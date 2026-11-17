@@ -365,7 +365,7 @@ namespace sw::editor
             _snapshotPath.clear();
             return;
         }
-        _snapshotHandle = textures.request( _snapshotPath, AssetLoadStart::Async );
+        _snapshotHandle = textures.request( _snapshotPath, AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
         applySnapshotTextureIfReady();
     }
 } // namespace sw::editor

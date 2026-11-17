@@ -327,7 +327,7 @@ namespace sw
                 // 게임 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 로드 중 텍스처가 보인다(`Material` 의 텍스처 자리와 같은 길, 언리얼 MID 도
                 // 스트리밍 중인 텍스처 파라미터는 낮은 밉 · 기본 텍스처로 그린다). 요청이 곧바로 번호를 주고 업로드가 끝나면 같은 번호를 다시 묶으므로(R-6) 다시 패킹하지 않는다.
                 if ( texture._assetPath.empty() == false )
-                    texture._load = textures.request( texture._assetPath, AssetLoadStart::Async );
+                    texture._load = textures.request( texture._assetPath, AssetLoadStart::Async, TextureStreamingGroup::Streamable );
             }
             if ( texture._load.hasFailed() )
             {

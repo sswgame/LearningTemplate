@@ -201,7 +201,7 @@ namespace sw
             // 진짜 텍스처는 늘 워커가 읽는다. 캐시가 로드를 시작할 때 번호를 예약해 로드 중 텍스처(회색)를 가리키게 하고, 업로드가 끝나면 같은 번호를 진짜 텍스처로,
             // 실패하면 마젠타 체커로 다시 묶는다(R-6) — 그 번호를 한 번 받아 쥐면 된다(밉 올리기 · 핫 리로드도 같은 번호). 언리얼 · 유니티도 스트리밍이 끝날 때까지
             // 기본 텍스처를 그린다(초기화하는 스레드가 디스크를 기다리지 않는다).
-            TextureHandle      load = textures.request( prop._assetPath, AssetLoadStart::Async );
+            TextureHandle      load = textures.request( prop._assetPath, AssetLoadStart::Async, TextureStreamingGroup::Streamable );
             string             borrowedPath;
             RHIDescriptorIndex srv = load.isValid() ? load.getOperation()->getStableSRV() : kInvalidDescriptorIndex;
             if ( srv == kInvalidDescriptorIndex )

@@ -454,11 +454,13 @@ namespace sw
         // 아래쪽 밉만 올린 텍스처의 위쪽 밉을 프레임 예산 안에서 업로드한다(밉 스트리밍). 옛 자원은 게임 스레드가 해제한다(`Engine`).
         // 결정적 실행도 풀 예산은 지킨다(예산은 장면 내용으로만 정해져 결정적이다) — 풀리는 것은 프레임당 제출 수뿐이다.
         TextureStreamingBudget streamingBudget;
-        streamingBudget._maxUpgradesPerFrame     = bFinishAssetJobs ? UINT32_MAX : streamingConfig._upgradesPerFrame;
-        streamingBudget._poolBytes               = static_cast<uint64>( streamingConfig._poolMegabytes ) * constant::memory::kBytesPerMegabyte;
-        streamingBudget._maxBytesInFlight        = static_cast<uint64>( streamingConfig._maxMegabytesInFlight ) * constant::memory::kBytesPerMegabyte;
-        streamingBudget._viewHeightPixels        = _state._outputHeight;
-        streamingBudget._idleFramesBeforeRelease = streamingConfig._idleFramesBeforeRelease;
+        streamingBudget._maxUpgradesPerFrame        = bFinishAssetJobs ? UINT32_MAX : streamingConfig._upgradesPerFrame;
+        streamingBudget._poolBytes                  = static_cast<uint64>( streamingConfig._poolMegabytes ) * constant::memory::kBytesPerMegabyte;
+        streamingBudget._maxBytesInFlight           = static_cast<uint64>( streamingConfig._maxMegabytesInFlight ) * constant::memory::kBytesPerMegabyte;
+        streamingBudget._viewHeightPixels           = _state._outputHeight;
+        streamingBudget._idleFramesBeforeRelease    = streamingConfig._idleFramesBeforeRelease;
+        streamingBudget._minFramesBetweenChanges    = streamingConfig._minFramesBetweenChanges;
+        streamingBudget._promoteBudgetMarginPercent = streamingConfig._promoteBudgetMarginPercent;
         (void)textures.updateStreaming( pDevice, streamingBudget );
     }
 
@@ -653,7 +655,7 @@ namespace sw
         {
             _state._skyHdriPath = hdriPath;
             _state._skyHdriLoad = hdriPath.empty() || engine::areEngineServicesBound() == false ? TextureHandle{}
-                                                                                                : engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( hdriPath.view(), AssetLoadStart::Async );
+                                                                                                : engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( hdriPath.view(), AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
         }
         if ( bHasSky == false )
         {
@@ -1221,7 +1223,7 @@ namespace sw
             textures.declareRenderTarget( request._renderTexture.view(), request._outputWidth, request._outputHeight );
             // 기다리지 않고 요청한다 — 0 채우기 전송은 진행 중인 프레임 뒤에 실행되므로(전송 계약 3) 이 스레드의 펌프가 끝낸다(`CanvasTextureLeases::prepareTargets` 와 같다).
             // 옛 경로의 핸들은 덮어쓰며 놓인다(캐시에 돌려준다).
-            view._outputLoad     = textures.request( request._renderTexture.view(), AssetLoadStart::Async );
+            view._outputLoad     = textures.request( request._renderTexture.view(), AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
             view._pOutputTexture = nullptr;
             view._outputPath     = request._renderTexture;
         }

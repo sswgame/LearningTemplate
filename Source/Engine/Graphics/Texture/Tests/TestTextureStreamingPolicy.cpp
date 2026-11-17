@@ -125,3 +125,48 @@ SW_TEST_CASE( TextureStreamingPolicyTest, WantedMipFromScreenTexels )
     SW_EXPECT_EQUAL( 3u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 100.0f ) ); // 128 ≥ 100 > 64
     SW_EXPECT_EQUAL( kMipCount - 1u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 0.0f ) );
 }
+
+/**
+ * @brief [TextureStreamingPolicyTest] 다른 텍스처의 바이트가 예산 경계를 오가도 한 텍스처의 밉은 `_minFramesBetweenChanges` 안에 두 번 바뀌지 않는다(R6-6)
+ * @details 여유 비율 0 이면 경계 위아래를 오갈 때마다 올렸다 내렸다 한다 — 최소 프레임만으로 간격을 본다. 여유가 있으면 그 띠 안에서는 올리지 않는다.
+ *          변이: 정책이 `_framesSinceChange` 를 보지 않으면 매 프레임 바뀌어 간격 단언이 진다.
+ */
+SW_TEST_CASE( TextureStreamingPolicyTest, BoundaryOscillationIsDamped )
+{
+    using Util                               = TextureStreamingPolicyTestUtil;
+    constexpr uint32       kMinFrames        = 10;
+    constexpr uint32       kFrameCount       = 60;
+    constexpr uint64       kBudget           = 4000;
+    constexpr uint64       kOtherUnderBudget = 2400; // 이 텍스처를 밉 0 까지 올려도(1360) 예산 아래
+    constexpr uint64       kOtherOverBudget  = 3800; // 밉 1 만 있어도(336) 예산을 넘는다
+    TextureStreamingConfig config            = Util::makeConfig();
+    config._minFramesBetweenChanges          = kMinFrames;
+    config._promoteBudgetMarginPercent       = 0;
+    vector<TextureStreamingCandidate> listCandidate{ Util::make( 1, 0 ) };
+    listCandidate[0]._framesSinceChange = kMinFrames;
+    vector<TextureStreamingDecision> listDecision;
+    vector<uint32>                   listChangeFrame;
+    for ( uint32 frame = 0; frame < kFrameCount; ++frame )
+    {
+        const uint64 other = ( frame % 2u == 0u ) ? kOtherUnderBudget : kOtherOverBudget;
+        TextureStreamingPolicy::decide( vector_reference<const TextureStreamingCandidate>{ listCandidate }, other + Util::sumResident( listCandidate ), kBudget, config, listDecision );
+        if ( listDecision.empty() )
+        {
+            ++listCandidate[0]._framesSinceChange;
+            continue;
+        }
+        Util::apply( listCandidate, listDecision );
+        listCandidate[0]._framesSinceChange = 0;
+        listChangeFrame.push_back( frame );
+    }
+    SW_REQUIRE_TRUE( listChangeFrame.size() >= 2u ); // 경계를 오가므로 바뀌기는 한다
+    for ( size_t index = 1; index < listChangeFrame.size(); ++index )
+        SW_EXPECT_TRUE( listChangeFrame[index] - listChangeFrame[index - 1] >= kMinFrames );
+
+    // 여유 띠: 예산의 50 % 를 남기면 아래쪽 바이트로도 올리지 않는다(2400 + 336 + 1024 > 2000).
+    config._promoteBudgetMarginPercent  = 50;
+    listCandidate[0]                    = Util::make( 1, 0 );
+    listCandidate[0]._framesSinceChange = kMinFrames;
+    TextureStreamingPolicy::decide( vector_reference<const TextureStreamingCandidate>{ listCandidate }, kOtherUnderBudget + Util::sumResident( listCandidate ), kBudget, config, listDecision );
+    SW_EXPECT_TRUE( listDecision.empty() );
+}

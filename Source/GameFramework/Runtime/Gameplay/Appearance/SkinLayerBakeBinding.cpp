@@ -123,7 +123,7 @@ namespace sw
                 return 0;
             }
             texture._path     = path;
-            texture._load     = cache.request( path, AssetLoadStart::Async );
+            texture._load     = cache.request( path, AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
             texture._revision = smear.getRevision();
         }
         else if ( texture._revision != smear.getRevision() )
@@ -221,15 +221,15 @@ namespace sw
             for ( const string& target : arrTarget )
             {
                 pCache->declareRenderTarget( target, resolution, resolution );
-                set._listHandle.push_back( pCache->request( target, AssetLoadStart::Async ) ); // 결과가 맨 앞이다(`findResultHandle`)
+                set._listHandle.push_back( pCache->request( target, AssetLoadStart::Async, TextureStreamingGroup::NeverStream ) ); // 결과가 맨 앞이다(`findResultHandle`)
             }
-            set._listHandle.push_back( pCache->request( basePath, AssetLoadStart::Async ) );
+            set._listHandle.push_back( pCache->request( basePath, AssetLoadStart::Async, TextureStreamingGroup::NeverStream ) );
             for ( uint32 index = 0; index < listLayer.size(); ++index )
             {
                 TextureLayerBakeLayer layer = Internal::makeBakeLayer( listLayer[index] );
                 if ( listSmearRevision[index] != 0u )
                     layer._smear = _listSmearTexture[index]._path; // 핸들은 번짐 텍스처가 쥔다
-                set._listHandle.push_back( pCache->request( layer._mask, AssetLoadStart::Async ) );
+                set._listHandle.push_back( pCache->request( layer._mask, AssetLoadStart::Async, TextureStreamingGroup::NeverStream ) );
                 set._request._listLayer.push_back( std::move( layer ) );
             }
             _pending = std::move( set );

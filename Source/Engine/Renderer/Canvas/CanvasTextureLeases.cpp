@@ -55,7 +55,7 @@ namespace sw
             if ( pState->_load.isValid() == false )
             {
                 textures.declareRenderTarget( target._targetPath.view(), width, height );
-                pState->_load = textures.request( target._targetPath.view(), AssetLoadStart::Async );
+                pState->_load = textures.request( target._targetPath.view(), AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
             }
             if ( pState->_load.isReady() == false )
                 continue; // 만드는 중이거나 만들지 못했다(이유는 캐시가 남겼다 — 실패한 핸들을 쥐어 다시 묻지 않는다)
@@ -101,7 +101,7 @@ namespace sw
                 // 렌더 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 그 이미지를 빼고 그린다(언리얼 Slate 의 브러시도 텍스처가 스트리밍되는 동안 비어 있다).
                 PathTexture& added = _listPathTexture.emplace_back();
                 added._path        = path;
-                added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( path.view(), AssetLoadStart::Async );
+                added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( path.view(), AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
             }
         }
     }

@@ -158,6 +158,17 @@ namespace sw
         /** @brief 화면 크기를 알리지 않은 지 이만큼 지난 텍스처는 필요 없는 것으로 본다 — 예산을 넘으면 가장 먼저 내리고, 다시 보일 때까지 올리지 않는다(`TextureStreamingPolicy`). */
         PROPERTY( Min = 1 )
         uint32 _idleFramesBeforeRelease{};
+
+        /**
+         * @brief 텍스처 하나의 밉을 바꾼 뒤 다시 바꾸기까지의 최소 프레임 수입니다(`TextureStreamingPolicy` — 경계에서 올렸다 내렸다를 되풀이하지 않게, R6-6).
+         * @details 언리얼 텍스처 스트리머가 밉을 바꾼 텍스처를 잠시 다시 고르지 않는 자리다. 바이트는 이 동안에도 예산에 센다.
+         */
+        PROPERTY( Min = 1 )
+        uint32 _minFramesBetweenChanges{};
+
+        /** @brief 올리기는 예산에서 이 비율(%)만큼 여유를 남긴 선까지만 한다 — 내리기는 예산을 넘을 때라 그 사이가 흔들림을 막는 띠다(`TextureStreamingPolicy`, R6-6). */
+        PROPERTY( Min = 0, Max = 50, Meta = "Units=%" )
+        uint32 _promoteBudgetMarginPercent{};
     };
 } // namespace sw
 

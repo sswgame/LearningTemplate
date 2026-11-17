@@ -24,14 +24,27 @@ namespace sw
 {
     struct DDSImageData;
 
+    /**
+     * @brief 텍스처가 밉 스트리밍(아래쪽 밉 먼저 · 예산 내리기)을 받는가입니다 — 언리얼 `TextureGroup` · `NeverStream`, 유니티 `streamingMipmaps` 자리. 요청하는 쪽이 정한다(기본값 없음).
+     * @details 화면 크기를 알리는 길(`TextureStreamingSystem` — 메시 머티리얼)이 있는 텍스처만 `Streamable` 이다. 그 밖(UI · 스프라이트 · 폰트 · 렌더 타깃 소비자 · 굽기 · 도구)은 화면 크기를 몰라
+     *          늘 "안 보임" 으로 잡히므로 `NeverStream` 으로 밉 전부를 올리고 내리지 않는다. 같은 텍스처를 둘이 요청하면 `NeverStream` 이 이긴다(누군가 밉 전부가 필요하다).
+     */
+    enum class TextureStreamingGroup : uint8
+    {
+        Streamable,  ///< 메시 머티리얼 — 비동기 로드는 아래쪽 밉부터, 예산을 넘으면 정책이 내린다
+        NeverStream, ///< 밉 전부를 올리고 내리지 않는다
+    };
+
     /** @brief 한 프레임의 텍스처 밉 스트리밍 예산입니다(`TextureCache::updateStreaming`). 값은 `RenderConfig`(Config/Engine/EngineConfig.json `_render`)가 정본이다. */
     struct TextureStreamingBudget
     {
-        uint32 _maxUpgradesPerFrame{ 0 };     ///< 이 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한(0 이면 끝남 확인만)
-        uint64 _poolBytes{ 0 };               ///< 위쪽 밉으로 올린 텍스처 바이트 합의 상한(`TextureStreamingPool`)
-        uint64 _maxBytesInFlight{ 0 };        ///< 범위로 읽는 중 · 제출을 기다리는 위쪽 밉 바이트 합의 상한(MR-2 — 하나가 이보다 크면 혼자일 때만 읽는다)
-        uint32 _viewHeightPixels{ 0 };        ///< 주 뷰의 높이(픽셀) — 화면 크기를 필요한 밉으로 바꾼다(0 이면 화면을 모른다 — 올리고 내리는 판단을 하지 않는다, R6-6)
-        uint32 _idleFramesBeforeRelease{ 0 }; ///< 화면 크기를 알리지 않은 지 이만큼 지나면 필요 없는 것으로 본다(`TextureStreamingConfig::_idleFramesBeforeRelease`)
+        uint32 _maxUpgradesPerFrame{ 0 };        ///< 이 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한(0 이면 끝남 확인만)
+        uint64 _poolBytes{ 0 };                  ///< 위쪽 밉으로 올린 텍스처 바이트 합의 상한(`TextureStreamingPool`)
+        uint64 _maxBytesInFlight{ 0 };           ///< 범위로 읽는 중 · 제출을 기다리는 위쪽 밉 바이트 합의 상한(MR-2 — 하나가 이보다 크면 혼자일 때만 읽는다)
+        uint32 _viewHeightPixels{ 0 };           ///< 주 뷰의 높이(픽셀) — 화면 크기를 필요한 밉으로 바꾼다(0 이면 화면을 모른다 — 올리고 내리는 판단을 하지 않는다, R6-6)
+        uint32 _idleFramesBeforeRelease{ 0 };    ///< 화면 크기를 알리지 않은 지 이만큼 지나면 필요 없는 것으로 본다(`TextureStreamingConfig::_idleFramesBeforeRelease`)
+        uint32 _minFramesBetweenChanges{ 0 };    ///< 밉을 바꾼 뒤 다시 바꾸기까지의 최소 프레임(`TextureStreamingConfig::_minFramesBetweenChanges`)
+        uint32 _promoteBudgetMarginPercent{ 0 }; ///< 올리기가 남기는 예산 여유(%)(`TextureStreamingConfig::_promoteBudgetMarginPercent`)
     };
 
     class IRHIDevice;
@@ -91,7 +104,8 @@ namespace sw
          * @details 디바이스는 받지 않는다 — 엔진이 붙인 디바이스(`bindDevice`)에 올린다. 게임 스레드 · 에디터는 RHI 를 모른다(언리얼 `UTexture` 게임 스레드 API 와 같다).
          *          예전에는 디바이스를 인자로 받아 에디터 패널 · 인스펙터 · 게임 인터페이스까지 디바이스가 관통했다.
          */
-        TextureHandle request( string_view relativePath, AssetLoadStart start );
+        /// @param group 밉 스트리밍을 받는가(`TextureStreamingGroup`) — 메시 머티리얼만 `Streamable` 이다. 같은 텍스처를 `NeverStream` 으로 요청하면 그것이 이긴다.
+        TextureHandle request( string_view relativePath, AssetLoadStart start, TextureStreamingGroup group );
         /** @brief 올릴 디바이스를 붙이거나(엔진이 RHI 를 세울 때) 뗍니다(nullptr, 내릴 때). 붙은 디바이스가 없으면 `request` 는 실패 핸들을 돌려준다. */
         void bindDevice( IRHIDevice* pDevice );
         /**
