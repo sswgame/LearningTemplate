@@ -54,10 +54,10 @@ namespace sw
             }
 
             /**
-             * @brief 기다림 없는 노드만으로 된 고리가 있으면 그 고리의 한 노드 id 를 돌려줍니다. 없으면 0 입니다.
+             * @brief 기다림 없는 노드만으로 된 고리가 있으면 그 고리의 한 노드 id 를 돌려줍니다.
              * @details 깊이 우선 탐색의 세 색(안 봄 · 경로 위 · 끝남)이다. 경로 위 노드로 돌아오는 간선이 고리다.
              */
-            static int32 findInfiniteLoop( const DialogueGraphAsset& asset )
+            [[nodiscard]] static optional<int32> findInfiniteLoop( const DialogueGraphAsset& asset )
             {
                 enum class Mark : uint8
                 {
@@ -107,7 +107,7 @@ namespace sw
                         listStack.pop_back();
                     }
                 }
-                return 0;
+                return nullopt;
             }
         };
     } // namespace
@@ -257,11 +257,10 @@ namespace sw
             bValid = false;
         }
         // 기다림(대사 · 선택 · 끝) 없는 고리는 러너가 한 프레임 안에서 끝없이 돈다.
-        const int32 cycleNodeID = DialogueGraphAssetInternal::findInfiniteLoop( *this );
-        if ( cycleNodeID != 0 )
+        if ( const optional<int32> cycleNodeID = DialogueGraphAssetInternal::findInfiniteLoop( *this ) )
         {
             SW_LOG_ERROR_ID( "Dialogue.InfiniteLoop", "Dialogue graph '%#': node %# is on a loop of Start, Action and Branch nodes only - add a Dialogue or Choice node to the loop", sourceLabel,
-                             cycleNodeID );
+                             *cycleNodeID );
             bValid = false;
         }
         // 화자는 id 로만 가리킨다 — 목록에 없는 id 는 이름으로 찾아 메우지 않고 읽기 오류다.
