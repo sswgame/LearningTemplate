@@ -153,6 +153,7 @@ namespace sw
                 return;
             }
             _voxelBuffer.upload( pDevice, words.data(), layout._totalVoxelWords * wordStride );
+            _framesSinceInputChange = 0;
         }
 
         // 기록 - 볼륨 구성(번호와 프로브 수)이 달라지면 0 에서 다시 쌓는다.
@@ -171,8 +172,9 @@ namespace sw
                 return;
             }
             _historyBuffer.upload( pDevice, zeros.data(), layout._totalHistoryElements * float4Stride );
-            _listHistoryKey   = std::move( historyKey );
-            _framesSinceReset = 0;
+            _listHistoryKey         = std::move( historyKey );
+            _framesSinceReset       = 0;
+            _framesSinceInputChange = 0;
         }
 
         // 입력 행 - 프레임마다.
@@ -193,6 +195,7 @@ namespace sw
         _totalProbes = layout._totalProbes;
         ++_frameCounter;
         ++_framesSinceReset;
+        ++_framesSinceInputChange;
         _bActive = SW_TRUE;
     }
 
@@ -231,7 +234,8 @@ namespace sw
         _paramBuffer.release( pDevice );
         _listHeldGrid.clear();
         _listHistoryKey.clear();
-        _framesSinceReset = 0;
-        _bActive          = SW_FALSE;
+        _framesSinceReset       = 0;
+        _framesSinceInputChange = 0;
+        _bActive                = SW_FALSE;
     }
 } // namespace sw

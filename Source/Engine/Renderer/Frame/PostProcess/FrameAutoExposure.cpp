@@ -12,7 +12,9 @@
 
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 
+#include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -77,7 +79,7 @@ namespace sw
         RHITextureDesc desc{};
         desc._width                   = 1;
         desc._height                  = 1;
-        desc._format                  = RHIFormat::R32_FLOAT;
+        desc._format                  = RHIFormat::R32G32_FLOAT; // R: 지금 EV(톤맵이 읽는다), G: 목표 EV(되읽어 적응이 남은 정도를 본다 — `readBackAdaptation`)
         desc._bIsRenderTarget         = SW_TRUE;
         desc._bIsShaderResource       = SW_TRUE;
         IRHIResourceFactory* pFactory = _pDevice->getResourceFactory();
@@ -95,6 +97,10 @@ namespace sw
 
     void FrameAutoExposure::releaseAutoExposureHistory( FrameViewTarget& view )
     {
+        if ( _pDevice != nullptr && _pDevice->getResourceFactory() != nullptr && view._exposureReadbackTicket.isValid() )
+            _pDevice->getResourceFactory()->discardTextureReadback( view._exposureReadbackTicket );
+        view._exposureReadbackTicket = RHITransferTicket{};
+        view._exposureAdaptationEv   = 0.0f;
         for ( uint32 slot = 0; slot < 2; ++slot )
         {
             // SRV 등록을 먼저 놓고 텍스처를 지운다(레지스트리에 죽은 핸들을 남기지 않는다 — 깊이 히스토리와 같은 순서).
@@ -124,6 +130,7 @@ namespace sw
         const bool bMeasures   = view._settings.usesPostProcess() && bHasHistory && _psoManager.getEnginePSO( RenderPassType::AutoExposure ) != 0;
         if ( bMeasures == false )
             return;
+        readBackAdaptation( view ); // 칸을 바꾸기 전 — 지난 프레임이 쓴 칸(`_autoExposureWrite`)을 읽는다
 
         // 시각은 패킷의 게임 시계다(고정 프레임 시간이면 결정적이다). 쉬던 추가 뷰(갱신 주기)는 그동안의 시간만큼 한 번에 다가간다.
         const float32 deltaSeconds = MathUtil::max( 0.0f, now - view._autoExposureClock );
@@ -139,6 +146,38 @@ namespace sw
         // 사진 앞 정착(`Render.Stable`) — 남은 노출 오차의 상한. 카메라가 움직인 프레임(정지 프레임 0)은 범위 끝까지 되돌린다.
         view._exposureErrorEv = RenderStabilityUtil::advanceExposureError( view._exposureErrorEv, bReset, view._stillFrameCount == 0, post._autoExposureMaxEv - post._autoExposureMinEv,
                                                                            MathUtil::min( view._autoExposureParams._z, view._autoExposureParams._w ) );
+    }
+
+    void FrameAutoExposure::readBackAdaptation( FrameViewTarget& view ) const
+    {
+        IRHIResourceFactory* const pFactory = _pDevice != nullptr ? _pDevice->getResourceFactory() : nullptr;
+        if ( pFactory == nullptr )
+            return;
+        if ( view._exposureReadbackTicket.isValid() )
+        {
+            const RHITransferStatus status = pFactory->pollTransfer( view._exposureReadbackTicket );
+            if ( status == RHITransferStatus::Pending )
+                return;
+            vector<uint8> listByte;
+            const bool    bTaken = status == RHITransferStatus::Complete && pFactory->takeTextureReadback( view._exposureReadbackTicket, listByte );
+            if ( bTaken == false )
+                pFactory->discardTextureReadback( view._exposureReadbackTicket );
+            float32 arrEv[2]{};
+            if ( bTaken && listByte.size() >= sizeof( arrEv ) )
+            {
+                Memory::copy( arrEv, listByte.data(), sizeof( arrEv ) );
+                view._exposureAdaptationEv = MathUtil::abs( arrEv[1] - arrEv[0] );
+            }
+            view._exposureReadbackTicket = RHITransferTicket{};
+            return;
+        }
+        // 아직 잰 적이 없는 기록 칸에는 값이 없다(NaN 일 수 있다).
+        if ( view._bAutoExposureMeasured == SW_FALSE )
+            return;
+        RHITextureMipSpan       layout{};
+        const RHITransferSubmit submit = pFactory->submitTextureReadback( view._arrAutoExposure[view._autoExposureWrite], 0, 0, layout );
+        if ( submit.isAccepted() )
+            view._exposureReadbackTicket = submit._ticket; // `Busy`(스테이징이 찼다)면 다음 프레임에 다시 낸다
     }
 
     void FrameAutoExposure::recordAutoExposure( FramePassContext& context, const FrameViewTarget& view, const RenderGraphPassDesc& passDesc ) const

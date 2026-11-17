@@ -25,6 +25,8 @@ namespace sw
         RenderStabilityStatusHolder()
             : _stillFrameCount{ 0 }
             , _exposureErrorBits{ 0 }
+            , _exposureAdaptationBits{ 0 }
+            , _giAccumulatedFrames{ 0 }
         {
         }
 
@@ -34,10 +36,14 @@ namespace sw
 
         void store( const RenderStabilitySample& sample )
         {
-            uint32 bits = 0;
+            uint32 bits           = 0;
+            uint32 adaptationBits = 0;
             Memory::copy( &bits, &sample._exposureErrorEv, sizeof( bits ) );
+            Memory::copy( &adaptationBits, &sample._exposureAdaptationEv, sizeof( adaptationBits ) );
             _stillFrameCount.store( sample._stillFrameCount, std::memory_order_relaxed );
             _exposureErrorBits.store( bits, std::memory_order_relaxed );
+            _exposureAdaptationBits.store( adaptationBits, std::memory_order_relaxed );
+            _giAccumulatedFrames.store( sample._giAccumulatedFrames, std::memory_order_relaxed );
         }
 
         RenderStabilitySample load() const
@@ -46,12 +52,17 @@ namespace sw
             sample._stillFrameCount = _stillFrameCount.load( std::memory_order_relaxed );
             const uint32 bits       = _exposureErrorBits.load( std::memory_order_relaxed );
             Memory::copy( &sample._exposureErrorEv, &bits, sizeof( bits ) );
+            const uint32 adaptationBits = _exposureAdaptationBits.load( std::memory_order_relaxed );
+            Memory::copy( &sample._exposureAdaptationEv, &adaptationBits, sizeof( adaptationBits ) );
+            sample._giAccumulatedFrames = _giAccumulatedFrames.load( std::memory_order_relaxed );
             return sample;
         }
 
     private:
         atomic<uint32> _stillFrameCount;
-        atomic<uint32> _exposureErrorBits; ///< `float32` 의 비트(원자 실수 대신)
+        atomic<uint32> _exposureErrorBits;      ///< `float32` 의 비트(원자 실수 대신)
+        atomic<uint32> _exposureAdaptationBits; ///< `float32` 의 비트
+        atomic<uint32> _giAccumulatedFrames;
 
         SW_SERVICE_SLOT( RenderStabilityStatusHolder, Required );
     };

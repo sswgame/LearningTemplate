@@ -20,6 +20,10 @@ namespace sw
     {
         uint32  _stillFrameCount{ 0 };    ///< 이어진 정지 프레임 수(TAA 기록이 쌓인 프레임)
         float32 _exposureErrorEv{ 0.0f }; ///< 노출 적응의 남은 오차 상한(EV). 자동 노출을 쓰지 않으면 0
+        /// 되읽은 노출 적응의 지금 EV 와 목표 EV 의 차(절댓값, EV — `FrameAutoExposure` 가 GPU 기록을 몇 프레임 늦게 읽는다). 기록을 버린 뒤에도 장면 밝기가 바뀌면 다시 커진다.
+        /// 자동 노출을 쓰지 않거나 아직 읽은 값이 없으면 0
+        float32 _exposureAdaptationEv{ 0.0f };
+        uint32  _giAccumulatedFrames{ 0 }; ///< 실시간 프로브 GI 기록이 0 에서 다시 쌓기 시작한 뒤 갱신한 프레임 수(`RealtimeProbeUpdater`). 실시간 볼륨이 없으면 0
 
         /** @brief 렌더 스레드가 주 시점의 이번 값을 올립니다(엔진 범위 서브시스템이 든다 — `RenderStability.cpp`). */
         static void publish( const RenderStabilitySample& sample );
