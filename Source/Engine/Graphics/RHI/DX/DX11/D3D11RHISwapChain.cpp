@@ -2,19 +2,27 @@
 
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHISwapChain.h"
 
+#include "Engine/Graphics/RHI/DX/DXGITearing.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
 namespace sw
 {
-    void D3D11RHISwapChain::attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height, uint32 swapChainFlags )
+    bool D3D11RHISwapChain::attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height, uint32 swapChainFlags )
     {
+        // 모든 DX11 스왑체인이 여기를 지나므로 창 연결 끄기도 여기 하나다(DXGITearing.h — Alt+Enter 배타 전체 화면 R-1).
+        if ( disableDXGIWindowChanges( pSwapChain, hWnd ) == false )
+        {
+            SW_LOG_ERROR_ID( "D3D11.WindowAssociationFailed", "IDXGIFactory::MakeWindowAssociation failed - DXGI would take Alt+Enter into exclusive fullscreen where tearing Present fails" );
+            return false;
+        }
         _swapChain      = pSwapChain;
         _pHWnd          = hWnd;
         _width          = width;
         _height         = height;
         _swapChainFlags = swapChainFlags;
+        return true;
     }
 
     bool D3D11RHISwapChain::createLike( ID3D11Device* pDevice, const D3D11RHISwapChain& source, HWND hWnd, uint32 width, uint32 height )
@@ -37,8 +45,7 @@ namespace sw
                               isHrSuccess( factory->CreateSwapChain( pDevice, &desc, created.GetAddressOf() ), "IDXGIFactory::CreateSwapChain" );
         if ( bCreated == false )
             return false;
-        attach( created.Get(), hWnd, width, height, desc.Flags );
-        return true;
+        return attach( created.Get(), hWnd, width, height, desc.Flags );
     }
 
     void D3D11RHISwapChain::shutdown()

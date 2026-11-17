@@ -598,7 +598,8 @@ namespace sw
         }
 
         // D3D11 은 디바이스와 스왑체인이 한 호출에서 함께 나온다. 만들어진 것을 넘겨 소유시킨다.
-        _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height, swapChainDesc.Flags );
+        if ( _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height, swapChainDesc.Flags ) == false )
+            return false;
 
         // Deferred Context 기반 병렬 기록이 실익이 있는지는 드라이버가 커맨드 리스트를 네이티브로
         // 지원하는지에 달렸다. 지원하지 않으면 D3D11 런타임이 소프트웨어로 에뮬레이션하므로 병렬화
