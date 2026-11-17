@@ -41,7 +41,7 @@ namespace sw
         stop();
     }
 
-    bool LinuxSplashThread::start( RunFunction run, const PaintState& initialState )
+    bool LinuxSplashThread::start( RunFunction body, const PaintState& initialState )
     {
         using Internal = LinuxSplashThreadInternal;
         _wakeFD        = ::eventfd( 0, EFD_CLOEXEC | EFD_NONBLOCK );
@@ -57,7 +57,7 @@ namespace sw
             _startMask   = 0;
         }
         Internal::signal( _wakeFD );
-        _thread = thread{ ThreadCreationKey{}, &LinuxSplashThread::run, this, std::move( run ) };
+        _thread = thread{ ThreadCreationKey{}, &LinuxSplashThread::run, this, std::move( body ) };
 
         UniqueLock<mutex> lock{ _mutex };
         _readyCondition.wait( lock, [this]() SW_REQUIRES_LOCK( _mutex )

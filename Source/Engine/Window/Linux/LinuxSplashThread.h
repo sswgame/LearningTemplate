@@ -53,7 +53,7 @@ namespace sw
          * @brief @p initialState 로 스레드를 띄우고 창이 섰는지(`markReady`) · 못 섰는지(`markFailed`) 기다립니다.
          * @return 창이 섰으면 true 입니다. eventfd 를 만들지 못하면 오류를 남기고 false 입니다(스레드를 띄우지 않는다).
          */
-        [[nodiscard]] bool start( RunFunction run, const PaintState& initialState );
+        [[nodiscard]] bool start( RunFunction body, const PaintState& initialState );
         /** @brief 새 상태를 적고 스레드를 깨웁니다. 스레드가 없으면 아무것도 하지 않는다. */
         void requestRedraw( const PaintState& state );
         /** @brief 끝내라고 하고 깨운 뒤 합류합니다. 두 번 불러도 된다. */
