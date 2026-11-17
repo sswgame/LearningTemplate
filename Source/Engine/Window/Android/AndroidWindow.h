@@ -58,6 +58,18 @@ namespace sw
         /** @brief 묶지 않는다 — 손가락 입력에는 묶을 포인터가 없다(마우스 캡처 `View.requestPointerCapture` 는 아직 잇지 않았다). 풀기는 늘 된다. */
         [[nodiscard]] bool supportsPointerLock() const override { return false; }
         [[nodiscard]] bool setPointerLock( WindowPointerLock lock ) override { return lock == WindowPointerLock::Released; }
+        /** @brief 커서가 없다 — 손가락 입력이다(마우스 커서 아이콘 `PointerIcon` 은 아직 잇지 않았다). */
+        [[nodiscard]] bool supportsCursorShape() const override { return false; }
+        [[nodiscard]] bool setCursorShape( CursorShape shape ) override
+        {
+            (void)shape;
+            return false;
+        }
+        [[nodiscard]] bool setCursorVisible( bool bVisible ) override
+        {
+            (void)bVisible;
+            return false;
+        }
 
     protected:
         void* getNativeHandle() const override;

@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Engine/Window/CallbackInputWindow.h"
+#include "Engine/Window/CursorShape.h"
 
 #if defined( SW_PLATFORM_WEB )
     #include <emscripten/html5.h>
@@ -38,6 +39,12 @@ namespace sw
          *          https://emscripten.org/docs/api_reference/emscripten.h.html#c.emscripten_set_main_loop_timing
          */
         void waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds ) override;
+        /** @brief 캔버스 CSS `cursor` 로 모양을 바꾼다(`CursorShapeUtil::toCSSName`). */
+        [[nodiscard]] bool supportsCursorShape() const override { return true; }
+        /** @brief 모양을 적고 캔버스에 겁니다. 숨긴 동안은 적기만 하고 보일 때 건다. */
+        [[nodiscard]] bool setCursorShape( CursorShape shape ) override;
+        /** @brief 캔버스 CSS `cursor: none` 으로 숨기거나 적어 둔 모양으로 되돌립니다. */
+        [[nodiscard]] bool setCursorVisible( bool bVisible ) override;
 
     protected:
         void* getNativeHandle() const override { return const_cast<utf8*>( kCanvasSelector ); }
@@ -50,6 +57,8 @@ namespace sw
     private:
         /** @brief 캔버스의 CSS 크기 · 화면 배율 · 안전 여백을 다시 읽어 캔버스 물리 크기를 맞춥니다(창 크기 · 회전 · 배율 변경). */
         void syncCanvasSize();
+        /** @brief 지금 모양 · 숨김을 캔버스 style.cursor 에 겁니다. */
+        void applyCursor() const;
         /** @brief DOM 콜백을 겁니다(마우스 · 바퀴 · 키 · 손가락 · 크기 · 보임 · 포커스). */
         void bindCallbacks();
         /** @brief DOM 콜백을 풉니다. */
@@ -70,9 +79,11 @@ namespace sw
     private:
         float32                _devicePixelRatio;
         int32                  _mainLoopIntervalMilliseconds; ///< 지금 건 프레임 콜백 간격(0 이면 requestAnimationFrame — `emscripten_set_main_loop_arg` 의 fps 0 과 같다)
+        CursorShape            _cursorShape;                  ///< 마지막 `setCursorShape`
         uint8                  _bCallbacksBound : 1;
         uint8                  _bPointerLocked  : 1; ///< 브라우저가 캔버스에 포인터를 잠갔다(`pointerlockchange` 가 정한다 — 요청이 아니라 결과)
-        [[maybe_unused]] uint8 _reserved        : 6;
+        uint8                  _bCursorHidden   : 1; ///< 마지막 `setCursorVisible( false )`
+        [[maybe_unused]] uint8 _reserved        : 5;
     };
 } // namespace sw
 

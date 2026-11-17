@@ -1,7 +1,7 @@
 /**
  * @file PlatformInputManager.cpp
  * @brief 콜백 입력 창(웹 · Android)의 입력 플랫폼 훅입니다. 창이 실은 `PlatformInputEvent` 를 엔진 원시 이벤트로 옮깁니다.
- * @details 키 번호만 플랫폼마다 다르다(웹 — DOM `KeyboardEvent.code`, Android — `AKEYCODE_*`). 커서 모양은 두 플랫폼 모두 없다.
+ * @details 키 번호만 플랫폼마다 다르다(웹 — DOM `KeyboardEvent.code`, Android — `AKEYCODE_*`). 커서 모양 · 숨김은 창이 한다(웹 캔버스 CSS cursor, Android 는 커서가 없다).
  *          포인터 잠금은 창이 묶는다(`IWindow::setPointerLock` — 웹은 Pointer Lock API, Android 는 묶지 않는다). 잠긴 동안의 이동은 `PointerRelative` 다.
  *          패드: 웹은 Gamepad API 를 프레임마다 읽고(standard 배치만 — `PlatformGamepadLayout`), Android 는 창이 패드 입력 장치의 키 · 축 이벤트와 연결 · 끊김을
  *          패드 칸 번호로 실어 보낸다. 둘 다 가상 입력 · 재생과 같은 원시 이벤트 길(`makeGamepad*`)로 들어온다.
@@ -309,12 +309,27 @@ namespace sw
         registerGamepadSlots<PlatformGamepadDevice>();
     }
 
-    void InputManager::setCursorVisiblePlatform( [[maybe_unused]] bool bVisible )
+    void InputManager::setCursorVisiblePlatform( bool bVisible )
     {
+        // 창이 스스로 숨긴다(웹 캔버스 CSS cursor). 커서가 없는 창(Android 손가락)은 할 일이 없다. 커서가 있는데 못 숨기면 한 번 오류로 알린다.
+        MainWindowSubsystem* const pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow* const             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        constexpr uint32           kCursorVisibleBit = 1u << 1;
+        if ( pWindow == nullptr || pWindow->supportsCursorShape() == false )
+            return;
+        if ( pWindow->setCursorVisible( bVisible ) == false && ( _unsupportedReportedMask.fetch_or( kCursorVisibleBit ) & kCursorVisibleBit ) == 0 )
+            SW_LOG_ERROR_ID( "PlatformInput.WindowCannotHideCursor", "This window cannot hide or show the cursor - the cursor stays as it is" );
     }
 
     void InputManager::applyCursorShapePlatform()
     {
+        MainWindowSubsystem* const pWindowHost     = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow* const             pWindow         = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        constexpr uint32           kCursorShapeBit = 1u << 2;
+        if ( pWindow == nullptr || pWindow->supportsCursorShape() == false )
+            return; // 커서가 없는 창(Android 손가락)
+        if ( pWindow->setCursorShape( _cursorShape ) == false && ( _unsupportedReportedMask.fetch_or( kCursorShapeBit ) & kCursorShapeBit ) == 0 )
+            SW_LOG_ERROR_ID( "PlatformInput.WindowCannotChangeCursor", "This window cannot change the cursor shape - the cursor keeps its current shape" );
     }
 
     void InputManager::applyMouseLockMode()

@@ -18,6 +18,7 @@ extern "C"
     int  swWebTextInputInstall( void ( *pCallback )( void*, int, const char* ), void* pUserData );
     void swWebTextInputSetWanted( int bWanted );
     void swWebTextInputSetArea( const char* pCanvasSelector, double x, double y, double lineHeight );
+    void swWebCursorSet( const char* pCanvasSelector, const char* pCSSName );
 }
 
 namespace sw
@@ -52,8 +53,10 @@ namespace sw
         : CallbackInputWindow{}
         , _devicePixelRatio{ 1.0f }
         , _mainLoopIntervalMilliseconds{ 0 }
+        , _cursorShape{ CursorShape::Arrow }
         , _bCallbacksBound{ SW_FALSE }
         , _bPointerLocked{ SW_FALSE }
+        , _bCursorHidden{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -121,6 +124,25 @@ namespace sw
             return;
         _mainLoopIntervalMilliseconds = intervalMilliseconds;
         (void)emscripten_set_main_loop_timing( intervalMilliseconds > 0 ? EM_TIMING_SETTIMEOUT : EM_TIMING_RAF, intervalMilliseconds > 0 ? intervalMilliseconds : 1 );
+    }
+
+    bool WebWindow::setCursorShape( CursorShape shape )
+    {
+        _cursorShape = shape;
+        applyCursor();
+        return true;
+    }
+
+    bool WebWindow::setCursorVisible( bool bVisible )
+    {
+        _bCursorHidden = bVisible ? SW_FALSE : SW_TRUE;
+        applyCursor();
+        return true;
+    }
+
+    void WebWindow::applyCursor() const
+    {
+        swWebCursorSet( kCanvasSelector, _bCursorHidden != SW_FALSE ? CursorShapeUtil::kHiddenCSSName : CursorShapeUtil::toCSSName( _cursorShape ) );
     }
 
     void WebWindow::onTextInput( void* pUserData, int kind, const char* pText )

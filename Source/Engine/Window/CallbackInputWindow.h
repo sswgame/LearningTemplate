@@ -41,18 +41,6 @@ namespace sw
         [[nodiscard]] bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const override;
         /** @brief 청하지 않는다 — 브라우저 · 액티비티의 초점은 사용자 입력과 OS 가 정한다. */
         [[nodiscard]] bool requestInputFocus() override { return false; }
-        /** @brief 커서 모양 · 숨기기를 하지 않는다(Android 는 커서가 없고, 웹 캔버스 커서는 아직 잇지 않았다). */
-        [[nodiscard]] bool supportsCursorShape() const override { return false; }
-        [[nodiscard]] bool setCursorShape( CursorShape shape ) override
-        {
-            (void)shape;
-            return false;
-        }
-        [[nodiscard]] bool setCursorVisible( bool bVisible ) override
-        {
-            (void)bVisible;
-            return false;
-        }
         /** @brief 창이 잇지 않는다 — 웹 · Android 클립보드는 `PlatformClipboard`(WebClipboard · AndroidClipboard)가 창 없이 연다. */
         [[nodiscard]] bool supportsClipboard() const override { return false; }
         [[nodiscard]] bool readClipboardText( string& outText ) override

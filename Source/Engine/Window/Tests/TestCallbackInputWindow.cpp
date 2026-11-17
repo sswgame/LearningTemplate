@@ -24,6 +24,9 @@ namespace
         NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::WebCanvas; }
         bool              supportsPointerLock() const override { return false; }
         bool              setPointerLock( WindowPointerLock lock ) override { return lock == WindowPointerLock::Released; }
+        bool              supportsCursorShape() const override { return false; }
+        bool              setCursorShape( CursorShape /*shape*/ ) override { return false; }
+        bool              setCursorVisible( bool /*bVisible*/ ) override { return false; }
         void              simulateFocus( bool bFocused ) { applyPlatformFocus( bFocused ); }
         void              simulateKey( PlatformInputKind kind )
         {
