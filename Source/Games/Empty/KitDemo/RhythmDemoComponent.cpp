@@ -48,7 +48,7 @@ namespace sw
     bool RhythmDemoComponent::runChart()
     {
         TimingWindow window;
-        window._grade      = RhythmDemoComponentInternal::kWindowGrade;
+        window._grade      = hashed_string( RhythmDemoComponentInternal::kWindowGrade );
         window._earlyWidth = RhythmDemoComponentInternal::kWindowWidth;
         window._lateWidth  = RhythmDemoComponentInternal::kWindowWidth;
         window._score      = RhythmDemoComponentInternal::kWindowScore;

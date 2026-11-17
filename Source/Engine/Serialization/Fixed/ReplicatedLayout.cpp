@@ -6,6 +6,7 @@
 
 #include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 
 namespace sw
 {

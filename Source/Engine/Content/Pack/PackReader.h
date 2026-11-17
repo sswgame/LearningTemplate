@@ -65,6 +65,8 @@ namespace sw
 
         /** @brief 64비트 경로 해시로 파일이 있는지 확인합니다(이진 탐색). */
         bool hasFile( uint64 pathHash ) const;
+        /** @brief 항목 @p pathHash 의 원본 크기입니다(없으면 nullopt) — 범위 읽기가 머리를 풀 때 파일 길이로 쓴다(`TextureMipLayout::parse`, MR-3). */
+        [[nodiscard]] optional<uint64> findFileSize( uint64 pathHash ) const;
 
         /** @brief 가상 상대 경로로 파일이 있는지 확인합니다. */
         bool hasFile( string_view relativePath ) const;

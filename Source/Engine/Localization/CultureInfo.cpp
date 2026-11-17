@@ -10,6 +10,7 @@
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Localization/TimeZoneInfo.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
