@@ -83,12 +83,37 @@ namespace sw::editor
     void MaterialModel::commitName()
     {
         _material->getDesc()._name = _name.c_str();
+        recordDocumentEdit( "Edit Material Name" );
     }
 
     void MaterialModel::setShaderPath( string_view shaderPath )
     {
         _shaderPath = shaderPath;
         _material->setShaderPath( _shaderPath.c_str() );
+        recordDocumentEdit( "Edit Material Shader" );
+    }
+
+    bool MaterialModel::setProperty( const MaterialProperty& value )
+    {
+        MaterialProperty* const pProp = _material->findProperty( hashed_string( value._name.c_str() ) );
+        if ( pProp == nullptr )
+            return false;
+        *pProp = value;
+        recordDocumentEdit( "Edit Material Property" );
+        return true;
+    }
+
+    bool MaterialModel::resetProperty( const hashed_string& name )
+    {
+        MaterialProperty* const pProp = _material->findProperty( name );
+        if ( pProp == nullptr )
+            return false;
+        const bool bHadPath = pProp->_assetPath.empty() == false;
+        pProp->_assetPath.clear(); // 텍스처 칸은 경로가 값보다 앞선다 — 비워야 기본값 글이 보인다
+        const bool bReset = _material->resetParameterToDefault( name ) || bHadPath;
+        if ( bReset )
+            recordDocumentEdit( "Edit Material Property" );
+        return bReset;
     }
 
     void MaterialModel::applyLivePreview( string_view path ) const
