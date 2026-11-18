@@ -49,12 +49,17 @@
     </Choice>
     <Slider name="ShoulderWidth" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Shoulder.Width"/></Slider>
     <Slider name="WaistWidth" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Waist.Width"/></Slider>
+    <Slider name="LegLength" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Leg.Length"/></Slider>
   </Schema>
   <Schema id="HelmetFinish">
     <Choice name="Finish" category="Dye" default="Standard">
       <Option name="Standard"/>
       <Option name="Gilded" materialVariant="Gilded"/>
     </Choice>
+  </Schema>
+  <!-- 장비 염색(아이템 인스턴스의 값 — 인벤토리 · 세이브가 인스턴스와 함께 싣는다). 색은 부품 머티리얼의 _color 를 곱한다(흰색이 원래 색). 시나리오 showcase/equipmentdye. -->
+  <Schema id="ArmorDye">
+    <Color name="Tint" category="Dye" default="1 1 1 1"><Drive kind="MaterialColor" target="_color"/></Color>
   </Schema>
   <Schema id="Gun">
     <Choice name="Finish" category="Dye" default="Standard">

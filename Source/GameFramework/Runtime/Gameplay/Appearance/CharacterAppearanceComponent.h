@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -25,6 +26,7 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
@@ -270,6 +272,17 @@ namespace sw
         float32 getFootLift() const { return _footLift; }
         /** @brief 이 컴포넌트가 조립에 쓰는 외형 데이터입니다(미리보기 데이터, 아니면 게임 서비스). 없으면 nullptr 입니다. */
         const AppearanceDatabase* findDatabase() const;
+        static constexpr uint32   kStateTag     = FourCCUtil::make( "CAPP" );
+        static constexpr uint32   kStateVersion = 1;
+        /**
+         * @brief `ComponentStateStore` 계약 — 게임 중 꾸민 모습을 게임 세이브에 싣습니다: 게임 선택(`applySelection` — 공유 코드, 판이 따로 있어 옛 판을 읽는다)과 슬롯 덮어쓰기.
+         * @details 프리셋 id · 시드는 프로퍼티라 씬과 함께 실린다. 미리보기 입히기(편집기 데이터)는 싣지 않는다. 장비 인스턴스(아이템 염색)는 `CharacterEquipmentComponent` 가 싣는다.
+         *          예전에는 상태가 없어 불러오면 꾸민 모습이 프리셋으로 돌아갔다. 읽기는 외형 데이터가 있어야 해 시작 뒤에만 한다 — 그 전 바이트는 `restoreState` 가 보관한다.
+         */
+        void serializeState( StateIO& io );
+        /** @brief 저장한 상태를 받습니다. 시작 전이면 보관했다가 `onBeginPlay` 가 겁니다. 읽지 못하면 알리고 지금 모습을 그대로 둡니다. */
+        void restoreState( vector<uint8>&& bytes );
+
         /** @brief 지금 스폰해 둔 부품 오브젝트입니다. */
         void collectPartObjects( vector<GameObjectHandle>& outListObject ) const;
         /**
@@ -323,6 +336,8 @@ namespace sw
         void requestAssemble( TickContext& context );
         /** @brief 예약된 조립을 돕니다(틱 뒤 작업 몸체). */
         void runScheduledAssemble();
+        /** @brief 보관한 세이브 상태를 겁니다. 건 것이 없으면 false 입니다. */
+        bool applyPendingState();
         /** @brief 펼치고, 해석하고, 조립합니다. 게임 스레드의 틱 밖에서 실행합니다. */
         void assemble();
         /** @brief 몸 부품을 이 오브젝트의 유닛에 입힙니다. 몸 부품 번호를 반환하고, 없으면 -1 입니다. */
@@ -479,6 +494,7 @@ namespace sw
         TComponentHandle<SkeletalMeshComponent>        _taskUnit;             ///< 단계 작업을 등록한 몸 유닛
         AppearanceSelection                            _selection;            ///< 선택 입히기의 선택(`applySelection` · `previewSelection` — `_bSelectionSet` 일 때만 쓴다)
         const AppearanceDatabase*                      _pPreviewDatabase;     ///< 미리보기 입히기의 데이터(빌린 것). 있으면 게임 서비스를 보지 않고 구운 메시 캐시를 건너뛴다
+        vector<uint8>                                  _pendingStateBytes;    ///< 시작 전에 받은 세이브 상태(`restoreState`)
         Subscription                                   _reloadSubscription;   ///< 외형 데이터 다시 읽기의 구독(플레이 중에만). 데이터 서비스가 먼저 사라지면 무효가 된다
         vector<MeshAssemblyLoad>                       _listMeshAssemblyLoad; ///< 베이크한 메시의 부품 로드(몸이 먼저)
         SharedAssetHandle<FitTables>                   _fitTablesLoad;        ///< 몸의 피팅 표 로드. 표가 없으면 요청이 없다

@@ -19,6 +19,21 @@
     <Positive><Bone name="spine" scale="1.12 1 1.08"/></Positive>
     <Negative><Bone name="spine" scale="0.88 1 0.92"/></Negative>
   </Axis>
+  <!-- 다리 길이(키) — 넓적 · 정강이 뼈를 길이 축(뼈의 +y)으로 늘이고 줄인다. 발 디딤 IK 가 바뀐 다리로 발을 땅에 맞춘다(시나리오 customizeheels). -->
+  <Axis name="Leg.Length" min="-1" max="1" default="0">
+    <Positive>
+      <Bone name="upperleg.l" scale="1 1.15 1"/>
+      <Bone name="upperleg.r" scale="1 1.15 1"/>
+      <Bone name="lowerleg.l" scale="1 1.15 1"/>
+      <Bone name="lowerleg.r" scale="1 1.15 1"/>
+    </Positive>
+    <Negative>
+      <Bone name="upperleg.l" scale="1 0.88 1"/>
+      <Bone name="upperleg.r" scale="1 0.88 1"/>
+      <Bone name="lowerleg.l" scale="1 0.88 1"/>
+      <Bone name="lowerleg.r" scale="1 0.88 1"/>
+    </Negative>
+  </Axis>
   <Unsupported name="Bust.Compression"/>
   <Unsupported name="Bust.Lift"/>
   <Unsupported name="Hair.Length"/>

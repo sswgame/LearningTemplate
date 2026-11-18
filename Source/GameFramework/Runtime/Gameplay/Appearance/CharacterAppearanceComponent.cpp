@@ -33,6 +33,7 @@
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Visual/2D/SpriteComponent.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 #include "Engine/Visual/Component/MeshSectionComponent.h"
@@ -309,6 +310,7 @@ namespace sw
         , _taskUnit{}
         , _selection{}
         , _pPreviewDatabase{ nullptr }
+        , _pendingStateBytes{}
         , _reloadSubscription{}
         , _listMeshAssemblyLoad{}
         , _fitTablesLoad{}
@@ -348,6 +350,7 @@ namespace sw
         AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
         if ( pDatabase != nullptr )
             _reloadSubscription = pDatabase->registerReloaded( Delegate<void()>::create<&CharacterAppearanceComponent::onAppearanceDataReloaded>( this ) );
+        (void)applyPendingState(); // 세이브가 실은 게임 선택 · 슬롯 덮어쓰기를 조립 전에 건다
         // 선택 입히기(`applySelection` · `previewSelection`)도 시작한 뒤 같은 틱 길로 조립한다 — 미리보기 씬도 플레이하고 틱한다(언리얼 FPreviewScene).
         if ( _presetID.empty() == false || _bSelectionSet == SW_TRUE )
             requestAssemble();
@@ -473,6 +476,63 @@ namespace sw
         _pPreviewDatabase = nullptr; // 게임 서비스로 조립한다 — 미리보기 데이터와 섞지 않는다
         if ( _bStarted == SW_TRUE )
             requestAssemble(); // 시작 전이면 `onBeginPlay` 가 조립한다
+    }
+
+    void CharacterAppearanceComponent::serializeState( StateIO& io )
+    {
+        io.header( kStateTag, kStateVersion );
+        const AppearanceDatabase* pDatabase = findDatabase();
+        // 게임 선택만 싣는다 — 미리보기(편집기 데이터)는 세이브의 뜻이 없다
+        uint8  bSelection = _bSelectionSet == SW_TRUE && _pPreviewDatabase == nullptr && pDatabase != nullptr ? SW_TRUE : SW_FALSE;
+        string code       = io.isWriting() && bSelection == SW_TRUE ? AppearanceSelection::encode( _selection, *pDatabase ) : string{};
+        io.value( bSelection );
+        io.value( code );
+        vector<SlotOverride> listOverride = io.isWriting() ? _listSlotOverride : vector<SlotOverride>{};
+        io.list( listOverride, 8, [&io]( SlotOverride& slotOverride )
+        {
+            io.value( slotOverride._slot );
+            io.value( slotOverride._itemID );
+        } );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        // 읽기 — 지역 값이 끝까지 맞은 뒤에만 바꾼다
+        AppearanceSelection selection;
+        if ( bSelection == SW_TRUE )
+        {
+            if ( io.check( pDatabase != nullptr ) == false )
+                return;
+            const expected<void> decoded = AppearanceSelection::decode( code, *pDatabase, selection );
+            if ( decoded.has_value() == false )
+            {
+                SW_LOG_WARNING_ID( "CharacterAppearance.SavedSelectionUnreadable", "Saved appearance of '%#' is not a readable share code: %#", getOwner() != nullptr ? getOwner()->getName().c_str() : "?",
+                                   decoded.error().message() );
+                io.fail();
+                return;
+            }
+        }
+        _listSlotOverride = std::move( listOverride );
+        _selection        = std::move( selection );
+        _bSelectionSet    = bSelection;
+        _pPreviewDatabase = nullptr;
+    }
+
+    void CharacterAppearanceComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _pendingStateBytes = std::move( bytes );
+        if ( _bStarted == SW_TRUE && applyPendingState() )
+            requestAssemble();
+    }
+
+    bool CharacterAppearanceComponent::applyPendingState()
+    {
+        if ( _pendingStateBytes.empty() )
+            return false;
+        Archive    archive( _pendingStateBytes.data(), static_cast<uint64>( _pendingStateBytes.size() ) );
+        const bool bRead = StateIO::readInPlace( *this, archive );
+        _pendingStateBytes.clear();
+        if ( bRead == false )
+            SW_LOG_WARNING_ID( "CharacterAppearance.StateNotRead", "Appearance state of '%#' did not read - keeping its preset", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
+        return bRead;
     }
 
     void CharacterAppearanceComponent::captureSelection( AppearanceSelection& outSelection ) const

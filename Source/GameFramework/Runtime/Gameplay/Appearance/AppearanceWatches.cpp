@@ -7,9 +7,11 @@
 #include "pch.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceMeshPart.h"
@@ -281,6 +283,35 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief 칸(@p query 의 key — `<칸>.<매개변수>`, 예: `Head._color`)에 소켓으로 붙인 첫 부품의 머티리얼 인스턴스가 지금 가진 그 매개변수의 글입니다(덮어쓰지 않았으면 머티리얼의 값).
+             * @details 염색이 실제 부품 인스턴스에 닿았는지 본다 — 같은 아이템을 입은 두 캐릭터 · 풀에서 다시 꺼낸 부품이 앞 인스턴스의 색을 남기지 않는지(`sameAs` · `differsFrom`).
+             */
+            [[nodiscard]] static bool readPartMaterial( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CharacterAppearanceComponent* pAppearance = findWatchTarget( query, outValue );
+                if ( pAppearance == nullptr )
+                    return false;
+                const size_t dot = query._key.find( '.' );
+                if ( dot == string_view::npos )
+                {
+                    outValue.setText( "key must be '<slot>.<material parameter>'" );
+                    return false;
+                }
+                const GameObjectHandle  handle    = pAppearance->findSlotPartObject( hashed_string( query._key.substr( 0, dot ) ) );
+                const GameObject*       pPart     = query._pManager != nullptr ? query._pManager->resolveGameObject( handle ) : nullptr;
+                const MeshComponent*    pMesh     = pPart != nullptr ? pPart->getComponent<MeshComponent>() : nullptr;
+                const MaterialInstance* pInstance = pMesh != nullptr ? pMesh->getMaterialInstance().get() : nullptr;
+                string                  text;
+                if ( pInstance == nullptr || pInstance->getParameter( hashed_string( query._key.substr( dot + 1 ) ), text ) == false )
+                {
+                    outValue.setText( "the slot has no part with a material instance holding that parameter" );
+                    return false;
+                }
+                outValue.setText( text.c_str() );
+                return true;
+            }
+
             /** @brief 구운 · 합친 메시 캐시가 내준 찾기 수(누적)입니다 — 같은 차림으로 되돌리면 오른다. */
             [[nodiscard]] static bool readBakedMeshHits( const GameObjectManager* pManager, float64& outValue )
             {
@@ -319,6 +350,8 @@ namespace sw
                                &AppearanceWatchesInternal::readSocketOffset, true, true );
     SW_AUTOMATION_QUERY_WATCH( appearanceSlotPartOffset, "Appearance.SlotPartOffset", "World offset from the character to the first socket part of the slot named by key '<slot>.<x|y|z>'",
                                &AppearanceWatchesInternal::readSlotPartOffset, true, true );
+    SW_AUTOMATION_QUERY_WATCH( appearancePartMaterial, "Appearance.PartMaterial", "Material instance parameter of the slot's first socket part, key '<slot>.<parameter>' (as text)",
+                               &AppearanceWatchesInternal::readPartMaterial, true, true );
     SW_AUTOMATION_WATCH( appearanceBakedMeshHits, "Appearance.BakedMeshHits", "Baked or merged appearance mesh lookups the cache served (cumulative)",
                          &AppearanceWatchesInternal::readBakedMeshHits );
     SW_AUTOMATION_WATCH( appearanceBakedMeshEntries, "Appearance.BakedMeshEntries", "Outfits the baked appearance mesh cache holds now", &AppearanceWatchesInternal::readBakedMeshEntries );

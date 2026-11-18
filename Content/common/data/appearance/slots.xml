@@ -7,5 +7,6 @@
   <Slot name="Back"/>
   <Slot name="MainHand" accept="Weapon"/>
   <Slot name="OffHand" accept="Shield"/>
+  <Slot name="Feet"/>
   <Occupancy id="TwoHanded" slots="MainHand,OffHand"/>
 </SlotCatalog>
