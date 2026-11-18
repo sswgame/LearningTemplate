@@ -1159,8 +1159,8 @@ namespace sw
         RHITransferFenceQueue<VulkanTransferJob> _transferFenceQueue;
         /// @brief 끝나지 않은 전송이 쓰는 텍스처의 해제입니다. 키는 전송 시리얼이고, 워터마크가 지나면 그때의 다음 프레임 펜스 뒤로 `_releaseQueue` 에 넘어간다(계약 6).
         RHIReleaseQueue   _transferReleaseQueue;
-        VulkanStagingRing _uploadRing;   ///< 업로드 스테이징(`gv_rhiStagingRingMegabytes`)
-        VulkanStagingRing _readbackRing; ///< 되읽기 스테이징(`gv_rhiReadbackRingMegabytes`)
+        VulkanStagingRing _uploadRing;   ///< 업로드 스테이징(`_rhi._stagingRingMegabytes`)
+        VulkanStagingRing _readbackRing; ///< 되읽기 스테이징(`_rhi._readbackRingMegabytes`)
         /**
          * @brief 텍스처 전송의 기록과 제출을 직렬화합니다. 전송 커맨드 풀, 전송이 바꾸는 레이아웃 기록의 순서를 지킨다.
          * @details 잡는 순서는 `_transferMutex` → `_queueMutex` → `_transferFenceQueue` 이다(레이아웃 기록은 레코드의 원자값이라 락이 없다). 링 할당과 소스 복사는 이 락 밖에서 한다.

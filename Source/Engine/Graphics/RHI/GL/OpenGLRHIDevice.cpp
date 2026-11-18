@@ -362,7 +362,7 @@ namespace sw
         _height = desc._height;
         _swapChain.setSize( desc._width, desc._height );
         if ( desc._bSoftwareAdapter )
-            SW_LOG_WARNING_ID( "OpenGL.GvRhiSoftwareAdapterIgnoredOpenGL", "gv_rhiSoftwareAdapter is ignored on OpenGL (the driver decides)" );
+            SW_LOG_WARNING_ID( "OpenGL.SoftwareAdapterIgnored", "_rhi._bSoftwareAdapter is ignored on OpenGL (the driver decides)" );
         // GL 에는 자원의 할당 크기를 물을 API 가 없다. 추적기는 서술(버퍼 크기 · 텍스처 서술)로 계산한 논리 크기다.
         getMemoryTracker().setSizeBasis( RHIMemorySizeBasis::Logical );
 
@@ -623,7 +623,7 @@ namespace sw
     {
         if ( capacityBytes == 0 )
         {
-            SW_LOG_ERROR_ID( "OpenGL.OpenGLBackendNeedsStaging", "The OpenGL backend needs a staging ring capacity (gv_rhiStagingRingMegabytes must be positive)" );
+            SW_LOG_ERROR_ID( "OpenGL.OpenGLBackendNeedsStaging", "The OpenGL backend needs a staging ring capacity (_rhi._stagingRingMegabytes must be positive)" );
             return false;
         }
         // 영속 매핑(glBufferStorage + GL_MAP_PERSISTENT_BIT)은 GL 4.4 코어다(glad 는 4.4 미만 컨텍스트에서 이 포인터를 채우지 않는다). 없으면 링을 두지 않고
@@ -638,7 +638,7 @@ namespace sw
         uint8* pMapped = createPersistentRingBuffer( capacityBytes, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, _stagingRingBuffer );
         if ( pMapped == nullptr )
         {
-            SW_LOG_ERROR_ID( "OpenGL.OpenGLStagingRingBytes", "The OpenGL staging ring (%# bytes) could not be created or mapped (gv_rhiStagingRingMegabytes)", capacityBytes );
+            SW_LOG_ERROR_ID( "OpenGL.OpenGLStagingRingBytes", "The OpenGL staging ring (%# bytes) could not be created or mapped (_rhi._stagingRingMegabytes)", capacityBytes );
             return false;
         }
 
@@ -652,7 +652,7 @@ namespace sw
     {
         if ( capacityBytes == 0 )
         {
-            SW_LOG_ERROR_ID( "OpenGL.OpenGLBackendNeedsReadback", "The OpenGL backend needs a readback ring capacity (gv_rhiReadbackRingMegabytes must be positive)" );
+            SW_LOG_ERROR_ID( "OpenGL.OpenGLBackendNeedsReadback", "The OpenGL backend needs a readback ring capacity (_rhi._readbackRingMegabytes must be positive)" );
             return false;
         }
         // 업로드 링과 같은 GL 4.4 조건이다. 없으면 텍스처 되읽기를 모두 Rejected 로 돌려준다 — 컨텍스트를 쥔 채 동기로 읽는 두 번째 경로를 두지 않는다.
@@ -666,7 +666,7 @@ namespace sw
         uint8* pMapped = createPersistentRingBuffer( capacityBytes, GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, _readbackRingBuffer );
         if ( pMapped == nullptr )
         {
-            SW_LOG_ERROR_ID( "OpenGL.OpenGLReadbackRingBytes", "The OpenGL readback ring (%# bytes) could not be created or mapped (gv_rhiReadbackRingMegabytes)", capacityBytes );
+            SW_LOG_ERROR_ID( "OpenGL.OpenGLReadbackRingBytes", "The OpenGL readback ring (%# bytes) could not be created or mapped (_rhi._readbackRingMegabytes)", capacityBytes );
             return false;
         }
 

@@ -476,7 +476,6 @@
     "Source/Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.cpp": {"integer": 1},
     "Source/Engine/Graphics/RHI/GL/Platform/EGLPlatformContext.cpp": {"integer": 1},
     "Source/Engine/Graphics/RHI/GL/Platform/WGLPlatformContext.cpp": {"integer": 2},
-    "Source/Engine/Graphics/RHI/IRHIDevice.cpp": {"integer": 4},
     "Source/Engine/Graphics/RHI/IRHIResourceFactory.h": {"integer": 1},
     "Source/Engine/Graphics/RHI/RHIDescriptors.h": {"integer": 2},
     "Source/Engine/Graphics/RHI/RHIEnums.h": {"integer": 13},

@@ -907,7 +907,7 @@ namespace sw
         static constexpr uint32 kBreadcrumbQueueCount = 2;
         /**
          * @brief 큐 하나의 GPU 브레드크럼 버퍼입니다(`IRHICommandList::writeBreadcrumb`) - 읽기 힙의 uint32 두 칸 버퍼를 영속 매핑해 두고 `WriteBufferImmediate` 가 패스 id 를 쓴다(시작 MARKER_IN · 끝 MARKER_OUT).
-         * @details 디바이스를 잃은 뒤에도 CPU 가 이 매핑으로 마지막으로 닿은 패스를 읽는다(`readLastBreadcrumbs`). 만들지 못했거나 `-gv_gpuBreadcrumbs` 가 꺼졌으면 주소가 0 이다.
+         * @details 디바이스를 잃은 뒤에도 CPU 가 이 매핑으로 마지막으로 닿은 패스를 읽는다(`readLastBreadcrumbs`). 만들지 못했거나 `-rhi-breadcrumbs`(`_rhi._gpuBreadcrumbs`)가 꺼졌으면 주소가 0 이다.
          *          **큐마다 따로다** — 한 버퍼를 두 큐가 쓰면 서로 기다리지 않는 쓰기라 디버그 레이어가 큐 사이 경합(id 1047)으로 막았다(같은 버퍼의 다른 칸이어도 자원 단위로 본다).
          */
         struct BreadcrumbTrack
@@ -965,7 +965,7 @@ namespace sw
         mutex _transferSubmitMutex;
         /// @brief 제출 순서대로 쌓인 전송 작업입니다. 전송 펜스가 앞에서부터 연속으로 지난 만큼 워터마크를 올립니다(`retireCompletedTransfers`).
         RHITransferFenceQueue<D3D12TransferJob> _transferFenceQueue;
-        /// @brief 업로드 스테이징 링입니다(`gv_rhiStagingRingMegabytes`).
+        /// @brief 업로드 스테이징 링입니다(`_rhi._stagingRingMegabytes`).
         D3D12StagingRing _uploadRing;
         D3D12StagingRing _readbackRing; ///< 텍스처 되읽기 도착지(READBACK 힙). 예전에는 되읽기마다 읽기 버퍼를 새로 만들었다
         /// @brief 놀고 있는 전송 작업 목록입니다. 펜스 줄의 회수 콜백 안에서도 잡는 잎 락(`_transferJobMutex`)이 지킵니다.

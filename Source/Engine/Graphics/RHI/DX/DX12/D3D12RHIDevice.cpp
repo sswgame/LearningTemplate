@@ -673,7 +673,7 @@ namespace sw
             SW_LOG_WARNING_ID( "D3D12.GPUBasedValidationWithoutLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but this build has no D3D12 debug layer - ignored" );
     #endif
         // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 **전에** 켜야 한다. 켤지는 EngineConfig `_rhi._dred`(배포가 아닌 구성 기본 켬)와
-        // `-rhi-dred` 가 정한다 — 배포 구성도 인자로 켠다(언리얼 `-gpucrashdebugging`). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`, `-gv_gpuBreadcrumbs`)가 싣고,
+        // `-rhi-dred` 가 정한다 — 배포 구성도 인자로 켠다(언리얼 `-gpucrashdebugging`). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`, `-rhi-breadcrumbs`)가 싣고,
         // DRED 는 명령 종류별 진행과 폴트 주소를 싣는다.
         _bDRED = desc._bDRED ? SW_TRUE : SW_FALSE;
         if ( desc._bDRED )
@@ -691,11 +691,11 @@ namespace sw
         if ( FAILED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
             return false;
 
-        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(gv_rhiSoftwareAdapter).
+        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(_rhi._bSoftwareAdapter).
         Microsoft::WRL::ComPtr<IDXGIAdapter1> softwareAdapter;
         if ( desc._bSoftwareAdapter && FAILED( factory->EnumWarpAdapter( IID_PPV_ARGS( softwareAdapter.GetAddressOf() ) ) ) )
         {
-            SW_LOG_ERROR_ID( "D3D12.WARPAdapterNotAvailable", "WARP adapter is not available (gv_rhiSoftwareAdapter)" );
+            SW_LOG_ERROR_ID( "D3D12.WARPAdapterNotAvailable", "WARP adapter is not available (_rhi._bSoftwareAdapter)" );
             return false;
         }
 
@@ -922,7 +922,7 @@ namespace sw
 
     void D3D12RHIDevice::createBreadcrumbBuffer()
     {
-        if ( GPUBreadcrumbs::isEnabled() == false || _device == nullptr )
+        if ( isGPUBreadcrumbsEnabled() == false || _device == nullptr )
             return;
         // 큐마다 읽기 힙(CPU 가 읽는 시스템 메모리) uint32 둘 — [0] 시작 표지 · [1] 끝 표지. GPU 가 소실 중에 쓴 값이 소실 뒤에도 CPU 에서 읽힌다. 읽기 힙 버퍼의 상태는 COPY_DEST 로 고정이다.
         const D3D12_HEAP_PROPERTIES heapProperties = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
@@ -2236,7 +2236,7 @@ namespace sw
     {
         if ( desc._stagingRingBytes == 0 || desc._readbackRingBytes == 0 )
         {
-            SW_LOG_ERROR_ID( "D3D12.D3D12BackendNeedsStaging", "The D3D12 backend needs staging and readback ring capacities (gv_rhiStagingRingMegabytes · gv_rhiReadbackRingMegabytes must be positive)" );
+            SW_LOG_ERROR_ID( "D3D12.D3D12BackendNeedsStaging", "The D3D12 backend needs staging and readback ring capacities (_rhi._stagingRingMegabytes · _rhi._readbackRingMegabytes must be positive)" );
             return false;
         }
         return createStagingRing( _uploadRing, D3D12_HEAP_TYPE_UPLOAD, desc._stagingRingBytes, desc._stagingSoloMaxBytes ) &&
@@ -2292,7 +2292,7 @@ namespace sw
         const bool bCreated = heapType == D3D12_HEAP_TYPE_READBACK ? createMappedReadbackBuffer( sizeBytes, outBuffer, pMapped ) : createMappedUploadBuffer( sizeBytes, outBuffer, pMapped );
         if ( bCreated == false )
         {
-            SW_LOG_ERROR_ID( "D3D12.FailedCreateMapD3D12", "Failed to create or map the D3D12 staging upload buffer (%# bytes, gv_rhiStagingRingMegabytes · gv_rhiStagingSingleMaxMegabytes)", sizeBytes );
+            SW_LOG_ERROR_ID( "D3D12.FailedCreateMapD3D12", "Failed to create or map the D3D12 staging upload buffer (%# bytes, _rhi._stagingRingMegabytes · _rhi._stagingSingleMaxMegabytes)", sizeBytes );
             return false;
         }
         pOutMapped = static_cast<uint8*>( pMapped );

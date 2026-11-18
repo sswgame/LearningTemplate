@@ -235,8 +235,12 @@ SW_REGISTER_ARGUMENT( RENDERDOC, false, false, "renderdoc" )
 SW_REGISTER_ARGUMENT( RHI_VALIDATION, false, false, "rhi-validation" )
 
 // D3D12 DRED(자동 브레드크럼 · 페이지 폴트 — 장치 소실 뒤 명령 진행과 폴트 주소)를 켠다(`-rhi-dred=0` 은 끈다) — EngineConfig `_rhi._dred` 를 이긴다. 장치를 만들 때 한 번 읽는다.
-// 배포 구성에서도 듣는다(언리얼 `-gpucrashdebugging`). 패스 표지(`-gv_gpuBreadcrumbs`)와는 따로다
+// 배포 구성에서도 듣는다(언리얼 `-gpucrashdebugging`). 패스 표지(`-rhi-breadcrumbs`)와는 따로다
 SW_REGISTER_ARGUMENT( RHI_DRED, false, false, "rhi-dred" )
+
+// GPU 브레드크럼(패스마다 GPU 표지 · Vulkan 체크포인트 — 장치 소실 뒤 마지막 패스 이름)을 켠다(`-rhi-breadcrumbs=0` 은 끈다) — EngineConfig `_rhi._gpuBreadcrumbs` 를 이긴다.
+// 체크포인트 확장은 장치를 만들기 전에만 켤 수 있어 장치를 만들 때 한 번 읽는다. 배포 구성에서도 듣는다(언리얼 `-gpucrashdebugging`)
+SW_REGISTER_ARGUMENT( RHI_BREADCRUMBS, false, false, "rhi-breadcrumbs" )
 
 // 교착 탐지기를 켜고 `sw::mutex` 잠금 순서를 추적한다(느리다). 코어 범위가 설 때 한 번 읽고 실행 중에 끄지 않는다. 배포 구성에는 없다
 SW_REGISTER_ARGUMENT( DEADLOCK_DETECTION, false, false, "deadlock-detection" )

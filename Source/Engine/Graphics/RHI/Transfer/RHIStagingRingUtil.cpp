@@ -15,7 +15,7 @@ namespace sw
             tracker.free( span );
         if ( result == RHIStagingAllocateResult::TooLarge )
         {
-            SW_LOG_ERROR_ID( "RHIStagingRingUtil.BytesExceedByteStaging", "%#: %# bytes exceed the %#-byte %# staging ring and the %#-byte single transfer limit; raise gv_rhiStagingSingleMaxMegabytes to transfer it", pCaller,
+            SW_LOG_ERROR_ID( "RHIStagingRingUtil.BytesExceedByteStaging", "%#: %# bytes exceed the %#-byte %# staging ring and the %#-byte single transfer limit; raise _rhi._stagingSingleMaxMegabytes to transfer it", pCaller,
                              sizeBytes, tracker.getCapacityBytes(), pBackend, tracker.getSoloMaxBytes() );
         }
         else
