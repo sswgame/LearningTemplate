@@ -66,6 +66,8 @@ namespace sw
 
     void CustomizationValueSet::overlay( const CustomizationValueSet& other )
     {
+        if ( _listValue.empty() )
+            _schemaVersion = other._schemaVersion;
         for ( const CustomizationValue& value : other._listValue )
         {
             setValue( value );
@@ -74,7 +76,9 @@ namespace sw
 
     bool CustomizationValueSet::isEquivalent( const CustomizationValueSet& other ) const
     {
-        if ( _listValue.size() != other._listValue.size() )
+        // 판을 찍지 않은 값(0)은 지금 판의 값이다 — 찍은 값과 판을 견주지 않는다(편집기 되돌리기 · 장비 비교가 판 찍기만으로 달라지지 않게)
+        const bool bVersionsMatch = _schemaVersion == other._schemaVersion || _schemaVersion == kUnversionedSchemaVersion || other._schemaVersion == kUnversionedSchemaVersion;
+        if ( _listValue.size() != other._listValue.size() || bVersionsMatch == false )
             return false;
         for ( const CustomizationValue& value : _listValue )
         {

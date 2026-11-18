@@ -19,6 +19,9 @@
 
 namespace sw
 {
+    class AppearanceDatabase;
+    struct CustomizationSchemaDef;
+
     /**
      * @class CharacterEquipmentComponent
      * @brief 장비 칸과 가방을 들고 같은 오브젝트의 `CharacterAppearanceComponent` 에 장비를 빌려 준다(`setEquipment`). 장비 칸의 아이템이 프리셋의 장비 구성을 덮는다.
@@ -35,7 +38,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CEQP" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; ///< 2: 아이템 칸에 꾸미기 스키마 판(`Inventory::serializeSlot`). 판 1 은 `SW_STATE_FORMAT_UPGRADE` 가 올린다
 
         CharacterEquipmentComponent();
         virtual ~CharacterEquipmentComponent() override;
@@ -49,8 +52,19 @@ namespace sw
         EquipResult equipFromBag( int32 bagSlot, const hashed_string& slot );
         /** @brief 장비 칸을 벗겨 가방에 넣습니다(함께 벗겨진 것도). 가방에 자리가 없거나 거부되면 그대로 두고 false 입니다. */
         [[nodiscard]] bool unequipToBag( const hashed_string& slot );
-        /** @brief 낀 아이템 인스턴스의 꾸미기 값 하나를 바꿉니다(염색). 칸이 비었으면 false 입니다. 값의 뜻은 그 아이템 외형의 스키마가 정한다. */
+        /**
+         * @brief 낀 아이템 인스턴스의 꾸미기 값 하나를 바꿉니다(염색). 값의 뜻은 그 아이템 외형의 스키마가 정한다.
+         * @details 인스턴스의 값이 옛 판(옛 세이브)이면 스키마로 지금 판까지 올린 뒤 넣는다(`CustomizationSchemaDef::applyValue`). 칸이 비었거나, 아이템에 스키마가 없거나,
+         *          스키마가 모르는 매개변수이거나, 값을 올리지 못하면(더 새 판) false 이고 인스턴스는 그대로입니다.
+         */
         [[nodiscard]] bool setEquippedValue( const hashed_string& slot, const CustomizationValue& value );
+        /** @brief 아이템 @p itemID 의 외형이 쓰는 꾸미기 스키마입니다(아이템 → 외형 → 스키마). 어느 하나라도 없으면 nullptr 입니다. */
+        static const CustomizationSchemaDef* findItemSchema( const AppearanceDatabase& database, const hashed_string& itemID );
+        /**
+         * @brief 세이브에서 읽은 아이템 인스턴스의 꾸미기 값을 그 아이템 스키마의 지금 판으로 올립니다 — 세이브 · 판 올림 길의 입구다(`setEquippedValue` 의 모르는 매개변수 거절을 거치지 않는다).
+         * @details 지금 판에 뜻이 없는 값은 그 값만 빼고 오류 로그를 남긴다(나머지는 읽는다). 더 새 판(다운그레이드)이면 알리고 false 다 — 부르는 쪽은 읽기를 거절하고 세이브는 그대로다.
+         */
+        [[nodiscard]] static bool upgradeSavedItem( const AppearanceDatabase& database, InventorySlot& inoutItem );
 
         const Equipment& getEquipment() const { return _equipment; }
         const Inventory& getBag() const { return _bag; }

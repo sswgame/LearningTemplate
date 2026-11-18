@@ -173,22 +173,19 @@ SW_TEST_CASE( InventoryTest, ShrunkSlotCountMovesExtraItemsToOverflow )
 }
 
 /**
- * @brief [InventoryTest] 판 1(넘침 목록 없음) 구간 본문을 판 올림 사슬(INVT 1 → 2)로 올려 읽는다 — 슬롯이 그대로다
+ * @brief [InventoryTest] 판 1(넘침 목록 없음) 구간 본문을 판 올림 사슬(INVT 1 → 2 → 3)로 올려 읽는다 — 슬롯이 그대로다
  */
 SW_TEST_CASE( InventoryTest, UpgradesVersionOneSectionBody )
 {
     sw::ItemCatalog catalog;
     loadCatalog( catalog );
-    sw::Inventory original;
-    SW_REQUIRE_TRUE( original.initialize( &catalog, 2, 50.0f ) );
-    SW_REQUIRE_EQUAL( 7, original.addItem( kArrow, 7 ) );
-    sw::Archive written;
-    original.writeState( written );
-
-    // 판 1 바이트: 최대 무게(4) 뒤의 넘침 목록 개수(4)가 없다
+    // 판 1 바이트를 손으로 쓴다: 최대 무게 · 슬롯 2(화살 7, 빈 칸) — 넘침 목록 개수와 슬롯의 꾸미기 스키마 판 칸이 없다
     sw::Archive versionOne;
-    versionOne.writeBytes( written.getData(), 4 );
-    versionOne.writeBytes( written.getData() + 8, written.getSize() - 8 );
+    versionOne << 50.0f << uint32{ 2 };
+    sw::StateIO::writeName( versionOne, kArrow );
+    versionOne << int32{ 7 } << 0.0f << 0.0f << uint32{ 0 } << uint32{ 0 }; // 개수 · 내구도 · 피해 · 꾸미기 수 · 뗀 부품 수
+    sw::StateIO::writeName( versionOne, sw::hashed_string{} );
+    versionOne << int32{ 0 } << 0.0f << 0.0f << uint32{ 0 } << uint32{ 0 };
     sw::Archive body( versionOne.getData(), versionOne.getSize() );
     SW_REQUIRE_TRUE( sw::StateIO::upgradeSectionBody( sw::Inventory::kStateTag, 1, sw::Inventory::kStateVersion, body ) );
 

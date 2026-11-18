@@ -6,6 +6,7 @@
   ⑴ A 의 투구만 염색 — 같은 투구를 쓴 B 는 기본색 그대로(인스턴스가 번지지 않는다), ⑵ 같은 정의의 기본색 인스턴스와 번갈아 바꿔 껴도(소켓 부품 풀이 부품을 다시 꺼낸다)
   색이 정확히 갈리고 기본색 사진이 처음과 같다, ⑶ 벗어 가방에 넣었다 다시 껴도 인스턴스 색이 남는다, ⑷ 게임 세이브 · 불러오기 뒤에도 낀 것 · 가방의 것(입지 않은 염색 아이템)의
   색과 캐릭터 꾸미기 값(머리 모양)이 같다 — 세이브 뒤 바꿔 두어(사진이 다른지 먼저 본다) 불러오기가 정말 되돌렸는지 가린다.
+  ⑸ 옛 판 세이브 표본(꾸미기 스키마 판 칸이 없던 CEQP 판 1 — 손으로 쓴 바이트)을 불러도 판 올림 사슬(CEQP 1 → 2, 가방 INVT 2 → 3)을 지나 같은 색 · 같은 사진이다.
   가방 칸: 껴 있던 것은 비워진 앞 칸으로 돌아가므로 교체 뒤 벗은 인스턴스는 0 칸에 있다(Equipment.BagItem 이 확인한다).
   골든은 통합 담당이 뜬다(-scenario-record-missing-golden).
   실행: App -scenario=game/shooter3d/automation/showcase/equipmentdye.scenario.xml -unattended
@@ -121,5 +122,26 @@
 	<!-- 가방의 파란 투구를 껴 본다 — 입지 않은 채 실린 색이 그대로다 -->
 	<DevCommand line="equipment.equip KnightB 0 Head"/>
 	<WaitUntil watch="Appearance.PartMaterial" target="KnightB" key="Head._color" sameAs="blueColor" timeoutFrames="30"/>
+
+	<!-- ⑸ 옛 판 세이브 표본 — 먼저 B 의 투구를 지금 판으로 붉게 칠해 사진을 뜬다(기준) -->
+	<DevCommand line="equipment.dye KnightB Head Tint 0.9 0.15 0.1"/>
+	<WaitUntil watch="Appearance.PartMaterial" target="KnightB" key="Head._color" sameAs="redColor" timeoutFrames="30"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="KnightB" equals="1" timeoutFrames="300"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="eqdye_bred.ppm"/>
+	<!-- 다시 파랗게 칠해 둔 뒤(불러오기가 정말 바꿨는지 가린다) 판 1 장비 상태를 건다: 낀 칸 Head = 붉게 염색한 투구(Tint 0.9 0.15 0.1, 판 칸 없음), 가방 = 기본색 투구 하나.
+	     바이트: 'CEQP' · 판 1 · 낀 칸 1(칸 이름 · 슬롯: 이름 · 개수 · 내구도 · 피해 · 꾸미기 수 + 값 · 뗀 부품 수) · 가방(인벤토리 판 2: 최대 무게 · 넘침 0 · 슬롯 1) -->
+	<DevCommand line="equipment.dye KnightB Head Tint 0.1 0.2 0.9"/>
+	<WaitUntil watch="Appearance.PartMaterial" target="KnightB" key="Head._color" sameAs="blueColor" timeoutFrames="30"/>
+	<DevCommand line="equipment.restore KnightB Q0VRUAEAAAABAAAABAAAAEhlYWQUAAAAaGVsbWV0X2tuaWdodF90aW50ZWQBAAAAAAAAAAAAAAABAAAABAAAAFRpbnQAAAAAZmZmP5qZGT7NzMw9AACAPwAAAAAAAAAAAAAAAAEAAAAUAAAAaGVsbWV0X2tuaWdodF90aW50ZWQBAAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
+	<WaitUntil watch="Appearance.PartMaterial" target="KnightB" key="Head._color" sameAs="redColor" timeoutFrames="30"/>
+	<Expect watch="Equipment.Worn" target="KnightB" key="Head" is="helmet_knight_tinted"/>
+	<Expect watch="Equipment.BagItem" target="KnightB" key="0" is="helmet_knight_tinted"/> <!-- 가방의 기본색 인스턴스(인스턴스 상태 없음) -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="KnightB" equals="1" timeoutFrames="300"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="eqdye_brestored.ppm"/>
+	<ExpectImagesDiffer first="eqdye_bred.ppm" second="eqdye_brestored.ppm" minDiffering="0" maxDiffering="0.002"/>
 	<Pass/>
 </Scenario>

@@ -218,6 +218,11 @@ add_test(NAME Scripts.ApiDiff
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_api_diff.py")
 set_tests_properties(Scripts.ApiDiff PROPERTIES LABELS nogpu TIMEOUT 60)
 
+# 꾸미기 스키마 출시 대조(customization-release) — 추가만은 통과, 단계 없는 제거는 실패하고 --fix 가 적는다, 이름 · 종류 바꾸기는 명시 단계 없이 실패.
+add_test(NAME Scripts.CustomizationRelease
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_customization_release.py")
+set_tests_properties(Scripts.CustomizationRelease PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 진 단계 다시 돌기(scenario_bisect --rerun-failed)가 고르는 백엔드 보고 폴더 — 여러 체인에 든 단계를 실은 다른 체인의 나중 실행을 고르지 않는다.
 add_test(NAME Scripts.ScenarioBisect
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_scenario_bisect.py")

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 
+#include "Core/Encoding/Base64Util.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
@@ -11,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
@@ -26,7 +28,31 @@ namespace sw
     {
         /** @brief 장비 칸과 가방을 게임 세이브에 싣습니다(모든 게임 — 게임마다 올리지 않는다). */
         const StatefulComponentRegistrar<CharacterEquipmentComponent> s_stateRegistration{ "CharacterEquipmentComponent" };
+
+        struct CharacterEquipmentStateInternal
+        {
+            /** @brief 판 1 → 2: 낀 칸(칸 이름 + 슬롯)과 가방(인벤토리 판 2 본문)의 슬롯마다 꾸미기 스키마 판(1)을 넣는다. */
+            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
+            {
+                StateIO inOld( inOldBody );
+                StateIO outNew( outNewBody );
+                uint32  wornCount = 0;
+                inOld.count( 4 + Inventory::kUnversionedSlotMinBytes, wornCount );
+                outNew.count( 4 + Inventory::kSlotStateMinBytes, wornCount );
+                for ( uint32 index = 0; index < wornCount && inOld.isOk(); ++index )
+                {
+                    hashed_string slotName;
+                    inOld.value( slotName );
+                    outNew.value( slotName );
+                    Inventory::upgradeSlotFromUnversioned( inOld, outNew );
+                }
+                Inventory::upgradeStateFrom2( inOld, outNew );
+                return inOld.isOk() && outNew.isOk();
+            }
+        };
     } // namespace
+
+    SW_STATE_FORMAT_UPGRADE( characterEquipment1To2, "CEQP", 1, 2, &CharacterEquipmentStateInternal::upgradeStateFrom1 );
 
     CharacterEquipmentComponent::CharacterEquipmentComponent()
         : _equipment{}
@@ -98,12 +124,45 @@ namespace sw
         const InventorySlot* pWorn = _equipment.findEquipped( slot );
         if ( _bStarted == SW_FALSE || pWorn == nullptr || pWorn->isEmpty() )
             return false;
-        InventorySlot dyed = *pWorn;
-        dyed._customization.setValue( value );
+        const AppearanceDatabase*     pDatabase = game::findSubsystem<AppearanceDatabase>();
+        const CustomizationSchemaDef* pSchema   = pDatabase != nullptr ? findItemSchema( *pDatabase, pWorn->_itemID ) : nullptr;
+        InventorySlot                 dyed      = *pWorn;
+        CustomizationValueSet         values    = dyed.getCustomization();
+        if ( pSchema == nullptr || pSchema->applyValue( value, false, values ) == false || dyed.setCustomization( values ) == false )
+            return false;
         if ( _equipment.setEquippedInstance( slot, dyed ) == false )
             return false;
         updateAppearance();
         return true;
+    }
+
+    const CustomizationSchemaDef* CharacterEquipmentComponent::findItemSchema( const AppearanceDatabase& database, const hashed_string& itemID )
+    {
+        const ItemDef*       pItem   = database.getItemCatalog() != nullptr ? database.getItemCatalog()->find( itemID ) : nullptr;
+        const ItemVisualDef* pVisual = pItem != nullptr ? database.getVisuals().findVisual( pItem->_visualID ) : nullptr;
+        return pVisual != nullptr ? database.getSchemas().findSchema( pVisual->_customization ) : nullptr;
+    }
+
+    bool CharacterEquipmentComponent::upgradeSavedItem( const AppearanceDatabase& database, InventorySlot& inoutItem )
+    {
+        const CustomizationSchemaDef* pSchema = findItemSchema( database, inoutItem._itemID );
+        if ( pSchema == nullptr || inoutItem.getCustomization().isEmpty() )
+            return true; // 스키마가 없는 아이템의 값은 그릴 때도 쓰이지 않는다
+        CustomizationValueSet upgraded;
+        vector<hashed_string> listDropped;
+        const expected<void>  result = pSchema->migrate( inoutItem.getCustomization(), upgraded, &listDropped );
+        if ( result.has_value() == false )
+        {
+            SW_LOG_WARNING_ID( "CharacterEquipment.SavedItemFromNewerSchema", "Saved '%#' has customization of schema '%#' version %# newer than this content (%#) - the equipment state is not loaded", inoutItem._itemID.c_str(),
+                               pSchema->_id.c_str(), inoutItem.getCustomization().getSchemaVersion(), pSchema->getVersion() );
+            return false;
+        }
+        for ( const hashed_string& dropped : listDropped )
+        {
+            SW_LOG_ERROR_ID( "CharacterEquipment.SavedValueDropped", "Saved '%#' value '%#' has no meaning in schema '%#' version %# - only that value is dropped (a schema change without a migration step)",
+                             inoutItem._itemID.c_str(), dropped.c_str(), pSchema->_id.c_str(), pSchema->getVersion() );
+        }
+        return inoutItem.setCustomization( upgraded );
     }
 
     void CharacterEquipmentComponent::updateAppearance()
@@ -151,6 +210,23 @@ namespace sw
         io.value( bag );
         if ( io.isOk() == false )
             return;
+        // 읽은 인스턴스 값을 그 아이템 스키마의 지금 판으로 올린다(패치 뒤 첫 불러오기) — 뜻이 없는 값은 그 값만 빼고 알린다. 더 새 판(다운그레이드)이면 읽지 않는다.
+        if ( const AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>(); pDatabase != nullptr )
+        {
+            for ( EquipmentSlot& slot : listWorn )
+            {
+                if ( io.check( upgradeSavedItem( *pDatabase, slot._item ) ) == false )
+                    return;
+            }
+            for ( int32 bagSlot = 0; bagSlot < bag.getSlotCount(); ++bagSlot )
+            {
+                InventorySlot item = bag.getSlot( bagSlot );
+                if ( item.getCustomization().isEmpty() )
+                    continue;
+                if ( io.check( upgradeSavedItem( *pDatabase, item ) && bag.setSlotCustomization( bagSlot, item.getCustomization() ) ) == false )
+                    return;
+            }
+        }
         Equipment equipment = _equipment;
         for ( const EquipmentSlot& slot : _equipment.getSlots() )
         {
@@ -279,9 +355,7 @@ namespace sw
                 const hashed_string           slot      = hashed_string( listArgument[1] );
                 const InventorySlot*          pWorn     = pEquipment->getEquipment().findEquipped( slot );
                 const AppearanceDatabase*     pDatabase = game::findSubsystem<AppearanceDatabase>();
-                const ItemDef*                pItem     = pWorn != nullptr && pDatabase != nullptr && pDatabase->getItemCatalog() != nullptr ? pDatabase->getItemCatalog()->find( pWorn->_itemID ) : nullptr;
-                const ItemVisualDef*          pVisual   = pItem != nullptr ? pDatabase->getVisuals().findVisual( pItem->_visualID ) : nullptr;
-                const CustomizationSchemaDef* pSchema   = pVisual != nullptr ? pDatabase->getSchemas().findSchema( pVisual->_customization ) : nullptr;
+                const CustomizationSchemaDef* pSchema   = pWorn != nullptr && pDatabase != nullptr ? CharacterEquipmentComponent::findItemSchema( *pDatabase, pWorn->_itemID ) : nullptr;
                 const CustomizationParamDef*  pParam    = pSchema != nullptr ? pSchema->findParameter( hashed_string( listArgument[2] ) ) : nullptr;
                 if ( pParam == nullptr )
                 {
@@ -312,6 +386,28 @@ namespace sw
                     return false;
                 }
                 outReply = listArgument[2] + " dyed";
+                return true;
+            }
+
+            /**
+             * @brief `equipment.restore <object> <base64>` — 장비 상태 바이트(`serializeState` 가 쓴 것, base64)를 겁니다. 게임 세이브의 그 구간과 같은 길이다.
+             *        옛 판 세이브 표본(손으로 쓴 바이트)을 시나리오에서 불러 판 올림 사슬을 본다. 읽지 못하면 지금 장비를 그대로 두고 알린다.
+             */
+            static bool runRestore( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 2 )
+                    return false;
+                CharacterEquipmentComponent* pEquipment = findEquipment( listArgument[0], outReply );
+                if ( pEquipment == nullptr )
+                    return false;
+                vector<uint8> bytes;
+                if ( Base64Util::decode( listArgument[1], bytes ) == false || bytes.empty() )
+                {
+                    outReply = "the state is not base64 bytes";
+                    return false;
+                }
+                pEquipment->restoreState( std::move( bytes ) );
+                outReply = "restored the equipment state of " + listArgument[0];
                 return true;
             }
 
@@ -355,7 +451,7 @@ namespace sw
                     outValue.setText( "(empty)" );
                     return true;
                 }
-                const size_t valueCount = item._customization.getCount();
+                const size_t valueCount = item.getCustomization().getCount();
                 outValue.setText( valueCount == 0 ? string( item._itemID.c_str() ) : string( item._itemID.c_str() ) + " +" + to_string( static_cast<uint32>( valueCount ) ) );
                 return true;
             }
@@ -366,6 +462,8 @@ namespace sw
     SW_DEV_COMMAND( EquipmentEquip, "equipment.equip", "equipment.equip <object> <bagSlot> [slot]", "Wear the item instance of a bag slot (what it displaces goes to the bag)",
                     &CharacterEquipmentCommandsInternal::runEquip );
     SW_DEV_COMMAND( EquipmentUnequip, "equipment.unequip", "equipment.unequip <object> <slot>", "Take off an equipment slot into the bag", &CharacterEquipmentCommandsInternal::runUnequip );
+    SW_DEV_COMMAND( EquipmentRestore, "equipment.restore", "equipment.restore <object> <base64>", "Apply saved equipment state bytes (an older save sample upgrades on read)",
+                    &CharacterEquipmentCommandsInternal::runRestore );
     SW_DEV_COMMAND( EquipmentDye, "equipment.dye", "equipment.dye <object> <slot> <parameter> <number | r g b [a] | option>",
                     "Change one customization value (dye) of the item instance worn in a slot", &CharacterEquipmentCommandsInternal::runDye );
     SW_AUTOMATION_QUERY_WATCH( equipmentWorn, "Equipment.Worn", "Item the character's equipment wears in the slot named by key ('(empty)' when empty)",

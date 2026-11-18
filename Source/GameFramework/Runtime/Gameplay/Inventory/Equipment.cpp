@@ -19,7 +19,7 @@ namespace sw
             {
                 const InventorySlot& left  = lhs._item;
                 const InventorySlot& right = rhs._item;
-                return lhs._bSuppressed == rhs._bSuppressed && left._itemID == right._itemID && left._count == right._count && left._durability == right._durability && left._damage == right._damage && left._listDetachedPart == right._listDetachedPart && left._customization.isEquivalent( right._customization );
+                return lhs._bSuppressed == rhs._bSuppressed && left._itemID == right._itemID && left._count == right._count && left._durability == right._durability && left._damage == right._damage && left._listDetachedPart == right._listDetachedPart && left.getCustomization().isEquivalent( right.getCustomization() );
             }
 
             /** @brief 정리는 슬롯 수의 두 배 안에 끝난다. 넘으면 데이터에 순환이 있다는 뜻이다. 로드 단계에서 막지만 방어용으로 둔다. */
@@ -299,10 +299,10 @@ namespace sw
         const int32           slotIndex = *foundSlot;
         vector<EquipmentSlot> listTrial = _listSlot;
         InventorySlot&        target    = listTrial[static_cast<size_t>( slotIndex )]._item;
-        target._customization           = item._customization;
-        target._listDetachedPart        = item._listDetachedPart;
-        target._durability              = item._durability;
-        target._damage                  = item._damage;
+        (void)target.setCustomization( item.getCustomization() ); // 슬롯이 지킨 값(판이 찍혀 있다)
+        target._listDetachedPart = item._listDetachedPart;
+        target._durability       = item._durability;
+        target._damage           = item._damage;
         commitSlots( std::move( listTrial ) );
         return true;
     }

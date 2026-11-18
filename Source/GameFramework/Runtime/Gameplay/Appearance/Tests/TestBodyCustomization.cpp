@@ -219,7 +219,7 @@ SW_TEST_CASE_F( BodyCustomizationTest, PaletteSnapsToNearestSwatch )
     CustomizationValueSet given;
     given.setColor( hashed_string( "Primary" ), float4{ 0.2f, 0.15f, 0.45f, 1.0f } );
     CustomizationValueSet normalized;
-    pSchema->normalize( given, normalized, nullptr );
+    SW_REQUIRE_TRUE( pSchema->normalize( given, normalized, nullptr ).has_value() );
     const CustomizationValue* pValue = normalized.findValue( hashed_string( "Primary" ) );
     SW_REQUIRE_NOT_NULL( pValue );
     SW_EXPECT_NEAR( 0.1f, pValue->_number._x, 1.0f / 255.0f );
