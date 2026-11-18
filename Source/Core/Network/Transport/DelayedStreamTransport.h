@@ -18,27 +18,23 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Network/Transport/StreamTransportDecorator.h"
 
 namespace sw
 {
-    class SW_API DelayedStreamTransport final : public IStreamTransport
+    class SW_API DelayedStreamTransport final : public StreamTransportDecorator
     {
     public:
         /** @param pInner 감쌀 전송(소유권을 받는다). @param sendDelaySeconds 보내는 바이트마다 거는 지연(0 이상). */
         DelayedStreamTransport( unique_ptr<IStreamTransport> pInner, float64 sendDelaySeconds );
         ~DelayedStreamTransport() override;
 
-        [[nodiscard]] bool     initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override;
-        void                   shutdown() override;
-        [[nodiscard]] bool     listen( const NetAddress& bindAddress ) override { return _pInner->listen( bindAddress ); }
-        uint16                 getListenPort() const override { return _pInner->getListenPort(); }
-        StreamConnectionHandle connect( const NetAddress& remote ) override { return _pInner->connect( remote ); }
-        StreamSendResult       send( StreamConnectionHandle handle, const uint8* pData, int32 size ) override;
-        void                   close( StreamConnectionHandle handle, StreamCloseMode mode ) override;
-        void                   setReceivePaused( StreamConnectionHandle handle, bool bPaused ) override { _pInner->setReceivePaused( handle, bPaused ); }
-        int32                  pollIO( int32 timeoutMilli ) override;
-        NetAddress             getRemoteAddress( StreamConnectionHandle handle ) const override { return _pInner->getRemoteAddress( handle ); }
-        StreamTransportStats   getStats() const override { return _pInner->getStats(); }
+        // 덮어쓰지 않은 함수(listen · connect · setReceivePaused · getRemoteAddress · getStats …)는 기반이 안쪽 전송에 그대로 넘긴다.
+        [[nodiscard]] bool initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override;
+        void               shutdown() override;
+        StreamSendResult   send( StreamConnectionHandle handle, const uint8* pData, int32 size ) override;
+        void               close( StreamConnectionHandle handle, StreamCloseMode mode ) override;
+        int32              pollIO( int32 timeoutMilli ) override;
 
     private:
         /** @brief 지연을 기다리는 보내기 하나입니다. `_bClose` 이면 바이트 대신 닫기입니다(보낸 바이트보다 먼저 닫지 않게 같은 줄을 지난다). */
@@ -55,12 +51,11 @@ namespace sw
         int32 flushDue();
 
     private:
-        unique_ptr<IStreamTransport> _pInner;
-        int64                        _delayNanoseconds;
-        mutex                        _mutex;
-        deque<DelayedItem>           _listItem; ///< 지연 시각 순서(고정 지연이라 보낸 순서와 같다)
-        StopSource                   _stop;
-        uint8                        _bManualPoll;
-        sw::thread                   _timerThread;
+        int64              _delayNanoseconds;
+        mutex              _mutex;
+        deque<DelayedItem> _listItem; ///< 지연 시각 순서(고정 지연이라 보낸 순서와 같다)
+        StopSource         _stop;
+        uint8              _bManualPoll;
+        sw::thread         _timerThread;
     };
 } // namespace sw

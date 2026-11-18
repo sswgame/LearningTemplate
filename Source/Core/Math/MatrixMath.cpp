@@ -24,7 +24,7 @@ namespace sw
              * @details 앞이 0 이면 +Z, 위가 0 이면 +Y 로 둡니다. 앞과 위가 나란하면(바로 위나 아래를 볼 때) 외적이 0 이 되므로 다른 위 방향으로
              *          다시 잡습니다. 두 함수가 함께 씁니다 — 한쪽의 폴백만 고치면 카메라와 오브젝트가 같은 방향에서 서로 다르게 돌게 됩니다.
              */
-            static void buildBasis( const float3& forward, const float3& up, float3& outRight, float3& outUp, float3& outForward ) noexcept
+            static void computeBasisFromForwardUp( const float3& forward, const float3& up, float3& outRight, float3& outUp, float3& outForward ) noexcept
             {
                 float3 zAxis = forward.normalize();
                 if ( zAxis.getLengthSquared() < MathUtil::kEpsilon )
@@ -499,7 +499,7 @@ namespace sw
         float3 xAxis{};
         float3 yAxis{};
         float3 zAxis{};
-        MatrixMathInternal::buildBasis( target - position, up, xAxis, yAxis, zAxis );
+        MatrixMathInternal::computeBasisFromForwardUp( target - position, up, xAxis, yAxis, zAxis );
 
         return float4x4{ xAxis._x, yAxis._x, zAxis._x, 0.f, xAxis._y, yAxis._y, zAxis._y, 0.f, xAxis._z, yAxis._z, zAxis._z, 0.f, -xAxis.dot( position ), -yAxis.dot( position ), -zAxis.dot( position ), 1.f };
     }
@@ -509,7 +509,7 @@ namespace sw
         float3 xAxis{};
         float3 yAxis{};
         float3 zAxis{};
-        MatrixMathInternal::buildBasis( forward, up, xAxis, yAxis, zAxis );
+        MatrixMathInternal::computeBasisFromForwardUp( forward, up, xAxis, yAxis, zAxis );
 
         return float4x4{ xAxis._x, xAxis._y, xAxis._z, 0.f, yAxis._x, yAxis._y, yAxis._z, 0.f, zAxis._x, zAxis._y, zAxis._z, 0.f, position._x, position._y, position._z, 1.f };
     }

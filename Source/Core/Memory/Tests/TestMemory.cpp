@@ -6,48 +6,10 @@
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/PoolAllocator.h"
-#include "Core/Task/LockFreeObjectPool.h"
 #include "Core/Testing/TestFramework.h"
 
 #include <mutex>
 #include <thread>
-
-// ------------------------------------------------------------------------------
-// 2) LockFreeObjectPool — 획득·반납
-// ------------------------------------------------------------------------------
-/**
- * @brief [MemoryTest] LockFreeObjectPool 동작
- */
-SW_TEST_CASE( MemoryTest, LockFreeObjectPoolOperations )
-{
-    struct PooledItem
-    {
-        int32   _id{ 0 };
-        float32 _value{ 0.0f };
-        PooledItem( int32 id, float32 val )
-            : _id{ id }
-            , _value{ val }
-        {
-        }
-    };
-
-    sw::LockFreeObjectPool<PooledItem, 16> pool;
-    SW_EXPECT_EQUAL( 0u, pool.getActiveCount() );
-    SW_EXPECT_EQUAL( 16u, pool.getAvailableCount() );
-
-    PooledItem* item1 = pool.acquire( 10, 3.14f );
-    SW_EXPECT_TRUE( item1 != nullptr );
-    if ( item1 != nullptr )
-    {
-        SW_EXPECT_EQUAL( 10, item1->_id );
-        SW_EXPECT_NEAR( 3.14f, item1->_value, 1e-4f );
-    }
-    SW_EXPECT_EQUAL( 1u, pool.getActiveCount() );
-
-    pool.release( item1 );
-    SW_EXPECT_EQUAL( 0u, pool.getActiveCount() );
-    SW_EXPECT_EQUAL( 16u, pool.getAvailableCount() );
-}
 
 /**
  * @brief [MemoryTest] Memory 기본 할당/해제, SIMD 정렬 할당(allocateAligned) 및 메모리 유틸 검증

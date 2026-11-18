@@ -1,6 +1,6 @@
 /**
  * @file FileUtil.h
- * @brief 경로 · 파일 I/O · 동적 라이브러리 유틸리티입니다. 파일 대화상자는 `FileDialog`(편집기 빌드만).
+ * @brief 경로 · 파일 I/O 유틸리티입니다. 동적 라이브러리는 `ModuleLibraryUtil`(Core/Module), 파일 대화상자는 `FileDialog`(편집기 빌드만).
  */
 #pragma once
 #include "Core/Concurrency/StopToken.h"
@@ -84,10 +84,10 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) FileUtil — 경로 분해 · 정규화 · 존재 확인 · I/O · 다이얼로그 · DLL
+    // 2) FileUtil — 경로 분해 · 정규화 · 존재 확인 · I/O
     //    전부 static. 맵 키에는 normalizePath, 파일 열기에는 normalizeSeparators 를 쓴다
     // ------------------------------------------------------------------------------
-    /** @brief 경로 · 파일 · 공유 라이브러리를 다루는 정적 유틸리티입니다. */
+    /** @brief 경로 · 파일을 다루는 정적 유틸리티입니다. */
     struct SW_API FileUtil
     {
         /** @brief 전체 경로를 디렉터리와 파일 이름 뷰로 나눕니다(할당 없음). */

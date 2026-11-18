@@ -7,7 +7,7 @@
 namespace sw
 {
     WebSocketAcceptTransport::WebSocketAcceptTransport( unique_ptr<IStreamTransport> pInner )
-        : _pInner{ std::move( pInner ) }
+        : StreamTransportDecorator{ std::move( pInner ) }
         , _innerHandler{ *this }
         , _pHandler{ nullptr }
         , _maxQueuedSendBytes{ StreamLimit::kDefaultMaxQueuedSendBytes }

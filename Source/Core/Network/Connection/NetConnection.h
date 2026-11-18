@@ -279,7 +279,7 @@ namespace sw
         /** @brief 순서만 메시지를 종류마다 가장 새 것 하나씩 싣습니다. 못 실은 것은 다음 패킷으로 남깁니다. */
         void writeSequencedMessages( PacketBody& body );
         /** @brief 순서만 채널 흐름 목록에서 @p kind 의 흐름을 찾고, 없으면 번호 0 으로 더합니다. */
-        static SequencedStream& findOrAddSequencedStream( vector<SequencedStream>& listStream, uint8 kind );
+        static SequencedStream& getOrCreateSequencedStream( vector<SequencedStream>& listStream, uint8 kind );
         /** @brief 비신뢰 메시지를 들어가는 만큼 싣습니다. 못 실은 것은 다음 패킷으로 남깁니다. */
         void writeUnreliableMessages( PacketBody& body );
 

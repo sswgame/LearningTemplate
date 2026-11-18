@@ -50,6 +50,20 @@ namespace
         size_t operator()( int32 ) const noexcept { return 0; }
     };
 
+    /** @brief 해시될 때마다 가리키는 수를 올리는 키입니다(`DefaultHash` 가 `computeHash()` 를 부른다) — 한 연산이 키를 몇 번 해시하는지 셉니다. */
+    struct HashCountingKey
+    {
+        int32   _value{ 0 };
+        uint32* _pHashCount{ nullptr };
+
+        size_t computeHash() const noexcept
+        {
+            ++*_pHashCount;
+            return static_cast<size_t>( _value );
+        }
+        bool operator==( const HashCountingKey& other ) const noexcept { return _value == other._value; }
+    };
+
     /** @brief '0' · '1' 리터럴을 비트셋으로 읽습니다. 읽기 실패는 테스트 실패입니다. */
     sw::DynamicBitset parseBits( const sw::string_view text )
     {
@@ -1514,6 +1528,69 @@ SW_TEST_CASE( UnorderedMapTest, ReservedInsertsDoNotAllocate )
     SW_EXPECT_EQUAL( static_cast<size_t>( kCount ), setValue.size() );
     if constexpr ( sw::test::ScopedAllocationCount::kCountsAreActive )
         SW_EXPECT_EQUAL( uint64{ 0 }, allocationCount );
+}
+
+/**
+ * @brief [UnorderedMapTest] 찾고 없으면 넣는 연산(`try_emplace` · `operator[]` · `insert` · `insert_or_assign`)은 키를 한 번만 해시한다 — 키가 있든 없든.
+ * @details `try_emplace` 가 `find` 뒤 `emplace` 로 가면 키를 두 번 해시한다(문자열 키에서 크다). 몸통(`internal::DenseHashTable::getOrCreateNode`)이
+ *          찾기와 넣기에 같은 태그를 쓴다. 버킷이 늘 때의 다시 잇기도 노드의 태그를 써서 키를 다시 해시하지 않는다(부하율 1 을 넘겨 넣어 본다).
+ */
+SW_TEST_CASE( UnorderedMapTest, FindOrInsertHashesTheKeyOnce )
+{
+    uint32                                    hashCount = 0;
+    sw::unordered_map<HashCountingKey, int32> mapValue;
+
+    static constexpr int32 kKeyCount = 40; // 최소 버킷 수(16)를 넘겨 버킷 다시 만들기를 두 번 지난다
+    for ( int32 value = 0; value < kKeyCount; ++value )
+        mapValue.try_emplace( HashCountingKey{ value, &hashCount }, value );
+    SW_EXPECT_EQUAL( static_cast<uint32>( kKeyCount ), hashCount );
+    SW_EXPECT_EQUAL( static_cast<size_t>( kKeyCount ), mapValue.size() );
+
+    hashCount         = 0;
+    const auto result = mapValue.try_emplace( HashCountingKey{ 7, &hashCount }, 700 );
+    SW_EXPECT_FALSE( result.second );
+    SW_EXPECT_EQUAL( 7, result.first->second );
+    SW_EXPECT_EQUAL( 1u, hashCount );
+
+    hashCount                                    = 0;
+    mapValue[HashCountingKey{ 100, &hashCount }] = 1;
+    SW_EXPECT_EQUAL( 1u, hashCount );
+
+    hashCount = 0;
+    SW_EXPECT_FALSE( mapValue.insert( {
+                                          HashCountingKey{ 100, &hashCount },
+                                          2
+    } )
+                         .second );
+    SW_EXPECT_EQUAL( 1u, hashCount );
+
+    hashCount = 0;
+    SW_EXPECT_FALSE( mapValue.insert_or_assign( HashCountingKey{ 100, &hashCount }, 3 ).second );
+    SW_EXPECT_EQUAL( 1u, hashCount );
+    SW_EXPECT_EQUAL( 3, mapValue.find( HashCountingKey{ 100, &hashCount } )->second );
+}
+
+/**
+ * @brief [UnorderedSetTest] `unordered_set` 도 `shrink_to_fit` 으로 버퍼를 놓는다(`unordered_map` 과 같은 몸통) — 비운 뒤 놓고 다시 채워도 조회가 맞는다.
+ */
+SW_TEST_CASE( UnorderedSetTest, ShrinkToFitKeepsLookupsCorrect )
+{
+    sw::unordered_set<int32> setValue;
+    for ( int32 value = 0; value < 100; ++value )
+        setValue.insert( value );
+    for ( int32 value = 10; value < 100; ++value )
+        setValue.erase( value );
+    setValue.shrink_to_fit();
+    SW_EXPECT_EQUAL( size_t( 10 ), setValue.size() );
+    for ( int32 value = 0; value < 10; ++value )
+        SW_EXPECT_TRUE( setValue.contains( value ) );
+    SW_EXPECT_FALSE( setValue.contains( 50 ) );
+
+    setValue.clear();
+    setValue.shrink_to_fit();
+    SW_EXPECT_TRUE( setValue.empty() );
+    SW_EXPECT_TRUE( setValue.insert( 5 ).second );
+    SW_EXPECT_TRUE( setValue.contains( 5 ) );
 }
 
 /**

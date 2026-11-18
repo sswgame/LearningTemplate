@@ -1,27 +1,25 @@
 /**
  * @file unordered_map.h
  * @brief DoD(Data-Oriented Design) 기반의 밀집 배열 해시맵(sw::unordered_map)입니다.
+ * @details 버킷 표 · 밀집 노드 배열 · 체인 검색 · 지우기 · 다시 해시는 `unordered_set` 과 함께 쓰는 몸통(`internal::DenseHashTable`, 구조 설명도 그 헤더)에 있고,
+ *          여기에는 이터레이터와 키 → 값 접근 · 삽입(`operator[]` · `insert` · `try_emplace` · `emplace` · `insert_or_assign`)만 있습니다.
  *
- * [구조와 메모리 배치]
- * 1. 밀집 저장소: 모든 키-값 쌍(Node)이 연속된 `vector<Node>` 에 들어 있어, 순회할 때 L1/L2 캐시 적중률이 높습니다.
- * 2. 버킷 인덱스 표: 해시 충돌 체인을 노드 포인터 대신 4바이트 정수 인덱스(`uint32`, 원소 수 상한 42억)로 이어, 포인터를 따라가는 비용과
- *    메모리 단편화를 없앱니다. 노드는 해시를 32비트로 접은 태그를 들고, 체인을 걸을 때 키를 비교하기 전에 태그부터 견주며
- *    `erase` 와 버킷 다시 만들기는 키를 다시 해시하지 않고 태그로 버킷을 구합니다.
- * 3. 레이스 탐지: 디버그 빌드에서 ScopedRaceRead / ScopedRaceWrite 로 동시 쓰기와 읽기/쓰기 충돌을 바로 잡아냅니다.
- * 4. 이종 키 조회: `string_view` 같은 이종 키로 찾을 때 키를 새로 만들지 않습니다(할당 없음).
+ * 1. 레이스 탐지: 디버그 빌드에서 ScopedRaceRead / ScopedRaceWrite 로 동시 쓰기와 읽기/쓰기 충돌을 바로 잡아냅니다.
+ * 2. 이종 키 조회: `string_view` 같은 이종 키로 찾을 때 키를 새로 만들지 않습니다(할당 없음).
  *    성립 조건은 **해시가 transparent** 라는 것 하나입니다. 기본 해시 `DefaultHash<sw::string>`(`Core/Container/string.h` 의 특수화)에
  *    `string_view` 오버로드가 있어서 같은 바이트에서 같은 해시가 나옵니다. 비교자의 기본값을 `std::equal_to<>` 로 둔 이유도 여기에 있습니다.
- * 5. 기본 해시: `DefaultHash<Key>`(`Core/Hash/HashUtil.h`)입니다. 키에 `computeHash() const` 가 있으면 그것을 부르므로 키마다 해시 구조체를
- *    따로 두지 않습니다.
  *    `std::equal_to<Key>` 였다면 `SW_ENABLE_STL_CONTAINER` 로 std 컨테이너를 쓸 때만 이종 검색이 컴파일되지 않아,
  *    같은 코드가 빌드 옵션에 따라 달라졌을 것입니다.
- * 5-1. 원소 주소: 삽입이 밀집 배열을 키우면 모든 원소가, `erase` 가 마지막 원소를 옮기면 그 원소가 다른 주소로 갑니다. `&it->second` 를 다른 삽입 · 삭제를 거쳐
+ * 3. 기본 해시: `DefaultHash<Key>`(`Core/Hash/HashUtil.h`)입니다. 키에 `computeHash() const` 가 있으면 그것을 부르므로 키마다 해시 구조체를
+ *    따로 두지 않습니다.
+ * 4. 원소 주소: 삽입이 밀집 배열을 키우면 모든 원소가, `erase` 가 마지막 원소를 옮기면 그 원소가 다른 주소로 갑니다. `&it->second` 를 다른 삽입 · 삭제를 거쳐
  *    쥐어야 하면 값을 `unique_ptr<T>` 로 듭니다(`unordered_map<Key, unique_ptr<T>>` — 원소가 옮겨져도 가리키는 객체는 제자리다. 언리얼 `TMap<K, TUniquePtr<V>>`).
- * 6. 구성: 모든 컨테이너 형식이 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 바뀌는 것은 안쪽 `vector` 의 할당자(`ContainerAllocator`)뿐입니다.
+ * 5. 구성: 모든 컨테이너 형식이 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 바뀌는 것은 안쪽 `vector` 의 할당자(`ContainerAllocator`)뿐입니다.
  *          순회 순서(넣은 순서, `erase` 는 마지막 원소를 빈 슬롯으로 옮긴다)와 무효화 규칙이 구성마다 달라지지 않습니다.
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Container/DenseHashTable.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
@@ -39,9 +37,10 @@ namespace sw
      * 주의: `erase` 는 마지막 원소를 빈 슬롯으로 옮기는 방식(swap-and-pop)이라, 기존 이터레이터가 무효화될 수 있습니다(두 구성 같음).
      */
     template <typename Key, typename T, typename Hash = DefaultHash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = ContainerAllocator<pair<const Key, T>>>
-    class unordered_map
+    class unordered_map : public internal::DenseHashTable<Key, internal::DenseHashMapNode<Key, T>, Hash, KeyEqual>
     {
-        SW_RACE_CTX_MEMBER
+        using Base = internal::DenseHashTable<Key, internal::DenseHashMapNode<Key, T>, Hash, KeyEqual>;
+        using Node = internal::DenseHashMapNode<Key, T>;
 
     public:
         using key_type        = Key;
@@ -56,19 +55,6 @@ namespace sw
         using const_reference = const value_type&;
         using pointer         = value_type*;
         using const_pointer   = const value_type*;
-
-    private:
-        /**
-         * @brief 밀집 배열에 저장되는 노드 하나입니다(키-값과, 충돌 체인에서 다음 노드의 인덱스, 해시 태그).
-         * @details 인덱스는 32비트입니다(원소 수 상한은 `kEmptySlot` 미만 — 42억 개). 태그는 해시를 32비트로 접은 값이라 체인을 걸을 때 키를 비교하기 전에 태그부터 견주고,
-         *          `erase` 가 옮긴 마지막 원소의 버킷과 `rebuild_buckets` 의 다시 해시가 키를 다시 해시하지 않고 태그로 버킷을 구한다(문자열 키에서 크다).
-         */
-        struct Node
-        {
-            pair<Key, T> _keyValuePair;
-            uint32       _next;
-            uint32       _tag;
-        };
 
     public:
         /**
@@ -136,71 +122,24 @@ namespace sw
         };
 
         // ------------------------------------------------------------------------------
-        // 1) 생성 · 대입 — 버킷 + 밀집 배열. 레이스 컨텍스트는 공유하지 않는다
+        // 1) 생성 — 복사 · 이동 · 대입은 몸통의 것을 암시적으로 부른다
         // ------------------------------------------------------------------------------
         /** @brief 빈 맵으로 둡니다. */
-        unordered_map()
-            : _listBucket{}
-            , _listDenseData{}
-            , _traits{} {}
+        unordered_map() = default;
 
         /** @brief 초기화 리스트의 원소로 채웁니다. */
         unordered_map( std::initializer_list<value_type> init )
-            : _listBucket{}
-            , _listDenseData{}
-            , _traits{}
         {
-            reserve( init.size() );
+            this->reserve( init.size() );
             for ( const auto& keyValuePair : init )
             {
                 insert( keyValuePair );
             }
         }
 
-        /** @brief 복사 생성합니다. */
-        unordered_map( const unordered_map& other )
-            : _listBucket{ other._listBucket }
-            , _listDenseData{ other._listDenseData }
-            , _traits{ other._traits }
-        {
-            SW_SCOPED_RACE_READ_OTHER( other );
-        }
-
-        /** @brief 이동 생성합니다. */
-        unordered_map( unordered_map&& other ) noexcept
-            : _listBucket{ std::move( other._listBucket ) }
-            , _listDenseData{ std::move( other._listDenseData ) }
-            , _traits{ std::move( other._traits ) }
-        {
-            SW_SCOPED_RACE_WRITE_OTHER( other );
-        }
-
-        unordered_map& operator=( const unordered_map& other )
-        {
-            if ( this != &other )
-            {
-                SW_SCOPED_RACE_WRITE();
-                SW_SCOPED_RACE_READ_OTHER( other );
-                _listBucket    = other._listBucket;
-                _listDenseData = other._listDenseData;
-                _traits        = other._traits;
-            }
-            return *this;
-        }
-
-        unordered_map& operator=( unordered_map&& other ) noexcept
-        {
-            if ( this != &other )
-            {
-                SW_SCOPED_RACE_WRITE();
-                SW_SCOPED_RACE_WRITE_OTHER( other );
-                _listBucket    = std::move( other._listBucket );
-                _listDenseData = std::move( other._listDenseData );
-                _traits        = std::move( other._traits );
-            }
-            return *this;
-        }
-
+        // ------------------------------------------------------------------------------
+        // 2) 조회 — 밀집 순회 · 버킷 검색
+        // ------------------------------------------------------------------------------
         iterator begin() noexcept
         {
             SW_SCOPED_RACE_READ();
@@ -210,7 +149,7 @@ namespace sw
         iterator end() noexcept
         {
             SW_SCOPED_RACE_READ();
-            return iterator( this, _listDenseData.size() );
+            return iterator( this, this->_listDenseData.size() );
         }
 
         const_iterator begin() const noexcept
@@ -222,7 +161,7 @@ namespace sw
         const_iterator end() const noexcept
         {
             SW_SCOPED_RACE_READ();
-            return const_iterator( this, _listDenseData.size() );
+            return const_iterator( this, this->_listDenseData.size() );
         }
 
         const_iterator cbegin() const noexcept
@@ -234,74 +173,19 @@ namespace sw
         const_iterator cend() const noexcept
         {
             SW_SCOPED_RACE_READ();
-            return const_iterator( this, _listDenseData.size() );
-        }
-
-        // ------------------------------------------------------------------------------
-        // 2) 조회 — 밀집 순회 · 버킷 검색
-        // ------------------------------------------------------------------------------
-        bool empty() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _listDenseData.empty();
-        }
-
-        size_type size() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _listDenseData.size();
-        }
-
-        // ------------------------------------------------------------------------------
-        // 3) 변경 — insert/erase. erase 뒤 이터레이터가 무효화될 수 있다
-        // ------------------------------------------------------------------------------
-        /** @brief 모든 원소를 제거합니다. 용량은 남깁니다(놓으려면 이어서 `shrink_to_fit()`). */
-        void clear() noexcept
-        {
-            SW_SCOPED_RACE_WRITE();
-            _listDenseData.clear();
-            for ( uint32& bucket : _listBucket )
-            {
-                bucket = kEmptySlot;
-            }
+            return const_iterator( this, this->_listDenseData.size() );
         }
 
         iterator find( const Key& key )
         {
             SW_SCOPED_RACE_READ();
-            if ( _listBucket.empty() )
-                return end();
-            const uint32  tag          = makeTag( get_hasher()( key ) );
-            const size_t  bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
-            const uint32* pBucketData  = std::as_const( _listBucket ).data();
-            const Node*   pDenseData   = std::as_const( _listDenseData ).data();
-            uint32        currentIndex = pBucketData[bucketIndex];
-            while ( currentIndex != kEmptySlot )
-            {
-                if ( pDenseData[currentIndex]._tag == tag && get_equal()( pDenseData[currentIndex]._keyValuePair.first, key ) )
-                    return iterator( this, currentIndex );
-                currentIndex = pDenseData[currentIndex]._next;
-            }
-            return end();
+            return iterator( this, this->findDenseIndex( key ) );
         }
 
         const_iterator find( const Key& key ) const
         {
             SW_SCOPED_RACE_READ();
-            if ( _listBucket.empty() )
-                return end();
-            const uint32  tag          = makeTag( get_hasher()( key ) );
-            const size_t  bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
-            const uint32* pBucketData  = std::as_const( _listBucket ).data();
-            const Node*   pDenseData   = std::as_const( _listDenseData ).data();
-            uint32        currentIndex = pBucketData[bucketIndex];
-            while ( currentIndex != kEmptySlot )
-            {
-                if ( pDenseData[currentIndex]._tag == tag && get_equal()( pDenseData[currentIndex]._keyValuePair.first, key ) )
-                    return const_iterator( this, currentIndex );
-                currentIndex = pDenseData[currentIndex]._next;
-            }
-            return end();
+            return const_iterator( this, this->findDenseIndex( key ) );
         }
 
         /** @brief 이종 키(heterogeneous key, 예: string_view)로 찾습니다. */
@@ -309,28 +193,7 @@ namespace sw
         iterator find( const K& key )
         {
             SW_SCOPED_RACE_READ();
-            if ( _listBucket.empty() )
-                return end();
-            const uint32  tag          = makeTag( get_hasher()( key ) );
-            const size_t  bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
-            const uint32* pBucketData  = std::as_const( _listBucket ).data();
-            const Node*   pDenseData   = std::as_const( _listDenseData ).data();
-            uint32        currentIndex = pBucketData[bucketIndex];
-            while ( currentIndex != kEmptySlot )
-            {
-                if constexpr ( std::is_invocable_v<KeyEqual, const Key&, const K&> )
-                {
-                    if ( pDenseData[currentIndex]._tag == tag && get_equal()( pDenseData[currentIndex]._keyValuePair.first, key ) )
-                        return iterator( this, currentIndex );
-                }
-                else
-                {
-                    if ( pDenseData[currentIndex]._tag == tag && pDenseData[currentIndex]._keyValuePair.first == key )
-                        return iterator( this, currentIndex );
-                }
-                currentIndex = pDenseData[currentIndex]._next;
-            }
-            return end();
+            return iterator( this, this->findDenseIndex( key ) );
         }
 
         /** @brief 이종 키(heterogeneous key, 예: string_view)로 찾습니다. */
@@ -338,155 +201,74 @@ namespace sw
         const_iterator find( const K& key ) const
         {
             SW_SCOPED_RACE_READ();
-            if ( _listBucket.empty() )
-                return end();
-            const uint32  tag          = makeTag( get_hasher()( key ) );
-            const size_t  bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
-            const uint32* pBucketData  = std::as_const( _listBucket ).data();
-            const Node*   pDenseData   = std::as_const( _listDenseData ).data();
-            uint32        currentIndex = pBucketData[bucketIndex];
-            while ( currentIndex != kEmptySlot )
-            {
-                if constexpr ( std::is_invocable_v<KeyEqual, const Key&, const K&> )
-                {
-                    if ( pDenseData[currentIndex]._tag == tag && get_equal()( pDenseData[currentIndex]._keyValuePair.first, key ) )
-                        return const_iterator( this, currentIndex );
-                }
-                else
-                {
-                    if ( pDenseData[currentIndex]._tag == tag && pDenseData[currentIndex]._keyValuePair.first == key )
-                        return const_iterator( this, currentIndex );
-                }
-                currentIndex = pDenseData[currentIndex]._next;
-            }
-            return end();
+            return const_iterator( this, this->findDenseIndex( key ) );
         }
 
-        /** @brief 키와 같은 원소의 개수(0 또는 1)를 반환합니다. */
-        size_type count( const Key& key ) const { return find( key ) != end() ? 1 : 0; }
-
-        /** @brief 이종 키와 같은 원소의 개수(0 또는 1)를 반환합니다. */
-        template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
-        size_type count( const K& key ) const { return find( key ) != end() ? 1 : 0; }
-
-        bool contains( const Key& key ) const { return find( key ) != end(); }
-
-        template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
-        bool contains( const K& key ) const { return find( key ) != end(); }
-
+        // ------------------------------------------------------------------------------
+        // 3) 변경 — insert/erase. erase 뒤 이터레이터가 무효화될 수 있다
+        // ------------------------------------------------------------------------------
         T& operator[]( const Key& key )
         {
             SW_SCOPED_RACE_WRITE();
-            check_expand();
-            const uint32 tag          = makeTag( get_hasher()( key ) );
-            const size_t bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
-            uint32       currentIndex = _listBucket[bucketIndex];
-            while ( currentIndex != kEmptySlot )
-            {
-                if ( _listDenseData[currentIndex]._tag == tag && get_equal()( _listDenseData[currentIndex]._keyValuePair.first, key ) )
-                    return _listDenseData[currentIndex]._keyValuePair.second;
-                currentIndex = _listDenseData[currentIndex]._next;
-            }
-
-            const uint32 newIndex = static_cast<uint32>( _listDenseData.size() );
-            _listDenseData.push_back( { pair<Key, T>( key, T{} ), _listBucket[bucketIndex], tag } );
-            _listBucket[bucketIndex] = newIndex;
-            return _listDenseData[newIndex]._keyValuePair.second;
+            const pair<uint32, bool> slot = this->getOrCreateNode( key, [&key]( uint32 next, uint32 tag )
+            { return Node{ pair<Key, T>( key, T{} ), next, tag }; } );
+            return this->_listDenseData[slot.first]._keyValuePair.second;
         }
 
         T& operator[]( Key&& key )
         {
             SW_SCOPED_RACE_WRITE();
-            check_expand();
-            const uint32 tag          = makeTag( get_hasher()( key ) );
-            const size_t bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
-            uint32       currentIndex = _listBucket[bucketIndex];
-            while ( currentIndex != kEmptySlot )
-            {
-                if ( _listDenseData[currentIndex]._tag == tag && get_equal()( _listDenseData[currentIndex]._keyValuePair.first, key ) )
-                    return _listDenseData[currentIndex]._keyValuePair.second;
-                currentIndex = _listDenseData[currentIndex]._next;
-            }
-
-            const uint32 newIndex = static_cast<uint32>( _listDenseData.size() );
-            _listDenseData.push_back( { pair<Key, T>( std::move( key ), T{} ), _listBucket[bucketIndex], tag } );
-            _listBucket[bucketIndex] = newIndex;
-            return _listDenseData[newIndex]._keyValuePair.second;
+            const pair<uint32, bool> slot = this->getOrCreateNode( key, [&key]( uint32 next, uint32 tag )
+            { return Node{ pair<Key, T>( std::move( key ), T{} ), next, tag }; } );
+            return this->_listDenseData[slot.first]._keyValuePair.second;
         }
 
         pair<iterator, bool> insert( const value_type& value )
         {
             SW_SCOPED_RACE_WRITE();
-            check_expand();
-            const uint32 tag          = makeTag( get_hasher()( value.first ) );
-            const size_t bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
-            uint32       currentIndex = _listBucket[bucketIndex];
-            while ( currentIndex != kEmptySlot )
-            {
-                if ( _listDenseData[currentIndex]._tag == tag && get_equal()( _listDenseData[currentIndex]._keyValuePair.first, value.first ) )
-                    return { iterator( this, currentIndex ), false };
-                currentIndex = _listDenseData[currentIndex]._next;
-            }
-
-            const uint32 newIndex = static_cast<uint32>( _listDenseData.size() );
-            _listDenseData.push_back( { pair<Key, T>( value.first, value.second ), _listBucket[bucketIndex], tag } );
-            _listBucket[bucketIndex] = newIndex;
-            return { iterator( this, newIndex ), true };
+            const pair<uint32, bool> slot = this->getOrCreateNode( value.first, [&value]( uint32 next, uint32 tag )
+            { return Node{ pair<Key, T>( value.first, value.second ), next, tag }; } );
+            return { iterator( this, slot.first ), slot.second };
         }
 
         /**
          * @brief 키가 없을 때만 값을 만들어 넣습니다. **키가 있으면 인자를 건드리지 않습니다**(표준 계약).
          * @details 값을 먼저 만들어 넣어 보면 키가 있어도 인자를 소비합니다(`try_emplace( k, std::move( pOwned ) )` 가 키가 있을 때
          *          `pOwned` 를 없앤다). 값은 괄호로 만듭니다 — 중괄호면 `try_emplace( k, 5 )` 가 `vector<int>{ 5 }` 가 됩니다.
+         *          키는 한 번만 해시합니다(찾기와 넣기가 같은 태그 · 버킷을 쓴다).
          */
         template <typename... Args>
         pair<iterator, bool> try_emplace( const Key& k, Args&&... args )
         {
-            iterator it = find( k );
-            if ( it != end() )
-                return { it, false };
-            return emplace( k, T( std::forward<Args>( args )... ) );
+            SW_SCOPED_RACE_WRITE();
+            const pair<uint32, bool> slot = this->getOrCreateNode( k, [&]( uint32 next, uint32 tag )
+            { return Node{ pair<Key, T>( k, T( std::forward<Args>( args )... ) ), next, tag }; } );
+            return { iterator( this, slot.first ), slot.second };
         }
 
         /** @brief 키가 없을 때만 값을 만들어 넣습니다. 키가 있으면 인자를 건드리지 않습니다. */
         template <typename... Args>
         pair<iterator, bool> try_emplace( Key&& k, Args&&... args )
         {
-            iterator it = find( k );
-            if ( it != end() )
-                return { it, false };
-            return emplace( std::move( k ), T( std::forward<Args>( args )... ) );
+            SW_SCOPED_RACE_WRITE();
+            const pair<uint32, bool> slot = this->getOrCreateNode( k, [&]( uint32 next, uint32 tag )
+            { return Node{ pair<Key, T>( std::move( k ), T( std::forward<Args>( args )... ) ), next, tag }; } );
+            return { iterator( this, slot.first ), slot.second };
         }
 
         template <typename... Args>
         pair<iterator, bool> emplace( Args&&... args )
         {
             SW_SCOPED_RACE_WRITE();
-            check_expand();
+            this->check_expand();
             // 키를 알려면 일단 만들어야 한다(표준 emplace 도 제자리에서 생성한다).
-            // 밀집 배열 끝에 만든 뒤, 키가 이미 있으면 pop 한다.
-            _listDenseData.push_back( { pair<Key, T>( std::forward<Args>( args )... ), kEmptySlot, 0 } );
-            const Key& key = _listDenseData.back()._keyValuePair.first;
-
-            const uint32 tag          = makeTag( get_hasher()( key ) );
-            const size_t bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
-            uint32       currentIndex = _listBucket[bucketIndex];
-            while ( currentIndex != kEmptySlot )
-            {
-                if ( _listDenseData[currentIndex]._tag == tag && get_equal()( _listDenseData[currentIndex]._keyValuePair.first, key ) )
-                {
-                    _listDenseData.pop_back();
-                    return { iterator( this, currentIndex ), false };
-                }
-                currentIndex = _listDenseData[currentIndex]._next;
-            }
-
-            const uint32 newIndex          = static_cast<uint32>( _listDenseData.size() - 1 );
-            _listDenseData[newIndex]._next = _listBucket[bucketIndex];
-            _listDenseData[newIndex]._tag  = tag;
-            _listBucket[bucketIndex]       = newIndex;
-            return { iterator( this, newIndex ), true };
+            // 밀집 배열 끝에 만든 뒤, 키가 이미 있으면 뗀다(`linkAppendedNode`).
+            this->_listDenseData.push_back( { pair<Key, T>( std::forward<Args>( args )... ), Base::kEmptySlot, 0 } );
+            const pair<uint32, bool> slot = this->linkAppendedNode();
+            return { iterator( this, slot.first ), slot.second };
         }
+
+        using Base::erase;
 
         iterator erase( iterator pos )
         {
@@ -509,24 +291,11 @@ namespace sw
         pair<iterator, bool> insert_or_assign( const Key& key, M&& mappedValue )
         {
             SW_SCOPED_RACE_WRITE();
-            check_expand();
-            const uint32 tag          = makeTag( get_hasher()( key ) );
-            const size_t bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
-            uint32       currentIndex = _listBucket[bucketIndex];
-            while ( currentIndex != kEmptySlot )
-            {
-                if ( _listDenseData[currentIndex]._tag == tag && get_equal()( _listDenseData[currentIndex]._keyValuePair.first, key ) )
-                {
-                    _listDenseData[currentIndex]._keyValuePair.second = std::forward<M>( mappedValue );
-                    return { iterator( this, currentIndex ), false };
-                }
-                currentIndex = _listDenseData[currentIndex]._next;
-            }
-
-            const uint32 newIndex = static_cast<uint32>( _listDenseData.size() );
-            _listDenseData.push_back( { pair<Key, T>( key, std::forward<M>( mappedValue ) ), _listBucket[bucketIndex], tag } );
-            _listBucket[bucketIndex] = newIndex;
-            return { iterator( this, newIndex ), true };
+            const pair<uint32, bool> slot = this->getOrCreateNode( key, [&]( uint32 next, uint32 tag )
+            { return Node{ pair<Key, T>( key, std::forward<M>( mappedValue ) ), next, tag }; } );
+            if ( slot.second == false )
+                this->_listDenseData[slot.first]._keyValuePair.second = std::forward<M>( mappedValue );
+            return { iterator( this, slot.first ), slot.second };
         }
 
         /** @brief 키가 없으면 삽입하고, 있으면 값을 대입합니다. */
@@ -534,195 +303,11 @@ namespace sw
         pair<iterator, bool> insert_or_assign( Key&& key, M&& mappedValue )
         {
             SW_SCOPED_RACE_WRITE();
-            check_expand();
-            const uint32 tag          = makeTag( get_hasher()( key ) );
-            const size_t bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
-            uint32       currentIndex = _listBucket[bucketIndex];
-            while ( currentIndex != kEmptySlot )
-            {
-                if ( _listDenseData[currentIndex]._tag == tag && get_equal()( _listDenseData[currentIndex]._keyValuePair.first, key ) )
-                {
-                    _listDenseData[currentIndex]._keyValuePair.second = std::forward<M>( mappedValue );
-                    return { iterator( this, currentIndex ), false };
-                }
-                currentIndex = _listDenseData[currentIndex]._next;
-            }
-
-            const uint32 newIndex = static_cast<uint32>( _listDenseData.size() );
-            _listDenseData.push_back( { pair<Key, T>( std::move( key ), std::forward<M>( mappedValue ) ), _listBucket[bucketIndex], tag } );
-            _listBucket[bucketIndex] = newIndex;
-            return { iterator( this, newIndex ), true };
+            const pair<uint32, bool> slot = this->getOrCreateNode( key, [&]( uint32 next, uint32 tag )
+            { return Node{ pair<Key, T>( std::move( key ), std::forward<M>( mappedValue ) ), next, tag }; } );
+            if ( slot.second == false )
+                this->_listDenseData[slot.first]._keyValuePair.second = std::forward<M>( mappedValue );
+            return { iterator( this, slot.first ), slot.second };
         }
-
-        size_type erase( const Key& key )
-        {
-            SW_SCOPED_RACE_WRITE();
-            if ( _listBucket.empty() )
-                return 0;
-
-            const uint32 tag           = makeTag( get_hasher()( key ) );
-            const size_t bucketIndex   = computeBucketIndex( tag, _listBucket.size() );
-            uint32       currentIndex  = _listBucket[bucketIndex];
-            uint32       previousIndex = kEmptySlot;
-
-            while ( currentIndex != kEmptySlot )
-            {
-                if ( _listDenseData[currentIndex]._tag == tag && get_equal()( _listDenseData[currentIndex]._keyValuePair.first, key ) )
-                {
-                    // 버킷 체인에서 분리한다
-                    if ( previousIndex == kEmptySlot )
-                        _listBucket[bucketIndex] = _listDenseData[currentIndex]._next;
-                    else
-                        _listDenseData[previousIndex]._next = _listDenseData[currentIndex]._next;
-
-                    const uint32 lastIndex = static_cast<uint32>( _listDenseData.size() - 1 );
-                    if ( currentIndex != lastIndex )
-                    {
-                        // 마지막 원소를 currentIndex 위치로 옮긴다.
-                        _listDenseData[currentIndex] = std::move( _listDenseData[lastIndex] );
-
-                        // lastIndex 를 가리키던 버킷 체인이 currentIndex 를 가리키게 바꾼다. 옮겨 온 노드의 태그로 버킷을 구한다(키를 다시 해시하지 않는다).
-                        const size_t lastBucketIndex   = computeBucketIndex( _listDenseData[currentIndex]._tag, _listBucket.size() );
-                        uint32       lastCurrentIndex  = _listBucket[lastBucketIndex];
-                        uint32       lastPreviousIndex = kEmptySlot;
-                        while ( lastCurrentIndex != kEmptySlot )
-                        {
-                            if ( lastCurrentIndex == lastIndex )
-                            {
-                                if ( lastPreviousIndex == kEmptySlot )
-                                    _listBucket[lastBucketIndex] = currentIndex;
-                                else
-                                    _listDenseData[lastPreviousIndex]._next = currentIndex;
-                                break;
-                            }
-                            lastPreviousIndex = lastCurrentIndex;
-                            lastCurrentIndex  = _listDenseData[lastCurrentIndex]._next;
-                        }
-                    }
-
-                    _listDenseData.pop_back();
-                    return 1;
-                }
-                previousIndex = currentIndex;
-                currentIndex  = _listDenseData[currentIndex]._next;
-            }
-            return 0;
-        }
-
-        /** @brief 버킷 수를 count 이상인 2의 거듭제곱으로 늘리고 재해시합니다. 지금보다 작으면 아무것도 하지 않습니다. */
-        void rehash( size_type count )
-        {
-            SW_SCOPED_RACE_WRITE();
-            rehash_internal( count );
-        }
-
-        /** @brief rehash 와 같지만 레이스 가드를 잡지 않습니다(내부용). */
-        void rehash_internal( size_type count )
-        {
-            if ( count <= _listBucket.size() )
-                return;
-            // 2의 거듭제곱으로 올린다(`reserve( 3000 )` 이면 4096). `computeBucketIndex` 가 마스크로 자르는 전제다.
-            size_t bucketCount = _listBucket.empty() ? kMinBucketCount : _listBucket.size();
-            while ( bucketCount < count )
-            {
-                bucketCount *= 2;
-            }
-            rebuild_buckets( bucketCount );
-        }
-
-        /** @brief 버킷 테이블을 bucketCount(2의 거듭제곱) 개로 다시 만들고 밀집 배열의 체인을 다시 연결합니다. */
-        void rebuild_buckets( size_t bucketCount )
-        {
-            _listBucket.assign( bucketCount, kEmptySlot );
-            for ( uint32 denseIndex = 0; denseIndex < static_cast<uint32>( _listDenseData.size() ); ++denseIndex )
-            {
-                const size_t bucketIndex         = computeBucketIndex( _listDenseData[denseIndex]._tag, _listBucket.size() ); // 태그가 해시를 들고 있다 — 키를 다시 해시하지 않는다
-                _listDenseData[denseIndex]._next = _listBucket[bucketIndex];
-                _listBucket[bucketIndex]         = denseIndex;
-            }
-        }
-
-        /**
-         * @brief 원소 count 개를 더 할당하지 않고 넣을 만큼 버킷과 밀집 배열을 함께 잡습니다(언리얼 `TMap::Reserve`).
-         * @details 버킷만 잡으면 밀집 배열이 삽입마다 키우기를 거듭한다(감사 C-9). 부하율 1 이라 버킷 수 ≥ count 면 넣는 동안 재해시도 없다.
-         */
-        void reserve( size_type count )
-        {
-            SW_SCOPED_RACE_WRITE();
-            _listDenseData.reserve( count );
-            rehash_internal( count );
-        }
-
-        /**
-         * @brief 남는 용량을 놓습니다. 비었으면 버킷 테이블과 밀집 배열의 버퍼를 모두 놓아 처음 상태로 돌아갑니다.
-         * @details `clear()` 는 용량을 남긴다(다시 채울 때 할당하지 않도록). 버퍼까지 놓는 비우기는 `clear()` + `shrink_to_fit()` 이다.
-         *          원소가 있으면 버킷 수를 원소 수 이상인 가장 작은 2의 거듭제곱(최소 `kMinBucketCount`)으로 줄인다.
-         */
-        void shrink_to_fit()
-        {
-            SW_SCOPED_RACE_WRITE();
-            _listDenseData.shrink_to_fit();
-            if ( _listDenseData.empty() )
-            {
-                _listBucket.clear();
-                _listBucket.shrink_to_fit();
-                return;
-            }
-            size_t bucketCount = kMinBucketCount;
-            while ( bucketCount < _listDenseData.size() )
-            {
-                bucketCount *= 2;
-            }
-            if ( bucketCount < _listBucket.size() )
-            {
-                rebuild_buckets( bucketCount );
-                _listBucket.shrink_to_fit();
-            }
-        }
-
-    private:
-        /** @brief 빈 버킷 슬롯을 나타내는 센티넬 값(모든 비트 1)입니다. */
-        static constexpr uint32 kEmptySlot = constant::invalid_index::kUint32;
-
-        /** @brief 버킷 수의 최솟값입니다. 버킷 수는 항상 2의 거듭제곱입니다(`computeBucketIndex` 가 마스크로 자르기 때문입니다). */
-        static constexpr size_t kMinBucketCount = 16;
-
-        const hasher&    get_hasher() const noexcept { return _traits.first(); }
-        const key_equal& get_equal() const noexcept { return _traits.second(); }
-
-        /** @brief 해시를 32비트 태그로 접습니다. 위쪽 절반을 아래쪽 절반에 섞으므로 64비트 해시의 위쪽 비트도 버킷과 태그 비교에 반영됩니다. */
-        static uint32 makeTag( size_t hash ) noexcept
-        {
-            const uint64 wide = static_cast<uint64>( hash );
-            return static_cast<uint32>( wide ^ ( wide >> 32 ) );
-        }
-
-        /**
-         * @brief 해시 태그(`makeTag`)를 버킷 번호로 바꿉니다. 곱셈 한 번 · 접기 한 번 · 마스크 한 번입니다. 버킷 수는 항상 2의 거듭제곱입니다(`rehash_internal`).
-         * @details `hash % 버킷 수` 를 쓰지 않습니다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹습니다
-         *          (`ContainerBenchTest`). 피보나치 상수를 곱하고 위쪽 절반을 아래쪽 절반에 접어 넣으므로, 아래 비트가 고르지 않은
-         *          해시도 고르게 퍼집니다. libstdc++ · libc++ 의 std::hash 는 정수 · 포인터에 대해 항등 함수라서, 2의 거듭제곱 크기에
-         *          `%` 만 쓰면 아래 비트만 남아 8바이트 정렬 포인터가 버킷 여덟 개 중 하나에 몰립니다.
-         *          순회는 밀집 배열을 따라가므로 버킷 배치가 바뀌어도 순서는 그대로입니다.
-         */
-        static size_t computeBucketIndex( uint32 tag, size_t bucketCount ) noexcept
-        {
-            const uint64 product = static_cast<uint64>( tag ) * HashUtil::kGoldenRatio64;
-            return static_cast<size_t>( product ^ ( product >> 32 ) ) & ( bucketCount - 1 );
-        }
-
-        /**
-         * @brief 부하율(load factor)이 1 에 닿으면 버킷 수를 두 배로 늘리고 재해시합니다.
-         */
-        void check_expand()
-        {
-            if ( _listBucket.empty() || _listDenseData.size() >= _listBucket.size() )
-                rehash_internal( _listBucket.empty() ? kMinBucketCount : _listBucket.size() * 2 );
-        }
-
-    private:
-        vector<uint32>                    _listBucket;    ///< 버킷마다 체인 첫 노드의 인덱스
-        vector<Node>                      _listDenseData; ///< 연속 메모리에 놓인 밀집 데이터 배열
-        CompressedPair<hasher, key_equal> _traits;        ///< 해시 · 키 비교 함수 객체(EBO 로 압축 보관)
     };
 } // namespace sw
