@@ -4,11 +4,13 @@
   부하 시나리오 — 인스턴스 20 만(벤치 큐브를 메시 인스턴스 배치로, 움직임 없음) 옆에서 메시 컴포넌트 큐브 10 개를 프레임마다 지우고 새로 만든다(감사 RN-6).
   포함 집합이 조금 바뀌는 프레임에 GPUScene 이 바뀐 칸만 모으는지 `GT.GPUScene.build.collect` 로 잰다(전체 다시 수집이면 20 만 칸을 매 프레임 돈다).
   측정 창(<Load>)이 끝내므로 <Pass/> 가 없다. 하위 폴더라 게임 체인이 줍지 않는다.
-  실행: ctest -L load (항목 Scenario.empty.load.instancechurn) · App -scenario=game/empty/automation/load/instancechurn.scenario.xml -unattended -gv_stressTestMeshes=200000 -gv_stressTestInstanced=1 -gv_stressTestSpawnChurn=10 -gv_stressTestAnimate=0
+  실행: ctest -L load (항목 Scenario.empty.load.instancechurn) · App -scenario=game/empty/automation/load/instancechurn.scenario.xml -unattended -gv_stressTestMeshes=200000 -gv_stressTestInstanced=1 -gv_stressTestTransparent=0 -gv_stressTestSpawnChurn=10 -gv_stressTestAnimate=0
 -->
 <Scenario name="game.empty.load.instancechurn" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
 	<Launch variable="gv_stressTestMeshes" value="200000"/>
 	<Launch variable="gv_stressTestInstanced" value="1"/>
+	<!-- 인스턴스 격자는 큐브마다의 투명 비율을 받지 않는다 — 기본 25 % 를 0 으로 맞춘다(그대로 두면 벤치가 무시한다고 경고한다, StressTestScene.GvStressTestInstancedDoesNot). -->
+	<Launch variable="gv_stressTestTransparent" value="0"/>
 	<Launch variable="gv_stressTestSpawnChurn" value="10"/>
 	<Launch variable="gv_stressTestAnimate" value="0"/>
 	<Load durationSeconds="15"/>
