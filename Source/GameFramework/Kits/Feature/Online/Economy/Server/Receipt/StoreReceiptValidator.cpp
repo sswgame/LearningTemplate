@@ -527,6 +527,13 @@ namespace sw
         }
     }
 
+    string StoreReceiptValidator::readText( const JSONValue& object, string_view path )
+    {
+        string text;
+        (void)object.findPathText( path, text ); // 없으면 빈 글이다
+        return text;
+    }
+
     void StoreReceiptValidator::pollCompletions( vector<ReceiptValidationResult>& outListResult )
     {
         for ( ReceiptValidationResult& result : _listDone )

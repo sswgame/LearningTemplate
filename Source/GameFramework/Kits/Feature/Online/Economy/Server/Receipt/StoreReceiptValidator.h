@@ -197,6 +197,9 @@ namespace sw
         /** @brief 401 · 403 을 받았습니다. 자격을 버리고 오류 로그를 남깁니다. */
         virtual void onCredentialRejected( const HTTPClientResponse& response ) = 0;
 
+        /** @brief 스토어 답 @p object 의 점 경로 @p path 의 글입니다. 없으면 빈 글입니다(틀과 응답 판정이 빈 글을 "없다 · 다르다" 로 읽는다). 답을 옮겨 적는 `parseOrder` · `parseRefundPage` 가 씁니다. */
+        [[nodiscard]] static string readText( const JSONValue& object, string_view path );
+
         /** @brief 호출 전에 자격을 준비합니다. 기본은 늘 준비됨입니다. */
         virtual AuthState prepareAuth( UnixMilliseconds now )
         {

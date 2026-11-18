@@ -24,14 +24,6 @@ namespace sw
                 return text.size() <= kMaxFieldSize && URLTextUtil::isSafeText( text, "-_." );
             }
 
-            /** @brief 키의 글입니다. 없으면 빈 글입니다. */
-            static string readText( const JSONValue& object, const utf8* pKey )
-            {
-                string text;
-                (void)object.findPathText( pKey, text );
-                return text;
-            }
-
             static HTTPClientRequest makeRequest( const string& url, int64 timeoutMs, const string& token, HTTPMethod method )
             {
                 HTTPClientRequest request;
@@ -165,13 +157,12 @@ namespace sw
 
     void GoogleReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& /*call*/, UnixMilliseconds now, ReceiptOrderInfo& outInfo )
     {
-        using Internal         = GoogleReceiptValidatorInternal;
-        outInfo._transactionID = Internal::readText( root, "orderId" );
-        outInfo._productID     = Internal::readText( root, "productId" );                   // 구글 문서: 없을 수 있다. 없으면 주소에 넣은 상품이다
-        outInfo._answeredKey   = Internal::readText( root, "purchaseToken" );               // 구글 문서: 없을 수 있다
-        outInfo._storeBuyerID  = Internal::readText( root, "obfuscatedExternalAccountId" ); // 클라이언트가 구매 때 찍은 값(`ReceiptBuyerToken`)
+        outInfo._transactionID = readText( root, "orderId" );
+        outInfo._productID     = readText( root, "productId" );                   // 구글 문서: 없을 수 있다. 없으면 주소에 넣은 상품이다
+        outInfo._answeredKey   = readText( root, "purchaseToken" );               // 구글 문서: 없을 수 있다
+        outInfo._storeBuyerID  = readText( root, "obfuscatedExternalAccountId" ); // 클라이언트가 구매 때 찍은 값(`ReceiptBuyerToken`)
         int64 purchaseMs       = 0;
-        if ( StringUtil::parseInt64( Internal::readText( root, "purchaseTimeMillis" ), purchaseMs ) )
+        if ( StringUtil::parseInt64( readText( root, "purchaseTimeMillis" ), purchaseMs ) )
             outInfo._purchaseTimeMs = purchaseMs;
         int32      purchaseState        = constant::invalid_index::kInt32;
         int32      purchaseType         = constant::invalid_index::kInt32;
@@ -200,18 +191,17 @@ namespace sw
 
     void GoogleReceiptValidator::parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage )
     {
-        using Internal         = GoogleReceiptValidatorInternal;
         const JSONValue voided = root.get( "voidedPurchases" );
         for ( size_t index = 0; voided.isArray() && index < voided.size(); ++index )
         {
             const JSONValue entry        = voided.at( index );
             int64           voidedMs     = now.count();
             int64           parsedVoided = 0;
-            if ( StringUtil::parseInt64( Internal::readText( entry, "voidedTimeMillis" ), parsedVoided ) )
+            if ( StringUtil::parseInt64( readText( entry, "voidedTimeMillis" ), parsedVoided ) )
                 voidedMs = parsedVoided;
-            addRefund( Internal::readText( entry, "orderId" ), voidedMs );
+            addRefund( readText( entry, "orderId" ), voidedMs );
         }
-        outPage._nextPageToken = Internal::readText( root, "tokenPagination.nextPageToken" );
+        outPage._nextPageToken = readText( root, "tokenPagination.nextPageToken" );
         // 다음 쪽 토큰 없이 상한까지 찼으면 뒤쪽을 이을 길이 없다 — 틀이 구간을 옮기지 않는다.
         const bool bFull    = voided.isArray() && voided.size() >= static_cast<size_t>( kVoidedMaxResults );
         outPage._bTruncated = bFull && outPage._nextPageToken.empty() ? SW_TRUE : SW_FALSE;
