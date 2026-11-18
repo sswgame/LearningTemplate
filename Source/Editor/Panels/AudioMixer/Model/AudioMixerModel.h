@@ -21,12 +21,12 @@ namespace sw
 namespace sw::editor
 {
     /** @brief 감시 값이 읽는 지난 프레임의 값입니다. 에디터 범위의 상태 저장소(`getEditorState`)가 소유한다 — 창이 닫혀도 마지막 값이 남는다. */
-    struct AudioMixerProbe
+    struct AudioMixerWatchValues
     {
         uint32  _busCount{ 0 };
         uint32  _mutedCount{ 0 };
         uint32  _soloCount{ 0 };
-        float32 _probedBusVolume{ -1.0f }; ///< 이름이 `gv_editorWatchBus` 인 버스의 사용자 볼륨(없으면 -1)
+        float32 _watchedBusVolume{ -1.0f }; ///< 이름이 `gv_editorWatchBus` 인 버스의 사용자 볼륨(없으면 -1)
     };
 
     /**
@@ -61,7 +61,7 @@ namespace sw::editor
         void postSelectedEvent( AudioEngine& engine ) const;
 
         /** @brief 감시 값이 읽는 지난 프레임의 값입니다. */
-        static const AudioMixerProbe& getProbe();
+        static const AudioMixerWatchValues& getWatchValues();
         /** @brief 오디오 서비스입니다. 에디터는 오디오를 짓는 구성이라 늘 있다(전용 서버 구성만 오디오를 짓지 않는다) — 없으면 멈춘다. 패널이 작업 공간 헤더를 보지 않게 여기서 찾는다(MVVM 계약). */
         static IAudioService& getAudioService();
 

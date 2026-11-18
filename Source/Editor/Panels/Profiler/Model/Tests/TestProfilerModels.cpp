@@ -484,15 +484,15 @@ SW_TEST_CASE( ProfilerCaptureModelTest, TickTurnsTheProfilerOnAndCaptures )
 {
     unique_ptr<FrameProfiler> pProfiler = make_unique<FrameProfiler>();
     ProfilerCaptureModel      model;
-    model.tick( *pProfiler );
+    model.update( *pProfiler );
     SW_EXPECT_TRUE( pProfiler->isEnabled() );
     SW_EXPECT_EQUAL( uint64{ 1 }, model.getHistory().getCapturedFrameCount() );
-    model.tick( *pProfiler );
+    model.update( *pProfiler );
     SW_EXPECT_EQUAL( uint64{ 1 }, model.getHistory().getCapturedFrameCount() ); // 새 프레임이 없다
 
     model.setCollect( *pProfiler, false );
     SW_EXPECT_FALSE( pProfiler->isEnabled() );
-    model.tick( *pProfiler );
+    model.update( *pProfiler );
     SW_EXPECT_FALSE( pProfiler->isEnabled() ); // 끈 수집은 다시 켜지 않는다
 }
 
@@ -500,17 +500,17 @@ SW_TEST_CASE( ProfilerCaptureModelTest, PauseStopsCapturingResumeClearsTheSelect
 {
     unique_ptr<FrameProfiler> pProfiler = Util::makeProfiler();
     ProfilerCaptureModel      model;
-    model.tick( *pProfiler );
+    model.update( *pProfiler );
     model.pause();
     model.selectFrameOffset( 3 );
     pProfiler->endFrame();
-    model.tick( *pProfiler );
+    model.update( *pProfiler );
     SW_EXPECT_EQUAL( uint64{ 1 }, model.getHistory().getCapturedFrameCount() );
 
     model.resume();
     SW_EXPECT_FALSE( model.isPaused() );
     SW_EXPECT_EQUAL( 0u, model.getSelectedFrameOffset() );
-    model.tick( *pProfiler );
+    model.update( *pProfiler );
     SW_EXPECT_EQUAL( uint64{ 2 }, model.getHistory().getCapturedFrameCount() );
 
     model.selectFrameOffset( 1 );
@@ -528,18 +528,18 @@ SW_TEST_CASE( ProfilerCaptureModelTest, SpikeOverTheThresholdPausesOnlyWhenAsked
 
     pProfiler->addSample( slot, 20u * 1000u * 1000u );
     pProfiler->endFrame();
-    model.tick( *pProfiler );
+    model.update( *pProfiler );
     SW_EXPECT_FALSE( model.isPaused() ); // 켜지 않았다
 
     model.setPauseOnSpike( true );
     pProfiler->addSample( slot, 5u * 1000u * 1000u );
     pProfiler->endFrame();
-    model.tick( *pProfiler );
+    model.update( *pProfiler );
     SW_EXPECT_FALSE( model.isPaused() ); // 임계값 아래
 
     pProfiler->addSample( slot, 20u * 1000u * 1000u );
     pProfiler->endFrame();
-    model.tick( *pProfiler );
+    model.update( *pProfiler );
     SW_EXPECT_TRUE( model.isPaused() );
 }
 

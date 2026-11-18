@@ -32,7 +32,7 @@ namespace sw::editor
         static const FrameProfiler* findProfiler();
 
         /** @brief 패널이 열려 있는 프레임마다 부릅니다. 수집이 켜져 있으면 엔진 프로파일러를 켜고, 멈추지 않았으면 한 칸 담은 뒤 스파이크를 봅니다. */
-        void tick( FrameProfiler& profiler );
+        void update( FrameProfiler& profiler );
 
         /** @brief 엔진 프로파일러 수집을 켜거나 끕니다. */
         void setCollect( FrameProfiler& profiler, bool bCollect );
@@ -59,8 +59,6 @@ namespace sw::editor
         bool loadCapture();
         /** @brief 캡처 파일 경로(`Saved/Profiler/ProfilerCapture.txt`)입니다. */
         static string getCaptureFilePath();
-        /** @brief 에디터 범위의 엔진 프로파일러입니다. 없으면(에디터 밖) nullptr 입니다. View · 감시 값이 서비스 창구(`EditorService.h`)를 보지 않게 여기서 찾는다. */
-        static FrameProfiler* findFrameProfiler();
 
         /** @brief 테이블의 "Last" 열이 보여 줄 프레임입니다. 0 이 가장 최근입니다. */
         uint32 getSelectedFrameOffset() const { return _rowQuery._frameOffset; }

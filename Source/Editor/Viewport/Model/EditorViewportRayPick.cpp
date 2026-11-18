@@ -438,9 +438,4 @@ namespace sw::editor
         EditorViewportRayPickInternal::getAxisOf( outPoint, axisIndex ) = 0.0f;
         return true;
     }
-
-    uint32 EditorViewportRayPick::getTypedProviderCount()
-    {
-        return EditorViewportRayPickInternal::kOrderRowCount;
-    }
 } // namespace sw::editor

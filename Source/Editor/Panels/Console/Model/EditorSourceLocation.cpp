@@ -154,7 +154,7 @@ namespace sw::editor
 #endif
     }
 
-    bool EditorSourceLocation::openInIde( const EditorSourceLocation& location )
+    bool EditorSourceLocation::openInIDE( const EditorSourceLocation& location )
     {
         const ProcessCommand command = makeOpenCommand( getOpenCommandTemplate(), location );
         if ( command._executable.empty() )

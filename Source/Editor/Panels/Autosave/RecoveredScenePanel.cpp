@@ -99,22 +99,12 @@ namespace sw::editor
                 restoreIndex = rowIndex;
             ImGui::EndDisabled();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAutosave", "RestoreTooltip" ) );
-            if ( EditorSelfTestMarks::isEnabled() )
-            {
-                fixed_string<constant::buffer::kMax64> text2;
-                formatstring( text2.data(), text2.capacity(), "recoveredWork.restore.%#", rowIndex );
-                EditorSelfTestMarks::record( text2.c_str() );
-            }
+            EditorSelfTestMarks::recordFormat( "recoveredWork.restore.%#", rowIndex );
             ImGui::SameLine();
             if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "Discard" ) ) )
                 discardIndex = rowIndex;
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAutosave", "DiscardTooltip" ) );
-            if ( EditorSelfTestMarks::isEnabled() )
-            {
-                fixed_string<constant::buffer::kMax64> text;
-                formatstring( text.data(), text.capacity(), "recoveredWork.discard.%#", rowIndex );
-                EditorSelfTestMarks::record( text.c_str() );
-            }
+            EditorSelfTestMarks::recordFormat( "recoveredWork.discard.%#", rowIndex );
             ImGui::PopID();
         }
         ImGui::EndTable();
@@ -162,22 +152,12 @@ namespace sw::editor
                 restoreIndex = rowIndex;
             ImGui::EndDisabled();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAutosave", "RestoreDocumentTooltip" ) );
-            if ( EditorSelfTestMarks::isEnabled() )
-            {
-                fixed_string<constant::buffer::kMax64> restoreMark;
-                formatstring( restoreMark.data(), restoreMark.capacity(), "recoveredWork.restoreDocument.%#", rowIndex );
-                EditorSelfTestMarks::record( restoreMark.c_str() );
-            }
+            EditorSelfTestMarks::recordFormat( "recoveredWork.restoreDocument.%#", rowIndex );
             ImGui::SameLine();
             if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "Discard" ) ) )
                 discardIndex = rowIndex;
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAutosave", "DiscardDocumentTooltip" ) );
-            if ( EditorSelfTestMarks::isEnabled() )
-            {
-                fixed_string<constant::buffer::kMax64> discardMark;
-                formatstring( discardMark.data(), discardMark.capacity(), "recoveredWork.discardDocument.%#", rowIndex );
-                EditorSelfTestMarks::record( discardMark.c_str() );
-            }
+            EditorSelfTestMarks::recordFormat( "recoveredWork.discardDocument.%#", rowIndex );
             ImGui::PopID();
         }
         ImGui::EndTable();

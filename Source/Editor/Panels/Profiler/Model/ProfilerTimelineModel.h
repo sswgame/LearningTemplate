@@ -115,8 +115,7 @@ namespace sw::editor
         uint32        getLoadedTraceThreadCount() const { return _bLoadedTrace == SW_TRUE ? static_cast<uint32>( _loadedTrace._listThread.size() ) : 0; }
         const string& getTraceStatus() const { return _traceStatus; }
         /** @brief 구간 이름 검색란의 버퍼입니다(검색란이 직접 고친다). */
-        utf8*       editTraceSearch() { return _arrTraceSearch; }
-        const utf8* getTraceSearch() const { return _arrTraceSearch; }
+        utf8* editTraceSearch() { return _arrTraceSearch; }
         /** @brief 검색어가 있고 @p pName 이 그것을 담지 않으면 false 입니다. 검색어가 없으면 모두 맞습니다. */
         bool matchesTraceSearch( const utf8* pName ) const;
         /** @brief 마지막으로 그린 타임라인에서 검색어와 맞은 사건 수입니다(그리는 쪽이 센다). */

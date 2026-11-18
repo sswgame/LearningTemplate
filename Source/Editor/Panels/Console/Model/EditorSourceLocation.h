@@ -47,7 +47,7 @@ namespace sw::editor
          * @brief 위치를 IDE 로 엽니다. 명령 템플릿은 환경설정 General 의 `_ideOpenCommand` 입니다.
          * @return 프로세스를 실행했으면 true 입니다.
          */
-        [[nodiscard]] static bool openInIde( const EditorSourceLocation& location );
+        [[nodiscard]] static bool openInIDE( const EditorSourceLocation& location );
     };
 } // namespace sw::editor
 

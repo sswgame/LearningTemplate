@@ -74,8 +74,7 @@ namespace sw::editor
                     if ( ImGui::Selectable( choice._label.c_str(), bCurrent ) && bCurrent == false )
                         pPickedText = &choice._valueText;
                     ImGui::PopID();
-                    if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::record( ( "inspector.sceneref.choice." + choice._label ).c_str() );
+                    EditorSelfTestMarks::recordFormat( "inspector.sceneref.choice.%#", choice._label );
                 }
                 return pPickedText;
             }

@@ -19,7 +19,7 @@
 
 namespace sw::editor
 {
-    /** @brief 프로브 `Editor.HierarchyRowIndex` 가 볼 오브젝트 이름입니다. 시나리오가 `<Variable>` 로 정합니다. */
+    /** @brief 감시 값 `Editor.HierarchyRowIndex` 가 볼 오브젝트 이름입니다. 시나리오가 `<Variable>` 로 정합니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_editorWatchHierarchyObject, "", "감시 값 Editor.HierarchyRowIndex 가 볼 오브젝트 이름 (시나리오용)" );
 
     namespace

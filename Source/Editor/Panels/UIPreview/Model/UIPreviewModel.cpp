@@ -113,7 +113,7 @@ namespace sw::editor
         , _focus{}
         , _pLocalization{}
         , _pSession{ sw::make_shared<EditSession>() }
-        , _probe{}
+        , _watchValues{}
         , _screen{ kInvalidUIScreenHandle }
         , _selected{ kInvalidWidgetID }
         , _seenRootID{ kInvalidWidgetID }
@@ -234,7 +234,7 @@ namespace sw::editor
     {
         closePreview();
         _pLocalization.reset(); // 화면을 닫은 뒤에 놓는다(화면이 관리자를 가리킨다)
-        _probe = UIPreviewProbe{};
+        _watchValues = UIPreviewWatchValues{};
     }
 
     void UIPreviewModel::syncPreview( const UISystem& ui, UIOffscreenScreens& offscreen )
@@ -916,28 +916,28 @@ namespace sw::editor
         markPreviewMutated();
     }
 
-    void UIPreviewModel::updateProbe( const UIScreen* pScreen, bool bDirty, bool bTextureReady )
+    void UIPreviewModel::updateWatchValues( const UIScreen* pScreen, bool bDirty, bool bTextureReady )
     {
-        _probe = UIPreviewProbe{};
+        _watchValues = UIPreviewWatchValues{};
         if ( pScreen == nullptr )
             return;
-        const WidgetTree& tree     = pScreen->getTree();
-        _probe._bValid             = true;
-        _probe._bDirty             = bDirty;
-        _probe._bReloadedAfterSave = _bReloadedAfterSave;
-        _probe._bTextureReady      = bTextureReady;
-        _probe._languageIndex      = _languageIndex;
-        const Widget* pRoot        = tree.getRoot();
-        _probe._bRightToLeft       = pRoot != nullptr && pRoot->isRightToLeft();
+        const WidgetTree& tree           = pScreen->getTree();
+        _watchValues._bValid             = true;
+        _watchValues._bDirty             = bDirty;
+        _watchValues._bReloadedAfterSave = _bReloadedAfterSave;
+        _watchValues._bTextureReady      = bTextureReady;
+        _watchValues._languageIndex      = _languageIndex;
+        const Widget* pRoot              = tree.getRoot();
+        _watchValues._bRightToLeft       = pRoot != nullptr && pRoot->isRightToLeft();
         vector<Widget*> listWidget;
         tree.collectWidgetsInDocumentOrder( listWidget );
-        _probe._widgetCount = static_cast<uint32>( listWidget.size() );
+        _watchValues._widgetCount = static_cast<uint32>( listWidget.size() );
         for ( const Widget* pWidget : listWidget )
         {
             const TextWidget* pText = castTo<const TextWidget>( pWidget );
             if ( pText != nullptr )
             {
-                _probe._firstTextBytes = static_cast<uint32>( pText->getDisplayText().size() );
+                _watchValues._firstTextBytes = static_cast<uint32>( pText->getDisplayText().size() );
                 break;
             }
         }
@@ -948,32 +948,32 @@ namespace sw::editor
             {
                 const optional<uint32> hovered = UIPreviewLogic::findWidgetOrdinal( tree, pHovered->getID() );
                 if ( hovered.has_value() )
-                    _probe._hoveredOrdinal = static_cast<int32>( *hovered );
-                _probe._bHoveredFocusable = pHovered->supportsFocus();
+                    _watchValues._hoveredOrdinal = static_cast<int32>( *hovered );
+                _watchValues._bHoveredFocusable = pHovered->supportsFocus();
             }
         }
         if ( tree.getFocusedWidget() != kInvalidWidgetID )
         {
             const optional<uint32> focused = UIPreviewLogic::findWidgetOrdinal( tree, tree.getFocusedWidget() );
             if ( focused.has_value() )
-                _probe._focusedOrdinal = static_cast<int32>( *focused );
+                _watchValues._focusedOrdinal = static_cast<int32>( *focused );
         }
         const Widget* pSelected = tree.findWidgetByID( _selected );
         if ( pSelected != nullptr )
         {
-            _probe._bSelectedValid     = true;
-            _probe._selectedOpacity    = pSelected->getOpacity();
-            _probe._bSlotEditable      = UIPreviewLogic::canEditSlotByHandle( *pSelected );
-            _probe._selectedOffsetMinX = pSelected->getLayoutSlot()._offsetMin._x;
+            _watchValues._bSelectedValid     = true;
+            _watchValues._selectedOpacity    = pSelected->getOpacity();
+            _watchValues._bSlotEditable      = UIPreviewLogic::canEditSlotByHandle( *pSelected );
+            _watchValues._selectedOffsetMinX = pSelected->getLayoutSlot()._offsetMin._x;
         }
-        _probe._paletteCount  = static_cast<uint32>( _listPaletteType.size() );
-        _probe._slotEditCount = _slotEditCount;
+        _watchValues._paletteCount  = static_cast<uint32>( _listPaletteType.size() );
+        _watchValues._slotEditCount = _slotEditCount;
         float32 time{ 0.0f };
         float32 duration{ 0.0f };
         if ( pScreen->getAnimationPlayer().getPlaybackTime( _animation, time, duration ) )
         {
-            _probe._animationTime     = time;
-            _probe._bAnimationPlaying = _bAnimationPaused == false;
+            _watchValues._animationTime     = time;
+            _watchValues._bAnimationPlaying = _bAnimationPaused == false;
         }
     }
 

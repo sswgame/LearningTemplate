@@ -31,7 +31,5 @@ namespace sw::editor
         static void release( const void* pOwner );
         /** @brief 누군가 마우스를 가져갔으면 true 입니다. */
         static bool isClaimed();
-        /** @brief pOwner 가 지금 소유자이면 true 입니다. */
-        static bool isClaimedBy( const void* pOwner );
     };
 } // namespace sw::editor

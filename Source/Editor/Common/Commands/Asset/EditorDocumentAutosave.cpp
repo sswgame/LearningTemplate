@@ -24,23 +24,6 @@ namespace sw::editor
             {
                 return FileUtil::joinPath( makeFolder( sessionFolder ), EditorAutosaveCommands::makeSlotName( documentPath ) + string{ suffix } );
             }
-
-            /** @brief 메타 한 줄(`key=value`)을 읽습니다. 없으면 빈 글입니다. */
-            static string readMetaValue( string_view metaText, string_view key )
-            {
-                size_t lineStart = 0;
-                while ( lineStart < metaText.size() )
-                {
-                    size_t lineEnd = metaText.find( '\n', lineStart );
-                    if ( lineEnd == string_view::npos )
-                        lineEnd = metaText.size();
-                    const string_view line = metaText.substr( lineStart, lineEnd - lineStart );
-                    if ( line.size() > key.size() && line.substr( 0, key.size() ) == key && line[key.size()] == '=' )
-                        return string( line.substr( key.size() + 1 ) );
-                    lineStart = lineEnd + 1;
-                }
-                return string();
-            }
         };
     } // namespace
 
@@ -94,10 +77,10 @@ namespace sw::editor
                 if ( FileUtil::readTextFile( file, metaText ) == false )
                     continue;
                 EditorDocumentAutosaveEntry entry{};
-                entry._documentPath = Internal::readMetaValue( metaText, "document" );
-                entry._projectRoot  = Internal::readMetaValue( metaText, "project" );
-                (void)StringUtil::parseUint64( Internal::readMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면 0 — 새 문서로 본다
-                (void)StringUtil::parseInt64( Internal::readMetaValue( metaText, "saved" ), entry._savedTicks );              // 없으면 0 — 창이 "-" 로 보인다
+                entry._documentPath = EditorAutosaveCommands::findMetaValue( metaText, "document" );
+                entry._projectRoot  = EditorAutosaveCommands::findMetaValue( metaText, "project" );
+                (void)StringUtil::parseUint64( EditorAutosaveCommands::findMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면 0 — 새 문서로 본다
+                (void)StringUtil::parseInt64( EditorAutosaveCommands::findMetaValue( metaText, "saved" ), entry._savedTicks );              // 없으면 0 — 창이 "-" 로 보인다
                 entry._textAbs = file.substr( 0, file.size() - string_view( Internal::kMetaSuffix ).size() ) + Internal::kTextSuffix;
                 if ( entry._documentPath.empty() || FileUtil::exists( entry._textAbs ) == false )
                     continue; // 짝이 없는 메타 — 복구할 글이 없다

@@ -113,6 +113,23 @@ namespace sw::editor
         {
             return static_cast<TPanel*>( findPanelByID( TPanel::kPanelID ) );
         }
+        /**
+         * @brief 지금 에디터 컨텍스트의 패널을 클래스로 찾습니다. 컨텍스트(`findInEditorContext`)나 그 패널이 없으면 nullptr 입니다.
+         * @details 패널 View 의 감시 값 · 개발 명령 · 명령 켜짐 판정이 자기 패널을 찾는 한 줄이다 — 예전에는 파일마다 "관리자 찾기 → null 검사 → `findPanel`" 을 손으로 적었다.
+         */
+        template <typename TPanel>
+        [[nodiscard]] static TPanel* findPanelInEditorContext()
+        {
+            const EditorPanelManager* pPanels = findInEditorContext();
+            return pPanels != nullptr ? pPanels->findPanel<TPanel>() : nullptr;
+        }
+        /** @brief `findPanelInEditorContext` 와 같되 창이 열려 있을 때만 돌려줍니다(`IEditorPanel::isOpen`). 닫힌 창의 값을 감시 값으로 내지 않는 자리가 쓴다. */
+        template <typename TPanel>
+        [[nodiscard]] static TPanel* findOpenPanelInEditorContext()
+        {
+            TPanel* pPanel = findPanelInEditorContext<TPanel>();
+            return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+        }
         /** @brief 패널 클래스로 열거나 닫습니다. 그 패널이 없으면 false 입니다(`findPanel` 과 같은 상수로 찾는다). */
         template <typename TPanel>
         bool setPanelOpen( bool bOpen )

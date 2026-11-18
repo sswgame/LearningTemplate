@@ -25,7 +25,7 @@ namespace sw::editor
         static constexpr int32 kCommands = 100;
         /// 2) 버전 관리 상태 · 저장 직후 검증. 에셋 감시 · 리로드는 게임 단계다(`EditorGameStepOrder::kAssetReload`).
         static constexpr int32 kAssetReload = 200;
-        /// 활성 씬의 자동 저장 사본 쓰기와 복원 마무리(`EditorAutosaveCommands::tick`). 씬 편집 명령 뒤라 이번 프레임 편집이 사본에 든다.
+        /// 활성 씬의 자동 저장 사본 쓰기와 복원 마무리(`EditorAutosaveCommands::update`). 씬 편집 명령 뒤라 이번 프레임 편집이 사본에 든다.
         static constexpr int32 kAutosave = 300;
         /// 3) 패널 · 팝업 · 알림 그리기.
         static constexpr int32 kPanels = 300;
@@ -80,7 +80,7 @@ namespace sw::editor
         static constexpr int32 kBake = 100;
         /// 에셋 · 설정 파일 감시와 임포트 결과 반영(캐시 리로드 · 씬 알림 — `AssetHotReload::update`). 다음 UI 프레임이 바뀐 에셋을 그린다.
         static constexpr int32 kAssetReload = 200;
-        /// 활성 씬의 자동 저장 사본 쓰기와 복원 마무리(`EditorAutosaveCommands::tick`). 씬 편집 명령 뒤라 이번 프레임 편집이 사본에 든다.
+        /// 활성 씬의 자동 저장 사본 쓰기와 복원 마무리(`EditorAutosaveCommands::update`). 씬 편집 명령 뒤라 이번 프레임 편집이 사본에 든다.
         static constexpr int32 kAutosave = 300;
         /// 되돌리기 기록 스냅샷(`EditorUndoHistory::publishSnapshot`) — 모든 게임 단계 뒤라 이번 프레임의 편집 · 되돌리기가 든다. 다음 UI 프레임의 History 창이 읽는다.
         static constexpr int32 kUndoHistory = 1000;

@@ -191,8 +191,6 @@ namespace sw::editor
         void setNodeIssues( vector<EditorGraphNodeIssue> listIssue ) { _listNodeIssue = std::move( listIssue ); }
         /** @brief 문제 노드에 빨간 테두리를 두르고, 노드 위에 마우스가 있으면 이유를 툴팁으로 보여 줍니다. 캔버스 안에서 노드를 그린 뒤 호출합니다. */
         void drawNodeIssues() const;
-        /** @brief 현재 문제 노드 수를 반환합니다. */
-        uint32 getNodeIssueCount() const { return static_cast<uint32>( _listNodeIssue.size() ); }
 
         /** @brief 핀을 끌어 만든 노드에 링크를 이은 횟수입니다(감시 값 `Editor.GraphAutoLinkCount`). */
         static uint32 getAutoLinkCount();
@@ -201,7 +199,7 @@ namespace sw::editor
         /** @brief 가장 최근에 그린 캔버스가 미니맵을 보였으면 true 입니다(감시 값 `Editor.GraphMinimapShown`). */
         static bool isMinimapShown();
 
-        /** @brief 이번 프레임에 그린 그래프의 노드 수를 기록합니다. 시나리오 프로브 `Editor.GraphNodeCount` 가 읽습니다. */
+        /** @brief 이번 프레임에 그린 그래프의 노드 수를 기록합니다. 시나리오 감시 값 `Editor.GraphNodeCount` 가 읽습니다. */
         static void recordDrawnNodeCount( uint32 nodeCount );
         /** @brief 가장 최근에 그린 그래프의 노드 수입니다. */
         static uint32 getDrawnNodeCount();

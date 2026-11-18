@@ -127,7 +127,7 @@ namespace sw
         , _bIsExecuting{ SW_FALSE }
         , _bHistorySuspended{ SW_FALSE }
         , _pAlive{ sw::make_shared<CommandStack*>( this ) }
-        , _listOwnerWatch{}
+        , _listOwnerSubscription{}
     {
         SW_ASSERT( limit._maxCommandCount > 0 && limit._maxBytes > 0 ); // 0 이면 기록이 남지 않는다 — 설정 값이 틀렸다
     }
@@ -152,22 +152,22 @@ namespace sw
         return CommandStackInteractionScope{ _pAlive };
     }
 
-    void CommandStack::watchOwners( const Command& cmd )
+    void CommandStack::subscribeOwners( const Command& cmd )
     {
         for ( const editor::UndoStep* pStep : { &cmd._undo, &cmd._redo } )
         {
             if ( pStep->_pOwner == nullptr )
                 continue;
-            const uint64 ownerID  = pStep->_ownerID;
-            const bool   bWatched = VectorUtil::containsIf( _listOwnerWatch, [ownerID]( const OwnerWatch& watch )
-              { return watch._ownerID == ownerID; } );
-            if ( bWatched == false )
-                _listOwnerWatch.push_back( OwnerWatch{ ownerID, pStep->_pOwner->subscribeReleased( editor::UndoStepOwner::ReleasedDelegate::create<&CommandStack::onOwnerReleased>( this ) ) } );
+            const uint64 ownerID     = pStep->_ownerID;
+            const bool   bSubscribed = VectorUtil::containsIf( _listOwnerSubscription, [ownerID]( const OwnerSubscription& subscription )
+              { return subscription._ownerID == ownerID; } );
+            if ( bSubscribed == false )
+                _listOwnerSubscription.push_back( OwnerSubscription{ ownerID, pStep->_pOwner->subscribeReleased( editor::UndoStepOwner::ReleasedDelegate::create<&CommandStack::onOwnerReleased>( this ) ) } );
         }
         if ( cmd._listChild != nullptr )
         {
             for ( const Command& child : *cmd._listChild )
-                watchOwners( child );
+                subscribeOwners( child );
         }
     }
 
@@ -175,16 +175,16 @@ namespace sw
     {
         (void)removeOwnedBy( ownerID );
         // 알림 안에서 구독을 놓는다 — 이 주인은 다시 알리지 않는다(사라지는 중이다).
-        _listOwnerWatch.erase( std::remove_if( _listOwnerWatch.begin(), _listOwnerWatch.end(), [ownerID]( const OwnerWatch& watch )
-        { return watch._ownerID == ownerID; } ),
-                               _listOwnerWatch.end() );
+        _listOwnerSubscription.erase( std::remove_if( _listOwnerSubscription.begin(), _listOwnerSubscription.end(), [ownerID]( const OwnerSubscription& subscription )
+        { return subscription._ownerID == ownerID; } ),
+                                      _listOwnerSubscription.end() );
     }
 
     void CommandStack::push( Command cmd )
     {
         if ( isExecutable( cmd ) == false || _bIsExecuting )
             return;
-        watchOwners( cmd );
+        subscribeOwners( cmd );
 
         if ( _transactionDepth != 0 )
         {

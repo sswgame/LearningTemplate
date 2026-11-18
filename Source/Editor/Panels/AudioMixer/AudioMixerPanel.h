@@ -43,7 +43,7 @@ namespace sw::editor
         /** @brief 솔로인 버스 수입니다(감시 값 `Editor.AudioMixerSoloCount`). */
         static uint32 getSoloCount();
         /** @brief 이름이 `gv_editorWatchBus` 인 버스의 사용자 볼륨입니다. 없으면 -1 입니다(감시 값 `Editor.AudioMixerBusVolume`). */
-        static float32 getProbedBusVolume();
+        static float32 getWatchedBusVolume();
 
     private:
         void drawPreviewBar( IAudioService& audio );

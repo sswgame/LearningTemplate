@@ -104,8 +104,6 @@ namespace sw::editor
          *          레이블은 `<패널 id>.open`, 팝업 검색 입력란은 `<패널 id>.open.search`, 목록 항목은 `<패널 id>.open.<파일 이름>` 이다.
          */
         void drawDocumentOpenBar( const utf8* pMarkPrefix );
-        /** @brief 최근에 연 문서 목록을 반환합니다. 새 것이 앞이고 최대 `kMaxRecentDocumentCount` 개입니다. */
-        const vector<string>& getRecentDocumentPaths() const { return _listRecentPath; }
 
         const string&             getLoadedAssetPath() const { return _loadedAssetPath; }
         [[nodiscard]] string_view getDocumentAssetPath() const final { return _loadedAssetPath; }

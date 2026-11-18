@@ -159,8 +159,7 @@ namespace sw::editor
             /** @brief 열린 Output Log 패널입니다. 없으면 nullptr 입니다. */
             static ConsolePanel* findPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                return pPanels != nullptr ? pPanels->findPanel<ConsolePanel>() : nullptr;
+                return EditorPanelManager::findPanelInEditorContext<ConsolePanel>();
             }
 
             /** @brief Output Log 가 지난 그리기에 보인 줄 수입니다(접기 · 거르기 뒤). */
@@ -576,7 +575,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( tooltipText.c_str() );
         }
         if ( EditorInputGUI::wasItemDoubleClicked() )
-            openEntryInIde( entry );
+            openEntryInIDE( entry );
 
         // 줄을 누르면 고르고, 누른 채 끌거나 Shift 로 누르면 넓힌다(언리얼 Output Log 의 여러 줄 선택). 선택 밖 줄을 오른쪽으로 누르면 그 줄만 고른다(R2).
         if ( bListHovered && ImGui::IsMouseHoveringRect( rowMin, rowMax, false ) )
@@ -603,7 +602,7 @@ namespace sw::editor
         if ( EditorInputGUI::beginItemContextMenu( "LogEntryCtx" ) == false )
             return;
         if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "OpenInIDE" ) ) )
-            openEntryInIde( entry );
+            openEntryInIDE( entry );
         if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyMessage" ) ) )
             ImGui::SetClipboardText( entry._message.c_str() );
         if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyFullLogLine" ) ) )
@@ -751,11 +750,11 @@ namespace sw::editor
         return _listTagCache;
     }
 
-    void ConsolePanel::openEntryInIde( const LogEntry& entry )
+    void ConsolePanel::openEntryInIDE( const LogEntry& entry )
     {
         EditorSourceLocation location;
         if ( EditorSourceLocation::findLogEntryLocation( entry._message, entry._file, entry._line, location ) )
-            (void)EditorSourceLocation::openInIde( location ); // 실패는 openInIde 가 경고로 남긴다
+            (void)EditorSourceLocation::openInIDE( location ); // 실패는 openInIDE 가 경고로 남긴다
     }
 
     void ConsolePanel::shutdown()

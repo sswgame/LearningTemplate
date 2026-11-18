@@ -55,8 +55,7 @@ namespace sw::editor
             if ( ImGui::Checkbox( "##shown", &bShown ) )
                 _viewModel.setLayerShown( row._name, bShown );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataLayers", "ShownTip" ) );
-            if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::record( ( string( "dataLayers.shown." ) + row._name ).c_str() );
+            EditorSelfTestMarks::recordFormat( "dataLayers.shown.%#", row._name );
             ImGui::TableSetColumnIndex( 2 );
             bool bInitiallyActive = row._bInitiallyActive != SW_FALSE;
             if ( ImGui::Checkbox( "##initial", &bInitiallyActive ) )

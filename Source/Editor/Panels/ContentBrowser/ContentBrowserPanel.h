@@ -202,7 +202,7 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax256> _renameBuffer;
         float32                                 _tileSize;
         uint32                                  _fallbackGlyphCount;     /**< 이번 그리기에서 종류 아이콘으로 그린 타일 수 */
-        uint32                                  _lastFallbackGlyphCount; /**< 지난 그리기의 값. 프로브가 읽는다 */
+        uint32                                  _lastFallbackGlyphCount; /**< 지난 그리기의 값. 감시 값이 읽는다 */
         ViewMode                                _viewMode;
         uint8                                   _bOpenDeleteConfirm      : 1; /**< 다음 그리기에서 삭제 확인 모달을 연다. 우클릭 메뉴 안에서는 창 단위 팝업을 열 수 없기 때문이다 */
         uint8                                   _bOpenReferenceResults   : 1; /**< 다음 그리기에서 참조 결과 창을 연다 */

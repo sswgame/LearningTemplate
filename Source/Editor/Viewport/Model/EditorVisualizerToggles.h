@@ -35,8 +35,6 @@ namespace sw::editor
         bool isOn( const EditorVisualizerRegistration& registration ) const;
         /** @brief 켜거나 끕니다. 기본값과 같아지면 기록을 지웁니다. */
         void setOn( const EditorVisualizerRegistration& registration, bool bOn );
-        /** @brief 바꾼 기록 수입니다(테스트). */
-        uint32 getOverrideCount() const { return static_cast<uint32>( _listToggle.size() ); }
 
     private:
         vector<EditorVisualizerToggle> _listToggle;

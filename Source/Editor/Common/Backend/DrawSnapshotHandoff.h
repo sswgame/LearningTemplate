@@ -87,8 +87,6 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 렌더 슬롯도 게시 대기도 없으면 true 입니다. */
         bool isIdle() const;
-        /** @brief 마지막으로 게시한 슬롯입니다. */
-        uint32 getPublishedSlot() const;
 
     private:
         mutable mutex           _mutex;

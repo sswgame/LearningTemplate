@@ -29,15 +29,6 @@ namespace sw::editor
     {
         struct AnimationGraphLayerEditorInternal
         {
-            /** @brief 값 입력란 앞 이름의 폭입니다(DPI 배율 전). */
-            static void recordIndexedMark( const utf8* pPrefix, size_t index )
-            {
-                if ( EditorSelfTestMarks::isEnabled() == false )
-                    return;
-                fixed_string<constant::buffer::kMax64> key;
-                formatstring( key.data(), key.capacity(), "%#.%#", pPrefix, static_cast<uint64>( index ) );
-                EditorSelfTestMarks::record( key.c_str() );
-            }
 
             static void drawRowLabel( const utf8* pLabel )
             {
@@ -156,7 +147,7 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( index ) );
             if ( ImGui::Selectable( label.c_str(), _selectedLayer == static_cast<int32>( index ) ) )
                 _selectedLayer = static_cast<int32>( index );
-            AnimationGraphLayerEditorInternal::recordIndexedMark( "animationGraph.layer", index );
+            EditorSelfTestMarks::recordFormat( "animationGraph.layer.%#", static_cast<uint64>( index ) );
             ImGui::PopID();
         }
 
@@ -339,7 +330,7 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( index ) );
             if ( ImGui::Selectable( label.c_str(), _selectedMask == static_cast<int32>( index ) ) )
                 _selectedMask = static_cast<int32>( index );
-            AnimationGraphLayerEditorInternal::recordIndexedMark( "animationGraph.mask", index );
+            EditorSelfTestMarks::recordFormat( "animationGraph.mask.%#", static_cast<uint64>( index ) );
             ImGui::PopID();
         }
 
@@ -511,7 +502,7 @@ namespace sw::editor
         if ( bExplicit == false )
             ImGui::PopStyleColor();
         EditorWidgets::drawTooltip( Internal::describeSource( row._source ) );
-        Internal::recordIndexedMark( "animationGraph.mask.bone", rowIndex );
+        EditorSelfTestMarks::recordFormat( "animationGraph.mask.bone.%#", static_cast<uint64>( rowIndex ) );
         ImGui::PopID();
     }
 

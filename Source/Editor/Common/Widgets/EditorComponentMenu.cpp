@@ -50,8 +50,7 @@ namespace sw::editor
             if ( ImGui::MenuItem( pDisplayName ) )
                 picked = typeName;
             // 자동화 시나리오가 타입 이름으로 누른다(EditorClick mark="<머리>.<타입>")
-            if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::record( ( markPrefix + "." + typeName.c_str() ).c_str() );
+            EditorSelfTestMarks::recordFormat( "%#.%#", markPrefix, typeName.c_str() );
             if ( pTypeInfo != nullptr )
                 EditorWidgets::drawTooltip( string{ pTypeInfo->getTooltip() }.c_str() );
         };

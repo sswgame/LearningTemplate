@@ -56,11 +56,7 @@ namespace sw::editor
             /** @brief 열린 오디오 이벤트 창입니다. 닫혔으면 nullptr 입니다(감시 값이 읽는다). */
             [[nodiscard]] static const AudioEventBrowserPanel* findOpenPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const AudioEventBrowserPanel* pPanel = pPanels->findPanel<AudioEventBrowserPanel>();
-                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+                return EditorPanelManager::findOpenPanelInEditorContext<AudioEventBrowserPanel>();
             }
 
             [[nodiscard]] static bool readEventCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -265,9 +261,7 @@ namespace sw::editor
         {
             if ( ImGui::Selectable( name.c_str(), name == _selectedEvent ) )
                 _selectedEvent = name;
-            fixed_string<constant::buffer::kMax128> mark;
-            formatstring( mark.data(), mark.capacity(), "audioevents.event.%#", name.c_str() );
-            EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 이벤트를 고른다
+            EditorSelfTestMarks::recordFormat( "audioevents.event.%#", name.c_str() ); // 시나리오가 이벤트를 고른다
         }
         EditorSelfTestMarks::record( "audioevents.list" );
     }

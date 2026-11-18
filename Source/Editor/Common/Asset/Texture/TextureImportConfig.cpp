@@ -213,11 +213,6 @@ namespace sw::editor
         return TextureFormatUsage::Raw;
     }
 
-    bool TextureImportConfig::isCatchAllRule( const TextureImportRule& rule )
-    {
-        return rule._filter.isCatchAll();
-    }
-
     optional<uint32> TextureImportConfig::findShadowingRuleIndex() const
     {
         // 마지막 규칙은 캐치올이어도 정상이다. 그래서 하나 앞까지만 본다.

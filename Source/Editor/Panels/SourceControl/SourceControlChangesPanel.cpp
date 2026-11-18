@@ -189,12 +189,7 @@ namespace sw::editor
                     _selectedPath = change._path;
                     (void)sourceControl.requestDiff( change._path );
                 }
-                if ( EditorSelfTestMarks::isEnabled() )
-                {
-                    fixed_string<constant::buffer::kMax64> text;
-                    formatstring( text.data(), text.capacity(), "sourceControl.row.%#", rowIndex );
-                    EditorSelfTestMarks::record( text.c_str() );
-                }
+                EditorSelfTestMarks::recordFormat( "sourceControl.row.%#", rowIndex );
                 ImGui::TableSetColumnIndex( 1 );
                 if ( change._originalPath.empty() )
                     ImGui::TextUnformatted( change._path.c_str() );

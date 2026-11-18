@@ -34,7 +34,7 @@ namespace sw::editor
          */
         void drawAdaptiveGrid( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float32* pView, const float32* pProj,
                                const float3& cameraPosition, bool b2DMode );
-        /** @brief 격자가 마지막으로 그린 결과입니다. 에디터 시나리오 프로브(`Editor.Grid*`)와 자체 테스트가 읽습니다. */
+        /** @brief 격자가 마지막으로 그린 결과입니다. 에디터 시나리오 감시 값(`Editor.Grid*`)와 자체 테스트가 읽습니다. */
         const EditorGridStats& getGridStats() const { return _gridStats; }
         /** @brief 오른쪽 위의 방향 큐브를 @p topInset 아래에 그립니다. 축 손잡이를 누르면 @p camera 를 그 축에서 보게 돌립니다. */
         static void drawOrientationCube( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, float32 topInset, EditorViewportCamera& camera );

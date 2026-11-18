@@ -19,8 +19,7 @@ namespace sw::editor
         /** @brief 인스펙터 창입니다. 에디터 컨텍스트나 창이 없으면 nullptr 입니다. */
         const InspectorPanel* findInspectorPanel()
         {
-            const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-            return pPanels != nullptr ? pPanels->findPanel<InspectorPanel>() : nullptr;
+            return EditorPanelManager::findPanelInEditorContext<InspectorPanel>();
         }
 
         /** @brief 인스펙터 그리드의 묶음 재구성 횟수입니다. 에디터 컨텍스트나 인스펙터 창이 없으면 값을 내지 않습니다. */

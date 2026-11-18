@@ -221,15 +221,6 @@ namespace sw::editor
         return document.dump();
     }
 
-    bool EditorPreferencesStore::applyJSON( const TypeInfo& type, void* pInstance, string_view jsonText, vector<string>& outListUnknownKey )
-    {
-        JSONDocument document;
-        if ( document.parse( jsonText ) == false || document.getRoot().isObject() == false )
-            return false;
-        EditorSettingsRegistryInternal::applyObject( document.getRoot(), type, pInstance, outListUnknownKey );
-        return true;
-    }
-
     bool EditorPreferencesStore::isPropertyModified( const PropertyInfo& prop, const ObjectAddress current, const ObjectAddress defaultInstance )
     {
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );

@@ -30,11 +30,8 @@ namespace sw::editor
             /** @brief 열린 데이터 테이블 창의 현지화 표 레코드 수 · 보이는 행 수를 읽습니다. 창이 닫혔거나 표를 읽지 않았으면 false 입니다. */
             [[nodiscard]] static bool readRecordCounts( uint32& outRecordCount, uint32& outVisibleCount )
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return false;
-                const DataTablePanel* pPanel = pPanels->findPanel<DataTablePanel>();
-                return pPanel != nullptr && pPanel->isOpen() && pPanel->findLocalizationRecordCounts( outRecordCount, outVisibleCount );
+                const DataTablePanel* pPanel = EditorPanelManager::findOpenPanelInEditorContext<DataTablePanel>();
+                return pPanel != nullptr && pPanel->findLocalizationRecordCounts( outRecordCount, outVisibleCount );
             }
 
             [[nodiscard]] static bool readRecordCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -49,9 +46,8 @@ namespace sw::editor
 
             [[nodiscard]] static bool readGameDataRowCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                const DataTablePanel*     pPanel  = pPanels != nullptr ? pPanels->findPanel<DataTablePanel>() : nullptr;
-                uint32                    rowCount{ 0 };
+                const DataTablePanel* pPanel = EditorPanelManager::findPanelInEditorContext<DataTablePanel>();
+                uint32                rowCount{ 0 };
                 if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->findGameDataRowCount( rowCount ) == false )
                     return false;
                 outValue = static_cast<float64>( rowCount );
@@ -415,9 +411,7 @@ namespace sw::editor
         ImGui::TableSetColumnIndex( static_cast<int32>( 2 + cultureCount ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Del" ) ) )
             bDeleteRequested = true;
-        fixed_string<constant::buffer::kMax128> mark;
-        formatstring( mark.data(), mark.capacity(), "dataTable.delete.%#", record._key.c_str() );
-        EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 더한 키를 지운다
+        EditorSelfTestMarks::recordFormat( "dataTable.delete.%#", record._key.c_str() ); // 시나리오가 더한 키를 지운다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "DeleteKeyTip" ) );
 
         ImGui::PopID();

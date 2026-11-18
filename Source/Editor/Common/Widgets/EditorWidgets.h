@@ -134,7 +134,7 @@ namespace sw::editor
         static void drawNoSearchResultHint( string_view filter );
         /** @brief 0건 안내를 그린 횟수를 반환합니다. 에디터 자체 테스트가 안내가 그려졌는지 확인할 때 씁니다. */
         static uint32 getNoSearchResultHintCount();
-        /** @brief 검색어가 있는 0건 안내를 이번 프레임이나 지난 프레임에 그렸으면 true 입니다. 자동화 시나리오의 프로브 `Editor.NoSearchResultHintShown` 이 씁니다. */
+        /** @brief 검색어가 있는 0건 안내를 이번 프레임이나 지난 프레임에 그렸으면 true 입니다. 자동화 시나리오의 감시 값 `Editor.NoSearchResultHintShown` 이 씁니다. */
         static bool wasFilteredNoResultHintDrawnRecently();
 
         /**

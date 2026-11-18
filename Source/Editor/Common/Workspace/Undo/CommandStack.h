@@ -133,8 +133,6 @@ namespace sw
         void endTransaction();
         /** @brief 트랜잭션을 취소하고 수집된 명령들을 버립니다. */
         void cancelTransaction();
-        /** @brief 트랜잭션 진행 여부를 반환합니다. */
-        bool isInsideTransaction() const { return _transactionDepth != 0; }
         /**
          * @brief 여러 프레임에 걸친 상호작용(기즈모 끌기 · 문서 위젯 끌기 — `DocumentEditSpan`)을 엽니다. 돌려준 핸들이 닫을 때까지 되돌리기 · 다시 하기 · 이동을 거절한다.
          * @details 상호작용은 시작 전 상태를 쥐고 끝에 한 단계를 올린다. 그 사이에 되돌리면 쥔 "전" 이 낡아 끝의 단계가 되돌린 편집을 다시 덮고 다시 하기 기록을 자른다(감사 E-2).
@@ -208,7 +206,7 @@ namespace sw
         void closeInteraction();
 
         /** @brief @p cmd(안쪽 명령까지)의 코드 단계 주인마다 사라짐을 한 번 구독합니다(`push`). */
-        void watchOwners( const Command& cmd );
+        void subscribeOwners( const Command& cmd );
         /** @brief 주인이 사라졌다 — 그 명령을 빼고 구독을 놓습니다. */
         void onOwnerReleased( uint64 ownerID );
 
@@ -241,13 +239,13 @@ namespace sw
         uint32 _interactionDepth; ///< 열린 상호작용 수(`beginInteraction`)
         uint8  _bIsExecuting      : 1;
         uint8  _bHistorySuspended : 1; ///< 보관한 내역이 있다
-        /** @struct OwnerWatch @brief 코드 단계를 받은 주인 하나의 사라짐 구독입니다. */
-        struct OwnerWatch
+        /** @struct OwnerSubscription @brief 코드 단계를 받은 주인 하나의 사라짐 구독입니다. */
+        struct OwnerSubscription
         {
             uint64       _ownerID;
             Subscription _subscription;
         };
-        shared_ptr<CommandStack*> _pAlive;         ///< 생존 표지 — 상호작용 핸들이 쥐고, 스택이 사라지면 nullptr 로 비운다
-        vector<OwnerWatch>        _listOwnerWatch; ///< 맨 끝 — 먼저 사라져 주인 쪽 알림 목록에서 빠진다
+        shared_ptr<CommandStack*> _pAlive;                ///< 생존 표지 — 상호작용 핸들이 쥐고, 스택이 사라지면 nullptr 로 비운다
+        vector<OwnerSubscription> _listOwnerSubscription; ///< 맨 끝 — 먼저 사라져 주인 쪽 알림 목록에서 빠진다
     };
 } // namespace sw

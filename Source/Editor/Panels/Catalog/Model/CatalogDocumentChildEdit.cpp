@@ -193,13 +193,6 @@ namespace sw::editor
                 return ownerPath;
             }
 
-            static CatalogChildPath appendStep( const CatalogChildPath& path, const CatalogChildStep& step )
-            {
-                CatalogChildPath childPath = path;
-                childPath.push_back( step );
-                return childPath;
-            }
-
             /** @brief 원소에 열쇠 말고 적은 것이 없으면 true 입니다. 작업 칸(`_before` 등)도 적은 것이다. */
             static bool isEmptyWritten( const CatalogXMLElement& element, const string& keyAttribute )
             {

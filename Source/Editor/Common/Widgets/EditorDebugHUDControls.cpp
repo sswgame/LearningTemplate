@@ -60,8 +60,7 @@ namespace sw::editor
             if ( ImGui::Checkbox( pSection->_pTitle, &bShown ) && pHUD->setSectionShown( pSection->_pName, bShown ) == false )
                 SW_LOG_WARNING_ID( "EditorDebugHUD.DebugHUDSectionNot", "Debug HUD section '%#' is not registered any more", pSection->_pName );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDSection" ) );
-            if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::record( ( string{ "debugHUD.section." } + pSection->_pName ).c_str() );
+            EditorSelfTestMarks::recordFormat( "debugHUD.section.%#", pSection->_pName );
             ImGui::SameLine();
             ImGui::TextDisabled( "%s", pSection->_pName );
             ImGui::PopID();

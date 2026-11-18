@@ -34,11 +34,8 @@ namespace sw::editor
             /** @brief 문서를 읽은 열린 스프라이트 클립 창입니다. 닫혔거나 문서가 없으면 nullptr 입니다. */
             [[nodiscard]] static const SpriteClipPanel* findLoadedPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const SpriteClipPanel* pPanel = pPanels->findPanel<SpriteClipPanel>();
-                return pPanel != nullptr && pPanel->isOpen() && pPanel->isClipDocumentLoaded() ? pPanel : nullptr;
+                const SpriteClipPanel* pPanel = EditorPanelManager::findOpenPanelInEditorContext<SpriteClipPanel>();
+                return pPanel != nullptr && pPanel->isClipDocumentLoaded() ? pPanel : nullptr;
             }
 
             [[nodiscard]] static bool readFrameCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -204,8 +201,7 @@ namespace sw::editor
             formatstring( label.data(), label.capacity(), "Frame %#", frameIndex );
             if ( ImGui::Selectable( label.c_str(), _model.getSelectedFrame() == frameIndex ) )
                 _model.selectFrame( frameIndex );
-            formatstring( label.data(), label.capacity(), "spriteClip.frame.%#", frameIndex );
-            EditorSelfTestMarks::record( label.c_str() ); // 시나리오가 프레임을 고른다
+            EditorSelfTestMarks::recordFormat( "spriteClip.frame.%#", frameIndex ); // 시나리오가 프레임을 고른다
             ImGui::PopID();
         }
 

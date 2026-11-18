@@ -9,6 +9,7 @@
 #include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
@@ -39,13 +40,6 @@ namespace sw::editor
 
             static State& getState() { return getEditorState<State>(); }
 
-            /** @brief 문서 @p documentPath 원본의 내용 해시입니다. 아직 없는 새 문서면 0 입니다(복구가 같은 규칙으로 견준다). */
-            static uint64 computeSourceHash( string_view documentPath )
-            {
-                const optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( documentPath );
-                return sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
-            }
-
             [[nodiscard]] static bool readCopyCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 if ( editor::findSubsystem<EditorStateStore>() == nullptr )
@@ -70,7 +64,7 @@ namespace sw::editor
     SW_DEV_COMMAND( AutosaveDocumentsNow, "autosave.documentsNow", "autosave.documentsNow",
                     "Write autosave copies of the dirty document panels on the next frame (ignores the interval)", &EditorDocumentAutosaveSchedulerInternal::runNow );
 
-    void EditorDocumentAutosaveScheduler::tick( const vector<IEditorPanel*>& listPanel )
+    void EditorDocumentAutosaveScheduler::update( const vector<EditorPanelEntry>& listPanel )
     {
         using Internal             = EditorDocumentAutosaveSchedulerInternal;
         Internal::State&     state = Internal::getState();
@@ -91,8 +85,11 @@ namespace sw::editor
         batch._sessionFolder                        = sessionFolder;
         const vector<const IEditorPanel*> listRetry = std::move( state._listDeferred );
         state._listDeferred.clear();
-        for ( IEditorPanel* pPanel : listPanel )
+        for ( const EditorPanelEntry& panelEntry : listPanel )
         {
+            IEditorPanel* const pPanel = panelEntry._pInstance.get();
+            if ( pPanel == nullptr )
+                continue;
             IEditorDocumentPanel* const pDocument = pPanel->asDocumentPanel();
             const bool                  bAsked    = listRetry.empty() || std::find( listRetry.begin(), listRetry.end(), pPanel ) != listRetry.end();
             if ( pDocument == nullptr || bAsked == false )
@@ -104,7 +101,7 @@ namespace sw::editor
             if ( take != DocumentAutosaveResult::Ready )
                 continue;
             entry._projectRoot       = ProcessRoots::get()._project.str();
-            entry._sourceContentHash = Internal::computeSourceHash( entry._documentPath );
+            entry._sourceContentHash = EditorAutosaveCommands::computeSourceHash( entry._documentPath );
             batch._listEntry.push_back( std::move( entry ) );
         }
         // 끄는 중인 문서가 있으면 주기를 다시 재지 않는다 — 구간이 끝난 첫 프레임에 그 문서가 나온다(감사 E-1 "끌기 중이면 한 프레임 미루기")

@@ -17,10 +17,7 @@ namespace sw::editor
         /** @brief 전역 변수 창의 목록 재구성 횟수입니다. 창이 없으면(에디터 컨텍스트 없음 · 창 인스턴스 없음) 값을 내지 않습니다. */
         [[nodiscard]] bool readGlobalVariablesRebuildCount( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-            if ( pPanels == nullptr )
-                return false;
-            const GlobalVariablesPanel* pPanel = pPanels->findPanel<GlobalVariablesPanel>();
+            const GlobalVariablesPanel* pPanel = EditorPanelManager::findPanelInEditorContext<GlobalVariablesPanel>();
             if ( pPanel == nullptr )
                 return false;
             outValue = static_cast<float64>( pPanel->getListRebuildCount() );

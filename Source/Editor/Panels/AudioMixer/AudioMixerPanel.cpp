@@ -67,7 +67,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readBusVolume( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( AudioMixerPanel::getProbedBusVolume() );
+                outValue = static_cast<float64>( AudioMixerPanel::getWatchedBusVolume() );
                 return true;
             }
         };
@@ -85,22 +85,22 @@ namespace sw::editor
 
     uint32 AudioMixerPanel::getBusCount()
     {
-        return AudioMixerModel::getProbe()._busCount;
+        return AudioMixerModel::getWatchValues()._busCount;
     }
 
     uint32 AudioMixerPanel::getMutedCount()
     {
-        return AudioMixerModel::getProbe()._mutedCount;
+        return AudioMixerModel::getWatchValues()._mutedCount;
     }
 
     uint32 AudioMixerPanel::getSoloCount()
     {
-        return AudioMixerModel::getProbe()._soloCount;
+        return AudioMixerModel::getWatchValues()._soloCount;
     }
 
-    float32 AudioMixerPanel::getProbedBusVolume()
+    float32 AudioMixerPanel::getWatchedBusVolume()
     {
-        return AudioMixerModel::getProbe()._probedBusVolume;
+        return AudioMixerModel::getWatchValues()._watchedBusVolume;
     }
 
     void AudioMixerPanel::drawPreviewBar( IAudioService& audio )
@@ -164,7 +164,7 @@ namespace sw::editor
         float32 volume = status._userVolume;
         if ( EditorWidgets::vSliderFloat( SW_WIDGET_ID( "##Volume" ), ImVec2{ 28.0f * dpi, Internal::kStripHeight * dpi }, &volume, 0.0f, 1.0f, "" ) )
             audio.setBusVolume( status._name, volume );
-        EditorSelfTestMarks::record( ( "audiomixer.volume." + name ).c_str() );
+        EditorSelfTestMarks::recordFormat( "audiomixer.volume.%#", name );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "UserVolumeTheOptionsMenuValueCtrl" ) );
 
         ImGui::SameLine();
@@ -186,14 +186,14 @@ namespace sw::editor
         if ( ImGui::Button( "M", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
             engine.setBusMuted( status._name, status._bMuted == false );
         ImGui::PopStyleColor();
-        EditorSelfTestMarks::record( ( "audiomixer.mute." + name ).c_str() );
+        EditorSelfTestMarks::recordFormat( "audiomixer.mute.%#", name );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "Mute" ) );
         ImGui::SameLine();
         ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bSolo ? SW_THEME_COLOR( "Signal", "Warning" ) : SW_THEME_COLOR( "Base", "ToggleInactive" ) ) );
         if ( ImGui::Button( "S", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
             engine.setBusSolo( status._name, status._bSolo == false );
         ImGui::PopStyleColor();
-        EditorSelfTestMarks::record( ( "audiomixer.solo." + name ).c_str() );
+        EditorSelfTestMarks::recordFormat( "audiomixer.solo.%#", name );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "SoloOnlyThisBusItsAncestorsAnd" ) );
         ImGui::EndGroup();
     }

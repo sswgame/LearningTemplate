@@ -208,10 +208,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readPreviewRedMinusBlue( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return false;
-                const MaterialPanel* pPanel = pPanels->findPanel<MaterialPanel>();
+                const MaterialPanel* pPanel = EditorPanelManager::findPanelInEditorContext<MaterialPanel>();
                 float32              value{ 0.0f };
                 const bool           bPreviewValueUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->findPreviewRedMinusBlue( value ) == false;
                 if ( bPreviewValueUnavailable )
@@ -223,11 +220,7 @@ namespace sw::editor
             /** @brief 열린 Material 패널입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const MaterialPanel* findOpenPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const MaterialPanel* pPanel = pPanels->findPanel<MaterialPanel>();
-                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+                return EditorPanelManager::findOpenPanelInEditorContext<MaterialPanel>();
             }
 
             /** @brief 패널이 지금 연 문서가 `gv_editorWatchAsset`(리소스 id)이면 1 입니다 — 문서 교체와 미리보기 계산을 나눠 보는 길입니다. */
@@ -373,10 +366,8 @@ namespace sw::editor
             MaterialProperty* const pProp  = &edited;
             ++shownCount;
             ImGui::PushID( static_cast<int32>( propIndex ) );
-            bool                                    bChanged = MaterialPanelInternal::drawTypedProperty( edited );
-            fixed_string<constant::buffer::kMax128> propertyMark;
-            formatstring( propertyMark.data(), propertyMark.capacity(), "material.property.%s", pProp->_name.c_str() );
-            EditorSelfTestMarks::record( propertyMark.c_str() );
+            bool bChanged = MaterialPanelInternal::drawTypedProperty( edited );
+            EditorSelfTestMarks::recordFormat( "material.property.%s", pProp->_name.c_str() );
             // 기본값과 다른 행만 되돌리기 단추를 둔다 — 인스펙터와 같은 공용 단추라 모양 · 툴팁이 같다.
             if ( MaterialPanelInternal::isModified( *pProp ) )
             {
@@ -385,9 +376,7 @@ namespace sw::editor
                     applyLivePreview();
                     bChanged = false; // 되돌린 값이 사본의 값이다 — 위젯이 고친 사본을 다시 쓰지 않는다
                 }
-                fixed_string<constant::buffer::kMax128> resetMark;
-                formatstring( resetMark.data(), resetMark.capacity(), "material.reset.%s", pProp->_name.c_str() );
-                EditorSelfTestMarks::record( resetMark.c_str() );
+                EditorSelfTestMarks::recordFormat( "material.reset.%s", pProp->_name.c_str() );
             }
             if ( bChanged && _model.setProperty( edited ) )
                 applyLivePreview();

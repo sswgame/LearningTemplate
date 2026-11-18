@@ -91,9 +91,4 @@ namespace sw::editor
     {
         return editor::getSubsystem<AssetPaths>();
     }
-
-    const AssetPaths* EditorPaths::findAssetPaths()
-    {
-        return editor::findSubsystem<AssetPaths>();
-    }
 } // namespace sw::editor

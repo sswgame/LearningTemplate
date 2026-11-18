@@ -42,13 +42,13 @@ namespace sw::editor
         void                          drawOverlaysMenu() { _overlays.drawOverlaysMenu(); }
         EditorViewportOverlays&       getOverlays() { return _overlays; }
         const EditorViewportOverlays& getOverlays() const { return _overlays; }
-        /** @brief 씬 뷰 HUD 박스를 반환합니다. 프로브가 읽습니다. */
+        /** @brief 씬 뷰 HUD 박스를 반환합니다. 감시 값이 읽습니다. */
         const EditorDebugHUDView& getHUDView() const { return _hudView; }
-        /** @brief 격자가 마지막으로 그린 결과입니다. 프로브 `Editor.Grid*` 와 자체 테스트가 읽습니다. */
+        /** @brief 격자가 마지막으로 그린 결과입니다. 감시 값 `Editor.Grid*` 와 자체 테스트가 읽습니다. */
         const EditorGridStats& getGridStats() const { return _canvasOverlay.getGridStats(); }
-        /** @brief 시각화(`debug_draw` · 물리 셰이프 · 내비메시)가 마지막으로 그린 양입니다. 프로브와 자체 테스트가 읽습니다. */
+        /** @brief 시각화(`debug_draw` · 물리 셰이프 · 내비메시)가 마지막으로 그린 양입니다. 감시 값과 자체 테스트가 읽습니다. */
         const EditorVisualizerStats& getVisualizerStats() const { return _visualizerStats; }
-        /** @brief 애셋 배치가 마지막으로 한 일(고스트 · 놓은 자리 · 거절)입니다. 프로브 `Editor.Placement*` 가 읽습니다. */
+        /** @brief 애셋 배치가 마지막으로 한 일(고스트 · 놓은 자리 · 거절)입니다. 감시 값 `Editor.Placement*` 가 읽습니다. */
         const EditorPlacementStats& getPlacementStats() const { return _assetPlacement.getStats(); }
 
         /** @brief 뷰 행렬을 계산합니다. */
@@ -62,7 +62,7 @@ namespace sw::editor
         void focusOnPoint( const float3& target, float32 radius ) { _camera.focusOnPoint( target, radius ); }
 
         const float3& getCameraPosition() const { return _camera.getPosition(); }
-        /** @brief 씬 뷰 카메라의 궤도 거리(m)입니다. 프로브 `Editor.SceneViewOrbitDistance` 가 읽습니다. */
+        /** @brief 씬 뷰 카메라의 궤도 거리(m)입니다. 감시 값 `Editor.SceneViewOrbitDistance` 가 읽습니다. */
         float32 getCameraOrbitDistance() const { return _camera.getOrbitDistance(); }
         /** @brief 씬 뷰 카메라(위치 · 회전 · 직교 · 속도)를 새 에디터 세션이 시작하는 값으로 되돌립니다. 씬을 다시 열어도 카메라 값은 이어지므로 따로 되돌린다. */
         void resetCameraToDefault();

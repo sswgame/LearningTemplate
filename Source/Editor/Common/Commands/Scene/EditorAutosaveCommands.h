@@ -77,7 +77,7 @@ namespace sw::editor
         static constexpr const utf8* kDomain = "autosave";
 
         /** @brief 게임 단계가 프레임마다 부릅니다 — 첫 프레임에 세션을 열고(잠금 · 복구 후보), 복원이 끝난 씬의 소스를 돌리고, 요청된 복원을 열고, 주기가 되면 사본을 쓴다. */
-        static void tick();
+        static void update();
         /** @brief 세션을 내립니다 — 도메인을 떼고, 편집기 종료일 때만 자기 세션 폴더를 지운다. 에디터 데이터가 내려가기 직전에 부른다(에디터 상태 저장소는 이미 없다). */
         static void endSession( EditorAutosaveSessionEnd reason );
         /** @brief 지금 씬의 사본을 바로 씁니다(주기 무시 — 개발 명령 `autosave.now`). 썼으면 true 입니다. */
@@ -90,7 +90,7 @@ namespace sw::editor
         /** @brief 지금 사본 폴더를 복구 후보로 다시 읽습니다(개발 명령 `autosave.rescan` — 비정상 종료 시나리오). 후보 수입니다. */
         static uint32 refreshRecoverable();
         /**
-         * @brief UI 쪽 — 후보 @p index 의 복원을 요청합니다. 실행은 게임 단계(`tick`)가 한다: 씬 열기 입구(`tryOpenScene`: Play 중 거절 · 미저장 확인)로 사본을 열고,
+         * @brief UI 쪽 — 후보 @p index 의 복원을 요청합니다. 실행은 게임 단계(`update`)가 한다: 씬 열기 입구(`tryOpenScene`: Play 중 거절 · 미저장 확인)로 사본을 열고,
          *        열리면 소스를 원래 id 로 돌리고 dirty 로 두고 후보에서 뺀다. 확인에서 취소하면 후보는 남는다. 거절 이유는 그때 알린다.
          * @details 요청은 번호가 아니라 사본 id 로 붙잡는다 — 실행 전에 다른 줄을 지우면 번호가 당겨진다. 번호가 범위 밖이면 false 입니다.
          */
@@ -123,5 +123,9 @@ namespace sw::editor
         static uint32 getRestoredDocumentCount();
         /** @brief 씬 리소스 id 를 사본 폴더 이름(`[a-z0-9_.-]`)으로 바꿉니다. 같은 id 는 같은 이름입니다. */
         static string makeSlotName( string_view sourceID );
+        /** @brief 사본 옆 메타 글(`key=value` 줄들)에서 @p key 의 값을 찾습니다. 없으면 빈 글입니다. 씬 사본 · 문서 사본 · 세션 잠금 파일이 같은 모양이다. */
+        [[nodiscard]] static string findMetaValue( string_view metaText, string_view key );
+        /** @brief 리소스 id @p sourceID 의 원본 파일 내용 해시입니다. 풀지 못하거나 아직 없으면(새 문서) 0 입니다 — 사본을 쓸 때와 복구할 때 같은 규칙으로 견준다. */
+        [[nodiscard]] static uint64 computeSourceHash( string_view sourceID );
     };
 } // namespace sw::editor

@@ -88,9 +88,6 @@ namespace sw::editor
             }
         }
 
-        /** @brief 누름을 넣고 아직 뗌을 넣지 않은 키입니다. */
-        [[nodiscard]] const vector<Key>& getHeldKeys() const { return _listHeldKey; }
-
     private:
         vector<Key> _listHeldKey{};
     };

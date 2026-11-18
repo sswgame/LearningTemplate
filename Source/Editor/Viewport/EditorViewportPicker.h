@@ -39,9 +39,6 @@ namespace sw::editor
          */
         void processMarquee( const EditorViewportPickInput& input, ImDrawList* pDrawList );
 
-        /** @brief 상자 선택을 기다리거나 끄는 중이면 true 입니다(호버가 양보한다). */
-        bool isMarqueeActive() const { return _bMarqueeArmed == SW_TRUE; }
-
         /** @brief 마우스 아래의 오브젝트 id 입니다. 호버 강조에 쓰며, 없거나 막혀 있으면 0 입니다. */
         uint64 getHoveredObjectID() const { return _hoveredObjectID; }
 

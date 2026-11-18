@@ -27,9 +27,7 @@ namespace sw::editor
             /** @brief @p nodeIndex 번 노드 줄의 칸 @p pCell 에 표식을 남깁니다(시나리오가 켜짐 · 가중치를 고친다). */
             static void recordNodeMark( uint32 nodeIndex, const utf8* pCell )
             {
-                fixed_string<constant::buffer::kMax64> mark;
-                formatstring( mark.data(), mark.capacity(), "rigdebug.node.%#.%#", nodeIndex, pCell );
-                EditorSelfTestMarks::record( mark.c_str() );
+                EditorSelfTestMarks::recordFormat( "rigdebug.node.%#.%#", nodeIndex, pCell );
             }
         };
     } // namespace

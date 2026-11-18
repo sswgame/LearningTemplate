@@ -43,7 +43,6 @@ namespace sw::editor
 
     void EditorDocumentPanel::drawDocumentOpenBar( const utf8* pMarkPrefix )
     {
-        const string markOpen = string{ pMarkPrefix } + ".open";
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Open" ) ) )
         {
             // 열 때 한 번 모은다 — 에디터의 에셋 색인에서 읽는다(디스크를 걷지 않는다).
@@ -51,7 +50,7 @@ namespace sw::editor
             _openFilter.clear();
             EditorInputGUI::openPopup( "##DocumentOpen" );
         }
-        EditorSelfTestMarks::record( markOpen.c_str() );
+        EditorSelfTestMarks::recordFormat( "%#.open", pMarkPrefix );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DocumentOpen" ) );
         drawOpenDocumentPopup( pMarkPrefix );
 
@@ -94,7 +93,7 @@ namespace sw::editor
             ++shownCount;
             if ( ImGui::Selectable( path.c_str(), path == _loadedAssetPath ) )
                 openPath = path;
-            EditorSelfTestMarks::record( ( markPrefix + FileUtil::getFileNamePart( path ) ).c_str() );
+            EditorSelfTestMarks::recordFormat( "%#%#", markPrefix, FileUtil::getFileNamePart( path ) );
         }
         if ( shownCount == 0 )
         {

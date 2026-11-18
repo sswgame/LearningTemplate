@@ -118,7 +118,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 에디터 자체 테스트 하나의 결과입니다. Test Runner 창과 프로브가 읽습니다. */
+    /** @brief 에디터 자체 테스트 하나의 결과입니다. Test Runner 창과 감시 값이 읽습니다. */
     struct EditorSelfTestResult
     {
         string _id;

@@ -140,8 +140,6 @@ namespace sw::editor
         /** @brief 열림 · 닫힘 상태에 맞는 폴더 아이콘 문자열을 반환합니다(SW_EDITOR_ICON( "FolderOpen" ) / kFolder). */
         static const utf8* getFolderIcon( bool bOpened = false );
 
-        /** @brief 종류의 에디터 아이콘을 반환합니다. 애셋 종류 등록을 따릅니다. 알 수 없음이면 일반 파일 아이콘입니다. */
-        static const utf8* getAssetTypeIcon( const EditorAssetType& kind );
         /** @brief 종류의 색을 반환합니다. 애셋 종류 등록을 따르고, 액센트 종류는 테마 액센트를 씁니다. 알 수 없음이면 흐린 글자색입니다. */
         static Color getAssetTypeColor( const EditorAssetType& kind );
 

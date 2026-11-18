@@ -34,11 +34,8 @@ namespace sw::editor
             /** @brief 문서를 읽은 열린 타일셋 창입니다. 없으면 nullptr 입니다. */
             [[nodiscard]] static const TileSetPanel* findLoadedPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const TileSetPanel* pPanel = pPanels->findPanel<TileSetPanel>();
-                return pPanel != nullptr && pPanel->isOpen() && pPanel->isTileSetDocumentLoaded() ? pPanel : nullptr;
+                const TileSetPanel* pPanel = EditorPanelManager::findOpenPanelInEditorContext<TileSetPanel>();
+                return pPanel != nullptr && pPanel->isTileSetDocumentLoaded() ? pPanel : nullptr;
             }
 
             [[nodiscard]] static bool readBrushCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -102,15 +99,6 @@ namespace sw::editor
                         return "x";
                 }
                 return ".";
-            }
-
-            static void recordIndexedMark( const utf8* pPrefix, int32 index )
-            {
-                if ( EditorSelfTestMarks::isEnabled() == false )
-                    return;
-                fixed_string<constant::buffer::kMax64> key;
-                formatstring( key.data(), key.capacity(), "%#.%#", pPrefix, index );
-                EditorSelfTestMarks::record( key.c_str() );
             }
         };
     } // namespace
@@ -263,7 +251,7 @@ namespace sw::editor
                     _model.selectBrush( brushIndex );
                 if ( bIssue )
                     ImGui::PopStyleColor();
-                Internal::recordIndexedMark( "tileSet.brush", brushIndex );
+                EditorSelfTestMarks::recordFormat( "tileSet.brush.%#", brushIndex );
                 ImGui::PopID();
             }
         }
@@ -324,7 +312,7 @@ namespace sw::editor
                               rule._visual._listFrameCell.empty() ? -1 : rule._visual._listFrameCell.front() );
                 if ( ImGui::Selectable( label.c_str(), _model.getSelectedRule() == ruleIndex ) )
                     _model.selectRule( ruleIndex );
-                Internal::recordIndexedMark( "tileSet.rule", ruleIndex );
+                EditorSelfTestMarks::recordFormat( "tileSet.rule.%#", ruleIndex );
                 ImGui::PopID();
                 drawIssues( _model.getSelectedBrush(), ruleIndex );
             }
@@ -376,7 +364,7 @@ namespace sw::editor
             ImGui::PushID( 2000 + neighbor );
             if ( ImGui::Button( Internal::getNeighborLabel( rule._arrNeighbor[neighbor] ), ImVec2{ buttonSide, buttonSide } ) )
                 (void)_model.cycleNeighbor( neighbor ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
-            Internal::recordIndexedMark( "tileSet.neighbor", neighbor );
+            EditorSelfTestMarks::recordFormat( "tileSet.neighbor.%#", neighbor );
             ImGui::PopID();
         }
     }

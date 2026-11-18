@@ -290,8 +290,7 @@ namespace sw::editor
                 {
                     if ( ImGui::MenuItem( typeName.c_str(), nullptr, StringUtil::equals( activeType, typeName ) ) )
                         _filterBuffer = string_view{ "t:" + typeName };
-                    const string mark = "hierarchy.typeFilter." + typeName;
-                    EditorSelfTestMarks::record( mark.c_str() );
+                    EditorSelfTestMarks::recordFormat( "hierarchy.typeFilter.%#", typeName );
                 }
                 EditorCompactControls::endViewOptions();
             }
@@ -401,16 +400,14 @@ namespace sw::editor
                                                SW_LOCKEY( "EditorScene", "HiddenInEditor" ) ) )
             viewModel.setHiddenInEditor( entry._id, bVisible );
         EditorSelfTestMarks::record( "hierarchy.activeToggle" );
-        if ( EditorSelfTestMarks::isEnabled() )
-            EditorSelfTestMarks::record( ( string( "hierarchy.toggle." ) + entry._name.c_str() ).c_str() );
+        EditorSelfTestMarks::recordFormat( "hierarchy.toggle.%#", entry._name.c_str() );
         ImGui::SameLine();
         // 2) 자물쇠 아이콘은 뷰포트에서 선택하지 못하게 한다. Hierarchy 에서는 선택할 수 있다. 저장하지 않는다.
         const bool bLocked = entry._bLocked != 0;
         if ( EditorWidgets::drawRowIconToggle( "##lock", bLocked, false, SW_EDITOR_ICON( "Lock" ), SW_EDITOR_ICON( "Unlock" ), SW_LOCKEY( "EditorScene", "LockedInViewport" ),
                                                SW_LOCKEY( "EditorScene", "PickableInViewport" ) ) )
             viewModel.setObjectLocked( entry._id, bLocked == false );
-        if ( EditorSelfTestMarks::isEnabled() )
-            EditorSelfTestMarks::record( ( string( "hierarchy.lock." ) + entry._name.c_str() ).c_str() );
+        EditorSelfTestMarks::recordFormat( "hierarchy.lock.%#", entry._name.c_str() );
         ImGui::SameLine();
         ImGui::PopID();
 
@@ -427,8 +424,7 @@ namespace sw::editor
             ImGui::SetScrollHereY( 0.5f );
         if ( entry._bSelected != 0 )
             EditorSelfTestMarks::record( "hierarchy.selectedRow" ); // 시나리오가 오른쪽 클릭으로 오브젝트 메뉴를 연다
-        if ( EditorSelfTestMarks::isEnabled() )
-            EditorSelfTestMarks::record( ( string( "hierarchy.row." ) + entry._name.c_str() ).c_str() );
+        EditorSelfTestMarks::recordFormat( "hierarchy.row.%#", entry._name.c_str() );
 
         // 행 뒤의 것(클릭 · 이름 칸 · 맥락 메뉴 · 끌기)은 방금 그린 트리 노드를 본다. 열린 노드가 넣은 깊이 위에 행 id 를 얹고 바로 닫는다.
         ImGui::PushID( static_cast<int32>( entry._id ) );

@@ -86,7 +86,7 @@ namespace sw::editor
     class InputMapModel
     {
     public:
-        /** @brief 처음 여는 맵은 디버그 키 맵(enginedefaultassets.xml), 리플레이 파일은 editortooldefaults.json 의 `_inputReplayFile` 입니다. 읽기는 첫 `tick` 전에 합니다. */
+        /** @brief 처음 여는 맵은 디버그 키 맵(enginedefaultassets.xml), 리플레이 파일은 editortooldefaults.json 의 `_inputReplayFile` 입니다. 읽기는 첫 `update` 전에 합니다. */
         /** @param recorder 편집 알림 창구입니다(문서 패널이 쥔다). 맵을 고친 뒤 이리 알려 문서 되돌리기 한 단계가 된다(감사 E-13). */
         explicit InputMapModel( const DocumentEditRecorder& recorder );
 
@@ -95,10 +95,10 @@ namespace sw::editor
          * @details ActionPhase 상태 머신 · 커맨드 히스토리 · 버퍼 만료 타이머는 `InputMap::update` 안에서만 갱신되므로 프레임마다 불러야 액션 표 · 콤보 테스터가 동작한다.
          *          입력 매니저는 모델이 찾는다 — 패널(View)은 엔진 입력 상태를 쥐지 않는다(MVVM 계약).
          */
-        void tick( float32 deltaTime );
+        void update( float32 deltaTime );
         /**
          * @brief 패널이 닫히거나 내려갈 때 부릅니다. 녹화를 끝내고, 재생 중인 리플레이를 입력에서 떼고, 키 잡기를 그만둡니다.
-         * @details 닫힌 패널은 `tick` 이 돌지 않는다. 그대로 두면 끝난 재생을 뗄 사람이 없어 입력이 독점(`Exclusive`)된 채 멈추고, 패널이 사라지면 입력이 해제된 리플레이를 가리킨다.
+         * @details 닫힌 패널은 `update` 이 돌지 않는다. 그대로 두면 끝난 재생을 뗄 사람이 없어 입력이 독점(`Exclusive`)된 채 멈추고, 패널이 사라지면 입력이 해제된 리플레이를 가리킨다.
          */
         void releaseInput();
 

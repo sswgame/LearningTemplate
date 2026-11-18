@@ -46,9 +46,7 @@ namespace sw::editor
                     _openPopupID          = popupID;
                     EditorInputGUI::openPopup( "CurveEditor" ); // 같은 id(위의 GetID 와 같은 이름)
                 }
-                fixed_string<constant::buffer::kMax128> mark;
-                formatstring( mark.data(), mark.capacity(), "inspector.curve.%#", row._propName.c_str() );
-                EditorSelfTestMarks::record( mark.c_str() );
+                EditorSelfTestMarks::recordFormat( "inspector.curve.%#", row._propName.c_str() );
 
                 const ImGuiID popupID = ImGui::GetID( "CurveEditor" );
                 // 창 가운데에 연다 — 인스펙터는 오른쪽 끝이라 누른 위치에 열면 편집기가 창 밖으로 나간다.

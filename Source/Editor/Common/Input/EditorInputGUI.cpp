@@ -133,13 +133,11 @@ namespace sw::editor
             EditorCommandRegistry::formatMenuLabel( desc, menuLabel );
             const bool bEnabled = menuState._listEnabled[itemIndex] != 0;
             // 시나리오가 누를 표식은 `menu.<명령 id>` 다 — 어느 창의 메뉴든 같은 명령은 같은 표식이다.
-            fixed_string<constant::buffer::kMax128> markKey{ "menu." };
-            markKey.append( desc._id.c_str() );
             if ( desc._submenu.isBound() )
             {
                 // 하위 메뉴는 열린 동안 그 명령의 함수가 안을 그린다(대상에 따라 항목이 바뀌는 메뉴 — Add Component · Select All With).
                 const bool bSubmenuOpen = ImGui::BeginMenu( menuLabel.c_str(), bEnabled );
-                EditorSelfTestMarks::record( markKey.c_str() );
+                EditorSelfTestMarks::recordFormat( "menu.%#", desc._id.c_str() );
                 if ( bSubmenuOpen )
                 {
                     desc._submenu( state._target );
@@ -151,7 +149,7 @@ namespace sw::editor
             const utf8* pShortcut = shortcutLabel.empty() ? nullptr : shortcutLabel.c_str();
             if ( ImGui::MenuItem( menuLabel.c_str(), pShortcut, false, bEnabled ) )
                 chosenCommandID = desc._id;
-            EditorSelfTestMarks::record( markKey.c_str() );
+            EditorSelfTestMarks::recordFormat( "menu.%#", desc._id.c_str() );
         }
         ImGui::EndPopup();
         // 고른 명령은 다음 프레임 첫머리에 실행한다 — 패널이 그리는 중인 목록(컴포넌트 카드 · 행)이 명령 뒤에 남지 않는다.
@@ -247,14 +245,6 @@ namespace sw::editor
         return ImGui::BeginPopup( pPopupID );
     }
 
-    bool EditorInputGUI::beginWindowContextMenu( const utf8* pPopupID )
-    {
-        const bool bOverEmpty = ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByPopup ) && ImGui::IsAnyItemHovered() == false;
-        if ( bOverEmpty && EditorInputGUIInternal::wasClickedWithoutDrag( ImGuiMouseButton_Right ) )
-            ImGui::OpenPopup( pPopupID );
-        return ImGui::BeginPopup( pPopupID );
-    }
-
     bool EditorInputGUI::wasItemClicked( EditorMouseButton button )
     {
         return ImGui::IsItemClicked( static_cast<ImGuiMouseButton>( button ) );
@@ -280,7 +270,6 @@ namespace sw::editor
             state._arrDown[index]               = ImGui::IsMouseDown( button );
             state._arrPressed[index]            = ImGui::IsMouseClicked( button );
             state._arrReleased[index]           = ImGui::IsMouseReleased( button );
-            state._arrDoubleClicked[index]      = ImGui::IsMouseDoubleClicked( button );
             state._arrDragging[index]           = ImGui::IsMouseDragging( button );
             state._arrClickedWithoutDrag[index] = EditorInputGUIInternal::wasClickedWithoutDrag( button );
             const ImVec2 dragDelta              = ImGui::GetMouseDragDelta( button, 0.0f );

@@ -34,11 +34,7 @@ namespace sw::editor
             /** @brief 열린 클립 미리보기 창입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const AnimationClipPreviewPanel* findOpenPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const AnimationClipPreviewPanel* pPanel = pPanels->findPanel<AnimationClipPreviewPanel>();
-                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+                return EditorPanelManager::findOpenPanelInEditorContext<AnimationClipPreviewPanel>();
             }
 
             [[nodiscard]] static bool readClipDuration( const GameObjectManager* /*pManager*/, float64& outValue )

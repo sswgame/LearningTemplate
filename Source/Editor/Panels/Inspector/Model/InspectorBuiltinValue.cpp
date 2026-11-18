@@ -148,10 +148,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    uint32 InspectorBuiltinValue::getBuiltinCount()
-    {
-        return static_cast<uint32>( InspectorBuiltinValueInternal::getTable().size() );
-    }
 
     const InspectorBuiltinValue& InspectorBuiltinValue::getBuiltin( uint32 index )
     {
@@ -168,11 +164,6 @@ namespace sw::editor
                 return &row;
         }
         return nullptr;
-    }
-
-    bool InspectorBuiltinValue::supportsMethodValue( string_view typeName )
-    {
-        return findBuiltin( typeName ) != nullptr;
     }
 
     bool InspectorBuiltinValue::prepareMethodArgs( const FunctionInfo& method, vector<InspectorMethodArgSlot>& inoutListSlot )

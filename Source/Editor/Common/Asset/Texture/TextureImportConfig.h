@@ -183,13 +183,6 @@ namespace sw::editor
         static string findSharedRuleName( string_view relativePath );
 
         /**
-         * @brief 이 규칙이 무엇에나 매칭되는지 확인합니다. 네 목록이 모두 비어 있으면 매칭됩니다.
-         * @details `findMatchingRule` 은 include 목록이 비어 있으면 그 검사를 건너뛰고, exclude 목록이 비어 있으면 거를 것이 없다. 즉 네 목록이 모두
-         *          비어 있으면 어떤 경로에도 바로 매칭된다.
-         */
-        static bool isCatchAllRule( const TextureImportRule& rule );
-
-        /**
          * @brief 맨 끝이 아닌 자리에 있는 조건 없는 규칙의 인덱스입니다. 없으면 비어 있습니다.
          *
          * @details 조건 없는 규칙은 나머지를 받는 규칙(`Fallback_Default`)이라 맨 끝에 하나만 둡니다. 맨 끝의 캐치올은 정상이고 흔한 쓰임이라

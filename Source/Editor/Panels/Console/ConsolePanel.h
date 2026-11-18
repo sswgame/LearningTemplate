@@ -97,10 +97,10 @@ namespace sw::editor
         /** @brief 툴바 옵션 메뉴(가끔 켜는 설정 · 내보내기)를 그립니다. */
         void drawOptionsPopup();
         /** @brief 로그 행이 가리키는 소스 위치를 IDE 로 엽니다. 메시지 안의 위치를 먼저 씁니다. */
-        static void openEntryInIde( const LogEntry& entry );
+        static void openEntryInIDE( const LogEntry& entry );
         /** @brief 아래쪽 명령 입력란(개발 콘솔)을 그립니다. 명령과 전역 변수의 get, set, Tab 자동 완성, ↑↓ 기록을 지원합니다. */
         void drawCommandLine();
-        /** @brief 지난 그리기의 행 수입니다. 접기와 필터링을 적용한 뒤의 수이며, 프로브 `Editor.OutputLogVisibleRows` 가 읽습니다. */
+        /** @brief 지난 그리기의 행 수입니다. 접기와 필터링을 적용한 뒤의 수이며, 감시 값 `Editor.OutputLogVisibleRows` 가 읽습니다. */
         uint32 getRowCount() const
         {
             _uiThread.assumeHeld();

@@ -4,9 +4,12 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Workspace/EditorPanelVisibility.h"
+
+struct ImGuiDockNode;
 
 namespace sw::editor
 {
@@ -59,6 +62,11 @@ namespace sw::editor
         void setPanelOverrideRequested( bool bRequested );
         /** @brief `-gv_editorOpenPanel=all` 로 등록된 패널을 전부 떠 있는 창으로 여는 중이면 true 입니다. */
         static bool isOpeningAllPanels();
+
+        /** @brief 메인 뷰포트를 덮는 도크스페이스의 루트 노드입니다. 없으면 nullptr 입니다(배치 검사 — 시나리오 단계 `EditorExpectDockLayout` · 자체 테스트가 읽는다). */
+        [[nodiscard]] static const ImGuiDockNode* findMainDockspace();
+        /** @brief @p pNode 아래의 보이는 잎 노드(패널이 붙는 영역)를 @p outListLeaf 에 더합니다. 보이지 않는 가지는 건너뜁니다. */
+        static void collectVisibleLeaves( const ImGuiDockNode* pNode, vector<const ImGuiDockNode*>& outListLeaf );
 
     private:
         void applyDefaultDockLayout( uint32 dockspaceID );

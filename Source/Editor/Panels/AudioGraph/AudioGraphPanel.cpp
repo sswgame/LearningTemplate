@@ -220,7 +220,7 @@ namespace sw::editor
         // 캔버스가 지운 id 를 모두 모은 뒤에 모델이 지운다. 버퍼는 멤버로 두어 프레임마다 할당하지 않는다.
         _nodeGraph.collectRemovals( _removal );
         if ( EditorNodeGraph::removeComments( _model.editGraph()._listComment, _removal._listCommentID ) )
-            _model.markCommentsEdited( AudioGraphModel::CommentEdit::Delete );
+            _model.markCommentsEdited( EditorGraphCommentEdit::Delete );
         _model.applyDeletions( _removal._listLinkID, _removal._listNodeID );
     }
 
@@ -240,9 +240,9 @@ namespace sw::editor
         // 주석 상자는 노드보다 먼저 그린다(상자가 노드 뒤에 깔린다). 보기 막대의 주석 단추가 낸 요청이면 새 상자를 더한다.
         vector<GraphCommentBox>& listComment = _model.editGraph()._listComment;
         if ( _nodeGraph.drawComments( listComment, _nodeGraph.needsContentFit() ) )
-            _model.markCommentsEdited( AudioGraphModel::CommentEdit::Rename );
+            _model.markCommentsEdited( EditorGraphCommentEdit::Rename );
         if ( _nodeGraph.addRequestedComment( listComment ) )
-            _model.markCommentsEdited( AudioGraphModel::CommentEdit::Add );
+            _model.markCommentsEdited( EditorGraphCommentEdit::Add );
 
         const AudioGraphDef& graph     = _model.getGraph();
         const uint32         nodeCount = static_cast<uint32>( graph._listNode.size() );
@@ -296,7 +296,7 @@ namespace sw::editor
                 _model.recordNodePosition( nodeIndex, float2{ position.x, position.y } );
             }
             if ( _nodeGraph.syncCommentLayout( _model.editGraph()._listComment ) )
-                _model.markCommentsEdited( AudioGraphModel::CommentEdit::Move );
+                _model.markCommentsEdited( EditorGraphCommentEdit::Move );
         }
 
         int32 selectedNodeID{ 0 };

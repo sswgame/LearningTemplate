@@ -102,18 +102,18 @@ namespace sw::editor
         void drawCallTreeNode( uint32 nodeIndex );
 
     public:
-        /** @brief 프로브용입니다. 테이블이 보여 주는 프레임을 반환합니다. 0 이 가장 최근입니다. */
+        /** @brief 감시 값용입니다. 테이블이 보여 주는 프레임을 반환합니다. 0 이 가장 최근입니다. */
         uint32 getSelectedFrameOffset() const { return _capture.getSelectedFrameOffset(); }
-        /** @brief 프로브용입니다. 수집을 멈췄으면 true 입니다. 스파이크를 잡았거나 캡처 파일을 열었을 때 멈춥니다. */
+        /** @brief 감시 값용입니다. 수집을 멈췄으면 true 입니다. 스파이크를 잡았거나 캡처 파일을 열었을 때 멈춥니다. */
         bool isCapturePaused() const { return _capture.isPaused(); }
-        /** @brief 프로브용입니다. 수집한 프레임 수를 반환합니다. */
+        /** @brief 감시 값용입니다. 수집한 프레임 수를 반환합니다. */
         uint64 getCapturedFrameCount() const { return _capture.getHistory().getCapturedFrameCount(); }
-        /** @brief 프로브용입니다. 마지막으로 그린 호출 트리의 노드 수를 반환합니다. */
+        /** @brief 감시 값용입니다. 마지막으로 그린 호출 트리의 노드 수를 반환합니다. */
         uint32 getCallTreeNodeCount() const { return _timeline.getCallTree().countLiveNodes(); }
 #if !defined( SW_SHIPPING )
-        /** @brief 프로브용입니다. 불러온 트레이스의 스레드 수를 반환합니다. 없으면 0 입니다. */
+        /** @brief 감시 값용입니다. 불러온 트레이스의 스레드 수를 반환합니다. 없으면 0 입니다. */
         uint32 getLoadedTraceThreadCount() const { return _timeline.getLoadedTraceThreadCount(); }
-        /** @brief 프로브용입니다. 마지막으로 그린 타임라인에서 검색어와 일치한 이벤트 수를 반환합니다. 검색어가 없으면 모든 이벤트입니다. */
+        /** @brief 감시 값용입니다. 마지막으로 그린 타임라인에서 검색어와 일치한 이벤트 수를 반환합니다. 검색어가 없으면 모든 이벤트입니다. */
         uint32 getTraceSearchMatchCount() const { return _timeline.getTraceSearchMatchCount(); }
         /**
          * @brief Profiler 창을 열고 @p path 를 불러와 다음 그리기에서 Timeline 탭을 고릅니다. 창이 없거나 불러오지 못하면 false 입니다(이유는 로그 · 상태 줄에 남는다).

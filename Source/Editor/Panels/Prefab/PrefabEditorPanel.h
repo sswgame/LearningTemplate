@@ -60,8 +60,6 @@ namespace sw::editor
 
         /** @brief 문서 루트를 (다시) 스폰합니다 — 미리보기 씬이 있어야 하고 문서가 열려 있어야 합니다. 창 테스트가 직접 부릅니다. */
         bool rebuildDocumentRoot();
-        /** @brief 중첩 프리팹 @p prefabPath 를 격리합니다. 지금 단계 아래에서 그 인스턴스를 찾고 없으면 스폰합니다. 쌓았으면 true 입니다. */
-        bool enterNestedIsolation( string_view prefabPath );
 
     private:
         ToolAssetLoadResult loadDocument() override;

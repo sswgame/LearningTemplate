@@ -266,7 +266,7 @@ namespace sw::editor
             state._bCollapsed = state._bCollapsed == false;
             save();
         }
-        EditorSelfTestMarks::record( ( "overlay.collapse." + state._id ).c_str() );
+        EditorSelfTestMarks::recordFormat( "overlay.collapse.%#", state._id );
         EditorWidgets::drawTooltip( state._bCollapsed ? SW_LOCKEY( "EdCommon", "OverlayExpand" ) : SW_LOCKEY( "EdCommon", "OverlayCollapse" ) );
         if ( state._bCollapsed )
         {
@@ -314,7 +314,7 @@ namespace sw::editor
                 }
             }
         }
-        EditorSelfTestMarks::record( ( "overlay.grip." + state._id ).c_str() );
+        EditorSelfTestMarks::recordFormat( "overlay.grip.%#", state._id );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "OverlayGrip" ) );
         if ( ImGui::IsItemActivated() )
         {
