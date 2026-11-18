@@ -34,7 +34,7 @@ namespace sw
         struct ArenaGameModeComponentInternal
         {
             static constexpr uint32 kStateTag       = FourCCUtil::make( "ARNA" );
-            static constexpr uint32 kStateVersion   = 1;
+            static constexpr uint32 kStateVersion   = 2; ///< 2: 탄의 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
             static constexpr int32  kProjectileTint = 3; ///< `applyTint` 의 투사체 번호(앞의 셋은 `ArenaUnitKind` 순서다).
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 abilityarena.audioevents.xml 이 정한다.
