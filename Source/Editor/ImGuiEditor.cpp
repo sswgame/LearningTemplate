@@ -91,7 +91,12 @@ namespace sw::editor
     struct EditorRedrawUtil
     {
         /**
-         * @brief ImGui 입력 · 잡은 항목 · 플레이 · 알림 · 패널의 연속 프레임 요청을 모아 `EditorRedrawReason` 비트 묶음으로 냅니다. 에디터 UI 갱신 뒤에 부릅니다.
+         * @brief UI 쪽 까닭 — ImGui 입력 · 잡은 항목 · 패널의 연속 프레임 요청을 `EditorRedrawReason` 비트로 냅니다. UI 프레임을 닫은 뒤 넘기기 전에 부릅니다(UI 스레드).
+         * @return ImGui 컨텍스트가 아직 없으면 0 입니다.
+         */
+        [[nodiscard]] static uint32 collectUIReasons( const EditorRenderViews& views );
+        /**
+         * @brief 게임 스레드 쪽 — 넘긴 UI 프레임의 까닭(`EditorUIFrameOutput::_redrawReasons`)에 플레이 · 알림 · 백그라운드 일 · 로딩을 더해 냅니다. 에디터 UI 갱신 뒤에 부릅니다.
          * @return 에디터 컨텍스트나 ImGui 컨텍스트가 아직 없으면(그릴 에디터 UI 가 없다) 0 입니다.
          */
         [[nodiscard]] static uint32 collectReasons();
@@ -100,19 +105,30 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    uint32 EditorRedrawUtil::collectReasons()
+    uint32 EditorRedrawUtil::collectUIReasons( const EditorRenderViews& views )
     {
-        EditorContext* const      pContext = editor::findSubsystem<EditorContext>();
-        const ImGuiContext* const pImGui   = ImGui::GetCurrentContext();
-        if ( pContext == nullptr || pImGui == nullptr )
-            return static_cast<uint32>( EditorRedrawReason::None ); // 그릴 에디터 UI 가 없다
+        const ImGuiContext* const pImGui = ImGui::GetCurrentContext();
+        if ( pImGui == nullptr )
+            return static_cast<uint32>( EditorRedrawReason::None );
         // 이번 프레임의 NewFrame 이 처리한 입력(마우스 위치 · 단추 · 키 · 글자 · 포커스)과 누르고 있는 단추.
         const bool bInput = pImGui->InputEventsTrail.Size > 0 || ImGui::IsAnyMouseDown();
         // 잡고 있는 것 — 다음 프레임 입력이 없어도 화면이 따라가야 한다(끌기 미리보기 · 창 옮기기 · Ctrl+Tab 창 고르기).
         const bool bActive  = ImGui::IsAnyItemActive() || pImGui->MovingWindow != nullptr || pImGui->DragDropActive || pImGui->NavWindowingTarget != nullptr;
+        const bool bAnimate = views.isAnimationRequested();
+        uint32     reasons  = 0;
+        reasons |= bInput ? static_cast<uint32>( EditorRedrawReason::Input ) : 0u;
+        reasons |= bActive ? static_cast<uint32>( EditorRedrawReason::ActiveItem ) : 0u;
+        reasons |= bAnimate ? static_cast<uint32>( EditorRedrawReason::Animation ) : 0u;
+        return reasons;
+    }
+
+    uint32 EditorRedrawUtil::collectReasons()
+    {
+        EditorContext* const pContext = editor::findSubsystem<EditorContext>();
+        if ( pContext == nullptr || ImGui::GetCurrentContext() == nullptr )
+            return static_cast<uint32>( EditorRedrawReason::None ); // 그릴 에디터 UI 가 없다
         const bool bRunning = ( EditorPlaySession::isPlayerActive() || EditorPlaySession::isSimulating() ) && EditorPlaySession::isPaused() == false;
         const bool bToast   = pContext->getSubsystem<EditorNotificationManager>().getNotifications().empty() == false;
-        const bool bAnimate = pContext->getSubsystem<EditorRenderViews>().isAnimationRequested();
         // 프레임 단계가 나르는 일 — 워커가 끝내도 창 메시지가 오지 않으므로 끝날 때까지 깨어 있는다.
         const EditorLightProbeBakeSession* const      pLightBake        = editor::findSubsystem<EditorLightProbeBakeSession>();
         const EditorReflectionProbeBakeSession* const pReflectionBake   = editor::findSubsystem<EditorReflectionProbeBakeSession>();
@@ -123,12 +139,10 @@ namespace sw::editor
         SceneManager&      sceneManager = editor::getSubsystem<SceneManager>();
         const Scene* const pScene       = sceneManager.getActiveScene();
         const bool         bLoading     = sceneManager.isTransitioning() || CaptureReadiness::countPendingJobs( pScene != nullptr ? pScene->getObjectManager() : nullptr ) > 0;
-        uint32             reasons      = 0;
-        reasons |= bInput ? static_cast<uint32>( EditorRedrawReason::Input ) : 0u;
-        reasons |= bActive ? static_cast<uint32>( EditorRedrawReason::ActiveItem ) : 0u;
+        // UI 쪽 까닭은 UI 프레임 끝에 넘긴 값 묶음에서 읽는다 — 살아 있는 ImGui 상태를 게임 스레드가 읽지 않는다.
+        uint32 reasons = pContext->getSubsystem<EditorRenderViews>().getPublishedUIFrame()._redrawReasons;
         reasons |= bRunning ? static_cast<uint32>( EditorRedrawReason::Simulation ) : 0u;
         reasons |= bToast ? static_cast<uint32>( EditorRedrawReason::Notification ) : 0u;
-        reasons |= bAnimate ? static_cast<uint32>( EditorRedrawReason::Animation ) : 0u;
         reasons |= bWorking ? static_cast<uint32>( EditorRedrawReason::BackgroundJob ) : 0u;
         reasons |= bLoading ? static_cast<uint32>( EditorRedrawReason::AssetsLoading ) : 0u;
         return reasons;
@@ -183,18 +197,25 @@ namespace sw::editor
             }
 
             /** @brief 뷰의 렌더 타깃 핸들 · 크기 · 창 안 자리를 호스트 형식으로 씁니다. @p pView 가 없으면 빈 값이며, 이번 프레임에 그 뷰를 그리지 않았다는 뜻입니다. */
-            static void writeViewport( const EditorViewTarget* pView, ViewportTarget* pOutTarget )
+            /** @brief 게임 스레드 쪽 — 넘긴 UI 프레임이 뷰 @p kind 를 요청했으면 그 렌더 타깃과 그린 자리를 @p pOutTarget 에 씁니다(아니면 빈 값). */
+            static void writeViewport( const EditorContext* pContext, EditorViewKind kind, ViewportTarget* pOutTarget )
             {
                 if ( pOutTarget == nullptr )
                     return;
                 *pOutTarget = ViewportTarget{};
-                if ( pView == nullptr )
+                if ( pContext == nullptr )
                     return;
-                pOutTarget->_renderTarget = pView->_renderTarget;
-                pOutTarget->_width        = pView->_width;
-                pOutTarget->_height       = pView->_height;
-                pOutTarget->_windowX      = pView->_windowX;
-                pOutTarget->_windowY      = pView->_windowY;
+                const EditorRenderViews&  views = pContext->getSubsystem<EditorRenderViews>();
+                const EditorUIFrameOutput frame = views.getPublishedUIFrame();
+                if ( frame.isViewRequested( kind ) == false )
+                    return;
+                const EditorViewTarget&              view = views.getViewTarget( kind );
+                const EditorUIFrameOutput::ViewMark& mark = frame._arrView[static_cast<uint32>( kind )];
+                pOutTarget->_renderTarget                 = view._renderTarget;
+                pOutTarget->_width                        = view._width;
+                pOutTarget->_height                       = view._height;
+                pOutTarget->_windowX                      = mark._windowX;
+                pOutTarget->_windowY                      = mark._windowY;
             }
 
             /** @brief ImGui 할당을 sw 할당자로 보냅니다. 할당 헤더에 태그가 기록되어 메모리 프로파일러의 Editor 항목으로 집계됩니다. */
@@ -873,6 +894,12 @@ namespace sw::editor
         }
 
         closeAndPublishFrame();
+        // UI → 게임 값 묶음 — 이 UI 프레임이 쓴 값(그린 뷰 · 미리보기 눈 · 게임 뷰 초점 · UI 쪽 다시 그릴 까닭)을 한 번에 넘긴다. 게임 스레드는 이 사본만 읽는다(`EditorUIFrameOutput`).
+        if ( _editorContext != nullptr )
+        {
+            EditorRenderViews& views = _editorContext->getSubsystem<EditorRenderViews>();
+            views.publishUIFrame( EditorRedrawUtil::collectUIReasons( views ) );
+        }
     }
 
     void ImGuiEditor::prepareRender( IRHIDevice* pRHIDevice )
@@ -981,21 +1008,20 @@ namespace sw::editor
 
     void ImGuiEditor::getGameViewport( ViewportTarget* pOutTarget ) const
     {
-        const bool bRequest = _editorContext != nullptr && _editorContext->getSubsystem<EditorRenderViews>().isViewRequested( EditorViewKind::Game );
-        ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game ) : nullptr, pOutTarget );
+        ImGuiEditorInternal::writeViewport( _editorContext.get(), EditorViewKind::Game, pOutTarget );
     }
 
     void ImGuiEditor::getSceneViewport( ViewportTarget* pOutTarget ) const
     {
-        const bool bRequest = _editorContext != nullptr && _editorContext->getSubsystem<EditorRenderViews>().isViewRequested( EditorViewKind::Scene );
-        ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene ) : nullptr, pOutTarget );
+        ImGuiEditorInternal::writeViewport( _editorContext.get(), EditorViewKind::Scene, pOutTarget );
     }
 
     uint32 ImGuiEditor::getPreviewSceneViews( PreviewSceneView* pOutView, uint32 capacity ) const
     {
         if ( _editorContext == nullptr || pOutView == nullptr )
             return 0;
-        return _editorContext->getSubsystem<EditorRenderViews>().collectSceneViews( pOutView, capacity );
+        const EditorRenderViews& views = _editorContext->getSubsystem<EditorRenderViews>();
+        return views.collectSceneViews( views.getPublishedUIFrame(), pOutView, capacity );
     }
 
     CameraComponent* ImGuiEditor::getSceneViewCamera() const
