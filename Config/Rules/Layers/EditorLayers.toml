@@ -90,6 +90,7 @@ patterns = [
     "^Engine/Object/",
     "^Engine/Scene/",
     "^Engine/.+/Component/",
+    "^Engine/Input/InputManager[.]h", # 입력 상태 · 주입은 모델이 쥔다 — View 는 값 묶음(`InputMapDeviceState` · 입력 오버레이 값)과 명령만 쓴다. 열거는 잎 헤더(`InputGlyphStyle.h` · `InputKeyboardFocus.h`)
 ]
 
 # 금지 폴더 안에 있지만 값 · 창구라 View 가 써도 되는 헤더 → 까닭. 껍데기를 놓지 않는다(그 헤더가 include 하는 금지 헤더는 껍데기가 멈춘다).

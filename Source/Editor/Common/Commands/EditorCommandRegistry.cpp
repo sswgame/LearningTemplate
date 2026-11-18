@@ -76,6 +76,7 @@ namespace sw::editor
     {
         _listCommand.clear();
         _listMenu.clear();
+        ++_commandRevision;
     }
 
     void EditorCommandRegistry::registerCommand( EditorCommandDesc desc )
@@ -87,6 +88,7 @@ namespace sw::editor
         }
 
         _listCommand.push_back( std::move( desc ) );
+        ++_commandRevision;
         rebuildMenus();
     }
 
@@ -162,6 +164,23 @@ namespace sw::editor
         if ( desc._enabledPredicate.isBound() == false )
             return true;
         return desc._enabledPredicate( target );
+    }
+
+    void EditorCommandRegistry::publishEnabledState()
+    {
+        _listEnabledSnapshot.resize( _listCommand.size() );
+        for ( size_t index = 0; index < _listCommand.size(); ++index )
+        {
+            _listEnabledSnapshot[index] = isEnabled( _listCommand[index], EditorCommandTarget::none() ) ? uint8{ 1 } : uint8{ 0 };
+        }
+        _snapshotRevision = _commandRevision;
+    }
+
+    bool EditorCommandRegistry::isEnabledInSnapshot( uint32 commandIndex ) const
+    {
+        if ( _snapshotRevision != _commandRevision || commandIndex >= _listEnabledSnapshot.size() )
+            return false;
+        return _listEnabledSnapshot[commandIndex] != 0;
     }
 
     bool EditorCommandRegistry::execute( string_view commandID, const EditorCommandTarget& target )
@@ -261,6 +280,16 @@ namespace sw::editor
                                           EditorCommandRegistryInternal::isGroupBoundary( _listCommand[outListItem.back()._commandIndex]._contextMenuOrder,
                                                                                           _listCommand[commandIndex]._contextMenuOrder );
             outListItem.push_back( EditorMenuItem{ commandIndex, bSeparatorBefore } );
+        }
+    }
+
+    void EditorCommandRegistry::gatherContextMenu( const EditorCommandTarget& target, EditorContextMenuState& outState ) const
+    {
+        collectContextMenuItems( target._kind, outState._listItem );
+        outState._listEnabled.resize( outState._listItem.size() );
+        for ( size_t index = 0; index < outState._listItem.size(); ++index )
+        {
+            outState._listEnabled[index] = isEnabled( _listCommand[outState._listItem[index]._commandIndex], target ) ? uint8{ 1 } : uint8{ 0 };
         }
     }
 

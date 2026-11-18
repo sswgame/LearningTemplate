@@ -47,8 +47,8 @@ namespace sw::editor
         static void processSceneRequests();
         /** @brief 미저장 확인을 기다리는 씬 동작입니다. 없으면 `None` 입니다. */
         [[nodiscard]] static EditorPendingSceneAction getPendingSceneAction();
-        /** @brief 미저장 확인 창의 선택을 이어서 실행합니다. */
-        static void applyUnsavedSceneChoice( EditorUnsavedChoice choice );
+        /** @brief 미저장 확인 창의 선택을 요청합니다 — 같은 프레임의 게임 단계(`sceneSession`)가 저장 · 버리기 · 이어서 할 동작을 한다. */
+        static void requestUnsavedSceneChoice( EditorUnsavedChoice choice );
 
         /** @brief 저장한 이름 붙인 레이아웃 이름들입니다(먼저 비운다). */
         static void collectLayoutNames( vector<string>& outListName );

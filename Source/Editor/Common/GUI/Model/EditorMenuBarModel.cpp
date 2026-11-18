@@ -57,9 +57,9 @@ namespace sw::editor
         return editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().getPendingSceneAction();
     }
 
-    void EditorMenuBarModel::applyUnsavedSceneChoice( EditorUnsavedChoice choice )
+    void EditorMenuBarModel::requestUnsavedSceneChoice( EditorUnsavedChoice choice )
     {
-        EditorSceneFileCommands::applyUnsavedSceneChoice( choice );
+        editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().requestUnsavedSceneChoice( choice );
     }
 
     void EditorMenuBarModel::collectLayoutNames( vector<string>& outListName )

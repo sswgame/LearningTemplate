@@ -62,6 +62,26 @@ namespace sw::editor
     /** @brief 에셋 옮김 알림입니다(`EditorWorkspace::notifyAssetsMoved`). */
     using EditorAssetsMovedDelegate = Delegate<void( const EditorAssetMoveEvent& )>;
 
+    /** @brief UI(메뉴 · 파일 대화상자 · 콘텐츠 브라우저)가 게임 단계에 넘기는 씬 파일 요청의 종류입니다. */
+    enum class EditorSceneFileRequestKind : uint8
+    {
+        Open,          ///< 씬 열기(미저장 확인을 거친다 — `EditorSceneFileCommands::tryOpenScene`)
+        SaveAs,        ///< 활성 씬을 디스크 경로에 다른 이름으로 저장(`EditorSceneFileCommands::saveActiveSceneAs`)
+        UnsavedChoice, ///< 미저장 확인 창의 선택을 적용(`EditorSceneFileCommands::applyUnsavedSceneChoice` — 문서 · 씬 저장, 버리기, 이어서 할 동작)
+    };
+
+    /**
+     * @struct EditorSceneFileRequest
+     * @brief 씬 파일 요청 하나입니다(값만 — 경로 사본). 게임 단계 `sceneSession` 이 요청한 순서대로 실행한다.
+     * @details 대화상자 결과를 받은 자리(UI 프레임)에서 씬을 읽고 쓰지 않는다 — 언리얼 Slate 가 게임 스레드에 넘기는 명령과 같은 자리.
+     */
+    struct EditorSceneFileRequest
+    {
+        EditorSceneFileRequestKind _kind{ EditorSceneFileRequestKind::Open };
+        string                     _path;                                ///< Open: 리소스 id(디스크 경로는 받는 쪽이 `AssetPaths::toAssetID` 로 바꿔 온다), SaveAs: 디스크 절대 경로
+        EditorUnsavedChoice        _choice{ EditorUnsavedChoice::None }; ///< UnsavedChoice: 확인 창에서 고른 것
+    };
+
     class SW_EDITOR_API EditorWorkspace : public EditorSubsystem
     {
     public:
@@ -139,10 +159,16 @@ namespace sw::editor
         [[nodiscard]] bool consumeOpenPanel( EditorPanelOpenRequest& outRequest );
 
         // ------------------------------------------------------------------------------
-        // 5) 씬 열기. 파일 대화상자는 백그라운드에서 열고, 소비는 메인 스레드에서 한다
+        // 5) 씬 파일 요청. UI 는 요청만 남기고 게임 단계(`EditorGameStepOrder::kSceneSession`)가 요청한 순서대로 연다 · 저장한다
         // ------------------------------------------------------------------------------
+        /** @brief 리소스 id @p path 의 씬 열기를 요청합니다(미저장 확인은 게임 단계의 `tryOpenScene` 이 띄운다). */
         void requestLoadScene( string_view path );
-        bool consumeLoadScene( string& outPath );
+        /** @brief 활성 씬을 디스크 절대 경로 @p absPath 에 다른 이름으로 저장하기를 요청합니다(Save As 대화상자 결과). */
+        void requestSaveSceneAs( string_view absPath );
+        /** @brief 미저장 확인 창(View)의 선택 @p choice 를 요청합니다 — 저장 · 버리기 · 이어서 할 동작은 게임 단계가 한다. */
+        void requestUnsavedSceneChoice( EditorUnsavedChoice choice );
+        /** @brief 쌓인 씬 파일 요청을 요청한 순서대로 @p outListRequest 에 옮깁니다(게임 단계 쪽). 없으면 false 입니다. */
+        [[nodiscard]] bool takeSceneFileRequests( vector<EditorSceneFileRequest>& outListRequest );
 
         /** @brief 미저장 확인 뒤에 이어서 할 씬 동작을 등록합니다. */
         void                     setPendingSceneAction( EditorPendingSceneAction action, string_view loadPath = {} );
@@ -222,7 +248,7 @@ namespace sw::editor
         string                                                 _focusedAssetPath;
         MulticastDelegate<void( const EditorAssetMoveEvent& )> _assetsMoved; ///< `notifyAssetsMoved`
         EditorPanelOpenRequest                                 _pendingOpenPanel;
-        string _pendingScenePath                               SW_GUARDED_BY( _pendingSceneMutex );
+        vector<EditorSceneFileRequest> _listSceneFileRequest   SW_GUARDED_BY( _pendingSceneMutex ); ///< UI 가 넘긴 씬 파일 요청(요청 순서)
         string                                                 _pendingSceneActionPath;
         string                                                 _copiedComponentXML;
         string                                                 _copiedComponentTypeName;

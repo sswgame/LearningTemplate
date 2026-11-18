@@ -39,15 +39,18 @@ namespace sw::editor
     {
         struct EditorSceneFileCommandsInternal
         {
-            /// @brief 파일 대화상자의 결과를 받습니다. `FileDialog::pollResults` 가 메인 스레드에서 호출합니다.
+            /// @brief 파일 대화상자의 결과를 받습니다(UI 프레임 — `FileDialog::pollResults`). 씬을 쓰지 않고 요청만 남긴다 — 게임 단계 `sceneSession` 이 `saveSceneAsRequested` 로 쓴다.
             static void onSaveSceneDialogResult( const vector<string>& listPath )
             {
-                if ( listPath.empty() )
-                    return;
+                if ( listPath.empty() == false )
+                    editor::getSubsystem<EditorWorkspace>().requestSaveSceneAs( listPath[0] ); // 필수: 대화상자 결과는 에디터가 서 있을 때만 온다(종료 때는 `cancelResults` 가 비운다)
+            }
 
-                // 필수: 대화상자 결과는 에디터 메인 스레드가 돌릴 때만 온다(종료 때는 `cancelFileDialogResults` 가 비운다).
+            /// @brief 게임 단계 — Save As 대화상자가 고른 디스크 경로에 활성 씬을 쓰고 알립니다. 미저장 확인에서 온 저장이면 이어서 그 동작을 한다.
+            static void saveSceneAsRequested( string_view path )
+            {
                 EditorNotificationManager&   notifications = editor::getSubsystem<EditorNotificationManager>();
-                const optional<AbsolutePath> absPath       = FileUtil::requireAbsolutePath( listPath[0] ); // 대화상자는 절대 경로를 돌려준다
+                const optional<AbsolutePath> absPath       = FileUtil::requireAbsolutePath( path ); // 대화상자는 절대 경로를 돌려준다
                 if ( absPath.has_value() == false || EditorSceneFileCommands::saveActiveSceneAs( *absPath ) == false )
                 {
                     notifications.push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationKind::Error );
@@ -360,12 +363,27 @@ namespace sw::editor
     {
         struct EditorSceneSessionStepInternal
         {
-            /** @brief 게임 단계 — UI(메뉴 · 대화상자 · 콘텐츠 브라우저)가 남긴 씬 열기 요청을 엽니다. 씬을 여는 일(`SceneManager`)은 게임 스레드가 한다. */
+            /** @brief 게임 단계 — UI(메뉴 · 대화상자 · 콘텐츠 브라우저 · 미저장 확인 창)가 남긴 씬 열기 · 다른 이름 저장 · 확인 선택 요청을 요청한 순서대로 합니다. 씬을 읽고 쓰는 일(`SceneManager`)은 게임 스레드가 한다. */
             static void run( EditorContext& context, EditorPlaySessionWriteKey /*key*/ )
             {
-                string scenePath;
-                if ( context.getSubsystem<EditorWorkspace>().consumeLoadScene( scenePath ) )
-                    (void)EditorSceneFileCommands::tryOpenScene( scenePath ); // 실패는 tryOpenScene 이 알린다
+                vector<EditorSceneFileRequest> listRequest;
+                if ( context.getSubsystem<EditorWorkspace>().takeSceneFileRequests( listRequest ) == false )
+                    return;
+                for ( const EditorSceneFileRequest& request : listRequest )
+                {
+                    switch ( request._kind )
+                    {
+                        case EditorSceneFileRequestKind::Open:
+                            (void)EditorSceneFileCommands::tryOpenScene( request._path ); // 실패는 tryOpenScene 이 알린다
+                            break;
+                        case EditorSceneFileRequestKind::SaveAs:
+                            EditorSceneFileCommandsInternal::saveSceneAsRequested( request._path );
+                            break;
+                        case EditorSceneFileRequestKind::UnsavedChoice:
+                            EditorSceneFileCommands::applyUnsavedSceneChoice( request._choice );
+                            break;
+                    }
+                }
             }
         };
     } // namespace

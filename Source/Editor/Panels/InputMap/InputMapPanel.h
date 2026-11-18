@@ -10,11 +10,6 @@
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Panels/InputMap/Model/InputMapModel.h"
 
-namespace sw
-{
-    class InputManager;
-} // namespace sw
-
 namespace sw::editor
 {
     /**
@@ -92,19 +87,19 @@ namespace sw::editor
         void drawCommandPatternTester();
         void drawDeviceMonitorTab();
 
-        /** @brief 키보드 실시간 상태를 그립니다. */
-        void drawKeyboardMonitor();
-        /** @brief 마우스 실시간 상태를 그립니다. */
-        void drawMouseMonitor();
-        /** @brief 게임패드 실시간 상태를 그립니다. */
-        void drawGamepadMonitor();
+        /** @brief 키보드 실시간 상태를 그립니다(모델이 모은 장치 값). */
+        void drawKeyboardMonitor( const InputMapDeviceState& state );
+        /** @brief 마우스 실시간 상태를 그립니다(모델이 모은 장치 값). */
+        void drawMouseMonitor( const InputMapDeviceState& state );
+        /** @brief 게임패드 실시간 상태와 진동 시험 단추를 그립니다(모델이 모은 장치 값 · 진동은 모델 명령). */
+        void drawGamepadMonitor( const InputMapDeviceState& state );
         void drawInputGraphTab();
         void drawInputSimulatorTab();
         void drawInputReplayTab();
         /** @brief 입력 녹화 시작 · 중지 줄입니다. */
-        void drawRecordControls( InputManager& input, bool bPlaying );
+        void drawRecordControls( bool bPlaying );
         /** @brief 녹화한 입력의 재생 · 일시정지 · 한 프레임 이동 · 타임라인 슬라이더입니다. */
-        void drawPlaybackControls( InputManager& input, bool bPlaying, uint32 currentFrame );
+        void drawPlaybackControls( bool bPlaying, uint32 currentFrame );
         void drawViewportOverlayTab();
 
         void drawLayerList();
@@ -117,7 +112,8 @@ namespace sw::editor
         void applyDocumentText( string_view text ) override;
 
     private:
-        InputMapModel                _document; ///< 편집하는 InputMap · 리플레이와 명령
+        InputMapModel                _document;    ///< 편집하는 InputMap · 리플레이와 명령
+        InputMapDeviceState          _deviceState; ///< 장치 모니터가 그리는 값(프레임마다 모델이 다시 채우는 재사용 버퍼)
         string                       _newActionName;
         string                       _newLayerName;
         utf8                         _arrActionFilter[constant::buffer::kMax64]; ///< 액션 목록의 검색어

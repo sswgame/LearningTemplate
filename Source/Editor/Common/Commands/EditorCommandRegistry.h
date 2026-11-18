@@ -219,6 +219,30 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /**
+     * @struct EditorContextMenuState
+     * @brief 맥락 메뉴 하나의 값 묶음입니다 — 항목과 대상에 대한 켜짐(`EditorCommandRegistry::gatherContextMenu`). 그리는 쪽(View)은 이 값만 읽고 판정 함수를 부르지 않는다.
+     */
+    struct EditorContextMenuState
+    {
+        vector<EditorMenuItem> _listItem;    ///< `_contextMenuOrder` 순서
+        vector<uint8>          _listEnabled; ///< `_listItem` 과 같은 칸의 켜짐(1 = 켜짐)
+
+        /** @brief 켜진 항목이 하나라도 있으면 true 입니다(R6 — 없으면 메뉴를 열지 않는다). */
+        bool hasEnabledItem() const
+        {
+            for ( const uint8 bEnabled : _listEnabled )
+            {
+                if ( bEnabled != 0 )
+                    return true;
+            }
+            return false;
+        }
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /** @brief 커맨드의 메뉴 경로 필드에서 만든 메뉴 하나입니다. */
     struct EditorMenu
     {
@@ -266,8 +290,19 @@ namespace sw::editor
 
         /** @brief id 로 커맨드를 찾습니다. 없으면 nullptr 입니다. */
         const EditorCommandDesc* find( string_view commandID ) const;
-        /** @brief @p target 에 대한 활성 조건을 평가합니다. 조건이 없으면 true 입니다. */
+        /** @brief @p target 에 대한 활성 조건을 평가합니다(Model 쪽 — 씬 · 세션을 읽는다). 조건이 없으면 true 입니다. 메뉴바 · 명령 단추(View)는 `isEnabledInSnapshot` 을 읽는다. */
         static bool isEnabled( const EditorCommandDesc& desc, const EditorCommandTarget& target );
+        /**
+         * @brief Model 쪽 — 대상 없는 실행(메뉴바 · 코드가 그리는 메뉴 · 명령 단추)의 켜짐을 명령마다 값 묶음으로 냅니다(`isEnabled( desc, none )`).
+         * @details 언리얼 `FUICommandList` 의 CanExecute 자리다. 판정은 씬 · 선택 · 플레이 세션을 읽으므로 Model 이 UI 프레임을 열기 직전에 내고(`EditorCommandGUI::syncWithRegistry`),
+         *          그 프레임의 UI 는 이 값만 읽는다. 같은 스레드 · 정해진 순서라 늦는 프레임이 없다. 실행 입구(`request` · `execute`)는 그때의 조건을 다시 본다.
+         */
+        void publishEnabledState();
+        /**
+         * @brief UI 쪽 — 마지막으로 낸 값 묶음에서 @p commandIndex(`getCommands()` 의 인덱스) 명령의 대상 없는 켜짐을 읽습니다.
+         * @details 값 묶음을 낸 뒤 등록부가 바뀌었으면 false 다 — 낡은 인덱스의 값을 읽지 않는다. UI 프레임 안에서 등록부가 바뀌는 길은 없다(다시 만들기는 프레임 앞 `EditorCommandGUI::syncWithRegistry` 안).
+         */
+        [[nodiscard]] bool isEnabledInSnapshot( uint32 commandIndex ) const;
         /** @brief 활성 상태이면 @p target 에 커맨드를 실행하고 true 를 반환합니다. 대상이 없는 실행은 `EditorCommandTarget::none()` 을 넘깁니다. */
         bool execute( string_view commandID, const EditorCommandTarget& target );
         /** @brief 활성 상태이면 @p target 에 커맨드를 실행하고 true 를 반환합니다. */
@@ -297,6 +332,12 @@ namespace sw::editor
          * @details 항목은 커맨드 인덱스만 가리킨다 — 라벨 · 켜짐 · 단축키 글자는 커맨드가 정한다(R4). 패널이 메뉴 글자를 적지 않는다.
          */
         void collectContextMenuItems( EditorCommandTargetKind kind, vector<EditorMenuItem>& outListItem ) const;
+        /**
+         * @brief Model 쪽 — @p target 의 종류 맥락 메뉴 항목과 그 대상에 대한 켜짐을 @p outState 에 모읍니다(`isEnabled( desc, target )` — 씬 · 선택 · 세션을 읽는다).
+         * @details 대상은 메뉴를 여는 순간에야 정해지므로 프레임 앞 값 묶음(`publishEnabledState`)에 담을 수 없다 — 같은 스레드의 ViewModel gather 처럼 여는 순간과 열린 프레임마다 그 자리에서 모은다.
+         *          View(`EditorInputGUI::drawContextMenu`)는 이 값만 읽는다.
+         */
+        void gatherContextMenu( const EditorCommandTarget& target, EditorContextMenuState& outState ) const;
 
         const vector<EditorCommandDesc>& getCommands() const { return _listCommand; }
         /** @brief 커맨드의 메뉴 경로와 순서 필드에서 만든 메뉴 목록입니다. 메뉴 안에서 가장 작은 `_menuOrder` 가 작은 메뉴가 앞에 옵니다. */
@@ -334,6 +375,9 @@ namespace sw::editor
 
         vector<EditorCommandDesc>               _listCommand;
         vector<EditorMenu>                      _listMenu;
+        vector<uint8>                           _listEnabledSnapshot;           ///< `publishEnabledState` 가 낸 대상 없는 켜짐(명령 인덱스 순, 1 = 켜짐)
+        uint32                                  _commandRevision{ 0 };          ///< 등록부가 바뀔 때마다(`clear` · `registerCommand`) 오른다
+        uint32                                  _snapshotRevision{ 0 };         ///< `_listEnabledSnapshot` 을 낸 때의 `_commandRevision`. 다르면 값 묶음이 낡았다
         mutex                                   _requestMutex;                  ///< 넘긴 명령 목록을 지킨다 — UI 가 넣고 게임 스레드가 꺼낸다
         vector<RequestedCommand> _listRequested SW_GUARDED_BY( _requestMutex ); ///< `request` 가 넘긴 씬 편집 명령(요청 순서)
         vector<RequestedCommand>                _listRunning;                   ///< 이번 게임 단계가 실행하는 명령(게임 스레드만 — 프레임마다 재사용)

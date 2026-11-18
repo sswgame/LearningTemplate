@@ -15,7 +15,7 @@ namespace sw::editor
 {
     struct EditorCommandDesc;
 
-    class EditorInputActions;
+    class EditorShortcutMap;
 
     /**
      * @class ShortcutsPanel
@@ -48,9 +48,9 @@ namespace sw::editor
         /** @brief 충돌을 묻는 줄(바꾸기 · 취소)입니다. */
         void drawConflictPrompt( IShortcutBindings& bindings );
         /** @brief 액션이 있는 명령의 조합 표입니다. */
-        void drawShortcutTable( const EditorInputActions& inputActions, IShortcutBindings& bindings );
+        void drawShortcutTable( const EditorShortcutMap& shortcuts, IShortcutBindings& bindings );
         /** @brief 테이블의 한 줄을 그립니다. */
-        void drawShortcutRow( const EditorInputActions& inputActions, IShortcutBindings& bindings, const EditorCommandDesc& desc, const string& shortcutLabel );
+        void drawShortcutRow( const EditorShortcutMap& shortcuts, IShortcutBindings& bindings, const EditorCommandDesc& desc, const string& shortcutLabel );
 
     private:
         fixed_string<constant::buffer::kMax64> _filter;

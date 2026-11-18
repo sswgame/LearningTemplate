@@ -109,9 +109,13 @@ namespace sw::editor
         return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
     }
 
-    InputManager* GameViewModel::findInputManager()
+    bool GameViewModel::readGameCursorShape( CursorShape& outShape )
     {
-        return editor::findSubsystem<InputManager>();
+        const InputManager* const pInput = editor::findSubsystem<InputManager>();
+        if ( pInput == nullptr )
+            return false;
+        outShape = pInput->getCursorShape();
+        return true;
     }
 
     ViewportInputOverlay* GameViewModel::findInputOverlay()
@@ -121,7 +125,7 @@ namespace sw::editor
     }
     const ViewportInputOverlayState* GameViewModel::gatherInputOverlay( const ViewportInputOverlay& overlay )
     {
-        const InputManager* const pInput = findInputManager();
+        const InputManager* const pInput = editor::findSubsystem<InputManager>();
         if ( pInput == nullptr || overlay._bEnabled == SW_FALSE )
             return nullptr;
         ViewportInputOverlayState::gather( *pInput, overlay._bShowCommandHistory == SW_TRUE, _inputOverlayState );

@@ -58,6 +58,7 @@ namespace sw::editor
                 uint32                              _restoredDocumentCount{ 0 };
                 Stopwatch                           _sinceSnapshot{};
                 string                              _sessionFolder{};         ///< 이 세션의 폴더(`Autosave/<pid>-<시각>`). 비면 세션을 열지 못했다 — 사본을 쓰지 않는다
+                string                              _requestedSnapshotID{};   ///< UI 가 복원을 요청한 사본의 id(`requestRestore`). 게임 단계(`tick`)가 연다
                 string                              _pendingSnapshotID{};     ///< 복원으로 연 사본의 id(`normalizeAssetID`). 활성 씬이 이 id 로 열리면 소스를 돌린다
                 string                              _pendingSlotFolder{};     ///< 그 사본의 씬 칸 폴더. 다 열리면 지운다(씬이 dirty 로 메모리에 있고 다음 사본은 이 세션 폴더에 간다)
                 string                              _pendingSourceID{};       ///< 그 원래 id. 비면 새 씬(원본 없음)이다
@@ -353,6 +354,53 @@ namespace sw::editor
                 state._pendingSlotFolder.clear();
             }
 
+            /**
+             * @brief 후보 @p index 를 엽니다(게임 단계 — `requestRestore` 가 남긴 요청). 씬 열기와 같은 입구다 — Play 중이면 거절하고, 지금 씬이 dirty 면 미저장 확인 뒤로 미룬다(E-1).
+             *        후보는 사본이 실제로 열린 뒤 뺀다(`finishPendingRestore`). 거절 · Play 중이면 false 입니다.
+             */
+            static bool restoreEntry( uint32 index )
+            {
+                State& state = getState();
+                if ( index >= state._listRecoverable.size() )
+                    return false;
+                const EditorAutosaveEntry entry = state._listRecoverable[index];
+                if ( entry._refusal.empty() == false )
+                {
+                    SW_LOG_WARNING_ID( "EditorAutosaveCommands.RestoreRefused", "Autosave: '%#' was not restored - %#", entry._sourceID, entry._refusal );
+                    return false;
+                }
+                if ( state._bMounted == false )
+                {
+                    SW_LOG_ERROR_ID( "EditorAutosaveCommands.DomainNotMounted", "Autosave: the copy folder is not mounted as '%#' - '%#' cannot be opened", EditorAutosaveCommands::kDomain,
+                                     entry._sourceID );
+                    return false;
+                }
+                if ( EditorSceneFileCommands::tryOpenScene( entry._snapshotID ) == false )
+                    return false; // 이유는 tryOpenScene 이 알렸다
+                state._pendingSnapshotID = AssetPaths::normalizeAssetID( entry._snapshotID );
+                state._pendingSourceID   = entry._sourceID;
+                state._pendingSlotFolder = FileUtil::getDirectoryPart( entry._snapshotAbs );
+                state._pendingGeneration = editor::getSubsystem<SceneManager>().getSceneGeneration();
+                return true;
+            }
+
+            /** @brief 게임 단계 — UI 가 요청한 복원을 엽니다. 그 사이 후보가 지워졌으면 알리고 버린다. */
+            static void runRequestedRestore()
+            {
+                State& state = getState();
+                if ( state._requestedSnapshotID.empty() )
+                    return;
+                const string snapshotID = state._requestedSnapshotID;
+                state._requestedSnapshotID.clear();
+                uint32 index = 0;
+                if ( EditorAutosaveCommands::findRecoverableIndex( state._listRecoverable, snapshotID, index ) == false )
+                {
+                    SW_LOG_WARNING_ID( "EditorAutosaveCommands.RestoreGone", "Autosave: the copy '%#' is no longer offered - nothing was restored", snapshotID );
+                    return;
+                }
+                (void)restoreEntry( index ); // 거절 이유는 restoreEntry 가 알린다
+            }
+
             /** @brief 게임 단계 — 활성 씬 사본 쓰기 · 복원 마무리는 씬을 읽고 바꾸므로 게임 스레드가 한다. */
             static void runGameStep( EditorContext& /*context*/, EditorPlaySessionWriteKey /*key*/ ) { EditorAutosaveCommands::tick(); }
 
@@ -437,6 +485,7 @@ namespace sw::editor
         if ( state._bSessionBegun == false )
             EditorAutosaveCommandsInternal::beginSession();
         EditorAutosaveCommandsInternal::finishPendingRestore();
+        EditorAutosaveCommandsInternal::runRequestedRestore();
 
         const EditorAutosavePreferences& preferences = getPreferences<EditorAutosavePreferences>();
         const EditorWorkspace&           workspace   = editor::getSubsystem<EditorWorkspace>();
@@ -595,30 +644,26 @@ namespace sw::editor
         return EditorAutosaveCommandsInternal::getState()._restoredDocumentCount;
     }
 
-    bool EditorAutosaveCommands::restore( uint32 index )
+    bool EditorAutosaveCommands::requestRestore( uint32 index )
     {
         EditorAutosaveCommandsInternal::State& state = EditorAutosaveCommandsInternal::getState();
         if ( index >= state._listRecoverable.size() )
             return false;
-        const EditorAutosaveEntry entry = state._listRecoverable[index];
-        if ( entry._refusal.empty() == false )
-        {
-            SW_LOG_WARNING_ID( "EditorAutosaveCommands.RestoreRefused", "Autosave: '%#' was not restored - %#", entry._sourceID, entry._refusal );
-            return false;
-        }
-        if ( state._bMounted == false )
-        {
-            SW_LOG_ERROR_ID( "EditorAutosaveCommands.DomainNotMounted", "Autosave: the copy folder is not mounted as '%#' - '%#' cannot be opened", kDomain, entry._sourceID );
-            return false;
-        }
-        // 씬 열기와 같은 입구다 — Play 중이면 거절하고, 지금 씬이 dirty 면 미저장 확인 뒤로 미룬다(E-1). 후보는 사본이 실제로 열린 뒤 뺀다(finishPendingRestore).
-        if ( EditorSceneFileCommands::tryOpenScene( entry._snapshotID ) == false )
-            return false; // 이유는 tryOpenScene 이 알렸다
-        state._pendingSnapshotID = AssetPaths::normalizeAssetID( entry._snapshotID );
-        state._pendingSourceID   = entry._sourceID;
-        state._pendingSlotFolder = FileUtil::getDirectoryPart( entry._snapshotAbs );
-        state._pendingGeneration = editor::getSubsystem<SceneManager>().getSceneGeneration();
+        state._requestedSnapshotID = AssetPaths::normalizeAssetID( state._listRecoverable[index]._snapshotID );
         return true;
+    }
+
+    bool EditorAutosaveCommands::findRecoverableIndex( const vector<EditorAutosaveEntry>& listEntry, string_view snapshotID, uint32& outIndex )
+    {
+        for ( uint32 index = 0; index < static_cast<uint32>( listEntry.size() ); ++index )
+        {
+            if ( AssetPaths::normalizeAssetID( listEntry[index]._snapshotID ) == snapshotID )
+            {
+                outIndex = index;
+                return true;
+            }
+        }
+        return false;
     }
 
     void EditorAutosaveCommands::discard( uint32 index )

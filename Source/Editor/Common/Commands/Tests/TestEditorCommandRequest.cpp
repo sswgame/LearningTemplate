@@ -44,3 +44,93 @@ SW_TEST_CASE( EditorCommandRequestTest, SceneEditsWaitForGameStep )
 
     SW_EXPECT_FALSE( registry.request( "test.missing", EditorCommandTarget::none() ) );
 }
+
+/**
+ * @brief [EditorCommandRequestTest] 메뉴 · 단추(View)는 게임 단계가 낸 켜짐 값 묶음만 읽는다 — 내기 전 · 등록부가 바뀐 뒤에는 꺼져 있고, 조건이 바뀌어도 다시 낼 때까지 앞 값이다
+ */
+SW_TEST_CASE( EditorCommandRequestTest, MenusReadThePublishedEnabledState )
+{
+    EditorCommandRegistry registry;
+    bool                  bCanRun{ true };
+
+    EditorCommandDesc command;
+    command._id               = "test.toggled";
+    command._edit             = EditorCommandEdit::NoScene;
+    command._action           = []( const EditorCommandTarget& /*target*/ ) {};
+    command._enabledPredicate = [&bCanRun]( const EditorCommandTarget& /*target*/ )
+    { return bCanRun; };
+    registry.registerCommand( command );
+
+    SW_EXPECT_FALSE( registry.isEnabledInSnapshot( 0 ) ); // 아직 내지 않았다
+
+    registry.publishEnabledState();
+    SW_EXPECT_TRUE( registry.isEnabledInSnapshot( 0 ) );
+    SW_EXPECT_FALSE( registry.isEnabledInSnapshot( 1 ) ); // 없는 인덱스
+
+    bCanRun = false;
+    SW_EXPECT_TRUE( registry.isEnabledInSnapshot( 0 ) ); // UI 는 낸 값을 읽는다 — 판정을 다시 돌리지 않는다
+    registry.publishEnabledState();
+    SW_EXPECT_FALSE( registry.isEnabledInSnapshot( 0 ) );
+
+    bCanRun = true;
+    registry.publishEnabledState();
+    EditorCommandDesc other;
+    other._id     = "test.other";
+    other._edit   = EditorCommandEdit::NoScene;
+    other._action = []( const EditorCommandTarget& /*target*/ ) {};
+    registry.registerCommand( other );
+    SW_EXPECT_FALSE( registry.isEnabledInSnapshot( 0 ) ); // 등록부가 바뀌면 낡은 값을 읽지 않는다
+    registry.publishEnabledState();
+    SW_EXPECT_TRUE( registry.isEnabledInSnapshot( 0 ) );
+    SW_EXPECT_TRUE( registry.isEnabledInSnapshot( 1 ) );
+}
+
+/**
+ * @brief [EditorCommandRequestTest] 맥락 메뉴는 그 종류의 항목만 순서대로 모으고, 켜짐은 그 대상으로 판정한 값이다(View 는 이 값만 읽는다)
+ */
+SW_TEST_CASE( EditorCommandRequestTest, ContextMenuStateIsGatheredForTheTarget )
+{
+    EditorCommandRegistry registry;
+
+    EditorCommandDesc single;
+    single._id               = "test.renameOne";
+    single._edit             = EditorCommandEdit::NoScene;
+    single._contextMenuKind  = EditorCommandTargetKind::GameObject;
+    single._contextMenuOrder = 20;
+    single._action           = []( const EditorCommandTarget& /*target*/ ) {};
+    single._enabledPredicate = []( const EditorCommandTarget& target )
+    { return target.hasSingleSelection(); };
+    registry.registerCommand( single );
+
+    EditorCommandDesc always;
+    always._id               = "test.copy";
+    always._edit             = EditorCommandEdit::NoScene;
+    always._contextMenuKind  = EditorCommandTargetKind::GameObject;
+    always._contextMenuOrder = 10;
+    always._action           = []( const EditorCommandTarget& /*target*/ ) {};
+    registry.registerCommand( always );
+
+    EditorCommandDesc otherKind;
+    otherKind._id              = "test.assetOnly";
+    otherKind._edit            = EditorCommandEdit::NoScene;
+    otherKind._contextMenuKind = EditorCommandTargetKind::Asset;
+    otherKind._action          = []( const EditorCommandTarget& /*target*/ ) {};
+    registry.registerCommand( otherKind );
+
+    EditorCommandTarget target{};
+    target._kind           = EditorCommandTargetKind::GameObject;
+    target._listSelectedID = { 7, 8 };
+
+    EditorContextMenuState state;
+    registry.gatherContextMenu( target, state );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, state._listItem.size() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, state._listEnabled.size() );
+    SW_EXPECT_TRUE( registry.getCommands()[state._listItem[0]._commandIndex]._id == "test.copy" ); // 순서는 _contextMenuOrder
+    SW_EXPECT_EQUAL( uint8{ 1 }, state._listEnabled[0] );
+    SW_EXPECT_EQUAL( uint8{ 0 }, state._listEnabled[1] ); // 둘을 골랐다 — 하나에만 뜻이 있는 명령은 꺼진다
+    SW_EXPECT_TRUE( state.hasEnabledItem() );
+
+    target._listSelectedID = { 7 };
+    registry.gatherContextMenu( target, state );
+    SW_EXPECT_EQUAL( uint8{ 1 }, state._listEnabled[1] );
+}
