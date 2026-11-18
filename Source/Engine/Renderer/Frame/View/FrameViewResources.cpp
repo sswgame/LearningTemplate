@@ -221,7 +221,7 @@ namespace sw
         view._transientAliasGeneration = aliasGeneration;
         placeTransients( pool, aliasPlan );
 
-        // 그림자 맵은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
+        // 그림자 맵(방향광 · 점광 스폿 아틀라스 둘)은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
         // 일반 풀스크린 패스만 쓰는 첨부(후처리 효과 · 톤맵의 출력)는 여기서 만들지 않는다 — 그 패스가 이 뷰에서 처음 돌 때 만든다(`applyViewPassSelection`).
         for ( const RenderPassAttachment& attachment : _pipeline.getDesc()._listAttachment )
         {
@@ -234,7 +234,8 @@ namespace sw
             const hashed_string aliasOwner = aliasPlan.findOwner( attachmentName );
             if ( aliasOwner.empty() == false && pool.allocateAlias( attachmentName, aliasOwner, attachment.getOps() ) )
                 continue;
-            if ( resolveRenderPassInputRole( attachment._name, bDepth, attachment._role ) == RenderPassInputRole::ShadowMap )
+            const RenderPassInputRole role = resolveRenderPassInputRole( attachment._name, bDepth, attachment._role );
+            if ( role == RenderPassInputRole::ShadowMap || role == RenderPassInputRole::LocalShadowMap )
                 (void)pool.allocateSized( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), shadowResolution, shadowResolution );
             else
                 pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );

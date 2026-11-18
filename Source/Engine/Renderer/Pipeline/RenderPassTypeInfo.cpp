@@ -81,9 +81,9 @@ namespace sw
                     }
                     case RenderPassType::ForwardOpaque:
                     {
-                        // 입력은 그림자 맵과 접촉 그림자(깊이 프리패스 뒤의 ContactShadow 패스)뿐이고 둘 다 선택이다 — 접촉 그림자는 꺼지면 출력이 없다(3-7).
+                        // 입력은 그림자 맵 둘(방향광 · 점광 스폿)과 접촉 그림자(깊이 프리패스 뒤의 ContactShadow 패스)뿐이고 모두 선택이다 — 접촉 그림자는 꺼지면 출력이 없다(3-7).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderForwardLit;
-                        info._inputContract  = makeContract( {}, { Role::ShadowMap, Role::ContactShadow } );
+                        info._inputContract  = makeContract( {}, { Role::ShadowMap, Role::LocalShadowMap, Role::ContactShadow } );
                         info._flags          = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kMaterialBlend | Flag::kWritesVelocity | Flag::kHasInputContract | kSceneColorPassFlags;
                         break;
                     }
@@ -102,7 +102,7 @@ namespace sw
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDeferredLighting;
                         // AO 는 조명의 입력이다 — 앰비언트 · 프로브 빛에만 곱한다(deferred_lighting.hlsl). 후처리(Bloom · Present)는 AO 를 받지 않는다(최종 색 전체에 곱하면 자체 발광 · 반투명까지 어두워진다).
-                        info._inputContract = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::GBufferCustomData, Role::SceneDepth }, { Role::ShadowMap, Role::ContactShadow, Role::AmbientOcclusion } );
+                        info._inputContract = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::GBufferCustomData, Role::SceneDepth }, { Role::ShadowMap, Role::LocalShadowMap, Role::ContactShadow, Role::AmbientOcclusion } );
                         info._flags         = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
                         break;
                     }

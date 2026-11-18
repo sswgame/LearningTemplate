@@ -37,6 +37,7 @@
 		<RenderGraphPassDesc _name="ForwardOpaque">
 			<_listInput>
 				<item>ShadowMap</item>
+				<item>LocalShadowMap</item>
 				<item>ContactShadowMask</item>
 			</_listInput>
 		</RenderGraphPassDesc>

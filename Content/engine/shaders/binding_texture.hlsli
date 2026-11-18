@@ -257,7 +257,8 @@ SW_DECLARE_ENGINE_TEXTURE( 15 );
 SW_DECLARE_ENGINE_TEXTURE( 16 );
 SW_DECLARE_ENGINE_TEXTURE( 17 );
 SW_DECLARE_ENGINE_TEXTURE( 18 );
-        #if SW_ENGINE_TEXTURE_COUNT != 19
+SW_DECLARE_ENGINE_TEXTURE( 19 );
+        #if SW_ENGINE_TEXTURE_COUNT != 20
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
@@ -394,6 +395,9 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
                 case 18u:                                                  \
                     OP( SW_ENGINE_TEXTURE( 18 ), SW_ENGINE_SAMPLER( 18 ) ) \
                     break;                                                 \
+                case 19u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 19 ), SW_ENGINE_SAMPLER( 19 ) ) \
+                    break;                                                 \
                 default:                                                   \
                     break;                                                 \
             }
@@ -474,25 +478,33 @@ static float4 Bindless::sampleIndexWith( uint index, uint emulatedSlot, uint sam
     return kUnmappedEngineTextureColor;
 }
         #endif
-/**
- * @brief 에뮬 백엔드: 비교 샘플러가 없어 2x2 이웃을 게더로 읽어 각각 비교하고 쌍선형으로 섞는다 — DX12 · Vulkan 의 비교 샘플러(LINEAR)와 같은 값이다.
- * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 ShadowMap 칸이다(`SW_ENGINE_ROLE( ShadowMap )`).
- */
+        /**
+         * @brief 에뮬 백엔드: 비교 샘플러가 없어 2x2 이웃을 게더로 읽어 각각 비교하고 쌍선형으로 섞는다 — DX12 · Vulkan 의 비교 샘플러(LINEAR)와 같은 값이다.
+         * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 두 칸이다 — 방향광 ShadowMap, 점광 · 스폿 LocalShadowMap
+         *          (`SW_ENGINE_ROLE( ShadowMap )` · `SW_ENGINE_ROLE( LocalShadowMap )`). 칸은 리터럴이라 고른 칸 하나만 셰이더에 남는다.
+         *          게더는 네 텍셀이 만나는 모서리를 가리킨다. 순서는 w (0,0) · z (1,0) · x (0,1) · y (1,1). depth <= 저장값이면 1 (LESS_EQUAL).
+         */
+        #define SW_SHADOW_GATHER_COMPARE( slot )                                                                                                         \
+            {                                                                                                                                            \
+                float2 size;                                                                                                                             \
+                SW_ENGINE_TEXTURE( slot ).GetDimensions( size.x, size.y );                                                                               \
+                const float2 texelPosition = uv * size - 0.5f;                                                                                           \
+                const float2 weight        = frac( texelPosition );                                                                                      \
+                const float4 stored        = SW_ENGINE_TEXTURE( slot ).GatherRed( SW_ENGINE_SAMPLER( slot ), ( floor( texelPosition ) + 1.0f ) / size ); \
+                const float4 lit           = step( depth.xxxx, stored );                                                                                 \
+                return lerp( lerp( lit.w, lit.z, weight.x ), lerp( lit.x, lit.y, weight.x ), weight.y );                                                 \
+            }
 static float Bindless::sampleShadowComparison( uint index, uint emulatedSlot, float2 uv, float depth )
 {
     if ( index == kInvalidIndex )
         return 1.0f;
-    if ( emulatedSlot != SW_EMU_SLOT_ShadowMap )
-        return ( depth <= Bindless::sampleIndex( index, emulatedSlot, uv ).r ) ? 1.0f : 0.0f;
-    float2 size;
-    SW_ENGINE_TEXTURE( SW_EMU_SLOT_ShadowMap ).GetDimensions( size.x, size.y );
-    const float2 texelPosition = uv * size - 0.5f;
-    const float2 weight        = frac( texelPosition );
-    // 게더는 네 텍셀이 만나는 모서리를 가리킨다. 순서는 w (0,0) · z (1,0) · x (0,1) · y (1,1).
-    const float4 stored = SW_ENGINE_TEXTURE( SW_EMU_SLOT_ShadowMap ).GatherRed( SW_ENGINE_SAMPLER( SW_EMU_SLOT_ShadowMap ), ( floor( texelPosition ) + 1.0f ) / size );
-    const float4 lit    = step( depth.xxxx, stored ); // depth <= 저장값이면 1 (LESS_EQUAL)
-    return lerp( lerp( lit.w, lit.z, weight.x ), lerp( lit.x, lit.y, weight.x ), weight.y );
+    if ( emulatedSlot == SW_EMU_SLOT_ShadowMap )
+        SW_SHADOW_GATHER_COMPARE( SW_EMU_SLOT_ShadowMap )
+    if ( emulatedSlot == SW_EMU_SLOT_LocalShadowMap )
+        SW_SHADOW_GATHER_COMPARE( SW_EMU_SLOT_LocalShadowMap )
+    return ( depth <= Bindless::sampleIndex( index, emulatedSlot, uv ).r ) ? 1.0f : 0.0f;
 }
+        #undef SW_SHADOW_GATHER_COMPARE
 
 /** @brief 패스가 칸 @p emulatedSlot(`SW_EMU_SLOT_<역할>`)에 건 엔진 텍스처의 밉 0 텍셀을 읽습니다. 칸 밖이면 오류 색(자홍)을 냅니다 — 조용히 0 번으로 읽지 않는다. */
 // 에뮬 백엔드(DX11 · GL)의 셰이더 컴파일은 매개변수 속성 `[[maybe_unused]]` 를 읽지 못한다(X3000) — 쓰지 않는 index 는 이름만 두고 속성을 달지 않는다.
