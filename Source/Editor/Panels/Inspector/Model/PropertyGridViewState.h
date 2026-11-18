@@ -1,7 +1,7 @@
 /**
  * @file PropertyGridViewState.h
  * @brief 프로퍼티 그리드가 한 대상을 그릴 값입니다 — 보이는 프로퍼티마다 값 행 하나(`PropertyValueRow`), 화면 밖 행은 높이만.
- * @details `PropertyGridModel::gather` 가 채우고 View(`EditorPropertyGrid` · 위젯 · 그리기 확장)가 읽는다. 포인터 · 참조 · 인스턴스 주소를 두지 않는다(`docs/agents/EditorUI.md` MVVM 절).
+ * @details `PropertyGridViewModel::gather` 가 채우고 View(`EditorPropertyGrid` · 위젯 · 그리기 확장)가 읽는다. 포인터 · 참조 · 인스턴스 주소를 두지 않는다(`docs/agents/EditorUI.md` MVVM 절).
  *          편집은 행 번호(`_rowID`)로 모델 명령을 부른다 — 주소는 모델의 행 표가 든다. 언리얼 Details 의 `FDetailTreeNode`(행) + `IPropertyHandle`(행 번호로 쓰기) 자리다.
  */
 #pragma once

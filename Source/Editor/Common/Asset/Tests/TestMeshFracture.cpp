@@ -3,7 +3,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Common/Asset/Model/MeshFracture.h"
+#include "Editor/Common/Asset/ModelImport/MeshFracture.h"
 
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 

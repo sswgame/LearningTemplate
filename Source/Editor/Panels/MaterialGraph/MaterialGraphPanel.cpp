@@ -18,8 +18,8 @@
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Panels/Material/Model/MaterialModel.h"
 #include "Editor/Panels/Material/Model/MaterialPreviewInputs.h"
+#include "Editor/Panels/Material/Model/MaterialViewModel.h"
 
 #include "Engine/Localization/LocText.h"
 
@@ -144,7 +144,7 @@ namespace sw::editor
     void MaterialGraphPanel::drawCanvasNode( uint32 nodeIndex )
     {
         const MaterialGraphNodeDef& node   = _model.getGraph()._listNode[nodeIndex];
-        const int32                 nodeID = MaterialGraphModel::makeNodeID( nodeIndex );
+        const int32                 nodeID = MaterialGraphViewModel::makeNodeID( nodeIndex );
         _nodeGraph.beginNode( nodeID );
         ImGui::TextUnformatted( node._name.c_str() );
         EditorThemeUtil::textMuted( node._kind.c_str() );
@@ -152,7 +152,7 @@ namespace sw::editor
         const vector<MaterialGraphPinInfo>& listInput = _model.getInputPins( nodeIndex );
         for ( uint32 slot = 0; slot < static_cast<uint32>( listInput.size() ); ++slot )
         {
-            _nodeGraph.beginPin( MaterialGraphModel::makeInputPinID( nodeIndex, slot ), true );
+            _nodeGraph.beginPin( MaterialGraphViewModel::makeInputPinID( nodeIndex, slot ), true );
             _nodeGraph.drawPinIcon( MaterialGraphPanelInternal::toPinColorIndex( listInput[slot]._type ), node.findLink( listInput[slot]._name ) != nullptr );
             ImGui::SameLine();
             ImGui::TextUnformatted( listInput[slot]._name.c_str() );
@@ -164,7 +164,7 @@ namespace sw::editor
         const vector<MaterialGraphPinInfo>& listOutput = _model.getOutputPins( nodeIndex );
         for ( uint32 slot = 0; slot < static_cast<uint32>( listOutput.size() ); ++slot )
         {
-            _nodeGraph.beginPin( MaterialGraphModel::makeOutputPinID( nodeIndex, slot ), false );
+            _nodeGraph.beginPin( MaterialGraphViewModel::makeOutputPinID( nodeIndex, slot ), false );
             ImGui::TextUnformatted( listOutput[slot]._name.c_str() );
             ImGui::SameLine();
             _nodeGraph.drawPinIcon( MaterialGraphPanelInternal::toPinColorIndex( listOutput[slot]._type ), true );
@@ -229,8 +229,8 @@ namespace sw::editor
                 {
                     if ( listOutput[outputSlot]._name != pLink->_fromPin )
                         continue;
-                    const int32 inputPin = MaterialGraphModel::makeInputPinID( readerIndex, slot );
-                    ed::Link( toLinkID( inputPin ), toPinID( MaterialGraphModel::makeOutputPinID( *from, outputSlot ) ), toPinID( inputPin ) );
+                    const int32 inputPin = MaterialGraphViewModel::makeInputPinID( readerIndex, slot );
+                    ed::Link( toLinkID( inputPin ), toPinID( MaterialGraphViewModel::makeOutputPinID( *from, outputSlot ) ), toPinID( inputPin ) );
                 }
             }
         }
@@ -242,7 +242,7 @@ namespace sw::editor
             const string_view      outerName{ string_view( issue._nodeName ).substr( 0, issue._nodeName.find( '/' ) ) };
             const optional<uint32> nodeIndex = graph.findNodeIndex( outerName );
             if ( nodeIndex.has_value() )
-                listIssue.push_back( EditorGraphNodeIssue{ MaterialGraphModel::makeNodeID( *nodeIndex ), issue._message } );
+                listIssue.push_back( EditorGraphNodeIssue{ MaterialGraphViewModel::makeNodeID( *nodeIndex ), issue._message } );
         }
         _nodeGraph.setNodeIssues( std::move( listIssue ) );
         _nodeGraph.drawNodeIssues();
@@ -264,7 +264,7 @@ namespace sw::editor
             const uint32 movedNodeCount = static_cast<uint32>( graph._listNode.size() );
             for ( uint32 nodeIndex = 0; nodeIndex < movedNodeCount; ++nodeIndex )
             {
-                const ImVec2 position = ed::GetNodePosition( toNodeID( MaterialGraphModel::makeNodeID( nodeIndex ) ) );
+                const ImVec2 position = ed::GetNodePosition( toNodeID( MaterialGraphViewModel::makeNodeID( nodeIndex ) ) );
                 _model.recordNodePosition( nodeIndex, float2{ position.x, position.y } );
             }
             if ( _nodeGraph.syncCommentLayout( _model.editGraph()._listComment ) )
@@ -363,7 +363,7 @@ namespace sw::editor
         if ( bChanged )
         {
             string written;
-            MaterialModel::writeFloats( written, arrValue, count );
+            MaterialViewModel::writeFloats( written, arrValue, count );
             _model.setValue( nodeIndex, pName, written );
         }
         if ( bRead == false )

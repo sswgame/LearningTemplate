@@ -11,7 +11,7 @@
 
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
-#include "Editor/Viewport/Model/EditorDebugHUDModel.h"
+#include "Editor/Viewport/Model/EditorDebugHUDViewModel.h"
 
 #include <imgui.h>
 
@@ -39,9 +39,9 @@ namespace sw::editor
         };
     } // namespace
 
-    float32 EditorDebugHUDView::draw( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float2& topRightInset, const EditorDebugHUDModel& model )
+    float32 EditorDebugHUDView::draw( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float2& topRightInset, const EditorDebugHUDViewModel& model )
     {
-        using SectionSlot  = EditorDebugHUDModel::SectionSlot;
+        using SectionSlot  = EditorDebugHUDViewModel::SectionSlot;
         _drawnSectionCount = 0;
         if ( pDrawList == nullptr )
             return 0.0f;

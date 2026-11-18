@@ -18,7 +18,7 @@
         "Source/Engine/Serialization/Inherit/DataCatalogInheritance.cpp": "감싼 카탈로그 글의 차이를 만드는 아래 함수다(makeFileDelta)",
         "Source/Engine/Graphics/Material/Material.cpp": "글을 돌려주는 API 다(saveToString) — 쓰기는 부르는 쪽이 한다",
         "Source/Engine/Audio/AudioEvent.cpp": "문서 안 프리셋 항목 하나의 차이다. 파일 저장은 saveDelta 를 탄다",
-        "Source/Editor/Common/Asset/Model/ModelImportMaterial.cpp": "임포트가 견본과의 차이 글을 만들어 넘긴다 — 쓰기는 임포트 절차가 한다"
+        "Source/Editor/Common/Asset/ModelImport/ModelImportMaterial.cpp": "임포트가 견본과의 차이 글을 만들어 넘긴다 — 쓰기는 임포트 절차가 한다"
     },
     "assetEntrance": {
         "Source/Engine/Localization/CultureInfo.cpp|CultureTable::loadFromAsset": "문화권 표는 locale 축 값을 정하는 쪽이다 — 그 표가 덮어쓰기 층 · 다시 읽기 기록에 들면 축이 자기를 다시 읽는 순환이 된다",
@@ -29,7 +29,7 @@
         "Source/Engine/Config/PackEngineSettings.cpp|PackEngineSettings::loadFromPack": "팩 설정이 덮어쓰기 층 목록 · 경로 교체 표를 정한다(PackEngineSettingsSubsystem 이 ResourceComposition::setLayers) — 그 파일을 층으로 읽으면 층이 자기를 정하는 순환이다(CultureTable 과 같은 까닭)",
         "Source/Engine/Serialization/Inherit/DataCatalogReferences.cpp|DataCatalogReferenceRules::loadFromAsset": "카탈로그 참조 검사의 규칙 표 자신이다 — 쿠커 · 에디터 · 런타임이 같은 표를 보아야 하고(쿠킹 문맥에는 withAsset 이 없다), 층으로 바뀌면 같은 데이터의 검사가 팩마다 달라진다",
         "Source/Engine/Serialization/JSON/JSONDocument.cpp|JSONDocument::loadResource": "JSON 리소스 입구 자신이다(loadResource… 는 싣는 길로 센다) — 합치기 · 덮어쓰기 층은 XML 형식(ResourceComposer)만 다루어 JSON 에 실을 문맥이 없다",
-        "Source/Editor/Panels/MaterialGraph/Model/MaterialGraphModel.cpp|MaterialGraphModel::load": "에디터가 고칠 원본을 읽는다 — 층 · 합치기를 거치면 층의 값이 원본 저장에 구워진다(ResourceComposer 의 SaveWouldBake 와 같은 까닭). 부모는 findBasePath 로 따로 든다",
+        "Source/Editor/Panels/MaterialGraph/Model/MaterialGraphViewModel.cpp|MaterialGraphViewModel::load": "에디터가 고칠 원본을 읽는다 — 층 · 합치기를 거치면 층의 값이 원본 저장에 구워진다(ResourceComposer 의 SaveWouldBake 와 같은 까닭). 부모는 findBasePath 로 따로 든다",
         "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLMigrationRunner.cpp|SQLMigrationRunner::loadMigrations": "SQL 이주 글이다 — XML 합치기 · 층의 형식이 아니고, 이주는 서버 저장소 스키마라 팩 층으로 바뀌면 안 된다"
     },
     "engineChildCommand": {
@@ -52,10 +52,10 @@
         "Source/Editor/Common/Commands/Asset/EditorDocumentAutosave.cpp|Internal::makeFolder( sessionFolder )": "자동 저장 세션 폴더의 문서 사본 칸(Saved 아래)이다 — 리소스 트리 밖",
         "Source/Editor/Panels/BugReport/Model/BugReportViewModel.cpp|BugReport::getRoot()": "버그 보고 폴더(Saved/BugReports 또는 실행 뿌리 아래)다 — 리소스 트리 밖",
         "Source/Editor/Common/Workspace/EditorLayoutStore.cpp|folder": "에디터 배치 ini 폴더(에디터 상태 폴더)다 — 리소스 트리 밖",
-        "Source/Editor/Panels/Packaging/Model/PackagingModel.cpp|FileUtil::joinPath( ProcessRoots::get()._project.str()": "게임 설정 폴더(Config/Game)다 — 리소스 트리 밖",
+        "Source/Editor/Panels/Packaging/Model/PackagingViewModel.cpp|FileUtil::joinPath( ProcessRoots::get()._project.str()": "게임 설정 폴더(Config/Game)다 — 리소스 트리 밖",
         "Source/Editor/Common/Localization/LocalizationTools.cpp|codeFolder": "소스 코드 폴더(Source)다 — 리소스 트리 밖",
         "Source/Editor/Common/Localization/LocalizationTools.cpp|gameFolder": "게임 팩 하나의 현지화 폴더(game/<팩>/data/localization, 재귀 아님)다 — scratch 를 지나지 않는다",
-        "Source/Editor/Common/Asset/Model/ModelImporter.cpp|sideFolder": "모델 하나의 곁 폴더(그 원본 옆)만 훑는다 — 트리를 걷지 않아 남의 사본으로 건너가지 않는다",
+        "Source/Editor/Common/Asset/ModelImport/ModelImporter.cpp|sideFolder": "모델 하나의 곁 폴더(그 원본 옆)만 훑는다 — 트리를 걷지 않아 남의 사본으로 건너가지 않는다",
         "Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp|source": "사람이 옮기거나 복사하려고 고른 폴더 하나의 내용이다 — 그 폴더를 통째로 다룬다",
         "Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp|path": "옮기거나 지우려고 고른 폴더 하나의 모든 파일이다 — 그 폴더를 통째로 다루니 남의 사본까지 읽기 전용을 본다",
         "Source/Editor/Common/Commands/Asset/EditorDataTableCommands.cpp|dataFolder": "데이터 표 폴더 하나(재귀 아님)다 — scratch 를 지나지 않는다",
@@ -70,7 +70,7 @@
         "Source/GameFramework/Runtime/Online/Bus/ServerBus.cpp": "LogOnce 키(버린 메시지 경고를 한 번)다 — 겹쳐도 거절 수는 그대로 센다",
         "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.cpp": "무작위 씨앗에 섞는 값이다(pickUnit) — 겹쳐도 같은 씨앗일 뿐 표가 아니다",
         "Source/GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.cpp": "저장 상태의 노드 id 해시다 — 만들기(populateNodes)가 NameHashIndex 로 같은 해시의 두 id 를 거절해 회로 안에서는 하나로 정해진다",
-        "Source/Editor/Panels/Inspector/Model/PropertyGridModel.cpp": "인스펙터 행 높이 기억 키다 — 겹치면 한 행의 높이 추정이 섞일 뿐 데이터는 바뀌지 않는다"
+        "Source/Editor/Panels/Inspector/Model/PropertyGridViewModel.cpp": "인스펙터 행 높이 기억 키다 — 겹치면 한 행의 높이 추정이 섞일 뿐 데이터는 바뀌지 않는다"
     },
     "frameIntern": {
         "Source/Games/NileCity/NileGameModeComponent.cpp|updateInput": "게임 스레드 입력, 프레임당 키 수가 상수이고 워커 경합이 없다",

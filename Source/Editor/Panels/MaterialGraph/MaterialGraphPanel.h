@@ -1,7 +1,7 @@
 /**
  * @file MaterialGraphPanel.h
  * @brief 머티리얼 그래프 창입니다(Window > Material Graph). `*.matgraph.xml` 문서를 캔버스 · 인스펙터로 고치고 미리보기 구에 바로 보이며, 컴파일이 통과하면 저장합니다.
- * @details 언리얼 Material Editor · 유니티 Shader Graph · Godot Visual Shader 의 자리입니다(비교는 기억에 의존). 상태 · 편집 명령은 `MaterialGraphModel`(Model/, ImGui 없음)이 든다.
+ * @details 언리얼 Material Editor · 유니티 Shader Graph · Godot Visual Shader 의 자리입니다(비교는 기억에 의존). 상태 · 편집 명령은 `MaterialGraphViewModel`(Model/, ImGui 없음)이 든다.
  *          저장은 그래프 파일만 쓰고, 생성물은 저장 뒤 핫 리로드 임포터가 만든다(`MaterialGraphAssetTypeActions.cpp`) — 바깥 편집기 · git 으로 그래프가 바뀐 때와 같은 길이다.
  */
 #pragma once
@@ -10,7 +10,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
-#include "Editor/Panels/MaterialGraph/Model/MaterialGraphModel.h"
+#include "Editor/Panels/MaterialGraph/Model/MaterialGraphViewModel.h"
 
 namespace sw::editor
 {
@@ -52,7 +52,7 @@ namespace sw::editor
         [[nodiscard]] bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo );
 
     private:
-        MaterialGraphModel                   _model;
+        MaterialGraphViewModel               _model;
         EditorNodeGraph                      _nodeGraph;
         vector<const MaterialGraphNodeKind*> _listKind; ///< 등록표의 종류(노드 메뉴). 번호가 메뉴의 `_kindID` 다
         vector<EditorGraphNodeKind>          _listMenu; ///< 노드 메뉴

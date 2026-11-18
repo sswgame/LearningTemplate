@@ -15,7 +15,7 @@ namespace sw::editor
     /**
      * @class PrefabEditorPanel
      * @brief 프리팹 문서 하나를 미리보기 씬에 스폰해 편집합니다(언리얼 블루프린트 편집기 · 유니티 프리팹 모드에 해당).
-     * @details `PrefabPanel`(메인 씬에 놓인 인스턴스의 오버라이드 도구)과 따로다 — 이 창은 메인 씬을 보지 않는다.
+     * @details `PrefabOverridesPanel`(메인 씬에 놓인 인스턴스의 오버라이드 도구)과 따로다 — 이 창은 메인 씬을 보지 않는다.
      *          문서 = 열린 프리팹이고 그 루트가 격리 스택(`EditorPrefabIsolation`)의 맨 아래 단계다. 중첩 프리팹을 열면 단계를 쌓아 그 부분만 보이게 하고(문서 루트 밖의
      *          조명 · 바닥은 그대로), 나오면 되돌린다. 저장은 지금 단계의 루트를 그 단계의 프리팹 파일에 쓴다.
      */
@@ -37,7 +37,7 @@ namespace sw::editor
          */
         [[nodiscard]] static bool openWindow( string_view prefabPath );
 
-        /** @brief 창 제목은 종류 등록(`EditorAssetTypeRegistry`)의 프리팹 패널 제목이다 — 콘텐츠 브라우저가 이 제목으로 연다. 오버라이드 도구(`PrefabPanel`)는 따로 둔 제목을 쓴다. */
+        /** @brief 창 제목은 종류 등록(`EditorAssetTypeRegistry`)의 프리팹 패널 제목이다 — 콘텐츠 브라우저가 이 제목으로 연다. 오버라이드 도구(`PrefabOverridesPanel`)는 따로 둔 제목을 쓴다. */
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 75.0f, 27.0f ); }
 
         void               drawDocumentContent() override;

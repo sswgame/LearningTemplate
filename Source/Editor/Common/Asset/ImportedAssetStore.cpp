@@ -14,7 +14,7 @@
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
-#include "Editor/Common/Asset/Model/ModelImportUtil.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
 
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetPaths.h"

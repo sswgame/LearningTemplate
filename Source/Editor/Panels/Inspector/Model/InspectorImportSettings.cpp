@@ -6,8 +6,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Asset/Model/ModelImportConfig.h"
-#include "Editor/Common/Asset/Model/ModelImportUtil.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Workspace/EditorService.h"

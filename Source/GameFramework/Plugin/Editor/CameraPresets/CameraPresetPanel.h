@@ -1,14 +1,14 @@
 /**
  * @file CameraPresetPanel.h
  * @brief 카메라 프리셋 파일(`*.cameras.xml`)의 프리셋을 미리보기 씬에서 보는 창입니다(Cinemachine 의 프리셋 미리보기, 언리얼 카메라 리그 미리보기에 해당).
- * @details 프리셋 파일 · 고름 · 대상 요 · 카메라 자리 풀기는 `CameraPresetModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
+ * @details 프리셋 파일 · 고름 · 대상 요 · 카메라 자리 풀기는 `CameraPresetViewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 
-#include "GameFramework/Plugin/Editor/CameraPresets/Model/CameraPresetModel.h"
+#include "GameFramework/Plugin/Editor/CameraPresets/Model/CameraPresetViewModel.h"
 
 namespace sw::editor
 {
@@ -48,6 +48,6 @@ namespace sw::editor
         void applySelectedPresetToViewport();
 
     private:
-        CameraPresetModel _model;
+        CameraPresetViewModel _model;
     };
 } // namespace sw::editor

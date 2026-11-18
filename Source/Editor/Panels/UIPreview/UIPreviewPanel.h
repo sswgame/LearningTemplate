@@ -15,7 +15,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
-#include "Editor/Panels/UIPreview/Model/UIPreviewModel.h"
+#include "Editor/Panels/UIPreview/Model/UIPreviewViewModel.h"
 
 namespace sw
 {
@@ -49,7 +49,7 @@ namespace sw::editor
      *          판단(뷰포트 · 맞춤 · 점 옮기기 · 트리 줄 · 언어 목록 · 속성 텍스트 · 끼우기 · 분리하기 · 슬롯 끌기)은 `UIPreviewLogic`(ImGui 없음 — EditorTest).
      *          여는 길은 문서 기반(`EditorDocumentPanel`, UIDocument 종류)이다 — 경로 칸 · 콘텐츠 브라우저 · Quick Open · `asset.openScratch` 가 모두 워크스페이스 포커스로 열고,
      *          미저장 편집이 있으면 바꾸기 전에 묻는다. 예전에는 포커스 확인을 모델이 따로 들고(`consumeWorkspaceFocusKey`) 다른 문서를 열면 편집을 경고만 남기고 버렸다.
-     *          상태 · 명령(문서 · 화면 · 보기 설정 · 고름 · 입력 흉내 · 애니메이션 · 되돌리기 · 저장)은 모델(`UIPreviewModel`, ImGui 없음)이 갖고, 이 패널은 ImGui 로 그리고
+     *          상태 · 명령(문서 · 화면 · 보기 설정 · 고름 · 입력 흉내 · 애니메이션 · 되돌리기 · 저장)은 모델(`UIPreviewViewModel`, ImGui 없음)이 갖고, 이 패널은 ImGui 로 그리고
      *          입력을 모델 명령으로 옮기며 ImGui 텍스처 등록만 직접 든다(뷰).
      */
     class UIPreviewPanel : public EditorDocumentPanel
@@ -121,7 +121,7 @@ namespace sw::editor
         void finishSlotField( Widget& widget, const PropertyInfo& slotProp, const string& frameText, bool bChanged, bool bImmediate );
 
     private:
-        UIPreviewModel                         _model;               ///< 상태와 명령(ImGui 없음)
+        UIPreviewViewModel                     _model;               ///< 상태와 명령(ImGui 없음)
         EditorPropertyGrid                     _grid;                ///< 고른 위젯의 프로퍼티 그리드
         string                                 _paletteFilter;       ///< 팔레트 검색어
         vector<uint32>                         _listTreeRow;         ///< 위젯 목록에 보이는 줄 번호(그릴 때마다 채운다)

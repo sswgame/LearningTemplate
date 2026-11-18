@@ -865,5 +865,525 @@
     "old": "findOrCreateRuntime",
     "new": "getOrCreateRuntime",
     "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "EditorMenuBarModel",
+    "new": "EditorMenuBarViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "EditorMenuBarModelInternal",
+    "new": "EditorMenuBarViewModelInternal",
+    "why": "EditorMenuBarModel → EditorMenuBarViewModel 를 따른다"
+  },
+  {
+    "old": "EditorPlayToolbarModel",
+    "new": "EditorPlayToolbarViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "AnimationClipPreviewModel",
+    "new": "AnimationClipPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "AnimationGraphPreviewModel",
+    "new": "AnimationGraphPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "SpriteClipModel",
+    "new": "SpriteClipViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "SpriteClipModelTest",
+    "new": "SpriteClipViewModelTest",
+    "why": "SpriteClipModel → SpriteClipViewModel 를 따른다"
+  },
+  {
+    "old": "SpriteClipModelInternal",
+    "new": "SpriteClipViewModelInternal",
+    "why": "SpriteClipModel → SpriteClipViewModel 를 따른다"
+  },
+  {
+    "old": "SpriteClipModelTestUtil",
+    "new": "SpriteClipViewModelTestUtil",
+    "why": "SpriteClipModel → SpriteClipViewModel 를 따른다"
+  },
+  {
+    "old": "SwSpriteClipModelMissing",
+    "new": "SwSpriteClipViewModelMissing",
+    "why": "SpriteClipModel → SpriteClipViewModel 를 따른다"
+  },
+  {
+    "old": "SwSpriteClipModelRoundTrip",
+    "new": "SwSpriteClipViewModelRoundTrip",
+    "why": "SpriteClipModel → SpriteClipViewModel 를 따른다"
+  },
+  {
+    "old": "AudioGraphModel",
+    "new": "AudioGraphViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "AudioGraphModelTest",
+    "new": "AudioGraphViewModelTest",
+    "why": "AudioGraphModel → AudioGraphViewModel 를 따른다"
+  },
+  {
+    "old": "AudioMixerModel",
+    "new": "AudioMixerViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "AudioMixerModelInternal",
+    "new": "AudioMixerViewModelInternal",
+    "why": "AudioMixerModel → AudioMixerViewModel 를 따른다"
+  },
+  {
+    "old": "ContentBrowserModel",
+    "new": "ContentBrowserViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ContentBrowserModelInternal",
+    "new": "ContentBrowserViewModelInternal",
+    "why": "ContentBrowserModel → ContentBrowserViewModel 를 따른다"
+  },
+  {
+    "old": "DataTableModel",
+    "new": "DataTableViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "DataTableModelTest",
+    "new": "DataTableViewModelTest",
+    "why": "DataTableModel → DataTableViewModel 를 따른다"
+  },
+  {
+    "old": "DialogueGraphPreviewModel",
+    "new": "DialogueGraphPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "InputMapModel",
+    "new": "InputMapViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "InputMapModelTest",
+    "new": "InputMapViewModelTest",
+    "why": "InputMapModel → InputMapViewModel 를 따른다"
+  },
+  {
+    "old": "InputMapModelInternal",
+    "new": "InputMapViewModelInternal",
+    "why": "InputMapModel → InputMapViewModel 를 따른다"
+  },
+  {
+    "old": "InputMapModelTestUtil",
+    "new": "InputMapViewModelTestUtil",
+    "why": "InputMapModel → InputMapViewModel 를 따른다"
+  },
+  {
+    "old": "InputMapModelTestRecorder",
+    "new": "InputMapViewModelTestRecorder",
+    "why": "InputMapModel → InputMapViewModel 를 따른다"
+  },
+  {
+    "old": "PropertyGridModel",
+    "new": "PropertyGridViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "PropertyGridModelTest",
+    "new": "PropertyGridViewModelTest",
+    "why": "PropertyGridModel → PropertyGridViewModel 를 따른다"
+  },
+  {
+    "old": "PropertyGridModelInternal",
+    "new": "PropertyGridViewModelInternal",
+    "why": "PropertyGridModel → PropertyGridViewModel 를 따른다"
+  },
+  {
+    "old": "PropertyGridModelTestInternal",
+    "new": "PropertyGridViewModelTestInternal",
+    "why": "PropertyGridModel → PropertyGridViewModel 를 따른다"
+  },
+  {
+    "old": "MaterialModel",
+    "new": "MaterialViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "MaterialModelTest",
+    "new": "MaterialViewModelTest",
+    "why": "MaterialModel → MaterialViewModel 를 따른다"
+  },
+  {
+    "old": "MaterialGraphModel",
+    "new": "MaterialGraphViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "MaterialGraphModelTest",
+    "new": "MaterialGraphViewModelTest",
+    "why": "MaterialGraphModel → MaterialGraphViewModel 를 따른다"
+  },
+  {
+    "old": "MaterialGraphModelTestUtil",
+    "new": "MaterialGraphViewModelTestUtil",
+    "why": "MaterialGraphModel → MaterialGraphViewModel 를 따른다"
+  },
+  {
+    "old": "MeshPreviewModel",
+    "new": "MeshPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "MeshPreviewModelInternal",
+    "new": "MeshPreviewViewModelInternal",
+    "why": "MeshPreviewModel → MeshPreviewViewModel 를 따른다"
+  },
+  {
+    "old": "PackagingModel",
+    "new": "PackagingViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "PackagingModelTest",
+    "new": "PackagingViewModelTest",
+    "why": "PackagingModel → PackagingViewModel 를 따른다"
+  },
+  {
+    "old": "RagdollPreviewModel",
+    "new": "RagdollPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "RagdollPreviewModelInternal",
+    "new": "RagdollPreviewViewModelInternal",
+    "why": "RagdollPreviewModel → RagdollPreviewViewModel 를 따른다"
+  },
+  {
+    "old": "ProfilerCaptureModel",
+    "new": "ProfilerCaptureViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ProfilerCaptureModelTest",
+    "new": "ProfilerCaptureViewModelTest",
+    "why": "ProfilerCaptureModel → ProfilerCaptureViewModel 를 따른다"
+  },
+  {
+    "old": "ProfilerPerformanceModel",
+    "new": "ProfilerPerformanceViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ProfilerPerformanceModelTest",
+    "new": "ProfilerPerformanceViewModelTest",
+    "why": "ProfilerPerformanceModel → ProfilerPerformanceViewModel 를 따른다"
+  },
+  {
+    "old": "ProfilerTimelineModel",
+    "new": "ProfilerTimelineViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ProfilerTimelineModelTest",
+    "new": "ProfilerTimelineViewModelTest",
+    "why": "ProfilerTimelineModel → ProfilerTimelineViewModel 를 따른다"
+  },
+  {
+    "old": "PrefabOverridesModel",
+    "new": "PrefabOverridesViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "PrefabOverridesModelInternal",
+    "new": "PrefabOverridesViewModelInternal",
+    "why": "PrefabOverridesModel → PrefabOverridesViewModel 를 따른다"
+  },
+  {
+    "old": "GlobalVariablesModel",
+    "new": "GlobalVariablesViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "GlobalVariablesModelTest",
+    "new": "GlobalVariablesViewModelTest",
+    "why": "GlobalVariablesModel → GlobalVariablesViewModel 를 따른다"
+  },
+  {
+    "old": "GlobalVariablesModelInternal",
+    "new": "GlobalVariablesViewModelInternal",
+    "why": "GlobalVariablesModel → GlobalVariablesViewModel 를 따른다"
+  },
+  {
+    "old": "GlobalVariablesModelPresetTest",
+    "new": "GlobalVariablesViewModelPresetTest",
+    "why": "GlobalVariablesModel → GlobalVariablesViewModel 를 따른다"
+  },
+  {
+    "old": "ModulesModel",
+    "new": "ModulesViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ModulesModelTest",
+    "new": "ModulesViewModelTest",
+    "why": "ModulesModel → ModulesViewModel 를 따른다"
+  },
+  {
+    "old": "ModulesModelInternal",
+    "new": "ModulesViewModelInternal",
+    "why": "ModulesModel → ModulesViewModel 를 따른다"
+  },
+  {
+    "old": "ModulesModelLoadTest",
+    "new": "ModulesViewModelLoadTest",
+    "why": "ModulesModel → ModulesViewModel 를 따른다"
+  },
+  {
+    "old": "PreferencesModel",
+    "new": "PreferencesViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "PreferencesModelTest",
+    "new": "PreferencesViewModelTest",
+    "why": "PreferencesModel → PreferencesViewModel 를 따른다"
+  },
+  {
+    "old": "ShortcutCaptureModel",
+    "new": "ShortcutCaptureViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ShortcutCaptureModelTest",
+    "new": "ShortcutCaptureViewModelTest",
+    "why": "ShortcutCaptureModel → ShortcutCaptureViewModel 를 따른다"
+  },
+  {
+    "old": "TileMapModel",
+    "new": "TileMapViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "TileMapModelTest",
+    "new": "TileMapViewModelTest",
+    "why": "TileMapModel → TileMapViewModel 를 따른다"
+  },
+  {
+    "old": "TileMapModelInternal",
+    "new": "TileMapViewModelInternal",
+    "why": "TileMapModel → TileMapViewModel 를 따른다"
+  },
+  {
+    "old": "TileMapModelTestUtil",
+    "new": "TileMapViewModelTestUtil",
+    "why": "TileMapModel → TileMapViewModel 를 따른다"
+  },
+  {
+    "old": "UIPreviewModel",
+    "new": "UIPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "VFXPreviewModel",
+    "new": "VFXPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "VFXPreviewModelTest",
+    "new": "VFXPreviewViewModelTest",
+    "why": "VFXPreviewModel → VFXPreviewViewModel 를 따른다"
+  },
+  {
+    "old": "VFXPreviewModelInternal",
+    "new": "VFXPreviewViewModelInternal",
+    "why": "VFXPreviewModel → VFXPreviewViewModel 를 따른다"
+  },
+  {
+    "old": "EditorDebugHUDModel",
+    "new": "EditorDebugHUDViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "EditorDebugHUDModelInternal",
+    "new": "EditorDebugHUDViewModelInternal",
+    "why": "EditorDebugHUDModel → EditorDebugHUDViewModel 를 따른다"
+  },
+  {
+    "old": "CameraPresetModel",
+    "new": "CameraPresetViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "CameraPresetModelInternal",
+    "new": "CameraPresetViewModelInternal",
+    "why": "CameraPresetModel → CameraPresetViewModel 를 따른다"
+  },
+  {
+    "old": "CharacterEditorModel",
+    "new": "CharacterEditorViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "CharacterEditorModelTest",
+    "new": "CharacterEditorViewModelTest",
+    "why": "CharacterEditorModel → CharacterEditorViewModel 를 따른다"
+  },
+  {
+    "old": "CharacterEditorModelInternal",
+    "new": "CharacterEditorViewModelInternal",
+    "why": "CharacterEditorModel → CharacterEditorViewModel 를 따른다"
+  },
+  {
+    "old": "RetargetPreviewModel",
+    "new": "RetargetPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "RetargetPreviewModelTest",
+    "new": "RetargetPreviewViewModelTest",
+    "why": "RetargetPreviewModel → RetargetPreviewViewModel 를 따른다"
+  },
+  {
+    "old": "RetargetPreviewModelInternal",
+    "new": "RetargetPreviewViewModelInternal",
+    "why": "RetargetPreviewModel → RetargetPreviewViewModel 를 따른다"
+  },
+  {
+    "old": "ScheduleDebugModel",
+    "new": "ScheduleDebugViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ParkLayoutModel",
+    "new": "ParkLayoutViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ParkLayoutModelTest",
+    "new": "ParkLayoutViewModelTest",
+    "why": "ParkLayoutModel → ParkLayoutViewModel 를 따른다"
+  },
+  {
+    "old": "ParkLayoutModelInternal",
+    "new": "ParkLayoutViewModelInternal",
+    "why": "ParkLayoutModel → ParkLayoutViewModel 를 따른다"
+  },
+  {
+    "old": "ParkLayoutModelTestUtil",
+    "new": "ParkLayoutViewModelTestUtil",
+    "why": "ParkLayoutModel → ParkLayoutViewModel 를 따른다"
+  },
+  {
+    "old": "MeshModifiersPanelModel",
+    "new": "MeshModifiersViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "SequenceModel",
+    "new": "SequenceEditModel",
+    "why": "창이 고치는 문서 사본과 편집 연산은 …EditModel — 창의 ViewModel 과 가른다(EditorUI.md)"
+  },
+  {
+    "old": "SequenceModelTest",
+    "new": "SequenceEditModelTest",
+    "why": "SequenceModel → SequenceEditModel 를 따른다"
+  },
+  {
+    "old": "SequenceModelTestBare",
+    "new": "SequenceEditModelTestBare",
+    "why": "SequenceModel → SequenceEditModel 를 따른다"
+  },
+  {
+    "old": "SequenceModelTestUtil",
+    "new": "SequenceEditModelTestUtil",
+    "why": "SequenceModel → SequenceEditModel 를 따른다"
+  },
+  {
+    "old": "SequenceModelTestHero",
+    "new": "SequenceEditModelTestHero",
+    "why": "SequenceModel → SequenceEditModel 를 따른다"
+  },
+  {
+    "old": "SequenceModelInternal",
+    "new": "SequenceEditModelInternal",
+    "why": "SequenceModel → SequenceEditModel 를 따른다"
+  },
+  {
+    "old": "RetargetProfileModel",
+    "new": "RetargetProfileEditModel",
+    "why": "창이 고치는 문서 사본과 편집 연산은 …EditModel — 창의 ViewModel 과 가른다(EditorUI.md)"
+  },
+  {
+    "old": "RetargetProfileModelTest",
+    "new": "RetargetProfileEditModelTest",
+    "why": "RetargetProfileModel → RetargetProfileEditModel 를 따른다"
+  },
+  {
+    "old": "GimmickGraphModel",
+    "new": "GimmickGraphEditModel",
+    "why": "창이 고치는 문서 사본과 편집 연산은 …EditModel — 창의 ViewModel 과 가른다(EditorUI.md)"
+  },
+  {
+    "old": "GimmickGraphModelTest",
+    "new": "GimmickGraphEditModelTest",
+    "why": "GimmickGraphModel → GimmickGraphEditModel 를 따른다"
+  },
+  {
+    "old": "GimmickGraphModelInternal",
+    "new": "GimmickGraphEditModelInternal",
+    "why": "GimmickGraphModel → GimmickGraphEditModel 를 따른다"
+  },
+  {
+    "old": "HierarchyRowModel",
+    "new": "HierarchyRowTree",
+    "why": "계층 창의 행 트리(루트 순서 · 필터 · 펼침 · 보이는 행) — 창의 상태 · 명령이 아니라 자료 구조라 내용으로 부른다"
+  },
+  {
+    "old": "HierarchyRowModelTest",
+    "new": "HierarchyRowTreeTest",
+    "why": "HierarchyRowModel → HierarchyRowTree 를 따른다"
+  },
+  {
+    "old": "HierarchyRowModelInternal",
+    "new": "HierarchyRowTreeInternal",
+    "why": "HierarchyRowModel → HierarchyRowTree 를 따른다"
+  },
+  {
+    "old": "HierarchyRowModelTestInternal",
+    "new": "HierarchyRowTreeTestInternal",
+    "why": "HierarchyRowModel → HierarchyRowTree 를 따른다"
+  },
+  {
+    "old": "EditorViewportMouseClaim",
+    "new": "EditorViewportMouseCapture",
+    "why": "마우스를 가져가 다른 도구가 못 받게 하는 것은 capture(Win32 SetCapture · 언리얼 CaptureMouse · ImGui WantCaptureMouse)"
+  },
+  {
+    "old": "EditorViewportMouseClaimInternal",
+    "new": "EditorViewportMouseCaptureInternal",
+    "why": "EditorViewportMouseClaim → EditorViewportMouseCapture 를 따른다"
+  },
+  {
+    "old": "PrefabPanel",
+    "new": "PrefabOverridesPanel",
+    "why": "프리팹 창(PrefabEditorPanel)이 아니라 인스턴스 오버라이드 도구다 — 내용으로 부른다(유니티 Prefab Overrides)"
+  },
+  {
+    "old": "PrefabPanelInternal",
+    "new": "PrefabOverridesPanelInternal",
+    "why": "PrefabPanel → PrefabOverridesPanel 를 따른다"
+  },
+  {
+    "old": "isClaimed",
+    "new": "isCaptured",
+    "why": "EditorViewportMouseClaim → EditorViewportMouseCapture 를 따른다"
   }
 ]

@@ -113,7 +113,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "ReadTheMeshFileAgainAfterImporting" ) );
 
         syncPreviewSubject();
-        MeshPreviewModel::gatherLOD( getPreviewScene(), _lodState );
+        MeshPreviewViewModel::gatherLOD( getPreviewScene(), _lodState );
         if ( _lodState._bHasSubject != SW_FALSE )
             drawLODTable();
         _model.applyLODChoice( getPreviewScene() );
@@ -132,7 +132,7 @@ namespace sw::editor
             return;
         }
 
-        ImGui::RadioButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Auto" ), "Auto" ), &_model.editLODChoice(), MeshPreviewModel::kAutoLOD );
+        ImGui::RadioButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Auto" ), "Auto" ), &_model.editLODChoice(), MeshPreviewViewModel::kAutoLOD );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PickTheLevelByTheScreenSize" ) );
         const uint32 lodCount = _lodState._lodCount;
         for ( uint32 lod = 0; lod < lodCount; ++lod )
@@ -158,7 +158,7 @@ namespace sw::editor
     bool MeshPreviewPanel::findPreviewVertexCount( uint32& outCount ) const
     {
         MeshPreviewLODState state;
-        MeshPreviewModel::gatherLOD( getPreviewScene(), state );
+        MeshPreviewViewModel::gatherLOD( getPreviewScene(), state );
         if ( state._bMeshRead == SW_FALSE )
             return false;
         outCount = state._vertexCount;
@@ -168,7 +168,7 @@ namespace sw::editor
     bool MeshPreviewPanel::findPreviewDrawnLOD( uint32& outLOD ) const
     {
         MeshPreviewLODState state;
-        MeshPreviewModel::gatherLOD( getPreviewScene(), state );
+        MeshPreviewViewModel::gatherLOD( getPreviewScene(), state );
         if ( state._bMeshRead == SW_FALSE )
             return false;
         outLOD = state._drawnLOD;

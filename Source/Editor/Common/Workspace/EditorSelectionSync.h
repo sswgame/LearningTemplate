@@ -6,7 +6,7 @@
  *          문맥의 칸에 적고 번호(`_sequence`)를 올린다. 받는 쪽이 따를 문맥을 마스크로 고른다: 콘텐츠 브라우저는 메인 씬만 따라 그 애셋을 표시하고(미리보기 선택은 보지 않는다),
  *          인스펙터는 지금처럼 겨누는 선택(`editor::getFocusedSelection`)을 본다. 언리얼의 "Sync to Content Browser"(메인 레벨 선택 → 애셋) · 유니티의 Ping 과 같은 뜻이고,
  *          둘 다 프리팹/애셋 편집 창의 선택은 레벨 선택과 따로 둔다.
- *          쓰는 곳은 둘이다 — 모든 오브젝트 선택 변경이 모이는 `EditorSelection::notifyChanged` 가 자기 문맥(메인 · 미리보기)으로, 콘텐츠 브라우저의 고르기(`ContentBrowserModel::selectAsset`)가 자기 문맥으로 알린다.
+ *          쓰는 곳은 둘이다 — 모든 오브젝트 선택 변경이 모이는 `EditorSelection::notifyChanged` 가 자기 문맥(메인 · 미리보기)으로, 콘텐츠 브라우저의 고르기(`ContentBrowserViewModel::selectAsset`)가 자기 문맥으로 알린다.
  */
 #pragma once
 #include "Core/Container/string.h"

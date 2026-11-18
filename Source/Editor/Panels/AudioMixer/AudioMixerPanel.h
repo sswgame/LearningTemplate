@@ -1,14 +1,14 @@
 /**
  * @file AudioMixerPanel.h
  * @brief 오디오 믹서 창입니다(Window > Audio Mixer). 버스마다 피크 미터, 볼륨 페이더, 음소거, 솔로를 보이고 고치며, 이벤트와 클립을 미리 듣습니다.
- * @details 버스 상태 · 피크 표시 값 · 감시 값 · 이벤트 목록은 `AudioMixerModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 클립 경로 입력란만 든다.
+ * @details 버스 상태 · 피크 표시 값 · 감시 값 · 이벤트 목록은 `AudioMixerViewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 클립 경로 입력란만 든다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-#include "Editor/Panels/AudioMixer/Model/AudioMixerModel.h"
+#include "Editor/Panels/AudioMixer/Model/AudioMixerViewModel.h"
 
 namespace sw
 {
@@ -50,7 +50,7 @@ namespace sw::editor
         void drawBusStrip( IAudioService& audio, uint32 busIndex );
 
     private:
-        AudioMixerModel                         _model;
+        AudioMixerViewModel                     _model;
         fixed_string<constant::buffer::kMax256> _clipPath;
     };
 } // namespace sw::editor

@@ -85,7 +85,7 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 
 손으로 자식 하나를 다시 돌리려면 `App --test --test-child-role=LogTest.ConsoleChild --test-child-arg=probe -unattended`. 자식의 로그 파일은 부모 케이스의 쓰기 폴더에 남는다.
 
-시간이 판정에 들어가는 케이스는 잠들지 않는다. 시각을 읽는 객체는 시계(`IClock`)를 받고(`GameTimer` · `FixedTimestep` · `NetRequestClient` · `ProfilerPerformanceModel` …) 테스트는 `ManualClock` 을 밀어 정확한 값을 단언한다. 다른 스레드 · OS 가 상태를 바꾸기를 기다릴 때는 사건(문 · future · 완료 핸들)을 기다리고, 사건이 없는 상태(카운터 · 연결 수)는 `test::waitUntil`(`Core/Testing/TestWait.h` — 통과는 조건, 시한은 멈춘 실행 그물)로 묻는다. "20 ms 자면 됐겠지" 는 느린 기계에서 옳은 구현을 지게 한다. 남겨도 되는 잠은 실제 시계 자체를 시험하거나 실시간 멈춤이 입력일 때, 그리고 경합 창을 넓혀 결함을 드러낼 기회만 주는 잠(옳은 구현은 잠 길이와 무관하게 통과)뿐이다.
+시간이 판정에 들어가는 케이스는 잠들지 않는다. 시각을 읽는 객체는 시계(`IClock`)를 받고(`GameTimer` · `FixedTimestep` · `NetRequestClient` · `ProfilerPerformanceViewModel` …) 테스트는 `ManualClock` 을 밀어 정확한 값을 단언한다. 다른 스레드 · OS 가 상태를 바꾸기를 기다릴 때는 사건(문 · future · 완료 핸들)을 기다리고, 사건이 없는 상태(카운터 · 연결 수)는 `test::waitUntil`(`Core/Testing/TestWait.h` — 통과는 조건, 시한은 멈춘 실행 그물)로 묻는다. "20 ms 자면 됐겠지" 는 느린 기계에서 옳은 구현을 지게 한다. 남겨도 되는 잠은 실제 시계 자체를 시험하거나 실시간 멈춤이 입력일 때, 그리고 경합 창을 넓혀 결함을 드러낼 기회만 주는 잠(옳은 구현은 잠 길이와 무관하게 통과)뿐이다.
 
 케이스 하나는 이럴 때 실패다: 단언 실패 · 단언이 하나도 없음 · 적지 않은 Warning · Error 로그 · 적었는데 나오지 않은 로그 · 다른 스냅숏. 거르개에 맞는 케이스가 없으면 실행이 실패다(샤드가 빈 것은 실패가 아니다). 보고 JSON 은 `Saved/Test/<프로세스>/report.json`(찍힌다).
 
@@ -94,7 +94,7 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 - 네트워크: Core 엔드포인트는 `LoopbackCluster`, 온라인 키트 끝단은 `OnlineHostTestUtil.h`(`OnlineTestFixture` — 호스트 + 클라이언트 묶음, 키트 DLL 이 include 하고 키트 서버 쪽은 같은 프로토콜 항목의 가짜로 올린다).
 - 그 밖: `AnimationTestUtil` · `RHIFakeDevice` · `FakeFontRasterizer`, 자식 프로세스는 `Core/Process` · 크래시 보고.
 - 온라인 키트는 싣는 게임이 없어 `UnitTests.OnlineKits`(OnlineLoadBot `-test`, Release — 봇이 온라인 키트를 모두 싣는다)가 돌린다.
-- 화면이 있어야 하는 것은 시나리오가 맡는다: `UIPreviewModel`(`editor/uipreview` · `uipreviewdesigner`), 섀도 복사본의 성공 길(핫 리로드 시나리오), 화면이 뜨는 게임 흐름(`loadingscreen`), `Editor/Common` · `Editor/Panels` 의 그리기 코드.
+- 화면이 있어야 하는 것은 시나리오가 맡는다: `UIPreviewViewModel`(`editor/uipreview` · `uipreviewdesigner`), 섀도 복사본의 성공 길(핫 리로드 시나리오), 화면이 뜨는 게임 흐름(`loadingscreen`), `Editor/Common` · `Editor/Panels` 의 그리기 코드.
 - 폴더 집계 `py -3 Scripts/dev/test_coverage.py` 는 테스트가 다른 폴더에 있어도 "없음" 으로 센다 — 실제로 비었는지는 클래스 이름을 테스트에서 찾아 본다.
 
 ## 리플렉션 파서

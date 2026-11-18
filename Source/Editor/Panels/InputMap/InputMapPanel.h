@@ -8,14 +8,14 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
-#include "Editor/Panels/InputMap/Model/InputMapModel.h"
+#include "Editor/Panels/InputMap/Model/InputMapViewModel.h"
 
 namespace sw::editor
 {
     /**
      * @class InputMapPanel
      * @brief 액션, 레이어, 바인딩, 트리거, 모디파이어를 시각적으로 편집하고, 입력 장치 상태를 실시간으로 보여 주는 에디터 패널입니다.
-     * @details 상태와 명령은 `InputMapModel`(Model/, ImGui 없음)가 들고, 이 패널은 그리기 · 입력칸 · 문서 dirty 만 든다.
+     * @details 상태와 명령은 `InputMapViewModel`(Model/, ImGui 없음)가 들고, 이 패널은 그리기 · 입력칸 · 문서 dirty 만 든다.
      *          여는 길은 문서 기반(`EditorDocumentPanel`, Data 종류 가운데 입력 맵 · 입력 맵 묶음)이다 — 경로 칸 · 콘텐츠 브라우저 · `asset.openScratch` 가 모두 워크스페이스 포커스로 연다.
      *          예전에는 경로 칸만 여는 자체 길이라 시나리오가 사본(`scratch/…`)을 가리킬 수 없었다. 포커스가 없으면 처음 문서는 데이터의 디버그 키 맵이다.
      */
@@ -47,11 +47,11 @@ namespace sw::editor
         /** @brief 감시 값용입니다. 지난 프레임에 찾은 바인딩 충돌 수를 반환합니다. */
         uint32 getConflictCount() const { return static_cast<uint32>( _document.getConflicts().size() ); }
 
-        /** @brief 패널이 내려갈 때 재생 중인 리플레이를 입력에서 뗍니다(`InputMapModel::releaseInput`). */
+        /** @brief 패널이 내려갈 때 재생 중인 리플레이를 입력에서 뗍니다(`InputMapViewModel::releaseInput`). */
         void shutdown() override { _document.releaseInput(); }
 
     protected:
-        /** @brief 입력 맵 파일(`*.input.xml`)과 입력 맵 묶음(게임 설정 파일)만 받습니다(`InputMapModel::isDocumentPath`). */
+        /** @brief 입력 맵 파일(`*.input.xml`)과 입력 맵 묶음(게임 설정 파일)만 받습니다(`InputMapViewModel::isDocumentPath`). */
         bool canAcceptDocumentPath( string_view assetPath ) const override;
         /** @brief 받아들인 문서 경로(없으면 데이터의 처음 경로)를 다시 읽습니다. 읽지 못하면 `Malformed` 라 저장이 막힌다. */
         ToolAssetLoadResult loadDocument() override;
@@ -106,13 +106,13 @@ namespace sw::editor
         void drawAddActionSection();
         void drawCaptureModal();
         void drawGamepadStickVisualizer( const utf8* pLabel, float32 stickX, float32 stickY, float32 deadzone );
-        /** @brief 편집하는 맵의 저장 글입니다(문서 되돌리기 — 감사 E-13). 묶음이면 파일마다 몫을 잇는다(`InputMapModel::captureText`). */
+        /** @brief 편집하는 맵의 저장 글입니다(문서 되돌리기 — 감사 E-13). 묶음이면 파일마다 몫을 잇는다(`InputMapViewModel::captureText`). */
         string captureDocumentText() const override;
         /** @brief 되돌리기가 준 글로 맵을 다시 읽습니다. */
         void applyDocumentText( string_view text ) override;
 
     private:
-        InputMapModel                _document;    ///< 편집하는 InputMap · 리플레이와 명령
+        InputMapViewModel            _document;    ///< 편집하는 InputMap · 리플레이와 명령
         InputMapDeviceState          _deviceState; ///< 장치 모니터가 그리는 값(프레임마다 모델이 다시 채우는 재사용 버퍼)
         string                       _newActionName;
         string                       _newLayerName;

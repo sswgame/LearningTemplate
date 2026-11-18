@@ -20,7 +20,7 @@
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorViewportClientScene.h"
-#include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
+#include "Editor/Viewport/Model/EditorViewportMouseCapture.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 #include "Editor/Viewport/Model/Visualizers/SelectionBoundsVisualizer.h"
 
@@ -230,7 +230,7 @@ namespace sw::editor
             visualizerArgs._bFlat2D        = frame._bFlat2D;
             visualizerArgs._pStats         = &_visualizerStats;
             // 마우스 양보는 시각화가 매 프레임 다시 잡아야 유지된다(끄는 중에 토글을 꺼 그리기 함수가 안 돌아도 풀린다). 클릭 선택은 이 그리기 뒤라 같은 프레임의 첫 클릭도 양보를 본다.
-            EditorViewportMouseClaim::beginFrame( static_cast<uint64>( ImGui::GetFrameCount() ) );
+            EditorViewportMouseCapture::beginFrame( static_cast<uint64>( ImGui::GetFrameCount() ) );
             // 모으기(Model, 씬을 읽는다) → 그리기(View, 값만 본다) — 언리얼 컴포넌트 비주얼라이저가 FPrimitiveDrawInterface 에 값을 넘기는 가름.
             _visualizerDrawList.gatherAll( visualizerArgs, _toolbarSettings._visualizerToggles );
             EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerToggles, _visualizerDrawList, _listScreenBillboard );
@@ -247,7 +247,7 @@ namespace sw::editor
             pickInput._skipObjectID         = frame._cameraObjectID;
             pickInput._pListScreenBillboard = &_listScreenBillboard;
             pickInput._b2DMode              = _toolbarSettings._bIs2DMode;
-            _picker.processClick( pickInput, bCanvasClicked && ( EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed() ) == false, bGizmoBusy );
+            _picker.processClick( pickInput, bCanvasClicked && ( EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseCapture::isCaptured() ) == false, bGizmoBusy );
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
             _picker.processMarquee( pickInput, pCanvasDrawList );
             pCanvasDrawList->PopClipRect();
@@ -257,8 +257,8 @@ namespace sw::editor
 
             {
                 EditorViewportClientScene::flushSceneTransforms();
-                // 콜라이더 손잡이나 확장 도구(EditorViewportMouseClaim) 위에서는 기즈모가 마우스를 양보한다 — 손잡이는 기즈모 축 위에 놓인다.
-                const bool bGizmoYields = EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed();
+                // 콜라이더 손잡이나 확장 도구(EditorViewportMouseCapture) 위에서는 기즈모가 마우스를 양보한다 — 손잡이는 기즈모 축 위에 놓인다.
+                const bool bGizmoYields = EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseCapture::isCaptured();
                 if ( bGizmoYields == false )
                 {
                     // 모으기(Model) → 기즈모(View, 스냅샷만 읽고 명령을 낸다) → 적용 · 되돌리기(Model). 메인 뷰포트는 메인 선택이다.

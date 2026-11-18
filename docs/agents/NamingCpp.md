@@ -176,7 +176,7 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 | `Reply` 는 키트 응답 본문, `OnlineResponse` 는 전송 봉투(합치지 않는다). `Since` 는 시간을 세는 칸(`_timeSinceShot`)만 | 뜻이 다르다 |
 | 저작 정의는 `Def` 하나(`Definition` 쓰지 않음). 값의 갈래를 고르는 열거형은 `…Kind` — `…Type` 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만 | 저장소 다수 |
 | 읽기 · 쓰기 동사는 원본 종류를 넣고 짝을 맞춘다: `loadFromAsset`(에셋 id) · `loadFromFile`/`saveToFile`(OS 경로) · `loadFromXMLText`/`saveToXMLText`(글). `read*`/`write*` 는 바이트 스트림 · Archive, `parse*` 는 글 → 스칼라만. GameObject 는 `createGameObject` ↔ `destroyGameObject` | 언리얼 LoadFromFile · SpawnActor |
-| 에디터 창 하나의 상태 · 명령은 `<창>Model`. `Document` 는 메모리에 든 파일 내용(SceneDocument · XMLDocument)만 | Qt Model/View |
+| 에디터 창 하나의 상태 · 명령은 `<창>ViewModel`(View 가 값을 읽고 명령을 보내는 창구 — 폴더는 `Model/`), 창이 고치는 문서 사본과 편집 연산은 `<문서>EditModel`. 창 클래스에 끝말 `Model` 만 붙이지 않는다([EditorUI](EditorUI.md)). `Document` 는 메모리에 든 파일 내용(SceneDocument · XMLDocument)만 | MVVM(WPF · 언리얼 UMG ViewModel) |
 | 알림: 버스의 "바뀌었다" 는 `<X>Changed` · `<X>Revoked`, 플레이어 알림 `<X>Notification`, 운영 공지 `Announcement`. `Notice` 는 영어 관용구(`ShutdownNotice`)만 | Apple · Google 서버 알림 |
 | 은유 대신 내용: 셈 `Stats`, 기록 `History`, 런타임에 형식을 고르는 구조체 값 `InstancedStruct`. 매크로는 낱말마다 `_`(`SW_THEME_COLOR`) — 언리얼 고유 이름을 따른 것(`SW_LOCTEXT`)만 붙인다 | 언리얼 FCookStats · FInstancedStruct |
 | 둔 것: `Editor*` · `Automation*` 접두어(타입 이름은 전역 유일), App 폴더(언리얼 Launch), `*Info` 정적 사실 표(FPixelFormatInfo), 폴더 이름과 같은 접두어 묶음(`Core/Container`), `IWindowTitleTarget`(창 제목 거는 길을 하나로 막는 이음매) | |

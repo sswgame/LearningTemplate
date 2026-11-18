@@ -3,7 +3,7 @@
  * @brief 편집 모델 하나의 문서 상태 한 벌입니다: 저장한 값(더러움 판정 · 저장한 값으로 되돌리기)과 창 안 되돌리기 기록.
  * @details 모델마다 `_savedText` 칸 · 되돌리기 스택 · "읽을 때 둘을 함께 비우기" 를 손으로 적었다. 한쪽을 빠뜨리면 읽은 뒤에도 옛 문서로 되돌아간다. 모델은 "어떻게 읽고 쓰나" 만 답한다.
  *          창별 기록과 전역 `CommandStack` 은 합치지 않는다(`EditSnapshotHistory.h` 머리말의 "창 안 Undo" — 언리얼은 전역 트랜잭션, Godot 은 문서별 기록이다. 기억에 의존).
- *          편집을 알림으로만 내는 모델(`AudioEventEditModel` · `InputMapModel` · `DataTableModel` — 문서 패널의 편집 알림 창구 `DocumentEditRecorder`, `UIPreviewModel`)은 이 형식을 쓰지 않는다 —
+ *          편집을 알림으로만 내는 모델(`AudioEventEditModel` · `InputMapViewModel` · `DataTableViewModel` — 문서 패널의 편집 알림 창구 `DocumentEditRecorder`, `UIPreviewViewModel`)은 이 형식을 쓰지 않는다 —
  *          되돌리기와 미저장은 문서 패널이 문서 글로 든다(글로 대조하려고 프레임마다 표를 직렬화하지 않는다).
  */
 #pragma once

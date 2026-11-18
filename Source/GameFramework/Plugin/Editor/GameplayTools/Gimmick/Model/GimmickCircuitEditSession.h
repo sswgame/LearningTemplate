@@ -12,7 +12,7 @@
 
 namespace sw::editor
 {
-    class GimmickGraphModel;
+    class GimmickGraphEditModel;
 
     /** @brief `GimmickCircuitEditSession::sync` 의 결과입니다. */
     enum class GimmickCircuitSync : uint8
@@ -34,7 +34,7 @@ namespace sw::editor
          * @brief 겨누는 창의 선택에서 회로를 찾고(없으면 보던 회로), 다른 회로이거나 저장 내용의 서명이 @p signature 와 다르면 @p outModel 로 다시 읽습니다.
          * @param outLoadFailed 다시 읽었는데 속성을 읽지 못했으면 true 입니다(모델은 비운다).
          */
-        GimmickCircuitSync sync( GimmickGraphModel& outModel, uint64 signature, bool& outLoadFailed );
+        GimmickCircuitSync sync( GimmickGraphEditModel& outModel, uint64 signature, bool& outLoadFailed );
         /** @brief 보는 회로를 잊습니다. */
         void clear() { _ownerHandle = GameObjectHandle{}; }
         /** @brief 회로를 가진 오브젝트의 이름입니다. 없으면 빈 글입니다. */
@@ -44,7 +44,7 @@ namespace sw::editor
         /** @brief 회로와 같은 선택(겨누는 창)의 첫 오브젝트입니다. 고른 것이 없으면 빈 핸들입니다. */
         [[nodiscard]] GameObjectHandle findFirstSelectedObject() const;
         /** @brief @p model 을 회로에 쓰고 되돌리기 한 단계(@p pLabel)로 남깁니다. 회로가 없거나 속성을 쓰지 못하면 false 입니다. */
-        [[nodiscard]] bool commit( const GimmickGraphModel& model, const utf8* pLabel );
+        [[nodiscard]] bool commit( const GimmickGraphEditModel& model, const utf8* pLabel );
 
     private:
         GameObjectHandle _ownerHandle{}; ///< 보는 회로를 가진 오브젝트

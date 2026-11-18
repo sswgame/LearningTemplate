@@ -44,7 +44,7 @@ namespace sw::editor
             EditorThemeUtil::textWarning( SW_LOCKEY( "EditorSettings", "ModuleSetChanged" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Build" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Build" ) ) )
-                (void)ModulesModel::requestBuildAll(); // 막혀 있으면 빌드 상태 표시가 알린다
+                (void)ModulesViewModel::requestBuildAll(); // 막혀 있으면 빌드 상태 표시가 알린다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "BuildModules" ) );
         }
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
@@ -61,13 +61,13 @@ namespace sw::editor
         const float32           listHeight = _model.getSelectedModule().empty() ? 0.0f : ImGui::GetContentRegionAvail().y * 0.6f;
         ImGui::BeginChild( "##ModuleList", ImVec2( 0.0f, listHeight ) );
         uint32 shownCount{ 0 };
-        for ( const ModuleKind kind : ModulesModel::kArrKindOrder )
+        for ( const ModuleKind kind : ModulesViewModel::kArrKindOrder )
         {
             if ( _model.isKindVisible( kind ) == false )
                 continue;
-            if ( ImGui::CollapsingHeader( ModulesModel::getKindName( kind ), ImGuiTreeNodeFlags_DefaultOpen ) == false )
+            if ( ImGui::CollapsingHeader( ModulesViewModel::getKindName( kind ), ImGuiTreeNodeFlags_DefaultOpen ) == false )
                 continue;
-            if ( ImGui::BeginTable( ModulesModel::getKindName( kind ), 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV ) == false )
+            if ( ImGui::BeginTable( ModulesViewModel::getKindName( kind ), 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV ) == false )
                 continue;
             ImGui::TableSetupColumn( "On", ImGuiTableColumnFlags_WidthFixed, 32.0f * EditorThemeUtil::getDPIScale() );
             ImGui::TableSetupColumn( "Module" );
@@ -83,7 +83,7 @@ namespace sw::editor
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex( 0 );
                 bool       bOn     = bActive;
-                const bool bLocked = ModulesModel::isLocked( kind );
+                const bool bLocked = ModulesViewModel::isLocked( kind );
                 ImGui::BeginDisabled( bLocked );
                 if ( ImGui::Checkbox( "##On", &bOn ) )
                     requestToggle( manifest._name, bOn );
@@ -169,14 +169,14 @@ namespace sw::editor
         const float32 comboWidth = 140.0f * EditorThemeUtil::getDPIScale();
         ImGui::SetNextItemWidth( comboWidth );
         const int32 kindFilter   = _model.getKindFilter();
-        const utf8* pKindPreview = kindFilter < 0 ? SW_LOCKEY( "EditorSettings", "ModuleKindAll" ) : ModulesModel::getKindName( static_cast<ModuleKind>( kindFilter ) );
+        const utf8* pKindPreview = kindFilter < 0 ? SW_LOCKEY( "EditorSettings", "ModuleKindAll" ) : ModulesViewModel::getKindName( static_cast<ModuleKind>( kindFilter ) );
         if ( EditorWidgets::beginCombo( "##ModuleKindFilter", pKindPreview ) )
         {
             if ( ImGui::Selectable( SW_LOCKEY( "EditorSettings", "ModuleKindAll" ), kindFilter < 0 ) )
                 _model.setKindFilter( -1 );
-            for ( const ModuleKind kind : ModulesModel::kArrKindOrder )
+            for ( const ModuleKind kind : ModulesViewModel::kArrKindOrder )
             {
-                if ( ImGui::Selectable( ModulesModel::getKindName( kind ), kindFilter == static_cast<int32>( kind ) ) )
+                if ( ImGui::Selectable( ModulesViewModel::getKindName( kind ), kindFilter == static_cast<int32>( kind ) ) )
                     _model.setKindFilter( static_cast<int32>( kind ) );
             }
             ImGui::EndCombo();
@@ -216,7 +216,7 @@ namespace sw::editor
             ImGui::Text( "%s: %s", SW_LOCKEY( "EditorSettings", "ModuleOverride" ), SW_LOCKEY( "EditorSettings", "ModuleOverrideNone" ) );
 
         const ModuleManifest* pManifest = _model.getCatalog().findManifest( detail._name );
-        const bool            bLocked   = pManifest == nullptr || ModulesModel::isLocked( pManifest->_kind );
+        const bool            bLocked   = pManifest == nullptr || ModulesViewModel::isLocked( pManifest->_kind );
         ImGui::BeginDisabled( detail._bHasOverride == false || bLocked );
         if ( ImGui::SmallButton( SW_LOCKEY( "EditorSettings", "ModuleResetOverride" ) ) )
             requestToggle( detail._name, detail._bEnabledByDefault ); // 기본과 같아지면 setOverride 가 줄을 지운다

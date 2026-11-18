@@ -1,13 +1,13 @@
 /**
  * @file VFXPreviewPanel.h
  * @brief 파티클 효과(`*.vfx.xml`)를 미리보기 씬에서 재생해 보는 창입니다(유니티 Particle Effect 미리보기, 언리얼 Niagara 에디터 뷰포트에 해당).
- * @details 방출기 표 · 효과 걸기는 `VFXPreviewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
+ * @details 방출기 표 · 효과 걸기는 `VFXPreviewViewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
-#include "Editor/Panels/VFX/Model/VFXPreviewModel.h"
+#include "Editor/Panels/VFX/Model/VFXPreviewViewModel.h"
 
 namespace sw::editor
 {
@@ -15,7 +15,7 @@ namespace sw::editor
      * @class VFXPreviewPanel
      * @brief 연 효과를 미리보기 씬의 오브젝트 하나(`VFXComponent`)로 재생하고, 방출기 목록과 살아 있는 입자 수를 보입니다.
      * @details **보기 전용**이다. 효과 파일은 데이터 종류(`vfx`)라 카탈로그 편집기가 고친다 — 같은 파일을 두 편집기가 쥐지 않게 이 창은 저장하지 않는다.
-     *          카탈로그 편집기(또는 바깥)에서 저장하면 파일 감시가 알리고 내용 해시가 바뀐 것을 본 이 창이 스스로 다시 읽어 다시 건다(`VFXPreviewModel::pollFileChanged`). Reload 는 손으로 다시 읽기다. Data 종류 중 `*.vfx.xml` 만 문서로 받는다(`canAcceptDocumentPath`).
+     *          카탈로그 편집기(또는 바깥)에서 저장하면 파일 감시가 알리고 내용 해시가 바뀐 것을 본 이 창이 스스로 다시 읽어 다시 건다(`VFXPreviewViewModel::pollFileChanged`). Reload 는 손으로 다시 읽기다. Data 종류 중 `*.vfx.xml` 만 문서로 받는다(`canAcceptDocumentPath`).
      */
     class VFXPreviewPanel : public EditorPreviewPanel
     {
@@ -38,7 +38,7 @@ namespace sw::editor
         [[nodiscard]] bool findPreviewSpawnedParticleCount( uint64& outCount ) const;
         /** @brief 효과 파일이 바뀌어 스스로 다시 읽은 횟수입니다(감시 값 `Editor.VFXPreviewAutoReloadCount`). */
         uint32 getAutoReloadCount() const { return _autoReloadCount; }
-        /** @brief 격리한 방출기 번호입니다(`VFXPreviewModel::kNoSolo` 면 없음 — 감시 값 `Editor.VFXPreviewSoloEmitter`). */
+        /** @brief 격리한 방출기 번호입니다(`VFXPreviewViewModel::kNoSolo` 면 없음 — 감시 값 `Editor.VFXPreviewSoloEmitter`). */
         int32 getSoloEmitter() const { return _model.getSoloEmitter(); }
         /** @brief 미리보기 효과에서 켜진 방출기 수입니다. 미리보기 씬이 없으면 false 입니다(감시 값 `Editor.VFXPreviewEnabledEmitterCount`). */
         [[nodiscard]] bool findEnabledEmitterCount( uint32& outCount ) const;
@@ -54,7 +54,7 @@ namespace sw::editor
         bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override;
 
     private:
-        VFXPreviewModel _model;
-        uint32          _autoReloadCount; ///< 파일이 바뀌어 다시 읽은 횟수
+        VFXPreviewViewModel _model;
+        uint32              _autoReloadCount; ///< 파일이 바뀌어 다시 읽은 횟수
     };
 } // namespace sw::editor

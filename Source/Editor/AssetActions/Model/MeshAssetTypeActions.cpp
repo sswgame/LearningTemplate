@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Asset/Model/ModelImporter.h"
+#include "Editor/Common/Asset/ModelImport/ModelImporter.h"
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"

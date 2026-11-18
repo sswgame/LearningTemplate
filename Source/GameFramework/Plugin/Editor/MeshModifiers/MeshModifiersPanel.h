@@ -5,7 +5,7 @@
  *          선언의 선택 칸이 모양을 정한다 — 구역(`_pGroup`) · 툴팁 · 단위, NumberList 열 선언(행 × 열 표), 참조의 컴포넌트 걸러 보기, 경로의 확장자.
  *          곡선은 엔진 공용 곡선 편집기(`EditorCurveEditorState`)를 `MeshModifierParamEdit` 의 선형 키 어댑터로 쓴다.
  *          격자(Lattice) 모디파이어만 제어점 목록 입력칸을 더 그린다.
- *          하위 스택 경로 · 곡선 팝업을 연 자리 · 설명 캐시 · 워프 내보내기 경로 · 편집 묶기는 `MeshModifiersPanelModel`(Model/, ImGui 없음)이 든다.
+ *          하위 스택 경로 · 곡선 팝업을 연 자리 · 설명 캐시 · 워프 내보내기 경로 · 편집 묶기는 `MeshModifiersViewModel`(Model/, ImGui 없음)이 든다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -16,7 +16,7 @@
 #include "Editor/Common/GUI/Panel/EditorStateDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditorState.h"
 
-#include "GameFramework/Plugin/Editor/MeshModifiers/Model/MeshModifiersPanelModel.h"
+#include "GameFramework/Plugin/Editor/MeshModifiers/Model/MeshModifiersViewModel.h"
 
 namespace sw::editor
 {
@@ -72,7 +72,7 @@ namespace sw::editor
          */
         int32 drawStackRows( MeshModifierSession& session, MeshModifierStack& stack, int32 selectedIndex, const utf8* pMarkPrefix, int32* pOutEnterIndex );
         /**
-         * @brief 묶음 모디파이어의 하위 스택 편집 — 경로(`MeshModifiersPanelModel::resolveNestedStack`)로 들어간 단계의 목록 · 추가 · 고른 하위 모디파이어의 기즈모와 매개변수.
+         * @brief 묶음 모디파이어의 하위 스택 편집 — 경로(`MeshModifiersViewModel::resolveNestedStack`)로 들어간 단계의 목록 · 추가 · 고른 하위 모디파이어의 기즈모와 매개변수.
          * @details 번호 경로 모델은 `DeformableModifier::findByPath` 다. 되돌리기는 바깥 스택 문서째(하위 스택은 `extra.stack`) 기록되므로 따로 두지 않는다.
          */
         void drawNestedStack( MeshModifierSession& session, DeformableModifier& root );
@@ -110,7 +110,7 @@ namespace sw::editor
         void finishItem();
 
     private:
-        MeshModifiersPanelModel _model;
-        EditorCurveEditorState  _curveState; ///< 열린 곡선 편집기 팝업 하나의 화면 상태(보기 · 끌기 · 작업 사본). 연 자리는 `_model` 이 든다
+        MeshModifiersViewModel _model;
+        EditorCurveEditorState _curveState; ///< 열린 곡선 편집기 팝업 하나의 화면 상태(보기 · 끌기 · 작업 사본). 연 자리는 `_model` 이 든다
     };
 } // namespace sw::editor

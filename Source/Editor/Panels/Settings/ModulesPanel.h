@@ -8,7 +8,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-#include "Editor/Panels/Settings/Model/ModulesModel.h"
+#include "Editor/Panels/Settings/Model/ModulesViewModel.h"
 
 namespace sw::editor
 {
@@ -16,7 +16,7 @@ namespace sw::editor
      * @class ModulesPanel
      * @brief `Bin/Modules` 의 매니페스트(빌드가 복사한 카탈로그)을 읽어 종류별 테이블을 그립니다. 체크를 바꾸면 미리보기를 묻고, 확인하면
      *        `Source/Games/<활성 게임>/SWGame.module.json` 의 `_listModuleOverride` 를 고칩니다. 적용은 Build(매니페스트가 구성 의존이라 ninja 가 다시 구성한다) 뒤 다시 시작입니다.
-     *        상태와 명령은 `ModulesModel`(Model/, ImGui 없음)이 들고, 이 패널은 그리기와 검색 글 · 팝업 열기만 든다.
+     *        상태와 명령은 `ModulesViewModel`(Model/, ImGui 없음)이 들고, 이 패널은 그리기와 검색 글 · 팝업 열기만 든다.
      */
     class ModulesPanel final : public IEditorPanel
     {
@@ -40,7 +40,7 @@ namespace sw::editor
         void requestToggle( const string& moduleName, bool bEnabled );
 
     private:
-        ModulesModel                           _model;
+        ModulesViewModel                       _model;
         uint8                                  _bOpenPreview : 1; ///< 이번 프레임에 확인 창을 연다(테이블 밖 ID 로 열려고 미룬다)
         fixed_string<constant::buffer::kMax64> _filter;           ///< 이름 · 설명 검색
     };

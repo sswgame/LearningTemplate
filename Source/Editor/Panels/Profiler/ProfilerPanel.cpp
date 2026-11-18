@@ -434,7 +434,7 @@ namespace sw::editor
 
         ImGui::SameLine();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Frames" ) );
-        for ( const uint32 frameChoice : ProfilerTimelineModel::kArrFrameChoice )
+        for ( const uint32 frameChoice : ProfilerTimelineViewModel::kArrFrameChoice )
         {
             fixed_string<constant::buffer::kMax16> label;
             formatstring( label.data(), label.capacity(), "%#", frameChoice );
@@ -602,7 +602,7 @@ namespace sw::editor
             const ProfilerTimelineEvent& event = listThread[rect._threadIndex]._listEvent[rect._eventIndex];
             const ImVec2                 minPoint{ geometry._trackLeft + rect._x0, listRowTop[rect._threadIndex] + static_cast<float32>( rect._depth ) * geometry._laneHeight };
             const ImVec2                 maxPoint{ geometry._trackLeft + rect._x1, minPoint.y + geometry._laneHeight - 1.0f };
-            const utf8*                  pName     = ProfilerTimelineModel::findSlotName( pProfiler, pLoadedSlotName, event._slot );
+            const utf8*                  pName     = ProfilerTimelineViewModel::findSlotName( pProfiler, pLoadedSlotName, event._slot );
             ImU32                        slotColor = ProfilerPanelInternal::computeSlotColor( event._slot );
 #if !defined( SW_SHIPPING )
             // 검색어가 있으면 일치하는 구간만 또렷하게 두고 나머지는 흐리게 한다.
@@ -639,7 +639,7 @@ namespace sw::editor
     {
         const FrameProfiler*         pProfiler = &ProfilerViewModel::getFrameProfiler(); // 필수 서비스: 없으면 버그
         const ProfilerTimelineEvent& event     = listThread[hoveredRect._threadIndex]._listEvent[hoveredRect._eventIndex];
-        const utf8*                  pName     = ProfilerTimelineModel::findSlotName( pProfiler, pLoadedSlotName, event._slot );
+        const utf8*                  pName     = ProfilerTimelineViewModel::findSlotName( pProfiler, pLoadedSlotName, event._slot );
         ImGui::BeginTooltip();
         ImGui::TextUnformatted( pName != nullptr ? pName : "?" );
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Depth", TextArgumentList().addDecimal( "endNanos", static_cast<float64>( static_cast<float64>( event._endNanos - event._beginNanos ) / constant::time::kNanosecondsPerMicrosecond ), 1 ).addInteger( "depth", static_cast<int64>( event._depth ) ) ).c_str() );
@@ -803,7 +803,7 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "AverageAvgMinMax", TextArgumentList().addDecimal( "averageFPS", static_cast<float64>( stats._averageFPS ), 1 ).addDecimal( "averageMs", static_cast<float64>( stats._averageMs ), 2 ).addDecimal( "minMs", static_cast<float64>( stats._minMs ), 2 ).addDecimal( "maxMs", static_cast<float64>( stats._maxMs ), 2 ) ).c_str() );
 
         ImGui::SetNextItemWidth( -1.0f );
-        ImGui::PlotLines( "##frameTime", _performance.getHistory(), static_cast<int32>( ProfilerPerformanceModel::kHistoryCount ), static_cast<int32>( _performance.getHistoryOffset() ),
+        ImGui::PlotLines( "##frameTime", _performance.getHistory(), static_cast<int32>( ProfilerPerformanceViewModel::kHistoryCount ), static_cast<int32>( _performance.getHistoryOffset() ),
                           "Frame Time (ms)", 0.0f, 33.3f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 4.0f ) ) );
 
         ImGui::Separator();
@@ -995,7 +995,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "CallTreeRecord" ) );
         ImGui::SameLine();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Frames" ) );
-        for ( const uint32 frameChoice : ProfilerTimelineModel::kArrFrameChoice )
+        for ( const uint32 frameChoice : ProfilerTimelineViewModel::kArrFrameChoice )
         {
             ImGui::SameLine();
             fixed_string<constant::buffer::kMax16> label;

@@ -2,7 +2,7 @@
  * @file CharacterEditorPanel.h
  * @brief 캐릭터 편집 창 패널 — 소켓 파일 편집(목록 · 추가 · 이름 바꾸기 · 변환 · 좌우 대칭 · 저장), 스켈레톤 본 트리와 레퍼런스 포즈 편집, 외형 선택 편집(슬롯 · 세트 입히기 ·
  *        체형 · 꾸미기 값 · 규칙 설명 · 프리셋 파일 저장 · 피팅 확인 표시)과, 그 선택을 입은 몸을 보이는 미리보기 씬.
- * @details 상태와 명령(팩 데이터 · 파일 읽기 · 저장 · 프리셋 · 내보내기 · 고른 것)은 모델(`CharacterEditorModel`, 편집 모델 셋을 든다)이 하고 이 패널은 그리기와 미리보기 동기화만 한다.
+ * @details 상태와 명령(팩 데이터 · 파일 읽기 · 저장 · 프리셋 · 내보내기 · 고른 것)은 모델(`CharacterEditorViewModel`, 편집 모델 셋을 든다)이 하고 이 패널은 그리기와 미리보기 동기화만 한다.
  *          - **문서**: 소켓 파일(`*.sockets.xml`, 종류 `EditorAssetTypeIDs::kData`)이 이 창의 문서다(`EditorDocumentPanel` 계약). 콘텐츠 브라우저에서 소켓 파일을 고르면 이 창이 그 파일로 바뀌고,
  *            고른 것이 없으면 팩 데이터의 소켓 파일을 연다. 저장은 소켓과 레퍼런스 포즈 둘 다(미저장 확인 · 닫기 확인이 같은 계약).
  *          - **파일 가름**: 그리기 · 입력은 `CharacterEditorPanel.cpp`(MVVM View — 씬 헤더를 보지 않는다, `PANEL_VIEW_SOURCES`), 문서 · 미리보기 씬 동기화(몸 · 기즈모 대리 · 제약 리그) · 썸네일 · 감시 값은
@@ -28,7 +28,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BodyCustomizationViewModel.h"
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorModel.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorViewModel.h"
 
 namespace sw
 {
@@ -92,19 +92,19 @@ namespace sw::editor
         EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 101.0f, 47.0f ); }
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
-        /** @brief 연 캐릭터가 아니라 미저장인 소켓 · 포즈 파일에 쓴다(`CharacterEditorModel::collectFilesToSave`). */
+        /** @brief 연 캐릭터가 아니라 미저장인 소켓 · 포즈 파일에 쓴다(`CharacterEditorViewModel::collectFilesToSave`). */
         void collectFilesToSave( vector<string>& outListPath ) const override;
         bool canSaveDocument() const override { return isDocumentLoadFailed() == false && _document.isDirty(); }
         /** @brief 미리보기 몸 오브젝트입니다. 외형 데이터를 읽기 전이거나 씬이 없으면 무효입니다(자동화 · 테스트). */
         GameObjectHandle getPreviewBody() const { return _previewBody; }
 
-        /** @brief 창의 모델(상태와 명령)입니다. 피팅 결과도 모델에 올린다(`CharacterEditorModel::setFitResult`). */
-        CharacterEditorModel&       getDocument() { return _document; }
-        const CharacterEditorModel& getDocument() const { return _document; }
-        SocketEditModel&            getSocketModel() { return _document.getSocketModel(); }
-        BonePoseEditModel&          getPoseModel() { return _document.getPoseModel(); }
-        AppearanceEditModel&        getAppearanceModel() { return _document.getAppearanceModel(); }
-        const Published&            getPublished() const { return _published; }
+        /** @brief 창의 모델(상태와 명령)입니다. 피팅 결과도 모델에 올린다(`CharacterEditorViewModel::setFitResult`). */
+        CharacterEditorViewModel&       getDocument() { return _document; }
+        const CharacterEditorViewModel& getDocument() const { return _document; }
+        SocketEditModel&                getSocketModel() { return _document.getSocketModel(); }
+        BonePoseEditModel&              getPoseModel() { return _document.getPoseModel(); }
+        AppearanceEditModel&            getAppearanceModel() { return _document.getAppearanceModel(); }
+        const Published&                getPublished() const { return _published; }
         /** @brief 요청한 썸네일 캡처를 아직 거두지 않았으면 true 입니다 — 자동화의 끝 차단(`CharacterEditorThumbnail`)이 캡처 · 저장 사이 틈을 진행 중인 일로 본다. */
         [[nodiscard]] bool isThumbnailCapturePending() const { return _thumbnailCaptureTicket != 0; }
 
@@ -151,7 +151,7 @@ namespace sw::editor
         /** @brief 소켓 파일의 소켓 축(편집 중 정의를 몸의 지금 포즈에 얹은 자리)을 선 값으로 모읍니다. 고른 소켓은 길고 밝다. 풀지 못하면 상태 줄에 알린다. */
         void gatherSocketAxes( const GameObject& body );
         /**
-         * @brief 미리보기 기즈모를 그 주인(`CharacterEditorModel::getGizmoTarget` — 마지막에 고른 본 · 소켓)의 월드 자리에 놓고, 기즈모로 옮긴 만큼을 주인의 데이터로 바꿉니다.
+         * @brief 미리보기 기즈모를 그 주인(`CharacterEditorViewModel::getGizmoTarget` — 마지막에 고른 본 · 소켓)의 월드 자리에 놓고, 기즈모로 옮긴 만큼을 주인의 데이터로 바꿉니다.
          * @details 표시 오브젝트(SceneComponent 하나)를 주인의 자리에 놓고 창 선택에 올린다. 다음 그리기에 그 월드 변환이 놓은 값과 다르면 기즈모가 옮긴 것이다 —
          *          부모 월드의 역으로 로컬을 구해 모델에 넣는다(`applyGizmoWorld`, 끄는 동안은 한 되돌리기 단계). 프리뷰 오브젝트만 움직이지 않는다 — 다음 그리기는 모델 값으로 다시 놓는다.
          *          주인이 없거나 자리를 못 구하면 표시 오브젝트를 지운다.
@@ -219,12 +219,12 @@ namespace sw::editor
         /**
          * @brief 꾸미기 스키마(`CustomizationSchema`)의 매개변수마다 슬라이더 · 색 · 고르기를 그립니다 — 카테고리(체형 · 얼굴 · 염색 …)로 가르고, 조건이 맞지 않는 매개변수는 숨깁니다.
          * @details 끄는 동안(`_bCustomizationActive`)은 미리보기 몸을 다시 입히지 않는다 — 피팅은 무거워서 놓을 때 한 번 푼다(설계 문서 단계 5). 스키마는 모델이 고른다
-         *          (`CharacterEditorModel::findCustomizationSchema` — 선택의 것, 비었으면 기준 프리셋의 것). 스키마가 없으면(데이터를 읽기 전, 프리셋에 스키마가 없음) 이미 있는 값만 숫자로 보인다(`drawCustomizationRows`).
+         *          (`CharacterEditorViewModel::findCustomizationSchema` — 선택의 것, 비었으면 기준 프리셋의 것). 스키마가 없으면(데이터를 읽기 전, 프리셋에 스키마가 없음) 이미 있는 값만 숫자로 보인다(`drawCustomizationRows`).
          */
         void drawCustomizationSliders( const AppearanceSelection& selection );
         /** @brief 미리보기 몸의 지금 모습 캡처를 요청합니다(`pollThumbnailCapture` 가 받아 같은 이름 프리셋의 썸네일 슬롯에 넣는다). 프리셋을 먼저 저장해야 합니다. */
         void saveThumbnail();
-        /** @brief 요청한 캡처가 끝났으면 그 PNG 바이트(`EditorPreviewViewport::takeImagePNGBytes` 에 요청 표로 — 파일을 거치지 않는다)를 문서에 넘깁니다(`CharacterEditorModel::attachThumbnail`). */
+        /** @brief 요청한 캡처가 끝났으면 그 PNG 바이트(`EditorPreviewViewport::takeImagePNGBytes` 에 요청 표로 — 파일을 거치지 않는다)를 문서에 넘깁니다(`CharacterEditorViewModel::attachThumbnail`). */
         void pollThumbnailCapture();
         void drawExplanation();
         void drawFitCheck();
@@ -233,7 +233,7 @@ namespace sw::editor
         void drawHistoryRow();
 
     private:
-        CharacterEditorModel                    _document;                 ///< 상태와 명령. 이 패널은 그리기와 미리보기 동기화만 한다
+        CharacterEditorViewModel                _document;                 ///< 상태와 명령. 이 패널은 그리기와 미리보기 동기화만 한다
         fixed_string<constant::buffer::kMax128> _newName;                  ///< 새 소켓 · 칸 이름 입력칸
         fixed_string<constant::buffer::kMax128> _renameBuffer;             ///< 고른 소켓의 새 이름 입력칸
         bool                                    _bClipLoop;                ///< 고른 클립을 반복 재생하는지 NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다

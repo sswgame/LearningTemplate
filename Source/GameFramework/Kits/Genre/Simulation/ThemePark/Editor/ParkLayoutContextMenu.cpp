@@ -72,7 +72,7 @@ namespace sw::editor
 
                 float32      distance{ 0.0f };
                 const uint32 nearest = pPreview->getModel().findNearestRide( position, distance );
-                if ( nearest == ParkLayoutModel::kNoRide )
+                if ( nearest == ParkLayoutViewModel::kNoRide )
                     return;
                 const ParkRidePreview& ride = pPreview->getRides()[nearest];
                 SW_LOG_INFO_ID( "ParkLayoutContextMenu.NearestParkRideM", "Nearest park ride to (%#, %#, %#): '%#' at %# m (cost %#, capacity %#)", position._x, position._y, position._z, ride._name.c_str(), distance,

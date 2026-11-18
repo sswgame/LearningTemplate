@@ -119,7 +119,7 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioGraph", "SaveTip" ) );
 
-        const bool bAudioReady = AudioGraphModel::isPreviewAudioReady();
+        const bool bAudioReady = AudioGraphViewModel::isPreviewAudioReady();
         _model.refreshPreview();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioGraph", "Preview" ) ) );
         ImGui::BeginDisabled( bAudioReady == false || isDocumentDirty() );

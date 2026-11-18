@@ -231,7 +231,7 @@ namespace sw::editor
         // 행의 조상도 세부가 있어야 창이 트리를 그 깊이까지 연다. 범위 안 행의 조상은 범위 안에 있거나 첫 행의 조상이다(행이 미리 순회 순서라 서브트리가 이어져 있다).
         auto pushWithAncestors = [&listRow, &outListRow]( uint32 row )
         {
-            for ( uint32 cursor = row; cursor != HierarchyRowModel::kNoRow; cursor = listRow[cursor]._parentRow )
+            for ( uint32 cursor = row; cursor != HierarchyRowTree::kNoRow; cursor = listRow[cursor]._parentRow )
             {
                 outListRow.push_back( cursor );
             }

@@ -4,7 +4,7 @@
  *        런타임 리타기터로 묶어 본 점검(사슬 길이 비 · 짝지은 본 수)을 보이며 저장합니다.
  * @details 데이터는 `RetargetProfile` 하나이고 쓰기는 `RetargetProfile::toXML`, 점검은 `RetargetProfileInspection::inspect`(런타임과 같은 묶기) 하나다 —
  *          에디터 쪽 사본 규칙을 두지 않는다. 묶이지 않는 프로필은 저장하지 않는다. 되돌리기는 문서 패널의 글 스냅샷(`captureDocumentText`)이 한다.
- *          스켈레톤 읽기 · 자세 · 카메라 맞춤은 `RetargetPreviewModel`, 이름 규칙은 `RetargetProfileEdit` 가 맡는다(화면 없이 테스트한다).
+ *          스켈레톤 읽기 · 자세 · 카메라 맞춤은 `RetargetPreviewViewModel`, 이름 규칙은 `RetargetProfileEdit` 가 맡는다(화면 없이 테스트한다).
  *          - **3D 미리보기**: 미리보기 씬은 비어 있고, 두 스켈레톤의 레퍼런스 자세를 뷰포트 위에 겹쳐 선으로 긋는다(원본 파랑 · 대상 레퍼런스 회색 · 리타깃 포즈를 얹은 대상 주황).
  *            리타깃 포즈를 얹는 길은 런타임 리타기터와 같은 `PoseRetargeter::applyTargetPose` 하나다.
  *          - **리타깃 포즈**: 프로필의 `target_pose` 줄(대상 본 + 부모 공간 도)을 고친다. 끄는 동안 미리보기가 바로 바뀌고 놓으면 되돌리기 한 단계가 된다.
@@ -24,9 +24,9 @@
 
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetPreviewModel.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetPreviewViewModel.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileEditModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileInspection.h"
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileModel.h"
 
 namespace sw::editor
 {
@@ -99,9 +99,9 @@ namespace sw::editor
         void syncFromProfile();
 
     private:
-        RetargetProfileModel                       _model; ///< 편집 중인 프로필과 편집 연산(연산이 알린다 — 감사 E-16)
+        RetargetProfileEditModel                   _model; ///< 편집 중인 프로필과 편집 연산(연산이 알린다 — 감사 E-16)
         RetargetProfileInspection                  _inspection;
-        RetargetPreviewModel                       _preview;
+        RetargetPreviewViewModel                   _preview;
         vector<ChainText>                          _listChainText;
         string                                     _inspectionError;
         string                                     _status;

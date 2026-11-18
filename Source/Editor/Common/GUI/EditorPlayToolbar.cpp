@@ -8,7 +8,7 @@
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/GUI/Model/EditorPlayToolbarModel.h"
+#include "Editor/Common/GUI/Model/EditorPlayToolbarViewModel.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorNetModeCombo.h"
@@ -34,8 +34,8 @@ namespace sw::editor
             static constexpr const utf8* kUnsavedPopupID  = "##UnsavedScenePlay";
             static constexpr const utf8* kOverflowPopupID = "##EditorPlayToolbarOverflow";
 
-            static EditorPlayToolbarModel&   getModel() { return EditorPlayToolbarModel::get(); }
-            static EditorPlayToolbarUIState& getState() { return getModel().editUIState(); }
+            static EditorPlayToolbarViewModel& getModel() { return EditorPlayToolbarViewModel::get(); }
+            static EditorPlayToolbarUIState&   getState() { return getModel().editUIState(); }
 
             /**
              * @brief Net Mode 가 Standalone 이 아니면 멀티 프로세스 재생의 Play · Stop 을 그리고 true 입니다(에디터 안 재생 단추는 그리지 않는다).
@@ -299,7 +299,7 @@ namespace sw::editor
     void EditorPlayToolbar::draw()
     {
         // 멀티 프로세스 재생의 로그 · 종료 알림은 툴바가 프레임마다 모은다(Multiplayer 창을 닫아도).
-        EditorPlayToolbarModel& model = EditorPlayToolbarModel::get();
+        EditorPlayToolbarViewModel& model = EditorPlayToolbarViewModel::get();
         model.updateNetPlay();
         EditorPlayToolbarViewState state;
         model.gather( state );

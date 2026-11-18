@@ -97,12 +97,12 @@ namespace sw::editor
             static bool drawEnumWidget( GlobalVariableInfo& info )
             {
                 const int32     currentVal = info.getValueAsInt();
-                const EnumInfo* pEnumInfo  = GlobalVariablesModel::findEnumInfo( info._enumType );
+                const EnumInfo* pEnumInfo  = GlobalVariablesViewModel::findEnumInfo( info._enumType );
                 if ( pEnumInfo == nullptr || pEnumInfo->_mapValueToName.empty() )
                     return drawInt32Widget( info );
 
                 bool        bChanged{ false };
-                const utf8* pName    = GlobalVariablesModel::findEnumName( info._enumType, currentVal );
+                const utf8* pName    = GlobalVariablesViewModel::findEnumName( info._enumType, currentVal );
                 const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
                 if ( EditorWidgets::beginCombo( "##val", pPreview ) )
                 {
@@ -192,7 +192,7 @@ namespace sw::editor
 
     bool GlobalVariablesPanel::saveDocument()
     {
-        if ( GlobalVariablesModel::saveSessionPreset() == false )
+        if ( GlobalVariablesViewModel::saveSessionPreset() == false )
             return false;
         clearDocumentDirty();
         return true;
@@ -200,12 +200,12 @@ namespace sw::editor
 
     void GlobalVariablesPanel::collectFilesToSave( vector<string>& outListPath ) const
     {
-        GlobalVariablesModel::collectFilesToSave( outListPath );
+        GlobalVariablesViewModel::collectFilesToSave( outListPath );
     }
 
     void GlobalVariablesPanel::revertDocument()
     {
-        GlobalVariablesModel::getVariableManager().resetAllToDefault();
+        GlobalVariablesViewModel::getVariableManager().resetAllToDefault();
     }
 
     void GlobalVariablesPanel::markSessionDirty()
@@ -215,7 +215,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::drawContent()
     {
-        GlobalVariableManager& gvm = GlobalVariablesModel::getVariableManager();
+        GlobalVariableManager& gvm = GlobalVariablesViewModel::getVariableManager();
 
         drawVariableToolbar( gvm );
 
@@ -305,9 +305,9 @@ namespace sw::editor
         {
             for ( const string& presetFile : _model.getPresetFiles() )
             {
-                const string displayName = GlobalVariablesModel::makePresetDisplayName( presetFile );
+                const string displayName = GlobalVariablesViewModel::makePresetDisplayName( presetFile );
                 if ( ImGui::MenuItem( displayName.c_str() ) )
-                    GlobalVariablesModel::loadPreset( presetFile );
+                    GlobalVariablesViewModel::loadPreset( presetFile );
             }
         }
 

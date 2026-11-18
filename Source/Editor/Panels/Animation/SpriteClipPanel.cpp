@@ -73,8 +73,8 @@ namespace sw::editor
                 float4                 bounds{};
                 if ( findSelectedBounds( pPanel, bounds ) == false )
                     return false;
-                const SpriteClipModel& model   = pPanel->getModel();
-                const bool             bOnGrid = model.snapToAtlasPixel( bounds._x, true ) == bounds._x && model.snapToAtlasPixel( bounds._z, true ) == bounds._z &&
+                const SpriteClipViewModel& model   = pPanel->getModel();
+                const bool                 bOnGrid = model.snapToAtlasPixel( bounds._x, true ) == bounds._x && model.snapToAtlasPixel( bounds._z, true ) == bounds._z &&
                                      model.snapToAtlasPixel( bounds._y, false ) == bounds._y && model.snapToAtlasPixel( bounds._w, false ) == bounds._w;
                 outValue = bOnGrid ? 1.0 : 0.0;
                 return true;
@@ -519,7 +519,7 @@ namespace sw::editor
     bool SpriteClipPanel::saveDocument()
     {
         // 포커스한 이미지로 연 클립은 이미지 옆의 새 클립 파일로 저장하고 그 파일을 연다 - 이미지를 덮어쓰면 안 된다.
-        const string clipPath = SpriteClipModel::computeClipPath( getLoadedAssetPath() );
+        const string clipPath = SpriteClipViewModel::computeClipPath( getLoadedAssetPath() );
         if ( _model.saveDocument( clipPath ) == false )
             return false;
         syncDocumentUndoBaseline();
@@ -530,7 +530,7 @@ namespace sw::editor
 
     void SpriteClipPanel::collectFilesToSave( vector<string>& outListPath ) const
     {
-        appendFileToSave( SpriteClipModel::computeClipPath( getLoadedAssetPath() ), outListPath );
+        appendFileToSave( SpriteClipViewModel::computeClipPath( getLoadedAssetPath() ), outListPath );
     }
 
     string SpriteClipPanel::captureDocumentText() const

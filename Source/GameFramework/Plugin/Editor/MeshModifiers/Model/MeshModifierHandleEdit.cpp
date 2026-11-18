@@ -9,7 +9,7 @@
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
+#include "Editor/Viewport/Model/EditorViewportMouseCapture.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.h"
@@ -376,12 +376,12 @@ namespace sw::editor
             void end()
             {
                 if ( _bDragging )
-                    EditorViewportMouseClaim::release( this );
+                    EditorViewportMouseCapture::release( this );
                 *this = ModifierHandleDrag{};
             }
 
             /** @brief 양보는 매 프레임 다시 잡아야 유지된다 — 끄는 중에 시각화 토글을 끄면 도구가 안 불려 다음 프레임 시작에 뷰포트가 거둔다. */
-            void acquireClaim() const { EditorViewportMouseClaim::acquire( this ); }
+            void acquireClaim() const { EditorViewportMouseCapture::acquire( this ); }
 
             /** @brief 끄는 중인 손잡이를 지금 레이로 옮깁니다. */
             void update( MeshModifierSession& session, const ModifierViewFrame& frame, ModifierPointSet& set, const Ray& ray )
@@ -459,7 +459,7 @@ namespace sw::editor
             {
                 end();
                 // 핸들을 집는 순간부터 놓을 때까지 뷰포트 선택 · 카메라가 마우스를 가져가지 않게 한다(호버만으로는 잡지 않는다)
-                EditorViewportMouseClaim::acquire( this );
+                EditorViewportMouseCapture::acquire( this );
                 _bDragging     = SW_TRUE;
                 _handle        = handle;
                 _startRay      = ray;

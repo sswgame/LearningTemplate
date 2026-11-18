@@ -6,8 +6,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/ImportedAssetStore.h"
-#include "Editor/Common/Asset/Model/ModelImportConfig.h"
-#include "Editor/Common/Asset/Model/ModelImportMaterial.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportMaterial.h"
 #include "Editor/Common/Asset/Tests/EditorScratchDomain.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 

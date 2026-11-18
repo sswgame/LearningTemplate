@@ -12,7 +12,7 @@
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
+#include "Editor/Viewport/Model/EditorViewportMouseCapture.h"
 #include "Editor/Viewport/Model/TerrainBrushEdit.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -26,7 +26,7 @@ namespace sw::editor
     {
         struct TerrainBrushToolInternal
         {
-            /** @brief 마우스를 가져가는 소유자 표시입니다(주소만 비교한다 — `EditorViewportMouseClaim`). */
+            /** @brief 마우스를 가져가는 소유자 표시입니다(주소만 비교한다 — `EditorViewportMouseCapture`). */
             static constexpr utf8 kClaimOwner = 0;
             /** @brief 안쪽 원(감쇠 시작)의 알파입니다. */
             static constexpr float32 kInnerCircleAlpha = 0.5f;
@@ -146,9 +146,9 @@ namespace sw::editor
                 const bool   bMouseInside = bInsideX && bInsideY && ImGui::IsWindowHovered();
                 const bool   bClaim       = state._bEditable && ( state._bStroking || ( bMouseInside && state._bHit && args._bGizmoDragging == false ) );
                 if ( bClaim )
-                    EditorViewportMouseClaim::acquire( &kClaimOwner );
+                    EditorViewportMouseCapture::acquire( &kClaimOwner );
                 else
-                    EditorViewportMouseClaim::release( &kClaimOwner );
+                    EditorViewportMouseCapture::release( &kClaimOwner );
 
                 input._hit        = state._hit;
                 input._bHit       = state._bHit;

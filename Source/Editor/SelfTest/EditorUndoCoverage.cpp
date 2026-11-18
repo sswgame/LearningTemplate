@@ -18,7 +18,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
@@ -251,7 +251,7 @@ namespace sw::editor
              * @brief 행 @p row 를 인스펙터와 같은 쓰기 명령으로 한 번 고칩니다 — 숫자 · 벡터는 @p delta 만큼, 체크는 뒤집는다.
              * @return 일반으로 고칠 값을 지을 수 없는 행(글 · 열거형 · 컨테이너 · 확장 타입)이면 false 입니다.
              */
-            static bool editRow( PropertyGridModel& model, const PropertyValueRow& row, float64 delta )
+            static bool editRow( PropertyGridViewModel& model, const PropertyValueRow& row, float64 delta )
             {
                 const bool bCheckbox = row._kind == PropertyRowKind::BitField || ( row._kind == PropertyRowKind::Builtin && row._widget == InspectorValueWidget::Checkbox );
                 if ( bCheckbox )
@@ -301,7 +301,7 @@ namespace sw::editor
              * @details 실패 셋은 명령 전수와 같다: 씬을 바꾸고 기록이 없음(`PropertyUnrecorded`), 한 쓰기가 두 단계 이상(`PropertySteps`), 되돌려도 해시가 다름(`PropertyMismatch` —
              *          그 프로퍼티는 값 글 하나로 되돌릴 수 없는 결합이 있다: 거래에 오브젝트 스냅샷을 함께 싣는다).
              */
-            static void validatePropertyRow( PropertyGridModel& model, const PropertyValueRow& row, CommandStack& stack, PropertyCoverageCount& inoutCount )
+            static void validatePropertyRow( PropertyGridViewModel& model, const PropertyValueRow& row, CommandStack& stack, PropertyCoverageCount& inoutCount )
             {
                 uint64 before = 0;
                 if ( computeEditedSceneHash( before ) == false )
@@ -382,7 +382,7 @@ namespace sw::editor
                     }
                 }
 
-                PropertyGridModel        model; // 인스펙터와 같은 편집 모델 — 쓰기 · 편집 구간 · 마감이 같은 길이다
+                PropertyGridViewModel    model; // 인스펙터와 같은 편집 모델 — 쓰기 · 편집 구간 · 마감이 같은 길이다
                 PropertyGridViewState    state;
                 PropertyGridGatherParams params{};
                 params._window._bSkipOffscreen = SW_FALSE;

@@ -146,7 +146,7 @@ namespace sw::editor
         // 효과 파일이 바뀌었으면(카탈로그 편집기의 저장) 다시 읽고 다시 건다 — Reload 를 누르지 않아도 된다.
         if ( _model.pollFileChanged() )
         {
-            VFXPreviewModel::applySavedAsset( getLoadedAssetPath() );
+            VFXPreviewViewModel::applySavedAsset( getLoadedAssetPath() );
             reloadDocument();
             _model.requestResync();
             ++_autoReloadCount;
@@ -161,19 +161,19 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "ReadTheEffectFileAgainAfterSaving" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Restart" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Restart" ) ) )
-            VFXPreviewModel::restartSubject( getPreviewScene() );
+            VFXPreviewViewModel::restartSubject( getPreviewScene() );
         EditorSelfTestMarks::record( "vfx.restart" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlayTheEffectAgainFromTheStart" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )
-            VFXPreviewModel::stopSubject( getPreviewScene() );
+            VFXPreviewViewModel::stopSubject( getPreviewScene() );
         EditorSelfTestMarks::record( "vfx.stop" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "StopAndClearTheParticles" ) );
         ImGui::SameLine();
         // GPU 방출기의 살아 있는 입자는 GPU 버퍼에만 있다 — 이번 재생에서 만든 수(일정)와 CPU 방출기의 살아 있는 수를 따로 보인다.
         VFXPreviewSubjectStats stats;
-        (void)VFXPreviewModel::findSubjectStats( getPreviewScene(), stats );    // 효과가 없으면 0 으로 보인다
-        const uint32 spawnedCount = static_cast<uint32>( stats._spawnedCount ); // 표시용 — 한 재생에 40 억을 넘지 않는다
+        (void)VFXPreviewViewModel::findSubjectStats( getPreviewScene(), stats ); // 효과가 없으면 0 으로 보인다
+        const uint32 spawnedCount = static_cast<uint32>( stats._spawnedCount );  // 표시용 — 한 재생에 40 억을 넘지 않는다
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SpawnedCPUAlive", TextArgumentList().addInteger( "spawnedCount", static_cast<int64>( spawnedCount ) ).addInteger( "subject", static_cast<int64>( stats._cpuAliveCount ) ) ).c_str() );
 
         // 방출기 줄마다 격리(Solo) 토글 — 켜면 그 방출기만 돈다(언리얼 Niagara 의 Isolate). 저장되는 효과는 바뀌지 않는다.
@@ -189,7 +189,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdVFX", "SoloTip" ) );
             ImGui::SameLine();
             const string text = SW_LOCKEYFORMAT( "EdFormat", "Max", TextArgumentList().addText( "name", row._name.c_str() ).addText( "blend", row._bAdditive ? "additive" : "alpha" ).addText( "looping", row._bLooping ? "yes" : "no" ).addInteger( "maxParticles", static_cast<int64>( row._maxParticles ) ).addText( "texturePath", row._texturePath.c_str() ) );
-            if ( _model.getSoloEmitter() != VFXPreviewModel::kNoSolo && bSolo == false )
+            if ( _model.getSoloEmitter() != VFXPreviewViewModel::kNoSolo && bSolo == false )
                 ImGui::TextDisabled( "%s", text.c_str() ); // 격리로 꺼진 방출기는 흐리게
             else
                 ImGui::TextUnformatted( text.c_str() );
@@ -224,7 +224,7 @@ namespace sw::editor
     bool VFXPreviewPanel::findPreviewSpawnedParticleCount( uint64& outCount ) const
     {
         VFXPreviewSubjectStats stats;
-        if ( VFXPreviewModel::findSubjectStats( getPreviewScene(), stats ) == false )
+        if ( VFXPreviewViewModel::findSubjectStats( getPreviewScene(), stats ) == false )
             return false;
         outCount = stats._spawnedCount;
         return true;
@@ -233,7 +233,7 @@ namespace sw::editor
     bool VFXPreviewPanel::findEnabledEmitterCount( uint32& outCount ) const
     {
         VFXPreviewSubjectStats stats;
-        if ( VFXPreviewModel::findSubjectStats( getPreviewScene(), stats ) == false )
+        if ( VFXPreviewViewModel::findSubjectStats( getPreviewScene(), stats ) == false )
             return false;
         outCount = stats._enabledEmitterCount;
         return true;

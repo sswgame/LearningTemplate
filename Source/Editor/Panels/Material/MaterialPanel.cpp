@@ -93,7 +93,7 @@ namespace sw::editor
                         else
                             bChanged = EditorWidgets::dragFloat( widgetID, &arrVal[0], 0.01f );
                         if ( bChanged )
-                            MaterialModel::writeFloats( prop._value, arrVal, 1 );
+                            MaterialViewModel::writeFloats( prop._value, arrVal, 1 );
                         return bChanged;
                     }
                     case MaterialPropertyKind::Float2:
@@ -104,7 +104,7 @@ namespace sw::editor
                         EditorWidgets::drawPropertyRowLabel( pLabel );
                         const bool bChanged = EditorWidgets::dragFloat2( widgetID, arrVal, 0.01f );
                         if ( bChanged )
-                            MaterialModel::writeFloats( prop._value, arrVal, 2 );
+                            MaterialViewModel::writeFloats( prop._value, arrVal, 2 );
                         return bChanged;
                     }
                     case MaterialPropertyKind::Float3:
@@ -115,7 +115,7 @@ namespace sw::editor
                         EditorWidgets::drawPropertyRowLabel( pLabel );
                         const bool bChanged = EditorWidgets::dragFloat3( widgetID, arrVal, 0.01f );
                         if ( bChanged )
-                            MaterialModel::writeFloats( prop._value, arrVal, 3 );
+                            MaterialViewModel::writeFloats( prop._value, arrVal, 3 );
                         return bChanged;
                     }
                     case MaterialPropertyKind::Color:
@@ -134,7 +134,7 @@ namespace sw::editor
                             arrVal[1] = color._g;
                             arrVal[2] = color._b;
                             arrVal[3] = color._a;
-                            MaterialModel::writeFloats( prop._value, arrVal, 4 );
+                            MaterialViewModel::writeFloats( prop._value, arrVal, 4 );
                         }
                         return bChanged;
                     }

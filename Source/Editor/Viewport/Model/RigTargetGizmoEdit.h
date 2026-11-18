@@ -70,7 +70,7 @@ namespace sw::editor
 
         /**
          * @brief 고른 대상의 기즈모 값을 @p outState 에 모읍니다(메인 씬). 놓은 값이 파일에서 다시 읽혔으면 남겨 둔 값을 버린다.
-         * @details 대상이 있는 동안 뷰포트 마우스를 가져가(`EditorViewportMouseClaim`) 선택 기즈모 · 클릭 선택이 비킨다. 대상이 없으면 놓는다.
+         * @details 대상이 있는 동안 뷰포트 마우스를 가져가(`EditorViewportMouseCapture`) 선택 기즈모 · 클릭 선택이 비킨다. 대상이 없으면 놓는다.
          *          @p pActiveCamera 가 없으면 대상이 없는 것과 같다.
          */
         void gather( const CameraComponent* pActiveCamera, float32 canvasAspect, RigTargetGizmoViewState& outState );

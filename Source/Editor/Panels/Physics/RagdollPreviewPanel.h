@@ -1,7 +1,7 @@
 /**
  * @file RagdollPreviewPanel.h
  * @brief 물리 에셋(`*.physics.xml`)을 고른 몸(프리팹)에 입혀 미리보기 씬에서 쓰러뜨려 보는 창입니다(언리얼 Physics Asset 에디터의 시뮬레이션, 유니티 Ragdoll Wizard 로 만든 래그돌 시험에 해당합니다).
- * @details 상태와 명령(바디 표 · 몸 놓기 · 충격)은 `RagdollPreviewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
+ * @details 상태와 명령(바디 표 · 몸 놓기 · 충격)은 `RagdollPreviewViewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
  *          설계 결정: 상용 엔진과 같은 선에서 **보기 + 시험**만 한다. 언리얼 Physics Asset 에디터는 바디 · 제약을 편집 · 저장하고 유니티 Ragdoll Wizard 는 래그돌을 만든다 —
  *          이 엔진의 물리 에셋은 문서 종류(`Data` 의 `*.physics.xml`)라 카탈로그 편집기 · 인스펙터가 고치고, 이 창은 같은 파일을 쥐지 않도록 저장하지 않는다.
  *          창이 하는 일은 바디 표 + 뷰포트 겹침 선(스켈레톤 · 바디 셰이프 · 관절)과 시뮬레이션 시험(쓰러뜨리기 · 충격 · 부분 · 리셋)이다.
@@ -10,7 +10,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
-#include "Editor/Panels/Physics/Model/RagdollPreviewModel.h"
+#include "Editor/Panels/Physics/Model/RagdollPreviewViewModel.h"
 
 namespace sw::editor
 {
@@ -59,7 +59,7 @@ namespace sw::editor
         void drawOverlay();
 
     private:
-        RagdollPreviewModel _model;
-        RagdollPreviewState _ragdollState; ///< 프레임마다 다시 채운다(값만)
+        RagdollPreviewViewModel _model;
+        RagdollPreviewState     _ragdollState; ///< 프레임마다 다시 채운다(값만)
     };
 } // namespace sw::editor

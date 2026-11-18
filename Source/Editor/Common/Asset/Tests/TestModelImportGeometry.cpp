@@ -4,8 +4,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Common/Asset/Model/ModelImportGeometry.h"
-#include "Editor/Common/Asset/Model/ModelImportUtil.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportGeometry.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
 
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 

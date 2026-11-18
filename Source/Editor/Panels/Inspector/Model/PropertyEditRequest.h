@@ -1,7 +1,7 @@
 /**
  * @file PropertyEditRequest.h
  * @brief 인스펙터 프로퍼티 칸 편집 요청입니다 — (프로퍼티 경로, 편집 종류, 새 값). 값만 들어 프레임을 넘길 수 있고, 적용은 대상 인스턴스에 경로를 그때 풀어 한다.
- * @details 그리드 모델(`PropertyGridModel`)은 View 가 행 번호로 낸 명령을 이 요청으로 바꾸고, 씬 대상이면 (범위, 오브젝트 id, 컴포넌트 id)와 함께 게임 단계에 넘긴다
+ * @details 그리드 모델(`PropertyGridViewModel`)은 View 가 행 번호로 낸 명령을 이 요청으로 바꾸고, 씬 대상이면 (범위, 오브젝트 id, 컴포넌트 id)와 함께 게임 단계에 넘긴다
  *          (`EditorCommandRegistry::requestSceneEdit`) — UI 프레임은 씬 메모리에 쓰지 않는다. 씬 밖 대상(환경설정 · 문서)은 주인 패널이 수명을 들어 바로 적용한다.
  *          언리얼 `IPropertyHandle::SetValue`(프로퍼티 노드 경로로 대상을 찾아 쓰고 `NotifyPostChange`) · 유니티 `SerializedProperty.propertyPath` 와 같은 단위다.
  *          경로는 깊이 0 프로퍼티 이름과 그 아래 마디(구조체 필드 이름 · 시퀀스 원소 자리 · 맵 항목 자리)다 — 행 번호와 달리 다음 모으기 뒤에도 뜻이 같다.

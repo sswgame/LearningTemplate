@@ -4,9 +4,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Common/Asset/Model/ModelImportConfig.h"
-#include "Editor/Common/Asset/Model/ModelImportMaterial.h"
-#include "Editor/Common/Asset/Model/ModelImporter.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportMaterial.h"
+#include "Editor/Common/Asset/ModelImport/ModelImporter.h"
 
 using namespace sw;
 using namespace sw::editor;

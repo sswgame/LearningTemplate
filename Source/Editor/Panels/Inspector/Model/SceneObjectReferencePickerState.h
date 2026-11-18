@@ -1,7 +1,7 @@
 /**
  * @file SceneObjectReferencePickerState.h
  * @brief `SceneObjectReference` 프로퍼티 선택기(그리기 확장 `SceneObjectReferencePropertyDrawer`)가 그리는 값입니다 — 지금 값의 미리보기와, 올라와 있는 씬마다 고를 수 있는 오브젝트 줄.
- *        ImGui 를 모릅니다(`docs/agents/EditorUI.md` MVVM 절). 씬 매니저 · 씬 오브젝트를 읽는 일은 여기서 하고, 그리기 확장은 값 글만 받아 `PropertyGridModel::setPropertyText` 로 쓴다.
+ *        ImGui 를 모릅니다(`docs/agents/EditorUI.md` MVVM 절). 씬 매니저 · 씬 오브젝트를 읽는 일은 여기서 하고, 그리기 확장은 값 글만 받아 `PropertyGridViewModel::setPropertyText` 로 쓴다.
  * @details 값은 (씬 경로, 파일 id) 라서 줄을 모으는 순간 대상 오브젝트에 파일 id 를 준다(`SceneObjectReference::makeReference` — 다음 저장이 그 id 를 쓴다).
  *          저장한 적 없는 씬(경로 없음)의 오브젝트는 참조를 만들 수 없어 씬 줄만 남는다.
  */
@@ -12,7 +12,7 @@
 
 namespace sw::editor
 {
-    class PropertyGridModel;
+    class PropertyGridViewModel;
 } // namespace sw::editor
 
 namespace sw::editor
@@ -47,8 +47,8 @@ namespace sw::editor
         SceneObjectReferencePickerState();
 
         /** @brief 그리드 값 행 @p rowID(`SceneObjectReference`)의 미리보기 · 상태를 채웁니다. 씬 줄은 비웁니다. 값을 읽지 못하면 false 입니다. */
-        [[nodiscard]] static bool gatherPreview( const PropertyGridModel& model, uint32 rowID, SceneObjectReferencePickerState& outChoices );
+        [[nodiscard]] static bool gatherPreview( const PropertyGridViewModel& model, uint32 rowID, SceneObjectReferencePickerState& outChoices );
         /** @brief 올라와 있는 씬마다 고를 수 있는 오브젝트 줄을 채웁니다(콤보를 연 프레임에만 부른다). `gatherPreview` 뒤에 부릅니다. */
-        static void gatherScenes( const PropertyGridModel& model, uint32 rowID, SceneObjectReferencePickerState& inoutChoices );
+        static void gatherScenes( const PropertyGridViewModel& model, uint32 rowID, SceneObjectReferencePickerState& inoutChoices );
     };
 } // namespace sw::editor

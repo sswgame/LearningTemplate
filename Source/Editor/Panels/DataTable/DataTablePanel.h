@@ -1,7 +1,7 @@
 /**
  * @file DataTablePanel.h
  * @brief 로컬라이제이션 프로젝트 표(원문 · 문화권 번역 · 낡음/검토 상태) 및 게임 XML 데이터 테이블 편집기 패널
- * @details 문서 · 목록 · 읽기 · 저장은 `DataTableModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 입력란 글 · 원문 보기 토글 · 표 편집기만 든다.
+ * @details 문서 · 목록 · 읽기 · 저장은 `DataTableViewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 입력란 글 · 원문 보기 토글 · 표 편집기만 든다.
  *          게임 데이터 표를 여는 길은 문서 기반(`EditorDocumentPanel`, Data 종류 가운데 `.xml`)이다 — 목록 클릭 · 콘텐츠 브라우저 · `asset.openScratch` 가 모두 워크스페이스 포커스로 연다.
  *          예전에는 목록 번호로만 고르는 자체 길이라 시나리오가 사본(`scratch/…`)을 가리킬 수 없었다. 현지화 표는 프로젝트 콤보가 고르는 두 번째 문서로 남는다(여러 파일 묶음이라 사본이 뜻이 없다).
  */
@@ -12,7 +12,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Panels/Catalog/CatalogTableEditor.h"
-#include "Editor/Panels/DataTable/Model/DataTableModel.h"
+#include "Editor/Panels/DataTable/Model/DataTableViewModel.h"
 
 namespace sw::editor
 {
@@ -42,9 +42,9 @@ namespace sw::editor
         EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Floating; }
         /** @brief 패널 UI를 그립니다. */
         void drawDocumentContent() override;
-        /** @brief 고친 현지화 표와 열린 게임 데이터 표를 저장합니다(`DataTableModel::saveDocument`). */
+        /** @brief 고친 현지화 표와 열린 게임 데이터 표를 저장합니다(`DataTableViewModel::saveDocument`). */
         [[nodiscard]] bool saveDocument() override;
-        /** @brief 연 문서가 아니라 모델이 쓸 파일들이다(현지화 표 · 게임 데이터 파일 — `DataTableModel::collectFilesToSave`). */
+        /** @brief 연 문서가 아니라 모델이 쓸 파일들이다(현지화 표 · 게임 데이터 파일 — `DataTableViewModel::collectFilesToSave`). */
         void collectFilesToSave( vector<string>& outListPath ) const override;
         /**
          * @brief 현지화 표의 레코드 수와 지난 그리기에서 검색을 지난 행 수입니다. 표를 아직 읽지 않았으면 false 입니다
@@ -81,7 +81,7 @@ namespace sw::editor
         void applyDocumentText( string_view text ) override;
 
     private:
-        DataTableModel                          _model;
+        DataTableViewModel                      _model;
         fixed_string<constant::buffer::kMax128> _localizationFilter;
         fixed_string<constant::buffer::kMax128> _newKeyBuffer;
         /** @brief 이번 프레임에 보일 행의 인덱스입니다. 프레임마다 지우고 다시 채우는 재사용 버퍼입니다. */

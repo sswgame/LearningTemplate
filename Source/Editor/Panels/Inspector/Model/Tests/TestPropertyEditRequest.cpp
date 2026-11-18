@@ -5,7 +5,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorEditRecorder.h"
 #include "Editor/Panels/Inspector/Model/PropertyEditRequest.h"
 #include "Editor/Panels/Inspector/Model/PropertyEditStep.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -40,7 +40,7 @@ namespace
         static bool apply( const sw::editor::PropertyEditRequest& request, sw::Component& component )
         {
             const sw::TypeInfo* pType = component.getTypeInfo();
-            return pType != nullptr && request.applyTo( sw::MutableObjectAddress{ &component }, *pType, sw::editor::PropertyGridModel::getTypeRegistry() );
+            return pType != nullptr && request.applyTo( sw::MutableObjectAddress{ &component }, *pType, sw::editor::PropertyGridViewModel::getTypeRegistry() );
         }
     };
 } // namespace
@@ -121,7 +121,7 @@ SW_TEST_CASE( PropertyEditRequestTest, DragIsOneUndoStep )
     static constexpr sw::string_view kPath = "_localPosition";
     static constexpr uint64          kKey  = 11;
 
-    // 첫 요청 직전에 구간을 연다(`PropertyGridModel::ensureEditSpan` 와 같은 차례).
+    // 첫 요청 직전에 구간을 연다(`PropertyGridViewModel::ensureEditSpan` 와 같은 차례).
     sw::editor::PropertyEditSpanSet spans;
     spans.open( kKey, sw::editor::PropertyEditSpan::captureProperty( *pObject, pScene, *pProp, {}, "Edit Position" ) );
     sw::vector<sw::editor::PropertyEditSpan> listClosed;
