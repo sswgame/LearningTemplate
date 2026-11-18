@@ -1,6 +1,6 @@
 <?asset guid="b4aad35143683c01659085eec0970d79"?>
 <Scene formatVersion="3" name="VelmoraVale">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

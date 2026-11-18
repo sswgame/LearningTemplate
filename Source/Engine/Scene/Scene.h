@@ -61,6 +61,12 @@ namespace sw
         [[nodiscard]] bool instantiateCell( const vector<SceneDocument::SceneObjectNode>& listNode, vector<uint64>& outListObjectID );
         /** @brief `instantiateCell` 이 지은 오브젝트를 자식(중첩 프리팹 부품)까지 지우고 파일 id · 프리팹 기록을 뺍니다. */
         void unloadCell( const vector<uint64>& listObjectID );
+        /**
+         * @brief `instantiateCell` 이 지은 오브젝트의 지금 상태를 셀 엔티티로 씁니다(비우고 채웁니다). 스트리밍이 셀을 내리기 전에 불러 다시 올릴 때 이것으로 짓는다(셀 상태 보존).
+         * @details 저장과 같은 길이다(`serializeToDocument` 의 엔티티 쓰기) — 프리팹 엔티티는 원형과 다른 것만(`PrefabOverrides` 델타), 그 밖은 저장 대상 프로퍼티 전체(`SerializePurpose::Authoring`)를 적고
+         *          파일 id · 레이어 · 인스턴스 앵커를 그대로 둔다. 상태는 이미 평평한 파일 id 라 id 범위는 0 이다. 플레이 중 지운 오브젝트는 적지 않아 다시 올려도 없다(언리얼 레벨 스트리밍의 상태 보존 · 세이브 델타와 같은 생각).
+         */
+        void captureCellNodes( const vector<uint64>& listObjectID, vector<SceneDocument::SceneObjectNode>& outListNode ) const;
         /** @brief 데이터 레이어 묶음의 엔티티를 이 씬에 더해 짓습니다(`SceneDataLayerSubsystem` 이 부릅니다). 셀과 같은 길이고, 프리팹을 찾지 못한 엔티티는 보관합니다(저장이 다시 쓴다). 내릴 때는 `unloadCell` 입니다. */
         [[nodiscard]] bool instantiateLayerNodes( const vector<SceneDocument::SceneObjectNode>& listNode, vector<uint64>& outListObjectID );
         /** @brief 다음 `instantiate` 가 처음 상태와 상관없이 모든 데이터 레이어를 켜고 짓습니다. 쿠커가 씁니다 — 모든 엔티티를 지어 봐야 상태 · 자리 · 참조를 안다. */

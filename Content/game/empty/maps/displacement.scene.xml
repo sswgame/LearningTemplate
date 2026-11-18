@@ -1,7 +1,7 @@
 <?asset guid="5a6fb4ee62d919294b65969606272a2d"?>
 <Scene formatVersion="3" name="Displacement">
 	<!-- 시나리오 automation/displacement — 체커 높이 맵으로 변위한 5 m 판. 먼 가장자리의 윤곽이 계단이 되고 솟은 칸이 그림자를 드리운다. displacement_flat.scene.xml 과 판의 머티리얼만 다르다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

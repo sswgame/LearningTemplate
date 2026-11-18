@@ -1,6 +1,6 @@
 <?asset guid="1f261c8005e344c9a50abb9621b0561c"?>
 <Scene formatVersion="2" name="KitDemoKartRacing">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

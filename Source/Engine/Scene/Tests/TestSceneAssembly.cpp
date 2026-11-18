@@ -20,7 +20,7 @@ namespace
 {
     struct SceneAssemblyTestUtil
     {
-        static constexpr const utf8* kSettings = "<SceneSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\" />";
+        static constexpr const utf8* kSettings = "<SceneSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\" _addToWorldBudgetMicroseconds=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\" />";
 
         /** @brief 씬 컴포넌트 하나를 가진 엔티티입니다. */
         static string makeEntity( const utf8* pID, const utf8* pName, const utf8* pPosition, const utf8* pExtraAttributes = "", const utf8* pExtraChildren = "", const utf8* pAttach = "" )

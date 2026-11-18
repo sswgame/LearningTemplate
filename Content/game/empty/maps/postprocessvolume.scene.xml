@@ -8,7 +8,7 @@
 	     BloomLamp: 가운데 큐브 앞의 강한 점광(블룸의 밝은 부분). BloomDirt · LensFlare: 먼지 마스크(textures/postprocess/bloomdirt) · 렌즈 플레어를 켜는 무한 볼륨.
 	     SSR: 화면 공간 반사를 켜는 무한 볼륨(디퍼드 파이프라인에만 패스가 있다 — 최대 거칠기 1 이라 격자 바닥도 받는다).
 	     PostMaterialBefore · PostMaterialAfter · PostMaterialReplace: 후처리 머티리얼(engine/materials/postprocess/colortint)을 톤맵 앞 · 뒤(무게 0.5) · 대신 자리에 더하는 무한 볼륨(디퍼드). -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 		<_listDataLayer>
 			<SceneDataLayerDef _name="Volume" _bInitiallyActive="false" />

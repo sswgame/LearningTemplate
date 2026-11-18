@@ -101,7 +101,7 @@
 - **R-4 [31] 자원마다 전용 할당** — `MaterialRenderProxy.cpp:48` 인스턴스마다 상수 버퍼 · 커밋 자원 · `vkAllocateMemory`. 상용: 언리얼 `FD3D12FastConstantAllocator`, 유니티 SRP Batcher, Godot VMA. 제안 `RHIBufferSlice` + D3D12MA / VMA. 확인: 머티리얼 인스턴스 5000 의 버퍼 바이트 · Vulkan 할당 수.
 - **RN-4 [34] 그림자 아틀라스 사분면 · 타일 번호 캐시** — 방향광 · 로컬 텍스처 분리, 로컬은 화면 크기 할당기, `ShadowCache::update` 키를 빛 정체(컴포넌트 id, 면)로. 상용: URP 분리 아틀라스, 언리얼 VSM. 확인: `ShadowSetupTest` — 우선순위가 뒤집혀도 서 있는 빛은 Reuse.
 - **RN-6 [34] 포함이 하나라도 바뀌면 GPUScene 재수집** — `GPUSceneBuilder.cpp` ~730 `collectAllCandidates`(식생 토글 `FoliageComponent.cpp:763` · 스폰 · 스트리밍). 상용: 언리얼 `FScene` 프리리스트, 유니티 GPU Resident Drawer. 판정(11-17): 고정 칸 + 프리리스트 + 바뀐 칸만 부분 수집. 확인: `load/*` 20 만(먼저 더한다) + 프레임마다 스폰 · 소멸 10, `GT.GPUScene.build.collect`.
-- **A-13 [36] 씬 스트리밍** — 셀 서술 전부 상주 · 동기 짓기 · 내릴 때 상태 버림(`SceneStreamingSubsystem.cpp:61-66 · 186-190 · 222-235`, `Scene.cpp:624-640`). 상용: World Partition 비동기 + AddToWorld 시간 예산. 확인: `load/` 셀 400 × 오브젝트 2000, `GT.Scene.service.SceneStreamingSubsystem` 최대 프레임.
+- **A-13 [36] 씬 스트리밍 — 측정만 남음**: `--cook-all` 뒤 `App -scenario=game/empty/automation/load/streamingcells.scenario.xml -unattended -cooked-content` 로 구간 `GT.Scene.service.SceneStreaming` 최대 프레임(셀 400 × 상자 2000, 짓기 예산 `_addToWorldBudgetMicroseconds` 2000 us) — 예산을 크게 넘으면 셀 안을 나눠 짓는다.
 - **S-8 [37] 캐릭터 이동이 차례로 돈다** — `moveCharacters` 는 섰고 구현이 차례, `ExtendedUpdate` 가 씬 공용 `_tempAllocator` 를 받는다. 상용: 유니티 DOTS Character Controller 잡. 제안 레인별 임시 할당자. 확인: `load/*` 캐릭터 500 PreStep(워커 1 · 4 · 8)을 먼저 잰다(PO-3).
 - **N-11 [43] 송신률 조절 없음** — `NetEndpoint.cpp` 토큰 버킷이 고정. 상용: ENet RTT 스로틀, 유니티 Transport. 확인: `NetEmulation` 손실 20 % 의 `_resentMessageCount` 를 먼저 잰다.
 - **A-24 [47]** 리플렉션 묶음 TU 가 헤더 하나에 전체를 다시 파싱 — 1 절 5-4 리플렉션.

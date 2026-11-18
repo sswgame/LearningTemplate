@@ -1,7 +1,7 @@
 <?asset guid="6018538b26af4095ba68e2183d5ddc13"?>
 <Scene formatVersion="2" name="TAALineGrid">
 	<!-- 시나리오 automation/taalinegrid 의 무대 — 바닥 격자를 낮게 비스듬히 보고, 앞에 두께 0.02 m 의 가는 막대 격자를 세운다. 지터 없는 TAA 는 계단이 그대로 남는다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

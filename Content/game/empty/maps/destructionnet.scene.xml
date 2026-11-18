@@ -1,6 +1,6 @@
 <?asset guid="7fff73c51e72f0e5e763568ac68bfc8e"?>
 <Scene formatVersion="3" name="DestructionNet">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

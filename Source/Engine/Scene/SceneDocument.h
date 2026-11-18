@@ -133,8 +133,13 @@ namespace sw
         struct StreamingCell
         {
             StreamingCellCoord      _cell{};
-            vector<SceneObjectNode> _listSceneObjectNode;
-            vector<string>          _listDataLayer; ///< 이 셀 조각의 데이터 레이어(비면 레이어 없는 엔티티). 언리얼 World Partition 처럼 좌표 + 레이어 집합이 런타임 셀 하나다 — 켜고 끌 때 이 조각만 오르내린다
+            vector<SceneObjectNode> _listSceneObjectNode; ///< 쿠커가 메모리에서 나눈 셀의 엔티티. 쿠킹본에서 읽은 셀은 비어 있다 — 내용은 파일의 구간(`_contentOffset` · `_contentSize`)에 남는다
+            vector<string>          _listDataLayer;       ///< 이 셀 조각의 데이터 레이어(비면 레이어 없는 엔티티). 언리얼 World Partition 처럼 좌표 + 레이어 집합이 런타임 셀 하나다 — 켜고 끌 때 이 조각만 오르내린다
+            uint64                  _contentOffset{ 0 };  ///< 쿠킹본 안 셀 내용(엔티티 목록)의 시작 바이트(`readStreamingCellContent` 로 푼다)
+            uint64                  _contentSize{ 0 };    ///< 셀 내용의 바이트 수. 0 이면 내용이 `_listSceneObjectNode` 에 있다(메모리에서 나눈 문서)
+
+            /** @brief 내용이 쿠킹본의 구간에 있으면(색인만 읽은 셀) true 입니다. */
+            bool hasFileContent() const { return _contentSize != 0; }
         };
 
         string                  _name;
@@ -171,11 +176,19 @@ namespace sw
          * @return 앵커와 경로로 갈리지 않으면 false 입니다.
          */
         [[nodiscard]] SW_API static bool splitInstancePartPath( string_view partPath, uint64& outAnchorFileID, string_view& outRelativePath );
-        /** @brief 리소스 id 의 바이너리(SCN1)를 로드합니다(OS 경로는 받지 않습니다). 월드 설정과 셀까지 읽습니다. */
+        /**
+         * @brief 리소스 id 의 바이너리(SCN1)를 로드합니다(OS 경로는 받지 않습니다). 월드 설정 · 늘 올라 있는 엔티티 · 셀 **색인**(좌표 · 레이어 · 내용 구간)을 읽습니다.
+         * @details 셀 내용은 풀지 않는다 — 스트리밍이 셀을 올릴 때 그 구간만 비동기로 읽어 워커에서 푼다(`readStreamingCellContent`, 언리얼 World Partition 의 셀 패키지 비동기 로드).
+         */
         [[nodiscard]] SW_API bool loadBinary( const AssetID& assetID );
         /** @brief 바이너리(SCN1)를 디스크 경로에 저장합니다. 월드 설정과 셀까지 씁니다. */
         [[nodiscard]] SW_API bool saveBinary( const AbsolutePath& absPath ) const;
-        /** @brief 셀까지 모든 엔티티 수입니다. */
+        /**
+         * @brief 쿠킹본에서 셀 하나의 구간(@p pData, @p size — `StreamingCell::_contentOffset` · `_contentSize`)을 엔티티 목록으로 풉니다. 문서를 건드리지 않아 워커에서 부릅니다.
+         * @return 구간이 엔티티 목록으로 읽히지 않으면(잘림 · 손상) 오류를 남기고 false 입니다. @p sourcePath 는 로그용입니다.
+         */
+        [[nodiscard]] SW_API static bool readStreamingCellContent( const uint8* pData, uint64 size, vector<SceneObjectNode>& outListNode, string_view sourcePath );
+        /** @brief 셀까지 메모리에 든 엔티티 수입니다(색인만 읽은 셀의 엔티티는 세지 않는다). */
         SW_API size_t computeTotalEntityCount() const;
 
     private:

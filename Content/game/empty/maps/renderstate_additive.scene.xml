@@ -1,7 +1,7 @@
 <?asset guid="c5fecb29861f0d672c245261e981dbe1"?>
 <Scene formatVersion="3" name="RenderState_additive">
 	<!-- 시나리오 automation/renderstate_* 의 무대 — 다섯 자리가 왼쪽부터 양면 · 가산 · 스텐실 · 깊이 비교 · 쓰기 마스크를 하나씩 보인다. renderstate_base 와 나머지 맵은 한 자리의 머티리얼만 다르다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

@@ -1,6 +1,6 @@
 <?asset guid="6187b6628a0c77f66ec7c2e24502e5dd"?>
 <Scene formatVersion="3" name="StarSkirmish">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

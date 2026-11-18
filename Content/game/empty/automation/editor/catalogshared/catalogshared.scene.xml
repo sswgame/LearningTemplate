@@ -1,7 +1,7 @@
 <?asset guid="1dbfcb1c68910db1c2abc36769fc065f"?>
 <Scene formatVersion="3" name="CatalogShared">
 	<!-- 공유 카탈로그 확인(editor/catalogshared)의 무대 — 상호작용 대상 둘(Left · Right)이 같은 표(table.interactions.xml)의 같은 항목(Use)을 쥔다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

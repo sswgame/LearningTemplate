@@ -4,7 +4,7 @@
 	     썰매 둘(SledSnow · SledIce)은 꼭대기에서 멈춘 채 놓여 경사 중력으로 내려가고 표면 종류 표의 구름 저항 · 그립(빙판 낮음, 눈 높음)이 갈린다. SledSnow 에는 탑승자(SledRider)가 앉는다.
 	     KartFlat 은 평지, KartHill 은 돌 비탈 아래에서 위로 같은 페달 — 오르막이 느리다. LeanKart 는 탑승자(Rider)를 태우고 달리다 급정거해 탑승자가 앞으로 기운다(좌석 가속도 → 기울임).
 	     Minecart 는 Rail 의 스플라인(레일 모듈) 위로 구른다. 튜닝은 common/data/vehicles/*.vehicle.xml. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

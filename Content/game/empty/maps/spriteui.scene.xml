@@ -1,6 +1,6 @@
 <?asset guid="00e66edf3b12c891bc46c44d8581b068"?>
 <Scene formatVersion="3" name="SpriteUI">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

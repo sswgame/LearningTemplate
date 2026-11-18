@@ -1,7 +1,7 @@
 <?asset guid="07c42e3304836cc68a6cba3eec9d7495"?>
 <Scene formatVersion="3" name="RealtimeGIExtras">
 	<!-- 시나리오 automation/realtimegi_extras — realtimegi_extras_off 와 같은 무대에 하늘 가림 1 · 발광 배율 1 을 켰다. 발광 큐브의 빛이 프로브를 거쳐 큰 큐브 옆면 · 바닥을 주황으로 물들이고, 큐브 아래의 반사 앰비언트가 하늘 보임만큼 어두워진다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

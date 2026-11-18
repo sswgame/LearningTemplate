@@ -1,6 +1,6 @@
 <?asset guid="9961c92313ad591c2923bf7ccfc14d3e"?>
 <Scene formatVersion="3" name="TurretLead">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

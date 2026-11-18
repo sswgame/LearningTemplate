@@ -1,7 +1,7 @@
 <?asset guid="01080102fa3667fa9246caa043bd346a"?>
 <Scene formatVersion="3" name="DeferredTransparent">
 	<!-- 시나리오 automation/deferredtransparent 의 무대 — 유리 상자(반투명)가 앞에 서 있다. 섞이면 뒤 상자와 물이 비치고, 덮어쓰면 유리색만 남는다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

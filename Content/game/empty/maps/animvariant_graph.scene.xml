@@ -1,7 +1,7 @@
 <?asset guid="8b3a7663c2f22f3bdc8720214ceb8625"?>
 <Scene formatVersion="3" name="animvariant_graph">
 	<!-- 시나리오 automation/animvariant 의 무대 — 셋은 그대로이고 그래프만 차이 파일로 바꾼다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

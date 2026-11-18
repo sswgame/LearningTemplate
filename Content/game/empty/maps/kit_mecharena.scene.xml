@@ -1,6 +1,6 @@
 <?asset guid="24e99278c2044c03a7893a7f276a05a5"?>
 <Scene formatVersion="2" name="KitDemoMechArena">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

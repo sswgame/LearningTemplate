@@ -4,7 +4,7 @@
 	     유황 분출구(독가스 살포) · 버프 샘 · 스킬 영역 · 즉사 구덩이 · 무중력 방 · 빙판 · 가시덩굴, 뒤쪽은 내비 마당(용암 띠). 입력은 넷이다 — 겹침(ZoneVolumeComponent),
 	     디딤 · 부딪힘 · 잠김(받는 쪽 ZoneContactComponent — 물리 재질 Ice · Thorns, 액체 종류 Lava · Sea 가 Empty 층의 표면 종류 표에서 프로필을 부른다).
 	     배우는 앞 마당에서 기다리고 시나리오가 object.place 로 옮긴다(걷는 사람 Walker · NPC Villager · 희생자 Victim · 화염 정령 Spirit, 물체는 상자 · 돌 · 열쇠 · 뗏목 · 꽃병). -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

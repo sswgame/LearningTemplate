@@ -1,6 +1,6 @@
 <?asset guid="8685ba5dc56189cf33cde66eb51d7133"?>
 <Scene formatVersion="3" name="MeadowVillage">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

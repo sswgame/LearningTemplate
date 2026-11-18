@@ -605,7 +605,7 @@ namespace sw
         // 셀로 나눈 쿠킹본이면 셀은 지금 짓지 않는다 — 스트리밍 원점이 다가올 때 서비스가 짓는다(`instantiateCell`).
         if ( doc._listStreamingCell.empty() )
             return true;
-        return _objectManager->getSubsystem<SceneStreamingSubsystem>().beginWorld( *this, _sceneSettings, doc._listStreamingCell );
+        return _objectManager->getSubsystem<SceneStreamingSubsystem>().beginWorld( *this, _sceneSettings, doc._listStreamingCell, doc._sourcePath );
     }
 
     bool Scene::instantiateCell( const vector<SceneDocument::SceneObjectNode>& listNode, vector<uint64>& outListObjectID )
@@ -637,6 +637,55 @@ namespace sw
             // 자식은 같은 셀의 엔티티이거나 이 엔티티의 중첩 프리팹 부품이다 — 늘 올라 있는 오브젝트는 셀의 오브젝트에 붙지 않는다(쿠커가 검사했다).
             if ( pGo != nullptr )
                 _objectManager->destroyGameObject( pGo, true );
+        }
+    }
+
+    void Scene::captureCellNodes( const vector<uint64>& listObjectID, vector<SceneDocument::SceneObjectNode>& outListNode ) const
+    {
+        outListNode.clear();
+        if ( _objectManager == nullptr )
+            return;
+        // 셀 몫만 준비한다 — 원형 상태 · 부품 덮어쓰기를 씬 전체가 아니라 이 셀의 프리팹 엔티티로 만든다. 참조는 씬의 파일 id 표 전체로 적는다(늘 올라 있는 오브젝트를 가리킨다).
+        SceneInternal::SaveInputs     inputs;
+        unordered_map<uint64, string> mapCellPrefab;
+        for ( const uint64 objectID : listObjectID )
+        {
+            const auto fileIDIt = _mapObjectIDToFileID.find( objectID );
+            if ( fileIDIt != _mapObjectIDToFileID.end() )
+                inputs._mapSavedID.emplace( objectID, fileIDIt->second );
+            const auto prefabIt = _mapPrefabSource.find( objectID );
+            if ( prefabIt != _mapPrefabSource.end() )
+                mapCellPrefab.emplace( objectID, prefabIt->second );
+        }
+        AssetManager* const pAssetManager = _services._pAssetManager;
+        if ( pAssetManager != nullptr )
+        {
+            for ( const auto& [objectID, prefabPath] : mapCellPrefab )
+            {
+                (void)objectID;
+                (void)SceneInternal::findPrefabBaseState( *pAssetManager, inputs._mapPrefabBaseState, prefabPath ); // 캐시를 채운다 — 못 만든 원형은 쓰는 쪽이 전체 상태로 적는다
+            }
+            SceneInternal::collectInstancePartOverrides( *_objectManager, pAssetManager->getAssetCache<PrefabCache>(), mapCellPrefab, inputs._mapPartOverride );
+        }
+        ObjectSaveOptions saveOptions{ SerializePurpose::Authoring };
+        saveOptions._pSavedIDMap = &_mapObjectIDToFileID;
+
+        outListNode.reserve( listObjectID.size() );
+        for ( const uint64 objectID : listObjectID )
+        {
+            GameObject* pGo = _objectManager->findGameObjectByID( objectID );
+            if ( pGo == nullptr || pGo->isPendingDestroy() )
+                continue; // 플레이 중 지웠다 — 다시 올려도 없다
+            SceneDocument::SceneObjectNode node{};
+            if ( SceneInternal::writeEntityNode( pGo, _mapPrefabSource, inputs, saveOptions, node ) == false )
+                continue;
+            const auto layerIt = _mapObjectDataLayer.find( objectID );
+            if ( layerIt != _mapObjectDataLayer.end() )
+                node._listDataLayer = layerIt->second;
+            const auto memberIt = _mapInstanceMember.find( objectID );
+            if ( memberIt != _mapInstanceMember.end() )
+                node._instanceAnchorFileID = memberIt->second._anchorFileID; // 앵커에 붙는 자리는 상태의 부착이 이미 들고 있다
+            outListNode.push_back( std::move( node ) );
         }
     }
 
