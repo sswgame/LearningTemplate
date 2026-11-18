@@ -26,6 +26,14 @@ namespace
 
         [[nodiscard]] static bool load( const AssetID& assetID, SharedAssetCacheTestAsset& outAsset ) { return AssetIO::readTextAsset( assetID, outAsset._text ); }
     };
+
+    /** @brief 다른 모듈이 올린 종류 자리입니다 — 한 모듈을 내려도 다른 모듈 캐시가 그대로인지 본다. */
+    struct SharedAssetCacheOtherTestAsset
+    {
+        string _text;
+
+        [[nodiscard]] static bool load( const AssetID& assetID, SharedAssetCacheOtherTestAsset& outAsset ) { return AssetIO::readTextAsset( assetID, outAsset._text ); }
+    };
 } // namespace
 
 namespace sw
@@ -39,6 +47,15 @@ namespace sw
     };
 
     template class SharedAssetCache<SharedAssetCacheTestAsset>;
+
+    template <>
+    struct SharedAssetCacheTraits<SharedAssetCacheOtherTestAsset>
+    {
+        static constexpr AssetTypeDef kType = AssetTypeDef::makeCacheOnly(
+            "SharedAssetCacheOtherTestAsset", AssetTypeLoader::with<SharedAssetCacheOtherTestAsset, &SharedAssetCacheOtherTestAsset::load>( MemoryTag::Game ) );
+    };
+
+    template class SharedAssetCache<SharedAssetCacheOtherTestAsset>;
 } // namespace sw
 
 namespace
@@ -50,24 +67,34 @@ namespace
         const utf8* getSubsystemName() const override { return "SharedAssetCache.Test"; }
     };
 
+    class SharedAssetCacheOtherTestSubsystem final : public SharedAssetCacheSubsystem<SharedAssetCacheOtherTestAsset>
+    {
+    public:
+        const utf8* getSubsystemName() const override { return "SharedAssetCache.OtherTest"; }
+    };
+
     struct SharedAssetCacheTestUtil
     {
-        using Cache = SharedAssetCache<SharedAssetCacheTestAsset>;
+        using Cache      = SharedAssetCache<SharedAssetCacheTestAsset>;
+        using OtherCache = SharedAssetCache<SharedAssetCacheOtherTestAsset>;
 
         /** @brief 모듈 서브시스템처럼 캐시를 세웠다 내립니다. */
-        class ScopedModuleCache
+        template <typename SubsystemType>
+        class ScopedModuleCacheOf
         {
         public:
-            ScopedModuleCache()
+            ScopedModuleCacheOf()
                 : _subsystem{}
             {
                 SW_REQUIRE_TRUE( _subsystem.initializeSubsystem() == SubsystemInitResult::Succeeded );
             }
-            ~ScopedModuleCache() { _subsystem.shutdownSubsystem(); }
+            ~ScopedModuleCacheOf() { _subsystem.shutdownSubsystem(); }
 
         private:
-            SharedAssetCacheTestSubsystem _subsystem;
+            SubsystemType _subsystem;
         };
+        using ScopedModuleCache      = ScopedModuleCacheOf<SharedAssetCacheTestSubsystem>;
+        using ScopedOtherModuleCache = ScopedModuleCacheOf<SharedAssetCacheOtherTestSubsystem>;
     };
 } // namespace
 
@@ -154,6 +181,54 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleUnloadDropsEntriesAndReloadStartsFresh
         SW_EXPECT_EQUAL( string( "second" ), fresh->_text );
         SW_EXPECT_EQUAL( string( "first" ), ref->_text ); // 내린 표의 참조는 새 표의 판을 따라가지 않는다 — 다시 받아야 한다
     }
+}
+
+/**
+ * @brief [SharedAssetCacheTest] 한 모듈을 내렸다 다시 올려도 다른 모듈이 올린 캐시는 등록 · 항목 · 객체가 그대로이고, 다시 올린 모듈만 빈 표에서 새로 읽는지 검증
+ * @details 캐시 등록은 종류 이름 하나씩이라(레지스트리) 한 모듈의 종료가 다른 모듈의 칸을 지우면 그 모듈은 다음 요청에서 멈춘다(`SharedAssetCacheLookup::getCache`).
+ */
+SW_TEST_CASE( SharedAssetCacheTest, ModuleUnloadLeavesOtherModuleCacheIntact )
+{
+    using Util = SharedAssetCacheTestUtil;
+    const test::ScopedScratchDomain domain;
+    const string                    id      = test::ScopedScratchDomain::makeID( "mine.txt" ).str();
+    const string                    otherID = test::ScopedScratchDomain::makeID( "other.txt" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "mine.txt" ), "first" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "other.txt" ), "other" ) );
+
+    AssetManager&                                          assetManager = engine::getSubsystem<AssetManager>();
+    const Util::ScopedOtherModuleCache                     otherModule;
+    const shared_ptr<const SharedAssetCacheOtherTestAsset> otherHeld = Util::OtherCache::acquire( otherID ).snapshot();
+    SW_REQUIRE_TRUE( otherHeld != nullptr );
+    AssetCacheBase* const pOtherCache = assetManager.findAssetCache( Util::OtherCache::kAssetKindName );
+    SW_REQUIRE_TRUE( pOtherCache != nullptr );
+
+    shared_ptr<const SharedAssetCacheTestAsset> held;
+    {
+        const Util::ScopedModuleCache module;
+        held = Util::Cache::acquire( id ).snapshot();
+        SW_REQUIRE_TRUE( held != nullptr );
+    }
+    // 내린 모듈만 빠지고 다른 모듈의 캐시는 같은 칸 · 같은 항목이다.
+    SW_EXPECT_TRUE( assetManager.findAssetCache( Util::Cache::kAssetKindName ) == nullptr );
+    SW_EXPECT_TRUE( assetManager.findAssetCache( Util::OtherCache::kAssetKindName ) == pOtherCache );
+    SW_EXPECT_TRUE( pOtherCache->isCached( otherID ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), pOtherCache->getCachedCount() );
+    SW_EXPECT_TRUE( assetManager.findReloadFunction( pOtherCache ) != nullptr ); // 핫 리로드 칸도 남는다
+    SW_EXPECT_TRUE( Util::OtherCache::acquire( otherID ).snapshot().get() == otherHeld.get() );
+
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "mine.txt" ), "second" ) );
+    {
+        const Util::ScopedModuleCache reloaded;
+        AssetCacheBase* const         pCache = assetManager.findAssetCache( Util::Cache::kAssetKindName );
+        SW_REQUIRE_TRUE( pCache != nullptr );
+        SW_EXPECT_FALSE( pCache->isCached( id ) );
+        const shared_ptr<const SharedAssetCacheTestAsset> fresh = Util::Cache::acquire( id ).snapshot();
+        SW_REQUIRE_TRUE( fresh != nullptr );
+        SW_EXPECT_EQUAL( string( "second" ), fresh->_text );
+        SW_EXPECT_TRUE( Util::OtherCache::acquire( otherID ).snapshot().get() == otherHeld.get() ); // 다시 올려도 다른 모듈 항목을 건드리지 않는다
+    }
+    SW_EXPECT_TRUE( assetManager.findAssetCache( Util::OtherCache::kAssetKindName ) == pOtherCache );
 }
 
 /**
