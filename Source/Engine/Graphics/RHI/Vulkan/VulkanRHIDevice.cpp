@@ -98,11 +98,7 @@ namespace sw
         , _depthFormat{ 0 }
         , _surfaceLostCount{ 0 }
         , _bFrameStarted{ SW_FALSE }
-#if defined( SW_VULKAN_VALIDATION )
-        , _bEnableValidationLayers{ SW_TRUE }
-#else
         , _bEnableValidationLayers{ SW_FALSE }
-#endif
         , _bMultiDrawIndirect{ SW_FALSE }
         , _bDrawIndirectCount{ SW_FALSE }
         , _bSamplerAnisotropy{ SW_FALSE }
@@ -244,11 +240,16 @@ namespace sw
         }
         _pipelineCacheSaveIntervalNanoseconds = MonotonicClock::secondsToNanoseconds( desc._pipelineCacheSaveIntervalSeconds );
 
-        // 검증 스위치(EngineConfig _rhi)는 검증 레이어가 있는 구성에서만 듣는다. 없는 구성에서 켜 두었으면 듣지 않는다고 알린다.
+        // 검증 레이어는 배포가 아닌 구성(레이어를 싣는 구성, `SW_VULKAN_VALIDATION`)에 컴파일돼 있고 켤지는 장치를 만들 때 정한다
+        // (EngineConfig `_rhi._validationLayer`, `-rhi-validation` — 언리얼 `-vulkandebug`). 레이어가 없으면 아래 레이어 확인이 끈다.
+#if defined( SW_VULKAN_VALIDATION )
+        _bEnableValidationLayers = desc._bValidationLayer ? SW_TRUE : SW_FALSE;
+#endif
+        // 검증 스위치(EngineConfig _rhi)는 검증 레이어를 켠 실행에서만 듣는다. 끈 실행에서 켜 두었으면 듣지 않는다고 알린다.
         _bGPUAssistedValidationRequested     = desc._bGPUBasedValidation ? SW_TRUE : SW_FALSE;
         _bSynchronizationValidationRequested = desc._bSynchronizationValidation ? SW_TRUE : SW_FALSE;
         if ( _bEnableValidationLayers == SW_FALSE && ( desc._bGPUBasedValidation || desc._bSynchronizationValidation ) )
-            SW_LOG_WARNING_ID( "Vulkan.ValidationSwitchWithoutLayer", "EngineConfig _rhi asks for GPU-assisted or synchronization validation, but this build has no Vulkan validation layer - ignored" );
+            SW_LOG_WARNING_ID( "Vulkan.ValidationSwitchWithoutLayer", "EngineConfig _rhi asks for GPU-assisted or synchronization validation, but the Vulkan validation layer is off (_rhi._validationLayer, -rhi-validation) - ignored" );
 
         // 백버퍼 포맷 · 개수는 백엔드 간 계약값이다. 스왑체인 재생성 때도 같은 요청을 써야 하므로 보관한다.
         _swapChain.setRequested( desc._format, desc._bufferCount, desc._bVSync );

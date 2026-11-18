@@ -7,6 +7,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Process/ProcessEnvironment.h"
@@ -23,6 +24,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
+#include "Engine/Graphics/RHI/RHIDiagnosticSwitch.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Reflection/EnumName.h"
@@ -167,8 +169,12 @@ namespace sw
 
     void IRHIDevice::reportBarrierDuringRecording( [[maybe_unused]] const utf8* pWhat ) const
     {
-#if defined( SW_DEBUG )
+        // 배포가 아닌 구성에서 늘 켠다(시작 선택이 아니다) — 병렬 기록 밖은 relaxed 읽기 하나, 안에서도 앞 8 번 뒤에는 relaxed 읽기 둘이라 값싸다.
+#if defined( SW_DO_CHECKS )
         if ( _bParallelRecording.load( std::memory_order_relaxed ) == false )
+            return;
+        // 다 쓴 뒤에는 공유 카운터에 쓰지 않는다 — 기록 워커가 배리어마다 같은 캐시 줄을 고쳐 쓰지 않게 한다.
+        if ( _parallelBarrierReportCount.load( std::memory_order_relaxed ) >= 8 )
             return;
 
         // 진단이지 오류가 아니다. 레벨 프롤로그가 대부분을 미리 발행하지만 **전부는 아니다.**
@@ -561,6 +567,31 @@ namespace sw
         swapChainDesc._pipelineCacheSaveIntervalSeconds = rhiConfig._pipelineCacheSaveIntervalSeconds;
         swapChainDesc._bGPUBasedValidation              = rhiConfig._bGPUBasedValidation;
         swapChainDesc._bSynchronizationValidation       = rhiConfig._bSynchronizationValidation;
+        {
+            // 검증 층 · DRED 는 장치를 만들기 전에만 걸 수 있어 여기서 한 번 정한다(설정 기본값, 시작 인자가 이긴다). 배포 구성은 검증 층을 짓지 않아 늘 끈다.
+#if defined( SW_SHIPPING )
+            constexpr RHIDiagnosticBuild kBuild = RHIDiagnosticBuild::Shipping;
+#elif defined( SW_DEBUG )
+            constexpr RHIDiagnosticBuild kBuild = RHIDiagnosticBuild::Debug;
+#else
+            constexpr RHIDiagnosticBuild kBuild = RHIDiagnosticBuild::Release;
+#endif
+            const CommandLineManager* pCommandLine = engine::areEngineServicesBound() ? &engine::getSubsystem<CommandLineManager>() : nullptr;
+            const expected<bool>      validation   = resolveRHIDiagnosticSwitch( rhiConfig._validationLayer, CommandLineArgument::RHI_VALIDATION, pCommandLine, kBuild );
+            const expected<bool>      dred         = resolveRHIDiagnosticSwitch( rhiConfig._dred, CommandLineArgument::RHI_DRED, pCommandLine, kBuild );
+            for ( const expected<bool>* pResult : { &validation, &dred } )
+            {
+                if ( pResult->has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "RHI.DiagnosticSwitchNotSet", "%# (-%#) - add it to Config/Engine/EngineConfig.json", pResult->error().message(), pResult->error().detail() );
+                    return false;
+                }
+            }
+            swapChainDesc._bValidationLayer = build::kShipping == false && *validation;
+            swapChainDesc._bDRED            = *dred;
+            SW_LOG_INFO_ID( "RHI.DiagnosticSwitches", "Graphics API validation layer: %#, DRED: %# (EngineConfig _rhi._validationLayer · _dred, -rhi-validation · -rhi-dred)",
+                            swapChainDesc._bValidationLayer ? "on" : "off", swapChainDesc._bDRED ? "on" : "off" );
+        }
         {
             string softwareEnv;
             bool   bSoftwareEnv = false;

@@ -8,7 +8,7 @@
  *
  *          백엔드별 표지:
  *          - **DX12** — `ID3D12GraphicsCommandList2::WriteBufferImmediate` 로 기록 가능한 버퍼에 쓴다: 시작 표지는 MARKER_IN(앞 명령이 시작한 뒤)으로 [0] 칸, 끝 표지는 MARKER_OUT(앞 명령이 끝난 뒤)으로 [1] 칸.
- *            소실 뒤 그 버퍼는 CPU 가 읽는다. DRED 자동 브레드크럼(명령 종류별 진행) · 페이지 폴트도 켠다.
+ *            소실 뒤 그 버퍼는 CPU 가 읽는다. DRED 자동 브레드크럼(명령 종류별 진행) · 페이지 폴트는 따로 켠다(EngineConfig `_rhi._dred` · `-rhi-dred`).
  *          - **Vulkan** — `VK_NV_device_diagnostic_checkpoints`(`vkCmdSetCheckpointNV`). 없으면 `VK_AMD_buffer_marker`(AMD · 인텔 Mesa — 호스트 보임 버퍼 두 칸에 DX12 와 같은 모양으로 쓴다: 시작 TOP_OF_PIPE [0] · 끝 BOTTOM_OF_PIPE [1]). 둘 다 없으면 능력을 끈다(`VulkanBreadcrumbMode`).
  *          - **DX11 · OpenGL** — GPU 쪽 표지 수단이 없다(DX11 은 소실 뒤 읽을 수 있는 디바이스측 쓰기가 없고, GL 은 컨텍스트 소실 시 상태를 읽을 길이 없다). 능력을 끄고 CPU 가 마지막으로 기록한 패스만 보고한다.
  *
@@ -45,7 +45,7 @@ namespace sw
         /// @brief 소실 때 한 번에 보고할 표지의 수입니다(Vulkan 은 파이프라인 단계마다 하나씩 돌려준다).
         static constexpr uint32 kMaxReported = 8;
 
-        /** @brief 이 실행이 브레드크럼을 쓰는지입니다(`-gv_gpuBreadcrumbs`, 배포 구성은 기본 끔). 백엔드가 DRED · 체크포인트를 켤 때도 이 값을 봅니다. */
+        /** @brief 이 실행이 브레드크럼을 쓰는지입니다(`-gv_gpuBreadcrumbs`, 배포 구성은 기본 끔). 백엔드가 체크포인트를 켤 때도 이 값을 봅니다(DRED 는 `_rhi._dred`). */
         [[nodiscard]] static bool isEnabled();
 
         /**

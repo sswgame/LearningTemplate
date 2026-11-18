@@ -25,7 +25,7 @@ namespace
 {
     /**
      * @brief 엔진이 걸어 둔 관찰자(Debug 의 교착 검출기, `DiagnosticsSubsystem`)를 이 범위 동안 뗍니다 — 관찰자는 하나뿐이라 그대로면 케이스가 자기 것을 걸지 못한다.
-     * @details 떼어 둔 동안의 합류 사건은 엔진 검출기가 못 본다. `mutex` 는 `SW_ENABLE_DEADLOCK_DETECTION` 빌드에서만 알리므로 보통은 드문 스레드 시작 · 끝뿐이다.
+     * @details 떼어 둔 동안의 합류 사건은 엔진 검출기가 못 본다. `mutex` 는 잠금 추적을 켠 실행(`-deadlock-detection`)에서만 알리므로 보통은 드문 스레드 시작 · 끝뿐이다.
      */
     struct ScopedHostLockObserverRemoval
     {

@@ -2,6 +2,8 @@
 
 #include "Engine/EngineSubsystemSet.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/CoreServices/CommandLineSubsystem.h"
@@ -23,7 +25,9 @@ namespace sw::engine
     CoreParts addCoreSubsystems( SubsystemScope& coreScope, const CoreSetup& setup )
     {
         CoreParts parts;
-        parts._pDiagnostics = &coreScope.emplaceSubsystem<DiagnosticsSubsystem>( setup._bDiagnostics );
+        // 교착 탐지(`-deadlock-detection`)는 명령줄 표가 서기 전에 읽는다 — 진단 서브시스템이 코어 범위의 첫째라, 잠금 추적을 그보다 늦게 켜면 이미 쥔 잠금을 놓친다.
+        const bool bDeadlockDetection = build::kShipping == false && CommandLineManager::isFlagGivenBeforeParse( setup._argc, setup._ppArgv, CommandLineArgument::DEADLOCK_DETECTION );
+        parts._pDiagnostics           = &coreScope.emplaceSubsystem<DiagnosticsSubsystem>( setup._bDiagnostics, bDeadlockDetection );
         coreScope.emplaceSubsystem<NamePoolSubsystem>();
         parts._pCommandLine = &coreScope.emplaceSubsystem<CommandLineSubsystem>( setup._argc, setup._ppArgv );
         coreScope.emplaceSubsystem<LoggerSubsystem>( *parts._pCommandLine );

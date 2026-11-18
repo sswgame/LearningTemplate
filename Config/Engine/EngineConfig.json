@@ -57,6 +57,8 @@
         "_uploadStagingMegabytes": 32,
         "_uploadStagingIdleFrames": 300,
         "_pipelineCacheSaveIntervalSeconds": 300.0,
+        "_validationLayer": "DebugBuildOnly",
+        "_dred": "NonShippingOnly",
         "_bGPUBasedValidation": false,
         "_bSynchronizationValidation": false
     },

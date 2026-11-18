@@ -4,7 +4,8 @@
  * @details 코어 범위에서 가장 먼저 서고(의존이 없는 루트) 가장 나중에 사라진다. 그 앞에서 잡힌 sw 블록이 없도록 이름 풀 · 로거보다 먼저 선다 —
  *          메모리 프로파일러는 모든 해제가 태그 줄에서 빠진 뒤(소멸자)에 기동 뒤 기준선과 비교해 보고한다.
  *          메모리 프로파일러는 배포본이 아닌 모든 구성에 선다(추적은 진단 구성에서만 켜 두고 Release 는 개발 명령 `memory.tracking on` 으로 켠다).
- *          배포본에는 할당 헤더가 없어 셀 것이 없으므로 진단 구성(테스트 하네스)에서만 세운다. 교착 감지기와 플랫폼 누수 검사는 진단 구성만.
+ *          배포본에는 할당 헤더가 없어 셀 것이 없으므로 진단 구성(테스트 하네스)에서만 세운다. 플랫폼 누수 검사는 진단 구성만, 교착 감지기는 진단 구성과
+ *          시작 인자 `-deadlock-detection`(배포가 아닌 모든 구성 — `mutex` 잠금까지 추적한다).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -26,8 +27,8 @@ namespace sw
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Diagnostics";
 
-        /** @brief @p bDiagnostics 면 교착 감지기 · 플랫폼 누수 검사 · 할당 추적을 켭니다. */
-        explicit DiagnosticsSubsystem( bool bDiagnostics );
+        /** @brief @p bDiagnostics 면 교착 감지기 · 플랫폼 누수 검사 · 할당 추적을 켭니다. @p bDeadlockDetection(`-deadlock-detection`)이면 교착 감지기를 세우고 `mutex` 잠금 추적을 켭니다. */
+        DiagnosticsSubsystem( bool bDiagnostics, bool bDeadlockDetection );
         /** @brief 메모리 프로파일러의 종료 보고(Debug) 뒤 그것을 놓습니다 — 같은 범위의 다른 것이 모두 사라진 뒤다. */
         ~DiagnosticsSubsystem() override;
 
@@ -43,8 +44,9 @@ namespace sw
         MemoryProfiler* findMemoryProfiler() const { return _memoryProfiler.get(); }
 
     private:
-        unique_ptr<MemoryProfiler>   _memoryProfiler;   ///< 배포본이 아니면 있다
-        unique_ptr<DeadlockDetector> _deadlockDetector; ///< 진단 구성에서만 있다
-        uint8                        _bDiagnostics : 1; ///< 만들 때 받은 진단 구성 여부
+        unique_ptr<MemoryProfiler>   _memoryProfiler;         ///< 배포본이 아니면 있다
+        unique_ptr<DeadlockDetector> _deadlockDetector;       ///< 진단 구성이나 `-deadlock-detection` 실행에서만 있다
+        uint8                        _bDiagnostics       : 1; ///< 만들 때 받은 진단 구성 여부
+        uint8                        _bDeadlockDetection : 1; ///< 만들 때 받은 `-deadlock-detection` 여부(배포 구성은 늘 거짓)
     };
 } // namespace sw

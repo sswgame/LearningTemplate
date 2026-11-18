@@ -255,10 +255,26 @@ namespace sw
 namespace sw
 {
     /**
+     * @enum RHIDiagnosticSwitch
+     * @brief 장치를 만들 때 켜는 GPU 진단(검증 층 · DRED)의 기본값입니다. 진단마다 시작 인자(`-rhi-validation` · `-rhi-dred`, `=0` 은 끔)가 이긴다(`resolveRHIDiagnosticSwitch`).
+     * @details 진단은 장치를 만들기 전에만 걸 수 있어 시작할 때 한 번 정한다 — 실행 중에 바꾸는 개발 변수가 아니다. 언리얼 Development 빌드의 `-d3ddebug` · `-gpucrashdebugging` 과 같다.
+     *          게임은 Release 에서만 지어지므로 게임 결함은 Release 에서 인자로 켜서 본다.
+     */
+    ENUM()
+    enum class RHIDiagnosticSwitch : uint8
+    {
+        None            = 0, ///< 파일에 값이 없다 — 장치 생성이 오류로 멈춘다(짐작하지 않는다)
+        Off             = 1, ///< 끈다
+        On              = 2, ///< 모든 구성에서 켠다(그 진단이 없는 구성은 듣지 않는다 — 검증 층은 배포 구성에 없다)
+        DebugBuildOnly  = 3, ///< Debug 구성만 켠다
+        NonShippingOnly = 4, ///< 배포가 아닌 구성(Debug · Release)만 켠다
+    };
+
+    /**
      * @struct RHIConfig
      * @brief 렌더 장치(`IRHIDevice::initialize`)가 읽는 정책 값입니다. 장치는 `RHISwapChainDesc` 로 받는다.
      * @details 값은 모두 `Config/Engine/EngineConfig.json` 의 `_rhi` 에 있다 — 빠진 숫자 키는 범위 검사(`Min`)에서 로드 오류다.
-     *          검증 스위치(GBV · syncval)는 Engine 의 장치가 읽어야 해서 DevTools 만 읽는 `Config/Dev` 가 아니라 여기 둔다. 디버그 레이어가 있는 구성(Debug)에서만 뜻이 있다.
+     *          검증 스위치(검증 층 · GBV · syncval)는 Engine 의 장치가 읽어야 해서 DevTools 만 읽는 `Config/Dev` 가 아니라 여기 둔다. 배포가 아닌 구성에서만 뜻이 있다.
      */
     REFLECT()
     struct SW_API RHIConfig
@@ -287,11 +303,25 @@ namespace sw
         PROPERTY( Min = 1, Units = s )
         float64 _pipelineCacheSaveIntervalSeconds{};
 
-        /** @brief GPU 기반 검증(D3D12 `SetEnableGPUBasedValidation` · Vulkan `VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT`)을 켭니다. 디버그 레이어가 켜진 구성에서만 듣는다(R-9). */
+        /**
+         * @brief 그래픽 API 검증 층(D3D12 · D3D11 디버그 레이어, Vulkan 검증 레이어)을 켤지의 기본값입니다. 시작 인자 `-rhi-validation` 이 이긴다.
+         * @details 검증 층은 배포가 아닌 구성(`SW_DO_CHECKS`)에만 컴파일돼 있다. 배포 구성은 이 값을 듣지 않는다.
+         */
+        PROPERTY()
+        RHIDiagnosticSwitch _validationLayer{ RHIDiagnosticSwitch::None };
+
+        /**
+         * @brief D3D12 DRED(Device Removed Extended Data — 자동 브레드크럼 · 페이지 폴트)를 켤지의 기본값입니다. 시작 인자 `-rhi-dred` 가 이긴다.
+         * @details DRED 는 런타임 기능이라 배포 구성에서도 인자로 켤 수 있다(플레이어 기계의 장치 소실을 좇을 때, 언리얼 `-gpucrashdebugging`). 패스 표지(`-gv_gpuBreadcrumbs`)와는 따로다.
+         */
+        PROPERTY()
+        RHIDiagnosticSwitch _dred{ RHIDiagnosticSwitch::None };
+
+        /** @brief GPU 기반 검증(D3D12 `SetEnableGPUBasedValidation` · Vulkan `VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT`)을 켭니다. 디버그 레이어가 켜진 실행에서만 듣는다(R-9). */
         PROPERTY()
         bool _bGPUBasedValidation{};
 
-        /** @brief Vulkan 동기화 검증(`VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT`)을 켭니다. 검증 레이어가 켜진 구성에서만 듣는다(R-9). */
+        /** @brief Vulkan 동기화 검증(`VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT`)을 켭니다. 검증 레이어가 켜진 실행에서만 듣는다(R-9). */
         PROPERTY()
         bool _bSynchronizationValidation{};
     };

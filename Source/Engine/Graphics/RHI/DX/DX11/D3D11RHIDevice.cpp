@@ -33,9 +33,9 @@ namespace sw
 {
     namespace
     {
-    #if defined( SW_DEBUG )
+    #if defined( SW_DO_CHECKS )
         // 아래 목록과 판별 함수는 디버그 레이어 메시지를 거르는 `flushDebugMessages` 전용이고, 그 함수의
-        // 본문 전체가 SW_DEBUG 안에 있다. 가드를 맞추지 않으면 Release 빌드에서 "정의했는데 아무도
+        // 본문 전체가 SW_DO_CHECKS 안에 있다. 가드를 맞추지 않으면 배포 빌드에서 "정의했는데 아무도
         // 쓰지 않는다"(-Wunused-function)가 남는다.
 
         /** @brief 출력과 입력에 같은 리소스가 동시에 걸렸을 때 D3D11 이 내는 메시지 ID 목록입니다. */
@@ -159,7 +159,8 @@ namespace sw
 
     void D3D11RHIDevice::flushDebugMessages( const utf8* pStage )
     {
-    #if defined( SW_DEBUG )
+    #if defined( SW_DO_CHECKS )
+        // 디버그 레이어를 끈 장치(`-rhi-validation=0` · Release 기본)는 정보 큐가 없어 아래 질의가 실패하고 돌아간다.
         // 디버그 레이어의 CORRUPTION/ERROR 만 로그로 남긴다. WARNING(null 샘플러 → 기본 상태 등)은 정상 경로에서도 매 드로우
         // 나오므로 버린다. DX12 의 flushDebugMessages 와 같은 시점(프레임 끝)에 부른다.
         Microsoft::WRL::ComPtr<ID3D11InfoQueue> queue;
@@ -505,8 +506,10 @@ namespace sw
         swapChainDesc.Flags      = bAllowTearing ? static_cast<UINT>( DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING ) : 0u;
 
         UINT createDeviceFlags{ 0 };
-    #if defined( SW_DEBUG )
-        createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+    #if defined( SW_DO_CHECKS )
+        // 디버그 레이어는 배포가 아닌 구성에 컴파일돼 있고 켤지는 장치를 만들 때 정한다(EngineConfig `_rhi._validationLayer`, `-rhi-validation` — 언리얼 `-d3ddebug`).
+        if ( desc._bValidationLayer )
+            createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     #endif
 
         // 셰이더는 SM5(vs_5_0 · cs_5_0 — ShaderStageInfo 표)로 쿠킹하므로 기능 수준 11_0 만 받는다. 10_0 으로 내려가면 셰이더 생성이 모두 실패하는데도
@@ -551,10 +554,10 @@ namespace sw
 
         if ( FAILED( hr ) )
         {
-            // Debug 구성은 디버그 레이어(Windows "그래픽 도구" 선택 기능)가 없으면 이 값으로 실패한다 — 까닭을 말하고 멈춘다(레이어 없이 몰래 진행하지 않는다).
+            // 디버그 레이어를 켠 실행은 레이어(Windows "그래픽 도구" 선택 기능)가 없으면 이 값으로 실패한다 — 까닭을 말하고 멈춘다(레이어 없이 몰래 진행하지 않는다).
             if ( hr == DXGI_ERROR_SDK_COMPONENT_MISSING )
             {
-                SW_LOG_ERROR_ID( "D3D11.DebugLayerMissing", "Direct3D 11 debug layer is not installed (DXGI_ERROR_SDK_COMPONENT_MISSING) - install the Windows 'Graphics Tools' optional feature for Debug builds" );
+                SW_LOG_ERROR_ID( "D3D11.DebugLayerMissing", "Direct3D 11 debug layer is not installed (DXGI_ERROR_SDK_COMPONENT_MISSING) - install the Windows 'Graphics Tools' optional feature, or turn the layer off (-rhi-validation=0)" );
                 return false;
             }
             SW_LOG_ERROR_ID( "D3D11.FailedCreateDirect3DDevice", "Failed to create Direct3D 11 Device and SwapChain at feature level 11_0! HRESULT: %#", hr );
@@ -1038,7 +1041,7 @@ namespace sw
 
     void D3D11RHIDevice::endFrameInternal( bool vsync, bool bPresent )
     {
-    #if defined( SW_DEBUG )
+    #if defined( SW_DO_CHECKS )
         flushDebugMessages( "endFrame" );
     #endif
         // beginFrame 이 열었으면 반드시 닫는다. 짝이 안 맞으면 런타임이 경고를 뿜고 값이 무의미해진다.

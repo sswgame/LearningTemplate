@@ -515,3 +515,22 @@ SW_TEST_CASE( CommandLineTest, InitializeIsNotShiftedByEarlierArguments )
     SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::DIRECTX_12, bDx12 ) );
     SW_EXPECT_TRUE( bDx12 );
 }
+
+/**
+ * @brief 교착 탐지 인자(`-deadlock-detection`)는 명령줄 표가 서기 전에 읽는다 — 값 없이 적으면 켬, `=0` 이면 끔, 없으면 끔이다.
+ * @details 코어 범위의 첫 서브시스템(`DiagnosticsSubsystem`)이 잠금 추적을 켜는지 이 판정으로 정한다. 하이픈 수는 `parse` 와 같이 가리지 않는다.
+ */
+SW_TEST_CASE( CommandLineTest, DeadlockDetectionFlagIsReadBeforeParse )
+{
+    utf8* argvOn[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-W=800" ), const_cast<utf8*>( "-deadlock-detection" ) };
+    SW_EXPECT_TRUE( sw::CommandLineManager::isFlagGivenBeforeParse( 3, argvOn, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
+
+    utf8* argvDashes[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "--deadlock-detection=true" ) };
+    SW_EXPECT_TRUE( sw::CommandLineManager::isFlagGivenBeforeParse( 2, argvDashes, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
+
+    utf8* argvOff[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-deadlock-detection=0" ) };
+    SW_EXPECT_FALSE( sw::CommandLineManager::isFlagGivenBeforeParse( 2, argvOff, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
+
+    utf8* argvNone[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-rhi-validation" ) };
+    SW_EXPECT_FALSE( sw::CommandLineManager::isFlagGivenBeforeParse( 2, argvNone, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
+}
