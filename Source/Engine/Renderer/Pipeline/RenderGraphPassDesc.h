@@ -156,6 +156,16 @@ namespace sw
          */
         Decal,
         /**
+         * @brief 모션 블러 타일 최대 속도입니다(motion_blur_tile_max.hlsl — McGuire 2012 TileMax, 언리얼 VelocityFlatten 자리). 화면 속도 · 장면 깊이(하늘의 카메라 재투영)를 읽어
+         *        16² 픽셀 타일마다 가장 긴 속도를 1/16 첨부(VelocityTileMax)에 쓴다. 읽는 패스(NeighborMax → MotionBlur)가 꺼진 뷰에서는 돌지 않는다.
+         */
+        MotionBlurTileMax,
+        /**
+         * @brief 모션 블러 이웃 최대 속도입니다(motion_blur_neighbor_max.hlsl — McGuire 2012 NeighborMax). 타일 최대 속도(원본 역할)의 3x3 이웃 중 가장 긴 것을 같은 크기 첨부
+         *        (VelocityNeighborMax — 역할 VelocityNeighborMax)에 쓴다. 모션 블러가 그 방향으로 흐려 빠른 물체의 흐림이 윤곽 밖으로 번진다.
+         */
+        MotionBlurNeighborMax,
+        /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
          */
@@ -235,16 +245,6 @@ namespace sw
          *        PSO 가 있다 — 데스크톱은 PSO · 대기 텍스처 · 패스 모두 없다(`RenderPassTraitFlag::kSurfaceRotation`).
          */
         ScreenRotation,
-        /**
-         * @brief 모션 블러 타일 최대 속도입니다(motion_blur_tile_max.hlsl — McGuire 2012 TileMax, 언리얼 VelocityFlatten 자리). 화면 속도 · 장면 깊이(하늘의 카메라 재투영)를 읽어
-         *        16² 픽셀 타일마다 가장 긴 속도를 1/16 첨부(VelocityTileMax)에 쓴다. 읽는 패스(NeighborMax → MotionBlur)가 꺼진 뷰에서는 돌지 않는다.
-         */
-        MotionBlurTileMax,
-        /**
-         * @brief 모션 블러 이웃 최대 속도입니다(motion_blur_neighbor_max.hlsl — McGuire 2012 NeighborMax). 타일 최대 속도(원본 역할)의 3x3 이웃 중 가장 긴 것을 같은 크기 첨부
-         *        (VelocityNeighborMax — 역할 VelocityNeighborMax)에 쓴다. 모션 블러가 그 방향으로 흐려 빠른 물체의 흐림이 윤곽 밖으로 번진다.
-         */
-        MotionBlurNeighborMax,
     };
 
     /**
