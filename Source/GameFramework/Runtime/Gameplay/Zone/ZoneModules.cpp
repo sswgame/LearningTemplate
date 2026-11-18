@@ -293,7 +293,7 @@ namespace sw
                 }
                 for ( const string_view agent : StringUtil::split( agents, ",", StringSplitOptions{ true, true } ) )
                 {
-                    (void)nav.setAgentAreaCost( hashed_string( string( agent ).c_str() ), area, cost, bBlocked == false ); // 모르는 종류는 내비가 알린다
+                    (void)nav.setAgentAreaCost( hashed_string( agent ), area, cost, bBlocked == false ); // 모르는 종류는 내비가 알린다
                 }
             }
         };

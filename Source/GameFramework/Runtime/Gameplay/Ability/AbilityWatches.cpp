@@ -32,7 +32,7 @@ namespace sw
                 const AbilityComponent* pAbility = findAbility( query, outValue );
                 if ( pAbility == nullptr )
                     return false;
-                const optional<float32> value = pAbility->getAttributeValue( hashed_string( string( query._key ).c_str() ) );
+                const optional<float32> value = pAbility->getAttributeValue( hashed_string( query._key ) );
                 if ( value.has_value() == false )
                 {
                     outValue.setText( string( "the target has no attribute '" ) + string( query._key ) + "'" );
@@ -58,7 +58,7 @@ namespace sw
                 const AbilityComponent* pAbility = findAbility( query, outValue );
                 if ( pAbility == nullptr )
                     return false;
-                const ActiveEffectHandle handle = pAbility->findActiveEffectByID( hashed_string( string( query._key ).c_str() ) );
+                const ActiveEffectHandle handle = pAbility->findActiveEffectByID( hashed_string( query._key ) );
                 outValue.setNumber( handle.isValid() ? static_cast<float64>( pAbility->getActiveEffectStackCount( handle ) ) : 0.0 );
                 return true;
             }
