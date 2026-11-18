@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
@@ -10,7 +11,8 @@
 #include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
-// 하우징 서버 권위 배치 — 남의 부지 · 겹침 · 예산 · 거리 · 요청률 거절과 깨진 요청, 늦게 들어온 클라이언트가 같은 부지 상태를 받는지.
+// 하우징 서버 권위 배치 — 남의 부지 · 겹침 · 예산 · 거리 · 요청률 거절과 깨진 요청, 늦게 들어온 클라이언트가 같은 부지 상태를 받는지,
+// 주인이 주체라 다시 붙어도 같은지, 되돌리기 · 다시 하기의 거리, 큰 부지의 조각 전송 · 델타.
 
 using namespace sw;
 
@@ -26,13 +28,17 @@ namespace
             int32         _connectionID{ -1 };
         };
 
-        vector<Sent>  _listSent;
-        vector<int32> _listConnected;
-        uint8         _bServer;
+        vector<Sent>   _listSent;
+        vector<int32>  _listConnected;
+        vector<uint64> _listPrincipal; ///< 연결 번호 자리의 주체(접속 인증기가 지정한 계정, 0 은 계정 없음)
+        int32          _sendBudget;    ///< 남은 보내기 수. 음수면 무한이다(신뢰 창이 찬 것을 흉내)
+        uint8          _bServer;
 
         explicit FakeHousingPeers( bool bServer )
             : _listSent{}
             , _listConnected{}
+            , _listPrincipal{}
+            , _sendBudget{ -1 }
             , _bServer{ bServer ? SW_TRUE : SW_FALSE }
         {
         }
@@ -41,6 +47,10 @@ namespace
         bool trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override
         {
             (void)channel;
+            if ( _sendBudget == 0 )
+                return false;
+            if ( _sendBudget > 0 )
+                --_sendBudget;
             _listSent.push_back( Sent{ vector<uint8>( pData, pData + size ), connectionID } );
             return true;
         }
@@ -61,13 +71,16 @@ namespace
         NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Connected; }
         bool               getConnectionStats( int32, NetConnectionStats& ) const override { return false; }
         NetAddress         getConnectionAddress( int32 ) const override { return NetAddress{}; }
-        uint64             getConnectionPrincipal( int32 ) const override { return 0; }
-        optional<int32>    getClientIndex() const override { return nullopt; }
-        int32              getConnectedCount() const override { return static_cast<int32>( _listConnected.size() ); }
-        void               collectConnected( vector<int32>& outListConnection ) const override { outListConnection = _listConnected; }
-        int32              getMaxBytesPerSecond() const override { return 0; }
-        bool               isConnectionSaturated( int32 ) const override { return false; }
-        void               addSentKindStats( NetMessageKindStatsTable& ) const override {}
+        uint64             getConnectionPrincipal( int32 connectionID ) const override
+        {
+            return connectionID >= 0 && static_cast<size_t>( connectionID ) < _listPrincipal.size() ? _listPrincipal[static_cast<size_t>( connectionID )] : 0;
+        }
+        optional<int32> getClientIndex() const override { return nullopt; }
+        int32           getConnectedCount() const override { return static_cast<int32>( _listConnected.size() ); }
+        void            collectConnected( vector<int32>& outListConnection ) const override { outListConnection = _listConnected; }
+        int32           getMaxBytesPerSecond() const override { return 0; }
+        bool            isConnectionSaturated( int32 ) const override { return false; }
+        void            addSentKindStats( NetMessageKindStatsTable& ) const override {}
     };
 
     /** @brief 부지 하나(레이아웃 + 지갑)입니다. 레이아웃이 지갑 주소를 묶으므로 옮기지 않는다. */
@@ -75,10 +88,12 @@ namespace
     {
         HousingLayout _layout;
         Wallet        _wallet;
+        uint64        _owner;
 
         HousingNetTestPlotState( const HousingPlotSettings& settings, const HousingPartCatalog& catalog, int64 funds )
             : _layout{}
             , _wallet{}
+            , _owner{ HousingOwnerID::kNone }
         {
             _layout.initialize( settings, catalog );
             _layout.bindWallet( &_wallet );
@@ -93,6 +108,7 @@ namespace
             HousingNetPlotRef plot;
             plot._pLayout = &_layout;
             plot._pWallet = &_wallet;
+            plot._pOwner  = &_owner;
             plot._origin  = float3{ 0.0f, 0.0f, 0.0f };
             return plot;
         }
@@ -118,7 +134,7 @@ namespace
         unique_ptr<HousingNetTestPlotState> _pServerPlot;
         vector<unique_ptr<Client>>          _listClient;
 
-        explicit HousingNetRig( int64 serverFunds, int32 maxRequestsPerTick = 16, float32 maxReach = 0.0f, const HousingCallerLocator& locator = HousingCallerLocator{} )
+        explicit HousingNetRig( int64 serverFunds, int32 maxRequestsPerTick = 16, float32 maxReach = 0.0f, const HousingCallerLocator& locator = HousingCallerLocator{}, int32 plotSize = 6 )
             : _catalog{}
             , _settings{}
             , _serverPeers{ true }
@@ -133,8 +149,8 @@ namespace
                 </Part></HousingPartCatalog>)",
                                                        "test" ) );
             _settings._plotID     = hashed_string( "home" );
-            _settings._sizeX      = 6;
-            _settings._sizeZ      = 6;
+            _settings._sizeX      = plotSize;
+            _settings._sizeZ      = plotSize;
             _settings._levelCount = 2;
             _settings._maxReach   = maxReach;
             _pServerPlot          = make_unique<HousingNetTestPlotState>( _settings, _catalog, serverFunds );
@@ -144,13 +160,15 @@ namespace
             SW_REQUIRE_TRUE( _server.initialize( &_serverPeers, config ) );
         }
 
-        /** @brief 클라이언트를 붙입니다. 클라이언트 지갑은 서버와 다르게 크다 — 판정이 서버 지갑으로만 되는지 본다. */
-        Client& connect()
+        /** @brief 클라이언트를 새 연결로 붙입니다(@p principal 은 그 연결의 계정, 0 은 계정 없음). 클라이언트 지갑은 서버와 다르게 크다 — 판정이 서버 지갑으로만 되는지 본다. */
+        Client& connect( uint64 principal = 0 )
         {
             _listClient.push_back( make_unique<Client>() );
             Client&     client       = *_listClient.back();
             const int32 connectionID = static_cast<int32>( _listClient.size() ) - 1;
-            client._pPlot            = make_unique<HousingNetTestPlotState>( _settings, _catalog, 100000 );
+            _serverPeers._listPrincipal.resize( _listClient.size(), 0 );
+            _serverPeers._listPrincipal.back() = principal;
+            client._pPlot                      = make_unique<HousingNetTestPlotState>( _settings, _catalog, 100000 );
             client._replication.initialize( &client._peers );
             _serverPeers._listConnected.push_back( connectionID );
             _server.onConnectionOpened( connectionID );
@@ -203,6 +221,13 @@ namespace
             }
         }
 
+        /** @brief 연결 @p connectionID 를 닫습니다(서버 쪽). */
+        void disconnect( int32 connectionID )
+        {
+            (void)VectorUtil::removeValue( _serverPeers._listConnected, connectionID );
+            _server.onConnectionClosed( connectionID, NetDisconnectReason::Timeout );
+        }
+
         /** @brief 클라이언트의 마지막 판정입니다(이번 틱에 하나 이상 받았어야 한다). */
         HousingPlaceResult lastReply( size_t clientIndex ) const
         {
@@ -231,7 +256,7 @@ SW_TEST_CASE( HousingReplicationTest, ServerRefusesOthersPlotOverlapAndBudget )
     rig.tick();
     SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::Ok );
     SW_EXPECT_TRUE( rig.lastReply( 1 ) == HousingPlaceResult::NotOwner );
-    SW_EXPECT_EQUAL( 0, rig._server.findOwner( hashed_string( "home" ) ) );
+    SW_EXPECT_TRUE( rig._pServerPlot->_owner == HousingOwnerID::makeForConnection( 0, 0 ) ); // 계정 없는 연결 — 세션 주체
     SW_EXPECT_TRUE( rig._listClient[0]->_replication.findOwner( hashed_string( "home" ) ) == HousingPlotOwner::Self );
     SW_EXPECT_TRUE( rig._listClient[1]->_replication.findOwner( hashed_string( "home" ) ) == HousingPlotOwner::Other );
 
@@ -391,8 +416,7 @@ SW_TEST_CASE( HousingReplicationTest, LateJoinerReceivesTheSamePlotState )
     SW_EXPECT_TRUE( rig._listClient[0]->_listReply.empty() ); // 첫 클라이언트는 이번 틱에 새 답이 없다
 
     // 주인이 떠나면 주인 없음 — 늦게 들어온 쪽이 차지하고, 앞 주인의 편집은 되돌리지 못한다(이력을 비웠다).
-    rig._serverPeers._listConnected = { 1 };
-    rig._server.onConnectionClosed( 0, NetDisconnectReason::Timeout );
+    rig.disconnect( 0 );
     rig.tick();
     SW_EXPECT_TRUE( late._replication.findOwner( hashed_string( "home" ) ) == HousingPlotOwner::None );
     rig.send( 1, HousingNetRig::makeOp( HousingEditOp::Claim ) );
@@ -402,4 +426,146 @@ SW_TEST_CASE( HousingReplicationTest, LateJoinerReceivesTheSamePlotState )
     SW_EXPECT_TRUE( late._listReply[0]._result == HousingPlaceResult::Ok );
     SW_EXPECT_TRUE( late._listReply[1]._result == HousingPlaceResult::NothingToUndo );
     SW_EXPECT_TRUE( late._replication.findOwner( hashed_string( "home" ) ) == HousingPlotOwner::Self );
+}
+
+/**
+ * @brief [HousingReplicationTest] 주인은 연결이 아니라 주체다 — 계정 주인이 끊겼다 다시 붙으면(새 연결) 같은 주인이고, 다른 계정의 차지는 거절된다
+ */
+SW_TEST_CASE( HousingReplicationTest, OwnerIsThePrincipalAcrossReconnects )
+{
+    constexpr uint64 kAccount      = 77;
+    constexpr uint64 kOtherAccount = 88;
+    HousingNetRig    rig( 100 );
+    rig.connect( kAccount );
+    rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Claim ) );
+    rig.send( 0, HousingNetRig::makePlace( "floor", 0.5f, 0.5f ) );
+    rig.tick();
+    SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::Ok );
+    SW_EXPECT_EQUAL( kAccount, rig._pServerPlot->_owner );
+
+    // 끊겨도 계정 주인은 남는다(세이브에 실리는 값).
+    rig.disconnect( 0 );
+    rig.tick();
+    SW_EXPECT_EQUAL( kAccount, rig._pServerPlot->_owner );
+    SW_EXPECT_TRUE( HousingOwnerID::isPersistent( rig._pServerPlot->_owner ) );
+
+    // 같은 계정이 새 연결로 붙으면 내 부지로 받고 바로 짓는다.
+    HousingNetRig::Client& back = rig.connect( kAccount );
+    rig.tick();
+    SW_EXPECT_TRUE( back._replication.findOwner( hashed_string( "home" ) ) == HousingPlotOwner::Self );
+    rig.send( 1, HousingNetRig::makePlace( "floor", 1.5f, 0.5f ) );
+    rig.tick();
+    SW_EXPECT_TRUE( rig.lastReply( 1 ) == HousingPlaceResult::Ok );
+
+    // 다른 계정은 남의 부지 — 차지도 편집도 거절된다.
+    HousingNetRig::Client& other = rig.connect( kOtherAccount );
+    rig.tick();
+    SW_EXPECT_TRUE( other._replication.findOwner( hashed_string( "home" ) ) == HousingPlotOwner::Other );
+    rig.send( 2, HousingNetRig::makeOp( HousingEditOp::Claim ) );
+    rig.send( 2, HousingNetRig::makeOp( HousingEditOp::Undo ) );
+    rig.tick();
+    SW_REQUIRE_EQUAL( size_t{ 2 }, other._listReply.size() );
+    SW_EXPECT_TRUE( other._listReply[0]._result == HousingPlaceResult::NotOwner );
+    SW_EXPECT_TRUE( other._listReply[1]._result == HousingPlaceResult::NotOwner );
+    SW_EXPECT_EQUAL( size_t{ 2 }, rig._pServerPlot->_layout.getPlacements().size() );
+}
+
+/**
+ * @brief [HousingReplicationTest] 되돌리기 · 다시 하기도 거리로 판정한다 — 서버는 그 편집이 건드릴 이력 칸의 자리를 서버가 아는 요청자 자리와 견준다
+ */
+SW_TEST_CASE( HousingReplicationTest, UndoAndRedoAreJudgedByTheirTargetReach )
+{
+    float3        caller{ 0.0f, 0.0f, 0.0f };
+    float3*       pCaller = &caller;
+    HousingNetRig rig( 100, 16, 3.0f, HousingCallerLocator::create( [pCaller]( int32, float3& outPosition )
+    {
+        outPosition = *pCaller;
+        return true;
+    } ) );
+    rig.connect();
+    rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Claim ) );
+    rig.send( 0, HousingNetRig::makePlace( "floor", 0.5f, 0.5f ) );
+    rig.send( 0, HousingNetRig::makePlace( "floor", 1.5f, 0.5f ) );
+    HousingEditRequest remove;
+    remove._op          = HousingEditOp::Remove;
+    remove._placementID = 2;
+    rig.send( 0, remove );
+    rig.tick();
+    SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::Ok );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, rig._pServerPlot->_layout.getPlacements().size() );
+
+    // 요청자가 멀어지면 치운 바닥을 되돌리는 것(그 자리에 다시 놓기)도 닿지 않는다.
+    caller = float3{ 100.0f, 0.0f, 100.0f };
+    rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Undo ) );
+    rig.tick();
+    SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::OutOfReach );
+    SW_EXPECT_EQUAL( size_t{ 1 }, rig._pServerPlot->_layout.getPlacements().size() );
+
+    // 돌아오면 되돌린다. 다시 멀어지면 다시 하기(그 자리에서 치우기)도 닿지 않는다.
+    caller = float3{ 0.0f, 0.0f, 0.0f };
+    rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Undo ) );
+    rig.tick();
+    SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::Ok );
+    SW_EXPECT_EQUAL( size_t{ 2 }, rig._pServerPlot->_layout.getPlacements().size() );
+    caller = float3{ 100.0f, 0.0f, 100.0f };
+    rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Redo ) );
+    rig.tick();
+    SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::OutOfReach );
+    SW_EXPECT_EQUAL( size_t{ 2 }, rig._pServerPlot->_layout.getPlacements().size() );
+}
+
+/**
+ * @brief [HousingReplicationTest] 신뢰 메시지 하나(64 KB)를 넘는 부지(배치 4096)는 조각으로 가고 창이 차면 다음 틱에 잇는다 — 그 뒤 바뀐 배치는 델타로만 간다
+ */
+SW_TEST_CASE( HousingReplicationTest, LargePlotTravelsInChunksThenAsDeltas )
+{
+    constexpr int32 kPlotSize = 64;
+    HousingNetRig   rig( 1000000, 16, 0.0f, HousingCallerLocator{}, kPlotSize );
+    // 서버 월드의 편집(사람이 아닌 서버 코드)은 바로 적용된다 — 바닥 4096 개.
+    for ( int32 z = 0; z < kPlotSize; ++z )
+    {
+        for ( int32 x = 0; x < kPlotSize; ++x )
+        {
+            HousingCandidate candidate;
+            candidate._partID              = hashed_string( "floor" );
+            candidate._transform._position = float2{ static_cast<float32>( x ) + 0.5f, static_cast<float32>( z ) + 0.5f };
+            uint32 placementID             = 0;
+            SW_REQUIRE_TRUE( rig._pServerPlot->_layout.place( candidate, placementID ) == HousingPlaceResult::Ok );
+        }
+    }
+    HousingNetRig::Client& late = rig.connect();
+    // 신뢰 창이 조각 둘만 받는다 — 나머지는 서버가 들고 있다가 다음 틱에 잇는다(연결을 닫지 않는다).
+    rig._serverPeers._sendBudget = 2;
+    rig.tick();
+    SW_EXPECT_EQUAL( uint64{ 2 }, rig._server.getStats()._snapshotChunkCount );
+    SW_EXPECT_EQUAL( size_t{ 1 }, rig._server.getTransferCount() );
+    SW_EXPECT_TRUE( late._pPlot->_layout.getPlacements().empty() );
+    rig._serverPeers._sendBudget = -1;
+    rig.tick();
+    SW_EXPECT_EQUAL( size_t{ 0 }, rig._server.getTransferCount() );
+    SW_EXPECT_TRUE( rig._server.getStats()._snapshotChunkCount > 4 ); // 4096 배치는 64 KB 를 넘는다 — 조각이 여럿이다
+    SW_REQUIRE_EQUAL( size_t{ 4096 }, late._pPlot->_layout.getPlacements().size() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, late._replication.getStats()._snapshotAppliedCount );
+
+    // 하나를 치우고 하나를 옮기면 델타 하나만 간다(조각은 더 가지 않는다).
+    const uint64 chunkCount = rig._server.getStats()._snapshotChunkCount;
+    SW_REQUIRE_TRUE( rig._pServerPlot->_layout.remove( 4096 ) == HousingPlaceResult::Ok );
+    SW_REQUIRE_TRUE( rig._pServerPlot->_layout.move( 1, HousingTransform{
+                                                            float2{ 63.5f, 63.5f },
+                                                            0, 0.0f
+    },
+                                                     HousingPlacementMode::Grid ) == HousingPlaceResult::Ok );
+    rig.tick();
+    SW_EXPECT_EQUAL( chunkCount, rig._server.getStats()._snapshotChunkCount );
+    SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._deltaSentCount );
+    SW_EXPECT_EQUAL( uint64{ 1 }, late._replication.getStats()._deltaAppliedCount );
+    const HousingLayout& serverLayout = rig._pServerPlot->_layout;
+    const HousingLayout& lateLayout   = late._pPlot->_layout;
+    SW_REQUIRE_EQUAL( serverLayout.getPlacements().size(), lateLayout.getPlacements().size() );
+    for ( size_t index = 0; index < serverLayout.getPlacements().size(); ++index )
+    {
+        SW_EXPECT_EQUAL( serverLayout.getPlacements()[index]._placementID, lateLayout.getPlacements()[index]._placementID );
+        SW_EXPECT_TRUE( serverLayout.getPlacements()[index]._transform == lateLayout.getPlacements()[index]._transform );
+    }
+    SW_EXPECT_EQUAL( rig._pServerPlot->getFunds(), late._pPlot->getFunds() );
 }

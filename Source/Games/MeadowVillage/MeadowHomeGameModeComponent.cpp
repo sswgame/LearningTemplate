@@ -63,6 +63,8 @@ namespace sw
         const bool            bFinished = _bGaveUp == SW_TRUE || _nextStep >= static_cast<int32>( _listStep.size() );
         if ( bSkipped || bFinished || pPlot->getPendingRequestCount() > 0 )
             return; // 서버의 답을 기다리는 동안은 다음 단계를 보내지 않는다(받침 · 값이 앞 단계에 기댄다)
+        if ( pPlot->getNetRole() == HousingNetRole::Standalone && pPlot->getOwnerID() == HousingOwnerID::kNone )
+            (void)pPlot->claim(); // 혼자 하는 게임도 로컬 주체로 차지해 세이브에 주인을 싣는다
         if ( pPlot->isOwnedLocally() == false )
         {
             if ( _bClaimSent == SW_FALSE )

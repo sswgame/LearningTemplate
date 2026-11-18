@@ -7,7 +7,9 @@
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Scene/SceneObjectHash.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -32,6 +34,7 @@ namespace sw
         , _interpolationDelay{ 0.1f }
         , _session{}
         , _hashSubscription{}
+        , _pendingDeltaTime{ 0.0f }
         , _bTickChecked{ SW_FALSE }
     {
         setCanEverTick( true );
@@ -78,20 +81,32 @@ namespace sw
         Component::onTick( context );
         if ( _session.isActive() == false )
             return;
+        _pendingDeltaTime = context.getDeltaTime(); // 자기 오브젝트 쓰기 — 복제는 틱 뒤에 남의 파괴 컴포넌트를 쓴다
+        context.deferPostTickOnComponent( *this, []( DestructionNetSessionComponent& component, GameObjectManager& manager )
+        {
+            (void)manager;
+            component.updateSession();
+        } );
+    }
+
+    void DestructionNetSessionComponent::updateSession()
+    {
+        if ( _session.isActive() == false )
+            return;
         // 서버의 첫 틱(델타가 있는)에서 틱 빈도를 한 번 비교한다.
-        const bool bCheckServerTick = _session.getSide() == DestructionNetSide::Server && _bTickChecked == SW_FALSE && context.getDeltaTime() > 0.0f;
+        const bool bCheckServerTick = _session.getSide() == DestructionNetSide::Server && _bTickChecked == SW_FALSE && _pendingDeltaTime > 0.0f;
         if ( bCheckServerTick )
         {
             _bTickChecked = SW_TRUE;
-            if ( computeDestructionNetTickRateHz( context.getDeltaTime() ) != computeDestructionNetTickRateHz( _tickInterval ) )
+            if ( computeDestructionNetTickRateHz( _pendingDeltaTime ) != computeDestructionNetTickRateHz( _tickInterval ) )
             {
                 SW_LOG_ERROR_ID( "DestructionNetSessionComponent.DestructionNetSessionStopped", "Destruction net session stopped: the server ticks every %# s but Tick Interval is %# s - pose times would drift; set Tick Interval to the server fixed step",
-                                 context.getDeltaTime(), _tickInterval );
+                                 _pendingDeltaTime, _tickInterval );
                 _session.shutdown();
                 return;
             }
         }
-        _session.update( context.getDeltaTime() );
+        _session.update( _pendingDeltaTime );
         reportReplicaStats();
     }
 

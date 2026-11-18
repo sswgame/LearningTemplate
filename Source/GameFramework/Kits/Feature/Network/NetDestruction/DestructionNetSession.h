@@ -86,7 +86,9 @@ namespace sw
          */
         void update( float32 deltaTime );
 
-        bool               isActive() const { return _routerSubscription.isActive(); }
+        bool isActive() const { return _routerSubscription.isActive(); }
+        /** @brief 서버가 다음에 보낼 틱 번호입니다(`update` 마다 하나 오른다). 클라이언트는 0 입니다. */
+        uint32             getServerTick() const { return _serverTick; }
         DestructionNetSide getSide() const { return _side; }
         uint32             getObjectCount() const { return static_cast<uint32>( _listEntry.size() ); }
         /** @brief 등록한 오브젝트의 번호입니다(등록 순서). */

@@ -20,6 +20,7 @@
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 
 #include "GameFramework/Kits/Feature/World/Housing/Net/HousingNetSessionComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
@@ -31,6 +32,16 @@ namespace sw
     {
         struct HousingPlotInternal
         {
+            /** @brief 부지 상태 판 1 → 2: 앞에 주인 주체(uint64)가 생겼다. 옛 세이브의 부지는 주인 없음이다. 옛 칸(레이아웃 · 지갑)은 그대로 뒤에 붙는다(`FormatUpgradeStep::runStateStep`). */
+            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
+            {
+                (void)inOldBody;
+                StateIO writer( outNewBody );
+                uint64  owner = HousingOwnerID::kNone;
+                writer.value( owner );
+                return writer.isOk();
+            }
+
             /** @brief 부지 둘이 칸 경계에서 맞닿는 것은 겹침이 아니다(m). */
             static constexpr float32 kTouchEpsilon = 1.0e-3f;
 
@@ -344,6 +355,8 @@ namespace sw
         const StatefulComponentRegistrar<HousingPlotComponent> s_stateRegistration{ "HousingPlotComponent" };
     } // namespace
 
+    SW_STATE_FORMAT_UPGRADE( housingPlotState1To2, "HPLT", 1, 2, &HousingPlotInternal::upgradeStateFrom1 );
+
     SW_DEV_COMMAND( HousingPreview, "housing.preview", "housing.preview <plot> <part> <x> <z> <level> <yawDegrees> [free]", "Show the ghost of a part on a housing plot and why it can or cannot go there",
                     &HousingPlotInternal::runPreview );
     SW_DEV_COMMAND( HousingPlace, "housing.place", "housing.place <plot> <part> <x> <z> <level> <yawDegrees> [free]", "Place a catalog part on a housing plot (snap, cost)", &HousingPlotInternal::runPlace );
@@ -383,6 +396,7 @@ namespace sw
         , _viewRevision{ 0 }
         , _pendingRequestCount{ 0 }
         , _lastResult{ HousingPlaceResult::Ok }
+        , _ownerID{ HousingOwnerID::kNone }
         , _replicatedOwner{ HousingPlotOwner::None }
         , _netRole{ HousingNetRole::Standalone }
         , _bGhostShown{ SW_FALSE }
@@ -465,19 +479,26 @@ namespace sw
         io.header( kStateTag, kStateVersion );
         if ( io.isWriting() )
         {
+            // 세션 주체(계정 없는 연결)는 그 세션에만 뜻이 있다 — 싣지 않는다(불러온 판에서 아무도 열지 못하는 부지가 된다).
+            uint64 owner = HousingOwnerID::isPersistent( _ownerID ) ? _ownerID : HousingOwnerID::kNone;
+            io.value( owner );
             io.value( _layout );
             io.value( _wallet );
             return;
         }
         // 컴포넌트는 복사하지 않는다 — 지역 사본에 읽고 끝까지 맞으면 옮긴다(반쯤 읽은 부지를 남기지 않는다).
+        uint64        owner  = HousingOwnerID::kNone;
         HousingLayout layout = _layout;
         Wallet        wallet = _wallet;
+        io.value( owner );
+        io.check( owner == HousingOwnerID::kNone || HousingOwnerID::isPersistent( owner ) );
         io.value( layout );
         io.value( wallet );
         if ( io.isOk() == false )
             return;
-        _layout = std::move( layout );
-        _wallet = std::move( wallet );
+        _ownerID = owner;
+        _layout  = std::move( layout );
+        _wallet  = std::move( wallet );
         _layout.bindWallet( &_wallet );
     }
 
@@ -673,6 +694,8 @@ namespace sw
         HousingPlaceResult result = HousingPlaceResult::Ok;
         if ( queueRemoteEdit( request, result ) )
             return result;
+        if ( _netRole == HousingNetRole::Standalone )
+            _ownerID = HousingOwnerID::kLocal; // 로컬 주체 — 세이브에 실린다
         _lastResult = _netRole == HousingNetRole::Standalone ? HousingPlaceResult::Ok : HousingPlaceResult::NotOwner;
         return _lastResult;
     }
@@ -699,6 +722,7 @@ namespace sw
         HousingNetPlotRef plot;
         plot._pLayout = &_layout;
         plot._pWallet = &_wallet;
+        plot._pOwner  = &_ownerID;
         plot._origin  = getPlotOrigin();
         return plot;
     }

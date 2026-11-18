@@ -53,7 +53,7 @@ namespace sw
         friend class HousingNetSessionComponent; ///< 세션이 틱 뒤에 요청을 꺼내 보내고 판정 · 주인을 돌려준다
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "HPLT" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; ///< 2: 앞에 주인 주체(`HousingOwnerID`)가 생겼다
 
         HousingPlotComponent();
         ~HousingPlotComponent() override;
@@ -69,6 +69,8 @@ namespace sw
         HousingPlaceResult redo();
         /** @brief 부지를 차지합니다. 네트워크가 없으면 늘 내 것이라 `Ok`, 클라이언트는 서버에 요청하고 `Pending`, 서버 월드는 사람이 없어 `NotOwner` 입니다. */
         HousingPlaceResult claim();
+        /** @brief 주인 주체입니다(`HousingOwnerID` — 서버 · 혼자 하는 게임). 클라이언트는 주체를 받지 않는다(`isOwnedLocally`). */
+        uint64 getOwnerID() const { return _ownerID; }
         /** @brief 이 월드의 플레이어가 편집할 수 있는 부지면 true 입니다(네트워크 없음, 또는 서버가 내 것이라고 보낸 부지). */
         bool isOwnedLocally() const;
         /** @brief 답을 기다리는 요청 수입니다(클라이언트). */
@@ -168,6 +170,7 @@ namespace sw
         uint32                             _viewRevision;        ///< 뷰가 맞춘 레이아웃 판
         uint32                             _pendingRequestCount; ///< 클라이언트 — 보냈거나 쌓였고 아직 답이 없는 요청
         HousingPlaceResult                 _lastResult;
+        uint64                             _ownerID;         ///< 주인 주체(`HousingOwnerID`) — 서버 · 혼자 하는 게임이 쓰고 세이브에 싣는다
         HousingPlotOwner                   _replicatedOwner; ///< 클라이언트 — 서버가 마지막으로 보낸 주인
         HousingNetRole                     _netRole;
         uint8                              _bGhostShown : 1; ///< 미리보기를 켰다
