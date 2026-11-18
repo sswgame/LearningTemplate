@@ -65,6 +65,7 @@ views = [
     "Common/Input/CommandPalettePopup.cpp",
     "Common/Input/EditorCommandGUI.cpp",
     "Common/Input/QuickLauncherPopup.cpp",
+    "Viewport/EditorColliderHandleTool.cpp",
     "Viewport/EditorDebugHUDView.cpp",
     "Viewport/EditorPreviewGizmo.cpp",
     "Viewport/EditorProjectedLineRenderer.cpp",

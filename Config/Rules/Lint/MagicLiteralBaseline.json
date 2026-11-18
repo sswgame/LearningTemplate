@@ -332,7 +332,7 @@
     "Source/Editor/SelfTest/EditorSelfTestUnitTests.cpp": {"integer": 1},
     "Source/Editor/SelfTest/EditorUndoSelfTests.cpp": {"integer": 1},
     "Source/Editor/SelfTest/TestRunnerPanel.cpp": {"float": 1, "integer": 1},
-    "Source/Editor/Viewport/EditorColliderHandleTool.cpp": {"minus-one": 1, "float": 1},
+    "Source/Editor/Viewport/EditorColliderHandleTool.cpp": {"float": 1},
     "Source/Editor/Viewport/EditorDebugHUDView.cpp": {"float": 3},
     "Source/Editor/Viewport/EditorPreviewGizmo.cpp": {"integer": 2},
     "Source/Editor/Viewport/EditorViewportAssetPlacement.cpp": {"float": 4},
