@@ -11,6 +11,7 @@
 #include "Editor/Viewport/EditorViewportOverlays.h"
 #include "Editor/Viewport/EditorViewportPicker.h"
 #include "Editor/Viewport/EditorVisualizerStats.h"
+#include "Editor/Viewport/Model/EditorDebugHUDModel.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 #include "Editor/Viewport/ViewportToolbarSettings.h"
 
@@ -106,7 +107,8 @@ namespace sw::editor
         EditorViewportGizmo          _gizmo;                    ///< 트랜스폼 기즈모와 그 되돌리기
         EditorViewportCanvasOverlay  _canvasOverlay;            ///< 격자, 자, 방향 큐브
         EditorViewportOverlays       _overlays;                 ///< 씬 뷰 위의 오버레이 바 목록
-        EditorDebugHUDView           _hudView;                  ///< 오른쪽 위의 HUD 박스
+        EditorDebugHUDModel          _hudModel;                 ///< HUD 박스의 섹션 줄(4 Hz 로 다시 적는다)
+        EditorDebugHUDView           _hudView;                  ///< 오른쪽 위의 HUD 박스(그 줄을 그린다)
         EditorVisualizerStats        _visualizerStats;          ///< 시각화가 마지막으로 그린 양(그리기 인자로 시각화에 넘긴다)
         EditorVisualizerDrawList     _visualizerDrawList;       ///< 이번 프레임에 모은 시각화 도형 값(모으기 → 그리기, 프레임마다 다시 쓴다)
         EditorViewportAssetPlacement _assetPlacement;           ///< 끌어 온 애셋의 고스트 · 표면 배치(끄는 동안 정적 물리 사본을 든다)

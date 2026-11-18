@@ -81,6 +81,7 @@ namespace sw::editor
         , _gizmo{}
         , _canvasOverlay{}
         , _overlays{}
+        , _hudModel{}
         , _hudView{}
         , _visualizerStats{}
         , _visualizerDrawList{}
@@ -283,10 +284,10 @@ namespace sw::editor
 
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
             // 위쪽이나 오른쪽에 붙은 오버레이 바 아래에 둔다(지난 프레임 위치). 방향 큐브는 HUD 박스 아래다.
-            const float2  topRightInset = _overlays.computeTopRightInset();
-            const float32 hudBoxHeight  = _toolbarSettings._bShowHUD
-                                            ? _hudView.draw( ImGui::GetWindowDrawList(), canvasPos, canvasSize, topRightInset, ImGui::GetIO().DeltaTime )
-                                            : topRightInset._y;
+            const float2 topRightInset = _overlays.computeTopRightInset();
+            if ( _toolbarSettings._bShowHUD )
+                _hudModel.update( ImGui::GetIO().DeltaTime );
+            const float32 hudBoxHeight = _toolbarSettings._bShowHUD ? _hudView.draw( ImGui::GetWindowDrawList(), canvasPos, canvasSize, topRightInset, _hudModel ) : topRightInset._y;
 
             if ( _toolbarSettings._bShowOrientationCube )
                 EditorViewportCanvasOverlay::drawOrientationCube( ImGui::GetWindowDrawList(), canvasPos, canvasSize, hudBoxHeight, _camera );
