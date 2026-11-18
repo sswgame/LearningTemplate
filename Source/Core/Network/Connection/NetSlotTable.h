@@ -25,6 +25,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetPacketSealer.h"
+#include "Core/Network/Connection/NetSendThrottle.h"
 #include "Core/Network/NetTypes.h"
 
 namespace sw
@@ -42,6 +43,7 @@ namespace sw
         float64                     _connectStartTime{ 0.0 };
         float64                     _sendCredit{ 0.0 };                         ///< 대역폭 토큰(바이트). 0보다 크면 꽉 찬 패킷을 보낼 수 있다. 보낸 뒤에는 음수가 될 수 있다.
         float64                     _lastCreditTime{ -1.0 };                    ///< 토큰을 마지막으로 채운 시각. 음수면 아직 채운 적이 없다는 뜻이며, 연결되면 가득 채운다.
+        NetSendThrottle             _sendThrottle{};                            ///< 토큰이 차는 속도(`NetEndpointConfig::_sendThrottle` 이 있을 때만 조절한다).
         NetConnectionState          _state{ NetConnectionState::Disconnected }; ///< 서버 슬롯은 Connecting 을 거치지 않는다. 응답이 맞아야 슬롯을 할당하기 때문이다.
         uint8                       _bRemoteDebugHold{ SW_FALSE };              ///< 상대가 마지막 데이터 패킷에서 디버거 대기를 알렸다(개발 빌드만 읽는다).
         /**

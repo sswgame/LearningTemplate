@@ -15,7 +15,7 @@
  *     if ( channel.registerMessage<MechArenaSnapshot>( kMechSnapshotKind ) == false ) return false;
  *     NetEndpointConfig hostSettings;
  *     if ( channel.seal( baseSettings, hostSettings ) == false ) return false;
- *     host.initialize( &transport, hostSettings );               // 핸드셰이크가 스키마를 확인한다
+ *     if ( host.initialize( &transport, hostSettings ) == false ) return false; // 핸드셰이크가 스키마를 확인한다
  *     (void)channel.writeMessage( kMechSnapshotKind, snapshot, writer ); // 본문만
  * @endcode
  */

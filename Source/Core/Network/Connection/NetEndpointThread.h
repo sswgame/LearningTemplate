@@ -39,7 +39,7 @@ namespace sw
      * @class NetEndpointThread
      * @brief `start` 로 스레드를 띄우고 `stop`(또는 소멸)으로 합류합니다. 엔드포인트 · 전송은 스레드보다 오래 살아야 합니다.
      * @code
-     *     host.initialize( &transport, settings );
+     *     if ( host.initialize( &transport, settings ) == false ) return false;
      *     (void)host.listen();
      *     (void)netThread.start( &host );
      *     // 게임 스레드: host.sendMessage( … ) · router.poll( host ) — update 는 부르지 않는다
