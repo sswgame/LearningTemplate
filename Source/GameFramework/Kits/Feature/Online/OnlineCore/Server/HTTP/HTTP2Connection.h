@@ -10,6 +10,7 @@
  *          한 스레드가 쓴다(`HTTP2Client` 가 잠금 안에서 부른다).
  */
 #pragma once
+#include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -136,7 +137,7 @@ namespace sw
         HPACKDecoder                    _decoder;
         HTTP2ConnectionConfig           _settings;
         unordered_map<uint32, Stream>   _mapStream;
-        vector<Queued>                  _listQueued;
+        deque<Queued>                   _listQueued; ///< 스트림 자리를 기다리는 요청(보낸 순서) — 앞에서 꺼내므로 링이다
         EventBuffer<HTTPClientResponse> _responseBuffer;
         vector<uint8>                   _inBytes;
         vector<uint8>                   _listHeaderBlock; ///< 이어 받는 헤더 블록

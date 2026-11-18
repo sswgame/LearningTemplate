@@ -165,7 +165,7 @@ namespace sw
         while ( _listWaiting.empty() == false && _runningCount < _settings._maxConcurrentPasswordHashes )
         {
             unique_ptr<HashJob> pNext = std::move( _listWaiting.front() );
-            _listWaiting.erase( _listWaiting.begin() );
+            _listWaiting.pop_front();
             launch( std::move( pNext ) );
         }
         return static_cast<int32>( listFinished.size() );
@@ -194,7 +194,7 @@ namespace sw
         if ( _pTaskManager != nullptr && _stage.isValid() )
             _pTaskManager->waitStage( _stage, "PasswordHashQueue::shutdown" ); // 도는 해시는 끝까지 — 워커가 쓰는 칸을 먼저 놓지 않는다
         // 기다리던 일은 돌리지 않는다 — 취소 완료로 돌려준다(먼저 빼야 아래 거두기가 올리지 않는다).
-        vector<unique_ptr<HashJob>> listWaiting;
+        deque<unique_ptr<HashJob>> listWaiting;
         listWaiting.swap( _listWaiting );
         (void)pollCompletions( outListCompletion );
         for ( unique_ptr<HashJob>& pWaiting : listWaiting )

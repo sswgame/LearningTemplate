@@ -129,7 +129,7 @@ namespace sw
         while ( _listQueued.empty() == false && _mapStream.size() < _peerMaxConcurrentStreams )
         {
             Queued queued = std::move( _listQueued.front() );
-            _listQueued.erase( _listQueued.begin() );
+            _listQueued.pop_front();
             if ( isUsable() == false )
             {
                 pushFailure( queued._requestID, "HTTP/2 connection is not usable" );

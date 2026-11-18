@@ -25,6 +25,7 @@
  *          Nakama 의 채널 메시지(DB 기록과 노드 간 클러스터 버스)와 같은 구조이다.
  */
 #pragma once
+#include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
@@ -257,7 +258,7 @@ namespace sw
     private:
         unordered_map<AccountID, Member>         _mapAccountToMember;
         unordered_map<string, vector<AccountID>> _mapChannelToMember;
-        vector<ChatMessage>                      _listHistoryQueue;
+        deque<ChatMessage>                       _listHistoryQueue; ///< 저장소에 쓸 기록(받은 순서) — 앞에서 꺼내고 넘치면 앞을 버리므로 링이다
         EventBuffer<ChatCompletion>              _completionBuffer;
         EventBuffer<ChatDelivery>                _deliveryBuffer;
         EventBuffer<ChatBusTopicChange>          _busTopicBuffer;
