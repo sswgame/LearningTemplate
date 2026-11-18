@@ -10,7 +10,7 @@ Scripts/dev/test_history.py
 여러 묶음 검증을 모아야 보인다 — 언리얼 Gauntlet · Horde 의 테스트 이력, 크로미움 Flakiness Dashboard 와 같은 자리를 저장소 안 sqlite 하나로 둔다.
 흔들림 지수 = 연속 두 실행의 결과가 바뀐 횟수 / (실행 수 - 1). 0 은 늘 같음, 1 은 매번 바뀜.
 
-  py -3 Scripts/dev/test_history.py ingest <보고 폴더…> [--commit <sha>]     # 기본 DB: Saved/TestHistory/history.sqlite
+  py -3 Scripts/dev/test_history.py ingest <보고 폴더…> [--commit <sha>]     # DB: Saved/TestHistory/history.sqlite
   py -3 Scripts/dev/test_history.py report [--min-runs 3] [--top 30]
   py -3 Scripts/dev/test_history.py quarantine [--ctest-exclude]              # 표를 검사한다(만료 · 빠진 칸은 실패), --ctest-exclude 는 ctest -E 정규식을 찍는다
   py -3 Scripts/dev/test_history.py costs [--write]                           # 시나리오 → 초 시간표(통과한 실행의 백엔드별 p50 합). --write 는 Config/Dev/ScenarioCosts.json 을 쓴다
@@ -776,7 +776,6 @@ def run_self_check() -> None:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="시나리오 보고 이력(sqlite) · 흔들림 · p95 추세 · 격리 표")
     parser.add_argument("--self-check", action="store_true")
-    parser.add_argument("--database", type=Path, default=None, help=f"기본 {DEFAULT_DATABASE}")
     sub = parser.add_subparsers(dest="command")
     ingest_parser = sub.add_parser("ingest")
     ingest_parser.add_argument("roots", nargs="+", type=Path)
@@ -808,7 +807,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_changed(project_root, arguments.preset, arguments.base)
     if arguments.command not in ("ingest", "report", "costs"):
         parser.error("ingest · report · quarantine · costs · changed 중 하나")
-    connection = open_database(arguments.database or project_root / DEFAULT_DATABASE)
+    connection = open_database(project_root / DEFAULT_DATABASE)
     if arguments.command == "ingest":
         added = ingest(connection, read_reports(arguments.roots), arguments.commit)
         print(f"[TestHistory] {added} 보고를 더했다")

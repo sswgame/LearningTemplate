@@ -145,18 +145,12 @@ def serve(folder: Path, port: int) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts web-package", description="Web-Shipping 빌드를 브라우저 폴더로 묶고 로컬 서버로 띄운다")
     parser.add_argument("--game", required=True, help="게임 프리셋 이름(Config/Game/<게임>.json — 담을 팩을 고른다)")
-    parser.add_argument("--build-dir", default=f"build/{PRESET_NAME}", help="Web-Shipping 빌드 폴더(저장소 기준)")
-    parser.add_argument("--packs-dir", default=None, help="웹 대상으로 쿠킹한 팩 폴더(기본 <build-dir>/Bin/Packs)")
-    parser.add_argument("--out-dir", default=None, help="묶은 폴더(기본 <build-dir>/Web/<게임>)")
     parser.add_argument("--serve", action="store_true", help="묶은 뒤 교차 출처 격리 헤더를 주는 로컬 서버로 띄운다")
-    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="로컬 서버 포트")
     args = parser.parse_args(argv)
     project_root = get_project_root()
-    build_dir = (project_root / args.build_dir).resolve()
-    packs_dir = (project_root / args.packs_dir).resolve() if args.packs_dir else build_dir / "Bin" / PACK_FOLDER_NAME
-    out_dir = (project_root / args.out_dir).resolve() if args.out_dir else build_dir / "Web" / args.game
+    build_dir = (project_root / "build" / PRESET_NAME).resolve()
     try:
-        folder = make_web_package(args.game, build_dir, packs_dir, out_dir, project_root)
+        folder = make_web_package(args.game, build_dir, build_dir / "Bin" / PACK_FOLDER_NAME, build_dir / "Web" / args.game, project_root)
     except WebPackageError as error:
         print(f"[web-package] FAILED {error}")
         return ExitCode.VIOLATION
@@ -164,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[web-package] done {folder} {size}")
     if args.serve:
         os.chdir(folder)
-        serve(folder, args.port)
+        serve(folder, DEFAULT_PORT)
     return ExitCode.PASSED
 
 

@@ -140,6 +140,16 @@ if(TARGET EditorModule)
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(ToolCheckAssetRefs PROPERTIES LABELS nogpu TIMEOUT 300)
 
+	# 임포트 검사 — 원본과 임포트 산출물(`.dds` · `.mesh` · `.heightfield`)이 맞는지 보기만 한다(고정 단계 `Import.*` 뒤라 새 체크아웃에서도 맞아야 한다).
+	# 임포트가 산출물을 쓰고 검사가 다른 판정(스탬프 · 판 번호)을 하면 여기서 갈린다. 형식 변형 검사(`--check-texture-variants`)는 넣지 않는다 — 모든 텍스처를
+	# ASTC · ETC2 로 먼저 구워야 해(`--cook-texture-variants`, 교차 빌드의 CookAssets 몫) 묶음마다 돌 크기가 아니다.
+	foreach(import_kind IN ITEMS textures models heightfields)
+		add_test(NAME ToolCheck.${import_kind}
+			COMMAND $<TARGET_FILE:App> --check-${import_kind} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/ToolCheck.${import_kind}.log
+			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+		set_tests_properties(ToolCheck.${import_kind} PROPERTIES LABELS nogpu TIMEOUT 300)
+	endforeach()
+
 	# 초상화 굽기 — 스튜디오 씬 → 패킷(게임 스레드)과 그리기 · 읽기(렌더 스레드 명령 `RenderThread::executeAndWait`)를 한 번 지난다.
 	# 예전에는 게임 스레드가 렌더 스레드를 세우고 직접 그렸고, 그 길을 도는 테스트가 없었다. 창 · GPU 가 필요해 hostgpu 다.
 	# 백엔드마다 돈다 — 기본 백엔드(DX12)만 돌 때 DX11 에서 머티리얼 PSO 가 만드는 중인 프레임을 읽어 빈 사진이 되던 결함이 숨었다.
@@ -151,6 +161,31 @@ if(TARGET EditorModule)
 		set_tests_properties(Bake.Portraits.${backend} PROPERTIES LABELS hostgpu TIMEOUT 300)
 	endforeach()
 endif()
+
+# 헤드리스 도구 명령 — 사람이 손으로 쓰는 길이라 자동으로 돌지 않으면 깨져도 모른다. 작은 입력으로 한 번씩 돌고 산출물을 본다.
+# 리플렉션 문서: 등록된 타입으로 Markdown 을 쓴다(한 장도 못 쓰면 종료 코드가 실패다).
+add_test(NAME Tool.WriteReflectionDocs
+	COMMAND $<TARGET_FILE:App> --write-reflection-docs=${CMAKE_BINARY_DIR}/Testing/ReflectionDocs -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Tool.WriteReflectionDocs.log
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+set_tests_properties(Tool.WriteReflectionDocs PROPERTIES LABELS nogpu TIMEOUT 300)
+# 립싱크 임포트: 트랙을 소스 트리가 아니라 `Testing/` 아래 출력 폴더(`-lipsync-dir`)에 쓴다(`Tool/RunImportLipSync.cmake`).
+add_test(NAME Tool.ImportLipSync
+	COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DOUT_DIR=${CMAKE_BINARY_DIR}/Testing/LipSync" "-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs"
+		-P "${CMAKE_CURRENT_SOURCE_DIR}/Tool/RunImportLipSync.cmake"
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+set_tests_properties(Tool.ImportLipSync PROPERTIES LABELS nogpu TIMEOUT 300)
+# 리타깃 베이크: 커밋된 프로필로 임포트한 기사 클립 하나를 굽는다(`Tool/RunBakeRetarget.cmake`).
+add_test(NAME Tool.BakeRetarget
+	COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DCONTENT_DIR=${CMAKE_SOURCE_DIR}/Content" "-DOUT_DIR=${CMAKE_BINARY_DIR}/Testing/Retarget"
+		"-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs" -P "${CMAKE_CURRENT_SOURCE_DIR}/Tool/RunBakeRetarget.cmake"
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+set_tests_properties(Tool.BakeRetarget PROPERTIES LABELS nogpu TIMEOUT 300)
+# 패치 만들기: 기준 빌드 → 새 빌드 → 서명한 패치 → 런타임 적용 결과 비교(`Pack/RunMakePatch.cmake`, 언리얼 `-generatepatch` 자리).
+add_test(NAME Pack.MakePatch
+	COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DWORK_DIR=${CMAKE_BINARY_DIR}/Testing/MakePatch" "-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs"
+		-P "${CMAKE_CURRENT_SOURCE_DIR}/Pack/RunMakePatch.cmake"
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+set_tests_properties(Pack.MakePatch PROPERTIES LABELS nogpu TIMEOUT 300)
 
 # 생성 표 동시 갱신 — 빌드 폴더 여럿이 저장소의 참조 칸 표(`Config/Dev/AssetReferenceFields.generated.json`)를 함께 고쳐도 주인 줄을 잃지 않는다(잠금 + 원자 교체).
 # 표의 사본을 임시 폴더에 두고 자식 프로세스 열둘이 서로 다른 주인을 동시에 갈아 끼운다.
@@ -245,6 +280,23 @@ if(TARGET OnlineLoadBot)
 			-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/OnlineLoadBot.localServer.log
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(OnlineLoadBot.localServer PROPERTIES LABELS nogpu TIMEOUT 120)
+
+	# 대상 인자의 짝 규칙 — 전용 서버에 붙는 길(`--server` · `--tls` · `--game`)과 외부 저장소(`--store-config` — PostgreSQL · RESP)는 띄울 서버 · 서비스가 있어야 해
+	# 여기서 돌지 않는다(`py -3 -m Scripts net-pair` · `online-local` 몫). 대신 그 인자를 읽고 맞지 않는 짝을 거절하는지 본다(종료 코드가 아니라 거절 글로 판정한다).
+	set(load_bot_base_argument --scenario=${load_bot_dir}/Scenarios/smoke.json --load=${load_bot_dir}/Scenarios/smoke.load.xml -unattended)
+	add_test(NAME OnlineLoadBot.RejectsTwoTargets
+		COMMAND $<TARGET_FILE:OnlineLoadBot> ${load_bot_base_argument} --server=127.0.0.1:1 --local-server=0
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(OnlineLoadBot.RejectsTwoTargets PROPERTIES PASS_REGULAR_EXPRESSION "exactly one of --server")
+	add_test(NAME OnlineLoadBot.RejectsTlsWithLocalServer
+		COMMAND $<TARGET_FILE:OnlineLoadBot> ${load_bot_base_argument} --local-server=0 --online-config=${load_bot_dir}/LoadBot.online.json --tls=${load_bot_dir}/LoadBot.online.json
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(OnlineLoadBot.RejectsTlsWithLocalServer PROPERTIES PASS_REGULAR_EXPRESSION "--tls goes with --server")
+	add_test(NAME OnlineLoadBot.RejectsStoreConfigWithServer
+		COMMAND $<TARGET_FILE:OnlineLoadBot> ${load_bot_base_argument} --server=127.0.0.1:1 --store-config=${load_bot_dir}/LoadBot.online.json
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(OnlineLoadBot.RejectsStoreConfigWithServer PROPERTIES PASS_REGULAR_EXPRESSION "--store-config goes with --local-server")
+	set_tests_properties(OnlineLoadBot.RejectsTwoTargets OnlineLoadBot.RejectsTlsWithLocalServer OnlineLoadBot.RejectsStoreConfigWithServer PROPERTIES LABELS nogpu TIMEOUT 60)
 
 	# 온라인 키트(클라이언트 · 서버 쌍)의 단위 테스트 — 그 키트를 싣는 게임이 없어 `UnitTests.<게임>` 에 들지 않는다. 봇이 키트를 모두 싣으므로 엔진 인자(대시 하나)로
 	# 테스트만 돌린다(`OnlineLoadBot` 의 `runBot` 이 헤드리스 결과로 끝낸다). `Tests/` 가 있는 키트 폴더만 넘긴다(빈 실행은 실패다).
@@ -351,7 +403,7 @@ endif()
 
 add_subdirectory(Scenario)
 
-# 퍼저(Linux-Fuzz 프리셋만) — 신뢰 경계 파서의 스모크 `Fuzz.<이름>.Smoke`(라벨 fuzz). 임포트 산출물을 읽지 않아 위의 고정 단계를 요구하지 않는다(다른 폴더라 걸리지 않는다).
+# 퍼저(Linux-Fuzz 프리셋만) — 신뢰 경계 파서의 스모크 `Fuzz.<이름>.Smoke`. 임포트 산출물을 읽지 않아 위의 고정 단계를 요구하지 않는다(다른 폴더라 걸리지 않는다).
 if(SW_ENABLE_FUZZING)
 	add_subdirectory(Fuzz)
 endif()

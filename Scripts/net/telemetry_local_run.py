@@ -37,6 +37,9 @@ _TELEMETRY_LINKED = re.compile(r"\[TelemetryUpload\] telemetry uploads go to")
 _CRASH_SENT = re.compile(r"\[TelemetryUpload\] crash reports: (\d+) sent from '([^']+)'")
 _PROBLEM_LINE = re.compile(r"\[(Error|Warning)\]")
 _FAKE_SESSION = "telemetrylocalrun"
+_PRESET = "Ninja-Debug"  # build/<프리셋>/Bin 의 App 을 쓴다
+_CLIENT_DELAY_SECONDS = 8.0  # 기동 줄을 본 뒤 명령을 보낼 때까지
+_TIMEOUT_SECONDS = 60.0  # 기동 줄을 기다리는 최대 초
 
 
 @dataclass
@@ -144,8 +147,8 @@ def _run_once(argument: argparse.Namespace, client_exe: Path, out_dir: Path, por
     print(f"[telemetry-local] run {index}: {' '.join(client_args)}")
     with log.open("wb") as client_out:
         client = subprocess.Popen(client_args, cwd=str(client_exe.parent), stdin=subprocess.PIPE, stdout=client_out, stderr=subprocess.STDOUT, env=environment)
-        _wait_for_text(log, _CRASH_SENT, argument.timeout, client)
-        time.sleep(argument.client_delay)  # 게임 인스턴스가 서고 표준 입력 명령을 받을 때까지
+        _wait_for_text(log, _CRASH_SENT, _TIMEOUT_SECONDS, client)
+        time.sleep(_CLIENT_DELAY_SECONDS)  # 게임 인스턴스가 서고 표준 입력 명령을 받을 때까지
         try:
             if consent:
                 _send(client, "settings.apply telemetry.enabled=true")
@@ -158,11 +161,11 @@ def _run_once(argument: argparse.Namespace, client_exe: Path, out_dir: Path, por
 
 def _run(argument: argparse.Namespace) -> int:
     root = get_project_root()
-    client_exe = root / "build" / argument.preset / "Bin" / executable_name("App")
+    client_exe = root / "build" / _PRESET / "Bin" / executable_name("App")
     if not client_exe.exists():
-        print(f"[telemetry-local] FAIL: {client_exe} does not exist - build the '{argument.preset}' preset first")
+        print(f"[telemetry-local] FAIL: {client_exe} does not exist - build the '{_PRESET}' preset first")
         return int(ExitCode.CHECK_INVALID)
-    out_dir = Path(argument.out) if argument.out else root / "Saved" / "TelemetryLocalRun"
+    out_dir = root / "Saved" / "TelemetryLocalRun"
     if out_dir.exists():
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True)
@@ -206,9 +209,5 @@ def main(list_argument: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts telemetry-local", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="mode", required=True)
     run_parser = sub.add_parser("run", help="수신기를 띄우고 게임을 두 번 띄워 텔레메트리 · 크래시 업로드를 본다")
-    run_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 App 을 쓴다)")
     run_parser.add_argument("--game", default="Shooter3D", help="게임 이름")
-    run_parser.add_argument("--client-delay", type=float, default=8.0, help="기동 줄을 본 뒤 명령을 보낼 때까지 기다리는 초")
-    run_parser.add_argument("--timeout", type=float, default=60.0, help="기동 줄을 기다리는 최대 초")
-    run_parser.add_argument("--out", default="", help="로그 · 사용자 설정을 둘 폴더(기본 Saved/TelemetryLocalRun, 매번 비운다)")
     return _run(parser.parse_args(list_argument))

@@ -423,7 +423,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--backend', default='dx12')
     parser.add_argument('--show', action='store_true', help='창을 띄워 돈다(-unattended 를 뺀다 — 판정은 같다)')
     parser.add_argument('--self-check', action='store_true')
-    parser.add_argument('--start', help='이분 탐색을 건너뛰고 이 단계(시나리오 이름 또는 경로)부터 줄이기만 한다 — 앞 실행이 시작 단계를 찾았을 때')
     parser.add_argument('--golden-margins', nargs='*', metavar='보고 폴더 · 파일',
                         help='체인 대신: 시나리오 보고(goldenSamples[])를 모아 골든마다 실행 사이 최대 차이와 여유를 낸다(기본 build/<preset>/Bin/Saved/Automation)')
     parser.add_argument('--golden-coverage', action='store_true', help='체인 대신: 플랫폼 · 백엔드마다 저장소 골든 수(체인 백엔드 표와 대조, 체인 밖 백엔드의 골든 0 이 드러난다)')
@@ -502,12 +501,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     before = paths[:target_index]
     print(f'{options.chain}: {target_name} (단계 {target_index + 1}/{len(paths)}) · {options.preset} {options.backend}', flush=True)
-    if options.start:
-        first_bad = next((index for index, path in enumerate(before) if path == options.start or read_scenario_name(path) == options.start), None)
-        if first_bad is None:
-            parser.error(f'{options.start} 는 {target_name} 앞 단계가 아니다')
-    else:
-        first_bad = find_first_bad_step(before, fails)
+    first_bad = find_first_bad_step(before, fails)
     if first_bad is None:
         print('재현 안 됨 — 단독으로 지는지(단계만 -scenario= 로) · 다른 백엔드 · 체인 밖 상태를 본다')
         return 1

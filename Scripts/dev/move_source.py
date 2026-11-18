@@ -303,7 +303,6 @@ def main_rename(argv: list[str]) -> int:
     parser.add_argument("pair", nargs="+", help="Old=New")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force", action="store_true", help="새 이름이 이미 쓰여도 바꾼다")
-    parser.add_argument("--regex", action="store_true", help="Old 를 정규식(낱말 경계 없이)으로, New 를 치환식으로 — 이름 일부를 바꾼다. 충돌 검사는 하지 않으니 빌드로 확인한다")
     parser.add_argument("--include-strings", action="store_true",
                         help="C 계열 소스의 문자열 리터럴 안도 바꾼다(기본은 건너뛰고 그 자리를 알린다 — 매직 · JSON 키 · 내보내기 기호는 바깥 철자다)")
     args = parser.parse_args(argv)
@@ -330,27 +329,6 @@ def main_rename(argv: list[str]) -> int:
             print(f"[rename-symbol] 문자열 안은 건너뛰었다 — 데이터 · 바깥 이름이면 그대로 두고, 우리 이름이면 손으로 고치거나 --include-strings: "
                   + ", ".join(list_skipped[:20]) + (" …" if len(list_skipped) > 20 else ""))
 
-    if args.regex:
-        list_rule = [(re.compile(old), new) for old, new in list_pair]
-
-        def rewrite_regex(part: str) -> str:
-            for pattern, replacement in list_rule:
-                part = pattern.sub(replacement, part)
-            return part
-
-        changed_count = 0
-        list_changed: list[Path] = []
-        for path in list_tracked_text(root):
-            text = read_text(path)
-            rewritten = rewrite_file(path, text, rewrite_regex)
-            if rewritten != text:
-                changed_count += 1
-                list_changed.append(path)
-                if not args.dry_run:
-                    write_text(path, rewritten)
-        print(f"[rename-symbol] {changed_count} 파일" + (" (dry-run)" if args.dry_run else ""))
-        report_skipped()
-        return ExitCode.PASSED if args.dry_run else format_changed(root, list_changed)
     # 문서 · 데이터 · 설정도 함께 바꾼다 — 빼면 개명마다 규칙 문서의 예시 이름 · 데이터의 칸 이름 · 린트 예외 표가 낡는다.
     # 겹침 검사는 코드만 본다(문서는 새 이름을 미리 적을 수 있다).
     code_suffix = CPP_SUFFIX | {".xxx", ".natvis", ".txt", ".cmake"}

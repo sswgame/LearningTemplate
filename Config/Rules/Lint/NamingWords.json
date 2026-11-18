@@ -1344,7 +1344,13 @@
     "sw_workspace_name": "SW_WORKSPACE_NAME — CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)(2026-11-13)",
     "getUndoStepSerial": "getRecordedUndoStepCount — serial 은 업계 용어가 아니다 — 기록한 되돌리기 단계 수다(2026-11-17)",
     "_undoStepSerial": "_recordedUndoStepCount — 같은 칸(2026-11-17)",
-    "appendFreshText": "appendSerializedText — fresh 는 업계 용어가 아니다 — 쓰기기로 직렬화한 글이다(2026-11-17)"
+    "appendFreshText": "appendSerializedText — fresh 는 업계 용어가 아니다 — 쓰기기로 직렬화한 글이다(2026-11-17)",
+    "server-ticks": "destruction-net 의 옛 옵션 — 상수 _SERVER_TICKS(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
+    "client-delay": "net · online-local · telemetry-local · destruction-net 의 옛 옵션 — 스크립트 상수 _CLIENT_DELAY_SECONDS(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
+    "client-log": "destruction-net run 의 옛 옵션 — 클라이언트 로그는 콘솔 출력 하나다(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
+    "game-port": "net-pair run 의 옛 옵션 — 상수 _GAME_PORT(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
+    "service-port": "net-pair run 의 옛 옵션 — 상수 _SERVICE_PORT(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
+    "out-dir": "web-package 의 옛 옵션 — 묶음은 build/Web-Shipping/Web/<게임> 하나다(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",

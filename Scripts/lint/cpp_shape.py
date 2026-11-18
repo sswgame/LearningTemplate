@@ -800,7 +800,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="C++ 모양 규칙(선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 중괄호 안 include · .cpp 상태 변경자)을 본다")
     parser.add_argument("--files", nargs="*", default=None, help="볼 파일(없으면 --all)")
     parser.add_argument("--all", action="store_true", help="Source 전체")
-    parser.add_argument("--summary", action="store_true", help="종류별 수만")
     parser.add_argument("--self-check", action="store_true", help="규칙 10 의 자체 시험")
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
@@ -808,18 +807,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_self_check()
     project_root = Path(__file__).resolve().parents[2]
     list_violation = check_cpp_shape(project_root, make_file_scope(project_root, args.files) if args.files else make_whole_scope(project_root))
-    if args.summary:
-        counts: dict[str, int] = {}
-        for line in list_violation:
-            message = line.split(": ", 1)[1]
-            key = re.sub(r"`[^`]*`", "`…`", message)[:60]
-            counts[key] = counts.get(key, 0) + 1
-        for key, count in sorted(counts.items(), key=lambda item: -item[1]):
-            print(f"{count:6d}  {key}")
-        print(f"files {len({line.split(':', 1)[0] for line in list_violation})}")
-    else:
-        for line in list_violation:
-            print(line)
+    for line in list_violation:
+        print(line)
     print(f"[CppShape] {'FAIL' if list_violation else 'OK'} — {len(list_violation)}건")
     return 1 if list_violation else 0
 

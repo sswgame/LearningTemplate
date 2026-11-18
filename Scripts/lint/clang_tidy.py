@@ -184,17 +184,14 @@ def main(argv: list[str] | None = None) -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--changed", nargs="?", const=DEFAULT_BASE, metavar="기준", help=f"기준(기본 {DEFAULT_BASE})과 다른 파일만")
     mode.add_argument("--files", nargs="+", type=Path, help="지정한 파일만")
-    parser.add_argument("--preset", default=DEFAULT_PRESET, help="컴파일 DB 를 읽을 본 트리 프리셋")
     parser.add_argument("--checks", help="`.clang-tidy` 의 Checks 대신 쓸 목록(검사 확대 실측용)")
-    parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     parser.add_argument("--out", type=Path, help="중복을 뺀 진단 전체를 JSON 으로 쓴다")
-    parser.add_argument("--show", action="store_true", help="진단 줄을 모두 찍는다(기본은 집계만)")
     args = parser.parse_args(list_argument)
 
     tree_root = get_project_root()
     main_root = main_tree_root(tree_root)
     clang_tidy = clang_tidy_path(main_root)
-    list_entry = load_database(main_root, tree_root, args.preset)
+    list_entry = load_database(main_root, tree_root, DEFAULT_PRESET)
 
     list_skipped: list[Path] = []
     if args.changed is not None:
@@ -211,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
     error_count = 0
     with tempfile.TemporaryDirectory(prefix="sw-tidy-") as database_dir:
         (Path(database_dir) / "compile_commands.json").write_text(json.dumps(list_entry), encoding="utf-8")
-        with ThreadPoolExecutor(max_workers=args.jobs) as pool:
+        with ThreadPoolExecutor(max_workers=max(1, (os.cpu_count() or 2) - 2)) as pool:
             futures = [pool.submit(run_one, clang_tidy, Path(database_dir), entry["file"], list_extra) for entry in list_entry]
             for index, future in enumerate(futures, 1):
                 file_path, return_code, output = future.result()
@@ -232,9 +229,6 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"[tidy] {index}/{len(futures)} TU", flush=True)
 
     list_diagnostic = sorted(diagnostics.values(), key=lambda d: (d["check"], d["path"], d["line"]))
-    if args.show:
-        for d in list_diagnostic:
-            print(f"{d['path']}:{d['line']}:{d['column']}: {d['level']}: {d['message']} [{d['check']}]")
     if args.out:
         args.out.write_text(json.dumps(list_diagnostic, ensure_ascii=False, indent=1), encoding="utf-8")
     counts = Counter(d["check"] for d in list_diagnostic)

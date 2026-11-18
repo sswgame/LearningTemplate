@@ -29,6 +29,10 @@ from common.paths import get_project_root
 _HASH_LINE = re.compile(r"\[DestructionHash\]\s+side=(?P<side>server|client)\s+id=(?P<id>\d+)\s+events=(?P<events>\d+)\s+hash=(?P<hash>[0-9a-fA-F]+)\s+name=(?P<name>.*)$")
 _SCENE = "game/empty/maps/destructionnet.scene.xml"
 _GAME = "Empty"
+_PORT = 7777  # 서버 UDP 포트
+_SERVER_TICKS = 1800  # 서버가 이 틱 수를 돈 뒤 끝난다(30 틱/초 기준 60 초)
+_CLIENT_DELAY_SECONDS = 2.0  # 서버를 띄운 뒤 클라이언트를 띄울 때까지
+_TIMEOUT_SECONDS = 180.0  # 서버가 끝나기를 기다리는 최대 초
 
 
 @dataclass
@@ -110,24 +114,24 @@ def _run_pair(argument: argparse.Namespace) -> int:
         if not exe.exists():
             print(f"[destruction-net] FAIL: {exe} does not exist - build the '{argument.preset}' preset first")
             return int(ExitCode.VIOLATION)
-    out_dir = Path(argument.out) if argument.out else root / "Saved" / "DestructionNetPair"
+    out_dir = root / "Saved" / "DestructionNetPair"
     out_dir.mkdir(parents=True, exist_ok=True)
     server_log = out_dir / "server.log"
     client_log = out_dir / "client.log"
-    port = argument.port
+    port = _PORT
     server_args = [str(server_exe), app_arguments.option("game", _GAME), app_arguments.variable("gv_firstScene", _SCENE), app_arguments.variable("gv_netListenPort", port),
-                  app_arguments.variable("gv_serverExitAfterTicks", argument.server_ticks)]
+                  app_arguments.variable("gv_serverExitAfterTicks", _SERVER_TICKS)]
     client_args = [str(client_exe), app_arguments.option("game", _GAME), app_arguments.variable("gv_firstScene", _SCENE), app_arguments.variable("gv_netConnectAddress", f"127.0.0.1:{port}")]
     print(f"[destruction-net] server: {' '.join(server_args)}")
     print(f"[destruction-net] client: {' '.join(client_args)}")
     with server_log.open("wb") as server_out, client_log.open("wb") as client_out:
         server = subprocess.Popen(server_args, cwd=str(bin_dir), stdout=server_out, stderr=subprocess.STDOUT)
-        time.sleep(argument.client_delay)  # 서버가 먼저 서야 한다(클라이언트는 시간 초과면 다시 시도하지만, 첫 연결을 빨리 잡는다)
+        time.sleep(_CLIENT_DELAY_SECONDS)  # 서버가 먼저 서야 한다(클라이언트는 시간 초과면 다시 시도하지만, 첫 연결을 빨리 잡는다)
         client = subprocess.Popen(client_args, cwd=str(bin_dir), stdout=client_out, stderr=subprocess.STDOUT)
         try:
-            server.wait(timeout=argument.timeout)  # 서버는 틱 상한에 스스로 끝난다
+            server.wait(timeout=_TIMEOUT_SECONDS)  # 서버는 틱 상한에 스스로 끝난다
         except subprocess.TimeoutExpired:
-            print(f"[destruction-net] FAIL: the server did not finish within {argument.timeout} s")
+            print(f"[destruction-net] FAIL: the server did not finish within {_TIMEOUT_SECONDS} s")
             server.kill()
             client.kill()
             return int(ExitCode.VIOLATION)
@@ -140,11 +144,7 @@ def _run_pair(argument: argparse.Namespace) -> int:
     if server.returncode != 0:
         print(f"[destruction-net] FAIL: the server exited with code {server.returncode} (log: {server_log})")
         return int(ExitCode.VIOLATION)
-    client_text = _read_log(client_log)
-    # 클라이언트가 콘솔이 아니라 파일 로그만 쓰는 구성이면 `--client-log` 로 그 파일을 준다.
-    if argument.client_log:
-        client_text += "\n" + _read_log(Path(argument.client_log))
-    result = compare_logs(_read_log(server_log), client_text)
+    result = compare_logs(_read_log(server_log), _read_log(client_log))
     print(f"[destruction-net] logs: {server_log} {client_log}")
     return _print_result(result)
 
@@ -154,12 +154,6 @@ def main(list_argument: list[str]) -> int:
     sub = parser.add_subparsers(dest="mode", required=True)
     run_parser = sub.add_parser("run", help="서버와 클라이언트를 띄워 해시를 맞댄다")
     run_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    run_parser.add_argument("--port", type=int, default=7777, help="서버 UDP 포트")
-    run_parser.add_argument("--server-ticks", type=int, default=1800, help="서버가 이 틱 수를 돈 뒤 끝난다(기본 30 틱/초 기준 60 초)")
-    run_parser.add_argument("--client-delay", type=float, default=2.0, help="서버를 띄운 뒤 클라이언트를 띄울 때까지 기다리는 초")
-    run_parser.add_argument("--timeout", type=float, default=180.0, help="서버가 끝나기를 기다리는 최대 초")
-    run_parser.add_argument("--out", default="", help="로그를 둘 폴더(기본 Saved/DestructionNetPair)")
-    run_parser.add_argument("--client-log", default="", help="클라이언트가 파일로만 남기는 로그 파일(콘솔 출력에 더해 읽는다)")
     compare_parser = sub.add_parser("compare", help="이미 있는 서버 · 클라이언트 로그를 맞댄다")
     compare_parser.add_argument("server_log")
     compare_parser.add_argument("client_log")

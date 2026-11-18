@@ -106,7 +106,7 @@ Checks: >
 # google-build-using-namespace(.cpp 의 using namespace 는 허용, 69), google-readability-todo(TODO 형식, 문체),
 # google-upgrade-googletest-case · google-objc-*(쓰지 않는 라이브러리), hicpp-signed-bitwise(플래그 상수의 부호 있는 비트 연산, 264 — 취향).
 #
-# 아래 건수는 표본 실측이다(`py -3 -m Scripts tidy --every 8` — 2828 TU 중 354 TU, 헤더 진단은 중복을 뺐다). 전체는 대략 몇 배다.
+# 아래 건수는 표본 실측이다(2828 TU 중 354 TU, 헤더 진단은 중복을 뺐다). 전체는 대략 몇 배다.
 # 끈 까닭은 셋 중 하나다: (규약) 저장소 규칙과 정면으로 부딪힌다, (린트) 같은 일을 저장소 린트가 허용 목록과 함께 이미 본다,
 # (취향) 결함이 아니라 문체 제안이라 고칠 값이 없다.
 #
