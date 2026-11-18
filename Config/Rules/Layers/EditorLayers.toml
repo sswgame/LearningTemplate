@@ -60,6 +60,7 @@ views = [
     "Common/GUI/EditorPlayToolbar.cpp",
     "Common/GUI/Panel/EditorDocumentPanel.cpp",
     "Common/GUI/Panel/EditorPreviewPanel.cpp",
+    "Common/GUI/Panel/EditorPreviewViewport.cpp",
     "Common/Input/CommandPalettePopup.cpp",
     "Common/Input/EditorCommandGUI.cpp",
     "Common/Input/QuickLauncherPopup.cpp",
