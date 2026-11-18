@@ -1,0 +1,15 @@
+{
+    "backend": "dx12",
+    "platform": "windows",
+    "commit": "bf9f327aa5eed201b655accd298616276a8f89e3-dirty",
+    "recordedUnixMs": 1795028375834,
+    "reason": "missing",
+    "width": 102,
+    "height": 123,
+    "previousDifference": null,
+    "limits": {
+        "maxDifferingFraction": 0.01,
+        "maxMeanDistance": 0.005,
+        "maxDeepRegionPixels": 16
+    }
+}

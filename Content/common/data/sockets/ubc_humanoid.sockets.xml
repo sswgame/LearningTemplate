@@ -4,7 +4,8 @@
      같은 칸의 장비가 어느 몸에든 붙는다. 자리는 바인드 포즈의 머리 · 가슴 · 손 뼈 기준 어림값이다 — 장비를 입혀 보며 맞춘다. 회전은 도 단위 "피치 요 롤". -->
 <SocketSet>
   <Socket name="Eyes" parent="Head" translation="0 0.09 0.09" kind="LockOn"/>
-  <Socket name="Helmet" parent="Head" translation="0 0.1 0" kind="Attach"/>
+  <!-- 투구는 KayKit 몸(머리가 큰 비율)에 맞춘 프리팹이다 — UBC 머리에는 0.3 배로 줄여 씌운다(1 배면 머리보다 두 배 넘게 크고 떠 보였다). 몸마다 다른 투구 메시가 생기면 아이템 외형의 <ForBody> 로 고른다. -->
+  <Socket name="Helmet" parent="Head" translation="0 0.03 0.01" scale="0.3 0.3 0.3" kind="Attach"/>
   <Socket name="Back" parent="spine_03" translation="0 0.1 -0.15" kind="Attach"/>
   <Socket name="Gun" parent="hand_r" translation="0.05 0 0" rotation="0 -90 0" kind="Attach"/>
   <Socket name="Blade" parent="hand_r" translation="0.05 0 0" rotation="0 180 0" kind="Attach"/>
