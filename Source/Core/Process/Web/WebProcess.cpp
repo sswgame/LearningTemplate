@@ -35,11 +35,18 @@ namespace sw
         return false;
     }
 
-    bool Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
+    optional<DetachedProcessID> Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
     {
         (void)options;
         SW_LOG_ERROR_ID( "WebProcess.LaunchUnsupported", "A browser tab cannot launch a process: %#", command._executable );
-        return false;
+        return nullopt;
+    }
+
+    bool Process::waitForDetachedExit( DetachedProcessID id, uint32 timeoutMilliseconds )
+    {
+        (void)id;
+        (void)timeoutMilliseconds;
+        return true; // 띄운 프로세스가 없다
     }
 
     bool Process::launchURL( string_view url )

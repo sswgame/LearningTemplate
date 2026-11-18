@@ -162,7 +162,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "EditorLog.OpenIDENoCommand", "Open in IDE: no command template (Editor/General IDE open command in Preferences) or no file." );
             return false;
         }
-        if ( Process::launchDetached( command ) == false )
+        if ( Process::launchDetached( command ).has_value() == false )
         {
             SW_LOG_WARNING_ID( "EditorLog.OpenIDEFailedLaunch", "Open in IDE: failed to launch '%#'", command.toCommandLine() );
             return false;

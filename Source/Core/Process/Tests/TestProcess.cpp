@@ -275,7 +275,8 @@ SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
     #error "Unsupported platform"
 #endif
 
-    SW_REQUIRE_TRUE( sw::Process::launchDetached( command, options ) );
+    const sw::optional<sw::DetachedProcessID> detached = sw::Process::launchDetached( command, options );
+    SW_REQUIRE_TRUE( detached.has_value() );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( releasePath, "go" ) ); // 돌아온 뒤에만 닿는 줄 — 기다렸다면 자식은 이미 timeout 을 썼다
 
     // 명령이 끝에 남기는 표식 — 다 쓸 때까지 기다린다(케이스 폴더는 케이스가 끝나면 지워지므로 쓰는 중이면 안 된다).
@@ -287,8 +288,8 @@ SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
     }, 20.0 );
     SW_EXPECT_TRUE_MSG( bFinished, "분리 실행한 명령이 표식을 남기지 않았다 — 띄우지 못했거나 돌지 않았다" );
     SW_EXPECT_TRUE_MSG( text.find( "done" ) != sw::string::npos, "분리 실행이 명령이 끝나기를 기다렸다 — 자식이 놓아 주기를 받지 못하고 timeout 을 썼다" );
-    // shortcut: 분리 실행은 기다릴 핸들이 없어 셸이 작업 폴더(케이스 폴더)를 놓기를 사건으로 볼 수 없다 — 표식 뒤의 짧은 유예로 둔다. 분리 실행이 pid 를 돌려주게 되면 그 종료를 기다린다.
-    sw::ThreadUtil::sleepForMilliseconds( 200 );
+    // 셸이 작업 폴더(케이스 폴더)를 놓을 때까지 — 표식 뒤에 끝나는 그 프로세스(POSIX 는 손자)를 id 로 기다린다.
+    SW_EXPECT_TRUE_MSG( sw::Process::waitForDetachedExit( *detached, 20000 ), "분리 실행한 명령이 표식을 쓴 뒤에도 끝나지 않았다" );
 }
 
 /**
@@ -558,4 +559,21 @@ SW_TEST_CASE( ProcessTest, EndWithParentChildEndsWhenReleased )
 
     SW_EXPECT_LOG( "Process.DetachedEndWithParent" );
     SW_EXPECT_FALSE( sw::Process::launchDetached( cmd, options ) ); // 분리한 자식은 부모와 묶지 않는다
+}
+
+/** @brief [ProcessTest] 분리 실행의 끝 기다리기 — 도는 동안은 시한에 걸리고, 끝나면 참이다(id 는 명령을 실제로 도는 프로세스 — POSIX 는 손자) */
+SW_TEST_CASE( ProcessTest, DetachedExitCanBeAwaited )
+{
+#if defined( SW_PLATFORM_WINDOWS )
+    const sw::ProcessCommand command = sw::ProcessCommand::fromSearchPath( "ping.exe", { "127.0.0.1", "-n", "3" } );
+#elif defined( SW_PLATFORM_POSIX )
+    const sw::ProcessCommand command = sw::ProcessCommand::fromSearchPath( "sleep", { "2" } );
+#else
+    #error "Unsupported platform"
+#endif
+    const sw::optional<sw::DetachedProcessID> detached = sw::Process::launchDetached( command );
+    SW_REQUIRE_TRUE( detached.has_value() );
+    SW_EXPECT_NOT_EQUAL( 0u, detached->_value );
+    SW_EXPECT_FALSE_MSG( sw::Process::waitForDetachedExit( *detached, 100 ), "2 초 도는 명령이 0.1 초 안에 끝났다고 했다 — id 가 가운데 프로세스를 가리킨다" );
+    SW_EXPECT_TRUE( sw::Process::waitForDetachedExit( *detached, 20000 ) );
 }

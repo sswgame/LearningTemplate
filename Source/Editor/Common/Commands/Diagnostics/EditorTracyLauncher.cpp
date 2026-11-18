@@ -84,7 +84,7 @@ namespace sw::editor
             return EditorTracyLaunchResult::TracyNotCompiled;
 
         const ProcessCommand command = makeViewerCommand( viewerPath, TracyProfilerBackend::getDataPort() );
-        if ( Process::launchDetached( command ) == false )
+        if ( Process::launchDetached( command ).has_value() == false )
         {
             SW_LOG_WARNING_ID( "EditorTracy.FailedLaunchTracyViewer", "Failed to launch the Tracy viewer: %#", command.toCommandLine() );
             return EditorTracyLaunchResult::ViewerLaunchFailed;

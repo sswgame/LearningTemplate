@@ -13,6 +13,7 @@
     #include <cerrno>
     #include <csignal>
     #include <cstring>
+    #include <ctime>
     #include <fcntl.h>
     #include <sys/syscall.h>
     #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
@@ -480,21 +481,21 @@ namespace sw
         return true;
     }
 
-    bool Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
+    optional<DetachedProcessID> Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
     {
         if ( options._bEndWithParent )
         {
             SW_LOG_ERROR_ID( "Process.DetachedEndWithParent", "A detached process cannot end with its parent - launch it attached" );
-            return false;
+            return nullopt;
         }
         if ( options._listEnvironment.empty() == false )
         {
             SW_LOG_ERROR_ID( "Process.DetachedEnvironment", "Detached process launch does not take environment overrides - use Process::launch" );
-            return false;
+            return nullopt;
         }
         PosixExecImage image;
         if ( preparePosixExec( command, image ) == false )
-            return false;
+            return nullopt;
         const string commandLine       = command.toCommandLine(); // 로그용
         const utf8*  pCommand          = commandLine.c_str();
         const utf8*  pWorkingDirectory = options._workingDirectory.empty() ? nullptr : options._workingDirectory.c_str();
@@ -504,7 +505,15 @@ namespace sw
         if ( openExecErrorPipe( arrErrorFd ) == false )
         {
             SW_LOG_ERROR_ID( "PosixProcess.PipeFailedCommand", "pipe() failed for command: %#", pCommand );
-            return false;
+            return nullopt;
+        }
+        // 가운데가 손자의 pid 를 부모에게 넘기는 관 — 손자는 표준 입출력 위의 서술자를 모두 닫아 물려받지 않는다.
+        int32 arrPidFd[2];
+        if ( openExecErrorPipe( arrPidFd ) == false )
+        {
+            closeLaunchPipePair( arrErrorFd );
+            SW_LOG_ERROR_ID( "PosixProcess.PipeFailedCommand", "pipe() failed for command: %#", pCommand );
+            return nullopt;
         }
 
         // 두 번 fork 한다 — 가운데 프로세스는 손자를 띄우자마자 끝나고 여기서 바로 거둔다. 손자의 부모는 init 이 되어 끝나도
@@ -513,8 +522,9 @@ namespace sw
         if ( middlePid < 0 )
         {
             closeLaunchPipePair( arrErrorFd );
+            closeLaunchPipePair( arrPidFd );
             SW_LOG_ERROR_ID( "PosixProcess.ForkFailedDetachedCommand", "fork() failed for detached command: %#", pCommand );
-            return false;
+            return nullopt;
         }
 
         if ( middlePid == 0 )
@@ -522,9 +532,17 @@ namespace sw
             // ---- 가운데 · 손자: exec 까지 async-signal-safe 한 함수만 ----
             setsid();
             close( arrErrorFd[0] );
+            close( arrPidFd[0] );
             const pid_t grandchildPid = fork();
             if ( grandchildPid != 0 )
+            {
+                ssize_t written = 0;
+                do
+                {
+                    written = write( arrPidFd[1], &grandchildPid, sizeof( grandchildPid ) );
+                } while ( written < 0 && errno == EINTR );
                 _exit( grandchildPid < 0 ? 127 : 0 );
+            }
 
             const int32 nullFd = open( "/dev/null", O_RDWR );
             if ( nullFd >= 0 )
@@ -541,6 +559,7 @@ namespace sw
             exitWithExecError( arrErrorFd[1] );
         }
         close( arrErrorFd[1] );
+        close( arrPidFd[1] );
 
         int32 status = 0;
         pid_t reaped = 0;
@@ -549,19 +568,42 @@ namespace sw
             reaped = waitpid( middlePid, &status, 0 );
         } while ( reaped < 0 && errno == EINTR );
 
-        const bool  bForked   = reaped == middlePid && WIFEXITED( status ) && WEXITSTATUS( status ) == 0;
+        const bool bForked       = reaped == middlePid && WIFEXITED( status ) && WEXITSTATUS( status ) == 0;
+        pid_t      grandchildPid = 0;
+        ssize_t    pidBytes      = 0;
+        do
+        {
+            pidBytes = read( arrPidFd[0], &grandchildPid, sizeof( grandchildPid ) );
+        } while ( pidBytes < 0 && errno == EINTR );
+        close( arrPidFd[0] );
         const int32 execError = readExecError( arrErrorFd[0] ); // 손자가 exec 하거나 질 때까지 — 가운데는 이미 끝나 쓰는 끝을 놓았다
-        if ( bForked == false || execError != 0 )
+        if ( bForked == false || execError != 0 || pidBytes != static_cast<ssize_t>( sizeof( grandchildPid ) ) || grandchildPid <= 0 )
         {
             SW_LOG_ERROR_ID( "Process.LaunchDetachedFailed", "Failed to launch detached command (%#): %#", execError != 0 ? strerror( execError ) : "fork failed", pCommand );
-            return false;
+            return nullopt;
+        }
+        return DetachedProcessID{ static_cast<uint32>( grandchildPid ) };
+    }
+
+    bool Process::waitForDetachedExit( DetachedProcessID id, uint32 timeoutMilliseconds )
+    {
+        // 손자의 부모는 init 이라 waitpid 로 기다릴 수 없다 — init 이 거두면 kill( pid, 0 ) 이 ESRCH 다.
+        static constexpr int64 kPollMilliseconds = 10;
+        const int64            deadline          = MonotonicClock::nowNanoseconds() + static_cast<int64>( timeoutMilliseconds ) * constant::time::kNanosecondsPerMillisecond;
+        const pid_t            pid               = static_cast<pid_t>( id._value );
+        while ( kill( pid, 0 ) == 0 || errno != ESRCH )
+        {
+            if ( MonotonicClock::nowNanoseconds() >= deadline )
+                return false;
+            const timespec pause{ 0, static_cast<long>( kPollMilliseconds * constant::time::kNanosecondsPerMillisecond ) };
+            nanosleep( &pause, nullptr );
         }
         return true;
     }
 
     bool Process::launchURL( string_view url )
     {
-        return launchDetached( ProcessCommand::fromSearchPath( "xdg-open", { string( url ) } ) );
+        return launchDetached( ProcessCommand::fromSearchPath( "xdg-open", { string( url ) } ) ).has_value();
     }
 
     bool Process::showInFileManager( string_view filePath )
@@ -569,7 +611,7 @@ namespace sw
         // 리눅스 파일 관리자에는 "선택한 채로 열기" 표준이 없다 — 그 폴더를 연다. Process 는 File 보다 아래 층이라 FileUtil 을 쓰지 않는다.
         const size_t separatorIndex = filePath.find_last_of( '/' );
         const string directory      = separatorIndex == string_view::npos ? string( "." ) : string( filePath.substr( 0, separatorIndex == 0 ? 1 : separatorIndex ) );
-        return launchDetached( ProcessCommand::fromSearchPath( "xdg-open", { directory } ) );
+        return launchDetached( ProcessCommand::fromSearchPath( "xdg-open", { directory } ) ).has_value();
     }
 
     size_t Process::readOutputBytes( utf8* pBuffer, size_t capacity )
