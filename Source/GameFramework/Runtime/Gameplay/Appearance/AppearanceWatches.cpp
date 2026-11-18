@@ -81,16 +81,9 @@ namespace sw
                 const CharacterAppearanceComponent* pAppearance = findWatchTarget( query, outValue );
                 if ( pAppearance == nullptr )
                     return false;
-                const hashed_string slot( query._key );
-                for ( const ResolvedPart& part : pAppearance->getResolvedAppearance()._listPart )
-                {
-                    if ( part._owner == slot && part._itemID.empty() == false )
-                    {
-                        outValue.setText( part._itemID.c_str() );
-                        return true;
-                    }
-                }
-                outValue.setText( "(empty)" );
+                // 부품이 아니라 해석의 슬롯 목록을 본다 — 부품을 내지 않는 아이템(몸 채널만 바꾸는 굽 신발)도 낀 것이다.
+                const hashed_string itemID = pAppearance->getResolvedAppearance().findSlotItem( hashed_string( query._key ) );
+                outValue.setText( itemID.empty() ? "(empty)" : itemID.c_str() );
                 return true;
             }
 

@@ -181,7 +181,14 @@ namespace sw
                     return unexpected( Error{ ErrorKind::InvalidArgument, "increaseBy=\"N\" and increaseFrom=\"<stored name>\" go together" } );
                 const bool bTextRule = step.findAttribute( "is" ) != nullptr || step.findAttribute( "sameAs" ) != nullptr || step.findAttribute( "differsFrom" ) != nullptr;
                 if ( bTextRule )
-                    return {};
+                {
+                    if ( step.findAttribute( "tolerance" ) == nullptr )
+                        return {};
+                    if ( step.findAttribute( "is" ) != nullptr )
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "tolerance goes with near · oppositeOf · sameAs · differsFrom (is compares text)" } );
+                    float32 tolerance = AutomationStepArgsUtil::kWatchNearTolerance;
+                    return AutomationStepArgsUtil::readFloat( step, "tolerance", tolerance ); // sameAs · differsFrom 을 수로 견준다
+                }
                 if ( step.findAttribute( "increaseBy" ) != nullptr )
                 {
                     float32 increase = 0.0f;

@@ -47,6 +47,7 @@ namespace sw
                 SceneGroundQuery( GameObjectManager& manager, bool bPlanar, uint64 ownerObjectID )
                     : _manager{ manager }
                     , _ownerObjectID{ ownerObjectID }
+                    , _layerMask{ PhysicsSystem::getGroundQueryLayerMask() }
                     , _bPlanar{ bPlanar }
                 {
                 }
@@ -55,6 +56,7 @@ namespace sw
                 {
                     PhysicsQueryFilter filter{};
                     filter._ignoreUserData      = _ownerObjectID;
+                    filter._layerMask           = _layerMask; // 걸을 수 있는 세계만 — 지나가는 캐릭터 · 래그돌 · 파편에 발이 올라타지 않는다
                     const ScenePhysics& physics = _manager.getSubsystem<sw::ScenePhysics>();
                     if ( _bPlanar )
                     {
@@ -78,6 +80,7 @@ namespace sw
             private:
                 GameObjectManager& _manager;
                 uint64             _ownerObjectID; ///< 이 사용자 값의 바디는 보지 않는다(리그를 가진 오브젝트)
+                uint32             _layerMask;     ///< 땅으로 보는 층(`PhysicsSettings::_listGroundQueryLayer`)
                 uint8              _bPlanar : 1;
             };
         };

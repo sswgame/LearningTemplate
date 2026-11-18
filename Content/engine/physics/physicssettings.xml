@@ -52,6 +52,11 @@
 			<_listCollidesWith />
 		</PhysicsLayerDef>
 	</_listLayer>
+	<!-- 발 · 손 IK 의 땅 광선이 맞는 층 — 걸을 수 있는 세계만(캐릭터 · 래그돌 · 파편 · 투사체 위에 발이 올라타지 않는다) -->
+	<_listGroundQueryLayer>
+		<item>Default</item>
+		<item>Static</item>
+	</_listGroundQueryLayer>
 	<_listMaterial>
 		<PhysicsMaterialDef _name="Default" _friction="0.5" _restitution="0" _density="1000" />
 		<PhysicsMaterialDef _name="Stone" _friction="0.7" _restitution="0.05" _density="2400" />

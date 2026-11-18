@@ -144,7 +144,22 @@ namespace sw
                 outMessage = subject + ": nothing was stored as '" + name + "' (add <Store as=\"" + name + "\"> before this step)";
                 return false;
             }
-            bOk        = pSameAs != nullptr ? valueText == *pStored : valueText != *pStored;
+            bool bSame = valueText == *pStored;
+            // 허용 폭을 주면 수로 견준다 — 지난 프레임 포즈 같은 실수는 같은 상태여도 끝자리가 다르다(글 비교는 해시처럼 끝자리까지 같아야 하는 값에 쓴다).
+            if ( step.findAttribute( "tolerance" ) != nullptr )
+            {
+                float32 tolerance  = Internal::kWatchNearTolerance;
+                float32 remembered = 0.0f;
+                if ( Internal::readFloat( step, "tolerance", tolerance ).has_value() == false )
+                    return false; // 검사가 본다 — 단계가 바뀌었다(핫 리로드)
+                if ( value._bText || StringUtil::parseFloat( string_view{ *pStored }, remembered ) == false )
+                {
+                    outMessage = subject + ": tolerance compares numbers, but '" + name + "' ('" + *pStored + "') or the value (" + valueText + ") is not a number";
+                    return false;
+                }
+                bSame = MathUtil::abs( value._number - static_cast<float64>( remembered ) ) <= static_cast<float64>( tolerance );
+            }
+            bOk        = pSameAs != nullptr ? bSame : bSame == false;
             outMatched = bOk;
             outMessage = subject + ( pSameAs != nullptr ? " same as " : " differs from " ) + name + " ('" + *pStored + "'), got " + valueText;
             return true;

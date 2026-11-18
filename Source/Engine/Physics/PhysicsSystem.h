@@ -78,6 +78,8 @@ namespace sw
         static float3 getConfiguredGravity();
         /** @brief `getConfiguredGravity()` 의 크기(m/s²)입니다. 아래(-Y) 방향만 쓰는 계산이 읽습니다. */
         static float32 getConfiguredGravityMagnitude();
+        /** @brief 발 · 손 IK 땅 광선의 층 마스크입니다(`PhysicsSettings::_listGroundQueryLayer`). 엔진 서비스가 없는 실행(손수 만든 테스트)에는 씬도 없어 모든 층이다. */
+        static uint32 getGroundQueryLayerMask();
 
     private:
         PhysicsSettings _settings;

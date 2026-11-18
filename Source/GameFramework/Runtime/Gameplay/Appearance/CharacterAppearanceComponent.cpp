@@ -1582,12 +1582,16 @@ namespace sw
         if ( bHasTables )
             _fitTablesLoad = SharedAssetCache<FitTables>::request( pBodyPart->_fitTables.view() );
         // 몸이 먼저, 그 뒤 몸을 따르는 스킨드 부품. 피팅은 몸 스켈레톤의 바인드 공간에서 풀므로 다른 스켈레톤의 부품은 피팅하지 않는다(데이터 오류로 알린다).
-        vector<uint32> listPartIndex{ static_cast<uint32>( _bodyPart ) };
+        vector<uint32> listPartIndex;
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
             if ( spawned._bSocketPart == SW_FALSE )
                 listPartIndex.push_back( spawned._partIndex );
         }
+        // 몸 뒤 부품은 해석 순서(부품 번호)로 세운다 — 생성된 부품 목록은 교체 이력 순(남은 것 뒤에 새것)이라, 같은 차림으로 돌아와도 실린 순서가 달라
+        // 구운 메시 캐시 키(실린 순서로 섞는다)가 갈려 다시 구웠다. 처음 지을 때와 같은 순서라 키와 합친 메시의 부품 순서가 차림 하나에 하나다.
+        VectorUtil::sort( listPartIndex );
+        listPartIndex.insert( listPartIndex.begin(), static_cast<uint32>( _bodyPart ) );
         for ( const uint32 partIndex : listPartIndex )
         {
             const ResolvedPart& part = resolved._listPart[partIndex];

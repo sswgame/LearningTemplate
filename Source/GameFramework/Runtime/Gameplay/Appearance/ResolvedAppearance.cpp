@@ -851,6 +851,7 @@ namespace sw
                     const AppearanceSlotRequest& request = *pOrdered;
                     if ( request._itemID.empty() )
                         continue;
+                    out._listSlotItem.push_back( ResolvedSlotItem{ request._slot, request._itemID } );
                     const ItemDef*       pItem    = pItemCatalog != nullptr ? pItemCatalog->find( request._itemID ) : nullptr;
                     const hashed_string  visualID = request._visibleVisual.empty() == false ? request._visibleVisual : ( pItem != nullptr ? pItem->_visualID : hashed_string{} );
                     const ItemVisualDef* pVisual  = database.getVisuals().findVisual( visualID );
@@ -1087,6 +1088,13 @@ namespace sw
         { return morph._owner == owner && morph._name == name; } );
     }
 
+    hashed_string ResolvedAppearance::findSlotItem( const hashed_string& slot ) const
+    {
+        const ResolvedSlotItem* pFound = VectorUtil::findIf( _listSlotItem, [&]( const ResolvedSlotItem& item )
+        { return item._slot == slot; } );
+        return pFound != nullptr ? pFound->_itemID : hashed_string{};
+    }
+
     hashed_string ResolvedAppearance::findHidingRule( const hashed_string& owner, const hashed_string& partName ) const
     {
         for ( const ResolvedHiddenPart& hide : _listHiddenByRule )
@@ -1228,6 +1236,11 @@ namespace sw
             builder.addFloat( layer._value._scale._y );
             builder.addFloat( layer._value._rotationDegrees );
             builder.addInt( layer._value._bMirror );
+        }
+        for ( const ResolvedSlotItem& item : resolved._listSlotItem )
+        {
+            builder.addName( item._slot );
+            builder.addName( item._itemID );
         }
         for ( const ResolvedPart& part : resolved._listPart )
         {

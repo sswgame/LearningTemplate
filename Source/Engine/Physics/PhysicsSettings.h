@@ -135,6 +135,12 @@ namespace sw
         vector<PhysicsLayerDef> _listLayer;
         PROPERTY( Tooltip = "Physics materials" )
         vector<PhysicsMaterialDef> _listMaterial;
+        /**
+         * @brief 발 · 손 IK 의 땅 광선이 맞는 층입니다(걸을 수 있는 세계). 비거나 모르는 이름이면 `validate` 가 오류다.
+         * @details 캐릭터 · 래그돌 · 파편 · 투사체를 빼야 지나가는 몸 · 떨어진 덩어리에 발이 올라타지 않는다(언리얼 발 IK 트레이스 채널 · 유니티 Foot IK 레이어 마스크).
+         */
+        PROPERTY( Tooltip = "Layers foot and hand IK ground traces hit (the walkable world - not characters, ragdolls, debris or projectiles)" )
+        vector<hashed_string> _listGroundQueryLayer;
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 파일이 없거나 모르는 이름이거나 이름이 겹쳐서 실패하면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
@@ -149,5 +155,7 @@ namespace sw
         const PhysicsMaterialDef* findMaterial( const hashed_string& name ) const;
         /** @brief 레이어 테이블을 대칭 행렬로 풉니다. 테이블에 없는 레이어 번호는 아무것과도 부딪히지 않습니다. */
         CollisionLayers makeCollisionLayers() const;
+        /** @brief 땅 광선의 층 마스크입니다(`_listGroundQueryLayer`). */
+        uint32 makeGroundQueryLayerMask() const;
     };
 } // namespace sw

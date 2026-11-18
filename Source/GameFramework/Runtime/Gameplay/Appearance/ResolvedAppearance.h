@@ -204,6 +204,13 @@ namespace sw
         hashed_string _part{};
         hashed_string _rule{};
     };
+
+    /** @brief 슬롯 하나에 낀 아이템입니다 — 부품을 내지 않는 아이템(몸 채널만 바꾸는 굽 신발)도 든다. 숨긴 아이템도 낀 것이다. */
+    struct ResolvedSlotItem
+    {
+        hashed_string _slot{};
+        hashed_string _itemID{};
+    };
 } // namespace sw
 
 namespace sw
@@ -226,6 +233,7 @@ namespace sw
         vector<ResolvedSkinLayer>        _listSkinLayer{}; ///< 그릴 피부 층(숨긴 층 · 모르는 층은 빠진다) — 굽기 순서
         vector<hashed_string>            _listHiddenRegion{};
         vector<ResolvedHiddenPart>       _listHiddenByRule{};    ///< 규칙이 숨긴 주인 · 부품과 그 규칙(숨긴 이유 — 감시 값 · 편집 창). 결과 부품 목록에는 숨긴 것이 없다
+        vector<ResolvedSlotItem>         _listSlotItem{};        ///< 슬롯 표 순서로 낀 아이템(장비 덮어쓰기 뒤). 부품에서 아이템을 찾으면 부품 없는 아이템이 빈 슬롯으로 보인다
         vector<hashed_string>            _listMaterialChannel{}; ///< 나온 부품의 머티리얼이 받은 몸 채널(`<ChannelMaterial>`) — 체형 축 데이터가 모르는 채널이어도 오류가 아니다
         vector<AppearanceTraceEntry>     _listTrace{};
         hashed_string                    _presetID{};
@@ -242,6 +250,8 @@ namespace sw
         const ResolvedMorph* findMorph( const hashed_string& owner, const hashed_string& name ) const;
         /** @brief 주인 @p owner 의 부품 @p partName 을 숨긴 규칙 id 입니다(주인 전체를 숨긴 규칙 포함). 규칙이 숨기지 않았으면 빈 이름입니다. */
         hashed_string findHidingRule( const hashed_string& owner, const hashed_string& partName ) const;
+        /** @brief @p slot 에 낀 아이템입니다. 빈 슬롯이면 빈 이름입니다. */
+        hashed_string findSlotItem( const hashed_string& slot ) const;
         /** @brief @p source 가 남긴 설명 항목 수입니다. 테스트와 편집 창에 씁니다. */
         uint32 countTrace( const hashed_string& source ) const;
 

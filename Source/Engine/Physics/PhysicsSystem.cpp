@@ -109,6 +109,13 @@ namespace sw
         return PhysicsSettings{}._gravity;
     }
 
+    uint32 PhysicsSystem::getGroundQueryLayerMask()
+    {
+        if ( engine::areEngineServicesBound() )
+            return engine::getSubsystem<PhysicsSystem>().getSettings().makeGroundQueryLayerMask();
+        return MathUtil::kMaxUInt32;
+    }
+
     float32 PhysicsSystem::getConfiguredGravityMagnitude()
     {
         return getConfiguredGravity().getLength();

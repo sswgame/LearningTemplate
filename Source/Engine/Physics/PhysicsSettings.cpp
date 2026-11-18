@@ -100,6 +100,19 @@ namespace sw
                 }
             }
         }
+        if ( _listGroundQueryLayer.empty() )
+        {
+            SW_LOG_ERROR_ID( "PhysicsSettings.GroundQueryLayersMissing", "PhysicsSettings _listGroundQueryLayer is empty - name the layers foot IK stands on (Default, Static)" );
+            bValid = false;
+        }
+        for ( const hashed_string& groundName : _listGroundQueryLayer )
+        {
+            if ( findLayerIndex( groundName ).has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "PhysicsSettings.GroundQueryLayerUnknown", "PhysicsSettings _listGroundQueryLayer names unknown layer '%#'", groundName.c_str() );
+                bValid = false;
+            }
+        }
         for ( size_t materialIndex = 0; materialIndex < _listMaterial.size(); ++materialIndex )
         {
             const PhysicsMaterialDef& material = _listMaterial[materialIndex];
@@ -118,6 +131,17 @@ namespace sw
             }
         }
         return bValid;
+    }
+
+    uint32 PhysicsSettings::makeGroundQueryLayerMask() const
+    {
+        uint32 mask = 0;
+        for ( const hashed_string& groundName : _listGroundQueryLayer )
+        {
+            if ( const optional<uint8> layer = findLayerIndex( groundName ) )
+                mask |= 1u << *layer;
+        }
+        return mask;
     }
 
     optional<uint8> PhysicsSettings::findLayerIndex( const hashed_string& name ) const

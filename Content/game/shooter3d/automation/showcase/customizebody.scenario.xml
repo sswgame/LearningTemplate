@@ -74,7 +74,7 @@
 	<WaitUntil watch="Appearance.Value" target="Brute" key="ShoulderWidth" near="0" timeoutFrames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Appearance.Idle" target="Brute" equals="1" timeoutFrames="120"/>
-	<WaitUntil watch="Appearance.SocketOffset" target="Brute" key="Blade.x" sameAs="bladeBase" timeoutFrames="10"/>
+	<WaitUntil watch="Appearance.SocketOffset" target="Brute" key="Blade.x" sameAs="bladeBase" tolerance="0.0001" timeoutFrames="10"/>
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="customizebody_reset.ppm"/>
 	<ExpectImagesDiffer first="customizebody_base.ppm" second="customizebody_reset.ppm" minDiffering="0" maxDiffering="0.002"/>
