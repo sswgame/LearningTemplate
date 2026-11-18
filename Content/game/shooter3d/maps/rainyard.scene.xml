@@ -85,7 +85,7 @@
 		<entity id="302" name="Puddle">
 			<GameObject _schemaVersion="0" _name="Puddle" _bActive="true">
 				<_listComponent>
-					<WaterBodyComponent _localPosition="0,0.04,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _materialPath="engine/materials/water.material" _size="3,4" _cellSize="0.5" />
+					<WaterBodyComponent _localPosition="0,0.04,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _materialPath="engine/materials/water.material" _size="3,4" _cellSize="0.5" _shallowColor="0.22,0.26,0.26,0.25" _deepColor="0.1,0.14,0.16,0.6" _deepDepth="2" />
 				</_listComponent>
 			</GameObject>
 		</entity>

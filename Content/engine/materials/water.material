@@ -13,6 +13,7 @@
 		<item name="_deepColor" type="Vector4" defaultValue="0.01 0.08 0.16 0.92" displayName="Deep Color" group="Water"/>
 		<item name="_skyColor" type="Vector4" defaultValue="0.55 0.70 0.85 1.0" displayName="Sky Color" group="Water"/>
 		<item name="_waveParams" type="Vector4" defaultValue="9.81 0.0 0.0 0.0" displayName="Wave Gravity (x)" group="Waves"/>
+		<item name="_rain" collection="engine/materials/weather.matparams.xml" collectionParameter="Rain" type="Vector4" defaultValue="0 0 0 0" displayName="Rain (strength: rain rings on the water)" group="Weather"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>

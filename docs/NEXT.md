@@ -65,6 +65,7 @@
 
 순서: 결함 · 계약 줄을 먼저, "문턱을 넘을 때만" 줄은 4 절 값이 나온 뒤. 판단 · 초안은 DesignBacklog 의 같은 이름 절에 있다.
 
+- **하늘 반사(스카이 라이트):** 반사 프로브가 없는 곳의 환경 반사가 장면 앰비언트 색 하나다(`SurfacePBR::computeEnvironmentSpecular` × 앰비언트) — 비 온 땅 · 웅덩이(거칠기 낮음)가 하늘 대신 그 색을 비춰 검게 보이고, 빗방울 링(법선 흔들림)이 화소 1 ~ 2 단계로만 보인다(Shooter3D rainyard, 물 표면 링은 `water.hlsl` 에 넣었다). 할 일: 하늘(`SkyComponent` — HDRI · 대기)을 거칠기 단계별로 걸러 프로브 밖 반사로 쓴다(언리얼 Sky Light · 유니티 Environment Reflections), 빗마당에 흐린 하늘을 두고 ⑨ 링 판정(Rain 1 · 0 두 장)을 되돌린다.
 - **렌더링:** TransientLeasePool 을 뷰 풀에, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, VFX · 프로브 디스패치 전이를 묶음 API 로. 셰이더: 공통 `PixelContext` · 표면 평가와 패스별 출력(포워드 색 / G버퍼 인코딩) 분리, 표면 모델 · 필수 입력 선언과 미지원 조합의 쿠킹 실패 — Lit · Unlit · Emissive · 툰 · 알파 마스크 패스 분류 목록부터(언리얼 셰이딩 모델 대조).
 - **R-15 후속(판단은 "텍스처 스트리밍 밉 범위 대기 줄" 절):** 1 — GI 복셀화를 GPU 원본으로(`SceneVoxelizer.cpp`, 기하 셰이더 없는 3 축 투영 · 프레임 업로드 단계, 스킨 · 모프는 CPU 정점 Keep). 2 — `MeshCPUAccess` 를 `Mesh::create` · `MeshCache::request` 에 기본값 없이, 업로드가 끝난 뒤 CPU 정점을 놓는다(언리얼 `bAllowCPUAccess`, 의존 1).
 - **RHI 5-2(측정 뒤에만):** Vulkan 동적 오프셋 · 푸시 디스크립터, WebGPU 바인드 그룹 캐시 은퇴, RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더, 서브할당은 감사 R-4. L-2 상수 버퍼 기록 값을 레코드로(L-1 의 미러 락 대기가 `RT.Graph.parallelLevel` 합의 2 % 를 넘을 때만, `D3D12RHIDevice` · `RHIConstantBufferMirror`, R6-3 · R6-4 뒤, 테스트 `SecondWriteInAFrameIsReported`).
