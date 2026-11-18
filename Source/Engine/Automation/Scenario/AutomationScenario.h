@@ -32,17 +32,6 @@ namespace sw
     /** @brief 골든 그림 폴더 이름 — 시나리오 파일 옆 `<시나리오 폴더>/golden/` 이다. 판정(`AutomationEvaluator`)이 읽고 쓰는 자리와 쓰기 문(`AutomationScratch`)이 여는 자리가 이 하나를 본다. */
     inline constexpr const utf8* kAutomationGoldenFolder = "golden";
 
-    /**
-     * @brief 시나리오 경로의 이름 줄기(`game/empty/automation/fog.scenario.xml` → `fog`)입니다 — 보고 · 로그 · 에디터 상태 폴더 이름의 앞머리(`<줄기>_<백엔드>`)입니다.
-     * @details 마지막 `/` 뒤 파일 이름의 첫 `.` 앞입니다. 스크립트(`ScenarioDeclaration.stem`)가 같은 규칙을 쓴다.
-     */
-    inline string getAutomationScenarioStem( string_view path )
-    {
-        string_view fileName;
-        FileUtil::getFileNamePart( path, fileName );
-        return string( fileName.substr( 0, fileName.find( '.' ) ) );
-    }
-
     /** @brief 시나리오의 프레임 0 이 언제인가입니다. */
     enum class AutomationStartCondition : uint8
     {
@@ -170,9 +159,6 @@ namespace sw
          *          단계가 아니라 루트 속성인 이유: 시작 뒤의 단계는 게임의 첫 틱보다 늦다.
          */
         bool _bRequiresForeground{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-
-        /** @brief `_listLaunchVariable` 을 명령줄 인자(`-gv_a=1 -gv_b=x`)로 씁니다. 선언이 없으면 빈 글입니다. 띄우는 쪽(`AppScenarioTest`, 손 실행)이 명령줄에 붙이고, 실행기는 시작할 때 값이 같은지 보고 다르면 읽기 오류로 멈춘다. */
-        string makeLaunchArguments() const;
     };
 } // namespace sw
 

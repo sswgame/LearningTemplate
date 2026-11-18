@@ -595,16 +595,6 @@ namespace sw
         return {};
     }
 
-    string AutomationTestOptions::makeLaunchArguments() const
-    {
-        string arguments;
-        for ( const AutomationAttribute& variable : _listLaunchVariable )
-        {
-            arguments += ( arguments.empty() ? "-" : " -" ) + variable._name + "=" + variable._value;
-        }
-        return arguments;
-    }
-
     expected<void> AutomationScenario::parseLoad( const XMLNode& node )
     {
         using Internal                = AutomationScenarioInternal;

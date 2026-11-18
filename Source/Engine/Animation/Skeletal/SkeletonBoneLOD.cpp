@@ -293,19 +293,6 @@ namespace sw
     {
         return Skeleton::makeSidePath( skeletonPath, kExtension );
     }
-
-    void SkeletonBoneLOD::makeSkeletonCandidatePaths( string_view boneLODPath, string& outImportedPath, string& outSiblingPath )
-    {
-        outImportedPath.clear();
-        outSiblingPath.clear();
-        if ( StringUtil::endsWith( boneLODPath, kExtension ) == false )
-            return;
-        const string_view stemPath = boneLODPath.substr( 0, boneLODPath.size() - kExtension.size() );
-        string_view       stem;
-        FileUtil::getFileNamePart( stemPath, stem );
-        outImportedPath = string{ stemPath } + "/" + string{ stem } + string{ Skeleton::kExtension };
-        outSiblingPath  = string{ stemPath } + string{ Skeleton::kExtension };
-    }
 } // namespace sw
 
 namespace sw

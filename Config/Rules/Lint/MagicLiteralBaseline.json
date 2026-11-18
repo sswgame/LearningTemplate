@@ -556,7 +556,6 @@
     "Source/Engine/Physics/Asset/PhysicsRagdoll.cpp": {"minus-one": 2},
     "Source/Engine/Physics/Box2D/Box2DPhysicsScene.cpp": {"float": 2},
     "Source/Engine/Physics/Cloth/ClothComponent.cpp": {"minus-one": 1, "integer": 3},
-    "Source/Engine/Physics/Collision/PhysicsQuery.h": {"integer": 1},
     "Source/Engine/Physics/Collision/SweepHit.cpp": {"float": 2},
     "Source/Engine/Physics/Component/CharacterControllerComponent.cpp": {"float": 1},
     "Source/Engine/Physics/Component/LaunchVelocityComponent.cpp": {"float": 3},

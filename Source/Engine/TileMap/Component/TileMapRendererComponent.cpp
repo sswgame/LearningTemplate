@@ -413,12 +413,6 @@ namespace sw
         }
     }
 
-    void TileMapRendererComponent::computeNavCosts( vector<uint8>& outListCost ) const
-    {
-        constexpr uint8 kEmptyCost = 10;
-        TileGridUtil::makeNavCosts( getTileSet(), _listBrushIndex, kEmptyCost, outListCost );
-    }
-
     void TileMapRendererComponent::setSorting( const hashed_string& layerName, int32 orderInLayer )
     {
         _sortingLayer = layerName;

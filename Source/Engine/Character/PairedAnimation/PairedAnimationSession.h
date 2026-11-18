@@ -137,8 +137,6 @@ namespace sw
         const TComponentHandle<SkeletalAnimatorComponent>& getRoleAnimator( uint32 roleIndex ) const { return _listRole[roleIndex]._animator; }
         /** @brief 지금 재생 중인(들어왔고 나가지 않은) 역할 수입니다. */
         uint32 getPlayingRoleCount() const;
-        /** @brief 이름의 역할이 지금 재생 중이면 true 입니다. */
-        bool isRolePlaying( const hashed_string& roleName ) const;
 
     private:
         /** @brief 역할 하나의 실행 상태입니다(에셋의 역할과 인덱스가 같다). */

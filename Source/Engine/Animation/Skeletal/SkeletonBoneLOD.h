@@ -110,8 +110,6 @@ namespace sw
          *        `a/b.skeleton.xml` 은 `a/b.bonelod.xml` 입니다. 스켈레톤 확장자가 아니면 빈 문자열입니다.
          */
         static string makePathForSkeleton( string_view skeletonPath );
-        /** @brief `makePathForSkeleton` 의 역함수입니다. 본 LOD 경로에서 스켈레톤 후보 둘(임포트 옆 폴더 안, 같은 폴더)을 구합니다. */
-        static void makeSkeletonCandidatePaths( string_view boneLODPath, string& outImportedPath, string& outSiblingPath );
 
     private:
         /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<SkeletonBoneLOD>::acquire` 로 한 벌을 쥔다. */
