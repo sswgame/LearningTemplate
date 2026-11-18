@@ -100,6 +100,7 @@ namespace sw::editor
             , _textInput{}
             , _lastCursor{ CursorShape::Arrow }
             , _bCursorKnown{ SW_FALSE }
+            , _heldModifierKeyMask{ 0 }
         {
         }
 
@@ -205,6 +206,7 @@ namespace sw::editor
                 case WaylandInputKind::FocusGained:
                 case WaylandInputKind::FocusLost:
                 {
+                    _heldModifierKeyMask = 0; // 초점 밖에서 뗀 키는 오지 않는다 - ImGui 도 초점을 잃으면 키를 모두 뗀다
                     io.AddFocusEvent( input._kind == WaylandInputKind::FocusGained );
                     return false;
                 }
@@ -214,9 +216,9 @@ namespace sw::editor
                     const bool     bIsDown   = input._kind == WaylandInputKind::KeyDown;
                     const Key      engineKey = InputKeyTable::mapX11Key( static_cast<uint64>( input._keySym ), input._keyCode );
                     const ImGuiKey modifier  = ImGuiKeyForward::toImGuiModifier( engineKey );
+                    const ImGuiKey key       = ImGuiKeyForward::toImGuiKey( engineKey );
                     if ( modifier != ImGuiKey_None )
-                        io.AddKeyEvent( modifier, bIsDown ); // shortcut: 좌우를 함께 누른 채 하나만 떼면 수정 키가 풀린다, 입력에 xkb 수정 상태가 실리면 그것으로 바꾼다
-                    const ImGuiKey key = ImGuiKeyForward::toImGuiKey( engineKey );
+                        io.AddKeyEvent( modifier, trackModifierKey( key, bIsDown ) );
                     if ( key != ImGuiKey_None )
                         io.AddKeyEvent( key, bIsDown );
                     return io.WantCaptureKeyboard;
@@ -228,6 +230,25 @@ namespace sw::editor
                 }
             }
             return false;
+        }
+
+        /**
+         * @brief 좌우 수정 키 @p key 의 누름을 기록하고, 같은 수정 키(Ctrl · Shift · Alt · Super)가 한쪽이라도 눌려 있으면 true 를 돌려줍니다.
+         * @details wl_keyboard 의 키 사건에는 수정 상태가 없다 - 좌우를 함께 누른 채 하나만 떼도 수정 키가 풀리던 것을 키마다의 누름으로 막는다(X11 은 사건의 state 를 쓴다).
+         *          ImGui 는 왼쪽 넷(Ctrl · Shift · Alt · Super) 뒤에 오른쪽 넷을 같은 순서로 둔다 - 짝은 번호의 아래 두 비트가 같다.
+         */
+        bool trackModifierKey( ImGuiKey key, bool bIsDown )
+        {
+            static_assert( ImGuiKey_RightCtrl - ImGuiKey_LeftCtrl == ImGuiKey_RightSuper - ImGuiKey_RightCtrl + 1, "ImGui 좌우 수정 키 배치가 바뀌었다" );
+            if ( key < ImGuiKey_LeftCtrl || key > ImGuiKey_RightSuper )
+                return bIsDown;
+            const uint32 bit       = static_cast<uint32>( key - ImGuiKey_LeftCtrl );
+            const uint8  mask      = static_cast<uint8>( 1u << bit );
+            _heldModifierKeyMask   = bIsDown ? static_cast<uint8>( _heldModifierKeyMask | mask ) : static_cast<uint8>( _heldModifierKeyMask & ~mask );
+            const uint32 sideCount = static_cast<uint32>( ImGuiKey_RightCtrl - ImGuiKey_LeftCtrl );
+            const uint32 kind      = bit % sideCount;
+            const uint32 pairMask  = ( 1u << kind ) | ( 1u << ( kind + sideCount ) );
+            return ( _heldModifierKeyMask & pairMask ) != 0;
         }
 
         float32 getDPIScale() const override
@@ -302,6 +323,7 @@ namespace sw::editor
         ImGuiTextInputBridge _textInput;     ///< 창의 입력기와 ImGui 를 잇는다
         CursorShape          _lastCursor;
         uint8                _bCursorKnown : 1;
+        uint8                _heldModifierKeyMask; ///< 누른 좌우 수정 키(`ImGuiKey_LeftCtrl` 부터 8 개 — 왼쪽 넷, 오른쪽 넷)
     };
 
     unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackendFor( const IWindow& window )
