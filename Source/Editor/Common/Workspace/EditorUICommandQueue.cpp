@@ -27,6 +27,24 @@ namespace sw::editor
         return command;
     }
 
+    EditorUICommand EditorUICommand::makeFitPreviewTarget( uint32 targetID, uint32 width, uint32 height )
+    {
+        EditorUICommand command;
+        command._kind     = EditorUICommandKind::FitPreviewTarget;
+        command._targetID = targetID;
+        command._width    = width;
+        command._height   = height;
+        return command;
+    }
+
+    EditorUICommand EditorUICommand::makeFreePreviewTarget( uint32 targetID )
+    {
+        EditorUICommand command;
+        command._kind     = EditorUICommandKind::FreePreviewTarget;
+        command._targetID = targetID;
+        return command;
+    }
+
     EditorUICommand EditorUICommand::makeStart( bool bSimulate, bool bStartAtCamera )
     {
         EditorUICommand command;
@@ -219,6 +237,12 @@ namespace sw::editor
         {
             case EditorUICommandKind::FitViewTarget:
                 Internal::fitViewTarget( command );
+                break;
+            case EditorUICommandKind::FitPreviewTarget:
+                editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().ensurePreviewTargetSize( command._targetID, command._width, command._height );
+                break;
+            case EditorUICommandKind::FreePreviewTarget:
+                editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().freePreviewTarget( command._targetID );
                 break;
             case EditorUICommandKind::StartPlay:
             case EditorUICommandKind::StartSimulate:

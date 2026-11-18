@@ -73,7 +73,7 @@ SW_TEST_CASE( EditorUIFrameOutputTest, ViewRequestRule )
 }
 
 /**
- * @brief [EditorUIFrameOutputTest] 미리보기 뷰의 눈은 묶음에 값으로 실리고, 모르는 타깃은 싣지 않으며, 한 프레임 상한을 넘으면 버리고 오류를 남긴다
+ * @brief [EditorUIFrameOutputTest] 미리보기 뷰의 눈은 묶음에 값으로 실리고, id 없는 제출은 싣지 않으며, 한 프레임 상한을 넘으면 버리고 오류를 남긴다
  */
 SW_TEST_CASE( EditorUIFrameOutputTest, PreviewSubmitsTravelAsValues )
 {
@@ -81,7 +81,7 @@ SW_TEST_CASE( EditorUIFrameOutputTest, PreviewSubmitsTravelAsValues )
     const uint32      targetID = views.allocatePreviewTarget();
 
     views.clearViewDrawnMarks();
-    views.submitPreviewView( targetID + 100, 7, float4x4{}, float3{} ); // 없는 타깃
+    views.submitPreviewView( 0, 7, float4x4{}, float3{} ); // id 없음 — 싣지 않는다
     views.submitPreviewView( targetID, 7, float4x4{}, float3{ 1.0f, 2.0f, 3.0f } );
     SW_EXPECT_TRUE( views.isAnimationRequested() );
     views.publishUIFrame( 0u );
@@ -101,4 +101,34 @@ SW_TEST_CASE( EditorUIFrameOutputTest, PreviewSubmitsTravelAsValues )
     SW_EXPECT_LOG( "EditorRenderViews.PreviewViewOverflow" );
     views.publishUIFrame( 0u );
     SW_EXPECT_EQUAL( kMaxPreviewSceneView, views.getPublishedUIFrame()._previewCount );
+}
+
+/**
+ * @brief [EditorUIFrameOutputTest] 타깃은 게임 스레드가 가진다 — 게임 쪽에서 만들고 놓은 미리보기 타깃은 게임이 넘긴 뒤 다음 UI 프레임 시작에만 UI 값에 보인다(게임 → UI 값 묶음)
+ */
+SW_TEST_CASE( EditorUIFrameOutputTest, TargetStatesReachUIAtFrameStart )
+{
+    EditorRenderViews views;
+    const uint32      targetID = views.allocatePreviewTarget();
+    SW_EXPECT_TRUE( targetID != 0 );
+    SW_EXPECT_TRUE( views.allocatePreviewTarget() != targetID ); // 다시 쓰지 않는다
+
+    // 게임 틱 — FitPreviewTarget 의 적용이 슬롯을 만든다(디바이스가 없어 렌더 타깃은 요청하지 않는다). 넘기기 전에는 UI 에 없다.
+    views.ensurePreviewTargetSize( targetID, 64, 32 );
+    SW_EXPECT_TRUE( views.findPreviewTarget( targetID ) != nullptr );
+    views.clearViewDrawnMarks();
+    SW_EXPECT_TRUE( views.findUIPreviewTargetState( targetID ) == nullptr );
+
+    // 게임이 넘기고 다음 UI 프레임이 시작해야 보인다.
+    views.applyReadyAndPublishTargets();
+    SW_EXPECT_TRUE( views.findUIPreviewTargetState( targetID ) == nullptr ); // 이번 UI 프레임 값은 그대로다
+    views.clearViewDrawnMarks();
+    SW_EXPECT_TRUE( views.findUIPreviewTargetState( targetID ) != nullptr );
+
+    // FreePreviewTarget 의 적용 뒤에도 같은 길로 사라진다.
+    views.freePreviewTarget( targetID );
+    SW_EXPECT_TRUE( views.findUIPreviewTargetState( targetID ) != nullptr );
+    views.applyReadyAndPublishTargets();
+    views.clearViewDrawnMarks();
+    SW_EXPECT_TRUE( views.findUIPreviewTargetState( targetID ) == nullptr );
 }

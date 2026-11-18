@@ -513,9 +513,9 @@ namespace sw::editor
                         (void)context.expect( probe._objectID != 0, "could not create the probe object" );
                         return EditorSelfTestStep::Continue;
                     }
-                    const EditorViewTarget& view        = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
-                    int32                   vertexCount = 0;
-                    const bool              bImage      = view._pTextureID != nullptr && countVerticesAfterGameImage( reinterpret_cast<ImTextureID>( view._pTextureID ), vertexCount );
+                    const EditorViewTargetState& view        = editorContext.getSubsystem<EditorRenderViews>().getUITargetState( EditorViewKind::Game );
+                    int32                        vertexCount = 0;
+                    const bool                   bImage      = view._pTextureID != nullptr && countVerticesAfterGameImage( reinterpret_cast<ImTextureID>( view._pTextureID ), vertexCount );
                     if ( bImage == false && stepIndex < kMaxWaitFrame ) // 이미지가 이 프레임에 그려졌다는 것이 조건이다(프레임 수를 어림하지 않는다)
                         return EditorSelfTestStep::Continue;
                     (void)context.expect( bImage, "the game view image was not drawn while its tab was in front" );

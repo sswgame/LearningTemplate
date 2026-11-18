@@ -35,14 +35,10 @@ namespace sw::editor
 
     void EditorRenderViews::clearViewDrawnMarks()
     {
-        // UI 프레임 시작 — 그리기 표시를 지우고, 엔진이 그사이 올린 렌더 텍스처를 받는다(패널은 크기가 바뀔 때만 `ensure*TargetSize` 를 부른다).
-        for ( EditorViewTarget& view : _arrViewTarget )
+        // UI 프레임 시작 — 그리기 표시를 지우고, 게임 스레드가 넘긴 타깃 값(받은 렌더 텍스처 · 요청한 크기)을 이번 프레임 값으로 받는다.
         {
-            applyIfReady( view );
-        }
-        for ( EditorPreviewViewTarget& preview : _listPreviewTarget )
-        {
-            applyIfReady( preview._target );
+            ScopedLock<mutex> lock{ _targetStatesMutex };
+            _uiTargets = _publishedTargets;
         }
         for ( EditorUIFrameOutput::ViewMark& mark : _uiFrame._arrView )
         {
@@ -83,12 +79,27 @@ namespace sw::editor
         ensureTargetSize( _arrViewTarget[static_cast<uint32>( kind )], width, height );
     }
 
-    uint32 EditorRenderViews::allocatePreviewTarget()
+    const EditorPreviewTargetState* EditorRenderViews::findUIPreviewTargetState( uint32 id ) const
     {
-        EditorPreviewViewTarget preview;
-        preview._id = _previewTargetIDAllocator.allocate();
-        _listPreviewTarget.push_back( preview );
-        return preview._id;
+        return VectorUtil::findBy<&EditorPreviewTargetState::_id>( _uiTargets._listPreview, id );
+    }
+
+    void EditorRenderViews::applyReadyAndPublishTargets()
+    {
+        EditorTargetSnapshot states;
+        for ( uint32 kindIndex = 0; kindIndex < static_cast<uint32>( EditorViewKind::Count ); ++kindIndex )
+        {
+            applyIfReady( _arrViewTarget[kindIndex] );
+            states._arrView[kindIndex] = EditorViewTargetState::capture( _arrViewTarget[kindIndex] );
+        }
+        states._listPreview.reserve( _listPreviewTarget.size() );
+        for ( EditorPreviewViewTarget& preview : _listPreviewTarget )
+        {
+            applyIfReady( preview._target );
+            states._listPreview.push_back( EditorPreviewTargetState{ EditorViewTargetState::capture( preview._target ), preview._id } );
+        }
+        ScopedLock<mutex> lock{ _targetStatesMutex };
+        _publishedTargets = std::move( states );
     }
 
     void EditorRenderViews::freePreviewTarget( uint32 id )
@@ -105,9 +116,17 @@ namespace sw::editor
 
     void EditorRenderViews::ensurePreviewTargetSize( uint32 id, uint32 width, uint32 height )
     {
+        if ( id == 0 )
+            return;
         EditorPreviewViewTarget* pPreview = findPreviewTargetMutable( id );
-        if ( pPreview != nullptr )
-            ensureTargetSize( pPreview->_target, width, height );
+        if ( pPreview == nullptr )
+        {
+            EditorPreviewViewTarget created;
+            created._id = id;
+            _listPreviewTarget.push_back( created );
+            pPreview = &_listPreviewTarget.back();
+        }
+        ensureTargetSize( pPreview->_target, width, height );
     }
 
     const EditorPreviewViewTarget* EditorRenderViews::findPreviewTarget( uint32 id ) const
@@ -122,7 +141,7 @@ namespace sw::editor
 
     void EditorRenderViews::submitPreviewView( uint32 id, uint32 sceneKey, const float4x4& viewProj, const float3& cameraPos )
     {
-        if ( findPreviewTarget( id ) == nullptr )
+        if ( id == 0 )
             return;
         requestAnimationFrame(); // 보인 미리보기 씬은 이번 프레임에 틱한다(`ScenePreviewTick::WhenDrawn`) — 그 움직임을 그리려면 다음 프레임이 곧 와야 한다
         if ( _uiFrame._previewCount >= kMaxPreviewSceneView )

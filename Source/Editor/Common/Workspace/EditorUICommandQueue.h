@@ -23,6 +23,8 @@ namespace sw::editor
     enum class EditorUICommandKind : uint8
     {
         FitViewTarget = 0, ///< 뷰 렌더 타깃을 `_width` x `_height` 로 맞춘다(`EditorRenderViews::ensureViewTargetSize`)
+        FitPreviewTarget,  ///< 미리보기 타깃 `_targetID` 를 `_width` x `_height` 로 맞춘다 — 없으면 만든다(`EditorRenderViews::ensurePreviewTargetSize`)
+        FreePreviewTarget, ///< 미리보기 타깃 `_targetID` 를 놓는다(`EditorRenderViews::freePreviewTarget`)
         StartPlay,         ///< 플레이어가 조종하는 재생을 시작한다(`_bStartAtCamera` 면 에디터 카메라 위치에서, 멈춤에서 시작할 때만)
         StartSimulate,     ///< 월드만 도는 재생을 시작한다
         Pause,
@@ -51,8 +53,11 @@ namespace sw::editor
         uint32              _width{ 0 };
         uint32              _height{ 0 };
         uint32              _stepFrameCount{ 0 };
+        uint32              _targetID{ 0 }; ///< 미리보기 타깃 id(`EditorRenderViews::allocatePreviewTarget`)
 
         static EditorUICommand makeFitViewTarget( EditorViewKind view, uint32 width, uint32 height );
+        static EditorUICommand makeFitPreviewTarget( uint32 targetID, uint32 width, uint32 height );
+        static EditorUICommand makeFreePreviewTarget( uint32 targetID );
         static EditorUICommand makeStart( bool bSimulate, bool bStartAtCamera );
         static EditorUICommand makeStep( uint32 frameCount );
         /** @brief 칸이 없는 종류(Pause · Resume · Stop · ToggleEject · KeepSelectedChanges)입니다. */

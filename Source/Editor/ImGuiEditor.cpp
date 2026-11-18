@@ -812,6 +812,8 @@ namespace sw::editor
             return;
         SW_EDITOR_PROFILE_SCOPE( "GT.Editor.applyUICommands" );
         _editorContext->getSubsystem<EditorUICommandQueue>().applyDue();
+        // 타깃은 게임 스레드가 가진다 — 명령이 바꾼 크기와 엔진이 그사이 올린 렌더 텍스처를 받아 다음 UI 프레임이 읽을 값으로 넘긴다(`EditorTargetSnapshot`).
+        _editorContext->getSubsystem<EditorRenderViews>().applyReadyAndPublishTargets();
     }
 
     void ImGuiEditor::openFrame()
