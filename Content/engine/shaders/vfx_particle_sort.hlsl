@@ -19,13 +19,6 @@
 #define SW_SORT_THREADS      256 // = SW_SORT_MAX_ELEMENTS / 2
 #include "bitonic_sort.hlsli"
 
-struct GPUParticle
-{
-    float4 _positionSize;
-    float4 _color;
-    float4 _rotationLife;
-};
-
 SW_DECLARE_STRUCTURED_BUFFER( uint4, g_VFXParams, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( GPUParticle, g_VFXParticles, 1 );
 #if defined( DX11 )

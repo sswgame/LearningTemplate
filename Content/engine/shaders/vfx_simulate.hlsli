@@ -1,5 +1,6 @@
 /**
- * vfx_simulate.hlsli — GPU 입자 시뮬레이션(vfx_simulate.hlsl · vfx_mesh_instance.hlsl)과 C++ `VFXGPUSimulation` 이 함께 읽는 계약이다. 숫자 #define 만 둔다(C++ 가 그대로 include 한다).
+ * vfx_simulate.hlsli — GPU 입자 시뮬레이션(vfx_simulate.hlsl · vfx_mesh_instance.hlsl · vfx_particle_sort.hlsl) · 입자 그리기(particle.hlsl)와 C++ `VFXGPUSimulation` 이 함께 읽는 계약이다.
+ * C++ 가 그대로 include 하므로 숫자 #define 을 두고, 셰이더만 읽는 선언(입자 원소 `GPUParticle`)은 `__cplusplus` 밖에 둔다.
  *
  * 매개변수 버퍼(StructuredBuffer<uint4> g_VFXParams, t0)에 방출기마다 한 구간이 이어 붙고, 루트 상수 g_VFXParamBase 가 그 첫 행이다. 실수는 비트 그대로 담는다(asfloat).
  * 행 번호는 구간 첫 행 기준이다. 해시 상수(splitmix64)와 충돌의 띄움 거리도 C++ 가 올린다 — 셰이더에 같은 값을 다시 적지 않는다.
@@ -81,5 +82,15 @@
 #define SW_VFX_PASS_COMPACT    4u // (그룹 = 풀 / 스레드 수 올림) 그룹마다 자기 시작 위치로 안정 압축
 #define SW_VFX_PASS_OUTPUT     5u // (그룹 = 풀 / 스레드 수 올림) 렌더 입력 · 파티클 라이트 쓰기
 #define SW_VFX_PASS_STEP_SHIFT 8u
+
+#if !defined( __cplusplus )
+/** @brief 입자 하나의 렌더 입력입니다 — C++ `GPUParticle`(Engine/VFX/VFXParticle.h)과 같은 배치다. 시뮬레이션이 쓰고 그리기 · 정렬 · 메시 인스턴스 쓰기가 읽는다. */
+struct GPUParticle
+{
+    float4 _positionSize; // xyz = 방출기 로컬 위치, w = 크기(월드 변 길이 — 방출기 배율이 곱해진다)
+    float4 _color;        // 선형 RGBA
+    float4 _rotationLife; // x = 회전(라디안), y = 수명 비율, zw = 비어 있음
+};
+#endif
 
 #endif // SW_ENGINE_VFXSIMULATE_HLSLI

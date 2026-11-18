@@ -14,13 +14,7 @@
     #error "MATERIAL_TEXTURE_COUNT from the compile defines differs from this shader's material texture slots"
 #endif
 #include "binding.hlsli"
-
-struct GPUParticle
-{
-    float4 _positionSize; // xyz = 방출기 로컬 위치, w = 크기(월드 변 길이 — 방출기 배율이 곱해진다)
-    float4 _color;        // 선형 RGBA
-    float4 _rotationLife; // x = 회전(라디안), y = 수명 비율, zw = 비어 있음
-};
+#include "vfx_simulate.hlsli" // 입자 원소 GPUParticle
 
 SW_DECLARE_STRUCTURED_BUFFER( GPUParticle, g_SwParticles, SW_SLOT_PASS_SRV );
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwParticleOrder, SW_SLOT_PARTICLE_ORDER_SRV ); // 입자 번호 순서 목록(C++ GPUSceneSnapshot::_listParticleOrder)
