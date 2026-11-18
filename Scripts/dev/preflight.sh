@@ -1,5 +1,5 @@
 #!/bin/bash
-# 묶음 끝 전체 검증: Windows(린트, Debug · Release · 서버 · 배포 빌드, 단위 · ctest)가 모두 통과한 뒤에만 Linux 를 돌린다.
+# 묶음 끝 전체 검증: Windows(린트, Release · ASan · 서버 · 배포 빌드, 단위 · ctest)가 모두 통과한 뒤에만 Linux 를 돌린다.
 # 인자는 Linux 로 넘긴다(--record). --no-linux 면 Windows 까지만 돈다(Linux 골든이 곧 바뀌는 묶음 사이). 로그는 build/<프리셋>/Testing/Logs/verify.* · build/verify.*.log. 끝 줄 VERIFIED=<sha> 가 나와야 push 한다.
 # --show 는 게임 · 에디터 테스트 창을 화면에 띄우고 테스트를 하나씩 돌린다(사람이 지켜볼 때). --dry-run 은 돌릴 명령만 차례대로 찍는다(스크립트를 고친 뒤 확인).
 # --self-check 는 판정 요약(print_results)의 자체 검사만 하고 끝난다(빌드 · 테스트 없이). 끝 줄 SELF_CHECK_OK.
@@ -7,11 +7,12 @@
 # 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 #
 # 단계(시간 판정이 CPU 경합에 흔들리는 일과 그렇지 않은 일을 가른다 — 시나리오는 벽시계 시한 · 프레임에 걸린 그림을 판정하므로 GPU 단계는 혼자 돈다):
-#   build       lint --all(뒤에서) ‖ Debug 빌드 → (바뀐 파일 clang-tidy, 뒤에서) ‖ 임포트 → (Release → 서버 빌드 ‖ 배포 프리셋 셋 빌드 · 쿠킹). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
+#   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 → (바뀐 파일 clang-tidy, 뒤에서) → 서버 빌드 ‖ 배포 프리셋 셋 빌드 · 쿠킹). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
+#               Debug 는 짓지 않는다 — 단언 · 검사는 SW_DO_CHECKS 로 Release 에 있고, CPU 단위는 ASan(Release + clang-cl ASan)이 돈다(사용자 결정 2026-11-18).
 #   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오만 Release 로 먼저(test_history.py changed — DesignBacklog D4). 돈 적 없는 테스트 · 기준 파일의 실패를
 #               전체 실행 중간이 아니라 빌드 직후에 갈래 이름과 함께 낸다. 없는 골든 · 스냅숏만 쓰고(MissingBaseline) 쓴 것이 있으면 멈춘다 — 보고 커밋한 뒤 --from changed.
 #               지면 cpu · gpu-release 를 시작하지 않는다. 끝 줄 CHANGED_OK=<sha> · CHANGED_FAILED.
-#   cpu         Debug ctest -L nogpu(단위 · 셰이더 다시 굽기 · 파서 …) ‖ 서버 단위 → launch-args → shipping-check --skip-build(기동만). 시간을 판정하지 않는 CPU 일만 겹친다.
+#   cpu         ASan ctest -L nogpu(단위 · 셰이더 다시 굽기 · 파서 …) ‖ 서버(Release) 단위 → launch-args → shipping-check --skip-build(기동만). 시간을 판정하지 않는 CPU 일만 겹친다.
 #   gpu-release Release ctest 전체 — 시나리오 그림 · 골든 · 기록 대조의 정본(모든 게임 · 네 백엔드).
 #   (없앤 gpu-debug: Debug 로 같은 체인을 한 번 더 돌던 단계 14.6 분 — 단언 · 검사가 SW_DO_CHECKS 로 Release 에도 들어 Release 체인이 지난다. Core/Foundation/Macros.h 4-1)
 # 예전(2026-11-13 측정 53 분)은 단계가 모두 차례였고, 같은 체인을 두 구성에서 네 백엔드로 다 돌았고, 셰이더 다시 굽기가 두 구성에서 혼자(RUN_SERIAL) 돌았고, Debug 단위를 ctest 밖에서 한 번 더 돌았다.
@@ -175,19 +176,19 @@ run_changed() {
 }
 
 job_tidy() {
-  # 정적 분석: 이 묶음이 바꾼 파일(origin/main 기준)만 — 방금 지은 Debug 의 컴파일 DB 를 쓴다. 오류로 오르는 검사는 .clang-tidy 의 WarningsAsErrors.
+  # 정적 분석: 이 묶음이 바꾼 파일(origin/main 기준)만 — 방금 지은 ASan 의 컴파일 DB 를 쓴다(유니티를 끈 구성이라 원본 TU 가 DB 에 있다, clang_tidy.py 기본 프리셋). 오류로 오르는 검사는 .clang-tidy 의 WarningsAsErrors.
   echo "== tidy $(date +%T)"
-  run build/Ninja-Debug/Testing/Logs/verify.tidy.log py -3 -m Scripts tidy --changed origin/main
+  run build/Ninja-Release-ASan/Testing/Logs/verify.tidy.log py -3 -m Scripts tidy --changed origin/main
   local RC=$?
-  [ $DRY -eq 1 ] || tail -n 25 build/Ninja-Debug/Testing/Logs/verify.tidy.log
+  [ $DRY -eq 1 ] || tail -n 25 build/Ninja-Release-ASan/Testing/Logs/verify.tidy.log
   echo "tidy exit=$RC"
   return $RC
 }
 
-job_debug_cpu() {
-  run_ctest Ninja-Debug nogpu -L nogpu || return 1
+job_sanitizer_cpu() {
+  run_ctest Ninja-Release-ASan nogpu -L nogpu || return 1
   # App --test 의 케이스 수(보고에 적는다) — 보고 JSON 에서 읽는다(엔진 로그 파일에는 요약 줄이 없다). 보고 줄은 판정을 바꾸지 않는다.
-  [ $DRY -eq 1 ] || py -3 -c "import json; d=json.load(open('build/Ninja-Debug/Testing/Reports/UnitTests.json', encoding='utf-8')); print(f\"App --test: {d['runCount']} case run(s), {d['failedCount']} failed, {d.get('skippedCount', 0)} skipped\")" || true
+  [ $DRY -eq 1 ] || py -3 -c "import json; d=json.load(open('build/Ninja-Release-ASan/Testing/Reports/UnitTests.json', encoding='utf-8')); print(f\"App --test: {d['runCount']} case run(s), {d['failedCount']} failed, {d.get('skippedCount', 0)} skipped\")" || true
   return 0
 }
 
@@ -201,10 +202,10 @@ job_shipping_build() {
 
 job_server_tools() {
   echo "== server unit $(date +%T)"
-  run build/Ninja-Debug-Server/Testing/Logs/verify.unit.log build/Ninja-Debug-Server/Bin/Server.exe --test -unattended
+  run build/Ninja-Release-Server/Testing/Logs/verify.unit.log build/Ninja-Release-Server/Bin/Server.exe --test -unattended
   local RC=$?
   echo "server unit exit=$RC"
-  [ $DRY -eq 1 ] || grep -E "case run|TEST_RESULT=" build/Ninja-Debug-Server/Testing/Logs/verify.unit.log
+  [ $DRY -eq 1 ] || grep -E "case run|TEST_RESULT=" build/Ninja-Release-Server/Testing/Logs/verify.unit.log
   [ $RC -eq 0 ] || return 1
 
   # 도구 테스트: 실행 인자 GUI(VS Code 확장 Tools/launch-args — 확장이라 JS 다)가 Source 의 매크로 · 인자 표를 읽는다. 엔진 쪽 이름 · 형식이 바뀌면 깨지는데
@@ -229,21 +230,22 @@ job_server_tools() {
 mkdir -p build
 if [ $STAGE -le 1 ]; then
   start_job "lint --all" job_lint
-  build_preset Ninja-Debug
-  start_job "clang-tidy" job_tidy
-  # 임포트를 먼저 끝낸다 — 낡은 산출물을 Content 에 다시 쓰는 일이라 배포 빌드의 쿠킹이 그 파일을 읽는 동안 돌지 않게(ctest 의 고정 단계 ImportedAssets 는 아래에서 곧바로 끝난다).
-  run_ctest Ninja-Debug import -L import || windows_failed "Ninja-Debug import"
-  start_job "shipping build" job_shipping_build
   build_preset Ninja-Release
-  build_preset Ninja-Debug-Server
+  # 임포트를 먼저 끝낸다 — 낡은 산출물을 Content 에 다시 쓰는 일이라 배포 빌드의 쿠킹이 그 파일을 읽는 동안 돌지 않게(ctest 의 고정 단계 ImportedAssets 는 아래에서 곧바로 끝난다).
+  # 최적화 App 으로 임포트한다 — Debug 의 BC7 · BC6H 압축기는 큰 텍스처 하나에 몇 분이다(AssetImportEntry.TextureImportDebugBuild). 산출물은 구성과 무관하게 Content 하나다.
+  run_ctest Ninja-Release import -L import || windows_failed "Ninja-Release import"
+  start_job "shipping build" job_shipping_build
+  build_preset Ninja-Release-ASan
+  start_job "clang-tidy" job_tidy
+  build_preset Ninja-Release-Server
   wait_jobs
 else
   # --from 으로 build 를 건너뛰어도 뒤 단계가 돌릴 프리셋은 증분 빌드한다 — 짓지 않으면 고친 커밋 대신 옛 바이너리가 돌아 고친 테스트가 다시 진다
   # (2026-11-13 --from cpu 의 Release 단위). 바뀐 것이 없으면 몇 초다. 배포 프리셋은 --from cpu 의 shipping-check 가 직접 짓는다.
-  [ $STAGE -le 3 ] && { build_preset Ninja-Debug; build_preset Ninja-Debug-Server; }
   [ $STAGE -le 4 ] && build_preset Ninja-Release
+  [ $STAGE -le 3 ] && { build_preset Ninja-Release-ASan; build_preset Ninja-Release-Server; }
   # 임포트는 build 단계가 했다 — 거기서 시작하지 않았으면 첫 테스트 단계 앞에서 한다(changed 는 ctest 고정 단계 없이 App 을 바로 띄운다).
-  [ $STAGE -le 3 ] && { run_ctest Ninja-Debug import -L import || windows_failed "Ninja-Debug import"; }
+  [ $STAGE -le 3 ] && { run_ctest Ninja-Release import -L import || windows_failed "Ninja-Release import"; }
 fi
 
 if [ $STAGE -le 2 ]; then
@@ -251,7 +253,7 @@ if [ $STAGE -le 2 ]; then
 fi
 
 if [ $STAGE -le 3 ]; then
-  start_job "Debug nogpu" job_debug_cpu
+  start_job "ASan nogpu" job_sanitizer_cpu
   start_job "server · tools · shipping" job_server_tools
   wait_jobs
 fi

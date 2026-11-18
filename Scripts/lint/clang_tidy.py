@@ -40,7 +40,8 @@ from common.run_process import run_process  # noqa: E402
 from common.toolchain_config import load_search_paths  # noqa: E402
 from setup.llvm import clang_tidy_file_name  # noqa: E402
 
-DEFAULT_PRESET = "Ninja-Debug"
+#: 유니티 빌드를 끈 묶음 검증 구성 — 유니티 구성(Ninja-Release)의 DB 에는 묶음 TU 만 있어 바꾼 파일을 고르지 못한다.
+DEFAULT_PRESET = "Ninja-Release-ASan"
 DEFAULT_BASE = "origin/main"
 SOURCE_EXTENSIONS = {".cpp", ".cc", ".cxx"}
 HEADER_EXTENSIONS = {".h", ".hpp"}
