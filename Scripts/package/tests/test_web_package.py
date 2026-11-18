@@ -57,14 +57,14 @@ class WebPackageTest(unittest.TestCase):
         self.assertIn(PROBE_PATH, page)
 
     def test_evaluate_counts_errors_and_missing_reports(self) -> None:
-        report = RunReport(list_line=["O booted", AUDIO_STARTED_LINE], gpu="yes")
+        report = RunReport(list_line=["O booted", AUDIO_STARTED_LINE], gpu="yes", adapter="yes")
         report.done.set()
         self.assertEqual([], evaluate_run("run1", report))
         report.list_line.append("E WebGPU: device lost")
         report.exit = "abort oom"
         self.assertEqual(2, len(evaluate_run("run1", report)))
         self.assertEqual(3, len(evaluate_run("run2", RunReport())))  # 끝나지 않았다 + GPU 보고 없음 + 오디오 시작 줄 없음
-        silent = RunReport(list_line=["O booted"], gpu="yes")
+        silent = RunReport(list_line=["O booted"], gpu="yes", adapter="yes")
         silent.done.set()
         self.assertEqual(1, len(evaluate_run("run3", silent)))  # 워클릿이 링을 당기지 않으면 진다
 
