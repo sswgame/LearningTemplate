@@ -37,8 +37,8 @@ namespace sw
         [[nodiscard]] bool restore( float32 timeScale, bool bPaused );
 
     private:
-        float32 _timeScale;
-        uint8   _bPaused  : 1;
+        float32                _timeScale;
+        uint8                  _bPaused  : 1;
         [[maybe_unused]] uint8 _reserved : 7;
     };
 } // namespace sw
