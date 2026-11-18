@@ -1362,7 +1362,16 @@
     "client-log": "destruction-net run 의 옛 옵션 — 클라이언트 로그는 콘솔 출력 하나다(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
     "game-port": "net-pair run 의 옛 옵션 — 상수 _GAME_PORT(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
     "service-port": "net-pair run 의 옛 옵션 — 상수 _SERVICE_PORT(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
-    "out-dir": "web-package 의 옛 옵션 — 묶음은 build/Web-Shipping/Web/<게임> 하나다(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)"
+    "out-dir": "web-package 의 옛 옵션 — 묶음은 build/Web-Shipping/Web/<게임> 하나다(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
+    "TicketQueryLoginProvider": "ProfileAPILoginProvider — 응답을 읽는 규칙이 같은 두 제공자를 합쳤다(묻는 방식은 설정 _kind 가 고른다)(2026-11-19)",
+    "ReceiptAsk": "ReceiptQuery — ask 는 결제 API 가 쓰지 않는 말이다 — 스토어에 보낸 조회다(2026-11-19)",
+    "ReceiptOrderFacts": "ReceiptOrderInfo — facts 는 결제 API 가 쓰지 않는 말이다 — 스토어가 답한 주문 정보다(유니티 IAP IOrderInfo)(2026-11-19)",
+    "applyOrderFacts": "applyOrderInfo — 같은 형식(2026-11-19)",
+    "_askedKey": "_queryKey — 같은 형식(2026-11-19)",
+    "GhostSuctionTick": "GhostSuctionResult — tick 은 틱 시스템만 — 갱신 한 번의 결과다(2026-11-19)",
+    "AdminCallExtra": "AdminCallRecord — 주인이 관리 대상마다 드는 칸은 Record(2026-11-19)",
+    "CoasterPieceType": "CoasterPieceKind — 값의 갈래를 고르는 열거형은 …Kind(2026-11-19)",
+    "SRPGMoveType": "SRPGMoveKind — 값의 갈래를 고르는 열거형은 …Kind(2026-11-19)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",
