@@ -82,8 +82,6 @@ namespace sw::editor
         static constexpr int32 kAssetReload = 200;
         /// 활성 씬의 자동 저장 사본 쓰기와 복원 마무리(`EditorAutosaveCommands::tick`). 씬 편집 명령 뒤라 이번 프레임 편집이 사본에 든다.
         static constexpr int32 kAutosave = 300;
-        /// 다음 UI 프레임의 메뉴 · 명령 단추가 읽을 명령 켜짐 값 묶음(`EditorCommandRegistry::publishEnabledState`). 맨 끝이라 이번 프레임의 편집 · 열기 · 베이크 시작이 반영된다.
-        static constexpr int32 kCommandState = 400;
     };
 } // namespace sw::editor
 

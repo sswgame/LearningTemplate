@@ -481,9 +481,10 @@ namespace sw::editor
         const EditorDefaultCommandsInternal::GUIState& guiState     = getEditorState<EditorDefaultCommandsInternal::GUIState>();
         const uint32                                   textRevision = EditorDataText::getRevision();
         const bool                                     bSynced      = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration() == guiState._syncedGeneration && textRevision == guiState._syncedTextRevision;
-        if ( bSynced )
-            return;
-        registerDefaults();
+        if ( bSynced == false )
+            registerDefaults();
+        // 이번 UI 프레임의 메뉴 · 단추가 읽는다 — 판정(씬 · 선택 · 세션 읽기)은 Model 이 UI 앞에서 한 번 한다.
+        editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>().publishEnabledState();
     }
 
     void EditorDefaultCommandsInternal::rebuild()

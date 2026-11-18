@@ -22,7 +22,12 @@ namespace sw::editor
     public:
         /** @brief 기본 커맨드 테이블을 레지스트리에 등록합니다. 중복 id · 같은 액션은 오류로 로그합니다. */
         static void registerDefaults();
-        /** @brief 커맨드 등록 줄(`SW_EDITOR_COMMAND`)의 세대가 바뀌었으면 표와 등록 줄로 레지스트리를 다시 만듭니다. 세대가 같으면 아무것도 하지 않습니다. */
+        /**
+         * @brief 커맨드 등록 줄(`SW_EDITOR_COMMAND`)의 세대가 바뀌었으면 표와 등록 줄로 레지스트리를 다시 만들고, 이번 UI 프레임이 읽을 명령 켜짐 값 묶음을 냅니다(`publishEnabledState`).
+         * @details 셸이 UI 프레임을 열기 직전에 부른다(`ImGuiEditor::prepareFrameState` → `EditorSubsystemSet::syncExtensionRegistrations`). 스레드를 나누지 않으므로(사용자 결정)
+         *          한 호스트 프레임은 이 준비 → UI 프레임(메뉴 · 패널) → 명령 적용 · 게임 단계 → 씬 틱 순서로 한 스레드에서 돈다 — UI 가 읽는 값을 UI 바로 앞에서 내므로
+         *          첫 프레임 · 모듈 리로드로 다시 만든 뒤에도 그 프레임의 메뉴가 바로 켜진다. 계약 테스트 `EditorUIFrameOrderTest`.
+         */
         static void syncWithRegistry();
 
         /** @brief 메뉴 경로의 부모가 `commandmenu::kMainMenuBar` 인 메뉴들을 테이블의 순서대로 메뉴바에 그립니다. */
@@ -34,7 +39,7 @@ namespace sw::editor
         static void drawMenuItems( string_view menuPath );
         /**
          * @brief 패널 도구줄에 명령 하나를 단추로 그립니다. 눌렸으면 다음 프레임 첫머리에 대상 없이 실행하고(`queueCommand`) true 입니다.
-         * @details 아이콘이 있는 명령은 정사각 아이콘 단추, 없으면 이름표 단추다. 툴팁은 "이름 — 설명 (단축키)" 이고, 꺼진 명령은 회색으로 그린다(게임 단계가 낸 켜짐 값 묶음 — `isEnabledInSnapshot`).
+         * @details 아이콘이 있는 명령은 정사각 아이콘 단추, 없으면 이름표 단추다. 툴팁은 "이름 — 설명 (단축키)" 이고, 꺼진 명령은 회색으로 그린다(UI 프레임 앞에서 Model 이 낸 켜짐 값 묶음 — `isEnabledInSnapshot`).
          *          이름표 · 꺼짐 · 단축키 글자를 명령 하나에서 읽으므로 메뉴 · 팔레트 · 도구줄이 서로 다른 글을 보이지 않는다
          *          (언리얼 FUICommandInfo 가 메뉴 항목과 툴바 단추를 같은 명령에서 만드는 것과 같다). 표식은 `toolbar.<명령 id>` 다.
          *          없는 명령 id 는 부른 쪽의 잘못이라 멈춘다.

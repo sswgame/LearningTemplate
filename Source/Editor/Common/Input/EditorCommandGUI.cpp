@@ -31,7 +31,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // 4) ImGui 연결 — 메뉴 항목. 단축키 글자는 에디터 입력 맵에서 만든다
             // ------------------------------------------------------------------------------
-            /** @brief 커맨드 @p commandIndex 를 메뉴 항목으로 그립니다. 켜짐은 게임 단계가 낸 값 묶음에서 읽는다(View 는 씬 · 세션을 읽지 않는다). 눌렸으면 커맨드를 요청합니다. */
+            /** @brief 커맨드 @p commandIndex 를 메뉴 항목으로 그립니다. 켜짐은 프레임 앞에서 Model 이 낸 값 묶음에서 읽는다(View 는 씬 · 세션을 읽지 않는다). 눌렸으면 커맨드를 요청합니다. */
             static void drawCommandItem( const EditorCommandRegistry& registry, const EditorInputActions& inputActions, uint32 commandIndex )
             {
                 const EditorCommandDesc&                desc = registry.getCommands()[commandIndex];

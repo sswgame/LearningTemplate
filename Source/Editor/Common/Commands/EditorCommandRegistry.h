@@ -263,14 +263,14 @@ namespace sw::editor
         /** @brief @p target 에 대한 활성 조건을 평가합니다(Model 쪽 — 씬 · 세션을 읽는다). 조건이 없으면 true 입니다. 메뉴바 · 명령 단추(View)는 `isEnabledInSnapshot` 을 읽는다. */
         static bool isEnabled( const EditorCommandDesc& desc, const EditorCommandTarget& target );
         /**
-         * @brief 게임 단계 쪽 — 대상 없는 실행(메뉴바 · 코드가 그리는 메뉴 · 명령 단추)의 켜짐을 명령마다 값 묶음으로 냅니다(`isEnabled( desc, none )`).
-         * @details 언리얼 `FUICommandList` 의 CanExecute 자리다. 판정은 씬 · 선택 · 플레이 세션을 읽으므로 씬을 쥔 게임 단계가 하고(`EditorGameStepOrder::kCommandState` — 이번 프레임의 편집 뒤),
-         *          UI 프레임은 그 값만 읽는다. 그래서 UI 의 회색은 한 프레임 늦다 — 실행 입구(`request` · `execute`)는 그때의 조건을 다시 보므로 늦은 회색이 꺼진 명령을 돌리지 않는다.
+         * @brief Model 쪽 — 대상 없는 실행(메뉴바 · 코드가 그리는 메뉴 · 명령 단추)의 켜짐을 명령마다 값 묶음으로 냅니다(`isEnabled( desc, none )`).
+         * @details 언리얼 `FUICommandList` 의 CanExecute 자리다. 판정은 씬 · 선택 · 플레이 세션을 읽으므로 Model 이 UI 프레임을 열기 직전에 내고(`EditorCommandGUI::syncWithRegistry`),
+         *          그 프레임의 UI 는 이 값만 읽는다. 같은 스레드 · 정해진 순서라 늦는 프레임이 없다. 실행 입구(`request` · `execute`)는 그때의 조건을 다시 본다.
          */
         void publishEnabledState();
         /**
          * @brief UI 쪽 — 마지막으로 낸 값 묶음에서 @p commandIndex(`getCommands()` 의 인덱스) 명령의 대상 없는 켜짐을 읽습니다.
-         * @details 값 묶음을 낸 뒤 등록부가 바뀌었으면(모듈 리로드 · 첫 프레임) 다음 게임 단계가 낼 때까지 false 다 — 낡은 인덱스의 값을 읽지 않는다.
+         * @details 값 묶음을 낸 뒤 등록부가 바뀌었으면 false 다 — 낡은 인덱스의 값을 읽지 않는다. UI 프레임 안에서 등록부가 바뀌는 길은 없다(다시 만들기는 프레임 앞 `EditorCommandGUI::syncWithRegistry` 안).
          */
         [[nodiscard]] bool isEnabledInSnapshot( uint32 commandIndex ) const;
         /** @brief 활성 상태이면 @p target 에 커맨드를 실행하고 true 를 반환합니다. 대상이 없는 실행은 `EditorCommandTarget::none()` 을 넘깁니다. */
