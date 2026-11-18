@@ -34,7 +34,7 @@ namespace sw
      */
     enum class TextureResidency : uint8
     {
-        Full = 0,      ///< 품질 설정(`gv_textureMipDrop`)이 남긴 밉 사슬 전부
+        Full = 0,      ///< 품질 설정(`-gv_textureMipDrop`)이 남긴 밉 사슬 전부
         StreamingBase, ///< 아래쪽 밉만(밉 0 의 짧은 변이 `Texture2D::kMinMipDropExtent` 근처) — 위쪽 밉은 `upgradeResidency` 가 뒤에 올린다
     };
 } // namespace sw
@@ -94,7 +94,7 @@ namespace sw
         Texture2D& operator=( const Texture2D& ) = delete;
 
         /** @brief 리소스 상대 경로(전역 id, 예: engine/textures/random/grass.dds)의 DDS 를 GPU 에 업로드합니다(`readImage` 다음 `loadFromImage`). */
-        [[nodiscard]] bool loadFromAsset( IRHIDevice* pDevice, const AssetID& assetID );
+        [[nodiscard]] bool loadFromAsset( IRHIDevice* pDevice, const AssetID& assetID, int32 qualityMipDrop );
         /**
          * @brief 리소스의 DDS 를 읽고 이 엔진이 올릴 수 있는 형식인지 확인합니다. 디바이스를 쓰지 않으므로 어느 스레드에서든 부릅니다(비동기 로드의 워커 단계).
          * @return 읽지 못했거나 포맷 · 차원이 맞지 않으면 오류를 남기고 false 를 반환합니다.
@@ -107,8 +107,8 @@ namespace sw
          * @details 머리를 다시 풀지 않고 업로드와 같은 밉 배치(`computeRHITextureMipLayout`)로 센다 — 업로드가 읽는 구간과 어긋날 수 없다.
          */
         [[nodiscard]] static TextureMipLayout makeMipLayout( const DDSImageData& image );
-        /** @brief 위쪽 밉 올리기가 읽기 시작할 밉입니다 — 텍스처 품질(`gv_textureMipDrop`)이 버리는 밉 수다(`beginUploadFromImage` 의 품질 버리기와 같은 식). */
-        [[nodiscard]] static uint32 computeUpgradeFirstMip( const TextureMipLayout& layout );
+        /** @brief 위쪽 밉 올리기가 읽기 시작할 밉입니다 — 텍스처 품질 @p qualityMipDrop(`TextureCache::getQualityMipDrop`)이 버리는 밉 수다(`beginUploadFromImage` 의 품질 버리기와 같은 식). */
+        [[nodiscard]] static uint32 computeUpgradeFirstMip( const TextureMipLayout& layout, int32 qualityMipDrop );
         /** @brief 스트리밍 기반(`StreamingBase`)이 처음 올리는 가장 큰 밉입니다 — 버릴 수 있는 만큼 버린 밉(`beginUploadFromImage` 의 같은 식). 첫 로드는 이 밉부터 끝까지(꼬리)만 읽는다(MR-3). */
         [[nodiscard]] static uint32 computeResidentFirstMip( const TextureMipLayout& layout );
         /**
@@ -116,19 +116,21 @@ namespace sw
          * @details @p tailBytes 는 그 구간의 파일 바이트(`TextureMipLayout::getRange`)다. 끝나면 그대로 돌려준다(`Busy` 면 같은 바이트로 다시 낸다). 위쪽 밉 수는 `firstMip - 품질이 버리는 밉` 이다.
          */
         [[nodiscard]] Texture2DUploadStep beginUploadTail( IRHIDevice* pDevice, string_view relativePath, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& tailBytes,
-                                                           bool bBlocking );
+                                                           int32 qualityMipDrop, bool bBlocking );
         /**
          * @brief `readImage` 가 읽은 이미지를 GPU 에 업로드합니다. 디바이스를 쓰는 스레드에서만 부릅니다(DX11 즉시 컨텍스트 · GL 컨텍스트는 스레드에 묶인다).
          * @param residency `StreamingBase` 면 아래쪽 밉만 업로드합니다 — 위쪽 밉은 `upgradeResidency` 가 같은 이미지로 뒤에 업로드합니다(`isFullyResident`).
          */
-        [[nodiscard]] bool loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency );
+        [[nodiscard]] bool loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency, int32 qualityMipDrop );
         /**
          * @brief 새 업로드의 1단계입니다 — GPU 텍스처를 만들고 밉 사슬 업로드를 제출합니다. 기다리지 않습니다(`bBlocking` 이 아니면). 디바이스를 쓰는 스레드에서만 부릅니다.
          * @details 세 단계(워커 읽기 → `beginUploadFromImage` → 이후 프레임의 `finishUpload`)의 가운데다(RHIAsyncUploads U8). 제출한 텍스처는 `finishUpload` 가 `Ready` 를 돌려주기 전에는
          *          bindless 에 등록하지 않는다(전송 계약 1 · 8) — 그 사이 `isRHIValid` 는 거짓이다.
+         * @param qualityMipDrop 텍스처 품질이 버리는 위쪽 밉 수(`TextureCache::getQualityMipDrop` — 기동 때 뜬 사본, 다시 시작해야 바뀐다).
          * @param bBlocking 참이면 `Busy` 를 기다려 넘긴다(블로킹 헬퍼 — 동기 `acquire` 의 `wait()`). 거짓이면 `Busy` 를 그대로 돌려준다.
          */
-        [[nodiscard]] Texture2DUploadStep beginUploadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& sourceImage, TextureResidency residency, bool bBlocking );
+        [[nodiscard]] Texture2DUploadStep beginUploadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& sourceImage, TextureResidency residency, int32 qualityMipDrop,
+                                                                bool bBlocking );
         /**
          * @brief 제출한 업로드(`beginUploadFromImage` · `beginUploadFromCPUBytes`)가 끝났는지 보고, 끝났으면 bindless 에 등록합니다.
          * @param bBlocking 참이면 끝날 때까지 기다립니다(10 초 상한 — 넘으면 오류와 `Failed`). 거짓이면 `Pending` 을 그대로 돌려줍니다.
@@ -146,7 +148,7 @@ namespace sw
          *          (`Busy` 면 부르는 쪽이 같은 바이트로 다음 프레임에 다시 낸다 — 스테이징이 복사했으므로 `Submitted` 뒤에는 버려도 된다).
          * @param bBlocking 참이면 `Busy` 를 기다려 넘긴다. 거짓이면 `Busy` 를 그대로 돌려줍니다(만든 텍스처는 지웠다).
          */
-        [[nodiscard]] Texture2DUploadStep beginUploadMips( IRHIDevice* pDevice, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& mipBytes, bool bBlocking );
+        [[nodiscard]] Texture2DUploadStep beginUploadMips( IRHIDevice* pDevice, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& mipBytes, int32 qualityMipDrop, bool bBlocking );
         /**
          * @brief `beginUploadMips` 가 낸 업로드가 끝났는지 보고, 끝났으면 새 텍스처를 bindless 에 등록해 바꿔 끼웁니다(렌더 스레드).
          * @details 옛 자원은 @p outRetired 로 내놓는다: 게임 스레드가 이미 만든 패킷이 옛 SRV 번호를 값으로 가지고 있으므로 그 패킷이 끝난 뒤에 해제한다(`TextureCache::releaseRetiredTextures`).
@@ -258,7 +260,7 @@ namespace sw
          */
         [[nodiscard]] static bool expandToFourChannels( const DDSImageData& image, DDSImageData& outImage );
         /**
-         * @brief 텍스처 품질(`gv_textureMipDrop`)로 버릴 위쪽 밉을 고릅니다. 밉 사슬이 있는 텍스처만 줄이고, 남은 밉 0 은 `kMinMipDropExtent` 이상이고
+         * @brief 텍스처 품질(`-gv_textureMipDrop`)로 버릴 위쪽 밉을 고릅니다. 밉 사슬이 있는 텍스처만 줄이고, 남은 밉 0 은 `kMinMipDropExtent` 이상이고
          *        블록 크기의 배수여야 합니다(BC 는 4 의 배수 — 아니면 백엔드가 만들지 못한다). 마지막 밉 하나는 늘 남깁니다.
          * @details 밉이 하나뿐인 텍스처(UI 아이콘 · 글꼴 아틀라스 · 룩업 표)는 줄이지 않는다. 화면에 1:1 로 그리는 것이라 밉을 만들지 않기 때문이다.
          */
@@ -311,7 +313,8 @@ namespace sw
         uint32                   _width;
         uint32                   _height;
         uint32                   _mipCount;
-        uint32                   _streamedMipCount; ///< 아직 GPU 에 없는 위쪽 밉 수(`TextureResidency::StreamingBase` 로 올렸을 때). 0 이면 다 올라와 있다
+        uint32                   _streamedMipCount;    ///< 아직 GPU 에 없는 위쪽 밉 수(`TextureResidency::StreamingBase` 로 올렸을 때). 0 이면 다 올라와 있다
+        int32                    _qualityMipDrop{ 0 }; ///< 마지막 업로드가 받은 텍스처 품질(버린 위쪽 밉 수) — 장치를 다시 세울 때(`initRHI`) 같은 품질로 다시 올린다
         RHIFormat                _format;
         uint8                    _bRenderTarget;              ///< `createRenderTarget` 으로 만들었다. 다시 만들 때 DDS 를 읽지 않는다
         vector<uint8>            _cpuBytes;                   ///< CPU 텍스처의 원본(RGBA8 밉 0). 비었으면 DDS 또는 렌더 타깃이다

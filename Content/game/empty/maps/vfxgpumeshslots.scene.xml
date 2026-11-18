@@ -1,0 +1,74 @@
+<?asset guid="98f557e667d440eea27dcd4db994c4d4"?>
+<Scene formatVersion="3" name="VfxGPUMeshSlots">
+	<!-- GPU 메시 입자 칸 시나리오(automation/vfxgpumeshslots)의 무대 — 바닥 위에서 큐브 파편(engine/vfx/gpudebrisburst)이 한 번 터진다.
+	     파편은 깊이 충돌로 바닥에 튀어 카메라 안에 머문다. 장면에 다른 큐브가 없어 파편 배치(Cube · 기본 머티리얼)에 다른 인스턴스가 섞이지 않는다 —
+	     그래서 그 배치의 간접 인스턴스 수가 곧 그린 파편 수다(VFX.GPUMeshDrawn). 해는 보통 밝기다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,2.5,-3"
+					                 _localRotation="0.5,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.9"
+					                 _nearZ="0.1"
+					                 _farZ="60"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.628882,0.93002,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1"
+					                           _ambient="0.2"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,2"
+					               _localRotation="0,0,0"
+					               _localScale="16,1,16"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _boundsRadius="12" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Effect">
+			<GameObject _schemaVersion="0" _name="Effect" _bActive="true">
+				<_listComponent>
+					<VFXComponent _localPosition="0,0.2,2"
+					              _localRotation="0,0,0"
+					              _localScale="1,1,1"
+					              _attachOwner="None"
+					              _attachComponent="None"
+					              _effectPath="engine/vfx/gpudebrisburst.vfx.xml"
+					              _seed="1"
+					              _bPlayOnBegin="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

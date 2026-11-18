@@ -204,7 +204,7 @@ float2 computeAnimatedUv( MaterialData material, float2 uv )
 OutlineOffset computeMaterialOutline( VertexContext context )
 {
     // 두께 곱 텍스처(MToon outlineWidthMultiplyTexture)는 g 를 쓴다. 정점이라 밉 0 으로 읽는다. 없으면 흰색이라 1 이다.
-    const float   outlineWidth = context._material._outlineWidth * MaterialTexture::sampleLevelZero( context._material._outlineWidthMap, context._input._uv ).g;
+    const float   outlineWidth = context._material._outlineWidth * MaterialTexture::sampleLevel( context._material._outlineWidthMap, context._input._uv, 0.0f ).g;
     const bool    bScreenWidth = context._material._outlineWidthMode > 0.5f;
     OutlineOffset offset;
     offset._worldOffset = bScreenWidth ? float3( 0.0f, 0.0f, 0.0f ) : context._worldNormal * outlineWidth;

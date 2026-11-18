@@ -12,6 +12,7 @@
 namespace sw
 {
     class FrameRenderer;
+    struct RenderPipelineRequest;
     class OffscreenSceneRenderers;
     struct GlobalVariableInfo;
     class RenderPacketBuilder;
@@ -49,8 +50,8 @@ namespace sw
     private:
         /** @brief 파이프라인을 고르는 변수(`gv_renderPipeline` · `gv_deferredShading`)가 바뀌면 렌더 스레드에 다시 고르기를 맡깁니다(기다리지 않는다 — `RenderThread::enqueueCommand`). */
         void onPipelineVariableChanged( GlobalVariableInfo* pVariable );
-        /** @brief (패킷을 실행하는 스레드, 프레임 기록 전) 화면 밖 렌더러를 내리고 주 렌더러의 파이프라인을 다시 고릅니다. @p change 는 로그에 적을 "변수=값" 입니다. */
-        void applyPipelineChange( const string& change );
+        /** @brief (패킷을 실행하는 스레드, 프레임 기록 전) 화면 밖 렌더러를 내리고 주 렌더러의 파이프라인을 @p request(게임 스레드의 사본)로 다시 고릅니다. @p change 는 로그에 적을 "변수=값" 입니다. */
+        void applyPipelineChange( const string& change, const RenderPipelineRequest& request );
 
     private:
         unique_ptr<FrameRenderer>           _frameRenderer;

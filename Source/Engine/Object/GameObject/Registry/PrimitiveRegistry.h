@@ -33,14 +33,16 @@ namespace sw
     class ScenePrimitiveBatch;
 
     /**
-     * @brief 인스턴스 배치의 항목 하나입니다. 레지스트리의 프리미티브 번호 공간에서 메시 컴포넌트 뒤에 이어 붙습니다.
-     * @details 번호는 메시 컴포넌트 수, 배치의 첫 항목 위치, 항목 인덱스를 더한 값이다. 메시 컴포넌트가 늘거나 줄면 이 번호가 밀리는데,
-     *          그 변경은 집합 세대를 올려 빌더가 전체 수집으로 가므로 더티 번호가 어긋나도 답이 틀리지 않는다.
+     * @brief 인스턴스 배치의 항목 하나입니다. 레지스트리의 프리미티브 번호 공간에서 메시 칸 영역 뒤에 이어 붙습니다. 빈 칸(지운 배치의 자리)은 `_pBatch` 가 널입니다.
+     * @details 번호는 메시 칸 영역의 크기(`getAll().size()` — 빈 칸 포함), 배치의 첫 항목 위치, 항목 인덱스를 더한 값이다. 메시 칸 영역은 두 배씩만 늘고
+     *          그때만 이 번호가 밀린다 — 그 변경은 배치 세대(`getLayoutGeneration`)를 올려 빌더가 전체 수집으로 간다.
      */
     struct PrimitiveInstanceEntry
     {
         ScenePrimitiveBatch* _pBatch{ nullptr };
         uint32               _index{ 0 };
+        /// @brief 이 칸에 들어온 차례입니다(`PrimitiveRegistry::getPrimitiveSerials` 와 같은 뜻 — 칸을 다시 쓸 때마다 오른다). 지운 뒤에도 남겨 다음 차례가 이어진다.
+        uint32 _serial{ 0 };
     };
 } // namespace sw
 
@@ -101,16 +103,32 @@ namespace sw
          */
         void markTransformDirty( uint32 primitiveIndex );
         /**
-         * @brief 프리미티브 **집합**이 바뀌었음을 표시합니다(등록과 해제). 오브젝트 활성 토글은 여기가 아니라 그 오브젝트의 메시가 자기 슬롯을
-         *        더티로 표시합니다(`Component::onOwnerActiveInHierarchyChanged`).
-         * @details 드물게 일어나므로 무엇이 바뀌었는지 따지지 않고 전부 다시 만들게 한다.
+         * @brief 프리미티브 **집합**이 바뀌었음을 표시합니다(등록 · 해제가 스스로 부르고, 정적 여부를 바꾼 메시도 부른다). 오브젝트 활성 토글은 여기가 아니라
+         *        그 오브젝트의 메시가 자기 슬롯을 더티로 표시합니다(`Component::onOwnerActiveInHierarchyChanged`).
+         * @details 집합 전체를 보는 소비자(정적 그림자 지문, 실시간 프로브의 복셀 격자)가 이 세대로 캐시를 버린다. 칸 번호는 바뀌지 않으므로 GPUScene 은
+         *          이 세대로 전체 수집을 하지 않는다 — 바뀐 칸은 더티 비트로 받는다(`getLayoutGeneration`).
          */
         void markSetDirty() { _setGeneration.fetch_add( 1, std::memory_order_relaxed ); }
 
-        /** @brief 등록된 프리미티브 목록입니다. 렌더 스냅샷 수집의 입력입니다(인스턴스 배치 항목은 `getInstanceEntries`). 실제 타입은 `MeshComponent` 계열입니다. */
+        /**
+         * @brief 메시 칸 영역입니다. 렌더 스냅샷 수집의 입력입니다(인스턴스 배치 항목은 `getInstanceEntries`). 실제 타입은 `MeshComponent` 계열이고, **빈 칸은 널**입니다.
+         * @details 칸은 고정이다 — 지우면 그 칸을 비워 프리리스트에 넣고 다음 등록이 다시 쓴다(언리얼 `FScene` 의 영속 프리미티브 칸 · 유니티 GPU Resident Drawer 의 인스턴스 칸).
+         *          그래서 하나를 더하거나 지워도 다른 프리미티브의 번호가 그대로이고, GPUScene 은 바뀐 칸만 다시 모은다.
+         */
         const vector<ScenePrimitive*>& getAll() const { return _listPrimitive; }
-        /** @brief 집합의 세대입니다. 값이 달라졌으면 전체 재구축이 필요합니다. */
+        /** @brief 집합의 세대입니다. 등록 · 해제 · 정적 여부 바꾸기에 오릅니다(`markSetDirty`). */
         uint64 getSetGeneration() const { return _setGeneration.load( std::memory_order_relaxed ); }
+        /**
+         * @brief 칸 배치의 세대입니다. 칸 번호가 밀릴 때(메시 칸 영역을 늘려 인스턴스 항목 번호가 밀림)만 오릅니다. 값이 달라졌으면 칸마다의 캐시를 버리고 전체를 다시 모읍니다.
+         * @details 늘리기는 두 배씩이라 드물다. 그 밖의 등록 · 해제는 칸을 옮기지 않고 그 칸만 더티로 표시한다.
+         */
+        uint64 getLayoutGeneration() const { return _layoutGeneration.load( std::memory_order_relaxed ); }
+        /**
+         * @brief 집합 세대 @p sinceGeneration 뒤에 등록 · 해제된 **메시 칸** 번호를 @p outListSlot 에 담습니다(같은 칸이 두 번 올 수 있다). 기록이 그만큼 거슬러 가지 못하면 false 입니다.
+         * @details 집합 전체를 보던 캐시(실시간 프로브의 복셀 격자)가 바뀐 칸만 다시 칠하려고 쓴다. 기록은 고리 `kMeshSetChangeLogCapacity` 개라 오래 안 본 소비자는 false 를 받고 다시 만든다.
+         *          인스턴스 배치 · 정적 여부 바꾸기는 세대만 올리고 기록하지 않는다 — 메시 칸이 아니다(이 기록의 소비자는 메시 칸만 본다).
+         */
+        [[nodiscard]] bool collectMeshSetChanges( uint64 sinceGeneration, vector<uint32>& outListSlot ) const;
         /** @brief 렌더 상태가 바뀐 프리미티브가 하나라도 있으면 true 입니다. */
         bool hasDirty() const;
         /** @brief 더티 표시를 모두 지웁니다. 렌더 스냅샷이 반영을 마친 뒤 부릅니다. */
@@ -126,26 +144,34 @@ namespace sw
          * @details 슬롯 번호는 컴포넌트 수명 동안 바뀌지 않으므로 등록할 때 한 번 기록하고, 제거할 때 위치 이동을 따라간다.
          */
         const vector<uint32>& getTransformSlots() const { return _listPrimitiveTransformSlot; }
+        /**
+         * @brief 메시 칸마다 그 칸에 들어온 차례입니다(`getAll()` 과 같은 길이). 등록이 칸을 받을 때마다 오른다(지운 칸을 다시 쓰면 다른 값).
+         * @details 칸 번호에 묶인 GPU 상태(인스턴스 LOD 전환 · 칸 순 인스턴스 버퍼)가 칸을 다시 쓴 것을 알아채는 근거다 — 같은 칸 · 같은 내용이어도 차례가 다르면 다른 물체다.
+         *          인스턴스 항목 칸의 차례는 `PrimitiveInstanceEntry::_serial` 이다.
+         */
+        const vector<uint32>& getPrimitiveSerials() const { return _listPrimitiveSerial; }
 
         /**
          * @brief 인스턴스 배치를 등록합니다. 항목마다 프리미티브 번호 하나를 받습니다(메시 컴포넌트 뒤에 이어서). 집합 세대가 오릅니다.
          * @details 배치는 소유하지 않는다. 배치가 먼저 사라지면 자기 소멸자에서 빠지고, 레지스트리가 먼저 사라지면 배치의 포인터를 비운다.
          */
         void addInstanceBatch( ScenePrimitiveBatch* pBatch );
-        /** @brief 인스턴스 배치를 제거합니다. 항목 구간을 지우고 뒤 배치의 위치를 당깁니다. 집합 세대가 오릅니다. `removeInstanceBatches` 의 배치 하나짜리 호출입니다. */
+        /** @brief 인스턴스 배치를 제거합니다. 항목 구간을 비워 프리리스트에 돌려줍니다(다른 배치는 자리가 그대로다). 집합 세대가 오릅니다. `removeInstanceBatches` 의 배치 하나짜리 호출입니다. */
         void removeInstanceBatch( ScenePrimitiveBatch* pBatch );
         /**
-         * @brief 인스턴스 배치 여럿을 한 번에 제거합니다. 항목 목록을 한 번만 접고 남은 배치의 자리를 한 번만 당깁니다(집합 세대는 한 번 오릅니다).
-         * @details 하나씩 지우면 배치마다 항목 목록 뒤쪽을 옮기고 남은 배치를 모두 훑어 M 개에 O(M·(항목 + 배치)) 입니다 — 한 컴포넌트가 배치를 수백 개 들었다가 씬을 내릴 때
-         *          (잔디 칸, 지형 청크) 이것으로 모아 지웁니다. 이 레지스트리에 들지 않은 배치 · 널 · 두 번 넘긴 배치는 건너뜁니다. 지운 배치는 등록 전 상태가 됩니다.
+         * @brief 인스턴스 배치 여럿을 한 번에 제거합니다. 배치마다 항목 구간을 비우고 더티로 표시한 뒤 빈 구간 목록에 합칩니다(집합 세대는 한 번 오릅니다).
+         * @details 남은 배치는 옮기지 않는다 — 옮기면 그 뒤 항목 전부의 칸 번호가 바뀌어 GPUScene 이 전체를 다시 모은다. 이 레지스트리에 들지 않은 배치 · 널 · 두 번 넘긴 배치는
+         *          건너뜁니다. 지운 배치는 등록 전 상태가 됩니다.
          */
         void removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const> listBatch );
         /** @brief 배치의 항목 하나를 더티로 표시합니다. 그 항목의 프리미티브 번호에 플래그를 켭니다. */
         void markInstanceDirty( ScenePrimitiveBatch* pBatch, uint32 index );
-        /** @brief 인스턴스 배치의 항목 목록입니다. 메시 컴포넌트 목록 뒤에 이어지는 프리미티브들입니다. */
+        /** @brief 인스턴스 배치의 항목 목록입니다. 메시 칸 영역 뒤에 이어지는 프리미티브들이고, 빈 항목(`_pBatch` 널)은 지운 배치의 자리입니다. */
         const vector<PrimitiveInstanceEntry>& getInstanceEntries() const { return _listInstanceEntry; }
-        /** @brief 프리미티브 번호 공간의 크기입니다(메시 컴포넌트 수 + 인스턴스 항목 수). */
+        /** @brief 프리미티브 번호 공간의 크기입니다(메시 칸 영역 + 인스턴스 항목 목록, 빈 칸 포함). */
         uint32 getSlotCount() const { return static_cast<uint32>( _listPrimitive.size() + _listInstanceEntry.size() ); }
+        /** @brief 살아 있는 칸 수입니다(등록된 메시 + 등록된 배치의 항목 — 빈 칸은 세지 않는다). 디버그 HUD 가 읽습니다. */
+        uint32 getLiveSlotCount() const { return _liveSlotCount; }
         /**
          * @brief 에셋 로드(`AssetHandle`)를 기다리는 컴포넌트를 겁니다(게임 스레드). 이미 걸려 있으면 함수만 바꿉니다.
          * @details 기반에 가상 함수를 더하지 않으려고 함수 포인터로 받는다(파일 머리 `ScenePrimitive.h`). 프리미티브는 `remove` 가 같이 빼고,
@@ -184,6 +210,37 @@ namespace sw
         /** @brief `_mutex` 를 이미 쥔 채로 기다리는 컴포넌트를 뺍니다. */
         void removeAssetWaiterLocked( const Component* pComponent ) SW_REQUIRES_LOCK( _mutex );
 
+        /** @brief 메시 칸 영역의 처음 크기입니다(그 뒤로 두 배씩). 더티 비트 워드 하나(64 칸)와 같다. */
+        static constexpr uint32 kInitialMeshSlotCount = 64;
+        /** @brief 메시 칸 등록 · 해제 기록(`collectMeshSetChanges`)의 고리 크기입니다. 한 프레임 스폰 · 소멸 수백 개를 담고 남는다. */
+        static constexpr uint32 kMeshSetChangeLogCapacity = 1024;
+
+        /** @brief 메시 칸 등록 · 해제 기록 하나입니다(그 일로 오른 뒤의 집합 세대와 칸 번호). */
+        struct MeshSetChange
+        {
+            uint64 _generation{ 0 };
+            uint32 _slot{ 0 };
+        };
+        /** @brief 메시 칸 하나의 등록 · 해제를 기록하고 집합 세대를 올립니다(`_mutex` 를 쥔 채). */
+        void recordMeshSetChange( uint32 slot ) SW_REQUIRES_LOCK( _mutex );
+
+        /** @brief 비어 있는 인스턴스 항목 구간 하나입니다(`_listFreeEntrySpan`). */
+        struct EntrySpan
+        {
+            uint32 _start{ 0 };
+            uint32 _count{ 0 };
+        };
+
+        /**
+         * @brief 메시 칸 영역을 두 배로 늘리고 새 칸을 프리리스트에 넣습니다(`_mutex` 를 쥔 채). 인스턴스 항목 번호가 밀리므로 배치 세대를 올리고 더티 비트를 버립니다.
+         * @details 비트를 버려도 잃는 것이 없다 — 배치 세대가 오르면 빌더가 모든 칸을 다시 모은다.
+         */
+        void growMeshRegion() SW_REQUIRES_LOCK( _mutex );
+        /** @brief 항목 @p count 개짜리 구간을 빈 구간에서 첫 맞춤으로 떼어 주고, 없으면 목록 끝에 붙입니다. 첫 자리를 반환합니다(`_mutex` 를 쥔 채). */
+        [[nodiscard]] uint32 allocateEntrySpan( uint32 count ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 구간을 빈 구간 목록에 넣고 앞뒤 이웃과 합칩니다(`_mutex` 를 쥔 채). 목록은 자리 순입니다. */
+        void freeEntrySpan( uint32 start, uint32 count ) SW_REQUIRES_LOCK( _mutex );
+
         /** @brief `_mutex` 를 이미 쥔 채로 더티 표시를 지웁니다. */
         void clearDirtyLocked() SW_REQUIRES_LOCK( _mutex );
 
@@ -201,8 +258,11 @@ namespace sw
     private:
         /** @brief 등록된 메시 컴포넌트입니다. 소유하지 않습니다(수명은 GameObject 가 관리합니다). */
         vector<ScenePrimitive*> _listPrimitive;
-        /** @brief `_listPrimitive` 와 같은 위치의 트랜스폼 슬롯 번호입니다(`getTransformSlots`). */
+        /** @brief `_listPrimitive` 와 같은 위치의 트랜스폼 슬롯 번호입니다(`getTransformSlots`). 빈 칸은 무효 번호입니다. */
         vector<uint32>                                  _listPrimitiveTransformSlot;
+        vector<uint32>                                  _listPrimitiveSerial;                ///< 메시 칸마다 들어온 차례(`getPrimitiveSerials`)
+        vector<uint32> _listFreePrimitiveSlot           SW_GUARDED_BY( _mutex );             ///< 메시 칸 프리리스트(스택 — 끝에서 꺼낸다). 늘릴 때 작은 번호가 끝에 오게 넣는다
+        vector<EntrySpan> _listFreeEntrySpan            SW_GUARDED_BY( _mutex );             ///< 빈 인스턴스 항목 구간(자리 순, 이웃끼리 합쳐 둔다)
         vector<PrimitiveInstanceEntry>                  _listInstanceEntry;                  ///< 배치 순서대로 이어 붙은 항목들
         vector<ScenePrimitiveBatch*> _listInstanceBatch SW_GUARDED_BY( _mutex );             ///< 등록된 배치. 빼기와 자리 당기기에 씁니다
         vector<AssetWaiter>                             _listAssetWaiter;                    ///< 에셋 로드를 기다리는 컴포넌트(`addAssetWaiter`). 게임 스레드만 씁니다
@@ -231,7 +291,12 @@ namespace sw
          */
         atomic<uint8> _bAnyDirty{ 0 };
         /// @brief add 와 remove(구조 변경)만 보호합니다. 더티 표시는 이 잠금을 쓰지 않습니다.
-        mutable mutex  _mutex;
-        atomic<uint64> _setGeneration{ 1 };
+        mutable mutex                            _mutex;
+        atomic<uint64>                           _setGeneration{ 1 };
+        atomic<uint64>                           _layoutGeneration{ 1 };       ///< 칸 번호가 밀린 횟수(`getLayoutGeneration`)
+        uint32                                   _liveSlotCount{ 0 };          ///< 살아 있는 칸 수(`getLiveSlotCount`). 등록 · 해제가 잠금 안에서 고친다
+        vector<MeshSetChange> _listMeshSetChange SW_GUARDED_BY( _mutex );      ///< 메시 칸 등록 · 해제 고리(`kMeshSetChangeLogCapacity` 개까지 자란 뒤 덮어쓴다)
+        uint64 _meshSetChangeTotal               SW_GUARDED_BY( _mutex ){ 0 }; ///< 지금까지 기록한 수(고리의 다음 자리 = 이 값 % 용량)
+        uint64 _meshSetChangeLogStart            SW_GUARDED_BY( _mutex ){ 0 }; ///< 이 세대 뒤의 메시 칸 변경은 모두 고리에 있다(덮어쓴 기록의 세대)
     };
 } // namespace sw

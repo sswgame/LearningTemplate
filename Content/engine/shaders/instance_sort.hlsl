@@ -20,7 +20,8 @@
  * sortMode = Preserve 를 준다). 배치 하나에 투명 인스턴스가 수백 개를 넘는 일은 드물고, 넘으면 정확성을
  * 포기하는 대신 컬링을 포기한다.
  *
- * 바인딩 계약(binding_slots.hlsli): CB b0, 인스턴스 t0, 배치 구간 t1, 뷰 순번 t2(추가 뷰 — 다른 뷰는 자리표), 간접 인자 u0, 가시 ID u1.
+ * 바인딩 계약(binding_slots.hlsli): CB b0, 인스턴스 t0, 배치 구간 t1, 뷰 순번 t2(추가 뷰 — 다른 뷰는 자리표), 차례 → 칸 t3, 간접 인자 u0, 가시 ID u1.
+ * 정렬하는 배치는 컬링이 **차례**를 적어 두었다(인스턴스 버퍼가 칸 순이라 칸 번호는 그리는 순서가 아니다). 차례로 정렬한 뒤 t3 으로 칸을 찾아 되쓴다.
  * (컬링과 같은 자리라 바인딩을 갈아 끼우지 않고 PSO 만 바꿔 디스패치한다.)
  */
 
@@ -50,6 +51,7 @@ SW_DECLARE_CBUFFER( SortParams, SW_SLOT_COMPUTE_CB )
 SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_Instances, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( BatchData, g_BatchInfo, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_ViewRank, 2 );
+SW_DECLARE_STRUCTURED_BUFFER( uint, g_InstanceOrder, 3 ); // 그리는 차례 → GPUScene 칸(gpu_cull.hlsl 과 같은 목록)
 SW_DECLARE_RW_STRUCTURED_BUFFER( SceneDrawArgs, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
 
@@ -110,7 +112,9 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID 
 
     for ( uint storeIndex = groupThreadID.x; storeIndex < count; storeIndex += SW_SORT_THREADS )
     {
-        const uint key                           = s_arrID[storeIndex];
-        g_VisibleInstanceIDs[slots + storeIndex] = ( g_UseViewRank != 0u ) ? ( base + ( key & 0x1FFu ) ) : key;
+        const uint key        = s_arrID[storeIndex];
+        const uint orderIndex = ( g_UseViewRank != 0u ) ? ( base + ( key & 0x1FFu ) ) : key;
+        // 차례를 칸으로 바꿔 쓴다 — 정점 셰이더는 가시 목록에서 칸을 읽는다. 차례가 범위 밖이면(있어선 안 된다) 칸 0 을 그리지 않게 그대로 둔다(그리는 쪽이 g_SwInstanceCount 로 막는다).
+        g_VisibleInstanceIDs[slots + storeIndex] = ( orderIndex < g_InstanceCount ) ? g_InstanceOrder[orderIndex] : orderIndex;
     }
 }

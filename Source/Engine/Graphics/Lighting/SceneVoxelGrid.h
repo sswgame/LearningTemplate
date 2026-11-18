@@ -43,6 +43,18 @@ namespace sw
          * @details 실시간 프로브 갱신이 광선이 닿은 칸의 빛으로 더한다(볼륨의 `_emissiveIntensity` 배). 칸 번호는 점유 비트와 같다.
          */
         vector<uint32> _listEmission;
+        /**
+         * @brief 칠한 원천(레지스트리 메시 칸 번호)마다 칠할 때의 월드 상자입니다. 칠하지 않은 칸은 빈 상자(`AABB::empty`)입니다. 칸이 그 뒤로 늘었으면 짧다.
+         * @details 메시가 빠지거나 들어온 칸만 다시 칠할 때(`SceneVoxelizer::updateGrid`) 빠진 메시가 덮던 곳을 이 상자로 안다 — 사라진 메시는 물을 수 없다. GPU 로는 가지 않는다.
+         */
+        vector<AABB> _listSourceBox;
+
+        /** @brief 격자 칸의 직육면체 구간입니다(축 x · y · z 마다 처음 · 끝 칸, 끝 포함). */
+        struct CellRange
+        {
+            uint32 _arrFirst[3]{};
+            uint32 _arrLast[3]{};
+        };
 
         /**
          * @brief 상자 @p bounds 를 덮는 빈 격자를 만듭니다. 칸 크기는 @p targetCellSize 이되, 축 하나라도 칸 수가 `kMaxCellsPerAxis` 를 넘으면 가장 긴 축이 맞도록 키웁니다.
@@ -50,6 +62,12 @@ namespace sw
          */
         [[nodiscard]] static SceneVoxelGrid make( const AABB& bounds, float32 targetCellSize );
 
+        /** @brief 격자 전체 구간입니다. 빈 격자에는 부르지 않는다. */
+        CellRange getFullRange() const;
+        /** @brief 월드 상자 @p box 가 덮는 칸 구간을 @p outRange 에 적습니다. 상자가 격자 밖이거나 유효하지 않으면 false 입니다. */
+        [[nodiscard]] bool findCellRange( const AABB& box, CellRange& outRange ) const;
+        /** @brief 구간 @p range 의 칸을 모두 끕니다(발광도 0). 그 자리를 다시 칠하기 전에 부릅니다. */
+        void clearCells( const CellRange& range );
         /** @brief 칸이 하나도 없으면 true 입니다. */
         bool isEmpty() const { return _dimX == 0 || _dimY == 0 || _dimZ == 0; }
         /** @brief 칸 수입니다. */
@@ -70,8 +88,12 @@ namespace sw
 
         /** @brief 삼각형 (@p a, @p b, @p c)(월드 좌표)와 겹치는 모든 칸을 켭니다. 격자 밖의 부분은 무시합니다. */
         void voxelizeTriangle( const float3& a, const float3& b, const float3& c );
+        /** @brief `voxelizeTriangle` 과 같되 구간 @p clip 안의 칸만 켭니다(일부 영역만 다시 칠할 때 — 구간 밖은 지난 결과 그대로). */
+        void voxelizeTriangle( const float3& a, const float3& b, const float3& c, const CellRange& clip );
         /** @brief 발광 삼각형 — 칸을 켜고 칸의 발광을 @p radiance 로 둡니다(이미 더 밝은 칸이면 그대로). 처음 부르면 발광 칸 배열을 만듭니다. */
         void voxelizeEmissiveTriangle( const float3& a, const float3& b, const float3& c, const float3& radiance );
+        /** @brief `voxelizeEmissiveTriangle` 과 같되 구간 @p clip 안의 칸만 칠합니다. */
+        void voxelizeEmissiveTriangle( const float3& a, const float3& b, const float3& c, const float3& radiance, const CellRange& clip );
         /** @brief 칸의 발광 복사휘도입니다. 발광 칸이 없거나 범위 밖이면 0 입니다. */
         float3 findEmission( uint32 cellX, uint32 cellY, uint32 cellZ ) const;
 
@@ -90,6 +112,6 @@ namespace sw
 
     private:
         /** @brief 겹치는 칸을 켜고, @p packedEmission 이 0 이 아니면 칸의 발광도 둡니다(두 공개 함수의 한 몸). */
-        void voxelizeTriangleCells( const float3& a, const float3& b, const float3& c, uint32 packedEmission );
+        void voxelizeTriangleCells( const float3& a, const float3& b, const float3& c, uint32 packedEmission, const CellRange& clip );
     };
 } // namespace sw

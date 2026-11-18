@@ -235,11 +235,65 @@ SW_TEST_CASE( SceneVoxelizerTest, VoxelizesOpaqueVisibleMeshesOnly )
 }
 
 /**
- * @brief [RealtimeProbeTest] 요청들의 버퍼 배치는 앞 요청들의 복셀 단어 · 기록 원소 · 프로브 수를 누적한다
+ * @brief [SceneVoxelizerTest] 메시가 드나든 칸만 다시 칠한 격자가 처음부터 만든 격자와 같고, 격자와 상관없는 칸(반투명 · 격자 밖)의 변화로는 칠하지 않는다
+ * @details 실시간 프로브 복셀 격자는 예전에 프리미티브 집합 세대가 오를 때마다(투사체 하나가 생기고 사라져도) 씬 전체를 다시 칠했다. 이제 집합 기록(`collectMeshSetChanges`)의
+ *          칸만 보고(`SceneVoxelizer::updateGrid`) 그 칸이 덮던 · 덮는 구간만 다시 칠한다.
+ */
+SW_TEST_CASE( SceneVoxelizerTest, UpdateGridRepaintsOnlyChangedOccluders )
+{
+    const sw::shared_ptr<sw::Material> glass       = makeTranslucentMaterial();
+    const sw::shared_ptr<sw::Material> sceneOpaque = makeOpaqueMaterial();
+    sw::Scene                          scene( "SceneVoxelizerUpdate" );
+    sw::GameObjectManager*             pObjects = scene.getObjectManager();
+    SW_REQUIRE_NOT_NULL( pObjects );
+    const sw::PrimitiveRegistry& registry = pObjects->getPrimitiveRegistry();
+    const sw::AABB               bounds{
+        sw::float3{-2.0f, -2.0f, -2.0f},
+        sw::float3{ 2.0f,  2.0f,  2.0f}
+    };
+    sw::MeshComponent* pWall = addCube( pObjects, "Wall", sw::float3{ -1.0f, 0.0f, 0.0f }, nullptr, true );
+    SW_REQUIRE_NOT_NULL( pWall );
+    sw::SceneVoxelGrid grid       = sw::SceneVoxelizer::makeGrid( registry, sceneOpaque.get(), bounds, 0.25f );
+    uint64             generation = registry.getSetGeneration();
+    sw::vector<uint32> listChanged;
+
+    // 반투명 큐브와 격자 밖 큐브 — 가리개가 아니거나 닿지 않으니 칠할 것이 없다.
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Glass", sw::float3{ 0.0f, 0.0f, 0.0f }, glass.get(), true ) );
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Far", sw::float3{ 50.0f, 0.0f, 0.0f }, nullptr, true ) );
+    SW_REQUIRE_TRUE( registry.collectMeshSetChanges( generation, listChanged ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), listChanged.size() );
+    SW_EXPECT_FALSE( sw::SceneVoxelizer::updateGrid( grid, registry, sceneOpaque.get(), listChanged ) );
+    generation = registry.getSetGeneration();
+
+    // 격자 안 불투명 큐브 — 그 구간만 칠해도 처음부터 만든 것과 단어마다 같다.
+    sw::MeshComponent* pInside = addCube( pObjects, "Inside", sw::float3{ 1.0f, 0.5f, 0.0f }, nullptr, true );
+    SW_REQUIRE_NOT_NULL( pInside );
+    SW_REQUIRE_TRUE( registry.collectMeshSetChanges( generation, listChanged ) );
+    SW_EXPECT_TRUE( sw::SceneVoxelizer::updateGrid( grid, registry, sceneOpaque.get(), listChanged ) );
+    const sw::SceneVoxelGrid afterAdd = sw::SceneVoxelizer::makeGrid( registry, sceneOpaque.get(), bounds, 0.25f );
+    SW_EXPECT_TRUE( grid._listWord == afterAdd._listWord );
+    SW_EXPECT_TRUE( grid.countOccupied() > 0u );
+    generation = registry.getSetGeneration();
+
+    // 벽을 지운다 — 벽이 덮던 칸이 꺼지고 남은 큐브는 그대로다.
+    SW_REQUIRE_NOT_NULL( pWall->getOwner() );
+    pObjects->destroyGameObject( pWall->getOwner() );
+    pObjects->processDeferredDestruction();
+    SW_REQUIRE_TRUE( registry.collectMeshSetChanges( generation, listChanged ) );
+    SW_EXPECT_TRUE( sw::SceneVoxelizer::updateGrid( grid, registry, sceneOpaque.get(), listChanged ) );
+    const sw::SceneVoxelGrid afterRemove = sw::SceneVoxelizer::makeGrid( registry, sceneOpaque.get(), bounds, 0.25f );
+    SW_EXPECT_TRUE( grid._listWord == afterRemove._listWord );
+    SW_EXPECT_TRUE( afterRemove.countOccupied() < afterAdd.countOccupied() );
+}
+
+/**
+ * @brief [RealtimeProbeTest] 요청들의 버퍼 배치는 앞 요청들의 복셀 단어 · 프로브 수를 누적하고, 기록 구간은 할당기가 정체마다 매긴 자리다(처음은 이어 붙는다)
  */
 SW_TEST_CASE( RealtimeProbeTest, PlanLayoutAccumulatesOffsets )
 {
     sw::vector<sw::RealtimeProbeRequest> listRequest( 2 );
+    listRequest[0]._volumeID   = 1;
+    listRequest[1]._volumeID   = 2;
     listRequest[0]._probeCount = 18;
     listRequest[0]._pVoxelGrid = sw::make_shared<sw::SceneVoxelGrid>( makeFourMeterGrid() ); // 64 칸 → 단어 2
     listRequest[1]._probeCount = 5;
@@ -249,7 +303,9 @@ SW_TEST_CASE( RealtimeProbeTest, PlanLayoutAccumulatesOffsets )
     },
                                                                                                 1.0f ) ); // 512 칸 → 단어 16
 
-    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest );
+    sw::RealtimeProbeHistoryAllocator history;
+    SW_EXPECT_TRUE( history.assign( listRequest ) ); // 처음 — 용량이 생긴다
+    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest, history );
     SW_REQUIRE_EQUAL( size_t( 2 ), layout._listFirstThread.size() );
     SW_EXPECT_EQUAL( 0u, layout._listFirstThread[0] );
     SW_EXPECT_EQUAL( 18u, layout._listFirstThread[1] );
@@ -259,7 +315,53 @@ SW_TEST_CASE( RealtimeProbeTest, PlanLayoutAccumulatesOffsets )
     SW_EXPECT_EQUAL( 18u * sw::SH9Color::kGPUFloat4Count, layout._listHistoryOffset[1] );
     SW_EXPECT_EQUAL( 23u, layout._totalProbes );
     SW_EXPECT_EQUAL( 18u, layout._totalVoxelWords );
-    SW_EXPECT_EQUAL( 23u * sw::SH9Color::kGPUFloat4Count, layout._totalHistoryElements );
+    SW_EXPECT_EQUAL( history.getCapacity(), layout._totalHistoryElements );
+    SW_EXPECT_TRUE( layout._totalHistoryElements >= 23u * sw::SH9Color::kGPUFloat4Count );
+}
+
+/**
+ * @brief [RealtimeProbeTest] 볼륨 하나가 빠지고 하나가 들어와도 서 있는 볼륨은 기록 구간 · 누적 프레임을 지키고, 새 볼륨만 0 에서 시작해 빠진 볼륨의 구간을 다시 쓴다
+ * @details 예전 열쇠는 (볼륨 번호, 프로브 수) 목록을 순서째 견줘 하나만 드나들어도 모든 기록이 0 으로 돌아갔다.
+ */
+SW_TEST_CASE( RealtimeProbeTest, HistoryKeepsStandingVolumesWhenOneLeaves )
+{
+    sw::vector<sw::RealtimeProbeRequest> listRequest( 3 );
+    for ( uint32 index = 0; index < 3; ++index )
+    {
+        listRequest[index]._volumeID   = 100u + index;
+        listRequest[index]._probeCount = 4;
+    }
+    sw::RealtimeProbeHistoryAllocator history;
+    SW_REQUIRE_TRUE( history.assign( listRequest ) );
+    const uint32 offsetB  = history.getOffset( 1 );
+    const uint32 offsetC  = history.getOffset( 2 );
+    const uint32 offsetA  = history.getOffset( 0 );
+    const uint32 capacity = history.getCapacity();
+    history.advanceFrame();
+    history.advanceFrame();
+
+    // A(100) 가 빠지고 D(200) 가 들어온다 — 차례도 바뀐다.
+    sw::vector<sw::RealtimeProbeRequest> listNext( 3 );
+    listNext[0]             = listRequest[2];
+    listNext[1]             = listRequest[1];
+    listNext[2]._volumeID   = 200u;
+    listNext[2]._probeCount = 4;
+    SW_EXPECT_FALSE( history.assign( listNext ) ); // 빠진 구간으로 들어가 용량이 그대로다
+    SW_EXPECT_EQUAL( offsetC, history.getOffset( 0 ) );
+    SW_EXPECT_EQUAL( offsetB, history.getOffset( 1 ) );
+    SW_EXPECT_EQUAL( offsetA, history.getOffset( 2 ) );
+    SW_EXPECT_FALSE( history.isFresh( 0 ) );
+    SW_EXPECT_FALSE( history.isFresh( 1 ) );
+    SW_EXPECT_TRUE( history.isFresh( 2 ) );
+    SW_EXPECT_EQUAL( 2u, history.getFramesSinceReset( 0 ) );
+    SW_EXPECT_EQUAL( 0u, history.getFramesSinceReset( 2 ) );
+    SW_EXPECT_EQUAL( capacity, history.getCapacity() );
+
+    // 프로브 수가 바뀐 볼륨은 새 볼륨과 같다.
+    listNext[1]._probeCount = 2;
+    SW_EXPECT_FALSE( history.assign( listNext ) ); // 돌려받은 구간 안에 든다
+    SW_EXPECT_TRUE( history.isFresh( 1 ) );
+    SW_EXPECT_FALSE( history.isFresh( 0 ) );
 }
 
 /**
@@ -305,7 +407,9 @@ SW_TEST_CASE( RealtimeProbeTest, BuildParamRowsFollowShaderLayout )
     sw::vector<sw::RealtimeProbeRequest> listRequest;
     listRequest.push_back( request );
 
-    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest );
+    sw::RealtimeProbeHistoryAllocator history;
+    (void)history.assign( listRequest );
+    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest, history );
     const sw::SH9Color            sky    = sw::SH9Color::makeConstant( sw::float3{ 1.0f, 2.0f, 3.0f } );
     const sw::vector<uint32>      warmup{ 3u };
     const sw::vector<sw::float4>  rows = sw::RealtimeProbeUpdater::makeParamRows( listRequest, layout, warmup, sky, 9u, 4u );
@@ -374,8 +478,12 @@ SW_TEST_CASE( RealtimeProbeTest, EmissionWordsFollowOccupancy )
     listRequest[0]._pVoxelGrid        = sw::make_shared<sw::SceneVoxelGrid>( std::move( emissive ) );
     listRequest[1]._probeCount        = 1;
     listRequest[1]._pVoxelGrid        = sw::make_shared<sw::SceneVoxelGrid>( makeFourMeterGrid() );
+    listRequest[0]._volumeID          = 1;
+    listRequest[1]._volumeID          = 2;
 
-    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest );
+    sw::RealtimeProbeHistoryAllocator history;
+    (void)history.assign( listRequest );
+    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest, history );
     SW_REQUIRE_EQUAL( size_t( 2 ), layout._listEmissionWordOffset.size() );
     SW_EXPECT_EQUAL( 2u, layout._listEmissionWordOffset[0] );
     SW_EXPECT_EQUAL( 66u, layout._listVoxelWordOffset[1] );

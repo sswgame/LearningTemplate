@@ -11,6 +11,8 @@
  *      난수는 CPU 와 같은 splitmix64 수열이다(64 비트 정수가 없는 SM5 를 위해 uint2 로 흉내 낸다 — x 가 아래 32 비트).
  *   2) 적분 · 깊이 충돌 · 수명 제거 — 중력 · 속도 · 나이를 더하고, 깊이 충돌(SW_VFX_FLAG_COLLIDE_*)이면 주 시점의 지난 프레임 깊이와 견줘 튀거나 없앤다.
  *      살아남은 입자를 다른 반쪽에 **안정 압축**한다(덩어리마다 그룹 공유 메모리의 접두사 합). 버퍼는 늘 태어난 순서다 — 띠가 정렬하지 않고 이웃을 잇는다.
+ *   인스턴스 칸(dead list) — 새 입자는 빈 칸 스택 꼭대기에서 칸을 꺼내고(생성 k 번째는 꼭대기 - k), 죽은 입자는 같은 접두사 합의 죽은 차례로 꼭대기 위에 돌려준다.
+ *      스택 깊이가 늘 풀 - 살아 있는 수라 원자 연산이 없고 결정적이다. 칸은 압축으로 자리가 옮겨도 입자를 따라간다(메시 입자의 인스턴스 칸이 고정된다 — vfx_mesh_instance.hlsl).
  * 단계가 끝나면 살아 있는 입자의 렌더 입력(GPUParticle — 크기 · 색은 수명 커브, 커브는 키와 접선을 올려 C++ FloatCurve 와 같은 식)을 쓰고,
  * 간접 인자(정점 수, 인스턴스 수)와 다음 디스패치가 읽을 살아 있는 수 · 지금 반쪽을 쓴다. 메시 방출기는 같은 렌더 입력을 vfx_mesh_instance.hlsl 이 인스턴스 칸으로 옮긴다.
  *
@@ -32,7 +34,7 @@
  * 크면 단계마다 디스패치 셋 + 앞뒤 하나다(언리얼 Niagara GPU 의 입자 압축 · 유니티 VFX Graph 의 dead list 와 같은 선 - 그룹마다 생존 수를 세고 접두사 합으로 시작 위치를 받아 쓴다):
  *   BEGIN(그룹 1) 재생 시작이면 수를 지운다 -> 단계마다 [INTEGRATE(그룹 = 풀 / 256 올림) -> SCAN(그룹 1) -> COMPACT(그룹 = 풀 / 256 올림)] -> OUTPUT(렌더 입력 · 라이트).
  *   INTEGRATE: 슬롯 하나가 스레드 하나다. 살아 있던 슬롯은 원본 반쪽에서 읽고, 새 슬롯(살아 있는 수 이후)은 같은 난수 수열(입자 번호 + 씨앗)로 바로 만든다 - 생성 결과를 메모리에 쓰고 다시 읽는
- *     것과 값이 같고 그룹 사이 동기화가 필요 없다. 적분한 상태를 같은 슬롯에 되쓰고 생존 여부를 `_particleIndex.z` 에 남기며 그룹의 생존 수를 간접 인자 버퍼 단어(SW_VFX_ARGS_WORD_GROUP_FIRST + 그룹)에 쓴다.
+ *     것과 값이 같고 그룹 사이 동기화가 필요 없다. 적분한 상태를 같은 슬롯에 되쓰고 생존 여부를 `_particleIndex.z` 에 남기며 그룹의 생존 수를 간접 인자 버퍼 단어(SW_VFX_ARGS_WORD_GROUP_FIRST( 풀 ) + 그룹)에 쓴다.
  *   SCAN: 그룹 수를 256 개씩 접두사 합(그룹 번호 순)해 단어를 시작 위치로 덮고, 살아 있는 수 · 반쪽 · 버린 수 · 간접 인자를 단계마다 갱신한다(압축 전 수는 SCRATCH_TOTAL).
  *   COMPACT: 그룹이 자기 슬롯에서 살아 있는 것을 슬롯 순서(= 원래 인덱스 순서, 안정)로 다른 반쪽의 시작 위치부터 쓴다. 한 단계의 입자 값 · 순서가 그룹 하나 경로와 같다.
  * 디스패치 사이는 C++ 가 UAV 장벽을 둔다(VFXGPUSimulation::recordDispatches). DX11 은 간접 인자가 RAW UAV 라 Load/Store 단어 주소 그대로다.
@@ -43,7 +45,7 @@ struct VFXParticleState
 {
     float4 _positionAge;      // xyz 방출기 로컬 위치, w 나이(초)
     float4 _velocityLifetime; // xyz 속도, w 수명(초)
-    uint4  _particleIndex;    // xy 입자 번호(64 비트, x 가 아래), zw 빈칸
+    uint4  _particleIndex;    // xy 입자 번호(64 비트, x 가 아래), z 다중 그룹의 생존 표시, w 인스턴스 칸(빈 칸 스택에서 꺼냈다)
 };
 
 struct GPUParticle
@@ -88,6 +90,25 @@ void storeArgsWord( uint word, uint value )
 #else
     g_VFXArgsRW[word] = value;
 #endif
+}
+
+/** @brief 빈 인스턴스 칸 스택의 @p index 번째 단어입니다(인자 버퍼 안). */
+uint deadSlotWord( uint index )
+{
+    return SW_VFX_ARGS_WORD_DEAD_FIRST + index;
+}
+
+/** @brief 재생 시작 — 빈 칸 스택을 모든 칸으로 채웁니다. 꼭대기(끝)가 0 번이라 작은 칸부터 나간다(CPU VFXCPUSimulation 과 같다). */
+void resetDeadSlots( uint firstIndex, uint stride, uint poolSize )
+{
+    for ( uint index = firstIndex; index < poolSize; index += stride )
+        storeArgsWord( deadSlotWord( index ), poolSize - 1u - index );
+}
+
+/** @brief 압축 전 자리 @p slot 의 새 입자가 꺼낼 칸입니다. 꼭대기는 풀 - 살아 있는 수 - 1 이고 생성 k 번째(= slot - 살아 있는 수)는 그 아래 k 칸이다. */
+uint popDeadSlot( uint poolSize, uint slot )
+{
+    return loadArgsWord( deadSlotWord( poolSize - 1u - slot ) );
 }
 
 uint4 loadParamRow( uint row )
@@ -367,6 +388,7 @@ void writeRenderOutput( uint firstIndex, uint stride, uint poolSize, uint aliveC
                             userTint;
             output._rotationLife          = float4( 0.0f, lifeRatio, 0.0f, 0.0f );
             g_VFXParticlesRW[outputIndex] = output;
+            storeArgsWord( SW_VFX_ARGS_WORD_ALIVE_SLOT_FIRST( poolSize ) + outputIndex, particle._particleIndex.w ); // 메시 인스턴스 쓰기가 렌더 입력 순서로 칸을 읽는다
         }
         if ( outputIndex < lightCount )
         {
@@ -408,7 +430,9 @@ void simulateSingleGroup( uint thread )
     uint aliveCount   = bReset ? 0u : loadArgsWord( SW_VFX_ARGS_WORD_ALIVE );
     uint currentHalf  = bReset ? 0u : loadArgsWord( SW_VFX_ARGS_WORD_HALF );
     uint droppedCount = bReset ? 0u : loadArgsWord( SW_VFX_ARGS_WORD_DROPPED );
-    GroupMemoryBarrierWithGroupSync();
+    if ( bReset )
+        resetDeadSlots( thread, SW_VFX_SIMULATE_THREAD_COUNT, poolSize );
+    DeviceMemoryBarrierWithGroupSync();
 
     for ( uint stepIndex = 0u; stepIndex < stepCount; ++stepIndex )
     {
@@ -419,13 +443,17 @@ void simulateSingleGroup( uint thread )
         droppedCount += spawn.x - createdCount;
         for ( uint spawnIndex = thread; spawnIndex < createdCount; spawnIndex += SW_VFX_SIMULATE_THREAD_COUNT )
         {
-            g_VFXStateRW[sourceBase + aliveCount + spawnIndex] = makeParticle( addUint64( spawn.yz, uint2( spawnIndex, 0u ) ) );
+            VFXParticleState created                           = makeParticle( addUint64( spawn.yz, uint2( spawnIndex, 0u ) ) );
+            created._particleIndex.w                           = popDeadSlot( poolSize, aliveCount + spawnIndex );
+            g_VFXStateRW[sourceBase + aliveCount + spawnIndex] = created;
         }
+        // 꺼낸 칸을 다 읽은 뒤에 아래 죽은 입자가 같은 스택 자리에 돌려준다.
         DeviceMemoryBarrierWithGroupSync();
 
         // 2) 적분 · 충돌 · 수명 제거 - 다른 반쪽에 태어난 순서 그대로 압축한다.
         const uint totalCount = aliveCount + createdCount;
         const uint targetBase = ( 1u - currentHalf ) * poolSize;
+        const uint deadBase   = poolSize - totalCount; // 생성이 꺼낸 뒤의 스택 깊이 — 죽은 입자는 그 위에 죽은 차례로 돌려준다
         uint       written    = 0u;
 #if defined( DX11 )
         // FXC(cs_5_0)는 UAV 에서 읽은 수(살아 있는 수)로 끝나는 반복 안의 동기화를 받지 않는다(X3663) - 풀 전체(매개변수 SRV 의 값)를 돌고
@@ -453,6 +481,8 @@ void simulateSingleGroup( uint thread )
             inclusiveScanGroup( thread );
             if ( bAlive )
                 g_VFXStateRW[targetBase + written + s_arrScan[thread] - 1u] = particle;
+            else if ( slot < totalCount )
+                storeArgsWord( deadSlotWord( deadBase + slot - ( written + s_arrScan[thread] ) ), particle._particleIndex.w ); // 앞의 죽은 수 = 자리 - 앞의 산 수
             written += s_arrScan[SW_VFX_SIMULATE_THREAD_COUNT - 1u];
             GroupMemoryBarrierWithGroupSync();
         }
@@ -475,13 +505,14 @@ void simulateSingleGroup( uint thread )
 // ------------------------------------------------------------------------------
 // 다중 그룹 경로 - 패스마다 디스패치 하나(파일 머리 설명).
 // ------------------------------------------------------------------------------
-/** @brief 재생 시작이면 수를 지우고 인자를 비웁니다. 디스패치는 재생 시작에만 한다. */
+/** @brief 재생 시작이면 수를 지우고 인자를 비우며 빈 칸 스택을 채웁니다. 디스패치는 재생 시작에만 한다. */
 void passBegin( uint thread )
 {
-    if ( thread != 0u )
-        return;
     const uint4 header = loadParamRow( SW_VFX_PARAM_ROW_HEADER );
     if ( ( header.z & SW_VFX_FLAG_RESET ) == 0u )
+        return;
+    resetDeadSlots( thread, SW_VFX_SIMULATE_THREAD_COUNT, header.x );
+    if ( thread != 0u )
         return;
     storeDrawArgs( header.w, 0u, header.z );
     storeArgsWord( SW_VFX_ARGS_WORD_ALIVE, 0u );
@@ -510,9 +541,14 @@ void passIntegrate( uint thread, uint group, uint stepIndex )
     {
         VFXParticleState particle;
         if ( slot < aliveCount )
+        {
             particle = g_VFXStateRW[sourceBase + slot];
+        }
         else
-            particle = makeParticle( addUint64( spawn.yz, uint2( slot - aliveCount, 0u ) ) );
+        {
+            particle                  = makeParticle( addUint64( spawn.yz, uint2( slot - aliveCount, 0u ) ) );
+            particle._particleIndex.w = popDeadSlot( poolSize, slot ); // 돌려주기는 압축 패스(다른 디스패치)라 읽기와 겹치지 않는다
+        }
         bAlive                          = integrateParticle( particle, gravity, flags, bCollideDepth );
         particle._particleIndex.z       = bAlive ? 1u : 0u; // 압축 패스가 읽는 생존 표시(칸의 빈칸)
         g_VFXStateRW[sourceBase + slot] = particle;
@@ -526,7 +562,7 @@ void passIntegrate( uint thread, uint group, uint stepIndex )
         GroupMemoryBarrierWithGroupSync();
     }
     if ( thread == 0u )
-        storeArgsWord( SW_VFX_ARGS_WORD_GROUP_FIRST + group, s_arrScan[0] );
+        storeArgsWord( SW_VFX_ARGS_WORD_GROUP_FIRST( poolSize ) + group, s_arrScan[0] );
 }
 
 /** @brief 그룹별 생존 수를 그룹 번호 순으로 접두사 합해 시작 위치로 덮고, 단계가 끝난 뒤의 수 · 반쪽 · 버린 수 · 간접 인자를 씁니다. */
@@ -547,12 +583,12 @@ void passScan( uint thread, uint stepIndex )
     for ( uint chunkFirst = 0u; chunkFirst < groupCount; chunkFirst += SW_VFX_SIMULATE_THREAD_COUNT )
     {
         const uint group  = chunkFirst + thread;
-        const uint count  = group < groupCount ? loadArgsWord( SW_VFX_ARGS_WORD_GROUP_FIRST + group ) : 0u;
+        const uint count  = group < groupCount ? loadArgsWord( SW_VFX_ARGS_WORD_GROUP_FIRST( poolSize ) + group ) : 0u;
         s_arrScan[thread] = count;
         GroupMemoryBarrierWithGroupSync();
         inclusiveScanGroup( thread );
         if ( group < groupCount )
-            storeArgsWord( SW_VFX_ARGS_WORD_GROUP_FIRST + group, running + s_arrScan[thread] - count );
+            storeArgsWord( SW_VFX_ARGS_WORD_GROUP_FIRST( poolSize ) + group, running + s_arrScan[thread] - count );
         running += s_arrScan[SW_VFX_SIMULATE_THREAD_COUNT - 1u];
         GroupMemoryBarrierWithGroupSync();
     }
@@ -572,7 +608,7 @@ void passCompact( uint thread, uint group )
     const uint poolSize   = loadParamRow( SW_VFX_PARAM_ROW_HEADER ).x;
     const uint totalOld   = loadArgsWord( SW_VFX_ARGS_WORD_SCRATCH_TOTAL );
     const uint newHalf    = loadArgsWord( SW_VFX_ARGS_WORD_HALF );
-    const uint offset     = loadArgsWord( SW_VFX_ARGS_WORD_GROUP_FIRST + group );
+    const uint offset     = loadArgsWord( SW_VFX_ARGS_WORD_GROUP_FIRST( poolSize ) + group );
     const uint slot       = group * SW_VFX_SIMULATE_THREAD_COUNT + thread;
     const uint sourceBase = ( 1u - newHalf ) * poolSize;
     const uint targetBase = newHalf * poolSize;
@@ -594,6 +630,11 @@ void passCompact( uint thread, uint group )
     {
         particle._particleIndex.z                                  = 0u;
         g_VFXStateRW[targetBase + offset + s_arrScan[thread] - 1u] = particle;
+    }
+    else if ( slot < totalOld )
+    {
+        // 죽은 입자의 칸을 스택에 돌려준다 — 생성이 꺼낸 뒤의 깊이(풀 - 압축 전 수) 위, 앞의 죽은 수(자리 - 앞의 산 수) 자리다. 그룹 하나 경로와 같은 순서다.
+        storeArgsWord( deadSlotWord( poolSize - totalOld + slot - ( offset + s_arrScan[thread] ) ), particle._particleIndex.w );
     }
 }
 

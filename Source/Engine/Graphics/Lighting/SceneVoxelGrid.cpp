@@ -20,6 +20,9 @@ namespace sw
             static constexpr uint32  kEmissionExponentShift = kEmissionMantissaBits * 3u;
             static constexpr int32   kEmissionExponentBias  = 15;
             static constexpr float32 kEmissionMaxValue      = 65408.0f;
+            /// @brief 점유 비트 — 칸 번호를 단어 번호로 옮기는 자리 수(32 칸 = 2^5)와 단어 안 자리 마스크.
+            static constexpr uint32 kWordShift   = 5u;
+            static constexpr uint32 kWordBitMask = ( 1u << kWordShift ) - 1u;
 
             /** @brief 공유 지수 @p sharedExponent 의 가수 한 눈금입니다(2^(지수 - 치우침 - 가수 비트)). */
             static float32 computeEmissionScale( int32 sharedExponent )
@@ -205,20 +208,82 @@ namespace sw
         return unpackEmission( _listEmission[computeCellIndex( cellX, cellY, cellZ )] );
     }
 
+    SceneVoxelGrid::CellRange SceneVoxelGrid::getFullRange() const
+    {
+        CellRange range{};
+        range._arrLast[0] = _dimX - 1u;
+        range._arrLast[1] = _dimY - 1u;
+        range._arrLast[2] = _dimZ - 1u;
+        return range;
+    }
+
+    bool SceneVoxelGrid::findCellRange( const AABB& box, CellRange& outRange ) const
+    {
+        using Internal = SceneVoxelGridInternal;
+        if ( isEmpty() || box.isValid() == false )
+            return false;
+        float32 arrLow[3];
+        float32 arrHigh[3];
+        Internal::unpack( box._min - _origin, arrLow );
+        Internal::unpack( box._max - _origin, arrHigh );
+        const uint32 arrDim[3]{ _dimX, _dimY, _dimZ };
+        for ( uint32 axis = 0; axis < 3; ++axis )
+        {
+            // 상자가 격자 밖이면 덮는 칸이 없다.
+            const float32 gridExtent = static_cast<float32>( arrDim[axis] ) * _cellSize;
+            if ( arrHigh[axis] < 0.0f || arrLow[axis] > gridExtent )
+                return false;
+            outRange._arrFirst[axis] = MathUtil::min( static_cast<uint32>( MathUtil::max( MathUtil::floor( arrLow[axis] / _cellSize ), 0.0f ) ), arrDim[axis] - 1u );
+            outRange._arrLast[axis]  = MathUtil::min( static_cast<uint32>( MathUtil::max( MathUtil::floor( arrHigh[axis] / _cellSize ), 0.0f ) ), arrDim[axis] - 1u );
+        }
+        return true;
+    }
+
+    void SceneVoxelGrid::clearCells( const CellRange& range )
+    {
+        for ( uint32 cellZ = range._arrFirst[2]; cellZ <= range._arrLast[2]; ++cellZ )
+        {
+            for ( uint32 cellY = range._arrFirst[1]; cellY <= range._arrLast[1]; ++cellY )
+            {
+                for ( uint32 cellX = range._arrFirst[0]; cellX <= range._arrLast[0]; ++cellX )
+                {
+                    if ( containsCell( cellX, cellY, cellZ ) == false )
+                        continue;
+                    const uint32 index = computeCellIndex( cellX, cellY, cellZ );
+                    _listWord[index >> SceneVoxelGridInternal::kWordShift] &= ~( 1u << ( index & SceneVoxelGridInternal::kWordBitMask ) );
+                    if ( _listEmission.empty() == false )
+                        _listEmission[index] = 0u;
+                }
+            }
+        }
+    }
+
     void SceneVoxelGrid::voxelizeTriangle( const float3& a, const float3& b, const float3& c )
     {
-        voxelizeTriangleCells( a, b, c, 0u );
+        if ( isEmpty() == false )
+            voxelizeTriangleCells( a, b, c, 0u, getFullRange() );
+    }
+
+    void SceneVoxelGrid::voxelizeTriangle( const float3& a, const float3& b, const float3& c, const CellRange& clip )
+    {
+        voxelizeTriangleCells( a, b, c, 0u, clip );
     }
 
     void SceneVoxelGrid::voxelizeEmissiveTriangle( const float3& a, const float3& b, const float3& c, const float3& radiance )
     {
+        if ( isEmpty() == false )
+            voxelizeEmissiveTriangle( a, b, c, radiance, getFullRange() );
+    }
+
+    void SceneVoxelGrid::voxelizeEmissiveTriangle( const float3& a, const float3& b, const float3& c, const float3& radiance, const CellRange& clip )
+    {
         const uint32 packed = packEmission( radiance );
         if ( packed != 0u && _listEmission.empty() && isEmpty() == false )
             _listEmission.assign( getCellCount(), 0u );
-        voxelizeTriangleCells( a, b, c, packed );
+        voxelizeTriangleCells( a, b, c, packed, clip );
     }
 
-    void SceneVoxelGrid::voxelizeTriangleCells( const float3& a, const float3& b, const float3& c, uint32 packedEmission )
+    void SceneVoxelGrid::voxelizeTriangleCells( const float3& a, const float3& b, const float3& c, uint32 packedEmission, const CellRange& clip )
     {
         using Internal = SceneVoxelGridInternal;
         if ( isEmpty() )
@@ -240,6 +305,11 @@ namespace sw
                 return;
             arrFirst[axis] = static_cast<uint32>( MathUtil::max( MathUtil::floor( arrLow[axis] / _cellSize ), 0.0f ) );
             arrLast[axis]  = MathUtil::min( static_cast<uint32>( MathUtil::max( MathUtil::floor( arrHigh[axis] / _cellSize ), 0.0f ) ), arrDim[axis] - 1u );
+            // 다시 칠하는 구간 밖은 손대지 않는다.
+            arrFirst[axis] = MathUtil::max( arrFirst[axis], clip._arrFirst[axis] );
+            arrLast[axis]  = MathUtil::min( arrLast[axis], clip._arrLast[axis] );
+            if ( arrFirst[axis] > arrLast[axis] )
+                return;
         }
         const float32 half = _cellSize * 0.5f * ( 1.0f + Internal::kOverlapSlack );
         for ( uint32 cellZ = arrFirst[2]; cellZ <= arrLast[2]; ++cellZ )

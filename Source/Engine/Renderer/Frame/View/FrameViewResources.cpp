@@ -11,8 +11,10 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
@@ -21,7 +23,6 @@
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
 {
@@ -87,6 +88,15 @@ namespace sw
                     }
                 }
                 return false;
+            }
+
+            /** @brief @p name 을 읽거나 쓰거나 깊이로 거는 패스가 있으면 true 입니다. */
+            static bool isUsedByAnyPass( const vector<RenderGraphPassDesc>& listPass, const hashed_string& name )
+            {
+                return VectorUtil::containsIf( listPass, [&name]( const RenderGraphPassDesc& pass )
+                { return pass._resolvedDepthAttachment == name || VectorUtil::contains( pass._listResolvedOutput, name ) ||
+                         VectorUtil::containsIf( pass._listResolvedInput, [&name]( const RenderGraphPassDesc::ResolvedAttachment& input )
+                  { return input._attachment == name; } ); } );
             }
 
             /** @brief 파이프라인이 선언한 첨부 가운데 @p name 의 자리입니다. 선언되지 않은 이름(Swapchain)이면 비어 있습니다. */
@@ -160,10 +170,11 @@ namespace sw
              *          예전에는 같은 뜻을 `isEffectOff`(꺼짐)와 `shouldRenderPass`(그림)가 반대 극성으로 따로 말했다.
              * @param bMotionStill 기록을 버리는 프레임(컷 — 언리얼도 컷에서 모션 블러를 끈다)이거나, 이번 뷰-투영이 지난번 것과 같고 물체도 움직이지 않았다 — 화면 속도가 모두 0 이다.
              */
-            static bool isPassEnabledInView( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, const FrameViewResources::ViewPassSceneState& sceneState, bool bMotionStill )
+            static bool isPassEnabledInView( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, const RenderFrameSettings& frameSettings, const FrameViewResources::ViewPassSceneState& sceneState,
+                                             bool bMotionStill )
             {
                 const RenderPassTypeInfo& info = getRenderPassTypeInfo( pass._type );
-                if ( info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && ( settings.usesPostProcess() == false || pass._minPostQuality > static_cast<int32>( gv_postQuality ) ) )
+                if ( info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && ( settings.usesPostProcess() == false || pass._minPostQuality > frameSettings._postQuality ) )
                     return false;
                 const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( settings._viewMode );
                 // 값 보기(노멀 · 깊이 · 오버드로)와 와이어프레임은 장면 색을 덮지 않는다(안개와 같은 판정).
@@ -173,9 +184,14 @@ namespace sw
                     case RenderPassType::DepthOfField:
                         return settings._depthOfField.hasDepthOfField() && settings._projectionScaleY > 0.0f; // 핀홀(조리개 0) · 직교는 꺼짐
                     case RenderPassType::MotionBlur:
-                        return static_cast<bool>( gv_motionBlur ) && bMotionStill == false;
+                    case RenderPassType::MotionBlurTileMax:
+                    case RenderPassType::MotionBlurNeighborMax:
+                        return frameSettings._bMotionBlur != SW_FALSE && bMotionStill == false;
                     case RenderPassType::ContactShadow:
                         return sceneState._bContactShadows == SW_TRUE; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다
+                    case RenderPassType::Shadow:
+                        // 점광 · 스폿 아틀라스 패스는 타일이 없으면 지우지도 않는다 — 그 프레임엔 그림자 칸을 받은 빛(params.x)이 없어 조명이 아틀라스를 읽지 않으니 내용은 상관없다.
+                        return pass._resolvedDepthRole != static_cast<uint8>( RenderPassInputRole::LocalShadowMap ) || sceneState._bLocalShadows == SW_TRUE;
                     case RenderPassType::PostProcessMaterial:
                         return settings.shouldDrawPostProcessMaterial( pass._blendableLocation ); // 이 자리에 읽기를 마친 블렌더블이 없다 — 출력이 원본을 가리킨다
                     case RenderPassType::ScreenSpaceReflection:
@@ -183,6 +199,11 @@ namespace sw
                     case RenderPassType::Distortion:
                     case RenderPassType::DistortionApply:
                         return bShowsScene && sceneState._bDistortionBatches == SW_TRUE;
+                    case RenderPassType::DepthPrepass:
+                        // 와이어프레임(겹침 아님)은 선만 그린다 — 면 깊이를 먼저 쓰면 뒤 선이 가려지고 앞 선이 면 깊이와 다투어 끊긴다(프리패스 없는 파이프라인과 같은 그림으로)
+                        return viewModeInfo._bWireframe == false || viewModeInfo._bOverlay;
+                    case RenderPassType::Decal:
+                        return bShowsScene && sceneState._bDecals == SW_TRUE; // 값 보기는 데칼을 덮지 않는다 — 출력이 없어 베이스 패스가 DBuffer 를 걸지 않는다
                     default:
                         return true;
                 }
@@ -190,26 +211,21 @@ namespace sw
         };
     } // namespace
 
-    FrameViewResources::FrameViewResources( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameAutoExposure& autoExposure, FrameUpscale& upscale )
+    FrameViewResources::FrameViewResources( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const RenderFrameSettings& frameSettings, FrameAutoExposure& autoExposure,
+                                            FrameUpscale& upscale )
         : _pDevice{ pDevice }
         , _pipeline{ pipeline }
+        , _frameSettings{ frameSettings }
         , _autoExposure{ autoExposure }
         , _upscale{ upscale }
         , _listScratchNeededAttachment{}
     {
     }
 
-    uint32 FrameViewResources::getShadowMapResolution()
-    {
-        // 값의 출처는 설정 스키마 하나다. 여기서는 텍스처를 만들 수 있는 범위만 지킨다(1 미만 · 밉 상한을 넘는 한 변은 첨부를 만들지 못한다).
-        constexpr int32 kMaxResolution = static_cast<int32>( 1u << ( constant::render::kMaxTextureMipCount - 1 ) );
-        return static_cast<uint32>( MathUtil::clamp( static_cast<int32>( gv_shadowMapResolution ), 1, kMaxResolution ) );
-    }
-
     bool FrameViewResources::updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height, const RenderGraphAliasPlan& aliasPlan, uint32 aliasGeneration )
     {
         TransientAttachmentPool& pool             = view._transientPool;
-        const uint32             shadowResolution = getShadowMapResolution();
+        const uint32             shadowResolution = _frameSettings._shadowMapResolution; // 게임 스레드가 뜬 사본(텍스처를 만들 수 있는 범위로 잘랐다) — 그림자 행렬의 텍셀 스냅과 같은 값
         const bool               bPoolUnchanged   = width == pool.getWidth() && height == pool.getHeight() && pool.isEmpty() == false && view._shadowMapResolution == shadowResolution &&
                                     view._transientAliasGeneration == aliasGeneration;
         if ( bPoolUnchanged )
@@ -221,20 +237,26 @@ namespace sw
         view._transientAliasGeneration = aliasGeneration;
         placeTransients( pool, aliasPlan );
 
-        // 그림자 맵은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
+        // 그림자 맵(방향광 · 점광 스폿 아틀라스 둘)은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
         // 일반 풀스크린 패스만 쓰는 첨부(후처리 효과 · 톤맵의 출력)는 여기서 만들지 않는다 — 그 패스가 이 뷰에서 처음 돌 때 만든다(`applyViewPassSelection`).
         for ( const RenderPassAttachment& attachment : _pipeline.getDesc()._listAttachment )
         {
             if ( FrameViewResourcesInternal::isMadeOnFirstUse( _pipeline.getGraphPass(), hashed_string( attachment._name.c_str() ) ) )
                 continue;
-            const RHIFormat format = attachment._format;
-            const bool      bDepth = FrameRendererUtil::isDepthFormat( format );
+            const RHIFormat           format       = attachment._format;
+            const bool                bDepth       = FrameRendererUtil::isDepthFormat( format );
+            const RenderPassInputRole role         = resolveRenderPassInputRole( attachment._name, bDepth, attachment._role );
+            const bool                bShadowAtlas = role == RenderPassInputRole::ShadowMap || role == RenderPassInputRole::LocalShadowMap;
+            // 그림자 아틀라스는 공용 렌더 패스 묶음(defaultrenderpass)이 늘 선언하지만, 그림자 패스를 뺀 파이프라인(2D)에서는 아무 패스도 쓰지 않는다 — 큰 정사각 깊이를 잡지 않는다.
+            // shortcut: 쓰지 않는 첨부 거르기는 그림자 아틀라스 둘에만 한다(모듈 확장 패스가 선언 첨부를 이름으로 찾을 수 있다), 확장 패스가 첨부를 선언으로 밝히게 되면 모든 첨부로 넓힌다.
+            if ( bShadowAtlas && FrameViewResourcesInternal::isUsedByAnyPass( _pipeline.getGraphPass(), hashed_string( attachment._name.c_str() ) ) == false )
+                continue;
             // 앨리어싱 계획의 별칭은 주인의 텍스처를 함께 쓴다(레벨 수명이 겹치지 않고 서술이 같다). 주인을 아직 만들지 않았으면(처음 쓸 때 만드는 첨부) 자기 텍스처로 만든다.
             const hashed_string attachmentName( attachment._name.c_str() );
             const hashed_string aliasOwner = aliasPlan.findOwner( attachmentName );
             if ( aliasOwner.empty() == false && pool.allocateAlias( attachmentName, aliasOwner, attachment.getOps() ) )
                 continue;
-            if ( resolveRenderPassInputRole( attachment._name, bDepth, attachment._role ) == RenderPassInputRole::ShadowMap )
+            if ( bShadowAtlas )
                 (void)pool.allocateSized( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), shadowResolution, shadowResolution );
             else
                 pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
@@ -245,6 +267,7 @@ namespace sw
         ensureTAAHistory( view );
         ensureDepthHistory( view );
         ensureOcclusionTiles( view );
+        ensureDeferredTiles( view );
         _autoExposure.ensureAutoExposureHistory( view );
         // 새 풀의 장면 깊이에는 아직 아무것도 없다 — 이 뷰를 한 번 그릴 때까지 깊이 충돌은 보지 않는다. 시간 누적 기록(TAA · 지난 뷰-투영 · 노출)도 새것이라 첫 프레임은 버린다.
         view._bLastFrameDepthValid = SW_FALSE;
@@ -383,6 +406,41 @@ namespace sw
         }
     }
 
+    void FrameViewResources::ensureDeferredTiles( FrameViewTarget& view )
+    {
+        // 분류 컴퓨트가 G버퍼를 샘플하고(네이티브 bindless) 간접 인자를 쓴다(간접 인자 능력 — 컬링과 같다). 조명 패스가 없는 파이프라인(포워드)은 쓸 곳이 없다.
+        const bool bUsable = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() && _pDevice->getCapabilities()._bGPUCulling != SW_FALSE &&
+                             VectorUtil::containsIf( _pipeline.getGraphPass(), []( const RenderGraphPassDesc& pass )
+        { return pass._type == RenderPassType::Lighting; } );
+        if ( bUsable == false || view._deferredTileList.isValid() )
+            return;
+        const TransientAttachmentPool::Attachment albedo = view._transientPool.find( attachmentNames()._gbufferAlbedo );
+        if ( albedo._texture == 0 )
+            return;
+        view._deferredTileCapacity = FrameRendererUtil::divideRoundUp( albedo._width, kDeferredTileSize ) * FrameRendererUtil::divideRoundUp( albedo._height, kDeferredTileSize );
+        // 간접 인자는 종류마다 RHIDrawIndirectCommand 하나다 — 분류의 지우기 디스패치가 프레임마다 다시 쓴다(처음 값은 그리지 않음).
+        vector<RHIDrawIndirectCommand> listInitialArgs( kDeferredTileClassCount );
+        for ( RHIDrawIndirectCommand& args : listInitialArgs )
+        {
+            args._vertexCount   = SW_DEFERRED_TILE_VERTEX_COUNT;
+            args._instanceCount = 0;
+        }
+        constexpr RHIBufferUsage kArgsUsage = RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
+        constexpr RHIBufferUsage kListUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
+        const bool               bCreated   = view._deferredTileArgs.ensureCapacity( _pDevice, static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), kDeferredTileClassCount, kArgsUsage, false, true,
+                                                                                     listInitialArgs.data() ) &&
+                              view._deferredTileList.ensureCapacity( _pDevice, static_cast<uint32>( sizeof( uint32 ) ), kDeferredTileClassCount * view._deferredTileCapacity, kListUsage, true, true,
+                                                                     nullptr );
+        if ( bCreated == false )
+        {
+            SW_LOG_ERROR_ID( "FrameViewResources.FailedCreateDeferredTiles", "Failed to create the deferred lighting tile buffers (%# tiles) - this view lights the whole screen with every lobe",
+                             view._deferredTileCapacity );
+            view._deferredTileArgs.release( _pDevice );
+            view._deferredTileList.release( _pDevice );
+            view._deferredTileCapacity = 0;
+        }
+    }
+
     void FrameViewResources::releaseViewTransients( FrameViewTarget& view )
     {
         _autoExposure.releaseAutoExposureHistory( view );
@@ -392,7 +450,10 @@ namespace sw
         view._bOcclusionTilesThisFrame = SW_FALSE;
         if ( _pDevice == nullptr )
         {
-            view._occlusionTiles = RHIStructuredBuffer{};
+            view._occlusionTiles       = RHIStructuredBuffer{};
+            view._deferredTileList     = RHIStructuredBuffer{};
+            view._deferredTileArgs     = RHIStructuredBuffer{};
+            view._deferredTileCapacity = 0;
             view._transientPool.clear();
             view._taaHistory           = 0;
             view._taaHistorySRV        = kInvalidDescriptorIndex;
@@ -402,8 +463,11 @@ namespace sw
             return;
         }
 
-        // 가림 타일은 깊이 히스토리 크기를 따른다.
+        // 가림 타일은 깊이 히스토리 크기를, 디퍼드 조명 타일은 G버퍼 크기를 따른다.
         view._occlusionTiles.release( _pDevice );
+        view._deferredTileList.release( _pDevice );
+        view._deferredTileArgs.release( _pDevice );
+        view._deferredTileCapacity = 0;
         // 깊이 히스토리도 풀 크기를 따른다. UAV 등록을 먼저 놓고 텍스처를 지운다(버퍼 슬롯과 같은 순서 — 레지스트리에 죽은 핸들을 남기지 않는다).
         if ( view._depthHistoryUAV != kInvalidDescriptorIndex )
             _pDevice->getResourceFactory()->unregisterBindlessUAV( view._depthHistoryUAV );
@@ -478,7 +542,7 @@ namespace sw
                     ensureMade( output._attachment );
                 }
                 // 비활성인 덧그리는 패스는 출력이 그대로라 입력을 필요로 하지 않는다 — 그것만 읽는 사본이 아래에서 빠진다.
-                if ( Internal::isPassEnabledInView( pass, view._settings, sceneState, bMotionStill ) == false )
+                if ( Internal::isPassEnabledInView( pass, view._settings, _frameSettings, sceneState, bMotionStill ) == false )
                 {
                     view._listPassDisabled[passIndex] = SW_TRUE;
                     continue;
@@ -490,7 +554,7 @@ namespace sw
                 continue;
             }
             const RenderPassTypeInfo& info          = getRenderPassTypeInfo( pass._type );
-            const bool                bOff          = Internal::isPassEnabledInView( pass, view._settings, sceneState, bMotionStill ) == false;
+            const bool                bOff          = Internal::isPassEnabledInView( pass, view._settings, _frameSettings, sceneState, bMotionStill ) == false;
             const bool                bOutputNeeded = VectorUtil::containsIf( pass._listResolvedColorOutput, [&]( const RenderGraphPassDesc::ResolvedAttachment& output )
                            { return Internal::isNeeded( listAttachment, output._attachment, listNeeded ); } );
             const hashed_string*      pSource       = Internal::findSource( pass );

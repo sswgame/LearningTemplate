@@ -41,17 +41,30 @@ namespace sw
         : _clock{ std::move( pDef ), spawnScale }
         , _seed{ seed }
         , _listParticle{}
+        , _listFreeSlot{}
         , _userValues{}
         , _bWarnedPoolFull{ SW_FALSE }
     {
         SW_ASSERT( getDef()._maxParticles >= 1 );
         SW_ASSERT( getDef().computeSupportedTargets().has( VFXSimulationTarget::CPU ) ); // 깊이 충돌 같은 GPU 전용 모듈은 여기 오지 않는다
         _listParticle.reserve( getDef()._maxParticles );
+        resetFreeSlots();
+    }
+
+    void VFXCPUSimulation::resetFreeSlots()
+    {
+        const uint32 slotCount = getDef()._maxParticles;
+        _listFreeSlot.resize( slotCount );
+        for ( uint32 index = 0; index < slotCount; ++index )
+        {
+            _listFreeSlot[index] = slotCount - 1u - index;
+        }
     }
 
     void VFXCPUSimulation::restart()
     {
         _listParticle.clear();
+        resetFreeSlots();
         _clock.restart();
         // 이미 낸 경고(풀이 참)는 다시 켜지 않는다 — 다시 시작해도 같은 데이터 문제다.
     }
@@ -91,10 +104,12 @@ namespace sw
 
             Particle particle{};
             particle._particleIndex = particleIndex;
-            particle._lifetime      = VFXCPUSimulationInternal::lerpFloat( def._lifetimeMin, def._lifetimeMax, VFXCPUSimulationInternal::nextUnitFloat( state ) );
-            particle._velocity._x   = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._x, def._velocityMax._x, VFXCPUSimulationInternal::nextUnitFloat( state ) );
-            particle._velocity._y   = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._y, def._velocityMax._y, VFXCPUSimulationInternal::nextUnitFloat( state ) );
-            particle._velocity._z   = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._z, def._velocityMax._z, VFXCPUSimulationInternal::nextUnitFloat( state ) );
+            particle._instanceSlot  = _listFreeSlot.back(); // spawnCount 가 빈 칸 수 이하라 늘 있다
+            _listFreeSlot.pop_back();
+            particle._lifetime    = VFXCPUSimulationInternal::lerpFloat( def._lifetimeMin, def._lifetimeMax, VFXCPUSimulationInternal::nextUnitFloat( state ) );
+            particle._velocity._x = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._x, def._velocityMax._x, VFXCPUSimulationInternal::nextUnitFloat( state ) );
+            particle._velocity._y = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._y, def._velocityMax._y, VFXCPUSimulationInternal::nextUnitFloat( state ) );
+            particle._velocity._z = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._z, def._velocityMax._z, VFXCPUSimulationInternal::nextUnitFloat( state ) );
             _listParticle.push_back( particle );
         }
     }
@@ -115,7 +130,8 @@ namespace sw
 
             if ( particle._age >= particle._lifetime || bSurvivesCollision == false )
             {
-                // 마지막 입자와 바꿔 지운다. 바뀐 입자는 아직 적분 전이라 같은 자리를 다시 본다.
+                // 칸을 빈 칸 목록에 돌려주고 마지막 입자와 바꿔 지운다. 바뀐 입자는 아직 적분 전이라 같은 자리를 다시 본다.
+                _listFreeSlot.push_back( particle._instanceSlot );
                 particle = _listParticle.back();
                 _listParticle.pop_back();
                 continue;
@@ -170,6 +186,17 @@ namespace sw
                                            *def._colorOverLife._blue.evaluate( lifeRatio ) * _userValues._tint._z, *def._colorOverLife._alpha.evaluate( lifeRatio ) * _userValues._tint._w );
             output._rotationLife = float4( 0.0f, lifeRatio, 0.0f, 0.0f );
             outListParticle.push_back( output );
+        }
+    }
+
+    void VFXCPUSimulation::writeInstanceSlots( vector<uint32>& outListSlot ) const
+    {
+        SW_ASSERT( getDef()._renderMode != VFXRenderMode::Ribbon ); // 띠는 `writeParticles` 가 번호 순으로 줄 세운다 — 순서가 맞지 않는다
+        outListSlot.clear();
+        outListSlot.reserve( _listParticle.size() );
+        for ( const Particle& particle : _listParticle )
+        {
+            outListSlot.push_back( particle._instanceSlot );
         }
     }
 } // namespace sw

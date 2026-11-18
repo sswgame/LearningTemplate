@@ -88,7 +88,8 @@ namespace sw
         /**
          * @brief 항목 하나를 보이거나 숨깁니다. 값이 그대로면 아무것도 하지 않습니다.
          * @details 항목 수는 만들 때 정해지므로(언리얼 ISM 도 추가 · 제거가 재구성입니다) 쓰지 않는 자리는 숨깁니다 — 데미지 숫자의 남는 자릿수,
-         *          길이가 0 인 HP 바 구간이 그렇습니다. 실릴지가 바뀌므로 그 프레임은 빌더가 전체 수집으로 넘어갑니다(드문 일입니다).
+         *          길이가 0 인 HP 바 구간, 메시 입자의 죽은 칸(`VFXMeshSlotVisibility`)이 그렇습니다. 실릴지가 바뀌는 것은 그 칸 하나의 일이라 빌더가 부분 수집으로
+         *          그 칸만 고칩니다(불투명은 배치 구성원만 고치고, 투명은 배치를 다시 나눕니다 — `GPUSceneBuilder::collectDirtyCandidatesInPlace`).
          */
         void setEntryVisible( uint32 index, bool bVisible );
         /** @brief 항목이 보이면 true 입니다(배치 전체의 `isVisible` 과 따로입니다). 범위 밖이면 false 입니다. */

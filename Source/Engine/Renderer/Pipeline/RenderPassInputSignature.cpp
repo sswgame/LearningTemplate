@@ -26,6 +26,11 @@ namespace sw
             "Distortion",
             "ContactShadow",
             "GBufferCustomData",
+            "LocalShadowMap",
+            "VelocityNeighborMax",
+            "DBufferA",
+            "DBufferB",
+            "DBufferC",
         };
 
         /// 이름이 곧 역할인 첨부입니다. 파이프라인이 이 이름을 쓰면 그 역할로 걸립니다.
@@ -35,18 +40,23 @@ namespace sw
             RenderPassInputRole _role;
         };
         constexpr FixedRoleName s_arrFixedRoleName[] = {
-            {    "GBufferAlbedo",     RenderPassInputRole::GBufferAlbedo},
-            {    "GBufferNormal",     RenderPassInputRole::GBufferNormal},
-            {  "GBufferMaterial",   RenderPassInputRole::GBufferMaterial},
-            {"GBufferCustomData", RenderPassInputRole::GBufferCustomData},
-            {        "ShadowMap",         RenderPassInputRole::ShadowMap},
-            {          "AOColor",  RenderPassInputRole::AmbientOcclusion},
-            {      "BloomBright",       RenderPassInputRole::BloomBright},
-            {   "SceneColorCopy",    RenderPassInputRole::SceneColorCopy},
-            {   "SceneDepthCopy",    RenderPassInputRole::SceneDepthCopy},
-            {    "SceneVelocity",          RenderPassInputRole::Velocity},
-            {  "SceneDistortion",        RenderPassInputRole::Distortion},
-            {"ContactShadowMask",     RenderPassInputRole::ContactShadow},
+            {      "GBufferAlbedo",       RenderPassInputRole::GBufferAlbedo},
+            {      "GBufferNormal",       RenderPassInputRole::GBufferNormal},
+            {    "GBufferMaterial",     RenderPassInputRole::GBufferMaterial},
+            {  "GBufferCustomData",   RenderPassInputRole::GBufferCustomData},
+            {          "ShadowMap",           RenderPassInputRole::ShadowMap},
+            {     "LocalShadowMap",      RenderPassInputRole::LocalShadowMap},
+            {            "AOColor",    RenderPassInputRole::AmbientOcclusion},
+            {        "BloomBright",         RenderPassInputRole::BloomBright},
+            {     "SceneColorCopy",      RenderPassInputRole::SceneColorCopy},
+            {     "SceneDepthCopy",      RenderPassInputRole::SceneDepthCopy},
+            {      "SceneVelocity",            RenderPassInputRole::Velocity},
+            {    "SceneDistortion",          RenderPassInputRole::Distortion},
+            {  "ContactShadowMask",       RenderPassInputRole::ContactShadow},
+            {"VelocityNeighborMax", RenderPassInputRole::VelocityNeighborMax},
+            {           "DBufferA",            RenderPassInputRole::DBufferA},
+            {           "DBufferB",            RenderPassInputRole::DBufferB},
+            {           "DBufferC",            RenderPassInputRole::DBufferC},
         };
     } // namespace
 

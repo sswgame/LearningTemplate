@@ -17,7 +17,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<Screenshot file="lensflare_on.ppm"/>
-	<ExpectLog id="RenderPacketSceneCollector.LensFlareUnreadable" count="0"/>
+	<ExpectLog id="LensFlareAsset.Unreadable" count="0"/>
 	<ExpectImagesDiffer first="lensflare_off.ppm" second="lensflare_on.ppm" region="0.5,0,1,0.5" minDiffering="0.02"/>
 	<ExpectImage file="lensflare_on.ppm" golden="lensflare"/>
 	<Pass/>

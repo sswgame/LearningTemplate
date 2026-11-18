@@ -10,7 +10,6 @@
 #include "Core/Container/frame_vector.h"
 #include "Core/Container/string.h"
 #include "Core/Encoding/FourCCUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
@@ -23,7 +22,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
-#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -36,6 +34,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -69,6 +68,9 @@ namespace sw
 {
     namespace
     {
+        /// 데칼 상자 한 그리기의 정점 수 — 면 여섯 × 삼각형 둘 × 정점 셋(decal.hlsl 의 kDecalBoxCorner 표와 같은 수).
+        constexpr uint32 kDecalBoxVertexCount = 36;
+
         struct FramePassExecutorInternal
         {
             /**
@@ -216,13 +218,17 @@ namespace sw
                 case RenderPassType::Shadow:
                 {
                     // 클리어 값은 실제로 바인딩하는 뎁스 첨부의 선언에서 읽는다(이름 ShadowMap 으로 찾지 않는다).
-                    // 그림자 캐시 층은 아틀라스 패스 앞에 다시 그리고(다른 깊이 대상이다) 셰이더 읽기로 돌린다 — 렌더 패스 안에서는 상태를 바꿀 수 없다.
-                    const bool bShadows    = _pActiveView->_settings._bShadows == SW_TRUE;
-                    const bool bCacheLayer = bShadows && prepareShadowCacheLayer( context, passDepth, input._bTransparentBatch );
+                    // 깊이 첨부의 역할이 그릴 타일을 고른다 — ShadowMap 이면 방향광 캐스케이드, LocalShadowMap 이면 점광 · 스폿 타일(아틀라스 둘, 감사 RN-4).
+                    // 그림자 캐시 층은 점광 · 스폿 아틀라스 패스 앞에 다시 그리고(다른 깊이 대상이다) 셰이더 읽기로 돌린다 — 렌더 패스 안에서는 상태를 바꿀 수 없다.
+                    const bool bShadows     = _pActiveView->_settings._bShadows == SW_TRUE;
+                    const bool bLocalShadow = passDesc._resolvedDepthRole == static_cast<uint8>( RenderPassInputRole::LocalShadowMap );
+                    const bool bCacheLayer  = bShadows && bLocalShadow && prepareShadowCacheLayer( context, passDepth, input._bTransparentBatch );
                     beginDepthOnlyPass( context, passDepth, getColorLoadFor( passDepth ) );
                     // 그림자를 끈 뷰는 지우기만 한다. 깊이 1(가장 멀다)이면 모두 빛을 받는다.
-                    if ( bShadows )
-                        drawShadowTiles( context, input._bTransparentBatch, bCacheLayer );
+                    if ( bShadows && bLocalShadow )
+                        drawLocalShadowTiles( context, input._bTransparentBatch, bCacheLayer );
+                    else if ( bShadows )
+                        drawCascadeShadowTiles( context, input._bTransparentBatch );
                     context._pCmd->endRenderPass();
                     break;
                 }
@@ -338,6 +344,8 @@ namespace sw
                 case RenderPassType::Tonemap:
                 case RenderPassType::DepthOfField:
                 case RenderPassType::MotionBlur:
+                case RenderPassType::MotionBlurTileMax:
+                case RenderPassType::MotionBlurNeighborMax:
                 case RenderPassType::SceneDepthCopy:
                 case RenderPassType::ForwardOpaqueNoDepthWrite:
                 case RenderPassType::GPUCull:
@@ -361,6 +369,7 @@ namespace sw
                 case RenderPassType::IndirectArgsReset:
                 case RenderPassType::ScreenRotation:
                 case RenderPassType::ProbeUpdate:
+                case RenderPassType::DeferredTileClassify:
                 {
                     SW_LOG_WARNING_ID( "FramePassExecutor.UnknownPassType", "Unknown pass type '%#' in '%#'", passType, passName );
                     break;
@@ -405,6 +414,9 @@ namespace sw
         }
         registerDeclaredInputs( context, passDesc );
         _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
+        // 디퍼드 조명은 타일 분류를 쓸 수 있으면 종류마다 타일 사각형만 그린다 — 아니면 아래 풀스크린 한 장(모든 엽)이다(능력이 정한 길, 같은 그림).
+        if ( input._passType == RenderPassType::Lighting && executeTiledLighting( input, *pTarget ) )
+            return;
 
         // PSO 가 0이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대체할 PSO 는 테이블이 정한 것만 쓴다(Tonemap 은 Present).
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( input._passType );
@@ -412,6 +424,89 @@ namespace sw
         // 클리어 색은 타깃 첨부의 선언이다(SSAO 의 흰색 = 가림 없음도 AOColor 선언에 있다).
         const float4 targetClear = getTargetClearColor( *pTarget );
         executeFullscreenInto( context, pso, *pTarget, targetClear );
+    }
+
+    bool FramePassExecutor::executeTiledLighting( const PassExecuteInput& input, const hashed_string& target )
+    {
+        // 셰이더의 SwRootConstants(deferred_tile_classify.hlsl)와 같은 배치다.
+        struct RootConstants
+        {
+            uint32 _albedoIndex{ kInvalidDescriptorIndex }; ///< G버퍼 알베도의 bindless SRV
+            uint32 _width{ 0 };                             ///< 뷰 사각형 크기(px)
+            uint32 _height{ 0 };
+            uint32 _capacity{ 0 }; ///< 종류 하나의 목록 칸 수
+            uint32 _mode{ 0 };     ///< 0 간접 인자 지우기 · 1 분류
+        };
+        static_assert( sizeof( RootConstants ) / sizeof( uint32 ) <= shaderslot::kRootConstantDwords, "tile classification root constants exceed the root block" );
+        constexpr uint32 kModeClear    = 0;
+        constexpr uint32 kModeClassify = 1;
+
+        using Internal                        = FramePassExecutorInternal;
+        const FrameViewTarget&       view     = *_pActiveView;
+        const RHIPipelineStateHandle classify = _psoManager.getEnginePSO( RenderPassType::DeferredTileClassify );
+        bool                         bReady   = classify != 0 && view._deferredTileList.isValid() && view._deferredTileArgs.isValid() && _pDevice->supportsNativeBindlessSampling();
+        RHIPipelineStateHandle       arrTilePSO[kDeferredTileClassCount]{};
+        for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
+        {
+            arrTilePSO[tileClass] = _psoManager.findDeferredTilePSO( tileClass );
+            bReady                = bReady && arrTilePSO[tileClass] != 0;
+        }
+        const RenderGraphPassDesc::ResolvedAttachment* pAlbedoInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::GBufferAlbedo );
+        if ( bReady == false || pAlbedoInput == nullptr )
+            return false;
+        const TransientAttachmentPool::Attachment albedo = activePool().find( pAlbedoInput->_attachment );
+        RootConstants                             constants{};
+        constants._width     = view.scaleToRect( albedo._width, albedo._bViewSized != 0, true );
+        constants._height    = view.scaleToRect( albedo._height, albedo._bViewSized != 0, false );
+        constants._capacity  = view._deferredTileCapacity;
+        const uint32 columns = FrameRendererUtil::divideRoundUp( constants._width, kDeferredTileSize );
+        const uint32 rows    = FrameRendererUtil::divideRoundUp( constants._height, kDeferredTileSize );
+        // 목록은 풀 크기로 만들었다 — 사각형은 풀 안이라 넘지 않는다. 넘는다면(풀을 다시 만들기 전 한 프레임) 그 프레임은 풀스크린으로 그린다.
+        if ( albedo._srv == kInvalidDescriptorIndex || columns * rows > view._deferredTileCapacity || columns == 0 || rows == 0 )
+            return false;
+        constants._albedoIndex = static_cast<uint32>( albedo._srv );
+
+        // 1) 분류 — 간접 인자를 지우고(그룹 하나) 타일마다 그룹 하나. 렌더 패스 밖이다. G버퍼 알베도는 그래프가 이 패스의 입력으로 셰이더 읽기 상태로 옮겨 두었다.
+        FramePassContext&         context      = input._context;
+        IRHICommandList&          cmd          = *context._pCmd;
+        const RHIBufferTransition arrToWrite[] = {
+            RHIBufferTransition{view._deferredTileArgs._buffer, RHIBufferState::UnorderedAccess},
+            RHIBufferTransition{view._deferredTileList._buffer, RHIBufferState::UnorderedAccess}
+        };
+        cmd.transitionBuffers( arrToWrite, static_cast<uint32>( std::size( arrToWrite ) ) );
+        cmd.setComputePipelineState( classify );
+        // g_DeferredTileArgsRW(u0) / g_DeferredTileListRW(u1) — deferred_tile_classify.hlsl 레지스터와 1:1 이다.
+        cmd.bindComputeUAV( view._deferredTileArgs._uav, 0 );
+        cmd.bindComputeUAV( view._deferredTileList._uav, 1 );
+        constants._mode = kModeClear;
+        cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        cmd.dispatchCompute( 1, 1, 1 );
+        cmd.uavBarrier( view._deferredTileArgs._buffer );
+        constants._mode = kModeClassify;
+        cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        cmd.dispatchCompute( columns, rows, 1 );
+        const RHIBufferTransition arrToRead[] = {
+            RHIBufferTransition{view._deferredTileArgs._buffer, RHIBufferState::IndirectArgument},
+            RHIBufferTransition{view._deferredTileList._buffer,   RHIBufferState::ShaderResource}
+        };
+        cmd.transitionBuffers( arrToRead, static_cast<uint32>( std::size( arrToRead ) ) );
+
+        // 2) 종류마다 간접 그리기 — 인스턴스 하나가 타일 하나(정점 여섯). 타일 목록은 패스 전용 구조버퍼 칸(t11)에 PSO · 공통 바인딩 뒤에 건다(렌즈 플레어와 같다).
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), getColorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+            return true;
+        setIdentityWorld( context );
+        context._passValues.setUint( passConstantNames()._deferredTileCapacity, view._deferredTileCapacity );
+        for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
+        {
+            commitBindlessTextureBindings( context );
+            cmd.setPipelineState( arrTilePSO[tileClass] );
+            if ( bindForDraw( context, arrTilePSO[tileClass], kInvalidDescriptorIndex ) == false )
+                continue;
+            cmd.bindStructuredBuffer( view._deferredTileList._srv, shaderslot::kPassBuffer );
+            cmd.drawIndirect( view._deferredTileArgs._buffer, tileClass * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), 1 );
+        }
+        cmd.endRenderPass();
+        return true;
     }
 
     void FramePassExecutor::executeComputeImplementation( const PassExecuteInput& input )
@@ -556,7 +651,7 @@ namespace sw
     {
         // ForwardOnlyOpaque 는 디퍼드의 G버퍼가 뺀 배치(MATERIAL_FORWARD_ONLY — 툰)만 조명 패스가 쓴 색과 장면 깊이 위에 그린다(거르기는 shouldDrawBatchInPass).
         // 첨부는 앞 패스가 이미 썼으므로 getColorLoadFor 가 Load 를 고른다.
-        // 그림자 맵은 선언한 입력 중 ShadowMap 역할이다(첨부의 `_role` 또는 원본 이름). 선언하지 않은 파이프라인(2D)은 그림자를 바인딩하지 않는다
+        // 그림자 맵은 선언한 입력 중 ShadowMap · LocalShadowMap 역할이다(첨부의 `_role` 또는 원본 이름). 선언하지 않은 파이프라인(2D)은 그림자를 바인딩하지 않는다
         // — 옛 코드는 이름 ShadowMap 으로 찾았고, 그 첨부가 없는 파이프라인에서는 어차피 빈 바인딩이었다.
         using Internal                                              = FramePassExecutorInternal;
         FramePassContext&                              context      = input._context;
@@ -564,10 +659,20 @@ namespace sw
         const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ShadowMap );
         if ( pShadowInput != nullptr )
             registerPassTexture( context, attachmentNames()._shadowMap, pShadowInput->_attachment );
+        const RenderGraphPassDesc::ResolvedAttachment* pLocalShadowInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::LocalShadowMap );
+        if ( pLocalShadowInput != nullptr )
+            registerPassTexture( context, attachmentNames()._localShadowMap, pLocalShadowInput->_attachment );
         // 접촉 그림자 마스크는 그 패스가 이 뷰에서 돌았을 때만 건다(꺼지면 출력이 없다 — 셰이더는 1). 나머지 선언 입력(원본 색 · 깊이)은 이 패스가 그리는 첨부라 걸지 않는다.
         const RenderGraphPassDesc::ResolvedAttachment* pContactInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ContactShadow );
         if ( pContactInput != nullptr && activePool().resolveName( pContactInput->_attachment ).empty() == false )
             registerPassTexture( context, attachmentNames()._contactShadow, pContactInput->_attachment );
+        // DBuffer 셋도 같다 — 데칼 패스가 이 뷰에서 돌았을 때만 건다(데칼이 없으면 출력이 없다 — 셰이더는 "덮지 않음").
+        for ( const RenderPassInputRole dbufferRole : { RenderPassInputRole::DBufferA, RenderPassInputRole::DBufferB, RenderPassInputRole::DBufferC } )
+        {
+            const RenderGraphPassDesc::ResolvedAttachment* pDBufferInput = Internal::findInputByRole( input._passDesc, dbufferRole );
+            if ( pDBufferInput != nullptr && activePool().resolveName( pDBufferInput->_attachment ).empty() == false )
+                registerPassTexture( context, inputRoleName( dbufferRole ), pDBufferInput->_attachment );
+        }
         // 선언한 컬러 출력을 모두 연다 — 화면 속도를 선언했으면 [색, 속도] 두 타깃이다(검증 3-3, 셰이더 SV_TARGET0 · 1).
         const vector<RenderGraphPassDesc::ResolvedAttachment>& declaredColor = input._declaredColor;
         const uint32                                           colorCount    = static_cast<uint32>( declaredColor.size() ) < kMaxColorAttachments ? static_cast<uint32>( declaredColor.size() ) : kMaxColorAttachments;
@@ -617,6 +722,8 @@ namespace sw
         static_assert( sizeof( arrNames ) / sizeof( arrNames[0] ) == GBufferLayout::kAttachmentCount, "G버퍼 패스의 MRT 는 GBufferLayout 의 첨부 수다" );
         if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, GBufferLayout::kAttachmentCount, passDepth, getColorLoadFor( passDepth ) ) == false )
             return;
+        // 선언 입력은 DBuffer 셋뿐이다(계약) — 이 뷰에 데칼이 없으면 출력이 없어 걸지 않고, 셰이더는 "덮지 않음" 을 읽는다.
+        registerDeclaredInputs( context, input._passDesc );
         drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
     }
@@ -812,7 +919,7 @@ namespace sw
         float4     volumeParams = _fog.getFrameFog()._volumeParams;
         volumeParams._x         = bVolume ? 1.0f : 0.0f;
         context._passValues.setFloat4( passConstantNames()._fogVolumeParams, volumeParams );
-        context._passValues.setFloat4( passConstantNames()._fogDebugParams, FrameFog::makeDebugParams( bVolume, RenderDiagnostics::get() ) );
+        context._passValues.setFloat4( passConstantNames()._fogDebugParams, FrameFog::makeDebugParams( bVolume, _state._settings._diagnostics ) );
 
         if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), getColorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
             return;
@@ -913,17 +1020,14 @@ namespace sw
 
     void FramePassExecutor::executeDecalPass( const PassExecuteInput& input )
     {
-        // 디퍼드 데칼이다. G버퍼 패스가 쓴 칸 셋(알베도 · 노멀 · 머티리얼) 위에 데칼마다 곧은 알파로 섞는다 — 칸마다의 덮임은 셰이더의 출력 알파, 채널 쓰기 마스크는 XML 의 블렌드다.
-        // 표면 값 보기 · 와이어프레임에서는 그리지 않는다(값 위를 덮는다). 데칼이 없으면 "그리지 않음" 은 아무것도 하지 않는 것이다(G버퍼가 이미 맞다).
-        const RenderViewModeInfo&                       viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
-        const RHIPipelineStateHandle                    pso          = _psoManager.getEnginePSO( RenderPassType::Decal );
-        const vector<FrameRenderState::FrameDecalDraw>& listDecal    = _state._listFrameDecalDraw;
-        const bool                                      bDraws       = pso != 0 && listDecal.empty() == false && viewModeInfo._bShowsBuffer == false && viewModeInfo._bWireframe == false;
-        if ( bDraws == false )
-            return;
-        FramePassContext& context = input._context;
+        // DBuffer 데칼이다(언리얼 DBuffer). 깊이 프리패스 뒤 · 베이스 패스 앞에 DBufferA · B · C 를 지우고(클리어 (0, 0, 0, 1) = 덮지 않음) 데칼마다 상자 뒷면을 그려 프리멀티플라이로 쌓는다.
+        // 데칼이 없는 뷰 · 표면 값 보기는 뷰 패스 고르기가 이 패스를 빼고 출력도 없다(베이스 패스가 걸지 않는다). 여기 온 뒤에는 PSO 가 없어도 지우기는 한다 —
+        // 출력이 있는데 지우지 않으면 베이스 패스가 지난 프레임 값을 섞는다.
+        const RHIPipelineStateHandle                    pso       = _psoManager.getEnginePSO( RenderPassType::Decal );
+        const vector<FrameRenderState::FrameDecalDraw>& listDecal = _state._listFrameDecalDraw;
+        FramePassContext&                               context   = input._context;
         registerDeclaredInputs( context, input._passDesc );
-        // 선언한 컬러 출력 셋이 MRT 다(검증: G버퍼 역할 셋 — 이 차례). 깊이 붙임은 없다(장면 깊이를 입력으로 읽는다).
+        // 선언한 컬러 출력 셋이 MRT 다(검증 3-9: DBuffer 역할 셋 — 이 차례). 깊이 붙임은 없다(장면 깊이를 입력으로 읽는다).
         hashed_string       arrColor[3];
         float4              arrClear[3];
         RHIRenderPassLoadOp arrLoad[3];
@@ -932,12 +1036,14 @@ namespace sw
         {
             arrColor[colorIndex] = input._declaredColor[colorIndex]._attachment;
             arrClear[colorIndex] = getTargetClearColor( arrColor[colorIndex] );
-            arrLoad[colorIndex]  = RHIRenderPassLoadOp::Load;
+            arrLoad[colorIndex]  = getColorLoadFor( arrColor[colorIndex] );
         }
         if ( beginColorPassMrt( context, arrColor, arrClear, arrLoad, colorCount, hashed_string{}, RHIRenderPassLoadOp::Load ) == false )
             return;
         for ( const FrameRenderState::FrameDecalDraw& decal : listDecal )
         {
+            if ( pso == 0 )
+                break;
             // 상자 월드 행렬은 g_World(bindForDraw 가 context._world 로 건다), 나머지는 그리기마다의 패스 상수다.
             context._world = decal._world;
             context._passValues.setMatrix( passConstantNames()._decalWorldToLocal, decal._worldToLocal );
@@ -948,8 +1054,10 @@ namespace sw
             context._passValues.setUint( passConstantNames()._decalNormalTexture, decal._normalTexture );
             commitBindlessTextureBindings( context );
             context._pCmd->setPipelineState( pso );
+            // 상자 하나 = 삼각형 12 개(정점 버퍼 없이 SV_VertexID — decal.hlsl VSMain). 앞면은 XML 의 컬(Front)이 버린다.
+            // shortcut: 거울 상자(월드 행렬식 < 0)는 감김이 뒤집혀 앞면이 남는다 — 그런 데칼이 생기면 FramePSOManager::reverseCullMode 처럼 컬을 뒤집은 PSO 를 고른다.
             if ( bindForDraw( context, pso, kInvalidDescriptorIndex, decal._arrTextureSRV ) )
-                context._pCmd->draw( 3, 0 );
+                context._pCmd->draw( kDecalBoxVertexCount, 0 );
         }
         context._pCmd->endRenderPass();
         setIdentityWorld( context );
@@ -972,13 +1080,33 @@ namespace sw
             return;
         // drawFullscreen 과 같은 순서다. 스프라이트 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다(안개 패스와 같다).
         setIdentityWorld( context );
-        commitBindlessTextureBindings( context );
-        context._pCmd->setPipelineState( pso );
-        if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) )
+        // 구간마다 그리기 하나 — Image 구간은 텍스처를 머티리얼 칸 0 으로 빌려 건다(데칼과 같다). 아직 읽는 중인 텍스처의 구간은 이번 프레임에 뺀다(흰 사각형으로 대신하지 않는다).
+        const bool bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
+        for ( const LensFlareDrawRange& range : sprites.getDrawRanges() )
         {
-            context._pCmd->bindStructuredBuffer( sprites.getBuffer()._srv, shaderslot::kPassBuffer );
-            // 스프라이트 하나 = 모서리 여섯(정점 버퍼 없이 SV_VertexID 로 만든다 — lens_flare.hlsl).
-            context._pCmd->draw( sprites.getSpriteCount() * 6u, 0 );
+            RHIDescriptorIndex arrTextureSRV[shaderslot::kMaterialTextureCount];
+            for ( RHIDescriptorIndex& srv : arrTextureSRV )
+            {
+                srv = kInvalidDescriptorIndex;
+            }
+            uint32 textureIndex = kInvalidDescriptorIndex;
+            if ( range._pTexturePath != nullptr )
+            {
+                const Texture2D* pTexture = _state._postProcessTextures.findReady( *range._pTexturePath, "lens flare sprite" );
+                if ( pTexture == nullptr )
+                    continue;
+                arrTextureSRV[0] = pTexture->getSRV();
+                textureIndex     = bNativeBindless ? pTexture->getSRV() : 0u;
+            }
+            context._passValues.setUint( passConstantNames()._lensFlareTexture, textureIndex );
+            commitBindlessTextureBindings( context );
+            context._pCmd->setPipelineState( pso );
+            if ( bindForDraw( context, pso, kInvalidDescriptorIndex, arrTextureSRV ) )
+            {
+                context._pCmd->bindStructuredBuffer( sprites.getBuffer()._srv, shaderslot::kPassBuffer );
+                // 스프라이트 하나 = 모서리 여섯(정점 버퍼 없이 SV_VertexID 로 만든다 — lens_flare.hlsl). 시작 정점이 SV_VertexID 에 더해져 구간의 스프라이트를 읽는다.
+                context._pCmd->draw( range._spriteCount * 6u, range._firstSprite * 6u );
+            }
         }
         context._pCmd->endRenderPass();
     }

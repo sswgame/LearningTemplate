@@ -18,20 +18,15 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
 {
-    /**
-     * @brief `-gv_upscalerSharpness=<단계>`: FSR 1 RCAS 의 선명도를 줄이는 단계입니다(0 = 가장 선명, 1 단계마다 절반 — AMD FSRRcasCon 의 sharpness). AMD 예제 기본값은 0.2 다.
-     */
-    SW_GLOBAL_VARIABLE( float32, gv_upscalerSharpness, 0.2f, "FSR 1 선명화(RCAS) 를 줄이는 단계 — 0 가장 선명, 1 마다 절반 (graphics.upscaler 가 spatial 일 때)" );
-
     namespace
     {
         struct FrameUpscaleInternal
@@ -55,9 +50,10 @@ namespace sw
         };
     } // namespace
 
-    FrameUpscale::FrameUpscale( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const FramePSOManager& psoManager )
+    FrameUpscale::FrameUpscale( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const RenderFrameSettings& frameSettings, const FramePSOManager& psoManager )
         : _pDevice{ pDevice }
         , _pipeline{ pipeline }
+        , _frameSettings{ frameSettings }
         , _psoManager{ psoManager }
     {
     }
@@ -80,7 +76,7 @@ namespace sw
         using Internal                                  = FrameUpscaleInternal;
         view._bUpscaleThisFrame                         = SW_FALSE;
         const TransientAttachmentPool& pool             = view._transientPool;
-        const bool                     bSpatial         = static_cast<int32>( gv_upscaler ) == Internal::kUpscalerSpatial;
+        const bool                     bSpatial         = _frameSettings._upscaler == Internal::kUpscalerSpatial;
         const bool                     bSmaller         = view._rect._width < viewportWidth || view._rect._height < viewportHeight; // 그리는 사각형이 화면보다 작다(풀 배율 · 자동 렌더 배율)
         const bool                     bCandidate       = _pDevice != nullptr && bSpatial && bSmaller && view._settings._upscaleZoom == 0 && pool.isEmpty() == false;
         const RenderGraphPassDesc*     pTonemap         = FrameAutoExposure::findTonemapPass( _pipeline );
@@ -180,7 +176,7 @@ namespace sw
         constants._source            = bNativeBindless ? static_cast<uint32>( view._upscaleIntermediateSRV ) : 0u;
         constants._outputWidth       = static_cast<float32>( view._upscaleWidth ); // 픽셀 = 정점 UV × 중간 RT 크기(SV_Position 은 GL 기본 프레임버퍼에서 원점이 다르다)
         constants._outputHeight      = static_cast<float32>( view._upscaleHeight );
-        constants._sharpness         = MathUtil::max( 0.0f, static_cast<float32>( gv_upscalerSharpness ) );
+        constants._sharpness         = _frameSettings._upscalerSharpness; // 사본을 뜰 때 0 아래를 잘랐다
         constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
         if ( bNativeBindless == false )
             cmd.bindShaderResource( view._upscaleIntermediateSRV, kSourceSlot );

@@ -33,6 +33,7 @@ namespace sw
             static constexpr auto kSceneColor        = "SceneColor";
             static constexpr auto kSceneDepth        = "SceneDepth";
             static constexpr auto kShadowMap         = "ShadowMap";
+            static constexpr auto kLocalShadowMap    = "LocalShadowMap";
             static constexpr auto kGBufferAlbedo     = "GBufferAlbedo";
             static constexpr auto kGBufferNormal     = "GBufferNormal";
             static constexpr auto kGBufferMaterial   = "GBufferMaterial";
@@ -181,8 +182,8 @@ namespace sw
             float32 _arrPlane[6][4]{};
             uint32  _instanceCount{ 0 };
             uint32  _batchCount{ 0 };
-            uint32  _visibleSlotCount{ 0 }; ///< 가시 목록의 칸 수(가시 구간의 합). 셰이더 g_VisibleSlotCount
-            uint32  _pad{ 0 };
+            uint32  _visibleSlotCount{ 0 };  ///< 가시 목록의 칸 수(가시 구간의 합). 셰이더 g_VisibleSlotCount
+            uint32  _instanceSlotCount{ 0 }; ///< 칸 순 인스턴스 버퍼의 원소 수(GPUScene 칸 수). 셰이더 g_InstanceSlotCount — 차례 → 칸 목록이 가리킨 칸의 범위다
             float32 _arrOcclusionViewProj[16]{};
             uint32  _arrOcclusionGrid[4]{};
             float32 _arrOcclusionDepthSize[4]{};
@@ -531,6 +532,8 @@ namespace sw
         hashed_string _sceneColor{ FrameRendererUtil::Attachment::kSceneColor };
         hashed_string _sceneDepth{ FrameRendererUtil::Attachment::kSceneDepth };
         hashed_string _shadowMap{ FrameRendererUtil::Attachment::kShadowMap };
+        /// 점광 · 스폿 그림자 아틀라스 — 첨부 이름이 곧 역할 이름(`g_LocalShadowMapIndex`)이다. 그림자 캐시 층도 복원 드로우 동안 이 이름으로 건다.
+        hashed_string _localShadowMap{ FrameRendererUtil::Attachment::kLocalShadowMap };
         hashed_string _gbufferAlbedo{ FrameRendererUtil::Attachment::kGBufferAlbedo };
         hashed_string _gbufferNormal{ FrameRendererUtil::Attachment::kGBufferNormal };
         hashed_string _gbufferMaterial{ FrameRendererUtil::Attachment::kGBufferMaterial };
@@ -552,6 +555,12 @@ namespace sw
         hashed_string _sceneDepthCopy{ "SceneDepthCopy" };
         /// 화면 속도(SceneVelocity — 불투명 지오메트리 패스의 출력) — TAA · 모션 블러가 선언한 입력을 역할로 건다(`g_VelocityIndex`).
         hashed_string _velocity{ "Velocity" };
+        /// 모션 블러 이웃 최대 속도(MotionBlurNeighborMax 출력) — 모션 블러가 `g_VelocityNeighborMaxIndex` 로 읽는다.
+        hashed_string _velocityNeighborMax{ "VelocityNeighborMax" };
+        /// DBuffer 데칼 셋(Decal 패스의 출력) — 베이스 패스(G버퍼 · 포워드 불투명)가 선언한 입력을 역할로 건다(`g_DBufferAIndex` · `g_DBufferBIndex` · `g_DBufferCIndex`).
+        hashed_string _dbufferA{ "DBufferA" };
+        hashed_string _dbufferB{ "DBufferB" };
+        hashed_string _dbufferC{ "DBufferC" };
         /// 화면 왜곡 오프셋(SceneDistortion — 왜곡 누적 패스의 출력) — 왜곡 적용 패스가 선언한 입력을 역할로 건다(`g_DistortionIndex`).
         hashed_string _distortion{ "Distortion" };
         /// 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷) — 조명 · 포워드 불투명 패스가 선언한 입력을 역할로 건다(`g_ContactShadowIndex`).
@@ -562,6 +571,8 @@ namespace sw
         hashed_string _autoExposure{ "AutoExposure" };
         /// 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUT`, `FramePostProcessTextureSet`) — 톤맵하는 패스가 `g_ColorGradingLUTIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
         hashed_string _colorGradingLUT{ "ColorGradingLUT" };
+        /// 겹친 볼륨이 섞는 둘째 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUTBlend`) — 톤맵하는 패스가 `g_ColorGradingLUTBlendIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
+        hashed_string _colorGradingLUTBlend{ "ColorGradingLUTBlend" };
         /// 블룸 먼지 마스크(뷰의 후처리 값 `_bloomDirtMask`) — 블룸을 더하는 패스가 `g_BloomDirtMaskIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
         hashed_string _bloomDirtMask{ "BloomDirtMask" };
         /// 표면 변형 층의 높이 텍스처(패킷의 `SurfaceDeformBinding`) — 씬 지오메트리 패스의 정점 셰이더가 `g_SurfaceDeformIndex` 로 읽는다. 텍스처 캐시가 소유한 CPU 텍스처다.
@@ -619,13 +630,15 @@ namespace sw
         hashed_string _surfaceDeformParams{ "g_SurfaceDeformParams" };
         /// @brief 안개 패스의 진단 보기입니다(`FrameFog::makeDebugParams`, fog.hlsl).
         hashed_string _fogDebugParams{ "g_FogDebugParams" };
-        hashed_string _postProcessMaterial{ "g_PostProcessMaterial" }; ///< 후처리 머티리얼 그리기마다의 무게(x)
-        hashed_string _decalWorldToLocal{ "g_DecalWorldToLocal" };     ///< 데칼 그리기마다 — 월드 → 상자 공간
-        hashed_string _decalColor{ "g_DecalColor" };                   ///< 데칼 알베도 곱 · 불투명도
-        hashed_string _decalSurface{ "g_DecalSurface" };               ///< 데칼 거칠기 · 금속도 · 노멀 세기 · 각도 페이드 시작
-        hashed_string _decalChannels{ "g_DecalChannels" };             ///< 데칼이 덮는 칸(DecalChannels 비트)
-        hashed_string _decalAlbedoTexture{ "g_DecalAlbedoTexture" };   ///< 데칼 알베도 텍스처 번호(MaterialTexture::sampleIndex 의 뜻)
-        hashed_string _decalNormalTexture{ "g_DecalNormalTexture" };   ///< 데칼 노멀 텍스처 번호
+        hashed_string _postProcessMaterial{ "g_PostProcessMaterial" };   ///< 후처리 머티리얼 그리기마다의 무게(x)
+        hashed_string _decalWorldToLocal{ "g_DecalWorldToLocal" };       ///< 데칼 그리기마다 — 월드 → 상자 공간
+        hashed_string _decalColor{ "g_DecalColor" };                     ///< 데칼 알베도 곱 · 불투명도
+        hashed_string _decalSurface{ "g_DecalSurface" };                 ///< 데칼 거칠기 · 금속도 · 노멀 세기 · 각도 페이드 시작
+        hashed_string _decalChannels{ "g_DecalChannels" };               ///< 데칼이 덮는 칸(DecalChannels 비트)
+        hashed_string _decalAlbedoTexture{ "g_DecalAlbedoTexture" };     ///< 데칼 알베도 텍스처 번호(MaterialTexture::sampleIndex 의 뜻)
+        hashed_string _decalNormalTexture{ "g_DecalNormalTexture" };     ///< 데칼 노멀 텍스처 번호
+        hashed_string _lensFlareTexture{ "g_LensFlareTexture" };         ///< 렌즈 플레어 Image 구간의 텍스처 번호(MaterialTexture::sampleIndex 의 뜻, 없으면 kInvalidIndex)
+        hashed_string _deferredTileCapacity{ "g_DeferredTileCapacity" }; ///< 디퍼드 조명 타일 목록의 종류 하나 칸 수(타일 그리기 — deferred_lighting.hlsl VSTile)
         hashed_string _shadowParams{ "g_ShadowParams" };
         /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭, w 거리 끝에서 옅어지기 시작하는 깊이. `ViewShadowData::_cascadeLayout`.
         hashed_string _shadowCascadeLayout{ "g_ShadowCascadeLayout" };

@@ -135,10 +135,11 @@ SW_TEST_CASE( RenderPipelineAssetTest, RenderPassAttachmentsAreMerged )
     RenderPipelineAsset asset;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, xml ) );
     const vector<RenderPassAttachment>& listAttachment = asset.getDesc()._listAttachment;
-    SW_REQUIRE_EQUAL( size_t( 3 ), listAttachment.size() );
+    SW_REQUIRE_EQUAL( size_t( 4 ), listAttachment.size() );
     SW_EXPECT_EQUAL( string( "SceneDepth" ), listAttachment[0]._name );
     SW_EXPECT_EQUAL( string( "ShadowMap" ), listAttachment[1]._name );
-    SW_EXPECT_EQUAL( string( "SceneColor" ), listAttachment[2]._name );
+    SW_EXPECT_EQUAL( string( "LocalShadowMap" ), listAttachment[2]._name );
+    SW_EXPECT_EQUAL( string( "SceneColor" ), listAttachment[3]._name );
 }
 
 /** @brief [RenderPipelineAssetTest] 읽지 못한 렌더 패스는 로드 실패이고, 파이프라인과 이름이 겹치는 첨부는 검증 오류다 */
@@ -688,8 +689,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, PostProcessMaterialPassesNameOneLocation 
     SW_EXPECT_EQUAL( expected, locationMask );
 }
 
-/** @brief [RenderPipelineAssetTest] 데칼 패스는 G버퍼 알베도 · 노멀 · 머티리얼에만 쓴다(차례 그대로) — 엔진 디퍼드는 G버퍼 뒤 · 조명 앞에 둔다 */
-SW_TEST_CASE( RenderPipelineAssetTest, DecalPassWritesTheGBuffer )
+/** @brief [RenderPipelineAssetTest] 데칼 패스는 DBufferA · B · C 에만 쓴다(차례 그대로) — 엔진 디퍼드 · 포워드 프리패스는 깊이 프리패스 뒤 · 베이스 패스 앞에 두고 베이스 패스가 셋을 읽는다 */
+SW_TEST_CASE( RenderPipelineAssetTest, DecalPassWritesTheDBuffer )
 {
     SW_EXPECT_LOG( "RenderPipelineAsset.PassBlendOff" ); // 틀린 파이프라인은 블렌드도 꺼 두었다 — 경고가 함께 난다
     SW_EXPECT_LOG( "RenderPipelineAsset.PassDecalOutputs" );
@@ -699,26 +700,37 @@ SW_TEST_CASE( RenderPipelineAssetTest, DecalPassWritesTheGBuffer )
                               "<RenderPassAttachment _name=\"SceneColor\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
                               "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
                               "</_listAttachment><_listPass>"
-                              "<RenderGraphPassDesc _name=\"Decal\" _type=\"Decal\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\">"
+                              "<RenderGraphPassDesc _name=\"Decal\" _type=\"Decal\" _cullMode=\"Front\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\">"
                               "<_listInput><item>SceneDepth</item></_listInput><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>"
                               "</_listPass></RenderPipelineDesc>";
     RenderPipelineAsset asset;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, xml ) );
 
-    RenderPipelineAsset deferred;
-    SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ string_view( "engine/pipeline/deferredpipeline.xml" ) } ) );
-    const vector<RenderGraphPassDesc>& listPass      = deferred.getGraphPass();
-    size_t                             gbufferIndex  = listPass.size();
-    size_t                             decalIndex    = listPass.size();
-    size_t                             lightingIndex = listPass.size();
-    for ( size_t index = 0; index < listPass.size(); ++index )
+    const RenderPassType arrBasePass[] = { RenderPassType::GBuffer, RenderPassType::ForwardOpaque };
+    const string_view    arrPath[]     = { "engine/pipeline/deferredpipeline.xml", "engine/pipeline/forwardprepasspipeline.xml" };
+    for ( size_t pipelineIndex = 0; pipelineIndex < std::size( arrPath ); ++pipelineIndex )
     {
-        gbufferIndex  = listPass[index]._type == RenderPassType::GBuffer ? index : gbufferIndex;
-        decalIndex    = listPass[index]._type == RenderPassType::Decal ? index : decalIndex;
-        lightingIndex = listPass[index]._type == RenderPassType::Lighting ? index : lightingIndex;
+        RenderPipelineAsset engine;
+        SW_REQUIRE_TRUE( engine.loadFromXMLFile( AssetID{ arrPath[pipelineIndex] } ) );
+        const vector<RenderGraphPassDesc>& listPass     = engine.getGraphPass();
+        size_t                             prepassIndex = listPass.size();
+        size_t                             decalIndex   = listPass.size();
+        size_t                             baseIndex    = listPass.size();
+        for ( size_t index = 0; index < listPass.size(); ++index )
+        {
+            prepassIndex = listPass[index]._type == RenderPassType::DepthPrepass ? index : prepassIndex;
+            decalIndex   = listPass[index]._type == RenderPassType::Decal ? index : decalIndex;
+            baseIndex    = listPass[index]._type == arrBasePass[pipelineIndex] ? index : baseIndex;
+        }
+        SW_REQUIRE_TRUE( prepassIndex < decalIndex && decalIndex < baseIndex && baseIndex < listPass.size() );
+        SW_EXPECT_TRUE( listPass[decalIndex]._resolvedRenderState.isAnyBlendEnabled() );
+        size_t dbufferReadCount = 0;
+        for ( const RenderGraphPassDesc::ResolvedAttachment& input : listPass[baseIndex]._listResolvedInput )
+        {
+            dbufferReadCount += ( input._role >= static_cast<uint8>( RenderPassInputRole::DBufferA ) && input._role <= static_cast<uint8>( RenderPassInputRole::DBufferC ) ) ? 1u : 0u;
+        }
+        SW_EXPECT_EQUAL( size_t( 3 ), dbufferReadCount );
     }
-    SW_REQUIRE_TRUE( gbufferIndex < decalIndex && decalIndex < lightingIndex );
-    SW_EXPECT_TRUE( listPass[decalIndex]._resolvedRenderState.isAnyBlendEnabled() );
 }
 
 namespace
@@ -862,6 +874,30 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputeImplementationIsATableChoice )
     RenderPipelineAsset asset;
     const string        opaqueCompute = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _implementation=\"Compute\" " ) + RenderPipelineTestUtil::kOpaqueState;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( opaqueCompute ) ) );
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 디퍼드 조명 타일 종류 변형은 조명 패스의 셰이더 · define 에 종류 define 하나를 더한 것이고 종류마다 다르다 — 쿠커와 런타임이 같은 함수를 부른다.
+ *        분류 컴퓨트는 네이티브 bindless · 간접 인자 능력에서만 PSO 가 있다(에뮬은 풀스크린 조명).
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, DeferredTileVariantsAddTheClassDefine )
+{
+    RenderPipelineAsset deferred;
+    SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ string_view( "engine/pipeline/deferredpipeline.xml" ) } ) );
+    const RenderGraphPassDesc* pLighting = VectorUtil::findIf( deferred.getGraphPass(), []( const RenderGraphPassDesc& pass )
+    { return pass._type == RenderPassType::Lighting; } );
+    SW_REQUIRE_NOT_NULL( pLighting );
+    const EngineDefaultAssets&      assets   = engine::getSubsystem<EngineDefaultAssets>();
+    const RenderPassShaderSelection lighting = selectRenderPassShader( RenderPassType::Lighting, pLighting, pLighting, assets );
+    const RenderPassShaderSelection complex  = selectDeferredTileLightingShader( *pLighting, SW_DEFERRED_TILE_CLASS_COMPLEX, assets );
+    const RenderPassShaderSelection simple   = selectDeferredTileLightingShader( *pLighting, SW_DEFERRED_TILE_CLASS_SIMPLE, assets );
+    SW_EXPECT_EQUAL( lighting._shaderPath, simple._shaderPath );
+    SW_EXPECT_EQUAL( lighting._listDefine.size() + 1, simple._listDefine.size() );
+    SW_EXPECT_TRUE( VectorUtil::contains( simple._listDefine, string( "SW_DEFERRED_TILE_CLASS=1" ) ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( complex._listDefine, string( "SW_DEFERRED_TILE_CLASS=0" ) ) );
+    const RenderPassTypeInfo& classify = getRenderPassTypeInfo( RenderPassType::DeferredTileClassify );
+    SW_EXPECT_TRUE( classify.hasFlag( RenderPassTraitFlag::kCompute ) && classify.hasFlag( RenderPassTraitFlag::kRequiresNativeBindless ) &&
+                    classify.hasFlag( RenderPassTraitFlag::kRequiresGPUCulling ) );
 }
 
 /**

@@ -544,7 +544,7 @@ namespace sw
          *       자리에서 큐로 제출한다. DX11/GL 은 기록 스트림이 곧 제출 스트림이라 순서는
          *       이미 맞으므로 `Flush`/`glFlush` 로 GPU 에 밀어내기만 한다. 어느 쪽이든 효과는 같다.
          *       리스트 경계에서 GPU 작업이 끊긴다.
-         * @note 값의 출처는 Engine 의 `gv_rhiImmediateSubmit` 이고, RenderThread 가 프레임마다 전달한다.
+         * @note 값의 출처는 `-gv_rhiImmediateSubmit` 이고, RenderThread 가 프레임마다 패킷의 설정 사본(`RenderFrameSettings::_bRHIImmediateSubmit`)으로 전달한다.
          *       백엔드는 MODULE DLL 로 따로 빌드되므로 전역 변수를 그쪽까지 export 하지 않는다.
          *       정책은 Engine 이 정하고 디바이스는 메커니즘만 가진다.
          */

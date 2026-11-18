@@ -45,8 +45,17 @@ namespace sw
          * 화면 왜곡 오프셋(SceneDistortion, R16G16 실수 — 화면 UV 오프셋, 클리어 0). 왜곡 누적 패스(`RenderPassType::Distortion`)가 쓰고 왜곡 적용 패스가 읽는다(`g_DistortionIndex`).
          */
         Distortion,
-        ContactShadow,     ///< 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷 = 빛 넷). 조명이 빛의 채널(`GPULight::_extra.z`)을 곱한다(`g_ContactShadowIndex`) — 없으면 1(가림 없음).
-        GBufferCustomData, ///< G버퍼 사용자 칸 — 셰이딩 모델 번호마다의 값(shading_model_ids.hlsli 표). 디퍼드 조명이 읽는다(`g_GBufferCustomDataIndex`)
+        ContactShadow,       ///< 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷 = 빛 넷). 조명이 빛의 채널(`GPULight::_extra.z`)을 곱한다(`g_ContactShadowIndex`) — 없으면 1(가림 없음).
+        GBufferCustomData,   ///< G버퍼 사용자 칸 — 셰이딩 모델 번호마다의 값(shading_model_ids.hlsli 표). 디퍼드 조명이 읽는다(`g_GBufferCustomDataIndex`)
+        LocalShadowMap,      ///< 점광 · 스폿 그림자 아틀라스(방향광 `ShadowMap` 과 다른 텍스처 — 감사 RN-4). 깊이로 거는 그림자 패스는 점광 · 스폿 타일을 그리고, 조명이 `g_LocalShadowMapIndex` 로 읽는다
+        VelocityNeighborMax, ///< 모션 블러 이웃 최대 속도(MotionBlurNeighborMax 패스 출력, 16² 픽셀 타일마다 UV 속도). 모션 블러가 흐리는 방향이다(`g_VelocityNeighborMaxIndex`)
+        /**
+         * DBuffer 데칼 색(Decal 패스 출력 RGBA8 — rgb 덮인 색의 합, a 남은 비율, 클리어 (0, 0, 0, 1)). 베이스 패스(G버퍼 · 포워드 불투명)가 표면을 셰이딩하기 전에 섞는다(`g_DBufferAIndex`).
+         * 언리얼 DBufferA 와 같은 자리다. 데칼이 없는 뷰는 출력이 없어 걸지 않는다 — 셰이더의 기본값 (0, 0, 0, 1)이 곧 "덮지 않음" 이다.
+         */
+        DBufferA,
+        DBufferB, ///< DBuffer 데칼 노멀(rgb 덮인 월드 노멀 × 0.5 + 0.5 의 합, a 남은 비율 — 언리얼 DBufferB). `g_DBufferBIndex`
+        DBufferC, ///< DBuffer 데칼 거칠기 · 금속도(r · g 덮인 값의 합, a 남은 비율 — 언리얼 DBufferC). `g_DBufferCIndex`
         Count,
     };
 
@@ -58,8 +67,8 @@ namespace sw
 
     /**
      * @brief 첨부의 역할을 정합니다. 첨부가 선언한 역할(`RenderPassAttachment::_role`)이 먼저입니다.
-     * @details 선언이 없거나 모르는 문자열이면(검증이 오류로 알립니다) 고정 역할 이름(GBufferAlbedo, GBufferNormal, GBufferMaterial, GBufferCustomData, ShadowMap, AOColor, BloomBright, SceneColorCopy, SceneDepthCopy)은 그 역할,
-     *          그 밖의 깊이 포맷은 SceneDepth, 나머지 컬러는 SourceColor 입니다. ShadowMap 은 깊이 포맷이지만 이름이 먼저입니다.
+     * @details 선언이 없거나 모르는 문자열이면(검증이 오류로 알립니다) 고정 역할 이름(GBufferAlbedo, GBufferNormal, GBufferMaterial, GBufferCustomData, ShadowMap, LocalShadowMap, AOColor, BloomBright, SceneColorCopy, SceneDepthCopy)은 그 역할,
+     *          그 밖의 깊이 포맷은 SceneDepth, 나머지 컬러는 SourceColor 입니다. ShadowMap · LocalShadowMap 은 깊이 포맷이지만 이름이 먼저입니다.
      */
     RenderPassInputRole resolveRenderPassInputRole( string_view attachmentName, bool bDepthFormat, string_view declaredRole );
 

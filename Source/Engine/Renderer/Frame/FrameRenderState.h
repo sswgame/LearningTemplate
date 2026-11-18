@@ -21,6 +21,7 @@
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
+#include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/PostProcess/FramePostProcessTextureSet.h"
 #include "Engine/Renderer/Frame/Resource/PassConstantRing.h"
 #include "Engine/Renderer/Frame/Timeline/GPUFrameClock.h"
@@ -36,6 +37,7 @@
 #include "Engine/Renderer/Lighting/ShadowCache.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUScene.h"
+#include "Engine/Renderer/VFX/VFXGPUMeshReadback.h"
 #include "Engine/Renderer/VFX/VFXParticleRenderer.h"
 #include "Engine/Visual/Component/DecalComponent.h"
 
@@ -79,7 +81,12 @@ namespace sw
      */
     struct FrameRenderState
     {
-        GPUScene _gpuScene{};
+        /**
+         * @brief 이번 프레임의 렌더 설정 사본입니다(게임 스레드가 뜬 `RenderFramePacket::_settings`). 렌더러 · 패스 실행 · 기록 워커는 전역 변수 대신 이것을 읽는다.
+         * @details 패킷을 받을 때(`FrameRenderer::executePacket`) 바뀌고 기록 중에는 그대로라 한 프레임의 패스가 모두 같은 값을 본다. 기동 · 화면 밖 렌더러는 기동 때 받은 사본이다.
+         */
+        RenderFrameSettings _settings{};
+        GPUScene            _gpuScene{};
         /** @brief 파이프라인 XML 의 `_listPass` 로 만든 뷰 그래프입니다. 뷰마다 다시 돈다. 렌더러가 다시 만들고(`loadPipeline`) 패스 실행이 콜백을 묶고 돌립니다. */
         RenderGraph _graph{};
         /** @brief 파이프라인 XML 의 `_listFramePass` 로 만든 프레임 그래프입니다. 프레임에 한 번, 뷰 그래프보다 먼저 돈다(`FramePassExecutor::recordFrameGraph`). */
@@ -135,7 +142,7 @@ namespace sw
          * @details 패킷 경로는 패킷과 맞바꾸기로 받고, 씬 직접 경로는 여기에 바로 채운다. 기록 중에는 읽기만 한다.
          */
         FrameShadowData _frameShadow{};
-        /// @brief 서 있는 점광 · 스폿의 그림자 캐시(규칙 · 캐시 층)입니다. `FrameRenderer::applyFrameShadow` 가 프레임마다 정하고 그림자 패스가 그린다(`gv_shadowCache`).
+        /// @brief 서 있는 점광 · 스폿의 그림자 캐시(규칙 · 캐시 층)입니다. `FrameRenderer::applyFrameShadow` 가 프레임마다 정하고 그림자 패스가 그린다(`_settings._bShadowCache`).
         ShadowCache _shadowCache{};
         /// @brief 이번 프레임 실시간 프로브 갱신 요청입니다(패킷 경로도 여기에 받는다). 기록은 읽기만 합니다.
         vector<RealtimeProbeRequest> _listFrameRealtimeProbe{};
@@ -196,6 +203,8 @@ namespace sw
          *          꺼져 있으면 비어 있다.
          */
         GPUMessageChannel _gpuMessages{};
+        /** @brief GPU 메시 입자의 살아 있는 수 · 주 시점이 그린 수의 되읽기입니다(자동화 감시 값 `VFX.GPUMesh*`). 프레임 끝에 요청하고 프레임 앞에서 도착한 사본을 낸다. */
+        VFXGPUMeshReadback _vfxMeshReadback{};
         /// @brief 병렬 기록(`RenderGraph::executeParallel`)이 쓰는 태스크 매니저입니다. 없으면 직렬로 기록합니다.
         TaskManager*     _pTaskManager{ nullptr };
         RHITextureHandle _outputRenderTarget{ 0 }; ///< 주 출력 RT(에디터 게임 뷰). 0 이면 백버퍼

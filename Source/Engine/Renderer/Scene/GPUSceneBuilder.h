@@ -18,6 +18,7 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
+#include "Engine/Renderer/Scene/GPUBatchMembershipPatch.h"
 #include "Engine/Renderer/Scene/GPUInstanceRing.h"
 #include "Engine/Renderer/Scene/GPUMaterialRegistry.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
@@ -167,7 +168,7 @@ namespace sw
         /** @brief 불투명 배치를 셰이더 퍼뮤테이션 단위로 묶고 있으면 true 입니다(`setMergeBatchesAcrossMaterials`). */
         bool isMergeBatchesAcrossMaterials() const { return _bMergeAcrossMaterials == SW_TRUE; }
 
-        /** @brief 인스턴스 목록을 반환합니다. */
+        /** @brief 칸 순 인스턴스 목록을 반환합니다(원소 번호 = 후보 번호, 실리지 않은 칸은 구멍). */
         const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
         /**
          * @brief 렌더 프리미티브 번호(`ScenePrimitive::getPrimitiveIndex`)가 지금 스냅샷에서 차지한 **불투명** 인스턴스 칸을 돌려줍니다. 없으면 비어 있습니다.
@@ -210,7 +211,7 @@ namespace sw
             uint32                                _meshCount{ 0 }; ///< 슬롯 공간에서 메시 컴포넌트 수(그 뒤가 인스턴스 배치 항목)
             uint32                                _slotCount{ 0 };
             bool                                  _bHasCache{ false };        ///< 지난 프레임 후보가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                                  _bSetSame{ false };         ///< 프리미티브 집합 세대가 같다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                  _bSetSame{ false };         ///< 레지스트리 칸 배치 세대가 같다(칸 번호가 그대로) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool                                  _bPermutationSame{ false }; ///< 퍼뮤테이션 세대가 같다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /** @brief 수집 결과입니다. 두 수집(부분 · 전체)이 같은 뜻으로 채웁니다. */
@@ -366,33 +367,22 @@ namespace sw
          */
         enum CollectFlag : uint8
         {
-            kCollectIncluded    = 1u << 0, ///< 후보에 실린다.
-            kCollectNeedsStamp  = 1u << 1, ///< 해시를 직렬 구간에서 기록해야 한다(머티리얼, 인스턴스, 세대 중 하나가 달라졌다).
-            kCollectKeySame     = 1u << 2, ///< 지난 후보와 배치 키가 같다.
-            kCollectContentSame = 1u << 3, ///< 지난 후보와 내용이 전부 같다.
+            kCollectIncluded        = 1u << 0, ///< 후보에 실린다.
+            kCollectNeedsStamp      = 1u << 1, ///< 해시를 직렬 구간에서 기록해야 한다(머티리얼, 인스턴스, 세대 중 하나가 달라졌다).
+            kCollectKeySame         = 1u << 2, ///< 지난 후보와 배치 키가 같다.
+            kCollectContentSame     = 1u << 3, ///< 지난 후보와 내용이 전부 같다.
+            kCollectMaterialPending = 1u << 4, ///< 실리지 않았다 — 머티리얼이 아직 초기화되지 않았다(다음 빌드에 그 칸만 다시 본다).
+        };
+        /** @brief 프리미티브 하나를 후보로 채운 결과입니다. */
+        enum class CandidateFillResult : uint8
+        {
+            Included,        ///< 후보에 실린다
+            Excluded,        ///< 그리지 않는다(안 보임 · 비활성 · 메시 없음 · 머티리얼 없음)
+            MaterialPending, ///< 머티리얼이 아직 초기화되지 않아 이번에는 싣지 않는다 — 그 칸을 다음 빌드에 다시 본다
         };
 
         /** @brief 후보 배열에 실리지 않은 프리미티브의 표시입니다. */
         static constexpr uint32 kInvalidCandidateIndex = constant::invalid_index::kUint32;
-        /**
-         * @brief 마지막 수집에서 초기화가 안 된(`MaterialInitState` 가 `Ready` 가 아닌) 머티리얼 때문에 후보에서 뺀 프리미티브 수입니다(워커가 더하므로 원자).
-         * @details 0 이 아니면 다음 프레임은 더티 신호가 없어도 전체 수집을 다시 합니다. 머티리얼 초기화는 씬에 아무 신호도 남기지 않기 때문입니다.
-         *          이동 가능하게 두려고 값을 감싼 형식입니다.
-         */
-        struct NotReadyCounter
-        {
-            atomic<uint32> _count{ 0 };
-            NotReadyCounter() = default;
-            NotReadyCounter( NotReadyCounter&& other ) noexcept
-                : _count{ other._count.load() }
-            {
-            }
-            NotReadyCounter& operator=( NotReadyCounter&& other ) noexcept
-            {
-                _count.store( other._count.load() );
-                return *this;
-            }
-        };
 
         struct SortKey
         {
@@ -508,16 +498,33 @@ namespace sw
         };
         /** @brief `populateFromScene` 의 메시 쪽입니다(프리미티브 수집 · 나누기 · 투명 정렬). 바뀐 것이 없거나 후보가 없으면 일찍 끝난다. */
         void populateMeshesFromScene( Scene* pScene, const float3& cameraPos );
-        /** @brief 더티 슬롯만 제자리에서 다시 채웁니다. 실릴지가 바뀌는 등 조건이 어긋나면 되돌리고 `_bPartialDone == false` 입니다. */
+        /** @brief 레지스트리 칸 @p slot 의 후보가 실렸는지 반환합니다(후보 번호 = 칸 번호, 실리지 않은 칸은 구멍). */
+        bool isCandidateIncluded( uint32 slot ) const { return slot < _listPrimitiveToCandidate.size() && _listPrimitiveToCandidate[slot] != kInvalidCandidateIndex; }
+        /** @brief 더티 칸만 제자리에서 다시 채웁니다(더하기 · 지우기 · 실릴지 바뀜도 그 칸만 고친다). 칸이 번호 공간 밖이면 되돌리고 `_bPartialDone == false` 입니다. */
         [[nodiscard]] MeshCollectResult collectDirtyCandidatesInPlace( const MeshCollectInput& input );
-        /** @brief 모든 슬롯을 다시 채우고(임계값을 넘으면 병렬) 지난 프레임과 슬롯마다 비교한 뒤 앞으로 당깁니다. */
+        /** @brief 모든 슬롯을 다시 채우고(임계값을 넘으면 병렬) 지난 프레임과 칸마다 비교한 뒤 칸 표를 새로 씁니다(후보 번호 = 칸 번호). */
         [[nodiscard]] MeshCollectResult collectAllCandidates( const MeshCollectInput& input );
-        /** @brief 전체 수집이 남긴 슬롯 표시로 실린 후보를 앞으로 당기고, 지난 프레임과 같은지를 하나로 줄입니다(직렬 구간). */
-        [[nodiscard]] MeshCollectResult compactCollectedCandidates( uint32 primitiveCount, bool bPrevAligned );
-        /** @brief 후보의 raw 페이로드를 채우고(@p bOnlyDirtySlots 면 더티 슬롯만), 배치 키가 바뀌었으면 분할 테이블을 다시 짓습니다. */
-        void fillPayloadsAndPartition( bool bOnlyDirtySlots, bool bBatchKeysSame );
-        /** @brief 투명을 정렬하고 배치를 제자리 갱신하거나 다시 지은 뒤 쓰지 않는 머티리얼 원소를 놓습니다. */
-        void rebuildBatches( const float3& cameraPos, bool bBatchKeysSame, bool bPartialCollect );
+        /** @brief 전체 수집이 남긴 칸 표시로 칸 표를 새로 쓰고(옮기지 않는다 — 실리지 않은 칸은 구멍), 지난 프레임과 같은지를 하나로 줄입니다(직렬 구간). */
+        [[nodiscard]] MeshCollectResult compactCollectedCandidates( const MeshCollectInput& input, uint32 primitiveCount, bool bPrevAligned );
+        /** @brief 레지스트리 칸 @p slot 에 들어온 차례입니다(메시 칸은 `PrimitiveRegistry::getPrimitiveSerials`, 인스턴스 항목은 `PrimitiveInstanceEntry::_serial`). */
+        static uint32 readSlotSerial( const MeshCollectInput& input, uint32 slot );
+        /** @brief 후보의 raw 페이로드를 채우고(@p bOnlyDirtySlots 면 더티 슬롯만), @p bSkipPartition 이 아니면 분할 테이블을 다시 짓습니다. */
+        void fillPayloadsAndPartition( bool bOnlyDirtySlots, bool bSkipPartition );
+        /**
+         * @brief 투명을 정렬하고 배치를 제자리 갱신하거나(키 그대로) 구성원만 고치거나(@p bTryMembershipPatch) 다시 지은 뒤 쓰지 않는 머티리얼 원소를 놓습니다.
+         * @details 다시 지을 때 분할 테이블이 낡았으면(구성원 고치기 뒤) 먼저 다시 짓는다.
+         */
+        void rebuildBatches( const float3& cameraPos, bool bBatchKeysSame, bool bPartialCollect, bool bTryMembershipPatch );
+        /**
+         * @brief 부분 수집에서 불투명 후보가 기존 배치에 드나들기만 했으면 다시 나누지 않고 그 배치의 구성원만 고칩니다(언리얼 FScene 의 프리미티브 더하기 · 빼기, 유니티 GPU Resident Drawer 의 배치 인스턴스 목록).
+         * @details 들어온 칸 · 빠진 칸만 인스턴스 배열에 쓰고 바뀐 칸 구간으로 싣는다. 배치 순서 · 번호는 그대로라 다른 칸의 내용(배치 번호)이 바뀌지 않는다.
+         *          들어갈 키의 배치가 없거나, 배치가 비거나, 투명이 드나들면 false — 아무것도 고치지 않았고 부르는 쪽이 다시 나눈다.
+         *          shortcut: 배치 사이에 여유 칸이 없어 드나든 배치 뒤의 차례가 밀린다 — 차례 목록(uint32)을 O(N) 다시 쓰고 GPU 에는 바뀐 구간만 올린다.
+         *          차례 복사가 측정에 드러나면 배치마다 여유 칸(유니티 GRD 의 배치 용량)을 둔다.
+         */
+        [[nodiscard]] bool patchBatchMembership();
+        /** @brief 불투명 후보의 나누기 키입니다(`rebuildPartitionTables` · `patchBatchMembership` 이 같은 규칙을 쓴다). 합치기 대표 맵을 채울 수 있어 게임 스레드 전용이다. */
+        SortKey makeOpaqueSortKey( const DrawCandidate& candidate );
         /** @brief 수집한 인스턴스를 배치로 묶습니다. */
         void populateBatches();
         /**
@@ -596,10 +603,12 @@ namespace sw
         bool refreshInstancesInPlace( bool bPartialCollect );
         /** @brief 전체 제자리 갱신입니다. 접두부를 청크로 나눠 병렬로 고치고(바뀐 투명 순서면 블록 0 이 꼬리) 청크의 더티 구간을 잇습니다. 청크가 실패하면 false 입니다. */
         [[nodiscard]] bool refreshAllInstancesParallel( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool bTransparentOrderChanged, bool& ioTooManyRuns );
-        /** @brief 다시 만든 투명 꼬리를 더티 구간 하나로 이어 붙입니다(구간 상한을 넘으면 @p ioTooManyRuns). */
-        void appendTransparentTailRun( uint32 opaqueInstanceCount, bool& ioTooManyRuns );
+        /** @brief 다시 방출한 투명 칸 중 발행본과 다른 칸을 더티 구간에 더합니다(구간 상한을 넘으면 @p ioTooManyRuns). */
+        void appendTransparentTailRun( const vector<GPUInstance>& listPublishedInstance, bool& ioTooManyRuns );
         /** @brief 부분 제자리 갱신입니다. 더티 프리미티브가 가리키는 인스턴스만 고치고 회전 인스턴스 수를 증감합니다. 매핑이 어긋나면 false 입니다. */
-        [[nodiscard]] bool refreshDirtyInstances( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool& ioTooManyRuns );
+        [[nodiscard]] bool refreshDirtyInstances( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool& ioTooManyRuns, const uint8* pSkipFlag = nullptr );
+        /** @brief 칸 @p slot 을 바뀐 칸 구간에 더합니다(직전 구간에 이어지면 늘리고, 구간 상한을 넘으면 @p ioTooManyRuns). */
+        void appendDirtySlot( uint32 slot, bool& ioTooManyRuns );
         /**
          * @brief 부분 수집에서 메시만 바뀐 불투명 후보(`_listMeshSwapCandidate`)의 배치를 다시 나누지 않고 그 배치의 메시만 바꿉니다.
          * @details 후보마다 그 배치가 인스턴스 하나뿐이어야 한다(지형 청크는 청크마다 인스턴스 배치 하나다). 같은 메시를 여럿이 쓰는 배치는
@@ -614,13 +623,13 @@ namespace sw
         void invalidateBuildCache();
 
         /**
-         * @brief 프리미티브 하나를 후보로 채웁니다. 그릴 수 없으면(안 보임, 비활성, 메시 없음) false 를 반환합니다.
+         * @brief 프리미티브 하나를 후보로 채웁니다. 그릴 수 없으면(안 보임, 비활성, 메시 없음) `Excluded`, 머티리얼이 초기화 전이면 `MaterialPending` 입니다.
          * @details **전체 수집과 부분 수집이 이 함수를 함께 쓴다.** 채우는 규칙이 두 곳으로 갈리면
          *          부분 갱신만 낡은 필드를 남기는데, 그 화면은 대부분의 프레임에서 멀쩡해 보인다.
          */
-        bool fillCandidateFromPrimitive( ScenePrimitive* pPrimitive, Scene* pScene, DrawCandidate& candidate );
+        CandidateFillResult fillCandidateFromPrimitive( ScenePrimitive* pPrimitive, Scene* pScene, DrawCandidate& candidate );
         /** @brief 인스턴스 배치의 항목 하나를 후보로 채웁니다. 메시 컴포넌트 버전과 규칙이 같고, 소유권은 배치에 있습니다. */
-        bool fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate );
+        CandidateFillResult fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate );
         /**
          * @brief 후보의 머티리얼과 블렌드 모드를 정합니다. 메시 컴포넌트 버전과 인스턴스 배치 버전이 같은 규칙을 씁니다.
          * @details 머티리얼이 없으면 인스턴스의 부모 머티리얼을, 그것도 없으면 씬 기본 머티리얼을 쓴다(언리얼의 기본 머티리얼).
@@ -630,8 +639,8 @@ namespace sw
          *          퍼뮤테이션(불투명, 반투명)을 가른다. 메시가 값을 뒤집을 수 있게 두면 불투명으로 컴파일된 머티리얼을 블렌딩으로
          *          그리는 어긋난 상태가 만들어진다. 그래서 메시 컴포넌트에는 블렌드 칸이 없고, 머티리얼(자기 · 인스턴스 부모 · 씬 기본)이 없는 후보는 싣지 않는다.
          */
-        /** @return 후보의 머티리얼이 초기화되지 않았으면(`MaterialInitState` 가 `Ready` 가 아님) 세고 false 입니다 — 그 후보는 싣지 않습니다. 워커에서 불립니다. */
-        [[nodiscard]] bool fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene );
+        /** @return 후보의 머티리얼이 초기화되지 않았으면(`MaterialInitState` 가 `Ready` 가 아님) `MaterialPending` — 그 후보는 싣지 않습니다. 워커에서 불립니다. */
+        [[nodiscard]] CandidateFillResult fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene );
         /** @brief 후보를 GPU 인스턴스 LOD 그룹으로 그릴 수 있으면 그 단계 구간을 LOD 0 으로 되돌리고 `_lodContentID` 를 기록합니다(아니면 빈 토큰). 블렌드가 정해진 뒤에 부른다. */
         void applyGPULODGroup( DrawCandidate& candidate ) const;
         /** @brief 후보의 퍼뮤테이션 해시를 기록합니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */
@@ -670,12 +679,12 @@ namespace sw
         void emitLODLevelBatches( const GPUMeshBatch& head );
 
         /**
-         * @brief 청크 하나의 슬롯 구간을 갱신합니다(워커에서 돌며 포인터만 만집니다).
-         * @details 이전 값은 `pPrevious`(마지막 발행본)에서 읽고 결과는 `pInstance`(이번 쓰기 슬롯)에 통째로 쓴다.
-         *          두 배열은 다른 메모리다(`GPUInstanceRing`).
+         * @brief 청크 하나의 칸 구간을 갱신합니다(워커에서 돌며 포인터만 만집니다).
+         * @details 이전 값은 `pPrevious`(마지막 발행본)에서 읽고 결과는 `pInstance`(이번 쓰기 슬롯)에 쓴다. 두 배열은 다른 메모리다(`GPUInstanceRing`).
+         *          칸 순이라 원소 번호가 후보 번호다(raw 도 같은 번호). @p bSkipTransparent 면 투명 칸은 건드리지 않는다(꼬리 재방출이 같은 병렬 구간에서 쓴다).
          */
-        static void refreshInstanceChunk( GPUInstance* pInstance, const GPUInstance* pPrevious, const GPUInstance* pRaw, const uint32* pSrcIndex,
-                                          uint32 rawCount, InstanceRefreshChunk& chunk );
+        static void refreshInstanceChunk( GPUInstance* pInstance, const GPUInstance* pPrevious, const GPUInstance* pRaw, uint32 rawCount, bool bSkipTransparent,
+                                          InstanceRefreshChunk& chunk );
 
         /** @brief 이번 프레임의 쓰기 슬롯을 반환합니다(`GPUInstanceRing::acquireWrite`). */
         vector<GPUInstance>& instanceJob() { return _instanceRing.acquireWrite(); }
@@ -726,15 +735,44 @@ namespace sw
         vector<uint32> _listTransformDirtyPrimitive;
         /** @brief 이번 부분 수집에서 메시만 바뀐 불투명 후보의 인덱스입니다(`swapSingleInstanceBatchMeshes`). 수집마다 비웁니다. */
         vector<uint32> _listMeshSwapCandidate;
-        /** @brief 레지스트리 인덱스에서 후보 인덱스를 찾는 배열입니다(`kInvalidCandidateIndex` 는 후보에 실리지 않았다는 뜻). */
+        /** @brief 이번 부분 수집에서 배치에 들어가는 · 빠지는 후보입니다(키가 바뀐 후보는 둘 다). 수집마다 비웁니다(`patchBatchMembership`). */
+        vector<uint32> _listMembershipEnter;
+        vector<uint32> _listMembershipLeave;
+        /** @brief 배치마다의 나누기 키입니다(불투명 배치 번호와 나란하다 — LOD 단계 배치는 메시가 널인 키). 전체 방출이 채우고 구성원 고치기가 배치를 찾는다. */
+        vector<SortKey> _listOpaqueBatchKey;
+        /** @brief 구성원 고치기의 이번 변경(빠지는 칸 · 들어가는 칸)입니다. */
+        GPUBatchMembershipPatch _membershipPatch;
+        /** @brief 구성원 고치기의 작업 배열입니다(새 차례 · 배치마다 새 수 · 바뀐 칸). */
+        vector<uint32> _listScratchPatchOrder;
+        vector<uint32> _listScratchBatchCount;
+        vector<uint32> _listScratchDirtySlot;
+        /**
+         * @brief 레지스트리 칸에서 후보 번호를 찾는 배열입니다. 실린 칸은 **자기 칸 번호**, 실리지 않은 칸은 `kInvalidCandidateIndex` 입니다.
+         * @details 후보 배열은 칸 번호로 줄 세운다(구멍 있음). 레지스트리 칸이 고정(프리리스트)이라 하나를 더하거나 지워도 다른 후보의 번호가 그대로이고,
+         *          부분 수집이 그 칸 하나만 고친다(언리얼 `FScene` 의 영속 프리미티브 칸, 유니티 GPU Resident Drawer 의 인스턴스 칸). 전체 수집은 처음과 배치 세대
+         *          변경(영역 늘리기) · 퍼뮤테이션 세대 · 캐시 무효화(장치 잃음 · 합치기 토글) 때만 한다.
+         */
         vector<uint32> _listPrimitiveToCandidate;
-        /// @brief 전체 수집이 프리미티브 번호 위치에 남긴 `CollectFlag` 입니다. 앞으로 당겨 올 때 읽습니다.
+        /// @brief 전체 수집이 칸 위치에 남긴 `CollectFlag` 입니다. 칸 표를 새로 쓸 때 읽습니다.
         vector<uint8> _listCollectFlag;
+        /**
+         * @brief 칸마다 마지막으로 본 차례입니다(`readSlotSerial`). 실린 칸만 맞춘다. raw 페이로드의 `GPUInstance::_slotSerial` 이 이 값이다.
+         * @details 같은 칸을 다른 물체가 받으면(지우고 같은 프레임에 다시 등록) 후보 내용이 같아도 차례가 달라 내용이 바뀐 것으로 본다 — 칸 번호에 묶인 GPU 상태(LOD 전환)가 다시 시작한다.
+         */
+        vector<uint32> _listSlotSerial;
         /** @brief 후보 인덱스에서 인스턴스 슬롯을 찾는 배열입니다(`kInvalidCandidateIndex` 는 인스턴스 없음). `_listInstanceSrcIndex` 의 역방향입니다. */
         vector<uint32> _listCandidateToInstance;
-        /** @brief 마지막 수집이 만든 후보 수입니다. 부분 수집이 이 슬롯 수를 그대로 이어받습니다. */
-        size_t          _lastCandidateCount{ 0 };
-        NotReadyCounter _notReadySkipped;
+        /** @brief 마지막 수집이 만든 후보 배열의 길이(= 칸 수, 구멍 포함)입니다. 부분 수집이 이 길이를 이어받습니다. */
+        size_t _lastCandidateCount{ 0 };
+        /** @brief 후보 배열에서 실린 칸 수입니다. 전체 수집이 세고 부분 수집이 들고 남에 따라 더하고 뺀다. 0 이면 스냅샷을 비운다. */
+        size_t _includedCount{ 0 };
+        /**
+         * @brief 이번 수집에서 초기화가 안 된(`MaterialInitState` 가 `Ready` 가 아닌) 머티리얼 때문에 싣지 않은 칸입니다(부분 수집이 바로, 전체 수집은 압축이 적는다).
+         * @details 다음 빌드가 `_listMaterialRetrySlot` 으로 넘겨 그 칸만 더티로 다시 본다 — 머티리얼 초기화는 씬에 신호를 남기지 않는다.
+         */
+        vector<uint32> _listMaterialPendingSlot;
+        /** @brief 지난 빌드의 머티리얼 대기 칸입니다(이번 빌드가 더티에 더한다). */
+        vector<uint32> _listMaterialRetrySlot;
         /** @brief 부분 수집이 프리미티브 하나를 채워 볼 임시 후보입니다. 프레임마다 할당하지 않습니다. */
         DrawCandidate _candidateProbe;
 
@@ -774,7 +812,7 @@ namespace sw
         GPUInstanceRing _instanceRing;
 
         /**
-         * @brief `getInstances()[i]` 가 어느 후보에서 왔는지 나타냅니다(populateBatches 가 채웁니다).
+         * @brief 그리는 차례(배치 순) → 후보 번호(= 칸 순 인스턴스 배열의 원소 번호)입니다(populateBatches 가 채운다). 발행하면 차례 → 칸 목록으로 실린다.
          * @details 배치 구성이 그대로면 이 매핑도 그대로다. 그러면 배치를 다시 나눌 필요 없이 인스턴스
          *          값만 **제자리에서** 갱신하면 된다. 언리얼 GPUScene 이 프리미티브가 움직였을 때
          *          자료구조를 다시 만들지 않고 그 원소만 갱신하는 것과 같은 방식이다.
@@ -784,8 +822,10 @@ namespace sw
         vector<uint32>    _listBuiltTransparentIdx;
         BatchElementTable _batchElementTable;
 
-        /** @brief 마지막으로 반영한 프리미티브 집합 세대입니다. 달라졌으면 레지스트리가 바뀐 것입니다. */
+        /** @brief 마지막으로 반영한 프리미티브 집합 세대입니다. 정적 그림자 지문만 이 값으로 다시 잰다(`updateStaticShadowGeneration`). */
         uint64 _lastPrimitiveSetGeneration{ 0 };
+        /** @brief 마지막으로 반영한 레지스트리 칸 배치 세대입니다(`PrimitiveRegistry::getLayoutGeneration`). 달라졌으면 칸 번호가 밀려 전체를 다시 모은다. */
+        uint64 _lastPrimitiveLayoutGeneration{ 0 };
         uint64 _staticShadowSignature{ 0 }; ///< 정적 메시 집합의 지문(포인터 섞은 값의 합 — 순서와 무관하다). `updateStaticShadowGeneration`
         uint32 _staticShadowCount{ 0 };     ///< 정적 메시 수. 지문과 함께 집합이 바뀌었는지 본다
         float3 _lastCameraPos{};
@@ -798,5 +838,11 @@ namespace sw
         uint8 _bGPULODActive{ SW_FALSE };
         /// @brief 꼬리를 재방출하는 중이면 true 입니다. `emitBatch` 가 원소를 테이블에서 다시 조회하지 않고 `_listCandidateMaterialElement` 를 읽습니다.
         uint8 _bReuseMaterialElement{ SW_FALSE };
+        /// @brief 그리는 차례(`_listInstanceSrcIndex`)가 마지막 발행 뒤 바뀌었으면 1 입니다. 발행이 차례 → 칸 목록(`GPUSceneSnapshot::_pListInstanceSlot`)을 새로 싣는다.
+        uint8 _bInstanceOrderChanged{ SW_TRUE };
+        /// @brief 이번 부분 수집의 배치 변화가 불투명 구성원 드나듦뿐이면 1 입니다(투명이 드나들거나 컬 반전이 바뀌면 0). `patchBatchMembership` 을 해 볼지 가른다.
+        uint8 _bMembershipOnly{ SW_FALSE };
+        /// @brief 분할 테이블(`_listScratchOpaqueEntry` · `_listScratchOpaqueIdx`)이 배치와 어긋났으면 1 입니다(구성원 고치기 뒤). 다시 나누기 · 메시 바꾸기 앞에 본다.
+        uint8 _bPartitionStale{ SW_FALSE };
     };
 } // namespace sw

@@ -80,6 +80,7 @@ namespace sw
             {
                 float32 _priority{ 0.0f };
                 uint32  _lightIndex{ 0 };
+                uint64  _lightID{ 0 };
             };
 
             /** @brief 우선순위가 높은 쪽이 앞입니다(정렬 비교). */
@@ -105,67 +106,211 @@ namespace sw
 
 namespace sw
 {
-    ShadowAtlasLayout ShadowAtlasLayout::make( uint32 atlasResolution, uint32 cascadeCount, uint32 localTileCount, uint32 minLocalTileResolution )
+    ShadowAtlasLayout ShadowAtlasLayout::make( uint32 atlasResolution, uint32 cascadeCount )
     {
         ShadowAtlasLayout layout{};
         layout._atlasResolution = MathUtil::max( atlasResolution, 4u );
-        uint32 cascades         = MathUtil::clamp( cascadeCount, 1u, shaderslot::kShadowCascadeMax );
-        if ( localTileCount > 0 )
-            cascades = MathUtil::min( cascades, kMaxCascadeWithLocalShadow );
-        layout._cascadeCount = cascades;
-        layout._bQuadrant    = ( cascades > 1 || localTileCount > 0 ) ? SW_TRUE : SW_FALSE;
-        if ( localTileCount == 0 )
-            return layout;
-        // 남은 사분면을 같은 크기의 칸으로 나눈다 — 사분면 하나부터 반씩 줄여 모두 들어가는 가장 큰 칸(하한 아래로는 줄이지 않는다).
-        const uint32 localQuadrantCount = shaderslot::kShadowCascadeMax - cascades;
-        const uint32 half               = layout._atlasResolution / 2u;
-        const uint32 minTile            = MathUtil::clamp( minLocalTileResolution, 1u, half );
-        uint32       tile               = half;
-        while ( localQuadrantCount * ( half / tile ) * ( half / tile ) < localTileCount && tile / 2u >= minTile )
-            tile /= 2u;
-        layout._localTileResolution = tile;
-        layout._localCapacity       = localQuadrantCount * ( half / tile ) * ( half / tile );
+        layout._cascadeCount    = MathUtil::clamp( cascadeCount, 1u, shaderslot::kShadowCascadeMax );
         return layout;
     }
 
     ShadowAtlasCell ShadowAtlasLayout::getCascadeCell( uint32 cascadeIndex ) const
     {
-        if ( _bQuadrant == SW_FALSE )
+        if ( _cascadeCount <= 1 )
             return ShadowAtlasCell{ 0u, 0u, _atlasResolution };
         const uint32 half = _atlasResolution / 2u;
         return ShadowAtlasCell{ ( cascadeIndex & 1u ) * half, ( cascadeIndex >> 1u ) * half, half };
-    }
-
-    ShadowAtlasCell ShadowAtlasLayout::getLocalCell( uint32 tileIndex ) const
-    {
-        const uint32 half             = _atlasResolution / 2u;
-        const uint32 tile             = MathUtil::max( _localTileResolution, 1u );
-        const uint32 tilesPerRow      = MathUtil::max( half / tile, 1u );
-        const uint32 tilesPerQuadrant = tilesPerRow * tilesPerRow;
-        const uint32 quadrant         = _cascadeCount + tileIndex / tilesPerQuadrant;
-        const uint32 indexInQuadrant  = tileIndex % tilesPerQuadrant;
-        return ShadowAtlasCell{ ( quadrant & 1u ) * half + ( indexInQuadrant % tilesPerRow ) * tile, ( quadrant >> 1u ) * half + ( indexInQuadrant / tilesPerRow ) * tile, tile };
     }
 } // namespace sw
 
 namespace sw
 {
-    uint32 FrameShadowData::countLocalTiles( const vector<GPULight>& listLight, const vector<uint32>& listShadowLightIndex )
+    void LocalShadowAtlas::build( uint32 atlasResolution, uint32 minTileResolution, const vector<LocalShadowRequest>& listRequest )
     {
-        uint32 tileCount = 0;
-        for ( const uint32 lightIndex : listShadowLightIndex )
+        const uint32 resolution = MathUtil::max( atlasResolution, 4u );
+        const uint32 maxTile    = resolution / 2u;
+        // 칸은 아틀라스 반 ÷ 2ⁿ 이다 — 하한은 그 꼴 가운데 하한 값 이상인 가장 작은 것.
+        uint32 minTile = maxTile;
+        while ( minTile / 2u >= MathUtil::max( minTileResolution, 1u ) )
+            minTile /= 2u;
+        _minTileResolution = minTile;
+
+        const size_t requestCount = listRequest.size();
+        _listSize.resize( requestCount );
+        for ( size_t requestIndex = 0; requestIndex < requestCount; ++requestIndex )
         {
-            if ( lightIndex >= listLight.size() )
-                continue;
-            const uint32 lightType = ShadowSetupInternal::getLightType( listLight[lightIndex] );
-            if ( lightType == shaderslot::kLightTypePoint )
-                tileCount += shaderslot::kPointShadowFaceCount;
-            else if ( lightType == shaderslot::kLightTypeSpot )
-                tileCount += 1u;
+            // 원하는 크기 이상인 가장 작은 칸(올림) — 화면에서 작아지면 칸도 반씩 준다.
+            const uint32 desired = listRequest[requestIndex]._desiredSize;
+            uint32       size    = maxTile;
+            while ( size / 2u >= minTile && size / 2u >= desired )
+                size /= 2u;
+            _listSize[requestIndex] = size;
         }
-        return tileCount;
+        // 넓이가 넘치면 하한보다 큰 칸을 모두 반으로 — 크기 차례(우선순위 차례)가 그대로 남는다.
+        const uint64 atlasArea = static_cast<uint64>( resolution ) * resolution;
+        for ( ;; )
+        {
+            uint64 area = 0;
+            for ( size_t requestIndex = 0; requestIndex < requestCount; ++requestIndex )
+            {
+                area += static_cast<uint64>( listRequest[requestIndex]._faceCount ) * _listSize[requestIndex] * _listSize[requestIndex];
+            }
+            if ( area <= atlasArea )
+                break;
+            bool bShrunk = false;
+            for ( uint32& size : _listSize )
+            {
+                if ( size > minTile )
+                {
+                    size /= 2u;
+                    bShrunk = true;
+                }
+            }
+            if ( bShrunk == false )
+                break; // 모두 하한이다 — 뒤의 빛은 칸을 못 받는다
+        }
+
+        const bool bKeep = resolution == _atlasResolution;
+        _atlasResolution = resolution;
+        if ( place( listRequest, bKeep ) == false && bKeep )
+            (void)place( listRequest, false ); // 지킨 자리가 빈 곳을 조각냈다 — 처음부터 쌓는다
+
+        // 다음 프레임이 지킬 자리 — 이번에 칸을 받은 빛만 남는다(사라진 빛의 칸은 풀린다).
+        _mapLastCell.clear();
+        for ( size_t requestIndex = 0; requestIndex < requestCount; ++requestIndex )
+        {
+            const uint32 firstCell = _listFirstCell[requestIndex];
+            if ( firstCell == kNotPlaced )
+                continue;
+            for ( uint32 faceIndex = 0; faceIndex < listRequest[requestIndex]._faceCount; ++faceIndex )
+            {
+                _mapLastCell.insert_or_assign( makeTileKey( listRequest[requestIndex]._lightID, faceIndex ), _listCell[firstCell + faceIndex] );
+            }
+        }
     }
 
+    bool LocalShadowAtlas::place( const vector<LocalShadowRequest>& listRequest, bool bKeep )
+    {
+        const size_t requestCount = listRequest.size();
+        _listFirstCell.assign( requestCount, kNotPlaced );
+        _listOffset.resize( requestCount );
+        uint32 cellCount = 0;
+        _unit            = _atlasResolution / 2u;
+        for ( size_t requestIndex = 0; requestIndex < requestCount; ++requestIndex )
+        {
+            _listOffset[requestIndex] = cellCount;
+            cellCount += listRequest[requestIndex]._faceCount;
+            _unit = MathUtil::min( _unit, _listSize[requestIndex] );
+        }
+        _listCell.assign( cellCount, ShadowAtlasCell{} );
+        _unit     = MathUtil::max( _unit, 1u );
+        _gridSize = _atlasResolution / _unit;
+        _listOccupied.assign( static_cast<size_t>( _gridSize ) * _gridSize, 0 );
+
+        // 1) 지난 프레임에 같은 크기로 서 있던 빛은 그 자리 그대로 — 칸은 자기 크기의 배수 자리라 이번 격자(가장 작은 칸)에도 맞는다.
+        if ( bKeep )
+        {
+            for ( size_t requestIndex = 0; requestIndex < requestCount; ++requestIndex )
+            {
+                const LocalShadowRequest& request = listRequest[requestIndex];
+                const uint32              units   = _listSize[requestIndex] / _unit;
+                bool                      bKept   = true;
+                for ( uint32 faceIndex = 0; faceIndex < request._faceCount && bKept; ++faceIndex )
+                {
+                    const auto it = _mapLastCell.find( makeTileKey( request._lightID, faceIndex ) );
+                    bKept         = it != _mapLastCell.end() && it->second._size == _listSize[requestIndex] && isFree( it->second._x / _unit, it->second._y / _unit, units );
+                    if ( bKept )
+                        _listCell[_listOffset[requestIndex] + faceIndex] = it->second;
+                    // 면끼리 겹치지 않게 지금 채운다(못 지키면 아래에서 비운다).
+                    if ( bKept )
+                        mark( it->second._x / _unit, it->second._y / _unit, units, true );
+                }
+                if ( bKept )
+                {
+                    _listFirstCell[requestIndex] = _listOffset[requestIndex];
+                    continue;
+                }
+                for ( uint32 faceIndex = 0; faceIndex < request._faceCount; ++faceIndex )
+                {
+                    const ShadowAtlasCell& cell = _listCell[_listOffset[requestIndex] + faceIndex];
+                    if ( cell._size != 0 )
+                        mark( cell._x / _unit, cell._y / _unit, units, false );
+                    _listCell[_listOffset[requestIndex] + faceIndex] = ShadowAtlasCell{};
+                }
+            }
+        }
+
+        // 2) 나머지는 우선순위 차례로 첫 빈 자리 — 크기가 내림차순이라 넓이가 남으면 반드시 든다(빈 곳이 모두 지금 크기의 배수 덩어리다).
+        bool bAllPlaced = true;
+        for ( size_t requestIndex = 0; requestIndex < requestCount; ++requestIndex )
+        {
+            if ( _listFirstCell[requestIndex] != kNotPlaced )
+                continue;
+            const LocalShadowRequest& request     = listRequest[requestIndex];
+            const uint32              units       = _listSize[requestIndex] / _unit;
+            uint32                    placedFaces = 0;
+            for ( ; placedFaces < request._faceCount; ++placedFaces )
+            {
+                bool bFound = false;
+                for ( uint32 unitY = 0; unitY + units <= _gridSize && bFound == false; unitY += units )
+                {
+                    for ( uint32 unitX = 0; unitX + units <= _gridSize && bFound == false; unitX += units )
+                    {
+                        if ( isFree( unitX, unitY, units ) == false )
+                            continue;
+                        mark( unitX, unitY, units, true );
+                        _listCell[_listOffset[requestIndex] + placedFaces] = ShadowAtlasCell{ unitX * _unit, unitY * _unit, _listSize[requestIndex] };
+                        bFound                                             = true;
+                    }
+                }
+                if ( bFound == false )
+                    break;
+            }
+            if ( placedFaces == request._faceCount )
+            {
+                _listFirstCell[requestIndex] = _listOffset[requestIndex];
+                continue;
+            }
+            // 면 일부만 들어갔다 — 빛 하나는 면을 다 받거나 하나도 받지 않는다.
+            for ( uint32 faceIndex = 0; faceIndex < placedFaces; ++faceIndex )
+            {
+                const ShadowAtlasCell& cell = _listCell[_listOffset[requestIndex] + faceIndex];
+                mark( cell._x / _unit, cell._y / _unit, units, false );
+            }
+            bAllPlaced = false;
+        }
+        return bAllPlaced;
+    }
+
+    bool LocalShadowAtlas::isFree( uint32 unitX, uint32 unitY, uint32 units ) const
+    {
+        if ( unitX + units > _gridSize || unitY + units > _gridSize )
+            return false;
+        for ( uint32 y = unitY; y < unitY + units; ++y )
+        {
+            for ( uint32 x = unitX; x < unitX + units; ++x )
+            {
+                if ( _listOccupied[static_cast<size_t>( y ) * _gridSize + x] != 0 )
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    void LocalShadowAtlas::mark( uint32 unitX, uint32 unitY, uint32 units, bool bOccupied )
+    {
+        for ( uint32 y = unitY; y < unitY + units; ++y )
+        {
+            for ( uint32 x = unitX; x < unitX + units; ++x )
+            {
+                _listOccupied[static_cast<size_t>( y ) * _gridSize + x] = static_cast<uint8>( bOccupied ? 1 : 0 );
+            }
+        }
+    }
+} // namespace sw
+
+namespace sw
+{
     float32 FrameShadowData::computeLocalShadowPriority( const GPULight& light, const float4x4& viewProj )
     {
         const float4  clip   = float4::transform( float4{ light._positionRadius._x, light._positionRadius._y, light._positionRadius._z, 1.0f }, viewProj );
@@ -176,40 +321,61 @@ namespace sw
         return radius / MathUtil::max( clip._w, MathUtil::max( radius * kLocalPriorityMinDepthFraction, MathUtil::kEpsilon ) );
     }
 
-    void FrameShadowData::populateLocalShadows( const ShadowAtlasLayout& layout, const float4x4* pPriorityViewProj, const RenderConfig& renderConfig, const vector<uint32>& listShadowLightIndex,
-                                                vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
+    uint32 FrameShadowData::computeLocalShadowDesiredSize( float32 priority, const float4x4& viewProj, uint32 atlasResolution )
     {
-        using Internal               = ShadowSetupInternal;
-        const uint32 atlasResolution = layout.getAtlasResolution();
-        uint32       usedTileCount   = 0;
+        // 행벡터 규약 — 클립 x 는 첫 열과의 내적이고 그 열의 xyz 길이가 투영 배율이다(뷰 회전은 길이를 바꾸지 않는다).
+        const float32 scaleX     = float3{ viewProj._11, viewProj._21, viewProj._31 }.getLength();
+        const float32 scaleY     = float3{ viewProj._12, viewProj._22, viewProj._32 }.getLength();
+        const float32 ndcRadius  = priority * MathUtil::max( scaleX, scaleY );
+        const float32 resolution = static_cast<float32>( atlasResolution );
+        return static_cast<uint32>( MathUtil::clamp( ndcRadius * resolution, 0.0f, resolution ) );
+    }
 
-        // 칸이 모자랄 때 화면에 크게 보이는 빛이 먼저 받는다. 같은 값은 목록 순서를 지킨다(stable).
+    void FrameShadowData::populateLocalShadows( uint32 atlasResolution, const float4x4* pPriorityViewProj, const RenderConfig& renderConfig, const vector<LocalShadowLight>& listShadowLight,
+                                                LocalShadowAtlas& inoutLocalAtlas, vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
+    {
+        using Internal       = ShadowSetupInternal;
+        uint32 usedTileCount = 0;
+
+        // 칸이 모자랄 때 화면에 크게 보이는 빛이 먼저 받는다. 같은 값은 목록 순서를 지킨다(stable). 점광 · 스폿이 아닌 원소는 칸을 원하지 않는다.
         vector<Internal::PriorityEntry> listOrder;
-        listOrder.reserve( listShadowLightIndex.size() );
-        for ( const uint32 lightIndex : listShadowLightIndex )
+        listOrder.reserve( listShadowLight.size() );
+        for ( const LocalShadowLight& shadowLight : listShadowLight )
         {
-            if ( lightIndex >= inoutListLight.size() )
+            if ( shadowLight._lightIndex >= inoutListLight.size() )
                 continue;
-            const float32 priority = pPriorityViewProj != nullptr ? computeLocalShadowPriority( inoutListLight[lightIndex], *pPriorityViewProj ) : 0.0f;
-            listOrder.push_back( Internal::PriorityEntry{ priority, lightIndex } );
+            const uint32 lightType = Internal::getLightType( inoutListLight[shadowLight._lightIndex] );
+            if ( lightType != shaderslot::kLightTypePoint && lightType != shaderslot::kLightTypeSpot )
+                continue;
+            const float32 priority = pPriorityViewProj != nullptr ? computeLocalShadowPriority( inoutListLight[shadowLight._lightIndex], *pPriorityViewProj ) : 0.0f;
+            listOrder.push_back( Internal::PriorityEntry{ priority, shadowLight._lightIndex, shadowLight._lightID } );
         }
         VectorUtil::stableSort( listOrder, Internal::isHigherPriority );
 
+        // 칸 크기는 화면 크기로 — 카메라가 없으면 가장 큰 칸을 원한다(넘치면 할당기가 고루 줄인다).
+        vector<LocalShadowRequest> listRequest;
+        listRequest.reserve( listOrder.size() );
         for ( const Internal::PriorityEntry& entry : listOrder )
         {
-            const uint32 lightIndex = entry._lightIndex;
-            GPULight&    light      = inoutListLight[lightIndex];
-            const uint32 lightType  = Internal::getLightType( light );
-            const bool   bPoint     = lightType == shaderslot::kLightTypePoint;
-            const bool   bSpot      = lightType == shaderslot::kLightTypeSpot;
-            if ( bPoint == false && bSpot == false )
-                continue;
-            const uint32 tileCount = bPoint ? shaderslot::kPointShadowFaceCount : 1u;
-            // 칸이 모자라면 이 빛은 그림자 없이 비춘다. 뒤의 스폿(칸 하나)은 아직 들어갈 수 있으므로 멈추지 않는다.
-            if ( usedTileCount + tileCount > layout.getLocalCapacity() )
+            const bool   bPoint  = Internal::getLightType( inoutListLight[entry._lightIndex] ) == shaderslot::kLightTypePoint;
+            const uint32 desired = pPriorityViewProj != nullptr ? computeLocalShadowDesiredSize( entry._priority, *pPriorityViewProj, atlasResolution ) : atlasResolution;
+            listRequest.push_back( LocalShadowRequest{ entry._lightID, bPoint ? shaderslot::kPointShadowFaceCount : 1u, desired } );
+        }
+        inoutLocalAtlas.build( atlasResolution, renderConfig._shadowLocalMinTileResolution, listRequest );
+
+        for ( uint32 requestIndex = 0; requestIndex < static_cast<uint32>( listOrder.size() ); ++requestIndex )
+        {
+            const Internal::PriorityEntry& entry      = listOrder[requestIndex];
+            const uint32                   lightIndex = entry._lightIndex;
+            GPULight&                      light      = inoutListLight[lightIndex];
+            const bool                     bSpot      = Internal::getLightType( light ) == shaderslot::kLightTypeSpot;
+            const uint32                   tileCount  = listRequest[requestIndex]._faceCount;
+            const uint32                   firstCell  = inoutLocalAtlas.getFirstCell( requestIndex );
+            // 칸이 모자라면 이 빛은 그림자 없이 비춘다. 뒤의 작은 빛은 아직 들어갈 수 있다(할당기가 계속 본다).
+            if ( firstCell == LocalShadowAtlas::kNotPlaced )
             {
-                SW_LOG_WARNING_ONCE_ID( "ShadowSetup.LocalShadowAtlasFull", "Shadow atlas has no room for a point/spot shadow (%# cells of %# texels) - the light is drawn without shadows. Lower _shadowLocalMinTileResolution or the shadow light count",
-                                        layout.getLocalCapacity(), layout.getLocalTileResolution() );
+                SW_LOG_WARNING_ONCE_ID( "ShadowSetup.LocalShadowAtlasFull", "Local shadow atlas has no room for a point/spot shadow (smallest cell %# texels) - the light is drawn without shadows. Lower _shadowLocalMinTileResolution or the shadow light count",
+                                        inoutLocalAtlas.getMinTileResolution() );
                 continue;
             }
 
@@ -222,7 +388,7 @@ namespace sw
 
             for ( uint32 faceIndex = 0; faceIndex < tileCount; ++faceIndex )
             {
-                const ShadowAtlasCell cell     = layout.getLocalCell( usedTileCount + faceIndex );
+                const ShadowAtlasCell cell     = inoutLocalAtlas.getCell( firstCell + faceIndex );
                 const float32         cellSize = static_cast<float32>( MathUtil::max( cell._size, 8u ) );
                 // 칸 가장자리에 여유 텍셀을 두도록 시야각을 넓힌다 — 면을 고른 점은 90° 원뿔 안이라 여유 밖으로 나가지 않는다.
                 const float32 guardScale = cellSize / ( cellSize - 2.0f * Internal::kLocalGuardTexels );
@@ -239,7 +405,7 @@ namespace sw
                 const float32  fieldOfView = 2.0f * MathUtil::atan2( tanHalf, 1.0f );
                 const float4x4 viewProj    = float4x4::makeLookAt( position, position + forward, up ) *
                                           float4x4::makePerspectiveFieldOfView( fieldOfView, 1.0f, nearPlane, radius );
-                outFrame._listLocalTile.push_back( ShadowTileDraw{ viewProj, cell } );
+                outFrame._listLocalTile.push_back( ShadowTileDraw{ viewProj, cell, LocalShadowAtlas::makeTileKey( entry._lightID, faceIndex ) } );
                 outFrame._listLocalTileLight.push_back( lightSlot );
 
                 // 셰이딩은 아틀라스 자리를 접은 행렬로 투영한다 — 클립 공간 변환이라 원근 나눗셈 뒤에도 칸 안에 떨어진다.
@@ -327,14 +493,13 @@ namespace sw
     }
 
     void FrameShadowData::populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, uint32 atlasResolution, const RenderConfig& renderConfig,
-                                         const vector<uint32>& listShadowLightIndex, vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
+                                         const vector<LocalShadowLight>& listShadowLight, LocalShadowAtlas& inoutLocalAtlas, vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
     {
         outFrame.clear();
         populateContactShadows( inoutListLight, outFrame );
         const uint32 cascadeCount = pShadowLight != nullptr ? pShadowLight->getShadowCascadeCount() : 1u;
-        outFrame._layout =
-            ShadowAtlasLayout::make( atlasResolution, cascadeCount, countLocalTiles( inoutListLight, listShadowLightIndex ), renderConfig._shadowLocalMinTileResolution );
-        populateLocalShadows( outFrame._layout, pMainViewProj, renderConfig, listShadowLightIndex, inoutListLight, outFrame );
+        outFrame._layout          = ShadowAtlasLayout::make( atlasResolution, cascadeCount );
+        populateLocalShadows( outFrame._layout.getAtlasResolution(), pMainViewProj, renderConfig, listShadowLight, inoutLocalAtlas, inoutListLight, outFrame );
 
         if ( pShadowLight != nullptr )
         {

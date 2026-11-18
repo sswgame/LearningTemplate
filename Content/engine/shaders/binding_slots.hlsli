@@ -17,7 +17,7 @@
  *   s0..s6 정적 샘플러 · s7 그림자 비교(DX12 · Vulkan) | DX11 은 s0..s3 엔진 슬롯 결합 샘플러 + s9..s15 정적 세트 — 4 절
  *   t0 space1 / u0 space1 bindless 텍스처 배열(DX12), Vulkan 은 set 1 binding 0..3 — 5 절
  *   그 밖: Vulkan set 0 시프트(6) · GL SSBO · 이미지 유닛(7) · 라이트 타입(8) · 패스 플래그(9) · 버퍼 배치 상수(10).
- *   에뮬 슬롯(엔진 텍스처 t32..t43 · 머티리얼 t16..t31)이 bindless 를 어떻게 흉내 내는지는 binding.hlsli 0 절(bindless 입문).
+ *   에뮬 슬롯(엔진 텍스처 t32..t56 · 머티리얼 t16..t31)이 bindless 를 어떻게 흉내 내는지는 binding.hlsli 0 절(bindless 입문).
  *
  * 모델 (언리얼 GPUScene 식): 셰이더 선언은 네 백엔드에서 **같다** — register(b#/t#/u#) 하나로 쓰고, 백엔드는
  * 그 번호를 각자의 방식으로 건다. 드로우마다 바뀌는 데이터는 바인딩을 갈아 끼우지 않고 **큰 버퍼에서 인덱스로 읽는다**
@@ -30,7 +30,7 @@
  *   ├────────────────────┼──────────────┼─────────────────────┼─────────────────────┼──────────────────┤
  *   │ PassCB / 컴퓨트 CB │ b0           │ 루트 CBV            │ UBO  binding 0      │ UBO 0            │
  *   │ MaterialCB (픽스처)│ b1           │ 루트 CBV            │ UBO  binding 1      │ UBO 1            │
- *   │ 엔진 텍스처 칸     │ t32..t49(에뮬)│ (없음)             │ (없음)              │ 텍스처 유닛 32..49│
+ *   │ 엔진 텍스처 칸     │ t32..t56(에뮬)│ (없음)             │ (없음)              │ 텍스처 유닛 32..56│
  *   │ 인스턴스 구조버퍼  │ t4           │ t 테이블            │ SSBO binding 16+4   │ SSBO 4           │
  *   │ 머티리얼 데이터    │ t5           │ t 테이블            │ SSBO binding 16+5   │ SSBO 5           │
  *   │ 머티리얼 텍스처    │ t16..t31(에뮬)│ (없음)             │ (없음)              │ 텍스처 유닛 16..31│
@@ -100,7 +100,13 @@
 #define SW_SLOT_ENGINE_TEX16    48
 #define SW_SLOT_ENGINE_TEX17    49
 #define SW_SLOT_ENGINE_TEX18    50
-#define SW_ENGINE_TEXTURE_COUNT 19
+#define SW_SLOT_ENGINE_TEX19    51
+#define SW_SLOT_ENGINE_TEX20    52
+#define SW_SLOT_ENGINE_TEX21    53
+#define SW_SLOT_ENGINE_TEX22    54
+#define SW_SLOT_ENGINE_TEX23    55
+#define SW_SLOT_ENGINE_TEX24    56
+#define SW_ENGINE_TEXTURE_COUNT 25
 
 // GPUScene 인스턴스 구조버퍼 (per-instance world/material). 네 백엔드 공통.
 #define SW_SLOT_INSTANCE_SRV 4
@@ -189,6 +195,9 @@
 #define SW_SLOT_MATERIAL_TEX14         30
 #define SW_SLOT_MATERIAL_TEX15         31
 #define SW_MATERIAL_TEXTURE_SLOT_COUNT 16
+// 웹(WebGPU)에서 머티리얼 변형 하나가 가질 수 있는 텍스처 칸 수 — 단계 텍스처 한도 16(CookContract stage_texture_unit_limit) 안에 패스의 엔진 텍스처
+// (그림자 아틀라스 둘 · 접촉 그림자 · 장면 색 · 깊이 사본 · 2D 쿠키 — 여섯까지)가 함께 들어야 한다. 넘는 머티리얼은 쿠킹이 #error 로 멈춘다(binding_texture.hlsli).
+#define SW_MATERIAL_TEXTURE_SLOT_COUNT_WEBGPU 10
 
 // 캔버스(UI) 배치 하나가 쓰는 텍스처 수 — 머티리얼 텍스처 슬롯의 앞 넷을 빌려 쓴다(에뮬 백엔드). 루트 상수 16 dword 안에 들어야 해서
 // 머티리얼 칸 수와 따로 둔다(canvas.hlsl 의 SwRootConstants: 시작 · 텍스처 넷 · 대상 너비 · 높이 · 색각 보정).

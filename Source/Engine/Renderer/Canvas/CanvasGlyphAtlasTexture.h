@@ -94,11 +94,23 @@ namespace sw
         void uploadRegions( IRHIResourceFactory& factory, AtlasPage& page );
         /** @brief 페이지를 멈춥니다: 오류를 남기고, `release` 전까지 그리지도 올리지도 않습니다(폴백 없이 실패를 드러냅니다). */
         void failPage( AtlasPage& page, string_view reason );
+        /** @brief 페이지의 GPU 텍스처 · SRV 를 물러날 목록으로 옮기고 페이지를 새 텍스처 전 상태로 되돌립니다(모양이 바뀌었다 — 다음 `uploadPages` 가 새로 만들고 전체를 올린다). */
+        void retirePageTexture( AtlasPage& page );
+        /** @brief 물러난 텍스처를 놓습니다(디바이스가 있는 `uploadPages` · `release` 가 부른다 — 백엔드가 GPU 해제를 쓰는 프레임 뒤로 미룬다). */
+        void destroyRetiredTextures( IRHIDevice* pDevice );
+
+        /** @brief 모양이 바뀌어 물러난 페이지 텍스처와 그 SRV 입니다. */
+        struct RetiredTexture
+        {
+            RHITextureHandle   _texture{ 0 };
+            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
+        };
 
     private:
-        vector<AtlasPage> _listPage;
-        vector<uint8>     _regionScratchBytes;  ///< 구간 업로드용으로 행 사이의 빈틈을 없앤 사본
-        uint64            _appliedSequence;     ///< 마지막으로 받은 묶음 번호입니다(0 = 아직 없음).
-        uint8             _bAwaitingFullUpload; ///< 묶음을 놓쳐 전체 묶음을 기다린다 — 그때까지 차분 묶음은 버리고 다시 청한다
+        vector<AtlasPage>      _listPage;
+        vector<RetiredTexture> _listRetired;         ///< 다음 `uploadPages` 에서 놓을 옛 페이지 텍스처
+        vector<uint8>          _regionScratchBytes;  ///< 구간 업로드용으로 행 사이의 빈틈을 없앤 사본
+        uint64                 _appliedSequence;     ///< 마지막으로 받은 묶음 번호입니다(0 = 아직 없음).
+        uint8                  _bAwaitingFullUpload; ///< 묶음을 놓쳐 전체 묶음을 기다린다 — 그때까지 차분 묶음은 버리고 다시 청한다
     };
 } // namespace sw

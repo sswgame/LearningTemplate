@@ -6,5 +6,8 @@
 		<RenderPassAttachment _name="SceneColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
 		<RenderPassAttachment _name="MotionBlurColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
 		<RenderPassAttachment _name="SceneVelocity" _format="R16G16_FLOAT" _clearColor="0,0,0,0" _loadOp="Clear" />
+		<!-- 모션 블러 타일(16² 픽셀) 속도 — 타일 최대(MotionBlurTileMax) · 이웃 최대(MotionBlurNeighborMax). 나눗수는 motion_blur_tile_max.hlsl 의 kMotionBlurTileSize 와 같다. -->
+		<RenderPassAttachment _name="VelocityTileMax" _format="R16G16_FLOAT" _clearColor="0,0,0,0" _loadOp="Clear" _resolutionDivisor="16" />
+		<RenderPassAttachment _name="VelocityNeighborMax" _format="R16G16_FLOAT" _clearColor="0,0,0,0" _loadOp="Clear" _resolutionDivisor="16" />
 	</_listAttachment>
 </RenderPassDesc>

@@ -33,6 +33,22 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 점광 · 스폿 그림자 — 깊이 첨부가 LocalShadowMap 역할이라 같은 그림자 패스 종류가 점광 · 스폿 타일을 그린다(방향광 캐스케이드는 위의 Shadow). -->
+		<RenderGraphPassDesc _name="LocalShadow"
+		                     _type="Shadow"
+		                     _depthAttachment="LocalShadowMap"
+		                     _shaderPath="engine/shaders/shadow_depth.hlsl"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="true">
+			<_listInput />
+			<_listOutput>
+				<item>LocalShadowMap</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="ForwardOpaque"
 		                     _type="ForwardOpaque"
 		                     _depthAttachment="SceneDepth"
@@ -44,6 +60,7 @@
 		                     _bEnableDepthWrite="true">
 			<_listInput>
 				<item>ShadowMap</item>
+				<item>LocalShadowMap</item>
 			</_listInput>
 			<!-- 화면 속도(SceneVelocity)를 둘째 컬러 출력으로 쓴다 — 물체마다 지난 월드 행렬 · 스킨 위치로 구한 이번 UV - 지난 UV(binding_output.hlsli). 모션 블러가 읽는다. -->
 			<_listOutput>
@@ -275,6 +292,40 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 모션 블러 타일 최대 · 이웃 최대 속도(McGuire 2012 — 언리얼 · 유니티 HDRP 와 같은 단계). 모션 블러가 꺼진 뷰에서는 읽는 패스가 빠져 함께 빠진다. -->
+		<RenderGraphPassDesc _name="MotionBlurTileMax"
+		                     _type="MotionBlurTileMax"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _minPostQuality="1">
+			<_listInput>
+				<item>SceneDepth</item>
+				<item>SceneVelocity</item>
+			</_listInput>
+			<_listOutput>
+				<item>VelocityTileMax</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="MotionBlurNeighborMax"
+		                     _type="MotionBlurNeighborMax"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _minPostQuality="1">
+			<_listInput>
+				<item>VelocityTileMax</item>
+			</_listInput>
+			<_listOutput>
+				<item>VelocityNeighborMax</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<!-- 모션 블러(motion_blur.hlsl) — 화면 속도(카메라 + 물체)로 흐린다. 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 원본을 그대로 넘긴다(같은 포맷).
 		     디퍼드와 같은 자리(피사계 심도 뒤, 톤맵 앞)다. 카메라와 물체가 모두 서 있으면 원본 그대로다. -->
 		<RenderGraphPassDesc _name="MotionBlur"
@@ -289,6 +340,7 @@
 				<item>DepthOfFieldColor</item>
 				<item>SceneDepth</item>
 				<item>SceneVelocity</item>
+				<item>VelocityNeighborMax</item>
 			</_listInput>
 			<_listOutput>
 				<item>MotionBlurColor</item>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="323edda254f48859badd20655254f472"?>
-<!-- 광낸 마루 — 판자(줄마다 이음 어긋남) · 나뭇결 · 판자마다 색, 니스 클리어 코트. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<!-- 광낸 마루 — 판자(줄마다 이음 어긋남) · 나뭇결 · 판자마다 색, 니스 클리어 코트. 부모(environmentsurface.material)의 값을 바꾸고 Clear Coat 셰이딩 모델(MATERIAL_LOBE_COAT)을 고른 프리셋이다. -->
 <MaterialDef formatVersion="0" name="WoodFloorPolished" _base="engine/materials/environmentsurface.material">
 	<_properties>
 		<item name="_baseColor" defaultValue="0.55 0.33 0.17 1"/>
@@ -13,4 +13,19 @@
 		<item name="_clearCoatRoughness" defaultValue="0.08"/>
 		<item name="_porosity" defaultValue="0.2"/>
 	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_LOBE_COAT</item>
+		</_alwaysDefines>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_OFF">
+				<_options>
+					<item>FOG_OFF</item>
+					<item>FOG_LINEAR</item>
+					<item>FOG_EXP</item>
+				</_options>
+			</item>
+		</_multiCompiles>
+	</_permutations>
 </MaterialDef>

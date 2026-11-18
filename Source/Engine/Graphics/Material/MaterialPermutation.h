@@ -30,6 +30,16 @@ namespace sw
 
         static void appendUniqueDefine( vector<string>& outListDefine, string_view define );
 
+        /**
+         * @brief 변형 define 을 바탕 목록에 얹습니다 — 같은 이름(`=` 앞)이 있으면 그 자리의 값을 바꾸고, 없으면 뒤에 붙입니다.
+         * @details 패스 PSO 는 머티리얼 없는 배치를 위해 `MATERIAL_TEXTURE_COUNT=0` 을 갖고, 머티리얼 변형은 같은 이름을 자기 칸 수로 바꾼다 — 같은 이름이 둘이면
+         *          셰이더 컴파일이 재정의로 갈린다. 런타임 PSO 변형(FramePSOManager)과 쿠커(ShaderCookRequestCollector)가 이 함수 하나로 합쳐 같은 목록 · 같은 차례가 된다.
+         */
+        static void mergeDefine( vector<string>& inoutListDefine, string_view define );
+
+        /** @brief `MATERIAL_TEXTURE_COUNT=<count>` define 입니다(`kMaterialTextureCountDefine`). */
+        static string makeTextureCountDefine( uint32 count );
+
         static void appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine );
 
         static void appendQualityDefines( MaterialQualityLevel quality, vector<string>& outListDefine );
