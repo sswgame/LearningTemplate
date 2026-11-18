@@ -35,17 +35,14 @@ SW_TEST_CASE( ScreenshotRequestQueueTest, EachTicketReadsItsOwnResult )
     SW_REQUIRE_TRUE( queue.take( request ) );
     SW_EXPECT_EQUAL( first.str(), request._path ); // 덮어쓰지 않고 받은 차례다
     SW_EXPECT_EQUAL( ticketA, request._ticket );
-    queue.reportCompleted( request._ticket, false, request._path );
+    queue.reportCompleted( request._ticket, false );
     SW_EXPECT_TRUE( queue.findResult( ticketA ) == ScreenshotTicketState::Failed );
     SW_EXPECT_TRUE( queue.findResult( ticketB ) == ScreenshotTicketState::Pending );
-    SW_EXPECT_TRUE( queue.getLastPath().empty() ); // 실패하면 마지막 경로가 빈다
 
     SW_REQUIRE_TRUE( queue.take( request ) );
-    queue.reportCompleted( ticketB, true, request._path );
+    queue.reportCompleted( ticketB, true );
     SW_EXPECT_TRUE( queue.findResult( ticketB ) == ScreenshotTicketState::Written );
     SW_EXPECT_FALSE( queue.hasUnfinishedRequest() );
-    SW_EXPECT_EQUAL( 2u, queue.getCompletedSerial() );
-    SW_EXPECT_EQUAL( second.str(), queue.getLastPath() );
     SW_EXPECT_TRUE( queue.findResult( 0 ) == ScreenshotTicketState::Unknown );
     SW_EXPECT_TRUE( queue.findResult( ticketB + 1 ) == ScreenshotTicketState::Unknown ); // 내준 적 없는 표
 }
@@ -95,10 +92,9 @@ SW_TEST_CASE( ScreenshotRequestQueueTest, EarlierTicketSurvivesLaterResults )
     const uint32           startupTicket = queue.put( makeShotPath( "startup.png" ), RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
     ScreenshotRequest      request;
     SW_REQUIRE_TRUE( queue.take( request ) );
-    queue.reportCompleted( request._ticket, true, request._path );
+    queue.reportCompleted( request._ticket, true );
     SW_REQUIRE_TRUE( queue.take( request ) );
-    queue.reportCompleted( request._ticket, false, request._path ); // 뒤 요청은 실패했다 — 마지막 경로가 빈다
-    SW_EXPECT_TRUE( queue.getLastPath().empty() );
+    queue.reportCompleted( request._ticket, false ); // 뒤 요청은 실패했다
     SW_EXPECT_TRUE( queue.findResult( editorTicket ) == ScreenshotTicketState::Written );
     SW_EXPECT_TRUE( queue.findResult( startupTicket ) == ScreenshotTicketState::Failed );
 }

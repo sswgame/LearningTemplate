@@ -150,10 +150,6 @@ namespace sw
         static uint32 requestScreenshot( const AbsolutePath& filePath, RHITextureHandle sourceTexture = 0, RHIFormat sourceFormat = RHIFormat::R8G8B8A8_UNORM );
         /** @brief 표 @p ticket 의 요청 상태입니다(`requestScreenshot` 의 반환). 우편함이 없으면 `Unknown` 입니다. */
         [[nodiscard]] static ScreenshotTicketState findScreenshotResult( uint32 ticket );
-        /** @brief `requestScreenshot` 요청을 처리한 수입니다(성공과 실패 모두 셉니다). 값이 바뀌면 `getLastScreenshotPath` 가 그 결과를 가리킵니다. */
-        static uint32 getCompletedScreenshotSerial();
-        /** @brief 마지막으로 처리한 `requestScreenshot` 이 쓴 파일 경로입니다. 실패했으면 빈 문자열입니다. */
-        static string getLastScreenshotPath();
 
     private:
         /** @brief 렌더 스레드 루프입니다. 패킷을 꺼내 executePacket 합니다. */

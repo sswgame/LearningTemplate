@@ -86,7 +86,7 @@ namespace sw
                 else
                     SW_LOG_WARNING_ID( "Screenshot.NotWritten", "Screenshot was not written: %#", write._path.c_str() );
                 if ( write._pMailbox != nullptr )
-                    write._pMailbox->reportCompleted( write._ticket, bWritten, write._path );
+                    write._pMailbox->reportCompleted( write._ticket, bWritten );
                 --*write._pInFlight;
             }
 
@@ -850,21 +850,9 @@ namespace sw
         return pMailbox != nullptr ? pMailbox->findResult( ticket ) : ScreenshotTicketState::Unknown;
     }
 
-    uint32 RenderThread::getCompletedScreenshotSerial()
-    {
-        const ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
-        return pMailbox != nullptr ? pMailbox->getCompletedSerial() : 0u; // 우편함이 없으면 처리한 요청이 없다
-    }
-
-    string RenderThread::getLastScreenshotPath()
-    {
-        const ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
-        return pMailbox != nullptr ? pMailbox->getLastPath() : string{}; // 우편함이 없으면 쓴 사진이 없다
-    }
-
     void RenderThread::takeScreenshotRequest()
     {
-        // 앞 요청을 워커가 쓰는 중이면 꺼내지 않는다 - 처리 수(`getCompletedScreenshotSerial`)가 요청 순서대로 오르게(뒤 장이 먼저 끝나 앞 장의 끝으로 읽히지 않게).
+        // 앞 요청을 워커가 쓰는 중이면 꺼내지 않는다 - 표의 결과가 요청 순서대로 나오게(끝 차단 `hasUnfinishedRequest` 가 받은 수와 처리 수를 견준다).
         if ( _requestedScreenshotPath.empty() == false || _pRequestedScreenshotWritesInFlight->load() > 0 )
             return;
         ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
@@ -912,7 +900,7 @@ namespace sw
         }
         SW_LOG_WARNING_ID( "Screenshot.NotWritten", "Screenshot was not written: %#", pWrite->_path.c_str() );
         if ( pWrite->_pMailbox != nullptr )
-            pWrite->_pMailbox->reportCompleted( pWrite->_ticket, false, pWrite->_path ); // 우편함이 먼저 내려갔으면 알릴 곳이 없다
+            pWrite->_pMailbox->reportCompleted( pWrite->_ticket, false ); // 우편함이 먼저 내려갔으면 알릴 곳이 없다
     }
 
     void RenderThread::discardPendingRenderTargetRead()
