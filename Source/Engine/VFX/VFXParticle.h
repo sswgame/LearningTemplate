@@ -31,7 +31,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 입자 하나의 렌더 입력입니다. 필드 순서가 셰이더 쪽 구조체(`particle.hlsl` 의 `GPUParticle`)와 같습니다. */
+    /** @brief 입자 하나의 렌더 입력입니다. 필드 순서가 셰이더 쪽 구조체(`vfx_simulate.hlsli` 의 `GPUParticle`)와 같습니다. */
     struct GPUParticle
     {
         /** @brief 입자 하나(띠는 마디 하나)의 정점 수입니다 — particle.hlsl 이 SV_VertexID 로 모서리 여섯을 만든다. CPU 드로우와 GPU 간접 인자가 같은 값을 쓴다. */

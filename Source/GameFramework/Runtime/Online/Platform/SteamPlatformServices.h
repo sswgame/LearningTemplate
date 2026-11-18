@@ -39,7 +39,7 @@ namespace sw
         [[nodiscard]] virtual bool           writeCloudFile( string_view fileName, const vector<uint8>& bytes ) = 0;
         [[nodiscard]] virtual bool           readCloudFile( string_view fileName, vector<uint8>& outBytes )     = 0;
         [[nodiscard]] virtual bool           setRichPresence( string_view key, string_view value )              = 0;
-        /** @brief `ISteamUser::GetAuthTicketForWebApi( identity )` 로 웹 API 티켓을 받아 16 진 글(바이트)로 씁니다. 서버는 같은 @p identity 로 확인한다(`TicketQueryLoginProvider`). */
+        /** @brief `ISteamUser::GetAuthTicketForWebApi( identity )` 로 웹 API 티켓을 받아 16 진 글(바이트)로 씁니다. 서버는 같은 @p identity 로 확인한다(`ProfileAPILoginProvider`). */
         [[nodiscard]] virtual bool requestAuthTicket( string_view identity, vector<uint8>& outTicket ) = 0;
     };
 

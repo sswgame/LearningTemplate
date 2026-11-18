@@ -29,7 +29,7 @@ namespace sw
 
     /**
      * @struct DecalDrawData
-     * @brief 데칼 하나의 그리기 값입니다(값 타입 — 게임 스레드가 패킷에 싣고 렌더 스레드가 읽는다). 텍스처는 경로로 싣고 렌더 스레드가 읽는다(`FramePostProcessTextureSet` 와 같은 길).
+     * @brief 데칼 하나의 그리기 값입니다(값 타입 — 게임 스레드가 패킷에 싣고 렌더 스레드가 읽는다). 텍스처는 경로로 싣고 렌더 스레드가 읽는다(`PathTextureSet` 와 같은 길).
      */
     struct DecalDrawData
     {
