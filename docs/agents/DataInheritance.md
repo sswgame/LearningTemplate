@@ -42,6 +42,8 @@
 
 ## 새 형식을 올리는 법
 
+순서: (1) `SW_ASSET_TYPE` 한 줄(로더 포함, [ExistingFacilities](ExistingFacilities.md) "리소스 읽기 입구와 에셋 참조"), 쿠킹이 펼칠 형식이면 아래 문서 표에도 한 줄. (2) 목록 원소의 이름 칸에 `PROPERTY( InheritKey )` 또는 카탈로그 규칙 한 줄. (3) 다른 리소스를 가리키는 칸은 `AssetRef<T>`. (4) 리소스 id 로 읽는 입구를 쓰고, 쓰는 쪽은 `acquire` · `request` 로 받아 실행 상태는 자기 쪽에 둔다. (5) 조건과 동작은 등록된 어휘를 쓴다("행동 어휘와 행동 리소스 변형"). (6) 칸을 더하면 실행이 그 칸을 읽고 시나리오가 그 효과를 확인한다 — 읽히지 않는 칸은 넣지 않는다.
+
 **리플렉션 형식(`ReflectedXMLFile::loadDesc` · `XMLSerializer::loadFromFile` 로 읽는 것).** 읽기는 이미 합친다. 목록 원소의 이름 칸에 표시만 한다(본보기 `RenderGraphPassDesc`).
 
 ```cpp
@@ -105,7 +107,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 ## 조건(`_when`) · 덮어쓰기 층 · 경로 교체
 
-부모 다음 단계다(`ResourceComposer`, 설계는 `docs/ResourceStructure.md` 2 절). 어느 형식에나 규칙 없이 적는다.
+부모 다음 단계다. 리소스 글은 모두 `ResourceComposer::compose( text, id, context )` 한 길을 지나고(부모 → 조건 → 덮어쓰기 층), 읽는 쪽은 단계를 모르고 펼친 글만 받는다. 조건은 어느 형식에나 규칙 없이 적는다 — Godot 기능 태그처럼 태그 집합 하나에 묻되, 언리얼 Device Profile 처럼 쿠킹 축과 로드 축을 나눠 쿠킹 축은 쿠킹본에서 지운다.
 
 ```xml
 <Interaction id="Use" maxDistance="3">
@@ -124,6 +126,23 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 | 저장은 있던 파일의 조건을 지킨다(`ResourceComposer::saveText`). 새 형식의 저장은 `FileUtil::writeTextFile` 이 아니라 이 입구를 쓴다 | 편집기 사본은 지금 태그로 푼 값을 들어, 그대로 쓰면 푼 값이 파일에 박히고 조건이 사라진다 |
 
 덮어쓰기 층은 게임 팩 설정의 `<Engine _listResourceLayer>` 뿌리다. 리소스 `X` 를 리소스 id 로 읽을 때 `<뿌리>/X` 가 있으면 원본을 부모로 얹는다(층 파일에 `_base` 를 적으면 오류). 규칙은 읽는 쪽의 형식에서 온다 — 리플렉션 형식은 리플렉션(배포 런타임에도 있다), 손 형식은 그 규칙 함수, 카탈로그는 표. 경로 교체는 `<Engine _resourceRemap>` 표의 `<Remap id when to>` 다.
+
+| 축 | 정해지는 때 | 값을 넣는 곳 | 쿠킹본 |
+|---|---|---|---|
+| `platform` · `target` | 쿠킹 | 엔진 기동(쿠커도 같은 자리) | 펼쳐서 없어진다(로드 축 조건 뒤의 것은 차례를 지키려 남고 런타임이 같은 값으로 푼다) |
+| `quality` | 로드 | 사용자 설정 핸들러 `resource.tag` | `_when` 이 남고, 값이 바뀌면 그 태그를 읽은 리소스를 다시 읽는다 |
+| `locale` | 로드 | 현지화의 지금 언어(`en-US` → `locale.en_US`) | 위와 같다 |
+| `region` · `feature` · `flag` | 로드 | 게임 코드(`ResourceTags::setAxisValue` · `setTagActive`) | 위와 같다 |
+| `layer` | 로드 | 켜진 씬 데이터 레이어(`SceneDataLayerSubsystem`) | 위와 같다 |
+
+- **규칙 출처의 순서:** 문서 표 · 카탈로그 표(`datacataloginheritance.xml`) → 합치기 함수(`SW_DATA_INHERITANCE_MERGE`) → 손 형식 → 리플렉션 형식. 쿠킹은 Engine 코드만 보므로 게임 · 키트 형식은 표에만 있어도 된다. 프리팹(`PrefabOverrides`)은 열쇠 모양이 달라 따로이고 문서 머리의 조건 · 층만 같은 길을 지난다.
+- **태그 주인:** 식은 `ConditionExpr` 이고 그냥 이름은 태그 조건(`resourceTag`)이다. 태그는 코어 범위 리소스 루트(`ContentRootSubsystem::getResourceTags`)가 든 `ResourceTags`, 합성 기록(`ResourceComposition`)도 같은 주인이 든다. 쿠킹본을 런타임이 푼 결과가 소스를 바로 푼 결과와 같은지는 `ResourceConditionTest.CookedTextResolvesLikeTheSource`.
+- **바이너리 경로 교체:** 텍스처 · 오디오 · 메시는 경로를 바꾼다(`ResourceRemap`). 같은 id 는 위에서 처음 참인 줄, 사슬은 오류. `AssetIO` 입구가 찾기 전에 한 번 바꾸고, 쿠킹 작업 안에서는 바꾸지 않는다(쿠킹본이 기계마다 달라지지 않게). 두 파일 모두 팩에 든다.
+- **다시 읽기:** 리소스 id 로 읽은 합성은 기댄 로드 축 태그를 `ResourceComposition` 에 남기고, 태그가 바뀌면 `AssetManager::reloadComposedDependents` → `AssetCacheBase::reloadComposed` 가 그 id 를 쥔 캐시를 다시 읽는다. 배포 구성에도 있다. 시나리오 `game.empty.resourcecondition`.
+- **한계:** 캐시 열쇠는 경로뿐이라 한 프로세스의 문맥은 하나다. 서버가 플레이어마다 다른 지역 값을 고르려면 데이터의 키로 나눈다. 에디터에서 씬이 여럿이면 `layer` 축은 마지막에 넣은 씬의 집합이다. 예외 하나: 몇 축만 바꿔 끼우는 미리보기 합성(`ResourceContext::withTagOverride` — UI 미리보기의 `screen` · `orientation`)은 그 캐시가 경로 + 태그 열쇠로 따로 들고(`UITextAssetCache`) 다시 읽기 · 접속 대조 기록에 적지 않는다.
+- **네트워크:** 게임플레이 값이 클라이언트마다 다르면 판정이 어긋난다. 클라이언트는 붙자마자, 그리고 새로 읽거나 바뀔 때마다 로드 축 · 층에 기댄 합성 한 줄(리소스 id + 결과 해시, `GameNetSessionMessage::kResourceDigest`)을 보내고, 서버(`ResourceDigestComparer`)는 같은 리소스를 다르게 합성했고 유예(`gv_netResourceDigestGraceSeconds`)가 지나도 다르면 끊는다(`Net.ResourceDigestMismatch`). 서버가 조건 · 층 없이 읽은 표도 해시를 들어, 클라이언트만 모드 층을 얹으면 거절된다. 서버가 읽지 않는 리소스(시각 효과)는 대조하지 않는다. `ResourceTagScope::PerClient` 축(품질 · 언어)은 달라도 되므로 판정 값은 이 축에 기대지 않는다. 일관성 검사이지 부정행위 방지가 아니다. 시뮬레이션 데이터에 쿠킹 축과 로드 축 조건을 섞지 않는다. 시나리오 `editor.netresourcedigest`.
+- **편집기 저장:** 참인 조건이 정한 칸의 편집은 그 조건의 값이 된다(규칙은 `restoreConditions` 머리말). 층을 얹어 읽은 리소스는 원본 자리에 쓰지 않는다(`ResourceLayer.SaveWouldBake`). 시나리오 `editor.resourcesave`.
+- **덮어쓰기 층**(언리얼 Composite Data Table · 팩 우선순위 자리): 순서 있는 목록(`ResourceLayers`, 아래 층이 먼저)이고 층 파일은 원본을 암묵적 부모로 가진 차이다. 목록은 게임 팩 설정의 `game/<팩>/layers/<이름>` 이고 DLC · 모드 팩을 올리는 쪽이 늘린다(`ResourceComposition::setLayers` — 바뀐 층에 파일이 있는 리소스를 다시 읽는다). 쿠킹 때 펼치지 않고 읽을 때 얹는다 — 공용 도메인 팩(`common` · `engine`)은 게임마다 같아야 해 게임 층을 펼칠 자리가 없다(`PackCooker::cookDomainPack`). 층 파일의 `_when` 은 층의 차이에 얹는다. 리소스 id 로 읽을 때만 얹고 글 입구(`loadFromXMLText`)는 얹지 않는다. 항목 id 를 바꾸지 않아 세이브는 그대로다. 층 파일은 외부 입력이라 합성 뒤 그 형식의 검증이 그대로 돌고, 온라인 게임은 위 해시 대조로 거른다.
 
 ## 도구가 묻는 것
 
@@ -173,7 +192,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 에디터 카탈로그 창(`CatalogDocument`)은 원문을 고치므로 적은 칸만 저장하고, 부모와 같은 값을 적으면 그 칸을 지운다. 자식 원소 편집(`CatalogChildSection`)도 같은 규칙(열쇠와 함께 적고, 비면 지움, `_op` · `_before` · `_after` · `_op="Clear"`)을 쓴다. 시나리오: `engine/automation/editor/catalogchildren`.
 
-핫 리로드: 부모 파일을 고치면 물려받은 카탈로그가 다시 읽힌다(`AssetReloadCascade`, 역색인은 `#` 앞 파일 기준). 계획이 파일 단위라 두 파일이 서로의 항목을 부모로 삼으면 순환 오류(`AssetReloadCascade.ReferenceCycle`)다. 시나리오: `game/empty/automation/editor/catalogcascade`. 공유 캐시 경로는 [ResourceStructure](../ResourceStructure.md) 3 절.
+핫 리로드: 부모 파일을 고치면 물려받은 카탈로그가 다시 읽힌다(`AssetReloadCascade`, 역색인은 `#` 앞 파일 기준). 계획이 파일 단위라 두 파일이 서로의 항목을 부모로 삼으면 순환 오류(`AssetReloadCascade.ReferenceCycle`)다. 시나리오: `game/empty/automation/editor/catalogcascade`. 공유 캐시의 다시 읽기(새 판 · 옛 판)는 [ExistingFacilities](ExistingFacilities.md) "리소스 읽기 입구와 에셋 참조".
 
 외형 항목의 머티리얼은 메시 구간 **이름**으로 적는다(`<Section name material>` · `<SwapMaterial section>` · `<MaterialValue section>`; 번호는 다시 임포트하면 어긋난다). 물려받은 항목은 변형의 `<Section>` 을 이름으로 덮는다. 시나리오: `game/empty/automation/sectionmaterial` · `game/shooter3d/automation/showcase/itemvariant`.
 
@@ -234,6 +253,34 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 **코드에서 기본값을 바꾸면 그 칸을 적지 않은 모든 데이터의 값이 바뀐다.** 언리얼의 CDO 와 같다. 바꾸면 안 되는 값은 기본값을 고치지 말고 데이터에 적는다. 값이 그림 · 규칙을 바꾸면 쓰는 쪽 자료를 대조한다. 필수 칸(`PROPERTY( Required )`)은 저장이 지우지 않는다.
 
+## 행동 어휘와 행동 리소스 변형
+
+행동 트리 · 스케줄 · 대화 · 어빌리티 · 기믹 회로는 실행기를 합치지 않고(아래 "합치지 않은 것") 조건과 동작의 이름만 공유한다.
+
+- **조건 `ConditionExpr`**(`Engine/Behavior/ConditionExpr.h`): 문법 `flag && !other` · `tag(Quest.Done)` · `weather(rain, storm)` · `affinity >= 4`, 등록은 `SW_CONDITION( 이름, 칸 스키마, 함수 )`. 읽을 때 후위 배열 + 함수 포인터로 컴파일하고 모르는 이름은 로드 오류, 확률 조건은 문맥의 씨앗을 쓴다. 세계는 형식 있는 칸의 문맥(`GameplayContext` — `GameFlagsSlot` · `BlackboardSlot` · `ScheduleConditionSlot`)으로 넘긴다 — 없는 칸은 거짓, 없는 값은 NaN(`hasBlackboard` 로 묻는다). 장착 · 외형 조건의 종류 칸(`_kind` · `_setID` · `_tag`)은 순환 · 뒤집힌 규칙 검사가 쓰므로 남는다. 쓰는 곳: `ScheduleCondition` · `EquipmentCondition` · `AppearanceRuleCondition` · 대화 `_condition` · 행동 트리 블랙보드 조건 · 상점 조건 · 리소스 `_when`. 쓰지 않는 곳: `AnimationConditionOp`(매 프레임 값 비교), `UserSettingConditionOperator`(게임 문맥 없음).
+- **동작 `ActionRegistry`**(`Engine/Behavior/ActionRegistry.h`): `SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop )` — 칸은 리플렉션 구조체라 에디터가 목록과 칸을 보이고, 함수는 `Succeeded` · `Failed` · `Running`. 글 형식은 `flag.set(hasKey, 1)` · `flag.set(flag=hasKey, value=1)`, 행동 트리는 노드 속성(`<Action task="flag.set" flag="alarm"/>` — 칸 이름은 `id` · `name` · `task` 와 겹치지 않게). 쓰는 곳: 행동 트리 `<Action task>` · 대화 `_actionCommand` · 스케줄 `onStart` · `onEnd` · 퀘스트 `<Reward><Action call>`(시나리오 `game/empty/automation/vocabulary`). 쓰지 않는 곳: 어빌리티 이펙트(복제 · 예측), 기믹 회로 노드(스텝 상태가 저장 대상), 에디터 · 개발 명령. 코드로 짓는 트리(`BehaviorTree::addAction( …, BehaviorTaskFunction )`)는 이름 없이 함수를 받는다.
+- **행동 트리 변형:** 노드 `id` 가 열쇠(`BehaviorTreeSchema`, `_bSelfNested`)라 `_base` 트리에서 가지만 바꾼다. `<SubTree tree>` 는 읽을 때 펼치고(순환 오류, 언리얼 Run Behavior), `<SubTree slot>` 은 러너가 `setSlotTree` 로 채운다(Run Behavior Dynamic). 퀘스트 · 루트 · 스폰 · 상점은 `datacataloginheritance.xml` 의 줄이다.
+
+## 종류별 변형 축
+
+앞 층(부모 · 조건 · 덮어쓰기 층) 위에 얹는다. 합치기 코드 대신 `PROPERTY( InheritKey )` 나 규칙 한 줄이 기본이다.
+
+| 축 | 항목 | 엔진 |
+|---|---|---|
+| 교체표 | 애니메이션 셋 `_base` · 열쇠 목록, 그래프는 슬롯 이름만 | 유니티 Animator Override Controller |
+| 교체표 | 그래프 상태가 열쇠, 연결 레이어 `<layer slot>` → `SkeletalAnimatorComponent::_listLinkedLayer`(한 단계) | 언리얼 Linked Anim Layers |
+| 교체표 | 스프라이트 라이브러리: 분류 · 라벨 → 프레임(아틀라스는 파일에 하나 — 배치가 깨지지 않게) | 유니티 Sprite Library |
+| 파라미터 | 머티리얼 파라미터 묶음(`*.matparams.xml`), 머티리얼 층([MaterialGraph](MaterialGraph.md)), 외형 구간 머티리얼(`AppearanceSectionDef`) | 언리얼 MPC · Material Layers · Material Slot |
+| 파라미터 | VFX 방출기 `InheritKey` · 사용자 파라미터, 오디오 라이브러리 · 믹서 `_base`, 이벤트 `_parentEvent` | Niagara 부모 이미터 · MetaSound Preset |
+| 인스턴스 값 | `InstanceCustomData`(float4 둘, 배치 키 아님), `MaterialInstance` 는 드로우 단위 덮기 | 언리얼 Custom Primitive Data |
+| 조립 | 씬 인스턴스 · 씬 상속 · 데이터 레이어(아래 "씬 조립", 조건의 `layer` 축) | 언리얼 Level Instance · Data Layers, Godot 씬 상속 |
+| UI | 스타일 시트 `_base`, `<TypeVariation>`, 에디터 테마 토큰 `_base` | Godot Theme Type Variation |
+| 기타 | 리그 · 리타겟 · 물리 · 소켓 · 알림 표 · 입력 레이어에 `InheritKey` 또는 표 한 줄 | — |
+
+- **뺀 것:** 물리 셰이프 · 충돌 쌍, 리그 · 리타겟 안의 뼈 목록(순서가 뜻)은 통째로 바뀐다. 입력 맵의 `<override>` · `<remove>` 는 실행 중 쌓기다([InputMapBundle](../InputMapBundle.md)).
+- **LOD:** 애니메이션은 등급 한 축(`AnimationLODState::_lodGrade`)으로 그래프 `<layer>` · 블렌드 `<node>` · 리그 노드가 `max_lod` 칸에서 꺼지고 `_nodeFadeSeconds` 동안 가중치를 옮긴다(`AnimationLODFade`, 본 LOD `SkeletonBoneLOD` 와 따로). `ClothComponent` 는 조상 스켈레탈 메시의 등급으로 반복 수를 낮추고(`_listLODIterationCount`) `_maxLOD` 를 넘으면 시뮬레이션을 내린다 — 다시 켜면 지금 고정 자세에서 새로 만든다(확인 `ClothLODTest` · `game.empty.clothlod`).
+- **메시 런타임 조립(언리얼 Mutable 자리):** 부품 피팅 · 모프 굽기(`AppearanceMeshPart::assemble`) → 구간 있는 메시 하나로 병합(`mergeParts`) → 결과 캐시(`AppearanceBakedMeshCache`) · 진행 중 짓기 나눔(`CharacterAppearanceInFlightTable`), 짓기는 워커. 캐릭터마다 텍스처 층을 굽지 않는다 — 염색 · 마스크 · 표면 상태는 머티리얼 매개변수라 군중이 머티리얼을 나눈다. 고정 차림 아틀라스는 에디터가 쿠킹한다(`OutfitAtlasSpec`).
+
 ## 합치지 않은 것과 까닭
 
 | 코드 | 까닭 |
@@ -243,6 +290,8 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 | JSON 형식 | 설정은 층(`ConfigManager`)으로 겹친다. 프리팹 JSON 은 변형을 읽고 쓰지만 기본값은 빼지 않는다. 에디터 테마 토큰(`*.tokens.json`)은 파일이 자기 부모를 고르므로 `_base` 를 적고 키 표를 덮는다(`EditorThemeTokens`) |
 | 오디오 이벤트의 `_parentEvent` | 이벤트가 `_listEvent` 래퍼 안에 있어 카탈로그 규칙(루트 바로 아래 되풀이)에 맞지 않는다. 합치기는 `DataInheritance` 그대로이고 이벤트 하나를 가상의 문서로 넘긴다. 파일 합치기가 목록 원소의 `_base` 를 지우므로 이름이 다르다 |
 | `AudioEffectDef` 목록 | 이름이 비면 종류 이름을 쓰는 규칙이라 열쇠가 비는 원소가 있다. 적으면 통째로 바뀐다 |
+| 행동 실행기(행동 트리 · 스케줄 · 대화 · 어빌리티 · 기믹 회로) | 모델이 다르다. 언리얼도 BT · StateTree · GAS 를 나누고 Gameplay Tag 로 어휘만 공유한다 — 여기도 조건 · 동작 이름만 공유한다(위 "행동 어휘") |
+| 스케줄 `<Archetype>` 을 항목 `_base` 로 | (1) `_base` 는 같은 종류만 가리키는데 아키타입은 NPC 가 아니다. (2) 행사의 `archetypes="villager"` 는 사슬 소속을 묻는데 펼친 글에는 `_base` 가 남지 않는다. (3) 같은 id 루틴이 통째 교체가 아니라 속성 합치기가 되고 순서가 뒤집힌다. 추상 항목과 펼친 뒤의 소속 표가 생기면 옮긴다 |
 | `SkeletonVariant` 의 칸 | 뼈 비율은 곱해지고 클립 규칙은 쌓이며 본은 뒤에 붙는다. 덮어쓰면 변형의 변형이 다른 값이 된다. 사슬(순환 · 깊이 · 없는 부모)만 공통이고 칸은 `Skeleton::mergeVariantText` 가 얹어 평평한 `<Skeleton>` 글을 낸다(쿠킹본에 `_base` 가 남지 않는다). 부모 본 번호를 바꾸지 않는지는 합친 뒤에 본다 |
 
 ## 상용 엔진과 비교

@@ -165,13 +165,32 @@
 
 - 키트마다 대표 동작을 보이는 최소 샘플만 둔다(범용 에셋을 모든 키트에 복사하지 않는다). 먼저 각 게임 `credits.md` · 공용 출처 기록을 키트별로 이어 중복을 막고, 부족한 것만 고른다.
 - **허용 출처:** Kenney(asset pages CC0 — 묶음의 `License.txt` 보관), Poly Haven(CC0), ambientCG(CC0), 이미 쓰는 KayKit · 오디오 팩은 `Content/common/credits.md` · `audio.sources.json` 기록 그대로(같은 제작자라고 새 팩 라이선스를 추정하지 않는다). OpenGameArt 같은 업로드 사이트는 항목별 CC0 확인만. Quaternius QAL(원본 단독 재배포 금지) · CC-BY · NC · ND · 불명확한 것은 들이지 않는다(기존 묶음 여덟의 판단은 아래 "리소스 라이선스").
-- **추가 전 기록:** 쓰는 파일과 키트 id, 원본 페이지 · 라이선스 원문, 원본 SHA-256 · 받은 날짜, 변환 경로 · 옵션, 재배포 · 수정 허용. CC0 도 상표 · 초상 · 유명 IP 는 따로 뺀다. 원본은 쓰는 파일만 Git LFS, 구조는 [ResourceStructure](ResourceStructure.md). "무료" 에셋을 자동으로 받는 도구는 만들지 않는다.
+- **추가 전 기록:** 쓰는 파일과 키트 id, 원본 페이지 · 라이선스 원문, 원본 SHA-256 · 받은 날짜, 변환 경로 · 옵션, 재배포 · 수정 허용. CC0 도 상표 · 초상 · 유명 IP 는 따로 뺀다. 원본은 쓰는 파일만 Git LFS, 리소스 구조는 [ExistingFacilities](agents/ExistingFacilities.md) "리소스 읽기 입구와 에셋 참조". "무료" 에셋을 자동으로 받는 도구는 만들지 않는다.
 - 네트워크 · 온라인 · 저장소 키트는 이미지보다 합성 fixture(입력 · 시드 · 예상 상태, 가짜 사용자 · 상품 데이터)를 쓰고 실제 공급자 로고 · 사용자 자료를 쓰지 않는다.
 
 ### GameFramework
 
 - **`GameInstance` 의 조정 책임 집중(중간):** 팩 설정 · 초기화 순서 · 클라이언트 훅 · 넷 세션 · 저장 · 자동 저장 · 오디오 · 프레임 갱신을 한 곳이 조정한다. 기동 실패 되감기 · 프로세스당 하나는 S2 계약(e6933d4ab1). 수명 · 호스트 · 실패 정책이 다른 책임만 나누고, `update` 순서는 계약 테스트로 고정한다. 여러 인스턴스가 요구되면 thread-local 이 아니라 명시적 게임 컨텍스트.
 - 유지: 키트 의존 · 모듈 종류는 `*.module.json` 매니페스트가 정본이고 `ModuleManifest.cmake` · `ModuleTargets.cmake` 가 순환 · 링크를 검사한다 — 다른 레지스트리로 복제하지 않는다. 키트 전체의 API 일관성 · 데이터 판 정책은 감사하지 않았다.
+
+### 무기와 발사체 조합(정함)
+
+무기 N 종과 발사체 M 종이 파일 N + M 개로 조합된다(`GameFramework/Runtime/Character/Combat/Projectile/`, 언리얼 Lyra 무기 조각 · 유니티 ScriptableObject 탄 정의와 같은 방향).
+
+| 자리 | 형식 |
+|---|---|
+| 탄 | `ProjectileDef` · `ProjectileCatalog`(`data/projectiles.xml`): 운동(광선 · 탄도 · 유도) · 탄속 · 중력 · 저항 · 수명 · 관통 · 튕김 · 폭발 · 태그 · `<OnHit when call>`(조건 · 동작 어휘) |
+| 맞음 표 | 같은 파일 `<Impact id surface when color size>`, 처음 맞는 줄(`ProjectileCatalog::findImpact`) — 효과는 탄 × 표면이라 탄이 들지 않는다 |
+| 무기 | `WeaponDef::_projectileID`(필수) · `_accepts`(탄 태그 식 — 호환은 조합 표가 아니라 태그 조건) · `<Modifier field op value>` |
+| 수정자 | `ShotModifierDef`(`ShotField`, `Add` · `Multiply`, 음수는 0 에서 멈춤). 순서는 탄 → 무기 → 수정자 |
+| 조합 | `ResolvedShot::resolve` — 장전 · 부착물이 바뀔 때 한 번(`WeaponState::equip` · `loadProjectile`) |
+| 시뮬레이션 | `ProjectileSimulation` · `ProjectileState` · `IProjectileWorld` — 탄은 게임 오브젝트가 아니다 |
+
+- 키트는 데이터와 반응만 갖는다 — `IProjectileWorld` 로 맞을 대상을 답하고 `ProjectileEvent` 를 받아 반응한다. 반응 수치는 탄에 베끼지 않고 가리킨다. 키트는 자기 카탈로그를 받는 길(게임 서비스 또는 생성 인자)로 탄 카탈로그를 받는다 — 판이 서비스를 찾지 않아 테스트 · 리플레이 · 서버가 같은 판을 연다. 벽 없는 판은 수명 · 사거리 없는 탄을 받지 않는다.
+- 2D 는 평면 제약 3D 다(언리얼 ProjectileMovement 의 평면 제약). 차원마다 관통 · 튕김 · 유도를 두 벌 쓰지 않는다.
+- 결정성: `ProjectileDef.cpp` · `ProjectileSimulation.cpp` 는 `sw_mark_deterministic_sources` 에 있고 삼각함수는 `DeterministicMathUtil`, 중력은 값으로 받는다. 상태 바이트는 `ProjectileSimulation::writeState` 한 벌. 걸음 안에서 세계를 바꾸지 않는다(사건은 걸음 뒤).
+- 어빌리티 탄: 탄은 시뮬레이션이 돌리고 이펙트 스펙은 탄 id 로 찾는 짐(`ProjectileCargo`)이다 — 런타임 값이라 상태 바이트에 넣지 않는다. 복제가 생기면 시뮬레이션은 서버 권위, 짐은 서버에 둔다(GAS 투사체와 같은 길).
+- 확인: `ProjectileTest`, `ActionRoomTest.ShotsResolveFromTheProjectileCatalog` · `KartRaceTest.ItemsFlyByTheirProjectile` · `MechArenaRulesTest`, 시나리오 `game.shooter3d.projectilecombo` · `game.abilityarena.control`.
 
 ### 오픈월드 액션 RPG 키트: MMO 와 싱글플레이 분리
 

@@ -118,16 +118,34 @@ A new row names the header and the API.
 
 ## 리소스 읽기 입구와 에셋 참조
 
-설계는 [ResourceStructure](../ResourceStructure.md) 2 · 4 절, 규칙은 여기가 정본이다.
+리소스는 한 길을 지난다. 새 형식은 종류 정의 한 줄로 합성 · 공유 · 다시 읽기 · 쿠킹 · 참조 색인 · 에디터 선택기를 얻는다. 파일에 적는 법(`_base` · `_when` · 층 · 경로 교체)은 [DataInheritance](DataInheritance.md), 새 형식 순서는 그 문서 "새 형식을 올리는 법" 이다.
+
+```
+리소스 파일
+  └─ 합성 읽기 ResourceComposer: 부모(_base) → 조건(_when) → 덮어쓰기 층 → 펼친 글
+       └─ 종류 정의(AssetTypeDef)의 로더: 글 → const T
+            └─ 공유 캐시 SharedAssetCache<T>: 경로 하나에 객체 하나, 다시 읽기, 로드 상태
+                 └─ AssetRef<T> 가 꺼낸다 → 실행 상태는 쓰는 쪽이 따로 가진다
+```
+
+- **종류 정의:** 등록은 `SW_ASSET_TYPE( id, 정의.withPathRule( … ).withLoader( AssetTypeLoader::of<T>( 메모리 태그 ) ) )` 한 줄이다(문맥이 더 필요한 로더는 `AssetTypeLoader::with<T, 함수>`). `AssetTypeDef` 가 이름 · 접미사 · 판 · 쿠킹 접미사 · 경로 규칙(`/data/items.xml` 처럼 접미사로 가를 수 없는 파일) · 내장 이름 · 로더를 들고, 고치는 함수는 `withPathRule` · `withBuiltinNames` · `withLoader` 뿐이다. 헤더의 `kAssetType` 은 쿠킹이 쓰는 사실만, 로더는 등록 표의 사본에만 있다. 검증 전용 로더는 두지 않는다 — 스키마 테스트도 진짜 로더를 부른다.
+- **공유 캐시 등록:** `SW_SHARED_ASSET_CACHE( id, T, 정의 )`(Engine) · `SW_MODULE_SHARED_ASSET_CACHE( id, T, 내보내기, 정의 )`(모듈 — 모듈 수명으로 등록, `Engine/Module/ModuleSharedAssetCache.h`) 한 줄이 종류 등록 · 캐시 인스턴스화 · 레지스트리 등록을 함께 한다. 캐시 이름도 정의의 이름 하나다. `XMLCatalog` 형식은 모두 캐시를 가진다.
+- **쿠킹 제약:** 팩 쿠킹은 게임 모듈을 올리기 전에 돈다(`HeadlessSubsystem::runCookTask`). 쿠킹이 알아야 하는 합성 규칙은 데이터(`Content/engine/settings/datacataloginheritance.xml`)에 두고, 배포 런타임도 이 표를 읽는다.
+- **창구:** `request( 경로 )` 는 핸들(로드 상태), `acquire( 경로 )` 는 `SharedAssetRef<T>` 를 돌려준다. `XMLCatalog` 에 감싸개를 두지 않는다(내보내는 카탈로그가 베이스 멤버를 모두 인스턴스화해 캐시 없는 카탈로그의 링크가 깨진다). 다시 읽은 횟수는 비공개이고 `AssetReloadWatch<T>` 만 읽는다.
+- **다시 읽기:** 다시 읽으면 늘 새 판이 생긴다. `SharedAssetRef<T>` 로 쥔 쪽은 새 판을 보고, `shared_ptr<const T>`(`.snapshot()`)로 쥔 쪽은 받은 때의 판을 그대로 읽는다 — 진행 중인 세션 · 워커 일감 · 번호를 지어 둔 쪽이 이것이다. 옛 판은 `collectRetiredVersions` 가 프레임 경계에서 놓는다. 지어 둔 것은 `AssetReloadWatch` 로 횟수를 보고 다시 짓는다. 시나리오 `editor/catalogshared`.
+- **사본을 못 만들게 한다:** `loadFromAsset` 은 비공개이고 `AssetTypeLoader` 만 friend 다. 게임 범위 서비스는 `GameInstance::loadRequiredCatalog` 로 받고, 테스트 · 미리 보기는 `loadFromXMLText`. 쿠커가 읽는 형식만 공개 `loadCopyFromAsset` 을 둔다 — 쿠킹 작업(`CookJob`)은 범위 안의 읽기를 입력으로 기록하므로 캐시의 한 벌을 쓰면 입력이 빠진다.
+- **사본이 맞는 것:** 프로세스에 한 벌이고 서비스가 기동 때 자기 상태로 옮기는 엔진 설정(`PhysicsSettings` · `UIScaleSettings` 등, 언리얼 `UDeveloperSettings` 자리), 쓰는 쪽이 고치는 입력(`InputMap` 재바인딩 · 높이장 · `NavMeshAsset` · `TileMapXMLData`), 도구 입력(정점 애니메이션 쿠커 · 머티리얼 그래프 컴파일러 · 에디터 편집 사본).
+- **정의와 실행 상태:** 공유 객체는 `const` 다. 실행 상태가 섞인 카탈로그는 나눈다(`BehaviorTree` · `BehaviorTreeRunner`, `AbilityCatalog` · `AbilityClassRegistry`). `MeshCache` · `TextureCache` · `MaterialCache` · `PrefabCache` 는 GPU 수명 · 쓰는 쪽의 수정이 있어 합치지 않는다(`SharedAssetCache.h` 머리말). `AssetHandle` · 로드 상태 · 종류 정의는 공유한다.
+- 아직 쓰는 게임이 없는 키트 카탈로그(약 20 종)는 라이브러리라 지우지 않고 캐시 등록과 접미사만 둔다.
 
 - **리소스는 id 로 읽는다.** 그래야 조건(`_when`) · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조(리소스 해시)를 받는다. 리플렉션 파일 하나는 `ConfigManager::readComposedXMLDocument`, 루트를 손으로 읽는 형식은 `XMLReadUtil::parseResourceRoot`, 그 밖은 `XMLDocument::loadResource` · `loadResourceAs` · `parseResourceText`(테스트 `ResourceEntranceTest`).
 - 글을 읽은 뒤 id 없이 글 입구(`loadFromAsset` · `loadFromFile`)로 넘기지 않는다 — 린트 `common-shapes` 의 `assetEntrance` 가 막고, 예외는 문맥을 정하는 쪽(문화권 표 · 경로 교체 표)만 `Config/Rules/Lint/CommonShapeExceptions.json` 에 까닭과 함께. 팩 설정(`PackEngineSettings`)은 층 · 조건이 기대는 값을 정하므로 그대로 읽는다. 미리 보기 · 테스트는 `loadFromXMLText`(층을 얹지 않는다).
-- **다른 에셋을 가리키는 칸은 `AssetRef<T>`**(언리얼 `TSoftObjectPtr<T>`). 스스로 읽지 않는다(`acquire()` · `request()`). 접미사가 대상 종류와 다르면 로드 오류다.
+- **다른 에셋을 가리키는 칸은 `AssetRef<T>`**(언리얼 `TSoftObjectPtr<T>`). 스스로 읽지 않는다(`acquire()` · `request()`). 접미사가 대상 종류와 다르면 로드 오류다. 값은 `AssetRefBase`(경로 + `const AssetTypeDef*`)와 `AssetRef<T>` — 대상 종류를 값이 품어 `vector<AssetRef<T>>` · 중첩 구조체 · 덮어쓰기 패치가 같은 검사를 지나고, 의존성 수집 · 미리 읽기(`PreloadSet`) · 쿠킹 입력 · 참조 색인 · 에디터 선택기가 모두 이 칸을 본다.
 - 경로 칸은 리플렉션 선언에서만 온다 — 손으로 쓴 이름 표를 두지 않는다. 생성 목록은 `Config/Dev/AssetReferenceFields.generated.json`(낡음은 `--check-asset-refs`), `Config/Dev/AssetReferenceFields.json` 에는 도메인 · 확장자 · 임포트 폴더 규칙만.
 - `AssetRef<T>` 칸이 만들어지는 곳에서 `T` 는 완전해야 한다(`unique_ptr<T>` 소멸자와 같은 규칙) — 대상 헤더를 못 읽으면 생성자를 .cpp 로 옮긴다.
 - 종류는 접미사 · 경로 규칙(`AssetTypeDef::makeDataFile`) · 내장 이름(`withBuiltinNames`) 셋으로만 가른다. 셋 다 없는 종류는 `AssetRef<T>` 가 컴파일에서 막는다(`AssetTypeDef::canTellPath`). 모르는 내장 이름은 폴백 없이 오류다.
 - 종류가 하나로 정해지지 않는 칸(인턴 열쇠로 쓰는 칸, 종류가 여럿인 칸, 종류 정의가 없는 파일)은 `PROPERTY( AssetPath )` 로 두어 생성 목록에 넣는다.
-- **쿠킹은 닿는 것만 담는다**(`PackReachability`, 언리얼 "참조된 패키지만 쿠킹"): 뿌리(`PackConfig.json` `_cookRules`, 게임 설정 `<RequiredData>`, `SW_ASSET_COOK_ROOT`)에서 참조 칸 · `_base` · 곁 파일(`SW_ASSET_COMPANION`)을 따라간다. 코드가 경로를 조립해 읽는 파일은 뿌리나 곁 파일로 선언한다 — 닿지 않으면 배포에서 빠진다. 닿는 참조가 없는 파일을 가리키면 쿠킹 오류다.
+- **쿠킹은 닿는 것만 담는다**(`PackReachability`, 언리얼 "참조된 패키지만 쿠킹"): 뿌리(`PackConfig.json` `_cookRules`, 게임 설정 `<RequiredData>`, `SW_ASSET_COOK_ROOT`)에서 참조 칸 · `_base` · 곁 파일(`SW_ASSET_COMPANION`)을 따라간다. 코드가 경로를 조립해 읽는 파일은 뿌리나 곁 파일로 선언한다 — 닿지 않으면 배포에서 빠진다. 닿는 참조가 없는 파일을 가리키면 쿠킹 오류다. 계산과 칸 규칙(`AssetReferenceFields`)은 `Engine/Asset/Reference` 에 있다. 큰 카탈로그는 항목 단위로 고르고(`_listEntryCatalog` · `_listEntryIDField`), 스테이징 산출물은 원본이 쓰일 때만 담는다(`PackStagedSelection`).
 
 ## 리플렉션 스키마로 읽지 않고 손으로 두는 것
 
