@@ -86,7 +86,6 @@
         "AInputEvent_getDeviceId": "바깥 이름(Android NDK)",
         "AMotionEvent_getPointerId": "바깥 이름(Android NDK)",
         "ActiveId": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
-        "ActiveIdHasBeenEditedThisFrame": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "ActiveIdIsAlive": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "AddDllDirectory": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "CompressEtc2Rgba": "바깥 이름(etcpak ProcessRGB.hpp 의 철자)",

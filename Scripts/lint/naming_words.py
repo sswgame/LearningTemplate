@@ -10,15 +10,15 @@ Scripts/lint/naming_words.py
 3인칭 문장형 술어(`shouldDrawBatchInPass`) · 동사 없는 게터(`materialGroupFor`)가 그대로 통과했다(2026-11-12 Source 전체 점검 약 470 건).
 
 규칙:
-- function · suffix — 함수 첫 단어는 `_functionWords`, 형식 끝 단어는 `_typeSuffixes` 에 있어야 한다.
-- verb — 함수 첫 단어가 금지 동사(`_banned`)면 허용 표에 있어도 실패한다(예전에는 허용 표에 없을 때 안내로만 썼다).
+- verb — 함수 첫 단어가 금지 동사(`_banned`)면 실패한다.
 - term — 금지 명사(`_bannedTerms`)는 모든 식별자(함수 · 형식 · 멤버 · 지역)의 **모든 단어**에서 본다. 표준 합성어(`WorkArea` — Win32 `SPI_GETWORKAREA`)는 `_keepTerms`.
 - predicate — `bool` 을 돌려주는 함수의 첫 단어가 3인칭 동사(끝이 s)면 `_predicateWords`(언리얼 `Is · Has · Can · Should · Uses · Needs · Requires · Supports …`)여야 한다.
 - lookup — 끝 단어가 `For` · `Of` 인 함수는 조회 동사(`_lookupWords` — get · find · compute …)로 시작해야 한다(`materialGroupFor` 는 "찾거나 만든다" 를 숨겼다).
 - word — 모든 선언 이름(형식 · 열거자 · 별칭 · 함수 · 멤버 · 상수 · 변수 · 매크로)과 `Source` 의 파일 · 폴더 이름, 스크립트(`Scripts` · `.claude/hooks` ·
   `.claude/skills` · `cmake` 의 함수 · 클래스 · 상수 · CLI 명령 · 규칙 id · CMake 함수 · 옵션 · 파일 · 폴더 이름)의 **모든 낱말**이 낱말 표
   (`_words` 의 a 업계 · b 게임)에 있어야 한다. 앞 규칙들은 함수 첫 단어 · 형식 끝 단어만 허용 표로 봐서, 멤버 · 파일 이름 · 이름 가운데의 조어
-  (`SceneWalkKey` · `aimAtMark` · `parkHistory`)가 들어왔다(2026-11-13). 문맥에 따라 맞기도 틀리기도 한 낱말은 `_scopedWords` 가 쓸 경로를 정한다
+  (`SceneWalkKey` · `aimAtMark` · `parkHistory`)가 들어왔다(2026-11-13). 함수 첫 단어 · 형식 끝 단어 허용 표(`_functionWords` 1100 · `_typeSuffixes` 1240)는
+  2026-11-18 지웠다 — 본 낱말을 모두 올린 허용 목록(`two` · `from` · `days`)이 되어 동사 · 접미 규율을 더는 지키지 못했고, 선언의 첫 · 끝 낱말은 이 규칙이 본다. 문맥에 따라 맞기도 틀리기도 한 낱말은 `_scopedWords` 가 쓸 경로를 정한다
   (게임의 walk 는 맞고 엔진의 walk 는 순회다). 바깥 철자(`PFN_` · `VK_` · ImGui 깃발)는 `_externalPatterns`, 받아 온 스킬은 `_externalPaths` 가 뺀다.
   파이썬 이름의 PEP 8 꼴(모듈 · 함수 snake_case, 클래스 PascalCase, 상수 UPPER_CASE — docs/agents/NamingScripts.md)도 여기서 막는다.
   CMake 함수는 `sw_snake_case` 꼴만 받는다(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test). CMake 함수 꼴은 cmake 밖
@@ -34,6 +34,7 @@ verb · term · predicate · lookup · word 는 기준선(`Config/Rules/Lint/Nam
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import re
 import sys
@@ -53,10 +54,9 @@ EXTENSIONS = (".h", ".cpp", ".inl")
 COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 STRING = re.compile(r'R"\((?:.|\n)*?\)"|"(?:[^"\\\n]|\\.)*"')
 FUNCTION = re.compile(r"\b_?([a-z][a-z0-9]*)[A-Z]\w*\s*\(")
-TYPE = re.compile(r"\b(?:class|struct|enum class)\s+(?:SW_\w+\s+)?([A-Z]\w+)")
 BOOL_FUNCTION = re.compile(r"\bbool\s+(?:\w+::)*(_?[a-z][A-Za-z0-9]*)\s*\(")
 IDENTIFIER = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
-WORD = re.compile(r"[A-Z][a-z0-9]+|[A-Z]+(?![a-z])")
+WORD_RUN = re.compile(r"\w+")   # `\b` 사이의 글자 덩어리 — 옛 이름이 맞을 수 있는 자리는 그 이름의 첫 덩어리와 같은 덩어리에서만 시작한다
 ANY_WORD = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z0-9]+")
 
 
@@ -191,15 +191,9 @@ def is_third_person_verb(word: str) -> bool:
     return word.endswith("s") and not word.endswith(("ss", "us", "is", "as", "os"))
 
 
-def collect_words(code: str) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
-    """코드(주석 · 문자열을 뺀 글)의 (함수 앞 단어, 이름) 과 (형식 끝 단어, 이름) 을 돌려준다."""
-    list_function = [(match.group(1), match.group(0).split("(")[0].strip()) for match in FUNCTION.finditer(code)]
-    list_suffix: list[tuple[str, str]] = []
-    for match in TYPE.finditer(code):
-        words = WORD.findall(match.group(1))
-        if words:
-            list_suffix.append((words[-1], match.group(1)))
-    return list_function, list_suffix
+def collect_words(code: str) -> list[tuple[str, str]]:
+    """코드(주석 · 문자열을 뺀 글)의 (함수 앞 단어, 이름) — 선언과 호출 모두."""
+    return [(match.group(1), match.group(0).split("(")[0].strip()) for match in FUNCTION.finditer(code)]
 
 
 def find_term_word(name: str, banned_terms: dict, keep_terms: Sequence[str]) -> str | None:
@@ -214,10 +208,24 @@ def find_term_word(name: str, banned_terms: dict, keep_terms: Sequence[str]) -> 
     return None
 
 
-def classify_names(list_source: Iterable[tuple[str, str]], table: dict) -> tuple[list[str], dict[str, dict[str, str]]]:
-    """(기준선 없는 문제 목록, 규칙 → {이름: 경로 · 안내}) — 기준선 규칙의 위반은 이름으로 모아 기준선과 견준다."""
-    allowed_function = set(table["_functionWords"])
-    allowed_suffix = set(table["_typeSuffixes"])
+@functools.lru_cache(maxsize=256)
+def compile_banned_names(list_name: tuple[str, ...]) -> re.Pattern:
+    return re.compile(r"\b(" + "|".join(map(re.escape, list_name)) + r")\b")
+
+
+def find_banned_names(code: str, banned_names: dict, map_first_run: dict[str, str | None]) -> list[str]:
+    """
+    @p code 의 옛 이름(`\b(이름|…)\b` 의 차례대로) — 옛 이름 1 249 개를 엮은 정규식을 파일마다 모든 자리에서 돌리지 않고, 글의 덩어리(`WORD_RUN`)에 첫 덩어리가
+    있는 이름만 엮어 돈다. 이름이 맞는 자리는 늘 그 이름의 첫 덩어리와 같은 덩어리이므로(`\b` 로 시작한다) 뺀 이름은 어디서도 맞지 않고, 표 차례를 지켜
+    엮어 겹친 이름(`YawUtil` · `YawUtil::fromWorld`)도 전체를 엮은 것과 같은 것을 고른다. 첫 글자가 덩어리 글자가 아닌 이름(첫 덩어리 None)은 늘 엮는다.
+    """
+    set_run = set(WORD_RUN.findall(code))
+    list_candidate = tuple(name for name in banned_names if map_first_run[name] is None or map_first_run[name] in set_run)
+    return [match.group(1) for match in compile_banned_names(list_candidate).finditer(code)] if list_candidate else []
+
+
+def classify_names(list_code: Iterable[tuple[str, str]], table: dict) -> tuple[list[str], dict[str, dict[str, str]]]:
+    """(기준선 없는 문제 목록, 규칙 → {이름: 경로 · 안내}) — 기준선 규칙의 위반은 이름으로 모아 기준선과 견준다. @p list_code 는 (경로, `strip_code` 한 글)."""
     banned_verbs = table["_banned"]
     banned_terms = table.get("_bannedTerms", {})
     keep_terms = table.get("_keepTerms", [])
@@ -225,7 +233,8 @@ def classify_names(list_source: Iterable[tuple[str, str]], table: dict) -> tuple
     lookup_words = set(table.get("_lookupWords", []))
     keep = table["_keep"]
     banned_names = table.get("_bannedNames", {})
-    banned_pattern = re.compile(r"\b(" + "|".join(map(re.escape, banned_names)) + r")\b") if banned_names else None
+    map_first_run = {name: (match.group(0) if (match := WORD_RUN.match(name)) else None) for name in banned_names}
+    map_term: dict[str, str | None] = {}   # 이름 → 금지 명사 — 같은 식별자가 파일마다 수백 번 나와 `_keepTerms` 지우기를 이름마다 한 번만 한다
 
     list_problem: list[str] = []
     seen: set[str] = set()
@@ -235,31 +244,20 @@ def classify_names(list_source: Iterable[tuple[str, str]], table: dict) -> tuple
         if name not in keep and name not in ratchet[rule]:
             ratchet[rule][name] = f"{path}: {hint}"
 
-    for path, text in list_source:
-        code = strip_code(text)
-        if banned_pattern is not None:
-            for match in banned_pattern.finditer(code):
-                name = match.group(1)
+    for path, code in list_code:
+        if banned_names:
+            for name in find_banned_names(code, banned_names, map_first_run):
                 if f"name:{name}" not in seen:
                     seen.add(f"name:{name}")
                     list_problem.append(f"{path}: 옛 이름 '{name}' — {banned_names[name]}")
-        list_function, list_suffix = collect_words(code)
-        for word, name in list_function:
+        for word, name in collect_words(code):
             if name in keep:
                 continue
             if word in banned_verbs:
                 record("verb", name, path, f"함수 앞 단어 '{word}'({name}) 는 금지 동사다 — {banned_verbs[word]}")
-            elif word not in allowed_function and name not in seen:
-                seen.add(name)
-                list_problem.append(f"{path}: 함수 앞 단어 '{word}'({name}) 가 표에 없다 — 업계 용어와 대조한 뒤 {CONFIG_PATH} 의 _functionWords 에 올린다")
             words = split_words(name, function=True)
             if len(words) > 1 and words[-1] in ("For", "Of") and words[0] not in lookup_words:
                 record("lookup", name, path, f"'{name}' 는 동사 없는 For · Of 게터다 — get · find · findOrAdd · compute 로 시작한다(_lookupWords)")
-        for word, name in list_suffix:
-            if word not in allowed_suffix and name not in keep and name not in seen:
-                seen.add(name)
-                hint = banned_terms.get(word, f"업계 용어와 대조한 뒤 {CONFIG_PATH} 의 _typeSuffixes 에 올린다")
-                list_problem.append(f"{path}: 형식 끝 단어 '{word}'({name}) 가 표에 없다 — {hint}")
         for match in BOOL_FUNCTION.finditer(code):
             name = match.group(1)
             words = split_words(name, function=True)
@@ -271,7 +269,9 @@ def classify_names(list_source: Iterable[tuple[str, str]], table: dict) -> tuple
                 name = match.group(0)
                 if name in keep or name in ratchet["term"]:
                     continue
-                term = find_term_word(name, banned_terms, keep_terms)
+                if name not in map_term:
+                    map_term[name] = find_term_word(name, banned_terms, keep_terms)
+                term = map_term[name]
                 if term is not None:
                     record("term", name, path, f"'{name}' 에 금지 명사 '{term}' 가 있다 — {banned_terms[term]}")
     return list_problem, ratchet
@@ -293,9 +293,15 @@ def read_sources(project_root: Path, scope: LintScope) -> list[tuple[str, str]]:
     return read_texts(project_root, scope.select(("Source",), EXTENSIONS))
 
 
-def collect_source_names(project_root: Path, scope: LintScope) -> list[tuple[str, str, str]]:
-    """범위 안의 (종류, 이름, 파일) — `Source` 의 C++ 선언과 모든 파일의 파일 · 폴더 이름, 스크립트 뿌리(`SCRIPT_ROOTS`)의 선언과 스크립트 파일 · 폴더 이름."""
-    list_name = [(kind, name, path) for path, text in read_sources(project_root, scope) for kind, name in collect_declarations(strip_code(text))]
+def read_codes(project_root: Path, scope: LintScope) -> list[tuple[str, str]]:
+    """범위 안 `Source` C++ 의 (경로, `strip_code` 한 글) — 이름 판정 둘(`classify_names` · `collect_source_names`)이 함께 쓴다."""
+    return [(path, strip_code(text)) for path, text in read_sources(project_root, scope)]
+
+
+def collect_source_names(project_root: Path, scope: LintScope, list_code: list[tuple[str, str]] | None = None) -> list[tuple[str, str, str]]:
+    """범위 안의 (종류, 이름, 파일) — `Source` 의 C++ 선언과 모든 파일의 파일 · 폴더 이름, 스크립트 뿌리(`SCRIPT_ROOTS`)의 선언과 스크립트 파일 · 폴더 이름.
+    @p list_code 는 이미 읽어 지운 C++ 글(`read_codes`, 없으면 여기서 읽는다)."""
+    list_name = [(kind, name, path) for path, code in (read_codes(project_root, scope) if list_code is None else list_code) for kind, name in collect_declarations(code)]
     for path in scope.select(("Source",)):
         list_name.extend((kind, name, path) for kind, name in collect_path_names(path))
     list_script = scope.select(SCRIPT_ROOTS, SCRIPT_EXTENSIONS) + [path for path in scope.select(SCRIPT_ROOTS) if path.endswith("CMakeLists.txt")]
@@ -372,8 +378,9 @@ def classify_words(list_name: Iterable[tuple[str, str, str]], table: dict) -> di
 
 def collect_violations(project_root: Path, scope: LintScope) -> tuple[list[str], dict[str, dict[str, str]]]:
     table = read_table(project_root)
-    list_problem, ratchet = classify_names(read_sources(project_root, scope), table)
-    ratchet["word"] = classify_words(collect_source_names(project_root, scope), table)
+    list_code = read_codes(project_root, scope)
+    list_problem, ratchet = classify_names(list_code, table)
+    ratchet["word"] = classify_words(collect_source_names(project_root, scope, list_code), table)
     return list_problem, ratchet
 
 
@@ -383,15 +390,15 @@ def check_naming_words(project_root: Path, scope: LintScope) -> list[str]:
 
 
 def run_self_check() -> None:
-    table = {"_functionWords": ["get", "has", "find", "draws", "material", "set", "focus", "starts"], "_typeSuffixes": ["Component", "Result"], "_banned": {"drain": "flush 또는 poll"},
+    table = {"_banned": {"drain": "flush 또는 poll"},
              "_bannedTerms": {"Verdict": "Result", "Work": "Job"}, "_keepTerms": ["WorkArea"], "_predicateWords": ["is", "has", "uses", "starts"], "_lookupWords": ["get", "find"],
              "_keep": {"MailboxServiceResult": "이유"}}
     clean = 'struct FooComponent {}; int getValue( int x ); struct MailboxServiceResult {}; // drainEvents() hasWork\nconst char* s = "drainEvents() Verdict"; bool hasValue(); bool setAxisTags(); bool focusPanel(); bool startsWith(); RECT readWorkArea; int getSlotFor( int x );'
-    problems, ratchet = classify_names([("a.h", clean)], table)
+    problems, ratchet = classify_names([("a.h", strip_code(clean))], table)
     assert problems == [] and all(not names for names in ratchet.values()), (problems, ratchet)
     bad = 'void drainEvents( int x ); struct FooVerdict {}; bool hasPendingWork(); bool drawsBatch(); int materialGroupFor( int x ); int _verdictCount;'
-    problems, ratchet = classify_names([("a.h", bad)], table)
-    assert len(problems) == 1 and "'Verdict'" in problems[0], problems   # 형식 끝 단어 Verdict 는 표에 없다
+    problems, ratchet = classify_names([("a.h", strip_code(bad))], table)
+    assert problems == [], problems   # 금지 명사 Verdict 는 term 기준선 규칙이 본다
     assert set(ratchet["verb"]) == {"drainEvents"}, ratchet
     assert set(ratchet["term"]) == {"FooVerdict", "hasPendingWork", "_verdictCount"}, ratchet
     assert set(ratchet["predicate"]) == {"drawsBatch"}, ratchet
@@ -402,8 +409,12 @@ def run_self_check() -> None:
     assert any("goneName" in line for line in ratchet_problems), ratchet_problems   # 고쳐 사라진 이름은 빼라고 한다
     assert len(ratchet_problems) == 2, ratchet_problems
     table_names = dict(table, _bannedNames={"CombatHealth": "HealthStateMachine"})
-    assert classify_names([("a.h", "// CombatHealth\nconst char* s = \"CombatHealth\";")], table_names)[0] == [], "주석 · 문자열의 옛 이름은 본다고 하지 않는다"
+    assert classify_names([("a.h", strip_code("// CombatHealth\nconst char* s = \"CombatHealth\";"))], table_names)[0] == [], "주석 · 문자열의 옛 이름은 본다고 하지 않는다"
     assert len(classify_names([("a.h", "CombatHealth health; int getCombatHealthRatio();")], table_names)[0]) == 1, "통째 이름만 막는다"
+    overlap = dict(table, _bannedNames={"YawUtil": "a", "YawUtil::fromWorld": "b", "Gone": "c", "new-names": "d"})
+    assert find_banned_names("x = YawUtil::fromWorld( v ); new-names;", overlap["_bannedNames"], {"YawUtil": "YawUtil", "YawUtil::fromWorld": "YawUtil", "Gone": "Gone", "new-names": "new"}) \
+        == ["YawUtil", "new-names"], "표 차례로 엮은 것과 같다 — 앞 이름(YawUtil)이 이기고, 글에 없는 이름은 엮지 않는다"
+    assert [line.split("'")[1] for line in classify_names([("a.h", "auto y = YawUtil::fromWorld( v );")], overlap)[0]] == ["YawUtil"]
 
     code = strip_code("#define SW_SCENE_WATCH 1\nenum class Mode { Idle, Walk };\nusing Alias = int;\nstruct SceneWalkKey {};\n"
                      "void hoverMark( int outbChanged, const Foo& inoutListCrumb ) { float _walkSpeed = 1; const int kMaxCount = 2; }")

@@ -66,17 +66,42 @@ UNCOUNTED_BASES = ("enable_shared_from_this",)  # 표준 믹스인 — 상속 �
 # ------------------------------------------------------------------------------
 # 1) 주석 · 문자열을 지운 글(위치는 그대로)
 # ------------------------------------------------------------------------------
+STRIP_START = re.compile(r'//|/\*|R"|["\']')   # 지울 것이 시작할 수 있는 자리 — 그 사이 글자는 그대로 둔다
+RAW_STRING_HEAD = re.compile(r'R"([^(]*)\(')
+PREPROCESSOR_LINE = re.compile(r"^[ \t]*#(?:[^\n]*\\\n)*[^\n]*$", re.M)
+
+
+def blank_text(text: str) -> str:
+    """줄 바꿈만 남기고 같은 길이의 공백으로."""
+    return "\n".join(" " * len(part) for part in text.split("\n"))
+
+
+@functools.lru_cache(maxsize=64)
 def strip_code(text: str) -> str:
-    """주석 · 문자열 · 문자 상수 · 전처리 줄을 같은 길이의 공백으로 바꿉니다(줄 번호를 지킨다)."""
-    out = list(text)
-    index, size = 0, len(text)
+    """
+    주석 · 문자열 · 문자 상수 · 전처리 줄을 같은 길이의 공백으로 바꿉니다(줄 번호를 지킨다).
+
+    C++ 글 규칙 일곱(cpp-shape · common-shapes · byte-read · magic-literals · mutable-statics · result-types · thread-owners)이 같은 파일에 부른다 —
+    커밋 훅은 한 프로세스에서 차례로 돌므로 글 하나를 한 번만 지운다(`lint_scope.read_text` 가 같은 글 객체를 돌려줘 열쇠 비교가 싸다).
+    지울 것이 시작할 수 있는 자리(`STRIP_START`)로 건너뛴다 — 글자마다 파이썬으로 돌던 것보다 약 5 배 빠르다(같은 출력, `run_self_check`).
+    """
+    list_piece: list[str] = []
+    copied = 0
+    size = len(text)
 
     def blank(start: int, end: int) -> None:
-        for position in range(start, min(end, size)):
-            if out[position] != "\n":
-                out[position] = " "
+        nonlocal copied
+        end = min(end, size)
+        list_piece.append(text[copied:start])
+        list_piece.append(blank_text(text[start:end]))
+        copied = max(end, start)
 
-    while index < size:
+    index = 0
+    while True:
+        match = STRIP_START.search(text, index)
+        if match is None:
+            break
+        index = match.start()
         char = text[index]
         if text.startswith("//", index):
             end = text.find("\n", index)
@@ -89,12 +114,12 @@ def strip_code(text: str) -> str:
             blank(index, end)
             index = end
         elif char == "R" and text.startswith('R"', index) and (index == 0 or not (text[index - 1].isalnum() or text[index - 1] == "_")):
-            match = re.match(r'R"([^(]*)\(', text[index:])
-            if match is None:
+            head = RAW_STRING_HEAD.match(text, index)
+            if head is None:
                 index += 1
                 continue
-            end = text.find(")" + match.group(1) + '"', index)
-            end = size if end < 0 else end + len(match.group(1)) + 2
+            end = text.find(")" + head.group(1) + '"', index)
+            end = size if end < 0 else end + len(head.group(1)) + 2
             blank(index + 1, end)
             index = end
         elif char == '"' or (char == "'" and not (index > 0 and (text[index - 1].isalnum() or text[index - 1] == "_"))):
@@ -105,9 +130,9 @@ def strip_code(text: str) -> str:
             index = end + 1
         else:
             index += 1
-    stripped = "".join(out)
-    # 전처리 줄(이어진 줄 포함)도 지운다 — `#define` 몸통의 중괄호가 범위를 흐트러뜨리지 않게
-    return re.sub(r"^[ \t]*#(?:[^\n]*\\\n)*[^\n]*$", lambda m: re.sub(r"[^\n]", " ", m.group(0)), stripped, flags=re.M)
+    list_piece.append(text[copied:])
+    stripped = "".join(list_piece)
+    return PREPROCESSOR_LINE.sub(lambda m: blank_text(m.group(0)), stripped)
 
 
 def match_brace(text: str, open_index: int) -> int:
@@ -792,6 +817,13 @@ def run_self_check() -> int:
     owned = ("class CapState\n{\npublic:\n    void group();\nprivate:\n    vector<int32> _listGroup;\n};\n"
              "struct FooInternal\n{\n    static void a( CapState& s ) { s._listGroup.clear(); }\n    static void b( CapState& s ) { s._listGroup.clear(); }\n};\n")
     expect(check_state_mutators(owned, "Source/Engine/Foo.cpp", rules) == [], "private fields are not counted")
+    stripped = {
+        'a // c\nb': 'a     \nb', 'x /* c\nd */ y': 'x     \n     y', 's = "q\\"w";': 's = "    ";', "c = 'x'; it's": "c = ' '; it's",
+        'r = R"d(a)"b\n)d";': 'r = R       \n   ;', 'fooR"x"': 'fooR" "', '#define A \\\n  B\nint q;': '           \n   \nint q;',
+        'u = "open\nnext': 'u = "    \nnext', '/* open': '       ',
+    }
+    for text, want in stripped.items():
+        expect(strip_code(text) == want, f"strip_code({text!r}) == {want!r}, got {strip_code(text)!r}")
     print(f"[CppShape] self-check {'OK' if failures == 0 else 'FAIL'}")
     return 0 if failures == 0 else 1
 

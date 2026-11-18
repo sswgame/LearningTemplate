@@ -130,13 +130,31 @@ def read_bytes(path: Path | str) -> bytes | None:
     return _read_bytes(os.path.normcase(os.path.abspath(path)))
 
 
-def read_text(path: Path | str, errors: str = "strict", encoding: str = "utf-8") -> str | None:
-    """`Path.read_text` 와 같은 글(줄 끝은 LF 로). 못 읽거나(지웠거나 OSError) `errors="strict"` 에서 UTF-8 이 아니면 None."""
+@functools.lru_cache(maxsize=256)
+def _read_text(key: str, errors: str, encoding: str) -> str | None:
+    data = _read_bytes(key)   # OSError 는 캐시하지 않고 올린다(read_text 가 None 으로)
     try:
-        data = read_bytes(path)
         return None if data is None else data.decode(encoding, errors).replace("\r\n", "\n").replace("\r", "\n")
-    except (UnicodeDecodeError, OSError):
+    except UnicodeDecodeError:
         return None
+
+
+def read_text(path: Path | str, errors: str = "strict", encoding: str = "utf-8") -> str | None:
+    """
+    `Path.read_text` 와 같은 글(줄 끝은 LF 로). 못 읽거나(지웠거나 OSError) `errors="strict"` 에서 UTF-8 이 아니면 None.
+    커밋 훅은 규칙마다 같은 스테이지 파일을 부르므로 푼 글도 함께 쓴다 — 같은 글 객체라 글을 열쇠로 둔 전처리 캐시(`cpp_shape.strip_code`)의 비교가 싸다.
+    한도(256)는 커밋 훅의 스테이지를 담고 `--all` 이 저장소 전체의 글을 붙잡지 않게 둔다.
+    """
+    try:
+        return _read_text(os.path.normcase(os.path.abspath(path)), errors, encoding)
+    except OSError:
+        return None
+
+
+def clear_read_cache() -> None:
+    """읽은 바이트 · 글을 잊는다 — `pre_commit.check_read_bound` 가 파일을 실제로 여는지 세기 전에 부른다."""
+    _read_bytes.cache_clear()
+    _read_text.cache_clear()
 
 
 def read_texts(project_root: Path, list_relative: Iterable[str], errors: str = "strict") -> list[tuple[str, str]]:
