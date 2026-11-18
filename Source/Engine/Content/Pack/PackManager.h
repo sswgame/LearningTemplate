@@ -10,6 +10,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/ContentSource.h"
+#include "Engine/Content/Pack/PackChunkManifest.h"
 #include "Engine/Content/Pack/PackPatch.h"
 #include "Engine/Content/Pack/PackReader.h"
 
@@ -169,6 +170,13 @@ namespace sw
          *          패치가 덜 적용된 채 돌지 않는다.
          */
         bool scanAndMountPacks( string_view packsDirectory );
+        /**
+         * @brief `scanAndMountPacks` 가 읽은 청크 목록(`PackChunkManifest::kFileName`)입니다. 목록 파일이 없는 폴더면 빈 목록이다(미루는 청크가 없다).
+         * @details 목록에 든 팩은 기동 때 마운트하지 않았다 — 씬을 열 때 `PackChunkLoader` 가 마운트한다.
+         */
+        const PackChunkManifest& getChunkManifest() const { return _chunkManifest; }
+        /** @brief `scanAndMountPacks` 가 훑은 팩 폴더입니다(아직 훑지 않았으면 빈 글). */
+        const string& getPacksDirectory() const { return _packsDirectory; }
 
         /**
          * @brief 패치 목록의 서명을 마운트 전에 확인하게 합니다. `scanAndMountPacks` 보다 먼저, 기동 스레드에서 한 번 부릅니다.
@@ -215,6 +223,8 @@ namespace sw
         atomic<ContentSource>                _contentSource;  ///< 기동 때 정하고 로드 스레드가 잠금 없이 읽는다 — 원자값
         atomic<uint32>                       _patchPackCount; ///< 도메인 없는 팩 수(`hasPatchFile` 이 모든 리소스 읽기에서 잠금 없이 0 을 본다). 목록을 바꿀 때 잠금 안에서 다시 센다
         PackPatchTrust                       _patchTrust;     ///< 기동 스레드가 마운트 전에 한 번 정한다(`setPatchTrust`). `_pProvider` 가 null 이면 서명을 보지 않는다
+        PackChunkManifest                    _chunkManifest;  ///< 기동 스레드가 `scanAndMountPacks` 에서 한 번 읽는다 — 그 뒤로는 읽기만 한다
+        string                               _packsDirectory; ///< 같다
 
         SW_SERVICE_SLOT( PackManager, Optional );
     };

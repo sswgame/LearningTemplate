@@ -101,9 +101,10 @@ namespace sw
          * @brief 도메인 팩의 항목 @p listEntry 를 청크 규칙과 크기 한도(@p split)로 팩 몫들로 나눕니다. 결과는 기본 청크가 먼저이고 기본 청크 0 번은 늘 있다(빈 도메인도 첫 팩이 있다).
          * @details 청크는 규칙 순서대로 처음 맞는 패턴의 것, 아무것도 맞지 않으면 기본이다. 청크 안에서 경로 해시 순으로 놓고 합이 한도를 넘기 전에 다음 번호로 넘긴다 —
          *          같은 입력이면 순서와 상관없이 같은 몫이고, 항목 하나가 한도보다 크면 그 항목만 든 몫이 된다.
-         * @return 청크 이름이 비었거나 파일 이름에 쓸 수 없는 글자(글자 · 숫자 · `_` · `-` 밖)이거나 겹치면 오류입니다.
+         *          @p mapAssignedChunk(도메인 기준 경로 → 씬 청크 — `PackSceneChunkPlan`)는 패턴 청크에 맞지 않는 항목의 청크다. 씬 청크는 패턴 청크 뒤에 이름순으로 온다.
+         * @return 청크 이름이 비었거나 파일 이름에 쓸 수 없는 글자(글자 · 숫자 · `_` · `-` 밖)이거나 겹치면(씬 청크와 패턴 청크 포함) 오류입니다.
          */
-        [[nodiscard]] static expected<vector<PackPart>> splitIntoParts( const vector<PackSplitEntry>& listEntry, const PackSplitConfig& split );
+        [[nodiscard]] static expected<vector<PackPart>> splitIntoParts( const vector<PackSplitEntry>& listEntry, const PackSplitConfig& split, const unordered_map<string, string>& mapAssignedChunk );
         /**
          * @brief 원본 @p sizeBytes 바이트 항목(@p relativePath)이 팩에서 차지할 크기의 어림입니다 — 페이로드를 섹터(`kPackSectorAlignment`)로 올리고 FAT 줄 · 블록 표 줄(가장 작은 블록 기준) ·
          *        경로를 더한다. 압축은 세지 않는다(줄기만 하므로 위로 어림이다). 데이터 상속을 펼친 글은 커질 수 있어 쓰기 끝의 크기 확인(`cookDomainPack`)이 마지막 문이다.

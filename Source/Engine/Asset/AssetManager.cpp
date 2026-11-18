@@ -97,6 +97,7 @@ namespace sw
     AssetManager::AssetManager()
         : _listOwnedAssetCache{}
         , _pPackManager{ make_unique<PackManager>() }
+        , _pPackChunks{}
         , _listBuiltInAssetCache{}
         , _registeredAssetCache{ "AssetManager.AssetCache", RegistrationList<AssetCacheBase>::ReleaseFunction::create<&AssetManager::releaseAssetCache>( this ) }
         , _listReloadEntry{}
@@ -163,12 +164,36 @@ namespace sw
         }
 
         // 팩 폴더는 한 곳이다(`ProcessRoots::_packs` - 실행 파일 기준). 예전에는 실행 파일 · 작업 폴더 · 프로젝트 · "Bin/Packs" 를 차례로 찾았다(띄운 자리에 따라 다른 팩).
-        return _pPackManager->scanAndMountPacks( ProcessRoots::get()._packs.str() );
+        if ( _pPackManager->scanAndMountPacks( ProcessRoots::get()._packs.str() ) == false )
+            return false;
+        _pPackChunks = make_unique<PackChunkLoader>( *_pPackManager, IPackChunkSource::createPlatformSource() );
+        return true;
+    }
+
+    PackChunkState AssetManager::prepareSceneChunks( string_view sceneID )
+    {
+        if ( _pPackChunks == nullptr )
+            return PackChunkState::Ready; // 팩을 올리지 않은 실행(소스 · 쿠킹) — 미룬 청크가 없다
+        vector<string>       listToMount;
+        const PackChunkState state = _pPackChunks->prepareScene( sceneID, listToMount );
+        if ( listToMount.empty() == false )
+        {
+            // 마운트는 팩 색인을 읽는다 — 게임 스레드가 파일을 읽지 않게 로드 태스크로 낸다. 스트리머는 매니저와 함께 살고 종료가 로드 태스크를 기다린 뒤 내린다.
+            PackChunkLoader* const pChunks = _pPackChunks.get();
+            launchLoadJob( "PackChunkMount", SW_DELEGATE_LAMBDA( TaskDelegate, [pChunks, listToMount]()
+            { pChunks->mountPacks( listToMount ); } ) );
+        }
+        return state;
     }
 
     void AssetManager::shutdown()
     {
         _configReloadedSubscription.reset();
+        if ( _pPackChunks != nullptr )
+        {
+            waitLoadTasks( "AssetManager::shutdown (chunk mounts)" ); // 마운트 태스크가 스트리머를 쥐고 있다
+            _pPackChunks.reset();
+        }
         if ( _pPackManager != nullptr )
             _pPackManager->unmountAll();
 

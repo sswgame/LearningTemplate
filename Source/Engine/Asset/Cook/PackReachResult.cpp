@@ -445,7 +445,7 @@ namespace sw
                     uint32 rootCount = 0;
                     for ( const string& assetID : _files._setExisting )
                     {
-                        if ( matchesAlwaysCook( assetID ) == false )
+                        if ( matchesAlwaysCook( assetID ) == false || _files._setDeferredRoot.contains( assetID ) )
                             continue;
                         ++rootCount;
                         if ( _files._setPackable.contains( assetID ) )
@@ -620,6 +620,21 @@ namespace sw
         outResult._rootCount += traversal.addAlwaysCookRoots();
         outResult._rootCount += traversal.addRequiredDataRoots();
         outResult._rootCount += traversal.addRedirectTableRoots();
+        traversal.run();
+        return traversal._bFailed == false;
+    }
+
+    bool PackReachResult::collectFromRoots( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source,
+                                            const vector<string>& listRoot, PackReachResult& outResult )
+    {
+        outResult._setIncluded.clear();
+        outResult._setReferencedExcluded.clear();
+        outResult._rootCount = static_cast<uint32>( listRoot.size() );
+        PackReachabilityInternal::ReachTraversal traversal( params, rules, files, source, outResult._setIncluded, outResult._setReferencedExcluded );
+        for ( const string& root : listRoot )
+        {
+            traversal.resolve( root, "PackSceneChunk", root, PackReachabilityInternal::CatalogReach::Whole );
+        }
         traversal.run();
         return traversal._bFailed == false;
     }

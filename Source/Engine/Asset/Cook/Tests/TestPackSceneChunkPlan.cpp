@@ -1,0 +1,207 @@
+// PackSceneChunkPlanTest — 씬 단위 청크 나누기(언리얼 청크 pak · 유니티 Addressables 자리): 결정성, 씬이 쓰는 에셋이 기동 필수나 그 씬의 청크에 반드시 있는지(빠지면 쿠킹 오류),
+// 나누기가 씬 청크를 따르는지, 청크 목록(`packchunks.xml`) 읽고 쓰기.
+#include "pch.h"
+
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
+#include "Core/Testing/TestFramework.h"
+
+#include "Engine/Asset/Cook/PackCooker.h"
+#include "Engine/Asset/Cook/PackSceneChunkPlan.h"
+#include "Engine/Content/Pack/PackChunkManifest.h"
+#include "Engine/Content/Pack/PackConfig.h"
+#include "Engine/Content/Pack/PackWriter.h"
+
+using namespace sw;
+
+namespace
+{
+    struct PackSceneChunkPlanTestUtil
+    {
+        static constexpr const utf8* kSceneA = "game/empty/maps/alpha.scene.xml";
+        static constexpr const utf8* kSceneB = "game/empty/maps/beta.scene.xml";
+
+        /** @brief 두 씬 — 각자만 쓰는 에셋, 둘 다 쓰는 에셋, 기동 필수(엔진 셰이더)를 함께 쓴다. */
+        static vector<PackSceneReach> makeScenes()
+        {
+            vector<PackSceneReach> listScene( 2 );
+            listScene[0]._sceneID    = kSceneA;
+            listScene[0]._setReached = { kSceneA, "game/empty/textures/alpha.dds", "common/meshes/rock.mesh", "engine/shaders/pbr.hlsl" };
+            listScene[1]._sceneID    = kSceneB;
+            listScene[1]._setReached = { kSceneB, "game/empty/textures/beta.dds", "common/meshes/rock.mesh", "engine/shaders/pbr.hlsl" };
+            return listScene;
+        }
+
+        static unordered_set<string> makeStartup() { return { "engine/shaders/pbr.hlsl", "game/empty/data/gamesettings.xml" }; }
+
+        /** @brief 계획에서 에셋의 청크입니다(계획 밖이면 `-`). */
+        static string findChunk( const PackSceneChunkPlan& plan, const string& assetID )
+        {
+            const auto itChunk = plan._mapAssetChunk.find( assetID );
+            return itChunk != plan._mapAssetChunk.end() ? itChunk->second : string( "-" );
+        }
+
+        /** @brief 두 계획이 같은 에셋을 같은 청크에 두면 true 입니다. */
+        static bool isSamePlan( const PackSceneChunkPlan& left, const PackSceneChunkPlan& right )
+        {
+            if ( left._mapAssetChunk.size() != right._mapAssetChunk.size() )
+                return false;
+            for ( const auto& [assetID, chunk] : left._mapAssetChunk )
+            {
+                if ( findChunk( right, assetID ) != chunk )
+                    return false;
+            }
+            return true;
+        }
+    };
+} // namespace
+
+/**
+ * @brief [PackSceneChunkPlanTest] 한 씬만 쓰는 것은 그 씬의 청크, 둘 이상이 쓰는 것은 공유 청크, 기동 필수는 계획 밖이다 — 씬 순서가 달라도 같은 계획이다
+ */
+SW_TEST_CASE( PackSceneChunkPlanTest, PlanIsDeterministicAndSeparatesSharedAssets )
+{
+    using Util                                   = PackSceneChunkPlanTestUtil;
+    const vector<PackSceneReach>       listScene = Util::makeScenes();
+    const expected<PackSceneChunkPlan> plan      = PackSceneChunkPlan::plan( Util::makeStartup(), listScene );
+    SW_REQUIRE_TRUE( plan.has_value() );
+    const vector<PackSceneReach>       listReversed( listScene.rbegin(), listScene.rend() );
+    const expected<PackSceneChunkPlan> reversedPlan = PackSceneChunkPlan::plan( Util::makeStartup(), listReversed );
+    SW_REQUIRE_TRUE( reversedPlan.has_value() );
+    SW_EXPECT_TRUE( Util::isSamePlan( *plan, *reversedPlan ) );
+
+    const string chunkA = PackSceneChunkPlan::makeSceneChunkName( Util::kSceneA );
+    SW_EXPECT_EQUAL( string( "scene_empty_alpha" ), chunkA );
+    SW_EXPECT_EQUAL( chunkA, Util::findChunk( *plan, "game/empty/textures/alpha.dds" ) );
+    SW_EXPECT_EQUAL( chunkA, Util::findChunk( *plan, Util::kSceneA ) );
+    SW_EXPECT_EQUAL( string( PackSceneChunkPlan::kSharedChunk ), Util::findChunk( *plan, "common/meshes/rock.mesh" ) );
+    SW_EXPECT_EQUAL( string( "-" ), Util::findChunk( *plan, "engine/shaders/pbr.hlsl" ) ); // 기동 필수
+
+    // 파일 이름에 쓸 수 없는 글자를 `_` 로 바꾸면 같은 이름이 되는 두 씬 — 섞이지 않게 쿠킹을 멈춘다.
+    vector<PackSceneReach> listClash( 2 );
+    listClash[0]._sceneID = "game/empty/maps/a-b.scene.xml";
+    listClash[1]._sceneID = "game/empty/maps/a_b.scene.xml";
+    SW_EXPECT_FALSE( PackSceneChunkPlan::plan( Util::makeStartup(), listClash ).has_value() );
+}
+
+/**
+ * @brief [PackSceneChunkPlanTest] 씬이 쓰는 에셋이 기동 필수도 그 씬의 청크도 아닌 곳에 있거나 팩에 없으면 빠진 것으로 알린다 — 계획대로 놓였으면 빠진 것이 없다
+ */
+SW_TEST_CASE( PackSceneChunkPlanTest, UncoveredAssetsAreReported )
+{
+    using Util                                   = PackSceneChunkPlanTestUtil;
+    const vector<PackSceneReach>       listScene = Util::makeScenes();
+    const expected<PackSceneChunkPlan> plan      = PackSceneChunkPlan::plan( Util::makeStartup(), listScene );
+    SW_REQUIRE_TRUE( plan.has_value() );
+
+    // 놓인 청크 — 계획의 것, 기동 필수는 기본 청크(빈 글).
+    unordered_map<string, string> mapPlaced = plan->_mapAssetChunk;
+    for ( const string& assetID : Util::makeStartup() )
+    {
+        mapPlaced.emplace( assetID, string{} );
+    }
+    const unordered_set<string>  setStartup{ string{} };
+    const vector<PackSceneEntry> listSceneChunks = PackSceneChunkPlan::makeSceneChunks( listScene, mapPlaced, setStartup );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listSceneChunks.size() );
+    SW_EXPECT_EQUAL( string( Util::kSceneA ), listSceneChunks[0]._sceneID );
+    SW_EXPECT_TRUE( listSceneChunks[0]._listChunk == ( vector<string>{ "scene_empty_alpha", "shared" } ) );
+    SW_EXPECT_TRUE( PackSceneChunkPlan::findUncovered( listScene, mapPlaced, setStartup, listSceneChunks ).empty() );
+
+    // 알파만 쓰는 텍스처가 베타의 청크에 놓였다(잘못 놓음) · 공유 메시가 팩에서 빠졌다.
+    unordered_map<string, string> mapWrong    = mapPlaced;
+    mapWrong["game/empty/textures/alpha.dds"] = "scene_empty_beta";
+    mapWrong.erase( "common/meshes/rock.mesh" );
+    const vector<PackChunkIssue> listIssue = PackSceneChunkPlan::findUncovered( listScene, mapWrong, setStartup, listSceneChunks );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listIssue.size() ); // 알파의 텍스처, 두 씬의 메시
+    SW_EXPECT_EQUAL( string( Util::kSceneA ), listIssue[0]._sceneID );
+    SW_EXPECT_EQUAL( string( "common/meshes/rock.mesh" ), listIssue[0]._assetID );
+    SW_EXPECT_TRUE( listIssue[0]._chunk.empty() );
+    SW_EXPECT_EQUAL( string( "game/empty/textures/alpha.dds" ), listIssue[1]._assetID );
+    SW_EXPECT_EQUAL( string( "scene_empty_beta" ), listIssue[1]._chunk );
+}
+
+/**
+ * @brief [PackSceneChunkPlanTest] 나누기는 씬 청크를 따르고(패턴 청크가 먼저 이긴다) 입력 순서와 상관없이 같은 몫이다. 씬 청크가 패턴 청크 이름과 같으면 오류다
+ */
+SW_TEST_CASE( PackSceneChunkPlanTest, SplitFollowsSceneChunksDeterministically )
+{
+    PackSplitConfig split;
+    split._maxPackBytes = 1024 * 1024;
+    PackChunkRule& rule = split._listChunkRule.emplace_back();
+    rule._name          = "music";
+    rule._listPattern.push_back( "audio/music/**" );
+
+    const vector<PackSplitEntry> listEntry{
+        { "maps/alpha.scene.xml", 100},
+        { "maps/alpha.scene.bin", 100},
+        {   "textures/alpha.dds", 100},
+        {    "textures/rock.dds", 100},
+        {"audio/music/alpha.ogg", 100},
+        {"data/gamesettings.xml", 100}
+    };
+    const unordered_map<string, string> mapAssigned{
+        { "maps/alpha.scene.xml", "scene_empty_alpha"},
+        { "maps/alpha.scene.bin", "scene_empty_alpha"},
+        {   "textures/alpha.dds", "scene_empty_alpha"},
+        {    "textures/rock.dds",            "shared"},
+        {"audio/music/alpha.ogg", "scene_empty_alpha"}
+    };
+    const expected<vector<PackPart>> parts = PackCooker::splitIntoParts( listEntry, split, mapAssigned );
+    SW_REQUIRE_TRUE( parts.has_value() );
+    const vector<PackSplitEntry>     listReversed( listEntry.rbegin(), listEntry.rend() );
+    const expected<vector<PackPart>> reversedParts = PackCooker::splitIntoParts( listReversed, split, mapAssigned );
+    SW_REQUIRE_TRUE( reversedParts.has_value() );
+    SW_REQUIRE_EQUAL( size_t{ 4 }, parts->size() ); // 기본 · music · scene_empty_alpha · shared
+    SW_REQUIRE_EQUAL( parts->size(), reversedParts->size() );
+    for ( size_t index = 0; index < parts->size(); ++index )
+    {
+        SW_EXPECT_TRUE( ( *parts )[index]._chunk == ( *reversedParts )[index]._chunk );
+        SW_EXPECT_TRUE( ( *parts )[index]._listPathHash == ( *reversedParts )[index]._listPathHash );
+    }
+    SW_EXPECT_TRUE( ( *parts )[0].contains( PackStreamWriter::makePathHash( "data/gamesettings.xml" ) ) );
+    SW_EXPECT_TRUE( ( *parts )[1]._chunk == "music" && ( *parts )[1].contains( PackStreamWriter::makePathHash( "audio/music/alpha.ogg" ) ) ); // 패턴이 이긴다
+    SW_EXPECT_TRUE( ( *parts )[2]._chunk == "scene_empty_alpha" && ( *parts )[2]._listPathHash.size() == 3 );
+    SW_EXPECT_TRUE( ( *parts )[3]._chunk == "shared" && ( *parts )[3].contains( PackStreamWriter::makePathHash( "textures/rock.dds" ) ) );
+
+    const unordered_map<string, string> mapClash{
+        { "textures/alpha.dds", "music" }
+    };
+    SW_EXPECT_FALSE( PackCooker::splitIntoParts( listEntry, split, mapClash ).has_value() );
+}
+
+/**
+ * @brief [PackSceneChunkPlanTest] 청크 목록은 쓴 그대로 읽히고, 목록에 든 팩만 미룬 팩이며, 씬이 마운트할 팩을 청크 순서로 준다. 폴더를 벗어나는 팩 이름 · 없는 청크는 읽기 오류다
+ */
+SW_TEST_CASE( PackSceneChunkPlanTest, ManifestRoundTripsAndNamesScenePacks )
+{
+    PackChunkManifest manifest;
+    manifest._listChunk.push_back( PackChunkFiles{
+        "scene_empty_alpha",
+        { "common.scene_empty_alpha.0.pack", "game_empty.scene_empty_alpha.0.pack" }
+    } );
+    manifest._listChunk.push_back( PackChunkFiles{ "shared", { "common.shared.0.pack" } } );
+    manifest._listScene.push_back( PackSceneEntry{
+        "game/empty/maps/alpha.scene.xml",
+        { "scene_empty_alpha", "shared" }
+    } );
+
+    const string      text = PackChunkManifest::makeText( manifest );
+    PackChunkManifest read;
+    SW_REQUIRE_TRUE( PackChunkManifest::parse( text, "test", read ) );
+    SW_EXPECT_EQUAL( text, PackChunkManifest::makeText( read ) );
+    SW_EXPECT_TRUE( read.isDeferredPack( "COMMON.SHARED.0.PACK" ) );
+    SW_EXPECT_FALSE( read.isDeferredPack( "common.pack" ) );
+
+    vector<string> listPack;
+    read.appendScenePackFiles( "Game/Empty/Maps/Alpha.scene.xml", listPack );
+    SW_EXPECT_TRUE( listPack == ( vector<string>{ "common.scene_empty_alpha.0.pack", "game_empty.scene_empty_alpha.0.pack", "common.shared.0.pack" } ) );
+    listPack.clear();
+    read.appendScenePackFiles( "game/empty/maps/editortest.scene.xml", listPack ); // 기동 필수 씬 — 목록에 없다
+    SW_EXPECT_TRUE( listPack.empty() );
+
+    SW_EXPECT_LOG( "PackChunkManifest.PackName" );
+    SW_EXPECT_LOG( "PackChunkManifest.UnknownChunk" );
+    PackChunkManifest bad;
+    SW_EXPECT_FALSE( PackChunkManifest::parse( "<PackChunks><Chunk name=\"x\"><Pack>../escape.pack</Pack></Chunk></PackChunks>", "test", bad ) );
+    SW_EXPECT_FALSE( PackChunkManifest::parse( "<PackChunks><Scene id=\"a.scene.xml\"><Chunk>missing</Chunk></Scene></PackChunks>", "test", bad ) );
+}

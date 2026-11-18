@@ -12,7 +12,8 @@
   },
   "_split": {
     "_maxPackBytes": 4294967295,
-    "_listChunkRule": []
+    "_listChunkRule": [],
+    "_listScenePattern": [ "game/*/maps/*.scene.xml" ]
   },
   "_bExcludeRawShaderSource": true,
   "_listGlobalExcludeDirectory": [
