@@ -364,6 +364,18 @@ namespace sw
             if ( set._completeVisual.empty() == false && _visuals.findVisual( set._completeVisual ) == nullptr )
                 _report.addErrorWithID( "Appearance.VisualUnknown", "set '%#' complete visual '%#' is unknown", set._id.c_str(), set._completeVisual.c_str() );
         }
+        // 몸마다 다른 외형(`<ForBody>`)은 있는 외형을 가리키고 한 단계다 — 대응 외형이 다시 대응을 두면 어느 몸에서 멈출지 모른다.
+        for ( const ItemVisualDef& visual : _visuals.getVisuals() )
+        {
+            for ( const ItemVisualBodyVariant& variant : visual._listBodyVariant )
+            {
+                const ItemVisualDef* pTarget = _visuals.findVisual( variant._visual );
+                if ( pTarget == nullptr )
+                    _report.addErrorWithID( "Appearance.VisualUnknown", "visual '%#' <ForBody> names unknown visual '%#'", visual._id.c_str(), variant._visual.c_str() );
+                else if ( pTarget->_listBodyVariant.empty() == false )
+                    _report.addErrorWithID( "Appearance.ForBodyChained", "visual '%#' <ForBody> names '%#' which has its own <ForBody> - one step only", visual._id.c_str(), variant._visual.c_str() );
+            }
+        }
     }
 
     void AppearanceDatabase::validateVisuals( const vector<hashed_string>* pListKnownBodyRegion )

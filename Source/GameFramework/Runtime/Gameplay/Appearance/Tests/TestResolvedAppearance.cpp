@@ -43,7 +43,9 @@ namespace
           <Part name="Ink" kind="BodyModification"><Morph name="Flat" weight="0.25"/><Material name="_ink" value="1 0 0 1"/><HideRegion name="Chest"/><HideRegion name="Arm"/></Part>
         </ItemVisual>
         <ItemVisual id="shirt"><Part name="Cover" kind="BodyModification"><HideRegion name="Chest"/></Part></ItemVisual>
-        <ItemVisual id="cape_knight"><Part name="Crest" kind="SocketPrefab" prefab="crest.prefab" socket="Back"/></ItemVisual>
+        <ItemVisual id="cape_knight"><Part name="Crest" kind="SocketPrefab" prefab="crest.prefab" socket="Back"/><ForBody bodies="body_other" visual="cape_other"/></ItemVisual>
+        <ItemVisual id="cape_other"><Part name="OtherCrest" kind="SocketPrefab" prefab="crest_other.prefab" socket="Back"/></ItemVisual>
+        <ItemVisual id="body_other"><Part name="Body" kind="Skinned" mesh="other.mesh" material="body.material" sockets="body.sockets"/></ItemVisual>
         <ItemVisual id="sectioned_a"><Part name="Suit" kind="Skinned" mesh="suit.mesh"><Section name="s0" material="red.material"/></Part></ItemVisual>
         <ItemVisual id="sectioned_b"><Part name="Suit" kind="Skinned" mesh="suit.mesh"><Section name="s0" material="blue.material"/></Part></ItemVisual>
     </ItemVisualCatalog>)";
@@ -171,6 +173,13 @@ SW_TEST_CASE_F( AppearanceResolverTest, SetCompletionReplacesItsSlots )
     _spec.findSlot( hashed_string( "Head" ) )->_bSuppressed = SW_TRUE;
     resolve();
     SW_EXPECT_TRUE( findPart( "OffHand", "Board" ) != nullptr );
+
+    // 골격이 다른 몸은 완성 표현도 그 몸의 외형(`<ForBody>`)을 입는다 — 몸 종류(Male · Female)는 골격을 가르지 않는다
+    _spec.findSlot( hashed_string( "Head" ) )->_bSuppressed = SW_FALSE;
+    _spec._bodyVisual                                       = hashed_string( "body_other" );
+    resolve();
+    SW_EXPECT_TRUE( findPart( "OffHand", "OtherCrest" ) != nullptr );
+    SW_EXPECT_TRUE( findPart( "OffHand", "Crest" ) == nullptr );
 }
 
 // 조건은 태그(칸 · 아무 곳) · 캐릭터 태그 · 점유 · 몸 종류 · 체형이고 not 으로 뒤집는다. 조건이 모두 맞아야 동작한다.

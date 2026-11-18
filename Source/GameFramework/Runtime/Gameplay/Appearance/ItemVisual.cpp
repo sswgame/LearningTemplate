@@ -395,6 +395,19 @@ namespace sw
                     inoutVisual._listBodyChannel.push_back( layer );
             }
 
+            static void readBodyVariant( const XMLNode& node, ItemVisualDef& inoutVisual, AppearanceLoadReport& report, string_view sourceName )
+            {
+                static constexpr const utf8* kArrAttribute[] = { "bodies", "visual" };
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrAttribute, 2, report, sourceName );
+                ItemVisualBodyVariant variant;
+                AppearanceXMLUtil::readNameList( node, "bodies", variant._listBody );
+                variant._visual = AppearanceXMLUtil::readRequiredName( node, "visual", report, sourceName );
+                if ( variant._listBody.empty() )
+                    report.addErrorWithID( "Appearance.ForBodyShape", "%#: visual '%#' <ForBody> needs bodies", sourceName, inoutVisual._id.c_str() );
+                else if ( variant._visual.empty() == false )
+                    inoutVisual._listBodyVariant.push_back( variant );
+            }
+
             static void readVisual( const XMLNode& node, ItemVisualDef& outVisual, AppearanceLoadReport& report, string_view sourceName )
             {
                 (void)AppearanceXMLUtil::readProperties( node, outVisual, report, sourceName, { "id", "tags" } );
@@ -415,6 +428,8 @@ namespace sw
                         readBodyChannel( child, outVisual, report, sourceName );
                     else if ( StringUtil::equals( pName, "DamageStage" ) )
                         readDamageStage( child, outVisual, report, sourceName );
+                    else if ( StringUtil::equals( pName, "ForBody" ) )
+                        readBodyVariant( child, outVisual, report, sourceName );
                     else
                         AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
                 }
@@ -540,5 +555,18 @@ namespace sw
     const ItemVisualDef* ItemVisualCatalog::findVisual( const hashed_string& id ) const
     {
         return VectorUtil::findBy<&ItemVisualDef::_id>( _listVisual, id );
+    }
+
+    const ItemVisualDef* ItemVisualCatalog::findVisualForBody( const hashed_string& id, const hashed_string& bodyVisual ) const
+    {
+        const ItemVisualDef* pVisual = findVisual( id );
+        if ( pVisual == nullptr || bodyVisual.empty() )
+            return pVisual;
+        for ( const ItemVisualBodyVariant& variant : pVisual->_listBodyVariant )
+        {
+            if ( VectorUtil::contains( variant._listBody, bodyVisual ) )
+                return findVisual( variant._visual ); // 읽기 마무리가 있는 id 인지 봤다
+        }
+        return pVisual;
     }
 } // namespace sw

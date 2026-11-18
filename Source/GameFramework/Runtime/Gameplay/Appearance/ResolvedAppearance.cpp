@@ -854,7 +854,7 @@ namespace sw
                     out._listSlotItem.push_back( ResolvedSlotItem{ request._slot, request._itemID } );
                     const ItemDef*       pItem    = pItemCatalog != nullptr ? pItemCatalog->find( request._itemID ) : nullptr;
                     const hashed_string  visualID = request._visibleVisual.empty() == false ? request._visibleVisual : ( pItem != nullptr ? pItem->_visualID : hashed_string{} );
-                    const ItemVisualDef* pVisual  = database.getVisuals().findVisual( visualID );
+                    const ItemVisualDef* pVisual  = database.getVisuals().findVisualForBody( visualID, spec._bodyVisual ); // 골격이 다른 몸은 그 몸의 외형(`<ForBody>`)
                     if ( pVisual == nullptr )
                     {
                         addTrace( out, AppearanceTraceStep::Output, request._slot, "item '%#' has no visual", request._itemID.c_str() );
@@ -911,7 +911,7 @@ namespace sw
             {
                 for ( const EquipmentSetDef& set : database.getSets().getSets() )
                 {
-                    const ItemVisualDef* pCompleteVisual = set._completeVisual.empty() ? nullptr : database.getVisuals().findVisual( set._completeVisual );
+                    const ItemVisualDef* pCompleteVisual = set._completeVisual.empty() ? nullptr : database.getVisuals().findVisualForBody( set._completeVisual, spec._bodyVisual );
                     if ( pCompleteVisual == nullptr )
                         continue;
                     const EquipmentSetProgress progress = database.getSets().computeProgressWith( set, spec._bodyType, [&spec]( const hashed_string& slot )

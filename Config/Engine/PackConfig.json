@@ -101,6 +101,7 @@
       { "_field": "visual", "_kind": "visual" },
       { "_field": "visible", "_kind": "visual" },
       { "_field": "body", "_kind": "visual" },
+      { "_field": "bodies", "_kind": "visual" },
       { "_field": "set", "_kind": "set" },
       { "_field": "schema", "_kind": "schema" },
       { "_field": "customization", "_kind": "schema" },

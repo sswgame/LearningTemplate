@@ -40,8 +40,8 @@
 	<Screenshot file="customizebody_wide.ppm"/>
 	<ExpectImage file="customizebody_wide.ppm" golden="customizebody_wide"/>
 	<ExpectImagesDiffer first="customizebody_base.ppm" second="customizebody_wide.ppm" region="0.6,0.25,0.82,0.75" minDiffering="0.005"/>
-	<!-- 다른 캐릭터는 그대로다 -->
-	<ExpectImagesDiffer first="customizebody_base.ppm" second="customizebody_wide.ppm" region="0.18,0.25,0.6,0.75" minDiffering="0" maxDiffering="0.002"/>
+	<!-- 다른 캐릭터는 그대로다 — 바닥 띠(0.66 아래)와 Brute 옆(0.5 오른쪽)은 뺀다: 넓어진 Brute 의 그림자가 왼쪽 바닥까지, 벌어진 팔 · 도끼가 0.53 까지 온다 -->
+	<ExpectImagesDiffer first="customizebody_base.ppm" second="customizebody_wide.ppm" region="0.18,0.25,0.5,0.66" minDiffering="0" maxDiffering="0.002"/>
 
 	<!-- 좁힘 극값 -->
 	<DevCommand line="appearance.value Brute ShoulderWidth -1"/>
