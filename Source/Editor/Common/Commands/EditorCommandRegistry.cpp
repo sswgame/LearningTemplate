@@ -76,6 +76,7 @@ namespace sw::editor
     {
         _listCommand.clear();
         _listMenu.clear();
+        ++_commandRevision;
     }
 
     void EditorCommandRegistry::registerCommand( EditorCommandDesc desc )
@@ -87,6 +88,7 @@ namespace sw::editor
         }
 
         _listCommand.push_back( std::move( desc ) );
+        ++_commandRevision;
         rebuildMenus();
     }
 
@@ -162,6 +164,23 @@ namespace sw::editor
         if ( desc._enabledPredicate.isBound() == false )
             return true;
         return desc._enabledPredicate( target );
+    }
+
+    void EditorCommandRegistry::publishEnabledState()
+    {
+        _listEnabledSnapshot.resize( _listCommand.size() );
+        for ( size_t index = 0; index < _listCommand.size(); ++index )
+        {
+            _listEnabledSnapshot[index] = isEnabled( _listCommand[index], EditorCommandTarget::none() ) ? uint8{ 1 } : uint8{ 0 };
+        }
+        _snapshotRevision = _commandRevision;
+    }
+
+    bool EditorCommandRegistry::isEnabledInSnapshot( uint32 commandIndex ) const
+    {
+        if ( _snapshotRevision != _commandRevision || commandIndex >= _listEnabledSnapshot.size() )
+            return false;
+        return _listEnabledSnapshot[commandIndex] != 0;
     }
 
     bool EditorCommandRegistry::execute( string_view commandID, const EditorCommandTarget& target )
@@ -406,8 +425,12 @@ namespace sw::editor
         {
             /** @brief 게임 단계 — UI 가 넘긴 씬 편집 명령을 실행합니다(거래 · 되돌리기 기록은 게임 스레드가 연다). */
             static void run( EditorContext& context, EditorPlaySessionWriteKey /*key*/ ) { context.getSubsystem<EditorCommandRegistry>().runRequestedSceneCommands(); }
+
+            /** @brief 게임 단계 — 다음 UI 프레임의 메뉴 · 명령 단추가 읽을 명령 켜짐 값 묶음을 냅니다(판정이 씬 · 세션을 읽는다). */
+            static void publishEnabledState( EditorContext& context, EditorPlaySessionWriteKey /*key*/ ) { context.getSubsystem<EditorCommandRegistry>().publishEnabledState(); }
         };
     } // namespace
 
     SW_EDITOR_GAME_STEP( SceneCommands, "sceneCommands", EditorGameStepOrder::kSceneCommands, &EditorSceneCommandStepInternal::run );
+    SW_EDITOR_GAME_STEP( CommandState, "commandState", EditorGameStepOrder::kCommandState, &EditorSceneCommandStepInternal::publishEnabledState );
 } // namespace sw::editor

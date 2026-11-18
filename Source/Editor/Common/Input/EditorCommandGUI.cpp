@@ -26,14 +26,15 @@ namespace sw::editor
         struct EditorCommandGUIInternal
         {
             /** @brief 명령 단추 하나(도구줄 아이콘 또는 아이콘 + 이름표). 정의는 `EditorCommandGUI::drawToolbarButton` 아래. */
-            static bool drawCommandButton( string_view commandID, const EditorCommandTarget& target, bool bIconOnly );
+            static bool drawCommandButton( string_view commandID, bool bIconOnly );
 
             // ------------------------------------------------------------------------------
             // 4) ImGui 연결 — 메뉴 항목. 단축키 글자는 에디터 입력 맵에서 만든다
             // ------------------------------------------------------------------------------
-            /** @brief 커맨드 하나를 메뉴 항목으로 그립니다. 눌렸으면 커맨드를 실행합니다. */
-            static void drawCommandItem( const EditorInputActions& inputActions, const EditorCommandDesc& desc )
+            /** @brief 커맨드 @p commandIndex 를 메뉴 항목으로 그립니다. 켜짐은 게임 단계가 낸 값 묶음에서 읽는다(View 는 씬 · 세션을 읽지 않는다). 눌렸으면 커맨드를 요청합니다. */
+            static void drawCommandItem( const EditorCommandRegistry& registry, const EditorInputActions& inputActions, uint32 commandIndex )
             {
+                const EditorCommandDesc&                desc = registry.getCommands()[commandIndex];
                 fixed_string<constant::buffer::kMax128> menuLabel;
                 EditorCommandRegistry::formatMenuLabel( desc, menuLabel );
 
@@ -41,7 +42,7 @@ namespace sw::editor
                 inputActions.formatShortcutLabel( desc._inputAction, shortcutLabel );
 
                 const utf8* pShortcut = shortcutLabel.empty() ? nullptr : shortcutLabel.c_str();
-                const bool  bEnabled  = EditorCommandRegistry::isEnabled( desc, EditorCommandTarget::none() );
+                const bool  bEnabled  = registry.isEnabledInSnapshot( commandIndex );
 
                 if ( ImGui::MenuItem( menuLabel.c_str(), pShortcut, false, bEnabled ) )
                     (void)EditorCommandRegistry::getInEditorContext().request( desc._id, EditorCommandTarget::none() ); // 꺼진 항목은 그려질 때 이미 회색이다 — 씬 편집은 게임 스레드가 실행한다
@@ -63,13 +64,12 @@ namespace sw::editor
             /** @brief 메뉴 하나의 항목을 구분선과 함께 그립니다. */
             static void drawMenu( const EditorCommandRegistry& registry, const EditorMenu& menu )
             {
-                const EditorInputActions&        inputActions = EditorInputActions::getInEditorContext();
-                const vector<EditorCommandDesc>& listCommand  = registry.getCommands();
+                const EditorInputActions& inputActions = EditorInputActions::getInEditorContext();
                 for ( const EditorMenuItem& item : menu._listItem )
                 {
                     if ( item._bSeparatorBefore )
                         ImGui::Separator();
-                    drawCommandItem( inputActions, listCommand[item._commandIndex] );
+                    drawCommandItem( registry, inputActions, item._commandIndex );
                 }
             }
         };
@@ -105,20 +105,20 @@ namespace sw::editor
             EditorCommandGUIInternal::drawMenu( registry, *pMenu );
     }
 
-    bool EditorCommandGUI::drawToolbarButton( string_view commandID, const EditorCommandTarget& target )
+    bool EditorCommandGUI::drawToolbarButton( string_view commandID )
     {
-        return EditorCommandGUIInternal::drawCommandButton( commandID, target, true );
+        return EditorCommandGUIInternal::drawCommandButton( commandID, true );
     }
 
-    bool EditorCommandGUI::drawCommandButton( string_view commandID, const EditorCommandTarget& target )
+    bool EditorCommandGUI::drawCommandButton( string_view commandID )
     {
-        return EditorCommandGUIInternal::drawCommandButton( commandID, target, false );
+        return EditorCommandGUIInternal::drawCommandButton( commandID, false );
     }
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    bool EditorCommandGUIInternal::drawCommandButton( string_view commandID, const EditorCommandTarget& target, bool bIconOnly )
+    bool EditorCommandGUIInternal::drawCommandButton( string_view commandID, bool bIconOnly )
     {
         const EditorCommandRegistry& registry = EditorCommandRegistry::getInEditorContext();
         const EditorCommandDesc*     pDesc    = registry.find( commandID );
@@ -126,7 +126,7 @@ namespace sw::editor
             SW_FATAL( "Toolbar button names command '%#' which is not registered", string( commandID ).c_str() );
         EditorInputActions& inputActions = EditorInputActions::getInEditorContext();
 
-        const bool bEnabled = EditorCommandRegistry::isEnabled( *pDesc, target );
+        const bool bEnabled = registry.isEnabledInSnapshot( static_cast<uint32>( pDesc - registry.getCommands().data() ) );
         ImGui::PushID( pDesc->_id.c_str() );
         ImGui::BeginDisabled( bEnabled == false );
         bool bPressed = false;
@@ -172,7 +172,7 @@ namespace sw::editor
         }
 
         if ( bPressed )
-            inputActions.queueCommand( pDesc->_id, target );
+            inputActions.queueCommand( pDesc->_id, EditorCommandTarget::none() );
         return bPressed;
     }
 } // namespace sw::editor

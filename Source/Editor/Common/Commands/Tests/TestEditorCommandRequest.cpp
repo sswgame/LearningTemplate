@@ -44,3 +44,43 @@ SW_TEST_CASE( EditorCommandRequestTest, SceneEditsWaitForGameStep )
 
     SW_EXPECT_FALSE( registry.request( "test.missing", EditorCommandTarget::none() ) );
 }
+
+/**
+ * @brief [EditorCommandRequestTest] 메뉴 · 단추(View)는 게임 단계가 낸 켜짐 값 묶음만 읽는다 — 내기 전 · 등록부가 바뀐 뒤에는 꺼져 있고, 조건이 바뀌어도 다시 낼 때까지 앞 값이다
+ */
+SW_TEST_CASE( EditorCommandRequestTest, MenusReadThePublishedEnabledState )
+{
+    EditorCommandRegistry registry;
+    bool                  bCanRun{ true };
+
+    EditorCommandDesc command;
+    command._id               = "test.toggled";
+    command._edit             = EditorCommandEdit::NoScene;
+    command._action           = []( const EditorCommandTarget& /*target*/ ) {};
+    command._enabledPredicate = [&bCanRun]( const EditorCommandTarget& /*target*/ )
+    { return bCanRun; };
+    registry.registerCommand( command );
+
+    SW_EXPECT_FALSE( registry.isEnabledInSnapshot( 0 ) ); // 아직 내지 않았다
+
+    registry.publishEnabledState();
+    SW_EXPECT_TRUE( registry.isEnabledInSnapshot( 0 ) );
+    SW_EXPECT_FALSE( registry.isEnabledInSnapshot( 1 ) ); // 없는 인덱스
+
+    bCanRun = false;
+    SW_EXPECT_TRUE( registry.isEnabledInSnapshot( 0 ) ); // UI 는 낸 값을 읽는다 — 판정을 다시 돌리지 않는다
+    registry.publishEnabledState();
+    SW_EXPECT_FALSE( registry.isEnabledInSnapshot( 0 ) );
+
+    bCanRun = true;
+    registry.publishEnabledState();
+    EditorCommandDesc other;
+    other._id     = "test.other";
+    other._edit   = EditorCommandEdit::NoScene;
+    other._action = []( const EditorCommandTarget& /*target*/ ) {};
+    registry.registerCommand( other );
+    SW_EXPECT_FALSE( registry.isEnabledInSnapshot( 0 ) ); // 등록부가 바뀌면 낡은 값을 읽지 않는다
+    registry.publishEnabledState();
+    SW_EXPECT_TRUE( registry.isEnabledInSnapshot( 0 ) );
+    SW_EXPECT_TRUE( registry.isEnabledInSnapshot( 1 ) );
+}
