@@ -119,7 +119,7 @@ namespace sw
         const utf8*           _pHandleTargetTypeName; ///< 타입 핸들 인자의 대상(아니면 nullptr)
     };
 
-    struct SW_API FunctionDesc
+    struct FunctionDesc
     {
         using InvokeFunction       = TaskValue ( * )( void* pObject, const TaskArgs& args );
         using MetadataFillFunction = void ( * )( FunctionMetadata& metadata );
@@ -139,10 +139,10 @@ namespace sw
          * @brief 생성자 줄의 생성 함수입니다(아니면 nullptr). 파서가 더한 기본 생성자는 그 타입이 기본 생성 가능하지 않으면 nullptr 이다(`ReflectDefaultCtorOf`).
          * @details 생성 TU 마다 있어야 하는 것은 placement new 한 줄뿐이다 — 예전 `$ctor` 람다는 반환값 만들기 · 인자 버리기까지 타입마다 펼쳤다.
          */
-        ConstructFunction _pConstruct = nullptr;
+        ConstructFunction _pConstruct;
 
         /** @brief 생성자 줄을 부릅니다 — `_pConstruct` 로 짓고 빈 값을 돌려준다. `FunctionInfo::_invoker` 가 이 줄에 묶인다(비인라인, 한 곳). */
-        TaskValue invokeConstructor( void* pObject, const TaskArgs& args ) const;
+        SW_API TaskValue invokeConstructor( void* pObject, const TaskArgs& args ) const;
     };
 
     struct EventDesc

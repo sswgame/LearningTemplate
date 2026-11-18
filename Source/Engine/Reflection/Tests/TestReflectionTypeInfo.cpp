@@ -465,8 +465,8 @@ SW_TEST_CASE( ReflectionTypeInfoTest, MethodTableBuildsMethodList )
         { "delta", "int32", "1", &sw::ReflectTypeOpsOf<int32>::kOps, nullptr },
     };
     static constexpr sw::FunctionDesc kMethods[] = {
-        { "addScore", "addScore", "int32", &sw::ReflectTypeOpsOf<int32>::kOps, kParams, 1u, &MethodTableTestActor::invokeAddScore, &MethodTableTestActor::fillAddScore },
-        { "$ctor", "$ctor", "void", nullptr, nullptr, 0u, nullptr, nullptr, sw::ReflectDefaultCtorOf<MethodTableTestActor>::kConstruct },
+        {"addScore", "addScore", "int32", &sw::ReflectTypeOpsOf<int32>::kOps, kParams, 1u, &MethodTableTestActor::invokeAddScore, &MethodTableTestActor::fillAddScore,                                                    nullptr},
+        {   "$ctor",    "$ctor",  "void",                            nullptr, nullptr, 0u,                               nullptr,                             nullptr, sw::ReflectDefaultCtorOf<MethodTableTestActor>::kConstruct},
     };
 
     sw::TypeInfo info;

@@ -828,19 +828,20 @@ namespace sw
             fillEmit.flagIf( bConstructor, "m._bConstructor", "SW_TRUE" );
             fillEmit.flagIf( method._bStatic != SW_FALSE, "m._bStatic", "SW_TRUE" );
             fillEmit.flagIf( method._bConst != SW_FALSE, "m._bConst", "SW_TRUE" );
-            const utf8* pFillEnd = bConstructor ? "," : "";
             if ( fillBuffer.view().empty() )
             {
-                emit.linef( "nullptr%#", pFillEnd );
+                emit.line( "nullptr," );
             }
             else
             {
                 emit.line( "[]( ::sw::FunctionMetadata& m ) {" );
                 emit.raw( fillBuffer.view() );
-                emit.linef( "}%#", pFillEnd );
+                emit.line( "}," );
             }
             if ( bConstructor )
                 emitConstructor( emit, typeInfo, method, CodeGeneratorInternal::makeInvokerCallArgs( method._listParameter, _session ) );
+            else
+                emit.line( "nullptr" ); // 생성 칸 — 줄마다 모든 칸을 적는다(빠진 칸 경고)
             emit.pop();
             emit.line( "}," );
         }
