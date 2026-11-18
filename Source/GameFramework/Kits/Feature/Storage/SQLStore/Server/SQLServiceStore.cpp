@@ -261,8 +261,9 @@ namespace sw
             class SQLServiceStoreJob final : public ISQLJob
             {
             public:
-                explicit SQLServiceStoreJob( unique_ptr<IServiceStoreJob> job )
+                SQLServiceStoreJob( unique_ptr<IServiceStoreJob> job, ServiceStoreCommitStats& inoutStats )
                     : _job{ std::move( job ) }
+                    , _pStats{ &inoutStats }
                 {
                     _job->bindLogContext( LogContext::getCurrent() );
                 }
@@ -271,7 +272,7 @@ namespace sw
                 {
                     ScopedLogContext          scope( _job->getLogContext() );
                     SQLServiceStoreConnection adapter{ connection };
-                    _job->execute( adapter );
+                    _job->execute( adapter, *_pStats );
                 }
 
                 void cancel() override { _job->markCancelled(); }
@@ -284,6 +285,7 @@ namespace sw
 
             private:
                 unique_ptr<IServiceStoreJob> _job;
+                ServiceStoreCommitStats*     _pStats; ///< 저장소 앞의 것 — 풀이 일을 다 돌린 뒤에 앞이 사라진다
             };
         };
     } // namespace
@@ -321,6 +323,6 @@ namespace sw
 
     void SQLServiceStore::submit( unique_ptr<IServiceStoreJob> job )
     {
-        _pool.submit( sw::make_unique<SQLServiceStoreInternal::SQLServiceStoreJob>( std::move( job ) ) );
+        _pool.submit( sw::make_unique<SQLServiceStoreInternal::SQLServiceStoreJob>( std::move( job ), _commitStats ) );
     }
 } // namespace sw

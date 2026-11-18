@@ -16,6 +16,7 @@
  *            게임 스레드와 네트워크 스레드는 DB 를 기다리지 않는다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
@@ -198,6 +199,21 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct ServiceStoreCommitStats
+     * @brief 저장소 앞 하나가 받은 일들의 커밋 수와 그 가운데 버전 충돌(`Conflict`) 수입니다. 충돌은 서비스가 다시 읽고 다시 하므로 충돌 / 커밋이 재시도율이다.
+     * @details 일의 입구(`IServiceStoreJob::execute`)가 거는 읽기 집합 포장만 센다 — 저장 함수 안에서 겹쳐 둔 포장은 세지 않아 한 커밋을 두 번 세지 않는다.
+     *          저장소 스레드 여럿(SQL 풀)이 함께 올리므로 원자 값이다. 부하 봇이 끝에 읽어 보고서에 낸다(감사 O-12). 엔진 비교: PostgreSQL `pg_stat_database.xact_rollback` 과 같은 자리의 수.
+     */
+    struct ServiceStoreCommitStats
+    {
+        atomic<int64> _commitCount{ 0 };   ///< 커밋 시도 수
+        atomic<int64> _conflictCount{ 0 }; ///< 그 가운데 `Conflict` 로 끝난 수
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class IServiceStoreJob
      * @brief 저장 왕복 하나입니다.
      * @details 입력은 맡기기 전에 이 객체에 복사해 둔다.
@@ -217,11 +233,11 @@ namespace sw
         IServiceStoreJob& operator=( const IServiceStoreJob& ) = delete;
 
         /**
-         * @brief 저장소 구현이 부르는 입구입니다. 연결을 읽기 집합 연결(`ServiceReadSetConnection`)로 감싸 `run` 에 넘깁니다.
+         * @brief 저장소 구현이 부르는 입구입니다. 연결을 읽기 집합 연결(`ServiceReadSetConnection`)로 감싸 `run` 에 넘기고, 그 커밋을 @p inoutStats(저장소 앞의 것)에 셉니다.
          * @details 일은 감싸지 않은 연결을 받을 길이 없다 — 판단에 쓴 읽기는 모두 다음 커밋의 버전 조건이 된다(손으로 `requireVersion` 을 빠뜨리는 모양을 막는다, 감사 "다음 할 일" 5 번).
          *          연결은 커밋마다 읽은 것을 비우므로 재시도는 판단에 쓸 레코드를 시도 안에서 다시 읽는다.
          */
-        void         execute( IServiceStoreConnection& connection );
+        void         execute( IServiceStoreConnection& connection, ServiceStoreCommitStats& inoutStats );
         virtual void complete() = 0;
 
         /** @brief 맡긴 스레드의 로그 문맥입니다. 저장소 구현이 `submit` 에서 잡습니다. */
@@ -274,5 +290,11 @@ namespace sw
         virtual int32 getPendingCount() const = 0;
         /** @brief 새 일을 받지 않고, 돌지 못한 일은 닫힌 연결로 돌려 완료 큐에 넣습니다. 그 뒤 `pollCompletions` 한 번으로 모두 거둘 수 있습니다. */
         virtual void shutdown() = 0;
+
+        /** @brief 이 앞이 받은 일들의 커밋 · 충돌 수입니다(아무 스레드에서 읽는다). */
+        const ServiceStoreCommitStats& getCommitStats() const { return _commitStats; }
+
+    protected:
+        ServiceStoreCommitStats _commitStats{}; ///< 구현이 일마다 `execute` 에 넘긴다
     };
 } // namespace sw
