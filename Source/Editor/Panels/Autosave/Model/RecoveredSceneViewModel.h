@@ -41,7 +41,7 @@ namespace sw::editor
     public:
         /** @brief 복구 후보를 @p outState 에 채웁니다(비우고 채운다). */
         static void gather( RecoveredSceneViewState& outState );
-        /** @brief 줄 @p rowIndex 의 사본을 복원합니다. 거절 이유는 `EditorAutosaveCommands::restore` 가 알린다. */
+        /** @brief 줄 @p rowIndex 의 사본 복원을 요청합니다(`EditorAutosaveCommands::requestRestore` — 여는 일은 게임 단계, 거절 이유는 그때 알린다). */
         static void restore( uint32 rowIndex );
         /** @brief 줄 @p rowIndex 의 사본을 지웁니다. */
         static void discard( uint32 rowIndex );

@@ -76,7 +76,7 @@ namespace sw::editor
         /** @brief 사본을 붙이는 리소스 도메인 이름입니다(`autosave/<씬 칸>/<세대>.scene.xml`). */
         static constexpr const utf8* kDomain = "autosave";
 
-        /** @brief 프레임마다 부릅니다 — 첫 프레임에 세션을 열고(잠금 · 복구 후보), 주기가 되면 사본을 쓰고, 복원이 끝난 씬의 소스를 돌린다. */
+        /** @brief 게임 단계가 프레임마다 부릅니다 — 첫 프레임에 세션을 열고(잠금 · 복구 후보), 복원이 끝난 씬의 소스를 돌리고, 요청된 복원을 열고, 주기가 되면 사본을 쓴다. */
         static void tick();
         /** @brief 세션을 내립니다 — 도메인을 떼고, 편집기 종료일 때만 자기 세션 폴더를 지운다. 에디터 데이터가 내려가기 직전에 부른다(에디터 상태 저장소는 이미 없다). */
         static void endSession( EditorAutosaveSessionEnd reason );
@@ -89,8 +89,14 @@ namespace sw::editor
         static const vector<EditorAutosaveEntry>& getRecoverable();
         /** @brief 지금 사본 폴더를 복구 후보로 다시 읽습니다(개발 명령 `autosave.rescan` — 비정상 종료 시나리오). 후보 수입니다. */
         static uint32 refreshRecoverable();
-        /** @brief 후보 @p index 를 복원합니다 — 씬 열기 입구(`tryOpenScene`: Play 중 거절 · 미저장 확인)로 사본을 열고, 열리면 소스를 원래 id 로 돌리고 dirty 로 두고 후보에서 뺀다. 확인에서 취소하면 후보는 남는다. 거절 · Play 중이면 false 입니다. */
-        static bool restore( uint32 index );
+        /**
+         * @brief UI 쪽 — 후보 @p index 의 복원을 요청합니다. 실행은 게임 단계(`tick`)가 한다: 씬 열기 입구(`tryOpenScene`: Play 중 거절 · 미저장 확인)로 사본을 열고,
+         *        열리면 소스를 원래 id 로 돌리고 dirty 로 두고 후보에서 뺀다. 확인에서 취소하면 후보는 남는다. 거절 이유는 그때 알린다.
+         * @details 요청은 번호가 아니라 사본 id 로 붙잡는다 — 실행 전에 다른 줄을 지우면 번호가 당겨진다. 번호가 범위 밖이면 false 입니다.
+         */
+        static bool requestRestore( uint32 index );
+        /** @brief @p listEntry 에서 사본 id(`normalizeAssetID` 로 견준다)가 @p snapshotID 인 후보의 번호를 찾습니다. 없으면 false 입니다(그 사이 지웠거나 복원했다). */
+        [[nodiscard]] static bool findRecoverableIndex( const vector<EditorAutosaveEntry>& listEntry, string_view snapshotID, uint32& outIndex );
         /** @brief 후보 @p index 의 사본을 지웁니다. */
         static void discard( uint32 index );
         /** @brief 이번 세션에 쓴 사본 수입니다(감시 값 `Editor.AutosaveSnapshotCount`). */

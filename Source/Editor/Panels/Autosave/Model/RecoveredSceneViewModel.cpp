@@ -47,7 +47,7 @@ namespace sw::editor
 
     void RecoveredSceneViewModel::restore( const uint32 rowIndex )
     {
-        (void)EditorAutosaveCommands::restore( rowIndex ); // 거절 이유는 restore 가 알린다
+        (void)EditorAutosaveCommands::requestRestore( rowIndex ); // 여는 일은 게임 단계가 한다(거절 이유는 그때 알린다). 범위 밖이면 그린 줄이 아니다
     }
 
     void RecoveredSceneViewModel::discard( const uint32 rowIndex )
