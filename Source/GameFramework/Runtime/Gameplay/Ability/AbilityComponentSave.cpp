@@ -160,10 +160,7 @@ namespace sw
             {
                 saved._listDynamicGrantedTag.push_back( string( tag.getString() ) );
             }
-            for ( const EvaluatedModifier& modifier : activeEffect._listEvaluatedModifier )
-            {
-                saved._listModifier.push_back( SavedAbilityModifier{ modifier._attribute, modifier._op, modifier._magnitude } );
-            }
+            saved._listModifier = activeEffect._listEvaluatedModifier;
             outState._listEffect.push_back( std::move( saved ) );
         }
 
@@ -284,10 +281,7 @@ namespace sw
                     pNewEffect->_spec._dynamicGrantedTags.addTag( tag );
                     pNewEffect->_grantedTags.addTag( tag );
                 }
-                for ( const SavedAbilityModifier& modifier : saved._listModifier )
-                {
-                    pNewEffect->_listEvaluatedModifier.push_back( EvaluatedModifier{ modifier._attribute, modifier._op, modifier._magnitude } );
-                }
+                pNewEffect->_listEvaluatedModifier.insert( pNewEffect->_listEvaluatedModifier.end(), saved._listModifier.begin(), saved._listModifier.end() );
                 pNewEffect->_duration      = saved._duration;
                 pNewEffect->_remainingTime = saved._remainingTime;
                 pNewEffect->_periodTimer   = saved._periodTimer;

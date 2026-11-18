@@ -1374,7 +1374,8 @@
     "checkNotifyIndex": "validateNotifyIndex — expected 를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate(2026-11-19)",
     "checkNonNegative": "validateNonNegative — expected 를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate(2026-11-19)",
     "checkBone": "validateBone — 문제를 목록에 적는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate(2026-11-19)",
-    "checkExposure": "validateExposure — expected 를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate(2026-11-19)"
+    "checkExposure": "validateExposure — expected 를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate(2026-11-19)",
+    "SavedAbilityModifier": "EvaluatedModifier — 칸이 같은 두 형식을 하나로(활성 이펙트가 든 값을 그대로 세이브에 싣는다)(2026-11-19)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",

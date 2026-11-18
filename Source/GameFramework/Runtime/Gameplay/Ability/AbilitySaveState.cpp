@@ -32,7 +32,7 @@ namespace sw
         AbilitySaveStateInternal::serializeFinite( io, _value );
     }
 
-    void SavedAbilityModifier::serializeState( StateIO& io )
+    void EvaluatedModifier::serializeState( StateIO& io )
     {
         io.value( _attribute );
         (void)io.check( _attribute.empty() == false );
@@ -57,7 +57,7 @@ namespace sw
         io.list( _listSourceAttribute, AbilitySaveStateInternal::kValueMinBytes, [&io]( SavedAttributeValue& value )
         { io.value( value ); } );
         io.list( _listDynamicGrantedTag );
-        io.list( _listModifier, AbilitySaveStateInternal::kModifierMinBytes, [&io]( SavedAbilityModifier& modifier )
+        io.list( _listModifier, AbilitySaveStateInternal::kModifierMinBytes, [&io]( EvaluatedModifier& modifier )
         { io.value( modifier ); } );
     }
 
