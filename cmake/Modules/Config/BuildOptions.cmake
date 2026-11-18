@@ -126,7 +126,6 @@ option(SW_VCPKG_FORCE_INSTALL "설치 트리 및 스탬프가 일치해도 vcpkg
 # ------------------------------------------------------------------------------
 # 3) 디버깅 및 진단 도구 옵션
 # ------------------------------------------------------------------------------
-option(SW_ENABLE_DEADLOCK_DETECTION "sw::Mutex 잠금 순서를 실시간 추적하여 데드락 사이클 탐지 (성능 저하 주의)" OFF)
 option(SW_ENABLE_LTO "Shipping 배포 빌드 시 ThinLTO(링크 타임 최적화) 활성화" ON)
 option(SW_ENABLE_STL_CONTAINER "컨테이너의 기본 할당자를 엔진 할당자 대신 std::allocator 로 바꾼다(컨테이너 형식은 두 구성에서 같다)" OFF)
 option(SW_ENABLE_TIME_TRACE "Clang 컴파일 시간 프로파일링(-ftime-trace JSON 출력)" OFF)

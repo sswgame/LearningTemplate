@@ -49,10 +49,10 @@ namespace sw
                 return reinterpret_cast<void*>( ( std::hash<std::thread::id>{}( threadID ) << 1 ) | 1 );
             }
 
-            /** @brief 잠금 관찰자에 사건 하나를 알립니다. 탐지 빌드에서는 `mutex` 와 같은 재진입 가드 안에서 부른다. */
+            /** @brief 잠금 관찰자에 사건 하나를 알립니다. 검사 구성에서는 `mutex` 와 같은 재진입 가드 안에서 부른다. */
             static void notify( void ( ILockObserver::*pRecord )( void* ), void* pKey )
             {
-#if defined( SW_ENABLE_DEADLOCK_DETECTION )
+#if defined( SW_DO_CHECKS )
                 MutexReentryGuard guard;
                 if ( guard._bEntered == false )
                     return;

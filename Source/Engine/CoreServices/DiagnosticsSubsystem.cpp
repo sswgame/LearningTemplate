@@ -10,10 +10,11 @@
 
 namespace sw
 {
-    DiagnosticsSubsystem::DiagnosticsSubsystem( bool bDiagnostics )
+    DiagnosticsSubsystem::DiagnosticsSubsystem( bool bDiagnostics, bool bDeadlockDetection )
         : _memoryProfiler{ nullptr }
         , _deadlockDetector{ nullptr }
         , _bDiagnostics{ bDiagnostics }
+        , _bDeadlockDetection{ bDeadlockDetection }
     {
     }
 
@@ -47,11 +48,14 @@ namespace sw
             _memoryProfiler->setTrackingEnabled( _bDiagnostics );
         }
         // 교착 감지기는 잠금 관찰자를 걸 뿐 로그를 남기지 않는다 — 로거보다 먼저 서도 된다(찾은 교착은 로거가 선 뒤에 알린다).
-        if ( _bDiagnostics && _deadlockDetector == nullptr )
+        // 진단 구성은 스레드 합류만 듣고, `-deadlock-detection` 이면 `mutex` 잠금도 듣는다(코어 범위의 첫째라 아직 쥔 잠금이 없다 — 실행 중에는 끄지 않는다).
+        if ( ( _bDiagnostics || _bDeadlockDetection ) && _deadlockDetector == nullptr )
         {
             _deadlockDetector = make_unique<DeadlockDetector>();
             _deadlockDetector->initialize();
         }
+        if ( _bDeadlockDetection )
+            mutex::enableLockTracking();
         return SubsystemInitResult::Succeeded;
     }
 

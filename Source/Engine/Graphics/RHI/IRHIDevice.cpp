@@ -7,6 +7,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Process/ProcessEnvironment.h"
@@ -24,6 +25,7 @@
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/RHI/RHIValidationLayer.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Window/IRenderSurface.h"
@@ -561,6 +563,23 @@ namespace sw
         swapChainDesc._pipelineCacheSaveIntervalSeconds = rhiConfig._pipelineCacheSaveIntervalSeconds;
         swapChainDesc._bGPUBasedValidation              = rhiConfig._bGPUBasedValidation;
         swapChainDesc._bSynchronizationValidation       = rhiConfig._bSynchronizationValidation;
+        {
+            // 검증 층은 장치를 만들기 전에만 걸 수 있어 여기서 한 번 정한다(설정 기본값, `-rhi-validation` 이 이긴다). 배포 구성은 검증 층을 짓지 않아 늘 끈다.
+#if defined( SW_DEBUG )
+            constexpr bool kDebugBuild = true;
+#else
+            constexpr bool kDebugBuild = false;
+#endif
+            const CommandLineManager* pCommandLine = engine::areEngineServicesBound() ? &engine::getSubsystem<CommandLineManager>() : nullptr;
+            const expected<bool>      validation   = resolveRHIValidationLayer( rhiConfig._validationLayer, pCommandLine, kDebugBuild );
+            if ( validation.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "RHI.ValidationLayerNotSet", "%# - add it to Config/Engine/EngineConfig.json", validation.error().message() );
+                return false;
+            }
+            swapChainDesc._bValidationLayer = build::kShipping == false && *validation;
+            SW_LOG_INFO_ID( "RHI.ValidationLayer", "Graphics API validation layer: %# (EngineConfig _rhi._validationLayer, -rhi-validation)", swapChainDesc._bValidationLayer ? "on" : "off" );
+        }
         {
             string softwareEnv;
             bool   bSoftwareEnv = false;

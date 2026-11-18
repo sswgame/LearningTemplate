@@ -4,12 +4,13 @@
  * @details 잠금은 잎 잠금이다 — 쥔 채 로그 · 콜백 · 장치 · 외부 호출을 하지 않는다(결정 5-3). 그 규칙을 세 겹으로 지킨다.
  *          - 형식: 잠금 타입은 `SW_CAPABILITY` 이고(`ThreadSafety.h`), clang 빌드는 `-Wthread-safety` 로 `SW_GUARDED_BY` · `SW_REQUIRES_LOCK` 계약을 컴파일 때 본다.
  *          - 실행(Debug): 이 스레드가 쥔 잠금 수(`mutex::getHeldLockDepth`)를 세고 로거가 0 을 단언한다 — 호출 그래프를 건너는 위반은 형식이 못 본다.
- *          - 교착 검출(`SW_ENABLE_DEADLOCK_DETECTION`): 독점 잠금의 시도 · 획득 · 해제를 관찰자에 알린다.
+ *          - 교착 검출(배포가 아닌 구성, 시작 인자 `-deadlock-detection` 으로 켠다 — `mutex::enableLockTracking`): 독점 잠금의 시도 · 획득 · 해제를 관찰자에 알린다.
  *          `std::mutex` · `std::shared_mutex` 를 직접 쓰면 셋이 모두 꺼지므로 직접 쓰지 않는다.
  */
 #pragma once
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/ThreadSafety.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -24,7 +25,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 대기 사건을 받는 인터페이스입니다 — `mutex` 의 잠금과 `thread` 의 합류(스레드가 자기 합류 키를 잡고 있다가 끝날 때 놓는다). `mutex::registerLockObserver` 로 겁니다.
-     * @details `mutex` 는 `SW_ENABLE_DEADLOCK_DETECTION` 빌드에서만 부르고, `thread` 는 늘 부른다(시작 · 끝 · 합류는 드물다). 탐지 빌드에서는
+     * @details `mutex` 는 잠금 추적을 켠 실행(`mutex::enableLockTracking`)에서만 부르고, `thread` 는 늘 부른다(시작 · 끝 · 합류는 드물다). 검사 구성에서는
      *          재진입 가드(`MutexReentryGuard`) 안에서 불리므로 구현이 자기 `mutex` 를 잡아도 다시 불리지 않습니다. 키 `pLock` 은 주소로만 쓴다.
      */
     class SW_API ILockObserver
@@ -51,10 +52,10 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) mutex — std::mutex 래퍼. 교착 검출 빌드에서 잠금 사이클을 탐지하고 Debug 에서 쥔 잠금 수를 센다
+    // 2) mutex — std::mutex 래퍼. 잠금 추적을 켠 실행에서 잠금 사이클을 탐지하고 검사 구성에서 쥔 잠금 수를 센다
     // ------------------------------------------------------------------------------
     /**
-     * @brief std::mutex 를 감싸 교착 검출 빌드에서 잠금 사이클을 탐지하고, Debug 에서 이 스레드가 쥔 잠금 수를 셉니다.
+     * @brief std::mutex 를 감싸 잠금 추적을 켠 실행에서 잠금 사이클을 탐지하고, 검사 구성에서 이 스레드가 쥔 잠금 수를 셉니다.
      */
     class SW_API SW_CAPABILITY( "mutex" ) mutex
     {
@@ -89,6 +90,13 @@ namespace sw
         static ILockObserver* getLockObserver();
 
         /**
+         * @brief `mutex` · `shared_mutex` 의 독점 잠금을 관찰자에 알리기 시작합니다. 시작할 때 한 번 부르고 끄지 않는다 — 켜기 전에 쥔 잠금은 탐지기가 모른다.
+         * @details 기동 인자 `-deadlock-detection` 이면 코어 범위의 첫 서브시스템(`DiagnosticsSubsystem`)이 부른다(언리얼 Development 의 실행 인자 스위치와 같다).
+         *          꺼진 실행의 잠금 비용은 이 깃발의 relaxed 읽기 하나다. 배포 구성에는 없다(아무 일도 하지 않는다).
+         */
+        static void enableLockTracking();
+
+        /**
          * @brief 이 스레드가 지금 쥔 `mutex` · `shared_mutex` 수입니다(공유 잠금 포함). Debug 만 세고 다른 구성은 늘 0 입니다.
          * @details 관찰자(교착 검출기)의 훅 안에서는 0 입니다 — 검출기의 보고는 잠금 진단 자체라 잎 규칙 밖이다. 로거가 0 을 단언합니다.
          */
@@ -107,6 +115,11 @@ namespace sw
         static void notifyLockAttempt( void* pLock );
         static void notifyAcquired( void* pLock );
         static void notifyReleased( void* pLock );
+
+#if defined( SW_DO_CHECKS )
+        /** @brief 잠금을 관찰자에 알릴지입니다. 정의는 Engine 이미지의 `mutex.cpp` 하나다(모듈이 따로 갖지 않게 내보낸 클래스의 정적 멤버로 둔다). */
+        static atomic<bool> _s_bLockTracking;
+#endif
 
         std::mutex _mutex;
     };
@@ -168,7 +181,7 @@ namespace sw
 
 namespace sw
 {
-#if defined( SW_ENABLE_DEADLOCK_DETECTION )
+#if defined( SW_DO_CHECKS )
     struct MutexReentryGuard
     {
 
@@ -202,6 +215,8 @@ namespace sw
 
     inline void mutex::notifyLockAttempt( void* pLock )
     {
+        if ( _s_bLockTracking.load( std::memory_order_relaxed ) == false )
+            return;
         MutexReentryGuard guard;
         if ( guard )
         {
@@ -213,6 +228,8 @@ namespace sw
 
     inline void mutex::notifyAcquired( void* pLock )
     {
+        if ( _s_bLockTracking.load( std::memory_order_relaxed ) == false )
+            return;
         MutexReentryGuard guard;
         if ( guard )
         {
@@ -224,6 +241,8 @@ namespace sw
 
     inline void mutex::notifyReleased( void* pLock )
     {
+        if ( _s_bLockTracking.load( std::memory_order_relaxed ) == false )
+            return;
         MutexReentryGuard guard;
         if ( guard )
         {

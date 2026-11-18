@@ -228,6 +228,13 @@ SW_REGISTER_ARGUMENT( SCENARIO_RECORD_PROBES, "", false, "scenario-record-probes
 // RenderDoc 을 RHI 디바이스보다 먼저 설치 경로에서 올린다(Dev 만 — `RenderDocCapture`). 없어도 RenderDoc UI 로 띄운 실행이면 캡처할 수 있다.
 SW_REGISTER_ARGUMENT( RENDERDOC, false, false, "renderdoc" )
 
+// 그래픽 API 검증 층(D3D12 · D3D11 디버그 레이어, Vulkan 검증 레이어, GL 디버그 출력, WebGPU 검증 오류 로그)을 켠다(`-rhi-validation=0` 은 끈다) — EngineConfig `_rhi._validationLayer` 를 이긴다.
+// 배포가 아닌 구성(Debug · Release)에 컴파일돼 있고 장치를 만들 때 한 번 읽는다. 배포 구성에는 검증 층이 없어 듣지 않는다(언리얼 `-d3ddebug` · `-vulkandebug`)
+SW_REGISTER_ARGUMENT( RHI_VALIDATION, false, false, "rhi-validation" )
+
+// 교착 탐지기를 켜고 `sw::mutex` 잠금 순서를 추적한다(느리다). 코어 범위가 설 때 한 번 읽고 실행 중에 끄지 않는다. 배포 구성에는 없다
+SW_REGISTER_ARGUMENT( DEADLOCK_DETECTION, false, false, "deadlock-detection" )
+
 // 사람이 지켜보지 않는 실행이다 — 에디터를 켜도 단언 대화상자를 걸지 않는다(Debug 단언은 지금처럼 멈춘다). App 을 띄우는 테스트 · 스크립트가 준다.
 SW_REGISTER_ARGUMENT( UNATTENDED, false, false, "unattended" )
 

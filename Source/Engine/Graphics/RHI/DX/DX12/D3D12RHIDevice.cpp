@@ -74,6 +74,7 @@ namespace sw
         , _renderPassRegistry{}
         , _swapChain{}
         , _bBindlessRootSignature{ SW_FALSE }
+        , _bValidationLayer{ SW_FALSE }
         , _reservedPassFlags{ 0 }
         , _bDeviceRemovedLogged{ SW_FALSE }
         , _arrBreadcrumb{}
@@ -522,9 +523,9 @@ namespace sw
         // 여기로 다시 들어오는데, 정보량 없이 로그만 무한히 쌓인다.
         const bool bAlreadyDeviceRemoved = _bDeviceRemovedLogged.load( std::memory_order_relaxed ) != SW_FALSE;
 
-    #if defined( SW_DEBUG )
+    #if defined( SW_DO_CHECKS )
         Microsoft::WRL::ComPtr<ID3D12InfoQueue> infoQueue;
-        if ( SUCCEEDED( _device.As( &infoQueue ) ) && infoQueue != nullptr )
+        if ( _bValidationLayer != SW_FALSE && SUCCEEDED( _device.As( &infoQueue ) ) && infoQueue != nullptr )
         {
             const uint64 messageCount = infoQueue->GetNumStoredMessages();
             for ( uint64 messageIndex = 0; messageIndex < messageCount; ++messageIndex )
@@ -635,7 +636,10 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 디바이스 · 큐 · 힙 · 전역 리소스 생성의 순서가 곧 의미라 나누지 않는다.
     bool D3D12RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
-    #if defined( SW_DEBUG )
+    #if defined( SW_DO_CHECKS )
+        // 디버그 레이어는 배포가 아닌 구성에 컴파일돼 있고 켤지는 장치를 만들 때 정한다(EngineConfig `_rhi._validationLayer`, `-rhi-validation` — 언리얼 `-d3ddebug`).
+        _bValidationLayer = desc._bValidationLayer ? SW_TRUE : SW_FALSE;
+        if ( desc._bValidationLayer )
         {
             Microsoft::WRL::ComPtr<ID3D12Debug> debugController;
             if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( debugController.GetAddressOf() ) ) ) )
@@ -661,6 +665,8 @@ namespace sw
                 return false;
             }
         }
+        else if ( desc._bGPUBasedValidation )
+            SW_LOG_WARNING_ID( "D3D12.GPUBasedValidationWithoutLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but the debug layer is off (_rhi._validationLayer, -rhi-validation) - ignored" );
     #else
         if ( desc._bGPUBasedValidation )
             SW_LOG_WARNING_ID( "D3D12.GPUBasedValidationWithoutLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but this build has no D3D12 debug layer - ignored" );
@@ -733,7 +739,8 @@ namespace sw
                 SW_LOG_WARNING_ID( "D3D12.DeviceDoesNOTSupport", "Device does NOT support Resource Binding Tier 3. Fallback may be required." );
         }
 
-    #if defined( SW_DEBUG )
+    #if defined( SW_DO_CHECKS )
+        if ( _bValidationLayer != SW_FALSE )
         {
             Microsoft::WRL::ComPtr<ID3D12InfoQueue> infoQueue;
             if ( SUCCEEDED( _device.As( &infoQueue ) ) )

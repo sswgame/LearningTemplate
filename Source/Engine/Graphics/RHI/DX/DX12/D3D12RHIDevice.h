@@ -891,7 +891,8 @@ namespace sw
         RHISwapChainSet<D3D12RHISwapChain> _windowSwapChains;
 
         uint8                  _bBindlessRootSignature : 1; ///< 루트 시그니처(텍스처 배열 테이블 포함)를 만드는 데 성공했다. 네이티브 bindless 텍스처 샘플링이 가능하다.
-        [[maybe_unused]] uint8 _reservedPassFlags      : 7;
+        uint8                  _bValidationLayer       : 1; ///< 디버그 레이어를 켰다(`RHISwapChainDesc::_bValidationLayer`, 배포가 아닌 구성). 장치를 만들 때 한 번 정한다
+        [[maybe_unused]] uint8 _reservedPassFlags      : 6;
         /// @brief 디바이스 제거(DEVICE_HUNG/REMOVED) 상태를 이미 한 번 로그로 남겼으면 true 입니다. 매
         /// 프레임 flushDebugMessages() 가 똑같은 검증 메시지 수십 줄을 끝없이 반복 출력하는 것을 막습니다.
         /// 렌더 스레드 · 기록 워커(리스트 생성) · PSO 생성이 함께 읽고 쓰므로 atomic 입니다(비트필드면 옆 비트와 한 바이트를 고쳐 쓴다).

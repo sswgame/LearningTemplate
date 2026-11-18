@@ -147,7 +147,7 @@ namespace sw
          *          D3D11 이 금지하는 것이 바로 그 경우다.
          */
         void writeTimestampSlot( ID3D11DeviceContext* pContext, uint32 slotIndex );
-        /** @brief D3D11 디버그 레이어의 CORRUPTION/ERROR 메시지를 로그로 비웁니다(SW_DEBUG, 프레임 끝). */
+        /** @brief D3D11 디버그 레이어의 CORRUPTION/ERROR 메시지를 로그로 비웁니다(배포가 아닌 구성에서 레이어를 켠 실행, 프레임 끝). */
         void flushDebugMessages( const utf8* pStage );
 
         IRHIResourceFactory* getResourceFactory() override;

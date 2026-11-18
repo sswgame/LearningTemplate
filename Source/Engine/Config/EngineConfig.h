@@ -255,10 +255,25 @@ namespace sw
 namespace sw
 {
     /**
+     * @enum RHIValidationLayerMode
+     * @brief 그래픽 API 검증 층(D3D12 · D3D11 디버그 레이어, Vulkan 검증 레이어, GL 디버그 출력, WebGPU 검증 오류 로그)을 켤지의 기본값입니다. 시작 인자 `-rhi-validation`(`=0`)이 이긴다.
+     * @details 검증 층은 배포가 아닌 구성(`SW_DO_CHECKS`)에 늘 컴파일하고 장치를 만들 때 한 번 정한다 — 언리얼 Development 빌드의 `-d3ddebug` · `-vulkandebug` 와 같다.
+     *          게임은 Release 에서만 지어지므로 게임 결함은 Release 에서 인자로 켜서 본다. 배포 구성에는 검증 층이 없어 이 값을 듣지 않는다.
+     */
+    ENUM()
+    enum class RHIValidationLayerMode : uint8
+    {
+        None           = 0, ///< 파일에 값이 없다 — 장치 생성이 오류로 멈춘다(짐작하지 않는다)
+        Off            = 1, ///< 끈다
+        On             = 2, ///< 켠다(검증 층이 설치돼 있어야 한다 — 없으면 백엔드마다 오류 · 경고로 알린다)
+        DebugBuildOnly = 3, ///< Debug 구성만 켜고 Release 는 끈다
+    };
+
+    /**
      * @struct RHIConfig
      * @brief 렌더 장치(`IRHIDevice::initialize`)가 읽는 정책 값입니다. 장치는 `RHISwapChainDesc` 로 받는다.
      * @details 값은 모두 `Config/Engine/EngineConfig.json` 의 `_rhi` 에 있다 — 빠진 숫자 키는 범위 검사(`Min`)에서 로드 오류다.
-     *          검증 스위치(GBV · syncval)는 Engine 의 장치가 읽어야 해서 DevTools 만 읽는 `Config/Dev` 가 아니라 여기 둔다. 디버그 레이어가 있는 구성(Debug)에서만 뜻이 있다.
+     *          검증 스위치(검증 층 · GBV · syncval)는 Engine 의 장치가 읽어야 해서 DevTools 만 읽는 `Config/Dev` 가 아니라 여기 둔다. 배포가 아닌 구성에서만 뜻이 있다.
      */
     REFLECT()
     struct SW_API RHIConfig
@@ -287,11 +302,15 @@ namespace sw
         PROPERTY( Min = 1, Units = s )
         float64 _pipelineCacheSaveIntervalSeconds{};
 
-        /** @brief GPU 기반 검증(D3D12 `SetEnableGPUBasedValidation` · Vulkan `VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT`)을 켭니다. 디버그 레이어가 켜진 구성에서만 듣는다(R-9). */
+        /** @brief 그래픽 API 검증 층을 켤지의 기본값입니다(`RHIValidationLayerMode`). 시작 인자 `-rhi-validation` 이 이긴다 — `resolveRHIValidationLayer`. */
+        PROPERTY()
+        RHIValidationLayerMode _validationLayer{ RHIValidationLayerMode::None };
+
+        /** @brief GPU 기반 검증(D3D12 `SetEnableGPUBasedValidation` · Vulkan `VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT`)을 켭니다. 디버그 레이어가 켜진 실행에서만 듣는다(R-9). */
         PROPERTY()
         bool _bGPUBasedValidation{};
 
-        /** @brief Vulkan 동기화 검증(`VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT`)을 켭니다. 검증 레이어가 켜진 구성에서만 듣는다(R-9). */
+        /** @brief Vulkan 동기화 검증(`VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT`)을 켭니다. 검증 레이어가 켜진 실행에서만 듣는다(R-9). */
         PROPERTY()
         bool _bSynchronizationValidation{};
     };

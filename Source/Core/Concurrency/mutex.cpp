@@ -52,13 +52,24 @@ namespace sw
         return s_pLockObserver.load( std::memory_order_acquire );
     }
 
+#if defined( SW_DO_CHECKS )
+    atomic<bool> mutex::_s_bLockTracking{ false };
+
+    void mutex::enableLockTracking()
+    {
+        _s_bLockTracking.store( true, std::memory_order_relaxed );
+    }
+#else
+    void mutex::enableLockTracking()
+    {
+    }
+#endif
+
     uint32 mutex::getHeldLockDepth()
     {
-#if defined( SW_ENABLE_DEADLOCK_DETECTION )
+#if defined( SW_DO_CHECKS )
         if ( MutexReentryGuard::isInHook() )
             return 0;
-#endif
-#if defined( SW_DO_CHECKS )
         return t_leafLockExemptionDepth != 0 ? 0 : t_heldLockDepth;
 #else
         return 0;
