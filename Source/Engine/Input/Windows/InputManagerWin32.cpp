@@ -132,9 +132,10 @@ namespace sw
 
         /**
          * @brief 활성 창의 IME 조합 중인 문자열을 UTF-8 로 읽습니다.
-         * @return 읽었으면 true 입니다(빈 조합 문자열도 읽은 것입니다). 활성 창 · IME 컨텍스트가 없거나 길이가 버퍼를 넘으면 false 입니다.
+         * @details `ImmGetCompositionStringW` 가 알린 바이트 수만큼 버퍼를 잡는다 - 예전 256 자 고정 버퍼는 그보다 긴 조합(일본어 문장 변환)을 통째로 버렸다.
+         * @return 읽었으면 true 입니다(빈 조합 문자열도 읽은 것입니다). 활성 창 · IME 컨텍스트가 없으면 false 입니다.
          */
-        [[nodiscard]] bool readIMECompositionInternal( LPARAM lParam, fixed_string<constant::buffer::kMax512>& outUTF8, int32& outLength )
+        [[nodiscard]] bool readIMECompositionInternal( LPARAM lParam, string& outUTF8 )
         {
             MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
             IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
@@ -147,29 +148,23 @@ namespace sw
             if ( hImc == nullptr )
                 return false;
 
-            // `ImmGetCompositionStringW` 가 반환하는 값은 바이트 수이고 버퍼는
-            // 와이드 문자 배열이다. 그래서 상한을 버퍼 길이에서 직접 계산한다(바이트 상수와 문자 상수를
-            // 따로 두면 어느 한쪽만 고칠 때 조용히 넘친다).
-            using CompositionBuffer                  = fixed_wstring<constant::buffer::kMax256>;
-            constexpr LONG kMaxCompositionByteLength = static_cast<LONG>( constant::buffer::kMax256 * sizeof( utf16 ) );
-
+            // 반환값은 바이트 수이고 버퍼는 와이드 문자 배열이다.
             bool       bRead = false;
             const LONG size  = ImmGetCompositionStringW( hImc, GCS_COMPSTR, nullptr, 0 );
             if ( size == 0 )
             {
-                outLength = 0; // 글자를 다 지운 조합이다 - 위젯이 비운다
-                bRead     = true;
+                outUTF8.clear(); // 글자를 다 지운 조합이다 - 위젯이 비운다
+                bRead = true;
             }
-            else if ( size > 0 && size < kMaxCompositionByteLength )
+            else if ( size > 0 )
             {
-                CompositionBuffer wstrBuf;
-                ImmGetCompositionStringW( hImc, GCS_COMPSTR, wstrBuf.data(), static_cast<DWORD>( size ) );
-                wstrBuf.data()[static_cast<size_t>( size ) / sizeof( utf16 )] = L'\0';
-                const int32 utf8Len                                           = WideCharToMultiByte( CP_UTF8, 0, wstrBuf.data(), -1, outUTF8.data(), static_cast<int32>( outUTF8.capacity() ), nullptr, nullptr );
-                if ( utf8Len > 0 )
+                wstring    composition( static_cast<size_t>( size ) / sizeof( utf16 ), L' ' );
+                const LONG written = ImmGetCompositionStringW( hImc, GCS_COMPSTR, composition.data(), static_cast<DWORD>( size ) );
+                if ( written >= 0 )
                 {
-                    outLength = utf8Len - 1;
-                    bRead     = true;
+                    composition.resize( static_cast<size_t>( written ) / sizeof( utf16 ) );
+                    outUTF8 = StringUtil::utf16ToUTF8( composition.c_str() );
+                    bRead   = true;
                 }
             }
             ImmReleaseContext( pHwnd, hImc );
@@ -388,10 +383,9 @@ namespace sw
             }
             case WM_IME_COMPOSITION:
             {
-                fixed_string<constant::buffer::kMax512> utf8Buf;
-                int32                                   utf8Length{ 0 };
-                if ( readIMECompositionInternal( event._lParam, utf8Buf, utf8Length ) )
-                    postTextComposition( string_view( utf8Buf.data(), static_cast<size_t>( utf8Length ) ) );
+                string composition;
+                if ( readIMECompositionInternal( event._lParam, composition ) )
+                    postTextComposition( composition );
                 break;
             }
             case WM_IME_ENDCOMPOSITION:
