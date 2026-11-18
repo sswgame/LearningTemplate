@@ -75,6 +75,12 @@ namespace sw
                 unordered_map<string, ShaderReflectionLibrary::EntryMap> _mapManifest;
                 /** @brief 이 쿠킹의 스탬프 읽기 캐시입니다. 병렬 구간의 최신 판정이 함께 쓴다(안에서 잠근다 — 그래서 const 상태 안에서도 쓸 수 있다). */
                 mutable ShaderCookStampCache _stampCache;
+
+                /** @brief @p enginePolicy 는 쿠킹 시작(이 쿠킹을 부른 스레드 — 게임 · 헤드리스 주 스레드)에 뜬 엔진 설정 사본이다. 병렬 구간은 이것만 본다. */
+                explicit CookState( const ShaderEnginePolicy& enginePolicy )
+                    : _stampCache{ enginePolicy }
+                {
+                }
             };
 
             /** @brief 요청 하나를 포맷 하나로 쿠킹하는 작업의 입력입니다. 계획 단계(직렬)가 채우고, 병렬 구간에서는 읽기만 합니다. */
@@ -150,7 +156,8 @@ namespace sw
                     {
                         outResult._listIncludedFile.clear();
                         ShaderCookResult cookResult{};
-                        outResult._bCooked        = ShaderCooker::cookShader( task._source, task._outPath, request._entryPoint, request._stage, task._format, &request._listPermutation, &cookResult );
+                        outResult._bCooked        = ShaderCooker::cookShader( task._source, task._outPath, request._entryPoint, request._stage, task._format, _pState->_stampCache.getEnginePolicy(),
+                                                                              &request._listPermutation, &cookResult );
                         outResult._bCompileFailed = outResult._bCooked == false;
                         if ( outResult._bCooked )
                             outResult._listIncludedFile = std::move( cookResult._listIncludedFile );
@@ -578,7 +585,7 @@ namespace sw
         }
         vector<string> listDomain;
         collectCookedDomains( listRequest, listDomain );
-        ShaderCookStamp::verifyCookedShaders( assetPaths, cookedDir, targetFormat, listDomain, outListProblem );
+        ShaderCookStamp::verifyCookedShaders( assetPaths, cookedDir, targetFormat, listDomain, ShaderEnginePolicy::capture(), outListProblem );
     }
 
     bool ShaderCookDriver::collectRequestedBinaries( ShaderTargetFormat targetFormat, unordered_map<string, vector<vector<string>>>& outMapBinaryOrigin )
@@ -607,7 +614,7 @@ namespace sw
         using Internal = ShaderCookDriverInternal;
         const Stopwatch                  totalWatch;
         const vector<ShaderTargetFormat> listTargetFormat = Internal::makeTargetFormatList( targetFormat );
-        Internal::CookState              state;
+        Internal::CookState              state{ ShaderEnginePolicy::capture() }; // 쿠킹을 부른 스레드에서 뜬다 — 병렬 구간은 설정을 직접 읽지 않는다
         if ( cookedDir.empty() )
         {
             SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookNeedsCooked", "Shader cook needs -cooked-dir=<folder> (the staging folder of cooked shaders, scenes and prefabs)" );

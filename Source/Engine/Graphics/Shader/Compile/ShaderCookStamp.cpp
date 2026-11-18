@@ -68,8 +68,9 @@ namespace sw
         unordered_map<string, Info> _mapStamp; ///< `_mutex` 를 잡고 쓴다(값을 참조로 돌려주는 `readCookStamp` 때문에 잠금 분석 주석을 달 수 없다)
     };
 
-    ShaderCookStampCache::ShaderCookStampCache()
+    ShaderCookStampCache::ShaderCookStampCache( const ShaderEnginePolicy& enginePolicy )
         : _pState{ make_unique<State>() }
+        , _enginePolicy{ enginePolicy }
     {
     }
 
@@ -210,7 +211,7 @@ namespace sw
              * @warning 참조를 반환하므로 **@p cache 의 `_mutex` 를 잡은 채로만** 부르세요. 캐시에 삽입이
              *          일어나면 앞서 반환한 참조가 무효가 됩니다.
              */
-            static const StampInfo& readCookStamp( ShaderCookStampCache::State& cache, const string& binDirectory )
+            static const StampInfo& readCookStamp( ShaderCookStampCache::State& cache, const string& binDirectory, const ShaderEnginePolicy& enginePolicy )
             {
                 const auto cached = cache._mapStamp.find( binDirectory );
                 if ( cached != cache._mapStamp.end() )
@@ -224,7 +225,7 @@ namespace sw
                     info = parseCookStamp( text );
 
                 // 도구 지문이 다르면(컴파일러 · 옵션이 바뀌었으면) 소스가 같아도 모두 낡았다. 빈 결과와 같게 다룬다.
-                const bool bUsable = info._bVersionKnown && info._bHasToolchain && info._toolchain == computeToolchainFingerprint();
+                const bool bUsable = info._bVersionKnown && info._bHasToolchain && info._toolchain == computeToolchainFingerprint( enginePolicy );
                 if ( bUsable == false )
                     info = StampInfo{};
 
@@ -232,7 +233,7 @@ namespace sw
             }
 
             /** @brief 도구 지문을 구합니다(`ShaderCookStamp::getToolchainFingerprint` 의 본체). 상수와 엔진 define 만으로 정해져 OS · 파일과 무관하다. */
-            static uint64 computeToolchainFingerprint()
+            static uint64 computeToolchainFingerprint( const ShaderEnginePolicy& enginePolicy )
             {
                 static const uint64 s_baseFingerprint = []
                 {
@@ -241,10 +242,10 @@ namespace sw
                     return ShaderCookStamp::makeToolchainFingerprint( CookCodeFingerprint::find( "ShaderCompiler" ), kVulkanTargetVersion, CookCodeFingerprint::getShaderCompilerVersion() );
                 }();
                 // 엔진이 모든 컴파일에 넣는 define 도 도구 입력이다 — 요청 desc 로 키를 만드는 캐시도 표가 바뀌면 낡는다. 렌더 정책 값(EngineConfig `_render`)은
-                // 설정을 다시 읽으면 바뀌므로 부를 때마다 섞는다(한 번 잡아 두면 새 값으로 컴파일한 바이트와 옛 값의 캐시가 같은 키를 쓴다).
+                // 설정을 다시 읽으면 바뀌므로 부를 때마다 요청의 사본으로 섞는다(한 번 잡아 두면 새 값으로 컴파일한 바이트와 옛 값의 캐시가 같은 키를 쓴다).
                 uint64                    hash = s_baseFingerprint;
                 vector<ShaderMacroDefine> listDefine;
-                ShaderCompiler::appendEngineDefines( listDefine );
+                ShaderCompiler::appendEngineDefines( listDefine, enginePolicy );
                 for ( const ShaderMacroDefine& define : listDefine )
                 {
                     hash = HashUtil::computeStringHash64( define._name, false, hash );
@@ -407,10 +408,11 @@ namespace sw
              */
             [[nodiscard]] static bool writeCookStamp( const ShaderIncludeResolver& resolver, string_view sourceShadersDir, string_view binDirectory,
                                                       const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile,
-                                                      ShaderCookStampCache::State& stampCache )
+                                                      ShaderCookStampCache& cookStampCache )
             {
-                const string rhiDir     = FileUtil::normalizeSeparators( binDirectory );
-                const string shadersDir = FileUtil::normalizeSeparators( sourceShadersDir );
+                ShaderCookStampCache::State& stampCache = cookStampCache.getState();
+                const string                 rhiDir     = FileUtil::normalizeSeparators( binDirectory );
+                const string                 shadersDir = FileUtil::normalizeSeparators( sourceShadersDir );
                 if ( shadersDir.empty() || rhiDir.empty() )
                     return false;
 
@@ -470,7 +472,7 @@ namespace sw
                     }
                 }
 
-                listLine.push_back( formatHex64( computeToolchainFingerprint() ) + " " + string( kToolchainKey ) );
+                listLine.push_back( formatHex64( computeToolchainFingerprint( cookStampCache.getEnginePolicy() ) ) + " " + string( kToolchainKey ) );
 
                 VectorUtil::sortUnique( listLine ); // 같은 헤더를 다른 이름으로 열었어도 한 줄이다
 
@@ -699,7 +701,8 @@ namespace sw
             }
 
             /** @brief 도메인 하나의 `bin/<폴더>` 를 판정합니다(`ShaderCookStamp::verifyCookedShaders` 의 본체). */
-            static void verifyDomain( const ShaderSourceResolver& resolver, string_view cookedDir, const string& domain, ShaderTargetFormat format, vector<string>& outListProblem )
+            static void verifyDomain( const ShaderSourceResolver& resolver, string_view cookedDir, const string& domain, ShaderTargetFormat format, const ShaderEnginePolicy& enginePolicy,
+                                      vector<string>& outListProblem )
             {
                 const string_view            shaderFolder  = ShaderCooker::getSubfolderForFormat( format ); // 문제 글의 이름표 - 자리는 아래 `ShaderBinaryLocation` 이 정한다
                 const optional<AbsolutePath> shadersFolder = resolver.findDomainShadersFolder( domain );
@@ -736,7 +739,7 @@ namespace sw
                     appendProblem( outListProblem, "%#: '%#' cook.stamp has an unknown header (an older format is stale - cook again)", label, shaderFolder );
                     return;
                 }
-                if ( stamped._bHasToolchain == false || stamped._toolchain != computeToolchainFingerprint() )
+                if ( stamped._bHasToolchain == false || stamped._toolchain != computeToolchainFingerprint( enginePolicy ) )
                     appendProblem( outListProblem, "%#: '%#' was cooked with another toolchain (compiler or options changed)", label, shaderFolder );
 
                 verifySourceHashes( resolver.getIncludeResolver(), shadersDir, label, shaderFolder, listSource, stamped, outListProblem );
@@ -768,7 +771,7 @@ namespace sw
                                           const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile,
                                           ShaderCookStampCache& stampCache )
     {
-        return ShaderCookStampInternal::writeCookStamp( resolver, sourceShadersDir, binDirectory, pFailedSource, mapIncludedFile, stampCache.getState() );
+        return ShaderCookStampInternal::writeCookStamp( resolver, sourceShadersDir, binDirectory, pFailedSource, mapIncludedFile, stampCache );
     }
 
     bool ShaderCookStamp::removeUnlistedBinaries( string_view binDirectory, const unordered_set<string>& uniqueKeepFileName, uint32& outRemovedCount )
@@ -801,7 +804,7 @@ namespace sw
         ContentHash::clearCache();
     }
 
-    uint64 ShaderCookStamp::computeSourceFingerprint( string_view absShaderPath, const vector<string>& listIncludedFile )
+    uint64 ShaderCookStamp::computeSourceFingerprint( string_view absShaderPath, const vector<string>& listIncludedFile, const ShaderEnginePolicy& enginePolicy )
     {
         const uint64 sourceHash = ContentHash::computeFile( absShaderPath );
         if ( sourceHash == 0 )
@@ -820,7 +823,7 @@ namespace sw
         }
         // 도구 지문도 섞는다. 디스크 캐시 키가 이 값을 쓰므로, 빠지면 DXC 를 바꿔도 옛 바이트를 돌려준다.
         const uint64 headerPart = HashUtil::computeStringHash64( to_string( combined ), false, sourceHash );
-        return HashUtil::computeStringHash64( to_string( getToolchainFingerprint() ), false, headerPart );
+        return HashUtil::computeStringHash64( to_string( getToolchainFingerprint( enginePolicy ) ), false, headerPart );
     }
 
     bool ShaderCookStamp::writeIncludeRecord( string_view recordPath, const vector<string>& listIncludedFile, uint64 bytecodeHash )
@@ -891,9 +894,9 @@ namespace sw
         return HashUtil::computeStringHash64( string( compilerVersion ), false, hash );
     }
 
-    uint64 ShaderCookStamp::getToolchainFingerprint()
+    uint64 ShaderCookStamp::getToolchainFingerprint( const ShaderEnginePolicy& enginePolicy )
     {
-        return ShaderCookStampInternal::computeToolchainFingerprint();
+        return ShaderCookStampInternal::computeToolchainFingerprint( enginePolicy );
     }
 
     bool ShaderCookStamp::isCookedOutputCurrent( const ShaderIncludeResolver& resolver, string_view binDirectory, string_view absShaderPath, string_view sourceShadersDir,
@@ -920,7 +923,7 @@ namespace sw
             ShaderCookStampCache::State& cache = stampCache.getState();
             ScopedLock<mutex>            lock{ cache._mutex };
 
-            const Internal::StampInfo& stamp = Internal::readCookStamp( cache, rhiDir );
+            const Internal::StampInfo& stamp = Internal::readCookStamp( cache, rhiDir, stampCache.getEnginePolicy() );
             const auto                 iter  = stamp._mapSourceHash.find( stampKey );
             if ( iter == stamp._mapSourceHash.end() )
                 return false;
@@ -947,7 +950,8 @@ namespace sw
         return true;
     }
 
-    void ShaderCookStamp::verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, ShaderTargetFormat format, const vector<string>& listDomain, vector<string>& outListProblem )
+    void ShaderCookStamp::verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, ShaderTargetFormat format, const vector<string>& listDomain, const ShaderEnginePolicy& enginePolicy,
+                                               vector<string>& outListProblem )
     {
         const string& resourceRoot = assetPaths.getRootFolderPath();
         if ( resourceRoot.empty() || cookedDir.empty() )
@@ -963,7 +967,7 @@ namespace sw
         }
         for ( const string& domain : listDomain )
         {
-            ShaderCookStampInternal::verifyDomain( *resolver, cookedDir, domain, format, outListProblem );
+            ShaderCookStampInternal::verifyDomain( *resolver, cookedDir, domain, format, enginePolicy, outListProblem );
         }
     }
 } // namespace sw

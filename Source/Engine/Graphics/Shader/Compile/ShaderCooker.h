@@ -100,11 +100,12 @@ namespace sw
          * @param entryPoint 셰이더 진입점 함수 이름(예: "VSMain", "PSMain", "CSMain")
          * @param stage 셰이더 스테이지(Vertex, Pixel, Compute)
          * @param targetFormat 대상 포맷(DXIL_D3D12, SPIRV_Vulkan, DXBC_D3D11)
+         * @param enginePolicy 쿠킹 시작에 뜬 엔진 설정 사본(`ShaderCookStampCache::getEnginePolicy`) — 쿠킹 워커에서 불려 설정을 직접 읽지 않는다
          * @param pOutResult 쿠킹 결과 상세 정보(선택)
          * @return 성공하면 true 입니다.
          */
         [[nodiscard]] static bool cookShader( const ShaderSourceID& source, string_view outputPath, string_view entryPoint,
-                                              ShaderStage stage, ShaderTargetFormat targetFormat,
+                                              ShaderStage stage, ShaderTargetFormat targetFormat, const ShaderEnginePolicy& enginePolicy,
                                               const vector<string>* pListPermutation = nullptr,
                                               ShaderCookResult*     pOutResult       = nullptr );
 

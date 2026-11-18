@@ -58,10 +58,11 @@ namespace sw
         return result;
     }
 
-    uint64 CookedShaderBytecodeProvider::computeFingerprint( const ShaderCompileResult& result ) const
+    uint64 CookedShaderBytecodeProvider::computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const
     {
         // 팩은 실행 중 바뀌지 않는다 - 넣은 항목은 늘 맞다(예전에는 소스 경로가 없어 지문이 0 이라 한 번도 맞지 않고 매번 팩을 다시 읽었다).
         (void)result;
+        (void)desc;
         return 1u;
     }
 
@@ -93,9 +94,11 @@ namespace sw
         return ShaderCompiler::compileHLSL( ShaderCache::makeLiveCompileDesc( desc ) );
     }
 
-    uint64 LiveShaderBytecodeProvider::computeFingerprint( const ShaderCompileResult& result ) const
+    uint64 LiveShaderBytecodeProvider::computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const
     {
-        return result._sourceFile.empty() ? 0u : ShaderCookStamp::computeSourceFingerprint( result._sourceFile, result._listIncludedFile );
+        if ( result._sourceFile.empty() || desc._enginePolicy.has_value() == false )
+            return 0u;
+        return ShaderCookStamp::computeSourceFingerprint( result._sourceFile, result._listIncludedFile, *desc._enginePolicy );
     }
 
     bool LiveShaderBytecodeProvider::getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const
