@@ -28,8 +28,8 @@
 	<WaitUntil watch="Surface.ObjectFootstepCount" target="Walker" key="Dirt" atLeast="4" timeoutSeconds="5"/>
 	<Expect watch="Surface.ObjectLastFootstep" target="Walker" is="Dirt"/>
 	<Expect watch="Surface.ObjectLastFootstepState" target="Walker" is="dry"/>
-	<Expect watch="Surface.ObjectLastFootstepEffect" target="Walker" is="engine/vfx/footstep_dust.vfx.xml"/>
-	<Expect watch="Surface.ObjectLastFootstepSound" target="Walker" is="Footstep.Dirt"/>
+	<Expect watch="Surface.ObjectFootstepEffectOn" target="Walker" key="Dirt" is="engine/vfx/footstep_dust.vfx.xml"/>
+	<Expect watch="Surface.ObjectFootstepSoundOn" target="Walker" key="Dirt" is="Footstep.Dirt"/>
 	<Expect watch="VFX.PoolPlayed" key="engine/vfx/footstep_dust.vfx.xml" atLeast="1"/>
 	<Expect watch="Surface.FootprintPlaced" atLeast="2"/>
 	<Expect watch="Surface.DeformDeepestNear" key="0 -12.6 0.6" atLeast="0.008"/>
@@ -46,8 +46,8 @@
 	<DevCommand line="object.place Walker -3.5 0.05 -12"/>
 	<WaitUntil watch="Surface.ObjectFootstepCount" target="Walker" key="Stone" atLeast="2" timeoutSeconds="5"/>
 	<Expect watch="Surface.ObjectLastFootstep" target="Walker" is="Stone"/>
-	<Expect watch="Surface.ObjectLastFootstepEffect" target="Walker" is="none"/>
-	<Expect watch="Surface.ObjectLastFootstepSound" target="Walker" is="Footstep.Stone"/>
+	<Expect watch="Surface.ObjectFootstepEffectOn" target="Walker" key="Stone" is="none"/>
+	<Expect watch="Surface.ObjectFootstepSoundOn" target="Walker" key="Stone" is="Footstep.Stone"/>
 	<Expect watch="Surface.WetPrintPlaced" equals="0"/>
 
 	<!-- ③ 웅덩이 -->
@@ -55,8 +55,8 @@
 	<DevCommand line="object.place Walker 0 0.05 -8"/>
 	<WaitUntil watch="Surface.ObjectFootstepCount" target="Walker" key="Water" atLeast="2" timeoutSeconds="5"/>
 	<Expect watch="Surface.ObjectLastFootstep" target="Walker" is="Water"/>
-	<Expect watch="Surface.ObjectLastFootstepEffect" target="Walker" is="engine/vfx/footstep_splash.vfx.xml"/>
-	<Expect watch="Surface.ObjectLastFootstepSound" target="Walker" is="Footstep.Water"/>
+	<Expect watch="Surface.ObjectFootstepEffectOn" target="Walker" key="Water" is="engine/vfx/footstep_splash.vfx.xml"/>
+	<Expect watch="Surface.ObjectFootstepSoundOn" target="Walker" key="Water" is="Footstep.Water"/>
 	<Expect watch="VFX.PoolPlayed" key="engine/vfx/footstep_splash.vfx.xml" atLeast="2"/>
 	<Expect watch="VFX.PoolSize" key="engine/vfx/footstep_splash.vfx.xml" atMost="16"/>
 
@@ -73,30 +73,30 @@
 	<DevCommand line="object.place Walker 0 0.05 -4"/>
 	<WaitUntil watch="Surface.ObjectFootstepCount" target="Walker" key="Mud" atLeast="2" timeoutSeconds="5"/>
 	<Expect watch="Surface.ObjectLastFootstep" target="Walker" is="Mud"/>
-	<Expect watch="Surface.ObjectLastFootstepEffect" target="Walker" is="engine/vfx/footstep_mud.vfx.xml"/>
-	<Expect watch="Surface.ObjectLastFootstepSound" target="Walker" is="Footstep.Mud"/>
+	<Expect watch="Surface.ObjectFootstepEffectOn" target="Walker" key="Mud" is="engine/vfx/footstep_mud.vfx.xml"/>
+	<Expect watch="Surface.ObjectFootstepSoundOn" target="Walker" key="Mud" is="Footstep.Mud"/>
 	<AdvanceSimulation frames="1"/>
 	<DevCommand line="object.place Walker 16 0.05 -18"/> <!-- 플레이어의 길을 비운다 -->
 
 	<!-- ⑥ 플레이어 1인칭: 흙 → 웅덩이 → 진흙(발 닿음 감지가 낸 발걸음). 표면마다 첫 걸음의 반응을 그 프레임에 본다. -->
 	<Press slot="Key.W"/>
 	<WaitUntil watch="Surface.ObjectFootstepCount" target="PlayerBody" key="Dirt" atLeast="1" timeoutSeconds="4"/>
-	<Expect watch="Surface.ObjectLastFootstepEffect" target="PlayerBody" is="engine/vfx/footstep_dust.vfx.xml"/>
-	<Expect watch="Surface.ObjectLastFootstepSound" target="PlayerBody" is="Footstep.Dirt"/>
+	<Expect watch="Surface.ObjectFootstepEffectOn" target="PlayerBody" key="Dirt" is="engine/vfx/footstep_dust.vfx.xml"/>
+	<Expect watch="Surface.ObjectFootstepSoundOn" target="PlayerBody" key="Dirt" is="Footstep.Dirt"/>
 	<WaitUntil watch="Surface.ObjectFootstepCount" target="PlayerBody" key="Water" atLeast="1" timeoutSeconds="4"/>
-	<Expect watch="Surface.ObjectLastFootstepEffect" target="PlayerBody" is="engine/vfx/footstep_splash.vfx.xml"/>
-	<Expect watch="Surface.ObjectLastFootstepSound" target="PlayerBody" is="Footstep.Water"/>
+	<Expect watch="Surface.ObjectFootstepEffectOn" target="PlayerBody" key="Water" is="engine/vfx/footstep_splash.vfx.xml"/>
+	<Expect watch="Surface.ObjectFootstepSoundOn" target="PlayerBody" key="Water" is="Footstep.Water"/>
 	<WaitUntil watch="Surface.ObjectFootstepCount" target="PlayerBody" key="Mud" atLeast="1" timeoutSeconds="4"/>
-	<Expect watch="Surface.ObjectLastFootstepEffect" target="PlayerBody" is="engine/vfx/footstep_mud.vfx.xml"/>
+	<Expect watch="Surface.ObjectFootstepEffectOn" target="PlayerBody" key="Mud" is="engine/vfx/footstep_mud.vfx.xml"/>
 	<Release slot="Key.W"/>
 
 	<!-- ⑦ 플레이어 3인칭: 시점만 바꿔 뒤로 걸어 진흙 → 웅덩이 → 흙을 되밟는다 -->
 	<DevCommand line="camera.preset thirdperson"/>
 	<Press slot="Key.S"/>
 	<WaitUntil watch="Surface.ObjectFootstepCount" target="PlayerBody" key="Water" atLeast="2" timeoutSeconds="5"/>
-	<Expect watch="Surface.ObjectLastFootstepEffect" target="PlayerBody" is="engine/vfx/footstep_splash.vfx.xml"/>
+	<Expect watch="Surface.ObjectFootstepEffectOn" target="PlayerBody" key="Water" is="engine/vfx/footstep_splash.vfx.xml"/>
 	<WaitUntil watch="Surface.ObjectFootstepCount" target="PlayerBody" key="Dirt" atLeast="2" timeoutSeconds="5"/>
-	<Expect watch="Surface.ObjectLastFootstepSound" target="PlayerBody" is="Footstep.Dirt"/>
+	<Expect watch="Surface.ObjectFootstepSoundOn" target="PlayerBody" key="Dirt" is="Footstep.Dirt"/>
 	<Release slot="Key.S"/>
 	<DevCommand line="camera.preset firstperson"/>
 

@@ -77,6 +77,18 @@ namespace sw
                 return pRecord;
             }
 
+            /** @brief 반응을 볼 종류의 기록입니다 — @p bByKind 면 키의 종류, 아니면 마지막 발걸음. 없으면 까닭을 적고 nullptr 입니다. */
+            static const SurfaceFootstepKindNote* findNote( const AutomationWatchQuery& query, bool bTarget, bool bByKind, AutomationWatchValue& outValue )
+            {
+                const SurfaceFootstepRecord* pRecord = bByKind ? findRecord( query, bTarget, outValue ) : findLastStep( query, bTarget, outValue );
+                if ( pRecord == nullptr )
+                    return nullptr;
+                const SurfaceFootstepKindNote* pNote = bByKind ? pRecord->findKind( hashed_string( query._key ) ) : pRecord->findLast();
+                if ( pNote == nullptr )
+                    outValue.setText( "no footstep on that surface kind yet" );
+                return pNote;
+            }
+
             /** @brief 종류 `key` 를 밟은 발걸음 수(누적)입니다. */
             template <bool bTarget>
             [[nodiscard]] static bool readCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
@@ -105,32 +117,32 @@ namespace sw
             template <bool bTarget>
             [[nodiscard]] static bool readLastState( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const SurfaceFootstepRecord* pRecord = findLastStep( query, bTarget, outValue );
-                if ( pRecord == nullptr )
+                const SurfaceFootstepKindNote* pNote = findNote( query, bTarget, false, outValue );
+                if ( pNote == nullptr )
                     return false;
-                outValue.setText( pRecord->isLastWet() ? "wet" : "dry" );
+                outValue.setText( pNote->_bLastWet == SW_TRUE ? "wet" : "dry" );
                 return true;
             }
 
             /** @brief 마지막 발걸음 반응의 소리 이벤트("none" = 조용함)입니다. */
-            template <bool bTarget>
+            template <bool bTarget, bool bByKind = false>
             [[nodiscard]] static bool readLastSound( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const SurfaceFootstepRecord* pRecord = findLastStep( query, bTarget, outValue );
-                if ( pRecord == nullptr )
+                const SurfaceFootstepKindNote* pNote = findNote( query, bTarget, bByKind, outValue );
+                if ( pNote == nullptr )
                     return false;
-                outValue.setText( pRecord->_lastSound.empty() ? "none" : pRecord->_lastSound.c_str() );
+                outValue.setText( pNote->_lastSound.empty() ? "none" : pNote->_lastSound.c_str() );
                 return true;
             }
 
             /** @brief 마지막 발걸음 반응의 효과 경로("none" = 없음)입니다. */
-            template <bool bTarget>
+            template <bool bTarget, bool bByKind = false>
             [[nodiscard]] static bool readLastEffect( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const SurfaceFootstepRecord* pRecord = findLastStep( query, bTarget, outValue );
-                if ( pRecord == nullptr )
+                const SurfaceFootstepKindNote* pNote = findNote( query, bTarget, bByKind, outValue );
+                if ( pNote == nullptr )
                     return false;
-                outValue.setText( pRecord->_lastEffect.empty() ? "none" : pRecord->_lastEffect.c_str() );
+                outValue.setText( pNote->_lastEffect.empty() ? "none" : pNote->_lastEffect.c_str() );
                 return true;
             }
         };
@@ -159,28 +171,35 @@ namespace sw
                                &SurfaceFootprintSystemInternal::readLastSound<true>, true, false );
     SW_AUTOMATION_QUERY_WATCH( surfaceObjectLastFootstepEffect, "Surface.ObjectLastFootstepEffect", "Effect of the target object's last footstep response (none: no effect)",
                                &SurfaceFootprintSystemInternal::readLastEffect<true>, true, false );
+    // 종류마다: 두 발이 한 프레임에 다른 종류를 디디면 "마지막 발걸음" 은 나중 것 하나다 — 그 종류를 마지막으로 밟은 반응을 키로 본다.
+    SW_AUTOMATION_QUERY_WATCH( surfaceObjectFootstepSoundOn, "Surface.ObjectFootstepSoundOn", "Audio event of the target object's last footstep on the surface kind named key (none: silent)",
+                               (&SurfaceFootprintSystemInternal::readLastSound<true, true>), true, true );
+    SW_AUTOMATION_QUERY_WATCH( surfaceObjectFootstepEffectOn, "Surface.ObjectFootstepEffectOn", "Effect of the target object's last footstep on the surface kind named key (none: no effect)",
+                               (&SurfaceFootprintSystemInternal::readLastEffect<true, true>), true, true );
 } // namespace sw
 
 namespace sw
 {
-    SurfaceFootstepRecord::SurfaceFootstepRecord()
-        : _bLastWet{ SW_FALSE }
-    {
-    }
-
     uint32 SurfaceFootstepRecord::getCount( const hashed_string& kind ) const
     {
-        const auto found = _mapCount.find( kind );
-        return found != _mapCount.end() ? found->second : 0;
+        const SurfaceFootstepKindNote* pNote = findKind( kind );
+        return pNote != nullptr ? pNote->_count : 0;
+    }
+
+    const SurfaceFootstepKindNote* SurfaceFootstepRecord::findKind( const hashed_string& kind ) const
+    {
+        const auto found = _mapKind.find( kind );
+        return found != _mapKind.end() ? &found->second : nullptr;
     }
 
     void SurfaceFootstepRecord::note( const hashed_string& kind, const SurfaceStepResponse& step, bool bWet )
     {
-        ++_mapCount[kind];
-        _lastKind   = kind;
-        _lastSound  = step._sound;
-        _lastEffect = step._effect.isSet() ? step._effect.get() : string{};
-        _bLastWet   = bWet ? SW_TRUE : SW_FALSE;
+        SurfaceFootstepKindNote& note = _mapKind[kind];
+        ++note._count;
+        note._lastSound  = step._sound;
+        note._lastEffect = step._effect.isSet() ? step._effect.get() : string{};
+        note._bLastWet   = bWet ? SW_TRUE : SW_FALSE;
+        _lastKind        = kind;
     }
 
     SW_SCENE_SERVICE( SurfaceFootprintSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
