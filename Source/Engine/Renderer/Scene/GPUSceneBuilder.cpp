@@ -241,6 +241,8 @@ namespace sw
         _listScratchOpaqueIdx.clear();
         _listScratchTransparentIdx.clear();
         _listOpaqueBatchKey.clear();
+        _listMaterialPendingSlot.clear();
+        _listMaterialRetrySlot.clear();
         _bPartitionStale = SW_FALSE;
         invalidateBuildCache();
     }
@@ -539,29 +541,29 @@ namespace sw
         return true;
     }
 
-    bool GPUSceneBuilder::fillCandidateFromPrimitive( ScenePrimitive* pPrimitive, Scene* pScene, DrawCandidate& candidate )
+    GPUSceneBuilder::CandidateFillResult GPUSceneBuilder::fillCandidateFromPrimitive( ScenePrimitive* pPrimitive, Scene* pScene, DrawCandidate& candidate )
     {
         // 레지스트리는 코어 기반만 알고, 들어오는 타입은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식). 인스턴스 배치도 같다.
         MeshComponent* pMeshComp = static_cast<MeshComponent*>( pPrimitive );
         if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
-            return false;
+            return CandidateFillResult::Excluded;
         // 등장 비율 0 은 아직(또는 이제) 보이지 않는다 — 애니메이션을 기다리는 캐릭터, 다 사라진 메시(`MeshComponent::getAppearance`).
         if ( pMeshComp->getAppearance() <= 0.0f )
-            return false;
+            return CandidateFillResult::Excluded;
         // 컴포넌트를 꺼도 빠진다(`isActive` 는 자기 비트와 소유 오브젝트의 계층 활성을 함께 본다).
         // 소유 오브젝트만 보면 빛은 컴포넌트를 끄면 꺼지는데 메시는 그대로 그려진다.
         const bool bExcludedMeshComponent = pMeshComp->getOwner() == nullptr || pMeshComp->isActive() == false || pMeshComp->getOwner()->isRenderHidden();
         if ( bExcludedMeshComponent )
-            return false;
+            return CandidateFillResult::Excluded;
         Mesh* pMesh = pMeshComp->getRawMesh();
         if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
-            return false;
+            return CandidateFillResult::Excluded;
         // 1인칭 숨김(VRM firstPerson) — 이 구간이 지금 시점에서 보이지 않으면 후보가 아니다.
         if ( pMeshComp->isVisibleInCurrentPerson() == false )
-            return false;
+            return CandidateFillResult::Excluded;
         // 그릴 구간 — 구간 이름이 메시에 없으면 그리지 않는다(컴포넌트가 오류를 남긴다). 이름이 없으면 메시 전체(수 0).
         if ( pMeshComp->findDrawSection( candidate._sectionFirstIndex, candidate._sectionIndexCount ) == false )
-            return false;
+            return CandidateFillResult::Excluded;
 
         // 경계는 컴포넌트와 같은 규칙이다(`MeshComponent::getWorldBounds`). 메시 반지름에 월드의 최대 축 스케일을 곱한다. 반지름을
         // 그대로 싣으면 부모나 자기 스케일로 키운 메시가 화면에 있는데도 절두체 컬링에 잘린다.
@@ -589,32 +591,33 @@ namespace sw
             candidate._mesh = pMeshComp->getMesh();
         if ( candidate._instance.get() != pMeshComp->getRawMaterialInstance() )
             candidate._instance = pMeshComp->getMaterialInstance();
-        if ( fillCandidateMaterial( candidate, pMeshComp->getMaterial(), pScene ) == false )
-            return false;
+        const CandidateFillResult materialFill = fillCandidateMaterial( candidate, pMeshComp->getMaterial(), pScene );
+        if ( materialFill != CandidateFillResult::Included )
+            return materialFill;
         applyGPULODGroup( candidate );
         // 퍼뮤테이션 해시는 **여기서 구하지 않는다**. 호출하는 쪽이 게임 스레드에서 기록한다(`assignPermutationHash`).
         // 머티리얼의 해시 게터는 더티 플래그를 보고 캐시를 다시 만드는 지연 계산이라, 같은 머티리얼을
         // 나눠 쓰는 프리미티브들을 워커 여럿이 동시에 채우면 그 캐시를 동시에 고쳐 쓰게 된다.
-        return true;
+        return CandidateFillResult::Included;
     }
 
-    bool GPUSceneBuilder::fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate )
+    GPUSceneBuilder::CandidateFillResult GPUSceneBuilder::fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate )
     {
         const MeshInstanceBatch* pBatch            = static_cast<const MeshInstanceBatch*>( entry._pBatch );
         const bool               bHiddenBatchEntry = pBatch == nullptr || pBatch->isVisible() == false || entry._index >= pBatch->getCount();
         if ( bHiddenBatchEntry )
-            return false;
+            return CandidateFillResult::Excluded;
         // 항목 하나만 숨길 수 있다(데미지 숫자의 남는 자릿수나 길이 0인 HP 바 구간). 실릴지가 바뀌면 부분 수집이 전체로 넘어간다.
         if ( pBatch->isEntryVisible( entry._index ) == false )
-            return false;
+            return CandidateFillResult::Excluded;
         // 배치를 가진 컴포넌트를 끄면(자기 비트나 소유 오브젝트의 계층 활성) 빠진다. `fillCandidateFromPrimitive` 와 같은 규칙이다.
         const Component* pOwnerComponent = pBatch->getOwnerComponent();
         if ( pOwnerComponent != nullptr && ( pOwnerComponent->isActive() == false ||
                                              ( pOwnerComponent->getOwner() != nullptr && pOwnerComponent->getOwner()->isRenderHidden() ) ) )
-            return false;
+            return CandidateFillResult::Excluded;
         Mesh* pMesh = pBatch->getRawMesh();
         if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
-            return false;
+            return CandidateFillResult::Excluded;
         // 그릴 구간 — 이름이 메시에 없으면 그리지 않는다(메시 컴포넌트의 `findDrawSection` 과 같은 규칙). 이름이 없으면 메시 전체(수 0).
         // 후보 배열은 지난 프레임 값 위에 덮어쓰므로 늘 기록한다.
         candidate._sectionFirstIndex = 0;
@@ -623,12 +626,12 @@ namespace sw
         {
             const optional<uint32> sectionIndex = pMesh->findSectionIndex( pBatch->getDrawSection() );
             if ( sectionIndex.has_value() == false )
-                return false;
+                return CandidateFillResult::Excluded;
             const MeshSection& section   = pMesh->getSections()[*sectionIndex];
             candidate._sectionFirstIndex = section._firstIndex;
             candidate._sectionIndexCount = section._indexCount;
             if ( section._indexCount == 0 )
-                return false; // 빈 구간 — (0, 0) 은 "메시 전체" 라 넘기면 안 된다
+                return CandidateFillResult::Excluded; // 빈 구간 — (0, 0) 은 "메시 전체" 라 넘기면 안 된다
         }
         const MeshInstanceBatch::Entry& item = pBatch->getEntry( entry._index );
         candidate._world                     = item._world;
@@ -652,10 +655,11 @@ namespace sw
             candidate._mesh = pBatch->getMesh();
         if ( candidate._instance.get() != pBatch->getRawMaterialInstance() )
             candidate._instance = pBatch->getMaterialInstance();
-        if ( fillCandidateMaterial( candidate, pBatch->getMaterial(), pScene ) == false )
-            return false;
+        const CandidateFillResult materialFill = fillCandidateMaterial( candidate, pBatch->getMaterial(), pScene );
+        if ( materialFill != CandidateFillResult::Included )
+            return materialFill;
         applyGPULODGroup( candidate ); // LOD 를 가진 메시의 인스턴스 배치(식생)도 그룹이다 — 항목마다 컬링이 단계를 고른다
-        return true;
+        return CandidateFillResult::Included;
     }
 
     void GPUSceneBuilder::applyGPULODGroup( DrawCandidate& candidate ) const
@@ -697,24 +701,22 @@ namespace sw
         invalidateBuildCache(); // 그룹 여부가 배치 키(`_lodContentID`)를 바꾼다
     }
 
-    bool GPUSceneBuilder::fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene )
+    GPUSceneBuilder::CandidateFillResult GPUSceneBuilder::fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene )
     {
         pMaterial = Material::resolveDrawMaterial( pMaterial, candidate._instance.get(), pScene->getMaterial() ); // 복셀러와 같은 한 벌
         // 초기화가 끝나지 않은 머티리얼(줄에 있음 · 실패)은 그리지 않는다. `Failed` 의 오류는 초기화한 쪽(`MaterialCache::initializePending`)이 한 번 남겼다.
+        // 그 칸은 다음 빌드에 그 칸만 다시 본다(`_listMaterialPendingSlot`) — 초기화는 씬에 신호를 남기지 않는다.
         if ( pMaterial != nullptr && pMaterial->getInitState() != MaterialInitState::Ready )
-        {
-            _notReadySkipped._count.fetch_add( 1u, std::memory_order_relaxed );
-            return false;
-        }
+            return CandidateFillResult::MaterialPending;
         // 원시 포인터로 먼저 비교하고, 다르면 소유권을 싣는다. 같으면 참조 카운트를 건드리지 않는다.
         if ( candidate._material.get() != pMaterial )
             candidate._material = GPUSceneBuilderInternal::shareMaterial( pMaterial );
 
         // 그리기 목록(불투명 · 반투명)은 머티리얼만 정한다 — 컴포넌트에 따로 두면 두 값이 어긋난다(언리얼 · 유니티도 블렌드 모드는 머티리얼의 것이다). 머티리얼이 없으면 그리지 않는다.
         if ( candidate._material == nullptr )
-            return false;
+            return CandidateFillResult::Excluded;
         candidate._blendMode = static_cast<uint32>( candidate._material->getBlendMode() );
-        return true;
+        return CandidateFillResult::Included;
     }
 
     void GPUSceneBuilder::assignPermutationHash( DrawCandidate& candidate )
@@ -866,18 +868,27 @@ namespace sw
         // 아무도 "바뀌었다" 고 말하지 않았고 카메라도 그대로면 **수집 자체를 하지 않는다**.
         // 바꾼 쪽이 알려 주므로 정지한 씬의 비용은 0에 수렴한다. 주의: 이 판단을 위해 모든 GameObject 의
         // Component 를 훑어 후보를 만들어 보면, 화면이 정지해 있어도 씬 크기만큼 비용이 든다.
-        // 지난 수집이 GPU 준비 전의 머티리얼 때문에 뺀 프리미티브가 있으면, 올라갔는지는 씬에 신호가 없으므로 전체 수집으로 다시 본다.
-        const uint32 notReadyLastBuild = _notReadySkipped._count.exchange( 0u, std::memory_order_relaxed );
-        SW_PROFILE_COUNT( "GT.Material.notReadyBatches", notReadyLastBuild );
-        const bool bRetryNotReady = notReadyLastBuild != 0u;
-        if ( bRetryNotReady )
-            input._bSetSame = false;
-        const bool bNothingChanged = input._bSetSame && bCamSame && input._bPermutationSame && primitives.hasDirty() == false;
+        // 지난 수집이 초기화 전의 머티리얼 때문에 뺀 칸은, 올라갔는지 씬에 신호가 없으므로 이번에 **그 칸만** 다시 본다(더티로 더한다 — 예전에는 전체 수집이었고,
+        // 실패한 머티리얼은 매 프레임 전체 수집을 불렀다). 언리얼이 자원이 준비되지 않은 프리미티브를 대기 목록에 두고 다시 더하는 것과 같은 자리다.
+        _listMaterialRetrySlot.swap( _listMaterialPendingSlot );
+        _listMaterialPendingSlot.clear();
+        SW_PROFILE_COUNT( "GT.Material.notReadyBatches", _listMaterialRetrySlot.size() );
+        const bool bNothingChanged = input._bSetSame && bCamSame && input._bPermutationSame && primitives.hasDirty() == false && _listMaterialRetrySlot.empty();
         if ( bNothingChanged )
             return;
 
         // 렌더 상태가 바뀐 것과 월드 행렬만 바뀐 것을 따로 받는다. 뒤쪽은 다시 모으지 않는다(`copyCandidateTransforms`).
         pObjects->getPrimitiveRegistry().consumeDirty( _listDirtyPrimitive, _listTransformDirtyPrimitive );
+        if ( _listMaterialRetrySlot.empty() == false )
+        {
+            // 칸 번호가 그대로일 때만 뜻이 있다(배치 세대가 바뀌면 전체 수집이 모든 칸을 보고 대기 칸을 다시 적는다). 레지스트리 더티와 겹친 칸은 한 번만 본다.
+            if ( input._bSetSame )
+            {
+                _listDirtyPrimitive.insert( _listDirtyPrimitive.end(), _listMaterialRetrySlot.begin(), _listMaterialRetrySlot.end() );
+                VectorUtil::sortUnique( _listDirtyPrimitive );
+            }
+            _listMaterialRetrySlot.clear();
+        }
         updateStaticShadowGeneration( primitives, setGeneration != _lastPrimitiveSetGeneration );
 
         input._pPrimitives        = &primitives;
@@ -1022,9 +1033,12 @@ namespace sw
                 break;
             const bool bWasIncluded = isCandidateIncluded( slot );
 
-            _candidateProbe      = DrawCandidate{};
-            const bool bIncluded = ( slot < input._meshCount ) ? fillCandidateFromPrimitive( listPrimitive[slot], input._pScene, _candidateProbe )
-                                                               : fillCandidateFromInstanceEntry( listInstanceEntry[slot - input._meshCount], input._pScene, _candidateProbe );
+            _candidateProbe                = DrawCandidate{};
+            const CandidateFillResult fill = ( slot < input._meshCount ) ? fillCandidateFromPrimitive( listPrimitive[slot], input._pScene, _candidateProbe )
+                                                                         : fillCandidateFromInstanceEntry( listInstanceEntry[slot - input._meshCount], input._pScene, _candidateProbe );
+            if ( fill == CandidateFillResult::MaterialPending )
+                _listMaterialPendingSlot.push_back( slot );
+            const bool bIncluded = fill == CandidateFillResult::Included;
             if ( bIncluded )
                 assignPermutationHash( _candidateProbe );
             // 후보 번호는 칸 번호다. 실릴지가 바뀌면(더하기 · 지우기 · 숨김 토글) 그 칸만 채우거나 비우고 배치를 다시 나눈다 — 다른 후보는 자리가 그대로다.
@@ -1133,6 +1147,7 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.GPUScene.build.collect" );
         const uint32 primitiveCount = input._slotCount;
         _listCollectFlag.resize( primitiveCount );
+        _listMaterialPendingSlot.clear(); // 모든 칸을 다시 보므로 대기 칸도 처음부터 적는다(되돌아 떨어진 부분 수집의 몫을 버린다)
 
         // 지난 프레임의 "칸에서 후보로" 테이블은 배치 세대가 같을 때만 의미가 있다(영역을 늘리면 인스턴스 항목 칸이 밀린다).
         // 테이블이 그 크기가 아니면 지난 후보와 짝을 지을 수 없으니 전부 "처음 본 것" 으로 처리한다.
@@ -1160,12 +1175,14 @@ namespace sw
             {
                 for ( uint32 index = start; index < end; ++index )
                 {
-                    DrawCandidate& candidate = _pCandidate[index];
-                    uint8          flag      = 0u;
-                    const bool     bFilled   = ( index < _meshCount ) ? _pBuilder->fillCandidateFromPrimitive( _ppPrimitive[index], _pScene, candidate )
-                                                                      : _pBuilder->fillCandidateFromInstanceEntry( _pEntry[index - _meshCount], _pScene, candidate );
-                    if ( bFilled )
+                    DrawCandidate&            candidate = _pCandidate[index];
+                    uint8                     flag      = 0u;
+                    const CandidateFillResult fill      = ( index < _meshCount ) ? _pBuilder->fillCandidateFromPrimitive( _ppPrimitive[index], _pScene, candidate )
+                                                                                 : _pBuilder->fillCandidateFromInstanceEntry( _pEntry[index - _meshCount], _pScene, candidate );
+                    if ( fill == CandidateFillResult::Included )
                         flag = compareWithPrevious( index, candidate );
+                    else if ( fill == CandidateFillResult::MaterialPending )
+                        flag = kCollectMaterialPending;
                     _pFlag[index] = flag;
                 }
             }
@@ -1238,6 +1255,8 @@ namespace sw
             const bool  bWasIncluded = _listPrimitiveToCandidate[slot] != kInvalidCandidateIndex; // 쓰기 전에 읽는다. 같은 테이블을 제자리에서 새로 쓴다
             if ( ( flag & kCollectIncluded ) == 0u )
             {
+                if ( ( flag & kCollectMaterialPending ) != 0u )
+                    _listMaterialPendingSlot.push_back( slot );
                 bAllKeySame                     = bAllKeySame && bWasIncluded == false;
                 bAllContentSame                 = bAllContentSame && bWasIncluded == false;
                 _listPrimitiveToCandidate[slot] = kInvalidCandidateIndex;

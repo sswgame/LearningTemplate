@@ -367,33 +367,22 @@ namespace sw
          */
         enum CollectFlag : uint8
         {
-            kCollectIncluded    = 1u << 0, ///< 후보에 실린다.
-            kCollectNeedsStamp  = 1u << 1, ///< 해시를 직렬 구간에서 기록해야 한다(머티리얼, 인스턴스, 세대 중 하나가 달라졌다).
-            kCollectKeySame     = 1u << 2, ///< 지난 후보와 배치 키가 같다.
-            kCollectContentSame = 1u << 3, ///< 지난 후보와 내용이 전부 같다.
+            kCollectIncluded        = 1u << 0, ///< 후보에 실린다.
+            kCollectNeedsStamp      = 1u << 1, ///< 해시를 직렬 구간에서 기록해야 한다(머티리얼, 인스턴스, 세대 중 하나가 달라졌다).
+            kCollectKeySame         = 1u << 2, ///< 지난 후보와 배치 키가 같다.
+            kCollectContentSame     = 1u << 3, ///< 지난 후보와 내용이 전부 같다.
+            kCollectMaterialPending = 1u << 4, ///< 실리지 않았다 — 머티리얼이 아직 초기화되지 않았다(다음 빌드에 그 칸만 다시 본다).
+        };
+        /** @brief 프리미티브 하나를 후보로 채운 결과입니다. */
+        enum class CandidateFillResult : uint8
+        {
+            Included,        ///< 후보에 실린다
+            Excluded,        ///< 그리지 않는다(안 보임 · 비활성 · 메시 없음 · 머티리얼 없음)
+            MaterialPending, ///< 머티리얼이 아직 초기화되지 않아 이번에는 싣지 않는다 — 그 칸을 다음 빌드에 다시 본다
         };
 
         /** @brief 후보 배열에 실리지 않은 프리미티브의 표시입니다. */
         static constexpr uint32 kInvalidCandidateIndex = constant::invalid_index::kUint32;
-        /**
-         * @brief 마지막 수집에서 초기화가 안 된(`MaterialInitState` 가 `Ready` 가 아닌) 머티리얼 때문에 후보에서 뺀 프리미티브 수입니다(워커가 더하므로 원자).
-         * @details 0 이 아니면 다음 프레임은 더티 신호가 없어도 전체 수집을 다시 합니다. 머티리얼 초기화는 씬에 아무 신호도 남기지 않기 때문입니다.
-         *          이동 가능하게 두려고 값을 감싼 형식입니다.
-         */
-        struct NotReadyCounter
-        {
-            atomic<uint32> _count{ 0 };
-            NotReadyCounter() = default;
-            NotReadyCounter( NotReadyCounter&& other ) noexcept
-                : _count{ other._count.load() }
-            {
-            }
-            NotReadyCounter& operator=( NotReadyCounter&& other ) noexcept
-            {
-                _count.store( other._count.load() );
-                return *this;
-            }
-        };
 
         struct SortKey
         {
@@ -634,13 +623,13 @@ namespace sw
         void invalidateBuildCache();
 
         /**
-         * @brief 프리미티브 하나를 후보로 채웁니다. 그릴 수 없으면(안 보임, 비활성, 메시 없음) false 를 반환합니다.
+         * @brief 프리미티브 하나를 후보로 채웁니다. 그릴 수 없으면(안 보임, 비활성, 메시 없음) `Excluded`, 머티리얼이 초기화 전이면 `MaterialPending` 입니다.
          * @details **전체 수집과 부분 수집이 이 함수를 함께 쓴다.** 채우는 규칙이 두 곳으로 갈리면
          *          부분 갱신만 낡은 필드를 남기는데, 그 화면은 대부분의 프레임에서 멀쩡해 보인다.
          */
-        bool fillCandidateFromPrimitive( ScenePrimitive* pPrimitive, Scene* pScene, DrawCandidate& candidate );
+        CandidateFillResult fillCandidateFromPrimitive( ScenePrimitive* pPrimitive, Scene* pScene, DrawCandidate& candidate );
         /** @brief 인스턴스 배치의 항목 하나를 후보로 채웁니다. 메시 컴포넌트 버전과 규칙이 같고, 소유권은 배치에 있습니다. */
-        bool fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate );
+        CandidateFillResult fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate );
         /**
          * @brief 후보의 머티리얼과 블렌드 모드를 정합니다. 메시 컴포넌트 버전과 인스턴스 배치 버전이 같은 규칙을 씁니다.
          * @details 머티리얼이 없으면 인스턴스의 부모 머티리얼을, 그것도 없으면 씬 기본 머티리얼을 쓴다(언리얼의 기본 머티리얼).
@@ -650,8 +639,8 @@ namespace sw
          *          퍼뮤테이션(불투명, 반투명)을 가른다. 메시가 값을 뒤집을 수 있게 두면 불투명으로 컴파일된 머티리얼을 블렌딩으로
          *          그리는 어긋난 상태가 만들어진다. 그래서 메시 컴포넌트에는 블렌드 칸이 없고, 머티리얼(자기 · 인스턴스 부모 · 씬 기본)이 없는 후보는 싣지 않는다.
          */
-        /** @return 후보의 머티리얼이 초기화되지 않았으면(`MaterialInitState` 가 `Ready` 가 아님) 세고 false 입니다 — 그 후보는 싣지 않습니다. 워커에서 불립니다. */
-        [[nodiscard]] bool fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene );
+        /** @return 후보의 머티리얼이 초기화되지 않았으면(`MaterialInitState` 가 `Ready` 가 아님) `MaterialPending` — 그 후보는 싣지 않습니다. 워커에서 불립니다. */
+        [[nodiscard]] CandidateFillResult fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene );
         /** @brief 후보를 GPU 인스턴스 LOD 그룹으로 그릴 수 있으면 그 단계 구간을 LOD 0 으로 되돌리고 `_lodContentID` 를 기록합니다(아니면 빈 토큰). 블렌드가 정해진 뒤에 부른다. */
         void applyGPULODGroup( DrawCandidate& candidate ) const;
         /** @brief 후보의 퍼뮤테이션 해시를 기록합니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */
@@ -776,8 +765,14 @@ namespace sw
         /** @brief 마지막 수집이 만든 후보 배열의 길이(= 칸 수, 구멍 포함)입니다. 부분 수집이 이 길이를 이어받습니다. */
         size_t _lastCandidateCount{ 0 };
         /** @brief 후보 배열에서 실린 칸 수입니다. 전체 수집이 세고 부분 수집이 들고 남에 따라 더하고 뺀다. 0 이면 스냅샷을 비운다. */
-        size_t          _includedCount{ 0 };
-        NotReadyCounter _notReadySkipped;
+        size_t _includedCount{ 0 };
+        /**
+         * @brief 이번 수집에서 초기화가 안 된(`MaterialInitState` 가 `Ready` 가 아닌) 머티리얼 때문에 싣지 않은 칸입니다(부분 수집이 바로, 전체 수집은 압축이 적는다).
+         * @details 다음 빌드가 `_listMaterialRetrySlot` 으로 넘겨 그 칸만 더티로 다시 본다 — 머티리얼 초기화는 씬에 신호를 남기지 않는다.
+         */
+        vector<uint32> _listMaterialPendingSlot;
+        /** @brief 지난 빌드의 머티리얼 대기 칸입니다(이번 빌드가 더티에 더한다). */
+        vector<uint32> _listMaterialRetrySlot;
         /** @brief 부분 수집이 프리미티브 하나를 채워 볼 임시 후보입니다. 프레임마다 할당하지 않습니다. */
         DrawCandidate _candidateProbe;
 
