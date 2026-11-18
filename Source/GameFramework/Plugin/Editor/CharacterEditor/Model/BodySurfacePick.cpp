@@ -10,15 +10,36 @@
 
 namespace sw::editor
 {
-    void BodyPickSurface::build( vector_reference<const RHIVertex> listVertex, vector_reference<const MeshSkinVertex> listSkin, const vector<float4x4>& listPalette,
-                                 const float4x4& world, BodyPickSurface& outSurface )
+    void BodyPickSurface::build( vector_reference<const RHIVertex> listVertex, vector_reference<const MeshMorphTarget> listMorphTarget, vector_reference<const float32> listMorphWeight,
+                                 vector_reference<const MeshSkinVertex> listSkin, const vector<float4x4>& listPalette, const float4x4& world, BodyPickSurface& outSurface )
     {
         const bool bSkinned    = listSkin.size() == listVertex.size() && listPalette.empty() == false;
         outSurface._listVertex = listVertex;
         outSurface._listPosition.resize( listVertex.size() );
+        // 모프는 레스트(바인드) 자리에 먼저 더한다 — 스키닝 컴퓨트와 같은 차례다. 그 자리를 _listPosition 에 잠시 둔다.
+        for ( size_t index = 0; index < listVertex.size(); ++index )
+            outSurface._listPosition[index] = float3{ listVertex[index]._arrPosition[0], listVertex[index]._arrPosition[1], listVertex[index]._arrPosition[2] };
+        if ( listMorphWeight.size() == listMorphTarget.size() )
+        {
+            for ( size_t target = 0; target < listMorphTarget.size(); ++target )
+            {
+                const float32 weight = listMorphWeight[target];
+                if ( weight == 0.0f )
+                    continue;
+                for ( const MeshMorphDelta& delta : listMorphTarget[target]._listDelta )
+                {
+                    if ( delta._vertexIndex < outSurface._listPosition.size() )
+                        outSurface._listPosition[delta._vertexIndex] += delta._position * weight;
+                }
+            }
+        }
         for ( size_t index = 0; index < listVertex.size(); ++index )
         {
-            RHIVertex vertex = listVertex[index];
+            RHIVertex    vertex    = listVertex[index];
+            const float3 rest      = outSurface._listPosition[index];
+            vertex._arrPosition[0] = rest._x;
+            vertex._arrPosition[1] = rest._y;
+            vertex._arrPosition[2] = rest._z;
             if ( bSkinned )
                 MeshSkinBinding::skinVertex( listPalette, listSkin[index], vertex );
             outSurface._listPosition[index] = float3::transform( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] }, world );

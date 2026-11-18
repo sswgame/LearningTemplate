@@ -109,6 +109,7 @@ namespace sw::editor
             {
                 outListSurface.clear();
                 const vector<float4x4> listNoPalette{}; // 단단한 부품 — 스키닝하지 않는다
+                const vector<float32>  listNoWeight{};  // 유닛이 없으면 모프 가중치가 없다
                 for ( size_t index = 0; index < listObject.size(); ++index )
                 {
                     const GameObject&            object = *listObject[index];
@@ -118,7 +119,8 @@ namespace sw::editor
                     if ( pMesh == nullptr || pScene == nullptr || pMesh->getCPUView().getVertices().empty() )
                         continue;
                     BodyPickSurface& surface = outListSurface.emplace_back();
-                    BodyPickSurface::build( pMesh->getCPUView().getVertices(), pMesh->getSkinVertices(), pUnit != nullptr ? pUnit->getSkinPalette() : listNoPalette, pScene->getWorldMatrix(), surface );
+                    BodyPickSurface::build( pMesh->getCPUView().getVertices(), pMesh->getMorphTargets(), pUnit != nullptr ? pUnit->getMorphWeights() : listNoWeight, pMesh->getSkinVertices(),
+                                            pUnit != nullptr ? pUnit->getSkinPalette() : listNoPalette, pScene->getWorldMatrix(), surface );
                     surface._listIndex   = pMesh->getIndices();
                     surface._listSection = pMesh->getSections();
                     surface._bSkin       = index == 0 ? SW_TRUE : SW_FALSE;
