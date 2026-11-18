@@ -41,6 +41,12 @@ namespace sw
         recordMeshSetChange( slot );
     }
 
+    uint64 PrimitiveRegistry::issueGenerationBase()
+    {
+        static atomic<uint64> s_nextRange{ 1 };
+        return s_nextRange.fetch_add( 1, std::memory_order_relaxed ) << 32u;
+    }
+
     void PrimitiveRegistry::recordMeshSetChange( uint32 slot )
     {
         const uint64 generation = _setGeneration.fetch_add( 1, std::memory_order_relaxed ) + 1u;
@@ -60,7 +66,8 @@ namespace sw
     {
         outListSlot.clear();
         ScopedLock<mutex> lock{ _mutex };
-        if ( sinceGeneration < _meshSetChangeLogStart )
+        // 다른 레지스트리의 세대(앞 구간이든 뒤 구간이든)는 이 기록으로 거슬러 갈 수 없다 — 다시 만든다.
+        if ( sinceGeneration < _meshSetChangeLogStart || sinceGeneration > _setGeneration.load( std::memory_order_relaxed ) )
             return false;
         for ( const MeshSetChange& change : _listMeshSetChange )
         {
