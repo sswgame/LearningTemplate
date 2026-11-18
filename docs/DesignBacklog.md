@@ -969,7 +969,7 @@ struct MemoryBackend
 |---|---|---|---|---|
 | `vector::insert( pos, first, last )` | 고침 — 한 번 키우고 꼬리를 한 번 민다(`TArray::Insert`). `ByteStream.h` · `Archive.cpp` 가 부른다 | 1 MB 를 4 KB 꼬리 앞에 범위 삽입 | `reserve` + `memcpy` 기준의 2 배 이상 | 전방 반복자는 거리 → 한 번 키우기 → 꼬리 한 번 밀기 → 범위 생성(자명 복사는 `memmove`), 입력 반복자는 임시 벡터로 모아 같은 길 |
 | `unordered_map` · `unordered_set` 의 `reserve` | 고침(AC-2) — 버킷과 밀집 배열을 함께 예약(`TMap::Reserve`), `UnorderedMapTest.ReservedInsertsDoNotAllocate` | 10 만 개 `reserve` 뒤 삽입의 할당 수 | 0 이 아니면 | 값 배열도 예약 |
-| `map` · `set` 범위 구축(정렬 벡터) | 고침(AC-2) — 꼬리에 붙여 안정 정렬 · 겹친 키 거르기 · 한 번 병합하는 O(n log n), 버퍼는 컨테이너 할당자(`SortedVectorMerge.h`), `MapTest.RangeBuildKeepsTheFirstOfEqualKeys` | 정렬 안 된 10 만 키 범위 구축 | `stable_sort` 기준의 2 배 이상 | 붙이고 `stable_sort` 뒤 겹친 키는 앞 것만 |
+| `map` · `set` 범위 구축(정렬 벡터) | 고침(AC-2) — 꼬리에 붙여 안정 정렬 · 겹친 키 거르기 · 한 번 병합하는 O(n log n), 버퍼는 컨테이너 할당자(`SortedVectorBase.h`), `MapTest.RangeBuildKeepsTheFirstOfEqualKeys` | 정렬 안 된 10 만 키 범위 구축 | `stable_sort` 기준의 2 배 이상 | 붙이고 `stable_sort` 뒤 겹친 키는 앞 것만 |
 | `deque` | 고침 — 2 의 거듭제곱 링 버퍼(`TDeque`), 주소 안정 자리는 `ChunkedArray`(옛 래퍼는 MSVC STL 이 8 B 넘는 원소마다 블록 하나) | 64 B 원소 1 만 번 `push_back` + `pop_front` 의 할당 수와 ns(Windows · Linux) | 원소당 할당 0.5 번 이상 | 아래 |
 
 **`deque` 는 역할 둘을 형식으로 가른다.** 쓰는 자리 50 여 곳 가운데 대부분은 FIFO 줄(`AsyncFileIO` · `NetConnection` · `SQLConnectionPool` · `DedicatedWorker` · `JoltJobSystem` · `StreamSendQueue` …)이고 몇 곳은 "주소가 움직이지 않는다" 때문에 쓴다(`LoopbackCluster.h` 셋 · `NetTransport.h` 의 `_listEndpoint` · `RTSWorld::_listUnit` · `FlowFieldCache::_listSlot` · 테스트 셋). 링 버퍼는 커질 때 원소를 옮겨 뒤쪽 계약을 깬다.

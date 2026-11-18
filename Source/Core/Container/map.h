@@ -2,10 +2,11 @@
  * @file map.h
  * @brief 정렬 맵입니다. 정렬된 벡터와 이진 검색입니다. 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 기본 할당자(`ContainerAllocator`)만 다릅니다.
  * @details 키 순서로 돕니다. 원소 주소 · 반복자는 삽입 · 삭제마다 무효가 될 수 있습니다(주소를 오래 쥐어야 하면 값을 `unique_ptr` 로 든다).
+ *          저장소 · 조회 · 삽입 · 삭제는 `set` 과 함께 쓰는 몸통(`internal::SortedVectorBase`)에 있고, 여기에는 키 → 값 접근(`at` · `operator[]` · `try_emplace`)만 있습니다.
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
-#include "Core/Container/SortedVectorMerge.h"
+#include "Core/Container/SortedVectorBase.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -14,119 +15,25 @@ namespace sw
 {
     /** @brief 정렬된 벡터로 구현한 맵입니다. 조회는 이진 검색이고, 삽입할 때 정렬을 유지합니다. */
     template <typename Key, typename T, typename Compare = std::less<void>, typename Allocator = ContainerAllocator<pair<Key, T>>>
-    class map
+    class map : public internal::SortedVectorBase<pair<Key, T>, Compare, internal::PairKeyLess<pair<Key, T>, Compare>, Allocator>
     {
-    public:
-        using key_type               = Key;
-        using mapped_type            = T;
-        using value_type             = pair<Key, T>;
-        using size_type              = size_t;
-        using difference_type        = std::ptrdiff_t;
-        using key_compare            = Compare;
-        using allocator_type         = Allocator;
-        using reference              = value_type&;
-        using const_reference        = const value_type&;
-        using pointer                = value_type*;
-        using const_pointer          = const value_type*;
-        using Container              = std::vector<value_type, Allocator>;
-        using iterator               = typename Container::iterator;
-        using const_iterator         = typename Container::const_iterator;
-        using reverse_iterator       = typename Container::reverse_iterator;
-        using const_reverse_iterator = typename Container::const_reverse_iterator;
-
-    private:
-        /** @brief 키만 비교해 정렬 위치를 찾습니다. */
-        struct KeyCompare
-        {
-            Compare _comp;
-            bool    operator()( const value_type& a, const value_type& b ) const { return _comp( a.first, b.first ); }
-            template <typename K>
-            bool operator()( const value_type& a, const K& b ) const { return _comp( a.first, b ); }
-
-            /** @brief 이종 키와 엔트리의 키를 비교합니다(`upper_bound` 가 쓰는 인자 순서). 키 쪽에서 `.first` 를 읽지 않습니다. */
-            template <typename K>
-            bool operator()( const K& a, const value_type& b ) const { return _comp( a, b.first ); }
-        };
+        using Base      = internal::SortedVectorBase<pair<Key, T>, Compare, internal::PairKeyLess<pair<Key, T>, Compare>, Allocator>;
+        using ValueLess = internal::PairKeyLess<pair<Key, T>, Compare>;
 
     public:
-        // ------------------------------------------------------------------------------
-        // 1) 생성 · 대입 — 정렬 벡터 + 비교자. 레이스 컨텍스트는 공유하지 않는다
-        // ------------------------------------------------------------------------------
-        /** @brief 빈 맵으로 둡니다. */
-        map()
-            : _data{}
-            , _comp{} {}
+        using key_type       = Key;
+        using mapped_type    = T;
+        using value_type     = typename Base::value_type;
+        using iterator       = typename Base::iterator;
+        using const_iterator = typename Base::const_iterator;
 
-        /** @brief 비교자와 할당자를 지정합니다. */
-        explicit map( const Compare& comp, const Allocator& alloc = Allocator() )
-            : _data{ alloc }
-            , _comp{ comp } {}
-
-        /** @brief 지정한 할당자로 빈 맵을 만듭니다. */
-        explicit map( const Allocator& alloc )
-            : _data{ alloc }
-            , _comp{} {}
-
-        /** @brief [first, last) 를 넣고 정렬합니다. */
-        template <class InputIt>
-        map( InputIt first, InputIt last, const Compare& comp = Compare(), const Allocator& alloc = Allocator() )
-            : _data{ alloc }
-            , _comp{ comp } { insert( first, last ); }
-
-        /** @brief 복사 생성합니다. */
-        map( const map& other )
-            : _data{ other._data }
-            , _comp{ other._comp } {}
-
-        /** @brief 이동 생성합니다. */
-        map( map&& other ) noexcept
-            : _data{ std::move( other._data ) }
-            , _comp{ std::move( other._comp ) } {}
-
-        /** @brief 초기화 리스트를 넣고 정렬합니다. */
-        map( std::initializer_list<value_type> init, const Compare& comp = Compare(), const Allocator& alloc = Allocator() )
-            : _data{ alloc }
-            , _comp{ comp } { insert( init.begin(), init.end() ); }
-
-        map& operator=( const map& other )
-        {
-            if ( this != &other )
-            {
-                SW_SCOPED_RACE_WRITE();
-                SW_SCOPED_RACE_READ_OTHER( other );
-                _data = other._data;
-                _comp = other._comp;
-            }
-            return *this;
-        }
-
-        map& operator=( map&& other ) noexcept
-        {
-            if ( this != &other )
-            {
-                SW_SCOPED_RACE_WRITE();
-                SW_SCOPED_RACE_WRITE_OTHER( other );
-                _data = std::move( other._data );
-                _comp = std::move( other._comp );
-            }
-            return *this;
-        }
+        // 생성자는 몸통의 것을 그대로 쓴다(기본 · 복사 · 이동은 암시적으로 몸통의 것을 부른다).
+        using Base::Base;
 
         map& operator=( std::initializer_list<value_type> ilist )
         {
-            SW_SCOPED_RACE_WRITE();
-            clear();
-            insert( ilist.begin(), ilist.end() );
+            Base::assign( ilist );
             return *this;
-        }
-
-        // ------------------------------------------------------------------------------
-        // 2) 조회 — 이진 검색 · 이터레이터 · 크기
-        // ------------------------------------------------------------------------------
-        allocator_type get_allocator() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.get_allocator();
         }
 
         /** @brief 키에 해당하는 값을 반환합니다. 키가 없으면 std::out_of_range 를 던집니다. */
@@ -134,8 +41,8 @@ namespace sw
         T& at( const K& key )
         {
             SW_SCOPED_RACE_WRITE();
-            auto it = lower_bound( key );
-            if ( it != end() && _comp( key, it->first ) == false )
+            auto it = this->lower_bound( key );
+            if ( it != this->end() && this->_comp( key, it->first ) == false )
                 return it->second;
             throw std::out_of_range( "map::at" );
         }
@@ -145,8 +52,8 @@ namespace sw
         const T& at( const K& key ) const
         {
             SW_SCOPED_RACE_READ();
-            auto it = lower_bound( key );
-            if ( it != end() && _comp( key, it->first ) == false )
+            auto it = this->lower_bound( key );
+            if ( it != this->end() && this->_comp( key, it->first ) == false )
                 return it->second;
             throw std::out_of_range( "map::at" );
         }
@@ -154,197 +61,32 @@ namespace sw
         T& operator[]( const Key& key )
         {
             SW_SCOPED_RACE_WRITE();
-            auto it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-            if ( it != _data.end() && _comp( key, it->first ) == false )
+            auto it = std::lower_bound( this->_data.begin(), this->_data.end(), key, ValueLess{ this->_comp } );
+            if ( it != this->_data.end() && this->_comp( key, it->first ) == false )
                 return it->second;
-            it = _data.insert( it, value_type( key, T() ) );
+            it = this->_data.insert( it, value_type( key, T() ) );
             return it->second;
         }
 
         T& operator[]( Key&& key )
         {
             SW_SCOPED_RACE_WRITE();
-            auto it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-            if ( it != _data.end() && _comp( key, it->first ) == false )
+            auto it = std::lower_bound( this->_data.begin(), this->_data.end(), key, ValueLess{ this->_comp } );
+            if ( it != this->_data.end() && this->_comp( key, it->first ) == false )
                 return it->second;
-            it = _data.insert( it, value_type( std::move( key ), T() ) );
+            it = this->_data.insert( it, value_type( std::move( key ), T() ) );
             return it->second;
         }
 
-        iterator begin() noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.begin();
-        }
-
-        const_iterator begin() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.begin();
-        }
-
-        const_iterator cbegin() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.cbegin();
-        }
-
-        iterator end() noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.end();
-        }
-
-        const_iterator end() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.end();
-        }
-
-        const_iterator cend() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.cend();
-        }
-
-        reverse_iterator rbegin() noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.rbegin();
-        }
-
-        const_reverse_iterator rbegin() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.rbegin();
-        }
-
-        const_reverse_iterator crbegin() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.crbegin();
-        }
-
-        reverse_iterator rend() noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.rend();
-        }
-
-        const_reverse_iterator rend() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.rend();
-        }
-
-        const_reverse_iterator crend() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.crend();
-        }
-
-        bool empty() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.empty();
-        }
-
-        size_type size() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.size();
-        }
-
-        size_type max_size() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.max_size();
-        }
-
-        void reserve( size_type new_cap )
-        {
-            SW_SCOPED_RACE_WRITE();
-            _data.reserve( new_cap );
-        }
-
-        size_type capacity() const noexcept
-        {
-            SW_SCOPED_RACE_READ();
-            return _data.capacity();
-        }
-
-        // ------------------------------------------------------------------------------
-        // 3) 변경 — 정렬을 유지하며 insert/erase
-        // ------------------------------------------------------------------------------
-        void clear() noexcept
-        {
-            SW_SCOPED_RACE_WRITE();
-            _data.clear();
-        }
-
-        pair<iterator, bool> insert( const value_type& value )
-        {
-            SW_SCOPED_RACE_WRITE();
-            auto it = std::lower_bound( _data.begin(), _data.end(), value.first, KeyCompare{ _comp } );
-            if ( it != _data.end() && _comp( value.first, it->first ) == false )
-                return { it, false };
-            it = _data.insert( it, value );
-            return { it, true };
-        }
-
-        pair<iterator, bool> insert( value_type&& value )
-        {
-            SW_SCOPED_RACE_WRITE();
-            auto it = std::lower_bound( _data.begin(), _data.end(), value.first, KeyCompare{ _comp } );
-            if ( it != _data.end() && _comp( value.first, it->first ) == false )
-                return { it, false };
-            it = _data.insert( it, std::move( value ) );
-            return { it, true };
-        }
-
-        iterator insert( [[maybe_unused]] const_iterator hint, const value_type& value ) { return insert( value ).first; }
-
-        iterator insert( [[maybe_unused]] const_iterator hint, value_type&& value ) { return insert( std::move( value ) ).first; }
-
-        /**
-         * @brief [first, last) 를 넣습니다. 키가 이미 있거나 범위 안에서 겹치면 먼저 온 것(있던 원소, 그다음 입력 순서) 하나만 남습니다.
-         * @details 꼬리에 붙여 안정 정렬하고 겹친 키를 걸러 한 번 병합한다(`internal::mergeAppendedRange`) — O(n log n)(감사 C-9: 원소마다 정렬 위치에 끼우면 O(n²)였다.
-         *          std::map 범위 구축 · 언리얼 `TSortedMap` 과 같은 결과).
-         */
-        template <class InputIt>
-        void insert( InputIt first, InputIt last )
-        {
-            SW_SCOPED_RACE_WRITE();
-            const size_t oldSize = _data.size();
-            for ( ; first != last; ++first )
-                _data.emplace_back( *first );
-
-            internal::mergeAppendedRange( _data, oldSize, KeyCompare{ _comp } );
-        }
-
-        void insert( std::initializer_list<value_type> ilist ) { insert( ilist.begin(), ilist.end() ); }
-
-        template <class... Args>
-        pair<iterator, bool> emplace( Args&&... args )
-        {
-            value_type val( std::forward<Args>( args )... );
-            return insert( std::move( val ) );
-        }
-
-        /** @brief 원소를 제자리에서 생성해 삽입합니다. 힌트는 쓰지 않습니다. */
-        template <class... Args>
-        iterator emplace_hint( [[maybe_unused]] const_iterator hint, Args&&... args ) { return emplace( std::forward<Args>( args )... ).first; }
-
-        // try_emplace
         /** @brief 키가 없을 때만 값을 제자리에서 생성해 넣습니다. */
         template <class... Args>
         pair<iterator, bool> try_emplace( const Key& k, Args&&... args )
         {
             SW_SCOPED_RACE_WRITE();
-            auto it = std::lower_bound( _data.begin(), _data.end(), k, KeyCompare{ _comp } );
-            if ( it != _data.end() && _comp( k, it->first ) == false )
+            auto it = std::lower_bound( this->_data.begin(), this->_data.end(), k, ValueLess{ this->_comp } );
+            if ( it != this->_data.end() && this->_comp( k, it->first ) == false )
                 return { it, false };
-            it = _data.emplace( it, std::piecewise_construct, std::forward_as_tuple( k ), std::forward_as_tuple( std::forward<Args>( args )... ) );
+            it = this->_data.emplace( it, std::piecewise_construct, std::forward_as_tuple( k ), std::forward_as_tuple( std::forward<Args>( args )... ) );
             return { it, true };
         }
 
@@ -353,142 +95,11 @@ namespace sw
         pair<iterator, bool> try_emplace( Key&& k, Args&&... args )
         {
             SW_SCOPED_RACE_WRITE();
-            auto it = std::lower_bound( _data.begin(), _data.end(), k, KeyCompare{ _comp } );
-            if ( it != _data.end() && _comp( k, it->first ) == false )
+            auto it = std::lower_bound( this->_data.begin(), this->_data.end(), k, ValueLess{ this->_comp } );
+            if ( it != this->_data.end() && this->_comp( k, it->first ) == false )
                 return { it, false };
-            it = _data.emplace( it, std::piecewise_construct, std::forward_as_tuple( std::move( k ) ), std::forward_as_tuple( std::forward<Args>( args )... ) );
+            it = this->_data.emplace( it, std::piecewise_construct, std::forward_as_tuple( std::move( k ) ), std::forward_as_tuple( std::forward<Args>( args )... ) );
             return { it, true };
         }
-
-        iterator erase( iterator pos )
-        {
-            SW_SCOPED_RACE_WRITE();
-            return _data.erase( pos );
-        }
-
-        iterator erase( const_iterator pos )
-        {
-            SW_SCOPED_RACE_WRITE();
-            return _data.erase( pos );
-        }
-
-        iterator erase( const_iterator first, const_iterator last )
-        {
-            SW_SCOPED_RACE_WRITE();
-            return _data.erase( first, last );
-        }
-
-        /** @brief 키와 같은 원소를 제거하고, 제거한 개수(0 또는 1)를 반환합니다. */
-        template <typename K>
-        size_type erase( const K& key )
-        {
-            SW_SCOPED_RACE_WRITE();
-            auto it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-            if ( it != _data.end() && _comp( key, it->first ) == false )
-            {
-                _data.erase( it );
-                return 1;
-            }
-            return 0;
-        }
-
-        void swap( map& other ) noexcept
-        {
-            SW_SCOPED_RACE_WRITE();
-            SW_SCOPED_RACE_WRITE_OTHER( other );
-            _data.swap( other._data );
-            std::swap( _comp, other._comp );
-        }
-
-        /** @brief 키와 같은 원소의 개수(0 또는 1)를 반환합니다. */
-        template <typename K>
-        size_type count( const K& key ) const
-        {
-            SW_SCOPED_RACE_READ();
-            auto it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-            if ( it != _data.end() && _comp( key, it->first ) == false )
-                return 1;
-            return 0;
-        }
-
-        template <typename K>
-        iterator find( const K& key )
-        {
-            SW_SCOPED_RACE_READ();
-            auto it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-            return ( it != _data.end() && _comp( key, it->first ) == false ) ? it : _data.end();
-        }
-
-        template <typename K>
-        const_iterator find( const K& key ) const
-        {
-            SW_SCOPED_RACE_READ();
-            auto it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-            return ( it != _data.end() && _comp( key, it->first ) == false ) ? it : _data.end();
-        }
-
-        template <typename K>
-        bool contains( const K& key ) const { return count( key ) > 0; }
-
-        /** @brief 키와 같은 원소의 범위를 반환합니다(equal_range). */
-        template <typename K>
-        pair<iterator, iterator> equal_range( const K& key )
-        {
-            SW_SCOPED_RACE_READ();
-            auto first = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-            auto last  = first;
-            if ( first != _data.end() && _comp( key, first->first ) == false )
-                ++last;
-            return { first, last };
-        }
-
-        /** @brief 키와 같은 원소의 범위를 반환합니다(equal_range). */
-        template <typename K>
-        pair<const_iterator, const_iterator> equal_range( const K& key ) const
-        {
-            SW_SCOPED_RACE_READ();
-            auto first = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-            auto last  = first;
-            if ( first != _data.end() && _comp( key, first->first ) == false )
-                ++last;
-            return { first, last };
-        }
-
-        /** @brief 키보다 작지 않은 첫 원소를 가리키는 이터레이터를 반환합니다(lower_bound). */
-        template <typename K>
-        iterator lower_bound( const K& key )
-        {
-            SW_SCOPED_RACE_READ();
-            return std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-        }
-
-        /** @brief 키보다 작지 않은 첫 원소를 가리키는 이터레이터를 반환합니다(lower_bound). */
-        template <typename K>
-        const_iterator lower_bound( const K& key ) const
-        {
-            SW_SCOPED_RACE_READ();
-            return std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-        }
-
-        /** @brief 키보다 큰 첫 원소를 가리키는 이터레이터를 반환합니다(upper_bound). */
-        template <typename K>
-        iterator upper_bound( const K& key )
-        {
-            SW_SCOPED_RACE_READ();
-            return std::upper_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-        }
-
-        /** @brief 키보다 큰 첫 원소를 가리키는 이터레이터를 반환합니다(upper_bound). */
-        template <typename K>
-        const_iterator upper_bound( const K& key ) const
-        {
-            SW_SCOPED_RACE_READ();
-            return std::upper_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-        }
-
-    private:
-        Container _data;
-        Compare   _comp;
-        SW_RACE_CTX_MEMBER
     };
 } // namespace sw
