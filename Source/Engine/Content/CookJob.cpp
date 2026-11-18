@@ -242,9 +242,10 @@ namespace sw
 
     void CookJob::recordInput( const CookInput& input )
     {
+        const string sourceKey = input.makeSourceKey(); // 바깥 작업마다 다시 만들지 않는다
         for ( CookJob* pJob = this; pJob != nullptr; pJob = pJob->_pOuter )
         {
-            if ( pJob->_uniqueSetKnownSource.insert( input.makeSourceKey() ).second )
+            if ( pJob->_uniqueSetKnownSource.insert( sourceKey ).second )
                 pJob->_listInput.push_back( input );
         }
     }

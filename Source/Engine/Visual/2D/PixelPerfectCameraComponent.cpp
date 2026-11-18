@@ -76,8 +76,7 @@ namespace sw
     void PixelPerfectCameraComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
-        static const hashed_string s_activeName( "_bActive" );
-        if ( propertyName == s_activeName )
+        if ( propertyName == getActivePropertyName() )
             _barBatch.markAllEntriesDirty();
     }
 

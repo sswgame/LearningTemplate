@@ -112,21 +112,6 @@ namespace sw
         return GlyphLookup{ &inserted.first->second, GlyphLookupStatus::Ready };
     }
 
-    void GlyphCache::removeFace( FontFaceID face )
-    {
-        vector<uint64> listKey;
-        for ( const auto& [key, glyph] : _mapGlyph )
-        {
-            (void)glyph;
-            if ( static_cast<FontFaceID>( key >> 32 ) == face )
-                listKey.push_back( key );
-        }
-        for ( const uint64 key : listKey )
-        {
-            _mapGlyph.erase( key );
-        }
-    }
-
     bool GlyphCache::allocateOrEvictStalePage( uint32 width, uint32 height, uint64 frameIndex, GlyphAtlasRect& outRect )
     {
         if ( _atlas.allocate( width, height, outRect ) )

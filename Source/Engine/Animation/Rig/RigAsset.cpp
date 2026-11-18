@@ -57,12 +57,8 @@ namespace sw
             static DataInheritanceSchema makeInheritanceSchema()
             {
                 DataInheritanceSchema schema{ "RigAsset" };
-                DataInheritanceSchema targets{ "targets" };
-                targets._keyAttribute = "name";
-                schema._listField.push_back( std::move( targets ) );
-                DataInheritanceSchema nodes{ "nodes" };
-                nodes._keyAttribute = "name";
-                schema._listField.push_back( std::move( nodes ) );
+                schema._listField.push_back( DataInheritanceSchema::makeKeyedList( "targets", "name" ) );
+                schema._listField.push_back( DataInheritanceSchema::makeKeyedList( "nodes", "name" ) );
                 return schema;
             }
         };

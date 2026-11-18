@@ -52,7 +52,7 @@ namespace sw
                 /** @brief 읽기 오류입니다. 문장은 하나이고 대상이 `경로:줄: 까닭` 이다(대상 길이에서 잘린다). */
                 unexpected<Error> fail( const XMLNode& node, string_view message ) const
                 {
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document is invalid", makeError( _path, findLine( node ), message ) } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document is invalid", XMLDocument::makeSourceError( _path, findLine( node ), message ) } );
                 }
 
                 /** @brief 구조체나 컨테이너 필드 요소 @p source 를 @p destinationParent 아래로 옮겨 적고, 그 안의 바인딩 속성은 분리해 @p inoutNode 에 모읍니다. */
@@ -217,7 +217,7 @@ namespace sw
 
                 unique_ptr<Widget> failInstantiate( const UIDocumentAsset& document, const UIDocumentNode& node, string_view message )
                 {
-                    *_pError = makeError( document._path, node._sourceLine, message );
+                    *_pError = XMLDocument::makeSourceError( document._path, node._sourceLine, message );
                     return {};
                 }
 
@@ -324,21 +324,6 @@ namespace sw
                 }
             };
 
-            /** @brief `<경로>:<줄>: <이유>` 형식의 문구입니다. 줄을 모르면(0) 경로만 적습니다. */
-            static string makeError( string_view path, uint32 line, string_view message )
-            {
-                string error( path );
-                if ( line > 0 )
-                {
-                    StringBuilder<constant::buffer::kMax256> errorPart;
-                    errorPart.appendFormat( ":%#", line );
-                    error += errorPart.c_str();
-                }
-                error += ": ";
-                error += message;
-                return error;
-            }
-
             /** @brief 속성 값이 바인딩 식(`{` 로 시작)인지 판정합니다. 식은 값으로 읽지 않고 분리합니다. */
             static bool isBindingValue( const utf8* pValue ) { return pValue != nullptr && pValue[0] == '{'; }
 
@@ -360,14 +345,7 @@ namespace sw
             /** @brief @p pName 이 타입(상속 포함)의 프로퍼티 이름이나 별칭인지 판정합니다(철자 그대로이며, 직렬화의 이름 맞춤과 같습니다). */
             static bool isKnownProperty( const TypeInfo& type, const utf8* pName )
             {
-                if ( StringUtil::isNullOrEmpty( pName ) )
-                    return false;
-                for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
-                {
-                    if ( prop.matchesNameText( pName ) )
-                        return true;
-                }
-                return false;
+                return StringUtil::isNullOrEmpty( pName ) == false && type.findPropertyByNameText( pName ) != nullptr;
             }
 
             /** @brief 경로를 정규화해 적습니다(캐시 키와 조각 연쇄 비교용). */
@@ -376,7 +354,7 @@ namespace sw
             /** @brief orphan 하나를 `이름 = '텍스트'` 로 적습니다(안쪽 요소면 타입 이름이 앞에 붙습니다). */
             static string describeOrphan( const SchemaOrphanValue& orphan )
             {
-                string description = orphan._writtenName.empty() ? string( orphan._name.c_str() ) : orphan._writtenName;
+                string description = orphan.getDisplayName();
                 if ( orphan._text.empty() == false )
                     description += "' = '" + orphan._text;
                 return description;
@@ -426,7 +404,7 @@ namespace sw
         const Internal::ParseContext context{ text, path, &asset };
         const XMLNode                root = document.getRoot();
         if ( root.isValid() == false || StringUtil::equals( root.getName(), UIDocumentAsset::kRootElementName ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document is invalid", Internal::makeError( path, 1, "the root element must be <UIDocument>" ) } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document is invalid", XMLDocument::makeSourceError( path, 1, "the root element must be <UIDocument>" ) } );
 
         // 루트 속성은 버전 번호 하나뿐이다. 이전 형식 리더는 없다.
         bool bVersioned{ false };
@@ -509,7 +487,7 @@ namespace sw
     expected<unique_ptr<Widget>> UIDocumentLoader::instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, const ResourceTagSet& tagOverride, vector<UIBindingDef>& outListBinding )
     {
         if ( document._listNode.empty() )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document cannot be built", UIDocumentLoaderInternal::makeError( document._path, 0, "document has no root widget" ) } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document cannot be built", XMLDocument::makeSourceError( document._path, 0, "document has no root widget" ) } );
         const size_t                                 bindingStart = outListBinding.size();
         string                                       reason; // 위젯을 만드는 깊은 곳(조각 · 필드 읽기)이 `경로:줄: 까닭` 을 적는다
         UIDocumentLoaderInternal::InstantiateContext context{ &cache, &tagOverride, vector<string>{ document._path }, &outListBinding, &reason };

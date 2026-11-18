@@ -26,18 +26,6 @@ namespace sw
     {
         struct DataInheritanceInternal
         {
-            /** @brief 원소 노드인지 봅니다(글 · 주석 노드는 이름이 비어 있다). */
-            static bool isElement( const XMLNode& node )
-            {
-                return node.isValid() && StringUtil::isNullOrEmpty( node.getName() ) == false;
-            }
-
-            /** @brief 조건 원소(`_when`)인지 봅니다. 칸 · 목록 원소가 아니라 쌓이는 조건부 차이입니다. */
-            static bool isWhen( const XMLNode& node )
-            {
-                return isElement( node ) && string_view( node.getName() ) == DataInheritance::kWhenElement;
-            }
-
             /** @brief 부모의 조건 원소 다음에 자식의 조건 원소를 붙입니다 — 조건은 바꾸지 않고 쌓는다(합친 결과에서 위에서 아래로 얹는다). */
             static void appendWhenElements( const XMLNode& parent, const XMLNode& child, const XMLNode& out )
             {
@@ -161,7 +149,7 @@ namespace sw
                     vector<string> listReplacedName;
                     for ( XMLNode element = parent.findChild(); element.isValid(); element = element.findNextSibling() )
                     {
-                        if ( isElement( element ) == false || isWhen( element ) )
+                        if ( element.isElement() == false || DataInheritance::isWhenElement( element ) )
                             continue;
                         const XMLNode                childElement = findChildElement( child, element.getName() );
                         const DataInheritanceSchema* pField       = schema.findField( element.getName() );
@@ -188,7 +176,7 @@ namespace sw
                 {
                     for ( XMLNode element = child.findChild(); element.isValid(); element = element.findNextSibling() )
                     {
-                        if ( isElement( element ) == false || isWhen( element ) || findChildElement( parent, element.getName() ).isValid() )
+                        if ( element.isElement() == false || DataInheritance::isWhenElement( element ) || findChildElement( parent, element.getName() ).isValid() )
                             continue;
                         const DataInheritanceSchema* pField = schema.findField( element.getName() );
                         if ( pField == nullptr )
@@ -208,7 +196,7 @@ namespace sw
                     return true;
                 for ( XMLNode element = parent.findChild(); element.isValid(); element = element.findNextSibling() )
                 {
-                    if ( isElement( element ) == false || isWhen( element ) )
+                    if ( element.isElement() == false || DataInheritance::isWhenElement( element ) )
                         continue; // 조건 원소는 목록 원소가 아니다 — 목록 원소 자신에 얹는 차이다(`appendWhenElements`)
                     const utf8* pKey = element.findAttribute( schema._keyAttribute.c_str() );
                     if ( pKey == nullptr )
@@ -323,7 +311,7 @@ namespace sw
                 {
                     for ( XMLNode element = child.findChild(); element.isValid(); element = element.findNextSibling() )
                     {
-                        if ( isElement( element ) && isWhen( element ) == false && applyChildEntry( element, schema, listEntry, sourceName ) == false )
+                        if ( element.isElement() && DataInheritance::isWhenElement( element ) == false && applyChildEntry( element, schema, listEntry, sourceName ) == false )
                             return false;
                     }
                 }
@@ -471,7 +459,7 @@ namespace sw
                 vector<string> listComparedName;
                 for ( XMLNode element = full.findChild(); element.isValid(); element = element.findNextSibling() )
                 {
-                    if ( isElement( element ) == false || isWhen( element ) )
+                    if ( element.isElement() == false || DataInheritance::isWhenElement( element ) )
                         continue;
                     const XMLNode                inherited = findChildElement( parent, element.getName() );
                     const DataInheritanceSchema* pField    = schema.findField( element.getName() );
@@ -500,7 +488,7 @@ namespace sw
                     return true;
                 for ( XMLNode element = parent.findChild(); element.isValid(); element = element.findNextSibling() )
                 {
-                    if ( isElement( element ) == false || isWhen( element ) || findChildElement( full, element.getName() ).isValid() )
+                    if ( element.isElement() == false || DataInheritance::isWhenElement( element ) || findChildElement( full, element.getName() ).isValid() )
                         continue;
                     const DataInheritanceSchema* pField = schema.findField( element.getName() );
                     if ( pField != nullptr && pField->_keyAttribute.empty() == false )
@@ -574,7 +562,7 @@ namespace sw
                         mergeAttributes( XMLNode{}, fullEntry._parentNode, item );
                         for ( XMLNode element = fullEntry._parentNode.findChild(); element.isValid(); element = element.findNextSibling() )
                         {
-                            if ( isElement( element ) )
+                            if ( element.isElement() )
                                 (void)item.appendClone( element );
                         }
                     }
@@ -691,6 +679,13 @@ namespace sw
     {
     }
 
+    DataInheritanceSchema DataInheritanceSchema::makeKeyedList( string_view name, string_view keyAttribute )
+    {
+        DataInheritanceSchema list{ name };
+        list._keyAttribute = keyAttribute;
+        return list;
+    }
+
     const DataInheritanceSchema* DataInheritanceSchema::findField( string_view name ) const
     {
         for ( const DataInheritanceSchema& field : _listField )
@@ -748,7 +743,7 @@ namespace sw
         }
         for ( XMLNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
         {
-            if ( DataInheritanceInternal::isElement( child ) == false || DataInheritanceInternal::isWhen( child ) )
+            if ( child.isElement() == false || DataInheritance::isWhenElement( child ) )
                 continue; // 조건 원소는 칸이 아니다 — 어느 층이 그 칸을 적었는지는 펼친 뒤 조건 단계 앞의 값이다
             const DataInheritanceSchema* pField = schema.findField( child.getName() );
             const string                 path   = prefix + child.getName();
@@ -764,7 +759,7 @@ namespace sw
             }
             for ( XMLNode item = child.findChild(); item.isValid(); item = item.findNextSibling() )
             {
-                if ( DataInheritanceInternal::isElement( item ) == false || DataInheritanceInternal::isWhen( item ) )
+                if ( item.isElement() == false || DataInheritance::isWhenElement( item ) )
                     continue;
                 const string      itemPath = path + "[" + string{ item.getAttributeText( pField->_keyAttribute.c_str() ) } + "]";
                 const string_view op       = item.getAttributeText( DataInheritance::kOpAttribute );
@@ -782,16 +777,26 @@ namespace sw
             applyElement( layerRoot, schema, string{}, assetID );
     }
 
+    bool DataInheritance::isWhenElement( const XMLNode& node )
+    {
+        return node.isElement() && string_view( node.getName() ) == kWhenElement;
+    }
+
+    bool DataInheritance::isLikelyXMLText( string_view text )
+    {
+        string_view body = StringUtil::trim( text );
+        if ( StringUtil::startsWith( body, "\xEF\xBB\xBF" ) )
+            body.remove_prefix( 3 );
+        return body.empty() == false && body.front() == '<';
+    }
+
     string DataInheritance::findBasePath( string_view text )
     {
         // 부모를 가리키지 않는 파일(거의 전부)은 글 검색 한 번으로 끝난다 — 런타임 읽기마다 지나는 자리다.
         // 첫 글자를 보는 것은 팩 쿠커가 모든 파일을 지나 보내기 때문이다 — 바이너리 · 셰이더에 우연히 든 글자로 XML 파서가 오류를 내지 않게.
         if ( text.find( kBaseAttribute ) == string_view::npos )
             return {};
-        string_view body = StringUtil::trim( text );
-        if ( StringUtil::startsWith( body, "\xEF\xBB\xBF" ) )
-            body.remove_prefix( 3 );
-        if ( body.empty() || body.front() != '<' )
+        if ( isLikelyXMLText( text ) == false )
             return {};
         XMLDocument doc;
         if ( doc.parse( text ) == false )

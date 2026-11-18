@@ -68,25 +68,6 @@ namespace sw
                 }
             };
 
-            /** @brief 바이너리 · 셰이더를 XML 파서에 넣지 않습니다(팩 쿠커가 모든 파일을 지나 보낸다 — `DataInheritance::findBasePath` 와 같은 까닭). */
-            static bool isLikelyXML( string_view text )
-            {
-                string_view body = StringUtil::trim( text );
-                if ( StringUtil::startsWith( body, "\xEF\xBB\xBF" ) )
-                    body.remove_prefix( 3 );
-                return body.empty() == false && body.front() == '<';
-            }
-
-            static bool isElement( const XMLNode& node )
-            {
-                return node.isValid() && StringUtil::isNullOrEmpty( node.getName() ) == false;
-            }
-
-            static bool isWhen( const XMLNode& node )
-            {
-                return isElement( node ) && string_view( node.getName() ) == DataInheritance::kWhenElement;
-            }
-
             static void setOverride( Decision& inoutDecision, const utf8* pName, const utf8* pValue )
             {
                 for ( size_t index = 0; index < inoutDecision._listOverrideName.size(); ++index )
@@ -110,7 +91,7 @@ namespace sw
                 {
                     for ( XMLNode child = when.findChild(); child.isValid(); child = child.findNextSibling() )
                     {
-                        if ( isElement( child ) )
+                        if ( child.isElement() )
                         {
                             SW_LOG_ERROR_ID( "ResourceCondition.WhenHasChildren", "'%#': <%#> in <%#> has a child <%#> - a condition sets attributes of the element it is in; put it inside the element it changes",
                                              id, DataInheritance::kWhenElement, element.getName(), child.getName() );
@@ -192,7 +173,7 @@ namespace sw
                 }
                 for ( XMLNode child = src.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
-                    if ( isElement( child ) == false || isWhen( child ) )
+                    if ( child.isElement() == false || DataInheritance::isWhenElement( child ) )
                         continue;
                     Decision childDecision;
                     if ( decide( child, id, resolvedTiming, tags, childDecision, inoutbChanged, inoutListLoadTag ) == false )
@@ -209,8 +190,6 @@ namespace sw
         /** @brief 저장할 글에 원본의 조건을 되돌리는 일입니다(`ResourceComposer::restoreConditions`). */
         struct ResourceConditionRestoreInternal
         {
-            using Stage = ResourceConditionStageInternal;
-
             /** @brief 원소에 적힌 조건 하나입니다. */
             struct When
             {
@@ -267,7 +246,7 @@ namespace sw
             {
                 for ( XMLNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
-                    if ( Stage::isWhen( child ) || ( Stage::isElement( child ) && hasConditions( child ) ) )
+                    if ( DataInheritance::isWhenElement( child ) || ( child.isElement() && hasConditions( child ) ) )
                         return true;
                 }
                 return false;
@@ -394,7 +373,7 @@ namespace sw
                 {
                     for ( ; candidate.isValid(); candidate = candidate.findNextSibling() )
                     {
-                        if ( Stage::isElement( candidate ) == false || string_view( candidate.getName() ) != string_view( listTarget[index].getName() ) )
+                        if ( candidate.isElement() == false || string_view( candidate.getName() ) != string_view( listTarget[index].getName() ) )
                             continue;
                         uint32 attributeCount = 0;
                         for ( XMLAttribute attribute = listTarget[index].getFirstAttribute(); attribute; attribute = attribute.getNext() )
@@ -450,13 +429,13 @@ namespace sw
                 vector<XMLNode> listTarget;
                 for ( XMLNode child = target.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
-                    if ( Stage::isElement( child ) )
+                    if ( child.isElement() )
                         listTarget.push_back( child );
                 }
                 vector<SourceChild> listSource;
                 for ( XMLNode child = source.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
-                    if ( Stage::isElement( child ) == false || Stage::isWhen( child ) )
+                    if ( child.isElement() == false || DataInheritance::isWhenElement( child ) )
                         continue;
                     vector<When> listChildWhen;
                     if ( readWhenElements( child, id, tags, listChildWhen ) == false )
@@ -811,7 +790,7 @@ namespace sw
         using Internal = ResourceConditionStageInternal;
         outbChanged    = false;
         // 조건을 적지 않은 파일(거의 전부)은 글 검색 한 번으로 끝난다 — 런타임 읽기마다 지나는 자리다.
-        if ( text.find( DataInheritance::kWhenElement ) == string_view::npos || Internal::isLikelyXML( text ) == false )
+        if ( text.find( DataInheritance::kWhenElement ) == string_view::npos || DataInheritance::isLikelyXMLText( text ) == false )
             return true;
         XMLDocument doc;
         if ( doc.parse( text, id ) == false )
@@ -846,7 +825,7 @@ namespace sw
         using Internal              = ResourceConditionRestoreInternal;
         const string_view savedText = text.getText();
         outText                     = string{ savedText };
-        if ( sourceText.find( DataInheritance::kWhenElement ) == string_view::npos || ResourceConditionStageInternal::isLikelyXML( sourceText ) == false )
+        if ( sourceText.find( DataInheritance::kWhenElement ) == string_view::npos || DataInheritance::isLikelyXMLText( sourceText ) == false )
             return true;
         XMLDocument sourceDoc;
         if ( sourceDoc.parse( sourceText, id ) == false || Internal::hasConditions( sourceDoc.getRoot() ) == false )

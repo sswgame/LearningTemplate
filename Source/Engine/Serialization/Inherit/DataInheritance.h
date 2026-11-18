@@ -107,6 +107,8 @@ namespace sw
 
         /** @brief 이름 @p name 의 노드를 만듭니다. */
         explicit DataInheritanceSchema( string_view name );
+        /** @brief 자식들이 속성 @p keyAttribute 를 열쇠로 하는 목록 원소 @p name 의 노드를 만듭니다(손으로 읽는 XML 형식의 규칙에서 `<nodes>` · `<chains>` 같은 목록 한 줄). */
+        [[nodiscard]] static DataInheritanceSchema makeKeyedList( string_view name, string_view keyAttribute );
         /** @brief @p name 의 자식 칸입니다. 없으면 nullptr 이고, 그 칸은 통째로 바뀝니다. */
         [[nodiscard]] const DataInheritanceSchema* findField( string_view name ) const;
         /** @brief 리플렉션 형식의 규칙을 만듭니다. 구조체 칸 · `InheritKey` 칸이 있는 구조체 목록은 합치고, 필수 칸(`Required`)은 저장이 지우지 않습니다. */
@@ -165,6 +167,14 @@ namespace sw
          */
         static constexpr const utf8* kWhenElement = "_when";
         static constexpr const utf8* kIfAttribute = "_if"; ///< 조건 원소: 리소스 조건식(`ResourceTags::compileTest`)
+
+        /** @brief 조건 원소(`_when`)인지 봅니다. 칸 · 목록 원소가 아니라 쌓이는 조건부 차이입니다. */
+        [[nodiscard]] static bool isWhenElement( const XMLNode& node );
+        /**
+         * @brief 글이 XML 처럼 시작하는지(앞 공백 · UTF-8 BOM 뒤 첫 글자가 `<`) 봅니다. 파싱하지 않습니다.
+         * @details 팩 쿠커 · 런타임 읽기가 모든 파일을 지나 보내는 자리에서 바이너리 · 셰이더를 XML 파서에 넣지 않으려고 먼저 봅니다.
+         */
+        [[nodiscard]] static bool isLikelyXMLText( string_view text );
 
         /** @brief @p text 의 루트가 `_base` 를 적었으면 그 값입니다. XML 이 아니거나 없으면 빈 글입니다. 부모를 가리키지 않는 파일은 글 검색 한 번으로 끝납니다. */
         [[nodiscard]] static string findBasePath( string_view text );

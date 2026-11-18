@@ -281,17 +281,7 @@ namespace sw
         binding._name         = skeletalMeshName;
         binding._sockets      = SharedAssetRef<SocketSet>{ std::move( sockets ) };
         binding._skeletalMesh = TComponentHandle<SkeletalMeshComponent>{ pSkeletalMesh };
-        for ( SkeletalMeshBinding& existing : _listUnitBinding )
-        {
-            if ( existing._name == skeletalMeshName )
-            {
-                existing = binding;
-                bindExternalTargets();
-                return;
-            }
-        }
-        _listUnitBinding.push_back( binding );
-        bindExternalTargets();
+        setUnitBinding( binding );
     }
 
     void PoseModifierComponent::bindRigidUnit( const hashed_string& skeletalMeshName, GameObject* pObject, shared_ptr<const SocketSet> sockets )
@@ -300,27 +290,21 @@ namespace sw
         binding._name        = skeletalMeshName;
         binding._sockets     = SharedAssetRef<SocketSet>{ std::move( sockets ) };
         binding._rigidObject = ( pObject != nullptr ) ? pObject->getHandle() : GameObjectHandle{};
-        for ( SkeletalMeshBinding& existing : _listUnitBinding )
-        {
-            if ( existing._name == skeletalMeshName )
-            {
-                existing = binding;
-                bindExternalTargets();
-                return;
-            }
-        }
-        _listUnitBinding.push_back( binding );
-        bindExternalTargets();
+        setUnitBinding( binding );
     }
 
     void PoseModifierComponent::bindRigidComponentUnit( const hashed_string& skeletalMeshName, SceneComponent* pFrame, shared_ptr<const SocketSet> sockets )
     {
         SkeletalMeshBinding binding{};
-        binding._name                  = skeletalMeshName;
-        binding._sockets               = SharedAssetRef<SocketSet>{ std::move( sockets ) };
-        binding._rigidFrame            = TComponentHandle<SceneComponent>{ pFrame };
-        SkeletalMeshBinding* pExisting = VectorUtil::findIf( _listUnitBinding, [&skeletalMeshName]( const SkeletalMeshBinding& existing )
-        { return existing._name == skeletalMeshName; } );
+        binding._name       = skeletalMeshName;
+        binding._sockets    = SharedAssetRef<SocketSet>{ std::move( sockets ) };
+        binding._rigidFrame = TComponentHandle<SceneComponent>{ pFrame };
+        setUnitBinding( binding );
+    }
+
+    void PoseModifierComponent::setUnitBinding( const SkeletalMeshBinding& binding )
+    {
+        SkeletalMeshBinding* const pExisting = VectorUtil::findBy<&SkeletalMeshBinding::_name>( _listUnitBinding, binding._name );
         if ( pExisting != nullptr )
             *pExisting = binding;
         else

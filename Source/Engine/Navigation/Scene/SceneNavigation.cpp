@@ -35,23 +35,7 @@ namespace sw
 {
     namespace
     {
-        struct SceneNavigationInternal
-        {
-            static constexpr float32 kIndexCellPerTile = 0.25f; ///< 기하 색인 셀은 타일보다 잘게 나눈다 — 타일 하나가 몇 셀만 훑게
-            template <typename T>
-            static void removeFromList( vector<T*>& inoutList, T* pItem )
-            {
-                for ( size_t index = 0; index < inoutList.size(); ++index )
-                {
-                    if ( inoutList[index] == pItem )
-                    {
-                        inoutList[index] = inoutList.back();
-                        inoutList.pop_back();
-                        return;
-                    }
-                }
-            }
-        };
+        constexpr float32 kNavIndexCellPerTile = 0.25f; ///< 기하 색인 셀은 타일보다 잘게 나눈다 — 타일 하나가 몇 셀만 훑게
     } // namespace
 } // namespace sw
 
@@ -198,7 +182,7 @@ namespace sw
 
     void SceneNavigation::unregisterSurface( NavMeshSurfaceComponent* pSurface )
     {
-        SceneNavigationInternal::removeFromList( _listSurface, pSurface );
+        (void)VectorUtil::removeSingleSwap( _listSurface, pSurface ); // 등록한 적 없는 표면이면 지울 것이 없다
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
         {
             if ( pRuntime->_pSurface == pSurface )
@@ -504,7 +488,7 @@ namespace sw
         if ( _bIgnoreCooked == false && installCooked( *pRuntime, *pType, inputHash ) )
         {
             // 쿠킹본에는 장애물이 없다 — 장애물 자리의 타일만 다시 베이크한다.
-            pGeometry->rebuildSpatialIndex( MathUtil::max( 1.0f, pRuntime->_pNavMesh->getTileGrid()._tileWorldSize * SceneNavigationInternal::kIndexCellPerTile ) );
+            pGeometry->rebuildSpatialIndex( MathUtil::max( 1.0f, pRuntime->_pNavMesh->getTileGrid()._tileWorldSize * kNavIndexCellPerTile ) );
             vector<int2> listTile;
             for ( const NavConvexVolume& volume : *pVolume )
             {
@@ -837,7 +821,7 @@ namespace sw
                 }
                 else
                 {
-                    pGeometry->rebuildSpatialIndex( MathUtil::max( 1.0f, grid._tileWorldSize * SceneNavigationInternal::kIndexCellPerTile ) );
+                    pGeometry->rebuildSpatialIndex( MathUtil::max( 1.0f, grid._tileWorldSize * kNavIndexCellPerTile ) );
                     runtime._pGeometry = std::move( pGeometry ); // 다시 베이크는 이 지금 기하를 읽는다(옛 일은 옛 사본을 끝까지 읽는다)
                     bGeometryRefreshed = true;
                 }

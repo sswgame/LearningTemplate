@@ -94,8 +94,6 @@ namespace sw
         const vector<TileEdge>& getOutlineEdges() const { return _listOutlineEdge; }
         /** @brief 외곽선 토막을 월드 (x0, y0, x1, y1) 로 옮깁니다. 바깥쪽 방향은 @p outListOutward 에 같은 순서로 넣습니다. */
         void computeWorldOutline( vector<float4>& outListSegment, vector<float2>& outListOutward ) const;
-        /** @brief 칸마다 이동 비용(`NavGrid` 와 같은 값)을 만듭니다. */
-        void computeNavCosts( vector<uint8>& outListCost ) const;
         /** @brief 청크마다 정적 바디입니다(청크 번호 순, 단단한 칸이 없는 청크는 무효 핸들). 바디 하나에 그 청크의 병합 사각형마다 셰이프 하나입니다. */
         const vector<PhysicsBodyHandle>& getChunkBodies() const { return _listChunkBody; }
         /** @brief 청크 수입니다(배치를 만들지 않은 빈 청크 포함). */

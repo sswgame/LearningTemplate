@@ -147,7 +147,7 @@ namespace sw
             uint8      _bRemove{ SW_FALSE };
         };
 
-        uint32       findOrAddLayer( const SpatialGridLayerDesc& layer );
+        uint32       getOrCreateLayer( const SpatialGridLayerDesc& layer );
         const Layer* findLayer( const SpatialGridLayerDesc& layer ) const;
         Entry*       resolve( SlotHandle entry );
         Change       makeInsertChange( uint32 entryIndex, uint32& outVersion ) const;

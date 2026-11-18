@@ -351,14 +351,7 @@ namespace sw
              */
             static bool isNameKnown( const TypeInfo& typeInfo, const utf8* pName )
             {
-                if ( pName == nullptr )
-                    return false;
-                for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
-                {
-                    if ( prop.matchesNameText( pName ) )
-                        return true;
-                }
-                return false;
+                return pName != nullptr && typeInfo.findPropertyByNameText( pName ) != nullptr;
             }
 
             /**

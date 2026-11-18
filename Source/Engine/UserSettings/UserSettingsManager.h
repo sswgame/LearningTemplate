@@ -69,6 +69,16 @@ namespace sw
     {
         hashed_string        _settingID{};
         UserSettingEventKind _kind{ UserSettingEventKind::PendingChanged };
+
+        /**
+         * @brief 이 통보로 설정 @p settingID 의 적용 값(`UserSettingsManager::getAppliedValue`)이 바뀌었을 수 있으면 true 입니다.
+         * @details 보류 값(메뉴에서 바꾸는 중)과 확인 대기 시작은 적용 값이 아니다 — 적용 · 되돌리기 · 확인 · 로드만 본다. 전체 이벤트(`_settingID` 가 빔)는 모든 설정에 해당한다.
+         */
+        bool hasAppliedValueChange( const hashed_string& settingID ) const
+        {
+            const bool bCompleted = _kind != UserSettingEventKind::PendingChanged && _kind != UserSettingEventKind::ConfirmStarted;
+            return bCompleted && ( _settingID.empty() || _settingID == settingID );
+        }
     };
 } // namespace sw
 

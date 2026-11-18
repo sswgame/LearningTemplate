@@ -331,9 +331,9 @@ namespace sw
         };
         /** @brief 클립 한 바퀴 안에서 유닛 시간에 가장 가까운 변형 구간을 고릅니다. */
         uint32 selectVariation( const AnimationSharedPoseRequest& request, float32 duration ) const;
-        /** @brief 키의 묶음을 찾고, 없으면 스킨 원본의 사본 메시로 만듭니다. */
-        AnimationCrowdBucket* findOrCreateBucket( const AnimationCrowdBucketKey& key, const shared_ptr<const Skeleton>& skeleton, const shared_ptr<const AnimationClip>& clip,
-                                                  const shared_ptr<const AnimationClip>& nextClip, const shared_ptr<Mesh>& sourceMesh );
+        /** @brief 키의 묶음을 찾고, 없으면 스킨 원본의 사본 메시로 만듭니다. 새로 만들었으면 @p outbCreated 가 true 입니다(부르는 쪽이 같은 키를 한 번 더 찾지 않는다). */
+        AnimationCrowdBucket* getOrCreateBucket( const AnimationCrowdBucketKey& key, const shared_ptr<const Skeleton>& skeleton, const shared_ptr<const AnimationClip>& clip,
+                                                 const shared_ptr<const AnimationClip>& nextClip, const shared_ptr<Mesh>& sourceMesh, bool& outbCreated );
 
     private:
         AnimationCrowdSettings                                                                     _settings;

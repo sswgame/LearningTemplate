@@ -42,7 +42,7 @@ namespace sw
         outPlaneY = layer._plane == SpatialGridPlane::XY ? position._y : position._z;
     }
 
-    uint32 SceneSpatialGrid::findOrAddLayer( const SpatialGridLayerDesc& layer )
+    uint32 SceneSpatialGrid::getOrCreateLayer( const SpatialGridLayerDesc& layer )
     {
         for ( uint32 layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
@@ -97,7 +97,7 @@ namespace sw
     {
         waitBackBufferRebuild();
         SW_ASSERT( extent >= 0.0f );
-        const uint32 layerIndex = findOrAddLayer( layer );
+        const uint32 layerIndex = getOrCreateLayer( layer );
         uint32       entryIndex{ 0 };
         if ( _listFreeEntry.empty() == false )
         {
@@ -190,7 +190,7 @@ namespace sw
     void SceneSpatialGrid::addLayerReader( const SpatialGridLayerDesc& layer )
     {
         waitBackBufferRebuild();
-        const uint32 layerIndex = findOrAddLayer( layer );
+        const uint32 layerIndex = getOrCreateLayer( layer );
         ++_listLayer[layerIndex]._userCount;
         refreshLayer( layerIndex );
     }
@@ -198,7 +198,7 @@ namespace sw
     void SceneSpatialGrid::removeLayerReader( const SpatialGridLayerDesc& layer )
     {
         waitBackBufferRebuild();
-        const uint32 layerIndex = findOrAddLayer( layer );
+        const uint32 layerIndex = getOrCreateLayer( layer );
         SW_ASSERT( _listLayer[layerIndex]._userCount > 0 );
         if ( _listLayer[layerIndex]._userCount == 0 )
             return;
@@ -209,7 +209,7 @@ namespace sw
     void SceneSpatialGrid::requireCellSize( const SpatialGridLayerDesc& layer, float32 cellSize )
     {
         waitBackBufferRebuild();
-        const uint32 layerIndex = findOrAddLayer( layer );
+        const uint32 layerIndex = getOrCreateLayer( layer );
         if ( cellSize <= _listLayer[layerIndex]._cellSize )
             return;
         _listLayer[layerIndex]._cellSize = cellSize;
@@ -312,7 +312,7 @@ namespace sw
             layer._arrBuiltCell[back] = layer._cellSize;
         }
         _bJobLaunched = SW_TRUE;
-        // 넘긴 일은 이 배열만 본다 — 일이 도는 동안 층 벡터의 구조는 바뀌지 않고(새 층은 `findOrAddLayer` 가 일을 기다린 뒤 더한다), 일은 층마다 뒤 버퍼 칸만 쓴다.
+        // 넘긴 일은 이 배열만 본다 — 일이 도는 동안 층 벡터의 구조는 바뀌지 않고(새 층은 `getOrCreateLayer` 가 일을 기다린 뒤 더한다), 일은 층마다 뒤 버퍼 칸만 쓴다.
         _pJobLayer     = _listLayer.data();
         _jobLayerCount = static_cast<uint32>( _listLayer.size() );
         if ( engine::areEngineServicesBound() == false )

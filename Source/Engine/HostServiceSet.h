@@ -189,14 +189,4 @@ namespace sw
         }
         return text;
     }
-
-    /** @brief @p listPart 가 설 순서를 `A > B > C` 로 적습니다(몸통 없이 표만으로 — 테스트가 실행 파일의 기동 로그와 맞춰 본다). 정렬 오류면 그 글입니다. */
-    inline string describeDeclaredHostServiceOrder( vector_reference<const HostServiceID> listPart )
-    {
-        SubsystemCollection parts;
-        const bool          bStarted = startHostServices( parts, listPart, SW_DELEGATE_LAMBDA( HostServiceStartDelegate, []( HostServiceID )
-                 { return true; } ),
-                                                          HostServiceStopDelegate{} );
-        return bStarted ? describeHostServiceOrder( parts ) : parts.getError();
-    }
 } // namespace sw

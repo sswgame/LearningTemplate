@@ -28,11 +28,6 @@ namespace sw
             static constexpr const utf8* kEntryElement    = "Entry";    ///< 규칙 표: 카탈로그의 항목 종류(`key` 필수)
             static constexpr const utf8* kFieldElement    = "Field";    ///< 규칙 표: 칸(`key` 가 있으면 목록 원소의 열쇠). 카탈로그 줄 바로 아래면 항목이 아닌 칸이다(`_base` 를 받지 않는다)
 
-            static bool isElement( const XMLNode& node )
-            {
-                return node.isValid() && StringUtil::isNullOrEmpty( node.getName() ) == false;
-            }
-
             /** @brief 속성과 글을 옮깁니다. @p pRenameFrom 이름의 속성은 @p pRenameTo 로 적습니다(둘 다 nullptr 이면 그대로). */
             static void copyOwnValues( const XMLNode& src, const XMLNode& out, const utf8* pRenameFrom, const utf8* pRenameTo )
             {
@@ -56,7 +51,7 @@ namespace sw
                 vector<string> listSeen;
                 for ( XMLNode child = src.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
-                    if ( isElement( child ) == false )
+                    if ( child.isElement() == false )
                         continue;
                     const string name{ child.getName() };
                     if ( VectorUtil::contains( listSeen, name ) )
@@ -97,7 +92,7 @@ namespace sw
                 copyOwnValues( src, out, kEntryBaseTransit, DataInheritance::kBaseAttribute );
                 for ( XMLNode child = src.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
-                    if ( isElement( child ) == false )
+                    if ( child.isElement() == false )
                         continue;
                     const DataInheritanceSchema* pField = schema.findField( child.getName() );
                     if ( pField != nullptr && pField->_keyAttribute.empty() )
@@ -107,7 +102,7 @@ namespace sw
                     }
                     for ( XMLNode item = child.findChild(); item.isValid(); item = item.findNextSibling() )
                     {
-                        if ( isElement( item ) == false )
+                        if ( item.isElement() == false )
                             continue;
                         if ( pField != nullptr )
                             unwrapElement( item, *pField, out.appendChild( item.getName() ) );
@@ -397,7 +392,7 @@ namespace sw
         DataCatalogInheritanceInternal::ParentFiles parentFiles{ schema, source };
         for ( XMLNode entry = fileRoot.findChild(); entry.isValid(); entry = entry.findNextSibling() )
         {
-            if ( DataCatalogInheritanceInternal::isElement( entry ) == false )
+            if ( entry.isElement() == false )
                 continue;
             if ( entry.hasAttribute( DataInheritance::kBaseAttribute ) == false )
                 (void)outRoot.appendClone( entry );
@@ -437,10 +432,7 @@ namespace sw
         outbFlattened = false;
         if ( text.find( DataInheritance::kBaseAttribute ) == string_view::npos )
             return true; // 거의 모든 파일이 여기서 끝난다 — 런타임 읽기 · 팩 쿠커가 모든 파일을 지나 보내는 자리다
-        string_view body = StringUtil::trim( text );
-        if ( StringUtil::startsWith( body, "\xEF\xBB\xBF" ) )
-            body.remove_prefix( 3 );
-        if ( body.empty() || body.front() != '<' )
+        if ( DataInheritance::isLikelyXMLText( text ) == false )
             return true;
         XMLDocument doc;
         if ( doc.parse( text, sourceName ) == false )

@@ -283,28 +283,13 @@ namespace sw
     DataInheritanceSchema SkeletonBoneLOD::makeInheritanceSchema()
     {
         DataInheritanceSchema schema{ "SkeletonBoneLOD" };
-        DataInheritanceSchema coreBones{ "coreBones" };
-        coreBones._keyAttribute = "name";
-        schema._listField.push_back( std::move( coreBones ) );
+        schema._listField.push_back( DataInheritanceSchema::makeKeyedList( "coreBones", "name" ) );
         return schema; // `levels` 는 규칙에 없어 자식이 적으면 통째로 바뀐다(단계 표는 한 벌로 맞춘다)
     }
 
     string SkeletonBoneLOD::makePathForSkeleton( string_view skeletonPath )
     {
         return Skeleton::makeSidePath( skeletonPath, kExtension );
-    }
-
-    void SkeletonBoneLOD::makeSkeletonCandidatePaths( string_view boneLODPath, string& outImportedPath, string& outSiblingPath )
-    {
-        outImportedPath.clear();
-        outSiblingPath.clear();
-        if ( StringUtil::endsWith( boneLODPath, kExtension ) == false )
-            return;
-        const string_view stemPath = boneLODPath.substr( 0, boneLODPath.size() - kExtension.size() );
-        string_view       stem;
-        FileUtil::getFileNamePart( stemPath, stem );
-        outImportedPath = string{ stemPath } + "/" + string{ stem } + string{ Skeleton::kExtension };
-        outSiblingPath  = string{ stemPath } + string{ Skeleton::kExtension };
     }
 } // namespace sw
 

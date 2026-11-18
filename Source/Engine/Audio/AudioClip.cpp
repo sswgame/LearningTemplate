@@ -242,7 +242,7 @@ namespace sw
                 markUsedLocked( it->second );
                 return;
             }
-            findOrAddLocked( path )._status = AssetLoadState::Loading;
+            getOrCreateLocked( path )._status = AssetLoadState::Loading;
         }
 
         // 이 호스트(전용 서버)의 패키지에 없는 종류다 — 디코드 작업을 띄우지 않고 없는 것으로 친다(경고 없음, AssetPaths::setHostTarget).
@@ -333,16 +333,14 @@ namespace sw
         // 다 걸었는데도 넘으면 남은 것은 모두 재생 중이다 — 예산을 넘긴 채 둔다
     }
 
-    AudioClipCache::Entry& AudioClipCache::findOrAddLocked( const hashed_string& path )
+    AudioClipCache::Entry& AudioClipCache::getOrCreateLocked( const hashed_string& path )
     {
-        const auto it = _mapPathToEntry.find( path );
-        if ( it != _mapPathToEntry.end() )
-        {
-            markUsedLocked( it->second );
-            return it->second;
-        }
-        Entry& entry       = _mapPathToEntry[path];
-        entry._itPathByUse = _listPathByUse.insert( _listPathByUse.end(), path );
+        const auto inserted = _mapPathToEntry.try_emplace( path );
+        Entry&     entry    = inserted.first->second;
+        if ( inserted.second )
+            entry._itPathByUse = _listPathByUse.insert( _listPathByUse.end(), path );
+        else
+            markUsedLocked( entry );
         return entry;
     }
 
@@ -446,7 +444,7 @@ namespace sw
     {
         const uint64      byteCount = pClip != nullptr ? static_cast<uint64>( pClip->getByteCount() ) : 0u;
         ScopedLock<mutex> lock{ _mutex };
-        Entry&            entry = findOrAddLocked( path );
+        Entry&            entry = getOrCreateLocked( path );
         _cachedBytes            = _cachedBytes - entry._byteCount + byteCount;
         entry._status           = pClip != nullptr ? AssetLoadState::Ready : AssetLoadState::Failed;
         entry._pClip            = std::move( pClip );

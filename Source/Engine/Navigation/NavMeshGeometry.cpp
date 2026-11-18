@@ -27,13 +27,6 @@ namespace sw
                 int32 _maxZ{ 0 };
             };
 
-            static uint64 mixBytes( uint64 hash, const void* pData, size_t size )
-            {
-                if ( pData == nullptr || size == 0 )
-                    return hash;
-                return HashUtil::computeStringHash64( static_cast<const utf8*>( pData ), size, false, hash );
-            }
-
             /** @brief 셰이프 점들의 로컬 경계 상자의 반 크기와 중심을 구합니다. 점이 없으면 false 를 반환합니다. */
             static bool computePointBox( const vector<float3>& listPoint, float3& outCenter, float3& outHalfExtents )
             {
@@ -393,7 +386,6 @@ namespace sw
 
     uint64 NavMeshGeometry::computeRegionHash( const AABB& region ) const
     {
-        using Internal              = NavMeshGeometryInternal;
         const auto overlapsRegionXZ = [&region]( const float3& boxMin, const float3& boxMax )
         { return boxMin._x <= region._max._x && boxMax._x >= region._min._x && boxMin._z <= region._max._z && boxMax._z >= region._min._z; };
         uint64         hash = HashUtil::kFNVOffset64;
@@ -409,10 +401,10 @@ namespace sw
             if ( overlapsRegionXZ( boxMin, boxMax ) == false )
                 continue;
             uint64 triangleHash = HashUtil::kFNVOffset64;
-            triangleHash        = Internal::mixBytes( triangleHash, &point0, sizeof( float3 ) );
-            triangleHash        = Internal::mixBytes( triangleHash, &point1, sizeof( float3 ) );
-            triangleHash        = Internal::mixBytes( triangleHash, &point2, sizeof( float3 ) );
-            triangleHash        = Internal::mixBytes( triangleHash, &_listTriangleArea[triangleIndex], sizeof( uint8 ) );
+            triangleHash        = HashUtil::appendBytes64( triangleHash, &point0, sizeof( float3 ) );
+            triangleHash        = HashUtil::appendBytes64( triangleHash, &point1, sizeof( float3 ) );
+            triangleHash        = HashUtil::appendBytes64( triangleHash, &point2, sizeof( float3 ) );
+            triangleHash        = HashUtil::appendBytes64( triangleHash, &_listTriangleArea[triangleIndex], sizeof( uint8 ) );
             hash += triangleHash; // 더하기라 순서와 상관없다
         }
         for ( const NavConvexVolume& volume : _listVolume )
@@ -421,10 +413,10 @@ namespace sw
             if ( overlapsRegionXZ( bounds._min, bounds._max ) == false )
                 continue;
             uint64 volumeHash = HashUtil::kFNVOffset64;
-            volumeHash        = Internal::mixBytes( volumeHash, volume._listPoint.data(), volume._listPoint.size() * sizeof( float3 ) );
-            volumeHash        = Internal::mixBytes( volumeHash, &volume._minY, sizeof( volume._minY ) );
-            volumeHash        = Internal::mixBytes( volumeHash, &volume._maxY, sizeof( volume._maxY ) );
-            volumeHash        = Internal::mixBytes( volumeHash, &volume._area, sizeof( volume._area ) );
+            volumeHash        = HashUtil::appendBytes64( volumeHash, volume._listPoint.data(), volume._listPoint.size() * sizeof( float3 ) );
+            volumeHash        = HashUtil::appendBytes64( volumeHash, &volume._minY, sizeof( volume._minY ) );
+            volumeHash        = HashUtil::appendBytes64( volumeHash, &volume._maxY, sizeof( volume._maxY ) );
+            volumeHash        = HashUtil::appendBytes64( volumeHash, &volume._area, sizeof( volume._area ) );
             hash += volumeHash;
         }
         for ( const NavOffMeshLink& link : _listLink )
@@ -433,12 +425,12 @@ namespace sw
             if ( overlapsRegionXZ( bounds._min, bounds._max ) == false )
                 continue;
             uint64 linkHash = HashUtil::kFNVOffset64;
-            linkHash        = Internal::mixBytes( linkHash, &link._start, sizeof( link._start ) );
-            linkHash        = Internal::mixBytes( linkHash, &link._end, sizeof( link._end ) );
-            linkHash        = Internal::mixBytes( linkHash, &link._radius, sizeof( link._radius ) );
-            linkHash        = Internal::mixBytes( linkHash, &link._userID, sizeof( link._userID ) );
-            linkHash        = Internal::mixBytes( linkHash, &link._area, sizeof( link._area ) );
-            linkHash        = Internal::mixBytes( linkHash, &link._bBidirectional, sizeof( link._bBidirectional ) );
+            linkHash        = HashUtil::appendBytes64( linkHash, &link._start, sizeof( link._start ) );
+            linkHash        = HashUtil::appendBytes64( linkHash, &link._end, sizeof( link._end ) );
+            linkHash        = HashUtil::appendBytes64( linkHash, &link._radius, sizeof( link._radius ) );
+            linkHash        = HashUtil::appendBytes64( linkHash, &link._userID, sizeof( link._userID ) );
+            linkHash        = HashUtil::appendBytes64( linkHash, &link._area, sizeof( link._area ) );
+            linkHash        = HashUtil::appendBytes64( linkHash, &link._bBidirectional, sizeof( link._bBidirectional ) );
             hash += linkHash;
         }
         return hash != 0 ? hash : HashUtil::kFNVOffset64;
@@ -446,27 +438,26 @@ namespace sw
 
     uint64 NavMeshGeometry::computeHash() const
     {
-        using Internal = NavMeshGeometryInternal;
-        uint64 hash    = HashUtil::kFNVOffset64;
-        hash           = Internal::mixBytes( hash, _listVertex.data(), _listVertex.size() * sizeof( float3 ) );
-        hash           = Internal::mixBytes( hash, _listIndex.data(), _listIndex.size() * sizeof( uint32 ) );
-        hash           = Internal::mixBytes( hash, _listTriangleArea.data(), _listTriangleArea.size() );
+        uint64 hash = HashUtil::kFNVOffset64;
+        hash        = HashUtil::appendBytes64( hash, _listVertex.data(), _listVertex.size() * sizeof( float3 ) );
+        hash        = HashUtil::appendBytes64( hash, _listIndex.data(), _listIndex.size() * sizeof( uint32 ) );
+        hash        = HashUtil::appendBytes64( hash, _listTriangleArea.data(), _listTriangleArea.size() );
         for ( const NavConvexVolume& volume : _listVolume )
         {
-            hash = Internal::mixBytes( hash, volume._listPoint.data(), volume._listPoint.size() * sizeof( float3 ) );
-            hash = Internal::mixBytes( hash, &volume._minY, sizeof( volume._minY ) );
-            hash = Internal::mixBytes( hash, &volume._maxY, sizeof( volume._maxY ) );
-            hash = Internal::mixBytes( hash, &volume._area, sizeof( volume._area ) );
+            hash = HashUtil::appendBytes64( hash, volume._listPoint.data(), volume._listPoint.size() * sizeof( float3 ) );
+            hash = HashUtil::appendBytes64( hash, &volume._minY, sizeof( volume._minY ) );
+            hash = HashUtil::appendBytes64( hash, &volume._maxY, sizeof( volume._maxY ) );
+            hash = HashUtil::appendBytes64( hash, &volume._area, sizeof( volume._area ) );
         }
         // 링크는 필드마다 섞는다(구조체의 채움 바이트는 값이 정해지지 않는다).
         for ( const NavOffMeshLink& link : _listLink )
         {
-            hash = Internal::mixBytes( hash, &link._start, sizeof( link._start ) );
-            hash = Internal::mixBytes( hash, &link._end, sizeof( link._end ) );
-            hash = Internal::mixBytes( hash, &link._radius, sizeof( link._radius ) );
-            hash = Internal::mixBytes( hash, &link._userID, sizeof( link._userID ) );
-            hash = Internal::mixBytes( hash, &link._area, sizeof( link._area ) );
-            hash = Internal::mixBytes( hash, &link._bBidirectional, sizeof( link._bBidirectional ) );
+            hash = HashUtil::appendBytes64( hash, &link._start, sizeof( link._start ) );
+            hash = HashUtil::appendBytes64( hash, &link._end, sizeof( link._end ) );
+            hash = HashUtil::appendBytes64( hash, &link._radius, sizeof( link._radius ) );
+            hash = HashUtil::appendBytes64( hash, &link._userID, sizeof( link._userID ) );
+            hash = HashUtil::appendBytes64( hash, &link._area, sizeof( link._area ) );
+            hash = HashUtil::appendBytes64( hash, &link._bBidirectional, sizeof( link._bBidirectional ) );
         }
         return hash;
     }

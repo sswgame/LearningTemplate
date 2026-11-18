@@ -228,7 +228,7 @@ namespace sw
 
     bool AssetReferenceFields::isField( string_view name ) const
     {
-        return _setField.find( string( name ) ) != _setField.end();
+        return _setField.find( name ) != _setField.end();
     }
 
     bool AssetReferenceFields::isTextAsset( string_view assetID ) const

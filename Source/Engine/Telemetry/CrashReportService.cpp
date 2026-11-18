@@ -244,9 +244,7 @@ namespace sw
 
     void CrashReportService::onSettingEvent( const UserSettingEvent& event )
     {
-        const bool bCompleted = event._kind != UserSettingEventKind::PendingChanged && event._kind != UserSettingEventKind::ConfirmStarted;
-        const bool bOurs      = event._settingID.empty() || event._settingID == hashed_string( kConsentSettingID );
-        if ( bCompleted && bOurs )
+        if ( event.hasAppliedValueChange( hashed_string( kConsentSettingID ) ) )
             refreshConsentFromSetting();
     }
 

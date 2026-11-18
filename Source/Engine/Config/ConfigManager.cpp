@@ -161,7 +161,7 @@ namespace sw
         const bool bWithinRange = JSONSerializer::deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, nullptr, context ) == SoftReadResult::Read;
         for ( const SchemaOrphanValue& orphan : listOrphan )
         {
-            const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();
+            const utf8* const pName = orphan.getDisplayName();
             SW_LOG_ERROR_ID( "Config.KeyUnknown", "Config %#: key '%#' is unknown to %# or its value %# cannot be read", pSourceLabel, pName, typeInfo._fullyQualifiedName.c_str(),
                              orphan._text.c_str() );
         }
@@ -205,7 +205,7 @@ namespace sw
         const bool                bWithinRange = XMLSerializer::deserializeElementSoft( pInstance, typeInfo, element, &listOrphan, nullptr, context ) == SoftReadResult::Read;
         for ( const SchemaOrphanValue& orphan : listOrphan )
         {
-            const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();
+            const utf8* const pName = orphan.getDisplayName();
             SW_LOG_ERROR_ID( "Config.KeyUnknown", "Config %#: '%#' is unknown to %# or its value %# cannot be read", pSourceLabel, pName, typeInfo._fullyQualifiedName.c_str(), orphan._text.c_str() );
         }
         // 필수 칸은 속성이나 자식으로 적혀 있어야 한다(구조체 칸 · 목록 원소 안까지) — 초기값은 형식이지 기본값이 아니다.

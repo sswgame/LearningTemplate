@@ -240,8 +240,6 @@ namespace sw
         static bool isPathOfType( string_view path, const AssetTypeDef& def );
         /** @brief @p path 가 맞은 종류의 제외 묶음(`_excludeGroup`)입니다. 맞은 종류가 없거나 묶음이 없으면 빈 글입니다. */
         static string_view findExcludeGroup( string_view path );
-        /** @brief @p group 을 제외 묶음으로 가진 종류가 올라와 있으면 true 입니다(쿠킹 표가 모르는 묶음 이름을 가리키지 않는지 테스트가 본다). */
-        static bool hasExcludeGroup( string_view group );
 
         /** @brief 올리지 못한 등록(겹친 이름 · 접미사 · JSON 으로 그대로 읽는 접미사)을 사람이 읽는 글로 @p outListProblem 에 더합니다. */
         static void collectProblems( vector<string>& outListProblem );

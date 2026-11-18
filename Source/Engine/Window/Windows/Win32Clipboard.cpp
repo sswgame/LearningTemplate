@@ -40,8 +40,7 @@ namespace sw
             /** @brief 클립보드 주인으로 둘 창입니다(활성 창). 없으면 nullptr 입니다. */
             static HWND findOwnerWindow()
             {
-                const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                const IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 return pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
             }
         };

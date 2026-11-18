@@ -77,6 +77,16 @@ namespace sw
             void run();
         };
 
+        /** @brief 간선 있는 스테이지의 위상 정렬(Kahn, `dispatchStageGraph`)이 쓰는 임시 배열입니다. 스테이지마다 다시 채우고 할당만 재사용합니다. */
+        struct StageOrderScratch
+        {
+            vector<uint32> _listOffset{};   ///< 항목마다 나가는 간선의 시작 번호(CSR — 끝에 전체 수)
+            vector<uint32> _listTarget{};   ///< 간선의 도착 항목(출발 항목 순)
+            vector<uint32> _listCursor{};   ///< CSR 을 채우는 동안 항목마다의 쓰기 자리
+            vector<uint32> _listInDegree{}; ///< 항목마다 남은 선행 수
+            vector<uint32> _listOrder{};    ///< 위상 순서(항목 번호)
+        };
+
         /** @brief 레지스트리의 오브젝트를 그룹 순으로 틱합니다(그룹마다 모드 → 그 그룹의 선행 조건 스테이지). */
         void tickGroups( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
         /** @brief 한 그룹의 세 모드를 돕니다 — Task 태스크를 띄움 → 파도마다 포크-조인 → Task 를 기다림 → Main 을 게임 스레드에서(일괄 경로를 끄면 칸 한 번의 포크-조인). */
@@ -103,6 +113,7 @@ namespace sw
         vector<uint32>           _listBatchStart;           ///< 한 일괄 디스패치(파도 · 스테이지)에서 일괄 목록마다 시작 번호(끝에 전체 수). 할당을 재사용한다
         vector<EntryTask>        _listEntryTask;            ///< 한 그룹의 Task 모드 태스크(할당을 재사용한다)
         vector<StageItemTask>    _listStageItemTask;        ///< 간선 있는 스테이지 하나의 항목 태스크(할당을 재사용한다)
+        StageOrderScratch        _stageOrderScratch;        ///< 간선 있는 스테이지 하나의 위상 정렬 임시 배열(할당을 재사용한다)
         uint32                   _stageTransformApplyCount; ///< 스테이지 경계 적용 횟수(진단)
         uint32                   _dispatchOrdinal;          ///< 디스패치마다 오르는 순번(`TickThreadState::_dispatchOrdinal` — 같은 오브젝트가 디스패치마다 다른 스레드에서 쓴 건의 선후). 되감지 않는다
     };

@@ -77,23 +77,17 @@ namespace sw
      * @brief 리타깃 포즈(대상 레퍼런스를 원본 레퍼런스 자세에 맞추는 포즈, 언리얼 IK Retargeter 의 Retarget Pose)의 한 줄입니다.
      * @details 대상 본 하나를 **부모 공간에서** 도(`[피치, 요, 롤]`, `quaternion::makeFromYawPitchRoll` 배치) 만큼 더 돌립니다 — 새 로컬 회전 = 돌림 × 레퍼런스 로컬 회전.
      *          A 자세 대상을 T 자세 원본에 맞출 때 팔을 내리는 식으로 쓴다. 이동 · 스케일은 건드리지 않는다(체형은 본 비율 `BoneProportion` 의 몫).
+     *          파일의 `<target_pose><item bone rotation>` 칸을 그대로 읽고 쓴다(`RetargetBonePair` 와 같은 모양 — 회전은 파일 글 그대로 도 단위다).
      */
-    struct RetargetPoseBone
-    {
-        hashed_string _bone{};
-        float3        _rotationDegrees{};
-    };
-
-    /** @brief `<target_pose><item bone rotation>` 의 칸입니다(파일 스키마 — 회전은 파일 글 그대로 도 단위다). */
     REFLECT()
-    struct SW_API RetargetPoseBoneParams
+    struct SW_API RetargetPoseBone
     {
         REFLECT_BODY();
 
         PROPERTY( Name = "bone", Required )
         hashed_string _bone{};
         PROPERTY( Name = "rotation", Required, Units = deg )
-        float3 _rotation{};
+        float3 _rotationDegrees{};
     };
 
     /** @brief 파일 루트(`<RetargetProfile …>`)의 칸입니다. 루트 · 골반 짝과 목록은 자식 요소라 손으로 푼다. */

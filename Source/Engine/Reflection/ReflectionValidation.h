@@ -70,8 +70,6 @@ namespace sw
         void addWarning( string_view message );
         /** @brief 안전한 고침이 있는 문제를 적습니다. @p fix 의 프로퍼티가 비면 지금 범위의 프로퍼티입니다. */
         void addErrorWithFix( string_view message, const ValidationPropertyEdit& fix );
-        /** @brief 안전한 고침이 있는 경고를 적습니다. */
-        void addWarningWithFix( string_view message, const ValidationPropertyEdit& fix );
 
         /** @brief 적힌 결과입니다. */
         const vector<ValidationIssue>& getIssues() const noexcept { return _listIssue; }

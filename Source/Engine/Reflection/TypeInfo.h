@@ -409,6 +409,11 @@ namespace sw
          *          레지스트리에 든 타입은 등록이 짓는다. 짓지 않은 사본(레지스트리 밖에서 손으로 만든 파생 타입)에 부르면 조용히 자기 목록만 주지 않고 멈춘다.
          */
         PropertyListView getPropertiesWithBase() const;
+        /**
+         * @brief 이름이나 별칭이 @p nameText 와 철자 그대로 같은 프로퍼티를 상속 포함으로 찾습니다(`PropertyInfo::matchesNameText`). 없으면 nullptr 입니다.
+         * @details XML · JSON 의 태그 · 속성 이름을 프로퍼티에 맞출 때 씁니다 — 대소문자만 다른 이름은 모르는 이름입니다(`findProperty( hashed_string )` 는 대소문자를 무시한다).
+         */
+        const PropertyInfo* findPropertyByNameText( string_view nameText ) const;
 
         /** @brief 자기 이름 맵이 지어져 있으면 true 입니다(레지스트리에 든 타입은 등록 뒤 늘 true 입니다). */
         bool isLookupCacheBuilt() const { return _bIsCacheBuilt != SW_FALSE; }
@@ -469,16 +474,6 @@ namespace sw
                 {
                     func( propertyInfo );
                 }
-            }
-        }
-
-        /** @brief 메서드를 순회합니다. */
-        template <typename Func>
-        void forEachMethod( Func&& func ) const
-        {
-            for ( const FunctionInfo& method : _listMethod )
-            {
-                func( method );
             }
         }
 

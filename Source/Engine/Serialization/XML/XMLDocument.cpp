@@ -328,6 +328,11 @@ namespace sw
         return pNode.name();
     }
 
+    bool XMLNode::isElement() const
+    {
+        return isValid() && StringUtil::isNullOrEmpty( getName() ) == false;
+    }
+
     const utf8* XMLNode::getText() const
     {
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
@@ -766,6 +771,20 @@ namespace sw
                 ++line;
         }
         return line;
+    }
+
+    string XMLDocument::makeSourceError( string_view path, uint32 line, string_view message )
+    {
+        string error( path );
+        if ( line > 0 )
+        {
+            StringBuilder<constant::buffer::kMax256> errorPart;
+            errorPart.appendFormat( ":%#", line );
+            error += errorPart.c_str();
+        }
+        error += ": ";
+        error += message;
+        return error;
     }
 
     XMLNode XMLDocument::getRoot( const utf8* pName ) const

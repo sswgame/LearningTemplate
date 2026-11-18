@@ -16,8 +16,7 @@ namespace sw
          */
         IWindow* findClipboardWindow()
         {
-            const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-            IWindow* const             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+            IWindow* const pWindow = MainWindowSubsystem::findMainWindow();
             return pWindow != nullptr && pWindow->supportsClipboard() ? pWindow : nullptr;
         }
     } // namespace

@@ -312,9 +312,8 @@ namespace sw
     void InputManager::setCursorVisiblePlatform( bool bVisible )
     {
         // 창이 스스로 숨긴다(웹 캔버스 CSS cursor). 커서가 없는 창(Android 손가락)은 할 일이 없다. 커서가 있는데 못 숨기면 한 번 오류로 알린다.
-        MainWindowSubsystem* const pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow* const             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        constexpr uint32           kCursorVisibleBit = 1u << 1;
+        IWindow* const   pWindow           = MainWindowSubsystem::findMainWindow();
+        constexpr uint32 kCursorVisibleBit = 1u << 1;
         if ( pWindow == nullptr || pWindow->supportsCursorShape() == false )
             return;
         if ( pWindow->setCursorVisible( bVisible ) == false && ( _unsupportedReportedMask.fetch_or( kCursorVisibleBit ) & kCursorVisibleBit ) == 0 )
@@ -323,9 +322,8 @@ namespace sw
 
     void InputManager::applyCursorShapePlatform()
     {
-        MainWindowSubsystem* const pWindowHost     = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow* const             pWindow         = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        constexpr uint32           kCursorShapeBit = 1u << 2;
+        IWindow* const   pWindow         = MainWindowSubsystem::findMainWindow();
+        constexpr uint32 kCursorShapeBit = 1u << 2;
         if ( pWindow == nullptr || pWindow->supportsCursorShape() == false )
             return; // 커서가 없는 창(Android 손가락)
         if ( pWindow->setCursorShape( _cursorShape ) == false && ( _unsupportedReportedMask.fetch_or( kCursorShapeBit ) & kCursorShapeBit ) == 0 )
@@ -335,8 +333,7 @@ namespace sw
     void InputManager::applyMouseLockMode()
     {
         // 창이 포인터를 묶는다 — 웹은 Pointer Lock API(가두기는 브라우저에 없다), Android 는 묶지 않는다. 못 하면 묶지 않은 채로 한 번 오류로 알린다(Wayland 갈래와 같은 규칙).
-        MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow* const             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        IWindow* const pWindow = MainWindowSubsystem::findMainWindow();
         if ( _pMouse == nullptr || pWindow == nullptr )
             return;
         const MouseLockMode     mode            = _pMouse->getLockMode();
@@ -353,8 +350,7 @@ namespace sw
 
     void InputManager::releaseMouseLockMode()
     {
-        MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow* const             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        IWindow* const pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow != nullptr )
             (void)pWindow->setPointerLock( WindowPointerLock::Released ); // 풀기는 항상 된다
     }

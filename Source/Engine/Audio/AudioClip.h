@@ -177,7 +177,7 @@ namespace sw
         };
 
         /** @brief 경로의 엔트리를 찾거나 만들고 최근 사용 목록 맨 뒤로 옮깁니다. */
-        Entry& findOrAddLocked( const hashed_string& path ) SW_REQUIRES_LOCK( _mutex );
+        Entry& getOrCreateLocked( const hashed_string& path ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 엔트리를 최근 사용 목록 맨 뒤로 옮깁니다(찾기는 const 라 목록은 mutable). */
         void markUsedLocked( const Entry& entry ) const SW_REQUIRES_LOCK( _mutex );
 

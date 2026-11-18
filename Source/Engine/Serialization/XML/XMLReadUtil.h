@@ -122,8 +122,6 @@ namespace sw
         [[nodiscard]] static bool readOptionalFloat2( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float2& inoutValue );
         /** @brief 선택 속성 @p pAttribute 를 "x y z" 세 실수로 읽습니다. 규칙은 `readOptionalFloat2` 와 같습니다. */
         [[nodiscard]] static bool readOptionalFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& inoutValue );
-        /** @brief 필수 속성 @p pAttribute 를 "x y z" 세 실수로 읽습니다. 속성이 없거나 정확히 세 실수가 아니면 오류를 알리고 false 입니다. */
-        [[nodiscard]] static bool readRequiredFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& outValue );
 
         /**
          * @brief 선택 숫자 속성을 손으로 읽습니다(스키마 구조체가 없는 손 읽기용 — 카탈로그 원소는 `XMLFields::readProperties`).

@@ -807,13 +807,15 @@ namespace sw
     void Box2DPhysicsScene::destroyBodies( span<const PhysicsBodyHandle> listBody )
     {
         vector<PhysicsBodyHandle> listDestroyed;
+        listDestroyed.reserve( listBody.size() );
+        vector<PhysicsJointHandle> listPendingDestroy; // 바디마다 다시 할당하지 않는다(파괴 조각을 한꺼번에 지울 때 바디 수만큼 돈다)
         for ( const PhysicsBodyHandle& body : listBody )
         {
             BodyRecord record;
             if ( _bodies.take( body.getSlot(), record ) == false )
                 continue;
             // Box2D 가 바디에 붙은 관절을 함께 지운다. 엔진 쪽 관절 기록도 지운다.
-            vector<PhysicsJointHandle> listPendingDestroy;
+            listPendingDestroy.clear();
             _joints.forEachHandle( [&]( SlotHandle slot, const JointRecord& joint )
             {
                 if ( joint._bodyA == body || joint._bodyB == body )

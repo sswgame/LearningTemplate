@@ -255,8 +255,7 @@ namespace sw
     {
         SceneComponent::onPropertyChanged( propertyName );
         // 켜고 끄기는 배치를 바꾸지 않는다. 셀을 다시 만들지 않고 빌더가 다시 확인하게만 한다.
-        static const hashed_string s_activeName( "_bActive" );
-        if ( propertyName == s_activeName )
+        if ( propertyName == getActivePropertyName() )
         {
             markCellsDirty();
             return;

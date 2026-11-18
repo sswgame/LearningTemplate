@@ -17,16 +17,6 @@ namespace sw
     {
         struct NavMeshSettingsInternal
         {
-            static uint64 mixFloat( uint64 hash, float32 value )
-            {
-                return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &value ), sizeof( value ), false, hash );
-            }
-
-            static uint64 mixUint( uint64 hash, uint32 value )
-            {
-                return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &value ), sizeof( value ), false, hash );
-            }
-
             static bool isAgentTypeInRange( const NavAgentTypeDef& agentType )
             {
                 const bool bBody   = agentType._radius >= 0.0f && agentType._height > 0.0f && agentType._maxClimb >= 0.0f;
@@ -167,24 +157,23 @@ namespace sw
 
     uint64 NavMeshSettings::computeAgentTypeHash( const NavAgentTypeDef& agentType )
     {
-        using Internal = NavMeshSettingsInternal;
-        uint64 hash    = HashUtil::computeStringHash64( agentType._name.c_str(), agentType._name.size(), true );
-        hash           = Internal::mixFloat( hash, agentType._radius );
-        hash           = Internal::mixFloat( hash, agentType._height );
-        hash           = Internal::mixFloat( hash, agentType._maxClimb );
-        hash           = Internal::mixFloat( hash, agentType._maxSlope );
-        hash           = Internal::mixFloat( hash, agentType._cellSize );
-        hash           = Internal::mixFloat( hash, agentType._cellHeight );
-        hash           = Internal::mixUint( hash, agentType._tileSize );
-        hash           = Internal::mixUint( hash, agentType._minRegionSize );
-        hash           = Internal::mixUint( hash, agentType._mergeRegionSize );
-        hash           = Internal::mixFloat( hash, agentType._maxEdgeLength );
-        hash           = Internal::mixFloat( hash, agentType._maxEdgeError );
-        hash           = Internal::mixFloat( hash, agentType._detailSampleDistance );
-        hash           = Internal::mixFloat( hash, agentType._detailSampleMaxError );
+        uint64 hash = HashUtil::computeStringHash64( agentType._name.c_str(), agentType._name.size(), true );
+        hash        = HashUtil::appendValue64<float32>( hash, agentType._radius );
+        hash        = HashUtil::appendValue64<float32>( hash, agentType._height );
+        hash        = HashUtil::appendValue64<float32>( hash, agentType._maxClimb );
+        hash        = HashUtil::appendValue64<float32>( hash, agentType._maxSlope );
+        hash        = HashUtil::appendValue64<float32>( hash, agentType._cellSize );
+        hash        = HashUtil::appendValue64<float32>( hash, agentType._cellHeight );
+        hash        = HashUtil::appendValue64<uint32>( hash, agentType._tileSize );
+        hash        = HashUtil::appendValue64<uint32>( hash, agentType._minRegionSize );
+        hash        = HashUtil::appendValue64<uint32>( hash, agentType._mergeRegionSize );
+        hash        = HashUtil::appendValue64<float32>( hash, agentType._maxEdgeLength );
+        hash        = HashUtil::appendValue64<float32>( hash, agentType._maxEdgeError );
+        hash        = HashUtil::appendValue64<float32>( hash, agentType._detailSampleDistance );
+        hash        = HashUtil::appendValue64<float32>( hash, agentType._detailSampleMaxError );
         // 장애물 방식이 바뀌면 쿠킹본의 바이트 종류(타일 · 높이 층)가 바뀐다 — 낡은 쿠킹본으로 읽지 않는다. 기본(다시 베이크)은 섞지 않아 있던 쿠킹본이 그대로 맞는다.
         if ( agentType._obstacleMode != NavObstacleMode::RebakeTiles )
-            hash = Internal::mixUint( hash, static_cast<uint32>( agentType._obstacleMode ) );
+            hash = HashUtil::appendValue64<uint32>( hash, static_cast<uint32>( agentType._obstacleMode ) );
         return hash;
     }
 

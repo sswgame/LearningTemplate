@@ -2,6 +2,7 @@
 
 #include "Engine/Observability/DebugChannel.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
@@ -128,12 +129,7 @@ namespace sw
         bool bTooLong = false;
         {
             ScopedLock<mutex> lock{ _mutex };
-            Connection*       pConnection = nullptr;
-            for ( Connection& connection : _listConnection )
-            {
-                if ( connection._packedHandle == handle.packed() )
-                    pConnection = &connection;
-            }
+            Connection* const pConnection = VectorUtil::findBy<&Connection::_packedHandle>( _listConnection, handle.packed() );
             if ( pConnection == nullptr )
                 return;
             pConnection->_buffer.append( reinterpret_cast<const utf8*>( pData ), static_cast<size_t>( size ) );
@@ -181,20 +177,12 @@ namespace sw
     {
         (void)reason;
         ScopedLock<mutex> lock{ _mutex };
-        for ( size_t connectionIndex = 0; connectionIndex < _listConnection.size(); ++connectionIndex )
-        {
-            if ( _listConnection[connectionIndex]._packedHandle == handle.packed() )
-            {
-                _listConnection.erase( _listConnection.begin() + static_cast<ptrdiff_t>( connectionIndex ) );
-                break;
-            }
-        }
+        const uint64      packedHandle = handle.packed();
+        if ( const optional<size_t> connectionIndex = VectorUtil::findIndexBy<&Connection::_packedHandle>( _listConnection, packedHandle ) )
+            _listConnection.erase( _listConnection.begin() + static_cast<ptrdiff_t>( *connectionIndex ) );
         // 닫힌 연결이 남긴 요청은 답할 곳이 없다.
-        for ( size_t requestIndex = _listRequest.size(); requestIndex > 0; --requestIndex )
-        {
-            if ( _listRequest[requestIndex - 1]._packedHandle == handle.packed() )
-                _listRequest.erase( _listRequest.begin() + static_cast<ptrdiff_t>( requestIndex - 1 ) );
-        }
+        VectorUtil::removeIf( _listRequest, [packedHandle]( const Request& request )
+        { return request._packedHandle == packedHandle; } );
     }
 } // namespace sw
 

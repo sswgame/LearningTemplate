@@ -2,6 +2,7 @@
 
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
@@ -93,13 +94,7 @@ namespace sw
 
     void UserSettingsEngineHandlers::removeBindingInputMap( const InputMap& inputMap )
     {
-        for ( size_t index = 0; index < _listBindingInputMap.size(); ++index )
-        {
-            if ( _listBindingInputMap[index] != &inputMap )
-                continue;
-            _listBindingInputMap.erase( _listBindingInputMap.begin() + static_cast<ptrdiff_t>( index ) );
-            return;
-        }
+        VectorUtil::removeFirst( _listBindingInputMap, &inputMap );
     }
 
     InputMap* UserSettingsEngineHandlers::findBindingInputMap( const hashed_string& action ) const
@@ -311,8 +306,7 @@ namespace sw
     {
         outListOption.clear();
         // 창이 없는 호스트(서버 · 테스트)는 물을 곳이 없다 - 빈 목록이면 스키마의 고정 선택지가 쓰인다(`UserSettingsManager::collectOptionsOf`).
-        const MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        const IWindow* const             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        const IWindow* const pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         // 모니터 모드 열거는 수백 줄을 훑는다 — 메뉴가 그릴 때마다 부르므로 모니터가 바뀔 때만 다시 읽는다.

@@ -67,6 +67,7 @@ namespace sw
         , _maxLOD{ -1 }
         , _listLODIterationCount{}
         , _listVertex{}
+        , _listPinBoneWorld{}
         , _softBody{}
         , _appliedIterationCount{ 0 }
         , _bPinBoneErrorReported{ SW_FALSE }
@@ -190,9 +191,13 @@ namespace sw
         // 본이 없거나 둘 이상(스킨 — 몸은 오브젝트 자리에 서고 고정 정점을 뼈 가중으로 따른다)이면 오브젝트 자세다. 둘 이상이면 뼈가 모두 있어야 한다.
         if ( _listPinBone.size() != 1 )
         {
-            vector<float4x4> listBoneWorld;
-            if ( findPinBoneWorlds( listBoneWorld ) == false )
-                return false;
+            // 뼈가 있는지만 본다 — 행렬 목록은 스킨을 걸 때(`applySkinningPose`) 한 번만 만든다(프레임마다 불린다).
+            float4x4 boneWorld;
+            for ( const hashed_string& boneName : _listPinBone )
+            {
+                if ( findBoneWorld( boneName, boneWorld ) == false )
+                    return false;
+            }
             float3 scale;
             return PhysicsComponent::readWorldPose( *this, outPosition, outRotation, scale );
         }
@@ -377,10 +382,9 @@ namespace sw
     void ClothComponent::applySkinningPose( ScenePhysics& physics, bool bHardSkinAll )
     {
         IPhysicsScene3D* const pScene = physics.getScene3D();
-        vector<float4x4>       listBoneWorld;
-        if ( pScene == nullptr || findPinBoneWorlds( listBoneWorld ) == false )
+        if ( pScene == nullptr || findPinBoneWorlds( _listPinBoneWorld ) == false )
             return; // `beginPhysicsFrame` 이 같은 프레임에 씬과 뼈를 이미 확인했다
-        pScene->setSoftBodySkinningPose( _softBody, listBoneWorld, bHardSkinAll );
+        pScene->setSoftBodySkinningPose( _softBody, _listPinBoneWorld, bHardSkinAll );
     }
 
     bool ClothComponent::makeRenderVertices( const vector<float3>& listWorldVertex, const float4x4& worldToLocal, vector<RHIVertex>& outListVertex ) const

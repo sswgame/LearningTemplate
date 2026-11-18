@@ -34,14 +34,6 @@ namespace sw
                 XMLFields::writeProperties( element, RetargetBonePair{ source, target } );
             }
 
-            /** @brief 열쇠 있는 목록의 규칙 하나입니다. */
-            static DataInheritanceSchema makeKeyedList( const utf8* pName, const utf8* pKey )
-            {
-                DataInheritanceSchema list{ pName };
-                list._keyAttribute = pKey;
-                return list;
-            }
-
             /**
              * @brief 상속 규칙입니다. `root` · `pelvis` 는 구조체 칸, 사슬은 이름, 뼈 짝은 원본 뼈, 자세는 뼈가 열쇠입니다.
              * @details 사슬의 뼈 목록은 열쇠가 없어 통째로 바뀐다(순서가 뜻이다). 같은 원본에 대상 뼈 이름만 다른 스켈레톤의 프로필이 차이 파일 하나다.
@@ -51,9 +43,9 @@ namespace sw
                 DataInheritanceSchema schema{ "RetargetProfile" };
                 schema._listField.emplace_back( "root" );
                 schema._listField.emplace_back( "pelvis" );
-                schema._listField.push_back( makeKeyedList( "chains", "name" ) );
-                schema._listField.push_back( makeKeyedList( "bone_map", "source" ) );
-                schema._listField.push_back( makeKeyedList( "target_pose", "bone" ) );
+                schema._listField.push_back( DataInheritanceSchema::makeKeyedList( "chains", "name" ) );
+                schema._listField.push_back( DataInheritanceSchema::makeKeyedList( "bone_map", "source" ) );
+                schema._listField.push_back( DataInheritanceSchema::makeKeyedList( "target_pose", "bone" ) );
                 return schema;
             }
         };
@@ -215,7 +207,7 @@ namespace sw
             const XMLNode targetPose = root.appendChild( "target_pose" );
             for ( const RetargetPoseBone& poseBone : _listTargetPose )
             {
-                XMLFields::writeProperties( targetPose.appendChild( "item" ), RetargetPoseBoneParams{ poseBone._bone, poseBone._rotationDegrees } );
+                XMLFields::writeProperties( targetPose.appendChild( "item" ), poseBone );
             }
         }
         return document.saveToString();
@@ -258,10 +250,9 @@ namespace sw
 
         for ( size_t index = 0; targetPose.isValid() && index < targetPose.size(); ++index )
         {
-            RigXMLReader           entryReader( targetPose.at( index ), sourceLabel );
-            RetargetPoseBoneParams poseParams;
-            bOk = entryReader.readProperties( poseParams );
-            const RetargetPoseBone poseBone{ poseParams._bone, poseParams._rotation };
+            RigXMLReader     entryReader( targetPose.at( index ), sourceLabel );
+            RetargetPoseBone poseBone{};
+            bOk = entryReader.readProperties( poseBone );
             if ( ( entryReader.finish() && bOk ) == false )
                 return false;
             for ( const RetargetPoseBone& existing : _listTargetPose )

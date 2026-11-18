@@ -954,6 +954,14 @@ namespace sw
         return FieldReadResult::ObjectRejected;
     }
 
+    const ISequenceContainerWrapper* SerializerUtil::findTextList( const PropertyInfo& prop, const SerializeContext& context )
+    {
+        const bool bSequence = prop._bIsContainer == SW_TRUE && prop._containerWrapper != nullptr && ( prop._nestedContainer == nullptr || prop._nestedContainer->_elementNested == nullptr );
+        if ( bSequence == false || canCarryValueType( prop._elementTypeName, context ) == false )
+            return nullptr;
+        return prop._containerWrapper->asSequence();
+    }
+
     bool SerializerUtil::canCarryValueType( hashed_string typeName, const SerializeContext& context )
     {
         if ( typeName.empty() )
@@ -992,23 +1000,6 @@ namespace sw
             }
             return isOwnedPointerElementType( shape._elementTypeName ) || canCarryValueType( shape._elementTypeName, context );
         }
-    }
-
-    bool SerializerUtil::copySameNamedProperties( const void* pSrc, const TypeInfo& srcType, void* pDst, const TypeInfo& dstType )
-    {
-        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        bool                    bOk     = true;
-        for ( const PropertyInfo& srcProp : srcType.getPropertiesWithBase() )
-        {
-            for ( const PropertyInfo& dstProp : dstType.getPropertiesWithBase() )
-            {
-                if ( dstProp._name != srcProp._name )
-                    continue;
-                const string text = formatPropertyText( srcProp, ObjectAddress{ pSrc }, context );
-                bOk               = applyPropertyText( dstProp, MutableObjectAddress{ pDst }, text, context ) && bOk;
-            }
-        }
-        return bOk;
     }
 
     string SerializerUtil::formatPropertyText( const PropertyInfo& prop, ObjectAddress instance, const SerializeContext& context )

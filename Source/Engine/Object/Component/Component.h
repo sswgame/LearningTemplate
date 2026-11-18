@@ -544,6 +544,8 @@ namespace sw
         void setOwner( GameObject* pOwner ) { _pOwner = pOwner; }
         /** @brief 컴포넌트를 켜거나 끕니다. */
         void setActive( bool bActive );
+        /** @brief `setActive` 가 `onPropertyChanged` 로 알리는 프로퍼티 이름(`_bActive`)입니다. 파생 컴포넌트가 "켜고 끄기만 바뀌었다" 를 가를 때 이것과 견줍니다. */
+        static const hashed_string& getActivePropertyName();
         /** @brief 틱 그룹을 바꿉니다. 유효하지 않은 그룹(`isValidTickGroup`)은 경고하고 무시합니다. */
         void setTickGroup( TickGroup group );
         /**

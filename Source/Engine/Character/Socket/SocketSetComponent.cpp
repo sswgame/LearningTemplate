@@ -6,6 +6,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -16,18 +17,6 @@ namespace sw
     {
         struct SocketSetComponentInternal
         {
-            /** @brief 유닛의 본(이름, 레퍼런스 포즈)을 소켓 대조용 본 배열로 옮깁니다. */
-            static void makeBoneArray( const Skeleton& skeleton, CharacterBoneArray& outBones )
-            {
-                outBones = CharacterBoneArray{};
-                for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
-                {
-                    const SkeletonBone& bone = skeleton.getBone( boneIndex );
-                    (void)outBones.addBone( bone._name, bone._parentIndex, bone._referencePose.toMatrix() );
-                }
-                outBones.computeModelTransforms();
-            }
-
             /** @brief 본 하나의 유닛 공간 행렬입니다(유닛이 없거나 본이 없으면 false). */
             [[nodiscard]] static bool findBone( const SkeletalMeshComponent* pUnit, const hashed_string& boneName, float4x4& outTransform )
             {
@@ -99,7 +88,7 @@ namespace sw
         if ( _socketSet == nullptr || pUnit == nullptr )
             return;
         CharacterBoneArray bones;
-        SocketSetComponentInternal::makeBoneArray( pUnit->getSkeleton(), bones );
+        CharacterPoseUtil::makeBindBones( pUnit->getSkeleton(), bones );
         CharacterIssueList issues;
         if ( _socketSet->validateBones( bones, &issues ) == false )
         {

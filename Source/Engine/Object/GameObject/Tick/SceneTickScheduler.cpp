@@ -198,6 +198,7 @@ namespace sw
         , _listBatchStart{}
         , _listEntryTask{}
         , _listStageItemTask{}
+        , _stageOrderScratch{}
         , _stageTransformApplyCount{ 0 }
         , _dispatchOrdinal{ 0 }
     {
@@ -391,7 +392,9 @@ namespace sw
         SW_ASSERT( itemCount == stage._listItem.size() ); // 간선 있는 스테이지는 항목마다 목록 하나다(`TickRegistry::refreshStageBatches`)
 
         // 위상 순서(Kahn). 간선은 레지스트리가 DAG 에서 지었고 편집은 빼거나 번호만 민다 — 순환이 생길 수 없다.
-        vector<uint32> listOffset( itemCount + 1, 0 );
+        // 임시 배열은 멤버를 다시 채운다 — 간선 있는 스테이지마다 프레임마다 다섯 번 할당하지 않는다.
+        vector<uint32>& listOffset = _stageOrderScratch._listOffset;
+        listOffset.assign( itemCount + 1, 0 );
         for ( const TickStageEdge& edge : stage._listEdge )
         {
             ++listOffset[edge._source + 1];
@@ -400,15 +403,19 @@ namespace sw
         {
             listOffset[index + 1] += listOffset[index];
         }
-        vector<uint32> listTarget( stage._listEdge.size(), 0 );
-        vector<uint32> listCursor( listOffset.begin(), listOffset.end() - 1 );
-        vector<uint32> listInDegree( itemCount, 0 );
+        vector<uint32>& listTarget = _stageOrderScratch._listTarget;
+        listTarget.assign( stage._listEdge.size(), 0 );
+        vector<uint32>& listCursor = _stageOrderScratch._listCursor;
+        listCursor.assign( listOffset.begin(), listOffset.end() - 1 );
+        vector<uint32>& listInDegree = _stageOrderScratch._listInDegree;
+        listInDegree.assign( itemCount, 0 );
         for ( const TickStageEdge& edge : stage._listEdge )
         {
             listTarget[listCursor[edge._source]++] = edge._target;
             ++listInDegree[edge._target];
         }
-        vector<uint32> listOrder;
+        vector<uint32>& listOrder = _stageOrderScratch._listOrder;
+        listOrder.clear();
         listOrder.reserve( itemCount );
         for ( uint32 index = 0; index < itemCount; ++index )
         {

@@ -50,6 +50,9 @@ namespace sw
          *          말할 수 없다. 바이너리는 이름을 싣지 않아 항상 비어 있다.
          */
         string _writtenName;
+
+        /** @brief 경고 · 오류에 적을 이름입니다 — 텍스트에 적힌 이름(`_writtenName`)이 먼저이고, 없으면 intern 이름(`_name`)입니다. 둘 다 없으면(바이너리의 해시뿐인 값) 빈 글입니다. */
+        const utf8* getDisplayName() const { return _writtenName.empty() ? _name.c_str() : _writtenName.c_str(); }
     };
 
     /**

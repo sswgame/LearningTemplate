@@ -68,9 +68,8 @@ namespace sw
             /** @brief 열쇠 있는 목록의 규칙 하나입니다. */
             [[nodiscard]] static DataInheritanceSchema makeKeyedList( const utf8* pName, const utf8* pKey )
             {
-                DataInheritanceSchema list{ pName };
-                list._keyAttribute = pKey;
-                list._bEmptyClears = SW_FALSE; // 숫자 칸의 빈 글은 읽히지 않는다 — 기본값으로 되돌린 칸은 저장의 왕복 검사가 잡는다(`saveToFile`)
+                DataInheritanceSchema list = DataInheritanceSchema::makeKeyedList( pName, pKey );
+                list._bEmptyClears         = SW_FALSE; // 숫자 칸의 빈 글은 읽히지 않는다 — 기본값으로 되돌린 칸은 저장의 왕복 검사가 잡는다(`saveToFile`)
                 return list;
             }
 

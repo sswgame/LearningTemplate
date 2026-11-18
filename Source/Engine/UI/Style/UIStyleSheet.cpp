@@ -73,7 +73,7 @@ namespace sw
                 /** @brief 읽기 오류입니다. 문장은 하나이고 대상이 `경로:줄: 까닭` 이다(대상 길이에서 잘린다). */
                 unexpected<Error> fail( const XMLNode& node, string_view message ) const
                 {
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "the UI style sheet is invalid", makeError( _path, findLine( node ), message ) } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the UI style sheet is invalid", XMLDocument::makeSourceError( _path, findLine( node ), message ) } );
                 }
 
                 /**
@@ -185,7 +185,7 @@ namespace sw
                         if ( StringUtil::equals( pName, kSelectorKey ) )
                             continue;
                         UIStyleField        field{};
-                        const PropertyInfo* pProperty = findProperty( styleType, pName );
+                        const PropertyInfo* pProperty = styleType.findPropertyByNameText( pName );
                         if ( pProperty == nullptr || UIStyleFieldTable::tryFindField( pName, field ) == false )
                             return fail( element, string( "Rule has unknown style property '" ) + pName + "'" );
                         if ( expected<void> added = addAssignment( element, rule, field, *pProperty, nullptr, nullptr, pName, attribute.getValue() ); added.has_value() == false )
@@ -195,13 +195,13 @@ namespace sw
                     {
                         const utf8*         pName = child.getName();
                         UIStyleField        field{};
-                        const PropertyInfo* pProperty = findProperty( styleType, pName );
+                        const PropertyInfo* pProperty = styleType.findPropertyByNameText( pName );
                         const TypeInfo*     pNested   = pProperty != nullptr ? SerializerUtil::findNestedObjectType( pProperty->_typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ) : nullptr;
                         if ( pNested == nullptr || UIStyleFieldTable::tryFindField( pName, field ) == false )
                             return fail( child, string( "Rule has unknown style element <" ) + pName + ">" );
                         for ( XMLAttribute attribute = child.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                         {
-                            const PropertyInfo* pInner = findProperty( *pNested, attribute.getName() );
+                            const PropertyInfo* pInner = pNested->findPropertyByNameText( attribute.getName() );
                             if ( pInner == nullptr )
                                 return fail( child, string( "<" ) + pName + "> has unknown attribute '" + attribute.getName() + "'" );
                             if ( expected<void> added = addAssignment( child, rule, field, *pProperty, pNested, pInner, attribute.getName(), attribute.getValue() ); added.has_value() == false )
@@ -291,31 +291,6 @@ namespace sw
                 }
                 return false;
             }
-
-            static string makeError( string_view path, uint32 line, string_view message )
-            {
-                string error( path );
-                if ( line > 0 )
-                {
-                    StringBuilder<constant::buffer::kMax256> errorPart;
-                    errorPart.appendFormat( ":%#", line );
-                    error += errorPart.c_str();
-                }
-                error += ": ";
-                error += message;
-                return error;
-            }
-
-            /** @brief @p type 의 프로퍼티 중 이름이 @p pName 인 것입니다(철자 그대로). */
-            static const PropertyInfo* findProperty( const TypeInfo& type, const utf8* pName )
-            {
-                for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
-                {
-                    if ( prop.matchesNameText( pName ) )
-                        return &prop;
-                }
-                return nullptr;
-            }
         };
     } // namespace
 } // namespace sw
@@ -403,7 +378,7 @@ namespace sw
         Internal::ParseContext context{ text, path, {}, &sheet, text.find( DataInheritance::kBaseAttribute ) != string_view::npos };
         const XMLNode          root = document.getRoot();
         if ( root.isValid() == false || StringUtil::equals( root.getName(), UIStyleSheetAsset::kRootElementName ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI style sheet is invalid", Internal::makeError( path, 1, "the root element must be <UIStyleSheet>" ) } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI style sheet is invalid", XMLDocument::makeSourceError( path, 1, "the root element must be <UIStyleSheet>" ) } );
         bool bVersioned{ false };
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
