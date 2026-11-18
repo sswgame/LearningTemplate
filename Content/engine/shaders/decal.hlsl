@@ -10,7 +10,11 @@
  * 텍스처 번호의 뜻은 MaterialTexture::sampleIndex 와 같다(네이티브 bindless 의 SRV · 에뮬의 머티리얼 칸 0 · 1 — C++ FrameRenderer::prepareFrameDecals). 없으면 흰색이다.
  */
 // 머티리얼 텍스처 칸을 빌려 쓰는 비머티리얼 셰이더 — 알베도 0 · 노멀 1(FrameRenderer 데칼 그리기)(웹 에뮬이 이 칸만 남긴다, binding_texture.hlsli SW_MATERIAL_TEXTURE_SLOT_LIMIT).
-#define MATERIAL_TEXTURE_COUNT 2
+#if !defined( MATERIAL_TEXTURE_COUNT )
+    #define MATERIAL_TEXTURE_COUNT 2
+#elif MATERIAL_TEXTURE_COUNT != 2
+    #error "MATERIAL_TEXTURE_COUNT from the compile defines differs from this shader's material texture slots"
+#endif
 #include "binding.hlsli"
 #include "fullscreen.hlsli"
 

@@ -980,7 +980,7 @@ namespace sw
 
         // 칸이 내는 define — 쿠커도 이 목록을 읽는다.
         // 텍스처 칸 수 — 에뮬 백엔드의 고정 서수 0..N-1 이고, 웹은 셰이더가 이 칸만 선언한다(binding_texture.hlsli SW_MATERIAL_TEXTURE_SLOT_LIMIT).
-        MaterialPermutation::appendUniqueDefine( outListDefine, string( kMaterialTextureCountDefine ) + "=" + to_string( getTextureSlotCount() ) );
+        MaterialPermutation::appendUniqueDefine( outListDefine, MaterialPermutation::makeTextureCountDefine( getTextureSlotCount() ) );
         if ( _desc._alphaMode == MaterialAlphaMode::Mask )
             MaterialPermutation::appendUniqueDefine( outListDefine, kMaterialAlphaCutoffDefine );
         if ( _desc._bTwoSidedLighting != SW_FALSE )

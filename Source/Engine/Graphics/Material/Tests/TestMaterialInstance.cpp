@@ -7,6 +7,7 @@
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -121,4 +122,18 @@ SW_TEST_CASE( MaterialInstanceTest, TextureSlotCountReachesShaderDefine )
 
     SW_EXPECT_TRUE( textured->getTextureSlotCount() <= shaderslot::wgpu::kMaterialTextureBudget );
     SW_EXPECT_TRUE( shaderslot::wgpu::kMaterialTextureBudget + shaderslot::wgpu::kMaterialStageEngineTextureReserve <= shaderslot::wgpu::kStageTextureBudget );
+}
+
+/**
+ * @brief [MaterialInstanceTest] 패스 PSO 의 칸 0(머티리얼 없는 배치) 위에 머티리얼 변형의 칸 수를 얹으면 같은 자리의 값이 바뀐다 — 같은 이름 define 이 둘이 되지 않는다
+ * @details 런타임 PSO 변형과 쿠커가 같은 함수(MaterialPermutation::mergeDefine)로 합쳐 같은 목록 · 같은 차례다.
+ */
+SW_TEST_CASE( MaterialInstanceTest, TextureCountDefineReplacesPassValue )
+{
+    vector<string> listDefine{ "SW_PASS_FORWARD", MaterialPermutation::makeTextureCountDefine( 0 ), "SW_PASS_VELOCITY" };
+    MaterialPermutation::mergeDefine( listDefine, MaterialPermutation::makeTextureCountDefine( 3 ) );
+    MaterialPermutation::mergeDefine( listDefine, "MATERIAL_ALPHA_CUTOFF" );
+    SW_REQUIRE_EQUAL( size_t( 4 ), listDefine.size() );
+    SW_EXPECT_EQUAL( MaterialPermutation::makeTextureCountDefine( 3 ), listDefine[1] );
+    SW_EXPECT_EQUAL( string( "MATERIAL_ALPHA_CUTOFF" ), listDefine[3] );
 }
