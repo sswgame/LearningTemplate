@@ -15,12 +15,6 @@
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 #include "Editor/Viewport/ViewportToolbarSettings.h"
 
-namespace sw
-{
-    class CameraComponent;
-    class GameObject;
-} // namespace sw
-
 namespace sw::editor
 {
     /**

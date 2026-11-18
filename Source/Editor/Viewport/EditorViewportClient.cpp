@@ -15,29 +15,16 @@
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorCamera.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/IEditorPanelService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorColliderHandleTool.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
+#include "Editor/Viewport/Model/EditorViewportClientScene.h"
 #include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
-#include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 #include "Editor/Viewport/Model/Visualizers/SelectionBoundsVisualizer.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/RawInputEvent.h"
-#include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
-#include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 
@@ -45,15 +32,6 @@ namespace sw::editor
 {
     namespace
     {
-        /**
-         * @brief 씬 뷰 이미지를 그린 카메라(에디터 카메라)입니다. 호스트가 씬 뷰를 그리는 카메라와 같습니다(`ImGuiEditor::getSceneViewCamera`).
-         * @details 오버레이(격자, 시각화, 디버그 드로우, 피킹, 기즈모)는 이 카메라로 투영해야 이미지와 겹친다. Play 중에도 씬 뷰는 이 카메라를 쓴다.
-         */
-        CameraComponent* getSceneViewCamera()
-        {
-            return EditorCamera::ensure( editor::getActiveScene() );
-        }
-
         struct EditorViewportClientInternal
         {
             /** @brief 오른쪽 단추를 누른 동안 켜는 비행 레이어입니다(`editor.input.xml`). */
@@ -156,22 +134,21 @@ namespace sw::editor
             }
         }
 
-        _camera.applyToCamera( getSceneViewCamera() );
+        EditorViewportClientScene::applyCamera( _camera );
     }
 
     void EditorViewportClient::processShortcutKeys()
     {
         // 기즈모 모드는 유니티, 언리얼, Godot 모두 W, E, R 이다. Q 와 Space 는 다음 모드로 순환한다(Space 는 언리얼). Shift+Space 는 씬 뷰 최대화다.
         // 키는 `Editor.Panel.scene_view` 레이어가 정한다 — 수정 키는 정확히 맞아야 발화하므로 Ctrl+R 이 R 이 되지 않는다.
-        EditorWorkspace& ws = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>();
         if ( EditorInputGUI::wasActionTriggered( "viewport.gizmoTranslate" ) )
-            ws.setGizmoOperation( 0 );
+            EditorViewportClientScene::setGizmoOperation( 0 );
         if ( EditorInputGUI::wasActionTriggered( "viewport.gizmoRotate" ) )
-            ws.setGizmoOperation( 1 );
+            EditorViewportClientScene::setGizmoOperation( 1 );
         if ( EditorInputGUI::wasActionTriggered( "viewport.gizmoScale" ) )
-            ws.setGizmoOperation( 2 );
+            EditorViewportClientScene::setGizmoOperation( 2 );
         if ( EditorInputGUI::wasActionTriggered( "viewport.gizmoCycle" ) )
-            ws.setGizmoOperation( ( ws.getGizmoOperation() + 1 ) % 3 );
+            EditorViewportClientScene::setGizmoOperation( ( EditorViewportClientScene::getGizmoOperation() + 1 ) % 3 );
         if ( EditorInputGUI::wasActionTriggered( "viewport.toggleMaximize" ) )
             toggleMaximize();
         // 직교 보기(Blender, Godot 키패드). 7 은 위, 1 은 앞, 3 은 오른쪽이고, 5 는 직교와 원근을 전환한다.
@@ -187,15 +164,14 @@ namespace sw::editor
 
     void EditorViewportClient::toggleMaximize()
     {
-        EditorContext& context = editor::getSubsystem<EditorContext>();
         if ( _bMaximized == SW_TRUE )
         {
             _bMaximized = SW_FALSE;
-            if ( context.getSubsystem<IEditorPanelService>().restoreMaximizedLayout() == false )
+            if ( EditorViewportClientScene::restoreMaximizedLayout() == false )
                 SW_LOG_WARNING_ID( "EditorViewportClient.LayoutBeforeMaximizingGone", "The layout before maximizing is gone - use Panel > Reset Layout" );
             return;
         }
-        if ( context.getSubsystem<IEditorPanelService>().maximizePanel( editorpanel::kSceneView ) )
+        if ( EditorViewportClientScene::maximizeSceneView() )
             _bMaximized = SW_TRUE;
     }
 
@@ -221,20 +197,19 @@ namespace sw::editor
         const bool bCanvasClicked = EditorInputGUI::wasItemClicked();
         // 씬 뷰(메인 월드)가 포커스면 인스펙터 · 전역 명령이 다시 메인 선택을 겨눈다 — 미리보기 창이 걸어 둔 것을 푼다(`editor::getFocusedSelection`).
         if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) )
-            editor::setFocusedSelection( nullptr );
+            EditorViewportClientScene::focusMainSelection();
 
-        CameraComponent* pCamera = getSceneViewCamera();
-        const float2     canvasPos{ imagePos.x, imagePos.y };
-
-        if ( pCamera != nullptr )
+        const float2        canvasPos{ imagePos.x, imagePos.y };
+        const float32       aspect = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
+        EditorViewportFrame frame{};
+        if ( EditorViewportClientScene::gatherFrame( aspect, frame ) )
         {
-            const float32  aspect   = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
-            const float4x4 viewProj = pCamera->getViewProjectionMatrix( aspect );
+            const float4x4& viewProj = frame._viewProj;
 
             float32 arrView[16];
             float32 arrProj[16];
-            EditorViewportProjectionUtil::storeGizmoMatrix( arrView, pCamera->getViewMatrix() );
-            EditorViewportProjectionUtil::storeGizmoMatrix( arrProj, pCamera->getProjectionMatrix( aspect ) );
+            EditorViewportProjectionUtil::storeGizmoMatrix( arrView, frame._view );
+            EditorViewportProjectionUtil::storeGizmoMatrix( arrProj, frame._projection );
 
             // 격자, 시각화, 자, 통계, 방향 큐브는 창의 그리기 목록에 그린다. 캔버스로 자르지 않으면 화면 밖으로 뻗은 선(카메라 절두체 등)이
             // 탭과 툴바 위까지 그려진다. 기즈모는 ImGuizmo 가 같은 사각형(SetRect)으로 자른다.
@@ -244,22 +219,16 @@ namespace sw::editor
             if ( _toolbarSettings._bShowGrid )
                 _canvasOverlay.drawAdaptiveGrid( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj, _camera.getPosition(), _toolbarSettings._bIs2DMode );
 
-            // 시각화는 씬 전체를 복사하지 않고 매니저의 레지스트리(카메라 · 물리)를 읽는다.
-            GameObjectManager* pActiveManager = editor::getActiveObjectManager();
-
+            // 시각화는 씬 전체를 복사하지 않고 매니저의 레지스트리(카메라 · 물리)를 읽는다 — 씬 쪽 입력은 Model 이 채운다.
             EditorViewportVisualizerArgs visualizerArgs{};
-            visualizerArgs._pDrawList       = ImGui::GetWindowDrawList();
-            visualizerArgs._pViewProj       = &viewProj;
-            visualizerArgs._canvasPos       = canvasPos;
-            visualizerArgs._canvasSize      = canvasSize;
-            visualizerArgs._pActiveCamera   = pCamera;
-            visualizerArgs._pListCamera     = ( pActiveManager != nullptr ) ? &pActiveManager->getCameraRegistry().getAll() : nullptr;
-            visualizerArgs._pListCollider   = ( pActiveManager != nullptr ) ? &pActiveManager->getSubsystem<sw::ScenePhysics>().getColliders2D() : nullptr;
-            visualizerArgs._pDebugDrawQueue = &editor::getSubsystem<DebugDrawQueue>();
-            visualizerArgs._pObjectManager  = pActiveManager;
-            visualizerArgs._bGizmoDragging  = _gizmo.isDragging();
-            visualizerArgs._bFlat2D         = EditorVisualizerGeometryUtil::isFlat2DView( pCamera->isOrthographic(), pCamera->getViewMatrix() );
-            visualizerArgs._pStats          = &_visualizerStats;
+            EditorViewportClientScene::fillVisualizerScene( visualizerArgs );
+            visualizerArgs._pDrawList      = ImGui::GetWindowDrawList();
+            visualizerArgs._pViewProj      = &viewProj;
+            visualizerArgs._canvasPos      = canvasPos;
+            visualizerArgs._canvasSize     = canvasSize;
+            visualizerArgs._bGizmoDragging = _gizmo.isDragging();
+            visualizerArgs._bFlat2D        = frame._bFlat2D;
+            visualizerArgs._pStats         = &_visualizerStats;
             // 마우스 양보는 시각화가 매 프레임 다시 잡아야 유지된다(끄는 중에 토글을 꺼 그리기 함수가 안 돌아도 풀린다). 클릭 선택은 이 그리기 뒤라 같은 프레임의 첫 클릭도 양보를 본다.
             EditorViewportMouseClaim::beginFrame( static_cast<uint64>( ImGui::GetFrameCount() ) );
             // 모으기(Model, 씬을 읽는다) → 그리기(View, 값만 본다) — 언리얼 컴포넌트 비주얼라이저가 FPrimitiveDrawInterface 에 값을 넘기는 가름.
@@ -275,7 +244,7 @@ namespace sw::editor
             pickInput._viewProj             = viewProj;
             pickInput._canvasPos            = canvasPos;
             pickInput._canvasSize           = canvasSize;
-            pickInput._skipObjectID         = pCamera->getOwner() != nullptr ? pCamera->getOwner()->getObjectID() : 0;
+            pickInput._skipObjectID         = frame._cameraObjectID;
             pickInput._pListScreenBillboard = &_listScreenBillboard;
             pickInput._b2DMode              = _toolbarSettings._bIs2DMode;
             _picker.processClick( pickInput, bCanvasClicked && ( EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed() ) == false, bGizmoBusy );
@@ -287,18 +256,15 @@ namespace sw::editor
             processContextMenu( pickInput, bCanvasHovered );
 
             {
-                GameObjectManager* pObjectManager = editor::getActiveObjectManager();
-                if ( pObjectManager != nullptr )
-                    pObjectManager->flushSceneTransforms();
+                EditorViewportClientScene::flushSceneTransforms();
                 // 콜라이더 손잡이나 확장 도구(EditorViewportMouseClaim) 위에서는 기즈모가 마우스를 양보한다 — 손잡이는 기즈모 축 위에 놓인다.
                 const bool bGizmoYields = EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed();
                 if ( bGizmoYields == false )
                 {
                     // 모으기(Model) → 기즈모(View, 스냅샷만 읽고 명령을 낸다) → 적용 · 되돌리기(Model). 메인 뷰포트는 메인 선택이다.
-                    EditorSelection& selection = editor::getMainSceneSelection();
-                    EditorGizmoEdit::gather( selection, _gizmoState );
+                    EditorViewportClientScene::gatherGizmo( _gizmoState );
                     _gizmo.draw( _gizmoState, arrView, arrProj, canvasPos, canvasSize, _toolbarSettings, "sceneView.gizmoCenter" );
-                    _gizmoEdit.apply( selection, _gizmo.getCommands() );
+                    EditorViewportClientScene::applyGizmo( _gizmoEdit, _gizmo.getCommands() );
                 }
             }
 
