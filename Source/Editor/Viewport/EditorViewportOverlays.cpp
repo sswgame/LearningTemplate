@@ -158,7 +158,7 @@ namespace sw::editor
         }
     }
 
-    void EditorViewportOverlays::draw( const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings, bool bHasSelection )
+    void EditorViewportOverlays::draw( const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings, const ViewportToolbarState& toolbarState )
     {
         ensureLoaded();
         if ( canvasSize._x <= 1.0f || canvasSize._y <= 1.0f )
@@ -167,7 +167,7 @@ namespace sw::editor
         for ( EditorOverlayBarState& state : _layout._listBar )
         {
             if ( state._bVisible && EditorViewportOverlaysInternal::findDesc( state._id ) != nullptr )
-                drawBar( state, canvasMin, canvasSize, settings, bHasSelection );
+                drawBar( state, canvasMin, canvasSize, settings, toolbarState );
         }
     }
 
@@ -221,7 +221,7 @@ namespace sw::editor
     }
 
     void EditorViewportOverlays::drawBar( EditorOverlayBarState& state, const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings,
-                                          bool bHasSelection )
+                                          const ViewportToolbarState& toolbarState )
     {
         const EditorViewportOverlaysInternal::BarDesc* pDesc   = EditorViewportOverlaysInternal::findDesc( state._id );
         EditorOverlayBarRuntime&                       runtime = getRuntime( state._id );
@@ -278,13 +278,13 @@ namespace sw::editor
         {
             ViewportToolbarSettings::nextItem( bVertical );
             if ( state._id == "view" )
-                ViewportToolbarSettings::drawViewBar( settings, bVertical );
+                ViewportToolbarSettings::drawViewBar( settings, bVertical, toolbarState );
             else if ( state._id == "transform" )
-                ViewportToolbarSettings::drawTransformBar( settings, bVertical, bHasSelection );
+                ViewportToolbarSettings::drawTransformBar( settings, bVertical, toolbarState._selectedObjectCount > 0 );
             else if ( state._id == "display" )
                 ViewportToolbarSettings::drawDisplayBar( settings, bVertical );
             else if ( state._id == "tools" )
-                ViewportToolbarSettings::drawToolsBar( settings, bVertical );
+                ViewportToolbarSettings::drawToolsBar( settings, bVertical, toolbarState );
         }
 
         const ImVec2 size = ImGui::GetWindowSize();

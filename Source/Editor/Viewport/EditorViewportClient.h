@@ -101,6 +101,7 @@ namespace sw::editor
 
     private:
         ViewportToolbarSettings      _toolbarSettings;
+        ViewportToolbarState         _toolbarState;             ///< 오버레이 바가 이번 프레임에 보일 편집 상태 값(`drawOverlays` 가 모은다)
         float32                      _canvasHeight;             ///< 지난 `draw` 의 캔버스 높이(픽셀). 아직 그리지 않았으면 0 이고 팬은 쉰다
         EditorViewportCamera         _camera;                   ///< 씬 뷰 카메라 값과 비행 · 궤도 · 북마크 입력
         EditorViewportPicker         _picker;                   ///< 클릭 선택과 호버

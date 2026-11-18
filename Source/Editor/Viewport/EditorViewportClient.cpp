@@ -75,6 +75,7 @@ namespace sw::editor
 {
     EditorViewportClient::EditorViewportClient()
         : _toolbarSettings{}
+        , _toolbarState{}
         , _canvasHeight{ 0.0f }
         , _camera{}
         , _picker{}
@@ -196,8 +197,10 @@ namespace sw::editor
 
     void EditorViewportClient::drawOverlays( const float2& canvasMin, const float2& canvasSize )
     {
-        const bool bHasSelection = editor::getMainSceneSelection().getSelectedObjectCount() > 0;
-        _overlays.draw( canvasMin, canvasSize, _toolbarSettings, bHasSelection );
+        // 모으기(Model) → 바 그리기(View, 값만 본다) → 바가 적은 요청 실행.
+        ViewportToolbarState::gather( _toolbarState );
+        _overlays.draw( canvasMin, canvasSize, _toolbarSettings, _toolbarState );
+        _toolbarSettings.applyViewModeRequest();
     }
 
     void EditorViewportClient::draw( const void* pTextureID, const float2& canvasSize )

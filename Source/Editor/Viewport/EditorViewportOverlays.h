@@ -14,6 +14,7 @@
 namespace sw::editor
 {
     struct ViewportToolbarSettings;
+    struct ViewportToolbarState;
 
     /** @brief 오버레이 바 하나의 이번 실행 상태(저장하지 않는다)입니다. */
     struct EditorOverlayBarRuntime
@@ -42,7 +43,7 @@ namespace sw::editor
         EditorViewportOverlays();
 
         /** @brief 바들을 뷰포트 이미지(@p canvasMin, @p canvasSize — 화면 픽셀) 위에 그립니다. 이미지를 그린 뒤 부릅니다. */
-        void draw( const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings, bool bHasSelection );
+        void draw( const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings, const ViewportToolbarState& state );
         /** @brief 씬 뷰 툴바에 둘 Overlays 메뉴(바마다 보이기 · 기본 위치)입니다. */
         void drawOverlaysMenu();
         /** @brief 모든 바를 기본 위치 · 보임으로 되돌리고 저장합니다. */
@@ -70,7 +71,7 @@ namespace sw::editor
         void                     ensureLoaded();
         void                     save() const;
         EditorOverlayBarRuntime& getRuntime( string_view barID );
-        void                     drawBar( EditorOverlayBarState& state, const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings, bool bHasSelection );
+        void                     drawBar( EditorOverlayBarState& state, const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings, const ViewportToolbarState& toolbarState );
         void                     drawBarMenuItems();
         /**
          * @brief 바의 손잡이를 그리고 끌기 · 놓기 · 오른쪽 클릭 메뉴를 처리합니다. 놓으면 가까운 가장자리에 붙이고 저장합니다.
