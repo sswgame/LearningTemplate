@@ -1,4 +1,5 @@
-// 표면 변형 층 — 도장 모양(SurfaceStampDef), 높이 격자(SurfaceDeformGrid: 찍기 · 겹침 · 메우기 · 창 옮기기 · 텍스처 인코딩), 씬 서비스(SurfaceDeformSystem: 붙잡기 · 놓기 · 띠)(nogpu).
+// 표면 변형 층 — 도장 모양(SurfaceStampDef), 높이 격자(SurfaceDeformGrid: 찍기 · 겹침 · 메우기 · 창 옮기기 · 텍스처 인코딩 · 젖은 자국), 씬 서비스(SurfaceDeformSystem: 붙잡기 · 놓기 · 띠),
+// 발걸음 반응(SurfaceFootprintSystem: 발자국 · 젖은 발)(nogpu).
 #include "pch.h"
 
 #include "Core/Foundation/BuildInfo.h"
@@ -9,6 +10,7 @@
 #include "Engine/Environment/Surface/SurfaceDeformSystem.h"
 #include "Engine/Environment/Surface/SurfaceFootprintSystem.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"
+#include "Engine/Environment/Surface/SurfaceSample.h"
 #include "Engine/Environment/Surface/SurfaceStamp.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 
@@ -29,6 +31,18 @@ namespace
             def._rimWidth  = 0.05f;
             def._fillSpeed = 0.01f;
             return def;
+        }
+
+        /** @brief 종류 @p kind 를 젖음 @p wetness 로 @p point 에서 밟은 표면 질의 결과입니다(표를 함께 쥔다 — `SurfaceSample::_pKind`). */
+        static SurfaceSample makeSample( const shared_ptr<const SurfaceKindTable>& pTable, const SurfaceKindDef& kind, const float3& point, float32 wetness )
+        {
+            SurfaceSample sample;
+            sample._pKind    = shared_ptr<const SurfaceKindDef>( pTable, &kind );
+            sample._material = kind._name;
+            sample._point    = point;
+            sample._normal   = float3{ 0.0f, 1.0f, 0.0f };
+            sample._wetness  = wetness;
+            return sample;
         }
 
         /** @brief 지름 1 m · 깊이 0.3 m · 홈 셋 · 초당 2 라디안으로 도는 깔때기. */
@@ -236,11 +250,77 @@ SW_TEST_CASE( SurfaceDeformSystemTest, SegmentAndFootstepsStampTheLayer )
     SW_REQUIRE_NOT_NULL( pSnow );
     SW_REQUIRE_NOT_NULL( pStone );
     SurfaceFootprintSystem& footprints = manager.getSubsystem<SurfaceFootprintSystem>();
-    footprints.addFootstep( *pStone, float3{ 0.0f, 0.0f, 2.0f }, 0.0f );
+    footprints.addFootstep( SurfaceDeformTestUtil::makeSample( pTable, *pStone, float3{ 0.0f, 0.0f, 2.0f }, 0.0f ), 0.0f, 0 );
     SW_EXPECT_EQUAL( 0u, footprints.getPlacedCount() );
     SW_EXPECT_NEAR( 0.0f, deform.findHeightAt( 0.0f, 2.0f ), 1.0e-6f );
-    footprints.addFootstep( *pSnow, float3{ 0.0f, 0.0f, 2.0f }, 0.0f );
+    footprints.addFootstep( SurfaceDeformTestUtil::makeSample( pTable, *pSnow, float3{ 0.0f, 0.0f, 2.0f }, 0.0f ), 0.0f, 0 );
     SW_EXPECT_EQUAL( 1u, footprints.getPlacedCount() );
-    SW_EXPECT_TRUE( deform.findHeightAt( 0.0f, 2.0f ) < -0.5f * pSnow->_footprint._depth );
+    SW_EXPECT_TRUE( deform.findHeightAt( 0.0f, 2.0f ) < -0.5f * pSnow->_step._footprint._depth );
     SW_EXPECT_EQUAL( 1u, footprints.getFootstepCount( hashed_string( "Snow" ) ) );
+}
+
+/**
+ * @brief [SurfaceDeformSystemTest] 물을 밟은 발은 그 뒤 마른 땅에 표의 걸음 수만큼 젖은 자국을 남기고(걸음마다 옅게), 자국은 시간이 지나면 마른다 — 젖은 땅(비)에서는 남기지 않는다
+ */
+SW_TEST_CASE( SurfaceDeformSystemTest, WetFeetLeaveFadingWetPrintsThatDry )
+{
+    GameObjectManager                        manager;
+    SurfaceDeformSystem&                     deform     = manager.getSubsystem<SurfaceDeformSystem>();
+    SurfaceFootprintSystem&                  footprints = manager.getSubsystem<SurfaceFootprintSystem>();
+    const shared_ptr<const SurfaceKindTable> pTable     = SurfaceKindTable::findDefault();
+    SW_REQUIRE_NOT_NULL( pTable );
+    const SurfaceKindDef* pStone = pTable->findKind( "Stone" );
+    SW_REQUIRE_NOT_NULL( pStone );
+    const uint64 ownerObjectID = 7;
+    footprints.addFootstep( SurfaceDeformTestUtil::makeSample( pTable, pTable->getWaterKind(), float3{ 0.0f, 0.0f, 0.0f }, 1.0f ), 0.0f, ownerObjectID );
+    if constexpr ( build::kWithClientCode == false )
+    {
+        // 젖은 자국도 보이는 것뿐이다 — 전용 서버는 층을 두지 않는다.
+        footprints.addFootstep( SurfaceDeformTestUtil::makeSample( pTable, *pStone, float3{ 0.0f, 0.0f, 1.0f }, 0.0f ), 0.0f, ownerObjectID );
+        SW_EXPECT_EQUAL( 0u, footprints.getWetPrintCount() );
+        return;
+    }
+    // 젖은 땅(문턱 이상)의 걸음은 자국을 남기지 않지만 젖은 발의 걸음 하나를 쓴다.
+    footprints.addFootstep( SurfaceDeformTestUtil::makeSample( pTable, *pStone, float3{ 0.0f, 0.0f, 0.5f }, 1.0f ), 0.0f, ownerObjectID );
+    SW_EXPECT_EQUAL( 0u, footprints.getWetPrintCount() );
+    const uint32 steps = pTable->_wetFeetSteps + 2;
+    for ( uint32 step = 0; step < steps; ++step )
+        footprints.addFootstep( SurfaceDeformTestUtil::makeSample( pTable, *pStone, float3{ 0.0f, 0.0f, 1.0f + static_cast<float32>( step ) }, 0.0f ), 0.0f, ownerObjectID );
+    SW_EXPECT_EQUAL( pTable->_wetFeetSteps - 1, footprints.getWetPrintCount() );
+    const float32 first = deform.getGrid().findWetnessAt( 0.0f, 1.0f );
+    const float32 later = deform.getGrid().findWetnessAt( 0.0f, 2.0f );
+    SW_EXPECT_TRUE( first > 0.0f );
+    SW_EXPECT_TRUE( later > 0.0f && later < first );
+    SW_EXPECT_NEAR( 0.0f, deform.getGrid().findWetnessAt( 0.0f, 1.0f + static_cast<float32>( steps - 1 ) ), 1.0e-6f );
+    // 모르는 오브젝트(id 0)는 젖은 발이 없다.
+    footprints.addFootstep( SurfaceDeformTestUtil::makeSample( pTable, *pStone, float3{ 3.0f, 0.0f, 0.0f }, 0.0f ), 0.0f, 0 );
+    SW_EXPECT_NEAR( 0.0f, deform.getGrid().findWetnessAt( 3.0f, 0.0f ), 1.0e-6f );
+    // 마름: 가장 젖은 자국(≤ 1)도 1 / _wetPrintDrySpeed 초 뒤면 마른다.
+    const uint32 frames = static_cast<uint32>( 60.0f / pTable->_wetPrintDrySpeed ) + 2;
+    for ( uint32 frame = 0; frame < frames; ++frame )
+        deform.update( 1.0f / 60.0f );
+    SW_EXPECT_EQUAL( 0u, deform.getGrid().countWetTexels() );
+}
+
+/**
+ * @brief [SurfaceDeformGridTest] 젖은 자국은 텍스처의 B 채널(1 - 젖음)에 실리고 마른 칸은 흰색이다 — 창을 옮겨도 자국이 월드 자리에 남는다
+ */
+SW_TEST_CASE( SurfaceDeformGridTest, WetPrintsEncodeInBlueAndMoveWithTheWindow )
+{
+    SurfaceDeformGrid grid;
+    grid.reset( 16, 1.6f, 0.0f, 0.0f ); // 텍셀 0.1 m
+    grid.applyWetPrint( 0.05f, 0.05f, 0.0f, float2{ 0.6f, 0.6f }, 1.0f, 0.5f );
+    SW_EXPECT_NEAR( 1.0f, grid.findWetnessAt( 0.05f, 0.05f ), 1.0e-6f );
+    vector<uint8> listByte;
+    grid.writeTexels( SurfaceDeformGrid::TexelRect{ 8, 8, 9, 9 }, 0.1f, listByte );
+    SW_EXPECT_EQUAL( 255u, static_cast<uint32>( listByte[0] ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listByte[2] ) );
+    grid.writeTexels( SurfaceDeformGrid::TexelRect{ 0, 0, 1, 1 }, 0.1f, listByte );
+    SW_EXPECT_EQUAL( 255u, static_cast<uint32>( listByte[2] ) );
+    SW_EXPECT_TRUE( grid.recenter( 0.5f, 0.0f ) );
+    SW_EXPECT_NEAR( 1.0f, grid.findWetnessAt( 0.05f, 0.05f ), 1.0e-6f );
+    grid.fill( 1.0f ); // 0.5 /초 — 1 초면 절반
+    SW_EXPECT_NEAR( 0.5f, grid.findWetnessAt( 0.05f, 0.05f ), 1.0e-5f );
+    grid.fill( 1.0f );
+    SW_EXPECT_EQUAL( 0u, grid.countWetTexels() );
 }

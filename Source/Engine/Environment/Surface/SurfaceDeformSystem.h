@@ -72,6 +72,11 @@ namespace sw
         [[nodiscard]] bool movePersistentStamp( SurfaceStampHandle handle, const float3& point, float32 yaw );
         /** @brief 붙잡은 도장을 놓습니다. 남은 자국은 메워진다. 멱등입니다. */
         void removePersistentStamp( SurfaceStampHandle handle );
+        /**
+         * @brief 젖은 자국(타원 너비 × 길이 @p size, m)을 @p point 에 요 @p yaw 로 한 번 찍습니다 — 물에서 나온 발이 마른 땅에 남기는 자국(`SurfaceDeformGrid::applyWetPrint`).
+         * @return 찍었으면 true 입니다(전용 서버 · 표 없음 · 젖음 0 이면 false).
+         */
+        bool applyWetPrint( const float3& point, float32 yaw, const float2& size, float32 wetness, float32 drySpeed );
 
         /** @brief 월드 (@p x, @p z) 의 변형 높이(m, 음수 = 꺼짐)입니다. 창 밖이나 찍은 적이 없으면 0 이다. */
         float32 findHeightAt( float32 x, float32 z ) const { return _grid.findHeightAt( x, z ); }
@@ -98,7 +103,7 @@ namespace sw
         };
 
         /** @brief 찍을 수 있는지 보고, 격자가 없으면 표면 종류 표의 크기로 만듭니다(창은 카메라 앞, 카메라가 없으면 @p point). 찍을 수 없으면 false 입니다. */
-        [[nodiscard]] bool ensureGrid( const SurfaceStampDef& def, const float3& point );
+        [[nodiscard]] bool ensureGrid( const float3& point );
         /** @brief 너비 @p extent 인 창이 따라갈 자리(카메라 앞, 월드 x · z)입니다. 카메라가 없으면 false 입니다. */
         [[nodiscard]] bool computeWindowCenter( float32 extent, float2& outFocus ) const;
         /** @brief 텍스처를 만들거나 바뀐 칸만 보냅니다. 에셋 서비스가 없으면(CPU 테스트) 격자만 남는다. */

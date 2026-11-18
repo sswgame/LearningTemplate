@@ -69,7 +69,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief `surface.probe <object> [length]` — 오브젝트 발 아래의 표면(종류 · 형식 · 재질 · 지형 레이어 · 법선 · 표면 속도 · 물 깊이 · 이동 계수)을 적습니다. */
+            /** @brief `surface.probe <object> [length]` — 오브젝트 발 아래의 표면(종류 · 형식 · 재질 · 지형 레이어 · 법선 · 표면 속도 · 물 깊이 · 젖음 · 이동 계수)을 적습니다. */
             static bool runProbe( const vector<string>& listArgument, string& outReply )
             {
                 float32    length  = 1.0f;
@@ -89,11 +89,11 @@ namespace sw
                     return true;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "surface %# kind=%# source=%# material=%# layer=%# point=%#,%#,%# normal=%#,%#,%# velocity=%#,%#,%# water=%# moveScale=%#", listArgument[0],
+                replyBuilder.appendFormat( "surface %# kind=%# source=%# material=%# layer=%# point=%#,%#,%# normal=%#,%#,%# velocity=%#,%#,%# water=%# wetness=%# moveScale=%#", listArgument[0],
                                            sample._pKind->_name.c_str(), SurfaceSample::getSourceName( sample._source ), sample._material.c_str(),
                                            sample._terrainLayer == SurfaceSample::kNoTerrainLayer ? -1 : static_cast<int32>( sample._terrainLayer ), sample._point._x, sample._point._y,
                                            sample._point._z, sample._normal._x, sample._normal._y, sample._normal._z, sample._surfaceVelocity._x, sample._surfaceVelocity._y,
-                                           sample._surfaceVelocity._z, sample._waterDepth, sample._pKind->_moveScale );
+                                           sample._surfaceVelocity._z, sample._waterDepth, sample._wetness, sample._pKind->_moveScale );
                 outReply = string( replyBuilder.view() );
                 return true;
             }
@@ -104,7 +104,7 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( surfaceMoveScale, "Surface.MoveScale", "Move scale the target's character controller applied to its walk speed last physics frame",
                                &GroundSurfaceComponentInternal::readMoveScale, true, false );
     SW_DEV_COMMAND( SurfaceProbe, "surface.probe", "surface.probe <object> [length]",
-                    "Print the surface under an object's feet: kind, source (collider, terrain layer, water), material, normal, surface velocity, water depth, move scale",
+                    "Print the surface under an object's feet: kind, source (collider, terrain layer, water), material, normal, surface velocity, water depth, wetness, move scale",
                     &GroundSurfaceComponentInternal::runProbe );
 } // namespace sw
 

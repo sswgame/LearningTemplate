@@ -85,6 +85,30 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `Surface.DeformWetTexels` 입니다. 젖은 자국이 아직 마르지 않은 칸 수입니다. */
+            [[nodiscard]] static bool readWetTexels( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const SurfaceDeformSystem* pSystem = findSystem( query );
+                if ( pSystem == nullptr )
+                    return false;
+                outValue.setNumber( static_cast<float64>( pSystem->getGrid().countWetTexels() ) );
+                return true;
+            }
+
+            /** @brief 감시 값 `Surface.DeformWetness` 입니다. 키 "x z"(월드 m) 자리의 젖은 자국 젖음(0..1)입니다. */
+            [[nodiscard]] static bool readWetness( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const SurfaceDeformSystem* pSystem = findSystem( query );
+                float32                    arrPoint[2]{};
+                if ( pSystem == nullptr || StringUtil::parseExactFloats( query._key, " ", arrPoint, 2 ) == false )
+                {
+                    outValue.setText( "key must be 'x z' (world meters)" );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( pSystem->getGrid().findWetnessAt( arrPoint[0], arrPoint[1] ) ) );
+                return true;
+            }
+
             /** @brief 감시 값 `Surface.DeformHeld` 입니다. 지금 붙잡힌 도장 수입니다. */
             [[nodiscard]] static bool readHeld( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -107,6 +131,9 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( surfaceDeformStamps, "Surface.DeformStamps", "Stamps put on the surface deform layer in this scene (cumulative)", &SurfaceDeformSystemInternal::readStamps, false,
                                false );
     SW_AUTOMATION_QUERY_WATCH( surfaceDeformHeld, "Surface.DeformHeld", "Stamps held on the surface deform layer now", &SurfaceDeformSystemInternal::readHeld, false, false );
+    SW_AUTOMATION_QUERY_WATCH( surfaceDeformWetTexels, "Surface.DeformWetTexels", "Texels of the surface deform layer still wet from wet footprints", &SurfaceDeformSystemInternal::readWetTexels,
+                               false, false );
+    SW_AUTOMATION_QUERY_WATCH( surfaceDeformWetness, "Surface.DeformWetness", "Wetness (0..1) of the wet footprint layer at key 'x z'", &SurfaceDeformSystemInternal::readWetness, false, true );
 } // namespace sw
 
 namespace sw
@@ -181,7 +208,7 @@ namespace sw
 
     void SurfaceDeformSystem::stamp( const SurfaceStampDef& def, const float3& point, float32 yaw )
     {
-        if ( ensureGrid( def, point ) == false )
+        if ( def.isSet() == false || ensureGrid( point ) == false )
             return;
         _grid.applyStamp( def, point._x, point._z, yaw, 0.0f, 0.0f );
         ++_stampCount;
@@ -197,7 +224,7 @@ namespace sw
             stamp( def, to, 0.0f );
             return;
         }
-        if ( ensureGrid( def, to ) == false )
+        if ( def.isSet() == false || ensureGrid( to ) == false )
             return;
         // 띠의 앞은 from → to 다(요 규칙 OrientationUtil: atan2( x, z )).
         _grid.applyStamp( def, ( from._x + to._x ) * 0.5f, ( from._z + to._z ) * 0.5f, MathUtil::atan2( deltaX, deltaZ ), length, 0.0f );
@@ -206,7 +233,7 @@ namespace sw
 
     SurfaceStampHandle SurfaceDeformSystem::addPersistentStamp( const SurfaceStampDef& def, const float3& point, float32 yaw )
     {
-        if ( ensureGrid( def, point ) == false )
+        if ( def.isSet() == false || ensureGrid( point ) == false )
             return SurfaceStampHandle{};
         PersistentStamp held{};
         held._def                       = def;
@@ -233,6 +260,14 @@ namespace sw
         _persistentStampTable.erase( handle );
     }
 
+    bool SurfaceDeformSystem::applyWetPrint( const float3& point, float32 yaw, const float2& size, float32 wetness, float32 drySpeed )
+    {
+        if ( wetness <= 0.0f || ensureGrid( point ) == false )
+            return false;
+        _grid.applyWetPrint( point._x, point._z, yaw, size, wetness, drySpeed );
+        return true;
+    }
+
     uint32 SurfaceDeformSystem::getPersistentStampCount() const
     {
         return _persistentStampTable.size();
@@ -246,10 +281,10 @@ namespace sw
         return float4{ origin._x, origin._y, 1.0f / _grid.getExtent(), _depthRange };
     }
 
-    bool SurfaceDeformSystem::ensureGrid( const SurfaceStampDef& def, const float3& point )
+    bool SurfaceDeformSystem::ensureGrid( const float3& point )
     {
         // 변형은 보이는 것만이다 — 그리는 것이 없는 전용 서버는 격자를 두지 않는다.
-        if ( build::kWithClientCode == false || def.isSet() == false )
+        if ( build::kWithClientCode == false )
             return false;
         if ( _grid.isReady() )
             return true;

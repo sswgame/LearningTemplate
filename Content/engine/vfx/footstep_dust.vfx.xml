@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d9b3a550d2c0414db84de09b6269700d"?>
+<!-- 발걸음 효과(표면 종류 표 engine/environment/default.surfacekinds.xml 의 반응 _effect) — 흙먼지 — 마른 흙 · 흙길을 밟으면 발 둘레로 낮게 퍼지는 갈색 연기.
+     반복하지 않는 한 번 터지기다: 발걸음 반응(SurfaceFootprintSystem)이 효과 풀 오브젝트를 돌려 쓰며 발 자리에서 다시 튼다. 텍스처는 Kenney 파티클 팩(CC0). -->
+<VFXEffectDef>
+	<_listEmitter>
+		<VFXEmitterDef _name="Dust" _texturePath="engine/textures/particles/kenney_particle/smoke_07.dds" _blendMode="Alpha" _bLooping="false"
+		               _maxParticles="6" _duration="0.1" _spawnRate="0" _lifetimeMin="0.5" _lifetimeMax="0.8"
+		               _velocityMin="-0.6, 0.15, -0.6" _velocityMax="0.6, 0.45, 0.6" _gravity="0, -0.2, 0">
+			<_listBurst><VFXBurstDef _time="0" _count="6"/></_listBurst>
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.12" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.45" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="0.55" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="0.45" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="0.33" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="0.5" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+		</VFXEmitterDef>
+	</_listEmitter>
+</VFXEffectDef>

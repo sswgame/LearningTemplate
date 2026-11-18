@@ -96,6 +96,8 @@
     "should"
   ],
   "_bannedNames": {
+    "_footstep": "SurfaceKindDef::_step · _wetStep(SurfaceStepResponse — 소리 이벤트 _sound · 효과 · 발자국 · 발 적시기 한 벌) — 발소리 분류 글자를 소리 경로 {surface} 에 끼우던 칸, 반응이 마름 · 젖음으로 갈리고 소리는 이벤트가 됐다(2026-11-18)",
+    "hasFootprints": "_step._footprint.isSet() — 발자국은 마른 · 젖은 반응마다 다르다(2026-11-18)",
     "getCompletedScreenshotSerial": "RenderThread::requestScreenshot 이 돌려준 표 + findScreenshotResult — 처리 수는 같은 실행의 다른 요청 끝을 제 끝으로 읽는다(2026-11-18)",
     "getLastScreenshotPath": "RenderThread::findScreenshotResult(표) — 마지막 경로는 다른 요청이 덮는다(2026-11-18)",
     "getCompletedImageFileSerial": "EditorPreviewViewport::requestImageFile 이 돌려준 표 + findImageFileResult(2026-11-18)",

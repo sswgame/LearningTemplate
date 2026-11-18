@@ -8,6 +8,17 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct SurfaceDeformGridInternal
+        {
+            /** @brief 텍셀 한 채널의 가장 큰 값(RGBA8) — 흰색이 평평 · 마름이다. */
+            static constexpr float32 kTexelMax = 255.0f;
+            /** @brief 젖은 자국 가장자리에서 젖음이 0 으로 줄어드는 폭(타원 안쪽 비율) — 칸 경계가 계단으로 보이지 않게. */
+            static constexpr float32 kWetPrintEdgeFade = 0.3f;
+        };
+    } // namespace
+
     void SurfaceDeformGrid::TexelRect::merge( const TexelRect& other )
     {
         if ( other.isEmpty() )
@@ -26,6 +37,8 @@ namespace sw
     SurfaceDeformGrid::SurfaceDeformGrid()
         : _listHeight{}
         , _listFillSpeed{}
+        , _listWet{}
+        , _listDrySpeed{}
         , _resolution{ 0 }
         , _extent{ 0.0f }
         , _texelSize{ 0.0f }
@@ -43,6 +56,8 @@ namespace sw
         _texelSize  = extent / static_cast<float32>( resolution );
         _listHeight.assign( static_cast<size_t>( resolution ) * resolution, 0.0f );
         _listFillSpeed.assign( static_cast<size_t>( resolution ) * resolution, 0.0f );
+        _listWet.assign( static_cast<size_t>( resolution ) * resolution, 0.0f );
+        _listDrySpeed.assign( static_cast<size_t>( resolution ) * resolution, 0.0f );
         const int32 half = static_cast<int32>( resolution / 2 );
         _originCellX     = toWorldCell( centerX ) - half;
         _originCellZ     = toWorldCell( centerZ ) - half;
@@ -65,6 +80,8 @@ namespace sw
         {
             _listHeight.assign( _listHeight.size(), 0.0f );
             _listFillSpeed.assign( _listFillSpeed.size(), 0.0f );
+            _listWet.assign( _listWet.size(), 0.0f );
+            _listDrySpeed.assign( _listDrySpeed.size(), 0.0f );
             _activeRect = TexelRect{};
             _dirtyRect  = TexelRect{ 0, 0, _resolution, _resolution };
             return true;
@@ -72,8 +89,12 @@ namespace sw
         // 새 칸 (x, z) 는 옛 칸 (x + shiftX, z + shiftZ) 다 — 사본에서 읽어 겹치는 칸만 옮긴다(움직임은 드물다 — 창 너비의 일부만큼 벗어날 때).
         const vector<float32> listOldHeight    = _listHeight;
         const vector<float32> listOldFillSpeed = _listFillSpeed;
+        const vector<float32> listOldWet       = _listWet;
+        const vector<float32> listOldDrySpeed  = _listDrySpeed;
         _listHeight.assign( listOldHeight.size(), 0.0f );
         _listFillSpeed.assign( listOldFillSpeed.size(), 0.0f );
+        _listWet.assign( listOldWet.size(), 0.0f );
+        _listDrySpeed.assign( listOldDrySpeed.size(), 0.0f );
         TexelRect moved;
         for ( int32 z = 0; z < extentN; ++z )
         {
@@ -86,11 +107,13 @@ namespace sw
                 if ( oldX < 0 || oldX >= extentN )
                     continue;
                 const uint32 oldIndex = toIndex( static_cast<uint32>( oldX ), static_cast<uint32>( oldZ ) );
-                if ( listOldHeight[oldIndex] == 0.0f )
+                if ( listOldHeight[oldIndex] == 0.0f && listOldWet[oldIndex] <= 0.0f )
                     continue;
                 const uint32 newIndex    = toIndex( static_cast<uint32>( x ), static_cast<uint32>( z ) );
                 _listHeight[newIndex]    = listOldHeight[oldIndex];
                 _listFillSpeed[newIndex] = listOldFillSpeed[oldIndex];
+                _listWet[newIndex]       = listOldWet[oldIndex];
+                _listDrySpeed[newIndex]  = listOldDrySpeed[oldIndex];
                 moved.merge( TexelRect{ static_cast<uint32>( x ), static_cast<uint32>( z ), static_cast<uint32>( x ) + 1, static_cast<uint32>( z ) + 1 } );
             }
         }
@@ -144,6 +167,53 @@ namespace sw
         _dirtyRect.merge( stamped );
     }
 
+    void SurfaceDeformGrid::applyWetPrint( float32 centerX, float32 centerZ, float32 yaw, const float2& size, float32 wetness, float32 drySpeed )
+    {
+        const float32 halfWidth  = size._x * 0.5f;
+        const float32 halfLength = size._y * 0.5f;
+        const float32 strength   = MathUtil::clamp( wetness, 0.0f, 1.0f );
+        if ( isReady() == false || halfWidth <= 0.0f || halfLength <= 0.0f || strength <= 0.0f )
+            return;
+        const float32 reach  = MathUtil::max( halfWidth, halfLength );
+        const int32   extent = static_cast<int32>( _resolution );
+        const int32   minX   = MathUtil::max( toWorldCell( centerX - reach ) - _originCellX, 0 );
+        const int32   minZ   = MathUtil::max( toWorldCell( centerZ - reach ) - _originCellZ, 0 );
+        const int32   maxX   = MathUtil::min( toWorldCell( centerX + reach ) - _originCellX + 1, extent );
+        const int32   maxZ   = MathUtil::min( toWorldCell( centerZ + reach ) - _originCellZ + 1, extent );
+        if ( minX >= maxX || minZ >= maxZ )
+            return;
+        // 요 규칙은 applyStamp 와 같다: 앞 = (sin, 0, cos), 오른쪽 = (cos, 0, -sin).
+        const float32 sinYaw  = MathUtil::sin( yaw );
+        const float32 cosYaw  = MathUtil::cos( yaw );
+        const float2  origin  = getOrigin();
+        bool          bChange = false;
+        for ( int32 z = minZ; z < maxZ; ++z )
+        {
+            const float32 offsetZ = origin._y + ( static_cast<float32>( z ) + 0.5f ) * _texelSize - centerZ;
+            for ( int32 x = minX; x < maxX; ++x )
+            {
+                const float32 offsetX = origin._x + ( static_cast<float32>( x ) + 0.5f ) * _texelSize - centerX;
+                const float32 right   = ( offsetX * cosYaw - offsetZ * sinYaw ) / halfWidth;
+                const float32 forward = ( offsetX * sinYaw + offsetZ * cosYaw ) / halfLength;
+                const float32 inside  = 1.0f - ( right * right + forward * forward );
+                if ( inside <= 0.0f )
+                    continue;
+                const float32 wet   = strength * MathUtil::min( inside / SurfaceDeformGridInternal::kWetPrintEdgeFade, 1.0f );
+                const uint32  index = toIndex( static_cast<uint32>( x ), static_cast<uint32>( z ) );
+                if ( wet <= _listWet[index] )
+                    continue;
+                _listWet[index]      = wet;
+                _listDrySpeed[index] = drySpeed;
+                bChange              = true;
+            }
+        }
+        if ( bChange == false )
+            return;
+        const TexelRect stamped{ static_cast<uint32>( minX ), static_cast<uint32>( minZ ), static_cast<uint32>( maxX ), static_cast<uint32>( maxZ ) };
+        _activeRect.merge( stamped );
+        _dirtyRect.merge( stamped );
+    }
+
     void SurfaceDeformGrid::fill( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f || _activeRect.isEmpty() )
@@ -156,28 +226,42 @@ namespace sw
             for ( uint32 x = _activeRect._minX; x < _activeRect._maxX; ++x )
             {
                 const uint32 index = toIndex( x, z );
-                float32&     cell  = _listHeight[index];
-                if ( cell == 0.0f )
+                if ( isMarked( index ) == false )
                     continue;
+                float32&      cell = _listHeight[index];
                 const float32 step = _listFillSpeed[index] * deltaTime;
                 cell               = cell < 0.0f ? MathUtil::min( cell + step, 0.0f ) : MathUtil::max( cell - step, 0.0f );
-                if ( cell != 0.0f )
+                _listWet[index]    = MathUtil::max( _listWet[index] - _listDrySpeed[index] * deltaTime, 0.0f );
+                if ( isMarked( index ) )
                     remaining.merge( TexelRect{ x, z, x + 1, z + 1 } );
             }
         }
         _activeRect = remaining;
     }
 
-    float32 SurfaceDeformGrid::findHeightAt( float32 x, float32 z ) const
+    bool SurfaceDeformGrid::findIndexAt( float32 x, float32 z, uint32& outIndex ) const
     {
         if ( isReady() == false )
-            return 0.0f;
+            return false;
         const int32 cellX = toWorldCell( x ) - _originCellX;
         const int32 cellZ = toWorldCell( z ) - _originCellZ;
         const int32 limit = static_cast<int32>( _resolution );
         if ( cellX < 0 || cellZ < 0 || cellX >= limit || cellZ >= limit )
-            return 0.0f;
-        return _listHeight[toIndex( static_cast<uint32>( cellX ), static_cast<uint32>( cellZ ) )];
+            return false;
+        outIndex = toIndex( static_cast<uint32>( cellX ), static_cast<uint32>( cellZ ) );
+        return true;
+    }
+
+    float32 SurfaceDeformGrid::findHeightAt( float32 x, float32 z ) const
+    {
+        uint32 index = 0;
+        return findIndexAt( x, z, index ) ? _listHeight[index] : 0.0f;
+    }
+
+    float32 SurfaceDeformGrid::findWetnessAt( float32 x, float32 z ) const
+    {
+        uint32 index = 0;
+        return findIndexAt( x, z, index ) ? _listWet[index] : 0.0f;
     }
 
     uint32 SurfaceDeformGrid::countActiveTexels() const
@@ -191,6 +275,19 @@ namespace sw
             }
         }
         return activeCount;
+    }
+
+    uint32 SurfaceDeformGrid::countWetTexels() const
+    {
+        uint32 wetCount = 0;
+        for ( uint32 z = _activeRect._minZ; z < _activeRect._maxZ; ++z )
+        {
+            for ( uint32 x = _activeRect._minX; x < _activeRect._maxX; ++x )
+            {
+                wetCount += _listWet[toIndex( x, z )] > 0.0f ? 1u : 0u;
+            }
+        }
+        return wetCount;
     }
 
     float32 SurfaceDeformGrid::computeMaxDepth() const
@@ -229,17 +326,21 @@ namespace sw
     void SurfaceDeformGrid::writeTexels( const TexelRect& rect, float32 depthRange, vector<uint8>& outListByte ) const
     {
         outListByte.assign( static_cast<size_t>( rect.getWidth() ) * rect.getHeight() * 4, 255 );
-        const float32 scale = depthRange > 0.0f ? 255.0f / depthRange : 0.0f;
-        size_t        byte  = 0;
+        constexpr float32 kTexelMax = SurfaceDeformGridInternal::kTexelMax;
+        const float32     scale     = depthRange > 0.0f ? kTexelMax / depthRange : 0.0f;
+        size_t            byte      = 0;
         for ( uint32 z = rect._minZ; z < rect._maxZ; ++z )
         {
             for ( uint32 x = rect._minX; x < rect._maxX; ++x )
             {
-                const float32 height  = _listHeight[toIndex( x, z )];
-                const float32 sink    = MathUtil::clamp( -height * scale, 0.0f, 255.0f );
-                const float32 raise   = MathUtil::clamp( height * scale, 0.0f, 255.0f );
-                outListByte[byte]     = static_cast<uint8>( MathUtil::round( 255.0f - sink ) );
-                outListByte[byte + 1] = static_cast<uint8>( MathUtil::round( 255.0f - raise ) );
+                const uint32  index   = toIndex( x, z );
+                const float32 height  = _listHeight[index];
+                const float32 sink    = MathUtil::clamp( -height * scale, 0.0f, kTexelMax );
+                const float32 raise   = MathUtil::clamp( height * scale, 0.0f, kTexelMax );
+                const float32 wet     = MathUtil::clamp( _listWet[index] * kTexelMax, 0.0f, kTexelMax );
+                outListByte[byte]     = static_cast<uint8>( MathUtil::round( kTexelMax - sink ) );
+                outListByte[byte + 1] = static_cast<uint8>( MathUtil::round( kTexelMax - raise ) );
+                outListByte[byte + 2] = static_cast<uint8>( MathUtil::round( kTexelMax - wet ) );
                 byte += 4;
             }
         }

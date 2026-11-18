@@ -3,6 +3,7 @@
 #include "Engine/Environment/Surface/SurfaceSample.h"
 
 #include "Core/Log/LogOnce.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"
@@ -28,7 +29,10 @@ namespace sw
                 return pSettings != nullptr && pSettings->_listMaterial.empty() == false ? pSettings->_listMaterial.front()._name : hashed_string{};
             }
 
-            /** @brief 맞은 바디가 지형이면 그 점의 가장 무거운 레이어가 적은 재질을 @p inoutSample 에 씁니다. 지형이 아니거나 레이어가 재질을 적지 않았으면 그대로 둡니다. */
+            /**
+             * @brief 맞은 바디가 지형이면 그 점의 가장 무거운 레이어가 적은 재질과 그 레이어의 늘 젖음을 @p inoutSample 에 씁니다. 지형이 아니거나 레이어가 재질을 적지 않았으면 그대로 둡니다.
+             * @details 가장 무거운 레이어 하나다(언리얼 Landscape Physical Material Output · 유니티 Terrain 의 가장 큰 알파맵 레이어와 같다) — 섞인 경계는 무게가 큰 쪽이 이긴다.
+             */
             static void applyTerrainLayer( const GameObjectManager& manager, const CharacterRayHit& hit, SurfaceSample& inoutSample )
             {
                 const TerrainComponent* pTerrain = TerrainComponent::findTerrainAt( manager, hit._point._x, hit._point._z );
@@ -49,6 +53,7 @@ namespace sw
                 if ( heaviest >= listLayer.size() || listLayer[heaviest]._physicsMaterial.empty() )
                     return;
                 inoutSample._material     = listLayer[heaviest]._physicsMaterial;
+                inoutSample._wetness      = MathUtil::max( inoutSample._wetness, listLayer[heaviest]._wetness );
                 inoutSample._terrainLayer = static_cast<uint8>( heaviest );
                 inoutSample._source       = SurfaceSource::TerrainLayer;
             }
@@ -95,6 +100,7 @@ namespace sw
         sample._objectID        = hit._pObject != nullptr ? hit._pObject->getObjectID() : 0;
         sample._surfaceVelocity = SurfaceQueryInternal::findBodyVelocity( manager, hit );
         sample._material        = hit._material.empty() ? SurfaceQueryInternal::findUnnamedMaterial( manager ) : hit._material;
+        sample._wetness         = table.readGroundWetness();
         if ( hit._bIs2D == false )
         {
             SurfaceQueryInternal::applyTerrainLayer( manager, hit, sample );
@@ -105,6 +111,7 @@ namespace sw
             {
                 sample._material   = pWater->getSurfaceKind().empty() ? table._waterKind : pWater->getSurfaceKind(); // 용암 호수는 같은 물 질의에 제 종류를 낸다
                 sample._waterDepth = depth;
+                sample._wetness    = 1.0f;
                 sample._source     = SurfaceSource::Water;
             }
         }

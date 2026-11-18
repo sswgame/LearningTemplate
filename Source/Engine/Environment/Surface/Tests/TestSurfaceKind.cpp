@@ -28,15 +28,41 @@ SW_TEST_CASE( SurfaceKindTest, ShippedTableCoversPhysicsMaterials )
     // 발자국을 남기는 종류가 적어도 하나 있다(눈) — 시연 씬과 시나리오가 그 종류를 밟는다.
     const SurfaceKindDef* pSnow = pTable->findKind( "Snow" );
     SW_REQUIRE_NOT_NULL( pSnow );
-    SW_EXPECT_TRUE( pSnow->hasFootprints() );
-    SW_EXPECT_TRUE( pSnow->_footprint._fillSpeed > 0.0f );
+    SW_EXPECT_TRUE( pSnow->_step._footprint.isSet() );
+    SW_EXPECT_TRUE( pSnow->_step._footprint._fillSpeed > 0.0f );
     // 눈은 모래보다 깊고 느리게 메워진다(종류마다 도장 데이터 — 코드에 지형 이름이 없다).
     const SurfaceKindDef* pSand = pTable->findKind( "Sand" );
     SW_REQUIRE_NOT_NULL( pSand );
-    SW_EXPECT_TRUE( pSnow->_footprint._depth > pSand->_footprint._depth );
-    SW_EXPECT_TRUE( pSnow->_footprint._fillSpeed < pSand->_footprint._fillSpeed );
-    SW_EXPECT_TRUE( pTable->_deformResolution > 0 && pTable->_deformExtent > 0.0f && pTable->_deformDepthRange >= pSnow->_footprint._depth );
+    SW_EXPECT_TRUE( pSnow->_step._footprint._depth > pSand->_step._footprint._depth );
+    SW_EXPECT_TRUE( pSnow->_step._footprint._fillSpeed < pSand->_step._footprint._fillSpeed );
+    SW_EXPECT_TRUE( pTable->_deformResolution > 0 && pTable->_deformExtent > 0.0f && pTable->_deformDepthRange >= pSnow->_step._footprint._depth );
     SW_EXPECT_TRUE( pSnow->_moveScale < 1.0f );
+    // 물은 튀고 발을 적신다 — 물에서 나온 발이 마른 땅에 젖은 자국을 남긴다.
+    const SurfaceKindDef& water = pTable->getWaterKind();
+    SW_EXPECT_TRUE( water._step._effect.isSet() );
+    SW_EXPECT_TRUE( water._step._feetWetness > 0.0f );
+    SW_EXPECT_TRUE( pTable->_wetFeetSteps > 0 );
+}
+
+/**
+ * @brief [SurfaceKindTest] 같은 흙이라도 땅이 젖으면 젖은 반응을 고른다 — 문턱 아래 · 젖은 반응이 없는 종류는 마른 반응이다(엔진 표의 Default 와 Mud)
+ */
+SW_TEST_CASE( SurfaceKindTest, WetGroundSelectsTheWetResponse )
+{
+    const shared_ptr<const SurfaceKindTable> pTable = SurfaceKindTable::findDefault();
+    SW_REQUIRE_NOT_NULL( pTable );
+    const float32         threshold = pTable->_wetThreshold;
+    const SurfaceKindDef* pWetKind  = pTable->findKind( "Mud" );
+    SW_REQUIRE_NOT_NULL( pWetKind );
+    SW_REQUIRE_TRUE( pWetKind->_wetStep.isSet() );
+    SW_EXPECT_TRUE( &pWetKind->selectStep( threshold, threshold ) == &pWetKind->_wetStep );
+    SW_EXPECT_TRUE( pWetKind->isWetStep( 1.0f, threshold ) );
+    SW_EXPECT_TRUE( &pWetKind->selectStep( threshold * 0.5f, threshold ) == &pWetKind->_step );
+    SW_EXPECT_FALSE( pWetKind->isWetStep( 0.0f, threshold ) );
+    const SurfaceKindDef* pMetal = pTable->findKind( "Metal" );
+    SW_REQUIRE_NOT_NULL( pMetal );
+    SW_EXPECT_FALSE( pMetal->_wetStep.isSet() );
+    SW_EXPECT_TRUE( &pMetal->selectStep( 1.0f, threshold ) == &pMetal->_step );
 }
 
 namespace
@@ -48,23 +74,26 @@ namespace
     };
 
     const BrokenSurfaceKindTable kArrBrokenSurfaceKindTable[] = {
-        {                                                                                                                                                                                             R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind></_listKind></SurfaceKindTable>)","Surface.KindTableEmpty"                                                                                                                                                                                                                                                                                                                                                            },
-        {                                                                                               R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/><SurfaceKindDef _name="water" _footstep="w"/></_listKind></SurfaceKindTable>)",
-         "Surface.KindDuplicate"                                                                                                                                                                                                                                                                                                                                                       },
-        {                                                                                                                                             R"(<SurfaceKindTable _waterKind="Lake" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/></_listKind></SurfaceKindTable>)", "Surface.WaterKindUnknown"},
-        {                   R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/><SurfaceKindDef _name="Snow" _footstep="snow"><_footprint _shape="Print" _size="0.1,0.2" _depth="0.05"/></SurfaceKindDef></_listKind></SurfaceKindTable>)",
-         "Surface.StampFillMissing"                                                                                                                                                                                                                                                                                                                                                    },
-        {                                                                                                                             R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind><SurfaceKindDef _name="Water" _footstep="water" _moveScale="5"/></_listKind></SurfaceKindTable>)",
-         "Serialization.ValueOutOfRange"                                                                                                                                                                                                                                                                                                                                               },
-        {                                  R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/><SurfaceKindDef _name="Mud" _footstep="mud"><_footprint _depth="0.05" _fillSpeed="0.01"/></SurfaceKindDef></_listKind></SurfaceKindTable>)",
-         "Surface.StampSizeMissing"                                                                                                                                                                                                                                                                                                                                                    },
-        {R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/><SurfaceKindDef _name="Mud" _footstep="mud"><_footprint _size="0.1,0.2" _depth="0.05" _rimHeight="0.01" _fillSpeed="0.01"/></SurfaceKindDef></_listKind></SurfaceKindTable>)",
-         "Surface.StampRimHalf"                                                                                                                                                                                                                                                                                                                                                        },
+        {                                                                                                                                                                                R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1" _wetnessCollection="engine/materials/weather.matparams.xml" _wetnessParameter="Weather" _wetThreshold="0.5" _wetFeetSteps="4" _wetPrintSize="0.1,0.2" _wetPrintDrySpeed="0.1" _stepEffectPoolSize="4"><_listKind></_listKind></SurfaceKindTable>)","Surface.KindTableEmpty"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     },
+        {                                                                                                                  R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1" _wetnessCollection="engine/materials/weather.matparams.xml" _wetnessParameter="Weather" _wetThreshold="0.5" _wetFeetSteps="4" _wetPrintSize="0.1,0.2" _wetPrintDrySpeed="0.1" _stepEffectPoolSize="4"><_listKind><SurfaceKindDef _name="Water"/><SurfaceKindDef _name="water"/></_listKind></SurfaceKindTable>)",
+         "Surface.KindDuplicate"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                },
+        {                                                                                                                                                  R"(<SurfaceKindTable _waterKind="Lake" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1" _wetnessCollection="engine/materials/weather.matparams.xml" _wetnessParameter="Weather" _wetThreshold="0.5" _wetFeetSteps="4" _wetPrintSize="0.1,0.2" _wetPrintDrySpeed="0.1" _stepEffectPoolSize="4"><_listKind><SurfaceKindDef _name="Water"/></_listKind></SurfaceKindTable>)", "Surface.WaterKindUnknown"},
+        {                          R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1" _wetnessCollection="engine/materials/weather.matparams.xml" _wetnessParameter="Weather" _wetThreshold="0.5" _wetFeetSteps="4" _wetPrintSize="0.1,0.2" _wetPrintDrySpeed="0.1" _stepEffectPoolSize="4"><_listKind><SurfaceKindDef _name="Water"/><SurfaceKindDef _name="Snow"><_step><_footprint _shape="Print" _size="0.1,0.2" _depth="0.05"/></_step></SurfaceKindDef></_listKind></SurfaceKindTable>)",
+         "Surface.StampFillMissing"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             },
+        {                                                                                                                                  R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1" _wetnessCollection="engine/materials/weather.matparams.xml" _wetnessParameter="Weather" _wetThreshold="0.5" _wetFeetSteps="4" _wetPrintSize="0.1,0.2" _wetPrintDrySpeed="0.1" _stepEffectPoolSize="4"><_listKind><SurfaceKindDef _name="Water" _moveScale="5"/></_listKind></SurfaceKindTable>)",
+         "Serialization.ValueOutOfRange"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        },
+        {                                        R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1" _wetnessCollection="engine/materials/weather.matparams.xml" _wetnessParameter="Weather" _wetThreshold="0.5" _wetFeetSteps="4" _wetPrintSize="0.1,0.2" _wetPrintDrySpeed="0.1" _stepEffectPoolSize="4"><_listKind><SurfaceKindDef _name="Water"/><SurfaceKindDef _name="Mud"><_step><_footprint _depth="0.05" _fillSpeed="0.01"/></_step></SurfaceKindDef></_listKind></SurfaceKindTable>)",
+         "Surface.StampSizeMissing"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             },
+        {R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1" _wetnessCollection="engine/materials/weather.matparams.xml" _wetnessParameter="Weather" _wetThreshold="0.5" _wetFeetSteps="4" _wetPrintSize="0.1,0.2" _wetPrintDrySpeed="0.1" _stepEffectPoolSize="4"><_listKind><SurfaceKindDef _name="Water"/><SurfaceKindDef _name="Mud"><_wetStep><_footprint _size="0.1,0.2" _depth="0.05" _rimHeight="0.01" _fillSpeed="0.01"/></_wetStep></SurfaceKindDef></_listKind></SurfaceKindTable>)",
+         "Surface.StampRimHalf"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 },
+        {                                                                                                                                                   R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1" _wetnessCollection="engine/materials/weather.matparams.xml" _wetnessParameter="Weather" _wetThreshold="0.5" _wetFeetSteps="4" _wetPrintSize="0,0.2" _wetPrintDrySpeed="0.1" _stepEffectPoolSize="4"><_listKind><SurfaceKindDef _name="Water"/></_listKind></SurfaceKindTable>)",
+         "Surface.WetPrintSizeMissing"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          },
     };
 } // namespace
 
 /**
- * @brief [SurfaceKindTest] 틀린 표는 로드 시점에 오류다 — 빈 표, 겹친 이름(대소문자 무시), 표에 없는 물 종류, 메워지지 않는 · 크기 없는 · 테두리 반쪽 발자국 도장, 범위 밖 이동 계수.
+ * @brief [SurfaceKindTest] 틀린 표는 로드 시점에 오류다 — 빈 표, 겹친 이름(대소문자 무시), 표에 없는 물 종류, 메워지지 않는 · 크기 없는 · 테두리 반쪽 발자국 도장(마른 · 젖은 반응 모두),
+ *        범위 밖 이동 계수, 크기 없는 젖은 자국.
  *        실패하면 표가 비어 코드 폴백이 없다
  */
 SW_TEST_CASE_EACH( SurfaceKindTest, BrokenTableIsRejectedAtLoad, kArrBrokenSurfaceKindTable )
