@@ -133,12 +133,12 @@ namespace sw
             /** @brief 높은 풀 꼭대기의 눈과 돌 속 광석입니다. 광석 해시는 나무와 다른 소금을 섞은 같은 씨앗이다. */
             static void decorate( VoxelTerrainChunk& chunk, const VoxelBlockCatalog& catalog, const VoxelTerrainSettings& settings, const VoxelTerrainPalette& blocks )
             {
-                const VoxelBlockIndex   snowBlock = settings._snowBlock.empty() ? kVoxelAirBlock : catalog.findBlockIndex( settings._snowBlock );
+                const VoxelBlockIndex   snowBlock = catalog.findBlockIndex( settings._snowBlock ).value_or( kVoxelAirBlock ); // 없으면 눈이 없다(설정 머리)
                 vector<VoxelBlockIndex> listOreBlock;
                 listOreBlock.reserve( settings._listOreLayer.size() );
                 for ( const VoxelOreLayer& layer : settings._listOreLayer )
                 {
-                    listOreBlock.push_back( catalog.findBlockIndex( layer._block ) );
+                    listOreBlock.push_back( catalog.findBlockIndex( layer._block ).value_or( kVoxelAirBlock ) ); // 없으면 그 층을 건너뛴다(설정 머리) — 아래에서 공기를 놓지 않는다
                 }
                 for ( int32 z = chunk._originZ; z < chunk._originZ + kVoxelChunkSize; ++z )
                 {
@@ -165,7 +165,7 @@ namespace sw
                                 threshold += layer._chance;
                                 if ( roll >= threshold )
                                     continue;
-                                if ( y < layer._maxHeight )
+                                if ( y < layer._maxHeight && listOreBlock[layerIndex] != kVoxelAirBlock )
                                     chunk.place( x, y, z, listOreBlock[layerIndex] );
                                 break;
                             }
@@ -198,10 +198,11 @@ namespace sw
         if ( pCatalog == nullptr )
             return report;
 
-        const VoxelTerrainPalette blocks{ pCatalog->findBlockIndex( settings._grassBlock ), pCatalog->findBlockIndex( settings._dirtBlock ),
-                                          pCatalog->findBlockIndex( settings._stoneBlock ), pCatalog->findBlockIndex( settings._sandBlock ),
-                                          pCatalog->findBlockIndex( settings._waterBlock ), pCatalog->findBlockIndex( settings._bedrockBlock ),
-                                          pCatalog->findBlockIndex( settings._logBlock ), pCatalog->findBlockIndex( settings._leavesBlock ) };
+        // 카탈로그에 없는 층은 공기로 건너뛴다(설정 머리의 약속 — 테스트 카탈로그는 몇 블록만 싣는다).
+        const auto findPaletteBlock = [pCatalog]( const hashed_string& blockID )
+        { return pCatalog->findBlockIndex( blockID ).value_or( kVoxelAirBlock ); };
+        const VoxelTerrainPalette blocks{ findPaletteBlock( settings._grassBlock ), findPaletteBlock( settings._dirtBlock ), findPaletteBlock( settings._stoneBlock ), findPaletteBlock( settings._sandBlock ),
+                                          findPaletteBlock( settings._waterBlock ), findPaletteBlock( settings._bedrockBlock ), findPaletteBlock( settings._logBlock ), findPaletteBlock( settings._leavesBlock ) };
         VoxelTerrainChunk         chunk{ outBlocks, chunkX * kVoxelChunkSize, chunkZ * kVoxelChunkSize };
 
         for ( int32 z = chunk._originZ; z < chunk._originZ + kVoxelChunkSize; ++z )

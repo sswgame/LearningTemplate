@@ -1511,9 +1511,11 @@ namespace sw
         return _bServer != SW_FALSE;
     }
 
-    int32 NetEndpoint::getClientIndex() const
+    optional<int32> NetEndpoint::getClientIndex() const
     {
         ScopedLock<mutex> lock{ _mutex };
+        if ( _clientIndex == constant::invalid_index::kInt32 )
+            return nullopt;
         return _clientIndex;
     }
 

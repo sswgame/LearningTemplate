@@ -154,7 +154,7 @@ namespace sw
     {
         // 가운데에서 시작해 나선으로 찾은, 물이 아닌 첫 땅입니다.
         // 게임이 시작되었다면 카탈로그와 블록 이름은 startGame 이 이미 확인했습니다.
-        const VoxelBlockIndex water   = _world.getCatalog()->findBlockIndex( _waterBlock );
+        const VoxelBlockIndex water   = _world.getCatalog()->findBlockIndex( _waterBlock ).value(); // startGame 이 확인했다 — 없으면 멈춘다
         const int32           centerX = _world.getSizeX() / 2;
         const int32           centerZ = _world.getSizeZ() / 2;
         for ( int32 radius = 0; radius < _world.getSizeX() / 2; ++radius )
@@ -208,7 +208,7 @@ namespace sw
         bool bBlocksKnown = true;
         for ( const hashed_string* pBlockID : { &_waterBlock, &_stoneBlock, &_grassBlock, &_snowBlock, &_coalOreBlock, &_ironOreBlock } )
         {
-            if ( pCatalog->findBlockIndex( *pBlockID ) != kVoxelAirBlock )
+            if ( pCatalog->findBlockIndex( *pBlockID ).has_value() )
                 continue;
             SW_LOG_ERROR_ID( "VoxelGameMode.DirectorBlockNotBlock", "[Voxel] the game mode's block '%#' is not in the block catalog - the world cannot start", pBlockID->c_str() );
             bBlocksKnown = false;

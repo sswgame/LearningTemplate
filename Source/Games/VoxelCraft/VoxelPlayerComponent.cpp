@@ -49,10 +49,10 @@ namespace sw
             }
 
             /** @brief 카탈로그에서 블록 @p blockID 의 번호를 찾습니다. 없으면 오류를 적고 @p outKnown 을 false 로 둡니다(true 로 되돌리지는 않는다). */
-            static VoxelBlockIndex findBlockOrReport( const VoxelBlockCatalog& catalog, const hashed_string& blockID, bool& outKnown )
+            static optional<VoxelBlockIndex> findBlockOrReport( const VoxelBlockCatalog& catalog, const hashed_string& blockID, bool& outKnown )
             {
-                const VoxelBlockIndex index = catalog.findBlockIndex( blockID );
-                if ( index == kVoxelAirBlock )
+                const optional<VoxelBlockIndex> index = catalog.findBlockIndex( blockID );
+                if ( index.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "VoxelPlayer.BlockNotBlockCatalog", "[Voxel] block '%#' is not in the block catalog", blockID.c_str() );
                     outKnown = false;
@@ -66,7 +66,7 @@ namespace sw
                 const VoxelBlockDef* pBlock = catalog.findBlock( block );
                 if ( pBlock == nullptr || pBlock->_bBreakable == SW_FALSE )
                     return kVoxelAirBlock;
-                return pBlock->_dropID.empty() ? block : catalog.findBlockIndex( pBlock->_dropID );
+                return pBlock->_dropID.empty() ? block : catalog.findBlockIndex( pBlock->_dropID ).value(); // 카탈로그 읽기가 모르는 drop 을 거절했다 — 없으면 멈춘다
             }
 
             [[nodiscard]] static bool readWalkedDistance( const VoxelPlayerComponent& player, float64& outValue )
@@ -354,12 +354,12 @@ namespace sw
     bool VoxelPlayerComponent::applyBlockNames( const VoxelBlockCatalog& catalog )
     {
         bool bKnown = true;
-        _body.setWaterBlock( VoxelPlayerComponentInternal::findBlockOrReport( catalog, _waterBlock, bKnown ) );
+        if ( const optional<VoxelBlockIndex> water = VoxelPlayerComponentInternal::findBlockOrReport( catalog, _waterBlock, bKnown ) )
+            _body.setWaterBlock( *water );
         for ( const hashed_string& blockID : _listStartBlock )
         {
-            const VoxelBlockIndex index = VoxelPlayerComponentInternal::findBlockOrReport( catalog, blockID, bKnown );
-            if ( index != kVoxelAirBlock )
-                (void)_hotbar.addBlock( index, 64 ); // 핫바 슬롯보다 많으면 넘친 블록은 버립니다. 슬롯 수는 핫바가 정합니다.
+            if ( const optional<VoxelBlockIndex> index = VoxelPlayerComponentInternal::findBlockOrReport( catalog, blockID, bKnown ) )
+                (void)_hotbar.addBlock( *index, 64 ); // 핫바 슬롯보다 많으면 넘친 블록은 버립니다. 슬롯 수는 핫바가 정합니다.
         }
         return bKnown;
     }

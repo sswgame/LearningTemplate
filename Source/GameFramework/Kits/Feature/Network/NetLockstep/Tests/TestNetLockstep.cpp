@@ -162,7 +162,7 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
     vector<map<uint32, uint32>> listHashByTick( 3 );
     for ( int32 index = 0; index < 3; ++index )
     {
-        const int32 player = index == 0 ? 0 : cluster.getEndpoint( index ).getClientIndex() + 1;
+        const int32 player = index == 0 ? 0 : cluster.getEndpoint( index ).getClientIndex().value() + 1;
         SW_REQUIRE_TRUE( listSession[static_cast<size_t>( index )].initialize( &cluster.getEndpoint( index ), 3, player, LockstepConfig{ 4 } ) );
     }
     vector<uint8> buffer;

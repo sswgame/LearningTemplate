@@ -124,14 +124,21 @@ namespace
 
 // ---- 카탈로그 ----
 
+// 모르는 id 는 공기(0)가 아니라 비어 있다 — 공기를 가짜 정상 값으로 쓰지 못하게.
+SW_TEST_CASE( VoxelBlockCatalogTest, UnknownIDFindsNothing )
+{
+    VoxelFixture rig;
+    SW_EXPECT_FALSE( rig._catalog.findBlockIndex( hashed_string( "nothing" ) ).has_value() );
+    SW_EXPECT_FALSE( rig._catalog.findBlockIndex( hashed_string{} ).has_value() );
+}
+
 // 번호 0 은 공기다. 번호는 저장되므로 겹친 id 가 앞 블록의 번호를 바꾸면 안 된다.
 SW_TEST_CASE( VoxelBlockCatalogTest, IndexStartsAfterAirAndDuplicateIsRefused )
 {
     VoxelFixture rig;
     SW_EXPECT_EQUAL( 1, static_cast<int32>( rig._stone ) );
     SW_EXPECT_EQUAL( 2, static_cast<int32>( rig._water ) );
-    SW_EXPECT_TRUE( rig._catalog.findBlockIndex( hashed_string( "glass" ) ) == rig._glass );
-    SW_EXPECT_TRUE( rig._catalog.findBlockIndex( hashed_string( "nothing" ) ) == kVoxelAirBlock );
+    SW_EXPECT_TRUE( rig._catalog.findBlockIndex( hashed_string( "glass" ) ).value() == rig._glass );
 
     SW_EXPECT_LOG( "GameCatalog.DuplicateID" );
     SW_EXPECT_TRUE( rig.addBlock( "stone", false, false ) == kVoxelAirBlock );
@@ -710,7 +717,7 @@ SW_TEST_CASE( VoxelHotbarTest, SaveSurvivesCatalogReorder )
         block._name = pID;
         SW_REQUIRE_TRUE( reordered.addBlock( block ) != kVoxelAirBlock );
     }
-    const VoxelBlockIndex glass = reordered.findBlockIndex( hashed_string( "glass" ) );
+    const VoxelBlockIndex glass = reordered.findBlockIndex( hashed_string( "glass" ) ).value();
     SW_REQUIRE_TRUE( glass != rig._glass );
     VoxelHotbar restored{ &reordered };
     Archive     reading( listSaved.data(), listSaved.size() );

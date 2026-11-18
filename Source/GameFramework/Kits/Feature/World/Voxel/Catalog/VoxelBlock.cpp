@@ -87,10 +87,10 @@ namespace sw
         return &_catalog.getAt( static_cast<size_t>( index - 1 ) );
     }
 
-    VoxelBlockIndex VoxelBlockCatalog::findBlockIndex( const hashed_string& blockID ) const
+    optional<VoxelBlockIndex> VoxelBlockCatalog::findBlockIndex( const hashed_string& blockID ) const
     {
-        const optional<int32> index = _catalog.findIndex( blockID );
-        return index.has_value() ? static_cast<VoxelBlockIndex>( *index + 1 ) : kVoxelAirBlock;
+        return _catalog.findIndex( blockID ).transform( []( int32 index )
+        { return static_cast<VoxelBlockIndex>( index + 1 ); } );
     }
 
     bool VoxelBlockCatalog::isSolid( VoxelBlockIndex index ) const
@@ -144,7 +144,7 @@ namespace sw
         bool bDropsKnown = true;
         for ( const VoxelBlockDef& block : getBlocks() )
         {
-            if ( block._dropID.empty() || findBlockIndex( block._dropID ) != kVoxelAirBlock )
+            if ( block._dropID.empty() || findBlockIndex( block._dropID ).has_value() )
                 continue;
             SW_LOG_ERROR_ID( "VoxelBlockCatalog.BlockDropsWhichNot", "%#: block '%#' drops '%#', which is not a block in this catalog", sourceName, block._id.c_str(), block._dropID.c_str() );
             bDropsKnown = false;

@@ -25,6 +25,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -194,6 +195,8 @@ namespace sw
         uint32 getStaticBodyCount() const;
         /** @brief 아직 그려지는 떨어진 그룹 수입니다. */
         uint32 getDebrisGroupCount() const;
+        /** @brief 바디가 속한 그룹 번호입니다. 무효 바디이거나 이 컴포넌트의 바디가 아니면 비어 있습니다(그룹 번호 0 으로 대신하지 않는다). */
+        [[nodiscard]] optional<uint32> findGroupOfBody( PhysicsBodyHandle body ) const;
         /** @brief 잎마다 지금 본 로컬 변환(오브젝트 메시 공간)입니다. */
         const vector<BoneTransform>& getPiecePoses() const { return _listPiecePose; }
         /** @brief 지난 물리 프레임의 처리 시간(마이크로초)입니다. 사건 적용, 바디 생성, 자세 읽기, 렌더링 갱신으로 나뉩니다. */
@@ -306,8 +309,6 @@ namespace sw
         void setBaked( bool bBaked );
         /** @brief 월드 점을 그룹의 메시 공간으로 옮깁니다. */
         float3 toMeshSpace( const FractureGroupRuntime& runtime, const float3& worldPoint ) const;
-        /** @brief 바디가 속한 그룹 번호입니다. 없으면 0 입니다. */
-        uint32 findGroupOfBody( PhysicsBodyHandle body ) const;
         /** @brief 그룹 번호의 런타임입니다. 없으면 nullptr 입니다. */
         FractureGroupRuntime*       findRuntime( uint32 groupID );
         const FractureGroupRuntime* findRuntime( uint32 groupID ) const;

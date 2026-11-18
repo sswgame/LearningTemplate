@@ -46,7 +46,7 @@ namespace
         bool               getConnectionStats( int32, NetConnectionStats& ) const override { return false; }
         NetAddress         getConnectionAddress( int32 ) const override { return NetAddress{}; }
         uint64             getConnectionPrincipal( int32 ) const override { return 0; }
-        int32              getClientIndex() const override { return -1; }
+        optional<int32>    getClientIndex() const override { return nullopt; }
         int32              getConnectedCount() const override { return 0; }
         void               collectConnected( vector<int32>& ) const override {}
         int32              getMaxBytesPerSecond() const override { return 0; }

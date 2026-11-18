@@ -81,7 +81,7 @@ SW_TEST_CASE( NetEndpointThreadTest, ThreadedHostsConnectAsyncAndExchangeWithout
     SW_REQUIRE_TRUE( next.waitFor( NetEndpointThreadTestInternal::kFutureWaitMilli ) );
     SW_EXPECT_EQUAL( 0, next.get() );
     SW_EXPECT_EQUAL( 1, continuationCount.load() );
-    SW_EXPECT_EQUAL( 0, client.getClientIndex() );
+    SW_EXPECT_EQUAL( 0, client.getClientIndex().value() );
     SW_REQUIRE_TRUE( test::waitUntil( [&cluster]()
     { return cluster.getServer().getConnectedCount() == 1; } ) );
 

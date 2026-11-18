@@ -724,8 +724,10 @@ namespace sw
         // 갓 갈라진 조각끼리는 맞닿은 채 생성된다. 그 밀어냄은 피해가 아니다(같은 오브젝트 조각끼리, 생성 후 kSpawnGraceTime 안).
         if ( collision._pOther == getOwner() )
         {
-            const FractureGroupRuntime* pSelf       = findRuntime( findGroupOfBody( collision._selfBody ) );
-            const FractureGroupRuntime* pOther      = findRuntime( findGroupOfBody( collision._otherBody ) );
+            const optional<uint32>      selfGroup   = findGroupOfBody( collision._selfBody );
+            const optional<uint32>      otherGroup  = findGroupOfBody( collision._otherBody );
+            const FractureGroupRuntime* pSelf       = selfGroup.has_value() ? findRuntime( *selfGroup ) : nullptr;
+            const FractureGroupRuntime* pOther      = otherGroup.has_value() ? findRuntime( *otherGroup ) : nullptr;
             const bool                  bYoungSelf  = pSelf != nullptr && pSelf->_bAnchored == SW_FALSE && pSelf->_age < FractureComponentBaseInternal::kSpawnGraceTime;
             const bool                  bYoungOther = pOther != nullptr && pOther->_bAnchored == SW_FALSE && pOther->_age < FractureComponentBaseInternal::kSpawnGraceTime;
             if ( bYoungSelf || bYoungOther )
@@ -988,8 +990,8 @@ namespace sw
         }
         if ( pending._kind == FracturePendingDamage::Kind::WorldPoint )
         {
-            const uint32                groupID  = findGroupOfBody( pending._hitBody );
-            const FractureGroupRuntime* pRuntime = groupID != 0 ? findRuntime( groupID ) : nullptr;
+            const optional<uint32>      groupID  = findGroupOfBody( pending._hitBody );
+            const FractureGroupRuntime* pRuntime = groupID.has_value() ? findRuntime( *groupID ) : nullptr;
             if ( pRuntime == nullptr )
             {
                 // 바디를 모르면(이미 빠진 파편이거나 광선이 아닌 요청) 붙은 구조를 기준으로 한다.
@@ -1529,10 +1531,10 @@ namespace sw
 
     // --- 질의 -------------------------------------------------------------------------------------------------------------------
 
-    uint32 FractureComponentBase::findGroupOfBody( PhysicsBodyHandle body ) const
+    optional<uint32> FractureComponentBase::findGroupOfBody( PhysicsBodyHandle body ) const
     {
         if ( body.isValid() == false )
-            return 0;
+            return nullopt;
         for ( const FractureGroupRuntime& runtime : _listRuntime )
         {
             if ( runtime._body == body )
@@ -1543,7 +1545,7 @@ namespace sw
             if ( _listLeafStaticBody[leaf] == body )
                 return _state.getGroupOfLeaf( leaf );
         }
-        return 0;
+        return nullopt;
     }
 
     FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupID )

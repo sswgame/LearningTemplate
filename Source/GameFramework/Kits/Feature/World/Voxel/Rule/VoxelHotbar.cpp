@@ -29,9 +29,11 @@ namespace sw
             io.value( slot._count );
             if ( io.isReading() )
             {
-                slot._block = blockID.empty() ? kVoxelAirBlock : _pCatalog->findBlockIndex( blockID );
-                io.check( blockID.empty() || slot._block != kVoxelAirBlock ); // 지금 카탈로그에 없는 블록은 비우지 않고 거절한다
-                io.check( blockID.empty() == false || slot._count == 0 );     // 블록 없이 개수만 있는 칸은 손상이다
+                const optional<VoxelBlockIndex> found = blockID.empty() ? optional<VoxelBlockIndex>{ kVoxelAirBlock } : _pCatalog->findBlockIndex( blockID );
+                if ( io.check( found.has_value() ) == false ) // 지금 카탈로그에 없는 블록은 비우지 않고 거절한다
+                    return;
+                slot._block = *found;
+                io.check( blockID.empty() == false || slot._count == 0 ); // 블록 없이 개수만 있는 칸은 손상이다
             }
             io.check( 0 <= slot._count && slot._count <= kMaxStack );
         }

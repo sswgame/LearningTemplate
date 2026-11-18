@@ -47,12 +47,12 @@ namespace
             const auto iter = _mapAccount.find( connectionID );
             return iter != _mapAccount.end() ? iter->second : 0;
         }
-        int32 getClientIndex() const override { return _inner.getClientIndex(); }
-        int32 getConnectedCount() const override { return _inner.getConnectedCount(); }
-        void  collectConnected( vector<int32>& outListConnection ) const override { _inner.collectConnected( outListConnection ); }
-        int32 getMaxBytesPerSecond() const override { return _inner.getMaxBytesPerSecond(); }
-        bool  isConnectionSaturated( int32 connectionID ) const override { return _inner.isConnectionSaturated( connectionID ); }
-        void  addSentKindStats( NetMessageKindStatsTable& outTable ) const override { _inner.addSentKindStats( outTable ); }
+        optional<int32> getClientIndex() const override { return _inner.getClientIndex(); }
+        int32           getConnectedCount() const override { return _inner.getConnectedCount(); }
+        void            collectConnected( vector<int32>& outListConnection ) const override { _inner.collectConnected( outListConnection ); }
+        int32           getMaxBytesPerSecond() const override { return _inner.getMaxBytesPerSecond(); }
+        bool            isConnectionSaturated( int32 connectionID ) const override { return _inner.isConnectionSaturated( connectionID ); }
+        void            addSentKindStats( NetMessageKindStatsTable& outTable ) const override { _inner.addSentKindStats( outTable ); }
 
     private:
         NetEndpoint&                 _inner;
@@ -113,7 +113,7 @@ namespace
             _pServerPeers      = _pServerPeersOwner.get();
             for ( int32 index = 0; index < clientCount; ++index )
             {
-                _pServerPeers->setAccount( _cluster.getClient( index ).getClientIndex(), 1000 + static_cast<uint64>( index ) );
+                _pServerPeers->setAccount( _cluster.getClient( index ).getClientIndex().value(), 1000 + static_cast<uint64>( index ) );
                 SW_EXPECT_TRUE( _arrClient[index].initialize( _cluster.getClient( index ), _arrClientRouter[index] ) );
             }
         }
@@ -123,7 +123,7 @@ namespace
             return server.initialize( *_pServerPeers, _serverRouter, makeValeLinkTestRules(), makeValeLinkTestGrid(), make_unique<MemoryLocalStore>( &_database, LocalSealContext{} ) );
         }
 
-        int32 getConnectionID( int32 clientIndex ) { return _cluster.getClient( clientIndex ).getClientIndex(); }
+        int32 getConnectionID( int32 clientIndex ) { return _cluster.getClient( clientIndex ).getClientIndex().value(); }
 
         /** @brief 망 · 라우터 · 링크를 @p seconds 만큼 돌립니다(1/60 초 걸음). */
         void run( ValeServerLink& server, float32 seconds )

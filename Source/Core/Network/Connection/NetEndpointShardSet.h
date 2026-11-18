@@ -64,12 +64,12 @@ namespace sw
         NetAddress         getConnectionAddress( int32 connectionID ) const override;
         uint64             getConnectionPrincipal( int32 connectionID ) const override;
         int32              getConnectedCount() const override;
-        /** @brief 샤드 하나(클라이언트)면 그 엔드포인트의 번호, 샤드 여럿(서버)이면 -1 입니다. */
-        int32 getClientIndex() const override;
-        void  collectConnected( vector<int32>& outListConnection ) const override;
-        int32 getMaxBytesPerSecond() const override;
-        bool  isConnectionSaturated( int32 connectionID ) const override;
-        void  addSentKindStats( NetMessageKindStatsTable& outTable ) const override;
+        /** @brief 샤드 하나(클라이언트)면 그 엔드포인트의 번호, 샤드 여럿(서버)이면 비어 있습니다. */
+        [[nodiscard]] optional<int32> getClientIndex() const override;
+        void                          collectConnected( vector<int32>& outListConnection ) const override;
+        int32                         getMaxBytesPerSecond() const override;
+        bool                          isConnectionSaturated( int32 connectionID ) const override;
+        void                          addSentKindStats( NetMessageKindStatsTable& outTable ) const override;
 
     private:
         /** @brief 묶음의 연결 ID 를 샤드와 샤드 안의 ID 로 풉니다. 범위 밖이면 nullptr 입니다. */
