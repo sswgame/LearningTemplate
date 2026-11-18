@@ -317,7 +317,7 @@ SW_TEST_CASE( ScopedLockTest, DeferredUniqueLockReleasesOnlyWhatItHolds )
     SpinLockTestUtil::unlock( lock );
 }
 
-SW_TEST_CASE( ScopedLockTest, PairHoldsBothOptionalMayBeEmpty )
+SW_TEST_CASE( ScopedLockTest, PairHoldsBoth )
 {
     SpinLock first;
     SpinLock second;
@@ -328,13 +328,6 @@ SW_TEST_CASE( ScopedLockTest, PairHoldsBothOptionalMayBeEmpty )
     }
     SW_EXPECT_FALSE( first.isLocked() );
     SW_EXPECT_FALSE( second.isLocked() );
-
-    {
-        ScopedOptionalLock<SpinLock> empty{ nullptr };
-        ScopedOptionalLock<SpinLock> guard{ &first };
-        SW_EXPECT_TRUE( first.isLocked() );
-    }
-    SW_EXPECT_FALSE( first.isLocked() );
 }
 
 // 쥔 잠금 수는 Debug 만 센다. 로거가 0 을 단언하는 잎 잠금 규칙의 근거다.

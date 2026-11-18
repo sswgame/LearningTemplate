@@ -232,6 +232,7 @@
     "findOrAddSequencedStream": "getOrCreateSequencedStream — 찾고 없으면 만들기는 getOrCreate(2026-11-19 Core 이름 정리)",
     "buildBasis": "computeBasisFromForwardUp — 입력에서 값을 셈하는 것은 compute, build 는 쓰지 않는다(2026-11-19 Core 이름 정리)",
     "buildProcessSessionTextInternal": "makeProcessSessionText — 값을 만들어 돌려주는 것은 make(2026-11-19 Core 이름 정리)",
+    "ScopedOptionalLock": "지웠다 — 쓰던 자리(Vulkan 큐 제출 바깥 잠금)가 사라져 테스트만 쓰고 있었다. 잡을지가 실행 중에 정해지는 잠금이 다시 필요하면 UniqueLock + std::defer_lock(2026-11-19 Core 죽은 형식 정리)",
     "allowsOneMore": "canSpawnMore (2026-11-08 새 이름 검토)",
     "allowsAnotherRun": "canTriggerAgain (2026-11-08 새 이름 검토)",
     "isAboveIntensityCap": "isAboveMaxIntensity (2026-11-08 새 이름 검토)",
