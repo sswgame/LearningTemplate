@@ -8,6 +8,7 @@
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -30,7 +31,9 @@ namespace sw
 
     span<const utf8* const> ModuleLoadStageSubsystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, ModuleUnloadStageSubsystem::kSubsystemName, ReflectionSubsystem::kSubsystemName };
+        // 씬 관리자: 모듈 타입 등록이 진행 중인 씬 로드를 기다리고 로드된 씬의 틱 표를 다시 짓게 한다(`registerModuleTypes`) — 선 뒤에 올린다(초기화 의존 검사가 잡은 자리).
+        static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, ModuleUnloadStageSubsystem::kSubsystemName, ReflectionSubsystem::kSubsystemName,
+                                                          SceneManager::kSubsystemName };
         return kArrDependency;
     }
 } // namespace sw

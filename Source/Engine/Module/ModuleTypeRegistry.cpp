@@ -133,11 +133,20 @@ namespace sw
             return true;
         }
 
+        /** @brief 등록이 씬을 거드는가 — 씬 관리자가 선 뒤(모듈 로드 · 리로드)만 그렇다. */
+        enum class SceneSync : uint8
+        {
+            None,      ///< 엔진 기동의 호스트 라이브러리 등록 — 리플렉션이 씬 관리자보다 먼저 서므로(씬이 리플렉션에 기댄다) 아직 선 씬도 로드도 없다
+            WithScenes ///< 진행 중인 씬 로드를 기다리고 로드된 씬의 틱 표를 다시 짓게 한다
+        };
+        static void registerTypesFromHeads( string_view moduleName, const ModuleRegistrarHeads& heads, SceneSync sceneSync );
+
         void registerHostLibraryTypes()
         {
             const ModuleRegistrarHeads heads = peekGlobalRegistrarHeads();
             setGlobalRegistrarHeads( ModuleRegistrarHeads{} );
-            registerModuleTypes( "Engine", heads ); // 타입 머리 캐시 · 모듈 서브시스템 자리의 이름 — 호스트 라이브러리는 내리지 않는다
+            // 타입 머리 캐시 · 모듈 서브시스템 자리의 이름 — 호스트 라이브러리는 내리지 않는다. 씬 관리자는 아직 서지 않았다(초기화 의존 검사가 잡은 자리).
+            registerTypesFromHeads( "Engine", heads, SceneSync::None );
         }
 
         ModuleRegistrarHeads peekGlobalRegistrarHeads()
@@ -161,6 +170,11 @@ namespace sw
         }
 
         void registerModuleTypes( string_view moduleName, const ModuleRegistrarHeads& heads )
+        {
+            registerTypesFromHeads( moduleName, heads, SceneSync::WithScenes );
+        }
+
+        static void registerTypesFromHeads( string_view moduleName, const ModuleRegistrarHeads& heads, SceneSync sceneSync )
         {
             SW_MEMORY_SCOPE( Reflection );
             TypeRegistrar* pTypeHead = heads._pType;
@@ -192,7 +206,8 @@ namespace sw
 
             // 컴포넌트 생성 함수는 타입과 함께 오른다(`TypeInfo::_addComponent`) — 씬마다 팩토리 표를 다시 채울 일이 없다.
             // 등록은 바뀐 타입과 그 자손의 상속 캐시를 비우고 다시 짓는다 — 워커가 짓는 씬 로드가 그 캐시를 읽는 중이면 경합이다. 먼저 끝나기를 기다린다.
-            getSubsystem<SceneManager>().waitForPendingLoad();
+            if ( sceneSync == SceneSync::WithScenes )
+                getSubsystem<SceneManager>().waitForPendingLoad();
             {
                 // 계측(NEXT 5-4 W-R0): 등록 시간 · `MemoryTag::Reflection` 살아 있는 바이트 차이 · 상속 캐시를 비운 타입 수. 추적이 꺼져 있으면 바이트는 0 이다.
                 SW_PROFILE_SCOPE( "Reflection.registerModuleTypes" );
@@ -218,6 +233,8 @@ namespace sw
             if ( heads._pObject != nullptr )
                 attachModuleObjects( moduleName, heads._pObject );
 
+            if ( sceneSync == SceneSync::None )
+                return;
             for ( const auto& scene : getSubsystem<SceneManager>().getLoadedScenes() )
             {
                 if ( scene && scene->getObjectManager() )
