@@ -236,6 +236,13 @@ namespace sw
             return desc;
         }
 
+        /** @brief 디퍼드 조명 타일 종류 PSO 의 저장소 키입니다 — 머티리얼 변형 저장소의 키 공간을 빌린다(쿠키 아틀라스 PSO 와 같은 길 — 저장소가 소유하고 디바이스를 바꾸면 셋업이 다시 만든다). */
+        uint64 makeDeferredTilePSOKey( uint32 tileClass )
+        {
+            return RenderPSOCache::materialPSOKey( 0, HashUtil::combine( static_cast<uint64>( FourCCUtil::make( "DTLC" ) ), static_cast<uint64>( tileClass ) ), RenderViewMode::Lit, false,
+                                                   RHIMeshVertexFormat::Packed );
+        }
+
         /** @brief PSO 를 동기로 만듭니다(셰이더 컴파일 · 드라이버 생성을 렌더 스레드가 기다리는 시간을 `RT.PSO.create` 로 잰다). */
         [[nodiscard]] RHIPipelineStateHandle createPipelineStateTimed( IRHIDevice& device, const RHIPipelineStateDesc& desc )
         {
@@ -388,9 +395,33 @@ namespace sw
         // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPSO 주석 참고).
         collectOutputPSOJobs( listJob );
 
+        // 디퍼드 조명 타일 종류 변형 — 조명 패스 서술 그대로에 종류 define 과 타일 정점 진입점(deferred_lighting.hlsl VSTile). 분류 컴퓨트와 같은 조건(네이티브 bindless · 간접 인자)에서만 만든다.
+        struct DeferredTilePSOJob
+        {
+            uint64               _key{ 0 };
+            RHIPipelineStateDesc _desc{};
+        };
+        vector<DeferredTilePSOJob> listTileJob;
+        const RenderGraphPassDesc* pLightingDesc = findPassDescByType( RenderPassType::Lighting );
+        const bool                 bTileCapable  = pLightingDesc != nullptr && _pDevice->supportsNativeBindlessSampling() && caps._bGPUCulling != SW_FALSE;
+        for ( uint32 tileClass = 0; bTileCapable && tileClass < kDeferredTileClassCount; ++tileClass )
+        {
+            DeferredTilePSOJob tileJob;
+            tileJob._key = makeDeferredTilePSOKey( tileClass );
+            if ( _pCache->hasMaterialPSO( tileJob._key ) || makePassPSODesc( RenderPassType::Lighting, pLightingDesc, nullptr, tileJob._desc ) == false )
+                continue;
+            tileJob._desc._listShaderDefine = selectDeferredTileLightingShader( *pLightingDesc, tileClass, engineDefaultAssets )._listDefine;
+            tileJob._desc._vertexEntryPoint = kDeferredTileVertexEntryPoint;
+            listTileJob.push_back( std::move( tileJob ) );
+        }
+
         // 2) 셰이더 데우기 — 패스 PSO 셋과, 처음 그리는 프레임에 만드는 PSO(입자 · 쿠키 아틀라스)의 셰이더를 한 번에 나눈다.
         //    입자 PSO 는 투명 패스의 desc 를 물려받으므로 이번에 만들 투명 패스 desc 가 있을 때만 넣는다(이미 있으면 처음 셋업이 데웠다).
         vector<ShaderCompileDesc> listShader;
+        for ( const DeferredTilePSOJob& tileJob : listTileJob )
+        {
+            appendShaderWarm( tileJob._desc, listShader );
+        }
         for ( const PassPSOJob& job : listJob )
         {
             appendShaderWarm( job._desc, listShader );
@@ -448,8 +479,24 @@ namespace sw
             }
             _pCache->setEnginePSO( job._passType, pso );
         }
+        for ( const DeferredTilePSOJob& tileJob : listTileJob )
+        {
+            // 못 만들면 그 이유를 남기고 조명은 풀스크린 한 장(모든 엽 — 같은 그림)으로 그린다(`FramePassExecutor::executeTiledLighting` 이 종류 하나라도 없으면 타일을 쓰지 않는다).
+            const RHIPipelineStateHandle pso = createPipelineStateTimed( *_pDevice, tileJob._desc );
+            if ( pso == 0 )
+                SW_LOG_ERROR_ID( "FramePSOManager.DeferredTilePSOCould", "Deferred lighting tile PSO could not be created (shader '%#') - lighting draws one fullscreen triangle with every lobe",
+                                 tileJob._desc._vertexShaderPath.c_str() );
+            else
+                registerLayout( pso, tileJob._desc );
+            _pCache->setMaterialPSO( tileJob._key, RenderPSOCache::MaterialPSOEntry::ready( pso, true ) );
+        }
         // 폴백 원소는 PSO 를 모두 등록한 뒤에 만든다. 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
         ensureMaterialFallbackBuffers();
+    }
+
+    RHIPipelineStateHandle FramePSOManager::findDeferredTilePSO( uint32 tileClass ) const
+    {
+        return _pCache->findMaterialPSO( makeDeferredTilePSOKey( tileClass ) );
     }
 
     void FramePSOManager::release()

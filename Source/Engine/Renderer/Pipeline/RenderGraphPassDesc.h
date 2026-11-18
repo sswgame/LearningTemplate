@@ -149,11 +149,22 @@ namespace sw
          */
         PostProcessMaterial,
         /**
-         * @brief 디퍼드 데칼입니다(decal.hlsl — 언리얼 Deferred Decal · 유니티 HDRP Decal Projector). 씬의 데칼(`DecalComponent`)마다 풀스크린 하나로 장면 깊이에서 위치를 복원해
-         *        데칼 상자 안의 픽셀만 G버퍼 알베도 · 노멀 · 머티리얼 칸(선언한 컬러 출력 셋, 이 차례)에 곧은 알파로 섞는다 — 칸마다의 마스크는 셰이더의 출력 알파, 채널 쓰기 마스크는 XML 의
-         *        `_listBlendTarget` 이다(알베도 알파의 셰이딩 모델 번호 · 반사율 · 가림은 덮지 않는다). G버퍼 뒤 · 조명 앞에 둔다. 데칼이 없으면 기록하지 않는다(전용 실행 `executeDecalPass`).
+         * @brief DBuffer 데칼입니다(decal.hlsl — 언리얼 DBuffer Decal · 유니티 HDRP DBuffer). 씬의 데칼(`DecalComponent`)마다 상자 볼륨(뒷면 삼각형, `kDrawsBoxVolume`)을 그려
+         *        깊이 프리패스가 쓴 장면 깊이에서 위치를 복원하고, 상자 안의 픽셀만 DBufferA · B · C(색 · 노멀 · 거칠기 금속도 — 선언한 컬러 출력 셋, 이 차례)에 프리멀티플라이로 쌓는다.
+         *        베이스 패스(G버퍼 · 포워드 불투명)가 그 셋을 읽어 표면을 셰이딩 전에 바꾼다 — 그래서 디퍼드 · 포워드가 같은 데칼을 받는다. 깊이 프리패스 뒤 · 베이스 패스 앞에 둔다.
+         *        이번 뷰에 데칼이 없거나 표면 값 보기면 기록하지 않고 출력이 없다(`kCullWhenUnconsumed` 고르기 — 베이스 패스는 걸지 않아 "덮지 않음"). 전용 실행 `executeDecalPass`.
          */
         Decal,
+        /**
+         * @brief 모션 블러 타일 최대 속도입니다(motion_blur_tile_max.hlsl — McGuire 2012 TileMax, 언리얼 VelocityFlatten 자리). 화면 속도 · 장면 깊이(하늘의 카메라 재투영)를 읽어
+         *        16² 픽셀 타일마다 가장 긴 속도를 1/16 첨부(VelocityTileMax)에 쓴다. 읽는 패스(NeighborMax → MotionBlur)가 꺼진 뷰에서는 돌지 않는다.
+         */
+        MotionBlurTileMax,
+        /**
+         * @brief 모션 블러 이웃 최대 속도입니다(motion_blur_neighbor_max.hlsl — McGuire 2012 NeighborMax). 타일 최대 속도(원본 역할)의 3x3 이웃 중 가장 긴 것을 같은 크기 첨부
+         *        (VelocityNeighborMax — 역할 VelocityNeighborMax)에 쓴다. 모션 블러가 그 방향으로 흐려 빠른 물체의 흐림이 윤곽 밖으로 번진다.
+         */
+        MotionBlurNeighborMax,
         /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
@@ -235,15 +246,11 @@ namespace sw
          */
         ScreenRotation,
         /**
-         * @brief 모션 블러 타일 최대 속도입니다(motion_blur_tile_max.hlsl — McGuire 2012 TileMax, 언리얼 VelocityFlatten 자리). 화면 속도 · 장면 깊이(하늘의 카메라 재투영)를 읽어
-         *        16² 픽셀 타일마다 가장 긴 속도를 1/16 첨부(VelocityTileMax)에 쓴다. 읽는 패스(NeighborMax → MotionBlur)가 꺼진 뷰에서는 돌지 않는다.
+         * @brief 디퍼드 조명 타일 분류 컴퓨트입니다(deferred_tile_classify.hlsl — 언리얼 Substrate 타일 분류 · 유니티 HDRP 디퍼드 타일). 조명 패스가 렌더 패스를 열기 전에
+         *        8² 픽셀 타일마다 G버퍼의 셰이딩 모델 번호를 모아 종류(deferred_tile_class.hlsli)를 고르고 종류마다 타일 목록과 간접 인자를 쓴다 — 조명은 종류마다 그 종류의 엽만
+         *        컴파일한 변형으로 타일 사각형을 간접 그리기 한다(`FramePassExecutor::executeTiledLighting`). 컴퓨트가 G버퍼를 샘플해야 해 네이티브 bindless 에서만 돈다.
          */
-        MotionBlurTileMax,
-        /**
-         * @brief 모션 블러 이웃 최대 속도입니다(motion_blur_neighbor_max.hlsl — McGuire 2012 NeighborMax). 타일 최대 속도(원본 역할)의 3x3 이웃 중 가장 긴 것을 같은 크기 첨부
-         *        (VelocityNeighborMax — 역할 VelocityNeighborMax)에 쓴다. 모션 블러가 그 방향으로 흐려 빠른 물체의 흐림이 윤곽 밖으로 번진다.
-         */
-        MotionBlurNeighborMax,
+        DeferredTileClassify,
     };
 
     /**

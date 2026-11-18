@@ -242,6 +242,12 @@ namespace sw
          * @details 효과의 값(블룸 문턱 · 렌즈 · 역뷰-투영 4 열)은 패스 상수에서 루트 상수로 옮긴다 — 컴퓨트 PSO 에는 PassCB 가 묶이지 않는다. 네이티브 bindless 에서만 부른다.
          */
         void executeComputeImplementation( const PassExecuteInput& input );
+        /**
+         * @brief 디퍼드 조명을 타일 분류로 그립니다(언리얼 Substrate 타일 · 유니티 HDRP 디퍼드 타일). 분류 컴퓨트가 8² 타일마다 종류를 골라 목록 · 간접 인자를 쓰고,
+         *        렌더 패스를 열어 종류마다 그 종류의 엽만 컴파일한 PSO 로 타일 사각형을 간접 그리기 한다. 그린 것이 없는 타일은 어느 목록에도 없다.
+         * @return 타일로 그렸으면 true 입니다. 분류를 쓸 수 없으면(에뮬 백엔드 · 버퍼 · PSO 없음) false 이고 부르는 쪽이 풀스크린 한 장(모든 엽 — 같은 그림)으로 그린다.
+         */
+        [[nodiscard]] bool executeTiledLighting( const PassExecuteInput& input, const hashed_string& target );
         /** @brief 파이프라인 컴퓨트 패스입니다. 첨부를 RW 텍스처로 묶고 출력 크기만큼 디스패치합니다(`compute_pass.hlsli` 의 루트 상수). */
         void executeComputePass( const PassExecuteInput& input );
         /** @brief ForwardOpaque · ForwardOnlyOpaque 입니다. 그림자 맵 입력을 바인딩하고 선언한 첫 컬러 출력에 그립니다. */
@@ -273,8 +279,8 @@ namespace sw
          */
         void executePostProcessMaterialPass( const PassExecuteInput& input );
         /**
-         * @brief 디퍼드 데칼 패스입니다 — 이번 프레임 데칼(`FrameRenderState::_listFrameDecalDraw`, 그리는 차례)마다 풀스크린 하나로 G버퍼 칸 셋을 덮습니다. 데칼이 없거나 표면 값 보기에서는 기록하지 않습니다.
-         * @details shortcut: 데칼마다 화면 전체를 돈다(상자 밖 픽셀은 셰이더가 일찍 버린다), 데칼이 수십 개를 넘으면 상자를 래스터하거나 타일 목록(언리얼 클러스터드 데칼)으로 바꾼다.
+         * @brief DBuffer 데칼 패스입니다 — DBufferA · B · C 를 지우고 이번 프레임 데칼(`FrameRenderState::_listFrameDecalDraw`, 그리는 차례)마다 상자 뒷면을 그려 프리멀티플라이로 쌓습니다.
+         * @details 베이스 패스(G버퍼 · 포워드 불투명)가 셋을 읽어 셰이딩 전에 표면에 섞는다(언리얼 DBuffer). 데칼이 없는 뷰 · 표면 값 보기는 뷰 패스 고르기가 이 패스를 뺀다.
          */
         void executeDecalPass( const PassExecuteInput& input );
         /** @brief 렌즈 플레어 패스(`RenderPassType::LensFlare`)를 실행합니다. 주 시점이 아니거나 스프라이트가 없으면 그리지 않습니다. 스프라이트는 `LensFlareSpriteBuffer` 가 기록 전에 올렸다. */

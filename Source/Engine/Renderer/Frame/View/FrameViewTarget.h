@@ -80,6 +80,13 @@ namespace sw
         uint32              _occlusionColumns{ 0 };
         uint32              _occlusionRows{ 0 };
         uint8               _bOcclusionTilesThisFrame{ SW_FALSE };
+        /**
+         * @brief 디퍼드 조명 타일 분류의 버퍼 둘입니다 — 종류마다의 타일 목록(uint, 종류 c 는 c × `_deferredTileCapacity` 부터 · SRV + UAV)과 종류마다의 간접 그리기 인자(UAV · 간접 인자).
+         * @details 풀 크기(G버퍼 알베도)의 타일 수로 만든다(`FrameViewResources::ensureDeferredTiles`). 네이티브 bindless · 간접 인자 능력이 없거나 조명 패스가 없으면 비어 있고 조명은 풀스크린이다.
+         */
+        RHIStructuredBuffer _deferredTileList;
+        RHIStructuredBuffer _deferredTileArgs;
+        uint32              _deferredTileCapacity{ 0 };
         RHIStructuredBuffer _transparentRank;           ///< 이 뷰의 투명 순번 테이블(정렬 디스패치 t2). GPU 정렬 백엔드에서 쓴다.
         vector<uint32>      _listTransparentBatchOrder; ///< 이번 프레임 이 뷰의 투명 배치 순서(비면 주 순서를 쓴다)
         /// @brief 이번 프레임 이 뷰의 입자 그리기 순서와 자리(`_listTransparentBatchOrder` 안의 자리)입니다. `_bHasParticleOrder` 가 0 이면 주 시점의 것을 쓴다.

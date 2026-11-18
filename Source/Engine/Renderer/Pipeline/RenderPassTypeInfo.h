@@ -19,6 +19,8 @@
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 
+#include "deferred_tile_class.hlsli"
+
 namespace sw
 {
     /**
@@ -130,7 +132,13 @@ namespace sw
     inline constexpr const utf8* kGPUMessagesDefine = "SW_GPU_MESSAGES_ENABLED";
 
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
-    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::MotionBlurNeighborMax ) + 1;
+    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::DeferredTileClassify ) + 1;
+
+    /** @brief 디퍼드 조명 타일 분류의 종류 수 · 타일 한 변(px)입니다 — 셰이더와 같은 표(deferred_tile_class.hlsli)의 값입니다. */
+    inline constexpr uint32 kDeferredTileClassCount = SW_DEFERRED_TILE_CLASS_COUNT;
+    inline constexpr uint32 kDeferredTileSize       = SW_DEFERRED_TILE_SIZE;
+    /** @brief 디퍼드 조명 타일 변형의 정점 진입점입니다(deferred_lighting.hlsl `VSTile` — 타일 목록의 사각형). 픽셀 진입점은 조명 패스의 것 그대로입니다. */
+    inline constexpr const utf8* kDeferredTileVertexEntryPoint = "VSTile";
 
     /**
      * @struct RenderPassTraitFlag
@@ -238,6 +246,11 @@ namespace sw
          * @details 일반 풀스크린 패스(장면 깊이 사본)는 이 표시 없이도 같은 규칙을 탄다. 읽는 쪽이 누구인지는 파이프라인 선언과 그 패스의 이번 뷰 판정이 정한다 — 생산 패스가 읽는 쪽을 알지 않는다(언리얼 RDG 의 소비자 없는 패스 컬링).
          */
         static constexpr uint32 kCullWhenUnconsumed = SW_BIT( 30 );
+        /**
+         * @brief 풀스크린 삼각형 대신 그리기마다 상자 볼륨(정점 36 개, 정점 버퍼 없음)을 그린다(DBuffer 데칼). 파이프라인 XML 의 `_cullMode` 는 Front 여야 한다 —
+         *        뒷면만 그려야 픽셀마다 한 번 섞이고 카메라가 상자 안에 있어도 덮는다(언리얼 데칼의 카메라 안쪽 판정을 뒷면 하나로 줄인 모양).
+         */
+        static constexpr uint32 kDrawsBoxVolume = SW_BIT( 31 );
     };
 } // namespace sw
 
@@ -326,6 +339,12 @@ namespace sw
      * @details 런타임 PSO(`FramePSOManager`)와 쿠커가 함께 부른다. 진입점은 컴퓨트 스테이지 기본값(`CSMain`)이다.
      */
     SW_API RenderPassShaderSelection selectRenderPassComputeShader( const RenderGraphPassDesc& passDesc, const EngineDefaultAssets& engineDefaultAssets );
+
+    /**
+     * @brief 조명 패스 @p lightingDesc 의 타일 종류 @p tileClass 변형이 컴파일할 셰이더 경로와 define 입니다 — 조명 패스의 것에 `SW_DEFERRED_TILE_CLASS=<종류>` 를 더한다.
+     * @details 런타임 PSO(`FramePSOManager` 의 타일 PSO)와 쿠커가 함께 부른다. 정점 진입점은 `kDeferredTileVertexEntryPoint` 다.
+     */
+    SW_API RenderPassShaderSelection selectDeferredTileLightingShader( const RenderGraphPassDesc& lightingDesc, uint32 tileClass, const EngineDefaultAssets& engineDefaultAssets );
 
     /** @brief `kDiagnostic` 패스가 이 실행에서 요청됐는지 반환합니다(NanCheck 는 `-gv_nanCheck`). 진단 패스가 아니면 false 입니다. */
     SW_API bool isDiagnosticPassRequested( RenderPassType type );

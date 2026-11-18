@@ -557,6 +557,10 @@ namespace sw
         hashed_string _velocity{ "Velocity" };
         /// 모션 블러 이웃 최대 속도(MotionBlurNeighborMax 출력) — 모션 블러가 `g_VelocityNeighborMaxIndex` 로 읽는다.
         hashed_string _velocityNeighborMax{ "VelocityNeighborMax" };
+        /// DBuffer 데칼 셋(Decal 패스의 출력) — 베이스 패스(G버퍼 · 포워드 불투명)가 선언한 입력을 역할로 건다(`g_DBufferAIndex` · `g_DBufferBIndex` · `g_DBufferCIndex`).
+        hashed_string _dbufferA{ "DBufferA" };
+        hashed_string _dbufferB{ "DBufferB" };
+        hashed_string _dbufferC{ "DBufferC" };
         /// 화면 왜곡 오프셋(SceneDistortion — 왜곡 누적 패스의 출력) — 왜곡 적용 패스가 선언한 입력을 역할로 건다(`g_DistortionIndex`).
         hashed_string _distortion{ "Distortion" };
         /// 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷) — 조명 · 포워드 불투명 패스가 선언한 입력을 역할로 건다(`g_ContactShadowIndex`).
@@ -626,14 +630,15 @@ namespace sw
         hashed_string _surfaceDeformParams{ "g_SurfaceDeformParams" };
         /// @brief 안개 패스의 진단 보기입니다(`FrameFog::makeDebugParams`, fog.hlsl).
         hashed_string _fogDebugParams{ "g_FogDebugParams" };
-        hashed_string _postProcessMaterial{ "g_PostProcessMaterial" }; ///< 후처리 머티리얼 그리기마다의 무게(x)
-        hashed_string _decalWorldToLocal{ "g_DecalWorldToLocal" };     ///< 데칼 그리기마다 — 월드 → 상자 공간
-        hashed_string _decalColor{ "g_DecalColor" };                   ///< 데칼 알베도 곱 · 불투명도
-        hashed_string _decalSurface{ "g_DecalSurface" };               ///< 데칼 거칠기 · 금속도 · 노멀 세기 · 각도 페이드 시작
-        hashed_string _decalChannels{ "g_DecalChannels" };             ///< 데칼이 덮는 칸(DecalChannels 비트)
-        hashed_string _decalAlbedoTexture{ "g_DecalAlbedoTexture" };   ///< 데칼 알베도 텍스처 번호(MaterialTexture::sampleIndex 의 뜻)
-        hashed_string _decalNormalTexture{ "g_DecalNormalTexture" };   ///< 데칼 노멀 텍스처 번호
-        hashed_string _lensFlareTexture{ "g_LensFlareTexture" };       ///< 렌즈 플레어 Image 구간의 텍스처 번호(MaterialTexture::sampleIndex 의 뜻, 없으면 kInvalidIndex)
+        hashed_string _postProcessMaterial{ "g_PostProcessMaterial" };   ///< 후처리 머티리얼 그리기마다의 무게(x)
+        hashed_string _decalWorldToLocal{ "g_DecalWorldToLocal" };       ///< 데칼 그리기마다 — 월드 → 상자 공간
+        hashed_string _decalColor{ "g_DecalColor" };                     ///< 데칼 알베도 곱 · 불투명도
+        hashed_string _decalSurface{ "g_DecalSurface" };                 ///< 데칼 거칠기 · 금속도 · 노멀 세기 · 각도 페이드 시작
+        hashed_string _decalChannels{ "g_DecalChannels" };               ///< 데칼이 덮는 칸(DecalChannels 비트)
+        hashed_string _decalAlbedoTexture{ "g_DecalAlbedoTexture" };     ///< 데칼 알베도 텍스처 번호(MaterialTexture::sampleIndex 의 뜻)
+        hashed_string _decalNormalTexture{ "g_DecalNormalTexture" };     ///< 데칼 노멀 텍스처 번호
+        hashed_string _lensFlareTexture{ "g_LensFlareTexture" };         ///< 렌즈 플레어 Image 구간의 텍스처 번호(MaterialTexture::sampleIndex 의 뜻, 없으면 kInvalidIndex)
+        hashed_string _deferredTileCapacity{ "g_DeferredTileCapacity" }; ///< 디퍼드 조명 타일 목록의 종류 하나 칸 수(타일 그리기 — deferred_lighting.hlsl VSTile)
         hashed_string _shadowParams{ "g_ShadowParams" };
         /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭, w 거리 끝에서 옅어지기 시작하는 깊이. `ViewShadowData::_cascadeLayout`.
         hashed_string _shadowCascadeLayout{ "g_ShadowCascadeLayout" };

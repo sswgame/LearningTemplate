@@ -431,7 +431,7 @@ namespace sw
         if ( VectorUtil::containsIf( _pipelineResource.getGraphPass(), []( const RenderGraphPassDesc& pass )
         { return pass._type == RenderPassType::Decal; } ) == false )
         {
-            SW_LOG_WARNING_ONCE_ID( "FrameRenderer.DecalsWithoutDecalPass", "The scene has %# decals but pipeline '%#' has no Decal pass - decals need the G-buffer (deferred pipeline) and are not drawn",
+            SW_LOG_WARNING_ONCE_ID( "FrameRenderer.DecalsWithoutDecalPass", "The scene has %# decals but pipeline '%#' has no Decal pass - DBuffer decals need a depth prepass (deferred or forward prepass pipeline) and are not drawn",
                                     static_cast<uint32>( _state._listFrameDecal.size() ), _pipelinePath );
             return;
         }
@@ -667,6 +667,7 @@ namespace sw
         sceneState._bLocalShadows      = _state._frameShadow._listLocalTile.empty() ? SW_FALSE : SW_TRUE;
         sceneState._bRefractionBatches = _state._gpuScene.hasRefractionBatches() ? SW_TRUE : SW_FALSE;
         sceneState._bDistortionBatches = _state._gpuScene.hasDistortionBatches() ? SW_TRUE : SW_FALSE;
+        sceneState._bDecals            = _state._listFrameDecalDraw.empty() ? SW_FALSE : SW_TRUE;
         return sceneState;
     }
 

@@ -39,7 +39,7 @@
  *   ├────────┼──────────────────┼─────────────────────────────────────────┼──────────────────────────────────────────┤
  *   │ DX12   │ 네이티브 bindless│ t0 space1 무제한 배열(힙 전체 테이블)   │ 배열 원소 번호                           │
  *   │ Vulkan │ 네이티브 bindless│ set 1 binding 0 무제한 배열             │ 배열 원소 번호                           │
- *   │ DX11   │ 슬롯 에뮬        │ 엔진 t32..t53 · 머티리얼 t16..t31       │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
+ *   │ DX11   │ 슬롯 에뮬        │ 엔진 t32..t56 · 머티리얼 t16..t31       │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
  *   │ OpenGL │ 슬롯 에뮬        │ 텍스처 유닛 16..49(결합)        │ 머티리얼: 서수 0..15 (DX11 과 같다)      │
  *   └────────┴──────────────────┴─────────────────────────────────────────┴──────────────────────────────────────────┘
  *   네이티브인지는 common.hlsli 의 `SW_NATIVE_BINDLESS` 가 정한다(ShaderCompiler 가 DX12 · Vulkan 에만 SW_BINDLESS=1 을 준다).
@@ -187,12 +187,15 @@ struct PassTexture
     static float2 sampleVelocityPoint( float2 uv );   // 화면 속도(이번 UV - 지난 UV) — 불투명 지오메트리 패스의 출력(SceneVelocity)
     static float2 sampleDistortionPoint( float2 uv ); // 화면 왜곡 오프셋(화면 UV) — 왜곡 누적 패스의 출력(SceneDistortion)
     static float4 sampleLight2dCookieAtlas( float2 uv );
-    static float4 sampleContactShadow( float2 uv );  // 접촉 그림자 마스크(채널 = 빛). 패스가 걸지 않았으면 1
-    static float4 sampleAlbedoPrevious( float2 uv ); // 지난 프레임 첨부를 알베도 역할로 건 패스(TAA 히스토리) — 지난 프레임의 사각형 배율로 읽는다
-    static float2 toViewRectUV( float2 uv );         // 화면 UV(0..1) → 풀 UV(사각형 안, 가장자리는 반 텍셀 안쪽). 그림자 · 쿠키 아틀라스처럼 뷰 크기가 아닌 텍스처에는 쓰지 않는다
-    static float2 toPreviousViewRectUV( float2 uv ); // 같은 변환을 지난 프레임 사각형으로
-    static uint2 getViewRectSize();                  // 텍셀 번호로 읽는 쪽의 크기 — 풀(텍스처)이 아니라 사각형
-    static float2 toSourceViewRectUV( float2 uv );   // 원본 역할(반해상도일 수 있다)의 변환 — 반 텍셀을 원본의 실제 텍셀로 잰다
+    static float4 sampleContactShadow( float2 uv );     // 접촉 그림자 마스크(채널 = 빛). 패스가 걸지 않았으면 1
+    static float4 loadDBufferA( float2 pixelPosition ); // DBuffer 데칼 색(rgb 덮인 색, a 남은 비율) — SV_POSITION.xy 의 텍셀. 걸지 않았으면 (0, 0, 0, 1) = 덮지 않음
+    static float4 loadDBufferB( float2 pixelPosition ); // DBuffer 데칼 노멀(rgb 덮인 노멀 × 0.5 + 0.5, a 남은 비율)
+    static float4 loadDBufferC( float2 pixelPosition ); // DBuffer 데칼 거칠기 · 금속도(r · g, a 남은 비율)
+    static float4 sampleAlbedoPrevious( float2 uv );    // 지난 프레임 첨부를 알베도 역할로 건 패스(TAA 히스토리) — 지난 프레임의 사각형 배율로 읽는다
+    static float2 toViewRectUV( float2 uv );            // 화면 UV(0..1) → 풀 UV(사각형 안, 가장자리는 반 텍셀 안쪽). 그림자 · 쿠키 아틀라스처럼 뷰 크기가 아닌 텍스처에는 쓰지 않는다
+    static float2 toPreviousViewRectUV( float2 uv );    // 같은 변환을 지난 프레임 사각형으로
+    static uint2 getViewRectSize();                     // 텍셀 번호로 읽는 쪽의 크기 — 풀(텍스처)이 아니라 사각형
+    static float2 toSourceViewRectUV( float2 uv );      // 원본 역할(반해상도일 수 있다)의 변환 — 반 텍셀을 원본의 실제 텍셀로 잰다
     static float2 scaleToViewRect( float2 uv, float2 scale, float2 texel );
 };
 
@@ -325,14 +328,15 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint     g_DecalChannels;      // 1 알베도 · 2 노멀 · 4 머티리얼(C++ DecalChannels)
     uint     g_DecalAlbedoTexture; // MaterialTexture::sampleIndex 의 번호(없으면 kInvalidIndex — 흰색)
     uint     g_DecalNormalTexture;
-    uint     g_LensFlareTexture; // 렌즈 플레어 Image 구간의 텍스처 번호(lens_flare.hlsl — MaterialTexture::sampleIndex 의 뜻, 절차적 구간은 kInvalidIndex)
+    uint     g_LensFlareTexture;     // 렌즈 플레어 Image 구간의 텍스처 번호(lens_flare.hlsl — MaterialTexture::sampleIndex 의 뜻, 절차적 구간은 kInvalidIndex)
+    uint     g_DeferredTileCapacity; // 디퍼드 조명 타일 목록의 종류 하나 칸 수(deferred_lighting.hlsl VSTile — 타일 그리기만 쓴다)
     // 표면 변형 층의 창(C++ SurfaceDeformBinding::_params) — (창 최소 x, 창 최소 z, 1 / 창 너비, 깊이 범위). z 가 0 이면 층이 없다. 텍스처는 엔진 칸 SurfaceDeform(g_SurfaceDeformIndex)
     float4 g_SurfaceDeformParams;
     // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.
     // 손으로 적지 않는다: 표에 없는 엔진 텍스처 인덱스가 생기면 에뮬 백엔드(DX11 · GL)가 칸을 몰라 자홍을 낸다(뜻은 표의 주석). 걸려 있지 않은 역할은 kInvalidIndex 다.
-    // 아래 22 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
-#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_21 ) || defined( SW_ENGINE_TEXTURE_INDEX_22 ) || SW_ENGINE_TEXTURE_COUNT != 22
-    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 22 fields below"
+    // 아래 25 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
+#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_24 ) || defined( SW_ENGINE_TEXTURE_INDEX_25 ) || SW_ENGINE_TEXTURE_COUNT != 25
+    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 25 fields below"
 #endif
     uint  SW_ENGINE_TEXTURE_INDEX_0;
     uint  SW_ENGINE_TEXTURE_INDEX_1;
@@ -356,6 +360,9 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  SW_ENGINE_TEXTURE_INDEX_19;
     uint  SW_ENGINE_TEXTURE_INDEX_20;
     uint  SW_ENGINE_TEXTURE_INDEX_21;
+    uint  SW_ENGINE_TEXTURE_INDEX_22;
+    uint  SW_ENGINE_TEXTURE_INDEX_23;
+    uint  SW_ENGINE_TEXTURE_INDEX_24;
     uint  g_Flags;
     uint  g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
     uint  g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)

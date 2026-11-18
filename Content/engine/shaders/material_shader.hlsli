@@ -237,10 +237,11 @@ struct MaterialSurface
     float _occlusion;
 #endif
 
-    void setAlphaCutoff( float cutoff );  // 알파 컷오프 머티리얼만 컷오프를 싣는다(아니면 아무것도 하지 않는다)
-    void applyAlphaCutoff();              // 알파 컷오프 머티리얼만 오린다(아니면 아무것도 하지 않는다)
-    void setOcclusion( float occlusion ); // 가림 셰이더만 싣는다(아니면 아무것도 하지 않는다)
-    float getOcclusion();                 // 가림 셰이더가 실은 값, 아니면 1
+    void setAlphaCutoff( float cutoff );       // 알파 컷오프 머티리얼만 컷오프를 싣는다(아니면 아무것도 하지 않는다)
+    void applyAlphaCutoff();                   // 알파 컷오프 머티리얼만 오린다(아니면 아무것도 하지 않는다)
+    void setOcclusion( float occlusion );      // 가림 셰이더만 싣는다(아니면 아무것도 하지 않는다)
+    float getOcclusion();                      // 가림 셰이더가 실은 값, 아니면 1
+    void applyDBuffer( float2 pixelPosition ); // DBuffer 데칼을 받는 패스(G버퍼 · 포워드 불투명)만 섞는다(아니면 아무것도 하지 않는다 — material_shader_main.hlsli)
 };
 
 #if defined( SW_MATERIAL_OCCLUSION )

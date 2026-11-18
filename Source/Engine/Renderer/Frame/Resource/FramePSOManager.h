@@ -82,6 +82,11 @@ namespace sw
         /** @brief 파이프라인 컴퓨트 패스(`RenderPassType::Compute`) @p passName 의 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle findPipelineComputePSO( const hashed_string& passName ) const;
         /**
+         * @brief 디퍼드 조명 타일 종류 @p tileClass 의 PSO(조명 패스 서술 + 그 종류의 엽만 — deferred_lighting.hlsl VSTile)입니다. 없으면 0 입니다.
+         * @details **조회만 한다.** 셋업(`createPassPSOs`)이 분류를 쓸 수 있는 백엔드(네이티브 bindless · 간접 인자)와 조명 패스가 있는 파이프라인에서 만든다.
+         */
+        RHIPipelineStateHandle findDeferredTilePSO( uint32 tileClass ) const;
+        /**
          * @brief 주 출력에 그리는 패스(Present, Canvas, RCAS)의 PSO 를 **대상 포맷별로** 찾습니다.
          * @details **조회만 한다.** 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 된다. 셋업에 없는 포맷이면 대신 그리지 않고 멈춘다(`SW_FATAL`) —
          *          돌려준 PSO 는 0 이 아니다. 언리얼이 PSO 초기화자의 RenderTargetFormats 를 바인딩된 타깃에서 뽑아 PSO 캐시 키로 삼는 것과 같다.

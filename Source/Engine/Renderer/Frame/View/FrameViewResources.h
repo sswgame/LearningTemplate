@@ -41,6 +41,7 @@ namespace sw
             uint8 _bLocalShadows{ SW_FALSE };      ///< 그림자 칸을 받은 점광 · 스폿이 있다(`FrameShadowData::_listLocalTile` 이 비지 않았다) — 없으면 점광 · 스폿 아틀라스 패스가 빠진다
             uint8 _bRefractionBatches{ SW_FALSE }; ///< 굴절 머티리얼(`MATERIAL_REFRACTION` — 물 · 유리) 배치가 있다(`GPUScene::hasRefractionBatches`) — 없으면 반투명 패스가 장면 색 · 깊이 사본을 필요로 하지 않는다(언리얼 MaterialUsesSceneColorCopy)
             uint8 _bDistortionBatches{ SW_FALSE }; ///< 왜곡 배치가 있다(`GPUScene::hasDistortionBatches`) — 없으면 왜곡 누적 · 적용이 비활성이다
+            uint8 _bDecals{ SW_FALSE };            ///< 이번 프레임에 그릴 데칼이 있다(`FrameRenderState::_listFrameDecalDraw`) — 없으면 데칼 패스가 빠지고 DBuffer 출력이 없다
         };
 
         /** @brief `applyViewPassSelection` 이 이번 프레임에 바꾼 것입니다. 렌더 타깃 목록을 다시 싣고 메모리를 다시 보고할지 정할 때 씁니다. */
@@ -88,6 +89,8 @@ namespace sw
         void placeTransients( TransientAttachmentPool& pool, const RenderGraphAliasPlan& aliasPlan );
         /** @brief 뷰의 가림 타일 버퍼를 깊이 히스토리 크기에 맞춰 만들어 둡니다. 깊이 히스토리가 없으면 만들지 않습니다. */
         void ensureOcclusionTiles( FrameViewTarget& view );
+        /** @brief 뷰의 디퍼드 조명 타일 목록 · 간접 인자를 G버퍼 알베도 크기의 타일 수로 만들어 둡니다. 타일 분류를 쓸 수 없는 백엔드 · 파이프라인이면 만들지 않습니다. */
+        void ensureDeferredTiles( FrameViewTarget& view );
 
     private:
         IRHIDevice* const&         _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다(생성자 참고)
