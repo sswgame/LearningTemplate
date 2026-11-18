@@ -110,7 +110,7 @@ namespace sw
                 vector<ControlIntent> listIntent( params._frames, intent );
                 listIntent[0]._buttonTriggered = intent._buttonDown;
 
-                IntentTrackControllerComponent* pTrack = IntentPlayback::findOrCreateTrackController( *pObject->getMutableManager(), params._pawn );
+                IntentTrackControllerComponent* pTrack = IntentPlayback::getOrCreateTrackController( *pObject->getMutableManager(), params._pawn );
                 if ( pTrack == nullptr )
                     return false;
                 pTrack->play( *pPawn, listIntent, true );

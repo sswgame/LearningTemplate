@@ -20,7 +20,7 @@
 
 namespace sw
 {
-    IntentTrackControllerComponent* IntentPlayback::findOrCreateTrackController( GameObjectManager& manager, string_view pawnName )
+    IntentTrackControllerComponent* IntentPlayback::getOrCreateTrackController( GameObjectManager& manager, string_view pawnName )
     {
         const hashed_string controllerName( string( kControllerPrefix ) + string( pawnName ) );
         GameObject*         pTrackObject = manager.findGameObjectByName( controllerName );
@@ -54,7 +54,7 @@ namespace sw
                     continue; // 이 트랙은 firstIndex 틱 전에 이미 끝났다 — 폰은 지금 상태 그대로다
                 listIntent.erase( listIntent.begin(), listIntent.begin() + static_cast<std::ptrdiff_t>( firstIndex ) );
             }
-            IntentTrackControllerComponent* pTrack = findOrCreateTrackController( manager, pawnName.view() );
+            IntentTrackControllerComponent* pTrack = getOrCreateTrackController( manager, pawnName.view() );
             if ( pTrack == nullptr )
             {
                 ++skipped;

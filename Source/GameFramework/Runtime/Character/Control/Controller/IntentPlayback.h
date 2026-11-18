@@ -31,7 +31,7 @@ namespace sw
          * @brief 폰 @p pawnName 의 기록 조종자를 반환합니다. 없으면 오브젝트(`kControllerPrefix` + 폰 이름)와 컴포넌트를 만듭니다 — 기록 재생과 시나리오 `<Intent>` 가 같은 조종자를 씁니다.
          * @return 오브젝트나 컴포넌트를 만들지 못하면 nullptr 입니다. 게임 스레드의 틱 밖에서 부릅니다(오브젝트를 만든다).
          */
-        static IntentTrackControllerComponent* findOrCreateTrackController( GameObjectManager& manager, string_view pawnName );
+        static IntentTrackControllerComponent* getOrCreateTrackController( GameObjectManager& manager, string_view pawnName );
 
         /**
          * @brief @p history 의 트랙마다 같은 이름의 폰에 기록 조종자를 생성하고 다음 틱부터 재생합니다.

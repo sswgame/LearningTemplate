@@ -1428,6 +1428,7 @@
     "SavedAbilityModifier": "EvaluatedModifier — 칸이 같은 두 형식을 하나로(활성 이펙트가 든 값을 그대로 세이브에 싣는다)(2026-11-19)",
     "findOrAddLocked": "getOrCreateLocked — 없으면 만들어 돌려주는 것은 getOrCreate 다(AudioClipCache, 2026-11-19)",
     "findOrAddLayer": "getOrCreateLayer — 없으면 만들어 돌려주는 것은 getOrCreate 다(SceneSpatialGrid, 2026-11-19)",
+    "findOrCreateTrackController": "getOrCreateTrackController — 없으면 만들어 돌려주는 것은 getOrCreate 다(IntentPlayback, 2026-11-19)",
     "findOrCreateBucket": "getOrCreateBucket — 없으면 만들어 돌려주는 것은 getOrCreate 다(AnimationCrowd, 2026-11-19)",
     "TicketQueryLoginProvider": "ProfileAPILoginProvider — 응답을 읽는 규칙이 같은 두 제공자를 합쳤다(묻는 방식은 설정 _kind 가 고른다)(2026-11-19)",
     "ReceiptAsk": "ReceiptQuery — ask 는 결제 API 가 쓰지 않는 말이다 — 스토어에 보낸 조회다(2026-11-19)",
