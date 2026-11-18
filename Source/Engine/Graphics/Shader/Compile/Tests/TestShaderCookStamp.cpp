@@ -12,6 +12,9 @@ using namespace sw;
 
 namespace
 {
+    /** @brief 스탬프의 도구 지문이 섞는 엔진 설정 사본입니다(값은 무엇이든 — 쓰기와 읽기가 같은 사본이면 된다). */
+    const ShaderEnginePolicy kTestEnginePolicy{ 0.9f };
+
     /** @brief 케이스 폴더 아래 자기 도메인(game) · engine · common 의 `shaders` 와 쿠킹 폴더입니다. */
     struct StampFixture
     {
@@ -70,12 +73,12 @@ SW_TEST_CASE( ShaderCookStampTest, AbsentCandidateThatAppearsMakesTheCookStale )
     unordered_map<string, vector<string>> mapIncluded;
     mapIncluded[fixture._source] = fixture.makeDependencies();
     {
-        ShaderCookStampCache writeCache;
+        ShaderCookStampCache writeCache{ kTestEnginePolicy };
         SW_REQUIRE_TRUE( ShaderCookStamp::writeCookStamp( *resolver, fixture._ownShaders, fixture._binDir, nullptr, mapIncluded, writeCache ) );
     }
 
     {
-        ShaderCookStampCache cache;
+        ShaderCookStampCache cache{ kTestEnginePolicy };
         vector<string>       listDependency;
         SW_EXPECT_TRUE( ShaderCookStamp::isCookedOutputCurrent( *resolver, fixture._binDir, fixture._source, fixture._ownShaders, cache, &listDependency ) );
         SW_EXPECT_EQUAL( size_t( 3 ), listDependency.size() ); // 없던 둘도 되돌아와 다음 스탬프가 다시 적는다
@@ -85,19 +88,19 @@ SW_TEST_CASE( ShaderCookStampTest, AbsentCandidateThatAppearsMakesTheCookStale )
     const string engineHeader = FileUtil::joinPath( fixture._engineShaders, "x.hlsli" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( engineHeader, "float4 x() { return 2; }\n" ) );
     {
-        ShaderCookStampCache cache;
+        ShaderCookStampCache cache{ kTestEnginePolicy };
         SW_EXPECT_FALSE( ShaderCookStamp::isCookedOutputCurrent( *resolver, fixture._binDir, fixture._source, fixture._ownShaders, cache ) );
     }
     SW_REQUIRE_TRUE( FileUtil::removeFile( engineHeader ) );
     {
-        ShaderCookStampCache cache;
+        ShaderCookStampCache cache{ kTestEnginePolicy };
         SW_EXPECT_TRUE( ShaderCookStamp::isCookedOutputCurrent( *resolver, fixture._binDir, fixture._source, fixture._ownShaders, cache ) );
     }
 
     // 연 헤더의 내용이 바뀌면 낡음이다(예전과 같다).
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( fixture._commonShaders, "x.hlsli" ), "float4 x() { return 3; }\n" ) );
     {
-        ShaderCookStampCache cache;
+        ShaderCookStampCache cache{ kTestEnginePolicy };
         SW_EXPECT_FALSE( ShaderCookStamp::isCookedOutputCurrent( *resolver, fixture._binDir, fixture._source, fixture._ownShaders, cache ) );
     }
 }
@@ -116,10 +119,10 @@ SW_TEST_CASE( ShaderCookStampTest, IncludeRecordKeepsAbsentCandidates )
     SW_EXPECT_EQUAL( size_t( 3 ), listDependency.size() );
     SW_EXPECT_EQUAL( uint64( 0x1234u ), bytecodeHash );
 
-    const uint64 before = ShaderCookStamp::computeSourceFingerprint( fixture._source, fixture.makeDependencies() );
+    const uint64 before = ShaderCookStamp::computeSourceFingerprint( fixture._source, fixture.makeDependencies(), kTestEnginePolicy );
     SW_EXPECT_TRUE( before != 0 );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( fixture._ownShaders, "x.hlsli" ), "float4 x() { return 4; }\n" ) );
     SW_EXPECT_FALSE( ShaderCookStamp::readIncludeRecord( recordPath, listDependency, bytecodeHash ) );
     ShaderCookStamp::invalidateSharedHeaderCache();
-    SW_EXPECT_TRUE( ShaderCookStamp::computeSourceFingerprint( fixture._source, fixture.makeDependencies() ) != before );
+    SW_EXPECT_TRUE( ShaderCookStamp::computeSourceFingerprint( fixture._source, fixture.makeDependencies(), kTestEnginePolicy ) != before );
 }

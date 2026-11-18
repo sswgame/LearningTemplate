@@ -245,7 +245,7 @@ namespace sw
                 // (키는 컴파일 전에 필요하다), 컴파일할 때 연 헤더와 그 내용 해시를 항목 옆의 의존 기록에 적고 맞출 때 그 기록이 지금 헤더와 같은지 본다
                 // (`ShaderCookStamp::readIncludeRecord`). 전역 헤더 해시를 키에 섞으면 헤더 하나에 모든 셰이더의 캐시가 무효가 된다.
                 // 도구 지문은 키에 넣는다 — DXC 나 옵션을 바꾸면 옛 바이트를 돌려주면 안 된다. 디버그 코드젠 여부도 키다(같은 소스라도 바이트코드가 다르다).
-                text.append( "\ntoolchain=" ).append( to_string( ShaderCookStamp::getToolchainFingerprint() ) );
+                text.append( "\ntoolchain=" ).append( to_string( ShaderCookStamp::getToolchainFingerprint( *desc._enginePolicy ) ) );
                 text.append( "\ncodegen=" ).append( desc._bDebugCodegen != SW_FALSE ? "dbg" : "opt" ).append( "\n" );
                 slot._key = HashUtil::computeStringHash64( string_view{ text }, false );
                 return slot;
@@ -778,7 +778,12 @@ namespace sw
 namespace sw
 {
 
-    void ShaderCompiler::appendEngineDefines( vector<ShaderMacroDefine>& inoutList )
+    ShaderEnginePolicy ShaderEnginePolicy::capture()
+    {
+        return ShaderEnginePolicy{ engine::getSubsystem<EngineConfig>()._render._taaHistoryWeight };
+    }
+
+    void ShaderCompiler::appendEngineDefines( vector<ShaderMacroDefine>& inoutList, const ShaderEnginePolicy& enginePolicy )
     {
         // 엔진 텍스처 칸 표(shaderslot::emulated) — binding.hlsli 가 PassCB 의 g_<이름>Index 필드와 Bindless::emulatedSlot 을 이 매크로로 펼친다.
         for ( uint32 ordinal = 0; ordinal < shaderslot::kEngineTextureCount; ++ordinal )
@@ -794,10 +799,9 @@ namespace sw
             inoutList.push_back( std::move( indexDefine ) );
         }
         // 렌더 정책(셰이더가 읽는 몫) — 설정 파일이 정본이고 셰이더는 기본값을 두지 않는다(없으면 #error). 도구 지문에 섞여 값이 바뀌면 셰이더 캐시가 함께 낡는다.
-        const RenderConfig& renderConfig = engine::getSubsystem<EngineConfig>()._render;
-        ShaderMacroDefine   taaDefine;
+        ShaderMacroDefine taaDefine;
         taaDefine._name  = "SW_TAA_HISTORY_WEIGHT";
-        taaDefine._value = to_string( renderConfig._taaHistoryWeight );
+        taaDefine._value = to_string( enginePolicy._taaHistoryWeight );
         inoutList.push_back( std::move( taaDefine ) );
     }
 
@@ -814,16 +818,23 @@ namespace sw
     ShaderCompileResult ShaderCompiler::compileHLSL( const ShaderCompileDesc& requestDesc )
     {
         using Internal = ShaderCompilerInternal;
+        ShaderCompileResult result{};
+        result._bSuccess = false;
+        // 엔진 설정 값은 요청이 실어 온 사본만 쓴다 — 이 함수는 컴파일 워커에서 불려 설정을 직접 읽으면 제자리 덮기와 겹친다.
+        if ( requestDesc._enginePolicy.has_value() == false )
+        {
+            result._errorMessage = "The shader compile request carries no engine policy (ShaderCompileDesc::_enginePolicy) - the requester captures it";
+            SW_LOG_ERROR_ID( "ShaderCompiler.EnginePolicyMissing", "%# ('%#')", result._errorMessage, requestDesc._source.c_str() );
+            return result;
+        }
         // 엔진 define 은 모든 컴파일에 더한다(appendEngineDefines) — 값이 도구 지문에 섞여 표를 바꾸면 모든 셰이더 캐시가 다시 컴파일된다.
         ShaderCompileDesc desc = requestDesc;
-        appendEngineDefines( desc._listDefine );
+        appendEngineDefines( desc._listDefine, *desc._enginePolicy );
         // 단계 매크로 — 네 백엔드 컴파일 경로(DXC → DXIL · SPIR-V → GL · WGSL, FXC → DXBC)가 모두 이 함수를 지나므로 여기 한 곳에서 넣는다.
         ShaderMacroDefine stageDefine;
         stageDefine._name  = getShaderStageInfo( desc._stage )._pStageMacro;
         stageDefine._value = "1";
         desc._listDefine.push_back( std::move( stageDefine ) );
-        ShaderCompileResult result{};
-        result._bSuccess = false;
         result._bytecode.reserve( 4096 );
 
         // 소스는 리소스 경로 하나로 푼다(`ShaderSourceResolver`) - 절대 경로 · 작업 폴더로 추측하지 않는다.

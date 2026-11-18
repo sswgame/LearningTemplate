@@ -28,8 +28,11 @@ namespace sw
 
         /** @brief 메모리 캐시에 없는 요청 @p desc 의 바이트코드를 얻습니다. 실패해도 오류 글을 담은 결과를 돌려줍니다. */
         [[nodiscard]] virtual ShaderCompileResult load( const ShaderCompileDesc& desc ) const = 0;
-        /** @brief 메모리 캐시 항목의 지문입니다. 넣을 때와 꺼낼 때 같은 값이면 맞다. 0 이면 맞을 수 없다(읽지 못한 소스). */
-        [[nodiscard]] virtual uint64 computeFingerprint( const ShaderCompileResult& result ) const = 0;
+        /**
+         * @brief 메모리 캐시 항목의 지문입니다. 넣을 때와 꺼낼 때 같은 값이면 맞다. 0 이면 맞을 수 없다(읽지 못한 소스 · 엔진 설정 사본이 없는 요청).
+         * @details @p desc 는 지금 요청이다 — 그 엔진 설정 사본(`ShaderCompileDesc::_enginePolicy`)이 지문에 들어 설정이 바뀌면 옛 항목이 빗나간다. 로드 워커에서 불려 설정을 직접 읽지 않는다.
+         */
+        [[nodiscard]] virtual uint64 computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const = 0;
         /** @brief 요청 @p desc 의 바인딩 리플렉션을 구합니다. 바이트코드와 같은 출처다(섞으면 레이아웃과 바이트코드가 어긋난다). */
         [[nodiscard]] virtual bool getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const = 0;
     };
@@ -43,7 +46,7 @@ namespace sw
     {
     public:
         [[nodiscard]] ShaderCompileResult load( const ShaderCompileDesc& desc ) const override;
-        [[nodiscard]] uint64              computeFingerprint( const ShaderCompileResult& result ) const override;
+        [[nodiscard]] uint64              computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override;
         [[nodiscard]] bool                getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const override;
     };
 
@@ -56,7 +59,7 @@ namespace sw
     {
     public:
         [[nodiscard]] ShaderCompileResult load( const ShaderCompileDesc& desc ) const override;
-        [[nodiscard]] uint64              computeFingerprint( const ShaderCompileResult& result ) const override;
+        [[nodiscard]] uint64              computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override;
         [[nodiscard]] bool                getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const override;
     };
 } // namespace sw

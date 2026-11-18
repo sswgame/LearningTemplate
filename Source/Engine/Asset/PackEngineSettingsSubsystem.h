@@ -19,7 +19,7 @@ namespace sw
      * @class PackEngineSettingsSubsystem
      * @brief 기동 순서의 PackEngineSettings 자리입니다 — 팩을 마운트한 뒤(`AssetManager`) 활성 팩의 `<Engine>` 요소를 읽고 그 값을 소유합니다.
      * @details 읽지 못하면 기동을 멈춘다(대신 쓸 값이 없다). 창 · 사용자 설정 · 텔레메트리 · UI · 렌더러가 이 뒤에 선다(각자 의존으로 적는다).
-     *          호스트는 소유한 값을 범위에 `bind` 해 서비스 표(`engine::getSubsystem<PackEngineSettings>()`)가 찾게 한다.
+     *          호스트는 소유한 값을 범위에 `exposeMember` 로 걸어 서비스 표(`engine::getSubsystem<PackEngineSettings>()`)가 찾게 한다.
      */
     class SW_API PackEngineSettingsSubsystem : public ISubsystem
     {
@@ -27,7 +27,7 @@ namespace sw
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "PackEngineSettings";
 
-        /** @brief 읽지 않은 값을 만들어 소유합니다. 값은 `initializeSubsystem` 이 활성 팩에서 읽는다(호스트는 그 전에 값을 범위에 `bind` 한다). */
+        /** @brief 읽지 않은 값을 만들어 소유합니다. 값은 `initializeSubsystem` 이 활성 팩에서 읽는다(호스트는 그 전에 값을 범위에 `exposeMember` 로 건다). */
         PackEngineSettingsSubsystem();
         ~PackEngineSettingsSubsystem() override;
 
@@ -39,7 +39,7 @@ namespace sw
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;
 
-        /** @brief 소유한 팩 설정입니다(호스트가 범위에 `bind` 한다). */
+        /** @brief 소유한 팩 설정입니다(호스트가 범위에 `exposeMember` 로 건다). */
         PackEngineSettings& getSettings() const { return *_settings; }
 
     private:

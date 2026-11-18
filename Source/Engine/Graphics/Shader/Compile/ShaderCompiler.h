@@ -188,6 +188,20 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct ShaderEnginePolicy
+     * @brief 엔진 설정 중 셰이더 컴파일에 들어가는 값의 사본입니다(`ShaderCompiler::appendEngineDefines` 가 define 으로 펼친다).
+     * @details 설정은 다시 읽기가 제자리에서 덮고 그 울타리(`ConfigManager::setWriteFence`)는 렌더 스레드만 기다린다 — 컴파일 워커가 `EngineConfig` 를 직접 읽으면 덮기와 겹친다.
+     *          그래서 요청을 만드는 쪽(게임 · 렌더 스레드의 `ShaderCache`, 쿠킹 시작)이 `capture` 로 사본을 떠 요청에 실어 보낸다(언리얼이 셰이더 컴파일 환경을 잡에 값으로 싣는 것과 같다).
+     */
+    struct ShaderEnginePolicy
+    {
+        float32 _taaHistoryWeight; ///< `SW_TAA_HISTORY_WEIGHT` — `EngineConfig::_render._taaHistoryWeight`
+
+        /** @brief 엔진 설정에서 사본을 뜹니다. 설정 덮기와 겹치지 않는 스레드(게임 스레드 · 렌더 스레드)에서만 부른다. */
+        [[nodiscard]] static ShaderEnginePolicy capture();
+    };
+
+    /**
      * @struct ShaderCompileDesc
      * @brief 셰이더 컴파일 요청 디스크립터입니다.
      */
@@ -206,6 +220,11 @@ namespace sw
          *          라이브 컴파일(ShaderCache)은 Debug 에서 켜고, 쿠커는 절대 켜지 않는다.
          */
         uint8 _bDebugCodegen = SW_FALSE;
+        /**
+         * @brief 이 컴파일에 들어가는 엔진 설정 값의 사본입니다(`ShaderEnginePolicy`). 컴파일(`ShaderCompiler::compileHLSL`)은 이것이 없으면 오류로 진다 — 워커가 설정을 직접 읽어 채우지 않는다.
+         * @details 요청을 만드는 쪽이 비워 두면 `ShaderCache` 가 요청을 받을 때 자기 사본을 싣고, 쿠커는 쿠킹 시작에 뜬 사본을 싣는다. 메모리 캐시 키에는 넣지 않는다(지문이 섞는다).
+         */
+        optional<ShaderEnginePolicy> _enginePolicy;
     };
 } // namespace sw
 
@@ -244,7 +263,7 @@ namespace sw
     public:
         /**
          * @brief HLSL 셰이더를 컴파일합니다. 이 기계의 셰이더 DDC(`Saved/ShaderCompileCache` — 셰이더 디스크 캐시는 이것 하나다)에 맞으면 컴파일하지 않습니다.
-         * @param desc 컴파일 디스크립터
+         * @param desc 컴파일 디스크립터. `_enginePolicy` 가 없으면 컴파일하지 않고 실패를 돌려준다(엔진 설정을 이 스레드에서 읽지 않는다).
          * @return 컴파일 결과(성공 여부와 바이트코드)
          * @details 스레드 계약: 워커에서 동시에 불린다(병렬 쿠킹). 공유 상태는 읽기 전용(`AssetPaths` 읽기)이거나 원자값이다.
          *          서로 다른 @p desc 만 동시에 넣는다 — 같은 셰이더 변형을 두 스레드가 동시에 컴파일하면 같은 캐시 파일을 함께 쓴다.
@@ -254,11 +273,12 @@ namespace sw
         /**
          * @brief 엔진이 모든 컴파일에 넣는 define(엔진 텍스처 칸 표 `SW_EMU_SLOT_<이름>=<칸>` · `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index`, 렌더 정책 `SW_TAA_HISTORY_WEIGHT`)을 @p inoutList 뒤에 더합니다.
          * @details 렌더 정책 값은 `EngineConfig::_render`(Config/Engine/EngineConfig.json)가 정본이다 — 셰이더가 읽는 정책 값은 이 한 경로로만 간다(셰이더에 기본값이 없다).
+         *          값은 요청이 실어 온 사본 @p enginePolicy 다 — 컴파일 워커에서 불리므로 설정을 직접 읽지 않는다.
          * @details 요청에 없고 엔진 바이너리가 정하는 컴파일 입력이라 도구 지문(`ShaderCookStamp::getToolchainFingerprint`)이 이 목록을 섞는다 —
          *          그래야 표가 바뀌면 모든 셰이더 캐시(실행 캐시 · 컴파일 캐시 · 쿠킹 도장)가 함께 낡는다. 요청 desc 로 키를 만드는 캐시가 이 값을 몰라
          *          옛 칸 번호의 바이트를 새것으로 돌려준 결함(DX11 · GL 검정 화면)이 있었다.
          */
-        static void appendEngineDefines( vector<ShaderMacroDefine>& inoutList );
+        static void appendEngineDefines( vector<ShaderMacroDefine>& inoutList, const ShaderEnginePolicy& enginePolicy );
 
         /**
          * @brief DXC 의 `DxcCreateInstance` 주소입니다(`DxcCreateInstanceProc` 로 바꿔 쓴다). 라이브러리는 처음 부를 때 실행 파일 옆에서 한 번 로드한다. 없으면 nullptr 입니다.

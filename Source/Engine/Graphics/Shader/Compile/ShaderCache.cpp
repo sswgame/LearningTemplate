@@ -12,6 +12,8 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -64,6 +66,8 @@ namespace sw
         , _mapCache{}
         , _mapLoading{}
         , _mutexCache{}
+        , _enginePolicy{}
+        , _configReloadedSubscription{}
         , _memoryHitCount{ 0 }
         , _providerLoadCount{ 0 }
         , _compileBusy{}
@@ -78,9 +82,39 @@ namespace sw
     bool ShaderCache::initialize()
     {
         // 콘텐츠 정책은 기동 때 정해지고(에셋 매니저 - 이 서브시스템이 그 뒤에 선다) 실행 중 바뀌지 않는다 - 공급자를 한 번 고른다.
-        if ( AssetIO::getContentSource() == ContentSource::Cooked )
-            return initializeWithProvider( make_unique<CookedShaderBytecodeProvider>() );
-        return initializeWithProvider( make_unique<LiveShaderBytecodeProvider>() );
+        const bool bInitialized = AssetIO::getContentSource() == ContentSource::Cooked ? initializeWithProvider( make_unique<CookedShaderBytecodeProvider>() )
+                                                                                       : initializeWithProvider( make_unique<LiveShaderBytecodeProvider>() );
+        if ( bInitialized == false )
+            return false;
+        // 셰이더에 들어가는 설정 값은 여기(기동 스레드)와 다시 읽기 알림(게임 스레드)에서만 뜬다 — 컴파일 워커는 요청에 실린 사본만 본다.
+        ConfigManager* const pConfigManager = engine::findSubsystem<ConfigManager>();
+        if ( pConfigManager == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ShaderCache.NoConfigManager", "ShaderCache needs the Config subsystem - the engine settings that shaders read come from it" );
+            return false;
+        }
+        const ShaderEnginePolicy policy = ShaderEnginePolicy::capture();
+        {
+            ScopedLock<mutex> lock{ _mutexCache };
+            _enginePolicy = policy;
+        }
+        _configReloadedSubscription = pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &ShaderCache::onConfigReloaded, this ) );
+        return true;
+    }
+
+    void ShaderCache::onConfigReloaded( const hashed_string& configTypeName )
+    {
+        if ( configTypeName != EngineConfig::StaticType()->_fullyQualifiedName )
+            return;
+        const ShaderEnginePolicy policy = ShaderEnginePolicy::capture();
+        ScopedLock<mutex>        lock{ _mutexCache };
+        _enginePolicy = policy;
+    }
+
+    optional<ShaderEnginePolicy> ShaderCache::findEnginePolicy() const
+    {
+        ScopedLock<mutex> lock{ _mutexCache };
+        return _enginePolicy;
     }
 
     bool ShaderCache::initializeWithProvider( unique_ptr<IShaderBytecodeProvider> pProvider )
@@ -99,13 +133,14 @@ namespace sw
 
     span<const utf8* const> ShaderCache::getSubsystemDependencies() const
     {
-        // 콘텐츠 정책(`AssetIO::getContentSource`)은 에셋 매니저의 초기화가 정한다.
-        static constexpr const utf8* kArrDependency[] = { AssetManager::kSubsystemName };
+        // 콘텐츠 정책(`AssetIO::getContentSource`)은 에셋 매니저의 초기화가 정한다. 셰이더에 들어가는 설정 값은 Config 에서 뜬다.
+        static constexpr const utf8* kArrDependency[] = { AssetManager::kSubsystemName, ConfigManager::kSubsystemName };
         return kArrDependency;
     }
 
     void ShaderCache::shutdown()
     {
+        _configReloadedSubscription.reset();
         waitForLoadsInFlight();
         clearCache();
         // 리플렉션 매니페스트도 셰이더 층이 종료될 때 같이 비운다(백엔드 교체로 다시 서면 새 백엔드의 매니페스트를 읽는다). 소멸자에서도 불리므로 서비스 칸을 거치지 않는다.
@@ -142,7 +177,11 @@ namespace sw
             if ( pOperation != nullptr )
                 return ShaderHandle{ std::move( pOperation ) };
             // 인메모리 적중도 로드 단계가 본다 — 적중인지는 소스 해시를 구해야 알고, 그 계산(파일 읽기)은 잠금 밖에서 한다.
-            pOperation            = sw::make_shared<ShaderLoadOperation>( this, desc, cacheKey );
+            // 엔진 설정 사본을 요청에 싣는다 — 로드 워커는 설정을 직접 읽지 않는다(제자리 덮기의 울타리는 렌더 스레드만 기다린다).
+            ShaderCompileDesc loadDesc = desc;
+            if ( loadDesc._enginePolicy.has_value() == false )
+                loadDesc._enginePolicy = _enginePolicy;
+            pOperation            = sw::make_shared<ShaderLoadOperation>( this, loadDesc, cacheKey );
             _mapLoading[cacheKey] = pOperation;
         }
         AssetLoadOperation::startLoad( pOperation, start );
@@ -215,7 +254,7 @@ namespace sw
             }
             if ( bCached )
             {
-                const uint64 currentFingerprint = provider.computeFingerprint( cachedEntry._result );
+                const uint64 currentFingerprint = provider.computeFingerprint( cachedEntry._result, desc );
                 if ( currentFingerprint != 0 && currentFingerprint == cachedEntry._sourceFingerprint )
                 {
                     ++_memoryHitCount;
@@ -270,7 +309,7 @@ namespace sw
     {
         // 지문은 파일을 읽는 계산이라 잠금 밖에서 한다.
         ShaderCacheEntry entry{};
-        entry._sourceFingerprint = getProvider().computeFingerprint( result );
+        entry._sourceFingerprint = getProvider().computeFingerprint( result, desc );
         entry._desc              = desc;
         entry._result            = result;
 

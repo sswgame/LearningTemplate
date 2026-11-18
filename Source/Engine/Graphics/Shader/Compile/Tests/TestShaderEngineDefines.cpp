@@ -11,11 +11,11 @@
 
 using namespace sw;
 
-/** @brief [ShaderEngineDefinesTest] 엔진 define 에 TAA 기록 비율이 설정 값 그대로 한 번 든다(셰이더는 기본값 없이 이 define 을 요구한다) */
+/** @brief [ShaderEngineDefinesTest] 엔진 define 에 TAA 기록 비율이 설정에서 뜬 사본 그대로 한 번 든다(셰이더는 기본값 없이 이 define 을 요구한다) */
 SW_TEST_CASE( ShaderEngineDefinesTest, TAAHistoryWeightComesFromEngineConfig )
 {
     vector<ShaderMacroDefine> listDefine;
-    ShaderCompiler::appendEngineDefines( listDefine );
+    ShaderCompiler::appendEngineDefines( listDefine, ShaderEnginePolicy::capture() );
     uint32 foundCount = 0;
     for ( const ShaderMacroDefine& define : listDefine )
     {
@@ -25,6 +25,21 @@ SW_TEST_CASE( ShaderEngineDefinesTest, TAAHistoryWeightComesFromEngineConfig )
         SW_EXPECT_EQUAL( to_string( engine::getSubsystem<EngineConfig>()._render._taaHistoryWeight ), define._value );
     }
     SW_EXPECT_EQUAL( 1u, foundCount );
+}
+
+/**
+ * @brief [ShaderEngineDefinesTest] 엔진 설정 사본을 싣지 않은 요청은 컴파일하지 않고 진다 — 컴파일 워커가 설정을 직접 읽어 채우지 않는다
+ * @details 설정 다시 읽기는 제자리 덮기이고 그 울타리는 렌더 스레드만 기다린다. 요청을 만드는 쪽(`ShaderCache` · 쿠킹 시작)이 사본을 싣는다.
+ */
+SW_TEST_CASE( ShaderEngineDefinesTest, CompileWithoutEnginePolicyFails )
+{
+    ShaderCompileDesc desc{};
+    desc._entryPoint = "PSMain";
+    desc._stage      = ShaderStage::Pixel;
+    SW_EXPECT_LOG( "ShaderCompiler.EnginePolicyMissing" );
+    const ShaderCompileResult result = ShaderCompiler::compileHLSL( desc );
+    SW_EXPECT_FALSE( result._bSuccess );
+    SW_EXPECT_TRUE( StringUtil::contains( result._errorMessage, "engine policy" ) );
 }
 
 /**

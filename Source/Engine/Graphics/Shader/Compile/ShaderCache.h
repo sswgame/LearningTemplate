@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
@@ -87,7 +88,10 @@ namespace sw
         ShaderCache( const ShaderCache& )            = delete;
         ShaderCache& operator=( const ShaderCache& ) = delete;
 
-        /** @brief 셰이더 캐시를 초기화합니다. 바이트코드 공급자는 콘텐츠 정책(쿠킹본 · 소스)으로 고릅니다. */
+        /**
+         * @brief 셰이더 캐시를 초기화합니다. 바이트코드 공급자는 콘텐츠 정책(쿠킹본 · 소스)으로 고릅니다.
+         * @details 엔진 설정 중 셰이더에 들어가는 값의 사본(`ShaderEnginePolicy`)을 뜨고, 설정 다시 읽기 알림(게임 스레드)마다 다시 뜬다 — 요청이 그 사본을 싣고 워커로 간다.
+         */
         [[nodiscard]] bool initialize();
         /**
          * @brief 공급자 @p pProvider 를 걸고 캐시를 초기화합니다. `initialize` 가 정책으로 고른 공급자를 이것으로 겁니다.
@@ -141,6 +145,11 @@ namespace sw
          */
         static ShaderCompileDesc makeLiveCompileDesc( const ShaderCompileDesc& desc );
 
+        /**
+         * @brief 요청에 싣는 엔진 설정 사본입니다(`initialize` 와 설정 다시 읽기 알림이 뜬다). 엔진 없이 공급자만 건 캐시(`initializeWithProvider` — 테스트)는 비어 있다.
+         * @details 캐시를 거치지 않고 컴파일하는 쪽(`ShaderRecompiler`)이 요청에 이것을 싣는다. 아무 스레드에서 불러도 된다(잠근다).
+         */
+        [[nodiscard]] optional<ShaderEnginePolicy> findEnginePolicy() const;
         /** @brief 메모리 캐시가 맞아 공급자를 부르지 않은 로드 수입니다(초기화마다 0 부터). 쿠킹본 정책은 지문이 상수라 같은 요청의 둘째 로드부터 맞아야 한다. */
         [[nodiscard]] uint64 getMemoryHitCount() const { return _memoryHitCount.load(); }
         /** @brief 공급자(팩 · 컴파일)까지 간 로드 수입니다(초기화마다 0 부터). */
@@ -171,6 +180,8 @@ namespace sw
         const IShaderBytecodeProvider& getProvider() const;
         /** @brief 진행 중인 로드를 모두 기다립니다(종료 — 워커의 로드가 사라진 캐시에 쓰지 않게). */
         void waitForLoadsInFlight();
+        /** @brief 설정 다시 읽기 알림입니다(게임 스레드). 엔진 설정이면 요청에 실을 사본을 다시 뜬다. */
+        void onConfigReloaded( const hashed_string& configTypeName );
 
     private:
         unique_ptr<IShaderBytecodeProvider>                              _pProvider;           ///< 기동 때(`initialize`) 콘텐츠 정책으로 고른 바이트코드 공급자. 로드 워커는 읽기만 한다
@@ -178,9 +189,11 @@ namespace sw
         unordered_map<string, ShaderCacheEntry> _mapCache                SW_GUARDED_BY( _mutexCache );
         unordered_map<string, weak_ptr<ShaderLoadOperation>> _mapLoading SW_GUARDED_BY( _mutexCache ); ///< 읽거나 컴파일 중인 로드(같은 요청은 같은 로드 작업). `_mutexCache` 로 지킨다
         mutable mutex                                                    _mutexCache;
-        atomic<uint64>                                                   _memoryHitCount;    ///< `getMemoryHitCount` — 로드 워커가 함께 센다
-        atomic<uint64>                                                   _providerLoadCount; ///< `getProviderLoadCount` — 로드 워커가 함께 센다
-        BusyClock                                                        _compileBusy;       ///< `getCompileBusyClock` — 로드 워커 · PSO 워커가 함께 센다
+        optional<ShaderEnginePolicy> _enginePolicy                       SW_GUARDED_BY( _mutexCache ); ///< 요청에 싣는 엔진 설정 사본(`findEnginePolicy`) — 워커가 설정을 직접 읽지 않게 요청을 받는 자리에서 싣는다
+        Subscription                                                     _configReloadedSubscription;  ///< 설정 다시 읽기 알림 구독(`onConfigReloaded`)
+        atomic<uint64>                                                   _memoryHitCount;              ///< `getMemoryHitCount` — 로드 워커가 함께 센다
+        atomic<uint64>                                                   _providerLoadCount;           ///< `getProviderLoadCount` — 로드 워커가 함께 센다
+        BusyClock                                                        _compileBusy;                 ///< `getCompileBusyClock` — 로드 워커 · PSO 워커가 함께 센다
 
         SW_SERVICE_SLOT( ShaderCache, Required );
     };

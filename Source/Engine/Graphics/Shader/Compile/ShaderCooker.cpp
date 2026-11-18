@@ -192,7 +192,7 @@ namespace sw
     }
 
     bool ShaderCooker::cookShader( const ShaderSourceID& source, string_view outputPath, string_view entryPoint,
-                                   ShaderStage stage, ShaderTargetFormat targetFormat,
+                                   ShaderStage stage, ShaderTargetFormat targetFormat, const ShaderEnginePolicy& enginePolicy,
                                    const vector<string>* pListPermutation,
                                    ShaderCookResult*     pOutResult )
     {
@@ -213,6 +213,7 @@ namespace sw
         desc._entryPoint   = entryPoint;
         desc._stage        = stage;
         desc._targetFormat = targetFormat;
+        desc._enginePolicy = enginePolicy;
 
         if ( pListPermutation != nullptr )
         {

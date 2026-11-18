@@ -75,11 +75,24 @@ namespace
         int32 _value{ 0 };
     };
 
+    /** @brief 값 묶음을 멤버로 들고 그것을 범위에 거는 서브시스템입니다(설정 · 타입 표를 든 서브시스템 자리 — `exposeMember`). */
+    class ScopeCatalogOwnerSubsystem final : public ISubsystem
+    {
+    public:
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return "ScopeCatalogOwner"; }
+        ScopeCatalog&       getCatalog() { return _catalog; }
+
+    private:
+        ScopeCatalog _catalog{ 5 };
+    };
+
     /**
-     * @brief 초기화에서 같은 범위의 `ScopeProbeSubsystem` 을 찾는 서브시스템입니다 — 의존 선언(@p listDependency)이 그 조회를 덮는지 본다. 종료가 불리면 @p pShutDown 을 켭니다.
+     * @brief 초기화에서 같은 범위의 @p TTarget 을 찾는 서브시스템입니다 — 의존 선언(@p listDependency)이 그 조회를 덮는지 본다. 종료가 불리면 @p pShutDown 을 켭니다.
      * @tparam TTag 한 범위에 둘을 걸 때 타입을 가른다 — 범위는 타입마다 하나만 등록한다.
      */
-    template <int32 TTag>
+    template <int32 TTag, class TTarget = ScopeProbeSubsystem>
     class ScopeLookupSubsystem final : public ISubsystem
     {
     public:
@@ -92,7 +105,7 @@ namespace
         }
         SubsystemInitResult initializeSubsystem() override
         {
-            (void)_scope.get<ScopeProbeSubsystem>();
+            (void)_scope.get<TTarget>();
             return SubsystemInitResult::Succeeded;
         }
         void                    shutdownSubsystem() override { *_pShutDown = true; }
@@ -137,6 +150,34 @@ SW_TEST_CASE( SubsystemScopeTest, UndeclaredLookupDuringInitializeFailsStartup )
     SW_EXPECT_TRUE_MSG( StringUtil::contains( error, "looked up 'ScopeProbe' without declaring it as a dependency" ), error.c_str() );
     SW_EXPECT_TRUE( bShutDown );                                                          // 선 것은 내린다 — 종료 목록에서 빠져도 자원을 쥔 채 남지 않는다
     SW_EXPECT_EQUAL( size_t( 1 ), scope.getCollection().getInitializedIndices().size() ); // 대상만 선 채로 남아 `shutdownAll` 이 내린다
+}
+
+/**
+ * @brief [SubsystemScopeTest] 서브시스템의 멤버를 `exposeMember` 로 건 칸은 주인이 그 서브시스템이다 — 선언 없이 찾으면 기동이 지고, 선언하면 서며, 주인과 함께 지워진다
+ * @details `bind` 로 걸면 주인이 비어(빌린 칸) 같은 조회가 검사를 빠져나갔다 — 설정 · 타입 표 · 기본 에셋 표가 그 모양이었다.
+ */
+SW_TEST_CASE( SubsystemScopeTest, UndeclaredMemberLookupDuringInitializeFailsStartup )
+{
+    bool                        bShutDown = false;
+    SubsystemScope              scope;
+    ScopeCatalogOwnerSubsystem& owner = scope.emplaceSubsystem<ScopeCatalogOwnerSubsystem>();
+    SW_REQUIRE_TRUE( scope.exposeMember( owner, owner.getCatalog() ) );
+    SW_EXPECT_FALSE( scope.exposeMember( owner, owner.getCatalog() ) );                         // 같은 타입을 두 번 걸지 않는다
+    SW_EXPECT_TRUE( scope.findOwnerInScope( getSubsystemTypeHash<ScopeCatalog>() ) == &owner ); // 서비스 칸이 바인딩 때 묻는 주인
+    (void)scope.emplaceSubsystem<ScopeLookupSubsystem<0, ScopeCatalog>>( scope, "ZLookup", vector<const utf8*>{}, &bShutDown );
+    SW_EXPECT_FALSE( scope.getCollection().initializeAll( SubsystemHostMask::All ) );
+    const string& error = scope.getCollection().getError();
+    SW_EXPECT_TRUE_MSG( StringUtil::contains( error, "looked up 'ScopeCatalogOwner' without declaring it as a dependency" ), error.c_str() );
+
+    bool                        bDeclaredShutDown = false;
+    SubsystemScope              declared;
+    ScopeCatalogOwnerSubsystem& declaredOwner = declared.emplaceSubsystem<ScopeCatalogOwnerSubsystem>();
+    SW_REQUIRE_TRUE( declared.exposeMember( declaredOwner, declaredOwner.getCatalog() ) );
+    (void)declared.emplaceSubsystem<ScopeLookupSubsystem<0, ScopeCatalog>>( declared, "ZLookup", vector<const utf8*>{ "ScopeCatalogOwner" }, &bDeclaredShutDown );
+    SW_EXPECT_TRUE_MSG( declared.getCollection().initializeAll( SubsystemHostMask::All ), declared.getCollection().getError().c_str() );
+    SW_EXPECT_EQUAL( 5, declared.get<const ScopeCatalog>()._value );
+    declared.destroyAll();
+    SW_EXPECT_TRUE( declared.find<ScopeCatalog>() == nullptr ); // 멤버 칸은 주인과 함께 지워진다(빌린 칸처럼 남아 매달리지 않는다)
 }
 
 /**

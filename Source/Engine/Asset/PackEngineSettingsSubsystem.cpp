@@ -63,7 +63,7 @@ namespace sw
     {
         (void)build;
         const PackEngineSettingsSubsystem& packSettings = scope.emplaceSubsystem<PackEngineSettingsSubsystem>();
-        (void)scope.bind( &packSettings.getSettings() ); // 새 범위 — 겹치지 않는다
+        (void)scope.exposeMember( packSettings, packSettings.getSettings() ); // 새 범위 — 겹치지 않는다
     } );
 
     // 위 공장이 건 팩 설정의 서비스 칸(읽기 전용). 엔진과 에디터가 읽는다 — 게임은 자기 `GameSettings` 를 읽는다.

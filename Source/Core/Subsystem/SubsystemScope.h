@@ -161,15 +161,22 @@ namespace sw
         }
 
         /**
-         * @brief 이미 걸린 객체 @p owner 가 가진 멤버 @p member 를 인터페이스 @p TInterface 로 찾게 합니다 — 인터페이스를 상속하지 않고 멤버 어댑터로 가진 서브시스템의 자리다.
-         * @details 칸의 소유 표시는 @p owner 를 따른다(소유한 서브시스템의 멤버면 그 서브시스템과 함께 지워진다 — `destroyAll`). @p member 는 @p owner 와 수명이 같아야 한다.
-         * @return 그 인터페이스가 이미 걸려 있으면 false 입니다.
+         * @brief 이 범위가 소유한 서브시스템 @p owner 의 멤버 @p member 를 타입 @p TInterface 로 찾게 합니다 — 멤버 어댑터 · 서브시스템이 든 값 묶음(설정 · 타입 표)의 자리다.
+         * @details 칸의 주인은 @p owner 다 — 초기화 중 조회(범위 · 서비스 칸)가 의존 검사를 지나고(`SubsystemCollection::recordInitializeLookup`), 칸은 그 서브시스템과 함께 지워진다(`destroyAll`).
+         *          `bind` 로 걸면 주인이 비어(빌린 칸) 선언을 빠뜨린 조회가 검사를 빠져나간다 — 서브시스템의 멤버는 이것으로 건다. @p member 는 @p owner 와 수명이 같아야 한다.
+         *          @p TInterface 가 const 면 `bind` 와 같이 `const T` 로 찾는 쪽만 찾는다. @p owner 가 이 범위에 소유한 서브시스템이 아니면 부른 쪽의 잘못이라 멈춘다.
+         * @return 같은 타입이 const 든 아니든 이미 걸려 있으면 false 입니다.
          */
         template <class TInterface, class TOwner>
         [[nodiscard]] bool exposeMember( TOwner& owner, TInterface& member )
         {
-            (void)owner;
-            return registerEntry( getSubsystemTypeHash<TInterface>(), &member, findOwner( getSubsystemTypeHash<TOwner>() ) );
+            using TPlain = std::remove_const_t<TInterface>;
+            static_assert( std::is_base_of_v<ISubsystem, std::remove_const_t<TOwner>>, "SubsystemScope::exposeMember needs the owning subsystem" );
+            ISubsystem* const pOwner = findOwner( getSubsystemTypeHash<std::remove_const_t<TOwner>>() );
+            SW_ASSERT( pOwner == static_cast<const ISubsystem*>( &owner ) );
+            if ( findOwnEntry( getSubsystemTypeHash<TPlain>() ) != nullptr || findOwnEntry( getSubsystemTypeHash<const TPlain>() ) != nullptr )
+                return false;
+            return registerEntry( getSubsystemTypeHash<TInterface>(), const_cast<TPlain*>( &member ), pOwner );
         }
 
         /**
@@ -214,6 +221,7 @@ namespace sw
 
         /**
          * @brief 소유하지 않는 객체를 타입 @p T 로 겁니다. 객체는 범위보다 오래 살아야 하고, 먼저 사라지면 `unbind` 합니다.
+         * @note 이 범위가 소유한 서브시스템의 멤버는 `exposeMember` 로 건다 — 빌린 칸은 주인이 없어 초기화 중 조회의 의존 검사를 지나지 않는다.
          * @details @p T 가 const 면(공유 캐시의 카탈로그) `const T` 로 찾는 쪽만 찾는다(`findInLocator`). 칸의 `void*` 는 형식을 지운 저장일 뿐 const 는 해시에 남는다.
          * @return 같은 타입이 const 든 아니든 이미 걸려 있으면 false 이고 걸지 않습니다(먼저 `unbind`).
          */

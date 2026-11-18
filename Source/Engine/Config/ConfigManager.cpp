@@ -325,9 +325,9 @@ namespace sw
         ConfigManager& configManager          = scope.emplaceSubsystem<ConfigManager>();
         build._pStartupParts->_pConfigManager = &configManager;
         // 호스트 설정 둘은 Config 가 소유한다 - 읽는 것은 Config 의 초기화이고, 서비스 칸(`engine::getSubsystem<EngineConfig>()`)은 이 자리의 주소를 묶는다.
-        (void)scope.bind( &configManager.getHostEngineConfig() );                     // 새 범위 - 겹치지 않는다
-        (void)scope.bind( &configManager.getHostGameConfig() );                       // 새 범위 - 겹치지 않는다
-        (void)scope.bind( &configManager.getHostEngineConfig()._characterMeshCache ); // 게임에 보이는 조각 - 엔진 설정 안의 자리라 다시 읽어도 주소가 같다
+        (void)scope.exposeMember( configManager, configManager.getHostEngineConfig() );                     // 새 범위 - 겹치지 않는다
+        (void)scope.exposeMember( configManager, configManager.getHostGameConfig() );                       // 새 범위 - 겹치지 않는다
+        (void)scope.exposeMember( configManager, configManager.getHostEngineConfig()._characterMeshCache ); // 게임에 보이는 조각 - 엔진 설정 안의 자리라 다시 읽어도 주소가 같다
     } );
 
     // 위 공장이 건 호스트 설정 둘의 서비스 칸(읽기 전용). 정적 활성본(`EngineConfig::getActive()` 따위)을 대신한다 — 다시 읽기는 같은 자리에서 일어나 칸의 주소가 바뀌지 않는다.

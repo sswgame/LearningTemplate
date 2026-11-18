@@ -25,7 +25,7 @@ namespace
             (void)desc;
             return result;
         }
-        [[nodiscard]] uint64 computeFingerprint( const ShaderCompileResult& result ) const override { return _cooked.computeFingerprint( result ); }
+        [[nodiscard]] uint64 computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override { return _cooked.computeFingerprint( result, desc ); }
         [[nodiscard]] bool   getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const override
         {
             (void)cache;

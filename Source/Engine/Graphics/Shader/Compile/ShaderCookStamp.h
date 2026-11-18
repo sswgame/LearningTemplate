@@ -32,16 +32,20 @@ namespace sw
     public:
         struct State; ///< 폴더별 스탬프 해석 결과와 잠금(정의는 ShaderCookStamp.cpp)
 
-        ShaderCookStampCache();
+        /** @brief 이 쿠킹의 엔진 설정 사본 @p enginePolicy 를 듭니다(쿠킹 시작에 게임 스레드가 뜬다 — 스탬프의 도구 지문이 섞는다). */
+        explicit ShaderCookStampCache( const ShaderEnginePolicy& enginePolicy );
         ~ShaderCookStampCache();
         ShaderCookStampCache( const ShaderCookStampCache& )            = delete;
         ShaderCookStampCache& operator=( const ShaderCookStampCache& ) = delete;
 
         /** @brief 내용입니다. `ShaderCookStamp` 만 씁니다. */
         State& getState() { return *_pState; }
+        /** @brief 이 쿠킹의 엔진 설정 사본입니다(쿠커가 요청에 싣고, 스탬프의 도구 지문이 섞는다). */
+        const ShaderEnginePolicy& getEnginePolicy() const { return _enginePolicy; }
 
     private:
-        unique_ptr<State> _pState;
+        unique_ptr<State>  _pState;
+        ShaderEnginePolicy _enginePolicy; ///< 쿠킹 시작에 뜬 엔진 설정 사본 — 쿠킹 워커가 설정을 직접 읽지 않는다
     };
 } // namespace sw
 
@@ -81,6 +85,7 @@ namespace sw
          * @brief 소스와 **그 소스가 실제로 연 헤더들**, 도구 지문을 합친 지문입니다. 산출물 · 캐시 항목이 최신인지 판단하는 **내용 기준**입니다.
          * @param absShaderPath 주 소스(`.hlsl`)의 절대 경로
          * @param listIncludedFile 컴파일이 연 헤더(`ShaderCompileResult::_listIncludedFile`). 모르면 빈 목록이며 그러면 소스와 도구 지문만 본다 — 헤더 변경은 잡히지 않는다.
+         * @param enginePolicy 요청이 실어 온 엔진 설정 사본(도구 지문이 섞는다 — `getToolchainFingerprint`).
          * @return 소스나 헤더 하나라도 읽지 못하면 0 입니다(같은 지문이 나올 수 없다). 헤더 순서와 무관하다.
          * @details 예전에는 `.hlsli` **전부**의 해시를 섞어 헤더 하나를 고치면 모든 셰이더가 낡았다. 어느 헤더를 읽었는지는 컴파일러가 소스를 읽는 순간 include 처리기가 안다
          *          (바이트코드 리플렉션은 바인딩 정보라 담지 못한다). 그래서 그 목록을 컴파일 결과에서 받아 이 셰이더의 헤더만 본다.
@@ -89,7 +94,7 @@ namespace sw
          *          이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다. 소스가 바뀌었는데도 "산출물이
          *          더 새것"으로 판정되어 그대로 넘어가고, 한 백엔드만 다른 이미지를 내면 백엔드 버그로 보인다.
          */
-        static uint64 computeSourceFingerprint( string_view absShaderPath, const vector<string>& listIncludedFile );
+        static uint64 computeSourceFingerprint( string_view absShaderPath, const vector<string>& listIncludedFile, const ShaderEnginePolicy& enginePolicy );
 
         /** @brief 의존 기록 파일의 접미사입니다(캐시 파일 이름 뒤에 붙입니다). */
         inline static constexpr const utf8* kIncludeRecordSuffix = ".deps";
@@ -114,8 +119,9 @@ namespace sw
          * @brief 컴파일러 도구의 지문입니다. 컴파일러를 부르는 코드의 지문(`CookCodeFingerprint` "ShaderCompiler" — 인자 · 플래그를 고치면 저절로 바뀐다), Vulkan 타깃 버전, 설치된 컴파일러 버전(vcpkg 설치 기록)을 합칩니다(`makeToolchainFingerprint` 에 이 클래스의 상수를 넣은 값).
          * @details 소스 내용 해시만 보면 DXC 를 바꾸거나 옵션을 고쳐도 아무것도 다시 쿠킹하지 않는다. 슬롯 계약 숫자(시프트 포함)는
          *          `binding_slots.hlsli` 에 있고 그 파일은 include 루트 헤더라 이미 스탬프에 들어간다. 파일이나 OS 에 따라 달라지는 값은 넣지 않는다.
+         *          엔진 define(`ShaderCompiler::appendEngineDefines`)도 섞는다 — 그 값은 요청이 실어 온 사본 @p enginePolicy 다(워커가 설정을 직접 읽지 않는다).
          */
-        static uint64 getToolchainFingerprint();
+        static uint64 getToolchainFingerprint( const ShaderEnginePolicy& enginePolicy );
 
         /** @brief 지문 계산의 본체입니다. 입력만으로 정해집니다(테스트가 상수만으로 같은 값이 나오는지 확인합니다). */
         static uint64 makeToolchainFingerprint( uint64 compilerCodeFingerprint, uint32 vulkanTargetVersion, string_view compilerVersion );
@@ -158,7 +164,8 @@ namespace sw
          *          (포함한 파일의 폴더 → 자기 shaders → engine → common)에 같은 이름의 헤더가 새로 생겨 가리면 낡음이다. `findShadowedHeaders` 는 그 위에 같은 이름 자체를 오류로 막는다.
          *          `App --verify-shaders`(커밋 훅 · 배포 빌드)와 `ShaderCookStampTest` 가 부릅니다.
          */
-        static void verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, ShaderTargetFormat format, const vector<string>& listDomain, vector<string>& outListProblem );
+        static void verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, ShaderTargetFormat format, const vector<string>& listDomain, const ShaderEnginePolicy& enginePolicy,
+                                         vector<string>& outListProblem );
 
         /**
          * @brief 파일 내용 해시 캐시(`ContentHash`)를 버려, 다음 조회가 다시 읽게 합니다(스탬프 읽기 캐시는 쿠킹마다의 값 `ShaderCookStampCache` 다).
