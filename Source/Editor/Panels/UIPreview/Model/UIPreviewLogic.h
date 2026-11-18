@@ -241,6 +241,8 @@ namespace sw::editor
         static Widget* insertWidget( WidgetTree& tree, const TypeInfo& type, uint32 parentOrdinal, uint32 index );
         /** @brief 문서 순서 번호 @p parentOrdinal 인 패널의 @p index 번째 자식을 분리해 소유권을 돌려줍니다(지우거나 되돌릴 때 다시 끼운다). 없으면 빈 포인터입니다. */
         static unique_ptr<Widget> detachWidget( WidgetTree& tree, uint32 parentOrdinal, uint32 index );
+        /** @brief 위젯 @p widget 과 그 아래 트리가 차지하는 바이트입니다 — 위젯마다 동적 타입의 크기(`TypeInfo::_size`)를 더한다. 지운 트리를 쥔 되돌리기 단계가 바이트 한도에 적는다. */
+        static uint64 measureWidgetBytes( const Widget& widget );
         /** @brief 분리한 위젯을 같은 위치에 다시 끼웁니다(지우기 되돌리기). 못 끼우면 nullptr 입니다. */
         static Widget* attachWidget( WidgetTree& tree, unique_ptr<Widget> widget, uint32 parentOrdinal, uint32 index );
         /** @brief 위젯의 슬롯을 손잡이로 고칠 수 있으면 true 입니다 — 부모가 캔버스 패널(앵커와 오프셋)일 때입니다. */
