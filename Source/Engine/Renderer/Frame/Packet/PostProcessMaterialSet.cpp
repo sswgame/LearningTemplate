@@ -26,7 +26,7 @@ namespace sw
         releaseAll();
     }
 
-    PostProcessMaterialSet::Entry* PostProcessMaterialSet::findOrAcquire( const hashed_string& path )
+    PostProcessMaterialSet::Entry* PostProcessMaterialSet::getOrCreateEntry( const hashed_string& path )
     {
         for ( Entry& entry : _listEntry )
         {
@@ -54,7 +54,7 @@ namespace sw
         {
             if ( blendable.isActive() == false )
                 continue;
-            Entry* pEntry = findOrAcquire( hashed_string( blendable._materialPath.c_str() ) );
+            Entry* pEntry = getOrCreateEntry( hashed_string( blendable._materialPath.c_str() ) );
             if ( pEntry == nullptr )
                 continue;
             pEntry->_lastUsedFrame = _frame;

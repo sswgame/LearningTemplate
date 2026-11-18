@@ -138,7 +138,7 @@ namespace sw
         return true;
     }
 
-    HousingReplicationServer::PlotEntry& HousingReplicationServer::findOrAddEntry( uint64 plotHash )
+    HousingReplicationServer::PlotEntry& HousingReplicationServer::getOrCreateEntry( uint64 plotHash )
     {
         if ( PlotEntry* pEntry = VectorUtil::findIf( _listPlot, [plotHash]( const PlotEntry& entry )
         { return entry._plotHash == plotHash; } ) )
@@ -293,7 +293,7 @@ namespace sw
                 if ( request._plotHash == plotHash && VectorUtil::contains( listFresh, request._connectionID ) == false )
                     listFresh.push_back( request._connectionID );
             }
-            sendPlotChanges( findOrAddEntry( plotHash ), plot, listFresh );
+            sendPlotChanges( getOrCreateEntry( plotHash ), plot, listFresh );
         }
         _listJoined.clear();
         _listSnapshotRequest.clear();
@@ -458,7 +458,7 @@ namespace sw
             return HousingPlaceResult::UnknownPlot;
         const HousingNetPlotRef& plot        = listPlot[plotIndex];
         HousingLayout&           layout      = *plot._pLayout;
-        PlotEntry&               entry       = findOrAddEntry( edit._plotHash );
+        PlotEntry&               entry       = getOrCreateEntry( edit._plotHash );
         const uint64             callerOwner = findCallerOwner( edit._connectionID );
         if ( edit._op == HousingEditOp::Claim )
         {

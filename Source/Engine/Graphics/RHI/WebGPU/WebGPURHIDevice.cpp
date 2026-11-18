@@ -137,7 +137,7 @@ namespace sw
         return true;
     }
 
-    WGPUBindGroup WebGPUBindGroupCache::findOrCreate( WGPUDevice device, WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry )
+    WGPUBindGroup WebGPUBindGroupCache::getOrCreate( WGPUDevice device, WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry )
     {
         vector<CachedGroup>& listBucket = _mapGroup[makeKeyHash( layout, listEntry )];
         for ( const CachedGroup& cached : listBucket )

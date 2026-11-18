@@ -36,9 +36,9 @@ namespace sw
         return FrameSystemUtil::find<DecalRainWashSystem>( manager );
     }
 
-    DecalRainWashSystem& DecalRainWashSystem::findOrCreate( GameObjectManager& manager )
+    DecalRainWashSystem& DecalRainWashSystem::getOrCreate( GameObjectManager& manager )
     {
-        return FrameSystemUtil::findOrCreate<DecalRainWashSystem>( manager );
+        return FrameSystemUtil::getOrCreate<DecalRainWashSystem>( manager );
     }
 
     void DecalRainWashSystem::release( GameObjectManager& manager )

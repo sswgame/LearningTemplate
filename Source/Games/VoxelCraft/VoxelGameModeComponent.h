@@ -42,7 +42,7 @@ namespace sw
      *
      *          **자동 플레이는 AI 조종자가 폰에 빙의하는 방식입니다.** 자동 플레이 스위치(`gv_voxelAutoPlay`, 씬의 `_bAutoPlay`)가 바뀌면
      *          틱이 끝난 뒤 플러시에서 플레이어 폰의 조종자를 바꿉니다.
-     *          켜면 `VoxelAutoPlayControllerComponent`(스폰한 오브젝트)에게, 끄면 플레이어 0의 조종자(`ControlSystem::findOrCreatePlayerController`)에게 넘깁니다.
+     *          켜면 `VoxelAutoPlayControllerComponent`(스폰한 오브젝트)에게, 끄면 플레이어 0의 조종자(`ControlSystem::getOrCreatePlayerController`)에게 넘깁니다.
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Game Mode", Tooltip = "Owns the voxel world: terrain, block edits, chunk spawns and rebuild scheduling" )
     class VoxelGameModeComponent : public GameModeComponent

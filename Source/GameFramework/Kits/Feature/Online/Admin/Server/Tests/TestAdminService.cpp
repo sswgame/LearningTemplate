@@ -251,7 +251,7 @@ namespace
             return take();
         }
 
-        void tick() { _service.update( UnixMilliseconds{ kNowMs } ); }
+        void update() { _service.update( UnixMilliseconds{ kNowMs } ); }
     };
 
     AdminRequest makeRequest()
@@ -392,7 +392,7 @@ SW_TEST_CASE( AdminServiceTest, DirectoryCommandsForwardAndFinishOnCompletion )
     SW_EXPECT_EQUAL( string( "maint.key" ), rig._directoryControl._maintenance._messageKey );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._directoryControl._maintenance._listAllowedAccount.size() );
     rig._directoryControl.finishLast( ServerDirectoryControlResult::Ok );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.take()._serviceResult == AdminResult::Ok );
 
     AdminRequest announcement    = makeRequest();
@@ -405,24 +405,24 @@ SW_TEST_CASE( AdminServiceTest, DirectoryCommandsForwardAndFinishOnCompletion )
     SW_EXPECT_EQUAL( 3, rig._directoryControl._announcement._priority );
     SW_EXPECT_EQUAL( SW_TRUE, rig._directoryControl._announcement._bLiteralText );
     rig._directoryControl.finishLast( ServerDirectoryControlResult::Invalid );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.take()._serviceResult.hasError( OnlineError::kInvalidRequest ) );
 
     rig.send( kOperator, AdminMethod::RemoveAnnouncement::kID, announcement );
     SW_EXPECT_EQUAL( uint64( 5 ), rig._directoryControl._removedAnnouncementID );
     rig._directoryControl.finishLast( ServerDirectoryControlResult::NotFound );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.take()._serviceResult == AdminResult::NotFound );
 
     rig.send( kOperator, AdminMethod::ClearMaintenance::kID, maintenance );
     SW_EXPECT_EQUAL( string( "game" ), rig._directoryControl._clearedScope );
     rig._directoryControl.finishLast( ServerDirectoryControlResult::Unavailable );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.take()._serviceResult.hasError( OnlineError::kUnavailable ) );
 
     rig.send( kOperator, AdminMethod::ClearMaintenance::kID, maintenance );
     rig._directoryControl.finishLast( ServerDirectoryControlResult::Forbidden ); // 쓰는 일 안의 등급 가드가 거절했다(그사이 강등)
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.take()._serviceResult.hasError( OnlineError::kForbidden ) );
 }
 
@@ -442,7 +442,7 @@ SW_TEST_CASE( AdminServiceTest, LiveEventCommandsForward )
     SW_EXPECT_TRUE( rig._sink._listReply.empty() );
     SW_EXPECT_EQUAL( put._eventJSON, rig._liveControl._putJSON );
     rig._liveControl.finishLast( LiveEventControlResult::Invalid );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.take()._serviceResult.hasError( OnlineError::kInvalidRequest ) );
 
     AdminRequest removal = makeRequest();
@@ -450,7 +450,7 @@ SW_TEST_CASE( AdminServiceTest, LiveEventCommandsForward )
     rig.send( kOperator, AdminMethod::RemoveLiveEvent::kID, removal );
     SW_EXPECT_EQUAL( string( "b" ), rig._liveControl._removedEventID );
     rig._liveControl.finishLast( LiveEventControlResult::NotFound );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.take()._serviceResult == AdminResult::NotFound );
 }
 
@@ -476,7 +476,7 @@ SW_TEST_CASE( AdminServiceTest, UnknownForwardedCompletionWarns )
     SW_EXPECT_LOG( "ServiceServerCallTable.UnknownCall" );
     AdminFixture rig;
     rig._directoryControl._listCompletion.push_back( ServerDirectoryControlCompletion{ 12345, ServerDirectoryControlResult::Ok } );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig._sink._listReply.empty() );
 }
 

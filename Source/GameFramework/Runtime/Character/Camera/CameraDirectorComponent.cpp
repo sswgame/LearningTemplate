@@ -136,7 +136,7 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<CameraDirectorComponent>( this );
-        (void)CameraSystem::findOrCreate( manager );
+        (void)CameraSystem::getOrCreate( manager );
     }
 
     void CameraDirectorComponent::onUnregister( GameObjectManager& manager )

@@ -94,7 +94,7 @@ namespace sw
                     if ( pOutRowSet != nullptr )
                         pOutRowSet->clear();
                     SQLResult     prepareResult = SQLResult::Ok;
-                    sqlite3_stmt* pStatement    = findOrPrepare( sql, prepareResult );
+                    sqlite3_stmt* pStatement    = getOrPrepare( sql, prepareResult );
                     if ( pStatement == nullptr )
                         return fail( prepareResult );
                     // 자리 수가 다른 호출은 고칠 수 없는 잘못이다 - 예전에는 모자란 칸이 NULL 로, 남는 값은 버려져 다른 문장이 말없이 돌았다.
@@ -163,7 +163,7 @@ namespace sw
 
             private:
                 /** @brief 준비된 문장을 찾거나 만듭니다. 못 만들면 nullptr 과 까닭(@p outFailure)입니다 - 끊김 · 잠금을 문법 오류로 뭉개면 풀이 다시 열지 못한다. */
-                sqlite3_stmt* findOrPrepare( string_view sql, SQLResult& outFailure )
+                sqlite3_stmt* getOrPrepare( string_view sql, SQLResult& outFailure )
                 {
                     const string key( sql );
                     const auto   statementIt = _mapStatement.find( key );

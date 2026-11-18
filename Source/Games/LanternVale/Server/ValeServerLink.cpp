@@ -100,7 +100,7 @@ namespace sw
     {
         if ( _pPeers == nullptr )
             return;
-        _world.tick( deltaSeconds );
+        _world.update( deltaSeconds );
         _listLoadScratch.clear();
         _profiles.poll( _listLoadScratch );
         for ( const ValeProfileLoad& load : _listLoadScratch )

@@ -725,5 +725,145 @@
     "old": "checkPropertyValue",
     "new": "isPropertyValueAllowed",
     "why": "static_assert 가 읽는 constexpr bool 술어 — bool 을 돌려주는 check* 는 is*(NamingCpp)"
+  },
+  {
+    "old": "tickModalLoop",
+    "new": "updateModalLoop",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "WindowModalLoopTickDelegate",
+    "new": "WindowModalLoopUpdateDelegate",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "bindModalLoopTickCallback",
+    "new": "bindModalLoopUpdateCallback",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "isInModalLoopTick",
+    "new": "isInModalLoopUpdate",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "_onModalLoopTick",
+    "new": "_onModalLoopUpdate",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "_bInModalLoopTick",
+    "new": "_bInModalLoopUpdate",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "onWindowModalLoopTick",
+    "new": "onWindowModalLoopUpdate",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "_modalLoopTickSubscription",
+    "new": "_modalLoopUpdateSubscription",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "ModalLoopTickDoesNotReenter",
+    "new": "ModalLoopUpdateDoesNotReenter",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)",
+    "ban": false
+  },
+  {
+    "old": "tickBoth",
+    "new": "updateBoth",
+    "why": "테스트 픽스처가 서비스 둘을 한 번 갱신한다 — tick 은 틱 시스템만(NamingCpp)"
+  },
+  {
+    "old": "findOrLoad",
+    "new": "acquire",
+    "why": "캐시에서 얻고 없으면 읽어 공유 소유로 돌려주는 것은 acquire( path )(NamingCpp — 다른 캐시와 같은 동사, 언리얼 StreamableManager · Godot ResourceLoader.load)",
+    "allowExisting": true
+  },
+  {
+    "old": "findOrLoadAsset",
+    "new": "acquireAsset",
+    "why": "캐시에서 얻고 없으면 읽어 공유 소유로 돌려주는 것은 acquire( path )(NamingCpp — 다른 캐시와 같은 동사, 언리얼 StreamableManager · Godot ResourceLoader.load)"
+  },
+  {
+    "old": "findOrCreate",
+    "new": "getOrCreate",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)",
+    "allowExisting": true
+  },
+  {
+    "old": "findOrAcquire",
+    "new": "getOrCreateEntry",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)",
+    "allowExisting": true
+  },
+  {
+    "old": "findOrAddEntry",
+    "new": "getOrCreateEntry",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)",
+    "allowExisting": true
+  },
+  {
+    "old": "findOrAddSurfaceZone",
+    "new": "getOrCreateSurfaceZone",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrPrepare",
+    "new": "getOrPrepare",
+    "why": "없으면 준비해(SQL prepare) 돌려준다 — findOr* 는 쓰지 않는다(NamingCpp)"
+  },
+  {
+    "old": "findOrCreateChannelUnlocked",
+    "new": "getOrCreateChannelUnlocked",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateCookieAtlasPSO",
+    "new": "getOrCreateCookieAtlasPSO",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateCursor",
+    "new": "getOrCreateCursor",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateExtensionProgramPSO",
+    "new": "getOrCreateExtensionProgramPSO",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateFont",
+    "new": "getOrCreateFont",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateLayerBakePSO",
+    "new": "getOrCreateLayerBakePSO",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateLevelZeroStage",
+    "new": "getOrCreateLevelZeroStage",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateNamed",
+    "new": "getOrCreateNamed",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreatePlayerController",
+    "new": "getOrCreatePlayerController",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateRuntime",
+    "new": "getOrCreateRuntime",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
   }
 ]

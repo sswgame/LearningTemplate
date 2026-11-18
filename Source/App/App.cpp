@@ -128,7 +128,7 @@ namespace sw
         , _configReloadedSubscription{}
         , _windowMessageSubscription{}
         , _appLifecycleSubscription{}
-        , _modalLoopTickSubscription{}
+        , _modalLoopUpdateSubscription{}
         , _pFramePacer{ nullptr }
         , _initializeStartMicro{ 0 }
         , _mainLoopStartMicro{ 0 }
@@ -460,9 +460,9 @@ namespace sw
     void App::bindHostCallbacks()
     {
         // 주 창의 처리기 칸은 주인이 하나다 — 구독을 쥐고, 창(엔진 종료 때 파괴)이 먼저 사라지면 구독이 무효가 된다.
-        _windowMessageSubscription = _pWindow->bindCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
-        _appLifecycleSubscription  = _pWindow->addLifecycleListener( SW_DELEGATE_METHOD( WindowLifecycleDelegate, &App::onAppLifecycle, this ) );
-        _modalLoopTickSubscription = _pWindow->bindModalLoopTickCallback( SW_DELEGATE_METHOD( WindowModalLoopTickDelegate, &App::onWindowModalLoopTick, this ) );
+        _windowMessageSubscription   = _pWindow->bindCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
+        _appLifecycleSubscription    = _pWindow->addLifecycleListener( SW_DELEGATE_METHOD( WindowLifecycleDelegate, &App::onAppLifecycle, this ) );
+        _modalLoopUpdateSubscription = _pWindow->bindModalLoopUpdateCallback( SW_DELEGATE_METHOD( WindowModalLoopUpdateDelegate, &App::onWindowModalLoopUpdate, this ) );
 
         // 연결 대상이 프레임마다 바뀌지 않으므로 루프 안이 아니라 여기서 한 번만 연결한다.
         // 에디터 뷰 카메라는 에디터 모드에서만 연결한다. 비어 있다는 사실이 곧 "씬 카메라를 쓴다"는 뜻이므로 루프에서 모드를
@@ -627,7 +627,7 @@ namespace sw
 
         // 프레임 경계의 장치 교체 · 다시 만들기 — 개발 구성은 교체기(메뉴 · 콘솔 교체 + 실패 집계)를 거치고, 배포는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)만 예약한다.
         // 창 모달 루프 안의 프레임은 건너뛴다 — 교체가 창을 다시 만들면 아직 그 창에서 도는 모달 루프의 HWND 가 사라진다. 예약은 남아 루프가 끝난 뒤 첫 프레임이 한다.
-        if ( _pWindow->isInModalLoopTick() == false )
+        if ( _pWindow->isInModalLoopUpdate() == false )
         {
             if constexpr ( build::kShipping == false )
                 _pBackendSwitcher->applyIfPending();
@@ -686,7 +686,7 @@ namespace sw
         return runFrame( *_pFramePacer );
     }
 
-    void App::onWindowModalLoopTick()
+    void App::onWindowModalLoopUpdate()
     {
         // 메인 루프의 `processMessages` 안이다(창 프로시저 → 모달 루프 → WM_TIMER). 루프 밖(기동 · 종료)의 메시지 처리나 멈춘 표면이면 프레임을 돌지 않는다.
         if ( _pFramePacer == nullptr || _pWindow->isRenderPaused() )

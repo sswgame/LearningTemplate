@@ -137,7 +137,7 @@ namespace sw
      *          적의 AI 조종자는 적 폰의 자동 빙의가 만들고 폰과 함께 지워진다.
      *
      *          **자동 플레이는 AI 조종자의 빙의로 구현한다.** 자동 플레이 스위치(`gv_shooterAutoPlay`, 씬의 `_bAutoPlay`, 에디터 툴바)가 바뀌면 틱이 끝난 뒤 플러시에서 플레이어 폰을
-     *          `ShooterAutoAimControllerComponent`(스폰한 오브젝트) 또는 플레이어 0 의 조종자(`ControlSystem::findOrCreatePlayerController`)에게 넘긴다.
+     *          `ShooterAutoAimControllerComponent`(스폰한 오브젝트) 또는 플레이어 0 의 조종자(`ControlSystem::getOrCreatePlayerController`)에게 넘긴다.
      *          플레이어 몸에는 자동 플레이 분기가 없다.
      *
      *          **네트 클라이언트의 월드**(넷 링크 역할이 Client)는 판을 돌리지 않는다 — 페이싱 감독 · 적 규칙은 서버 몫이고, 스냅샷의 적을 복제 모습으로 세워(`ShooterEnemyComponent::launchReplica`)

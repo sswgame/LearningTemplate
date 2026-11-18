@@ -332,7 +332,7 @@ namespace sw
             return false;
         const string&                                     documentPath = findRowDocument( pUI->getEngineDocuments(), setting, pUI->getInputRouter().getInputMode() );
         UIDocumentCache&                                  documents    = engine::getSubsystem<UIDocumentCache>();
-        const expected<shared_ptr<const UIDocumentAsset>> document     = documents.findOrLoad( documentPath );
+        const expected<shared_ptr<const UIDocumentAsset>> document     = documents.acquire( documentPath );
         vector<UIBindingDef>                              listBinding;
         expected<unique_ptr<Widget>>                      built = document.has_value() ? UIDocumentLoader::instantiate( **document, documents, ResourceTagSet{}, listBinding ) : unexpected( document.error() );
         if ( built.has_value() == false )

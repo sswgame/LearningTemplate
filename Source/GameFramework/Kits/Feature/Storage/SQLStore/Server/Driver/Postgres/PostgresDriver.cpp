@@ -101,7 +101,7 @@ namespace sw
                     if ( pOutRowSet != nullptr )
                         pOutRowSet->clear();
                     SQLResult                prepareResult = SQLResult::Ok;
-                    const PreparedStatement* pStatement    = findOrPrepare( sql, prepareResult );
+                    const PreparedStatement* pStatement    = getOrPrepare( sql, prepareResult );
                     if ( pStatement == nullptr )
                         return prepareResult;
                     PostgresParameters parameters;
@@ -158,7 +158,7 @@ namespace sw
                 };
 
                 /** @brief 준비된 문장을 찾거나 만듭니다. 못 만들면 nullptr 과 까닭(@p outFailure)입니다 - 예전에는 까닭을 버려 끊김 · 직렬화 실패가 호출한 쪽에는 Error 로 보였다. */
-                const PreparedStatement* findOrPrepare( string_view sql, SQLResult& outFailure )
+                const PreparedStatement* getOrPrepare( string_view sql, SQLResult& outFailure )
                 {
                     const string key( sql );
                     const auto   statementIt = _mapStatementName.find( key );

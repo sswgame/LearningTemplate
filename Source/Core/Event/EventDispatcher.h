@@ -233,7 +233,7 @@ namespace sw
         /** @brief 타입을 지운 즉시 발행입니다(`publish` 의 본체). */
         void publishErased( hashed_string channel, EventTypeID type, const IEvent& eventRef );
         /** @brief 채널 + 타입의 멀티캐스트를 찾거나 만듭니다. `_busSpinLock` 을 **잡은 채로** 부르십시오. */
-        shared_ptr<ChannelMulticast> findOrCreateChannelUnlocked( hashed_string channel, EventTypeID type ) SW_REQUIRES_LOCK( _busSpinLock );
+        shared_ptr<ChannelMulticast> getOrCreateChannelUnlocked( hashed_string channel, EventTypeID type ) SW_REQUIRES_LOCK( _busSpinLock );
 
     private:
         mutable SpinLock _busSpinLock;

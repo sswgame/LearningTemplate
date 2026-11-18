@@ -41,7 +41,7 @@ namespace
             _manager.beginPlay();
         }
 
-        void tick() { _manager.update( 1.0f / 60.0f ); }
+        void update() { _manager.update( 1.0f / 60.0f ); }
 
         static ControlIntent makeMove( float32 forward )
         {
@@ -326,11 +326,11 @@ SW_TEST_CASE( ControlSystemTest, ControllerProducesAndReleaseStopsTheMotion )
 {
     ControlRig rig;
     rig._pFirst->play( *rig._pPawn, { ControlRig::makeMove( 1.0f ), ControlRig::makeMove( 0.5f ) }, false );
-    rig.tick();
+    rig.update();
     SW_EXPECT_EQUAL( 1.0f, rig._pPawn->getIntent()._move._y );
-    rig.tick();
+    rig.update();
     SW_EXPECT_NEAR( 0.5f, rig._pPawn->getIntent()._move._y, 0.01f );
-    rig.tick();
+    rig.update();
     SW_EXPECT_EQUAL( 0.0f, rig._pPawn->getIntent()._move._y ); // 트랙이 끝나면 의도는 0 이다
     SW_EXPECT_FALSE( rig._pFirst->isPlaying() );
     SW_EXPECT_TRUE( rig._pPawn->isPossessed() ); // 돌려주지 않으면 그대로 쥔다
@@ -342,7 +342,7 @@ SW_TEST_CASE( ControlSystemTest, UnpossessedPawnStopsButKeepsItsLook )
     ControlIntent intent = ControlRig::makeMove( 1.0f );
     intent._controlYaw   = 0.5f;
     rig._pFirst->play( *rig._pPawn, { intent, intent }, false );
-    rig.tick();
+    rig.update();
     rig._pFirst->unpossess();
     SW_EXPECT_EQUAL( 0.0f, rig._pPawn->getIntent()._move._y );
     SW_EXPECT_NEAR( 0.5f, rig._pPawn->getIntent()._controlYaw, 1e-3f );
@@ -355,9 +355,9 @@ SW_TEST_CASE( ControlSystemTest, PlaybackReturnsThePawnOnTheNextTick )
     rig._pFirst->possess( *rig._pPawn );
     rig._pSecond->play( *rig._pPawn, { ControlRig::makeMove( 1.0f ) }, true );
     SW_EXPECT_TRUE( rig._pPawn->getController() == rig._pSecond->getHandle() );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig._pPawn->getController() == rig._pSecond->getHandle() );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig._pPawn->getController() == rig._pFirst->getHandle() );
 }
 
@@ -365,26 +365,26 @@ SW_TEST_CASE( ControlSystemTest, PlaybackWithNoPreviousControllerReleases )
 {
     ControlRig rig;
     rig._pSecond->play( *rig._pPawn, { ControlRig::makeMove( 1.0f ) }, true );
-    rig.tick();
-    rig.tick();
+    rig.update();
+    rig.update();
     SW_EXPECT_FALSE( rig._pPawn->isPossessed() );
 }
 
 SW_TEST_CASE( ControlSystemTest, QueuedPossessIgnoresDeadControllers )
 {
     ControlRig     rig;
-    ControlSystem& system = ControlSystem::findOrCreate( rig._manager );
+    ControlSystem& system = ControlSystem::getOrCreate( rig._manager );
     system.queuePossess( TComponentHandle<ControllerComponent>{ rig._pFirst }, TComponentHandle<PawnComponent>{ rig._pPawn } );
     SW_EXPECT_FALSE( rig._pPawn->isPossessed() ); // 다음 틱 첫머리에 적용한다
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig._pPawn->getController() == rig._pFirst->getHandle() );
 
     system.queuePossess( TComponentHandle<ControllerComponent>{}, TComponentHandle<PawnComponent>{ rig._pPawn } );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig._pPawn->getController() == rig._pFirst->getHandle() );
 
     system.queuePossess( TComponentHandle<ControllerComponent>{ rig._pFirst }, TComponentHandle<PawnComponent>{} ); // 무효 폰은 놓기다
-    rig.tick();
+    rig.update();
     SW_EXPECT_FALSE( rig._pPawn->isPossessed() );
 }
 
@@ -393,23 +393,23 @@ SW_TEST_CASE( ControlSystemTest, ControlRotationRequestsAndOffsetsApply )
     ControlRig rig;
     rig._pFirst->possess( *rig._pPawn );
     rig._pPawn->requestControlRotation( 1.0f, 0.25f );
-    rig.tick();
+    rig.update();
     SW_EXPECT_NEAR( 1.0f, rig._pPawn->getIntent()._controlYaw, 1e-3f );
     SW_EXPECT_NEAR( 0.25f, rig._pPawn->getIntent()._controlPitch, 1e-3f );
 
     rig._pPawn->addControlRotationOffset( 0.5f, 0.0f );
-    rig.tick();
+    rig.update();
     SW_EXPECT_NEAR( 1.5f, rig._pPawn->getIntent()._controlYaw, 1e-3f );
 
     // 요청은 그 앞의 오프셋을 버린다.
     rig._pPawn->addControlRotationOffset( 2.0f, 0.0f );
     rig._pPawn->requestControlRotation( 0.1f, 0.0f );
-    rig.tick();
+    rig.update();
     SW_EXPECT_NEAR( 0.1f, rig._pPawn->getIntent()._controlYaw, 1e-3f );
 
     // 피치는 폰의 한도 안이다.
     rig._pPawn->addControlRotationOffset( 0.0f, 50.0f );
-    rig.tick();
+    rig.update();
     SW_EXPECT_NEAR( rig._pPawn->getMaxPitch(), rig._pPawn->getIntent()._controlPitch, 1e-3f );
 }
 
@@ -417,7 +417,7 @@ SW_TEST_CASE( ControlSystemTest, UnpossessedPawnStillAppliesRotationRequests )
 {
     ControlRig rig;
     rig._pPawn->requestControlRotation( 0.5f, 0.0f );
-    rig.tick();
+    rig.update();
     SW_EXPECT_NEAR( 0.5f, rig._pPawn->getIntent()._controlYaw, 1e-3f );
 }
 
@@ -509,14 +509,14 @@ SW_TEST_CASE( ControlSystemTest, SystemLeavesWhenNothingUsesIt )
 SW_TEST_CASE( ControlSystemTest, RecordingCapturesEachTick )
 {
     ControlRig     rig;
-    ControlSystem& system = ControlSystem::findOrCreate( rig._manager );
+    ControlSystem& system = ControlSystem::getOrCreate( rig._manager );
     rig._pFirst->play( *rig._pPawn, { ControlRig::makeMove( 1.0f ), ControlRig::makeMove( 0.5f ) }, false );
     system.setRecording( true, 16 );
     SW_EXPECT_TRUE( system.isRecording() );
-    rig.tick();
-    rig.tick();
+    rig.update();
+    rig.update();
     system.setRecording( false );
-    rig.tick();
+    rig.update();
     const optional<int32> track = system.getHistory().findTrack( hashed_string( "Hero" ) );
     SW_REQUIRE_TRUE( track.has_value() );
     vector<ControlIntent> listIntent;
@@ -540,7 +540,7 @@ SW_TEST_CASE( IntentPlaybackTest, TracksFindTheirPawnsByName )
     withGhost.record( 0, ghost, hashed_string( "NoSuchPawn" ), ControlRig::makeMove( 1.0f ) );
 
     SW_EXPECT_EQUAL( 1u, IntentPlayback::start( rig._manager, history, false, 0 ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_EQUAL( 1.0f, rig._pPawn->getIntent()._move._y );
     GameObject* pTrackObject = rig._manager.findGameObjectByName( hashed_string( "IntentTrack.Hero" ) );
     SW_EXPECT_TRUE( pTrackObject != nullptr );
@@ -560,7 +560,7 @@ SW_TEST_CASE( IntentPlaybackTest, RestartReusesTheControllerAndHonoursTheFirstIn
     history.record( 1, pawn, hashed_string( "Hero" ), ControlRig::makeMove( 1.0f ) );
 
     SW_EXPECT_EQUAL( 1u, IntentPlayback::start( rig._manager, history, false, 1 ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_EQUAL( 1.0f, rig._pPawn->getIntent()._move._y ); // 둘째 틱부터 나온다
 
     const uint32 objectCount = rig._manager.getComponentRegistry().getAll<ControllerComponent>().size();

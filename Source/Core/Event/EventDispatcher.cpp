@@ -146,7 +146,7 @@ namespace sw
         assertBusThread();
         // `add` 를 잠금 안에서 한다 — 잠금이 맵 조회까지만 걸리면 같은 이벤트를 두 스레드가 동시에 구독할 때 멀티캐스트의 벡터가 경쟁한다.
         ScopedLock<SpinLock> lock{ _busSpinLock };
-        return findOrCreateChannelUnlocked( channel, type )->add( std::move( delegate ) );
+        return getOrCreateChannelUnlocked( channel, type )->add( std::move( delegate ) );
     }
 
     void EventDispatcher::publishErased( hashed_string channel, EventTypeID type, const IEvent& eventRef )
@@ -155,12 +155,12 @@ namespace sw
         shared_ptr<ChannelMulticast> pMulticast;
         {
             ScopedLock<SpinLock> lock{ _busSpinLock };
-            pMulticast = findOrCreateChannelUnlocked( channel, type );
+            pMulticast = getOrCreateChannelUnlocked( channel, type );
         }
         pMulticast->broadcast( eventRef );
     }
 
-    shared_ptr<EventDispatcher::ChannelMulticast> EventDispatcher::findOrCreateChannelUnlocked( hashed_string channel, EventTypeID type )
+    shared_ptr<EventDispatcher::ChannelMulticast> EventDispatcher::getOrCreateChannelUnlocked( hashed_string channel, EventTypeID type )
     {
         shared_ptr<ChannelMulticast>& pMulticast = _mapChannelDispatchTable[pair<hashed_string, EventTypeID>( channel, type )];
         if ( pMulticast == nullptr )

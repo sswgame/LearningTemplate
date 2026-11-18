@@ -924,7 +924,7 @@ namespace sw
         }
 
         // 칸에 옮겨 그리는 PSO(전체 화면 블릿 셰이더, 아틀라스 포맷)는 PSO 관리자가 저장소에 둔다 — 디바이스를 바꾸면 저장소가 비고 다시 만든다.
-        const RHIPipelineStateHandle pso = _psoManager.findOrCreateCookieAtlasPSO( pAtlas->getFormat() );
+        const RHIPipelineStateHandle pso = _psoManager.getOrCreateCookieAtlasPSO( pAtlas->getFormat() );
         if ( pso == 0 )
         {
             _state._cookieAtlas.clearPendingDraws();
@@ -1029,7 +1029,7 @@ namespace sw
                 textures.deferLayerBake( std::move( request ) ); // 읽는 중이거나 디바이스 교체로 다시 만드는 중 — 다음 프레임에 다시
                 continue;
             }
-            const RHIPipelineStateHandle pso = _psoManager.findOrCreateLayerBakePSO( arrTarget[1][0]->getFormat() );
+            const RHIPipelineStateHandle pso = _psoManager.getOrCreateLayerBakePSO( arrTarget[1][0]->getFormat() );
             if ( pso == 0 )
                 continue; // 못 만든 까닭은 PSO 관리자가 남겼다
 

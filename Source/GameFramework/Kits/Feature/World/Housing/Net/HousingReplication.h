@@ -257,7 +257,7 @@ namespace sw
             int32  _connectionID{ constant::invalid_index::kInt32 };
         };
 
-        PlotEntry& findOrAddEntry( uint64 plotHash );
+        PlotEntry& getOrCreateEntry( uint64 plotHash );
         /** @brief 이번 틱에 이 연결이 넣을 수 있는 요청이면 셈을 올리고 true 입니다. */
         [[nodiscard]] bool acceptRequest( int32 connectionID );
         uint64             findCallerOwner( int32 connectionID ) const;

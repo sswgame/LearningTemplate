@@ -36,7 +36,7 @@ namespace sw
 
             void shape( const IFontRasterizer& rasterizer, const ShapingRun& run, vector<ShapedGlyph>& inoutListGlyph ) const override
             {
-                const FontEntry* pEntry = findOrCreateFont( rasterizer, run._face );
+                const FontEntry* pEntry = getOrCreateFont( rasterizer, run._face );
                 if ( pEntry == nullptr || run._text.empty() )
                     return;
 
@@ -76,7 +76,7 @@ namespace sw
                 uint32       _upem{ 1 };
             };
 
-            const FontEntry* findOrCreateFont( const IFontRasterizer& rasterizer, FontFaceID face ) const
+            const FontEntry* getOrCreateFont( const IFontRasterizer& rasterizer, FontFaceID face ) const
             {
                 const vector<uint8>* pBytes = rasterizer.findFaceBytes( face );
                 if ( pBytes == nullptr || pBytes->empty() )

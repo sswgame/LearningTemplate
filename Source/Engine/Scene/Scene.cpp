@@ -1321,7 +1321,7 @@ namespace sw
             pCamera = resolveCamera( _activeGameCamera );
         if ( pCamera == nullptr || pCamera->isPendingDestroy() )
         {
-            // 기본 GameCamera 다. 이미 있으면 **그대로** 쓴다. `findOrCreateNamed` 는 있는 것의 위치와 렌즈를 기본값으로 되돌린다.
+            // 기본 GameCamera 다. 이미 있으면 **그대로** 쓴다. `getOrCreateNamed` 는 있는 것의 위치와 렌즈를 기본값으로 되돌린다.
             GameObject*      pNamed       = _objectManager->findGameObjectByName( hashed_string( "GameCamera" ) );
             CameraComponent* pNamedCamera = ( pNamed != nullptr ) ? pNamed->getComponent<CameraComponent>() : nullptr;
             if ( pNamedCamera != nullptr && pNamedCamera->isPendingDestroy() == false )
@@ -1329,8 +1329,8 @@ namespace sw
             else
             {
                 _objectManager->flushSceneTransforms();
-                pCamera = CameraComponent::findOrCreateNamed( _objectManager.get(), hashed_string( "GameCamera" ), CameraRole::Game,
-                                                              float3( 0.0f, 1.2f, 3.2f ), float3( 0.0f, 0.0f, 0.0f ) );
+                pCamera = CameraComponent::getOrCreateNamed( _objectManager.get(), hashed_string( "GameCamera" ), CameraRole::Game,
+                                                             float3( 0.0f, 1.2f, 3.2f ), float3( 0.0f, 0.0f, 0.0f ) );
                 _objectManager->flushSceneTransforms();
             }
         }

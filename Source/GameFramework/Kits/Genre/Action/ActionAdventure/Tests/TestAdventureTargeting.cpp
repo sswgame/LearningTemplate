@@ -52,7 +52,7 @@ namespace
             return listCandidate;
         }
 
-        static sw::AdventureTargetingState tick( sw::AdventureTargeting& targeting, const sw::vector<sw::LockOnCandidate>& listCandidate, const sw::float2& move = sw::float2{}, bool bJump = false )
+        static sw::AdventureTargetingState update( sw::AdventureTargeting& targeting, const sw::vector<sw::LockOnCandidate>& listCandidate, const sw::float2& move = sw::float2{}, bool bJump = false )
         {
             return targeting.update( kEye, listCandidate, move, bJump, kAimStep );
         }
@@ -72,15 +72,15 @@ SW_TEST_CASE( AdventureTargetingTest, ParallelModeHasStrafeButNoDodge )
     SW_EXPECT_TRUE( targeting.isHeld() );
     SW_EXPECT_FALSE( targeting.hasTarget() );
 
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listNone, sw::float2{ 1.0f, 0.0f } ) == sw::AdventureTargetingState::StrafeRight );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listNone, sw::float2{ -1.0f, 0.0f } ) == sw::AdventureTargetingState::StrafeLeft );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listNone, sw::float2{ 1.0f, 0.0f }, true ) == sw::AdventureTargetingState::StrafeRight );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listNone, sw::float2{ 0.0f, -1.0f }, true ) == sw::AdventureTargetingState::Parallel );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listNone, sw::float2{ 1.0f, 0.0f } ) == sw::AdventureTargetingState::StrafeRight );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listNone, sw::float2{ -1.0f, 0.0f } ) == sw::AdventureTargetingState::StrafeLeft );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listNone, sw::float2{ 1.0f, 0.0f }, true ) == sw::AdventureTargetingState::StrafeRight );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listNone, sw::float2{ 0.0f, -1.0f }, true ) == sw::AdventureTargetingState::Parallel );
     SW_EXPECT_FALSE( targeting.isEvading() );
 
     targeting.release();
     SW_EXPECT_TRUE( targeting.getState() == sw::AdventureTargetingState::Free );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listNone, sw::float2{ 1.0f, 0.0f } ) == sw::AdventureTargetingState::Free );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listNone, sw::float2{ 1.0f, 0.0f } ) == sw::AdventureTargetingState::Free );
     SW_EXPECT_EQUAL( uint64( 0 ), targeting.cycleTarget( kEye, kForward, listNone, 1 ) );
 }
 
@@ -111,15 +111,15 @@ SW_TEST_CASE( AdventureTargetingTest, InputBoundariesPickTheDodge )
         sw::AdventureTargeting targeting;
         AdventureTargetingTestUtil::setUp( targeting );
         SW_REQUIRE_TRUE( targeting.press( kEye, kForward, listTarget ) );
-        SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget, testCase._move, true ) == testCase._state );
+        SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget, testCase._move, true ) == testCase._state );
     }
 
     // 뛰지 않으면 옆은 옆걸음이고 뒤는 그대로 선다.
     sw::AdventureTargeting targeting;
     AdventureTargetingTestUtil::setUp( targeting );
     SW_REQUIRE_TRUE( targeting.press( kEye, kForward, listTarget ) );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget, sw::float2{ 0.0f, -1.0f } ) == sw::AdventureTargetingState::Locked );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget, sw::float2{ -1.0f, 0.0f } ) == sw::AdventureTargetingState::StrafeLeft );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget, sw::float2{ 0.0f, -1.0f } ) == sw::AdventureTargetingState::Locked );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget, sw::float2{ -1.0f, 0.0f } ) == sw::AdventureTargetingState::StrafeLeft );
 }
 
 /**
@@ -132,19 +132,19 @@ SW_TEST_CASE( AdventureTargetingTest, EvadeLocksInputAndInvulnerabilityEndsFirst
     const sw::vector<sw::LockOnCandidate> listTarget = AdventureTargetingTestUtil::makeFrontTarget();
     SW_REQUIRE_TRUE( targeting.press( kEye, kForward, listTarget ) );
 
-    SW_REQUIRE_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget, sw::float2{ 0.0f, -1.0f }, true ) == sw::AdventureTargetingState::Backflip );
+    SW_REQUIRE_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget, sw::float2{ 0.0f, -1.0f }, true ) == sw::AdventureTargetingState::Backflip );
     SW_EXPECT_TRUE( targeting.isEvading() );
     SW_EXPECT_TRUE( targeting.isInvulnerable() );
 
     const sw::float2 sideInput{ 1.0f, 0.0f };
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget, sideInput, true ) == sw::AdventureTargetingState::Backflip ); // 0.125
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget, sideInput, true ) == sw::AdventureTargetingState::Backflip ); // 0.125
     SW_EXPECT_TRUE( targeting.isInvulnerable() );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget, sideInput, true ) == sw::AdventureTargetingState::Backflip ); // 0.25 — 무적 끝
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget, sideInput, true ) == sw::AdventureTargetingState::Backflip ); // 0.25 — 무적 끝
     SW_EXPECT_FALSE( targeting.isInvulnerable() );
     SW_EXPECT_TRUE( targeting.isEvading() );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget, sideInput, true ) == sw::AdventureTargetingState::Backflip ); // 0.375
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget, sideInput, true ) == sw::AdventureTargetingState::Backflip ); // 0.375
 
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget, sideInput, true ) == sw::AdventureTargetingState::SideHopRight ); // 0.5 — 끝난 틱에 다음 회피
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget, sideInput, true ) == sw::AdventureTargetingState::SideHopRight ); // 0.5 — 끝난 틱에 다음 회피
     SW_EXPECT_TRUE( targeting.isEvading() );
     SW_EXPECT_TRUE( targeting.isInvulnerable() );
 }
@@ -158,7 +158,7 @@ SW_TEST_CASE( AdventureTargetingTest, ReleaseDoesNotCancelARunningEvade )
     AdventureTargetingTestUtil::setUp( targeting );
     const sw::vector<sw::LockOnCandidate> listTarget = AdventureTargetingTestUtil::makeFrontTarget();
     SW_REQUIRE_TRUE( targeting.press( kEye, kForward, listTarget ) );
-    SW_REQUIRE_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget, sw::float2{ 0.0f, -1.0f }, true ) == sw::AdventureTargetingState::Backflip );
+    SW_REQUIRE_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget, sw::float2{ 0.0f, -1.0f }, true ) == sw::AdventureTargetingState::Backflip );
 
     targeting.release();
     SW_EXPECT_FALSE( targeting.isHeld() );
@@ -167,12 +167,12 @@ SW_TEST_CASE( AdventureTargetingTest, ReleaseDoesNotCancelARunningEvade )
     SW_EXPECT_TRUE( targeting.isEvading() );
     SW_EXPECT_TRUE( targeting.isInvulnerable() );
 
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget ) == sw::AdventureTargetingState::Backflip );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget ) == sw::AdventureTargetingState::Backflip );
     SW_EXPECT_TRUE( targeting.isInvulnerable() );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget ) == sw::AdventureTargetingState::Backflip );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget ) == sw::AdventureTargetingState::Backflip );
     SW_EXPECT_FALSE( targeting.isInvulnerable() );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget ) == sw::AdventureTargetingState::Backflip );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget ) == sw::AdventureTargetingState::Free );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget ) == sw::AdventureTargetingState::Backflip );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget ) == sw::AdventureTargetingState::Free );
     SW_EXPECT_FALSE( targeting.isEvading() );
 }
 
@@ -185,16 +185,16 @@ SW_TEST_CASE( AdventureTargetingTest, PressDuringEvadeKeepsTheEvadeState )
     AdventureTargetingTestUtil::setUp( targeting );
     const sw::vector<sw::LockOnCandidate> listTarget = AdventureTargetingTestUtil::makeFrontTarget();
     SW_REQUIRE_TRUE( targeting.press( kEye, kForward, listTarget ) );
-    SW_REQUIRE_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget, sw::float2{ -1.0f, 0.0f }, true ) == sw::AdventureTargetingState::SideHopLeft );
+    SW_REQUIRE_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget, sw::float2{ -1.0f, 0.0f }, true ) == sw::AdventureTargetingState::SideHopLeft );
     targeting.release();
 
     SW_EXPECT_TRUE( targeting.press( kEye, kForward, listTarget ) );
     SW_EXPECT_TRUE( targeting.hasTarget() );
     SW_EXPECT_TRUE( targeting.getState() == sw::AdventureTargetingState::SideHopLeft );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget ) == sw::AdventureTargetingState::SideHopLeft );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget ) == sw::AdventureTargetingState::Locked );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget ) == sw::AdventureTargetingState::SideHopLeft );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget ) == sw::AdventureTargetingState::Locked );
 
-    SW_REQUIRE_TRUE( AdventureTargetingTestUtil::tick( targeting, listTarget, sw::float2{ 0.0f, -1.0f }, true ) == sw::AdventureTargetingState::Backflip );
+    SW_REQUIRE_TRUE( AdventureTargetingTestUtil::update( targeting, listTarget, sw::float2{ 0.0f, -1.0f }, true ) == sw::AdventureTargetingState::Backflip );
     AdventureTargetingTestUtil::setUp( targeting );
     SW_EXPECT_TRUE( targeting.getState() == sw::AdventureTargetingState::Free );
     SW_EXPECT_FALSE( targeting.isEvading() );
@@ -212,7 +212,7 @@ SW_TEST_CASE( AdventureTargetingTest, LosingTheTargetFallsBackToParallel )
     sw::AdventureTargeting gone;
     AdventureTargetingTestUtil::setUp( gone );
     SW_REQUIRE_TRUE( gone.press( kEye, kForward, listTarget ) );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( gone, listNone ) == sw::AdventureTargetingState::Parallel );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( gone, listNone ) == sw::AdventureTargetingState::Parallel );
     SW_EXPECT_FALSE( gone.hasTarget() );
 
     sw::vector<sw::LockOnCandidate> listFar = listTarget;
@@ -220,7 +220,7 @@ SW_TEST_CASE( AdventureTargetingTest, LosingTheTargetFallsBackToParallel )
     sw::AdventureTargeting distant;
     AdventureTargetingTestUtil::setUp( distant );
     SW_REQUIRE_TRUE( distant.press( kEye, kForward, listTarget ) );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( distant, listFar ) == sw::AdventureTargetingState::Parallel );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( distant, listFar ) == sw::AdventureTargetingState::Parallel );
 
     sw::vector<sw::LockOnCandidate> listHidden = listTarget;
     listHidden[0]._bVisible                    = SW_FALSE;
@@ -233,10 +233,10 @@ SW_TEST_CASE( AdventureTargetingTest, LosingTheTargetFallsBackToParallel )
     sw::AdventureTargeting midEvade;
     AdventureTargetingTestUtil::setUp( midEvade );
     SW_REQUIRE_TRUE( midEvade.press( kEye, kForward, listTarget ) );
-    SW_REQUIRE_TRUE( AdventureTargetingTestUtil::tick( midEvade, listTarget, sw::float2{ 1.0f, 0.0f }, true ) == sw::AdventureTargetingState::SideHopRight );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( midEvade, listNone ) == sw::AdventureTargetingState::SideHopRight );
+    SW_REQUIRE_TRUE( AdventureTargetingTestUtil::update( midEvade, listTarget, sw::float2{ 1.0f, 0.0f }, true ) == sw::AdventureTargetingState::SideHopRight );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( midEvade, listNone ) == sw::AdventureTargetingState::SideHopRight );
     SW_EXPECT_FALSE( midEvade.hasTarget() );
-    SW_EXPECT_TRUE( AdventureTargetingTestUtil::tick( midEvade, listNone ) == sw::AdventureTargetingState::Parallel );
+    SW_EXPECT_TRUE( AdventureTargetingTestUtil::update( midEvade, listNone ) == sw::AdventureTargetingState::Parallel );
 }
 
 /**
@@ -257,7 +257,7 @@ SW_TEST_CASE( AdventureTargetingTest, CycleAndTrackTheTarget )
     SW_EXPECT_EQUAL( kTargetFront, targeting.cycleTarget( kEye, kForward, listCandidate, -1 ) );
 
     listCandidate[0]._position = sw::float3{ 2.0f, 0.0f, 12.0f };
-    (void)AdventureTargetingTestUtil::tick( targeting, listCandidate );
+    (void)AdventureTargetingTestUtil::update( targeting, listCandidate );
     SW_EXPECT_NEAR( 12.0f, targeting.getTargetPosition()._z, kHoverTolerance );
 }
 
@@ -302,7 +302,7 @@ SW_TEST_CASE( AdventureTargetingTest, StateRoundTripResumesTheEvade )
     AdventureTargetingTestUtil::setUp( original );
     const sw::vector<sw::LockOnCandidate> listTarget = AdventureTargetingTestUtil::makeFrontTarget();
     SW_REQUIRE_TRUE( original.press( kEye, kForward, listTarget ) );
-    SW_REQUIRE_TRUE( AdventureTargetingTestUtil::tick( original, listTarget, sw::float2{ 0.0f, -1.0f }, true ) == sw::AdventureTargetingState::Backflip );
+    SW_REQUIRE_TRUE( AdventureTargetingTestUtil::update( original, listTarget, sw::float2{ 0.0f, -1.0f }, true ) == sw::AdventureTargetingState::Backflip );
 
     sw::Archive written;
     original.writeState( written );
@@ -317,8 +317,8 @@ SW_TEST_CASE( AdventureTargetingTest, StateRoundTripResumesTheEvade )
 
     for ( int32 tick = 0; tick < 6; ++tick )
     {
-        const sw::AdventureTargetingState expected = AdventureTargetingTestUtil::tick( original, listTarget );
-        const sw::AdventureTargetingState actual   = AdventureTargetingTestUtil::tick( restored, listTarget );
+        const sw::AdventureTargetingState expected = AdventureTargetingTestUtil::update( original, listTarget );
+        const sw::AdventureTargetingState actual   = AdventureTargetingTestUtil::update( restored, listTarget );
         SW_EXPECT_TRUE( expected == actual );
         SW_EXPECT_TRUE( original.isInvulnerable() == restored.isInvulnerable() );
     }

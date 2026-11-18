@@ -41,7 +41,7 @@ namespace sw
         [[nodiscard]] static expected<void> parse( string_view text, string_view path, const ResourceContext& context, UIDocumentAsset& outAsset );
         /**
          * @brief 문서 @p document 에서 위젯 트리를 만듭니다. 조각(`UserWidget`)은 @p cache 에서 찾아 끼우고 그 안의 이름을 `조각.이름` 으로 감쌉니다.
-         * @param tagOverride 조각을 찾을 변형의 태그입니다(문서를 읽은 것과 같은 것 — 빈 집합이면 엔진 판, `UIDocumentCache::findOrLoad`).
+         * @param tagOverride 조각을 찾을 변형의 태그입니다(문서를 읽은 것과 같은 것 — 빈 집합이면 엔진 판, `UIDocumentCache::acquire`).
          * @param outListBinding 문서에서 분리한 바인딩 식을 위젯 번호와 함께 뒤에 붙입니다(실패하면 비웁니다).
          * @return 루트 위젯입니다. 실패하면(모르는 타입, 읽지 못한 값, 조각이 자기를 다시 부르는 경우) 그 이유(대상은 `<경로>:<줄>: <까닭>`)입니다.
          */

@@ -20,9 +20,9 @@ namespace sw
         return FrameSystemUtil::find<VehicleSeatSystem>( manager );
     }
 
-    VehicleSeatSystem& VehicleSeatSystem::findOrCreate( GameObjectManager& manager )
+    VehicleSeatSystem& VehicleSeatSystem::getOrCreate( GameObjectManager& manager )
     {
-        return FrameSystemUtil::findOrCreate<VehicleSeatSystem>( manager );
+        return FrameSystemUtil::getOrCreate<VehicleSeatSystem>( manager );
     }
 
     void VehicleSeatSystem::releaseIfUnused( GameObjectManager& manager )

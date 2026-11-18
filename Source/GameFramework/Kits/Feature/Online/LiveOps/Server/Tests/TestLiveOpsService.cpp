@@ -59,7 +59,7 @@ namespace
         }
 
         /** @brief 틱 하나를 돌리고 저장소 완료를 받습니다. */
-        void tick( int64 nowMs )
+        void update( int64 nowMs )
         {
             _service.update( UnixMilliseconds{ nowMs } );
             poll();
@@ -138,7 +138,7 @@ SW_TEST_CASE( LiveOpsServiceTest, PutReloadRemove )
     LiveOpsFixture rig;
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Ok );
     SW_EXPECT_EQUAL( 1, rig._database.countRecords( ServiceAuditLog::getTable() ) );
-    rig.tick( kStartMs );
+    rig.update( kStartMs );
     const vector<LiveEventState> listOpen = rig.active( "kr", kStartMs );
     SW_REQUIRE_EQUAL( size_t( 1 ), listOpen.size() );
     SW_EXPECT_EQUAL( string( "spring.sale" ), listOpen[0]._eventID );
@@ -162,7 +162,7 @@ SW_TEST_CASE( LiveOpsServiceTest, PutReloadRemove )
     rig._service.removeEvent( "spring.sale", makeGM(), "m", UnixMilliseconds{ kStartMs }, 6 );
     rig.poll();
     SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::Ok );
-    rig.tick( kStartMs );
+    rig.update( kStartMs );
     SW_EXPECT_TRUE( rig.active( "kr", kStartMs ).empty() );
 }
 
@@ -173,11 +173,11 @@ SW_TEST_CASE( LiveOpsServiceTest, StoreFailuresKeepPreviousState )
     rig._database.armFault( ServiceStoreFault::RejectCommit );
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ).hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Ok );
-    rig.tick( kStartMs );
+    rig.update( kStartMs );
     SW_EXPECT_EQUAL( size_t( 1 ), rig.active( "kr", kStartMs ).size() );
 
     rig._database.armFault( ServiceStoreFault::RejectRead );
-    rig.tick( kStartMs + LiveOpsBus::kReloadPeriodMs );
+    rig.update( kStartMs + LiveOpsBus::kReloadPeriodMs );
     SW_EXPECT_EQUAL( size_t( 1 ), rig.active( "kr", kStartMs ).size() );
     SW_EXPECT_EQUAL( 0, rig._service.getPendingCount() );
 }
@@ -186,20 +186,20 @@ SW_TEST_CASE( LiveOpsServiceTest, StoreFailuresKeepPreviousState )
 SW_TEST_CASE( LiveOpsServiceTest, StateChangeFiresOnOpenAndClose )
 {
     LiveOpsFixture rig;
-    rig.tick( kStartMs - 2 );
+    rig.update( kStartMs - 2 );
     SW_EXPECT_FALSE( rig._service.takeStateChange() ); // 빈 상태는 알리지 않는다
 
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Ok );
-    rig.tick( kStartMs - 1 );
+    rig.update( kStartMs - 1 );
     SW_EXPECT_FALSE( rig._service.takeStateChange() ); // 아직 창 밖이다
 
-    rig.tick( kStartMs );
+    rig.update( kStartMs );
     SW_EXPECT_TRUE( rig._service.takeStateChange() );
     SW_EXPECT_FALSE( rig._service.takeStateChange() );
-    rig.tick( kStartMs + LiveOpsBus::kReloadPeriodMs );
+    rig.update( kStartMs + LiveOpsBus::kReloadPeriodMs );
     SW_EXPECT_FALSE( rig._service.takeStateChange() );
 
-    rig.tick( kEndMs );
+    rig.update( kEndMs );
     SW_EXPECT_TRUE( rig._service.takeStateChange() );
 }
 
@@ -213,8 +213,8 @@ SW_TEST_CASE( LiveOpsServiceTest, StartPushOncePerWindow )
     SW_EXPECT_TRUE( rig.put( withPush ) == LiveOpsResult::Ok );
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent( "no.push" ) ) == LiveOpsResult::Ok );
 
-    rig.tick( kStartMs );
-    rig.tick( kStartMs + 1 );
+    rig.update( kStartMs );
+    rig.update( kStartMs + 1 );
     vector<LiveEventStart> listStart;
     rig._service.takeStartedEvents( listStart );
     SW_REQUIRE_EQUAL( size_t( 1 ), listStart.size() );
@@ -225,7 +225,7 @@ SW_TEST_CASE( LiveOpsServiceTest, StartPushOncePerWindow )
 
     LiveOpsFixture late;
     SW_EXPECT_TRUE( late.put( withPush ) == LiveOpsResult::Ok );
-    late.tick( kStartMs + LiveOpsPush::kStartGraceMs + 1 );
+    late.update( kStartMs + LiveOpsPush::kStartGraceMs + 1 );
     listStart.clear();
     late._service.takeStartedEvents( listStart );
     SW_EXPECT_TRUE( listStart.empty() );
@@ -241,7 +241,7 @@ SW_TEST_CASE( LiveOpsServiceTest, AudienceFilters )
     hidden._bClientVisible = SW_FALSE;
     SW_EXPECT_TRUE( rig.put( regional ) == LiveOpsResult::Ok );
     SW_EXPECT_TRUE( rig.put( hidden ) == LiveOpsResult::Ok );
-    rig.tick( kStartMs );
+    rig.update( kStartMs );
 
     SW_EXPECT_EQUAL( size_t( 1 ), rig.active( "kr", kStartMs ).size() );
     SW_EXPECT_TRUE( rig.active( "eu", kStartMs ).empty() );
@@ -259,7 +259,7 @@ SW_TEST_CASE( LiveOpsServiceTest, ParametersResolveRemoteConfig )
     definition._listParameter.push_back( LiveOpsTestUtil::makeParameter( "missing", "@no.such.key" ) );
     definition._listParameter.push_back( LiveOpsTestUtil::makeParameter( "plain", "literal" ) );
     SW_EXPECT_TRUE( rig.put( definition ) == LiveOpsResult::Ok );
-    rig.tick( kStartMs );
+    rig.update( kStartMs );
 
     string value;
     SW_REQUIRE_TRUE( rig._service.findParameter( "spring.sale", "percent", value ) );
@@ -277,17 +277,17 @@ SW_TEST_CASE( LiveOpsServiceTest, KillSwitchHidesEverything )
 {
     LiveOpsFixture rig;
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Ok );
-    rig.tick( kStartMs );
+    rig.update( kStartMs );
     (void)rig._service.takeStateChange();
 
     rig.setKillSwitch( false );
-    rig.tick( kStartMs + 1 );
+    rig.update( kStartMs + 1 );
     SW_EXPECT_TRUE( rig._service.takeStateChange() );
     SW_EXPECT_TRUE( rig.active( "kr", kStartMs + 1 ).empty() );
     SW_EXPECT_FALSE( rig._service.isEventActive( "spring.sale", kPlayer, "kr", 0, UnixMilliseconds{ kStartMs + 1 } ) );
 
     rig.setKillSwitch( true );
-    rig.tick( kStartMs + 2 );
+    rig.update( kStartMs + 2 );
     SW_EXPECT_TRUE( rig._service.takeStateChange() );
     SW_EXPECT_EQUAL( size_t( 1 ), rig.active( "kr", kStartMs + 2 ).size() );
 }
@@ -298,7 +298,7 @@ SW_TEST_CASE( LiveOpsServiceTest, JSONRoundTrip )
     SW_EXPECT_LOG( "JSON.ParseError" );
     LiveOpsFixture rig;
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Ok );
-    rig.tick( kStartMs );
+    rig.update( kStartMs );
     vector<string> listJSON;
     rig._service.collectEventJSON( listJSON );
     SW_REQUIRE_EQUAL( size_t( 1 ), listJSON.size() );

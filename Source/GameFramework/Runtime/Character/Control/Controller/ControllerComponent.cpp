@@ -27,7 +27,7 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<ControllerComponent>( this );
-        (void)ControlSystem::findOrCreate( manager ); // 시스템을 있게만 한다 — 관리자가 쥔다
+        (void)ControlSystem::getOrCreate( manager ); // 시스템을 있게만 한다 — 관리자가 쥔다
     }
 
     void ControllerComponent::onUnregister( GameObjectManager& manager )

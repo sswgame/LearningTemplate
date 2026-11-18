@@ -193,7 +193,7 @@ namespace sw
             return desc;
         }
 
-        /** @brief 확장 프로그램 PSO 의 저장소 키입니다 — 셰이더 · 렌더 상태 · 타깃 포맷이 같으면 한 PSO 를 나눈다(`findOrCreateExtensionProgramPSO` · `warmExtensionPrograms`). 상태를 칸마다 글자로 적지 않아 칸이 늘어도 따라온다. */
+        /** @brief 확장 프로그램 PSO 의 저장소 키입니다 — 셰이더 · 렌더 상태 · 타깃 포맷이 같으면 한 PSO 를 나눈다(`getOrCreateExtensionProgramPSO` · `warmExtensionPrograms`). 상태를 칸마다 글자로 적지 않아 칸이 늘어도 따라온다. */
         hashed_string makeExtensionProgramKey( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
         {
             const RHIPipelineStateDesc desc = makeExtensionProgramDesc( program, colorFormat, bDepthTest );
@@ -205,7 +205,7 @@ namespace sw
             return hashed_string{ string_view{ key } };
         }
 
-        /** @brief 2D 빛 쿠키 아틀라스 칸에 옮겨 그리는 PSO 의 desc 입니다 — 전체 화면 블릿 셰이더를 @p atlasFormat 으로(`findOrCreateCookieAtlasPSO` · 셋업의 셰이더 데우기). */
+        /** @brief 2D 빛 쿠키 아틀라스 칸에 옮겨 그리는 PSO 의 desc 입니다 — 전체 화면 블릿 셰이더를 @p atlasFormat 으로(`getOrCreateCookieAtlasPSO` · 셋업의 셰이더 데우기). */
         RHIPipelineStateDesc makeCookieAtlasPSODesc( const string& shaderPath, RHIFormat atlasFormat )
         {
             RHIPipelineStateDesc desc{};
@@ -220,7 +220,7 @@ namespace sw
             return desc;
         }
 
-        /** @brief UV 공간 층 굽기 PSO 의 desc 입니다 — 층 굽기 셰이더, 타깃 둘(알베도 · 표면 덮어쓰기)을 같은 포맷으로(`findOrCreateLayerBakePSO` · 셋업의 셰이더 데우기). */
+        /** @brief UV 공간 층 굽기 PSO 의 desc 입니다 — 층 굽기 셰이더, 타깃 둘(알베도 · 표면 덮어쓰기)을 같은 포맷으로(`getOrCreateLayerBakePSO` · 셋업의 셰이더 데우기). */
         RHIPipelineStateDesc makeLayerBakePSODesc( const string& shaderPath, RHIFormat targetFormat )
         {
             RHIPipelineStateDesc desc{};
@@ -712,7 +712,7 @@ namespace sw
         }
     }
 
-    RHIPipelineStateHandle FramePSOManager::findOrCreateCookieAtlasPSO( RHIFormat atlasFormat )
+    RHIPipelineStateHandle FramePSOManager::getOrCreateCookieAtlasPSO( RHIFormat atlasFormat )
     {
         if ( _pDevice == nullptr )
             return 0;
@@ -735,7 +735,7 @@ namespace sw
         return _pCache->findMaterialPSO( psoKey );
     }
 
-    RHIPipelineStateHandle FramePSOManager::findOrCreateLayerBakePSO( RHIFormat targetFormat )
+    RHIPipelineStateHandle FramePSOManager::getOrCreateLayerBakePSO( RHIFormat targetFormat )
     {
         if ( _pDevice == nullptr )
             return 0;
@@ -777,7 +777,7 @@ namespace sw
         warmShaders( listShader );
     }
 
-    RHIPipelineStateHandle FramePSOManager::findOrCreateExtensionProgramPSO( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
+    RHIPipelineStateHandle FramePSOManager::getOrCreateExtensionProgramPSO( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
     {
         // 모듈 확장 패스의 프로그램(ExtensionRenderPass M3)이다. 셰이더 · 고정 상태 · 타깃 포맷이 같으면 한 PSO 를 나눈다. 기록 중에는 만들 수 없으므로 셋업(`FrameExtensionHost::collectFrame`)만 부른다.
         // 실패(0)도 기록한다 — 매 프레임 같은 컴파일을 되풀이하지 않고, 부르는 쪽이 0 을 보고 오류를 남기고 그리지 않는다(다른 셰이더로 대신 그리지 않는다).

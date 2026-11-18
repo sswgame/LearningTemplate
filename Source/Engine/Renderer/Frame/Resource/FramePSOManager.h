@@ -114,7 +114,7 @@ namespace sw
             bool                        _bDepthTest{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /**
-         * @brief 아직 PSO 가 없는 확장 프로그램들의 셰이더를 워커가 한 번에 데웁니다(셋업 — PSO 는 뒤의 `findOrCreateExtensionProgramPSO` 가 차례로 만든다).
+         * @brief 아직 PSO 가 없는 확장 프로그램들의 셰이더를 워커가 한 번에 데웁니다(셋업 — PSO 는 뒤의 `getOrCreateExtensionProgramPSO` 가 차례로 만든다).
          * @details `createPassPSOS` 와 같은 "셰이더 병렬 데우기 → PSO 직렬 생성" 이다 — 처음 보는 프로그램이 여럿인 프레임에 렌더 스레드가 하나씩 컴파일하지 않게.
          */
         void warmExtensionPrograms( const vector<ExtensionProgramRequest>& listRequest ) const;
@@ -122,11 +122,11 @@ namespace sw
          * @brief 모듈 확장 패스의 프로그램(`ExtensionProgramDesc`) PSO 를 셋업에서 찾거나 만듭니다(키 = 셰이더 · 고정 상태 · 타깃 포맷). 기록 중에는 부르지 않습니다.
          * @return 0 이면 만들지 못한 것입니다(오류를 남겼다 — 부르는 쪽은 그 패스를 그리지 않는다).
          */
-        RHIPipelineStateHandle findOrCreateExtensionProgramPSO( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest );
+        RHIPipelineStateHandle getOrCreateExtensionProgramPSO( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest );
         /** @brief 2D 빛 쿠키 아틀라스 칸에 옮겨 그리는 PSO(전체 화면 블릿 셰이더, 아틀라스 포맷)를 찾거나 만듭니다. 기록 전(프레임 프리패스)에만 부릅니다. 못 만들면 0 입니다. */
-        RHIPipelineStateHandle findOrCreateCookieAtlasPSO( RHIFormat atlasFormat );
+        RHIPipelineStateHandle getOrCreateCookieAtlasPSO( RHIFormat atlasFormat );
         /** @brief UV 공간 층 굽기 PSO(층 굽기 셰이더, 타깃 둘 — @p targetFormat)를 찾거나 만듭니다. 기록 전(프레임 프리패스)에만 부릅니다. 못 만들면 0 입니다. */
-        RHIPipelineStateHandle findOrCreateLayerBakePSO( RHIFormat targetFormat );
+        RHIPipelineStateHandle getOrCreateLayerBakePSO( RHIFormat targetFormat );
 
         /**
          * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 모두 만들어 둡니다.
@@ -205,7 +205,7 @@ namespace sw
         void appendShaderWarm( const RHIPipelineStateDesc& desc, vector<ShaderCompileDesc>& inoutListShader ) const;
         /**
          * @brief @p listShader 를 워커가 나눠 읽거나 컴파일해 `ShaderCache` 에 올립니다(PSO 는 만들지 않는다 — 뒤의 생성이 캐시에서 받는다).
-         * @details 셰이더 바이트코드는 디바이스를 쓰지 않아 백엔드와 상관없이 병렬로 된다. PSO 생성은 이 스레드가 차례로 한다(`createPassPSOS` · `findOrCreateExtensionProgramPSO`).
+         * @details 셰이더 바이트코드는 디바이스를 쓰지 않아 백엔드와 상관없이 병렬로 된다. PSO 생성은 이 스레드가 차례로 한다(`createPassPSOS` · `getOrCreateExtensionProgramPSO`).
          */
         void warmShaders( const vector<ShaderCompileDesc>& listShader ) const;
         /**

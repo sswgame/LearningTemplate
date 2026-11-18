@@ -183,7 +183,7 @@ namespace sw
             const ExtensionPassParams& params = pass._params;
             if ( params._program._shaderPath.empty() == false )
             {
-                pass._pso = _psoManager.findOrCreateExtensionProgramPSO( params._program, accepted._colorFormat, params._depthAttachment.empty() == false );
+                pass._pso = _psoManager.getOrCreateExtensionProgramPSO( params._program, accepted._colorFormat, params._depthAttachment.empty() == false );
                 if ( pass._pso == 0 )
                 {
                     const char* const pReason = "pass program PSO could not be created";

@@ -77,7 +77,7 @@ namespace sw
          * @brief 에셋을 나눠 줍니다. 처음이면 읽고 파싱합니다. 실패하면 오류입니다.
          * @param tagOverride 엔진 태그에서 바꿔 끼울 축입니다(빈 집합이면 엔진 판 — 게임 UI 가 쓰는 것). 비지 않으면 변형으로 따로 듭니다.
          */
-        expected<shared_ptr<const void>> findOrLoadAsset( string_view path, const ResourceTagSet& tagOverride );
+        expected<shared_ptr<const void>> acquireAsset( string_view path, const ResourceTagSet& tagOverride );
         /** @brief 파일 대신 읽을 텍스트를 경로에 등록합니다. 이미 읽어 둔 그 경로의 에셋은 버립니다. */
         void registerMemoryText( string_view path, string_view text );
         /** @brief 텍스트를 읽어 파싱한 횟수입니다. */

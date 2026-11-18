@@ -473,7 +473,7 @@ namespace sw
                 {
                     if ( wParam != Win32WindowInternal::kModalLoopTimerID )
                         break;
-                    pThis->tickModalLoop();
+                    pThis->updateModalLoop();
                     return 0;
                 }
 

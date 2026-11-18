@@ -65,7 +65,7 @@ namespace
             }
         }
 
-        void tickBoth( int64 nowMs )
+        void updateBoth( int64 nowMs )
         {
             _first.update( UnixMilliseconds{ nowMs } );
             _second.update( UnixMilliseconds{ nowMs } );
@@ -214,7 +214,7 @@ SW_TEST_CASE( ServiceSchedulerTest, DefinitionRules )
 SW_TEST_CASE( ServiceSchedulerTest, ExactlyOneServerRunsAnOccurrence )
 {
     SchedulerFixture rig;
-    rig.tickBoth( kNowMs );
+    rig.updateBoth( kNowMs );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
     SW_EXPECT_TRUE( rig._secondSink._listRun.empty() );
     const ScheduledRun run = rig._firstSink._listRun[0];
@@ -225,11 +225,11 @@ SW_TEST_CASE( ServiceSchedulerTest, ExactlyOneServerRunsAnOccurrence )
     SW_EXPECT_EQUAL( 0, rig._first.getPendingJobCount() );
 
     const int64 afterLease = kNowMs + ScheduleDef{}._leaseMs + 1;
-    rig.tickBoth( afterLease );
+    rig.updateBoth( afterLease );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
     SW_EXPECT_TRUE( rig._secondSink._listRun.empty() );
 
-    rig.tickBoth( kNowMs + kDayMs );
+    rig.updateBoth( kNowMs + kDayMs );
     SW_EXPECT_EQUAL( size_t( 2 ), rig._firstSink._listRun.size() + rig._secondSink._listRun.size() );
 }
 
@@ -238,7 +238,7 @@ SW_TEST_CASE( ServiceSchedulerTest, ExpiredLeaseIsTakenOver )
 {
     SW_EXPECT_LOG( "ServiceScheduler.CouldNotRecordEnd" );
     SchedulerFixture rig;
-    rig.tickBoth( kNowMs );
+    rig.updateBoth( kNowMs );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
 
     rig._second.update( UnixMilliseconds{ kNowMs + 1000 } ); // 아직 임대 안이다
@@ -307,7 +307,7 @@ SW_TEST_CASE( ServiceSchedulerTest, RunRecordsExpireAndLongWindowsAreRefused )
 {
     SW_EXPECT_LOG( "ServiceScheduler.WindowOutlivesRunRecord" );
     SchedulerFixture rig;
-    rig.tickBoth( kNowMs );
+    rig.updateBoth( kNowMs );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() + rig._secondSink._listRun.size() );
     ServiceScheduler&  winner = rig._firstSink._listRun.empty() ? rig._second : rig._first;
     const ScheduledRun run    = rig._firstSink._listRun.empty() ? rig._secondSink._listRun[0] : rig._firstSink._listRun[0];

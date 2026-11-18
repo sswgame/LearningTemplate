@@ -287,7 +287,7 @@ namespace sw
                             widget = failInstantiate( document, node, ( bRecursive ? "fragment includes itself: " : "fragments nest too deep: " ) + chain );
                             return widget;
                         }
-                        const expected<shared_ptr<const UIDocumentAsset>> loaded = _pCache->findOrLoad( node._fragment, *_pTagOverride );
+                        const expected<shared_ptr<const UIDocumentAsset>> loaded = _pCache->acquire( node._fragment, *_pTagOverride );
                         if ( loaded.has_value() == false )
                         {
                             widget = failInstantiate( document, node, "fragment '" + node._fragment + "' is not loaded: " + string( loaded.error().message().data(), loaded.error().message().size() ) + ": " + string( loaded.error().detail().data(), loaded.error().detail().size() ) );

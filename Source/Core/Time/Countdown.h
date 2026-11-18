@@ -19,13 +19,13 @@ namespace sw
      *          끝난 스텝에 다시 걸지 않으면(쉬는 중) 늦음은 사라진다. 쉰 시간을 다음 발로 이어 주지 않는다.
      *          상태 바이트는 `_remaining` 을 그대로 적는다. 음수 늦음까지 담아야 되감기와 재시뮬레이션이 같은 발생 시각을 낸다.
      * @code
-     *     _fireCooldown.tick( deltaTime );
+     *     _fireCooldown.update( deltaTime );
      *     if ( _fireCooldown.isActive() == false && bTriggerHeld )
      *     {
      *         fire();
      *         _fireCooldown.restart( _fireInterval ); // 늦음을 다음 간격으로 넘긴다
      *     }
-     *     if ( _stun.tick( deltaTime ) )
+     *     if ( _stun.update( deltaTime ) )
      *         pushEvent( StunEnded );                  // 끝난 스텝에 한 번
      * @endcode
      */

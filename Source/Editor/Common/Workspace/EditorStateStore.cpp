@@ -12,7 +12,7 @@ namespace sw::editor
 
     EditorStateStore::~EditorStateStore() = default;
 
-    void* EditorStateStore::findOrCreate( uint64 typeHash, size_t size, CreateFunc pfnCreate )
+    void* EditorStateStore::getOrCreate( uint64 typeHash, size_t size, CreateFunc pfnCreate )
     {
         ScopedLock<mutex> lock{ _mutex };
         for ( Entry& entry : _listEntry )

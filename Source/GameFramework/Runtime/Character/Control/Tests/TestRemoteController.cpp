@@ -28,7 +28,7 @@ namespace
             _pRemote->possess( *_pPawn );
         }
 
-        void tick() { _manager.update( 1.0f / 60.0f ); }
+        void update() { _manager.update( 1.0f / 60.0f ); }
 
         static ControlIntent makeIntent( float32 forward, int32 buttonIndex, bool bTriggered )
         {
@@ -46,12 +46,12 @@ SW_TEST_CASE( RemoteControllerTest, HoldsTheLastIntentAndTriggersOnce )
 {
     RemoteControllerTestRig rig;
     rig._pRemote->receiveIntent( 0, RemoteControllerTestRig::makeIntent( 1.0f, 2, true ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig._pPawn->isButtonDown( 2 ) );
     SW_EXPECT_TRUE( rig._pPawn->wasButtonTriggered( 2 ) );
     SW_EXPECT_NEAR( 0.5f, rig._pPawn->getIntent()._controlYaw, 1e-3f );
 
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig._pPawn->isButtonDown( 2 ) );
     SW_EXPECT_FALSE( rig._pPawn->wasButtonTriggered( 2 ) );
     SW_EXPECT_NEAR( 1.0f, rig._pPawn->getIntent()._move._y, 1e-3f );
@@ -67,7 +67,7 @@ SW_TEST_CASE( RemoteControllerTest, MergesTheTicksOfOneFrame )
     first.setTriggerLook( 0.25f, 0.125f );
     rig._pRemote->receiveIntent( 0, first );
     rig._pRemote->receiveIntent( 1, RemoteControllerTestRig::makeIntent( -1.0f, 3, false ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig._pPawn->wasButtonTriggered( 1 ) );
     SW_EXPECT_FALSE( rig._pPawn->isButtonDown( 1 ) ); // 눌림은 마지막 틱의 값이다
     SW_EXPECT_TRUE( rig._pPawn->isButtonDown( 3 ) );
@@ -82,14 +82,14 @@ SW_TEST_CASE( RemoteControllerTest, CountsGapsAndDropsOldTicks )
 {
     RemoteControllerTestRig rig;
     rig._pRemote->receiveIntent( 0, RemoteControllerTestRig::makeIntent( 1.0f, 0, false ) );
-    rig.tick();
+    rig.update();
     rig._pRemote->receiveIntent( 3, RemoteControllerTestRig::makeIntent( 0.5f, 0, false ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_EQUAL( 2u, rig._pRemote->getMissingTickCount() );
     SW_EXPECT_NEAR( 0.5f, rig._pPawn->getIntent()._move._y, 1e-2f );
 
     rig._pRemote->receiveIntent( 2, RemoteControllerTestRig::makeIntent( -1.0f, 0, true ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_NEAR( 0.5f, rig._pPawn->getIntent()._move._y, 1e-2f );
     SW_EXPECT_FALSE( rig._pPawn->wasButtonTriggered( 0 ) );
 }
@@ -99,10 +99,10 @@ SW_TEST_CASE( RemoteControllerTest, ClearReceivedStopsTheRepeat )
 {
     RemoteControllerTestRig rig;
     rig._pRemote->receiveIntent( 0, RemoteControllerTestRig::makeIntent( 1.0f, 0, false ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig._pPawn->isButtonDown( 0 ) );
     rig._pRemote->clearReceived();
-    rig.tick();
+    rig.update();
     SW_EXPECT_FALSE( rig._pPawn->isButtonDown( 0 ) );
     SW_EXPECT_NEAR( 0.0f, rig._pPawn->getIntent()._move._y, 1e-5f );
 }

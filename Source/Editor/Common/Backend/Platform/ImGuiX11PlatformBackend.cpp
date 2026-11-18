@@ -399,7 +399,7 @@ namespace sw::editor
         }
 
         /** @brief ImGui 커서의 X 커서입니다(처음 쓸 때 만든다). 주 창 몫만 다루는 `IWindow::setCursorShape` 대신 쓰는 까닭은 떼어 낸 창에도 걸어야 해서다 - X 커서는 창마다 걸린다(GLFW 백엔드도 뷰포트마다 건다). */
-        Cursor findOrCreateCursor( ImGuiMouseCursor cursor )
+        Cursor getOrCreateCursor( ImGuiMouseCursor cursor )
         {
             const int32 index = cursor >= 0 && cursor < ImGuiMouseCursor_COUNT ? cursor : ImGuiMouseCursor_Arrow;
             if ( _arrCursor[index] == 0 )
@@ -414,7 +414,7 @@ namespace sw::editor
             if ( ( io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange ) != 0 || cursor == _lastCursor )
                 return;
             _lastCursor                       = cursor;
-            const Cursor           xCursor    = findOrCreateCursor( cursor );
+            const Cursor           xCursor    = getOrCreateCursor( cursor );
             const ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
             for ( int32 viewportIndex = 0; viewportIndex < platformIO.Viewports.Size; ++viewportIndex )
             {
@@ -600,7 +600,7 @@ namespace sw::editor
                 WhitePixel( _pDisplay, DefaultScreen( _pDisplay ) ) );
 
             applyWindowHints( *pViewport, *pData );
-            XDefineCursor( _pDisplay, pData->_windowHandle, findOrCreateCursor( _lastCursor ) ); // 지금 커서가 바뀔 때까지 기다리지 않는다
+            XDefineCursor( _pDisplay, pData->_windowHandle, getOrCreateCursor( _lastCursor ) ); // 지금 커서가 바뀔 때까지 기다리지 않는다
             XSelectInput( _pDisplay, pData->_windowHandle,
                           ExposureMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask | KeyPressMask | KeyReleaseMask );
             if ( _wmDelete == 0 )

@@ -36,7 +36,7 @@ namespace sw
     SW_DECLARE_DELEGATE( void, WindowLifecycleDelegate, WindowLifecycleEvent event );
     SW_DECLARE_DELEGATE( bool, WindowMessageHandlerDelegate, const NativeWindowEvent& event );
     SW_DECLARE_DELEGATE( void, WindowResizeDelegate, uint32 width, uint32 height );
-    SW_DECLARE_DELEGATE( void, WindowModalLoopTickDelegate, void );
+    SW_DECLARE_DELEGATE( void, WindowModalLoopUpdateDelegate, void );
     SW_DECLARE_DELEGATE( bool, WindowCloseQueryDelegate, void );
     SW_DECLARE_DELEGATE( bool, WindowAccessibilityQueryDelegate, uintptr_t wParam, intptr_t lParam, intptr_t& outResult );
 
@@ -430,11 +430,11 @@ namespace sw
         /**
          * @brief 플랫폼 모달 루프(Win32 창 끌기 · 크기 조절) 동안 메인 루프 대신 프레임을 돌릴 콜백을 겁니다.
          * @details 그 루프 안에서는 메인 루프의 `processMessages` 가 돌아오지 않아 게임 · 리슨 호스트 · 오디오가 멈췄다(감사 P-2). Godot 은 `WM_ENTERSIZEMOVE` 에
-         *          타이머를 걸어 `WM_TIMER` 에서 `Main::iteration()` 을 부른다 — 같은 모양이다. 재진입은 `tickModalLoop` 가 막는다.
+         *          타이머를 걸어 `WM_TIMER` 에서 `Main::iteration()` 을 부른다 — 같은 모양이다. 재진입은 `updateModalLoop` 가 막는다.
          */
-        [[nodiscard]] Subscription bindModalLoopTickCallback( WindowModalLoopTickDelegate callback ) { return _onModalLoopTick.bind( std::move( callback ) ); }
+        [[nodiscard]] Subscription bindModalLoopUpdateCallback( WindowModalLoopUpdateDelegate callback ) { return _onModalLoopUpdate.bind( std::move( callback ) ); }
         /** @brief 모달 루프 틱 콜백이 도는 중인지입니다. 그 안에서는 창을 다시 만들면 안 된다(그 창의 모달 루프가 아직 돈다). */
-        [[nodiscard]] bool isInModalLoopTick() const { return _bInModalLoopTick == SW_TRUE; }
+        [[nodiscard]] bool isInModalLoopUpdate() const { return _bInModalLoopUpdate == SW_TRUE; }
         /** @brief 렌더러의 수명 이벤트 처리기를 겁니다(`notifyLifecycleEvent`). 표면을 놓고 다시 짓는 쪽이라 구독자(`addLifecycleListener`) 뒤에 마지막으로 불린다. */
         [[nodiscard]] Subscription bindLifecycleCallback( WindowLifecycleDelegate callback ) { return _onLifecycle.bind( std::move( callback ) ); }
         /**
@@ -516,7 +516,7 @@ namespace sw
          */
         void notifyResized( uint32 width, uint32 height );
         /** @brief 플랫폼 모달 루프 안의 타이머가 부릅니다. 모달 루프 틱 콜백(프레임 하나 — 대기 크기 적용도 그 안이다)을 부른다. 콜백 안에서 다시 오면(중첩 메시지 펌프) 건너뛴다. */
-        void tickModalLoop();
+        void updateModalLoop();
         /** @brief 플랫폼 메시지 처리가 최소화 이벤트를 받으면 부릅니다(`isMinimized`). */
         void setMinimizedState( bool bMinimized ) { _bMinimized = bMinimized ? SW_TRUE : SW_FALSE; }
         /** @brief 플랫폼 메시지 처리가 포커스 이벤트를 받으면 부릅니다(`hasFocus`). */
@@ -566,10 +566,10 @@ namespace sw
 
     private:
         // 크기 콜백 칸은 기반만 만진다 — 플랫폼이 메시지 처리 안에서 바로 부르는 길(감사 P-2)을 형식으로 막는다. 플랫폼은 `notifyResized` 만 부른다.
-        DelegateSlot<WindowResizeDelegate>        _onResize;
-        DelegateSlot<WindowModalLoopTickDelegate> _onModalLoopTick;
-        uint8                                     _bResizePending   : 1; /**< 적용을 기다리는 크기 변경(`applyPendingResize`). */
-        uint8                                     _bInModalLoopTick : 1; /**< 모달 루프 틱 콜백이 도는 중(`tickModalLoop` 의 재진입 가드). */
-        [[maybe_unused]] uint8                    _reservedResize   : 6;
+        DelegateSlot<WindowResizeDelegate>          _onResize;
+        DelegateSlot<WindowModalLoopUpdateDelegate> _onModalLoopUpdate;
+        uint8                                       _bResizePending     : 1; /**< 적용을 기다리는 크기 변경(`applyPendingResize`). */
+        uint8                                       _bInModalLoopUpdate : 1; /**< 모달 루프 틱 콜백이 도는 중(`updateModalLoop` 의 재진입 가드). */
+        [[maybe_unused]] uint8                      _reservedResize     : 6;
     };
 } // namespace sw

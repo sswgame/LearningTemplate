@@ -65,9 +65,9 @@ namespace sw
     {
     }
 
-    ControlSystem& ControlSystem::findOrCreate( GameObjectManager& manager )
+    ControlSystem& ControlSystem::getOrCreate( GameObjectManager& manager )
     {
-        return FrameSystemUtil::findOrCreate<ControlSystem>( manager );
+        return FrameSystemUtil::getOrCreate<ControlSystem>( manager );
     }
 
     ControlSystem* ControlSystem::find( const GameObjectManager& manager )
@@ -82,7 +82,7 @@ namespace sw
             FrameSystemUtil::remove<ControlSystem>( manager );
     }
 
-    PlayerControllerComponent* ControlSystem::findOrCreatePlayerController( GameObjectManager& manager, uint32 playerIndex )
+    PlayerControllerComponent* ControlSystem::getOrCreatePlayerController( GameObjectManager& manager, uint32 playerIndex )
     {
         for ( PlayerControllerComponent* pPlayer : manager.getComponentRegistry().getAll<PlayerControllerComponent>() )
         {
@@ -108,7 +108,7 @@ namespace sw
     {
         if ( pawn.isPossessed() && isPawnControlledBy( manager, pawn, autoPlayObject ) == false )
             return false;
-        PlayerControllerComponent* pPlayer = findOrCreatePlayerController( manager, 0 );
+        PlayerControllerComponent* pPlayer = getOrCreatePlayerController( manager, 0 );
         if ( pPlayer != nullptr && pPlayer->getPawn() != pawn.getHandle() )
             pPlayer->possess( pawn );
         return true;
@@ -252,7 +252,7 @@ namespace sw
                 continue;
             ControllerComponent* pController = nullptr;
             if ( pPawn->getAutoPossess() == PawnAutoPossess::Player0 )
-                pController = findOrCreatePlayerController( manager, 0 );
+                pController = getOrCreatePlayerController( manager, 0 );
             else if ( pPawn->getAutoPossess() == PawnAutoPossess::AI )
                 pController = ControlSystemInternal::createAIController( manager, *pPawn );
             if ( pController == nullptr )

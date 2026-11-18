@@ -112,25 +112,25 @@ SW_TEST_CASE( WindowLifecycleTest, ResizeIsAppliedOncePerFrameWithTheLastSize )
 
 /**
  * @brief [WindowLifecycleTest] 모달 루프 타이머는 틱 콜백을 부르고, 콜백 안에서 다시 온 타이머(중첩 메시지 펌프)는 건너뛴다 — 끌기 동안 프레임이 멈추던 결함(감사 P-2)의
- *        틱 자리와 그 재진입 가드. 콜백이 도는 동안만 `isInModalLoopTick` 이다(그 안에서는 창을 다시 만들지 않는다).
+ *        틱 자리와 그 재진입 가드. 콜백이 도는 동안만 `isInModalLoopUpdate` 이다(그 안에서는 창을 다시 만들지 않는다).
  */
-SW_TEST_CASE( WindowLifecycleTest, ModalLoopTickDoesNotReenter )
+SW_TEST_CASE( WindowLifecycleTest, ModalLoopUpdateDoesNotReenter )
 {
     FakeWindow         window;
     uint32             tickCount     = 0;
     bool               bInTickInside = false;
-    const Subscription tick          = window.bindModalLoopTickCallback( SW_DELEGATE_LAMBDA( WindowModalLoopTickDelegate, [&window, &tickCount, &bInTickInside]()
+    const Subscription tick          = window.bindModalLoopUpdateCallback( SW_DELEGATE_LAMBDA( WindowModalLoopUpdateDelegate, [&window, &tickCount, &bInTickInside]()
              {
         ++tickCount;
-        bInTickInside = window.isInModalLoopTick();
+        bInTickInside = window.isInModalLoopUpdate();
         window.simulateModalLoopTimer(); // 프레임 안의 메시지 펌프가 타이머를 다시 꺼낸 경우
     } ) );
 
-    SW_EXPECT_FALSE( window.isInModalLoopTick() );
+    SW_EXPECT_FALSE( window.isInModalLoopUpdate() );
     window.simulateModalLoopTimer();
     SW_EXPECT_EQUAL( 1u, tickCount );
     SW_EXPECT_TRUE( bInTickInside );
-    SW_EXPECT_FALSE( window.isInModalLoopTick() );
+    SW_EXPECT_FALSE( window.isInModalLoopUpdate() );
     window.simulateModalLoopTimer();
     SW_EXPECT_EQUAL( 2u, tickCount );
 }

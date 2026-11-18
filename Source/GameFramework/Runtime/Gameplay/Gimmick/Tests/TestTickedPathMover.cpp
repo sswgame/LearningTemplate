@@ -28,7 +28,7 @@ namespace
 
         TickedMoverOrderRig()
         {
-            (void)ControlSystem::findOrCreate( _manager );
+            (void)ControlSystem::getOrCreate( _manager );
             const vector<float3> listWaypoint{
                 float3{ 1000.0f, 0.0f, 0.0f }
             };
@@ -77,7 +77,7 @@ SW_TEST_CASE( TickedPathMoverTest, ReadsServerTickPublishedThisFrame )
 SW_TEST_CASE( TickedPathMoverTest, WithoutSourceFollowsControlTick )
 {
     GameObjectManager manager;
-    ControlSystem&    control = ControlSystem::findOrCreate( manager );
+    ControlSystem&    control = ControlSystem::getOrCreate( manager );
     GameObject*       pMover  = manager.createGameObject( hashed_string( "Mover" ) );
     SceneComponent*   pRoot   = pMover->addComponent<SceneComponent>();
     pMover->addComponent<TickedPathMoverComponent>()->setPath( vector<float3>{

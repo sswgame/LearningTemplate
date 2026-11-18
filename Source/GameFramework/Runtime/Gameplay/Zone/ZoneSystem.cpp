@@ -23,9 +23,9 @@ namespace sw
         return FrameSystemUtil::find<ZoneSystem>( manager );
     }
 
-    ZoneSystem& ZoneSystem::findOrCreate( GameObjectManager& manager )
+    ZoneSystem& ZoneSystem::getOrCreate( GameObjectManager& manager )
     {
-        return FrameSystemUtil::findOrCreate<ZoneSystem>( manager );
+        return FrameSystemUtil::getOrCreate<ZoneSystem>( manager );
     }
 
     void ZoneSystem::releaseIfUnused( GameObjectManager& manager )

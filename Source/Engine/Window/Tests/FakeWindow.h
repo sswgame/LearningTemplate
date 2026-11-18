@@ -62,7 +62,7 @@ namespace sw
         /** @brief 플랫폼 메시지 처리가 새 크기를 받은 것처럼 합니다(Win32 `WM_SIZE` · X11 `ConfigureNotify`). */
         void simulateResize( uint32 width, uint32 height ) { notifyResized( width, height ); }
         /** @brief 플랫폼 모달 루프의 타이머가 온 것처럼 합니다(Win32 `WM_TIMER`). */
-        void simulateModalLoopTimer() { tickModalLoop(); }
+        void simulateModalLoopTimer() { updateModalLoop(); }
 
     protected:
         void* getNativeHandle() const override { return nullptr; }

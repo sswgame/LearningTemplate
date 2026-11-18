@@ -119,8 +119,8 @@ namespace sw
          *          `kDefaultFOVY`, `kDefaultNearZ`, `kDefaultFarZ` 를 리터럴로 다시 적지 않게 하려는 것이다).
          * @return 매니저가 없거나 만들 수 없으면(틱 중에는 `addComponent` 가 지연된다) nullptr 입니다.
          */
-        static CameraComponent* findOrCreateNamed( GameObjectManager* pObjectManager, hashed_string objectName, CameraRole role,
-                                                   const float3& position, const float3& lookTarget );
+        static CameraComponent* getOrCreateNamed( GameObjectManager* pObjectManager, hashed_string objectName, CameraRole role,
+                                                  const float3& position, const float3& lookTarget );
         /** @brief 기본 소멸자입니다. */
         virtual ~CameraComponent() override = default;
 
