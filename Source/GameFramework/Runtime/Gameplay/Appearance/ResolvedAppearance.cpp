@@ -1144,17 +1144,8 @@ namespace sw
             builder.addName( morph._name );
             builder.addFloat( morph._weight );
         }
-        for ( const ResolvedMaterialValue& value : resolved._listMaterialValue )
-        {
-            builder.addName( value._owner );
-            builder.addName( value._part );
-            builder.addName( value._section );
-            builder.addName( value._name );
-            builder.addFloat4( value._value );
-            builder.addInt( value._channel );
-            builder.addInt( static_cast<int32>( value._target ) );
-            builder.addInt( static_cast<int32>( value._shape ) );
-        }
+        // 머티리얼 값(염색 · 스칼라)은 넣지 않는다 — 메시가 아니라 부품마다의 머티리얼 인스턴스에 걸린다(`CharacterAppearanceComponent::applyMaterialValues`). 넣었더니 색마다
+        // 같은 메시를 다시 굽고 합쳤다(구운 메시 캐시 키가 이 해시다 — 언리얼 Mutable 도 파라미터만 바뀌면 메시를 다시 만들지 않는다). 해석 해시(`computeHash`)에는 든다.
         for ( const ResolvedBoneProportion& proportion : resolved._listBoneProportion )
         {
             builder.addName( proportion._owner );
@@ -1172,6 +1163,17 @@ namespace sw
     {
         AppearanceResolverInternal::HashBuilder builder;
         builder.addUint64( computeMeshHash( resolved ) );
+        for ( const ResolvedMaterialValue& value : resolved._listMaterialValue )
+        {
+            builder.addName( value._owner );
+            builder.addName( value._part );
+            builder.addName( value._section );
+            builder.addName( value._name );
+            builder.addFloat4( value._value );
+            builder.addInt( value._channel );
+            builder.addInt( static_cast<int32>( value._target ) );
+            builder.addInt( static_cast<int32>( value._shape ) );
+        }
         builder.addName( resolved._presetID );
         builder.addName( resolved._bodyProfile );
         for ( const ResolvedSkinLayer& layer : resolved._listSkinLayer ) // 굽기 텍스처가 바뀌는 값(메시 해시에는 넣지 않는다 — 병합 메시는 그대로다)
