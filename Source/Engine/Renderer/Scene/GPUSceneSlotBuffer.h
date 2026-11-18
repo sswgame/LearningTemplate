@@ -5,8 +5,8 @@
  *          (언리얼 GPUScene 의 영속 프리미티브 · 인스턴스 칸, 유니티 GPU Resident Drawer 의 인스턴스 칸). 그리는 순서(배치 순)는 따로 든 번호 목록
  *          (차례 → 칸, `GPUSceneSnapshot::_pListInstanceSlot`)이 정한다. 그래서 배치를 다시 나눠 그리는 순서가 바뀌어도 칸의 내용은 그대로라 올리지 않고,
  *          내용이 바뀐 칸만 흩어 올린다(scatter).
- *          스냅샷은 아직 그리는 순서의 배열을 싣는다(빌더가 배치 순으로 채운다). 이 사본이 그 배열을 칸으로 흩어 두고 칸마다 비교해 바뀐 칸만 고른다 —
- *          2 단계(증분 배치 표)에서 빌더가 칸 순 배열을 바로 내면 이 흩기는 지운다.
+ *          스냅샷이 칸 순 배열과 바뀐 칸 구간을 싣는다(빌더가 칸 순으로 채운다). 이 사본은 그 구간만 비교해 받아 두고, 올릴 때까지 바뀐 칸을 쌓는다 —
+ *          업로드를 건너뛴 프레임(장치 없음 · 빈 장면)의 변경도 다음 업로드에 실린다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -31,14 +31,10 @@ namespace sw
         static GPUInstance makeHole();
 
         /**
-         * @brief 그리는 순서의 배열 @p listOrdered 를 칸으로 흩어 사본을 맞추고 내용이 바뀐 칸을 기록합니다.
-         * @param pListOrderToSlot 차례 → 칸입니다. 없으면 차례가 곧 칸이다.
-         * @param slotCount 칸 수입니다(구멍 포함). 줄면 꼬리를 버리고, 늘면 새 칸은 구멍으로 두고 바뀐 칸으로 센다(GPU 쪽 내용을 모른다).
-         * @param bOrderChanged 차례 목록이 지난번과 다르면 true — 모든 차례를 보고, 차례 목록에 없는 칸은 구멍으로 만든다.
-         * @param listDirtyRange 차례 목록이 같을 때 내용이 바뀐 차례 구간입니다. 비었거나 @p bAllDirty 면 모든 차례를 본다(비교만 하므로 같은 칸은 올리지 않는다).
+         * @brief 칸 순 배열 @p listSlotInstance 로 사본을 맞추고 내용이 바뀐 칸을 기록합니다. 칸 수가 줄면 꼬리를 버리고, 늘면 새 칸을 바뀐 칸으로 센다(GPU 쪽 내용을 모른다).
+         * @param listDirtyRange 내용이 바뀐 칸 구간입니다. 비었거나 @p bAllDirty 면 모든 칸을 본다(비교만 하므로 같은 칸은 올리지 않는다).
          */
-        void apply( const vector<GPUInstance>& listOrdered, const vector<uint32>* pListOrderToSlot, uint32 slotCount, bool bOrderChanged,
-                    const vector<GPUInstanceDirtyRange>& listDirtyRange, bool bAllDirty );
+        void apply( const vector<GPUInstance>& listSlotInstance, const vector<GPUInstanceDirtyRange>& listDirtyRange, bool bAllDirty );
         /** @brief 칸 순 사본입니다. 원소 번호가 GPUScene 칸입니다. */
         const vector<GPUInstance>& getSlots() const { return _listSlot; }
         /** @brief 올리지 않은 바뀐 칸 수입니다(같은 칸은 한 번). */
@@ -63,9 +59,8 @@ namespace sw
 
     private:
         vector<GPUInstance> _listSlot;
-        vector<uint32>      _listDirtySlot;   ///< 올리지 않은 바뀐 칸(같은 칸은 한 번 — `_listDirtyFlag`)
-        vector<uint8>       _listDirtyFlag;   ///< 칸마다 `_listDirtySlot` 에 들었는지
-        vector<uint8>       _listSeenScratch; ///< 차례 목록이 바뀐 `apply` 에서 차례가 가리킨 칸
+        vector<uint32>      _listDirtySlot; ///< 올리지 않은 바뀐 칸(같은 칸은 한 번 — `_listDirtyFlag`)
+        vector<uint8>       _listDirtyFlag; ///< 칸마다 `_listDirtySlot` 에 들었는지
         uint8               _bFullUploadPending{ SW_TRUE };
     };
 } // namespace sw

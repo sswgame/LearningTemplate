@@ -167,7 +167,7 @@ namespace sw
         /** @brief 불투명 배치를 셰이더 퍼뮤테이션 단위로 묶고 있으면 true 입니다(`setMergeBatchesAcrossMaterials`). */
         bool isMergeBatchesAcrossMaterials() const { return _bMergeAcrossMaterials == SW_TRUE; }
 
-        /** @brief 인스턴스 목록을 반환합니다. */
+        /** @brief 칸 순 인스턴스 목록을 반환합니다(원소 번호 = 후보 번호, 실리지 않은 칸은 구멍). */
         const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
         /**
          * @brief 렌더 프리미티브 번호(`ScenePrimitive::getPrimitiveIndex`)가 지금 스냅샷에서 차지한 **불투명** 인스턴스 칸을 돌려줍니다. 없으면 비어 있습니다.
@@ -600,8 +600,8 @@ namespace sw
         bool refreshInstancesInPlace( bool bPartialCollect );
         /** @brief 전체 제자리 갱신입니다. 접두부를 청크로 나눠 병렬로 고치고(바뀐 투명 순서면 블록 0 이 꼬리) 청크의 더티 구간을 잇습니다. 청크가 실패하면 false 입니다. */
         [[nodiscard]] bool refreshAllInstancesParallel( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool bTransparentOrderChanged, bool& ioTooManyRuns );
-        /** @brief 다시 만든 투명 꼬리를 더티 구간 하나로 이어 붙입니다(구간 상한을 넘으면 @p ioTooManyRuns). */
-        void appendTransparentTailRun( uint32 opaqueInstanceCount, bool& ioTooManyRuns );
+        /** @brief 다시 방출한 투명 칸 중 발행본과 다른 칸을 더티 구간에 더합니다(구간 상한을 넘으면 @p ioTooManyRuns). */
+        void appendTransparentTailRun( const vector<GPUInstance>& listPublishedInstance, bool& ioTooManyRuns );
         /** @brief 부분 제자리 갱신입니다. 더티 프리미티브가 가리키는 인스턴스만 고치고 회전 인스턴스 수를 증감합니다. 매핑이 어긋나면 false 입니다. */
         [[nodiscard]] bool refreshDirtyInstances( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool& ioTooManyRuns );
         /**
@@ -674,12 +674,12 @@ namespace sw
         void emitLODLevelBatches( const GPUMeshBatch& head );
 
         /**
-         * @brief 청크 하나의 슬롯 구간을 갱신합니다(워커에서 돌며 포인터만 만집니다).
-         * @details 이전 값은 `pPrevious`(마지막 발행본)에서 읽고 결과는 `pInstance`(이번 쓰기 슬롯)에 통째로 쓴다.
-         *          두 배열은 다른 메모리다(`GPUInstanceRing`).
+         * @brief 청크 하나의 칸 구간을 갱신합니다(워커에서 돌며 포인터만 만집니다).
+         * @details 이전 값은 `pPrevious`(마지막 발행본)에서 읽고 결과는 `pInstance`(이번 쓰기 슬롯)에 쓴다. 두 배열은 다른 메모리다(`GPUInstanceRing`).
+         *          칸 순이라 원소 번호가 후보 번호다(raw 도 같은 번호). @p bSkipTransparent 면 투명 칸은 건드리지 않는다(꼬리 재방출이 같은 병렬 구간에서 쓴다).
          */
-        static void refreshInstanceChunk( GPUInstance* pInstance, const GPUInstance* pPrevious, const GPUInstance* pRaw, const uint32* pSrcIndex,
-                                          uint32 rawCount, InstanceRefreshChunk& chunk );
+        static void refreshInstanceChunk( GPUInstance* pInstance, const GPUInstance* pPrevious, const GPUInstance* pRaw, uint32 rawCount, bool bSkipTransparent,
+                                          InstanceRefreshChunk& chunk );
 
         /** @brief 이번 프레임의 쓰기 슬롯을 반환합니다(`GPUInstanceRing::acquireWrite`). */
         vector<GPUInstance>& instanceJob() { return _instanceRing.acquireWrite(); }
@@ -790,7 +790,7 @@ namespace sw
         GPUInstanceRing _instanceRing;
 
         /**
-         * @brief `getInstances()[i]` 가 어느 후보에서 왔는지 나타냅니다(populateBatches 가 채웁니다).
+         * @brief 그리는 차례(배치 순) → 후보 번호(= 칸 순 인스턴스 배열의 원소 번호)입니다(populateBatches 가 채운다). 발행하면 차례 → 칸 목록으로 실린다.
          * @details 배치 구성이 그대로면 이 매핑도 그대로다. 그러면 배치를 다시 나눌 필요 없이 인스턴스
          *          값만 **제자리에서** 갱신하면 된다. 언리얼 GPUScene 이 프리미티브가 움직였을 때
          *          자료구조를 다시 만들지 않고 그 원소만 갱신하는 것과 같은 방식이다.

@@ -380,7 +380,7 @@ namespace sw
     /**
      * @struct GPUVFXMeshEmitter
      * @brief GPU 로 시뮬레이션하는 메시 방출기 하나입니다. 입자 그리기가 아니라 메시 인스턴스 배치(`MeshInstanceWriter::GPU`)의 인스턴스 칸에 쓴다.
-     * @details GT 는 배치 항목마다 그 프레임의 인스턴스 칸(`getInstances()` 의 번호, 불투명 구간)을 찾아 싣는다 — 칸은 배치 구성이 바뀔 때마다 옮겨진다.
+     * @details GT 는 배치 항목마다 그 프레임의 인스턴스 칸(칸 순 `getInstances()` 의 번호, 불투명 배치에 실린 것만)을 찾아 싣는다.
      *          RT 는 시뮬레이션 뒤 · 인스턴스 애니메이션과 컬링 앞에 그 칸들의 행렬 · 바운드 · 색을 쓰고(vfx_mesh_instance.hlsl), 컬링이 간접 인자를 만든다.
      */
     struct GPUVFXMeshEmitter
@@ -413,7 +413,8 @@ namespace sw
     struct GPUSceneSnapshot
     {
         /**
-         * @brief 인스턴스 배열입니다. **값이 아니라 공유합니다.** RT 는 읽기만 하므로 프레임마다 복사할 이유가 없습니다.
+         * @brief **칸 순** 인스턴스 배열입니다(원소 번호 = GPUScene 칸 = 레지스트리 칸 = 빌더의 후보 번호, 실리지 않은 칸은 배치 번호가 무효인 구멍).
+         *        **값이 아니라 공유합니다.** RT 는 읽기만 하므로 프레임마다 복사할 이유가 없습니다.
          *
          * @details 값으로 두면 `exportCPUSnapshot` 이 매 프레임 통째로 복사한다. 아무것도 움직이지 않는 정적 씬에서도
          *          인스턴스당 55ns(엔티티 8000개면 441µs)가 들고, 그것이 정적 씬에서 **게임 스레드의 유일한 실제 작업**이 된다.
@@ -425,14 +426,12 @@ namespace sw
          */
         shared_ptr<const vector<GPUInstance>> _pListInstance;
         /**
-         * @brief 그리는 차례(`getInstances()` 의 번호 — 배치 순) → GPUScene 칸입니다. **불변 목록을 공유합니다.** 차례가 바뀐 빌드(배치를 다시 나눔 · 투명 꼬리 재방출)만 새 목록을 싣습니다.
-         * @details GPU 인스턴스 버퍼는 칸 순이다(`GPUSceneSlotBuffer` — 원소 번호 = 레지스트리 칸 = 빌더의 후보 번호). 컬링(`gpu_cull.hlsl` t3)은 차례마다 이 칸을 읽고,
-         *          컬링이 없는 길은 이 목록을 가시 목록 자리(`g_SwVisibleInstanceIDs`)에 걸어 정점 셰이더가 차례 → 칸을 읽는다 — 한 셰이더가 두 길을 같은 형식으로 읽는다.
-         *          널이면 차례가 곧 칸이다.
+         * @brief 그리는 차례(배치 순 — 배치의 `_instanceBase` · `_instanceCount` 가 이 번호다) → GPUScene 칸입니다. **불변 목록을 공유합니다.** 차례가 바뀐 빌드(배치 구성원이 드나듦 ·
+         *        투명 꼬리 재방출)만 새 목록을 싣습니다.
+         * @details 인스턴스 배열(`_pListInstance`)은 칸 순이다. 컬링(`gpu_cull.hlsl` t3)은 차례마다 이 칸을 읽고, 컬링이 없는 길은 이 목록을 가시 목록 자리(`g_SwVisibleInstanceIDs`)에
+         *          걸어 정점 셰이더가 차례 → 칸을 읽는다 — 한 셰이더가 두 길을 같은 형식으로 읽는다. 널이면 차례가 곧 칸이다(발행 전).
          */
         shared_ptr<const vector<uint32>> _pListInstanceSlot;
-        /** @brief GPUScene 칸 수입니다(구멍 포함 — 빌더의 후보 배열 길이). 칸 순 인스턴스 버퍼의 원소 수입니다. `_pListInstanceSlot` 이 널이면 쓰지 않는다. */
-        uint32 _instanceSlotCount{ 0 };
         /**
          * @brief 퍼뮤테이션 목록입니다. 배치의 `_shaderPermutation` 이 가리킵니다. **불변 목록을 공유합니다.**
          * @details 문자열 경로와 define 목록이 든 값이라 프레임마다 복사하면 그 문자열들이 모두 힙 할당이다(프레임당 약 30회).
@@ -466,11 +465,6 @@ namespace sw
          */
         uint64 _staticShadowGeneration{ 0 };
         /**
-         * @brief 인스턴스 **번호의 배치**가 바뀔 때마다 오르는 세대입니다(배치를 처음부터 다시 만든 빌드). 제자리 갱신(움직임 · 색)은 올리지 않는다.
-         * @details 인스턴스 번호에 묶어 둔 GPU 상태(LOD 전환 상태 `GPUCullViewResources::_lodState`)가 이 값이 달라지면 낡은 것이라 비운다.
-         */
-        uint32 _instanceLayoutGeneration{ 0 };
-        /**
          * @brief LOD 단계 전환의 크로스페이드 시간(초)입니다. 0 이면 전환 없이 바로 바꾼다(`GPUSceneBuilder::setGPUInstanceLODCrossfadeSeconds`).
          * @details 빌더가 정하고 스냅샷이 싣는다 — 같은 값이 후보의 디더 변형 여부(GT)와 컬링의 전환 진행량(RT)을 가른다. 어긋나면 디더 변형이 없는 배치가 상보 값을 받는다.
          */
@@ -490,13 +484,13 @@ namespace sw
          */
         uint8 _bMeshesCreatedBeforeHandoff{ SW_FALSE };
         /**
-         * @brief 1이면 인스턴스 배열 **전체**가 바뀌었고, 0이면 `_listDirtyInstanceRange` 만 바뀌었습니다.
+         * @brief 1이면 인스턴스 배열 **전체**가 바뀌었고, 0이면 `_listDirtyInstanceRange` 의 칸만 바뀌었습니다.
          * @details 전체 재구축은 1이고, 물체만 움직인 프레임은 0이다. 버퍼를 새로 만든 프레임도 받는 쪽이
          *          전체로 취급해야 한다. 새 버퍼에는 아직 아무것도 없기 때문이다.
          */
         uint8 _bAllInstancesDirty{ SW_TRUE };
         /**
-         * @brief 바뀐 인스턴스 구간들입니다(`_bAllInstancesDirty` 가 0일 때만 의미가 있습니다).
+         * @brief 바뀐 **칸** 구간들입니다(`_bAllInstancesDirty` 가 0일 때만 의미가 있습니다). 칸 순 배열의 번호라 배치를 다시 나눠도 드나든 칸만 든다.
          * @details 하나만 움직여도 인스턴스 버퍼 **전체**를 다시 올리면 8000개 중 10개만 움직여도 800개를 움직일 때와
          *          같은 100µs 가 든다. 그래서 바뀐 구간만 올린다. 구간이 너무 잘게 흩어지면
          *          작은 업로드가 오히려 비싸므로, 빌더가 개수 상한을 넘기면 전체로 돌린다.
@@ -557,11 +551,16 @@ namespace sw
             _listVFXMeshEmitter.clear();
         }
 
-        /** @brief 인스턴스 배열을 반환합니다. 아직 발행 전이면 빈 배열입니다. */
+        /** @brief 칸 순 인스턴스 배열을 반환합니다(구멍 포함). 아직 발행 전이면 빈 배열입니다. */
         const vector<GPUInstance>& getInstances() const
         {
             static const vector<GPUInstance> s_listEmpty{};
             return ( _pListInstance != nullptr ) ? *_pListInstance : s_listEmpty;
+        }
+        /** @brief 그리는 차례의 수입니다(배치에 실린 인스턴스 수 — 컬링 스레드 수). 차례 목록이 없으면 칸 수입니다. */
+        uint32 getInstanceOrderCount() const
+        {
+            return static_cast<uint32>( _pListInstanceSlot != nullptr ? _pListInstanceSlot->size() : getInstances().size() );
         }
 
         /** @brief 모든 배치(불투명 다음 투명)를 반환합니다. 간접 슬롯 순서와 같습니다. */

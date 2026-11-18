@@ -1380,7 +1380,7 @@ namespace sw
         SW_ASSERT( pOrder == nullptr || bParticleSlotsComplete );
         const bool bUsable = bParticleSlotsComplete && pOrder->_pListRank != nullptr &&
                              pOrder->_listBatchOrder.size() == _state._gpuScene.getTransparentBatches().size() &&
-                             pOrder->_tailBase + pOrder->_pListRank->size() == _state._gpuScene.getInstances().size();
+                             pOrder->_tailBase + pOrder->_pListRank->size() == _state._gpuScene.getInstanceOrderCount();
         // 메시 투명이 없으면 입자 자리만 이 뷰의 것이다(배치 순서가 비어 짝이 될 것이 없다).
         const bool bParticleOrderOnly  = bParticleSlotsComplete && pOrder->_listBatchOrder.empty() && _state._gpuScene.getTransparentBatches().empty();
         const bool bParticleSlotsMatch = bUsable || bParticleOrderOnly;
