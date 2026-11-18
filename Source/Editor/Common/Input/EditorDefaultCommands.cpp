@@ -540,7 +540,7 @@ namespace sw::editor
         if ( registry.validate( report ) == false )
             SW_LOG_ERROR_ID( "Editor.EditorCommandTableInconsistent", "The editor command table is inconsistent:\n%#", report.c_str() );
         // 명령이 가리키는 액션이 입력 맵에 없으면 그 단축키는 조용히 없는 것이 된다 — 표 · 등록 줄과 editor.input.xml 이 어긋난 것이다.
-        const InputMap& inputMap = editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>().getInputMap();
+        const InputMap& inputMap = editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>().getShortcuts().getInputMap();
         for ( const EditorCommandDesc& desc : registry.getCommands() )
         {
             if ( desc._inputAction.empty() == false && inputMap.hasAction( hashed_string( desc._inputAction.c_str() ) ) == false )

@@ -147,7 +147,7 @@ namespace sw::editor
                 }
                 continue;
             }
-            inputActions.formatShortcutLabel( desc._inputAction, shortcutLabel );
+            inputActions.getShortcuts().formatShortcutLabel( desc._inputAction, shortcutLabel );
             const utf8* pShortcut = shortcutLabel.empty() ? nullptr : shortcutLabel.c_str();
             if ( ImGui::MenuItem( menuLabel.c_str(), pShortcut, false, bEnabled ) )
                 chosenCommandID = desc._id;
@@ -342,6 +342,6 @@ namespace sw::editor
 
     void EditorInputGUI::setModeLayerEnabled( string_view layer, bool bEnabled )
     {
-        editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>().setModeLayerEnabled( layer, bEnabled );
+        editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>().getShortcuts().setModeLayerEnabled( layer, bEnabled );
     }
 } // namespace sw::editor

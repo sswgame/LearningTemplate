@@ -39,7 +39,7 @@ namespace sw::editor
                 EditorCommandRegistry::formatMenuLabel( desc, menuLabel );
 
                 string shortcutLabel;
-                inputActions.formatShortcutLabel( desc._inputAction, shortcutLabel );
+                inputActions.getShortcuts().formatShortcutLabel( desc._inputAction, shortcutLabel );
 
                 const utf8* pShortcut = shortcutLabel.empty() ? nullptr : shortcutLabel.c_str();
                 const bool  bEnabled  = registry.isEnabledInSnapshot( commandIndex );
@@ -156,7 +156,7 @@ namespace sw::editor
         if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled ) )
         {
             string shortcutLabel;
-            inputActions.formatShortcutLabel( pDesc->_inputAction, shortcutLabel );
+            inputActions.getShortcuts().formatShortcutLabel( pDesc->_inputAction, shortcutLabel );
             ImGui::BeginTooltip();
             ImGui::PushTextWrapPos( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "TooltipWrapEm" ) );
             ImGui::TextUnformatted( pDesc->_label.c_str() );

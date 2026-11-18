@@ -8,7 +8,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
-#include "Editor/Common/Input/EditorInputActions.h"
+#include "Editor/Common/Input/Model/EditorShortcutMap.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -49,8 +49,8 @@ namespace sw::editor
 
     void ShortcutsPanel::drawContent()
     {
-        const EditorInputActions& inputActions = ShortcutsViewModel::getInputActions();
-        IShortcutBindings&        bindings     = _viewModel;
+        const EditorShortcutMap& shortcuts = ShortcutsViewModel::getShortcuts();
+        IShortcutBindings&       bindings  = _viewModel;
 
         pollShortcutCapture( bindings );
 
@@ -63,7 +63,7 @@ namespace sw::editor
         EditorWidgets::drawSearchField( "##ShortcutFilter", _filter, SW_LOCKEY( "EditorSettings", "SearchShortcutsHint" ), 0.0f, false );
 
         drawConflictPrompt( bindings );
-        drawShortcutTable( inputActions, bindings );
+        drawShortcutTable( shortcuts, bindings );
     }
 
     void ShortcutsPanel::pollShortcutCapture( IShortcutBindings& bindings )
@@ -92,7 +92,7 @@ namespace sw::editor
         EditorSelfTestMarks::record( "shortcuts.cancel" );
     }
 
-    void ShortcutsPanel::drawShortcutTable( const EditorInputActions& inputActions, IShortcutBindings& bindings )
+    void ShortcutsPanel::drawShortcutTable( const EditorShortcutMap& shortcuts, IShortcutBindings& bindings )
     {
         const EditorCommandRegistry& registry = ShortcutsViewModel::getCommandRegistry();
         const EditorListFilter       filter{ _filter.c_str() };
@@ -111,15 +111,15 @@ namespace sw::editor
         {
             if ( desc._inputAction.empty() )
                 continue;
-            inputActions.formatShortcutLabel( desc._inputAction, label );
+            shortcuts.formatShortcutLabel( desc._inputAction, label );
             if ( filter.matchesAny( { desc._label, desc._id, desc._category, label } ) == false )
                 continue;
-            drawShortcutRow( inputActions, bindings, desc, label );
+            drawShortcutRow( shortcuts, bindings, desc, label );
         }
         ImGui::EndTable();
     }
 
-    void ShortcutsPanel::drawShortcutRow( const EditorInputActions& inputActions, IShortcutBindings& bindings, const EditorCommandDesc& desc, const string& shortcutLabel )
+    void ShortcutsPanel::drawShortcutRow( const EditorShortcutMap& shortcuts, IShortcutBindings& bindings, const EditorCommandDesc& desc, const string& shortcutLabel )
     {
         ImGui::PushID( desc._id.c_str() );
         ImGui::TableNextRow();
@@ -139,7 +139,7 @@ namespace sw::editor
             _capture.beginCapture( bindings, desc._inputAction );
         EditorSelfTestMarks::record( ShortcutsPanelInternal::makeMark( "set", desc._id ).c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "SetShortcut" ) );
-        if ( inputActions.isShortcutModified( desc._inputAction ) )
+        if ( shortcuts.isShortcutModified( desc._inputAction ) )
         {
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reset" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Reset" ) ) )

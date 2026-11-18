@@ -9,9 +9,9 @@
 
 namespace sw::editor
 {
-    EditorInputActions& ShortcutsViewModel::getInputActions()
+    EditorShortcutMap& ShortcutsViewModel::getShortcuts()
     {
-        return editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>();
+        return editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>().getShortcuts();
     }
 
     const EditorCommandRegistry& ShortcutsViewModel::getCommandRegistry()
@@ -21,27 +21,27 @@ namespace sw::editor
 
     uint32 ShortcutsViewModel::countModifiedShortcuts()
     {
-        return static_cast<uint32>( getInputActions().countModifiedShortcuts() );
+        return static_cast<uint32>( getShortcuts().countModifiedShortcuts() );
     }
 
     bool ShortcutsViewModel::rebindShortcut( string_view action, Key key, uint8 modifierMask, hashed_string& outConflictAction )
     {
-        return getInputActions().rebindShortcut( action, key, modifierMask, outConflictAction );
+        return getShortcuts().rebindShortcut( action, key, modifierMask, outConflictAction );
     }
 
     bool ShortcutsViewModel::swapShortcut( string_view action, string_view otherAction, Key key, uint8 modifierMask )
     {
-        return getInputActions().swapShortcut( action, otherAction, key, modifierMask );
+        return getShortcuts().swapShortcut( action, otherAction, key, modifierMask );
     }
 
     void ShortcutsViewModel::resetShortcut( string_view action )
     {
-        getInputActions().resetShortcut( action );
+        getShortcuts().resetShortcut( action );
     }
 
     void ShortcutsViewModel::resetAllShortcuts()
     {
-        getInputActions().resetAllShortcuts();
+        getShortcuts().resetAllShortcuts();
     }
 
     void ShortcutsViewModel::setCommandsSuspended( bool bSuspended )
