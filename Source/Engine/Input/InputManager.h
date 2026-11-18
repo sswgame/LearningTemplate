@@ -144,6 +144,8 @@ namespace sw
         void onWindowFocusGained();
         /** @brief 창이 포커스를 잃으면 모든 장치 입력 상태를 초기화하고 마우스 클리핑을 풉니다. */
         void onWindowFocusLost();
+        /** @brief 창이 포커스를 가지고 있는지입니다(포커스 메시지로 갱신하며, 창 없는 테스트에서는 true). 감시 값 `Input.WindowFocused` 가 읽는다. */
+        bool isWindowFocused() const { return _bWindowFocused == SW_TRUE; }
         /** @brief 등록된 모든 장치의 입력 상태(키, 버튼, 축)를 초기화합니다(리플레이 재동기화 등에 씁니다). */
         void resetAllDeviceState();
         /**
