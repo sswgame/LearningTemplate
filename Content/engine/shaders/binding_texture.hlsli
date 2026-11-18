@@ -257,8 +257,27 @@ SW_DECLARE_ENGINE_TEXTURE( 15 );
 SW_DECLARE_ENGINE_TEXTURE( 16 );
 SW_DECLARE_ENGINE_TEXTURE( 17 );
 SW_DECLARE_ENGINE_TEXTURE( 18 );
-        #if SW_ENGINE_TEXTURE_COUNT != 19
+SW_DECLARE_ENGINE_TEXTURE( 19 );
+        #if SW_ENGINE_TEXTURE_COUNT != 20
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
+        #endif
+
+        // 머티리얼 텍스처 칸 상한(에뮬) — 아래 실행 중 분기가 이 수보다 앞의 칸만 읽어, 셰이더에는 그 칸만 남는다(리터럴 칸 접기와 같은 까닭).
+        // 웹(WEBGPU)은 단계 텍스처 한도가 16 이라 머티리얼 변형이 실제로 가진 칸만 남긴다(언리얼 머티리얼 셰이더가 머티리얼마다 쓰는 텍스처만 고정 바인딩하는 자리).
+        //   MATERIAL_TEXTURE_COUNT — 머티리얼 변형이면 머티리얼 정의가 낸다(Material::buildShaderDefines, 텍스처 프로퍼티 수 = 고정 서수 0..N-1),
+        //                            머티리얼 칸을 빌려 쓰는 비머티리얼 셰이더(캔버스 · 입자 · 데칼 · 층 굽기 · ImGui)는 파일 머리에 적는다.
+        //   씬 메시 패스 PSO(머티리얼 없는 배치)는 패스 define 이 0 을 적는다(selectRenderPassShader) — 머티리얼 변형은 같은 이름을 칸 수로 바꾼다.
+        //   웹에서 칸 수가 없으면 칸 분기 함수를 정의하지 않는다(아래 SW_MATERIAL_TEXTURE_SLOTS_DECLARED) — 기본 칸 수로 대신 그리지 않는다.
+        // 데스크톱 에뮬(DX11 128 · GL 32 단위)은 16 칸 그대로 넉넉하다 — 이 갈래는 웹 깃발에만 둔다.
+        #if defined( WEBGPU )
+            #if defined( MATERIAL_TEXTURE_COUNT )
+                #define SW_MATERIAL_TEXTURE_SLOT_LIMIT MATERIAL_TEXTURE_COUNT
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > SW_MATERIAL_TEXTURE_SLOT_COUNT_WEBGPU
+                    #error "MATERIAL_TEXTURE_COUNT exceeds SW_MATERIAL_TEXTURE_SLOT_COUNT_WEBGPU - the web stage texture limit (16) also holds the engine textures of the pass; use fewer material textures"
+                #endif
+            #endif
+        #else
+            #define SW_MATERIAL_TEXTURE_SLOT_LIMIT SW_MATERIAL_TEXTURE_SLOT_COUNT
         #endif
 
         // 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸) — 번호는 binding_slots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
@@ -394,6 +413,9 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
                 case 18u:                                                  \
                     OP( SW_ENGINE_TEXTURE( 18 ), SW_ENGINE_SAMPLER( 18 ) ) \
                     break;                                                 \
+                case 19u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 19 ), SW_ENGINE_SAMPLER( 19 ) ) \
+                    break;                                                 \
                 default:                                                   \
                     break;                                                 \
             }
@@ -474,25 +496,33 @@ static float4 Bindless::sampleIndexWith( uint index, uint emulatedSlot, uint sam
     return kUnmappedEngineTextureColor;
 }
         #endif
-/**
- * @brief 에뮬 백엔드: 비교 샘플러가 없어 2x2 이웃을 게더로 읽어 각각 비교하고 쌍선형으로 섞는다 — DX12 · Vulkan 의 비교 샘플러(LINEAR)와 같은 값이다.
- * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 ShadowMap 칸이다(`SW_ENGINE_ROLE( ShadowMap )`).
- */
+        /**
+         * @brief 에뮬 백엔드: 비교 샘플러가 없어 2x2 이웃을 게더로 읽어 각각 비교하고 쌍선형으로 섞는다 — DX12 · Vulkan 의 비교 샘플러(LINEAR)와 같은 값이다.
+         * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 두 칸이다 — 방향광 ShadowMap, 점광 · 스폿 LocalShadowMap
+         *          (`SW_ENGINE_ROLE( ShadowMap )` · `SW_ENGINE_ROLE( LocalShadowMap )`). 칸은 리터럴이라 고른 칸 하나만 셰이더에 남는다.
+         *          게더는 네 텍셀이 만나는 모서리를 가리킨다. 순서는 w (0,0) · z (1,0) · x (0,1) · y (1,1). depth <= 저장값이면 1 (LESS_EQUAL).
+         */
+        #define SW_SHADOW_GATHER_COMPARE( slot )                                                                                                         \
+            {                                                                                                                                            \
+                float2 size;                                                                                                                             \
+                SW_ENGINE_TEXTURE( slot ).GetDimensions( size.x, size.y );                                                                               \
+                const float2 texelPosition = uv * size - 0.5f;                                                                                           \
+                const float2 weight        = frac( texelPosition );                                                                                      \
+                const float4 stored        = SW_ENGINE_TEXTURE( slot ).GatherRed( SW_ENGINE_SAMPLER( slot ), ( floor( texelPosition ) + 1.0f ) / size ); \
+                const float4 lit           = step( depth.xxxx, stored );                                                                                 \
+                return lerp( lerp( lit.w, lit.z, weight.x ), lerp( lit.x, lit.y, weight.x ), weight.y );                                                 \
+            }
 static float Bindless::sampleShadowComparison( uint index, uint emulatedSlot, float2 uv, float depth )
 {
     if ( index == kInvalidIndex )
         return 1.0f;
-    if ( emulatedSlot != SW_EMU_SLOT_ShadowMap )
-        return ( depth <= Bindless::sampleIndex( index, emulatedSlot, uv ).r ) ? 1.0f : 0.0f;
-    float2 size;
-    SW_ENGINE_TEXTURE( SW_EMU_SLOT_ShadowMap ).GetDimensions( size.x, size.y );
-    const float2 texelPosition = uv * size - 0.5f;
-    const float2 weight        = frac( texelPosition );
-    // 게더는 네 텍셀이 만나는 모서리를 가리킨다. 순서는 w (0,0) · z (1,0) · x (0,1) · y (1,1).
-    const float4 stored = SW_ENGINE_TEXTURE( SW_EMU_SLOT_ShadowMap ).GatherRed( SW_ENGINE_SAMPLER( SW_EMU_SLOT_ShadowMap ), ( floor( texelPosition ) + 1.0f ) / size );
-    const float4 lit    = step( depth.xxxx, stored ); // depth <= 저장값이면 1 (LESS_EQUAL)
-    return lerp( lerp( lit.w, lit.z, weight.x ), lerp( lit.x, lit.y, weight.x ), weight.y );
+    if ( emulatedSlot == SW_EMU_SLOT_ShadowMap )
+        SW_SHADOW_GATHER_COMPARE( SW_EMU_SLOT_ShadowMap )
+    if ( emulatedSlot == SW_EMU_SLOT_LocalShadowMap )
+        SW_SHADOW_GATHER_COMPARE( SW_EMU_SLOT_LocalShadowMap )
+    return ( depth <= Bindless::sampleIndex( index, emulatedSlot, uv ).r ) ? 1.0f : 0.0f;
 }
+        #undef SW_SHADOW_GATHER_COMPARE
 
 /** @brief 패스가 칸 @p emulatedSlot(`SW_EMU_SLOT_<역할>`)에 건 엔진 텍스처의 밉 0 텍셀을 읽습니다. 칸 밖이면 오류 색(자홍)을 냅니다 — 조용히 0 번으로 읽지 않는다. */
 // 에뮬 백엔드(DX11 · GL)의 셰이더 컴파일은 매개변수 속성 `[[maybe_unused]]` 를 읽지 못한다(X3000) — 쓰지 않는 index 는 이름만 두고 속성을 달지 않는다.
@@ -562,6 +592,14 @@ static float4 Bindless::loadRwTexture2D( uint index, uint2 texelPosition )
 
 // ---- 11-3) 공통 진입 함수 (네 백엔드) -----------------------------------------
 #if defined( SW_NATIVE_BINDLESS ) || !defined( SW_STAGE_COMPUTE )
+    // 머티리얼 칸 분기(MaterialTexture 의 칸 읽기)를 정의하는지 — 웹은 칸 수(MATERIAL_TEXTURE_COUNT)가 없으면 정의하지 않는다. 그런 셰이더가 머티리얼 칸을 읽으면
+    // 정의 없는 함수로 쿠킹이 멈춘다(기본 칸 수로 대신 그리지 않는다). binding.hlsli 는 모든 셰이더가 읽어 전처리기는 "칸을 읽는가" 를 모른다 — 그래서 #error 대신 정의를 뺀다.
+    // 머티리얼 셰이더는 material_shader.hlsli 가 #error 로 먼저 멈춘다.
+    #if defined( WEBGPU ) && !defined( MATERIAL_TEXTURE_COUNT )
+        #define SW_MATERIAL_TEXTURE_SLOTS_DECLARED 0
+    #else
+        #define SW_MATERIAL_TEXTURE_SLOTS_DECLARED 1
+    #endif
     /**
      * @brief 2D 빛 쿠키 아틀라스(패스 역할 `Light2DCookieAtlas`)를 밉 0 으로 읽습니다. 빛 반복 안에서 부르므로 암시 미분을 쓰지 않는다.
      * @details 미분이 든 샘플을 길이가 정해지지 않은 반복에 두면 FXC(DX11)가 반복을 펼치려다 실패한다(X3511). 아틀라스는 밉이 없는 렌더 타깃이라
@@ -622,92 +660,158 @@ static float4 ViewMode::computeMipColor( float lod )
     const float4 arrColor[4] = { float4( 0.2f, 0.9f, 0.2f, 1.0f ), float4( 1.0f, 0.95f, 0.2f, 1.0f ), float4( 1.0f, 0.55f, 0.1f, 1.0f ), float4( 1.0f, 0.15f, 0.1f, 1.0f ) };
     return arrColor[min( uint( lod + 0.5f ), 3u )];
 }
+        #if SW_MATERIAL_TEXTURE_SLOTS_DECLARED
 static float4 MaterialTexture::sampleMipColor( uint index, float2 uv )
 {
-        #if defined( SW_NATIVE_BINDLESS )
+            #if defined( SW_NATIVE_BINDLESS )
     if ( index == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
     const uint slot = Bindless::textureSlot( index );
-            #if defined( __spirv__ )
+                #if defined( __spirv__ )
     return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwBindlessTex2D[NonUniformResourceIndex( slot )], SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv ) );
-            #else
+                #else
     return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwBindlessTex2D[NonUniformResourceIndex( slot )], g_SwSampler0, uv ) );
-            #endif
-        #else
+                #endif
+            #else
     switch ( index )
     {
-            #if defined( SW_SEPARATE_SAMPLER_EMULATION )
+                #if defined( SW_SEPARATE_SAMPLER_EMULATION )
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex0, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex1, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex2, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex3, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex4, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex5, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex6, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex7, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex8, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex9, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex10, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex11, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex12, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex13, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex14, g_SwSampler0, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex15, g_SwSampler0, uv ) );
-            #else
+                    #endif
+                #else
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex0, g_SwMaterialTex0Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex1, g_SwMaterialTex1Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex2, g_SwMaterialTex2Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex3, g_SwMaterialTex3Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex4, g_SwMaterialTex4Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex5, g_SwMaterialTex5Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex6, g_SwMaterialTex6Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex7, g_SwMaterialTex7Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex8, g_SwMaterialTex8Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex9, g_SwMaterialTex9Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex10, g_SwMaterialTex10Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex11, g_SwMaterialTex11Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex12, g_SwMaterialTex12Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex13, g_SwMaterialTex13Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex14, g_SwMaterialTex14Sampler, uv ) );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex15, g_SwMaterialTex15Sampler, uv ) );
-            #endif
+                    #endif
+                #endif
         default:
             return float4( 1, 1, 1, 1 );
     }
-        #endif
+            #endif
 }
+        #endif
     #endif
 
     // 머티리얼 텍스처 샘플의 단계 갈래는 여기 한 곳이다(R-15) — 픽셀 단계는 뷰의 밉 바이어스(PassCB g_TextureMipBias.x = log2(렌더 높이 / 출력 높이), 배율 1 이면 0)를
@@ -728,6 +832,7 @@ static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
             #endif
 }
         #else
+            #if SW_MATERIAL_TEXTURE_SLOTS_DECLARED
 static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
 {
     // 에뮬 백엔드: index 는 전역 인덱스가 아니라 **머티리얼 텍스처 서수**(0..15)다.
@@ -736,77 +841,142 @@ static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
     // DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 슬롯의 결합 샘플러(엔진이 머티리얼 샘플러를 건다)로 읽는다.
     switch ( index )
     {
-            #if defined( SW_SEPARATE_SAMPLER_EMULATION )
+                #if defined( SW_SEPARATE_SAMPLER_EMULATION )
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
             return g_SwMaterialTex0.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
             return g_SwMaterialTex1.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
             return g_SwMaterialTex2.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
             return g_SwMaterialTex3.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
             return g_SwMaterialTex4.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
             return g_SwMaterialTex5.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
             return g_SwMaterialTex6.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
             return g_SwMaterialTex7.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
             return g_SwMaterialTex8.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
             return g_SwMaterialTex9.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
             return g_SwMaterialTex10.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
             return g_SwMaterialTex11.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
             return g_SwMaterialTex12.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
             return g_SwMaterialTex13.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
             return g_SwMaterialTex14.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
             return g_SwMaterialTex15.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
-            #else
+                    #endif
+                #else
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
             return g_SwMaterialTex0.SampleBias( g_SwMaterialTex0Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
             return g_SwMaterialTex1.SampleBias( g_SwMaterialTex1Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
             return g_SwMaterialTex2.SampleBias( g_SwMaterialTex2Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
             return g_SwMaterialTex3.SampleBias( g_SwMaterialTex3Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
             return g_SwMaterialTex4.SampleBias( g_SwMaterialTex4Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
             return g_SwMaterialTex5.SampleBias( g_SwMaterialTex5Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
             return g_SwMaterialTex6.SampleBias( g_SwMaterialTex6Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
             return g_SwMaterialTex7.SampleBias( g_SwMaterialTex7Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
             return g_SwMaterialTex8.SampleBias( g_SwMaterialTex8Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
             return g_SwMaterialTex9.SampleBias( g_SwMaterialTex9Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
             return g_SwMaterialTex10.SampleBias( g_SwMaterialTex10Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
             return g_SwMaterialTex11.SampleBias( g_SwMaterialTex11Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
             return g_SwMaterialTex12.SampleBias( g_SwMaterialTex12Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
             return g_SwMaterialTex13.SampleBias( g_SwMaterialTex13Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
             return g_SwMaterialTex14.SampleBias( g_SwMaterialTex14Sampler, uv, g_TextureMipBias.x );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
             return g_SwMaterialTex15.SampleBias( g_SwMaterialTex15Sampler, uv, g_TextureMipBias.x );
-            #endif
+                    #endif
+                #endif
         default:
             return float4( 1, 1, 1, 1 );
     }
 }
+            #endif
         #endif
     #else
 static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
@@ -836,237 +1006,403 @@ static float4 MaterialTexture::sampleIndex( uint index, float2 uv )
     #if SW_MATERIAL_TEXTURE_SAMPLER != 0
         #error MaterialTexture::sampleLevel 는 머티리얼 샘플러가 정적 샘플러 0 번(g_SwSampler0)이라고 가정한다
     #endif
+    #if SW_MATERIAL_TEXTURE_SLOTS_DECLARED
 static float4 MaterialTexture::sampleLevel( uint index, float2 uv, float level )
 {
-    #if defined( SW_NATIVE_BINDLESS )
-    if ( index == kInvalidIndex )
-        return float4( 1, 1, 1, 1 );
-    const uint slot = Bindless::textureSlot( index );
-        #if defined( __spirv__ )
-    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv, level );
-        #else
-    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( g_SwSampler0, uv, level );
-        #endif
-    #else
-    switch ( index )
-    {
-        #if defined( SW_SEPARATE_SAMPLER_EMULATION )
-        case 0u:
-            return g_SwMaterialTex0.SampleLevel( g_SwSampler0, uv, level );
-        case 1u:
-            return g_SwMaterialTex1.SampleLevel( g_SwSampler0, uv, level );
-        case 2u:
-            return g_SwMaterialTex2.SampleLevel( g_SwSampler0, uv, level );
-        case 3u:
-            return g_SwMaterialTex3.SampleLevel( g_SwSampler0, uv, level );
-        case 4u:
-            return g_SwMaterialTex4.SampleLevel( g_SwSampler0, uv, level );
-        case 5u:
-            return g_SwMaterialTex5.SampleLevel( g_SwSampler0, uv, level );
-        case 6u:
-            return g_SwMaterialTex6.SampleLevel( g_SwSampler0, uv, level );
-        case 7u:
-            return g_SwMaterialTex7.SampleLevel( g_SwSampler0, uv, level );
-        case 8u:
-            return g_SwMaterialTex8.SampleLevel( g_SwSampler0, uv, level );
-        case 9u:
-            return g_SwMaterialTex9.SampleLevel( g_SwSampler0, uv, level );
-        case 10u:
-            return g_SwMaterialTex10.SampleLevel( g_SwSampler0, uv, level );
-        case 11u:
-            return g_SwMaterialTex11.SampleLevel( g_SwSampler0, uv, level );
-        case 12u:
-            return g_SwMaterialTex12.SampleLevel( g_SwSampler0, uv, level );
-        case 13u:
-            return g_SwMaterialTex13.SampleLevel( g_SwSampler0, uv, level );
-        case 14u:
-            return g_SwMaterialTex14.SampleLevel( g_SwSampler0, uv, level );
-        case 15u:
-            return g_SwMaterialTex15.SampleLevel( g_SwSampler0, uv, level );
-        #else
-        case 0u:
-            return g_SwMaterialTex0.SampleLevel( g_SwMaterialTex0Sampler, uv, level );
-        case 1u:
-            return g_SwMaterialTex1.SampleLevel( g_SwMaterialTex1Sampler, uv, level );
-        case 2u:
-            return g_SwMaterialTex2.SampleLevel( g_SwMaterialTex2Sampler, uv, level );
-        case 3u:
-            return g_SwMaterialTex3.SampleLevel( g_SwMaterialTex3Sampler, uv, level );
-        case 4u:
-            return g_SwMaterialTex4.SampleLevel( g_SwMaterialTex4Sampler, uv, level );
-        case 5u:
-            return g_SwMaterialTex5.SampleLevel( g_SwMaterialTex5Sampler, uv, level );
-        case 6u:
-            return g_SwMaterialTex6.SampleLevel( g_SwMaterialTex6Sampler, uv, level );
-        case 7u:
-            return g_SwMaterialTex7.SampleLevel( g_SwMaterialTex7Sampler, uv, level );
-        case 8u:
-            return g_SwMaterialTex8.SampleLevel( g_SwMaterialTex8Sampler, uv, level );
-        case 9u:
-            return g_SwMaterialTex9.SampleLevel( g_SwMaterialTex9Sampler, uv, level );
-        case 10u:
-            return g_SwMaterialTex10.SampleLevel( g_SwMaterialTex10Sampler, uv, level );
-        case 11u:
-            return g_SwMaterialTex11.SampleLevel( g_SwMaterialTex11Sampler, uv, level );
-        case 12u:
-            return g_SwMaterialTex12.SampleLevel( g_SwMaterialTex12Sampler, uv, level );
-        case 13u:
-            return g_SwMaterialTex13.SampleLevel( g_SwMaterialTex13Sampler, uv, level );
-        case 14u:
-            return g_SwMaterialTex14.SampleLevel( g_SwMaterialTex14Sampler, uv, level );
-        case 15u:
-            return g_SwMaterialTex15.SampleLevel( g_SwMaterialTex15Sampler, uv, level );
-        #endif
-        default:
-            return float4( 1, 1, 1, 1 );
-    }
-    #endif
-}
-
-/**
- * @brief 머티리얼 텍스처를 준 UV 미분으로 읽습니다(밉 단계를 미분이 고른다). 인덱스의 뜻은 `MaterialTexture::sampleIndex` 와 같고 텍스처가 없으면 흰색입니다.
- * @details 아틀라스 타일을 `frac` 로 되풀이하는 셰이더(복셀 블록 — voxel_blocks.hlsl)가 쓴다. 되풀이 경계에서 암시 미분이 튀어 가장 작은 밉으로 읽는 줄무늬를
- *          연속인 UV 의 미분으로 막는다(언리얼 `Texture2DSampleGrad` · 유니티 `SAMPLE_TEXTURE2D_GRAD` 자리). 뷰의 밉 바이어스는 미분을 2^바이어스 배로 늘여 같게 맞춘다.
- *          보기 모드 Mipmaps 는 `sampleIndex` 처럼 밉 단계 색을 낸다.
- */
-static float4 MaterialTexture::sampleGrad( uint index, float2 uv, float2 gradX, float2 gradY )
-{
-    #if defined( SW_VIEWMODE_MIPMAPS )
-    return MaterialTexture::sampleMipColor( index, uv );
-    #else
-    const float biasScale = exp2( g_TextureMipBias.x );
-    gradX *= biasScale;
-    gradY *= biasScale;
         #if defined( SW_NATIVE_BINDLESS )
     if ( index == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
     const uint slot = Bindless::textureSlot( index );
             #if defined( __spirv__ )
-    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleGrad( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv, gradX, gradY );
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv, level );
             #else
-    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleGrad( g_SwSampler0, uv, gradX, gradY );
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( g_SwSampler0, uv, level );
             #endif
         #else
     switch ( index )
     {
             #if defined( SW_SEPARATE_SAMPLER_EMULATION )
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
-            return g_SwMaterialTex0.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex0.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
-            return g_SwMaterialTex1.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex1.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
-            return g_SwMaterialTex2.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex2.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
-            return g_SwMaterialTex3.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex3.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
-            return g_SwMaterialTex4.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex4.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
-            return g_SwMaterialTex5.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex5.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
-            return g_SwMaterialTex6.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex6.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
-            return g_SwMaterialTex7.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex7.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
-            return g_SwMaterialTex8.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex8.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
-            return g_SwMaterialTex9.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex9.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
-            return g_SwMaterialTex10.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex10.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
-            return g_SwMaterialTex11.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex11.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
-            return g_SwMaterialTex12.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex12.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
-            return g_SwMaterialTex13.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex13.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
-            return g_SwMaterialTex14.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex14.SampleLevel( g_SwSampler0, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
-            return g_SwMaterialTex15.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            return g_SwMaterialTex15.SampleLevel( g_SwSampler0, uv, level );
+                #endif
             #else
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
-            return g_SwMaterialTex0.SampleGrad( g_SwMaterialTex0Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex0.SampleLevel( g_SwMaterialTex0Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
-            return g_SwMaterialTex1.SampleGrad( g_SwMaterialTex1Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex1.SampleLevel( g_SwMaterialTex1Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
-            return g_SwMaterialTex2.SampleGrad( g_SwMaterialTex2Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex2.SampleLevel( g_SwMaterialTex2Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
-            return g_SwMaterialTex3.SampleGrad( g_SwMaterialTex3Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex3.SampleLevel( g_SwMaterialTex3Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
-            return g_SwMaterialTex4.SampleGrad( g_SwMaterialTex4Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex4.SampleLevel( g_SwMaterialTex4Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
-            return g_SwMaterialTex5.SampleGrad( g_SwMaterialTex5Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex5.SampleLevel( g_SwMaterialTex5Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
-            return g_SwMaterialTex6.SampleGrad( g_SwMaterialTex6Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex6.SampleLevel( g_SwMaterialTex6Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
-            return g_SwMaterialTex7.SampleGrad( g_SwMaterialTex7Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex7.SampleLevel( g_SwMaterialTex7Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
-            return g_SwMaterialTex8.SampleGrad( g_SwMaterialTex8Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex8.SampleLevel( g_SwMaterialTex8Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
-            return g_SwMaterialTex9.SampleGrad( g_SwMaterialTex9Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex9.SampleLevel( g_SwMaterialTex9Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
-            return g_SwMaterialTex10.SampleGrad( g_SwMaterialTex10Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex10.SampleLevel( g_SwMaterialTex10Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
-            return g_SwMaterialTex11.SampleGrad( g_SwMaterialTex11Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex11.SampleLevel( g_SwMaterialTex11Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
-            return g_SwMaterialTex12.SampleGrad( g_SwMaterialTex12Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex12.SampleLevel( g_SwMaterialTex12Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
-            return g_SwMaterialTex13.SampleGrad( g_SwMaterialTex13Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex13.SampleLevel( g_SwMaterialTex13Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
-            return g_SwMaterialTex14.SampleGrad( g_SwMaterialTex14Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex14.SampleLevel( g_SwMaterialTex14Sampler, uv, level );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
-            return g_SwMaterialTex15.SampleGrad( g_SwMaterialTex15Sampler, uv, gradX, gradY );
+            return g_SwMaterialTex15.SampleLevel( g_SwMaterialTex15Sampler, uv, level );
+                #endif
             #endif
         default:
             return float4( 1, 1, 1, 1 );
     }
         #endif
-    #endif
 }
+    #endif
 
-/** @brief 머티리얼 텍스처의 크기(텍셀)입니다. 텍스처가 없으면 (1, 1) 입니다. 인덱스의 뜻은 `MaterialTexture::sampleIndex` 와 같습니다. */
+    /**
+     * @brief 머티리얼 텍스처를 준 UV 미분으로 읽습니다(밉 단계를 미분이 고른다). 인덱스의 뜻은 `MaterialTexture::sampleIndex` 와 같고 텍스처가 없으면 흰색입니다.
+     * @details 아틀라스 타일을 `frac` 로 되풀이하는 셰이더(복셀 블록 — voxel_blocks.hlsl)가 쓴다. 되풀이 경계에서 암시 미분이 튀어 가장 작은 밉으로 읽는 줄무늬를
+     *          연속인 UV 의 미분으로 막는다(언리얼 `Texture2DSampleGrad` · 유니티 `SAMPLE_TEXTURE2D_GRAD` 자리). 뷰의 밉 바이어스는 미분을 2^바이어스 배로 늘여 같게 맞춘다.
+     *          보기 모드 Mipmaps 는 `sampleIndex` 처럼 밉 단계 색을 낸다.
+     */
+    #if SW_MATERIAL_TEXTURE_SLOTS_DECLARED
+static float4 MaterialTexture::sampleGrad( uint index, float2 uv, float2 gradX, float2 gradY )
+{
+        #if defined( SW_VIEWMODE_MIPMAPS )
+    return MaterialTexture::sampleMipColor( index, uv );
+        #else
+    const float biasScale = exp2( g_TextureMipBias.x );
+    gradX *= biasScale;
+    gradY *= biasScale;
+            #if defined( SW_NATIVE_BINDLESS )
+    if ( index == kInvalidIndex )
+        return float4( 1, 1, 1, 1 );
+    const uint slot = Bindless::textureSlot( index );
+                #if defined( __spirv__ )
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleGrad( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv, gradX, gradY );
+                #else
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+            #else
+    switch ( index )
+    {
+                #if defined( SW_SEPARATE_SAMPLER_EMULATION )
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
+        case 0u:
+            return g_SwMaterialTex0.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
+        case 1u:
+            return g_SwMaterialTex1.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
+        case 2u:
+            return g_SwMaterialTex2.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
+        case 3u:
+            return g_SwMaterialTex3.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
+        case 4u:
+            return g_SwMaterialTex4.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
+        case 5u:
+            return g_SwMaterialTex5.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
+        case 6u:
+            return g_SwMaterialTex6.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
+        case 7u:
+            return g_SwMaterialTex7.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
+        case 8u:
+            return g_SwMaterialTex8.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
+        case 9u:
+            return g_SwMaterialTex9.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
+        case 10u:
+            return g_SwMaterialTex10.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
+        case 11u:
+            return g_SwMaterialTex11.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
+        case 12u:
+            return g_SwMaterialTex12.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
+        case 13u:
+            return g_SwMaterialTex13.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
+        case 14u:
+            return g_SwMaterialTex14.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
+        case 15u:
+            return g_SwMaterialTex15.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                    #endif
+                #else
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
+        case 0u:
+            return g_SwMaterialTex0.SampleGrad( g_SwMaterialTex0Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
+        case 1u:
+            return g_SwMaterialTex1.SampleGrad( g_SwMaterialTex1Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
+        case 2u:
+            return g_SwMaterialTex2.SampleGrad( g_SwMaterialTex2Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
+        case 3u:
+            return g_SwMaterialTex3.SampleGrad( g_SwMaterialTex3Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
+        case 4u:
+            return g_SwMaterialTex4.SampleGrad( g_SwMaterialTex4Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
+        case 5u:
+            return g_SwMaterialTex5.SampleGrad( g_SwMaterialTex5Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
+        case 6u:
+            return g_SwMaterialTex6.SampleGrad( g_SwMaterialTex6Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
+        case 7u:
+            return g_SwMaterialTex7.SampleGrad( g_SwMaterialTex7Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
+        case 8u:
+            return g_SwMaterialTex8.SampleGrad( g_SwMaterialTex8Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
+        case 9u:
+            return g_SwMaterialTex9.SampleGrad( g_SwMaterialTex9Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
+        case 10u:
+            return g_SwMaterialTex10.SampleGrad( g_SwMaterialTex10Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
+        case 11u:
+            return g_SwMaterialTex11.SampleGrad( g_SwMaterialTex11Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
+        case 12u:
+            return g_SwMaterialTex12.SampleGrad( g_SwMaterialTex12Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
+        case 13u:
+            return g_SwMaterialTex13.SampleGrad( g_SwMaterialTex13Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
+        case 14u:
+            return g_SwMaterialTex14.SampleGrad( g_SwMaterialTex14Sampler, uv, gradX, gradY );
+                    #endif
+                    #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
+        case 15u:
+            return g_SwMaterialTex15.SampleGrad( g_SwMaterialTex15Sampler, uv, gradX, gradY );
+                    #endif
+                #endif
+        default:
+            return float4( 1, 1, 1, 1 );
+    }
+            #endif
+        #endif
+}
+    #endif
+
+    /** @brief 머티리얼 텍스처의 크기(텍셀)입니다. 텍스처가 없으면 (1, 1) 입니다. 인덱스의 뜻은 `MaterialTexture::sampleIndex` 와 같습니다. */
+    #if SW_MATERIAL_TEXTURE_SLOTS_DECLARED
 static float2 MaterialTexture::computeSize( uint index )
 {
     uint width  = 1u;
     uint height = 1u;
-    #if defined( SW_NATIVE_BINDLESS )
+        #if defined( SW_NATIVE_BINDLESS )
     if ( index != kInvalidIndex )
         g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( index ) )].GetDimensions( width, height );
-    #else
+        #else
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
     if ( index == 0u )
         g_SwMaterialTex0.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
     if ( index == 1u )
         g_SwMaterialTex1.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
     if ( index == 2u )
         g_SwMaterialTex2.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
     if ( index == 3u )
         g_SwMaterialTex3.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
     if ( index == 4u )
         g_SwMaterialTex4.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
     if ( index == 5u )
         g_SwMaterialTex5.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
     if ( index == 6u )
         g_SwMaterialTex6.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
     if ( index == 7u )
         g_SwMaterialTex7.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
     if ( index == 8u )
         g_SwMaterialTex8.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
     if ( index == 9u )
         g_SwMaterialTex9.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
     if ( index == 10u )
         g_SwMaterialTex10.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
     if ( index == 11u )
         g_SwMaterialTex11.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
     if ( index == 12u )
         g_SwMaterialTex12.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
     if ( index == 13u )
         g_SwMaterialTex13.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
     if ( index == 14u )
         g_SwMaterialTex14.GetDimensions( width, height );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
     if ( index == 15u )
         g_SwMaterialTex15.GetDimensions( width, height );
-    #endif
+            #endif
+        #endif
     return float2( max( width, 1u ), max( height, 1u ) );
 }
+    #endif
 
 /**
  * @brief 머티리얼 텍스처를 **점 필터**로 읽습니다(픽셀 아트). UV 를 텍셀 중심에 붙여 선형 샘플러로도 텍셀 하나만 읽게 합니다.

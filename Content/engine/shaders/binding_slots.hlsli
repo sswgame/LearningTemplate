@@ -101,7 +101,8 @@
 #define SW_SLOT_ENGINE_TEX17    49
 #define SW_SLOT_ENGINE_TEX18    50
 #define SW_SLOT_ENGINE_TEX19    51
-#define SW_ENGINE_TEXTURE_COUNT 20
+#define SW_SLOT_ENGINE_TEX20    52
+#define SW_ENGINE_TEXTURE_COUNT 21
 
 // GPUScene 인스턴스 구조버퍼 (per-instance world/material). 네 백엔드 공통.
 #define SW_SLOT_INSTANCE_SRV 4
@@ -190,6 +191,9 @@
 #define SW_SLOT_MATERIAL_TEX14         30
 #define SW_SLOT_MATERIAL_TEX15         31
 #define SW_MATERIAL_TEXTURE_SLOT_COUNT 16
+// 웹(WebGPU)에서 머티리얼 변형 하나가 가질 수 있는 텍스처 칸 수 — 단계 텍스처 한도 16(CookContract stage_texture_unit_limit) 안에 패스의 엔진 텍스처
+// (그림자 아틀라스 둘 · 접촉 그림자 · 장면 색 · 깊이 사본 · 2D 쿠키 — 여섯까지)가 함께 들어야 한다. 넘는 머티리얼은 쿠킹이 #error 로 멈춘다(binding_texture.hlsli).
+#define SW_MATERIAL_TEXTURE_SLOT_COUNT_WEBGPU 10
 
 // 캔버스(UI) 배치 하나가 쓰는 텍스처 수 — 머티리얼 텍스처 슬롯의 앞 넷을 빌려 쓴다(에뮬 백엔드). 루트 상수 16 dword 안에 들어야 해서
 // 머티리얼 칸 수와 따로 둔다(canvas.hlsl 의 SwRootConstants: 시작 · 텍스처 넷 · 대상 너비 · 높이 · 색각 보정).

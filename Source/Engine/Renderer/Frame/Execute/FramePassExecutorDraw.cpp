@@ -222,7 +222,23 @@ namespace sw
         return true;
     }
 
-    void FramePassExecutor::drawShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer )
+    bool FramePassExecutor::beginShadowTile( FramePassContext& context, const ShadowTileDraw& tile )
+    {
+        RHIViewport viewport{};
+        viewport._x      = static_cast<float32>( tile._cell._x );
+        viewport._y      = static_cast<float32>( tile._cell._y );
+        viewport._width  = static_cast<float32>( tile._cell._size );
+        viewport._height = static_cast<float32>( tile._cell._size );
+        context._pCmd->setViewport( viewport );
+        // 타일마다 새 상수 슬롯을 잡는다. 슬롯은 패스당 하나라서 같은 슬롯에 행렬만 다시 올리면, GPU 가 나중에 읽는 DX12 · Vulkan 에서는
+        // 모든 타일이 마지막에 쓴 행렬을 본다(DX11 · GL 은 업데이트가 명령 순서대로 들어가 가려진다).
+        if ( acquirePassCb( context ) == false )
+            return false;
+        context._passValues.setMatrix( passConstantNames()._lightViewProj, tile._viewProj );
+        return true;
+    }
+
+    void FramePassExecutor::drawCascadeShadowTiles( FramePassContext& context, bool bTransparentBatch )
     {
         // 그림자는 모든 타일을 덮는 상자로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링에 해당한다). 끝나면 지금 뷰의 슬롯으로 돌아간다.
         const ViewShadowData&        shadow   = _pActiveView->_shadow;
@@ -230,59 +246,56 @@ namespace sw
         const uint32                 viewCull = context._cullViewIndex;
         context._cullViewIndex                = _pActiveView->_shadowCullSlot;
 
-        // 캐스케이드 하나가 아틀라스 전체이고 점광 · 스폿 타일이 없으면 아틀라스가 생기기 전과 같다 — 뷰포트도 행렬도 바꾸지 않는다.
-        const bool bWholeAtlas = shadow._cascadeCount <= 1 && _state._frameShadow._listLocalTile.empty() &&
-                                 shadow._arrCascadeTile[0]._cell._size == _state._frameShadow._layout.getAtlasResolution();
+        // 캐스케이드 하나가 아틀라스 전체면 아틀라스가 생기기 전과 같다 — 뷰포트도 행렬도 바꾸지 않는다(점광 · 스폿은 다른 텍스처다).
+        const bool bWholeAtlas = shadow._cascadeCount <= 1 && shadow._arrCascadeTile[0]._cell._size == _state._frameShadow._layout.getAtlasResolution();
         if ( bWholeAtlas )
         {
             drawSceneMeshes( context, pso, bTransparentBatch );
         }
         else
         {
-            // 타일마다 그 칸을 뷰포트로 잡고(가위도 같이 잡힌다) 그 타일의 행렬로 씬을 그린다. 상수가 바뀌므로 드로우는 새 상수 버퍼 슬롯을 받는다.
-            // 캐시한 점광 · 스폿 타일은 캐시 층의 깊이를 픽셀 깊이로 옮긴 뒤(ShadowCacheRestore — 층을 ShadowMap 역할 이름으로 건다) 움직이는 배치만 그린다.
-            const PassConstantNames& names = passConstantNames();
-            if ( bCacheLayer )
+            for ( uint32 cascadeIndex = 0; cascadeIndex < shadow._cascadeCount; ++cascadeIndex )
             {
-                const TransientAttachmentPool::Attachment layer = _state._shadowCache.getLayer();
-                context._resourceRegistry.registerTexture( attachmentNames()._shadowMap, layer._texture, layer._srv );
-            }
-            const RHIPipelineStateHandle restorePSO = _psoManager.getEnginePSO( RenderPassType::ShadowCacheRestore );
-            const uint32                 tileCount  = shadow._cascadeCount + static_cast<uint32>( _state._frameShadow._listLocalTile.size() );
-            for ( uint32 tileIndex = 0; tileIndex < tileCount; ++tileIndex )
-            {
-                const ShadowTileDraw& tile = tileIndex < shadow._cascadeCount ? shadow._arrCascadeTile[tileIndex] : _state._frameShadow._listLocalTile[tileIndex - shadow._cascadeCount];
-                RHIViewport           viewport{};
-                viewport._x      = static_cast<float32>( tile._cell._x );
-                viewport._y      = static_cast<float32>( tile._cell._y );
-                viewport._width  = static_cast<float32>( tile._cell._size );
-                viewport._height = static_cast<float32>( tile._cell._size );
-                context._pCmd->setViewport( viewport );
-                // 타일마다 새 상수 슬롯을 잡는다. 슬롯은 패스당 하나라서 같은 슬롯에 행렬만 다시 올리면, GPU 가 나중에 읽는 DX12 · Vulkan 에서는
-                // 모든 타일이 마지막에 쓴 행렬을 본다(DX11 · GL 은 업데이트가 명령 순서대로 들어가 가려진다).
-                if ( acquirePassCb( context ) == false ) // 링 고갈 — 이 타일은 그리지 않는다(앞 타일의 행렬로 그리지 않는다)
+                if ( beginShadowTile( context, shadow._arrCascadeTile[cascadeIndex] ) == false )
                     continue;
-                context._passValues.setMatrix( names._lightViewProj, tile._viewProj );
                 // 주 시점의 캐스케이드 타일은 자기 컬링 슬롯의 목록을 그린다(그 캐스케이드 절두체로만 거른 것). 추가 뷰의 캐스케이드는 합친 칸이다.
-                // 점광 · 스폿 타일은 모든 뷰가 같으므로 어느 뷰든 그 빛의 슬롯이다(슬롯이 없으면 합친 칸).
-                const bool bCascadeSlot = _pActiveView == &_state._mainView && tileIndex < _state._cascadeCullCount;
-                if ( tileIndex >= shadow._cascadeCount )
-                    context._cullViewIndex = findLocalShadowCullSlot( tileIndex - shadow._cascadeCount );
-                else
-                    context._cullViewIndex = bCascadeSlot ? _state._cascadeCullSlotBase + tileIndex : _pActiveView->_shadowCullSlot;
-                const bool bCachedTile = bCacheLayer && tileIndex >= shadow._cascadeCount &&
-                                         _state._shadowCache.getAction( tileIndex - shadow._cascadeCount ) != ShadowCacheTileAction::DrawAll;
-                if ( bCachedTile )
-                {
-                    drawFullscreen( context, restorePSO );
-                    context._shadowCasterFilter = ShadowCasterFilter::MovableOnly;
-                }
+                const bool bCascadeSlot = _pActiveView == &_state._mainView && cascadeIndex < _state._cascadeCullCount;
+                context._cullViewIndex  = bCascadeSlot ? _state._cascadeCullSlotBase + cascadeIndex : _pActiveView->_shadowCullSlot;
                 drawSceneMeshes( context, pso, bTransparentBatch );
-                context._shadowCasterFilter = ShadowCasterFilter::All;
             }
             // 이 패스 컨텍스트는 패스마다 시드의 사본이지만, 기준 행렬로 되돌려 두면 뒤에 무엇이 붙어도 셰이딩과 같은 행렬을 본다.
-            context._passValues.setMatrix( names._lightViewProj, shadow._lightViewProj );
+            context._passValues.setMatrix( passConstantNames()._lightViewProj, shadow._lightViewProj );
         }
+        context._cullViewIndex = viewCull;
+    }
+
+    void FramePassExecutor::drawLocalShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer )
+    {
+        const RHIPipelineStateHandle  pso      = _psoManager.getEnginePSO( RenderPassType::Shadow );
+        const uint32                  viewCull = context._cullViewIndex;
+        const vector<ShadowTileDraw>& listTile = _state._frameShadow._listLocalTile;
+        // 캐시한 타일은 캐시 층의 깊이를 픽셀 깊이로 옮긴 뒤(ShadowCacheRestore — 층을 LocalShadowMap 역할 이름으로 건다) 움직이는 배치만 그린다.
+        if ( bCacheLayer )
+        {
+            const TransientAttachmentPool::Attachment layer = _state._shadowCache.getLayer();
+            context._resourceRegistry.registerTexture( attachmentNames()._localShadowMap, layer._texture, layer._srv );
+        }
+        const RHIPipelineStateHandle restorePSO = _psoManager.getEnginePSO( RenderPassType::ShadowCacheRestore );
+        for ( uint32 tileIndex = 0; tileIndex < static_cast<uint32>( listTile.size() ); ++tileIndex )
+        {
+            if ( beginShadowTile( context, listTile[tileIndex] ) == false )
+                continue;
+            // 점광 · 스폿 타일은 모든 뷰가 같으므로 어느 뷰든 그 빛의 슬롯이다(슬롯이 없으면 합친 칸).
+            context._cullViewIndex = findLocalShadowCullSlot( tileIndex );
+            if ( bCacheLayer && _state._shadowCache.getAction( tileIndex ) != ShadowCacheTileAction::DrawAll )
+            {
+                drawFullscreen( context, restorePSO );
+                context._shadowCasterFilter = ShadowCasterFilter::MovableOnly;
+            }
+            drawSceneMeshes( context, pso, bTransparentBatch );
+            context._shadowCasterFilter = ShadowCasterFilter::All;
+        }
+        context._passValues.setMatrix( passConstantNames()._lightViewProj, _pActiveView->_shadow._lightViewProj );
         context._cullViewIndex = viewCull;
     }
 

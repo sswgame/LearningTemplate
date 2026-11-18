@@ -216,13 +216,17 @@ namespace sw
                 case RenderPassType::Shadow:
                 {
                     // 클리어 값은 실제로 바인딩하는 뎁스 첨부의 선언에서 읽는다(이름 ShadowMap 으로 찾지 않는다).
-                    // 그림자 캐시 층은 아틀라스 패스 앞에 다시 그리고(다른 깊이 대상이다) 셰이더 읽기로 돌린다 — 렌더 패스 안에서는 상태를 바꿀 수 없다.
-                    const bool bShadows    = _pActiveView->_settings._bShadows == SW_TRUE;
-                    const bool bCacheLayer = bShadows && prepareShadowCacheLayer( context, passDepth, input._bTransparentBatch );
+                    // 깊이 첨부의 역할이 그릴 타일을 고른다 — ShadowMap 이면 방향광 캐스케이드, LocalShadowMap 이면 점광 · 스폿 타일(아틀라스 둘, 감사 RN-4).
+                    // 그림자 캐시 층은 점광 · 스폿 아틀라스 패스 앞에 다시 그리고(다른 깊이 대상이다) 셰이더 읽기로 돌린다 — 렌더 패스 안에서는 상태를 바꿀 수 없다.
+                    const bool bShadows     = _pActiveView->_settings._bShadows == SW_TRUE;
+                    const bool bLocalShadow = passDesc._resolvedDepthRole == static_cast<uint8>( RenderPassInputRole::LocalShadowMap );
+                    const bool bCacheLayer  = bShadows && bLocalShadow && prepareShadowCacheLayer( context, passDepth, input._bTransparentBatch );
                     beginDepthOnlyPass( context, passDepth, getColorLoadFor( passDepth ) );
                     // 그림자를 끈 뷰는 지우기만 한다. 깊이 1(가장 멀다)이면 모두 빛을 받는다.
-                    if ( bShadows )
-                        drawShadowTiles( context, input._bTransparentBatch, bCacheLayer );
+                    if ( bShadows && bLocalShadow )
+                        drawLocalShadowTiles( context, input._bTransparentBatch, bCacheLayer );
+                    else if ( bShadows )
+                        drawCascadeShadowTiles( context, input._bTransparentBatch );
                     context._pCmd->endRenderPass();
                     break;
                 }
@@ -556,7 +560,7 @@ namespace sw
     {
         // ForwardOnlyOpaque 는 디퍼드의 G버퍼가 뺀 배치(MATERIAL_FORWARD_ONLY — 툰)만 조명 패스가 쓴 색과 장면 깊이 위에 그린다(거르기는 shouldDrawBatchInPass).
         // 첨부는 앞 패스가 이미 썼으므로 getColorLoadFor 가 Load 를 고른다.
-        // 그림자 맵은 선언한 입력 중 ShadowMap 역할이다(첨부의 `_role` 또는 원본 이름). 선언하지 않은 파이프라인(2D)은 그림자를 바인딩하지 않는다
+        // 그림자 맵은 선언한 입력 중 ShadowMap · LocalShadowMap 역할이다(첨부의 `_role` 또는 원본 이름). 선언하지 않은 파이프라인(2D)은 그림자를 바인딩하지 않는다
         // — 옛 코드는 이름 ShadowMap 으로 찾았고, 그 첨부가 없는 파이프라인에서는 어차피 빈 바인딩이었다.
         using Internal                                              = FramePassExecutorInternal;
         FramePassContext&                              context      = input._context;
@@ -564,6 +568,9 @@ namespace sw
         const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ShadowMap );
         if ( pShadowInput != nullptr )
             registerPassTexture( context, attachmentNames()._shadowMap, pShadowInput->_attachment );
+        const RenderGraphPassDesc::ResolvedAttachment* pLocalShadowInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::LocalShadowMap );
+        if ( pLocalShadowInput != nullptr )
+            registerPassTexture( context, attachmentNames()._localShadowMap, pLocalShadowInput->_attachment );
         // 접촉 그림자 마스크는 그 패스가 이 뷰에서 돌았을 때만 건다(꺼지면 출력이 없다 — 셰이더는 1). 나머지 선언 입력(원본 색 · 깊이)은 이 패스가 그리는 첨부라 걸지 않는다.
         const RenderGraphPassDesc::ResolvedAttachment* pContactInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ContactShadow );
         if ( pContactInput != nullptr && activePool().resolveName( pContactInput->_attachment ).empty() == false )

@@ -6,6 +6,13 @@
 
 // 이 셰이더는 루트 상수 블록을 직접 선언한다(binding.hlsli 의 그래픽스 블록 g_SwMaterialCount 대신).
 #define SW_OWN_ROOT_CONSTANTS 1
+// 머티리얼 텍스처 칸을 빌려 쓰는 비머티리얼 셰이더 — 배치 하나가 앞 넷(SW_CANVAS_TEXTURE_COUNT)(웹 에뮬이 이 칸만 남긴다, binding_texture.hlsli SW_MATERIAL_TEXTURE_SLOT_LIMIT).
+#include "binding_slots.hlsli"
+#if !defined( MATERIAL_TEXTURE_COUNT )
+    #define MATERIAL_TEXTURE_COUNT SW_CANVAS_TEXTURE_COUNT
+#elif MATERIAL_TEXTURE_COUNT != SW_CANVAS_TEXTURE_COUNT
+    #error "MATERIAL_TEXTURE_COUNT from the compile defines differs from this shader's material texture slots"
+#endif
 #include "binding.hlsli"
 #include "canvas_quad.hlsli"
 #include "color_vision.hlsli"

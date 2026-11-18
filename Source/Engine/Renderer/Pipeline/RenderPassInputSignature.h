@@ -47,6 +47,7 @@ namespace sw
         Distortion,
         ContactShadow,     ///< 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷 = 빛 넷). 조명이 빛의 채널(`GPULight::_extra.z`)을 곱한다(`g_ContactShadowIndex`) — 없으면 1(가림 없음).
         GBufferCustomData, ///< G버퍼 사용자 칸 — 셰이딩 모델 번호마다의 값(shading_model_ids.hlsli 표). 디퍼드 조명이 읽는다(`g_GBufferCustomDataIndex`)
+        LocalShadowMap,    ///< 점광 · 스폿 그림자 아틀라스(방향광 `ShadowMap` 과 다른 텍스처 — 감사 RN-4). 깊이로 거는 그림자 패스는 점광 · 스폿 타일을 그리고, 조명이 `g_LocalShadowMapIndex` 로 읽는다
         Count,
     };
 
@@ -58,8 +59,8 @@ namespace sw
 
     /**
      * @brief 첨부의 역할을 정합니다. 첨부가 선언한 역할(`RenderPassAttachment::_role`)이 먼저입니다.
-     * @details 선언이 없거나 모르는 문자열이면(검증이 오류로 알립니다) 고정 역할 이름(GBufferAlbedo, GBufferNormal, GBufferMaterial, GBufferCustomData, ShadowMap, AOColor, BloomBright, SceneColorCopy, SceneDepthCopy)은 그 역할,
-     *          그 밖의 깊이 포맷은 SceneDepth, 나머지 컬러는 SourceColor 입니다. ShadowMap 은 깊이 포맷이지만 이름이 먼저입니다.
+     * @details 선언이 없거나 모르는 문자열이면(검증이 오류로 알립니다) 고정 역할 이름(GBufferAlbedo, GBufferNormal, GBufferMaterial, GBufferCustomData, ShadowMap, LocalShadowMap, AOColor, BloomBright, SceneColorCopy, SceneDepthCopy)은 그 역할,
+     *          그 밖의 깊이 포맷은 SceneDepth, 나머지 컬러는 SourceColor 입니다. ShadowMap · LocalShadowMap 은 깊이 포맷이지만 이름이 먼저입니다.
      */
     RenderPassInputRole resolveRenderPassInputRole( string_view attachmentName, bool bDepthFormat, string_view declaredRole );
 

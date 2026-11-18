@@ -222,7 +222,7 @@ namespace sw
         float32 _shadowLocalDepthBiasTexels{};
 
         /**
-         * @brief 점광 · 스폿 그림자 칸 한 변의 하한(텍셀)입니다(`ShadowAtlasLayout::make` — 칸 수가 많으면 칸을 반씩 줄이되 이 아래로는 줄이지 않는다, 감사 RN-4).
+         * @brief 점광 · 스폿 그림자 칸 한 변의 하한(텍셀)입니다(`LocalShadowAtlas::build` — 화면에서 작은 빛 · 칸이 넘치는 프레임에 칸을 반씩 줄이되 이 아래로는 줄이지 않는다, 감사 RN-4).
          * @details 유니티 URP 추가 광 그림자 해상도 단계의 가장 낮은 칸 자리다. 이 아래로 줄이면 칸 가장자리 여유(PCF 3 텍셀)가 칸을 다 먹는다.
          */
         PROPERTY( Min = 16 )

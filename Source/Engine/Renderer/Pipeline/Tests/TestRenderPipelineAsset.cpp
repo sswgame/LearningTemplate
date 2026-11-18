@@ -135,10 +135,11 @@ SW_TEST_CASE( RenderPipelineAssetTest, RenderPassAttachmentsAreMerged )
     RenderPipelineAsset asset;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, xml ) );
     const vector<RenderPassAttachment>& listAttachment = asset.getDesc()._listAttachment;
-    SW_REQUIRE_EQUAL( size_t( 3 ), listAttachment.size() );
+    SW_REQUIRE_EQUAL( size_t( 4 ), listAttachment.size() );
     SW_EXPECT_EQUAL( string( "SceneDepth" ), listAttachment[0]._name );
     SW_EXPECT_EQUAL( string( "ShadowMap" ), listAttachment[1]._name );
-    SW_EXPECT_EQUAL( string( "SceneColor" ), listAttachment[2]._name );
+    SW_EXPECT_EQUAL( string( "LocalShadowMap" ), listAttachment[2]._name );
+    SW_EXPECT_EQUAL( string( "SceneColor" ), listAttachment[3]._name );
 }
 
 /** @brief [RenderPipelineAssetTest] 읽지 못한 렌더 패스는 로드 실패이고, 파이프라인과 이름이 겹치는 첨부는 검증 오류다 */

@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Lighting/RealtimeProbeUpdater.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -30,20 +31,101 @@ namespace sw
         };
     } // namespace
 
-    RealtimeProbeLayout RealtimeProbeUpdater::planLayout( const vector<RealtimeProbeRequest>& listRequest )
+    bool RealtimeProbeHistoryAllocator::assign( const vector<RealtimeProbeRequest>& listRequest )
+    {
+        const size_t requestCount = listRequest.size();
+        // 1) 빠졌거나 프로브 수가 바뀐 볼륨의 구간을 돌려받는다 — 서 있는 볼륨은 그대로다.
+        _listActiveID.clear();
+        for ( auto it = _mapSlot.begin(); it != _mapSlot.end(); )
+        {
+            const uint64 volumeID = it->first;
+            const uint32 count    = it->second._count;
+            const bool   bStays   = VectorUtil::containsIf( listRequest, [volumeID, count]( const RealtimeProbeRequest& request )
+                { return request._volumeID == volumeID && request._probeCount * SH9Color::kGPUFloat4Count == count; } );
+            if ( bStays )
+            {
+                ++it;
+                continue;
+            }
+            if ( count != 0 )
+                _span.free( it->second._offset, count );
+            it = _mapSlot.erase( it ); // 마지막 원소가 이 자리로 온다 — 같은 자리를 다시 본다
+        }
+        // 2) 새로 든 볼륨에 구간을 준다. 모자라면 용량을 두 배로 — 버퍼를 다시 만들므로 모두 새로 시작한다.
+        bool bGrew = false;
+        _listOffset.resize( requestCount );
+        _listFramesSinceReset.resize( requestCount );
+        _listFresh.assign( requestCount, SW_FALSE );
+        for ( size_t requestIndex = 0; requestIndex < requestCount; ++requestIndex )
+        {
+            const RealtimeProbeRequest& request = listRequest[requestIndex];
+            const uint32                count   = request._probeCount * SH9Color::kGPUFloat4Count;
+            auto                        it      = _mapSlot.find( request._volumeID );
+            if ( it == _mapSlot.end() )
+            {
+                uint32 offset = count != 0 ? _span.allocate( count ) : 0u;
+                if ( offset == SpanAllocator::kInvalidOffset )
+                {
+                    _span.grow( MathUtil::max( _span.getCapacity() * 2u, _span.getCapacity() + count ) );
+                    offset = _span.allocate( count );
+                    bGrew  = true;
+                }
+                it                       = _mapSlot.insert_or_assign( request._volumeID, HistorySlot{ offset, count, 0u } ).first;
+                _listFresh[requestIndex] = SW_TRUE;
+            }
+            _listOffset[requestIndex] = it->second._offset;
+        }
+        if ( bGrew )
+        {
+            for ( auto& entry : _mapSlot )
+            {
+                entry.second._framesSinceReset = 0;
+            }
+            _listFresh.assign( requestCount, SW_TRUE );
+        }
+        for ( size_t requestIndex = 0; requestIndex < requestCount; ++requestIndex )
+        {
+            _listActiveID.push_back( listRequest[requestIndex]._volumeID );
+            _listFramesSinceReset[requestIndex] = _mapSlot.find( listRequest[requestIndex]._volumeID )->second._framesSinceReset;
+        }
+        return bGrew;
+    }
+
+    void RealtimeProbeHistoryAllocator::advanceFrame()
+    {
+        for ( const uint64 volumeID : _listActiveID )
+        {
+            const auto it = _mapSlot.find( volumeID );
+            if ( it != _mapSlot.end() )
+                ++it->second._framesSinceReset;
+        }
+    }
+
+    void RealtimeProbeHistoryAllocator::clear()
+    {
+        _mapSlot.clear();
+        _span.reset( 0 );
+        _listActiveID.clear();
+        _listOffset.clear();
+        _listFramesSinceReset.clear();
+        _listFresh.clear();
+    }
+
+    RealtimeProbeLayout RealtimeProbeUpdater::planLayout( const vector<RealtimeProbeRequest>& listRequest, const RealtimeProbeHistoryAllocator& history )
     {
         RealtimeProbeLayout layout;
-        for ( const RealtimeProbeRequest& request : listRequest )
+        layout._totalHistoryElements = history.getCapacity();
+        for ( uint32 requestIndex = 0; requestIndex < static_cast<uint32>( listRequest.size() ); ++requestIndex )
         {
+            const RealtimeProbeRequest& request = listRequest[requestIndex];
             layout._listVoxelWordOffset.push_back( layout._totalVoxelWords );
-            layout._listHistoryOffset.push_back( layout._totalHistoryElements );
+            layout._listHistoryOffset.push_back( history.getOffset( requestIndex ) );
             layout._listFirstThread.push_back( layout._totalProbes );
             layout._totalVoxelWords += request._pVoxelGrid != nullptr ? static_cast<uint32>( request._pVoxelGrid->_listWord.size() ) : 0u;
             // 발광 칸은 그 볼륨의 점유 단어 바로 뒤에 붙인다(같은 버퍼 t2). 없으면 셰이더가 읽지 않는다.
             const bool bHasEmission = request._pVoxelGrid != nullptr && request._pVoxelGrid->_listEmission.empty() == false;
             layout._listEmissionWordOffset.push_back( bHasEmission ? layout._totalVoxelWords : kNoEmission );
             layout._totalVoxelWords += bHasEmission ? static_cast<uint32>( request._pVoxelGrid->_listEmission.size() ) : 0u;
-            layout._totalHistoryElements += request._probeCount * SH9Color::kGPUFloat4Count;
             layout._totalProbes += request._probeCount;
         }
         return layout;
@@ -125,7 +207,8 @@ namespace sw
 
         constexpr RHIBufferUsage  kReadUsage    = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         constexpr RHIBufferUsage  kHistoryUsage = kReadUsage | RHIBufferUsage::UnorderedAccess;
-        const RealtimeProbeLayout layout        = planLayout( listRequest );
+        const bool                bHistoryGrew  = _historyAllocator.assign( listRequest );
+        const RealtimeProbeLayout layout        = planLayout( listRequest, _historyAllocator );
         const uint32              float4Stride  = static_cast<uint32>( sizeof( float4 ) );
         const uint32              wordStride    = static_cast<uint32>( sizeof( uint32 ) );
 
@@ -156,32 +239,37 @@ namespace sw
             _framesSinceInputChange = 0;
         }
 
-        // 기록 - 볼륨 구성(번호와 프로브 수)이 달라지면 0 에서 다시 쌓는다.
-        vector<uint64> historyKey;
-        for ( const RealtimeProbeRequest& request : listRequest )
-        {
-            historyKey.push_back( request._volumeID );
-            historyKey.push_back( request._probeCount );
-        }
-        if ( historyKey != _listHistoryKey || _historyBuffer.isValid() == false )
+        // 기록 - 볼륨 정체마다 구간이다. 용량이 늘었거나 버퍼가 없으면 통째로 0 에서, 아니면 새로 든 볼륨의 구간만 0 으로 채운다(서 있는 볼륨은 누적을 잇는다).
+        if ( bHistoryGrew || _historyBuffer.isValid() == false )
         {
             vector<float4> zeros( layout._totalHistoryElements, float4{} );
             if ( _historyBuffer.ensureCapacity( pDevice, float4Stride, layout._totalHistoryElements, kHistoryUsage, true, true, zeros.data() ) == false || _historyBuffer._uav == kInvalidDescriptorIndex )
             {
                 SW_LOG_ERROR_ID( "RealtimeProbeUpdater.FailedCreateProbeHistory", "Failed to create the probe history buffer (%# elements) - realtime light probes do not update", layout._totalHistoryElements );
+                _historyAllocator.clear(); // 다음 프레임에 모든 볼륨이 새로 시작한다
                 return;
             }
             _historyBuffer.upload( pDevice, zeros.data(), layout._totalHistoryElements * float4Stride );
-            _listHistoryKey         = std::move( historyKey );
-            _framesSinceReset       = 0;
             _framesSinceInputChange = 0;
         }
-
-        // 입력 행 - 프레임마다.
-        vector<uint32> listWarmup;
-        for ( const RealtimeProbeRequest& request : listRequest )
+        else
         {
-            listWarmup.push_back( _framesSinceReset / MathUtil::max( request._updatePeriod, 1u ) );
+            for ( uint32 requestIndex = 0; requestIndex < static_cast<uint32>( listRequest.size() ); ++requestIndex )
+            {
+                if ( _historyAllocator.isFresh( requestIndex ) == false )
+                    continue;
+                const uint32         elementCount = listRequest[requestIndex]._probeCount * SH9Color::kGPUFloat4Count;
+                const vector<float4> zeros( elementCount, float4{} );
+                _historyBuffer.upload( pDevice, zeros.data(), elementCount * float4Stride, layout._listHistoryOffset[requestIndex] * float4Stride );
+                _framesSinceInputChange = 0;
+            }
+        }
+
+        // 입력 행 - 프레임마다. 섞는 비율의 초기 가속은 볼륨마다 기록이 시작한 뒤의 프레임 수다.
+        vector<uint32> listWarmup;
+        for ( uint32 requestIndex = 0; requestIndex < static_cast<uint32>( listRequest.size() ); ++requestIndex )
+        {
+            listWarmup.push_back( _historyAllocator.getFramesSinceReset( requestIndex ) / MathUtil::max( listRequest[requestIndex]._updatePeriod, 1u ) );
         }
         _listRowScratch       = makeParamRows( listRequest, layout, listWarmup, projectSky( sky, bHasSky ), _frameCounter, lightBuffer.getGPULightBase() );
         const uint32 rowCount = static_cast<uint32>( _listRowScratch.size() );
@@ -194,7 +282,7 @@ namespace sw
 
         _totalProbes = layout._totalProbes;
         ++_frameCounter;
-        ++_framesSinceReset;
+        _historyAllocator.advanceFrame();
         ++_framesSinceInputChange;
         _bActive = SW_TRUE;
     }
@@ -233,8 +321,7 @@ namespace sw
         _historyBuffer.release( pDevice );
         _paramBuffer.release( pDevice );
         _listHeldGrid.clear();
-        _listHistoryKey.clear();
-        _framesSinceReset       = 0;
+        _historyAllocator.clear();
         _framesSinceInputChange = 0;
         _bActive                = SW_FALSE;
     }

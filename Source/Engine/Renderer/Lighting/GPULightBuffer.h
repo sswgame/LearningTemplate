@@ -29,6 +29,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Lighting/LightGrid.h"
+#include "Engine/Renderer/Lighting/ShadowSetup.h"
 
 namespace sw
 {
@@ -124,9 +125,9 @@ namespace sw
      *          (큐브 20,000 개에서 그 훑기 한 번이 2.9ms 입니다).
      *          활성 판정은 여기서 합니다(레지스트리는 "무엇이 있나"만 압니다).
      * @note 방향광의 그림자 플래그는 `DirectionalLightComponent::findShadowCasting` 가 고른 빛 하나만 받습니다. 그림자 행렬도 같은 함수에서
-     *       나옵니다. 그림자를 켠 점광과 스폿은 번호만 @p pOutListShadowLightIndex 에 적고, 아틀라스 슬롯은 `FrameShadowData::populateFrame` 이 나눠 줍니다.
+     *       나옵니다. 그림자를 켠 점광과 스폿은 번호 · 정체만 @p pOutListShadowLight 에 적고, 아틀라스 슬롯은 `FrameShadowData::populateFrame` 이 나눠 줍니다.
      * @param outList 기존 내용을 지우고 채웁니다. 부르는 쪽이 프레임마다 재사용하는 버퍼여야 합니다(할당 회피).
-     * @param pOutListShadowLightIndex 비지 않으면 그림자를 켠 점광과 스폿 원소의 번호를 지우고 채웁니다.
+     * @param pOutListShadowLight 비지 않으면 그림자를 켠 점광과 스폿 원소의 번호와 빛의 정체(컴포넌트 id — 아틀라스 칸 · 그림자 캐시의 열쇠)를 지우고 채웁니다.
      * @param pOutProbeElement 비지 않으면 쓸 수 있는 베이크를 가진 라이트 프로브 볼륨마다 볼륨 원소(`kLightTypeProbeVolume`, 3D 라이트 뒤)를 목록에 넣고
      *                         그 프로브들의 SH9 원소(프로브 하나가 float4 `kLightProbeFloat4Count` 개)를 모읍니다. 반사 프로브도 같은 길이다 — 볼륨 뒤에
      *                         반사 프로브 원소(`kLightTypeReflectionProbe`)를 넣고 그 옥타헤드럴 텍셀(텍셀 하나가 float4 하나)을 같은 묶음에 붙입니다.
@@ -136,7 +137,7 @@ namespace sw
      * @param pOutListRealtimeProbe 비지 않으면 실시간 갱신 볼륨(`LightProbeVolumeComponent::isRealtime`)마다 볼륨 원소(자리는 0 으로 채운 프로브 원소)를 넣고 갱신 요청을 지우고 채웁니다.
      *                              nullptr 이면 실시간 볼륨은 모으지 않습니다(갱신을 돌릴 수 없는 경로 — 미리보기와 베이크).
      */
-    SW_API void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex = nullptr,
+    SW_API void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<LocalShadowLight>* pOutListShadowLight = nullptr,
                                     LightProbeElementBuilder* pOutProbeElement = nullptr, vector<GPULightCookie>* pOutListCookie = nullptr,
                                     vector<RealtimeProbeRequest>* pOutListRealtimeProbe = nullptr );
 

@@ -208,17 +208,19 @@ namespace sw
         /** @brief resolveTextureAssets 가 빌린 텍스처를 캐시에 반환합니다. */
         void releaseTextureAssets();
         /**
-         * @brief 머티리얼 텍스처의 **백엔드 SRV 인덱스**를 서수 순서로 반환합니다.
-         * @details 네이티브 bindless 가 없는 백엔드(DX11, GL)에서 엔진이 이 순서대로 t16..t31 에 바인딩한다.
-         *          그 백엔드에서 MaterialCB 에 실리는 값은 SRV 인덱스가 아니라 이 배열의 **서수**다.
+         * @brief 머티리얼 텍스처의 **백엔드 SRV 인덱스**를 서수 순서로 반환합니다. 서수는 텍스처 프로퍼티의 차례(빈 칸 포함)이고 빈 칸은 kInvalidDescriptorIndex 다.
+         * @details 네이티브 bindless 가 없는 백엔드(DX11, GL, WebGPU)에서 엔진이 이 순서대로 t16..t31 에 바인딩한다.
+         *          그 백엔드에서 MaterialCB 에 실리는 값은 SRV 인덱스가 아니라 이 배열의 **서수**다. 셰이더 변형은 그 칸 수(`getTextureSlotCount`)만 선언한다(웹).
          */
         const vector<MaterialTextureIndex>& getMaterialTextureSRVs() const { return _listMaterialTextureSRV; }
         /**
-         * @brief 텍스처 프로퍼티 `name` 이 슬롯 목록(`getMaterialTextureSRVs`)의 몇 번째인지 반환합니다. 이 머티리얼이 그 프로퍼티에 텍스처를 빌리지
-         *        않았으면 비어 있습니다.
+         * @brief 텍스처 프로퍼티 `name` 이 슬롯 목록(`getMaterialTextureSRVs`)의 몇 번째인지 반환합니다. 텍스처가 비어 있는 프로퍼티도 자리를 가진다.
+         *        그런 텍스처 프로퍼티가 없으면(또는 텍스처를 아직 풀지 않았으면) 비어 있습니다.
          * @details 인스턴스가 같은 프로퍼티의 텍스처를 덮어쓸 때 같은 슬롯을 쓰려고 묻는다(`MaterialInstance::findTextureSlot`).
          */
         optional<uint32> findTextureSlot( hashed_string name ) const;
+        /** @brief 텍스처 칸 수(텍스처 프로퍼티 수, 칸 상한 `shaderslot::kMaterialTextureCount` 까지)입니다. 셰이더 define `MATERIAL_TEXTURE_COUNT` 의 값이다. */
+        uint32 getTextureSlotCount() const;
         /** @brief 품질 레벨을 설정합니다. */
         void setQualityLevel( MaterialQualityLevel level );
         /** @brief 쿠킹 · 미리 만들기가 모든 조합을 다루는 런타임 스위치(`bShaderFeature="0"`) 수의 상한입니다. 조합이 2^n 이라 넘으면 에셋 상태만 쿠킹하고 오류로 알린다. */

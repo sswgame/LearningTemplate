@@ -36,6 +36,27 @@ namespace sw
         outListDefine.push_back( string( define ) );
     }
 
+    void MaterialPermutation::mergeDefine( vector<string>& inoutListDefine, string_view define )
+    {
+        if ( define.empty() )
+            return;
+        const string_view name = define.substr( 0, define.find( '=' ) );
+        for ( string& existing : inoutListDefine )
+        {
+            if ( string_view( existing ).substr( 0, string_view( existing ).find( '=' ) ) == name )
+            {
+                existing = string( define );
+                return;
+            }
+        }
+        inoutListDefine.push_back( string( define ) );
+    }
+
+    string MaterialPermutation::makeTextureCountDefine( uint32 count )
+    {
+        return string( kMaterialTextureCountDefine ) + "=" + to_string( count );
+    }
+
     void MaterialPermutation::appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine )
     {
         // define 이름은 열거자 이름에서 만든다(`PostProcess` → `MATERIAL_USAGE_POST_PROCESS`). 셰이더 쪽 철자의 원본은 MaterialUsageFlags 하나다.

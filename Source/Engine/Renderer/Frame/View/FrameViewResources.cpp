@@ -89,6 +89,15 @@ namespace sw
                 return false;
             }
 
+            /** @brief @p name 을 읽거나 쓰거나 깊이로 거는 패스가 있으면 true 입니다. */
+            static bool isUsedByAnyPass( const vector<RenderGraphPassDesc>& listPass, const hashed_string& name )
+            {
+                return VectorUtil::containsIf( listPass, [&name]( const RenderGraphPassDesc& pass )
+                { return pass._resolvedDepthAttachment == name || VectorUtil::contains( pass._listResolvedOutput, name ) ||
+                         VectorUtil::containsIf( pass._listResolvedInput, [&name]( const RenderGraphPassDesc::ResolvedAttachment& input )
+                  { return input._attachment == name; } ); } );
+            }
+
             /** @brief 파이프라인이 선언한 첨부 가운데 @p name 의 자리입니다. 선언되지 않은 이름(Swapchain)이면 비어 있습니다. */
             static optional<size_t> findAttachmentIndex( const vector<RenderPassAttachment>& listAttachment, const hashed_string& name )
             {
@@ -176,6 +185,9 @@ namespace sw
                         return static_cast<bool>( gv_motionBlur ) && bMotionStill == false;
                     case RenderPassType::ContactShadow:
                         return sceneState._bContactShadows == SW_TRUE; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다
+                    case RenderPassType::Shadow:
+                        // 점광 · 스폿 아틀라스 패스는 타일이 없으면 지우지도 않는다 — 그 프레임엔 그림자 칸을 받은 빛(params.x)이 없어 조명이 아틀라스를 읽지 않으니 내용은 상관없다.
+                        return pass._resolvedDepthRole != static_cast<uint8>( RenderPassInputRole::LocalShadowMap ) || sceneState._bLocalShadows == SW_TRUE;
                     case RenderPassType::PostProcessMaterial:
                         return settings.shouldDrawPostProcessMaterial( pass._blendableLocation ); // 이 자리에 읽기를 마친 블렌더블이 없다 — 출력이 원본을 가리킨다
                     case RenderPassType::ScreenSpaceReflection:
@@ -221,20 +233,26 @@ namespace sw
         view._transientAliasGeneration = aliasGeneration;
         placeTransients( pool, aliasPlan );
 
-        // 그림자 맵은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
+        // 그림자 맵(방향광 · 점광 스폿 아틀라스 둘)은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
         // 일반 풀스크린 패스만 쓰는 첨부(후처리 효과 · 톤맵의 출력)는 여기서 만들지 않는다 — 그 패스가 이 뷰에서 처음 돌 때 만든다(`applyViewPassSelection`).
         for ( const RenderPassAttachment& attachment : _pipeline.getDesc()._listAttachment )
         {
             if ( FrameViewResourcesInternal::isMadeOnFirstUse( _pipeline.getGraphPass(), hashed_string( attachment._name.c_str() ) ) )
                 continue;
-            const RHIFormat format = attachment._format;
-            const bool      bDepth = FrameRendererUtil::isDepthFormat( format );
+            const RHIFormat           format       = attachment._format;
+            const bool                bDepth       = FrameRendererUtil::isDepthFormat( format );
+            const RenderPassInputRole role         = resolveRenderPassInputRole( attachment._name, bDepth, attachment._role );
+            const bool                bShadowAtlas = role == RenderPassInputRole::ShadowMap || role == RenderPassInputRole::LocalShadowMap;
+            // 그림자 아틀라스는 공용 렌더 패스 묶음(defaultrenderpass)이 늘 선언하지만, 그림자 패스를 뺀 파이프라인(2D)에서는 아무 패스도 쓰지 않는다 — 큰 정사각 깊이를 잡지 않는다.
+            // shortcut: 쓰지 않는 첨부 거르기는 그림자 아틀라스 둘에만 한다(모듈 확장 패스가 선언 첨부를 이름으로 찾을 수 있다), 확장 패스가 첨부를 선언으로 밝히게 되면 모든 첨부로 넓힌다.
+            if ( bShadowAtlas && FrameViewResourcesInternal::isUsedByAnyPass( _pipeline.getGraphPass(), hashed_string( attachment._name.c_str() ) ) == false )
+                continue;
             // 앨리어싱 계획의 별칭은 주인의 텍스처를 함께 쓴다(레벨 수명이 겹치지 않고 서술이 같다). 주인을 아직 만들지 않았으면(처음 쓸 때 만드는 첨부) 자기 텍스처로 만든다.
             const hashed_string attachmentName( attachment._name.c_str() );
             const hashed_string aliasOwner = aliasPlan.findOwner( attachmentName );
             if ( aliasOwner.empty() == false && pool.allocateAlias( attachmentName, aliasOwner, attachment.getOps() ) )
                 continue;
-            if ( resolveRenderPassInputRole( attachment._name, bDepth, attachment._role ) == RenderPassInputRole::ShadowMap )
+            if ( bShadowAtlas )
                 (void)pool.allocateSized( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), shadowResolution, shadowResolution );
             else
                 pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );

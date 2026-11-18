@@ -146,7 +146,7 @@ namespace sw
         uint8 _bReverseCulling{ SW_FALSE };
         /**
          * @brief 정적 메시(`MeshComponent::isStatic`)의 배치입니다. 배치 키라 불투명 배치는 정적과 움직이는 것이 섞이지 않는다(반투명은 그림자 패스가 그리지 않아 섞일 수 있다).
-         * @details 그림자 캐시가 정적 배치만 캐시 층에, 움직이는 배치만 그 위에 그린다(`FramePassExecutor::drawShadowTiles`).
+         * @details 그림자 캐시가 정적 배치만 캐시 층에, 움직이는 배치만 그 위에 그린다(`FramePassExecutor::drawLocalShadowTiles`).
          */
         uint8 _bStaticShadowCaster{ SW_FALSE };
         /** @brief 머티리얼 데이터 그룹(셰이더 타입) 인덱스입니다(`GPUSceneSnapshot::getMaterialGroups`). 없으면 kInvalidMaterialGroup 입니다. */

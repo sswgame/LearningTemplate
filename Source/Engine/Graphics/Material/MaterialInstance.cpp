@@ -359,20 +359,9 @@ namespace sw
     {
         if ( _pParentMaterial == nullptr )
             return nullopt;
+        // 서수는 부모의 텍스처 프로퍼티 차례로 고정이다(빈 칸 포함) — 덮어쓰기는 같은 칸에 든다. 셰이더 변형이 그 칸만 선언하므로 뒤에 칸을 잇지 않는다.
         const optional<uint32> parentSlot = _pParentMaterial->findTextureSlot( name );
-        if ( parentSlot.has_value() )
-            return parentSlot;
-        // 부모에 없는 프로퍼티는 부모 슬롯 뒤에 덮어쓰기 순서대로 잇는다. 지울 것(빈 경로)은 자리를 차지하지 않는다.
-        uint32 slot = static_cast<uint32>( _pParentMaterial->getMaterialTextureSRVs().size() );
-        for ( const TextureOverride& texture : _listTextureOverride )
-        {
-            if ( texture._assetPath.empty() || _pParentMaterial->findTextureSlot( texture._name ).has_value() )
-                continue;
-            if ( texture._name == name )
-                return slot < shaderslot::kMaterialTextureCount ? optional<uint32>{ slot } : nullopt;
-            ++slot;
-        }
-        return nullopt;
+        return parentSlot.has_value() && *parentSlot < shaderslot::kMaterialTextureCount ? parentSlot : nullopt;
     }
 
     void MaterialInstance::fillTextureSlots( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const
