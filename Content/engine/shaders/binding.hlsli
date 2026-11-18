@@ -82,8 +82,6 @@
 #include "octahedral.hlsli"
 #include "light_grid_common.hlsli"
 
-static const uint kInvalidIndex = 0xFFFFFFFFu;
-
 // ------------------------------------------------------------------------------
 // 0-1) 이 헤더가 내놓는 함수의 묶음 — 선언만 둔다. 정의는 각 절에 있다(리소스 선언과 백엔드 분기 사이에 두어야 해서 밖에 정의한다).
 //      정의도 `static` 을 붙인다(FXC 가 선언과 정의의 static 이 다르면 거절한다). 인스턴스 · 배치 원소의 함수는 그 구조체(instance_data · batch_data)에 있다.

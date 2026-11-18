@@ -25,6 +25,9 @@
 #define SW_CAT_( a, b ) a##b
 #define SW_CAT( a, b )  SW_CAT_( a, b )
 
+/// 없는 번호(C++ `constant::invalid_index::kUint32`) — 칸 · 리소스 인덱스 · 스킨 칸이 비었음을 뜻한다. binding.hlsli 를 들이지 않는 컴퓨트(gpu_cull)도 쓴다.
+static const uint kInvalidIndex = 0xFFFFFFFFu;
+
 // 네이티브 bindless 텍스처 백엔드 — 컴파일러(ShaderCompiler.cpp)가 DX12/Vulkan 에 SW_BINDLESS=1 을 정의한다.
 #if defined( SW_BINDLESS ) && ( defined( DX12 ) || defined( VULKAN ) )
     #define SW_NATIVE_BINDLESS 1
