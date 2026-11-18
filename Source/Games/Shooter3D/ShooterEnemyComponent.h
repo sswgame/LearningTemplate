@@ -17,6 +17,8 @@
 
 namespace sw
 {
+    enum class PawnAutoPossess : uint8;
+
     /** @brief 적 하나의 행동 단계입니다. */
     enum class ShooterEnemyPhase : uint8
     {
@@ -61,6 +63,11 @@ namespace sw
         void onHitReceived( const HitInfo& hit ) override;
         /** @brief 휘두름 클립의 맞는 알림(`_attackHitEvent`)을 받습니다(게임 스레드, 애니메이션 평가 뒤). 휘두르는 중이면 다음 틱이 맞힘을 처리합니다. */
         void onAnimationNotify( const AnimationNotifyInfo& notify ) override;
+        /**
+         * @brief 풀 반환: 아직 `launch` 하지 않은 적으로 돌립니다 — 체력 · 단계 · 휘두름 · 복제 표시 · 넷 번호를 비우고, 복제 모습이 끈 폰의 자동 빙의를 되돌립니다.
+         * @details 자리 · 요 · 빠르기 · 디렉터는 다음 `launch` 가 정한다. 래그돌 · 애니메이터 · 외형 · 폰은 각자 되돌린다.
+         */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
 
         /**
          * @brief 스폰합니다 — 디렉터 · 발 위치 · 요 · 체력 · 속도(게임 스레드).
@@ -155,6 +162,7 @@ namespace sw
         Countdown          _attackCooldown; ///< 휘두르기 간격(늦음을 잇는다)
         uint32             _netEntityID;    ///< 복제 엔티티 번호(0 은 아직 없음)
         ShooterEnemyPhase  _phase;
+        PawnAutoPossess    _autoPossessBeforeReplica; ///< 복제 모습이 끄기 전의 폰 자동 빙의(`launchReplica` — 풀 반환이 되돌린다)
         uint8              _bLaunched                : 1;
         uint8              _bHitPending              : 1; ///< 다음 틱에 애니메이터에 Hit 트리거를 건다
         uint8              _bAttackLanded            : 1; ///< 이번 휘두름이 이미 맞았다

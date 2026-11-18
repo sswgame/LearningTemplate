@@ -327,7 +327,7 @@ namespace sw
         , _bProportionTask{ SW_FALSE }
         , _bMeshMerged{ SW_FALSE }
         , _bMeshApplyQueued{ SW_FALSE }
-        , _reserved{ 0 }
+        , _bPartsStripped{ SW_FALSE }
         , _surface{}
         , _surfaceBinding{}
         , _loadedSurfaceChannels{}
@@ -355,6 +355,8 @@ namespace sw
     void CharacterAppearanceComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
+        if ( _bPartsStripped == SW_TRUE )
+            requestAssemble( context ); // 풀에서 다시 켜졌는데 꺼낸 쪽이 입히지 않았다 — 지금 프리셋으로 입힌다(갓 스폰한 것의 `onBeginPlay` 와 같다)
         if ( _assembleCount == 0 )
             return;
         if ( hasSurfaceState() )
@@ -536,6 +538,17 @@ namespace sw
         } );
     }
 
+    SpawnStateReset CharacterAppearanceComponent::resetToSpawnState()
+    {
+        if ( _listSpawnedPart.empty() == false )
+        {
+            removeParts( true ); // 풀 반환은 틱 밖이다 — 소켓에서 떼기를 바로 한다
+            _bPartsStripped = _bStarted;
+        }
+        _surface.clear();
+        return SpawnStateReset::Reset;
+    }
+
     void CharacterAppearanceComponent::removeParts( bool bPool )
     {
         unbindRigUnits();
@@ -710,6 +723,7 @@ namespace sw
 
     void CharacterAppearanceComponent::assemble()
     {
+        _bPartsStripped                 = SW_FALSE;
         GameObject*            pOwner   = getOwner();
         GameObjectManager*     pManager = findManager();
         SkeletalMeshComponent* pBody    = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;

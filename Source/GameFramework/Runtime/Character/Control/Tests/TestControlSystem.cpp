@@ -17,6 +17,7 @@
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntentHistory.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
 
 using namespace sw;
 
@@ -453,6 +454,42 @@ SW_TEST_CASE( ControlSystemTest, AutoPossessSpawnsAnAIThatDiesWithThePawn )
     manager.update( 1.0f / 60.0f );
     manager.update( 1.0f / 60.0f );
     SW_EXPECT_TRUE( manager.resolveGameObject( controllerObject ) == nullptr );
+}
+
+/** @brief [ControlSystemTest] 풀(`PrefabPool`)에 돌려준 폰은 자동 빙의가 세운 AI 조종자를 놓고(조종자는 지워진다) 쉬는 동안 쥐이지 않다가, 다시 꺼내면 갓 스폰한 폰처럼 다시 빙의된다 */
+SW_TEST_CASE( ControlSystemTest, PooledPawnDropsItsAIAndIsPossessedAgainWhenReused )
+{
+    GameObjectManager manager;
+    PrefabPool        pool{ string{}, 2 };
+    pool.setSpawner( PrefabPool::SpawnDelegate::create( []( GameObjectManager& sceneManager, const utf8* pName )
+    {
+        GameObject* pGuard = sceneManager.createGameObject( hashed_string( pName ) );
+        (void)pGuard->addComponent<PawnComponent>();
+        return pGuard;
+    } ) );
+    manager.beginPlay();
+    GameObject* pObject = pool.acquire( manager, "Guard" );
+    SW_REQUIRE_NOT_NULL( pObject );
+    PawnComponent* pPawn = pObject->getComponent<PawnComponent>();
+    SW_REQUIRE_NOT_NULL( pPawn );
+    pPawn->setAutoPossess( PawnAutoPossess::AI );
+    manager.update( 1.0f / 60.0f );
+    SW_REQUIRE_TRUE( pPawn->isPossessed() );
+    const ControllerComponent* pFirstController = manager.resolveComponent( pPawn->getController() );
+    SW_REQUIRE_NOT_NULL( pFirstController );
+    const GameObjectHandle firstControllerObject = pFirstController->getOwner()->getHandle();
+
+    pool.release( manager, pObject->getHandle() );
+    SW_EXPECT_FALSE( pPawn->isPossessed() );
+    manager.update( 1.0f / 60.0f );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( manager.resolveGameObject( firstControllerObject ) == nullptr );
+    SW_EXPECT_FALSE( pPawn->isPossessed() ); // 꺼져 쉬는 폰은 쥐지 않는다
+
+    SW_REQUIRE_TRUE( pool.acquire( manager, "Guard" ) == pObject );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( pPawn->isPossessed() );
+    SW_EXPECT_EQUAL( 1u, pool.getCreatedCount() );
 }
 
 // 폰도 조종자도 없으면 시스템이 프레임에서 빠진다.

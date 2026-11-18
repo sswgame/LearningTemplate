@@ -310,6 +310,19 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 풀 반환 계약의 답입니다(`Component::resetToSpawnState`). 언리얼 Lyra 의 풀 반환 · 유니티 `IPoolable.OnReturn` 의 자리입니다.
+     * @details 기본은 `Unsupported` 다 — 되돌리기를 구현하지 않은 컴포넌트가 붙은 프리팹은 풀(`PrefabPool`)이 받지 않는다(오류로 멈추고 매번 스폰으로 물러서지 않는다).
+     */
+    enum class SpawnStateReset : uint8
+    {
+        Unsupported = 0, ///< 되돌리기를 모른다 — 이 컴포넌트가 붙은 프리팹은 풀 정책으로 쓸 수 없다
+        Reset,           ///< 스폰 상태로 되돌렸다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class Component
      * @brief GameObject 에 기능과 데이터를 덧붙이는 컴포넌트의 기반 클래스입니다.
      * @details 리플렉션에는 **만들 수 없는 기반**(`Abstract`)으로 등록한다. 팩토리가 없어 이름으로 붙일 수 없다.
@@ -464,6 +477,13 @@ namespace sw
          *          접을 수 없는 형식의 상태 칸(맵 · 컴포넌트 핸들)은 선언 결함이라 이유와 함께 멈춘다 — 빼고 접으면 그 칸이 어긋나도 해시가 같다.
          */
         virtual void foldStateHash( StateHashBuilder& inoutBuilder ) const;
+        /**
+         * @brief 풀에 돌려줄 때 실행 중에 바뀐 상태(죽음 · 맞음 · 래그돌 · 절단 · 빙의처럼 사건이 바꾼 것)를 갓 스폰한 상태로 되돌립니다. 게임 스레드 · 틱 밖에서 부릅니다.
+         * @details 기본은 `SpawnStateReset::Unsupported` 다 — 풀(`PrefabPool`)이 처음 만든 인스턴스의 계층 전부에 이 함수를 불러 하나라도 모르면 오류로 그 풀을 막는다.
+         *          그래서 갓 스폰한 상태에서 불러도 아무것도 바뀌지 않아야 한다. 꺼낸 쪽이 매번 다시 정하는 값(배치 · `launch` 같은 시작 호출이 넣는 설정)은 되돌리지 않는다.
+         *          남의 컴포넌트 상태를 바꾼 컴포넌트가 그것을 되돌린다(절단이 바꾼 몸 메시는 절단이, 래그돌이 끈 컨트롤러는 래그돌이). 재정의는 부모 것을 부르지 않는다.
+         */
+        [[nodiscard]] virtual SpawnStateReset resetToSpawnState() { return SpawnStateReset::Unsupported; }
         /**
          * @brief 리플렉션 값을 직렬화기로 **직접** 쓴 뒤 부릅니다. 프로퍼티마다 `onPropertyChanged` 를 부르고, 그다음 `onPostLoad` 를 부릅니다(언리얼의
          *        `PostEditChangeProperty`, 유니티의 `OnValidate` 에 해당).

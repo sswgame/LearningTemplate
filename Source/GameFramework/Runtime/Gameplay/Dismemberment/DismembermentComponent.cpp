@@ -286,6 +286,7 @@ namespace sw
         , _pRegionTable{}
         , _listSeveredRegion{}
         , _listPiece{}
+        , _pIntactMesh{}
         , _bTableLoaded{ false }
     {
         setCanEverTick( false );
@@ -299,6 +300,12 @@ namespace sw
 
     void DismembermentComponent::onEndPlay()
     {
+        destroyPieces();
+        Component::onEndPlay();
+    }
+
+    void DismembermentComponent::destroyPieces()
+    {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         for ( const GameObjectHandle& piece : _listPiece )
@@ -308,7 +315,18 @@ namespace sw
                 pManager->destroyGameObject( pPiece );
         }
         _listPiece.clear();
-        Component::onEndPlay();
+    }
+
+    SpawnStateReset DismembermentComponent::resetToSpawnState()
+    {
+        destroyPieces();
+        GameObject*            pOwner = getOwner();
+        SkeletalMeshComponent* pUnit  = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( _pIntactMesh != nullptr && pUnit != nullptr )
+            pUnit->setMesh( std::move( _pIntactMesh ) );
+        _pIntactMesh.reset();
+        _listSeveredRegion.clear();
+        return SpawnStateReset::Reset;
     }
 
     void DismembermentComponent::onPropertyChanged( hashed_string propertyName )
@@ -438,6 +456,8 @@ namespace sw
         // 낮은 단계도 같이 자른다(스킨을 먼저 둔 뒤 — `setSkin` 은 LOD 를 뗀다). 받지 못하면 setLODs 가 오류를 남기고 LOD 0 만 남는다.
         if ( mesh->getLODs().empty() == false )
             (void)kept->setLODs( Internal::severLODLevels( *mesh, pUnit->getSkeleton(), *_pRegionTable, regionIndex ) );
+        if ( _pIntactMesh == nullptr )
+            _pIntactMesh = mesh; // 처음 자를 때만 — 다음 영역은 이미 자른 몸에서 자른다
         pUnit->setMesh( std::move( kept ) );
 
         // 3) 떨어진 조각: 현재 포즈로 스키닝해 정적 메시로 만들고, 그 정점의 볼록 껍질로 강체를 만든다.

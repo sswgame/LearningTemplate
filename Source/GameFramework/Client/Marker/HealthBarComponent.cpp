@@ -41,7 +41,18 @@ namespace sw
         , _bShowWhenHurt{ false }
         , _bHideWhenDead{ false }
         , _bWarnedNoWidgetComponent{ false }
+        , _spawnRatio{ 0.0f }
+        , _bSpawnVisible{ false }
     {
+    }
+
+    SpawnStateReset HealthBarComponent::resetToSpawnState()
+    {
+        if ( hasBegunPlay() == false )
+            return SpawnStateReset::Reset;
+        _bVisible = _bSpawnVisible;
+        resetRatio( _spawnRatio );
+        return SpawnStateReset::Reset;
     }
 
     void HealthBarComponent::onBeginPlay()
@@ -54,9 +65,11 @@ namespace sw
         const HealthSourceComponent* pSource = ( pOwner != nullptr ) ? pOwner->getComponent<HealthSourceComponent>() : nullptr;
         if ( pSource != nullptr && pSource->getHealthReading()._bHasHealth == SW_TRUE )
             _hpRatio = pSource->getHealthRatio();
-        _hpRatio     = MathUtil::saturate( _hpRatio );
-        _remainRatio = _hpRatio;
-        _targetRatio = _hpRatio;
+        _hpRatio       = MathUtil::saturate( _hpRatio );
+        _remainRatio   = _hpRatio;
+        _targetRatio   = _hpRatio;
+        _spawnRatio    = _hpRatio;
+        _bSpawnVisible = _bVisible;
 
         // 막대 위젯을 화면 마커에 넣는다(마커가 아직 UI 시스템에 묶이지 않았으면 묶일 때 붙는다). 끝날 때는 마커가 위젯을 지운다 — 다시 시작하면 다시 짓는다.
         WidgetComponent* pWidget            = findWidgetComponent();

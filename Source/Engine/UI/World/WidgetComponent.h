@@ -100,6 +100,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        /** @brief 풀 반환: 마커는 스스로 바꾸는 실행 상태가 없습니다 — 내용을 채우는 쪽(HP 바)이 자기 되돌리기에서 되돌립니다. */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override { return SpawnStateReset::Reset; }
+
         WidgetComponent();
         ~WidgetComponent() override;
 

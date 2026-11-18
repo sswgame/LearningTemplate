@@ -2,7 +2,12 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
 #include "GameFramework/Runtime/Gameplay/Dismemberment/Dismemberment.h"
+#include "GameFramework/Runtime/Gameplay/Dismemberment/DismembermentComponent.h"
 
 using namespace sw;
 
@@ -53,4 +58,20 @@ SW_TEST_CASE( DismembermentTest, NothingToSeverReturnsFalse )
     DismembermentResult      result;
     SW_EXPECT_FALSE( DismembermentResult::severRegions( strip, vector_reference<const uint16>{ arrRegion, 6 }, vector_reference<const uint16>{ &severedRegion, 1 }, result ) );
     SW_EXPECT_EQUAL( strip._listIndex.size(), result._remaining._listIndex.size() );
+}
+
+/** @brief [DismembermentTest] 자른 적이 없는 몸(갓 스폰)은 되돌려도 몸 메시 · 잘린 영역 · 조각이 그대로다 — 풀이 처음 만든 인스턴스로 계약을 확인할 때 아무것도 바꾸지 않는다 */
+SW_TEST_CASE( DismembermentTest, IntactBodyIsUnchangedBySpawnStateReset )
+{
+    GameObjectManager       manager;
+    GameObject*             pObject = manager.createGameObject( hashed_string( "Skeleton" ) );
+    SkeletalMeshComponent*  pUnit   = pObject->addComponent<SkeletalMeshComponent>();
+    DismembermentComponent* pCut    = pObject->addComponent<DismembermentComponent>();
+    SW_REQUIRE_TRUE( pUnit != nullptr && pCut != nullptr );
+    const Mesh* pBody = pUnit->getMesh().get();
+
+    SW_EXPECT_TRUE( pCut->resetToSpawnState() == SpawnStateReset::Reset );
+    SW_EXPECT_TRUE( pUnit->getMesh().get() == pBody );
+    SW_EXPECT_TRUE( pCut->getSeveredRegions().empty() );
+    SW_EXPECT_TRUE( pCut->getPieces().empty() );
 }

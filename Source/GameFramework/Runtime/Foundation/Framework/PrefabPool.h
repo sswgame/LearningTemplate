@@ -9,20 +9,38 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
+    class Component;
     class GameObject;
     class GameObjectManager;
 
     /**
+     * @brief 프리팹 하나를 풀로 돌릴지 정하는 데이터입니다(`GameModeComponent::spawnPrefab` 이 받는다). Lyra · Boss Room 의 풀 설정(프리팹 + 쉬게 둘 수) 자리입니다.
+     * @details `_maxIdleCount` 가 0 이면 풀 없이 매번 스폰하고 지운다. 0 보다 크면 그 프리팹의 컴포넌트가 모두 되돌리기(`Component::resetToSpawnState`)를 구현해야 한다 —
+     *          아니면 풀이 처음 만들 때 오류로 막는다(`PrefabPool`).
+     */
+    REFLECT()
+    struct SW_GF_API PrefabPoolPolicy
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0, Tooltip = "Released instances kept switched off for reuse; 0 spawns and destroys every time (pooling needs every component to implement resetToSpawnState)" )
+        uint32 _maxIdleCount{ 0 };
+    };
+
+    /**
      * @class PrefabPool
      * @brief 프리팹 인스턴스를 만들고 지우는 대신 끄고 켭니다(유니티 `ObjectPool<T>` · 언리얼 액터 풀링의 자리).
-     * @details `acquire` 는 꺼 둔 인스턴스가 있으면 켜서, 없으면 `PrefabCache::spawn` 으로 새로 만들어 돌려준다. `release` 는 끄고 쉬는 목록에 넣으며,
-     *          쉬는 수가 `_maxIdleCount` 를 넘으면 그 인스턴스는 지운다. 다시 켠 인스턴스의 컴포넌트 상태(속도 · 체력)는 돌려줄 때 그대로다 —
-     *          쓰는 쪽이 꺼낸 뒤 자리 · 상태를 다시 정한다(풀은 프리팹 원형으로 되돌리지 않는다). 쉬는 인스턴스는 핸들로 들고, 지워졌으면 건너뛴다.
+     * @details `acquire` 는 꺼 둔 인스턴스가 있으면 켜서, 없으면 `PrefabCache::spawn` 으로 새로 만들어 돌려준다. `release` 는 계층의 컴포넌트를 모두
+     *          스폰 상태로 되돌리고(`Component::resetToSpawnState` — 죽음 · 래그돌 · 절단 · 빙의) 끈 뒤 쉬는 목록에 넣으며, 쉬는 수가 `_maxIdleCount` 를 넘으면 지운다.
+     *          꺼낸 쪽이 매번 다시 정하는 값(자리 · `launch` 같은 시작 호출)은 꺼낸 뒤 정한다. 쉬는 인스턴스는 핸들로 들고, 지워졌으면 건너뛴다.
+     *          **풀 계약**: 처음 만든 인스턴스의 계층 전부에 되돌리기를 불러 보고, 구현하지 않은 컴포넌트(`SpawnStateReset::Unsupported`)가 있으면 오류를 남기고
+     *          그 인스턴스를 지운 뒤 이 풀을 막는다 — 다음 꺼내기도 nullptr 이다(매번 스폰으로 물러서지 않는다, 유니티 `IPoolable` · 언리얼 풀 인터페이스의 강제를 형식 대신 등록에서).
      *          `prewarm` 은 컷 · 레벨 시작 전에 미리 만들어 꺼 둔다(첫 사용 프레임의 스폰 비용을 앞당긴다).
      *          수가 정해진 효과(탄착 · 탄도선)는 `acquireRecycling` 을 쓴다 — 꺼낸 수가 상한이면 가장 오래 꺼낸 것을 다시 내주어(유니티 파티클 `Stop Action Recycle` 의 자리, 기억에 의존한 비교) 연사가 풀보다 빨라도 새 효과가 보인다.
      *          풀이 만든 인스턴스는 씬의 평범한 오브젝트라 상태 스냅샷 앞에 걷어야 한다 — 쓰는 쪽이 `destroyAll` 을 부른다.
@@ -75,8 +93,10 @@ namespace sw
         uint32 getCreatedCount() const { return _createdCount; }
 
     private:
-        /** @brief 새로 만듭니다(`_spawner` 또는 프리팹). */
+        /** @brief 새로 만듭니다(`_spawner` 또는 프리팹). 처음 만든 것으로 풀 계약을 확인하고, 어기면 지우고 풀을 막아 nullptr 입니다. */
         GameObject* spawnInstance( GameObjectManager& manager, const utf8* pInstanceName );
+        /** @brief 계층의 컴포넌트를 모두 스폰 상태로 되돌립니다. 되돌리기를 모르는 컴포넌트가 있으면 그것(멈춘 자리)을, 아니면 nullptr 를 반환합니다. */
+        [[nodiscard]] static const Component* resetHierarchy( GameObject& object );
         /** @brief 살아 있는 오브젝트입니다. 지워졌거나 지워지는 중이면 nullptr 입니다. */
         static GameObject* findLive( GameObjectManager& manager, GameObjectHandle handle );
 
@@ -87,5 +107,8 @@ namespace sw
         vector<GameObjectHandle> _listBusy; ///< 꺼낸 인스턴스(오래 꺼낸 것이 앞)
         uint32                   _maxIdleCount;
         uint32                   _createdCount;
+        uint8                    _bContractChecked : 1; ///< 처음 만든 인스턴스로 풀 계약을 확인했다
+        uint8                    _bRefused         : 1; ///< 풀 계약을 어긴 프리팹이다 — 더 만들지 않는다
+        uint8                    _reserved         : 6;
     };
 } // namespace sw

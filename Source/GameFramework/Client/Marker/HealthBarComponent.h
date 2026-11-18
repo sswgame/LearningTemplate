@@ -54,6 +54,8 @@ namespace sw
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 소유 오브젝트가 꺼지면 막대를 숨깁니다(꺼진 오브젝트는 틱이 돌지 않습니다). */
         void onOwnerActiveInHierarchyChanged() override;
+        /** @brief 풀 반환: 시작할 때의 비율(흔적 없이)과 보임으로 돌립니다 — 맞아서 보였거나 쓰러져 숨은 것을 되돌립니다. 시작 전(갓 스폰)이면 바꿀 것이 없습니다. */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
         /**
          * @brief 같은 오브젝트의 체력 시스템이 알린 변화를 받습니다. 다시 두기는 흔적 없이(`resetRatio`) 처리하고, 바뀜은 목표만(`setTargetRatio`) 바꿉니다.
          * @details `_bShowWhenHurt` 면 처음 줄 때 보이고, `_bHideWhenDead` 면 쓰러질 때 숨는다.
@@ -122,7 +124,9 @@ namespace sw
         PROPERTY( Category = "Layout", DisplayName = "Show When Hurt", Tooltip = "Show the bar the first time health drops" )
         bool _bShowWhenHurt;
         PROPERTY( Category = "Layout", DisplayName = "Hide When Dead", Tooltip = "Hide the bar when the owner dies" )
-        bool _bHideWhenDead;
-        bool _bWarnedNoWidgetComponent; ///< 같은 오브젝트에 WidgetComponent 가 없다고 한 번 알렸다
+        bool    _bHideWhenDead;
+        bool    _bWarnedNoWidgetComponent; ///< 같은 오브젝트에 WidgetComponent 가 없다고 한 번 알렸다
+        float32 _spawnRatio;               ///< 시작할 때의 비율(풀 반환이 되돌린다)
+        bool    _bSpawnVisible;            ///< 시작할 때의 보임(풀 반환이 되돌린다)
     };
 } // namespace sw

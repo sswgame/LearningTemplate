@@ -316,7 +316,7 @@ namespace sw
         for ( EnemyRecord& enemy : _listEnemy )
         {
             if ( pManager != nullptr )
-                destroySpawned( *pManager, enemy._object );
+                retireEnemy( *pManager, enemy._kindIndex, enemy._object );
         }
         _listEnemy.clear();
         _listEnemyView.clear();
@@ -610,15 +610,16 @@ namespace sw
     {
         // 종류는 정예면 정예, 나머지는 목록을 차례로 쓴다. 시드는 스폰 순번이라 같은 판은 같은 얼굴이 나온다.
         const uint8                   kindIndex   = request._bElite == SW_TRUE ? kEliteKindIndex : static_cast<uint8>( request._slot % static_cast<uint32>( _listEnemyKind.size() ) );
-        const ShooterEnemyKind&       kind        = kindIndex == kEliteKindIndex ? _eliteEnemyKind : _listEnemyKind[kindIndex];
+        const ShooterEnemyKind&       kind        = findKind( kindIndex );
         const uint32                  seed        = static_cast<uint32>( _pacingSeed ) * 7919u + request._slot;
-        GameObject*                   pObject     = spawnPrefab( manager, kind._prefab, kind._preset.c_str() ); // 이름은 종류의 외형 프리셋(QuadShell · SkeletonMinion) - 시나리오 · 로그가 종류로 찾는다
+        GameObject*                   pObject     = spawnPrefab( manager, kind._prefab, kind._preset.c_str(), kind._pool ); // 이름은 종류의 외형 프리셋(QuadShell · SkeletonMinion) - 시나리오 · 로그가 종류로 찾는다
         ShooterEnemyComponent*        pEnemy      = pObject != nullptr ? pObject->getComponent<ShooterEnemyComponent>() : nullptr;
         CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
+        GameObjectHandle              handle      = pObject != nullptr ? pObject->getHandle() : GameObjectHandle{};
         if ( pEnemy == nullptr )
         {
             if ( pObject != nullptr )
-                manager.destroyGameObject( pObject );
+                retireEnemy( manager, kindIndex, handle );
             if ( request._spawnID != 0 && _bPacingReady == SW_TRUE )
                 (void)_director.notifyDespawned( request._spawnID ); // 스폰하지 못한 적의 예산 슬롯을 돌려준다.
             return;
@@ -640,7 +641,7 @@ namespace sw
         if ( pEnemy->launch( getOwner()->getHandle(), position, yaw, request._health, request._speed ) == false )
         {
             // 체력 설정이 거절됐다(이유는 HealthStateMachine 가 남겼다) — 올려서 대신 세우지 않고 정리한다.
-            manager.destroyGameObject( pObject );
+            retireEnemy( manager, kindIndex, handle );
             if ( request._spawnID != 0 && _bPacingReady == SW_TRUE )
                 (void)_director.notifyDespawned( request._spawnID );
             return;
@@ -655,6 +656,24 @@ namespace sw
         _listEnemy.push_back( record );
     }
 
+    void ShooterGameModeComponent::retireEnemy( GameObjectManager& manager, uint8 kindIndex, GameObjectHandle& inoutHandle )
+    {
+        const ShooterEnemyKind& kind = findKind( kindIndex );
+        if ( kind._pool._maxIdleCount > 0 )
+        {
+            releaseSpawned( manager, kind._prefab.path(), inoutHandle );
+            return;
+        }
+        // 풀 없이 매번 스폰한 적 — 투구 · 망토는 씬의 부품 풀에 쉬게 한 뒤 지운다(다음 적이 꺼내 쓴다). 떨어진 무기는 부품 풀이 받지 않아 지워진다.
+        GameObject*                   pObject     = manager.resolveGameObject( inoutHandle );
+        CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
+        if ( pAppearance != nullptr )
+            pAppearance->destroyOwnerStowingParts();
+        else if ( pObject != nullptr )
+            manager.destroyGameObject( pObject );
+        inoutHandle = GameObjectHandle{};
+    }
+
     void ShooterGameModeComponent::spawnReplicaEnemy( GameObjectManager& manager, const ShooterReplicatedEnemy& replica )
     {
         const bool bKnownKind = replica._kindIndex == kEliteKindIndex || replica._kindIndex < _listEnemyKind.size();
@@ -664,14 +683,15 @@ namespace sw
                              static_cast<int32>( _listEnemyKind.size() ) );
             return;
         }
-        const ShooterEnemyKind&       kind        = replica._kindIndex == kEliteKindIndex ? _eliteEnemyKind : _listEnemyKind[replica._kindIndex];
-        GameObject*                   pObject     = spawnPrefab( manager, kind._prefab, kind._preset.c_str() ); // 이름은 서버 쪽과 같은 종류의 프리셋
+        const ShooterEnemyKind&       kind        = findKind( replica._kindIndex );
+        GameObject*                   pObject     = spawnPrefab( manager, kind._prefab, kind._preset.c_str(), kind._pool ); // 이름은 서버 쪽과 같은 종류의 프리셋
         ShooterEnemyComponent*        pEnemy      = pObject != nullptr ? pObject->getComponent<ShooterEnemyComponent>() : nullptr;
         CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
         if ( pEnemy == nullptr )
         {
+            GameObjectHandle handle = pObject != nullptr ? pObject->getHandle() : GameObjectHandle{};
             if ( pObject != nullptr )
-                manager.destroyGameObject( pObject );
+                retireEnemy( manager, replica._kindIndex, handle );
             return;
         }
         if ( pAppearance != nullptr )
@@ -707,11 +727,8 @@ namespace sw
             if ( pEnemy == nullptr || pSample == nullptr )
             {
                 // 스냅샷에서 빠졌다(서버에서 쓰러졌거나 관심 영역 밖) — 복제 모습은 시체를 남기지 않는다.
-                CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
-                if ( pAppearance != nullptr )
-                    pAppearance->destroyOwnerStowingParts();
-                else if ( pObject != nullptr )
-                    pManager->destroyGameObject( pObject );
+                GameObjectHandle handle = record._object;
+                retireEnemy( *pManager, record._kindIndex, handle );
                 _listEnemy[enemyIndex] = _listEnemy.back();
                 _listEnemy.pop_back();
                 continue;
@@ -774,12 +791,8 @@ namespace sw
                 const bool bShouldNotifyDespawn = pEnemy == nullptr && _bPacingReady == SW_TRUE && record._spawnID != 0 && record._bCounted == SW_FALSE;
                 if ( bShouldNotifyDespawn )
                     (void)_director.notifyDespawned( record._spawnID );
-                // 외형이 있으면 투구 · 망토를 씬의 부품 풀에 쉬게 한 뒤 지운다(다음 적이 꺼내 쓴다). 떨어진 무기는 풀이 받지 않아 지워진다.
-                CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
-                if ( pAppearance != nullptr )
-                    pAppearance->destroyOwnerStowingParts();
-                else if ( pObject != nullptr )
-                    pManager->destroyGameObject( pObject );
+                // 종류의 풀에 돌려준다(래그돌 · 절단 · 애니메이터 · 떨어진 무기 · 빙의를 스폰 상태로) — 풀이 없으면 외형 부품을 쉬게 한 뒤 지운다.
+                retireEnemy( *pManager, record._kindIndex, record._object );
                 _listEnemy[enemyIndex] = _listEnemy.back();
                 _listEnemy.pop_back();
                 continue;
