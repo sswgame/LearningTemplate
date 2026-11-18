@@ -195,10 +195,10 @@ namespace sw::editor
         const EditorCommandDesc* pDesc = find( commandID );
         if ( pDesc == nullptr || isEnabled( *pDesc, target ) == false )
             return false;
-        if ( EditorCommandTargetUtil::isTransacted( pDesc->_edit ) == false )
+        if ( EditorCommandTargetUtil::isRequested( pDesc->_edit ) == false )
             return executeDesc( *pDesc, target ); // 씬을 바꾸지 않는 명령(창 · 저장 · 플레이 요청)은 UI 쪽에서 바로 — 씬은 명령 안에서 다시 명령으로 넘긴다
         ScopedLock<mutex> lock{ _requestMutex };
-        _listRequested.push_back( RequestedCommand{ string( commandID ), target, {} } );
+        _listRequested.push_back( RequestedCommand{ string( commandID ), target, {}, {} } );
         return true;
     }
 
@@ -207,7 +207,15 @@ namespace sw::editor
         if ( edit.isBound() == false )
             return;
         ScopedLock<mutex> lock{ _requestMutex };
-        _listRequested.push_back( RequestedCommand{ string{}, EditorCommandTarget{}, edit } );
+        _listRequested.push_back( RequestedCommand{ string{}, EditorCommandTarget{}, edit, {} } );
+    }
+
+    void EditorCommandRegistry::requestHistoryMove( const Delegate<void()>& move )
+    {
+        if ( move.isBound() == false )
+            return;
+        ScopedLock<mutex> lock{ _requestMutex };
+        _listRequested.push_back( RequestedCommand{ string{}, EditorCommandTarget{}, {}, move } );
     }
 
     void EditorCommandRegistry::runRequestedSceneCommands()
@@ -218,6 +226,11 @@ namespace sw::editor
         }
         for ( const RequestedCommand& requested : _listRunning )
         {
+            if ( requested._moveHistory.isBound() )
+            {
+                requested._moveHistory(); // 거래 밖 — 스택 움직임은 기록이 아니다
+                continue;
+            }
             if ( requested._commandID.empty() )
             {
                 EditorTransaction transaction; // 한 편집이 되돌리기 한 단계다(명령 실행과 같다)

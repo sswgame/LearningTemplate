@@ -2,9 +2,11 @@
 
 #include "Editor/Panels/Scene/Model/HistoryViewModel.h"
 
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Commands/EditorCommandTarget.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoEntry.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 
 namespace sw::editor
 {
@@ -12,56 +14,55 @@ namespace sw::editor
     {
         struct HistoryViewModelInternal
         {
-            /**
-             * @brief Ctrl+Z 가 가는 스택(포커스한 문서 패널의 스택, 없으면 메인 스택)입니다 — 문서마다 스택이라(감사 E-3) 메인만 보이면 문서 기록이 보이지 않는다.
-             *        선택 서비스: 메인 스택은 EditorModule 보다 오래 살아 종료할 때 결합이 먼저 풀린다(그때 nullptr).
-             */
-            static CommandStack* findStack() { return editor::getFocusedCommandStack(); }
+            /** @brief 되돌리기 스택 움직임 하나를 게임 단계에 넘깁니다 — 실행은 Ctrl+Z 와 같은 입구다(`EditorUndoEntry` — 편집 잠금 · 열린 편집을 같은 판정으로 거절한다, 감사 E-2). */
+            template <typename TMove>
+            static void requestMove( const TMove& move )
+            {
+                EditorCommandRegistry::getInEditorContext().requestHistoryMove( Delegate<void()>::create( move ) );
+            }
         };
     } // namespace
 
     void HistoryViewModel::gather( HistoryViewState& outState ) const
     {
-        const CommandStack* pStack = HistoryViewModelInternal::findStack();
-        outState._bAvailable       = pStack != nullptr;
-        if ( pStack == nullptr )
+        // 스택이 아니라 게임 단계 끝이 지은 스냅샷을 읽는다(`EditorUndoHistory::publishSnapshot`). 메인 기록은 선택 서비스다 — 종료할 때 결합이 먼저 풀린다(그때 비운다).
+        const EditorUndoHistory* const pHistory = editor::findSubsystem<EditorUndoHistory>();
+        if ( pHistory == nullptr || pHistory->getSnapshot()._bAvailable == SW_FALSE )
         {
+            outState._bAvailable = false;
             outState._listLabel.clear();
             outState._currentIndex = 0;
             outState._bCanUndo     = false;
             outState._bCanRedo     = false;
             return;
         }
-        const size_t count = pStack->getCommandCount();
-        outState._listLabel.resize( count );
-        for ( size_t index = 0; index < count; ++index )
-        {
-            const string& label        = pStack->getCommand( index )._label;
-            outState._listLabel[index] = label.empty() == false ? label : string( "Command" );
-        }
-        outState._currentIndex = pStack->getCurrentIndex();
-        outState._bCanUndo     = pStack->canUndo();
-        outState._bCanRedo     = pStack->canRedo();
+        const EditorUndoHistorySnapshot& snapshot = pHistory->getSnapshot();
+        outState._bAvailable                      = true;
+        outState._listLabel                       = snapshot._listLabel;
+        outState._currentIndex                    = snapshot._currentIndex;
+        outState._bCanUndo                        = snapshot._bCanUndo != SW_FALSE;
+        outState._bCanRedo                        = snapshot._bCanRedo != SW_FALSE;
     }
 
-    // 움직임은 Ctrl+Z 와 같은 입구다(`EditorUndoEntry`) — 편집 잠금(플레이 · 베이크)과 열린 편집(끌기 · 거래)을 같은 판정으로 거절한다(감사 E-2).
     void HistoryViewModel::undo()
     {
-        (void)EditorUndoEntry::undo();
+        (void)EditorCommandRegistry::getInEditorContext().request( "edit.undo", EditorCommandTarget::none() ); // Ctrl+Z 와 같은 명령 — 게임 단계가 실행한다
     }
 
     void HistoryViewModel::redo()
     {
-        (void)EditorUndoEntry::redo();
+        (void)EditorCommandRegistry::getInEditorContext().request( "edit.redo", EditorCommandTarget::none() );
     }
 
     void HistoryViewModel::clear()
     {
-        (void)EditorUndoEntry::clear();
+        HistoryViewModelInternal::requestMove( []()
+        { (void)EditorUndoEntry::clear(); } );
     }
 
     void HistoryViewModel::jumpTo( size_t stepIndex )
     {
-        (void)EditorUndoEntry::jumpTo( stepIndex );
+        HistoryViewModelInternal::requestMove( [stepIndex]()
+        { (void)EditorUndoEntry::jumpTo( stepIndex ); } );
     }
 } // namespace sw::editor
