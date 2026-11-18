@@ -17,6 +17,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -754,6 +755,31 @@ namespace sw
         return CandidateFillResult::Included;
     }
 
+    bool GPUSceneBuilder::collectPermutationDirtySlots( uint64 sinceGeneration, uint64 untilGeneration )
+    {
+        _listPermutationDirtySlot.clear();
+        const MaterialCache* const pCache = MaterialCache::findBound();
+        if ( pCache == nullptr || pCache->getPermutationLog().collectChangedOwners( sinceGeneration, untilGeneration, _listChangedOwnerScratch ) == false )
+            return false;
+        // 지난 빌드의 후보(최신은 `_listBuiltCandidate` — 빌드 끝에 맞바꿨다)에서 바뀐 머티리얼 · 인스턴스를 쓰는 칸만 고른다. 머티리얼이 바뀌었으면 그 인스턴스를 쓰는 칸도
+        // 후보의 머티리얼이 부모라 함께 걸린다. 실리지 않은 칸(대기 · 숨김)은 실릴 때 해시를 새로 구한다.
+        // shortcut: 후보를 한 번 훑는다(포인터 비교 둘 — 다시 모으기보다 훨씬 싸다). 퍼뮤테이션을 매 프레임 바꾸는 장면이 커서 드러나면 머티리얼 → 칸 역참조를 둔다.
+        const vector<const void*>& listOwner = _listChangedOwnerScratch;
+        const uint32               count     = static_cast<uint32>( _listBuiltCandidate.size() );
+        for ( uint32 slot = 0; slot < count; ++slot )
+        {
+            if ( isCandidateIncluded( slot ) == false )
+                continue;
+            const DrawCandidate& candidate = _listBuiltCandidate[slot];
+            const bool           bUses     = std::binary_search( listOwner.begin(), listOwner.end(), static_cast<const void*>( candidate._material.get() ) ) ||
+                               ( candidate._instance != nullptr &&
+                                 std::binary_search( listOwner.begin(), listOwner.end(), static_cast<const void*>( candidate._instance.get() ) ) );
+            if ( bUses )
+                _listPermutationDirtySlot.push_back( slot );
+        }
+        return true;
+    }
+
     void GPUSceneBuilder::assignPermutationHash( DrawCandidate& candidate )
     {
         // 어느 PSO 로 그릴지를 정하는 값이다. 배치 키의 일부이고, 여기서 한 번 구해 두면
@@ -899,6 +925,12 @@ namespace sw
         // 바꾸면 그릴 셰이더가 달라지는데 씬에서는 아무 일도 일어나지 않은 것처럼 보인다. 세대로 가른다.
         const uint64 permutationGeneration = MaterialPermutation::getPermutationGeneration();
         input._bPermutationSame            = input._bHasCache && permutationGeneration != 0 && ( permutationGeneration == _lastPermutationGeneration ); // 0 = 모름(엔진 없음) — 같다고 보지 않는다
+        // 세대가 바뀌었으면 변경 기록에서 바뀐 머티리얼 · 인스턴스를 받아 **그것을 쓰는 칸만** 다시 모은다(키워드 하나에 장면 전체를 다시 모으지 않는다 — 유니티는 키워드를 바꾼
+        // 렌더러만 다시 배치하고, 언리얼은 그 프리미티브의 드로우 명령만 다시 캐시한다). 기록이 넘쳤거나 주인을 모르는 변경이면 예전처럼 전체 수집이다.
+        // 이 칸 목록이 성립하면 수집은 부분 수집으로 갈 수 있다 — 전체 수집으로 떨어지면 `_bPermutationSame` 이 거짓이라 모든 칸의 해시를 다시 구한다.
+        const bool bPermutationTargeted = input._bPermutationSame == false && input._bSetSame && permutationGeneration != 0 && _lastPermutationGeneration != 0 &&
+                                          collectPermutationDirtySlots( _lastPermutationGeneration, permutationGeneration );
+        const bool bPermutationLocal = input._bPermutationSame || bPermutationTargeted;
 
         // 아무도 "바뀌었다" 고 말하지 않았고 카메라도 그대로면 **수집 자체를 하지 않는다**.
         // 바꾼 쪽이 알려 주므로 정지한 씬의 비용은 0에 수렴한다. 주의: 이 판단을 위해 모든 GameObject 의
@@ -908,12 +940,23 @@ namespace sw
         _listMaterialRetrySlot.swap( _listMaterialPendingSlot );
         _listMaterialPendingSlot.clear();
         SW_PROFILE_COUNT( "GT.Material.notReadyBatches", _listMaterialRetrySlot.size() );
-        const bool bNothingChanged = input._bSetSame && bCamSame && input._bPermutationSame && primitives.hasDirty() == false && _listMaterialRetrySlot.empty();
+        const bool bNothingChanged = input._bSetSame && bCamSame && bPermutationLocal && _listPermutationDirtySlot.empty() && primitives.hasDirty() == false &&
+                                     _listMaterialRetrySlot.empty();
         if ( bNothingChanged )
+        {
+            _lastPermutationGeneration = permutationGeneration; // 바뀐 퍼뮤테이션을 쓰는 칸이 없었다 — 다음 프레임이 같은 기록을 다시 읽지 않게
             return;
+        }
 
         // 렌더 상태가 바뀐 것과 월드 행렬만 바뀐 것을 따로 받는다. 뒤쪽은 다시 모으지 않는다(`copyCandidateTransforms`).
         pObjects->getPrimitiveRegistry().consumeDirty( _listDirtyPrimitive, _listTransformDirtyPrimitive );
+        if ( _listPermutationDirtySlot.empty() == false )
+        {
+            _listDirtyPrimitive.insert( _listDirtyPrimitive.end(), _listPermutationDirtySlot.begin(), _listPermutationDirtySlot.end() );
+            VectorUtil::sortUnique( _listDirtyPrimitive );
+            SW_PROFILE_COUNT( "GT.GPUScene.build.permutationDirtySlots", _listPermutationDirtySlot.size() );
+            _listPermutationDirtySlot.clear();
+        }
         if ( _listMaterialRetrySlot.empty() == false )
         {
             // 칸 번호가 그대로일 때만 뜻이 있다(배치 세대가 바뀌면 전체 수집이 모든 칸을 보고 대기 칸을 다시 적는다). 레지스트리 더티와 겹친 칸은 한 번만 본다.
@@ -951,7 +994,7 @@ namespace sw
         // 조건이 하나라도 어긋나면 **아래 전체 수집으로 떨어진다**. 부분 갱신이 틀리는 것보다 느린
         // 것이 낫고, 두 경로가 같은 `fillCandidateFromPrimitive` 를 쓰므로 채우는 규칙이 갈리지 않는다.
         // 칸 수는 배치 세대가 같으면 줄지 않는다(끝에 붙은 인스턴스 항목만큼 는다) — 는 칸은 모두 더티로 오므로 부분 수집이 표를 늘려 채운다.
-        const bool bCanPartial = input._bSetSame && input._bPermutationSame && _listPrimitiveToCandidate.size() <= input._slotCount &&
+        const bool bCanPartial = input._bSetSame && bPermutationLocal && _listPrimitiveToCandidate.size() <= input._slotCount &&
                                  _lastCandidateCount <= _listScratchCandidate.size() + _listBuiltCandidate.size() &&
                                  _listDirtyPrimitive.size() * 4 < input._slotCount;
         MeshCollectResult collect{};

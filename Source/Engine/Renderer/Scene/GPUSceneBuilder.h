@@ -722,6 +722,11 @@ namespace sw
         void applyGPULODGroup( DrawCandidate& candidate ) const;
         /** @brief 후보의 퍼뮤테이션 해시를 기록합니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */
         static void assignPermutationHash( DrawCandidate& candidate );
+        /**
+         * @brief 퍼뮤테이션 변경 기록(`MaterialCache::getPermutationLog`)의 세대 (@p sinceGeneration, @p untilGeneration] 에 바뀐 머티리얼 · 인스턴스를 쓰는 칸을 `_listPermutationDirtySlot` 에 모읍니다.
+         * @return 기록이 넘쳤거나 주인을 모르는 변경이 끼었으면 false — 부르는 쪽은 예전처럼 모든 칸을 다시 모은다.
+         */
+        [[nodiscard]] bool collectPermutationDirtySlots( uint64 sinceGeneration, uint64 untilGeneration );
         /** @brief 후보에서 GPU 인스턴스 페이로드(월드, 바운드, 블렌드, 시드, 스프라이트 프레임과 색)를 채웁니다. 배치와 머티리얼 인덱스는 건드리지 않습니다. */
         static void fillPayload( const DrawCandidate& candidate, GPUInstance& outInstance );
         /**
@@ -790,6 +795,10 @@ namespace sw
          *          않는다. 이 값이 다르면 "아무도 안 움직였다" 는 건너뛰기를 하지 않는다.
          */
         uint64 _lastPermutationGeneration{ 0 };
+        /** @brief 이번 빌드에 퍼뮤테이션이 바뀐 머티리얼 · 인스턴스를 쓰는 칸입니다(`collectPermutationDirtySlots`). 더티 칸에 더한 뒤 비운다. */
+        vector<uint32> _listPermutationDirtySlot;
+        /** @brief 변경 기록에서 꺼낸 주인의 작업 배열입니다(정렬 · 중복 없음). */
+        vector<const void*> _listChangedOwnerScratch;
         /**
          * @brief 재구축 중 **퍼뮤테이션 해시**에서 대표 머티리얼을 찾는 맵입니다(배치 키 합치기용).
          * @details 셰이더 **경로**를 키로 쓰면 forward_lit.hlsl 을 쓰는 유리 머티리얼과 불투명 머티리얼이 한 대표로 합쳐져
