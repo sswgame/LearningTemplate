@@ -8,9 +8,9 @@
 
 ## 0. 다음 순서
 
-1. **다음 묶음 — 갈래 r-plat · r-econ · r-edrem · r-hang · r-tidy(옛 백업을 최신 main 위로 옮겨 커밋만 함, 빌드 안 됨):** 둘씩 합쳐 빌드 · 검증 · push 한다. r-edrem 은 새 테스트 파일이 글롭에 잡히는지, r-hang 은 Required 슬롯이 는 `CharacterMeshCacheConfig` 의 바인딩 검사, r-tidy 는 `--from cpu` 에서 tidy 를 건너뛰는 것을 본다.
+1. **다음 묶음:** 작업자 갈래(w-gentu2 · w-rn4 · w-s8 · w-n11 · w-gvsnap · w-k11 · w-a13 · w-rn6 단계 · w-editorthread 단계)를 둘 · 셋씩 병합 → Debug · Release 증분 빌드로 컴파일 먼저 → `preflight --no-linux` → push → 워크트리 지움. 할 일을 끝낼 때 Linux(`linux_scenarios.py all` + sanitize)를 모아서 한 번.
    - 작업자 몫: `GameObjectManager.inl` 머리말의 "포함을 잊으면 링크에서 멈춘다" 를 맞춘다 — clang 은 `-Werror=undefined-func-template`(`sw_require_template_definitions`)로 컴파일에서 멈추고 MSVC 만 링크에서 멈춘다. 그 뒤 에셋 GUID 2 · 3 단계(5 절).
-2. **감사 열린 항목(7 절):** P1 9 · P2 7 건. 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고친다. 작업자에게는 NEXT 를 고치지 말게 하고 통합 커밋이 줄을 지운다 — 커밋 메시지는 `감사 <ID>` 꼴(옛 백로그 번호와 겹친다).
+2. **감사 열린 항목(7 절):** 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고친다. 작업자에게는 NEXT 를 고치지 말게 하고 통합 커밋이 줄을 지운다 — 커밋 메시지는 `감사 <ID>` 꼴(옛 백로그 번호와 겹친다).
 
 ## 1. 통합 빌드에서 함께 볼 것 (빌드 없이 넘어온 묶음)
 
@@ -54,6 +54,7 @@
   - GPU 업로드 · 텍스처: shooter3d · meadowvillage 첫 진입 × 백엔드 셋 × `-gv_gpuUploadQueue=0/1`, `RT.TextureUpload.*` — pump 가 RT 의 10 % 를 넘거나 waiting 이 계속 0 이 아니면 RHI Thread 형 시제품.
   - 렌더 그래프 폭: `-gv_renderGraphParallelMinWidth=2 · 3 · 4 · 99` × DX12 · Vulkan — 3 · 4 가 흔들림 밖으로 빠르면 기본값을 바꾼다.
   - 그 밖: Tracy `GT.Frame` 자식 합 90 % 이상, 배치 크기 12 · 24 · 48, `load/*` × 워커 1 · 2 · 4 · 8 과 구조 지표, W25 GPU 비교(c05a3ee251 대 지금 — 노이즈 안이면 되돌림), W-S4 `-ftime-trace`, W-R1 RT 프레임 힙 할당, W-R2 PSO 조회, 5-2 `RT.Bind.*`, DX12 기록 경로 락 제거 전후 `bench.json` p50(291d69074e), 골든 여유(`--golden-margins`), 군중 `load/navcrowd`(넘으면 한 종류 군중을 지역으로 쪼갬), 잔상 GPU · CPU 메모리 `game.empty.afterimage`(품질 단계별 상한), 볼륨 안개 해상도별 `RT.Fog.Volume`.
+- **메시 인덱스 전환 뒤(StructureRefactor 10 절):** 모든 골든 대조(정점 순서가 같으면 그림이 같아야 한다 — 차이는 버그)와 농장 · 군중의 캐릭터당 GPU 측정.
 - **N×M 측정 후보**(목록이 작으면 해시가 손해이거나 순서를 지켜야 한다 — 재고 나서): `DataInheritance.cpp` `findEntry`(가장 큰 후보), `ComponentRegistry.cpp:60,75`, `PrefabPool.cpp:80,92`, `ShooterNetPawnComponent.cpp:535,571`(틱마다 적 수²), `MaterialCache.cpp:350`, `DestructionState.cpp:779,855`, `ContentBrowserCollectionStore.cpp:108`, `EditorAssetFileCommands.cpp:154,199,569`, `EditorNodeGraph.cpp:333,543,696`(프레임마다 노드 × 고른 노드), `ModResolver.cpp:161`, `ProjectSettingsDocument.cpp:45,62`, `ComponentStateStore.cpp:82`.
 - **Shooter3D 소총 자세 클립:** 지금은 리그 IK 견착(`ubc_player_body.rig.xml` TwoHandHold). 상용(Lyra · ALS)처럼 쥔 자세 클립 + 왼손 IK 로 — CC0 poly.pizza "SWAT"(Quaternius, `https://static.poly.pizza/713f6535-f4f3-4367-a4c6-ced126ae0936.glb`, `Idle_Gun` · `Gun_Shoot` · `Run_Shoot`)을 `models_raw/quaternius` 에 넣고 UBC 로 리타깃해 상체 층(Aim)으로, IK 견착은 손 자리 보정으로.
 
@@ -90,11 +91,12 @@
 ## 6. 리소스 · 그 뒤
 
 - **Sprite Fusion 타일셋**(상세 페이지마다 CC0): Castle · Tiny Swords(Pixel Frog), Dungeon(0x72), Four Seasons Platformer(Analog Studios), Retro Gameboy(Ben Leggett) — `https://www.spritefusion.com/downloads/tilesets/<이름>.zip`. 1Bit Platformer 는 Kenney 원본에서. **VFX 25 종**(MIT, credits 에 고지): 캔버스 TypeScript 를 브라우저 MCP 로 재생해 시트로 굽는다. **PixelFX Piper**: 이용 조건 확인 뒤 시트로.
+- **로우폴리 에셋을 실제 게임 품질로(사용자 지시 2026-11-01, CC0):** Quaternius 적용(11-02) 뒤 끝났다는 판정이 없다. 게임마다 플레이스홀더 · 원시 도형이 남은 자리를 `-gv_screenshot` 사진으로 모아 목록을 만들고, 남은 자리를 CC0 팩으로 채운다(판정: 게임 사진에 원시 도형 · 단색 플레이스홀더 0).
 - Empty 게임을 TestBed 로 전수 개명(옛 이름 린트로 막기). `new-online-kit` 로 키트 하나 지어 보기. `-cooked-content` 로 띄워 경로를 조립해 읽는 에셋이 빠지지 않는지. 단위 테스트 빈 곳(`Scripts/dev/test_coverage.py` "없음"), `AccountTicketConnect` 를 루프백 온라인 호스트로 성공 · 만료 · 재시도 실패와 비밀 값이 로그 · 오류에 새지 않는지.
 
 ## 7. 감사 열린 항목
 
-상용 대비 감사(2026-11-12, 기준 main `e480b07498` — 줄 번호의 기준. 원문 · 닫힌 항목은 `git show e480b07498:docs/CommercialGapAudit.md`). 순서: 결함 · 계약 줄([14] · [35])을 먼저, 성능 줄은 측정이 문턱을 넘은 것만. 줄 앞은 감사 ID 와 옛 "다음 할 일" 번호 `[n]`(코드 주석 · DesignBacklog 제목이 가리킨다 — 다시 매기지 않는다). 온라인 줄은 `security-and-hardening`, 외부 API 주장은 기억 기준이라 context7 로 대조한다.
+상용 대비 감사(2026-11-12, 기준 main `e480b07498` — 줄 번호의 기준. 원문은 `git show aa79565a0a:docs/CommercialGapAudit.md`, 마지막 판은 `f0e5340264^`). 순서: 결함 · 계약 줄을 먼저, 성능 줄은 측정이 문턱을 넘은 것만. 줄 앞은 감사 ID 와 옛 "다음 할 일" 번호 `[n]`(코드 주석 · DesignBacklog 제목이 가리킨다 — 다시 매기지 않는다). 온라인 줄은 `security-and-hardening`, 외부 API 주장은 기억 기준이라 context7 로 대조한다.
 
 - **P-4 [14] Android IME 조합** — Android 가 미확정 글을 못 받는다(웹 조합 · 소프트 키보드는 섰다). 상용: 유니티 `TouchScreenKeyboard`, Godot `virtual_keyboard_show`. 제안 GameTextInput. 확인: `WindowTextInputTest` Android 조합 케이스, `web-check` 의 `compositionend` 화면.
 - **O-12 [30] 원장 경로 부하 측정(통합 담당이 돌린다)** — PostgreSQL · RESP 를 띄우고 `SW_SHOOTER3D_DB_PASSWORD` · `SW_SHOOTER3D_CACHE_PASSWORD` 를 둔 뒤 빌드 `Bin` 에서 `OnlineLoadBot --scenario=<저장소>/Source/Programs/OnlineLoadBot/Scenarios/ledger_mix.json --load=<저장소>/Source/Programs/OnlineLoadBot/Scenarios/ledger_mix.load.xml --local-server=0 --online-config=<저장소>/Source/Programs/OnlineLoadBot/LoadBot.online.json --store-config=<저장소>/Config/Server/Online/Shooter3D.external.json --report=<빌드>/Testing/Logs/OnlineLoadBot.ledgerMix.json` — 보고서의 `_server._conflictRetryBasisPoints` · `_busyBasisPoints` · `_droppedArrivalCount` 를 이 줄에 적고, 종료 코드 5 면 원장 감사(재화 총량 보존)가 깨진 것이다.
