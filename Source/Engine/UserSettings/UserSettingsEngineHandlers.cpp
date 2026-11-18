@@ -2,6 +2,7 @@
 
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
@@ -93,13 +94,7 @@ namespace sw
 
     void UserSettingsEngineHandlers::removeBindingInputMap( const InputMap& inputMap )
     {
-        for ( size_t index = 0; index < _listBindingInputMap.size(); ++index )
-        {
-            if ( _listBindingInputMap[index] != &inputMap )
-                continue;
-            _listBindingInputMap.erase( _listBindingInputMap.begin() + static_cast<ptrdiff_t>( index ) );
-            return;
-        }
+        VectorUtil::removeFirst( _listBindingInputMap, &inputMap );
     }
 
     InputMap* UserSettingsEngineHandlers::findBindingInputMap( const hashed_string& action ) const
