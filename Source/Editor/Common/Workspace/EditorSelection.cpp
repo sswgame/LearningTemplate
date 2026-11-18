@@ -6,7 +6,6 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Foundation/StdHeaders.h"
-#include "Core/Log/Logger.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelectionSync.h"
@@ -14,12 +13,10 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
-#include "Editor/Common/Workspace/Undo/ObjectSnapshot.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
 
 namespace sw::editor
 {
@@ -325,24 +322,6 @@ namespace sw::editor
             return editor::findGameObject( handle );
         GameObjectManager* pManager = _pPreviewScene->getObjectManager();
         return ( pManager != nullptr && handle.isValid() ) ? pManager->resolveGameObject( handle ) : nullptr;
-    }
-
-    void EditorSelection::recordModify( GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after, string_view label ) const
-    {
-        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        if ( _pPreviewScene == nullptr )
-        {
-            transaction.recordModify( &obj, before, after, label );
-            return;
-        }
-        // 창의 스택에 남긴다 — 명령은 기록할 때의 씬 키를 기억해 활성 씬이 바뀌어도 그 미리보기 씬에서 되돌린다(`ObjectSnapshot`).
-        SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-        if ( pSceneManager == nullptr )
-        {
-            SW_LOG_ERROR_ID( "EditorSelection.NoSceneManagerEditPreview", "No SceneManager - the edit of '%#' in the preview scene is not recorded", obj.getName().c_str() );
-            return;
-        }
-        _pPreviewStack->push( ObjectSnapshot::makeModify( *pSceneManager, obj, before, after, label ) );
     }
 
     void EditorSelection::notifyChanged()

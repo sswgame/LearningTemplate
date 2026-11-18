@@ -813,6 +813,8 @@ namespace sw::editor
         if ( EditorPreferencesStore::hasNewSections() )
             (void)EditorPreferencesStore::loadNewSections( EditorPreferencesStore::getDefaultFilePath() ); // 입힌 수는 쓰지 않는다
         EditorPlaySession::beginUIFrame();                                                                 // 이번 UI 프레임이 읽는 플레이 상태(게임 스레드가 넘긴 값)
+        // 되돌리기 알림이 남긴 선택 고칠 일 — 선택은 UI 상태라 기록 쪽은 id 만 남기고 UI 가 입힌다(`EditorSelectionUpdateQueue`). 게임 단계 · 자동화가 움직인 스택의 몫이다.
+        _editorContext->getSubsystem<EditorObjectEditBindings>().applySelectionUpdates( editor::getMainSceneSelection() );
         _editorContext->getSubsystem<EditorRenderViews>().beginFrameFocus();
         _editorContext->getSubsystem<EditorRenderViews>().clearViewDrawnMarks();
     }

@@ -17,8 +17,6 @@
 
 namespace sw
 {
-    struct ObjectSnapshot;
-
     class CommandStack;
     class GameObject;
     class Scene;
@@ -124,7 +122,7 @@ namespace sw::editor
         // 범위. 메인 선택(묶지 않음) 또는 미리보기 창의 씬과 스택
         // ------------------------------------------------------------------------------
         /**
-         * @brief 이 선택을 미리보기 씬 @p scene 과 창의 Undo 스택 @p stack 에 묶습니다. 핸들의 대상은 그 씬에서 찾고, 편집 기록(`recordModify`)은 그 스택에 남습니다.
+         * @brief 이 선택을 미리보기 씬 @p scene 과 창의 Undo 스택 @p stack 에 묶습니다. 핸들의 대상은 그 씬에서 찾습니다. 편집 기록은 거래(`EditorTransaction`)가 오브젝트가 사는 씬으로 이 스택을 고른다 — 선택은 되돌리기에 기록하지 않는다.
          * @details 창이 씬을 만든 직후 부르고, 창이 닫힐 때 `unbindPreviewScope` 로 해제한다. 묶인 동안 씬과 스택은 이 선택보다 오래 살아야 한다.
          */
         void bindPreviewScope( Scene& scene, CommandStack& stack );
@@ -138,11 +136,6 @@ namespace sw::editor
         Scene* getScene() const;
         /** @brief 이 선택의 범위에서 핸들이 가리키는 오브젝트를 찾습니다. 사라졌으면 nullptr 입니다. */
         GameObject* findObject( GameObjectHandle handle ) const;
-        /**
-         * @brief @p obj 의 수정 전후 상태를 이 선택의 범위에 기록합니다. 미리보기 선택은 묶인 스택에 그 씬의 키를 기억하는 명령으로 남기고,
-         *        메인 선택은 에디터 트랜잭션(`EditorTransaction::recordModify`)에 남깁니다.
-         */
-        void recordModify( GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after, string_view label ) const;
 
     private:
         void notifyChanged();

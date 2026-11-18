@@ -142,7 +142,7 @@ namespace sw::editor
                 const ObjectSnapshot& before = _pUndo->_listBefore[objectIndex];
                 EditorTransaction     transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다
                 if ( _pTarget->isPreviewScope() )
-                    _pTarget->recordModify( *pObject, before, EditorTransaction::captureSnapshot( pObject ), "Gizmo Transform" );
+                    transaction.recordModify( pObject, before, EditorTransaction::captureSnapshot( pObject ), "Gizmo Transform" ); // 거래가 오브젝트의 씬으로 창의 스택을 고른다
                 else
                     EditorSceneCommands::commitModify( transaction, pObject, before, "Gizmo Transform" );
             }
