@@ -720,10 +720,11 @@ namespace sw
         const RHIRenderPassLoadOp arrLoads[]   = { getColorLoadFor( albedoTarget ), getColorLoadFor( *pNormalTarget ), getColorLoadFor( *pMaterialTarget ),
                                                    getColorLoadFor( *pVelocityTarget ), getColorLoadFor( *pCustomTarget ), getColorLoadFor( *pSceneTarget ) };
         static_assert( sizeof( arrNames ) / sizeof( arrNames[0] ) == GBufferLayout::kAttachmentCount, "G버퍼 패스의 MRT 는 GBufferLayout 의 첨부 수다" );
+        // 선언 입력은 DBuffer 셋뿐이다(계약) — 이 뷰에 데칼이 없으면 출력이 없어 걸지 않고, 셰이더는 "덮지 않음" 을 읽는다.
+        // 패스를 열기 전에 건다 — 입력을 셰이더 읽기로 옮기는 전이는 패스 밖의 일이라 열린 패스를 닫는다(데칼이 켜지면 G버퍼 드로우가 모두 빠져 하늘만 남았다).
+        registerDeclaredInputs( context, input._passDesc );
         if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, GBufferLayout::kAttachmentCount, passDepth, getColorLoadFor( passDepth ) ) == false )
             return;
-        // 선언 입력은 DBuffer 셋뿐이다(계약) — 이 뷰에 데칼이 없으면 출력이 없어 걸지 않고, 셰이더는 "덮지 않음" 을 읽는다.
-        registerDeclaredInputs( context, input._passDesc );
         drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
     }
