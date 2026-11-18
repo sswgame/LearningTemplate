@@ -836,7 +836,7 @@
     "Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.cpp": {"minus-one": 18, "integer": 1},
     "Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp": {"minus-one": 5, "float": 16, "integer": 1},
     "Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.h": {"float": 2},
-    "Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp": {"minus-one": 2, "float": 24, "integer": 3},
+    "Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp": {"float": 18, "integer": 2},
     "Source/GameFramework/Plugin/Editor/MeshModifiers/Model/MeshModifiersPanelModel.cpp": {"minus-one": 8},
     "Source/GameFramework/Plugin/Editor/MeshModifiers/Modifiers/BendModifier.cpp": {"float": 4},
     "Source/GameFramework/Plugin/Editor/MeshModifiers/Modifiers/BezierAttractorModifier.cpp": {"float": 16},
