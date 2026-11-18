@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
@@ -22,7 +22,7 @@ namespace sw
 {
     namespace
     {
-        struct ReceiptProviderSetInternal
+        struct ReceiptProviderManagerInternal
         {
             static constexpr const utf8* kKindSteam  = "steam";
             static constexpr const utf8* kKindGoogle = "google";
@@ -197,19 +197,19 @@ namespace sw
 
 namespace sw
 {
-    ReceiptProviderSet::ReceiptProviderSet()
+    ReceiptProviderManager::ReceiptProviderManager()
         : _listEntry{}
     {
     }
 
-    ReceiptProviderSet::~ReceiptProviderSet()
+    ReceiptProviderManager::~ReceiptProviderManager()
     {
         shutdown();
     }
 
-    expected<void> ReceiptProviderSet::readEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig )
+    expected<void> ReceiptProviderManager::readEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig )
     {
-        using Internal = ReceiptProviderSetInternal;
+        using Internal = ReceiptProviderManagerInternal;
         for ( const string& key : entry.getMemberNames() )
         {
             if ( VectorUtil::contains( Internal::kKnownKeys, key ) == false )
@@ -237,14 +237,14 @@ namespace sw
         return Internal::readGoogleEntry( entry, outConfig );
     }
 
-    expected<void> ReceiptProviderSet::initialize( const vector<ReceiptProviderConfig>& listSettings, string_view trustFile, const IClock& clock )
+    expected<void> ReceiptProviderManager::initialize( const vector<ReceiptProviderConfig>& listSettings, string_view trustFile, const IClock& clock )
     {
-        using Internal = ReceiptProviderSetInternal;
+        using Internal = ReceiptProviderManagerInternal;
         shutdown();
         for ( const ReceiptProviderConfig& config : listSettings )
         {
             if ( config._buyerRule._binding == ReceiptBuyerBinding::None )
-                SW_LOG_WARNING_ID( "ReceiptProviderSet.ReceiptProviderHasNoBuyerBinding", "Receipt provider '%#' does not bind receipts to buyers - the first account to submit a receipt receives it", config._kind );
+                SW_LOG_WARNING_ID( "ReceiptProviderManager.ReceiptProviderHasNoBuyerBinding", "Receipt provider '%#' does not bind receipts to buyers - the first account to submit a receipt receives it", config._kind );
             Entry& entry      = _listEntry.emplace_back();
             entry._httpClient = make_unique<OwnedHTTPClient>( clock );
             if ( entry._httpClient->initialize() == false )
@@ -266,7 +266,7 @@ namespace sw
         return {};
     }
 
-    void ReceiptProviderSet::shutdown()
+    void ReceiptProviderManager::shutdown()
     {
         for ( Entry& entry : _listEntry )
         {

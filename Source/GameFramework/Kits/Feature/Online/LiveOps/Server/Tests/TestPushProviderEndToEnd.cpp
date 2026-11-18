@@ -16,7 +16,7 @@
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
-#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderManager.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HPACK.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HTTP2Frame.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
@@ -276,7 +276,7 @@ namespace
         SystemMonotonicClock                        _clock{};
         MemoryServiceDatabase                       _database{};
         MemoryServiceStore                          _store{ &_database };
-        PushProviderSet                             _providers{};
+        PushProviderManager                         _providers{};
         PushNotificationDispatcher                  _dispatcher{};
 
         PushEndToEndTest()
@@ -314,7 +314,7 @@ namespace
             const optional<AbsolutePath> providersFile = AbsolutePath::tryMake( writeProvidersFile() );
             const optional<AbsolutePath> trustFile     = AbsolutePath::tryMake( _apns.getTrustFile() );
             vector<PushProviderConfig>   listConfig;
-            if ( expected<void> read = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "pushProvidersFile", "pushTrustFile", &PushProviderSet::readEntry, listConfig );
+            if ( expected<void> read = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "pushProvidersFile", "pushTrustFile", &PushProviderManager::readEntry, listConfig );
                  read.has_value() == false )
                 return read;
             if ( expected<void> providers = _providers.initialize( listConfig, OnlineProviderFile::getTrustText( trustFile ), _clock ); providers.has_value() == false )
@@ -507,7 +507,7 @@ SW_TEST_CASE( PushKitAssemblyTest, ExternalSampleConfigReads )
     const optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Shooter3D.push.json", ProcessRoots::get()._project );
     SW_REQUIRE_TRUE( providersFile.has_value() );
     vector<PushProviderConfig> listConfig;
-    const expected<void>       read = OnlineProviderFile::read<PushProviderConfig>( providersFile, sw::nullopt, "pushProvidersFile", "pushTrustFile", &PushProviderSet::readEntry, listConfig );
+    const expected<void>       read = OnlineProviderFile::read<PushProviderConfig>( providersFile, sw::nullopt, "pushProvidersFile", "pushTrustFile", &PushProviderManager::readEntry, listConfig );
     SW_REQUIRE_TRUE_MSG( read.has_value(), read.has_value() ? string_view{} : read.error().message() );
     SW_EXPECT_EQUAL( size_t( 2 ), listConfig.size() );
 }

@@ -46,7 +46,7 @@ namespace sw
         /** @brief 지급 뒤 온 스토어 환불의 회수 정책입니다(`Debt` · `Unspent`). */
         PROPERTY( Required )
         EconomyRefundRecoveryMode _refundRecovery{ EconomyRefundRecoveryMode::Count };
-        /** @brief 실제 영수증 제공자 설정 JSON 입니다(항목 형식은 `ReceiptProviderSet::readEntry`). 비우면 실제 제공자가 없습니다. 있으면 자격(키 · 서비스 계정)을 환경 변수에서 읽고, 읽지 못하면 기동 실패입니다. */
+        /** @brief 실제 영수증 제공자 설정 JSON 입니다(항목 형식은 `ReceiptProviderManager::readEntry`). 비우면 실제 제공자가 없습니다. 있으면 자격(키 · 서비스 계정)을 환경 변수에서 읽고, 읽지 못하면 기동 실패입니다. */
         PROPERTY()
         string _receiptProvidersFile{};
         /** @brief 제공자 `https://` 서버를 검증할 CA 번들 PEM 입니다. `_receiptProvidersFile` 이 https 주소를 쓰면 필수입니다. */

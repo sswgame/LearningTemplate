@@ -13,7 +13,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Google/GoogleReceiptValidator.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderManager.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/StoreReceiptValidator.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
@@ -496,7 +496,7 @@ SW_TEST_CASE( StoreReceiptValidatorTest, ProviderEntryRequiresABuyerBinding )
     {
         JSONDocument document;
         SW_EXPECT_TRUE( document.tryParse( text ) );
-        return ReceiptProviderSet::readEntry( document.getRoot(), outConfig ).has_value();
+        return ReceiptProviderManager::readEntry( document.getRoot(), outConfig ).has_value();
     };
     {
         ReceiptProviderConfig config;

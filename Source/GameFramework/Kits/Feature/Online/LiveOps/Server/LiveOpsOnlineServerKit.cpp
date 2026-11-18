@@ -8,7 +8,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fake/FakePushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
-#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderManager.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
@@ -141,7 +141,7 @@ namespace sw
             [[nodiscard]] expected<void> createPushProviders( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const IClock& clock )
             {
                 vector<PushProviderConfig> listSettings;
-                if ( expected<void> read = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "_pushProvidersFile", "_pushTrustFile", &PushProviderSet::readEntry, listSettings );
+                if ( expected<void> read = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "_pushProvidersFile", "_pushTrustFile", &PushProviderManager::readEntry, listSettings );
                      read.has_value() == false )
                     return read;
                 if ( expected<void> providers = _providerSet.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock ); providers.has_value() == false )
@@ -160,7 +160,7 @@ namespace sw
             PushNotificationDispatcher                                            _dispatcher;
             LiveOpsOfflinePush                                                    _offlinePush;   ///< 발송기를 빌려 쓰므로 뒤에 선언한다
             unique_ptr<IPushNotificationProvider>                                 _pFakeProvider; ///< `_bFakePush` 의 가짜 제공자(DevOnline 단위가 만든다). 발송기가 빌려 쓴다
-            PushProviderSet                                                       _providerSet;
+            PushProviderManager                                                   _providerSet;
             AfterDeleteAccountFunction<&PushNotificationDispatcher::eraseAccount> _afterDeleteAccount;
         };
 

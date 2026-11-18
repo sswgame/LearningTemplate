@@ -1,5 +1,5 @@
 /**
- * @file PushProviderSet.h
+ * @file PushProviderManager.h
  * @brief 설정 목록(`PushProviderConfig`)에서 실제 푸시 제공자를 만들고, 제공자마다 쓸 HTTP 클라이언트와 TLS 컨텍스트를 소유합니다(OnlineKits G4).
  * @details - 설정 파일은 `{"providers":[{"kind":"fcm","serviceAccountEnvironment":"<변수>","tokenUrl":"…","sendUrl":"…"},
  *            {"kind":"apns","keyEnvironment":"<변수>","keyId":"…","teamId":"…","topic":"<번들 id>","sendUrl":"…"}]}` 이다. 자격(서비스 계정 키 · 인증 키)은 파일에 쓰지 않고
@@ -42,17 +42,17 @@ namespace sw
 namespace sw
 {
     /**
-     * @class PushProviderSet
+     * @class PushProviderManager
      * @brief 서버 하나의 실제 푸시 제공자 그룹입니다. 서비스 스레드에서만 씁니다.
      */
-    class SW_KIT_SERVER_API PushProviderSet
+    class SW_KIT_SERVER_API PushProviderManager
     {
     public:
-        PushProviderSet();
-        ~PushProviderSet();
+        PushProviderManager();
+        ~PushProviderManager();
 
-        PushProviderSet( const PushProviderSet& )            = delete;
-        PushProviderSet& operator=( const PushProviderSet& ) = delete;
+        PushProviderManager( const PushProviderManager& )            = delete;
+        PushProviderManager& operator=( const PushProviderManager& ) = delete;
 
         /**
          * @brief 제공자 파일(`OnlineProviderFile::read`)의 항목 하나를 읽습니다. 모르는 키, 모르는 종류, 빠진 필수 키는 오류입니다 — 철자가 틀린 설정이 조용히 기본값이 되지 않게 한다.

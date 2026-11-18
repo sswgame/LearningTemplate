@@ -42,7 +42,7 @@ namespace sw
             return make_unique<OidcLoginProvider>( settings, pProvider, pHTTPClient );
         }
         if ( settings._kind == PlatformLoginProviderKind::AppleSignIn )
-            return nullptr;                                              // HTTP 클라이언트가 둘 필요해 `PlatformLoginProviderSet` 이 `AppleLoginProvider::create` 로 만든다
+            return nullptr;                                              // HTTP 클라이언트가 둘 필요해 `PlatformLoginProviderManager` 이 `AppleLoginProvider::create` 로 만든다
         return ProfileAPILoginProvider::create( settings, pHTTPClient ); // `TicketQuery` 는 비밀 키를 읽지 못하면 nullptr(그 함수가 알린다)
     }
 

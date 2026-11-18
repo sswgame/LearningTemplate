@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
@@ -21,7 +21,7 @@ namespace sw
 {
     namespace
     {
-        struct PushProviderSetInternal
+        struct PushProviderManagerInternal
         {
             static constexpr const utf8* kKindFCM  = "fcm";
             static constexpr const utf8* kKindAPNS = "apns";
@@ -92,19 +92,19 @@ namespace sw
 
 namespace sw
 {
-    PushProviderSet::PushProviderSet()
+    PushProviderManager::PushProviderManager()
         : _listEntry{}
     {
     }
 
-    PushProviderSet::~PushProviderSet()
+    PushProviderManager::~PushProviderManager()
     {
         shutdown();
     }
 
-    expected<void> PushProviderSet::readEntry( const JSONValue& entry, PushProviderConfig& outConfig )
+    expected<void> PushProviderManager::readEntry( const JSONValue& entry, PushProviderConfig& outConfig )
     {
-        using Internal  = PushProviderSetInternal;
+        using Internal  = PushProviderManagerInternal;
         outConfig._kind = OnlineProviderFile::readText( entry, "kind" );
         const bool bFCM = outConfig._kind == Internal::kKindFCM;
         if ( bFCM == false && outConfig._kind != Internal::kKindAPNS )
@@ -143,9 +143,9 @@ namespace sw
         return {};
     }
 
-    expected<void> PushProviderSet::initialize( const vector<PushProviderConfig>& listSettings, string_view trustFile, const IClock& clock )
+    expected<void> PushProviderManager::initialize( const vector<PushProviderConfig>& listSettings, string_view trustFile, const IClock& clock )
     {
-        using Internal = PushProviderSetInternal;
+        using Internal = PushProviderManagerInternal;
         shutdown();
         for ( const PushProviderConfig& config : listSettings )
         {
@@ -180,7 +180,7 @@ namespace sw
         return {};
     }
 
-    void PushProviderSet::shutdown()
+    void PushProviderManager::shutdown()
     {
         for ( Entry& entry : _listEntry )
         {

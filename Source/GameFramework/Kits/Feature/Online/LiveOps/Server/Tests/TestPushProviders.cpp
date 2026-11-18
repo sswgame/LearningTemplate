@@ -13,7 +13,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/APNS/APNSPushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/FCM/FCMPushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushPayloadUtil.h"
-#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderManager.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
 
@@ -325,7 +325,7 @@ SW_TEST_CASE( PushProviderSetTest, ReadEntry )
     {
         JSONDocument document;
         SW_EXPECT_TRUE( document.tryParse( text ) );
-        return PushProviderSet::readEntry( document.getRoot(), outConfig ).has_value();
+        return PushProviderManager::readEntry( document.getRoot(), outConfig ).has_value();
     };
     {
         PushProviderConfig config;
