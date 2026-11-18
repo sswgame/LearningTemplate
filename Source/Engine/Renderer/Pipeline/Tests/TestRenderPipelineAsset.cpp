@@ -877,6 +877,30 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputeImplementationIsATableChoice )
 }
 
 /**
+ * @brief [RenderPipelineAssetTest] 디퍼드 조명 타일 종류 변형은 조명 패스의 셰이더 · define 에 종류 define 하나를 더한 것이고 종류마다 다르다 — 쿠커와 런타임이 같은 함수를 부른다.
+ *        분류 컴퓨트는 네이티브 bindless · 간접 인자 능력에서만 PSO 가 있다(에뮬은 풀스크린 조명).
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, DeferredTileVariantsAddTheClassDefine )
+{
+    RenderPipelineAsset deferred;
+    SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ string_view( "engine/pipeline/deferredpipeline.xml" ) } ) );
+    const RenderGraphPassDesc* pLighting = VectorUtil::findIf( deferred.getGraphPass(), []( const RenderGraphPassDesc& pass )
+    { return pass._type == RenderPassType::Lighting; } );
+    SW_REQUIRE_NOT_NULL( pLighting );
+    const EngineDefaultAssets&      assets   = engine::getSubsystem<EngineDefaultAssets>();
+    const RenderPassShaderSelection lighting = selectRenderPassShader( RenderPassType::Lighting, pLighting, pLighting, assets );
+    const RenderPassShaderSelection complex  = selectDeferredTileLightingShader( *pLighting, SW_DEFERRED_TILE_CLASS_COMPLEX, assets );
+    const RenderPassShaderSelection simple   = selectDeferredTileLightingShader( *pLighting, SW_DEFERRED_TILE_CLASS_SIMPLE, assets );
+    SW_EXPECT_EQUAL( lighting._shaderPath, simple._shaderPath );
+    SW_EXPECT_EQUAL( lighting._listDefine.size() + 1, simple._listDefine.size() );
+    SW_EXPECT_TRUE( VectorUtil::contains( simple._listDefine, string( "SW_DEFERRED_TILE_CLASS=1" ) ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( complex._listDefine, string( "SW_DEFERRED_TILE_CLASS=0" ) ) );
+    const RenderPassTypeInfo& classify = getRenderPassTypeInfo( RenderPassType::DeferredTileClassify );
+    SW_EXPECT_TRUE( classify.hasFlag( RenderPassTraitFlag::kCompute ) && classify.hasFlag( RenderPassTraitFlag::kRequiresNativeBindless ) &&
+                    classify.hasFlag( RenderPassTraitFlag::kRequiresGPUCulling ) );
+}
+
+/**
  * @brief [RenderPipelineAssetTest] 디퍼드의 SSAO 는 조명 패스 앞에서 돌고 조명 패스만 AO 를 읽는다(RN-11)
  * @details AO 를 후처리(블룸)에서 최종 색 전체에 곱하면 직접광 · 자체 발광 · 반투명까지 어두워진다. 언리얼 · 유니티처럼 앰비언트 · 프로브 빛에만 든다(deferred_lighting.hlsl).
  *          블룸 · Present 의 입력 계약에서 AO 를 뺐으므로 후처리에 AOColor 를 선언한 XML 은 로드가 거절한다.

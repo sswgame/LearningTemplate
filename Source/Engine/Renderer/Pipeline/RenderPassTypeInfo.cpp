@@ -508,6 +508,13 @@ namespace sw
                         info._flags          = Flag::kCompute | Flag::kDiagnostic | Flag::kRequiresNativeBindless;
                         break;
                     }
+                    case RenderPassType::DeferredTileClassify:
+                    {
+                        // G버퍼 알베도를 엔진 텍스처(bindless)로 읽고 간접 인자를 쓴다 — 간접 인자 능력(컬링과 같다)과 네이티브 bindless 가 함께 있어야 한다. 에뮬은 풀스크린 조명이다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderDeferredTileClassify;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kRequiresNativeBindless;
+                        break;
+                    }
                     case RenderPassType::ProbeUpdate:
                     {
                         // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
@@ -656,6 +663,17 @@ namespace sw
         const string              computeDefine{ kPassComputeImplementationDefine };
         if ( VectorUtil::contains( selection._listDefine, computeDefine ) == false )
             selection._listDefine.push_back( computeDefine );
+        return selection;
+    }
+
+    RenderPassShaderSelection selectDeferredTileLightingShader( const RenderGraphPassDesc& lightingDesc, uint32 tileClass, const EngineDefaultAssets& engineDefaultAssets )
+    {
+        constexpr uint32 kDecimalDigitCount = 10;
+        static_assert( kDeferredTileClassCount <= kDecimalDigitCount, "타일 종류 define 은 한 자리 숫자로 적는다" );
+        RenderPassShaderSelection selection = selectRenderPassShader( lightingDesc._type, &lightingDesc, &lightingDesc, engineDefaultAssets );
+        string                    classDefine{ "SW_DEFERRED_TILE_CLASS=" };
+        classDefine.push_back( static_cast<char>( '0' + tileClass ) );
+        selection._listDefine.push_back( std::move( classDefine ) );
         return selection;
     }
 

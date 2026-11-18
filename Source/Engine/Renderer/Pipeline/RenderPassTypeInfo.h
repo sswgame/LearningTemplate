@@ -19,6 +19,8 @@
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 
+#include "deferred_tile_class.hlsli"
+
 namespace sw
 {
     /**
@@ -130,7 +132,13 @@ namespace sw
     inline constexpr const utf8* kGPUMessagesDefine = "SW_GPU_MESSAGES_ENABLED";
 
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
-    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::ScreenRotation ) + 1;
+    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::DeferredTileClassify ) + 1;
+
+    /** @brief 디퍼드 조명 타일 분류의 종류 수 · 타일 한 변(px)입니다 — 셰이더와 같은 표(deferred_tile_class.hlsli)의 값입니다. */
+    inline constexpr uint32 kDeferredTileClassCount = SW_DEFERRED_TILE_CLASS_COUNT;
+    inline constexpr uint32 kDeferredTileSize       = SW_DEFERRED_TILE_SIZE;
+    /** @brief 디퍼드 조명 타일 변형의 정점 진입점입니다(deferred_lighting.hlsl `VSTile` — 타일 목록의 사각형). 픽셀 진입점은 조명 패스의 것 그대로입니다. */
+    inline constexpr const utf8* kDeferredTileVertexEntryPoint = "VSTile";
 
     /**
      * @struct RenderPassTraitFlag
@@ -331,6 +339,12 @@ namespace sw
      * @details 런타임 PSO(`FramePSOManager`)와 쿠커가 함께 부른다. 진입점은 컴퓨트 스테이지 기본값(`CSMain`)이다.
      */
     SW_API RenderPassShaderSelection selectRenderPassComputeShader( const RenderGraphPassDesc& passDesc, const EngineDefaultAssets& engineDefaultAssets );
+
+    /**
+     * @brief 조명 패스 @p lightingDesc 의 타일 종류 @p tileClass 변형이 컴파일할 셰이더 경로와 define 입니다 — 조명 패스의 것에 `SW_DEFERRED_TILE_CLASS=<종류>` 를 더한다.
+     * @details 런타임 PSO(`FramePSOManager` 의 타일 PSO)와 쿠커가 함께 부른다. 정점 진입점은 `kDeferredTileVertexEntryPoint` 다.
+     */
+    SW_API RenderPassShaderSelection selectDeferredTileLightingShader( const RenderGraphPassDesc& lightingDesc, uint32 tileClass, const EngineDefaultAssets& engineDefaultAssets );
 
     /** @brief `kDiagnostic` 패스가 이 실행에서 요청됐는지 반환합니다(NanCheck 는 `-gv_nanCheck`). 진단 패스가 아니면 false 입니다. */
     SW_API bool isDiagnosticPassRequested( RenderPassType type );

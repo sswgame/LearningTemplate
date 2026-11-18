@@ -328,7 +328,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint     g_DecalChannels;      // 1 알베도 · 2 노멀 · 4 머티리얼(C++ DecalChannels)
     uint     g_DecalAlbedoTexture; // MaterialTexture::sampleIndex 의 번호(없으면 kInvalidIndex — 흰색)
     uint     g_DecalNormalTexture;
-    uint     g_LensFlareTexture; // 렌즈 플레어 Image 구간의 텍스처 번호(lens_flare.hlsl — MaterialTexture::sampleIndex 의 뜻, 절차적 구간은 kInvalidIndex)
+    uint     g_LensFlareTexture;     // 렌즈 플레어 Image 구간의 텍스처 번호(lens_flare.hlsl — MaterialTexture::sampleIndex 의 뜻, 절차적 구간은 kInvalidIndex)
+    uint     g_DeferredTileCapacity; // 디퍼드 조명 타일 목록의 종류 하나 칸 수(deferred_lighting.hlsl VSTile — 타일 그리기만 쓴다)
     // 표면 변형 층의 창(C++ SurfaceDeformBinding::_params) — (창 최소 x, 창 최소 z, 1 / 창 너비, 깊이 범위). z 가 0 이면 층이 없다. 텍스처는 엔진 칸 SurfaceDeform(g_SurfaceDeformIndex)
     float4 g_SurfaceDeformParams;
     // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.

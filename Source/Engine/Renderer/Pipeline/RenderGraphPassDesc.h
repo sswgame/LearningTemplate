@@ -245,6 +245,12 @@ namespace sw
          *        PSO 가 있다 — 데스크톱은 PSO · 대기 텍스처 · 패스 모두 없다(`RenderPassTraitFlag::kSurfaceRotation`).
          */
         ScreenRotation,
+        /**
+         * @brief 디퍼드 조명 타일 분류 컴퓨트입니다(deferred_tile_classify.hlsl — 언리얼 Substrate 타일 분류 · 유니티 HDRP 디퍼드 타일). 조명 패스가 렌더 패스를 열기 전에
+         *        8² 픽셀 타일마다 G버퍼의 셰이딩 모델 번호를 모아 종류(deferred_tile_class.hlsli)를 고르고 종류마다 타일 목록과 간접 인자를 쓴다 — 조명은 종류마다 그 종류의 엽만
+         *        컴파일한 변형으로 타일 사각형을 간접 그리기 한다(`FramePassExecutor::executeTiledLighting`). 컴퓨트가 G버퍼를 샘플해야 해 네이티브 bindless 에서만 돈다.
+         */
+        DeferredTileClassify,
     };
 
     /**

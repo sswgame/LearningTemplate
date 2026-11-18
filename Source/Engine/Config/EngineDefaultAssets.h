@@ -191,6 +191,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderOcclusionTiles; ///< 가림 타일(컴퓨트) — 지난 장면 깊이를 타일마다 최대 깊이로 줄인다. GPU 컬링의 가림 판정이 읽는다
         PROPERTY( Required )
+        DataPath _shaderDeferredTileClassify; ///< 디퍼드 조명 타일 분류(컴퓨트) — 8² 타일마다 셰이딩 모델 종류를 골라 조명의 간접 그리기 목록을 쓴다
+        PROPERTY( Required )
         DataPath _shaderSSAO; ///< SSAO
         PROPERTY( Required )
         DataPath _shaderShadowCacheRestore; ///< 그림자 캐시 복원(풀스크린, 픽셀 깊이) — 캐시 층의 정적 메시 깊이를 점광 · 스폿 칸에 옮긴다

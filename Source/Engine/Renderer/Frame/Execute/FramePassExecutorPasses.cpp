@@ -36,6 +36,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -370,6 +371,7 @@ namespace sw
                 case RenderPassType::IndirectArgsReset:
                 case RenderPassType::ScreenRotation:
                 case RenderPassType::ProbeUpdate:
+                case RenderPassType::DeferredTileClassify:
                 {
                     SW_LOG_WARNING_ID( "FramePassExecutor.UnknownPassType", "Unknown pass type '%#' in '%#'", passType, passName );
                     break;
@@ -414,6 +416,9 @@ namespace sw
         }
         registerDeclaredInputs( context, passDesc );
         _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
+        // 디퍼드 조명은 타일 분류를 쓸 수 있으면 종류마다 타일 사각형만 그린다 — 아니면 아래 풀스크린 한 장(모든 엽)이다(능력이 정한 길, 같은 그림).
+        if ( input._passType == RenderPassType::Lighting && executeTiledLighting( input, *pTarget ) )
+            return;
 
         // PSO 가 0이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대체할 PSO 는 테이블이 정한 것만 쓴다(Tonemap 은 Present).
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( input._passType );
@@ -421,6 +426,89 @@ namespace sw
         // 클리어 색은 타깃 첨부의 선언이다(SSAO 의 흰색 = 가림 없음도 AOColor 선언에 있다).
         const float4 targetClear = getTargetClearColor( *pTarget );
         executeFullscreenInto( context, pso, *pTarget, targetClear );
+    }
+
+    bool FramePassExecutor::executeTiledLighting( const PassExecuteInput& input, const hashed_string& target )
+    {
+        // 셰이더의 SwRootConstants(deferred_tile_classify.hlsl)와 같은 배치다.
+        struct RootConstants
+        {
+            uint32 _albedoIndex{ kInvalidDescriptorIndex }; ///< G버퍼 알베도의 bindless SRV
+            uint32 _width{ 0 };                             ///< 뷰 사각형 크기(px)
+            uint32 _height{ 0 };
+            uint32 _capacity{ 0 }; ///< 종류 하나의 목록 칸 수
+            uint32 _mode{ 0 };     ///< 0 간접 인자 지우기 · 1 분류
+        };
+        static_assert( sizeof( RootConstants ) / sizeof( uint32 ) <= shaderslot::kRootConstantDwords, "tile classification root constants exceed the root block" );
+        constexpr uint32 kModeClear    = 0;
+        constexpr uint32 kModeClassify = 1;
+
+        using Internal                        = FramePassExecutorInternal;
+        const FrameViewTarget&       view     = *_pActiveView;
+        const RHIPipelineStateHandle classify = _psoManager.getEnginePSO( RenderPassType::DeferredTileClassify );
+        bool                         bReady   = classify != 0 && view._deferredTileList.isValid() && view._deferredTileArgs.isValid() && _pDevice->supportsNativeBindlessSampling();
+        RHIPipelineStateHandle       arrTilePSO[kDeferredTileClassCount]{};
+        for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
+        {
+            arrTilePSO[tileClass] = _psoManager.findDeferredTilePSO( tileClass );
+            bReady                = bReady && arrTilePSO[tileClass] != 0;
+        }
+        const RenderGraphPassDesc::ResolvedAttachment* pAlbedoInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::GBufferAlbedo );
+        if ( bReady == false || pAlbedoInput == nullptr )
+            return false;
+        const TransientAttachmentPool::Attachment albedo = activePool().find( pAlbedoInput->_attachment );
+        RootConstants                             constants{};
+        constants._width     = view.scaleToRect( albedo._width, albedo._bViewSized != 0, true );
+        constants._height    = view.scaleToRect( albedo._height, albedo._bViewSized != 0, false );
+        constants._capacity  = view._deferredTileCapacity;
+        const uint32 columns = FrameRendererUtil::divideRoundUp( constants._width, kDeferredTileSize );
+        const uint32 rows    = FrameRendererUtil::divideRoundUp( constants._height, kDeferredTileSize );
+        // 목록은 풀 크기로 만들었다 — 사각형은 풀 안이라 넘지 않는다. 넘는다면(풀을 다시 만들기 전 한 프레임) 그 프레임은 풀스크린으로 그린다.
+        if ( albedo._srv == kInvalidDescriptorIndex || columns * rows > view._deferredTileCapacity || columns == 0 || rows == 0 )
+            return false;
+        constants._albedoIndex = static_cast<uint32>( albedo._srv );
+
+        // 1) 분류 — 간접 인자를 지우고(그룹 하나) 타일마다 그룹 하나. 렌더 패스 밖이다. G버퍼 알베도는 그래프가 이 패스의 입력으로 셰이더 읽기 상태로 옮겨 두었다.
+        FramePassContext&         context      = input._context;
+        IRHICommandList&          cmd          = *context._pCmd;
+        const RHIBufferTransition arrToWrite[] = {
+            RHIBufferTransition{view._deferredTileArgs._buffer, RHIBufferState::UnorderedAccess},
+            RHIBufferTransition{view._deferredTileList._buffer, RHIBufferState::UnorderedAccess}
+        };
+        cmd.transitionBuffers( arrToWrite, static_cast<uint32>( std::size( arrToWrite ) ) );
+        cmd.setComputePipelineState( classify );
+        // g_DeferredTileArgsRW(u0) / g_DeferredTileListRW(u1) — deferred_tile_classify.hlsl 레지스터와 1:1 이다.
+        cmd.bindComputeUAV( view._deferredTileArgs._uav, 0 );
+        cmd.bindComputeUAV( view._deferredTileList._uav, 1 );
+        constants._mode = kModeClear;
+        cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        cmd.dispatchCompute( 1, 1, 1 );
+        cmd.uavBarrier( view._deferredTileArgs._buffer );
+        constants._mode = kModeClassify;
+        cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        cmd.dispatchCompute( columns, rows, 1 );
+        const RHIBufferTransition arrToRead[] = {
+            RHIBufferTransition{view._deferredTileArgs._buffer, RHIBufferState::IndirectArgument},
+            RHIBufferTransition{view._deferredTileList._buffer,   RHIBufferState::ShaderResource}
+        };
+        cmd.transitionBuffers( arrToRead, static_cast<uint32>( std::size( arrToRead ) ) );
+
+        // 2) 종류마다 간접 그리기 — 인스턴스 하나가 타일 하나(정점 여섯). 타일 목록은 패스 전용 구조버퍼 칸(t11)에 PSO · 공통 바인딩 뒤에 건다(렌즈 플레어와 같다).
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), getColorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+            return true;
+        setIdentityWorld( context );
+        context._passValues.setUint( passConstantNames()._deferredTileCapacity, view._deferredTileCapacity );
+        for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
+        {
+            commitBindlessTextureBindings( context );
+            cmd.setPipelineState( arrTilePSO[tileClass] );
+            if ( bindForDraw( context, arrTilePSO[tileClass], kInvalidDescriptorIndex ) == false )
+                continue;
+            cmd.bindStructuredBuffer( view._deferredTileList._srv, shaderslot::kPassBuffer );
+            cmd.drawIndirect( view._deferredTileArgs._buffer, tileClass * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), 1 );
+        }
+        cmd.endRenderPass();
+        return true;
     }
 
     void FramePassExecutor::executeComputeImplementation( const PassExecuteInput& input )

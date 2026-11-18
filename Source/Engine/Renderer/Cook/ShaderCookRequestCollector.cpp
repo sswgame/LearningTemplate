@@ -304,6 +304,14 @@ namespace sw
                         }
                         appendPipelinePassStages( outListRequest, pass, pipelineResource, engineDefaultAssets, passShader._shaderPath, passShader._listDefine, pipelineOrigin );
                         appendInternalSlotMeshPasses( pass, engineDefaultAssets, pipelineOrigin, outListMeshPass, outListRequest );
+                        // 디퍼드 조명의 타일 종류 변형 — 런타임(FramePSOManager::createPassPSOs)과 같은 함수로 define 을 정하고 정점 진입점은 타일 사각형(VSTile)이다.
+                        for ( uint32 tileClass = 0; pass._type == RenderPassType::Lighting && tileClass < kDeferredTileClassCount; ++tileClass )
+                        {
+                            const RenderPassShaderSelection tileShader = selectDeferredTileLightingShader( pass, tileClass, engineDefaultAssets );
+                            appendRequestUnique( outListRequest, tileShader._shaderPath, kDeferredTileVertexEntryPoint, ShaderStage::Vertex, tileShader._listDefine, pipelineOrigin );
+                            appendRequestUnique( outListRequest, tileShader._shaderPath, resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ), ShaderStage::Pixel, tileShader._listDefine,
+                                                 pipelineOrigin );
+                        }
                     }
                     // 모듈 확장 패스의 프로그램(ExtensionRenderPass) — 모듈이 런타임에 고르는 셰이더라 파이프라인 XML 이 `_listExtensionShader` 로 선언한다. 진입점 · define 은 기본 한 벌이다.
                     for ( const string& moduleShader : pipelineResource.getDesc()._listExtensionShader )
