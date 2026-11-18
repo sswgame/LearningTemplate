@@ -69,8 +69,5 @@ namespace sw::editor
          *          구한다. 카메라가 바닥 아래에 있을 때 드롭이 원점으로 튀지 않게 하기 위해서다. 교점의 축 성분은 정확히 0 이다.
          */
         static bool rayHitsAxisPlane( const Ray& ray, uint32 axisIndex, float3& outPoint );
-
-        /** @brief 순서 테이블의 항목 수입니다. 테이블이 비어 있지 않은지 확인하는 데 씁니다. */
-        static uint32 getTypedProviderCount();
     };
 } // namespace sw::editor

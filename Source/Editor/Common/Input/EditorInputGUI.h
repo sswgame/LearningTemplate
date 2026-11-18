@@ -55,7 +55,6 @@ namespace sw::editor
         bool    _arrDown[kButtonCount]{};
         bool    _arrPressed[kButtonCount]{};            ///< 이번 프레임에 눌렸다
         bool    _arrReleased[kButtonCount]{};           ///< 이번 프레임에 뗐다
-        bool    _arrDoubleClicked[kButtonCount]{};      ///< 이번 프레임의 누름이 더블클릭이다
         bool    _arrDragging[kButtonCount]{};           ///< 누른 채 끌기 문턱을 넘었다
         bool    _arrClickedWithoutDrag[kButtonCount]{}; ///< 이번 프레임에 문턱 안에서 뗐다(클릭 — 메뉴 · 선택)
         float2  _arrDragDelta[kButtonCount]{};          ///< 누른 자리에서 지금까지의 끌기
@@ -63,7 +62,6 @@ namespace sw::editor
         bool isDown( EditorMouseButton button ) const { return _arrDown[static_cast<size_t>( button )]; }
         bool wasPressed( EditorMouseButton button ) const { return _arrPressed[static_cast<size_t>( button )]; }
         bool wasReleased( EditorMouseButton button ) const { return _arrReleased[static_cast<size_t>( button )]; }
-        bool wasDoubleClicked( EditorMouseButton button ) const { return _arrDoubleClicked[static_cast<size_t>( button )]; }
         bool isDragging( EditorMouseButton button ) const { return _arrDragging[static_cast<size_t>( button )]; }
         bool wasClickedWithoutDrag( EditorMouseButton button ) const { return _arrClickedWithoutDrag[static_cast<size_t>( button )]; }
         bool hasModifier( uint8 modifierBit ) const { return ( _modifierMask & modifierBit ) != 0; }
@@ -122,8 +120,6 @@ namespace sw::editor
          *          대상이 id 로 풀리는 메뉴(오브젝트 · 컴포넌트 · 에셋 · 뷰포트)는 명령 등록부를 쓰는 `drawContextMenu` 다.
          */
         static bool beginItemContextMenu( const utf8* pPopupID );
-        /** @brief 창의 빈 곳(어느 항목 밖) 우클릭에 @p pPopupID 팝업을 엽니다. 나머지는 `beginItemContextMenu` 와 같습니다. */
-        static bool beginWindowContextMenu( const utf8* pPopupID );
 
         // ------------------------------------------------------------------------------
         // 2) 끌어 놓기 — {종류, id} 한 형식. 이름(에셋 경로 · 위젯 타입)은 id 표로 바꾼다

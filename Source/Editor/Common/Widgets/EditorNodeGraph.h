@@ -191,8 +191,6 @@ namespace sw::editor
         void setNodeIssues( vector<EditorGraphNodeIssue> listIssue ) { _listNodeIssue = std::move( listIssue ); }
         /** @brief 문제 노드에 빨간 테두리를 두르고, 노드 위에 마우스가 있으면 이유를 툴팁으로 보여 줍니다. 캔버스 안에서 노드를 그린 뒤 호출합니다. */
         void drawNodeIssues() const;
-        /** @brief 현재 문제 노드 수를 반환합니다. */
-        uint32 getNodeIssueCount() const { return static_cast<uint32>( _listNodeIssue.size() ); }
 
         /** @brief 핀을 끌어 만든 노드에 링크를 이은 횟수입니다(감시 값 `Editor.GraphAutoLinkCount`). */
         static uint32 getAutoLinkCount();

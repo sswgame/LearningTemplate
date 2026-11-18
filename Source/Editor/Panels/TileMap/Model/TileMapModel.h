@@ -142,7 +142,6 @@ namespace sw::editor
         float32*                                 editTint() { return _arrTint; }
         int32&                                   editPaintDataValue() { return _paintDataValue; }
         int32&                                   editBrushIndex() { return _brushIndex; }
-        int32                                    getBrushIndex() const { return _brushIndex; }
         fixed_string<constant::buffer::kMax128>& editWarpTarget() { return _warpTarget; }
         int32&                                   editWarpTileX() { return _warpTx; }
         int32&                                   editWarpTileY() { return _warpTy; }

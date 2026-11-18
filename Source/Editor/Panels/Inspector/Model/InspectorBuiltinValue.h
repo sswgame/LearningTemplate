@@ -147,15 +147,11 @@ namespace sw::editor
 #undef SW_REFLECT_BUILTIN_CONTAINER
             ;
 
-        /** @brief 테이블의 항목 수를 반환합니다. `kBuiltinCount` 와 같습니다. */
-        static uint32 getBuiltinCount();
         /** @brief @p index 번째 항목을 반환합니다. */
         static const InspectorBuiltinValue& getBuiltin( uint32 index );
         /** @brief 정규 이름으로 항목을 찾습니다. 내장 타입이 아니면 nullptr 입니다. */
         static const InspectorBuiltinValue* findBuiltin( string_view typeName );
 
-        /** @brief CallInEditor 인자나 반환으로 쓸 수 있는 타입이면 true 입니다. 인자와 반환이 같은 판정을 받습니다. */
-        static bool supportsMethodValue( string_view typeName );
         /**
          * @brief @p method 의 인자 입력란을 맞춥니다. 입력란 수를 인자 수에 맞추고, 타입이 바뀐 입력란은 기본값으로 되돌립니다.
          * @return 모든 인자를 인스펙터가 채울 수 있으면 true 입니다. 인자가 `kMaxMethodArgCount` 를 넘거나 내장 타입이 아닌 인자가 있으면 false 입니다.

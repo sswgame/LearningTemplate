@@ -83,10 +83,4 @@ namespace sw::editor
         ScopedLock<mutex> lock{ _mutex };
         return _renderingSlot == kInvalidSlot && _bPublishedPending == false;
     }
-
-    uint32 DrawSnapshotHandoff::getPublishedSlot() const
-    {
-        ScopedLock<mutex> lock{ _mutex };
-        return _publishedSlot;
-    }
 } // namespace sw::editor

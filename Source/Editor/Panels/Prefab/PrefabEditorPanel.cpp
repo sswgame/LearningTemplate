@@ -93,11 +93,6 @@ namespace sw::editor
         (void)rebuildDocumentRoot(); // 실패는 상태 줄에 남는다 — 같은 경로로 프레임마다 다시 스폰하지 않게 모델이 스폰한 경로를 이미 채웠다
     }
 
-    bool PrefabEditorPanel::enterNestedIsolation( string_view prefabPath )
-    {
-        return _viewModel.enterNested( getPreviewScene(), getPreviewSelection(), prefabPath );
-    }
-
     bool PrefabEditorPanel::exitIsolation( bool bSaveToPrefab )
     {
         const PrefabFrameExit result = _viewModel.exitFrame( getPreviewScene(), getPreviewSelection(), bSaveToPrefab );

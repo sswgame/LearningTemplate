@@ -273,8 +273,6 @@ namespace sw::editor
         void submitPreviewView( uint32 id, uint32 sceneKey, const float4x4& viewProj, const float3& cameraPos );
         /** @brief 게임 스레드 쪽 — 넘긴 UI 프레임 @p frame 이 보인 미리보기 뷰를 호스트 형식으로 씁니다. 쓴 개수를 반환합니다(`ImGuiEditor::getPreviewSceneViews`). */
         uint32 collectSceneViews( const EditorUIFrameOutput& frame, PreviewSceneView* pOutView, uint32 capacity ) const;
-        /** @brief 지금 가진 미리보기 타깃 수입니다(테스트용). */
-        uint32 getPreviewTargetCount() const { return static_cast<uint32>( _listPreviewTarget.size() ); }
 
         /**
          * @brief 이번 프레임 뒤에 곧바로 다음 프레임이 필요하다고 알립니다(시간으로 움직이는 패널). 프레임을 시작할 때 지웁니다.

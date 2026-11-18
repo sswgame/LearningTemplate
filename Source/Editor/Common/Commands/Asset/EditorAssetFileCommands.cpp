@@ -989,21 +989,6 @@ namespace sw::editor
         return true;
     }
 
-    void EditorAssetFileCommands::setFileExplorerDryRun( bool bDryRun )
-    {
-        getEditorState<EditorAssetFileCommandsInternal::ExplorerState>()._bDryRun = bDryRun;
-    }
-
-    uint32 EditorAssetFileCommands::getFileExplorerLaunchCount()
-    {
-        return getEditorState<EditorAssetFileCommandsInternal::ExplorerState>()._launchCount;
-    }
-
-    string EditorAssetFileCommands::getLastFileExplorerCommand()
-    {
-        return getEditorState<EditorAssetFileCommandsInternal::ExplorerState>()._lastCommand;
-    }
-
     SW_AUTOMATION_WATCH( editorExplorerLaunchCount, "Editor.ExplorerLaunchCount", "Times the editor built a file explorer command (Show in Explorer, dry run included)",
                          &EditorAssetFileCommandsInternal::readExplorerLaunchCount );
     SW_AUTOMATION_WATCH( editorExplorerCommandWellFormed, "Editor.ExplorerCommandWellFormed",

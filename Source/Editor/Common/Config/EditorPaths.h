@@ -57,8 +57,6 @@ namespace sw::editor
          * @details 패널 View 가 서비스 창구(`EditorService.h`)를 보지 않고 경로를 풀게 여기를 지난다(`docs/agents/EditorUI.md` MVVM 계약). 경로 해석은 읽기만 한다.
          */
         static const AssetPaths& getAssetPaths();
-        /** @brief `getAssetPaths` 와 같되 없으면(에디터 밖 · 종료 뒤) nullptr 입니다. */
-        static const AssetPaths* findAssetPaths();
         /** @brief 씬 파일 대화상자가 처음 여는 폴더(활성 게임 팩의 `maps`)입니다. 없으면 빈 문자열이고 대화상자가 정한다. */
         static string getSceneDialogFolderPath();
 

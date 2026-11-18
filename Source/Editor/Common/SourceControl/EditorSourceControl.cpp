@@ -23,7 +23,6 @@ namespace sw::editor
         , _detailPath{}
         , _listDetailLine{}
         , _lastError{}
-        , _changeRevision{ 0 }
         , _detailOperation{ SourceControlOperation::None }
         , _bStatusKnown{ SW_FALSE }
         , _reserved{ 0 }
@@ -253,7 +252,6 @@ namespace sw::editor
                     _lastError = string( lastErrorBuilder.view() );
                     SW_LOG_WARNING_ID( "SourceControl.StatusFailed", "Source control: %#", _lastError );
                 }
-                ++_changeRevision;
                 return;
             }
             case SourceControlOperation::Diff:
@@ -268,7 +266,6 @@ namespace sw::editor
                     lastErrorBuilder.appendFormat( "%# of %# failed (exit %#): %#", operation._operation == SourceControlOperation::Diff ? "Diff" : "History", operation._repositoryPath, exitText, lastLine );
                     _lastError = string( lastErrorBuilder.view() );
                 }
-                ++_changeRevision;
                 return;
             }
             case SourceControlOperation::Revert:

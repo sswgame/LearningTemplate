@@ -92,8 +92,6 @@ namespace sw::editor
         static string makeRepositoryPath( string_view repositoryRoot, string_view absolutePath );
         /** @brief 공급자를 바꿉니다. 테스트와 공급자 탐지 결과가 씁니다. 잠금 목록은 비웁니다. */
         void setProvider( unique_ptr<ISourceControlProvider> pProvider );
-        /** @brief 잠금 목록을 바꿉니다. 테스트와 갱신 결과가 씁니다. */
-        void setLocks( vector<SourceControlLock>&& listLock ) { _listLock = std::move( listLock ); }
 
         // ------------------------------------------------------------------------------
         // 변경 목록 · diff · 이력 · 되돌리기(git 공급자만 — `ISourceControlProvider::canTrackChanges`)
@@ -121,8 +119,6 @@ namespace sw::editor
         const vector<string>& getDetailLines() const { return _listDetailLine; }
         /** @brief 마지막으로 실패한 변경 작업의 이유입니다(창이 보인다). 성공하면 비운다. */
         const string& getLastError() const { return _lastError; }
-        /** @brief 변경 목록 · 상세가 바뀔 때마다 오르는 번호입니다. */
-        uint32 getChangeRevision() const { return _changeRevision; }
 
     private:
         /** @brief 순서를 기다리는 작업 하나입니다. */
@@ -146,7 +142,6 @@ namespace sw::editor
         string                             _detailPath;
         vector<string>                     _listDetailLine;
         string                             _lastError;
-        uint32                             _changeRevision;
         SourceControlOperation             _detailOperation;
         uint8                              _bStatusKnown : 1;
         [[maybe_unused]] uint8             _reserved     : 7;

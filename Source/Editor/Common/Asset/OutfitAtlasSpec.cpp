@@ -291,23 +291,6 @@ namespace sw::editor
         };
     } // namespace
 
-    bool OutfitAtlasSpec::parseSpec( string_view xmlText, string_view sourceName, OutfitAtlasSpec& outSpec )
-    {
-        outSpec = OutfitAtlasSpec{};
-        CharacterDataReader reader( sourceName );
-        XMLDocument         document;
-        XMLNode             root;
-        if ( reader.parseRoot( document, xmlText, "OutfitAtlas", root ) )
-        {
-            OutfitAtlasBakerInternal::readRoot( root, reader, outSpec );
-            OutfitAtlasBakerInternal::validateSpec( outSpec, reader );
-        }
-        const bool bRead = reader.finish();
-        if ( bRead == false )
-            outSpec = OutfitAtlasSpec{};
-        return bRead;
-    }
-
     bool OutfitAtlasSpec::loadSpec( const AssetID& assetID, OutfitAtlasSpec& outSpec )
     {
         const string_view assetPath = assetID.view();

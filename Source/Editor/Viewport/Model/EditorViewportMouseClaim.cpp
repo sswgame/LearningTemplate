@@ -51,9 +51,4 @@ namespace sw::editor
     {
         return EditorViewportMouseClaimInternal::get()._pMouseOwner != nullptr;
     }
-
-    bool EditorViewportMouseClaim::isClaimedBy( const void* pOwner )
-    {
-        return pOwner != nullptr && EditorViewportMouseClaimInternal::get()._pMouseOwner == pOwner;
-    }
 } // namespace sw::editor
