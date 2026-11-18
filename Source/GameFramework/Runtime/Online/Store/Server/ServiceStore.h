@@ -16,6 +16,7 @@
  *            게임 스레드와 네트워크 스레드는 DB 를 기다리지 않는다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
@@ -198,6 +199,36 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct ServiceStoreCommitStats
+     * @brief 저장소 앞 하나가 받은 일들의 커밋 수와 그 가운데 버전 충돌(`Conflict`) 수입니다. 충돌은 서비스가 다시 읽고 다시 하므로 충돌 / 커밋이 재시도율이다.
+     * @details 일의 입구(`IServiceStoreJob::execute`)가 거는 읽기 집합 포장만 센다 — 저장 함수 안에서 겹쳐 둔 포장은 세지 않아 한 커밋을 두 번 세지 않는다.
+     *          저장소 스레드 여럿(SQL 풀)이 함께 올리므로 원자 값이다. 부하 봇이 끝에 읽어 보고서에 낸다(감사 O-12). 엔진 비교: PostgreSQL `pg_stat_database.xact_rollback` 과 같은 자리의 수.
+     */
+    struct ServiceStoreCommitStats
+    {
+        atomic<int64> _commitCount{ 0 };   ///< 커밋 시도 수
+        atomic<int64> _conflictCount{ 0 }; ///< 그 가운데 `Conflict` 로 끝난 수
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 일의 종류입니다. 저장소 구현이 `run` 에 넘길 연결을 이것으로 고른다.
+     * @details 스냅샷 읽기는 일 하나의 모든 읽기가 한 시점의 상태를 본다 — 테이블 전체를 여러 쪽으로 훑는 검사(원장 감사)가 그사이 끼는 다른 서버의 커밋 때문에
+     *          앞쪽(분개)과 뒤쪽(잔액)을 다른 시점으로 읽어 거짓 불균형을 보지 않게 한다. PostgreSQL `REPEATABLE READ READ ONLY` 트랜잭션, SQLite WAL 의 읽기 트랜잭션,
+     *          메모리 저장소는 한 잠금 구간에서 뜬 사본이다. 스냅샷 읽기의 커밋은 `Invalid` 다(읽기 전용). 언리얼 · 유니티 · Godot 엔 서버 저장소가 없고, Nakama 의 저장소 읽기도 DB 격리를 그대로 쓴다.
+     */
+    enum class ServiceStoreJobKind : uint8
+    {
+        ReadWrite = 0, ///< 읽고 커밋한다 — 읽기는 호출마다 그때의 상태다(조건은 커밋이 본다)
+        SnapshotRead   ///< 읽기만 한다 — 모든 읽기가 일이 시작한 시점의 상태다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class IServiceStoreJob
      * @brief 저장 왕복 하나입니다.
      * @details 입력은 맡기기 전에 이 객체에 복사해 둔다.
@@ -210,18 +241,22 @@ namespace sw
     class SW_GF_API IServiceStoreJob
     {
     public:
-        IServiceStoreJob()          = default;
+        IServiceStoreJob() = default;
+        explicit IServiceStoreJob( ServiceStoreJobKind kind )
+            : _kind{ kind }
+        {
+        }
         virtual ~IServiceStoreJob() = default;
 
         IServiceStoreJob( const IServiceStoreJob& )            = delete;
         IServiceStoreJob& operator=( const IServiceStoreJob& ) = delete;
 
         /**
-         * @brief 저장소 구현이 부르는 입구입니다. 연결을 읽기 집합 연결(`ServiceReadSetConnection`)로 감싸 `run` 에 넘깁니다.
+         * @brief 저장소 구현이 부르는 입구입니다. 연결을 읽기 집합 연결(`ServiceReadSetConnection`)로 감싸 `run` 에 넘기고, 그 커밋을 @p inoutStats(저장소 앞의 것)에 셉니다.
          * @details 일은 감싸지 않은 연결을 받을 길이 없다 — 판단에 쓴 읽기는 모두 다음 커밋의 버전 조건이 된다(손으로 `requireVersion` 을 빠뜨리는 모양을 막는다, 감사 "다음 할 일" 5 번).
          *          연결은 커밋마다 읽은 것을 비우므로 재시도는 판단에 쓸 레코드를 시도 안에서 다시 읽는다.
          */
-        void         execute( IServiceStoreConnection& connection );
+        void         execute( IServiceStoreConnection& connection, ServiceStoreCommitStats& inoutStats );
         virtual void complete() = 0;
 
         /** @brief 맡긴 스레드의 로그 문맥입니다. 저장소 구현이 `submit` 에서 잡습니다. */
@@ -237,6 +272,8 @@ namespace sw
         void markCancelled() { _bCancelled = true; }
         /** @brief 종료 중이라 취소됐는지입니다. `complete` 에서 읽습니다(저장소 스레드의 표시는 완료 큐의 락을 거쳐 보인다). */
         bool isCancelled() const { return _bCancelled; }
+        /** @brief 스냅샷 읽기 일인지입니다. 저장소 구현은 그렇다면 한 시점의 읽기 전용 연결로 `execute` 한다(`ServiceStoreJobKind`). */
+        bool isSnapshotRead() const { return _kind == ServiceStoreJobKind::SnapshotRead; }
         /** @brief 서비스의 완료 함수에 넘기는 끝 상태입니다. `complete` 에서 부릅니다. */
         ServiceStoreCompletion getCompletion() const { return ServiceStoreCompletion{ _bCancelled }; }
 
@@ -245,8 +282,9 @@ namespace sw
         virtual void run( ServiceReadSetConnection& connection ) = 0;
 
     private:
-        LogContext _logContext{};
-        bool       _bCancelled{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        LogContext          _logContext{};
+        ServiceStoreJobKind _kind{ ServiceStoreJobKind::ReadWrite };
+        bool                _bCancelled{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -274,5 +312,11 @@ namespace sw
         virtual int32 getPendingCount() const = 0;
         /** @brief 새 일을 받지 않고, 돌지 못한 일은 닫힌 연결로 돌려 완료 큐에 넣습니다. 그 뒤 `pollCompletions` 한 번으로 모두 거둘 수 있습니다. */
         virtual void shutdown() = 0;
+
+        /** @brief 이 앞이 받은 일들의 커밋 · 충돌 수입니다(아무 스레드에서 읽는다). */
+        const ServiceStoreCommitStats& getCommitStats() const { return _commitStats; }
+
+    protected:
+        ServiceStoreCommitStats _commitStats{}; ///< 구현이 일마다 `execute` 에 넘긴다
     };
 } // namespace sw

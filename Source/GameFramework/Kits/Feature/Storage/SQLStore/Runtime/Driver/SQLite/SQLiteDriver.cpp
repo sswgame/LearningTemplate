@@ -38,7 +38,8 @@ namespace sw
                                                    "INTEGER PRIMARY KEY AUTOINCREMENT",
                                                    "BEGIN IMMEDIATE",
                                                    "UPDATE sw_store_counter SET value = value + 1 WHERE name = 'commit_version' RETURNING value",
-                                                   "" };
+                                                   "",
+                                                   "BEGIN DEFERRED" }; // WAL 의 읽기 트랜잭션은 첫 읽기의 시점을 끝까지 본다
                 return s_dialect;
             }
 

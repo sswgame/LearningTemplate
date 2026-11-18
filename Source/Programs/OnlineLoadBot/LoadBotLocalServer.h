@@ -1,9 +1,12 @@
 /**
  * @file LoadBotLocalServer.h
- * @brief 한 프로세스 온라인 서버입니다. 부하 봇이 겨눌 서비스 호스트 하나에 키트 일곱(계정 · 서버 디렉터리 · 채팅 · 친구 · 순위 · 매칭 · 라이브 운영)을 올립니다.
+ * @brief 한 프로세스 온라인 서버입니다. 부하 봇이 겨눌 서비스 호스트 하나에 설정 파일(`LoadBot.online.json`)의 키트(계정 · 디렉터리 · 채팅 · 친구 · 순위 · 매칭 · 라이브 운영 · 경제 · 우편 · 거래)를 올립니다.
  * @details - 조립은 전용 서버와 같은 `OnlineServerRuntime` 이고, 온라인 설정(키트 목록과 옵션)도 전용 서버와 같은 꼴의 파일(`LoadBot.online.json`)을
  *            같은 로더(`ConfigManager::readConfigFileInto<OnlineServerConfig>`)로 읽는다. 이 클래스는 부하에 딸린 값(지역 · 연결 상한 · 서버 id · 가벼운 해시)만 얹는다.
- *          - 저장소 · 캐시 · 버스는 메모리 구현(같은 프로세스)이다. 이 서버를 게임 서버로 디렉터리에 등록해 매칭 배정이 그리로 간다.
+ *          - 저장소 · 캐시는 기본이 메모리 구현(같은 프로세스)이다. 서버 설정(`_pStoreConfig` — 봇 `--store-config=Config/Server/Online/Shooter3D.external.json`)을 주면
+ *            전용 서버와 같은 규칙(`OnlineServerRuntime::resolveStores`, 온라인 설정의 `_storeName` · `_cacheName`)으로 그 저장소(PostgreSQL · RESP)를 쓴다 — 원장 경로의 Conflict 를 재는 길.
+ *            이 서버를 게임 서버로 디렉터리에 등록해 매칭 배정이 그리로 간다.
+ *          - 기동하면 전체 우편(캠페인) 하나를 넣어 봇의 `mailbox_claim_all` 이 원장 발행을 지나게 한다. 끝에 원장 감사(`readLedgerAudit`)와 저장소 커밋 · 충돌 수를 봇이 읽는다(감사 O-12).
  *          - 봇의 `--local-server` 와 CTest `OnlineLoadBot.localServer` 가 쓴다. 실제 서버(`Server`)에 붙이려면 봇의 `--server` 를 쓴다.
  *          - 개발 도구용 설정이다: 한 주소에서 오는 봇 수천을 받도록 주소마다 요청 · 로그인 시도 제한을 크게 둔다(값은 `LoadBot.online.json`).
  */
@@ -16,26 +19,34 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/TimePoint.h"
 
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
+#include "Programs/OnlineLoadBot/LoadBotMetrics.h"
+
 namespace sw
 {
+    class IServiceStore;
     class IStreamTransport;
     class OnlineServerRuntime;
     class OnlineServiceHost;
 
+    struct ServerConfig;
+    struct ServiceStoreCommitStats;
+
     /** @brief 조립 설정입니다. */
     struct LoadBotLocalServerSettings
     {
-        OnlineServerConfig _config{};                       ///< `LoadBot.online.json` 에서 읽은 키트 목록 · 옵션 · 서버 값. 아래 부하 값이 그 위에 얹힌다
-        string             _region{ "kr" };                 ///< 게임 서버 지역
-        UnixMilliseconds   _startMs{ 0 };                   ///< 서비스 시각의 시작. 0 이면 지금 — 가짜 시계 테스트는 첫 `tick` 과 같은 값을 준다
-        const IClock*      _pClock{ nullptr };              ///< 필수. 메모리 캐시 만료를 재는 단조 시계(실행은 `SystemMonotonicClock`, 결정적 테스트는 `ManualClock` 을 틱마다 민다). 빌려 쓴다
-        uint64             _serverID{ 1 };                  ///< 버스 · 접속 상태 · 디렉터리의 서버 id
-        int32              _maxConnections{ 1024 };         ///< 받을 연결 상한(봇 수보다 크게)
-        uint16             _port{ 0 };                      ///< 0 이면 OS 가 고른다(`getListenPort` 로 읽는다 - 나란히 도는 테스트가 포트를 다투지 않는다)
-        uint8              _bLightPasswordHash{ SW_FALSE }; ///< 테스트 — 가벼운 Argon2id(실제 비용을 측정하려면 끈다)
+        OnlineServerConfig  _config{};                       ///< `LoadBot.online.json` 에서 읽은 키트 목록 · 옵션 · 서버 값. 아래 부하 값이 그 위에 얹힌다
+        const ServerConfig* _pStoreConfig{ nullptr };        ///< 있으면 그 `_listStore` · `_listCache` 에서 온라인 설정의 `_storeName` · `_cacheName` 을 고른다(비밀은 환경 변수). 없으면 메모리. 빌려 쓴다
+        string              _region{ "kr" };                 ///< 게임 서버 지역
+        UnixMilliseconds    _startMs{ 0 };                   ///< 서비스 시각의 시작. 0 이면 지금 — 가짜 시계 테스트는 첫 `tick` 과 같은 값을 준다
+        const IClock*       _pClock{ nullptr };              ///< 필수. 메모리 캐시 만료를 재는 단조 시계(실행은 `SystemMonotonicClock`, 결정적 테스트는 `ManualClock` 을 틱마다 민다). 빌려 쓴다
+        uint64              _serverID{ 1 };                  ///< 버스 · 접속 상태 · 디렉터리의 서버 id
+        int32               _maxConnections{ 1024 };         ///< 받을 연결 상한(봇 수보다 크게)
+        uint16              _port{ 0 };                      ///< 0 이면 OS 가 고른다(`getListenPort` 로 읽는다 - 나란히 도는 테스트가 포트를 다투지 않는다)
+        uint8               _bLightPasswordHash{ SW_FALSE }; ///< 테스트 — 가벼운 Argon2id(실제 비용을 측정하려면 끈다)
     };
 } // namespace sw
 
@@ -63,6 +74,19 @@ namespace sw
 
         OnlineServiceHost& getHost();
         uint16             getListenPort() const;
+
+        /** @brief 저장소를 감사합니다(`runLedgerAudit`). 서버가 서지 않았으면 오류입니다. */
+        [[nodiscard]] expected<LedgerAuditReport> readLedgerAudit();
+        /** @brief 저장소 앞의 커밋 · 충돌 수입니다. 서버가 서지 않았으면 null 입니다. */
+        const ServiceStoreCommitStats* findCommitStats() const;
+
+        /**
+         * @brief 맡긴 일을 다 거둔 뒤 @p store 에 원장 감사(`LedgerAuditReport::computeReport`)를 맡기고 끝날 때까지 기다립니다. 저장소를 못 읽으면 오류입니다.
+         * @details 저장소는 일마다 완료를 정확히 한 번 부르므로(종료 중이면 닫힌 연결로) 감사 일은 시한 없이 기다려도 끝난다. 봇이 멈춘 뒤에 부른다.
+         */
+        [[nodiscard]] static expected<LedgerAuditReport> runLedgerAudit( IServiceStore& store );
+        /** @brief 커밋 · 충돌 수와 감사 결과를 보고서 값으로 묶습니다. */
+        static LoadBotServerStats makeServerStats( const ServiceStoreCommitStats& commitStats, const LedgerAuditReport& report );
 
     private:
         unique_ptr<OnlineServerRuntime> _runtime;

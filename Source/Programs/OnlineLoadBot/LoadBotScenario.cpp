@@ -14,12 +14,12 @@ namespace sw
     {
         struct LoadBotScenarioInternal
         {
-            /** @brief 동작 표 한 줄 — 시나리오 `_action` 이름 · 보고의 동작 이름, 그 동작이 받는 칸(`_action` 밖, 둘까지), 첫 칸이 받는 값(비면 아무 값). */
+            /** @brief 동작 표 한 줄 — 시나리오 `_action` 이름 · 보고의 동작 이름, 그 동작이 받는 칸(`_action` 밖, 셋까지), 첫 칸이 받는 값(비면 아무 값). */
             struct ActionRow
             {
                 LoadBotAction      _action;
                 string_view        _name;
-                string_view        _arrKey[2];
+                string_view        _arrKey[3];
                 const string_view* _pAllowedText;
                 uint32             _allowedTextCount;
             };
@@ -30,27 +30,37 @@ namespace sw
 
             /** @brief 동작 표 — 이름 찾기 · 칸 검사 · 값 검사가 이 표 하나를 쓴다. 열거형 순서와 같다. */
             static constexpr ActionRow kArrAction[] = {
-                {             LoadBotAction::Login,                "login",                { "_mode" },      kArrLoginMode,      SW_COUNT_OF( kArrLoginMode )},
-                {            LoadBotAction::Logout,               "logout",                         {},            nullptr,                                 0},
-                {        LoadBotAction::Disconnect,           "disconnect",                         {},            nullptr,                                 0},
-                {         LoadBotAction::Reconnect,            "reconnect",                         {},            nullptr,                                 0},
-                {              LoadBotAction::Wait,                 "wait",     { "_minMs", "_maxMs" },            nullptr,                                 0},
-                {            LoadBotAction::Repeat,               "repeat",  { "_count", "_listStep" },            nullptr,                                 0},
-                {   LoadBotAction::DirectoryStatus,     "directory_status",                         {},            nullptr,                                 0},
-                {   LoadBotAction::DirectoryAssign,     "directory_assign",                { "_kind" },            nullptr,                                 0},
-                {          LoadBotAction::ChatJoin,            "chat_join",             { "_channel" },            nullptr,                                 0},
-                {          LoadBotAction::ChatSend,            "chat_send",    { "_channel", "_text" },            nullptr,                                 0},
-                {       LoadBotAction::ChatHistory,         "chat_history",   { "_channel", "_count" },            nullptr,                                 0},
-                {    LoadBotAction::SocialPresence,      "social_presence", { "_status", "_activity" }, kArrPresenceStatus, SW_COUNT_OF( kArrPresenceStatus )},
-                {LoadBotAction::SocialFriendRandom, "social_friend_random",                         {},            nullptr,                                 0},
-                {    LoadBotAction::LeaderboardTop,      "leaderboard_top",     { "_board", "_count" },            nullptr,                                 0},
-                { LoadBotAction::LeaderboardAround,   "leaderboard_around",     { "_board", "_count" },            nullptr,                                 0},
-                {  LoadBotAction::MatchmakingQueue,    "matchmaking_queue",                { "_mode" },            nullptr,                                 0},
-                {         LoadBotAction::WaitMatch,           "wait_match",           { "_timeoutMs" },            nullptr,                                 0},
-                {       LoadBotAction::PartyCreate,         "party_create",                         {},            nullptr,                                 0},
-                {      LoadBotAction::LiveOpsState,        "liveops_state",                         {},            nullptr,                                 0},
-                {       LoadBotAction::GameConnect,         "game_connect",                         {},            nullptr,                                 0},
-                {    LoadBotAction::GameDisconnect,      "game_disconnect",                         {},            nullptr,                                 0},
+                {             LoadBotAction::Login,                "login",                           { "_mode" },      kArrLoginMode,      SW_COUNT_OF( kArrLoginMode )},
+                {            LoadBotAction::Logout,               "logout",                                    {},            nullptr,                                 0},
+                {        LoadBotAction::Disconnect,           "disconnect",                                    {},            nullptr,                                 0},
+                {         LoadBotAction::Reconnect,            "reconnect",                                    {},            nullptr,                                 0},
+                {              LoadBotAction::Wait,                 "wait",                { "_minMs", "_maxMs" },            nullptr,                                 0},
+                {            LoadBotAction::Repeat,               "repeat",             { "_count", "_listStep" },            nullptr,                                 0},
+                {   LoadBotAction::DirectoryStatus,     "directory_status",                                    {},            nullptr,                                 0},
+                {   LoadBotAction::DirectoryAssign,     "directory_assign",                           { "_kind" },            nullptr,                                 0},
+                {          LoadBotAction::ChatJoin,            "chat_join",                        { "_channel" },            nullptr,                                 0},
+                {          LoadBotAction::ChatSend,            "chat_send",               { "_channel", "_text" },            nullptr,                                 0},
+                {       LoadBotAction::ChatHistory,         "chat_history",              { "_channel", "_count" },            nullptr,                                 0},
+                {    LoadBotAction::SocialPresence,      "social_presence",            { "_status", "_activity" }, kArrPresenceStatus, SW_COUNT_OF( kArrPresenceStatus )},
+                {LoadBotAction::SocialFriendRandom, "social_friend_random",                                    {},            nullptr,                                 0},
+                {    LoadBotAction::LeaderboardTop,      "leaderboard_top",                { "_board", "_count" },            nullptr,                                 0},
+                { LoadBotAction::LeaderboardAround,   "leaderboard_around",                { "_board", "_count" },            nullptr,                                 0},
+                {  LoadBotAction::MatchmakingQueue,    "matchmaking_queue",                           { "_mode" },            nullptr,                                 0},
+                {         LoadBotAction::WaitMatch,           "wait_match",                      { "_timeoutMs" },            nullptr,                                 0},
+                {       LoadBotAction::PartyCreate,         "party_create",                                    {},            nullptr,                                 0},
+                {      LoadBotAction::LiveOpsState,        "liveops_state",                                    {},            nullptr,                                 0},
+                {       LoadBotAction::GameConnect,         "game_connect",                                    {},            nullptr,                                 0},
+                {    LoadBotAction::GameDisconnect,      "game_disconnect",                                    {},            nullptr,                                 0},
+                {              LoadBotAction::Pick,                 "pick",                       { "_listStep" },            nullptr,                                 0},
+                {     LoadBotAction::EconomyWallet,       "economy_wallet",                                    {},            nullptr,                                 0},
+                {   LoadBotAction::EconomyPurchase,     "economy_purchase",                          { "_offer" },            nullptr,                                 0},
+                {     LoadBotAction::EconomyRedeem,       "economy_redeem",                        { "_product" },            nullptr,                                 0},
+                {   LoadBotAction::MailboxClaimAll,    "mailbox_claim_all",                                    {},            nullptr,                                 0},
+                {             LoadBotAction::Trade,                "trade", { "_asset", "_amount", "_timeoutMs" },            nullptr,                                 0},
+                {       LoadBotAction::GuildCreate,         "guild_create",                                    {},            nullptr,                                 0},
+                {      LoadBotAction::GuildDeposit,        "guild_deposit",               { "_asset", "_amount" },            nullptr,                                 0},
+                {     LoadBotAction::GuildWithdraw,       "guild_withdraw",               { "_asset", "_amount" },            nullptr,                                 0},
+                { LoadBotAction::LeaderboardSubmit,   "leaderboard_submit",               { "_board", "_amount" },            nullptr,                                 0},
             };
             static_assert( std::size( kArrAction ) == static_cast<size_t>( LoadBotAction::Count ), "every load bot action has a row" );
 
@@ -68,17 +78,17 @@ namespace sw
             static const ActionRow& getRow( LoadBotAction action ) { return kArrAction[static_cast<size_t>( action )]; }
 
             /** @brief 첫 칸(`_text`)으로 읽는 키 — 동작마다 많아야 하나다. */
-            static constexpr string_view kArrTextKey[] = { "_channel", "_board", "_mode", "_kind", "_status" };
+            static constexpr string_view kArrTextKey[] = { "_channel", "_board", "_mode", "_kind", "_status", "_offer", "_product", "_asset" };
 
             /** @brief 동작이 받으면 반드시 적어야 하는 키 — 횟수 · 시간은 시나리오가 정한다(읽는 코드에 숨은 기본값이 없다). `_maxMs` 는 비면 `_minMs` 다(고정 대기). */
-            static constexpr string_view kArrRequiredKey[] = { "_count", "_timeoutMs", "_minMs" };
+            static constexpr string_view kArrRequiredKey[] = { "_count", "_timeoutMs", "_minMs", "_amount" };
 
             static constexpr int32 kMaxRepeatDepth = 8;
 
-            /** @brief 동작마다 받는 칸입니다(`kArrAction`) — 그 밖의 칸은 오류. */
+            /** @brief 동작마다 받는 칸입니다(`kArrAction`) — 그 밖의 칸은 오류. `_weight` 는 `pick` 의 자식만 받는다(`readStep` 이 가른다). */
             static bool isKnownKey( LoadBotAction action, string_view key )
             {
-                if ( key == "_action" )
+                if ( key == "_action" || key == "_weight" )
                     return true;
                 for ( const string_view known : getRow( action )._arrKey )
                 {
@@ -90,7 +100,8 @@ namespace sw
 
             static bool isKnownRootKey( string_view key )
             {
-                return key == "_name" || key == "_seed" || key == "_region" || key == "_pacing" || key == "_listStep";
+                return key == "_name" || key == "_seed" || key == "_region" || key == "_pacing" || key == "_executor" || key == "_arrivalRatePerSecond" ||
+                       key == "_gracefulStopMs" || key == "_listStep";
             }
 
             /** @brief 첫 칸 값이 그 동작이 받는 값인지 봅니다. 허용 목록이 없거나 값이 비면(기본) 참입니다. */
@@ -106,8 +117,11 @@ namespace sw
                 return false;
             }
 
-            [[nodiscard]] static expected<void> readStep( const JSONValue& value, LoadBotStep& outStep, int32 depth );
-            [[nodiscard]] static expected<void> readStepList( const JSONValue& listValue, vector<LoadBotStep>& outListStep, int32 depth );
+            /** @brief 단계 하나를 읽습니다. @p bWeighted 면(`pick` 의 자식) `_weight` 가 필수이고, 아니면 `_weight` 는 오류다. */
+            [[nodiscard]] static expected<void> readStep( const JSONValue& value, LoadBotStep& outStep, int32 depth, bool bWeighted );
+            [[nodiscard]] static expected<void> readStepList( const JSONValue& listValue, vector<LoadBotStep>& outListStep, int32 depth, bool bWeighted );
+            /** @brief 실행기 칸(`_executor` · `_arrivalRatePerSecond` · `_gracefulStopMs`)을 읽습니다 — 숨은 기본값 없이 시나리오가 정한다. */
+            [[nodiscard]] static expected<void> readExecutor( const JSONValue& root, LoadBotScenario& inoutScenario );
         };
 
         static_assert( LoadBotScenarioInternal::isInEnumOrder(), "kArrAction rows follow LoadBotAction order" );
@@ -123,20 +137,20 @@ namespace sw
         return LoadBotScenarioInternal::getRow( action )._name.data();
     }
 
-    expected<void> LoadBotScenarioInternal::readStepList( const JSONValue& listValue, vector<LoadBotStep>& outListStep, int32 depth )
+    expected<void> LoadBotScenarioInternal::readStepList( const JSONValue& listValue, vector<LoadBotStep>& outListStep, int32 depth, bool bWeighted )
     {
         if ( listValue.isArray() == false || listValue.size() == 0 )
             return unexpected( Error{ ErrorKind::InvalidArgument, "_listStep must be a non-empty array" } );
         for ( size_t index = 0; index < listValue.size(); ++index )
         {
-            const expected<void> step = readStep( listValue.at( index ), outListStep.emplace_back(), depth );
+            const expected<void> step = readStep( listValue.at( index ), outListStep.emplace_back(), depth, bWeighted );
             if ( step.has_value() == false )
                 return step;
         }
         return {};
     }
 
-    expected<void> LoadBotScenarioInternal::readStep( const JSONValue& value, LoadBotStep& outStep, int32 depth )
+    expected<void> LoadBotScenarioInternal::readStep( const JSONValue& value, LoadBotStep& outStep, int32 depth, bool bWeighted )
     {
         if ( depth > kMaxRepeatDepth || value.isObject() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "step must be an object (repeat nesting up to 8)" } );
@@ -164,12 +178,20 @@ namespace sw
                 return unexpected( Error{ ErrorKind::NotFound, "the action needs a key", actionName }.appendDetail( " / " ).appendDetail( key ) );
         }
 
+        // 비율은 `pick` 의 자식에만 있고 거기서는 필수다 — 비율을 코드 기본값으로 두지 않는다
+        if ( value.has( "_weight" ) != bWeighted )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "_weight is required on every child of pick and allowed nowhere else", actionName } );
+        if ( bWeighted && ( value.readOptionalInto( "_weight", outStep._weight ) == false || outStep._weight <= 0 ) )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "_weight must be a positive integer", actionName } );
+
         // 적지 않은 시간 · 횟수는 단계의 초기값이고, `_maxMs` 는 없으면 `_minMs` 와 같다(고정 대기). 정수가 아니면 거절한다.
         const bool bRepeat     = outStep._action == LoadBotAction::Repeat;
+        const bool bPick       = outStep._action == LoadBotAction::Pick;
         bool       bTimingRead = value.readOptionalInto( "_minMs", outStep._minMs );
         outStep._maxMs         = outStep._minMs;
-        bTimingRead            = bTimingRead && value.readOptionalInto( "_maxMs", outStep._maxMs ) && value.readOptionalInto( "_count", outStep._count );
-        if ( outStep._action == LoadBotAction::WaitMatch )
+        bTimingRead            = bTimingRead && value.readOptionalInto( "_maxMs", outStep._maxMs ) && value.readOptionalInto( "_count", outStep._count ) &&
+                      value.readOptionalInto( "_amount", outStep._amount );
+        if ( outStep._action == LoadBotAction::WaitMatch || outStep._action == LoadBotAction::Trade )
         {
             bTimingRead    = bTimingRead && value.readOptionalInto( "_timeoutMs", outStep._minMs );
             outStep._maxMs = outStep._minMs;
@@ -185,14 +207,38 @@ namespace sw
             outStep._secondText = value.get( "_text" ).asString();
         else if ( value.has( "_activity" ) )
             outStep._secondText = value.get( "_activity" ).asString();
-        const bool bInvalidStepTiming = outStep._minMs < 0 || outStep._maxMs < outStep._minMs || outStep._count <= 0;
+        const bool bInvalidStepTiming = outStep._minMs < 0 || outStep._maxMs < outStep._minMs || outStep._count <= 0 || ( isKnownKey( outStep._action, "_amount" ) && outStep._amount <= 0 );
         if ( bInvalidStepTiming )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the action has a negative time, _maxMs below _minMs or a non-positive _count", actionName } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the action has a negative time, _maxMs below _minMs, a non-positive _count or a non-positive _amount", actionName } );
         const bool bBadText = isAllowedText( getRow( outStep._action ), outStep._text ) == false;
         if ( bBadText )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the action has an unknown value", actionName }.appendDetail( " / " ).appendDetail( outStep._text ) );
-        if ( bRepeat )
-            return readStepList( value.get( "_listStep" ), outStep._listStep, depth + 1 );
+        if ( bRepeat || bPick )
+            return readStepList( value.get( "_listStep" ), outStep._listStep, depth + 1, bPick );
+        return {};
+    }
+
+    expected<void> LoadBotScenarioInternal::readExecutor( const JSONValue& root, LoadBotScenario& inoutScenario )
+    {
+        const string executor = root.get( "_executor" ).asString();
+        if ( executor == "per_vu_iterations" )
+            inoutScenario._executor = LoadBotExecutor::PerUserIterations;
+        else if ( executor == "constant_arrival_rate" )
+            inoutScenario._executor = LoadBotExecutor::ConstantArrivalRate;
+        else
+            return unexpected( Error{ ErrorKind::InvalidArgument, "_executor must be \"per_vu_iterations\" or \"constant_arrival_rate\"", executor } );
+        const bool bArrival   = inoutScenario._executor == LoadBotExecutor::ConstantArrivalRate;
+        const bool bRateGiven = root.has( "_arrivalRatePerSecond" ) || root.has( "_gracefulStopMs" );
+        if ( bArrival == false )
+        {
+            if ( bRateGiven )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_arrivalRatePerSecond and _gracefulStopMs belong to constant_arrival_rate", executor } );
+            return {};
+        }
+        const bool bRead = root.has( "_arrivalRatePerSecond" ) && root.has( "_gracefulStopMs" ) && root.readOptionalInto( "_arrivalRatePerSecond", inoutScenario._arrivalRatePerSecond ) &&
+                           root.readOptionalInto( "_gracefulStopMs", inoutScenario._gracefulStopMs );
+        if ( bRead == false || inoutScenario._arrivalRatePerSecond <= 0 || inoutScenario._gracefulStopMs < 0 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "constant_arrival_rate needs _arrivalRatePerSecond > 0 and _gracefulStopMs >= 0 (integers)", executor } );
         return {};
     }
 
@@ -237,7 +283,9 @@ namespace sw
             scenario._pacing = LoadBotPacing::Open;
         else
             return unexpected( Error{ ErrorKind::InvalidArgument, "_pacing must be \"closed\" or \"open\"", pacing } );
-        const expected<void> steps = LoadBotScenarioInternal::readStepList( root.get( "_listStep" ), scenario._listStep, 0 );
+        if ( const expected<void> executor = LoadBotScenarioInternal::readExecutor( root, scenario ); executor.has_value() == false )
+            return unexpected( executor.error() );
+        const expected<void> steps = LoadBotScenarioInternal::readStepList( root.get( "_listStep" ), scenario._listStep, 0, false );
         if ( steps.has_value() == false )
             return unexpected( steps.error() );
         return scenario;

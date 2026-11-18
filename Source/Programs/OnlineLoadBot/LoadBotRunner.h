@@ -1,11 +1,13 @@
 /**
  * @file LoadBotRunner.h
- * @brief 봇 실행기 — 전송 하나 · 엔드포인트 하나 · 요청 클라이언트 하나에 봇(연결) 여럿. 늘리는 시간 동안 봇을 고르게 띄우고, 틱마다 봇의 다음 단계를 낸다.
+ * @brief 봇 실행기 — 전송 하나 · 엔드포인트 하나 · 요청 클라이언트 하나에 봇(연결) 여럿. 실행기(`LoadBotExecutor`)대로 봇을 띄우고, 틱마다 봇의 다음 단계를 낸다.
  * @details - 전송은 빌려 쓴다(테스트는 루프백 망의 전송, 실제는 `StreamTransportFactory::createPlatformTransport()` — Main 이 만든다). I/O 스레드 없이
  *            `tick` 이 `pollIO` 를 돈다 — 실행기 스레드 하나.
  *          - 시계: 기본은 `MonotonicClock`(지연은 마이크로초). 테스트는 `setManualClock` 으로 바깥이 밀리초를 정한다(결정적 — 지연도 그 밀리초).
  *          - 받은 Message 프레임(알림)은 종류(첫 2 바이트)별로 센 뒤 그 봇에 넘긴다.
- *          - 시나리오를 다 돌았거나(모든 봇이 끝남) 늘린 뒤 `_durationMs` 가 지나면 `tick` 이 false 다.
+ *          - `per_vu_iterations`: 늘리는 시간 동안 봇 풀 전부를 고르게 띄운다. 시나리오를 다 돌았거나(모든 봇이 끝남) 늘린 뒤 `_durationMs` 가 지나면 `tick` 이 false 다.
+ *          - `constant_arrival_rate`: 길이 동안 초당 `_arrivalRatePerSecond` 개를 띄운다(`LoadBotArrivalSchedule`). 풀이 바닥나면 그 도착은 버린 수로 센다(k6 `dropped_iterations`).
+ *            도착이 끝나고 띄운 봇이 다 끝났거나 길이 + `_gracefulStopMs` 가 지나면 `tick` 이 false 다.
  */
 #pragma once
 #include "Core/Container/unordered_map.h"
@@ -19,6 +21,7 @@
 
 #include "Programs/OnlineLoadBot/LoadBotMetrics.h"
 #include "Programs/OnlineLoadBot/LoadBotScenario.h"
+#include "Programs/OnlineLoadBot/LoadBotSchedule.h"
 
 namespace sw
 {
@@ -66,7 +69,11 @@ namespace sw
         const LoadBotScenario&       getScenario() const { return _scenario; }
         const LoadBotRunnerSettings& getSettings() const { return _settings; }
         int32                        getBotCount() const { return static_cast<int32>( _listBot.size() ); }
-        int32                        getRunningBotCount() const;
+        /** @brief 띄운 봇 수입니다(도착률 실행기는 풀이 바닥나면 이보다 많은 도착을 버린다 — `LoadBotMetrics::getDroppedArrivalCount`). */
+        int32 getLaunchedCount() const { return _launchedCount; }
+        int32 getRunningBotCount() const;
+        /** @brief 실행 하나를 가르는 값(시작한 벽시계 밀리초)입니다 — 영수증 거래 id 처럼 저장소가 남는 실행 사이에서 겹치면 안 되는 글에 붙인다. */
+        int64 getRunID() const { return _runID; }
         /** @brief 시작(첫 틱)부터 지난 밀리초입니다. */
         int64 getElapsedMs() const { return getNowMs() - kRunStart; }
 
@@ -87,6 +94,8 @@ namespace sw
     private:
         LoadBot* findBotByConnection( StreamConnectionHandle handle ) const;
         int64    computeLaunchMs( int32 botIndex ) const;
+        /** @brief 실행기대로 이번 틱에 띄울 봇을 띄웁니다. 도착이 모두 끝났으면 true 입니다. */
+        bool launchDueBots( MonotonicMilliseconds nowMs );
 
     private:
         vector<unique_ptr<LoadBot>>  _listBot;
@@ -94,12 +103,15 @@ namespace sw
         LoadBotScenario              _scenario;
         LoadBotRunnerSettings        _settings;
         LoadBotMetrics               _metrics;
+        LoadBotArrivalSchedule       _arrivalSchedule; ///< 도착률 실행기의 시각표(그 밖에는 쓰지 않는다)
         StreamMessageEndpoint        _endpoint;
         NetRequestClient             _requestClient;
         IStreamTransport*            _pTransport;
         int64                        _startUs;
+        int64                        _runID;
         MonotonicMilliseconds        _manualNowMs;
         MonotonicMilliseconds        _manualStartMs;
+        int64                        _arrivedCount; ///< 도착률 실행기 — 지금까지 도착한 수(띄운 수 + 버린 수)
         int32                        _launchedCount;
         uint8                        _bManualClock;
         uint8                        _bInitialized;

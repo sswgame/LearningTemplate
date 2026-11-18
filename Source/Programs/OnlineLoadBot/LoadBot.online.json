@@ -1,4 +1,6 @@
 {
+    "_storeName": "main",
+    "_cacheName": "main",
     "_serverKind": "game",
     "_publicAddress": "127.0.0.1",
     "_capacity": 100000,
@@ -20,8 +22,11 @@
         { "_name": "directory", "_settings": { "_endedAnnouncementTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 } } },
         { "_name": "chat", "_settings": { "_historyTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 20000 }, "_bannedWordsFile": "", "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt", "_spam": { "_refillIntervalMs": 1000, "_repeatWindowMs": 10000, "_burstCount": 5, "_maxRepeatCount": 2, "_maxTrackedAccount": 65536 } } },
         { "_name": "social", "_settings": { "_expiredInviteTTL": { "_expireAfterDays": 7, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 }, "_expiredApplicationTTL": { "_expireAfterDays": 7, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 } } },
-        { "_name": "leaderboard", "_settings": { "_pastScoreTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 }, "_seasonResultTTL": { "_expireAfterDays": 365, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 }, "_listBoardID": [ "kills" ] } },
+        { "_name": "leaderboard", "_settings": { "_pastScoreTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 }, "_seasonResultTTL": { "_expireAfterDays": 365, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 }, "_catalog": "engine/data/loadbot/loadbot.leaderboards.xml" } },
         { "_name": "matchmaking", "_settings": { "_reconnectGraceMs": 60000, "_cancelConfirmWaitMs": 3000, "_listMode": [ { "_modeID": "solo", "_teamCount": 2, "_teamSize": 1, "_matchTimeLimitMs": 1800000 }, { "_modeID": "duo", "_teamCount": 2, "_teamSize": 2, "_matchTimeLimitMs": 1800000 } ] } },
-        { "_name": "liveops", "_settings": { "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 } } }
+        { "_name": "liveops", "_settings": { "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 } } },
+        { "_name": "economy", "_settings": { "_currencyCatalog": "engine/data/loadbot/loadbot.currencies.xml", "_offerCatalog": "engine/data/loadbot/loadbot.offers.xml", "_refundRecovery": "Debt", "_bFakeReceipts": true } },
+        { "_name": "mailbox", "_settings": { "_claimedRetentionDays": 30, "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 } } },
+        { "_name": "trade", "_settings": { "_listTradablePrefix": [ "cur.gold" ], "_closedSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 }, "_inviteTimeoutMs": 30000, "_idleTimeoutMs": 60000 } }
     ]
 }

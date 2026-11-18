@@ -3,6 +3,7 @@
     "_seed": 1,
     "_region": "kr",
     "_pacing": "closed",
+    "_executor": "per_vu_iterations",
     "_listStep": [
         { "_action": "login", "_mode": "guest" },
         { "_action": "directory_status" },

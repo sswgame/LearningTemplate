@@ -60,8 +60,9 @@ namespace sw
         using RunResult = std::invoke_result_t<TRun&, IServiceStoreConnection&>;
         using Result    = std::conditional_t<std::is_void_v<RunResult>, ServiceStoreNoResult, RunResult>;
 
-        ServiceStoreFunctionJob( ServiceStoreTracker& tracker, TRun run, TComplete complete )
-            : _run{ std::move( run ) }
+        ServiceStoreFunctionJob( ServiceStoreTracker& tracker, ServiceStoreJobKind kind, TRun run, TComplete complete )
+            : IServiceStoreJob{ kind }
+            , _run{ std::move( run ) }
             , _complete{ std::move( complete ) }
             , _result{}
             , _pTracker{ &tracker }
@@ -121,7 +122,20 @@ namespace sw
             if ( _pStore == nullptr )
                 return;
             ++_openCount;
-            _pStore->submit( make_unique<ServiceStoreFunctionJob<std::decay_t<TRun>, std::decay_t<TComplete>>>( *this, std::forward<TRun>( run ), std::forward<TComplete>( complete ) ) );
+            _pStore->submit( make_unique<ServiceStoreFunctionJob<std::decay_t<TRun>, std::decay_t<TComplete>>>( *this, ServiceStoreJobKind::ReadWrite, std::forward<TRun>( run ),
+                                                                                                                std::forward<TComplete>( complete ) ) );
+        }
+
+        /** @brief `submit` 과 같되 @p run 의 모든 읽기가 일이 시작한 한 시점을 본다(`ServiceStoreJobKind::SnapshotRead` — 읽기 전용, 커밋은 `Invalid`). 테이블 전체를 훑는 검사가 쓴다. */
+        template <typename TRun, typename TComplete>
+        void submitSnapshotRead( TRun&& run, TComplete&& complete )
+        {
+            SW_ASSERT( _pStore != nullptr );
+            if ( _pStore == nullptr )
+                return;
+            ++_openCount;
+            _pStore->submit( make_unique<ServiceStoreFunctionJob<std::decay_t<TRun>, std::decay_t<TComplete>>>( *this, ServiceStoreJobKind::SnapshotRead, std::forward<TRun>( run ),
+                                                                                                                std::forward<TComplete>( complete ) ) );
         }
 
         /** @brief 맡겼지만 완료가 아직 불리지 않은 일 수입니다. */

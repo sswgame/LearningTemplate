@@ -37,7 +37,8 @@ namespace sw
                                                    "BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
                                                    "BEGIN ISOLATION LEVEL SERIALIZABLE",
                                                    "SELECT nextval( 'sw_commit_version' )",
-                                                   "LOCK TABLE sw_schema_migration IN EXCLUSIVE MODE" };
+                                                   "LOCK TABLE sw_schema_migration IN EXCLUSIVE MODE",
+                                                   "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY" }; // 트랜잭션 스냅샷 하나 — 원장 감사가 쪽마다 다른 시점을 읽지 않는다
                 return s_dialect;
             }
 

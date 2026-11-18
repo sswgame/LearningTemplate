@@ -1,15 +1,17 @@
 /**
  * @file LoadBotMain.cpp
- * @brief 온라인 부하 테스트 봇의 진입점(모듈 `OnlineLoadBotCore` 가 내보낸다) — `OnlineLoadBot --scenario=<json> --load=<.scenario.xml> (--server=<ip:port> [--tls=<신뢰 PEM>] | --local-server=<port> --online-config=<json>)
- *        [--game=<ip:port>] [--report=<json>] [--max-error-percent=N] [--light-hash]`.
+ * @brief 온라인 부하 테스트 봇의 진입점(모듈 `OnlineLoadBotCore` 가 내보낸다) — `OnlineLoadBot --scenario=<json> --load=<.scenario.xml> (--server=<ip:port> [--tls=<신뢰 PEM>] | --local-server=<port> --online-config=<json>
+ *        [--store-config=<서버 설정 json>]) [--game=<ip:port>] [--report=<json>] [--max-error-percent=N] [--light-hash]`.
  * @details - 실행 파일(`Main.cpp`)이 엔진을 세우고 이 모듈을 올린 뒤 부른다(`LoadBotModuleEntry.h`). 로그는 엔진 로거(콘솔 · 파일)로 간다.
  *          - 인자는 `CommandLineManager` 가 읽는다(경로는 기동 폴더 기준으로 한 번 절대화, 틀린 인자는 모두 모아 종료 코드 2).
  *          - 부하 값(봇 수 · 늘리는 시간 · 길이)은 `--load` 의 Automation `<Load>` 한 곳에서 온다 — 시나리오 JSON 은 단계만 든다.
  *          - `--local-server` 는 같은 프로세스에 서버 조립(`LoadBotLocalServer` — 전용 서버와 같은 `OnlineServerRuntime`)을 띄우고 루프백 TCP(플랫폼 전송, 평문)로 붙는다.
  *            키트 목록 · 옵션은 `--online-config`(`LoadBot.online.json`)를 전용 서버와 같은 로더로 읽는다. 포트 0 이면 OS 가 고른다. 서버 시각은 UTC 벽시계, 봇 지연은 `MonotonicClock`.
  *          - `--server` 는 전용 서버(`Server` 의 온라인 서비스)에 붙는다. 그 서비스 포트는 TLS 1.3 이므로 `--tls=<신뢰 PEM>` 을 함께 준다(값이 없으면 오류 - 개발용 인증서로 대신하지 않는다).
+ *          - `--store-config` 는 로컬 서버가 쓸 저장소 · 캐시를 전용 서버의 서버 설정(`Shooter3D.external.json` — PostgreSQL · RESP, 비밀은 환경 변수)에서 고른다. 없으면 메모리.
+ *          - 로컬 서버면 끝에 원장 감사(재화 총량 보존 — `LedgerAuditReport`)와 저장소 커밋 · 충돌 수를 읽어 보고서에 싣는다. 감사가 균형이 아니면 종료 코드 5.
  *          - 끝에 동작별 지연 백분위 표를 로그로, `--report` 면 JSON 을 파일로 쓴다. 오류율이 상한(기본 1 %)을 넘으면 종료 코드 1, 인자 · 시나리오 오류는 2,
- *            보고서를 쓰지 못하면 4(`LoadBotModuleEntry`).
+ *            보고서를 쓰지 못하면 4, 원장 감사가 깨지면 5(`LoadBotModuleEntry`).
  */
 #include "pch.h"
 
@@ -25,6 +27,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/ServerConfig.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
@@ -45,6 +48,7 @@ namespace sw
             string _scenarioPath{};     ///< `--scenario=<json>` — 단계 나무(필수)
             string _loadPath{};         ///< `--load=<.scenario.xml>` — 봇 수 · 늘리는 시간 · 길이의 정본 `<Load>`(필수)
             string _onlineConfigPath{}; ///< `--online-config=<LoadBot.online.json>` — 로컬 서버의 키트 목록 · 옵션(`--local-server` 와 필수)
+            string _storeConfigPath{};  ///< `--store-config=<서버 설정 json>` — 로컬 서버의 저장소 · 캐시(없으면 메모리)
             string _reportPath{};
             string _serverAddress{};
             string _gameAddress{};  ///< `--game=<ip:port>` — 전용 서버의 게임 UDP 포트. 시나리오의 `game_connect` 가 붙는다(서버 디버깅 S5)
@@ -75,6 +79,7 @@ namespace sw
                 commandLine.addArgument( { "scenario" }, CommandLineDiskPath{}, false );
                 commandLine.addArgument( { "load" }, CommandLineDiskPath{}, false );
                 commandLine.addArgument( { "online-config" }, CommandLineDiskPath{}, false );
+                commandLine.addArgument( { "store-config" }, CommandLineDiskPath{}, false );
                 commandLine.addArgument( { "report" }, CommandLineDiskPath{}, false );
                 commandLine.addArgument( { "tls" }, CommandLineDiskPath{}, false );
                 commandLine.addArgument( { "server" }, string{}, false );
@@ -98,6 +103,7 @@ namespace sw
                 (void)commandLine.getArgument( "scenario", options._scenarioPath );
                 (void)commandLine.getArgument( "load", options._loadPath );
                 (void)commandLine.getArgument( "online-config", options._onlineConfigPath );
+                (void)commandLine.getArgument( "store-config", options._storeConfigPath );
                 (void)commandLine.getArgument( "report", options._reportPath );
                 (void)commandLine.getArgument( "tls", options._tlsTrustFile );
                 (void)commandLine.getArgument( "server", options._serverAddress );
@@ -121,6 +127,8 @@ namespace sw
                     return unexpected( string( "--local-server needs --online-config=<LoadBot.online.json> (the kits and options the local server runs)" ) );
                 if ( bLocalServer && options._tlsTrustFile.empty() == false )
                     return unexpected( string( "--tls goes with --server (the local server listens in plaintext)" ) );
+                if ( bLocalServer == false && options._storeConfigPath.empty() == false )
+                    return unexpected( string( "--store-config goes with --local-server (a remote server has its own store)" ) );
                 return options;
             }
 
@@ -186,6 +194,7 @@ namespace sw
                 LoadBotRunnerSettings        runnerSettings;
                 unique_ptr<IStreamTransport> serverTransport;
                 SystemMonotonicClock         serverClock; // 로컬 서버가 빌린다(메모리 캐시 만료). 서버보다 먼저 선언한다
+                ServerConfig                 storeConfig; // 로컬 서버가 빌린다(`--store-config`). 서버보다 먼저 선언한다
                 LoadBotLocalServer           localServer;
                 if ( bLocalServer )
                 {
@@ -196,6 +205,17 @@ namespace sw
                     {
                         SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotOnlineConfig", "OnlineLoadBot: online config '%#' is %#", options._onlineConfigPath, configRead == ConfigReadResult::Missing ? "missing" : "invalid" );
                         return Exit::kExitUsage;
+                    }
+                    if ( options._storeConfigPath.empty() == false )
+                    {
+                        // 전용 서버의 `<이름>.json` 과 같은 로더로 읽는다 — 저장소 · 캐시 항목과 비밀 환경 변수 이름만 쓴다
+                        const ConfigReadResult storeRead = ConfigManager::readConfigFileInto( options._storeConfigPath, storeConfig );
+                        if ( storeRead != ConfigReadResult::Loaded )
+                        {
+                            SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotStoreConfig", "OnlineLoadBot: store config '%#' is %#", options._storeConfigPath, storeRead == ConfigReadResult::Missing ? "missing" : "invalid" );
+                            return Exit::kExitUsage;
+                        }
+                        serverSettings._pStoreConfig = &storeConfig;
                     }
                     serverTransport                    = StreamTransportFactory::createPlatformTransport();
                     serverSettings._port               = static_cast<uint16>( options._localServerPort );
@@ -257,8 +277,20 @@ namespace sw
                     MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + kIdleSleepNs );
                 }
 
-                const LoadBotMetrics& metrics   = runner.getMetrics();
-                const int64           elapsedMs = runner.getElapsedMs();
+                const int64 elapsedMs = runner.getElapsedMs();
+                runner.shutdown(); // 봇이 멈춘 뒤 감사한다 — 날아가던 요청은 서버 쪽에서 끝난다
+                bool bLedgerFailed = false;
+                if ( bLocalServer )
+                {
+                    const expected<LedgerAuditReport> audit  = localServer.readLedgerAudit();
+                    const ServiceStoreCommitStats*    pStats = localServer.findCommitStats();
+                    if ( audit.has_value() && pStats != nullptr )
+                        runner.getMutableMetrics().setServerStats( LoadBotLocalServer::makeServerStats( *pStats, *audit ) );
+                    else if ( audit.has_value() == false )
+                        SW_LOG_ERROR_ID( "OnlineLoadBot.LedgerAuditUnread", "OnlineLoadBot: the ledger audit could not run: %#", audit.error().message() );
+                    bLedgerFailed = audit.has_value() == false || pStats == nullptr || audit->isBalanced() == false;
+                }
+                const LoadBotMetrics& metrics = runner.getMetrics();
                 logLines( LogLevel::Info, metrics.formatTable( elapsedMs ) );
                 bool bReportFailed = false;
                 if ( options._reportPath.empty() == false )
@@ -270,11 +302,16 @@ namespace sw
                 }
                 if ( bReportFailed )
                     SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotCannotWriteReport", "OnlineLoadBot: cannot write report '%#'", options._reportPath );
-                runner.shutdown();
                 localServer.shutdown();
 
                 if ( bReportFailed )
                     return Exit::kExitReport;
+                if ( bLedgerFailed )
+                {
+                    SW_LOG_ERROR_ID( "OnlineLoadBot.LedgerNotBalanced", "OnlineLoadBot: the ledger is not balanced after the run (held != issued - burned for %# assets) - currency was created or lost",
+                                     metrics.getServerStats()._mismatchedAssetCount );
+                    return Exit::kExitLedger;
+                }
                 const int64 completedCount = metrics.getTotalCompletedCount();
                 const int64 errorCount     = metrics.getTotalErrorCount();
                 const bool  bTooManyErrors = completedCount == 0 || errorCount * kPercentScale > completedCount * options._maxErrorPercent;

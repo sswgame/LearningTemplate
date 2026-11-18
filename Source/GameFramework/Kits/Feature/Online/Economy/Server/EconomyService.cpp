@@ -508,7 +508,8 @@ namespace sw
         _auditJob.request();
         if ( _auditJob.tryStart( _nowMs ) == false )
             return;
-        _store.submit( []( IServiceStoreConnection& connection )
+        // 한 시점에서 읽는다 — 쪽마다 다른 시점이면 그사이 끼는 이동 때문에 분개와 잔액이 어긋나 보인다(거짓 불균형)
+        _store.submitSnapshotRead( []( IServiceStoreConnection& connection )
         {
             ServiceStoreRead<LedgerAuditReport> read;
             read._result = LedgerAuditReport::computeReport( connection, read._value );

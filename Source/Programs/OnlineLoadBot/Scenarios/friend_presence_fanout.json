@@ -3,6 +3,7 @@
     "_seed": 11,
     "_region": "kr",
     "_pacing": "open",
+    "_executor": "per_vu_iterations",
     "_listStep": [
         { "_action": "login", "_mode": "guest" },
         { "_action": "repeat", "_count": 200, "_listStep": [

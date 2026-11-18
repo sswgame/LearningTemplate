@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4b84b05f73725df2700d260f07bc6764"?>
+<!-- 부하 봇 로컬 서버의 상품 — gem_from_gold 는 화폐 구매(원장 소각 · 발행), gold_pack 은 가짜 스토어("fake", 개발 서버의 테스트 공급자) 영수증 지급이다. 실제 상점 상품이 아니다. -->
+<OfferCatalog>
+  <Offer id="gem_from_gold">
+    <Price currency="cur.gold" amount="10"/>
+    <Grant asset="cur.gem" amount="1"/>
+  </Offer>
+  <Offer id="gold_pack">
+    <Product store="fake" id="loadbot.gold_pack"/>
+    <Grant asset="cur.gold" amount="1000"/>
+  </Offer>
+</OfferCatalog>

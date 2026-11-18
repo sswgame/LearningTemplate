@@ -888,7 +888,7 @@ namespace
 
         void submit( unique_ptr<IServiceStoreJob> job ) override
         {
-            job->execute( _connection );
+            job->execute( _connection, _commitStats );
             _listDone.push_back( std::move( job ) );
         }
         int32 pollCompletions() override

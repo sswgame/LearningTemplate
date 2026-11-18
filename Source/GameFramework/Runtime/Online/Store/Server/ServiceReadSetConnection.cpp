@@ -8,10 +8,11 @@
 
 namespace sw
 {
-    ServiceReadSetConnection::ServiceReadSetConnection( IServiceStoreConnection& inner )
+    ServiceReadSetConnection::ServiceReadSetConnection( IServiceStoreConnection& inner, ServiceStoreCommitStats* pStats )
         : _inner{ inner }
         , _listRead{}
         , _listRangeRead{}
+        , _pStats{ pStats }
     {
     }
 
@@ -105,6 +106,12 @@ namespace sw
         _listRangeRead.clear();
         ServiceCommitInfo        info;
         const ServiceStoreResult committed = _inner.commit( conditioned, &info );
+        if ( _pStats != nullptr )
+        {
+            _pStats->_commitCount.fetch_add( 1, std::memory_order_relaxed );
+            if ( committed == ServiceStoreResult::Conflict )
+                _pStats->_conflictCount.fetch_add( 1, std::memory_order_relaxed );
+        }
         if ( pOutInfo != nullptr )
         {
             *pOutInfo = info;

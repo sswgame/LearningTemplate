@@ -219,7 +219,8 @@ add_test(NAME Scripts.VcpkgInstallPolicy
 set_tests_properties(Scripts.VcpkgInstallPolicy PROPERTIES LABELS nogpu TIMEOUT 60)
 
 # 온라인 부하 봇의 짧은 시나리오 — 같은 프로세스 서버(`--local-server=0`, OS 가 고른 포트라 나란히 돌아도 다투지 않는다)에 봇 여덟이 붙어
-# 로그인 · 채팅 · 순위를 한 번씩 돈다. 오류율 · 보고서 쓰기 실패가 종료 코드다(엔진 · 모듈이 서지 못하면 3). 봇 로그는 `-log-file` 로 같은 폴더에 남는다.
+# 로그인 · 채팅 · 순위와 원장 경로(영수증 · 구매 · 우편 · 점수 · 길드 창고 · 거래)를 한 번씩 돈다. 오류율 · 보고서 쓰기 실패 · 끝의 원장 감사 불균형(5)이 종료 코드다
+# (엔진 · 모듈이 서지 못하면 3). 봇 로그는 `-log-file` 로 같은 폴더에 남는다.
 if(TARGET OnlineLoadBot)
 	set(load_bot_dir "${CMAKE_SOURCE_DIR}/Source/Programs/OnlineLoadBot")
 	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/Testing/Logs")

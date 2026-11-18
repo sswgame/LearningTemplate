@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/MonotonicClock.h"
+#include "Core/Time/WallClock.h"
 
 #include "Programs/OnlineLoadBot/LoadBot.h"
 
@@ -30,12 +31,15 @@ namespace sw
         , _scenario{}
         , _settings{}
         , _metrics{}
+        , _arrivalSchedule{ 0, 0 }
         , _endpoint{}
         , _requestClient{}
         , _pTransport{ nullptr }
         , _startUs{ 0 }
+        , _runID{ 0 }
         , _manualNowMs{ 0 }
         , _manualStartMs{ 0 }
+        , _arrivedCount{ 0 }
         , _launchedCount{ 0 }
         , _bManualClock{ SW_FALSE }
         , _bInitialized{ SW_FALSE }
@@ -52,8 +56,16 @@ namespace sw
         SW_ASSERT( _bInitialized == SW_FALSE );
         _scenario = scenario;
         _settings = settings;
+        _runID    = WallClock::nowUnixMilliseconds().count();
         if ( _scenario._botCount <= 0 || _scenario._durationMs <= 0 || _scenario._rampUpMs < 0 )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the load (bots, ramp-up, duration) is not set - it comes from the <Load> declaration (--load)" } );
+        if ( _scenario._executor == LoadBotExecutor::ConstantArrivalRate )
+        {
+            // 도착률은 길이 동안 고른 속도다 — 늘리는 시간을 받으면 그 값이 무엇을 뜻하는지 숨는다(조용히 버리지 않는다)
+            if ( _scenario._rampUpMs != 0 || _scenario._arrivalRatePerSecond <= 0 )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "constant_arrival_rate needs rampUpSeconds=\"0\" in <Load> and _arrivalRatePerSecond > 0" } );
+            _arrivalSchedule = LoadBotArrivalSchedule{ _scenario._arrivalRatePerSecond, _scenario._durationMs };
+        }
         StreamTransportConfig transportSettings;
         transportSettings._ioThreadCount  = 0;
         transportSettings._maxConnections = MathUtil::max( transportSettings._maxConnections, _scenario._botCount + LoadBotRunnerInternal::kSpareConnectionCount );
@@ -126,21 +138,46 @@ namespace sw
         (void)_endpoint.poll( *this );
         _requestClient.update();
 
-        while ( _launchedCount < getBotCount() && kRunStart + computeLaunchMs( _launchedCount ) <= nowMs )
-        {
-            _listBot[static_cast<size_t>( _launchedCount )]->start();
-            ++_launchedCount;
-        }
-        int32 runningCount = 0;
+        const bool bArrivalsDone = launchDueBots( nowMs );
+        int32      runningCount  = 0;
         for ( int32 botIndex = 0; botIndex < _launchedCount; ++botIndex )
         {
             runningCount += _listBot[static_cast<size_t>( botIndex )]->update( nowMs ) ? 1 : 0;
         }
 
-        const int64 endMs     = _scenario._rampUpMs + _scenario._durationMs;
-        const bool  bAllDone  = _launchedCount == getBotCount() && runningCount == 0;
+        const bool  bArrival  = _scenario._executor == LoadBotExecutor::ConstantArrivalRate;
+        const int64 endMs     = bArrival ? _scenario._durationMs + _scenario._gracefulStopMs : _scenario._rampUpMs + _scenario._durationMs;
+        const bool  bAllDone  = bArrivalsDone && runningCount == 0;
         const bool  bTimedOut = nowMs >= kRunStart + endMs;
         return bAllDone == false && bTimedOut == false;
+    }
+
+    bool LoadBotRunner::launchDueBots( MonotonicMilliseconds nowMs )
+    {
+        if ( _scenario._executor == LoadBotExecutor::PerUserIterations )
+        {
+            while ( _launchedCount < getBotCount() && kRunStart + computeLaunchMs( _launchedCount ) <= nowMs )
+            {
+                _listBot[static_cast<size_t>( _launchedCount )]->start();
+                ++_launchedCount;
+            }
+            return _launchedCount == getBotCount();
+        }
+        const int64 dueCount = _arrivalSchedule.computeDueCount( getNowUs() );
+        while ( _arrivedCount < dueCount )
+        {
+            ++_arrivedCount;
+            if ( _launchedCount < getBotCount() )
+            {
+                _listBot[static_cast<size_t>( _launchedCount )]->start();
+                ++_launchedCount;
+            }
+            else
+            {
+                _metrics.recordDroppedArrival(); // 풀이 바닥났다 — 도착을 미루지 않는다(미루면 닫힌 모델이 된다)
+            }
+        }
+        return _arrivedCount == _arrivalSchedule.getTotalCount();
     }
 
     int32 LoadBotRunner::getRunningBotCount() const

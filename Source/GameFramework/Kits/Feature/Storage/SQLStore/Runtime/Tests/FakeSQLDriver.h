@@ -107,7 +107,7 @@ namespace sw::test
 
         static const SQLDialect& getDialect()
         {
-            static const SQLDialect s_dialect{ kName, "BLOBTYPE", "KEYTEXT", "AUTOID", "BEGIN WRITE", kNextCommitVersion, "LOCK HISTORY" };
+            static const SQLDialect s_dialect{ kName, "BLOBTYPE", "KEYTEXT", "AUTOID", "BEGIN WRITE", kNextCommitVersion, "LOCK HISTORY", "BEGIN SNAPSHOT" };
             return s_dialect;
         }
 

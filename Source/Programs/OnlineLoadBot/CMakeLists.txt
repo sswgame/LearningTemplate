@@ -16,7 +16,8 @@ set(load_bot_kit
 	GF_Matchmaking GF_Server_Matchmaking
 	GF_ServerDirectory GF_Server_ServerDirectory
 	GF_Social GF_Server_Social
-	# 봇 시나리오가 쓰지 않는 키트도 싣는다 — 봇이 온라인 키트 단위 테스트의 호스트다(`UnitTests.OnlineKits`). 싣기만 하고 켜는 것은 설정 파일의 `_listKit` 이다.
+	# 원장 경로 키트(경제 · 우편 · 거래 — 봇 시나리오의 구매 · 영수증 · 우편 · 거래)와 시나리오가 쓰지 않는 키트(관리)도 싣는다 — 봇이 온라인 키트 단위 테스트의 호스트다
+	# (`UnitTests.OnlineKits`). 싣기만 하고 켜는 것은 설정 파일의 `_listKit` 이다.
 	GF_Economy GF_Server_Economy
 	GF_Mailbox GF_Server_Mailbox
 	GF_Trade GF_Server_Trade
