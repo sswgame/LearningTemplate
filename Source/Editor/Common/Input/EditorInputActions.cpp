@@ -152,7 +152,7 @@ namespace sw::editor
         {
             (void)registry.execute( queued._commandID, queued._target ); // 그 사이 꺼졌으면 아무 일도 없다(메뉴의 회색과 같은 조건)
         }
-        forwardEditorKeyboard( syncKeyboardOwner() );
+        forwardEditorKeyboard( decideKeyboardOwner() );
         syncFocusedPanelLayer();
         _map.update( deltaSeconds );
         // ImGui 의 클릭 · 끌기 · 더블클릭 판정(항목 단추 · 맥락 메뉴 · 끌어 놓기)도 입력 맵의 값 하나를 쓴다 — 두 곳에 숫자를 두지 않는다.
@@ -223,19 +223,26 @@ namespace sw::editor
         }
     }
 
-    bool EditorInputActions::syncKeyboardOwner()
+    bool EditorInputActions::decideKeyboardOwner()
     {
         // 패널을 그리기 전이라 이번 프레임 포커스는 아직 없다 — 지난 프레임에 게임 뷰 · 게임 입력 면(한 프로세스 재생 뷰포트)이 포커스였는지를 본다.
-        const bool               bGameViewFocused = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().wasGameInputFocusedLastFrame();
-        const bool               bEditorOwns      = EditorPlaySession::isSimulating() || ( ImGui::GetIO().WantCaptureKeyboard && bGameViewFocused == false );
-        InputManager&            input            = editor::getSubsystem<InputManager>();
-        const InputKeyboardFocus current          = input.getKeyboardFocus();
+        EditorRenderViews& views            = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
+        const bool         bGameViewFocused = views.wasGameInputFocusedLastFrame();
+        const bool         bEditorOwns      = EditorPlaySession::isSimulating() || ( ImGui::GetIO().WantCaptureKeyboard && bGameViewFocused == false );
+        views.setEditorOwnsKeyboard( bEditorOwns ); // 엔진 포커스는 게임 스레드가 넘긴 값으로 입힌다(`applyKeyboardOwner`)
+        return bEditorOwns;
+    }
+
+    void EditorInputActions::applyKeyboardOwner( bool bEditorOwns )
+    {
+        InputManager&            input   = editor::getSubsystem<InputManager>();
+        const InputKeyboardFocus current = input.getKeyboardFocus();
         if ( bEditorOwns && current != InputKeyboardFocus::Tool )
         {
             _focusBeforeTool   = current;
             _bToolOwnsKeyboard = SW_TRUE;
             input.setKeyboardFocus( InputKeyboardFocus::Tool );
-            return true;
+            return;
         }
         if ( bEditorOwns == false && _bToolOwnsKeyboard )
         {
@@ -244,7 +251,6 @@ namespace sw::editor
                 input.setKeyboardFocus( _focusBeforeTool );
             _bToolOwnsKeyboard = SW_FALSE;
         }
-        return bEditorOwns;
     }
 
     void EditorInputActions::forwardEditorKeyboard( bool bEditorOwnsKeyboard )

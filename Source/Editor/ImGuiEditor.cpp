@@ -38,6 +38,7 @@
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
+#include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -813,7 +814,10 @@ namespace sw::editor
         SW_EDITOR_PROFILE_SCOPE( "GT.Editor.applyUICommands" );
         _editorContext->getSubsystem<EditorUICommandQueue>().applyDue();
         // 타깃은 게임 스레드가 가진다 — 명령이 바꾼 크기와 엔진이 그사이 올린 렌더 텍스처를 받아 다음 UI 프레임이 읽을 값으로 넘긴다(`EditorTargetSnapshot`).
-        _editorContext->getSubsystem<EditorRenderViews>().applyReadyAndPublishTargets();
+        EditorRenderViews& views = _editorContext->getSubsystem<EditorRenderViews>();
+        views.applyReadyAndPublishTargets();
+        // 키보드 주인 — UI 프레임이 정한 값을 엔진 입력 매니저의 포커스에 입힌다(UI 는 입력 매니저를 바로 바꾸지 않는다).
+        _editorContext->getSubsystem<EditorInputActions>().applyKeyboardOwner( views.getPublishedUIFrame()._bEditorOwnsKeyboard == SW_TRUE );
     }
 
     void ImGuiEditor::openFrame()

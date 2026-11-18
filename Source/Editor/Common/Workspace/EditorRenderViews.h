@@ -143,6 +143,7 @@ namespace sw::editor
         uint8          _bGameViewHovered{ SW_FALSE };         ///< 게임 뷰 창 위에 마우스가 있다
         uint8          _bGameInputSurfaceFocused{ SW_FALSE }; ///< 게임 입력을 받는 다른 면(한 프로세스 재생의 월드 뷰포트)이 포커스를 가졌다
         uint8          _bAnimationRequested{ SW_FALSE };      ///< 패널이 연속 프레임을 청했다(`requestAnimationFrame`)
+        uint8          _bEditorOwnsKeyboard{ SW_FALSE };      ///< 에디터 창이 키보드를 가졌다 — 게임 스레드가 엔진 키보드 포커스를 `Tool` 로 둔다(`EditorInputActions::applyKeyboardOwner`)
 
         /** @brief 그 뷰를 그렸으면 true 입니다. */
         bool wasViewDrawn( EditorViewKind kind ) const { return _arrView[static_cast<uint32>( kind )]._bDrawn == SW_TRUE; }
@@ -188,7 +189,7 @@ namespace sw::editor
         bool isGameViewFocused() const { return _uiFrame._bGameViewFocused == SW_TRUE; }
         /**
          * @brief 게임 입력을 받는 다른 면(한 프로세스 재생의 월드 뷰포트 등)이 이번 프레임에 포커스를 가졌음을 알립니다. 패널이 그리는 동안 부릅니다.
-         * @details 게임 뷰 패널처럼 그 창이 포커스면 키보드를 도구(에디터)가 아니라 게임 쪽에 둔다(`EditorInputActions::syncKeyboardOwner`).
+         * @details 게임 뷰 패널처럼 그 창이 포커스면 키보드를 도구(에디터)가 아니라 게임 쪽에 둔다(`EditorInputActions::decideKeyboardOwner`).
          */
         void recordGameInputSurfaceFocused() { _uiFrame._bGameInputSurfaceFocused = SW_TRUE; }
         /**
@@ -203,6 +204,8 @@ namespace sw::editor
             _uiFrame._bGameViewHovered         = SW_FALSE;
             _uiFrame._bGameInputSurfaceFocused = SW_FALSE;
         }
+        /** @brief UI 쪽 — 이번 UI 프레임에 에디터 창이 키보드를 가졌는지 적습니다(`EditorInputActions::decideKeyboardOwner`). 프레임마다 다시 적으므로 앞 정리가 지우지 않는다. */
+        void setEditorOwnsKeyboard( bool bOwns ) { _uiFrame._bEditorOwnsKeyboard = bOwns ? SW_TRUE : SW_FALSE; }
         /** @brief 지난 프레임에 게임 뷰 또는 게임 입력 면이 포커스였는지입니다(키보드 주인 판정용, UI 쪽). */
         bool wasGameInputFocusedLastFrame() const { return _bGameInputFocusedLastFrame == SW_TRUE; }
 
