@@ -229,6 +229,27 @@ SW_TEST_CASE( ValeNetLinkTest, UnchangedProfileIsNotWrittenAgain )
     SW_EXPECT_TRUE( restarted.requestSave( 8, listLoad[0]._profile ) ); // 다른 계정은 따로 센다
 }
 
+/** @brief [ValeNetLinkTest] 세션이 끝난 계정의 디스크 바이트 기억은 마지막 쓰기가 끝나면 지운다 — 들고 있는 바이트가 접속 중인 계정 수를 따른다 */
+SW_TEST_CASE( ValeNetLinkTest, ReleasedAccountIsForgottenAfterItsLastWrite )
+{
+    MemoryLocalDatabase database;
+    MemoryLocalStore    store( &database, LocalSealContext{} );
+    ValeProfileStore    profiles;
+    profiles.bindStore( &store );
+    ValeProfile profile;
+    profile._coins = 5;
+    SW_REQUIRE_TRUE( profiles.requestSave( 7, profile ) );
+    SW_REQUIRE_TRUE( profiles.requestSave( 8, profile ) );
+    profiles.releaseAccount( 7 );
+    SW_EXPECT_EQUAL( size_t{ 2 }, profiles.getKnownAccountCount() ); // 7 의 쓰기가 아직 끝나지 않았다
+
+    vector<ValeProfileLoad> listLoad;
+    profiles.poll( listLoad );
+    SW_EXPECT_EQUAL( size_t{ 1 }, profiles.getKnownAccountCount() );
+    profiles.releaseAccount( 8 ); // 쓰는 중이 아니면 바로 지운다
+    SW_EXPECT_EQUAL( size_t{ 0 }, profiles.getKnownAccountCount() );
+}
+
 /** @brief [ValeNetLinkTest] 파티 초대 · 수락이 서버에서 서고, 쓰러뜨린 짐승의 경험을 두 클라이언트가 나눠 받는다. */
 SW_TEST_CASE( ValeNetLinkTest, PartyIsServerAuthoritative )
 {

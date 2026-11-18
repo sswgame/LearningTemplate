@@ -325,7 +325,10 @@ namespace sw
         _replicator.removeObserver( connectionID );
         const ValeAvatar* pAvatar = _world.findAvatar( iter->second->_avatarID );
         if ( pAvatar != nullptr )
+        {
             _profiles.requestSave( pAvatar->_accountID, pAvatar->_profile );
+            _profiles.releaseAccount( pAvatar->_accountID );
+        }
         removePublishedEntity( iter->second->_avatarID );
         _world.removeAvatar( iter->second->_avatarID );
         _mapAgent.erase( iter );

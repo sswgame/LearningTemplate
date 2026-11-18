@@ -11,6 +11,7 @@ namespace sw
         : _mapPendingRead{}
         , _mapPendingWrite{}
         , _mapStoredBytes{}
+        , _setReleasedAccount{}
         , _listCompletionScratch{}
         , _pStore{ nullptr }
         , _savedCount{ 0 }
@@ -29,7 +30,26 @@ namespace sw
     {
         if ( _pStore == nullptr )
             return;
+        (void)_setReleasedAccount.erase( accountID ); // 다시 들어왔다 — 읽기가 기억을 다시 채운다
         _mapPendingRead[_pStore->submitRead( makeSlotName( accountID ) )] = accountID;
+    }
+
+    void ValeProfileStore::releaseAccount( uint64 accountID )
+    {
+        if ( hasPendingWrite( accountID ) )
+            (void)_setReleasedAccount.insert( accountID );
+        else
+            (void)_mapStoredBytes.erase( accountID );
+    }
+
+    bool ValeProfileStore::hasPendingWrite( uint64 accountID ) const
+    {
+        for ( const auto& entry : _mapPendingWrite )
+        {
+            if ( entry.second == accountID )
+                return true;
+        }
+        return false;
     }
 
     bool ValeProfileStore::requestSave( uint64 accountID, const ValeProfile& profile )
@@ -76,6 +96,11 @@ namespace sw
                 {
                     _mapStoredBytes.erase( accountID ); // 디스크 바이트를 모른다 — 다음 저장이 다시 쓴다
                     SW_LOG_ERROR_ID( "LanternVale.ProfileSaveFailed", "[LanternVale] profile of account %# was not saved (local store result %#)", accountID, static_cast<int32>( completion._result ) );
+                }
+                if ( _setReleasedAccount.count( accountID ) != 0 && hasPendingWrite( accountID ) == false )
+                {
+                    (void)_setReleasedAccount.erase( accountID );
+                    (void)_mapStoredBytes.erase( accountID ); // 세션이 끝난 계정의 마지막 쓰기가 끝났다
                 }
                 continue;
             }

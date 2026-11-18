@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
@@ -43,6 +44,11 @@ namespace sw
         void requestLoad( uint64 accountID );
         /** @brief 진행을 쓰도록 맡깁니다. 그 계정의 디스크 바이트(읽었거나 앞서 맡긴 것)와 같으면 맡기지 않고 false 입니다. */
         bool requestSave( uint64 accountID, const ValeProfile& profile );
+        /**
+         * @brief 계정의 세션이 끝났습니다 — 그 계정의 쓰기가 모두 끝나면 디스크 바이트 기억을 지웁니다(쓰는 중이 아니면 바로). 들고 있는 바이트가 접속 중인 계정 수를 따른다.
+         * @details 다시 들어오면 읽기가 기억을 다시 채운다. 세션을 닫는 쪽이 마지막 `requestSave` 뒤에 부른다.
+         */
+        void releaseAccount( uint64 accountID );
         /** @brief 끝난 읽기를 @p outListLoad 뒤에 붙입니다. 쓰기 실패는 오류 로그로 알립니다. */
         void poll( vector<ValeProfileLoad>& outListLoad );
 
@@ -51,16 +57,22 @@ namespace sw
         uint64 getSavedCount() const { return _savedCount; }
         /** @brief 디스크 바이트와 같아 맡기지 않은 쓰기 수입니다. */
         uint64 getSkippedSaveCount() const { return _skippedSaveCount; }
+        /** @brief 디스크 바이트를 기억하는 계정 수입니다(감시 · 테스트). */
+        size_t getKnownAccountCount() const { return _mapStoredBytes.size(); }
 
         /** @brief 계정 id 의 슬롯 이름입니다(`vale/a<id>` — 슬롯 이름 규칙 `[0-9a-z_.-]` 안). */
         static string makeSlotName( uint64 accountID );
 
     private:
+        /** @brief 계정 @p accountID 의 쓰기가 아직 끝나지 않았으면 true 입니다. */
+        bool hasPendingWrite( uint64 accountID ) const;
+
+    private:
         unordered_map<uint64, uint64> _mapPendingRead;  ///< 읽기 요청 id → 계정 id
         unordered_map<uint64, uint64> _mapPendingWrite; ///< 쓰기 요청 id → 계정 id
-        /// 계정 id → 디스크에 있다고 아는 진행 바이트(읽었거나 맡긴 것). 쓰기가 지면 지워 다음 저장이 다시 쓴다.
-        /// shortcut: 한 번 든 계정의 바이트(수십 바이트)를 프로세스 동안 들고 있다 — 계정 수가 커지면 세션이 끝나 쓰기가 끝난 계정을 지운다.
+        /// 계정 id → 디스크에 있다고 아는 진행 바이트(읽었거나 맡긴 것). 쓰기가 지면 지워 다음 저장이 다시 쓴다. 세션이 끝난 계정은 쓰기가 끝나면 지운다(`releaseAccount`).
         unordered_map<uint64, vector<uint8>> _mapStoredBytes;
+        unordered_set<uint64>                _setReleasedAccount; ///< 세션이 끝났지만 쓰기가 남아 기억을 아직 지우지 않은 계정
         vector<LocalStoreCompletion>         _listCompletionScratch;
         ILocalStore*                         _pStore;
         uint64                               _savedCount;
