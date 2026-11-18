@@ -363,7 +363,7 @@ namespace sw::editor
     {
         struct EditorSceneSessionStepInternal
         {
-            /** @brief 게임 단계 — UI(메뉴 · 대화상자 · 콘텐츠 브라우저)가 남긴 씬 열기 · 다른 이름 저장 요청을 요청한 순서대로 합니다. 씬을 읽고 쓰는 일(`SceneManager`)은 게임 스레드가 한다. */
+            /** @brief 게임 단계 — UI(메뉴 · 대화상자 · 콘텐츠 브라우저 · 미저장 확인 창)가 남긴 씬 열기 · 다른 이름 저장 · 확인 선택 요청을 요청한 순서대로 합니다. 씬을 읽고 쓰는 일(`SceneManager`)은 게임 스레드가 한다. */
             static void run( EditorContext& context, EditorPlaySessionWriteKey /*key*/ )
             {
                 vector<EditorSceneFileRequest> listRequest;
@@ -378,6 +378,9 @@ namespace sw::editor
                             break;
                         case EditorSceneFileRequestKind::SaveAs:
                             EditorSceneFileCommandsInternal::saveSceneAsRequested( request._path );
+                            break;
+                        case EditorSceneFileRequestKind::UnsavedChoice:
+                            EditorSceneFileCommands::applyUnsavedSceneChoice( request._choice );
                             break;
                     }
                 }

@@ -33,3 +33,22 @@ SW_TEST_CASE( EditorSceneFileRequestTest, RequestsAreTakenInOrderOnce )
     SW_EXPECT_FALSE( workspace.takeSceneFileRequests( listRequest ) );
     SW_EXPECT_TRUE( listRequest.empty() );
 }
+
+/**
+ * @brief [EditorSceneFileRequestTest] 미저장 확인 창의 선택은 고른 값을 든 요청으로 줄에 서고(창이 저장 · 버리기를 바로 하지 않는다), 앞의 열기 요청 뒤에 온다
+ */
+SW_TEST_CASE( EditorSceneFileRequestTest, UnsavedChoiceIsARequest )
+{
+    sw::editor::EditorWorkspace                    workspace{ nullptr };
+    sw::vector<sw::editor::EditorSceneFileRequest> listRequest;
+
+    workspace.requestLoadScene( "game/empty/maps/b.scene.xml" );
+    workspace.requestUnsavedSceneChoice( sw::editor::EditorUnsavedChoice::Discard );
+
+    SW_REQUIRE_TRUE( workspace.takeSceneFileRequests( listRequest ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listRequest.size() );
+    SW_EXPECT_TRUE( listRequest[0]._choice == sw::editor::EditorUnsavedChoice::None );
+    SW_EXPECT_TRUE( listRequest[1]._kind == sw::editor::EditorSceneFileRequestKind::UnsavedChoice );
+    SW_EXPECT_TRUE( listRequest[1]._choice == sw::editor::EditorUnsavedChoice::Discard );
+    SW_EXPECT_TRUE( listRequest[1]._path.empty() );
+}

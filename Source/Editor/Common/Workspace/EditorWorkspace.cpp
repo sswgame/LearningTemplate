@@ -239,6 +239,12 @@ namespace sw::editor
         _listSceneFileRequest.push_back( EditorSceneFileRequest{ EditorSceneFileRequestKind::SaveAs, string{ absPath } } );
     }
 
+    void EditorWorkspace::requestUnsavedSceneChoice( EditorUnsavedChoice choice )
+    {
+        ScopedLock<mutex> lock{ _pendingSceneMutex };
+        _listSceneFileRequest.push_back( EditorSceneFileRequest{ EditorSceneFileRequestKind::UnsavedChoice, string{}, choice } );
+    }
+
     bool EditorWorkspace::takeSceneFileRequests( vector<EditorSceneFileRequest>& outListRequest )
     {
         outListRequest.clear();
