@@ -285,7 +285,7 @@ namespace sw
                     return false;
                 }
                 CustomizationValueSet normalized;
-                pSchema->normalize( selection._customization, normalized, nullptr );
+                (void)pSchema->normalize( selection._customization, normalized, nullptr ); // 더 새 판이면 기본값 — 감시 값은 그대로 읽는다
                 const CustomizationValue* pValue = normalized.findValue( pParam->_name );
                 if ( pValue == nullptr )
                 {

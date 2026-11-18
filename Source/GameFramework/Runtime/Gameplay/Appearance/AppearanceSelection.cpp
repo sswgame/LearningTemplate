@@ -103,28 +103,40 @@ namespace sw
 
             static void writeVarCount( BitWriter& writer, size_t count ) { writer.writeVarUint( static_cast<uint64>( count ) ); }
 
-            /** @brief 값 묶음을 스키마 @p pSchema 의 지금 판으로 올립니다. 스키마가 없으면 그대로 둡니다(값을 받을 매개변수가 없어 어차피 버려진다). 실패하면 @p inoutValues 는 그대로입니다. */
-            [[nodiscard]] static expected<void> migrateInPlace( const CustomizationSchemaDef* pSchema, CustomizationValueSet& inoutValues )
+            /**
+             * @brief 값 묶음을 스키마 @p pSchema 의 지금 판으로 올립니다. 스키마가 없으면 그대로 둡니다(값을 받을 매개변수가 없어 어차피 버려진다). 실패하면(더 새 판) @p inoutValues 는 그대로입니다.
+             *        뜻이 없어 뺀 값의 이름은 @p pOutListDropped 에 담깁니다.
+             */
+            [[nodiscard]] static expected<void> migrateInPlace( const CustomizationSchemaDef* pSchema, CustomizationValueSet& inoutValues, vector<hashed_string>* pOutListDropped = nullptr )
             {
                 if ( pSchema == nullptr )
                     return {};
                 CustomizationValueSet upgraded;
-                const expected<void>  result = pSchema->migrate( inoutValues, upgraded );
+                const expected<void>  result = pSchema->migrate( inoutValues, upgraded, pOutListDropped );
                 if ( result.has_value() )
                     inoutValues = std::move( upgraded );
                 return result;
             }
 
-            /** @brief 선택의 꾸미기 값(몸 · 슬롯마다)을 모두 지금 판으로 올립니다. 하나라도 올리지 못하면 그 까닭입니다(앞에서 올린 묶음은 올린 채다 — 부르는 쪽이 선택을 버린다). */
+            /**
+             * @brief 읽은 선택의 꾸미기 값(몸 · 슬롯마다)을 모두 지금 판으로 올립니다. 지금 판에 뜻이 없는 값은 그 값만 빼고 오류 로그를 남긴다(나머지는 읽는다).
+             * @return 더 새 판(다운그레이드)이면 그 까닭입니다(앞에서 올린 묶음은 올린 채다 — 부르는 쪽이 선택을 버린다. 저장된 코드는 그대로다).
+             */
             [[nodiscard]] static expected<void> migrateSelection( const AppearanceDatabase& database, AppearanceSelection& inoutSelection )
             {
-                if ( expected<void> result = migrateInPlace( database.getSchemas().findSchema( inoutSelection._schema ), inoutSelection._customization ); result.has_value() == false )
+                vector<hashed_string> listDropped;
+                if ( expected<void> result = migrateInPlace( database.getSchemas().findSchema( inoutSelection._schema ), inoutSelection._customization, &listDropped ); result.has_value() == false )
                     return result;
                 for ( AppearanceSlotRequest& request : inoutSelection._listSlot )
                 {
                     const CustomizationSchemaDef* pSchema = findVisualSchema( database, findShownVisual( database, request._itemID, request._visibleVisual ) );
-                    if ( expected<void> result = migrateInPlace( pSchema, request._customization ); result.has_value() == false )
+                    if ( expected<void> result = migrateInPlace( pSchema, request._customization, &listDropped ); result.has_value() == false )
                         return result;
+                }
+                for ( const hashed_string& dropped : listDropped )
+                {
+                    SW_LOG_ERROR_ID( "AppearanceSelection.SavedValueDropped", "Saved customization value '%#' has no meaning in the current schema - only that value is dropped (a schema change without a migration step)",
+                                     dropped.c_str() );
                 }
                 return {};
             }
@@ -184,8 +196,9 @@ namespace sw
             static void writeValues( BitWriter& writer, const CustomizationValueSet& values, const CustomizationSchemaDef* pSchema, uint32 formatVersion )
             {
                 const CustomizationValueSet upgraded = migrateForWrite( pSchema, values );
+                // 판 0(판을 찍지 않은 값)은 쓰지 않는다 — 읽는 때의 판으로 잘못 읽힌다. 스키마가 없으면 값도 쓰지 않으므로 판 1 이다
                 if ( formatVersion >= 4 )
-                    writer.writeVarUint( upgraded.getSchemaVersion() );
+                    writer.writeVarUint( pSchema != nullptr ? pSchema->getVersion() : CustomizationValueSet::kFirstSchemaVersion );
                 vector<const CustomizationValue*> listKnown;
                 for ( const CustomizationValue& value : upgraded.getValues() )
                 {
@@ -314,7 +327,12 @@ namespace sw
             /** @brief 값을 지금 판으로 올립니다. 올리지 못하면(이 빌드보다 새 판) 값마다 버린 것으로 보고하고 비웁니다 — 펼치기는 실패하지 않는다. */
             static void migrateOrDrop( const CustomizationSchemaDef* pSchema, CustomizationValueSet& inoutValues, AppearanceSelectionReport& outReport )
             {
-                const expected<void> result = migrateInPlace( pSchema, inoutValues );
+                vector<hashed_string> listDropped;
+                const expected<void>  result = migrateInPlace( pSchema, inoutValues, &listDropped );
+                for ( const hashed_string& dropped : listDropped )
+                {
+                    addDropped( outReport, dropped );
+                }
                 if ( result.has_value() )
                     return;
                 SW_LOG_WARNING_ID( "AppearanceSelection.ValuesNotMigrated", "Customization values of schema '%#' (version %#) cannot be upgraded: %# - dropped", pSchema->_id.c_str(), inoutValues.getSchemaVersion(),
@@ -538,8 +556,15 @@ namespace sw
         // 꾸미기 값 — 종류는 스키마가 안다(값만으로는 슬라이더와 색을 가를 수 없다). 프리셋은 지금 콘텐츠라 값을 지금 판으로 올려 적는다.
         const CustomizationSchemaDef* pSchema = database.getSchemas().findSchema( selection._schema );
         CustomizationValueSet         values  = selection._customization;
-        if ( expected<void> upgraded = AppearanceSelectionInternal::migrateInPlace( pSchema, values ); upgraded.has_value() == false )
+        vector<hashed_string>         listDropped;
+        if ( expected<void> upgraded = AppearanceSelectionInternal::migrateInPlace( pSchema, values, &listDropped ); upgraded.has_value() == false )
             return upgraded;
+        if ( listDropped.empty() == false ) // 프리셋이 담지 못하는 값 — 조용히 버리지 않는다
+        {
+            Error error{ ErrorKind::NotFound, "the value is not a parameter of the schema (value, schema)", listDropped.front().c_str() };
+            error.appendDetail( ", " ).appendDetail( selection._schema.c_str() );
+            return unexpected( error );
+        }
         for ( const CustomizationValue& value : values.getValues() )
         {
             const CustomizationParamDef* pParam = pSchema != nullptr ? pSchema->findParameter( value._parameter ) : nullptr;

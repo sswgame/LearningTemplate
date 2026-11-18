@@ -8,6 +8,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
@@ -76,7 +77,7 @@ namespace
          * @details 판 · 기준 프리셋 · 시드 · 스키마 · 몸 셋 · 카테고리 0 · [판 4: 몸 스키마 판] 몸 값 · 슬롯 1(칸 · 아이템 · 형상 · 상태 · 피해 8 비트 · 조건 숨김 ·
          *          [판 3: 플레이어 숨김] · 뗀 부품 0 · [판 4: 투구 스키마 판] 투구 값) · [판 3: 피부 층 0] · CRC32 를 base64url 로.
          */
-        static string makeCode( uint32 formatVersion, uint32 bodySchemaVersion, uint32 itemSchemaVersion )
+        static string makeCode( uint32 formatVersion, uint32 bodySchemaVersion, uint32 itemSchemaVersion, bool bOrphanValue = false )
         {
             BitWriter writer;
             writer.writeBits( formatVersion, 8 );
@@ -103,9 +104,11 @@ namespace
             writer.writeVarUint( 0 );
             if ( formatVersion >= 4 )
                 writer.writeVarUint( itemSchemaVersion );
-            writer.writeVarUint( 2 );
+            writer.writeVarUint( bOrphanValue ? 3 : 2 );
             writeColor( writer, "Tint", kRed );
             writeColor( writer, "Dye", kBlue );
+            if ( bOrphanValue )
+                writeColor( writer, "Bogus", kGreen ); // 어느 판에도 없던 이름 — 단계 없이 지운 매개변수와 같다
             if ( formatVersion >= 3 )
                 writer.writeVarUint( 0 );
             vector<uint8> bytes = writer.releaseBytes();
@@ -156,6 +159,7 @@ SW_TEST_CASE_F( CustomizationShareCodeMigrationTest, OlderCodesReachCurrentSchem
     // 음성 대조 — 판 4 의 스키마 판 3 값: Split(→3) 은 지난 판이라 Dye 를 옮기지 않는다(그 판에 Dye 는 없던 이름이다)
     AppearanceSelection decoded;
     SW_REQUIRE_TRUE( AppearanceSelection::decode( makeCode( 4, 2, 3 ), _database, decoded ).has_value() );
+    SW_EXPECT_LOG( "AppearanceSelection.SavedValueDropped" ); // 판 2 의 HairTint · 판 3 의 Tint · Dye 는 그 판에 없는 이름이다
     SW_EXPECT_NULL( decoded._listSlot.front()._customization.findValue( hashed_string( "Outer" ) ) );
 }
 
@@ -191,6 +195,7 @@ SW_TEST_CASE_F( CustomizationShareCodeMigrationTest, NewerSchemaVersionIsRefused
     SW_EXPECT_TRUE( futureBody.error().kind() == ErrorKind::Unsupported );
     // 음성 대조: 같은 모양의 지금 판 코드는 읽힌다
     SW_EXPECT_TRUE( AppearanceSelection::decode( makeCode( 4, 2, 4 ), _database, decoded ).has_value() );
+    SW_EXPECT_LOG( "AppearanceSelection.SavedValueDropped" );
 }
 
 /** @brief [CustomizationShareCodeMigrationTest] 펼치기는 옛 판 값을 올린 뒤 스키마로 거른다 — 올리지 않으면 Tint 가 "지워진 값" 으로 버려진다 */
@@ -198,6 +203,7 @@ SW_TEST_CASE_F( CustomizationShareCodeMigrationTest, ApplySelectionUpgradesBefor
 {
     AppearanceSelection selection;
     SW_REQUIRE_TRUE( AppearanceSelection::decode( makeCode( 4, 2, 4 ), _database, selection ).has_value() );
+    SW_EXPECT_LOG( "AppearanceSelection.SavedValueDropped" );
     CustomizationValueSet& item = selection._listSlot.front()._customization;
     item.clear();
     item.setColor( hashed_string( "Tint" ), kRed );
@@ -224,4 +230,42 @@ SW_TEST_CASE_F( CustomizationShareCodeMigrationTest, ApplySelectionUpgradesBefor
     SW_EXPECT_TRUE( applied.findSlot( hashed_string( "Head" ) )->_customization.isEmpty() );
     SW_EXPECT_LOG( "AppearanceSelection.ValuesNotMigrated" );
     SW_EXPECT_LOG( "AppearanceSelection.AppearanceValueNoLonger" );
+}
+
+/** @brief [CustomizationShareCodeMigrationTest] 뜻이 없는 값이 든 옛 공유 코드: 그 값만 빠지고 오류 로그, 나머지는 올라 읽힌다(코드 전체를 거절하지 않는다) */
+SW_TEST_CASE_F( CustomizationShareCodeMigrationTest, OrphanValueIsDroppedAlone )
+{
+    AppearanceSelection  decoded;
+    const expected<void> result = AppearanceSelection::decode( makeCode( 3, 1, 1, true ), _database, decoded );
+    SW_REQUIRE_TRUE( result.has_value() );
+    expectUpgraded( decoded );
+    SW_EXPECT_NULL( decoded._listSlot.front()._customization.findValue( hashed_string( "Bogus" ) ) );
+    SW_EXPECT_LOG( "AppearanceSelection.SavedValueDropped" );
+}
+
+/** @brief [CustomizationShareCodeMigrationTest] 세이브의 장비 인스턴스(`upgradeSavedItem` — 세이브 길의 입구): 옛 판 값은 올리고 뜻이 없는 값만 빼며 알린다. 더 새 판은 읽지 않고 값을 그대로 둔다 */
+SW_TEST_CASE_F( CustomizationShareCodeMigrationTest, SavedItemUpgradesAndDropsOnlyOrphans )
+{
+    CustomizationValueSet values;
+    values.setColor( hashed_string( "Tint" ), kRed );
+    values.setColor( hashed_string( "Dye" ), kBlue );
+    values.setColor( hashed_string( "Bogus" ), kGreen );
+    values.setSchemaVersion( 1 );
+    InventorySlot helm;
+    helm._itemID = hashed_string( "helm" );
+    helm._count  = 1;
+    SW_REQUIRE_TRUE( helm.setCustomization( values ) );
+    SW_REQUIRE_TRUE( CharacterEquipmentComponent::upgradeSavedItem( _database, helm ) );
+    SW_EXPECT_EQUAL( uint32{ 4 }, helm.getCustomization().getSchemaVersion() );
+    expectColorNear( helm.getCustomization(), "Primary", kRed );
+    expectColorNear( helm.getCustomization(), "Outer", kBlue );
+    SW_EXPECT_NULL( helm.getCustomization().findValue( hashed_string( "Bogus" ) ) );
+    SW_EXPECT_LOG( "CharacterEquipment.SavedValueDropped" );
+
+    // 다운그레이드: 이 콘텐츠보다 새 판 — 읽지 않고(부르는 쪽이 세이브 읽기를 거절한다) 값은 그대로다
+    values.setSchemaVersion( 5 );
+    SW_REQUIRE_TRUE( helm.setCustomization( values ) );
+    SW_EXPECT_FALSE( CharacterEquipmentComponent::upgradeSavedItem( _database, helm ) );
+    SW_EXPECT_EQUAL( uint32{ 5 }, helm.getCustomization().getSchemaVersion() );
+    SW_EXPECT_LOG( "CharacterEquipment.SavedItemFromNewerSchema" );
 }

@@ -6,8 +6,11 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -95,9 +98,9 @@ SW_TEST_CASE( InventorySlotUpgradeTest, InventoryVersionTwoKeepsDye )
     SW_REQUIRE_TRUE( restored.readState( body ) );
     const InventorySlot& sword = restored.getSlot( 0 );
     SW_EXPECT_TRUE( sword._itemID == hashed_string( "sword" ) );
-    SW_EXPECT_EQUAL( CustomizationValueSet::kFirstSchemaVersion, sword._customization.getSchemaVersion() );
-    SW_REQUIRE_NOT_NULL( sword._customization.findValue( hashed_string( "Tint" ) ) );
-    SW_EXPECT_TRUE( sword._customization.findValue( hashed_string( "Tint" ) )->_number == kRed );
+    SW_EXPECT_EQUAL( CustomizationValueSet::kFirstSchemaVersion, sword.getCustomization().getSchemaVersion() );
+    SW_REQUIRE_NOT_NULL( sword.getCustomization().findValue( hashed_string( "Tint" ) ) );
+    SW_EXPECT_TRUE( sword.getCustomization().findValue( hashed_string( "Tint" ) )->_number == kRed );
     SW_REQUIRE_EQUAL( size_t{ 1 }, sword._listDetachedPart.size() );
     SW_EXPECT_NEAR( 0.25f, sword._damage, 1.0e-6f );
 }
@@ -112,8 +115,10 @@ SW_TEST_CASE( InventorySlotUpgradeTest, CurrentRoundTripAndNewerRefused )
     InventorySlot dyed;
     dyed._itemID = hashed_string( "sword" );
     dyed._count  = 1;
-    dyed._customization.setColor( hashed_string( "Primary" ), kRed );
-    dyed._customization.setSchemaVersion( 7 );
+    CustomizationValueSet primary;
+    primary.setColor( hashed_string( "Primary" ), kRed );
+    primary.setSchemaVersion( 7 );
+    SW_REQUIRE_TRUE( dyed.setCustomization( primary ) );
     SW_REQUIRE_TRUE( original.addStack( dyed ) );
     Archive written;
     original.writeState( written );
@@ -121,7 +126,7 @@ SW_TEST_CASE( InventorySlotUpgradeTest, CurrentRoundTripAndNewerRefused )
     SW_REQUIRE_TRUE( restored.initialize( &catalog, 2 ) );
     Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
-    SW_EXPECT_EQUAL( uint32{ 7 }, restored.getSlot( 0 )._customization.getSchemaVersion() );
+    SW_EXPECT_EQUAL( uint32{ 7 }, restored.getSlot( 0 ).getCustomization().getSchemaVersion() );
 
     Archive future( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( StateIO::upgradeSectionBody( Inventory::kStateTag, Inventory::kStateVersion + 1, Inventory::kStateVersion, future ) );
@@ -189,4 +194,58 @@ SW_TEST_CASE( InventorySlotUpgradeTest, ShopVersionTwoUpgrades )
     Archive versionThree;
     writeShops( versionThree, CustomizationValueSet::kFirstSchemaVersion );
     expectUpgradesTo( ShopManager::kStateTag, 2, ShopManager::kStateVersion, versionTwo, versionThree );
+}
+
+/**
+ * @brief [InventorySlotUpgradeTest] 판을 찍지 않은(0) 값은 슬롯에 들어가지 못한다 — 슬롯을 바이트로 쓰는 쪽은 판 0 을 만날 수 없다(음성 대조: 판 0 을 쓰는 길이 없다).
+ *        스키마 입구(`applyValue`)를 거친 값은 쓴 때의 판이 찍혀 읽힌다. 손으로 쓴 "판 0 + 값" 슬롯 바이트는 깨진 것으로 거절한다.
+ */
+SW_TEST_CASE( InventorySlotUpgradeTest, UnversionedValuesNeverReachBytes )
+{
+    CustomizationValueSet unversioned;
+    unversioned.setColor( hashed_string( "Tint" ), kRed );
+    InventorySlot sword;
+    sword._itemID = hashed_string( "sword" );
+    sword._count  = 1;
+    SW_EXPECT_FALSE( sword.setCustomization( unversioned ) );
+    SW_EXPECT_TRUE( sword.getCustomization().isEmpty() );
+    SW_EXPECT_TRUE( sword.setCustomization( CustomizationValueSet{} ) ); // 빈 집합은 판이 없어도 된다
+
+    // 이 실행의 스키마는 판 3 — 값 넣기가 판 3 을 찍는다
+    XMLDocument document;
+    SW_REQUIRE_TRUE( document.parse( R"(<CustomizationSchemaCatalog><Schema id="Armor" version="3"><Migration toVersion="2"/><Migration toVersion="3"/>
+        <Color name="Tint" default="1 1 1 1"/></Schema></CustomizationSchemaCatalog>)" ) );
+    CustomizationSchemaCatalog schemas;
+    AppearanceLoadReport       report;
+    SW_REQUIRE_TRUE( schemas.loadFromXML( document.getRoot( "CustomizationSchemaCatalog" ), report, "test" ) );
+    CustomizationValue tint;
+    tint._parameter = hashed_string( "Tint" );
+    tint._number    = kRed;
+    CustomizationValueSet dyed;
+    SW_REQUIRE_TRUE( schemas.findSchema( hashed_string( "Armor" ) )->applyValue( tint, false, dyed ) );
+    SW_REQUIRE_TRUE( sword.setCustomization( dyed ) );
+
+    ItemCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCatalogXML, "InventorySlotUpgradeTest" ) );
+    Inventory original;
+    SW_REQUIRE_TRUE( original.initialize( &catalog, 1 ) );
+    SW_REQUIRE_TRUE( original.addStack( sword ) );
+    Archive written;
+    original.writeState( written );
+    Inventory restored;
+    SW_REQUIRE_TRUE( restored.initialize( &catalog, 1 ) );
+    Archive reading( written.getData(), written.getSize() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_EQUAL( uint32{ 3 }, restored.getSlot( 0 ).getCustomization().getSchemaVersion() );
+
+    // 손으로 쓴 지금 판 본문: 슬롯의 판 칸이 0 인데 값이 있다 — 어느 판인지 모르는 값이라 읽지 않는다
+    Archive broken;
+    broken << 12.0f << uint32{ 0 } << uint32{ 1 };
+    StateIO::writeName( broken, hashed_string( "sword" ) );
+    broken << int32{ 1 } << 0.0f << 0.0f << CustomizationValueSet::kUnversionedSchemaVersion << uint32{ 1 };
+    StateIO::writeName( broken, hashed_string( "Tint" ) );
+    StateIO::writeName( broken, hashed_string{} );
+    broken << kRed << uint32{ 0 };
+    Archive brokenReading( broken.getData(), broken.getSize() );
+    SW_EXPECT_FALSE( restored.readState( brokenReading ) );
 }

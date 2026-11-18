@@ -9,6 +9,8 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 
+#include <algorithm>
+
 using namespace sw;
 
 namespace
@@ -116,12 +118,15 @@ SW_TEST_CASE_F( CustomizationMigrationTest, VersionOneReachesCurrent )
 /** @brief [CustomizationMigrationTest] 단계는 그 판보다 옛 값에만 걸린다 — 판 3 값은 판 4 단계만, 지금 판 · 판을 찍지 않은 값은 그대로(음성 대조) */
 SW_TEST_CASE_F( CustomizationMigrationTest, StepsRunOnlyAboveStoredVersion )
 {
-    // 판 3: Rename(→2) · Split(→3) 은 이미 지난 판이라 걸리지 않는다. Tint · Dye 가 남은 것은 판 3 에서 그 이름이 아무 뜻이 없다는 것(버려질 값)이다.
+    // 판 3: Rename(→2) · Split(→3) 은 이미 지난 판이라 걸리지 않는다. 판 3 에서 Tint · Dye 는 뜻이 없는 이름이라 그 값만 빠지고 이름이 남는다
     CustomizationValueSet versionThree = makeVersionOneValues();
     versionThree.setSchemaVersion( 3 );
     CustomizationValueSet upgraded;
-    SW_REQUIRE_TRUE( _pSchema->migrate( versionThree, upgraded ).has_value() );
-    SW_EXPECT_NOT_NULL( upgraded.findValue( hashed_string( "Tint" ) ) );
+    vector<hashed_string> listDropped;
+    SW_REQUIRE_TRUE( _pSchema->migrate( versionThree, upgraded, &listDropped ).has_value() );
+    SW_EXPECT_NULL( upgraded.findValue( hashed_string( "Tint" ) ) );
+    SW_EXPECT_TRUE( std::find( listDropped.begin(), listDropped.end(), hashed_string( "Tint" ) ) != listDropped.end() );
+    SW_EXPECT_TRUE( std::find( listDropped.begin(), listDropped.end(), hashed_string( "Dye" ) ) != listDropped.end() );
     SW_EXPECT_NULL( upgraded.findValue( hashed_string( "Primary" ) ) );
     SW_EXPECT_NULL( upgraded.findValue( hashed_string( "Outer" ) ) );
     expectColor( upgraded, "Clasp", float4{ 1.0f, 0.8f, 0.2f, 1.0f } ); // 판 4 단계는 걸린다
@@ -131,22 +136,22 @@ SW_TEST_CASE_F( CustomizationMigrationTest, StepsRunOnlyAboveStoredVersion )
     CustomizationValueSet versionTwo = makeVersionOneValues();
     versionTwo.setSchemaVersion( 2 );
     SW_REQUIRE_TRUE( _pSchema->migrate( versionTwo, upgraded ).has_value() );
-    SW_EXPECT_NOT_NULL( upgraded.findValue( hashed_string( "Tint" ) ) );
+    SW_EXPECT_NULL( upgraded.findValue( hashed_string( "Primary" ) ) );
     expectColor( upgraded, "Outer", kBlue );
 
-    // 지금 판 · 판을 찍지 않은 값(이 실행이 지금 스키마로 만든 값): 아무 단계도 걸리지 않고 판만 찍는다
+    // 지금 판 · 판을 찍지 않은 값(이 실행이 지금 스키마로 만든 값): 아무 단계도 걸리지 않고 판만 찍는다 — 뜻 있는 Clasp · Shine 만 남는다
     for ( const uint32 version : { uint32{ 4 }, CustomizationValueSet::kUnversionedSchemaVersion } )
     {
         CustomizationValueSet current = makeVersionOneValues();
         current.setSchemaVersion( version );
         SW_REQUIRE_TRUE( _pSchema->migrate( current, upgraded ).has_value() );
         SW_EXPECT_EQUAL( uint32{ 4 }, upgraded.getSchemaVersion() );
-        SW_EXPECT_EQUAL( current.getCount(), upgraded.getCount() );
+        SW_EXPECT_EQUAL( size_t{ 2 }, upgraded.getCount() );
         SW_EXPECT_NEAR( 1.0f, upgraded.findValue( hashed_string( "Clasp" ) )->_number._x, 1.0e-6f ); // 번호 그대로(색으로 바꾸지 않았다)
     }
 }
 
-/** @brief [CustomizationMigrationTest] 이 콘텐츠보다 새 판 값은 오류이고 받는 쪽을 덮지 않는다(폴백 없음) */
+/** @brief [CustomizationMigrationTest] 이 콘텐츠보다 새 판 값(다운그레이드)은 오류이고 받는 쪽을 덮지 않는다. 옮길 수 없는 값 하나는 그 값만 빠진다 */
 SW_TEST_CASE_F( CustomizationMigrationTest, NewerVersionIsRefusedWithoutOverwrite )
 {
     CustomizationValueSet future = makeVersionOneValues();
@@ -159,13 +164,18 @@ SW_TEST_CASE_F( CustomizationMigrationTest, NewerVersionIsRefusedWithoutOverwrit
     SW_EXPECT_EQUAL( size_t{ 1 }, kept.getCount() );
     expectColor( kept, "Primary", kGreen );
 
-    // 견본 번호가 묶음 밖이면 어느 색인지 모른다 — 가까운 색으로 맞추지 않고 거절한다
-    CustomizationValueSet outside = makeVersionOneValues();
-    outside.setNumber( hashed_string( "Clasp" ), 2.0f );
-    SW_EXPECT_FALSE( _pSchema->migrate( outside, kept ).has_value() );
-    expectColor( kept, "Primary", kGreen );
-    outside.setNumber( hashed_string( "Clasp" ), -1.0f );
-    SW_EXPECT_FALSE( _pSchema->migrate( outside, kept ).has_value() );
+    // 견본 번호가 묶음 밖이면 어느 색인지 모른다 — 가까운 색으로 맞추지 않고 그 값만 뺀다(나머지는 올린다 — 패치가 세이브 전체를 버리지 않는다)
+    for ( const float32 index : { 2.0f, -1.0f } )
+    {
+        CustomizationValueSet outside = makeVersionOneValues();
+        outside.setNumber( hashed_string( "Clasp" ), index );
+        vector<hashed_string> listDropped;
+        SW_REQUIRE_TRUE( _pSchema->migrate( outside, kept, &listDropped ).has_value() );
+        SW_EXPECT_NULL( kept.findValue( hashed_string( "Clasp" ) ) );
+        expectColor( kept, "Primary", kRed );
+        SW_REQUIRE_EQUAL( size_t{ 1 }, listDropped.size() );
+        SW_EXPECT_TRUE( listDropped.front() == hashed_string( "Clasp" ) );
+    }
 
     // 값 넣기도 올리지 못한 집합을 건드리지 않는다
     CustomizationValue shine;
@@ -211,7 +221,7 @@ SW_TEST_CASE_F( CustomizationMigrationTest, ApplyValueAndNormalizeStampVersion )
     SW_EXPECT_NEAR( 0.2f, values.findValue( hashed_string( "Shine" ) )->_number._x, 1.0e-6f );
 
     CustomizationValueSet normalized;
-    _pSchema->normalize( values, normalized, nullptr );
+    SW_REQUIRE_TRUE( _pSchema->normalize( values, normalized, nullptr ).has_value() );
     SW_EXPECT_EQUAL( uint32{ 4 }, normalized.getSchemaVersion() );
 
     // 판을 적지 않은 스키마는 판 1 이다(판을 두기 전의 세이브와 같은 판)

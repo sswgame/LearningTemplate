@@ -60,6 +60,11 @@ namespace sw
         [[nodiscard]] bool setEquippedValue( const hashed_string& slot, const CustomizationValue& value );
         /** @brief 아이템 @p itemID 의 외형이 쓰는 꾸미기 스키마입니다(아이템 → 외형 → 스키마). 어느 하나라도 없으면 nullptr 입니다. */
         static const CustomizationSchemaDef* findItemSchema( const AppearanceDatabase& database, const hashed_string& itemID );
+        /**
+         * @brief 세이브에서 읽은 아이템 인스턴스의 꾸미기 값을 그 아이템 스키마의 지금 판으로 올립니다 — 세이브 · 판 올림 길의 입구다(`setEquippedValue` 의 모르는 매개변수 거절을 거치지 않는다).
+         * @details 지금 판에 뜻이 없는 값은 그 값만 빼고 오류 로그를 남긴다(나머지는 읽는다). 더 새 판(다운그레이드)이면 알리고 false 다 — 부르는 쪽은 읽기를 거절하고 세이브는 그대로다.
+         */
+        [[nodiscard]] static bool upgradeSavedItem( const AppearanceDatabase& database, InventorySlot& inoutItem );
 
         const Equipment& getEquipment() const { return _equipment; }
         const Inventory& getBag() const { return _bag; }

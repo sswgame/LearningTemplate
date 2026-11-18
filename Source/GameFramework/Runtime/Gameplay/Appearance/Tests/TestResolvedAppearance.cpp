@@ -523,7 +523,10 @@ SW_TEST_CASE( AppearanceInputUtilTest, ApplyEquipmentCopiesTheInstanceState )
     item._durability = 25.0f;
     item._damage     = 0.5f;
     item._listDetachedPart.push_back( hashed_string( "Visor" ) );
-    item._customization.setNumber( hashed_string( "Tint" ), 0.5f );
+    CustomizationValueSet tint;
+    tint.setNumber( hashed_string( "Tint" ), 0.5f );
+    tint.setSchemaVersion( CustomizationValueSet::kFirstSchemaVersion );
+    SW_REQUIRE_TRUE( item.setCustomization( tint ) );
     vector<InventorySlot> listRemoved;
     SW_REQUIRE_TRUE( equipment.equip( hashed_string( "Head" ), item, listRemoved ) == EquipResult::Ok );
 

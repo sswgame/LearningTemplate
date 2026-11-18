@@ -316,8 +316,8 @@ namespace sw
                 inoutSchema._listMigration.push_back( migration );
             }
 
-            /** @brief 단계 하나를 값 목록에 겁니다. 옮길 수 없는 값(견본 번호가 묶음 밖 · 수가 아님)이면 false 입니다. */
-            [[nodiscard]] static bool applyMigrationOp( const CustomizationMigrationOp& op, vector<CustomizationValue>& inoutListValue )
+            /** @brief 단계 하나를 값 목록에 겁니다. 옮길 수 없는 값(견본 번호가 묶음 밖 · 수가 아님)은 그 값만 빼고 @p inoutListDropped 에 이름을 담습니다. */
+            static void applyMigrationOp( const CustomizationMigrationOp& op, vector<CustomizationValue>& inoutListValue, vector<hashed_string>& inoutListDropped )
             {
                 const auto isFrom = [&op]( const CustomizationValue& value )
                 { return CustomizationSchemaDef::matchesStoredName( value._parameter, op._from ); };
@@ -326,7 +326,7 @@ namespace sw
                     case CustomizationMigrationKind::Remove:
                     {
                         (void)VectorUtil::removeIf( inoutListValue, isFrom );
-                        return true;
+                        return;
                     }
                     case CustomizationMigrationKind::Rename:
                     case CustomizationMigrationKind::Split:
@@ -350,25 +350,33 @@ namespace sw
                                 inoutListValue.push_back( copied );
                             }
                         }
-                        return true;
+                        return;
                     }
                     case CustomizationMigrationKind::PaletteIndexToColor:
                     {
+                        // 묶음 밖 번호 · NaN 은 어느 색인지 모른다 — 가까운 색으로 맞추지 않고 그 값만 뺀다(나머지 값은 읽는다)
+                        const auto isOutside = [&op, &isFrom]( const CustomizationValue& value )
+                        {
+                            const float32 index = value._number._x;
+                            return isFrom( value ) && ( ( index >= 0.0f ) == false || index + 0.5f >= static_cast<float32>( op._listSwatch.size() ) );
+                        };
+                        for ( const CustomizationValue& value : inoutListValue )
+                        {
+                            if ( isOutside( value ) )
+                                inoutListDropped.push_back( op._from );
+                        }
+                        (void)VectorUtil::removeIf( inoutListValue, isOutside );
                         for ( CustomizationValue& value : inoutListValue )
                         {
                             if ( isFrom( value ) == false )
                                 continue;
-                            const float32 index = value._number._x;
-                            if ( ( index >= 0.0f ) == false || index + 0.5f >= static_cast<float32>( op._listSwatch.size() ) )
-                                return false;            // 묶음 밖 번호 · NaN — 어느 색인지 모른다(가까운 색으로 맞추지 않는다)
                             value._parameter = op._from; // 공유 코드의 자리 이름도 지금 이름으로
                             value._option    = hashed_string{};
-                            value._number    = op._listSwatch[static_cast<size_t>( index + 0.5f )];
+                            value._number    = op._listSwatch[static_cast<size_t>( value._number._x + 0.5f )];
                         }
-                        return true;
+                        return;
                     }
                 }
-                return false;
             }
 
             static constexpr const utf8* kArrIDAttribute[]      = { "id" };
@@ -565,13 +573,21 @@ namespace sw
         return static_cast<float32>( MathUtil::min( step, kColorSteps ) ) / static_cast<float32>( kColorSteps );
     }
 
-    void CustomizationSchemaDef::normalize( const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped ) const
+    expected<void> CustomizationSchemaDef::normalize( const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped ) const
     {
+        // 값을 쓰는 입구는 하나다 — 옛 판 값은 여기서 지금 판으로 올린다(해석기 · 편집 창 · 감시 값이 같은 길). 더 새 판이면 기본값만 담고 까닭을 돌려준다.
+        CustomizationValueSet upgraded;
+        vector<hashed_string> listDropped;
+        const expected<void>  result = migrate( values, upgraded, &listDropped );
+        if ( pOutListDropped != nullptr )
+            pOutListDropped->insert( pOutListDropped->end(), listDropped.begin(), listDropped.end() );
+        if ( result.has_value() == false )
+            upgraded.clear();
         outValues.clear();
         for ( const CustomizationParamDef& param : _listParameter )
         {
             CustomizationValue        value       = param.makeDefaultValue();
-            const CustomizationValue* pGiven      = values.findValue( param._name );
+            const CustomizationValue* pGiven      = upgraded.findValue( param._name );
             const bool                bOptionKind = param._kind == CustomizationKind::Choice || param._kind == CustomizationKind::Attachment;
             if ( pGiven != nullptr && bOptionKind == false )
                 value._number = pGiven->_number;
@@ -593,23 +609,18 @@ namespace sw
             outValues.setValue( value );
         }
         outValues.setSchemaVersion( getVersion() );
-        if ( pOutListDropped == nullptr )
-            return;
-        for ( const CustomizationValue& given : values.getValues() )
-        {
-            if ( findParameter( given._parameter ) == nullptr )
-                pOutListDropped->push_back( given._parameter );
-        }
+        return result;
     }
 
-    expected<void> CustomizationSchemaDef::migrate( const CustomizationValueSet& values, CustomizationValueSet& outValues ) const
+    expected<void> CustomizationSchemaDef::migrate( const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped ) const
     {
         const uint32 current = getVersion();
         const uint32 stored  = values.getSchemaVersion();
         if ( stored > current )
             return unexpected( Error{ ErrorKind::Unsupported, "customization values are from a newer schema version than this content", _id.view() } );
         vector<CustomizationValue> listValue = values.getValues();
-        const uint32               from      = stored == CustomizationValueSet::kUnversionedSchemaVersion ? current : stored;
+        vector<hashed_string>      listDropped;
+        const uint32               from = stored == CustomizationValueSet::kUnversionedSchemaVersion ? current : stored;
         for ( uint32 version = from + 1; version <= current; ++version )
         {
             const size_t stepIndex = static_cast<size_t>( version - CustomizationMigrationDef::kFirstVersion );
@@ -617,15 +628,20 @@ namespace sw
                 return unexpected( Error{ ErrorKind::NotFound, "the schema has no migration step to this version", _id.view() } ); // 읽기가 이미 오류로 알린 스키마
             for ( const CustomizationMigrationOp& op : _listMigration[stepIndex]._listOp )
             {
-                if ( CustomizationSchemaInternal::applyMigrationOp( op, listValue ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "a stored palette index is outside the palette", op._from.view() } );
+                CustomizationSchemaInternal::applyMigrationOp( op, listValue, listDropped );
             }
         }
+        // 단계를 다 지나고도 이 판에 없는 이름은 뜻이 없다 — 그 값만 뺀다(쿠킹 검사가 단계 없는 제거 · 이름 바꾸기를 막으므로 정상 콘텐츠에서는 생기지 않는다)
         outValues.clear();
         for ( const CustomizationValue& value : listValue )
         {
-            outValues.setValue( value );
+            if ( findParameter( value._parameter ) != nullptr )
+                outValues.setValue( value );
+            else
+                listDropped.push_back( value._parameter );
         }
+        if ( pOutListDropped != nullptr )
+            pOutListDropped->insert( pOutListDropped->end(), listDropped.begin(), listDropped.end() );
         outValues.setSchemaVersion( current );
         return {};
     }

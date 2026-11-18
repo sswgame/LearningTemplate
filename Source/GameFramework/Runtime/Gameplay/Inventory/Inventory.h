@@ -28,7 +28,6 @@ namespace sw
      */
     struct InventorySlot
     {
-        CustomizationValueSet _customization{};    ///< 아이템 인스턴스의 꾸미기 값(염색, 부착물, 변형). 뜻은 외형 스키마가 정한다
         vector<hashed_string> _listDetachedPart{}; ///< 맞아서 떨어져 나간 외형 부품 이름(모자가 날아감, 갑옷 판이 깨짐)
         hashed_string         _itemID{};
         int32                 _count{ 0 };
@@ -38,6 +37,24 @@ namespace sw
         bool isEmpty() const { return _count <= 0; }
         /** @brief 겹치면 잃게 되는 인스턴스 상태가 있으면 true 입니다. */
         bool hasInstanceState() const { return _customization.isEmpty() == false || _listDetachedPart.empty() == false || _damage > 0.0f; }
+
+        /** @brief 아이템 인스턴스의 꾸미기 값(염색, 부착물, 변형)입니다. 뜻은 외형 스키마가 정하고, 값이 있으면 쓴 스키마 판이 찍혀 있다. */
+        const CustomizationValueSet& getCustomization() const { return _customization; }
+        /**
+         * @brief 꾸미기 값을 바꿉니다. 값이 있는데 스키마 판을 찍지 않은 집합(0)은 받지 않고 false 입니다.
+         * @details 슬롯은 세이브 · 네트워크에 그대로 실린다 — 판 0 이 실리면 다음 실행은 "쓴 때의 판" 이 아니라 "읽는 때의 판" 으로 읽는다. 스키마를 아는 입구
+         *          (`CustomizationSchemaDef::applyValue` · `migrate` · `normalize`)가 찍은 집합만 들어오게 해, 쓰는 쪽(`Inventory::serializeSlot`)이 판 0 을 만날 수 없다.
+         */
+        [[nodiscard]] bool setCustomization( const CustomizationValueSet& values )
+        {
+            if ( values.isEmpty() == false && values.getSchemaVersion() == CustomizationValueSet::kUnversionedSchemaVersion )
+                return false;
+            _customization = values;
+            return true;
+        }
+
+    private:
+        CustomizationValueSet _customization{};
     };
 } // namespace sw
 
@@ -66,6 +83,8 @@ namespace sw
         void resize( int32 slotCount, vector<InventorySlot>& outListOverflow );
         /** @brief 최대 무게가 음수이면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool setMaxWeight( float32 maxWeight );
+        /** @brief 칸 @p slot 의 꾸미기 값을 바꿉니다(읽은 세이브의 값을 지금 스키마 판으로 올린 것). 칸이 없거나 비었거나 판을 찍지 않은 값이면 false 입니다. */
+        [[nodiscard]] bool setSlotCustomization( int32 slot, const CustomizationValueSet& values );
 
         /** @brief 넣고, 넣은 개수를 반환합니다. 슬롯이나 무게가 모자라면 일부만 넣습니다. */
         int32 addItem( const hashed_string& itemID, int32 count );

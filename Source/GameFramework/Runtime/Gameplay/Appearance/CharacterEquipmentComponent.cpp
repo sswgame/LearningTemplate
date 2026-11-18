@@ -127,7 +127,8 @@ namespace sw
         const AppearanceDatabase*     pDatabase = game::findSubsystem<AppearanceDatabase>();
         const CustomizationSchemaDef* pSchema   = pDatabase != nullptr ? findItemSchema( *pDatabase, pWorn->_itemID ) : nullptr;
         InventorySlot                 dyed      = *pWorn;
-        if ( pSchema == nullptr || pSchema->applyValue( value, false, dyed._customization ) == false )
+        CustomizationValueSet         values    = dyed.getCustomization();
+        if ( pSchema == nullptr || pSchema->applyValue( value, false, values ) == false || dyed.setCustomization( values ) == false )
             return false;
         if ( _equipment.setEquippedInstance( slot, dyed ) == false )
             return false;
@@ -140,6 +141,28 @@ namespace sw
         const ItemDef*       pItem   = database.getItemCatalog() != nullptr ? database.getItemCatalog()->find( itemID ) : nullptr;
         const ItemVisualDef* pVisual = pItem != nullptr ? database.getVisuals().findVisual( pItem->_visualID ) : nullptr;
         return pVisual != nullptr ? database.getSchemas().findSchema( pVisual->_customization ) : nullptr;
+    }
+
+    bool CharacterEquipmentComponent::upgradeSavedItem( const AppearanceDatabase& database, InventorySlot& inoutItem )
+    {
+        const CustomizationSchemaDef* pSchema = findItemSchema( database, inoutItem._itemID );
+        if ( pSchema == nullptr || inoutItem.getCustomization().isEmpty() )
+            return true; // 스키마가 없는 아이템의 값은 그릴 때도 쓰이지 않는다
+        CustomizationValueSet upgraded;
+        vector<hashed_string> listDropped;
+        const expected<void>  result = pSchema->migrate( inoutItem.getCustomization(), upgraded, &listDropped );
+        if ( result.has_value() == false )
+        {
+            SW_LOG_WARNING_ID( "CharacterEquipment.SavedItemFromNewerSchema", "Saved '%#' has customization of schema '%#' version %# newer than this content (%#) - the equipment state is not loaded", inoutItem._itemID.c_str(),
+                               pSchema->_id.c_str(), inoutItem.getCustomization().getSchemaVersion(), pSchema->getVersion() );
+            return false;
+        }
+        for ( const hashed_string& dropped : listDropped )
+        {
+            SW_LOG_ERROR_ID( "CharacterEquipment.SavedValueDropped", "Saved '%#' value '%#' has no meaning in schema '%#' version %# - only that value is dropped (a schema change without a migration step)",
+                             inoutItem._itemID.c_str(), dropped.c_str(), pSchema->_id.c_str(), pSchema->getVersion() );
+        }
+        return inoutItem.setCustomization( upgraded );
     }
 
     void CharacterEquipmentComponent::updateAppearance()
@@ -187,6 +210,23 @@ namespace sw
         io.value( bag );
         if ( io.isOk() == false )
             return;
+        // 읽은 인스턴스 값을 그 아이템 스키마의 지금 판으로 올린다(패치 뒤 첫 불러오기) — 뜻이 없는 값은 그 값만 빼고 알린다. 더 새 판(다운그레이드)이면 읽지 않는다.
+        if ( const AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>(); pDatabase != nullptr )
+        {
+            for ( EquipmentSlot& slot : listWorn )
+            {
+                if ( io.check( upgradeSavedItem( *pDatabase, slot._item ) ) == false )
+                    return;
+            }
+            for ( int32 bagSlot = 0; bagSlot < bag.getSlotCount(); ++bagSlot )
+            {
+                InventorySlot item = bag.getSlot( bagSlot );
+                if ( item.getCustomization().isEmpty() )
+                    continue;
+                if ( io.check( upgradeSavedItem( *pDatabase, item ) && bag.setSlotCustomization( bagSlot, item.getCustomization() ) ) == false )
+                    return;
+            }
+        }
         Equipment equipment = _equipment;
         for ( const EquipmentSlot& slot : _equipment.getSlots() )
         {
@@ -411,7 +451,7 @@ namespace sw
                     outValue.setText( "(empty)" );
                     return true;
                 }
-                const size_t valueCount = item._customization.getCount();
+                const size_t valueCount = item.getCustomization().getCount();
                 outValue.setText( valueCount == 0 ? string( item._itemID.c_str() ) : string( item._itemID.c_str() ) + " +" + to_string( static_cast<uint32>( valueCount ) ) );
                 return true;
             }

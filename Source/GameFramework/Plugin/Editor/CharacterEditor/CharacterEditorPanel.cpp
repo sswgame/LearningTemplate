@@ -1369,7 +1369,7 @@ namespace sw::editor
             return;
         }
         CustomizationValueSet normalized;
-        pSchema->normalize( selection._customization, normalized, nullptr );
+        (void)pSchema->normalize( selection._customization, normalized, nullptr ); // 옛 판 값도 올려 보인다. 더 새 판이면 기본값
         bool          bAnyActive   = false;
         bool          bFirstSlider = true;
         hashed_string category{};

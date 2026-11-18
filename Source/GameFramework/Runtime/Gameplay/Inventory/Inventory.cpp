@@ -498,6 +498,14 @@ namespace sw
         ++_revision;
     }
 
+    bool Inventory::setSlotCustomization( int32 slot, const CustomizationValueSet& values )
+    {
+        if ( isValidSlot( slot ) == false || _listSlot[static_cast<size_t>( slot )].isEmpty() || _listSlot[static_cast<size_t>( slot )].setCustomization( values ) == false )
+            return false;
+        ++_revision;
+        return true;
+    }
+
     void Inventory::serializeSlot( StateIO& io, InventorySlot& inoutSlot ) // 슬롯마다 이름(4) + 개수, 내구도, 피해(12) + 꾸미기 판(4) + 꾸미기 수, 부품 수(8)
     {
         InventorySlot& slot = inoutSlot;
@@ -510,25 +518,28 @@ namespace sw
             io.value( slot._count );
             io.value( slot._durability );
             io.value( slot._damage );
-            uint32 schemaVersion = slot._customization.getSchemaVersion();
+            CustomizationValueSet values        = slot.getCustomization();
+            uint32                schemaVersion = values.getSchemaVersion();
             io.value( schemaVersion );
-            uint32 valueCount = static_cast<uint32>( slot._customization.getValues().size() );
+            uint32 valueCount = static_cast<uint32>( values.getValues().size() );
             io.count( InventoryInternal::kValueStateMinBytes, valueCount );
             for ( uint32 valueIndex = 0; valueIndex < valueCount && io.isOk(); ++valueIndex )
             {
-                CustomizationValue value = io.isWriting() ? slot._customization.getValues()[valueIndex] : CustomizationValue{};
+                CustomizationValue value = io.isWriting() ? values.getValues()[valueIndex] : CustomizationValue{};
                 io.value( value._parameter );
                 io.value( value._option );
                 io.value( value._number );
                 if ( io.isReading() )
                 {
-                    slot._customization.setValue( value );
+                    values.setValue( value );
                 }
             }
             io.list( slot._listDetachedPart );
             if ( io.isReading() )
             {
-                slot._customization.setSchemaVersion( schemaVersion );
+                // 판 0 은 쓰는 쪽이 만들 수 없다(`InventorySlot::setCustomization`) — 값이 있는 판 0 은 깨진 바이트다
+                values.setSchemaVersion( schemaVersion );
+                (void)io.check( slot.setCustomization( values ) );
             }
             (void)io.check( 0 <= slot._count && ( slot._count == 0 || slot._itemID.empty() == false ) );
         }
@@ -537,7 +548,8 @@ namespace sw
     void Inventory::upgradeSlotFromUnversioned( StateIO& inOld, StateIO& outNew )
     {
         // 옛 모양: 이름 · 개수 · 내구도 · 피해 · 꾸미기 수 + 값들 · 뗀 부품 — 판 칸만 없다
-        InventorySlot slot;
+        InventorySlot         slot;
+        CustomizationValueSet values;
         inOld.value( slot._itemID );
         inOld.value( slot._count );
         inOld.value( slot._durability );
@@ -550,12 +562,12 @@ namespace sw
             inOld.value( value._parameter );
             inOld.value( value._option );
             inOld.value( value._number );
-            slot._customization.setValue( value );
+            values.setValue( value );
         }
         inOld.list( slot._listDetachedPart );
-        if ( inOld.isOk() == false )
+        values.setSchemaVersion( CustomizationValueSet::kFirstSchemaVersion );
+        if ( inOld.isOk() == false || slot.setCustomization( values ) == false )
             return;
-        slot._customization.setSchemaVersion( CustomizationValueSet::kFirstSchemaVersion );
         serializeSlot( outNew, slot );
     }
 

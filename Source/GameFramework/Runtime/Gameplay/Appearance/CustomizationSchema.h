@@ -267,10 +267,12 @@ namespace sw
 
         uint32 getVersion() const { return static_cast<uint32>( _version ); }
         /**
-         * @brief @p values 를 이 스키마의 지금 판으로 올려 @p outValues 에 담습니다. 판을 찍지 않은 값(0)과 지금 판의 값은 그대로 옮기고, 결과에는 지금 판을 찍습니다.
-         * @return 이 스키마보다 새 판(다른 빌드 · 더 새 콘텐츠가 쓴 값)이거나 단계가 데이터를 옮기지 못하면(견본 번호가 묶음 밖) 까닭이고, @p outValues 는 그대로입니다 — 폴백 없음, 원본을 덮지 않는다.
+         * @brief @p values 를 이 스키마의 지금 판으로 올려 @p outValues 에 담습니다. 판을 찍지 않은 값(0)과 지금 판의 값은 단계 없이 옮기고, 결과에는 지금 판을 찍습니다.
+         * @details 지금 판에 뜻이 없는 값(단계를 지나고도 없는 이름 · 견본 밖 번호)은 그 값만 빼고 이름을 @p pOutListDropped 에 담는다 — 나머지는 읽는다(패치가 세이브 전체를 버리지 않게).
+         *          세이브 · 공유 코드를 읽는 쪽이 빠진 것을 오류 로그로 남긴다. 정상 콘텐츠에서는 생기지 않는다(쿠킹 검사 `customization-release`).
+         * @return 이 스키마보다 새 판(다른 빌드 · 더 새 콘텐츠가 쓴 값 — 다운그레이드)이면 까닭이고 @p outValues 는 그대로입니다. 원본을 덮지 않는다.
          */
-        [[nodiscard]] expected<void> migrate( const CustomizationValueSet& values, CustomizationValueSet& outValues ) const;
+        [[nodiscard]] expected<void> migrate( const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped = nullptr ) const;
         /** @brief 저장된 이름 @p stored 가 @p name 인지 봅니다. 이름이 같거나, 공유 코드가 모르는 해시로 둔 자리 이름(`makeHashPlaceholder`)이 @p name 의 해시와 같으면 true 입니다. */
         static bool matchesStoredName( const hashed_string& stored, const hashed_string& name );
         /** @brief 받는 쪽이 모르는 32 비트 이름 해시의 자리 이름(`#1a2b3c4d`)입니다. 0 이면 빈 이름입니다. 공유 코드 읽기가 두고, 펼치기는 "지워진 콘텐츠" 로 보고하며, 판 올림은 옛 이름과 맞춘다. */
@@ -282,9 +284,10 @@ namespace sw
          * @details **값은 전송 정밀도로 저장한다.** 슬라이더는 범위를 65535 단계, 색은 성분마다 255 단계로 맞춘다. 해석기는 맞춘 값만 쓰므로
          *          네트워크나 공유 코드로 오간 값이 보낸 쪽과 비트까지 같고, 해석 해시도 같다.
          *          스키마에 없는 이름은 버리고 @p pOutListDropped 에 담는다. 콘텐츠가 바뀌어 지워진 매개변수가 여기에 해당한다. 결과 순서는 스키마 순서다.
-         *          @p values 는 이 판의 값이어야 한다(옛 판은 먼저 `migrate`). 결과에는 지금 판을 찍는다.
+         *          값을 쓰는 입구는 이것 하나다 — 옛 판 값은 먼저 `migrate` 로 올린다(빠진 값도 @p pOutListDropped). 결과에는 지금 판을 찍는다.
+         * @return @p values 가 더 새 판이면 까닭이고, @p outValues 는 기본값만 담는다(그리는 쪽은 실패하지 않는다 — 원본은 그대로다).
          */
-        void normalize( const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped ) const;
+        [[nodiscard]] expected<void> normalize( const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped ) const;
         /**
          * @brief 값을 넣습니다. @p bSymmetric 이 true 이면 같은 대칭 그룹의 다른 매개변수(같은 종류끼리)에도 같은 값을 넣습니다. 알 수 없는 매개변수이면 false 입니다.
          * @details @p inoutValues 가 옛 판이면 먼저 지금 판으로 올리고(새 판 값을 옛 판 집합에 섞지 않는다) 지금 판을 찍습니다. 올리지 못하면 false 이고 @p inoutValues 는 그대로입니다.
