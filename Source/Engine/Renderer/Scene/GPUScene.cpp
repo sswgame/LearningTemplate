@@ -67,9 +67,12 @@ namespace sw
         _bBatchTablesDirty    = SW_TRUE;
         // 씬을 비우면 움직임 기록도 버린다 — 다음 씬의 첫 프레임은 카메라 움직임뿐이다.
         _motionHistory.reset();
-        _bObjectMotion      = SW_FALSE;
-        _bDistortionBatches = SW_FALSE;
-        _bRefractionBatches = SW_FALSE;
+        _slotBuffer.reset();
+        _pUploadedInstanceOrder.reset();
+        _bInstanceOrderUploadPending = SW_TRUE;
+        _bObjectMotion               = SW_FALSE;
+        _bDistortionBatches          = SW_FALSE;
+        _bRefractionBatches          = SW_FALSE;
     }
 
     void GPUScene::setVertexPoolEnabled( bool bEnabled )
@@ -141,6 +144,9 @@ namespace sw
         // 머티리얼 데이터 구조버퍼(셰이더 타입별). 값이 프레임마다 바뀔 수 있어 스냅샷 dirty 와 무관하게 매번 본다(바이트가 같으면 올리지 않는다).
         uploadMaterialGroups( pDevice );
         // 불투명 · 투명 배치는 같은 목록의 구간 뷰라(GPUSceneSnapshot) 렌더 쪽 값(`_listBatchBinding`)도 한 벌이다.
+        // 새 스냅샷이면 바뀐 칸을 칸 순 사본에 받는다 — 움직임 기록이 칸 순 사본을 읽으므로 그 앞이다.
+        if ( _snapshot._bCPUDirty != SW_FALSE )
+            syncSlotInstances();
         // 움직임 기록은 스냅샷이 그대로인 프레임에도 나아간다(멈춘 물체의 지난 행렬이 이번 것이 되어야 속도가 0 이다).
         updateMotionHistory( pDevice );
 
@@ -152,11 +158,10 @@ namespace sw
         if ( bCPUDirty == false && _bBatchTablesDirty == SW_FALSE )
             return true;
 
-        const uint32 instanceCount = static_cast<uint32>( _snapshot.getInstances().size() );
-        const uint32 argsCount     = static_cast<uint32>( _snapshot.getAllBatches().size() );
+        const uint32 argsCount = static_cast<uint32>( _snapshot.getAllBatches().size() );
         if ( bCPUDirty )
         {
-            uploadInstanceAndVisibleBuffers( pDevice, instanceCount );
+            uploadInstanceAndVisibleBuffers( pDevice );
         }
 
         SW_PROFILE_SCOPE( "RT.GPUScene.batchTables" );
@@ -278,28 +283,54 @@ namespace sw
         }
     }
 
-    void GPUScene::uploadInstanceAndVisibleBuffers( IRHIDevice* pDevice, uint32 instanceCount )
+    void GPUScene::syncSlotInstances()
+    {
+        SW_PROFILE_SCOPE( "RT.GPUScene.slotInstances" );
+        // 스냅샷이 칸 순이다 — 바뀐 칸 구간만 견주어 받는다(배치를 다시 나눈 빌드는 "전체" 라 모든 칸을 견주되 내용이 같은 칸은 올리지 않는다).
+        _slotBuffer.apply( _snapshot.getInstances(), _snapshot._listDirtyInstanceRange, _snapshot._bAllInstancesDirty != SW_FALSE );
+        // 차례 목록은 공유 목록이라 포인터가 같으면 그대로다.
+        if ( _pUploadedInstanceOrder != _snapshot._pListInstanceSlot )
+            _bInstanceOrderUploadPending = SW_TRUE;
+    }
+
+    void GPUScene::uploadInstanceAndVisibleBuffers( IRHIDevice* pDevice )
     {
         // UnorderedAccess 를 함께 요구한다. instance_animation 컴퓨트가 월드 행렬을 고쳐 쓴다. 못 만드는
         // 백엔드 · 드라이버면 슬롯이 SRV 전용으로 한 번 더 시도해 그리기는 그대로 살린다.
         constexpr RHIBufferUsage kInstanceUsage =
             RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
+        constexpr uint32           kStride    = static_cast<uint32>( sizeof( GPUInstance ) );
+        const vector<GPUInstance>& listSlot   = _slotBuffer.getSlots();
+        const uint32               slotCount  = static_cast<uint32>( listSlot.size() );
+        const uint32               orderCount = _snapshot.getInstanceOrderCount();
         {
             SW_PROFILE_SCOPE( "RT.GPUScene.instanceBuffer" );
-            // 버퍼가 새로 만들어졌는지 봐야 한다. 새 버퍼에는 아직 아무것도 없으므로 구간만
-            // 올리면 나머지가 쓰레기다. 핸들이 바뀌었으면 다시 만들어진 것이다.
+            // 칸 순 버퍼다 — 원소 번호가 GPUScene 칸이다. 새로 만든 버퍼에는 아직 아무것도 없으므로 전체를 올린다(핸들이 바뀌었으면 다시 만들어진 것이다).
             const RHIBufferHandle bufferBefore = _instances._buffer;
-            if ( _instances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GPUInstance ) ), instanceCount, kInstanceUsage, true, true,
-                                            _snapshot.getInstances().data() ) )
+            if ( _instances.ensureCapacity( pDevice, kStride, slotCount, kInstanceUsage, true, true, listSlot.data() ) )
             {
-                const bool bRecreated          = ( _instances._buffer != bufferBefore );
-                const bool bFullInstanceUpload = bRecreated || _snapshot._bAllInstancesDirty != SW_FALSE || _snapshot._listDirtyInstanceRange.empty();
-                if ( bFullInstanceUpload )
-                    _instances.upload( pDevice, _snapshot.getInstances().data(), instanceCount * static_cast<uint32>( sizeof( GPUInstance ) ) );
+                if ( _instances._buffer != bufferBefore )
+                    _slotBuffer.markFullUpload();
+                if ( _slotBuffer.buildRuns( kMaxInstanceScatterRunCount, _listScratchSlotRun ) )
+                {
+                    // 바뀐 칸만 흩어 올린다 — 한 번의 호출이다(구간마다 부르면 스테이징 확보 · 제출이 되풀이된다).
+                    _listScratchCopyRegion.clear();
+                    _listScratchCopyRegion.reserve( _listScratchSlotRun.size() );
+                    for ( const GPUInstanceDirtyRange& run : _listScratchSlotRun )
+                    {
+                        _listScratchCopyRegion.push_back( RHIBufferCopyRegion{ run._start * kStride, run._start * kStride, run._count * kStride } );
+                    }
+                    if ( _listScratchCopyRegion.empty() == false )
+                        (void)_instances.uploadRegions( pDevice, listSlot.data(), _listScratchCopyRegion );
+                }
                 else
-                    uploadDirtyInstanceRanges( pDevice, instanceCount );
+                {
+                    _instances.upload( pDevice, listSlot.data(), slotCount * kStride );
+                }
+                _slotBuffer.clearPending();
             }
         }
+        uploadInstanceOrder( pDevice );
 
         // 가시 인스턴스 ID 버퍼. 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해
         // 넣고(언리얼 FInstanceCullingContext 의 InstanceIDBuffer), 정점 셰이더가 그 순서로 읽는다.
@@ -316,15 +347,64 @@ namespace sw
             if ( bVisibleBuffer == false && visibleSlotCount > 0 )
                 SW_LOG_ERROR_ONCE_ID( "GPUScene.FailedCreateVisibleInstance", "Failed to create the visible instance buffer (%# slots) of a cull view", visibleSlotCount );
         }
-        // 가시 목록 항목은 아래 24비트가 인스턴스 번호다(다음 3비트는 LOD 단계, 위쪽 5비트는 크로스페이드 코드 — instance_data.hlsli `kVisibleEntryIDMask`).
-        SW_ASSERT( instanceCount <= 0x00FFFFFFu );
-        ensureLODStateBuffers( pDevice, instanceCount );
+        // 가시 목록 항목은 아래 24비트가 인스턴스 번호(칸)다(다음 3비트는 LOD 단계, 위쪽 5비트는 크로스페이드 코드 — instance_data.hlsli `kVisibleEntryIDMask`).
+        // 투명 정렬 배치는 컬링이 차례를 적었다가 정렬이 칸으로 바꾼다 — 차례도 같은 칸에 든다.
+        SW_ASSERT( MathUtil::max( slotCount, orderCount ) <= 0x00FFFFFFu );
+        ensureLODStateBuffers( pDevice, slotCount );
     }
 
-    void GPUScene::ensureLODStateBuffers( IRHIDevice* pDevice, uint32 instanceCount )
+    void GPUScene::uploadInstanceOrder( IRHIDevice* pDevice )
     {
-        // 전환 상태는 LOD 그룹이 있을 때만 필요하다. 없으면 놓아 인스턴스 수만큼의 메모리를 뷰마다 들고 있지 않는다.
-        const uint32             stateCount     = _snapshot.hasLODGroups() ? instanceCount : 0u;
+        SW_PROFILE_SCOPE( "RT.GPUScene.instanceOrder" );
+        const vector<uint32>* pListOrder = _snapshot._pListInstanceSlot.get();
+        const uint32          orderCount = _snapshot.getInstanceOrderCount();
+        if ( pListOrder == nullptr )
+        {
+            // 차례가 곧 칸인 스냅샷 — 항등 목록을 건다(한 셰이더가 늘 목록을 거쳐 읽는다).
+            if ( _listScratchIdentityOrder.size() != orderCount )
+            {
+                _listScratchIdentityOrder.resize( orderCount );
+                for ( uint32 orderIndex = 0; orderIndex < orderCount; ++orderIndex )
+                    _listScratchIdentityOrder[orderIndex] = orderIndex;
+                _bInstanceOrderUploadPending = SW_TRUE;
+            }
+            pListOrder = &_listScratchIdentityOrder;
+        }
+        SW_ASSERT( pListOrder->size() == orderCount ); // 빌더가 차례(인스턴스)마다 칸 하나를 싣는다
+        constexpr RHIBufferUsage kOrderUsage  = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+        const RHIBufferHandle    bufferBefore = _instanceOrder._buffer;
+        if ( _instanceOrder.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), orderCount, kOrderUsage, true, false, pListOrder->data() ) == false )
+        {
+            if ( orderCount > 0 )
+                SW_LOG_ERROR_ONCE_ID( "GPUScene.FailedCreateInstanceOrder", "Failed to create the instance order buffer (%# entries) - scene meshes are not drawn", orderCount );
+            return;
+        }
+        if ( _instanceOrder._buffer == bufferBefore && _bInstanceOrderUploadPending == SW_FALSE )
+            return;
+        // 같은 버퍼에 지난 목록이 올라가 있으면 바뀐 구간만 올린다 — 배치에 인스턴스 몇이 드나든 빌드는 그 배치 뒤의 차례만 밀린다.
+        const vector<uint32>* pUploaded = _pUploadedInstanceOrder.get();
+        if ( _instanceOrder._buffer == bufferBefore && pUploaded != nullptr && pUploaded != pListOrder )
+        {
+            constexpr uint32 kOrderMergeGap = 64u; // 원소 64 개(256 바이트) 이하 사이는 붙인다 — 조각마다 복사 명령이 하나 더 나간다
+            RHIStructuredBuffer::collectChangedRegions( pUploaded->data(), static_cast<uint32>( pUploaded->size() ), pListOrder->data(), orderCount,
+                                                        static_cast<uint32>( sizeof( uint32 ) ), kOrderMergeGap, _listScratchCopyRegion );
+            if ( _listScratchCopyRegion.empty() == false )
+                (void)_instanceOrder.uploadRegions( pDevice, pListOrder->data(), _listScratchCopyRegion );
+        }
+        else
+        {
+            _instanceOrder.upload( pDevice, pListOrder->data(), orderCount * static_cast<uint32>( sizeof( uint32 ) ) );
+        }
+        // 항등 목록(스크래치)은 공유 목록이 아니라 기억하지 않는다 — 다음 비교는 통째로 올린다.
+        _pUploadedInstanceOrder      = _snapshot._pListInstanceSlot;
+        _bInstanceOrderUploadPending = SW_FALSE;
+    }
+
+    void GPUScene::ensureLODStateBuffers( IRHIDevice* pDevice, uint32 slotCount )
+    {
+        // 전환 상태는 LOD 그룹이 있을 때만 필요하다. 없으면 놓아 칸 수만큼의 메모리를 뷰마다 들고 있지 않는다.
+        // 칸마다 하나다(컬링이 칸 번호로 읽는다) — 칸을 다시 쓴 것은 상태에 함께 적은 차례(`GPUInstance::_slotSerial`)로 컬링이 알아채 처음부터 한다.
+        const uint32             stateCount     = _snapshot.hasLODGroups() ? slotCount : 0u;
         constexpr RHIBufferUsage kLODStateUsage = RHIBufferUsage::Structured | RHIBufferUsage::UnorderedAccess;
         for ( GPUCullViewResources& view : _listCullView )
         {
@@ -334,7 +414,7 @@ namespace sw
                 SW_LOG_ERROR_ONCE_ID( "GPUScene.FailedCreateLODState", "Failed to create the LOD state buffer (%# instances) of a cull view - its LOD levels switch without a crossfade", stateCount );
             // 새 버퍼의 내용은 정해져 있지 않다 — 다음 컬링이 비운다.
             if ( view._lodState._buffer != bufferBefore )
-                view._lodStateLayoutGeneration = 0xFFFFFFFFu;
+                view._bLODStateUndefined = SW_TRUE;
         }
     }
 
@@ -343,9 +423,9 @@ namespace sw
         if ( cullViewIndex >= _listCullView.size() )
             return false;
         GPUCullViewResources& view = _listCullView[cullViewIndex];
-        if ( view._lodStateLayoutGeneration == _snapshot._instanceLayoutGeneration )
+        if ( view._bLODStateUndefined == SW_FALSE )
             return false;
-        view._lodStateLayoutGeneration = _snapshot._instanceLayoutGeneration;
+        view._bLODStateUndefined = SW_FALSE;
         return true;
     }
 
@@ -371,7 +451,8 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "RT.GPUScene.motionHistory" );
         // shortcut: 움직이는 프레임마다 인스턴스 수만큼 열쇠를 찾고 버퍼 전체(인스턴스당 64 바이트)를 올린다 — 인스턴스가 수만을 넘어 이 구간이 측정에 드러나면 바뀐 구간만 올린다.
-        _bObjectMotion                           = _motionHistory.update( _snapshot.getInstances(), _listScratchPrevWorld ) ? SW_TRUE : SW_FALSE;
+        // 칸 순이다 — 정점 셰이더가 칸 번호로 지난 행렬을 읽는다(binding.hlsli `InstanceData::loadPreviousWorld`). 구멍은 열쇠가 0 이라 기록이 없다.
+        _bObjectMotion                           = _motionHistory.update( _slotBuffer.getSlots(), _listScratchPrevWorld ) ? SW_TRUE : SW_FALSE;
         constexpr RHIBufferUsage kPrevWorldUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         const uint32             count           = static_cast<uint32>( _listScratchPrevWorld.size() );
         const RHIBufferHandle    bufferBefore    = _prevInstanceWorlds._buffer;
@@ -388,28 +469,6 @@ namespace sw
             return;
         _prevInstanceWorlds.upload( pDevice, _listScratchPrevWorld.data(), count * static_cast<uint32>( sizeof( float4x4 ) ) );
         _listUploadedPrevWorld.swap( _listScratchPrevWorld );
-    }
-
-    void GPUScene::uploadDirtyInstanceRanges( IRHIDevice* pDevice, uint32 instanceCount )
-    {
-        // **바뀐 구간만, 그리고 한 번의 호출로 올린다.** 구간마다 따로 부르면 백엔드가
-        // 스테이징 확보와 큐 제출을 그만큼 되풀이한다(DX12 에서 호출당 ~3.3 us).
-        constexpr uint32 kStride = static_cast<uint32>( sizeof( GPUInstance ) );
-        _listScratchCopyRegion.clear();
-        _listScratchCopyRegion.reserve( _snapshot._listDirtyInstanceRange.size() );
-        for ( const GPUInstanceDirtyRange& run : _snapshot._listDirtyInstanceRange )
-        {
-            if ( run._count == 0 || run._start >= instanceCount )
-                continue;
-            const uint32 count = MathUtil::min( run._count, instanceCount - run._start );
-            _listScratchCopyRegion.push_back( RHIBufferCopyRegion{ run._start * kStride, run._start * kStride, count * kStride } );
-        }
-        if ( _listScratchCopyRegion.empty() == false )
-        {
-            pDevice->getResourceFactory()->updateStructuredBufferRegions( _instances._buffer, _snapshot.getInstances().data(),
-                                                                          _listScratchCopyRegion.data(),
-                                                                          static_cast<uint32>( _listScratchCopyRegion.size() ) );
-        }
     }
 
     void GPUScene::uploadBatchTable( IRHIDevice* pDevice, uint32 argsCount )
@@ -588,6 +647,10 @@ namespace sw
         }
         // 슬롯이 뷰 등록 해제와 버퍼 파괴를 순서까지 맞춰 처리한다. 손으로 풀어 쓰면 뷰 하나를 빠뜨려도 컴파일은 통과한다.
         _instances.release( pDevice );
+        _instanceOrder.release( pDevice );
+        _slotBuffer.markFullUpload();           // 버퍼를 다시 만들면 전체를 올린다
+        _bInstanceOrderUploadPending = SW_TRUE; // 차례 목록도 다시 올린다
+        _pUploadedInstanceOrder.reset();
         _batchInfo.release( pDevice );
         _prevInstanceWorlds.release( pDevice );
         _listUploadedPrevWorld.clear(); // 버퍼를 다시 만들면 내용을 다시 올린다

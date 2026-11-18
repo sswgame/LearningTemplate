@@ -103,6 +103,25 @@ SW_TEST_CASE( GPUInstanceMotionHistoryTest, HistoryFollowsKeysNotSlots )
 }
 
 /**
+ * @brief [GPUInstanceMotionHistoryTest] 같은 칸을 다른 물체가 받으면 지난 월드 행렬을 이어받지 않는다 — 칸 순 버퍼에서 칸 번호로 읽어도 새 물체는 기록이 없다
+ * @details 인스턴스 버퍼가 칸 순이라 지난 행렬 버퍼도 칸 순이다(binding.hlsli `InstanceData::loadPreviousWorld` 가 칸 번호로 읽는다). 지운 물체의 칸을 같은 프레임에 다른 물체가 받아도
+ *          기록은 열쇠로 찾으므로 새 열쇠는 기록 없음이다 — 지운 물체의 위치에서 긴 속도가 생기지 않는다. 옆 칸의 기록은 그대로다.
+ */
+SW_TEST_CASE( GPUInstanceMotionHistoryTest, ReusedSlotDoesNotInheritHistory )
+{
+    using Util = MotionHistoryTestUtil;
+    GPUInstanceMotionHistory history;
+    vector<float4x4>         listPrev;
+    vector<GPUInstance>      listSlot{ Util::makeInstance( 3u << 16, 0.0f ), Util::makeInstance( 4u << 16, 50.0f ) };
+    (void)history.update( listSlot, listPrev );
+    listSlot[0]._world._41 = 1.0f;                                  // 칸 0 은 같은 물체가 움직였다
+    listSlot[1]            = Util::makeInstance( 8u << 16, 51.0f ); // 칸 1 은 지우고 다른 물체가 받았다
+    SW_EXPECT_TRUE( history.update( listSlot, listPrev ) );
+    SW_EXPECT_NEAR( 0.0f, listPrev[0]._41, 1.0e-6f );
+    SW_EXPECT_TRUE( GPUInstanceMotionHistory::isNoHistory( listPrev[1] ) );
+}
+
+/**
  * @brief [GPUInstanceMotionHistoryTest] 스킨 결과의 지난 벌은 배치가 그대로이고 지난 프레임에 디스패치했을 때만 믿는다 — 첫 프레임 · 디스패치 없는 프레임 뒤는 기록 없음이고 벌은 프레임마다 바뀐다
  */
 SW_TEST_CASE( GPUInstanceMotionHistoryTest, SkinResultHistorySwapsHalves )

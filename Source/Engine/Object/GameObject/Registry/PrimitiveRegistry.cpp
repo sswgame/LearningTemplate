@@ -26,13 +26,67 @@ namespace sw
         if ( bAlreadyRegistered )
             return;
 
-        const uint32 slot = static_cast<uint32>( _listPrimitive.size() );
-        // 인스턴스 항목이 메시 컴포넌트 뒤에 이어지므로 깃발은 전체 번호 공간만큼 있어야 한다.
-        growDirtyFlags( slot + 1 + static_cast<uint32>( _listInstanceEntry.size() ) );
-        _listPrimitive.push_back( pComp );
-        _listPrimitiveTransformSlot.push_back( pComp->getTransformSlot() );
+        // 칸은 고정이다 — 프리리스트에서 꺼내고, 비었으면 영역을 두 배로 늘린다(늘릴 때만 인스턴스 항목 번호가 밀린다).
+        if ( _listFreePrimitiveSlot.empty() )
+            growMeshRegion();
+        const uint32 slot = _listFreePrimitiveSlot.back();
+        _listFreePrimitiveSlot.pop_back();
+        _listPrimitive[slot]              = pComp;
+        _listPrimitiveTransformSlot[slot] = pComp->getTransformSlot();
+        ++_listPrimitiveSerial[slot]; // 다시 쓰는 칸이면 지난 물체의 칸 상태(LOD 전환 · 칸 순 인스턴스)를 이어받지 않게 차례가 바뀐다
         pComp->setPrimitiveIndex( slot );
-        _setGeneration.fetch_add( 1, std::memory_order_relaxed );
+        // 집합 세대만으로 알리면 빌더가 모든 칸을 다시 모은다. 새 칸 하나를 더티로 올려 그 칸만 모으게 한다.
+        markSlotDirty( slot );
+        ++_liveSlotCount;
+        recordMeshSetChange( slot );
+    }
+
+    void PrimitiveRegistry::recordMeshSetChange( uint32 slot )
+    {
+        const uint64 generation = _setGeneration.fetch_add( 1, std::memory_order_relaxed ) + 1u;
+        const size_t ringIndex  = static_cast<size_t>( _meshSetChangeTotal % kMeshSetChangeLogCapacity );
+        if ( _listMeshSetChange.size() < kMeshSetChangeLogCapacity )
+            _listMeshSetChange.push_back( MeshSetChange{ generation, slot } );
+        else
+        {
+            // 가장 오랜 기록을 덮는다 — 그 세대까지는 더 이상 거슬러 갈 수 없다.
+            _meshSetChangeLogStart        = _listMeshSetChange[ringIndex]._generation;
+            _listMeshSetChange[ringIndex] = MeshSetChange{ generation, slot };
+        }
+        ++_meshSetChangeTotal;
+    }
+
+    bool PrimitiveRegistry::collectMeshSetChanges( uint64 sinceGeneration, vector<uint32>& outListSlot ) const
+    {
+        outListSlot.clear();
+        ScopedLock<mutex> lock{ _mutex };
+        if ( sinceGeneration < _meshSetChangeLogStart )
+            return false;
+        for ( const MeshSetChange& change : _listMeshSetChange )
+        {
+            if ( change._generation > sinceGeneration )
+                outListSlot.push_back( change._slot );
+        }
+        return true;
+    }
+
+    void PrimitiveRegistry::growMeshRegion()
+    {
+        const uint32 oldCount = static_cast<uint32>( _listPrimitive.size() );
+        const uint32 newCount = ( oldCount == 0 ) ? kInitialMeshSlotCount : oldCount * 2u;
+        _listPrimitive.resize( newCount, nullptr );
+        _listPrimitiveTransformSlot.resize( newCount, SceneTransformStorage::kInvalidSlot );
+        _listPrimitiveSerial.resize( newCount, 0u );
+        // 스택이라 끝에서 꺼낸다 — 작은 번호부터 쓰이게 큰 번호를 먼저 넣는다.
+        _listFreePrimitiveSlot.reserve( _listFreePrimitiveSlot.size() + ( newCount - oldCount ) );
+        for ( uint32 slot = newCount; slot > oldCount; --slot )
+        {
+            _listFreePrimitiveSlot.push_back( slot - 1 );
+        }
+        // 인스턴스 항목의 번호(영역 크기 + 자리)가 밀렸다. 비트는 옛 번호라 버리고, 배치 세대를 올려 빌더가 모든 칸을 다시 모으게 한다.
+        clearDirtyLocked();
+        growDirtyFlags( getSlotCount() );
+        _layoutGeneration.fetch_add( 1, std::memory_order_relaxed );
     }
 
     void PrimitiveRegistry::growDirtyFlags( uint32 count )
@@ -79,28 +133,19 @@ namespace sw
         if ( bSlotNotOwned )
             return;
 
-        // swap-and-pop. 마지막 원소가 이 자리로 오므로 그쪽 인덱스와 **깃발**을 같이 옮긴다(지울 때마다 깃발 전부를 훑지 않는다).
-        // 집합 세대가 오르므로 빌더는 어차피 전부 다시 모은다. 옮기지 않은 인스턴스 항목 깃발이 한 칸 어긋나도
-        // (`markInstanceDirty` 주석) 답은 틀리지 않는다.
-        ScenePrimitive* pMoved   = _listPrimitive.back();
-        const uint32    lastSlot = static_cast<uint32>( _listPrimitive.size() - 1 );
-        VectorUtil::removeAtSwap( _listPrimitive, slot );
-        VectorUtil::removeAtSwap( _listPrimitiveTransformSlot, slot );
-        if ( pMoved != pComp )
-            pMoved->setPrimitiveIndex( slot );
-        if ( lastSlot < _dirtyFlagCapacity )
+        // 칸을 비우고 프리리스트에 돌려준다 — 다른 프리미티브는 옮기지 않으므로 번호가 그대로다(옮기면 옮긴 칸과 그 뒤 인스턴스 항목이 모두 바뀐다).
+        // 빈 칸을 더티로 올려 빌더가 그 칸의 후보를 빼게 한다. 트랜스폼 비트는 뜻이 없어 내린다.
+        _listPrimitive[slot]              = nullptr;
+        _listPrimitiveTransformSlot[slot] = SceneTransformStorage::kInvalidSlot;
+        _listFreePrimitiveSlot.push_back( slot );
+        if ( slot < _dirtyFlagCapacity )
         {
-            // 깃발 둘을 다 옮긴다. 트랜스폼 깃발만 옮기지 않으면 움직인 물체가 한 프레임 멈춰 보인다.
-            const bool bMovedDirty          = takeWordBit( _arrDirtyWord.get(), lastSlot );
-            const bool bMovedTransformDirty = takeWordBit( _arrTransformDirtyWord.get(), lastSlot );
-            if ( slot != lastSlot )
-            {
-                storeWordBit( _arrDirtyWord.get(), slot, bMovedDirty );
-                storeWordBit( _arrTransformDirtyWord.get(), slot, bMovedTransformDirty );
-            }
+            (void)takeWordBit( _arrTransformDirtyWord.get(), slot );
+            markWordBit( _arrDirtyWord.get(), slot );
         }
         pComp->setPrimitiveIndex( ScenePrimitive::kInvalidPrimitiveIndex );
-        _setGeneration.fetch_add( 1, std::memory_order_relaxed );
+        --_liveSlotCount;
+        recordMeshSetChange( slot );
     }
 
     void PrimitiveRegistry::addAssetWaiter( Component* pComponent, AssetWaitFunction pFunction )
@@ -253,16 +298,72 @@ namespace sw
             return;
         SW_LOG_ASSERT( pBatch->_pRegistry == nullptr, "ScenePrimitiveBatch is already registered to another registry" );
         pBatch->_pRegistry  = this;
-        pBatch->_firstEntry = static_cast<uint32>( _listInstanceEntry.size() );
         const uint32 count  = pBatch->getCount();
-        _listInstanceEntry.reserve( _listInstanceEntry.size() + count );
+        const uint32 first  = allocateEntrySpan( count );
+        pBatch->_firstEntry = first;
         for ( uint32 index = 0; index < count; ++index )
         {
-            _listInstanceEntry.push_back( PrimitiveInstanceEntry{ pBatch, index } );
+            // 차례는 칸에 남아 있던 값에서 잇는다(지운 배치의 항목도 차례를 남겨 둔다).
+            PrimitiveInstanceEntry& entry = _listInstanceEntry[first + index];
+            entry._pBatch                 = pBatch;
+            entry._index                  = index;
+            ++entry._serial;
         }
         _listInstanceBatch.push_back( pBatch );
         growDirtyFlags( getSlotCount() );
+        // 새 항목 칸만 더티로 올린다 — 다른 칸의 번호는 그대로이므로 빌더가 이 칸들만 모은다.
+        const uint32 firstSlot = static_cast<uint32>( _listPrimitive.size() ) + first;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            markSlotDirty( firstSlot + index );
+        }
+        _liveSlotCount += count;
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
+    }
+
+    uint32 PrimitiveRegistry::allocateEntrySpan( uint32 count )
+    {
+        const uint32 entryTotal = static_cast<uint32>( _listInstanceEntry.size() );
+        if ( count == 0 )
+            return entryTotal;
+        // 첫 맞춤 — 지운 배치의 자리를 다시 쓴다(언리얼 GPUScene 의 `FSpanAllocator` 와 같은 모양). 맞는 구간이 없으면 끝에 붙인다(다른 칸은 그대로다).
+        for ( size_t spanIndex = 0; spanIndex < _listFreeEntrySpan.size(); ++spanIndex )
+        {
+            EntrySpan& span = _listFreeEntrySpan[spanIndex];
+            if ( span._count < count )
+                continue;
+            const uint32 start = span._start;
+            span._start += count;
+            span._count -= count;
+            if ( span._count == 0 )
+                _listFreeEntrySpan.erase( _listFreeEntrySpan.begin() + static_cast<ptrdiff_t>( spanIndex ) );
+            return start;
+        }
+        _listInstanceEntry.resize( static_cast<size_t>( entryTotal ) + count );
+        return entryTotal;
+    }
+
+    void PrimitiveRegistry::freeEntrySpan( uint32 start, uint32 count )
+    {
+        if ( count == 0 )
+            return;
+        // 자리 순으로 넣고 앞뒤 이웃과 합친다 — 잘게 쪼개지면 큰 배치가 빈 자리를 못 쓰고 목록 끝만 늘어난다.
+        const auto   it        = std::lower_bound( _listFreeEntrySpan.begin(), _listFreeEntrySpan.end(), start, []( const EntrySpan& span, uint32 value )
+                 { return span._start < value; } );
+        const size_t spanIndex = static_cast<size_t>( it - _listFreeEntrySpan.begin() );
+        _listFreeEntrySpan.insert( it, EntrySpan{ start, count } );
+        const bool bMergeNext = spanIndex + 1 < _listFreeEntrySpan.size() && start + count == _listFreeEntrySpan[spanIndex + 1]._start;
+        if ( bMergeNext )
+        {
+            _listFreeEntrySpan[spanIndex]._count += _listFreeEntrySpan[spanIndex + 1]._count;
+            _listFreeEntrySpan.erase( _listFreeEntrySpan.begin() + static_cast<ptrdiff_t>( spanIndex + 1 ) );
+        }
+        const bool bMergePrevious = spanIndex > 0 && _listFreeEntrySpan[spanIndex - 1]._start + _listFreeEntrySpan[spanIndex - 1]._count == start;
+        if ( bMergePrevious )
+        {
+            _listFreeEntrySpan[spanIndex - 1]._count += _listFreeEntrySpan[spanIndex]._count;
+            _listFreeEntrySpan.erase( _listFreeEntrySpan.begin() + static_cast<ptrdiff_t>( spanIndex ) );
+        }
     }
 
     void PrimitiveRegistry::removeInstanceBatch( ScenePrimitiveBatch* pBatch )
@@ -287,59 +388,38 @@ namespace sw
         }
         if ( listRemoved.empty() )
             return;
-        clearDirtyLocked();
 
-        // 항목 구간을 자리 순으로 놓고 목록을 한 번만 접는다. 구간은 서로 겹치지 않는다(배치마다 자기 구간).
-        // 정렬 키는 (첫 항목 자리 << 32 | listRemoved 안의 번호)다 — 자리가 같은(항목 0 개) 배치는 번호 순이다.
-        vector<uint64> listOrderKey;
-        listOrderKey.reserve( listRemoved.size() );
-        for ( size_t removedIndex = 0; removedIndex < listRemoved.size(); ++removedIndex )
+        // 배치마다 항목 구간을 비우고 그 칸들을 더티로 올린 뒤 빈 구간 목록에 돌려준다. 남은 배치는 옮기지 않는다 — 옮기면 그 뒤 항목 전부의 칸 번호가 바뀐다.
+        const uint32 entryTotal = static_cast<uint32>( _listInstanceEntry.size() );
+        const uint32 meshRegion = static_cast<uint32>( _listPrimitive.size() );
+        for ( ScenePrimitiveBatch* pBatch : listRemoved )
         {
-            listOrderKey.push_back( ( static_cast<uint64>( listRemoved[removedIndex]->_firstEntry ) << 32 ) | static_cast<uint64>( removedIndex ) );
+            const uint32 first           = pBatch->_firstEntry;
+            const uint32 count           = pBatch->getCount();
+            const bool   bOutsideEntries = first > entryTotal || count > entryTotal - first || ( count > 0 && _listInstanceEntry[first]._pBatch != pBatch );
+            pBatch->_firstEntry          = 0;
+            if ( bOutsideEntries )
+                continue; // 항목 목록과 어긋난 배치 — 항목은 건드리지 않는다
+            for ( uint32 index = 0; index < count; ++index )
+            {
+                // 차례는 남긴다 — 다음에 이 칸을 받는 항목이 다른 차례가 되게.
+                _listInstanceEntry[first + index]._pBatch = nullptr;
+                _listInstanceEntry[first + index]._index  = 0;
+                markSlotDirty( meshRegion + first + index );
+            }
+            _liveSlotCount -= count;
+            freeEntrySpan( first, count );
         }
-        VectorUtil::sort( listOrderKey );
-        const uint32   entryTotal = static_cast<uint32>( _listInstanceEntry.size() );
-        uint32         readIndex  = 0;
-        uint32         writeIndex = 0;
-        vector<uint32> listRemovedFirst;
-        vector<uint32> listRemovedPrefix; // 앞 구간들이 빠진 항목 수의 누적(자기 구간 포함)
-        listRemovedFirst.reserve( listRemoved.size() );
-        listRemovedPrefix.reserve( listRemoved.size() );
-        for ( const uint64 orderKey : listOrderKey )
-        {
-            const ScenePrimitiveBatch* pBatch          = listRemoved[static_cast<uint32>( orderKey )];
-            const uint32               first           = pBatch->_firstEntry;
-            const uint32               count           = pBatch->getCount();
-            const bool                 bOutsideEntries = first > entryTotal || count > entryTotal - first;
-            if ( bOutsideEntries || first < readIndex )
-                continue; // 항목 목록과 어긋난 배치 — 항목은 건드리지 않는다(옛 단건 제거와 같다)
-            if ( writeIndex != readIndex )
-                std::copy( _listInstanceEntry.begin() + readIndex, _listInstanceEntry.begin() + first, _listInstanceEntry.begin() + writeIndex );
-            writeIndex += first - readIndex;
-            readIndex = first + count;
-            listRemovedFirst.push_back( first );
-            listRemovedPrefix.push_back( ( listRemovedPrefix.empty() ? 0u : listRemovedPrefix.back() ) + count );
-        }
-        if ( writeIndex != readIndex )
-            std::copy( _listInstanceEntry.begin() + readIndex, _listInstanceEntry.end(), _listInstanceEntry.begin() + writeIndex );
-        _listInstanceEntry.resize( writeIndex + ( entryTotal - readIndex ) );
 
-        // 남은 배치는 자기보다 앞에서 빠진 항목 수만큼 앞으로 당겨진다. 빠진 배치는 목록에서 뺀다(남은 배치의 순서는 그대로).
+        // 빠진 배치를 목록에서 뺀다(남은 배치의 순서는 그대로). 빠질 배치는 위에서 `_pRegistry` 를 비워 표시했다.
         size_t keepCount = 0;
         for ( ScenePrimitiveBatch* pOther : _listInstanceBatch )
         {
             if ( pOther == nullptr || pOther->_pRegistry != this )
                 continue;
-            const size_t removedBefore = static_cast<size_t>( std::lower_bound( listRemovedFirst.begin(), listRemovedFirst.end(), pOther->_firstEntry ) - listRemovedFirst.begin() );
-            if ( removedBefore > 0 )
-                pOther->_firstEntry -= listRemovedPrefix[removedBefore - 1];
             _listInstanceBatch[keepCount++] = pOther;
         }
         _listInstanceBatch.resize( keepCount );
-        for ( ScenePrimitiveBatch* pBatch : listRemoved )
-        {
-            pBatch->_firstEntry = 0;
-        }
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
     }
 
@@ -348,7 +428,7 @@ namespace sw
         const bool bInvalidInstanceDirty = pBatch == nullptr || pBatch->_pRegistry != this || index >= pBatch->getCount();
         if ( bInvalidInstanceDirty )
             return;
-        // 잠금 없이 메시 컴포넌트 수를 읽는다. 그 수가 그 사이 바뀌면 번호가 어긋나지만, 그 변경은 집합 세대를 올려
+        // 잠금 없이 메시 칸 영역의 크기를 읽는다. 영역이 그 사이 늘면 번호가 어긋나지만, 늘리기는 배치 세대를 올려
         // 다음 빌드가 전체 수집으로 가므로 깃발 하나가 엉뚱한 자리에 서도 답은 틀리지 않는다.
         const uint32 slot = static_cast<uint32>( std::as_const( _listPrimitive ).size() ) + pBatch->_firstEntry + index;
         markSlotDirty( slot );
@@ -376,7 +456,7 @@ namespace sw
         // (이미 지난 칸이면 그 프레임에는 헛훑기 한 번, 아직 안 지난 칸이면 이번에 잡힌다. 어느 쪽도 잃지 않는다.)
         _bAnyDirty.store( 0u, std::memory_order_release );
         // 워드를 훑는다. 8000 칸이 워드 125 개다. 빈 워드는 읽기만, 선 워드만 exchange 한 번 하고 켜진 비트를 골라 돈다.
-        // 번호 공간 밖의 비트(지워진 칸)는 여기서 같이 내려 버린다. 그 칸을 다시 쓰는 추가는 집합 세대를 올려 전체 수집이 된다.
+        // 번호 공간은 줄지 않는다(지운 칸은 비워 둔다). 공간 밖 비트는 없지만 경계는 그대로 본다.
         const uint32 count     = MathUtil::min( getSlotCount(), _dirtyFlagCapacity );
         const uint32 wordCount = ( count + 63u ) / 64u;
         for ( uint32 wordIndex = 0; wordIndex < wordCount; ++wordIndex )

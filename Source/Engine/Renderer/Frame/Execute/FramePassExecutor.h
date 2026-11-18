@@ -242,6 +242,12 @@ namespace sw
          * @details 효과의 값(블룸 문턱 · 렌즈 · 역뷰-투영 4 열)은 패스 상수에서 루트 상수로 옮긴다 — 컴퓨트 PSO 에는 PassCB 가 묶이지 않는다. 네이티브 bindless 에서만 부른다.
          */
         void executeComputeImplementation( const PassExecuteInput& input );
+        /**
+         * @brief 디퍼드 조명을 타일 분류로 그립니다(언리얼 Substrate 타일 · 유니티 HDRP 디퍼드 타일). 분류 컴퓨트가 8² 타일마다 종류를 골라 목록 · 간접 인자를 쓰고,
+         *        렌더 패스를 열어 종류마다 그 종류의 엽만 컴파일한 PSO 로 타일 사각형을 간접 그리기 한다. 그린 것이 없는 타일은 어느 목록에도 없다.
+         * @return 타일로 그렸으면 true 입니다. 분류를 쓸 수 없으면(에뮬 백엔드 · 버퍼 · PSO 없음) false 이고 부르는 쪽이 풀스크린 한 장(모든 엽 — 같은 그림)으로 그린다.
+         */
+        [[nodiscard]] bool executeTiledLighting( const PassExecuteInput& input, const hashed_string& target );
         /** @brief 파이프라인 컴퓨트 패스입니다. 첨부를 RW 텍스처로 묶고 출력 크기만큼 디스패치합니다(`compute_pass.hlsli` 의 루트 상수). */
         void executeComputePass( const PassExecuteInput& input );
         /** @brief ForwardOpaque · ForwardOnlyOpaque 입니다. 그림자 맵 입력을 바인딩하고 선언한 첫 컬러 출력에 그립니다. */
@@ -273,8 +279,8 @@ namespace sw
          */
         void executePostProcessMaterialPass( const PassExecuteInput& input );
         /**
-         * @brief 디퍼드 데칼 패스입니다 — 이번 프레임 데칼(`FrameRenderState::_listFrameDecalDraw`, 그리는 차례)마다 풀스크린 하나로 G버퍼 칸 셋을 덮습니다. 데칼이 없거나 표면 값 보기에서는 기록하지 않습니다.
-         * @details shortcut: 데칼마다 화면 전체를 돈다(상자 밖 픽셀은 셰이더가 일찍 버린다), 데칼이 수십 개를 넘으면 상자를 래스터하거나 타일 목록(언리얼 클러스터드 데칼)으로 바꾼다.
+         * @brief DBuffer 데칼 패스입니다 — DBufferA · B · C 를 지우고 이번 프레임 데칼(`FrameRenderState::_listFrameDecalDraw`, 그리는 차례)마다 상자 뒷면을 그려 프리멀티플라이로 쌓습니다.
+         * @details 베이스 패스(G버퍼 · 포워드 불투명)가 셋을 읽어 셰이딩 전에 표면에 섞는다(언리얼 DBuffer). 데칼이 없는 뷰 · 표면 값 보기는 뷰 패스 고르기가 이 패스를 뺀다.
          */
         void executeDecalPass( const PassExecuteInput& input );
         /** @brief 렌즈 플레어 패스(`RenderPassType::LensFlare`)를 실행합니다. 주 시점이 아니거나 스프라이트가 없으면 그리지 않습니다. 스프라이트는 `LensFlareSpriteBuffer` 가 기록 전에 올렸다. */
@@ -301,14 +307,21 @@ namespace sw
         /** @brief 역할의 셰이더 이름입니다. intern 된 hashed_string 입니다. */
         const hashed_string& inputRoleName( RenderPassInputRole role ) const;
         /**
-         * @brief 그림자 패스 하나를 그립니다 — 지금 뷰의 캐스케이드 타일과 프레임의 점광 · 스폿 타일을 아틀라스의 자기 칸(뷰포트)에 그립니다.
-         * @details 타일마다 `g_LightViewProj` 를 그 타일의 행렬로 바꿔 씬을 한 번씩 그린다. 컬링은 모든 타일을 덮는 상자(`ViewShadowData::_cullViewProj`) 하나다.
-         *          @p bCacheLayer 면 그림자 캐시가 캐시하는 점광 · 스폿 타일(`ShadowCache::getAction` 이 DrawAll 이 아닌 것)은 캐시 층을 옮기고 움직이는 배치만 그린다.
+         * @brief 방향광 그림자 패스(깊이 첨부가 ShadowMap 역할)를 그립니다 — 지금 뷰의 캐스케이드 타일을 방향광 아틀라스의 자기 칸(뷰포트)에 그립니다.
+         * @details 타일마다 `g_LightViewProj` 를 그 타일의 행렬로 바꿔 씬을 한 번씩 그린다. 주 시점 캐스케이드는 자기 컬링 슬롯, 추가 뷰는 합친 칸이다.
          */
-        void drawShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer );
+        void drawCascadeShadowTiles( FramePassContext& context, bool bTransparentBatch );
+        /**
+         * @brief 점광 · 스폿 그림자 패스(깊이 첨부가 LocalShadowMap 역할)를 그립니다 — 프레임의 점광 · 스폿 타일을 점광 · 스폿 아틀라스의 자기 칸에 그립니다.
+         * @details 타일마다 그 빛의 컬링 슬롯(`findLocalShadowCullSlot`)이다. @p bCacheLayer 면 그림자 캐시가 캐시하는 타일(`ShadowCache::getAction` 이 DrawAll 이 아닌 것)은
+         *          캐시 층을 옮기고 움직이는 배치만 그린다.
+         */
+        void drawLocalShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer );
+        /** @brief 그림자 타일 하나의 칸을 뷰포트로 잡고 새 상수 슬롯에 그 타일의 행렬을 올립니다. 링이 고갈되면 false 이고 그 타일은 그리지 않는다(앞 타일의 행렬로 그리지 않는다). */
+        [[nodiscard]] bool beginShadowTile( FramePassContext& context, const ShadowTileDraw& tile );
         /** @brief 점광 · 스폿 타일 @p localTileIndex 를 그릴 컬링 슬롯입니다. 그 빛이 자기 슬롯을 가지면 그것이고(감사 RN-5), 아니면 지금 뷰의 합친 그림자 칸입니다. */
         uint32 findLocalShadowCullSlot( uint32 localTileIndex ) const;
-        /** @brief 그림자 캐시 층을 그래프 기록 전에 만듭니다(그림자 아틀라스와 같은 형식 · 크기). 기록 중에는 자원을 만들 수 없다. */
+        /** @brief 그림자 캐시 층을 그래프 기록 전에 만듭니다(점광 · 스폿 아틀라스와 같은 형식 · 크기). 기록 중에는 자원을 만들 수 없다. */
         void prepareShadowCacheLayerResource();
         /**
          * @brief 그림자 캐시 층을 이번 프레임에 씁니다 — 층(기록 전에 `prepareShadowCacheLayerResource` 가 만든다)이 아틀라스(@p atlasName)와 맞으면, 다시 그릴 프레임이면 정적 배치만 그리고, 셰이더 읽기로 돌린다.
@@ -426,7 +439,7 @@ namespace sw
          *          (`TextureCache::deferLayerBake`), 결과 타깃이 없으면(요청한 쪽이 놓았다) 버린다.
          */
         void drawTextureLayerBakes();
-        /** @brief 씬 배치를 멀티 드로우로 묶을지 반환합니다. `setDrawMergeEnabled` 로 받은 값을 쓰고, 없으면 전역 `gv_drawMerge` 를 씁니다. */
+        /** @brief 씬 배치를 멀티 드로우로 묶을지 반환합니다. 프레임 사본(`RenderFrameSettings::_bDrawMerge`)입니다. */
         bool isDrawMergeEnabled() const;
 
         // ------------------------------------------------------------------------------

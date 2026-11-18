@@ -45,9 +45,6 @@ namespace sw
             static constexpr float32 kUnitScaleTolerance = 1.0e-4f;
             /// 백만 픽셀 단위 예산을 픽셀 수로 바꾸는 비율입니다.
             static constexpr float64 kPixelsPerMegapixel = 1.0e6;
-            /// 보임을 측정하는 화면 수의 구조 상한입니다(주 시점 + 화면 사각형 뷰 — 실제 수는 자리 수 + 1).
-            static constexpr uint32 kMaxVisibilityView = kExtraRenderViewCapacity + 1;
-
             /**
              * @brief 카메라 하나의 뷰 설정입니다 — 출력 설정, 후처리 값, 피사계 심도 렌즈 값, 컷 표시(읽고 지운다).
              * @details 세 뷰(주 시점 · 추가 뷰 · 호스트 뷰)가 모두 이 함수로 만든다. 카메라에서 뷰로 가는 값이 늘면 여기 한 곳에만 더한다.
@@ -248,24 +245,25 @@ namespace sw
         }
         const uint32 candidateCount = static_cast<uint32>( listCandidate.size() );
 
-        // 보임은 사람이 보는 화면 전부에서 측정한다 — 주 시점과 화면 사각형 뷰(분할 화면의 다른 칸에 모니터가 보일 수 있다). 렌더 텍스처 뷰 너머로 보이는 모니터는 세지 않는다.
-        LODView      arrVisibilityView[RenderViewCollectorInternal::kMaxVisibilityView]{};
-        const uint32 visibilityViewLimit         = MathUtil::min( maxExtraViewCount, kExtraRenderViewCapacity ) + 1;
-        uint32       visibilityViewCount         = 0;
-        arrVisibilityView[visibilityViewCount++] = LODView::make( mainViewProj, mainPosition );
+        // 보임은 사람이 보는 화면 전부에서 측정한다 — 주 시점과 화면 사각형 뷰 모두(분할 화면의 다른 칸에 모니터가 보일 수 있다). 자리 수로 자르지 않는다 —
+        // 자리는 스케줄러가 이 보임을 보고 나눠 주므로, 자르면 넘친 칸에만 보이는 모니터가 자리를 못 얻는다(언리얼 뷰 패밀리도 모든 뷰를 본다).
+        // 렌더 텍스처 뷰 너머로 보이는 모니터는 세지 않는다.
+        vector<LODView> listVisibilityView;
+        listVisibilityView.reserve( outListView.size() + 1 );
+        listVisibilityView.push_back( LODView::make( mainViewProj, mainPosition ) );
         for ( const RenderViewRequest& request : outListView )
         {
-            // shortcut: 화면 사각형 뷰가 자리 수보다 많으면 넘친 칸은 보는 쪽으로 세지 않는다 — 분할 화면이 자리 수를 넘으면 Config 를 늘린다.
-            if ( request._outputKind == RenderViewOutputKind::ScreenRect && visibilityViewCount < visibilityViewLimit )
-                arrVisibilityView[visibilityViewCount++] = LODView::make( request._viewProj, request._position );
+            if ( request._outputKind == RenderViewOutputKind::ScreenRect )
+                listVisibilityView.push_back( LODView::make( request._viewProj, request._position ) );
         }
-        uint32 hiddenViewCount = 0;
+        const uint32 visibilityViewCount = static_cast<uint32>( listVisibilityView.size() );
+        uint32       hiddenViewCount     = 0;
         for ( uint32 index = 0; index < candidateCount; ++index )
         {
             const CameraRenderOutput& output = *listCameraOutput[index];
             if ( output._visibilityObject.isValid() == false )
                 continue;
-            const float32 screenSize       = RenderViewCollectorInternal::computeVisibleScreenSize( manager, output._visibilityObject, arrVisibilityView, visibilityViewCount, pMainOcclusion );
+            const float32 screenSize       = RenderViewCollectorInternal::computeVisibleScreenSize( manager, output._visibilityObject, listVisibilityView.data(), visibilityViewCount, pMainOcclusion );
             const bool    bVisible         = screenSize > 0.0f && screenSize >= output._minScreenSize;
             listCandidate[index]._bVisible = bVisible ? SW_TRUE : SW_FALSE;
             hiddenViewCount += bVisible ? 0u : 1u;

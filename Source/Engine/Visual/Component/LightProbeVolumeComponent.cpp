@@ -83,13 +83,14 @@ namespace sw
         return AABB{ center - half, center + half };
     }
 
-    shared_ptr<const SceneVoxelGrid> LightProbeVolumeComponent::findRealtimeVoxelGrid( uint64 primitiveSetGeneration ) const
+    shared_ptr<const SceneVoxelGrid> LightProbeVolumeComponent::findRealtimeVoxelGrid( uint64& outPrimitiveSetGeneration ) const
     {
         const AABB bounds = computeRealtimeVoxelBounds();
-        // 상자(볼륨을 옮기거나 키웠다) · 칸 크기 · 프리미티브 집합이 그대로여야 캐시가 맞다.
-        const bool bSameBounds = _realtimeVoxelBounds._min == bounds._min && _realtimeVoxelBounds._max == bounds._max;
-        const bool bFresh      = _pRealtimeVoxelGrid != nullptr && bSameBounds && MathUtil::nearEqual( _realtimeVoxelCellSize, _voxelSize ) && _realtimeVoxelSetGeneration == primitiveSetGeneration;
-        return bFresh ? _pRealtimeVoxelGrid : nullptr;
+        // 상자(볼륨을 옮기거나 키웠다) · 칸 크기가 그대로여야 캐시를 쓸 수 있다. 프리미티브 집합은 부르는 쪽이 세대로 따진다(바뀐 칸만 다시 칠한다).
+        const bool bSameBounds    = _realtimeVoxelBounds._min == bounds._min && _realtimeVoxelBounds._max == bounds._max;
+        const bool bUsable        = _pRealtimeVoxelGrid != nullptr && bSameBounds && MathUtil::nearEqual( _realtimeVoxelCellSize, _voxelSize );
+        outPrimitiveSetGeneration = _realtimeVoxelSetGeneration;
+        return bUsable ? _pRealtimeVoxelGrid : nullptr;
     }
 
     void LightProbeVolumeComponent::setRealtimeVoxelGrid( shared_ptr<const SceneVoxelGrid> grid, uint64 primitiveSetGeneration ) const

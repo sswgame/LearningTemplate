@@ -445,8 +445,9 @@ namespace sw
             return kEngineFrameRunning;
         const uint32 completedScreenshotCount = findCompletedScreenshotCount();
         _pRunner->setCompletedScreenshotCount( completedScreenshotCount >= _screenshotBaseline ? completedScreenshotCount - _screenshotBaseline : 0u );
-        // 사진을 실은 패킷은 방금 제출했고 렌더 스레드가 아직 그리는 중일 수 있다. 이제 돌 단계가 렌더 스레드가 그릴 때 읽는 전역 변수(gv_upscaler …)를 바꾸면
-        // 그 값이 사진에 섞인다 — 백엔드마다 렌더 스레드가 뒤처지는 정도가 달라 Vulkan · GL 만 FSR 이 섞였다(useroptions scale). 단계 앞에서 패킷을 비운다(언리얼 FlushRenderingCommands).
+        // 사진을 실은 패킷은 방금 제출했고 렌더 스레드가 아직 그리는 중일 수 있다. 렌더 설정 스위치는 패킷의 사본(`RenderFrameSettings`)이라 섞이지 않지만, 패킷 밖 사본
+        // (텍스처 품질 `TextureCache::refreshQualitySettings` · 진단 정책 `RenderDiagnostics`)은 다음 패킷을 지을 때 바뀌어 그리는 중인 사진의 업로드에 들 수 있다 —
+        // 예전에는 렌더 스레드가 변수를 직접 읽어 Vulkan · GL 만 FSR 이 섞였다(useroptions scale). 단계 앞에서 패킷을 비운다(언리얼 FlushRenderingCommands).
         // 시계를 붙잡지 않는다 — 붙잡으면 게임이 그동안 더 돌아 뒤 사진의 게임 시간이 렌더 지연에 따라 흔들린다.
         if ( _pRenderDriver != nullptr && _pRunner->hasPendingScreenshot() )
             _pRenderDriver->flushSubmittedPackets();

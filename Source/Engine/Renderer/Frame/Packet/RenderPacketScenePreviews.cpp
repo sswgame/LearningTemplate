@@ -75,6 +75,7 @@ namespace sw
             preview.resetForFrame();
             preview._sceneKey   = request._sceneKey;
             preview._frameIndex = packet._frameIndex;
+            preview._settings   = packet._settings; // 같은 프레임의 설정 사본(주 패킷이 뜬 것)
 
             ScenePreviewEntry&  entry = getOrCreateEntry( request._sceneKey );
             RenderSceneViewDesc view{};

@@ -33,10 +33,10 @@ namespace sw
         static constexpr float32 kMinKernelRadiusTexels = 1.0f;
 
         /**
-         * @brief 이번 프레임의 필터 품질입니다(`gv_shadowFilter`).
+         * @brief 이번 프레임의 필터 품질입니다. @p value 는 프레임 설정 사본의 요청(`RenderFrameSettings::_shadowFilter` — 사용자 설정 graphics.shadowFilter)입니다.
          * @details 범위 밖 값은 오류 로그를 남기고 3x3 PCF 로 그립니다 — 설정 스키마의 Enum 은 범위 밖을 넣지 못하므로 명령줄(`-gv_shadowFilter=`)에서만 난다.
          */
-        [[nodiscard]] static ShadowFilterMode getActiveMode();
+        [[nodiscard]] static ShadowFilterMode getActiveMode( int32 value );
 
         /**
          * @brief 방향광 반그림자 배율입니다 — 받는 점과 가리개의 NDC 깊이 차 1 이 기준 볼륨 텍셀 몇 개의 반그림자 **폭**이 되는가.

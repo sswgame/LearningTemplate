@@ -128,13 +128,14 @@ void applyLayerRule( inout float4 inoutLow, inout float4 inoutHigh, float layer,
 }
 
 /**
- * @brief 디테일 맵의 레이어 채널 넷을 찍는다 - 평면(위에서) 하나와 3 축 셋을 @p triplanar 마스크로 섞는다. 평면 표본은 3 축의 xz 면과 같다.
+ * @brief 디테일 맵의 레이어 채널 넷을 찍는다 - 평면(위에서) 하나와 3 축 셋을 @p triplanar 마스크로 섞는다. 평면 표본은 3 축의 위 면(+y)과 같다.
  * @param scale 월드 좌표에 곱하는 배율(레이어 0..3 은 1, 4..7 은 kHighLayerDetailScale)
  */
-float4 sampleLayerDetail( uint detailMap, float3 worldPosition, float3 axisWeight, float tiling, float scale, float4 triplanar )
+float4 sampleLayerDetail( uint detailMap, float3 worldPosition, float3 normal, float3 axisWeight, float tiling, float scale, float4 triplanar )
 {
-    const float4 detailTop       = MaterialTexture::sampleIndex( detailMap, worldPosition.xz * tiling * scale );
-    const float4 detailTriplanar = SurfaceFunction::sampleTriplanar( detailMap, worldPosition, axisWeight, tiling * scale );
+    const float2 topUv           = SurfaceFunction::computeTriplanarFaceUV( worldPosition, float3( 0.0f, 1.0f, 0.0f ), 1u );
+    const float4 detailTop       = MaterialTexture::sampleIndex( detailMap, topUv * tiling * scale );
+    const float4 detailTriplanar = SurfaceFunction::sampleTriplanar( detailMap, worldPosition, normal, axisWeight, tiling * scale );
     return lerp( detailTop, detailTriplanar, triplanar );
 }
 
@@ -165,8 +166,8 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     // 디테일 — 평면(위에서) 하나와 3 축 셋. 평면 표본은 3 축의 xz 면과 같다.
     const float  tiling     = material._terrainParams.y;
     const float3 axisWeight = SurfaceFunction::computeTriplanarWeights( normal, kDetailTriplanarSharpness );
-    const float4 detailLow  = sampleLayerDetail( material._detailMap, position, axisWeight, tiling, 1.0f, material._layerTriplanar );
-    const float4 detailHigh = sampleLayerDetail( material._detailMap, position, axisWeight, tiling, kHighLayerDetailScale, material._layerTriplanar1 );
+    const float4 detailLow  = sampleLayerDetail( material._detailMap, position, normal, axisWeight, tiling, 1.0f, material._layerTriplanar );
+    const float4 detailHigh = sampleLayerDetail( material._detailMap, position, normal, axisWeight, tiling, kHighLayerDetailScale, material._layerTriplanar1 );
 
     // 3. 높이 섞기 — 디테일 채널이 레이어의 높이다(깊이 0 이면 그대로).
     SurfaceFunction::blendByHeight8( weightLow, weightHigh, detailLow, detailHigh, material._terrainParams.z );

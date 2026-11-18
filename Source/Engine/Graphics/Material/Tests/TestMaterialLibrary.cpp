@@ -1,4 +1,4 @@
-// MaterialLibraryTest — 외형 머티리얼 라이브러리(Content/engine/materials/library)의 모든 프리셋이 읽히고, 갈래 규칙(정렬 · 블렌드 · 엽 조합)을 지키는지(nogpu).
+// MaterialLibraryTest — 외형 머티리얼 라이브러리(Content/engine/materials/library)의 모든 프리셋이 읽히고, 갈래 규칙(정렬 · 블렌드 · 엽 조합)을 지키는지, 환경 표면 프리셋의 셰이딩 모델 define 이 값과 짝인지(nogpu).
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
@@ -144,4 +144,47 @@ SW_TEST_CASE( MaterialLibraryTest, RootDeclaresSkinLayerSurfaceMap )
     for ( const MaterialProperty& property : root->getProperties() )
         bDeclared = bDeclared || ( property._name == "_skinLayerSurfaceMap" && property._type == MaterialPropertyType::Texture2D ); // GameFramework 의 이름 — Engine 테스트라 글로 적는다
     SW_EXPECT_TRUE( bDeclared );
+}
+
+/**
+ * @brief [MaterialLibraryTest] 환경 표면의 셰이딩 모델 선택 — 코트 값이 있으면 Clear Coat(MATERIAL_LOBE_COAT), 비등방 값이 있으면 Anisotropic(MATERIAL_LOBE_ANISOTROPY), 둘 다면 포워드 전용
+ * @details 셰이더는 define 만 보고 값은 보지 못한다 — define 없이 값만 넣은 프리셋은 엽이 꺼진 채 기본 PBR 로 조용히 그려진다. 코트 + 비등방은 G버퍼 번호 하나에 들지 않아
+ *          environment_surface.hlsl 의 G버퍼 #error 가 쿠킹을 멈추는데, 리플렉션 컴파일(define 없음)은 그 #error 에 닿지 않아(TerrainMaterialsDeformVertices 머리말) 데이터에서도 본다.
+ *          외형(appearance_lit.hlsl)은 코트를 늘 켜므로 비등방 짝만 본다.
+ */
+SW_TEST_CASE( MaterialLibraryTest, LayeredShadingModelMatchesLobeValues )
+{
+    static constexpr const utf8* kEnvironmentShader = "engine/shaders/environment_surface.hlsl";
+    static constexpr const utf8* kAppearanceShader  = "engine/shaders/appearance_lit.hlsl";
+    vector<string>               listPath;
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( ProcessRoots::get()._project.str() + "/Content/engine/materials", ".material", listPath, true ) );
+    uint32 coatCount        = 0;
+    uint32 anisotropicCount = 0;
+    for ( const string& path : listPath )
+    {
+        const size_t contentAt = path.find( "Content/" );
+        SW_REQUIRE_TRUE( contentAt != string::npos );
+        const string               id       = path.substr( contentAt + 8 );
+        const shared_ptr<Material> material = Material::create();
+        SW_REQUIRE_TRUE_MSG( material->loadFromAsset( AssetID{ id } ), id.c_str() );
+        const bool bEnvironment = material->getShaderPath() == kEnvironmentShader;
+        if ( bEnvironment == false && material->getShaderPath() != kAppearanceShader )
+            continue;
+        float32 anisotropy = 0.0f;
+        SW_EXPECT_TRUE_MSG( material->getScalarParameter( hashed_string( "_anisotropy" ), anisotropy ), id.c_str() );
+        const bool bAnisotropic = MaterialLibraryTestUtil::hasDefine( *material, "MATERIAL_LOBE_ANISOTROPY" );
+        SW_EXPECT_TRUE_MSG( anisotropy == 0.0f || bAnisotropic, id.c_str() );
+        anisotropicCount += ( bEnvironment && bAnisotropic ) ? 1u : 0u;
+        if ( bEnvironment == false )
+            continue;
+        float32 coat = 0.0f;
+        SW_EXPECT_TRUE_MSG( material->getScalarParameter( hashed_string( "_clearCoat" ), coat ), id.c_str() );
+        const bool bCoat = MaterialLibraryTestUtil::hasDefine( *material, "MATERIAL_LOBE_COAT" );
+        SW_EXPECT_TRUE_MSG( coat == 0.0f || bCoat, id.c_str() );
+        SW_EXPECT_TRUE_MSG( ( bCoat && bAnisotropic ) == MaterialLibraryTestUtil::hasDefine( *material, "MATERIAL_FORWARD_ONLY" ), id.c_str() );
+        coatCount += bCoat ? 1u : 0u;
+    }
+    // 찻잔 · 대리석 · 마루 … 는 Clear Coat, 헤어라인 · 포크는 Anisotropic — 하나도 못 찾으면 이 테스트는 아무것도 보지 않는다.
+    SW_EXPECT_TRUE( coatCount >= 5 );
+    SW_EXPECT_TRUE( anisotropicCount >= 2 );
 }

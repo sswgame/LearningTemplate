@@ -1,10 +1,19 @@
 // 디퍼드는 셰이딩 모델 번호마다 겹 BRDF 의 엽을 켠다 — 모든 엽을 컴파일하고 번호가 무게를 정한다(꺼진 엽은 무게 0 이라 PBR 과 같다).
-#define SW_SHADING_MODEL_LAYERED
-#define MATERIAL_LOBE_COAT
-#define MATERIAL_LOBE_SHEEN
-#define MATERIAL_LOBE_SUBSURFACE
-#define MATERIAL_LOBE_TRANSMISSION
-#define MATERIAL_LOBE_ANISOTROPY
+// 타일 분류 변형(SW_DEFERRED_TILE_CLASS — deferred_tile_class.hlsli)은 그 종류의 엽만 컴파일한다: SIMPLE 은 엽 없는 PBR, COMPLEX 와 풀스크린 한 장(정의 없음)은 모든 엽.
+#include "deferred_tile_class.hlsli"
+#if !defined( SW_DEFERRED_TILE_CLASS ) || SW_DEFERRED_TILE_CLASS == SW_DEFERRED_TILE_CLASS_COMPLEX
+    #define SW_DEFERRED_LIGHTING_LOBES 1
+    #define SW_SHADING_MODEL_LAYERED
+    #define MATERIAL_LOBE_COAT
+    #define MATERIAL_LOBE_SHEEN
+    #define MATERIAL_LOBE_SUBSURFACE
+    #define MATERIAL_LOBE_TRANSMISSION
+    #define MATERIAL_LOBE_ANISOTROPY
+#elif SW_DEFERRED_TILE_CLASS == SW_DEFERRED_TILE_CLASS_SIMPLE
+    #define SW_DEFERRED_LIGHTING_LOBES 0
+#else
+    #error "SW_DEFERRED_TILE_CLASS has no lobe selection - add its branch here (deferred_tile_class.hlsli)"
+#endif
 #include "lighting.hlsli"
 #include "fullscreen.hlsli"
 
@@ -14,13 +23,15 @@
  * 조명 식은 포워드와 **같은 함수**(lighting.hlsli 의 SurfaceBRDF::shadeLights)를 부른다. 두 경로가 각자 식을 들고 있으면 반드시 갈라진다("경로마다 다른 그림").
  * 셰이딩 모델 번호(G버퍼 알베도 알파 — shading_model_ids.hlsli)마다 사용자 칸(GBufferCustomData)을 풀어 엽을 하나 켠다 — 번호 하나에 분기 하나다(언리얼 디퍼드의 ShadingModelID 분기).
  * 출력은 장면 색(LitColor)에 **더한다**(파이프라인 XML 의 Additive) — G버퍼 패스가 자체 발광을 먼저 적어 두었다.
- * shortcut: 모든 엽이 컴파일되어 기본 PBR 픽셀도 엽 식을 무게 0 으로 돈다(빛마다 GGX 하나 · 시엔 하나 더). 비싸지면 번호별 타일 분류(언리얼 Strata 타일)로 가른다.
+ * 네이티브 bindless(DX12 · Vulkan)는 타일 분류(deferred_tile_classify.hlsl)가 8² 타일을 종류마다 모아 종류의 변형으로 타일 사각형만 간접 그리기 한다(VSTile) —
+ * 기본 PBR 만 있는 타일은 엽 식을 돌지 않고, 그린 것이 없는 타일은 셰이딩하지 않는다. 에뮬 백엔드는 풀스크린 한 장(모든 엽)이다.
  *
  * 월드 위치는 깊이에서 복원한다(Transform::computeWorldPositionFromDepth). G버퍼에 위치를 저장하지 않는 이유는
  * 첨부 하나를 통째로 아끼기 때문이고, 언리얼도 같은 선택을 한다.
  */
 
 /** @brief 번호마다 사용자 칸을 엽으로 — 번호 하나에 분기 하나. 모르는 번호는 기본 PBR 이다(번호 표 밖 값은 G버퍼 패스가 쓰지 않는다). */
+#if SW_DEFERRED_LIGHTING_LOBES
 void applyShadingModel( inout SurfaceBRDF brdf, uint shadingModel, float4 customData, float3 albedo )
 {
     if ( shadingModel == SW_SHADING_MODEL_ID_SUBSURFACE )
@@ -51,6 +62,33 @@ void applyShadingModel( inout SurfaceBRDF brdf, uint shadingModel, float4 custom
         brdf.setAnisotropy( Octahedral::decode( customData.rg * 2.0f - 1.0f ), customData.b * 2.0f - 1.0f );
     }
 }
+#else
+/** @brief 엽 없는 종류(SIMPLE) — 이 타일에는 PBR · Unlit 번호만 있다(분류가 보장한다). */
+void applyShadingModel( inout SurfaceBRDF brdf, uint shadingModel, float4 customData, float3 albedo )
+{
+}
+#endif
+
+#if defined( SW_DEFERRED_TILE_CLASS )
+// 타일 목록 — 분류 컴퓨트가 쓴 타일 좌표(x | y << 16). 종류 c 의 목록은 c × g_DeferredTileCapacity 에서 시작한다(패스 전용 구조버퍼 칸 t11).
+SW_DECLARE_STRUCTURED_BUFFER( uint, g_DeferredTiles, SW_SLOT_PASS_SRV );
+
+/**
+ * @brief 타일 사각형 한 정점 — 인스턴스 하나가 이 종류 목록의 타일 하나다(간접 인자의 인스턴스 수 = 분류가 센 타일 수). 정점 여섯이 삼각형 둘이다.
+ * @details UV 는 풀스크린 정점(fullscreen.hlsli)과 같은 규약 — 뷰 사각형 안 0..1, 위가 0. 사각형 밖으로 나간 끝 타일은 뷰포트가 자른다.
+ */
+PSInput VSTile( uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID )
+{
+    const uint   packed = g_DeferredTiles[SW_DEFERRED_TILE_CLASS * g_DeferredTileCapacity + instanceID];
+    const uint2  tile   = uint2( packed & 0xFFFFu, packed >> 16u );
+    const uint2  corner = uint2( ( vertexID == 1u || vertexID == 2u || vertexID == 4u ) ? 1u : 0u, ( vertexID == 2u || vertexID == 4u || vertexID == 5u ) ? 1u : 0u );
+    const float2 pixel  = float2( ( tile + corner ) * SW_DEFERRED_TILE_SIZE );
+    PSInput      output;
+    output._uv       = pixel / g_ViewRectSize.xy;
+    output._position = float4( output._uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f ), 0.0f, 1.0f );
+    return output;
+}
+#endif
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {

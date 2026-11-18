@@ -4,7 +4,6 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Encoding/FourCCUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
@@ -18,6 +17,7 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -30,6 +30,7 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -38,11 +39,6 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_psoAsync=0` 이면 머티리얼 변형 PSO 를 빌더 스레드가 아니라 렌더 스레드가 셋업 구간에서 모두 만듭니다(옛 동작 - A/B 측정 · 진단용).
-     * @details 기본은 빌더 스레드입니다(`MaterialPSOBuilder`). 스레드를 쓸 수 없는 백엔드(GL)는 이 값과 상관없이 렌더 스레드가 프레임당 시간 예산 안에서 만듭니다.
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_psoAsync, true, "머티리얼 변형 PSO 를 빌더 스레드가 만든다 (false=렌더 스레드가 동기로 만듦, A/B 측정용)" );
 
     namespace
     {
@@ -240,6 +236,13 @@ namespace sw
             return desc;
         }
 
+        /** @brief 디퍼드 조명 타일 종류 PSO 의 저장소 키입니다 — 머티리얼 변형 저장소의 키 공간을 빌린다(쿠키 아틀라스 PSO 와 같은 길 — 저장소가 소유하고 디바이스를 바꾸면 셋업이 다시 만든다). */
+        uint64 makeDeferredTilePSOKey( uint32 tileClass )
+        {
+            return RenderPSOCache::materialPSOKey( 0, HashUtil::combine( static_cast<uint64>( FourCCUtil::make( "DTLC" ) ), static_cast<uint64>( tileClass ) ), RenderViewMode::Lit, false,
+                                                   RHIMeshVertexFormat::Packed );
+        }
+
         /** @brief PSO 를 동기로 만듭니다(셰이더 컴파일 · 드라이버 생성을 렌더 스레드가 기다리는 시간을 `RT.PSO.create` 로 잰다). */
         [[nodiscard]] RHIPipelineStateHandle createPipelineStateTimed( IRHIDevice& device, const RHIPipelineStateDesc& desc )
         {
@@ -290,10 +293,11 @@ namespace sw
         finishPassRenderState( desc );
     }
 
-    FramePSOManager::FramePSOManager( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const GPUScene& gpuScene )
+    FramePSOManager::FramePSOManager( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const GPUScene& gpuScene, const RenderFrameSettings& frameSettings )
         : _pDevice{ pDevice }
         , _pipeline{ pipeline }
         , _gpuScene{ gpuScene }
+        , _frameSettings{ frameSettings }
         , _cache{}
         , _pCache{ &_cache }
     {
@@ -391,9 +395,33 @@ namespace sw
         // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPSO 주석 참고).
         collectOutputPSOJobs( listJob );
 
+        // 디퍼드 조명 타일 종류 변형 — 조명 패스 서술 그대로에 종류 define 과 타일 정점 진입점(deferred_lighting.hlsl VSTile). 분류 컴퓨트와 같은 조건(네이티브 bindless · 간접 인자)에서만 만든다.
+        struct DeferredTilePSOJob
+        {
+            uint64               _key{ 0 };
+            RHIPipelineStateDesc _desc{};
+        };
+        vector<DeferredTilePSOJob> listTileJob;
+        const RenderGraphPassDesc* pLightingDesc = findPassDescByType( RenderPassType::Lighting );
+        const bool                 bTileCapable  = pLightingDesc != nullptr && _pDevice->supportsNativeBindlessSampling() && caps._bGPUCulling != SW_FALSE;
+        for ( uint32 tileClass = 0; bTileCapable && tileClass < kDeferredTileClassCount; ++tileClass )
+        {
+            DeferredTilePSOJob tileJob;
+            tileJob._key = makeDeferredTilePSOKey( tileClass );
+            if ( _pCache->hasMaterialPSO( tileJob._key ) || makePassPSODesc( RenderPassType::Lighting, pLightingDesc, nullptr, tileJob._desc ) == false )
+                continue;
+            tileJob._desc._listShaderDefine = selectDeferredTileLightingShader( *pLightingDesc, tileClass, engineDefaultAssets )._listDefine;
+            tileJob._desc._vertexEntryPoint = kDeferredTileVertexEntryPoint;
+            listTileJob.push_back( std::move( tileJob ) );
+        }
+
         // 2) 셰이더 데우기 — 패스 PSO 셋과, 처음 그리는 프레임에 만드는 PSO(입자 · 쿠키 아틀라스)의 셰이더를 한 번에 나눈다.
         //    입자 PSO 는 투명 패스의 desc 를 물려받으므로 이번에 만들 투명 패스 desc 가 있을 때만 넣는다(이미 있으면 처음 셋업이 데웠다).
         vector<ShaderCompileDesc> listShader;
+        for ( const DeferredTilePSOJob& tileJob : listTileJob )
+        {
+            appendShaderWarm( tileJob._desc, listShader );
+        }
         for ( const PassPSOJob& job : listJob )
         {
             appendShaderWarm( job._desc, listShader );
@@ -451,8 +479,24 @@ namespace sw
             }
             _pCache->setEnginePSO( job._passType, pso );
         }
+        for ( const DeferredTilePSOJob& tileJob : listTileJob )
+        {
+            // 못 만들면 그 이유를 남기고 조명은 풀스크린 한 장(모든 엽 — 같은 그림)으로 그린다(`FramePassExecutor::executeTiledLighting` 이 종류 하나라도 없으면 타일을 쓰지 않는다).
+            const RHIPipelineStateHandle pso = createPipelineStateTimed( *_pDevice, tileJob._desc );
+            if ( pso == 0 )
+                SW_LOG_ERROR_ID( "FramePSOManager.DeferredTilePSOCould", "Deferred lighting tile PSO could not be created (shader '%#') - lighting draws one fullscreen triangle with every lobe",
+                                 tileJob._desc._vertexShaderPath.c_str() );
+            else
+                registerLayout( pso, tileJob._desc );
+            _pCache->setMaterialPSO( tileJob._key, RenderPSOCache::MaterialPSOEntry::ready( pso, true ) );
+        }
         // 폴백 원소는 PSO 를 모두 등록한 뒤에 만든다. 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
         ensureMaterialFallbackBuffers();
+    }
+
+    RHIPipelineStateHandle FramePSOManager::findDeferredTilePSO( uint32 tileClass ) const
+    {
+        return _pCache->findMaterialPSO( makeDeferredTilePSOKey( tileClass ) );
     }
 
     void FramePSOManager::release()
@@ -914,22 +958,13 @@ namespace sw
                     desc._pixelEntryPoint = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
                 bChanged = true;
             }
+            // 같은 이름은 머티리얼 값으로 바꾼다(패스의 MATERIAL_TEXTURE_COUNT=0 → 머티리얼 칸 수) — 쿠커와 같은 함수(MaterialPermutation::mergeDefine).
             for ( const string& defineStr : pPermutation->_listDefine )
             {
-                bool bFound{ false };
-                for ( const string& existing : desc._listShaderDefine )
-                {
-                    if ( existing == defineStr )
-                    {
-                        bFound = true;
-                        break;
-                    }
-                }
-                if ( bFound == false )
-                {
-                    desc._listShaderDefine.push_back( defineStr );
-                    bChanged = true;
-                }
+                if ( VectorUtil::contains( desc._listShaderDefine, defineStr ) )
+                    continue;
+                MaterialPermutation::mergeDefine( desc._listShaderDefine, defineStr );
+                bChanged = true;
             }
         }
 
@@ -1128,7 +1163,7 @@ namespace sw
     {
         // GL 은 컨텍스트가 스레드에 묶여 빌더 스레드에서 만들 수 없다 — 렌더 스레드가 같은 줄을 예산 안에서 만든다.
         // 결정적 실행(`DeterministicRunPolicy::_bFinishAssetJobsEachFrame`)은 빌더 스레드를 쓰지 않는다 — 변형이 언제 준비되느냐가 컴파일 시간(셰이더 캐시가 비었는가)에 달린다.
-        return gv_psoAsync && engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_FALSE && _pDevice != nullptr && _pDevice->getCapabilities()._bThreadSafeResourceCreation != SW_FALSE;
+        return _frameSettings._bPSOAsync != SW_FALSE && engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_FALSE && _pDevice != nullptr && _pDevice->getCapabilities()._bThreadSafeResourceCreation != SW_FALSE;
     }
 
     void FramePSOManager::pollMaterialPSOBuilds()
@@ -1138,7 +1173,7 @@ namespace sw
         SW_PROFILE_SCOPE( "RT.PSO.pumpBuilds" );
         // 빌더 스레드를 쓰지 않을 때: `-gv_psoAsync=0` 은 전부(옛 동작, A/B 측정), 그 밖(GL)은 프레임당 시간 예산(줄이 있으면 최소 하나)이다.
         // 예산은 `EngineConfig::_render`(Config/Engine/EngineConfig.json)가 정본이다 — 0 이면 로드의 범위 검사(Min 1)가 막는다.
-        const bool   bBuildAll          = gv_psoAsync == false || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE; // 결정적 실행은 시간 예산 없이 이 프레임에 모두 만든다
+        const bool   bBuildAll          = _frameSettings._bPSOAsync == SW_FALSE || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE; // 결정적 실행은 시간 예산 없이 이 프레임에 모두 만든다
         const uint32 budgetMicroseconds = bBuildAll ? 0u : engine::getSubsystem<EngineConfig>()._render._psoBuildBudgetMicroseconds;
         const uint32 readyCount         = _pCache->pollMaterialPSOBuilds( _pDevice, usesAsyncMaterialPSOBuilder(), budgetMicroseconds );
         SW_PROFILE_COUNT( "RT.PSO.pendingBuilds", _pCache->getPendingMaterialPSOBuilds() );

@@ -160,6 +160,10 @@ namespace sw
         DataPath _colorGradingLUT;
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "How much of the LUT result replaces the colour; 0 is off" )
         float32 _colorGradingLUTIntensity{ 0.0f };
+        /// @brief 겹친 볼륨이 섞는 둘째 LUT 입니다 — 섞기(`blendColorGradingLUT`)만 채우는 칸이라 저작 칸(PROPERTY)이 아니다. 비면 항등 LUT 다.
+        DataPath _colorGradingLUTBlend;
+        /// @brief 둘째 LUT 의 무게(0..1)입니다. 색 = lerp( 첫 LUT, 둘째 LUT, 무게 ) 를 세기만큼. 0 이면 첫 LUT 만이다.
+        float32 _colorGradingLUTBlendWeight{ 0.0f };
 
         /**
          * @brief 렌즈 · 필름 효과입니다(언리얼 Lens · Film Grain 칸). 모두 톤맵하는 셰이더 안에서 돈다(`CameraGrade::applyLens` · `applyFilmGrain`) — 원본을 읽는 자리에서
@@ -228,9 +232,16 @@ namespace sw
         static PostProcessValues blend( const PostProcessValues& from, const PostProcessValues& to, float32 weight );
         /**
          * @brief @p inoutValues 의 칸 가운데 @p overrides 가 켠 칸만 @p target 쪽으로 @p weight 만큼 섞습니다(언리얼 볼륨 블렌드의 bOverride_* 칸).
-         * @details 섞을 수 없는 칸(경로 — LUT · 먼지 마스크)은 @p weight 가 0.5 이상일 때 바꾼다. 레터박스는 양쪽에 있을 때만 비율을 섞고, 한쪽에만 있으면 절반에서 바꾼다(0 은 없음이라 섞을 비율이 없다).
+         * @details 컬러 그레이딩 LUT 는 두 장을 무게로 섞는다(`blendColorGradingLUT`). 먼지 마스크 경로는 @p weight 가 0.5 이상일 때 바꾼다.
+         *          레터박스는 양쪽에 있을 때만 비율을 섞고, 한쪽에만 있으면 절반에서 바꾼다(0 은 없음이라 섞을 비율이 없다).
          */
         static void blendOverrides( PostProcessValues& inoutValues, const PostProcessValues& target, const PostProcessOverrides& overrides, float32 weight );
+        /**
+         * @brief 지금의 LUT 짝(첫 LUT · 둘째 LUT · 둘째 무게)을 @p target 경로 쪽으로 @p alpha 만큼 섞습니다(빈 경로는 항등 LUT 다).
+         * @details 언리얼 CombineLUTs 의 무게 붙은 LUT 목록과 같은 셈을 두 장으로 한다 — 셋째 LUT 가 들어오면 무게가 가장 작은 것을 버리고 둘을 다시 정규화한다.
+         *          @p target 이 이미 짝을 가졌으면(포즈 블렌드의 반대편이 볼륨 사이) 그 첫 LUT 만 본다.
+         */
+        static void blendColorGradingLUT( PostProcessValues& inoutValues, const DataPath& target, float32 alpha );
     };
 
     /**

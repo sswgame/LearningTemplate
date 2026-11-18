@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="1ba99fce681ba40c72afde0c77a6c37c"?>
-<!-- 빙렬 청자 유약 — 유약 밑의 가는 균열(칸 무늬, 홈 깊이 0 — 유약이 덮어 평평하다). 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<!-- 빙렬 청자 유약 — 유약 밑의 가는 균열(칸 무늬, 홈 깊이 0 — 유약이 덮어 평평하다). 부모(environmentsurface.material)의 값을 바꾸고 Clear Coat 셰이딩 모델(MATERIAL_LOBE_COAT)을 고른 프리셋이다. -->
 <MaterialDef formatVersion="0" name="PorcelainCrackle" _base="engine/materials/environmentsurface.material">
 	<_properties>
 		<item name="_baseColor" defaultValue="0.70 0.80 0.72 1"/>
@@ -13,4 +13,19 @@
 		<item name="_clearCoatRoughness" defaultValue="0.04"/>
 		<item name="_porosity" defaultValue="0"/>
 	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_LOBE_COAT</item>
+		</_alwaysDefines>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_OFF">
+				<_options>
+					<item>FOG_OFF</item>
+					<item>FOG_LINEAR</item>
+					<item>FOG_EXP</item>
+				</_options>
+			</item>
+		</_multiCompiles>
+	</_permutations>
 </MaterialDef>

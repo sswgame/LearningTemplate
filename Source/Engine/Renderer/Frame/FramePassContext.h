@@ -24,7 +24,7 @@ namespace sw
      *          상수 버퍼도 패스마다 따로 있어야 한다. 하나를 공유하면 기록은 지연되고
      *          버퍼 쓰기는 즉시 일어나므로, replay 시점에는 마지막으로 쓴 값만 남는다.
      */
-    /** @brief 그림자 패스가 그릴 배치를 정적 여부(`GPUMeshBatch::_bStaticShadowCaster`)로 거르는 방식입니다. 그림자 캐시가 쓴다(`FramePassExecutor::drawShadowTiles`). */
+    /** @brief 그림자 패스가 그릴 배치를 정적 여부(`GPUMeshBatch::_bStaticShadowCaster`)로 거르는 방식입니다. 그림자 캐시가 쓴다(`FramePassExecutor::drawLocalShadowTiles`). */
     enum class ShadowCasterFilter : uint8
     {
         All,         ///< 거르지 않는다(그림자 캐시가 아닌 모든 그리기)

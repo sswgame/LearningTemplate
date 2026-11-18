@@ -7,7 +7,7 @@
  *          (언리얼 WorldAlignedTexture 와 같은 생각, 축 하나만 골라 섞지는 않는다).
  *          머티리얼 define: `MATERIAL_ALPHA_CUTOFF`(glTF alphaMode MASK — 잎 · 꽃) · `MATERIAL_TWO_SIDED`(glTF doubleSided — 컬링은 PSO 변형이 끄고 뒷면 노멀은 뼈대가 뒤집는다) ·
  *          `MATERIAL_DISPLACEMENT`(높이 맵 변위 — 헐 · 도메인이 붙은 변형으로 윤곽까지 바뀐다, material_displacement.hlsli).
- *          shortcut: 가림은 알베도에 곱한다 — 직접광도 조금 어두워진다. G버퍼에 가림 칸이 생기면 간접광(앰비언트 · 프로브)에만 곱한다.
+ *          가림(ORM R)은 간접광(앰비언트 · 프로브)에만 든다(SW_MATERIAL_OCCLUSION — 직접광은 그림자가 가린다, 언리얼 · 유니티 · Godot 과 같다).
  */
 #include "lighting.hlsli"
 
@@ -38,43 +38,29 @@ SW_MATERIAL_END
 
 #define SW_MATERIAL_DEFAULT_LIGHTING
 #define SW_MATERIAL_RIM_LIGHT
+#define SW_MATERIAL_OCCLUSION
 #define SW_MATERIAL_DEFAULT_VARYINGS
 #if !defined( SW_PASS_SHADOW ) && !defined( SW_PASS_DEPTH_PREPASS )
     #define SW_MATERIAL_USES_TANGENT
 #endif
 #include "material_shader.hlsli"
 #include "normal_map.hlsli"
+#include "material_functions.hlsli"
 
 /**
  * @brief 월드 축 정렬 투영 UV 와 그 탄젠트입니다. 노멀이 가장 큰 축의 면에 투영하고, 벽은 위가 이미지 위다.
- * @details 탄젠트 손잡이는 메시와 같은 규약이다 — cross( N, T ) × w 가 -dP/dv(수면: UV = xz, T = +x, w = +1 — `WaterBodyComponent`).
- *          shortcut: 반대쪽 면(-x · -z)은 이미지가 좌우로 뒤집힌다 — 콘크리트 · 블록 같은 무늬엔 보이지 않는다. 글자 · 방향 있는 무늬를 쓰면 면마다 u 부호를 고른다.
+ * @details UV 는 3 축 투영과 같은 함수다(SurfaceFunction::computeTriplanarFaceUV — 여섯 면 모두 거울상이 아니다). 탄젠트는 그 UV 의 dP/du 다.
+ *          탄젠트 손잡이는 메시와 같은 규약이다 — cross( N, T ) × w 가 -dP/dv(수면: UV = xz, T = +x, w = +1 — `WaterBodyComponent`).
  */
 void computeWorldAlignedUV( float3 worldPosition, float3 normal, float tileSize, out float2 outUV, out float4 outTangent )
 {
-    const float3 axisWeight = abs( normal );
-    float3       tangent;
-    float3       downV;
-    if ( axisWeight.y >= axisWeight.x && axisWeight.y >= axisWeight.z )
-    {
-        outUV   = worldPosition.xz;
-        tangent = float3( 1.0f, 0.0f, 0.0f );
-        downV   = float3( 0.0f, 0.0f, 1.0f );
-    }
-    else if ( axisWeight.x >= axisWeight.z )
-    {
-        outUV   = float2( worldPosition.z, -worldPosition.y );
-        tangent = float3( 0.0f, 0.0f, 1.0f );
-        downV   = float3( 0.0f, -1.0f, 0.0f );
-    }
-    else
-    {
-        outUV   = float2( worldPosition.x, -worldPosition.y );
-        tangent = float3( 1.0f, 0.0f, 0.0f );
-        downV   = float3( 0.0f, -1.0f, 0.0f );
-    }
-    outUV /= tileSize;
-    outTangent = float4( tangent, dot( cross( normal, tangent ), downV ) > 0.0f ? -1.0f : 1.0f );
+    const uint   axis     = SurfaceFunction::findDominantAxis( normal );
+    const float3 faceSign = float3( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f, normal.z >= 0.0f ? 1.0f : -1.0f );
+    // computeTriplanarFaceUV 의 dP/du(탄젠트) · dP/dv(아래)
+    const float3 tangent = ( axis == 0u ) ? float3( 0.0f, 0.0f, faceSign.x ) : ( ( axis == 1u ) ? float3( faceSign.y, 0.0f, 0.0f ) : float3( -faceSign.z, 0.0f, 0.0f ) );
+    const float3 downV   = ( axis == 1u ) ? float3( 0.0f, 0.0f, -1.0f ) : float3( 0.0f, -1.0f, 0.0f );
+    outUV                = SurfaceFunction::computeTriplanarFaceUV( worldPosition, normal, axis ) / tileSize;
+    outTangent           = float4( tangent, dot( cross( normal, tangent ), downV ) > 0.0f ? -1.0f : 1.0f );
 }
 
 MaterialSurface computeMaterialSurface( PixelContext context )
@@ -90,7 +76,7 @@ MaterialSurface computeMaterialSurface( PixelContext context )
 
     MaterialSurface surface;
     surface._albedo = context._color * context._material._color * albedoTexture;
-    surface._albedo.rgb *= occlusion;
+    surface.setOcclusion( occlusion );
 #if defined( SW_MATERIAL_USES_TANGENT )
     surface._normal = applyNormalMap( context._material._normalMap, context._material._normalScale, context._uv, context._normal, context._tangent );
 #else

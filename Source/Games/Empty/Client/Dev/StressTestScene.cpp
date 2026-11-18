@@ -403,7 +403,7 @@ namespace sw
     /**
      * @brief `-gv_stressTestSpawnChurn=N`: 프레임마다 큐브 N 개를 지우고 같은 위치에 새로 만듭니다(총알처럼 스폰이 잦은 게임의 패턴입니다).
      * @details 스폰과 파괴 경로(이름 유일화, 풀, 레지스트리)와 "틱 멤버십이 매 프레임 바뀌는" 틱 레지스트리를 측정합니다. 새 큐브는 같은 메시
-     *          종류와 기본 머티리얼을 쓰고, 무버(`-gv_stressTestTickMovers`)도 함께 붙습니다.
+     *          종류와 기본 머티리얼을 쓰고, 무버(`-gv_stressTestTickMovers`)도 함께 붙습니다. `-gv_stressTestInstanced=1` 이면 인스턴스 격자 옆에 메시 컴포넌트 큐브 N 개를 따로 두고 그것을 돌립니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestSpawnChurn, 0, "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 레지스트리 측정)" );
 
@@ -760,6 +760,14 @@ namespace sw
             if ( gv_stressTestMaterialInstances != 0 || transparentPercent > 0 )
                 SW_LOG_WARNING_ID( "StressTestScene.GvStressTestInstancedDoesNot", "[Bench] -gv_stressTestInstanced=1 does not support per-cube material instances or a transparent ratio - ignoring them." );
             spawnInstancedGrid( pObjects, pSceneMaterial, meshCount, meshVariantCount, side, origin );
+            // 스폰 · 소멸 부하(`-gv_stressTestSpawnChurn`)는 인스턴스 격자 위에 메시 컴포넌트 큐브를 그 수만큼 따로 두고 `updateSpawnChurn` 이 프레임마다 지우고 새로 만든다 —
+            // 큰 인스턴스 집합 옆에서 프리미티브 몇 개가 드나드는 씬(GPUScene 부분 수집 측정, load/instancechurn)이다.
+            const uint32 churnCubeCount = MathUtil::min( static_cast<uint32>( MathUtil::max( gv_stressTestSpawnChurn, 0 ) ), meshCount );
+            for ( uint32 index = 0; index < churnCubeCount; ++index )
+            {
+                if ( MeshComponent* pMesh = spawnCube( pObjects, pSceneMaterial, index, side, origin ) )
+                    _listBenchMesh.push_back( TComponentHandle<MeshComponent>{ pMesh } );
+            }
             finishGrid( pScene, side );
             SW_LOG_INFO_ID( "StressTestScene.SceneCreatedCubesInstanced", "[Bench] In scene '%#', created %# cubes in %# instanced batches (%#x%# grid, no GameObject).",
                             pScene->getName(), meshCount, meshVariantCount, side, side );

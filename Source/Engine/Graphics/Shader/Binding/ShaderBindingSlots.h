@@ -39,7 +39,7 @@ namespace sw
         // 2) SRV(t#, space0): 네 백엔드 공통 슬롯
         // ------------------------------------------------------------------------------
         /**
-         * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 레지스터 t32..t50 입니다 — 역할 하나가 칸 하나(`emulated::kEngineTextureNames` 의 순서)입니다.
+         * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 레지스터 t32..t56 입니다 — 역할 하나가 칸 하나(`emulated::kEngineTextureNames` 의 순서)입니다.
          * @details GL 텍스처 유닛은 레지스터 번호 그대로다(머티리얼 칸과 같은 규칙 — 유닛 t32..). DX12 · Vulkan 은 선언하지 않는다.
          */
         inline constexpr uint32 kEngineTexture0     = SW_SLOT_ENGINE_TEX0;
@@ -366,7 +366,7 @@ namespace sw
         /**
          * @brief WebGPU 바인드 그룹 0 의 번호입니다. binding = 레지스터 종류별 시프트 + 번호(DXC -fvk-b/t/s/u-shift 와 같은 값)이고 그룹은 하나다.
          * @details 셰이더는 이 값을 읽지 않는다 — DXC 인자(ShaderCompiler)와 백엔드의 바인드 그룹(WebGPURHICommandContext)과 리플렉션의 번호 되돌림(ShaderReflectionData)만 쓴다.
-         *          t 띠가 엔진 텍스처 칸(t32..t50)까지 가므로 t 폭이 가장 넓다. 샘플러가 따로 있다 — WGSL 은 텍스처 · 샘플러를 나눠 받는다(DX11 과 같은 모양, GL 의 결합 샘플러가 아니다).
+         *          t 띠가 엔진 텍스처 칸(t32..t56)까지 가므로 t 폭이 가장 넓다. 샘플러가 따로 있다 — WGSL 은 텍스처 · 샘플러를 나눠 받는다(DX11 과 같은 모양, GL 의 결합 샘플러가 아니다).
          */
         namespace wgpu
         {
@@ -386,7 +386,7 @@ namespace sw
             /**
              * @brief 셰이더 단계 하나가 선언해도 되는 샘플 텍스처 수 — 장치가 어댑터에 요구하는 maxSampledTexturesPerShaderStage 의 하한입니다.
              * @details 값은 Config/Engine/CookContract.json 의 WebGPU stage_texture_unit_limit 하나다(WebGPU 명세의 기본 한도 16 — 모든 어댑터가 준다).
-             *          칸 에뮬 전체(머티리얼 16 + 엔진 18)는 이보다 커서 셰이더가 쓰는 칸만 남는 것이 전제다 — 쿠킹의 계약 검사가 넘는 바이너리를
+             *          칸 에뮬 전체(머티리얼 16 + 엔진 25)는 이보다 커서 셰이더가 쓰는 칸만 남는 것이 전제다 — 쿠킹의 계약 검사가 넘는 바이너리를
              *          오류로 멈추고(ShaderBindingValidatorIssue), 장치 생성이 한도가 이보다 작은 어댑터를 거절한다(WebGPURHIDevice). GL 의 kFragmentTextureUnitBudget 과 같은 모양이다.
              */
 #if !defined( SW_STAGE_TEXTURE_UNIT_LIMIT_WGSL_WebGPU )
@@ -394,6 +394,15 @@ namespace sw
 #endif
             inline constexpr uint32 kStageTextureBudget = SW_STAGE_TEXTURE_UNIT_LIMIT_WGSL_WebGPU;
             static_assert( kMaterialTextureCount <= kStageTextureBudget, "WebGPU 단계 텍스처 예산이 머티리얼 칸 수보다 작다" );
+            /**
+             * @brief 웹에서 머티리얼 변형 하나가 가질 수 있는 텍스처 칸 수입니다(binding_slots.hlsli SW_MATERIAL_TEXTURE_SLOT_COUNT_WEBGPU — 셰이더가 넘으면 #error).
+             * @details 웹 에뮬 셰이더는 머티리얼 변형이 가진 칸(MATERIAL_TEXTURE_COUNT)만 선언하고, 같은 단계에 패스의 엔진 텍스처(그림자 아틀라스 둘 · 접촉 그림자 ·
+             *          장면 색 · 깊이 사본 · 2D 쿠키 — `kMaterialStageEngineTextureReserve`)가 함께 든다. 둘의 합이 단계 예산 안이어야 쿠킹 계약 검사를 통과한다.
+             */
+            inline constexpr uint32 kMaterialTextureBudget             = SW_MATERIAL_TEXTURE_SLOT_COUNT_WEBGPU;
+            inline constexpr uint32 kMaterialStageEngineTextureReserve = 6;
+            static_assert( kMaterialTextureBudget + kMaterialStageEngineTextureReserve <= kStageTextureBudget && kMaterialTextureBudget <= kMaterialTextureCount,
+                           "웹 머티리얼 칸 예산과 엔진 텍스처 몫의 합이 단계 텍스처 예산을 넘는다" );
         } // namespace wgpu
 
         /// @brief 엔진 예약 CB 이름입니다(리플렉션 매칭 키).
@@ -455,8 +464,8 @@ namespace sw
         static_assert( kInstanceBuffer == 4, "t0..t3 은 비어 있고 띠는 인스턴스 버퍼 t4 부터다 — 띠를 내리면 DX12 테이블 · Vulkan 범위 · GL SSBO 번호가 함께 움직인다" );
         static_assert( kEngineTexture0 >= kMaterialTexture0 + kMaterialTextureCount && kEngineTexture0 >= vk::kRangeSize,
                        "엔진 텍스처 칸(에뮬)은 t 띠 · 머티리얼 칸 위다 — DX11 SRV 128 칸 안이고, GL 은 유닛을 칸 번호로 옮긴다" );
-        static_assert( SW_SLOT_ENGINE_TEX18 == SW_SLOT_ENGINE_TEX0 + 18 && kEngineTextureCount == 19 && kEngineTexture0 + kEngineTextureCount <= gl::kTextureUnitLimit,
-                       "엔진 텍스처 칸은 연속 19 칸이다. GL 텍스처 유닛은 머티리얼 칸처럼 레지스터 번호 그대로(t32..)라 GL 백엔드가 유닛 64 개 안에서 묶는다 (binding.hlsli 의 선언과 같다)" );
+        static_assert( SW_SLOT_ENGINE_TEX24 == SW_SLOT_ENGINE_TEX0 + 24 && kEngineTextureCount == 25 && kEngineTexture0 + kEngineTextureCount <= gl::kTextureUnitLimit,
+                       "엔진 텍스처 칸은 연속 25 칸이다. GL 텍스처 유닛은 머티리얼 칸처럼 레지스터 번호 그대로(t32..)라 GL 백엔드가 유닛 64 개 안에서 묶는다 (binding.hlsli 의 선언과 같다)" );
         static_assert( kMaterialBuffer == kInstanceBuffer + 1, "머티리얼 데이터 버퍼는 인스턴스 버퍼 바로 다음이어야 한다" );
         static_assert( kMaterialTexture0 == vk::kRangeSize && kSRVSlotCount <= kMaterialTexture0,
                        "머티리얼 텍스처 슬롯(에뮬)은 Vulkan t 밴드 바로 뒤에 둔다 — DX12 테이블 · Vulkan t 밴드 밖이고 SRV 띠가 자라도 겹치지 않는다" );
@@ -504,25 +513,31 @@ namespace sw
             inline constexpr const utf8* kIndexMacroPrefix = "SW_ENGINE_TEXTURE_INDEX_"; ///< 뒤에 칸 번호가 붙고 값은 `g_<이름>Index` 다(PassCB 필드 이름).
 
             inline constexpr const utf8* kEngineTextureNames[] = {
-                "ShadowMap",          ///< 그림자 깊이
-                "SourceColor",        ///< 패스가 가공할 컬러(직전 패스의 출력)
-                "GBufferAlbedo",      ///< G버퍼 알베도
-                "AmbientOcclusion",   ///< SSAO 결과(AOColor). 없으면 kInvalidIndex — AO 1
-                "SceneColorCopy",     ///< 반투명 앞에 떠 둔 장면 색 사본 — 반투명 패스가 선언했을 때만(water.hlsl 굴절)
-                "SceneDepthCopy",     ///< 반투명 앞에 떠 둔 장면 깊이 사본(R32 실수) — 반투명 패스가 선언했을 때만(water.hlsl 두께)
-                "GBufferNormal",      ///< G버퍼 노멀
-                "BloomBright",        ///< 반해상도 블룸 밝은 부분(BloomDownsample 출력). 없으면 원본에서 직접 구한다
-                "SceneDepth",         ///< 씬 깊이
-                "GBufferMaterial",    ///< G버퍼 머티리얼 칸(금속도 · 거칠기) — 디퍼드 조명(PassTexture::loadGbufferMaterial)
-                "Light2DCookieAtlas", ///< 2D 빛 쿠키 아틀라스 — 쿠키를 쓴 2D 빛이 있는 프레임에만
-                "AutoExposure",       ///< 자동 노출의 이번 EV(1x1 R32) — 톤맵하는 패스에만(post_grade.hlsli). 없으면 EV 0
-                "Velocity",           ///< 화면 속도(SceneVelocity, R16G16 실수) — TAA · 모션 블러가 선언했을 때만
-                "Distortion",         ///< 화면 왜곡 오프셋(SceneDistortion, R16G16 실수) — 왜곡 적용 패스가 선언했을 때만
-                "ColorGradingLUT",    ///< 컬러 그레이딩 LUT(가로 N² × 세로 N 띠, PostProcessValues::_colorGradingLUT) — 톤맵하는 패스에, 읽힌 LUT 가 있는 뷰만
-                "BloomDirtMask",      ///< 블룸 먼지 마스크(PostProcessValues::_bloomDirtMask) — 블룸을 더하는 패스에, 읽힌 마스크가 있는 뷰만
-                "ContactShadow",      ///< 접촉 그림자 마스크(ContactShadow 패스 출력, 채널 넷 = 빛 넷) — 조명 · 포워드 불투명이 선언했을 때만. 없으면 1(가림 없음)
-                "GBufferCustomData",  ///< G버퍼 사용자 칸(셰이딩 모델 번호마다의 값) — 디퍼드 조명(PassTexture::sampleGbufferCustomData)
-                "SurfaceDeform",      ///< 표면 변형 층의 높이 텍스처(SurfaceDeformSystem, 창은 g_SurfaceDeformParams) — 씬 지오메트리 패스에, 찍은 적이 있는 씬만. 정점 단계가 읽는다
+                "ShadowMap",            ///< 그림자 깊이
+                "SourceColor",          ///< 패스가 가공할 컬러(직전 패스의 출력)
+                "GBufferAlbedo",        ///< G버퍼 알베도
+                "AmbientOcclusion",     ///< SSAO 결과(AOColor). 없으면 kInvalidIndex — AO 1
+                "SceneColorCopy",       ///< 반투명 앞에 떠 둔 장면 색 사본 — 반투명 패스가 선언했을 때만(water.hlsl 굴절)
+                "SceneDepthCopy",       ///< 반투명 앞에 떠 둔 장면 깊이 사본(R32 실수) — 반투명 패스가 선언했을 때만(water.hlsl 두께)
+                "GBufferNormal",        ///< G버퍼 노멀
+                "BloomBright",          ///< 반해상도 블룸 밝은 부분(BloomDownsample 출력). 없으면 원본에서 직접 구한다
+                "SceneDepth",           ///< 씬 깊이
+                "GBufferMaterial",      ///< G버퍼 머티리얼 칸(금속도 · 거칠기) — 디퍼드 조명(PassTexture::loadGbufferMaterial)
+                "Light2DCookieAtlas",   ///< 2D 빛 쿠키 아틀라스 — 쿠키를 쓴 2D 빛이 있는 프레임에만
+                "AutoExposure",         ///< 자동 노출의 이번 EV(1x1 R32) — 톤맵하는 패스에만(post_grade.hlsli). 없으면 EV 0
+                "Velocity",             ///< 화면 속도(SceneVelocity, R16G16 실수) — TAA · 모션 블러가 선언했을 때만
+                "Distortion",           ///< 화면 왜곡 오프셋(SceneDistortion, R16G16 실수) — 왜곡 적용 패스가 선언했을 때만
+                "ColorGradingLUT",      ///< 컬러 그레이딩 LUT(가로 N² × 세로 N 띠, PostProcessValues::_colorGradingLUT) — 톤맵하는 패스에, 읽힌 LUT 가 있는 뷰만
+                "BloomDirtMask",        ///< 블룸 먼지 마스크(PostProcessValues::_bloomDirtMask) — 블룸을 더하는 패스에, 읽힌 마스크가 있는 뷰만
+                "ContactShadow",        ///< 접촉 그림자 마스크(ContactShadow 패스 출력, 채널 넷 = 빛 넷) — 조명 · 포워드 불투명이 선언했을 때만. 없으면 1(가림 없음)
+                "GBufferCustomData",    ///< G버퍼 사용자 칸(셰이딩 모델 번호마다의 값) — 디퍼드 조명(PassTexture::sampleGbufferCustomData)
+                "SurfaceDeform",        ///< 표면 변형 층의 높이 텍스처(SurfaceDeformSystem, 창은 g_SurfaceDeformParams) — 씬 지오메트리 패스에, 찍은 적이 있는 씬만. 정점 단계가 읽는다
+                "LocalShadowMap",       ///< 점광 · 스폿 그림자 아틀라스(방향광 ShadowMap 과 다른 텍스처 — 감사 RN-4). 그림자 캐시 복원 드로우 동안은 캐시 층
+                "ColorGradingLUTBlend", ///< 겹친 볼륨이 섞는 둘째 컬러 그레이딩 LUT(PostProcessValues::_colorGradingLUTBlend) — 톤맵하는 패스에, 두 LUT 가 다 읽힌 뷰만
+                "VelocityNeighborMax",  ///< 모션 블러 이웃 최대 속도(MotionBlurNeighborMax 출력, 16² 픽셀 타일) — 모션 블러가 선언했을 때만
+                "DBufferA",             ///< DBuffer 데칼 색(rgb 덮인 색, a 남은 비율 — Decal 패스 출력) — 베이스 패스(G버퍼 · 포워드 불투명)가 선언했고 이번 뷰에 데칼이 있을 때만
+                "DBufferB",             ///< DBuffer 데칼 노멀(rgb 덮인 월드 노멀 × 0.5 + 0.5, a 남은 비율)
+                "DBufferC",             ///< DBuffer 데칼 거칠기 · 금속도(r · g 덮인 값, a 남은 비율)
             };
             static_assert( sizeof( kEngineTextureNames ) / sizeof( kEngineTextureNames[0] ) == kEngineTextureCount, "엔진 텍스처 칸 표와 칸 수(SW_ENGINE_TEXTURE_COUNT)가 다르다" );
 

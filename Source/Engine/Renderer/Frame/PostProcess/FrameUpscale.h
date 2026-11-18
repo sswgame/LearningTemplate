@@ -18,6 +18,7 @@ namespace sw
     struct FogSettings;
     struct FramePassContext;
     struct FrameViewTarget;
+    struct RenderFrameSettings;
     struct RenderGraphPassDesc;
     struct RenderView;
 
@@ -34,7 +35,7 @@ namespace sw
     class SW_API FrameUpscale
     {
     public:
-        FrameUpscale( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const FramePSOManager& psoManager );
+        FrameUpscale( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const RenderFrameSettings& frameSettings, const FramePSOManager& psoManager );
         FrameUpscale( const FrameUpscale& )            = delete;
         FrameUpscale& operator=( const FrameUpscale& ) = delete;
 
@@ -56,6 +57,7 @@ namespace sw
     private:
         IRHIDevice* const&         _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다
         const RenderPipelineAsset& _pipeline;
+        const RenderFrameSettings& _frameSettings; ///< 렌더러의 프레임 설정 사본(`FrameRenderState::_settings`) — 업스케일 필터 · 선명도
         const FramePSOManager&     _psoManager;
         /// @brief Present 가 톤맵하는 파이프라인에서 FSR 1 을 켰다는 오류를 남겼다(셋업에서만 읽고 쓴다 — 한 번만 알린다).
         uint8 _bUpscalePostChainLogged{ SW_FALSE };

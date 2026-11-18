@@ -83,10 +83,11 @@ namespace sw
          */
         AABB computeRealtimeVoxelBounds() const;
         /**
-         * @brief 지금 상자 · 칸 크기 · 프리미티브 집합 세대(@p primitiveSetGeneration)에 맞는 복셀 격자 캐시를 돌려줍니다. 없거나 낡았으면 nullptr 입니다(부르는 쪽이 다시 만들어 `setRealtimeVoxelGrid`).
-         * @details 수집 경로(`collectSceneLights`, 게임 스레드)에서만 부른다 — 캐시는 const 수집 길에서 채우므로 mutable 이다.
+         * @brief 지금 상자 · 칸 크기에 맞는 복셀 격자 캐시와 그것을 만들 때의 프리미티브 집합 세대(@p outPrimitiveSetGeneration)를 돌려줍니다. 없거나 상자 · 칸 크기가 바뀌었으면 nullptr 입니다.
+         * @details 세대가 지금과 다르면 부르는 쪽이 그 사이 바뀐 메시 칸만 다시 칠하거나(`SceneVoxelizer::updateGrid`) 다시 만들어 `setRealtimeVoxelGrid` 로 넣는다.
+         *          수집 경로(`collectSceneLights`, 게임 스레드)에서만 부른다 — 캐시는 const 수집 길에서 채우므로 mutable 이다.
          */
-        shared_ptr<const SceneVoxelGrid> findRealtimeVoxelGrid( uint64 primitiveSetGeneration ) const;
+        shared_ptr<const SceneVoxelGrid> findRealtimeVoxelGrid( uint64& outPrimitiveSetGeneration ) const;
         /** @brief `findRealtimeVoxelGrid` 의 캐시를 채웁니다. @p primitiveSetGeneration 은 만들 때의 프리미티브 집합 세대입니다. */
         void setRealtimeVoxelGrid( shared_ptr<const SceneVoxelGrid> grid, uint64 primitiveSetGeneration ) const;
 

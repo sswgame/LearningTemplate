@@ -15,6 +15,10 @@
 	<_listAttachment>
 		<!-- 접촉 그림자 마스크 — 채널 넷이 접촉 그림자를 켠 빛 넷이다. 깊이 프리패스가 장면 깊이를 먼저 써 두므로 포워드도 조명 앞에 걸을 수 있다. -->
 		<RenderPassAttachment _name="ContactShadowMask" _format="R8G8B8A8_UNORM" _clearColor="1,1,1,1" _loadOp="Clear" />
+		<!-- DBuffer 데칼 셋 — 디퍼드와 같다(deferredpipeline.xml). 깊이 프리패스가 장면 깊이를 먼저 써 두므로 포워드도 데칼을 받는다(언리얼 포워드 셰이딩의 DBuffer). -->
+		<RenderPassAttachment _name="DBufferA" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="DBufferB" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="DBufferC" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,1" _loadOp="Clear" />
 	</_listAttachment>
 	<_listPass>
 		<RenderGraphPassDesc _name="DepthPrepass" _after="Shadow" _type="DepthPrepass" _depthAttachment="SceneDepth" _shaderPath="engine/shaders/shadow_depth.hlsl" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _threadGroupSize="8" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _minPostQuality="0">
@@ -34,10 +38,31 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- DBuffer 데칼(decal.hlsl) — 깊이 프리패스 뒤, 포워드 불투명 앞. 데칼이 없는 뷰는 기록하지 않는다. -->
+		<RenderGraphPassDesc _name="Decal" _after="ContactShadow" _type="Decal" _cullMode="Front" _bEnableDepthTest="false" _bEnableDepthWrite="false">
+			<_listInput>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>DBufferA</item>
+				<item>DBufferB</item>
+				<item>DBufferC</item>
+			</_listOutput>
+			<_listBlendTarget>
+				<BlendTargetState _srcColor="One" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="InvSrcAlpha" _alphaOp="Add" _colorWriteMask="RGBA" _bEnableBlend="true" />
+				<BlendTargetState _srcColor="One" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="InvSrcAlpha" _alphaOp="Add" _colorWriteMask="RGBA" _bEnableBlend="true" />
+				<BlendTargetState _srcColor="One" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="InvSrcAlpha" _alphaOp="Add" _colorWriteMask="RGBA" _bEnableBlend="true" />
+			</_listBlendTarget>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="ForwardOpaque">
 			<_listInput>
 				<item>ShadowMap</item>
+				<item>LocalShadowMap</item>
 				<item>ContactShadowMask</item>
+				<item>DBufferA</item>
+				<item>DBufferB</item>
+				<item>DBufferC</item>
 			</_listInput>
 		</RenderGraphPassDesc>
 	</_listPass>

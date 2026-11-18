@@ -6,7 +6,14 @@
  * 표본 깊이가 빛 깊이 - 여유 이상이면 가리지 않은 것이다(C++ `LensFlareSpriteBuffer::computeVisibility` 와 같은 식). 방향광의 깊이는 1 이라 하늘만 보인다.
  * 구조 버퍼는 정점 단계에서만 읽는다 — GL 은 두 단계가 같은 구조 버퍼를 읽으면 링크를 거절한다(binding.hlsli 9 절). 픽셀이 쓸 값은 보간하지 않는 칸으로 넘긴다.
  * 출력은 가산 블렌드(SrcAlpha, One — XML `_blendPreset="Additive"`)라 알파 1 이면 rgb 가 그대로 더해진다.
+ * Image 모양은 구간의 텍스처(g_LensFlareTexture — 머티리얼 칸 0 을 빌린다, 데칼과 같은 방식)를 스프라이트 사각형에 펴서 rgb × 알파를 곱한다.
  */
+// 머티리얼 텍스처 칸을 빌려 쓰는 비머티리얼 셰이더 — Image 스프라이트 0(웹 에뮬이 이 칸만 남긴다, binding_texture.hlsli SW_MATERIAL_TEXTURE_SLOT_LIMIT).
+#if !defined( MATERIAL_TEXTURE_COUNT )
+    #define MATERIAL_TEXTURE_COUNT 1
+#elif MATERIAL_TEXTURE_COUNT != 1
+    #error "MATERIAL_TEXTURE_COUNT from the compile defines differs from this shader's material texture slots"
+#endif
 #include "binding.hlsli"
 
 struct LensFlareSprite
@@ -22,6 +29,7 @@ SW_DECLARE_STRUCTURED_BUFFER( LensFlareSprite, g_LensFlareSprites, SW_SLOT_PASS_
 static const uint  kLensFlareShapeGlow   = 0u;      // LensFlareShape::Glow
 static const uint  kLensFlareShapeDisc   = 1u;      // LensFlareShape::Disc
 static const uint  kLensFlareShapeRing   = 2u;      // LensFlareShape::Ring
+static const uint  kLensFlareShapeImage  = 4u;      // LensFlareShape::Image
 static const float kLensFlareDepthBias   = 1.0e-4f; // LensFlareSpriteBuffer::kDepthBias 와 같다
 static const uint  kLensFlareSampleCount = 9u;
 
@@ -79,7 +87,14 @@ float computeVisibility( float2 lightUv, float2 kernelRadius, float lightDepth )
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const float mask       = computeShapeMask( input._local, (uint)( input._colorShape.a + 0.5f ) );
+    const uint  shape      = (uint)( input._colorShape.a + 0.5f );
     const float visibility = computeVisibility( input._lightUVKernel.xy, input._lightUVKernel.zw, input._depthFade.x );
-    return float4( input._colorShape.rgb * ( mask * visibility * input._depthFade.y ), 1.0f );
+    // Image 는 스프라이트 안 좌표(-1 ~ 1, 위가 +)를 텍스처 UV(위가 0)로 편다. 절차적 모양은 깎은 세기 하나다.
+    float3 shapeColor = float3( 1.0f, 1.0f, 1.0f ) * computeShapeMask( input._local, shape );
+    SW_BRANCH if ( shape == kLensFlareShapeImage )
+    {
+        const float4 texel = MaterialTexture::sampleIndex( g_LensFlareTexture, float2( input._local.x * 0.5f + 0.5f, 0.5f - input._local.y * 0.5f ) );
+        shapeColor         = texel.rgb * texel.a;
+    }
+    return float4( input._colorShape.rgb * shapeColor * ( visibility * input._depthFade.y ), 1.0f );
 }
