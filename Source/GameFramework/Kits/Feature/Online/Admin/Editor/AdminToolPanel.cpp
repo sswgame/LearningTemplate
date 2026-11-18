@@ -9,8 +9,6 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -66,7 +64,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawContent()
     {
-        if ( AdminToolSession* pConnectionSession = findSubsystem<AdminToolSession>() )
+        if ( AdminToolSession* pConnectionSession = AdminToolSession::find() )
             pConnectionSession->updateConnection();
         drawProviderBar();
         ImGui::Separator();
@@ -78,7 +76,7 @@ namespace sw::editor
         drawDirectorySection();
         drawLiveEventSection();
 
-        const AdminToolSession* pSession = findSubsystem<AdminToolSession>();
+        const AdminToolSession* pSession = AdminToolSession::find();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         const AdminToolSession& session = *pSession;
@@ -88,7 +86,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawProviderBar()
     {
-        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
+        AdminToolSession* pSession = AdminToolSession::find();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
@@ -145,7 +143,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawAccountSection()
     {
-        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
+        AdminToolSession* pSession = AdminToolSession::find();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
@@ -201,7 +199,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawAdjustSection()
     {
-        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
+        AdminToolSession* pSession = AdminToolSession::find();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
@@ -231,7 +229,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawSanctionSection()
     {
-        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
+        AdminToolSession* pSession = AdminToolSession::find();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
@@ -271,7 +269,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawAuditSection()
     {
-        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
+        AdminToolSession* pSession = AdminToolSession::find();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
@@ -311,7 +309,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawReportSection()
     {
-        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
+        AdminToolSession* pSession = AdminToolSession::find();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
@@ -372,7 +370,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawDirectorySection()
     {
-        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
+        AdminToolSession* pSession = AdminToolSession::find();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
@@ -415,7 +413,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawLiveEventSection()
     {
-        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
+        AdminToolSession* pSession = AdminToolSession::find();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
@@ -446,6 +444,5 @@ namespace sw::editor
         ImGui::EndDisabled();
     }
 
-    SW_EDITOR_SUBSYSTEM( AdminToolSession, 9200 );
     SW_EDITOR_PANEL( AdminToolPanel, AdminToolPanel::kPanelID, EditorPanelCategory::Custom, 9200 );
 } // namespace sw::editor

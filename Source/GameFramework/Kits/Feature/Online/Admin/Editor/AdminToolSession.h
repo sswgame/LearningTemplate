@@ -23,7 +23,7 @@ namespace sw::editor
     /**
      * @class AdminToolSession
      * @brief GM 도구 패널 하나가 쓰는 명령 보내기와 결과 보관입니다.
-     * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`) — 에디터 범위가 소유하고 패널은 `editor::findSubsystem<AdminToolSession>()` 로 찾는다.
+     * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`) — 에디터 범위가 소유하고 패널은 `find()` 로 찾는다.
      */
     class AdminToolSession final : public EditorSubsystem
     {
@@ -42,6 +42,8 @@ namespace sw::editor
 
         AdminToolSession();
         ~AdminToolSession() override;
+        /** @brief 에디터 범위에 걸린 이 서브시스템입니다. 프레임 앞 sync 전이면 nullptr 입니다. 패널 View 가 작업 공간 헤더(`EditorService.h`) 없이 찾는 창구다(`docs/agents/EditorUI.md` MVVM). */
+        [[nodiscard]] static AdminToolSession* find();
         AdminToolSession( const AdminToolSession& )            = delete; // 활성 제공자가 자기 멤버를 가리킨다
         AdminToolSession& operator=( const AdminToolSession& ) = delete;
 

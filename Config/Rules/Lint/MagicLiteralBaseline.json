@@ -699,7 +699,7 @@
     "Source/GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.cpp": {"integer": 4},
     "Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminCommandProvider.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminLoginBridge.cpp": {"integer": 1},
-    "Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp": {"float": 22, "integer": 2},
+    "Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp": {"float": 22, "integer": 1},
     "Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.h": {"float": 2},
     "Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolSelfTest.cpp": {"integer": 9},
     "Source/GameFramework/Kits/Feature/Online/Admin/Editor/Model/AdminToolModel.cpp": {"integer": 2},
