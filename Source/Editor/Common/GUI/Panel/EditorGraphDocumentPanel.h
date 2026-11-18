@@ -64,7 +64,7 @@ namespace sw::editor
          * @details 바인딩하지 않으면 캔버스 안에서 패널이 직접 부르는 `ax::NodeEditor` 호출이 편집기 없음으로 멈춘다(머리말의 사본 설명).
          */
         bool beginGraphCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName, const utf8* pMarkScope );
-        /** @brief `beginGraphCanvas` 와 짝입니다. 그린 노드 수 @p drawnNodeCount 를 프로브(`Editor.GraphNodeCount`)에 기록합니다. */
+        /** @brief `beginGraphCanvas` 와 짝입니다. 그린 노드 수 @p drawnNodeCount 를 감시 값(`Editor.GraphNodeCount`)에 기록합니다. */
         void finishGraphCanvas( uint32 drawnNodeCount );
 
         /** @brief 새 노드 @p nodeID 를 다음에 그릴 때 캔버스 좌표 @p canvasPosition 에 둡니다(노드 검색 팝업을 연 자리 · 붙여 넣은 자리). 여러 노드를 한 번에 예약할 수 있습니다. */
@@ -156,7 +156,7 @@ namespace sw::editor
         /** @brief 편집 중인 애셋의 사본입니다. */
         AssetType captureGraphData() const { return _graph; }
 
-        /** @brief `beginGraphCanvas` 와 짝입니다. 그린 노드 수를 프로브(`Editor.GraphNodeCount`)에 기록합니다. */
+        /** @brief `beginGraphCanvas` 와 짝입니다. 그린 노드 수를 감시 값(`Editor.GraphNodeCount`)에 기록합니다. */
         void endGraphCanvas() { finishGraphCanvas( static_cast<uint32>( _graph._listNode.size() ) ); }
 
         /** @brief 문서 텍스트는 애셋 XML 입니다. */

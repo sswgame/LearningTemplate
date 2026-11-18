@@ -126,7 +126,7 @@ namespace sw::editor
         /** @brief 지난 `draw` 가 이미지를 놓은 화면 위치와 크기입니다. 그리지 않았으면 크기가 0 입니다. */
         const float2& getImagePosition() const { return _imagePosition; }
         const float2& getImageSize() const { return _imageSize; }
-        /** @brief 오빗 카메라가 대상에서 떨어진 거리입니다. 휠 줌이 바꾸며 프로브 `Editor.PreviewViewportOrbitDistance` 가 읽습니다. */
+        /** @brief 오빗 카메라가 대상에서 떨어진 거리입니다. 휠 줌이 바꾸며 감시 값 `Editor.PreviewViewportOrbitDistance` 가 읽습니다. */
         float32 getOrbitDistance() const { return _orbitDistance; }
 
         /** @brief 환경 프리셋이 바닥을 스폰했으면 true 입니다(바닥 토글을 보일지). */

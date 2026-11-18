@@ -80,15 +80,15 @@ namespace sw::editor
          */
         void drawFavoriteProperties( const EditorPropertyGridTarget& target );
 
-        /** @brief 배치 묶음을 새로 지은 횟수입니다(프로브 `Editor.InspectorLayoutRebuildCount` — 선택 · 검색 글이 그대로면 늘지 않는다). */
+        /** @brief 배치 묶음을 새로 지은 횟수입니다(감시 값 `Editor.InspectorLayoutRebuildCount` — 선택 · 검색 글이 그대로면 늘지 않는다). */
         uint32 getLayoutRebuildCount() const { return _model.getLayoutRebuildCount(); }
-        /** @brief 마지막으로 그린 프레임의 메서드 행 수입니다(프로브 `Editor.InspectorMethodRows`). */
+        /** @brief 마지막으로 그린 프레임의 메서드 행 수입니다(감시 값 `Editor.InspectorMethodRows`). */
         uint32 getMethodRowCount() const { return _methodRowCount; }
-        /** @brief 마지막으로 그린 프레임에 `CallInEditor` 가 없어 숨긴 메서드 수입니다(프로브 `Editor.InspectorHiddenMethods`). 진단 보기를 켜면 0 입니다. */
+        /** @brief 마지막으로 그린 프레임에 `CallInEditor` 가 없어 숨긴 메서드 수입니다(감시 값 `Editor.InspectorHiddenMethods`). 진단 보기를 켜면 0 입니다. */
         uint32 getHiddenMethodCount() const { return _hiddenMethodCount; }
-        /** @brief 마지막으로 그린 프레임에 값을 채운 프로퍼티 행 수입니다(프로브 `Editor.InspectorFilledRows` — 화면 밖 행은 세지 않는다). */
+        /** @brief 마지막으로 그린 프레임에 값을 채운 프로퍼티 행 수입니다(감시 값 `Editor.InspectorFilledRows` — 화면 밖 행은 세지 않는다). */
         uint32 getFilledRowCount() const { return _filledRowCount; }
-        /** @brief 마지막으로 그린 프레임에 화면 밖이라 높이만 둔 깊이 0 행 수입니다(프로브 `Editor.InspectorSkippedRows`). */
+        /** @brief 마지막으로 그린 프레임에 화면 밖이라 높이만 둔 깊이 0 행 수입니다(감시 값 `Editor.InspectorSkippedRows`). */
         uint32 getSkippedRowCount() const { return _skippedRowCount; }
 
     private:

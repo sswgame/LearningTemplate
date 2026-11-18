@@ -40,11 +40,11 @@ namespace sw::editor
          */
         [[nodiscard]] bool saveDocument() override;
 
-        /** @brief 프로브용입니다. 선택한 액션의 바인딩 수를 반환합니다. 선택한 액션이 없으면 false 입니다. */
+        /** @brief 감시 값용입니다. 선택한 액션의 바인딩 수를 반환합니다. 선택한 액션이 없으면 false 입니다. */
         [[nodiscard]] bool readSelectedBindingCount( uint32& outCount ) const { return _document.readSelectedBindingCount( outCount ); }
-        /** @brief 프로브용입니다. 선택한 액션의 0번 바인딩의 발화 규칙(`ActionTrigger` 번호)을 반환합니다. 선택한 액션이 없으면 false 입니다. */
+        /** @brief 감시 값용입니다. 선택한 액션의 0번 바인딩의 발화 규칙(`ActionTrigger` 번호)을 반환합니다. 선택한 액션이 없으면 false 입니다. */
         [[nodiscard]] bool readSelectedTrigger( uint32& outTrigger ) const { return _document.readSelectedTrigger( outTrigger ); }
-        /** @brief 프로브용입니다. 지난 프레임에 찾은 바인딩 충돌 수를 반환합니다. */
+        /** @brief 감시 값용입니다. 지난 프레임에 찾은 바인딩 충돌 수를 반환합니다. */
         uint32 getConflictCount() const { return static_cast<uint32>( _document.getConflicts().size() ); }
 
         /** @brief 패널이 내려갈 때 재생 중인 리플레이를 입력에서 뗍니다(`InputMapModel::releaseInput`). */

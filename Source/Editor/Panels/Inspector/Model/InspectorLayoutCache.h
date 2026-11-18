@@ -57,7 +57,7 @@ namespace sw::editor
         InspectorPropertyDisplay* findDisplay( const PropertyInfo& prop );
         /** @brief 묶음에 든 @p prop 의 표시 정보입니다. 이 캐시가 돌려준 묶음의 프로퍼티만 부릅니다(아니면 멈춘다). */
         const InspectorPropertyDisplay& getLaidOutDisplay( const PropertyInfo& prop ) const;
-        /** @brief 묶음을 새로 지은 횟수입니다(프로브 `Editor.InspectorLayoutRebuildCount`). */
+        /** @brief 묶음을 새로 지은 횟수입니다(감시 값 `Editor.InspectorLayoutRebuildCount`). */
         uint32 getRebuildCount() const { return _rebuildCount; }
 
     private:

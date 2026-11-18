@@ -199,7 +199,7 @@ namespace sw::editor
         /** @brief 가장 최근에 그린 캔버스가 미니맵을 보였으면 true 입니다(감시 값 `Editor.GraphMinimapShown`). */
         static bool isMinimapShown();
 
-        /** @brief 이번 프레임에 그린 그래프의 노드 수를 기록합니다. 시나리오 프로브 `Editor.GraphNodeCount` 가 읽습니다. */
+        /** @brief 이번 프레임에 그린 그래프의 노드 수를 기록합니다. 시나리오 감시 값 `Editor.GraphNodeCount` 가 읽습니다. */
         static void recordDrawnNodeCount( uint32 nodeCount );
         /** @brief 가장 최근에 그린 그래프의 노드 수입니다. */
         static uint32 getDrawnNodeCount();

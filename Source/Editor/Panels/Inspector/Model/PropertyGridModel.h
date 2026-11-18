@@ -137,7 +137,7 @@ namespace sw::editor
         [[nodiscard]] bool findRowValue( uint32 rowID, MutableObjectAddress& outInstance, const PropertyInfo*& outProp ) const;
         /** @brief 숫자 행 @p rowID 의 printf 서식입니다 — @p pNumberFormat 에 단위를 붙인다(`InspectorPropertyLayout::appendUnitSuffix`). 묶음에 든 프로퍼티는 처음 한 번만 짓습니다. */
         const utf8* getUnitNumberFormat( uint32 rowID, const utf8* pNumberFormat );
-        /** @brief 배치 묶음을 새로 지은 횟수입니다(프로브 `Editor.InspectorLayoutRebuildCount`). */
+        /** @brief 배치 묶음을 새로 지은 횟수입니다(감시 값 `Editor.InspectorLayoutRebuildCount`). */
         uint32 getLayoutRebuildCount() const { return _layoutCache.getRebuildCount(); }
 
         // ------------------------------------------------------------------------------

@@ -37,17 +37,17 @@ namespace sw::editor
         /** @brief 노드 그래프 캔버스를 그립니다. */
         void               drawAnimationCanvas();
         [[nodiscard]] bool saveDocument() override;
-        /** @brief 조건이 있는 전이 수를 반환합니다. 프로브 `Editor.AnimationGraphConditionCount` 가 읽습니다. */
+        /** @brief 조건이 있는 전이 수를 반환합니다. 감시 값 `Editor.AnimationGraphConditionCount` 가 읽습니다. */
         uint32 countConditionLinks() const;
-        /** @brief 전이 수를 반환합니다. 프로브 `Editor.AnimationGraphLinkCount` 가 읽습니다. */
+        /** @brief 전이 수를 반환합니다. 감시 값 `Editor.AnimationGraphLinkCount` 가 읽습니다. */
         uint32 getLinkCount() const { return static_cast<uint32>( _graph._listLink.size() ); }
-        /** @brief 레이어 수를 반환합니다. 프로브 `Editor.AnimationGraphLayerCount` 가 읽습니다. */
+        /** @brief 레이어 수를 반환합니다. 감시 값 `Editor.AnimationGraphLayerCount` 가 읽습니다. */
         uint32 getLayerCount() const { return static_cast<uint32>( _graph._listLayer.size() ); }
-        /** @brief 본 마스크 수를 반환합니다. 프로브 `Editor.AnimationGraphBoneMaskCount` 가 읽습니다. */
+        /** @brief 본 마스크 수를 반환합니다. 감시 값 `Editor.AnimationGraphBoneMaskCount` 가 읽습니다. */
         uint32 getBoneMaskCount() const { return static_cast<uint32>( _graph._listBoneMask.size() ); }
-        /** @brief 모든 본 마스크의 항목 수입니다. 프로브 `Editor.AnimationGraphMaskEntryCount` 가 읽습니다(칠하기 · 초기화가 바꾼다). */
+        /** @brief 모든 본 마스크의 항목 수입니다. 감시 값 `Editor.AnimationGraphMaskEntryCount` 가 읽습니다(칠하기 · 초기화가 바꾼다). */
         uint32 countBoneMaskEntries() const;
-        /** @brief 레이어 탭 계층 보기의 본 줄 수입니다. 프로브 `Editor.AnimationGraphMaskBoneRowCount` 가 읽습니다. */
+        /** @brief 레이어 탭 계층 보기의 본 줄 수입니다. 감시 값 `Editor.AnimationGraphMaskBoneRowCount` 가 읽습니다. */
         uint32 getMaskBoneRowCount() const { return _layerEditor.getBoneRowCount(); }
 
     private:

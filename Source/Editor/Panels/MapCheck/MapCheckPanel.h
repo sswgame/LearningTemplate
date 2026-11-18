@@ -31,7 +31,7 @@ namespace sw::editor
         bool selectRowObject( uint32 rowIndex ) const;
         /** @brief 지난 그리기의 줄 수(거른 뒤)입니다. */
         uint32 getRowCount() const { return static_cast<uint32>( _viewState._listRow.size() ); }
-        /** @brief 지난 그리기에서 안전한 고침(`ValidationPropertyEdit`)이 있는 줄 수입니다(Fix All 단추의 수, 프로브 `Editor.MapCheckFixableRows`). */
+        /** @brief 지난 그리기에서 안전한 고침(`ValidationPropertyEdit`)이 있는 줄 수입니다(Fix All 단추의 수, 감시 값 `Editor.MapCheckFixableRows`). */
         uint32 getFixableRowCount() const { return _viewState._fixableRowCount; }
 
     private:

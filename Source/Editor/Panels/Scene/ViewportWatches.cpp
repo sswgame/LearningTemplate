@@ -36,7 +36,7 @@ namespace sw::editor
             return pPanel != nullptr ? &pPanel->getViewportClient() : nullptr;
         }
 
-        /** @brief 뷰포트 격자가 이번 프레임이나 지난 프레임에 그려졌는지 확인합니다. 그려지지 않았으면 격자 프로브는 값을 내지 않습니다. 격자를 끈 뷰나 다른 탭이 해당합니다. */
+        /** @brief 뷰포트 격자가 이번 프레임이나 지난 프레임에 그려졌는지 확인합니다. 그려지지 않았으면 격자 감시 값은 값을 내지 않습니다. 격자를 끈 뷰나 다른 탭이 해당합니다. */
         [[nodiscard]] const EditorGridStats* findRecentGridStats()
         {
             const EditorViewportClient* pClient = findSceneViewClient();

@@ -9,7 +9,7 @@
 
 namespace sw::editor
 {
-    /** @brief 선택 상자 시각화가 지난 프레임에 그린 상자 수입니다. 프로브 `Editor.SelectionOutlineBoxes` 가 읽습니다. */
+    /** @brief 선택 상자 시각화가 지난 프레임에 그린 상자 수입니다. 감시 값 `Editor.SelectionOutlineBoxes` 가 읽습니다. */
     struct SW_EDITOR_API SelectionBoundsVisualizer
     {
         static uint32 getDrawnBoxCount();

@@ -149,7 +149,7 @@ namespace sw::editor
     {
         vector<PropertyValueRow> _listRow{};        ///< 앞 `_rowCount` 개가 이번 프레임의 행(위에서 아래 순서, 자식은 부모 바로 뒤)
         uint32                   _rowCount{ 0 };    ///< 이번 프레임의 행 수
-        uint32                   _filledCount{ 0 }; ///< 값을 채운 행 수(`Skipped` · 카테고리 머리 밖) — 프로브 `Editor.InspectorFilledRows`
+        uint32                   _filledCount{ 0 }; ///< 값을 채운 행 수(`Skipped` · 카테고리 머리 밖) — 감시 값 `Editor.InspectorFilledRows`
         uint8                    _bNoMatch : 1;     ///< 검색 글이 아무 프로퍼티도 맞히지 못했다
         uint8                    _bHasRows : 1;     ///< 그릴 프로퍼티가 있다(구분선 제목을 둔다)
 
