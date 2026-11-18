@@ -104,6 +104,24 @@ namespace
             }
             return maxError;
         }
+
+        /** @brief 채널 @p firstChannel ..@p lastChannel 의 PSNR(dB)입니다. 블록 압축 품질은 화소 하나의 최대 오차가 아니라 평균 제곱 오차로 잰다(astcenc · etcpak 의 품질 보고와 같은 척도). */
+        static float64 measurePSNR( const vector<uint8>& listSource, const vector<uint8>& listDecoded, uint32 firstChannel, uint32 lastChannel )
+        {
+            float64 sumSquared = 0.0;
+            size_t  count      = 0;
+            for ( size_t pixel = 0; pixel * 4 < listSource.size(); ++pixel )
+            {
+                for ( uint32 channel = firstChannel; channel <= lastChannel; ++channel )
+                {
+                    const float64 difference = static_cast<float64>( listSource[pixel * 4 + channel] ) - static_cast<float64>( listDecoded[pixel * 4 + channel] );
+                    sumSquared += difference * difference;
+                    ++count;
+                }
+            }
+            const float64 meanSquared = sumSquared / static_cast<float64>( count );
+            return meanSquared <= 0.0 ? 99.0 : 10.0 * std::log10( 255.0 * 255.0 / meanSquared );
+        }
     };
 } // namespace
 
@@ -119,7 +137,7 @@ SW_TEST_CASE( TextureBlockEncoderTest, ASTCRoundTripsNearTheSourceDeterministica
     SW_REQUIRE_EQUAL( size_t( 4 * 16 ), listBlock.size() );
     const vector<uint8> listDecoded = Util::decodeASTC( listBlock, Util::kSize, Util::kSize );
     SW_REQUIRE_EQUAL( listSource.size(), listDecoded.size() );
-    SW_EXPECT_TRUE_MSG( Util::measureMaxError( listSource, listDecoded, 0, 3 ) <= 8, "ASTC pixel is far from the source" );
+    SW_EXPECT_TRUE_MSG( Util::measurePSNR( listSource, listDecoded, 0, 3 ) >= 36.0, "ASTC is far from the source" ); // -medium 은 이 그라디언트에서 약 38 dB
 
     vector<uint8> listAgain;
     SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::ASTC_4x4_UNORM, listSource.data(), Util::kSize, Util::kSize, listAgain ) );
@@ -137,7 +155,7 @@ SW_TEST_CASE( TextureBlockEncoderTest, ETC2AndEACRoundTripNearTheSourceDetermini
     SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::ETC2_RGBA8_UNORM, listSource.data(), Util::kSize, Util::kSize, listBlock ) );
     SW_REQUIRE_EQUAL( size_t( 4 * 16 ), listBlock.size() );
     vector<uint8> listDecoded = Util::decodeETC( RHIFormat::ETC2_RGBA8_UNORM, listBlock, Util::kSize, Util::kSize );
-    SW_EXPECT_TRUE_MSG( Util::measureMaxError( listSource, listDecoded, 0, 2 ) <= 24, "ETC2 color is far from the source" );
+    SW_EXPECT_TRUE_MSG( Util::measurePSNR( listSource, listDecoded, 0, 2 ) >= 40.0, "ETC2 color is far from the source" ); // 모든 모드(planar 포함) 약 47 dB, 빠른 휴리스틱은 26 dB 라 여기서 진다
     SW_EXPECT_TRUE_MSG( Util::measureMaxError( listSource, listDecoded, 3, 3 ) <= 8, "ETC2 alpha is far from the source" );
     vector<uint8> listAgain;
     SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::ETC2_RGBA8_UNORM, listSource.data(), Util::kSize, Util::kSize, listAgain ) );

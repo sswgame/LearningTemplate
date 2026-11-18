@@ -107,7 +107,7 @@ namespace sw::editor
                 vector<uint64>       encoded( static_cast<size_t>( blocks ) * ( bTwo ? 2 : 1 ) );
                 const size_t         width4 = static_cast<size_t>( blocksX ) * kBlockSize;
                 if ( format == RHIFormat::ETC2_RGBA8_UNORM )
-                    CompressEtc2Rgba( source.data(), encoded.data(), blocks, width4, true );
+                    CompressEtc2Rgba( source.data(), encoded.data(), blocks, width4, false ); // 휴리스틱 끔 — 쿠킹은 오프라인이라 planar 를 포함한 모든 모드를 본다(켜면 2 축 그라디언트가 26 dB 로 무너진다)
                 else if ( format == RHIFormat::EAC_RG11_UNORM )
                     CompressEacRg( source.data(), encoded.data(), blocks, width4 );
                 else
