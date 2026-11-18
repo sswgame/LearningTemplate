@@ -21,7 +21,7 @@ namespace sw
          * @brief 시각과 난수를 섞은 16진수 세션 ID 를 새로 만듭니다.
          * @details GUID API 를 쓰지 않는다 — 플랫폼마다 헤더가 다르고, 여기서 필요한 것은 "이 실행을 다른 실행과 구분하는 것" 뿐이다.
          */
-        ProcessSessionText buildProcessSessionTextInternal()
+        ProcessSessionText makeProcessSessionText()
         {
             const uint64 nowTicks    = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
             const uint64 wallSeconds = static_cast<uint64>( WallClock::nowUnixMilliseconds().count() );
@@ -35,7 +35,7 @@ namespace sw
 
     const utf8* ProcessSession::getID()
     {
-        static const ProcessSessionText s_session = buildProcessSessionTextInternal();
+        static const ProcessSessionText s_session = makeProcessSessionText();
         return s_session._arrText;
     }
 } // namespace sw

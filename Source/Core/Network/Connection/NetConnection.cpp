@@ -489,7 +489,7 @@ namespace sw
         }
     }
 
-    NetConnection::SequencedStream& NetConnection::findOrAddSequencedStream( vector<SequencedStream>& listStream, uint8 kind )
+    NetConnection::SequencedStream& NetConnection::getOrCreateSequencedStream( vector<SequencedStream>& listStream, uint8 kind )
     {
         for ( SequencedStream& stream : listStream )
         {
@@ -506,7 +506,7 @@ namespace sw
         while ( sequencedWritten < _listOutgoingSequenced.size() )
         {
             const vector<uint8>& pending = _listOutgoingSequenced[sequencedWritten];
-            SequencedStream&     stream  = findOrAddSequencedStream( _listSequencedSend, pending.empty() ? static_cast<uint8>( 0 ) : pending[0] );
+            SequencedStream&     stream  = getOrCreateSequencedStream( _listSequencedSend, pending.empty() ? static_cast<uint8>( 0 ) : pending[0] );
             const uint16         id      = static_cast<uint16>( stream._lastID + 1 );
             if ( body.tryWriteMessage( NetChannelType::UnreliableSequenced, id, pending, false ) == false )
                 break;
