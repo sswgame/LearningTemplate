@@ -59,10 +59,11 @@ SW_TEST_CASE( SurfaceKindTest, WetGroundSelectsTheWetResponse )
     SW_EXPECT_TRUE( pWetKind->isWetStep( 1.0f, threshold ) );
     SW_EXPECT_TRUE( &pWetKind->selectStep( threshold * 0.5f, threshold ) == &pWetKind->_step );
     SW_EXPECT_FALSE( pWetKind->isWetStep( 0.0f, threshold ) );
-    const SurfaceKindDef* pMetal = pTable->findKind( "Metal" );
-    SW_REQUIRE_NOT_NULL( pMetal );
-    SW_EXPECT_FALSE( pMetal->_wetStep.isSet() );
-    SW_EXPECT_TRUE( &pMetal->selectStep( 1.0f, threshold ) == &pMetal->_step );
+    // 음성 대조 — 젖은 반응이 없는 종류(얼음)는 젖어도 마른 반응이다(금속은 젖으면 작은 물튀김이 있다)
+    const SurfaceKindDef* pIce = pTable->findKind( "Ice" );
+    SW_REQUIRE_NOT_NULL( pIce );
+    SW_EXPECT_FALSE( pIce->_wetStep.isSet() );
+    SW_EXPECT_TRUE( &pIce->selectStep( 1.0f, threshold ) == &pIce->_step );
 }
 
 namespace

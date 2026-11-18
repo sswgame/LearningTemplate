@@ -492,7 +492,8 @@ SW_TEST_CASE( AppearanceResolverHashTest, HashSeesEveryOutputField )
 
     ResolvedAppearance scalar           = base;
     scalar._listMaterialValue[0]._shape = ResolvedMaterialShape::Scalar;
-    SW_EXPECT_NOT_EQUAL( ResolvedAppearance::computeMeshHash( scalar ), ResolvedAppearance::computeMeshHash( base ) );
+    SW_EXPECT_NOT_EQUAL( ResolvedAppearance::computeHash( scalar ), ResolvedAppearance::computeHash( base ) );
+    SW_EXPECT_EQUAL( ResolvedAppearance::computeMeshHash( scalar ), ResolvedAppearance::computeMeshHash( base ) ); // 머티리얼 값은 메시를 다시 굽지 않는다(메시 해시 밖)
 
     ResolvedAppearance otherAsset          = base;
     otherAsset._listDetachedPart[0]._asset = hashed_string( "b.prefab" );

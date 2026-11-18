@@ -1,5 +1,5 @@
 """
-꾸미기 스키마 출시 대조 — 콘텐츠의 꾸미기 스키마(`<CustomizationSchemaCatalog>`)를 마지막 출시 스냅숏(`Config/Game/Release/CustomizationSchemas.json`)과 견준다.
+꾸미기 스키마 출시 대조 — 콘텐츠의 꾸미기 스키마(`<CustomizationSchemaCatalog>`)를 마지막 출시 스냅숏(`Config/Build/Release/CustomizationSchemas.json`)과 견준다.
 
 패치가 꾸미기 스키마를 바꿔도 옛 세이브 · 공유 코드가 자연스럽게 새 스키마로 올라가게, 런타임의 판 올림 단계(`<Migration toVersion>`)가 빠진 콘텐츠는
 쿠킹에서 멈춘다(CookAssets 가 `check --fix` 를 먼저 돈다). 그래서 런타임에는 "단계가 빠진 패치" 가 있을 수 없다.
@@ -35,7 +35,7 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다
 from common.paths import get_project_root  # noqa: E402
 
 #: 출시 스냅숏(판마다 스키마의 판 · 매개변수 이름 → 종류). 출시 때 `accept` 가 쓴다.
-SNAPSHOT_PATH = Path("Config/Game/Release/CustomizationSchemas.json")
+SNAPSHOT_PATH = Path("Config/Build/Release/CustomizationSchemas.json")
 #: 꾸미기 스키마가 있는 외형 데이터 폴더(`<게임>/data/appearance/*.xml`).
 CONTENT_GLOB = "**/data/appearance/*.xml"
 CATALOG_TAG = "CustomizationSchemaCatalog"

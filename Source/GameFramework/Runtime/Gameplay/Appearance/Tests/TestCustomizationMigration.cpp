@@ -234,20 +234,20 @@ SW_TEST_CASE_F( CustomizationMigrationTest, ApplyValueAndNormalizeStampVersion )
 SW_TEST_CASE( CustomizationMigrationLoadTest, RejectsBrokenMigrationData )
 {
     CustomizationSchemaCatalog catalog;
+    SW_EXPECT_LOG( "Appearance.MigrationMissing" );
     SW_EXPECT_FALSE( loadSchemas( R"(<CustomizationSchemaCatalog><Schema id="A" version="3">
         <Migration toVersion="2"><Remove parameter="Old"/></Migration><Slider name="S"/></Schema></CustomizationSchemaCatalog>)",
                                   catalog ) );
-    SW_EXPECT_LOG( "Appearance.MigrationMissing" );
+    SW_EXPECT_LOG( "Appearance.MigrationOrder" );
     SW_EXPECT_FALSE( loadSchemas( R"(<CustomizationSchemaCatalog><Schema id="A" version="3">
         <Migration toVersion="3"><Remove parameter="Old"/></Migration><Migration toVersion="2"><Remove parameter="Old"/></Migration><Slider name="S"/></Schema></CustomizationSchemaCatalog>)",
                                   catalog ) );
-    SW_EXPECT_LOG( "Appearance.MigrationOrder" );
+    SW_EXPECT_LOG( "Appearance.MigrationTargets" );
     SW_EXPECT_FALSE( loadSchemas( R"(<CustomizationSchemaCatalog><Schema id="A" version="2">
         <Migration toVersion="2"><Split from="Dye" to="Outer"/></Migration><Slider name="S"/></Schema></CustomizationSchemaCatalog>)",
                                   catalog ) );
-    SW_EXPECT_LOG( "Appearance.MigrationTargets" );
+    SW_EXPECT_LOG( "Appearance.PaletteUnknown" );
     SW_EXPECT_FALSE( loadSchemas( R"(<CustomizationSchemaCatalog><Schema id="A" version="2">
         <Migration toVersion="2"><PaletteIndexToColor parameter="Clasp" palette="Nowhere"/></Migration><Slider name="S"/></Schema></CustomizationSchemaCatalog>)",
                                   catalog ) );
-    SW_EXPECT_LOG( "Appearance.PaletteUnknown" );
 }

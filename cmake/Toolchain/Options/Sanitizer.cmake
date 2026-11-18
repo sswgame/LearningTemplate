@@ -96,6 +96,11 @@ if(MSVC OR SW_IS_CLANG_CL)
 
 	target_compile_options(sw_sanitizer INTERFACE /fsanitize=address)
 	target_link_options(sw_sanitizer INTERFACE /INCREMENTAL:NO)
+	# lld 의 문자열 꼬리 병합은 빈 글 `L""`(2 바이트)와 `""`(1 바이트)를 한 주소에 겹쳐 둔다 — ASan 이 그 둘을 같은 전역의 다른 정의로 보고
+	# odr-violation 으로 멈춘다(ReflectionParser 가 빌드 중에 돌아 Windows ASan 빌드가 끝나지 않았다). 꼬리 병합만 끈다 — 나머지 ODR 검사는 그대로다.
+	if(SW_IS_CLANG_CL)
+		target_link_options(sw_sanitizer INTERFACE /OPT:NOLLDTAILMERGE)
+	endif()
 
 	# /fsanitize=address 를 켜면 MSVC STL 이 컨테이너 버퍼에 ASan 주석을 달고 오브젝트에
 	# `annotate_string` / `annotate_vector` / `annotate_optional` 표시를 심는다

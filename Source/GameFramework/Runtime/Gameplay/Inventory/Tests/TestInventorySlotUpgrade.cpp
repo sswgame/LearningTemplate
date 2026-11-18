@@ -129,8 +129,8 @@ SW_TEST_CASE( InventorySlotUpgradeTest, CurrentRoundTripAndNewerRefused )
     SW_EXPECT_EQUAL( uint32{ 7 }, restored.getSlot( 0 ).getCustomization().getSchemaVersion() );
 
     Archive future( written.getData(), written.getSize() );
-    SW_EXPECT_FALSE( StateIO::upgradeSectionBody( Inventory::kStateTag, Inventory::kStateVersion + 1, Inventory::kStateVersion, future ) );
     SW_EXPECT_LOG( "FormatUpgrade.NewerThanSupported" );
+    SW_EXPECT_FALSE( StateIO::upgradeSectionBody( Inventory::kStateTag, Inventory::kStateVersion + 1, Inventory::kStateVersion, future ) );
     SW_EXPECT_TRUE( StateIO::upgradeSectionBody( Inventory::kStateTag, Inventory::kStateVersion, Inventory::kStateVersion, future ) );
 }
 
