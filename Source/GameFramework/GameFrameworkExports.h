@@ -1,7 +1,7 @@
 /**
  * @file GameFrameworkExports.h
  * @brief GameFramework DLL(`SW_GF_API`)과 키트 모듈(`SW_KIT_API` · `SW_KIT_SERVER_API` · `SW_KIT_CLIENT_API`)의 내보내기 매크로입니다.
- * @details 정의는 이 층이 가진다 — 계약 층(ModuleAPI)은 위층 이름을 모른다(예전 `ModuleAPI/Export/GameFrameworkAPI.h`, StructureRefactor 8 절 18).
+ * @details 정의는 이 층이 가진다 — 계약 층(ModuleAPI)은 위층 이름을 모른다(예전 `ModuleAPI/Export/GameFrameworkAPI.h`, DesignBacklog "구조 점검에서 닫은 것" GameFramework 18).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

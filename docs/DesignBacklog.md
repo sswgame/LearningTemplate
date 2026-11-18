@@ -25,6 +25,36 @@
 - 유지할 구조: 타입 기반 온라인 프로토콜, InterestReplicationPolicy 증분 가시 목록, 프로브 revision 캐시, 머티리얼 변경 감지, `IEngineRenderDriver` 경계.
 - 측정 전에는 결함으로 세지 않는 것: 헤더 전파 · TU 비용, 시작 시간 단계 비중, UI · VFX 배열 복사, 프레임 경로 intern.
 
+### 구조 점검에서 닫은 것(SOLID 점검)
+
+모두 끝냈거나 하지 않기로 했다. 번호는 코드 주석이 가리킨다(`Core · Engine 15` 처럼). 근본 원인은 바닥 도우미가 찾기 어려운 자리에 있어 호출부가 사본을 만든 것, 층 검사가 include 글만 봐서 전방 선언 · 함수 포인터로 역류가 숨은 것이었다. 스레드 소유 점검의 기준은 [CppStyle](agents/CppStyle.md) "Thread and GPU resource ownership" 이다.
+
+**Core · Engine**
+
+| # | 문제 | 지금 모양 |
+|---|---|---|
+| 11 | Core 티어 사이 역류를 빌드가 막지 않았다 | 티어마다 빌드 부분(`Core_tier<N>_objects`)과 위 티어 헤더의 `#error` 껍데기, 티어 이하만 담은 pch |
+| 13 | `BindingKind` switch 여럿 | 둔다 — 종류 값은 표 하나(`BindingKinds`)이고 남은 switch 는 `-Werror=switch` 아래라 종류를 늘리면 빠진 자리가 컴파일 오류다 |
+| 14 | 큰 파일 | 크기만 보고 나누지 않는다(아래 "큰 클래스"). `MemoryProfiler` 의 누수 창만 `MemoryLeakWindow` · `LeakCurveCriteria` · `LeakWindowReport` 로 뗐다 |
+| 15 | 같은 일 둘 | Wayland xdg 리스너는 `WaylandShell` 하나, MemoryTag 이름표는 `SW_MEMORY_TAG_LIST`, float3 성분 곱은 `float3::multiply`, CRC32 는 `HashUtil::computeCRC32` |
+| 16 | 이름 | 호스트 창구는 `Engine/Module/HostInterfaces.h`, 콘텐츠 주소는 `Engine/Content`. 관측 넷(Diagnostics · Profiling · Observability · Telemetry)은 역할이 달라 둔다 |
+
+**GameFramework · Editor · App** ("닫음" 은 하지 않기로 한 판단)
+
+| # | 문제 | 판단 |
+|---|---|---|
+| 7 | App · Server 의 프레임 본문 두 벌 | 끝 — 겹치던 게임 걸음은 `GameModuleManager::updateGameFrame` 하나(언리얼 `FEngineLoop::Tick`). 나머지는 실행 파일마다 다른 일이다 |
+| 8 | 파일 감시 넷 | 닫음 — OS 감시기 하나(`IFileWatcher::createNative`)와 거르기 하나(`FileWatchDispatcher`)를 뿌리 폴더마다 둘 뿐이다. 셰이더는 일부러 수동 재컴파일(Ctrl+F8) |
+| 12 | 온라인 소도우미 복사 | 닫음 — `encodeID` 는 저장 형식이, `isTransientStatus` 는 제공자마다 뜻이 다르다 |
+| 14 | Runtime 에 장르 기믹 | 닫음 — 공용 프리팹 라이브러리(`common/prefabs/gimmicks/`)를 여러 게임이 쓴다. 키트로 쪼개면 결합이 는다 |
+| 16 | 큰 패널 | 닫음 — 상태는 Model 이 들고 패널은 그리기만 한다. 탭이 독립된 상태 · 수명을 가질 때만 뗀다 |
+| 17 | 큰 인터페이스(`EditorAPI` · `IEditor`) | 닫음 — 호스트 ↔ 에디터 모듈 C ABI 표 하나, 호출자는 `EditorModuleManager` 뿐이다 |
+| 18 | 계약 층(ModuleAPI)이 `SW_GF_API` · `SW_KIT_API` 를 알았다 | 끝 — 정의는 `GameFramework/GameFrameworkExports.h`, 계약 층의 게임 서비스 선언은 자기 빌드 정의(`SW_GAMESERVICE_API`) |
+
+- 폴더 뜻: `GameFramework/Runtime` · `Kits/` · `Plugin/` 은 언리얼 플러그인의 `Source/Runtime` 과 같다. `Plugin/Editor/GameplayTools` 는 기반이 아니라 내용 이름이다. 자동 플레이 되돌리기는 조종 영역(`ControlSystem`)에, 소리 그래프는 그래프 문서 템플릿이 아니라 문서 기반에(링크 표가 없다).
+- 큰 클래스: 크기만 보고 cpp 를 나누지 않고(같은 클래스는 한 파일) 제 상태와 규칙이 있는 묶음만 뗀다 — RTSWorld → `RTSVision` · `RTSUnitBuckets` · `FlowFieldCache`(유닛 슬롯은 순서 · LIFO 빈 칸이 결정적 결과와 저장 바이트에 들어가 `SlotHandleTable` 로 옮기지 않는다), InputMap → `InputTriggerRules` · `InputBinding.h`, AudioEngine 보이스 슬롯 → `AudioVoicePool`. 잠금 + 목록 큐는 Core `LockedSwapQueue` 하나(손 잠금이 남은 곳은 잠금 안에서 다른 상태도 만진다).
+- 에디터 콘솔 명령은 기능의 명령 파일 옆에 둔다. 짝 없는 cpp 는 스스로 등록하는 단위 · 플랫폼 구현 · 모듈 진입점만 둔다.
+
 ### 데이터 기반 값 · 매직 리터럴
 
 - 늘지 않게 하는 구조(파일 단위 래칫 `Scripts/lint/magic_literals.py`, 기준선 `Config/Rules/Lint/MagicLiteralBaseline.json`, 규칙 [Constants.md](agents/Constants.md) "The ratchet" · "Sentinels")는 섰다.
@@ -253,7 +283,7 @@ MMO(검은사막류 — 지속 월드 · 경제 · 길드 경쟁)와 싱글 캠�
 
 ## 렌더 · RHI 설계(2026-11-17)
 
-"측정 · 설계가 먼저" 라 미뤄 둔 다섯 항목이다. 절마다 문제 → 상용 대조 → 결정과 기각 → API 초안(C++17) → 이전 순서 → 측정 순이다(일 목록은 [NEXT](NEXT.md) 5 절). 상용 엔진의 내부 이름은 기억 기준이라 작업자가 그 판의 문서로 다시 본다. 새 린트 규칙은 없다 — 막을 것은 형식(순수 가상 · 주인 타입 · 매개변수 타입 · 로드 오류)으로 막았다.
+"측정 · 설계가 먼저" 라 미뤄 둔 다섯 항목과, 맨 끝에 이미 정한 메시 구조다. 절마다 문제 → 상용 대조 → 결정과 기각 → API 초안(C++17) → 이전 순서 → 측정 순이다(일 목록은 [NEXT](NEXT.md) 5 절). 상용 엔진의 내부 이름은 기억 기준이라 작업자가 그 판의 문서로 다시 본다. 새 린트 규칙은 없다 — 막을 것은 형식(순수 가상 · 주인 타입 · 매개변수 타입 · 로드 오류)으로 막았다.
 
 ### bindless 번호 고정과 디스크립터 다시 쓰기(설계 2026-11-17, 감사 R-6)
 
@@ -621,6 +651,21 @@ void mergeDirty( vector<RHIBufferHandle>& listDirty );                          
 | 들어간 락 제거의 값 | NEXT 4 절 S8 후보의 "DX12 기록 경로 락 제거 전후 `bench.json` p50" — 291d69074e 와 그 앞 커밋, `benchmark` · Shooter3D dx12 5 번 | 값을 S8 에 적고 닫는다(나빠졌으면 그 커밋을 본다) |
 | 미러 락 경합 | 같은 장면 dx12 · vk, `-gv_renderGraphParallelMinWidth=2`, 새 스코프 `RT.Bind.mirrorLockWait`(`RHIConstantBufferMirror::_mutex` 를 기다린 시간)의 합과 새 카운터 `RT.Bind.constantBufferWrites` | 대기 합이 `RT.Graph.parallelLevel` 합의 2 % 를 넘으면 L-2 를 한다. 아래면 값을 적고 닫는다 |
 | L-2 뒤 | 같은 실행의 RT 프레임 중앙값 | 흔들림 밖으로 빨라지지 않으면 되돌린다 |
+
+### 메시 구조: 인덱스만 · 칸마다 스킨 결과 · 고른 단계만 스키닝(정함)
+
+미뤄 둔 항목이 아니라 정해서 코드에 있는 구조다. 남은 측정(인덱스 전환 뒤 골든 대조 · 캐릭터당 GPU)은 [NEXT](NEXT.md) 4 절.
+
+- **인덱스 버퍼:** 모든 메시가 고유 정점 + 인덱스를 가진다(내장 도형 · 스프라이트 · 절차 메시 포함). 색인 없는 이중 모드는 두지 않는다 — 언리얼 · 유니티 · Godot 과 같다. 구간 · LOD 는 인덱스 범위다.
+- **스킨 인스턴스 — 메시 사본 대신 칸마다 결과 구간:** 메시(원본)는 한 벌을 나누고, 스킨을 내는 유닛 · 군중 묶음마다 게임 스레드가 받는 오래 가는 스킨 칸(`AnimationSkinSlot`)이 결과 구간을 가진다(언리얼 `FSkeletalMeshObjectGPUSkin` · 유니티 · Godot 의 인스턴스마다 스킨 버퍼).
+  - 팔레트 항목과 인스턴스(`InstanceData::_skinSlot`)가 칸을 싣고, 구간 컴포넌트는 주 메시 컴포넌트의 칸을 따른다. 프레임마다 바뀌는 번호(팔레트 순서)는 쓰지 않는다 — 인스턴스를 매 프레임 다시 올리게 된다.
+  - 모프 결과 구간은 칸마다, 원본은 스킨 데이터 번호마다 한 번. 칸 → 결과 시작 표(`g_SwSkinResultOffsets`)는 바뀐 프레임에만 올린다. 모프만 있는 메시는 결과가 메시마다라 배치 값(`_morphVertexBase`)이고, 그 메시를 유닛이 그릴 때 쓰는 고정 스킨 원본(`Mesh::acquireRigidSkinSource`)은 원본 내용 번호마다 한 벌이다.
+  - 같은 메시 · 구간 · 머티리얼의 캐릭터가 한 배치다(드로우 수가 캐릭터 수와 무관). 변형이 필요한데 칸이 무효인 인스턴스는 컬링이 가시 목록에 넣지 않는다(레스트 포즈로 대신 그리지 않는다).
+  - 잰 것(DX12 Release, 마을 사람 100 명): 배치 3,000 → 30, 그림자 6.8 → 3.2 ms, 불투명 8.3 → 5.1 ms, GT 프레임 24.5 → 17.7 ms.
+- **구간 메시 LOD — 고른 단계만 스키닝:** 언리얼 `FSkeletalMeshLODRenderData::RenderSections` 처럼 단계마다 LOD 0 구간 순서의 범위(`MeshLOD::_listSectionRange`)를 두고, 고른 단계만 스킨 캐시가 변형한다(낮은 단계에는 모프가 없다).
+  - 구간 컴포넌트는 주 메시의 단계를 따른다. 스킨 칸 · 구간 메시는 CPU 가 고르고, GPU 인스턴스 LOD 와 CPU 선택이 한 규칙(`MeshLODSystem::isGPUSelectable`)을 쓴다. 팔레트가 단계를 싣고 그 단계 정점만 스킨 행으로 낸다(`GPUSkinResultOffset` = 결과 시작 · 단계 첫 정점).
+  - 단순화는 `CharacterMeshLOD::buildLODs` — 구간마다 `meshopt_simplify`(경계 잠금, 옷과 몸 틈이 벌어지지 않게), 표는 데이터(`engine/character/characterlod.xml`). 외형의 굽기 · 합치기 · LOD 는 `CharacterAppearanceMeshBuild` 로 워커에서(`AssetManager::launchLoadJob` — 로드 단계라 결정적 실행이 기다린다), 캐시와 걸기는 게임 스레드, 짓는 중인 같은 차림은 키로 나눈다.
+  - 잰 것(DX12 Release, `load/townsfolk` 200 명): 스키닝 컴퓨트 7.5 ms · GT 프레임 17.3 ms, 칸마다 스킨 정점 평균 16,653(LOD 0 은 28,696).
 
 ## 코어 · 런타임 설계(2026-11-17)
 

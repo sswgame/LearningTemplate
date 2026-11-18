@@ -83,6 +83,39 @@ Search here before writing a helper for a common job. If the job is missing, sea
 
 A new row names the header and the API.
 
+## 경로 · 리소스 신원 규칙 (R1 ~ R9)
+
+경로 · 신원 · 인자를 형식 없는 `string` 으로 넘기면 받는 쪽이 글자로 다시 추측한다. 아래 규칙과 형식으로 막는다. 코드 주석이 `(R2)` · `(R3 · R8)` 처럼 이 번호를 가리킨다.
+
+| 규칙 | 뜻 | 상용 엔진 |
+|---|---|---|
+| R1 OS 경계 하나 | 파일 · 폴더 · 라이브러리 · 환경 변수 · 실행 파일 경로 같은 OS 호출은 `PlatformFileUtil`(과 그 짝) 한 곳만. Win32 · POSIX 네이티브로 통일하고 `std::filesystem` 은 쓰지 않는다 — 한 층에 오류 모델 · UTF-16 변환이 둘이면 결함이 난다 | 언리얼 `IPlatformFile`, Godot `FileAccess` · `DirAccess` |
+| R2 디스크 I/O 는 절대 경로만 | `FileUtil` · `PlatformFileUtil` 의 I/O 는 절대 경로만 받는다. 상대 · `C:foo` · `\foo` 는 오류. 경로 글 연산(`joinPath` 등)은 대상이 아니다 | |
+| R3 리소스는 리소스 경로만 | `AssetPaths` · `AssetIO` 는 `ResourcePath{도메인(선택), 상대 경로}` 만 받는다. 도메인을 비우면 우선순위로 찾고, 넣으면 그 도메인만. 문자열에서 도메인을 추측하지 않는다 | 언리얼 `/Game/…`, 덮어쓰기는 pak 우선순위 |
+| R4 쓰기는 FileUtil 이 절대 경로로 | `AssetPaths` · `AssetIO` 는 읽기와 경로 풀기만. 있는 파일은 리소스 경로를 디스크 위치로 풀어 쓰고, 새 파일은 도메인 루트 아래에 잇는다 | |
+| R5 상대 → 절대는 경계에서 한 번 | 명령줄 · 설정 · 콘솔 · 시나리오 값은 들어오는 자리에서 기동 때 고정한 루트 기준으로 한 번 바꾼다. 실행 중 작업 폴더는 읽지 않는다 | 언리얼 `FPaths::ProjectSavedDir` |
+| R6 폴백 없음 | 필요한 값이 없으면 오류로 멈춘다. "못 찾으면 받은 글", "실패하면 기본값", "실패하면 다른 구현" 은 없다 | |
+| R7 확인과 실행은 같은 해석 | 있는지 · 쓸 수 있는지를 묻는 쪽과 실제로 읽고 쓰는 쪽이 같은 함수로 푼다 | |
+| R8 같은 일은 하나 | 같은 판정 · 정규화 · 표 · 백오프 · 파서는 하나만 둔다. 답을 아는 쪽이 값을 넘긴다(재추측 금지) | |
+| R9 구성 차이는 크기대로 | 규칙은 [BuildConfigSwitch](BuildConfigSwitch.md) | 언리얼 Runtime · Developer · Editor 모듈과 `#if !UE_BUILD_SHIPPING` |
+
+| 형식 | 자리 | 막는 것 |
+|---|---|---|
+| `AbsolutePath` | `Core/Path/AbsolutePath.h` — `tryMake` · `tryResolve` 로만 만든다(Windows `X:/` · UNC, POSIX `/`) | 느슨한 판정 — `FileUtil::isAbsolutePath` 는 `C:foo` · `\foo` 도 절대로 보므로 디스크 입구는 이 형식(`FileUtil::requireAbsolutePath`)으로 받는다 |
+| `ProcessRoots` | `Core/File/ProcessRoots.h` — 기동 때 한 번(실행 파일 위치 · `-project=`): binary · project · content · saved · logs · crash · userData · packs · DDC. 못 정하면 기동 오류 | 작업 폴더 의존, Saved 기준 여럿, `"Saved"` 리터럴 |
+| `ResourcePath` · `DomainTable` | `Engine/Content/ResourcePath.h` — 만들 때 정규화(소문자 · `/` · `..` 거절), 문자열에서 암시적으로 못 만든다. 도메인 이름표 · 우선순위 · 쿠킹 대상은 표 하나, 한 줄 참조(`common/x`)는 이 표의 최장 일치(`DomainTable::split`)로만 가른다 | 캐시마다 다른 키 정규화, 도메인 판정 · 나열 · 우선순위 표 여러 벌 |
+| 입력 경계 | 명령줄 값 종류 `CommandLineDiskPath`(parse 때 R5 로 절대화, 오류는 모아 기동 실패), `gv_` 보류 값도 같은 변환기, 개발 명령 `readDiskPathArgument` | "실패하면 0 넣고 읽음 표시", 인자 글자 비교 · 추측 |
+
+정해 둔 것:
+
+- `AssetPaths` 의 공개 해석은 `toDiskPath` · `findLooseFile` · `toAssetID` · `collectLooseFolders` 와 설정(`setSearchPriority` · `mountDiskDomain`)뿐이다. 붙인 디스크 도메인(`isMountedDiskDomainID`)은 팩을 보지 않는다.
+- `collectAssets` 는 소스 · 팩 구성 모두 합집합이다(같은 이름은 앞선 도메인 · 높은 팩, 언리얼 `IterateDirectory`). 팩의 도메인은 팩 안(스트링 풀 맨 앞)에 적고 파일 이름으로 추측하지 않는다(언리얼 pak mount point).
+- 개발 명령의 디스크 경로 인자와 문서 · 직렬화기의 `saveToFile` 은 글을 받는다 — 저장으로 갈 때만 `FileUtil::requireAbsolutePath` 로 형식에 올리고 OS 경계가 상대 경로를 거절한다. 시나리오 단계 속성마다 경로 종류를 선언하지 않는다(`{out}` 은 명령 글 안에서도 쓰여 속성 형식으로 막을 수 없다 — 경로를 받는 명령이 검사한다).
+- 씬 데이터의 `string _…Path` 칸은 참조 형식으로 바꾸지 않는다 — 그 값이 디스크 입구로 가는 곳이 없고, 상대 경로가 OS 경계에 닿으면 R2 가 오류로 드러낸다. 새 결함이 이 모양으로 나오면 그때 형식으로.
+- `TextureCache` 렌더 타깃 기본 크기(256)는 폴백이 아니라 자리 표시 값이다 — 카메라가 크기를 알리면 `resizeRenderTarget` 이 다시 만든다.
+- 저장: 런타임 저장소 `GameLocalStore` 는 게임 범위다(봉투 · 백엔드가 GameFramework, 슬롯 폴더가 게임마다 — 언리얼 `ISaveGameSystem` + `AsyncSaveGameToSlot`), 완료 배분은 기반 `LocalStoreChannel`. 에디터 사용자 자료(`CharacterEditorLocalStore`)는 게임 인스턴스 밖의 사용자 자료라 따로다(언리얼 에디터 설정의 `Saved/`). 쓰는 확장이 둘이 되면 공용 에디터 플러그인으로 옮긴다.
+- 합치지 않는 것: 디렉터 컴포넌트의 카탈로그 읽기는 씬마다 다른 데이터라 게임 범위 `loadRequiredCatalog` 로 옮기지 않는다(실패는 ERROR). 파일 글 되돌리기 둘(프리팹 · 리그)은 뒤따르는 일이 달라 합치지 않는다.
+
 ## 리소스 읽기 입구와 에셋 참조
 
 설계는 [ResourceStructure](../ResourceStructure.md) 2 · 4 절, 규칙은 여기가 정본이다.
