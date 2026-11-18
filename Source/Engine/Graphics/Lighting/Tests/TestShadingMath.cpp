@@ -88,6 +88,16 @@ SW_TEST_CASE( ShadingMathTest, AnisotropicGGXMatchesIsotropicAtZeroAnisotropy )
     SW_EXPECT_TRUE( stretched > anisotropic );
 }
 
+/** @brief [ShadingMathTest] 비등방 반사 프로브의 굽힌 노멀 무게 — 비등방 0 · 거울면은 굽히지 않고, 거칠기 0.2 부터 |비등방| 그대로다(부호는 축만 고른다) */
+SW_TEST_CASE( ShadingMathTest, AnisotropicNormalStretchFollowsUnreal )
+{
+    SW_EXPECT_NEAR( 0.0, ShadingMath::computeAnisotropicNormalStretch( 0.0f, 0.5f ), 1e-6 );
+    SW_EXPECT_NEAR( 0.0, ShadingMath::computeAnisotropicNormalStretch( 0.8f, 0.0f ), 1e-6 );
+    SW_EXPECT_NEAR( 0.8, ShadingMath::computeAnisotropicNormalStretch( 0.8f, 0.5f ), 1e-6 );
+    SW_EXPECT_NEAR( 0.8, ShadingMath::computeAnisotropicNormalStretch( -0.8f, 0.5f ), 1e-6 );
+    SW_EXPECT_NEAR( 0.4, ShadingMath::computeAnisotropicNormalStretch( 0.8f, 0.1f ), 1e-6 );
+}
+
 /** @brief [ShadingMathTest] 감싼 확산은 빛을 늘리거나 줄이지 않는다 — 구 전체 적분이 램버트(π)와 같다 */
 SW_TEST_CASE( ShadingMathTest, WrappedDiffuseConservesEnergy )
 {
