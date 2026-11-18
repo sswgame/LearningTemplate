@@ -43,8 +43,8 @@ namespace sw
             }
         }
 
-        const bool bScanAll = bAllDirty || listDirtyRange.empty();
-        if ( bScanAll )
+        // 구간이 비고 "전체" 가 아니면 바뀐 칸이 없다(빌더는 바뀐 칸을 모두 구간으로 싣고, 넘치면 "전체" 로 보낸다 — 카메라만 움직인 빌드).
+        if ( bAllDirty )
         {
             // 비교만 한다 — 내용이 같은 칸은 올리지 않는다(배치를 다시 나눠 배치 번호가 그대로인 칸).
             for ( uint32 slot = 0; slot < slotCount; ++slot )

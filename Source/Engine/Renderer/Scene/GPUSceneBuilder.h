@@ -18,6 +18,7 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
+#include "Engine/Renderer/Scene/GPUBatchMembershipPatch.h"
 #include "Engine/Renderer/Scene/GPUInstanceRing.h"
 #include "Engine/Renderer/Scene/GPUMaterialRegistry.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
@@ -518,10 +519,23 @@ namespace sw
         [[nodiscard]] MeshCollectResult compactCollectedCandidates( const MeshCollectInput& input, uint32 primitiveCount, bool bPrevAligned );
         /** @brief 레지스트리 칸 @p slot 에 들어온 차례입니다(메시 칸은 `PrimitiveRegistry::getPrimitiveSerials`, 인스턴스 항목은 `PrimitiveInstanceEntry::_serial`). */
         static uint32 readSlotSerial( const MeshCollectInput& input, uint32 slot );
-        /** @brief 후보의 raw 페이로드를 채우고(@p bOnlyDirtySlots 면 더티 슬롯만), 배치 키가 바뀌었으면 분할 테이블을 다시 짓습니다. */
-        void fillPayloadsAndPartition( bool bOnlyDirtySlots, bool bBatchKeysSame );
-        /** @brief 투명을 정렬하고 배치를 제자리 갱신하거나 다시 지은 뒤 쓰지 않는 머티리얼 원소를 놓습니다. */
-        void rebuildBatches( const float3& cameraPos, bool bBatchKeysSame, bool bPartialCollect );
+        /** @brief 후보의 raw 페이로드를 채우고(@p bOnlyDirtySlots 면 더티 슬롯만), @p bSkipPartition 이 아니면 분할 테이블을 다시 짓습니다. */
+        void fillPayloadsAndPartition( bool bOnlyDirtySlots, bool bSkipPartition );
+        /**
+         * @brief 투명을 정렬하고 배치를 제자리 갱신하거나(키 그대로) 구성원만 고치거나(@p bTryMembershipPatch) 다시 지은 뒤 쓰지 않는 머티리얼 원소를 놓습니다.
+         * @details 다시 지을 때 분할 테이블이 낡았으면(구성원 고치기 뒤) 먼저 다시 짓는다.
+         */
+        void rebuildBatches( const float3& cameraPos, bool bBatchKeysSame, bool bPartialCollect, bool bTryMembershipPatch );
+        /**
+         * @brief 부분 수집에서 불투명 후보가 기존 배치에 드나들기만 했으면 다시 나누지 않고 그 배치의 구성원만 고칩니다(언리얼 FScene 의 프리미티브 더하기 · 빼기, 유니티 GPU Resident Drawer 의 배치 인스턴스 목록).
+         * @details 들어온 칸 · 빠진 칸만 인스턴스 배열에 쓰고 바뀐 칸 구간으로 싣는다. 배치 순서 · 번호는 그대로라 다른 칸의 내용(배치 번호)이 바뀌지 않는다.
+         *          들어갈 키의 배치가 없거나, 배치가 비거나, 투명이 드나들면 false — 아무것도 고치지 않았고 부르는 쪽이 다시 나눈다.
+         *          shortcut: 배치 사이에 여유 칸이 없어 드나든 배치 뒤의 차례가 밀린다 — 차례 목록(uint32)을 O(N) 다시 쓰고 GPU 에는 바뀐 구간만 올린다.
+         *          차례 복사가 측정에 드러나면 배치마다 여유 칸(유니티 GRD 의 배치 용량)을 둔다.
+         */
+        [[nodiscard]] bool patchBatchMembership();
+        /** @brief 불투명 후보의 나누기 키입니다(`rebuildPartitionTables` · `patchBatchMembership` 이 같은 규칙을 쓴다). 합치기 대표 맵을 채울 수 있어 게임 스레드 전용이다. */
+        SortKey makeOpaqueSortKey( const DrawCandidate& candidate );
         /** @brief 수집한 인스턴스를 배치로 묶습니다. */
         void populateBatches();
         /**
@@ -603,7 +617,9 @@ namespace sw
         /** @brief 다시 방출한 투명 칸 중 발행본과 다른 칸을 더티 구간에 더합니다(구간 상한을 넘으면 @p ioTooManyRuns). */
         void appendTransparentTailRun( const vector<GPUInstance>& listPublishedInstance, bool& ioTooManyRuns );
         /** @brief 부분 제자리 갱신입니다. 더티 프리미티브가 가리키는 인스턴스만 고치고 회전 인스턴스 수를 증감합니다. 매핑이 어긋나면 false 입니다. */
-        [[nodiscard]] bool refreshDirtyInstances( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool& ioTooManyRuns );
+        [[nodiscard]] bool refreshDirtyInstances( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool& ioTooManyRuns, const uint8* pSkipFlag = nullptr );
+        /** @brief 칸 @p slot 을 바뀐 칸 구간에 더합니다(직전 구간에 이어지면 늘리고, 구간 상한을 넘으면 @p ioTooManyRuns). */
+        void appendDirtySlot( uint32 slot, bool& ioTooManyRuns );
         /**
          * @brief 부분 수집에서 메시만 바뀐 불투명 후보(`_listMeshSwapCandidate`)의 배치를 다시 나누지 않고 그 배치의 메시만 바꿉니다.
          * @details 후보마다 그 배치가 인스턴스 하나뿐이어야 한다(지형 청크는 청크마다 인스턴스 배치 하나다). 같은 메시를 여럿이 쓰는 배치는
@@ -730,6 +746,17 @@ namespace sw
         vector<uint32> _listTransformDirtyPrimitive;
         /** @brief 이번 부분 수집에서 메시만 바뀐 불투명 후보의 인덱스입니다(`swapSingleInstanceBatchMeshes`). 수집마다 비웁니다. */
         vector<uint32> _listMeshSwapCandidate;
+        /** @brief 이번 부분 수집에서 배치에 들어가는 · 빠지는 후보입니다(키가 바뀐 후보는 둘 다). 수집마다 비웁니다(`patchBatchMembership`). */
+        vector<uint32> _listMembershipEnter;
+        vector<uint32> _listMembershipLeave;
+        /** @brief 배치마다의 나누기 키입니다(불투명 배치 번호와 나란하다 — LOD 단계 배치는 메시가 널인 키). 전체 방출이 채우고 구성원 고치기가 배치를 찾는다. */
+        vector<SortKey> _listOpaqueBatchKey;
+        /** @brief 구성원 고치기의 이번 변경(빠지는 칸 · 들어가는 칸)입니다. */
+        GPUBatchMembershipPatch _membershipPatch;
+        /** @brief 구성원 고치기의 작업 배열입니다(새 차례 · 배치마다 새 수 · 바뀐 칸). */
+        vector<uint32> _listScratchPatchOrder;
+        vector<uint32> _listScratchBatchCount;
+        vector<uint32> _listScratchDirtySlot;
         /**
          * @brief 레지스트리 칸에서 후보 번호를 찾는 배열입니다. 실린 칸은 **자기 칸 번호**, 실리지 않은 칸은 `kInvalidCandidateIndex` 입니다.
          * @details 후보 배열은 칸 번호로 줄 세운다(구멍 있음). 레지스트리 칸이 고정(프리리스트)이라 하나를 더하거나 지워도 다른 후보의 번호가 그대로이고,
@@ -818,5 +845,9 @@ namespace sw
         uint8 _bReuseMaterialElement{ SW_FALSE };
         /// @brief 그리는 차례(`_listInstanceSrcIndex`)가 마지막 발행 뒤 바뀌었으면 1 입니다. 발행이 차례 → 칸 목록(`GPUSceneSnapshot::_pListInstanceSlot`)을 새로 싣는다.
         uint8 _bInstanceOrderChanged{ SW_TRUE };
+        /// @brief 이번 부분 수집의 배치 변화가 불투명 구성원 드나듦뿐이면 1 입니다(투명이 드나들거나 컬 반전이 바뀌면 0). `patchBatchMembership` 을 해 볼지 가른다.
+        uint8 _bMembershipOnly{ SW_FALSE };
+        /// @brief 분할 테이블(`_listScratchOpaqueEntry` · `_listScratchOpaqueIdx`)이 배치와 어긋났으면 1 입니다(구성원 고치기 뒤). 다시 나누기 · 메시 바꾸기 앞에 본다.
+        uint8 _bPartitionStale{ SW_FALSE };
     };
 } // namespace sw

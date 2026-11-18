@@ -32,7 +32,7 @@ namespace sw
 
         /**
          * @brief 칸 순 배열 @p listSlotInstance 로 사본을 맞추고 내용이 바뀐 칸을 기록합니다. 칸 수가 줄면 꼬리를 버리고, 늘면 새 칸을 바뀐 칸으로 센다(GPU 쪽 내용을 모른다).
-         * @param listDirtyRange 내용이 바뀐 칸 구간입니다. 비었거나 @p bAllDirty 면 모든 칸을 본다(비교만 하므로 같은 칸은 올리지 않는다).
+         * @param listDirtyRange 내용이 바뀐 칸 구간입니다. @p bAllDirty 면 무시하고 모든 칸을 본다(비교만 하므로 같은 칸은 올리지 않는다). 비었으면 바뀐 칸이 없다.
          */
         void apply( const vector<GPUInstance>& listSlotInstance, const vector<GPUInstanceDirtyRange>& listDirtyRange, bool bAllDirty );
         /** @brief 칸 순 사본입니다. 원소 번호가 GPUScene 칸입니다. */
