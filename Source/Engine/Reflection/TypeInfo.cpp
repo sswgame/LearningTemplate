@@ -74,7 +74,7 @@ namespace sw
         _listMethod.reserve( count );
         for ( size_t descIndex = 0; descIndex < count; ++descIndex )
         {
-            if ( pDesc[descIndex]._pInvoke != nullptr )
+            if ( pDesc[descIndex]._pInvoke != nullptr || pDesc[descIndex]._pConstruct != nullptr )
                 _listMethod.emplace_back( pDesc[descIndex] );
         }
     }

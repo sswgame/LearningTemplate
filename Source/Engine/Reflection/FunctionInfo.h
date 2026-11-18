@@ -119,10 +119,12 @@ namespace sw
         const utf8*           _pHandleTargetTypeName; ///< 타입 핸들 인자의 대상(아니면 nullptr)
     };
 
-    struct FunctionDesc
+    struct SW_API FunctionDesc
     {
         using InvokeFunction       = TaskValue ( * )( void* pObject, const TaskArgs& args );
         using MetadataFillFunction = void ( * )( FunctionMetadata& metadata );
+        /** @brief 생성자 줄의 생성 함수입니다 — @p pObject 에 placement new 한 줄만 한다. 반환값(`TaskValue`) 만들기는 `invokeConstructor` 가 한 곳에서 한다. */
+        using ConstructFunction = void ( * )( void* pObject, const TaskArgs& args );
 
         const utf8*                  _pName;           ///< 표시 이름(생성자는 `$ctor`)
         const utf8*                  _pLookupName;     ///< 찾는 이름(`_hashName` — 생성자는 인자 타입까지 붙인 이름)
@@ -130,9 +132,17 @@ namespace sw
         const ReflectTypeOps*        _pReturnType;     ///< void · 생성자면 nullptr
         const FunctionParameterDesc* _pParameters;
         uint32                       _parameterCount;
-        /** @brief 호출 함수입니다. 파서가 더한 기본 생성자는 그 타입이 기본 생성 가능하지 않으면 nullptr 이고 등록에서 빠진다(`ReflectDefaultCtorOf`). */
+        /** @brief 호출 함수입니다. 생성자 줄은 nullptr 이고 `_pConstruct` 를 쓴다. 둘 다 nullptr 인 줄은 등록에서 빠진다. */
         InvokeFunction       _pInvoke;
         MetadataFillFunction _pFillMetadata; ///< 적은 메타데이터 · 선언 사실(생성자 · 정적 · const)이 없으면 nullptr — 공유 기본값을 쓴다
+        /**
+         * @brief 생성자 줄의 생성 함수입니다(아니면 nullptr). 파서가 더한 기본 생성자는 그 타입이 기본 생성 가능하지 않으면 nullptr 이다(`ReflectDefaultCtorOf`).
+         * @details 생성 TU 마다 있어야 하는 것은 placement new 한 줄뿐이다 — 예전 `$ctor` 람다는 반환값 만들기 · 인자 버리기까지 타입마다 펼쳤다.
+         */
+        ConstructFunction _pConstruct = nullptr;
+
+        /** @brief 생성자 줄을 부릅니다 — `_pConstruct` 로 짓고 빈 값을 돌려준다. `FunctionInfo::_invoker` 가 이 줄에 묶인다(비인라인, 한 곳). */
+        TaskValue invokeConstructor( void* pObject, const TaskArgs& args ) const;
     };
 
     struct EventDesc
@@ -148,19 +158,17 @@ namespace sw
     };
 
     /**
-     * @brief 파서가 더한 기본 생성자(`$ctor`)의 호출 함수입니다. 기본 생성할 수 없는 타입(참조 멤버 · 기본 생성자 없는 기반)은 `kInvoke` 가 nullptr 라 등록에서 빠진다.
+     * @brief 파서가 더한 기본 생성자(`$ctor`)의 생성 함수입니다. 기본 생성할 수 없는 타입(참조 멤버 · 기본 생성자 없는 기반)은 `kConstruct` 가 nullptr 라 등록에서 빠진다.
      * @details 생성 코드의 `Registrar<T>` 는 템플릿이 아닌 특수화라 `if constexpr` 로 본문을 버릴 수 없다 — 템플릿 안에서 가른다.
      */
     template <typename T>
     struct ReflectDefaultCtorOf
     {
-        static TaskValue invoke( void* pObject, const TaskArgs& args )
+        static void construct( void* pObject, const TaskArgs& )
         {
-            (void)args;
             if constexpr ( std::is_default_constructible_v<T> )
                 sw_placement_new( pObject ) T();
-            return TaskValue{};
         }
-        static constexpr FunctionDesc::InvokeFunction kInvoke = std::is_default_constructible_v<T> ? &invoke : nullptr;
+        static constexpr FunctionDesc::ConstructFunction kConstruct = std::is_default_constructible_v<T> ? &construct : nullptr;
     };
 } // namespace sw

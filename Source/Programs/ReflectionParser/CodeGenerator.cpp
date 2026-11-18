@@ -723,7 +723,7 @@ namespace sw
         if ( method._listParameter.empty() )
             emit.line( "(void)args;" );
 
-        if ( method._bStatic != SW_FALSE && method._bConstructor == SW_FALSE )
+        if ( method._bStatic != SW_FALSE )
         {
             emit.line( "(void)objPtr;" );
             if ( returnType == annotation::kVoidTypeName )
@@ -750,12 +750,7 @@ namespace sw
                             static_cast<uint32>( paramIndex ), CodeEmit::quoted( typeInfo._fullyQualifiedName + "::" + method._name ) );
                 emit.line( "    return ::sw::TaskValue{};" );
             }
-            if ( method._bConstructor != SW_FALSE )
-            {
-                emit.linef( "sw_placement_new( self ) %#(%#);", typeInfo._fullyQualifiedName, callArgs ); // `Style/PlacementNew` 와 같은 모양
-                emit.line( "return ::sw::TaskValue{};" );
-            }
-            else if ( returnType == annotation::kVoidTypeName )
+            if ( returnType == annotation::kVoidTypeName )
             {
                 emit.linef( "self->%#(%#);", method._name, callArgs );
                 emit.line( "return ::sw::TaskValue{};" );
@@ -767,6 +762,20 @@ namespace sw
         }
         emit.pop();
         emit.line( "}," );
+    }
+
+    void CodeGenerator::emitConstructor( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedFunctionInfo& method, const string& callArgs ) const
+    {
+        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::MethodInvoker };
+        // 생성 TU 에는 placement new 한 줄만 남긴다 — 반환값 만들기는 `FunctionDesc::invokeConstructor`(Engine, 비인라인)가 한 곳에서 한다.
+        // 파서가 더한 기본 생성자는 기본 생성 가능할 때만 등록한다(참조 멤버 · 기본 생성자 없는 베이스는 가린다 — 생성 함수가 nullptr 면 등록에서 빠진다).
+        if ( method._bSynthesized != SW_FALSE )
+        {
+            emit.linef( "::sw::ReflectDefaultCtorOf<%#>::kConstruct", typeInfo._fullyQualifiedName );
+            return;
+        }
+        emit.linef( "[]( void* pObject, const ::sw::TaskArgs&%# ) { sw_placement_new( pObject ) %#(%#); }", method._listParameter.empty() ? "" : " args",
+                    typeInfo._fullyQualifiedName, callArgs ); // `Style/PlacementNew` 와 같은 모양
     }
 
     void CodeGenerator::emitMethodList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const
@@ -796,9 +805,9 @@ namespace sw
             emit.linef( "%#, %#, %#, %#,", CodeEmit::quoted( bConstructor ? string( annotation::kCtorLookupName ) : method._name ), CodeEmit::quoted( lookupName ),
                         CodeEmit::quoted( returnType ), returnOps );
             emit.linef( "%#, %#u,", listParamTable[methodIndex], static_cast<uint32>( method._listParameter.size() ) );
-            // 파서가 더한 기본 생성자는 그 타입이 기본 생성 가능할 때만 등록한다(참조 멤버 · 기본 생성자 없는 베이스는 가린다 — 호출 함수가 nullptr 면 등록에서 빠진다).
-            if ( method._bSynthesized != SW_FALSE )
-                emit.linef( "::sw::ReflectDefaultCtorOf<%#>::kInvoke,", typeInfo._fullyQualifiedName );
+            // 생성자 줄은 호출 칸이 비고 끝의 생성 칸(`_pConstruct`)을 쓴다.
+            if ( bConstructor )
+                emit.line( "nullptr," );
             else
                 emitMethodInvoker( emit, typeInfo, method, returnType, CodeGeneratorInternal::makeInvokerCallArgs( method._listParameter, _session ) );
 
@@ -819,16 +828,19 @@ namespace sw
             fillEmit.flagIf( bConstructor, "m._bConstructor", "SW_TRUE" );
             fillEmit.flagIf( method._bStatic != SW_FALSE, "m._bStatic", "SW_TRUE" );
             fillEmit.flagIf( method._bConst != SW_FALSE, "m._bConst", "SW_TRUE" );
+            const utf8* pFillEnd = bConstructor ? "," : "";
             if ( fillBuffer.view().empty() )
             {
-                emit.line( "nullptr" );
+                emit.linef( "nullptr%#", pFillEnd );
             }
             else
             {
                 emit.line( "[]( ::sw::FunctionMetadata& m ) {" );
                 emit.raw( fillBuffer.view() );
-                emit.line( "}" );
+                emit.linef( "}%#", pFillEnd );
             }
+            if ( bConstructor )
+                emitConstructor( emit, typeInfo, method, CodeGeneratorInternal::makeInvokerCallArgs( method._listParameter, _session ) );
             emit.pop();
             emit.line( "}," );
         }

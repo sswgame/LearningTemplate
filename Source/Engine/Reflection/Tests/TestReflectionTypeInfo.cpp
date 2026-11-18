@@ -442,6 +442,14 @@ namespace
     {
         int32  _score{ 0 };
         int32& _ref; // 참조 멤버 — 기본 생성할 수 없다
+
+        static sw::TaskValue invokeAddScore( void* pObject, const sw::TaskArgs& args )
+        {
+            MethodTableTestActor& actor = *static_cast<MethodTableTestActor*>( pObject );
+            actor._score += args.get<int32>( 0 );
+            return sw::TaskValue{ actor._score };
+        }
+        static void fillAddScore( sw::FunctionMetadata& m ) { m._bConst = SW_TRUE; }
     };
 } // namespace
 
@@ -450,22 +458,15 @@ namespace
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, MethodTableBuildsMethodList )
 {
-    static_assert( sw::ReflectDefaultCtorOf<MethodTableTestActor>::kInvoke == nullptr );
-    static_assert( sw::ReflectDefaultCtorOf<int32>::kInvoke != nullptr );
+    static_assert( sw::ReflectDefaultCtorOf<MethodTableTestActor>::kConstruct == nullptr );
+    static_assert( sw::ReflectDefaultCtorOf<int32>::kConstruct != nullptr );
 
     static constexpr sw::FunctionParameterDesc kParams[] = {
         { "delta", "int32", "1", &sw::ReflectTypeOpsOf<int32>::kOps, nullptr },
     };
     static constexpr sw::FunctionDesc kMethods[] = {
-        { "addScore", "addScore", "int32", &sw::ReflectTypeOpsOf<int32>::kOps, kParams, 1u,
-         []( void* pObject, const sw::TaskArgs& args ) -> sw::TaskValue
-    {
-        MethodTableTestActor& actor = *static_cast<MethodTableTestActor*>( pObject );
-        actor._score += args.get<int32>( 0 );
-        return sw::TaskValue{ actor._score };
-    }, []( sw::FunctionMetadata& m )
-    { m._bConst = SW_TRUE; } },
-        { "$ctor", "$ctor", "void", nullptr, nullptr, 0u, sw::ReflectDefaultCtorOf<MethodTableTestActor>::kInvoke, nullptr },
+        { "addScore", "addScore", "int32", &sw::ReflectTypeOpsOf<int32>::kOps, kParams, 1u, &MethodTableTestActor::invokeAddScore, &MethodTableTestActor::fillAddScore },
+        { "$ctor", "$ctor", "void", nullptr, nullptr, 0u, nullptr, nullptr, sw::ReflectDefaultCtorOf<MethodTableTestActor>::kConstruct },
     };
 
     sw::TypeInfo info;
