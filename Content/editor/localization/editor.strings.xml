@@ -1051,12 +1051,12 @@
 		</entry>
 		<entry key="EdCommon.NotifyKeepSimulation" source="The selected objects keep their state after Stop">
 			<origins>
-				<item>Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp</item>
+				<item>Source/Editor/Common/Workspace/EditorUICommandQueue.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyKeepSimulationTitle" source="Keep Simulation Changes">
 			<origins>
-				<item>Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp</item>
+				<item>Source/Editor/Common/Workspace/EditorUICommandQueue.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyNewScene" source="New scene">
@@ -1138,11 +1138,13 @@
 		<entry key="EdCommon.NotifySceneOpenFailed" source="Failed to open the scene">
 			<origins>
 				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+				<item>Source/Editor/Common/Input/EditorDefaultCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifySceneTitle" source="Scene">
 			<origins>
 				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+				<item>Source/Editor/Common/Input/EditorDefaultCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyScreenshotFailed" source="The screenshot was not written (see the log)">
@@ -4617,66 +4619,66 @@
 		</entry>
 		<entry key="EdVisualizer.BillboardLabel" source="Icons">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportBillboardItem.cpp</item>
+				<item>Source/Editor/Viewport/Model/Visualizers/BillboardVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.BillboardTip"
 		       source="Shows components without a mesh (lights, cameras, audio) as icons you can click to select">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportBillboardItem.cpp</item>
+				<item>Source/Editor/Viewport/Model/Visualizers/BillboardVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.BoxCollider2DLabel" source="Col">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/BoxCollider2DVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/Model/Visualizers/BoxCollider2DVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.BoxCollider2DTip" source="Shows BoxCollider2D rectangles as wireframe">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/BoxCollider2DVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/Model/Visualizers/BoxCollider2DVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.CameraFrustumLabel" source="Cam">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/CameraFrustumVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/Model/Visualizers/CameraFrustumVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.CameraFrustumTip" source="Shows the frustum of every camera except the active one">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/CameraFrustumVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/Model/Visualizers/CameraFrustumVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.DebugDrawLabel" source="Dbg">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/DebugDrawVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/Model/Visualizers/DebugDrawVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.DebugDrawTip"
 		       source="Shows the lines, spheres, boxes, arrows and text game code put into DebugDrawQueue">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/DebugDrawVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/Model/Visualizers/DebugDrawVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.NavMeshLabel" source="Nav">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/NavMeshVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/Model/Visualizers/NavMeshVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.NavMeshTip"
 		       source="Shows the polygon edges of the baked navmesh (bake with Build > Bake Navigation)">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/NavMeshVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/Model/Visualizers/NavMeshVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.PhysicsShapesLabel" source="Phys">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/PhysicsShapeVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/EditorColliderHandleTool.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.PhysicsShapesTip"
 		       source="Shows RigidBody and RigidBody2D collision shapes as wireframe (static grey, kinematic blue, dynamic green, trigger yellow)">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/PhysicsShapeVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/EditorColliderHandleTool.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.RigTargetGizmoLabel" source="Rig Target">
@@ -4692,13 +4694,13 @@
 		</entry>
 		<entry key="EdVisualizer.SelectionBoundsLabel" source="Sel">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/SelectionBoundsVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/Model/Visualizers/SelectionBoundsVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.SelectionBoundsTip"
 		       source="Shows the bounding box of the selected objects in accent-colored lines">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/SelectionBoundsVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/Model/Visualizers/SelectionBoundsVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.TerrainBrushLabel" source="Terrain">

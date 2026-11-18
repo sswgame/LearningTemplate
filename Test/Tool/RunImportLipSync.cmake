@@ -10,7 +10,7 @@ execute_process(COMMAND "${APP}" --import-lipsync "-lipsync-dir=${OUT_DIR}" -una
 if(NOT exit_code EQUAL 0)
 	message(FATAL_ERROR "--import-lipsync exited ${exit_code} - see ${log_path}")
 endif()
-file(STRINGS "${log_path}" list_summary_line REGEX "Imported [0-9]+ viseme tracks \(0 failures\)")
+file(STRINGS "${log_path}" list_summary_line REGEX "Imported [0-9]+ viseme tracks \\(0 failures\\)")
 if(NOT list_summary_line MATCHES "Imported ([0-9]+) viseme tracks" OR CMAKE_MATCH_1 EQUAL 0)
 	message(FATAL_ERROR "--import-lipsync did not report 'Imported N viseme tracks (0 failures)' with N >= 1 - see ${log_path}")
 endif()
