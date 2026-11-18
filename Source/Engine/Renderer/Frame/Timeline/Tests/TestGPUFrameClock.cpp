@@ -4,8 +4,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
-#include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Timeline/GPUFrameClock.h"
+#include "Engine/Renderer/Frame/Timeline/GPUTimestampSlotLayout.h"
 
 // GPU 프레임 시계 — 표본은 끝 - 시작, 기록되지 않은 슬롯은 표본이 없고, 타임스탬프 없는 디바이스는 Unsupported, 순번은 읽을 때마다 하나씩. GPU 없이 돈다.
 
@@ -17,8 +17,8 @@ namespace
     {
         RHITimestampFrame frame;
         frame._listMicro.assign( constant::render::kMaxGPUTimestampSlot, -1.0f );
-        frame._listMicro[FrameRendererUtil::kGPUTimestampSlotFrameBegin] = beginMicro;
-        frame._listMicro[FrameRendererUtil::kGPUTimestampSlotFrameEnd]   = endMicro;
+        frame._listMicro[GPUTimestampSlotLayout::kFrameBegin] = beginMicro;
+        frame._listMicro[GPUTimestampSlotLayout::kFrameEnd]   = endMicro;
         return frame;
     }
 

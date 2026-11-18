@@ -36,6 +36,7 @@
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/Timeline/GPUTimestampSlotLayout.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -232,13 +233,13 @@ namespace sw
 
 #if SW_PROFILE_COMPILED
         // 타임스탬프 슬롯은 앞쪽 패스에만 있다. 넘는 패스는 GPU 시간(과 GPU.Frame 의 끝)이 빠지므로 로드할 때 알린다.
-        const uint32 untimedPassCount = FrameRendererUtil::countUntimedGPUPass( listPass.size() );
+        const uint32 untimedPassCount = GPUTimestampSlotLayout::countUntimedPass( listPass.size() );
         if ( untimedPassCount > 0 )
         {
             SW_LOG_WARNING_ID( "FrameRenderer.PipelinePassesGPUTimestamps", "Pipeline '%#' has %# passes; GPU timestamps cover the first %#, so %# pass(es) from '%#' on are not timed "
                                                                             "(constant::render::kMaxGPUTimestampSlot)",
-                               _pipelineResource.getDesc()._name, listPass.size(), FrameRendererUtil::kGPUTimedPassCapacity, untimedPassCount,
-                               listPass[FrameRendererUtil::kGPUTimedPassCapacity]._name );
+                               _pipelineResource.getDesc()._name, listPass.size(), GPUTimestampSlotLayout::kTimedPassCapacity, untimedPassCount,
+                               listPass[GPUTimestampSlotLayout::kTimedPassCapacity]._name );
         }
 #endif
 

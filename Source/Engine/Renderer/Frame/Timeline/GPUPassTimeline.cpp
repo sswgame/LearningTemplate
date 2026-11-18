@@ -7,7 +7,7 @@
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
-#include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Timeline/GPUTimestampSlotLayout.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 
 namespace sw
@@ -85,7 +85,7 @@ namespace sw
 #if SW_PROFILER_BACKEND_COMPILED
         // Tracy 에서는 프레임 그래프 구간의 자식으로 보인다(`GPUTimelineExporter::exportFrame`). 줄 번호는 뷰 패스 칸 뒤의 프레임 패스 번호다.
         scope._pZoneSite = ProfilerBackend::registerZoneSite( passName.c_str(), "GPU frame pass", "Engine/Renderer",
-                                                              FrameRendererUtil::kGPUTimedPassCapacity + static_cast<uint32>( framePassIndex ) );
+                                                              GPUTimestampSlotLayout::kTimedPassCapacity + static_cast<uint32>( framePassIndex ) );
 #endif
         return scope._profilerSlot;
     }
@@ -130,7 +130,7 @@ namespace sw
         float32 lastEndMicro{ -1.0f };
         for ( size_t passIndex = 0; passIndex < listPass.size(); ++passIndex )
         {
-            if ( passIndex >= FrameRendererUtil::kGPUTimedPassCapacity )
+            if ( passIndex >= GPUTimestampSlotLayout::kTimedPassCapacity )
                 break;
             const size_t  beginSlot = passIndex * 2;
             const float32 endMicro  = reportSpan( getOrCreateScopeSlot( passIndex, listPass[passIndex]._name ), beginSlot, beginSlot + 1 );
@@ -140,7 +140,7 @@ namespace sw
         // 프레임 패스(컬링 · 그리드 · 스킨 …)는 프레임 그래프 안이라 `GPU.Compute` 구간의 안쪽 조각이다 — 마지막 패스 끝(GPU.Frame)에는 넣지 않는다.
         for ( size_t framePassIndex = 0; framePassIndex < listFramePass.size(); ++framePassIndex )
         {
-            const uint32 beginSlot = FrameRendererUtil::findFramePassTimestampSlot( framePassIndex );
+            const uint32 beginSlot = GPUTimestampSlotLayout::findFramePassSlot( framePassIndex );
             if ( beginSlot == constant::invalid_index::kUint32 )
                 break;
             std::ignore = reportSpan( getOrCreateFrameScopeSlot( framePassIndex, listFramePass[framePassIndex]._name ), beginSlot, beginSlot + 1u );
@@ -153,10 +153,10 @@ namespace sw
             _computeScopeSlot = profiler.registerScope( "GPU.Compute" );
         if ( _frameScopeSlot == FrameProfiler::kInvalidSlot )
             _frameScopeSlot = profiler.registerScope( "GPU.Frame" );
-        reportSpan( _computeScopeSlot, FrameRendererUtil::kGPUTimestampSlotComputeBegin, FrameRendererUtil::kGPUTimestampSlotComputeEnd );
-        if ( lastEndMicro >= 0.0f && FrameRendererUtil::kGPUTimestampSlotFrameBegin < listGPUTimestampMicro.size() )
+        reportSpan( _computeScopeSlot, GPUTimestampSlotLayout::kComputeBegin, GPUTimestampSlotLayout::kComputeEnd );
+        if ( lastEndMicro >= 0.0f && GPUTimestampSlotLayout::kFrameBegin < listGPUTimestampMicro.size() )
         {
-            const float32 frameBegin = listGPUTimestampMicro[FrameRendererUtil::kGPUTimestampSlotFrameBegin];
+            const float32 frameBegin = listGPUTimestampMicro[GPUTimestampSlotLayout::kFrameBegin];
             if ( frameBegin >= 0.0f && lastEndMicro >= frameBegin )
                 profiler.addSample( _frameScopeSlot, static_cast<uint64>( ( lastEndMicro - frameBegin ) * constant::time::kNanosecondsPerMicrosecond ) );
         }

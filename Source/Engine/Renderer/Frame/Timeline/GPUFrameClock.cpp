@@ -4,7 +4,7 @@
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
-#include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Timeline/GPUTimestampSlotLayout.h"
 
 #include <cstring>
 
@@ -13,8 +13,8 @@ namespace sw
     namespace
     {
         // 시작 · 끝 슬롯 둘 중 큰 번호가 열려 있어야 둘 다 쓴다.
-        constexpr uint32 kHighestClockSlot = FrameRendererUtil::kGPUTimestampSlotFrameBegin > FrameRendererUtil::kGPUTimestampSlotFrameEnd ? FrameRendererUtil::kGPUTimestampSlotFrameBegin
-                                                                                                                                           : FrameRendererUtil::kGPUTimestampSlotFrameEnd;
+        constexpr uint32 kHighestClockSlot = GPUTimestampSlotLayout::kFrameBegin > GPUTimestampSlotLayout::kFrameEnd ? GPUTimestampSlotLayout::kFrameBegin
+                                                                                                                     : GPUTimestampSlotLayout::kFrameEnd;
 
         uint64 packSample( uint32 serial, float32 gpuMs )
         {
@@ -43,13 +43,13 @@ namespace sw
     void GPUFrameClock::writeFrameBegin( IRHICommandList& cmd ) const
     {
         if ( _bWritingFrame != SW_FALSE )
-            cmd.writeTimestamp( FrameRendererUtil::kGPUTimestampSlotFrameBegin );
+            cmd.writeTimestamp( GPUTimestampSlotLayout::kFrameBegin );
     }
 
     void GPUFrameClock::writeFrameEnd( IRHICommandList& cmd ) const
     {
         if ( _bWritingFrame != SW_FALSE )
-            cmd.writeTimestamp( FrameRendererUtil::kGPUTimestampSlotFrameEnd );
+            cmd.writeTimestamp( GPUTimestampSlotLayout::kFrameEnd );
     }
 
     const RHITimestampFrame* GPUFrameClock::readBack( IRHITimestampProvider* pTimestamps, bool bProfilerRecording )
@@ -95,8 +95,8 @@ namespace sw
         const vector<float32>& listMicro = frame._listMicro;
         if ( kHighestClockSlot >= listMicro.size() )
             return false;
-        const float32 beginMicro = listMicro[FrameRendererUtil::kGPUTimestampSlotFrameBegin];
-        const float32 endMicro   = listMicro[FrameRendererUtil::kGPUTimestampSlotFrameEnd];
+        const float32 beginMicro = listMicro[GPUTimestampSlotLayout::kFrameBegin];
+        const float32 endMicro   = listMicro[GPUTimestampSlotLayout::kFrameEnd];
         // 음수는 그 프레임에 기록되지 않았다는 표시다(백엔드 약속). 한쪽만 음수여도 구간이 서지 않는다.
         if ( beginMicro < 0.0f || endMicro < 0.0f || endMicro < beginMicro )
             return false;

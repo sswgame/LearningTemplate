@@ -4,9 +4,9 @@
 
 #include "Engine/Graphics/RHI/Diagnostics/GPUTimestampSlotMask.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
 #include "Engine/Renderer/Frame/Timeline/GPUTimelineExporter.h"
+#include "Engine/Renderer/Frame/Timeline/GPUTimestampSlotLayout.h"
 #include "Engine/Renderer/Frame/Timeline/GPUTimingRow.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 
@@ -15,14 +15,14 @@ using namespace sw;
 /** @brief [GPUPassTimelineTest] 칸 배치: 뷰 패스 쌍 · 프레임 패스 쌍 · 예약 셋이 겹치지 않고, 측정 칸 밖의 프레임 패스는 칸이 없다. */
 SW_TEST_CASE( GPUPassTimelineTest, SlotLayoutDoesNotOverlap )
 {
-    const uint32 lastViewSlot = FrameRendererUtil::kGPUTimedPassCapacity * 2u - 1u;
-    const uint32 firstFrame   = FrameRendererUtil::findFramePassTimestampSlot( 0 );
-    const uint32 lastFrame    = FrameRendererUtil::findFramePassTimestampSlot( FrameRendererUtil::kGPUTimedFramePassCapacity - 1u ) + 1u;
+    const uint32 lastViewSlot = GPUTimestampSlotLayout::kTimedPassCapacity * 2u - 1u;
+    const uint32 firstFrame   = GPUTimestampSlotLayout::findFramePassSlot( 0 );
+    const uint32 lastFrame    = GPUTimestampSlotLayout::findFramePassSlot( GPUTimestampSlotLayout::kTimedFramePassCapacity - 1u ) + 1u;
     SW_EXPECT_TRUE( firstFrame > lastViewSlot );
-    SW_EXPECT_TRUE( lastFrame <= FrameRendererUtil::kGPUTimestampReservedSlotBegin );
-    SW_EXPECT_EQUAL( FrameRendererUtil::findFramePassTimestampSlot( 1 ), firstFrame + 2u );
-    SW_EXPECT_EQUAL( FrameRendererUtil::findFramePassTimestampSlot( FrameRendererUtil::kGPUTimedFramePassCapacity ), constant::invalid_index::kUint32 );
-    SW_EXPECT_TRUE( FrameRendererUtil::kGPUTimestampSlotFrameBegin < constant::render::kMaxGPUTimestampSlot );
+    SW_EXPECT_TRUE( lastFrame <= GPUTimestampSlotLayout::kReservedSlotBegin );
+    SW_EXPECT_EQUAL( GPUTimestampSlotLayout::findFramePassSlot( 1 ), firstFrame + 2u );
+    SW_EXPECT_EQUAL( GPUTimestampSlotLayout::findFramePassSlot( GPUTimestampSlotLayout::kTimedFramePassCapacity ), constant::invalid_index::kUint32 );
+    SW_EXPECT_TRUE( GPUTimestampSlotLayout::kFrameBegin < constant::render::kMaxGPUTimestampSlot );
 }
 
 /** @brief [GPUPassTimelineTest] 슬롯 비트 집합: 64 를 넘는 칸도 서고, 빈 집합은 any 가 거짓이다. */
@@ -63,7 +63,7 @@ SW_TEST_CASE( GPUPassTimelineTest, ReportsFramePassSpans )
     frame._listMicro.assign( constant::render::kMaxGPUTimestampSlot, -1.0f );
     frame._listMicro[0]            = 100.0f; // Shadow 100 ~ 400 us
     frame._listMicro[1]            = 400.0f;
-    const uint32 cullSlot          = FrameRendererUtil::findFramePassTimestampSlot( 0 );
+    const uint32 cullSlot          = GPUTimestampSlotLayout::findFramePassSlot( 0 );
     frame._listMicro[cullSlot]     = 10.0f; // Cull 10 ~ 60 us
     frame._listMicro[cullSlot + 1] = 60.0f;
     timeline.reportFrame( frame, listPass, listFramePass );
@@ -115,14 +115,14 @@ SW_TEST_CASE( GPUPassTimelineTest, ExportNestsFramePassesUnderCompute )
 
     RHITimestampFrame frame;
     frame._listMicro.assign( constant::render::kMaxGPUTimestampSlot, -1.0f );
-    frame._listMicro[FrameRendererUtil::kGPUTimestampSlotFrameBegin]   = 0.0f;
-    frame._listMicro[FrameRendererUtil::kGPUTimestampSlotComputeBegin] = 1.0f;
-    frame._listMicro[FrameRendererUtil::kGPUTimestampSlotComputeEnd]   = 10.0f;
-    const uint32 framePassSlot                                         = FrameRendererUtil::findFramePassTimestampSlot( 0 );
-    frame._listMicro[framePassSlot]                                    = 2.0f;
-    frame._listMicro[framePassSlot + 1u]                               = 5.0f;
-    frame._listMicro[0]                                                = 11.0f; // 뷰 패스 0
-    frame._listMicro[1]                                                = 20.0f;
+    frame._listMicro[GPUTimestampSlotLayout::kFrameBegin]   = 0.0f;
+    frame._listMicro[GPUTimestampSlotLayout::kComputeBegin] = 1.0f;
+    frame._listMicro[GPUTimestampSlotLayout::kComputeEnd]   = 10.0f;
+    const uint32 framePassSlot                              = GPUTimestampSlotLayout::findFramePassSlot( 0 );
+    frame._listMicro[framePassSlot]                         = 2.0f;
+    frame._listMicro[framePassSlot + 1u]                    = 5.0f;
+    frame._listMicro[0]                                     = 11.0f; // 뷰 패스 0
+    frame._listMicro[1]                                     = 20.0f;
 
     RecordingGPUTimeline backend;
     GPUTimelineExporter  exporter;
