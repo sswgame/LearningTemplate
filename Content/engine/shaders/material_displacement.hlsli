@@ -14,7 +14,9 @@
  * 식의 C++ 짝은 `MaterialDisplacement`(MaterialDisplacement.h)이고 단위 테스트가 성질을 지킨다 — 한쪽을 고치면 다른 쪽도 고친다.
  *
  * 뷰 깊이는 늘 카메라의 뷰-투영(g_ViewProj)에서 읽는다 — 그림자 패스도 같은 값이라 그림자와 본 패스가 같은 계수 · 같은 변위로 같은 윤곽을 그린다.
- * 높이는 정점 간격에 맞춘 밉으로 읽는다(Displacement::computeHeightMipLevel) — 도메인에는 화면 미분이 없어, 정점이 담지 못하는 주파수를 걸러 먼 표면의 읽기가 흩어지지 않는다.
+ * 높이는 정점 간격에 맞춘 밉으로 읽는다 — 도메인에는 화면 미분이 없어, 정점이 담지 못하는 주파수를 걸러 먼 표면의 읽기가 흩어지지 않는다.
+ * 밉은 변마다 그 변의 두 끝점 UV · 변 계수만으로 정하고(Displacement::computeEdgeHeightMipLevel) 패치 안은 세 변의 밉을 섞는다(blendEdgeHeightMipLevels) —
+ * 변을 나누는 두 패치가 그 변 위에서 같은 밉으로 읽어 틈이 없다(변 계수와 같은 규칙).
  * 셰이딩 노멀: 노멀 맵이 없으면 변위가 만든 기울기로 다시 구한다(표면 기울기 — Mikkelsen 2020 · HDRP, Displacement::computeDisplacementNormal).
  * 노멀 맵이 있으면 그 맵이 높이 맵과 짝이라 보고 메시 노멀에 맵을 얹는다 — 둘을 함께 쓰면 같은 디테일이 두 번 든다(언리얼 · HDRP 변위도 노멀 맵으로 셰이딩한다).
  * shortcut: UV 이음매에서는 양쪽이 다른 높이를 읽어 틈이 날 수 있다. 이음매 없는 UV 나 이음매에서 같은 높이인 맵을 쓴다(언리얼 Nanite 변위도 같은 제약, 기억에 의존).
@@ -30,6 +32,7 @@
 static const float kDisplacementMaxTessFactor = 64.0f;    // MaterialDisplacement::kMaxTessFactor 와 같다
 static const float kDisplacementMinViewDepth  = 0.05f;    // MaterialDisplacement::kMinViewDepth 와 같다
 static const float kDisplacementMinUVArea     = 1.0e-12f; // MaterialDisplacement::kMinUVArea 와 같다
+static const float kDisplacementMinWeight     = 1.0e-8f;  // MaterialDisplacement::kMinBarycentricWeight 와 같다
 
 /**
  * @brief 정점 → 헐 → 도메인 제어점. 위치는 SV_POSITION 이 아니라 일반 값이다(내장 위치는 GL 이 패치 사이에서 잃는다 — optional_stages.hlsl).
@@ -63,7 +66,8 @@ struct Displacement
 {
     static float computeEdgeFactor( float3 position0, float3 position1, float viewDepth0, float viewDepth1, float density, float maxFactor );
     static float computeOffset( float height, float scale, float midLevel );
-    static float computeHeightMipLevel( float2 uv0, float2 uv1, float2 uv2, float insideFactor, float2 textureSize );
+    static float computeEdgeHeightMipLevel( float2 uvA, float2 uvB, float edgeFactor, float2 textureSize );
+    static float blendEdgeHeightMipLevels( float3 barycentric, float edgeMip0, float edgeMip1, float edgeMip2 );
     static void computeUVTangentFrame( float3 position0, float3 position1, float3 position2, float2 uv0, float2 uv1, float2 uv2, out float3 outTangent, out float3 outBitangent );
     static float3 computeDisplacementNormal( float3 normal, float3 tangent, float3 bitangent, float heightSlopeU, float heightSlopeV, float scale );
 };
@@ -83,11 +87,19 @@ static float Displacement::computeOffset( float height, float scale, float midLe
     return ( height - midLevel ) * scale;
 }
 
-/** @brief 높이 맵 밉 — 정점 간격(패치 UV 변 / 안쪽 계수)이 걸치는 텍셀 수의 log2(0 이상). */
-static float Displacement::computeHeightMipLevel( float2 uv0, float2 uv1, float2 uv2, float insideFactor, float2 textureSize )
+/** @brief 변 하나의 높이 밉 — 정점 간격(UV 변 / 변 계수)이 걸치는 텍셀 수의 log2(0 이상). 두 끝점 · 변 계수만 읽어 이웃 패치와 같은 값이다. */
+static float Displacement::computeEdgeHeightMipLevel( float2 uvA, float2 uvB, float edgeFactor, float2 textureSize )
 {
-    const float texelSpan = max( max( length( ( uv1 - uv0 ) * textureSize ), length( ( uv2 - uv1 ) * textureSize ) ), length( ( uv0 - uv2 ) * textureSize ) ) / max( insideFactor, 1.0f );
+    const float texelSpan = length( ( uvB - uvA ) * textureSize ) / max( edgeFactor, 1.0f );
     return log2( max( texelSpan, 1.0f ) );
+}
+
+/** @brief 한 점의 높이 밉 — 세 변의 밉을 b1·b2 · b2·b0 · b0·b1 로 섞는다. 변 위에서는 그 변의 밉 하나, 원래 꼭짓점은 0(어느 패치에서나 같다 — C++ 짝의 shortcut 주석). */
+static float Displacement::blendEdgeHeightMipLevels( float3 barycentric, float edgeMip0, float edgeMip1, float edgeMip2 )
+{
+    const float3 weight = barycentric.yzx * barycentric.zxy;
+    const float  sum    = weight.x + weight.y + weight.z;
+    return sum > kDisplacementMinWeight ? dot( weight, float3( edgeMip0, edgeMip1, edgeMip2 ) ) / sum : 0.0f;
 }
 
 /** @brief 패치의 탄젠트 dP/du · 바이탄젠트 dP/dv(2x2 풀이, 정규화하지 않는다). UV 가 퇴화하면 둘 다 0 이다. */
@@ -248,9 +260,12 @@ void storeDisplacedVaryings( inout MaterialInterpolants output, MaterialControlP
 {
     MaterialControlPoint controlPoint = interpolateControlPoint( patch[0], patch[1], patch[2], barycentric );
     const MaterialData   material     = SW_MATERIAL( controlPoint._materialIndex );
-    // 도메인 스테이지에는 화면 미분이 없다 — 정점 간격에 맞춘 밉으로 읽는다.
+    // 도메인 스테이지에는 화면 미분이 없다 — 정점 간격에 맞춘 밉으로 읽는다. 변 i 는 꼭짓점 i 의 맞은편이다(헐의 변 계수와 같은 짝).
     const float2 heightSize    = MaterialTexture::computeSize( material._displacementMap );
-    const float  heightMip     = Displacement::computeHeightMipLevel( patch[0]._uv, patch[1]._uv, patch[2]._uv, constants._inside, heightSize );
+    const float  edgeMip0      = Displacement::computeEdgeHeightMipLevel( patch[1]._uv, patch[2]._uv, constants._arrEdge[0], heightSize );
+    const float  edgeMip1      = Displacement::computeEdgeHeightMipLevel( patch[2]._uv, patch[0]._uv, constants._arrEdge[1], heightSize );
+    const float  edgeMip2      = Displacement::computeEdgeHeightMipLevel( patch[0]._uv, patch[1]._uv, constants._arrEdge[2], heightSize );
+    const float  heightMip     = Displacement::blendEdgeHeightMipLevels( barycentric, edgeMip0, edgeMip1, edgeMip2 );
     const float  height        = MaterialTexture::sampleLevel( material._displacementMap, controlPoint._uv, heightMip ).r;
     const float  offset        = Displacement::computeOffset( height, material._displacementScale, material._displacementMidLevel );
     const float3 meshNormal    = normalize( controlPoint._normal );
