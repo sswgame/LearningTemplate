@@ -32,7 +32,7 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Renderer/Scene/GPUMaterialRegistry.h"
 #include "Engine/Renderer/Scene/GPUScene.h"
@@ -116,7 +116,7 @@ namespace sw
         }
 
         /** @brief 파이프라인에 없는 내부 슬롯(`pPassDesc` 없음)의 깊이 · 블렌드 · 컬을 표에서 정합니다. 파이프라인 패스는 XML 값이 그대로 들어간다(`applyPassRenderState`). */
-        void applyInternalPassRenderState( RHIPipelineStateDesc& desc, const RenderPassTypeInfo& info, RenderPassType passType )
+        void applyInternalPassRenderState( RHIPipelineStateDesc& desc, const RenderPassKindInfo& info, RenderPassKind passType )
         {
             RenderState& state       = desc._renderState;
             state                    = RenderState{};
@@ -125,7 +125,7 @@ namespace sw
             if ( info.hasFlag( RenderPassTraitFlag::kBlend ) )
                 state.setAllBlendTargets( info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) ? BlendTargetState::makePremultipliedAlpha() : BlendTargetState::makeStraightAlpha() );
             // 풀스크린 삼각형의 와인딩에는 앞뒤 의미가 없다. 컬링하면 화면이 빈다.
-            if ( getRenderPassTypeInfo( passType ).shouldDrawSceneMeshes() == false )
+            if ( getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false )
                 state._cullMode = CullMode::None;
             else
                 state._cullMode = info.hasFlag( RenderPassTraitFlag::kCullFront ) ? CullMode::Front : CullMode::Back;
@@ -256,7 +256,7 @@ namespace sw
          *          엔진 PassCB 는 모든 역할의 인덱스 칸을 가지므로 칸이 있는 것이 아니라 읽는 것을 본다. 쓰임을 모르는 리플렉션(SPIR-V · GLSL · 쿠킹 매니페스트)은 건너뛴다 —
          *          DX 백엔드의 개발 실행 · 시나리오가 잡는다(언리얼 RDG 가 패스 파라미터 밖 자원 접근을 검증 단계에서 잡는 자리).
          */
-        bool checkPassInputContract( RenderPassType passType, const ShaderBindingLayout& layout )
+        bool checkPassInputContract( RenderPassKind passType, const ShaderBindingLayout& layout )
         {
             const RenderPassInputSignature* const pContract = findRenderPassInputSignature( passType );
             if ( pContract == nullptr )
@@ -272,10 +272,10 @@ namespace sw
                         continue;
                     RenderPassInputRole role  = RenderPassInputRole::Invalid;
                     const bool          bRole = tryParseRenderPassInputRole( name.substr( 2, name.size() - 7 ), role );
-                    if ( bRole == false || pContract->hasRole( role ) || getRenderPassTypeInfo( passType )._executionBoundRole == role )
+                    if ( bRole == false || pContract->hasRole( role ) || getRenderPassKindInfo( passType )._executionBoundRole == role )
                         continue;
                     SW_LOG_ERROR_ID( "FramePSOManager.PassReadsRoleOutsideContract",
-                                     "Pass %# reads engine role '%#' (%#) but its input contract does not have it - the graph binds no texture there and the shader reads an invalid index; add the role to the contract (RenderPassTypeInfo) and the pipeline inputs",
+                                     "Pass %# reads engine role '%#' (%#) but its input contract does not have it - the graph binds no texture there and the shader reads an invalid index; add the role to the contract (RenderPassKindInfo) and the pipeline inputs",
                                      getEnumName( passType ), getRenderPassInputRoleName( role ), member._name.c_str() );
                     bInside = false;
                 }
@@ -284,12 +284,12 @@ namespace sw
         }
     } // namespace
 
-    void FramePSOManager::applyPassRenderState( RHIPipelineStateDesc& desc, RenderPassType passType, const RenderGraphPassDesc* pPassDesc )
+    void FramePSOManager::applyPassRenderState( RHIPipelineStateDesc& desc, RenderPassKind passType, const RenderGraphPassDesc* pPassDesc )
     {
         if ( pPassDesc != nullptr )
             desc._renderState = pPassDesc->_resolvedRenderState; // 조합은 읽을 때 검사했다(`RenderPipelineAsset::validate`)
         else
-            applyInternalPassRenderState( desc, getRenderPassTypeInfo( passType ), passType );
+            applyInternalPassRenderState( desc, getRenderPassKindInfo( passType ), passType );
         finishPassRenderState( desc );
     }
 
@@ -312,15 +312,15 @@ namespace sw
         // 그래픽스 · 컴퓨트 패스는 desc 를 먼저 모으고(아래 1), 셰이더를 워커가 나눠 데운 뒤(2), PSO 를 이 스레드가 차례로 만든다(3).
         vector<PassPSOJob>    listJob;
         vector<ComputePSOJob> listComputeJob;
-        // 엔진 PSO 는 패스 종류의 표(RenderPassTypeInfo)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
+        // 엔진 PSO 는 패스 종류의 표(RenderPassKindInfo)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
         // 표의 EngineDefaultAssets 경로는 마지막 폴백일 뿐이다. 셰이더 쿠커가 같은 표를 훑는다.
         // 저장소에 이미 있는 패스는 만들지 않는다 — 미리보기 씬 렌더러는 주 렌더러의 저장소를 함께 쓰고(`shareCache`), 주 렌더러가 같은 파이프라인으로 먼저 만들었다.
         const EngineDefaultAssets& engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         const RHICapabilities      caps                = _pDevice->getCapabilities();
-        for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
+        for ( uint32 typeIndex = 0; typeIndex < kRenderPassKindCount; ++typeIndex )
         {
-            const RenderPassType      passType = static_cast<RenderPassType>( typeIndex );
-            const RenderPassTypeInfo& info     = getRenderPassTypeInfo( passType );
+            const RenderPassKind      passType = static_cast<RenderPassKind>( typeIndex );
+            const RenderPassKindInfo& info     = getRenderPassKindInfo( passType );
             const bool                bMissing = info._pDefaultShader != nullptr && _pCache->findEnginePSO( passType ) == 0;
             if ( bMissing == false )
                 continue;
@@ -381,15 +381,15 @@ namespace sw
                 computeJob._passType                    = pass._type;
                 continue;
             }
-            if ( pass._type != RenderPassType::Compute )
+            if ( pass._type != RenderPassKind::Compute )
                 continue;
-            RenderPassShaderSelection computeShader = selectRenderPassShader( RenderPassType::Compute, &pass, &pass, engineDefaultAssets );
+            RenderPassShaderSelection computeShader = selectRenderPassShader( RenderPassKind::Compute, &pass, &pass, engineDefaultAssets );
             ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
             computeJob._shaderPath                  = std::move( computeShader._shaderPath );
             computeJob._entryPoint                  = pass._computeEntryPoint;
             computeJob._listDefine                  = std::move( computeShader._listDefine );
             computeJob._pipelinePassName            = hashed_string( pass._name.c_str() );
-            computeJob._passType                    = RenderPassType::Compute;
+            computeJob._passType                    = RenderPassKind::Compute;
         }
 
         // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPSO 주석 참고).
@@ -402,13 +402,13 @@ namespace sw
             RHIPipelineStateDesc _desc{};
         };
         vector<DeferredTilePSOJob> listTileJob;
-        const RenderGraphPassDesc* pLightingDesc = findPassDescByType( RenderPassType::Lighting );
+        const RenderGraphPassDesc* pLightingDesc = findPassDescByType( RenderPassKind::Lighting );
         const bool                 bTileCapable  = pLightingDesc != nullptr && _pDevice->supportsNativeBindlessSampling() && caps._bGPUCulling != SW_FALSE;
         for ( uint32 tileClass = 0; bTileCapable && tileClass < kDeferredTileClassCount; ++tileClass )
         {
             DeferredTilePSOJob tileJob;
             tileJob._key = makeDeferredTilePSOKey( tileClass );
-            if ( _pCache->hasMaterialPSO( tileJob._key ) || makePassPSODesc( RenderPassType::Lighting, pLightingDesc, nullptr, tileJob._desc ) == false )
+            if ( _pCache->hasMaterialPSO( tileJob._key ) || makePassPSODesc( RenderPassKind::Lighting, pLightingDesc, nullptr, tileJob._desc ) == false )
                 continue;
             tileJob._desc._listShaderDefine = selectDeferredTileLightingShader( *pLightingDesc, tileClass, engineDefaultAssets )._listDefine;
             tileJob._desc._vertexEntryPoint = kDeferredTileVertexEntryPoint;
@@ -425,7 +425,7 @@ namespace sw
         for ( const PassPSOJob& job : listJob )
         {
             appendShaderWarm( job._desc, listShader );
-            if ( job._passType == RenderPassType::Transparent && job._outputFormat == RHIFormat::Unknown )
+            if ( job._passType == RenderPassKind::Transparent && job._outputFormat == RHIFormat::Unknown )
                 appendShaderWarm( makeParticlePSODesc( job._desc, engineDefaultAssets._shaderParticle.get() ), listShader );
         }
         if ( listJob.empty() == false )
@@ -527,7 +527,7 @@ namespace sw
         return _pCache->findExtensionProgramPSO( passName, pso ) ? pso : RHIPipelineStateHandle{ 0 };
     }
 
-    RHIPipelineStateHandle FramePSOManager::getEnginePSO( RenderPassType passType ) const
+    RHIPipelineStateHandle FramePSOManager::getEnginePSO( RenderPassKind passType ) const
     {
         // 프레임 패스는 이 파이프라인이 선언했을 때만 있다 — 함께 쓰는 저장소(미리보기 렌더러)에 주 렌더러가 만든 PSO 가 있어도 0 이다.
         // 그래서 "PSO 가 있으면 준비한다" 고 묻는 모든 곳(간접 인자를 컬링에 맡김 · GPU 라이트 그리드 · 볼륨 안개 · 프로브 · 입자 · 깊이 히스토리)이 선언을 따른다.
@@ -536,7 +536,7 @@ namespace sw
         return _pCache->findEnginePSO( passType );
     }
 
-    RHIPipelineStateHandle FramePSOManager::findOutputPSO( RenderPassType passType, RHIFormat targetFormat ) const
+    RHIPipelineStateHandle FramePSOManager::findOutputPSO( RenderPassKind passType, RHIFormat targetFormat ) const
     {
         // **조회만 한다.** 없다고 여기서 만들면 안 된다 — 이 함수는 패스 실행 중 = 태스크 워커에서
         // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더 패스 캐시(락 없음)를 건드리므로, 같은
@@ -575,7 +575,7 @@ namespace sw
         _pCache->registerLayout( pso, desc, _pDevice->getShaderTargetFormat() );
     }
 
-    const RenderGraphPassDesc* FramePSOManager::findPassDescByType( RenderPassType passType ) const
+    const RenderGraphPassDesc* FramePSOManager::findPassDescByType( RenderPassKind passType ) const
     {
         // 값만 비교한다 — 표기는 읽을 때 enum 으로 검사했다.
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
@@ -676,10 +676,10 @@ namespace sw
         // 화면 회전 출력(kSurfaceRotation)은 스왑체인 이미지에만 그려 백버퍼 포맷 하나이고, 서피스를 돌릴 수 있는 장치에서만 만든다(데스크톱은 없다).
         const RHIFormat arrTargetFormat[]   = { _pDevice->getBackBufferFormat(), constant::render::kOffscreenColorFormat, constant::render::kBackBufferFormat };
         const bool      bSurfacePreRotation = _pDevice->getCapabilities()._bSurfacePreRotation != SW_FALSE;
-        for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
+        for ( uint32 typeIndex = 0; typeIndex < kRenderPassKindCount; ++typeIndex )
         {
-            const RenderPassType      passType = static_cast<RenderPassType>( typeIndex );
-            const RenderPassTypeInfo& info     = getRenderPassTypeInfo( passType );
+            const RenderPassKind      passType = static_cast<RenderPassKind>( typeIndex );
+            const RenderPassKindInfo& info     = getRenderPassKindInfo( passType );
             if ( info.hasFlag( RenderPassTraitFlag::kOutputPass ) == false )
                 continue;
             const bool bSurfaceRotation = info.hasFlag( RenderPassTraitFlag::kSurfaceRotation );
@@ -756,7 +756,7 @@ namespace sw
         return _pCache->findMaterialPSO( psoKey );
     }
 
-    RHIPipelineStateHandle FramePSOManager::createPSOForPassType( RenderPassType passType, const RHIFormat* pRTVFormatOverride )
+    RHIPipelineStateHandle FramePSOManager::createPSOForPassType( RenderPassKind passType, const RHIFormat* pRTVFormatOverride )
     {
         return createPSOForPass( passType, findPassDescByType( passType ), pRTVFormatOverride );
     }
@@ -798,7 +798,7 @@ namespace sw
         return handle;
     }
 
-    RHIPipelineStateHandle FramePSOManager::createPSOForPass( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride )
+    RHIPipelineStateHandle FramePSOManager::createPSOForPass( RenderPassKind passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride )
     {
         if ( _pDevice == nullptr )
             return 0;
@@ -810,14 +810,14 @@ namespace sw
         return handle;
     }
 
-    bool FramePSOManager::makePassPSODesc( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride, RHIPipelineStateDesc& outDesc ) const
+    bool FramePSOManager::makePassPSODesc( RenderPassKind passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride, RHIPipelineStateDesc& outDesc ) const
     {
         // 파이프라인 패스는 XML 의 값(셰이더 · 진입점 · 렌더 상태 · 퍼뮤테이션 · 타깃)이 그대로 들어간다. 표는 XML 이 비운 셰이더의 기본값, 패스 define, XML 에 없는 내부 슬롯의 값이다.
         // 셰이더와 define 은 쿠커와 **같은 함수**(selectRenderPassShader)로 정한다. 어긋나면 Shipping 에서 매니페스트 미스가 난다.
-        const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
+        const RenderPassKindInfo& info = getRenderPassKindInfo( passType );
         // 내부 슬롯은 대신 그리는 파이프라인 패스의 출력 선언으로 포맷 · 화면 속도 쓰기를 정한다(`_targetSourceType`).
         const RenderGraphPassDesc* pTargetDesc =
-            ( pPassDesc == nullptr && info._targetSourceType != RenderPassType::Invalid ) ? findPassDescByType( info._targetSourceType ) : pPassDesc;
+            ( pPassDesc == nullptr && info._targetSourceType != RenderPassKind::Invalid ) ? findPassDescByType( info._targetSourceType ) : pPassDesc;
         const RenderPassShaderSelection shader = selectRenderPassShader( passType, pPassDesc, pTargetDesc, engine::getSubsystem<EngineDefaultAssets>() );
 
         RHIPipelineStateDesc& desc = outDesc;
@@ -886,16 +886,16 @@ namespace sw
         return desc._numRenderTargets == 0;
     }
 
-    bool FramePSOManager::hasRenderTargetFormatSource( RenderPassType passType ) const
+    bool FramePSOManager::hasRenderTargetFormatSource( RenderPassKind passType ) const
     {
-        const RenderPassTypeInfo&  info        = getRenderPassTypeInfo( passType );
-        const RenderPassType       sourceType  = info._targetSourceType != RenderPassType::Invalid ? info._targetSourceType : passType;
+        const RenderPassKindInfo&  info        = getRenderPassKindInfo( passType );
+        const RenderPassKind       sourceType  = info._targetSourceType != RenderPassKind::Invalid ? info._targetSourceType : passType;
         const RenderGraphPassDesc* pTargetDesc = findPassDescByType( sourceType );
         const bool                 bDeclared   = pTargetDesc != nullptr && pTargetDesc->_listOutput.empty() == false;
         return info._pColorFormat != nullptr || info._colorTargetCount == 0 || bDeclared;
     }
 
-    RenderPSOCache::MaterialPSOEntry FramePSOManager::createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType,
+    RenderPSOCache::MaterialPSOEntry FramePSOManager::createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassKind passType,
                                                                                 const GPUShaderPermutation* pPermutation, RenderViewMode viewMode, bool bReverseCulling,
                                                                                 RHIMeshVertexFormat vertexFormat, RHIPipelineStateDesc* pOutDeferredDesc )
     {
@@ -911,7 +911,7 @@ namespace sw
             return RenderPSOCache::MaterialPSOEntry::failed();
         }
 
-        const RenderPassTypeInfo& passInfo = getRenderPassTypeInfo( passType );
+        const RenderPassKindInfo& passInfo = getRenderPassKindInfo( passType );
         bool                      bChanged{ false };
         if ( pPermutation != nullptr )
         {
@@ -1027,9 +1027,9 @@ namespace sw
         bool bCreatedVariant{ false };
         for ( const auto& [passType, passPSO] : _pCache->getEnginePSOs() )
         {
-            if ( passPSO == 0 || getRenderPassTypeInfo( passType ).shouldDrawSceneMeshes() == false )
+            if ( passPSO == 0 || getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false )
                 continue;
-            const bool                        bTransparentPass = getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
+            const bool                        bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
             const vector<MaterialPSORequest>& listRequest      = bTransparentPass ? listTransparentRequest : listOpaqueRequest;
             for ( const MaterialPSORequest& request : listRequest )
             {
@@ -1068,9 +1068,9 @@ namespace sw
                 const GPUShaderPermutation permutation = GPUMaterialRegistry::makeShaderPermutation( entry, bAppearanceDither );
                 for ( const auto& [passType, passPSO] : _pCache->getEnginePSOs() )
                 {
-                    const bool bTransparentPass = getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
-                    const bool bSkippedPass     = passPSO == 0 || getRenderPassTypeInfo( passType ).shouldDrawSceneMeshes() == false || bTransparentPass != bTransparentMaterial;
-                    if ( bSkippedPass || getRenderPassTypeInfo( passType ).shouldDrawMaterial( &permutation._listDefine ) == false )
+                    const bool bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
+                    const bool bSkippedPass     = passPSO == 0 || getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false || bTransparentPass != bTransparentMaterial;
+                    if ( bSkippedPass || getRenderPassKindInfo( passType ).shouldDrawMaterial( &permutation._listDefine ) == false )
                         continue;
                     for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
                     {
@@ -1109,13 +1109,13 @@ namespace sw
         }
     }
 
-    bool FramePSOManager::ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask )
+    bool FramePSOManager::ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPSORequest& request, uint32 viewModeMask )
     {
         const bool bReverseCulling = ( request._bReverseCulling != SW_FALSE );
         // 이 패스가 그리지 않는 배치(외곽선을 켜지 않은 머티리얼)의 변형은 만들지 않는다. 쿠커도 그것을 쿠킹하지 않는다.
         const GPUShaderPermutation* pRequestPermutation =
             ( request._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( request._shaderPermutation );
-        if ( getRenderPassTypeInfo( passType ).shouldDrawMaterial( pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
+        if ( getRenderPassKindInfo( passType ).shouldDrawMaterial( pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
             return false;
         bool bCreatedVariant{ false };
         for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
@@ -1127,7 +1127,7 @@ namespace sw
             {
                 // 퍼뮤테이션이 없는 배치를 위한 변형이다. 적용하는 것이 뷰 모드와 컬 반전뿐이다. Lit 이고 거울이 아니면 만들 것이 없다
                 // (그때는 패스 PSO 가 그대로 정답이고 psoForBatch 도 캐시를 보지 않는다).
-                const bool bAppliesViewMode = ( viewMode != RenderViewMode::Lit ) && getRenderPassTypeInfo( passType ).shouldApplyViewMode();
+                const bool bAppliesViewMode = ( viewMode != RenderViewMode::Lit ) && getRenderPassKindInfo( passType ).shouldApplyViewMode();
                 const bool bNeedsVariant    = bAppliesViewMode || bReverseCulling || request._vertexFormat != RHIMeshVertexFormat::Packed;
                 if ( bNeedsVariant && ensureMaterialPSOVariant( passPSO, passType, nullptr, 0, bReverseCulling, viewMode, request._vertexFormat ) )
                     bCreatedVariant = true;
@@ -1141,7 +1141,7 @@ namespace sw
         return bCreatedVariant;
     }
 
-    bool FramePSOManager::ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation,
+    bool FramePSOManager::ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassKind passType, const GPUShaderPermutation* pPermutation,
                                                     uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode, RHIMeshVertexFormat vertexFormat, bool bUrgent )
     {
         // 키를 `Building` 으로 올린 쪽만 만든다(`beginMaterialPSO`). 셰이더 컴파일이 낄 수 있는 변형은 desc 만 정해 빌더 줄에 넣고(렌더 스레드의 임계 경로에서 뺀다),
@@ -1186,7 +1186,7 @@ namespace sw
     void FramePSOManager::ensureParticlePSO()
     {
         _particlePSOKey                              = 0;
-        const RHIPipelineStateHandle transparentPSO  = getEnginePSO( RenderPassType::Transparent );
+        const RHIPipelineStateHandle transparentPSO  = getEnginePSO( RenderPassKind::Transparent );
         const bool                   bNoParticlePass = _pDevice == nullptr || transparentPSO == 0 || _gpuScene.getParticleBatches().empty();
         if ( bNoParticlePass )
             return;

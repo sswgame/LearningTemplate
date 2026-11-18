@@ -82,7 +82,7 @@ namespace sw
                 if ( codec == 0 || bodySize == 0 )
                     return LocalStoreResult::Ok;
                 CompressionCodecRegistry* pRegistry = findRegistry( context );
-                ICompressionCodec*        pCodec    = pRegistry != nullptr ? pRegistry->getCodec( static_cast<CompressionCodecType>( codec ) ) : nullptr;
+                ICompressionCodec*        pCodec    = pRegistry != nullptr ? pRegistry->getCodec( static_cast<CompressionCodecKind>( codec ) ) : nullptr;
                 if ( pCodec == nullptr )
                     return LocalStoreResult::Invalid; // 등록되지 않은 코덱으로 쓰지 않는다(읽을 수 없는 슬롯이 된다)
                 vector<uint8> compressed( pCodec->compressBound( bodySize ) );
@@ -105,7 +105,7 @@ namespace sw
                     return LocalStoreResult::Ok;
                 }
                 CompressionCodecRegistry* pRegistry = findRegistry( context );
-                ICompressionCodec*        pCodec    = pRegistry != nullptr ? pRegistry->getCodec( static_cast<CompressionCodecType>( header._codec ) ) : nullptr;
+                ICompressionCodec*        pCodec    = pRegistry != nullptr ? pRegistry->getCodec( static_cast<CompressionCodecKind>( header._codec ) ) : nullptr;
                 if ( pCodec == nullptr )
                     return LocalStoreResult::Corrupt; // 이 구성에 없는 코덱 — 다른 코덱으로 바꾸지 않는다
                 if ( header._originalSize > pCodec->decompressBound( bodySize ) )

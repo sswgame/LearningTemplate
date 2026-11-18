@@ -182,7 +182,7 @@ namespace sw::editor
         switch ( def._type )
         {
             // 아래 세 칸의 핸들은 스키마에서 꺼낸 정의(`def`)로 풀어 언제나 풀린다 — 못 풀면 `resolveKey` 가 오류를 남기고 칸을 그리지 않는다.
-            case UserSettingType::Bool:
+            case UserSettingKind::Bool:
             {
                 const optional<UserSettingKey<bool>> key = settings.resolveKey<bool>( def._id );
                 if ( key.has_value() == false )
@@ -192,7 +192,7 @@ namespace sw::editor
                     (void)settings.setPendingBoolValue( def._id, bValue );
                 break;
             }
-            case UserSettingType::Int:
+            case UserSettingKind::Int:
             {
                 const optional<UserSettingKey<int32>> key = settings.resolveKey<int32>( def._id );
                 if ( key.has_value() == false )
@@ -202,7 +202,7 @@ namespace sw::editor
                     (void)settings.setPendingIntValue( def._id, number );
                 break;
             }
-            case UserSettingType::Float:
+            case UserSettingKind::Float:
             {
                 const optional<UserSettingKey<float32>> key = settings.resolveKey<float32>( def._id );
                 if ( key.has_value() == false )
@@ -212,7 +212,7 @@ namespace sw::editor
                     (void)settings.setPendingFloatValue( def._id, number );
                 break;
             }
-            case UserSettingType::Enum:
+            case UserSettingKind::Enum:
             {
                 vector<UserSettingOption> listOption;
                 settings.collectOptions( def._id, listOption );
@@ -236,7 +236,7 @@ namespace sw::editor
                 }
                 break;
             }
-            case UserSettingType::KeyBinding:
+            case UserSettingKind::KeyBinding:
             {
                 // 키를 눌러 받는 창은 게임 메뉴의 일이다. 여기서는 슬롯 글(`Key.Space`)을 적고 겹치면 맞바꾼다.
                 const string glyph = settings.getBindingGlyph( def._id, InputGlyphStyle::KeyboardMouse );
@@ -247,7 +247,7 @@ namespace sw::editor
                     (void)settings.setPendingBinding( def._id, text, UserSettingBindingPolicy::Swap );
                 break;
             }
-            case UserSettingType::String:
+            case UserSettingKind::String:
             {
                 string text = value;
                 if ( EditorWidgets::drawTextField( "##value", text ) )

@@ -1,7 +1,7 @@
 /**
  * @file TouchDevice.h
  * @brief 터치 스크린 장치입니다. 손가락 번호가 컨트롤 번호라 입력 맵은 키처럼 `Touch.0` 슬롯으로 묶습니다.
- * @details 언리얼 `EKeys::Touch1` … 처럼 손가락을 키로 둔다(기억). 새 바인딩 종류를 더하지 않아 충돌 검사 · 재바인딩 · 저장이 그대로 돈다. 모바일 · 웹 창이 `RawInputEventType::Touch*` 를 낸다.
+ * @details 언리얼 `EKeys::Touch1` … 처럼 손가락을 키로 둔다(기억). 새 바인딩 종류를 더하지 않아 충돌 검사 · 재바인딩 · 저장이 그대로 돈다. 모바일 · 웹 창이 `RawInputEventKind::Touch*` 를 낸다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

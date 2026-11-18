@@ -21,7 +21,7 @@ namespace
     public:
         static constexpr uint8 kMask = 0xA5;
 
-        sw::CompressionCodecType getCodecType() const override { return sw::CompressionCodecType::Custom; }
+        sw::CompressionCodecKind getCodecType() const override { return sw::CompressionCodecKind::Custom; }
         const utf8*              getCodecName() const override { return "XorTest"; }
         size_t                   compressBound( size_t uncompressedSize ) const override { return uncompressedSize; }
         size_t                   decompressBound( size_t compressedSize ) const override { return compressedSize; }
@@ -72,7 +72,7 @@ namespace
 SW_TEST_CASE( CompressionTest, NullCodecPassthrough )
 {
     sw::NullCompressionCodec codec;
-    SW_EXPECT_EQUAL( static_cast<uint32>( sw::CompressionCodecType::None ), static_cast<uint32>( codec.getCodecType() ) );
+    SW_EXPECT_EQUAL( static_cast<uint32>( sw::CompressionCodecKind::None ), static_cast<uint32>( codec.getCodecType() ) );
     SW_EXPECT_EQUAL( sw::string( "Null" ), sw::string( codec.getCodecName() ) );
 
     const sw::string original = "Hello SW Engine Compression!";
@@ -99,7 +99,7 @@ SW_TEST_CASE( CompressionTest, NullCodecPassthrough )
 SW_TEST_CASE( CompressionTest, RLECodecRepetitionAndLiterals )
 {
     sw::RLECompressionCodec codec;
-    SW_EXPECT_EQUAL( static_cast<uint32>( sw::CompressionCodecType::RLE ), static_cast<uint32>( codec.getCodecType() ) );
+    SW_EXPECT_EQUAL( static_cast<uint32>( sw::CompressionCodecKind::RLE ), static_cast<uint32>( codec.getCodecType() ) );
 
     // 1) 고반복 데이터 (압축률이 높은 경우)
     sw::vector<uint8> repetitiveData( 1024, 0xAA );
@@ -139,13 +139,13 @@ SW_TEST_CASE( CompressionTest, CodecRegistryAndDynamicLookup )
     sw::CompressionCodecRegistry registry;
     registry.initialize();
 
-    sw::ICompressionCodec* pRLE = registry.getCodec( sw::CompressionCodecType::RLE );
+    sw::ICompressionCodec* pRLE = registry.getCodec( sw::CompressionCodecKind::RLE );
     SW_EXPECT_TRUE( pRLE != nullptr );
     SW_EXPECT_EQUAL( sw::string( "RLE" ), sw::string( pRLE->getCodecName() ) );
 
     sw::ICompressionCodec* pNull = registry.getCodec( "Null" );
     SW_EXPECT_TRUE( pNull != nullptr );
-    SW_EXPECT_EQUAL( static_cast<uint32>( sw::CompressionCodecType::None ), static_cast<uint32>( pNull->getCodecType() ) );
+    SW_EXPECT_EQUAL( static_cast<uint32>( sw::CompressionCodecKind::None ), static_cast<uint32>( pNull->getCodecType() ) );
 }
 
 // ------------------------------------------------------------------------------
@@ -168,7 +168,7 @@ SW_TEST_CASE( CompressionTest, RegisteredCodecIsUsedByStream )
     // **레지스트리를 넘기지 않는다** — 기본 레지스트리를 보는지가 이 테스트의 요점이다.
     sw::vector<uint8> compressedStream;
     SW_EXPECT_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), compressedStream,
-                                                           sw::CompressionCodecType::Custom ) );
+                                                           sw::CompressionCodecKind::Custom ) );
 
     // 페이로드가 XOR 되어 있어야 한다 — 내장 코덱으로 갔다면 원문 그대로다.
     SW_EXPECT_TRUE( compressedStream.size() > sizeof( sw::CompressionHeader ) );
@@ -190,7 +190,7 @@ SW_TEST_CASE( CompressionTest, CompressionStreamRoundtrip )
 
     // 1) RLE 압축 스트림 생성
     sw::vector<uint8> compressedStream;
-    SW_EXPECT_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), compressedStream, sw::CompressionCodecType::RLE ) );
+    SW_EXPECT_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), compressedStream, sw::CompressionCodecKind::RLE ) );
     SW_EXPECT_TRUE( compressedStream.size() > sizeof( sw::CompressionHeader ) );
 
     // 2) 헤더 검증
@@ -232,12 +232,12 @@ SW_TEST_CASE( CompressionTest, UnavailableCodecFailsInsteadOfSwappingForNull )
     SW_EXPECT_LOG( "Compression.CodecNotRegistered" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     // Zstd 코덱은 Engine 쪽에 있고 빈 레지스트리에는 없으므로 "등록 안 된 코덱" 의 실물이다.
     sw::CompressionCodecRegistry registry;
-    SW_EXPECT_TRUE( registry.isCodecRegistered( sw::CompressionCodecType::Zstd ) == false );
+    SW_EXPECT_TRUE( registry.isCodecRegistered( sw::CompressionCodecKind::Zstd ) == false );
 
     const sw::string  source( 512, 'Q' );
     sw::vector<uint8> compressedStream;
     const bool        bCompressed = sw::CompressionStream::compressBuffer(
-        source.data(), source.size(), compressedStream, sw::CompressionCodecType::Zstd, 0, &registry );
+        source.data(), source.size(), compressedStream, sw::CompressionCodecKind::Zstd, 0, &registry );
 
     SW_EXPECT_FALSE_MSG( bCompressed, "an unavailable codec was requested and it succeeded - another codec was swapped in" );
     SW_EXPECT_TRUE( compressedStream.empty() );
@@ -258,12 +258,12 @@ SW_TEST_CASE( CompressionTest, StreamWithUnknownCodecFailsToDecompress )
     const sw::string  source( 256, 'Z' );
     sw::vector<uint8> compressedStream;
     SW_REQUIRE_TRUE( sw::CompressionStream::compressBuffer(
-        source.data(), source.size(), compressedStream, sw::CompressionCodecType::RLE, 0, &registry ) );
+        source.data(), source.size(), compressedStream, sw::CompressionCodecKind::RLE, 0, &registry ) );
     SW_REQUIRE_TRUE( compressedStream.size() > sizeof( sw::CompressionHeader ) );
 
     // 헤더의 코덱 종류만 이 빌드에 없는 것으로 바꾼다 — 페이로드는 여전히 RLE 다.
     auto* const pHeader = reinterpret_cast<sw::CompressionHeader*>( compressedStream.data() );
-    pHeader->_codecType = sw::CompressionCodecType::LZ4;
+    pHeader->_codecType = sw::CompressionCodecKind::LZ4;
     pHeader->_flags     = 0;
 
     SW_EXPECT_LOG( "Compression.UnsupportedCodec" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
@@ -290,7 +290,7 @@ SW_TEST_CASE( CompressionTest, HeaderSizeOverflowIsRejected )
     const sw::string  original( 4096, 'A' );
     sw::vector<uint8> stream;
     SW_REQUIRE_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), stream,
-                                                            sw::CompressionCodecType::RLE ) );
+                                                            sw::CompressionCodecKind::RLE ) );
     SW_REQUIRE_TRUE( stream.size() > sizeof( sw::CompressionHeader ) );
 
     // 1) 넘치는 _compressedSize — 덧셈 검사면 통과해 버퍼 밖을 읽는다.
@@ -343,7 +343,7 @@ SW_TEST_CASE( CompressionTest, AbsurdUncompressedSizeIsRejectedBeforeAllocating 
     const sw::string  original( 256, 'B' );
     sw::vector<uint8> stream;
     SW_REQUIRE_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), stream,
-                                                            sw::CompressionCodecType::RLE ) );
+                                                            sw::CompressionCodecKind::RLE ) );
 
     sw::vector<uint8>      attack = stream;
     sw::CompressionHeader* pHead  = reinterpret_cast<sw::CompressionHeader*>( attack.data() );
@@ -499,7 +499,7 @@ SW_TEST_CASE( CompressionTest, CodecDecompressBoundCoversWorstCaseAndStreamRejec
 
     const sw::string  original( 130 * 64, 'R' );
     sw::vector<uint8> stream;
-    SW_REQUIRE_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), stream, sw::CompressionCodecType::RLE ) );
+    SW_REQUIRE_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), stream, sw::CompressionCodecKind::RLE ) );
 
     sw::CompressionHeader header{};
     SW_REQUIRE_TRUE( sw::CompressionStream::verifyHeader( stream.data(), stream.size(), header ) );

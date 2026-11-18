@@ -1,5 +1,5 @@
 /**
- * screen_space_reflection.hlsl — 화면 공간 반사 패스(RenderPassType::ScreenSpaceReflection).
+ * screen_space_reflection.hlsl — 화면 공간 반사 패스(RenderPassKind::ScreenSpaceReflection).
  *
  * 디퍼드에서 불투명 · 하늘을 그린 뒤 · 반투명 앞에 돈다. G버퍼 노멀로 시선을 반사한 광선을 월드에서 같은 걸음으로 나아가며 화면에 투영해, 장면 깊이보다 뒤로
  * 들어간 첫 걸음(두께 g_SSRParams.z 안)을 맞은 자리로 보고 이분 탐색으로 다듬는다. 맞은 자리의 색은 장면 색 사본(SceneColorCopy — 반사가 자기 결과를 읽지 않는다)에서 읽는다.

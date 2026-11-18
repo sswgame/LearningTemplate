@@ -373,7 +373,7 @@ namespace sw
         PROPERTY( Tooltip = "Distance along the rail added to the point nearest the target", Units = m )
         float32 _pathOffset{ 0.0f };
         PROPERTY( Tooltip = "How the control points are joined" )
-        SplineType _type{ SplineType::CatmullRom };
+        SplineKind _type{ SplineKind::CatmullRom };
         PROPERTY( Tooltip = "The rail loops back to its first point" )
         bool _bClosed{ false };
     };

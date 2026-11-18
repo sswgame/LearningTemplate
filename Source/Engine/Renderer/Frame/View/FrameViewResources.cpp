@@ -21,7 +21,7 @@
 #include "Engine/Renderer/Frame/View/RenderStability.h"
 #include "Engine/Renderer/Graph/RenderGraphMemoryPlan.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 
 namespace sw
@@ -52,7 +52,7 @@ namespace sw
                 {
                     if ( VectorUtil::contains( pass._listResolvedOutput, name ) == false )
                         continue;
-                    if ( getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kGenericFullscreen ) == false )
+                    if ( getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kGenericFullscreen ) == false )
                         return false;
                     bWritten = true;
                 }
@@ -65,7 +65,7 @@ namespace sw
              */
             static bool isSelectable( const vector<RenderGraphPassDesc>& listPass, const RenderGraphPassDesc& pass )
             {
-                const RenderPassTypeInfo& info            = getRenderPassTypeInfo( pass._type );
+                const RenderPassKindInfo& info            = getRenderPassKindInfo( pass._type );
                 const bool                bSelectableType = info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) || info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) ||
                                              info.hasFlag( RenderPassTraitFlag::kCullWhenUnconsumed );
                 if ( bSelectableType == false || pass._listResolvedColorOutput.empty() )
@@ -173,7 +173,7 @@ namespace sw
             static bool isPassEnabledInView( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, const RenderFrameSettings& frameSettings, const FrameViewResources::ViewPassSceneState& sceneState,
                                              bool bMotionStill )
             {
-                const RenderPassTypeInfo& info = getRenderPassTypeInfo( pass._type );
+                const RenderPassKindInfo& info = getRenderPassKindInfo( pass._type );
                 if ( info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && ( settings.usesPostProcess() == false || pass._minPostQuality > frameSettings._postQuality ) )
                     return false;
                 const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( settings._viewMode );
@@ -181,28 +181,28 @@ namespace sw
                 const bool bShowsScene = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
                 switch ( pass._type )
                 {
-                    case RenderPassType::DepthOfField:
+                    case RenderPassKind::DepthOfField:
                         return settings._depthOfField.hasDepthOfField() && settings._projectionScaleY > 0.0f; // 핀홀(조리개 0) · 직교는 꺼짐
-                    case RenderPassType::MotionBlur:
-                    case RenderPassType::MotionBlurTileMax:
-                    case RenderPassType::MotionBlurNeighborMax:
+                    case RenderPassKind::MotionBlur:
+                    case RenderPassKind::MotionBlurTileMax:
+                    case RenderPassKind::MotionBlurNeighborMax:
                         return frameSettings._bMotionBlur != SW_FALSE && bMotionStill == false;
-                    case RenderPassType::ContactShadow:
+                    case RenderPassKind::ContactShadow:
                         return sceneState._bContactShadows == SW_TRUE; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다
-                    case RenderPassType::Shadow:
+                    case RenderPassKind::Shadow:
                         // 점광 · 스폿 아틀라스 패스는 타일이 없으면 지우지도 않는다 — 그 프레임엔 그림자 칸을 받은 빛(params.x)이 없어 조명이 아틀라스를 읽지 않으니 내용은 상관없다.
                         return pass._resolvedDepthRole != static_cast<uint8>( RenderPassInputRole::LocalShadowMap ) || sceneState._bLocalShadows == SW_TRUE;
-                    case RenderPassType::PostProcessMaterial:
+                    case RenderPassKind::PostProcessMaterial:
                         return settings.shouldDrawPostProcessMaterial( pass._blendableLocation ); // 이 자리에 읽기를 마친 블렌더블이 없다 — 출력이 원본을 가리킨다
-                    case RenderPassType::ScreenSpaceReflection:
+                    case RenderPassKind::ScreenSpaceReflection:
                         return settings.usesPostProcess() && settings._postProcess._screenSpaceReflectionIntensity > 0.0f;
-                    case RenderPassType::Distortion:
-                    case RenderPassType::DistortionApply:
+                    case RenderPassKind::Distortion:
+                    case RenderPassKind::DistortionApply:
                         return bShowsScene && sceneState._bDistortionBatches == SW_TRUE;
-                    case RenderPassType::DepthPrepass:
+                    case RenderPassKind::DepthPrepass:
                         // 와이어프레임(겹침 아님)은 선만 그린다 — 면 깊이를 먼저 쓰면 뒤 선이 가려지고 앞 선이 면 깊이와 다투어 끊긴다(프리패스 없는 파이프라인과 같은 그림으로)
                         return viewModeInfo._bWireframe == false || viewModeInfo._bOverlay;
-                    case RenderPassType::Decal:
+                    case RenderPassKind::Decal:
                         return bShowsScene && sceneState._bDecals == SW_TRUE; // 값 보기는 데칼을 덮지 않는다 — 출력이 없어 베이스 패스가 DBuffer 를 걸지 않는다
                     default:
                         return true;
@@ -327,7 +327,7 @@ namespace sw
         RHITextureDesc historyDesc{};
         historyDesc._width              = depth._width;
         historyDesc._height             = depth._height;
-        historyDesc._format             = getRenderPassTypeInfo( RenderPassType::DepthHistory )._pColorFormat[0]; // 복사 PSO 와 같은 포맷 한 곳
+        historyDesc._format             = getRenderPassKindInfo( RenderPassKind::DepthHistory )._pColorFormat[0]; // 복사 PSO 와 같은 포맷 한 곳
         historyDesc._bIsRenderTarget    = SW_TRUE;
         historyDesc._bIsShaderResource  = SW_TRUE;
         historyDesc._bIsUnorderedAccess = SW_TRUE;
@@ -348,7 +348,7 @@ namespace sw
         const RenderGraphPassDesc* pTAAPass = nullptr;
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
         {
-            if ( pass._type == RenderPassType::TAA )
+            if ( pass._type == RenderPassKind::TAA )
             {
                 pTAAPass = &pass;
                 break;
@@ -411,7 +411,7 @@ namespace sw
         // 분류 컴퓨트가 G버퍼를 샘플하고(네이티브 bindless) 간접 인자를 쓴다(간접 인자 능력 — 컬링과 같다). 조명 패스가 없는 파이프라인(포워드)은 쓸 곳이 없다.
         const bool bUsable = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() && _pDevice->getCapabilities()._bGPUCulling != SW_FALSE &&
                              VectorUtil::containsIf( _pipeline.getGraphPass(), []( const RenderGraphPassDesc& pass )
-        { return pass._type == RenderPassType::Lighting; } );
+        { return pass._type == RenderPassKind::Lighting; } );
         if ( bUsable == false || view._deferredTileList.isValid() )
             return;
         const TransientAttachmentPool::Attachment albedo = view._transientPool.find( attachmentNames()._gbufferAlbedo );
@@ -547,13 +547,13 @@ namespace sw
                     view._listPassDisabled[passIndex] = SW_TRUE;
                     continue;
                 }
-                if ( pass._type == RenderPassType::TAA )
+                if ( pass._type == RenderPassKind::TAA )
                     view._bTAAHistoryWritten = SW_TRUE;
-                const bool bSkipSceneCopyInputs = getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) && sceneState._bRefractionBatches == SW_FALSE;
+                const bool bSkipSceneCopyInputs = getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) && sceneState._bRefractionBatches == SW_FALSE;
                 Internal::markReads( listAttachment, pass, true, listNeeded, bSkipSceneCopyInputs );
                 continue;
             }
-            const RenderPassTypeInfo& info          = getRenderPassTypeInfo( pass._type );
+            const RenderPassKindInfo& info          = getRenderPassKindInfo( pass._type );
             const bool                bOff          = Internal::isPassEnabledInView( pass, view._settings, _frameSettings, sceneState, bMotionStill ) == false;
             const bool                bOutputNeeded = VectorUtil::containsIf( pass._listResolvedColorOutput, [&]( const RenderGraphPassDesc::ResolvedAttachment& output )
                            { return Internal::isNeeded( listAttachment, output._attachment, listNeeded ); } );
@@ -580,7 +580,7 @@ namespace sw
                 }
                 continue;
             }
-            if ( pass._type == RenderPassType::TAA )
+            if ( pass._type == RenderPassKind::TAA )
                 view._bTAAHistoryWritten = SW_TRUE;
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
             {

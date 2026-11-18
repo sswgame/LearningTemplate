@@ -43,8 +43,8 @@ namespace
         {
         }
 
-        bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override { return trySendMessage( connectionID, channel, pData, size ); }
-        bool trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override
+        bool sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override { return trySendMessage( connectionID, channel, pData, size ); }
+        bool trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override
         {
             (void)channel;
             if ( _sendBudget == 0 )
@@ -55,7 +55,7 @@ namespace
             return true;
         }
         bool  sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
-        int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID ) override
+        int32 broadcast( NetChannelKind channel, const uint8* pData, int32 size, int32 exceptID ) override
         {
             int32 count = 0;
             for ( const int32 connectionID : _listConnected )
@@ -203,7 +203,7 @@ namespace
                 vector<FakeHousingPeers::Sent> listSent = std::move( _listClient[index]->_peers._listSent );
                 _listClient[index]->_peers._listSent.clear();
                 for ( const FakeHousingPeers::Sent& sent : listSent )
-                    (void)_server.handleMessage( static_cast<int32>( index ), sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelType::ReliableOrdered );
+                    (void)_server.handleMessage( static_cast<int32>( index ), sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelKind::ReliableOrdered );
             }
             _server.update( vector<HousingNetPlotRef>{ _pServerPlot->makeNetPlot() } );
             vector<FakeHousingPeers::Sent> listOut = std::move( _serverPeers._listSent );
@@ -211,7 +211,7 @@ namespace
             for ( const FakeHousingPeers::Sent& sent : listOut )
             {
                 Client& client = *_listClient[static_cast<size_t>( sent._connectionID )];
-                SW_EXPECT_TRUE( client._replication.handleMessage( 0, sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
+                SW_EXPECT_TRUE( client._replication.handleMessage( 0, sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
             }
             for ( unique_ptr<Client>& pClient : _listClient )
             {
@@ -363,12 +363,12 @@ SW_TEST_CASE( HousingReplicationTest, ServerChecksReachRateAndRawValues )
         body.writeVarInt( 0 );
         body.writeFloat( 0.0f );
         body.writeBool( false );
-        SW_EXPECT_TRUE( rig._server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelType::ReliableOrdered ) == NetHandleResult::Malformed );
+        SW_EXPECT_TRUE( rig._server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
         BitWriter& badOp = writer.begin( NetHousingMessage::kEdit );
         badOp.writeVarUint( 2 );
         badOp.writeVarUint( static_cast<uint64>( hashed_string( "home" ).getHash() ) );
         badOp.writeBits( 7u, 3 );
-        SW_EXPECT_TRUE( rig._server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelType::ReliableOrdered ) == NetHandleResult::Malformed );
+        SW_EXPECT_TRUE( rig._server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
         SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._editCount );
     }
 }

@@ -21,9 +21,9 @@ namespace sw
     /** @brief 클라이언트-서버 복제 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetClientServerMessage
     {
-        using Snapshot    = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelType::UnreliableSequenced>;
-        using SnapshotAck = NetMessageDef<1, NetMessageDirection::ToServer, NetChannelType::Unreliable>;
-        using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelType::UnreliableSequenced, 6>; ///< 판 6: 의도 끝에 발동 순간 시선 필드(선택)가 붙는다(5: 입력 항목마다의 보던 틱 스탬프, 4: 소유자 상태 필드)
+        using Snapshot    = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced>;
+        using SnapshotAck = NetMessageDef<1, NetMessageDirection::ToServer, NetChannelKind::Unreliable>;
+        using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::UnreliableSequenced, 6>; ///< 판 6: 의도 끝에 발동 순간 시선 필드(선택)가 붙는다(5: 입력 항목마다의 보던 틱 스탬프, 4: 소유자 상태 필드)
         using Table       = NetMessageTable<NetKitMessageRange::kClientServer, Snapshot, SnapshotAck, Input>;
 
         static constexpr uint8 kSnapshot    = Table::getKindOf<Snapshot>();

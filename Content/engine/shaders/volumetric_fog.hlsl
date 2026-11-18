@@ -4,7 +4,7 @@
 #include "light_grid_common.hlsli"
 
 /**
- * volumetric_fog.hlsl — 볼륨 안개의 froxel 컴퓨트(RenderPassType::VolumetricFog). 언리얼 Volumetric Fog, 유니티 HDRP Volumetric Fog 에 해당한다.
+ * volumetric_fog.hlsl — 볼륨 안개의 froxel 컴퓨트(RenderPassKind::VolumetricFog). 언리얼 Volumetric Fog, 유니티 HDRP Volumetric Fog 에 해당한다.
  *
  * 주 시점의 화면 칸(SW_FOG_VOLUME_DIM_X × DIM_Y)마다 스레드 하나가 시선을 거리의 로그 조각(DIM_Z 개, FogMath::computeBoundaryDistance)으로 앞에서 뒤로 걸으며
  * 조각마다 (1) 그 높이의 안개 밀도로 투과율을 곱하고 (2) 그 자리의 빛을 구해 산란을 더한다. 결과는 조각 끝까지의 누적 (산란 rgb, 투과율)을 구조 버퍼에 쓴다 —

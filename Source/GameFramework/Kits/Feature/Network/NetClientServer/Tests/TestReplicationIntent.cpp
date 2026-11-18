@@ -45,7 +45,7 @@ namespace
             _cluster.step();
             vector<uint8>  buffer;
             int32          connectionID = -1;
-            NetChannelType channel      = NetChannelType::Unreliable;
+            NetChannelKind channel      = NetChannelKind::Unreliable;
             while ( _cluster.getServer().receiveMessage( connectionID, channel, buffer ) )
             {
                 (void)_server.handleMessage( connectionID, buffer );

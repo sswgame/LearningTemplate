@@ -99,7 +99,7 @@ namespace sw::editor
     void ContentBrowserImportQueue::openDialog( string_view initialFolderAbs )
     {
         FileDialogParams params{};
-        params._type                = FileDialogParams::Type::Open;
+        params._type                = FileDialogParams::Kind::Open;
         params._title               = "Import to Content Browser";
         params._description         = "Assets";
         params._bEnableMultiselect  = true;

@@ -1,6 +1,6 @@
 /**
- * @file RenderPassTypeInfo.h
- * @brief 패스 종류(`RenderPassType`) 하나에 대한 사실을 한 항목에 모은 테이블입니다.
+ * @file RenderPassKindInfo.h
+ * @brief 패스 종류(`RenderPassKind`) 하나에 대한 사실을 한 항목에 모은 테이블입니다.
  * @details 기본 셰이더, PSO 상태, 패스 define, 그리는 대상(씬 메시, 풀스크린, 컴퓨트), 입력 계약이 여기 있습니다.
  *          엔진 PSO 등록(`FrameRenderer::ensurePassResources`), 셰이더 쿠킹 요청(`ShaderCookDriver`), 패스 실행
  *          (`FramePassExecutor::executePass`), 파이프라인 검증(`RenderPipelineAsset::validate`)이 모두 이 테이블을 enum 으로 읽습니다.
@@ -75,7 +75,7 @@ namespace sw
 
     /** @brief FSR 1 의 RCAS 단계가 fsr1.hlsl 에 추가하는 define 입니다. 없으면 같은 파일이 EASU 단계입니다. */
     inline constexpr const utf8* kPassFSRRcasDefine = "SW_PASS_FSR_RCAS=1";
-    /// @brief 컬링 셰이더(gpu_cull.hlsl)를 간접 인자 개수 되돌리기 커널로 만든다(`RenderPassType::IndirectArgsReset`).
+    /// @brief 컬링 셰이더(gpu_cull.hlsl)를 간접 인자 개수 되돌리기 커널로 만든다(`RenderPassKind::IndirectArgsReset`).
     inline constexpr const utf8* kPassIndirectArgsResetDefine = "SW_CULL_RESET_ARGS=1";
 
     /**
@@ -91,7 +91,7 @@ namespace sw
     /**
      * @brief 등장 중인 인스턴스(`GPUInstance::_appearance` < 1)의 퍼뮤테이션 define 입니다. 셰이더가 등장 비율만큼의 픽셀만 남긴다(binding.hlsli 8-1).
      * @details 머티리얼 에셋이 아니라 빌더가 붙인다(`GPUMaterialRegistry::computePermutationHashFor`). 등장 중인 인스턴스만 이 변형이라 다 보이는 물체는
-     *          픽셀 버리기 없이 그린다. 깊이만 쓰는 패스도 이 변형에는 픽셀 스테이지를 붙인다(`RenderPassTypeInfo::needsAppearanceDitherPixelStage`).
+     *          픽셀 버리기 없이 그린다. 깊이만 쓰는 패스도 이 변형에는 픽셀 스테이지를 붙인다(`RenderPassKindInfo::needsAppearanceDitherPixelStage`).
      */
     inline constexpr const utf8* kAppearanceDitherDefine = "SW_APPEARANCE_DITHER";
 
@@ -100,7 +100,7 @@ namespace sw
 
     /**
      * @brief 높이 맵으로 표면을 노멀 방향으로 옮기는 머티리얼(`material_displacement.hlsli`)의 define 입니다. 그 배치는 헐 · 도메인 스테이지가 붙은 변형 PSO 로 그린다.
-     * @details 깊이 패스(그림자 · 깊이 프리패스)도 머티리얼 셰이더로 같은 변위를 그린다(`RenderPassTypeInfo::usesMaterialShaderForDepth`) — 패스 셰이더로 그리면 윤곽이 평면으로 남는다.
+     * @details 깊이 패스(그림자 · 깊이 프리패스)도 머티리얼 셰이더로 같은 변위를 그린다(`RenderPassKindInfo::usesMaterialShaderForDepth`) — 패스 셰이더로 그리면 윤곽이 평면으로 남는다.
      *          테셀레이션이 없는 백엔드(`RHICapabilities::_bMaterialTessellation`)에서는 변형을 만들지 않고 오류를 남긴다 — 평면으로 대신 그리지 않는다.
      */
     inline constexpr const utf8* kMaterialDisplacementDefine = "MATERIAL_DISPLACEMENT";
@@ -132,8 +132,8 @@ namespace sw
     /** @brief 셰이더 메시지를 켠 변형의 define 입니다(`gpu_message.hlsli`). `-gv_gpuMessages` 가 켜진 개발 빌드에서 `kGPUMessageTarget` 패스에만 붙는다. */
     inline constexpr const utf8* kGPUMessagesDefine = "SW_GPU_MESSAGES_ENABLED";
 
-    /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
-    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::DeferredTileClassify ) + 1;
+    /** @brief `RenderPassKind` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
+    inline constexpr uint32 kRenderPassKindCount = static_cast<uint32>( RenderPassKind::DeferredTileClassify ) + 1;
 
     /** @brief 디퍼드 조명 타일 분류의 종류 수 · 타일 한 변(px)입니다 — 셰이더와 같은 표(deferred_tile_class.hlsli)의 값입니다. */
     inline constexpr uint32 kDeferredTileClassCount = SW_DEFERRED_TILE_CLASS_COUNT;
@@ -143,7 +143,7 @@ namespace sw
 
     /**
      * @struct RenderPassTraitFlag
-     * @brief `RenderPassTypeInfo::_flags` 의 비트입니다.
+     * @brief `RenderPassKindInfo::_flags` 의 비트입니다.
      */
     struct RenderPassTraitFlag
     {
@@ -211,7 +211,7 @@ namespace sw
          * @brief 컴퓨트가 엔진 텍스처를 읽어야 해서 네이티브 bindless 샘플링(DX12 · Vulkan)이 있는 백엔드에서만 PSO 를 만든다. 에뮬 백엔드(DX11 · GL)의 컴퓨트는 샘플 텍스처를 읽지 못한다(binding.hlsli).
          */
         static constexpr uint32 kRequiresNativeBindless = SW_BIT( 22 );
-        /** @brief 파이프라인 XML 의 패스가 컴퓨트 셰이더를 고른다(`RenderPassType::Compute`). 셰이더가 패스마다 달라 PSO 를 패스 이름으로 찾는다(`FramePSOManager::findPipelineComputePSO`). */
+        /** @brief 파이프라인 XML 의 패스가 컴퓨트 셰이더를 고른다(`RenderPassKind::Compute`). 셰이더가 패스마다 달라 PSO 를 패스 이름으로 찾는다(`FramePSOManager::findPipelineComputePSO`). */
         static constexpr uint32 kPipelineCompute = SW_BIT( 23 );
         /**
          * @brief 머티리얼이 렌더 타깃과 상관없는 렌더 상태(깊이 · 스텐실 · 채우기)를 덮을 수 있는 색 패스다. 없는 씬 메시 패스(그림자 · 깊이 프리패스 · 외곽선)는 컬 · 앞면 방향만 받는다.
@@ -238,7 +238,7 @@ namespace sw
          */
         static constexpr uint32 kComputeImplementation = SW_BIT( 28 );
         /**
-         * @brief 화면 회전 출력 패스다(`RenderPassType::ScreenRotation`) — `kOutputPass` 와 함께 붙고, 대상은 스왑체인 이미지 하나라 PSO 를 **백버퍼 포맷으로만** 만들며
+         * @brief 화면 회전 출력 패스다(`RenderPassKind::ScreenRotation`) — `kOutputPass` 와 함께 붙고, 대상은 스왑체인 이미지 하나라 PSO 를 **백버퍼 포맷으로만** 만들며
          *        서피스를 돌릴 수 있는 장치(`RHICapabilities::_bSurfacePreRotation`)에서만 만든다(`FramePSOManager::collectOutputPSOJobs`).
          */
         static constexpr uint32 kSurfaceRotation = SW_BIT( 29 );
@@ -258,10 +258,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct RenderPassTypeInfo
-     * @brief 패스 종류 하나의 사실입니다. `getRenderPassTypeInfo` 가 enum 값으로 찾습니다.
+     * @struct RenderPassKindInfo
+     * @brief 패스 종류 하나의 사실입니다. `getRenderPassKindInfo` 가 enum 값으로 찾습니다.
      */
-    struct RenderPassTypeInfo
+    struct RenderPassKindInfo
     {
         /** @brief 파이프라인 XML 이 `_shaderPath` 를 적지 않았을 때 쓰는 셰이더입니다(EngineDefaultAssets 의 항목). nullptr 이면 엔진 PSO 가 없습니다. */
         DataPath EngineDefaultAssets::* _pDefaultShader{ nullptr };
@@ -285,13 +285,13 @@ namespace sw
          */
         RenderPassInputRole _executionBoundRole{ RenderPassInputRole::Invalid };
         /** @brief 테이블의 항목 순서를 검사하는 용도입니다. 항목 번호가 이 값입니다. */
-        RenderPassType _type{ RenderPassType::Invalid };
+        RenderPassKind _type{ RenderPassKind::Invalid };
         /**
          * @brief 엔진 내부 슬롯이 대신 그리는 파이프라인 패스 타입입니다 — PSO 의 컬러 출력 포맷을 그 패스의 선언에서 읽습니다. Invalid 면 자기 선언을 씁니다.
          * @details 내부 슬롯(`ForwardOpaqueNoDepthWrite`)은 XML 에 나오지 않아 자기 선언이 없다. 선언 없이 만들면 포맷을 알 수 없어 장면 색이 HDR 일 때
          *          PSO(RGBA8)와 렌더 타깃이 어긋났다(D3D12 ExecuteIndirect 검증 · Vulkan 렌더 패스 비호환). 셰이더 · 깊이 · 블렌드는 그대로 자기 표에서 정한다(쿠커와 같은 답).
          */
-        RenderPassType _targetSourceType{ RenderPassType::Invalid };
+        RenderPassKind _targetSourceType{ RenderPassKind::Invalid };
         /** @brief `RenderPassTraitFlag` 의 합입니다. */
         uint32 _flags{ 0 };
         /** @brief 출력 선언이 없을 때의 컬러 RT 수입니다. */
@@ -377,7 +377,7 @@ namespace sw
         {
             if ( isDepthOnly() == false )
                 return false;
-            const bool bShadowPass = _type == RenderPassType::Shadow;
+            const bool bShadowPass = _type == RenderPassKind::Shadow;
             if ( bShadowPass && hasMaterialDefine( pListMaterialDefine, kMaterialShadowCastOffDefine ) )
                 return false;
             // 변위는 두 깊이 패스 모두 갈아탄다 — 윤곽이 바뀌므로 깊이 프리패스도 같은 자리를 써야 본 패스의 깊이 비교를 통과한다.
@@ -437,7 +437,7 @@ namespace sw
 namespace sw
 {
     /** @brief 패스 종류의 사실을 반환합니다. 테이블에 없는 값이면 Invalid 항목을 반환합니다. */
-    SW_API const RenderPassTypeInfo& getRenderPassTypeInfo( RenderPassType type );
+    SW_API const RenderPassKindInfo& getRenderPassKindInfo( RenderPassKind type );
 
     /**
      * @struct RenderPassShaderSelection
@@ -458,14 +458,14 @@ namespace sw
      * @param pPassDesc 파이프라인의 패스 서술입니다. nullptr 이면 테이블의 기본값만 씁니다.
      * @param pTargetDesc 컬러 출력을 정하는 서술입니다(`passWritesVelocity`). 파이프라인 패스는 @p pPassDesc 와 같고, 내부 슬롯은 대신 그리는 파이프라인 패스의 서술입니다.
      */
-    SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const RenderGraphPassDesc* pTargetDesc,
+    SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassKind type, const RenderGraphPassDesc* pPassDesc, const RenderGraphPassDesc* pTargetDesc,
                                                              const EngineDefaultAssets& engineDefaultAssets );
 
     /**
      * @brief 패스가 화면 속도를 쓰는지 반환합니다 — 패스 종류가 `kWritesVelocity` 이고 @p pTargetDesc 의 컬러 출력에 Velocity 역할이 있습니다.
      * @param pTargetDesc 컬러 타깃을 정하는 서술입니다. 파이프라인 패스는 자기 서술, 내부 슬롯(`ForwardOpaqueNoDepthWrite`)은 대신 그리는 패스(`_targetSourceType`)의 서술입니다. nullptr 이면 false 입니다.
      */
-    SW_API bool passWritesVelocity( RenderPassType type, const RenderGraphPassDesc* pTargetDesc );
+    SW_API bool passWritesVelocity( RenderPassKind type, const RenderGraphPassDesc* pTargetDesc );
 
     /**
      * @brief 패스 @p passDesc 의 컴퓨트 구현(`_implementation="Compute"`)이 컴파일할 셰이더 경로와 define 입니다 — 픽셀 구현과 같은 파일 · define 에 `kPassComputeImplementationDefine` 을 더한다.
@@ -480,7 +480,7 @@ namespace sw
     SW_API RenderPassShaderSelection selectDeferredTileLightingShader( const RenderGraphPassDesc& lightingDesc, uint32 tileClass, const EngineDefaultAssets& engineDefaultAssets );
 
     /** @brief `kDiagnostic` 패스가 이 실행에서 요청됐는지 반환합니다(NanCheck 는 `-gv_nanCheck`). 진단 패스가 아니면 false 입니다. */
-    SW_API bool isDiagnosticPassRequested( RenderPassType type );
+    SW_API bool isDiagnosticPassRequested( RenderPassKind type );
 
     /** @brief 패스가 HDR 색을 톤맵하는지 반환합니다 — Tonemap 이거나 퍼뮤테이션 `kPostTonemapDefine` 을 켠 Present(후처리 체인)입니다. */
     SW_API bool passAppliesTonemap( const RenderGraphPassDesc& passDesc );

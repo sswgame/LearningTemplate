@@ -40,7 +40,7 @@ namespace sw::editor
             static constexpr float32 kPreviewRadius = 0.75f;
 
             /** @brief 형식의 핀 색 번호입니다. `any` 는 색 표 밖이라 글자색이다. */
-            [[nodiscard]] static uint32 toPinColorIndex( MaterialGraphValueType type )
+            [[nodiscard]] static uint32 toPinColorIndex( MaterialGraphValueKind type )
             {
                 const uint32 count  = static_cast<uint32>( type );
                 const bool   bTyped = 1 <= count && count <= 4;
@@ -125,8 +125,8 @@ namespace sw::editor
         bool   bInput    = false;
         if ( _model.tryDecodePin( pinID, nodeIndex, slot, bInput ) == false )
             return false;
-        const MaterialGraphValueType type    = bInput ? _model.getInputPins( nodeIndex )[slot]._type : _model.getOutputPins( nodeIndex )[slot]._type;
-        const bool                   bWidens = bInput == false && type == MaterialGraphValueType::Float;
+        const MaterialGraphValueKind type    = bInput ? _model.getInputPins( nodeIndex )[slot]._type : _model.getOutputPins( nodeIndex )[slot]._type;
+        const bool                   bWidens = bInput == false && type == MaterialGraphValueKind::Float;
         outInfo._type                        = bWidens ? EditorNodeGraphRules::kWildcardPinType : MaterialGraphPanelInternal::toPinColorIndex( type );
         outInfo._bInput                      = bInput;
         return true;
@@ -280,7 +280,7 @@ namespace sw::editor
         ImGui::EndChild();
     }
 
-    void MaterialGraphPanel::drawValueRow( uint32 nodeIndex, const utf8* pName, MaterialGraphValueType type, string_view defaultText, bool bColor )
+    void MaterialGraphPanel::drawValueRow( uint32 nodeIndex, const utf8* pName, MaterialGraphValueKind type, string_view defaultText, bool bColor )
     {
         ImGui::PushID( pName );
         const string text = _model.readValue( nodeIndex, pName, defaultText );
@@ -290,7 +290,7 @@ namespace sw::editor
         uint32       count    = 0;
         switch ( type )
         {
-            case MaterialGraphValueType::Float:
+            case MaterialGraphValueKind::Float:
             {
                 float32 arrOne[1]{};
                 bRead = MaterialPreviewInputs::parseFloats( text, arrOne );
@@ -303,7 +303,7 @@ namespace sw::editor
                 count = 1;
                 break;
             }
-            case MaterialGraphValueType::Float2:
+            case MaterialGraphValueKind::Float2:
             {
                 float32 arrTwo[2]{};
                 bRead = MaterialPreviewInputs::parseFloats( text, arrTwo );
@@ -317,7 +317,7 @@ namespace sw::editor
                 count = 2;
                 break;
             }
-            case MaterialGraphValueType::Float3:
+            case MaterialGraphValueKind::Float3:
             {
                 float32 arrThree[3]{};
                 bRead = MaterialPreviewInputs::parseFloats( text, arrThree );
@@ -332,7 +332,7 @@ namespace sw::editor
                 count = 3;
                 break;
             }
-            case MaterialGraphValueType::Float4:
+            case MaterialGraphValueKind::Float4:
             {
                 bRead = MaterialPreviewInputs::parseFloats( text, arrValue );
                 if ( bRead && bColor )
@@ -355,9 +355,9 @@ namespace sw::editor
                 count = 4;
                 break;
             }
-            case MaterialGraphValueType::Any:
-            case MaterialGraphValueType::String:
-            case MaterialGraphValueType::Invalid:
+            case MaterialGraphValueKind::Any:
+            case MaterialGraphValueKind::String:
+            case MaterialGraphValueKind::Invalid:
                 break;
         }
         if ( bChanged )
@@ -414,7 +414,7 @@ namespace sw::editor
                 continue;
             const string name{ pin._name };
             // `any` 핀은 float 로 시작한다. 기본값이 식이면(메시 UV 등) 글 칸이 그 식을 보인다.
-            const MaterialGraphValueType rowType = pin._type == MaterialGraphValueType::Any ? MaterialGraphValueType::Float : pin._type;
+            const MaterialGraphValueKind rowType = pin._type == MaterialGraphValueKind::Any ? MaterialGraphValueKind::Float : pin._type;
             drawValueRow( nodeIndex, name.c_str(), rowType, pin._default.empty() ? string_view{ "0" } : pin._default, false );
         }
     }

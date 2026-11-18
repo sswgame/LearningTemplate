@@ -189,7 +189,7 @@ SW_TEST_CASE( MaterialGraphCompilerTest, ParameterBecomesMaterialField )
     SW_REQUIRE_TRUE( material->loadFromXML( text ) );
     const MaterialProperty* pTint = material->findProperty( hashed_string( "_tint" ) );
     SW_REQUIRE_TRUE( pTint != nullptr );
-    SW_EXPECT_TRUE( pTint->_type == MaterialPropertyType::Color );
+    SW_EXPECT_TRUE( pTint->_type == MaterialPropertyKind::Color );
     float32 rough = 0.0f;
     SW_EXPECT_TRUE( material->getScalarParameter( hashed_string( "_rough" ), rough ) );
     SW_EXPECT_NEAR( 0.25f, rough, 1e-5f );

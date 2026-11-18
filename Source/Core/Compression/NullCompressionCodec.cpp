@@ -5,9 +5,9 @@
 
 namespace sw
 {
-    CompressionCodecType NullCompressionCodec::getCodecType() const
+    CompressionCodecKind NullCompressionCodec::getCodecType() const
     {
-        return CompressionCodecType::None;
+        return CompressionCodecKind::None;
     }
 
     const utf8* NullCompressionCodec::getCodecName() const

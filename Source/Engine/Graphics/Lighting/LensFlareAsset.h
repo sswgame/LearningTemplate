@@ -1,7 +1,7 @@
 /**
  * @file LensFlareAsset.h
  * @brief 빛 하나의 렌즈 플레어(`*.lensflare.xml`)입니다 — 빛에서 화면 가운데를 지나는 축 위에 놓는 스프라이트 원소 목록과 가림 · 가장자리 감쇠 값.
- * @details 빛 컴포넌트가 경로(`LightComponent::_lensFlarePath`)로 가리키고, 렌더러의 렌즈 플레어 패스(`RenderPassType::LensFlare`, lens_flare.hlsl)가 그린다.
+ * @details 빛 컴포넌트가 경로(`LightComponent::_lensFlarePath`)로 가리키고, 렌더러의 렌즈 플레어 패스(`RenderPassKind::LensFlare`, lens_flare.hlsl)가 그린다.
  *          블룸에서 고스트를 뽑는 화면 효과와 달리 빛마다 데이터로 정한 스프라이트다(언리얼 Lens Flare 의 이미지 기반 고스트와 다른, 유니티 SRP Lens Flare(Data Driven) 자리 — 기억에 의존한 비교).
  *          모양은 셰이더가 깎는 절차적 모양 넷과 텍스처 스프라이트(Image — 원소의 `_texture`, 유니티 SRP Lens Flare 의 Image 원소)다.
  *          파일은 공유 캐시(`SharedAssetCache<LensFlareAsset>`)가 읽고, 고치면 다시 읽는다.

@@ -101,7 +101,7 @@ namespace
                 server.update( 1.0f / 20.0f );
                 cluster.step( 1.0 / 20.0 );
                 int32          connectionID = -1;
-                NetChannelType channel      = NetChannelType::Unreliable;
+                NetChannelKind channel      = NetChannelKind::Unreliable;
                 for ( int32 index = 0; index < kClientCount; ++index )
                 {
                     while ( cluster.getClient( index ).receiveMessage( connectionID, channel, buffer ) )

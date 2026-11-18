@@ -152,7 +152,7 @@ namespace sw
     void TurnRelayServer::sendOrQueue( int32 connectionID )
     {
         const int32 pendingCount = countPending( connectionID );
-        if ( pendingCount == 0 && _messageWriter.send( *_pHost, connectionID, NetChannelType::ReliableOrdered ) )
+        if ( pendingCount == 0 && _messageWriter.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered ) )
             return;
         if ( _pHost->getConnectionState( connectionID ) != NetConnectionState::Connected )
             return; // 닫힌 연결이다. 돌아오면 토큰으로 다시 받는다
@@ -178,7 +178,7 @@ namespace sw
             {
                 bBlocked = bBlocked || blocked == pending._connectionID;
             }
-            if ( bBlocked == false && _pHost->trySendMessage( pending._connectionID, NetChannelType::ReliableOrdered, pending._buffer ) )
+            if ( bBlocked == false && _pHost->trySendMessage( pending._connectionID, NetChannelKind::ReliableOrdered, pending._buffer ) )
                 continue;
             if ( bBlocked == false )
                 _listBlockedScratch.push_back( pending._connectionID );
@@ -202,7 +202,7 @@ namespace sw
             writer.writeVarUint( static_cast<uint64>( index ) );
             writer.writeVarUint( static_cast<uint64>( action._seat ) );
             writer.writeBlob( action._buffer.data(), static_cast<int32>( action._buffer.size() ) );
-            if ( _messageWriter.send( *_pHost, seat._connectionID, NetChannelType::ReliableOrdered ) == false )
+            if ( _messageWriter.send( *_pHost, seat._connectionID, NetChannelKind::ReliableOrdered ) == false )
                 return; // 창이 찼으므로 `update` 가 이어서 보낸다
             ++seat._sentActionCount;
         }
@@ -478,7 +478,7 @@ namespace sw
         writer.writeVarInt( seat );
         writer.writeUint32( _token );
         writer.writeVarUint( _listAction.size() );
-        (void)_pHost->sendMessage( 0, NetChannelType::ReliableOrdered, writer.getBytes() );
+        (void)_pHost->sendMessage( 0, NetChannelKind::ReliableOrdered, writer.getBytes() );
     }
 
     int32 TurnRelayClient::submitAction( const vector<uint8>& buffer )
@@ -493,7 +493,7 @@ namespace sw
         writer.writeVarUint( _roomID );
         writer.writeVarUint( static_cast<uint64>( submitID ) );
         writer.writeBlob( buffer.data(), static_cast<int32>( buffer.size() ) );
-        (void)_pHost->sendMessage( 0, NetChannelType::ReliableOrdered, writer.getBytes() );
+        (void)_pHost->sendMessage( 0, NetChannelKind::ReliableOrdered, writer.getBytes() );
         return submitID;
     }
 

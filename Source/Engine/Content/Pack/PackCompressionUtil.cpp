@@ -6,7 +6,7 @@
 
 namespace sw
 {
-    bool PackCompressionUtil::findCodecType( PackCompressionType packType, CompressionCodecType& outCodecType )
+    bool PackCompressionUtil::findCodecType( PackCompressionKind packType, CompressionCodecKind& outCodecType )
     {
         for ( const CodecMapping& mapping : kArrCodecMapping )
         {
@@ -18,9 +18,9 @@ namespace sw
         return false;
     }
 
-    ICompressionCodec* PackCompressionUtil::findCodec( PackCompressionType packType )
+    ICompressionCodec* PackCompressionUtil::findCodec( PackCompressionKind packType )
     {
-        CompressionCodecType codecType{ CompressionCodecType::None };
+        CompressionCodecKind codecType{ CompressionCodecKind::None };
         if ( findCodecType( packType, codecType ) == false )
             return nullptr;
 

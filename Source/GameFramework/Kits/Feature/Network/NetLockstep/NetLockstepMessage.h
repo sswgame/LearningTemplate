@@ -14,10 +14,10 @@ namespace sw
     /** @brief 락스텝 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetLockstepMessage
     {
-        using Input         = NetMessageDef<0, NetMessageDirection::Both, NetChannelType::ReliableOrdered>;
-        using Checksum      = NetMessageDef<1, NetMessageDirection::Both, NetChannelType::ReliableOrdered>;
-        using RollbackInput = NetMessageDef<2, NetMessageDirection::Both, NetChannelType::Unreliable>;
-        using Leave         = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>; ///< 서버 → 모두. 플레이어와, 그 플레이어가 빈 입력이 되는 틱을 알린다
+        using Input         = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
+        using Checksum      = NetMessageDef<1, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
+        using RollbackInput = NetMessageDef<2, NetMessageDirection::Both, NetChannelKind::Unreliable>;
+        using Leave         = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>; ///< 서버 → 모두. 플레이어와, 그 플레이어가 빈 입력이 되는 틱을 알린다
         using Table         = NetMessageTable<NetKitMessageRange::kLockstep, Input, Checksum, RollbackInput, Leave>;
 
         static constexpr uint8 kInput         = Table::getKindOf<Input>();

@@ -40,7 +40,7 @@ namespace sw
 
         /**
          * @brief 프레임 그래프 리스트에 뷰 @p target 의 가림 타일(깊이 히스토리 → 타일마다 최대 깊이)을 기록합니다. 깊이 히스토리를 옮긴 뒤 · 컬링 앞입니다.
-         * @param pso `RenderPassType::OcclusionTiles` 의 PSO 입니다(없으면 0 — 짓지 않는다).
+         * @param pso `RenderPassKind::OcclusionTiles` 의 PSO 입니다(없으면 0 — 짓지 않는다).
          * @param bDepthHistoryReady 이번 프레임에 지난 깊이를 옮겼는지입니다(실행기의 `canCopyDepthHistory`).
          * @param bEnabled 가림 판정을 켰는지입니다(프레임 설정 사본 `RenderFrameSettings::_bOcclusionCulling`).
          * @details 가림 판정이 꺼졌거나 옮긴 지난 깊이가 없으면 짓지 않는다 — 그 뷰의 컬링은 가림을 보지 않는다.

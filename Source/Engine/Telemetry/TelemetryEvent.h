@@ -20,7 +20,7 @@ namespace sw
         hashed_string      _name{};
         float64            _number{ 0.0 };
         int64              _integer{ 0 };
-        TelemetryFieldType _type{ TelemetryFieldType::String };
+        TelemetryFieldKind _type{ TelemetryFieldKind::String };
         uint8              _bValue{ SW_FALSE };
     };
 } // namespace sw
@@ -51,7 +51,7 @@ namespace sw
         const TelemetryValue*         findValue( const hashed_string& name ) const;
 
     private:
-        TelemetryValue& acquireValue( const hashed_string& name, TelemetryFieldType type );
+        TelemetryValue& acquireValue( const hashed_string& name, TelemetryFieldKind type );
 
     private:
         vector<TelemetryValue> _listValue;

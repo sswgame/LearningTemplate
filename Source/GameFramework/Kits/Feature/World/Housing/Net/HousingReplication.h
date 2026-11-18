@@ -46,21 +46,21 @@ namespace sw
     struct NetHousingMessage
     {
         /** @brief 클라이언트 → 서버. 편집 요청 — 요청 번호(varuint) · 부지 id 해시(varuint) · 종류(3 비트) · 종류마다의 날 값. */
-        using Edit = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered>;
+        using Edit = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>;
         /** @brief 서버 → 요청한 클라이언트. 판정 — 요청 번호 · 부지 id 해시 · 결과(8 비트 `HousingPlaceResult`) · 새 배치 id(varuint, 놓기가 아니면 0). */
-        using Reply = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
+        using Reply = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
         /**
          * @brief 서버 → 클라이언트. 부지 상태 조각 — 부지 id 해시 · 주인(2 비트 `HousingPlotOwner`) · 잔액(varint) · 전체 크기(varuint) · 시작 자리(varuint) · 조각(blob).
          *        판 2: 부지 전체를 메시지 하나로 보내던 것(64 KB 상한)을 조각으로 나눴다. 시작 자리 0 은 새 전송이다(받던 조각은 버린다).
          */
-        using PlotSnapshot = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 2>;
+        using PlotSnapshot = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>;
         /**
          * @brief 서버 → 클라이언트. 부지 델타 — 부지 id 해시 · 주인(2 비트) · 잔액(varint) · 다음 배치 id(varuint) · 사라진 id 수와 id 들(varuint) ·
          *        새로 · 바뀐 배치 수와 배치 들(id · 부품 id 해시 · 부품 판 · x · z · 층 · 요).
          */
-        using PlotDelta = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
+        using PlotDelta = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
         /** @brief 클라이언트 → 서버. 부지 상태를 처음부터 다시 달라는 요청 — 부지 id 해시(varuint). 델타를 적용하지 못했을 때 보낸다. */
-        using SnapshotRequest = NetMessageDef<4, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered>;
+        using SnapshotRequest = NetMessageDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>;
         using Table           = NetMessageTable<NetKitMessageRange::kHousing, Edit, Reply, PlotSnapshot, PlotDelta, SnapshotRequest>;
 
         static constexpr uint8 kEdit            = Table::getKindOf<Edit>();

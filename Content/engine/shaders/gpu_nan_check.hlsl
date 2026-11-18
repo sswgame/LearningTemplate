@@ -1,7 +1,7 @@
 #include "binding.hlsli"
 
 /**
- * gpu_nan_check.hlsl — 패스 출력 텍스처의 NaN · Inf 감시(컴퓨트, RenderPassType::NanCheck). 언리얼 r.CheckNaN 과 같은 선이다.
+ * gpu_nan_check.hlsl — 패스 출력 텍스처의 NaN · Inf 감시(컴퓨트, RenderPassKind::NanCheck). 언리얼 r.CheckNaN 과 같은 선이다.
  *
  * 스레드 하나가 텍셀 하나다. 네 채널 중 하나라도 NaN 이면 슬롯의 NaN 카운터에, NaN 은 없고 무한이 있으면 Inf 카운터에 하나를 더한다(원자 연산).
  * 카운터는 지우지 않는 누적 값이다 — CPU 가 지난번 읽은 값과의 차로 이번 프레임의 수를 구한다(GPUNanCheck). 슬롯은 패스 출력마다 하나이고 슬롯의 이름은 CPU 가 안다.

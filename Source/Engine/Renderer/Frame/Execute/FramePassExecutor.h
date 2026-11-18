@@ -98,9 +98,9 @@ namespace sw
         void setInputRoleEnabled( RenderPassInputRole role, bool bEnabled );
         /**
          * @brief 이 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
-         * @details 판정은 `RenderPassTypeInfo::shouldDrawMaterial` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
+         * @details 판정은 `RenderPassKindInfo::shouldDrawMaterial` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
          */
-        bool shouldDrawBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
+        bool shouldDrawBatchInPass( RenderPassKind passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
         /**
          * @brief 파이프라인 패스 @p pass 가 이번 뷰에서 비활성이면 true 입니다(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스) — 뷰 패스 고르기의 결과(`FrameViewTarget::_listPassDisabled`)를 그대로 읽는다.
          * @details 덧그리는 패스(SSR · 왜곡 누적 · 왜곡 적용)의 실행이 따로 판정하지 않는다 — 판정이 둘이면 고르기가 뺀 사본을 실행이 읽거나, 실행이 쉬는데 사본을 만든다.
@@ -173,7 +173,7 @@ namespace sw
         struct PassExecuteInput
         {
             FramePassContext&                                      _context;
-            RenderPassType                                         _passType;
+            RenderPassKind                                         _passType;
             const RenderGraphPassDesc&                             _passDesc;          ///< 패스 서술
             const vector<RenderGraphPassDesc::ResolvedAttachment>& _declaredColor;     ///< 선언한 컬러 출력(선언 순서). kDrawsDeclaredColor 패스는 비어 있지 않다
             hashed_string                                          _passDepth;         ///< 바인딩할 뎁스. 선언이 없거나 이번 프레임에 없으면 빈 이름
@@ -191,7 +191,7 @@ namespace sw
             RHIBufferHandle                                    _boundVertexBuffer{ 0 };
             RHIBufferHandle                                    _slotStream{ 0 }; ///< 인스턴스 슬롯 스트림(슬롯 1)
             RHIBufferHandle                                    _argsBuffer{ 0 }; ///< 이 패스의 뷰가 만든 간접 인자
-            RenderPassType                                     _passType{};
+            RenderPassKind                                     _passType{};
             ShadowCasterFilter                                 _casterFilter{ ShadowCasterFilter::All }; ///< 그림자 캐시의 정적 · 움직임 거르기(패스 컨텍스트의 값)
             uint32                                             _batchOffset{ 0 };                        ///< 간접 인자 슬롯의 시작(불투명 다음 투명)
             uint32                                             _particleSlotCursor{ 0 };
@@ -264,7 +264,7 @@ namespace sw
         void executeHighlightPass( const PassExecuteInput& input );
         /** @brief 하늘입니다. 씬에 하늘이 없거나 뎁스 · 컬러 출력이 없으면 그리지 않습니다. */
         void executeSkyPass( const PassExecuteInput& input );
-        /** @brief 안개 패스(`RenderPassType::Fog`)를 실행합니다. 안개가 없거나 표면 값 보기에서는 그리지 않습니다. 안개 상수 · 볼륨 버퍼는 `FrameFog` 가 정해 둔 것을 읽습니다. */
+        /** @brief 안개 패스(`RenderPassKind::Fog`)를 실행합니다. 안개가 없거나 표면 값 보기에서는 그리지 않습니다. 안개 상수 · 볼륨 버퍼는 `FrameFog` 가 정해 둔 것을 읽습니다. */
         void executeFogPass( const PassExecuteInput& input );
         /** @brief 화면 왜곡 누적 — 왜곡 머티리얼의 반투명 배치가 오프셋을 선언한 출력에 더한다. 왜곡이 없는 뷰는 기록하지 않는다. */
         void executeDistortionPass( const PassExecuteInput& input );
@@ -283,7 +283,7 @@ namespace sw
          * @details 베이스 패스(G버퍼 · 포워드 불투명)가 셋을 읽어 셰이딩 전에 표면에 섞는다(언리얼 DBuffer). 데칼이 없는 뷰 · 표면 값 보기는 뷰 패스 고르기가 이 패스를 뺀다.
          */
         void executeDecalPass( const PassExecuteInput& input );
-        /** @brief 렌즈 플레어 패스(`RenderPassType::LensFlare`)를 실행합니다. 주 시점이 아니거나 스프라이트가 없으면 그리지 않습니다. 스프라이트는 `LensFlareSpriteBuffer` 가 기록 전에 올렸다. */
+        /** @brief 렌즈 플레어 패스(`RenderPassKind::LensFlare`)를 실행합니다. 주 시점이 아니거나 스프라이트가 없으면 그리지 않습니다. 스프라이트는 `LensFlareSpriteBuffer` 가 기록 전에 올렸다. */
         void executeLensFlarePass( const PassExecuteInput& input );
         /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */
         void executeTAAPass( const PassExecuteInput& input );
@@ -359,7 +359,7 @@ namespace sw
         /** @brief 이 패스가 Swapchain 을 쓰는 마지막 패스면 true 입니다. 스크린샷 캡처를 백버퍼로 복사하는 일을 이 패스 끝에서 합니다. */
         bool isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const;
         /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
-        const RenderGraphPassDesc* findPassDescByType( RenderPassType passType ) const;
+        const RenderGraphPassDesc* findPassDescByType( RenderPassKind passType ) const;
 
         // ------------------------------------------------------------------------------
         // 드로우
@@ -404,7 +404,7 @@ namespace sw
         /** @brief 그 PSO 의 레이아웃이 머티리얼 CB 슬롯을 거는지입니다. 거는 셰이더에서만 머티리얼 CB 가 멀티 드로우 병합 키다. */
         bool layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const;
         /** @brief @p other 가 @p head 와 같은 멀티 드로우 묶음에 들 수 있는지입니다(그릴 수 있고 정점 버퍼 · PSO · 머티리얼 바인딩이 같다). */
-        bool isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head, const GPUMeshBatchBinding& headBinding,
+        bool isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassKind passType, RenderViewMode drawMode, const GPUMeshBatch& head, const GPUMeshBatchBinding& headBinding,
                               const GPUMeshBatch& other, const GPUMeshBatchBinding& otherBinding ) const;
         /**
          * @brief 묶음 하나를 그립니다 — 바뀐 배치 PSO 를 걸고(그때 정점 슬롯이 비므로 인스턴스 슬롯 스트림 · 메시 스트림도 다시 건다), 바뀐 정점 버퍼만 다시 걸고,

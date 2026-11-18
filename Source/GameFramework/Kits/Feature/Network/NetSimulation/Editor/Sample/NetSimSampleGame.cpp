@@ -34,9 +34,9 @@ namespace sw
             static constexpr float32 kSmoothing      = 0.5f;   ///< 클라이언트가 받은 위치로 틱마다 다가가는 비율
             static constexpr float32 kSnapDistance   = 0.001f; ///< 이 거리 안이면 받은 위치로 붙는다(멈춘 뒤 서버와 같은 값이 되게)
             /** @brief 클라이언트 → 서버: 이동 입력(`writeVarUint` 클라이언트 틱, 정수 축 둘). 순서가 뒤바뀐 낡은 입력은 서버가 버린다. */
-            using InputMessage = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelType::Unreliable>;
+            using InputMessage = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelKind::Unreliable>;
             /** @brief 서버 → 클라이언트: 아바타 목록(`writeVarUint` 서버 틱 · 개수, 아바타마다 엔티티 id · x · z). 낡은 것은 클라이언트가 버린다. */
-            using StateMessage = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::Unreliable>;
+            using StateMessage = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::Unreliable>;
             using MessageTable = NetMessageTable<NetMessageRange::kGame, InputMessage, StateMessage>;
 
             static constexpr uint8 kInputKind = MessageTable::getKindOf<InputMessage>();
@@ -172,7 +172,7 @@ namespace sw
                     writer.writeFloat( avatar._x );
                     writer.writeFloat( avatar._z );
                 }
-                (void)_stateWriter.broadcast( world.getPeers(), NetChannelType::Unreliable ); // 보낸 수는 쓰지 않는다 — 못 보낸 틱은 다음 틱이 덮는다
+                (void)_stateWriter.broadcast( world.getPeers(), NetChannelKind::Unreliable ); // 보낸 수는 쓰지 않는다 — 못 보낸 틱은 다음 틱이 덮는다
             }
 
         private:
@@ -376,7 +376,7 @@ namespace sw
                 if ( bWritten == false )
                     return; // 축은 범위로 잘랐으므로 닿지 않는다
                 ++_nextInputTick;
-                (void)_inputWriter.sendToPeers( world.getPeers(), NetChannelType::Unreliable ); // 못 보낸 입력은 다음 틱의 입력이 덮는다
+                (void)_inputWriter.sendToPeers( world.getPeers(), NetChannelKind::Unreliable ); // 못 보낸 입력은 다음 틱의 입력이 덮는다
             }
 
             /** @brief 받은 목록의 아바타를 만들고 옮기며, 목록에서 빠진 아바타는 지웁니다. */

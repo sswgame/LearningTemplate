@@ -128,7 +128,7 @@ namespace sw
             _pGameMixerDesc = make_shared<AudioMixerDef>( mixerDesc );
         }
         Command command;
-        command._type   = CommandType::SwapMixer;
+        command._type   = CommandKind::SwapMixer;
         command._pMixer = std::move( pMixer );
         pushCommand( std::move( command ) );
         return true;
@@ -209,7 +209,7 @@ namespace sw
             }
         }
         Command command;
-        command._type     = CommandType::SetLibrary;
+        command._type     = CommandKind::SetLibrary;
         command._name     = libraryName;
         command._pLibrary = std::move( pLibrary );
         pushCommand( std::move( command ) );
@@ -288,7 +288,7 @@ namespace sw
             _libraryGeneration.fetch_add( 1, std::memory_order_release );
         }
         Command command;
-        command._type = CommandType::SetLibrary;
+        command._type = CommandKind::SetLibrary;
         command._name = libraryName;
         pushCommand( std::move( command ) );
     }
@@ -383,7 +383,7 @@ namespace sw
     void AudioEngine::setRandomSeed( uint64 seed )
     {
         Command command;
-        command._type = CommandType::SetRandomSeed;
+        command._type = CommandKind::SetRandomSeed;
         command._seed = seed;
         pushCommand( std::move( command ) );
     }
@@ -416,7 +416,7 @@ namespace sw
         }
 
         Command command;
-        command._type      = CommandType::PostEvent;
+        command._type      = CommandKind::PostEvent;
         command._name      = eventName;
         command._emitterID = emitterID;
         return pushPlayCommand( std::move( command ) );
@@ -428,7 +428,7 @@ namespace sw
             return 0;
         _clipStore.requestClip( path );
         Command command;
-        command._type       = CommandType::PlayClip;
+        command._type       = CommandKind::PlayClip;
         command._path       = path;
         command._name       = bus;
         command._clipParams = params;
@@ -438,7 +438,7 @@ namespace sw
     void AudioEngine::stop( AudioPlayingID playingID, float32 fadeSeconds )
     {
         Command command;
-        command._type      = CommandType::Stop;
+        command._type      = CommandKind::Stop;
         command._playingID = playingID;
         command._value     = fadeSeconds;
         pushCommand( std::move( command ) );
@@ -447,7 +447,7 @@ namespace sw
     void AudioEngine::stopEmitter( AudioEmitterID emitterID, float32 fadeSeconds )
     {
         Command command;
-        command._type      = CommandType::StopEmitter;
+        command._type      = CommandKind::StopEmitter;
         command._emitterID = emitterID;
         command._value     = fadeSeconds;
         pushCommand( std::move( command ) );
@@ -456,7 +456,7 @@ namespace sw
     void AudioEngine::setPaused( AudioPlayingID playingID, bool bPaused )
     {
         Command command;
-        command._type      = CommandType::SetPaused;
+        command._type      = CommandKind::SetPaused;
         command._playingID = playingID;
         command._bFlag     = bPaused;
         pushCommand( std::move( command ) );
@@ -478,7 +478,7 @@ namespace sw
             _clipStore.requestClip( transition._stinger );
         }
         Command command;
-        command._type   = CommandType::StartMusic;
+        command._type   = CommandKind::StartMusic;
         command._pMusic = std::move( pMusic );
         command._value  = fadeSeconds;
         return pushPlayCommand( std::move( command ) );
@@ -487,7 +487,7 @@ namespace sw
     void AudioEngine::setMusicSegment( const hashed_string& segment )
     {
         Command command;
-        command._type = CommandType::SetMusicSegment;
+        command._type = CommandKind::SetMusicSegment;
         command._name = segment;
         pushCommand( std::move( command ) );
     }
@@ -495,7 +495,7 @@ namespace sw
     void AudioEngine::stopMusic( float32 fadeSeconds )
     {
         Command command;
-        command._type  = CommandType::StopMusic;
+        command._type  = CommandKind::StopMusic;
         command._value = fadeSeconds;
         pushCommand( std::move( command ) );
     }
@@ -508,7 +508,7 @@ namespace sw
     void AudioEngine::setBusUserVolume( const hashed_string& bus, float32 volume )
     {
         Command command;
-        command._type  = CommandType::SetBusUserVolume;
+        command._type  = CommandKind::SetBusUserVolume;
         command._name  = bus;
         command._value = volume;
         pushCommand( std::move( command ) );
@@ -517,7 +517,7 @@ namespace sw
     void AudioEngine::setBusMuted( const hashed_string& bus, bool bMuted )
     {
         Command command;
-        command._type  = CommandType::SetBusMuted;
+        command._type  = CommandKind::SetBusMuted;
         command._name  = bus;
         command._bFlag = bMuted;
         pushCommand( std::move( command ) );
@@ -526,7 +526,7 @@ namespace sw
     void AudioEngine::setBusSolo( const hashed_string& bus, bool bSolo )
     {
         Command command;
-        command._type  = CommandType::SetBusSolo;
+        command._type  = CommandKind::SetBusSolo;
         command._name  = bus;
         command._bFlag = bSolo;
         pushCommand( std::move( command ) );
@@ -535,7 +535,7 @@ namespace sw
     void AudioEngine::setParameter( const hashed_string& name, float32 value )
     {
         Command command;
-        command._type  = CommandType::SetParameter;
+        command._type  = CommandKind::SetParameter;
         command._name  = name;
         command._value = value;
         pushCommand( std::move( command ) );
@@ -546,7 +546,7 @@ namespace sw
         if ( emitterID == 0 )
             return;
         Command command;
-        command._type      = CommandType::SetEmitterParameter;
+        command._type      = CommandKind::SetEmitterParameter;
         command._emitterID = emitterID;
         command._name      = name;
         command._value     = value;
@@ -556,7 +556,7 @@ namespace sw
     void AudioEngine::startSnapshot( const hashed_string& name )
     {
         Command command;
-        command._type = CommandType::StartSnapshot;
+        command._type = CommandKind::StartSnapshot;
         command._name = name;
         pushCommand( std::move( command ) );
     }
@@ -564,7 +564,7 @@ namespace sw
     void AudioEngine::stopSnapshot( const hashed_string& name )
     {
         Command command;
-        command._type = CommandType::StopSnapshot;
+        command._type = CommandKind::StopSnapshot;
         command._name = name;
         pushCommand( std::move( command ) );
     }
@@ -572,7 +572,7 @@ namespace sw
     void AudioEngine::setSnapshotIntensity( const hashed_string& name, float32 intensity )
     {
         Command command;
-        command._type  = CommandType::SetSnapshotIntensity;
+        command._type  = CommandKind::SetSnapshotIntensity;
         command._name  = name;
         command._value = MathUtil::saturate( intensity );
         pushCommand( std::move( command ) );
@@ -583,7 +583,7 @@ namespace sw
         if ( listenerIndex >= kMaxListenerCount )
             return;
         Command command;
-        command._type     = CommandType::SetListener;
+        command._type     = CommandKind::SetListener;
         command._index    = listenerIndex;
         command._listener = state;
         pushCommand( std::move( command ) );
@@ -594,7 +594,7 @@ namespace sw
         if ( emitterID == 0 )
             return;
         Command command;
-        command._type      = CommandType::SetEmitter;
+        command._type      = CommandKind::SetEmitter;
         command._emitterID = emitterID;
         command._position  = position;
         command._velocity  = velocity;
@@ -606,7 +606,7 @@ namespace sw
         if ( emitterID == 0 )
             return;
         Command command;
-        command._type                     = CommandType::SetEmitterPropagation;
+        command._type                     = CommandKind::SetEmitterPropagation;
         command._emitterID                = emitterID;
         command._propagation              = propagation;
         command._propagation._occlusion   = MathUtil::saturate( propagation._occlusion );
@@ -617,7 +617,7 @@ namespace sw
     void AudioEngine::removeEmitter( AudioEmitterID emitterID )
     {
         Command command;
-        command._type      = CommandType::RemoveEmitter;
+        command._type      = CommandKind::RemoveEmitter;
         command._emitterID = emitterID;
         pushCommand( std::move( command ) );
     }
@@ -751,28 +751,28 @@ namespace sw
     {
         switch ( command._type )
         {
-            case CommandType::PlayClip:
+            case CommandKind::PlayClip:
             {
                 applyPlayClip( command );
                 break;
             }
-            case CommandType::PostEvent:
+            case CommandKind::PostEvent:
             {
                 _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID );
                 applyPostEvent( command );
                 break;
             }
-            case CommandType::Stop:
+            case CommandKind::Stop:
             {
                 stopVoices( command._playingID, 0, command._value );
                 break;
             }
-            case CommandType::StopEmitter:
+            case CommandKind::StopEmitter:
             {
                 stopVoices( 0, command._emitterID, command._value );
                 break;
             }
-            case CommandType::SetPaused:
+            case CommandKind::SetPaused:
             {
                 for ( AudioVoiceSlot& slot : _voicePool )
                 {
@@ -783,42 +783,42 @@ namespace sw
                 }
                 break;
             }
-            case CommandType::SetBusUserVolume:
+            case CommandKind::SetBusUserVolume:
             {
                 _snapshotMixer.setBusUserVolume( *_pMixer, command._name, command._value );
                 break;
             }
-            case CommandType::SetBusMuted:
+            case CommandKind::SetBusMuted:
             {
                 _snapshotMixer.setBusMuted( *_pMixer, command._name, command._bFlag );
                 break;
             }
-            case CommandType::SetBusSolo:
+            case CommandKind::SetBusSolo:
             {
                 _snapshotMixer.setBusSolo( *_pMixer, command._name, command._bFlag );
                 break;
             }
-            case CommandType::SwapMixer:
+            case CommandKind::SwapMixer:
             {
                 applyMixer( std::move( command._pMixer ) );
                 break;
             }
-            case CommandType::SetLibrary:
+            case CommandKind::SetLibrary:
             {
                 applySetLibrary( command );
                 break;
             }
-            case CommandType::SetRandomSeed:
+            case CommandKind::SetRandomSeed:
             {
                 _random.setSeed( command._seed );
                 break;
             }
-            case CommandType::SetListener:
+            case CommandKind::SetListener:
             {
                 _arrListener[command._index] = command._listener;
                 break;
             }
-            case CommandType::SetEmitter:
+            case CommandKind::SetEmitter:
             {
                 EmitterRecord& record   = _mapEmitter[command._emitterID];
                 record._state._position = command._position;
@@ -826,7 +826,7 @@ namespace sw
                 record._bRemoved        = false;
                 break;
             }
-            case CommandType::SetEmitterPropagation:
+            case CommandKind::SetEmitterPropagation:
             {
                 // 가림 · 회절은 엔진이 부드럽게 따라가고(`updateEmitters`), 겉보기 위치는 길이 바뀐 블록부터 쓴다.
                 AudioEmitterState& state = _mapEmitter[command._emitterID]._state;
@@ -836,12 +836,12 @@ namespace sw
                 state._bRedirected       = command._propagation._bRedirected;
                 break;
             }
-            case CommandType::SetEmitterParameter:
+            case CommandKind::SetEmitterParameter:
             {
                 applySetEmitterParameter( command );
                 break;
             }
-            case CommandType::RemoveEmitter:
+            case CommandKind::RemoveEmitter:
             {
                 // 바로 지우지 않는다. 그 에미터의 원샷이 끝나기 전에 위치를 잃으면 2D 로 돌아가 크게 들린다.
                 const auto it = _mapEmitter.find( command._emitterID );
@@ -849,7 +849,7 @@ namespace sw
                     it->second._bRemoved = true;
                 break;
             }
-            case CommandType::SetParameter:
+            case CommandKind::SetParameter:
             {
                 ParameterState& parameter = _mapParameter[command._name];
                 parameter._target         = MathUtil::clamp( command._value, parameter._minValue, parameter._maxValue );
@@ -857,33 +857,33 @@ namespace sw
                     parameter._value = parameter._target;
                 break;
             }
-            case CommandType::StartSnapshot:
+            case CommandKind::StartSnapshot:
             {
                 _snapshotMixer.startSnapshot( *_pMixer, command._name );
                 break;
             }
-            case CommandType::StopSnapshot:
+            case CommandKind::StopSnapshot:
             {
                 _snapshotMixer.stopSnapshot( command._name );
                 break;
             }
-            case CommandType::StartMusic:
+            case CommandKind::StartMusic:
             {
                 _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID );
                 _musicPlayer.start( *this, command._pMusic, command._playingID, command._value );
                 break;
             }
-            case CommandType::SetMusicSegment:
+            case CommandKind::SetMusicSegment:
             {
                 _musicPlayer.setSegment( *this, command._name );
                 break;
             }
-            case CommandType::StopMusic:
+            case CommandKind::StopMusic:
             {
                 _musicPlayer.stop( *this, command._value );
                 break;
             }
-            case CommandType::SetSnapshotIntensity:
+            case CommandKind::SetSnapshotIntensity:
             {
                 _snapshotMixer.setSnapshotIntensity( *_pMixer, command._name, command._value );
                 break;
@@ -1519,7 +1519,7 @@ namespace sw
         outPickCount           = 1;
         switch ( event._container )
         {
-            case AudioContainerType::Random:
+            case AudioContainerKind::Random:
             {
                 // 가중치로 하나를 고른다. 클립이 둘 이상이면 바로 앞에 낸 것은 뺀다.
                 const bool bSkipLast = event._bAvoidRepeat && clipCount > 1 && inoutState._lastRandomIndex.has_value();
@@ -1543,13 +1543,13 @@ namespace sw
                 inoutState._lastRandomIndex = outFirstClip;
                 break;
             }
-            case AudioContainerType::Sequence:
+            case AudioContainerKind::Sequence:
             {
                 outFirstClip               = inoutState._sequenceCursor % clipCount;
                 inoutState._sequenceCursor = ( outFirstClip + 1 ) % clipCount;
                 break;
             }
-            case AudioContainerType::Layer:
+            case AudioContainerKind::Layer:
             {
                 outFirstClip = 0;
                 outPickCount = clipCount;

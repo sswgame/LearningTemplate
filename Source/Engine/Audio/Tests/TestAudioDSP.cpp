@@ -163,7 +163,7 @@ SW_TEST_CASE( AudioDSPTest, BiquadFrequencyResponseAtPoints )
     SW_EXPECT_NEAR( -3.01f, AudioDSPTestInternal::measureGainDb( *pLowPass, 1000.0f ), 0.1f );
     const float32 lowPassAt10k = AudioDSPTestInternal::measureGainDb( *pLowPass, 10000.0f );
     SW_EXPECT_TRUE( -46.0f < lowPassAt10k && lowPassAt10k < -39.0f );
-    const sw::AudioBiquadCoefficients lowPassCoefficients = sw::AudioBiquadCoefficients::make( sw::AudioBiquadType::LowPass, 1000.0f, 0.70710678f, 0.0f, 48000.0f );
+    const sw::AudioBiquadCoefficients lowPassCoefficients = sw::AudioBiquadCoefficients::make( sw::AudioBiquadKind::LowPass, 1000.0f, 0.70710678f, 0.0f, 48000.0f );
     SW_EXPECT_NEAR( sw::AudioMath::linearToDb( lowPassCoefficients.computeMagnitude( 10000.0f, 48000.0f ) ), lowPassAt10k, 0.2f );
 
     sw::unique_ptr<sw::IAudioEffect> pHighPass = AudioDSPTestInternal::createEffect( "HighPass", {

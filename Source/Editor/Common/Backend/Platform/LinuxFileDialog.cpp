@@ -141,7 +141,7 @@ namespace sw
                     return params._title;
                 if ( params._description.empty() == false )
                     return params._description;
-                return ( params._type == FileDialogParams::Type::Save ) ? "Save File" : "Open File";
+                return ( params._type == FileDialogParams::Kind::Save ) ? "Save File" : "Open File";
             }
 
             /**
@@ -199,7 +199,7 @@ namespace sw
                 cmd += " ";
                 cmd += pFileSelectionFlag;
 
-                if ( params._type == FileDialogParams::Type::Save )
+                if ( params._type == FileDialogParams::Kind::Save )
                     cmd += " --save --confirm-overwrite";
 
                 cmd += " --title=";
@@ -244,7 +244,7 @@ namespace sw
             /** @brief 다중 선택을 쓸 수 있는 상황인지 반환합니다(저장 다이얼로그는 하나만 고릅니다). */
             static bool isMultiselectEnabled( const FileDialogParams& params )
             {
-                return params._bEnableMultiselect && params._type == FileDialogParams::Type::Open;
+                return params._bEnableMultiselect && params._type == FileDialogParams::Kind::Open;
             }
 
             /** @brief zenity(또는 호환 도구)로 다이얼로그를 엽니다. */
@@ -277,7 +277,7 @@ namespace sw
             [[nodiscard]] static bool openWithKDialog( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
             {
                 string cmd = shellQuote( toolPath );
-                if ( params._type == FileDialogParams::Type::Save )
+                if ( params._type == FileDialogParams::Kind::Save )
                     cmd += " --getsavefilename";
                 else
                     cmd += " --getopenfilename";
@@ -285,7 +285,7 @@ namespace sw
                 cmd += " --title ";
                 cmd += shellQuote( dialogTitle( params ) );
 
-                const bool bMulti = params._bEnableMultiselect && params._type == FileDialogParams::Type::Open;
+                const bool bMulti = params._bEnableMultiselect && params._type == FileDialogParams::Kind::Open;
                 if ( bMulti )
                     cmd += " --multiple --separate-output";
 

@@ -27,7 +27,7 @@ namespace sw
 
     /** @brief 설정 값의 종류입니다. 값은 늘 정규화한 글(`UserSettingsSchema::normalizeValue`)로 다닙니다. */
     ENUM()
-    enum class UserSettingType : uint8
+    enum class UserSettingKind : uint8
     {
         Bool,       ///< `true` · `false`
         Int,        ///< 정수입니다. min, max, step 이 있습니다.
@@ -152,7 +152,7 @@ namespace sw
         uint32 _bindIndex{ 0 }; ///< 키 바인딩에서 액션의 몇 번째 바인딩인지입니다.
         uint32 _order{ 0 };     ///< 스키마에 적힌 순서(카테고리 안 표시 순서)
         PROPERTY( Required )
-        UserSettingType _type{ UserSettingType::Bool };
+        UserSettingKind _type{ UserSettingKind::Bool };
         PROPERTY( Name = "apply" )
         UserSettingApplyTiming _applyTiming{ UserSettingApplyTiming::OnConfirm };
         UserSettingTargetKind  _targetKind{ UserSettingTargetKind::None };
@@ -167,10 +167,10 @@ namespace sw
      * @details 표는 `UserSettingsSchema::getTypeTraits` 가 돌려줍니다. 종류를 더하면 열거자와 표 한 줄을 같이 더합니다 — 표 순서가 열거자 순서와
      *          어긋나면 컴파일이 멈춥니다. 값 정규화처럼 종류마다 코드가 다른 것은 각자의 switch 에 남고, UI 쪽 성질(행 문서 · 값 위젯 필드)은 그것을 그리는 옵션 메뉴(`OptionsMenuScreen`)가 갖습니다.
      */
-    struct UserSettingTypeTraits
+    struct UserSettingKindTraits
     {
         uint32                 _globalVariableTypeMask; ///< 대상으로 받을 수 있는 전역 변수 타입 비트(`SW_BIT( GlobalVariableType )`)입니다.
-        UserSettingType        _type;
+        UserSettingKind        _type;
         UserSettingStorageKind _storageKind;
         bool                   _bNumeric; ///< min · max · step 이 있습니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
@@ -388,7 +388,7 @@ namespace sw
         static UserSettingValueResult normalizeValue( const UserSettingDef& def, string_view text, string& outValue );
 
         /** @brief @p type 의 성질 표 한 줄입니다. */
-        static const UserSettingTypeTraits& getTypeTraits( UserSettingType type );
+        static const UserSettingKindTraits& getTypeTraits( UserSettingKind type );
 
         /** @brief 읽은 스키마 파일마다 판 번호의 주인 · 판 · 올림 단계입니다(읽은 순서). */
         const vector<UserSettingsSchemaOwner>& getOwners() const { return _listOwner; }

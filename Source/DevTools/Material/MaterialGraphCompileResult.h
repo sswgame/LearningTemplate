@@ -40,7 +40,7 @@ namespace sw
     struct MaterialGraphPinInfo
     {
         string                 _name;
-        MaterialGraphValueType _type{ MaterialGraphValueType::Invalid };
+        MaterialGraphValueKind _type{ MaterialGraphValueKind::Invalid };
     };
 
     /** @brief 컴파일 결과입니다. `_listIssue` 가 비어야 `_hlsl` 을 쓸 수 있습니다. */

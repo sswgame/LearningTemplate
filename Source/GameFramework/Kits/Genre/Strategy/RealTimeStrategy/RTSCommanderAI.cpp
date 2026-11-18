@@ -114,7 +114,7 @@ namespace sw
                 return;
             const RTSOrder* pOrder                   = unit.findOrder();
             int32           score                    = 3;
-            const bool      bGatheringWithEmptyCargo = pOrder != nullptr && pOrder->_type == RTSOrderType::Gather && unit._cargoAmount == 0;
+            const bool      bGatheringWithEmptyCargo = pOrder != nullptr && pOrder->_type == RTSOrderKind::Gather && unit._cargoAmount == 0;
             if ( pOrder == nullptr )
                 score = 0;
             else if ( bGatheringWithEmptyCargo && unit._gatherPhase != RTSGatherPhase::Harvesting )
@@ -130,7 +130,7 @@ namespace sw
         if ( workerID.isValid() == false || _pWorld->issueBuild( workerID, buildingID, cell ) != RTSCommandResult::Ok )
             return false;
         // 다 지으면 다시 캐러 간다.
-        const RTSUnitID mineralID = _pWorld->findNearestResource( pDepot->_position, RTSResourceType::Minerals, 16.0f );
+        const RTSUnitID mineralID = _pWorld->findNearestResource( pDepot->_position, RTSResourceKind::Minerals, 16.0f );
         if ( mineralID.isValid() )
             (void)_pWorld->issueGather( workerID, mineralID, true );
         return true;
@@ -170,7 +170,7 @@ namespace sw
         } );
         for ( const RTSUnitID workerID : listIdle )
         {
-            const RTSUnitID mineralID = world.findNearestResource( pDepot->_position, RTSResourceType::Minerals, 16.0f );
+            const RTSUnitID mineralID = world.findNearestResource( pDepot->_position, RTSResourceKind::Minerals, 16.0f );
             if ( mineralID.isValid() == false )
                 return ActionResult::Failed;
             (void)world.issueGather( workerID, mineralID );

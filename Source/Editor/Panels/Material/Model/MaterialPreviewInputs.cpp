@@ -96,7 +96,7 @@ namespace sw::editor
         {
             for ( const MaterialProperty& prop : listProperty )
             {
-                if ( prop._type == MaterialPropertyType::Color )
+                if ( prop._type == MaterialPropertyKind::Color )
                 {
                     pBase = &prop;
                     break;

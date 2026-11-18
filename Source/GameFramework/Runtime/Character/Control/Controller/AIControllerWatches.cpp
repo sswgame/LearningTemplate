@@ -114,12 +114,12 @@ namespace sw
             if ( pAI == nullptr )
                 return false;
             const BlackboardValue* pValue = pAI->getBlackboard().findValue( hashed_string( query._key ) );
-            if ( pValue == nullptr || pValue->_type == BlackboardValueType::None )
+            if ( pValue == nullptr || pValue->_type == BlackboardValueKind::None )
             {
                 outValue.setText( "blackboard key '" + string( query._key ) + "' is not set" );
                 return false;
             }
-            outValue.setNumber( pValue->_type == BlackboardValueType::Vector ? static_cast<float64>( pValue->_vector.getLength() ) : static_cast<float64>( pValue->computeNumeric() ) );
+            outValue.setNumber( pValue->_type == BlackboardValueKind::Vector ? static_cast<float64>( pValue->_vector.getLength() ) : static_cast<float64>( pValue->computeNumeric() ) );
             return true;
         }
     } // namespace

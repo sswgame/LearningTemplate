@@ -65,7 +65,7 @@ namespace sw
     {
         uint8              _bGPUMessages{ SW_FALSE };                      ///< 셰이더 메시지(`SW_GPU_PRINT` · `SW_GPU_LOG` · `SW_GPU_ASSERT`) 변형으로 컴파일하고 링 버퍼를 건다(`GPUMessageChannel`) — 렌더러 초기화 때 읽는다
         uint8              _gpuMessageLogBudget{ 4 };                      ///< `SW_GPU_LOG` 가 메시지 id 하나당 한 프레임에 적는 기록 수(`GPUMessageChannel::updateControl`)
-        uint8              _bNanCheck{ SW_FALSE };                         ///< 패스 출력의 NaN · Inf 를 컴퓨트로 센다(`GPUNanCheck`, 진단 패스 `RenderPassType::NanCheck`) — 렌더러 초기화 때 읽는다
+        uint8              _bNanCheck{ SW_FALSE };                         ///< 패스 출력의 NaN · Inf 를 컴퓨트로 센다(`GPUNanCheck`, 진단 패스 `RenderPassKind::NanCheck`) — 렌더러 초기화 때 읽는다
         uint8              _bShaderDebugCodegen{ SW_FALSE };               ///< 실행 중 셰이더 컴파일을 디버그 코드젠으로(RenderDoc 에서 한 줄씩, `ShaderCache::makeLiveCompileDesc`)
         BindlessIndexCheck _bindlessIndexCheck{ BindlessIndexCheck::Off }; ///< bindless 인덱스 검사 수준(`BindlessIndexValidator`)
         LightGridProducer  _lightGridProducer{ LightGridProducer::GPU };   ///< 라이트 그리드 생산자(`FrameRenderer::selectLightGridProducer`)

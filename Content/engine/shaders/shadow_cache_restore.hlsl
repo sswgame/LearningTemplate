@@ -2,7 +2,7 @@
 #include "fullscreen.hlsli"
 
 /**
- * shadow_cache_restore.hlsl — 그림자 캐시 복원(RenderPassType::ShadowCacheRestore).
+ * shadow_cache_restore.hlsl — 그림자 캐시 복원(RenderPassKind::ShadowCacheRestore).
  *
  * 그림자 패스가 캐시한 점광 · 스폿 타일의 칸을 뷰포트로 잡고 이 풀스크린 삼각형을 그린다. 픽셀마다 캐시 층(정적 메시만 그린 깊이 — C++ ShadowCache,
  * 이 드로우 동안 LocalShadowMap 역할 이름으로 걸린다)의 같은 텍셀을 픽셀 깊이로 쓴다. 캐시 층과 점광 · 스폿 아틀라스는 형식 · 크기가 같아 SV_Position(렌더 타깃 픽셀, 뷰포트 원점 포함)이 곧 텍셀이다.

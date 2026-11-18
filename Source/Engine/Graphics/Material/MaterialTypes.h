@@ -27,7 +27,7 @@ namespace sw
         Blend,  ///< 반투명 배치 목록. 반투명 패스의 블렌드를 쓰고, 머티리얼이 프리셋으로 덮을 수 있다
     };
 
-    /** @brief `alphaMode="Mask"` 머티리얼의 define 입니다. 깊이 패스(그림자, 깊이 프리패스)도 머티리얼 셰이더로 그려 같은 형태로 오립니다(`RenderPassTypeInfo::usesMaterialShaderForDepth`). 머티리얼 XML 에 직접 적지 않습니다(읽기 오류). */
+    /** @brief `alphaMode="Mask"` 머티리얼의 define 입니다. 깊이 패스(그림자, 깊이 프리패스)도 머티리얼 셰이더로 그려 같은 형태로 오립니다(`RenderPassKindInfo::usesMaterialShaderForDepth`). 머티리얼 XML 에 직접 적지 않습니다(읽기 오류). */
     inline constexpr const utf8* kMaterialAlphaCutoffDefine = "MATERIAL_ALPHA_CUTOFF";
     /// @brief 머티리얼 변형의 텍스처 칸 수 define 의 이름입니다(`MATERIAL_TEXTURE_COUNT=N`, `Material::getTextureSlotCount`). 웹 에뮬 셰이더가 이 칸만 선언한다.
     inline constexpr const utf8* kMaterialTextureCountDefine = "MATERIAL_TEXTURE_COUNT";
@@ -35,7 +35,7 @@ namespace sw
     inline constexpr const utf8* kMaterialTwoSidedDefine = "MATERIAL_TWO_SIDED";
 
     /// @brief 머티리얼 프로퍼티 타입 종류입니다.
-    enum class MaterialPropertyType : uint8
+    enum class MaterialPropertyKind : uint8
     {
         Float,
         Float2,
@@ -106,8 +106,8 @@ namespace sw
     struct SW_API MaterialProperty
     {
         string               _name;
-        MaterialPropertyType _type;
-        MaterialPropertyType _shaderType;
+        MaterialPropertyKind _type;
+        MaterialPropertyKind _shaderType;
 
         /** @brief 작성 기본값입니다. XML 의 `_defaultValue` 이며, 로드할 때 `_value` 의 기본으로 씁니다. */
         string _defaultValue;

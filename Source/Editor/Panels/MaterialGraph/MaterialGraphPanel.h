@@ -46,7 +46,7 @@ namespace sw::editor
         /** @brief 고른 노드의 설정과 잇지 않은 핀의 값입니다. */
         void drawInspector();
         /** @brief 값 한 줄입니다. 형식에 맞는 위젯을 그리고 고쳤으면 모델에 넘깁니다. */
-        void drawValueRow( uint32 nodeIndex, const utf8* pName, MaterialGraphValueType type, string_view defaultText, bool bColor );
+        void drawValueRow( uint32 nodeIndex, const utf8* pName, MaterialGraphValueKind type, string_view defaultText, bool bColor );
         void drawIssues();
         /** @brief 캔버스 프레임워크가 묻는 핀 정보입니다. float 출력은 어느 입력으로든 넓어져 와일드카드입니다. */
         [[nodiscard]] bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo );

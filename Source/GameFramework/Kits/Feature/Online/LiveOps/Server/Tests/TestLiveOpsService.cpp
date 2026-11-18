@@ -90,7 +90,7 @@ namespace
         void setConfigText( string_view key, string_view text )
         {
             RemoteConfigValue value;
-            value._type = RemoteConfigValueType::Text;
+            value._type = RemoteConfigValueKind::Text;
             value._text = string( text );
             submit( key, value );
         }
@@ -98,7 +98,7 @@ namespace
         void setKillSwitch( bool bEnabled )
         {
             RemoteConfigValue value;
-            value._type               = RemoteConfigValueType::Flag;
+            value._type               = RemoteConfigValueKind::Flag;
             value._integer            = 1; // 켜진 플래그이고 대상 비율로 끈다
             value._rolloutBasisPoints = bEnabled ? 10000 : 0;
             submit( LiveOpsBus::kKillSwitchFlag, value );

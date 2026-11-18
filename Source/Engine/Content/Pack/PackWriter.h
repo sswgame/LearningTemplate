@@ -36,7 +36,7 @@ namespace sw
     /** @struct PackWriterDesc @brief 팩 하나의 쓰기 설정입니다. `_blockSize` · `_writeWindowBytes` 는 기본값이 없어 비워 두면 `open` 이 오류입니다. */
     struct PackWriterDesc
     {
-        PackCompressionType   _compression{ PackCompressionType::None };
+        PackCompressionKind   _compression{ PackCompressionKind::None };
         int32                 _compressionLevel{ 0 };                ///< 코덱의 레벨(0 = 코덱 기본값)
         uint32                _dlcAppID{ 0 };                        ///< 0: 본편 · 공용, >0: DLC AppID
         PackLayoutMode        _layoutMode{ PackLayoutMode::Sorted }; ///< 페이로드 배치(파일 머리말의 "슬롯 배치")

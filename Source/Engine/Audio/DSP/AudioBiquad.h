@@ -12,7 +12,7 @@
 namespace sw
 {
     /** @brief 바이쿼드 형태입니다. */
-    enum class AudioBiquadType : uint8
+    enum class AudioBiquadKind : uint8
     {
         LowPass = 0,
         HighPass,
@@ -35,7 +35,7 @@ namespace sw
          * @brief cookbook 계수를 구합니다. @p frequencyHz 는 (0, 나이퀴스트) 범위로 제한합니다.
          * @param gainDb Peaking 과 셸빙에서만 씁니다.
          */
-        static AudioBiquadCoefficients make( AudioBiquadType type, float32 frequencyHz, float32 q, float32 gainDb, float32 sampleRate );
+        static AudioBiquadCoefficients make( AudioBiquadKind type, float32 frequencyHz, float32 q, float32 gainDb, float32 sampleRate );
         /** @brief @p frequencyHz 에서의 크기 응답(선형) |H(e^jω)| 을 반환합니다. 테스트가 처리 결과와 비교합니다. */
         float32 computeMagnitude( float32 frequencyHz, float32 sampleRate ) const;
     };

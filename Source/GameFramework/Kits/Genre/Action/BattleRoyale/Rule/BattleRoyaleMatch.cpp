@@ -289,9 +289,9 @@ namespace sw
         target._healthMachine.pollEvents( listEvent );
         for ( const HealthEvent& event : listEvent )
         {
-            if ( event._type == HealthEventType::Downed )
+            if ( event._type == HealthEventKind::Downed )
                 handleDowned( player, event._instigatorID );
-            else if ( event._type == HealthEventType::Died )
+            else if ( event._type == HealthEventKind::Died )
                 handleDeath( player, event._instigatorID );
         }
     }

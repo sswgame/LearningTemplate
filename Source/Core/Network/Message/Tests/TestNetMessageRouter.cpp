@@ -94,7 +94,7 @@ namespace
             // 판 맞춤이 끝난 뒤 클라이언트가 그 영역 메시지를 보낸다 — 판이 같으면 서버 처리기가 받는다.
             NetMessageWriter messageWriter;
             messageWriter.begin( static_cast<uint8>( kRange + 1 ) ).writeVarUint( 5 );
-            (void)messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ); // 끊겼으면 보내지 못한다 — 아래 상태가 본다
+            (void)messageWriter.send( pair.getClient( 0 ), 0, NetChannelKind::ReliableOrdered ); // 끊겼으면 보내지 못한다 — 아래 상태가 본다
             for ( int32 round = 0; round < 6; ++round )
             {
                 pair.run( 0.05 );
@@ -133,7 +133,7 @@ SW_TEST_CASE( NetMessageRouterTest, MessageRouterDispatchesByRangeAndKeepsUnhand
     for ( const uint8 kind : arrKind )
     {
         messageWriter.begin( kind ).writeVarUint( kind );
-        SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
+        SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelKind::ReliableOrdered ) );
     }
     pair.run( 0.2 );
     vector<NetReceivedMessage> listUnhandled;
@@ -243,9 +243,9 @@ SW_TEST_CASE( NetMessageRouterTest, MalformedMessageIsCountedNotForwarded )
     const sw::Subscription                        subscription = router.registerHandler( &handler );
     NetMessageWriter                              messageWriter;
     (void)messageWriter.begin( NetMessageRouterTestInternal::kGameKind1 ); // 몸(가변 정수)이 없다
-    SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
+    SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelKind::ReliableOrdered ) );
     messageWriter.begin( NetMessageRouterTestInternal::kGameKind1 ).writeVarUint( 5 );
-    SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
+    SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelKind::ReliableOrdered ) );
     pair.run( 0.2 );
     vector<NetReceivedMessage> listUnhandled;
     SW_EXPECT_EQUAL( 2, router.poll( pair.getServer(), &listUnhandled ) );
@@ -299,7 +299,7 @@ SW_TEST_CASE( NetMessageRouterTest, RouterTellsHandlersAboutConnectionsBeforeThe
     pair.run( 0.3 );
     NetMessageWriter messageWriter;
     messageWriter.begin( NetMessageRouterTestInternal::kGameKind0 ).writeVarUint( 1 );
-    SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
+    SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelKind::ReliableOrdered ) );
     pair.run( 0.2 );
     (void)router.poll( pair.getServer() );
     pair.getClient( 0 ).disconnect( 0 );
@@ -342,13 +342,13 @@ SW_TEST_CASE( NetMessageRouterTest, SendToPeersAndRelayReachEveryOtherPeer )
     // 클라이언트 0 → 서버만.
     NetMessageWriter writer;
     writer.begin( NetMessageRange::kGame ).writeVarUint( 7 );
-    SW_EXPECT_EQUAL( 1, writer.sendToPeers( arrClient[0], NetChannelType::Unreliable ) );
+    SW_EXPECT_EQUAL( 1, writer.sendToPeers( arrClient[0], NetChannelKind::Unreliable ) );
     runAll( 0.2 );
     int32          connectionID = -1;
-    NetChannelType channel      = NetChannelType::ReliableOrdered;
+    NetChannelKind channel      = NetChannelKind::ReliableOrdered;
     vector<uint8>  buffer;
     SW_REQUIRE_TRUE( server.receiveMessage( connectionID, channel, buffer ) );
-    SW_EXPECT_TRUE( channel == NetChannelType::Unreliable );
+    SW_EXPECT_TRUE( channel == NetChannelKind::Unreliable );
 
     // 서버의 중계 — 보낸 클라이언트 0 말고 1 만, 같은 채널로.
     NetMessageContext context;
@@ -362,11 +362,11 @@ SW_TEST_CASE( NetMessageRouterTest, SendToPeersAndRelayReachEveryOtherPeer )
     runAll( 0.2 );
     SW_EXPECT_FALSE( arrClient[0].receiveMessage( connectionID, channel, buffer ) );
     SW_REQUIRE_TRUE( arrClient[1].receiveMessage( connectionID, channel, buffer ) );
-    SW_EXPECT_TRUE( channel == NetChannelType::Unreliable );
+    SW_EXPECT_TRUE( channel == NetChannelKind::Unreliable );
 
     // 서버 → 모두.
     writer.begin( NetMessageRange::kGame ).writeVarUint( 9 );
-    SW_EXPECT_EQUAL( 2, writer.sendToPeers( server, NetChannelType::ReliableOrdered ) );
+    SW_EXPECT_EQUAL( 2, writer.sendToPeers( server, NetChannelKind::ReliableOrdered ) );
     runAll( 0.2 );
     for ( NetEndpoint& client : arrClient )
     {

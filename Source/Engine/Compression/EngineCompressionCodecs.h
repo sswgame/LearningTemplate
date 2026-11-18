@@ -23,10 +23,10 @@ namespace sw
     struct SW_API EngineCompressionCodecUtil
     {
         /** @brief Engine 이 제공하는 코덱 타입입니다. 코덱을 늘리면 여기와 `registerAll` 만 고칩니다. */
-        static constexpr CompressionCodecType kArrCodecType[] = {
-            CompressionCodecType::LZ4,
-            CompressionCodecType::Zstd,
-            CompressionCodecType::Zlib,
+        static constexpr CompressionCodecKind kArrCodecType[] = {
+            CompressionCodecKind::LZ4,
+            CompressionCodecKind::Zstd,
+            CompressionCodecKind::Zlib,
         };
 
         /** @brief 위 목록의 코덱을 모두 등록하고 그 구독들을 돌려줍니다(부르는 쪽이 레지스트리와 같은 수명으로 든다). 같은 타입이 이미 있으면 덮어씁니다. */
@@ -54,7 +54,7 @@ namespace sw
         LZ4CompressionCodec( LZ4CompressionCodec&& ) noexcept            = default;
         LZ4CompressionCodec& operator=( LZ4CompressionCodec&& ) noexcept = default;
 
-        virtual CompressionCodecType getCodecType() const override;
+        virtual CompressionCodecKind getCodecType() const override;
         virtual const utf8*          getCodecName() const override;
         virtual size_t               compressBound( size_t uncompressedSize ) const override;
         virtual size_t               decompressBound( size_t compressedSize ) const override;
@@ -93,7 +93,7 @@ namespace sw
         ZstdCompressionCodec( ZstdCompressionCodec&& ) noexcept            = default;
         ZstdCompressionCodec& operator=( ZstdCompressionCodec&& ) noexcept = default;
 
-        virtual CompressionCodecType getCodecType() const override;
+        virtual CompressionCodecKind getCodecType() const override;
         virtual const utf8*          getCodecName() const override;
         virtual size_t               compressBound( size_t uncompressedSize ) const override;
         virtual size_t               decompressBound( size_t compressedSize ) const override;
@@ -120,7 +120,7 @@ namespace sw
      * @brief zlib(Deflate) 압축 코덱 (외부 라이브러리 `zlib`)
      * @details 리소스 팩의 기본 코덱입니다(`Config/Engine/PackConfig.json`). 팩 쿠커(`PackCooker`)와 리더가 같은 엔진 코덱을 쓰므로
      *          LZ4/Zstd 로 바꿔도 도구 설치가 필요 없습니다. 리더는 표준 zlib 이라 Deflate 전략에 제약이 없습니다.
-     * @note 팩은 자기 디스크 enum(`PackCompressionType`)을 `PackCompressionUtil` 의 표로 `CompressionCodecType` 에 옮겨 레지스트리에서 이 코덱을
+     * @note 팩은 자기 디스크 enum(`PackCompressionKind`)을 `PackCompressionUtil` 의 표로 `CompressionCodecKind` 에 옮겨 레지스트리에서 이 코덱을
      *       찾습니다. 두 디스크 번호는 서로 다르고 그대로입니다.
      */
     class SW_API ZlibCompressionCodec final : public ICompressionCodec
@@ -133,7 +133,7 @@ namespace sw
         ZlibCompressionCodec( ZlibCompressionCodec&& ) noexcept            = default;
         ZlibCompressionCodec& operator=( ZlibCompressionCodec&& ) noexcept = default;
 
-        virtual CompressionCodecType getCodecType() const override;
+        virtual CompressionCodecKind getCodecType() const override;
         virtual const utf8*          getCodecName() const override;
         virtual size_t               compressBound( size_t uncompressedSize ) const override;
         virtual size_t               decompressBound( size_t compressedSize ) const override;

@@ -29,17 +29,17 @@ namespace sw
     };
 
     /**
-     * @brief 메시지 서술자입니다. 키트는 `using Input = NetMessageDef<0, NetMessageDirection::Both, NetChannelType::ReliableOrdered>;` 로 씁니다.
+     * @brief 메시지 서술자입니다. 키트는 `using Input = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;` 로 씁니다.
      * @tparam Offset 영역 안 번호(0 ~ 15)
      * @tparam Channel 기본 채널. 보내는 쪽이 상태에 따라 다른 채널을 고르는 메시지(멈추면 신뢰로 보내는 자세)는 평소 채널을 적는다
      * @tparam BodyRevision 본문 판. 본문의 형식이나 뜻을 바꾸면 올린다
      */
-    template <uint8 Offset, NetMessageDirection Direction, NetChannelType Channel, uint32 BodyRevision = 1>
+    template <uint8 Offset, NetMessageDirection Direction, NetChannelKind Channel, uint32 BodyRevision = 1>
     struct NetMessageDef
     {
         static constexpr uint8               kOffset       = Offset;
         static constexpr NetMessageDirection kDirection    = Direction;
-        static constexpr NetChannelType      kChannel      = Channel;
+        static constexpr NetChannelKind      kChannel      = Channel;
         static constexpr uint32              kBodyRevision = BodyRevision;
         static_assert( Offset < NetMessageRange::kSize, "a message must fit inside its range" );
     };

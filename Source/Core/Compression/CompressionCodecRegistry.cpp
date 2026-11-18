@@ -63,7 +63,7 @@ namespace sw
         if ( codec == nullptr )
             return {};
 
-        const CompressionCodecType type = codec->getCodecType();
+        const CompressionCodecKind type = codec->getCodecType();
         SW_LOG_INFO_ID( "Compression.RegisteredCodecType", "Registered codec: %# (type=%#)", codec->getCodecName(), static_cast<uint32>( type ) );
 
         uint64 id{ 0 };
@@ -89,7 +89,7 @@ namespace sw
         }
     }
 
-    ICompressionCodec* CompressionCodecRegistry::getCodec( CompressionCodecType type ) const
+    ICompressionCodec* CompressionCodecRegistry::getCodec( CompressionCodecKind type ) const
     {
         ScopedLock<mutex> lock{ _mutex };
         const auto        iter = _mapCodec.find( type );
@@ -110,7 +110,7 @@ namespace sw
         return nullptr;
     }
 
-    bool CompressionCodecRegistry::isCodecRegistered( CompressionCodecType type ) const
+    bool CompressionCodecRegistry::isCodecRegistered( CompressionCodecKind type ) const
     {
         ScopedLock<mutex> lock{ _mutex };
         return _mapCodec.find( type ) != _mapCodec.end();
@@ -118,8 +118,8 @@ namespace sw
 
     void CompressionCodecRegistry::registerBuiltinCodecs()
     {
-        _mapCodec[CompressionCodecType::None] = make_unique<NullCompressionCodec>();
-        _mapCodec[CompressionCodecType::RLE]  = make_unique<RLECompressionCodec>();
+        _mapCodec[CompressionCodecKind::None] = make_unique<NullCompressionCodec>();
+        _mapCodec[CompressionCodecKind::RLE]  = make_unique<RLECompressionCodec>();
     }
 
 } // namespace sw

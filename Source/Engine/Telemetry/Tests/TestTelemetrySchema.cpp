@@ -18,7 +18,7 @@ SW_TEST_CASE( TelemetrySchemaTest, ReadsThroughSchemas )
     SW_EXPECT_EQUAL( uint64{ 4096 }, schema.getSettings()._maxTotalBytes );
     const sw::TelemetryEventDef* pEvent = schema.findEvent( sw::hashed_string( "match.end" ) );
     SW_REQUIRE_TRUE( pEvent != nullptr && pEvent->_listField.size() == 1 );
-    SW_EXPECT_TRUE( pEvent->_listField[0]._type == sw::TelemetryFieldType::Int && pEvent->_listField[0]._bRequired );
+    SW_EXPECT_TRUE( pEvent->_listField[0]._type == sw::TelemetryFieldKind::Int && pEvent->_listField[0]._bRequired );
 
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );

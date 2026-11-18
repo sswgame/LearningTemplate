@@ -54,11 +54,11 @@ namespace sw
     /** @brief 파괴 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetDestructionMessage
     {
-        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelType::ReliableUnordered, 2>; ///< 판 2: 오브젝트 번호가 64 비트(`NetObjectID`). 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
-        using Snapshot        = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 3>;   ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지). 판 2: 조각이 아니라 메시지 하나로 보낸다. 판 3: 번호 64 비트
-        using Pose            = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelType::Unreliable, 2>;        ///< 판 2: 번호 64 비트. 덩어리 자세. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다
-        using Hash            = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 2>;   ///< (이벤트 수, 상태 해시). 판 2: 번호 64 비트
-        using SnapshotRequest = NetMessageDef<4, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered, 2>;   ///< 스냅숏을 요청한다. 판 2: 번호 64 비트
+        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableUnordered, 2>; ///< 판 2: 오브젝트 번호가 64 비트(`NetObjectID`). 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
+        using Snapshot        = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 3>;   ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지). 판 2: 조각이 아니라 메시지 하나로 보낸다. 판 3: 번호 64 비트
+        using Pose            = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 2>;        ///< 판 2: 번호 64 비트. 덩어리 자세. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다
+        using Hash            = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>;   ///< (이벤트 수, 상태 해시). 판 2: 번호 64 비트
+        using SnapshotRequest = NetMessageDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, 2>;   ///< 스냅숏을 요청한다. 판 2: 번호 64 비트
         using Table           = NetMessageTable<NetKitMessageRange::kDestruction, Event, Snapshot, Pose, Hash, SnapshotRequest>;
 
         static constexpr uint8 kEvent           = Table::getKindOf<Event>();
@@ -172,7 +172,7 @@ namespace sw
          */
         void  sendPoseList( const Entry& entry, const vector<const FractureGroupPose*>& listPose, bool bRest, bool bReliable, uint32 serverTick );
         void  sendHash( const Entry& entry, const FractureComponentBase& component );
-        int32 broadcast( NetChannelType channel );
+        int32 broadcast( NetChannelKind channel );
 
     private:
         vector<Entry>                _listEntry;

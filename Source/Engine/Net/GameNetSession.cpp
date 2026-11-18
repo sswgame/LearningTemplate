@@ -160,7 +160,7 @@ namespace sw
                 {
                     for ( int32 index = 0; index < messageCount; ++index )
                     {
-                        const bool bSent = pSession->getPeers().trySendMessage( connectionID, NetChannelType::ReliableOrdered, payloadBytes.data(), static_cast<int32>( payloadBytes.size() ) );
+                        const bool bSent = pSession->getPeers().trySendMessage( connectionID, NetChannelKind::ReliableOrdered, payloadBytes.data(), static_cast<int32>( payloadBytes.size() ) );
                         sentCount += bSent ? 1 : 0;
                     }
                 }
@@ -755,7 +755,7 @@ namespace sw
             return;
         BitWriter& writer = _tickWriter.begin( GameNetSessionMessage::kServerTick );
         writer.writeVarUint( tick );
-        (void)_tickWriter.broadcast( _peers, NetChannelType::UnreliableSequenced ); // 잃어도 다음 틱이 더 새 번호를 싣는다
+        (void)_tickWriter.broadcast( _peers, NetChannelKind::UnreliableSequenced ); // 잃어도 다음 틱이 더 새 번호를 싣는다
     }
 
     void GameNetSession::sendShutdownNotice( const GameShutdownNotice& notification )
@@ -765,7 +765,7 @@ namespace sw
         BitWriter& writer = _tickWriter.begin( GameNetSessionMessage::kShutdownNotice );
         writer.writeBits( static_cast<uint32>( notification._reason ), 8 );
         writer.writeVarUint( notification._graceSeconds );
-        const int32 sentCount = _tickWriter.broadcast( _peers, NetChannelType::ReliableOrdered ); // 끊기 전에 사유가 닿아야 한다
+        const int32 sentCount = _tickWriter.broadcast( _peers, NetChannelKind::ReliableOrdered ); // 끊기 전에 사유가 닿아야 한다
         SW_LOG_INFO_ID( "GameNetSession.NetSessionNotifiedClients", "Net session told %# clients the server is shutting down (reason %#, grace %# s)", sentCount, static_cast<uint32>( notification._reason ), notification._graceSeconds );
     }
 
@@ -884,7 +884,7 @@ namespace sw
             BitWriter& writer = _tickWriter.begin( GameNetSessionMessage::kResourceDigest );
             writer.writeBlob( reinterpret_cast<const uint8*>( entry._assetID.data() ), static_cast<int32>( entry._assetID.size() ) );
             writer.writeVarUint( entry._hash );
-            if ( _tickWriter.send( _peers, connectionID, NetChannelType::ReliableOrdered ) )
+            if ( _tickWriter.send( _peers, connectionID, NetChannelKind::ReliableOrdered ) )
                 ++sentCount;
         }
         SW_LOG_INFO_ID( "GameNetSession.DigestSent", "Net session sent %# resource composition digest(s) to the server", sentCount );

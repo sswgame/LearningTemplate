@@ -16,7 +16,7 @@
 namespace sw
 {
     /**
-     * @enum RenderPassType
+     * @enum RenderPassKind
      * @brief 파이프라인 XML 의 `_type` 이 가리키는 패스 종류입니다.
      * @details 디스패치와 PSO 생성이 같은 값을 본다. 주의: 두 곳이 각자 문자열을 비교하면 받아 주는 표기가 갈려,
      *          디스패치는 되는데 PSO 는 desc 를 찾지 못하고 기본 포맷으로 만들어진다. 리플렉션이
@@ -28,7 +28,7 @@ namespace sw
      *       다시 쓸 수 없게 된 뒤에 쓰는 수단이다.
      */
     ENUM()
-    enum class RenderPassType : uint32
+    enum class RenderPassKind : uint32
     {
         Invalid = 0, ///< 알 수 없는 표기이며 검증에서 오류로 보고한다.
 
@@ -88,7 +88,7 @@ namespace sw
          * @brief 높이 · 거리 지수 안개입니다(fog.hlsl). 장면 깊이로 시선 위 광학 두께를 구해 선언한 컬러 출력 **위에 블렌드**(프리멀티플라이: 안개색 × 불투명도 + 장면 × (1 - 불투명도))합니다 —
          *        그래서 입력은 장면 깊이뿐이고 출력은 앞 패스가 칠한 색 첨부입니다(복사 첨부를 따로 두지 않는다). 불투명 · 하늘 · 반투명 뒤, 후처리 앞에 둡니다.
          *        씬에 안개(`FogComponent` · 물속)가 없거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FramePassExecutor::executeFogPass`).
-         *        볼륨 안개를 켠 씬은 볼륨(froxel, `RenderPassType::VolumetricFog` 컴퓨트)의 산란과 투과율을 같은 블렌드로 더합니다.
+         *        볼륨 안개를 켠 씬은 볼륨(froxel, `RenderPassKind::VolumetricFog` 컴퓨트)의 산란과 투과율을 같은 블렌드로 더합니다.
          */
         Fog,
         /**
@@ -273,9 +273,9 @@ namespace sw
     inline constexpr const utf8* kSwapchainOutputName = "Swapchain";
 
     /** @brief 뷰 그래프(`_listPass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 뷰마다 다시 도는 패스입니다(내부 슬롯 · 프레임 패스 · Invalid 는 제외합니다). */
-    constexpr bool isViewPassType( RenderPassType type )
+    constexpr bool isViewPassType( RenderPassKind type )
     {
-        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::Compute );
+        return type != RenderPassKind::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassKind::Compute );
     }
 
     /**
@@ -283,21 +283,21 @@ namespace sw
      * @details 이 목록이 곧 "그래프 앞에 C++ 가 박아 두던 일" 의 전부다. 파이프라인이 선언하지 않은 종류는 PSO 도 없고 돌지 않는다(`FramePSOManager::createPassPSOs`).
      *          InstanceSort · IndirectArgsReset · VFXMeshInstance · VFXParticleSort 는 GPUCull · VFXSimulation 패스 안의 다른 디스패치라 따로 선언하지 않는다.
      */
-    constexpr bool isFramePassType( RenderPassType type )
+    constexpr bool isFramePassType( RenderPassKind type )
     {
         switch ( type )
         {
-            case RenderPassType::DepthHistory:
-            case RenderPassType::OcclusionTiles:
-            case RenderPassType::VFXSimulation:
-            case RenderPassType::InstanceAnimation:
-            case RenderPassType::MeshMorph:
-            case RenderPassType::MeshSkin:
-            case RenderPassType::GPUCull:
-            case RenderPassType::LightGrid:
-            case RenderPassType::VolumetricFog:
-            case RenderPassType::ProbeUpdate:
-            case RenderPassType::CanvasMarker:
+            case RenderPassKind::DepthHistory:
+            case RenderPassKind::OcclusionTiles:
+            case RenderPassKind::VFXSimulation:
+            case RenderPassKind::InstanceAnimation:
+            case RenderPassKind::MeshMorph:
+            case RenderPassKind::MeshSkin:
+            case RenderPassKind::GPUCull:
+            case RenderPassKind::LightGrid:
+            case RenderPassKind::VolumetricFog:
+            case RenderPassKind::ProbeUpdate:
+            case RenderPassKind::CanvasMarker:
                 return true;
             default:
                 return false;
@@ -305,7 +305,7 @@ namespace sw
     }
 
     /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(뷰 패스 또는 프레임 패스 — 내부 슬롯과 Invalid 는 제외합니다). */
-    constexpr bool isPipelinePassType( RenderPassType type )
+    constexpr bool isPipelinePassType( RenderPassKind type )
     {
         return isViewPassType( type ) || isFramePassType( type );
     }
@@ -409,7 +409,7 @@ namespace sw
 
         /** @brief 패스 종류입니다. 디스패치와 PSO 생성이 같은 값을 본다. */
         PROPERTY()
-        RenderPassType _type{ RenderPassType::Invalid };
+        RenderPassKind _type{ RenderPassKind::Invalid };
 
         PROPERTY( SkipIfEmpty )
         vector<string> _listInput;
@@ -537,7 +537,7 @@ namespace sw
          *          그래픽스 큐에서 같은 순서로 돈다 — 능력 표가 정한 길이다. 포크 · 조인은 그래프 간선이 정한다(`RenderGraph::getQueueSteps`). 언리얼 `ERDGPassFlags::AsyncCompute` 자리.
          */
         PROPERTY()
-        RHIQueueType _queue{ RHIQueueType::Graphics };
+        RHIQueueKind _queue{ RHIQueueKind::Graphics };
 
         /** @brief 일반 풀스크린 패스의 실행 방식입니다(`RenderPassExecutionMode`). Compute 는 표가 컴퓨트 구현을 가진 종류만 받는다(검증). */
         PROPERTY()

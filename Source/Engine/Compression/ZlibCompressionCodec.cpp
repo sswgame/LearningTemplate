@@ -121,9 +121,9 @@ namespace sw
 
 namespace sw
 {
-    CompressionCodecType ZlibCompressionCodec::getCodecType() const
+    CompressionCodecKind ZlibCompressionCodec::getCodecType() const
     {
-        return CompressionCodecType::Zlib;
+        return CompressionCodecKind::Zlib;
     }
 
     const utf8* ZlibCompressionCodec::getCodecName() const

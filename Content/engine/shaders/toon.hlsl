@@ -9,7 +9,7 @@
  *          **외곽선은 같은 파일의 다른 퍼뮤테이션이다**(`SW_PASS_MESH_OUTLINE` — 메시 외곽선 패스가 얹는다). 뒤집은 껍질(inverted hull):
  *          정점을 노멀 방향으로 밀어 앞면을 컬링해 그린다(컬 모드는 패스가 정한다). 두께는 월드(미터) 또는 화면(화면 높이 비율, 거리와 무관)이다.
  *          정점은 모프 · 스키닝 결과를 읽으므로(MorphPool::loadVertex) 움직이는 메시에서도 껍질이 따라간다. 외곽선 패스는 퍼뮤테이션에
- *          `MATERIAL_OUTLINE` 이 있는 배치만 그린다(RenderPassTypeInfo 의 `_pRequiredMaterialDefine`).
+ *          `MATERIAL_OUTLINE` 이 있는 배치만 그린다(RenderPassKindInfo 의 `_pRequiredMaterialDefine`).
  *
  *          **머티리얼은 한 스테이지에서만 읽는다**(GL 은 구조버퍼를 두 단계가 읽으면 링크를 거절한다). 기본 퍼뮤테이션은 픽셀이,
  *          외곽선 퍼뮤테이션은 정점이 읽어(두께가 정점에 필요하다) 픽셀이 쓸 값을 보간 칸으로 넘긴다.

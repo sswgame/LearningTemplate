@@ -24,10 +24,10 @@ namespace
     class SilentServerPeers final : public INetPeers
     {
     public:
-        bool               sendMessage( int32, NetChannelType, const uint8*, int32 ) override { return false; }
-        bool               trySendMessage( int32, NetChannelType, const uint8*, int32 ) override { return false; }
+        bool               sendMessage( int32, NetChannelKind, const uint8*, int32 ) override { return false; }
+        bool               trySendMessage( int32, NetChannelKind, const uint8*, int32 ) override { return false; }
         bool               sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
-        int32              broadcast( NetChannelType, const uint8*, int32, int32 ) override { return 0; }
+        int32              broadcast( NetChannelKind, const uint8*, int32, int32 ) override { return 0; }
         void               disconnect( int32 ) override {}
         void               pollInbound( NetInbound& ) override {}
         bool               isServer() const override { return true; }

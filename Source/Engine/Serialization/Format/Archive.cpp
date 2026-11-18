@@ -598,7 +598,7 @@ namespace sw
         return BinarySerializer::deserialize( pInstance, typeInfo, *this, context );
     }
 
-    bool Archive::writeCompressedSection( const void* pData, uint32 byteSize, CompressionCodecType codecType )
+    bool Archive::writeCompressedSection( const void* pData, uint32 byteSize, CompressionCodecKind codecType )
     {
         if ( pData == nullptr || byteSize == 0 )
         {
@@ -639,7 +639,7 @@ namespace sw
         return true;
     }
 
-    bool Archive::serializeCompressedObject( const void* pInstance, const TypeInfo& typeInfo, CompressionCodecType codecType )
+    bool Archive::serializeCompressedObject( const void* pInstance, const TypeInfo& typeInfo, CompressionCodecKind codecType )
     {
         if ( pInstance == nullptr )
         {

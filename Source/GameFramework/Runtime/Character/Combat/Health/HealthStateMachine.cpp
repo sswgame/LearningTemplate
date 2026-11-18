@@ -105,7 +105,7 @@ namespace sw
             const float32 healed = maxHealth - _health;
             _health              = maxHealth;
             if ( healed > 0.0f )
-                pushEvent( HealthEventType::Healed, healed, nullopt );
+                pushEvent( HealthEventKind::Healed, healed, nullopt );
             return;
         }
         _health = MathUtil::min( _health, maxHealth );
@@ -129,11 +129,11 @@ namespace sw
             // 기절 중 — 실드 · 경직은 없다. 출혈 체력을 깎고, 설정이면 부활을 끊는다.
             result._healthDamage = DepletingValue::take( _downedHealth, amount )._taken;
             if ( result._healthDamage > 0.0f )
-                pushEvent( HealthEventType::Damaged, result._healthDamage, instigatorID );
+                pushEvent( HealthEventKind::Damaged, result._healthDamage, instigatorID );
             const bool bReviveInterrupted = amount > 0.0f && isReviving() && _settings._bDamageInterruptsRevive == SW_TRUE;
             if ( bReviveInterrupted )
             {
-                pushEvent( HealthEventType::ReviveInterrupted, 0.0f, instigatorID );
+                pushEvent( HealthEventKind::ReviveInterrupted, 0.0f, instigatorID );
                 stopRevive();
             }
             if ( _downedHealth <= 0.0f && amount > 0.0f )
@@ -149,12 +149,12 @@ namespace sw
         result._shieldAbsorbed = DepletingValue::take( _shield, amount )._taken;
         result._healthDamage   = DepletingValue::take( _health, amount - result._shieldAbsorbed )._taken;
         if ( result._shieldAbsorbed + result._healthDamage > 0.0f )
-            pushEvent( HealthEventType::Damaged, result._shieldAbsorbed + result._healthDamage, instigatorID );
+            pushEvent( HealthEventKind::Damaged, result._shieldAbsorbed + result._healthDamage, instigatorID );
         if ( bHadShield && _shield <= 0.0f )
         {
             _shield               = 0.0f;
             result._bShieldBroken = SW_TRUE;
-            pushEvent( HealthEventType::ShieldBroken, 0.0f, instigatorID );
+            pushEvent( HealthEventKind::ShieldBroken, 0.0f, instigatorID );
         }
 
         // 경직 — 붕괴 중에는 더 쌓지 않는다(붕괴가 끝나면 가득 찬다).
@@ -167,7 +167,7 @@ namespace sw
             {
                 _poiseBreak.start( MathUtil::max( _settings._poiseBreakDuration, 1.0e-6f ) );
                 result._bPoiseBroken = SW_TRUE;
-                pushEvent( HealthEventType::PoiseBroken, poiseDamage, instigatorID );
+                pushEvent( HealthEventKind::PoiseBroken, poiseDamage, instigatorID );
             }
         }
 
@@ -197,7 +197,7 @@ namespace sw
         const float32 healed = MathUtil::min( amount, _settings._maxHealth - _health );
         _health += healed;
         if ( healed > 0.0f )
-            pushEvent( HealthEventType::Healed, healed, nullopt );
+            pushEvent( HealthEventKind::Healed, healed, nullopt );
         return healed;
     }
 
@@ -245,7 +245,7 @@ namespace sw
             {
                 _poise                = _settings._poiseMax;
                 _timeSincePoiseDamage = 0.0f;
-                pushEvent( HealthEventType::PoiseRecovered, 0.0f, nullopt );
+                pushEvent( HealthEventKind::PoiseRecovered, 0.0f, nullopt );
             }
             return;
         }
@@ -263,7 +263,7 @@ namespace sw
         if ( isReviving() == false )
         {
             _bReviving = SW_TRUE;
-            pushEvent( HealthEventType::ReviveStarted, 0.0f, reviverID );
+            pushEvent( HealthEventKind::ReviveStarted, 0.0f, reviverID );
         }
         if ( _settings._reviveTime <= 0.0f )
             finishRevive();
@@ -321,7 +321,7 @@ namespace sw
         _reviverID     = constant::invalid_index::kInt32;
         _bReviving     = SW_FALSE;
         ++_downCount;
-        pushEvent( HealthEventType::Downed, 0.0f, instigatorID );
+        pushEvent( HealthEventKind::Downed, 0.0f, instigatorID );
     }
 
     void HealthStateMachine::enterDead( optional<int32> instigatorID )
@@ -333,7 +333,7 @@ namespace sw
         _poiseBreak.clear();
         _reviverID = constant::invalid_index::kInt32;
         _bReviving = SW_FALSE;
-        pushEvent( HealthEventType::Died, 0.0f, instigatorID );
+        pushEvent( HealthEventKind::Died, 0.0f, instigatorID );
     }
 
     void HealthStateMachine::finishRevive()
@@ -351,10 +351,10 @@ namespace sw
         _reviverID            = constant::invalid_index::kInt32;
         _bReviving            = SW_FALSE;
         _invulnerable.extendTo( _settings._invulnerableAfterRevive );
-        pushEvent( HealthEventType::Revived, _health, reviverID );
+        pushEvent( HealthEventKind::Revived, _health, reviverID );
     }
 
-    void HealthStateMachine::pushEvent( HealthEventType type, float32 amount, optional<int32> instigatorID )
+    void HealthStateMachine::pushEvent( HealthEventKind type, float32 amount, optional<int32> instigatorID )
     {
         HealthEvent event;
         event._type         = type;

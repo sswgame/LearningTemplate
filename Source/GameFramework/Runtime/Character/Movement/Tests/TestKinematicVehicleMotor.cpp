@@ -245,7 +245,7 @@ SW_TEST_CASE( KinematicVehicleMotorTest, RailRollsDownAndStopsAtTheEnd )
                                           float3{0.0f, 10.0f,  0.0f},
                                           float3{0.0f,  0.0f, 50.0f}
     },
-                                      SplineType::Linear, false ) );
+                                      SplineKind::Linear, false ) );
     KinematicVehicleSettings cart = Util::makeSled();
     cart._rail._bEnabled          = true;
     cart._grip._bEnabled          = false;

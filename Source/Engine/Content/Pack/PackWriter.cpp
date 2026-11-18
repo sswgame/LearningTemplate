@@ -144,7 +144,7 @@ namespace sw
         if ( desc._writeWindowBytes == 0 )
             return unexpected( Error{ ErrorKind::InvalidArgument, "pack write window must not be zero (PackConfig _writeWindowBytes)", packPath } );
         ICompressionCodec* pCodec = nullptr;
-        if ( desc._compression != PackCompressionType::None )
+        if ( desc._compression != PackCompressionKind::None )
         {
             pCodec = PackCompressionUtil::findCodec( desc._compression );
             if ( pCodec == nullptr )
@@ -445,7 +445,7 @@ namespace sw
         header._formatVersion      = kPackFormatVersion;
         header._dlcAppID           = _desc._dlcAppID;
         header._compressionType    = static_cast<uint8>( _desc._compression );
-        header._encryptionType     = static_cast<uint8>( PackEncryptionType::None );
+        header._encryptionType     = static_cast<uint8>( PackEncryptionKind::None );
         header._sectorAlignment    = kPackSectorAlignment;
         const bool bBlockHash      = _desc._pDigestProvider != nullptr;
         header._flags              = static_cast<uint16>( static_cast<uint16>( PackFlag::HasCRC32 ) | static_cast<uint16>( PackFlag::HasStringPool ) |

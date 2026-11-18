@@ -40,8 +40,8 @@ namespace sw
     static_assert( std::is_same_v<MaterialTextureIndex, RHIDescriptorIndex>, "MaterialTextureIndex must be the RHI bindless index type (MaterialTypes.h)" );
 
     MaterialProperty::MaterialProperty() noexcept
-        : _type{ MaterialPropertyType::Unknown }
-        , _shaderType{ MaterialPropertyType::Unknown }
+        : _type{ MaterialPropertyKind::Unknown }
+        , _shaderType{ MaterialPropertyKind::Unknown }
         , _min{ 0.0f }
         , _max{ 1.0f }
         , _offset{ 0 }
@@ -384,10 +384,10 @@ namespace sw
             uint32                  count{ 0 };
             if ( pProp != nullptr )
             {
-                const bool bScalar = pProp->_type == MaterialPropertyType::Float || pProp->_type == MaterialPropertyType::Range;
-                const bool bVector = pProp->_type == MaterialPropertyType::Float4 || pProp->_type == MaterialPropertyType::Color;
-                count              = bScalar ? 1u : pProp->_type == MaterialPropertyType::Float2 ? 2u
-                                              : pProp->_type == MaterialPropertyType::Float3     ? 3u
+                const bool bScalar = pProp->_type == MaterialPropertyKind::Float || pProp->_type == MaterialPropertyKind::Range;
+                const bool bVector = pProp->_type == MaterialPropertyKind::Float4 || pProp->_type == MaterialPropertyKind::Color;
+                count              = bScalar ? 1u : pProp->_type == MaterialPropertyKind::Float2 ? 2u
+                                              : pProp->_type == MaterialPropertyKind::Float3     ? 3u
                                               : bVector                                          ? 4u
                                                                                                  : 0u;
             }
@@ -572,7 +572,7 @@ namespace sw
             // 텍스처 인덱스 필드(이름 규칙 — MaterialPacking::isTextureIndexMember)는 텍스처 속성으로 둔다. uint 로 두면 0 이 들어가는데,
             // 0 은 Vulkan 의 첫 실제 텍스처 · DX11 · GL 의 서수 0 이다. 텍스처 속성은 붙은 것이 없으면 kInvalidDescriptorIndex 를 넣는다.
             if ( MaterialPacking::isTextureIndexMember( var._name, var._type ) )
-                prop._type = MaterialPropertyType::Texture2D;
+                prop._type = MaterialPropertyKind::Texture2D;
             _data._listProperty.push_back( prop );
         }
         rebuildPropertyNames();
@@ -624,8 +624,8 @@ namespace sw
             }
             const ShaderVariableInfo& var = *pVar;
             // 칸 형식은 셰이더가 정한다 — `.material` 에는 적지 않는다(언리얼 머티리얼 파라미터 · 유니티 ShaderLab Properties 도 칸 형식을 셰이더에서 얻는다). 리플렉션 전의 기본 형식(`getDefaultShaderTypeFor`)은 여기서 바뀐다.
-            const MaterialPropertyType reflected = MaterialPacking::shaderTypeFromReflectionName( var._type, var._size );
-            if ( reflected != MaterialPropertyType::Unknown )
+            const MaterialPropertyKind reflected = MaterialPacking::shaderTypeFromReflectionName( var._type, var._size );
+            if ( reflected != MaterialPropertyKind::Unknown )
                 prop._shaderType = reflected;
             else if ( MaterialPacking::computePackedSizeOf( prop._shaderType ) != 0 && MaterialPacking::computePackedSizeOf( prop._shaderType ) != var._size )
             {
@@ -689,7 +689,7 @@ namespace sw
                 continue;
             }
 
-            if ( prop._shaderType == MaterialPropertyType::Unknown )
+            if ( prop._shaderType == MaterialPropertyKind::Unknown )
                 prop._shaderType = MaterialPacking::getDefaultShaderTypeFor( prop._type );
 
             // 이 순회는 비버퍼 타입을 0 으로 되돌리고 셰이더 타입을 채우는 것까지다. 오프셋 패킹은 아래 두 번째 순회가 한다.
@@ -715,7 +715,7 @@ namespace sw
             if ( MaterialPacking::isNonBufferType( prop._type ) )
                 continue;
 
-            if ( prop._shaderType == MaterialPropertyType::Unknown )
+            if ( prop._shaderType == MaterialPropertyKind::Unknown )
                 prop._shaderType = MaterialPacking::getDefaultShaderTypeFor( prop._type );
 
             uint32 packSize = MaterialPacking::computePackedSizeOf( prop._shaderType );
@@ -824,7 +824,7 @@ namespace sw
         _bufferGeneration.bump( this );
         _desc._listProperty = _data._listProperty;
 
-        if ( prop->_type == MaterialPropertyType::Keyword || prop->_type == MaterialPropertyType::Bool )
+        if ( prop->_type == MaterialPropertyKind::Keyword || prop->_type == MaterialPropertyKind::Bool )
         {
             _bDefinesDirty = SW_TRUE;
             MaterialPermutation::recordPermutationChange( this ); // 키워드 · 불 프로퍼티는 define 이다 — 이 머티리얼을 쓰는 칸이 해시를 다시 구한다
@@ -838,7 +838,7 @@ namespace sw
         MaterialProperty* pProp = findProperty( name );
         if ( pProp == nullptr )
             return false;
-        if ( MaterialPacking::isTextureType( pProp->_type ) == false && pProp->_shaderType != MaterialPropertyType::Uint )
+        if ( MaterialPacking::isTextureType( pProp->_type ) == false && pProp->_shaderType != MaterialPropertyKind::Uint )
             return false;
         pProp->_textureIndex = descIdx;
         pProp->_value        = to_string( descIdx );
@@ -1009,7 +1009,7 @@ namespace sw
 
         for ( const MaterialProperty& prop : _data._listProperty )
         {
-            if ( prop._type != MaterialPropertyType::Keyword && prop._type != MaterialPropertyType::Bool )
+            if ( prop._type != MaterialPropertyKind::Keyword && prop._type != MaterialPropertyKind::Bool )
                 continue;
             if ( prop._shaderKeyword.empty() )
                 continue;
@@ -1204,12 +1204,12 @@ namespace sw
                 MaterialXML::appendAttribute( item, "collection", prop._collectionPath );
                 MaterialXML::appendAttribute( item, "collectionParameter", prop._collectionParameter );
             }
-            if ( prop._type == MaterialPropertyType::Range )
+            if ( prop._type == MaterialPropertyKind::Range )
             {
                 item.appendAttribute( "min", prop._min );
                 item.appendAttribute( "max", prop._max );
             }
-            if ( prop._type == MaterialPropertyType::Color )
+            if ( prop._type == MaterialPropertyKind::Color )
             {
                 MaterialXML::appendBoolAttribute( item, "bHdr", prop._bHDR );
                 MaterialXML::appendBoolAttribute( item, "bSrgb", prop._bSRGB );

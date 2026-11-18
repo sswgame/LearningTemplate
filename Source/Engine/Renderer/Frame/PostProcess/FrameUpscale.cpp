@@ -22,7 +22,7 @@
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 
 namespace sw
@@ -80,7 +80,7 @@ namespace sw
         const bool                     bSmaller         = view._rect._width < viewportWidth || view._rect._height < viewportHeight; // 그리는 사각형이 화면보다 작다(풀 배율 · 자동 렌더 배율)
         const bool                     bCandidate       = _pDevice != nullptr && bSpatial && bSmaller && view._settings._upscaleZoom == 0 && pool.isEmpty() == false;
         const RenderGraphPassDesc*     pTonemap         = FrameAutoExposure::findTonemapPass( _pipeline );
-        const bool                     bPostChain       = pTonemap != nullptr && pTonemap->_type == RenderPassType::Present;
+        const bool                     bPostChain       = pTonemap != nullptr && pTonemap->_type == RenderPassKind::Present;
         const bool                     bReportPostChain = bCandidate && bPostChain && _bUpscalePostChainLogged == SW_FALSE;
         if ( bReportPostChain )
         {
@@ -89,7 +89,7 @@ namespace sw
                              _pipeline.getDesc()._name.c_str() );
             _bUpscalePostChainLogged = SW_TRUE;
         }
-        const bool bUpscale = bCandidate && bPostChain == false && _psoManager.getEnginePSO( RenderPassType::UpscaleEasu ) != 0;
+        const bool bUpscale = bCandidate && bPostChain == false && _psoManager.getEnginePSO( RenderPassKind::UpscaleEasu ) != 0;
         if ( bUpscale == false )
         {
             if ( view._upscaleIntermediate != 0 )
@@ -103,7 +103,7 @@ namespace sw
             RHITextureDesc desc{};
             desc._width                   = viewportWidth;
             desc._height                  = viewportHeight;
-            desc._format                  = getRenderPassTypeInfo( RenderPassType::UpscaleEasu )._pColorFormat[0]; // EASU PSO 와 같은 포맷 한 곳
+            desc._format                  = getRenderPassKindInfo( RenderPassKind::UpscaleEasu )._pColorFormat[0]; // EASU PSO 와 같은 포맷 한 곳
             desc._bIsRenderTarget         = SW_TRUE;
             desc._bIsShaderResource       = SW_TRUE;
             IRHIResourceFactory* pFactory = _pDevice->getResourceFactory();
@@ -143,7 +143,7 @@ namespace sw
         beginInfo._width             = view._upscaleWidth;
         beginInfo._height            = view._upscaleHeight;
         cmd.beginRenderPass( beginInfo );
-        cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassType::UpscaleEasu ) );
+        cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassKind::UpscaleEasu ) );
         // 원본 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor 칸(fsr1.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameUpscaleInternal::RootConstants constants{};
@@ -168,7 +168,7 @@ namespace sw
 
     void FrameUpscale::drawUpscaleRcas( FramePassContext& context, const FrameViewTarget& view, RHIFormat targetFormat ) const
     {
-        const RHIPipelineStateHandle pso = _psoManager.findOutputPSO( RenderPassType::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
+        const RHIPipelineStateHandle pso = _psoManager.findOutputPSO( RenderPassKind::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
         IRHICommandList&             cmd = *context._pCmd;
         cmd.setPipelineState( pso );
         const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();

@@ -269,7 +269,7 @@ namespace sw
      * @brief 그래프에 새 패스 노드를 등록합니다.
      */
     bool RenderGraph::addPass( hashed_string passName, vector<hashed_string> listInput, vector<hashed_string> listOutput,
-                               RenderGraphPassExecuteFn execute, RHIQueueType queue )
+                               RenderGraphPassExecuteFn execute, RHIQueueKind queue )
     {
         // 이름은 패스의 키다(실행 순서, 레벨, 이름에서 노드를 찾는 테이블). 같은 이름을 받으면 그 테이블이 뒤의 것으로 덮여 한 패스는 두 번,
         // 다른 하나는 한 번도 돌지 않고, 병렬 기록에서는 두 작업 스레드가 같은 커맨드 리스트에 쓴다. 그래서 거절한다.
@@ -366,12 +366,12 @@ namespace sw
             const size_t          nodeIndex = _mapNameToIndex[_listCompiledExecutionOrder[orderIndex]];
             RenderGraphQueueStep& step      = _listQueueStep[orderIndex];
             // 능력이 없으면 선언과 상관없이 그래픽스로 계획한다 — 같은 순서로 돌 뿐 결과는 같다.
-            const bool bAsync = _bAsyncComputeSupported && _listNode[nodeIndex]._queue == RHIQueueType::AsyncCompute;
-            step._queue       = bAsync ? RHIQueueType::AsyncCompute : RHIQueueType::Graphics;
+            const bool bAsync = _bAsyncComputeSupported && _listNode[nodeIndex]._queue == RHIQueueKind::AsyncCompute;
+            step._queue       = bAsync ? RHIQueueKind::AsyncCompute : RHIQueueKind::Graphics;
             if ( bAsync )
             {
                 // 실행 순서에서 이어진 비동기 패스는 한 묶음(컴퓨트 리스트 하나)이다. 앞 패스가 그래픽스였으면 여기서 포크한다.
-                const bool bPreviousAsync = orderIndex > 0 && _listQueueStep[orderIndex - 1]._queue == RHIQueueType::AsyncCompute;
+                const bool bPreviousAsync = orderIndex > 0 && _listQueueStep[orderIndex - 1]._queue == RHIQueueKind::AsyncCompute;
                 if ( bPreviousAsync == false )
                 {
                     step._bBeginsBatch = 1;
@@ -397,8 +397,8 @@ namespace sw
         }
         for ( size_t orderIndex = 0; orderIndex < _listQueueStep.size(); ++orderIndex )
         {
-            const bool bAsync                      = _listQueueStep[orderIndex]._queue == RHIQueueType::AsyncCompute;
-            const bool bNextAsync                  = orderIndex + 1 < _listQueueStep.size() && _listQueueStep[orderIndex + 1]._queue == RHIQueueType::AsyncCompute;
+            const bool bAsync                      = _listQueueStep[orderIndex]._queue == RHIQueueKind::AsyncCompute;
+            const bool bNextAsync                  = orderIndex + 1 < _listQueueStep.size() && _listQueueStep[orderIndex + 1]._queue == RHIQueueKind::AsyncCompute;
             _listQueueStep[orderIndex]._bEndsBatch = ( bAsync && bNextAsync == false ) ? 1 : 0;
         }
         // 그래프 밖(뷰 그래프 · 다음 프레임)이 결과를 읽는다 — 아무도 조인하지 않은 묶음은 그래프 끝에서 조인한다.
@@ -451,12 +451,12 @@ namespace sw
             }
             RenderGraphNode&            node = _listNode[indexIt->second];
             const RenderGraphQueueStep& step = _listQueueStep[orderIndex];
-            if ( step._queue == RHIQueueType::Graphics )
+            if ( step._queue == RHIQueueKind::Graphics )
                 joinBatches( step._listJoinBatch );
             else if ( step._bBeginsBatch != 0 )
                 pAsyncList->beginCommandList();
 
-            IRHICommandList* const pList = step._queue == RHIQueueType::Graphics ? &graphicsList : pAsyncList;
+            IRHICommandList* const pList = step._queue == RHIQueueKind::Graphics ? &graphicsList : pAsyncList;
             _listLevelBarrier.clear();
             _mapLevelBarrierIndex.clear();
             appendPassBarriers( context, node );
@@ -464,7 +464,7 @@ namespace sw
             if ( node._execute.isBound() )
                 recordPassBody( node, pList );
 
-            if ( step._queue == RHIQueueType::AsyncCompute && step._bEndsBatch != 0 )
+            if ( step._queue == RHIQueueKind::AsyncCompute && step._bEndsBatch != 0 )
             {
                 pAsyncList->endCommandList();
                 handOffGraphics(); // 포크 지점 — 이 묶음은 여기까지의 그래픽스 일 뒤에 시작한다

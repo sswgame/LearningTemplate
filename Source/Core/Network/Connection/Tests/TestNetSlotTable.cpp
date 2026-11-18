@@ -169,7 +169,7 @@ SW_TEST_CASE( NetSlotTableTest, ConnectionObjectLivesOnlyWhileTheSlotIsOpen )
     table.open( 3, NetConnectionState::Connecting );
     SW_REQUIRE_TRUE( table.get( 3 )._connection != nullptr );
     SW_EXPECT_TRUE( table.get( 4 )._connection == nullptr );
-    SW_REQUIRE_TRUE( table.get( 3 )._connection->sendMessage( NetChannelType::ReliableOrdered, reinterpret_cast<const uint8*>( "ab" ), 2 ) );
+    SW_REQUIRE_TRUE( table.get( 3 )._connection->sendMessage( NetChannelKind::ReliableOrdered, reinterpret_cast<const uint8*>( "ab" ), 2 ) );
     table.close( 3, true );
     SW_EXPECT_TRUE( table.get( 3 )._connection == nullptr ); // 받은 메시지 · 신뢰 창도 함께 버린다
     table.release( 3 );

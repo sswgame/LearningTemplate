@@ -71,14 +71,14 @@ namespace sw
         return _listShard[static_cast<size_t>( *shardIndex )];
     }
 
-    bool NetEndpointShardSet::sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
+    bool NetEndpointShardSet::sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size )
     {
         int32        localConnectionID = constant::invalid_index::kInt32;
         NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr && pShard->sendMessage( localConnectionID, channel, pData, size );
     }
 
-    bool NetEndpointShardSet::trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
+    bool NetEndpointShardSet::trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size )
     {
         int32        localConnectionID = constant::invalid_index::kInt32;
         NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
@@ -92,7 +92,7 @@ namespace sw
         return pShard != nullptr && pShard->sendNotifiedMessage( localConnectionID, pData, size, tag );
     }
 
-    int32 NetEndpointShardSet::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID )
+    int32 NetEndpointShardSet::broadcast( NetChannelKind channel, const uint8* pData, int32 size, int32 exceptID )
     {
         int32              exceptLocalID = constant::invalid_index::kInt32;
         const NetEndpoint* pExceptShard  = findShard( exceptID, exceptLocalID );

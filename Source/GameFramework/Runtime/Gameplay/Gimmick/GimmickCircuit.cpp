@@ -36,10 +36,10 @@ namespace sw
             [[nodiscard]] static bool parseParam( const GimmickParamSpec& spec, const string& text, GimmickParamValue& outValue )
             {
                 outValue._text = text;
-                if ( spec._type == GimmickParamType::Text )
+                if ( spec._type == GimmickParamKind::Text )
                     return true;
                 vector<float32> listValue;
-                if ( XMLReadUtil::parseFloatList( text, 4, listValue ) == false || ( spec._type == GimmickParamType::Number && listValue.size() != 1 ) )
+                if ( XMLReadUtil::parseFloatList( text, 4, listValue ) == false || ( spec._type == GimmickParamKind::Number && listValue.size() != 1 ) )
                     return false;
                 listValue.resize( 4, 0.0f ); // 벡터는 모자란 성분이 0 이다
                 outValue._vector = float4{ listValue[0], listValue[1], listValue[2], listValue[3] };

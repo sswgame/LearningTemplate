@@ -151,7 +151,7 @@ namespace sw
         for ( uint32 settingIndex = 0; settingIndex < static_cast<uint32>( _listState.size() ); ++settingIndex )
         {
             const UserSettingDef& def = listSetting[settingIndex];
-            if ( def._type == UserSettingType::KeyBinding && inputMap.hasAction( def._action ) )
+            if ( def._type == UserSettingKind::KeyBinding && inputMap.hasAction( def._action ) )
                 (void)applyToTarget( settingIndex, _listState[settingIndex]._committedValue, true ); // 못 넣은 키는 핸들러가 경고한다 — 값은 저장된 그대로다
         }
         return _subscriptions.issue( &inputMap );
@@ -553,7 +553,7 @@ namespace sw
             return UserSettingSetResult::Rejected;
 
         // 공급자 열거형은 지금 공급자가 주는 선택지와 대조한다(공급자가 아직 비었으면, 곧 언어 팩을 읽기 전이면 형식만 본다).
-        const bool bCheckProviderOption = def._type == UserSettingType::Enum && def._optionProvider.empty() == false && normalized.empty() == false;
+        const bool bCheckProviderOption = def._type == UserSettingKind::Enum && def._optionProvider.empty() == false && normalized.empty() == false;
         if ( bCheckProviderOption )
         {
             vector<UserSettingOption> listOption;
@@ -570,7 +570,7 @@ namespace sw
             if ( bFound == false )
                 return UserSettingSetResult::Rejected;
         }
-        if ( def._type == UserSettingType::KeyBinding )
+        if ( def._type == UserSettingKind::KeyBinding )
         {
             UserSettingBindingConflict conflict;
             if ( findBindingConflict( settingID, normalized, conflict ) )
@@ -783,7 +783,7 @@ namespace sw
         const uint32                  settingIndex = *settingFound;
         const vector<UserSettingDef>& listSetting  = _schema.getSettings();
         const UserSettingDef&         def          = listSetting[settingIndex];
-        if ( def._type != UserSettingType::KeyBinding )
+        if ( def._type != UserSettingKind::KeyBinding )
             return false;
 
         InputSlot  slot;
@@ -797,7 +797,7 @@ namespace sw
         for ( uint32 otherIndex = 0; otherIndex < static_cast<uint32>( listSetting.size() ); ++otherIndex )
         {
             const UserSettingDef& other = listSetting[otherIndex];
-            if ( otherIndex == settingIndex || other._type != UserSettingType::KeyBinding )
+            if ( otherIndex == settingIndex || other._type != UserSettingKind::KeyBinding )
                 continue;
             InputSlot otherSlot;
             if ( isSameBindingContext( settingIndex, otherIndex ) == false || findEffectiveSlot( otherIndex, otherSlot ) == false )
@@ -819,7 +819,7 @@ namespace sw
             return false;
         for ( const UserSettingDef& other : listSetting )
         {
-            if ( other._type == UserSettingType::KeyBinding && other._action == conflictingName )
+            if ( other._type == UserSettingKind::KeyBinding && other._action == conflictingName )
                 return false;
         }
         outConflict._settingID = {};
@@ -833,7 +833,7 @@ namespace sw
         if ( settingFound.has_value() == false )
             return UserSettingSetResult::Unknown;
         const uint32 settingIndex = *settingFound;
-        if ( _schema.getSettings()[settingIndex]._type != UserSettingType::KeyBinding )
+        if ( _schema.getSettings()[settingIndex]._type != UserSettingKind::KeyBinding )
             return UserSettingSetResult::Rejected;
 
         UserSettingBindingConflict conflict;
@@ -883,7 +883,7 @@ namespace sw
         return settingIndex;
     }
 
-    optional<uint32> UserSettingsManager::resolveKeyIndex( const hashed_string& settingID, UserSettingType expectedType ) const
+    optional<uint32> UserSettingsManager::resolveKeyIndex( const hashed_string& settingID, UserSettingKind expectedType ) const
     {
         const optional<uint32> settingIndex = findIndex( settingID );
         if ( settingIndex.has_value() == false )
@@ -891,7 +891,7 @@ namespace sw
             SW_LOG_ERROR_ID( "UserSettings.KeyUnresolved", "User setting '%#' is not in the schema", settingID.c_str() );
             return nullopt;
         }
-        const UserSettingType actualType = _schema.getSettings()[*settingIndex]._type;
+        const UserSettingKind actualType = _schema.getSettings()[*settingIndex]._type;
         if ( actualType != expectedType )
         {
             SW_LOG_ERROR_ID( "UserSettings.KeyUnresolved", "User setting '%#' is '%#', not '%#'", settingID.c_str(), getEnumName( actualType ),
@@ -960,7 +960,7 @@ namespace sw
                 const bool                bKeepCommandLineValue = bStartup && pCommandLineManager != nullptr && pCommandLineManager->isGlobalVariableProvided( def._targetName.view() );
                 if ( bKeepCommandLineValue )
                     return true;
-                if ( def._type != UserSettingType::Enum )
+                if ( def._type != UserSettingKind::Enum )
                     return pVariable->setValueFromString( value );
 
                 // 열거형은 선택지의 `targetValue`, 없으면 선택지 순번을 넘긴다. 문자열 변수면 선택지 이름 그대로다.

@@ -106,12 +106,12 @@ namespace sw
         if ( MaterialXMLInternal::parseEnumEntries( item, string_view{ item.getAttributeText( "name" ) }, prop._listEnumEntry ) == false )
             return false;
         // 불리언 · 키워드 값은 읽을 때 확인한다 — 틀린 글이 패킹 · 순열 계산에서 조용히 false 가 되지 않게.
-        const bool bBooleanValue = prop._type == MaterialPropertyType::Bool || ( prop._type == MaterialPropertyType::Keyword && prop._shaderKeyword.empty() == false );
+        const bool bBooleanValue = prop._type == MaterialPropertyKind::Bool || ( prop._type == MaterialPropertyKind::Keyword && prop._shaderKeyword.empty() == false );
         bool       bUnused{ false };
         if ( bBooleanValue && MaterialPacking::parseBoolToken( prop._value, prop._name, "Material.BooleanValueUnreadable", bUnused ) == false )
             return false;
         // 숫자 값도 읽을 때 확인한다 — 패커가 못 읽는 글을 0 으로 쓰지 않고 거절하므로 로드를 멈춘다. 같은 패커로 확인해 규칙이 하나다.
-        const bool bNumericValue = prop._type <= MaterialPropertyType::Int4 || prop._type == MaterialPropertyType::Range || prop._type == MaterialPropertyType::Color;
+        const bool bNumericValue = prop._type <= MaterialPropertyKind::Int4 || prop._type == MaterialPropertyKind::Range || prop._type == MaterialPropertyKind::Color;
         if ( bNumericValue == false )
             return true;
         MaterialProperty probe = prop;

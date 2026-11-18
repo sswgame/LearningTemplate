@@ -39,7 +39,7 @@
 #include "Engine/Renderer/Frame/Timeline/GPUTimestampSlotLayout.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Scene/GPUTransparentSorter.h"
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
 #include "Engine/Scene/Scene.h"
@@ -431,7 +431,7 @@ namespace sw
         if ( _state._listFrameDecal.empty() )
             return;
         if ( VectorUtil::containsIf( _pipelineResource.getGraphPass(), []( const RenderGraphPassDesc& pass )
-        { return pass._type == RenderPassType::Decal; } ) == false )
+        { return pass._type == RenderPassKind::Decal; } ) == false )
         {
             SW_LOG_WARNING_ONCE_ID( "FrameRenderer.DecalsWithoutDecalPass", "The scene has %# decals but pipeline '%#' has no Decal pass - DBuffer decals need a depth prepass (deferred or forward prepass pipeline) and are not drawn",
                                     static_cast<uint32>( _state._listFrameDecal.size() ), _pipelinePath );
@@ -503,7 +503,7 @@ namespace sw
         if ( requested == LightGridProducer::CPU )
             return LightGridProducer::CPU;
         // GPU 생산자는 컴퓨트 PSO 가 있어야 한다. 없으면 그리드 버퍼를 채울 쪽이 없다 — 채우지 않은 버퍼를 읽게 두지 않고 그리드 없이 그린다(그림은 같고 비용만 다르다).
-        if ( _psoManager.getEnginePSO( RenderPassType::LightGrid ) != 0 )
+        if ( _psoManager.getEnginePSO( RenderPassKind::LightGrid ) != 0 )
             return LightGridProducer::GPU;
         if ( _bLightGridPSOMissingLogged == SW_FALSE )
         {
@@ -601,7 +601,7 @@ namespace sw
 
     void FrameRenderer::prepareRealtimeProbes( IRHIDevice* pDevice )
     {
-        const bool bPipelineReady = _psoManager.getEnginePSO( RenderPassType::ProbeUpdate ) != 0;
+        const bool bPipelineReady = _psoManager.getEnginePSO( RenderPassKind::ProbeUpdate ) != 0;
         _state._probeUpdater.prepare( pDevice, _state._listFrameRealtimeProbe, _state._lightBuffer, _state._frameSkySource, _state._bHasFrameSky == SW_TRUE, bPipelineReady );
     }
 
@@ -763,9 +763,9 @@ namespace sw
         _passResourcesBackBufferFormat = _pDevice->getBackBufferFormat();
         _bPassResourcesReady           = SW_TRUE;
         SW_LOG_INFO_ID( "FrameRenderer.PassPSOsCBReady", "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%#)",
-                        _psoManager.getEnginePSO( RenderPassType::Shadow ), _psoManager.getEnginePSO( RenderPassType::ForwardOpaque ),
-                        _psoManager.getEnginePSO( RenderPassType::Transparent ), _psoManager.getEnginePSO( RenderPassType::Lighting ),
-                        _psoManager.getEnginePSO( RenderPassType::Bloom ), _psoManager.getEnginePSO( RenderPassType::Outline ) );
+                        _psoManager.getEnginePSO( RenderPassKind::Shadow ), _psoManager.getEnginePSO( RenderPassKind::ForwardOpaque ),
+                        _psoManager.getEnginePSO( RenderPassKind::Transparent ), _psoManager.getEnginePSO( RenderPassKind::Lighting ),
+                        _psoManager.getEnginePSO( RenderPassKind::Bloom ), _psoManager.getEnginePSO( RenderPassKind::Outline ) );
     }
 
     void FrameRenderer::collectComputeConstantBuffers( ComputeConstantBufferRow ( &outArrRow )[_s_kComputeConstantBufferCount] )
@@ -872,7 +872,7 @@ namespace sw
         _state._passCbRing.ensureCapacity( _pDevice, MathUtil::max( estimate, _state._passCbRing.getHighWater() + PassConstantRing::kInitialSlotCount ) );
     }
 
-    RHIPipelineStateHandle FrameRenderer::getEnginePSO( RenderPassType passType ) const
+    RHIPipelineStateHandle FrameRenderer::getEnginePSO( RenderPassKind passType ) const
     {
         return _psoManager.getEnginePSO( passType );
     }
@@ -1090,7 +1090,7 @@ namespace sw
     {
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getDesc()._listPass )
         {
-            if ( pass._type == RenderPassType::Present && pass._listInput.empty() == false )
+            if ( pass._type == RenderPassKind::Present && pass._listInput.empty() == false )
                 return string_view{ pass._listInput.front() };
         }
         return string_view{};

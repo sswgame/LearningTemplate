@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 
 // 안개 — 높이 · 거리 지수 안개의 광학 두께 식(셰이더 fog.hlsl · fog_common.hlsli 가 같은 식)과 컴포넌트 찾기 · 물속 덮어쓰기.
 
@@ -164,16 +164,16 @@ SW_TEST_CASE( FogTest, ComponentAndUnderwaterOverride )
  */
 SW_TEST_CASE( FogTest, PassTypeRowDeclaresDepthOnlyBlendedDraw )
 {
-    const RenderPassTypeInfo& info = getRenderPassTypeInfo( RenderPassType::Fog );
-    SW_EXPECT_TRUE( isPipelinePassType( RenderPassType::Fog ) );
+    const RenderPassKindInfo& info = getRenderPassKindInfo( RenderPassKind::Fog );
+    SW_EXPECT_TRUE( isPipelinePassType( RenderPassKind::Fog ) );
     SW_EXPECT_TRUE( info.hasFlag( RenderPassTraitFlag::kBlend ) );
     SW_EXPECT_FALSE( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) ); // 전용 실행 — 일반 길의 복사 · 지우기를 타면 장면이 지워진다
     SW_EXPECT_TRUE( info._inputContract.hasRole( RenderPassInputRole::SceneDepth ) );
     SW_EXPECT_FALSE( info._inputContract.hasRole( RenderPassInputRole::SourceColor ) ); // 색을 읽지 않는다 — 읽으면서 쓰는 첨부가 없다
     // 볼륨 안개 컴퓨트는 뷰 패스가 아니라 프레임 패스다(`_listFramePass` — 프레임에 한 번, 뷰 그래프 앞).
-    SW_EXPECT_FALSE( isViewPassType( RenderPassType::VolumetricFog ) );
-    SW_EXPECT_TRUE( isFramePassType( RenderPassType::VolumetricFog ) );
-    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::VolumetricFog ).hasFlag( RenderPassTraitFlag::kCompute ) );
+    SW_EXPECT_FALSE( isViewPassType( RenderPassKind::VolumetricFog ) );
+    SW_EXPECT_TRUE( isFramePassType( RenderPassKind::VolumetricFog ) );
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::VolumetricFog ).hasFlag( RenderPassTraitFlag::kCompute ) );
 }
 
 /**

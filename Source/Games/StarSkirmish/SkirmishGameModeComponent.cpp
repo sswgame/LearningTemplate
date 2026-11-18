@@ -55,7 +55,7 @@ namespace sw
             static int32 computeLookCategory( const RTSUnit& unit )
             {
                 if ( unit.isResource() )
-                    return unit._pDef->_resourceType == RTSResourceType::Gas ? 4 : 3;
+                    return unit._pDef->_resourceType == RTSResourceKind::Gas ? 4 : 3;
                 if ( unit._owner == 0 || unit._owner == 1 )
                     return unit._owner;
                 return 2;
@@ -81,7 +81,7 @@ namespace sw
             gameMode.getWorld().forEachUnit( [&gameMode, bMoveOnly, &count]( const RTSUnit& unit )
             {
                 const RTSOrder* pOrder = unit.findOrder();
-                if ( gameMode.isSelected( unit._id ) && ( bMoveOnly == false || ( pOrder != nullptr && pOrder->_type == RTSOrderType::Move ) ) )
+                if ( gameMode.isSelected( unit._id ) && ( bMoveOnly == false || ( pOrder != nullptr && pOrder->_type == RTSOrderKind::Move ) ) )
                     ++count;
             } );
             outValue = static_cast<float64>( count );

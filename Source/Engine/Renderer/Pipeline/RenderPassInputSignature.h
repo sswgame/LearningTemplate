@@ -2,7 +2,7 @@
  * @file RenderPassInputSignature.h
  * @brief 풀스크린 패스 타입이 **읽는 입력의 역할**입니다. 로드 시점 검증과 프레임 실행이 같은 테이블을 봅니다.
  * @details 선언이 곧 바인딩이 되려면 "이 패스 타입은 어떤 역할의 입력을 읽는가"가 한 곳에 있어야 합니다. 역할과
- *          계약의 구조는 이 파일에, 타입마다의 계약은 패스 종류 테이블(`RenderPassTypeInfo::_inputContract`)에 있습니다.
+ *          계약의 구조는 이 파일에, 타입마다의 계약은 패스 종류 테이블(`RenderPassKindInfo::_inputContract`)에 있습니다.
  *          계약이 없으면 XML 이 선언한 입력을 아무도 바인딩하지 않아도 오류 없이 지나가고, 그 입력을 만드는 패스(SSAO 등)만 헛돕니다.
  */
 #pragma once
@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    enum class RenderPassType : uint32; // 정의는 RenderGraphPassDesc.h — 패스 종류를 값으로만 받으므로 에셋 헤더(파이프라인 XML 구조)를 끌지 않는다
+    enum class RenderPassKind : uint32; // 정의는 RenderGraphPassDesc.h — 패스 종류를 값으로만 받으므로 에셋 헤더(파이프라인 XML 구조)를 끌지 않는다
 } // namespace sw
 
 namespace sw
@@ -42,7 +42,7 @@ namespace sw
          */
         Velocity,
         /**
-         * 화면 왜곡 오프셋(SceneDistortion, R16G16 실수 — 화면 UV 오프셋, 클리어 0). 왜곡 누적 패스(`RenderPassType::Distortion`)가 쓰고 왜곡 적용 패스가 읽는다(`g_DistortionIndex`).
+         * 화면 왜곡 오프셋(SceneDistortion, R16G16 실수 — 화면 UV 오프셋, 클리어 0). 왜곡 누적 패스(`RenderPassKind::Distortion`)가 쓰고 왜곡 적용 패스가 읽는다(`g_DistortionIndex`).
          */
         Distortion,
         ContactShadow,       ///< 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷 = 빛 넷). 조명이 빛의 채널(`GPULight::_extra.z`)을 곱한다(`g_ContactShadowIndex`) — 없으면 1(가림 없음).
@@ -75,7 +75,7 @@ namespace sw
     /**
      * @struct RenderPassInputSignature
      * @brief 패스 타입 하나가 읽는 역할 목록입니다. 필수가 빠지면 검증 오류이고, 목록에 없는 역할을 선언해도 오류입니다.
-     * @details 패스 타입마다의 계약은 `RenderPassTypeInfo::_inputContract` 에 있습니다.
+     * @details 패스 타입마다의 계약은 `RenderPassKindInfo::_inputContract` 에 있습니다.
      */
     struct SW_API RenderPassInputSignature
     {
@@ -91,8 +91,8 @@ namespace sw
     };
 
     /**
-     * @brief 풀스크린 패스 타입의 입력 계약을 반환합니다(`RenderPassTypeInfo` 의 항목). 메시 패스(Shadow, GBuffer, ForwardOpaque, Transparent …)는 nullptr 입니다.
+     * @brief 풀스크린 패스 타입의 입력 계약을 반환합니다(`RenderPassKindInfo` 의 항목). 메시 패스(Shadow, GBuffer, ForwardOpaque, Transparent …)는 nullptr 입니다.
      * @details 메시 패스의 입력은 지오메트리 드로우가 정하고(그림자, 인스턴스, 머티리얼), 선언은 그래프 순서용입니다.
      */
-    SW_API const RenderPassInputSignature* findRenderPassInputSignature( RenderPassType type );
+    SW_API const RenderPassInputSignature* findRenderPassInputSignature( RenderPassKind type );
 } // namespace sw

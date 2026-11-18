@@ -31,15 +31,15 @@ namespace
 SW_TEST_CASE( SplinePathTest, RefusesTooFewPointsAndBadSampleCount )
 {
     SplinePath path;
-    SW_EXPECT_FALSE( path.initialize( { float3{} }, SplineType::Linear, false, 4 ) );
+    SW_EXPECT_FALSE( path.initialize( { float3{} }, SplineKind::Linear, false, 4 ) );
     SW_EXPECT_FALSE( path.isValid() );
-    SW_EXPECT_FALSE( path.initialize( Util::makeSquare(), SplineType::Linear, false, 0 ) );
+    SW_EXPECT_FALSE( path.initialize( Util::makeSquare(), SplineKind::Linear, false, 0 ) );
 
     // 열린 베지어는 3n + 1 점, 닫힌 베지어는 3n 점이다
-    SW_EXPECT_FALSE( path.initialize( { float3{}, float3{}, float3{} }, SplineType::Bezier, false, 4 ) );
-    SW_EXPECT_FALSE( path.initialize( { float3{}, float3{}, float3{}, float3{}, float3{} }, SplineType::Bezier, false, 4 ) );
-    SW_EXPECT_FALSE( path.initialize( Util::makeSquare(), SplineType::Bezier, true, 4 ) );
-    SW_EXPECT_TRUE( path.initialize( Util::makeSquare(), SplineType::Bezier, false, 4 ) );
+    SW_EXPECT_FALSE( path.initialize( { float3{}, float3{}, float3{} }, SplineKind::Bezier, false, 4 ) );
+    SW_EXPECT_FALSE( path.initialize( { float3{}, float3{}, float3{}, float3{}, float3{} }, SplineKind::Bezier, false, 4 ) );
+    SW_EXPECT_FALSE( path.initialize( Util::makeSquare(), SplineKind::Bezier, true, 4 ) );
+    SW_EXPECT_TRUE( path.initialize( Util::makeSquare(), SplineKind::Bezier, false, 4 ) );
 
     // 빈 곡선의 조회는 기본값이다
     path.clear();
@@ -52,7 +52,7 @@ SW_TEST_CASE( SplinePathTest, RefusesTooFewPointsAndBadSampleCount )
 SW_TEST_CASE( SplinePathTest, LinearOpenClampsAndMeasuresTheLength )
 {
     SplinePath path;
-    SW_REQUIRE_TRUE( path.initialize( Util::makeSquare(), SplineType::Linear, false, 4 ) );
+    SW_REQUIRE_TRUE( path.initialize( Util::makeSquare(), SplineKind::Linear, false, 4 ) );
     SW_EXPECT_EQUAL( 3, path.getSegmentCount() );
     SW_EXPECT_NEAR( 30.0f, path.getLength(), 1.0e-3f );
 
@@ -69,7 +69,7 @@ SW_TEST_CASE( SplinePathTest, LinearOpenClampsAndMeasuresTheLength )
 SW_TEST_CASE( SplinePathTest, ClosedWrapsAroundIncludingTheClosingSpan )
 {
     SplinePath path;
-    SW_REQUIRE_TRUE( path.initialize( Util::makeSquare(), SplineType::Linear, true, 2 ) );
+    SW_REQUIRE_TRUE( path.initialize( Util::makeSquare(), SplineKind::Linear, true, 2 ) );
     SW_EXPECT_EQUAL( 4, path.getSegmentCount() );
     SW_EXPECT_TRUE( path.isClosed() );
     SW_EXPECT_NEAR( 40.0f, path.getLength(), 1.0e-3f );
@@ -85,7 +85,7 @@ SW_TEST_CASE( SplinePathTest, ClosedWrapsAroundIncludingTheClosingSpan )
 SW_TEST_CASE( SplinePathTest, CatmullRomPassesThroughItsPoints )
 {
     SplinePath path;
-    SW_REQUIRE_TRUE( path.initialize( Util::makeSquare(), SplineType::CatmullRom, false, 16 ) );
+    SW_REQUIRE_TRUE( path.initialize( Util::makeSquare(), SplineKind::CatmullRom, false, 16 ) );
     Util::expectPoint( float3{ 0.0f, 0.0f, 0.0f }, path.evaluate( 0.0f ) );
     Util::expectPoint( float3{ 10.0f, 0.0f, 0.0f }, path.evaluate( 1.0f ) );
     Util::expectPoint( float3{ 10.0f, 0.0f, 10.0f }, path.evaluate( 2.0f ) );
@@ -95,11 +95,11 @@ SW_TEST_CASE( SplinePathTest, CatmullRomPassesThroughItsPoints )
     // 곡선이 현보다 길고, 표 샘플을 늘려도 거의 같다
     SW_EXPECT_TRUE( path.getLength() >= 30.0f );
     SplinePath fine;
-    SW_REQUIRE_TRUE( fine.initialize( Util::makeSquare(), SplineType::CatmullRom, false, 64 ) );
+    SW_REQUIRE_TRUE( fine.initialize( Util::makeSquare(), SplineKind::CatmullRom, false, 64 ) );
     SW_EXPECT_NEAR( fine.getLength(), path.getLength(), 0.1f );
 
     SplinePath closed;
-    SW_REQUIRE_TRUE( closed.initialize( Util::makeSquare(), SplineType::CatmullRom, true, 16 ) );
+    SW_REQUIRE_TRUE( closed.initialize( Util::makeSquare(), SplineKind::CatmullRom, true, 16 ) );
     Util::expectPoint( closed.evaluate( 0.0f ), closed.evaluate( 4.0f ) ); // 닫힌 곡선은 처음으로 돌아온다
 }
 
@@ -112,7 +112,7 @@ SW_TEST_CASE( SplinePathTest, BezierStartsAndEndsOnItsEndPoints )
         float3{10.0f, 0.0f, 0.0f}
     };
     SplinePath path;
-    SW_REQUIRE_TRUE( path.initialize( listPoint, SplineType::Bezier, false, 32 ) );
+    SW_REQUIRE_TRUE( path.initialize( listPoint, SplineKind::Bezier, false, 32 ) );
     SW_EXPECT_EQUAL( 1, path.getSegmentCount() );
     Util::expectPoint( listPoint[0], path.evaluate( 0.0f ) );
     Util::expectPoint( listPoint[3], path.evaluate( 1.0f ) );
@@ -127,14 +127,14 @@ SW_TEST_CASE( SplinePathTest, BezierStartsAndEndsOnItsEndPoints )
         float3{10.0f, 0.0f, 5.0f}
     };
     SplinePath closed;
-    SW_REQUIRE_TRUE( closed.initialize( listClosed, SplineType::Bezier, true, 16 ) );
+    SW_REQUIRE_TRUE( closed.initialize( listClosed, SplineKind::Bezier, true, 16 ) );
     Util::expectPoint( listClosed[0], closed.evaluate( 1.0f ) );
 }
 
 SW_TEST_CASE( SplinePathTest, FindClosestProjectsOntoTheCurve )
 {
     SplinePath path;
-    SW_REQUIRE_TRUE( path.initialize( Util::makeSquare(), SplineType::Linear, false, 4 ) );
+    SW_REQUIRE_TRUE( path.initialize( Util::makeSquare(), SplineKind::Linear, false, 4 ) );
     const SplineSample side = path.findClosest( float3{ 4.0f, 3.0f, -2.0f } );
     Util::expectPoint( float3{ 4.0f, 0.0f, 0.0f }, side._position );
     SW_EXPECT_NEAR( 4.0f, side._distance, 1.0e-3f );
@@ -145,7 +145,7 @@ SW_TEST_CASE( SplinePathTest, FindClosestProjectsOntoTheCurve )
     SW_EXPECT_NEAR( 30.0f, end._distance, 1.0e-3f );
 
     SplinePath closed;
-    SW_REQUIRE_TRUE( closed.initialize( Util::makeSquare(), SplineType::Linear, true, 2 ) );
+    SW_REQUIRE_TRUE( closed.initialize( Util::makeSquare(), SplineKind::Linear, true, 2 ) );
     const SplineSample closing = closed.findClosest( float3{ -1.0f, 0.0f, 5.0f } ); // 닫는 변에 있다
     Util::expectPoint( float3{ 0.0f, 0.0f, 5.0f }, closing._position );
     SW_EXPECT_NEAR( 35.0f, closing._distance, 1.0e-3f );
@@ -154,7 +154,7 @@ SW_TEST_CASE( SplinePathTest, FindClosestProjectsOntoTheCurve )
 SW_TEST_CASE( SplinePathTest, SampleUniformKeepsTheEndOfAnOpenCurveOnly )
 {
     SplinePath path;
-    SW_REQUIRE_TRUE( path.initialize( Util::makeSquare(), SplineType::Linear, false, 4 ) );
+    SW_REQUIRE_TRUE( path.initialize( Util::makeSquare(), SplineKind::Linear, false, 4 ) );
     vector<SplineSample> listSample;
     path.sampleUniform( 7.0f, listSample );
     SW_REQUIRE_EQUAL( size_t( 6 ), listSample.size() ); // 0 7 14 21 28 + 끝 30
@@ -165,7 +165,7 @@ SW_TEST_CASE( SplinePathTest, SampleUniformKeepsTheEndOfAnOpenCurveOnly )
     SW_EXPECT_EQUAL( size_t( 4 ), listSample.size() ); // 끝이 간격에 맞으면 겹쳐 넣지 않는다
 
     SplinePath closed;
-    SW_REQUIRE_TRUE( closed.initialize( Util::makeSquare(), SplineType::Linear, true, 2 ) );
+    SW_REQUIRE_TRUE( closed.initialize( Util::makeSquare(), SplineKind::Linear, true, 2 ) );
     closed.sampleUniform( 10.0f, listSample );
     SW_EXPECT_EQUAL( size_t( 4 ), listSample.size() ); // 닫힌 곡선은 처음을 다시 넣지 않는다
 
@@ -178,7 +178,7 @@ SW_TEST_CASE( SplinePathTest, DegenerateCurveStaysFinite )
 {
     const float3 point{ 1.0f, 2.0f, 3.0f };
     SplinePath   path;
-    SW_REQUIRE_TRUE( path.initialize( { point, point }, SplineType::Linear, false, 4 ) );
+    SW_REQUIRE_TRUE( path.initialize( { point, point }, SplineKind::Linear, false, 4 ) );
     SW_EXPECT_NEAR( 0.0f, path.getLength(), 0.0f );
     const SplineSample sample = path.sampleAtDistance( 3.0f );
     Util::expectPoint( point, sample._position );

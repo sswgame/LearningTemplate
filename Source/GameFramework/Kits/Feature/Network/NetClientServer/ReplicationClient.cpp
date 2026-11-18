@@ -108,7 +108,7 @@ namespace sw
         {
             BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kSnapshotAck );
             writer.writeVarUint( tick );
-            (void)_pHost->sendMessage( 0, NetChannelType::UnreliableSequenced, writer.getBytes() );
+            (void)_pHost->sendMessage( 0, NetChannelKind::UnreliableSequenced, writer.getBytes() );
         }
         return NetHandleResult::Handled;
     }
@@ -211,7 +211,7 @@ namespace sw
         NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
         budget.reserveBits( writer.getBitCount() );
         (void)_inputWindow.write( writer, budget ); // 실은 수는 쓰지 않는다. 못 실은 입력은 다음 메시지가 싣는다
-        (void)_pHost->sendMessage( 0, NetChannelType::Unreliable, writer.getBytes() );
+        (void)_pHost->sendMessage( 0, NetChannelKind::Unreliable, writer.getBytes() );
         return true;
     }
 

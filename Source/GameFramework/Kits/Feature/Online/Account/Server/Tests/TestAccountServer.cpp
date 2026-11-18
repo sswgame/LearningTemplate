@@ -601,7 +601,7 @@ SW_TEST_CASE( AccountServerTest, UpdateRequiredCarriesTheStoreURL )
     const auto           setText = [&]( string_view key, string_view text, int64 version )
     {
         RemoteConfigValue value;
-        value._type = RemoteConfigValueType::Text;
+        value._type = RemoteConfigValueKind::Text;
         value._text = string( text );
         ServiceAuditEntry audit;
         audit._actor   = "gm.0000000000000001";

@@ -99,7 +99,7 @@ namespace sw
 namespace sw
 {
     /** @brief 채널 종류입니다. 메시지마다 고르며, 값은 와이어 형식이므로 바꾸면 `NetWireVersion::kCore` 를 올려야 합니다. */
-    enum class NetChannelType : uint8
+    enum class NetChannelKind : uint8
     {
         ReliableOrdered = 0, ///< 반드시 도착하고, 보낸 순서대로 처리한다(채팅, 거래, 턴 행동, 생성과 파괴 스냅샷). 64KB까지 보낼 수 있다(조각으로 나눈다).
         ReliableUnordered,   ///< 반드시 도착하고, 받는 대로 처리한다. 앞 신뢰 메시지를 잃어도 기다리지 않는다(번호로 스스로 순서를 맞추는 파괴 사건 등). 1KB까지이며 조각나지 않는다.

@@ -217,7 +217,7 @@ namespace sw
         NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
         budget.reserveBits( writer.getBitCount() );
         (void)_sendWindow.write( writer, budget ); // 실은 수는 쓰지 않는다. 예산이 넘치지 않기 때문이다(위 주석)
-        (void)_messageWriter.sendToPeers( *_pHost, NetChannelType::Unreliable );
+        (void)_messageWriter.sendToPeers( *_pHost, NetChannelKind::Unreliable );
     }
 
     bool RollbackSession::advanceFrame( uint8 localInput )

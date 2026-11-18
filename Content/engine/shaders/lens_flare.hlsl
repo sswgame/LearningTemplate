@@ -1,5 +1,5 @@
 /**
- * lens_flare.hlsl — 빛마다의 렌즈 플레어 스프라이트(RenderPassType::LensFlare). 스프라이트 하나 = 모서리 여섯을 SV_VertexID 로 만든다(정점 버퍼 없음, canvas.hlsl 과 같은 방식).
+ * lens_flare.hlsl — 빛마다의 렌즈 플레어 스프라이트(RenderPassKind::LensFlare). 스프라이트 하나 = 모서리 여섯을 SV_VertexID 로 만든다(정점 버퍼 없음, canvas.hlsl 과 같은 방식).
  *
  * 스프라이트 원소는 C++ `LensFlareSprite`(LensFlareSpriteBuffer.h)와 같은 배치다 — 렌더 스레드가 빛을 주 시점에 투영하고 가장자리 감쇠를 곱해 올린다.
  * 모양은 절차적(`LensFlareShape` 의 번호): 빛무리 · 원판 · 고리 · 줄. 가림은 픽셀 셰이더가 빛 자리 둘레 장면 깊이 표본 아홉으로 본다 —

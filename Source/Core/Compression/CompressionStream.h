@@ -30,7 +30,7 @@ namespace sw
 
         uint32               _magic{ kMagic };
         uint8                _version{ kVersion };
-        CompressionCodecType _codecType{ CompressionCodecType::None }; ///< 1바이트. enum 의 기반 타입이 uint8 이다
+        CompressionCodecKind _codecType{ CompressionCodecKind::None }; ///< 1바이트. enum 의 기반 타입이 uint8 이다
         uint16               _flags{ 0 };                              ///< kFlagChecksum 등의 조합
         uint64               _uncompressedSize{ 0 };
         uint64               _compressedSize{ 0 };
@@ -73,7 +73,7 @@ namespace sw
         [[nodiscard]] static bool compressBuffer( const void*                     pSrc,
                                                   size_t                          srcSize,
                                                   vector<uint8>&                  outBytes,
-                                                  CompressionCodecType            codecType        = CompressionCodecType::RLE,
+                                                  CompressionCodecKind            codecType        = CompressionCodecKind::RLE,
                                                   int32                           compressionLevel = 0,
                                                   const CompressionCodecRegistry* pRegistry        = nullptr );
 

@@ -11,9 +11,9 @@ namespace sw
         constexpr size_t kMaxLiteralLength = 128;
     } // namespace
 
-    CompressionCodecType RLECompressionCodec::getCodecType() const
+    CompressionCodecKind RLECompressionCodec::getCodecType() const
     {
-        return CompressionCodecType::RLE;
+        return CompressionCodecKind::RLE;
     }
 
     const utf8* RLECompressionCodec::getCodecName() const

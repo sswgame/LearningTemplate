@@ -336,11 +336,11 @@ SW_TEST_CASE( NetPacketSealerTest, EncryptedEndpointsExchangeAndReconnectWithFre
 
     for ( int32 round = 0; round < 2; ++round )
     {
-        SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, test::NetTestUtil::makeMessage( 100 + round ) ) );
-        SW_REQUIRE_TRUE( cluster.getServer().sendMessage( 0, NetChannelType::ReliableOrdered, test::NetTestUtil::makeMessage( 200 + round ) ) );
+        SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelKind::ReliableOrdered, test::NetTestUtil::makeMessage( 100 + round ) ) );
+        SW_REQUIRE_TRUE( cluster.getServer().sendMessage( 0, NetChannelKind::ReliableOrdered, test::NetTestUtil::makeMessage( 200 + round ) ) );
         cluster.run( 0.2 );
         int32          connectionID = -1;
-        NetChannelType channel      = NetChannelType::Unreliable;
+        NetChannelKind channel      = NetChannelKind::Unreliable;
         vector<uint8>  buffer;
         SW_REQUIRE_TRUE( cluster.getServer().receiveMessage( connectionID, channel, buffer ) );
         SW_EXPECT_EQUAL( 0, connectionID );

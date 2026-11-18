@@ -27,7 +27,7 @@ namespace sw
     } // namespace ModifierKey
 
     /** @brief 원시 입력 이벤트 종류입니다. */
-    enum class RawInputEventType : uint8
+    enum class RawInputEventKind : uint8
     {
         None = 0,
         KeyDown,
@@ -60,7 +60,7 @@ namespace sw
      */
     struct RawInputEvent
     {
-        RawInputEventType      _type{ RawInputEventType::None };
+        RawInputEventKind      _type{ RawInputEventKind::None };
         InputDeviceKind        _deviceKind{ InputDeviceKind::Keyboard };
         uint8                  _deviceIndex{ 0 };
         uint8                  _modifierMask{ 0 }; /**< ModifierKey::Ctrl | Shift | Alt | Super */
@@ -117,7 +117,7 @@ namespace sw
         } _payload{};
 
         RawInputEvent()
-            : _type{ RawInputEventType::None }
+            : _type{ RawInputEventKind::None }
             , _deviceKind{ InputDeviceKind::Keyboard }
             , _deviceIndex{ 0 }
             , _modifierMask{ 0 }
@@ -131,7 +131,7 @@ namespace sw
             , _payload{} {}
 
         /** @brief 손가락 이벤트입니다. @p type 은 `TouchDown` · `TouchMove` · `TouchUp` 입니다. */
-        static RawInputEvent makeTouch( RawInputEventType type, uint16 pointerIndex, int32 x, int32 y )
+        static RawInputEvent makeTouch( RawInputEventKind type, uint16 pointerIndex, int32 x, int32 y )
         {
             RawInputEvent event{};
             event._type                             = type;
@@ -145,7 +145,7 @@ namespace sw
         static RawInputEvent makeKeyDown( Key key, uint16 vk = 0, bool bRepeat = false, uint8 modifierMask = 0 )
         {
             RawInputEvent event{};
-            event._type                               = RawInputEventType::KeyDown;
+            event._type                               = RawInputEventKind::KeyDown;
             event._deviceKind                         = InputDeviceKind::Keyboard;
             event._modifierMask                       = modifierMask;
             event._bRepeat                            = bRepeat ? SW_TRUE : SW_FALSE;
@@ -157,7 +157,7 @@ namespace sw
         static RawInputEvent makeKeyUp( Key key, uint16 vk = 0, uint8 modifierMask = 0 )
         {
             RawInputEvent event{};
-            event._type                               = RawInputEventType::KeyUp;
+            event._type                               = RawInputEventKind::KeyUp;
             event._deviceKind                         = InputDeviceKind::Keyboard;
             event._modifierMask                       = modifierMask;
             event._payload._keyData._key              = key;
@@ -169,7 +169,7 @@ namespace sw
         static RawInputEvent makeMouseMove( int32 x, int32 y )
         {
             RawInputEvent event{};
-            event._type                  = RawInputEventType::MouseMove;
+            event._type                  = RawInputEventKind::MouseMove;
             event._deviceKind            = InputDeviceKind::Mouse;
             event._payload._mouseData._x = x;
             event._payload._mouseData._y = y;
@@ -179,7 +179,7 @@ namespace sw
         static RawInputEvent makeMouseButtonDown( MouseButton btn, int32 x = 0, int32 y = 0, uint8 modifierMask = 0 )
         {
             RawInputEvent event{};
-            event._type                       = RawInputEventType::MouseButtonDown;
+            event._type                       = RawInputEventKind::MouseButtonDown;
             event._deviceKind                 = InputDeviceKind::Mouse;
             event._modifierMask               = modifierMask;
             event._payload._mouseData._button = btn;
@@ -191,7 +191,7 @@ namespace sw
         static RawInputEvent makeMouseButtonUp( MouseButton btn, int32 x = 0, int32 y = 0, uint8 modifierMask = 0 )
         {
             RawInputEvent event{};
-            event._type                       = RawInputEventType::MouseButtonUp;
+            event._type                       = RawInputEventKind::MouseButtonUp;
             event._deviceKind                 = InputDeviceKind::Mouse;
             event._modifierMask               = modifierMask;
             event._payload._mouseData._button = btn;
@@ -203,7 +203,7 @@ namespace sw
         static RawInputEvent makeMouseDoubleClick( MouseButton btn, int32 x = 0, int32 y = 0, uint8 modifierMask = 0 )
         {
             RawInputEvent event{};
-            event._type                       = RawInputEventType::MouseDoubleClick;
+            event._type                       = RawInputEventKind::MouseDoubleClick;
             event._deviceKind                 = InputDeviceKind::Mouse;
             event._modifierMask               = modifierMask;
             event._payload._mouseData._button = btn;
@@ -215,7 +215,7 @@ namespace sw
         static RawInputEvent makeMouseWheel( float32 delta )
         {
             RawInputEvent event{};
-            event._type                           = RawInputEventType::MouseWheel;
+            event._type                           = RawInputEventKind::MouseWheel;
             event._deviceKind                     = InputDeviceKind::Mouse;
             event._payload._mouseData._wheelDelta = delta;
             return event;
@@ -224,7 +224,7 @@ namespace sw
         static RawInputEvent makeMouseHorizontalWheel( float32 delta )
         {
             RawInputEvent event{};
-            event._type                           = RawInputEventType::MouseWheelHorizontal;
+            event._type                           = RawInputEventKind::MouseWheelHorizontal;
             event._deviceKind                     = InputDeviceKind::Mouse;
             event._payload._mouseData._wheelDelta = delta;
             return event;
@@ -234,7 +234,7 @@ namespace sw
         static RawInputEvent makeMouseRawDelta( float32 rawDx, float32 rawDy )
         {
             RawInputEvent event{};
-            event._type                            = RawInputEventType::MouseRawDelta;
+            event._type                            = RawInputEventKind::MouseRawDelta;
             event._deviceKind                      = InputDeviceKind::Mouse;
             event._payload._mouseData._rawDelta._x = rawDx;
             event._payload._mouseData._rawDelta._y = rawDy;
@@ -245,7 +245,7 @@ namespace sw
         static RawInputEvent makePointerCrossing( bool bEntered )
         {
             RawInputEvent event{};
-            event._type       = bEntered ? RawInputEventType::PointerEntered : RawInputEventType::PointerLeft;
+            event._type       = bEntered ? RawInputEventKind::PointerEntered : RawInputEventKind::PointerLeft;
             event._deviceKind = InputDeviceKind::Mouse;
             return event;
         }
@@ -254,14 +254,14 @@ namespace sw
         static RawInputEvent makeFocusChange( bool bGained )
         {
             RawInputEvent event{};
-            event._type = bGained ? RawInputEventType::FocusGained : RawInputEventType::FocusLost;
+            event._type = bGained ? RawInputEventKind::FocusGained : RawInputEventKind::FocusLost;
             return event;
         }
 
         static RawInputEvent makeGamepadButtonDown( GamepadButton btn, uint8 padIndex = 0 )
         {
             RawInputEvent event{};
-            event._type                         = RawInputEventType::GamepadButtonDown;
+            event._type                         = RawInputEventKind::GamepadButtonDown;
             event._deviceKind                   = InputDeviceKind::Gamepad;
             event._deviceIndex                  = padIndex;
             event._payload._gamepadData._button = btn;
@@ -271,7 +271,7 @@ namespace sw
         static RawInputEvent makeGamepadButtonUp( GamepadButton btn, uint8 padIndex = 0 )
         {
             RawInputEvent event{};
-            event._type                         = RawInputEventType::GamepadButtonUp;
+            event._type                         = RawInputEventKind::GamepadButtonUp;
             event._deviceKind                   = InputDeviceKind::Gamepad;
             event._deviceIndex                  = padIndex;
             event._payload._gamepadData._button = btn;
@@ -281,7 +281,7 @@ namespace sw
         static RawInputEvent makeGamepadAxis( uint16 axisIndex, float32 value, uint8 padIndex = 0 )
         {
             RawInputEvent event{};
-            event._type                            = RawInputEventType::GamepadAxis;
+            event._type                            = RawInputEventKind::GamepadAxis;
             event._deviceKind                      = InputDeviceKind::Gamepad;
             event._deviceIndex                     = padIndex;
             event._payload._gamepadData._axisIndex = axisIndex;
@@ -292,7 +292,7 @@ namespace sw
         static RawInputEvent makeGamepadConnection( uint8 padIndex, bool bConnected )
         {
             RawInputEvent event{};
-            event._type                             = RawInputEventType::GamepadConnectionChanged;
+            event._type                             = RawInputEventKind::GamepadConnectionChanged;
             event._deviceKind                       = InputDeviceKind::Gamepad;
             event._deviceIndex                      = padIndex;
             event._payload._gamepadData._bConnected = bConnected ? SW_TRUE : SW_FALSE;
@@ -306,7 +306,7 @@ namespace sw
         static RawInputEvent makeTextInput( string_view text )
         {
             RawInputEvent event{};
-            event._type       = RawInputEventType::TextInput;
+            event._type       = RawInputEventKind::TextInput;
             event._deviceKind = InputDeviceKind::Keyboard;
             copyTextPayload( event, text );
             return event;
@@ -316,7 +316,7 @@ namespace sw
         static RawInputEvent makeTextComposition( string_view text, bool bContinued )
         {
             RawInputEvent event{};
-            event._type           = RawInputEventType::TextComposition;
+            event._type           = RawInputEventKind::TextComposition;
             event._deviceKind     = InputDeviceKind::Keyboard;
             event._bTextContinued = bContinued ? SW_TRUE : SW_FALSE;
             copyTextPayload( event, text );

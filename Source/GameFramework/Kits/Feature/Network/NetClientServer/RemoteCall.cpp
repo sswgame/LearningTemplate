@@ -86,7 +86,7 @@ namespace sw
 
             /** @brief 호출 메시지 하나를 씁니다. 함수의 `Reliable` 로 채널을 고르고, 비신뢰가 한 조각(1 KB)을 넘으면 false 입니다. */
             [[nodiscard]] static bool writeCall( NetMessageWriter& messageWriter, uint32 sequence, uint32 targetID, const FunctionInfo& function, const vector<string>& listText,
-                                                 NetChannelType& outChannel )
+                                                 NetChannelKind& outChannel )
             {
                 BitWriter& writer = messageWriter.begin( NetRemoteCallMessage::kCall );
                 writer.writeVarUint( sequence );
@@ -97,8 +97,8 @@ namespace sw
                 {
                     writeText( writer, text );
                 }
-                outChannel           = function._metadata->_bReliable != SW_FALSE ? NetChannelType::ReliableOrdered : NetChannelType::Unreliable;
-                const int32 maxBytes = outChannel == NetChannelType::ReliableOrdered ? NetConnection::kMaxReliableMessageSize : NetConnection::kMaxSingleMessageSize;
+                outChannel           = function._metadata->_bReliable != SW_FALSE ? NetChannelKind::ReliableOrdered : NetChannelKind::Unreliable;
+                const int32 maxBytes = outChannel == NetChannelKind::ReliableOrdered ? NetConnection::kMaxReliableMessageSize : NetConnection::kMaxSingleMessageSize;
                 return messageWriter.getByteCount() <= maxBytes;
             }
 
@@ -350,7 +350,7 @@ namespace sw
                              functionName, targetID );
             return false;
         }
-        NetChannelType channel = NetChannelType::ReliableOrdered;
+        NetChannelKind channel = NetChannelKind::ReliableOrdered;
         if ( RemoteCallInternal::writeCall( _messageWriter, 0, targetID, *pFunction, _listSendScratch, channel ) == false )
         {
             SW_LOG_ERROR_ID( "RemoteCall.ClientCallTooLarge", "Remote call to client function '%#' is %# bytes - an unreliable call must fit one %#-byte message", functionName,
@@ -396,7 +396,7 @@ namespace sw
             disconnectViolator( context._connectionID, call._functionID, "the function is not a Server function" );
             return NetHandleResult::Handled;
         }
-        if ( pFunction->_metadata->_bReliable != SW_FALSE && context._channel != NetChannelType::ReliableOrdered )
+        if ( pFunction->_metadata->_bReliable != SW_FALSE && context._channel != NetChannelKind::ReliableOrdered )
         {
             disconnectViolator( context._connectionID, call._functionID, "a Reliable function arrived on an unreliable channel" );
             return NetHandleResult::Handled;
@@ -467,7 +467,7 @@ namespace sw
         BitWriter& writer = _messageWriter.begin( NetRemoteCallMessage::kRejected );
         writer.writeVarUint( sequence );
         writer.writeBits( static_cast<uint32>( error ), 8 );
-        (void)_messageWriter.send( *_pPeers, connectionID, NetChannelType::ReliableOrdered ); // 끊긴 연결이면 보낼 곳이 없다
+        (void)_messageWriter.send( *_pPeers, connectionID, NetChannelKind::ReliableOrdered ); // 끊긴 연결이면 보낼 곳이 없다
     }
 
     void RemoteCallServer::disconnectViolator( int32 connectionID, uint32 functionID, const utf8* pWhy )
@@ -522,7 +522,7 @@ namespace sw
             return 0;
         }
         const uint32   sequence = _nextSequence++;
-        NetChannelType channel  = NetChannelType::ReliableOrdered;
+        NetChannelKind channel  = NetChannelKind::ReliableOrdered;
         if ( RemoteCallInternal::writeCall( _messageWriter, sequence, targetID, *pFunction, _listSendScratch, channel ) == false )
         {
             SW_LOG_ERROR_ID( "RemoteCall.ServerCallTooLarge", "Remote call %# is %# bytes - an unreliable call must fit one %#-byte message", functionName, _messageWriter.getByteCount(),

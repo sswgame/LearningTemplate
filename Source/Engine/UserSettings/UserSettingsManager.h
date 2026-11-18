@@ -350,7 +350,7 @@ namespace sw
         /** @brief 설정의 순번입니다. 스키마에 없거나 상태가 아직 없으면 비어 있습니다. */
         [[nodiscard]] optional<uint32> findIndex( const hashed_string& settingID ) const;
         /** @brief `resolveKey` 의 본문입니다. 없거나 타입이 다르면 오류를 남기고 비어 있습니다. */
-        [[nodiscard]] optional<uint32> resolveKeyIndex( const hashed_string& settingID, UserSettingType expectedType ) const;
+        [[nodiscard]] optional<uint32> resolveKeyIndex( const hashed_string& settingID, UserSettingKind expectedType ) const;
         /** @brief 핸들이 가리키는 지금 값입니다. 다른 스키마에서 푼 핸들이면 단언으로 멈춥니다. */
         const string&        getKeyValue( const hashed_string& settingID, uint32 settingIndex ) const;
         const string&        getEffectiveValue( uint32 settingIndex ) const;
@@ -392,7 +392,7 @@ namespace sw
     template <typename T>
     optional<UserSettingKey<T>> UserSettingsManager::resolveKey( const hashed_string& settingID ) const
     {
-        constexpr UserSettingType kExpectedType = std::is_same_v<T, bool> ? UserSettingType::Bool : ( std::is_same_v<T, int32> ? UserSettingType::Int : UserSettingType::Float );
+        constexpr UserSettingKind kExpectedType = std::is_same_v<T, bool> ? UserSettingKind::Bool : ( std::is_same_v<T, int32> ? UserSettingKind::Int : UserSettingKind::Float );
         const optional<uint32>    settingIndex  = resolveKeyIndex( settingID, kExpectedType );
         if ( settingIndex.has_value() == false )
             return nullopt;

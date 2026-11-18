@@ -33,7 +33,7 @@ namespace sw
     };
 
     /** @brief 매개변수 값의 형식입니다. */
-    enum class GimmickParamType : uint8
+    enum class GimmickParamKind : uint8
     {
         Number = 0, ///< 실수 하나
         Vector,     ///< 실수 1..4 개("0 3 0")
@@ -45,7 +45,7 @@ namespace sw
     {
         hashed_string    _name{};
         string           _defaultText{};
-        GimmickParamType _type{ GimmickParamType::Number };
+        GimmickParamKind _type{ GimmickParamKind::Number };
     };
 } // namespace sw
 

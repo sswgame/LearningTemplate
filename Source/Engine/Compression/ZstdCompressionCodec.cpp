@@ -27,9 +27,9 @@ namespace sw
 
 namespace sw
 {
-    CompressionCodecType ZstdCompressionCodec::getCodecType() const
+    CompressionCodecKind ZstdCompressionCodec::getCodecType() const
     {
-        return CompressionCodecType::Zstd;
+        return CompressionCodecKind::Zstd;
     }
 
     const utf8* ZstdCompressionCodec::getCodecName() const

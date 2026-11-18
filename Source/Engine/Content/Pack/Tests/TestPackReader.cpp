@@ -448,7 +448,7 @@ SW_TEST_CASE( PackReaderTest, RangeReadEqualsTheSameSliceOfAWholeRead )
     vector<std::pair<string, vector<uint8>>> listEntry;
     listEntry.emplace_back( "textures/mips.dds", content );
     listEntry.emplace_back( "small.txt", vector<uint8>{ 'h', 'i' } );
-    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionType::Zlib ), listEntry ) );
+    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ), listEntry ) );
 
     PackReader reader;
     SW_REQUIRE_TRUE( reader.open( packPath ) );
@@ -529,7 +529,7 @@ SW_TEST_CASE( PackReaderTest, StoredEntryRangeReadReturnsTheSameSpan )
     const string        compressedPath = "data/level.xml";
     const bool          bStoredFirst   = PackStreamWriter::makePathHash( storedPath ) < PackStreamWriter::makePathHash( compressedPath );
     PackStreamWriter    writer;
-    SW_REQUIRE_TRUE( writer.open( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionType::Zlib ) ).has_value() );
+    SW_REQUIRE_TRUE( writer.open( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ) ).has_value() );
     for ( uint32 order = 0; order < 2; ++order )
     {
         const bool bStored = ( order == 0 ) == bStoredFirst;

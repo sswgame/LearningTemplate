@@ -4,7 +4,7 @@
 #include "gpu_message.hlsli"
 
 /**
- * canvas_marker.hlsl — 화면 마커(이름표 · HP 바 · 목표 표시)의 투영 컴퓨트(RenderPassType::CanvasMarker, docs/plans UI 후보 MarkerComputeProjection 의 구현).
+ * canvas_marker.hlsl — 화면 마커(이름표 · HP 바 · 목표 표시)의 투영 컴퓨트(RenderPassKind::CanvasMarker, docs/plans UI 후보 MarkerComputeProjection 의 구현).
  * 언리얼 위젯 컴포넌트의 일괄 월드 UI, 유니티 UI Toolkit 월드 스페이스와 같은 선이다 — 월드 점을 화면에 놓는 일은 GPU 가 하고 위젯은 앵커 원점 기준으로 한 번만 배치 · 칠한다.
  *
  * 스레드 하나가 마커 하나다. 앵커 번호(= 마커 기록 번호 = 구조 버퍼의 앞 원소 번호)가 마커와 GPU 인스턴스의 대응이다. 월드 점 · 앵커 → 화면 좌표 · 가시 판정을 C++

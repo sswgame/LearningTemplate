@@ -320,7 +320,7 @@ namespace sw
              * @return 인스턴스가 없거나, 쓴 바이트가 없거나, 압축에 실패하면 false 입니다.
              */
             template <typename SerializeRawFunc>
-            [[nodiscard]] static bool serializeThenCompress( const void* pInstance, vector<uint8>& outListBuffer, CompressionCodecType codecType,
+            [[nodiscard]] static bool serializeThenCompress( const void* pInstance, vector<uint8>& outListBuffer, CompressionCodecKind codecType,
                                                              SerializeRawFunc&& serializeRaw )
             {
                 outListBuffer.clear();
@@ -639,7 +639,7 @@ namespace sw
     bool BinarySerializer::serializeCompressed( const void*             pInstance,
                                                 const TypeInfo&         typeInfo,
                                                 vector<uint8>&          outListBuffer,
-                                                CompressionCodecType    codecType,
+                                                CompressionCodecKind    codecType,
                                                 const SerializeContext& context )
     {
         return BinarySerializerInternal::serializeThenCompress( pInstance, outListBuffer, codecType, [&]( vector<uint8>& outListRaw ) -> bool
@@ -699,7 +699,7 @@ namespace sw
     bool BinarySerializer::serializeCompressed( const void*             pInstance,
                                                 const TypeInfo&         typeInfo,
                                                 Archive&                outArchive,
-                                                CompressionCodecType    codecType,
+                                                CompressionCodecKind    codecType,
                                                 const SerializeContext& context )
     {
         vector<uint8> buffer;

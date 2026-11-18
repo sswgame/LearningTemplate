@@ -124,7 +124,7 @@ namespace sw
     {
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
         {
-            if ( pass._type != RenderPassType::PostProcessMaterial || pass._blendableLocation != location || pass._listResolvedColorOutput.empty() )
+            if ( pass._type != RenderPassKind::PostProcessMaterial || pass._blendableLocation != location || pass._listResolvedColorOutput.empty() )
                 continue;
             for ( const RenderPassAttachment& attachment : _pipeline.getDesc()._listAttachment )
             {

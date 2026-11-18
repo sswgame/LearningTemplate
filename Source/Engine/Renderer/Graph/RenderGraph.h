@@ -170,7 +170,7 @@ namespace sw
         vector<hashed_string>    _listInput;                       ///< 입력으로 읽는 자원 해시 목록
         vector<hashed_string>    _listOutput;                      ///< 출력으로 만드는 자원 해시 목록
         RenderGraphPassExecuteFn _execute;                         ///< 컴파일된 순서대로 부르는 패스 콜백(선택)
-        RHIQueueType             _queue{ RHIQueueType::Graphics }; ///< 선언한 큐입니다. 비동기 컴퓨트를 지원하지 않는 그래프에서는 그래픽스로 계획한다(`setAsyncComputeSupported`)
+        RHIQueueKind             _queue{ RHIQueueKind::Graphics }; ///< 선언한 큐입니다. 비동기 컴퓨트를 지원하지 않는 그래프에서는 그래픽스로 계획한다(`setAsyncComputeSupported`)
     };
 
     /**
@@ -182,7 +182,7 @@ namespace sw
      */
     struct RenderGraphQueueStep
     {
-        RHIQueueType   _queue{ RHIQueueType::Graphics };
+        RHIQueueKind   _queue{ RHIQueueKind::Graphics };
         uint32         _batch{ 0 };        ///< 비동기 묶음 번호(AsyncCompute 패스만)
         uint8          _bBeginsBatch{ 0 }; ///< 이 패스 앞에서 포크한다(묶음의 첫 패스)
         uint8          _bEndsBatch{ 0 };   ///< 이 패스 뒤에서 묶음을 컴퓨트 큐에 낸다(묶음의 마지막 패스)
@@ -246,7 +246,7 @@ namespace sw
          * @param execute 위상 정렬 순서로 실행할 때 부를 콜백입니다. 바인딩되지 않았으면 건너뜁니다.
          */
         bool addPass( hashed_string passName, vector<hashed_string> listInput = {}, vector<hashed_string> listOutput = {},
-                      RenderGraphPassExecuteFn execute = {}, RHIQueueType queue = RHIQueueType::Graphics );
+                      RenderGraphPassExecuteFn execute = {}, RHIQueueKind queue = RHIQueueKind::Graphics );
 
         /**
          * @brief 이 그래프를 돌릴 디바이스가 비동기 컴퓨트 큐를 갖는지 알립니다(능력 `RHICapabilities::_bAsyncCompute`). 컴파일 전에 부릅니다. 기본은 거짓입니다.

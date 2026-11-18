@@ -160,7 +160,7 @@ namespace sw
             uint32                       _blockSize{ 0 };
             uint32                       _sliceOffset{ 0 }; ///< 푼 블록들 안에서 돌려줄 범위의 시작
             uint32                       _sliceSize{ 0 };   ///< 돌려줄 크기
-            PackCompressionType          _compression{ PackCompressionType::None };
+            PackCompressionKind          _compression{ PackCompressionKind::None };
             bool                         _bVerifyCRC{ false };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             vector<PackBlockEntryOnDisk> _listBlock;                  ///< 걸친 블록 줄
             vector<PackDigest>           _listBlockDigest;            ///< 걸친 블록의 요약 — 신뢰를 받아 연 팩만(아니면 비어 있다)

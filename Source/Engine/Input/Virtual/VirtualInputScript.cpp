@@ -106,7 +106,7 @@ namespace sw
         for ( size_t index = _listEntry.size(); index > 0; --index )
         {
             const VirtualInputScriptEntry& entry = _listEntry[index - 1];
-            if ( entry._frameIndex <= frameIndex && entry._event._type == RawInputEventType::MouseMove )
+            if ( entry._frameIndex <= frameIndex && entry._event._type == RawInputEventKind::MouseMove )
                 return int2{ entry._event._payload._mouseData._x, entry._event._payload._mouseData._y };
         }
         return int2{};

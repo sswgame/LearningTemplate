@@ -50,14 +50,14 @@ SW_TEST_CASE( TouchDeviceTest, RawEventsReachTheDevice )
     SW_REQUIRE_TRUE( input.initialize() );
     SW_REQUIRE_TRUE( input.getTouch() != nullptr );
 
-    input.postRawEvent( RawInputEvent::makeTouch( RawInputEventType::TouchDown, 0, 100, 200 ) );
+    input.postRawEvent( RawInputEvent::makeTouch( RawInputEventKind::TouchDown, 0, 100, 200 ) );
     input.beginFrame( 0.016f );
     SW_EXPECT_TRUE( input.getTouch()->isControlDown( 0 ) );
     SW_EXPECT_EQUAL( 200, input.getTouch()->getPointerPosition( 0 )._y );
     input.endFrame();
 
-    input.postRawEvent( RawInputEvent::makeTouch( RawInputEventType::TouchMove, 0, 110, 210 ) );
-    input.postRawEvent( RawInputEvent::makeTouch( RawInputEventType::TouchUp, 0, 110, 210 ) );
+    input.postRawEvent( RawInputEvent::makeTouch( RawInputEventKind::TouchMove, 0, 110, 210 ) );
+    input.postRawEvent( RawInputEvent::makeTouch( RawInputEventKind::TouchUp, 0, 110, 210 ) );
     input.beginFrame( 0.016f );
     SW_EXPECT_FALSE( input.getTouch()->isControlDown( 0 ) );
     SW_EXPECT_EQUAL( 110, input.getTouch()->getPointerPosition( 0 )._x );

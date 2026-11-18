@@ -27,7 +27,7 @@ namespace sw::editor
     };
 
     /** @brief 정렬 기준입니다. */
-    enum class AlignType : uint8
+    enum class AlignKind : uint8
     {
         Min = 0,
         Center,
@@ -69,7 +69,7 @@ namespace sw::editor
         /** @brief 선택한 오브젝트를 지면(Y)에 맞춥니다(`snapObjectsToGround`). */
         static void snapSelectedToGround();
         /** @brief 선택한 오브젝트를 축 기준으로 정렬합니다(`alignObjects`). */
-        static void alignSelectedObjects( AlignAxis axis, AlignType type );
+        static void alignSelectedObjects( AlignAxis axis, AlignKind type );
         /** @brief 선택한 오브젝트를 축 방향으로 균등하게 배치합니다(`distributeObjects`). */
         static void distributeSelectedObjects( AlignAxis axis );
 
@@ -79,7 +79,7 @@ namespace sw::editor
         /** @brief 오브젝트들의 바닥을 월드 Y = 0 에 맞춥니다. 메시는 월드 Y 스케일의 절반을, 2D 박스는 박스 높이의 절반을 바닥까지의 거리로 봅니다. */
         static void snapObjectsToGround( const vector<GameObject*>& listObject );
         /** @brief 오브젝트들의 월드 위치를 축 하나에서 맞춥니다. 기준은 최솟값, 최댓값, 가운데 중 하나입니다. 둘보다 적으면 아무것도 하지 않습니다. */
-        static void alignObjects( const vector<GameObject*>& listObject, AlignAxis axis, AlignType type );
+        static void alignObjects( const vector<GameObject*>& listObject, AlignAxis axis, AlignKind type );
         /** @brief 오브젝트들을 월드 축 하나를 따라 양 끝 사이에 같은 간격으로 배치합니다. 셋보다 적으면 아무것도 하지 않습니다. */
         static void distributeObjects( vector<GameObject*> listObject, AlignAxis axis );
     };

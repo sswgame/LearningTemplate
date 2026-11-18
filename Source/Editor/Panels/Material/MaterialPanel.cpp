@@ -67,7 +67,7 @@ namespace sw::editor
 
                 switch ( prop._type )
                 {
-                    case MaterialPropertyType::Bool:
+                    case MaterialPropertyKind::Bool:
                     {
                         bool bVal{ false };
                         if ( StringUtil::tryParseBool( prop._value, bVal ) == false )
@@ -80,15 +80,15 @@ namespace sw::editor
                         }
                         return false;
                     }
-                    case MaterialPropertyType::Float:
-                    case MaterialPropertyType::Range:
+                    case MaterialPropertyKind::Float:
+                    case MaterialPropertyKind::Range:
                     {
                         float32 arrVal[1]{};
                         if ( MaterialPreviewInputs::parseFloats( prop._value, arrVal ) == false )
                             return drawUnreadableValue( pLabel, prop );
                         bool bChanged{ false };
                         EditorWidgets::drawPropertyRowLabel( pLabel );
-                        if ( prop._type == MaterialPropertyType::Range && prop._min < prop._max )
+                        if ( prop._type == MaterialPropertyKind::Range && prop._min < prop._max )
                             bChanged = EditorWidgets::sliderFloat( widgetID, &arrVal[0], prop._min, prop._max );
                         else
                             bChanged = EditorWidgets::dragFloat( widgetID, &arrVal[0], 0.01f );
@@ -96,7 +96,7 @@ namespace sw::editor
                             MaterialModel::writeFloats( prop._value, arrVal, 1 );
                         return bChanged;
                     }
-                    case MaterialPropertyType::Float2:
+                    case MaterialPropertyKind::Float2:
                     {
                         float32 arrVal[2]{};
                         if ( MaterialPreviewInputs::parseFloats( prop._value, arrVal ) == false )
@@ -107,7 +107,7 @@ namespace sw::editor
                             MaterialModel::writeFloats( prop._value, arrVal, 2 );
                         return bChanged;
                     }
-                    case MaterialPropertyType::Float3:
+                    case MaterialPropertyKind::Float3:
                     {
                         float32 arrVal[3]{};
                         if ( MaterialPreviewInputs::parseFloats( prop._value, arrVal ) == false )
@@ -118,11 +118,11 @@ namespace sw::editor
                             MaterialModel::writeFloats( prop._value, arrVal, 3 );
                         return bChanged;
                     }
-                    case MaterialPropertyType::Color:
-                    case MaterialPropertyType::Float4:
+                    case MaterialPropertyKind::Color:
+                    case MaterialPropertyKind::Float4:
                     {
                         float32    arrVal[4]{};
-                        const bool bRead = prop._type == MaterialPropertyType::Color ? MaterialPreviewInputs::parseColor( prop._value, arrVal )
+                        const bool bRead = prop._type == MaterialPropertyKind::Color ? MaterialPreviewInputs::parseColor( prop._value, arrVal )
                                                                                      : MaterialPreviewInputs::parseFloats( prop._value, arrVal );
                         if ( bRead == false )
                             return drawUnreadableValue( pLabel, prop );
@@ -138,7 +138,7 @@ namespace sw::editor
                         }
                         return bChanged;
                     }
-                    case MaterialPropertyType::Int:
+                    case MaterialPropertyKind::Int:
                     {
                         int32 iVal{ 0 };
                         (void)StringUtil::parseInt( prop._value, iVal ); // 화면 표시 — 못 읽으면 0
@@ -148,7 +148,7 @@ namespace sw::editor
                             prop._value = to_string( iVal );
                         return bChanged;
                     }
-                    case MaterialPropertyType::Enum:
+                    case MaterialPropertyKind::Enum:
                     {
                         int32 selected{ 0 };
                         (void)StringUtil::parseInt( prop._value, selected ); // 화면 표시 — 못 읽으면 첫 항목
@@ -174,10 +174,10 @@ namespace sw::editor
                         }
                         return bChanged;
                     }
-                    case MaterialPropertyType::Texture2D:
-                    case MaterialPropertyType::TextureCube:
-                    case MaterialPropertyType::Texture3D:
-                    case MaterialPropertyType::Texture2DArray:
+                    case MaterialPropertyKind::Texture2D:
+                    case MaterialPropertyKind::TextureCube:
+                    case MaterialPropertyKind::Texture3D:
+                    case MaterialPropertyKind::Texture2DArray:
                     {
                         string     path     = prop._assetPath.empty() ? prop._value : prop._assetPath;
                         const bool bChanged = EditorWidgets::drawAssetSlot( pLabel, path, ".png" );
@@ -188,18 +188,18 @@ namespace sw::editor
                         }
                         return bChanged;
                     }
-                    case MaterialPropertyType::Float4x4:
-                    case MaterialPropertyType::Uint:
-                    case MaterialPropertyType::Uint2:
-                    case MaterialPropertyType::Uint3:
-                    case MaterialPropertyType::Uint4:
-                    case MaterialPropertyType::Int2:
-                    case MaterialPropertyType::Int3:
-                    case MaterialPropertyType::Int4:
-                    case MaterialPropertyType::BitFlag:
-                    case MaterialPropertyType::ChannelMask:
-                    case MaterialPropertyType::Keyword:
-                    case MaterialPropertyType::Unknown:
+                    case MaterialPropertyKind::Float4x4:
+                    case MaterialPropertyKind::Uint:
+                    case MaterialPropertyKind::Uint2:
+                    case MaterialPropertyKind::Uint3:
+                    case MaterialPropertyKind::Uint4:
+                    case MaterialPropertyKind::Int2:
+                    case MaterialPropertyKind::Int3:
+                    case MaterialPropertyKind::Int4:
+                    case MaterialPropertyKind::BitFlag:
+                    case MaterialPropertyKind::ChannelMask:
+                    case MaterialPropertyKind::Keyword:
+                    case MaterialPropertyKind::Unknown:
                     {
                         return EditorWidgets::drawTextField( pLabel, prop._value );
                     }

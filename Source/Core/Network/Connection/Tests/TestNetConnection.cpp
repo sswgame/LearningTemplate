@@ -52,12 +52,12 @@ SW_TEST_CASE( NetConnectionTest, ConnectionsResendReliableMessagesInOrderAndDrop
     for ( int32 index = 0; index < 40; ++index )
     {
         const vector<uint8> buffer = NetTestUtil::makeMessage( index, 40 );
-        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, buffer.data(), static_cast<int32>( buffer.size() ) ) );
+        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::ReliableOrdered, buffer.data(), static_cast<int32>( buffer.size() ) ) );
     }
     {
         SW_EXPECT_LOG( "Net.MessageTooLarge" ); // 신뢰 상한을 넘는 메시지는 오류와 함께 거절한다
         const vector<uint8> tooBig( static_cast<size_t>( NetConnection::kMaxReliableMessageSize + 1 ), 0 );
-        SW_EXPECT_FALSE( sender.sendMessage( NetChannelType::ReliableOrdered, tooBig.data(), static_cast<int32>( tooBig.size() ) ) );
+        SW_EXPECT_FALSE( sender.sendMessage( NetChannelKind::ReliableOrdered, tooBig.data(), static_cast<int32>( tooBig.size() ) ) );
     }
 
     // 세 패킷 중 하나를 잃고, 받는 쪽은 매번 확인을 돌려준다.
@@ -81,7 +81,7 @@ SW_TEST_CASE( NetConnectionTest, ConnectionsResendReliableMessagesInOrderAndDrop
         BitReader ackReader( ackWriter.getBytes().data(), ackWriter.getByteCount() );
         (void)sender.readPacket( time + 0.04, ackReader ); // ack 만 받으면 된다 — 결과는 아래 수신 메시지로 확인한다
         vector<uint8> buffer;
-        while ( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) )
+        while ( receiver.receiveMessage( NetChannelKind::ReliableOrdered, buffer ) )
         {
             listReceived.push_back( NetTestUtil::readMessageValue( buffer ) );
         }
@@ -101,12 +101,12 @@ SW_TEST_CASE( NetConnectionTest, ConnectionsResendReliableMessagesInOrderAndDrop
     for ( int32 index = 0; index < 3; ++index )
     {
         const vector<uint8> buffer = NetTestUtil::makeMessage( index << 8 );
-        SW_REQUIRE_TRUE( fresh.sendMessage( NetChannelType::UnreliableSequenced, buffer.data(), 4 ) );
+        SW_REQUIRE_TRUE( fresh.sendMessage( NetChannelKind::UnreliableSequenced, buffer.data(), 4 ) );
     }
     BitWriter firstPacket;
     fresh.writePacket( 0.0, firstPacket, 300 );
     const vector<uint8> newer = NetTestUtil::makeMessage( 9 << 8 );
-    SW_REQUIRE_TRUE( fresh.sendMessage( NetChannelType::UnreliableSequenced, newer.data(), 4 ) );
+    SW_REQUIRE_TRUE( fresh.sendMessage( NetChannelKind::UnreliableSequenced, newer.data(), 4 ) );
     BitWriter secondPacket;
     fresh.writePacket( 0.1, secondPacket, 300 );
     BitReader secondReader( secondPacket.getBytes().data(), secondPacket.getByteCount() );
@@ -114,9 +114,9 @@ SW_TEST_CASE( NetConnectionTest, ConnectionsResendReliableMessagesInOrderAndDrop
     SW_EXPECT_TRUE( late.readPacket( 0.2, secondReader ) );
     SW_EXPECT_TRUE( late.readPacket( 0.3, firstReader ) ); // 패킷은 받지만 그 안의 옛 순서 메시지는 버린다
     vector<uint8> buffer;
-    SW_REQUIRE_TRUE( late.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) );
+    SW_REQUIRE_TRUE( late.receiveMessage( NetChannelKind::UnreliableSequenced, buffer ) );
     SW_EXPECT_EQUAL( 9 << 8, NetTestUtil::readMessageValue( buffer ) );
-    SW_EXPECT_FALSE( late.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) );
+    SW_EXPECT_FALSE( late.receiveMessage( NetChannelKind::UnreliableSequenced, buffer ) );
 }
 
 /**
@@ -201,9 +201,9 @@ SW_TEST_CASE( NetConnectionTest, SequencedChannelKeepsOneStreamPerMessageKind )
     const vector<uint8> snapshotOld{ 0x10, 1 };
     const vector<uint8> pose{ 0x15, 2 };
     const vector<uint8> snapshotNew{ 0x10, 3 };
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, snapshotOld.data(), 2 ) );
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, pose.data(), 2 ) );
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, snapshotNew.data(), 2 ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::UnreliableSequenced, snapshotOld.data(), 2 ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::UnreliableSequenced, pose.data(), 2 ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::UnreliableSequenced, snapshotNew.data(), 2 ) );
     BitWriter firstPacket;
     sender.writePacket( 0.0, firstPacket, 300 );
     // 한 패킷에 두 종류가 다 실린다(같은 종류의 옛 스냅샷만 빠졌다).
@@ -213,7 +213,7 @@ SW_TEST_CASE( NetConnectionTest, SequencedChannelKeepsOneStreamPerMessageKind )
         SW_REQUIRE_TRUE( direct.readPacket( 0.05, directReader ) );
         vector<uint8> directBuffer;
         int32         directCount = 0;
-        while ( direct.receiveMessage( NetChannelType::UnreliableSequenced, directBuffer ) )
+        while ( direct.receiveMessage( NetChannelKind::UnreliableSequenced, directBuffer ) )
         {
             ++directCount;
         }
@@ -221,7 +221,7 @@ SW_TEST_CASE( NetConnectionTest, SequencedChannelKeepsOneStreamPerMessageKind )
     }
     // 다음 간격 — 자세만 새로. 이 패킷이 먼저 도착해도 앞 패킷의 스냅샷(다른 종류)은 받는다.
     const vector<uint8> poseNew{ 0x15, 4 };
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, poseNew.data(), 2 ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::UnreliableSequenced, poseNew.data(), 2 ) );
     BitWriter secondPacket;
     sender.writePacket( 0.1, secondPacket, 300 );
     BitReader secondReader( secondPacket.getBytes().data(), secondPacket.getByteCount() );
@@ -230,7 +230,7 @@ SW_TEST_CASE( NetConnectionTest, SequencedChannelKeepsOneStreamPerMessageKind )
     SW_EXPECT_TRUE( receiver.readPacket( 0.3, firstReader ) );
     vector<vector<uint8>> listReceived;
     vector<uint8>         buffer;
-    while ( receiver.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) )
+    while ( receiver.receiveMessage( NetChannelKind::UnreliableSequenced, buffer ) )
     {
         listReceived.push_back( buffer );
     }
@@ -247,9 +247,9 @@ SW_TEST_CASE( NetConnectionTest, SequencedReplacementTakesNewSizeAndAppendReceiv
     const vector<uint8> longOld{ 0x20, 1, 2, 3, 4, 5 };
     const vector<uint8> shortNew{ 0x20, 9 };
     const vector<uint8> other{ 0x21, 7, 7 };
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, longOld.data(), static_cast<int32>( longOld.size() ) ) );
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, other.data(), static_cast<int32>( other.size() ) ) );
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, shortNew.data(), static_cast<int32>( shortNew.size() ) ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::UnreliableSequenced, longOld.data(), static_cast<int32>( longOld.size() ) ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::UnreliableSequenced, other.data(), static_cast<int32>( other.size() ) ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::UnreliableSequenced, shortNew.data(), static_cast<int32>( shortNew.size() ) ) );
     BitWriter packet;
     sender.writePacket( 0.0, packet, 300 );
     BitReader reader( packet.getBytes().data(), packet.getByteCount() );
@@ -257,9 +257,9 @@ SW_TEST_CASE( NetConnectionTest, SequencedReplacementTakesNewSizeAndAppendReceiv
 
     // 아레나에 덧붙이기 — 앞에 있던 바이트는 그대로 두고 메시지 바이트만 뒤에 붙는다.
     vector<uint8> arena{ 0xEE };
-    SW_REQUIRE_TRUE( receiver.receiveMessageAppend( NetChannelType::UnreliableSequenced, arena ) );
-    SW_REQUIRE_TRUE( receiver.receiveMessageAppend( NetChannelType::UnreliableSequenced, arena ) );
-    SW_EXPECT_FALSE( receiver.receiveMessageAppend( NetChannelType::UnreliableSequenced, arena ) );
+    SW_REQUIRE_TRUE( receiver.receiveMessageAppend( NetChannelKind::UnreliableSequenced, arena ) );
+    SW_REQUIRE_TRUE( receiver.receiveMessageAppend( NetChannelKind::UnreliableSequenced, arena ) );
+    SW_EXPECT_FALSE( receiver.receiveMessageAppend( NetChannelKind::UnreliableSequenced, arena ) );
     const vector<uint8> expected{ 0xEE, 0x20, 9, 0x21, 7, 7 };
     SW_EXPECT_TRUE( arena == expected );
 }
@@ -274,12 +274,12 @@ SW_TEST_CASE( NetConnectionTest, ReceivedMessageBuffersAreReusedThroughTheCaller
     for ( int32 round = 0; round < 3; ++round )
     {
         const vector<uint8> message( 100, static_cast<uint8>( round ) );
-        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::Unreliable, message.data(), static_cast<int32>( message.size() ) ) );
+        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::Unreliable, message.data(), static_cast<int32>( message.size() ) ) );
         BitWriter packet;
         sender.writePacket( 0.01 * round, packet, 300 );
         BitReader reader( packet.getBytes().data(), packet.getByteCount() );
         SW_REQUIRE_TRUE( receiver.readPacket( 0.01 * round, reader ) );
-        SW_REQUIRE_TRUE( receiver.receiveMessage( NetChannelType::Unreliable, received ) );
+        SW_REQUIRE_TRUE( receiver.receiveMessage( NetChannelKind::Unreliable, received ) );
         SW_EXPECT_TRUE( received == message );
         if ( round == 0 )
             pFirstStorage = received.data();
@@ -300,7 +300,7 @@ SW_TEST_CASE( NetConnectionTest, ReceiveQueueOverflowIsFlaggedAndDrainingFreesRo
     SW_EXPECT_LOG( "Net.ReceiveOverflow" ); // 받은 큐 넘침은 경고로 알린다
     for ( int32 round = 0; round <= fitCount; ++round )
     {
-        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::Unreliable, message.data(), static_cast<int32>( message.size() ) ) );
+        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::Unreliable, message.data(), static_cast<int32>( message.size() ) ) );
         BitWriter packet;
         sender.writePacket( 0.001 * round, packet, 1200 );
         BitReader reader( packet.getBytes().data(), packet.getByteCount() );
@@ -310,7 +310,7 @@ SW_TEST_CASE( NetConnectionTest, ReceiveQueueOverflowIsFlaggedAndDrainingFreesRo
     }
     SW_EXPECT_TRUE( receiver.hasReceiveOverflowed() );
     vector<uint8> received;
-    while ( receiver.receiveMessage( NetChannelType::Unreliable, received ) )
+    while ( receiver.receiveMessage( NetChannelKind::Unreliable, received ) )
     {
         ++deliveredSeen;
     }
@@ -329,7 +329,7 @@ SW_TEST_CASE( NetConnectionTest, MalformedPayloadIsNotAcknowledged )
     NetConnection       sender;
     NetConnection       receiver;
     const vector<uint8> message = NetTestUtil::makeMessage( 777, 40 );
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
     BitWriter packet;
     sender.writePacket( 0.0, packet, 300 );
     // 머리(시퀀스 · 확인)는 온전하고 메시지 몸이 잘렸다.
@@ -351,7 +351,7 @@ SW_TEST_CASE( NetConnectionTest, MalformedPayloadIsNotAcknowledged )
         sender.writePacket( time + 0.02, next, 300 );
         BitReader nextReader( next.getBytes().data(), next.getByteCount() );
         (void)receiver.readPacket( time + 0.03, nextReader ); // 중복이면 false — 결과는 아래 수신 메시지로 확인한다
-        while ( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) )
+        while ( receiver.receiveMessage( NetChannelKind::ReliableOrdered, buffer ) )
         {
             ++receivedCount;
         }
@@ -379,7 +379,7 @@ SW_TEST_CASE( NetConnectionTest, BandwidthStatCountsEveryPacketInTheLastSecond )
     for ( int32 frame = 0; frame <= 240; ++frame )
     {
         const float64 time = static_cast<float64>( frame ) / 120.0;
-        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::Unreliable, payload.data(), static_cast<int32>( payload.size() ) ) );
+        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::Unreliable, payload.data(), static_cast<int32>( payload.size() ) ) );
         BitWriter packet;
         sender.writePacket( time, packet, 1200 );
         packetBytes = packet.getByteCount();
@@ -424,18 +424,18 @@ SW_TEST_CASE( NetConnectionTest, LostPacketIsResentBeforeTheResendDelay )
     // 신뢰 메시지를 실은 패킷을 잃고, 뒤의 패킷 넷(비신뢰)은 빨라진 회선으로 간다.
     time += 2.0;
     const vector<uint8> message = NetTestUtil::makeMessage( 4242, 8 );
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
     sendTo( sender, receiver, time, time, false );
     for ( int32 index = 1; index <= 4; ++index )
     {
         const vector<uint8> filler = NetTestUtil::makeMessage( index, 4 );
-        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::Unreliable, filler.data(), static_cast<int32>( filler.size() ) ) );
+        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::Unreliable, filler.data(), static_cast<int32>( filler.size() ) ) );
         sendTo( sender, receiver, time + 0.01 * index, time + 0.01 * index + 0.02, true );
     }
     sendTo( receiver, sender, time + 0.07, time + 0.09, true );
     sendTo( sender, receiver, time + 0.1, time + 0.12, true );
     vector<uint8> buffer;
-    SW_REQUIRE_TRUE( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) );
+    SW_REQUIRE_TRUE( receiver.receiveMessage( NetChannelKind::ReliableOrdered, buffer ) );
     SW_EXPECT_EQUAL( 4242, NetTestUtil::readMessageValue( buffer ) );
 }
 
@@ -449,9 +449,9 @@ SW_TEST_CASE( NetConnectionTest, OversizedMessagesAreRefusedLoudlyAndAFullWindow
     const vector<uint8> unfragmented = NetTestUtil::makePatternMessage( 7u, NetConnection::kMaxSingleMessageSize + 1 );
     {
         SW_EXPECT_LOG( "Net.MessageTooLarge" ); // 채널 상한을 넘는 셋은 오류와 함께 거절한다
-        SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::ReliableOrdered, tooLarge.data(), static_cast<int32>( tooLarge.size() ) ) );
-        SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::UnreliableSequenced, unfragmented.data(), static_cast<int32>( unfragmented.size() ) ) );
-        SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::Unreliable, unfragmented.data(), static_cast<int32>( unfragmented.size() ) ) );
+        SW_EXPECT_FALSE( connection.sendMessage( NetChannelKind::ReliableOrdered, tooLarge.data(), static_cast<int32>( tooLarge.size() ) ) );
+        SW_EXPECT_FALSE( connection.sendMessage( NetChannelKind::UnreliableSequenced, unfragmented.data(), static_cast<int32>( unfragmented.size() ) ) );
+        SW_EXPECT_FALSE( connection.sendMessage( NetChannelKind::Unreliable, unfragmented.data(), static_cast<int32>( unfragmented.size() ) ) );
     }
     SW_EXPECT_EQUAL( 0, connection.getPendingReliableCount() ); // 거절한 것은 조각 하나도 남기지 않는다
     SW_EXPECT_FALSE( connection.hasDataToSend( 0.0 ) );
@@ -462,14 +462,14 @@ SW_TEST_CASE( NetConnectionTest, OversizedMessagesAreRefusedLoudlyAndAFullWindow
     const int32         perMessage = NetConnection::kMaxReliableMessageSize / NetConnection::kMaxSingleMessageSize;
     for ( int32 index = 0; index < 3; ++index )
     {
-        SW_EXPECT_TRUE( connection.sendMessage( NetChannelType::ReliableOrdered, largest.data(), static_cast<int32>( largest.size() ) ) );
+        SW_EXPECT_TRUE( connection.sendMessage( NetChannelKind::ReliableOrdered, largest.data(), static_cast<int32>( largest.size() ) ) );
     }
     SW_EXPECT_EQUAL( 3 * perMessage, connection.getPendingReliableCount() );
-    SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::ReliableOrdered, largest.data(), static_cast<int32>( largest.size() ) ) );
+    SW_EXPECT_FALSE( connection.sendMessage( NetChannelKind::ReliableOrdered, largest.data(), static_cast<int32>( largest.size() ) ) );
     SW_EXPECT_EQUAL( 3 * perMessage, connection.getPendingReliableCount() );
-    SW_EXPECT_TRUE( connection.sendMessage( NetChannelType::ReliableOrdered, largest.data(), 63 * NetConnection::kMaxSingleMessageSize ) );
+    SW_EXPECT_TRUE( connection.sendMessage( NetChannelKind::ReliableOrdered, largest.data(), 63 * NetConnection::kMaxSingleMessageSize ) );
     SW_EXPECT_EQUAL( NetConnection::kReliableWindow - 1, connection.getPendingReliableCount() );
-    SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::ReliableOrdered, largest.data(), 1 ) );
+    SW_EXPECT_FALSE( connection.sendMessage( NetChannelKind::ReliableOrdered, largest.data(), 1 ) );
 }
 
 /**
@@ -482,7 +482,7 @@ SW_TEST_CASE( NetConnectionTest, LargeReliableMessageDoesNotStarveSequencedMessa
     NetConnection       receiver;
     const int32         fragmentCount = 32;
     const vector<uint8> large         = NetTestUtil::makePatternMessage( 10u, fragmentCount * NetConnection::kMaxSingleMessageSize );
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, large.data(), static_cast<int32>( large.size() ) ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::ReliableOrdered, large.data(), static_cast<int32>( large.size() ) ) );
     const auto exchange = [&]( float64 time )
     {
         BitWriter packet;
@@ -500,9 +500,9 @@ SW_TEST_CASE( NetConnectionTest, LargeReliableMessageDoesNotStarveSequencedMessa
     {
         vector<uint8> snapshot( 600, static_cast<uint8>( frame ) );
         snapshot[0] = 0x10; // 종류 하나 — 흐름 하나
-        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, snapshot.data(), static_cast<int32>( snapshot.size() ) ) );
+        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::UnreliableSequenced, snapshot.data(), static_cast<int32>( snapshot.size() ) ) );
         exchange( 0.05 * frame );
-        while ( receiver.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) )
+        while ( receiver.receiveMessage( NetChannelKind::UnreliableSequenced, buffer ) )
         {
             ++snapshotCount;
         }
@@ -515,7 +515,7 @@ SW_TEST_CASE( NetConnectionTest, LargeReliableMessageDoesNotStarveSequencedMessa
     for ( int32 frame = 20; frame < 80 && listReceived.empty(); ++frame )
     {
         exchange( 0.05 * frame );
-        while ( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) )
+        while ( receiver.receiveMessage( NetChannelKind::ReliableOrdered, buffer ) )
         {
             listReceived.push_back( buffer );
         }
@@ -532,7 +532,7 @@ SW_TEST_CASE( NetConnectionTest, ReliableUnorderedSkipsTheHeadOfLineButStaysReli
 {
     NetConnection sender;
     NetConnection receiver;
-    const auto    writeOne = [&sender]( NetChannelType channel, int32 value, float64 time ) -> vector<uint8>
+    const auto    writeOne = [&sender]( NetChannelKind channel, int32 value, float64 time ) -> vector<uint8>
     {
         const vector<uint8> message = NetTestUtil::makeMessage( value );
         SW_EXPECT_TRUE( sender.sendMessage( channel, message.data(), static_cast<int32>( message.size() ) ) );
@@ -545,7 +545,7 @@ SW_TEST_CASE( NetConnectionTest, ReliableUnorderedSkipsTheHeadOfLineButStaysReli
         BitReader reader( listPacket.data(), static_cast<int32>( listPacket.size() ) );
         return receiver.readPacket( time, reader );
     };
-    const auto pollAll = [&receiver]( NetChannelType channel ) -> vector<int32>
+    const auto pollAll = [&receiver]( NetChannelKind channel ) -> vector<int32>
     {
         vector<int32> listValue;
         vector<uint8> buffer;
@@ -557,28 +557,28 @@ SW_TEST_CASE( NetConnectionTest, ReliableUnorderedSkipsTheHeadOfLineButStaysReli
     };
 
     // 패킷마다 메시지 하나 — 순서 1 · 없음 2 · 순서 3 · 없음 4. 첫 패킷(순서 1)을 잃고, 나머지는 뒤바뀌어 온다.
-    (void)writeOne( NetChannelType::ReliableOrdered, 1, 0.00 );
-    const vector<uint8> packetA = writeOne( NetChannelType::ReliableUnordered, 2, 0.01 );
-    const vector<uint8> packetB = writeOne( NetChannelType::ReliableOrdered, 3, 0.02 );
-    const vector<uint8> packetC = writeOne( NetChannelType::ReliableUnordered, 4, 0.03 );
+    (void)writeOne( NetChannelKind::ReliableOrdered, 1, 0.00 );
+    const vector<uint8> packetA = writeOne( NetChannelKind::ReliableUnordered, 2, 0.01 );
+    const vector<uint8> packetB = writeOne( NetChannelKind::ReliableOrdered, 3, 0.02 );
+    const vector<uint8> packetC = writeOne( NetChannelKind::ReliableUnordered, 4, 0.03 );
     SW_REQUIRE_TRUE( deliver( packetC, 0.05 ) );
     SW_REQUIRE_TRUE( deliver( packetA, 0.06 ) );
     SW_REQUIRE_TRUE( deliver( packetB, 0.07 ) );
-    SW_EXPECT_TRUE( pollAll( NetChannelType::ReliableUnordered ) == ( vector<int32>{ 4, 2 } ) ); // 받는 대로 — 순서 1 을 기다리지 않는다
-    SW_EXPECT_TRUE( pollAll( NetChannelType::ReliableOrdered ).empty() );                        // 순서 3 은 잃은 1 을 기다린다
+    SW_EXPECT_TRUE( pollAll( NetChannelKind::ReliableUnordered ) == ( vector<int32>{ 4, 2 } ) ); // 받는 대로 — 순서 1 을 기다리지 않는다
+    SW_EXPECT_TRUE( pollAll( NetChannelKind::ReliableOrdered ).empty() );                        // 순서 3 은 잃은 1 을 기다린다
 
     // 확인이 보내는 쪽에 가지 않았다 — 재전송 간격(0.1 초)이 지나 넷이 모두 다시 간다. 순서는 1, 3 으로 이어지고 없음 2 · 4 는 다시 건네지지 않는다.
     BitWriter resend;
     sender.writePacket( 0.5, resend, 300 );
     BitReader resendReader( resend.getBytes().data(), resend.getByteCount() );
     SW_REQUIRE_TRUE( receiver.readPacket( 0.55, resendReader ) );
-    SW_EXPECT_TRUE( pollAll( NetChannelType::ReliableOrdered ) == ( vector<int32>{ 1, 3 } ) );
-    SW_EXPECT_TRUE( pollAll( NetChannelType::ReliableUnordered ).empty() );
+    SW_EXPECT_TRUE( pollAll( NetChannelKind::ReliableOrdered ) == ( vector<int32>{ 1, 3 } ) );
+    SW_EXPECT_TRUE( pollAll( NetChannelKind::ReliableUnordered ).empty() );
 
     // 순서 없음은 조각나지 않는다.
     SW_EXPECT_LOG( "Net.MessageTooLarge" ); // 조각 하나를 넘는 순서 없음 메시지는 오류와 함께 거절한다
     const vector<uint8> tooLarge( static_cast<size_t>( NetConnection::kMaxSingleMessageSize + 1 ), 0 );
-    SW_EXPECT_FALSE( sender.sendMessage( NetChannelType::ReliableUnordered, tooLarge.data(), static_cast<int32>( tooLarge.size() ) ) );
+    SW_EXPECT_FALSE( sender.sendMessage( NetChannelKind::ReliableUnordered, tooLarge.data(), static_cast<int32>( tooLarge.size() ) ) );
 }
 
 /**
@@ -591,7 +591,7 @@ SW_TEST_CASE( NetConnectionTest, UnreliableMessagesExpireAfterWaitingTooLong )
     for ( int32 index = 0; index < 3; ++index )
     {
         const vector<uint8> buffer = NetTestUtil::makeMessage( index );
-        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::Unreliable, buffer.data(), 4 ) );
+        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::Unreliable, buffer.data(), 4 ) );
     }
     BitWriter starved;
     sender.writePacket( 0.0, starved, 0 ); // 대역폭 토큰을 다 쓴 전송 — 헤더만 나가고 메시지는 기다린다
@@ -604,20 +604,20 @@ SW_TEST_CASE( NetConnectionTest, UnreliableMessagesExpireAfterWaitingTooLong )
     BitReader lateReader( late.getBytes().data(), late.getByteCount() );
     SW_EXPECT_TRUE( receiver.readPacket( 0.5, lateReader ) );
     vector<uint8> buffer;
-    SW_EXPECT_FALSE( receiver.receiveMessage( NetChannelType::Unreliable, buffer ) );
+    SW_EXPECT_FALSE( receiver.receiveMessage( NetChannelKind::Unreliable, buffer ) );
 
     // 상한 안이면 그대로 간다.
     const vector<uint8> fresh = NetTestUtil::makeMessage( 7 );
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::Unreliable, fresh.data(), 4 ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::Unreliable, fresh.data(), 4 ) );
     BitWriter onTime;
     sender.writePacket( 0.6, onTime, 1200 );
     BitReader onTimeReader( onTime.getBytes().data(), onTime.getByteCount() );
     SW_EXPECT_TRUE( receiver.readPacket( 0.6, onTimeReader ) );
-    SW_REQUIRE_TRUE( receiver.receiveMessage( NetChannelType::Unreliable, buffer ) );
+    SW_REQUIRE_TRUE( receiver.receiveMessage( NetChannelKind::Unreliable, buffer ) );
     SW_EXPECT_EQUAL( 7, NetTestUtil::readMessageValue( buffer ) );
 
     // 상한 0 — 오래 기다려도 버리지 않는다.
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::Unreliable, fresh.data(), 4 ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::Unreliable, fresh.data(), 4 ) );
     BitWriter noRoom;
     sender.writePacket( 1.0, noRoom, 0, NetConnection::kDefaultAckRequestInterval, 0.0 );
     BitWriter muchLater;
@@ -644,24 +644,24 @@ SW_TEST_CASE( NetConnectionTest, SequencedKindIdleForHalfTheSequenceSpaceStillDe
     {
         BitReader reader( packet.getBytes().data(), packet.getByteCount() );
         SW_EXPECT_TRUE( receiver.readPacket( 0.1, reader ) );
-        while ( receiver.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) )
+        while ( receiver.receiveMessage( NetChannelKind::UnreliableSequenced, buffer ) )
         {
             if ( buffer[0] == poseOld[0] )
                 listReceived.push_back( buffer );
         }
     };
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, poseOld.data(), 2 ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::UnreliableSequenced, poseOld.data(), 2 ) );
     BitWriter firstPacket;
     sender.writePacket( 0.0, firstPacket, 300 );
     deliver( firstPacket );
     for ( int32 packet = 0; packet < kOtherKindPacketCount; ++packet )
     {
-        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, snapshot.data(), 2 ) );
+        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::UnreliableSequenced, snapshot.data(), 2 ) );
         BitWriter other; // 패킷 번호가 이어지게 받는 쪽도 읽는다(멀리 건너뛴 패킷은 받는 쪽이 거절한다)
         sender.writePacket( 0.0, other, 300 );
         deliver( other );
     }
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, poseNew.data(), 2 ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::UnreliableSequenced, poseNew.data(), 2 ) );
     BitWriter lastPacket;
     sender.writePacket( 0.0, lastPacket, 300 );
     deliver( lastPacket );
@@ -677,7 +677,7 @@ SW_TEST_CASE( NetConnectionTest, TimedOutResendsBackOffExponentially )
 {
     NetConnection       sender;
     const vector<uint8> message = NetTestUtil::makeMessage( 7, 8 );
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
     // 3 초 동안 0.02 초마다 보내고 아무것도 확인되지 않는다. 시한 0.1 초를 두 배씩 — 0.1 · 0.3 · 0.7 · 1.5 · 3.1 초에 다시 싣는다(넷). 늘리지 않으면 스물아홉 번이다.
     for ( int32 step = 0; step <= 150; ++step )
     {
@@ -716,7 +716,7 @@ SW_TEST_CASE( NetConnectionTest, ResendDelayWaitsOutRttJitter )
 
     time += 2.0;
     const vector<uint8> message = NetTestUtil::makeMessage( 99, 8 );
-    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
     sendTo( sender, receiver, time, time, false ); // 잃었다
     const uint64 resentBefore = sender.getStats()._resentMessageCount;
     sendTo( sender, receiver, time + 0.7, time + 0.7, false ); // 평균 RTT(0.4) + 50 ms 는 지났지만 흔들림 안이다

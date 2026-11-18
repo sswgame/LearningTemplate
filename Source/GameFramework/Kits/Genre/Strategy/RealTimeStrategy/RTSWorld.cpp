@@ -49,7 +49,7 @@ namespace sw
                 io.value( order._buildCell );
                 serializeUnitID( io, order._targetUnit );
                 io.value( order._arriveRadius );
-                io.enumValue( order._type, RTSOrderType::Hold );
+                io.enumValue( order._type, RTSOrderKind::Hold );
                 io.flag( bFlowField );
                 io.check( 0.0f <= order._arriveRadius );
                 if ( io.isReading() )
@@ -103,7 +103,7 @@ namespace sw
                 io.value( unit._resourceLeft );
                 io.value( unit._cargoAmount );
                 io.value( unit._supplyReserved );
-                io.enumValue( unit._cargoType, RTSResourceType::None );
+                io.enumValue( unit._cargoType, RTSResourceKind::None );
                 io.enumValue( unit._gatherPhase, RTSGatherPhase::Returning );
                 io.value( unit._bAlive );
                 io.value( unit._bHasRally );
@@ -405,7 +405,7 @@ namespace sw
                     return RTSUnitID{};
                 for ( const RTSUnit& other : _listUnit )
                 {
-                    const bool bGasAtCell = other._bAlive && other.isResource() && other._pDef->_resourceType == RTSResourceType::Gas && other._cell == cell;
+                    const bool bGasAtCell = other._bAlive && other.isResource() && other._pDef->_resourceType == RTSResourceKind::Gas && other._cell == cell;
                     if ( bGasAtCell )
                         linkedResource = other._id;
                 }
@@ -747,7 +747,7 @@ namespace sw
             unit._agent.stop();
             return;
         }
-        if ( unit._listOrder.front()._type == RTSOrderType::Gather )
+        if ( unit._listOrder.front()._type == RTSOrderKind::Gather )
             unit._gatherPhase = unit._cargoAmount > 0 ? RTSGatherPhase::Returning : RTSGatherPhase::ToResource;
     }
 
@@ -758,7 +758,7 @@ namespace sw
             _flowParams.release( order._pFlowField );
             order._pFlowField = nullptr;
         }
-        if ( order._type == RTSOrderType::Gather || order._type == RTSOrderType::Build )
+        if ( order._type == RTSOrderKind::Gather || order._type == RTSOrderKind::Build )
         {
             RTSUnit* pTarget = findUnitMutable( order._targetUnit );
             if ( pTarget != nullptr && pTarget->_harvester == unit._id )
@@ -795,7 +795,7 @@ namespace sw
         if ( pUnit->isMobile() == false )
             return RTSCommandResult::CannotDo;
         RTSOrder order;
-        order._type   = RTSOrderType::Move;
+        order._type   = RTSOrderKind::Move;
         order._target = target;
         return pushOrder( *pUnit, order, bQueue );
     }
@@ -808,7 +808,7 @@ namespace sw
         if ( pUnit->isMobile() == false )
             return RTSCommandResult::CannotDo;
         RTSOrder order;
-        order._type   = pUnit->_pDef->canAttack() ? RTSOrderType::AttackMove : RTSOrderType::Move;
+        order._type   = pUnit->_pDef->canAttack() ? RTSOrderKind::AttackMove : RTSOrderKind::Move;
         order._target = target;
         return pushOrder( *pUnit, order, bQueue );
     }
@@ -822,7 +822,7 @@ namespace sw
         if ( pUnit->isMobile() == false || canAttack( *pUnit, *pTarget ) == false )
             return RTSCommandResult::CannotDo;
         RTSOrder order;
-        order._type       = RTSOrderType::Attack;
+        order._type       = RTSOrderKind::Attack;
         order._targetUnit = targetID;
         order._target     = pTarget->_position;
         return pushOrder( *pUnit, order, bQueue );
@@ -836,12 +836,12 @@ namespace sw
             return RTSCommandResult::InvalidUnit;
         if ( pUnit->_pDef->_bWorker == SW_FALSE )
             return RTSCommandResult::CannotDo;
-        const bool bMinerals  = pTarget->isResource() && pTarget->_pDef->_resourceType == RTSResourceType::Minerals;
+        const bool bMinerals  = pTarget->isResource() && pTarget->_pDef->_resourceType == RTSResourceKind::Minerals;
         const bool bExtractor = pTarget->_pDef->_bExtractor && pTarget->_owner == pUnit->_owner && pTarget->isConstructed();
         if ( bMinerals == false && bExtractor == false )
             return RTSCommandResult::CannotDo;
         RTSOrder order;
-        order._type       = RTSOrderType::Gather;
+        order._type       = RTSOrderKind::Gather;
         order._targetUnit = assetID;
         order._target     = pTarget->_position;
         return pushOrder( *pUnit, order, bQueue );
@@ -862,7 +862,7 @@ namespace sw
         if ( canPlaceBuilding( buildingID, cell, workerID ) == false )
             return RTSCommandResult::InvalidPlacement;
         RTSOrder order;
-        order._type      = RTSOrderType::Build;
+        order._type      = RTSOrderKind::Build;
         order._buildID   = buildingID;
         order._buildCell = cell;
         order._target    = computeFootprintCenter( cell, pDef->_footprint );
@@ -877,7 +877,7 @@ namespace sw
         if ( pUnit->isMobile() == false )
             return RTSCommandResult::CannotDo;
         RTSOrder order;
-        order._type   = RTSOrderType::Hold;
+        order._type   = RTSOrderKind::Hold;
         order._target = pUnit->_position;
         return pushOrder( *pUnit, order, false );
     }
@@ -914,7 +914,7 @@ namespace sw
                 if ( bShouldAssistBuild )
                 {
                     RTSOrder order;
-                    order._type       = RTSOrderType::Build;
+                    order._type       = RTSOrderKind::Build;
                     order._buildID    = pTarget->_pDef->_id;
                     order._buildCell  = pTarget->_cell;
                     order._targetUnit = targetID;
@@ -946,7 +946,7 @@ namespace sw
             if ( pUnit == nullptr || pUnit->isMobile() == false )
                 continue;
             RTSOrder order;
-            order._type         = bAttackMove && pUnit->_pDef->canAttack() ? RTSOrderType::AttackMove : RTSOrderType::Move;
+            order._type         = bAttackMove && pUnit->_pDef->canAttack() ? RTSOrderKind::AttackMove : RTSOrderKind::Move;
             order._target       = target;
             order._arriveRadius = listUnit.size() > 1 ? arriveRadius : 0.0f;
             if ( bUseField && isGroundUnitCommand( *pUnit ) )
@@ -1023,10 +1023,10 @@ namespace sw
         unit._agent.stop();
         RTSPlayer& player = _listPlayer[static_cast<size_t>( unit._owner )];
         if ( player._pWallet != nullptr )
-            player._pWallet->add( unit._cargoType == RTSResourceType::Gas ? _settings._gasCurrency : _settings._mineralCurrency, unit._cargoAmount );
+            player._pWallet->add( unit._cargoType == RTSResourceKind::Gas ? _settings._gasCurrency : _settings._mineralCurrency, unit._cargoAmount );
         pushEvent( RTSEvent::Kind::ResourcesDeposited, unit._owner, unit._id, unit._pDef->_id, unit._cargoAmount );
         unit._cargoAmount = 0;
-        unit._cargoType   = RTSResourceType::None;
+        unit._cargoType   = RTSResourceKind::None;
         unit._gatherPhase = RTSGatherPhase::ToResource;
         unit._repathTimer.clear();
     }
@@ -1063,7 +1063,7 @@ namespace sw
         if ( pTarget == nullptr )
         {
             // 다 캔 광물이면 둘레의 다른 광물로 옮긴다. 정제소가 부서졌으면 끝낸다.
-            const RTSUnitID nextID = findNearestResource( order._target, RTSResourceType::Minerals, _settings._resourceSearchRadius );
+            const RTSUnitID nextID = findNearestResource( order._target, RTSResourceKind::Minerals, _settings._resourceSearchRadius );
             if ( nextID.isValid() == false )
             {
                 finishOrder( unit );
@@ -1106,7 +1106,7 @@ namespace sw
                 {
                     const RTSUnit* pOther       = findUnit( otherID );
                     const bool     bFreeMineral = pOther != nullptr && pOther != pTarget && pOther->isResource() &&
-                                              pOther->_pDef->_resourceType == RTSResourceType::Minerals && findUnit( pOther->_harvester ) == nullptr;
+                                              pOther->_pDef->_resourceType == RTSResourceKind::Minerals && findUnit( pOther->_harvester ) == nullptr;
                     if ( bFreeMineral )
                     {
                         order._targetUnit = otherID;
@@ -1305,7 +1305,7 @@ namespace sw
             }
             for ( const RTSOrder& order : unit._listOrder )
             {
-                count += order._type == RTSOrderType::Build && order._buildID == defID && order._targetUnit.isValid() == false ? 1 : 0;
+                count += order._type == RTSOrderKind::Build && order._buildID == defID && order._targetUnit.isValid() == false ? 1 : 0;
             }
         }
         return count;
@@ -1332,7 +1332,7 @@ namespace sw
             // 같은 셀 위치에 같은 크기의 빈 가스 간헐천이 있을 때만 놓을 수 있다.
             for ( const RTSUnit& unit : _listUnit )
             {
-                const bool bNotMatchingGas = unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RTSResourceType::Gas || unit._cell != cell ||
+                const bool bNotMatchingGas = unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RTSResourceKind::Gas || unit._cell != cell ||
                                              unit._pDef->_footprint != footprint;
                 if ( bNotMatchingGas )
                     continue;
@@ -1375,7 +1375,7 @@ namespace sw
             bool    bFound       = false;
             for ( const RTSUnit& unit : _listUnit )
             {
-                const bool bNotGasResource = unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RTSResourceType::Gas;
+                const bool bNotGasResource = unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RTSResourceKind::Gas;
                 if ( bNotGasResource )
                     continue;
                 const float32 distance = float3::getHorizontalDistance( nearPosition, unit._position );
@@ -1421,7 +1421,7 @@ namespace sw
         return false;
     }
 
-    RTSUnitID RTSWorld::findNearestResource( const float3& position, RTSResourceType type, float32 maxDistance ) const
+    RTSUnitID RTSWorld::findNearestResource( const float3& position, RTSResourceKind type, float32 maxDistance ) const
     {
         RTSUnitID bestID{};
         float32   bestDistance = maxDistance;
@@ -1591,7 +1591,7 @@ namespace sw
         _listNeighborScratch.clear();
         // 채취하는 일꾼은 서로 밀지 않는다. 스타크래프트처럼 광물 앞에 모여도 된다.
         const RTSOrder* pOrder = unit.findOrder();
-        if ( pOrder == nullptr || pOrder->_type != RTSOrderType::Gather )
+        if ( pOrder == nullptr || pOrder->_type != RTSOrderKind::Gather )
         {
             queryUnits( unit._position, unit._pDef->_radius * 2.0f, _listQueryScratch );
             for ( const RTSUnitID otherID : _listQueryScratch )
@@ -1601,7 +1601,7 @@ namespace sw
                 if ( bSkipOtherUnit )
                     continue;
                 const RTSOrder* pOtherOrder = pOther->findOrder();
-                if ( pOtherOrder != nullptr && pOtherOrder->_type == RTSOrderType::Gather )
+                if ( pOtherOrder != nullptr && pOtherOrder->_type == RTSOrderKind::Gather )
                     continue;
                 _listNeighborScratch.push_back( pOther->_position );
             }
@@ -1622,10 +1622,10 @@ namespace sw
         RTSOrder& order = unit._listOrder.front();
         switch ( order._type )
         {
-            case RTSOrderType::Move:
-            case RTSOrderType::AttackMove:
+            case RTSOrderKind::Move:
+            case RTSOrderKind::AttackMove:
             {
-                if ( order._type == RTSOrderType::AttackMove )
+                if ( order._type == RTSOrderKind::AttackMove )
                 {
                     if ( findUnit( unit._attackTarget ) == nullptr )
                         unit._attackTarget = findAutoTarget( unit, unit._pDef->_sight );
@@ -1655,7 +1655,7 @@ namespace sw
                     finishOrder( unit );
                 return;
             }
-            case RTSOrderType::Attack:
+            case RTSOrderKind::Attack:
             {
                 if ( findUnit( order._targetUnit ) == nullptr )
                 {
@@ -1665,7 +1665,7 @@ namespace sw
                 unit._attackTarget = order._targetUnit;
                 return;
             }
-            case RTSOrderType::Hold:
+            case RTSOrderKind::Hold:
             {
                 if ( unit._agent.isMoving() )
                     unit._agent.stop();
@@ -1674,12 +1674,12 @@ namespace sw
                     unit._attackTarget = findAutoTarget( unit, unit._pDef->_range );
                 return;
             }
-            case RTSOrderType::Gather:
+            case RTSOrderKind::Gather:
             {
                 updateGather( unit, order, deltaTime );
                 return;
             }
-            case RTSOrderType::Build:
+            case RTSOrderKind::Build:
             {
                 updateBuild( unit, order, deltaTime );
                 return;
@@ -1702,7 +1702,7 @@ namespace sw
         }
         const float32   distance = computeEdgeDistance( unit, *pTarget );
         const RTSOrder* pOrder   = unit.findOrder();
-        const bool      bHold    = pOrder != nullptr && pOrder->_type == RTSOrderType::Hold;
+        const bool      bHold    = pOrder != nullptr && pOrder->_type == RTSOrderKind::Hold;
         if ( distance <= unit._pDef->_range )
         {
             if ( unit.isMobile() && unit._agent.isMoving() )
@@ -1715,7 +1715,7 @@ namespace sw
             }
             return;
         }
-        const bool bOrdered    = pOrder != nullptr && pOrder->_type == RTSOrderType::Attack;
+        const bool bOrdered    = pOrder != nullptr && pOrder->_type == RTSOrderKind::Attack;
         const bool bLostTarget = unit.isMobile() == false || bHold || ( bOrdered == false && distance > unit._pDef->_sight * 1.5f );
         if ( bLostTarget )
         {

@@ -71,9 +71,9 @@ namespace sw
                 const MaterialProperty* pProp = pParent != nullptr ? pParent->findProperty( name ) : nullptr;
                 if ( pProp == nullptr )
                     return true;
-                const MaterialPropertyType shaderType = pProp->_shaderType;
-                const bool                 bIsScalar  = shaderType == MaterialPropertyType::Float;
-                const bool                 bIsVector  = shaderType == MaterialPropertyType::Float2 || shaderType == MaterialPropertyType::Float3 || shaderType == MaterialPropertyType::Float4;
+                const MaterialPropertyKind shaderType = pProp->_shaderType;
+                const bool                 bIsScalar  = shaderType == MaterialPropertyKind::Float;
+                const bool                 bIsVector  = shaderType == MaterialPropertyKind::Float2 || shaderType == MaterialPropertyKind::Float3 || shaderType == MaterialPropertyKind::Float4;
                 if ( ( bScalar && bIsVector ) || ( bScalar == false && bIsScalar ) )
                 {
                     SW_LOG_ERROR_ID( "Material.ParameterShapeMismatch", "Material parameter '%#' is %# and cannot take a %# value", pProp->_name, MaterialPacking::typeToString( shaderType ),

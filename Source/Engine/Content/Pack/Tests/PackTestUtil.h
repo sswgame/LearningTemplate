@@ -24,7 +24,7 @@ namespace sw
         static constexpr uint64 kWriteWindowBytes = 4ull * kPackMinBlockSize;
 
         /** @brief 압축 없는 테스트 팩의 쓰기 설정입니다. */
-        static PackWriterDesc makeDesc( string_view mountDomain, PackCompressionType compression = PackCompressionType::None )
+        static PackWriterDesc makeDesc( string_view mountDomain, PackCompressionKind compression = PackCompressionKind::None )
         {
             PackWriterDesc desc;
             desc._mountDomain      = string{ mountDomain };

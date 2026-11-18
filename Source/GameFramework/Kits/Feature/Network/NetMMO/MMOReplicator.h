@@ -53,9 +53,9 @@ namespace sw
     /** @brief MMO 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetMMOMessage
     {
-        using Enter  = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
-        using Leave  = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
-        using Update = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelType::Unreliable, 4>; ///< 서버 → 클라이언트(비신뢰, 전달 통지). 통지 값은 서버 틱이다. 판 4: 갱신 확인 메시지 없이 전달 통지로 판정한다
+        using Enter  = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
+        using Leave  = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
+        using Update = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 4>; ///< 서버 → 클라이언트(비신뢰, 전달 통지). 통지 값은 서버 틱이다. 판 4: 갱신 확인 메시지 없이 전달 통지로 판정한다
         using Table  = NetMessageTable<NetKitMessageRange::kMMO, Enter, Leave, Update>;
 
         static constexpr uint8 kEnter  = Table::getKindOf<Enter>();

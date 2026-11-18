@@ -60,7 +60,7 @@
 #include "Engine/Renderer/Frame/Screen/FrameScreenRotation.h"
 #include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -164,7 +164,7 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "RT.Pass.execute" );
         // 타입은 로드 시점에 한 번 해석해 둔 값을 쓴다. 여기서 문자열을 다시 비교하면 디스패치와 PSO 생성이 서로 다른 표기를 받아 줄 여지가 생긴다.
-        const RenderPassType passType        = passDesc._type;
+        const RenderPassKind passType        = passDesc._type;
         const string_view    passName        = string_view( passDesc._name );
         const hashed_string& depthAttachment = passDesc._resolvedDepthAttachment;
 
@@ -200,7 +200,7 @@ namespace sw
         // 파이프라인에서 없는 첨부(핸들 0 은 백버퍼)를 열었다. 뎁스 로드 연산은 바인딩한 뎁스의 클리어 기록으로 정한다.
         const vector<RenderGraphPassDesc::ResolvedAttachment>& declaredColor = passDesc._listResolvedColorOutput;
 
-        const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
+        const RenderPassKindInfo& info = getRenderPassKindInfo( passType );
         // 로드가 막았어야 할 상태다(검증 3-1). 여기서는 그리지 않고 끝낸다 — 백버퍼에 그리는 것보다 낫다.
         const bool bMissingDeclaredColor = info.hasFlag( RenderPassTraitFlag::kDrawsDeclaredColor ) && declaredColor.empty();
         SW_ASSERT( bMissingDeclaredColor == false );
@@ -215,7 +215,7 @@ namespace sw
         {
             switch ( passType )
             {
-                case RenderPassType::Shadow:
+                case RenderPassKind::Shadow:
                 {
                     // 클리어 값은 실제로 바인딩하는 뎁스 첨부의 선언에서 읽는다(이름 ShadowMap 으로 찾지 않는다).
                     // 깊이 첨부의 역할이 그릴 타일을 고른다 — ShadowMap 이면 방향광 캐스케이드, LocalShadowMap 이면 점광 · 스폿 타일(아틀라스 둘, 감사 RN-4).
@@ -232,144 +232,144 @@ namespace sw
                     context._pCmd->endRenderPass();
                     break;
                 }
-                case RenderPassType::DepthPrepass:
+                case RenderPassKind::DepthPrepass:
                 {
                     beginDepthOnlyPass( context, passDepth, getColorLoadFor( passDepth ) );
-                    drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::DepthPrepass ), input._bTransparentBatch );
+                    drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassKind::DepthPrepass ), input._bTransparentBatch );
                     context._pCmd->endRenderPass();
                     _bHasExecutedDepthPrepass.store( 1 );
                     break;
                 }
-                case RenderPassType::ForwardOpaque:
-                case RenderPassType::ForwardOnlyOpaque:
+                case RenderPassKind::ForwardOpaque:
+                case RenderPassKind::ForwardOnlyOpaque:
                 {
                     executeForwardOpaquePass( input );
                     break;
                 }
-                case RenderPassType::GBuffer:
+                case RenderPassKind::GBuffer:
                 {
                     executeGBufferPass( input );
                     break;
                 }
-                case RenderPassType::Transparent:
+                case RenderPassKind::Transparent:
                 {
                     executeTransparentPass( input );
                     break;
                 }
-                case RenderPassType::Compute:
+                case RenderPassKind::Compute:
                 {
                     executeComputePass( input );
                     break;
                 }
-                case RenderPassType::SceneColorCopy:
+                case RenderPassKind::SceneColorCopy:
                 {
                     executeSceneColorCopyPass( input );
                     break;
                 }
-                case RenderPassType::MeshOutline:
+                case RenderPassKind::MeshOutline:
                 {
                     executeMeshOutlinePass( input );
                     break;
                 }
-                case RenderPassType::HighlightOutline:
-                case RenderPassType::HighlightSense:
+                case RenderPassKind::HighlightOutline:
+                case RenderPassKind::HighlightSense:
                 {
                     executeHighlightPass( input );
                     break;
                 }
-                case RenderPassType::Sky:
+                case RenderPassKind::Sky:
                 {
                     executeSkyPass( input );
                     break;
                 }
-                case RenderPassType::Fog:
+                case RenderPassKind::Fog:
                 {
                     executeFogPass( input );
                     break;
                 }
-                case RenderPassType::ScreenSpaceReflection:
+                case RenderPassKind::ScreenSpaceReflection:
                 {
                     executeScreenSpaceReflectionPass( input );
                     break;
                 }
-                case RenderPassType::LensFlare:
+                case RenderPassKind::LensFlare:
                 {
                     executeLensFlarePass( input );
                     break;
                 }
-                case RenderPassType::PostProcessMaterial:
+                case RenderPassKind::PostProcessMaterial:
                 {
                     executePostProcessMaterialPass( input );
                     break;
                 }
-                case RenderPassType::Decal:
+                case RenderPassKind::Decal:
                 {
                     executeDecalPass( input );
                     break;
                 }
-                case RenderPassType::TAA:
+                case RenderPassKind::TAA:
                 {
                     executeTAAPass( input );
                     break;
                 }
-                case RenderPassType::Distortion:
+                case RenderPassKind::Distortion:
                 {
                     executeDistortionPass( input );
                     break;
                 }
-                case RenderPassType::DistortionApply:
+                case RenderPassKind::DistortionApply:
                 {
                     executeDistortionApplyPass( input );
                     break;
                 }
-                case RenderPassType::Present:
+                case RenderPassKind::Present:
                 {
                     executePresentPass( input );
                     break;
                 }
-                case RenderPassType::Canvas:
+                case RenderPassKind::Canvas:
                 {
                     executeCanvasPass( input );
                     break;
                 }
                 // 실행 코드가 없는 타입이다. 패스 서술이 없는 일반 풀스크린 패스이거나, PSO 슬롯만 있는 엔진 내부 타입이다.
-                case RenderPassType::Invalid:
-                case RenderPassType::Lighting:
-                case RenderPassType::SSAO:
-                case RenderPassType::ScreenSpaceGI:
-                case RenderPassType::ContactShadow:
-                case RenderPassType::Bloom:
-                case RenderPassType::BloomDownsample:
-                case RenderPassType::Outline:
-                case RenderPassType::Tonemap:
-                case RenderPassType::DepthOfField:
-                case RenderPassType::MotionBlur:
-                case RenderPassType::MotionBlurTileMax:
-                case RenderPassType::MotionBlurNeighborMax:
-                case RenderPassType::SceneDepthCopy:
-                case RenderPassType::ForwardOpaqueNoDepthWrite:
-                case RenderPassType::GPUCull:
-                case RenderPassType::InstanceAnimation:
-                case RenderPassType::InstanceSort:
-                case RenderPassType::MeshMorph:
-                case RenderPassType::MeshSkin:
-                case RenderPassType::LightGrid:
-                case RenderPassType::VFXSimulation:
-                case RenderPassType::VFXMeshInstance:
-                case RenderPassType::VFXParticleSort:
-                case RenderPassType::DepthHistory:
-                case RenderPassType::AutoExposure:
-                case RenderPassType::UpscaleEasu:
-                case RenderPassType::UpscaleRcas:
-                case RenderPassType::OcclusionTiles:
-                case RenderPassType::VolumetricFog:
-                case RenderPassType::CanvasMarker:
-                case RenderPassType::ShadowCacheRestore:
-                case RenderPassType::NanCheck:
-                case RenderPassType::IndirectArgsReset:
-                case RenderPassType::ScreenRotation:
-                case RenderPassType::ProbeUpdate:
-                case RenderPassType::DeferredTileClassify:
+                case RenderPassKind::Invalid:
+                case RenderPassKind::Lighting:
+                case RenderPassKind::SSAO:
+                case RenderPassKind::ScreenSpaceGI:
+                case RenderPassKind::ContactShadow:
+                case RenderPassKind::Bloom:
+                case RenderPassKind::BloomDownsample:
+                case RenderPassKind::Outline:
+                case RenderPassKind::Tonemap:
+                case RenderPassKind::DepthOfField:
+                case RenderPassKind::MotionBlur:
+                case RenderPassKind::MotionBlurTileMax:
+                case RenderPassKind::MotionBlurNeighborMax:
+                case RenderPassKind::SceneDepthCopy:
+                case RenderPassKind::ForwardOpaqueNoDepthWrite:
+                case RenderPassKind::GPUCull:
+                case RenderPassKind::InstanceAnimation:
+                case RenderPassKind::InstanceSort:
+                case RenderPassKind::MeshMorph:
+                case RenderPassKind::MeshSkin:
+                case RenderPassKind::LightGrid:
+                case RenderPassKind::VFXSimulation:
+                case RenderPassKind::VFXMeshInstance:
+                case RenderPassKind::VFXParticleSort:
+                case RenderPassKind::DepthHistory:
+                case RenderPassKind::AutoExposure:
+                case RenderPassKind::UpscaleEasu:
+                case RenderPassKind::UpscaleRcas:
+                case RenderPassKind::OcclusionTiles:
+                case RenderPassKind::VolumetricFog:
+                case RenderPassKind::CanvasMarker:
+                case RenderPassKind::ShadowCacheRestore:
+                case RenderPassKind::NanCheck:
+                case RenderPassKind::IndirectArgsReset:
+                case RenderPassKind::ScreenRotation:
+                case RenderPassKind::ProbeUpdate:
+                case RenderPassKind::DeferredTileClassify:
                 {
                     SW_LOG_WARNING_ID( "FramePassExecutor.UnknownPassType", "Unknown pass type '%#' in '%#'", passType, passName );
                     break;
@@ -415,7 +415,7 @@ namespace sw
         registerDeclaredInputs( context, passDesc );
         _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
         // 디퍼드 조명은 타일 분류를 쓸 수 있으면 종류마다 타일 사각형만 그린다 — 아니면 아래 풀스크린 한 장(모든 엽)이다(능력이 정한 길, 같은 그림).
-        if ( input._passType == RenderPassType::Lighting && executeTiledLighting( input, *pTarget ) )
+        if ( input._passType == RenderPassKind::Lighting && executeTiledLighting( input, *pTarget ) )
             return;
 
         // PSO 가 0이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대체할 PSO 는 테이블이 정한 것만 쓴다(Tonemap 은 Present).
@@ -443,7 +443,7 @@ namespace sw
 
         using Internal                        = FramePassExecutorInternal;
         const FrameViewTarget&       view     = *_pActiveView;
-        const RHIPipelineStateHandle classify = _psoManager.getEnginePSO( RenderPassType::DeferredTileClassify );
+        const RHIPipelineStateHandle classify = _psoManager.getEnginePSO( RenderPassKind::DeferredTileClassify );
         bool                         bReady   = classify != 0 && view._deferredTileList.isValid() && view._deferredTileArgs.isValid() && _pDevice->supportsNativeBindlessSampling();
         RHIPipelineStateHandle       arrTilePSO[kDeferredTileClassCount]{};
         for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
@@ -563,7 +563,7 @@ namespace sw
         }
         // 패스 상수(시드가 이미 채운 값)에서 효과의 값을 옮긴다 — 컴퓨트 PSO 에는 PassCB 가 묶이지 않는다.
         uint32       valueSize     = 0;
-        const bool   bDepthOfField = passDesc._type == RenderPassType::DepthOfField;
+        const bool   bDepthOfField = passDesc._type == RenderPassKind::DepthOfField;
         const uint8* pParam        = context._passValues.find( bDepthOfField ? passConstantNames()._cameraLens : passConstantNames()._bloomParams, valueSize );
         if ( pParam != nullptr && valueSize >= sizeof( constants._arrParam ) )
             Memory::copy( constants._arrParam, pParam, sizeof( constants._arrParam ) );
@@ -687,9 +687,9 @@ namespace sw
         }
         if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, colorCount, passDepth, getColorLoadFor( passDepth ) ) == false )
             return;
-        const bool bDepthAlreadyWritten = input._passType == RenderPassType::ForwardOpaque && _bHasExecutedDepthPrepass.load() != 0 &&
-                                          _psoManager.getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0;
-        const RHIPipelineStateHandle psoForward = bDepthAlreadyWritten ? _psoManager.getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) : _psoManager.getEnginePSO( input._passType );
+        const bool bDepthAlreadyWritten = input._passType == RenderPassKind::ForwardOpaque && _bHasExecutedDepthPrepass.load() != 0 &&
+                                          _psoManager.getEnginePSO( RenderPassKind::ForwardOpaqueNoDepthWrite ) != 0;
+        const RHIPipelineStateHandle psoForward = bDepthAlreadyWritten ? _psoManager.getEnginePSO( RenderPassKind::ForwardOpaqueNoDepthWrite ) : _psoManager.getEnginePSO( input._passType );
         drawSceneMeshes( context, psoForward, input._bTransparentBatch );
         context._pCmd->endRenderPass();
     }
@@ -711,7 +711,7 @@ namespace sw
         const bool           bHasTargets     = pAlbedoTarget != nullptr && pNormalTarget != nullptr && findTransient( *pNormalTarget ) != 0 &&
                                  pMaterialTarget != nullptr && findTransient( *pMaterialTarget ) != 0 && pVelocityTarget != nullptr && findTransient( *pVelocityTarget ) != 0 &&
                                  pCustomTarget != nullptr && findTransient( *pCustomTarget ) != 0 && pSceneTarget != nullptr && findTransient( *pSceneTarget ) != 0;
-        if ( bHasTargets == false || _psoManager.getEnginePSO( RenderPassType::GBuffer ) == 0 )
+        if ( bHasTargets == false || _psoManager.getEnginePSO( RenderPassKind::GBuffer ) == 0 )
             return;
         const hashed_string&      albedoTarget = *pAlbedoTarget;
         const hashed_string       arrNames[]   = { albedoTarget, *pNormalTarget, *pMaterialTarget, *pVelocityTarget, *pCustomTarget, *pSceneTarget };
@@ -725,7 +725,7 @@ namespace sw
         registerDeclaredInputs( context, input._passDesc );
         if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, GBufferLayout::kAttachmentCount, passDepth, getColorLoadFor( passDepth ) ) == false )
             return;
-        drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
+        drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassKind::GBuffer ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
     }
 
@@ -764,14 +764,14 @@ namespace sw
             return;
         // 메시 투명 배치와 입자(방출기 하나 = 후보 하나)를 그 뷰의 한 순서로 섞어 그린다(GPUSceneBuilder::populateParticleBatches · computeViewTransparentOrders).
         SW_ASSERT( input._bTransparentBatch );
-        drawTransparentQueue( context, _psoManager.getEnginePSO( RenderPassType::Transparent ) );
+        drawTransparentQueue( context, _psoManager.getEnginePSO( RenderPassKind::Transparent ) );
         context._pCmd->endRenderPass();
     }
 
     void FramePassExecutor::executeSceneColorCopyPass( const PassExecuteInput& input )
     {
         // 원본 색(SourceColor 역할 입력)을 선언한 컬러 출력으로 그대로 복사한다 — 셰이더도 PSO 도 없다. 반투명 패스는 장면 색에 섞으며 쓰므로 그 색을 읽을 수 없다(물의 굴절).
-        // 둘은 같은 크기 · 형식이어야 한다(파이프라인이 같은 형식으로 선언한다). 계약(`RenderPassTypeInfo`)이 SourceColor 를 필수로 검사했다.
+        // 둘은 같은 크기 · 형식이어야 한다(파이프라인이 같은 형식으로 선언한다). 계약(`RenderPassKindInfo`)이 SourceColor 를 필수로 검사했다.
         // 읽는 패스가 이번 뷰에 모두 비활성이면 뷰 패스 고르기가 출력을 빼고 이 패스를 비활성으로 적는다(`kCullWhenUnconsumed`) — 실행 입구가 거르지만 출력이 없는 경우도 지킨다(풀 해상도 HDR 복사 한 번이 매 프레임 0.27 ms 였다).
         const hashed_string& copyTarget = input._declaredColor[0]._attachment;
         if ( activePool().isForwarded( copyTarget ) )
@@ -802,7 +802,7 @@ namespace sw
         const float4         sceneClear  = getTargetClearColor( colorTarget );
         if ( beginColorPass( context, colorTarget, passDepth, sceneClear, getColorLoadFor( colorTarget ), getColorLoadFor( passDepth ) ) == false )
             return;
-        drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::MeshOutline ), input._bTransparentBatch );
+        drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassKind::MeshOutline ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
     }
 
@@ -814,7 +814,7 @@ namespace sw
         if ( ( viewModeInfo._bWireframe && viewModeInfo._bOverlay == false ) || viewModeInfo._bShowsBuffer )
             return;
         // 이 패스의 방식으로 강조된 인스턴스가 없으면 그리지 않는다 — 그려도 정점 셰이더가 모두 버린다(씬의 모든 정점을 헛돈다).
-        const InstanceHighlightStyle style = input._passType == RenderPassType::HighlightSense ? InstanceHighlightStyle::Sense : InstanceHighlightStyle::Outline;
+        const InstanceHighlightStyle style = input._passType == RenderPassKind::HighlightSense ? InstanceHighlightStyle::Sense : InstanceHighlightStyle::Outline;
         if ( _state._gpuScene.hasHighlightStyle( style ) == false )
             return;
         FramePassContext&            context     = input._context;
@@ -839,7 +839,7 @@ namespace sw
         // 뎁스나 선언한 컬러 출력이 없으면 그리지 않는다(장면을 통째로 덮거나 백버퍼에 그린다 — 그런 파이프라인은 검증이 거부한다).
         // 앞의 불투명 패스가 색과 깊이를 이미 썼으므로 둘 다 불러온다(지우지 않는다).
         const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
-        const RHIPipelineStateHandle skyPSO       = _psoManager.getEnginePSO( RenderPassType::Sky );
+        const RHIPipelineStateHandle skyPSO       = _psoManager.getEnginePSO( RenderPassKind::Sky );
         const bool                   bShowsSky    = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
         const bool                   bHasTargets  = input._passDepth.empty() == false;
         const bool                   bDrawsSky    = _state._bHasFrameSky == SW_TRUE && bHasTargets && skyPSO != 0 && bShowsSky;
@@ -872,7 +872,7 @@ namespace sw
     {
         // 화면 왜곡 누적 — 왜곡 머티리얼(MATERIAL_DISTORTION)의 반투명 배치가 화면 UV 오프셋을 선언한 출력에 더한다(가산 블렌드, 깊이는 테스트만).
         // 왜곡 배치가 없으면 기록하지 않는다 — 출력은 지워지지도 않지만 읽는 적용 패스도 같은 판정으로 돌지 않는다(쓰지 않을 때 비용이 없다).
-        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::Distortion );
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassKind::Distortion );
         if ( pso == 0 )
             return;
         FramePassContext&    context = input._context;
@@ -887,7 +887,7 @@ namespace sw
     {
         // 화면 왜곡 적용 — 장면 색 사본을 왜곡 오프셋만큼 비껴 읽어 장면 색에 쓴다(distortion_apply.hlsl). 왜곡이 없으면 출력(장면 색)이 이미 맞아 아무것도 하지 않는다
         // — 일반 풀스크린 패스의 복사 길을 타면 왜곡 없는 프레임에도 전 화면을 한 번 읽고 쓴다.
-        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::DistortionApply );
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassKind::DistortionApply );
         if ( pso == 0 )
             return;
         FramePassContext&    context = input._context;
@@ -905,7 +905,7 @@ namespace sw
         // 씬에 안개가 없거나 표면 값 보기(Normals, Depth, Overdraw)와 와이어프레임에서는 그리지 않는다 — 값 위를 덮는다. 후처리를 끈 뷰(CCTV)도 안개는 그린다(장면의 일이다).
         // 출력이 곧 입력의 위(블렌드)라 "그리지 않음" 은 아무것도 하지 않는 것이다 — 일반 풀스크린 패스의 복사 · 지우기 길을 타면 장면이 지워진다.
         const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
-        const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassType::Fog );
+        const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassKind::Fog );
         const bool                   bShowsScene  = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
         const bool                   bDraws       = _fog.hasFrameFog() && pso != 0 && bShowsScene;
         if ( bDraws == false )
@@ -941,7 +941,7 @@ namespace sw
     {
         // 화면 공간 반사다. 맞은 자리의 장면 색 사본을 선언한 컬러 출력(장면 색) 위에 프리멀티플라이 블렌드한다(screen_space_reflection.hlsl).
         // 세기 0 · 후처리를 끈 뷰(CCTV) · 표면 값 보기(usesPostProcess 가 거른다)에서는 그리지 않는다 — 출력이 입력의 위(블렌드)라 "그리지 않음" 은 아무것도 하지 않는 것이다(안개와 같다).
-        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::ScreenSpaceReflection );
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassKind::ScreenSpaceReflection );
         if ( pso == 0 )
             return;
 
@@ -1024,7 +1024,7 @@ namespace sw
         // DBuffer 데칼이다(언리얼 DBuffer). 깊이 프리패스 뒤 · 베이스 패스 앞에 DBufferA · B · C 를 지우고(클리어 (0, 0, 0, 1) = 덮지 않음) 데칼마다 상자 뒷면을 그려 프리멀티플라이로 쌓는다.
         // 데칼이 없는 뷰 · 표면 값 보기는 뷰 패스 고르기가 이 패스를 빼고 출력도 없다(베이스 패스가 걸지 않는다). 여기 온 뒤에는 PSO 가 없어도 지우기는 한다 —
         // 출력이 있는데 지우지 않으면 베이스 패스가 지난 프레임 값을 섞는다.
-        const RHIPipelineStateHandle                    pso       = _psoManager.getEnginePSO( RenderPassType::Decal );
+        const RHIPipelineStateHandle                    pso       = _psoManager.getEnginePSO( RenderPassKind::Decal );
         const vector<FrameRenderState::FrameDecalDraw>& listDecal = _state._listFrameDecalDraw;
         FramePassContext&                               context   = input._context;
         registerDeclaredInputs( context, input._passDesc );
@@ -1068,7 +1068,7 @@ namespace sw
     {
         // 스프라이트는 주 시점의 투영으로 펼쳤다 — 추가 뷰 · 표면 값 보기에서는 그리지 않는다(값 위를 덮는다). 출력 위에 더하므로 "그리지 않음" 은 아무것도 하지 않는 것이다.
         const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
-        const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassType::LensFlare );
+        const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassKind::LensFlare );
         const LensFlareSpriteBuffer& sprites      = _state._lensFlare;
         const bool                   bDraws       = pso != 0 && sprites.getSpriteCount() > 0 && _pActiveView == &_state._mainView && viewModeInfo._bShowsBuffer == false && viewModeInfo._bWireframe == false;
         if ( bDraws == false )
@@ -1143,7 +1143,7 @@ namespace sw
         if ( beginColorPass( context, taaTarget, hashed_string{}, _state._clearColor, getColorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
         {
             // TAA PSO 가 없으면(셋업이 알렸다) 원본을 복사해 TAA 없이 넘기지 않는다 — drawFullscreen 이 그리지 않는다.
-            drawFullscreen( context, _psoManager.getEnginePSO( RenderPassType::TAA ) );
+            drawFullscreen( context, _psoManager.getEnginePSO( RenderPassKind::TAA ) );
             context._pCmd->endRenderPass();
         }
 
@@ -1177,7 +1177,7 @@ namespace sw
                                                                                                   : RHIRenderPassLoadOp::Clear;
         const float4&             outputClear = upscaleZoom > 0 ? FrameRendererUtil::kBlackClear : _state._clearColor;
         // PSO 는 대상의 실제 포맷으로 고른다. 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다. 셋업에 없으면 findOutputPSO 가 멈춘다(복사로 대신하지 않는다).
-        const RHIPipelineStateHandle psoBlit = _psoManager.findOutputPSO( RenderPassType::Present, target._format );
+        const RHIPipelineStateHandle psoBlit = _psoManager.findOutputPSO( RenderPassKind::Present, target._format );
         if ( src != 0 )
         {
             registerPassTexture( context, attachmentNames()._sourceColor, srcName );
@@ -1253,7 +1253,7 @@ namespace sw
         const bool          bDraw   = _pActiveView == _pMainOutputCanvasView && _state._canvasFrame.getMainOutput().isEmpty() == false && target._width > 0 && target._height > 0;
         if ( bDraw )
         {
-            const RHIPipelineStateHandle psoCanvas = _psoManager.findOutputPSO( RenderPassType::Canvas, target._format ); // 셋업에 없으면 멈춘다(다른 포맷의 PSO 로 대신하지 않는다)
+            const RHIPipelineStateHandle psoCanvas = _psoManager.findOutputPSO( RenderPassKind::Canvas, target._format ); // 셋업에 없으면 멈춘다(다른 포맷의 PSO 로 대신하지 않는다)
             RHIRenderPassBeginInfo       beginInfo{};
             beginInfo._bBindColor        = SW_TRUE;
             beginInfo._arrColorTarget[0] = target._texture;
@@ -1286,7 +1286,7 @@ namespace sw
         if ( bDrawOverlay == false )
             return;
         const RHIFormat              format = _pDevice->getBackBufferFormat();
-        const RHIPipelineStateHandle pso    = _psoManager.findOutputPSO( RenderPassType::Canvas, format ); // 백버퍼 포맷의 캔버스 PSO 는 셋업이 늘 만든다
+        const RHIPipelineStateHandle pso    = _psoManager.findOutputPSO( RenderPassKind::Canvas, format ); // 백버퍼 포맷의 캔버스 PSO 는 셋업이 늘 만든다
         RHIRenderPassBeginInfo       beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;
         beginInfo._arrColorTarget[0] = screen; // 화면 — 캡처를 옮긴 뒤이거나 처음부터 화면에 그린 프레임이다
@@ -1316,7 +1316,7 @@ namespace sw
             return;
         const GPUPassScope passScope{ *context._pCmd, pass._graphName.view() };
         context._resourceRegistry.reset();
-        context._passType = RenderPassType::Invalid;
+        context._passType = RenderPassKind::Invalid;
         registerLightBuffer( context );
         registerSurfaceDeformLayer( context );
         ExtensionViewInfo view{};

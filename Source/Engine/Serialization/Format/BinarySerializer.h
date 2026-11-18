@@ -144,14 +144,14 @@ namespace sw
         [[nodiscard]] static bool serializeCompressed( const void*             pInstance,
                                                        const TypeInfo&         typeInfo,
                                                        vector<uint8>&          outListBuffer,
-                                                       CompressionCodecType    codecType = CompressionCodecType::RLE,
+                                                       CompressionCodecKind    codecType = CompressionCodecKind::RLE,
                                                        const SerializeContext& context   = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief Archive 에 압축 바이너리로 직렬화합니다. */
         [[nodiscard]] static bool serializeCompressed( const void*             pInstance,
                                                        const TypeInfo&         typeInfo,
                                                        Archive&                outArchive,
-                                                       CompressionCodecType    codecType = CompressionCodecType::RLE,
+                                                       CompressionCodecKind    codecType = CompressionCodecKind::RLE,
                                                        const SerializeContext& context   = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief 압축된 바이너리 스트림을 풀어 객체로 역직렬화합니다. */

@@ -11,16 +11,16 @@ namespace sw
     {
         switch ( _type )
         {
-            case BlackboardValueType::Float:
+            case BlackboardValueKind::Float:
                 return _float;
-            case BlackboardValueType::Int:
-            case BlackboardValueType::Bool:
+            case BlackboardValueKind::Int:
+            case BlackboardValueKind::Bool:
                 return static_cast<float32>( _int );
-            case BlackboardValueType::Object:
+            case BlackboardValueKind::Object:
                 return _object != 0 ? 1.0f : 0.0f;
-            case BlackboardValueType::Vector:
+            case BlackboardValueKind::Vector:
                 return _vector.getLength();
-            case BlackboardValueType::None:
+            case BlackboardValueKind::None:
                 return 0.0f;
         }
         return 0.0f;
@@ -30,17 +30,17 @@ namespace sw
     {
         switch ( _type )
         {
-            case BlackboardValueType::Float:
+            case BlackboardValueKind::Float:
                 return to_string( _float );
-            case BlackboardValueType::Int:
+            case BlackboardValueKind::Int:
                 return to_string( _int );
-            case BlackboardValueType::Bool:
+            case BlackboardValueKind::Bool:
                 return _int != 0 ? string( "true" ) : string( "false" );
-            case BlackboardValueType::Vector:
+            case BlackboardValueKind::Vector:
                 return "(" + to_string( _vector._x ) + ", " + to_string( _vector._y ) + ", " + to_string( _vector._z ) + ")";
-            case BlackboardValueType::Object:
+            case BlackboardValueKind::Object:
                 return "#" + to_string( _object );
-            case BlackboardValueType::None:
+            case BlackboardValueKind::None:
                 return string( "-" );
         }
         return string( "-" );
@@ -64,7 +64,7 @@ namespace sw
     {
     }
 
-    BlackboardValue& Blackboard::acquireValue( const hashed_string& key, BlackboardValueType type )
+    BlackboardValue& Blackboard::acquireValue( const hashed_string& key, BlackboardValueKind type )
     {
         BlackboardValue& value = _mapValue[key];
         value._type            = type;
@@ -74,33 +74,33 @@ namespace sw
 
     void Blackboard::setFloat( const hashed_string& key, float32 value )
     {
-        acquireValue( key, BlackboardValueType::Float )._float = value;
+        acquireValue( key, BlackboardValueKind::Float )._float = value;
     }
 
     void Blackboard::setInt( const hashed_string& key, int32 value )
     {
-        acquireValue( key, BlackboardValueType::Int )._int = value;
+        acquireValue( key, BlackboardValueKind::Int )._int = value;
     }
 
     void Blackboard::setBool( const hashed_string& key, bool bValue )
     {
-        acquireValue( key, BlackboardValueType::Bool )._int = bValue ? 1 : 0;
+        acquireValue( key, BlackboardValueKind::Bool )._int = bValue ? 1 : 0;
     }
 
     void Blackboard::setVector( const hashed_string& key, const float3& value )
     {
-        acquireValue( key, BlackboardValueType::Vector )._vector = value;
+        acquireValue( key, BlackboardValueKind::Vector )._vector = value;
     }
 
     void Blackboard::setObject( const hashed_string& key, uint64 objectID )
     {
-        acquireValue( key, BlackboardValueType::Object )._object = objectID;
+        acquireValue( key, BlackboardValueKind::Object )._object = objectID;
     }
 
     bool Blackboard::copyValue( const hashed_string& from, const hashed_string& to )
     {
         const BlackboardValue* pSource = findValue( from );
-        if ( pSource == nullptr || pSource->_type == BlackboardValueType::None )
+        if ( pSource == nullptr || pSource->_type == BlackboardValueKind::None )
             return false;
         const BlackboardValue copied     = *pSource; // 대상 칸을 만들며 표가 다시 자리를 잡아도 원본을 잃지 않게 먼저 베낀다
         acquireValue( to, copied._type ) = copied;
@@ -125,17 +125,17 @@ namespace sw
         if ( pValue == nullptr )
             return false;
         // 오브젝트는 0(없음)이면, 참거짓은 false 면 "없다" 로 본다 — 언리얼 Is Set 과 같다.
-        if ( pValue->_type == BlackboardValueType::Object )
+        if ( pValue->_type == BlackboardValueKind::Object )
             return pValue->_object != 0;
-        if ( pValue->_type == BlackboardValueType::Bool )
+        if ( pValue->_type == BlackboardValueKind::Bool )
             return pValue->_int != 0;
-        return pValue->_type != BlackboardValueType::None;
+        return pValue->_type != BlackboardValueKind::None;
     }
 
     optional<float32> Blackboard::getFloat( const hashed_string& key ) const
     {
         const BlackboardValue* pValue = findValue( key );
-        if ( pValue == nullptr || pValue->_type == BlackboardValueType::None )
+        if ( pValue == nullptr || pValue->_type == BlackboardValueKind::None )
             return nullopt;
         return pValue->computeNumeric();
     }
@@ -145,9 +145,9 @@ namespace sw
         const BlackboardValue* pValue = findValue( key );
         if ( pValue == nullptr )
             return nullopt;
-        if ( pValue->_type == BlackboardValueType::Int || pValue->_type == BlackboardValueType::Bool )
+        if ( pValue->_type == BlackboardValueKind::Int || pValue->_type == BlackboardValueKind::Bool )
             return pValue->_int;
-        if ( pValue->_type == BlackboardValueType::Float )
+        if ( pValue->_type == BlackboardValueKind::Float )
             return static_cast<int32>( pValue->_float );
         return nullopt;
     }
@@ -155,7 +155,7 @@ namespace sw
     optional<bool> Blackboard::getBool( const hashed_string& key ) const
     {
         const BlackboardValue* pValue = findValue( key );
-        if ( pValue == nullptr || pValue->_type == BlackboardValueType::None )
+        if ( pValue == nullptr || pValue->_type == BlackboardValueKind::None )
             return nullopt;
         return pValue->computeNumeric() != 0.0f;
     }
@@ -163,7 +163,7 @@ namespace sw
     optional<float3> Blackboard::getVector( const hashed_string& key ) const
     {
         const BlackboardValue* pValue = findValue( key );
-        if ( pValue == nullptr || pValue->_type != BlackboardValueType::Vector )
+        if ( pValue == nullptr || pValue->_type != BlackboardValueKind::Vector )
             return nullopt;
         return pValue->_vector;
     }
@@ -171,7 +171,7 @@ namespace sw
     optional<uint64> Blackboard::getObject( const hashed_string& key ) const
     {
         const BlackboardValue* pValue = findValue( key );
-        if ( pValue == nullptr || pValue->_type != BlackboardValueType::Object )
+        if ( pValue == nullptr || pValue->_type != BlackboardValueKind::Object )
             return nullopt;
         return pValue->_object;
     }

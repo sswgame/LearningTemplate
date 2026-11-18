@@ -173,7 +173,7 @@ namespace sw
         int32          _connectionID{ constant::invalid_index::kInt32 };
         int32          _offset{ 0 };
         int32          _size{ 0 };
-        NetChannelType _channel{ NetChannelType::ReliableOrdered };
+        NetChannelKind _channel{ NetChannelKind::ReliableOrdered };
     };
 } // namespace sw
 
@@ -219,14 +219,14 @@ namespace sw
          * @details 신뢰 메시지를 조용히 버리면 받는 쪽의 순서가 영영 끊긴다(락스텝 입력 · 체크섬이 멈춘다, 감사 N-3) — 결과를 버려도 안전하게 닫는다. 창이 찬 것을
          *          역압으로 직접 다루는 쪽(대기열을 든 중계 · 관심 영역 복제)은 `trySendMessage` 를 쓴다.
          */
-        [[nodiscard]] virtual bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) = 0;
-        [[nodiscard]] bool         sendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
+        [[nodiscard]] virtual bool sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) = 0;
+        [[nodiscard]] bool         sendMessage( int32 connectionID, NetChannelKind channel, const vector<uint8>& buffer )
         {
             return sendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
         /** @brief `sendMessage` 와 같되 신뢰 창이 차면 닫지 않고 false 만 돌려줍니다. 부른 쪽이 남은 것을 들고 다음 틱에 다시 보낸다. */
-        [[nodiscard]] virtual bool trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) = 0;
-        [[nodiscard]] bool         trySendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
+        [[nodiscard]] virtual bool trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) = 0;
+        [[nodiscard]] bool         trySendMessage( int32 connectionID, NetChannelKind channel, const vector<uint8>& buffer )
         {
             return trySendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
@@ -236,7 +236,7 @@ namespace sw
          */
         [[nodiscard]] virtual bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) = 0;
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다(-1 이면 제외 없음). 반환값은 보낸 수입니다. */
-        virtual int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = constant::invalid_index::kInt32 ) = 0;
+        virtual int32 broadcast( NetChannelKind channel, const uint8* pData, int32 size, int32 exceptID = constant::invalid_index::kInt32 ) = 0;
         virtual void  disconnect( int32 connectionID )                                                                                      = 0;
         /** @brief 쌓인 연결 사건과 받은 메시지를 모두 꺼냅니다(`NetEndpoint::pollInbound` 와 같은 약속 — 사건이 메시지보다 앞에 온다). */
         virtual void               pollInbound( NetInbound& outInbound )                                        = 0;
@@ -283,7 +283,7 @@ namespace sw
         static constexpr int32 kMaxPacketsPerSend    = 8;   ///< 한 번의 전송에서 연결마다 보내는 패킷 상한. 대역폭 토큰이 남고 보낼 것이 있으면 여러 개를 보낸다.
 
         /** @brief 패킷 본문의 첫 3비트로, 핸드셰이크 단계와 데이터와 끊김을 구분합니다. */
-        enum class PacketType : uint8
+        enum class PacketKind : uint8
         {
             ConnectRequest = 0,
             Challenge,
@@ -336,26 +336,26 @@ namespace sw
         /** @brief `update` 스레드 역할을 놓습니다(그 스레드가 끝날 때) — 다음에 `update` 를 부르는 스레드가 받는다. */
         void releaseUpdateThread() { _updateThread.unbind(); }
 
-        [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) SW_EXCLUDES_LOCK( _mutex ) override;
-        [[nodiscard]] bool trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) SW_EXCLUDES_LOCK( _mutex ) override;
-        [[nodiscard]] bool trySendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
+        [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) SW_EXCLUDES_LOCK( _mutex ) override;
+        [[nodiscard]] bool trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) SW_EXCLUDES_LOCK( _mutex ) override;
+        [[nodiscard]] bool trySendMessage( int32 connectionID, NetChannelKind channel, const vector<uint8>& buffer )
         {
             return trySendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
         [[nodiscard]] bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) SW_EXCLUDES_LOCK( _mutex ) override;
-        [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
+        [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelKind channel, const vector<uint8>& buffer )
         {
             return sendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
-        int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = constant::invalid_index::kInt32 ) SW_EXCLUDES_LOCK( _mutex ) override;
+        int32 broadcast( NetChannelKind channel, const uint8* pData, int32 size, int32 exceptID = constant::invalid_index::kInt32 ) SW_EXCLUDES_LOCK( _mutex ) override;
         /**
          * @brief 지금까지 보내기 큐에 넣은 메시지의 종류별 셈을 @p outTable 에 더합니다(`sendMessage` · `broadcast` 가 연결마다 센다 — 받은 쪽 셈은 `NetMessageRouter::getKindStats`).
          * @details 큐에 넣은 것을 센다. 대역폭에 막혀 늦게 나가거나 다시 보낸 바이트는 연결 통계(`NetConnectionStats`)의 몫이다. 잠금을 잡고 표 하나(4 KiB)를 더한다 — `net.stats` 처럼 느리게 묻는 쪽이 쓴다.
          */
         void addSentKindStats( NetMessageKindStatsTable& outTable ) const SW_EXCLUDES_LOCK( _mutex ) override;
         /** @brief 받은 메시지 하나를 꺼냅니다. 연결 순서대로, 채널은 신뢰 순서, 신뢰 순서 없음, 순서만, 비신뢰 순(채널 값 순)으로 확인합니다. */
-        [[nodiscard]] bool receiveMessage( int32& outConnectionID, NetChannelType& outChannel, vector<uint8>& outBuffer ) SW_EXCLUDES_LOCK( _mutex );
+        [[nodiscard]] bool receiveMessage( int32& outConnectionID, NetChannelKind& outChannel, vector<uint8>& outBuffer ) SW_EXCLUDES_LOCK( _mutex );
         void               disconnect( int32 connectionID ) SW_EXCLUDES_LOCK( _mutex ) override;
         void               disconnectAll() SW_EXCLUDES_LOCK( _mutex );
         void               pollEvents( vector<NetEndpointEvent>& outListEvent ) SW_EXCLUDES_LOCK( _mutex );
@@ -412,7 +412,7 @@ namespace sw
         /** @brief 지금 @p nowSeconds 에서 @p nextUpdateTime 까지 잘 시간입니다. 0 과 @p maxWaitSeconds 사이로 자른다(지난 기한은 0, 기한 없음은 상한). 순수 함수다. */
         static float64 computeWaitSeconds( float64 nowSeconds, float64 nextUpdateTime, float64 maxWaitSeconds );
         /** @brief 데이터그램(헤더 포함)의 패킷 종류를 미리 확인합니다. 체크섬은 보지 않으며, 너무 짧으면 Count 를 반환합니다(위조 패킷 필터와 진단용). */
-        static PacketType peekPacketType( const uint8* pData, int32 size );
+        static PacketKind peekPacketKind( const uint8* pData, int32 size );
         /** @brief 패킷 체크섬입니다(헤더 값을 먼저 섞은 FNV-1a). 테스트와 진단 도구가 고친 패킷의 체크섬을 다시 맞출 때 씁니다. */
         static uint32 computePacketChecksum( uint32 headerID, const uint8* pBody, int32 size );
 
@@ -468,7 +468,7 @@ namespace sw
             uint64          _valueB{ 0 };
         };
         /** @brief 버전과 상관없는 고정 헤더(`NetProtocol::kHandshakeID`)로 싸는 패킷입니다. 요청과 거절뿐이며, 두 패킷의 배치는 버전이 바뀌어도 그대로 둡니다. */
-        static bool isHandshakeFramed( PacketType type ) { return type == PacketType::ConnectRequest || type == PacketType::Denied; }
+        static bool isHandshakeFramed( PacketKind type ) { return type == PacketKind::ConnectRequest || type == PacketKind::Denied; }
 
         /**
          * @brief 잠금 안에서 슬롯 · 연결 값을 확인하고 잠금 밖에서 열 암호화 데이터그램 하나입니다(감사 N-8).
@@ -483,7 +483,7 @@ namespace sw
             int32                                 _slotIndex{ 0 };
             int32                                 _plainOffset{ 0 };
             int32                                 _plainSize{ 0 };
-            PacketType                            _type{ PacketType::Payload };
+            PacketKind                            _type{ PacketKind::Payload };
         };
 
         /** @brief `update` 스레드가 쥔 슬롯 하나의 받는 방향 암호 상태와 그 연결 값입니다. */
@@ -506,7 +506,7 @@ namespace sw
         /** @brief 암호화하지 않은 데이터 패킷의 연결 값을 확인하고 본문을 연결에 넘깁니다. */
         void handlePayloadPacket( float64 nowSeconds, optional<int32> slotIndex, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 제어 패킷을 종류별로 처리합니다(핸드셰이크 · 거절 · 끊기). */
-        void handleControlPacket( PacketType type, const ControlPacket& packet, BitReader& reader ) SW_REQUIRES_LOCK( _mutex, _updateThread );
+        void handleControlPacket( PacketKind type, const ControlPacket& packet, BitReader& reader ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 서버가 연결 요청에 답합니다. 프로토콜이 다르면 거절, 빈 슬롯이 없으면 가득 참, 아니면 챌린지를 보냅니다. */
         void handleConnectRequest( const ControlPacket& packet ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 서버가 챌린지 응답을 확인하고 슬롯을 할당해 수락합니다. 이미 연결된 주소의 같은 응답이면 수락만 다시 보냅니다. */
@@ -519,7 +519,7 @@ namespace sw
         void requestWake( float64 dueTime ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 남은 깨움이 있으면 지우고 깨울 전송을, 없으면 nullptr 를 돌려줍니다. 깨우기(시스템 호출)는 잠금을 놓은 뒤 한다. */
         INetTransport* consumeWakeRequest() SW_REQUIRES_LOCK( _mutex );
-        void           sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB ) SW_REQUIRES_LOCK( _mutex );
+        void           sendControl( const NetAddress& to, PacketKind type, uint64 valueA, uint64 valueB ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 연결 요청을 거절합니다. 이유, 이 엔드포인트의 프로토콜 ID, 요청에 든 클라이언트 솔트(위조 거절을 걸러 내는 값)를 싣습니다. */
         void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 클라이언트가 챌린지 응답을 보냅니다. 암호화 방식이면 공개 키를, 토큰 결속이면 토큰과 증명 태그를 함께 싣습니다. */
@@ -531,9 +531,9 @@ namespace sw
         /** @brief 클라이언트가 수락의 공개 키와 키 확인 태그를 읽고 키를 만듭니다. 틀리면 연결을 닫고 false 를 반환합니다. */
         [[nodiscard]] bool acceptSecureAccepted( BitReader& reader, NetEndpointSlot& slot, int32 slotIndex, uint32 serverIndex ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 암호화된 데이터 패킷과 끊기 패킷을 만듭니다(@p pPlain 을 봉인). 보낸 데이터그램의 바이트 수를 반환하며, 실패하면 0 입니다. */
-        int32 sendSealed( NetEndpointSlot& slot, PacketType type, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
+        int32 sendSealed( NetEndpointSlot& slot, PacketKind type, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 암호화 방식의 데이터 패킷과 끊기 패킷(헤더 8바이트 뒤의 본문)의 슬롯 · 연결 값을 확인해 `_listSealed` 에 넣습니다. 여는 것은 잠금 밖(`openSealedPackets`)이다. */
-        void queueSealedPacket( float64 nowSeconds, PacketType type, optional<int32> slotIndex, const uint8* pBody, int32 bodySize ) SW_REQUIRES_LOCK( _mutex, _updateThread );
+        void queueSealedPacket( float64 nowSeconds, PacketKind type, optional<int32> slotIndex, const uint8* pBody, int32 bodySize ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 잠금 밖에서 연 데이터그램 하나를 처리합니다. 슬롯이 그사이 닫혔거나 다른 연결이면 버립니다. */
         void handleOpenedPacket( float64 nowSeconds, const SealedDatagram& sealed ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 키를 막 만든 슬롯의 받는 방향 상태를 `update` 스레드 소유(`_listReceiveCrypt`)로 옮깁니다. 슬롯에는 보내는 쪽만 남는다. */
@@ -571,7 +571,7 @@ namespace sw
             Close,
             Report
         };
-        bool sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size, WindowFullPolicy policy ) SW_REQUIRES_LOCK( _mutex );
+        bool sendMessageLocked( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size, WindowFullPolicy policy ) SW_REQUIRES_LOCK( _mutex );
         void takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished ) SW_REQUIRES_LOCK( _mutex );
 
         // 잠금 밖에서 부른다.

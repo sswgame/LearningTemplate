@@ -218,7 +218,7 @@ namespace sw
         _listRequest.push_back( Request{ connectionID, netID } );
     }
 
-    int32 DestructionReplicationServer::broadcast( NetChannelType channel )
+    int32 DestructionReplicationServer::broadcast( NetChannelKind channel )
     {
         const int32 connectedCount = _pHost->getConnectedCount();
         const int32 sentCount      = _writer.broadcast( *_pHost, channel );
@@ -286,7 +286,7 @@ namespace sw
             writer.writeBool( bHasPose );
             if ( bHasPose )
                 DestructionReplicationInternal::writeExactPose( writer, listGroupPose[index]->_position, listGroupPose[index]->_rotation );
-            (void)broadcast( NetChannelType::ReliableUnordered ); // 받는 쪽이 번호로 순서를 맞춘다. 앞 이벤트를 잃어도 뒤 이벤트가 기다리지 않는다
+            (void)broadcast( NetChannelKind::ReliableUnordered ); // 받는 쪽이 번호로 순서를 맞춘다. 앞 이벤트를 잃어도 뒤 이벤트가 기다리지 않는다
             ++_stats._eventMessageCount;
         }
         entry._sentEventCount = static_cast<uint32>( listEvent.size() );
@@ -311,7 +311,7 @@ namespace sw
             ++_stats._sendRejectedCount;
             return true;
         }
-        if ( _writer.send( *_pHost, connectionID, NetChannelType::ReliableOrdered ) == false )
+        if ( _writer.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered ) == false )
         {
             ++_stats._sendRejectedCount;
             return false;
@@ -423,7 +423,7 @@ namespace sw
             // 움직이는 자세는 위에서 범위로 걸렀다. 그래도 하나라도 쓰지 못했으면 메시지가 어긋났으므로 보내지 않는다.
             if ( bPosesWritten == false )
                 continue;
-            (void)broadcast( bReliable ? NetChannelType::ReliableOrdered : NetChannelType::Unreliable );
+            (void)broadcast( bReliable ? NetChannelKind::ReliableOrdered : NetChannelKind::Unreliable );
             ++_stats._poseMessageCount;
             _stats._restPoseCount += bReliable ? count : 0u;
         }
@@ -441,7 +441,7 @@ namespace sw
         const uint64 hash = component.getState().computeStateHash();
         writer.writeUint32( static_cast<uint32>( hash & 0xFFFFFFFFull ) );
         writer.writeUint32( static_cast<uint32>( hash >> 32 ) );
-        (void)broadcast( NetChannelType::ReliableOrdered );
+        (void)broadcast( NetChannelKind::ReliableOrdered );
         ++_stats._hashMessageCount;
     }
 } // namespace sw
@@ -785,7 +785,7 @@ namespace sw
             return;
         BitWriter& writer = _writer.begin( NetDestructionMessage::kSnapshotRequest );
         writer.writeVarUint( entry._netID );
-        if ( _writer.send( *_pHost, 0, NetChannelType::ReliableOrdered ) )
+        if ( _writer.send( *_pHost, 0, NetChannelKind::ReliableOrdered ) )
             _stats._sentBytes += static_cast<uint64>( _writer.getByteCount() );
     }
 

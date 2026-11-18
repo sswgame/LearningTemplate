@@ -292,7 +292,7 @@ namespace sw::editor
         }
 
         FileDialogParams params{};
-        params._type               = FileDialogParams::Type::Save;
+        params._type               = FileDialogParams::Kind::Save;
         params._title              = "Save Scene";
         params._description        = "Scene";
         params._bEnableMultiselect = false;

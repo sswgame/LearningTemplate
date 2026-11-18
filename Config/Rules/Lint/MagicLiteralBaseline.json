@@ -3,7 +3,7 @@
   "_files": {
     "Source/App/App.cpp": {"minus-one": 1, "float": 4},
     "Source/App/AppHeadlessTasks.cpp": {"integer": 2},
-    "Source/Core/Compression/CompressionCodecType.h": {"integer": 1},
+    "Source/Core/Compression/CompressionCodecKind.h": {"integer": 1},
     "Source/Core/Compression/CompressionStream.h": {"integer": 1},
     "Source/Core/Compression/RLECompressionCodec.cpp": {"integer": 3, "hex": 3},
     "Source/Core/Concurrency/DataRaceDetector.cpp": {"integer": 1},

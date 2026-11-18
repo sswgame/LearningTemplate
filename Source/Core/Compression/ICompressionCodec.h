@@ -1,9 +1,9 @@
 /**
  * @file ICompressionCodec.h
- * @brief 압축 코덱 인터페이스입니다. 코덱 식별자는 `CompressionCodecType.h` 입니다.
+ * @brief 압축 코덱 인터페이스입니다. 코덱 식별자는 `CompressionCodecKind.h` 입니다.
  */
 #pragma once
-#include "Core/Compression/CompressionCodecType.h"
+#include "Core/Compression/CompressionCodecKind.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -34,7 +34,7 @@ namespace sw
         /**
          * @brief 코덱 유형을 반환합니다.
          */
-        virtual CompressionCodecType getCodecType() const = 0;
+        virtual CompressionCodecKind getCodecType() const = 0;
 
         /**
          * @brief 사람이 읽을 수 있는 코덱 이름을 반환합니다.

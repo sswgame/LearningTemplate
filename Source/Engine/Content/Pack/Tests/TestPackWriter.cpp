@@ -56,7 +56,7 @@ SW_TEST_CASE( PackWriterTest, StreamedPackReadsBackEveryEntry )
 {
     const string                                   packPath  = test::makeScratchPath( "SwPackWriterTest.pack" );
     const vector<std::pair<string, vector<uint8>>> listEntry = Util::makeEntries();
-    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionType::Zlib ), listEntry ) );
+    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ), listEntry ) );
 
     PackReader reader;
     SW_REQUIRE_TRUE( reader.open( packPath ) );
@@ -116,7 +116,7 @@ SW_TEST_CASE( PackWriterTest, WriteResultHashEqualsHashOfTheFile )
     VectorUtil::sort( listEntry, []( const std::pair<string, vector<uint8>>& left, const std::pair<string, vector<uint8>>& right )
     { return PackStreamWriter::makePathHash( left.first ) < PackStreamWriter::makePathHash( right.first ); } );
     PackStreamWriter writer;
-    SW_REQUIRE_TRUE( writer.open( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionType::Zlib ) ).has_value() );
+    SW_REQUIRE_TRUE( writer.open( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ) ).has_value() );
     for ( std::pair<string, vector<uint8>>& entry : listEntry )
     {
         SW_REQUIRE_TRUE( writer.append( entry.first, PackEntryStorage::Blocks, std::move( entry.second ) ).has_value() );

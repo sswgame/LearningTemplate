@@ -165,7 +165,7 @@ namespace sw
 
         // 암호화한 팩은 받지 않는다. 풀 방법이 없으므로 플래그 · 방식을 보고 거절한다(평문으로 풀지 않는다).
         if ( ( _header._flags & static_cast<uint16>( PackFlag::Encrypted ) ) != 0 ||
-             static_cast<PackEncryptionType>( _header._encryptionType ) != PackEncryptionType::None )
+             static_cast<PackEncryptionKind>( _header._encryptionType ) != PackEncryptionKind::None )
         {
             const auto encryptionType = static_cast<uint32>( _header._encryptionType );
             closeLocked();
@@ -184,8 +184,8 @@ namespace sw
         }
 
 #if defined( SW_DO_CHECKS )
-        const auto compression = static_cast<PackCompressionType>( _header._compressionType ); // 헤더는 잠금 안에서 복사한다
-        const auto encryption  = static_cast<PackEncryptionType>( _header._encryptionType );
+        const auto compression = static_cast<PackCompressionKind>( _header._compressionType ); // 헤더는 잠금 안에서 복사한다
+        const auto encryption  = static_cast<PackEncryptionKind>( _header._encryptionType );
         const auto fileCount   = static_cast<uint32>( _header._fileCount );
 #endif
         lock.unlock(); // 잠금은 잎이다 — 안내 로그는 놓은 뒤에 쓴다
@@ -373,7 +373,7 @@ namespace sw
         outPlan._sliceSize        = static_cast<uint32>( length );
         // `Stored` 항목은 팩 코덱과 상관없이 블록의 저장 바이트가 원본이다 — 풀기 없이 복사만 한다.
         const bool bStored   = static_cast<PackEntryStorage>( entry.getStorageValue() ) == PackEntryStorage::Stored;
-        outPlan._compression = bStored ? PackCompressionType::None : static_cast<PackCompressionType>( _header._compressionType );
+        outPlan._compression = bStored ? PackCompressionKind::None : static_cast<PackCompressionKind>( _header._compressionType );
         outPlan._bVerifyCRC  = ( _header._flags & static_cast<uint16>( PackFlag::HasCRC32 ) ) != 0;
         outPlan._listBlock.assign( _listBlock.begin() + tableBegin, _listBlock.begin() + tableBegin + ( endBlock - firstBlock ) );
         outPlan._pDigestProvider = _pDigestProvider;
@@ -388,7 +388,7 @@ namespace sw
         outBytes.clear();
         // 블록 k(항목 안 번호 first + k)의 저장 바이트는 [끝(k-1), 끝(k)) 에서 계획의 시작(`_storedBegin`)을 뺀 자리다.
         ICompressionCodec* pCodec = nullptr;
-        if ( plan._compression != PackCompressionType::None )
+        if ( plan._compression != PackCompressionKind::None )
         {
             // 팩 종류 → 코덱 종류는 표 한 곳(`PackCompressionUtil::kArrCodecMapping`), 구현은 코덱 레지스트리가 든다.
             pCodec = PackCompressionUtil::findCodec( plan._compression );

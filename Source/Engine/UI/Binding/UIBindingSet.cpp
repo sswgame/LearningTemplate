@@ -333,13 +333,13 @@ namespace sw
         const TypeInfo&      type     = *widget.getTypeInfo();
         switch ( pDef->_type )
         {
-            case UserSettingType::Bool:
+            case UserSettingKind::Bool:
             {
                 outSourceKind = UIBindingValueKind::Bool;
                 break;
             }
-            case UserSettingType::Int:
-            case UserSettingType::Float:
+            case UserSettingKind::Int:
+            case UserSettingKind::Float:
             {
                 outSourceKind = UIBindingValueKind::Number;
                 if ( leafName == hashed_string( UIBindingSetInternal::kValueProperty ) )
@@ -350,7 +350,7 @@ namespace sw
                 }
                 break;
             }
-            case UserSettingType::Enum:
+            case UserSettingKind::Enum:
             {
                 // 콤보에서 고른 항목이면 선택지 순번을, 아니면 보일 텍스트(텍스트 키)를 쓴다.
                 const bool bIndex = leafName == hashed_string( UIBindingSetInternal::kSelectedIndexProperty ) &&
@@ -360,8 +360,8 @@ namespace sw
                     binding._optionList = UIBindingSetInternal::findOptionalPath( type, UIBindingSetInternal::kOptionListProperty );
                 break;
             }
-            case UserSettingType::KeyBinding:
-            case UserSettingType::String:
+            case UserSettingKind::KeyBinding:
+            case UserSettingKind::String:
             {
                 outSourceKind = UIBindingValueKind::Text;
                 break;
@@ -380,17 +380,17 @@ namespace sw
         const string_view text = pSettings->getValue( binding._sourceField );
         switch ( pDef->_type )
         {
-            case UserSettingType::Bool:
+            case UserSettingKind::Bool:
             {
                 bool bValue = false;
                 (void)StringUtil::tryParseBool( text, bValue ); // 값은 정규화되어 있다(true, false)
                 return UIBindingValue::makeBool( bValue );
             }
-            case UserSettingType::Int:
-            case UserSettingType::Float:
+            case UserSettingKind::Int:
+            case UserSettingKind::Float:
             {
                 // 범위를 값보다 먼저 쓴다. 위젯이 값을 범위로 제한하기 때문이다.
-                const bool bInteger = pDef->_type == UserSettingType::Int;
+                const bool bInteger = pDef->_type == UserSettingKind::Int;
                 UIBindingSetInternal::writeRange( binding._rangeMin, widget, pDef->_minValue, bInteger );
                 UIBindingSetInternal::writeRange( binding._rangeMax, widget, pDef->_maxValue, bInteger );
                 UIBindingSetInternal::writeRange( binding._rangeStep, widget, pDef->_step, bInteger );
@@ -398,7 +398,7 @@ namespace sw
                 (void)StringUtil::parseDouble( text, number ); // 값은 정규화되어 있다(가장 짧은 왕복 표기)
                 return UIBindingValue::makeNumber( number, bInteger );
             }
-            case UserSettingType::Enum:
+            case UserSettingKind::Enum:
             {
                 vector<UserSettingOption> listOption;
                 pSettings->collectOptions( binding._sourceField, listOption );
@@ -436,8 +436,8 @@ namespace sw
                 }
                 return UIBindingValue::makeNumber( static_cast<float64>( constant::invalid_index::kUint32 ), true );
             }
-            case UserSettingType::KeyBinding:
-            case UserSettingType::String:
+            case UserSettingKind::KeyBinding:
+            case UserSettingKind::String:
             {
                 return UIBindingValue::makeText( text );
             }
@@ -455,22 +455,22 @@ namespace sw
         binding._bDirty = SW_TRUE;
         switch ( pDef->_type )
         {
-            case UserSettingType::Bool:
+            case UserSettingKind::Bool:
             {
                 (void)_pSettings->setPendingBoolValue( binding._sourceField, value.toBool() );
                 break;
             }
-            case UserSettingType::Int:
+            case UserSettingKind::Int:
             {
                 (void)_pSettings->setPendingIntValue( binding._sourceField, static_cast<int32>( MathUtil::round( value.toNumber() ) ) );
                 break;
             }
-            case UserSettingType::Float:
+            case UserSettingKind::Float:
             {
                 (void)_pSettings->setPendingFloatValue( binding._sourceField, static_cast<float32>( value.toNumber() ) );
                 break;
             }
-            case UserSettingType::Enum:
+            case UserSettingKind::Enum:
             {
                 if ( value._kind != UIBindingValueKind::Number )
                 {
@@ -484,8 +484,8 @@ namespace sw
                     (void)_pSettings->setPendingValue( binding._sourceField, listOption[static_cast<uint32>( index )]._value );
                 break;
             }
-            case UserSettingType::KeyBinding:
-            case UserSettingType::String:
+            case UserSettingKind::KeyBinding:
+            case UserSettingKind::String:
             {
                 (void)_pSettings->setPendingValue( binding._sourceField, value.toText() );
                 break;

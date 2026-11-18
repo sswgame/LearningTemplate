@@ -150,7 +150,7 @@ SW_TEST_CASE( ReflectionEnumNamesTest, ContainerKindAndNetRoleNames )
  */
 SW_TEST_CASE( ReflectionEnumBitFlagTest, PlainSequentialEnumIsNotABitFlag )
 {
-    for ( const utf8* pName : { "sw::CameraRole", "sw::PackEncryptionType", "sw::PackCompressionType", "sw::SampleStatus" } )
+    for ( const utf8* pName : { "sw::CameraRole", "sw::PackEncryptionKind", "sw::PackCompressionKind", "sw::SampleStatus" } )
     {
         const sw::EnumInfo* pInfo = findEnum( pName );
         SW_REQUIRE_NOT_NULL( pInfo );

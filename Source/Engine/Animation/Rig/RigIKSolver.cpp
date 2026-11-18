@@ -62,7 +62,7 @@ namespace sw
                 for ( uint32 index = 0; index + 1 < count; ++index )
                 {
                     pose.aimBoneAt( listChainBone[index], listChainBone[index + 1], pPosition[index + 1] );
-                    if ( index < listLimit.size() && listLimit[index]._type != RigJointLimitType::None )
+                    if ( index < listLimit.size() && listLimit[index]._type != RigJointLimitKind::None )
                         RigIKSolver::applyJointLimit( pose, listChainBone[index], listLimit[index] );
                 }
             }
@@ -71,7 +71,7 @@ namespace sw
             {
                 for ( const RigJointLimit& limit : listLimit )
                 {
-                    if ( limit._type != RigJointLimitType::None )
+                    if ( limit._type != RigJointLimitKind::None )
                         return true;
                 }
                 return false;
@@ -216,7 +216,7 @@ namespace sw
                 if ( angle > settings._maxStepAngle )
                     delta = RigIKSolverInternal::scaleRotation( delta, settings._maxStepAngle / angle );
                 pose.rotateModel( joint, delta );
-                if ( index - 1 < listLimit.size() && listLimit[index - 1]._type != RigJointLimitType::None )
+                if ( index - 1 < listLimit.size() && listLimit[index - 1]._type != RigJointLimitKind::None )
                     applyJointLimit( pose, joint, listLimit[index - 1] );
             }
             if ( ( pose.getModelPosition( endBone ) - goal ).getLength() <= settings._tolerance )
@@ -287,13 +287,13 @@ namespace sw
 
     void RigIKSolver::applyJointLimit( RigPoseBuffer& pose, uint32 bone, const RigJointLimit& limit )
     {
-        if ( limit._type == RigJointLimitType::None )
+        if ( limit._type == RigJointLimitKind::None )
             return;
         const quaternion delta = ( limit._referenceRotation.inverse() * pose.getLocalRotation( bone ) ).normalize();
         quaternion       swing{};
         quaternion       twist{};
         quaternion       limited{};
-        if ( limit._type == RigJointLimitType::Cone )
+        if ( limit._type == RigJointLimitKind::Cone )
         {
             decomposeSwingTwist( delta, limit._boneAxis, swing, twist );
             if ( swing._w < 0.0f )

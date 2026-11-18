@@ -108,7 +108,7 @@ namespace sw::editor
             static void commandOpenScene()
             {
                 FileDialogParams params{};
-                params._type               = FileDialogParams::Type::Open;
+                params._type               = FileDialogParams::Kind::Open;
                 params._title              = "Open Scene";
                 params._description        = "Scene";
                 params._bEnableMultiselect = false;
@@ -280,7 +280,7 @@ namespace sw::editor
                     return;
                 }
                 FileDialogParams params{};
-                params._type                = FileDialogParams::Type::Open;
+                params._type                = FileDialogParams::Kind::Open;
                 params._title               = "Load Component Preset";
                 params._description         = "Component Preset";
                 params._bEnableMultiselect  = false;
@@ -303,7 +303,7 @@ namespace sw::editor
                     return;
                 }
                 FileDialogParams params{};
-                params._type                = FileDialogParams::Type::Save;
+                params._type                = FileDialogParams::Kind::Save;
                 params._title               = "Save Component Preset";
                 params._description         = "Component Preset";
                 params._bEnableMultiselect  = false;
@@ -322,7 +322,7 @@ namespace sw::editor
             template <AlignAxis TAxis>
             static void commandAlign( EditorTransaction& /*transaction*/ )
             {
-                EditorTransformCommands::alignSelectedObjects( TAxis, AlignType::Center );
+                EditorTransformCommands::alignSelectedObjects( TAxis, AlignKind::Center );
             }
 
             template <AlignAxis TAxis>

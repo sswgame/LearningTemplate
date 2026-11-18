@@ -643,7 +643,7 @@ SW_TEST_CASE( TradeServerTest, FeatureFlagBlocksRequests )
     SW_EXPECT_TRUE( rig.invite( kAliceSlot, "bob" )._result == TradeResult::Ok ); // 플래그 없음 = 켬
 
     RemoteConfigValue value;
-    value._type    = RemoteConfigValueType::Flag;
+    value._type    = RemoteConfigValueKind::Flag;
     value._integer = 0;
     ServiceAuditEntry audit;
     audit._actor   = "gm.0000000000000001";

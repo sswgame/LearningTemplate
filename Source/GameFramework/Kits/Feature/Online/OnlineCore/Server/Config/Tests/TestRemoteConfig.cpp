@@ -29,7 +29,7 @@ namespace
     RemoteConfigValue makeInteger( int64 value, bool bClientVisible )
     {
         RemoteConfigValue configValue;
-        configValue._type           = RemoteConfigValueType::Integer;
+        configValue._type           = RemoteConfigValueKind::Integer;
         configValue._integer        = value;
         configValue._bClientVisible = bClientVisible ? SW_TRUE : SW_FALSE;
         return configValue;
@@ -38,7 +38,7 @@ namespace
     RemoteConfigValue makeFlag( int32 rolloutBasisPoints )
     {
         RemoteConfigValue configValue;
-        configValue._type               = RemoteConfigValueType::Flag;
+        configValue._type               = RemoteConfigValueKind::Flag;
         configValue._integer            = 1;
         configValue._rolloutBasisPoints = rolloutBasisPoints;
         configValue._bClientVisible     = SW_TRUE;
@@ -65,7 +65,7 @@ SW_TEST_CASE( RemoteConfigTest, ReloadReadsValuesAndTheSnapshotHash )
     const uint64          emptyHash = writer.getSnapshotHash();
     writer.submitSet( front, "account.minimum_build.windows", makeInteger( 42, true ), makeAudit( 1 ) );
     RemoteConfigValue text;
-    text._type = RemoteConfigValueType::Text;
+    text._type = RemoteConfigValueKind::Text;
     text._text = "maintenance at 10:00";
     writer.submitSet( front, "notice.banner", text, makeAudit( 2 ) );
     (void)front.pollCompletions();
@@ -127,7 +127,7 @@ SW_TEST_CASE( RemoteConfigTest, ExperimentAssignsStableVariantsAndCountsThem )
     MemoryServiceStore    front{ &database };
     RemoteConfig          server;
     RemoteConfigValue     experiment;
-    experiment._type           = RemoteConfigValueType::Experiment;
+    experiment._type           = RemoteConfigValueKind::Experiment;
     experiment._text           = "control:5000;cheap_gems:5000";
     experiment._bClientVisible = SW_TRUE;
     server.submitSet( front, "exp.gem_price", experiment, makeAudit( 1 ) );
@@ -249,7 +249,7 @@ SW_TEST_CASE( RemoteConfigTest, InvalidKeysAndValuesAreRejectedBeforeTheWrite )
     MemoryServiceStore    front{ &database };
     RemoteConfig          config;
     RemoteConfigValue     tooLong;
-    tooLong._type = RemoteConfigValueType::Text;
+    tooLong._type = RemoteConfigValueKind::Text;
     tooLong._text.assign( static_cast<size_t>( RemoteConfigValue::kMaxTextSize ) + 1, 'x' );
     SW_EXPECT_LOG( "RemoteConfig.ChangeRejected" );
     config.submitSet( front, "Bad.Key", makeInteger( 1, true ), makeAudit( 1 ) );

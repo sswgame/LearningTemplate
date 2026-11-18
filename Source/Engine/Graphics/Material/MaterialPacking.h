@@ -19,19 +19,19 @@ namespace sw
     /** @brief 머티리얼 프로퍼티 타입 · 크기 · 정렬, 셰이더 리플렉션 타입 대응, 불리언 글 읽기, 프로퍼티 값을 상수 버퍼 바이트로 묶기를 담당합니다. */
     struct SW_API MaterialPacking
     {
-        static MaterialPropertyType stringToType( string_view str, uint32& outSize );
+        static MaterialPropertyKind stringToType( string_view str, uint32& outSize );
 
-        static const utf8* typeToString( MaterialPropertyType type );
+        static const utf8* typeToString( MaterialPropertyKind type );
 
-        static uint32 computePackedSizeOf( MaterialPropertyType type );
+        static uint32 computePackedSizeOf( MaterialPropertyKind type );
 
-        static bool isTextureType( MaterialPropertyType type );
+        static bool isTextureType( MaterialPropertyKind type );
 
-        static bool isNonBufferType( MaterialPropertyType type );
+        static bool isNonBufferType( MaterialPropertyKind type );
 
-        static MaterialPropertyType getDefaultShaderTypeFor( MaterialPropertyType cpuType );
+        static MaterialPropertyKind getDefaultShaderTypeFor( MaterialPropertyKind cpuType );
 
-        static MaterialPropertyType shaderTypeFromReflectionName( string_view typeName, uint32 byteSize );
+        static MaterialPropertyKind shaderTypeFromReflectionName( string_view typeName, uint32 byteSize );
 
         static uint32 alignOffset( uint32 offset, uint32 typeSize );
 

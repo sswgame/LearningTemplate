@@ -17,7 +17,7 @@ namespace sw
 
             /** @brief 비신뢰 · 순서만 메시지의 흐름 번호입니다 — (패킷 번호 << 8 | 패킷 안 자리). 자리는 `kMessageCountMax`(255) 아래다. */
             static uint64 makeWirePosition( uint16 sequence, int32 position ) { return ( static_cast<uint64>( sequence ) << 8 ) | static_cast<uint64>( position & 0xFF ); }
-            static_assert( static_cast<int32>( NetChannelType::Count ) <= ( 1 << kChannelBits ), "every channel must fit in the channel field" );
+            static_assert( static_cast<int32>( NetChannelKind::Count ) <= ( 1 << kChannelBits ), "every channel must fit in the channel field" );
             static constexpr float64 kRttSmoothing         = 0.1;
             static constexpr float64 kRttVarianceSmoothing = 0.25; ///< RFC 6298 의 β
             static constexpr float64 kLossSmoothing        = 0.1;
@@ -34,10 +34,10 @@ namespace sw
             static constexpr float64 kBandwidthWindow = 1.0; ///< 대역폭 통계의 윈도우(초).
 
             /** @brief 메시지 하나가 차지하는 비트 수입니다(채널, ID, 조각 비트, 길이, 본문). */
-            static int32 computeMessageBits( NetChannelType channel, int32 size )
+            static int32 computeMessageBits( NetChannelKind channel, int32 size )
             {
-                const int32 idBits   = channel == NetChannelType::Unreliable ? 0 : 16;
-                const int32 moreBits = channel == NetChannelType::ReliableOrdered ? 1 : 0;
+                const int32 idBits   = channel == NetChannelKind::Unreliable ? 0 : 16;
+                const int32 moreBits = channel == NetChannelKind::ReliableOrdered ? 1 : 0;
                 return kChannelBits + idBits + moreBits + NetConnection::kMessageSizeBits + size * 8;
             }
         };
@@ -156,9 +156,9 @@ namespace sw
         return getPendingReliableCount() + fragmentCount > kReliableWindow - 1;
     }
 
-    bool NetConnection::sendMessage( NetChannelType channel, const uint8* pData, int32 size )
+    bool NetConnection::sendMessage( NetChannelKind channel, const uint8* pData, int32 size )
     {
-        const bool bInvalidMessage = size < 0 || ( size > 0 && pData == nullptr ) || channel == NetChannelType::Count;
+        const bool bInvalidMessage = size < 0 || ( size > 0 && pData == nullptr ) || channel == NetChannelKind::Count;
         if ( bInvalidMessage )
             return false;
         if ( size > getMaxMessageSize( channel ) )
@@ -170,12 +170,12 @@ namespace sw
         }
         switch ( channel )
         {
-            case NetChannelType::ReliableOrdered:
-            case NetChannelType::ReliableUnordered:
+            case NetChannelKind::ReliableOrdered:
+            case NetChannelKind::ReliableUnordered:
             {
                 return queueReliable( channel, pData, size );
             }
-            case NetChannelType::UnreliableSequenced:
+            case NetChannelKind::UnreliableSequenced:
             {
                 // 흐름은 메시지 첫 바이트(종류)마다 따로 둔다. 같은 종류의 아직 나가지 않은 옛 메시지만 새 메시지로 바꾸고, 다른 종류는 서로 지우지 않는다.
                 // 바꿀 때는 옛 버퍼에 덮어 써서, 틱마다 같은 종류를 보내는 흐름이 메시지마다 할당하지 않게 한다.
@@ -192,14 +192,14 @@ namespace sw
                 _listOutgoingSequenced.emplace_back( pData, pData + size );
                 return true;
             }
-            case NetChannelType::Unreliable:
+            case NetChannelKind::Unreliable:
             {
                 QueuedUnreliable& queued = _listOutgoingUnreliable.emplace_back();
                 queued._buffer           = acquireBuffer();
                 queued._buffer.assign( pData, pData + size );
                 return true;
             }
-            case NetChannelType::Count:
+            case NetChannelKind::Count:
             {
                 break;
             }
@@ -241,12 +241,12 @@ namespace sw
         }
     }
 
-    int32 NetConnection::getMaxMessageSize( NetChannelType channel )
+    int32 NetConnection::getMaxMessageSize( NetChannelKind channel )
     {
-        return channel == NetChannelType::ReliableOrdered ? kMaxReliableMessageSize : kMaxSingleMessageSize;
+        return channel == NetChannelKind::ReliableOrdered ? kMaxReliableMessageSize : kMaxSingleMessageSize;
     }
 
-    bool NetConnection::queueReliable( NetChannelType channel, const uint8* pData, int32 size )
+    bool NetConnection::queueReliable( NetChannelKind channel, const uint8* pData, int32 size )
     {
         // 조각 하나가 신뢰 ID 하나다. 재전송과 확인도 조각마다 한다. 창이 메시지 전체를 받을 수 없으면 조각을 하나도 넣지 않는다.
         // 신뢰 순서 없음은 조각나지 않는다(`getMaxMessageSize` 가 이미 1KB 로 막았다). 조각은 연속으로 ID를 받으므로 사이에 다른 메시지가 끼지 않는다.
@@ -264,7 +264,7 @@ namespace sw
             pMessage->_channel      = channel;
             ++_nextReliableSendID;
         }
-        if ( channel == NetChannelType::ReliableOrdered )
+        if ( channel == NetChannelKind::ReliableOrdered )
         {
             recordFlow( channel, _orderedSentCount, pData, static_cast<size_t>( size ), false );
             ++_orderedSentCount;
@@ -279,7 +279,7 @@ namespace sw
         _bFlowLocalServer = bLocalIsServer ? SW_TRUE : SW_FALSE;
     }
 
-    void NetConnection::recordFlow( NetChannelType channel, uint64 wireIndex, const uint8* pData, size_t size, bool bReceive ) const
+    void NetConnection::recordFlow( NetChannelKind channel, uint64 wireIndex, const uint8* pData, size_t size, bool bReceive ) const
     {
 #if !defined( SW_SHIPPING )
         if ( _bFlowIdentity == SW_FALSE )
@@ -297,10 +297,10 @@ namespace sw
 #endif
     }
 
-    bool NetConnection::receiveMessage( NetChannelType channel, vector<uint8>& outBuffer )
+    bool NetConnection::receiveMessage( NetChannelKind channel, vector<uint8>& outBuffer )
     {
         const int32 channelIndex       = static_cast<int32>( channel );
-        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex]._listMessage.empty();
+        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelKind::Count ) || _arrIncoming[channelIndex]._listMessage.empty();
         if ( bNoIncomingMessage )
             return false;
         // 바꿔 넣어 부른 쪽 버퍼의 옛 용량을 다시 쓴다 — 받는 쪽이 같은 버퍼로 계속 꺼내면 메시지마다 할당하지 않는다.
@@ -309,7 +309,7 @@ namespace sw
         queue._byteCount -= static_cast<int32>( outBuffer.size() ) + kIncomingMessageOverheadBytes;
         recycleBuffer( queue._listMessage.front() );
         queue._listMessage.pop_front();
-        if ( channel == NetChannelType::ReliableOrdered )
+        if ( channel == NetChannelKind::ReliableOrdered )
         {
             recordFlow( channel, _orderedReceivedCount, outBuffer.data(), outBuffer.size(), true );
             ++_orderedReceivedCount;
@@ -317,16 +317,16 @@ namespace sw
         return true;
     }
 
-    bool NetConnection::receiveMessageAppend( NetChannelType channel, vector<uint8>& inoutBytes )
+    bool NetConnection::receiveMessageAppend( NetChannelKind channel, vector<uint8>& inoutBytes )
     {
         const int32 channelIndex       = static_cast<int32>( channel );
-        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex]._listMessage.empty();
+        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelKind::Count ) || _arrIncoming[channelIndex]._listMessage.empty();
         if ( bNoIncomingMessage )
             return false;
         IncomingQueue& queue   = _arrIncoming[channelIndex];
         vector<uint8>& message = queue._listMessage.front();
         inoutBytes.insert( inoutBytes.end(), message.begin(), message.end() );
-        if ( channel == NetChannelType::ReliableOrdered )
+        if ( channel == NetChannelKind::ReliableOrdered )
         {
             recordFlow( channel, _orderedReceivedCount, message.data(), message.size(), true );
             ++_orderedReceivedCount;
@@ -343,7 +343,7 @@ namespace sw
         queue._listMessage.pop_front();
     }
 
-    void NetConnection::pushIncoming( NetChannelType channel, vector<uint8>& buffer )
+    void NetConnection::pushIncoming( NetChannelKind channel, vector<uint8>& buffer )
     {
         IncomingQueue& queue = _arrIncoming[static_cast<int32>( channel )];
         const int32    bytes = static_cast<int32>( buffer.size() ) + kIncomingMessageOverheadBytes;
@@ -421,7 +421,7 @@ namespace sw
         return ackBits;
     }
 
-    bool NetConnection::PacketBody::tryWriteMessage( NetChannelType channel, uint16 messageID, const vector<uint8>& buffer, bool bMore )
+    bool NetConnection::PacketBody::tryWriteMessage( NetChannelKind channel, uint16 messageID, const vector<uint8>& buffer, bool bMore )
     {
         const int32 bits = 1 + NetConnectionInternal::computeMessageBits( channel, static_cast<int32>( buffer.size() ) );
         if ( _usedBits + bits > _budgetBits || _written >= NetConnectionInternal::kMessageCountMax )
@@ -429,9 +429,9 @@ namespace sw
         BitWriter& writer = *_pWriter;
         writer.writeBool( true );
         writer.writeBits( static_cast<uint32>( channel ), NetConnectionInternal::kChannelBits );
-        if ( channel != NetChannelType::Unreliable )
+        if ( channel != NetChannelKind::Unreliable )
             writer.writeBits( messageID, 16 );
-        if ( channel == NetChannelType::ReliableOrdered )
+        if ( channel == NetChannelKind::ReliableOrdered )
             writer.writeBool( bMore );
         writer.writeBits( static_cast<uint32>( buffer.size() ), kMessageSizeBits );
         if ( buffer.empty() == false )
@@ -481,7 +481,7 @@ namespace sw
                 if ( pMessage->_bResendNow == SW_FALSE && pMessage->_backoffShift < kMaxResendBackoffShift )
                     ++pMessage->_backoffShift;
             }
-            else if ( pMessage->_channel == NetChannelType::ReliableUnordered )
+            else if ( pMessage->_channel == NetChannelKind::ReliableUnordered )
                 recordFlow( pMessage->_channel, messageID, pMessage->_buffer.data(), pMessage->_buffer.size(), false ); // 재전송은 같은 메시지라 처음만 찍는다
             pMessage->_lastSentTime                    = body._time;
             pMessage->_bResendNow                      = SW_FALSE;
@@ -508,9 +508,9 @@ namespace sw
             const vector<uint8>& pending = _listOutgoingSequenced[sequencedWritten];
             SequencedStream&     stream  = getOrCreateSequencedStream( _listSequencedSend, pending.empty() ? static_cast<uint8>( 0 ) : pending[0] );
             const uint16         id      = static_cast<uint16>( stream._lastID + 1 );
-            if ( body.tryWriteMessage( NetChannelType::UnreliableSequenced, id, pending, false ) == false )
+            if ( body.tryWriteMessage( NetChannelKind::UnreliableSequenced, id, pending, false ) == false )
                 break;
-            recordFlow( NetChannelType::UnreliableSequenced, NetConnectionInternal::makeWirePosition( body._sequence, body._written - 1 ), pending.data(), pending.size(), false );
+            recordFlow( NetChannelKind::UnreliableSequenced, NetConnectionInternal::makeWirePosition( body._sequence, body._written - 1 ), pending.data(), pending.size(), false );
             stream._lastID = id;
             ++sequencedWritten;
         }
@@ -526,9 +526,9 @@ namespace sw
             const bool        bNotificationSlotFull = front._bNotified == SW_TRUE && sent._notifiedCount >= kMaxNotifiedPerPacket;
             if ( bNotificationSlotFull )
                 break; // 순서를 지키려고 뒤의 메시지도 다음 패킷으로 미룬다
-            if ( body.tryWriteMessage( NetChannelType::Unreliable, 0, front._buffer, false ) == false )
+            if ( body.tryWriteMessage( NetChannelKind::Unreliable, 0, front._buffer, false ) == false )
                 break;
-            recordFlow( NetChannelType::Unreliable, NetConnectionInternal::makeWirePosition( body._sequence, body._written - 1 ), front._buffer.data(), front._buffer.size(),
+            recordFlow( NetChannelKind::Unreliable, NetConnectionInternal::makeWirePosition( body._sequence, body._written - 1 ), front._buffer.data(), front._buffer.size(),
                         false );
             if ( front._bNotified == SW_TRUE )
             {
@@ -605,11 +605,11 @@ namespace sw
         {
             ParsedMessage& message = _listParsedScratch.emplace_back();
             message._buffer        = acquireBuffer();
-            message._channel       = static_cast<NetChannelType>( reader.readBits( NetConnectionInternal::kChannelBits ) );
-            if ( message._channel >= NetChannelType::Count )
+            message._channel       = static_cast<NetChannelKind>( reader.readBits( NetConnectionInternal::kChannelBits ) );
+            if ( message._channel >= NetChannelKind::Count )
                 return false; // 채널 슬롯 넷을 모두 쓰면 닿지 않는 분기다. 채널이 늘어도 깨진 값을 거르도록 남겨 둔다.
-            message._id      = message._channel != NetChannelType::Unreliable ? static_cast<uint16>( reader.readBits( 16 ) ) : static_cast<uint16>( 0 );
-            message._bMore   = message._channel == NetChannelType::ReliableOrdered && reader.readBool() ? SW_TRUE : SW_FALSE;
+            message._id      = message._channel != NetChannelKind::Unreliable ? static_cast<uint16>( reader.readBits( 16 ) ) : static_cast<uint16>( 0 );
+            message._bMore   = message._channel == NetChannelKind::ReliableOrdered && reader.readBool() ? SW_TRUE : SW_FALSE;
             const int32 size = static_cast<int32>( reader.readBits( kMessageSizeBits ) );
             if ( size > kMaxSingleMessageSize )
                 return false;
@@ -626,8 +626,8 @@ namespace sw
     {
         switch ( message._channel )
         {
-            case NetChannelType::ReliableOrdered:
-            case NetChannelType::ReliableUnordered:
+            case NetChannelKind::ReliableOrdered:
+            case NetChannelKind::ReliableUnordered:
             {
                 // 이미 넘긴 것과 창 밖의 것은 버린다. 신뢰 순서는 슬롯에 두었다가 순서대로 넘기고(`deliverReliable`), 신뢰 순서 없음은 앞의 신뢰 메시지를
                 // 기다리지 않고 받는 대로 넘기되 슬롯에 "넘겼다" 표시만 남겨 순서 커서가 지나가게 하고 늦게 온 중복을 거른다.
@@ -638,18 +638,18 @@ namespace sw
                 IncomingReliable* pIncoming = _incomingReliable.insert( message._id );
                 if ( pIncoming == nullptr )
                     return;
-                if ( message._channel == NetChannelType::ReliableUnordered )
+                if ( message._channel == NetChannelKind::ReliableUnordered )
                 {
                     recordFlow( message._channel, message._id, message._buffer.data(), message._buffer.size(), true );
                     pIncoming->_bDelivered = SW_TRUE;
-                    pushIncoming( NetChannelType::ReliableUnordered, message._buffer );
+                    pushIncoming( NetChannelKind::ReliableUnordered, message._buffer );
                     return;
                 }
                 pIncoming->_buffer.swap( message._buffer ); // 슬롯의 옛 용량은 받은 메시지 쪽으로 가 다음 패킷이 재사용 목록에 돌려 놓는다
                 pIncoming->_bMore = message._bMore;
                 return;
             }
-            case NetChannelType::UnreliableSequenced:
+            case NetChannelKind::UnreliableSequenced:
             {
                 // 번호는 종류(흐름)마다 따로 센다. 종류마다 마지막 번호와 비교해 늦게 온 같은 종류의 옛 메시지만 버린다.
                 const uint8      kind    = message._buffer.empty() ? static_cast<uint8>( 0 ) : message._buffer[0];
@@ -668,16 +668,16 @@ namespace sw
                 }
                 pStream->_lastID = message._id;
                 recordFlow( message._channel, NetConnectionInternal::makeWirePosition( sequence, static_cast<int32>( position ) ), message._buffer.data(), message._buffer.size(), true );
-                pushIncoming( NetChannelType::UnreliableSequenced, message._buffer );
+                pushIncoming( NetChannelKind::UnreliableSequenced, message._buffer );
                 return;
             }
-            case NetChannelType::Unreliable:
+            case NetChannelKind::Unreliable:
             {
                 recordFlow( message._channel, NetConnectionInternal::makeWirePosition( sequence, static_cast<int32>( position ) ), message._buffer.data(), message._buffer.size(), true );
-                pushIncoming( NetChannelType::Unreliable, message._buffer );
+                pushIncoming( NetChannelKind::Unreliable, message._buffer );
                 return;
             }
-            case NetChannelType::Count:
+            case NetChannelKind::Count:
             {
                 return;
             }
@@ -743,7 +743,7 @@ namespace sw
         const bool bDeliverSingleFragment = bLast && _listReliableAssembly.empty() && _bDiscardingAssembly == SW_FALSE;
         if ( bDeliverSingleFragment )
         {
-            pushIncoming( NetChannelType::ReliableOrdered, incoming._buffer );
+            pushIncoming( NetChannelKind::ReliableOrdered, incoming._buffer );
             return;
         }
         if ( _bDiscardingAssembly == SW_FALSE )
@@ -764,7 +764,7 @@ namespace sw
         if ( bLast == false )
             return;
         if ( _bDiscardingAssembly == SW_FALSE )
-            pushIncoming( NetChannelType::ReliableOrdered, _listReliableAssembly );
+            pushIncoming( NetChannelKind::ReliableOrdered, _listReliableAssembly );
         _listReliableAssembly.clear(); // 옮긴 뒤의 빈 버퍼다. 다음 메시지가 새로 할당한다.
         _bDiscardingAssembly = SW_FALSE;
     }

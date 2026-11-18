@@ -24,7 +24,7 @@ namespace sw
         class AudioFilterEffect final : public IAudioEffect
         {
         public:
-            AudioFilterEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout, AudioBiquadType type )
+            AudioFilterEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout, AudioBiquadKind type )
                 : IAudioEffect{ typeInfo, layout }
                 , _filter{}
                 , _type{ type }
@@ -45,15 +45,15 @@ namespace sw
             void onParameterChanged() override
             {
                 const float32 frequency = _listParameter[0];
-                const bool    bOpenLow  = _type == AudioBiquadType::LowPass && frequency >= audio::kFilterOpenHz;
-                const bool    bOpenHigh = _type == AudioBiquadType::HighPass && frequency <= 10.0f;
+                const bool    bOpenLow  = _type == AudioBiquadKind::LowPass && frequency >= audio::kFilterOpenHz;
+                const bool    bOpenHigh = _type == AudioBiquadKind::HighPass && frequency <= 10.0f;
                 _bBypass                = bOpenLow || bOpenHigh;
                 _filter._coefficients   = AudioBiquadCoefficients::make( _type, frequency, _listParameter[1], _listParameter[2], static_cast<float32>( audio::kSampleRate ) );
             }
 
         private:
             AudioBiquadFilter _filter;      /**< 필터 상태입니다(채널마다). */
-            AudioBiquadType   _type;        /**< 필터 형태입니다. */
+            AudioBiquadKind   _type;        /**< 필터 형태입니다. */
             uint8             _bBypass : 1; /**< 걸러도 같은 신호라 건너뜁니다. */
         };
 
@@ -784,7 +784,7 @@ namespace sw
                 {"dry", 0.0f, 0.0f, 1.0f, false},
             };
 
-            template <AudioBiquadType TType>
+            template <AudioBiquadKind TType>
             static unique_ptr<IAudioEffect> createFilter( const AudioEffectTypeInfo& typeInfo, const AudioEffectDef& desc, AudioChannelLayout layout )
             {
                 (void)desc;
@@ -814,12 +814,12 @@ namespace sw
 
             /** @brief 이펙트 종류 표입니다. 이름은 데이터가 쓰는 철자이고, 마지막 칸은 처리할 수 있는 레이아웃입니다. */
             inline static const AudioEffectTypeInfo kArrEffectType[] = {
-                {          "LowPass",     kArrLowPassParameter,     SW_COUNT_OF( kArrLowPassParameter ),   &createFilter<AudioBiquadType::LowPass>, kAllLayouts},
-                {         "HighPass",    kArrHighPassParameter,    SW_COUNT_OF( kArrHighPassParameter ),  &createFilter<AudioBiquadType::HighPass>, kAllLayouts},
-                {         "BandPass",        kArrBandParameter,        SW_COUNT_OF( kArrBandParameter ),  &createFilter<AudioBiquadType::BandPass>, kAllLayouts},
-                {          "Peaking",        kArrBandParameter,        SW_COUNT_OF( kArrBandParameter ),   &createFilter<AudioBiquadType::Peaking>, kAllLayouts},
-                {         "LowShelf",        kArrBandParameter,        SW_COUNT_OF( kArrBandParameter ),  &createFilter<AudioBiquadType::LowShelf>, kAllLayouts},
-                {        "HighShelf",        kArrBandParameter,        SW_COUNT_OF( kArrBandParameter ), &createFilter<AudioBiquadType::HighShelf>, kAllLayouts},
+                {          "LowPass",     kArrLowPassParameter,     SW_COUNT_OF( kArrLowPassParameter ),   &createFilter<AudioBiquadKind::LowPass>, kAllLayouts},
+                {         "HighPass",    kArrHighPassParameter,    SW_COUNT_OF( kArrHighPassParameter ),  &createFilter<AudioBiquadKind::HighPass>, kAllLayouts},
+                {         "BandPass",        kArrBandParameter,        SW_COUNT_OF( kArrBandParameter ),  &createFilter<AudioBiquadKind::BandPass>, kAllLayouts},
+                {          "Peaking",        kArrBandParameter,        SW_COUNT_OF( kArrBandParameter ),   &createFilter<AudioBiquadKind::Peaking>, kAllLayouts},
+                {         "LowShelf",        kArrBandParameter,        SW_COUNT_OF( kArrBandParameter ),  &createFilter<AudioBiquadKind::LowShelf>, kAllLayouts},
+                {        "HighShelf",        kArrBandParameter,        SW_COUNT_OF( kArrBandParameter ), &createFilter<AudioBiquadKind::HighShelf>, kAllLayouts},
                 {       "Compressor",  kArrCompressorParameter,  SW_COUNT_OF( kArrCompressorParameter ),      &createEffect<AudioCompressorEffect>, kAllLayouts},
                 {          "Limiter",     kArrLimiterParameter,     SW_COUNT_OF( kArrLimiterParameter ),         &createEffect<AudioLimiterEffect>, kAllLayouts},
                 {           "Reverb",      kArrReverbParameter,      SW_COUNT_OF( kArrReverbParameter ),          &createEffect<AudioReverbEffect>, kAllLayouts},

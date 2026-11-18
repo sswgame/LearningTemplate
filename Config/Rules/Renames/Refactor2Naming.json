@@ -1,0 +1,152 @@
+[
+  {
+    "old": "CommandType",
+    "new": "CommandKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "PacketType",
+    "new": "PacketKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "AlignType",
+    "new": "AlignKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "AudioBiquadType",
+    "new": "AudioBiquadKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "AudioContainerType",
+    "new": "AudioContainerKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "BlackboardValueType",
+    "new": "BlackboardValueKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "CompressionCodecType",
+    "new": "CompressionCodecKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "GimmickParamType",
+    "new": "GimmickParamKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "HealthEventType",
+    "new": "HealthEventKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "MaterialGraphValueType",
+    "new": "MaterialGraphValueKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "MaterialPropertyType",
+    "new": "MaterialPropertyKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "NetChannelType",
+    "new": "NetChannelKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "PackCompressionType",
+    "new": "PackCompressionKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "PackEncryptionType",
+    "new": "PackEncryptionKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RHIQueueType",
+    "new": "RHIQueueKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RTSOrderType",
+    "new": "RTSOrderKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RTSResourceType",
+    "new": "RTSResourceKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RawInputEventType",
+    "new": "RawInputEventKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RemoteConfigValueType",
+    "new": "RemoteConfigValueKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RenderPassType",
+    "new": "RenderPassKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RigJointLimitType",
+    "new": "RigJointLimitKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "SplineType",
+    "new": "SplineKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "TelemetryFieldType",
+    "new": "TelemetryFieldKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "UserSettingType",
+    "new": "UserSettingKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "peekPacketType",
+    "new": "peekPacketKind",
+    "why": "열거형 PacketType → PacketKind 를 따른다"
+  },
+  {
+    "old": "RenderPassTypeInfo",
+    "new": "RenderPassKindInfo",
+    "why": "열거형 RenderPassType → RenderPassKind 를 따른다"
+  },
+  {
+    "old": "RenderPassTypeInfoInternal",
+    "new": "RenderPassKindInfoInternal",
+    "why": "열거형 RenderPassType → RenderPassKind 를 따른다"
+  },
+  {
+    "old": "getRenderPassTypeInfo",
+    "new": "getRenderPassKindInfo",
+    "why": "열거형 RenderPassType → RenderPassKind 를 따른다"
+  },
+  {
+    "old": "kRenderPassTypeCount",
+    "new": "kRenderPassKindCount",
+    "why": "열거형 RenderPassType → RenderPassKind 를 따른다"
+  },
+  {
+    "old": "UserSettingTypeTraits",
+    "new": "UserSettingKindTraits",
+    "why": "열거형 UserSettingType → UserSettingKind 를 따른다"
+  }
+]

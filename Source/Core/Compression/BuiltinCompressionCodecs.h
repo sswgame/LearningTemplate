@@ -18,7 +18,7 @@ namespace sw
         NullCompressionCodec( NullCompressionCodec&& ) noexcept            = default;
         NullCompressionCodec& operator=( NullCompressionCodec&& ) noexcept = default;
 
-        virtual CompressionCodecType getCodecType() const override;
+        virtual CompressionCodecKind getCodecType() const override;
         virtual const utf8*          getCodecName() const override;
         virtual size_t               compressBound( size_t uncompressedSize ) const override;
         virtual size_t               decompressBound( size_t compressedSize ) const override;
@@ -55,7 +55,7 @@ namespace sw
         RLECompressionCodec( RLECompressionCodec&& ) noexcept            = default;
         RLECompressionCodec& operator=( RLECompressionCodec&& ) noexcept = default;
 
-        virtual CompressionCodecType getCodecType() const override;
+        virtual CompressionCodecKind getCodecType() const override;
         virtual const utf8*          getCodecName() const override;
         virtual size_t               compressBound( size_t uncompressedSize ) const override;
         virtual size_t               decompressBound( size_t compressedSize ) const override;

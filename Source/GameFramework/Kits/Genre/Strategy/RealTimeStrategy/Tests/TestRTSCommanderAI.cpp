@@ -237,7 +237,7 @@ SW_TEST_CASE( RTSCommanderAITest, DefendSendsArmyAndClearsThreat )
     rig.think();
     const RTSOrder* pOrder = rig.findOrder( marineID );
     SW_REQUIRE_NOT_NULL( pOrder );
-    SW_EXPECT_TRUE( pOrder->_type == RTSOrderType::AttackMove );
+    SW_EXPECT_TRUE( pOrder->_type == RTSOrderKind::AttackMove );
     SW_EXPECT_NEAR( threat._x, pOrder->_target._x, 1.0e-4f );
     SW_EXPECT_NULL( rig.findOrder( workerID ) );
     SW_EXPECT_FALSE( rig._ai.getBlackboard().isSet( Rig::kThreat ) );
@@ -277,7 +277,7 @@ SW_TEST_CASE( RTSCommanderAITest, GatherIdleSendsOnlyWorkersWhenDepotAndMinerals
     ready.think();
     const RTSOrder* pOrder = ready.findOrder( readyWorkerID );
     SW_REQUIRE_NOT_NULL( pOrder );
-    SW_EXPECT_TRUE( pOrder->_type == RTSOrderType::Gather );
+    SW_EXPECT_TRUE( pOrder->_type == RTSOrderKind::Gather );
     SW_EXPECT_TRUE( pOrder->_targetUnit == mineralID );
     SW_EXPECT_NULL( ready.findOrder( readyMarineID ) );
     SW_EXPECT_NULL( rig.findOrder( marineID ) );
@@ -338,11 +338,11 @@ SW_TEST_CASE( RTSCommanderAITest, BuildSupplyWaitsForMarginAndDoesNotRepeat )
     const RTSOrder* pSecond = rig.findOrder( spareID );
     SW_REQUIRE_TRUE( ( pFirst != nullptr ) != ( pSecond != nullptr ) ); // 한 명만 간다
     const RTSOrder* pOrder = pFirst != nullptr ? pFirst : pSecond;
-    SW_EXPECT_TRUE( pOrder->_type == RTSOrderType::Build );
+    SW_EXPECT_TRUE( pOrder->_type == RTSOrderKind::Build );
     SW_EXPECT_TRUE( pOrder->_buildID == Rig::kSupply );
     const RTSUnit* pBuilder = rig._world.findUnit( pFirst != nullptr ? workerID : spareID );
     SW_REQUIRE_EQUAL( size_t( 2 ), pBuilder->_listOrder.size() );
-    SW_EXPECT_TRUE( pBuilder->_listOrder.back()._type == RTSOrderType::Gather );
+    SW_EXPECT_TRUE( pBuilder->_listOrder.back()._type == RTSOrderKind::Gather );
 
     rig.think();
     SW_EXPECT_TRUE( ( rig.findOrder( workerID ) != nullptr ) != ( rig.findOrder( spareID ) != nullptr ) ); // 또 시키지 않는다
@@ -363,9 +363,9 @@ SW_TEST_CASE( RTSCommanderAITest, ConstructionPrefersIdleWorkerAndSkipsBusyOnes 
     rig._settings._workerTarget = 2;
     rig.start( "rts.buildProduction" );
     rig.think();
-    SW_EXPECT_TRUE( rig.findOrder( gatherID )->_type == RTSOrderType::Gather );
+    SW_EXPECT_TRUE( rig.findOrder( gatherID )->_type == RTSOrderKind::Gather );
     SW_REQUIRE_NOT_NULL( rig.findOrder( idleID ) );
-    SW_EXPECT_TRUE( rig.findOrder( idleID )->_type == RTSOrderType::Build );
+    SW_EXPECT_TRUE( rig.findOrder( idleID )->_type == RTSOrderKind::Build );
 
     Rig busy;
     SW_REQUIRE_TRUE( busy.setUp() );
@@ -375,7 +375,7 @@ SW_TEST_CASE( RTSCommanderAITest, ConstructionPrefersIdleWorkerAndSkipsBusyOnes 
     busy._settings._workerTarget = 2;
     busy.start( "rts.buildProduction" );
     busy.think();
-    SW_EXPECT_TRUE( busy.findOrder( movingID )->_type == RTSOrderType::Move );
+    SW_EXPECT_TRUE( busy.findOrder( movingID )->_type == RTSOrderKind::Move );
     SW_EXPECT_EQUAL( 0, busy._world.countPlanned( 0, Rig::kBarracks ) );
 }
 
@@ -449,7 +449,7 @@ SW_TEST_CASE( RTSCommanderAITest, AttackWaitsForArmyAndTargetsNearestEnemy )
     SW_EXPECT_EQUAL( 1, rig._ai.getAttackWaveCount() );
     const RTSOrder* pOrder = rig.findOrder( secondID );
     SW_REQUIRE_NOT_NULL( pOrder );
-    SW_EXPECT_TRUE( pOrder->_type == RTSOrderType::AttackMove );
+    SW_EXPECT_TRUE( pOrder->_type == RTSOrderKind::AttackMove );
     SW_EXPECT_NEAR( 25.0f, pOrder->_target._x, 1.0e-4f );
     SW_EXPECT_NEAR( 25.0f, pOrder->_target._z, 1.0e-4f );
     SW_EXPECT_NOT_NULL( rig.findOrder( firstID ) );

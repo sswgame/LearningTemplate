@@ -22,13 +22,13 @@ namespace sw
     struct FileDialogParams
     {
         /** @brief 열기인지 저장인지 나타냅니다. */
-        enum class Type : uint8
+        enum class Kind : uint8
         {
             Open,
             Save,
         };
 
-        Type           _type{ Type::Open };         ///< Open 또는 Save
+        Kind           _type{ Kind::Open };         ///< Open 또는 Save
         string         _title;                      ///< 다이얼로그 창 제목(비어 있으면 OS 기본값)
         string         _description;                ///< 필터 설명 문자열
         vector<string> _listFilterExtension;        ///< 허용 확장자 목록(예: ".png", "hlsl")
