@@ -49,6 +49,13 @@ namespace sw
         GBufferCustomData,   ///< G버퍼 사용자 칸 — 셰이딩 모델 번호마다의 값(shading_model_ids.hlsli 표). 디퍼드 조명이 읽는다(`g_GBufferCustomDataIndex`)
         LocalShadowMap,      ///< 점광 · 스폿 그림자 아틀라스(방향광 `ShadowMap` 과 다른 텍스처 — 감사 RN-4). 깊이로 거는 그림자 패스는 점광 · 스폿 타일을 그리고, 조명이 `g_LocalShadowMapIndex` 로 읽는다
         VelocityNeighborMax, ///< 모션 블러 이웃 최대 속도(MotionBlurNeighborMax 패스 출력, 16² 픽셀 타일마다 UV 속도). 모션 블러가 흐리는 방향이다(`g_VelocityNeighborMaxIndex`)
+        /**
+         * DBuffer 데칼 색(Decal 패스 출력 RGBA8 — rgb 덮인 색의 합, a 남은 비율, 클리어 (0, 0, 0, 1)). 베이스 패스(G버퍼 · 포워드 불투명)가 표면을 셰이딩하기 전에 섞는다(`g_DBufferAIndex`).
+         * 언리얼 DBufferA 와 같은 자리다. 데칼이 없는 뷰는 출력이 없어 걸지 않는다 — 셰이더의 기본값 (0, 0, 0, 1)이 곧 "덮지 않음" 이다.
+         */
+        DBufferA,
+        DBufferB, ///< DBuffer 데칼 노멀(rgb 덮인 월드 노멀 × 0.5 + 0.5 의 합, a 남은 비율 — 언리얼 DBufferB). `g_DBufferBIndex`
+        DBufferC, ///< DBuffer 데칼 거칠기 · 금속도(r · g 덮인 값의 합, a 남은 비율 — 언리얼 DBufferC). `g_DBufferCIndex`
         Count,
     };
 

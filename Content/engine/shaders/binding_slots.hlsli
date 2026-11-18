@@ -30,7 +30,7 @@
  *   ├────────────────────┼──────────────┼─────────────────────┼─────────────────────┼──────────────────┤
  *   │ PassCB / 컴퓨트 CB │ b0           │ 루트 CBV            │ UBO  binding 0      │ UBO 0            │
  *   │ MaterialCB (픽스처)│ b1           │ 루트 CBV            │ UBO  binding 1      │ UBO 1            │
- *   │ 엔진 텍스처 칸     │ t32..t49(에뮬)│ (없음)             │ (없음)              │ 텍스처 유닛 32..49│
+ *   │ 엔진 텍스처 칸     │ t32..t56(에뮬)│ (없음)             │ (없음)              │ 텍스처 유닛 32..56│
  *   │ 인스턴스 구조버퍼  │ t4           │ t 테이블            │ SSBO binding 16+4   │ SSBO 4           │
  *   │ 머티리얼 데이터    │ t5           │ t 테이블            │ SSBO binding 16+5   │ SSBO 5           │
  *   │ 머티리얼 텍스처    │ t16..t31(에뮬)│ (없음)             │ (없음)              │ 텍스처 유닛 16..31│
@@ -103,7 +103,10 @@
 #define SW_SLOT_ENGINE_TEX19    51
 #define SW_SLOT_ENGINE_TEX20    52
 #define SW_SLOT_ENGINE_TEX21    53
-#define SW_ENGINE_TEXTURE_COUNT 22
+#define SW_SLOT_ENGINE_TEX22    54
+#define SW_SLOT_ENGINE_TEX23    55
+#define SW_SLOT_ENGINE_TEX24    56
+#define SW_ENGINE_TEXTURE_COUNT 25
 
 // GPUScene 인스턴스 구조버퍼 (per-instance world/material). 네 백엔드 공통.
 #define SW_SLOT_INSTANCE_SRV 4

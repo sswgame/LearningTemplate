@@ -82,21 +82,23 @@ namespace sw
                     }
                     case RenderPassType::ForwardOpaque:
                     {
-                        // 입력은 그림자 맵 둘(방향광 · 점광 스폿)과 접촉 그림자(깊이 프리패스 뒤의 ContactShadow 패스)뿐이고 모두 선택이다 — 접촉 그림자는 꺼지면 출력이 없다(3-7).
+                        // 입력은 그림자 맵 둘(방향광 · 점광 스폿) · 접촉 그림자(깊이 프리패스 뒤의 ContactShadow 패스) · DBuffer 셋(깊이 프리패스 뒤의 Decal 패스)이고 모두 선택이다
+                        // — 접촉 그림자 · DBuffer 는 꺼지면 출력이 없다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderForwardLit;
-                        info._inputContract  = makeContract( {}, { Role::ShadowMap, Role::LocalShadowMap, Role::ContactShadow } );
+                        info._inputContract  = makeContract( {}, { Role::ShadowMap, Role::LocalShadowMap, Role::ContactShadow, Role::DBufferA, Role::DBufferB, Role::DBufferC } );
                         info._flags          = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kMaterialBlend | Flag::kWritesVelocity | Flag::kHasInputContract | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::GBuffer:
                     {
-                        // define 은 이 PSO 를 물려받는 머티리얼 변형까지 MRT 서명으로 컴파일되게 한다.
+                        // define 은 이 PSO 를 물려받는 머티리얼 변형까지 MRT 서명으로 컴파일되게 한다. 입력은 DBuffer 셋(Decal 패스 — 데칼이 없는 뷰는 출력이 없다)뿐이고 선택이다.
                         info._pDefaultShader          = &EngineDefaultAssets::_shaderGBuffer;
                         info._pPassDefine             = kPassGBufferDefine;
                         info._pExcludedMaterialDefine = kMaterialForwardOnlyDefine;
                         info._pColorFormat            = kArrGBufferColorFormat;
                         info._colorTargetCount        = GBufferLayout::kAttachmentCount;
-                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kWritesVelocity | kSceneColorPassFlags;
+                        info._inputContract           = makeContract( {}, { Role::DBufferA, Role::DBufferB, Role::DBufferC } );
+                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kWritesVelocity | Flag::kHasInputContract | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::Lighting:
@@ -340,10 +342,11 @@ namespace sw
                     }
                     case RenderPassType::Decal:
                     {
-                        // 출력은 G버퍼 셋(알베도 · 노멀 · 머티리얼) — 깊이 붙임 없이 장면 깊이를 입력으로 읽는다(G버퍼 패스가 다 쓴 깊이). 블렌드 · 쓰기 마스크는 XML 이 적는다.
+                        // 출력은 DBuffer 셋(색 · 노멀 · 거칠기 금속도) — 깊이 붙임 없이 장면 깊이를 입력으로 읽는다(깊이 프리패스가 쓴 깊이). 블렌드는 XML 이 적는다(프리멀티플라이).
+                        // 데칼이 없는 뷰는 기록하지 않고 출력이 없다(kCullWhenUnconsumed 고르기 — FrameViewResources 의 isPassEnabledInView).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDecal;
                         info._inputContract  = makeContract( { Role::SceneDepth }, {} );
-                        info._flags          = Flag::kBlend | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        info._flags          = Flag::kBlend | Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kCullWhenUnconsumed | Flag::kDrawsBoxVolume;
                         break;
                     }
                     case RenderPassType::PostProcessMaterial:

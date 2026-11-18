@@ -260,7 +260,10 @@ SW_DECLARE_ENGINE_TEXTURE( 18 );
 SW_DECLARE_ENGINE_TEXTURE( 19 );
 SW_DECLARE_ENGINE_TEXTURE( 20 );
 SW_DECLARE_ENGINE_TEXTURE( 21 );
-        #if SW_ENGINE_TEXTURE_COUNT != 22
+SW_DECLARE_ENGINE_TEXTURE( 22 );
+SW_DECLARE_ENGINE_TEXTURE( 23 );
+SW_DECLARE_ENGINE_TEXTURE( 24 );
+        #if SW_ENGINE_TEXTURE_COUNT != 25
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
@@ -423,6 +426,15 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
                     break;                                                 \
                 case 21u:                                                  \
                     OP( SW_ENGINE_TEXTURE( 21 ), SW_ENGINE_SAMPLER( 21 ) ) \
+                    break;                                                 \
+                case 22u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 22 ), SW_ENGINE_SAMPLER( 22 ) ) \
+                    break;                                                 \
+                case 23u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 23 ), SW_ENGINE_SAMPLER( 23 ) ) \
+                    break;                                                 \
+                case 24u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 24 ), SW_ENGINE_SAMPLER( 24 ) ) \
                     break;                                                 \
                 default:                                                   \
                     break;                                                 \
@@ -1504,6 +1516,23 @@ static float4 PassTexture::sampleContactShadow( float2 uv )
     if ( g_ContactShadowIndex == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
     return Bindless::sampleIndexLevelZero( SW_ENGINE_ROLE( ContactShadow ), PassTexture::toViewRectUV( uv ) ); // 빛 루프 안에서 읽는다 — 미분 없는 밉 0(마스크는 화면과 같은 크기라 밉이 없다)
+}
+/**
+ * @brief DBuffer 데칼 셋(Decal 패스 출력 — decal.hlsl 머리말의 인코딩)을 픽셀 @p pixelPosition(SV_POSITION.xy, 텍셀 가운데)의 텍셀로 읽는다. 밉 0 · 미분 없음이다.
+ * @details 베이스 패스는 뷰 사각형의 원점에서 그리므로 풀 UV 는 픽셀 × (1 / 풀 크기)다. 걸지 않았으면(데칼이 없는 뷰 · DBuffer 없는 파이프라인) 무효 인덱스의 기본값
+ *          (0, 0, 0, 1)이 곧 DBuffer 클리어 값 — "덮지 않음" 이다(Bindless::sampleIndexLevelZero). 따로 갈래를 두지 않는다.
+ */
+static float4 PassTexture::loadDBufferA( float2 pixelPosition )
+{
+    return Bindless::sampleIndexLevelZero( SW_ENGINE_ROLE( DBufferA ), pixelPosition * g_ViewRectSize.zw );
+}
+static float4 PassTexture::loadDBufferB( float2 pixelPosition )
+{
+    return Bindless::sampleIndexLevelZero( SW_ENGINE_ROLE( DBufferB ), pixelPosition * g_ViewRectSize.zw );
+}
+static float4 PassTexture::loadDBufferC( float2 pixelPosition )
+{
+    return Bindless::sampleIndexLevelZero( SW_ENGINE_ROLE( DBufferC ), pixelPosition * g_ViewRectSize.zw );
 }
 /** @brief SSAO 결과. 파이프라인에 SSAO 가 없으면(인덱스 무효) 가림 없음(1)이다 — 0 으로 폴백하면 화면이 검게 된다. */
 static float PassTexture::sampleAmbientOcclusion( float2 uv )

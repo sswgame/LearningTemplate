@@ -273,8 +273,8 @@ namespace sw
          */
         void executePostProcessMaterialPass( const PassExecuteInput& input );
         /**
-         * @brief 디퍼드 데칼 패스입니다 — 이번 프레임 데칼(`FrameRenderState::_listFrameDecalDraw`, 그리는 차례)마다 풀스크린 하나로 G버퍼 칸 셋을 덮습니다. 데칼이 없거나 표면 값 보기에서는 기록하지 않습니다.
-         * @details shortcut: 데칼마다 화면 전체를 돈다(상자 밖 픽셀은 셰이더가 일찍 버린다), 데칼이 수십 개를 넘으면 상자를 래스터하거나 타일 목록(언리얼 클러스터드 데칼)으로 바꾼다.
+         * @brief DBuffer 데칼 패스입니다 — DBufferA · B · C 를 지우고 이번 프레임 데칼(`FrameRenderState::_listFrameDecalDraw`, 그리는 차례)마다 상자 뒷면을 그려 프리멀티플라이로 쌓습니다.
+         * @details 베이스 패스(G버퍼 · 포워드 불투명)가 셋을 읽어 셰이딩 전에 표면에 섞는다(언리얼 DBuffer). 데칼이 없는 뷰 · 표면 값 보기는 뷰 패스 고르기가 이 패스를 뺀다.
          */
         void executeDecalPass( const PassExecuteInput& input );
         /** @brief 렌즈 플레어 패스(`RenderPassType::LensFlare`)를 실행합니다. 주 시점이 아니거나 스프라이트가 없으면 그리지 않습니다. 스프라이트는 `LensFlareSpriteBuffer` 가 기록 전에 올렸다. */

@@ -238,6 +238,11 @@ namespace sw
          * @details 일반 풀스크린 패스(장면 깊이 사본)는 이 표시 없이도 같은 규칙을 탄다. 읽는 쪽이 누구인지는 파이프라인 선언과 그 패스의 이번 뷰 판정이 정한다 — 생산 패스가 읽는 쪽을 알지 않는다(언리얼 RDG 의 소비자 없는 패스 컬링).
          */
         static constexpr uint32 kCullWhenUnconsumed = SW_BIT( 30 );
+        /**
+         * @brief 풀스크린 삼각형 대신 그리기마다 상자 볼륨(정점 36 개, 정점 버퍼 없음)을 그린다(DBuffer 데칼). 파이프라인 XML 의 `_cullMode` 는 Front 여야 한다 —
+         *        뒷면만 그려야 픽셀마다 한 번 섞이고 카메라가 상자 안에 있어도 덮는다(언리얼 데칼의 카메라 안쪽 판정을 뒷면 하나로 줄인 모양).
+         */
+        static constexpr uint32 kDrawsBoxVolume = SW_BIT( 31 );
     };
 } // namespace sw
 

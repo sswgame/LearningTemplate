@@ -441,16 +441,38 @@ SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 }
     #endif
 
+    // DBuffer 데칼을 받는 패스 — G버퍼와 포워드 불투명이다(언리얼 DBuffer 처럼 반투명 · 왜곡 · 외곽선은 받지 않는다). 그 패스가 DBuffer 를 걸지 않았으면 읽기가 "덮지 않음" 이다.
+    // 웹(WEBGPU) 포워드는 단계 텍스처 한도 16 에 머티리얼 10 + 패스 엔진 텍스처 6(binding_slots.hlsli SW_MATERIAL_TEXTURE_SLOT_COUNT_WEBGPU)이 이미 차 DBuffer 셋이 들 자리가 없다 —
+    // 웹 깃발로만 뺀다(웹 G버퍼는 그림자 · 접촉 그림자를 읽지 않아 든다). 웹 포워드 프리패스 파이프라인의 데칼은 보이지 않는다.
+    #if defined( SW_PASS_GBUFFER ) || ( !defined( MATERIAL_BLEND_TRANSLUCENT ) && !defined( SW_PASS_DISTORTION ) && !defined( SW_PASS_MESH_OUTLINE ) && !defined( WEBGPU ) )
+/** @brief DBuffer 를 셰이딩 전에 표면에 섞는다 — 값 × 남은 비율 + 덮인 값(언리얼 ApplyDBufferData). 노멀은 rgb × 2 - (1 - a) 가 덮인 노멀의 합이다. */
+void MaterialSurface::applyDBuffer( float2 pixelPosition )
+{
+    const float4 color    = PassTexture::loadDBufferA( pixelPosition );
+    const float4 normal   = PassTexture::loadDBufferB( pixelPosition );
+    const float4 material = PassTexture::loadDBufferC( pixelPosition );
+    _albedo.rgb           = _albedo.rgb * color.a + color.rgb;
+    _normal               = normalize( _normal * normal.a + ( normal.rgb * 2.0f - ( 1.0f - normal.a ) ) );
+    _roughness            = saturate( _roughness * material.a + material.r );
+    _metallic             = saturate( _metallic * material.a + material.g );
+}
+    #else
+void MaterialSurface::applyDBuffer( float2 pixelPosition )
+{
+}
+    #endif
+
 /**
- * @brief 본 패스 · G버퍼 패스의 픽셀 — 표면 훅 → (G버퍼가 아니면) 조명 훅 → 출력 → 등장 디더 · 알파 컷오프.
+ * @brief 본 패스 · G버퍼 패스의 픽셀 — 표면 훅 → DBuffer 데칼 → (G버퍼가 아니면) 조명 훅 → 출력 → 등장 디더 · 알파 컷오프.
  * @details 오리기는 출력을 다 만든 **뒤**다(깊이 패스와 같은 까닭). 표면 · 조명 훅의 미분 읽기가 모두 끝난 뒤 버리므로 `clip` 이 OpKill 이어도
  *          이웃 픽셀의 미분이 맞다. 남는 픽셀의 값은 앞에서 버릴 때와 같다.
  */
 SurfaceOutput MaterialInterpolants::shadePixel( bool bFrontFace )
 {
-    const PixelContext    context = PixelContext::make( this, bFrontFace );
-    const MaterialSurface surface = computeMaterialSurface( context );
-    const SurfaceOutput   output  = context.storeSurface( surface );
+    const PixelContext context = PixelContext::make( this, bFrontFace );
+    MaterialSurface    surface = computeMaterialSurface( context );
+    surface.applyDBuffer( context._position.xy );
+    const SurfaceOutput output = context.storeSurface( surface );
     SW_APPEARANCE_CLIP( this )
     surface.applyAlphaCutoff();
     return output;

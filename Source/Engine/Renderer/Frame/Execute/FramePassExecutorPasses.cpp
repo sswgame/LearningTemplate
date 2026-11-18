@@ -69,6 +69,9 @@ namespace sw
 {
     namespace
     {
+        /// 데칼 상자 한 그리기의 정점 수 — 면 여섯 × 삼각형 둘 × 정점 셋(decal.hlsl 의 kDecalBoxCorner 표와 같은 수).
+        constexpr uint32 kDecalBoxVertexCount = 36;
+
         struct FramePassExecutorInternal
         {
             /**
@@ -577,6 +580,13 @@ namespace sw
         const RenderGraphPassDesc::ResolvedAttachment* pContactInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ContactShadow );
         if ( pContactInput != nullptr && activePool().resolveName( pContactInput->_attachment ).empty() == false )
             registerPassTexture( context, attachmentNames()._contactShadow, pContactInput->_attachment );
+        // DBuffer 셋도 같다 — 데칼 패스가 이 뷰에서 돌았을 때만 건다(데칼이 없으면 출력이 없다 — 셰이더는 "덮지 않음").
+        for ( const RenderPassInputRole dbufferRole : { RenderPassInputRole::DBufferA, RenderPassInputRole::DBufferB, RenderPassInputRole::DBufferC } )
+        {
+            const RenderGraphPassDesc::ResolvedAttachment* pDBufferInput = Internal::findInputByRole( input._passDesc, dbufferRole );
+            if ( pDBufferInput != nullptr && activePool().resolveName( pDBufferInput->_attachment ).empty() == false )
+                registerPassTexture( context, inputRoleName( dbufferRole ), pDBufferInput->_attachment );
+        }
         // 선언한 컬러 출력을 모두 연다 — 화면 속도를 선언했으면 [색, 속도] 두 타깃이다(검증 3-3, 셰이더 SV_TARGET0 · 1).
         const vector<RenderGraphPassDesc::ResolvedAttachment>& declaredColor = input._declaredColor;
         const uint32                                           colorCount    = static_cast<uint32>( declaredColor.size() ) < kMaxColorAttachments ? static_cast<uint32>( declaredColor.size() ) : kMaxColorAttachments;
@@ -626,6 +636,8 @@ namespace sw
         static_assert( sizeof( arrNames ) / sizeof( arrNames[0] ) == GBufferLayout::kAttachmentCount, "G버퍼 패스의 MRT 는 GBufferLayout 의 첨부 수다" );
         if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, GBufferLayout::kAttachmentCount, passDepth, getColorLoadFor( passDepth ) ) == false )
             return;
+        // 선언 입력은 DBuffer 셋뿐이다(계약) — 이 뷰에 데칼이 없으면 출력이 없어 걸지 않고, 셰이더는 "덮지 않음" 을 읽는다.
+        registerDeclaredInputs( context, input._passDesc );
         drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
     }
@@ -922,17 +934,14 @@ namespace sw
 
     void FramePassExecutor::executeDecalPass( const PassExecuteInput& input )
     {
-        // 디퍼드 데칼이다. G버퍼 패스가 쓴 칸 셋(알베도 · 노멀 · 머티리얼) 위에 데칼마다 곧은 알파로 섞는다 — 칸마다의 덮임은 셰이더의 출력 알파, 채널 쓰기 마스크는 XML 의 블렌드다.
-        // 표면 값 보기 · 와이어프레임에서는 그리지 않는다(값 위를 덮는다). 데칼이 없으면 "그리지 않음" 은 아무것도 하지 않는 것이다(G버퍼가 이미 맞다).
-        const RenderViewModeInfo&                       viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
-        const RHIPipelineStateHandle                    pso          = _psoManager.getEnginePSO( RenderPassType::Decal );
-        const vector<FrameRenderState::FrameDecalDraw>& listDecal    = _state._listFrameDecalDraw;
-        const bool                                      bDraws       = pso != 0 && listDecal.empty() == false && viewModeInfo._bShowsBuffer == false && viewModeInfo._bWireframe == false;
-        if ( bDraws == false )
-            return;
-        FramePassContext& context = input._context;
+        // DBuffer 데칼이다(언리얼 DBuffer). 깊이 프리패스 뒤 · 베이스 패스 앞에 DBufferA · B · C 를 지우고(클리어 (0, 0, 0, 1) = 덮지 않음) 데칼마다 상자 뒷면을 그려 프리멀티플라이로 쌓는다.
+        // 데칼이 없는 뷰 · 표면 값 보기는 뷰 패스 고르기가 이 패스를 빼고 출력도 없다(베이스 패스가 걸지 않는다). 여기 온 뒤에는 PSO 가 없어도 지우기는 한다 —
+        // 출력이 있는데 지우지 않으면 베이스 패스가 지난 프레임 값을 섞는다.
+        const RHIPipelineStateHandle                    pso       = _psoManager.getEnginePSO( RenderPassType::Decal );
+        const vector<FrameRenderState::FrameDecalDraw>& listDecal = _state._listFrameDecalDraw;
+        FramePassContext&                               context   = input._context;
         registerDeclaredInputs( context, input._passDesc );
-        // 선언한 컬러 출력 셋이 MRT 다(검증: G버퍼 역할 셋 — 이 차례). 깊이 붙임은 없다(장면 깊이를 입력으로 읽는다).
+        // 선언한 컬러 출력 셋이 MRT 다(검증 3-9: DBuffer 역할 셋 — 이 차례). 깊이 붙임은 없다(장면 깊이를 입력으로 읽는다).
         hashed_string       arrColor[3];
         float4              arrClear[3];
         RHIRenderPassLoadOp arrLoad[3];
@@ -941,12 +950,14 @@ namespace sw
         {
             arrColor[colorIndex] = input._declaredColor[colorIndex]._attachment;
             arrClear[colorIndex] = getTargetClearColor( arrColor[colorIndex] );
-            arrLoad[colorIndex]  = RHIRenderPassLoadOp::Load;
+            arrLoad[colorIndex]  = getColorLoadFor( arrColor[colorIndex] );
         }
         if ( beginColorPassMrt( context, arrColor, arrClear, arrLoad, colorCount, hashed_string{}, RHIRenderPassLoadOp::Load ) == false )
             return;
         for ( const FrameRenderState::FrameDecalDraw& decal : listDecal )
         {
+            if ( pso == 0 )
+                break;
             // 상자 월드 행렬은 g_World(bindForDraw 가 context._world 로 건다), 나머지는 그리기마다의 패스 상수다.
             context._world = decal._world;
             context._passValues.setMatrix( passConstantNames()._decalWorldToLocal, decal._worldToLocal );
@@ -957,8 +968,10 @@ namespace sw
             context._passValues.setUint( passConstantNames()._decalNormalTexture, decal._normalTexture );
             commitBindlessTextureBindings( context );
             context._pCmd->setPipelineState( pso );
+            // 상자 하나 = 삼각형 12 개(정점 버퍼 없이 SV_VertexID — decal.hlsl VSMain). 앞면은 XML 의 컬(Front)이 버린다.
+            // shortcut: 거울 상자(월드 행렬식 < 0)는 감김이 뒤집혀 앞면이 남는다 — 그런 데칼이 생기면 FramePSOManager::reverseCullMode 처럼 컬을 뒤집은 PSO 를 고른다.
             if ( bindForDraw( context, pso, kInvalidDescriptorIndex, decal._arrTextureSRV ) )
-                context._pCmd->draw( 3, 0 );
+                context._pCmd->draw( kDecalBoxVertexCount, 0 );
         }
         context._pCmd->endRenderPass();
         setIdentityWorld( context );

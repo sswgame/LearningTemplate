@@ -1146,6 +1146,12 @@ namespace sw
                 return names._gbufferCustomData;
             case RenderPassInputRole::VelocityNeighborMax:
                 return names._velocityNeighborMax;
+            case RenderPassInputRole::DBufferA:
+                return names._dbufferA;
+            case RenderPassInputRole::DBufferB:
+                return names._dbufferB;
+            case RenderPassInputRole::DBufferC:
+                return names._dbufferC;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;

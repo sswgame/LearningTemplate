@@ -197,6 +197,11 @@ namespace sw
                     case RenderPassType::Distortion:
                     case RenderPassType::DistortionApply:
                         return bShowsScene && sceneState._bDistortionBatches == SW_TRUE;
+                    case RenderPassType::DepthPrepass:
+                        // 와이어프레임(겹침 아님)은 선만 그린다 — 면 깊이를 먼저 쓰면 뒤 선이 가려지고 앞 선이 면 깊이와 다투어 끊긴다(프리패스 없는 파이프라인과 같은 그림으로)
+                        return viewModeInfo._bWireframe == false || viewModeInfo._bOverlay;
+                    case RenderPassType::Decal:
+                        return bShowsScene && sceneState._bDecals == SW_TRUE; // 값 보기는 데칼을 덮지 않는다 — 출력이 없어 베이스 패스가 DBuffer 를 걸지 않는다
                     default:
                         return true;
                 }
