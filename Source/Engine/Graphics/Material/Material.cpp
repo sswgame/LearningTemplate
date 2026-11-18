@@ -151,7 +151,7 @@ namespace sw
         constexpr uint32 kConstantBufferAlignment = 256u;
         const uint32     bufferSize               = MathUtil::align( MathUtil::max( static_cast<uint32>( _data._bytes.size() ), 1u ), kConstantBufferAlignment );
         _data._bytes.resize( bufferSize, 0 );
-        _bufferGeneration.bump(); // 크기를 256 정렬로 맞췄다
+        _bufferGeneration.bump( this ); // 크기를 256 정렬로 맞췄다
 
         if ( resolveTextureAssets( pRHI ) == false )
         {
@@ -291,7 +291,7 @@ namespace sw
         _listBorrowedTexturePath.clear();
         _listMaterialTextureSRV.clear();
         _listMaterialTextureName.clear();
-        _bufferGeneration.bump(); // 슬롯 목록이 비었다 — 놓은 텍스처의 SRV 를 렌더 사본에 남기지 않는다
+        _bufferGeneration.bump( this ); // 슬롯 목록이 비었다 — 놓은 텍스처의 SRV 를 렌더 사본에 남기지 않는다
         for ( MaterialProperty& prop : _data._listProperty )
         {
             if ( MaterialPacking::isTextureType( prop._type ) == false || prop._assetPath.empty() )
@@ -537,7 +537,7 @@ namespace sw
         if ( _data._listProperty.empty() )
         {
             fillPropertiesFromSchema( *pSchemaCb );
-            _bufferGeneration.bump(); // 위에서 stride 가 바뀌었다 — 사본이 stride 를 싣는다(예전에는 다음 값 변경까지 옛 stride 사본이 남을 수 있었다)
+            _bufferGeneration.bump( this ); // 위에서 stride 가 바뀌었다 — 사본이 stride 를 싣는다(예전에는 다음 값 변경까지 옛 stride 사본이 남을 수 있었다)
             return true;
         }
         const bool bAllPacked = matchPropertiesToSchema( *pSchemaCb );
@@ -554,7 +554,7 @@ namespace sw
     {
         _data._bytes.clear();
         _elementStride = 0;
-        _bufferGeneration.bump();
+        _bufferGeneration.bump( this );
     }
 
     void Material::fillPropertiesFromSchema( const ShaderBufferInfo& schema )
@@ -673,7 +673,7 @@ namespace sw
 
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
         _data._bytes.resize( alignedTotal, 0 );
-        _bufferGeneration.bump();
+        _bufferGeneration.bump( this );
     }
 
     bool Material::rebuildPackedBuffer()
@@ -746,7 +746,7 @@ namespace sw
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
         if ( alignedTotal > _data._bytes.size() )
             _data._bytes.resize( alignedTotal, 0 );
-        _bufferGeneration.bump();
+        _bufferGeneration.bump( this );
 
         _desc._listProperty = _data._listProperty;
         return bAllPacked;
@@ -821,11 +821,14 @@ namespace sw
             prop->_value = std::move( previousValue );
             return false;
         }
-        _bufferGeneration.bump();
+        _bufferGeneration.bump( this );
         _desc._listProperty = _data._listProperty;
 
         if ( prop->_type == MaterialPropertyType::Keyword || prop->_type == MaterialPropertyType::Bool )
+        {
             _bDefinesDirty = SW_TRUE;
+            MaterialPermutation::recordPermutationChange( this ); // 키워드 · 불 프로퍼티는 define 이다 — 이 머티리얼을 쓰는 칸이 해시를 다시 구한다
+        }
 
         return true;
     }
@@ -841,7 +844,7 @@ namespace sw
         pProp->_value        = to_string( descIdx );
         if ( MaterialPacking::packPropertyIntoBuffer( *pProp, _data._bytes ) == false )
             return false;
-        _bufferGeneration.bump();
+        _bufferGeneration.bump( this );
         _desc._listProperty = _data._listProperty;
         return true;
     }
@@ -852,7 +855,7 @@ namespace sw
         {
             _desc._permutations._quality = level;
             _bDefinesDirty               = SW_TRUE;
-            MaterialPermutation::bumpPermutationGeneration();
+            MaterialPermutation::recordPermutationChange( this );
         }
     }
 
@@ -872,7 +875,7 @@ namespace sw
             {
                 ss._bEnabled   = bEnabled ? 1 : 0;
                 _bDefinesDirty = SW_TRUE;
-                MaterialPermutation::bumpPermutationGeneration();
+                MaterialPermutation::recordPermutationChange( this );
             }
             return true;
         }
@@ -891,7 +894,7 @@ namespace sw
                 {
                     mc._selected   = string( selectedOption );
                     _bDefinesDirty = SW_TRUE;
-                    MaterialPermutation::bumpPermutationGeneration();
+                    MaterialPermutation::recordPermutationChange( this );
                 }
                 return;
             }
@@ -903,6 +906,7 @@ namespace sw
             multiCompile._listOption.push_back( string( selectedOption ) );
         _desc._permutations._listMultiCompile.push_back( std::move( multiCompile ) );
         _bDefinesDirty = SW_TRUE;
+        MaterialPermutation::recordPermutationChange( this );
     }
 
     bool Material::setScalarParameter( hashed_string name, float32 value )
@@ -913,7 +917,7 @@ namespace sw
         pProp->_value = to_string( value );
         if ( MaterialPacking::packPropertyIntoBuffer( *pProp, _data._bytes ) == false )
             return false;
-        _bufferGeneration.bump();
+        _bufferGeneration.bump( this );
         return true;
     }
 
@@ -1314,6 +1318,8 @@ namespace sw
         }
 
         _bDefinesDirty = SW_TRUE;
+        // 다시 읽기(에디터 미리보기 · 머티리얼 패널)는 같은 객체를 제자리에서 바꾼다 — 셰이더 · define 이 달라졌을 수 있다. 주인을 적어 장면 빌더가 이 머티리얼을 쓰는 칸만 다시 모은다.
+        MaterialPermutation::recordPermutationChange( this );
         applyDescToRuntime();
         return true;
     }
@@ -1328,6 +1334,8 @@ namespace sw
         _elementStride       = 0;
         rebuildCollectionBindings();
         rebuildPackedBuffer();
+        // 바이트를 새로 쌓았다 — 렌더 값 변경 기록에 이 머티리얼을 적어 다음 맞추기가 이것과 그 인스턴스의 원소를 다시 맞춘다(레이아웃 맞추기는 그때 `syncRenderState` 가 한다).
+        _bufferGeneration.bump( this );
     }
 
     void Material::rebuildPropertyNames()

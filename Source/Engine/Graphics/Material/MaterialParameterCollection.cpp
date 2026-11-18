@@ -101,7 +101,7 @@ namespace sw
         {
             _listEntry.push_back( Entry{ hashed_string( string_view( parameter._name ) ), parameter._value } );
         }
-        _generation.bump();
+        _generation.bump( nullptr ); // 묶음 값은 그것을 읽는 머티리얼 모두에 닿는다 — 주인을 모르는 변경이라 읽는 쪽이 전부 다시 본다
     }
 
     const float4* MaterialParameterCollection::findValue( const hashed_string& name ) const
@@ -122,7 +122,7 @@ namespace sw
         if ( bSame == false )
         {
             pEntry->_value = value;
-            _generation.bump();
+            _generation.bump( nullptr ); // 묶음 값은 그것을 읽는 머티리얼 모두에 닿는다 — 주인을 모르는 변경이라 읽는 쪽이 전부 다시 본다
         }
         return true;
     }

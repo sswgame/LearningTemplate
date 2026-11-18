@@ -19,6 +19,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 #include <thread>
@@ -128,8 +129,6 @@ namespace sw
     MaterialCache::MaterialCache()
         : AssetCacheBase{ CacheTracking::counted( kAssetKindName ) }
         , _impl{ make_unique<Impl>() }
-        , _renderValueGeneration{ 1 }
-        , _permutationGeneration{ 1 }
     {
     }
 
@@ -224,6 +223,9 @@ namespace sw
         if ( pDevice == nullptr || _impl == nullptr )
             return;
         promoteReadyPSOWarmKeys(); // 지난 프레임까지 초기화를 마친 고정 머티리얼
+        // 로드가 끝난(성공 · 실패) 덮어쓴 텍스처의 주인을 렌더 값 변경 기록에 적는다 — 장면 빌더가 그 원소를 다시 맞춘다(실패면 부모 텍스처로 다시 패킹).
+        const uint32 completedLoadCount = _completionWatch.pollAll( _renderValueLog ); // 계측 매크로 밖에서 부른다 — 계측을 끈 빌드에서도 돈다
+        SW_PROFILE_COUNT( "GT.Material.textureLoadsCompleted", completedLoadCount );
         if ( _impl->_pendingCount.load( std::memory_order_acquire ) == 0 )
             return;
 

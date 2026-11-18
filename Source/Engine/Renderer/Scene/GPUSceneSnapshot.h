@@ -530,9 +530,14 @@ namespace sw
             return ( _pListMaterialGroup != nullptr ) ? *_pListMaterialGroup : s_listEmpty;
         }
         /**
+         * @brief 머티리얼 그룹 목록의 공유 참조입니다(렌더 스레드가 지난번 올린 목록을 붙든다 — `GPUScene::uploadMaterialGroups`).
+         * @details 목록은 공유 중이면 고칠 때 베끼므로(`editMaterialGroups`) 같은 포인터면 같은 내용이다. 붙든 쪽이 있으면 게임 스레드는 제자리에 고치지 않는다.
+         */
+        shared_ptr<const vector<GPUMaterialGroup>> shareMaterialGroups() const { return _pListMaterialGroup; }
+        /**
          * @brief 고칠 머티리얼 그룹 목록입니다(게임 스레드의 `GPUMaterialRegistry` 만 부른다). 공유 중이면 베낀 새 목록을 둔다(copy-on-write).
          * @details 고치는 프레임(새 원소 · 회수 · 사본이 바뀐 원소)에만 부르게 해야 공유가 산다 — 바뀌지 않은 프레임은 목록 포인터 하나만 패킷으로 간다.
-         *          use_count 가 1 이면 다른 참조가 없다(새 참조는 게임 스레드의 내보내기에서만 생긴다).
+         *          use_count 가 1 이면 다른 참조가 없다(새 참조는 게임 스레드의 내보내기와, 이미 참조를 쥔 렌더 스레드의 `shareMaterialGroups` 에서만 생긴다 — 둘 다 1 에서 시작하지 않는다).
          */
         vector<GPUMaterialGroup>& editMaterialGroups()
         {

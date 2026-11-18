@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Scene/GPUMaterialRegistry.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -64,7 +65,9 @@ namespace sw
         _mapShaderPathToGroup.clear();
         inoutSnapshot._pListShaderPermutation.reset();
         _mapPermutationToIndex.clear();
-        _bElementsChanged = SW_TRUE;
+        _mapOwnerToElement.clear();
+        _listNewElement.clear();
+        _bAllElementsStale = SW_TRUE;
     }
 
     uint32 GPUMaterialRegistry::findOrAddMaterialGroup( const Material* pMaterial, GPUSceneSnapshot& inoutSnapshot )
@@ -156,7 +159,12 @@ namespace sw
                 state._listEntryOwner.resize( elementIndex + 1 );
             state._listEntryOwner[elementIndex] = MaterialElementOwner{ material, instance }; // 소유가 키(생포인터)를 살려 둔다 — 회수 전에는 키가 가리키는 것이 사라지지 않는다
             state._mapEntryToIndex.emplace( key, elementIndex );
-            _bElementsChanged = SW_TRUE; // 새 원소의 사본은 비었다 — 이번 맞추기를 건너뛰지 않는다
+            // 새 원소의 사본은 비었다 — 이번 맞추기가 이 원소를 맞춘다. 주인 → 원소 표에도 올려 값이 바뀌면 이 원소만 다시 맞춘다.
+            const ElementRef ref{ groupIndex, elementIndex };
+            _listNewElement.push_back( ref );
+            _mapOwnerToElement[static_cast<const void*>( pMaterial )].push_back( ref );
+            if ( pInstance != nullptr )
+                _mapOwnerToElement[static_cast<const void*>( pInstance )].push_back( ref );
         }
         state._listEntryLastUsedBuild[elementIndex] = _buildCounter;
         state._lastKey                              = key;
@@ -209,6 +217,10 @@ namespace sw
                     continue;
 
                 state._mapEntryToIndex.erase( key );
+                const ElementRef ref{ static_cast<uint32>( groupIndex ), index };
+                unlinkOwner( key._pMaterial, ref );
+                if ( key._pInstance != nullptr )
+                    unlinkOwner( key._pInstance, ref );
                 // 슬롯은 비워 두고 프리리스트로 돌린다. 뒤 원소를 당겨오면 그들의 인덱스가 바뀌어
                 // 이미 인스턴스에 기록된 materialIndex 가 엉뚱한 머티리얼을 가리킨다.
                 inoutSnapshot.editMaterialGroups()[groupIndex]._listEntry[index] = GPUMaterialElement{};
@@ -220,34 +232,93 @@ namespace sw
         }
     }
 
+    void GPUMaterialRegistry::unlinkOwner( const void* pOwner, const ElementRef& ref )
+    {
+        const auto it = _mapOwnerToElement.find( pOwner );
+        if ( it == _mapOwnerToElement.end() )
+            return;
+        VectorUtil::removeIf( it->second, [&ref]( const ElementRef& item )
+        { return item._group == ref._group && item._index == ref._index; } );
+        if ( it->second.empty() )
+            _mapOwnerToElement.erase( it );
+    }
+
+    bool GPUMaterialRegistry::refreshElement( GPUSceneSnapshot& inoutSnapshot, const ElementRef& ref ) const
+    {
+        if ( ref._group >= _listMaterialGroupState.size() || ref._group >= inoutSnapshot.getMaterialGroups().size() )
+            return false;
+        const MaterialGroupState& state = _listMaterialGroupState[ref._group];
+        if ( ref._index >= state._listEntryOwner.size() || ref._index >= inoutSnapshot.getMaterialGroups()[ref._group]._listEntry.size() )
+            return false;
+        const MaterialElementOwner& owner = state._listEntryOwner[ref._index];
+        if ( owner._material == nullptr )
+            return false; // 회수된 칸이다
+        MaterialRenderBinding        binding = ( owner._instance != nullptr ) ? owner._instance->getRenderBinding() : owner._material->getRenderBinding();
+        const MaterialRenderBinding& current = inoutSnapshot.getMaterialGroups()[ref._group]._listEntry[ref._index]._binding;
+        if ( binding._proxy == current._proxy && binding._data == current._data )
+            return false;
+        // 사본이 바뀐 원소가 있을 때만 그룹 목록을 고친다(공유 중이면 그때 베낀다) — 맞추기가 돌아도 값이 그대로면 패킷은 같은 목록을 받는다(렌더 스레드는 목록이 같으면 올리지 않는다).
+        inoutSnapshot.editMaterialGroups()[ref._group]._listEntry[ref._index]._binding = std::move( binding );
+        return true;
+    }
+
     void GPUMaterialRegistry::refreshMaterialBindings( GPUSceneSnapshot& inoutSnapshot )
     {
         // 입력은 맞추기 **전에** 읽는다 — 맞추는 중에 오른 번호(인스턴스가 부모의 레이아웃을 맞춤 · 묶음 값을 다시 패킹)는 다음 빌드가 한 번 더 맞춰 수렴한다.
         // 뒤에 읽으면 앞 원소(부모)가 옛 사본을 든 채 건너뛸 수 있다.
-        const MaterialRenderInputs inputs = MaterialRenderInputs::capture();
-        if ( _bElementsChanged == SW_FALSE && inputs.isSame( _lastRefreshInputs ) )
+        const MaterialRenderInputs inputs      = MaterialRenderInputs::capture();
+        const bool                 bInputsSame = inputs.isSame( _lastRefreshInputs );
+        if ( _bAllElementsStale == SW_FALSE && bInputsSame && _listNewElement.empty() )
             return;
-        _bElementsChanged  = SW_FALSE;
-        _lastRefreshInputs = inputs;
-        SW_PROFILE_COUNT( "GT.Material.refreshBindings", 1 );
-        // 사본이 바뀐 원소가 있을 때만 그룹 목록을 고친다(공유 중이면 그때 베낀다) — 맞추기가 돌아도 값이 그대로면 패킷은 같은 목록을 받는다.
-        // 베끼면 옛 목록은 다른 쪽이 놓을 수 있으므로 참조를 들고 있지 않고 매번 다시 읽는다.
-        const size_t groupCount = MathUtil::min( inoutSnapshot.getMaterialGroups().size(), _listMaterialGroupState.size() );
-        for ( size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex )
+        // 바뀐 주인만 맞출 수 있는가 — 레이아웃이 그대로이고 변경 기록이 지난 맞추기 뒤를 모두 덮으며 주인을 모르는 변경이 없어야 한다.
+        bool bTargeted = _bAllElementsStale == SW_FALSE && inputs._bKnown == SW_TRUE && _lastRefreshInputs._bKnown == SW_TRUE &&
+                         inputs._shaderReflectionGeneration == _lastRefreshInputs._shaderReflectionGeneration;
+        _listChangedOwnerScratch.clear();
+        if ( bTargeted && bInputsSame == false )
         {
-            const MaterialGroupState& state      = _listMaterialGroupState[groupIndex];
-            const size_t              entryCount = MathUtil::min( inoutSnapshot.getMaterialGroups()[groupIndex]._listEntry.size(), state._listEntryOwner.size() );
-            for ( size_t index = 0; index < entryCount; ++index )
+            const MaterialCache* const pCache = MaterialCache::findBound();
+            bTargeted                         = pCache != nullptr &&
+                        pCache->getRenderValueLog().collectChangedOwners( _lastRefreshInputs._materialRevision, inputs._materialRevision, _listChangedOwnerScratch );
+        }
+        _bAllElementsStale = SW_FALSE;
+        _lastRefreshInputs = inputs;
+        uint32 visitCount  = 0;
+        uint32 changeCount = 0;
+        if ( bTargeted )
+        {
+            for ( const ElementRef& ref : _listNewElement )
             {
-                const MaterialElementOwner& owner = state._listEntryOwner[index];
-                if ( owner._material == nullptr )
-                    continue;
-                MaterialRenderBinding        binding = ( owner._instance != nullptr ) ? owner._instance->getRenderBinding() : owner._material->getRenderBinding();
-                const MaterialRenderBinding& current = inoutSnapshot.getMaterialGroups()[groupIndex]._listEntry[index]._binding;
-                if ( binding._proxy == current._proxy && binding._data == current._data )
-                    continue;
-                inoutSnapshot.editMaterialGroups()[groupIndex]._listEntry[index]._binding = std::move( binding );
+                ++visitCount;
+                changeCount += refreshElement( inoutSnapshot, ref ) ? 1u : 0u;
+            }
+            for ( const void* pOwner : _listChangedOwnerScratch )
+            {
+                const auto it = _mapOwnerToElement.find( pOwner );
+                if ( it == _mapOwnerToElement.end() )
+                    continue; // 이 장면에 없는 머티리얼이다
+                for ( const ElementRef& ref : it->second )
+                {
+                    ++visitCount;
+                    changeCount += refreshElement( inoutSnapshot, ref ) ? 1u : 0u;
+                }
             }
         }
+        else
+        {
+            SW_PROFILE_COUNT( GT.Material.refreshBindingsAll, 1 );
+            for ( uint32 groupIndex = 0; groupIndex < _listMaterialGroupState.size(); ++groupIndex )
+            {
+                const uint32 entryCount = static_cast<uint32>( _listMaterialGroupState[groupIndex]._listEntryOwner.size() );
+                for ( uint32 index = 0; index < entryCount; ++index )
+                {
+                    ++visitCount;
+                    changeCount += refreshElement( inoutSnapshot, ElementRef{ groupIndex, index } ) ? 1u : 0u;
+                }
+            }
+        }
+        _listNewElement.clear();
+        SW_PROFILE_COUNT( GT.Material.refreshBindings, 1 );
+        SW_PROFILE_COUNT( GT.Material.refreshVisited, visitCount );
+        SW_PROFILE_COUNT( GT.Material.refreshChanged, changeCount );
     }
 } // namespace sw

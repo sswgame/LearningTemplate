@@ -76,12 +76,26 @@ namespace sw
          * @brief 모든 원소의 (프록시, 사본)을 지금 값으로 맞춥니다. 배치 구성을 그대로 둔 프레임에도 매 빌드 부릅니다(값만 바뀐 머티리얼이 있다).
          * @details 바뀌지 않은 머티리얼은 세대 비교 한 번으로 같은 사본을 돌려준다(`Material::getRenderBinding`). 렌더 스레드는 사본이 바뀐 원소만 올린다.
          *          원소가 그대로이고 사본을 정하는 입력(`MaterialRenderInputs`)도 지난 맞추기 때와 같으면 통째로 건너뛴다 — 정지한 씬의 비용이 원소 수가 아니라 비교 한 번이다.
+         *          입력이 바뀌었으면 렌더 값 변경 기록(`MaterialCache::getRenderValueLog`)에서 바뀐 머티리얼 · 인스턴스만 받아 그 원소와 새 원소만 맞춘다 —
+         *          값을 매 프레임 바꾸는 머티리얼의 비용이 장면의 머티리얼 수가 아니라 바뀐 수에 비례한다(유니티 SRP Batcher 의 바뀐 CBUFFER 만 올리기, 언리얼 MID 의 유니폼 무효화).
+         *          기록이 넘쳤거나 주인을 모르는 변경(묶음 값) · 셰이더 레이아웃 변경 · 그룹 목록 비움이면 모든 원소를 맞춘다.
          */
         void refreshMaterialBindings( GPUSceneSnapshot& inoutSnapshot );
 
     private:
+        /** @brief 원소 하나의 자리(그룹 번호, 원소 번호)입니다. */
+        struct ElementRef
+        {
+            uint32 _group{ 0 };
+            uint32 _index{ 0 };
+        };
+
         /** @brief (셰이더 경로 해시, define 해시)의 퍼뮤테이션 해시입니다. 머티리얼에서 묻는 길과 미리 만들기 값의 길이 같은 식을 쓴다. */
         static uint64 combinePermutationHash( uint64 shaderPathHash, uint64 defineHash, bool bAppearanceDither );
+        /** @brief 원소 하나의 (프록시, 사본)을 지금 값으로 맞춥니다. 사본이 바뀐 원소만 그룹 목록을 고친다(공유 중이면 그때 베낀다). @return 고쳤으면 true. */
+        bool refreshElement( GPUSceneSnapshot& inoutSnapshot, const ElementRef& ref ) const;
+        /** @brief 주인 @p pOwner(머티리얼 · 인스턴스) → 원소 목록에서 @p ref 를 뺍니다. */
+        void unlinkOwner( const void* pOwner, const ElementRef& ref );
 
         /** @brief 원소의 게임 쪽 소유입니다. 스냅샷(패킷)에는 싣지 않는다 — 렌더 스레드가 Material 을 보지 않게. */
         struct MaterialElementOwner
@@ -108,6 +122,7 @@ namespace sw
             uint8                 _bHasLast{ SW_FALSE };
         };
 
+    private:
         /// @brief 셰이더 경로에서 `GPUSceneSnapshot::getMaterialGroups` 인덱스를 찾는 맵입니다. 배치마다 그룹 목록을 string 비교로 훑지 않기 위한 것입니다.
         unordered_map<string, uint32> _mapShaderPathToGroup;
         vector<MaterialGroupState>    _listMaterialGroupState;
@@ -117,7 +132,13 @@ namespace sw
         uint64 _buildCounter{ 0 };
         /// @brief 마지막 `refreshMaterialBindings` 가 맞추기 전에 읽은 입력입니다. 같고 원소가 그대로면 다시 맞추지 않는다.
         MaterialRenderInputs _lastRefreshInputs{};
-        /// @brief 지난 맞추기 뒤 사본이 빈 원소가 생겼다(새 원소 · 그룹 목록을 비움). 입력이 같아도 맞춘다.
-        uint8 _bElementsChanged{ SW_TRUE };
+        /// @brief 그룹 목록을 비웠다(`reset`) — 다음 맞추기는 모든 원소를 본다.
+        uint8 _bAllElementsStale{ SW_TRUE };
+        /// @brief 지난 맞추기 뒤 생긴 원소입니다(사본이 비었다). 입력이 같아도 이것들은 맞춘다.
+        vector<ElementRef> _listNewElement;
+        /// @brief 머티리얼 · 인스턴스 주소 → 그 주인을 키에 가진 원소들입니다(머티리얼이면 그 인스턴스의 원소도 — 인스턴스 사본은 부모 바이트 위에 덮어쓴다). 렌더 값 변경 기록의 주인을 원소로 바꾼다.
+        unordered_map<const void*, vector<ElementRef>> _mapOwnerToElement;
+        /// @brief 맞추기가 변경 기록에서 꺼낸 주인입니다(작업 배열).
+        vector<const void*> _listChangedOwnerScratch;
     };
 } // namespace sw

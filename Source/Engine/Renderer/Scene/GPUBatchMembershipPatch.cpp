@@ -25,8 +25,8 @@ namespace sw
         _listEnter.push_back( GPUBatchMemberEntry{ batchIndex, slot } );
     }
 
-    void GPUBatchMembershipPatch::rewriteOrder( GPUMeshBatch* pBatch, uint32 batchCount, const vector<uint32>& listOldOrder, vector<uint32>& outListOrder,
-                                                vector<uint32>& ioListSlotToOrder )
+    void GPUBatchMembershipPatch::rewriteOrder( GPUMeshBatch* pBatch, uint32 batchCount, uint32 freshBatchBegin, const vector<uint32>& listOldOrder,
+                                                vector<uint32>& outListOrder, vector<uint32>& ioListSlotToOrder )
     {
         // 배치 번호 순으로 붙인다 — 같은 배치 안은 칸 순(결정적이다).
         VectorUtil::sort( _listEnter, []( const GPUBatchMemberEntry& entryA, const GPUBatchMemberEntry& entryB )
@@ -44,8 +44,9 @@ namespace sw
         for ( uint32 batchIndex = 0; batchIndex < batchCount; ++batchIndex )
         {
             GPUMeshBatch& batch    = pBatch[batchIndex];
+            const bool    bFresh   = batchIndex >= freshBatchBegin; // 이번에 끝에 붙인 배치 — 지난 구성원이 없다
             const uint32  oldBase  = batch._instanceBase;
-            const uint32  oldCount = batch._instanceCount;
+            const uint32  oldCount = bFresh ? 0u : batch._instanceCount;
             batch._instanceBase    = static_cast<uint32>( outListOrder.size() );
             for ( uint32 order = oldBase; order < oldBase + oldCount && order < listOldOrder.size(); ++order )
             {
@@ -56,7 +57,7 @@ namespace sw
             for ( ; enterCursor < _listEnter.size() && _listEnter[enterCursor]._batchIndex == batchIndex; ++enterCursor )
                 appendMember( _listEnter[enterCursor]._slot );
             batch._instanceCount = static_cast<uint32>( outListOrder.size() ) - batch._instanceBase;
-            const bool bLODLevel = oldCount == 0u && batch._lodLevelCount == 0u;
+            const bool bLODLevel = bFresh == false && oldCount == 0u && batch._lodLevelCount == 0u;
             if ( bLODLevel == false )
                 headCapacity = batch._instanceCount;
             batch._visibleBase     = visibleBase;

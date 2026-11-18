@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e80d49de23284d3d9063f1d267b6cef1"?>
+<!--
+  부하 시나리오 — 메시 컴포넌트의 머티리얼 교체. 큐브 512 개가 저마다 머티리얼 인스턴스를 들고(배치 512 개), 프레임마다 16 개가 이미 있는 다른 인스턴스로 바꾸고(-gv_stressTestMaterialChurnSwap)
+  2 개가 새 인스턴스를 받거나 놓는다(-gv_stressTestMaterialChurnAdd — 처음 보는 배치 키). 언리얼 GPUScene(바뀐 프리미티브의 드로우 명령만 다시 캐시) ·
+  유니티 GPU Resident Drawer(키가 바뀐 인스턴스만 옮김)처럼 바뀐 칸만 옮기고 장면을 다시 나누지 않는지 잰다.
+  감시 값: GT.GPUScene.build.patchEnter · patchLeave(바뀐 칸 수), GT.GPUScene.build.patchNewBatch(새 키를 끝에 붙인 배치 수),
+           GT.GPUScene.build.partition(다시 나누기 — 드물어야 한다), GT.GPUScene.build 시간, 프레임 시간.
+  측정 창(<Load>)이 끝내므로 <Pass/> 가 없다. 하위 폴더라 게임 체인이 줍지 않는다.
+  실행: ctest -L load (항목 Scenario.empty.load.materialswap)
+-->
+<Scenario name="game.empty.load.materialswap" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
+	<Launch variable="gv_stressTestMeshes" value="512"/>
+	<Launch variable="gv_stressTestMaterialInstances" value="1"/>
+	<Launch variable="gv_stressTestTransparent" value="0"/>
+	<Launch variable="gv_stressTestAnimate" value="0"/>
+	<Launch variable="gv_stressTestMaterialChurnSwap" value="16"/>
+	<Launch variable="gv_stressTestMaterialChurnAdd" value="2"/>
+	<Load durationSeconds="15"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Scene.ObjectCount" atLeast="512"/>
+</Scenario>

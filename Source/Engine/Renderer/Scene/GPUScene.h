@@ -120,8 +120,10 @@ namespace sw
     struct GPUMaterialGroupBuffer
     {
         RHIStructuredBuffer _slot;
-        /** @brief 마지막으로 올린 바이트입니다. 같으면 업로드를 건너뜁니다(언리얼처럼 바뀐 것만 올립니다). */
+        /** @brief 마지막으로 올린 바이트입니다(버퍼의 CPU 거울). 원소가 바뀌면 그 원소 칸만 고치고 그 구간만 올립니다. */
         vector<uint8> _lastBytes;
+        /** @brief 원소마다 마지막으로 올린 사본입니다(`_lastBytes` 와 같은 번호). 사본은 바뀌면 새 객체라(`MaterialRenderBinding`) 포인터가 같으면 바이트도 같다 — 붙들어 두어 주소가 다시 쓰이지 않는다. */
+        vector<shared_ptr<const MaterialRenderData>> _listUploadedData;
     };
 } // namespace sw
 
@@ -346,7 +348,8 @@ namespace sw
         };
         /**
          * @brief 그룹마다 머티리얼 패킹 바이트를 원소 stride 로 이어 붙여 구조 버퍼에 올리고, 배치에 버퍼와 SRV 를 기록합니다(RT).
-         * @details 바이트가 지난 업로드와 같으면 건너뛴다. 값이 바뀐 그룹만 올린다(언리얼의 더티 업로드).
+         * @details 그룹 목록이 지난번 올린 것과 같은 객체면(게임 스레드는 공유 중인 목록을 베껴 고친다) 아무것도 하지 않는다 — 정지한 머티리얼의 비용이 포인터 비교 하나다.
+         *          목록이 바뀌었으면 사본이 바뀐 원소만 그 칸을 올린다(유니티 SRP Batcher 의 바뀐 머티리얼 CBUFFER 만 올리기). 버퍼를 새로 만들거나 stride · 원소 수가 바뀌면 그룹 전체를 올린다.
          */
         void uploadMaterialGroups( IRHIDevice* pDevice );
         /**
@@ -354,7 +357,7 @@ namespace sw
          * @return 올릴 원소가 없으면 0 입니다.
          */
         static uint32 computeMaterialGroupStride( const GPUMaterialGroup& group );
-        /** @brief 그룹 하나의 머티리얼 바이트를 stride 로 이어 붙여 구조 버퍼에 올립니다(지난 업로드와 같으면 건너뛴다). */
+        /** @brief 그룹 하나의 머티리얼 바이트를 stride 로 이어 붙여 구조 버퍼에 올립니다(사본이 바뀐 원소만 — 버퍼 · stride · 원소 수가 바뀌면 전체). */
         void uploadMaterialGroup( IRHIDevice* pDevice, const GPUMaterialGroup& group );
         /** @brief 그룹당 한 번 푼 버퍼와 SRV 를 배치에 기록합니다. */
         void bindBatchMaterials();
@@ -399,9 +402,12 @@ namespace sw
         /// @brief 셰이더 경로에서 머티리얼 데이터 GPU 버퍼를 찾는 맵입니다(RT 영속, 스냅샷 교체와 무관).
         unordered_map<string, GPUMaterialGroupBuffer> _mapMaterialGroupBuffer;
         vector<uint8>                                 _listMaterialScratch;
+        vector<RHIBufferCopyRegion>                   _listMaterialRegionScratch;
         vector<ResolvedGroup>                         _listResolvedGroupScratch;
-        vector<RHIDrawIndexedIndirectCommand>         _listScratchIndirectCmd;
-        vector<GPUBatchInfo>                          _listScratchBatchInfo;
+        /// @brief 마지막으로 올린 머티리얼 그룹 목록입니다(공유 참조). 이번 스냅샷의 목록과 같은 객체면 올릴 것이 없다. GPU 버퍼를 놓으면 비운다.
+        shared_ptr<const vector<GPUMaterialGroup>> _pUploadedMaterialGroups;
+        vector<RHIDrawIndexedIndirectCommand>      _listScratchIndirectCmd;
+        vector<GPUBatchInfo>                       _listScratchBatchInfo;
         /// @brief 부분 인스턴스 업로드용 영역 목록입니다. 프레임마다 다시 채워 쓰며 할당을 반복하지 않습니다.
         vector<RHIBufferCopyRegion> _listScratchCopyRegion;
         /// @brief 바뀐 칸을 모은 구간입니다(스크래치).

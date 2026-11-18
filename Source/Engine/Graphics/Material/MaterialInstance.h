@@ -9,6 +9,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialChangeLog.h"
 #include "Engine/Graphics/Material/MaterialRenderBinding.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 
@@ -180,7 +181,7 @@ namespace sw
         /** @brief 런타임 오버라이드를 Desc 에 다시 씁니다. */
         void syncDescOverrides() const;
         /** @brief 덮어쓰기가 바뀌었다 — 다음 `getRenderBinding` 이 사본을 다시 만들고, 렌더 값의 전역 번호가 오른다(`MaterialRenderVersion`). */
-        void markRenderDirty() { _overrideRevision.bump(); }
+        void markRenderDirty() { _overrideRevision.bump( this ); }
         /** @brief 부모 바이트에 덮어쓰기를 패킹하고 텍스처 슬롯을 채운 새 사본을 만듭니다(`getRenderBinding`). */
         void rebuildRenderData( IRHIDevice* pDevice );
         /** @brief 부모의 매개변수 모양과 어긋난 스칼라 · 벡터 덮어쓰기를 알리고 지웁니다(`rebuildRenderData` 가 부모 초기화 뒤 게임 스레드에서 부른다). */
@@ -197,6 +198,10 @@ namespace sw
         bool syncTextureOverrides( IRHIDevice* pRHI );
         /** @brief 요청한 텍스처를 모두 놓습니다(핸들이 쥔 참조를 캐시에 돌려준다). 디바이스가 이미 없으면 캐시가 참조 수만 줄인다(`Material::clearRHI` 와 같다). */
         void releaseTextureOverrides();
+        /** @brief 덮어쓴 텍스처 가운데 아직 로드 중(준비도 실패도 아님)인 것이 있으면 true 입니다. */
+        bool hasPendingTextureLoad() const;
+        /** @brief 머티리얼 캐시의 지켜보기(`MaterialCompletionWatch`)가 묻는 함수입니다 — 로드 중인 덮어쓰기가 없으면 끝났다. */
+        static MaterialCompletionWatch::PollResult pollTextureCompletion( void* pOwner );
         /**
          * @brief 덮어쓴 텍스처의 슬롯 번호입니다. 부모가 그 프로퍼티에 텍스처를 빌렸으면 그 슬롯을, 아니면 부모 슬롯 뒤에 덮어쓰기 순서대로 이어 붙입니다.
          * @return 슬롯 수(`shaderslot::kMaterialTextureCount`)를 넘거나 덮어쓰기가 없으면 비어 있습니다.

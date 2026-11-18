@@ -640,6 +640,7 @@ namespace sw
             pair.second._slot.release( pDevice );
         }
         _mapMaterialGroupBuffer.clear();
+        _pUploadedMaterialGroups.reset(); // 버퍼를 놓았다 — 다음 업로드가 목록이 같아도 다시 올린다
         for ( GPUMeshBatchBinding& gpu : _listBatchBinding )
         {
             gpu._materialBuffer = 0;
@@ -733,21 +734,9 @@ namespace sw
         if ( stride == 0 )
             return;
 
-        const uint32 elementCount = static_cast<uint32>( group._listEntry.size() );
-        const uint32 needBytes    = stride * elementCount;
-        _listMaterialScratch.assign( needBytes, 0 );
-        for ( uint32 element = 0; element < elementCount; ++element )
-        {
-            const MaterialRenderData* pData = group._listEntry[element]._binding._data.get();
-            if ( pData == nullptr )
-                continue;
-            const vector<uint8>& bytes = pData->_bytes;
-            const uint32         copy  = MathUtil::min( stride, static_cast<uint32>( bytes.size() ) );
-            if ( copy > 0 )
-                Memory::copy( _listMaterialScratch.data() + static_cast<size_t>( element ) * stride, bytes.data(), copy );
-        }
-
-        GPUMaterialGroupBuffer& gpu = _mapMaterialGroupBuffer[group._shaderPath];
+        const uint32            elementCount = static_cast<uint32>( group._listEntry.size() );
+        const uint32            needBytes    = stride * elementCount;
+        GPUMaterialGroupBuffer& gpu          = _mapMaterialGroupBuffer[group._shaderPath];
         // 모자랄 때만 두 배로 키운다. 주의: "원소 수 × 2" 를 **매번** 요구하면 16 개를 넘은 뒤로는 머티리얼이 하나 늘 때마다 다시
         // 만든다(용량 34 < 요구 36 → 36, 다음엔 38 …). stride 가 달라지면 슬롯이 알아서 다시 만든다. 구조버퍼의 stride 는 뷰에 박혀 있어
         // 셰이더 선언과 달라지면 안 된다.
@@ -759,7 +748,56 @@ namespace sw
             SW_LOG_ERROR_ID( "GPUScene.FailedCreateMaterialData", "Failed to create the material data buffer (%#, stride %#, %# elements).", group._shaderPath.c_str(), stride, elementCount );
             return;
         }
-        // 값이 지난 업로드와 같으면 올리지 않는다. 머티리얼 수에 비례하던 프레임당 업로드가 바뀐 그룹만큼으로 준다.
+        // 원소 하나의 바이트를 stride 칸에 놓는다(짧으면 뒤는 0 — 레이아웃 오류로 빈 사본도 0 칸이다).
+        auto packElement = [stride]( const MaterialRenderData* pData, uint8* pDst )
+        {
+            Memory::set( pDst, 0u, stride );
+            if ( pData == nullptr )
+                return;
+            const uint32 copy = MathUtil::min( stride, static_cast<uint32>( pData->_bytes.size() ) );
+            if ( copy > 0 )
+                Memory::copy( pDst, pData->_bytes.data(), copy );
+        };
+
+        // 버퍼 · stride · 원소 수가 그대로면 사본이 바뀐 원소만 거울에 고치고 그 칸만 올린다(머티리얼 수가 아니라 바뀐 수에 비례).
+        const bool bIncremental = bRecreate == false && gpu._lastBytes.size() == needBytes && gpu._listUploadedData.size() == elementCount;
+        if ( bIncremental )
+        {
+            _listMaterialScratch.resize( stride );
+            _listMaterialRegionScratch.clear();
+            uint32 uploadedCount = 0;
+            for ( uint32 element = 0; element < elementCount; ++element )
+            {
+                const shared_ptr<const MaterialRenderData>& data = group._listEntry[element]._binding._data;
+                if ( data == gpu._listUploadedData[element] )
+                    continue;
+                gpu._listUploadedData[element] = data;
+                packElement( data.get(), _listMaterialScratch.data() );
+                uint8* const pMirror = gpu._lastBytes.data() + static_cast<size_t>( element ) * stride;
+                if ( Memory::compare( pMirror, _listMaterialScratch.data(), stride ) == 0 )
+                    continue; // 새 사본이지만 바이트가 같다(예: 텍스처 슬롯만 다시 맞춤)
+                Memory::copy( pMirror, _listMaterialScratch.data(), stride );
+                ++uploadedCount;
+                const uint32 offset = element * stride;
+                if ( _listMaterialRegionScratch.empty() == false && _listMaterialRegionScratch.back()._dstOffset + _listMaterialRegionScratch.back()._sizeBytes == offset )
+                    _listMaterialRegionScratch.back()._sizeBytes += stride; // 이웃한 원소는 한 조각으로 붙인다
+                else
+                    _listMaterialRegionScratch.push_back( RHIBufferCopyRegion{ offset, offset, stride } );
+            }
+            if ( _listMaterialRegionScratch.empty() == false )
+                gpu._slot.uploadRegions( pDevice, gpu._lastBytes.data(), _listMaterialRegionScratch );
+            SW_PROFILE_COUNT( "RT.GPUScene.materialElementsUploaded", uploadedCount );
+            return;
+        }
+
+        // 처음 · 다시 만든 버퍼 · stride 나 원소 수가 바뀐 그룹은 통째로 짓는다. 바이트가 지난 업로드와 같으면 올리지 않는다.
+        _listMaterialScratch.assign( needBytes, 0 );
+        gpu._listUploadedData.resize( elementCount );
+        for ( uint32 element = 0; element < elementCount; ++element )
+        {
+            gpu._listUploadedData[element] = group._listEntry[element]._binding._data;
+            packElement( gpu._listUploadedData[element].get(), _listMaterialScratch.data() + static_cast<size_t>( element ) * stride );
+        }
         const bool bChanged = bRecreate || gpu._lastBytes.size() != needBytes || Memory::compare( gpu._lastBytes.data(), _listMaterialScratch.data(), needBytes ) != 0;
         if ( bChanged )
         {
@@ -812,11 +850,18 @@ namespace sw
         if ( pDevice == nullptr )
             return;
 
-        for ( const GPUMaterialGroup& group : _snapshot.getMaterialGroups() )
+        // 게임 스레드는 공유 중인 목록을 베껴 고친다(`GPUSceneSnapshot::editMaterialGroups`) — 지난번 올린 목록과 같은 객체면 어느 원소도 바뀌지 않았다.
+        // 지난 목록을 붙들고 있어 주소가 다시 쓰이지 않고, 게임 스레드도 이 목록을 제자리에서 고치지 않는다.
+        shared_ptr<const vector<GPUMaterialGroup>> pGroups = _snapshot.shareMaterialGroups();
+        if ( pGroups != _pUploadedMaterialGroups )
         {
-            if ( group._listEntry.empty() )
-                continue;
-            uploadMaterialGroup( pDevice, group );
+            for ( const GPUMaterialGroup& group : _snapshot.getMaterialGroups() )
+            {
+                if ( group._listEntry.empty() )
+                    continue;
+                uploadMaterialGroup( pDevice, group );
+            }
+            _pUploadedMaterialGroups = std::move( pGroups );
         }
         bindBatchMaterials();
     }
