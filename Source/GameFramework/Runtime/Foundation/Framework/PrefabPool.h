@@ -61,7 +61,7 @@ namespace sw
         GameObject* acquire( GameObjectManager& manager, const utf8* pInstanceName );
         /** @brief `acquire` 와 같되 꺼낸 수가 @p maxBusyCount 면 가장 오래 꺼낸 인스턴스를 그대로 다시 내줍니다(끄고 켜지 않는다 — 쓰는 쪽이 자리 · 상태를 다시 정한다). */
         GameObject* acquireRecycling( GameObjectManager& manager, uint32 maxBusyCount, const utf8* pInstanceName );
-        /** @brief 인스턴스를 끄고 쉬는 목록에 넣습니다. 쉬는 수가 상한이면 지웁니다. 이미 지워진 핸들이면 아무것도 하지 않습니다. */
+        /** @brief 인스턴스를 스폰 상태로 되돌려 끄고 쉬는 목록에 넣습니다. 쉬는 수가 상한이면 되돌린 뒤 지웁니다(외형 부품은 부품 풀로 간다). 이미 지워진 핸들이면 아무것도 하지 않습니다. */
         void release( GameObjectManager& manager, GameObjectHandle handle );
         /** @brief 꺼낸 인스턴스 가운데 @p predicate( 오브젝트 ) 가 참인 것을 모두 돌려받습니다. 지워진 핸들은 걷습니다. */
         template <typename TPredicate>

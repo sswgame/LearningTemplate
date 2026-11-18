@@ -50,6 +50,24 @@ namespace sw
     {
     }
 
+    SpawnStateReset AIControllerComponent::resetToSpawnState()
+    {
+        unpossess();
+        _runner.reset();
+        _blackboard.clear();
+        _stateName        = hashed_string{};
+        _pending          = ControlIntent{};
+        _destination      = float3{};
+        _focusPoint       = float3{};
+        _heldButtonMask   = 0;
+        _moveStatus       = NavMoveStatus::Idle;
+        _bHasDestination  = SW_FALSE;
+        _bHasFocus        = SW_FALSE;
+        _bDestinationSent = SW_FALSE;
+        _bStopPending     = SW_FALSE;
+        return SpawnStateReset::Reset;
+    }
+
     bool AIControllerComponent::prepareBehaviorTree()
     {
         if ( _bTreePrepared == SW_TRUE )

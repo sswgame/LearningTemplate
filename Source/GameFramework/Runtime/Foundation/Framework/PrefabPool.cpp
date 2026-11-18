@@ -138,17 +138,18 @@ namespace sw
         GameObject* pObject = findLive( manager, handle );
         if ( pObject == nullptr )
             return;
-        if ( _listIdle.size() >= _maxIdleCount )
-        {
-            manager.destroyGameObject( pObject );
-            return;
-        }
-        // 실행 중에 붙은 것(돌려주기 전에 누가 자식으로 단 오브젝트)이 되돌리기를 모르면 쉬게 하지 않고 지운다 — 반쯤 되돌린 것을 다시 내주지 않는다.
+        // 쉬는 수가 상한이라 지울 것도 먼저 되돌린다 — 되돌리기가 남에게 돌려줄 것(외형 부품 → 씬의 부품 풀, AI 조종자)을 돌려준 뒤 지운다.
         const Component* pUnsupported = resetHierarchy( *pObject );
         if ( pUnsupported != nullptr )
         {
+            // 실행 중에 붙은 것(돌려주기 전에 누가 자식으로 단 오브젝트)이 되돌리기를 모르면 쉬게 하지 않고 지운다 — 반쯤 되돌린 것을 다시 내주지 않는다.
             SW_LOG_ERROR_ID( "PrefabPool.ReleasedComponentNotPoolable", "Prefab pool '%#' destroyed '%#' instead of keeping it: component '%#' does not implement resetToSpawnState", _prefabPath,
                              pObject->getName().c_str(), pUnsupported->getTypeName().c_str() );
+            manager.destroyGameObject( pObject );
+            return;
+        }
+        if ( _listIdle.size() >= _maxIdleCount )
+        {
             manager.destroyGameObject( pObject );
             return;
         }

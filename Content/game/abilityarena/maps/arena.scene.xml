@@ -6386,7 +6386,10 @@
 					                        _arenaHalfSize="14"
 					                        _waveRadius="11"
 					                        _playerRespawnDelay="2.5"
-					                        _bAutoPlay="false" />
+					                        _bAutoPlay="false">
+						<_enemyPool _maxIdleCount="12" />
+						<_enemyAIPool _maxIdleCount="12" />
+					</ArenaGameModeComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

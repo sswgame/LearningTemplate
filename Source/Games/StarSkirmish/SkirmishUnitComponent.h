@@ -39,6 +39,8 @@ namespace sw
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
+        /** @brief 풀 반환: 자리를 맞추기 전(숨은 채)으로 돌리고 따라가던 유닛 · 입은 모습을 잊습니다. 모델은 디렉터가 꺼낸 뒤 다시 겁니다. */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
         /** @brief 따라갈 디렉터 · 유닛 · 모델 폭을 정합니다(디렉터가 스폰한 뒤 부른다). */
         void assignUnit( GameObjectHandle gameMode, SlotHandle unitID, float32 modelWidth );
 
@@ -47,6 +49,10 @@ namespace sw
          * @details 뷰가 디렉터보다 뒤 그룹에서 돌면 한 프레임이 끝났을 때 0 이다. 앞 그룹에서 돌면 유닛이 움직인 만큼 뒤처진다 — 그룹 순서를 지키는지 시나리오가 본다.
          */
         float32 measureViewLag() const;
+        /** @brief 따라가는 유닛입니다(배정 전이면 무효). */
+        SlotHandle getUnitID() const { return _unitID; }
+        /** @brief 한 번이라도 자리를 맞췄으면(보이기 시작했으면) true 입니다. */
+        bool isPlaced() const { return _bPlaced == SW_TRUE; }
 
     private:
         PROPERTY( Category = "Unit", DisplayName = "Air Height", Tooltip = "Flying units hover this high", Units = m )

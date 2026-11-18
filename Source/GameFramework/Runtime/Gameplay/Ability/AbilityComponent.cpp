@@ -113,6 +113,40 @@ namespace sw
         Component::onEndPlay();
     }
 
+    SpawnStateReset AbilityComponent::resetToSpawnState()
+    {
+        {
+            const ScopedListLock lock{ *this };
+            clearAllAbilities();
+            const size_t effectCount = _activeEffects.size();
+            for ( size_t effectIndex = 0; effectIndex < effectCount; ++effectIndex )
+            {
+                ActiveGameplayEffect* pActiveEffect = _activeEffects[effectIndex].get();
+                if ( pActiveEffect->_bPendingRemove == SW_FALSE )
+                    removeActiveEffectInternal( *pActiveEffect, AbilityEffectLogKind::RemovedExplicitly );
+            }
+        }
+        // 이펙트 · 어빌리티가 준 몫을 걷은 뒤 남은 태그는 코드가 붙인 것(쓰러짐 표시)이다 — 개수째 거둔다(사라짐 알림은 보낸다).
+        const vector<TagID> listOwnedTag = _ownedTagCounts.getTags().getTags();
+        for ( const TagID tag : listOwnedTag )
+        {
+            _ownedTagCounts.updateCount( tag, -_ownedTagCounts.getCount( tag ) );
+        }
+        const vector<TagID> listBlockedTag = _blockedAbilityTagCounts.getTags().getTags();
+        for ( const TagID tag : listBlockedTag )
+        {
+            _blockedAbilityTagCounts.updateCount( tag, -_blockedAbilityTagCounts.getCount( tag ) );
+        }
+        _listAttributeSet.clear();
+        _pendingStateBytes.clear();
+        _time                       = 0.0f;
+        _effectLogCount             = 0;
+        _blockedHealthDecreaseCount = 0;
+        if ( hasBegunPlay() && _abilitySetID.empty() == false )
+            (void)grantAbilitySet( _abilitySetID ); // 실패는 안에서 알린다 — `onBeginPlay` 와 같다
+        return SpawnStateReset::Reset;
+    }
+
     void AbilityComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
