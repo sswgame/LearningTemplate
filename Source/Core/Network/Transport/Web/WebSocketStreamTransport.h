@@ -9,7 +9,7 @@
 #pragma once
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Transport/IStreamTransport.h"
@@ -50,12 +50,10 @@ namespace sw
             uint8      _bClosing{ SW_FALSE }; ///< 이쪽이 닫았다 — 닫힘 까닭은 LocalClose
         };
 
-        static constexpr int32 kNoSlot = constant::invalid_index::kInt32;
-
-        int32 findSlotLocked( int32 socket ) const;
-        int32 findSlotLocked( StreamConnectionHandle handle ) const;
+        [[nodiscard]] optional<uint32> findSlotLocked( int32 socket ) const;
+        [[nodiscard]] optional<uint32> findSlotLocked( StreamConnectionHandle handle ) const;
         /** @brief 칸을 비우고 소켓을 놓습니다. 닫힘을 알릴 까닭을 돌려줍니다. */
-        StreamCloseReason releaseSlotLocked( int32 slotIndex, bool bWasClean );
+        StreamCloseReason releaseSlotLocked( uint32 slotIndex, bool bWasClean );
 
     private:
         IStreamHandler*       _pHandler;

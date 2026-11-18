@@ -303,12 +303,13 @@ namespace sw
     {
         const NavMeshSettings& settings  = getSettings();
         const NavAgentTypeDef* pType     = settings.findAgentType( agentType );
-        uint8                  areaIndex = 0;
-        if ( pType == nullptr || settings.findAreaIndex( areaName, areaIndex ) == false )
+        const optional<uint8>  foundArea = settings.findAreaIndex( areaName );
+        if ( pType == nullptr || foundArea.has_value() == false )
         {
             SW_LOG_ERROR_ID( "SceneNavigation.AreaCostUnknown", "setAgentAreaCost: agent type '%#' or area '%#' is not in the navigation settings", agentType.c_str(), areaName.c_str() );
             return false;
         }
+        const uint8       areaIndex = *foundArea;
         AreaCostOverride* pExisting = nullptr;
         for ( AreaCostOverride& entry : _listAreaCostOverride )
         {
@@ -339,10 +340,11 @@ namespace sw
             return false;
         const NavMeshSettings& settings  = _settings;
         const NavAgentTypeDef* pType     = settings.findAgentType( agentType );
-        uint8                  areaIndex = 0;
-        if ( pType == nullptr || settings.findAreaIndex( areaName, areaIndex ) == false )
+        const optional<uint8>  foundArea = settings.findAreaIndex( areaName );
+        if ( pType == nullptr || foundArea.has_value() == false )
             return false;
-        NavQueryFilter filter = settings.makeDefaultFilter();
+        const uint8    areaIndex = *foundArea;
+        NavQueryFilter filter    = settings.makeDefaultFilter();
         applyAreaCostOverrides( pType->_name, filter );
         outCost     = filter._arrAreaCost[areaIndex];
         outbAllowed = ( filter._excludeAreaMask & static_cast<uint16>( 1u << areaIndex ) ) == 0;

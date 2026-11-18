@@ -108,10 +108,10 @@ namespace sw
             [[nodiscard]] static bool findLayerMask( const GameObjectManager& manager, const hashed_string& layer, uint32& outMask )
             {
                 const PhysicsSettings* pSettings  = manager.getSubsystem<ScenePhysics>().findSettings();
-                uint8                  layerIndex = 0;
-                if ( pSettings == nullptr || pSettings->findLayerIndex( layer, layerIndex ) == false )
+                const optional<uint8>  layerIndex = pSettings != nullptr ? pSettings->findLayerIndex( layer ) : optional<uint8>{};
+                if ( layerIndex.has_value() == false )
                     return false;
-                outMask = 1u << layerIndex;
+                outMask = 1u << *layerIndex;
                 return true;
             }
 

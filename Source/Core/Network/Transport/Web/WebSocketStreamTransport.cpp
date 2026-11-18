@@ -78,7 +78,7 @@ namespace sw
                     continue;
                 listClosed.push_back( StreamConnectionHandle::make( static_cast<uint32>( slotIndex ), slot._generation ) );
                 (void)emscripten_websocket_close( slot._socket, WebSocketProtocol::kCloseCodeNormal, "shutdown" );
-                (void)releaseSlotLocked( static_cast<int32>( slotIndex ), true );
+                (void)releaseSlotLocked( static_cast<uint32>( slotIndex ), true );
             }
         }
         for ( const StreamConnectionHandle handle : listClosed )
@@ -110,19 +110,16 @@ namespace sw
         StreamConnectionHandle handle;
         {
             ScopedLock<mutex> lock{ _mutex };
-            int32             slotIndex = findSlotLocked( 0 );
-            if ( slotIndex == kNoSlot )
-            {
-                slotIndex = static_cast<int32>( _listSlot.size() );
+            const uint32      slotIndex = findSlotLocked( 0 ).value_or( static_cast<uint32>( _listSlot.size() ) ); // 빈 칸이 없으면 끝에 새 칸
+            if ( slotIndex == _listSlot.size() )
                 _listSlot.push_back( Slot{} );
-            }
-            Slot& slot       = _listSlot[static_cast<size_t>( slotIndex )];
+            Slot& slot       = _listSlot[slotIndex];
             slot._socket     = socket;
             slot._generation = SlotHandle::nextGeneration( slot._generation );
             slot._remote     = remote;
             slot._bOpen      = SW_FALSE;
             slot._bClosing   = SW_FALSE;
-            handle           = StreamConnectionHandle::make( static_cast<uint32>( slotIndex ), slot._generation );
+            handle           = StreamConnectionHandle::make( slotIndex, slot._generation );
         }
         // 콜백을 건 뒤에야 이벤트가 온다 — 소켓은 메인 스레드에 있고 이벤트는 이 호출이 돌아간 뒤 브라우저 이벤트 루프에서 온다.
         (void)emscripten_websocket_set_onopen_callback_on_thread( socket, this, &WebSocketStreamTransportInternal::onOpen, EM_CALLBACK_THREAD_CONTEXT_MAIN_RUNTIME_THREAD );
@@ -134,11 +131,11 @@ namespace sw
 
     StreamSendResult WebSocketStreamTransport::send( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
-        ScopedLock<mutex> lock{ _mutex };
-        const int32       slotIndex = findSlotLocked( handle );
-        if ( slotIndex == kNoSlot )
+        ScopedLock<mutex>      lock{ _mutex };
+        const optional<uint32> slotIndex = findSlotLocked( handle );
+        if ( slotIndex.has_value() == false )
             return StreamSendResult::Closed;
-        const Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
+        const Slot& slot = _listSlot[*slotIndex];
         if ( slot._bOpen == SW_FALSE || slot._bClosing != SW_FALSE )
             return StreamSendResult::Closed; // 열리기 전 보내기는 위 층이 onStreamOpened 를 기다리는 약속이다
         size_t buffered = 0;
@@ -156,11 +153,11 @@ namespace sw
     void WebSocketStreamTransport::close( StreamConnectionHandle handle, StreamCloseMode mode )
     {
         (void)mode; // 브라우저 close 는 늘 쌓인 것을 다 보낸 뒤 닫는다(HTML 명세) — 끊기(RST)는 없다
-        ScopedLock<mutex> lock{ _mutex };
-        const int32       slotIndex = findSlotLocked( handle );
-        if ( slotIndex == kNoSlot )
+        ScopedLock<mutex>      lock{ _mutex };
+        const optional<uint32> slotIndex = findSlotLocked( handle );
+        if ( slotIndex.has_value() == false )
             return;
-        Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
+        Slot& slot = _listSlot[*slotIndex];
         if ( slot._bClosing != SW_FALSE )
             return;
         slot._bClosing = SW_TRUE;
@@ -182,9 +179,9 @@ namespace sw
 
     NetAddress WebSocketStreamTransport::getRemoteAddress( StreamConnectionHandle handle ) const
     {
-        ScopedLock<mutex> lock{ _mutex };
-        const int32       slotIndex = findSlotLocked( handle );
-        return slotIndex == kNoSlot ? NetAddress{} : _listSlot[static_cast<size_t>( slotIndex )]._remote;
+        ScopedLock<mutex>      lock{ _mutex };
+        const optional<uint32> slotIndex = findSlotLocked( handle );
+        return slotIndex.has_value() ? _listSlot[*slotIndex]._remote : NetAddress{};
     }
 
     StreamTransportStats WebSocketStreamTransport::getStats() const
@@ -198,13 +195,13 @@ namespace sw
         StreamConnectionHandle handle;
         NetAddress             remote;
         {
-            ScopedLock<mutex> lock{ _mutex };
-            const int32       slotIndex = findSlotLocked( socket );
-            if ( slotIndex == kNoSlot )
+            ScopedLock<mutex>      lock{ _mutex };
+            const optional<uint32> slotIndex = findSlotLocked( socket );
+            if ( slotIndex.has_value() == false )
                 return;
-            Slot& slot  = _listSlot[static_cast<size_t>( slotIndex )];
+            Slot& slot  = _listSlot[*slotIndex];
             slot._bOpen = SW_TRUE;
-            handle      = StreamConnectionHandle::make( static_cast<uint32>( slotIndex ), slot._generation );
+            handle      = StreamConnectionHandle::make( *slotIndex, slot._generation );
             remote      = slot._remote;
             ++_stats._connectedCount;
             ++_stats._openCount;
@@ -216,11 +213,11 @@ namespace sw
     {
         StreamConnectionHandle handle;
         {
-            ScopedLock<mutex> lock{ _mutex };
-            const int32       slotIndex = findSlotLocked( socket );
-            if ( slotIndex == kNoSlot )
+            ScopedLock<mutex>      lock{ _mutex };
+            const optional<uint32> slotIndex = findSlotLocked( socket );
+            if ( slotIndex.has_value() == false )
                 return;
-            handle = StreamConnectionHandle::make( static_cast<uint32>( slotIndex ), _listSlot[static_cast<size_t>( slotIndex )]._generation );
+            handle = StreamConnectionHandle::make( *slotIndex, _listSlot[*slotIndex]._generation );
             _stats._receivedBytes += static_cast<uint64>( size );
             ++_stats._receiveCallCount;
         }
@@ -237,38 +234,40 @@ namespace sw
         StreamConnectionHandle handle;
         StreamCloseReason      reason = StreamCloseReason::None;
         {
-            ScopedLock<mutex> lock{ _mutex };
-            const int32       slotIndex = findSlotLocked( socket );
-            if ( slotIndex == kNoSlot )
+            ScopedLock<mutex>      lock{ _mutex };
+            const optional<uint32> slotIndex = findSlotLocked( socket );
+            if ( slotIndex.has_value() == false )
                 return; // shutdown 이 이미 알렸다
-            handle = StreamConnectionHandle::make( static_cast<uint32>( slotIndex ), _listSlot[static_cast<size_t>( slotIndex )]._generation );
-            reason = releaseSlotLocked( slotIndex, bWasClean );
+            handle = StreamConnectionHandle::make( *slotIndex, _listSlot[*slotIndex]._generation );
+            reason = releaseSlotLocked( *slotIndex, bWasClean );
         }
         _pHandler->onStreamClosed( handle, reason );
     }
 
-    int32 WebSocketStreamTransport::findSlotLocked( int32 socket ) const
+    optional<uint32> WebSocketStreamTransport::findSlotLocked( int32 socket ) const
     {
         for ( size_t slotIndex = 0; slotIndex < _listSlot.size(); ++slotIndex )
         {
             if ( _listSlot[slotIndex]._socket == socket )
-                return static_cast<int32>( slotIndex );
+                return static_cast<uint32>( slotIndex );
         }
-        return kNoSlot;
+        return nullopt;
     }
 
-    int32 WebSocketStreamTransport::findSlotLocked( StreamConnectionHandle handle ) const
+    optional<uint32> WebSocketStreamTransport::findSlotLocked( StreamConnectionHandle handle ) const
     {
         const uint32 slotIndex = handle.index();
         if ( handle.isValid() == false || slotIndex >= _listSlot.size() )
-            return kNoSlot;
+            return nullopt;
         const Slot& slot = _listSlot[slotIndex];
-        return ( slot._socket != 0 && slot._generation == handle.generation() ) ? static_cast<int32>( slotIndex ) : kNoSlot;
+        if ( slot._socket == 0 || slot._generation != handle.generation() )
+            return nullopt;
+        return slotIndex;
     }
 
-    StreamCloseReason WebSocketStreamTransport::releaseSlotLocked( int32 slotIndex, bool bWasClean )
+    StreamCloseReason WebSocketStreamTransport::releaseSlotLocked( uint32 slotIndex, bool bWasClean )
     {
-        Slot&             slot   = _listSlot[static_cast<size_t>( slotIndex )];
+        Slot&             slot   = _listSlot[slotIndex];
         StreamCloseReason reason = StreamCloseReason::RemoteClose;
         if ( slot._bOpen == SW_FALSE )
             reason = StreamCloseReason::ConnectFailed; // 열리기 전 닫힘 — 거절 · 주소 · 시한(브라우저는 까닭을 가리지 않는다)

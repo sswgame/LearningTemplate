@@ -45,8 +45,7 @@ namespace sw
 {
     void PhysicsNameValidation::validateLayer( ValidationContext& context, const utf8* pFieldName, const hashed_string& name )
     {
-        uint8 layerIndex = 0;
-        if ( name.empty() == false && PhysicsNameValidationInternal::getSettings().findLayerIndex( name, layerIndex ) == false )
+        if ( name.empty() == false && PhysicsNameValidationInternal::getSettings().findLayerIndex( name ).has_value() == false )
             context.addError( string( pFieldName ) + " names '" + name.c_str() + "', which is not in the physics layers (physicssettings.xml) - layer 0 is used" );
     }
 

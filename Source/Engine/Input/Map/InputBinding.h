@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -91,14 +92,12 @@ namespace sw
          */
         static uint32 getConflictSlotCount( BindingKind kind );
 
-        /** @brief 키 하나로 바꿀 수 있는 슬롯이 없는 종류에 대해 `getRebindSlotIndex` 가 반환하는 값입니다. */
-        static constexpr uint32 kNoRebindSlot = constant::invalid_index::kUint32;
         /**
          * @brief 키 하나를 새로 잡았을 때(`InputMap::rebindKey`, 에디터의 Rebind) 그 키가 들어갈 슬롯을 반환합니다.
          * @details 단일 슬롯과 Shortcut 은 0, Chord 는 방아쇠(1)이고 수식 키는 그대로 둔다.
-         *          합성 축, 스틱, 마우스 델타, AnyKey 는 키 하나로 바꿀 수 없어 `kNoRebindSlot` 이다.
+         *          합성 축, 스틱, 마우스 델타, AnyKey 는 키 하나로 바꿀 수 없어 없음이다.
          */
-        static uint32 getRebindSlotIndex( BindingKind kind );
+        [[nodiscard]] static optional<uint32> findRebindSlotIndex( BindingKind kind );
         /**
          * @brief 이번 프레임의 이동량을 내는 종류(마우스 이동, 휠)인지 묻습니다.
          * @details 이동량은 [-1, 1] 로 묶지 않고, 액션 값 단계의 전역 축 반전(`InputAccessibilitySettings::_bInvertX/Y`)도 걸지 않는다.

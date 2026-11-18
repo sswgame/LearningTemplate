@@ -75,10 +75,9 @@ namespace sw
             layerMask = 0;
             for ( const hashed_string& layerID : listLayer )
             {
-                uint8 layer = 0;
-                if ( pSettings->findLayerIndex( layerID, layer ) )
+                if ( const optional<uint8> layer = pSettings->findLayerIndex( layerID ) )
                 {
-                    layerMask |= 1u << layer;
+                    layerMask |= 1u << *layer;
                     continue;
                 }
                 const string_view layerName( layerID.c_str() );

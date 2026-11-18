@@ -143,18 +143,15 @@ namespace sw
         return VectorUtil::findBy<&NavAgentTypeDef::_name>( _listAgentType, wanted );
     }
 
-    bool NavMeshSettings::findAreaIndex( const hashed_string& name, uint8& outIndex ) const
+    optional<uint8> NavMeshSettings::findAreaIndex( const hashed_string& name ) const
     {
         const size_t count = _listArea.size() < NavigationConstant::kMaxAreaCount ? _listArea.size() : NavigationConstant::kMaxAreaCount;
         for ( size_t areaIndex = 0; areaIndex < count; ++areaIndex )
         {
             if ( _listArea[areaIndex]._name == name )
-            {
-                outIndex = static_cast<uint8>( areaIndex );
-                return true;
-            }
+                return static_cast<uint8>( areaIndex );
         }
-        return false;
+        return nullopt;
     }
 
     NavQueryFilter NavMeshSettings::makeDefaultFilter() const

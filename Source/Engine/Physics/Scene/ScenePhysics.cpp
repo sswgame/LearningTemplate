@@ -186,9 +186,9 @@ namespace sw
         if ( layerName.empty() )
             return 0;
         const PhysicsSettings* pSettings = findSettings();
-        uint8                  layer     = 0;
-        if ( pSettings != nullptr && pSettings->findLayerIndex( layerName, layer ) )
-            return layer;
+        const optional<uint8>  layer     = pSettings != nullptr ? pSettings->findLayerIndex( layerName ) : optional<uint8>{};
+        if ( layer.has_value() )
+            return *layer;
         SW_LOG_ERROR_ID( "ScenePhysics.UnknownPhysicsLayerUsing", "Unknown physics layer '%#' - using layer 0", layerName.c_str() );
         return 0;
     }

@@ -87,8 +87,7 @@ namespace sw
             }
             for ( const hashed_string& otherName : layer._listCollidesWith )
             {
-                uint8 otherLayer = 0;
-                if ( findLayerIndex( otherName, otherLayer ) == false )
+                if ( findLayerIndex( otherName ).has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsLayerCollidesUnknown", "Physics layer '%#' collides with unknown layer '%#'", layer._name.c_str(), otherName.c_str() );
                     bValid = false;
@@ -115,18 +114,15 @@ namespace sw
         return bValid;
     }
 
-    bool PhysicsSettings::findLayerIndex( const hashed_string& name, uint8& outIndex ) const
+    optional<uint8> PhysicsSettings::findLayerIndex( const hashed_string& name ) const
     {
         const size_t count = _listLayer.size() < kMaxLayerCount ? _listLayer.size() : kMaxLayerCount;
         for ( size_t layerIndex = 0; layerIndex < count; ++layerIndex )
         {
             if ( _listLayer[layerIndex]._name == name )
-            {
-                outIndex = static_cast<uint8>( layerIndex );
-                return true;
-            }
+                return static_cast<uint8>( layerIndex );
         }
-        return false;
+        return nullopt;
     }
 
     const PhysicsMaterialDef* PhysicsSettings::findMaterial( const hashed_string& name ) const
@@ -149,9 +145,8 @@ namespace sw
         {
             for ( const hashed_string& otherName : _listLayer[layerIndex]._listCollidesWith )
             {
-                uint8 otherLayer = 0;
-                if ( findLayerIndex( otherName, otherLayer ) )
-                    layers.setLayerCollision( static_cast<uint8>( layerIndex ), otherLayer, true );
+                if ( const optional<uint8> otherLayer = findLayerIndex( otherName ) )
+                    layers.setLayerCollision( static_cast<uint8>( layerIndex ), *otherLayer, true );
             }
         }
         return layers;
