@@ -78,7 +78,7 @@ namespace
         }
     };
 
-    /** @brief 넘긴 명령을 적어 두고, 시험이 정한 결과로 끝냅니다. */
+    /** @brief 넘긴 명령을 적어 두고, 테스트가 정한 결과로 끝냅니다. */
     class FakeDirectoryControl final : public IServerDirectoryControl
     {
     public:
@@ -125,7 +125,7 @@ namespace
         void finishLast( ServerDirectoryControlResult result ) { _listCompletion.push_back( ServerDirectoryControlCompletion{ _listTag.back(), result } ); }
     };
 
-    /** @brief 라이브 이벤트 명령을 적어 두고, 시험이 정한 결과로 끝냅니다. */
+    /** @brief 라이브 이벤트 명령을 적어 두고, 테스트가 정한 결과로 끝냅니다. */
     class FakeLiveEventControl final : public ILiveEventControl
     {
     public:

@@ -44,7 +44,7 @@ namespace sw
          */
         [[nodiscard]] bool send( string_view channelID, string_view text );
 
-        // 클라이언트의 메시지와 응답이 들어오는 길입니다. 시험도 같은 길로 값을 넣습니다.
+        // 클라이언트의 메시지와 응답이 들어오는 길입니다. 테스트도 같은 길로 값을 넣습니다.
         void appendMessage( const ChatMessage& message );
         void onSendReply( const OnlineResult<ChatSendReply>& reply );
 

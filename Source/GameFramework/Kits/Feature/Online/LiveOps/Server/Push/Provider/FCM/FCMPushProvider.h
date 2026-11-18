@@ -8,7 +8,7 @@
  *          - 상태 대응: 200 Delivered, 404 · `UNREGISTERED` InvalidToken, 429 RateLimited(`Retry-After` 초, 없으면 FCM 문서의 최소 1 분), 5xx · 전송 실패 Transient, 401 · 403 Rejected(토큰을 버려 다음에 다시 받는다),
  *            그 밖의 4xx Rejected. 토큰 요청이 5xx · 전송 실패면 기다리던 배달이 Transient, 4xx 면 Rejected 다.
  *          - 토픽 발송(`sendToTopic`): `message.topic` 으로 한 번 보낸다. 토픽 이름은 `[A-Za-z0-9-_.~%]+` 이다.
- *          APNs 는 HTTP/2 가 필수라 이 제공자가 아니라 `Provider/Apns/` 의 제공자가 HTTP/2 클라이언트(`HTTP2Client`)로 보낸다.
+ *          APNs 는 HTTP/2 가 필수라 이 제공자가 아니라 `Provider/APNS/` 의 제공자가 HTTP/2 클라이언트(`HTTP2Client`)로 보낸다.
  */
 #pragma once
 #include "Core/Container/string.h"

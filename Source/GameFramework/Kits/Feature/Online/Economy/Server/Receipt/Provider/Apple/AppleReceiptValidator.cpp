@@ -193,7 +193,7 @@ namespace sw
             outInfo._failureText = "the signed transaction has no environment";
             return;
         }
-        // 운영이라고 정확히 말한 것만 운영 결제다 — Sandbox 말고도 Xcode · LocalTesting 같은 시험 환경이 있다(기억에 의존). 샌드박스 서버의 답은 모두 샌드박스다.
+        // 운영이라고 정확히 말한 것만 운영 결제다 — Sandbox 말고도 Xcode · LocalTesting 같은 테스트 환경이 있다(기억에 의존). 샌드박스 서버의 답은 모두 샌드박스다.
         outInfo._bSandbox  = environment != Internal::kEnvironmentProduction || _settings._bSandboxServer == SW_TRUE ? SW_TRUE : SW_FALSE;
         int64 revocationMs = 0;
         if ( token.findInteger( "revocationDate", revocationMs ) )

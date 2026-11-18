@@ -1,4 +1,4 @@
-// NetSecurityLoginCryptoTest — 로그인 암호의 실제 구현이 제공자(OpenSSL)를 맞게 부르는지 본다: HKDF 는 RFC 5869 시험 값, Argon2id 는 같은 입력 같은 출력 · 솔트가 다르면 다른 출력.
+// NetSecurityLoginCryptoTest — 로그인 암호의 실제 구현이 제공자(OpenSSL)를 맞게 부르는지 본다: HKDF 는 RFC 5869 테스트 벡터, Argon2id 는 같은 입력 같은 출력 · 솔트가 다르면 다른 출력.
 #include "pch.h"
 
 #include "Core/Network/Security/INetSecurityProvider.h"
@@ -25,7 +25,7 @@ namespace
     };
 } // namespace
 
-/** @brief [NetSecurityLoginCryptoTest] 키 섞기는 솔트 없는 HKDF-SHA256 이다 — RFC 5869 시험 3(솔트 · 정보 없음)과 같은 바이트가 나온다. */
+/** @brief [NetSecurityLoginCryptoTest] 키 섞기는 솔트 없는 HKDF-SHA256 이다 — RFC 5869 테스트 벡터 3(솔트 · 정보 없음)과 같은 바이트가 나온다. */
 SW_TEST_CASE( NetSecurityLoginCryptoTest, KeyedHashMatchesRfc5869 )
 {
     NetSecurityLoginCrypto crypto{ &game::getSubsystem<INetSecurityProvider>() };

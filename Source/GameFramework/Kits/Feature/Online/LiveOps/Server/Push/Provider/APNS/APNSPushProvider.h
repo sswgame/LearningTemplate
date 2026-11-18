@@ -11,7 +11,7 @@
  *            서명하지 않고 남은 시간만큼 `RateLimited` — 403 마다 곧바로 다시 서명하면 APNs 가 갱신이 잦다며 429 로 막는다),
  *            그 밖의 4xx Rejected(400 `BadDeviceToken` 은 개발 · 운영 환경이 어긋난 토큰일 수 있어 기기를 지우지 않는다).
  *          - 토픽 발송은 없다(APNs 에 토픽 구독이 없다) — `supportsTopics` 는 false 다.
- *          제품 이름(`apns`)은 이 설정의 `kind` 값과 `Provider/Apns/` 안에만 쓴다.
+ *          제품 이름(`apns`)은 이 설정의 `kind` 값과 `Provider/APNS/` 안에만 쓴다.
  */
 #pragma once
 #include "Core/Container/string.h"
