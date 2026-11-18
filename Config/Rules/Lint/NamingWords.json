@@ -1414,8 +1414,7 @@
     "SavedAbilityModifier": "EvaluatedModifier — 칸이 같은 두 형식을 하나로(활성 이펙트가 든 값을 그대로 세이브에 싣는다)(2026-11-19)",
     "findOrAddLocked": "getOrCreateLocked — 없으면 만들어 돌려주는 것은 getOrCreate 다(AudioClipCache, 2026-11-19)",
     "findOrAddLayer": "getOrCreateLayer — 없으면 만들어 돌려주는 것은 getOrCreate 다(SceneSpatialGrid, 2026-11-19)",
-    "findOrCreateBucket": "getOrCreateBucket — 없으면 만들어 돌려주는 것은 getOrCreate 다(AnimationCrowd, 2026-11-19)",
-    "RetargetPoseBoneParams": "RetargetPoseBone — 칸과 뜻이 같은 두 구조체를 합쳤다(RetargetBonePair 처럼 파일 칸을 그대로 든다, 2026-11-19)"
+    "findOrCreateBucket": "getOrCreateBucket — 없으면 만들어 돌려주는 것은 getOrCreate 다(AnimationCrowd, 2026-11-19)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",
