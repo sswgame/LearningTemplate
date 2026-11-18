@@ -82,15 +82,7 @@ namespace sw
 
     bool ServiceReportStore::isValidCode( string_view text, int32 maxSize )
     {
-        if ( text.empty() || text.size() > static_cast<size_t>( maxSize ) )
-            return false;
-        for ( const utf8 ch : text )
-        {
-            const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_' || ch == '.';
-            if ( bAllowed == false )
-                return false;
-        }
-        return true;
+        return ServiceKeyUtil::isTokenText( text, maxSize, "_." );
     }
 
     bool ServiceReportStore::isValidReport( const ServiceReport& report )

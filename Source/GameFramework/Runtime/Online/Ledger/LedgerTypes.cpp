@@ -15,32 +15,6 @@ namespace sw
         {
             static constexpr int32 kMaxEscrowDomainSize = 16;
             static constexpr int32 kMaxEscrowTokenSize  = 64;
-
-            static bool isLowerOrDigit( utf8 ch ) { return ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ); }
-
-            /** @brief 글자가 모두 [0-9a-z] 또는 @p pExtra 에 포함된 것이고 길이가 1..@p maxSize 인가입니다. */
-            static bool isTokenText( string_view text, int32 maxSize, const utf8* pExtra )
-            {
-                if ( text.empty() || text.size() > static_cast<size_t>( maxSize ) )
-                    return false;
-                for ( const utf8 ch : text )
-                {
-                    if ( isLowerOrDigit( ch ) )
-                        continue;
-                    bool bExtra = false;
-                    for ( const utf8* pCursor = pExtra; *pCursor != '\0'; ++pCursor )
-                    {
-                        if ( *pCursor == ch )
-                        {
-                            bExtra = true;
-                            break;
-                        }
-                    }
-                    if ( bExtra == false )
-                        return false;
-                }
-                return true;
-            }
         };
     } // namespace
 } // namespace sw
@@ -164,7 +138,7 @@ namespace sw
         outKey.clear();
         // 상한 범위 + '/' + 상한 토큰의 16 진이 분개 키 상한 안이다(토큰 상한이 그 식에서 나온다) — 받은 범위 · 토큰은 언제나 원장이 받는 키가 된다.
         static_assert( LedgerConstant::kMaxJournalScopeSize + 1 + LedgerConstant::kMaxTokenBytes * 2 <= LedgerConstant::kMaxJournalKeySize );
-        const bool bScopeOk = LedgerTypesInternal::isTokenText( scope, LedgerConstant::kMaxJournalScopeSize, "_." );
+        const bool bScopeOk = ServiceKeyUtil::isTokenText( scope, LedgerConstant::kMaxJournalScopeSize, "_." );
         const bool bTokenOk = token.empty() == false && token.size() <= static_cast<size_t>( LedgerConstant::kMaxTokenBytes );
         if ( bScopeOk == false || bTokenOk == false )
             return false;
@@ -191,22 +165,22 @@ namespace sw
 
     bool LedgerUtil::isValidAssetID( string_view assetID )
     {
-        return LedgerTypesInternal::isTokenText( assetID, LedgerConstant::kMaxAssetIDSize, "_.-" );
+        return ServiceKeyUtil::isTokenText( assetID, LedgerConstant::kMaxAssetIDSize, "_.-" );
     }
 
     bool LedgerUtil::isValidReasonCode( string_view reason )
     {
-        return LedgerTypesInternal::isTokenText( reason, LedgerConstant::kMaxReasonSize, "_." );
+        return ServiceKeyUtil::isTokenText( reason, LedgerConstant::kMaxReasonSize, "_." );
     }
 
     bool LedgerUtil::isValidEscrowDomain( string_view domain )
     {
-        return LedgerTypesInternal::isTokenText( domain, LedgerTypesInternal::kMaxEscrowDomainSize, "_" );
+        return ServiceKeyUtil::isTokenText( domain, LedgerTypesInternal::kMaxEscrowDomainSize, "_" );
     }
 
     bool LedgerUtil::isValidEscrowToken( string_view token )
     {
-        return LedgerTypesInternal::isTokenText( token, LedgerTypesInternal::kMaxEscrowTokenSize, "_.-" );
+        return ServiceKeyUtil::isTokenText( token, LedgerTypesInternal::kMaxEscrowTokenSize, "_.-" );
     }
 
     bool LedgerUtil::isValidJournalKey( string_view journalKey )
@@ -214,7 +188,7 @@ namespace sw
         if ( journalKey.empty() )
             return false;
         const bool bHasScope = journalKey.find( '/' ) != string_view::npos && journalKey.front() != '/' && journalKey.back() != '/';
-        return bHasScope && LedgerTypesInternal::isTokenText( journalKey, LedgerConstant::kMaxJournalKeySize, "_./-" );
+        return bHasScope && ServiceKeyUtil::isTokenText( journalKey, LedgerConstant::kMaxJournalKeySize, "_./-" );
     }
 
     void LedgerHolder::write( BitWriter& outWriter, const LedgerHolder& holder )

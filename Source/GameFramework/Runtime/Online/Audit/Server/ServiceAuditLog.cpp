@@ -18,19 +18,6 @@ namespace sw
             static constexpr int32  kMaxActionSize  = 64;
             static constexpr int32  kMaxSubjectSize = 128;
 
-            static bool isActionText( string_view text )
-            {
-                if ( text.empty() )
-                    return false;
-                for ( const utf8 ch : text )
-                {
-                    const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_' || ch == '.';
-                    if ( bAllowed == false )
-                        return false;
-                }
-                return true;
-            }
-
             static vector<uint8> encode( const ServiceAuditEntry& entry )
             {
                 BitWriter writer;
@@ -137,7 +124,7 @@ namespace sw
                             entry._memo.size() <= static_cast<size_t>( ServiceAuditEntry::kMaxMemoSize );
         if ( bSizes == false || entry._timeMs < 0 )
             return false;
-        if ( ServiceAuditLogInternal::isActionText( entry._action ) == false )
+        if ( ServiceKeyUtil::isTokenText( entry._action, ServiceAuditLogInternal::kMaxActionSize, "_." ) == false ) // 길이 상한은 위 bSizes 와 같은 값이다 — 여기서 더 걸리는 것은 빈 글 · 글자뿐
             return false;
         return ServiceTransaction::isValidKey( entry._subject ); // subject 는 키 앞부분이다
     }

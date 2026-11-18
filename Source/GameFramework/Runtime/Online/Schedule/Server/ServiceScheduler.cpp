@@ -307,15 +307,9 @@ namespace sw
 
     bool ServiceScheduler::isValidDefinition( const ScheduleDef& definition )
     {
-        const bool bInvalidJobDefinition = definition._jobID.empty() || definition._jobID.size() > static_cast<size_t>( ServiceSchedulerInternal::kMaxJobIDSize ) || definition._leaseMs <= 0;
+        const bool bInvalidJobDefinition = ServiceKeyUtil::isTokenText( definition._jobID, ServiceSchedulerInternal::kMaxJobIDSize, "_." ) == false || definition._leaseMs <= 0;
         if ( bInvalidJobDefinition )
             return false;
-        for ( const utf8 ch : definition._jobID )
-        {
-            const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_' || ch == '.';
-            if ( bAllowed == false )
-                return false;
-        }
         switch ( definition._kind )
         {
             case ScheduleKind::Daily:

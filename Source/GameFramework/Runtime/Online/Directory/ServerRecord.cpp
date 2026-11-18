@@ -41,15 +41,7 @@ namespace sw
 
     bool ServerRecord::isValidName( string_view name )
     {
-        if ( name.empty() || name.size() > static_cast<size_t>( kMaxNameSize ) )
-            return false;
-        for ( const utf8 ch : name )
-        {
-            const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_' || ch == '-';
-            if ( bAllowed == false )
-                return false;
-        }
-        return true;
+        return ServiceKeyUtil::isTokenText( name, kMaxNameSize, "_-" );
     }
 
     void ServerRecord::writeStatus( BitWriter& outWriter, const ServerStatus& status )
