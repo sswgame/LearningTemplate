@@ -3,8 +3,10 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -33,11 +35,15 @@ namespace sw
         struct CustomizationSchemaInternal
         {
             // 매개변수 종류마다 받는 칸이다(그 밖의 칸은 오류 — 칸 구조체 하나를 함께 쓰므로 종류마다 막는다).
-            static constexpr const utf8* kArrSliderField[]     = { "name", "category", "symmetry", "min", "max", "default" };
-            static constexpr const utf8* kArrColorField[]      = { "name", "category", "symmetry", "default", "palette" };
-            static constexpr const utf8* kArrChoiceField[]     = { "name", "category", "symmetry", "default" };
-            static constexpr const utf8* kArrSwatchAttribute[] = { "name", "color" };
-            static constexpr const utf8* kArrAttachmentField[] = { "name", "category", "symmetry", "default", "socket" };
+            static constexpr const utf8* kArrSliderField[]               = { "name", "category", "symmetry", "min", "max", "default" };
+            static constexpr const utf8* kArrColorField[]                = { "name", "category", "symmetry", "default", "palette" };
+            static constexpr const utf8* kArrChoiceField[]               = { "name", "category", "symmetry", "default" };
+            static constexpr const utf8* kArrSwatchAttribute[]           = { "name", "color" };
+            static constexpr const utf8* kArrAttachmentField[]           = { "name", "category", "symmetry", "default", "socket" };
+            static constexpr const utf8* kArrMigrationAttribute[]        = { "toVersion" };
+            static constexpr const utf8* kArrMigrationMoveAttribute[]    = { "from", "to" };
+            static constexpr const utf8* kArrMigrationParamAttribute[]   = { "parameter" };
+            static constexpr const utf8* kArrMigrationPaletteAttribute[] = { "parameter", "palette" };
 
             static bool isSliderDrive( CustomizationDriveKind kind )
             {
@@ -250,7 +256,123 @@ namespace sw
                 inoutListPalette.push_back( std::move( palette ) );
             }
 
-            static constexpr const utf8* kArrIDAttribute[] = { "id" };
+            /**
+             * @brief 판 올림 단계 묶음(`<Migration toVersion="n">` — 자식 `Rename` · `Split` · `PaletteIndexToColor` · `Remove`)을 읽습니다.
+             * @details 판은 2 부터 빈 판 없이 차례로 적는다(n 은 지금까지 읽은 묶음 수 + 2). 견본 묶음은 카탈로그가 다 읽은 뒤 잇는다(`loadFromXML`).
+             */
+            static void readMigration( const XMLNode& node, CustomizationSchemaDef& inoutSchema, AppearanceLoadReport& report, string_view sourceName )
+            {
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMigrationAttribute, report, sourceName );
+                CustomizationMigrationDef migration;
+                const int32               expectedVersion = static_cast<int32>( inoutSchema._listMigration.size() + CustomizationMigrationDef::kFirstVersion );
+                int32                     toVersion       = 0;
+                AppearanceXMLUtil::readOptionalInt( node, "toVersion", static_cast<int32>( CustomizationMigrationDef::kFirstVersion ), inoutSchema._version, toVersion, report, sourceName );
+                if ( toVersion != expectedVersion )
+                {
+                    report.addErrorWithID( "Appearance.MigrationOrder", "%#: schema '%#' <Migration> needs toVersion=%# (steps go 2, 3, ... up to the schema version %# with no gap)", sourceName, inoutSchema._id.c_str(),
+                                           expectedVersion, inoutSchema._version );
+                    return;
+                }
+                migration._toVersion = static_cast<uint32>( toVersion );
+                for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
+                {
+                    CustomizationMigrationOp op;
+                    const utf8*              pName = child.getName();
+                    if ( StringUtil::equals( pName, "Rename" ) || StringUtil::equals( pName, "Split" ) )
+                    {
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMigrationMoveAttribute, report, sourceName );
+                        op._kind = StringUtil::equals( pName, "Rename" ) ? CustomizationMigrationKind::Rename : CustomizationMigrationKind::Split;
+                        op._from = AppearanceXMLUtil::readRequiredName( child, "from", report, sourceName );
+                        AppearanceXMLUtil::readNameList( child, "to", op._listTo );
+                        const bool bCountFits = op._kind == CustomizationMigrationKind::Rename ? op._listTo.size() == 1 : op._listTo.size() >= 2;
+                        if ( bCountFits == false || VectorUtil::contains( op._listTo, op._from ) )
+                        {
+                            report.addErrorWithID( "Appearance.MigrationTargets", "%#: schema '%#' <%#> from '%#' needs %# new name(s) other than itself in 'to'", sourceName, inoutSchema._id.c_str(), pName,
+                                                   op._from.c_str(), op._kind == CustomizationMigrationKind::Rename ? "one" : "two or more" );
+                            continue;
+                        }
+                    }
+                    else if ( StringUtil::equals( pName, "PaletteIndexToColor" ) )
+                    {
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMigrationPaletteAttribute, report, sourceName );
+                        op._kind    = CustomizationMigrationKind::PaletteIndexToColor;
+                        op._from    = AppearanceXMLUtil::readRequiredName( child, "parameter", report, sourceName );
+                        op._palette = AppearanceXMLUtil::readRequiredName( child, "palette", report, sourceName );
+                    }
+                    else if ( StringUtil::equals( pName, "Remove" ) )
+                    {
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMigrationParamAttribute, report, sourceName );
+                        op._kind = CustomizationMigrationKind::Remove;
+                        op._from = AppearanceXMLUtil::readRequiredName( child, "parameter", report, sourceName );
+                    }
+                    else
+                    {
+                        AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
+                        continue;
+                    }
+                    if ( op._from.empty() == false )
+                        migration._listOp.push_back( op );
+                }
+                inoutSchema._listMigration.push_back( migration );
+            }
+
+            /** @brief 단계 하나를 값 목록에 겁니다. 옮길 수 없는 값(견본 번호가 묶음 밖 · 수가 아님)이면 false 입니다. */
+            [[nodiscard]] static bool applyMigrationOp( const CustomizationMigrationOp& op, vector<CustomizationValue>& inoutListValue )
+            {
+                const auto isFrom = [&op]( const CustomizationValue& value )
+                { return CustomizationSchemaDef::matchesStoredName( value._parameter, op._from ); };
+                switch ( op._kind )
+                {
+                    case CustomizationMigrationKind::Remove:
+                    {
+                        (void)VectorUtil::removeIf( inoutListValue, isFrom );
+                        return true;
+                    }
+                    case CustomizationMigrationKind::Rename:
+                    case CustomizationMigrationKind::Split:
+                    {
+                        vector<CustomizationValue> listMoved;
+                        for ( const CustomizationValue& value : inoutListValue )
+                        {
+                            if ( isFrom( value ) )
+                                listMoved.push_back( value );
+                        }
+                        (void)VectorUtil::removeIf( inoutListValue, isFrom );
+                        for ( const CustomizationValue& moved : listMoved )
+                        {
+                            for ( const hashed_string& to : op._listTo )
+                            {
+                                // 새 이름의 값이 이미 있으면 그것이 뒤에 정한 값이다 — 옛 값으로 덮지 않는다
+                                if ( VectorUtil::containsBy<&CustomizationValue::_parameter>( inoutListValue, to ) )
+                                    continue;
+                                CustomizationValue copied = moved;
+                                copied._parameter         = to;
+                                inoutListValue.push_back( copied );
+                            }
+                        }
+                        return true;
+                    }
+                    case CustomizationMigrationKind::PaletteIndexToColor:
+                    {
+                        for ( CustomizationValue& value : inoutListValue )
+                        {
+                            if ( isFrom( value ) == false )
+                                continue;
+                            const float32 index = value._number._x;
+                            if ( ( index >= 0.0f ) == false || index + 0.5f >= static_cast<float32>( op._listSwatch.size() ) )
+                                return false;            // 묶음 밖 번호 · NaN — 어느 색인지 모른다(가까운 색으로 맞추지 않는다)
+                            value._parameter = op._from; // 공유 코드의 자리 이름도 지금 이름으로
+                            value._option    = hashed_string{};
+                            value._number    = op._listSwatch[static_cast<size_t>( index + 0.5f )];
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            static constexpr const utf8* kArrIDAttribute[]      = { "id" };
+            static constexpr int32       kHashPlaceholderDigits = 8; ///< 32 비트 해시의 16 진 자리 수
         };
     } // namespace
 } // namespace sw
@@ -323,11 +445,17 @@ namespace sw
             for ( XMLNode paramNode = schemaNode.findChild(); paramNode; paramNode = paramNode.findNextSibling() )
             {
                 CustomizationKind kind = CustomizationKind::Slider;
-                if ( game::getSubsystem<TypeRegistry>().enumFromString( paramNode.getName(), kind ) ) // 원소 이름이 매개변수 종류다
+                if ( StringUtil::equals( paramNode.getName(), "Migration" ) )
+                    CustomizationSchemaInternal::readMigration( paramNode, schema, report, sourceName );
+                else if ( game::getSubsystem<TypeRegistry>().enumFromString( paramNode.getName(), kind ) ) // 원소 이름이 매개변수 종류다
                     CustomizationSchemaInternal::readParameter( paramNode, kind, schema, report, sourceName );
                 else
                     AppearanceXMLUtil::reportUnknownChild( schemaNode, paramNode, report, sourceName );
             }
+            // 판 n 의 값은 판 n+1 .. 지금 판의 단계를 모두 지나야 한다 — 빠진 판이 있으면 그 판의 세이브를 올릴 수 없다.
+            if ( schema._listMigration.size() + CustomizationMigrationDef::kFirstVersion != static_cast<size_t>( schema._version ) + 1 )
+                report.addErrorWithID( "Appearance.MigrationMissing", "%#: schema '%#' is version %# but has %# <Migration> step(s) - versions 2..%# each need one", sourceName, schema._id.c_str(), schema._version,
+                                       schema._listMigration.size(), schema._version );
             // 공유 코드와 네트워크는 매개변수 이름을 32 비트 해시로 싣는다. 한 스키마 안에서 해시가 겹치면 안 된다.
             for ( size_t lhs = 0; lhs < schema._listParameter.size(); ++lhs )
             {
@@ -343,6 +471,20 @@ namespace sw
         // 견본 묶음은 파일 어디에 적어도 된다 — 스키마를 다 읽은 뒤 이름으로 잇는다. 모르는 묶음은 오류다(자유 색으로 조용히 풀지 않는다).
         for ( CustomizationSchemaDef& schema : _listSchema )
         {
+            for ( CustomizationMigrationDef& migration : schema._listMigration )
+            {
+                for ( CustomizationMigrationOp& op : migration._listOp )
+                {
+                    if ( op._kind != CustomizationMigrationKind::PaletteIndexToColor )
+                        continue;
+                    const Palette* pPalette = findPalette( op._palette );
+                    if ( pPalette == nullptr )
+                        report.addErrorWithID( "Appearance.PaletteUnknown", "%#: schema '%#' migration to version %# names unknown palette '%#'", sourceName, schema._id.c_str(), migration._toVersion,
+                                               op._palette.c_str() );
+                    else
+                        op._listSwatch = pPalette->_listSwatch;
+                }
+            }
             for ( CustomizationParamDef& param : schema._listParameter )
             {
                 // 드라이브의 주인은 같은 스키마의 고르기여야 한다 — 그 고르기가 낸 부품만 그 이름을 주인으로 가진다.
@@ -450,6 +592,7 @@ namespace sw
             }
             outValues.setValue( value );
         }
+        outValues.setSchemaVersion( getVersion() );
         if ( pOutListDropped == nullptr )
             return;
         for ( const CustomizationValue& given : values.getValues() )
@@ -457,6 +600,52 @@ namespace sw
             if ( findParameter( given._parameter ) == nullptr )
                 pOutListDropped->push_back( given._parameter );
         }
+    }
+
+    expected<void> CustomizationSchemaDef::migrate( const CustomizationValueSet& values, CustomizationValueSet& outValues ) const
+    {
+        const uint32 current = getVersion();
+        const uint32 stored  = values.getSchemaVersion();
+        if ( stored > current )
+            return unexpected( Error{ ErrorKind::Unsupported, "customization values are from a newer schema version than this content", _id.view() } );
+        vector<CustomizationValue> listValue = values.getValues();
+        const uint32               from      = stored == CustomizationValueSet::kUnversionedSchemaVersion ? current : stored;
+        for ( uint32 version = from + 1; version <= current; ++version )
+        {
+            const size_t stepIndex = static_cast<size_t>( version - CustomizationMigrationDef::kFirstVersion );
+            if ( stepIndex >= _listMigration.size() )
+                return unexpected( Error{ ErrorKind::NotFound, "the schema has no migration step to this version", _id.view() } ); // 읽기가 이미 오류로 알린 스키마
+            for ( const CustomizationMigrationOp& op : _listMigration[stepIndex]._listOp )
+            {
+                if ( CustomizationSchemaInternal::applyMigrationOp( op, listValue ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a stored palette index is outside the palette", op._from.view() } );
+            }
+        }
+        outValues.clear();
+        for ( const CustomizationValue& value : listValue )
+        {
+            outValues.setValue( value );
+        }
+        outValues.setSchemaVersion( current );
+        return {};
+    }
+
+    bool CustomizationSchemaDef::matchesStoredName( const hashed_string& stored, const hashed_string& name )
+    {
+        if ( stored == name )
+            return true;
+        // 옛 판의 이름은 지금 스키마가 몰라 공유 코드에서 자리 이름으로 온다
+        const string_view text = stored.view();
+        return name.empty() == false && text.empty() == false && text[0] == '#' && stored == makeHashPlaceholder( static_cast<uint32>( name.getHash() ) );
+    }
+
+    hashed_string CustomizationSchemaDef::makeHashPlaceholder( uint32 hash )
+    {
+        if ( hash == 0 )
+            return hashed_string{};
+        utf8 arrBuffer[constant::buffer::kMax16];
+        FormatString::formatstring( arrBuffer, constant::buffer::kMax16, "#%#", Fmt( hash, Format().hex().width( CustomizationSchemaInternal::kHashPlaceholderDigits ).zeroPad() ) );
+        return hashed_string( string_view( arrBuffer ) );
     }
 
     bool CustomizationParamDef::isActive( const CustomizationSchemaDef& schema, const CustomizationValueSet& normalizedValues ) const
@@ -489,6 +678,10 @@ namespace sw
         const CustomizationParamDef* pParam = findParameter( value._parameter );
         if ( pParam == nullptr )
             return false;
+        CustomizationValueSet upgraded;
+        if ( migrate( inoutValues, upgraded ).has_value() == false )
+            return false;
+        inoutValues = std::move( upgraded );
         inoutValues.setValue( value );
         if ( bSymmetric == false || pParam->_symmetry.empty() )
             return true;

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -171,6 +172,37 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 스키마 판 올림의 단계 종류입니다(`<Migration>` 의 자식 원소 이름). */
+    enum class CustomizationMigrationKind : uint8
+    {
+        Rename = 0,          ///< `<Rename from to/>` — 매개변수 이름을 바꾼다
+        Split,               ///< `<Split from to="A B"/>` — 값 하나를 여러 매개변수에 똑같이 나눠 준다(염색 채널 하나 → 둘)
+        PaletteIndexToColor, ///< `<PaletteIndexToColor parameter palette/>` — 슬라이더에 담던 견본 번호를 그 견본의 색으로 바꾼다
+        Remove               ///< `<Remove parameter/>` — 값을 지운다(지운 매개변수가 새 이름으로 다시 쓰일 때 옛 값이 끼어들지 않게)
+    };
+
+    /** @brief 판 올림 단계 하나입니다. 이름은 공유 코드가 해시만 실은 자리 이름(`#1a2b3c4d`)과도 맞춘다(`CustomizationSchemaDef::matchesStoredName`). */
+    struct CustomizationMigrationOp
+    {
+        vector<hashed_string>      _listTo{};     ///< Rename: 새 이름 하나, Split: 나눠 받을 이름들
+        vector<float4>             _listSwatch{}; ///< PaletteIndexToColor: 견본 묶음의 색(읽기가 채운다)
+        hashed_string              _from{};       ///< 옛 이름(Rename · Split) 또는 대상 이름(PaletteIndexToColor · Remove)
+        hashed_string              _palette{};    ///< PaletteIndexToColor: 견본 묶음 id
+        CustomizationMigrationKind _kind{ CustomizationMigrationKind::Rename };
+    };
+
+    /** @brief 판 `_toVersion - 1` 의 값을 `_toVersion` 으로 올리는 단계들(`<Migration toVersion>`)입니다. 적은 순서로 한다. */
+    struct CustomizationMigrationDef
+    {
+        vector<CustomizationMigrationOp> _listOp{};
+        uint32                           _toVersion{ 0 };
+
+        static constexpr uint32 kFirstVersion = 2; ///< 첫 단계가 올리는 판(판 1 은 판을 두기 전의 값이다)
+    };
+} // namespace sw
+
+namespace sw
+{
     struct CustomizationSchemaDef;
 
     /** @brief 매개변수 하나입니다. */
@@ -215,15 +247,34 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 스키마 하나입니다. 캐릭터 종류 하나(사람)나 아이템 종류 하나(소총)의 꾸미기 매개변수를 담습니다. 이 순서가 정규화와 조건 판정의 순서입니다. */
+    /**
+     * @brief 스키마 하나입니다. 캐릭터 종류 하나(사람)나 아이템 종류 하나(소총)의 꾸미기 매개변수를 담습니다. 이 순서가 정규화와 조건 판정의 순서입니다.
+     * @details **판**(`version`, 적지 않으면 1): 매개변수의 뜻이 바뀌면(이름 · 채널 나눔 · 팔레트 번호가 색으로) 판을 올리고 `<Migration toVersion>` 에 옛 값을 옮기는 단계를 적는다.
+     *          세이브 · 공유 코드의 값은 쓴 판을 함께 싣고, 읽는 쪽이 `migrate` 로 지금 판까지 올린다 — 언리얼 `FCustomVersion`(데이터가 쓴 판을 싣고 읽는 쪽이 판으로 가른다) ·
+     *          유니티 `ISerializationCallbackReceiver::OnAfterDeserialize`(읽은 뒤 옛 칸을 새 칸으로 옮긴다)와 같은 자리를, 분기 코드 대신 데이터 단계로 둔다.
+     */
     REFLECT()
     struct SW_GF_API CustomizationSchemaDef
     {
         REFLECT_BODY();
 
-        vector<CustomizationParamDef> _listParameter{};
+        vector<CustomizationParamDef>     _listParameter{};
+        vector<CustomizationMigrationDef> _listMigration{}; ///< 판 2..`_version` 의 단계(`_listMigration[n]` 은 판 n+2 로 올린다 — 읽기가 빈 판 없이 맞춘다)
         PROPERTY( Required )
         hashed_string _id{};
+        PROPERTY( Min = 1 )
+        int32 _version{ 1 };
+
+        uint32 getVersion() const { return static_cast<uint32>( _version ); }
+        /**
+         * @brief @p values 를 이 스키마의 지금 판으로 올려 @p outValues 에 담습니다. 판을 찍지 않은 값(0)과 지금 판의 값은 그대로 옮기고, 결과에는 지금 판을 찍습니다.
+         * @return 이 스키마보다 새 판(다른 빌드 · 더 새 콘텐츠가 쓴 값)이거나 단계가 데이터를 옮기지 못하면(견본 번호가 묶음 밖) 까닭이고, @p outValues 는 그대로입니다 — 폴백 없음, 원본을 덮지 않는다.
+         */
+        [[nodiscard]] expected<void> migrate( const CustomizationValueSet& values, CustomizationValueSet& outValues ) const;
+        /** @brief 저장된 이름 @p stored 가 @p name 인지 봅니다. 이름이 같거나, 공유 코드가 모르는 해시로 둔 자리 이름(`makeHashPlaceholder`)이 @p name 의 해시와 같으면 true 입니다. */
+        static bool matchesStoredName( const hashed_string& stored, const hashed_string& name );
+        /** @brief 받는 쪽이 모르는 32 비트 이름 해시의 자리 이름(`#1a2b3c4d`)입니다. 0 이면 빈 이름입니다. 공유 코드 읽기가 두고, 펼치기는 "지워진 콘텐츠" 로 보고하며, 판 올림은 옛 이름과 맞춘다. */
+        static hashed_string makeHashPlaceholder( uint32 hash );
 
         const CustomizationParamDef* findParameter( const hashed_string& name ) const;
         /**
@@ -231,9 +282,13 @@ namespace sw
          * @details **값은 전송 정밀도로 저장한다.** 슬라이더는 범위를 65535 단계, 색은 성분마다 255 단계로 맞춘다. 해석기는 맞춘 값만 쓰므로
          *          네트워크나 공유 코드로 오간 값이 보낸 쪽과 비트까지 같고, 해석 해시도 같다.
          *          스키마에 없는 이름은 버리고 @p pOutListDropped 에 담는다. 콘텐츠가 바뀌어 지워진 매개변수가 여기에 해당한다. 결과 순서는 스키마 순서다.
+         *          @p values 는 이 판의 값이어야 한다(옛 판은 먼저 `migrate`). 결과에는 지금 판을 찍는다.
          */
         void normalize( const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped ) const;
-        /** @brief 값을 넣습니다. @p bSymmetric 이 true 이면 같은 대칭 그룹의 다른 매개변수(같은 종류끼리)에도 같은 값을 넣습니다. 알 수 없는 매개변수이면 false 입니다. */
+        /**
+         * @brief 값을 넣습니다. @p bSymmetric 이 true 이면 같은 대칭 그룹의 다른 매개변수(같은 종류끼리)에도 같은 값을 넣습니다. 알 수 없는 매개변수이면 false 입니다.
+         * @details @p inoutValues 가 옛 판이면 먼저 지금 판으로 올리고(새 판 값을 옛 판 집합에 섞지 않는다) 지금 판을 찍습니다. 올리지 못하면 false 이고 @p inoutValues 는 그대로입니다.
+         */
         [[nodiscard]] bool applyValue( const CustomizationValue& value, bool bSymmetric, CustomizationValueSet& inoutValues ) const;
     };
 } // namespace sw
