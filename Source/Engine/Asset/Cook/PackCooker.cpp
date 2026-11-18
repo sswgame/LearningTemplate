@@ -1228,7 +1228,7 @@ namespace sw
             SW_LOG_ERROR_ID( "PackCooker.PackLedgerUnreadable", "Pack cook: the cooked pack ledger in %# could not be read", params._packOutputDir );
             return false;
         }
-        // 기동 때 마운트하는 청크 — 기본과 이름 붙은 패턴 청크. 씬 청크 · 공유 청크는 목록(`packchunks.xml`)에 적어 씬을 열 때 마운트한다.
+        // 기동 때 마운트하는 청크 — 기본과 이름 붙은 패턴 청크. 씬 청크 · 공유 청크는 도메인마다의 목록(`packchunks.<도메인 줄기>.xml`)에 적어 씬을 열 때 마운트한다.
         unordered_set<string> setStartupChunk{ string{} };
         for ( const PackChunkRule& rule : config._split._listChunkRule )
         {
