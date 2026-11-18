@@ -24,6 +24,7 @@
 namespace sw
 {
     class Archive;
+    class LootCatalog;
 
     /** @brief 플레이어가 세상에 하는 일 하나의 종류입니다(씬의 `WesternDeedComponent` 가 데이터로 고른다). */
     ENUM()
@@ -73,9 +74,12 @@ namespace sw
 
         /**
          * @brief 지역 @p regionID 에서 시작합니다. @p regionBaseTemperature 는 날씨 값을 더하기 전의 기온(섭씨)이고 @p sight 는 목격자의 시야입니다.
+         * @param pLoot 손질한 사체의 전리품 테이블(동물의 `loot`)을 굴릴 카탈로그입니다. 굴린 것은 빌린 가방(`SessionStateRefs::_pInventory`)에 든다.
+         *              전리품 테이블을 적은 동물이 없는 판은 nullptr 이어도 된다 — 적은 동물이 있는데 없으면 손질할 때 오류다.
          * @return 카탈로그 · 지갑 · 평판 · 시계가 없거나, 지역이 카탈로그에 없거나, 생존 수치를 열지 못하면 오류를 남기고 false 입니다(시작하지 않는다).
          */
-        [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const SessionStateRefs& refs, const hashed_string& regionID, float32 regionBaseTemperature, const AIPerceptionSettings& sight );
+        [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, const SessionStateRefs& refs, const hashed_string& regionID, float32 regionBaseTemperature,
+                                       const AIPerceptionSettings& sight );
         /** @brief 실제 @p deltaTime 초와 빌린 시계가 지난번 뒤로 흐른 만큼 흘립니다. 대사 플래그를 맞춥니다. */
         void update( float32 deltaTime );
         /** @brief 행동을 규칙에 넘깁니다. @p listCandidate 는 범죄를 볼 수 있는 후보입니다. 받아들였으면 true 입니다(모르는 id · 벗길 사체 없음 · 낼 현상금 없음 · 돈 모자람은 false). */
@@ -120,6 +124,7 @@ namespace sw
         SessionStateRefs       _refs;
         hashed_string          _regionID;
         const WesternCatalog*  _pCatalog;
+        const LootCatalog*     _pLoot;          ///< 빌린 전리품 카탈로그(없으면 nullptr)
         float64                _lastClockHours; ///< 지난 `update` 의 시계(날 × 24 + 시)
         float32                _regionBaseTemperature;
         int32                  _centsCarry;     ///< 팔고 남은 센트(1 달러 아래)
