@@ -985,7 +985,7 @@
     "Source/GameFramework/Runtime/World/Spline/SplinePath.cpp": {"float": 15},
     "Source/GameFramework/Runtime/World/Spline/SplinePath.h": {"integer": 1},
     "Source/Games/AbilityArena/ArenaAbilities.cpp": {"float": 1},
-    "Source/Games/AbilityArena/ArenaGameModeComponent.cpp": {"minus-one": 1, "float": 3},
+    "Source/Games/AbilityArena/ArenaGameModeComponent.cpp": {"float": 3},
     "Source/Games/AbilityArena/ArenaUnitComponent.cpp": {"float": 3},
     "Source/Games/Empty/Client/Dev/EmptyRenderDemo.cpp": {"float": 12},
     "Source/Games/Empty/Client/Dev/StressTestCombatComponent.cpp": {"float": 16, "integer": 5},
