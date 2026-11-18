@@ -28,6 +28,7 @@
 #include "Engine/Automation/Scenario/AutomationCaptureUtil.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -165,6 +166,7 @@ namespace sw
         , _bEnded{ SW_FALSE }
         , _bHangWatchArmed{ SW_FALSE }
         , _bWriteFilterHeld{ SW_FALSE }
+        , _bStartPauseHeld{ SW_FALSE }
         , _reserved{ 0 }
         , _startedAt{}
         , _reproduceInput{}
@@ -184,6 +186,23 @@ namespace sw
     AutomationRunner::~AutomationRunner()
     {
         releaseWriteFilter();
+        releaseStartPause();
+    }
+
+    void AutomationRunner::holdGameTimeUntilStart()
+    {
+        if ( _bStartPauseHeld == SW_TRUE )
+            return;
+        engine::getSubsystem<GameTimeScale>().addPauseRequest();
+        _bStartPauseHeld = SW_TRUE;
+    }
+
+    void AutomationRunner::releaseStartPause()
+    {
+        if ( _bStartPauseHeld == SW_FALSE )
+            return;
+        engine::getSubsystem<GameTimeScale>().removePauseRequest();
+        _bStartPauseHeld = SW_FALSE;
     }
 
     void AutomationRunner::forwardPendingScreenshot()
@@ -375,6 +394,7 @@ namespace sw
             return; // 벽시계 상한을 넘었다 — 이 프레임의 `onFrameEnd` 가 끝맺는다
         if ( _bStarted == SW_FALSE )
         {
+            holdGameTimeUntilStart(); // 기다리는 프레임 수(로드 · 백엔드 · 앞 단계)가 게임 상태를 바꾸지 않게 시작까지 게임 시간을 멈춘다
             // 씬 플레이 중이란 활성 씬이 플레이를 시작했고 시작 차단 조건이 모두 풀렸다는 뜻이다(UI 의 로딩 화면은 게임 입력을 막으므로, 그동안 넣은 입력은 폰에 닿지 않는다).
             // `Immediately` 는 씬이 플레이 중일 필요만 없앤다 — 차단 조건(로딩 화면 · 감시 울타리)은 어느 시작 조건이든 풀려야 시작한다.
             const GameObjectManager* pManager    = findActiveObjectManager();
@@ -422,6 +442,7 @@ namespace sw
                 return;
             }
             _bStarted = SW_TRUE;
+            releaseStartPause(); // 시작 프레임부터 게임 시간이 흐른다
             // 상한을 다시 구한다 — 에디터 단계(CaptureEditorUI …)는 에디터 모듈이 실리며 등록돼, 시나리오를 읽던 때의 계산에는 그 단계 예산이 빠져 150 초로 남았다.
             // 행 감시도 같은 상한을 본다 — 바꿨으면 새 상한으로 다시 건다(옛 상한의 감시가 실행기보다 먼저 프로세스를 끝냈다).
             const float32 limitAtStart = computeWallLimitSeconds();
@@ -927,6 +948,7 @@ namespace sw
     {
         if ( isActive() == false )
             return;
+        releaseStartPause(); // 시작하지 못하고 끝나도(시작 시한 · 읽기 오류) 다음 단계에 정지가 남지 않는다
         // 통과로 끝맺었는데 적힌 실패가 있으면 첫 실패 줄이 까닭이다 — 끝 단계 이름(`<Pass/>`)이 실패의 까닭으로 남지 않는다.
         const vector<string>& listFailure = _evaluator.getFailures();
         _runResult                        = runResult.concludeWithFailures( listFailure.empty() ? string_view{} : string_view{ listFailure.front() }, _evaluator.getFirstFailureKind() );

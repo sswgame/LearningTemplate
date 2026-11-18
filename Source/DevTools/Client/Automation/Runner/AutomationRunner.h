@@ -364,6 +364,15 @@ namespace sw
         void acquireWriteFilter();
         /** @brief 쥔 쓰기 입구 게이트를 놓습니다. 쥐지 않았으면 아무것도 하지 않습니다. */
         void releaseWriteFilter();
+        /**
+         * @brief 시작 전 기다리는 동안 게임 시간을 멈춥니다(`GameTimeScale` 정지 요청). 시작 · 끝 · 소멸 때 `releaseStartPause` 가 풉니다.
+         * @details 시작 조건(씬 플레이 · 차단 조건 · 앞 단계의 백그라운드 작업)을 기다리는 프레임 수는 로드 속도 · 백엔드 · 체인의 앞 단계에 달린다. 그동안 게임이 돌면
+         *          물리 · 애니메이션이 그 수만큼 앞서 같은 시나리오가 혼자와 체인에서 다른 상태로 시작했다(boat 가 dx11 체인에서만 다른 사진). 언리얼 기능 테스트도
+         *          월드 시간은 BeginPlay 뒤 테스트가 시작될 때부터 센다.
+         */
+        void holdGameTimeUntilStart();
+        /** @brief `holdGameTimeUntilStart` 가 건 정지 요청을 풉니다(걸려 있을 때만). */
+        void releaseStartPause();
         /** @brief 감시 스레드가 읽을 스냅샷을 갱신합니다(@p position 은 `describeRunPosition`). 감시가 돌고 있지 않으면 아무것도 하지 않습니다. */
         void publishHangSnapshot( string_view position );
 
@@ -379,7 +388,8 @@ namespace sw
         uint8                         _bEnded           : 1;
         uint8                         _bHangWatchArmed  : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
         uint8                         _bWriteFilterHeld : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratchWorkspace::acquireWriteFilter` — `endRun` 이나 소멸자가 놓는다)
-        [[maybe_unused]] uint8        _reserved         : 4;
+        uint8                         _bStartPauseHeld  : 1; ///< 시작 전 게임 시간 정지 요청을 쥐고 있다(`holdGameTimeUntilStart`)
+        [[maybe_unused]] uint8        _reserved         : 3;
         string                        _startedAt;              ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
         AutomationReproduceInput      _reproduceInput;         ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
         AutomationHangPayload         _hangPayload;            ///< 감시 스레드에 넘기는 스냅샷의 게임 스레드 쪽 사본(바뀌지 않는 칸은 시작할 때 한 번 채운다)
