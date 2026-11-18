@@ -16,6 +16,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneObjectCommands.h"
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
@@ -216,40 +217,53 @@ namespace sw::editor
                 (void)EditorTransformCommands::pasteCopiedComponentAsNew( editorContext.getSubsystem<EditorWorkspace>(), pObj ); // 실패는 붙여넣기 함수가 로그로 알린다
             }
 
-            static void onLoadPresetDialogResult( const vector<string>& listPath )
+            /**
+             * @brief 프리셋 창 결과가 가리킬 컴포넌트를 게임 단계에서 id 로 다시 찾습니다(창이 열린 동안 선택이 바뀌어도 창을 연 대상에 쓴다). 사라졌으면 알리고 nullptr 입니다.
+             * @details 창을 연 순간의 id 만 붙잡는다 — 포인터는 대화상자가 열린 동안 낡는다.
+             */
+            static Component* findPresetComponent( uint64 componentID )
             {
-                if ( listPath.empty() )
-                    return;
-                Component* pComp = selectedComponent();
+                EditorCommandTarget target{};
+                target._kind       = EditorCommandTargetKind::Component;
+                target._hoveredID  = componentID;
+                GameObject* pOwner = nullptr;
+                Component*  pComp  = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
                 if ( pComp == nullptr )
-                {
                     warn( SW_LOCKEY( "EdCommon", "NotifyPresetTitle" ), SW_LOCKEY( "EdCommon", "NotifySelectComponent" ) );
-                    return;
-                }
-                // 반환값을 버리면 프리셋을 골랐는데 아무 일도 일어나지 않는다. 파일이 없거나
-                // XML 이 그 컴포넌트 타입과 맞지 않으면 실패한다. 명령(`preset.loadComponent`)은 창만 열었다 — 씬을 바꾸는 여기서 거래를 연다.
-                EditorTransaction transaction;
-                if ( EditorTransformCommands::loadComponentPreset( transaction, pComp, listPath[0] ) == false )
-                    warn( SW_LOCKEY( "EdCommon", "NotifyPresetTitle" ), SW_LOCKEY( "EdCommon", "NotifyPresetApplyFailed" ) );
+                return pComp;
             }
 
-            static void onSavePresetDialogResult( const vector<string>& listPath )
+            /**
+             * @brief 프리셋 열기 창의 결과(UI 프레임)를 게임 단계 씬 편집으로 넘깁니다 — 컴포넌트를 바꾸는 일은 UI 가 하지 않는다(`EditorCommandRegistry::requestSceneEdit`, 거래 하나가 되돌리기 한 단계).
+             * @details 반환값을 버리면 프리셋을 골랐는데 아무 일도 일어나지 않는다. 파일이 없거나 XML 이 그 컴포넌트 타입과 맞지 않으면 실패를 알린다.
+             */
+            static void requestLoadPreset( uint64 componentID, const string& presetPath )
             {
-                if ( listPath.empty() )
-                    return;
-                Component* pComp = selectedComponent();
-                if ( pComp == nullptr )
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create( [componentID, presetPath]( EditorTransaction& transaction )
                 {
-                    warn( SW_LOCKEY( "EdCommon", "NotifyPresetTitle" ), SW_LOCKEY( "EdCommon", "NotifySelectComponent" ) );
-                    return;
-                }
-                if ( EditorTransformCommands::saveComponentPresetTo( pComp, listPath[0] ) == false )
-                    warn( SW_LOCKEY( "EdCommon", "NotifyPresetTitle" ), SW_LOCKEY( "EdCommon", "NotifyPresetWriteFailed" ) );
+                    if ( EditorPlaySession::refuseSceneEdit( "Load Component Preset" ) ) // 창이 열린 동안 플레이 · 베이크가 시작됐을 수 있다
+                        return;
+                    Component* pComp = findPresetComponent( componentID );
+                    if ( pComp != nullptr && EditorTransformCommands::loadComponentPreset( transaction, pComp, presetPath ) == false )
+                        warn( SW_LOCKEY( "EdCommon", "NotifyPresetTitle" ), SW_LOCKEY( "EdCommon", "NotifyPresetApplyFailed" ) );
+                } ) );
+            }
+
+            /** @brief 프리셋 저장 창의 결과(UI 프레임)를 게임 단계로 넘깁니다 — 컴포넌트 값을 읽는 일도 씬을 쥔 쪽이 한다. 씬을 바꾸지 않아 거래는 빈 채로 닫힌다. */
+            static void requestSavePreset( uint64 componentID, const string& presetPath )
+            {
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create( [componentID, presetPath]( EditorTransaction& /*transaction*/ )
+                {
+                    const Component* pComp = findPresetComponent( componentID );
+                    if ( pComp != nullptr && EditorTransformCommands::saveComponentPresetTo( pComp, presetPath ) == false )
+                        warn( SW_LOCKEY( "EdCommon", "NotifyPresetTitle" ), SW_LOCKEY( "EdCommon", "NotifyPresetWriteFailed" ) );
+                } ) );
             }
 
             static void commandLoadComponentPreset()
             {
-                if ( selectedComponent() == nullptr )
+                const Component* pComp = selectedComponent();
+                if ( pComp == nullptr )
                 {
                     warn( SW_LOCKEY( "EdCommon", "NotifyPresetTitle" ), SW_LOCKEY( "EdCommon", "NotifySelectComponent" ) );
                     return;
@@ -261,12 +275,18 @@ namespace sw::editor
                 params._bEnableMultiselect  = false;
                 params._listFilterExtension = { ".preset.xml", ".xml" };
                 params._initialDirectory    = EditorGlobalVariableCommands::getComponentPresetFolderPath();
-                FileDialog::open( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onLoadPresetDialogResult ) );
+                const uint64 componentID    = pComp->getComponentID();
+                FileDialog::open( params, FileDialogDelegate::create( [componentID]( const vector<string>& listPath )
+                {
+                    if ( listPath.empty() == false )
+                        requestLoadPreset( componentID, listPath[0] );
+                } ) );
             }
 
             static void commandSaveComponentPreset()
             {
-                if ( selectedComponent() == nullptr )
+                const Component* pComp = selectedComponent();
+                if ( pComp == nullptr )
                 {
                     warn( SW_LOCKEY( "EdCommon", "NotifyPresetTitle" ), SW_LOCKEY( "EdCommon", "NotifySelectComponent" ) );
                     return;
@@ -278,7 +298,12 @@ namespace sw::editor
                 params._bEnableMultiselect  = false;
                 params._listFilterExtension = { ".preset.xml" };
                 params._initialDirectory    = EditorGlobalVariableCommands::getComponentPresetFolderPath();
-                FileDialog::open( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSavePresetDialogResult ) );
+                const uint64 componentID    = pComp->getComponentID();
+                FileDialog::open( params, FileDialogDelegate::create( [componentID]( const vector<string>& listPath )
+                {
+                    if ( listPath.empty() == false )
+                        requestSavePreset( componentID, listPath[0] );
+                } ) );
             }
 
             // 씬 표가 `void( EditorTransaction& )` 를 요구하므로 인자를 고정하는 함수는 필요하지만, 축마다 함수를 만들 이유는 없다. 축을 템플릿 인자로 받으면 표는 `&commandAlign<AlignAxis::X>` 로 가리킨다.

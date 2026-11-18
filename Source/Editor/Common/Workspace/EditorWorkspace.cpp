@@ -40,7 +40,7 @@ namespace sw::editor
         , _focusedAssetPath{}
         , _assetsMoved{}
         , _pendingOpenPanel{}
-        , _pendingScenePath{}
+        , _listSceneFileRequest{}
         , _pendingSceneActionPath{}
         , _copiedComponentXML{}
         , _copiedComponentTypeName{}
@@ -230,16 +230,22 @@ namespace sw::editor
     void EditorWorkspace::requestLoadScene( string_view path )
     {
         ScopedLock<mutex> lock{ _pendingSceneMutex };
-        _pendingScenePath = path;
+        _listSceneFileRequest.push_back( EditorSceneFileRequest{ EditorSceneFileRequestKind::Open, string{ path } } );
     }
 
-    bool EditorWorkspace::consumeLoadScene( string& outPath )
+    void EditorWorkspace::requestSaveSceneAs( string_view absPath )
     {
         ScopedLock<mutex> lock{ _pendingSceneMutex };
-        if ( _pendingScenePath.empty() )
+        _listSceneFileRequest.push_back( EditorSceneFileRequest{ EditorSceneFileRequestKind::SaveAs, string{ absPath } } );
+    }
+
+    bool EditorWorkspace::takeSceneFileRequests( vector<EditorSceneFileRequest>& outListRequest )
+    {
+        outListRequest.clear();
+        ScopedLock<mutex> lock{ _pendingSceneMutex };
+        if ( _listSceneFileRequest.empty() )
             return false;
-        outPath = _pendingScenePath;
-        _pendingScenePath.clear();
+        outListRequest.swap( _listSceneFileRequest );
         return true;
     }
 
