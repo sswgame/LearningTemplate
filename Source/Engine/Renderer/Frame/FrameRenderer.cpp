@@ -710,6 +710,7 @@ namespace sw
         FrameViewResources::ViewPassSceneState sceneState{};
         sceneState._bObjectMotion      = _state._gpuScene.hasObjectMotion() ? SW_TRUE : SW_FALSE;
         sceneState._bContactShadows    = _state._frameShadow.hasContactShadows() ? SW_TRUE : SW_FALSE;
+        sceneState._bLocalShadows      = _state._frameShadow._listLocalTile.empty() ? SW_FALSE : SW_TRUE;
         sceneState._bRefractionBatches = _state._gpuScene.hasRefractionBatches() ? SW_TRUE : SW_FALSE;
         sceneState._bDistortionBatches = _state._gpuScene.hasDistortionBatches() ? SW_TRUE : SW_FALSE;
         return sceneState;

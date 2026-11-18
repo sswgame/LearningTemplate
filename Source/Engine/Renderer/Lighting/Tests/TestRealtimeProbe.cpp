@@ -235,11 +235,13 @@ SW_TEST_CASE( SceneVoxelizerTest, VoxelizesOpaqueVisibleMeshesOnly )
 }
 
 /**
- * @brief [RealtimeProbeTest] 요청들의 버퍼 배치는 앞 요청들의 복셀 단어 · 기록 원소 · 프로브 수를 누적한다
+ * @brief [RealtimeProbeTest] 요청들의 버퍼 배치는 앞 요청들의 복셀 단어 · 프로브 수를 누적하고, 기록 구간은 할당기가 정체마다 매긴 자리다(처음은 이어 붙는다)
  */
 SW_TEST_CASE( RealtimeProbeTest, PlanLayoutAccumulatesOffsets )
 {
     sw::vector<sw::RealtimeProbeRequest> listRequest( 2 );
+    listRequest[0]._volumeID   = 1;
+    listRequest[1]._volumeID   = 2;
     listRequest[0]._probeCount = 18;
     listRequest[0]._pVoxelGrid = sw::make_shared<sw::SceneVoxelGrid>( makeFourMeterGrid() ); // 64 칸 → 단어 2
     listRequest[1]._probeCount = 5;
@@ -249,7 +251,9 @@ SW_TEST_CASE( RealtimeProbeTest, PlanLayoutAccumulatesOffsets )
     },
                                                                                                 1.0f ) ); // 512 칸 → 단어 16
 
-    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest );
+    sw::RealtimeProbeHistoryAllocator history;
+    SW_EXPECT_TRUE( history.assign( listRequest ) ); // 처음 — 용량이 생긴다
+    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest, history );
     SW_REQUIRE_EQUAL( size_t( 2 ), layout._listFirstThread.size() );
     SW_EXPECT_EQUAL( 0u, layout._listFirstThread[0] );
     SW_EXPECT_EQUAL( 18u, layout._listFirstThread[1] );
@@ -259,7 +263,53 @@ SW_TEST_CASE( RealtimeProbeTest, PlanLayoutAccumulatesOffsets )
     SW_EXPECT_EQUAL( 18u * sw::SH9Color::kGPUFloat4Count, layout._listHistoryOffset[1] );
     SW_EXPECT_EQUAL( 23u, layout._totalProbes );
     SW_EXPECT_EQUAL( 18u, layout._totalVoxelWords );
-    SW_EXPECT_EQUAL( 23u * sw::SH9Color::kGPUFloat4Count, layout._totalHistoryElements );
+    SW_EXPECT_EQUAL( history.getCapacity(), layout._totalHistoryElements );
+    SW_EXPECT_TRUE( layout._totalHistoryElements >= 23u * sw::SH9Color::kGPUFloat4Count );
+}
+
+/**
+ * @brief [RealtimeProbeTest] 볼륨 하나가 빠지고 하나가 들어와도 서 있는 볼륨은 기록 구간 · 누적 프레임을 지키고, 새 볼륨만 0 에서 시작해 빠진 볼륨의 구간을 다시 쓴다
+ * @details 예전 열쇠는 (볼륨 번호, 프로브 수) 목록을 순서째 견줘 하나만 드나들어도 모든 기록이 0 으로 돌아갔다.
+ */
+SW_TEST_CASE( RealtimeProbeTest, HistoryKeepsStandingVolumesWhenOneLeaves )
+{
+    sw::vector<sw::RealtimeProbeRequest> listRequest( 3 );
+    for ( uint32 index = 0; index < 3; ++index )
+    {
+        listRequest[index]._volumeID   = 100u + index;
+        listRequest[index]._probeCount = 4;
+    }
+    sw::RealtimeProbeHistoryAllocator history;
+    SW_REQUIRE_TRUE( history.assign( listRequest ) );
+    const uint32 offsetB  = history.getOffset( 1 );
+    const uint32 offsetC  = history.getOffset( 2 );
+    const uint32 offsetA  = history.getOffset( 0 );
+    const uint32 capacity = history.getCapacity();
+    history.advanceFrame();
+    history.advanceFrame();
+
+    // A(100) 가 빠지고 D(200) 가 들어온다 — 차례도 바뀐다.
+    sw::vector<sw::RealtimeProbeRequest> listNext( 3 );
+    listNext[0]             = listRequest[2];
+    listNext[1]             = listRequest[1];
+    listNext[2]._volumeID   = 200u;
+    listNext[2]._probeCount = 4;
+    SW_EXPECT_FALSE( history.assign( listNext ) ); // 빠진 구간으로 들어가 용량이 그대로다
+    SW_EXPECT_EQUAL( offsetC, history.getOffset( 0 ) );
+    SW_EXPECT_EQUAL( offsetB, history.getOffset( 1 ) );
+    SW_EXPECT_EQUAL( offsetA, history.getOffset( 2 ) );
+    SW_EXPECT_FALSE( history.isFresh( 0 ) );
+    SW_EXPECT_FALSE( history.isFresh( 1 ) );
+    SW_EXPECT_TRUE( history.isFresh( 2 ) );
+    SW_EXPECT_EQUAL( 2u, history.getFramesSinceReset( 0 ) );
+    SW_EXPECT_EQUAL( 0u, history.getFramesSinceReset( 2 ) );
+    SW_EXPECT_EQUAL( capacity, history.getCapacity() );
+
+    // 프로브 수가 바뀐 볼륨은 새 볼륨과 같다.
+    listNext[1]._probeCount = 2;
+    SW_EXPECT_FALSE( history.assign( listNext ) ); // 돌려받은 구간 안에 든다
+    SW_EXPECT_TRUE( history.isFresh( 1 ) );
+    SW_EXPECT_FALSE( history.isFresh( 0 ) );
 }
 
 /**
@@ -305,7 +355,9 @@ SW_TEST_CASE( RealtimeProbeTest, BuildParamRowsFollowShaderLayout )
     sw::vector<sw::RealtimeProbeRequest> listRequest;
     listRequest.push_back( request );
 
-    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest );
+    sw::RealtimeProbeHistoryAllocator history;
+    (void)history.assign( listRequest );
+    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest, history );
     const sw::SH9Color            sky    = sw::SH9Color::makeConstant( sw::float3{ 1.0f, 2.0f, 3.0f } );
     const sw::vector<uint32>      warmup{ 3u };
     const sw::vector<sw::float4>  rows = sw::RealtimeProbeUpdater::makeParamRows( listRequest, layout, warmup, sky, 9u, 4u );
@@ -374,8 +426,12 @@ SW_TEST_CASE( RealtimeProbeTest, EmissionWordsFollowOccupancy )
     listRequest[0]._pVoxelGrid        = sw::make_shared<sw::SceneVoxelGrid>( std::move( emissive ) );
     listRequest[1]._probeCount        = 1;
     listRequest[1]._pVoxelGrid        = sw::make_shared<sw::SceneVoxelGrid>( makeFourMeterGrid() );
+    listRequest[0]._volumeID          = 1;
+    listRequest[1]._volumeID          = 2;
 
-    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest );
+    sw::RealtimeProbeHistoryAllocator history;
+    (void)history.assign( listRequest );
+    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest, history );
     SW_REQUIRE_EQUAL( size_t( 2 ), layout._listEmissionWordOffset.size() );
     SW_EXPECT_EQUAL( 2u, layout._listEmissionWordOffset[0] );
     SW_EXPECT_EQUAL( 66u, layout._listVoxelWordOffset[1] );
