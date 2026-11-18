@@ -29,6 +29,13 @@ namespace sw
             return unexpected( Error{ ErrorKind::NotFound, "the lens flare file could not be read" } );
         if ( loaded._listElement.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the lens flare has no elements" } );
+        // Image 원소는 텍스처가 있어야 하고, 절차적 모양은 텍스처를 쓰지 않는다 — 적은 칸이 그림에 들지 않는 일을 읽기에서 막는다.
+        for ( const LensFlareElement& element : loaded._listElement )
+        {
+            const bool bImage = element._shape == LensFlareShape::Image;
+            if ( bImage != element._texture.isSet() )
+                return unexpected( Error{ ErrorKind::InvalidArgument, bImage ? "an Image element has no _texture" : "a procedural element has a _texture (only Image elements read one)" } );
+        }
         *this = std::move( loaded );
         return {};
     }

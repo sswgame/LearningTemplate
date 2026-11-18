@@ -3,7 +3,7 @@
  * @brief 빛 하나의 렌즈 플레어(`*.lensflare.xml`)입니다 — 빛에서 화면 가운데를 지나는 축 위에 놓는 스프라이트 원소 목록과 가림 · 가장자리 감쇠 값.
  * @details 빛 컴포넌트가 경로(`LightComponent::_lensFlarePath`)로 가리키고, 렌더러의 렌즈 플레어 패스(`RenderPassType::LensFlare`, lens_flare.hlsl)가 그린다.
  *          블룸에서 고스트를 뽑는 화면 효과와 달리 빛마다 데이터로 정한 스프라이트다(언리얼 Lens Flare 의 이미지 기반 고스트와 다른, 유니티 SRP Lens Flare(Data Driven) 자리 — 기억에 의존한 비교).
- *          모양은 셰이더가 깎는 절차적 모양 넷이다(텍스처 없음). shortcut: 텍스처 스프라이트가 필요해지면 원소에 텍스처 경로 칸을 더하고 셰이더가 머티리얼 텍스처로 읽는다.
+ *          모양은 셰이더가 깎는 절차적 모양 넷과 텍스처 스프라이트(Image — 원소의 `_texture`, 유니티 SRP Lens Flare 의 Image 원소)다.
  *          파일은 공유 캐시(`SharedAssetCache<LensFlareAsset>`)가 읽고, 고치면 다시 읽는다.
  */
 #pragma once
@@ -18,6 +18,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw
 {
@@ -29,6 +30,7 @@ namespace sw
         Disc,   ///< 가장자리가 부드러운 원판(고스트)
         Ring,   ///< 고리(헤일로)
         Streak, ///< 가로로 긴 줄(아나모픽 줄무늬)
+        Image,  ///< 텍스처 스프라이트(원소의 `_texture` — rgb × 알파를 색에 곱한다)
     };
 
     /** @brief 플레어 원소 하나 — 축 위의 자리, 크기, 색, 모양입니다. */
@@ -48,6 +50,9 @@ namespace sw
         /** @brief 색 × 세기(HDR, 선형)입니다. 빛의 색 × 세기에 곱한다. */
         PROPERTY( Required )
         float3 _color{};
+        /** @brief 모양이 Image 인 원소의 텍스처입니다(스프라이트 사각형에 그대로 편다). 다른 모양은 비워야 한다 — 읽기가 어긋난 칸을 오류로 막는다. */
+        PROPERTY( SkipIfEmpty, Tooltip = "Sprite texture of an Image element (empty for procedural shapes)" )
+        DataPath _texture;
     };
 
     /** @brief 렌즈 플레어 파일 하나입니다. 파일 머리말을 참고하세요. */

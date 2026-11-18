@@ -7,6 +7,8 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
+#include <algorithm>
+
 namespace sw
 {
     namespace
@@ -60,10 +62,14 @@ namespace sw
         return static_cast<float32>( visibleCount ) / static_cast<float32>( sampleCount );
     }
 
-    void LensFlareSpriteBuffer::buildSprites( const vector<LensFlareRequest>& listRequest, const float4x4& viewProj, float32 aspect, vector<LensFlareSprite>& outListSprite )
+    void LensFlareSpriteBuffer::buildSprites( const vector<LensFlareRequest>& listRequest, const float4x4& viewProj, float32 aspect, vector<LensFlareSprite>& outListSprite,
+                                              vector<LensFlareDrawRange>& outListRange )
     {
         outListSprite.clear();
-        const float32 safeAspect = MathUtil::max( aspect, LensFlareSpriteBufferInternal::kMinAspect );
+        outListRange.clear();
+        // Image 원소는 따로 모았다가 텍스처 경로 차례로 묶는다(텍스처 바꿈을 구간 수로 줄인다).
+        vector<pair<const DataPath*, LensFlareSprite>> listImage;
+        const float32                                  safeAspect = MathUtil::max( aspect, LensFlareSpriteBufferInternal::kMinAspect );
         for ( const LensFlareRequest& request : listRequest )
         {
             float3 ndcDepth{};
@@ -86,17 +92,33 @@ namespace sw
                                              static_cast<float32>( element._shape ) };
                 sprite._lightUVKernel  = lightUVKernel;
                 sprite._depthFade      = float4{ ndcDepth._z, fade, 0.0f, 0.0f };
-                outListSprite.push_back( sprite );
+                if ( element._shape == LensFlareShape::Image )
+                    listImage.emplace_back( &element._texture, sprite );
+                else
+                    outListSprite.push_back( sprite );
             }
+        }
+        if ( outListSprite.empty() == false )
+            outListRange.push_back( LensFlareDrawRange{ 0u, static_cast<uint32>( outListSprite.size() ), nullptr } );
+        std::stable_sort( listImage.begin(), listImage.end(), []( const pair<const DataPath*, LensFlareSprite>& lhs, const pair<const DataPath*, LensFlareSprite>& rhs )
+        { return lhs.first->get() < rhs.first->get(); } );
+        for ( const pair<const DataPath*, LensFlareSprite>& image : listImage )
+        {
+            const bool bSameTexture = outListRange.empty() == false && outListRange.back()._pTexturePath != nullptr && outListRange.back()._pTexturePath->get() == image.first->get();
+            if ( bSameTexture == false )
+                outListRange.push_back( LensFlareDrawRange{ static_cast<uint32>( outListSprite.size() ), 0u, image.first } );
+            outListSprite.push_back( image.second );
+            ++outListRange.back()._spriteCount;
         }
     }
 
     void LensFlareSpriteBuffer::prepare( IRHIDevice* pDevice, const vector<LensFlareRequest>& listRequest, const float4x4& viewProj, float32 aspect )
     {
         _spriteCount = 0;
+        _listRange.clear();
         if ( pDevice == nullptr || listRequest.empty() )
             return;
-        buildSprites( listRequest, viewProj, aspect, _listSpriteScratch );
+        buildSprites( listRequest, viewProj, aspect, _listSpriteScratch, _listRange );
         if ( _listSpriteScratch.empty() )
             return;
         constexpr RHIBufferUsage kReadUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
@@ -108,6 +130,7 @@ namespace sw
             if ( _bReportedFailure == SW_FALSE )
                 SW_LOG_ERROR_ID( "LensFlareSpriteBuffer.CreateFailed", "Failed to create the lens flare sprite buffer (%# sprites) - lens flares are not drawn", count );
             _bReportedFailure = SW_TRUE;
+            _listRange.clear();
             return;
         }
         _buffer.upload( pDevice, _listSpriteScratch.data(), count * stride );
@@ -118,5 +141,6 @@ namespace sw
     {
         _buffer.release( pDevice );
         _spriteCount = 0;
+        _listRange.clear();
     }
 } // namespace sw

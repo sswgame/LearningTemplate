@@ -631,6 +631,7 @@ namespace sw
         hashed_string _decalChannels{ "g_DecalChannels" };             ///< 데칼이 덮는 칸(DecalChannels 비트)
         hashed_string _decalAlbedoTexture{ "g_DecalAlbedoTexture" };   ///< 데칼 알베도 텍스처 번호(MaterialTexture::sampleIndex 의 뜻)
         hashed_string _decalNormalTexture{ "g_DecalNormalTexture" };   ///< 데칼 노멀 텍스처 번호
+        hashed_string _lensFlareTexture{ "g_LensFlareTexture" };       ///< 렌즈 플레어 Image 구간의 텍스처 번호(MaterialTexture::sampleIndex 의 뜻, 없으면 kInvalidIndex)
         hashed_string _shadowParams{ "g_ShadowParams" };
         /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭, w 거리 끝에서 옅어지기 시작하는 깊이. `ViewShadowData::_cascadeLayout`.
         hashed_string _shadowCascadeLayout{ "g_ShadowCascadeLayout" };

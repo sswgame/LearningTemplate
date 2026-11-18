@@ -979,13 +979,33 @@ namespace sw
             return;
         // drawFullscreen 과 같은 순서다. 스프라이트 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다(안개 패스와 같다).
         setIdentityWorld( context );
-        commitBindlessTextureBindings( context );
-        context._pCmd->setPipelineState( pso );
-        if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) )
+        // 구간마다 그리기 하나 — Image 구간은 텍스처를 머티리얼 칸 0 으로 빌려 건다(데칼과 같다). 아직 읽는 중인 텍스처의 구간은 이번 프레임에 뺀다(흰 사각형으로 대신하지 않는다).
+        const bool bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
+        for ( const LensFlareDrawRange& range : sprites.getDrawRanges() )
         {
-            context._pCmd->bindStructuredBuffer( sprites.getBuffer()._srv, shaderslot::kPassBuffer );
-            // 스프라이트 하나 = 모서리 여섯(정점 버퍼 없이 SV_VertexID 로 만든다 — lens_flare.hlsl).
-            context._pCmd->draw( sprites.getSpriteCount() * 6u, 0 );
+            RHIDescriptorIndex arrTextureSRV[shaderslot::kMaterialTextureCount];
+            for ( RHIDescriptorIndex& srv : arrTextureSRV )
+            {
+                srv = kInvalidDescriptorIndex;
+            }
+            uint32 textureIndex = kInvalidDescriptorIndex;
+            if ( range._pTexturePath != nullptr )
+            {
+                const Texture2D* pTexture = _state._postProcessTextures.findReady( *range._pTexturePath, "lens flare sprite" );
+                if ( pTexture == nullptr )
+                    continue;
+                arrTextureSRV[0] = pTexture->getSRV();
+                textureIndex     = bNativeBindless ? pTexture->getSRV() : 0u;
+            }
+            context._passValues.setUint( passConstantNames()._lensFlareTexture, textureIndex );
+            commitBindlessTextureBindings( context );
+            context._pCmd->setPipelineState( pso );
+            if ( bindForDraw( context, pso, kInvalidDescriptorIndex, arrTextureSRV ) )
+            {
+                context._pCmd->bindStructuredBuffer( sprites.getBuffer()._srv, shaderslot::kPassBuffer );
+                // 스프라이트 하나 = 모서리 여섯(정점 버퍼 없이 SV_VertexID 로 만든다 — lens_flare.hlsl). 시작 정점이 SV_VertexID 에 더해져 구간의 스프라이트를 읽는다.
+                context._pCmd->draw( range._spriteCount * 6u, range._firstSprite * 6u );
+            }
         }
         context._pCmd->endRenderPass();
     }
