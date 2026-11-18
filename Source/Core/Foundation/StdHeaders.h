@@ -30,6 +30,7 @@
 #include <functional>
 #include <initializer_list>
 #include <iosfwd>
+#include <iterator>
 #include <limits>
 #include <list>
 #include <map>

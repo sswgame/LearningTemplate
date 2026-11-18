@@ -272,8 +272,8 @@ namespace sw
     void DestructionReplicationServer::sendEvents( Entry& entry, FractureComponentBase& component, uint32 serverTick )
     {
         // 서버는 스냅숏을 받지 않으므로 기록의 인덱스가 곧 상태의 이벤트 번호이다.
-        const vector<DestructionDamageEvent>& listEvent     = component.getEventLog()._listEvent;
-        const vector<FractureGroupPose>&      listGroupPose = component.getEventGroupPoses();
+        const vector<DestructionDamageEvent>&      listEvent     = component.getEventLog()._listEvent;
+        const vector<optional<FractureGroupPose>>& listGroupPose = component.getEventGroupPoses();
         for ( uint32 index = entry._sentEventCount; index < static_cast<uint32>( listEvent.size() ); ++index )
         {
             BitWriter& writer = _writer.begin( NetDestructionMessage::kEvent );
@@ -282,10 +282,10 @@ namespace sw
             writer.writeVarUint( index );
             DestructionReplicationInternal::writeEvent( writer, listEvent[index] );
             // 떨어진 덩어리를 맞힌 이벤트이면 맞기 직전의 그 덩어리 자세를 비트 그대로 싣는다. 신뢰 채널이 밀려 자세가 늦어도 받는 쪽이 그 위치에서 덩어리를 가를 수 있다.
-            const bool bHasPose = index < listGroupPose.size() && listGroupPose[index]._groupID != 0;
+            const bool bHasPose = index < listGroupPose.size() && listGroupPose[index].has_value();
             writer.writeBool( bHasPose );
             if ( bHasPose )
-                DestructionReplicationInternal::writeExactPose( writer, listGroupPose[index]._position, listGroupPose[index]._rotation );
+                DestructionReplicationInternal::writeExactPose( writer, listGroupPose[index]->_position, listGroupPose[index]->_rotation );
             (void)broadcast( NetChannelType::ReliableUnordered ); // 받는 쪽이 번호로 순서를 맞춘다. 앞 이벤트를 잃어도 뒤 이벤트가 기다리지 않는다
             ++_stats._eventMessageCount;
         }
