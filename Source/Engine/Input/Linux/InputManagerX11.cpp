@@ -171,8 +171,7 @@ namespace sw
         // 키보드는 X11 이벤트(KeyPress/KeyRelease)로 빠짐없이 들어오므로 폴링 폴백이 필요 없다
         // (Win32 의 GetAsyncKeyState 폴백은 메시지 유실을 메우기 위한 것이고, X11 에는 같은 문제가 없다).
         // 마우스는 창 밖에서 버튼을 뗀 경우처럼 이벤트를 놓칠 수 있는 경로가 있어 위치와 버튼을 보조로 폴링한다.
-        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr || _pMouse == nullptr )
             return;
         // 포인터가 창 안에 있고 포커스도 있으면 MotionNotify/ButtonRelease 가 빠짐없이 들어오므로
@@ -381,8 +380,7 @@ namespace sw
 
     void InputManager::setCursorVisiblePlatform( bool bVisible )
     {
-        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         // 창이 스스로 커서를 숨긴다(X11 투명 커서 · Wayland `wl_pointer.set_cursor`). 못 하면 커서가 그대로 보이므로 한 번 오류로 알린다.
@@ -392,8 +390,7 @@ namespace sw
 
     void InputManager::applyCursorShapePlatform()
     {
-        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         // 창이 스스로 모양을 바꾼다(X11 글꼴 커서 · Wayland `wp_cursor_shape_manager_v1`). 컴포지터에 그 확장이 없으면 못 바꾸고, 기본 화살표를 청한 것이면 이미 그 모양이라 알릴 일이 없다.
@@ -409,8 +406,7 @@ namespace sw
         if ( _pMouse == nullptr )
             return;
 
-        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         Display* pDisplay  = nullptr;
@@ -454,8 +450,7 @@ namespace sw
         if ( bCannotRecenter )
             return;
 
-        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         Display* pDisplay  = nullptr;
@@ -478,8 +473,7 @@ namespace sw
 
     void InputManager::releaseMouseLockMode()
     {
-        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         Display* pDisplay  = nullptr;
@@ -497,8 +491,7 @@ namespace sw
     bool InputManager::isWindowFocusedPlatform() const
     {
         // X11 포커스는 FocusIn/FocusOut 으로만 알 수 있다(서버에 묻는 XGetInputFocus 는 왕복 호출이다). 창이 뜬 직후 FocusIn 전이면 false 이므로 첫 클릭에 잡는다.
-        const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        const bool                 bHasWindow  = pWindowHost != nullptr && pWindowHost->getWindow() != nullptr;
+        const bool bHasWindow = MainWindowSubsystem::findMainWindow() != nullptr;
         return _bWindowFocused == SW_TRUE && ( bHasWindow == false || _bNativeWindowFocused == SW_TRUE );
     }
 
@@ -507,9 +500,8 @@ namespace sw
         // 이름은 Windows API 시절 이름을 그대로 쓰지만(공용 InputManager.h 의 공개 API), 여기서는 X11
         // AccessX(XKB StickyKeys/SlowKeys/BounceKeys)를 억제한다. 게임 도중 방향키를 연타하다
         // AccessX 팝업이 뜨는 것을 막기 위해서다.
-        MainWindowSubsystem* pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        const bool           bNothingToDisable = pWindow == nullptr || _bAccessibilityShortcutsDisabled == SW_TRUE;
+        IWindow*   pWindow           = MainWindowSubsystem::findMainWindow();
+        const bool bNothingToDisable = pWindow == nullptr || _bAccessibilityShortcutsDisabled == SW_TRUE;
         if ( bNothingToDisable )
             return;
 
@@ -538,9 +530,8 @@ namespace sw
         // 이 함수는 InputManager::shutdown 이 부르는 유일한 플랫폼 훅이다. 입력기 · 커서는 창이 소유하고 창과 함께 내리므로 여기서는 포커스 기록만 지운다.
         _bNativeWindowFocused = SW_FALSE;
 
-        MainWindowSubsystem* pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        const bool           bNothingToRestore = pWindow == nullptr || _bAccessibilityShortcutsDisabled == SW_FALSE;
+        IWindow*   pWindow           = MainWindowSubsystem::findMainWindow();
+        const bool bNothingToRestore = pWindow == nullptr || _bAccessibilityShortcutsDisabled == SW_FALSE;
         if ( bNothingToRestore )
             return;
 

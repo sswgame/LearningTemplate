@@ -136,8 +136,7 @@ namespace sw
          */
         [[nodiscard]] bool readIMECompositionInternal( LPARAM lParam, string& outUTF8 )
         {
-            MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-            IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+            IWindow* pWindow = MainWindowSubsystem::findMainWindow();
             if ( pWindow == nullptr )
                 return false;
             HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
@@ -198,8 +197,7 @@ namespace sw
         /** @brief 활성 창이 마우스를 붙잡게 합니다(창 밖으로 끌어도 뗌이 도착한다). */
         void captureMouseOnActiveWindowInternal()
         {
-            MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-            IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+            IWindow* pWindow = MainWindowSubsystem::findMainWindow();
             if ( pWindow == nullptr )
                 return;
             HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
@@ -465,8 +463,7 @@ namespace sw
             POINT cursorPoint{};
             if ( GetCursorPos( &cursorPoint ) )
             {
-                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow != nullptr )
                 {
                     HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
@@ -491,9 +488,8 @@ namespace sw
 
     void InputManager::applyCursorShapePlatform()
     {
-        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        HWND                 pHwnd       = pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
+        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        HWND     pHwnd   = pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
         if ( pHwnd == nullptr )
             return;
         const LPCWSTR pCursorName = getWin32CursorNameInternal( _cursorShape );
@@ -508,8 +504,7 @@ namespace sw
         if ( _pMouse == nullptr )
             return;
 
-        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
 
@@ -538,8 +533,7 @@ namespace sw
         if ( _pMouse == nullptr || _pMouse->getLockMode() != MouseLockMode::LockedInCenter )
             return;
 
-        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
@@ -573,9 +567,8 @@ namespace sw
 
     bool InputManager::isWindowFocusedPlatform() const
     {
-        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        HWND                 pHwnd       = pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
+        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        HWND     pHwnd   = pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
         if ( pHwnd == nullptr )
             return _bWindowFocused == SW_TRUE;
         return GetForegroundWindow() == pHwnd;

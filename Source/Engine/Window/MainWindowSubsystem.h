@@ -38,6 +38,11 @@ namespace sw
          * @details 무인 실행의 "묻지 않음" 과 "창 숨김 · 내보내지 않음" 을 가른다 — 앞의 것은 그대로, 뒤의 것만 이 판정을 따른다. 판정 · 골든은 렌더 타깃을 읽어 결과가 같다. App 과 자동화 세션이 같이 쓴다.
          */
         [[nodiscard]] static bool shouldRenderOffScreen( const CommandLineManager& commandLine );
+        /**
+         * @brief 엔진 범위의 주 창입니다(`engine::findSubsystem<MainWindowSubsystem>()` 의 `getWindow()`). 이 서비스가 없는 호스트(서버 · 테스트 하네스)이거나 아직 창이 없으면 nullptr 입니다.
+         * @details 읽는 쪽(입력 · 클립보드 · 설정)이 "서비스 찾기 → 창 꺼내기" 두 줄을 자리마다 적지 않게 한다. 소유하지 않은 관찰 포인터로만 쓴다.
+         */
+        [[nodiscard]] static IWindow* findMainWindow();
 
         MainWindowSubsystem();
         ~MainWindowSubsystem() override;
