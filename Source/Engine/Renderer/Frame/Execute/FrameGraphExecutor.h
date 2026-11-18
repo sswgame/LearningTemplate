@@ -9,6 +9,7 @@
  *          패스 실행기(`FramePassExecutor`)가 소유한다. 렌더러는 업로드 전에 `usesGPUGeneratedCommands` · `prepareMeshMorphPool` · `makeVFXSimulationInput` 을 묻는다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -160,6 +161,8 @@ namespace sw
         vector<CullJob> _listCullJob;
         /// @brief 컬링 슬롯 모두의 앞 · 뒤 버퍼 전이를 한 번씩 내는 묶음입니다(슬롯마다 넷을 따로 내지 않는다).
         RHIBufferTransitionBatch _bufferTransitions;
+        /// @brief GPU 메시 입자 되읽기의 이번 프레임 출처입니다(`endFrame`). 프레임마다 다시 쓰고 용량은 지닌다.
+        vector<VFXGPUSimulation::MeshProbeSource> _listScratchMeshProbeSource;
         /// @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지입니다(`isGPUCullingActive`).
         uint8 _bGPUCullingActive{ 0 };
     };

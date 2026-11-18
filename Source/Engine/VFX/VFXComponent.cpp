@@ -505,8 +505,13 @@ namespace sw
             meshEmitter._batch      = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), meshEmitter._material->getMaterial(), meshEmitter._material->getInstance(),
                                                                           def._maxParticles, bGPUWritten ? MeshInstanceWriter::GPU : MeshInstanceWriter::CPU );
             meshEmitter._batch->setOwnerComponent( this );
+            if ( bGPUWritten )
+                meshEmitter._batch->setVisible( _bPlaying && isEmitterEnabled( emitterIndex ) ); // 컴퓨트가 칸을 쓰는 동안만 보인다(`publishParticles`)
             if ( bGPUWritten == false )
+            {
+                meshEmitter._visibility.reset( *meshEmitter._batch ); // 등록 전이라 더티를 올리지 않는다 — 살아 있는 칸만 아래에서 보인다
                 writeMeshEntries( emitterIndex, _listPublished[emitterIndex].get() );
+            }
             _pPrimitiveRegistry->addInstanceBatch( meshEmitter._batch.get() );
         }
     }
@@ -564,29 +569,30 @@ namespace sw
         if ( pBatch == nullptr )
             return;
         SW_ASSERT( pBatch->getInstanceWriter() == MeshInstanceWriter::CPU ); // GPU 배치의 항목은 컴퓨트가 쓴다(`VFXGPUSimulation`)
+        MeshEmitter&    meshEmitter = _listMeshEmitter[emitterIndex];
+        vector<uint32>& listSlot    = meshEmitter._listSlotScratch;
+        listSlot.clear();
+        if ( pListParticle != nullptr )
+            std::get<VFXCPUSimulation>( _listSimulation[emitterIndex] ).writeInstanceSlots( listSlot );
+        SW_ASSERT( listSlot.size() == ( pListParticle != nullptr ? pListParticle->size() : 0u ) ); // 칸과 입자가 같은 순서 · 같은 수다
         const float4x4 world      = getWorldMatrix();
         const float32  sizeScale  = world.getMaximumAxisScale();
-        const float32  meshRadius = _listMeshEmitter[emitterIndex]._meshRadius;
-        const uint32   aliveCount = pListParticle != nullptr ? static_cast<uint32>( pListParticle->size() ) : 0u;
-        for ( uint32 entry = 0; entry < pBatch->getCount(); ++entry )
+        const float32  meshRadius = meshEmitter._meshRadius;
+        for ( uint32 particleIndex = 0; particleIndex < static_cast<uint32>( listSlot.size() ); ++particleIndex )
         {
-            if ( entry >= aliveCount )
-            {
-                // 죽은 자리 — 크기 0 행렬(클래스 머리말의 shortcut).
-                pBatch->setWorld( entry, float4x4::makeScale( 0.0f ) * world );
-                pBatch->setBoundsRadius( entry, 0.0f );
-                continue;
-            }
-            const GPUParticle& particle = ( *pListParticle )[entry];
+            const uint32       slot     = listSlot[particleIndex];
+            const GPUParticle& particle = ( *pListParticle )[particleIndex];
             const float32      size     = particle._positionSize._w;
             const float3       local{ particle._positionSize._x, particle._positionSize._y, particle._positionSize._z };
-            pBatch->setWorld( entry, float4x4::makeScale( size ) * float4x4::makeTranslation( local ) * world );
-            pBatch->setBoundsRadius( entry, meshRadius * size * sizeScale );
-            pBatch->setSprite( entry, InstanceSpriteFrame{
-                                          float4{ 0.0f, 0.0f, 1.0f, 1.0f },
-                                          particle._color
+            pBatch->setWorld( slot, float4x4::makeScale( size ) * float4x4::makeTranslation( local ) * world );
+            pBatch->setBoundsRadius( slot, meshRadius * size * sizeScale );
+            pBatch->setSprite( slot, InstanceSpriteFrame{
+                                         float4{ 0.0f, 0.0f, 1.0f, 1.0f },
+                                         particle._color
             } );
         }
+        // 죽은 칸은 행렬을 고치지 않고 숨기기만 한다 — 다음에 그 칸을 받는 입자가 값을 다시 쓴다.
+        meshEmitter._visibility.update( *pBatch, listSlot );
     }
 
     void VFXComponent::publishParticles()
@@ -599,6 +605,10 @@ namespace sw
             {
                 // 입자는 렌더 스레드의 GPU 버퍼에 있다 — 재생 중일 때만 누적 단계 수를 싣는다(멈추면 렌더 스레드가 그 상태를 놓는다). 꺼진 방출기도 싣지 않는다.
                 _listGPURequest[emitterIndex] = _bPlaying && bEnabled ? pGPUEmitter->makeRequest() : VFXGPUEmitterRequest{};
+                // 싣지 않는 동안 GPU 메시 배치는 숨긴다 — 컴퓨트가 칸을 쓰지 않으니 배치 구성이 바뀌어 다시 올린 CPU 자리표(빈 칸 플래그 없음)가 그려지지 않게.
+                MeshInstanceBatch* pGPUBatch = emitterIndex < _listMeshEmitter.size() ? _listMeshEmitter[emitterIndex]._batch.get() : nullptr;
+                if ( pGPUBatch != nullptr )
+                    pGPUBatch->setVisible( _bPlaying && bEnabled );
                 continue;
             }
             const VFXCPUSimulation& simulation = std::get<VFXCPUSimulation>( _listSimulation[emitterIndex] );

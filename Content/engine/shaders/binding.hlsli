@@ -836,7 +836,7 @@ static InstanceData InstanceData::load( uint instanceSlot )
     instance._customData1          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
     instance._motionKey            = uint2( 0u, 0u ); // 기록 없음
     instance._slotSerial           = 0u;
-    instance._instancePad          = 0u;
+    instance._instanceFlags        = 0u;
     return instance;
 }
 

@@ -77,6 +77,8 @@ namespace sw
         /** @brief 버퍼를 지우고 빌린 텍스처를 돌려줍니다(디바이스가 없으면 핸들만 잊습니다). 다음 `prepareFrame` 이 다시 만듭니다. */
         void release( IRHIDevice* pDevice );
 
+        /** @brief 이번 프레임 GPU 메시 방출기의 되읽기 출처입니다(`VFXGPUSimulation::collectMeshProbeSources`). */
+        void collectGPUMeshProbeSources( vector<VFXGPUSimulation::MeshProbeSource>& outListSource ) const { _gpuSimulation.collectMeshProbeSources( outListSource ); }
         /** @brief 마지막 `prepareFrame` 이 올린 입자 수입니다(테스트와 진단용). */
         uint32 getUploadedParticleCount() const { return _uploadedParticleCount; }
         /** @brief GPU 방출기가 이번 프레임 디스패치 뒤에도 남긴 단계 수의 최댓값입니다(`VFXGPUSimulation::getPendingStepCount` — 따라잡는 중). */

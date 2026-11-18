@@ -302,6 +302,8 @@ namespace sw
         uint32 getPublishedViewTransientRebuildCount() const { return _publishedViewTransientRebuildCount.load(); }
         /** @brief 마지막 프레임에 주 시점의 가림 타일을 지었으면 1 입니다(감시 값 `Render.OcclusionTilesBuilt`). */
         uint32 getPublishedOcclusionTilesBuilt() const { return _publishedOcclusionTilesBuilt.load(); }
+        /** @brief GPU 메시 입자의 되읽기입니다(감시 값 `VFX.GPUMesh*`). 게임 스레드는 원자값만 읽습니다(`hasValue` · `getEmitterCount` · `readCounts`). */
+        const VFXGPUMeshReadback& getVFXGPUMeshReadback() const { return _state._vfxMeshReadback; }
         /** @brief GPU 프레임 시계입니다. 게임 스레드는 `getState` · `getLatest` 만 읽습니다(원자값, 락 없음). 원하는지는 패킷이 렌더 스레드로 나릅니다. */
         const GPUFrameClock& getGPUFrameClock() const { return _state._gpuFrameClock; }
 

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6281a1c904124ff2afb0e721016d04e7"?>
+<!-- GPU 메시 입자 한 번 터지기 — gpudebris 와 같은 큐브 파편이지만 반복하지 않고 1 초에 한 번만 24 개를 낸다(풀 64). 수명 1.5 ~ 2 초라 3 초에 모두 죽고,
+     방출기는 4 초(방출 2 초 + 최대 수명 2 초)에 재생을 끝낸다. 시나리오 game/empty/automation/vfxgpumeshslots 가 그 사이에 빈 칸 스택(dead list)을 본다.
+     터지기를 1 초 뒤로 둔 것은 시나리오가 장면 시작 뒤 되읽기를 받기까지의 여유다. -->
+<VFXEffectDef>
+	<_listEmitter>
+		<VFXEmitterDef _name="GPUDebris" _renderMode="Mesh" _bLooping="false"
+		               _maxParticles="64" _duration="2" _spawnRate="0" _lifetimeMin="1.5" _lifetimeMax="2"
+		               _velocityMin="-1.5, 3, -1.5" _velocityMax="1.5, 5, 1.5" _gravity="0, -9.8, 0">
+			<_mesh _meshID="Cube" _materialPath=""/>
+			<_listBurst><VFXBurstDef _time="1" _count="24"/></_listBurst>
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.15" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.05" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="0.9" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="0.6" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="0.3" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+			<_collision _mode="Bounce" _method="SceneDepth" _depthThickness="0.3" _restitution="0.4" _friction="0.2"/>
+		</VFXEmitterDef>
+	</_listEmitter>
+</VFXEffectDef>

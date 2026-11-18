@@ -37,6 +37,7 @@
 #include "Engine/Renderer/Lighting/ShadowCache.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUScene.h"
+#include "Engine/Renderer/VFX/VFXGPUMeshReadback.h"
 #include "Engine/Renderer/VFX/VFXParticleRenderer.h"
 #include "Engine/Visual/Component/DecalComponent.h"
 
@@ -202,6 +203,8 @@ namespace sw
          *          꺼져 있으면 비어 있다.
          */
         GPUMessageChannel _gpuMessages{};
+        /** @brief GPU 메시 입자의 살아 있는 수 · 주 시점이 그린 수의 되읽기입니다(자동화 감시 값 `VFX.GPUMesh*`). 프레임 끝에 요청하고 프레임 앞에서 도착한 사본을 낸다. */
+        VFXGPUMeshReadback _vfxMeshReadback{};
         /// @brief 병렬 기록(`RenderGraph::executeParallel`)이 쓰는 태스크 매니저입니다. 없으면 직렬로 기록합니다.
         TaskManager*     _pTaskManager{ nullptr };
         RHITextureHandle _outputRenderTarget{ 0 }; ///< 주 출력 RT(에디터 게임 뷰). 0 이면 백버퍼

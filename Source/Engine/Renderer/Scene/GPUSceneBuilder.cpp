@@ -607,7 +607,7 @@ namespace sw
         const bool               bHiddenBatchEntry = pBatch == nullptr || pBatch->isVisible() == false || entry._index >= pBatch->getCount();
         if ( bHiddenBatchEntry )
             return CandidateFillResult::Excluded;
-        // 항목 하나만 숨길 수 있다(데미지 숫자의 남는 자릿수나 길이 0인 HP 바 구간). 실릴지가 바뀌면 부분 수집이 전체로 넘어간다.
+        // 항목 하나만 숨길 수 있다(데미지 숫자의 남는 자릿수, 길이 0인 HP 바 구간, 메시 입자의 죽은 칸). 실릴지가 바뀌면 부분 수집이 그 칸만 들이거나 뺀다.
         if ( pBatch->isEntryVisible( entry._index ) == false )
             return CandidateFillResult::Excluded;
         // 배치를 가진 컴포넌트를 끄면(자기 비트나 소유 오브젝트의 계층 활성) 빠진다. `fillCandidateFromPrimitive` 와 같은 규칙이다.
