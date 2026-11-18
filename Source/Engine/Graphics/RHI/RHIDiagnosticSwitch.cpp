@@ -22,7 +22,6 @@ namespace sw
                 bConfigValue = build != RHIDiagnosticBuild::Shipping;
                 break;
             case RHIDiagnosticSwitch::None:
-            default:
                 return unexpected( Error{ ErrorKind::InvalidArgument, "the EngineConfig _rhi diagnostic switch is not set (Off, On, DebugBuildOnly or NonShippingOnly)",
                                           getCommandLineArgumentSpelling( argument ) } );
         }

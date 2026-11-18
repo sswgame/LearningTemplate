@@ -12,6 +12,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/EditorExports.h"
+
 namespace sw
 {
     struct TypeInfo;
@@ -43,7 +45,7 @@ namespace sw::editor
     };
 
     /** @brief 기본 컴포넌트 인스펙터 확장의 edit model 입니다. */
-    struct InspectorComponentEdit
+    struct SW_EDITOR_API InspectorComponentEdit
     {
         /** @brief 등록용 형 정보입니다(`SW_EDITOR_INSPECTOR_FOR_TYPE`). */
         static const TypeInfo* getCameraComponentType();

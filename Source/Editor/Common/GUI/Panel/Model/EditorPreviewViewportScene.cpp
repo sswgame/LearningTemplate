@@ -41,6 +41,8 @@ namespace sw::editor
             static constexpr float32 kDefaultFieldOfViewY = 0.8f;
             static constexpr float32 kNearPlane           = 0.05f;
             static constexpr float32 kFarPlane            = 200.0f;
+            static constexpr float32 kMinDistance         = 0.2f; // 궤도 입력(View, EditorPreviewViewport.cpp)과 같은 한계
+            static constexpr float32 kMaxPitch            = 1.5f;
         };
     } // namespace
 } // namespace sw::editor
