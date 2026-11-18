@@ -20,15 +20,7 @@ namespace sw
 
             static bool isDefText( string_view text )
             {
-                if ( text.empty() || text.size() > static_cast<size_t>( LedgerItemInstance::kMaxDefIDSize ) )
-                    return false;
-                for ( const utf8 ch : text )
-                {
-                    const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_';
-                    if ( bAllowed == false )
-                        return false;
-                }
-                return true;
+                return ServiceKeyUtil::isTokenText( text, LedgerItemInstance::kMaxDefIDSize, "_" );
             }
 
             /** @brief 아이템 하나를 옮기는 원장 요청입니다. */

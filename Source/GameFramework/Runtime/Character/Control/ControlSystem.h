@@ -40,6 +40,9 @@ namespace sw
     class SW_GF_API ControlSystem final : public ISceneMainFrameSystem
     {
     public:
+        /** @brief 매니저의 프레임 시스템 키입니다. */
+        static constexpr const utf8* kFrameSystemKey = "ControlSystem";
+
         ControlSystem();
         ~ControlSystem() override = default;
 

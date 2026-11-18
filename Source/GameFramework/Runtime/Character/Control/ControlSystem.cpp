@@ -17,6 +17,7 @@
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/FrameSystemUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
@@ -25,13 +26,6 @@ namespace sw
     {
         struct ControlSystemInternal
         {
-            /** @brief 매니저에 붙는 이름입니다. */
-            static const hashed_string& getFrameSystemKey()
-            {
-                static const hashed_string kKey{ "ControlSystem" };
-                return kKey;
-            }
-
             /** @brief @p pawn 을 쥘 AI 조종자를 세웁니다 — 폰의 프리팹이 있으면 그것(그 안의 AI 조종자), 없으면 기본 AI 조종자 하나. */
             static AIControllerComponent* createAIController( GameObjectManager& manager, const PawnComponent& pawn )
             {
@@ -73,27 +67,19 @@ namespace sw
 
     ControlSystem& ControlSystem::findOrCreate( GameObjectManager& manager )
     {
-        ControlSystem* pSystem = find( manager );
-        if ( pSystem != nullptr )
-            return *pSystem;
-        unique_ptr<ControlSystem> pNew = make_unique<ControlSystem>();
-        pSystem                        = pNew.get();
-        const bool bAdded              = manager.addFrameSystem( ControlSystemInternal::getFrameSystemKey(), std::move( pNew ) );
-        SW_ASSERT( bAdded ); // 같은 키가 없음을 바로 위에서 보았다. 거절되면 접근 선언과 붙인 순서가 어긋난 것이고(오류 로그), 시스템은 이미 지워졌다
-        (void)bAdded;
-        return *pSystem;
+        return FrameSystemUtil::findOrCreate<ControlSystem>( manager );
     }
 
     ControlSystem* ControlSystem::find( const GameObjectManager& manager )
     {
-        return static_cast<ControlSystem*>( manager.findFrameSystem( ControlSystemInternal::getFrameSystemKey() ) );
+        return FrameSystemUtil::find<ControlSystem>( manager );
     }
 
     void ControlSystem::releaseIfUnused( GameObjectManager& manager )
     {
         const ComponentRegistry& registry = manager.getComponentRegistry();
         if ( registry.getAll<PawnComponent>().empty() && registry.getAll<ControllerComponent>().empty() )
-            manager.removeFrameSystem( ControlSystemInternal::getFrameSystemKey() );
+            FrameSystemUtil::remove<ControlSystem>( manager );
     }
 
     PlayerControllerComponent* ControlSystem::findOrCreatePlayerController( GameObjectManager& manager, uint32 playerIndex )

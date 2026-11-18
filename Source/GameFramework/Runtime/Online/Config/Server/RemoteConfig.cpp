@@ -67,15 +67,7 @@ namespace sw
 
             static bool isCodeText( string_view text )
             {
-                if ( text.empty() || text.size() > static_cast<size_t>( kMaxKeySize ) )
-                    return false;
-                for ( const utf8 ch : text )
-                {
-                    const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_';
-                    if ( bAllowed == false )
-                        return false;
-                }
-                return true;
+                return ServiceKeyUtil::isTokenText( text, kMaxKeySize, "_" );
             }
 
             static vector<uint8> encodeRecord( const RemoteConfigValue& value )
@@ -307,15 +299,7 @@ namespace sw
 
     bool RemoteConfig::isValidKey( string_view key )
     {
-        if ( key.empty() || key.size() > static_cast<size_t>( RemoteConfigInternal::kMaxKeySize ) )
-            return false;
-        for ( const utf8 ch : key )
-        {
-            const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_' || ch == '.';
-            if ( bAllowed == false )
-                return false;
-        }
-        return true;
+        return ServiceKeyUtil::isTokenText( key, RemoteConfigInternal::kMaxKeySize, "_." );
     }
 
     bool RemoteConfig::parseVariants( string_view text, vector<RemoteConfigVariant>& outListVariant )

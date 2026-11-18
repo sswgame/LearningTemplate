@@ -6,6 +6,7 @@
 
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
 {
@@ -35,15 +36,7 @@ namespace sw
 {
     bool IServerBusTransport::isValidTopic( string_view topic )
     {
-        if ( topic.empty() || topic.size() > static_cast<size_t>( kMaxTopicSize ) )
-            return false;
-        for ( const utf8 ch : topic )
-        {
-            const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_' || ch == '.';
-            if ( bAllowed == false )
-                return false;
-        }
-        return true;
+        return ServiceKeyUtil::isTokenText( topic, kMaxTopicSize, "_." );
     }
 
     const SerializeContext& MixedBuildCodec::getReadContext()

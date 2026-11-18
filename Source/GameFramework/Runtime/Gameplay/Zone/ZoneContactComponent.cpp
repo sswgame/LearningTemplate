@@ -53,6 +53,7 @@ namespace sw
         , _touchDistance{ 0.15f }
         , _listSurfaceZone{}
         , _listCollision{}
+        , _listContactScratch{}
     {
     }
 
@@ -81,7 +82,7 @@ namespace sw
         for ( unique_ptr<SurfaceZone>& pZone : _listSurfaceZone )
         {
             if ( pManager != nullptr && pZone->_bValid == SW_TRUE )
-                pZone->_tracker.exitAllOccupants( *pManager, pZone->_compiled, ActionSource{ hashed_string( string( "surface:" ) + pZone->_kind.c_str() ), GameObjectHandle{} } );
+                pZone->_tracker.exitAllOccupants( *pManager, pZone->_compiled, ActionSource{ pZone->_sourceName, GameObjectHandle{} } );
         }
         _listSurfaceZone.clear();
         Component::onEndPlay();
@@ -162,6 +163,7 @@ namespace sw
         }
         unique_ptr<SurfaceZone> pZone                     = make_unique<SurfaceZone>();
         pZone->_kind                                      = kind;
+        pZone->_sourceName                                = hashed_string( string( "surface:" ) + kind.c_str() );
         const SurfaceKindDef*                    pKind    = table.findKind( kind );
         const string                             path     = pKind != nullptr ? pKind->_zoneProfile.get() : string{};
         shared_ptr<const ZoneProfile>            pProfile = path.empty() ? nullptr : SharedAssetCache<ZoneProfile>::acquire( path ).snapshot();
@@ -190,7 +192,8 @@ namespace sw
         const float3                        feet        = pScene->getWorldPosition();
         const float32                       height      = computeBodyHeight();
         CharacterControllerComponent* const pController = pOwner->getComponent<CharacterControllerComponent>();
-        vector<ContactRecord>               listContact;
+        vector<ContactRecord>&              listContact = _listContactScratch;
+        listContact.clear();
 
         // 디딤: 같은 오브젝트의 켜진 발 표면 질의가 있으면 이번 프레임 표본을 먼저 읽게 해 쓰고(한 프레임에 같은 질의를 두 번 하지 않는다 — 표면 서비스는 다시 읽지 않는다), 없으면 직접 묻는다.
         SurfaceSample           ground;
@@ -205,9 +208,10 @@ namespace sw
         {
             const SurfaceSample& sample = pGround != nullptr ? pGround->getLastSample() : ground;
             ContactRecord        contact;
-            contact._kind     = pGround != nullptr ? pGround->getGroundKind() : sample._pKind->_name; // 질의가 성공하면 종류가 늘 있다
-            contact._normalUp = sample._normal._y;
-            contact._object   = sample._objectID != 0 && manager.findGameObjectByID( sample._objectID ) != nullptr ? manager.findGameObjectByID( sample._objectID )->getHandle() : GameObjectHandle{};
+            contact._kind                         = pGround != nullptr ? pGround->getGroundKind() : sample._pKind->_name; // 질의가 성공하면 종류가 늘 있다
+            contact._normalUp                     = sample._normal._y;
+            const GameObject* const pGroundObject = sample._objectID != 0 ? manager.findGameObjectByID( sample._objectID ) : nullptr;
+            contact._object                       = pGroundObject != nullptr ? pGroundObject->getHandle() : GameObjectHandle{};
             addContact( listContact, *pTable, contact );
         }
         // 잠김: 발이 물 · 용암 호수의 수면 아래면 그 액체의 종류다. 잠긴 비율은 깊이 ÷ 키.
@@ -280,7 +284,7 @@ namespace sw
                 sourceObject            = contact._object;
                 pZone->_tracker.touch( *pOwner, sample );
             }
-            const ActionSource source{ hashed_string( string( "surface:" ) + pZone->_kind.c_str() ), sourceObject };
+            const ActionSource source{ pZone->_sourceName, sourceObject };
             pZone->_tracker.dispatchOverlapEvents( manager, pZone->_compiled, source, deltaTime );
         }
 

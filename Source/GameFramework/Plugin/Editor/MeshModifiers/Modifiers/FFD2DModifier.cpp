@@ -6,43 +6,18 @@
  *          D_ij 는 제어점 (i, j) 의 이동량(상자 크기 비율)이다. 베른슈타인 기저는 선형 정밀도가 있어 이동량이 모두 0 이면 정확히 항등이다.
  *          이동량은 `Offsets` 목록에 제어점 순서(i + 해상도X · j)로 dx dy 두 개씩 둔다. 모자란 항목은 0, 넘치는 항목은 버린다 —
  *          해상도를 바꾸면 같은 목록을 새 격자 순서로 다시 읽는다. 상자 폭이나 높이가 0 이면 그 축은 그대로 둔다.
+ *          해상도 범위와 베른슈타인 기저는 3 차원 격자의 것을 그대로 쓴다(`LatticeModifier::kMinResolution` · `kMaxResolution` · `computeBernstein`).
  */
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Plugin/Editor/MeshModifiers/Modifiers/LatticeModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
 
 namespace sw::editor
 {
-    namespace
-    {
-        struct FFD2DModifierInternal
-        {
-            static constexpr int32 kMinResolution = 2;
-            static constexpr int32 kMaxResolution = 8;
-
-            /** @brief 차수 @p degree 의 베른슈타인 기저 값 @p degree + 1 개를 채웁니다(드 카스텔조 방식). */
-            static void computeBernstein( int32 degree, float32 t, float32* pOutWeight )
-            {
-                pOutWeight[0]           = 1.0f;
-                const float32 oneMinusT = 1.0f - t;
-                for ( int32 order = 1; order <= degree; ++order )
-                {
-                    float32 carry = 0.0f;
-                    for ( int32 index = 0; index < order; ++index )
-                    {
-                        const float32 value = pOutWeight[index];
-                        pOutWeight[index]   = carry + oneMinusT * value;
-                        carry               = t * value;
-                    }
-                    pOutWeight[order] = carry;
-                }
-            }
-        };
-    } // namespace
-
     /** @brief XY 평면 2D 격자 FFD 입니다. */
     class FFD2DModifier final : public MeshModifier
     {
@@ -78,15 +53,15 @@ namespace sw::editor
             const bool   bUseY = context._bounds.isValid() && size._y > MathUtil::kEpsilon;
             if ( bUseX == false && bUseY == false )
                 return point._position;
-            const int32   countX = MathUtil::clamp( getInt( _resolutionXParam ), FFD2DModifierInternal::kMinResolution, FFD2DModifierInternal::kMaxResolution );
-            const int32   countY = MathUtil::clamp( getInt( _resolutionYParam ), FFD2DModifierInternal::kMinResolution, FFD2DModifierInternal::kMaxResolution );
+            const int32   countX = MathUtil::clamp( getInt( _resolutionXParam ), LatticeModifier::kMinResolution, LatticeModifier::kMaxResolution );
+            const int32   countY = MathUtil::clamp( getInt( _resolutionYParam ), LatticeModifier::kMinResolution, LatticeModifier::kMaxResolution );
             const float32 coordS = bUseX ? ( point._position._x - context._bounds._min._x ) / size._x : 0.0f;
             const float32 coordT = bUseY ? ( point._position._y - context._bounds._min._y ) / size._y : 0.0f;
 
-            float32 arrWeightX[FFD2DModifierInternal::kMaxResolution];
-            float32 arrWeightY[FFD2DModifierInternal::kMaxResolution];
-            FFD2DModifierInternal::computeBernstein( countX - 1, coordS, arrWeightX );
-            FFD2DModifierInternal::computeBernstein( countY - 1, coordT, arrWeightY );
+            float32 arrWeightX[LatticeModifier::kMaxResolution];
+            float32 arrWeightY[LatticeModifier::kMaxResolution];
+            LatticeModifier::computeBernstein( countX - 1, coordS, arrWeightX );
+            LatticeModifier::computeBernstein( countY - 1, coordT, arrWeightY );
 
             const size_t pointCount = listOffset.size() / 2;
             float32      deltaS     = 0.0f;

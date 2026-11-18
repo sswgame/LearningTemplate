@@ -51,7 +51,7 @@ namespace sw
                 {
                     const ZoneTracker::OccupantRecord* pOccupancy = pZone->_tracker.findOccupancy( handle );
                     if ( pOccupancy != nullptr && pOccupancy->_bEntered == SW_TRUE )
-                        visit( hashed_string( string( "surface:" ) + pZone->_kind.c_str() ), pOccupancy->_sample );
+                        visit( pZone->_sourceName, pOccupancy->_sample );
                 }
             }
 

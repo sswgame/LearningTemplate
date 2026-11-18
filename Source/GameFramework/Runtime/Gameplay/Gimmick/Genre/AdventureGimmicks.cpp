@@ -17,10 +17,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     PushBlockComponent::PushBlockComponent()
         : _cellSize{ 1.0f }
         , _moveTime{ 0.3f }

@@ -5,6 +5,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/FrameSystemUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/SurfaceExposureComponent.h"
 
 namespace sw
@@ -16,28 +17,19 @@ namespace sw
 
     SurfaceExposureSystem* SurfaceExposureSystem::find( const GameObjectManager& manager )
     {
-        // 이 키로는 이 타입만 붙인다(`findOrCreate`).
-        return static_cast<SurfaceExposureSystem*>( manager.findFrameSystem( hashed_string( kFrameSystemKey ) ) );
+        return FrameSystemUtil::find<SurfaceExposureSystem>( manager );
     }
 
     SurfaceExposureSystem& SurfaceExposureSystem::findOrCreate( GameObjectManager& manager )
     {
-        SurfaceExposureSystem* pSystem = find( manager );
-        if ( pSystem != nullptr )
-            return *pSystem;
-        unique_ptr<SurfaceExposureSystem> system = make_unique<SurfaceExposureSystem>();
-        pSystem                                  = system.get();
-        const bool bAdded                        = manager.addFrameSystem( hashed_string( kFrameSystemKey ), std::move( system ) );
-        SW_ASSERT( bAdded ); // 같은 키가 없음을 바로 위에서 보았고, 씬 데이터를 건드리지 않는다고 선언해 접근 충돌도 없다
-        (void)bAdded;
-        return *pSystem;
+        return FrameSystemUtil::findOrCreate<SurfaceExposureSystem>( manager );
     }
 
     void SurfaceExposureSystem::releaseIfUnused( GameObjectManager& manager )
     {
         // 모듈을 내리면 컴포넌트가 먼저 지워진다 — 마지막 노출 컴포넌트가 떠날 때 떼므로 매니저에 이 타입이 남지 않는다(`ISceneFrameSystem` 의 약속).
         if ( manager.getComponentRegistry().getAll<SurfaceExposureComponent>().empty() )
-            manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
+            FrameSystemUtil::remove<SurfaceExposureSystem>( manager );
     }
 
     void SurfaceExposureSystem::runMain( GameObjectManager& manager, float32 /*deltaTime*/ )

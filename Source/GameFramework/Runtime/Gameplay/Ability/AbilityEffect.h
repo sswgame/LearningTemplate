@@ -24,6 +24,7 @@ namespace sw
 {
     class AbilityComponent;
     class IGameplayEffectExecution;
+    class StateIO;
 
     // ------------------------------------------------------------------------------
     // 1) 모디파이어. 어트리뷰트 하나를 어떻게 바꿀지 정한다(언리얼의 `FGameplayModifierInfo` 에 해당)
@@ -53,8 +54,11 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 크기까지 계산을 마친 변경 하나입니다. 실행 계산(`IGameplayEffectExecution`)의 출력이고, 활성 이펙트가 보관하는 값이기도 합니다. */
-    struct EvaluatedModifier
+    /**
+     * @brief 크기까지 계산을 마친 변경 하나입니다. 실행 계산(`IGameplayEffectExecution`)의 출력이고, 활성 이펙트가 보관하는 값이기도 합니다.
+     * @details 걸린 이펙트는 적용 순간의 이 값을 그대로 세이브에 싣는다(스냅샷이라 다시 계산하지 않는다 — `SavedAbilityEffect::_listModifier`).
+     */
+    struct SW_GF_API EvaluatedModifier
     {
         hashed_string  _attribute{};
         AttributeModOp _op{ AttributeModOp::Add };
@@ -65,6 +69,8 @@ namespace sw
 
         /** @brief 즉시 실행 한 번이 base @p baseValue 에 쓰는 값입니다(스택 @p stackScale 만큼). */
         float32 applyToBase( float32 baseValue, float32 stackScale ) const;
+        /** @brief 세이브 본문의 모디파이어 하나를 읽고 씁니다(이름 · 연산 · 크기 — 빈 이름과 유한하지 않은 크기는 거절한다). 본문은 `AbilitySaveState.cpp`. */
+        void serializeState( StateIO& io );
     };
 } // namespace sw
 

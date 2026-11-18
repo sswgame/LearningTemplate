@@ -20,10 +20,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     InteractableComponent::InteractableComponent()
         : _interactionID{}
         , _catalogPath{}

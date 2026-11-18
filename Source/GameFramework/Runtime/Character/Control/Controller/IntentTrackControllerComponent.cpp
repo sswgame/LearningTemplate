@@ -11,10 +11,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     IntentTrackControllerComponent::IntentTrackControllerComponent()
         : _trackFile{}
         , _trackName{}

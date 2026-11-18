@@ -15,6 +15,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityTypes.h"
 
 namespace sw
@@ -28,16 +29,6 @@ namespace sw
         void serializeState( StateIO& io );
     };
 
-    /** @brief 걸린 이펙트가 적용 순간 계산해 둔 모디파이어 하나입니다(스냅샷이라 다시 계산하지 않는다). */
-    struct SW_GF_API SavedAbilityModifier
-    {
-        hashed_string  _attribute{};
-        AttributeModOp _op{ AttributeModOp::Add };
-        float32        _magnitude{ 0.0f };
-
-        void serializeState( StateIO& io );
-    };
-
     /**
      * @brief 걸린 지속 · 무한 이펙트 하나입니다. 정의는 카탈로그 id 로만 가리킵니다.
      * @details 건 쪽 핸들(`AbilityEffectContext::_instigator`)은 싣지 않는다 — 오브젝트 핸들은 실행마다 새로 나가 다른 실행에서는 엉뚱한 오브젝트를 가리킨다.
@@ -45,18 +36,18 @@ namespace sw
      */
     struct SW_GF_API SavedAbilityEffect
     {
-        hashed_string                _effectID{};
-        hashed_string                _sourceName{}; ///< 건 길(`removeActiveEffectsFromSource` 가 이것으로 지운다)
-        int32                        _level{ 1 };
-        int32                        _stackCount{ 1 };
-        float32                      _duration{ 0.0f };
-        float32                      _remainingTime{ 0.0f };
-        float32                      _periodTimer{ 0.0f };
-        float32                      _startTime{ 0.0f };
-        vector<SavedAttributeValue>  _listSetByCaller{};
-        vector<SavedAttributeValue>  _listSourceAttribute{};
-        vector<string>               _listDynamicGrantedTag{};
-        vector<SavedAbilityModifier> _listModifier{};
+        hashed_string               _effectID{};
+        hashed_string               _sourceName{}; ///< 건 길(`removeActiveEffectsFromSource` 가 이것으로 지운다)
+        int32                       _level{ 1 };
+        int32                       _stackCount{ 1 };
+        float32                     _duration{ 0.0f };
+        float32                     _remainingTime{ 0.0f };
+        float32                     _periodTimer{ 0.0f };
+        float32                     _startTime{ 0.0f };
+        vector<SavedAttributeValue> _listSetByCaller{};
+        vector<SavedAttributeValue> _listSourceAttribute{};
+        vector<string>              _listDynamicGrantedTag{};
+        vector<EvaluatedModifier>   _listModifier{}; ///< 적용 순간 계산해 둔 모디파이어(활성 이펙트가 든 값 그대로)
 
         void serializeState( StateIO& io );
     };

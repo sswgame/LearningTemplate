@@ -115,7 +115,7 @@ namespace sw
                 return pAbility->applyFatalDamage( params._bIgnoreInvulnerable != SW_FALSE ) ? ActionResult::Succeeded : ActionResult::Failed;
             }
 
-            static bool checkEffect( const AbilityCatalog& catalog, const hashed_string& effectID, string_view sourceName )
+            static bool validateEffect( const AbilityCatalog& catalog, const hashed_string& effectID, string_view sourceName )
             {
                 if ( effectID.empty() || catalog.findEffect( effectID ) != nullptr )
                     return true;
@@ -123,7 +123,7 @@ namespace sw
                 return false;
             }
 
-            static bool checkAbility( const AbilityCatalog& catalog, const hashed_string& abilityID, string_view sourceName )
+            static bool validateAbility( const AbilityCatalog& catalog, const hashed_string& abilityID, string_view sourceName )
             {
                 if ( catalog.findAbility( abilityID ) != nullptr )
                     return true;
@@ -167,11 +167,11 @@ namespace sw
             return false;
         }
         if ( bEffect )
-            return Internal::checkEffect( *pCatalog, static_cast<const AbilityEffectActionParams*>( pParams )->_effect, sourceName );
+            return Internal::validateEffect( *pCatalog, static_cast<const AbilityEffectActionParams*>( pParams )->_effect, sourceName );
         if ( bRemove )
-            return Internal::checkEffect( *pCatalog, static_cast<const AbilityEffectRemoveParams*>( pParams )->_effect, sourceName );
+            return Internal::validateEffect( *pCatalog, static_cast<const AbilityEffectRemoveParams*>( pParams )->_effect, sourceName );
         if ( bStacks )
-            return Internal::checkEffect( *pCatalog, static_cast<const AbilityStackRemoveParams*>( pParams )->_effect, sourceName );
-        return Internal::checkAbility( *pCatalog, static_cast<const AbilityGrantParams*>( pParams )->_ability, sourceName );
+            return Internal::validateEffect( *pCatalog, static_cast<const AbilityStackRemoveParams*>( pParams )->_effect, sourceName );
+        return Internal::validateAbility( *pCatalog, static_cast<const AbilityGrantParams*>( pParams )->_ability, sourceName );
     }
 } // namespace sw

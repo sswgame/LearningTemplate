@@ -6,10 +6,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     HTTPClient::HTTPClient( const IClock& clock )
         : _clock{ clock }
         , _mutex{}

@@ -8,6 +8,19 @@
 
 namespace sw
 {
+    bool ServiceKeyUtil::isTokenText( string_view text, int32 maxSize, string_view extraCharacters )
+    {
+        if ( text.empty() || text.size() > static_cast<size_t>( maxSize ) )
+            return false;
+        for ( const utf8 ch : text )
+        {
+            const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || extraCharacters.find( ch ) != string_view::npos;
+            if ( bAllowed == false )
+                return false;
+        }
+        return true;
+    }
+
     void ServiceKeyUtil::appendHex64( string& outKey, uint64 value )
     {
         HexUtil::appendUint64( outKey, value, static_cast<uint32>( kHexWidth ) );

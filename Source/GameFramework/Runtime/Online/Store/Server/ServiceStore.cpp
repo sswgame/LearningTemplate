@@ -6,6 +6,7 @@
 
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
 {
@@ -113,17 +114,6 @@ namespace sw
 
     bool ServiceTransaction::isValidKey( string_view key )
     {
-        if ( key.empty() || key.size() > static_cast<size_t>( OnlineLimit::kMaxKeySize ) )
-            return false;
-        for ( const utf8 ch : key )
-        {
-            const bool bLower                    = 'a' <= ch && ch <= 'z';
-            const bool bDigit                    = '0' <= ch && ch <= '9';
-            const bool bMark                     = ch == '_' || ch == '.' || ch == '/' || ch == '-';
-            const bool bInvalidStoreKeyCharacter = bLower == false && bDigit == false && bMark == false;
-            if ( bInvalidStoreKeyCharacter )
-                return false;
-        }
-        return true;
+        return ServiceKeyUtil::isTokenText( key, OnlineLimit::kMaxKeySize, "_./-" );
     }
 } // namespace sw

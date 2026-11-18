@@ -151,8 +151,8 @@ namespace sw
         const bool        bMalformedPortPath = dot == string_view::npos || dot == 0 || dot + 1 >= trimmed.size();
         if ( bMalformedPortPath )
             return false;
-        outNode = hashed_string( string( trimmed.substr( 0, dot ) ) );
-        outPort = hashed_string( string( trimmed.substr( dot + 1 ) ) );
+        outNode = hashed_string( trimmed.substr( 0, dot ) );
+        outPort = hashed_string( trimmed.substr( dot + 1 ) );
         return true;
     }
 

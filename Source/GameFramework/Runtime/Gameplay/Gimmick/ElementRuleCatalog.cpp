@@ -317,8 +317,8 @@ namespace sw
 
         vector<hashed_string> listFlag;
         StringUtil::forEachToken( child.getAttributeText( "flags" ), ", ;", [&listFlag]( string_view token )
-        { listFlag.push_back( hashed_string( string( token ).c_str() ) ); } );
-        const optional<int32> material = addMaterial( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), listFlag );
+        { listFlag.push_back( hashed_string( token ) ); } );
+        const optional<int32> material = addMaterial( hashed_string( child.getAttributeText( "id" ) ), listFlag );
         if ( material.has_value() == false )
         {
             SW_LOG_WARNING_ID( "ElementRuleCatalog.MaterialIdDuplicateNames", "%#: <Material id=\"%#\"> is a duplicate or names an undeclared flag", sourceName, child.getAttributeText( "id" ) );

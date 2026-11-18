@@ -19,6 +19,8 @@
 
 namespace sw
 {
+    struct SurfaceChannelDef;
+
     class CharacterSurfaceState;
     class MaterialInstance;
     class MeshComponent;
@@ -58,8 +60,8 @@ namespace sw
 
         /** @brief 메시 컴포넌트의 머티리얼 인스턴스입니다. 없으면 메시의 머티리얼에서 새로 만들어 건다. 머티리얼이 없으면 nullptr 입니다. */
         static MaterialInstance* acquireInstance( MeshComponent& mesh );
-        /** @brief 채널 스칼라와 영역 벡터를 인스턴스에 올립니다. */
-        static void applyValues( const CharacterSurfaceState& state, MaterialInstance& instance );
+        /** @brief 채널 스칼라와 영역 벡터를 인스턴스에 올립니다. 파라미터 이름은 채널 · 영역 수가 바뀔 때만 다시 짓는다(표면이 바뀌는 프레임마다 부품 메시 수만큼 불린다). */
+        void applyValues( const CharacterSurfaceState& state, MaterialInstance& instance );
         /**
          * @brief 부품의 마스크 텍스처를 만들거나(처음) 갈아 끼우고(마스크가 바뀌었으면) 인스턴스의 마스크 파라미터에 겁니다. 마스크가 있는 채널만 합니다.
          * @param ownerKey 이 캐릭터의 키(오브젝트 번호 같은, 캐릭터마다 다른 값)입니다. 텍스처 경로가 겹치지 않게 한다.
@@ -80,6 +82,16 @@ namespace sw
             uint32        _revision{ 0 }; ///< 올린 마스크의 번호(`SurfaceMask::getRevision`)
         };
 
-        vector<MaskTexture> _listMaskTexture;
+        /** @brief 파라미터 이름 표(`_listChannelName` · `_listRegionName`)를 채널 · 영역 · 덩어리 수에 맞춥니다. 같으면 아무것도 하지 않는다. */
+        void populateParameterNames( const vector<SurfaceChannelDef>& listChannel, uint32 regionCount, uint32 chunkCount );
+
+    private:
+        vector<MaskTexture>   _listMaskTexture;
+        vector<hashed_string> _listChannelSource;     ///< `_listChannelName` 을 지은 채널 이름(표가 낡았는지 본다)
+        vector<hashed_string> _listChannelName;       ///< 채널 스칼라 이름 `_surface<채널>`(채널 순서)
+        vector<hashed_string> _listRegionName;        ///< 영역 벡터 이름(영역 × 덩어리, 자리 = 영역 * 덩어리 수 + 덩어리)
+        uint32                _regionChunkCount{ 0 }; ///< `_listRegionName` 을 지은 덩어리 수
+        vector<float32>       _listValueScratch;      ///< `applyValues` 의 영역 값 재사용 버퍼
+        vector<float32>       _listMaxScratch;        ///< `applyValues` 의 채널 최댓값 재사용 버퍼
     };
 } // namespace sw

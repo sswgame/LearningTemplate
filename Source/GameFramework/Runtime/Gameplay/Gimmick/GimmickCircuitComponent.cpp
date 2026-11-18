@@ -247,7 +247,7 @@ namespace sw
                     outListError.push_back( outDef.getSourceName() + ": node '" + desc._id.c_str() + "' has a parameter without name=value: '" + string( pair ) + "'" );
                     continue;
                 }
-                node.setParam( hashed_string( string( name ) ), value );
+                node.setParam( hashed_string( name ), value );
             }
         }
         for ( const GimmickWireDesc& wire : _listWire )

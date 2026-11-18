@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
 {
@@ -156,17 +157,6 @@ namespace sw
 
     bool EphemeralRequest::isValidKey( string_view key )
     {
-        if ( key.empty() || key.size() > static_cast<size_t>( OnlineLimit::kMaxKeySize ) )
-            return false;
-        for ( const utf8 ch : key )
-        {
-            const bool bLower               = 'a' <= ch && ch <= 'z';
-            const bool bDigit               = '0' <= ch && ch <= '9';
-            const bool bMark                = ch == '_' || ch == '.' || ch == ':' || ch == '/' || ch == '-';
-            const bool bInvalidKeyCharacter = bLower == false && bDigit == false && bMark == false;
-            if ( bInvalidKeyCharacter )
-                return false;
-        }
-        return true;
+        return ServiceKeyUtil::isTokenText( key, OnlineLimit::kMaxKeySize, "_.:/-" );
     }
 } // namespace sw

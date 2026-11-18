@@ -26,6 +26,13 @@ namespace sw
         [[nodiscard]] static bool parseHex64( string_view text, uint64& outValue );
         static string             makeHex64( uint64 value );
 
+        /**
+         * @brief 키 · 토픽 · 코드에 쓰는 토큰 글인지 봅니다 — 길이 1..@p maxSize, 글자는 모두 `[0-9a-z]` 이거나 @p extraCharacters 에 든 것(`"_."` 처럼).
+         * @details 허용 목록 검사다(그 밖의 바이트 — 대문자 · 공백 · 널 · 비 ASCII — 는 모두 거절). 대문자를 받지 않는 것은 같은 값이 두 키가 되지 않게 하려는 것이다.
+         *          저장소 키 · 버스 토픽 · 원격 설정 키 · 작업 id · 감사 동작 · 원장 토큰이 이 하나를 쓴다 — 신뢰하지 않는 글이 키에 드는 경계마다 같은 규칙이 돈다.
+         */
+        [[nodiscard]] static bool isTokenText( string_view text, int32 maxSize, string_view extraCharacters );
+
         /** @brief id 하나를 레코드 값(가변 정수)으로 씁니다. 다른 표의 레코드를 가리키는 연결 레코드(게스트 → 계정, 계정 → 세션)가 쓴다. */
         static vector<uint8> encodeVarID( uint64 id );
         /**

@@ -5,6 +5,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/FrameSystemUtil.h"
 #include "GameFramework/Runtime/Gameplay/Zone/JumpEscapeReactionComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ScreenReactionComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneContactComponent.h"
@@ -19,21 +20,12 @@ namespace sw
 
     ZoneSystem* ZoneSystem::find( const GameObjectManager& manager )
     {
-        // 이 키로는 이 타입만 붙인다(`findOrCreate`).
-        return static_cast<ZoneSystem*>( manager.findFrameSystem( hashed_string( kFrameSystemKey ) ) );
+        return FrameSystemUtil::find<ZoneSystem>( manager );
     }
 
     ZoneSystem& ZoneSystem::findOrCreate( GameObjectManager& manager )
     {
-        ZoneSystem* pSystem = find( manager );
-        if ( pSystem != nullptr )
-            return *pSystem;
-        unique_ptr<ZoneSystem> system = make_unique<ZoneSystem>();
-        pSystem                       = system.get();
-        const bool bAdded             = manager.addFrameSystem( hashed_string( kFrameSystemKey ), std::move( system ) );
-        SW_ASSERT( bAdded ); // 같은 키가 없음을 바로 위에서 보았고, 씬 데이터를 건드리지 않는다고 선언해 접근 충돌도 없다
-        (void)bAdded;
-        return *pSystem;
+        return FrameSystemUtil::findOrCreate<ZoneSystem>( manager );
     }
 
     void ZoneSystem::releaseIfUnused( GameObjectManager& manager )
@@ -43,7 +35,7 @@ namespace sw
         const bool               bUnused  = registry.getAll<ZoneVolumeComponent>().empty() && registry.getAll<ZoneContactComponent>().empty() && registry.getAll<JumpEscapeReactionComponent>().empty() &&
                              registry.getAll<ScreenReactionComponent>().empty();
         if ( bUnused )
-            manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
+            FrameSystemUtil::remove<ZoneSystem>( manager );
     }
 
     void ZoneSystem::runMain( GameObjectManager& manager, float32 deltaTime )

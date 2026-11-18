@@ -9,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Visual/Component/DecalComponent.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/FrameSystemUtil.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 namespace sw
@@ -32,26 +33,17 @@ namespace sw
 
     DecalRainWashSystem* DecalRainWashSystem::find( const GameObjectManager& manager )
     {
-        // 이 키로는 이 타입만 붙인다(`findOrCreate`).
-        return static_cast<DecalRainWashSystem*>( manager.findFrameSystem( hashed_string( kFrameSystemKey ) ) );
+        return FrameSystemUtil::find<DecalRainWashSystem>( manager );
     }
 
     DecalRainWashSystem& DecalRainWashSystem::findOrCreate( GameObjectManager& manager )
     {
-        DecalRainWashSystem* pSystem = find( manager );
-        if ( pSystem != nullptr )
-            return *pSystem;
-        unique_ptr<DecalRainWashSystem> system = make_unique<DecalRainWashSystem>();
-        pSystem                                = system.get();
-        const bool bAdded                      = manager.addFrameSystem( hashed_string( kFrameSystemKey ), std::move( system ) );
-        SW_ASSERT( bAdded ); // 같은 키가 없음을 바로 위에서 보았고, 씬 데이터를 건드리지 않는다고 선언해 접근 충돌도 없다
-        (void)bAdded;
-        return *pSystem;
+        return FrameSystemUtil::findOrCreate<DecalRainWashSystem>( manager );
     }
 
     void DecalRainWashSystem::release( GameObjectManager& manager )
     {
-        manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
+        FrameSystemUtil::remove<DecalRainWashSystem>( manager );
     }
 
     void DecalRainWashSystem::runMain( GameObjectManager& manager, float32 deltaTime )

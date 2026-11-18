@@ -1,5 +1,5 @@
 // ServiceKeyUtilTest — 저장소 키 · 레코드 도우미: 고정폭 16 진 키의 순서 · 왕복과 거절(길이 · 대문자 · 글자), 연결 레코드 id 의 깨짐 = 0,
-// 길이 붙은 문자열의 상한 그대로 · 상한 + 1 · 잘린 몸.
+// 길이 붙은 문자열의 상한 그대로 · 상한 + 1 · 잘린 몸, 토큰 글 허용 목록(상한 · 부호 · 거절할 바이트).
 #include "pch.h"
 
 #include "Core/Serialization/BitStream.h"
@@ -69,4 +69,23 @@ SW_TEST_CASE( ServiceKeyUtilTest, ReadStringHonoursTheCapAndTheBody )
 
     BitReader truncated( bytes.data(), static_cast<int32>( bytes.size() ) - 1 );
     SW_EXPECT_FALSE( ServiceKeyUtil::readString( truncated, 4, text ) );
+}
+
+/** @brief [ServiceKeyUtilTest] 토큰 글은 소문자 · 숫자 · 넘긴 부호만 받고, 빈 글 · 상한 넘김 · 그 밖의 바이트(대문자 · 공백 · 널 · 비 ASCII · 넘기지 않은 부호)는 거절한다 */
+SW_TEST_CASE( ServiceKeyUtilTest, TokenTextIsAnAllowlistWithACap )
+{
+    // 틀리면: 허용 목록이 넓어지면(대문자 · 경로 부호 · 널) 거절 단언이, 상한을 보지 않으면 상한 + 1 단언이, 부호 목록을 보지 않으면 "a.b" 단언이 진다.
+    SW_EXPECT_TRUE( ServiceKeyUtil::isTokenText( "abc_09", 6, "_" ) );
+    SW_EXPECT_TRUE( ServiceKeyUtil::isTokenText( "a.b", 8, "_." ) );
+    SW_EXPECT_TRUE( ServiceKeyUtil::isTokenText( "a/b:c-d", 8, "_.:/-" ) );
+    SW_EXPECT_TRUE( ServiceKeyUtil::isTokenText( "abc", 3, "" ) ); // 상한 그대로
+
+    SW_EXPECT_FALSE( ServiceKeyUtil::isTokenText( "", 8, "_." ) );
+    SW_EXPECT_FALSE( ServiceKeyUtil::isTokenText( "abcd", 3, "_." ) ); // 상한 + 1
+    SW_EXPECT_FALSE( ServiceKeyUtil::isTokenText( "a.b", 8, "_" ) );   // 넘기지 않은 부호
+    SW_EXPECT_FALSE( ServiceKeyUtil::isTokenText( "Abc", 8, "_." ) );  // 대문자 — 같은 값이 두 키가 된다
+    SW_EXPECT_FALSE( ServiceKeyUtil::isTokenText( "a b", 8, "_." ) );
+    SW_EXPECT_FALSE( ServiceKeyUtil::isTokenText( "a/b", 8, "_." ) ); // 경로 부호는 넘긴 곳에서만
+    SW_EXPECT_FALSE( ServiceKeyUtil::isTokenText( string_view( "a\0b", 3 ), 8, "_." ) );
+    SW_EXPECT_FALSE( ServiceKeyUtil::isTokenText( "a\xc3\xa9", 8, "_." ) ); // 비 ASCII 바이트
 }
