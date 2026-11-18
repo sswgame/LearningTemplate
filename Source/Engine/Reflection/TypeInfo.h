@@ -252,7 +252,8 @@ namespace sw
 
         /** @brief 비어 있는 TypeInfo 를 만듭니다. */
         TypeInfo() noexcept;
-        ~TypeInfo() = default;
+        /// @brief 몸은 TypeInfo.cpp 에 둔다 — 인라인이면 생성 코드의 `RegisterType` 마다(지역 `info`) 벡터 · 맵 · 메타데이터 상자의 소멸 사슬이 펼쳐져 Release 최적화 시간을 키운다(언리얼 `UClass` 소멸자도 밖에 있다).
+        ~TypeInfo();
         TypeInfo( const TypeInfo& other );
         TypeInfo( TypeInfo&& other ) noexcept;
         TypeInfo& operator=( const TypeInfo& other );

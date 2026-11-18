@@ -16,7 +16,7 @@
 
 단위 · 시나리오로 확인되는 몫은 2026-11-18 전체 실행(Debug `App --test` 4822 · Release ctest 111 · 서버 단위 4288, Windows)에서 통과해 지웠다. 남은 것은 측정 · 실장치 · 손 확인이다.
 
-- **5-4 리플렉션(감사 A-24 남은 몫):** 11-18 측정 — `.gen.cpp` 합계 1.65 MB(전 7.86 MB, 달성), 생성 TU 비중 Debug 19.6 % · Release 19.0 %(전 30.7 %, 목표 8 % 미만 — 미달). 무거운 TU: `RigNodeFields.gen.cpp` 14.6 s · `AutomationRunnerFields.gen.cpp` 13.2 s · `AutomationOutcome.gen.cpp` 7.1 s · `ReflectionBundle.19.cpp` 14.6 s(Release) — 이 넷이 왜 무거운지(헤더 끌어옴 · 큰 표 상수 초기화)부터.
+- **5-4 리플렉션(감사 A-24 남은 몫):** 11-18 측정 — `.gen.cpp` 합계 1.65 MB(전 7.86 MB, 달성), 생성 TU 비중은 `build_time_report.py` 가 옛 출력(이름을 바꾼 `RigNodeFields` · `AutomationRunnerFields` · `AutomationOutcome` 의 `.obj` 등, 매니페스트에 없는 줄)을 세던 값이라 그것을 빼게 고쳤다 — 같은 로그로 Debug 8.6 %(목표 8 % 미만, 거의 닿음) · Release 15.8 %(미달). Release 의 `ReflectionBundle.N.cpp` 는 하나 11-15 s(Debug 의 3.5 배, 전체는 1.8 배)라 최적화 단계 몫이다 — 첫 수로 `RegisterType` 마다 펼쳐지던 `~TypeInfo` 인라인 소멸 사슬을 TypeInfo.cpp 로 뺐다(w-gentu). 남은 몫: 통합이 Release 를 깨끗이 다시 지어 재고, 아직 8 % 를 넘으면 다음 후보(메타데이터 람다의 `string` 대입 인라인, `$ctor` 람다의 생성자 인라인, 묶음 크기)를 하나씩 잰다.
 - **RHI 5-2 측정:** `D3D12.ComputeTimestampClock` 어긋남, Vulkan 비동기 컴퓨트 `GPU.<패스>` · Tracy 겹침.
 - **실장치 · 백엔드 동작:** Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯, DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지), Vulkan placed 텍스처(`RT.Frame.transientPlacements`, 검증 레이어 경고 없이 — lavapipe · Android 포함).
 - **손 확인을 시나리오로:** 에디터 설정 표 값을 고친 뒤 Ctrl+Z(형식 페이지 그리드는 아직 단계를 올리지 않는다), 'Game Config - Shooter3D' 를 열어 저장, 옵션 메뉴에서 렌더 품질을 바꿔 그림자 · 텍스처 풀 값이 바뀌는지(바꾸는 순간 `GT` 에 `pollPackets` 대기 한 번).

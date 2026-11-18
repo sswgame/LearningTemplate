@@ -150,6 +150,8 @@ namespace sw
     {
     }
 
+    TypeInfo::~TypeInfo() = default;
+
     TypeInfo::TypeInfo( const TypeInfo& other )
         : TypeInfo()
     {

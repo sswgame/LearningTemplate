@@ -6,11 +6,14 @@
 
 ninja 로그 v5 · v6 의 줄은 `시작ms 끝ms mtime 출력 해시` 다. 같은 출력이 여러 번 지어졌으면 마지막 줄만 센다(ninja 가 로그를 덧붙이므로).
 컴파일 단위는 출력이 `.obj` · `.o` 인 줄이다 — 링크 · 생성(파서 실행) 줄은 비중의 분모에 넣지 않는다.
+지금 매니페스트(`build.ninja`)에 없는 출력은 세지 않는다 — 이름을 바꾸거나 지운 파일의 `.obj` 가 디스크에 남으면 ninja 가 로그 줄을 지우지 않는다.
+11-18 측정의 Debug 19.6 % 는 이 옛 출력(`RigNodeFields.gen.cpp.obj` 등, 지금 이름은 `…Params`)이 분자 · 분모에 섞인 값이었다(빼면 8.6 %).
 """
 from __future__ import annotations
 
 import argparse
 import pathlib
+import re
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -33,12 +36,20 @@ def parse_ninja_log(text: str) -> dict[str, int]:
     return durations
 
 
-def summarize(durations: dict[str, int]) -> tuple[int, int, list[tuple[int, str]]]:
-    """(전체 컴파일 ms, 생성 TU ms, 생성 TU 의 (ms, 출력) 내림차순)."""
+_BUILD_OUTPUT = re.compile(r'^build ((?:\$.|[^ :$\n])+)', re.MULTILINE)
+
+
+def parse_manifest_outputs(text: str) -> set[str]:
+    """`build.ninja` 의 `build` 줄마다 첫 출력(ninja 이스케이프 `$:` · `$ ` 를 풀고 `/` 로 맞춘다). 컴파일 줄은 출력이 하나다."""
+    return {m.group(1).replace('$:', ':').replace('$ ', ' ').replace('\\', '/') for m in _BUILD_OUTPUT.finditer(text)}
+
+
+def summarize(durations: dict[str, int], live_outputs: set[str]) -> tuple[int, int, list[tuple[int, str]]]:
+    """(전체 컴파일 ms, 생성 TU ms, 생성 TU 의 (ms, 출력) 내림차순). @p live_outputs 에 없는 출력(옛 빌드의 찌꺼기)은 뺀다."""
     total = 0
     generated: list[tuple[int, str]] = []
     for output, ms in durations.items():
-        if not output.endswith(OBJECT_SUFFIXES):
+        if not output.endswith(OBJECT_SUFFIXES) or output not in live_outputs:
             continue
         total += ms
         if GENERATED_MARKER in output:
@@ -55,8 +66,14 @@ def self_check() -> None:
         '0\t70\t2\tSource/Engine/CMakeFiles/Engine.dir/__/__/generated/Engine/Foo.gen.cpp.obj\th',   # 다시 지었다 — 마지막 것
         '0\t999\t1\tgenerated/Engine/Foo.gen.cpp\th',                                                # 파서 실행 — 분모 밖
         '0\t30\t1\tbin/Engine.dll\th',                                                               # 링크 — 분모 밖
+        '0\t900\t1\tSource/Engine/CMakeFiles/Engine.dir/__/__/generated/Engine/Old.gen.cpp.obj\th',   # 매니페스트에 없다(옛 이름) — 뺀다
     ])
-    total, generated_ms, list_generated = summarize(parse_ninja_log(log))
+    manifest = '\n'.join([
+        'build Source\\Engine\\CMakeFiles\\Engine.dir\\Foo.cpp.obj: CXX D$:\\x\\Foo.cpp',
+        'build Source\\Engine\\CMakeFiles\\Engine.dir\\__\\__\\generated\\Engine\\Foo.gen.cpp.obj: CXX D$:\\x\\Foo.gen.cpp',
+        'build bin/Engine.dll: LINK',
+    ])
+    total, generated_ms, list_generated = summarize(parse_ninja_log(log), parse_manifest_outputs(manifest))
     assert (total, generated_ms, len(list_generated)) == (170, 70, 1), (total, generated_ms, list_generated)
     print('self-check ok')
 
@@ -71,9 +88,11 @@ def main() -> int:
         self_check()
         return 0
     log_path = REPO / 'build' / args.preset / '.ninja_log'
-    if not log_path.is_file():
-        sys.exit(f'{log_path} 가 없다 — 그 프리셋을 먼저 짓는다')
-    total, generated_ms, list_generated = summarize(parse_ninja_log(log_path.read_text(encoding='utf-8')))
+    manifest_path = log_path.with_name('build.ninja')
+    if not log_path.is_file() or not manifest_path.is_file():
+        sys.exit(f'{log_path} 나 {manifest_path} 가 없다 — 그 프리셋을 먼저 짓는다')
+    live_outputs = parse_manifest_outputs(manifest_path.read_text(encoding='utf-8', errors='replace'))
+    total, generated_ms, list_generated = summarize(parse_ninja_log(log_path.read_text(encoding='utf-8')), live_outputs)
     if total == 0:
         sys.exit(f'{log_path} 에 컴파일 줄이 없다')
     print(f'{args.preset}: 컴파일 {total / 1000:.1f} s(CPU 합), 생성 TU {len(list_generated)} 개 {generated_ms / 1000:.1f} s = {100.0 * generated_ms / total:.1f} %')
