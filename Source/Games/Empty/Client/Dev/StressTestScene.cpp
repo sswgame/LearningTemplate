@@ -306,6 +306,14 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMaterialChurnKeyword, 0, "N 프레임마다 키워드·멀티컴파일을 흔듭니다 (0=사용 안 함)" );
 
     /**
+     * @brief `-gv_stressTestMaterialChurnSwap=N`: 매 프레임 큐브 N 개의 머티리얼 인스턴스를 **이미 있는** 다른 인스턴스로 바꿉니다(메시 컴포넌트의 머티리얼 교체).
+     * @details 값도 집합도 그대로이고 큐브가 드는 배치만 바뀐다 — 장면 빌더가 그 칸만 옛 배치에서 빼 새 배치에 넣는지(`GT.GPUScene.build.patchEnter` · `patchLeave`),
+     *          다시 나누기(`GT.GPUScene.build.partition`)로 가지 않는지 잰다. 같은 부모의 인스턴스로만 바꾼다(블렌드가 뒤집히지 않게).
+     *          `-gv_stressTestMaterialInstances=1` 과 함께 쓴다(돌려 쓸 인스턴스가 큐브 수만큼 있다).
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMaterialChurnSwap, 0, "프레임당 머티리얼 인스턴스를 다른 기존 인스턴스로 바꿀 큐브 수 (0=사용 안 함)" );
+
+    /**
      * @brief `-gv_stressTestMeshShapes=N`: 벤치가 섞어 쓸 도형 수입니다(1 은 큐브만, 최대 5).
      * @details 순서는 큐브, 구, 실린더, 캡슐, 원뿔입니다. 큐브 하나만 쓰면 삼각형이 12개뿐이고 면이
      *          축에 정렬되어 있어서 래스터화, 보간, 컬링을 거의 자극하지 못합니다. 곡면을 섞으면 배치마다
@@ -1694,7 +1702,8 @@ namespace sw
         const uint32 valueChurn   = ( gv_stressTestMaterialChurn > 0 ) ? static_cast<uint32>( gv_stressTestMaterialChurn ) : 0u;
         const uint32 addChurn     = ( gv_stressTestMaterialChurnAdd > 0 ) ? static_cast<uint32>( gv_stressTestMaterialChurnAdd ) : 0u;
         const uint32 keywordEvery = ( gv_stressTestMaterialChurnKeyword > 0 ) ? static_cast<uint32>( gv_stressTestMaterialChurnKeyword ) : 0u;
-        if ( ( valueChurn | addChurn | keywordEvery ) == 0u )
+        const uint32 swapChurn    = ( gv_stressTestMaterialChurnSwap > 0 ) ? static_cast<uint32>( gv_stressTestMaterialChurnSwap ) : 0u;
+        if ( ( valueChurn | addChurn | keywordEvery | swapChurn ) == 0u )
             return;
 
         const uint32 cubeCount = static_cast<uint32>( _listBenchMesh.size() );
@@ -1742,7 +1751,19 @@ namespace sw
             pMesh->setMaterialInstance( std::move( instance ) );
         }
 
-        // 3) 퍼뮤테이션을 흔듭니다. 셰이더가 다시 컴파일되므로 주기를 길게 줍니다.
+        // 3) 교체합니다. 이미 있는 다른 인스턴스(같은 부모)로 바꾼다 — 새 키가 아니라 큐브가 드는 배치만 바뀐다.
+        for ( uint32 step = 0; step < swapChurn && _listChurnInstance.empty() == false; ++step )
+        {
+            MeshComponent* pMesh = pObjects->resolveComponent( _listBenchMesh[_churnRandom.nextUint() % cubeCount] );
+            if ( pMesh == nullptr || pMesh->getMaterialInstance() == nullptr )
+                continue;
+            const shared_ptr<MaterialInstance>& target      = _listChurnInstance[_churnRandom.nextUint() % _listChurnInstance.size()];
+            const bool                          bSameParent = target != nullptr && target != pMesh->getMaterialInstance() && target->getParent() == pMesh->getMaterial();
+            if ( bSameParent )
+                pMesh->setMaterialInstance( target );
+        }
+
+        // 4) 퍼뮤테이션을 흔듭니다. 셰이더가 다시 컴파일되므로 주기를 길게 줍니다.
         const bool bShouldChurnKeywords = keywordEvery > 0 && ( _churnFrame % keywordEvery ) == 0 && _listChurnInstance.empty() == false;
         if ( bShouldChurnKeywords )
         {
