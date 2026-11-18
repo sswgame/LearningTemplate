@@ -270,6 +270,16 @@ namespace sw::editor
         }
     }
 
+    void EditorCommandRegistry::gatherContextMenu( const EditorCommandTarget& target, EditorContextMenuState& outState ) const
+    {
+        collectContextMenuItems( target._kind, outState._listItem );
+        outState._listEnabled.resize( outState._listItem.size() );
+        for ( size_t index = 0; index < outState._listItem.size(); ++index )
+        {
+            outState._listEnabled[index] = isEnabled( _listCommand[outState._listItem[index]._commandIndex], target ) ? uint8{ 1 } : uint8{ 0 };
+        }
+    }
+
     bool EditorCommandRegistry::validate( string& outReport ) const
     {
         outReport.clear();

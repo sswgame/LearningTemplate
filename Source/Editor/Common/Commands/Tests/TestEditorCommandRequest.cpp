@@ -84,3 +84,53 @@ SW_TEST_CASE( EditorCommandRequestTest, MenusReadThePublishedEnabledState )
     SW_EXPECT_TRUE( registry.isEnabledInSnapshot( 0 ) );
     SW_EXPECT_TRUE( registry.isEnabledInSnapshot( 1 ) );
 }
+
+/**
+ * @brief [EditorCommandRequestTest] 맥락 메뉴는 그 종류의 항목만 순서대로 모으고, 켜짐은 그 대상으로 판정한 값이다(View 는 이 값만 읽는다)
+ */
+SW_TEST_CASE( EditorCommandRequestTest, ContextMenuStateIsGatheredForTheTarget )
+{
+    EditorCommandRegistry registry;
+
+    EditorCommandDesc single;
+    single._id               = "test.renameOne";
+    single._edit             = EditorCommandEdit::NoScene;
+    single._contextMenuKind  = EditorCommandTargetKind::GameObject;
+    single._contextMenuOrder = 20;
+    single._action           = []( const EditorCommandTarget& /*target*/ ) {};
+    single._enabledPredicate = []( const EditorCommandTarget& target )
+    { return target.hasSingleSelection(); };
+    registry.registerCommand( single );
+
+    EditorCommandDesc always;
+    always._id               = "test.copy";
+    always._edit             = EditorCommandEdit::NoScene;
+    always._contextMenuKind  = EditorCommandTargetKind::GameObject;
+    always._contextMenuOrder = 10;
+    always._action           = []( const EditorCommandTarget& /*target*/ ) {};
+    registry.registerCommand( always );
+
+    EditorCommandDesc otherKind;
+    otherKind._id              = "test.assetOnly";
+    otherKind._edit            = EditorCommandEdit::NoScene;
+    otherKind._contextMenuKind = EditorCommandTargetKind::Asset;
+    otherKind._action          = []( const EditorCommandTarget& /*target*/ ) {};
+    registry.registerCommand( otherKind );
+
+    EditorCommandTarget target{};
+    target._kind           = EditorCommandTargetKind::GameObject;
+    target._listSelectedID = { 7, 8 };
+
+    EditorContextMenuState state;
+    registry.gatherContextMenu( target, state );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, state._listItem.size() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, state._listEnabled.size() );
+    SW_EXPECT_TRUE( registry.getCommands()[state._listItem[0]._commandIndex]._id == "test.copy" ); // 순서는 _contextMenuOrder
+    SW_EXPECT_EQUAL( uint8{ 1 }, state._listEnabled[0] );
+    SW_EXPECT_EQUAL( uint8{ 0 }, state._listEnabled[1] ); // 둘을 골랐다 — 하나에만 뜻이 있는 명령은 꺼진다
+    SW_EXPECT_TRUE( state.hasEnabledItem() );
+
+    target._listSelectedID = { 7 };
+    registry.gatherContextMenu( target, state );
+    SW_EXPECT_EQUAL( uint8{ 1 }, state._listEnabled[1] );
+}

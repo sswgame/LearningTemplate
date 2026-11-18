@@ -213,6 +213,30 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /**
+     * @struct EditorContextMenuState
+     * @brief 맥락 메뉴 하나의 값 묶음입니다 — 항목과 대상에 대한 켜짐(`EditorCommandRegistry::gatherContextMenu`). 그리는 쪽(View)은 이 값만 읽고 판정 함수를 부르지 않는다.
+     */
+    struct EditorContextMenuState
+    {
+        vector<EditorMenuItem> _listItem;    ///< `_contextMenuOrder` 순서
+        vector<uint8>          _listEnabled; ///< `_listItem` 과 같은 칸의 켜짐(1 = 켜짐)
+
+        /** @brief 켜진 항목이 하나라도 있으면 true 입니다(R6 — 없으면 메뉴를 열지 않는다). */
+        bool hasEnabledItem() const
+        {
+            for ( const uint8 bEnabled : _listEnabled )
+            {
+                if ( bEnabled != 0 )
+                    return true;
+            }
+            return false;
+        }
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /** @brief 커맨드의 메뉴 경로 필드에서 만든 메뉴 하나입니다. */
     struct EditorMenu
     {
@@ -297,6 +321,12 @@ namespace sw::editor
          * @details 항목은 커맨드 인덱스만 가리킨다 — 라벨 · 켜짐 · 단축키 글자는 커맨드가 정한다(R4). 패널이 메뉴 글자를 적지 않는다.
          */
         void collectContextMenuItems( EditorCommandTargetKind kind, vector<EditorMenuItem>& outListItem ) const;
+        /**
+         * @brief Model 쪽 — @p target 의 종류 맥락 메뉴 항목과 그 대상에 대한 켜짐을 @p outState 에 모읍니다(`isEnabled( desc, target )` — 씬 · 선택 · 세션을 읽는다).
+         * @details 대상은 메뉴를 여는 순간에야 정해지므로 프레임 앞 값 묶음(`publishEnabledState`)에 담을 수 없다 — 같은 스레드의 ViewModel gather 처럼 여는 순간과 열린 프레임마다 그 자리에서 모은다.
+         *          View(`EditorInputGUI::drawContextMenu`)는 이 값만 읽는다.
+         */
+        void gatherContextMenu( const EditorCommandTarget& target, EditorContextMenuState& outState ) const;
 
         const vector<EditorCommandDesc>& getCommands() const { return _listCommand; }
         /** @brief 커맨드의 메뉴 경로와 순서 필드에서 만든 메뉴 목록입니다. 메뉴 안에서 가장 작은 `_menuOrder` 가 작은 메뉴가 앞에 옵니다. */

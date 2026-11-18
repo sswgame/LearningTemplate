@@ -60,17 +60,6 @@ namespace sw::editor
                 return ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByPopup ) && ImGui::IsAnyItemHovered() == false;
             }
 
-            /** @brief @p target 에 대해 켜진 항목이 있으면 true 입니다(R6 — 켜진 항목이 없으면 열지 않는다). */
-            static bool hasEnabledItem( const EditorCommandRegistry& registry, const vector<EditorMenuItem>& listItem, const EditorCommandTarget& target )
-            {
-                for ( const EditorMenuItem& item : listItem )
-                {
-                    if ( EditorCommandRegistry::isEnabled( registry.getCommands()[item._commandIndex], target ) )
-                        return true;
-                }
-                return false;
-            }
-
             /** @brief 끌려 오는 페이로드가 우리 형식이고 받을 종류면 @p outPayload 에 담고 true 입니다(놓기 전에 보는 것 — 집합 밖이면 강조하지 않는다). */
             static bool peekAcceptedPayload( EditorPayloadKindSet acceptedKinds, EditorDragPayload& outPayload )
             {
@@ -106,7 +95,7 @@ namespace sw::editor
         const EditorInputActions&                 inputActions  = editorContext.getSubsystem<EditorInputActions>();
         EditorInputGUIInternal::ContextMenuState& state         = getEditorState<EditorInputGUIInternal::ContextMenuState>();
         const ImGuiID                             popupKey      = ImGui::GetID( subject._pPopupID );
-        vector<EditorMenuItem>                    listItem;
+        EditorContextMenuState                    menuState; // 항목과 켜짐 — Model 이 모은 값만 읽는다(판정을 부르지 않는다)
 
         const bool bOpenRequested = subject._bCallerDecidesOpen
                                       ? subject._bOpenRequested
@@ -117,8 +106,8 @@ namespace sw::editor
             EditorCommandTarget target             = EditorCommandTarget::makeMenuTarget( subject._kind, subject._hoveredID, subject._listSelectedID, bSelectOnlyHovered );
             target._worldPosition                  = subject._worldPosition;
             target._bHasWorldPosition              = subject._bHasWorldPosition;
-            registry.collectContextMenuItems( subject._kind, listItem );
-            if ( EditorInputGUIInternal::hasEnabledItem( registry, listItem, target ) )
+            registry.gatherContextMenu( target, menuState );
+            if ( menuState.hasEnabledItem() )
             {
                 if ( bSelectOnlyHovered && subject._selectOnly.isBound() )
                     subject._selectOnly( subject._hoveredID );
@@ -131,17 +120,18 @@ namespace sw::editor
         if ( state._popupKey != popupKey || ImGui::BeginPopup( subject._pPopupID ) == false )
             return false;
         // 팝업이 열려 있는 동안 항목은 연 순간의 대상 종류로 다시 모은다 — 모듈 리로드로 등록부가 바뀌어도 낡은 인덱스를 읽지 않는다.
-        registry.collectContextMenuItems( state._target._kind, listItem );
+        registry.gatherContextMenu( state._target, menuState );
         string chosenCommandID;
         string shortcutLabel;
-        for ( const EditorMenuItem& item : listItem )
+        for ( size_t itemIndex = 0; itemIndex < menuState._listItem.size(); ++itemIndex )
         {
+            const EditorMenuItem&    item = menuState._listItem[itemIndex];
             const EditorCommandDesc& desc = registry.getCommands()[item._commandIndex];
             if ( item._bSeparatorBefore )
                 ImGui::Separator();
             fixed_string<constant::buffer::kMax128> menuLabel;
             EditorCommandRegistry::formatMenuLabel( desc, menuLabel );
-            const bool bEnabled = EditorCommandRegistry::isEnabled( desc, state._target );
+            const bool bEnabled = menuState._listEnabled[itemIndex] != 0;
             // 시나리오가 누를 표식은 `menu.<명령 id>` 다 — 어느 창의 메뉴든 같은 명령은 같은 표식이다.
             fixed_string<constant::buffer::kMax128> markKey{ "menu." };
             markKey.append( desc._id.c_str() );
