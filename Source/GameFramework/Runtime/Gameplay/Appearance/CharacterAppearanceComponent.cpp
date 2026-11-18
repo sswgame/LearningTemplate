@@ -307,7 +307,7 @@ namespace sw
         , _listHiddenSlot{}
         , _listRigUnit{}
         , _taskUnit{}
-        , _previewSelection{}
+        , _selection{}
         , _pPreviewDatabase{ nullptr }
         , _reloadSubscription{}
         , _listMeshAssemblyLoad{}
@@ -328,6 +328,7 @@ namespace sw
         , _bMeshMerged{ SW_FALSE }
         , _bMeshApplyQueued{ SW_FALSE }
         , _bPartsStripped{ SW_FALSE }
+        , _bSelectionSet{ SW_FALSE }
         , _surface{}
         , _surfaceBinding{}
         , _loadedSurfaceChannels{}
@@ -347,8 +348,8 @@ namespace sw
         AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
         if ( pDatabase != nullptr )
             _reloadSubscription = pDatabase->registerReloaded( Delegate<void()>::create<&CharacterAppearanceComponent::onAppearanceDataReloaded>( this ) );
-        // 미리보기 입히기(`previewSelection`)도 시작한 뒤 같은 틱 길로 조립한다 — 미리보기 씬도 플레이하고 틱한다(언리얼 FPreviewScene).
-        if ( _presetID.empty() == false || _pPreviewDatabase != nullptr )
+        // 선택 입히기(`applySelection` · `previewSelection`)도 시작한 뒤 같은 틱 길로 조립한다 — 미리보기 씬도 플레이하고 틱한다(언리얼 FPreviewScene).
+        if ( _presetID.empty() == false || _bSelectionSet == SW_TRUE )
             requestAssemble();
     }
 
@@ -383,7 +384,9 @@ namespace sw
 
     void CharacterAppearanceComponent::onAppearanceDataReloaded()
     {
-        if ( _bStarted == SW_TRUE && _presetID.empty() == false )
+        // 게임 서비스의 다시 읽기다 — 미리보기 데이터로 입힌 것은 그 데이터가 아니다. 게임 선택(`applySelection`)은 프리셋 id 가 비어도 다시 조립한다.
+        const bool bUsesGameData = _pPreviewDatabase == nullptr && ( _presetID.empty() == false || _bSelectionSet == SW_TRUE );
+        if ( _bStarted == SW_TRUE && bUsesGameData )
             requestAssemble();
     }
 
@@ -439,15 +442,18 @@ namespace sw
 
     void CharacterAppearanceComponent::setPreset( const hashed_string& presetID, uint32 seed )
     {
-        _presetID = string{ presetID.c_str() };
-        _seed     = static_cast<int32>( seed );
+        _presetID         = string{ presetID.c_str() };
+        _seed             = static_cast<int32>( seed );
+        _bSelectionSet    = SW_FALSE; // 선택 길이 남아 있으면 프리셋 id 를 보지 않아 이 호출이 소리 없이 무시됐다
+        _pPreviewDatabase = nullptr;
         if ( _bStarted == SW_TRUE )
             requestAssemble();
     }
 
     void CharacterAppearanceComponent::previewSelection( const AppearanceSelection& selection, const AppearanceDatabase& database )
     {
-        _previewSelection                 = selection;
+        _selection                        = selection;
+        _bSelectionSet                    = SW_TRUE;
         _pPreviewDatabase                 = &database;
         const GameObjectManager* pManager = findManager();
         // 베이크한 메시는 틱이 받아 건다 — 플레이하지 않는 씬에 입히면 영영 걸리지 않으므로 오류로 알린다(그 자리에서 기다리지 않는다).
@@ -458,6 +464,20 @@ namespace sw
         }
         if ( _bStarted == SW_TRUE )
             requestAssemble(); // 아직 시작 전이면(방금 붙인 컴포넌트 — 다음 틱에 시작) `onBeginPlay` 가 조립한다
+    }
+
+    void CharacterAppearanceComponent::applySelection( const AppearanceSelection& selection )
+    {
+        _selection        = selection;
+        _bSelectionSet    = SW_TRUE;
+        _pPreviewDatabase = nullptr; // 게임 서비스로 조립한다 — 미리보기 데이터와 섞지 않는다
+        if ( _bStarted == SW_TRUE )
+            requestAssemble(); // 시작 전이면 `onBeginPlay` 가 조립한다
+    }
+
+    void CharacterAppearanceComponent::captureSelection( AppearanceSelection& outSelection ) const
+    {
+        AppearanceSelection::captureSelection( _state.getSpec(), outSelection );
     }
 
     void CharacterAppearanceComponent::setSlotItem( const hashed_string& slot, const hashed_string& itemID )
@@ -799,24 +819,24 @@ namespace sw
 
     bool CharacterAppearanceComponent::expandSpec( const AppearanceDatabase& database, CharacterAppearanceSpec& outSpec ) const
     {
-        const bool              bPreview = _pPreviewDatabase != nullptr;
-        const hashed_string     presetID = bPreview ? _previewSelection._basePresetID : hashed_string( _presetID );
-        const uint32            seed     = bPreview ? _previewSelection._seed : static_cast<uint32>( _seed );
+        const bool              bSelection = _bSelectionSet == SW_TRUE;
+        const hashed_string     presetID   = bSelection ? _selection._basePresetID : hashed_string( _presetID );
+        const uint32            seed       = bSelection ? _selection._seed : static_cast<uint32>( _seed );
         CharacterAppearanceSpec base;
         if ( database.getPresets().expand( presetID, seed, database.getSlotCatalog(), database.getSets(), database.getSchemas(), base ) == false )
         {
             SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePresetCouldNot", "Appearance preset '%#' could not be expanded", presetID.c_str() );
             return false;
         }
-        if ( bPreview == false )
+        if ( bSelection == false )
         {
             outSpec = std::move( base );
             return true;
         }
         AppearanceSelectionReport report;
-        AppearanceSelection::applySelection( database, _previewSelection, base, nullptr, outSpec, report );
+        AppearanceSelection::applySelection( database, _selection, base, nullptr, outSpec, report );
         if ( report.isClean() == false )
-            SW_LOG_WARNING_ID( "CharacterAppearance.PreviewedAppearanceBaseDropped", "Previewed appearance on base '%#' dropped %# values, clamped %# and reset %# slots to their defaults", presetID.c_str(),
+            SW_LOG_WARNING_ID( "CharacterAppearance.SelectedAppearanceBaseDropped", "Selected appearance on base '%#' dropped %# values, clamped %# and reset %# slots to their defaults", presetID.c_str(),
                                static_cast<uint32>( report._listDroppedParameter.size() ), static_cast<uint32>( report._listClampedParameter.size() ), static_cast<uint32>( report._listSlotFallback.size() ) );
         return true;
     }
