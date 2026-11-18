@@ -59,3 +59,29 @@ SW_TEST_CASE( ObjectLifetimeTest, ComponentRemovedFromADyingObjectIsDeferred )
     manager.update( kFrameSeconds );
     SW_EXPECT_TRUE( manager.resolveGameObject( handle ) == nullptr );
 }
+
+/**
+ * @brief [ObjectLifetimeTest] 오브젝트를 지울 때 컴포넌트를 모두 끝낸 뒤 소멸한다 — 뒤 컴포넌트의 onEndPlay 가 앞 형제를 아직 산 채로 본다
+ * @details 예전에는 컴포넌트마다 끝내기 → 소멸을 차례로 해, 하우징 부지의 onEndPlay 가 먼저 소멸한 판 상태의 땅에 반납했다(meadowvillage game.load 크래시).
+ */
+SW_TEST_CASE( ObjectLifetimeTest, AllComponentsEndPlayBeforeAnyIsDestroyed )
+{
+    bool                                 bFirstAlive      = true;
+    bool                                 bSecondAlive     = true;
+    bool                                 bFirstAliveAtEnd = false;
+    GameObjectManager                    manager;
+    GameObject*                          pObject = manager.createGameObject( hashed_string( "Village" ) );
+    LifetimeEndPlaySiblingTestComponent* pFirst  = pObject->addComponent<LifetimeEndPlaySiblingTestComponent>();
+    LifetimeEndPlaySiblingTestComponent* pSecond = pObject->addComponent<LifetimeEndPlaySiblingTestComponent>();
+    pFirst->_pAlive                              = &bFirstAlive;
+    pSecond->_pAlive                             = &bSecondAlive;
+    pSecond->_pSibling                           = pFirst;
+    pSecond->_pSiblingAliveAtEnd                 = &bFirstAliveAtEnd;
+    manager.beginPlay();
+    manager.update( kFrameSeconds );
+
+    manager.destroyGameObject( pObject );
+    manager.update( kFrameSeconds );
+    SW_EXPECT_FALSE( bFirstAlive ); // 정말 소멸했다
+    SW_EXPECT_TRUE( bFirstAliveAtEnd );
+}

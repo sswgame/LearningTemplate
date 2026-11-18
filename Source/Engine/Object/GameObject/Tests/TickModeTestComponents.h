@@ -208,4 +208,29 @@ namespace sw
                 ++*_pSpawnCount;
         }
     };
+    /**
+     * @brief 형제가 소멸했는지 끝날 때 보는 테스트 컴포넌트입니다.
+     * @details 판 상태의 땅을 하우징 부지가 onEndPlay 에서 반납하는 모양이다. 소멸자가 `_pAlive` 를 false 로 두고, 끝날 때 형제의 칸을 읽어 테스트 칸에 적는다.
+     */
+    REFLECT( HideInMenu )
+    struct LifetimeEndPlaySiblingTestComponent : public Component
+    {
+        REFLECT_BODY();
+
+        bool*                                _pAlive{ nullptr };             ///< 소멸자가 false 로 둔다
+        bool*                                _pSiblingAliveAtEnd{ nullptr }; ///< 끝날 때 형제의 `_pAlive` 를 옮겨 적는다
+        LifetimeEndPlaySiblingTestComponent* _pSibling{ nullptr };
+
+        ~LifetimeEndPlaySiblingTestComponent() override
+        {
+            if ( _pAlive != nullptr )
+                *_pAlive = false;
+        }
+        void onEndPlay() override
+        {
+            if ( _pSibling != nullptr && _pSiblingAliveAtEnd != nullptr )
+                *_pSiblingAliveAtEnd = *_pSibling->_pAlive;
+            Component::onEndPlay();
+        }
+    };
 } // namespace sw
