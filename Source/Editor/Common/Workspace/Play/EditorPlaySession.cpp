@@ -278,6 +278,43 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    bool EditorPlayStateSnapshot::areSceneEditsAllowed() const
+    {
+        return EditorSessionPolicy::areSceneEditsAllowed( isStopped(), _bSceneEditsHeld == SW_TRUE );
+    }
+
+    EditorPlayStateSnapshot EditorPlaySession::getUIState()
+    {
+        const EditorPlaySession* const pSession = findSubsystem<EditorPlaySession>();
+        return pSession != nullptr ? pSession->_uiState : EditorPlayStateSnapshot{};
+    }
+
+    void EditorPlaySession::publishState( EditorPlaySessionWriteKey /*key*/ )
+    {
+        EditorPlaySession* const pSession = findSubsystem<EditorPlaySession>();
+        if ( pSession == nullptr )
+            return;
+        const PlaySessionData&  data = pSession->_data;
+        EditorPlayStateSnapshot state;
+        state._state           = data._state;
+        state._bSimulate       = data._bSimulate == SW_TRUE ? SW_TRUE : SW_FALSE;
+        state._bPendingStep    = data._pendingStepCount > 0 ? SW_TRUE : SW_FALSE;
+        state._bEjected        = data._bEjected == SW_TRUE ? SW_TRUE : SW_FALSE;
+        state._bPlayQueued     = data._bStartQueued != SW_FALSE ? SW_TRUE : SW_FALSE;
+        state._bSceneEditsHeld = data._sceneEditHoldCount > 0 ? SW_TRUE : SW_FALSE;
+        ScopedLock<mutex> lock{ pSession->_stateMutex };
+        pSession->_publishedState = state;
+    }
+
+    void EditorPlaySession::beginUIFrame()
+    {
+        EditorPlaySession* const pSession = findSubsystem<EditorPlaySession>();
+        if ( pSession == nullptr )
+            return;
+        ScopedLock<mutex> lock{ pSession->_stateMutex };
+        pSession->_uiState = pSession->_publishedState;
+    }
+
     PlaySessionState EditorPlaySession::getState()
     {
         const PlaySessionData* pData = findDataInternal();

@@ -3,6 +3,9 @@
  * @brief 에디터 플레이(PIE) 세션과 씬 스냅샷 및 롤백을 관리합니다.
  */
 #pragma once
+#include "Core/Concurrency/ScopedLock.h"
+#include "Core/Concurrency/ThreadSafety.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -154,6 +157,32 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
+     * @struct EditorPlayStateSnapshot
+     * @brief UI 가 읽는 플레이 세션 상태 값입니다 — 게임 스레드가 세션을 바꾼 뒤 넘기고(`EditorPlaySession::publishState`), UI 프레임 시작이 받는다(`beginUIFrame`).
+     * @details 게임 → UI 방향의 스냅샷이다. ViewModel · 툴바 · 창 제목 · 키보드 주인은 살아 있는 세션(`PlaySessionData`)이 아니라 이 값을 읽는다(`EditorPlaySession::getUIState`).
+     *          판정 규칙은 세션의 정적 함수와 같다(같은 이름의 함수).
+     */
+    struct EditorPlayStateSnapshot
+    {
+        PlaySessionState _state{ PlaySessionState::Stopped };
+        uint8            _bSimulate{ SW_FALSE };
+        uint8            _bPendingStep{ SW_FALSE };
+        uint8            _bEjected{ SW_FALSE };
+        uint8            _bPlayQueued{ SW_FALSE };
+        uint8            _bSceneEditsHeld{ SW_FALSE };
+
+        bool isStopped() const { return _state == PlaySessionState::Stopped; }
+        bool isPaused() const { return _state == PlaySessionState::Paused; }
+        bool isPlaying() const { return _bPendingStep == SW_TRUE || _state == PlaySessionState::Playing; }
+        bool isSimulating() const { return isStopped() == false && _bSimulate == SW_TRUE; }
+        bool isPlayerActive() const { return _bSimulate == SW_FALSE && isPlaying(); }
+        bool isEjected() const { return isStopped() == false && _bEjected == SW_TRUE; }
+        bool isPlayQueued() const { return _bPlayQueued == SW_TRUE; }
+        /** @brief 정지이고 편집을 막는 작업이 없으면 true 입니다(`EditorSessionPolicy::areSceneEditsAllowed` 와 같은 규칙). */
+        SW_EDITOR_API bool areSceneEditsAllowed() const;
+    };
+
+    /**
      * @class EditorSceneEditHold
      * @brief 씬 편집 막기 하나를 쥐는 객체입니다(`EditorPlaySession::holdSceneEdits` 가 준다). 놓거나(`release`) 사라지면 막기를 풉니다(RAII).
      * @details 예전에는 막기와 풀기가 짝 맞춘 두 함수라 아무 데서나(UI 프레임에서도) 부를 수 있었고 풀기를 빠뜨릴 수 있었다. 이제 막기는 게임 스레드 열쇠를 받아서만 생기고,
@@ -214,6 +243,16 @@ namespace sw::editor
         static constexpr const utf8* kPlayerStartTag = "Player";
         /** @brief 한 번에 진행할 수 있는 Step 프레임 수의 상한입니다. */
         static constexpr uint32 kMaxStepFrameCount = 10000;
+
+        /**
+         * @brief UI 쪽 — 이번 UI 프레임의 플레이 상태 값입니다(프레임 시작에 받은 사본). 에디터 범위가 없으면 "정지" 입니다. 확장 모듈의 ViewModel 이 읽으므로 내보낸다.
+         * @details UI(ViewModel · 툴바 · 창 제목)는 이것을 읽는다 — 아래 정적 질의는 게임 스레드(명령 적용 · 게임 단계 · 감시 값)와 명령의 켜짐 판정이 쓴다.
+         */
+        SW_EDITOR_API static EditorPlayStateSnapshot getUIState();
+        /** @brief 게임 스레드 쪽 — 지금 세션 상태를 UI 쪽으로 넘깁니다(셸이 UI 명령 적용 뒤와 호스트 프레임 끝에 부른다). */
+        static void publishState( EditorPlaySessionWriteKey key );
+        /** @brief UI 쪽 — UI 프레임 시작에 게임 스레드가 마지막으로 넘긴 상태를 이번 UI 프레임 값으로 받습니다. */
+        static void beginUIFrame();
 
         /** @brief 현재 플레이 세션 상태를 반환합니다. */
         static PlaySessionState getState();
@@ -333,6 +372,9 @@ namespace sw::editor
         static void releaseSceneEditHold();
         friend class EditorSceneEditHold;
 
-        PlaySessionData _data{};
+        PlaySessionData                         _data{};
+        mutable mutex                           _stateMutex{}; ///< 넘긴 상태를 지킨다 — 게임 스레드가 넘기고 UI 스레드가 받는다
+        EditorPlayStateSnapshot _publishedState SW_GUARDED_BY( _stateMutex ){};
+        EditorPlayStateSnapshot                 _uiState{}; ///< 이번 UI 프레임 값(UI 스레드만)
     };
 } // namespace sw::editor

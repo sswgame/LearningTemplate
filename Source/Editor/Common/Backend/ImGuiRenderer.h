@@ -90,10 +90,14 @@ namespace sw::editor
         /** @brief 보조 창에 그린 누적 횟수입니다(시나리오 감시 값). */
         uint32 getPlatformWindowFrames() const { return _platformWindowFrames.load( std::memory_order_relaxed ); }
 
-        /** @brief RHI 텍스처를 ImGui 텍스처 ID(칸 번호)로 등록합니다. UI 스레드에서 부릅니다. 번호 등록은 다음 `prepareFrame` 이 한다. 핸들이 0 이면 nullptr 입니다. */
+        /**
+         * @brief RHI 텍스처를 ImGui 텍스처 ID(칸 번호)로 등록합니다. 번호 등록은 다음 `prepareFrame` 이 한다. 핸들이 0 이면 nullptr 입니다.
+         * @details UI 스레드(패널 이미지)와 게임 스레드(뷰 렌더 타깃 바꿔 끼우기 — `EditorRenderViews::applyReadyAndPublishTargets`)가 부른다. 칸 표는 `_textureMutex` 가 지킨다.
+         *          받은 ID 는 게임 → UI 타깃 값 묶음(`EditorTargetSnapshot`)으로 UI 에 건너가고, 다음 UI 프레임부터 그린다.
+         */
         void* registerTexture( RHITextureHandle texture );
         /**
-         * @brief `registerTexture` 로 발급한 ID 를 해제합니다. UI 스레드에서 부릅니다.
+         * @brief `registerTexture` 로 발급한 ID 를 해제합니다. 등록한 스레드(UI · 게임)에서 부릅니다 — 칸 반환은 해제 큐(잠금)가 미룬다.
          * @details 이미 낸 draw 스냅샷이 그 ID 를 그릴 수 있으므로 칸 반환은 `getDrawReleaseQueue()` 에 맡긴다 — 바로 비우면 그 칸을 새 등록이 받아 앞 스냅샷이 다른 텍스처를 그린다.
          *          ID 는 호출한 즉시 무효다(같은 UI 프레임에서 다시 그리지 않는다).
          */

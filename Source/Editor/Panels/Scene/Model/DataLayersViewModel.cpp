@@ -61,7 +61,7 @@ namespace sw::editor
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
         SceneDataLayerSubsystem& layers = pScene->getObjectManager()->getSubsystem<SceneDataLayerSubsystem>();
-        if ( EditorPlaySession::isStopped() == false )
+        if ( EditorPlaySession::getUIState().isStopped() == false )
         {
             (void)layers.setLayerActive( name, bShown ); // 선언한 이름만 줄로 그린다
             return;

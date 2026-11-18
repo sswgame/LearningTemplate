@@ -812,6 +812,7 @@ namespace sw::editor
         // 기동 뒤에 올라온 확장 모듈의 환경설정 섹션은 기본값이다. 새 섹션이 없으면 목록을 한 번 훑고 끝난다.
         if ( EditorPreferencesStore::hasNewSections() )
             (void)EditorPreferencesStore::loadNewSections( EditorPreferencesStore::getDefaultFilePath() ); // 입힌 수는 쓰지 않는다
+        EditorPlaySession::beginUIFrame();                                                                 // 이번 UI 프레임이 읽는 플레이 상태(게임 스레드가 넘긴 값)
         _editorContext->getSubsystem<EditorRenderViews>().beginFrameFocus();
         _editorContext->getSubsystem<EditorRenderViews>().clearViewDrawnMarks();
     }
@@ -831,6 +832,7 @@ namespace sw::editor
         _editorContext->getSubsystem<EditorInputActions>().applyKeyboardOwner( views.getPublishedUIFrame()._bEditorOwnsKeyboard == SW_TRUE );
         // 게임 스레드 단계(베이크) — 명령이 남긴 시작 요청을 받고 이번 프레임의 몫을 한다. 게임 스레드 입구라 세션 쓰기 열쇠를 넘긴다.
         ImGuiEditorInternal::runGameSteps( *_editorContext, EditorPlaySessionWriteKey{} );
+        EditorPlaySession::publishState( EditorPlaySessionWriteKey{} ); // 명령 · 단계가 바꾼 세션을 다음 UI 프레임이 읽을 값으로
     }
 
     void ImGuiEditor::openFrame()
@@ -1079,6 +1081,7 @@ namespace sw::editor
         const EditorPlaySessionWriteKey key{}; // 호스트 훅 — 게임 스레드
         EditorPlaySession::update( key );
         EditorPlaySession::consumePendingStep( key );
+        EditorPlaySession::publishState( key ); // 미룬 시작 · Step 소비가 바꾼 상태를 다음 UI 프레임이 읽는다
     }
 
     bool ImGuiEditor::onWindowCloseQuery()

@@ -154,7 +154,7 @@ namespace sw::editor
             _bFavoritesLoaded = SW_TRUE;
         }
         outState._lockedObjectID     = _lockedObjectID;
-        outState._bSceneEditsAllowed = EditorPlaySession::areSceneEditsAllowed() ? SW_TRUE : SW_FALSE;
+        outState._bSceneEditsAllowed = EditorPlaySession::getUIState().areSceneEditsAllowed() ? SW_TRUE : SW_FALSE;
         outState._listComponent.clear();
         outState._listFavorite.clear();
         outState._listDataLayer.clear();

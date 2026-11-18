@@ -89,9 +89,10 @@ namespace sw::editor
         EditorPlayLayoutState* const pLayout  = editor::findSubsystem<EditorPlayLayoutState>(); // 이 파일의 SW_EDITOR_SUBSYSTEM 이 컨텍스트와 함께 만든다
         if ( pContext == nullptr || pLayout == nullptr )
             return;
-        EditorPlayLayoutState& layout = *pLayout;
-        IEditorPanelService&   panels = pContext->getSubsystem<IEditorPanelService>();
-        if ( EditorPlaySession::isStopped() )
+        EditorPlayLayoutState&        layout = *pLayout;
+        IEditorPanelService&          panels = pContext->getSubsystem<IEditorPanelService>();
+        const EditorPlayStateSnapshot play   = EditorPlaySession::getUIState(); // UI 쪽 — 게임 스레드가 넘긴 세션 전이를 본다
+        if ( play.isStopped() )
         {
             layout._bOptionsApplied = SW_FALSE;
             layout._bSeenEjected    = SW_FALSE;
@@ -107,11 +108,11 @@ namespace sw::editor
         {
             layout._bOptionsApplied = SW_TRUE;
             // Simulate 는 씬 뷰로 지켜보는 세션이라 게임 뷰를 키우지 않는다(유니티 Maximize On Play 도 게임 뷰의 플레이에만).
-            if ( getPreferences<EditorPlayPreferences>()._bMaximizeOnPlay && EditorPlaySession::isSimulating() == false )
+            if ( getPreferences<EditorPlayPreferences>()._bMaximizeOnPlay && play.isSimulating() == false )
                 layout._bMaximizedForPlay = panels.maximizePanel( editorpanel::kGameView ) ? SW_TRUE : SW_FALSE;
         }
         // Eject/Possess 전이 — 세션은 게임 스레드가 바꿨고(`EditorUICommandKind::ToggleEject`), 배치 · 포커스는 여기서 맞춘다.
-        const bool bEjected = EditorPlaySession::isEjected();
+        const bool bEjected = play.isEjected();
         if ( bEjected == ( layout._bSeenEjected == SW_TRUE ) )
             return;
         layout._bSeenEjected = bEjected ? SW_TRUE : SW_FALSE;

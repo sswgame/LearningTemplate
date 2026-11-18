@@ -30,7 +30,7 @@ namespace sw::editor
         {
             if ( pObj == nullptr )
                 return;
-            if ( EditorPlaySession::areSceneEditsAllowed() == false )
+            if ( EditorPlaySession::getUIState().areSceneEditsAllowed() == false )
             {
                 edit();
                 return;

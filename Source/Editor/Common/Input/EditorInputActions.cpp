@@ -228,7 +228,7 @@ namespace sw::editor
         // 패널을 그리기 전이라 이번 프레임 포커스는 아직 없다 — 지난 프레임에 게임 뷰 · 게임 입력 면(한 프로세스 재생 뷰포트)이 포커스였는지를 본다.
         EditorRenderViews& views            = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
         const bool         bGameViewFocused = views.wasGameInputFocusedLastFrame();
-        const bool         bEditorOwns      = EditorPlaySession::isSimulating() || ( ImGui::GetIO().WantCaptureKeyboard && bGameViewFocused == false );
+        const bool         bEditorOwns      = EditorPlaySession::getUIState().isSimulating() || ( ImGui::GetIO().WantCaptureKeyboard && bGameViewFocused == false );
         views.setEditorOwnsKeyboard( bEditorOwns ); // 엔진 포커스는 게임 스레드가 넘긴 값으로 입힌다(`applyKeyboardOwner`)
         return bEditorOwns;
     }

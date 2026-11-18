@@ -1094,7 +1094,7 @@ namespace sw::editor
 
     void PropertyGridModel::ensureEditSpan( const RowBinding& binding, string_view label )
     {
-        if ( _pObject == nullptr || EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( _pObject == nullptr || EditorPlaySession::getUIState().areSceneEditsAllowed() == false )
             return;
         // 구간 단위는 깊이 0 프로퍼티다 — 중첩 필드 · 원소 편집도 다중 선택은 그 프로퍼티를 통째로 입힌다(`notifyRowEdited`).
         const RowBinding* pRoot = findValueBinding( binding._rootRowID );
@@ -1120,7 +1120,7 @@ namespace sw::editor
 
     void PropertyGridModel::trackComponentRegion( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, bool bActive, string_view label )
     {
-        if ( bActive == false || EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( bActive == false || EditorPlaySession::getUIState().areSceneEditsAllowed() == false )
             return;
         // 행 키(`_key`)와 겹치지 않게 영역 씨앗을 섞는다.
         static constexpr uint64 kRegionSeed = 0x5245474E494F4E00ull;

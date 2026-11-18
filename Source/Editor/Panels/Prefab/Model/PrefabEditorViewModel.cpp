@@ -67,7 +67,7 @@ namespace sw::editor
 
     bool PrefabEditorViewModel::requestOpenWindow( string_view prefabPath, string_view panelID )
     {
-        if ( prefabPath.empty() || EditorPlaySession::isStopped() == false )
+        if ( prefabPath.empty() || EditorPlaySession::getUIState().isStopped() == false )
             return false;
         EditorContext&   editorContext = editor::getSubsystem<EditorContext>();
         EditorWorkspace& workspace     = editorContext.getSubsystem<EditorWorkspace>();

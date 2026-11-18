@@ -44,3 +44,28 @@ SW_TEST_CASE( EditorPlaySessionWriteKeyTest, BodiesTouchOnlyGivenData )
     empty.release();
     SW_EXPECT_FALSE( empty.isHeld() );
 }
+
+/**
+ * @brief [EditorPlaySessionWriteKeyTest] UI 가 읽는 플레이 상태 값(`EditorPlayStateSnapshot`)의 판정은 세션 질의와 같은 규칙이다 — Step 대기는 재생 중, Simulate 는 플레이어 조종이 아님, 막기는 편집 거절
+ */
+SW_TEST_CASE( EditorPlaySessionWriteKeyTest, UIStateRules )
+{
+    EditorPlayStateSnapshot state;
+    SW_EXPECT_TRUE( state.isStopped() );
+    SW_EXPECT_TRUE( state.areSceneEditsAllowed() );
+    SW_EXPECT_FALSE( EditorPlaySession::getUIState().isPlaying() ); // 에디터 범위가 없으면 "정지"
+
+    state._state        = PlaySessionState::Paused;
+    state._bPendingStep = SW_TRUE;
+    SW_EXPECT_TRUE( state.isPlaying() );
+    SW_EXPECT_TRUE( state.isPlayerActive() );
+    SW_EXPECT_FALSE( state.areSceneEditsAllowed() );
+
+    state._bSimulate = SW_TRUE;
+    SW_EXPECT_TRUE( state.isSimulating() );
+    SW_EXPECT_FALSE( state.isPlayerActive() );
+
+    EditorPlayStateSnapshot held;
+    held._bSceneEditsHeld = SW_TRUE;
+    SW_EXPECT_FALSE( held.areSceneEditsAllowed() );
+}

@@ -89,6 +89,6 @@ namespace sw::editor
 
     bool IEditorPanel::areSceneEditsAllowed()
     {
-        return EditorPlaySession::areSceneEditsAllowed();
+        return EditorPlaySession::getUIState().areSceneEditsAllowed();
     }
 } // namespace sw::editor

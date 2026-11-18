@@ -172,7 +172,7 @@ namespace sw::editor
     {
         if ( inoutListSpan.empty() )
             return;
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::getUIState().areSceneEditsAllowed() == false )
         {
             inoutListSpan.clear();
             return;

@@ -37,7 +37,7 @@ namespace sw::editor
     {
         outState._targetName.clear();
         outState._bHasSnapshot = SW_FALSE;
-        outState._bPlayStopped = EditorPlaySession::isStopped() ? SW_TRUE : SW_FALSE;
+        outState._bPlayStopped = EditorPlaySession::getUIState().isStopped() ? SW_TRUE : SW_FALSE;
 
         // 선택한 오브젝트에 컴포넌트가 있으면 그것을 보고, 없으면 목록에서 고른 것을 이어서 본다.
         if ( GameObject* pSelected = AbilityDebugViewModelInternal::findSelectedOwner() )

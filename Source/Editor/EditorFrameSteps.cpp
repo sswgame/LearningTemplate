@@ -90,9 +90,10 @@ namespace sw::editor
             /** @brief 플레이 세션 상태 이름입니다. 멈춰 있으면 nullptr(제목에 붙이지 않는다). */
             static const utf8* findPlayState()
             {
-                if ( EditorPlaySession::isStopped() )
+                const EditorPlayStateSnapshot play = EditorPlaySession::getUIState(); // UI 프레임 단계 — 넘긴 상태를 읽는다
+                if ( play.isStopped() )
                     return nullptr;
-                return EditorPlaySession::isSimulating() ? "Simulating" : ( EditorPlaySession::isPaused() ? "Paused" : "Playing" );
+                return play.isSimulating() ? "Simulating" : ( play.isPaused() ? "Paused" : "Playing" );
             }
 
             /**

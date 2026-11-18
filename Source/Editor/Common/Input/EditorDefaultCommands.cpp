@@ -145,7 +145,7 @@ namespace sw::editor
             static void commandPlay()
             {
                 EditorContext& editorContext          = editor::getSubsystem<EditorContext>();
-                const bool     bWarnUnsavedBeforePlay = editorContext.getSubsystem<EditorWorkspace>().isSceneDirty() && EditorPlaySession::isStopped();
+                const bool     bWarnUnsavedBeforePlay = editorContext.getSubsystem<EditorWorkspace>().isSceneDirty() && EditorPlaySession::getUIState().isStopped();
                 if ( bWarnUnsavedBeforePlay )
                 {
                     editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayUnsaved" ),
