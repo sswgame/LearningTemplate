@@ -74,6 +74,7 @@ namespace sw
     InputManager::InputManager()
         : _queueRawEvent{}
         , _droppedRawEventCount{ 0 }
+        , _collectingInputFrame{ 1 }
         , _unsupportedReportedMask{ 0 }
         , _bTrackingPointerLeave{ false }
         , _listDevice{}
@@ -83,6 +84,7 @@ namespace sw
         , _pGamepad{ nullptr }
         , _pInputMap{ nullptr }
         , _listPolledEvent{}
+        , _listQueuedEvent{}
         , _listFramePress{}
         , _frameLookDelta{}
         , _lastPlatformPointer{ 0, 0 }
@@ -141,6 +143,7 @@ namespace sw
         _queueRawEvent.clear();
         _droppedRawEventCount.store( 0, std::memory_order_relaxed );
         _listPolledEvent.clear();
+        _listQueuedEvent.clear();
 
         // 1) 표준 키보드 장치를 등록한다
         auto pKeyboard = make_unique<KeyboardDevice>();
@@ -189,6 +192,7 @@ namespace sw
         _queueRawEvent.clear();
         _droppedRawEventCount.store( 0, std::memory_order_relaxed );
         _listPolledEvent.clear();
+        _listQueuedEvent.clear();
 
         _bInitialized = SW_FALSE;
         SW_LOG_INFO_ID( "InputManager.InputManagerShutDown", "InputManager shut down." );
@@ -196,24 +200,28 @@ namespace sw
 
     bool InputManager::postRawEvent( const RawInputEvent& rawEvent )
     {
+        return postRawEventAt( rawEvent, getCollectingInputFrame() );
+    }
+
+    bool InputManager::postRawEventAt( const RawInputEvent& rawEvent, uint32 inputFrame )
+    {
         if ( _bInputMuted == SW_TRUE )
             return false;
-
-        RawInputEvent stamped     = rawEvent;
-        stamped._timeMicroseconds = _pfnNowMicroseconds();
-        const bool bPushed        = _queueRawEvent.enqueue( stamped );
-        if ( bPushed == false )
-            _droppedRawEventCount.fetch_add( 1, std::memory_order_relaxed );
-        return bPushed;
+        return enqueueRawEvent( rawEvent, inputFrame );
     }
 
     bool InputManager::postWindowStateEvent( const RawInputEvent& rawEvent )
     {
         // 음소거는 "입력을 무시한다" 는 뜻이지 "창이 포커스를 잃은 것도 모른다" 는 뜻이 아니다. 음소거 중에 포커스를 잃고
         // 음소거가 풀린 뒤에도 그 전의 눌림이 남아 있으면 안 된다.
-        RawInputEvent stamped     = rawEvent;
-        stamped._timeMicroseconds = _pfnNowMicroseconds();
-        const bool bPushed        = _queueRawEvent.enqueue( stamped );
+        return enqueueRawEvent( rawEvent, getCollectingInputFrame() );
+    }
+
+    bool InputManager::enqueueRawEvent( const RawInputEvent& rawEvent, uint32 inputFrame )
+    {
+        QueuedRawEvent queued{ rawEvent, inputFrame };
+        queued._event._timeMicroseconds = _pfnNowMicroseconds();
+        const bool bPushed              = _queueRawEvent.enqueue( queued );
         if ( bPushed == false )
             _droppedRawEventCount.fetch_add( 1, std::memory_order_relaxed );
         return bPushed;
@@ -394,9 +402,20 @@ namespace sw
         // 지난 프레임까지 뗀 키는 가림을 푼다. 뗀 프레임에는 아직 가린다. 게임이 누른 적 없는 키의 "뗌" 을 보지 않게 하기 위해서다.
         releaseCapturedKeys();
 
-        // 2) 락프리 큐에 비동기로 들어온 이번 프레임 원시 이벤트를 한꺼번에 꺼낸다
+        // 2) 락프리 큐에 비동기로 들어온 이번 입력 프레임의 원시 이벤트를 넣은 순서대로 꺼낸다. 뒤 프레임 번호가 붙은 칸(`postRawEventAt`)은 그 프레임까지 남긴다.
+        //    번호를 먼저 올린다 — 올리기 전에 번호를 읽고 꺼낸 뒤에 넣은 이벤트는 지난 번호라 다음 프레임에 적용된다(잃지 않는다).
+        const uint32 inputFrame = _collectingInputFrame.fetch_add( 1, std::memory_order_acq_rel );
+        _queueRawEvent.popAll( _listQueuedEvent );
         _listPolledEvent.clear();
-        _queueRawEvent.popAll( _listPolledEvent );
+        size_t keptCount = 0;
+        for ( const QueuedRawEvent& queued : _listQueuedEvent )
+        {
+            if ( queued._inputFrame <= inputFrame )
+                _listPolledEvent.push_back( queued._event );
+            else
+                _listQueuedEvent[keptCount++] = queued;
+        }
+        _listQueuedEvent.resize( keptCount );
         // 배타 가상 입력: OS 가 낸 장치 이벤트와 창 포커스 이벤트를 버린다(글자 입력도 버리며, 가상 원천이 `makeTextInput` 으로 따로 낸다).
         // 에디터 UI 가 ImGui 키를 넘긴 이벤트(`_bEditorUI`)는 OS 입력이 아니라 에디터의 것이라 남긴다 — 시나리오가 ImGui 에 넣은 키가 같은 길로 닿는다.
         if ( bOSSuppressed )
@@ -1131,6 +1150,7 @@ namespace sw
         if ( bExclusive )
         {
             _queueRawEvent.clear();
+            _listQueuedEvent.clear();
             if ( bResetState && _pMouse != nullptr )
                 _pMouse->setPositionWithoutDelta( 0, 0 );
         }

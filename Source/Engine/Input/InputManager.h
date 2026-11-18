@@ -155,8 +155,16 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 락프리 원시 이벤트 큐(Lock-Free Event Queue)
         // ------------------------------------------------------------------------------
-        /** @brief OS 창 스레드나 백그라운드 폴러에서 잠금 없이 원시 이벤트를 넣습니다. 넣는 순간의 시각(`setClock` 의 시계)을 이벤트에 적습니다. */
-        bool   postRawEvent( const RawInputEvent& rawEvent );
+        /** @brief OS 창 스레드나 백그라운드 폴러에서 잠금 없이 원시 이벤트를 넣습니다. 넣는 순간의 시각(`setClock` 의 시계)을 이벤트에 적습니다. 지금 모으는 입력 프레임(`getCollectingInputFrame`)에 적용됩니다. */
+        bool postRawEvent( const RawInputEvent& rawEvent );
+        /**
+         * @brief 원시 이벤트를 입력 프레임 @p inputFrame 에 적용하도록 넣습니다. 그 번호의 `beginFrame`(이미 지났으면 다음 `beginFrame`)이 넣은 순서대로 적용합니다.
+         * @details 에디터 UI 스레드 분리의 경계다(`docs/DesignBacklog.md` "에디터 UI 스레드 분리 검토" 2) — 창 · ImGui 를 가진 스레드가 게임 뷰 입력을 다음 게임 프레임 번호로 넣으면
+         *          스레드가 언제 돌든 같은 입력이 같은 게임 프레임에 닿는다(한 프레임 지연이 계약). 언리얼 `FDeferredWindowsMessage` 가 받은 스레드에서 수정 키 상태까지 값으로 떠 두고 나중에 처리하는 것과 같은 자리다.
+         */
+        bool postRawEventAt( const RawInputEvent& rawEvent, uint32 inputFrame );
+        /** @brief 지금 이벤트를 모으는 입력 프레임 번호입니다(1 부터). 다음 `beginFrame` 이 이 번호까지를 적용하고 하나 올린다. */
+        uint32 getCollectingInputFrame() const { return _collectingInputFrame.load( std::memory_order_acquire ); }
         uint32 getPendingRawEventCount() const { return _queueRawEvent.size(); }
 
         /** @brief 단조 시계 마이크로초를 읽는 함수입니다. */
@@ -378,6 +386,13 @@ namespace sw
         void restoreWindowsAccessibilityShortcuts();
 
     private:
+        /** @brief 원시 이벤트 큐의 칸 하나입니다 — 이벤트와 그것을 적용할 입력 프레임 번호(`postRawEventAt`). 번호는 리플레이 파일에 쓰는 `RawInputEvent` 배치를 바꾸지 않게 칸에 둔다. */
+        struct QueuedRawEvent
+        {
+            RawInputEvent _event{};
+            uint32        _inputFrame{ 0 };
+        };
+
         /** @brief 이번 프레임에 눌린 컨트롤 하나와 그 순간입니다(`tryGetPressInstant`). */
         struct FramePress
         {
@@ -461,6 +476,8 @@ namespace sw
         void recenterLockedCursorPlatform();
         /** @brief 음소거와 상관없이 큐에 넣습니다. 포커스나 포인터 진입 같은 창 상태 알림에 씁니다(입력이 아닙니다). */
         bool postWindowStateEvent( const RawInputEvent& rawEvent );
+        /** @brief 시각을 적어 입력 프레임 @p inputFrame 의 칸으로 큐에 넣습니다(음소거는 부르는 쪽이 본다). 큐가 차면 버린 수를 세고 false 입니다. */
+        bool enqueueRawEvent( const RawInputEvent& rawEvent, uint32 inputFrame );
         /** @brief 포커스가 `Game` 이 아닐 때 눌렀다가 지금은 뗀 키를 가림 목록에서 해제합니다(프레임 시작, 이벤트 적용 전). */
         void releaseCapturedKeys();
         /** @brief 개발 콘솔이 키보드를 쥔 동안 눌려 있는 패드 컨트롤을 가림 목록에 넣습니다(이벤트를 적용한 뒤). */
@@ -472,8 +489,9 @@ namespace sw
         static constexpr size_t kKeyboardFocusCount = static_cast<size_t>( InputKeyboardFocus::Count );
         static constexpr size_t kKeyMaskWordCount   = ( static_cast<size_t>( Key::Count ) + 63 ) / 64;
 
-        ConcurrentQueue<RawInputEvent, 2048>      _queueRawEvent;           /**< OS 와 폴러 스레드가 postRawEvent() 로 넣는 락프리 원시 이벤트 큐입니다. beginFrame() 이 매 프레임 비웁니다. */
+        ConcurrentQueue<QueuedRawEvent, 2048>     _queueRawEvent;           /**< OS 와 폴러 스레드가 postRawEvent() 로 넣는 락프리 원시 이벤트 큐입니다. beginFrame() 이 매 프레임 비웁니다. */
         atomic<uint32>                            _droppedRawEventCount;    /**< 큐가 가득 차서 버린 원시 이벤트의 누적 개수입니다. beginFrame() 에서 요약 로그를 남기고 0 으로 초기화합니다. */
+        atomic<uint32>                            _collectingInputFrame;    /**< 지금 이벤트를 모으는 입력 프레임 번호입니다(`getCollectingInputFrame`). beginFrame() 이 올린다. */
         atomic<uint32>                            _unsupportedReportedMask; /**< 창이 못 하는 동작(포인터 묶기 · 커서 모양 · 커서 숨기기)을 이미 알린 비트입니다(X11 · Wayland — 처음 한 번만 오류로 알린다). */
         atomic<bool>                              _bTrackingPointerLeave;   /**< 포인터 이탈 알림(Win32 WM_MOUSELEAVE)을 요청해 둔 상태인지입니다. TrackMouseEvent 는 이탈을 한 번 알리고 풀린다. */
         vector<unique_ptr<IInputDevice>>          _listDevice;              /**< 등록된 모든 장치(키보드, 마우스, 게임패드 등)를 소유하는 목록입니다. */
@@ -483,6 +501,7 @@ namespace sw
         GamepadDevice*                            _pGamepad;                /**< 0번 게임패드 편의 API 용 캐시 포인터입니다(1~3번은 getGamepad(index) 로 조회). */
         unique_ptr<InputMap>                      _pInputMap;               /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
         vector<RawInputEvent>                     _listPolledEvent;         /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
+        vector<QueuedRawEvent>                    _listQueuedEvent;         /**< 큐에서 꺼낸 칸입니다 — 뒤 입력 프레임 번호가 붙은 칸은 그 프레임의 beginFrame() 까지 넣은 순서대로 남는다. */
         vector<FramePress>                        _listFramePress;          /**< 이번 프레임에 눌린 컨트롤마다 첫 누름 순간입니다(beginFrame 이 비우고 채운다). */
         float2                                    _frameLookDelta;          /**< 이번 프레임에 적용한 마우스 원시 이동량의 합입니다. */
         int2                                      _lastPlatformPointer;     /**< 버튼 이벤트에 좌표가 없는 창(Wayland `wl_pointer.button`)이 쓰는 포인터의 마지막 자리입니다. */
