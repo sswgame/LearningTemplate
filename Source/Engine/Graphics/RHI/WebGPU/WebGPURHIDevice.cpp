@@ -680,7 +680,9 @@ namespace sw
 
     void WebGPURHIDevice::encodeDepthSampleCopy( WGPUCommandEncoder encoder, WebGPUTextureRecord& record )
     {
-        // shortcut: 부를 때마다 옮긴다(깊이를 다시 쓰지 않았어도), 프레임 시간에 사본 패스가 드러나면 깊이 첨부로 연 패스가 사본을 낡았다고 적게 한다.
+        // 깊이를 다시 쓰지 않았으면 사본이 최신이다 — 옮기지 않는다(그림자 맵을 여러 패스가 읽거나 깊이를 쓰지 않은 프레임).
+        if ( record._depthCopySourceWriteCount == record._depthWriteCount )
+            return;
         for ( size_t layer = 0; layer < record._listDepthCopyGroup.size(); ++layer )
         {
             WGPURenderPassColorAttachment color{};
@@ -702,7 +704,7 @@ namespace sw
             wgpuRenderPassEncoderEnd( pass );
             wgpuRenderPassEncoderRelease( pass );
         }
-        record._depthCopySerial = getFrameSerial();
+        record._depthCopySourceWriteCount = record._depthWriteCount;
     }
 
     void WebGPURHIDevice::releaseDepthSampleCopy( WebGPUTextureRecord& record )
