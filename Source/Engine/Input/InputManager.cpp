@@ -98,6 +98,7 @@ namespace sw
         , _onGamepadConnectionChanged{}
         , _arrOnTextInput{}
         , _arrOnTextComposition{}
+        , _pendingComposition{}
         , _arrCapturedKeyMask{}
         , _arrCapturedGamepadMask{}
         , _arrSavedAccessibilityFlags{}
@@ -655,7 +656,12 @@ namespace sw
 
             case RawInputEventType::TextComposition:
             {
-                onTextComposition( rawEvent._payload._textData._arrUTF8 );
+                _pendingComposition += rawEvent._payload._textData._arrUTF8;
+                if ( rawEvent._bTextContinued == SW_FALSE )
+                {
+                    onTextComposition( _pendingComposition );
+                    _pendingComposition.clear();
+                }
                 break;
             }
 
@@ -930,7 +936,7 @@ namespace sw
     {
         if ( event._kind == WindowTextInputKind::Composition )
         {
-            (void)postRawEvent( RawInputEvent::makeTextComposition( event._text ) );
+            postTextComposition( event._text );
             return;
         }
         string_view rest = event._text;
@@ -942,6 +948,20 @@ namespace sw
             (void)postRawEvent( RawInputEvent::makeTextInput( rest.substr( 0, length ) ) );
             rest.remove_prefix( length );
         }
+    }
+
+    void InputManager::postTextComposition( string_view text )
+    {
+        string_view rest = text;
+        do
+        {
+            size_t length = rest.size() <= RawInputEvent::kMaxTextBytes ? rest.size() : UTF8Util::backOffToCharacterStart( rest.data(), RawInputEvent::kMaxTextBytes );
+            if ( length == 0 && rest.empty() == false )
+                length = rest.size(); // UTF-8 이 아닌 글이다(나눌 경계가 없다) - 마지막 조각으로 넣어 칸에서 잘린다, 이어짐을 남기지 않는다
+            const string_view piece = rest.substr( 0, length );
+            rest.remove_prefix( length );
+            (void)postRawEvent( RawInputEvent::makeTextComposition( piece, rest.empty() == false ) ); // 빈 글도 넣는다 - 조합 취소다
+        } while ( rest.empty() == false );
     }
 
     void InputManager::setTextInputArea( const WindowTextInputArea& area )

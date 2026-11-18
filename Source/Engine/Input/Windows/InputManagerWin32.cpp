@@ -391,13 +391,13 @@ namespace sw
                 fixed_string<constant::buffer::kMax512> utf8Buf;
                 int32                                   utf8Length{ 0 };
                 if ( readIMECompositionInternal( event._lParam, utf8Buf, utf8Length ) )
-                    postRawEvent( RawInputEvent::makeTextComposition( string_view( utf8Buf.data(), static_cast<size_t>( utf8Length ) ) ) );
+                    postTextComposition( string_view( utf8Buf.data(), static_cast<size_t>( utf8Length ) ) );
                 break;
             }
             case WM_IME_ENDCOMPOSITION:
             {
                 // 취소(Esc)는 빈 조합을 알리지 않고 이것만 온다. 확정이면 이어 오는 WM_CHAR 가 글을 넣는다.
-                postRawEvent( RawInputEvent::makeTextComposition( string_view{} ) );
+                postTextComposition( string_view{} );
                 break;
             }
             // 포커스: OS 쪽 일(커서 가두기와 풀기)은 지금 하고, 장치 상태 리셋은 큐 순서 안에서 한다(`beginFrame` 참고).

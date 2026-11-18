@@ -224,3 +224,35 @@ SW_TEST_CASE( WindowTextInputTest, LongCommitIsSplitOnCharacterBoundaries )
 
     input.shutdown();
 }
+
+/**
+ * @brief [WindowTextInputTest] 글 이벤트 칸보다 긴 조합 글도 잘리지 않고 콜백 한 번에 온전히 온다(일본어 긴 변환) - 빈 조합(취소)도 그대로 온다
+ */
+SW_TEST_CASE( WindowTextInputTest, LongCompositionArrivesWholeOnce )
+{
+    InputManager input;
+    SW_REQUIRE_TRUE( input.initialize() );
+    WindowTextInputTestUtil util;
+    util._pInput = &input;
+    const Subscription compositionSubscription =
+        input.bindTextCompositionCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &WindowTextInputTestUtil::onComposition, &util ), InputKeyboardFocus::Game );
+
+    string longText;
+    for ( int32 index = 0; index < 40; ++index )
+    {
+        longText += "\xE3\x81\x82"; // あ - 3 바이트 글자 40 개, 120 바이트
+    }
+    WindowTextInputEvent event;
+    event._kind = WindowTextInputKind::Composition;
+    event._text = longText;
+    input.postWindowTextInput( event );
+    input.postTextComposition( string_view{} );
+    input.beginFrame();
+    input.endFrame();
+
+    SW_REQUIRE_EQUAL( size_t{ 2 }, util._listComposition.size() );
+    SW_EXPECT_TRUE( util._listComposition[0] == longText );
+    SW_EXPECT_TRUE( util._listComposition[1].empty() );
+
+    input.shutdown();
+}
