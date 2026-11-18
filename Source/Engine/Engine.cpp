@@ -145,11 +145,9 @@ namespace sw
         // 공용 서비스) → 엔진(기동 단계). 아래 범위가 모두 선 뒤에 위 범위를 세우고, 위 범위가 모두 사라진 뒤에 아래 범위를 내린다 — 범위 사이의
         // 순서는 의존으로 적지 않는다. 서비스 범위의 객체는 이름 풀 · 로거가 선 뒤에 만든다(생성자가 이름 · 블록을 잡는다). 테스트 하네스도 같은 세 범위다(호스트 범위는 없다).
         _coreScope.setParentScope( pHostScope );
-#if defined( SW_DEBUG )
-        constexpr bool kDiagnostics = true;
-#else
-        constexpr bool kDiagnostics = false;
-#endif
+        // 진단(CRT 누수 검사 · 메모리 태그 추적 · 누수 창)은 Debug 만 — 할당마다 추적 비용이 붙는다. ASan 구성(Ninja-Release-ASan)도 끈다: Windows ASan 은 CRT 디버그 힙을
+        // 쓸 수 없고(MemoryProfiler.cpp) 힙 오용은 ASan 이 직접 잡는다(언리얼 -EnableASan 도 메모리 추적을 더하지 않는다).
+        constexpr bool kDiagnostics = build::kDebug;
         // 서브시스템 목록은 `EngineSubsystemSet.cpp` 의 한 곳이다 — 테스트 하네스 · 기동 순서 테스트도 같은 함수로 채운다.
         engine::CoreSetup coreSetup;
         coreSetup._argc                       = argc;

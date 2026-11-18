@@ -34,5 +34,10 @@ namespace sw
         MeshComponent* findSourceMeshComponent() const;
         /** @brief 따르는 주 메시 컴포넌트의 스킨 칸입니다 — 구간은 주 메시와 같은 스킨 결과를 그린다. 주 메시가 없으면 무효입니다. */
         uint32 getSkinSlot() const override;
+        /**
+         * @brief 따르는 주 메시 컴포넌트의 바운드 반지름입니다 — 같은 메시 · 같은 스킨 결과를 그리므로 주 메시가 포즈 여유(`MeshLODSettings::_skinnedBoundsScale`)를 넣은 경계를 그대로 쓴다.
+         * @details 언리얼 `bUseBoundsFromLeaderPoseComponent` 자리. 자기 값을 쓰면 스킨 구간이 바인드 포즈 경계로 컬링되어 IK 로 뻗은 팔이 잘린다. 주 메시가 없으면 자기 값이다.
+         */
+        float32 getBoundsRadius() const override;
     };
 } // namespace sw

@@ -7,6 +7,7 @@
  */
 #include "pch.h"
 
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -18,13 +19,11 @@ namespace sw
 {
     namespace
     {
-        /** @brief Debug 는 늘 죽은 번호를 검사하고, Release 는 성능 측정에 쓰는 빌드라 끈다(필요할 때 켠다). 선언을 하나로 두어 도구(launch-args)가 한 변수로 읽는다. */
-        constexpr BindlessIndexCheck kDefaultBindlessIndexCheck =
-#if defined( SW_DEBUG )
-            BindlessIndexCheck::DeadIndex;
-#else
-            BindlessIndexCheck::Off;
-#endif
+        /**
+         * @brief Debug 는 늘 죽은 번호를 검사하고, Release 는 성능 측정에 쓰는 빌드라 끈다(필요할 때 켠다). 선언을 하나로 두어 도구(launch-args)가 한 변수로 읽는다.
+         * @details 자동화 체인(ctest `Scenario.*`)은 구성과 무관하게 `-gv_validateBindlessIndex=DeadIndex` 로 켠다(Test/Scenario/CMakeLists.txt — 부하 측정은 빼고).
+         */
+        constexpr BindlessIndexCheck kDefaultBindlessIndexCheck = build::kDebug ? BindlessIndexCheck::DeadIndex : BindlessIndexCheck::Off;
     } // namespace
 
     /**
@@ -40,7 +39,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( bool, gv_shaderDebugCodegen, false, "실행 중 셰이더 컴파일을 디버그 코드젠으로(RenderDoc 에서 한 줄씩) — 기본은 쿠킹과 같은 최적화 코드젠" );
     /**
      * @brief `-gv_validateBindlessIndex=<수준>`: 셰이더에 넘기기 직전의 bindless 인덱스 검사(Graphics README "함정과 주의").
-     * @details Debug 는 늘 죽은 번호를 검사한다. Release 는 성능 측정에 쓰는 빌드라(검사는 드로우마다 읽기 잠금 하나) 끄고 필요할 때 켠다.
+     * @details Debug 는 늘 죽은 번호를 검사한다. Release 는 성능 측정에 쓰는 빌드라(검사는 드로우마다 읽기 잠금 하나) 끄고 필요할 때 켠다 — 자동화 체인은 인자로 켠다.
      *          TraceAbsent 는 "없음" 번호가 셰이더로 가는 자리도 남긴다 — 드라이버가 디스크립터 읽기를 분기 앞으로 끌어올려 디바이스를 잃었을 때 후보를 고른다.
      */
     SW_TEST_GLOBAL_VARIABLE( BindlessIndexCheck, gv_validateBindlessIndex, kDefaultBindlessIndexCheck,

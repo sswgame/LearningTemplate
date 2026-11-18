@@ -369,7 +369,7 @@ def _find_guid_owners(project_root: Path, list_guid: list[str], rules: Rules) ->
     return map_holder
 
 
-def check_staged_asset_identity(project_root: Path) -> list[str] | None:
+def check_staged_asset_identity(project_root: Path, scope: LintScope | None = None) -> list[str] | None:
     """
     커밋 전 검사 — 스테이지에 Content 변경이 없으면 None. 있으면 **바뀐 파일과 그 짝**만 본다(인덱스 전체를 읽지 않는다 — 에셋 수가 수십만이 되어도 커밋마다 돈다):
     머리 없음 · 깨짐, 원본만 지우거나 옮겨 남은 .meta, .meta 없는 새 원본, 새 GUID 가 인덱스의 다른 파일과 겹침(`git grep`), HEAD 에 있던 경로의 GUID 가 바뀜.
@@ -380,7 +380,12 @@ def check_staged_asset_identity(project_root: Path) -> list[str] | None:
         raise RuntimeError(f"git diff --cached 실패: {status.stderr.strip()}")
     prefix = CONTENT_FOLDER + "/"
     list_change = [line.split("\t", 1) for line in status.stdout.splitlines() if "\t" in line]
-    list_change = [(code.strip(), path.strip().replace("\\", "/")[len(prefix):]) for code, path in list_change if path.strip().replace("\\", "/").startswith(prefix)]
+    list_change = [(code.strip(), path.strip().replace("\\", "/")) for code, path in list_change]
+    # 범위가 주어지면 그 파일만 — 변경 종류(A · M · D)는 인덱스에서 읽고, 판정 대상은 커밋 훅이 넘긴 범위다(범위 밖 스테이지 파일을 읽지 않는다 — lint-shape 의 읽기 상한).
+    if scope is not None:
+        set_scope = {*scope.list_file, *scope.list_removed}
+        list_change = [(code, path) for code, path in list_change if path in set_scope]
+    list_change = [(code, path[len(prefix):]) for code, path in list_change if path.startswith(prefix)]
     if not list_change:
         return None
     rules = load_rules(project_root)
@@ -578,7 +583,7 @@ def run_self_check(project_root: Path | None = None) -> None:
 def check_asset_identity(project_root: Path, scope: LintScope) -> list[str]:
     """린트 규칙(`rules.py`): 커밋 훅은 스테이지의 바뀐 파일과 그 짝만(`check_staged_asset_identity`), `--all` 은 작업 트리 전체."""
     if not scope.whole_repo:
-        return check_staged_asset_identity(project_root) or []
+        return check_staged_asset_identity(project_root, scope) or []
     rules = load_rules(project_root)
     list_issue, _ = collect_issues(read_worktree_texts(project_root, list_worktree_ids(project_root), rules), rules)
     return [str(issue) for issue in list_issue]

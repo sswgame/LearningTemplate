@@ -32,6 +32,15 @@ namespace sw::build
 #else
     inline constexpr bool kShipping = false;
 #endif
+#if defined( SW_DEBUG )
+    /**
+     * @brief Debug 구성이면 true 입니다. 비용이 커서 Debug 에만 켜는 진단(프로파일 카운터 · 셰이더 라이브 리로드 · 경고 한 줄)을 `if constexpr` 로 가른다 —
+     *        두 갈래가 모든 구성에서 컴파일되어 묶음 검증이 짓지 않는 Debug 갈래가 썩지 않는다. 단언 · 검사는 이것이 아니라 `SW_DO_CHECKS`(배포가 아니면 켜진다)다.
+     */
+    inline constexpr bool kDebug = true;
+#else
+    inline constexpr bool kDebug = false;
+#endif
 #if defined( SW_STATIC_MODULES )
     /**
      * @brief 모듈(엔진 · RHI 백엔드 · GameFramework · 키트 · 게임)을 한 실행 파일에 정적으로 링크한 구성이면 true 입니다 — 배포 전부와 웹 · Android 개발 구성.

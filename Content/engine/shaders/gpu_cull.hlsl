@@ -340,10 +340,12 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     // 회전 뒤에 다시 맞춘다). 여기서 또 world 를 곱하면 이동이 두 번 들어간다.
     if ( isVisible( instance._boundsCenter, instance._boundsRadius ) == false )
         return;
-    // 구 다음 상자(배치 메시의 경계) — 둘 다 보수적이라 둘 중 하나라도 밖이면 밖이다. 가림도 상자로 판정한다(가늘고 긴 캐릭터는 구가 몇 배 넓다).
+    // 구 다음 상자(배치 메시의 경계) — 둘 다 보수적이라 둘 중 하나라도 밖이면 밖이다. 가림도 상자로 판정한다(가늘고 긴 물체는 구가 몇 배 넓다).
+    // 스킨 인스턴스는 상자를 쓰지 않는다 — 상자는 바인드 포즈라 포즈가 정점을 축 사이로 옮기면(IK 로 앞으로 뻗은 T 포즈 팔) 덮지 못한다. 구는 포즈 여유를 넣은
+    // 반지름이다(`MeshLODSettings::_skinnedBoundsScale`). 언리얼은 스켈레탈 경계를 포즈에서(피직스 에셋) 다시 구한다 — 포즈 상자가 생기면 그것으로 바꾼다.
     float3     boxCenter = instance._boundsCenter;
     float3     boxExtent = instance._boundsRadius.xxx;
-    const bool bHasBox   = computeWorldBox( instance, headInfo, boxCenter, boxExtent );
+    const bool bHasBox   = instance._skinSlot == kInvalidIndex && computeWorldBox( instance, headInfo, boxCenter, boxExtent );
     if ( bHasBox && isBoxVisible( boxCenter, boxExtent ) == false )
         return;
 

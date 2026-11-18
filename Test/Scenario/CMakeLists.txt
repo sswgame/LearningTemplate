@@ -75,9 +75,15 @@ function(sw_add_scenario_chain test_name stage_seconds)
 	endif()
 	math(EXPR wave_count "(${scenario_backend_count} + ${slot_count} - 1) / ${slot_count}")
 	math(EXPR chain_timeout "${stage_seconds} * ${stage_count} * ${wave_count}")
+	# 체인은 구성과 무관하게 bindless 죽은 번호를 검사한다 — 변수 기본값은 Debug 만 켜는데(Release 는 성능 측정 빌드) 묶음 검증은 Debug 를 짓지 않는다(사용자 결정 2026-11-18).
+	# 검사는 드로우마다 읽기 잠금 하나라 판정 그림을 바꾸지 않는다. 부하 시나리오(`sw_add_load_scenario`)는 측정 경로라 켜지 않는다. 자식 App 에는 넘김 인자로 간다.
+	# 언리얼 자동화도 검증을 시작 인자로 켠다(`-d3ddebug`). 변수는 DevTools 의 테스트용 변수(SW_TEST_GLOBAL_VARIABLE)라 배포본에는 이름도 없다(shipping-check).
+	# 같은 까닭으로 그래픽 API 검증 층(`-rhi-validation` — D3D12 · D3D11 디버그 레이어, Vulkan Khronos 검증 레이어, GL 디버그 출력)과 교착 탐지(`-deadlock-detection` — `sw::mutex`
+	# 잠금 순서 추적)를 켠다. 설정 기본값(`_rhi._validationLayer` = DebugBuildOnly)은 사람이 Release 로 재는 실행을 위해 그대로 두고, 자동화만 인자로 켠다(언리얼 Development 에서 Gauntlet 이
+	# `-d3ddebug` · `-vulkandebug` 를 주는 것과 같은 자리). 검증 층 오류는 로그 오류라 판정의 로그 게이트에서 진다. 배포 구성에는 검증 층 · 교착 탐지가 컴파일되지 않는다.
 	add_test(NAME ${test_name}
 		COMMAND $<TARGET_FILE:App> ${ARG_ARGS} -scenario=${scenario_list} -scenario-keep-going -scenario-backends=all ${list_split_argument} ${list_slot_argument} -unattended
-			-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${test_name}.log ${list_launch_argument}
+			-gv_validateBindlessIndex=DeadIndex -rhi-validation -deadlock-detection -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${test_name}.log ${list_launch_argument}
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(${test_name} PROPERTIES LABELS hostgpu TIMEOUT ${chain_timeout} SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped} PROCESSORS ${slot_count})
 	message(STATUS "[Scenario] ${test_name}: ${stage_count} scenario(s)")

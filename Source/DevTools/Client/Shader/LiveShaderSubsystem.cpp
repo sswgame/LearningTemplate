@@ -2,6 +2,8 @@
 
 #include "DevTools/Client/Shader/LiveShaderSubsystem.h"
 
+#include "Core/Foundation/BuildInfo.h"
+
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -26,21 +28,23 @@ namespace sw
 
     SubsystemInitResult LiveShaderSubsystem::initializeSubsystem()
     {
-#if defined( SW_DEBUG )
-        _bReady = SW_FALSE;
-        if ( _shaderRecompiler == nullptr )
+        // 라이브 리로드는 Debug 클라이언트만 — 파일 감시 · 재컴파일기를 Release(측정 빌드)에 세우지 않는다. 갈래는 모든 구성에서 컴파일된다.
+        if constexpr ( build::kDebug )
         {
-            SW_MEMORY_SCOPE( Shader );
-            _shaderRecompiler = make_unique<ShaderRecompiler>();
+            _bReady = SW_FALSE;
+            if ( _shaderRecompiler == nullptr )
+            {
+                SW_MEMORY_SCOPE( Shader );
+                _shaderRecompiler = make_unique<ShaderRecompiler>();
+            }
+            if ( _shaderRecompiler->initialize( "Shaders" ) == false )
+            {
+                SW_LOG_ERROR_ID( "LiveShader.FailedInitializeShaderRecompiler", "Failed to initialize ShaderRecompiler!" );
+                return SubsystemInitResult::Succeeded; // 개발 도구 하나 때문에 기동을 멈추지 않는다
+            }
+            _recompiledSubscription = _shaderRecompiler->bindOnAnyShaderRecompiled( SW_DELEGATE_METHOD( ShaderRecompiledDelegate, &LiveShaderSubsystem::onShaderRecompiled, this ) );
+            _bReady                 = SW_TRUE;
         }
-        if ( _shaderRecompiler->initialize( "Shaders" ) == false )
-        {
-            SW_LOG_ERROR_ID( "LiveShader.FailedInitializeShaderRecompiler", "Failed to initialize ShaderRecompiler!" );
-            return SubsystemInitResult::Succeeded; // 개발 도구 하나 때문에 기동을 멈추지 않는다
-        }
-        _recompiledSubscription = _shaderRecompiler->bindOnAnyShaderRecompiled( SW_DELEGATE_METHOD( ShaderRecompiledDelegate, &LiveShaderSubsystem::onShaderRecompiled, this ) );
-        _bReady                 = SW_TRUE;
-#endif
         return SubsystemInitResult::Succeeded;
     }
 

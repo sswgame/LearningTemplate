@@ -324,11 +324,12 @@ endif()
 
 # 셰이더 캐시 — 제 DDC(`-shader-ddc-dir`)와 쿠킹 스테이징을 지운 뒤 굽고 판정한다(`Shader/RunShaderCacheRebuild.cmake`). 빌드 폴더가 함께 쓰는 DDC 는 건드리지 않는다 —
 # 지우면 뒤에 도는 시나리오 체인이 모두 빈 캐시로 돌아 백엔드마다 실행 시한에 걸렸다.
-# Debug 에만 둔다: 보는 것은 빈 캐시에서 다시 만드는 길(구성과 무관한 로직)이고 쿠커의 단언은 Debug 에만 있다. 최적화 빌드의 쿠킹은 shipping-check(배포 구성 빌드의 CookAssets)가 본다.
+# 묶음 검증의 CPU 구성 하나에만 둔다: 보는 것은 빈 캐시에서 다시 만드는 길(구성과 무관한 로직)이다. 그 구성은 ASan(Ninja-Release-ASan — 쿠커 단언은 SW_DO_CHECKS 로 들어 있다)이고,
+# 사람이 짓는 Debug(Linux 단위 포함)에도 남긴다. Ninja-Release 에 두면 GPU 단계의 시간 판정 시나리오와 CPU 를 다툰다. 최적화 빌드의 쿠킹은 shipping-check(배포 구성 빌드의 CookAssets)가 본다.
 # 두 구성에서 돌면 묶음 검증마다 Debug 503 초 + Release 361 초를 차례로 썼다(2026-11-13).
 # CPU 를 다 쓰는 굽기라 시간 판정이 있는 항목(hostgpu · load)은 이것 뒤에 돈다(`SW_CPU_HEAVY_TEST` → DEPENDS, 아래 · Scenario/) — 다른 nogpu 항목과는 함께 돈다(예전 RUN_SERIAL 은 그것까지 막았다).
 set(SW_CPU_HEAVY_TEST "")
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR SW_ENABLE_SANITIZER)
 	add_test(NAME ShaderCache.RebuildFromEmpty
 		COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DDDC_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderCache/DDC"
 			"-DCOOKED_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderCache/Cooked" "-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs"

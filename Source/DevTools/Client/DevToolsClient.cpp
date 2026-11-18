@@ -63,7 +63,7 @@ namespace sw
 
             EngineFrameExit onFrameEnd() override
             {
-#if defined( SW_DEBUG )
+                if constexpr ( build::kDebug )
                 {
                     // 셰이더 재컴파일 · 강제 리로드 단축키(`ReloadShaders`)는 Debug 클라이언트만 — 단축키의 뜻은 재컴파일기를 가진 이쪽이 읽는다(디버그 키 맵은 입력 사실만 낸다).
                     LiveShaderSubsystem* const pLiveShader = engine::findSubsystem<LiveShaderSubsystem>();
@@ -77,7 +77,6 @@ namespace sw
                         }
                     }
                 }
-#endif
                 // 시작 인자 사진(`-gv_screenshot`)의 차례 · 결과와 `-gv_screenshotQuit` 의 종료 — 렌더러가 있는 실행만 섰다.
                 StartupCaptureSubsystem* const pStartupCapture = engine::findSubsystem<StartupCaptureSubsystem>();
                 return pStartupCapture != nullptr ? pStartupCapture->update() : kEngineFrameRunning;
