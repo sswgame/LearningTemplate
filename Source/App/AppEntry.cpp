@@ -46,7 +46,7 @@ namespace sw
             app.reset();
             return exitCode;
         }
-        emscripten_set_main_loop_arg( &AppEntry::tickWebFrame, nullptr, 0, true ); // 돌아오지 않는다(simulate_infinite_loop)
+        emscripten_set_main_loop_arg( &AppEntry::updateWebFrame, nullptr, 0, true ); // 돌아오지 않는다(simulate_infinite_loop)
         return 0;
 #elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         App app{};
@@ -60,7 +60,7 @@ namespace sw
         // 데스크톱은 프로세스가 루프를 돈다. Android 는 `android_main`(App/Android)이 이 함수를 부르고, 메시지(ALooper)는 창의 `processMessages` 가 매 틱 비운다.
         if ( app.beginMainLoop() )
         {
-            while ( app.tickMainLoop() )
+            while ( app.updateMainLoop() )
             {
             }
         }
@@ -70,10 +70,10 @@ namespace sw
 #endif
     }
 #if defined( SW_PLATFORM_WEB )
-    void AppEntry::tickWebFrame( void* pUserData )
+    void AppEntry::updateWebFrame( void* pUserData )
     {
         (void)pUserData;
-        if ( getWebApp()->tickMainLoop() )
+        if ( getWebApp()->updateMainLoop() )
             return;
         emscripten_cancel_main_loop();
         const int32 exitCode = getWebApp()->finishMainLoop();

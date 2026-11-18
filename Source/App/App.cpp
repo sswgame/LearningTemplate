@@ -664,7 +664,7 @@ namespace sw
         return true;
     }
 
-    bool App::tickMainLoop()
+    bool App::updateMainLoop()
     {
         if ( _pWindow->processMessages() == false )
             return false;

@@ -18,26 +18,26 @@
 
 namespace sw
 {
-    AutomationValidatorLookup AutomationStepValidation::findValidator( string_view kind, AutomationStepValidateFunction& outValidate )
+    AutomationValidatorResult AutomationStepValidation::findValidator( string_view kind, AutomationStepValidateFunction& outValidate )
     {
         const AutomationStepRegistration* pStep = AutomationStepRegistry::find( kind );
         if ( pStep != nullptr )
         {
             outValidate = pStep->_pValidate;
-            return outValidate != nullptr ? AutomationValidatorLookup::Found : AutomationValidatorLookup::NoValidator;
+            return outValidate != nullptr ? AutomationValidatorResult::Found : AutomationValidatorResult::NoValidator;
         }
         const AutomationStepValidatorRegistration* pValidator = AutomationStepRegistry::findValidator( kind );
         if ( pValidator == nullptr )
-            return AutomationValidatorLookup::Unknown;
+            return AutomationValidatorResult::Unknown;
         outValidate = pValidator->_pValidate;
-        return AutomationValidatorLookup::Found;
+        return AutomationValidatorResult::Found;
     }
 
     AutomationStepDependency AutomationStepValidation::findUnresolvedDependency( const AutomationStep& step, string& outName )
     {
         outName                                  = step._kind;
         AutomationStepValidateFunction pValidate = nullptr;
-        if ( findValidator( step._kind, pValidate ) == AutomationValidatorLookup::Unknown )
+        if ( findValidator( step._kind, pValidate ) == AutomationValidatorResult::Unknown )
             return AutomationStepDependency::StepKind;
 
         const string* pWatch = step.findAttribute( "watch" );

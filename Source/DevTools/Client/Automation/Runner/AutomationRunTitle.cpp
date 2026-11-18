@@ -98,7 +98,7 @@ namespace sw
             };
 
             /** @brief `-key=value` · `--key` · `key=value` 에서 앞의 `-` 와 `=` 뒤를 뗀 이름입니다. */
-            static string_view findName( string_view argument )
+            static string_view getArgumentName( string_view argument )
             {
                 string_view name = argument;
                 string_view value;
@@ -129,7 +129,7 @@ namespace sw
             /** @brief 인자 하나에 규칙을 적용합니다. 버리면 false 이고, 비밀 값은 가려서 @p outArgument 에 씁니다. */
             [[nodiscard]] static bool apply( string_view argument, string& outArgument )
             {
-                const string_view name = findName( argument );
+                const string_view name = getArgumentName( argument );
                 if ( isDropped( name ) )
                     return false;
                 const size_t equalPos = argument.find( '=' );
@@ -148,7 +148,7 @@ namespace sw
             {
                 for ( const string& argument : listArgument )
                 {
-                    if ( findName( argument ) == name )
+                    if ( getArgumentName( argument ) == name )
                         return true;
                 }
                 return false;
@@ -197,7 +197,7 @@ namespace sw
         for ( const string& extra : input._listExtraArgument )
         {
             string argument;
-            if ( hasInOriginal( Rules::findName( extra ) ) == false && Rules::apply( extra, argument ) )
+            if ( hasInOriginal( Rules::getArgumentName( extra ) ) == false && Rules::apply( extra, argument ) )
                 appendArgument( command, argument );
         }
         return command;

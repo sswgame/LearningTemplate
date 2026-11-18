@@ -1362,7 +1362,14 @@
     "client-log": "destruction-net run 의 옛 옵션 — 클라이언트 로그는 콘솔 출력 하나다(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
     "game-port": "net-pair run 의 옛 옵션 — 상수 _GAME_PORT(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
     "service-port": "net-pair run 의 옛 옵션 — 상수 _SERVICE_PORT(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
-    "out-dir": "web-package 의 옛 옵션 — 묶음은 build/Web-Shipping/Web/<게임> 하나다(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)"
+    "out-dir": "web-package 의 옛 옵션 — 묶음은 build/Web-Shipping/Web/<게임> 하나다(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
+    "HostServiceUtil": "HostLaunch::startHostServices — 부르는 곳이 하나뿐이던 정적 묶음을 주인 형식의 몸체로 접었다(2026-11-19)",
+    "tickMainLoop": "App::updateMainLoop — tick 은 틱 시스템만, 한 프레임 진행은 update(2026-11-19)",
+    "tickWebFrame": "AppEntry::updateWebFrame — tick 은 틱 시스템만, 한 프레임 진행은 update(2026-11-19)",
+    "tickReplica": "ShooterEnemyComponent::updateReplica — tick 은 틱 시스템만, 한 프레임 진행은 update(2026-11-19)",
+    "lookupRangeName": "findRangeName — 못 찾을 수 있는 조회는 find(2026-11-19)",
+    "AutomationValidatorLookup": "AutomationValidatorResult — findValidator 의 답, 결과 형식 끝말은 Result(2026-11-19)",
+    "buildTerrain": "ActionPlatformerDemoComponent::populateTerrain — 이미 있는 상태를 원본(씬의 지형 줄)으로 채우는 것은 populate(2026-11-19)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",

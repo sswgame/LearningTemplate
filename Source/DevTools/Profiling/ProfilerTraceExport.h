@@ -109,7 +109,7 @@ namespace sw
          * @brief @p seconds 초 동안 처음부터 모아 끝나면 저장하는 긴 캡처를 시작합니다(링 버퍼의 최근 몇 프레임과 따로).
          * @param seconds 0 이하면 시간 제한이 없고 `finishRecording` 이 끝냅니다(측정 창에 맞춰 끝내는 `-gv_profileTracePath`).
          * @param budget 스레드당 사건 수 상한(0 이면 기본값). 넘으면 거기서 멈추고 잘림 표지를 남깁니다 — 오래된 것을 버리지 않습니다.
-         * @details 시간이 다 된 것은 `tickRecording` 이 알아챕니다(`Engine::endFrame` 이 프레임마다 부른다). 이미 진행 중이면 거절합니다.
+         * @details 시간이 다 된 것은 `updateRecording` 이 알아챕니다(`Engine::endFrame` 이 프레임마다 부른다). 이미 진행 중이면 거절합니다.
          * @return 시작했으면 true
          */
         [[nodiscard]] static bool startRecording( FrameProfiler& profiler, float64 seconds, string_view path, string_view processName, uint32 budget,

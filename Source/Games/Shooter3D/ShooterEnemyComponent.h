@@ -110,7 +110,7 @@ namespace sw
         [[nodiscard]] bool applyDamage( float32 amount );
         void               enterPhase( ShooterEnemyPhase phase );
         /** @brief 복제 모습의 한 틱입니다 — 받은 자리를 씬에 옮기고 애니메이터를 맞춥니다. */
-        void tickReplica( float32 step );
+        void updateReplica( float32 step );
         /** @brief 같은 오브젝트의 애니메이터 파라미터를 씁니다(자기 오브젝트). */
         void updateAnimator( float32 moveCode );
         /** @brief 플레이어를 때리는 것을 틱 뒤로 미룹니다. */

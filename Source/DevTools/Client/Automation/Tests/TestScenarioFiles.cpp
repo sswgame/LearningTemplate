@@ -90,7 +90,7 @@ namespace ScenarioFilesTestUtil
         if ( parsed.has_value() == false )
             return parsed;
         AutomationStepValidateFunction pfnValidate = nullptr;
-        if ( AutomationStepValidation::findValidator( "WaitUntil", pfnValidate ) != AutomationValidatorLookup::Found )
+        if ( AutomationStepValidation::findValidator( "WaitUntil", pfnValidate ) != AutomationValidatorResult::Found )
             return sw::unexpected( Error{ ErrorKind::NotFound, "WaitUntil has no validator in this process" } );
         return pfnValidate( outScenario.getSteps()[0] );
     }

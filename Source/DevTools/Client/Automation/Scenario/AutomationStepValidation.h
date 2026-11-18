@@ -36,7 +36,7 @@ namespace sw
     };
 
     /** @brief `findValidator` 의 답입니다. */
-    enum class AutomationValidatorLookup : uint8
+    enum class AutomationValidatorResult : uint8
     {
         Unknown,     ///< 이 단계 종류의 등록도 검사 함수 등록도 없습니다.
         NoValidator, ///< 단계 종류는 있으나 검사 함수가 없습니다(속성 검사를 하지 않는 단계).
@@ -54,7 +54,7 @@ namespace sw
          * @brief @p kind 의 검사 함수를 찾습니다. 올라온 단계 등록(`AutomationStepRegistry`)이 먼저이고, 없으면 검사만 올린 등록입니다.
          * @param outValidate `Found` 일 때만 채웁니다.
          */
-        [[nodiscard]] static AutomationValidatorLookup findValidator( string_view kind, AutomationStepValidateFunction& outValidate );
+        [[nodiscard]] static AutomationValidatorResult findValidator( string_view kind, AutomationStepValidateFunction& outValidate );
 
         /**
          * @brief @p step 의 검사가 기대는 이름 가운데 이 프로세스에 등록되지 않은 첫 번째의 종류를 반환합니다. 모두 있으면 `Resolved` 입니다.

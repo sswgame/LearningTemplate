@@ -62,7 +62,7 @@ namespace sw
 
     ActionPlatformerDemoComponent::~ActionPlatformerDemoComponent() = default;
 
-    bool ActionPlatformerDemoComponent::buildTerrain()
+    bool ActionPlatformerDemoComponent::populateTerrain()
     {
         if ( _listTerrainRow.empty() )
         {
@@ -110,7 +110,7 @@ namespace sw
             SW_LOG_ERROR_ID( "KitDemo.PlatformerUnknownStage", "Action platformer demo: stage '%#' is not in the catalog - the stage does not open", _stageID.c_str() );
             return false;
         }
-        if ( checkMarkers( *_run.getStage() ) == false || buildTerrain() == false )
+        if ( checkMarkers( *_run.getStage() ) == false || populateTerrain() == false )
             return false;
         placeBody( _startPosition );
         _bJumpHeldLastFrame = SW_FALSE;

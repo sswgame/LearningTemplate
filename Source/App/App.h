@@ -56,11 +56,11 @@ namespace sw
         void shutdown();
         /**
          * @brief 메인 루프에 들어갈 준비를 합니다. 루프는 플랫폼 진입점이 돌린다(데스크톱은 `main` 의 `while`, 웹 · 모바일은 프레임 콜백).
-         * @return 돌 루프가 있으면 true 입니다. 헤드리스 부팅 · 한 번 하고 끝나는 작업은 false 이고 그때는 `tickMainLoop` · `endMainLoop` 를 부르지 않습니다.
+         * @return 돌 루프가 있으면 true 입니다. 헤드리스 부팅 · 한 번 하고 끝나는 작업은 false 이고 그때는 `updateMainLoop` · `endMainLoop` 를 부르지 않습니다.
          */
         [[nodiscard]] bool beginMainLoop();
         /** @brief 창 메시지를 처리하고 한 프레임을 돕니다. 막지 않습니다. @return 루프를 끝낼 때면 false 입니다. */
-        [[nodiscard]] bool tickMainLoop();
+        [[nodiscard]] bool updateMainLoop();
         /** @brief 루프가 끝났습니다. */
         void endMainLoop();
         /** @brief 루프를 끝낸 앱을 내리고 종료 코드를 돌려줍니다(`endMainLoop` → 종료 코드 → `shutdown`). 종료 코드는 내리기 전에 읽는다(시나리오 결과 — `Engine::requestQuit`). */
