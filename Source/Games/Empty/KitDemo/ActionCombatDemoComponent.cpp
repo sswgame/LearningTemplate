@@ -101,7 +101,7 @@ namespace sw
 
     ActionRoomFrameInput ActionCombatDemoComponent::readInput( float32 deltaTime )
     {
-        // 이름은 한 번만 만든다(프레임마다 intern 하지 않는다 — `FrameIntern` 린트의 까닭).
+        // 이름은 한 번만 만든다(프레임마다 intern 하지 않는다 — 린트 `common-shapes` 의 `frameIntern` 까닭).
         static const hashed_string s_moveAction( CommonInputActions::kMove );
         static const hashed_string s_attackAction( ActionCombatDemoComponentInternal::kAttackAction );
         static const hashed_string s_dashAction( ActionCombatDemoComponentInternal::kDashAction );
