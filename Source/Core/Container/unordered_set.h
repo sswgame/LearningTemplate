@@ -91,6 +91,7 @@ namespace sw
             , _listDenseData{}
             , _traits{}
         {
+            reserve( init.size() );
             for ( const auto& value : init )
             {
                 insert( value );
@@ -392,8 +393,16 @@ namespace sw
             }
         }
 
-        /** @brief rehash( count ) 와 같습니다(버킷을 미리 잡습니다). */
-        void reserve( size_type count ) { rehash( count ); }
+        /**
+         * @brief 원소 count 개를 더 할당하지 않고 넣을 만큼 버킷과 밀집 배열을 함께 잡습니다(언리얼 `TMap::Reserve`).
+         * @details 버킷만 잡으면 밀집 배열이 삽입마다 키우기를 거듭한다(감사 C-9). 부하율 1 이라 버킷 수 ≥ count 면 넣는 동안 재해시도 없다.
+         */
+        void reserve( size_type count )
+        {
+            SW_SCOPED_RACE_WRITE();
+            _listDenseData.reserve( count );
+            rehash_internal( count );
+        }
 
     private:
         /** @brief 빈 버킷 슬롯 표식(모든 비트 1)입니다. */

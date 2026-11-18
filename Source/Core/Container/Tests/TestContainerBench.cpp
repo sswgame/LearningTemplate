@@ -1,7 +1,6 @@
 // ContainerBenchTest — std 와 이름이 같은데 복잡도가 다를 수 있는 컨테이너 넷(vector 범위 삽입 · unordered_map reserve · map 범위 구축 · deque)을 잰다(감사 C-9, 설계 AC-1).
 #include "pch.h"
 
-#include "Core/Concurrency/atomic.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/map.h"
 #include "Core/Container/pair.h"
@@ -9,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Testing/ScopedAllocationCount.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -19,53 +19,12 @@
  * @brief 컨테이너 벤치 넷입니다. 시간 문턱은 두지 않고 값을 로그(`ContainerBenchTest.*`)로 남긴다 — 판정은 통합이 설계 문턱(DesignBacklog "출하 할당기와 컨테이너 복잡도")으로 한다.
  * @details 재는 법: Release `App --test --test-run-disabled --test-filter=ContainerBenchTest.*` 5 번, 로그 값의 중앙값.
  *          할당 수는 할당 관찰자(`Memory::registerAllocationObserver`)로 이 스레드의 할당만 센다 — 배포본에는 관찰자가 없어 0 이다(Release 로 잰다).
- *          케이스는 무거워(고치기 전의 `map` 범위 구축은 O(n²)) 평소 실행에서 끈다.
+ *          케이스는 무거워 평소 실행에서 끈다(`map` 범위 구축은 AC-2 로 붙이고 정렬 · 병합하는 O(n log n), 고치기 전은 O(n²)).
  */
 namespace sw
 {
     namespace
     {
-        /** @brief 이 스레드에서 관찰 창 안에 일어난 할당을 셉니다. 관찰자는 할당하지 않아야 해서 스레드 로컬 표지와 원자 수만 쓴다. */
-        struct AllocationCountInternal
-        {
-            static thread_local bool s_bCounting;
-            static atomic<uint64>    s_allocateCount;
-
-            static void onAllocate( const void*, size_t, MemoryTag )
-            {
-                if ( s_bCounting )
-                    s_allocateCount.fetch_add( 1 );
-            }
-            static void onFree( const void*, MemoryTag ) {}
-        };
-
-        thread_local bool AllocationCountInternal::s_bCounting = false;
-        atomic<uint64>    AllocationCountInternal::s_allocateCount{ 0 };
-
-        /** @brief 살아 있는 동안 이 스레드의 할당을 셉니다. */
-        class ScopedAllocationCount
-        {
-        public:
-            ScopedAllocationCount()
-            {
-                AllocationCountInternal::s_allocateCount.store( 0 );
-                AllocationCountInternal::s_bCounting = true;
-                Memory::registerAllocationObserver( &kObserver );
-            }
-            ~ScopedAllocationCount()
-            {
-                Memory::unregisterAllocationObserver();
-                AllocationCountInternal::s_bCounting = false;
-            }
-            ScopedAllocationCount( const ScopedAllocationCount& )            = delete;
-            ScopedAllocationCount& operator=( const ScopedAllocationCount& ) = delete;
-
-            uint64 getCount() const { return AllocationCountInternal::s_allocateCount.load(); }
-
-        private:
-            static constexpr MemoryAllocationObserver kObserver{ &AllocationCountInternal::onAllocate, &AllocationCountInternal::onFree };
-        };
-
         /** @brief 결정적 난수(xorshift64)입니다. */
         uint64 nextRandom( uint64& inoutState )
         {
@@ -130,7 +89,7 @@ SW_TEST_CASE( ContainerBenchTest, UnorderedMapReservedInsertAllocations, ._tags 
     mapValue.reserve( kCount );
     uint64 allocationCount = 0;
     {
-        const ScopedAllocationCount counter;
+        const test::ScopedAllocationCount counter;
         for ( uint32 key = 0; key < kCount; ++key )
         {
             mapValue.emplace( key, static_cast<uint64>( key ) * 3u );
@@ -185,8 +144,8 @@ SW_TEST_CASE( ContainerBenchTest, DequeChurn, ._tags = "bench", ._disabledReason
     int64                   churnNanos      = 0;
     uint64                  checksum        = 0;
     {
-        const ScopedAllocationCount counter;
-        const Stopwatch             watch;
+        const test::ScopedAllocationCount counter;
+        const Stopwatch                   watch;
         for ( uint32 index = 0; index < kCount; ++index )
         {
             Element64Bytes payload;

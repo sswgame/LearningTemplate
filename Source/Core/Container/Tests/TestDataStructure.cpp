@@ -1,5 +1,5 @@
 // 자료 구조 — DynamicBitset(연산 · 시프트 · 크기 다른 연산 거절 · parse · 블록 경계 모델 비교), SpscQueue · ConcurrentQueue(동시성), sw::array · map · set ·
-// unordered_map · unordered_set(이종 조회 · 충돌 체인 지우기 · reserve · shrink_to_fit · try_emplace) · deque · list, SpinLock, WorkStealingDeque, pair(EBO), vector 의 resize 성장.
+// unordered_map · unordered_set(이종 조회 · 충돌 체인 지우기 · reserve · shrink_to_fit · try_emplace) · deque · list, SpinLock, WorkStealingDeque, pair(EBO), vector 의 resize 성장, 예약 뒤 무할당 삽입 · 범위 구축(감사 C-9).
 #include "pch.h"
 
 #include "Core/Concurrency/Queue/ConcurrentQueue.h"
@@ -21,6 +21,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Testing/ScopedAllocationCount.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/ThreadTestAccess.h"
@@ -1482,4 +1483,86 @@ SW_TEST_CASE( DataStructureTest, TryEmplaceKeepsArgumentsAndMapUpperBound )
     const auto upper = mapSorted.upper_bound( 20 );
     SW_REQUIRE_TRUE( upper != mapSorted.end() );
     SW_EXPECT_EQUAL( 30, upper->first );
+}
+
+/**
+ * @brief [UnorderedMapTest] `reserve( n )` 뒤 서로 다른 키 n 개를 넣는 동안 할당이 없다 — 버킷과 밀집 배열을 함께 잡는다(감사 C-9, 언리얼 `TMap::Reserve`).
+ * @details 버킷만 잡으면 밀집 배열이 넣는 동안 여러 번 키워진다. `unordered_set` 도 같은 모양이라 함께 본다. 배포본은 할당을 셀 수 없어 수를 보지 않는다.
+ */
+SW_TEST_CASE( UnorderedMapTest, ReservedInsertsDoNotAllocate )
+{
+    static constexpr uint32           kCount = 1000;
+    sw::unordered_map<uint32, uint64> mapValue;
+    sw::unordered_set<uint32>         setValue;
+    mapValue.reserve( kCount );
+    setValue.reserve( kCount );
+
+    uint64 allocationCount = 0;
+    {
+        const sw::test::ScopedAllocationCount counter;
+        for ( uint32 key = 0; key < kCount; ++key )
+        {
+            if ( key % 2 == 0 )
+                mapValue.emplace( key, static_cast<uint64>( key ) * 3u );
+            else
+                mapValue.insert( { key, static_cast<uint64>( key ) * 3u } );
+            setValue.insert( key );
+        }
+        allocationCount = counter.getCount();
+    }
+    SW_EXPECT_EQUAL( static_cast<size_t>( kCount ), mapValue.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( kCount ), setValue.size() );
+    if constexpr ( sw::test::ScopedAllocationCount::kCountsAreActive )
+        SW_EXPECT_EQUAL( uint64{ 0 }, allocationCount );
+}
+
+/**
+ * @brief [MapTest] 범위 삽입 · 범위 구축은 키 순서로 정렬하고, 같은 키는 먼저 온 것(있던 원소, 그다음 입력 순서)만 남긴다.
+ * @details 범위 삽입은 꼬리에 붙여 안정 정렬 · 병합하는 O(n log n) 이다(감사 C-9). 안정 정렬이 아니면 입력의 뒤쪽 중복이 남을 수 있다. `set` 도 같은 길이다.
+ */
+SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
+{
+    const sw::vector<sw::pair<int32, int32>> listInput{
+        {3, 1},
+        {5, 2},
+        {1, 3},
+        {3, 4},
+        {2, 5},
+        {1, 6},
+        {3, 7}
+    };
+
+    const sw::map<int32, int32> mapBuilt( listInput.begin(), listInput.end() );
+    SW_REQUIRE_EQUAL( 4u, mapBuilt.size() );
+    SW_EXPECT_EQUAL( 3, mapBuilt.at( 1 ) );
+    SW_EXPECT_EQUAL( 5, mapBuilt.at( 2 ) );
+    SW_EXPECT_EQUAL( 1, mapBuilt.at( 3 ) );
+    SW_EXPECT_EQUAL( 2, mapBuilt.at( 5 ) );
+
+    sw::map<int32, int32> mapGrown{
+        {5, 50},
+        {4, 40}
+    };
+    mapGrown.insert( listInput.begin(), listInput.end() );
+    SW_REQUIRE_EQUAL( 5u, mapGrown.size() );
+    SW_EXPECT_EQUAL( 50, mapGrown.at( 5 ) ); // 있던 원소가 이긴다
+    SW_EXPECT_EQUAL( 40, mapGrown.at( 4 ) );
+    SW_EXPECT_EQUAL( 1, mapGrown.at( 3 ) );
+    int32 previousKey = 0;
+    for ( const auto& entry : mapGrown )
+    {
+        SW_EXPECT_TRUE( entry.first > previousKey );
+        previousKey = entry.first;
+    }
+
+    sw::set<int32>          setGrown{ 3, 1, 3 };
+    const sw::vector<int32> listMore{ 4, 0, 1, 4, 2 };
+    setGrown.insert( listMore.begin(), listMore.end() );
+    SW_REQUIRE_EQUAL( 5u, setGrown.size() );
+    int32 expected = 0;
+    for ( const int32 value : setGrown )
+    {
+        SW_EXPECT_EQUAL( expected, value );
+        ++expected;
+    }
 }
