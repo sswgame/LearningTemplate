@@ -501,10 +501,8 @@ namespace sw
                 }
                 if ( liveCount >= GuildLimit::kMaxApplication )
                     return fail( SocialResult::PendingLimit );
-                // 쓰기: 죽은 신청과 그 역색인 지우기(최대 2 × kMaxDeadErase) + 신청 + 역색인 + TTL 색인 줄 + 길드 레코드 다시 쓰기
+                // 쓰기: 죽은 신청과 그 역색인 지우기(최대 2 × kMaxDeadErase) + 신청 + 역색인 + TTL 색인 줄 + 여유 하나(길드 · 신청 목록은 읽기 집합이 조건으로 건다 — 상한에 들지 않는다)
                 static_assert( kMaxDeadErase * 2 + 4 <= ServiceTransaction::kMaxWriteCount, "runApply 의 트랜잭션이 쓰기 상한을 넘을 수 있다" );
-                // 살아 있는 신청 수는 목록 읽기라 읽기 집합이 커밋 조건으로 걸지 못한다(팬텀) — 길드 레코드를 그대로 다시 써 버전을 올려, 같은 길드의 신청끼리 줄을 세운다(맡기기와 같은 자리)
-                transaction.put( Internal::getGuildTable(), guildKey, guildRecord._bytes, guildRecord._version );
                 const int64 expiresMs = _request._nowMs.count() + GuildLimit::kApplicationLifetimeMs;
                 transaction.put( Internal::getApplicationTable(), selfKey, Internal::encodeApplication( _request._nowMs.count(), expiresMs ) );
                 // 해산한 길드 · 다시 오지 않는 신청자의 신청은 이 함수가 다시 돌지 않아 남는다 - TTL 색인 줄이 기간 뒤에 지운다. 다시 낸 신청은 새 줄이 맡는다
@@ -1177,10 +1175,6 @@ namespace sw
                     if ( listGrantRecord.size() >= static_cast<size_t>( GuildLimit::kMaxStorageGrant ) )
                         return fail( SocialResult::StorageLimit ); // 쓰지 않는 허용을 거둔 뒤에 준다
                 }
-                // 허용 수 상한과 떠나기 · 내보내기의 허용 지우기는 목록 읽기라 읽기 집합이 커밋 조건으로 걸지 못한다(팬텀). 두 멤버 레코드를 그대로 다시 써 버전을 올린다 —
-                // 같은 맡긴 사람의 부여끼리, 부여와 어느 쪽의 떠나기가 줄을 서서 늦은 커밋이 Conflict 로 다시 읽는다(떠난 계정에 허용이 남아 다시 들어올 때 살아나지 않는다)
-                transaction.put( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord._bytes, selfMemberRecord._version );
-                transaction.put( Internal::getMemberTable(), targetMemberKey, targetMemberRecord._bytes, targetMemberRecord._version );
                 transaction.put( Internal::getGrantTable(), recordKey, Internal::encodeGrant( _request._amount ), bExists ? grantRecord._version : ServiceRecord::kAbsentVersion );
                 return commitGrant( connection, transaction, scope );
             }

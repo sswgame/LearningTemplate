@@ -980,8 +980,8 @@ SW_TEST_CASE( GuildServiceTest, DemotionBetweenReadAndCommitRefusesTheAnnounceme
 }
 
 /**
- * @brief [GuildServiceTest] 떠나는 임원이 허용 목록을 읽은 뒤 커밋 전에 그에게 준 허용은 떠나기와 함께 지워진다 — 허용 목록은 읽기 집합이 걸지 못해(팬텀) 부여가 멤버 레코드를 다시 써
- *        떠나기 커밋이 Conflict 로 다시 읽는다. 다시 들어와도 그 허용으로 꺼내지 못한다(감사 "다음 할 일" 5 번)
+ * @brief [GuildServiceTest] 떠나는 임원이 허용 목록을 읽은 뒤 커밋 전에 그에게 준 허용은 떠나기와 함께 지워진다 — 읽기 집합이 허용 목록을 범위 조건으로 걸어
+ *        끼어든 부여(팬텀)에 떠나기 커밋이 Conflict 로 다시 읽는다. 다시 들어와도 그 허용으로 꺼내지 못한다(감사 "다음 할 일" 5 번)
  */
 SW_TEST_CASE( GuildServiceTest, GrantBetweenReadAndCommitEndsWithTheLeave )
 {
@@ -1006,7 +1006,7 @@ SW_TEST_CASE( GuildServiceTest, GrantBetweenReadAndCommitEndsWithTheLeave )
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gem.wd", "cur.gem", kMember )._result == SocialResult::NotAllowed );
 }
 
-/** @brief [GuildServiceTest] 신청 목록을 읽은 뒤 커밋 전에 다른 신청이 마지막 자리를 채우면 이 신청은 PendingLimit 다 — 신청끼리 길드 레코드로 줄을 서서 상한을 넘지 않는다(감사 "다음 할 일" 5 번) */
+/** @brief [GuildServiceTest] 신청 목록을 읽은 뒤 커밋 전에 다른 신청이 마지막 자리를 채우면 이 신청은 PendingLimit 다 — 신청 목록이 범위 조건이라 다시 세어 상한을 넘지 않는다(감사 "다음 할 일" 5 번) */
 SW_TEST_CASE( GuildServiceTest, ApplicationBetweenReadAndCommitKeepsTheCap )
 {
     GuildFixture rig;

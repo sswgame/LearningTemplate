@@ -60,8 +60,10 @@ namespace sw
         using Table = map<string, Entry>;
 
         /** @brief 잠금 안에서 부릅니다. 설정해 둔 실패가 @p fault 이고 차례가 됐으면 해제하고 true 입니다. */
-        bool               consumeFault( ServiceStoreFault fault ) SW_REQUIRES_LOCK( _mutex );
-        const Entry*       findEntry( const hashed_string& table, string_view key ) const;
+        bool         consumeFault( ServiceStoreFault fault ) SW_REQUIRES_LOCK( _mutex );
+        const Entry* findEntry( const hashed_string& table, string_view key ) const;
+        /** @brief 잠금 안에서 부르는 목록 읽기입니다(`listRecords` 와 커밋의 범위 조건 재검증이 함께 쓴다). */
+        void               listLocked( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, vector<ServiceRecord>& outListRecord ) const;
         ServiceStoreResult validate( const ServiceTransaction& transaction, ServiceCommitInfo& outInfo ) const;
 
     private:

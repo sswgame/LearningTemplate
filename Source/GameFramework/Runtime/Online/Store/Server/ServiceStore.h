@@ -7,6 +7,7 @@
  *          - 버전(`ServiceRecord::_version`)은 저장소 전체에서 커밋마다 오르는 수이다. 지웠다 다시 만든 키도 옛 버전을 다시 받지 않으므로 ABA 가 없다. 빈틈은 있어도 된다.
  *          - 쓰기는 모두 트랜잭션이다. 쓰기마다 기대 버전을 준다. `kAnyVersion` 은 조건 없음이고, `kAbsentVersion` 은 "없어야 한다"이다.
  *            하나라도 어긋나면 아무것도 쓰지 않고 `Conflict` 를 반환한다. `requireVersion` 은 쓰지 않고 버전만 본다. 읽은 값이 그새 바뀌지 않았는지 확인할 때 쓴다.
+ *            `requireRange` 는 목록 읽기 하나가 지금도 같은 결과(키 · 버전 순서열)인지 본다 — 그사이 범위에 든 레코드(팬텀)를 막는다. 저장소는 같은 트랜잭션 안에서 다시 읽어 견준다.
  *          - `Unavailable` 은 "적용됐는지 모른다"를 포함한다. 돈이나 아이템이 움직이는 커밋은 같은 트랜잭션에 멱등 기록(`ServiceIdempotency`)을 넣어 결과를 가려야 한다.
  *          - 키는 ASCII(`[0-9a-z_./-]`, 256 B 이하)이고 순서는 바이트 사전순이다. 숫자는 `ServiceKeyUtil::appendHex64`(고정 16자)로 써야 순서가 맞는다.
  *            테이블 이름은 `hashed_string` 이라 대소문자를 가리지 않으므로 소문자로만 쓴다.
@@ -64,12 +65,23 @@ namespace sw
         {
             Put = 0,
             Erase,
-            Require ///< 쓰지 않고 판만 본다
+            Require,     ///< 쓰지 않고 판만 본다
+            RequireRange ///< 쓰지 않고 목록 읽기 하나(`_key` 가 접두어, `_range`)가 지금도 같은 결과인지 본다 — 범위의 판이다
+        };
+
+        /** @brief 범위 조건(`Kind::RequireRange`)의 목록 읽기 인자와 그때 본 결과의 지문입니다. */
+        struct Range
+        {
+            string _cursorKey{};
+            uint64 _fingerprint{ 0 }; ///< `ServiceTransaction::computeRangeFingerprint` — 읽은 레코드의 키 · 버전 순서열
+            int32  _maxCount{ 0 };
+            uint8  _bDescending{ SW_FALSE };
         };
 
         vector<uint8> _bytes{};
         string        _key{};
         hashed_string _table{};
+        Range         _range{};
         uint64        _expectedVersion{ ServiceRecord::kAnyVersion };
         Kind          _kind{ Kind::Put };
     };
@@ -94,6 +106,13 @@ namespace sw
         void put( const hashed_string& table, string_view key, vector<uint8> bytes, uint64 expectedVersion = ServiceRecord::kAnyVersion );
         void erase( const hashed_string& table, string_view key, uint64 expectedVersion = ServiceRecord::kAnyVersion );
         void requireVersion( const hashed_string& table, string_view key, uint64 expectedVersion );
+        /**
+         * @brief 목록 읽기 하나(인자 그대로)가 커밋 때도 지문 @p fingerprint 의 결과(키 · 버전 순서열)를 내야 한다는 조건입니다. 그사이 범위에 레코드가 들거나 빠지거나 바뀌면 Conflict 다.
+         * @details 저장소는 같은 트랜잭션 안에서 범위를 다시 읽어 견준다(이 트랜잭션의 쓰기 전에). 버전 조건 상한(`kMaxConditionCount`)에 든다.
+         */
+        void requireRange( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, uint64 fingerprint );
+        /** @brief 쓰기 하나를 그대로 덧붙입니다(다른 트랜잭션에서 짠 쓰기를 옮길 때). */
+        void addWrite( const ServiceWrite& write ) { _listWrite.push_back( write ); }
         void clear() { _listWrite.clear(); }
 
         bool                        isEmpty() const { return _listWrite.empty(); }
@@ -103,6 +122,8 @@ namespace sw
 
         /** @brief 키가 키 규칙(`[0-9a-z_./-]`, 1..256 B)을 지키면 true 입니다. */
         static bool isValidKey( string_view key );
+        /** @brief 목록 읽기 결과 @p listRecord 의 @p first 번부터 끝까지의 지문(개수 · 키 · 버전)입니다. 범위 조건을 거는 쪽과 견주는 저장소가 같은 함수를 쓴다. */
+        static uint64 computeRangeFingerprint( const vector<ServiceRecord>& listRecord, size_t first );
 
     private:
         vector<ServiceWrite> _listWrite;

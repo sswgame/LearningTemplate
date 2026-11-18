@@ -99,9 +99,16 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         if ( consumeFault( ServiceStoreFault::RejectRead ) )
             return ServiceStoreResult::Unavailable;
+        listLocked( table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord );
+        return ServiceStoreResult::Ok;
+    }
+
+    void MemoryServiceDatabase::listLocked( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending,
+                                            vector<ServiceRecord>& outListRecord ) const
+    {
         const auto tableIt = _mapTable.find( table );
         if ( tableIt == _mapTable.end() )
-            return ServiceStoreResult::Ok;
+            return;
         const Table& entries    = tableIt->second;
         int32        addedCount = 0;
         if ( bDescending == false )
@@ -117,7 +124,7 @@ namespace sw
                 record._version       = it->second._version;
                 ++addedCount;
             }
-            return ServiceStoreResult::Ok;
+            return;
         }
         // 내림차순 — 커서 바로 앞(커서가 없으면 접두어 범위 끝)에서 거꾸로 순회한다. 키는 ASCII(키 규칙)라 접두어 + 0x7F 가 범위 끝이다.
         string upperKey{ keyPrefix };
@@ -134,7 +141,6 @@ namespace sw
             record._version       = it->second._version;
             ++addedCount;
         }
-        return ServiceStoreResult::Ok;
     }
 
     ServiceStoreResult MemoryServiceDatabase::commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo )
@@ -171,6 +177,7 @@ namespace sw
                     break;
                 }
                 case ServiceWrite::Kind::Require:
+                case ServiceWrite::Kind::RequireRange:
                 {
                     break;
                 }
@@ -263,9 +270,21 @@ namespace sw
         const vector<ServiceWrite>& listWrite = transaction.getWrites();
         for ( size_t writeIndex = 0; writeIndex < listWrite.size(); ++writeIndex )
         {
-            const ServiceWrite& write          = listWrite[writeIndex];
-            const Entry*        pEntry         = findEntry( write._table, write._key );
-            const uint64        currentVersion = pEntry == nullptr ? ServiceRecord::kAbsentVersion : pEntry->_version;
+            const ServiceWrite& write = listWrite[writeIndex];
+            if ( write._kind == ServiceWrite::Kind::RequireRange )
+            {
+                // 쓰기를 적용하기 전에 잠금 안에서 범위를 다시 읽는다 — 이 트랜잭션의 쓰기는 견줄 대상이 아니다
+                vector<ServiceRecord> listRecord;
+                listLocked( write._table, write._key, write._range._cursorKey, write._range._maxCount, write._range._bDescending == SW_TRUE, listRecord );
+                if ( ServiceTransaction::computeRangeFingerprint( listRecord, 0 ) != write._range._fingerprint )
+                {
+                    outInfo._conflictIndex = static_cast<int32>( writeIndex );
+                    return ServiceStoreResult::Conflict;
+                }
+                continue;
+            }
+            const Entry* pEntry         = findEntry( write._table, write._key );
+            const uint64 currentVersion = pEntry == nullptr ? ServiceRecord::kAbsentVersion : pEntry->_version;
             if ( MemoryServiceStoreInternal::isVersionMatched( write._expectedVersion, currentVersion ) == false )
             {
                 outInfo._conflictIndex = static_cast<int32>( writeIndex );

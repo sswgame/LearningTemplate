@@ -351,6 +351,132 @@ SW_TEST_CASE( ServiceStoreParityTest, ConcurrentCreatesHaveOneWinner, ._timeoutS
     SW_EXPECT_EQUAL( kJobCount - 1, conflictCount );
 }
 
+namespace
+{
+    const hashed_string kRangeTable{ "rangeparity" };
+
+    /** @brief 범위 조건(`requireRange`)의 약속을 글 줄로 적습니다. 메모리와 SQL 이 같은 줄을 내야 합니다. 저장소 일 안(읽기 집합 연결)에서 돈다. */
+    struct ServiceRangeParity
+    {
+        static uint64 listFingerprint( IServiceStoreConnection& connection, string_view cursor, int32 maxCount, bool bDescending )
+        {
+            vector<ServiceRecord> listRecord;
+            SW_EXPECT_TRUE( ServiceRecordReader::readPage( connection, kRangeTable, "q/", cursor, maxCount, bDescending, listRecord )._result == ServiceStoreResult::Ok );
+            return ServiceTransaction::computeRangeFingerprint( listRecord, 0 );
+        }
+
+        static void put( IServiceStoreConnection& connection, string_view key, string_view text )
+        {
+            ServiceTransaction transaction;
+            transaction.put( kRangeTable, key, SQLServiceStoreTestUtil::makeBytes( text ) );
+            SW_EXPECT_TRUE( connection.commit( transaction ) == ServiceStoreResult::Ok );
+        }
+
+        /** @brief "q/" 범위를 @p fingerprint 로 걸고 범위 밖 키 @p otherKey 를 쓰는(비면 조건만) 커밋의 결과 줄입니다. */
+        static void recordGuardedCommit( vector<string>& inoutListLine, IServiceStoreConnection& connection, string_view step, string_view cursor, int32 maxCount, bool bDescending,
+                                         uint64 fingerprint, string_view writeKey )
+        {
+            ServiceTransaction transaction;
+            transaction.requireRange( kRangeTable, "q/", cursor, maxCount, bDescending, fingerprint );
+            if ( writeKey.empty() == false )
+                transaction.put( kRangeTable, writeKey, SQLServiceStoreTestUtil::makeBytes( "w" ) );
+            ServiceCommitInfo info;
+            ServiceStoreParity::addLine( inoutListLine, step, connection.commit( transaction, &info ), info._conflictIndex );
+        }
+
+        static vector<string> runScenario( IServiceStoreConnection& connection )
+        {
+            vector<string> listLine;
+            put( connection, "q/1", "1" );
+            put( connection, "q/2", "2" );
+
+            uint64 fingerprint = listFingerprint( connection, "", 10, false );
+            recordGuardedCommit( listLine, connection, "unchanged", "", 10, false, fingerprint, "z/a" );
+
+            fingerprint = listFingerprint( connection, "", 10, false );
+            put( connection, "q/3", "3" ); // 범위에 끼어든 삽입(팬텀)
+            recordGuardedCommit( listLine, connection, "inserted", "", 10, false, fingerprint, "z/b" );
+
+            fingerprint = listFingerprint( connection, "", 10, false );
+            put( connection, "z/c", "c" ); // 범위 밖
+            recordGuardedCommit( listLine, connection, "outside", "", 10, false, fingerprint, "z/d" );
+
+            fingerprint = listFingerprint( connection, "", 10, false );
+            recordGuardedCommit( listLine, connection, "own write", "", 10, false, fingerprint, "q/4" ); // 이 트랜잭션의 쓰기는 견줄 대상이 아니다
+
+            fingerprint = listFingerprint( connection, "", 1, false );
+            put( connection, "q/9", "9" ); // 본 쪽(첫 줄) 밖
+            recordGuardedCommit( listLine, connection, "past the page", "", 1, false, fingerprint, "z/e" );
+
+            fingerprint = listFingerprint( connection, "", 10, false );
+            put( connection, "q/1", "one" ); // 범위 안 레코드가 바뀌었다
+            recordGuardedCommit( listLine, connection, "updated", "", 10, false, fingerprint, "" );
+
+            fingerprint = listFingerprint( connection, "", 10, false );
+            {
+                ServiceTransaction erase;
+                erase.erase( kRangeTable, "q/2" );
+                SW_EXPECT_TRUE( connection.commit( erase ) == ServiceStoreResult::Ok );
+            }
+            recordGuardedCommit( listLine, connection, "erased", "", 10, false, fingerprint, "" );
+
+            fingerprint = listFingerprint( connection, "q/4", 10, true ); // 커서 앞(작은 키)을 거꾸로
+            put( connection, "q/0", "0" );
+            recordGuardedCommit( listLine, connection, "inserted before cursor", "q/4", 10, true, fingerprint, "" );
+
+            fingerprint = listFingerprint( connection, "q/4", 10, true );
+            put( connection, "q/5", "5" ); // 커서 뒤
+            recordGuardedCommit( listLine, connection, "inserted after cursor", "q/4", 10, true, fingerprint, "" );
+            return listLine;
+        }
+    };
+} // namespace
+
+/** @brief 범위 조건: 목록을 읽은 뒤 범위에 끼어든 삽입 · 바뀐 레코드 · 지운 레코드는 커밋을 Conflict 로, 범위 밖 · 본 쪽 밖 · 이 트랜잭션의 쓰기는 통과시킨다 — 메모리와 SQLite 가 같다(감사 [5] 팬텀) */
+SW_TEST_CASE( ServiceStoreParityTest, RangeConditionsAnswerLikeMemory, ._timeoutSeconds = 60 )
+{
+    MemoryServiceDatabase database;
+    MemoryServiceStore    memory{ &database };
+    vector<string>        listMemoryLine;
+    SW_REQUIRE_TRUE( SQLServiceStoreTestUtil::run( memory, [&]( IServiceStoreConnection& connection )
+    { listMemoryLine = ServiceRangeParity::runScenario( connection ); } ) );
+    const vector<string> listExpected{ "unchanged: 0 -1", "inserted: 2 0", "outside: 0 -1", "own write: 0 -1",
+                                       "past the page: 0 -1", "updated: 2 0", "erased: 2 0", "inserted before cursor: 2 0",
+                                       "inserted after cursor: 0 -1" };
+    SW_REQUIRE_EQUAL( listExpected.size(), listMemoryLine.size() );
+    for ( size_t index = 0; index < listExpected.size(); ++index )
+    {
+        SW_EXPECT_EQUAL( listExpected[index], listMemoryLine[index] );
+    }
+
+    SQLiteStoreFixture fixture;
+    vector<string>     listSQLLine;
+    SW_REQUIRE_TRUE( SQLServiceStoreTestUtil::run( fixture._store, [&]( IServiceStoreConnection& connection )
+    { listSQLLine = ServiceRangeParity::runScenario( connection ); } ) );
+    SW_REQUIRE_EQUAL( listMemoryLine.size(), listSQLLine.size() );
+    for ( size_t index = 0; index < listMemoryLine.size(); ++index )
+    {
+        SW_EXPECT_EQUAL( listMemoryLine[index], listSQLLine[index] );
+    }
+}
+
+/** @brief 읽기 집합 연결은 목록 읽기를 다음 커밋의 범위 조건으로 건다 — 손으로 `requireRange` 를 적지 않아도 읽은 뒤 끼어든 삽입이 커밋을 막고, 아무것도 쓰지 않는다 */
+SW_TEST_CASE( ServiceStoreParityTest, ReadSetConditionsTheListedRange )
+{
+    MemoryServiceDatabase database;
+    ServiceRangeParity::put( database, "q/1", "1" );
+    ServiceReadSetConnection readSet( database );
+    vector<ServiceRecord>    listRecord;
+    SW_REQUIRE_TRUE( ServiceRecordReader::readPage( readSet, kRangeTable, "q/", "", 10, false, listRecord )._result == ServiceStoreResult::Ok );
+    ServiceRangeParity::put( database, "q/2", "2" ); // 다른 서버의 삽입
+    ServiceTransaction transaction;
+    transaction.put( kRangeTable, "z/a", SQLServiceStoreTestUtil::makeBytes( "a" ) );
+    SW_EXPECT_TRUE( readSet.commit( transaction ) == ServiceStoreResult::Conflict );
+    ServiceRecord record;
+    SW_EXPECT_TRUE( database.readRecord( kRangeTable, "z/a", record ) == ServiceStoreResult::NotFound );
+    SW_EXPECT_TRUE( readSet.commit( transaction ) == ServiceStoreResult::Ok ); // 커밋이 읽은 것을 비웠다 — 다시 읽지 않은 시도는 조건이 없다
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // 문장과 트랜잭션 — 가짜 드라이버
 // ---------------------------------------------------------------------------------------------------------------------
