@@ -49,7 +49,7 @@ namespace sw
                 bool operator()( const LoginSessionRef& left, const LoginSessionRef& right ) const { return left._accountID < right._accountID; }
             };
 
-            static string makeNameKey( string_view displayName ) { return StringUtil::toLower( string( displayName ).c_str() ); }
+            static string makeNameKey( string_view displayName ) { return StringUtil::toLower( displayName ); }
 
             static string makeConfigKey( const utf8* pPrefix, string_view platform )
             {

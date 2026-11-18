@@ -159,7 +159,7 @@ namespace sw
             {
                 string_view fileName;
                 FileUtil::getFileNamePart( packPath, fileName );
-                return uniquePatchFileNameLower.contains( StringUtil::toLower( string( fileName ).c_str() ) );
+                return uniquePatchFileNameLower.contains( StringUtil::toLower( fileName ) );
             }
 
             /**

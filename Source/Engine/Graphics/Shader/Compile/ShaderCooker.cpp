@@ -146,7 +146,7 @@ namespace sw
         if ( bStdEntry )
             basePart += string( stageTag );
         else
-            basePart += StringUtil::toLower( string( entryPoint ).c_str() );
+            basePart += StringUtil::toLower( entryPoint );
 
         if ( permutationHash != 0 )
         {

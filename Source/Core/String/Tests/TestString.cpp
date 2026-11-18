@@ -1502,6 +1502,8 @@ SW_TEST_CASE( StringTest, WideCaseMappingAndEqualsMatchNarrow )
     SW_EXPECT_TRUE( sw::StringUtil::toLower( L"ABCxYZ09" ) == sw::wstring( L"abcxyz09" ) );
     SW_EXPECT_TRUE( sw::StringUtil::toUpper( static_cast<const utf16*>( nullptr ) ).empty() );
     SW_EXPECT_TRUE( sw::StringUtil::toLower( "" ).empty() );
+    SW_EXPECT_TRUE( sw::StringUtil::toLower( sw::string_view( "ABCxYZ09" ).substr( 1, 4 ) ) == "bcxy" ); // 널로 끝나지 않는 조각
+    SW_EXPECT_TRUE( sw::StringUtil::toLower( sw::string_view{} ).empty() );
     SW_EXPECT_TRUE( sw::StringUtil::equals( sw::wstring_view( L"Scene" ), sw::wstring_view( L"SCENE" ), true ) );
     SW_EXPECT_FALSE( sw::StringUtil::equals( sw::wstring_view( L"Scene" ), sw::wstring_view( L"SCENE" ), false ) );
     SW_EXPECT_FALSE( sw::StringUtil::equals( sw::wstring_view( L"Scene" ), sw::wstring_view( L"Scenes" ), true ) );

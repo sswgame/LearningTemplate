@@ -157,6 +157,8 @@ namespace sw
         static wstring toUpper( const utf16* pInput );
         /** @brief UTF-8 문자열 전체를 소문자로 변환합니다. */
         static string toLower( const utf8* pInput );
+        /** @brief 글 조각(@p text) 전체를 소문자로 변환합니다(ASCII 만). `toLower( string( text ).c_str() )` 로 임시 문자열을 만들지 않고 이것을 씁니다. */
+        static string toLower( string_view text );
         /** @brief UTF-16 문자열 전체를 소문자로 변환합니다. */
         static wstring toLower( const utf16* pInput );
         /**

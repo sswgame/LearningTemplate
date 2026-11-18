@@ -20,7 +20,7 @@ namespace sw
     {
         struct AssetDatabaseInternal
         {
-            static string toLowerID( string_view assetID ) { return StringUtil::toLower( string( assetID ).c_str() ); }
+            static string toLowerID( string_view assetID ) { return StringUtil::toLower( assetID ); }
 
             /** @brief 서술 리소스 id(`a/b.png.meta`)의 원본 리소스 id(`a/b.png`)입니다. */
             static string_view toSourceID( string_view sidecarID ) { return sidecarID.substr( 0, sidecarID.size() - AssetMeta::kExtension.size() ); }

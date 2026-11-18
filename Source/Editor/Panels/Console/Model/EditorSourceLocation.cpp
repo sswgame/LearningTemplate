@@ -179,7 +179,7 @@ namespace sw::editor
 
     void EditorLogTagFilter::setTagVisible( string_view tag, bool bVisible )
     {
-        const string key = StringUtil::toLower( string( tag ).c_str() );
+        const string key = StringUtil::toLower( tag );
         if ( bVisible )
             _uniqueHiddenTag.erase( key );
         else
@@ -191,7 +191,7 @@ namespace sw::editor
     {
         if ( _uniqueHiddenTag.empty() )
             return true;
-        return _uniqueHiddenTag.find( StringUtil::toLower( string( tag ).c_str() ) ) == _uniqueHiddenTag.end();
+        return _uniqueHiddenTag.find( StringUtil::toLower( tag ) ) == _uniqueHiddenTag.end();
     }
 
     void EditorLogTagFilter::showAll()

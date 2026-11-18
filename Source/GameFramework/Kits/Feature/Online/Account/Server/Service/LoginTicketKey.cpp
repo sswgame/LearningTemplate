@@ -28,7 +28,7 @@ namespace sw
         const string_view trimmed = StringUtil::trim( text );
         if ( trimmed.size() != static_cast<size_t>( LoginTicketAuthority::kMasterKeySize ) * 2 )
             return false;
-        const string lower = StringUtil::toLower( string( trimmed ).c_str() );
+        const string lower = StringUtil::toLower( trimmed );
         for ( int32 chunkIndex = 0; chunkIndex < LoginTicketAuthority::kMasterKeySize / Internal::kBytesPerChunk; ++chunkIndex )
         {
             uint64 value = 0;

@@ -58,7 +58,7 @@ namespace sw
                 for ( const string& line : listLine )
                 {
                     const string_view fqn        = string_view( line ).substr( 0, line.find( '\t' ) );
-                    string            leaf       = StringUtil::toLower( string( ParserUtil::scopeLeaf( fqn ) ).c_str() );
+                    string            leaf       = StringUtil::toLower( ParserUtil::scopeLeaf( fqn ) );
                     const auto [iter, bInserted] = mapLeafToFqn.emplace( std::move( leaf ), string( fqn ) );
                     if ( bInserted || iter->second == fqn )
                         continue;

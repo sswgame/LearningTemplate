@@ -125,7 +125,7 @@ namespace sw::editor
             const string_view word  = pattern.substr( start, end - start );
             const size_t      colon = word.find( ':' );
             if ( colon != string_view::npos && colon > 0 && colon + 1 < word.size() )
-                query._listFacet.emplace_back( StringUtil::toLower( string( word.substr( 0, colon ) ).c_str() ), string( word.substr( colon + 1 ) ) );
+                query._listFacet.emplace_back( StringUtil::toLower( word.substr( 0, colon ) ), string( word.substr( colon + 1 ) ) );
             else if ( word.empty() == false )
                 query._text += ( query._text.empty() ? "" : " " ) + string( word );
             start = end + 1;
@@ -146,7 +146,7 @@ namespace sw::editor
                 // 상태(`is:`)는 낱말 전체로 견준다 — `active` 가 `inactive` 안에도 들어 있다. 나머지 칸은 이어진 일부로 견준다(`type:mesh`).
                 const string_view facetValue = string_view( facet ).substr( colon + 1 );
                 const bool        bWhole     = field == "is";
-                const bool        bHit       = bWhole ? StringUtil::toLower( string( facetValue ).c_str() ) == StringUtil::toLower( value.c_str() ) : EditorSearchItem::containsIgnoreCase( facetValue, value );
+                const bool        bHit       = bWhole ? StringUtil::toLower( facetValue ) == StringUtil::toLower( value.c_str() ) : EditorSearchItem::containsIgnoreCase( facetValue, value );
                 if ( bHit )
                 {
                     bMatched = true;

@@ -117,7 +117,7 @@ namespace sw
 
             static bool isSecret( string_view name )
             {
-                const string lower = StringUtil::toLower( string{ name }.c_str() );
+                const string lower = StringUtil::toLower( name );
                 for ( const string_view fragment : kArrSecretFragment )
                 {
                     if ( string_view{ lower }.find( fragment ) != string_view::npos )

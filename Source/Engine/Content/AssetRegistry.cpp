@@ -18,7 +18,7 @@ namespace sw
     {
         struct AssetRegistryInternal
         {
-            static string toLowerID( string_view assetID ) { return StringUtil::toLower( string( assetID ).c_str() ); }
+            static string toLowerID( string_view assetID ) { return StringUtil::toLower( assetID ); }
 
             /** @brief 한 층 안에 GUID · 경로(대소문자 무시)가 겹치지 않으면 빈 결과, 겹치면 그 까닭입니다. */
             [[nodiscard]] static expected<void> checkLayer( const AssetRegistryLayer& layer )

@@ -16,7 +16,7 @@ namespace sw
     {
         struct UserDataPathInternal
         {
-            static string makeFolderName( string_view gameName ) { return gameName.empty() ? string( "default" ) : StringUtil::toLower( string( gameName ).c_str() ); }
+            static string makeFolderName( string_view gameName ) { return gameName.empty() ? string( "default" ) : StringUtil::toLower( gameName ); }
 
             /** @brief @p pRootEnvironment 가 있으면 그 아래, 없으면 `$HOME/<homeRelative>` 아래 `<vendor>/<game>` 입니다. 둘 다 없으면 빈 글. */
             static string makeUnderEnvironment( const utf8* pRootEnvironment, const utf8* pHomeRelative, const utf8* pVendor, string_view gameName )

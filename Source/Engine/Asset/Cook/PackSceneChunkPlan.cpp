@@ -26,7 +26,7 @@ namespace sw
     string PackSceneChunkPlan::makeSceneChunkName( string_view sceneID )
     {
         using Internal         = PackSceneChunkPlanInternal;
-        string      normalized = StringUtil::toLower( string( sceneID ).c_str() );
+        string      normalized = StringUtil::toLower( sceneID );
         string_view rest       = normalized;
         if ( StringUtil::startsWith( rest, Internal::kGamePrefix ) )
             rest.remove_prefix( Internal::kGamePrefix.size() );

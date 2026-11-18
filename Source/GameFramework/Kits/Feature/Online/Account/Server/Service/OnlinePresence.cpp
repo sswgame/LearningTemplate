@@ -185,7 +185,7 @@ namespace sw
             return deferNotFound( onFound, ownerID );
         const uint64     lookupID = _lookupIDAllocator.allocate();
         PendingOperation pending;
-        pending._nameKey     = StringUtil::toLower( string( displayName ).c_str() );
+        pending._nameKey     = StringUtil::toLower( displayName );
         pending._onFound     = onFound;
         pending._lookupID    = lookupID;
         pending._ownerID     = ownerID;

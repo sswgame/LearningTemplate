@@ -20,7 +20,7 @@ namespace sw::editor
         if ( ownerName.empty() || StringUtil::endsWith( sceneAssetID, EditorBakeOutputPathInternal::kSceneSuffix ) == false )
             return {};
         string path{ sceneAssetID.substr( 0, sceneAssetID.size() - EditorBakeOutputPathInternal::kSceneSuffix.size() ) };
-        string name = StringUtil::toLower( string( ownerName ).c_str() );
+        string name = StringUtil::toLower( ownerName );
         for ( utf8& character : name )
         {
             const bool bAllowed = ( 'a' <= character && character <= 'z' ) || ( '0' <= character && character <= '9' );
