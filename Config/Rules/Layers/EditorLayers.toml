@@ -71,6 +71,7 @@ views = [
     "Viewport/EditorViewportOverlays.cpp",
     "Viewport/EditorViewportProjection.cpp",
     "Viewport/EditorViewportVisualizer.cpp",
+    "Viewport/ViewportInputOverlay.cpp",
     "Viewport/Visualizers/TerrainBrushVisualizer.cpp",
 ]
 patterns = [
