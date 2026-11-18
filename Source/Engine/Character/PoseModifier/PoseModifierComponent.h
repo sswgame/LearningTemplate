@@ -229,6 +229,8 @@ namespace sw
         };
         /** @brief 바깥 대상을 오브젝트와 유닛에 연결하고 의존을 등록합니다. */
         void bindExternalTargets();
+        /** @brief 같은 이름의 유닛 연결이 있으면 @p binding 으로 바꾸고 없으면 더한 뒤, 대상을 다시 묶습니다(`bindUnit` · `bindRigidUnit` · `bindRigidComponentUnit` 공통). */
+        void setUnitBinding( const SkeletalMeshBinding& binding );
         /** @brief 유닛 · 소켓 대상이 가리키는 유닛과 본을 찾습니다. 소켓이 없으면 오류를 남기고 false 이며, 아직 유닛이 없는 것은 true 로 두고 `_pTargetUnit` 이 null 입니다. */
         [[nodiscard]] bool resolveSocketTarget( const RigTargetDef& def, string_view label, SocketTargetResolution& outResolved ) const;
         /** @brief 묶을 때 건 의존을 뗍니다. */
