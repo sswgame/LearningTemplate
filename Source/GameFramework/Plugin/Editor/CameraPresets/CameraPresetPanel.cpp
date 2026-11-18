@@ -9,14 +9,11 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Reflection/EnumName.h"
 
 #include <imgui.h>
@@ -34,10 +31,10 @@ namespace sw::editor
 
             [[nodiscard]] static const CameraPresetPanel* findOpenPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return nullptr;
-                const CameraPresetPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<CameraPresetPanel>();
+                const CameraPresetPanel* pPanel = pPanels->findPanel<CameraPresetPanel>();
                 return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
             }
 

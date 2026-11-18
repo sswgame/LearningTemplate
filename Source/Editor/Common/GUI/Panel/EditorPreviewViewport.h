@@ -143,6 +143,10 @@ namespace sw::editor
     private:
         /** @brief `-gv_editorPreviewScreenshot` 이 있으면 충분히 그린 뒤 이 타깃을 한 번 찍습니다(시나리오 눈 확인). */
         void requestScreenshotIfAsked();
+        /** @brief 렌더 타깃을 @p size 에 맞추고(다시 만들기 요청) 그 텍스처 id 를 돌려줍니다. 타깃이 아직 없으면 nullptr 입니다. */
+        [[nodiscard]] void* acquireTargetTexture( const float2& size );
+        /** @brief 지금 카메라로 이 씬의 뷰를 렌더러에 냅니다(이번 프레임 그리기) — 그린 프레임 수를 세고 청한 스크린숏을 찍는다. */
+        void submitView();
 
     private:
         Scene*  _pScene;

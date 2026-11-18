@@ -18,7 +18,7 @@ namespace sw::editor
     /**
      * @class ParkLayoutPreview
      * @brief 활성 게임 팩의 공원 배치 · 코스터 파일을 읽어 모델에 넘깁니다. 폴더 감시가 바뀌었다고 알리면 다시 읽습니다.
-     * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`) — 패널과 시각화가 `editor::findSubsystem<ParkLayoutPreview>()` 로 같이 본다.
+     * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`) — 패널과 시각화가 `find()` 로 같이 본다.
      *          프레임워크는 게임 이름을 모른다. 배치 · 코스터 파일은 활성 팩 루트(`GameConfig`)와 데이터 종류(`ParkLayout::kDataKind` ·
      *          `CoasterLayoutCatalog::kDataKind`)로 찾는다(`GamePackDataUtil`). 팩에 배치 파일이 없으면 `isMissing()` 이고 다른 게임의 파일로 대체하지 않는다.
      *          프레임마다 파일을 읽지 않는다 — 언리얼 · 유니티처럼 폴더 감시(`IContentFolderWatch`)의 알림을 기다린다. 이 플랫폼에 감시자가 없으면 그때만 내용을 매번 비교한다.
@@ -30,6 +30,9 @@ namespace sw::editor
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         ParkLayoutPreview();
+
+        /** @brief 에디터 범위에 걸린 이 서브시스템입니다. 프레임 앞 sync 전이면 nullptr 입니다. 패널 View 가 작업 공간 헤더(`EditorService.h`) 없이 찾는 창구다(`docs/agents/EditorUI.md` MVVM). */
+        [[nodiscard]] static ParkLayoutPreview* find();
 
         /**
          * @brief 처음이거나 파일이 바뀌었으면 다시 읽습니다. 다시 읽었으면(처음, 바뀜, @p bForce) true 를 반환합니다. 읽기에 실패해도 true 이고 결과는 `isLoaded` 입니다.

@@ -21,15 +21,8 @@
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
 
-#include "Engine/Foundation/GameObjectHandle.h"
-
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/PairedAnimationEditModel.h"
-
-namespace sw
-{
-    class GameObjectManager;
-    class SkeletalAnimatorComponent;
-} // namespace sw
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/PairedAnimationPreviewDriver.h"
 
 namespace sw::editor
 {
@@ -54,17 +47,6 @@ namespace sw::editor
         const PairedAnimationEditModel& getModel() const { return _model; }
 
     private:
-        /** @brief 역할 하나의 미리보기 오브젝트입니다(역할 인덱스와 같은 순서). */
-        struct RoleSlot
-        {
-            fixed_string<constant::file::kMaxPathSize> _prefabPath{};     ///< 미리보기에 놓을 프리팹(리소스 id). 비면 놓지 않는다
-            string                                     _spawnedPath{};    ///< 지금 놓은 오브젝트의 프리팹. 다르면 다시 놓는다
-            GameObjectHandle                           _object{};         ///< 놓은 오브젝트
-            float3                                     _placedPosition{}; ///< 지난 그리기에 창이 놓은 자리 — 다르면 기즈모가 옮긴 것이다
-            float32                                    _placedYaw{ 0.0f };
-            float32                                    _clipSeconds{ 0.0f }; ///< 역할 클립 길이(못 읽었으면 0)
-        };
-
         bool                canAcceptDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
         void                populatePreviewScene( Scene& scene ) override;
@@ -79,21 +61,13 @@ namespace sw::editor
         void drawRoleRows();
         void drawNotifyRows();
         void drawHistoryRow();
-        /** @brief 역할 프리팹을 (다시) 놓고, 기즈모가 옮긴 오프셋을 모델에 넣고, 스크럽 시각의 자세 · 자리를 맞춥니다. */
-        void syncPreviewRoles();
-        /** @brief 역할의 미리보기 오브젝트를 놓습니다(프리팹이 바뀌었으면 옛 것을 지우고). */
-        void ensureRoleObject( GameObjectManager& manager, uint32 roleIndex );
-        /** @brief 역할 오브젝트의 애니메이터를 스크럽 시각의 자세로 맞춥니다. */
-        void poseRoleObject( SkeletalAnimatorComponent& animator, uint32 roleIndex );
         /** @brief 모델 편집 결과를 상태 줄과 dirty 표시에 반영합니다. */
         void reportEdit( const expected<void>& result );
-        /** @brief 미리보기 씬의 매니저입니다. 씬이 없으면 nullptr 입니다. */
-        GameObjectManager* findPreviewManager() const;
 
     private:
         PairedAnimationEditModel               _model;
         EditorPreviewGizmo                     _gizmo;
-        vector<RoleSlot>                       _listSlot;
+        PairedAnimationPreviewDriver           _previewDriver;   ///< 역할마다 미리보기 오브젝트(씬 동기화는 Model/ 이 한다)
         vector<uint32>                         _listFiredNotify; ///< 지난 스크럽이 앞으로 지나며 울린 알림(표시용)
         string                                 _status;
         string                                 _editError;

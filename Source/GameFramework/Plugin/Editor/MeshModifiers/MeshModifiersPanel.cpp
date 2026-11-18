@@ -11,20 +11,15 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
@@ -128,7 +123,7 @@ namespace sw::editor
              * @brief 씬 오브젝트 고르기 콤보와 "선택 사용" 단추를 그립니다(참조 하나 · 참조 목록 항목이 함께 쓴다).
              * @return 이름을 새로 골랐으면 true 이고 @p outPicked 에 이름이 들어 있다(빈 글 = 비우기). 같은 이름을 다시 골라도 true 일 수 있다.
              */
-            static bool drawReferencePicker( const MeshModifierParamDef& def, const utf8* pLabel, const string& current, string& outPicked, const utf8* pMarkKey )
+            static bool drawReferencePicker( const MeshModifierSession& session, const MeshModifierParamDef& def, const utf8* pLabel, const string& current, string& outPicked, const utf8* pMarkKey )
             {
                 bool        bPicked  = false;
                 const utf8* pPreview = current.empty() ? SW_LOCKEY( "EdMeshModifiers", "ReferenceNone" ) : current.c_str();
@@ -139,35 +134,18 @@ namespace sw::editor
                         outPicked = string();
                         bPicked   = true;
                     }
-                    GameObjectManager*  pManager = getActiveObjectManager();
-                    vector<GameObject*> listObject;
-                    if ( pManager != nullptr )
-                        pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey(), listObject );
-                    // 걸러 볼 컴포넌트가 있으면 그것을 가진 오브젝트만, 하나도 없으면 알리고 전체를 보인다
-                    bool bAnyMatch = false;
-                    for ( const GameObject* pObject : listObject )
-                    {
-                        if ( pObject != nullptr && MeshModifierParamEdit::matchesComponentHint( *pObject, def._pRequiredComponentHint ) )
-                        {
-                            bAnyMatch = true;
-                            break;
-                        }
-                    }
+                    vector<string> listName;
+                    bool           bAnyMatch = false;
+                    session.collectReferenceCandidates( def._pRequiredComponentHint, listName, bAnyMatch ); // 걸러 볼 컴포넌트가 있으면 그것을 가진 오브젝트만, 하나도 없으면 알리고 전체를 보인다
                     if ( bAnyMatch == false && def._pRequiredComponentHint != nullptr )
                         ImGui::TextDisabled( "%s %s", SW_LOCKEY( "EdMeshModifiers", "ReferenceNoMatch" ), def._pRequiredComponentHint );
-                    for ( const GameObject* pObject : listObject )
+                    for ( size_t nameIndex = 0; nameIndex < listName.size(); ++nameIndex )
                     {
-                        if ( pObject == nullptr )
-                            continue;
-                        if ( bAnyMatch && MeshModifierParamEdit::matchesComponentHint( *pObject, def._pRequiredComponentHint ) == false )
-                            continue;
-                        const utf8* pName = pObject->getName().c_str();
-                        if ( pName == nullptr || pName[0] == '\0' )
-                            continue; // 참조는 이름으로 찾으므로 이름 없는 오브젝트는 고를 수 없다
-                        ImGui::PushID( pObject );
-                        if ( ImGui::Selectable( pName, string_view( current ) == string_view( pName ) ) )
+                        const string& name = listName[nameIndex];
+                        ImGui::PushID( static_cast<int32>( nameIndex ) );
+                        if ( ImGui::Selectable( name.c_str(), string_view( current ) == string_view( name ) ) )
                         {
-                            outPicked = string( pName );
+                            outPicked = name;
                             bPicked   = true;
                         }
                         ImGui::PopID();
@@ -181,16 +159,8 @@ namespace sw::editor
                 if ( bUseSelection )
                 {
                     // 모델링 도구는 레벨의 오브젝트를 고친다(언리얼 Modeling Mode 는 레벨 선택) — 메인 씬의 선택이다.
-                    GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
-                    if ( pObject == nullptr )
-                        SW_LOG_WARNING_ID( "MeshModifiersPanel.SelectObjectSceneFirst", "Select an object in the scene first" );
-                    else if ( MeshModifierParamEdit::matchesComponentHint( *pObject, def._pRequiredComponentHint ) == false )
-                        SW_LOG_WARNING_ID( "MeshModifiersPanel.ObjectNoComponent", "Object %# has no %# component", pObject->getName().c_str(), def._pRequiredComponentHint );
-                    else
-                    {
-                        outPicked = string( pObject->getName().c_str() );
-                        bPicked   = true;
-                    }
+                    if ( session.tryPickSelectedReference( def._pRequiredComponentHint, outPicked ) )
+                        bPicked = true;
                 }
                 if ( def._pRequiredComponentHint != nullptr )
                 {
@@ -275,7 +245,7 @@ namespace sw::editor
 
     void MeshModifiersPanel::drawContent()
     {
-        MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();
+        MeshModifierSession* pSession = MeshModifierSession::find();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         MeshModifierSession& session = *pSession;
@@ -302,13 +272,13 @@ namespace sw::editor
 
     bool MeshModifiersPanel::saveDocument()
     {
-        MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();
+        MeshModifierSession* pSession = MeshModifierSession::find();
         return pSession != nullptr && pSession->saveSidecar(); // 실패는 saveSidecar 가 알린다
     }
 
     void MeshModifiersPanel::collectFilesToSave( vector<string>& outListPath ) const
     {
-        const MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();
+        const MeshModifierSession* pSession = MeshModifierSession::find();
         const optional<string>     sidecar  = pSession != nullptr ? pSession->findSidecarPath() : nullopt;
         if ( sidecar.has_value() )
             outListPath.push_back( *sidecar );
@@ -316,7 +286,7 @@ namespace sw::editor
 
     bool MeshModifiersPanel::canSaveDocument() const
     {
-        const MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();
+        const MeshModifierSession* pSession = MeshModifierSession::find();
         return pSession != nullptr && pSession->isStackUnsaved();
     }
 
@@ -331,7 +301,7 @@ namespace sw::editor
 
     void MeshModifiersPanel::revertDocument()
     {
-        MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();
+        MeshModifierSession* pSession = MeshModifierSession::find();
         if ( pSession != nullptr )
             pSession->revertStackToSaved();
     }
@@ -348,8 +318,7 @@ namespace sw::editor
         EditorSelfTestMarks::record( "meshmodifiers.useSelection" );
         if ( bUseSelection )
         {
-            GameObject*          pObject = editor::getMainSceneSelection().getPrimaryObject(); // 메인 씬의 선택(위 `UseSelectionForParam` 과 같다)
-            const expected<void> picked  = session.setTarget( pObject );
+            const expected<void> picked = session.setTargetFromSelection(); // 메인 씬의 선택(위 `UseSelectionForParam` 과 같다)
             if ( picked.has_value() == false )
                 SW_LOG_WARNING_ID( "MeshModifiersPanel.MeshModifiersNeedObject", "Mesh modifiers could not take the selection: %# (%#)", picked.error().message(), picked.error().detail() );
         }
@@ -1027,7 +996,7 @@ namespace sw::editor
         const MeshModifierParamDef& def     = modifier.getParamDefs()[paramIndex];
         const string&               current = modifier.getText( paramIndex );
         string                      picked  = current;
-        if ( MeshModifiersPanelInternal::drawReferencePicker( def, def._pName, current, picked, "meshmodifiers.reference" ) && string_view( picked ) != string_view( current ) )
+        if ( MeshModifiersPanelInternal::drawReferencePicker( session, def, def._pName, current, picked, "meshmodifiers.reference" ) && string_view( picked ) != string_view( current ) )
         {
             session.applyEdit( [&]
             {
@@ -1061,7 +1030,7 @@ namespace sw::editor
             const string current = value._listText[item];
             string       picked  = current;
             const string markKey = string( "meshmodifiers.referenceList." ) + to_string( static_cast<uint32>( item ) );
-            if ( MeshModifiersPanelInternal::drawReferencePicker( def, "##Item", current, picked, markKey.c_str() ) && string_view( picked ) != string_view( current ) )
+            if ( MeshModifiersPanelInternal::drawReferencePicker( session, def, "##Item", current, picked, markKey.c_str() ) && string_view( picked ) != string_view( current ) )
             {
                 value._listText[item] = picked;
                 bChange               = true;

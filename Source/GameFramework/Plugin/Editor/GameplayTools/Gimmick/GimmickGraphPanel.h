@@ -15,17 +15,11 @@
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphModel.h"
-
-namespace sw
-{
-    class GameObject;
-    class GimmickCircuitComponent;
-} // namespace sw
+#include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/Model/GimmickCircuitEditSession.h"
 
 namespace sw::editor
 {
@@ -57,48 +51,47 @@ namespace sw::editor
             int32  _nodeGraphID{ 0 };
         };
 
-        GimmickCircuitComponent* findCircuit();
-        void                     reload( GimmickCircuitComponent& circuit );
-        void                     refreshIssues();
+        /** @brief 회로를 다시 읽은 뒤 창 상태(캔버스 자리 · 고른 노드 · 폼 · 문제)를 맞춥니다. */
+        void onReloaded( bool bLoadFailed );
+        void refreshIssues();
         /** @brief 캔버스의 노드 자리를 모델에 싣고, 커밋하지 않은 배치(노드 자리 · 주석)가 있으면 마우스를 놓았을 때 한 편집으로 남깁니다. */
-        void commitLayoutWhenReleased( GimmickCircuitComponent& circuit );
+        void commitLayoutWhenReleased();
         /** @brief 주석 상자를 그리고(노드보다 먼저) 이름 바꾸기 · 보기 막대의 새 상자 요청을 편집으로 남깁니다. */
-        void drawComments( GimmickCircuitComponent& circuit );
+        void drawComments();
 
         // 그리기
-        void               drawToolbar( GimmickCircuitComponent& circuit );
-        void               drawCanvasArea( GimmickCircuitComponent& circuit );
+        void               drawToolbar();
+        void               drawCanvasArea();
         void               drawNode( const GimmickGraphNode& node );
-        void               drawSidePanel( GimmickCircuitComponent& circuit );
-        void               drawNodeInspector( GimmickCircuitComponent& circuit );
-        void               drawWireSection( GimmickCircuitComponent& circuit );
-        void               drawIssueSection( GimmickCircuitComponent& circuit );
+        void               drawSidePanel();
+        void               drawNodeInspector();
+        void               drawWireSection();
+        void               drawIssueSection();
         bool               drawCommittedText( const utf8* pID, const string& current, string& outText, const utf8* pHint = nullptr );
-        void               handleCanvasInteractions( GimmickCircuitComponent& circuit );
+        void               handleCanvasInteractions();
         [[nodiscard]] bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
         bool               isPinLinked( int32 pinID ) const;
 
         // 편집 — 모델을 고치고 컴포넌트에 쓰고 Undo 에 올린다
-        ObjectSnapshot beginEdit( GimmickCircuitComponent& circuit ) const;
-        void           commitEdit( GimmickCircuitComponent& circuit, const ObjectSnapshot& before, const utf8* pLabel );
-        void           editAddNode( GimmickCircuitComponent& circuit, const hashed_string& kind, const float2* pPosition );
-        void           editRemove( GimmickCircuitComponent& circuit, const EditorGraphRemoval& removal );
+        void commitEdit( const utf8* pLabel );
+        void editAddNode( const hashed_string& kind, const float2* pPosition );
+        void editRemove( const EditorGraphRemoval& removal );
         /** @brief 노드를 비켜 복제합니다(Ctrl+D · 붙여 넣기). 한 편집으로 남깁니다. */
-        void editDuplicate( GimmickCircuitComponent& circuit, const vector<int32>& listNode, const float2& offset );
+        void editDuplicate( const vector<int32>& listNode, const float2& offset );
         /** @brief 캔버스 단축키 Ctrl+C · X · V · D 를 받습니다. 복사 버퍼에는 노드 번호를 둔다 — 붙여 넣기는 같은 회로의 그 노드를 복제한다. */
-        void handleEditCommands( GimmickCircuitComponent& circuit );
-        void editRemoveOrphanWires( GimmickCircuitComponent& circuit );
-        void editConnect( GimmickCircuitComponent& circuit, int32 fromNode, string_view fromPort, int32 toNode, string_view toPort );
-        void editRename( GimmickCircuitComponent& circuit, int32 nodeID, const string& newID );
-        void editSetParam( GimmickCircuitComponent& circuit, int32 nodeID, string_view name, string_view value );
-        void editSetTarget( GimmickCircuitComponent& circuit, int32 nodeID, GameObjectHandle target );
-        void editSetInvert( GimmickCircuitComponent& circuit, int32 wireID, bool bInvert );
+        void handleEditCommands();
+        void editRemoveOrphanWires();
+        void editConnect( int32 fromNode, string_view fromPort, int32 toNode, string_view toPort );
+        void editRename( int32 nodeID, const string& newID );
+        void editSetParam( int32 nodeID, string_view name, string_view value );
+        void editSetTarget( int32 nodeID, GameObjectHandle target );
+        void editSetInvert( int32 wireID, bool bInvert );
 
     private:
         GimmickGraphModel         _model;
         EditorNodeGraph           _nodeGraph;
         vector<GimmickGraphIssue> _listIssue;
-        GameObjectHandle          _ownerHandle;
+        GimmickCircuitEditSession _session; ///< 편집하는 회로(핸들)와 읽기 · 쓰기
         PortChoice                _formFrom;
         PortChoice                _formTo;
         string                    _editText;

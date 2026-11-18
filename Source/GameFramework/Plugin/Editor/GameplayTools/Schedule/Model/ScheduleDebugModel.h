@@ -27,55 +27,58 @@ namespace sw::editor
         uint32 _timelineRowCount{ 0 }; ///< 고른 NPC 의 오늘 타임라인 줄 수(고른 NPC 가 없으면 0)
     };
 
+    /** @brief 창이 한 프레임 그릴 값입니다(`ScheduleDebugModel::gather`). 값만 담는다 — 일정 시스템 포인터를 들지 않는다. */
+    struct ScheduleDebugViewState
+    {
+        vector<string>              _listNPC;            ///< 고른 시스템의 NPC id(시스템 안 번호 순서)
+        vector<ScheduleTimelineRow> _listRow;            ///< 고른 NPC 의 오늘 타임라인(미리 볼 시각 기준)
+        string                      _explanation;        ///< "지금 왜 이 행동인가"(접는 머리가 열려 있을 때만 채운다)
+        string                      _rawTimeline;        ///< 날 것 타임라인 글(접는 머리가 열려 있을 때만 채운다)
+        int32                       _systemCount{ 0 };   ///< NPC 가 있는 살아 있는 일정 시스템 수
+        int32                       _systemIndex{ 0 };   ///< 고른 시스템 번호
+        optional<int32>             _selectedNPC{};      ///< 고른 NPC 의 `_listNPC` 번호. 없으면 비어 있다
+        int32                       _previewMinute{ 0 }; ///< 미리 볼 시각(그날의 분)
+        int32                       _nowMinute{ 0 };     ///< 게임 시각(그날의 분)
+        int32                       _day{ 0 };           ///< 게임 날짜
+        uint8                       _bHasSystem{ SW_FALSE };
+        uint8                       _bPlayStopped{ SW_FALSE }; ///< 에디터 플레이가 멈춰 있다(빈 상태의 "플레이" 단추)
+        uint8                       _bFollowClock{ SW_FALSE };
+    };
+
     /**
      * @class ScheduleDebugModel
-     * @brief NPC 일정 디버그 창의 상태와 명령입니다. 파일 머리말 참고.
+     * @brief NPC 일정 디버그 창의 ViewModel 입니다 — 그리기마다 `gather` 가 값을 모으고, 창은 의도를 명령으로 넘깁니다. 파일 머리말 참고.
+     * @details 일정 시스템 포인터는 `gather` 안에서만 쓴다(시스템은 매번 `ScheduleSystem::collectLiveSystems` 로 다시 찾는다).
      */
     class ScheduleDebugModel
     {
     public:
         ScheduleDebugModel();
 
-        /**
-         * @brief NPC 가 있는 살아 있는 일정 시스템을 다시 모으고 게시 값을 비운 뒤, 고른 시스템의 NPC 수를 게시합니다. 패널이 그리기마다 맨 먼저 부릅니다.
-         * @return 고른 시스템입니다. 없으면 nullptr 입니다(이 프레임 안에서만 씁니다).
-         */
-        const ScheduleSystem* refreshSystems();
-        /** @brief 이번 프레임에 모은 시스템 수입니다. */
-        size_t getSystemCount() const { return _listActiveSystem.size(); }
-        int32  getSystemIndex() const { return _systemIndex; }
-        /** @brief 시스템 @p systemIndex 를 고릅니다(범위 밖이면 첫 시스템). 고른 시스템의 NPC 수를 게시하고 그 시스템을 돌려줍니다. */
-        const ScheduleSystem* selectSystem( int32 systemIndex );
+        /** @brief 살아 있는 일정 시스템을 다시 모아 이번 프레임 값을 @p outState 에 채우고 감시 값을 게시합니다. 창이 그리기 맨 앞에서 한 번 부릅니다. */
+        void gather( ScheduleDebugViewState& outState );
 
-        const hashed_string& getSelectedNPC() const { return _selectedNPC; }
-        void                 selectNPC( const hashed_string& npcID ) { _selectedNPC = npcID; }
-        /** @brief 고른 NPC 의 @p system 안 번호입니다. 고르지 않았거나 없으면 -1 입니다. */
-        [[nodiscard]] optional<int32> findSelectedNPCIndex( const ScheduleSystem& system ) const;
-
-        /** @brief 시계를 따라가면 미리 볼 시각을 @p system 의 지금 시각으로 맞춥니다. */
-        void  followClock( const ScheduleSystem& system );
-        bool& editFollowClock() { return _bFollowClock; }
-        int32 getPreviewMinute() const { return _previewMinute; }
+        /** @brief 시스템 @p systemIndex 를 고릅니다(범위 밖이면 다음 `gather` 가 첫 시스템으로 둔다). */
+        void selectSystem( int32 systemIndex ) { _systemIndex = systemIndex; }
+        /** @brief NPC @p npcID 를 고릅니다. */
+        void selectNPC( string_view npcID ) { _selectedNPC = hashed_string( npcID ); }
+        /** @brief 미리 볼 시각이 게임 시계를 따라갈지 정합니다. */
+        void setFollowClock( bool bFollow ) { _bFollowClock = bFollow; }
         /** @brief 미리 볼 시각을 @p minute 으로 두고 시계 따라가기를 끕니다(슬라이더). */
         void setPreviewMinute( int32 minute );
-
-        /** @brief NPC @p npcIndex 의 오늘 계획을 미리 볼 시각 기준 표 행으로 다시 짓고 그 줄 수를 게시합니다. */
-        const vector<ScheduleTimelineRow>& refreshTimeline( const ScheduleSystem& system, int32 npcIndex );
-        /** @brief NPC @p npcIndex 가 지금 이 행동인 이유입니다(지금 시각 기준 — 미리 볼 시각과 상관없다). 다음 호출까지 유효합니다. */
-        const string& explain( const ScheduleSystem& system, int32 npcIndex );
-        /** @brief NPC @p npcIndex 의 날 것 타임라인 글입니다(지금 시각 기준). 다음 호출까지 유효합니다. */
-        const string& dumpTimeline( const ScheduleSystem& system, int32 npcIndex );
+        /** @brief 설명 · 날 것 타임라인 글을 보이는지 알립니다(보기 상태 — 기록하지 않는다). 다음 `gather` 부터 보이는 글만 짓는다. */
+        void setTextShown( bool bExplanation, bool bRawTimeline );
 
         const ScheduleDebugPublished& getPublished() const { return _published; }
 
     private:
-        vector<const ScheduleSystem*> _listActiveSystem; ///< NPC 가 있는 살아 있는 시스템. `refreshSystems` 가 그리기마다 다시 채운다(프레임 너머로 쓰지 않는다)
-        vector<ScheduleTimelineRow>   _listRow;
-        string                        _text;
+        vector<const ScheduleSystem*> _listActiveSystem; ///< NPC 가 있는 살아 있는 시스템. `gather` 안에서만 쓴다
         hashed_string                 _selectedNPC;
         int32                         _systemIndex;
         int32                         _previewMinute;
-        bool                          _bFollowClock; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-        ScheduleDebugPublished        _published;    ///< 감시 값이 읽는 게시 값
+        uint8                         _bFollowClock      : 1;
+        uint8                         _bExplanationShown : 1;
+        uint8                         _bRawTimelineShown : 1;
+        ScheduleDebugPublished        _published; ///< 감시 값이 읽는 게시 값
     };
 } // namespace sw::editor

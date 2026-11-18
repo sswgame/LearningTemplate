@@ -11,23 +11,14 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/AnimationClip.h"
-#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
-#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Object/Prefab/PrefabCache.h"
-#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 
@@ -41,23 +32,14 @@ namespace sw::editor
             static constexpr float32 kMinViewportHeight = 220.0f;
             /// @brief 화면에 담을 반지름(미터)입니다 — 두 사람이 1 ~ 2 m 떨어져 선다.
             static constexpr float32 kFrameRadius = 2.5f;
-            /// @brief 기즈모가 옮겼다고 보는 자리 차이(m)와 요 차이(라디안)입니다. 창이 놓은 값을 다시 읽는 반올림은 이보다 작다.
-            static constexpr float32 kMovedToleranceMeters  = 1.0e-4f;
-            static constexpr float32 kMovedToleranceRadians = 1.0e-4f;
-
-            /** @brief 자리 · 요(라디안)의 월드 변환입니다. */
-            static float4x4 makeWorld( const float3& position, float32 yaw )
-            {
-                return float4x4::makeTrs( position, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, yaw ), float3{ 1.0f, 1.0f, 1.0f } );
-            }
 
             /** @brief 열린 창입니다. 닫혔으면 nullptr 입니다(감시 값이 실패한다). */
             [[nodiscard]] static const PairedAnimationPanel* findOpenPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return nullptr;
-                const PairedAnimationPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<PairedAnimationPanel>();
+                const PairedAnimationPanel* pPanel = pPanels->findPanel<PairedAnimationPanel>();
                 return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
             }
 
@@ -96,7 +78,7 @@ namespace sw::editor
         : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
         , _model{}
         , _gizmo{}
-        , _listSlot{}
+        , _previewDriver{}
         , _listFiredNotify{}
         , _status{}
         , _editError{}
@@ -125,7 +107,13 @@ namespace sw::editor
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdPlugin", "SharedNotifies" ), ImGuiTreeNodeFlags_DefaultOpen ) )
             drawNotifyRows();
 
-        syncPreviewRoles();
+        {
+            bool           bEdited = false;
+            expected<void> edit{};
+            _previewDriver.sync( getPreviewScene(), _model, _gizmo.hasMouse(), _status, bEdited, edit );
+            if ( bEdited )
+                reportEdit( edit );
+        }
         const float2 viewSize = computeViewportFillSize( PairedAnimationPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, _gizmo.hasMouse() );
         _gizmo.draw( *this );
@@ -175,16 +163,8 @@ namespace sw::editor
             return ToolAssetLoadResult::Malformed;
         }
         // 역할 수가 바뀌었을 수 있다 — 미리보기 오브젝트를 새로 놓는다(프리팹 경로는 같은 인덱스면 남긴다).
-        GameObjectManager* pManager = findPreviewManager();
-        for ( RoleSlot& slot : _listSlot )
-        {
-            GameObject* pObject = pManager != nullptr ? pManager->resolveGameObject( slot._object ) : nullptr;
-            if ( pObject != nullptr )
-                pManager->destroyGameObject( pObject );
-            slot._object = GameObjectHandle{};
-            slot._spawnedPath.clear();
-        }
-        _listSlot.resize( _model.getContent()._listRole.size() );
+        _previewDriver.destroySpawned( getPreviewScene() );
+        _previewDriver.editSlots().resize( _model.getContent()._listRole.size() );
         _listFiredNotify.clear();
         _previousScrubTime = 0.0f;
         resetDocumentHistory();
@@ -195,12 +175,8 @@ namespace sw::editor
 
     void PairedAnimationPanel::populatePreviewScene( Scene& scene )
     {
-        (void)scene; // 역할 오브젝트는 프리팹을 고른 뒤 놓는다(syncPreviewRoles)
-        for ( RoleSlot& slot : _listSlot )
-        {
-            slot._object = GameObjectHandle{};
-            slot._spawnedPath.clear();
-        }
+        (void)scene; // 역할 오브젝트는 프리팹을 고른 뒤 놓는다(`PairedAnimationPreviewDriver::sync`)
+        _previewDriver.clearSpawned();
     }
 
     void PairedAnimationPanel::drawHistoryRow()
@@ -259,19 +235,19 @@ namespace sw::editor
     void PairedAnimationPanel::drawRoleRows()
     {
         const vector<PairedAnimationRoleDef>& listRole = _model.getContent()._listRole;
-        _listSlot.resize( listRole.size() );
+        _previewDriver.editSlots().resize( listRole.size() );
         for ( uint32 roleIndex = 0; roleIndex < static_cast<uint32>( listRole.size() ); ++roleIndex )
         {
             const PairedAnimationRoleDef&    role    = listRole[roleIndex];
-            const PairedAnimationRolePreview preview = _model.computeRolePreview( roleIndex, _listSlot[roleIndex]._clipSeconds );
+            const PairedAnimationRolePreview preview = _model.computeRolePreview( roleIndex, _previewDriver.editSlots()[roleIndex]._clipSeconds );
             const utf8*                      pStage  = preview._stage == PairedAnimationPreviewStage::Waiting ? "waiting"
                                                      : preview._stage == PairedAnimationPreviewStage::Playing ? "playing"
                                                                                                               : "exited";
             ImGui::PushID( static_cast<int32>( roleIndex ) );
             ImGui::SeparatorText( role._name.c_str() );
-            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "ClipS", TextArgumentList().addText( "role", role._bAnchor ? "anchor" : ( role._bRequired ? "required" : "optional" ) ).addText( "clip", role._clip.c_str() ).addText( "stage", pStage ).addDecimal( "clipSeconds", static_cast<float64>( preview._clipSeconds ), 3 ).addText( "clipLength", _listSlot[roleIndex]._clipSeconds > 0.0f ? "known" : "unknown" ) ).c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "ClipS", TextArgumentList().addText( "role", role._bAnchor ? "anchor" : ( role._bRequired ? "required" : "optional" ) ).addText( "clip", role._clip.c_str() ).addText( "stage", pStage ).addDecimal( "clipSeconds", static_cast<float64>( preview._clipSeconds ), 3 ).addText( "clipLength", _previewDriver.editSlots()[roleIndex]._clipSeconds > 0.0f ? "known" : "unknown" ) ).c_str() );
 
-            RoleSlot& slot = _listSlot[roleIndex];
+            PairedAnimationRoleSlot& slot = _previewDriver.editSlots()[roleIndex];
             ImGui::SetNextItemWidth( -1.0f );
             (void)EditorWidgets::drawAssetPathField( "##Prefab", slot._prefabPath.data(), slot._prefabPath.max_size(), "Preview prefab (resource id, not saved)", ".prefab.xml,.prefab.json",
                                                      ( string( "pairedanim.role." ) + role._name.c_str() + ".prefab" ).c_str() );
@@ -380,111 +356,6 @@ namespace sw::editor
         EditorSelfTestMarks::record( "pairedanim.addNotify" );
     }
 
-    void PairedAnimationPanel::syncPreviewRoles()
-    {
-        GameObjectManager* pManager = findPreviewManager();
-        if ( pManager == nullptr )
-            return;
-        const vector<PairedAnimationRoleDef>& listRole = _model.getContent()._listRole;
-        _listSlot.resize( listRole.size() );
-        const float3  anchorPosition{};
-        const float32 anchorYaw = 0.0f;
-        for ( uint32 roleIndex = 0; roleIndex < static_cast<uint32>( listRole.size() ); ++roleIndex )
-        {
-            ensureRoleObject( *pManager, roleIndex );
-            RoleSlot&       slot    = _listSlot[roleIndex];
-            GameObject*     pObject = pManager->resolveGameObject( slot._object );
-            SceneComponent* pRoot   = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            if ( pRoot == nullptr )
-                continue;
-
-            // 기즈모가 정렬 역할을 옮겼으면 그 자리를 오프셋으로 넣는다.
-            const PairedAnimationRoleDef& role     = listRole[roleIndex];
-            const bool                    bAligned = role._bAnchor == false && role._align != PairedAnimationAlign::None;
-            const float3                  current  = pRoot->getWorldPosition();
-            const float32                 yaw      = OrientationUtil::computeYawFromWorld( pRoot->getWorldMatrix() );
-            const bool                    bMoved   = ( current - slot._placedPosition ).getLength() > PairedAnimationPanelInternal::kMovedToleranceMeters ||
-                                MathUtil::abs( MathUtil::wrapAngle( yaw - slot._placedYaw ) ) > PairedAnimationPanelInternal::kMovedToleranceRadians;
-            if ( bAligned && bMoved )
-                reportEdit( _model.setRoleOffsetFromWorld( roleIndex, anchorPosition, anchorYaw, current, yaw, true ) );
-            else if ( bMoved && _gizmo.hasMouse() == false )
-                _model.endContinuousEdit();
-
-            float3  target{};
-            float32 targetYaw = 0.0f;
-            _model.computeRoleTarget( roleIndex, anchorPosition, anchorYaw, target, targetYaw );
-            pRoot->setWorldTransform( PairedAnimationPanelInternal::makeWorld( target, targetYaw ) );
-            slot._placedPosition = pRoot->getWorldPosition();
-            slot._placedYaw      = OrientationUtil::computeYawFromWorld( pRoot->getWorldMatrix() );
-
-            SkeletalAnimatorComponent* pAnimator = pObject->getComponent<SkeletalAnimatorComponent>();
-            if ( pAnimator != nullptr )
-                poseRoleObject( *pAnimator, roleIndex );
-        }
-    }
-
-    void PairedAnimationPanel::ensureRoleObject( GameObjectManager& manager, uint32 roleIndex )
-    {
-        RoleSlot&    slot       = _listSlot[roleIndex];
-        const string prefabPath = string( slot._prefabPath.c_str() );
-        GameObject*  pExisting  = manager.resolveGameObject( slot._object );
-        if ( pExisting != nullptr && slot._spawnedPath == prefabPath )
-            return;
-        if ( pExisting != nullptr )
-            manager.destroyGameObject( pExisting );
-        slot._object = GameObjectHandle{};
-        slot._spawnedPath.clear();
-        slot._clipSeconds = 0.0f;
-        if ( prefabPath.empty() )
-            return;
-
-        AssetManager* pAssets  = manager.findAssetManager();
-        GameObject*   pSpawned = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefabPath ) : nullptr;
-        slot._spawnedPath      = prefabPath; // 실패해도 같은 경로로 매 프레임 다시 놓지 않는다(경로를 고치면 다시 한다)
-        if ( pSpawned == nullptr )
-        {
-            _status = string( "Prefab '" ) + prefabPath + "' could not be spawned - see the log";
-            return;
-        }
-        slot._object                            = pSpawned->getHandle();
-        slot._placedPosition                    = float3{};
-        slot._placedYaw                         = 0.0f;
-        SkeletalAnimatorComponent*    pAnimator = pSpawned->getComponent<SkeletalAnimatorComponent>();
-        const PairedAnimationRoleDef& role      = _model.getContent()._listRole[roleIndex];
-        if ( pAnimator == nullptr )
-        {
-            _status = string( "Prefab '" ) + prefabPath + "' has no skeletal animator on its root - the role cannot play";
-            return;
-        }
-        pAnimator->setPlayRate( 0.0f ); // 창이 시각을 정한다
-        const AnimationClip* pClip = pAnimator->preloadClip( role._clip ) ? pAnimator->findClip( role._clip ) : nullptr;
-        if ( pClip == nullptr )
-        {
-            _status = string( "Role clip '" ) + role._clip.c_str() + "' is not in the prefab's clip folder";
-            return;
-        }
-        slot._clipSeconds = pClip->getDuration();
-    }
-
-    void PairedAnimationPanel::poseRoleObject( SkeletalAnimatorComponent& animator, uint32 roleIndex )
-    {
-        const PairedAnimationRoleDef&    role    = _model.getContent()._listRole[roleIndex];
-        const PairedAnimationRolePreview preview = _model.computeRolePreview( roleIndex, _listSlot[roleIndex]._clipSeconds );
-        if ( preview._stage == PairedAnimationPreviewStage::Exited )
-        {
-            if ( animator.getCurrentStateName() != role._exitState )
-                (void)animator.play( role._exitState, true, 0.0f ); // 못 찾은 종료 상태는 `play` 가 오류로 남긴다
-            return;
-        }
-        if ( _listSlot[roleIndex]._clipSeconds <= 0.0f )
-            return; // 클립을 읽지 못했다 — 상태 줄이 알렸다
-        if ( animator.getCurrentStateName() != role._clip )
-            (void)animator.play( role._clip, false, 0.0f ); // 클립은 ensureRoleObject 에서 읽었다
-        // 기다리는 역할은 클립 첫 자세를 보인다(세션에서는 아직 다른 것을 재생하지만, 저작에는 진입 자세가 쓸모 있다).
-        const float32 clipTime = preview._stage == PairedAnimationPreviewStage::Playing ? preview._clipSeconds : 0.0f;
-        (void)animator.seekCurrentTime( clipTime ); // 범위 밖은 모델이 자른다 — 실패는 seek 가 오류로 남긴다
-    }
-
     void PairedAnimationPanel::reportEdit( const expected<void>& result )
     {
         if ( result.has_value() == false )
@@ -497,12 +368,6 @@ namespace sw::editor
             markDocumentDirty();
         else
             clearDocumentDirty();
-    }
-
-    GameObjectManager* PairedAnimationPanel::findPreviewManager() const
-    {
-        Scene* pScene = getPreviewScene();
-        return pScene != nullptr ? pScene->getObjectManager() : nullptr;
     }
 
     bool PairedAnimationPanel::findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const

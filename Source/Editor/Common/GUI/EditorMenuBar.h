@@ -30,9 +30,7 @@ namespace sw::editor
         /** @brief Workspace에 쌓인 패널 열기 요청을 소비합니다. */
         static void processOpenPanelRequests();
 
-        /** @brief File 메뉴가 고른 씬 경로를 메인 스레드에서 로드합니다. */
-        static void processPendingSceneLoad();
-        /** @brief 씬 세대 동기화와 "저장하지 않은 변경" 확인 창을 처리합니다. */
+        /** @brief 씬 세대 동기화 · File 메뉴가 고른 씬 열기와 "저장하지 않은 변경" 확인 창을 처리합니다. */
         static void processSceneSession();
 
     private:
@@ -48,8 +46,6 @@ namespace sw::editor
          * @details 지난 프레임에 측정한 너비로 오른쪽 끝에 붙이고, 마지막 메뉴와 겹칠 위치면 그 프레임은 그리지 않습니다.
          */
         static void drawStatusArea();
-        /** @brief 라이브 코딩 빌드가 끝난 순간(Compiling → Success / Failed)을 알림으로 띄웁니다. 상태 영역을 그리지 않는 프레임에도 부릅니다. */
-        static void notifyLiveCodingResult( IModuleCompiler& compiler );
         /** @brief 상태 영역의 내용(컴파일 버튼 · 빌드 상태 · RHI · FPS)을 그립니다. */
         static void drawStatusContent( IModuleCompiler* pCompiler );
     };

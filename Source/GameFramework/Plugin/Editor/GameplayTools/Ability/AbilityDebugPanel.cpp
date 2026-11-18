@@ -2,24 +2,15 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.h"
 
-#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
-
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 
 #include <imgui.h>
 
@@ -32,10 +23,10 @@ namespace sw::editor
             /** @brief 열린 어빌리티 디버거가 지난 그리기에서 모은 상태입니다. 창이 닫혔거나 모으지 않았으면 nullptr 입니다. */
             [[nodiscard]] static const AbilityDebugSnapshot* findOpenSnapshot()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return nullptr;
-                const AbilityDebugPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<AbilityDebugPanel>();
+                const AbilityDebugPanel* pPanel = pPanels->findPanel<AbilityDebugPanel>();
                 return pPanel != nullptr && pPanel->isOpen() ? pPanel->findSnapshot() : nullptr;
             }
 
@@ -68,60 +59,26 @@ namespace sw::editor
         };
     } // namespace
 
-    AbilityComponent* AbilityDebugPanel::findTarget()
+    void AbilityDebugPanel::drawTargetPicker()
     {
-        // 선택한 오브젝트에 컴포넌트가 있으면 그것을 본다 — 도는 월드(메인 씬)를 디버그하는 창이라 메인 씬의 선택이다
-        vector<GameObject*> listSelected;
-        editor::getMainSceneSelection().getSelectedObjects( listSelected );
-        for ( GameObject* pObject : listSelected )
-        {
-            AbilityComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilityComponent>() : nullptr;
-            if ( pAbilitySystem != nullptr )
-            {
-                _pickedHandle = pObject->getHandle();
-                return pAbilitySystem;
-            }
-        }
-        // 없으면 목록에서 고른 것을 이어서 본다
-        GameObjectManager* pObjects = getActiveObjectManager();
-        if ( pObjects == nullptr || _pickedHandle.isValid() == false )
-            return nullptr;
-        GameObject* pOwner = pObjects->resolveGameObject( _pickedHandle );
-        return pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
-    }
-
-    void AbilityDebugPanel::drawTargetPicker( const AbilityComponent* pCurrent )
-    {
-        GameObjectManager* pObjects = getActiveObjectManager();
-        if ( pObjects == nullptr )
+        if ( _state._bHasScene == SW_FALSE )
             return;
-
-        const GameObject* pCurrentOwner = pCurrent != nullptr ? pCurrent->getOwner() : nullptr;
-        const utf8*       pPreview      = pCurrentOwner != nullptr ? pCurrentOwner->getName().c_str() : SW_LOCKEY( "EdAbilityDebug", "PickTarget" );
-        const bool        bOpen         = EditorWidgets::beginCombo( "##AbilityTarget", pPreview );
+        const utf8* pPreview = _state._targetName.empty() == false ? _state._targetName.c_str() : SW_LOCKEY( "EdAbilityDebug", "PickTarget" );
+        const bool  bOpen    = EditorWidgets::beginCombo( "##AbilityTarget", pPreview );
         EditorSelfTestMarks::record( "abilityDebug.target" );
         if ( bOpen == false )
             return;
 
-        // 펼칠 때만 씬을 훑는다
-        _listCandidate.clear();
-        pObjects->forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [this]( GameObject* pObject )
-        {
-            if ( pObject != nullptr && pObject->getComponent<AbilityComponent>() != nullptr )
-                _listCandidate.push_back( pObject->getHandle() );
-        } );
+        _viewModel.gatherCandidates( _listCandidate ); // 펼칠 때만 씬을 훑는다
         if ( _listCandidate.empty() )
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdAbilityDebug", "NoComponentsInScene" ) );
-        for ( const GameObjectHandle& handle : _listCandidate )
+        for ( const AbilityDebugCandidate& candidate : _listCandidate )
         {
-            GameObject* pObject = pObjects->resolveGameObject( handle );
-            if ( pObject == nullptr )
-                continue;
-            ImGui::PushID( static_cast<int32>( pObject->getObjectID() ) );
-            if ( ImGui::Selectable( pObject->getName().c_str(), pObject == pCurrentOwner ) )
-                _pickedHandle = handle;
+            ImGui::PushID( static_cast<int32>( candidate._objectID ) );
+            if ( ImGui::Selectable( candidate._name.c_str(), candidate._bCurrent != SW_FALSE ) )
+                _viewModel.pickTarget( candidate._handle );
             ImGui::PopID();
-            const string mark = string( "abilityDebug.candidate." ) + pObject->getName().c_str();
+            const string mark = string( "abilityDebug.candidate." ) + candidate._name;
             EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 대상을 고른다(펼칠 때만 그려진다)
         }
         ImGui::EndCombo();
@@ -129,26 +86,23 @@ namespace sw::editor
 
     void AbilityDebugPanel::drawContent()
     {
-        _bSnapshotValid           = SW_FALSE;
-        AbilityComponent* pTarget = findTarget();
-        drawTargetPicker( pTarget );
+        _viewModel.gather( _state );
+        drawTargetPicker();
 
-        if ( EditorPlaySession::isStopped() )
+        if ( _state._bPlayStopped != SW_FALSE )
         {
             // 안내 아래에 그 다음 할 일(Play) 단추를 둔다 — 도구줄까지 눈을 옮기지 않는다(Godot 빈 독의 할 일 단추).
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdAbilityDebug", "HintPlayOnly" ) );
             (void)EditorCommandGUI::drawCommandButton( "play.start" );
             return;
         }
-        if ( pTarget == nullptr )
+        if ( _state._bHasSnapshot == SW_FALSE )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdAbilityDebug", "HintNoTarget" ) );
             return;
         }
 
-        AbilityDebugSnapshot::collect( *pTarget, _snapshot );
-        _bSnapshotValid = SW_TRUE;
-        ImGui::TextDisabled( "t = %.2f", static_cast<float64>( _snapshot._time ) );
+        ImGui::TextDisabled( "t = %.2f", static_cast<float64>( _state._snapshot._time ) );
         drawSnapshot();
     }
 
@@ -164,7 +118,7 @@ namespace sw::editor
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnBase" ) );
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnCurrent" ) );
                 ImGui::TableHeadersRow();
-                for ( const AbilityDebugAttributeRow& row : _snapshot._listAttribute )
+                for ( const AbilityDebugAttributeRow& row : _state._snapshot._listAttribute )
                 {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
@@ -187,7 +141,7 @@ namespace sw::editor
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnStacks" ) );
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnSource" ) );
                 ImGui::TableHeadersRow();
-                for ( const AbilityDebugEffectRow& row : _snapshot._listEffect )
+                for ( const AbilityDebugEffectRow& row : _state._snapshot._listEffect )
                 {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
@@ -213,7 +167,7 @@ namespace sw::editor
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnTag" ) );
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnCount" ) );
                 ImGui::TableHeadersRow();
-                for ( const AbilityDebugTagRow& row : _snapshot._listTag )
+                for ( const AbilityDebugTagRow& row : _state._snapshot._listTag )
                 {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
@@ -233,7 +187,7 @@ namespace sw::editor
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnActive" ) );
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnCooldown" ) );
                 ImGui::TableHeadersRow();
-                for ( const AbilityDebugAbilityRow& row : _snapshot._listAbility )
+                for ( const AbilityDebugAbilityRow& row : _state._snapshot._listAbility )
                 {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
@@ -254,7 +208,7 @@ namespace sw::editor
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdAbilityDebug", "SectionLog" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             EditorSelfTestMarks::record( "abilityDebug.log" );
-            if ( _snapshot._listLog.empty() )
+            if ( _state._snapshot._listLog.empty() )
                 EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdAbilityDebug", "HintNoLog" ) );
             else if ( ImGui::BeginTable( "##EffectLog", 4, kTableFlags ) )
             {
@@ -263,7 +217,7 @@ namespace sw::editor
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnName" ) );
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnSource" ) );
                 ImGui::TableHeadersRow();
-                for ( const AbilityDebugLogRow& row : _snapshot._listLog )
+                for ( const AbilityDebugLogRow& row : _state._snapshot._listLog )
                 {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();

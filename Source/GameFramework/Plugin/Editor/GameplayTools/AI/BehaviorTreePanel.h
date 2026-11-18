@@ -85,8 +85,6 @@ namespace sw::editor
         void    markStructureChanged();
         void    layoutTree();
         float32 layoutNode( int32 id, uint32 depth, float32& inoutNextRow );
-        /** @brief 선택한 오브젝트의 활성 노드를 내놓는 실행기입니다. 컴포넌트에 안 붙은 실행기(`IBehaviorTreeDebugSource`)는 연 파일과 같은 트리일 때만 잡고 @p outName 에 이름을 채웁니다. */
-        const BehaviorTreeRunner* findLiveRunner( string& outName ) const;
 
     private:
         BehaviorTreeEditModel         _model;

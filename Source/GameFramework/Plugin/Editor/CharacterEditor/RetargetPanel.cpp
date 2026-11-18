@@ -12,7 +12,6 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
@@ -48,7 +47,7 @@ namespace sw::editor
             /** @brief 감시 값이 읽는 값 하나입니다 — 패널 인스턴스가 게시한 값 중 @p pField 를 @p outValue 에 씁니다. 패널이 없으면 false 입니다. */
             [[nodiscard]] static bool readPublished( uint32 RetargetPanel::Published::* pField, float64& outValue )
             {
-                const EditorPanelManager* pManager = editor::findSubsystem<EditorPanelManager>();
+                const EditorPanelManager* pManager = EditorPanelManager::findInEditorContext();
                 const RetargetPanel*      pPanel   = pManager != nullptr ? pManager->findPanel<RetargetPanel>() : nullptr;
                 if ( pPanel == nullptr )
                     return false;

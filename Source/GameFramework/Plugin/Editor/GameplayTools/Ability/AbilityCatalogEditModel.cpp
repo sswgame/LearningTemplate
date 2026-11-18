@@ -4,6 +4,8 @@
 
 #include "Core/String/formatString.h"
 
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
+
 namespace sw::editor
 {
     namespace
@@ -356,5 +358,12 @@ namespace sw::editor
         const bool bRemoved = _document.removeRow( _listEntry[static_cast<size_t>( entry )]._element );
         rebuild();
         return bRemoved;
+    }
+
+    bool AbilityCatalogEditModel::validateWithRuntimeLoader( string_view assetPath ) const
+    {
+        // 클래스 이름 · 참조 · 칸의 판정은 로더의 것이고 편집기가 따로 적지 않는다.
+        AbilityCatalog catalog;
+        return catalog.loadFromXMLText( _document.getText(), assetPath );
     }
 } // namespace sw::editor

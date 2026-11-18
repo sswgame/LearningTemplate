@@ -28,12 +28,11 @@ namespace sw::editor
                 outListName.insert( outListName.end(), std::begin( s_arrName ), std::end( s_arrName ) );
             }
 
-            void drawSection( Component* pComponent ) override
+            void drawSection( const EditorPropertyGridTarget& target ) override
             {
-                if ( pComponent == nullptr )
-                    return;
                 CameraSectionValues values;
-                InspectorComponentEdit::gatherCamera( *pComponent, values );
+                if ( InspectorComponentEdit::gatherCamera( target, values ) == false )
+                    return;
                 bool bChanged = false;
 
                 ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Camera" ) );
@@ -64,7 +63,7 @@ namespace sw::editor
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraOrthoHeight" ) );
                 }
                 if ( bChanged )
-                    InspectorComponentEdit::applyCamera( *pComponent, values );
+                    InspectorComponentEdit::applyCamera( target, values );
             }
         };
     } // namespace

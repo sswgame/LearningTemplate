@@ -23,23 +23,22 @@ namespace sw::editor
         class SceneComponentInspector final : public IInspectorComponent
         {
         public:
-            void drawSection( Component* pComponent ) override
+            void drawSection( const EditorPropertyGridTarget& target ) override
             {
-                if ( pComponent == nullptr )
+                TransformSectionValues values;
+                if ( InspectorComponentEdit::gatherTransform( target, values ) == false )
                     return;
 
                 ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Transform" ) );
 
                 EditorWidgets::drawGizmoOperationControls( "inspector.gizmo" );
 
-                TransformSectionValues values;
-                InspectorComponentEdit::gatherTransform( *pComponent, values );
                 if ( EditorWidgets::drawVec3Control( "Position", values._localPosition, 0.0f, 80.0f, 0.1f ) )
-                    InspectorComponentEdit::setLocalPosition( *pComponent, values._localPosition );
+                    InspectorComponentEdit::setLocalPosition( target, values._localPosition );
                 if ( EditorWidgets::drawVec3Control( "Rotation", values._localRotationDegrees, 0.0f, 80.0f, InspectorPropertyLayout::kAngleDragSpeed ) )
-                    InspectorComponentEdit::setLocalRotationDegrees( *pComponent, values._localRotationDegrees );
+                    InspectorComponentEdit::setLocalRotationDegrees( target, values._localRotationDegrees );
                 if ( EditorWidgets::drawVec3Control( "Scale", values._localScale, 1.0f, 80.0f, 0.01f ) )
-                    InspectorComponentEdit::setLocalScale( *pComponent, values._localScale );
+                    InspectorComponentEdit::setLocalScale( target, values._localScale );
 
                 const float3& world = values._worldPosition;
                 ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "World", TextArgumentList().addDecimal( "worldX", static_cast<float64>( world._x ), 2 ).addDecimal( "worldY", static_cast<float64>( world._y ), 2 ).addDecimal( "worldZ", static_cast<float64>( world._z ), 2 ) ).c_str() );

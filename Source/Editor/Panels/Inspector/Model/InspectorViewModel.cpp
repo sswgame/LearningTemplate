@@ -503,14 +503,12 @@ namespace sw::editor
         return editor::getSubsystem<EditorContext>().getSubsystem<InspectorComponentManager>().getInspectorsForType( *pType );
     }
 
-    GameObject* InspectorViewModel::findShownObject() const
+    bool InspectorViewModel::addComponent( const hashed_string& typeName )
     {
-        return PropertyGridModel::findSceneObject( _shownScope, _shownObjectID );
-    }
-
-    Component* InspectorViewModel::findShownComponent( uint64 componentID ) const
-    {
-        GameObject* pObj = findShownObject();
-        return pObj != nullptr ? pObj->findComponentByID( componentID ) : nullptr;
+        GameObject* pObj = PropertyGridModel::findSceneObject( _shownScope, _shownObjectID );
+        if ( pObj == nullptr )
+            return false;
+        EditorTransaction transaction; // 목록에서 고른 끝 — 씬을 바꾸는 여기서 거래를 연다
+        return EditorSceneCommands::addComponent( transaction, pObj, typeName ) != nullptr;
     }
 } // namespace sw::editor

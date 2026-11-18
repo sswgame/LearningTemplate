@@ -5,9 +5,16 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Editor/Common/GUI/IEditorPopup.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 namespace sw::editor
 {
+    EditorPopupManager& EditorPopupManager::getInEditorContext()
+    {
+        return editor::getSubsystem<EditorContext>().getSubsystem<EditorPopupManager>();
+    }
+
     void EditorPopupManager::registerPopup( unique_ptr<IEditorPopup> pPopup )
     {
         if ( pPopup == nullptr )

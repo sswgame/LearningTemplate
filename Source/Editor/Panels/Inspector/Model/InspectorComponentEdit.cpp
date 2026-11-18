@@ -8,11 +8,13 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Visual/2D/SpriteComponent.h"
 
 namespace sw::editor
@@ -97,6 +99,59 @@ namespace sw::editor
             if ( StringUtil::isNullOrEmpty( tag._pString ) == false )
                 outListTag.emplace_back( tag._pString );
         }
+    }
+
+    Component* InspectorComponentEdit::findComponent( const EditorPropertyGridTarget& target )
+    {
+        GameObject* pObject = PropertyGridModel::findSceneObject( target._scope, target._objectID );
+        return pObject != nullptr ? pObject->findComponentByID( target._componentID ) : nullptr;
+    }
+
+    bool InspectorComponentEdit::gatherCamera( const EditorPropertyGridTarget& target, CameraSectionValues& outValues )
+    {
+        const Component* pComponent = findComponent( target );
+        if ( pComponent != nullptr )
+            gatherCamera( *pComponent, outValues );
+        return pComponent != nullptr;
+    }
+
+    void InspectorComponentEdit::applyCamera( const EditorPropertyGridTarget& target, const CameraSectionValues& values )
+    {
+        if ( Component* pComponent = findComponent( target ) )
+            applyCamera( *pComponent, values );
+    }
+
+    bool InspectorComponentEdit::gatherTransform( const EditorPropertyGridTarget& target, TransformSectionValues& outValues )
+    {
+        const Component* pComponent = findComponent( target );
+        if ( pComponent != nullptr )
+            gatherTransform( *pComponent, outValues );
+        return pComponent != nullptr;
+    }
+
+    void InspectorComponentEdit::setLocalPosition( const EditorPropertyGridTarget& target, const float3& position )
+    {
+        if ( Component* pComponent = findComponent( target ) )
+            setLocalPosition( *pComponent, position );
+    }
+
+    void InspectorComponentEdit::setLocalRotationDegrees( const EditorPropertyGridTarget& target, const float3& rotationDegrees )
+    {
+        if ( Component* pComponent = findComponent( target ) )
+            setLocalRotationDegrees( *pComponent, rotationDegrees );
+    }
+
+    void InspectorComponentEdit::setLocalScale( const EditorPropertyGridTarget& target, const float3& scale )
+    {
+        if ( Component* pComponent = findComponent( target ) )
+            setLocalScale( *pComponent, scale );
+    }
+
+    void InspectorComponentEdit::collectTags( const EditorPropertyGridTarget& target, vector<string>& outListTag )
+    {
+        outListTag.clear();
+        if ( const Component* pComponent = findComponent( target ) )
+            collectTags( *pComponent, outListTag );
     }
 
     void InspectorComponentEdit::openSpriteClipTool()
