@@ -542,7 +542,7 @@ namespace sw
                     break;
             }
             const bool bExitDeadlineExceeded = isActive() && _run._exitDeadlineSeconds > 0.0 &&
-                                               _run._exitDeadlineSeconds < static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
+                                               _run._exitDeadlineSeconds < AutomationRunnerInternal::readNowSeconds();
             if ( bExitDeadlineExceeded )
                 finish( AutomationRunResult::failed( AutomationFailureKind::Assertion, "the window was asked to close but the loop kept running past ExpectExitWithin", {} ) );
             // 단계 시점(`_frameIndex`)은 붙잡은 프레임(`WaitUntil` · 입력 대상 자리 잡기 · 씬 로드 …)에 서 있다(뒤 단계가 그만큼 밀린다). 프레임 시한도 이 축으로 본다 —
@@ -885,7 +885,7 @@ namespace sw
         {
             if ( _run._exitDeadlineSeconds > 0.0 )
             {
-                const float64      nowSeconds   = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
+                const float64      nowSeconds   = AutomationRunnerInternal::readNowSeconds();
                 const QuitRequest* pQuitRequest = engine::findSubsystem<QuitRequest>();
                 const int32        quitExitCode = pQuitRequest != nullptr && pQuitRequest->isRequested() ? static_cast<int32>( pQuitRequest->getExitCode() ) : 0;
                 if ( quitExitCode != _run._expectedExitCode )
