@@ -202,7 +202,7 @@ struct MaterialTexture
     static float4 sampleIndex( uint index, float2 uv );
     static float4 sampleIndexTexture( uint index, float2 uv ); // 텍스처를 읽는다(보기 모드 Mipmaps 가 아닐 때의 sampleIndex)
     static float4 samplePoint( uint index, float2 uv );
-    static float4 sampleLevelZero( uint index, float2 uv );
+    static float4 sampleLevel( uint index, float2 uv, float level );               // 준 밉 단계로 — 정점 · 도메인 셰이더
     static float4 sampleGrad( uint index, float2 uv, float2 gradX, float2 gradY ); // 준 미분으로 — 아틀라스 타일을 frac 로 되풀이할 때
     static float2 computeSize( uint index );
     static float4 sampleMipColor( uint index, float2 uv );

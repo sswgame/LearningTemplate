@@ -811,7 +811,7 @@ static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
     #else
 static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
 {
-    return MaterialTexture::sampleLevelZero( index, uv ); // 암시 미분이 없는 단계 — 밉 0
+    return MaterialTexture::sampleLevel( index, uv, 0.0f ); // 암시 미분이 없는 단계 — 밉 0
 }
     #endif
 
@@ -829,92 +829,93 @@ static float4 MaterialTexture::sampleIndex( uint index, float2 uv )
     #endif
 
     /**
-     * @brief 머티리얼 텍스처를 밉 0 으로 읽습니다 — 정점 셰이더용이다(암시 미분이 없다). 인덱스의 뜻은 `MaterialTexture::sampleIndex` 와 같고 텍스처가 없으면 흰색입니다.
-     * @details 툰 외곽선 두께 텍스처(MToon outlineWidthMultiplyTexture)가 정점을 밀 때 쓴다. DX11 은 엔진이 머티리얼 슬롯과 정적 샘플러를 정점 셰이더에도 건다.
+     * @brief 머티리얼 텍스처를 준 밉 단계로 읽습니다 — 정점 · 도메인 셰이더용이다(암시 미분이 없다). 인덱스의 뜻은 `MaterialTexture::sampleIndex` 와 같고 텍스처가 없으면 흰색입니다.
+     * @details 툰 외곽선 두께 텍스처(MToon outlineWidthMultiplyTexture)가 밉 0 으로 정점을 밀고, 변위 도메인이 정점 간격에 맞춘 밉으로 높이를 읽는다.
+     *          DX11 은 엔진이 머티리얼 슬롯과 정적 샘플러를 정점 셰이더에도 건다.
      */
     #if SW_MATERIAL_TEXTURE_SAMPLER != 0
-        #error MaterialTexture::sampleLevelZero 는 머티리얼 샘플러가 정적 샘플러 0 번(g_SwSampler0)이라고 가정한다
+        #error MaterialTexture::sampleLevel 는 머티리얼 샘플러가 정적 샘플러 0 번(g_SwSampler0)이라고 가정한다
     #endif
-static float4 MaterialTexture::sampleLevelZero( uint index, float2 uv )
+static float4 MaterialTexture::sampleLevel( uint index, float2 uv, float level )
 {
     #if defined( SW_NATIVE_BINDLESS )
     if ( index == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
     const uint slot = Bindless::textureSlot( index );
         #if defined( __spirv__ )
-    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv, 0.0f );
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv, level );
         #else
-    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( g_SwSampler0, uv, 0.0f );
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( g_SwSampler0, uv, level );
         #endif
     #else
     switch ( index )
     {
         #if defined( SW_SEPARATE_SAMPLER_EMULATION )
         case 0u:
-            return g_SwMaterialTex0.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex0.SampleLevel( g_SwSampler0, uv, level );
         case 1u:
-            return g_SwMaterialTex1.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex1.SampleLevel( g_SwSampler0, uv, level );
         case 2u:
-            return g_SwMaterialTex2.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex2.SampleLevel( g_SwSampler0, uv, level );
         case 3u:
-            return g_SwMaterialTex3.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex3.SampleLevel( g_SwSampler0, uv, level );
         case 4u:
-            return g_SwMaterialTex4.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex4.SampleLevel( g_SwSampler0, uv, level );
         case 5u:
-            return g_SwMaterialTex5.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex5.SampleLevel( g_SwSampler0, uv, level );
         case 6u:
-            return g_SwMaterialTex6.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex6.SampleLevel( g_SwSampler0, uv, level );
         case 7u:
-            return g_SwMaterialTex7.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex7.SampleLevel( g_SwSampler0, uv, level );
         case 8u:
-            return g_SwMaterialTex8.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex8.SampleLevel( g_SwSampler0, uv, level );
         case 9u:
-            return g_SwMaterialTex9.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex9.SampleLevel( g_SwSampler0, uv, level );
         case 10u:
-            return g_SwMaterialTex10.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex10.SampleLevel( g_SwSampler0, uv, level );
         case 11u:
-            return g_SwMaterialTex11.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex11.SampleLevel( g_SwSampler0, uv, level );
         case 12u:
-            return g_SwMaterialTex12.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex12.SampleLevel( g_SwSampler0, uv, level );
         case 13u:
-            return g_SwMaterialTex13.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex13.SampleLevel( g_SwSampler0, uv, level );
         case 14u:
-            return g_SwMaterialTex14.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex14.SampleLevel( g_SwSampler0, uv, level );
         case 15u:
-            return g_SwMaterialTex15.SampleLevel( g_SwSampler0, uv, 0.0f );
+            return g_SwMaterialTex15.SampleLevel( g_SwSampler0, uv, level );
         #else
         case 0u:
-            return g_SwMaterialTex0.SampleLevel( g_SwMaterialTex0Sampler, uv, 0.0f );
+            return g_SwMaterialTex0.SampleLevel( g_SwMaterialTex0Sampler, uv, level );
         case 1u:
-            return g_SwMaterialTex1.SampleLevel( g_SwMaterialTex1Sampler, uv, 0.0f );
+            return g_SwMaterialTex1.SampleLevel( g_SwMaterialTex1Sampler, uv, level );
         case 2u:
-            return g_SwMaterialTex2.SampleLevel( g_SwMaterialTex2Sampler, uv, 0.0f );
+            return g_SwMaterialTex2.SampleLevel( g_SwMaterialTex2Sampler, uv, level );
         case 3u:
-            return g_SwMaterialTex3.SampleLevel( g_SwMaterialTex3Sampler, uv, 0.0f );
+            return g_SwMaterialTex3.SampleLevel( g_SwMaterialTex3Sampler, uv, level );
         case 4u:
-            return g_SwMaterialTex4.SampleLevel( g_SwMaterialTex4Sampler, uv, 0.0f );
+            return g_SwMaterialTex4.SampleLevel( g_SwMaterialTex4Sampler, uv, level );
         case 5u:
-            return g_SwMaterialTex5.SampleLevel( g_SwMaterialTex5Sampler, uv, 0.0f );
+            return g_SwMaterialTex5.SampleLevel( g_SwMaterialTex5Sampler, uv, level );
         case 6u:
-            return g_SwMaterialTex6.SampleLevel( g_SwMaterialTex6Sampler, uv, 0.0f );
+            return g_SwMaterialTex6.SampleLevel( g_SwMaterialTex6Sampler, uv, level );
         case 7u:
-            return g_SwMaterialTex7.SampleLevel( g_SwMaterialTex7Sampler, uv, 0.0f );
+            return g_SwMaterialTex7.SampleLevel( g_SwMaterialTex7Sampler, uv, level );
         case 8u:
-            return g_SwMaterialTex8.SampleLevel( g_SwMaterialTex8Sampler, uv, 0.0f );
+            return g_SwMaterialTex8.SampleLevel( g_SwMaterialTex8Sampler, uv, level );
         case 9u:
-            return g_SwMaterialTex9.SampleLevel( g_SwMaterialTex9Sampler, uv, 0.0f );
+            return g_SwMaterialTex9.SampleLevel( g_SwMaterialTex9Sampler, uv, level );
         case 10u:
-            return g_SwMaterialTex10.SampleLevel( g_SwMaterialTex10Sampler, uv, 0.0f );
+            return g_SwMaterialTex10.SampleLevel( g_SwMaterialTex10Sampler, uv, level );
         case 11u:
-            return g_SwMaterialTex11.SampleLevel( g_SwMaterialTex11Sampler, uv, 0.0f );
+            return g_SwMaterialTex11.SampleLevel( g_SwMaterialTex11Sampler, uv, level );
         case 12u:
-            return g_SwMaterialTex12.SampleLevel( g_SwMaterialTex12Sampler, uv, 0.0f );
+            return g_SwMaterialTex12.SampleLevel( g_SwMaterialTex12Sampler, uv, level );
         case 13u:
-            return g_SwMaterialTex13.SampleLevel( g_SwMaterialTex13Sampler, uv, 0.0f );
+            return g_SwMaterialTex13.SampleLevel( g_SwMaterialTex13Sampler, uv, level );
         case 14u:
-            return g_SwMaterialTex14.SampleLevel( g_SwMaterialTex14Sampler, uv, 0.0f );
+            return g_SwMaterialTex14.SampleLevel( g_SwMaterialTex14Sampler, uv, level );
         case 15u:
-            return g_SwMaterialTex15.SampleLevel( g_SwMaterialTex15Sampler, uv, 0.0f );
+            return g_SwMaterialTex15.SampleLevel( g_SwMaterialTex15Sampler, uv, level );
         #endif
         default:
             return float4( 1, 1, 1, 1 );

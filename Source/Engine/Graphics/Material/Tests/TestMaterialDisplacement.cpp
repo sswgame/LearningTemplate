@@ -1,4 +1,5 @@
-// MaterialDisplacementTest — 변위 테셀레이션 계수가 틈 없이(변의 두 끝점만으로) 정해지고 거리 · 상한을 따르며, 변위가 기준 높이에서 0 인지(nogpu).
+// MaterialDisplacementTest — 변위 테셀레이션 계수가 틈 없이(변의 두 끝점만으로) 정해지고 거리 · 상한을 따르며, 변위가 기준 높이에서 0 이고,
+// 높이 밉이 정점 간격을 따르며 다시 구한 노멀이 오르막 반대로 기우는지(nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
@@ -52,4 +53,55 @@ SW_TEST_CASE( MaterialDisplacementTest, OffsetIsZeroAtMidLevel )
     SW_EXPECT_EQUAL( 0.0f, MaterialDisplacement::computeOffset( 0.5f, 0.3f, 0.5f ) );
     SW_EXPECT_NEAR( 0.15f, MaterialDisplacement::computeOffset( 1.0f, 0.3f, 0.5f ), 1e-6f );
     SW_EXPECT_NEAR( -0.15f, MaterialDisplacement::computeOffset( 0.0f, 0.3f, 0.5f ), 1e-6f );
+}
+
+/** @brief [MaterialDisplacementTest] 높이 밉은 정점 간격을 따른다 — 안쪽 계수를 두 배로 하면 한 단계 내려가고, 정점 간격이 한 텍셀보다 작으면 0 이다 */
+SW_TEST_CASE( MaterialDisplacementTest, HeightMipFollowsVertexSpacing )
+{
+    const float2  uv0( 0.0f, 0.0f );
+    const float2  uv1( 1.0f, 0.0f );
+    const float2  uv2( 1.0f, 1.0f ); // 가장 긴 변은 uv2 → uv0(대각선)
+    const float2  size( 256.0f, 256.0f );
+    const float32 coarse = MaterialDisplacement::computeHeightMipLevel( uv0, uv1, uv2, 4.0f, size );
+    const float32 fine   = MaterialDisplacement::computeHeightMipLevel( uv0, uv1, uv2, 8.0f, size );
+    SW_EXPECT_NEAR( MathUtil::log2( 256.0f * 1.41421356f / 4.0f ), coarse, 1e-4f );
+    SW_EXPECT_NEAR( coarse - 1.0f, fine, 1e-4f );
+    SW_EXPECT_EQUAL( 0.0f, MaterialDisplacement::computeHeightMipLevel( uv0, uv1, uv2, 64.0f, float2( 16.0f, 16.0f ) ) );
+}
+
+/** @brief [MaterialDisplacementTest] 위치 미분 — UV 가 월드 xz 를 2 배로 늘인 판이면 dP/du = (0.5, 0, 0), dP/dv = (0, 0, 0.5), UV 가 퇴화하면 0 이다 */
+SW_TEST_CASE( MaterialDisplacementTest, UVTangentFrameSolveUVMapping )
+{
+    const MaterialDisplacement::UVTangentFrame frame = MaterialDisplacement::computeUVTangentFrame(
+        float3( 0.0f, 0.0f, 0.0f ), float3( 1.0f, 0.0f, 0.0f ), float3( 0.0f, 0.0f, 1.0f ), float2( 0.0f, 0.0f ), float2( 2.0f, 0.0f ), float2( 0.0f, 2.0f ) );
+    SW_EXPECT_NEAR( 0.5f, frame._tangent.x, 1e-6f );
+    SW_EXPECT_NEAR( 0.0f, frame._tangent.z, 1e-6f );
+    SW_EXPECT_NEAR( 0.5f, frame._bitangent.z, 1e-6f );
+    SW_EXPECT_NEAR( 0.0f, frame._bitangent.x, 1e-6f );
+    const MaterialDisplacement::UVTangentFrame degenerate = MaterialDisplacement::computeUVTangentFrame(
+        float3( 0.0f, 0.0f, 0.0f ), float3( 1.0f, 0.0f, 0.0f ), float3( 0.0f, 0.0f, 1.0f ), float2( 0.0f, 0.0f ), float2( 1.0f, 1.0f ), float2( 2.0f, 2.0f ) );
+    SW_EXPECT_EQUAL( 0.0f, degenerate._tangent.getLength() );
+    SW_EXPECT_EQUAL( 0.0f, degenerate._bitangent.getLength() );
+    // 퇴화한 틀은 노멀을 그대로 둔다.
+    SW_EXPECT_NEAR( 1.0f, MaterialDisplacement::computeDisplacementNormal( float3( 0.0f, 1.0f, 0.0f ), degenerate, 1.0f, 1.0f, 0.5f ).y, 1e-6f );
+}
+
+/** @brief [MaterialDisplacementTest] 다시 구한 노멀 — 평평한 높이는 그대로, +u 오르막은 -u 쪽으로 기울고, UV 손잡이를 뒤집어도(거울 UV) 같은 쪽이다 */
+SW_TEST_CASE( MaterialDisplacementTest, DisplacementNormalTiltsAwayFromSlope )
+{
+    const float3                               up( 0.0f, 1.0f, 0.0f );
+    const MaterialDisplacement::UVTangentFrame frame{ float3( 1.0f, 0.0f, 0.0f ), float3( 0.0f, 0.0f, 1.0f ) };
+    const float3                               flat = MaterialDisplacement::computeDisplacementNormal( up, frame, 0.0f, 0.0f, 0.5f );
+    SW_EXPECT_NEAR( 1.0f, flat.y, 1e-6f );
+
+    // 높이 = u(= 월드 x) 인 경사를 0.5 m 세기로 — 기울기 0.5 라 노멀은 (-0.5, 1, 0) 방향이다.
+    const float3 sloped   = MaterialDisplacement::computeDisplacementNormal( up, frame, 1.0f, 0.0f, 0.5f );
+    const float3 expected = float3( -0.5f, 1.0f, 0.0f ).normalize();
+    SW_EXPECT_NEAR( expected.x, sloped.x, 1e-5f );
+    SW_EXPECT_NEAR( expected.y, sloped.y, 1e-5f );
+    SW_EXPECT_NEAR( 0.0f, sloped.z, 1e-6f );
+
+    const MaterialDisplacement::UVTangentFrame mirroredFrame{ float3( 1.0f, 0.0f, 0.0f ), float3( 0.0f, 0.0f, -1.0f ) };
+    const float3                               mirroredFrameSloped = MaterialDisplacement::computeDisplacementNormal( up, mirroredFrame, 1.0f, 0.0f, 0.5f );
+    SW_EXPECT_NEAR( expected.x, mirroredFrameSloped.x, 1e-5f );
 }
