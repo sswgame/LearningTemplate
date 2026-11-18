@@ -25,7 +25,7 @@ namespace sw
 
     float64 NetEndpointThread::getTime()
     {
-        return static_cast<float64>( MonotonicClock::nowNanoseconds() ) * 1.0e-9;
+        return MonotonicClock::nowSeconds();
     }
 
     bool NetEndpointThread::start( NetEndpoint* pHost, const NetEndpointThreadConfig& settings )

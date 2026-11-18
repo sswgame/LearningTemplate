@@ -26,11 +26,6 @@ namespace sw::editor
             /** @brief 탭과 `netplay.profile` 이 같이 쓰는 시계열입니다(창을 닫았다 열어도 남는다 — 에디터 컨텍스트가 사라지면 사라진다). 에디터 범위의 상태 저장소가 소유한다. */
             static EditorNetProfilerHistory& getHistory() { return getEditorState<EditorNetProfilerHistory>(); }
 
-            static float64 nowSeconds()
-            {
-                return static_cast<float64>( MonotonicClock::nowNanoseconds() ) / static_cast<float64>( constant::time::kNanosecondsPerSecond );
-            }
-
             /** @brief 감시 값 `Editor.NetPlayProfilerSamples` — Profiler 시계열에 쌓인 표본 수(모든 프로세스의 합)입니다. */
             [[nodiscard]] static bool readSampleCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -64,7 +59,7 @@ namespace sw::editor
                 EditorNetProfilerHistory& history = getHistory();
                 pSession->updateUntil( static_cast<int64>( seconds ) * constant::time::kMillisecondsPerSecond, [&]()
                 {
-                    history.update( *pSession, nowSeconds() );
+                    history.update( *pSession, MonotonicClock::nowSeconds() );
                     return false; // 시한까지 모은다
                 } );
                 StringBuilder<constant::buffer::kMax256> textBuilder;
@@ -96,7 +91,7 @@ namespace sw::editor
 
     void MultiplayerProfilerViewModel::update()
     {
-        MultiplayerProfilerViewModelInternal::getHistory().update( MultiplayerSessionViewModel::getSession(), MultiplayerProfilerViewModelInternal::nowSeconds() );
+        MultiplayerProfilerViewModelInternal::getHistory().update( MultiplayerSessionViewModel::getSession(), MonotonicClock::nowSeconds() );
     }
 
     void MultiplayerProfilerViewModel::gather( optional<int32> targetIndex, bool bAllProcessKinds, bool bSentKinds, MultiplayerProfilerViewState& outState )

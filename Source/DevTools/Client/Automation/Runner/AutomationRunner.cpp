@@ -127,9 +127,6 @@ namespace sw
                 return FileUtil::reserveUniquePath( textBuilder.view(), {}, true );
             }
 
-            /** @brief 단조 시계의 지금 시각(초)입니다. 벽시계 감시와 시한이 같은 시계를 읽는다. */
-            [[nodiscard]] static float64 readNowSeconds() { return static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6; }
-
             /**
              * @brief 이 구성에 없는 단계가 들어 있는 시나리오면 그 첫 단계를 반환합니다. 개발 명령(`DevCommand`)은 Shipping 에서 빠집니다.
              * @details 그런 시나리오는 이 구성에서 돌 수 없을 뿐 틀린 것이 아니다. 읽기 오류(11)가 아니라 건너뜀(13)으로 처리한다
@@ -509,7 +506,7 @@ namespace sw
                     break;
             }
             const bool bExitDeadlineExceeded = isActive() && _run._exitDeadlineSeconds > 0.0 &&
-                                               _run._exitDeadlineSeconds < AutomationRunnerInternal::readNowSeconds();
+                                               _run._exitDeadlineSeconds < MonotonicClock::nowSeconds();
             if ( bExitDeadlineExceeded )
                 finish( AutomationRunResult::failed( AutomationFailureKind::Assertion, "the window was asked to close but the loop kept running past ExpectExitWithin", {} ) );
             // 단계 시점(`_frameIndex`)은 붙잡은 프레임(`WaitUntil` · 입력 대상 자리 잡기 · 씬 로드 …)에 서 있다(뒤 단계가 그만큼 밀린다). 프레임 시한도 이 축으로 본다 —
@@ -577,7 +574,7 @@ namespace sw
 
     void AutomationRunner::markWallStart()
     {
-        _run._wallStartSeconds    = AutomationRunnerInternal::readNowSeconds();
+        _run._wallStartSeconds    = MonotonicClock::nowSeconds();
         _run._lastFrameEndSeconds = _run._wallStartSeconds;
         // 셰이더 컴파일(빈 캐시의 첫 실행)은 일하는 시간이다 — 시한에 세지 않는다(언리얼 자동화도 셰이더 컴파일을 기다린다). 행 감시도 같은 값을 뺀다.
         const ShaderCache* const pShaderCache = engine::findSubsystem<ShaderCache>();
@@ -609,7 +606,7 @@ namespace sw
             else
                 kind = bStepRan ? AutomationFrameKind::StepRan : AutomationFrameKind::ScheduledWait;
         }
-        const float64 nowSeconds = AutomationRunnerInternal::readNowSeconds();
+        const float64 nowSeconds = MonotonicClock::nowSeconds();
         _wallProfile.recordFrame( kind, nowSeconds - _run._lastFrameEndSeconds );
         if ( kind == AutomationFrameKind::StepRan )
             _wallProfile.recordStepFrame( _run._currentStepKind, nowSeconds - _run._lastFrameEndSeconds );
@@ -703,7 +700,7 @@ namespace sw
 
     float64 AutomationRunner::readNowSecondsWithoutCompile() const
     {
-        const float64 nowSeconds = AutomationRunnerInternal::readNowSeconds();
+        const float64 nowSeconds = MonotonicClock::nowSeconds();
         if ( _run._pCompileBusy == nullptr )
             return nowSeconds;
         return nowSeconds - _run._pCompileBusy->getBusySecondsSince( 0, MonotonicClock::nowNanoseconds() );
@@ -711,7 +708,7 @@ namespace sw
 
     float64 AutomationRunner::readElapsedSecondsWithoutCompile() const
     {
-        const float64 elapsedSeconds = AutomationRunnerInternal::readNowSeconds() - _run._wallStartSeconds;
+        const float64 elapsedSeconds = MonotonicClock::nowSeconds() - _run._wallStartSeconds;
         if ( _run._pCompileBusy == nullptr )
             return elapsedSeconds;
         return elapsedSeconds - _run._pCompileBusy->getBusySecondsSince( _run._compileBusyAtStartNanoseconds, MonotonicClock::nowNanoseconds() );
@@ -852,7 +849,7 @@ namespace sw
         {
             if ( _run._exitDeadlineSeconds > 0.0 )
             {
-                const float64      nowSeconds   = AutomationRunnerInternal::readNowSeconds();
+                const float64      nowSeconds   = MonotonicClock::nowSeconds();
                 const QuitRequest* pQuitRequest = engine::findSubsystem<QuitRequest>();
                 const int32        quitExitCode = pQuitRequest != nullptr && pQuitRequest->isRequested() ? static_cast<int32>( pQuitRequest->getExitCode() ) : 0;
                 if ( quitExitCode != _run._expectedExitCode )
@@ -1135,7 +1132,7 @@ namespace sw
         if ( _bEnded == SW_TRUE )
             return;
         _bEnded              = SW_TRUE;
-        _run._wallEndSeconds = AutomationRunnerInternal::readNowSeconds();
+        _run._wallEndSeconds = MonotonicClock::nowSeconds();
         _run.clearHeldStepState(); // 붙잡힌 채 끝난 단계의 상태(요청한 씬 로드 …)를 이 실행과 함께 걷는다
         releaseWriteFilter();
         _hangWatchdog.stop(); // 정상 끝맺음이 보고를 쓴다 — 감시가 같은 보고를 덮거나 프로세스를 끝내지 못하게 먼저 내린다

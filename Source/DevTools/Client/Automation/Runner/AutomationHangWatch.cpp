@@ -247,7 +247,7 @@ namespace sw
         ThreadName::setCurrentThreadName( "AutomationHangWatch" );
         while ( _state.load() == static_cast<uint32>( State::Running ) )
         {
-            float64 elapsedSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 - _settings._startSeconds;
+            float64 elapsedSeconds = MonotonicClock::nowSeconds() - _settings._startSeconds;
             if ( _settings._pExcludedBusy != nullptr ) // 시계는 스스로 잠근다 — 컴파일 워커가 쥔 다른 잠금과 얽히지 않는다
                 elapsedSeconds -= _settings._pExcludedBusy->getBusySecondsSince( _settings._excludedBusyAtStartNanoseconds, MonotonicClock::nowNanoseconds() );
             if ( AutomationHangPayload::isDeadlineExceeded( elapsedSeconds, _settings._limitSeconds, _settings._graceSeconds ) )

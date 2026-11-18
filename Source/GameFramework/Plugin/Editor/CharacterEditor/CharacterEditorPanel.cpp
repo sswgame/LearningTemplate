@@ -5,6 +5,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
@@ -131,7 +132,7 @@ namespace sw::editor
             return;
         }
         _document.ensureKindTable();
-        _document.pollExternalChange( readNowSeconds() );
+        _document.pollExternalChange( MonotonicClock::nowSeconds() );
         drawFileRow();
         drawHistoryRow();
         if ( _document.getStatus().empty() == false )

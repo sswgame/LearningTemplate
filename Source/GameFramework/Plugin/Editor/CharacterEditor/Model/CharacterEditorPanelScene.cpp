@@ -192,11 +192,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    float64 CharacterEditorPanel::readNowSeconds()
-    {
-        return static_cast<float64>( MonotonicClock::nowNanoseconds() ) / static_cast<float64>( constant::time::kNanosecondsPerSecond );
-    }
-
     CharacterEditorPanel::CharacterEditorPanel()
         : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, true }
         , _document{}
@@ -235,7 +230,7 @@ namespace sw::editor
 
     bool CharacterEditorPanel::saveDocument()
     {
-        if ( _document.saveFiles( readNowSeconds() ) == false )
+        if ( _document.saveFiles( MonotonicClock::nowSeconds() ) == false )
             return false; // 까닭은 상태 줄에 남았다
         acknowledgePreviewEdits();
         return true;

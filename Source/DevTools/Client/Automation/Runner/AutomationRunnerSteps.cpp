@@ -581,7 +581,7 @@ namespace sw
             string        error;
             const float32 seconds = bClose ? step.readValidatedProperties<AutomationCloseWindowParams>()._withinSeconds : step.readValidatedProperties<AutomationExpectExitWithinParams>()._seconds;
             // 종료 시한도 멈춘 루프를 잡는 그물이다(통과는 창이 닫힌 사건) — 다른 벽시계 시한처럼 기계 배율로 늘린다.
-            runner._run._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + AutomationRunner::scaleWallSeconds( seconds );
+            runner._run._exitDeadlineSeconds = MonotonicClock::nowSeconds() + AutomationRunner::scaleWallSeconds( seconds );
             if ( bClose == false )
             {
                 runner._run._expectedExitCode = step.readValidatedProperties<AutomationExpectExitWithinParams>()._exitCode;
