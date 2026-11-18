@@ -7,6 +7,8 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/array.h"
+#include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -27,6 +29,16 @@ namespace sw
         string           _path;                                ///< 쓸 파일 경로
         RHITextureHandle _texture{ 0 };                        ///< 0 이면 화면에 나간 이미지(Present 결과), 아니면 그 렌더 타깃
         RHIFormat        _format{ RHIFormat::R8G8B8A8_UNORM }; ///< `_texture` 의 포맷
+        uint32           _ticket{ 0 };                         ///< `put` 이 돌려준 표 — 끝 알림(`reportCompleted`)이 이 표로 결과를 남긴다
+    };
+
+    /** @brief 요청 표 하나의 상태입니다(`ScreenshotRequestQueue::findResult`). */
+    enum class ScreenshotTicketState : uint8
+    {
+        Pending, ///< 아직 처리하지 않았다
+        Written, ///< 파일을 썼다
+        Failed,  ///< 처리했지만 쓰지 못했다(읽기 · 쓰기 실패, 줄이 넘쳤다)
+        Unknown  ///< 받은 적이 없거나 결과 기록 창(`kResultHistoryCount`)을 벗어났다
     };
 } // namespace sw
 
@@ -34,8 +46,9 @@ namespace sw
 {
     /**
      * @class ScreenshotRequestQueue
-     * @brief 스크린샷 요청 한 칸과 처리 결과(마지막 경로 · 처리한 수)를 든 서비스입니다.
-     * @details 요청은 한 칸이라 앞 요청이 아직 남아 있으면 덮어씁니다. 모든 함수는 어느 스레드에서 불러도 됩니다.
+     * @brief 스크린샷 요청 줄과 처리 결과(표마다의 결과 · 마지막 경로 · 처리한 수)를 든 서비스입니다.
+     * @details 요청은 받은 차례로 처리하고(덮어쓰지 않는다), 요청마다 표를 돌려줘 기다리는 쪽이 제 결과만 읽는다 — 개발 명령 · 에디터 버튼 · 시작 인자 사진이 한 실행에서
+     *          함께 요청해도 남의 결과를 제 것으로 읽지 않는다. 모든 함수는 어느 스레드에서 불러도 됩니다.
      */
     class SW_API ScreenshotRequestQueue final : public ISubsystem
     {
@@ -53,18 +66,25 @@ namespace sw
         const utf8*                getSubsystemName() const override { return kSubsystemName; }
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
+        /** @brief 처리를 기다릴 수 있는 요청 수입니다. 넘치면 새 요청을 받지 않고 실패로 남긴다(요청을 매 프레임 내는 결함이 메모리를 끝없이 늘리지 않게). */
+        static constexpr uint32 kMaxPendingCount = 16;
+        /** @brief 표마다의 결과를 기억하는 수입니다. 이보다 오래된 표는 `Unknown` 이다. */
+        static constexpr uint32 kResultHistoryCount = 32;
+
         /**
-         * @brief 요청을 넣습니다. 아직 꺼내지 않은 앞 요청은 이 요청으로 바뀝니다.
+         * @brief 요청을 줄 끝에 넣고 그 표(0 이 아닌 수)를 돌려줍니다. 줄이 차 있으면 오류를 남기고 그 표는 곧바로 `Failed` 다.
          * @details 경로는 `AbsolutePath` 라 빈 값일 수 없다 — 빈 칸이 "요청 없음" 이라, 빈 경로를 받으면 받은 수만 올라 `hasUnfinishedRequest` 가 영영 참이었다.
          */
-        void put( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat );
-        /** @brief 넣어 둔 요청을 꺼냅니다(꺼낸 칸은 빈다). 요청이 없으면 false 입니다. */
+        uint32 put( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat );
+        /** @brief 줄 맨 앞의 요청을 꺼냅니다. 요청이 없으면 false 입니다. */
         [[nodiscard]] bool take( ScreenshotRequest& outRequest );
-        /** @brief 요청 하나를 처리했음을 알립니다(성공과 실패 모두). @p bWritten 이 true 면 @p writtenPath 가 마지막 경로가 되고, 아니면 마지막 경로가 비워집니다. */
-        void reportCompleted( bool bWritten, const string& writtenPath );
+        /** @brief 표 @p ticket 의 요청을 처리했음을 알립니다(성공과 실패 모두). @p bWritten 이 true 면 @p writtenPath 가 마지막 경로가 되고, 아니면 마지막 경로가 비워집니다. */
+        void reportCompleted( uint32 ticket, bool bWritten, const string& writtenPath );
+        /** @brief 표 @p ticket 의 지금 상태입니다. */
+        [[nodiscard]] ScreenshotTicketState findResult( uint32 ticket ) const;
         /** @brief 처리한 요청 수입니다(성공과 실패 모두 셉니다). */
         uint32 getCompletedSerial() const { return _completedSerial.load( std::memory_order_acquire ); }
-        /** @brief 받았지만 아직 처리하지 않은 요청(`put` 으로 넣고 `reportCompleted` 전)이나 패킷에 싣지 않은 패킷 사진이 있으면 true 입니다. 덮어쓴 요청은 하나로 센다. */
+        /** @brief 받았지만 아직 처리하지 않은 요청(`put` 으로 넣고 `reportCompleted` 전)이나 패킷에 싣지 않은 패킷 사진이 있으면 true 입니다. */
         [[nodiscard]] bool hasUnfinishedRequest() const
         {
             return _requestedSerial.load( std::memory_order_acquire ) != _completedSerial.load( std::memory_order_acquire ) || isPacketSlotFree() == false;
@@ -87,15 +107,22 @@ namespace sw
         uint32 getCompletedPacketSerial() const { return _completedPacketSerial.load( std::memory_order_acquire ); }
 
     private:
-        mutable mutex                    _mutex;
-        string _pendingPath              SW_GUARDED_BY( _mutex );
-        string _lastPath                 SW_GUARDED_BY( _mutex );
-        string _pendingPacketPath        SW_GUARDED_BY( _mutex );
-        RHITextureHandle _pendingTexture SW_GUARDED_BY( _mutex ){ 0 };
-        RHIFormat _pendingFormat         SW_GUARDED_BY( _mutex ){ RHIFormat::R8G8B8A8_UNORM };
-        atomic<uint32>                   _requestedSerial{ 0 }; ///< 받은 요청 수(꺼내기 전에 덮어쓴 요청은 세지 않는다 — 처리 수와 견준다)
-        atomic<uint32>                   _completedSerial{ 0 };
-        atomic<uint32>                   _completedPacketSerial{ 0 };
+        /** @brief 처리한 표 하나의 결과입니다. */
+        struct TicketResult
+        {
+            uint32 _ticket{ 0 };       ///< 0 이면 빈 칸(아직 처리하지 않았다)
+            bool   _bWritten{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        };
+
+        mutable mutex                                       _mutex;
+        deque<ScreenshotRequest> _listPending               SW_GUARDED_BY( _mutex ); ///< 받은 차례의 요청 줄
+        array<TicketResult, kResultHistoryCount> _arrResult SW_GUARDED_BY( _mutex ); ///< 표마다의 결과(고리 — 표 번호가 자리다)
+        string _lastPath                                    SW_GUARDED_BY( _mutex );
+        string _pendingPacketPath                           SW_GUARDED_BY( _mutex );
+        uint32 _lastTicket                                  SW_GUARDED_BY( _mutex ){ 0 }; ///< 마지막으로 내준 표
+        atomic<uint32>                                      _requestedSerial{ 0 };        ///< 받은 요청 수(처리 수와 견준다)
+        atomic<uint32>                                      _completedSerial{ 0 };
+        atomic<uint32>                                      _completedPacketSerial{ 0 };
 
         SW_SERVICE_SLOT( ScreenshotRequestQueue, Optional );
     };

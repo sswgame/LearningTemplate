@@ -4,7 +4,7 @@
 
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 
-// ScreenshotRequestQueueTest — 스크린샷 우편함: 덮어쓴 요청은 하나로 세고, 처리하면 끝나지 않은 요청이 없다. 패킷 칸은 하나다.
+// ScreenshotRequestQueueTest — 스크린샷 우편함: 요청은 받은 차례의 줄이고 표마다 제 결과를 읽는다. 처리하면 끝나지 않은 요청이 없다. 패킷 칸은 하나다.
 // 경로는 `AbsolutePath` 라 빈 경로 요청은 형식으로 만들 수 없다(빈 칸이 "요청 없음" 이다)(nogpu).
 
 using namespace sw;
@@ -18,26 +18,50 @@ namespace
     }
 } // namespace
 
-/** @brief [ScreenshotRequestQueueTest] 꺼내기 전에 덮어쓴 요청은 하나로 세고, 처리를 알리면 끝나지 않은 요청이 없다 */
-SW_TEST_CASE( ScreenshotRequestQueueTest, OverwrittenRequestCountsOnce )
+/** @brief [ScreenshotRequestQueueTest] 요청은 받은 차례로 꺼내고, 표마다 제 결과를 읽는다 — 두 쪽이 함께 요청해도 남의 결과를 제 것으로 읽지 않는다 */
+SW_TEST_CASE( ScreenshotRequestQueueTest, EachTicketReadsItsOwnResult )
 {
     ScreenshotRequestQueue queue;
     SW_EXPECT_FALSE( queue.hasUnfinishedRequest() );
-    queue.put( makeShotPath( "a.png" ), RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
-    const AbsolutePath second = makeShotPath( "b.png" );
-    queue.put( second, RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
+    const AbsolutePath first   = makeShotPath( "a.png" );
+    const AbsolutePath second  = makeShotPath( "b.png" );
+    const uint32       ticketA = queue.put( first, RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
+    const uint32       ticketB = queue.put( second, RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
+    SW_EXPECT_NOT_EQUAL( ticketA, ticketB );
     SW_EXPECT_TRUE( queue.hasUnfinishedRequest() );
+    SW_EXPECT_TRUE( queue.findResult( ticketA ) == ScreenshotTicketState::Pending );
 
     ScreenshotRequest request;
     SW_REQUIRE_TRUE( queue.take( request ) );
-    SW_EXPECT_EQUAL( second.str(), request._path );
-    SW_EXPECT_FALSE( queue.take( request ) ); // 꺼낸 칸은 빈다
-    queue.reportCompleted( true, request._path );
-    SW_EXPECT_FALSE( queue.hasUnfinishedRequest() );
-    SW_EXPECT_EQUAL( 1u, queue.getCompletedSerial() );
-    SW_EXPECT_EQUAL( second.str(), queue.getLastPath() );
-    queue.reportCompleted( false, request._path );
+    SW_EXPECT_EQUAL( first.str(), request._path ); // 덮어쓰지 않고 받은 차례다
+    SW_EXPECT_EQUAL( ticketA, request._ticket );
+    queue.reportCompleted( request._ticket, false, request._path );
+    SW_EXPECT_TRUE( queue.findResult( ticketA ) == ScreenshotTicketState::Failed );
+    SW_EXPECT_TRUE( queue.findResult( ticketB ) == ScreenshotTicketState::Pending );
     SW_EXPECT_TRUE( queue.getLastPath().empty() ); // 실패하면 마지막 경로가 빈다
+
+    SW_REQUIRE_TRUE( queue.take( request ) );
+    queue.reportCompleted( ticketB, true, request._path );
+    SW_EXPECT_TRUE( queue.findResult( ticketB ) == ScreenshotTicketState::Written );
+    SW_EXPECT_FALSE( queue.hasUnfinishedRequest() );
+    SW_EXPECT_EQUAL( 2u, queue.getCompletedSerial() );
+    SW_EXPECT_EQUAL( second.str(), queue.getLastPath() );
+    SW_EXPECT_TRUE( queue.findResult( 0 ) == ScreenshotTicketState::Unknown );
+    SW_EXPECT_TRUE( queue.findResult( ticketB + 1 ) == ScreenshotTicketState::Unknown ); // 내준 적 없는 표
+}
+
+/** @brief [ScreenshotRequestQueueTest] 줄이 차면 새 요청은 받지 않고 그 표는 곧바로 실패다 */
+SW_TEST_CASE( ScreenshotRequestQueueTest, FullQueueFailsTheNewTicket )
+{
+    SW_EXPECT_LOG( "Screenshot.QueueFull" );
+    ScreenshotRequestQueue queue;
+    const AbsolutePath     path = makeShotPath( "full.png" );
+    for ( uint32 index = 0; index < ScreenshotRequestQueue::kMaxPendingCount; ++index )
+    {
+        (void)queue.put( path, RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
+    }
+    const uint32 overflow = queue.put( path, RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
+    SW_EXPECT_TRUE( queue.findResult( overflow ) == ScreenshotTicketState::Failed );
 }
 
 /** @brief [ScreenshotRequestQueueTest] 빈 경로는 요청 경로 형식(`AbsolutePath`)이 되지 못한다 — 우편함에 "요청 없음" 과 같은 빈 요청이 들어갈 길이 없다 */
