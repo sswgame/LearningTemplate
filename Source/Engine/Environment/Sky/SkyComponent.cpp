@@ -106,15 +106,9 @@ namespace sw
             if ( pSky->isPendingDestroy() || pSky->isActive() == false )
                 continue;
             outGradient = pSky->makeGradient();
-            // 대기 모드의 해는 씬의 첫 활성 방향광이다(DirectionalLightComponent::findActive 와 같은 규칙). 없으면 해 색 0 — 하늘이 어둡다. 구름도 같은 해로 빛을 받는다.
-            for ( LightComponent* pLight : manager.getComponentRegistry().getAll<LightComponent>( shaderslot::kLightTypeDirectional ) )
-            {
-                if ( pLight == nullptr || pLight->isActive() == false )
-                    continue;
-                DirectionalLightComponent* pDirectional = static_cast<DirectionalLightComponent*>( pLight );
+            // 대기 모드의 해는 씬의 첫 활성 방향광이다. 없으면 해 색 0 — 하늘이 어둡다. 구름도 같은 해로 빛을 받는다.
+            if ( const DirectionalLightComponent* const pDirectional = DirectionalLightComponent::findActive( &manager ) )
                 outGradient.setSun( pDirectional->getLightDirection(), pDirectional->getColor() );
-                break;
-            }
             return true;
         }
         return false;
