@@ -73,6 +73,39 @@ namespace sw::editor
                 return pScene->getObjectManager()->findGameObjectByID( objectID );
             }
 
+            /** @brief 게임 단계에서 다시 찾은 씬 대상입니다 — 주인 오브젝트, 컴포넌트(오브젝트 자신이면 nullptr), 인스턴스와 타입. */
+            struct SceneTarget
+            {
+                GameObject*     _pObject{ nullptr };
+                Component*      _pComponent{ nullptr };
+                void*           _pInstance{ nullptr };
+                const TypeInfo* _pType{ nullptr };
+            };
+
+            /** @brief @p scope 씬의 오브젝트 @p objectID 의 컴포넌트 @p componentID(0 이면 오브젝트 자신)를 찾습니다. 그 사이 사라졌거나 지우는 중이면 false 입니다. */
+            static bool resolveSceneTarget( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, SceneTarget& outTarget )
+            {
+                GameObject* pObject = findObject( scope, objectID );
+                if ( pObject == nullptr || pObject->isPendingDestroy() )
+                    return false;
+                Component* pComponent = componentID != 0 ? pObject->findComponentByID( componentID ) : nullptr;
+                if ( componentID != 0 && pComponent == nullptr )
+                    return false;
+                outTarget._pObject    = pObject;
+                outTarget._pComponent = pComponent;
+                outTarget._pInstance  = pComponent != nullptr ? static_cast<void*>( pComponent ) : static_cast<void*>( pObject );
+                outTarget._pType      = pComponent != nullptr ? pComponent->getTypeInfo() : pObject->getTypeInfo();
+                return outTarget._pType != nullptr;
+            }
+
+            /** @brief 메서드 반환값 @p result 의 글을 @p outText 에 둡니다(`InspectorBuiltinValue::formatMethodResult`). */
+            static void formatInvokeResult( const TaskValue& result, string_view returnTypeName, string& outText )
+            {
+                fixed_string<constant::buffer::kMax256> text;
+                (void)InspectorBuiltinValue::formatMethodResult( result, returnTypeName, text.data(), text.capacity() );
+                outText = text.c_str();
+            }
+
             /**
              * @brief 씬 대상 편집 하나를 적용합니다(게임 단계) — 대상을 id 로 다시 찾고, 경로를 풀어 쓰고, 모델의 쓰기 길대로 알린다(깊이 0 프로퍼티로).
              * @details 다중 선택은 깊이 0 프로퍼티를 통째로 나머지에 입힌다(예전 `copyPropertyToOthers` 와 같은 단위 — 되돌리기 구간도 그 단위다). 그 사이 사라진 대상은 건너뛴다.
@@ -80,15 +113,14 @@ namespace sw::editor
             static void applySceneEdit( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, uint32 sceneKey, const vector<PropertyEditTarget>& listOther,
                                         const PropertyEditRequest& request )
             {
-                GameObject* pObject = findObject( scope, objectID );
-                if ( pObject == nullptr || pObject->isPendingDestroy() )
+                SceneTarget target;
+                if ( resolveSceneTarget( scope, objectID, componentID, target ) == false )
                     return;
-                Component* pComponent = componentID != 0 ? pObject->findComponentByID( componentID ) : nullptr;
-                if ( componentID != 0 && pComponent == nullptr )
-                    return;
-                const TypeInfo* pType     = pComponent != nullptr ? pComponent->getTypeInfo() : pObject->getTypeInfo();
-                void* const     pInstance = pComponent != nullptr ? static_cast<void*>( pComponent ) : static_cast<void*>( pObject );
-                if ( pType == nullptr || request.applyTo( MutableObjectAddress{ pInstance }, *pType, PropertyGridModel::getTypeRegistry() ) == false )
+                GameObject* const     pObject    = target._pObject;
+                Component* const      pComponent = target._pComponent;
+                const TypeInfo* const pType      = target._pType;
+                void* const           pInstance  = target._pInstance;
+                if ( request.applyTo( MutableObjectAddress{ pInstance }, *pType, PropertyGridModel::getTypeRegistry() ) == false )
                     return;
                 // 이 알림을 빠뜨리면 값에 반응하는 상태(트랜스폼 캐시 · 렌더 상태)가 어긋난다. 검증은 로그 없이 맵 검사 결과만 바꾼다(끄는 동안 프레임마다 온다).
                 if ( pComponent != nullptr )
@@ -120,15 +152,39 @@ namespace sw::editor
                 { applySceneEdit( scope, objectID, componentID, sceneKey, listOther, request ); } ) );
             }
 
-            /** @brief 편집 하나입니다. 주인 오브젝트가 있으면 되돌리기에 남기고(`InspectorObjectEdit`), 없으면(씬 밖 객체) 그냥 바꿉니다. */
-            template <typename EditFunc>
-            static void applyEdit( GameObject* pOwner, string_view undoLabel, EditFunc&& edit )
+            /**
+             * @brief 씬 대상의 FUNCTION 호출 하나를 게임 단계에 넘깁니다. 호출은 오브젝트 편집 하나로 감싼다(바뀐 것이 있으면 되돌리기 한 단계 — 플레이 중에는 기록 없이,
+             *        `InspectorObjectEdit::applyObjectEdit`). 반환값 글은 @p pResult 칸(그리드가 가진 결과 칸 — 다음 UI 프레임이 읽는다)에 둔다. 람다는 id · 이름 · 인자 값만 붙잡는다.
+             */
+            static void requestInvoke( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const hashed_string& methodName, const string& returnTypeName,
+                                       const string& label, const TaskArgs& args, const shared_ptr<string>& pResult )
             {
-                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-                if ( pOwner == nullptr )
-                    edit();
-                else
-                    InspectorObjectEdit::applyObjectEdit( transaction, pOwner, undoLabel, std::forward<EditFunc>( edit ) );
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create(
+                    [scope, objectID, componentID, methodName, returnTypeName, label, args, pResult]( EditorTransaction& transaction )
+                {
+                    SceneTarget target;
+                    if ( resolveSceneTarget( scope, objectID, componentID, target ) == false )
+                        return;
+                    TaskValue result{};
+                    InspectorObjectEdit::applyObjectEdit( transaction, target._pObject, label, [&target, &methodName, &args, &result]()
+                    { result = PropertyGridModel::getTypeRegistry().invokeMethod( target._pInstance, target._pType->_fullyQualifiedName, methodName, args ); } );
+                    formatInvokeResult( result, returnTypeName, *pResult );
+                } ) );
+            }
+
+            /** @brief 씬 대상의 이벤트 방송 하나를 게임 단계에 넘깁니다(기록하지 않는다 — 받는 쪽이 할 일이다). 이벤트는 이름으로 그때 다시 찾는다. */
+            static void requestBroadcast( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const hashed_string& eventName )
+            {
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create(
+                    [scope, objectID, componentID, eventName]( EditorTransaction& /*transaction*/ )
+                {
+                    SceneTarget target;
+                    if ( resolveSceneTarget( scope, objectID, componentID, target ) == false )
+                        return;
+                    const EventInfo* pEvent = target._pType->findEventInHierarchy( eventName );
+                    if ( pEvent != nullptr )
+                        (void)ReflectionInvoke::broadcastEvent( *pEvent, target._pInstance, {} );
+                } ) );
             }
 
             /** @brief 열거형 값의 미리보기 글입니다. 비트 플래그는 켜진 이름을 ` | ` 로 잇고, 하나도 없으면 `None`(0) · `<Unknown>` 입니다. */
@@ -245,7 +301,7 @@ namespace sw::editor
         , _targetObjectID{ 0 }
         , _targetComponentID{ 0 }
         , _targetScope{ EditorPropertyGridScope::None }
-        , _lastInvokeResult{}
+        , _pLastInvokeResult{ make_shared<string>() }
     {
     }
 
@@ -1183,15 +1239,18 @@ namespace sw::editor
     {
         if ( _pInstance == nullptr || _pType == nullptr )
             return;
-        void* const     pInstance = _pInstance;
-        const TypeInfo& type      = *_pType;
-        TaskValue       result{};
-        const auto      call = [&]()
-        { result = getTypeRegistry().invokeMethod( pInstance, type._fullyQualifiedName, method._hashName, args ); };
+        if ( _pObject == nullptr )
+        {
+            // 씬 밖 대상(환경설정 구조체 등) — 주인 패널이 수명을 들고 되돌리기 대상이 없다. 지금 부른다.
+            const TaskValue result = getTypeRegistry().invokeMethod( _pInstance, _pType->_fullyQualifiedName, method._hashName, args );
+            PropertyGridModelInternal::formatInvokeResult( result, method._returnTypeName, *_pLastInvokeResult );
+            return;
+        }
+        // 씬 대상 — UI 프레임은 씬을 바꾸는 호출을 하지 않는다. 게임 단계가 부르고 결과 칸에 글을 둔다.
         StringBuilder<constant::buffer::kMax256> textBuilder;
         textBuilder.appendFormat( "Call %#", method._name.c_str() );
-        PropertyGridModelInternal::applyEdit( _pObject, textBuilder.view(), call ); // 오브젝트 밖 대상(환경설정 구조체 등)은 되돌리기 대상이 없다
-        InspectorBuiltinValue::formatMethodResult( result, method._returnTypeName, _lastInvokeResult.data(), _lastInvokeResult.capacity() );
+        PropertyGridModelInternal::requestInvoke( _targetScope, _targetObjectID, _targetComponentID, method._hashName, method._returnTypeName, string{ textBuilder.view() }, args,
+                                                  _pLastInvokeResult );
     }
 
     bool PropertyGridModel::isEventBound( const EventInfo& event ) const
@@ -1201,8 +1260,14 @@ namespace sw::editor
 
     void PropertyGridModel::broadcastEvent( const EventInfo& event )
     {
-        if ( _pInstance != nullptr )
-            (void)ReflectionInvoke::broadcastEvent( event, _pInstance, {} );
+        if ( _pInstance == nullptr )
+            return;
+        if ( _pObject == nullptr )
+        {
+            (void)ReflectionInvoke::broadcastEvent( event, _pInstance, {} ); // 씬 밖 대상 — 주인 패널이 수명을 든다
+            return;
+        }
+        PropertyGridModelInternal::requestBroadcast( _targetScope, _targetObjectID, _targetComponentID, event._name );
     }
 
     // ------------------------------------------------------------------------------
