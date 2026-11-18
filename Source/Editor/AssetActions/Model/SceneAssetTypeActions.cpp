@@ -1,11 +1,13 @@
 #include "pch.h"
 
 #include "Editor/AssetActions/EditorAssetThumbnailRenderer.h"
-#include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Scene/SceneDocument.h"
 
@@ -23,7 +25,12 @@ namespace sw::editor
             }
 
             // 뷰포트에 놓아도 연다(놓을 수 있는 종류가 아니다 — 뷰포트 고스트가 "놓으면 연다" 고 알린다). 언리얼도 맵을 뷰포트에 끌면 연다.
-            [[nodiscard]] virtual bool open( string_view relativePath ) const override { return EditorSceneFileCommands::tryOpenScene( relativePath ); }
+            // 여는 일은 게임 단계가 한다(`EditorWorkspace::requestLoadScene` → `EditorGameStepOrder::kSceneSession`) — 콘텐츠 브라우저(UI)는 요청만 남긴다. 실패는 그때 씬 명령이 알린다.
+            [[nodiscard]] virtual bool open( string_view relativePath ) const override
+            {
+                editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().requestLoadScene( relativePath );
+                return true;
+            }
         };
 
         const SceneAssetTypeActions s_sceneActions{};

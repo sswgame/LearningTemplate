@@ -50,9 +50,6 @@ namespace sw::editor
     void EditorMenuBarModel::processSceneRequests()
     {
         EditorSceneFileCommands::syncAfterSceneGenerationChange();
-        string scenePath;
-        if ( editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().consumeLoadScene( scenePath ) )
-            (void)EditorSceneFileCommands::tryOpenScene( scenePath ); // 실패는 tryOpenScene 이 알린다
     }
 
     EditorPendingSceneAction EditorMenuBarModel::getPendingSceneAction()
