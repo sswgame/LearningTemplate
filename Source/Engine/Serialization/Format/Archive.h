@@ -306,11 +306,6 @@ namespace sw
             return deserializeJSONObject( &instance, *T::StaticType() );
         }
 
-        /** @brief JSON 문자열을 콤팩트 바이너리로 바꿔 기록합니다. */
-        [[nodiscard]] bool convertJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo );
-        /** @brief 아카이브의 바이너리 객체를 JSON 문자열로 바꿔 반환합니다. */
-        string convertBinaryToJSON( const TypeInfo& typeInfo, bool bPretty = false );
-
         // ------------------------------------------------------------------------------
         // 5) XML 임베딩 및 상호 변환 (XMLSerializer 연계)
         // ------------------------------------------------------------------------------
@@ -330,9 +325,6 @@ namespace sw
         {
             return deserializeXMLObject( &instance, *T::StaticType() );
         }
-
-        /** @brief XML 문자열을 콤팩트 바이너리로 바꿔 기록합니다. */
-        [[nodiscard]] bool convertXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo );
 
         // ------------------------------------------------------------------------------
         // 6) 가변 길이 정수 (VarInt / ZigZag) 스트리밍
@@ -359,15 +351,6 @@ namespace sw
         void writePooledString( string_view str );
         /** @brief 풀 인덱스를 읽어 그 문자열을 반환합니다. */
         [[nodiscard]] bool readPooledString( string& outStr );
-
-        /** @brief 아카이브에 내장된 StringPool 을 반환합니다. */
-        StringPool&       getStringPool() { return _stringPool; }
-        const StringPool& getStringPool() const { return _stringPool; }
-
-        /** @brief StringPool 테이블 전체를 아카이브에 기록합니다. */
-        void saveStringPool();
-        /** @brief 아카이브에서 StringPool 테이블 전체를 읽어 옵니다. */
-        [[nodiscard]] bool loadStringPool();
 
     private:
         /**

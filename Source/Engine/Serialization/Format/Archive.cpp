@@ -17,7 +17,6 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/SerializerTranscodeUtil.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 
@@ -744,34 +743,6 @@ namespace sw
         return JSONSerializer::deserialize( pInstance, typeInfo, jsonStr );
     }
 
-    bool Archive::convertJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo )
-    {
-        if ( jsonStr.empty() || typeInfo._size == 0 )
-        {
-            _bError = SW_TRUE;
-            return false;
-        }
-
-        vector<uint8> outBytes;
-        if ( SerializerTranscodeUtil::transcodeJSONToBinary( jsonStr, typeInfo, outBytes ) == false )
-        {
-            _bError = SW_TRUE;
-            return false;
-        }
-
-        writeBytes( outBytes.data(), outBytes.size() );
-        return true;
-    }
-
-    string Archive::convertBinaryToJSON( const TypeInfo& typeInfo, bool bPretty )
-    {
-        const bool bNothingToConvert = _pData == nullptr || _offset >= _dataSize || typeInfo._size == 0;
-        if ( bNothingToConvert )
-            return {};
-
-        return SerializerTranscodeUtil::transcodeBinaryToJSON( _pData + _offset, _dataSize - _offset, typeInfo, bPretty );
-    }
-
     bool Archive::serializeXMLObject( const void* pInstance, const TypeInfo& typeInfo )
     {
         if ( pInstance == nullptr )
@@ -799,25 +770,6 @@ namespace sw
             return false;
 
         return XMLSerializer::deserialize( pInstance, typeInfo, xmlStr );
-    }
-
-    bool Archive::convertXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo )
-    {
-        if ( xmlStr.empty() || typeInfo._size == 0 )
-        {
-            _bError = SW_TRUE;
-            return false;
-        }
-
-        vector<uint8> outBytes;
-        if ( SerializerTranscodeUtil::transcodeXMLToBinary( xmlStr, typeInfo, outBytes ) == false )
-        {
-            _bError = SW_TRUE;
-            return false;
-        }
-
-        writeBytes( outBytes.data(), outBytes.size() );
-        return true;
     }
 
     void Archive::writeVarUint( uint64 value )
@@ -920,18 +872,5 @@ namespace sw
         const string_view sv = _stringPool.getString( static_cast<uint32>( poolID ) );
         outStr.assign( sv.data(), sv.size() );
         return true;
-    }
-
-    void Archive::saveStringPool()
-    {
-        _stringPool.saveToArchive( *this );
-    }
-
-    bool Archive::loadStringPool()
-    {
-        const bool bOk = _stringPool.loadFromArchive( *this );
-        if ( bOk == false )
-            _bError = SW_TRUE;
-        return bOk;
     }
 } // namespace sw
