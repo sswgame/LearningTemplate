@@ -62,8 +62,14 @@ namespace sw
          * @details 어느 형식의 관리자를 쓸지는 호스트가 정한다(App 은 `EditorModuleManager`). 호스트는 `getModuleManager` 를 자기가 만든 형식으로 읽는다.
          */
         [[nodiscard]] bool loadModuleLibraries( uint8 targetMask, unique_ptr<GameModuleManager> moduleManager );
-        /** @brief 호스트 서비스를 @p listService 의 의존 순서로 세웁니다(`HostServiceUtil::startAll`). 서지 못하면 false 이고, 선 것은 `stopHostServices` 가 내립니다. */
+        /**
+         * @brief 호스트 서비스를 @p listService 의 의존 순서로 세웁니다. 서면 선 순서를 로그로 남기고, 모듈 · 게임이 모두 선 지금까지 가져간 곳이 없는 `-gv_*` 를 경고합니다.
+         * @details 예전에는 두 호스트가 이 세 걸음을 저마다 적어 Server 만 모르는 `-gv_*` 를 조용히 버렸다 — 세우는 길을 여기 하나로 둔다(언리얼 `FEngineLoop::PreInit` 하나가 게임 · 서버 대상을 함께 세운다).
+         * @return 하나라도 서지 못하면 오류를 남기고 false 이고, 선 것은 `stopHostServices` 가 내립니다.
+         */
         [[nodiscard]] bool startHostServices( vector_reference<const HostServiceID> listService, const HostServiceStartDelegate& start, const HostServiceStopDelegate& stop );
+        /** @brief 바뀐 모듈 라이브러리를 보고 리로드를 돌립니다(동적 모듈 구성의 개발 계층만 — 그 밖에는 아무것도 하지 않는다). 호스트가 프레임마다 씬 틱 직전에 부릅니다. */
+        void updateModuleReload();
 
         /** @brief 호스트 서비스를 역순으로 내리고 모듈 관리자를 놓습니다 — 라이브러리를 쥔 관리자는 엔진(모듈 라이브러리 종료 단계)보다 먼저 사라진다. 헤드리스 부팅 · 기동 실패면 선 것만 내립니다. */
         void stopHostServices();

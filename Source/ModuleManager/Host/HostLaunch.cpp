@@ -4,10 +4,32 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Foundation/EngineServices.h"
+
 #include "ModuleManager/GameModuleManager.h"
-#include "ModuleManager/Host/HostServiceUtil.h"
+
+namespace sw
+{
+    namespace
+    {
+        /**
+         * @brief 모르는 `-gv_*` 키를 경고합니다. 파서는 모듈이 선언하기 전이라 모르는 키를 보류 테이블에 남긴다 — 모두 선 뒤에도 가져간 곳이 없으면 오타다.
+         * @details 테이블은 비우지 않는다. 핫 리로드로 나중에 올라오는 모듈이 여전히 가져갈 수 있다.
+         */
+        void warnUnknownGlobalOverrides( const CommandLineManager& commandLine )
+        {
+            const vector<string> listPendingName = commandLine.collectPendingGlobalNames();
+            for ( const string& pendingName : listPendingName )
+            {
+                if ( engine::getSubsystem<GlobalVariableManager>().findVariable( pendingName ) == nullptr )
+                    SW_LOG_WARNING_ID( "HostServices.NoSuchGlobalVariable", "%#: no such global variable. Ignored", pendingName.c_str() );
+            }
+        }
+    } // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -73,7 +95,26 @@ namespace sw
     bool HostLaunch::startHostServices( vector_reference<const HostServiceID> listService, const HostServiceStartDelegate& start, const HostServiceStopDelegate& stop )
     {
         const CommandLineManager* pCommandLine = _engine.getCommandLineManager();
-        return pCommandLine != nullptr && HostServiceUtil::startAll( _hostServices, listService, start, stop, *pCommandLine );
+        if ( pCommandLine == nullptr )
+            return false;
+        // 멤버 이름이 같은 자유 함수(`Engine/HostServiceSet.h`)를 가린다 — 네임스페이스를 적어 부른다.
+        if ( sw::startHostServices( _hostServices, listService, start, stop ) == false )
+        {
+            SW_LOG_ERROR_ID( "HostServices.HostServicesFailedStart", "Host services failed to start: %#", _hostServices.getError().c_str() );
+            return false;
+        }
+        SW_LOG_INFO_ID( "HostServices.HostServicesUp", "Host services up: %#", describeHostServiceOrder( _hostServices ).c_str() );
+        // 모듈 · 게임이 모두 선 지금까지 가져간 곳이 없는 `-gv_*` 는 오타다.
+        warnUnknownGlobalOverrides( *pCommandLine );
+        return true;
+    }
+
+    void HostLaunch::updateModuleReload()
+    {
+#if SW_WITH_DYNAMIC_MODULES
+        if ( _pDevLayer != nullptr )
+            _pDevLayer->updateModuleReload();
+#endif
     }
 
     void HostLaunch::stopHostServices()
