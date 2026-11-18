@@ -34,6 +34,11 @@ namespace sw::editor
          * 세션 칸(`_bEjected` · 최대화)과 패널 포커스를 한 명령이 함께 바꾼다 — 따로 보내면 그 사이 프레임이 반쯤 바뀐 상태를 본다.
          */
         ToggleEject,
+        /**
+         * Keep Simulation Changes — 메인 씬에서 고른 오브젝트의 지금 상태를 Stop 뒤에도 남기게 적는다(`EditorPlaySession::keepObjectState`). 적었으면 알림을 띄운다.
+         * 고른 오브젝트는 적용할 때(게임 틱 시작) 읽는다 — UI 가 보낸 프레임과 적용 사이에 씬이 틱하지 않는다(UI 프레임 뒤 · 씬 틱 앞).
+         */
+        KeepSelectedChanges,
         Count
     };
 
@@ -50,10 +55,13 @@ namespace sw::editor
         static EditorUICommand makeFitViewTarget( EditorViewKind view, uint32 width, uint32 height );
         static EditorUICommand makeStart( bool bSimulate, bool bStartAtCamera );
         static EditorUICommand makeStep( uint32 frameCount );
-        /** @brief 칸이 없는 종류(Pause · Resume · Stop · ToggleEject)입니다. */
+        /** @brief 칸이 없는 종류(Pause · Resume · Stop · ToggleEject · KeepSelectedChanges)입니다. */
         static EditorUICommand make( EditorUICommandKind kind );
 
-        /** @brief 이 명령을 엔진 상태에 적용합니다 — 게임 스레드만 부른다(`EditorUICommandQueue::applyDue`). */
+        /**
+         * @brief 이 명령을 엔진 상태에 적용합니다 — 게임 스레드만 부른다(`EditorUICommandQueue::applyDue`).
+         * @details 플레이 세션의 게임 스레드 열쇠(`EditorPlaySessionWriteKey`)를 만드는 입구다 — UI 쪽은 열쇠가 없어 세션을 바로 바꾸지 못하고 명령을 보낸다.
+         */
         void apply() const;
     };
 

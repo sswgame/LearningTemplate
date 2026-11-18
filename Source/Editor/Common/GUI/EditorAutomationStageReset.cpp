@@ -25,6 +25,19 @@
 
 namespace sw::editor
 {
+    /**
+     * @struct EditorAutomationPlayReset
+     * @brief 자동화 단계 초기화가 재생을 바로 멈추는 입구입니다 — 단계 사이는 게임 스레드라 플레이 세션 열쇠(`EditorPlaySessionWriteKey`)를 만든다(열쇠가 친구로 부른다).
+     */
+    struct EditorAutomationPlayReset
+    {
+        static void stopIfPlaying()
+        {
+            if ( EditorPlaySession::isPlaying() )
+                EditorPlaySession::stop( EditorPlaySessionWriteKey{} );
+        }
+    };
+
     namespace
     {
         struct EditorAutomationStageResetInternal
@@ -58,8 +71,7 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>(); // 선택: 편집기를 켜지 않은 체인(게임 시나리오)에는 없다
                 if ( pContext == nullptr )
                     return;
-                if ( EditorPlaySession::isPlaying() )
-                    EditorPlaySession::stop();
+                EditorAutomationPlayReset::stopIfPlaying();
                 pContext->getSubsystem<EditorNetPlaySession>().resetToFreshEditor();
                 if ( ImGui::GetCurrentContext() != nullptr )
                 {

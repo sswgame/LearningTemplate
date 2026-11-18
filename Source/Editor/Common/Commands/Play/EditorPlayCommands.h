@@ -14,6 +14,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class EditorPlaySessionWriteKey;
+
     /**
      * @class EditorPlayCommands
      * @brief 플레이 툴바 밖의 플레이 옵션을 모읍니다(메뉴 Play · 게임 뷰 툴바 · 단축키).
@@ -27,15 +29,15 @@ namespace sw::editor
          * @brief 매 에디터 프레임에 부릅니다 — 세션이 시작된 첫 프레임에 "Maximize On Play" 면 게임 뷰를 최대화하고, 멈추면 되돌립니다.
          * @details 시작과 정지는 플레이 툴바 · 단축키 · 시나리오 어디서든 올 수 있어 상태 전이를 여기서 한 번에 본다.
          */
-        static void update();
+        static void update( EditorPlaySessionWriteKey key );
         /**
          * @brief F8 — Eject/Possess 를 UI 명령으로 보냅니다(`EditorUICommandKind::ToggleEject`). 이 UI 프레임 뒤 게임 틱 시작에 적용됩니다 — 플레이어 조종 중이면 Simulate 로 바꾸고
          *        씬 뷰를 앞으로(Eject), Eject 한 세션이면 다시 조종하고 게임 뷰를 앞으로 둡니다(Possess).
          * @details UI(메뉴 · 단축키 · 게임 뷰 툴바)는 세션을 바로 바꾸지 않는다 — UI 출력 계약(`EditorUICommandQueue`).
          */
         static void toggleEject();
-        /** @brief 고른 오브젝트의 지금 상태를 Stop 뒤에도 남기게 적습니다. 적은 오브젝트 수입니다(플레이 중이 아니면 0). */
-        static uint32 keepSelectedChanges();
+        /** @brief 고른 오브젝트의 지금 상태를 Stop 뒤에도 남기게 적으라고 UI 명령으로 보냅니다(`EditorUICommandKind::KeepSelectedChanges` — 적으면 알림이 뜬다). */
+        static void keepSelectedChanges();
         /** @brief 저장된 활성 씬을 새 창(엔진을 따로 띄운 프로세스)에서 엽니다(언리얼 Standalone Game). 띄웠으면 true 입니다. */
         [[nodiscard]] static bool launchStandalone();
         /**

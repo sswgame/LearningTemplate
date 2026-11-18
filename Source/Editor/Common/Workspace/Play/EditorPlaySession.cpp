@@ -280,13 +280,13 @@ namespace sw::editor
 {
     PlaySessionState EditorPlaySession::getState()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr ? pData->_state : PlaySessionState::Stopped;
     }
 
     bool EditorPlaySession::isPlaying()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         if ( pData == nullptr )
             return false;
         if ( pData->_pendingStepCount > 0 )
@@ -311,7 +311,7 @@ namespace sw::editor
 
     bool EditorPlaySession::refuseSceneEdit( const utf8* pAction )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( areSceneEditsAllowed() )
         {
             if ( pData != nullptr )
@@ -336,14 +336,14 @@ namespace sw::editor
 
     void EditorPlaySession::holdSceneEdits()
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             ++pData->_sceneEditHoldCount;
     }
 
     void EditorPlaySession::releaseSceneEdits()
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         SW_ASSERT( pData == nullptr || pData->_sceneEditHoldCount > 0 );
         if ( pData != nullptr && pData->_sceneEditHoldCount > 0 )
             --pData->_sceneEditHoldCount;
@@ -351,38 +351,38 @@ namespace sw::editor
 
     bool EditorPlaySession::areSceneEditsHeld()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr && pData->_sceneEditHoldCount > 0;
     }
 
     void EditorPlaySession::recordSceneEditWhileHeld()
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             ++pData->_heldSceneEditCount;
     }
 
     uint32 EditorPlaySession::getHeldSceneEditCount()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr ? pData->_heldSceneEditCount : 0u;
     }
 
     bool EditorPlaySession::hasPendingStep()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr && pData->_pendingStepCount > 0;
     }
 
     bool EditorPlaySession::isSimulating()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr && pData->_state != PlaySessionState::Stopped && pData->_bSimulate == SW_TRUE;
     }
 
     bool EditorPlaySession::isPlayerActive()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr && isPlayerActive( *pData );
     }
 
@@ -393,16 +393,16 @@ namespace sw::editor
         return data._pendingStepCount > 0 || data._state == PlaySessionState::Playing;
     }
 
-    void EditorPlaySession::play()
+    void EditorPlaySession::play( EditorPlaySessionWriteKey /*key*/ )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             startSession( *pData, false );
     }
 
-    void EditorPlaySession::simulate()
+    void EditorPlaySession::simulate( EditorPlaySessionWriteKey /*key*/ )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             startSession( *pData, true );
     }
@@ -414,7 +414,12 @@ namespace sw::editor
         setState( data, PlaySessionState::Playing );
     }
 
-    PlaySessionData* EditorPlaySession::findData()
+    PlaySessionData* EditorPlaySession::findData( EditorPlaySessionWriteKey /*key*/ )
+    {
+        return findDataInternal();
+    }
+
+    PlaySessionData* EditorPlaySession::findDataInternal()
     {
         // 선택 조회(필수 아님): 에디터 셸이 아직 만들어지지 않았거나 이미 종료된 시점에도 정적 함수가 불릴 수 있다(패널 정리 경로). 그때는 "정지" 로 응답한다.
         EditorPlaySession* pSession = findSubsystem<EditorPlaySession>();
@@ -457,13 +462,13 @@ namespace sw::editor
 
     bool EditorPlaySession::isPlayQueued()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr && pData->_bStartQueued != SW_FALSE;
     }
 
-    void EditorPlaySession::stepFrames( uint32 frameCount )
+    void EditorPlaySession::stepFrames( EditorPlaySessionWriteKey /*key*/, uint32 frameCount )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             stepFrames( *pData, frameCount );
     }
@@ -481,9 +486,9 @@ namespace sw::editor
         data._pendingStepCount = frameCount < kMaxStepFrameCount ? frameCount : kMaxStepFrameCount;
     }
 
-    void EditorPlaySession::consumePendingStep()
+    void EditorPlaySession::consumePendingStep( EditorPlaySessionWriteKey /*key*/ )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             consumePendingStep( *pData );
     }
@@ -497,16 +502,16 @@ namespace sw::editor
             data._state = PlaySessionState::Paused;
     }
 
-    void EditorPlaySession::setState( PlaySessionState state )
+    void EditorPlaySession::setState( EditorPlaySessionWriteKey /*key*/, PlaySessionState state )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             setState( *pData, state );
     }
 
-    void EditorPlaySession::update()
+    void EditorPlaySession::update( EditorPlaySessionWriteKey /*key*/ )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             update( *pData );
     }

@@ -1043,7 +1043,7 @@ namespace sw::editor
 
     void ImGuiEditor::stopSimulation()
     {
-        EditorPlaySession::stop();
+        EditorPlaySession::stop( EditorPlaySessionWriteKey{} ); // 호스트 훅 — 게임 스레드
     }
 
     void ImGuiEditor::requestBackgroundStop()
@@ -1055,9 +1055,10 @@ namespace sw::editor
     void ImGuiEditor::onHostFrameEnd()
     {
         // 씬을 여는 중에 누른 Play 는 미뤄 둔다. 로드가 끝난 프레임에 여기서 시작한다.
-        EditorPlaySession::update();
-        EditorPlaySession::consumePendingStep();
-        EditorPlayCommands::update(); // Maximize On Play. 시작과 정지가 어디서 왔든 상태 전이를 여기서 확인한다
+        const EditorPlaySessionWriteKey key{}; // 호스트 훅 — 게임 스레드
+        EditorPlaySession::update( key );
+        EditorPlaySession::consumePendingStep( key );
+        EditorPlayCommands::update( key ); // Maximize On Play. 시작과 정지가 어디서 왔든 상태 전이를 여기서 확인한다
     }
 
     bool ImGuiEditor::onWindowCloseQuery()

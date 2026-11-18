@@ -42,14 +42,8 @@ namespace sw::editor
 
             static void runToggleEject() { EditorPlayCommands::toggleEject(); }
 
-            // 씬은 Stop 이 남긴 상태를 적용할 때 바뀐다(`applyKeptStates` 도 거래를 받는다). 이 호출은 상태를 모을 뿐이지만 같은 형식을 따른다.
-            static void runKeepChanges( EditorTransaction& /*transaction*/ )
-            {
-                const uint32   keptCount     = EditorPlayCommands::keepSelectedChanges();
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                if ( keptCount > 0 )
-                    editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyKeepSimulationTitle" ), SW_LOCKEY( "EdCommon", "NotifyKeepSimulation" ), NotificationKind::Info );
-            }
+            // 씬은 Stop 이 남긴 상태를 적용할 때 바뀐다(`applyKeptStates` 도 거래를 받는다). 이 호출은 상태를 모으라고 보낼 뿐이지만 같은 형식을 따른다.
+            static void runKeepChanges( EditorTransaction& /*transaction*/ ) { EditorPlayCommands::keepSelectedChanges(); }
 
             static void runLaunchStandalone() { (void)EditorPlayCommands::launchStandalone(); } // 실패는 알림 · 로그가 알린다
         };
@@ -62,9 +56,9 @@ namespace sw::editor
     SW_EDITOR_COMMAND( PlayKeepChanges, "play.keepChanges", &EditorPlayCommandsInternal::runKeepChanges, &EditorPlayCommandsInternal::canKeepChanges, SceneDuringPlay );
     SW_EDITOR_COMMAND( PlayStandalone, "play.standalone", &EditorPlayCommandsInternal::runLaunchStandalone, nullptr, NoScene );
 
-    void EditorPlayCommands::update()
+    void EditorPlayCommands::update( EditorPlaySessionWriteKey key )
     {
-        PlaySessionData* pData         = EditorPlaySession::findData();
+        PlaySessionData* pData         = EditorPlaySession::findData( key );
         EditorContext&   editorContext = editor::getSubsystem<EditorContext>();
         if ( pData == nullptr )
             return;
@@ -93,21 +87,9 @@ namespace sw::editor
         EditorUICommandQueue::postToEditor( EditorUICommand::make( EditorUICommandKind::ToggleEject ) );
     }
 
-    uint32 EditorPlayCommands::keepSelectedChanges()
+    void EditorPlayCommands::keepSelectedChanges()
     {
-        // 플레이 세션은 메인 월드에서 돈다 — 남길 변경은 메인 씬의 선택이다.
-        PlaySessionData* pData                = EditorPlaySession::findData();
-        const bool       bNoActivePlaySession = pData == nullptr || pData->_state == PlaySessionState::Stopped;
-        if ( bNoActivePlaySession )
-            return 0;
-        vector<GameObject*> listSelected;
-        editor::getMainSceneSelection().getSelectedObjects( listSelected );
-        uint32 keptCount{ 0 };
-        for ( const GameObject* pObject : listSelected )
-        {
-            keptCount += EditorPlaySession::keepObjectState( *pData, pObject ) ? 1u : 0u;
-        }
-        return keptCount;
+        EditorUICommandQueue::postToEditor( EditorUICommand::make( EditorUICommandKind::KeepSelectedChanges ) );
     }
 
     bool EditorPlayCommands::launchStandalone()
@@ -147,65 +129,64 @@ namespace sw::editor
 namespace sw::editor
 {
     // 콘솔 명령 — 시나리오 · 콘솔 입력 줄이 부른다(`DevCommandRegistry`). 그 기능 옆에 둔다(언리얼 Exec 명령이 그 시스템 파일에 있는 것과 같다).
-    namespace
+    // 콘솔은 게임 스레드에서 돈다 — 플레이 세션 열쇠(`EditorPlaySessionWriteKey`)를 만드는 입구라 이름 있는 형식이다(열쇠가 친구로 부른다).
+    /** @struct EditorPlayConsoleCommands @brief 플레이 콘솔 명령(play · simulate · pause · stop · step)의 본문입니다. */
+    struct EditorPlayConsoleCommands
     {
-        struct EditorPlayConsoleInternal
+        static bool runPlay( const vector<string>& listArgument, string& outReply )
         {
-            static bool runPlay( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.empty() == false )
-                    return false;
-                EditorPlaySession::play();
-                outReply = "play";
-                return true;
-            }
+            if ( listArgument.empty() == false )
+                return false;
+            EditorPlaySession::play( EditorPlaySessionWriteKey{} );
+            outReply = "play";
+            return true;
+        }
 
-            static bool runSimulate( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.empty() == false )
-                    return false;
-                EditorPlaySession::simulate();
-                outReply = "simulate";
-                return true;
-            }
+        static bool runSimulate( const vector<string>& listArgument, string& outReply )
+        {
+            if ( listArgument.empty() == false )
+                return false;
+            EditorPlaySession::simulate( EditorPlaySessionWriteKey{} );
+            outReply = "simulate";
+            return true;
+        }
 
-            static bool runPause( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.empty() == false )
-                    return false;
-                EditorPlaySession::pause();
-                outReply = "pause";
-                return true;
-            }
+        static bool runPause( const vector<string>& listArgument, string& outReply )
+        {
+            if ( listArgument.empty() == false )
+                return false;
+            EditorPlaySession::pause( EditorPlaySessionWriteKey{} );
+            outReply = "pause";
+            return true;
+        }
 
-            static bool runStop( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.empty() == false )
-                    return false;
-                EditorPlaySession::stop();
-                outReply = "stop";
-                return true;
-            }
+        static bool runStop( const vector<string>& listArgument, string& outReply )
+        {
+            if ( listArgument.empty() == false )
+                return false;
+            EditorPlaySession::stop( EditorPlaySessionWriteKey{} );
+            outReply = "stop";
+            return true;
+        }
 
-            static bool runStep( const vector<string>& listArgument, string& outReply )
-            {
-                uint32     frameCount            = 1;
-                const bool bInvalidStepArguments = listArgument.size() > 1 || ( listArgument.size() == 1 && DevCommandRegistry::readCountArgument( listArgument[0], frameCount ) == false ) || frameCount == 0;
-                if ( bInvalidStepArguments )
-                    return false;
-                EditorPlaySession::stepFrames( frameCount );
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "step %#", frameCount );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-        };
-    } // namespace
+        static bool runStep( const vector<string>& listArgument, string& outReply )
+        {
+            uint32     frameCount            = 1;
+            const bool bInvalidStepArguments = listArgument.size() > 1 || ( listArgument.size() == 1 && DevCommandRegistry::readCountArgument( listArgument[0], frameCount ) == false ) || frameCount == 0;
+            if ( bInvalidStepArguments )
+                return false;
+            EditorPlaySession::stepFrames( EditorPlaySessionWriteKey{}, frameCount );
+            StringBuilder<constant::buffer::kMax256> replyBuilder;
+            replyBuilder.appendFormat( "step %#", frameCount );
+            outReply = string( replyBuilder.view() );
+            return true;
+        }
+    };
 
-    SW_DEV_COMMAND( Play, "play", "play", "Start (or switch to) play-in-editor", &EditorPlayConsoleInternal::runPlay );
+    SW_DEV_COMMAND( Play, "play", "play", "Start (or switch to) play-in-editor", &EditorPlayConsoleCommands::runPlay );
     SW_DEV_COMMAND( Simulate, "simulate", "simulate", "Start (or switch to) simulate - world only, no player or game input",
-                    &EditorPlayConsoleInternal::runSimulate );
-    SW_DEV_COMMAND( Pause, "pause", "pause", "Pause the play session", &EditorPlayConsoleInternal::runPause );
-    SW_DEV_COMMAND( Stop, "stop", "stop", "Stop the play session and restore the edited scene", &EditorPlayConsoleInternal::runStop );
-    SW_DEV_COMMAND( Step, "step", "step [frames]", "Advance the play session by N frames, then pause", &EditorPlayConsoleInternal::runStep );
+                    &EditorPlayConsoleCommands::runSimulate );
+    SW_DEV_COMMAND( Pause, "pause", "pause", "Pause the play session", &EditorPlayConsoleCommands::runPause );
+    SW_DEV_COMMAND( Stop, "stop", "stop", "Stop the play session and restore the edited scene", &EditorPlayConsoleCommands::runStop );
+    SW_DEV_COMMAND( Step, "step", "step [frames]", "Advance the play session by N frames, then pause", &EditorPlayConsoleCommands::runStep );
 } // namespace sw::editor

@@ -25,6 +25,31 @@ namespace sw
 
 namespace sw::editor
 {
+    class ImGuiEditor;
+    struct EditorUICommand;
+    struct EditorPlayConsoleCommands;
+    struct EditorAutomationPlayReset;
+
+    /**
+     * @class EditorPlaySessionWriteKey
+     * @brief 플레이 세션을 바꾸는 함수(`EditorPlaySession::play` · `setState` · `findData` …)의 게임 스레드 전용 열쇠입니다(passkey).
+     * @details 만들 수 있는 쪽은 게임 스레드의 입구뿐이다 — UI 명령 적용(`EditorUICommand::apply`), 호스트 훅(`ImGuiEditor` 의 `stopSimulation` · `onHostFrameEnd`),
+     *          콘솔 명령(`EditorPlayConsoleCommands`), 자동화 단계 초기화(`EditorAutomationPlayReset`). ViewModel · 패널은 열쇠를 만들 수 없어 세션을 바로 바꾸지 못하고
+     *          명령(`EditorUICommandQueue`)을 보낸다 — 에디터 UI 스레드 분리의 출력 계약을 형식이 막는다(언리얼 Slate 가 게임 상태를 명령으로만 바꾸는 자리).
+     *          열쇠를 받은 함수는 그것을 넘겨 다른 쓰기 함수를 부를 수 있다(값 복사).
+     */
+    class EditorPlaySessionWriteKey final
+    {
+    private:
+        // explicit 이 집합체 초기화(`EditorPlaySessionWriteKey{}` 가 비공개 생성자를 건너뛰는 C++17 구멍)를 막는다.
+        explicit EditorPlaySessionWriteKey() = default;
+
+        friend class ImGuiEditor;
+        friend struct EditorUICommand;
+        friend struct EditorPlayConsoleCommands;
+        friend struct EditorAutomationPlayReset;
+    };
+
     enum class PlaySessionState : uint8
     {
         Stopped = 0,
@@ -137,6 +162,7 @@ namespace sw::editor
      * @brief 에디터 Play-In-Editor(PIE) 시뮬레이션의 수명 주기와 씬 롤백을 관리합니다.
      * @details 에디터 서브시스템으로 상태(`PlaySessionData`)를 들고, 정적 함수가 에디터 범위에서 이 서브시스템을 찾아 조작한다(언리얼 `FSlateApplication::Get` 처럼
      *          하나뿐인 인스턴스에 정적으로 닿는다). 에디터 범위가 없으면 "정지" 로 응답한다. `PlaySessionData&` 를 받는 본체는 컨텍스트 없이 테스트한다.
+     *          세션을 바꾸는 정적 함수와 상태를 고칠 수 있게 꺼내는 `findData` 는 게임 스레드 열쇠(`EditorPlaySessionWriteKey`)를 받는다 — 읽기는 누구나 한다.
      */
     class EditorPlaySession final : public EditorSubsystem
     {
@@ -195,7 +221,7 @@ namespace sw::editor
         static bool isPlayQueued();
 
         /** @brief 플레이 세션 상태를 바꿉니다. 이때 스냅샷 캡처와 롤백 복구도 처리합니다. */
-        static void setState( PlaySessionState state );
+        static void setState( EditorPlaySessionWriteKey key, PlaySessionState state );
         /**
          * @brief `setState` 의 본체입니다. 상태를 인자로 받아 에디터 컨텍스트 없이도 테스트할 수 있습니다.
          * @details 정지에서 시작할 때 씬을 여는 중이면(`SceneManager::isTransitioning`) 시작을 미룬다. 언리얼의 `RequestPlaySession` 이 요청을
@@ -204,27 +230,25 @@ namespace sw::editor
          */
         static void setState( PlaySessionData& data, PlaySessionState state );
         /** @brief 매 에디터 프레임에 부릅니다. 미룬 시작이 있고 씬 로드가 끝났으면 시작합니다. */
-        static void update();
+        static void update( EditorPlaySessionWriteKey key );
         /** @brief `update` 의 본체입니다. 상태를 인자로 받습니다. */
         static void update( PlaySessionData& data );
         /** @brief 플레이어가 조종하는 플레이를 시작합니다. Simulate 중이면 플레이어 모드로 바꿉니다. */
-        static void play();
+        static void play( EditorPlaySessionWriteKey key );
         /** @brief 월드만 실행하는 Simulate 를 시작합니다. 플레이 중이면 Simulate 로 바꿉니다. */
-        static void simulate();
+        static void simulate( EditorPlaySessionWriteKey key );
         /** @brief `play` 와 `simulate` 의 본체입니다. @p bSimulate 가 세션 종류를 정하고 상태를 플레이로 바꿉니다. */
         static void startSession( PlaySessionData& data, bool bSimulate );
         /** @brief 시뮬레이션을 일시정지합니다. */
-        static void pause() { setState( PlaySessionState::Paused ); }
+        static void pause( EditorPlaySessionWriteKey key ) { setState( key, PlaySessionState::Paused ); }
         /** @brief 시뮬레이션을 정지하고 씬을 롤백합니다. */
-        static void stop() { setState( PlaySessionState::Stopped ); }
-        /** @brief 한 프레임만 시뮬레이션한 뒤 일시정지합니다. */
-        static void stepOnce() { stepFrames( 1 ); }
+        static void stop( EditorPlaySessionWriteKey key ) { setState( key, PlaySessionState::Stopped ); }
         /** @brief @p frameCount 프레임을 진행한 뒤 일시정지합니다. 정지 상태이면 플레이를 시작합니다. */
-        static void stepFrames( uint32 frameCount );
+        static void stepFrames( EditorPlaySessionWriteKey key, uint32 frameCount );
         /** @brief `stepFrames` 의 본체입니다. 0 은 무시하고 `kMaxStepFrameCount` 로 자릅니다. */
         static void stepFrames( PlaySessionData& data, uint32 frameCount );
         /** @brief 예약된 Step 한 프레임을 소비하고, 다 소비하면 일시정지로 되돌립니다. */
-        static void consumePendingStep();
+        static void consumePendingStep( EditorPlaySessionWriteKey key );
         /** @brief `consumePendingStep` 의 본체입니다. */
         static void consumePendingStep( PlaySessionData& data );
 
@@ -236,8 +260,8 @@ namespace sw::editor
         static void setStartPosition( PlaySessionData& data, const float3& position );
         /** @brief "카메라 위치에서 시작" 을 끕니다. */
         static void clearStartPosition( PlaySessionData& data );
-        /** @brief 현재 세션의 상태를 반환합니다. 컨텍스트가 없으면 nullptr 입니다. 패널이 시작 위치를 정할 때 씁니다. */
-        static PlaySessionData* findData();
+        /** @brief 현재 세션의 상태를 고칠 수 있게 반환합니다(게임 스레드 — 시작 위치 · Eject · 남길 변경 · 플레이 옵션). 컨텍스트가 없으면 nullptr 입니다. */
+        static PlaySessionData* findData( EditorPlaySessionWriteKey key );
         /**
          * @brief 시작 위치로 옮길 오브젝트를 고릅니다. `kPlayerStartTag` 태그를 가진 오브젝트를 먼저 찾고, 없으면 게임 카메라를 가진 오브젝트의 최상위 조상을 고릅니다.
          * @return 찾은 오브젝트입니다. 없으면 nullptr 입니다.
@@ -263,6 +287,9 @@ namespace sw::editor
         static bool keepObjectState( PlaySessionData& data, const GameObject* pObject );
 
     private:
+        /** @brief 읽기 · 세션 안의 기록(거절 로그 · 편집 막기)용 조회입니다. 밖으로는 열쇠를 받는 `findData` 만 상태를 고칠 수 있게 내준다. */
+        static PlaySessionData* findDataInternal();
+
         PlaySessionData _data{};
     };
 } // namespace sw::editor
