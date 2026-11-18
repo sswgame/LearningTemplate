@@ -299,8 +299,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _minPostQuality="1">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>SceneDepth</item>
 				<item>SceneVelocity</item>
@@ -316,8 +315,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _minPostQuality="1">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>VelocityTileMax</item>
 			</_listInput>

@@ -309,10 +309,10 @@ namespace sw
                     case RenderPassType::MotionBlurTileMax:
                     {
                         // 화면 속도 · 장면 깊이를 읽어 1/16 첨부에 타일 최대 속도를 쓴다. 출력 형식이 원본과 달라 원본을 가리키는 끄기(kBypassesToSource)는 없다 —
-                        // 모션 블러가 꺼진 뷰에서는 기록하지 않고 출력이 없다(kOmittedWhenOff — 읽는 모션 블러 패스는 원본을 가리켜 빠진다, applyViewPassSelection).
+                        // 모션 블러가 꺼진 뷰에서는 읽는 패스(모션 블러 · NeighborMax)가 원본을 가리켜 빠지므로 읽는 쪽이 없는 이 패스도 기록하지 않는다(kCullWhenUnconsumed — 데칼과 같다).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderMotionBlurTileMax;
                         info._inputContract  = makeContract( { Role::SceneDepth, Role::Velocity }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kOmittedWhenOff;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kCullWhenUnconsumed;
                         break;
                     }
                     case RenderPassType::MotionBlurNeighborMax:
@@ -320,7 +320,7 @@ namespace sw
                         // 타일 최대 속도(원본 역할)를 읽어 같은 크기 첨부에 3x3 이웃 최대를 쓴다. 끄기는 TileMax 와 같다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderMotionBlurNeighborMax;
                         info._inputContract  = makeContract( { Role::SourceColor }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kOmittedWhenOff;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kCullWhenUnconsumed;
                         break;
                     }
                     case RenderPassType::ScreenSpaceGI:
