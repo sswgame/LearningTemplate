@@ -36,11 +36,7 @@ namespace sw::editor
             /** @brief 열린 VFX 미리보기 창입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const VFXPreviewPanel* findOpenPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const VFXPreviewPanel* pPanel = pPanels->findPanel<VFXPreviewPanel>();
-                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+                return EditorPanelManager::findOpenPanelInEditorContext<VFXPreviewPanel>();
             }
 
             [[nodiscard]] static bool readParticleCount( const GameObjectManager* /*pManager*/, float64& outValue )

@@ -53,8 +53,7 @@ namespace sw::editor
             /** @brief 감시 값 `Editor.MapCheckFixableRows` — 맵 검사 창이 지난 그리기에서 안전한 고침이 있다고 본 줄 수입니다. 창이 없으면 값을 내지 않는다. */
             [[nodiscard]] static bool readFixableRows( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorPanelManager*  pPanels = EditorPanelManager::findInEditorContext();
-                const MapCheckPanel* pPanel  = pPanels != nullptr ? pPanels->findPanel<MapCheckPanel>() : nullptr;
+                const MapCheckPanel* pPanel = EditorPanelManager::findPanelInEditorContext<MapCheckPanel>();
                 if ( pPanel == nullptr )
                     return false;
                 outValue = static_cast<float64>( pPanel->getFixableRowCount() );

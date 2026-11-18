@@ -34,11 +34,8 @@ namespace sw::editor
             /** @brief 문서를 읽은 열린 타일셋 창입니다. 없으면 nullptr 입니다. */
             [[nodiscard]] static const TileSetPanel* findLoadedPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const TileSetPanel* pPanel = pPanels->findPanel<TileSetPanel>();
-                return pPanel != nullptr && pPanel->isOpen() && pPanel->isTileSetDocumentLoaded() ? pPanel : nullptr;
+                const TileSetPanel* pPanel = EditorPanelManager::findOpenPanelInEditorContext<TileSetPanel>();
+                return pPanel != nullptr && pPanel->isTileSetDocumentLoaded() ? pPanel : nullptr;
             }
 
             [[nodiscard]] static bool readBrushCount( const GameObjectManager* /*pManager*/, float64& outValue )

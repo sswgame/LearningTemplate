@@ -37,10 +37,7 @@ namespace sw::editor
 
             static const PackagingPanel* findPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                return pPanels->findPanel<PackagingPanel>();
+                return EditorPanelManager::findPanelInEditorContext<PackagingPanel>();
             }
 
             [[nodiscard]] static bool readPackagingLiveLineCount( const GameObjectManager* /*pManager*/, float64& outValue )

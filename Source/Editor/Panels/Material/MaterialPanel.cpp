@@ -208,10 +208,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readPreviewRedMinusBlue( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return false;
-                const MaterialPanel* pPanel = pPanels->findPanel<MaterialPanel>();
+                const MaterialPanel* pPanel = EditorPanelManager::findPanelInEditorContext<MaterialPanel>();
                 float32              value{ 0.0f };
                 const bool           bPreviewValueUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->findPreviewRedMinusBlue( value ) == false;
                 if ( bPreviewValueUnavailable )
@@ -223,11 +220,7 @@ namespace sw::editor
             /** @brief 열린 Material 패널입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const MaterialPanel* findOpenPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const MaterialPanel* pPanel = pPanels->findPanel<MaterialPanel>();
-                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+                return EditorPanelManager::findOpenPanelInEditorContext<MaterialPanel>();
             }
 
             /** @brief 패널이 지금 연 문서가 `gv_editorWatchAsset`(리소스 id)이면 1 입니다 — 문서 교체와 미리보기 계산을 나눠 보는 길입니다. */

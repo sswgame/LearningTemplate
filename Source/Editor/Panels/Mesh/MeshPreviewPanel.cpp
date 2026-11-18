@@ -35,11 +35,7 @@ namespace sw::editor
             /** @brief 열린 메시 미리보기 창입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const MeshPreviewPanel* findOpenPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const MeshPreviewPanel* pPanel = pPanels->findPanel<MeshPreviewPanel>();
-                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+                return EditorPanelManager::findOpenPanelInEditorContext<MeshPreviewPanel>();
             }
 
             [[nodiscard]] static bool readVertexCount( const GameObjectManager* /*pManager*/, float64& outValue )

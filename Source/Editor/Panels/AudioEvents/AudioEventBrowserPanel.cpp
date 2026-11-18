@@ -56,11 +56,7 @@ namespace sw::editor
             /** @brief 열린 오디오 이벤트 창입니다. 닫혔으면 nullptr 입니다(감시 값이 읽는다). */
             [[nodiscard]] static const AudioEventBrowserPanel* findOpenPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const AudioEventBrowserPanel* pPanel = pPanels->findPanel<AudioEventBrowserPanel>();
-                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+                return EditorPanelManager::findOpenPanelInEditorContext<AudioEventBrowserPanel>();
             }
 
             [[nodiscard]] static bool readEventCount( const GameObjectManager* /*pManager*/, float64& outValue )

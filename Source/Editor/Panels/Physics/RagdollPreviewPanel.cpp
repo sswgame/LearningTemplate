@@ -44,11 +44,7 @@ namespace sw::editor
             /** @brief 열린 래그돌 미리보기 창입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const RagdollPreviewPanel* findOpenPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const RagdollPreviewPanel* pPanel = pPanels->findPanel<RagdollPreviewPanel>();
-                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+                return EditorPanelManager::findOpenPanelInEditorContext<RagdollPreviewPanel>();
             }
 
             [[nodiscard]] static bool readDocumentBodies( const GameObjectManager* /*pManager*/, float64& outValue )

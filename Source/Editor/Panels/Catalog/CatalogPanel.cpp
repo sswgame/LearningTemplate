@@ -83,11 +83,7 @@ namespace sw::editor
             /** @brief 열린 카탈로그 편집기입니다. 닫혔으면 nullptr 입니다(감시 값이 읽는다). */
             [[nodiscard]] static const CatalogPanel* findOpenPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const CatalogPanel* pPanel = pPanels->findPanel<CatalogPanel>();
-                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+                return EditorPanelManager::findOpenPanelInEditorContext<CatalogPanel>();
             }
 
             [[nodiscard]] static bool readFileCount( const GameObjectManager* /*pManager*/, float64& outValue )

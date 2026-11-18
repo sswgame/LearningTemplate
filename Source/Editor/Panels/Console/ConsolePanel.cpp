@@ -159,8 +159,7 @@ namespace sw::editor
             /** @brief 열린 Output Log 패널입니다. 없으면 nullptr 입니다. */
             static ConsolePanel* findPanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                return pPanels != nullptr ? pPanels->findPanel<ConsolePanel>() : nullptr;
+                return EditorPanelManager::findPanelInEditorContext<ConsolePanel>();
             }
 
             /** @brief Output Log 가 지난 그리기에 보인 줄 수입니다(접기 · 거르기 뒤). */

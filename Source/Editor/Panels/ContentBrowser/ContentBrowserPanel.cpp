@@ -95,8 +95,7 @@ namespace sw::editor
             /** @brief 콘텐츠 브라우저 패널을 반환합니다. 없으면 nullptr 입니다. */
             static const ContentBrowserPanel* findPanel()
             {
-                EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                return pPanels != nullptr ? pPanels->findPanel<ContentBrowserPanel>() : nullptr;
+                return EditorPanelManager::findPanelInEditorContext<ContentBrowserPanel>();
             }
 
             [[nodiscard]] static bool readGameRootCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -192,8 +191,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static ContentBrowserPanel* findWritablePanel()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                return pPanels != nullptr ? pPanels->findPanel<ContentBrowserPanel>() : nullptr;
+                return EditorPanelManager::findPanelInEditorContext<ContentBrowserPanel>();
             }
 
             /** @brief 대상 에셋의 절대 경로입니다. 누른 항목 → 선택 스냅숏 → 창의 지금 선택 순서로 고릅니다. 없으면 빈 문자열입니다. */

@@ -77,10 +77,7 @@ namespace sw::editor
             /** @brief 열린 패널의 감시 값 값을 읽습니다. 닫혔거나 문서가 없으면 false 입니다. */
             [[nodiscard]] static const UIPreviewProbe* findProbe()
             {
-                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr )
-                    return nullptr;
-                const UIPreviewPanel* pPanel            = pPanels->findPanel<UIPreviewPanel>();
+                const UIPreviewPanel* pPanel            = EditorPanelManager::findPanelInEditorContext<UIPreviewPanel>();
                 const bool            bProbeUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->getProbe()._bValid == false;
                 if ( bProbeUnavailable )
                     return nullptr;
