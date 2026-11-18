@@ -98,7 +98,7 @@ namespace sw::editor
         }
 
         const bool bOpen = ImGui::TreeNodeEx( "##node", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", label.c_str() );
-        EditorSelfTestMarks::record( ( "projectsettings.table." + path ).c_str() );
+        EditorSelfTestMarks::recordFormat( "projectsettings.table.%#", path );
         ImGui::SameLine();
         fixed_string<constant::buffer::kMax32> countText;
         formatstring( countText.data(), countText.capacity(), value._type == JSONType::Array ? "%# items" : "%# keys", value._listChild.size() );
@@ -118,7 +118,7 @@ namespace sw::editor
                 _pendingEdit = PendingEdit::AddItem;
                 _pendingNode = node;
             }
-            EditorSelfTestMarks::record( ( "projectsettings.table." + path + ".add" ).c_str() );
+            EditorSelfTestMarks::recordFormat( "projectsettings.table.%#.add", path );
         }
         else
         {
@@ -132,7 +132,7 @@ namespace sw::editor
                 _pendingKey  = newKey.c_str();
                 newKey.clear();
             }
-            EditorSelfTestMarks::record( ( "projectsettings.table." + path + ".add" ).c_str() );
+            EditorSelfTestMarks::recordFormat( "projectsettings.table.%#.add", path );
         }
         for ( size_t index = 0; index < value._listChild.size(); ++index )
         {
@@ -216,7 +216,7 @@ namespace sw::editor
             _pendingNode  = parentNode;
             _pendingIndex = childIndex;
         }
-        EditorSelfTestMarks::record( ( "projectsettings.table." + path + ".remove" ).c_str() );
+        EditorSelfTestMarks::recordFormat( "projectsettings.table.%#.remove", path );
         EditorWidgets::drawTooltip( "Remove" );
         ImGui::SameLine();
     }

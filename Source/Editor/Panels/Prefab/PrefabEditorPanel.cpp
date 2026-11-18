@@ -136,7 +136,7 @@ namespace sw::editor
             ImGui::Indent( indent );
             if ( ImGui::Selectable( row._name.c_str(), row._bSelected != SW_FALSE ) )
                 _viewModel.selectObject( getPreviewScene(), getPreviewSelection(), row._objectID );
-            EditorSelfTestMarks::record( ( "prefabwindow.child." + row._name ).c_str() );
+            EditorSelfTestMarks::recordFormat( "prefabwindow.child.%#", row._name );
             ImGui::Unindent( indent );
             ImGui::PopID();
         }

@@ -716,8 +716,7 @@ namespace sw::editor
                 const int32 lastIndex = static_cast<int32>( _listScratchSeries.size() ) - 1;
                 _capture.selectFrameOffset( static_cast<uint32>( lastIndex - MathUtil::clamp( clicked, 0, lastIndex ) ) );
             }
-            if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::record( ( string{ "profiler.graph." } + pSeriesName ).c_str() );
+            EditorSelfTestMarks::recordFormat( "profiler.graph.%#", pSeriesName );
             const uint32 frameOffset = _capture.getSelectedFrameOffset();
             if ( frameOffset > 0 )
             {

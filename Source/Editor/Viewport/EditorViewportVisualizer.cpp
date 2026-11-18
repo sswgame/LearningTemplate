@@ -168,9 +168,7 @@ namespace sw::editor
                                             ImVec2{center.x + radius, center.y + radius}
                         },
                                         0, nullptr, ImGuiItemFlags_NoNav );
-                        fixed_string<constant::buffer::kMax128> mark;
-                        formatstring( mark.data(), mark.capacity(), "viewport.billboard.%#", badge._name.c_str() );
-                        EditorSelfTestMarks::record( mark.c_str() );
+                        EditorSelfTestMarks::recordFormat( "viewport.billboard.%#", badge._name.c_str() );
                     }
                 }
             }

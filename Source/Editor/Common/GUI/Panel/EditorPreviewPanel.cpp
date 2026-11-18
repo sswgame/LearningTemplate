@@ -84,14 +84,14 @@ namespace sw::editor
             if ( ImGui::SmallButton( _bPreviewPaused ? EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "PreviewPlay" ), "PreviewPlayPause" )
                                                      : EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "PreviewPause" ), "PreviewPlayPause" ) ) )
                 _bPreviewPaused = _bPreviewPaused == false;
-            EditorSelfTestMarks::record( ( scope + ".pause" ).c_str() );
+            EditorSelfTestMarks::recordFormat( "%#.pause", scope );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PreviewPauseTip" ) );
             ImGui::SameLine();
             ImGui::BeginDisabled( _bPreviewPaused == false );
             if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "PreviewStep" ), "PreviewStep" ) ) )
                 _stepFramesLeft = 1;
             ImGui::EndDisabled();
-            EditorSelfTestMarks::record( ( scope + ".step" ).c_str() );
+            EditorSelfTestMarks::recordFormat( "%#.step", scope );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PreviewStepTip" ) );
             ImGui::SameLine();
             EditorChrome::setNextItemWidthColumns( 6.0f );
@@ -104,7 +104,7 @@ namespace sw::editor
                 }
                 ImGui::EndCombo();
             }
-            EditorSelfTestMarks::record( ( scope + ".speed" ).c_str() );
+            EditorSelfTestMarks::recordFormat( "%#.speed", scope );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PreviewSpeedTip" ) );
 
             float32 time{ 0.0f };
@@ -118,7 +118,7 @@ namespace sw::editor
                     _bPreviewPaused = SW_TRUE; // 문지르는 동안은 멈춘다(언리얼 Persona 타임라인과 같다)
                     seekPreviewTimeline( time );
                 }
-                EditorSelfTestMarks::record( ( scope + ".scrub" ).c_str() );
+                EditorSelfTestMarks::recordFormat( "%#.scrub", scope );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PreviewScrubTip" ) );
             }
 
@@ -130,7 +130,7 @@ namespace sw::editor
             if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "PreviewFrame" ), "PreviewFrame" ) ) )
                 framePreviewSubject();
             ImGui::EndDisabled();
-            EditorSelfTestMarks::record( ( scope + ".frame" ).c_str() );
+            EditorSelfTestMarks::recordFormat( "%#.frame", scope );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PreviewFrameTip" ) );
             if ( _viewport.hasFloor() || _bFloorShown == false )
             {
@@ -142,7 +142,7 @@ namespace sw::editor
                     _bFloorChanged = SW_TRUE; // 씬의 바닥 오브젝트는 Model(`applyPreviewBar`)이 켜고 끈다
                 }
                 ImGui::PopStyleColor();
-                EditorSelfTestMarks::record( ( scope + ".floor" ).c_str() );
+                EditorSelfTestMarks::recordFormat( "%#.floor", scope );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PreviewFloorTip" ) );
             }
             ImGui::SameLine();
@@ -150,7 +150,7 @@ namespace sw::editor
             if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "PreviewAxes" ), "PreviewAxes" ) ) )
                 _bAxesShown = _bAxesShown == false;
             ImGui::PopStyleColor();
-            EditorSelfTestMarks::record( ( scope + ".axes" ).c_str() );
+            EditorSelfTestMarks::recordFormat( "%#.axes", scope );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PreviewAxesTip" ) );
             const ImVec2 barSize = ImGui::GetWindowSize();
             _previewBarSize      = float2{ barSize.x, barSize.y };

@@ -105,8 +105,7 @@ namespace sw::editor
             const bool bSelected = ( info._name == _viewState._selectedName );
             if ( ImGui::Selectable( info._name.c_str(), bSelected ) )
                 _viewModel.selectTarget( info._name );
-            if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::record( ( "renderTargets.row." + info._name ).c_str() );
+            EditorSelfTestMarks::recordFormat( "renderTargets.row.%#", info._name );
 
             if ( info._bDepth != SW_FALSE )
             {
@@ -170,8 +169,7 @@ namespace sw::editor
             if ( ImGui::RadioButton( RenderTargetViewSettings::getChannelLabel( channel ), _viewState._viewSettings._channel == channel ) )
                 _viewModel.setChannel( channel );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "ChannelTip" ) );
-            if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::record( ( string{ "renderTargets.channel." } + RenderTargetViewSettings::getChannelLabel( channel ) ).c_str() );
+            EditorSelfTestMarks::recordFormat( "renderTargets.channel.%#", RenderTargetViewSettings::getChannelLabel( channel ) );
         }
     }
 

@@ -201,8 +201,7 @@ namespace sw::editor
             formatstring( label.data(), label.capacity(), "Frame %#", frameIndex );
             if ( ImGui::Selectable( label.c_str(), _model.getSelectedFrame() == frameIndex ) )
                 _model.selectFrame( frameIndex );
-            formatstring( label.data(), label.capacity(), "spriteClip.frame.%#", frameIndex );
-            EditorSelfTestMarks::record( label.c_str() ); // 시나리오가 프레임을 고른다
+            EditorSelfTestMarks::recordFormat( "spriteClip.frame.%#", frameIndex ); // 시나리오가 프레임을 고른다
             ImGui::PopID();
         }
 

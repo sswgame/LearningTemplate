@@ -124,9 +124,7 @@ namespace sw::editor
                         ImGui::PushID( static_cast<int32>( stepNum ) );
                         if ( ImGui::Selectable( "##step", bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns ) )
                             viewModel.jumpTo( stepNum );
-                        fixed_string<constant::buffer::kMax32> mark;
-                        formatstring( mark.data(), mark.capacity(), "history.step.%#", stepNum );
-                        EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 그 시점으로 되돌린다
+                        EditorSelfTestMarks::recordFormat( "history.step.%#", stepNum ); // 시나리오가 그 시점으로 되돌린다
                         ImGui::SameLine( 0.0f, 0.0f );
                         ImGui::TextUnformatted( pCmdLabel );
                         ImGui::PopID();

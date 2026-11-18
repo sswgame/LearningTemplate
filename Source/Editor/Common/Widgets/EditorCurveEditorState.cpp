@@ -190,7 +190,7 @@ namespace sw::editor
                         state._selectedKey = curve.addKey( state._menuTime, state._menuValue );
                         bEdited            = true;
                     }
-                    EditorSelfTestMarks::record( ( string( pMarkScope ) + ".menu.addKey" ).c_str() );
+                    EditorSelfTestMarks::recordFormat( "%#.menu.addKey", pMarkScope );
                     if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "FitView" ), "F" ) )
                         state._bFitPending = true;
                 }
@@ -317,7 +317,7 @@ namespace sw::editor
         const ImVec2 available = ImGui::GetContentRegionAvail();
         const ImVec2 size{ MathUtil::max( available.x, 64.0f ), MathUtil::max( available.y, 64.0f ) };
         ImGui::InvisibleButton( "##curveCanvas", size, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle );
-        EditorSelfTestMarks::record( ( string( pMarkScope ) + ".canvas" ).c_str() );
+        EditorSelfTestMarks::recordFormat( "%#.canvas", pMarkScope );
         const bool   bHovered = ImGui::IsItemHovered();
         const bool   bActive  = ImGui::IsItemActive();
         const ImVec2 minPoint = ImGui::GetItemRectMin();

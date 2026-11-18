@@ -8,8 +8,10 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/EditorExports.h"
 
@@ -45,6 +47,20 @@ namespace sw::editor
     {
         /** @brief 바로 앞에 그린 위젯(ImGui "last item")을 @p pKey 로 기록합니다. 테스트가 꺼져 있으면 아무것도 하지 않습니다. */
         static void record( const utf8* pKey );
+        /**
+         * @brief `record` 와 같되 이름을 서식(`formatstring` — `%#`)으로 짓습니다: `recordFormat( "hierarchy.row.%#", name )`. 테스트가 꺼져 있으면 글을 짓지 않습니다.
+         * @details 행 · 항목마다 이름이 다른 표식이 쓴다. 예전에는 호출부마다 `( "접두" + 이름 ).c_str()` 로 지어, 테스트가 꺼진 평소에도 그리는 행마다 프레임마다 힙 문자열을 만들었다.
+         *          128 바이트까지는 스택 버퍼에 짓고 넘으면 늘린다(에셋 경로가 든 이름) — 잘리지 않는다.
+         */
+        template <typename... Args>
+        static void recordFormat( string_view format, const Args&... args )
+        {
+            if ( isEnabled() == false )
+                return;
+            StringBuilder<constant::buffer::kMax128> key;
+            key.appendFormat( format, args... );
+            record( key.c_str() );
+        }
         /**
          * @brief `note` 와 같되, 바로 앞 위젯이 입력 칸 + 오른쪽 레이블 글이면 사각형을 입력 칸(`ImGui::CalcItemWidth()`)까지만 남깁니다.
          * @details 레이블이 붙은 위젯의 "last item" 은 레이블 글까지 덮어, 좁은 창에서 그 가운데가 레이블 글(눌러도 열리지 않는 곳) 위에 놓인다.

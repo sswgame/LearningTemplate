@@ -83,15 +83,6 @@ namespace sw::editor
             /** @brief 참조 결과 테이블이 스크롤 없이 보이는 최대 행 수입니다. */
             static constexpr size_t kReferenceVisibleRowCount = 12;
 
-            /** @brief 테스트가 켜져 있으면 바로 앞 위젯에 `<접두><이름>` 이름을 남깁니다. 꺼져 있으면 문자열을 만들지 않습니다. */
-            static void recordMark( const utf8* pPrefix, string_view name )
-            {
-                if ( EditorSelfTestMarks::isEnabled() == false )
-                    return;
-                const string key = string( pPrefix ) + string( name );
-                EditorSelfTestMarks::record( key.c_str() );
-            }
-
             /** @brief 콘텐츠 브라우저 패널을 반환합니다. 없으면 nullptr 입니다. */
             static const ContentBrowserPanel* findPanel()
             {
@@ -542,7 +533,7 @@ namespace sw::editor
             if ( ImGui::Selectable( label.c_str(), false ) )
                 pApplySearch = &search;
             EditorWidgets::drawTooltip( search._searchText.c_str() );
-            ContentBrowserPanelInternal::recordMark( "contentBrowser.savedSearch.", search._name );
+            EditorSelfTestMarks::recordFormat( "contentBrowser.savedSearch.%#", search._name );
         }
         if ( pApplySearch != nullptr )
         {
@@ -572,7 +563,7 @@ namespace sw::editor
                 _activeCollectionName    = collection._name;
                 _bActiveCollectionShared = collection._bShared ? SW_TRUE : SW_FALSE;
             }
-            ContentBrowserPanelInternal::recordMark( "contentBrowser.collection.", collection._name );
+            EditorSelfTestMarks::recordFormat( "contentBrowser.collection.%#", collection._name );
             if ( addTargetName.empty() && EditorWidgets::acceptAssetDrop( droppedAssetID ) )
             {
                 addTargetName    = collection._name;
@@ -920,16 +911,13 @@ namespace sw::editor
             (void)_model.createNewFolder(); // 실패는 createFolder 가 알린다
         EditorSelfTestMarks::record( "contentBrowser.add.folder" );
         ImGui::Separator();
-        StringBuilder<constant::buffer::kMax64> mark;
-        vector<const EditorNewAssetTemplate*>   listTemplate;
+        vector<const EditorNewAssetTemplate*> listTemplate;
         EditorAssetTypeRegistry::collectNewAssetTemplates( listTemplate );
         for ( const EditorNewAssetTemplate* pTemplate : listTemplate )
         {
             if ( ImGui::MenuItem( pTemplate->_pLabel ) )
                 (void)_model.createNewAsset( *pTemplate ); // 실패는 createAsset 이 알린다
-            mark.clear();
-            mark.append( "contentBrowser.add." ).append( pTemplate->_pID );
-            EditorSelfTestMarks::record( mark.c_str() );
+            EditorSelfTestMarks::recordFormat( "contentBrowser.add.%#", pTemplate->_pID );
         }
         ImGui::EndPopup();
     }
@@ -1247,7 +1235,7 @@ namespace sw::editor
         const bool opened = ImGui::TreeNodeEx( labelWithIcon.c_str(), flags );
         ImGui::PopStyleColor();
         if ( EditorSelfTestMarks::isEnabled() )
-            ContentBrowserPanelInternal::recordMark( "contentBrowser.folder.", EditorPaths::getAssetPaths().toAssetID( absPath ) );
+            EditorSelfTestMarks::recordFormat( "contentBrowser.folder.%#", EditorPaths::getAssetPaths().toAssetID( absPath ) );
         acceptAssetDrop( absPath );
 
         if ( EditorInputGUI::wasItemClicked() && ImGui::IsItemToggledOpen() == false )
@@ -1404,7 +1392,7 @@ namespace sw::editor
                     const ImVec2 cursor = ImGui::GetCursorScreenPos();
                     if ( ImGui::Button( "##tile", ImVec2( cell, cell ) ) )
                         _model.selectAsset( entry );
-                    ContentBrowserPanelInternal::recordMark( "contentBrowser.asset.", entry._name );
+                    EditorSelfTestMarks::recordFormat( "contentBrowser.asset.%#", entry._name );
                     drawAssetContextMenu( entry );
                     if ( EditorInputGUI::wasItemDoubleClicked() )
                         _model.openAsset( entry );
@@ -1478,7 +1466,7 @@ namespace sw::editor
                     }
                     if ( statusText.empty() == false && ImGui::IsItemHovered() )
                         ImGui::SetTooltip( "%s", statusText.c_str() );
-                    ContentBrowserPanelInternal::recordMark( "contentBrowser.asset.", entry._name );
+                    EditorSelfTestMarks::recordFormat( "contentBrowser.asset.%#", entry._name );
                     drawAssetContextMenu( entry );
                     // 폴더도 끌기 원본이다(타일 보기와 같다)
                     EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );

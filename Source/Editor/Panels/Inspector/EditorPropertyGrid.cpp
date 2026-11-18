@@ -39,11 +39,8 @@ namespace sw::editor
             /** @brief 자체 테스트 표식 하나(`<머리>.<꼬리>`)를 방금 그린 항목으로 남깁니다. 테스트가 꺼져 있으면 글을 짓지 않는다. */
             static void recordMark( const utf8* pHead, const string& tail )
             {
-                if ( EditorSelfTestMarks::isEnabled() == false || tail.empty() )
-                    return;
-                fixed_string<constant::buffer::kMax128> mark;
-                formatstring( mark.data(), mark.capacity(), "%#.%#", pHead, tail.c_str() );
-                EditorSelfTestMarks::record( mark.c_str() );
+                if ( tail.empty() == false )
+                    EditorSelfTestMarks::recordFormat( "%#.%#", pHead, tail );
             }
 
             /** @brief 화면 밖 행의 자체 테스트 표식을 그 자리 사각형으로 남깁니다 — 시나리오가 요청하면 그 창이 스크롤해 행이 보이게 되고, 다음 프레임에 값이 채워진다. */
@@ -118,9 +115,7 @@ namespace sw::editor
                     if ( EditorSelfTestMarks::isEnabled() )
                     {
                         // 시나리오가 콤보 항목을 누를 수 있게 한다(`inspector.enum.<프로퍼티>.<열거자>`) — 콤보를 연 프레임에만 그려진다.
-                        fixed_string<constant::buffer::kMax128> itemMark;
-                        formatstring( itemMark.data(), itemMark.capacity(), "inspector.enum.%#.%#", row._propName.c_str(), choice._name );
-                        EditorSelfTestMarks::record( itemMark.c_str() );
+                        EditorSelfTestMarks::recordFormat( "inspector.enum.%#.%#", row._propName.c_str(), choice._name );
                     }
                     if ( bSelected )
                         ImGui::SetItemDefaultFocus();
@@ -801,8 +796,7 @@ namespace sw::editor
             {
                 _model.invokeMethod( method, TaskArgs{} );
             }
-            if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::record( ( string( "inspector.method.run." ) + method._name.c_str() ).c_str() );
+            EditorSelfTestMarks::recordFormat( "inspector.method.run.%#", method._name.c_str() );
             EditorWidgets::drawTooltip( bNetRole ? SW_LOCKEY( "EditorInspector", "NetRoleMethodRunsLocally" ) : method._metadata->getEditor()._tooltip.c_str() );
             ImGui::PopID();
             return;
@@ -845,8 +839,7 @@ namespace sw::editor
             const bool bInvoke = ImGui::Button( SW_LOCKEY( "EdText", "Invoke" ) );
             if ( EditorSelfTestMarks::isEnabled() )
             {
-                const string invokeMark = string( "inspector.method.invoke." ) + method._name.c_str();
-                EditorSelfTestMarks::record( invokeMark.c_str() );
+                EditorSelfTestMarks::recordFormat( "inspector.method.invoke.%#", method._name.c_str() );
             }
             if ( bInvoke )
                 _model.invokeMethod( method, InspectorBuiltinValue::makeMethodArgs( listSlot ) );

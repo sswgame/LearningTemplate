@@ -243,8 +243,7 @@ namespace sw::editor
                 _document.selectAction( actionName.view() );
             if ( bConflict )
                 EditorThemeUtil::popTextColor();
-            if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::record( ( string{ "inputMap.action." } + actionName.c_str() ).c_str() );
+            EditorSelfTestMarks::recordFormat( "inputMap.action.%#", actionName.c_str() );
             if ( bConflict )
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ActionConflictTip" ) );
             // 키 글리프는 오른쪽 끝에 맞춘다 — 고정 폭으로 비워 두면 "[ LeftControl+... ]" 같은 긴 글리프가 잘린다.
@@ -373,12 +372,7 @@ namespace sw::editor
         const ActionTrigger trigger  = inputMap.getBindingTrigger( action, bindIndex );
         const utf8*         pCurrent = getEnumName( trigger );
         const bool          bOpen    = EditorWidgets::beginCombo( "##trigger", pCurrent != nullptr ? pCurrent : "?" );
-        if ( EditorSelfTestMarks::isEnabled() )
-        {
-            fixed_string<constant::buffer::kMax64> text2;
-            formatstring( text2.data(), text2.capacity(), "inputMap.binding.%#.trigger", static_cast<uint64>( bindIndex ) );
-            EditorSelfTestMarks::record( text2.c_str() );
-        }
+        EditorSelfTestMarks::recordFormat( "inputMap.binding.%#.trigger", static_cast<uint64>( bindIndex ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TriggerTip" ) );
         if ( bOpen == false )
             return;
@@ -387,12 +381,7 @@ namespace sw::editor
             const ActionTrigger value = static_cast<ActionTrigger>( option );
             if ( ImGui::Selectable( getEnumName( value ), value == trigger ) )
                 (void)_document.setBindingTrigger( action, bindIndex, value );
-            if ( EditorSelfTestMarks::isEnabled() )
-            {
-                fixed_string<constant::buffer::kMax64> text;
-                formatstring( text.data(), text.capacity(), "inputMap.trigger.%#", static_cast<uint64>( option ) );
-                EditorSelfTestMarks::record( text.c_str() );
-            }
+            EditorSelfTestMarks::recordFormat( "inputMap.trigger.%#", static_cast<uint64>( option ) );
         }
         ImGui::EndCombo();
     }

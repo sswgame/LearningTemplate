@@ -159,9 +159,7 @@ namespace sw::editor
                         addNode( info._type );
                         DialogueGraphEdit::commitNodeAdded( getGraphEditSession() );
                     }
-                    fixed_string<constant::buffer::kMax64> markKey;
-                    formatstring( markKey.data(), markKey.capacity(), "dialogueGraph.add.%#", info._pName );
-                    EditorSelfTestMarks::record( markKey.c_str() );
+                    EditorSelfTestMarks::recordFormat( "dialogueGraph.add.%#", info._pName );
                 }
                 ImGui::EndPopup();
             }

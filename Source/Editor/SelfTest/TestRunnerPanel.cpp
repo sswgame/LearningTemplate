@@ -166,8 +166,7 @@ namespace sw::editor
                     if ( ImGui::Checkbox( label.c_str(), &bSelected ) )
                         _selfTests.setSelected( id, bSelected );
                     EditorWidgets::drawTooltip( id.c_str() );
-                    const string markKey = "testRunner.select." + id;
-                    EditorSelfTestMarks::record( markKey.c_str() );
+                    EditorSelfTestMarks::recordFormat( "testRunner.select.%#", id );
                     for ( const EditorSelfTestResult& result : listResult )
                     {
                         if ( result._id != id )

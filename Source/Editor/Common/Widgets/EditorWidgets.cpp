@@ -409,7 +409,7 @@ namespace sw::editor
             const GizmoButton& button = kArrGizmoButton[index];
             if ( drawIconToggle( button._pID, EditorIconGlyphTable::findGlyphByName( button._pIconName ), operation == index, arrTooltip[index] ) )
                 editorContext.getSubsystem<EditorWorkspace>().setGizmoOperation( index );
-            EditorSelfTestMarks::record( ( string( pMarkScope ) + button._pMarkSuffix ).c_str() );
+            EditorSelfTestMarks::recordFormat( "%#%#", pMarkScope, button._pMarkSuffix );
             if ( bVertical == false )
                 ImGui::SameLine();
         }
@@ -419,7 +419,7 @@ namespace sw::editor
                                    SW_LOCKEY( "EdCommon", "GizmoLocalSpace" ),
                                    SW_LOCKEY( "EdCommon", "GizmoWorldSpace" ) ) )
             editorContext.getSubsystem<EditorWorkspace>().setGizmoLocalSpace( bLocalSpace == false );
-        EditorSelfTestMarks::record( ( string( pMarkScope ) + ".space" ).c_str() );
+        EditorSelfTestMarks::recordFormat( "%#.space", pMarkScope );
     }
 
     void EditorWidgets::drawToolbarSeparator()

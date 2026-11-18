@@ -149,7 +149,7 @@ namespace sw::editor
                     EditorInputGUI::openPopup( "AssetPicker" );
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PickAsset" ) );
-                EditorSelfTestMarks::record( ( string( "inspector.assetPicker." ) + row._propName.c_str() ).c_str() );
+                EditorSelfTestMarks::recordFormat( "inspector.assetPicker.%#", row._propName.c_str() );
                 if ( ImGui::BeginPopup( "AssetPicker" ) )
                 {
                     AssetPickerState& picker = _assetPicker;
@@ -630,8 +630,7 @@ namespace sw::editor
                         picked  = choice._handle;
                         bPicked = true;
                     }
-                    if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::record( ( "inspector.handle.choice." + choice._label ).c_str() );
+                    EditorSelfTestMarks::recordFormat( "inspector.handle.choice.%#", choice._label );
                 }
                 ImGui::EndCombo();
                 if ( bPicked == false || picked == current )

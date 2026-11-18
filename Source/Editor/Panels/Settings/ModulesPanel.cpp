@@ -87,18 +87,14 @@ namespace sw::editor
                 ImGui::BeginDisabled( bLocked );
                 if ( ImGui::Checkbox( "##On", &bOn ) )
                     requestToggle( manifest._name, bOn );
-                fixed_string<constant::buffer::kMax128> mark;
-                formatstring( mark.data(), mark.capacity(), "modules.toggle.%#", manifest._name.c_str() );
-                EditorSelfTestMarks::record( mark.c_str() );
+                EditorSelfTestMarks::recordFormat( "modules.toggle.%#", manifest._name.c_str() );
                 ImGui::EndDisabled();
                 if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
                     ImGui::SetTooltip( "%s", bLocked ? SW_LOCKEY( "EditorSettings", "ModuleLocked" ) : SW_LOCKEY( "EditorSettings", "ModuleToggle" ) );
                 ImGui::TableSetColumnIndex( 1 );
                 if ( ImGui::Selectable( manifest._name.c_str(), _model.getSelectedModule() == manifest._name ) )
                     _model.selectModule( manifest._name );
-                fixed_string<constant::buffer::kMax128> rowMark;
-                formatstring( rowMark.data(), rowMark.capacity(), "modules.row.%#", manifest._name.c_str() );
-                EditorSelfTestMarks::record( rowMark.c_str() ); // 시나리오가 행을 골라 상세 절(modules.detail)을 연다
+                EditorSelfTestMarks::recordFormat( "modules.row.%#", manifest._name.c_str() ); // 시나리오가 행을 골라 상세 절(modules.detail)을 연다
                 EditorWidgets::drawTooltip( manifest._description.c_str() );
                 ImGui::TableSetColumnIndex( 2 );
                 ImGui::TextDisabled( "%s", manifest._version.toString().c_str() );

@@ -179,7 +179,7 @@ namespace sw::editor
                 selectPage( page );
             if ( page._bTypeFound == false )
                 ImGui::EndDisabled();
-            EditorSelfTestMarks::record( ( "projectsettings.page." + page._entry._page ).c_str() );
+            EditorSelfTestMarks::recordFormat( "projectsettings.page.%#", page._entry._page );
             EditorWidgets::drawTooltip( page._entry._relativePath.c_str() );
             ImGui::PopID();
         }

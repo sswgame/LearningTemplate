@@ -181,12 +181,7 @@ namespace sw::editor
                 if ( EditorInputGUI::wasItemDoubleClicked() )
                     MapCheckViewModel::focusObject( issue._sourceID );
             }
-            if ( EditorSelfTestMarks::isEnabled() )
-            {
-                fixed_string<constant::buffer::kMax64> mark;
-                formatstring( mark.data(), mark.capacity(), "mapCheck.row.%#", rowIndex );
-                EditorSelfTestMarks::record( mark.c_str() );
-            }
+            EditorSelfTestMarks::recordFormat( "mapCheck.row.%#", rowIndex );
             if ( row._bInActiveScene == SW_FALSE )
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "NotInActiveScene" ) );
 
@@ -203,12 +198,7 @@ namespace sw::editor
                 if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "Fix" ) ) )
                     fixRowIndex = rowIndex;
                 EditorWidgets::drawTooltip( issue._fix._description.c_str() );
-                if ( EditorSelfTestMarks::isEnabled() )
-                {
-                    fixed_string<constant::buffer::kMax64> mark;
-                    formatstring( mark.data(), mark.capacity(), "mapCheck.fix.%#", rowIndex );
-                    EditorSelfTestMarks::record( mark.c_str() );
-                }
+                EditorSelfTestMarks::recordFormat( "mapCheck.fix.%#", rowIndex );
             }
             ImGui::PopID();
         }

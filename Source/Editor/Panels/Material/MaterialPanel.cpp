@@ -366,10 +366,8 @@ namespace sw::editor
             MaterialProperty* const pProp  = &edited;
             ++shownCount;
             ImGui::PushID( static_cast<int32>( propIndex ) );
-            bool                                    bChanged = MaterialPanelInternal::drawTypedProperty( edited );
-            fixed_string<constant::buffer::kMax128> propertyMark;
-            formatstring( propertyMark.data(), propertyMark.capacity(), "material.property.%s", pProp->_name.c_str() );
-            EditorSelfTestMarks::record( propertyMark.c_str() );
+            bool bChanged = MaterialPanelInternal::drawTypedProperty( edited );
+            EditorSelfTestMarks::recordFormat( "material.property.%s", pProp->_name.c_str() );
             // 기본값과 다른 행만 되돌리기 단추를 둔다 — 인스펙터와 같은 공용 단추라 모양 · 툴팁이 같다.
             if ( MaterialPanelInternal::isModified( *pProp ) )
             {
@@ -378,9 +376,7 @@ namespace sw::editor
                     applyLivePreview();
                     bChanged = false; // 되돌린 값이 사본의 값이다 — 위젯이 고친 사본을 다시 쓰지 않는다
                 }
-                fixed_string<constant::buffer::kMax128> resetMark;
-                formatstring( resetMark.data(), resetMark.capacity(), "material.reset.%s", pProp->_name.c_str() );
-                EditorSelfTestMarks::record( resetMark.c_str() );
+                EditorSelfTestMarks::recordFormat( "material.reset.%s", pProp->_name.c_str() );
             }
             if ( bChanged && _model.setProperty( edited ) )
                 applyLivePreview();

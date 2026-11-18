@@ -202,7 +202,7 @@ namespace sw::editor
                         ImGui::SeparatorText( SW_LOCKEY( "EditorAnimationGraph", "AddPoseNodeSection" ) );
                     if ( ImGui::MenuItem( kind._pName ) && addNodeOfKind( kind._kindID ) != 0 )
                         AnimationGraphEdit::commitNodeAdded( getGraphEditSession() );
-                    EditorSelfTestMarks::record( ( string( "animationGraph.add." ) + kind._pName ).c_str() );
+                    EditorSelfTestMarks::recordFormat( "animationGraph.add.%#", kind._pName );
                     EditorWidgets::drawTooltip( bClipState ? arrClipTip[kind._kindID] : SW_LOCKEY( "EditorAnimationGraph", "AddPoseNodeTip" ) );
                 }
                 ImGui::EndPopup();
@@ -789,12 +789,7 @@ namespace sw::editor
                 _selectedLinkID = link._id;
                 _selectedNodeID = 0;
             }
-            if ( EditorSelfTestMarks::isEnabled() )
-            {
-                fixed_string<constant::buffer::kMax64> text;
-                formatstring( text.data(), text.capacity(), "animationGraph.link.%#", static_cast<uint64>( index ) );
-                EditorSelfTestMarks::record( text.c_str() );
-            }
+            EditorSelfTestMarks::recordFormat( "animationGraph.link.%#", static_cast<uint64>( index ) );
             ImGui::PopID();
         }
     }
@@ -842,12 +837,7 @@ namespace sw::editor
                     pLink->_op = value;
                     bEdited    = true;
                 }
-                if ( EditorSelfTestMarks::isEnabled() )
-                {
-                    fixed_string<constant::buffer::kMax64> text;
-                    formatstring( text.data(), text.capacity(), "animationGraph.condition.op.%#", static_cast<uint64>( op ) );
-                    EditorSelfTestMarks::record( text.c_str() );
-                }
+                EditorSelfTestMarks::recordFormat( "animationGraph.condition.op.%#", static_cast<uint64>( op ) );
             }
             ImGui::EndCombo();
         }

@@ -185,9 +185,7 @@ namespace sw::editor
             const bool bSolo = _model.getSoloEmitter() == static_cast<int32>( rowIndex );
             if ( EditorWidgets::drawToggleButton( SW_LOCKEY( "EdVFX", "Solo" ), bSolo ) )
                 _model.toggleSolo( static_cast<int32>( rowIndex ) ); // 보기 상태 — 되돌리기에 남기지 않는다
-            fixed_string<constant::buffer::kMax64> mark;
-            formatstring( mark.data(), mark.capacity(), "vfx.solo.%#", rowIndex );
-            EditorSelfTestMarks::record( mark.c_str() );
+            EditorSelfTestMarks::recordFormat( "vfx.solo.%#", rowIndex );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdVFX", "SoloTip" ) );
             ImGui::SameLine();
             const string text = SW_LOCKEYFORMAT( "EdFormat", "Max", TextArgumentList().addText( "name", row._name.c_str() ).addText( "blend", row._bAdditive ? "additive" : "alpha" ).addText( "looping", row._bLooping ? "yes" : "no" ).addInteger( "maxParticles", static_cast<int64>( row._maxParticles ) ).addText( "texturePath", row._texturePath.c_str() ) );

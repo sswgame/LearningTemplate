@@ -261,9 +261,7 @@ namespace sw::editor
         {
             if ( ImGui::Selectable( name.c_str(), name == _selectedEvent ) )
                 _selectedEvent = name;
-            fixed_string<constant::buffer::kMax128> mark;
-            formatstring( mark.data(), mark.capacity(), "audioevents.event.%#", name.c_str() );
-            EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 이벤트를 고른다
+            EditorSelfTestMarks::recordFormat( "audioevents.event.%#", name.c_str() ); // 시나리오가 이벤트를 고른다
         }
         EditorSelfTestMarks::record( "audioevents.list" );
     }

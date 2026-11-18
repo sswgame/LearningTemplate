@@ -148,8 +148,7 @@ namespace sw::editor
                     const utf8*          pName = getRenderViewModeInfo( mode )._pName;
                     if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( getViewModeDisplayName( mode ), pName ), mode == currentMode ) && bHasRenderer )
                         settings._requestedViewMode = mode;
-                    const string markKey = string( "viewport.viewMode." ) + StringUtil::toLower( pName );
-                    EditorSelfTestMarks::record( markKey.c_str() );
+                    EditorSelfTestMarks::recordFormat( "viewport.viewMode.%#", StringUtil::toLower( pName ) );
                 }
                 ImGui::EndCombo();
             }
@@ -208,9 +207,7 @@ namespace sw::editor
                                                                            : EditorWidgets::drawToggleButton( EditorThemeUtil::makeStableLabel( pLabel, visualizer._pID ), bOn );
             if ( bPressed )
                 settings._visualizerToggles.setOn( visualizer, bOn == false );
-            fixed_string<constant::buffer::kMax64> mark;
-            formatstring( mark.data(), mark.capacity(), "viewport.visualizer.%#", visualizer._pID );
-            EditorSelfTestMarks::record( mark.c_str() );
+            EditorSelfTestMarks::recordFormat( "viewport.visualizer.%#", visualizer._pID );
             if ( visualizer._pIconName.isEmpty() )
                 EditorWidgets::drawTooltip( tooltip.c_str() );
             ImGui::PopID();

@@ -149,9 +149,7 @@ namespace sw::editor
         ImGui::EndDisabled();
         ImGui::PopID();
 
-        fixed_string<constant::buffer::kMax128> markKey{ "toolbar." };
-        markKey.append( pDesc->_id.c_str() );
-        EditorSelfTestMarks::record( markKey.c_str() );
+        EditorSelfTestMarks::recordFormat( "toolbar.%#", pDesc->_id.c_str() );
 
         if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled ) )
         {

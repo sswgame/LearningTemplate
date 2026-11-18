@@ -126,12 +126,7 @@ namespace sw::editor
             formatstring( label.data(), label.capacity(), "%#, %#", cell._cellX, cell._cellZ );
             if ( ImGui::Selectable( label.c_str(), false, ImGuiSelectableFlags_SpanAllColumns ) )
                 _viewModel.selectCellObjects( rowIndex );
-            if ( EditorSelfTestMarks::isEnabled() )
-            {
-                fixed_string<constant::buffer::kMax64> mark;
-                formatstring( mark.data(), mark.capacity(), "streamingCells.cell.%#", rowIndex );
-                EditorSelfTestMarks::record( mark.c_str() );
-            }
+            EditorSelfTestMarks::recordFormat( "streamingCells.cell.%#", rowIndex );
             ImGui::TableSetColumnIndex( 1 );
             ImGui::Text( "%u", cell._objectCount );
             ImGui::TableSetColumnIndex( 2 );

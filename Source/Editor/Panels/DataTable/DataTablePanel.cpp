@@ -411,9 +411,7 @@ namespace sw::editor
         ImGui::TableSetColumnIndex( static_cast<int32>( 2 + cultureCount ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Del" ) ) )
             bDeleteRequested = true;
-        fixed_string<constant::buffer::kMax128> mark;
-        formatstring( mark.data(), mark.capacity(), "dataTable.delete.%#", record._key.c_str() );
-        EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 더한 키를 지운다
+        EditorSelfTestMarks::recordFormat( "dataTable.delete.%#", record._key.c_str() ); // 시나리오가 더한 키를 지운다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "DeleteKeyTip" ) );
 
         ImGui::PopID();

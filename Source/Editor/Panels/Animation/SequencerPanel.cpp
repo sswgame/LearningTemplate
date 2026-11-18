@@ -429,9 +429,7 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( binding._id ) );
             if ( ImGui::Selectable( binding._name.c_str(), binding._id == _document._selectedBinding, ImGuiSelectableFlags_None, ImVec2( labelWidth, 0.0f ) ) )
                 _document._selectedBinding = binding._id;
-            fixed_string<constant::buffer::kMax64> mark;
-            formatstring( mark.data(), mark.capacity(), "sequencer.binding.%#", bindingIndex );
-            EditorSelfTestMarks::record( mark.c_str() );
+            EditorSelfTestMarks::recordFormat( "sequencer.binding.%#", bindingIndex );
             ImGui::SameLine();
             // 묶인 오브젝트 · 스폰 · 묶이지 않음(오류 색 하나 — 고칠 일이 있는 줄)입니다.
             const string* pBoundName = bindingIndex < _sceneState._listBoundName.size() ? &_sceneState._listBoundName[bindingIndex] : nullptr;
@@ -612,9 +610,7 @@ namespace sw::editor
                 _currentFrame           = cut._start;
                 previewCurrentFrame();
             }
-            fixed_string<constant::buffer::kMax64> mark;
-            formatstring( mark.data(), mark.capacity(), "sequencer.shot.%#", shotIndex );
-            EditorSelfTestMarks::record( mark.c_str() );
+            EditorSelfTestMarks::recordFormat( "sequencer.shot.%#", shotIndex );
             ImGui::PopID();
             // 숫자는 오른쪽 맞춤(표는 규칙과 정렬).
             const int32 arrValue[] = { cut._start, cut._end, cut._end - cut._start + 1 };
@@ -807,9 +803,7 @@ namespace sw::editor
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) );
             if ( ImGui::Button( label.c_str() ) )
                 addKeyTrack( kind );
-            fixed_string<constant::buffer::kMax64> mark;
-            formatstring( mark.data(), mark.capacity(), "sequencer.addTrack.%#", getEnumName( kind ) );
-            EditorSelfTestMarks::record( mark.c_str() );
+            EditorSelfTestMarks::recordFormat( "sequencer.addTrack.%#", getEnumName( kind ) );
             EditorWidgets::drawTooltip( SW_LOCKEYFORMAT( "EditorSequencer", "AddTrackTipFormat", TextArgumentList().addText( "kind", pInfo->_pNamePrefix ) ).c_str() );
         }
         ImGui::EndDisabled();
@@ -885,22 +879,17 @@ namespace sw::editor
             if ( issue != SequenceTrackIssue::None )
             {
                 EditorWidgets::drawTooltip( SequencerPanelInternal::findTrackIssueText( issue ) );
-                fixed_string<constant::buffer::kMax64> issueMark;
-                formatstring( issueMark.data(), issueMark.capacity(), "sequencer.trackIssue.%#", trackIndex );
-                EditorSelfTestMarks::record( issueMark.c_str() );
+                EditorSelfTestMarks::recordFormat( "sequencer.trackIssue.%#", trackIndex );
             }
             ImGui::SameLine();
             fixed_string<constant::buffer::kMax256> label;
             formatstring( label.data(), label.capacity(), "%# (%#)", track._name.empty() ? "Track" : track._name.c_str(), findBindingName( track._binding ) );
             if ( ImGui::Selectable( label.c_str(), trackIndex == _document._selectedTrack, ImGuiSelectableFlags_None, ImVec2( labelWidth, 0.0f ) ) )
                 _document._selectedTrack = trackIndex;
-            fixed_string<constant::buffer::kMax64> mark;
-            formatstring( mark.data(), mark.capacity(), "sequencer.track.%#", trackIndex );
-            EditorSelfTestMarks::record( mark.c_str() );
+            EditorSelfTestMarks::recordFormat( "sequencer.track.%#", trackIndex );
             ImGui::SameLine();
             drawKeyStrip( track, trackIndex );
-            formatstring( mark.data(), mark.capacity(), "sequencer.keyStrip.%#", trackIndex );
-            EditorSelfTestMarks::record( mark.c_str() );
+            EditorSelfTestMarks::recordFormat( "sequencer.keyStrip.%#", trackIndex );
             ImGui::PopID();
         }
 
@@ -1089,9 +1078,7 @@ namespace sw::editor
                 (void)_document.setChannelValue( track, channelIndex, frame, value ); // 끄는 동안의 알림은 상호작용 구간 하나 — 되돌리기 한 단계
                 previewCurrentFrame();
             }
-            fixed_string<constant::buffer::kMax64> mark;
-            formatstring( mark.data(), mark.capacity(), "sequencer.channel.%#", channelIndex );
-            EditorSelfTestMarks::record( mark.c_str() );
+            EditorSelfTestMarks::recordFormat( "sequencer.channel.%#", channelIndex );
             ImGui::SameLine();
             if ( ImGui::SmallButton( pCurve ) )
             {
@@ -1102,8 +1089,7 @@ namespace sw::editor
                 _curveState._bFitPending = true;
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "OpenCurveTip" ) );
-            formatstring( mark.data(), mark.capacity(), "sequencer.curve.%#", channelIndex );
-            EditorSelfTestMarks::record( mark.c_str() );
+            EditorSelfTestMarks::recordFormat( "sequencer.curve.%#", channelIndex );
             ImGui::PopID();
         }
     }
