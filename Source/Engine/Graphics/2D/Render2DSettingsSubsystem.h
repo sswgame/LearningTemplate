@@ -20,7 +20,7 @@ namespace sw
     /**
      * @class Render2DSettingsSubsystem
      * @brief 2D 렌더 설정을 엔진 파일에서 읽어 소유하는 서브시스템입니다.
-     * @details 읽지 못하면 기동을 멈춘다(대신 쓸 표가 없다 - 기본 표를 지어내지 않는다). 호스트는 소유한 값을 범위에 `bind` 해 서비스 표가 찾게 한다.
+     * @details 읽지 못하면 기동을 멈춘다(대신 쓸 표가 없다 - 기본 표를 지어내지 않는다). 호스트는 소유한 값을 범위에 `exposeMember` 로 걸어 서비스 표가 찾게 한다.
      */
     class SW_API Render2DSettingsSubsystem : public ISubsystem
     {
@@ -28,7 +28,7 @@ namespace sw
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Render2DSettings";
 
-        /** @brief 레이어가 없는 빈 표를 만들어 소유합니다. 값은 `initializeSubsystem` 이 엔진 파일에서 읽는다(호스트는 그 전에 표를 범위에 `bind` 한다). */
+        /** @brief 레이어가 없는 빈 표를 만들어 소유합니다. 값은 `initializeSubsystem` 이 엔진 파일에서 읽는다(호스트는 그 전에 표를 범위에 `exposeMember` 로 건다). */
         Render2DSettingsSubsystem();
         ~Render2DSettingsSubsystem() override;
 
@@ -40,7 +40,7 @@ namespace sw
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;
 
-        /** @brief 소유한 2D 렌더 설정입니다(호스트가 범위에 `bind` 한다). */
+        /** @brief 소유한 2D 렌더 설정입니다(호스트가 범위에 `exposeMember` 로 건다). */
         Render2DSettings& getSettings() const { return *_settings; }
 
         /**

@@ -1816,7 +1816,8 @@ namespace sw
     SW_ENGINE_SUBSYSTEM( IRenderTargetDeclarationSink, Startup, ( AssetManager ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
-        (void)scope.bind( &scope.get<AssetManager>().getAssetCache<TextureCache>().getRenderTargetDeclarationSink() );
+        AssetManager& assetManager = scope.get<AssetManager>();
+        (void)scope.exposeMember( assetManager, assetManager.getAssetCache<TextureCache>().getRenderTargetDeclarationSink() ); // 주인은 캐시를 가진 에셋 매니저다
     } );
 } // namespace sw
 

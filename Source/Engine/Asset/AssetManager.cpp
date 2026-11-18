@@ -475,7 +475,7 @@ namespace sw
     {
         (void)build;
         AssetManager& assetManager = scope.emplaceSubsystem<AssetManager>();
-        (void)scope.bind( &assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서비스 칸으로 찾는다
+        (void)scope.exposeMember( assetManager, assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서비스 칸으로 찾는다
     } );
 
     // 위 공장이 건 팩 매니저의 서비스 칸(아래 층 · 아무 스레드의 리소스 입구가 읽는다). 비어 있을 수 있다 — 엔진 없이 도는 도구 · 쿠커 · 테스트는 팩이 없고

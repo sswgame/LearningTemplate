@@ -12,6 +12,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioMusic.h"
@@ -607,7 +608,8 @@ namespace sw
 {
     span<const utf8* const> IAudioService::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName, ConfigManager::kSubsystemName }; // 다시 열기 간격을 엔진 설정에서 읽는다
+        // 다시 열기 간격을 엔진 설정에서 읽고, 믹서 그래프를 에셋으로 읽는다(팩 매니저 — 에셋 매니저가 마운트한 뒤라야 한다).
+        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName, ConfigManager::kSubsystemName, AssetManager::kSubsystemName };
         return kArrDependency;
     }
 

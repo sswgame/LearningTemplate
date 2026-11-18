@@ -52,7 +52,7 @@ namespace sw
         if ( setup._reflection == nullptr )
             setup._reflection = sw::make_unique<ReflectionSubsystem>( sw::make_unique<TypeRegistry>() );
         const ReflectionSubsystem& reflection = scope.addSubsystem( std::move( setup._reflection ) );
-        (void)scope.bind( &reflection.getTypeRegistry() ); // 새 범위 — 겹치지 않는다
+        (void)scope.exposeMember( reflection, reflection.getTypeRegistry() ); // 새 범위 — 겹치지 않는다
     } );
 
     // 위 공장이 건 타입 표의 서비스 칸 — 컴포넌트 캐스트 · 직렬화가 프레임마다 읽는다.
