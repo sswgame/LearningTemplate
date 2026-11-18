@@ -7,6 +7,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionNetSessionComponent.h"
@@ -37,7 +38,6 @@ namespace
         optional<int32>    getClientIndex() const override { return nullopt; }
         int32              getConnectedCount() const override { return 0; }
         void               collectConnected( vector<int32>& outListConnection ) const override { outListConnection.clear(); }
-        int32              getMaxBytesPerSecond() const override { return 0; }
         bool               isConnectionSaturated( int32 ) const override { return false; }
         void               addSentKindStats( NetMessageKindStatsTable& ) const override {}
     };

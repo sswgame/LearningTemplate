@@ -39,7 +39,7 @@ namespace
             , _listConnected{}
             , _listPrincipal{}
             , _sendBudget{ -1 }
-            , _bServer{ bServer ? SW_TRUE : SW_FALSE }
+            , _bServer{ static_cast<uint8>( bServer ? SW_TRUE : SW_FALSE ) }
         {
         }
 
@@ -78,7 +78,6 @@ namespace
         optional<int32> getClientIndex() const override { return nullopt; }
         int32           getConnectedCount() const override { return static_cast<int32>( _listConnected.size() ); }
         void            collectConnected( vector<int32>& outListConnection ) const override { outListConnection = _listConnected; }
-        int32           getMaxBytesPerSecond() const override { return 0; }
         bool            isConnectionSaturated( int32 ) const override { return false; }
         void            addSentKindStats( NetMessageKindStatsTable& ) const override {}
     };

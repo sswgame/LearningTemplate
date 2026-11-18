@@ -830,7 +830,11 @@ namespace sw
     {
         unordered_set<uint64> uniqueExcluded;
         if ( pExcludedObjectID != nullptr )
-            uniqueExcluded.insert( pExcludedObjectID->begin(), pExcludedObjectID->end() );
+        {
+            uniqueExcluded.reserve( pExcludedObjectID->size() );
+            for ( const uint64 objectID : *pExcludedObjectID )
+                uniqueExcluded.insert( objectID );
+        }
         for ( const auto& [objectID, fileID] : _mapObjectIDToFileID )
         {
             if ( uniqueExcluded.find( objectID ) != uniqueExcluded.end() )

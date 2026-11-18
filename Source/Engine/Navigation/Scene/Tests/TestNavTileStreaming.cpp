@@ -112,9 +112,16 @@ namespace
             BoxGeometrySource::addBoxes( listBox, 0, geometry );
             const AABB           bounds = NavMeshAsset::computeBakeBounds( geometry );
             unique_ptr<INavMesh> pBaked = NavMeshBackend::createNavMesh();
-            SW_REQUIRE_NOT_NULL( pBaked );
-            SW_REQUIRE_TRUE( pBaked->initialize( agentType, settings, bounds ) );
-            SW_REQUIRE_TRUE( NavMeshAsset::bakeAllTiles( *pBaked, geometry ) );
+            // 도우미는 값을 돌려주므로 SW_REQUIRE_*(케이스 본문 전용)를 쓰지 않는다 — 기대로 남기고 nullptr 로 알린다.
+            SW_EXPECT_NOT_NULL( pBaked );
+            if ( pBaked == nullptr )
+                return nullptr;
+            const bool bInitialized = pBaked->initialize( agentType, settings, bounds );
+            SW_EXPECT_TRUE( bInitialized );
+            const bool bBaked = bInitialized && NavMeshAsset::bakeAllTiles( *pBaked, geometry );
+            SW_EXPECT_TRUE( bBaked );
+            if ( bBaked == false )
+                return nullptr;
             outTileCount = pBaked->getLoadedTileCount();
             NavMeshAssetEntry entry;
             entry._agentType    = agentType._name;
