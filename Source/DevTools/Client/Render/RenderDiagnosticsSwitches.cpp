@@ -2,7 +2,7 @@
  * @file DevTools/Client/Render/RenderDiagnosticsSwitches.cpp
  * @brief 렌더러 진단 정책(`RenderDiagnosticsPolicy`)을 채우는 개발 변수들입니다 — 실행 인자 · 콘솔 · 에디터 창(볼륨 안개)이 바꾸고, 렌더러는 `RenderDiagnostics::get` 으로만 묻는다.
  * @details 예전에는 이 변수들이 런타임 파일(GPUAssert · GPUNanCheck · FrameRenderer · FrameFog · BindlessIndexValidator · ShaderCache)에 흩어져 배포 바이너리에 이름이 남았다.
- *          이름은 그대로라 시나리오 · 스크립트의 `-gv_…` 는 바뀌지 않는다. 값은 부를 때마다 새로 읽는다(실행 중에 바꾼 값이 다음 질의부터 든다) —
+ *          이름은 그대로라 시나리오 · 스크립트의 `-gv_…` 는 바뀌지 않는다. `fill` 은 게임 스레드의 `RenderDiagnostics::publish`(프레임마다)만 부르고, 렌더 쪽은 그 사본을 읽는다(실행 중에 바꾼 값이 다음 프레임부터 든다) —
  *          셰이더 assert · NaN 감시는 렌더러 초기화 때 PSO · 버퍼를 정하므로 명령줄로 준다.
  */
 #include "pch.h"

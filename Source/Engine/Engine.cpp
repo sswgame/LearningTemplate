@@ -45,6 +45,7 @@
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -164,6 +165,8 @@ namespace sw
             SW_LOW_LEVEL_ERROR( "Engine core scope failed: %s", _coreScope.getCollection().getError().c_str() );
             return false;
         }
+        // 렌더 진단 정책을 명령줄(`-gv_…`, 코어 범위의 명령줄이 막 적용했다)이 든 값으로 내보낸다 — 기동 단계(셰이더 캐시 · 렌더러 초기화)가 이 사본을 읽는다.
+        RenderDiagnostics::publish();
         // 크래시 보고 프로세스(`-crash-reporter=<폴더>`)는 헤드리스다 — 서비스 · 기동 단계를 세우지 않고 App 이 묶음을 보내고 끝낸다.
         // 이 모드에서는 크래시 핸들러(죽으면 보고 프로세스를 또 띄운다) · 리소스 루트를 세우지 않았다.
         if ( pCrashHandler->isCrashReporterRun() )
@@ -580,6 +583,8 @@ namespace sw
             // 그리지 않고 진행하는 고정 걸음(`SimulationOnlyFrameQueue` — 시나리오 `<AdvanceSimulation>`)이면 패킷은 짓되 그리지 않는다. 고정 프레임 시간이 없으면 서비스가 거절한다.
             SimulationOnlyFrameQueue* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameQueue>();
             const FrameDrawMode             drawMode        = pSimulationOnly != nullptr ? pSimulationOnly->beginFrame( engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta ) : FrameDrawMode::Draw;
+            // 이번 프레임의 개발 변수(콘솔 · 에디터가 게임 스레드에서 바꾼다)를 렌더 진단 사본으로 — 렌더 스레드 · 기록 워커는 사본만 읽는다(언리얼 콘솔 변수의 렌더 스레드 값).
+            RenderDiagnostics::publish();
             _pRenderDriver->submitFrame( deltaTime, views, sceneViewCameraProvider, drawMode );
         }
     }
