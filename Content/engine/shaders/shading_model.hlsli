@@ -6,12 +6,12 @@
  *
  * | 엽 · define                     | 식                                                                  | 언리얼 대응(기억에 의존)               |
  * |---------------------------------|---------------------------------------------------------------------|----------------------------------------|
- * | 코트 MATERIAL_LOBE_COAT         | 둘째 GGX 반사(F0 0.04, 자기 거칠기) + 아래층 감쇠 1 - w·F(N·V)       | Clear Coat (피지 · 립글로스 · 니스 · 젖음) |
+ * | 코트 MATERIAL_LOBE_COAT         | 둘째 GGX 반사(F0 0.04, 자기 거칠기) + 아래층 감쇠 1 - w·F(V·H), 반사 프로브도 코트 거칠기로 따로 | Clear Coat (피지 · 립글로스 · 니스 · 젖음) |
  * | 시엔 MATERIAL_LOBE_SHEEN        | Charlie 분포 × Neubelt 가시성, 반사를 lerp( GGX, 시엔, 무게 )        | Cloth(Fuzz Color · Cloth 값)            |
  * | 피부 MATERIAL_LOBE_SUBSURFACE   | 채널마다 감싼 확산(산란 반경 × 곡률)                                 | Preintegrated Skin 의 값싼 판           |
  * | 투과 MATERIAL_LOBE_TRANSMISSION | 뒤에서 오는 빛의 감싼 확산 × 투과색                                  | Two Sided Foliage · Thin Translucent    |
- * | 비등방 MATERIAL_LOBE_ANISOTROPY | Burley 비등방 GGX · Heitz 가시성                                     | Anisotropy 핀                           |
- * | 박막 MATERIAL_LOBE_THIN_FILM    | 시선 각에서 잰 에어리 반사율로 F0 를 바꾼다(파장 셋)                 | Substrate Thin Film                     |
+ * | 비등방 MATERIAL_LOBE_ANISOTROPY | Burley 비등방 GGX · Heitz 가시성, 반사 프로브는 굽힌 노멀로          | Anisotropy 핀                           |
+ * | 박막 MATERIAL_LOBE_THIN_FILM    | 빛마다 V·H 에서 잰 에어리 반사율을 프레넬로(파장 셋), 환경은 N·V    | Substrate Thin Film                     |
  * | 머리결 MATERIAL_LOBE_STRAND     | Marschner R · TT · TRT(hair_shading.hlsli — 머리카락과 한 식) — 털   | Hair(Marschner)                         |
  *
  * 형식 · 멤버 이름은 lighting.hlsli 의 기본 SurfaceBRDF 와 같다(빛 고리가 부르는 다섯 + makePBR). 엽을 더하면 칸 · 설정 함수 · 엽 함수 하나를 더하고
@@ -51,7 +51,12 @@ struct SurfaceBRDF
     float3      _bitangent;
     float       _alphaTangent;
     float       _alphaBitangent;
-    HairSurface _strand; ///< 머리결 엽(털)의 Marschner 값 — 반사 배율 0 이면 꺼진다
+    float       _anisotropy;      ///< -1..1 — 반사 프로브의 굽힌 노멀(getReflectionDirection)
+    float       _filmThicknessNm; ///< 박막 두께(nm)
+    float       _filmIor;         ///< 박막 굴절률
+    float       _filmBaseIor;     ///< 막 아래 바탕 굴절률
+    float       _filmWeight;      ///< 0 이면 막 없음
+    HairSurface _strand;          ///< 머리결 엽(털)의 Marschner 값 — 반사 배율 0 이면 꺼진다
 
     static SurfaceBRDF makePBR( float3 albedo, float3 worldPosition, float3 normal, float roughness, float metallic );
     // 엽 설정 — 표면 훅의 값으로 부른다. 부르지 않은 엽은 무게 0 이다.
@@ -69,16 +74,22 @@ struct SurfaceBRDF
     float3 getAmbientDiffuseColor();
     float3 computeEnvironmentSpecular();
     float getReflectionRoughness();
+    float3 getReflectionDirection();
+    bool hasCoatLayer();
+    float3 computeCoatEnvironmentSpecular();
+    float getCoatReflectionRoughness();
     float3 shadeLights( float3 worldPosition, float shadow );
 
     // 엽 — define 이 정의를 고른다(꺼지면 0 · 그대로).
     float3 computeDiffuse( float normalDotLight );
+    float3 computeBaseFresnel( float cosine );
+    float3 computeBaseEnvironmentSpecular();
     float3 computeBaseSpecular( float3 toLight, float3 halfway, float normalDotLight, float normalDotHalf, float viewDotHalf );
     float3 computeSheenSpecular( float normalDotLight, float normalDotHalf );
     float3 computeTransmission( float normalDotLight );
     float3 computeStrandSpecular( float3 toLight, float normalDotLight );
     float3 applyCoat( float3 under, float normalDotLight, float normalDotHalf, float viewDotHalf );
-    float computeCoatAttenuation();
+    float computeCoatAttenuation( float cosine );
 };
 
 static SurfaceBRDF SurfaceBRDF::makePBR( float3 albedo, float3 worldPosition, float3 normal, float roughness, float metallic )
@@ -104,6 +115,11 @@ static SurfaceBRDF SurfaceBRDF::makePBR( float3 albedo, float3 worldPosition, fl
     brdf._bitangent         = cross( normal, brdf._tangent );
     brdf._alphaTangent      = brdf._pbr._alpha;
     brdf._alphaBitangent    = brdf._pbr._alpha;
+    brdf._anisotropy        = 0.0f;
+    brdf._filmThicknessNm   = 0.0f;
+    brdf._filmIor           = 1.0f;
+    brdf._filmBaseIor       = 1.0f;
+    brdf._filmWeight        = 0.0f;
     brdf._strand._baseColor = float3( 0.0f, 0.0f, 0.0f );
     brdf._strand._roughness = 1.0f;
     brdf._strand._shift     = 0.0f;
@@ -147,20 +163,21 @@ void SurfaceBRDF::setAnisotropy( float3 tangent, float anisotropy )
     const float  lengthSq   = dot( orthogonal, orthogonal );
     _tangent                = lengthSq > 1e-8f ? orthogonal * rsqrt( lengthSq ) : _tangent;
     _bitangent              = cross( _normal, _tangent );
-    _alphaTangent           = ShadingMath::computeAlphaTangent( _pbr._alpha, clamp( anisotropy, -0.95f, 0.95f ) );
-    _alphaBitangent         = ShadingMath::computeAlphaBitangent( _pbr._alpha, clamp( anisotropy, -0.95f, 0.95f ) );
+    _anisotropy             = clamp( anisotropy, -0.95f, 0.95f );
+    _alphaTangent           = ShadingMath::computeAlphaTangent( _pbr._alpha, _anisotropy );
+    _alphaBitangent         = ShadingMath::computeAlphaBitangent( _pbr._alpha, _anisotropy );
 }
 
 /**
- * @brief 박막 — 시선 각에서 잰 에어리 반사율로 F0 를 바꾼다.
- * @details shortcut: 빛마다 V·H 로 재지 않고 N·V 한 번으로 잰 색을 F0 로 쓴다(그 위에 슐릭이 한 번 더 걸려 스치는 각이 조금 밝다). 빛이 여럿인 장면에서 무지개가 어긋나 보이면 빛마다 잰다.
+ * @brief 박막 — 막의 값을 싣는다. 에어리 반사율은 빛마다 V·H 에서(computeBaseFresnel), 환경은 N·V 에서 재어 슐릭 프레넬을 대신한다
+ *        (Belcour · Barla 2017 — 반사율이 이미 각에 따라 바뀌는 프레넬이라 그 위에 슐릭을 다시 걸지 않는다).
  */
 void SurfaceBRDF::setThinFilm( float thicknessNm, float filmIor, float baseIor, float weight )
 {
-    const float3 film   = float3( ShadingMath::computeThinFilmReflectance( _normalDotView, thicknessNm, filmIor, baseIor, kThinFilmWavelengthNm.r ),
-                                  ShadingMath::computeThinFilmReflectance( _normalDotView, thicknessNm, filmIor, baseIor, kThinFilmWavelengthNm.g ),
-                                  ShadingMath::computeThinFilmReflectance( _normalDotView, thicknessNm, filmIor, baseIor, kThinFilmWavelengthNm.b ) );
-    _pbr._specularColor = lerp( _pbr._specularColor, film, saturate( weight ) );
+    _filmThicknessNm = max( thicknessNm, 0.0f );
+    _filmIor         = filmIor;
+    _filmBaseIor     = baseIor;
+    _filmWeight      = saturate( weight );
 }
 
 /**
@@ -202,20 +219,72 @@ float3 SurfaceBRDF::computeDiffuse( float normalDotLight )
 }
 #endif
 
+#if defined( MATERIAL_LOBE_THIN_FILM )
+/** @brief 바탕층 프레넬 — 슐릭과 각 @p cosine 에서 잰 박막 에어리 반사율(파장 셋)을 막 무게로 섞는다. */
+float3 SurfaceBRDF::computeBaseFresnel( float cosine )
+{
+    const float3 schlick = _pbr._specularColor + ( 1.0f - _pbr._specularColor ) * ShadingMath::computeSchlickWeight( cosine );
+    const float3 film    = float3( ShadingMath::computeThinFilmReflectance( cosine, _filmThicknessNm, _filmIor, _filmBaseIor, kThinFilmWavelengthNm.r ),
+                                   ShadingMath::computeThinFilmReflectance( cosine, _filmThicknessNm, _filmIor, _filmBaseIor, kThinFilmWavelengthNm.g ),
+                                   ShadingMath::computeThinFilmReflectance( cosine, _filmThicknessNm, _filmIor, _filmBaseIor, kThinFilmWavelengthNm.b ) );
+    return lerp( schlick, film, _filmWeight );
+}
+
+/** @brief 바탕층 환경 반사(박막) — 프레넬을 적분 밖으로 꺼내 N·V 의 프레넬 × F0 = 1 의 방향 반사율로 둔다(막 무게 0 이면 슐릭 판과 거의 같다). */
+float3 SurfaceBRDF::computeBaseEnvironmentSpecular()
+{
+    SurfacePBR unit     = _pbr;
+    unit._specularColor = float3( 1.0f, 1.0f, 1.0f );
+    const float3 film   = computeBaseFresnel( _normalDotView ) * unit.computeEnvironmentSpecular( _normalDotView );
+    return _filmWeight > 0.0f ? film : _pbr.computeEnvironmentSpecular( _normalDotView );
+}
+#else
+float3 SurfaceBRDF::computeBaseFresnel( float cosine )
+{
+    return _pbr._specularColor + ( 1.0f - _pbr._specularColor ) * ShadingMath::computeSchlickWeight( cosine );
+}
+
+float3 SurfaceBRDF::computeBaseEnvironmentSpecular()
+{
+    return _pbr.computeEnvironmentSpecular( _normalDotView );
+}
+#endif
+
 #if defined( MATERIAL_LOBE_ANISOTROPY )
 /** @brief 비등방 GGX — 비단 · 공단 · 솔질 금속의 길게 끌린 하이라이트. */
 float3 SurfaceBRDF::computeBaseSpecular( float3 toLight, float3 halfway, float normalDotLight, float normalDotHalf, float viewDotHalf )
 {
-    const float  distributionTimesPi = ShadingMath::computeDistributionAnisotropicGGXTimesPi( normalDotHalf, dot( _tangent, halfway ), dot( _bitangent, halfway ), _alphaTangent, _alphaBitangent );
-    const float  visibility          = ShadingMath::computeVisibilityAnisotropicGGX( normalDotLight, _normalDotView, dot( _tangent, _toView ), dot( _bitangent, _toView ), dot( _tangent, toLight ),
-                                                                                     dot( _bitangent, toLight ), _alphaTangent, _alphaBitangent );
-    const float3 fresnel             = _pbr._specularColor + ( 1.0f - _pbr._specularColor ) * ShadingMath::computeSchlickWeight( viewDotHalf );
-    return distributionTimesPi * visibility * fresnel * normalDotLight;
+    const float distributionTimesPi = ShadingMath::computeDistributionAnisotropicGGXTimesPi( normalDotHalf, dot( _tangent, halfway ), dot( _bitangent, halfway ), _alphaTangent, _alphaBitangent );
+    const float visibility          = ShadingMath::computeVisibilityAnisotropicGGX( normalDotLight, _normalDotView, dot( _tangent, _toView ), dot( _bitangent, _toView ), dot( _tangent, toLight ),
+                                                                                    dot( _bitangent, toLight ), _alphaTangent, _alphaBitangent );
+    return distributionTimesPi * visibility * computeBaseFresnel( viewDotHalf ) * normalDotLight;
+}
+
+/**
+ * @brief 비등방 반사 프로브 방향 — 노멀을 늘어나는 축을 품은 평면 쪽으로 굽혀 반사한다(언리얼 ModifyGGXAnisotropicNormalRoughness).
+ *        늘어난 하이라이트가 프로브 반사에서도 결 방향으로 끌린다. 비등방 0 이면 굽히지 않는다.
+ */
+float3 SurfaceBRDF::getReflectionDirection()
+{
+    const float3 stretchAxis   = _anisotropy < 0.0f ? _tangent : _bitangent;
+    const float3 bentTangent   = cross( stretchAxis, _toView );
+    const float3 bentNormal    = cross( bentTangent, stretchAxis );
+    const float  stretch       = ShadingMath::computeAnisotropicNormalStretch( _anisotropy, _pbr._roughness );
+    const float3 reflectNormal = normalize( lerp( _normal, bentNormal, stretch ) );
+    return reflect( -_toView, reflectNormal );
 }
 #else
+/** @brief 등방 GGX — SurfacePBR::evaluateSpecular 와 같은 D · Vis, 프레넬만 박막이 바꿀 수 있다. */
 float3 SurfaceBRDF::computeBaseSpecular( float3 toLight, float3 halfway, float normalDotLight, float normalDotHalf, float viewDotHalf )
 {
-    return _pbr.evaluateSpecular( _normal, _toView, toLight, normalDotLight, _normalDotView );
+    const float distributionTimesPi = ShadingMath::computeDistributionGGXTimesPi( normalDotHalf, _pbr._alpha );
+    const float visibility          = ShadingMath::computeVisibilitySmithGGX( normalDotLight, _normalDotView, _pbr._alpha );
+    return distributionTimesPi * visibility * computeBaseFresnel( viewDotHalf ) * normalDotLight;
+}
+
+float3 SurfaceBRDF::getReflectionDirection()
+{
+    return reflect( -_toView, _normal );
 }
 #endif
 
@@ -260,10 +329,10 @@ float3 SurfaceBRDF::computeStrandSpecular( float3 toLight, float normalDotLight 
 #endif
 
 #if defined( MATERIAL_LOBE_COAT )
-/** @brief 아래층이 코트를 지나며 잃는 몫 — 시선 쪽 프레넬 한 번(값싼 판, 언리얼 Clear Coat 도 같은 생각). */
-float SurfaceBRDF::computeCoatAttenuation()
+/** @brief 아래층이 코트를 지나며 잃는 몫 — 1 - 무게 × 코트 프레넬(각 @p cosine). 언리얼 ClearCoat 의 LayerAttenuation 과 같다(빛은 V·H, 환경은 N·V). */
+float SurfaceBRDF::computeCoatAttenuation( float cosine )
 {
-    return 1.0f - _coatWeight * ShadingMath::computeFresnelSchlick( kCoatF0, _normalDotView );
+    return 1.0f - _coatWeight * ShadingMath::computeFresnelSchlick( kCoatF0, cosine );
 }
 
 /** @brief 코트 — 아래층을 감쇠하고 코트 자신의 GGX 반사를 더한다(피지 · 립글로스 · 니스 · 젖은 면). 코트 노멀은 표면 노멀이다. */
@@ -271,12 +340,36 @@ float3 SurfaceBRDF::applyCoat( float3 under, float normalDotLight, float normalD
 {
     const float coat = ShadingMath::computeDistributionGGXTimesPi( normalDotHalf, _coatAlpha ) * ShadingMath::computeVisibilitySmithGGX( normalDotLight, _normalDotView, _coatAlpha ) *
                        ShadingMath::computeFresnelSchlick( kCoatF0, viewDotHalf ) * normalDotLight;
-    return under * computeCoatAttenuation() + coat * _coatWeight;
+    return under * computeCoatAttenuation( viewDotHalf ) + coat * _coatWeight;
+}
+
+bool SurfaceBRDF::hasCoatLayer()
+{
+    return _coatWeight > 0.0f;
+}
+
+/** @brief 코트층의 환경 반사 비율 — F0 0.04 · 코트 거칠기의 EnvBRDF 근사 × 무게(언리얼 ClearCoat 반사 환경과 같다). */
+float3 SurfaceBRDF::computeCoatEnvironmentSpecular()
+{
+    SurfacePBR coat     = _pbr;
+    coat._specularColor = float3( kCoatF0, kCoatF0, kCoatF0 );
+    coat._roughness     = sqrt( _coatAlpha );
+    return coat.computeEnvironmentSpecular( _normalDotView ) * _coatWeight;
 }
 #else
-float SurfaceBRDF::computeCoatAttenuation()
+float SurfaceBRDF::computeCoatAttenuation( float cosine )
 {
     return 1.0f;
+}
+
+bool SurfaceBRDF::hasCoatLayer()
+{
+    return false;
+}
+
+float3 SurfaceBRDF::computeCoatEnvironmentSpecular()
+{
+    return float3( 0.0f, 0.0f, 0.0f );
 }
 
 float3 SurfaceBRDF::applyCoat( float3 under, float normalDotLight, float normalDotHalf, float viewDotHalf )
@@ -301,20 +394,25 @@ float3 SurfaceBRDF::evaluateLight( float3 toLight, float normalDotLight )
 float3 SurfaceBRDF::getAmbientDiffuseColor()
 {
     // 투과 면은 뒤쪽 하늘빛도 받는다 — 앰비언트에 투과색의 절반을 더한다(반구 평균의 값싼 판).
-    return ( _pbr._diffuseColor + _transmissionColor * 0.5f ) * computeCoatAttenuation();
+    return ( _pbr._diffuseColor + _transmissionColor * 0.5f ) * computeCoatAttenuation( _normalDotView );
 }
 
 float3 SurfaceBRDF::computeEnvironmentSpecular()
 {
-    // 천은 반사 비율을 시엔 색으로 옮긴다(시엔의 반구 평균 ≈ 색 × 0.25, 값싼 판). 코트는 자기 프레넬만큼 하늘을 더 비춘다.
-    const float3 base = lerp( _pbr.computeEnvironmentSpecular( _normalDotView ), _sheenColor * 0.25f, _sheenWeight );
-    return base * computeCoatAttenuation() + _coatWeight * ShadingMath::computeFresnelSchlick( kCoatF0, _normalDotView );
+    // 천은 반사 비율을 시엔 색으로 옮긴다(시엔의 반구 평균 ≈ 색 × 0.25, 값싼 판). 코트가 덮으면 바탕층은 코트를 지나며 잃는 몫만큼 어둡고,
+    // 코트 자신의 반사는 코트층(computeCoatEnvironmentSpecular)이 코트 거칠기의 프로브로 따로 낸다.
+    const float3 base = lerp( computeBaseEnvironmentSpecular(), _sheenColor * 0.25f, _sheenWeight );
+    return base * computeCoatAttenuation( _normalDotView );
 }
 
 float SurfaceBRDF::getReflectionRoughness()
 {
-    // 코트가 덮으면 반사 프로브는 코트의 거칠기로 고른다(매끈한 기름막이 하늘을 또렷이 비춘다).
-    return lerp( _pbr._roughness, sqrt( _coatAlpha ), _coatWeight );
+    return _pbr._roughness;
+}
+
+float SurfaceBRDF::getCoatReflectionRoughness()
+{
+    return sqrt( _coatAlpha );
 }
 
 #endif // SW_ENGINE_SHADINGMODEL_HLSLI

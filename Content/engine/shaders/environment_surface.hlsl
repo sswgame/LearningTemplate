@@ -7,12 +7,22 @@
  *          무늬 종류(`_patternShape.x`)는 머티리얼 값 분기다 — 같은 드로우 안에서 갈리지 않아 분기 비용이 작고, 순열로 가르면 프리셋마다 셰이더가 하나씩 는다.
  *
  *          한 점의 순서: 밑(색 · 텍스처) → 무늬(둘째 색 · 홈 범프 · 칸마다 색 흔들림) → 잔무늬 · 큰 무늬(타일 반복 깨기) → 모서리 마모(밑 층이 드러난다) → 녹 → 변색 → 때
- *          → 헤어라인 · 클리어 코트 → 날씨(젖음 · 웅덩이 · 눈 · 반짝이). 식은 함수 묶음(material_functions.hlsli)의 것이다.
+ *          → 헤어라인 결 → 날씨(젖음 · 웅덩이 · 눈 · 반짝이). 식은 함수 묶음(material_functions.hlsli)의 것이다.
  *          날씨는 칸 `_weather` 가 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather 에 묶여 지형과 함께 젖는다 — 머티리얼 값(`_wetness` 등)은 거기에 더한다.
  *
- *          W17 합치는 자리: 클리어 코트 · 이방성은 `SurfaceFunction::applyClearCoat` · `computeBrushedRoughness` 의 근사다(머리 주석 — material_functions.hlsli).
- *          W17 의 셰이딩 모델 열거 · CustomData 가 들어오면 그 두 함수만 바꾸고 이 파일의 칸(`_clearCoat` · `_clearCoatRoughness` · `_anisotropy`)은 그대로 넘긴다.
+ *          셰이딩 모델(언리얼 머티리얼의 Shading Model 칸 — 인스턴스가 아니라 머티리얼이 고른다):
+ *            define 없음                → Default Lit(기본 PBR, 기본 조명 훅).
+ *            MATERIAL_LOBE_COAT         → Clear Coat — 둘째 반사층(코트 무게 `_clearCoat` × (1 - 모서리 마모), 코트 거칠기 `_clearCoatRoughness`). 유약 · 니스 · 칠.
+ *            MATERIAL_LOBE_ANISOTROPY   → Anisotropic — 탄젠트(메시 UV u) 방향 비등방 GGX(`_anisotropy`). 헤어라인 금속.
+ *          둘 다 켠 머티리얼은 G버퍼 사용자 칸(번호 하나에 엽 하나 — shading_model_ids.hlsli)에 들지 않아 MATERIAL_FORWARD_ONLY 가 아니면 쿠킹이 멈춘다.
+ *          값과 define 의 짝(코트 · 비등방 값이 0 이 아니면 그 define)은 MaterialLibraryTest 가 데이터로 본다 — 셰이더는 값을 보지 못한다.
  */
+#if defined( MATERIAL_LOBE_COAT ) || defined( MATERIAL_LOBE_ANISOTROPY )
+    #define SW_SHADING_MODEL_LAYERED
+    #define SW_ENVIRONMENT_LAYERED 1
+#else
+    #define SW_ENVIRONMENT_LAYERED 0
+#endif
 #include "lighting.hlsli"
 
 // 무늬 종류(`_patternShape.x`) — environmentsurface.material 의 표와 같다.
@@ -80,9 +90,27 @@ SW_MATERIAL_END
 #if defined( MATERIAL_ALPHA_CUTOFF )
     #error "environment_surface.hlsl has no alpha cutoff property — opaque surfaces only (cut-out leaves use pbr_lit.hlsl)"
 #endif
+#if defined( MATERIAL_LOBE_SHEEN ) || defined( MATERIAL_LOBE_SUBSURFACE ) || defined( MATERIAL_LOBE_TRANSMISSION ) || defined( MATERIAL_LOBE_THIN_FILM ) || defined( MATERIAL_LOBE_STRAND )
+    #error "environment_surface.hlsl shades Default Lit, Clear Coat (MATERIAL_LOBE_COAT) or Anisotropic (MATERIAL_LOBE_ANISOTROPY) only — other lobes use appearance_lit.hlsl"
+#endif
+// 코트 + 비등방은 G버퍼 번호 하나에 들지 않는다 — define 을 빠뜨린 머티리얼이 G버퍼에서 조용히 한 엽을 잃지 않게 쿠킹에서 멈춘다.
+#if defined( SW_PASS_GBUFFER ) && defined( MATERIAL_LOBE_COAT ) && defined( MATERIAL_LOBE_ANISOTROPY )
+    #error "environment_surface.hlsl: Clear Coat with Anisotropy does not fit the G-buffer (one shading model per pixel): list MATERIAL_FORWARD_ONLY"
+#endif
 
-#define SW_MATERIAL_DEFAULT_LIGHTING
-#define SW_MATERIAL_RIM_LIGHT
+#if defined( MATERIAL_LOBE_ANISOTROPY )
+    #define SW_ENVIRONMENT_SHADING_MODEL SW_SHADING_MODEL_ID_ANISOTROPIC
+#elif defined( MATERIAL_LOBE_COAT )
+    #define SW_ENVIRONMENT_SHADING_MODEL SW_SHADING_MODEL_ID_CLEAR_COAT
+#endif
+
+#if SW_ENVIRONMENT_LAYERED
+    #define SW_MATERIAL_CUSTOM_LIGHTING
+    #define SW_MATERIAL_CUSTOM_SHADING
+#else
+    #define SW_MATERIAL_DEFAULT_LIGHTING
+    #define SW_MATERIAL_RIM_LIGHT
+#endif
 #define SW_MATERIAL_DEFAULT_VARYINGS
 #if !defined( SW_PASS_SHADOW ) && !defined( SW_PASS_DEPTH_PREPASS )
     #define SW_MATERIAL_USES_TANGENT
@@ -150,7 +178,42 @@ EnvironmentPattern evaluatePattern( float kind, float4 scale, float2 uv, float3 
     return result;
 }
 
+/** @brief 환경 표면 한 점 — 표면 훅의 값과 셰이딩 모델 엽의 값(코트 · 비등방). 표면 · 조명 · 셰이딩 훅이 같은 함수를 부른다(같은 식이라 컴파일러가 한 번만 계산한다). */
+struct EnvironmentSurface
+{
+    MaterialSurface _surface;
+    float           _coatWeight;    ///< 코트 무게(모서리 마모 자리는 0)
+    float           _coatRoughness; ///< 코트 거칠기
+    float           _anisotropy;    ///< 비등방(0..1 — 탄젠트 방향으로 늘어난다)
+    float3          _tangent;       ///< 비등방 방향(메시 탄젠트 — 메시 UV u)
+
+    static EnvironmentSurface make( PixelContext context );
+    static float3 getTangent( PixelContext context );
+};
+
+#if defined( SW_MATERIAL_USES_TANGENT )
+static float3 EnvironmentSurface::getTangent( PixelContext context )
+{
+    return context._tangent.xyz;
+}
+#else
+static float3 EnvironmentSurface::getTangent( PixelContext context )
+{
+    return float3( 1.0f, 0.0f, 0.0f ); // 깊이 · 그림자 패스 — 조명을 하지 않는다
+}
+#endif
+
 MaterialSurface computeMaterialSurface( PixelContext context )
+{
+    return EnvironmentSurface::make( context )._surface;
+}
+
+/**
+ * @brief 층을 순서대로 쌓은 한 점.
+ * @details shortcut: 월드 축 투영(`_patternShape.w`)이어도 비등방 방향은 메시 탄젠트다 — 헤어라인 결 무늬는 투영 UV 를 따라 둘이 어긋난다. 월드 투영 헤어라인 프리셋이 생기면
+ *          pbr_lit.hlsl 의 computeWorldAlignedUV 처럼 투영의 dP/du 를 탄젠트로 낸다.
+ */
+static EnvironmentSurface EnvironmentSurface::make( PixelContext context )
 {
     MaterialData material = context._material;
     const float3 position = context._worldPosition;
@@ -213,9 +276,8 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     roughness        = lerp( roughness, kDirtRoughness, dirt );
     metallic         = lerp( metallic, 0.0f, dirt );
 
-    // 헤어라인 · 클리어 코트(W17 합치는 자리 — 머리 주석).
+    // 헤어라인 결 무늬(거칠기의 줄). 늘어난 하이라이트는 Anisotropic 모델의 엽이, 코트 반사는 Clear Coat 모델의 둘째 층이 낸다(머리 주석).
     roughness = SurfaceFunction::computeBrushedRoughness( roughness, uv, material._anisotropy, kBrushedFrequency );
-    SurfaceFunction::applyClearCoat( roughness, coat, material._clearCoatRoughness );
 
     // 날씨 — 머티리얼 값 + 파라미터 묶음 Weather.
     const float4 weather    = material._weather;
@@ -230,12 +292,51 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     SurfaceFunction::applySnow( albedo, roughness, metallic, surfaceNormal, snow );
     SurfaceFunction::applySparkle( roughness, surfaceNormal, position, kSparkleDensity, max( material._sparkle, snow * kSnowSparkle ) );
 
-    MaterialSurface surface;
-    surface._albedo    = float4( albedo, material._baseColor.a * albedoTexture.a );
-    surface._normal    = surfaceNormal;
-    surface._roughness = saturate( roughness );
-    surface._metallic  = saturate( metallic );
-    return surface;
+    EnvironmentSurface result;
+    result._surface._albedo    = float4( albedo, material._baseColor.a * albedoTexture.a );
+    result._surface._normal    = surfaceNormal;
+    result._surface._roughness = saturate( roughness );
+    result._surface._metallic  = saturate( metallic );
+    result._coatWeight         = saturate( coat );
+    result._coatRoughness      = saturate( material._clearCoatRoughness );
+    result._anisotropy         = saturate( material._anisotropy );
+    result._tangent            = EnvironmentSurface::getTangent( context );
+    return result;
 }
+
+#if SW_ENVIRONMENT_LAYERED
+    #if SW_VIEWMODE_SKIPS_LIGHTING
+float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
+{
+    return surface._albedo; // 보기 모드 Unlit — 조명 · 그림자 없이 표면 색
+}
+    #else
+/** @brief 코트 · 비등방 엽을 켠 겹 BRDF 로 모든 빛 — 디퍼드(deferred_lighting.hlsl)와 같은 빛 고리 · 같은 림 항이다. */
+float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
+{
+    const EnvironmentSurface environment = EnvironmentSurface::make( context );
+    SurfaceBRDF              brdf        = SurfaceBRDF::makePBR( ViewMode::overrideLightingAlbedo( surface._albedo.rgb ), context._worldPosition, surface._normal, surface._roughness, surface._metallic );
+    brdf.setCoat( environment._coatWeight, environment._coatRoughness );
+    brdf.setAnisotropy( environment._tangent, environment._anisotropy );
+    const float shadow = Shadow::sampleAtWorld( context._worldPosition, surface._normal );
+    float3      lit    = brdf.shadeLights( context._worldPosition, shadow ) + Lighting::computeRimLight( surface._normal );
+    context.addEmissive( lit );
+    return float4( lit, surface._albedo.a );
+}
+    #endif
+
+/** @brief G버퍼 셰이딩 값 — 번호와 사용자 칸(shading_model_ids.hlsli 표: Clear Coat = 코트 무게 · 거칠기, Anisotropic = 탄젠트 옥타 · 비등방). */
+SurfaceShading computeMaterialShading( PixelContext context, MaterialSurface surface )
+{
+    const EnvironmentSurface environment = EnvironmentSurface::make( context );
+    SurfaceShading           shading     = SurfaceShading::make( SW_ENVIRONMENT_SHADING_MODEL );
+    #if defined( MATERIAL_LOBE_ANISOTROPY )
+    shading._customData = float4( Octahedral::encode( environment._tangent ) * 0.5f + 0.5f, environment._anisotropy * 0.5f + 0.5f, 0.0f );
+    #else
+    shading._customData = float4( environment._coatWeight, environment._coatRoughness, 0.0f, 0.0f );
+    #endif
+    return shading;
+}
+#endif
 
 #include "material_shader_main.hlsli"

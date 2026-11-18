@@ -684,8 +684,12 @@ struct SurfaceBRDF
     bool receivesLight( float normalDotLight );                   // 이 N·L(자르지 않은 값)의 빛이 응답을 내는지
     float3 evaluateLight( float3 toLight, float normalDotLight ); // 빛 하나의 응답(빛 색 · 감쇠 · 그림자를 곱하기 전)
     float3 getAmbientDiffuseColor();                              // 앰비언트 · 라이트 프로브가 곱하는 확산색
-    float3 computeEnvironmentSpecular();                          // 앰비언트 · 반사 프로브가 곱하는 반사 비율
-    float getReflectionRoughness();                               // 반사 프로브 단계를 고르는 거칠기
+    float3 computeEnvironmentSpecular();                          // 앰비언트 · 반사 프로브가 곱하는 반사 비율(바탕층)
+    float getReflectionRoughness();                               // 반사 프로브 단계를 고르는 거칠기(바탕층)
+    float3 getReflectionDirection();                              // 반사 프로브를 읽는 방향(바탕층)
+    bool hasCoatLayer();                                          // 둘째 반사층(클리어 코트)이 있는지 — 있으면 프로브를 코트 거칠기로 한 번 더 읽는다
+    float3 computeCoatEnvironmentSpecular();                      // 코트층의 반사 비율(코트 없으면 0)
+    float getCoatReflectionRoughness();                           // 코트층의 반사 프로브 거칠기
     float3 shadeLights( float3 worldPosition, float shadow );     // 모든 빛 — 아래 한 벌
 };
 
@@ -725,6 +729,26 @@ float SurfaceBRDF::getReflectionRoughness()
 {
     return _pbr._roughness;
 }
+
+float3 SurfaceBRDF::getReflectionDirection()
+{
+    return reflect( -_toView, _normal );
+}
+
+bool SurfaceBRDF::hasCoatLayer()
+{
+    return false;
+}
+
+float3 SurfaceBRDF::computeCoatEnvironmentSpecular()
+{
+    return float3( 0.0f, 0.0f, 0.0f );
+}
+
+float SurfaceBRDF::getCoatReflectionRoughness()
+{
+    return _pbr._roughness;
+}
 #endif
 
 /**
@@ -741,13 +765,20 @@ float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
     const float3 ambient             = g_KeyLightColor.rgb * g_KeyLightColor.a;
     const float3 diffuseColor        = getAmbientDiffuseColor();
     const float3 environmentSpecular = computeEnvironmentSpecular();
-    const float3 reflectDirection    = reflect( -_toView, _normal );
-    float3       lit                 = ( diffuseColor + environmentSpecular ) * ambient * _occlusion;
-    float3       probeSum            = float3( 0.0f, 0.0f, 0.0f );
-    float        probeWeight         = 0.0f;
-    float        skyVisibilitySum    = 0.0f;
-    float3       reflectionSum       = float3( 0.0f, 0.0f, 0.0f );
-    float        reflectionWeight    = 0.0f;
+    const float3 reflectDirection    = getReflectionDirection();
+    // 클리어 코트는 둘째 반사층이다 — 코트 거칠기 · 표면 노멀의 반사로 프로브를 따로 읽는다(언리얼 ClearCoat 의 반사 환경과 같은 두 번 읽기). 코트 없는 표면은 컴파일러가 지운다.
+    const bool   bCoatLayer              = hasCoatLayer();
+    const float3 coatEnvironmentSpecular = computeCoatEnvironmentSpecular();
+    const float3 coatReflectDirection    = reflect( -_toView, _normal );
+    const float3 totalSpecular           = environmentSpecular + coatEnvironmentSpecular;
+    float3       lit                     = ( diffuseColor + totalSpecular ) * ambient * _occlusion;
+    float3       probeSum                = float3( 0.0f, 0.0f, 0.0f );
+    float        probeWeight             = 0.0f;
+    float        skyVisibilitySum        = 0.0f;
+    float3       reflectionSum           = float3( 0.0f, 0.0f, 0.0f );
+    float        reflectionWeight        = 0.0f;
+    float3       coatReflectionSum       = float3( 0.0f, 0.0f, 0.0f );
+    float        coatReflectionWeight    = 0.0f;
 
     LightCursor cursor = LightCursor::begin( worldPosition );
     LightData   light;
@@ -768,6 +799,12 @@ float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
             const float4 reflection = light.sampleReflectionProbe( worldPosition, reflectDirection, getReflectionRoughness() );
             reflectionSum += reflection.rgb * reflection.a;
             reflectionWeight += reflection.a;
+            SW_BRANCH if ( bCoatLayer )
+            {
+                const float4 coatReflection = light.sampleReflectionProbe( worldPosition, coatReflectDirection, getCoatReflectionRoughness() );
+                coatReflectionSum += coatReflection.rgb * coatReflection.a;
+                coatReflectionWeight += coatReflection.a;
+            }
             continue;
         }
         float3 toLight;
@@ -789,7 +826,7 @@ float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
     if ( probeWeight > 0.0f )
     {
         lit += diffuseColor * ( probeSum / probeWeight - ambient ) * _occlusion;
-        lit -= environmentSpecular * ambient * ( 1.0f - skyVisibility ) * _occlusion;
+        lit -= totalSpecular * ambient * ( 1.0f - skyVisibility ) * _occlusion;
     }
     // 반사 프로브가 덮는 곳은 반사 앰비언트를 프로브의 빛으로 바꾼다(IndirectLighting.md P4). 겹친 프로브는 가중 평균이고, 가중치 합이 1 보다 작은 경계는
     // 모자란 몫을 앰비언트로 채워 상자 밖과 이어진다. 덮지 않으면 아무 연산도 더하지 않는다.
@@ -798,6 +835,12 @@ float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
         const float3 occludedAmbient = ambient * skyVisibility;
         const float3 environment     = ( reflectionSum + occludedAmbient * max( 1.0f - reflectionWeight, 0.0f ) ) / max( reflectionWeight, 1.0f );
         lit += environmentSpecular * ( environment - occludedAmbient ) * _occlusion;
+    }
+    if ( coatReflectionWeight > 0.0f )
+    {
+        const float3 occludedAmbient = ambient * skyVisibility;
+        const float3 environment     = ( coatReflectionSum + occludedAmbient * max( 1.0f - coatReflectionWeight, 0.0f ) ) / max( coatReflectionWeight, 1.0f );
+        lit += coatEnvironmentSpecular * ( environment - occludedAmbient ) * _occlusion;
     }
     return lit;
 }

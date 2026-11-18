@@ -20,6 +20,8 @@ namespace sw
         static constexpr float32 kMinViewDepth = 0.05f;
         /** @brief UV 넓이 · 행렬식의 바닥입니다. 이보다 작으면 퇴화로 보고 노멀을 다시 구하지 않습니다. */
         static constexpr float32 kMinUVArea = 1.0e-12f;
+        /** @brief 높이 밉 무게 합의 바닥입니다. 이보다 작으면 원래 꼭짓점으로 보고 가장 고운 밉(0)으로 읽습니다. */
+        static constexpr float32 kMinBarycentricWeight = 1.0e-8f;
 
         /**
          * @brief 변 하나의 테셀레이션 계수입니다 — 변의 월드 길이를 두 끝점의 평균 뷰 깊이로 나눈 각 크기(rad) × 밀도(rad 당 분할 수)를 [1, 상한] 으로 자릅니다.
@@ -44,18 +46,34 @@ namespace sw
         }
 
         /**
-         * @brief 높이 맵을 읽을 밉 단계입니다 — 테셀레이션이 만든 정점 간격(패치의 UV 변 / 안쪽 계수)이 걸치는 텍셀 수의 log2 이고 0 이상입니다.
+         * @brief 변 하나의 높이 밉 단계입니다 — 그 변을 계수로 나눈 정점 간격(UV 변 / 변 계수)이 걸치는 텍셀 수의 log2 이고 0 이상입니다.
          * @details 도메인 스테이지에는 화면 미분이 없어 정점 간격으로 밉을 고른다 — 정점이 담을 수 없는 높이 주파수를 걸러 먼 표면의 읽기가 흩어지지 않고
          *          거리에 따라 계수가 바뀔 때 윤곽이 끓지 않는다(언리얼 테셀레이션 변위 · HDRP 가 거리로 밉을 고르는 것과 같은 생각).
+         *          변의 두 끝점 UV 와 그 변의 계수만 읽어 끝점 순서를 바꿔도 같은 값이다 — 변을 나누는 두 패치가 그 변 위에서 같은 밉 · 같은 높이를 읽어 틈이 없다
+         *          (패치의 세 변 · 안쪽 계수로 고르면 이웃 패치가 다른 밉으로 같은 변을 읽어 갈라진다).
          * @param textureSize 높이 맵 크기(텍셀).
          */
-        [[nodiscard]] static float32 computeHeightMipLevel( const float2& uv0, const float2& uv1, const float2& uv2, float32 insideFactor, const float2& textureSize ) noexcept
+        [[nodiscard]] static float32 computeEdgeHeightMipLevel( const float2& uvA, const float2& uvB, float32 edgeFactor, const float2& textureSize ) noexcept
         {
-            const float2  edge0( ( uv1._x - uv0._x ) * textureSize._x, ( uv1._y - uv0._y ) * textureSize._y );
-            const float2  edge1( ( uv2._x - uv1._x ) * textureSize._x, ( uv2._y - uv1._y ) * textureSize._y );
-            const float2  edge2( ( uv0._x - uv2._x ) * textureSize._x, ( uv0._y - uv2._y ) * textureSize._y );
-            const float32 texelSpan = MathUtil::max( MathUtil::max( edge0.getLength(), edge1.getLength() ), edge2.getLength() ) / MathUtil::max( insideFactor, 1.0f );
+            const float2  edge( ( uvB._x - uvA._x ) * textureSize._x, ( uvB._y - uvA._y ) * textureSize._y );
+            const float32 texelSpan = edge.getLength() / MathUtil::max( edgeFactor, 1.0f );
             return MathUtil::log2( MathUtil::max( texelSpan, 1.0f ) );
+        }
+
+        /**
+         * @brief 패치 안 한 점의 높이 밉입니다 — 세 변의 밉을 무게 b1·b2 · b2·b0 · b0·b1 로 섞는다(변 i 는 꼭짓점 i 의 맞은편).
+         * @details 변 i 위(b_i = 0)에서는 그 변의 밉 하나만 남아 이웃 패치와 같은 값이다. 원래 꼭짓점(무게가 모두 0)은 0 이다 — 꼭짓점은 여러 패치가 나누는데
+         *          꼭짓점만으로 정할 정점 간격이 없어, 어느 패치에서나 같은 단계(가장 고운 밉)로 읽어야 틈이 없다.
+         *          shortcut: 꼭짓점 하나는 거르지 않은 높이를 읽는다(주변 점과 튈 수 있다). 거리에서 꼭짓점이 튀어 보이면 메시 빌드가 꼭짓점마다 UV 밀도를 실어 거기서 고른다.
+         * @param barycentric 무게 중심 좌표(SV_DomainLocation).
+         */
+        [[nodiscard]] static float32 blendEdgeHeightMipLevels( const float3& barycentric, float32 edgeMip0, float32 edgeMip1, float32 edgeMip2 ) noexcept
+        {
+            const float32 weight0 = barycentric._y * barycentric._z;
+            const float32 weight1 = barycentric._z * barycentric._x;
+            const float32 weight2 = barycentric._x * barycentric._y;
+            const float32 sum     = weight0 + weight1 + weight2;
+            return sum > kMinBarycentricWeight ? ( weight0 * edgeMip0 + weight1 * edgeMip1 + weight2 * edgeMip2 ) / sum : 0.0f;
         }
 
         /** @brief 패치의 UV 에 대한 위치 미분 — 탄젠트 dP/du · 바이탄젠트 dP/dv(정규화하지 않는다). UV 가 퇴화한 패치(넓이 0)는 둘 다 0 입니다. */

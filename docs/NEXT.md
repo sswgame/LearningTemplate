@@ -124,7 +124,7 @@
 
 정본 모양이 있으면 크기와 무관하게 고친다. 정본이 없고 "규모가 커지면" 인 것만 문턱을 적고 남긴다. 영역마다 작업자 갈래(w-sc-*)로 진행.
 
-- **렌더 · 셰이더(w-sc-render):** 변위 UV 이음매(`material_displacement.hlsli` 머리말 — 언리얼 Crack Free Displacement 처럼 메시 빌드가 지배 UV 인접 인덱스를 만들어야 한다), ClearCoat · Anisotropic 셰이딩 모델(`material_functions.hlsli:570 · 580`, `appearance_lit.hlsl:38 · 408`, `shading_model.hlsli:156`).
+- **렌더 · 셰이더(w-sc-render):** 변위 UV 이음매(`material_displacement.hlsli:22` — 패치가 이웃 UV 를 알아야 한다: 메시 빌드가 지배 UV 인접 인덱스를 만드는 PN-AEN 식 패치 인덱스, 언리얼 Crack Free Displacement), 코트 칸 없는 외형 번호의 젖음 · 기름막을 거칠기로 접음(`appearance_lit.hlsl:408` — 코트의 둘째 반사 · 아래층 감쇠를 잃는다, 젖은 피부 클로즈업이 중요해지면 번호를 나눈다), 홍채 노멀(`appearance_lit.hlsl:38` — 오목한 홍채 노멀을 BRDF 둘째 노멀로).
 - **게임플레이 · 애니메이션 · 물리(w-sc-gameplay):** VFX 죽은 자리(`VFXComponent.h:45` — 살아 있는 수만 그리는 배치는 RN-6 의 `GPUSceneBuilder` 항목 수 변경 뒤), 프리팹 JSON 저장 칸 빼기(`PrefabAsset.cpp:336` — JSON 프리팹이 생길 때 JSON 값 차이 비교를 더한다).
 - **에디터 · 온라인 · 도구(w-sc-misc):** MVVM 갈래(w-editorthread)와 겹쳐 남김 — 상태 문서 자동 저장(`EditorStateDocumentPanel.h:26`), 캐릭터 에디터 셋(`CharacterEditorPanel.h:190`, `BodySurfacePick.h:7`, `CharacterEditorLocalStore.h:42`), 관리 도구 마지막 대상만(`AdminToolSession.h:158`). 남은 것 — 시나리오 옛 `<Wait>`(`AutomationScenario.cpp:86` — 22 파일 123 곳, `<AdvanceSimulation>` 은 그리지 않아 골든이 바뀔 수 있어 시나리오마다 조건 대기 · 진행을 가르고 돌려 본다), 문턱만: 팩 쓰기 재읽기 해시(`PackWriter.cpp:226` — 슬롯 배치를 배포 쿠킹에 켤 때), 백엔드 교체 예산(`AutomationPerBackend.cpp:575` — 지금 최다 5 회 +75 초, 상한 540 초), 데스크톱 팩 변형(`AssetAndToolTargets.cmake:57` — 쿠킹은 대상 무관이 정한 설계, 데스크톱 팩 크기가 문제일 때), 스크립트(`test_history.py:284` — D4 남는 위험, `naming_words.py:107` — 판정 불변).
 
