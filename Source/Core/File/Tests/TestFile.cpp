@@ -9,6 +9,11 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#if defined( SW_PLATFORM_LINUX )
+    #include <sys/stat.h>
+    #include <unistd.h>
+#endif
+
 // 파일 도우미 — 경로 문자열(이름 · 폴더 · 확장자 · 절대 판정), 읽기 · 쓰기(대소문자 · 한글 경로 · 원자적 바꿔 끼우기 · 실패 · 범위),
 // 폴더 만들기 · 막힌 폴더, 스탬프, 수집 · 순회, 읽기 전용, 대소문자 무시 풀기, 덧붙이기, 쓰기 게이트.
 
@@ -741,6 +746,47 @@ SW_TEST_CASE( FileTest, LinuxTrashFollowsFreedesktop )
     SW_EXPECT_FALSE( sw::PlatformFileUtil::moveToRecycleBin( { root + "/nothing.txt" } ) );
     SW_EXPECT_FALSE( sw::FileUtil::exists( root + "/data/Trash/info/nothing.txt.trashinfo" ) );
 
+    if ( bHadDataHome )
+        SW_EXPECT_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", savedDataHome ) );
+    else
+        SW_EXPECT_TRUE( sw::ProcessEnvironment::tryUnset( "XDG_DATA_HOME" ) );
+}
+
+/**
+ * @brief [FileTest] 휴지통: 홈 휴지통과 다른 파일 시스템(`/dev/shm` tmpfs)의 파일은 그 파일 시스템 꼭대기의 `.Trash-<uid>` 로 간다.
+ * @details 홈 휴지통 하나일 때는 다른 파일 시스템 사이 rename 이 실패해 버리지 못했다. `/dev/shm` 이 없거나 같은 장치인 환경에서는 볼 것이 없다.
+ */
+SW_TEST_CASE( FileTest, LinuxTrashUsesVolumeTrashAcrossFileSystems )
+{
+    struct stat      shmStat{};
+    struct stat      scratchStat{};
+    const sw::string root = sw::test::makeScratchPath( "VolumeTrashRoot" );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
+    if ( ::stat( "/dev/shm", &shmStat ) != 0 || ::stat( root.c_str(), &scratchStat ) != 0 || shmStat.st_dev == scratchStat.st_dev )
+        return;
+    struct stat devStat{};
+    if ( ::stat( "/dev", &devStat ) != 0 || devStat.st_dev == shmStat.st_dev )
+        return; // 꼭대기가 /dev/shm 이 아니다
+
+    sw::string savedDataHome;
+    const bool bHadDataHome = sw::ProcessEnvironment::tryRead( "XDG_DATA_HOME", savedDataHome );
+    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", root + "/data" ) );
+
+    const sw::string name = "sw_volume_trash_" + sw::to_string( static_cast<sw::uint64>( ::getpid() ) ) + ".txt";
+    const sw::string path = "/dev/shm/" + name;
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "volume" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path } ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( path ) );
+
+    const sw::string volumeTrash = "/dev/shm/.Trash-" + sw::to_string( static_cast<sw::uint64>( ::getuid() ) );
+    sw::string       text;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( volumeTrash + "/files/" + name, text ) );
+    SW_EXPECT_EQUAL( sw::string( "volume" ), text );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( volumeTrash + "/info/" + name + ".trashinfo" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( root + "/data/Trash/files/" + name ) );
+
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( volumeTrash + "/files/" + name ) );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( volumeTrash + "/info/" + name + ".trashinfo" ) );
     if ( bHadDataHome )
         SW_EXPECT_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", savedDataHome ) );
     else

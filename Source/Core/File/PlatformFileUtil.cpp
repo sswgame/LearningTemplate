@@ -85,10 +85,55 @@ namespace sw
                 return encoded;
             }
 
+            /** @brief 휴지통 폴더의 `files` · `info` 를 만듭니다. */
+            [[nodiscard]] static bool ensureTrashFolder( const string& trashFolder ) { return ensureFolders( trashFolder + "/files" ) && ensureFolders( trashFolder + "/info" ); }
+
+            /** @brief 경로의 부모 폴더입니다(`/a/b` → `/a`, `/a` → `/`). */
+            static string getParentFolder( const string& path )
+            {
+                const size_t slash = path.rfind( '/' );
+                return slash == 0 || slash == string::npos ? string( "/" ) : path.substr( 0, slash );
+            }
+
             /**
-             * @brief 파일 하나를 휴지통으로 옮깁니다. 정보 파일을 먼저 배타적으로 만들어 이름을 차지하고(같은 이름은 `.1` · `.2`), 옮기지 못하면 정보 파일을 지웁니다.
-             * @details shortcut: 홈과 다른 파일 시스템의 파일은 rename 이 실패해 false 다(지우지 않고 남는다). 볼륨별 `.Trash-<uid>` 는 필요해지면 더한다.
+             * @brief @p path 를 rename 으로 옮길 수 있는 휴지통 폴더입니다(freedesktop 휴지통 규격). 홈 휴지통과 같은 파일 시스템이면 홈 휴지통이고,
+             *        다르면 그 파일 시스템 꼭대기(`$topdir`)의 `.Trash/<uid>`(관리자가 만든 sticky 폴더이고 링크가 아닐 때) 또는 `.Trash-<uid>` 다.
+             *        파일이 없거나 상대 경로면 빈 글입니다. 폴더는 만들어 둔다.
+             * @details 다른 파일 시스템 사이 rename 은 실패하므로 홈 휴지통 하나로는 다른 볼륨 파일을 버리지 못했다 - 데스크톱 파일 관리자(GIO · KIO)도 같은 규칙이다.
              */
+            static string findTrashFolderFor( const string& path, const string& homeTrash )
+            {
+                struct stat fileStat{};
+                struct stat homeStat{};
+                if ( path.empty() || path[0] != '/' || ::lstat( path.c_str(), &fileStat ) != 0 || ::stat( homeTrash.c_str(), &homeStat ) != 0 )
+                    return {};
+                if ( fileStat.st_dev == homeStat.st_dev )
+                    return homeTrash;
+
+                string topFolder = getParentFolder( path );
+                while ( topFolder != "/" )
+                {
+                    struct stat parentStat{};
+                    if ( ::stat( getParentFolder( topFolder ).c_str(), &parentStat ) != 0 || parentStat.st_dev != fileStat.st_dev )
+                        break;
+                    topFolder = getParentFolder( topFolder );
+                }
+                const string topPrefix = topFolder == "/" ? string() : topFolder;
+                const string uid       = to_string( static_cast<uint64>( ::getuid() ) );
+
+                struct stat  adminStat{};
+                const string adminTrash = topPrefix + "/.Trash";
+                if ( ::lstat( adminTrash.c_str(), &adminStat ) == 0 && S_ISDIR( adminStat.st_mode ) && ( adminStat.st_mode & S_ISVTX ) != 0 )
+                {
+                    const string userTrash = adminTrash + "/" + uid;
+                    if ( ensureTrashFolder( userTrash ) )
+                        return userTrash;
+                }
+                const string volumeTrash = topPrefix + "/.Trash-" + uid;
+                return ensureTrashFolder( volumeTrash ) ? volumeTrash : string();
+            }
+
+            /** @brief 파일 하나를 휴지통으로 옮깁니다. 정보 파일을 먼저 배타적으로 만들어 이름을 차지하고(같은 이름은 `.1` · `.2`), 옮기지 못하면 정보 파일을 지웁니다. */
             [[nodiscard]] static bool moveToTrash( const string& path, const string& trashFolder )
             {
                 static constexpr int32 kMaxNameAttempt = 1000;
@@ -341,7 +386,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
         return true;
 #elif defined( SW_PLATFORM_POSIX )
-        const int32 directoryFd = ::open( pDirectoryPath[0] == ' ' ? "." : pDirectoryPath, O_RDONLY | O_DIRECTORY | O_CLOEXEC );
+        const int32 directoryFd = ::open( pDirectoryPath[0] == '\0' ? "." : pDirectoryPath, O_RDONLY | O_DIRECTORY | O_CLOEXEC );
         if ( directoryFd < 0 )
             return false;
         const bool bSynced = ::fsync( directoryFd ) == 0;
@@ -389,12 +434,13 @@ namespace sw
         operation.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
         return SHFileOperationW( &operation ) == 0 && operation.fAnyOperationsAborted == FALSE;
 #elif defined( SW_PLATFORM_LINUX )
-        const string trashFolder = PlatformFileUtilInternal::findTrashFolder();
-        if ( trashFolder.empty() || PlatformFileUtilInternal::ensureFolders( trashFolder + "/files" ) == false || PlatformFileUtilInternal::ensureFolders( trashFolder + "/info" ) == false )
+        const string homeTrash = PlatformFileUtilInternal::findTrashFolder();
+        if ( homeTrash.empty() || PlatformFileUtilInternal::ensureTrashFolder( homeTrash ) == false )
             return false;
         for ( const string& path : listPath )
         {
-            if ( PlatformFileUtilInternal::moveToTrash( path, trashFolder ) == false )
+            const string trashFolder = PlatformFileUtilInternal::findTrashFolderFor( path, homeTrash );
+            if ( trashFolder.empty() || PlatformFileUtilInternal::moveToTrash( path, trashFolder ) == false )
                 return false;
         }
         return true;
