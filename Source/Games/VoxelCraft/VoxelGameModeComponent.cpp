@@ -284,8 +284,10 @@ namespace sw
         const Material* pWaterMaterial  = pWater != nullptr ? pWater->getMaterial() : nullptr;
         if ( pOpaqueMaterial == nullptr || pWaterMaterial == nullptr )
             return; // 아직 준비되지 않았다 — 다음 플러시에서 다시 본다(그동안 청크는 그리지 않는다)
-        const bool bCanDraw = _atlasGate.update( *_world.getCatalog(), true, static_cast<const float4*>( pOpaqueMaterial->getParameterData( "_atlasGrid" ) ),
-                                                 static_cast<const float4*>( pWaterMaterial->getParameterData( "_atlasGrid" ) ), pOpaque->getMaterialPath().c_str() );
+        // 프로퍼티는 게임 스레드 초기화(`Ready`)가 끝나야 채워진다 — 그 전에는 견줄 값이 없으니 다음 플러시에서 다시 본다.
+        const bool bMaterialsReady = pOpaqueMaterial->getInitState() == MaterialInitState::Ready && pWaterMaterial->getInitState() == MaterialInitState::Ready;
+        const bool bCanDraw        = _atlasGate.update( *_world.getCatalog(), bMaterialsReady, static_cast<const float4*>( pOpaqueMaterial->getParameterData( "_atlasGrid" ) ),
+                                                        static_cast<const float4*>( pWaterMaterial->getParameterData( "_atlasGrid" ) ), pOpaque->getMaterialPath().c_str() );
         if ( bCanDraw == false )
             return;
         for ( const auto& entry : _mapChunkView )
