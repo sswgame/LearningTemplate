@@ -317,7 +317,7 @@ namespace sw
 
     private:
         /** @brief @p value 를 감싼 칸 주인을 짓고 판 표에 올린 뒤 나눠 줄 별칭 포인터를 만듭니다. 잠금 안에서 부른다. */
-        shared_ptr<ValueType> makeLive( const KeyType& key, shared_ptr<ValueType> value ) const
+        shared_ptr<ValueType> makeLive( const KeyType& key, shared_ptr<ValueType> value ) const SW_REQUIRES_LOCK( _pState->_mutex )
         {
             ValueType* const            pValue = value.get();
             const shared_ptr<LiveOwner> pOwner = sw::make_shared<LiveOwner>( _pState, key, std::move( value ) );

@@ -420,6 +420,7 @@ namespace sw
         streamingBudget._idleFramesBeforeRelease    = streamingConfig._idleFramesBeforeRelease;
         streamingBudget._minFramesBetweenChanges    = streamingConfig._minFramesBetweenChanges;
         streamingBudget._promoteBudgetMarginPercent = streamingConfig._promoteBudgetMarginPercent;
+        streamingBudget._bFinishEachFrame           = bFinishAssetJobs;
         (void)textures.updateStreaming( pDevice, streamingBudget );
     }
 

@@ -92,7 +92,7 @@ namespace sw
      * @struct GameCookRules
      * @brief 게임 하나가 엔진 쿠킹 규칙(`PackConfig::_cookRules`) 뒤에 더하는 규칙입니다(`Config/Game/<게임>.json` 의 `_cookRules`).
      * @details 게임 코드 · 데이터만 아는 값(이름으로 이어 붙이는 모델 경로, 그 게임의 프리셋 칸)을 엔진 공용 설정에 두지 않는다. 항상 담기 패턴은 그 게임 팩 루트 기준이다
-     *          (`models/**` — 합칠 때 `game/<팩>/` 를 붙인다). 칸이 없으면 더할 것이 없다.
+     *          (`models/` 아래 모두 — 합칠 때 `game/<팩>/` 를 붙인다). 칸이 없으면 더할 것이 없다.
      */
     REFLECT()
     struct SW_API GameCookRules

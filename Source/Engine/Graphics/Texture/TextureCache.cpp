@@ -143,6 +143,7 @@ namespace sw
             TextureMipRequest               _request;
             uint64                          _byteSize{ 0 }; ///< `_bytesInFlight` 에 센 바이트
             shared_ptr<StreamingReadResult> _pResult;
+            AsyncReadHandle                 _handle; ///< 결정적 실행이 끝남을 기다린다(`TextureStreamingBudget::_bFinishEachFrame`)
         };
         struct RenderTargetSize
         {
@@ -744,7 +745,7 @@ namespace sw
                 pTexture = it->second._texture.get(); // 올리는 중 표시가 항목을 지킨다
             }
             Texture2DRetiredResource    retired{};
-            const Texture2DUploadStatus status = pTexture->finishUpgradeResidency( pDevice, false, retired );
+            const Texture2DUploadStatus status = pTexture->finishUpgradeResidency( pDevice, budget._bFinishEachFrame, retired );
             if ( status == Texture2DUploadStatus::Pending )
             {
                 listStillPending.push_back( key );
@@ -774,6 +775,18 @@ namespace sw
             collectStreamingDecisions( mapFrameScreenSize, budget, mapDemotionKey );
 
         // 2) 다 읽은 밉 구간을 제출한다 — 프레임당 상한은 제출 수다. 읽는 중인 것은 줄에 남는다(MR-2).
+        // 결정적 실행은 앞 프레임에 낸 읽기를 모두 기다린다 — 잠금 밖에서 기다린다(완료 콜백은 결과만 쓴다).
+        if ( budget._bFinishEachFrame )
+        {
+            vector<AsyncReadHandle> listHandle;
+            {
+                ScopedLock<mutex> lock{ _impl->_streamingMutex };
+                for ( const Impl::StreamingRead& reading : _impl->_listReading )
+                    listHandle.push_back( reading._handle );
+            }
+            for ( const AsyncReadHandle& handle : listHandle )
+                handle.wait();
+        }
         vector<Impl::StreamingRead> listRead;
         {
             ScopedLock<mutex> lock{ _impl->_streamingMutex };
@@ -942,7 +955,7 @@ namespace sw
             }
             ScopedLock<mutex> lock{ _impl->_streamingMutex };
             _impl->_bytesInFlight += rangeSize;
-            _impl->_listReading.push_back( Impl::StreamingRead{ request, rangeSize, pResult } );
+            _impl->_listReading.push_back( Impl::StreamingRead{ request, rangeSize, pResult, handle } );
         }
         return upgradedCount;
     }

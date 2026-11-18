@@ -47,6 +47,11 @@ namespace sw
         uint32 _idleFramesBeforeRelease{ 0 };    ///< 화면 크기를 알리지 않은 지 이만큼 지나면 필요 없는 것으로 본다(`TextureStreamingConfig::_idleFramesBeforeRelease`)
         uint32 _minFramesBetweenChanges{ 0 };    ///< 밉을 바꾼 뒤 다시 바꾸기까지의 최소 프레임(`TextureStreamingConfig::_minFramesBetweenChanges`)
         uint32 _promoteBudgetMarginPercent{ 0 }; ///< 올리기가 남기는 예산 여유(%)(`TextureStreamingConfig::_promoteBudgetMarginPercent`)
+        /// 결정적 실행(`DeterministicRunPolicy::_bFinishAssetJobsEachFrame`)이면 앞 프레임에 낸 위쪽 밉 읽기와 제출한 업로드의 끝남을 이 자리에서 기다린다 — 밉이 언제 오는지가
+        /// IO · GPU 속도가 아니라 프레임 수로만 정해진다(DX11 은 첫 단계에서 늦게 와 같은 시나리오가 체인 위치에 따라 다른 사진을 냈다).
+        uint8 _bFinishEachFrame : 1;
+
+        TextureStreamingBudget() { _bFinishEachFrame = SW_FALSE; }
     };
 
     class IRHIDevice;
