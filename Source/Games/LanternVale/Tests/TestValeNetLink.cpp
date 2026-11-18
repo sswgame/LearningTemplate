@@ -266,6 +266,8 @@ SW_TEST_CASE( ValeNetLinkTest, CraftedTargetsAreDisconnected )
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
     rig.run( rig._server, 0.5f );
     SW_REQUIRE_TRUE( rig._arrClient[0].getAgent()._avatarID != 0u );
+    const int32 connectionID = rig.getConnectionID( 0 ); // 끊긴 뒤에는 클라이언트 번호가 없다 — 끊기 전에 뜬다
+    SW_REQUIRE_TRUE( rig._cluster.getServer().getConnectionState( connectionID ) == NetConnectionState::Connected );
     SW_EXPECT_LOG( "RemoteCall.ValidationFailed" );
     SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callServerFunction( "attackCreature", { ReflectedValue::make( uint32{ 7 } ) } ) );
     for ( int32 step = 0; step < 8; ++step )
@@ -275,7 +277,7 @@ SW_TEST_CASE( ValeNetLinkTest, CraftedTargetsAreDisconnected )
     }
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getRemoteCallStats()._validationFailedCount );
     SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._actionCount );
-    SW_EXPECT_TRUE( rig._cluster.getServer().getConnectionState( rig.getConnectionID( 0 ) ) != NetConnectionState::Connected );
+    SW_EXPECT_TRUE( rig._cluster.getServer().getConnectionState( connectionID ) != NetConnectionState::Connected );
 }
 
 /** @brief [ValeNetLinkTest] 접속이 끝나면 진행을 저장하고, 같은 계정이 다시 들면(서버를 다시 세워도) 그 진행을 읽는다. 주체가 없는 연결은 받지 않는다. */
