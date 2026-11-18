@@ -823,8 +823,21 @@ namespace sw
             static void addSlotEntries( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, vector<Entry>& inoutListEntry, ResolvedAppearance& out )
             {
                 const ItemCatalog* pItemCatalog = database.getItemCatalog();
+                // 슬롯 표 순서로 본다 — 요청 목록의 순서(입은 순서 · 덮어쓰기가 뒤에 붙인 칸)가 점유 판정 · 출력 순서 · 메시 해시를 바꾸지 않게(A → B 와 B → A 가 같은 결과).
+                // 표에 없는 칸은 표의 칸 뒤에 요청 순서대로 둔다.
+                vector<const AppearanceSlotRequest*> listOrdered;
                 for ( const AppearanceSlotRequest& request : spec._listSlot )
                 {
+                    listOrdered.push_back( &request );
+                }
+                const SlotCatalog& slotTable = database.getSlotCatalog();
+                std::stable_sort( listOrdered.begin(), listOrdered.end(), [&slotTable]( const AppearanceSlotRequest* pLeft, const AppearanceSlotRequest* pRight )
+                {
+                    return slotTable.findSlotIndex( pLeft->_slot ).value_or( MathUtil::kMaxInt32 ) < slotTable.findSlotIndex( pRight->_slot ).value_or( MathUtil::kMaxInt32 );
+                } );
+                for ( const AppearanceSlotRequest* pOrdered : listOrdered )
+                {
+                    const AppearanceSlotRequest& request = *pOrdered;
                     if ( request._itemID.empty() )
                         continue;
                     const ItemDef*       pItem    = pItemCatalog != nullptr ? pItemCatalog->find( request._itemID ) : nullptr;
@@ -943,6 +956,10 @@ namespace sw
                             decide( rule, action, outListDecision, out );
                     }
                 }
+                // 숨김은 합집합이라 결과는 순서와 상관없지만, 같은 부품을 여럿이 숨기면 우선순위가 높은 규칙이 숨긴 이유가 된다(데이터 파일의 적힌 순서가 아니다).
+                // 같은 우선순위는 id 순 — 이유가 데이터 편집 순서로 흔들리지 않는다.
+                std::stable_sort( listFired.begin(), listFired.end(), []( const AppearanceRuleDef* pLeft, const AppearanceRuleDef* pRight )
+                { return pLeft->_priority != pRight->_priority ? pLeft->_priority > pRight->_priority : string_view( pLeft->_id.c_str() ) < string_view( pRight->_id.c_str() ); } );
                 for ( const AppearanceRuleDef* pRule : listFired )
                 {
                     for ( const AppearanceRuleAction& action : pRule->_listAction )
@@ -963,6 +980,7 @@ namespace sw
                                 if ( entry._owner == action._target && VectorUtil::contains( entry._listHiddenPart, action._part ) == false )
                                 {
                                     entry._listHiddenPart.push_back( action._part );
+                                    out._listHiddenByRule.push_back( ResolvedHiddenPart{ entry._owner, action._part, pRule->_id } );
                                     addTrace( out, AppearanceTraceStep::Rule, pRule->_id, "part '%#.%#' hidden", entry._owner.c_str(), action._part.c_str() );
                                 }
                                 continue;
@@ -972,6 +990,7 @@ namespace sw
                             if ( bHideEntry )
                             {
                                 entry._bHidden = SW_TRUE;
+                                out._listHiddenByRule.push_back( ResolvedHiddenPart{ entry._owner, hashed_string{}, pRule->_id } );
                                 addTrace( out, AppearanceTraceStep::Rule, pRule->_id, "'%#' hidden", entry._owner.c_str() );
                             }
                         }
@@ -1055,6 +1074,17 @@ namespace sw
     {
         return VectorUtil::findIf( _listMorph, [&]( const ResolvedMorph& morph )
         { return morph._owner == owner && morph._name == name; } );
+    }
+
+    hashed_string ResolvedAppearance::findHidingRule( const hashed_string& owner, const hashed_string& partName ) const
+    {
+        for ( const ResolvedHiddenPart& hide : _listHiddenByRule )
+        {
+            const bool bWholeOwner = hide._owner == owner && hide._part.empty();
+            if ( bWholeOwner || ( hide._owner == owner && hide._part == partName ) )
+                return hide._rule;
+        }
+        return hashed_string{};
     }
 
     uint32 ResolvedAppearance::countTrace( const hashed_string& source ) const

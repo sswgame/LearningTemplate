@@ -151,6 +151,32 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief 주인의 부품(@p query 의 key — `<주인>.<부품>`, 예: `Outfit.Pauldron` · `Hair.Hair`)을 숨긴 규칙 id 입니다. 보이면 `(visible)`, 해석에 없으면(입지 않음) `(absent)` 입니다.
+             * @details 여러 규칙이 같은 부품을 숨기면 우선순위가 가장 높은 규칙이다(`ResolvedAppearance::findHidingRule`) — 하나를 벗으면 남은 규칙으로 바뀌는지 본다.
+             */
+            [[nodiscard]] static bool readHiddenBy( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CharacterAppearanceComponent* pAppearance = findWatchTarget( query, outValue );
+                if ( pAppearance == nullptr )
+                    return false;
+                const size_t dot = query._key.find( '.' );
+                if ( dot == string_view::npos )
+                {
+                    outValue.setText( "key must be '<owner>.<part>'" );
+                    return false;
+                }
+                const ResolvedAppearance& resolved = pAppearance->getResolvedAppearance();
+                const hashed_string       owner( query._key.substr( 0, dot ) );
+                const hashed_string       part( query._key.substr( dot + 1 ) );
+                const hashed_string       rule = resolved.findHidingRule( owner, part );
+                if ( rule.empty() == false )
+                    outValue.setText( rule.c_str() );
+                else
+                    outValue.setText( resolved.findPart( owner, part ) != nullptr ? "(visible)" : "(absent)" );
+                return true;
+            }
+
             /** @brief `<이름>.<x|y|z>` 를 이름과 축 번호로 나눕니다. 축이 없으면 false 입니다. 소켓 이름에는 점이 있어(`MainHand.Muzzle`) 마지막 점으로 나눈다. */
             [[nodiscard]] static bool splitAxisKey( string_view key, string_view& outName, uint32& outAxis )
             {
@@ -344,6 +370,8 @@ namespace sw
                                false );
     SW_AUTOMATION_QUERY_WATCH( appearancePartCount, "Appearance.PartCount", "Resolved parts whose owner (slot or customization parameter) is key - parts a rule hid are not counted",
                                &AppearanceWatchesInternal::readPartCount, true, true );
+    SW_AUTOMATION_QUERY_WATCH( appearanceHiddenBy, "Appearance.HiddenBy", "Rule that hid the part named by key '<owner>.<part>' ('(visible)' when shown, '(absent)' when not worn)",
+                               &AppearanceWatchesInternal::readHiddenBy, true, true );
     SW_AUTOMATION_QUERY_WATCH( appearanceValue, "Appearance.Value", "Normalized customization value named key (a colour takes '<name>.<r|g|b|a>'); options read as text",
                                &AppearanceWatchesInternal::readValue, true, true );
     SW_AUTOMATION_QUERY_WATCH( appearanceSocketOffset, "Appearance.SocketOffset", "World offset from the character to the socket named by key '<socket>.<x|y|z>' (last frame's pose)",

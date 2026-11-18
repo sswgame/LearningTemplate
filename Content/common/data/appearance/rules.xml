@@ -21,6 +21,20 @@
     <When target="Hood" tag="Hood.Ranger"/>
     <Hide target="Hair" part="Hair"/>
   </Rule>
+  <!-- 장비 조합 · 캐릭터 조건 부품 숨김(시나리오 showcase/customizevisibility) — 셋 모두 레인저 옷의 어깨받이(꾸미기 "Outfit" 의 "Pauldron" 부품)를 감춘다.
+       망토는 어깨를 덮고, 방패는 어깨받이와 겹치고, 마른 체형(캐릭터 태그 Build.Slim)은 어깨받이 없는 차림이다. 겹치면 우선순위가 높은 규칙이 숨긴 이유가 된다(망토 > 체형 > 방패). -->
+  <Rule id="CapeHidesPauldron" priority="5">
+    <When target="Back" tag="Cape"/>
+    <Hide target="Outfit" part="Pauldron"/>
+  </Rule>
+  <Rule id="SlimHidesPauldron" priority="3">
+    <When characterTag="Build.Slim"/>
+    <Hide target="Outfit" part="Pauldron"/>
+  </Rule>
+  <Rule id="ShieldHidesPauldron" priority="1">
+    <When target="OffHand" tag="Shield"/>
+    <Hide target="Outfit" part="Pauldron"/>
+  </Rule>
   <!-- 구간 머티리얼 쇼케이스 — 태그를 단 캐릭터만 레인저 팔(꾸미기 "Outfit" 의 "Arms" 부품)의 옷 구간 mi_ranger 를 금빛으로 바꾼다. 피부 구간 mi_regular_male 은 그대로다
        (시나리오 game/empty/automation/sectionmaterial). -->
   <Rule id="SectionShowcaseGilded" priority="0">

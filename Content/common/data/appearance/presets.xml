@@ -109,6 +109,8 @@
     <Value name="Outfit" option="Ranger"/>
     <Equip slot="MainHand" item="scifi_pistol"/>
   </CharacterAppearance>
+  <!-- 마른 체형 태그 — 규칙 SlimHidesPauldron 이 어깨받이를 감춘다(캐릭터 조건 부품). -->
+  <CharacterAppearance id="CustomizeTownsfolkSlim" parent="CustomizeTownsfolk" tags="Build.Slim"/>
   <!-- 두건 위에 투구(규칙 HelmetHidesHood) · 도끼 · 방패를 든 해골 전사에 체형 슬라이더(스키마 SkeletonBody)와 몸 채널 매핑(body_skeleton_bodydemo)을 단다. -->
   <CharacterAppearance id="CustomizeBrute" parent="SkeletonWarrior" schema="SkeletonBody" body="body_skeleton_bodydemo"/>
   <!-- 몸 동작 무대(maps/bodycustomization)의 꾸미기 — 굽 기본층이 없는 몸 프로필(HumanoidBase)이라 굽은 신발 칸(Feet)만 올린다(시나리오 customizeheels). -->
