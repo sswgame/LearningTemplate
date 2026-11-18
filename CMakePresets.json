@@ -60,7 +60,7 @@
     {
       "name": "Linux-Fuzz",
       "displayName": "Linux Ninja Debug + ASan + libFuzzer (Clang)",
-      "description": "퍼저 실행 파일(`Fuzz_<이름>`, cmake/Modules/Build/FuzzTargets.cmake)과 `Fuzz.<이름>.Smoke`(라벨 fuzz) — 엔진에 커버리지 계측(fuzzer-no-link)을 건다",
+      "description": "퍼저 실행 파일(`Fuzz_<이름>`, cmake/Modules/Build/FuzzTargets.cmake)과 `Fuzz.<이름>.Smoke` — 엔진에 커버리지 계측(fuzzer-no-link)을 건다",
       "inherits": "Linux-Debug-ASan",
       "cacheVariables": {
         "SW_ENABLE_FUZZING": "ON"

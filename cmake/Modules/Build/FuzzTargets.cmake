@@ -13,7 +13,7 @@
 # libFuzzer 는 첫 폴더에 새 입력을 쓰므로 자라는 말뭉치를 앞에 둔다 — 씨앗 폴더(소스 트리)를 더럽히지 않는다.
 
 # sw_add_fuzz_target(<이름> SOURCES <소스…> LINK <타깃…>)
-#   실행 파일 `Fuzz_<이름>`(`-fsanitize=fuzzer` 링크)과 CTest `Fuzz.<이름>.Smoke`(라벨 fuzz)를 만든다. SW_ENABLE_FUZZING 구성에서만 부른다.
+#   실행 파일 `Fuzz_<이름>`(`-fsanitize=fuzzer` 링크)과 CTest `Fuzz.<이름>.Smoke` 를 만든다. SW_ENABLE_FUZZING 구성에서만 부른다.
 function(sw_add_fuzz_target FUZZ_NAME)
 	cmake_parse_arguments(PARSE_ARGV 1 fuzz "" "" "SOURCES;LINK")
 	if(NOT SW_ENABLE_FUZZING)
@@ -45,7 +45,6 @@ function(sw_add_fuzz_target FUZZ_NAME)
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	# PASS_REGULAR_EXPRESSION 이 있으면 ctest 는 종료 코드를 보지 않는다 — 크래시 · 새니타이저 보고는 FAIL 식으로 따로 잡는다.
 	set_tests_properties(Fuzz.${FUZZ_NAME}.Smoke PROPERTIES
-		LABELS fuzz
 		TIMEOUT 300
 		PASS_REGULAR_EXPRESSION "Loaded ([2-9]|[1-9][0-9]+) modules"
 		FAIL_REGULAR_EXPRESSION "ERROR: (AddressSanitizer|LeakSanitizer|libFuzzer)|runtime error:|deadly signal")
