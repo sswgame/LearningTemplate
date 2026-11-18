@@ -103,19 +103,21 @@ namespace sw
     /** @brief 길드 요청 하나입니다. */
     struct GuildRequest
     {
-        string            _text{};                           ///< 이름이나 공지이다
-        string            _assetID{};                        ///< Deposit · Withdraw 의 자산이다
-        string            _journalKey{};                     ///< 창고 이동 · 몫을 돌려주는 떠나기와 내보내기의 분개 키이다. `LedgerJournalKey::makeFromIdempotency( makeAccountScope( 계정 ), 멱등 키 )`
-        AccountID         _accountID{ kInvalidAccountID };   ///< 요청한 사람이다
-        AccountID         _targetID{ kInvalidAccountID };    ///< 초대, 내보내기, 역할 변경의 대상, 꺼내기 허용을 받는 계정이다
-        AccountID         _depositorID{ kInvalidAccountID }; ///< Withdraw 가 꺼낼 맡긴 사람별 몫의 주인이다. 공용 창고 자산이면 `kInvalidAccountID`
-        NetIdempotencyKey _idempotencyKey{};                 ///< 호출의 멱등 키이다. GrantWithdrawal · RevokeWithdrawal 이 멱등 기록(`ServiceIdempotency`)에 쓴다
-        uint64            _guildID{ 0 };                     ///< 수락할 길드이다
-        int64             _amount{ 0 };                      ///< Deposit · Withdraw 의 양, AddExperience 의 경험치, GrantWithdrawal 의 한도이다
-        UnixMilliseconds  _nowMs{ 0 };
-        GuildRole         _role{ GuildRole::Member };
-        GuildOperation    _operation{ GuildOperation::Get };
-        uint8             _bOpen{ SW_FALSE }; ///< SetJoinPolicy 의 값이다
+        string             _text{};                           ///< 이름이나 공지이다
+        string             _assetID{};                        ///< Deposit · Withdraw 의 자산이다
+        string             _journalKey{};                     ///< 창고 이동 · 몫을 돌려주는 떠나기와 내보내기의 분개 키이다. `LedgerJournalKey::makeFromIdempotency( makeAccountScope( 계정 ), 멱등 키 )`
+        AccountID          _accountID{ kInvalidAccountID };   ///< 요청한 사람이다
+        AccountID          _targetID{ kInvalidAccountID };    ///< 초대, 내보내기, 역할 변경의 대상, 꺼내기 허용을 받는 계정이다
+        AccountID          _depositorID{ kInvalidAccountID }; ///< Withdraw 가 꺼낼 맡긴 사람별 몫의 주인이다. 공용 창고 자산이면 `kInvalidAccountID`
+        NetIdempotencyKey  _idempotencyKey{};                 ///< 호출의 멱등 키이다. GrantWithdrawal · RevokeWithdrawal 이 멱등 기록(`ServiceIdempotency`)에 쓴다
+        GuildStorageCursor _storageCursor{};                  ///< ListStorage 가 이어 읽을 자리이다(앞 쪽의 `_storageNextCursor`). 비면 처음부터
+        int32              _storageMaxCount{ 0 };             ///< ListStorage 의 쪽 크기이다. 1 보다 작으면 규칙 밖, `GuildLimit::kMaxStoragePage` 보다 크면 그 값으로 자른다
+        uint64             _guildID{ 0 };                     ///< 수락할 길드이다
+        int64              _amount{ 0 };                      ///< Deposit · Withdraw 의 양, AddExperience 의 경험치, GrantWithdrawal 의 한도이다
+        UnixMilliseconds   _nowMs{ 0 };
+        GuildRole          _role{ GuildRole::Member };
+        GuildOperation     _operation{ GuildOperation::Get };
+        uint8              _bOpen{ SW_FALSE }; ///< SetJoinPolicy 의 값이다
     };
 } // namespace sw
 
@@ -124,11 +126,11 @@ namespace sw
     /** @brief 요청 하나의 완료입니다. */
     struct GuildCompletion
     {
-        GuildInfo                _info{};            ///< Create 에서는 id 와 이름이고 Get 에서는 멤버까지 담는다
-        vector<GuildStorageItem> _listStorage{};     ///< ListStorage 는 창고 전체, Deposit · Withdraw 는 옮긴 자산의 창고 잔액 하나이다
-        vector<GuildApplication> _listApplication{}; ///< ListApplications 의 결과이다
+        GuildInfo                _info{};              ///< Create 에서는 id 와 이름이고 Get 에서는 멤버까지 담는다
+        vector<GuildStorageItem> _listStorage{};       ///< ListStorage 는 창고 한 쪽, Deposit · Withdraw 는 옮긴 자산의 창고 잔액 하나이다
+        vector<GuildApplication> _listApplication{};   ///< ListApplications 의 결과이다
+        GuildStorageCursor       _storageNextCursor{}; ///< ListStorage 의 쪽이 가득 찼으면 다음 쪽의 커서이다. 비면 끝
         uint64                   _requestTag{ 0 };
-        uint8                    _bStorageTruncated{ SW_FALSE }; ///< ListStorage 가 상한(`kMaxStorageItem`)에서 잘렸다
         SocialServiceResult      _result{ SocialResult::Ok };
     };
 } // namespace sw
@@ -141,8 +143,8 @@ namespace sw
         GuildInfo                _info{};
         vector<GuildStorageItem> _listStorage{};
         vector<GuildApplication> _listApplication{};
-        vector<AccountID>        _listNotifyMember{};            ///< GuildChanged 를 받을 멤버이다
-        uint8                    _bStorageTruncated{ SW_FALSE }; ///< 창고 품목이 상한에서 잘렸다
+        vector<AccountID>        _listNotifyMember{};  ///< GuildChanged 를 받을 멤버이다
+        GuildStorageCursor       _storageNextCursor{}; ///< ListStorage 의 다음 쪽 커서이다
         AccountID                _invitedID{ kInvalidAccountID };
         AccountID                _joinedID{ kInvalidAccountID };
         AccountID                _leftID{ kInvalidAccountID };
