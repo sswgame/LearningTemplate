@@ -81,32 +81,8 @@ namespace sw
                 {
                     if ( table.empty() || maxCount <= 0 )
                         return ServiceStoreResult::Invalid;
-                    // 키는 ASCII(키 규칙)이므로 접두어 + 0x7F 가 범위의 끝이다.
-                    string upperKey{ keyPrefix };
-                    upperKey.push_back( static_cast<utf8>( 0x7F ) );
-                    SQLResult result = SQLResult::Ok;
-                    if ( bDescending == false )
-                    {
-                        const SQLValue arrParam[] = { makeTableValue( table ), SQLValue::makeText( keyPrefix ), SQLValue::makeText( upperKey ), SQLValue::makeText( cursorKey ),
-                                                      SQLValue::makeInt64( maxCount ) };
-                        result                    = _connection.execute( kListAscendingSQL, arrParam, 5, &_rowSet );
-                    }
-                    else
-                    {
-                        const string_view upper      = cursorKey.empty() ? string_view{ upperKey } : cursorKey;
-                        const SQLValue    arrParam[] = { makeTableValue( table ), SQLValue::makeText( keyPrefix ), SQLValue::makeText( upper ),
-                                                         SQLValue::makeInt64( maxCount ) };
-                        result                       = _connection.execute( kListDescendingSQL, arrParam, 4, &_rowSet );
-                    }
-                    if ( result != SQLResult::Ok )
+                    if ( executeList( table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord ) != SQLResult::Ok )
                         return ServiceStoreResult::Unavailable; // 읽기에 Conflict 는 없다(`readRecord` 와 같다)
-                    for ( vector<SQLValue>& row : _rowSet._listRow )
-                    {
-                        ServiceRecord& record = outListRecord.emplace_back();
-                        record._key           = string( row[0].getText() );
-                        record._bytes         = std::move( row[1]._bytes );
-                        record._version       = static_cast<uint64>( row[2]._integer );
-                    }
                     return ServiceStoreResult::Ok;
                 }
 
@@ -147,8 +123,72 @@ namespace sw
                 }
 
             private:
+                /** @brief 목록 읽기 문장을 돌려 @p outListRecord 뒤에 붙입니다. 결과는 SQL 그대로다 — 목록 읽기는 Unavailable 로, 커밋 안의 범위 재검증은 Conflict 로 옮긴다. */
+                SQLResult executeList( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, vector<ServiceRecord>& outListRecord )
+                {
+                    // 키는 ASCII(키 규칙)이므로 접두어 + 0x7F 가 범위의 끝이다.
+                    string upperKey{ keyPrefix };
+                    upperKey.push_back( static_cast<utf8>( 0x7F ) );
+                    SQLResult result = SQLResult::Ok;
+                    if ( bDescending == false )
+                    {
+                        const SQLValue arrParam[] = { makeTableValue( table ), SQLValue::makeText( keyPrefix ), SQLValue::makeText( upperKey ), SQLValue::makeText( cursorKey ),
+                                                      SQLValue::makeInt64( maxCount ) };
+                        result                    = _connection.execute( kListAscendingSQL, arrParam, 5, &_rowSet );
+                    }
+                    else
+                    {
+                        const string_view upper      = cursorKey.empty() ? string_view{ upperKey } : cursorKey;
+                        const SQLValue    arrParam[] = { makeTableValue( table ), SQLValue::makeText( keyPrefix ), SQLValue::makeText( upper ),
+                                                         SQLValue::makeInt64( maxCount ) };
+                        result                       = _connection.execute( kListDescendingSQL, arrParam, 4, &_rowSet );
+                    }
+                    if ( result != SQLResult::Ok )
+                        return result;
+                    for ( vector<SQLValue>& row : _rowSet._listRow )
+                    {
+                        ServiceRecord& record = outListRecord.emplace_back();
+                        record._key           = string( row[0].getText() );
+                        record._bytes         = std::move( row[1]._bytes );
+                        record._version       = static_cast<uint64>( row[2]._integer );
+                    }
+                    return SQLResult::Ok;
+                }
+
+                /**
+                 * @brief 범위 조건(`RequireRange`)마다 같은 트랜잭션 안에서 범위를 다시 읽어 지문을 견줍니다. 쓰기 전에 부른다 — 이 트랜잭션의 쓰기는 견줄 대상이 아니다.
+                 * @details PostgreSQL 은 직렬화 가능 격리(SSI)라 이 재검증이 술어 읽기로 잡혀, 재검증 뒤 커밋 전에 끼는 삽입과 서로 어긋나면 한쪽이 직렬화 실패(Conflict)다.
+                 *          SQLite 는 `BEGIN IMMEDIATE` 로 쓰기 트랜잭션이 하나씩 돈다.
+                 */
+                ServiceStoreResult checkRanges( const vector<ServiceWrite>& listWrite, ServiceCommitInfo& outInfo )
+                {
+                    for ( size_t writeIndex = 0; writeIndex < listWrite.size(); ++writeIndex )
+                    {
+                        const ServiceWrite& write = listWrite[writeIndex];
+                        if ( write._kind != ServiceWrite::Kind::RequireRange )
+                            continue;
+                        vector<ServiceRecord> listRecord;
+                        const SQLResult       result =
+                            executeList( write._table, write._key, write._range._cursorKey, write._range._maxCount, write._range._bDescending == SW_TRUE, listRecord );
+                        if ( result != SQLResult::Ok )
+                        {
+                            if ( result == SQLResult::Constraint || result == SQLResult::SerializationFailure )
+                                outInfo._conflictIndex = constant::invalid_index::kInt32;
+                            return toStoreResult( result );
+                        }
+                        if ( ServiceTransaction::computeRangeFingerprint( listRecord, 0 ) != write._range._fingerprint )
+                        {
+                            outInfo._conflictIndex = static_cast<int32>( writeIndex );
+                            return ServiceStoreResult::Conflict;
+                        }
+                    }
+                    return ServiceStoreResult::Ok;
+                }
+
                 ServiceStoreResult applyWrites( const ServiceTransaction& transaction, ServiceCommitInfo& outInfo )
                 {
+                    if ( const ServiceStoreResult ranged = checkRanges( transaction.getWrites(), outInfo ); ranged != ServiceStoreResult::Ok )
+                        return ranged;
                     SQLResult  result                    = _connection.execute( _connection.getDialect()._pNextCommitVersion, nullptr, 0, &_rowSet );
                     const bool bCommitVersionUnavailable = result != SQLResult::Ok || _rowSet._listRow.empty() || _rowSet._listRow[0].empty();
                     if ( bCommitVersionUnavailable )
@@ -157,12 +197,14 @@ namespace sw
                     const vector<ServiceWrite>& listWrite     = transaction.getWrites();
                     for ( size_t writeIndex = 0; writeIndex < listWrite.size(); ++writeIndex )
                     {
-                        const ServiceWrite& write    = listWrite[writeIndex];
-                        const SQLValue      table    = makeTableValue( write._table );
-                        const SQLValue      key      = SQLValue::makeText( write._key );
-                        const bool          bAny     = write._expectedVersion == ServiceRecord::kAnyVersion;
-                        const bool          bAbsent  = write._expectedVersion == ServiceRecord::kAbsentVersion;
-                        bool                bMatched = true;
+                        const ServiceWrite& write = listWrite[writeIndex];
+                        if ( write._kind == ServiceWrite::Kind::RequireRange )
+                            continue; // `checkRanges` 가 쓰기 전에 봤다
+                        const SQLValue table    = makeTableValue( write._table );
+                        const SQLValue key      = SQLValue::makeText( write._key );
+                        const bool     bAny     = write._expectedVersion == ServiceRecord::kAnyVersion;
+                        const bool     bAbsent  = write._expectedVersion == ServiceRecord::kAbsentVersion;
+                        bool           bMatched = true;
                         if ( write._kind == ServiceWrite::Kind::Put && ( bAny || bAbsent ) )
                         {
                             const SQLValue arrParam[] = { table, key, makeBytesValue( write._bytes ), SQLValue::makeInt64( commitVersion ) };

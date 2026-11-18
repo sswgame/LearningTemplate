@@ -849,24 +849,7 @@ namespace sw
     {
         for ( const ServiceWrite& write : source.getWrites() )
         {
-            switch ( write._kind )
-            {
-                case ServiceWrite::Kind::Put:
-                {
-                    inoutTarget.put( write._table, write._key, write._bytes, write._expectedVersion );
-                    break;
-                }
-                case ServiceWrite::Kind::Erase:
-                {
-                    inoutTarget.erase( write._table, write._key, write._expectedVersion );
-                    break;
-                }
-                case ServiceWrite::Kind::Require:
-                {
-                    inoutTarget.requireVersion( write._table, write._key, write._expectedVersion );
-                    break;
-                }
-            }
+            inoutTarget.addWrite( write );
         }
     }
 

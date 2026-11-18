@@ -11,6 +11,7 @@ namespace sw
     ServiceReadSetConnection::ServiceReadSetConnection( IServiceStoreConnection& inner )
         : _inner{ inner }
         , _listRead{}
+        , _listRangeRead{}
     {
     }
 
@@ -35,8 +36,24 @@ namespace sw
     ServiceStoreResult ServiceReadSetConnection::listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending,
                                                               vector<ServiceRecord>& outListRecord )
     {
-        // 안쪽 연결의 보호 멤버는 기반 참조로 부를 수 없다 — 같은 입구로 넘긴다. 목록 읽기는 커밋 조건으로 기억하지 않는다(머리글의 shortcut)
-        return ServiceRecordReader::readPage( _inner, table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord )._result;
+        // 안쪽 연결의 보호 멤버는 기반 참조로 부를 수 없다 — 같은 입구로 넘긴다
+        const size_t             first = outListRecord.size();
+        const ServiceStoreResult read  = ServiceRecordReader::readPage( _inner, table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord )._result;
+        if ( read != ServiceStoreResult::Ok )
+            return read; // 읽지 못한 것은 판단에 쓰이지 않는다
+        const uint64 fingerprint = ServiceTransaction::computeRangeFingerprint( outListRecord, first );
+        const uint8  descending  = bDescending ? SW_TRUE : SW_FALSE;
+        for ( RangeEntry& entry : _listRangeRead )
+        {
+            const bool bSame = entry._table == table && entry._keyPrefix == keyPrefix && entry._cursorKey == cursorKey && entry._maxCount == maxCount && entry._bDescending == descending;
+            if ( bSame )
+            {
+                entry._fingerprint = fingerprint;
+                return read;
+            }
+        }
+        _listRangeRead.push_back( RangeEntry{ table, string( keyPrefix ), string( cursorKey ), fingerprint, maxCount, descending } );
+        return read;
     }
 
     ServiceStoreResult ServiceReadSetConnection::commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo )
@@ -54,40 +71,38 @@ namespace sw
         ServiceTransaction conditioned;
         for ( const ServiceWrite& write : listWrite )
         {
-            uint64                 expectedVersion = write._expectedVersion;
-            const ReadEntry* const pRead           = expectedVersion == ServiceRecord::kAnyVersion ? findRead( write._table, write._key ) : nullptr;
+            ServiceWrite           copy  = write;
+            const bool             bKey  = write._kind != ServiceWrite::Kind::RequireRange;
+            const ReadEntry* const pRead = bKey && write._expectedVersion == ServiceRecord::kAnyVersion ? findRead( write._table, write._key ) : nullptr;
             if ( pRead != nullptr )
-                expectedVersion = pRead->_version; // 읽고 덮어쓰는 쓰기 — 그사이 남이 바꿨으면 다시 읽는다
-            switch ( write._kind )
-            {
-                case ServiceWrite::Kind::Put:
-                {
-                    conditioned.put( write._table, write._key, vector<uint8>( write._bytes ), expectedVersion );
-                    break;
-                }
-                case ServiceWrite::Kind::Erase:
-                {
-                    conditioned.erase( write._table, write._key, expectedVersion );
-                    break;
-                }
-                case ServiceWrite::Kind::Require:
-                {
-                    conditioned.requireVersion( write._table, write._key, expectedVersion );
-                    break;
-                }
-            }
+                copy._expectedVersion = pRead->_version; // 읽고 덮어쓰는 쓰기 — 그사이 남이 바꿨으면 다시 읽는다
+            conditioned.addWrite( copy );
         }
         for ( const ReadEntry& entry : _listRead )
         {
             bool bWritten = false;
             for ( const ServiceWrite& write : listWrite )
             {
-                bWritten = bWritten || ( write._table == entry._table && write._key == entry._key );
+                bWritten = bWritten || ( write._kind != ServiceWrite::Kind::RequireRange && write._table == entry._table && write._key == entry._key );
             }
             if ( bWritten == false )
                 conditioned.requireVersion( entry._table, entry._key, entry._version );
         }
+        for ( const RangeEntry& entry : _listRangeRead )
+        {
+            // 안쪽 포장(시도마다 새로 둔 읽기 집합)이 이미 같은 범위를 걸었으면 겹쳐 걸지 않는다
+            bool bConditioned = false;
+            for ( const ServiceWrite& write : listWrite )
+            {
+                bConditioned = bConditioned || ( write._kind == ServiceWrite::Kind::RequireRange && write._table == entry._table && write._key == entry._keyPrefix &&
+                                                 write._range._cursorKey == entry._cursorKey && write._range._maxCount == entry._maxCount &&
+                                                 write._range._bDescending == entry._bDescending );
+            }
+            if ( bConditioned == false )
+                conditioned.requireRange( entry._table, entry._keyPrefix, entry._cursorKey, entry._maxCount, entry._bDescending == SW_TRUE, entry._fingerprint );
+        }
         _listRead.clear();
+        _listRangeRead.clear();
         ServiceCommitInfo        info;
         const ServiceStoreResult committed = _inner.commit( conditioned, &info );
         if ( pOutInfo != nullptr )
