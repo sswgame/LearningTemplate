@@ -356,7 +356,7 @@
     "Source/Editor/Viewport/Model/Visualizers/NavMeshVisualizer.cpp": {"integer": 1},
     "Source/Editor/Viewport/Model/Visualizers/PhysicsShapeVisualizer.cpp": {"integer": 1},
     "Source/Editor/Viewport/Model/Visualizers/SelectionBoundsVisualizer.cpp": {"integer": 1},
-    "Source/Editor/Viewport/TerrainBrushTool.cpp": {"minus-one": 1, "float": 8},
+    "Source/Editor/Viewport/TerrainBrushTool.cpp": {"float": 8},
     "Source/Editor/Viewport/ViewportInputOverlay.cpp": {"float": 31, "integer": 1},
     "Source/Editor/Viewport/ViewportToolbarSettings.cpp": {"float": 13},
     "Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp": {"integer": 1},
