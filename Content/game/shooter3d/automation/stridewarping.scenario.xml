@@ -19,6 +19,9 @@
 	<WaitUntil watch="Shooter3D.StrideAppliedCount" atLeast="100" timeoutFrames="120"/> <!-- 뒷걸음 달리기의 보폭이 걸렸다 -->
 	<WaitUntil watch="Shooter3D.StrideScale" atLeast="0.1" timeoutFrames="60"/>
 	<Screenshot file="backward_run.ppm" stability="assets"/>
+	<!-- 아레나 바닥(Stone)의 발걸음 — 플레이어 몸은 발 닿음 감지로 발걸음을 내고(common/characters/ubc/ubc_body.notifies.xml) 돌의 반응(소리 Footstep.Stone)이 난다. -->
+	<WaitUntil watch="Surface.ObjectFootstepCount" target="PlayerBody" key="Stone" atLeast="1" timeoutFrames="60"/>
+	<Expect watch="Surface.ObjectLastFootstepSound" target="PlayerBody" is="Footstep.Stone"/>
 	<Release slot="Key.S"/>
 	<Release slot="Key.LeftShift"/>
 	<!-- 멈춘 뒤 다시 1 로 돌아온다. -->

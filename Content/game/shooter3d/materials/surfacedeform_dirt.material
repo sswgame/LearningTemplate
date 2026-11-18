@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="957c306f190d4c88aa615b3e1b90ef94"?>
+<!-- 빗마당(maps/rainyard) 흙길 — 표면 변형 층을 읽는 지면(engine/materials/surfacedeform.material)에 색과 격자(크기 가늠용)만 얹는다.
+     발자국 · 젖은 자국 · 고이는 빗물 · 빗방울 링은 부모 셰이더(surface_deform.hlsl)가 낸다. -->
+<MaterialDef formatVersion="0" name="SurfaceDeformDirt" _base="engine/materials/surfacedeform.material">
+	<_properties>
+		<item name="_color" defaultValue="0.46 0.34 0.22 1.0" />
+		<item name="_roughness" defaultValue="0.95" />
+		<item name="_albedoMap" assetPath="engine/textures/prototype/grid_light.dds" />
+	</_properties>
+</MaterialDef>

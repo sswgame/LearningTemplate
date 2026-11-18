@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a4ea400538e948a2a07b6a6a2c8276dd"?>
+<!-- 빗마당(maps/rainyard) 스폰 예산 — 예산이 쌓이지 않아 적이 나오지 않는다(발걸음 무대를 적이 가로지르지 않게). 표의 모양은 arena.spawns.xml 과 같다. -->
+<SpawnTable budgetPerMinute="0" maxBudget="0" startBudget="0">
+  <Entry id="skeleton" cost="1" weight="1" max="6" tags="Skeleton"/>
+</SpawnTable>

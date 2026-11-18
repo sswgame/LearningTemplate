@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e53509e8d26740b3ba52a414e8c9a894"?>
+<!-- 발걸음 효과(표면 종류 표 engine/environment/default.surfacekinds.xml 의 반응 _effect) — 젖은 바닥 물 튀김 — 비에 젖은 돌 · 나무를 밟을 때의 작은 물방울.
+     반복하지 않는 한 번 터지기다: 발걸음 반응(SurfaceFootprintSystem)이 효과 풀 오브젝트를 돌려 쓰며 발 자리에서 다시 튼다. 텍스처는 Kenney 파티클 팩(CC0). -->
+<VFXEffectDef>
+	<_listEmitter>
+		<VFXEmitterDef _name="Droplets" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Alpha" _bLooping="false"
+		               _maxParticles="6" _duration="0.1" _spawnRate="0" _lifetimeMin="0.25" _lifetimeMax="0.4"
+		               _velocityMin="-0.6, 0.6, -0.6" _velocityMax="0.6, 1.2, 0.6" _gravity="0, -9.8, 0">
+			<_listBurst><VFXBurstDef _time="0" _count="6"/></_listBurst>
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.035" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.02" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="0.8" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="0.88" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="0.95" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="0.8" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.3" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+		</VFXEmitterDef>
+	</_listEmitter>
+</VFXEffectDef>

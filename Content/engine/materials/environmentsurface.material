@@ -14,6 +14,7 @@
 		<item name="_patternScale" type="Vector4" defaultValue="1 1 0.02 0.5" displayName="Pattern Cell Size XY, Groove Width, Row Offset / Skew" group="Pattern"/>
 		<item name="_patternShape" type="Vector4" defaultValue="0 0 0 0" displayName="Pattern Kind, Cell Tint, Groove Depth (m), World Space" group="Pattern"/>
 		<item name="_weather" collection="engine/materials/weather.matparams.xml" collectionParameter="Weather" type="Vector4" defaultValue="0 0 0 0" displayName="Weather (wet, puddle, snow, snow line)" group="Weather"/>
+		<item name="_rain" collection="engine/materials/weather.matparams.xml" collectionParameter="Rain" type="Vector4" defaultValue="0 0 0 0" displayName="Rain (strength: rain rings on puddles)" group="Weather"/>
 		<item name="_roughness" type="Range" defaultValue="0.5" min="0.0" max="1.0" group="Base"/>
 		<item name="_metallic" type="Range" defaultValue="0" min="0.0" max="1.0" group="Base"/>
 		<item name="_secondaryRoughness" type="Range" defaultValue="0.8" min="0.0" max="1.0" displayName="Pattern Roughness" group="Pattern"/>

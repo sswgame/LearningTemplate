@@ -444,7 +444,7 @@
     "Source/Engine/Environment/Placement/SurfaceLayerWeights.h": {"float": 1},
     "Source/Engine/Environment/Sky/SkyGradient.cpp": {"float": 6},
     "Source/Engine/Environment/Surface/GroundSurfaceComponent.cpp": {"minus-one": 1},
-    "Source/Engine/Environment/Surface/SurfaceDeformGrid.cpp": {"float": 5, "integer": 1},
+    "Source/Engine/Environment/Surface/SurfaceDeformGrid.cpp": {"integer": 1},
     "Source/Engine/Environment/Surface/SurfaceDeformSystem.cpp": {"float": 1},
     "Source/Engine/Environment/Surface/SurfaceStamp.cpp": {"float": 1},
     "Source/Engine/Environment/Terrain/TerrainComponent.cpp": {"float": 1},

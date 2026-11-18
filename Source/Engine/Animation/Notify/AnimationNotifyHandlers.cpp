@@ -2,7 +2,6 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
-#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Animation/Component/MotionWarpingComponent.h"
@@ -22,6 +21,7 @@
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Presentation/ISoundPlayer.h"
+#include "Engine/VFX/VFXEffectPool.h"
 
 namespace sw
 {
@@ -121,8 +121,10 @@ namespace sw
 
             /**
              * @class FootstepHandler
-             * @brief 발 소켓 아래를 공통 표면 질의(`SurfaceSample`)로 읽어 소리 경로의 `{surface}` 를 그 종류의 발소리 분류로 바꾸고, 씬의 발걸음 반응
-             *        (`SurfaceFootprintSystem` — 종류마다 세기 · 그 종류의 발자국 도장)에 알립니다. 높이장 · 충돌은 고치지 않습니다.
+             * @brief 발 소켓 아래를 공통 표면 질의(`SurfaceSample` — 종류 · 땅의 젖음)로 읽어 씬의 발걸음 반응(`SurfaceFootprintSystem`)에 알립니다.
+             * @details 소리 · 튀는 효과 · 발자국 · 젖은 자국은 모두 밟은 표면의 반응 데이터다(`SurfaceKindDef::_step` · `_wetStep`) — 알림은 발 소켓과 광선 길이만 적는다.
+             *          효과는 고른 반응의 `_effect` 를 씬의 효과 풀(`VFXEffectPool`)로 발 자리에서 튼다.
+             *          높이장 · 충돌은 고치지 않습니다.
              */
             class FootstepHandler final : public IAnimationNotifyHandler
             {
@@ -132,7 +134,6 @@ namespace sw
                 {
                     static const hashed_string s_socket( "socket" );
                     static const hashed_string s_distance( "distance" );
-                    static const hashed_string s_sound( "sound" );
                     const float3               foot     = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socket ) );
                     const float32              distance = MathUtil::max( context._entry.getFloatParam( s_distance ), 0.01f );
                     // 발 위 반 거리에서 아래로 쏜다. 발이 바닥에 조금 묻혀 있어도 바닥을 맞힌다.
@@ -148,14 +149,13 @@ namespace sw
                         record( context, hashed_string{}, foot, 0, AnimationNotifyPhase::Instant );
                         return;
                     }
-                    const string  sound  = context._entry.getTextParam( s_sound );
-                    ISoundPlayer* pSound = findSoundPlayer( context );
-                    if ( sound.empty() == false && pSound != nullptr )
-                        (void)pSound->play( AssetID{ StringUtil::replace( sound, "{surface}", sample._pKind->_footstep.c_str() ) }, hashed_string{} );
                     // 발자국 방향은 몸의 앞(루트의 +Z)이다 — 발 뼈의 축은 리그마다 다르다.
                     float4x4 root;
                     (void)context._component.findSocketWorldTransform( hashed_string{}, root ); // 빈 이름은 루트 변환을 담고 false 다(선언 설명)
-                    pManager->getSubsystem<SurfaceFootprintSystem>().addFootstep( *sample._pKind, sample._point, OrientationUtil::computeYawFromWorld( root ) );
+                    const SurfaceStepResponse* pStep = pManager->getSubsystem<SurfaceFootprintSystem>().addFootstep( sample, OrientationUtil::computeYawFromWorld( root ), context._owner.getObjectID() );
+                    // 튀는 효과는 이 층(표면과 VFX 를 함께 본다)이 튼다 — 표면 층은 VFX 를 include 하지 않는다. 효과마다 동시에 트는 수는 표의 데이터다.
+                    if ( pStep != nullptr && pStep->_effect.isSet() )
+                        (void)pManager->getSubsystem<VFXEffectPool>().play( pStep->_effect.get(), sample._point, pTable->_stepEffectPoolSize );
                     record( context, sample._pKind->_name, sample._point, sample._objectID, AnimationNotifyPhase::Instant );
                 }
 
@@ -163,7 +163,6 @@ namespace sw
                 static constexpr AnimationNotifyParamDef kArrParam[] = {
                     { "socket", AnimationNotifyParamKind::Name, true },
                     { "distance", AnimationNotifyParamKind::Float, false, 0.5f },
-                    { "sound", AnimationNotifyParamKind::Text, false },
                 };
             };
 

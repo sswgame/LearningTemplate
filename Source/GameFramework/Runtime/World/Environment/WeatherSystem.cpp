@@ -31,13 +31,16 @@ namespace sw
     uint32 WeatherCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 적지 않은 칸은 초기값이다. 깨진 값 · 범위 밖 값은 오류다(자르지 않는다). 날씨는 그 원소를, 전환 시간은 표 전체를 넣지 않는다.
-        WeatherCatalogRootParams rootParams{ _transitionTime };
+        _listMaterialBinding.clear(); // 다시 읽기는 같은 카탈로그에 읽는다 — 옛 바인딩을 남기지 않는다
+        WeatherCatalogRootParams rootParams{ _transitionTime, _materialCollection };
         if ( root.readProperties( rootParams, sourceName ) == false )
             return 0;
         _transitionTime                        = rootParams._transition;
+        _materialCollection                    = rootParams._materialCollection;
         using Element                          = XMLCatalogElement<WeatherCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&WeatherCatalog::loadWeather>( "Weather" ),
+            Element::of<&WeatherCatalog::loadMaterialBinding>( "MaterialBinding" ),
         };
         const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         return result._loadedCount;
@@ -78,6 +81,21 @@ namespace sw
         if ( valueNode )
             weather._values.addAttributes( valueNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 값이다
         (void)add( weather );
+        return true;
+    }
+
+    bool WeatherCatalog::loadMaterialBinding( const XMLNode& node, string_view sourceName )
+    {
+        WeatherMaterialBinding binding;
+        if ( XMLFields::readProperties( node, binding, sourceName ) == false )
+            return false;
+        if ( _materialCollection.empty() )
+        {
+            SW_LOG_ERROR_ID( "WeatherSystem.MaterialBindingNoCollection", "%#: <MaterialBinding parameter='%#'> needs materialCollection on <WeatherCatalog>", sourceName,
+                             binding._parameter.c_str() );
+            return false;
+        }
+        _listMaterialBinding.push_back( binding );
         return true;
     }
 

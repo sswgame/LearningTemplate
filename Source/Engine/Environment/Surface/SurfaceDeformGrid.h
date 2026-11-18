@@ -4,8 +4,10 @@
  * @details 도장(`SurfaceStampDef`)을 찍으면 꺼지는 칸은 더 깊은 쪽, 솟는 칸은 꺼지지 않은 칸에서만 더 높은 쪽을 남긴다(발자국 위의 다른 발자국 테두리가 자국을
  *          메우지 않는다). 칸은 마지막으로 바꾼 도장의 속도로 0 을 향해 메워진다. 창은 월드에 칸 단위로 붙어 있고, 옮기면 겹치는 칸의 내용을 그대로 민다.
  *          바뀐 칸만 텍스처로 보낸다(`hasDirtyRect` · `writeTexels`) — 자국이 없는 칸은 일하지 않는다.
- *          텍스처 인코딩(RGBA8): R = 1 - 꺼짐 / 범위, G = 1 - 솟음 / 범위, B = A = 1. 흰색이 평평이라, 텍스처가 아직 없거나 흰색으로 읽히는 자리가 땅을 옮기지 않는다
- *          (`surface_deform.hlsl` 이 높이 = (R - G) × 범위 로 푼다). 엔진 · 셰이더 밖에 기대는 것이 없어 테스트가 바로 쓴다.
+ *          칸마다 젖음(0..1)도 든다 — 물에서 나온 발이 마른 땅에 남기는 젖은 발자국(`applyWetPrint`)이고, 칸마다의 마르는 속도로 0 을 향해 마른다.
+ *          높이와 같은 창 · 같은 텍스처의 다른 채널이라 창을 옮기거나 칸을 보낼 때 함께 간다(언리얼 RVT 의 채널 하나 · 유니티 CustomRenderTexture 채널 자리).
+ *          텍스처 인코딩(RGBA8): R = 1 - 꺼짐 / 범위, G = 1 - 솟음 / 범위, B = 1 - 젖음, A = 1. 흰색이 평평 · 마름이라, 텍스처가 아직 없거나 흰색으로 읽히는 자리가 땅을 옮기지 않는다
+ *          (`surface_deform_layer.hlsli` 가 높이 = (R - G) × 범위, 젖음 = 1 - B 로 푼다). 엔진 · 셰이더 밖에 기대는 것이 없어 테스트가 바로 쓴다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -58,13 +60,23 @@ namespace sw
          * @param phase  Funnel 홈의 회전(라디안)
          */
         void applyStamp( const SurfaceStampDef& def, float32 centerX, float32 centerZ, float32 yaw, float32 length, float32 phase );
-        /** @brief 칸마다 0 을 향해 (메워지는 속도 × @p deltaTime) 만큼 메웁니다. 자국이 남은 칸만 훑는다. */
+        /**
+         * @brief 월드 (@p centerX, @p centerZ) 에 요 @p yaw 로 타원(너비 × 길이 @p size, m) 젖은 자국을 찍습니다. 칸의 젖음은 더 젖은 쪽이 남고, 마르는 속도는 이번 자국의 것이 된다.
+         * @param wetness  자국 가운데의 젖음(0..1) — 가장자리로 갈수록 줄어든다
+         * @param drySpeed 마르는 속도(젖음/초, 0 보다 커야 영영 남지 않는다)
+         */
+        void applyWetPrint( float32 centerX, float32 centerZ, float32 yaw, const float2& size, float32 wetness, float32 drySpeed );
+        /** @brief 칸마다 0 을 향해 (메워지는 속도 × @p deltaTime) 만큼 메우고, 젖음은 (마르는 속도 × @p deltaTime) 만큼 말립니다. 자국이 남은 칸만 훑는다. */
         void fill( float32 deltaTime );
 
         /** @brief 월드 (@p x, @p z) 가 든 칸의 높이(m, 음수 = 꺼짐)입니다. 창 밖은 0 이다. */
         float32 findHeightAt( float32 x, float32 z ) const;
+        /** @brief 월드 (@p x, @p z) 가 든 칸의 젖음(0..1)입니다. 창 밖은 0 이다. */
+        float32 findWetnessAt( float32 x, float32 z ) const;
         /** @brief 높이가 0 이 아닌 칸 수입니다. */
         uint32 countActiveTexels() const;
+        /** @brief 젖음이 0 이 아닌 칸 수입니다. */
+        uint32 countWetTexels() const;
         /** @brief 가장 깊은 꺼짐(m, 0 이상)입니다. */
         float32 computeMaxDepth() const;
         /** @brief 월드 (@p centerX, @p centerZ) 둘레 한 변 2 × @p halfSize 정사각형 안에서 가장 깊은 꺼짐(m, 0 이상)입니다(창 밖 칸은 0). */
@@ -92,10 +104,16 @@ namespace sw
         int32 toWorldCell( float32 world ) const;
         /** @brief 칸 (@p x, @p z) 의 배열 번호입니다. */
         uint32 toIndex( uint32 x, uint32 z ) const { return z * _resolution + x; }
+        /** @brief 칸 @p index 에 아직 자국(높이 · 젖음)이 남았는지입니다. */
+        bool isMarked( uint32 index ) const { return _listHeight[index] != 0.0f || _listWet[index] > 0.0f; }
+        /** @brief 월드 (@p x, @p z) 가 든 칸 번호입니다. 창 밖이면 false 입니다. */
+        [[nodiscard]] bool findIndexAt( float32 x, float32 z, uint32& outIndex ) const;
 
     private:
         vector<float32> _listHeight;    ///< 칸마다 지면 기준 높이(m)
         vector<float32> _listFillSpeed; ///< 칸마다 마지막으로 바꾼 도장의 메워지는 속도(m/s)
+        vector<float32> _listWet;       ///< 칸마다 젖음(0..1)
+        vector<float32> _listDrySpeed;  ///< 칸마다 마지막으로 적신 자국의 마르는 속도(젖음/초)
         uint32          _resolution;
         float32         _extent;
         float32         _texelSize;

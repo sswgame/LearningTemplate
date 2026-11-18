@@ -1,34 +1,82 @@
 <?asset guid="7725d7f950b9d06cee55300dbd69fc98"?>
 <!--
 	표면 종류 표 — SurfaceKindTable 이 읽는다(엔진 기본 에셋 표 _surfaceKinds). 종류 이름은 물리 재질 이름(physicssettings.xml _listMaterial)과 같고,
-	모든 물리 재질이 여기에 종류를 가져야 한다(테스트 SurfaceKindTest.ShippedTableCoversPhysicsMaterials). 물 속에 선 발은 _waterKind 를 낸다(SurfaceQuery).
-	_footstep 은 발소리 경로의 {surface} 자리, _moveScale 은 걷는 속도 배율(물리 마찰이 아니다), _rollingResistance · _gripScale 은 바디 없는 탈것(KinematicVehicle)의 구름 저항 계수 · 옆 그립 배율, <_footprint> 도장이 있는 종류만 발자국을 남긴다 —
-	도장은 표면 변형 층(SurfaceDeformSystem)에 찍혀 지면 머티리얼(surface_deform.hlsl)이 꺼져 보이고 _fillSpeed 로 메워진다(눈은 깊고 느리게, 모래는 얕고 빠르게).
-	높이장 · 충돌은 고치지 않는다. 변형 층은 카메라 앞 _deformExtent m 정사각 창을 _deformResolution 칸(640 / 20 m = 3 cm)으로 나누고 _deformDepthRange m 까지 담는다.
+	모든 물리 재질이 여기에 종류를 가져야 한다(테스트 SurfaceKindTest.ShippedTableCoversPhysicsMaterials). 물 속에 선 발은 _waterKind 를 낸다(SurfaceSample).
+	_moveScale 은 걷는 속도 배율(물리 마찰이 아니다), _rollingResistance · _gripScale 은 바디 없는 탈것(KinematicVehicle)의 구름 저항 계수 · 옆 그립 배율이다.
+
+	발걸음 반응(SurfaceFootprintSystem): 종류마다 <_step>(마른 땅) 한 벌과 <_wetStep>(젖은 땅 — 땅의 젖음이 _wetThreshold 이상) 한 벌. 젖은 반응이 없으면 젖어도 마른 반응이다.
+	  _effect     밟은 자리에서 한 번 터지는 효과(engine/vfx/footstep_*.vfx.xml — 흙먼지 · 모래 · 눈 가루 · 물 튀김 · 진흙 · 풀). 씬마다 _stepEffectPoolSize 개를 돌려 쓴다.
+	  _footprint  표면 변형 층(SurfaceDeformSystem)에 찍는 도장 — 지면 머티리얼(surface_deform.hlsl · terrain.hlsl)이 꺼져 보이고 _fillSpeed 로 메워진다(눈은 깊고 느리게, 모래는 얕고 빠르게).
+	              높이장 · 충돌은 고치지 않는다. 비가 오면 꺼진 자리에 물이 고인다(셰이더 — 깊이 × 젖음).
+	  _feetWetness 발을 적시는 정도 — 물 · 젖은 진흙을 밟은 발은 그 뒤 _wetFeetSteps 걸음 동안 마른 땅에 젖은 자국(크기 _wetPrintSize, _wetPrintDrySpeed 로 마름)을 남긴다.
+	  _sound      오디오 이벤트 — 이벤트 라이브러리는 게임 것이라 엔진 표는 비워 두고 게임이 덮어쓰기 층으로 적는다(Shooter3D: game/shooter3d/layers/footsteps).
+	땅의 젖음은 지면 머티리얼이 젖는 바로 그 값이다 — 파라미터 묶음 _wetnessCollection 의 _wetnessParameter x(날씨 Weather.x)와 지형 레이어의 늘 젖음 중 큰 쪽.
+	변형 층은 카메라 앞 _deformExtent m 정사각 창을 _deformResolution 칸(640 / 20 m = 3 cm)으로 나누고 _deformDepthRange m 까지 담는다.
 	_zoneProfile 은 그 표면에 디딘 · 닿은 · 잠긴 것에 거는 지역 프로필(*.zone.xml)이다. 엔진 표는 비워 두고 게임이 덮어쓰기 층으로 얹는다(Empty: layers/zones) —
 	프로필이 그 게임의 이펙트를 부르기 때문이다. Lava · Sea 는 액체(WaterBodyComponent _surfaceKind)가 내는 종류, Thorns 는 물리 재질이다.
 -->
-<SurfaceKindTable _waterKind="Water" _deformResolution="640" _deformExtent="20" _deformDepthRange="0.15">
+<SurfaceKindTable _waterKind="Water" _deformResolution="640" _deformExtent="20" _deformDepthRange="0.15"
+                  _wetnessCollection="engine/materials/weather.matparams.xml" _wetnessParameter="Weather" _wetThreshold="0.5"
+                  _wetFeetSteps="6" _wetPrintSize="0.12,0.26" _wetPrintDrySpeed="0.05" _stepEffectPoolSize="16">
 	<_listKind>
-		<SurfaceKindDef _name="Default" _footstep="default" _rollingResistance="0.015" _gripScale="1" />
-		<SurfaceKindDef _name="Stone" _footstep="stone" _rollingResistance="0.015" _gripScale="1" />
-		<SurfaceKindDef _name="Wood" _footstep="wood" _rollingResistance="0.02" _gripScale="1" />
-		<SurfaceKindDef _name="Metal" _footstep="metal" _rollingResistance="0.01" _gripScale="0.9" />
-		<SurfaceKindDef _name="Ice" _footstep="ice" _rollingResistance="0.005" _gripScale="0.15" />
-		<SurfaceKindDef _name="Rubber" _footstep="rubber" _rollingResistance="0.02" _gripScale="1" />
-		<SurfaceKindDef _name="Flesh" _footstep="flesh" _rollingResistance="0.05" _gripScale="0.8" />
-		<SurfaceKindDef _name="Snow" _footstep="snow" _rollingResistance="0.06" _gripScale="0.6" _moveScale="0.8">
-			<_footprint _shape="Print" _size="0.14,0.3" _depth="0.07" _rimHeight="0.012" _rimWidth="0.04" _fillSpeed="0.003" />
+		<SurfaceKindDef _name="Default" _rollingResistance="0.015" _gripScale="1" />
+		<SurfaceKindDef _name="Stone" _rollingResistance="0.015" _gripScale="1">
+			<_wetStep _effect="engine/vfx/footstep_splash_small.vfx.xml" />
 		</SurfaceKindDef>
-		<SurfaceKindDef _name="Sand" _footstep="sand" _rollingResistance="0.15" _gripScale="0.7" _moveScale="0.85">
-			<_footprint _shape="Print" _size="0.13,0.28" _depth="0.03" _rimHeight="0.008" _rimWidth="0.03" _fillSpeed="0.01" />
+		<SurfaceKindDef _name="Wood" _rollingResistance="0.02" _gripScale="1">
+			<_wetStep _effect="engine/vfx/footstep_splash_small.vfx.xml" />
 		</SurfaceKindDef>
-		<SurfaceKindDef _name="Mud" _footstep="mud" _rollingResistance="0.2" _gripScale="0.5" _moveScale="0.7">
-			<_footprint _shape="Print" _size="0.13,0.28" _depth="0.04" _fillSpeed="0.002" />
+		<SurfaceKindDef _name="Metal" _rollingResistance="0.01" _gripScale="0.9">
+			<_wetStep _effect="engine/vfx/footstep_splash_small.vfx.xml" />
 		</SurfaceKindDef>
-		<SurfaceKindDef _name="Water" _footstep="water" _rollingResistance="0.3" _gripScale="0.4" _moveScale="0.6" />
-		<SurfaceKindDef _name="Sea" _footstep="water" _rollingResistance="0.3" _gripScale="0.4" _moveScale="0.6" />
-		<SurfaceKindDef _name="Lava" _footstep="mud" _rollingResistance="0.2" _gripScale="0.5" _moveScale="0.5" />
-		<SurfaceKindDef _name="Thorns" _footstep="wood" _rollingResistance="0.02" _gripScale="1" _moveScale="0.8" />
+		<SurfaceKindDef _name="Ice" _rollingResistance="0.005" _gripScale="0.15" />
+		<SurfaceKindDef _name="Rubber" _rollingResistance="0.02" _gripScale="1" />
+		<SurfaceKindDef _name="Flesh" _rollingResistance="0.05" _gripScale="0.8" />
+		<SurfaceKindDef _name="Dirt" _rollingResistance="0.04" _gripScale="0.85" _moveScale="0.95">
+			<_step _effect="engine/vfx/footstep_dust.vfx.xml">
+				<_footprint _shape="Print" _size="0.12,0.27" _depth="0.012" _fillSpeed="0.0006" />
+			</_step>
+			<_wetStep _effect="engine/vfx/footstep_mud.vfx.xml" _feetWetness="0.3">
+				<_footprint _shape="Print" _size="0.12,0.27" _depth="0.025" _rimHeight="0.006" _rimWidth="0.03" _fillSpeed="0.0008" />
+			</_wetStep>
+		</SurfaceKindDef>
+		<SurfaceKindDef _name="Grass" _rollingResistance="0.05" _gripScale="0.8" _moveScale="0.95">
+			<_step _effect="engine/vfx/footstep_grass.vfx.xml" />
+			<_wetStep _effect="engine/vfx/footstep_splash_small.vfx.xml" _feetWetness="0.2" />
+		</SurfaceKindDef>
+		<SurfaceKindDef _name="Snow" _rollingResistance="0.06" _gripScale="0.6" _moveScale="0.8">
+			<_step _effect="engine/vfx/footstep_snow.vfx.xml">
+				<_footprint _shape="Print" _size="0.14,0.3" _depth="0.07" _rimHeight="0.012" _rimWidth="0.04" _fillSpeed="0.003" />
+			</_step>
+			<_wetStep _effect="engine/vfx/footstep_splash_small.vfx.xml" _feetWetness="0.3">
+				<_footprint _shape="Print" _size="0.14,0.3" _depth="0.05" _fillSpeed="0.006" />
+			</_wetStep>
+		</SurfaceKindDef>
+		<SurfaceKindDef _name="Sand" _rollingResistance="0.15" _gripScale="0.7" _moveScale="0.85">
+			<_step _effect="engine/vfx/footstep_sand.vfx.xml">
+				<_footprint _shape="Print" _size="0.13,0.28" _depth="0.03" _rimHeight="0.008" _rimWidth="0.03" _fillSpeed="0.01" />
+			</_step>
+			<_wetStep>
+				<_footprint _shape="Print" _size="0.13,0.28" _depth="0.02" _fillSpeed="0.002" />
+			</_wetStep>
+		</SurfaceKindDef>
+		<SurfaceKindDef _name="Mud" _rollingResistance="0.2" _gripScale="0.5" _moveScale="0.7">
+			<_step _effect="engine/vfx/footstep_mud.vfx.xml" _feetWetness="0.2">
+				<_footprint _shape="Print" _size="0.13,0.28" _depth="0.04" _fillSpeed="0.002" />
+			</_step>
+			<_wetStep _effect="engine/vfx/footstep_mud.vfx.xml" _feetWetness="0.4">
+				<_footprint _shape="Print" _size="0.13,0.28" _depth="0.05" _rimHeight="0.01" _rimWidth="0.03" _fillSpeed="0.003" />
+			</_wetStep>
+		</SurfaceKindDef>
+		<SurfaceKindDef _name="Water" _rollingResistance="0.3" _gripScale="0.4" _moveScale="0.6">
+			<_step _effect="engine/vfx/footstep_splash.vfx.xml" _feetWetness="1" />
+		</SurfaceKindDef>
+		<SurfaceKindDef _name="Sea" _rollingResistance="0.3" _gripScale="0.4" _moveScale="0.6">
+			<_step _effect="engine/vfx/footstep_splash.vfx.xml" _feetWetness="1" />
+		</SurfaceKindDef>
+		<SurfaceKindDef _name="Lava" _rollingResistance="0.2" _gripScale="0.5" _moveScale="0.5" />
+		<SurfaceKindDef _name="Thorns" _rollingResistance="0.02" _gripScale="1" _moveScale="0.8">
+			<_step _effect="engine/vfx/footstep_grass.vfx.xml" />
+		</SurfaceKindDef>
 	</_listKind>
 </SurfaceKindTable>

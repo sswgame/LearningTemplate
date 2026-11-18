@@ -7,7 +7,7 @@
  *          `<FootContact>` 는 그 알림을 클립 대신 발 닿음 감지(`AnimationFootContactDef`, 3D 만)가 내게 한다. 없는 알림 이름, 겹친 알림, 높이 순서가 틀린 값은 읽기 오류다.
  *          @code
  *          <AnimationNotifies>
- *            <Notify name="FootL" handler="Footstep" socket="foot.l" distance="0.4" sound="common/audio/footstep_{surface}.wav"/>
+ *            <Notify name="FootL" handler="Footstep" socket="foot.l" distance="0.4"/>
  *            <Notify name="Swing" handler="HitWindow" socketA="handslot.r" socketB="SwordTip" radius="0.05" damage="10" impulse="40"/>
  *            <Notify name="Impact" handler="CameraShake" amplitude="0.05" duration="0.25"/>
  *            <Notify name="Taunt" handler="AbilityEvent" event="Taunted"/>
@@ -270,7 +270,7 @@ namespace sw
  *          |---|---|---|
  *          | `PlaySound` | 소켓 위치에서 소리를 낸다 | sound(필수), socket |
  *          | `SpawnPrefab` | 소켓 변환에 프리팹(이펙트, 탄피)을 만든다 | prefab(필수), socket, offset, attach |
- *          | `Footstep` | 소켓 아래를 표면 질의(`SurfaceSample` — 콜라이더 재질 · 지형 레이어 · 물)로 읽어 소리 경로의 `{surface}` 를 그 종류의 발소리 분류(`SurfaceKindDef::_footstep`)로 바꾸고, 씬의 발걸음 반응(`SurfaceFootprintSystem` — 발자국 도장)에 알린다 | socket(필수), distance, sound |
+ *          | `Footstep` | 소켓 아래를 표면 질의(`SurfaceSample` — 콜라이더 재질 · 지형 레이어 · 물, 땅의 젖음)로 읽어 씬의 발걸음 반응(`SurfaceFootprintSystem` — 그 종류의 마른 · 젖은 반응: 소리 · 튀는 효과 · 발자국 · 젖은 자국)에 알린다 | socket(필수), distance |
  *          | `HitWindow` | 구간 알림이다. 두 소켓 사이 칼날을 프레임마다 쓸어(지난 위치에서 현재 위치까지, `MeleeHit::sweep`) 맞은 오브젝트에 한 번씩 `onHitReceived` 를 호출한다. 클라이언트는 기록만 한다 | socketA, socketB(필수), radius, damage, impulse, samples |
  *          | `CameraShake` | 카메라 충격을 요청한다(같은 씬의 `CameraRegistry::getShakeChannel` 을 듣는 카메라가 받는다) | amplitude, duration, frequency, radius, socket |
  *          | `AbilityEvent` | 같은 오브젝트의 컴포넌트에 `onAnimationNotify` 를 호출한다(구간이면 시작과 끝) | event(필수) |

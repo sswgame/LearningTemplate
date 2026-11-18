@@ -1,0 +1,11 @@
+<?asset guid="90d32d0e27254fb48fcd490fe15e2926"?>
+<!-- UBC 몸(Quaternius 기본 캐릭터 · UAL 클립)의 알림 표 — Shooter3D 플레이어 몸(prefabs/player_body.prefab.xml)의 AnimationNotifyComponent 가 읽는다.
+     발걸음은 클립마다 손으로 찍지 않고 발 닿음 감지(<FootContact> — 발 뼈 높이 · 세로 속도, AnimationFootContact)가 낸다: 블렌드 · 재생 속도 · 보폭 워핑이 섞여도 실제 포즈를 본다.
+     문턱은 UAL1 클립의 발 뼈(발목) 모델 공간 높이를 잰 값이다 — 디딘 발 0.10(걷기) ~ 0.14 m(조깅), 들린 발 0.35(걷기) ~ 0.53 m(조깅·질주).
+     닿음 0.17 m 아래 · 다시 받기 0.24 m 위, 세로 속도 1 m/s 이하. 발걸음 반응(소리 · 효과 · 발자국 · 젖은 자국)은 밟은 표면의 데이터다(default.surfacekinds.xml). -->
+<AnimationNotifies>
+    <Notify name="FootL" handler="Footstep" socket="foot_l" distance="0.5"/>
+    <Notify name="FootR" handler="Footstep" socket="foot_r" distance="0.5"/>
+    <FootContact notify="FootL" bone="foot_l" contact_height="0.17" release_height="0.24" max_vertical_speed="1"/>
+    <FootContact notify="FootR" bone="foot_r" contact_height="0.17" release_height="0.24" max_vertical_speed="1"/>
+</AnimationNotifies>
