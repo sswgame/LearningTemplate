@@ -250,8 +250,6 @@ namespace sw
         void setCanvasFrame( CanvasFrameData& inoutFrame );
         /** @brief 패킷의 글리프 아틀라스 업로드를 캔버스 거울에 옮깁니다. 그리지 않을 패킷도 받은 즉시 부릅니다(`CanvasRenderer::acceptAtlasUploads`). */
         void acceptCanvasAtlasUploads( CanvasFrameData& inoutFrame ) { _state._canvasRenderer.acceptAtlasUploads( inoutFrame ); }
-        /** @brief 캔버스(화면 2D · 렌더 텍스처 대상) 렌더러입니다. 다시 그린 대상 수 같은 진단 값을 읽을 때 씁니다. */
-        const CanvasRenderer& getCanvasRenderer() const { return _state._canvasRenderer; }
 
         /**
          * @brief 화면에 나간 첨부의 이름입니다. Present 패스가 입력으로 받는 첨부이며, 없으면 빈 문자열입니다.

@@ -181,7 +181,6 @@ namespace sw
 
         // 구간 갱신 구간이다. 이 시간이 이 풀의 스킨 원본 갱신 비용이다(집합이 바뀐 프레임에만 찍힌다).
         SW_PROFILE_SCOPE( "RT.Deform.rebuildSkinSources" );
-        _lastSkinUploadBytes = 0;
         // 예산 때문에 못 들어간 원본은 집합이 바뀐 프레임에만 다시 시도한다.
         for ( const auto& [dataID, source] : _mapSkinSource )
         {
@@ -337,7 +336,6 @@ namespace sw
                                                  static_cast<uint32>( _listScratchSkinRestRegion.size() ) );
         pFactory->updateStructuredBufferRegions( _skinWeight._buffer, _listScratchSkinWeight.data(), _listScratchSkinWeightRegion.data(),
                                                  static_cast<uint32>( _listScratchSkinWeightRegion.size() ) );
-        _lastSkinUploadBytes = static_cast<uint32>( _listScratchSkinRest.size() * sizeof( GPUMorphVertex ) + _listScratchSkinWeight.size() * sizeof( float4 ) );
     }
 
     void GPUMeshMorphPool::repackSkinSources( IRHIDevice* pDevice )
@@ -364,7 +362,6 @@ namespace sw
         const uint32 weightCapacity = grownCapacity( liveWeight );
         _skinRestAllocator.reset( restCapacity );
         _skinWeightAllocator.reset( weightCapacity );
-        ++_skinRepackCount;
 
         _skinRest.release( pDevice );
         _skinWeight.release( pDevice );
@@ -416,7 +413,6 @@ namespace sw
         _morphAllocator.retireDeferred( _updateCount );
         _skinRestAllocator.retireDeferred( _updateCount );
         _skinWeightAllocator.retireDeferred( _updateCount );
-        _lastMorphUploadBytes = 0;
 
         // 모프 구간은 바뀐 메시만 올린다. 레스트 포즈 · 스킨 가중치는 변하지 않으므로 **한 번만** 올린다 — 매 프레임 올리면 이 클래스가 없애려던
         // 바로 그 비용(정점 재업로드)을 다시 치르게 된다.
@@ -575,7 +571,6 @@ namespace sw
             _listPoolMorph.clear();
             _freeMorphSlot.clear();
             _listDeformProgramGeneration.clear();
-            _morphLiveVertexCount = 0;
             return bChanged || bHadMorph;
         }
         if ( bChanged == false )
@@ -661,7 +656,6 @@ namespace sw
                 return false;
             entry._base = base;
             entry._slot = _freeMorphSlot.allocate( _listPoolMorph, pMesh );
-            _morphLiveVertexCount += entry._count;
             RHIBufferCopyRegion region{};
             region._srcOffset = static_cast<uint32>( _listScratchRest.size() * sizeof( GPUMorphVertex ) );
             region._dstOffset = base * static_cast<uint32>( sizeof( GPUMorphVertex ) );
@@ -673,7 +667,6 @@ namespace sw
         {
             pDevice->getResourceFactory()->updateStructuredBufferRegions( _rest._buffer, _listScratchRest.data(), _listScratchRegion.data(),
                                                                           static_cast<uint32>( _listScratchRegion.size() ) );
-            _lastMorphUploadBytes = static_cast<uint32>( _listScratchRest.size() * sizeof( GPUMorphVertex ) );
         }
         return true;
     }
@@ -693,8 +686,6 @@ namespace sw
             capacity = kMaxPoolVertices;
 
         _morphAllocator.reset( capacity );
-        _morphLiveVertexCount = 0;
-        ++_morphRepackCount;
 
         // 빈 자리는 0(노멀 w = 0 → 칸 없음)으로 둔다. 컴퓨트는 빈 자리도 돌지만 그 결과는 아무도 읽지 않는다.
         _listScratchRest.assign( capacity, GPUMorphVertex{} );
@@ -727,19 +718,14 @@ namespace sw
                 restVertex._normal._w                                              = slotTag;
                 _listScratchRest[static_cast<size_t>( entry._base ) + vertexIndex] = restVertex;
             }
-            _morphLiveVertexCount += entry._count;
         }
         GPUMeshMorphPoolInternal::uploadAll( pDevice, _rest, _listScratchRest.data(), capacity * shaderslot::kMorphFloat4PerVertex );
-        _lastMorphUploadBytes = capacity * static_cast<uint32>( sizeof( GPUMorphVertex ) );
     }
 
     void GPUMeshMorphPool::releaseMorphEntry( MorphEntry& inoutEntry, uint64 retireStamp )
     {
         if ( inoutEntry._base != kInvalidBase )
-        {
             _morphAllocator.freeDeferred( inoutEntry._base, inoutEntry._count, retireStamp );
-            _morphLiveVertexCount -= inoutEntry._count;
-        }
         if ( inoutEntry._slot != kInvalidBase )
             (void)_freeMorphSlot.release( _listPoolMorph, inoutEntry._slot ); // 비우기 전 값(메시)은 쓰지 않는다
         inoutEntry._base = kInvalidBase;
@@ -890,7 +876,6 @@ namespace sw
         _mapMorphEntry.clear();
         _morphAllocator.reset( 0 );
         _listSkinResultOffset.clear();
-        _morphLiveVertexCount = 0;
         _listBuiltSkin.clear();
         _listBuiltSkinSlot.clear();
         _listBuiltSkinLOD.clear();

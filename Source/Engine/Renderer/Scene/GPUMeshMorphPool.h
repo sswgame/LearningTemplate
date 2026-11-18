@@ -222,12 +222,6 @@ namespace sw
         uint32 getResultVertexCapacity() const { return _vertexCount + getSkinVertexCount(); }
         /** @brief 모프 구간(앞)의 길이(용량, 빈 자리 포함)입니다. 모프 컴퓨트가 이만큼 돕니다. */
         uint32 getMorphVertexCount() const { return _skinVertexBase; }
-        /** @brief 모프 구간에 든(구간을 받은) 모프 메시의 정점 수 합입니다. */
-        uint32 getMorphLiveVertexCount() const { return _morphLiveVertexCount; }
-        /** @brief 모프 구간을 새 버퍼로 다시 채운 횟수입니다. 부분 갱신이 통째로 올리기로 새지 않는지 테스트가 봅니다. */
-        uint32 getMorphRepackCount() const { return _morphRepackCount; }
-        /** @brief 지난 `update` 가 모프 레스트에 올린 바이트 수입니다(다시 채웠으면 레스트 전체입니다). */
-        uint32 getLastMorphUploadBytes() const { return _lastMorphUploadBytes; }
         /** @brief 스킨 구간이 시작하는 정점입니다. */
         uint32 getSkinVertexBase() const { return _skinVertexBase; }
         /** @brief 스킨 구간의 정점 수(모든 인스턴스의 합)입니다. */
@@ -242,10 +236,6 @@ namespace sw
         uint32 getSkinSourceVertexCount() const { return _skinSourceVertexCount; }
         /** @brief 스킨 원본의 레스트 버퍼입니다(원소 하나가 float4 셋 — 원본마다 레스트 정점 구간과 모프 차이 구간이 있습니다). */
         const RHIStructuredBuffer& getSkinRestBuffer() const { return _skinRest; }
-        /** @brief 스킨 원본 구간을 새 버퍼로 다시 채운 횟수입니다. 부분 갱신이 통째로 올리기로 새지 않는지 테스트가 봅니다. */
-        uint32 getSkinRepackCount() const { return _skinRepackCount; }
-        /** @brief 지난 `update` 가 스킨 원본 버퍼(레스트 · 가중치)에 올린 바이트 수입니다. */
-        uint32 getLastSkinUploadBytes() const { return _lastSkinUploadBytes; }
         /** @brief 스킨 원본의 가중치 버퍼입니다(정점 하나가 float4 셋이며 가중치 4개, 원본 본 번호 4개, 모프 차이 구간(시작과 수)을 담습니다). */
         const RHIStructuredBuffer& getSkinWeightBuffer() const { return _skinWeight; }
         /** @brief 스킨 인스턴스 테이블입니다(인스턴스 하나가 uint4 둘이며 `GPUSkinInstanceRow` 입니다). */
@@ -383,13 +373,8 @@ namespace sw
         uint32         _skinVertexBase{ 0 };
         uint32         _skinBoneCount{ 0 };
         uint32         _skinSourceVertexCount{ 0 };
-        uint32         _skinRepackCount{ 0 };
-        uint32         _lastSkinUploadBytes{ 0 };
-        uint32         _skinFrameValueCount{ 0 }; ///< 인스턴스 프레임 값(머리 + 모프 가중치)의 합(팔레트 뒤에 float4 로 싣는다)
-        uint64         _updateCount{ 0 };         ///< update 를 부른 수(= 제출한 프레임 수). 돌려받은 모프 구간의 대기 번호다
-        uint32         _morphLiveVertexCount{ 0 };
-        uint32         _morphRepackCount{ 0 };
-        uint32         _lastMorphUploadBytes{ 0 };
+        uint32         _skinFrameValueCount{ 0 };                ///< 인스턴스 프레임 값(머리 + 모프 가중치)의 합(팔레트 뒤에 float4 로 싣는다)
+        uint64         _updateCount{ 0 };                        ///< update 를 부른 수(= 제출한 프레임 수). 돌려받은 모프 구간의 대기 번호다
         uint32         _skinParity{ 0 };                         ///< 이번 프레임에 스키닝이 쓰는 벌(0 앞 · 1 뒤, `advanceSkinHistory` 가 바꾼다)
         uint8          _bSkinLayoutChanged{ SW_TRUE };           ///< 지난 `advanceSkinHistory` 뒤에 스킨 결과 배치가 바뀌었다
         uint8          _bSkinDispatchedSinceAdvance{ SW_FALSE }; ///< 지난 `advanceSkinHistory` 뒤에 스키닝을 디스패치했다
