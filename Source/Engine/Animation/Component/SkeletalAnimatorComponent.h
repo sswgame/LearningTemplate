@@ -414,6 +414,34 @@ namespace sw
             const uint8*               _pBoneMask;
         };
 
+        /**
+         * @class PoseNodeRootMotionSource
+         * @brief 포즈 노드가 입력의 루트 모션을 물을 때 부르는 쪽입니다. `computePlayableRootMotion` 을 다시 부른다(입력이 블렌드 스페이스 · 앞 포즈 노드여도 같은 길).
+         */
+        class PoseNodeRootMotionSource final : public IAnimationRootMotionSource
+        {
+        public:
+            explicit PoseNodeRootMotionSource( const SkeletalAnimatorComponent& owner );
+            BoneTransform computeRootMotion( const IAnimationPlayable& playable, const AnimationTimeStep& step ) const override;
+
+        private:
+            const SkeletalAnimatorComponent* _pOwner;
+        };
+
+        /**
+         * @class PoseNodeCurveSink
+         * @brief 포즈 노드가 입력의 커브를 더할 때 부르는 쪽입니다. `accumulatePlayableCurves` 를 다시 부른다.
+         */
+        class PoseNodeCurveSink final : public IAnimationCurveSink
+        {
+        public:
+            explicit PoseNodeCurveSink( SkeletalAnimatorComponent& owner );
+            void accumulateCurves( const IAnimationPlayable& playable, float32 time, float32 weight ) override;
+
+        private:
+            SkeletalAnimatorComponent* _pOwner;
+        };
+
         /** @brief 레이어 하나의 실행 상태입니다. */
         struct LayerState
         {

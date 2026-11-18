@@ -46,6 +46,38 @@ namespace sw
         /** @brief @p playable 을 @p time 에서 샘플해 @p inoutPose 에 씁니다(트랙이 없는 본은 들어온 값을 둡니다). */
         virtual void samplePose( const IAnimationPlayable& playable, float32 time, Pose& inoutPose ) = 0;
     };
+
+    /**
+     * @class IAnimationRootMotionSource
+     * @brief 재생할 것(입력) 하나가 걸음 하나 동안 낸 루트 모션을 답합니다. 포즈 노드가 입력의 루트 모션을 모아 제 루트 모션을 낼 때 부릅니다(스켈레탈 애니메이터가 구현).
+     */
+    class SW_API IAnimationRootMotionSource
+    {
+    public:
+        IAnimationRootMotionSource()                                               = default;
+        virtual ~IAnimationRootMotionSource()                                      = default;
+        IAnimationRootMotionSource( const IAnimationRootMotionSource& )            = default;
+        IAnimationRootMotionSource& operator=( const IAnimationRootMotionSource& ) = default;
+
+        /** @brief @p playable 이 @p step 동안 낸 루트 모션(루트 로컬 이동 · 회전)입니다. */
+        virtual BoneTransform computeRootMotion( const IAnimationPlayable& playable, const AnimationTimeStep& step ) const = 0;
+    };
+
+    /**
+     * @class IAnimationCurveSink
+     * @brief 재생할 것(입력) 하나의 커브를 가중치를 곱해 이번 프레임 커브에 더합니다. 포즈 노드가 입력의 커브를 섞을 때 부릅니다(스켈레탈 애니메이터가 구현).
+     */
+    class SW_API IAnimationCurveSink
+    {
+    public:
+        IAnimationCurveSink()                                        = default;
+        virtual ~IAnimationCurveSink()                               = default;
+        IAnimationCurveSink( const IAnimationCurveSink& )            = default;
+        IAnimationCurveSink& operator=( const IAnimationCurveSink& ) = default;
+
+        /** @brief @p playable 의 @p time 커브 값에 @p weight 를 곱해 더합니다. */
+        virtual void accumulateCurves( const IAnimationPlayable& playable, float32 time, float32 weight ) = 0;
+    };
 } // namespace sw
 
 namespace sw
@@ -80,6 +112,13 @@ namespace sw
          * @return 샘플러나 파라미터가 없으면 오류를 남기고 false 입니다(포즈는 들어온 그대로입니다).
          */
         [[nodiscard]] virtual bool evaluatePose( const AnimationPoseParams& params, float32 time, Pose& inoutPose ) const = 0;
+        /**
+         * @brief 걸음 @p step(이 노드의 시각) 동안의 루트 모션입니다 — 입력마다 그 입력의 시각 구간으로 옮겨 @p source 에 묻고 노드의 규칙(섞기 · 비추기 · 섹션 잇기)으로 합친다.
+         * @details 언리얼 애님 그래프가 루트 모션을 포즈와 같은 가중치로 입력에서 뽑아 섞는 것과 같다.
+         */
+        [[nodiscard]] virtual BoneTransform computeRootMotion( const AnimationParameterSet& parameter, const AnimationTimeStep& step, const IAnimationRootMotionSource& source ) const = 0;
+        /** @brief @p time 의 커브를 입력마다 그 입력의 시각 · 포즈와 같은 가중치로 @p sink 에 더합니다(@p weight 는 이 노드의 섞임 가중치). 언리얼 포즈 노드의 커브 블렌드와 같다. */
+        virtual void accumulateCurves( const AnimationParameterSet& parameter, float32 time, float32 weight, IAnimationCurveSink& sink ) const = 0;
     };
 } // namespace sw
 
@@ -99,7 +138,15 @@ namespace sw
         float32 getPlayLength() const override { return _pInputA->getPlayLength(); }
         bool    isLoopingByDefault() const override { return _pInputA->isLoopingByDefault(); }
 
-        [[nodiscard]] bool evaluatePose( const AnimationPoseParams& params, float32 time, Pose& inoutPose ) const override;
+        [[nodiscard]] bool          evaluatePose( const AnimationPoseParams& params, float32 time, Pose& inoutPose ) const override;
+        [[nodiscard]] BoneTransform computeRootMotion( const AnimationParameterSet& parameter, const AnimationTimeStep& step, const IAnimationRootMotionSource& source ) const override;
+        void                        accumulateCurves( const AnimationParameterSet& parameter, float32 time, float32 weight, IAnimationCurveSink& sink ) const override;
+
+    private:
+        /** @brief 첫 입력의 시각 @p time 을 둘째 입력의 같은 정규화 위치로 옮깁니다. */
+        float32 mapTimeToInputB( float32 time ) const;
+        /** @brief 파라미터 가중치(0..1)입니다. */
+        float32 computeWeight( const AnimationParameterSet& parameter ) const;
 
     private:
         const IAnimationPlayable* _pInputA;
@@ -123,6 +170,9 @@ namespace sw
         bool    isLoopingByDefault() const override { return _pInput->isLoopingByDefault(); }
 
         [[nodiscard]] bool evaluatePose( const AnimationPoseParams& params, float32 time, Pose& inoutPose ) const override;
+        /** @brief 입력의 루트 모션을 축 면으로 비춥니다(이동은 축 성분을, 회전은 축이 아닌 두 성분을 뒤집는다 — 언리얼 Mirror 노드의 루트 모션과 같다). */
+        [[nodiscard]] BoneTransform computeRootMotion( const AnimationParameterSet& parameter, const AnimationTimeStep& step, const IAnimationRootMotionSource& source ) const override;
+        void                        accumulateCurves( const AnimationParameterSet& parameter, float32 time, float32 weight, IAnimationCurveSink& sink ) const override;
 
     private:
         const IAnimationPlayable* _pInput;
@@ -164,22 +214,41 @@ namespace sw
         bool    isLoopingByDefault() const override { return false; }
 
         [[nodiscard]] bool evaluatePose( const AnimationPoseParams& params, float32 time, Pose& inoutPose ) const override;
+        /** @brief 걸음이 지난 클립 시각 구간(섹션 링크 · 분기를 따라 끊긴 조각)마다 입력의 루트 모션을 차례로 잇습니다(언리얼 몽타주의 섹션 위치 구간 루트 모션과 같다). */
+        [[nodiscard]] BoneTransform computeRootMotion( const AnimationParameterSet& parameter, const AnimationTimeStep& step, const IAnimationRootMotionSource& source ) const override;
+        void                        accumulateCurves( const AnimationParameterSet& parameter, float32 time, float32 weight, IAnimationCurveSink& sink ) const override;
         /** @brief 마지막 평가가 있던 섹션 번호입니다(진단 · 테스트). */
         uint32 getCurrentSection() const { return _currentSection; }
         /** @brief 마지막 평가의 입력 클립 시각입니다(진단 · 테스트). */
         float32 getClipTime() const { return _clipTime; }
 
     private:
-        /** @brief 클립 시각을 @p delta 초만큼 섹션 링크를 따라 옮깁니다. */
-        void advance( float32 delta, const AnimationParameterSet& parameter ) const;
+        /** @brief 섹션 위의 자리입니다. */
+        struct Cursor
+        {
+            uint32  _section{ 0 };
+            float32 _clipTime{ 0.0f };
+        };
+        /** @brief 클립 시각 구간 하나입니다(한 섹션 안의 `[_start, _end]`). */
+        struct ClipSpan
+        {
+            float32 _start{ 0.0f };
+            float32 _end{ 0.0f };
+        };
+
+        /** @brief @p cursor 를 @p delta 초만큼 섹션 링크를 따라 옮긴 자리입니다. @p pOutListSpan 이 있으면 지난 클립 구간을 차례로 덧붙입니다. 상태를 바꾸지 않습니다. */
+        Cursor advanceCursor( Cursor cursor, float32 delta, const AnimationParameterSet& parameter, vector<ClipSpan>* pOutListSpan ) const;
+        /** @brief 플레이어 시각 @p time 의 자리입니다 — 마지막 평가 뒤면 그 자리에서, 아니면 첫 섹션부터 걷는다. 상태를 바꾸지 않습니다. */
+        Cursor findCursor( float32 time, const AnimationParameterSet& parameter ) const;
 
     private:
         const IAnimationPlayable* _pInput;
         vector<Section>           _listSection;
         float32                   _playLength;
-        mutable float32           _lastTime;       ///< 마지막으로 받은 플레이어 시각(음수 = 아직 평가하지 않음)
-        mutable float32           _clipTime;       ///< 입력 클립 시각
-        mutable uint32            _currentSection; ///< 지금 섹션 번호
+        mutable float32           _lastTime;        ///< 마지막으로 받은 플레이어 시각(음수 = 아직 평가하지 않음)
+        mutable float32           _clipTime;        ///< 입력 클립 시각
+        mutable uint32            _currentSection;  ///< 지금 섹션 번호
+        mutable vector<ClipSpan>  _listScratchSpan; ///< 루트 모션 구간 임시(인스턴스마다 한 스레드에서 쓴다)
     };
 } // namespace sw
 

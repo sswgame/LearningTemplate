@@ -79,6 +79,38 @@ namespace
 
         static bool isSameRotation( const quaternion& expected, const quaternion& actual ) { return MathUtil::abs( expected.dot( actual ) ) > 0.9999f; }
 
+        /** @brief 입력마다 정한 속도(m/s)로 X 로 가는 루트 모션을 냅니다 — 루트 모션은 걸음 구간 길이 × 속도입니다. */
+        class LinearRootMotionSource final : public IAnimationRootMotionSource
+        {
+        public:
+            const IAnimationPlayable* _pFast{ nullptr };
+            float32                   _fastSpeed{ 10.0f };
+            mutable uint32            _callCount{ 0 };
+
+            BoneTransform computeRootMotion( const IAnimationPlayable& playable, const AnimationTimeStep& step ) const override
+            {
+                ++_callCount;
+                BoneTransform delta;
+                delta._translation = float3{ ( step._currentTime - step._previousTime ) * ( &playable == _pFast ? _fastSpeed : 1.0f ), 0.0f, 0.0f };
+                return delta;
+            }
+        };
+
+        /** @brief 받은 입력 · 시각 · 가중치를 적습니다. */
+        class RecordingCurveSink final : public IAnimationCurveSink
+        {
+        public:
+            struct Entry
+            {
+                const IAnimationPlayable* _pPlayable{ nullptr };
+                float32                   _time{ 0.0f };
+                float32                   _weight{ 0.0f };
+            };
+            vector<Entry> _listEntry;
+
+            void accumulateCurves( const IAnimationPlayable& playable, float32 time, float32 weight ) override { _listEntry.push_back( Entry{ &playable, time, weight } ); }
+        };
+
         static constexpr const utf8* kArmMirrorTable = R"(<SkeletonMirrorTable><_listPair><SkeletonMirrorPair _bone="arm_l" _mirroredBone="arm_r" /></_listPair></SkeletonMirrorTable>)";
 
         /** @brief 섹션 Start(0..0.5) → Loop(0.5..1, 반복, Done 이면 End) → End(1..1.5) 의 몽타주입니다. */
@@ -386,4 +418,50 @@ SW_TEST_CASE( AnimationPoseNodeTest, DefaultDefsSatisfyTheirContract )
     AnimationGraphPoseNodeDef unknown;
     SW_EXPECT_LOG( "AnimationPoseNode.PoseNodeTypeUnknown" );
     SW_EXPECT_FALSE( registry.makeDefaultDef( hashed_string( "Mystery" ), unknown ) );
+}
+
+/**
+ * @brief [AnimationPoseNodeTest] 포즈 노드도 루트 모션 · 커브를 낸다 — 몽타주는 섹션 링크로 끊긴 클립 구간을 잇고, 섞기는 포즈와 같은 가중치 · 위상, 비추기는 축 성분을 뒤집는다
+ * @details 예전에는 포즈 노드가 루트 모션 · 커브를 내지 않아 몽타주로 도는 공격의 전진 · 발 커브가 사라졌다. 변이: 몽타주가 걸음 구간을 섹션으로 끊지 않고 플레이어 시각 그대로 물으면 첫 단언이 진다.
+ */
+SW_TEST_CASE( AnimationPoseNodeTest, PoseNodesExtractRootMotionAndCurves )
+{
+    const Util::FixedPlayable      clip( 1.5f );
+    unique_ptr<IAnimationPoseNode> montage = Util::makeReloadMontage( clip );
+    SW_REQUIRE_NOT_NULL( montage.get() );
+    AnimationParameterSet        parameter;
+    Util::LinearRootMotionSource source;
+
+    // 0.25 → 1.25: Start 0.25..0.5, Loop 0.5..1.0, Loop 0.5..0.75 — 클립 시각으로 1 초를 지났고 조각은 셋이다.
+    AnimationTimeStep step;
+    step._previousTime        = 0.25f;
+    step._currentTime         = 1.25f;
+    const BoneTransform delta = montage->computeRootMotion( parameter, step, source );
+    SW_EXPECT_NEAR( 1.0f, delta._translation._x, 1.0e-5f );
+    SW_EXPECT_EQUAL( 3u, source._callCount );
+    Util::RecordingCurveSink montageSink;
+    montage->accumulateCurves( parameter, 1.25f, 0.5f, montageSink );
+    SW_REQUIRE_EQUAL( size_t( 1 ), montageSink._listEntry.size() );
+    SW_EXPECT_NEAR( 0.75f, montageSink._listEntry[0]._time, 1.0e-5f ); // 커브도 섹션을 따른 클립 시각이다
+
+    // 섞기: 둘째 입력(길이 2)은 같은 위상이라 구간이 두 배다 — 0.5 × 1 과 1.0 × 10 을 0.25 로 섞는다.
+    const Util::FixedPlayable slow( 1.0f );
+    const Util::FixedPlayable run( 2.0f );
+    const BlendPosesNode      blend( slow, run, hashed_string( "Speed" ) );
+    parameter.setFloat( hashed_string( "Speed" ), 0.25f );
+    source._pFast             = &run;
+    step._previousTime        = 0.0f;
+    step._currentTime         = 0.5f;
+    const BoneTransform moved = blend.computeRootMotion( parameter, step, source );
+    SW_EXPECT_NEAR( 0.5f * 0.75f + 10.0f * 0.25f, moved._translation._x, 1.0e-4f );
+    Util::RecordingCurveSink blendSink;
+    blend.accumulateCurves( parameter, 0.5f, 1.0f, blendSink );
+    SW_REQUIRE_EQUAL( size_t( 2 ), blendSink._listEntry.size() );
+    SW_EXPECT_NEAR( 0.75f, blendSink._listEntry[0]._weight, 1.0e-5f );
+    SW_EXPECT_NEAR( 1.0f, blendSink._listEntry[1]._time, 1.0e-5f );
+    SW_EXPECT_NEAR( 0.25f, blendSink._listEntry[1]._weight, 1.0e-5f );
+
+    // 비추기(X): 이동의 X 가 뒤집힌다.
+    const MirrorPoseNode mirror( slow, AnimationMirrorAxis::X );
+    SW_EXPECT_NEAR( -0.5f, mirror.computeRootMotion( parameter, step, source )._translation._x, 1.0e-5f );
 }
