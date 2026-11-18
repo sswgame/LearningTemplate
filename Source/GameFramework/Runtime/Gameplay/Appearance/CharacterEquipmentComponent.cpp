@@ -415,11 +415,7 @@ namespace sw
 
             static const CharacterEquipmentComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*                  pTarget    = query.findTargetObject();
-                const CharacterEquipmentComponent* pEquipment = pTarget != nullptr ? pTarget->getComponent<CharacterEquipmentComponent>() : nullptr;
-                if ( pEquipment == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "CharacterEquipmentComponent" ) );
-                return pEquipment;
+                return query.findTargetComponent<CharacterEquipmentComponent>( "CharacterEquipmentComponent", outValue );
             }
 
             /** @brief 감시 값 `Equipment.Worn` — 칸(key)에 낀 아이템 id 입니다. 비었으면 `(empty)` 입니다. */

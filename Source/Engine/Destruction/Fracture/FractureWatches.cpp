@@ -17,11 +17,7 @@ namespace sw
             /** @brief 질의 대상의 파괴 컴포넌트입니다. 없으면 까닭을 적고 nullptr 입니다. */
             static const FractureComponentBase* findTargetFracture( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*            pTarget   = query.findTargetObject();
-                const FractureComponentBase* pFracture = pTarget != nullptr ? pTarget->getComponent<FractureComponentBase>() : nullptr;
-                if ( pFracture == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "Fracture" ) );
-                return pFracture;
+                return query.findTargetComponent<FractureComponentBase>( "Fracture", outValue );
             }
 
             [[nodiscard]] static bool readFractured( const AutomationWatchQuery& query, AutomationWatchValue& outValue )

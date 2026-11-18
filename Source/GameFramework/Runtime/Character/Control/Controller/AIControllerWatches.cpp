@@ -25,11 +25,7 @@ namespace sw
         /** @brief 질의 대상 오브젝트의 AI 조종자입니다. 없으면 이유를 적고 nullptr 입니다. */
         const AIControllerComponent* findTargetAI( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const GameObject*            pTarget = query.findTargetObject();
-            const AIControllerComponent* pAI     = pTarget != nullptr ? pTarget->getComponent<AIControllerComponent>() : nullptr;
-            if ( pAI == nullptr )
-                outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "AI controller" ) );
-            return pAI;
+            return query.findTargetComponent<AIControllerComponent>( "AI controller", outValue );
         }
 
         /** @brief 감시 값 `AI.State` 입니다. AI 조종자의 판단 상태 이름(`setStateName`)이고, 없으면 `none` 입니다. */

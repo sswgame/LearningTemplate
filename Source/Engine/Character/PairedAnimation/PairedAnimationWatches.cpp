@@ -15,13 +15,9 @@ namespace sw
         /** @brief 감시 값 `PairedAnimation.SessionState` — 대상 오브젝트의 `PairedAnimationComponent` 가 마지막으로 시작한 세션의 상태(0 Idle · 1 Playing · 2 Finished · 3 Aborted). */
         [[nodiscard]] bool readPairedSessionState( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const GameObject*               pObject    = query.findTargetObject();
-            const PairedAnimationComponent* pComponent = pObject != nullptr ? pObject->getComponent<PairedAnimationComponent>() : nullptr;
+            const PairedAnimationComponent* pComponent = query.findTargetComponent<PairedAnimationComponent>( "PairedAnimationComponent", outValue );
             if ( pComponent == nullptr )
-            {
-                outValue.setText( pObject == nullptr ? query.getTargetProblem() : query.describeMissing( "PairedAnimationComponent" ) );
                 return false;
-            }
             outValue.setNumber( static_cast<float64>( static_cast<uint32>( pComponent->getSessionState() ) ) );
             return true;
         }

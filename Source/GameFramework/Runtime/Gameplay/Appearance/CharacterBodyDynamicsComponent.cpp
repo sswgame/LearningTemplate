@@ -50,11 +50,7 @@ namespace sw
 
             static const CharacterBodyDynamicsComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*                     pTarget = query.findTargetObject();
-                const CharacterBodyDynamicsComponent* pFound  = pTarget != nullptr ? pTarget->getComponent<CharacterBodyDynamicsComponent>() : nullptr;
-                if ( pFound == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "CharacterBodyDynamicsComponent" ) );
-                return pFound;
+                return query.findTargetComponent<CharacterBodyDynamicsComponent>( "CharacterBodyDynamicsComponent", outValue );
             }
 
             template <float32 ( CharacterBodyDynamicsComponent::*Getter )() const>

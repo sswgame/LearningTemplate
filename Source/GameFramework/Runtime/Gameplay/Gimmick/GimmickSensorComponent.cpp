@@ -200,13 +200,9 @@ namespace sw
             /** @brief 감시 값 `Gimmick.OccupantWeight` 입니다. 대상 센서에 겹친 것들의 무게 합(kg — `GimmickWeightComponent`, 강체 질량, 기본 무게 순)입니다. 눌림판이 읽는 값과 같다. */
             [[nodiscard]] static bool readOccupantWeight( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*             pTarget = query.findTargetObject();
-                const GimmickSensorComponent* pSensor = pTarget != nullptr ? pTarget->getComponent<GimmickSensorComponent>() : nullptr;
+                const GimmickSensorComponent* pSensor = query.findTargetComponent<GimmickSensorComponent>( "gimmick sensor", outValue );
                 if ( pSensor == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "gimmick sensor" ) );
                     return false;
-                }
                 outValue.setNumber( static_cast<float64>( pSensor->computeOccupantWeight() ) );
                 return true;
             }

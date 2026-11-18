@@ -204,11 +204,7 @@ namespace sw
             /** @brief 질의 대상의 배입니다. 없으면 까닭을 적고 nullptr 입니다. */
             static const BoatComponent* findTargetBoat( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*    pTarget = query.findTargetObject();
-                const BoatComponent* pBoat   = pTarget != nullptr ? pTarget->getComponent<BoatComponent>() : nullptr;
-                if ( pBoat == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "Boat" ) );
-                return pBoat;
+                return query.findTargetComponent<BoatComponent>( "Boat", outValue );
             }
 
             /** @brief 감시 값 `Boat.ForwardSpeed` 입니다. 선수 방향 속도(m/s, 땅 기준)입니다. */

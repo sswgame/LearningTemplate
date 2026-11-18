@@ -135,18 +135,9 @@ namespace sw
             /** @brief 감시 값 `Shooter3D.BodySpeed` 입니다 — 대상 오브젝트의 슈터 몸 속도(수평 걸음 + 수직, m/s). 몸이 없으면 값이 없습니다. */
             [[nodiscard]] static bool readBodySpeed( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject* pTarget = query.findTargetObject();
-                if ( pTarget == nullptr )
-                {
-                    outValue.setText( query.getTargetProblem() );
-                    return false;
-                }
-                const ShooterBodyMovementComponent* pBody = pTarget->getComponent<ShooterBodyMovementComponent>();
+                const ShooterBodyMovementComponent* pBody = query.findTargetComponent<ShooterBodyMovementComponent>( "shooter body movement", outValue );
                 if ( pBody == nullptr )
-                {
-                    outValue.setText( "'" + string( pTarget->getName().c_str() ) + "' has no shooter body movement" );
                     return false;
-                }
                 const float3  walk = pBody->getMoveVelocity();
                 const float32 fall = pBody->getState()._verticalSpeed;
                 outValue.setNumber( static_cast<float64>( float3{ walk._x, fall, walk._z }.getLength() ) );

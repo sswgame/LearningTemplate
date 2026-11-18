@@ -18,16 +18,7 @@ namespace sw
             /** @brief 대상 오브젝트의 탐침입니다. 없으면 까닭을 적고 nullptr 입니다. */
             static const NavPathProbeComponent* findProbe( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject* pObject = query.findTargetObject();
-                if ( pObject == nullptr )
-                {
-                    outValue.setText( query.getTargetProblem() );
-                    return nullptr;
-                }
-                const NavPathProbeComponent* pProbe = pObject->getComponent<NavPathProbeComponent>();
-                if ( pProbe == nullptr )
-                    outValue.setText( query.describeMissing( "NavPathProbeComponent" ) );
-                return pProbe;
+                return query.findTargetComponent<NavPathProbeComponent>( "NavPathProbeComponent", outValue );
             }
 
             /** @brief 감시 값 `EmptyNav.ProbePathLength` — 탐침이 마지막으로 받은 비동기 경로의 길이(m)입니다. 아직 받지 못했으면 값이 없습니다. */

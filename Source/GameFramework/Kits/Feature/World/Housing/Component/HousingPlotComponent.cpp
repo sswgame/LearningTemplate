@@ -259,11 +259,7 @@ namespace sw
 
             static const HousingPlotComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*           pTarget = query.findTargetObject();
-                const HousingPlotComponent* pPlot   = pTarget != nullptr ? pTarget->getComponent<HousingPlotComponent>() : nullptr;
-                if ( pPlot == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "housing plot" ) );
-                return pPlot;
+                return query.findTargetComponent<HousingPlotComponent>( "housing plot", outValue );
             }
 
             /** @brief 감시 값 `Housing.PlacementCount` 입니다. */

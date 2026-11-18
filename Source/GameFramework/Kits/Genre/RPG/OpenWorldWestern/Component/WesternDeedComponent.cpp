@@ -123,7 +123,7 @@ namespace sw
                 const WesternGameModeComponent* pGameMode = pTarget != nullptr ? pTarget->getComponent<WesternGameModeComponent>() : nullptr;
                 const WesternOutlaw*            pOutlaw   = pGameMode != nullptr ? pGameMode->findOutlaw() : nullptr;
                 if ( pOutlaw == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "opened western game mode" ) );
+                    outValue.setText( query.describeMissing( "opened western game mode" ) );
                 return pOutlaw;
             }
 

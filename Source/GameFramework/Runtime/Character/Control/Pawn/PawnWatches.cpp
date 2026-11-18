@@ -19,13 +19,9 @@ namespace sw
         /** @brief 감시 값 `Pawn.Controller` 입니다. 폰을 쥔 조종자 오브젝트의 이름이고, 아무도 쥐지 않았으면 `none` 입니다. */
         [[nodiscard]] bool readPawnController( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const GameObject*    pTarget = query.findTargetObject();
-            const PawnComponent* pPawn   = pTarget != nullptr ? pTarget->getComponent<PawnComponent>() : nullptr;
+            const PawnComponent* pPawn = query.findTargetComponent<PawnComponent>( "pawn", outValue );
             if ( pPawn == nullptr )
-            {
-                outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "pawn" ) );
                 return false;
-            }
             const Component* pController = query._pManager != nullptr ? query._pManager->resolveComponent( pPawn->getController() ) : nullptr;
             outValue.setText( pController != nullptr ? string_view{ pController->getOwner()->getName().c_str() } : string_view{ "none" } );
             return true;

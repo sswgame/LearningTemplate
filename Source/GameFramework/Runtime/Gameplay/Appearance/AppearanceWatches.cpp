@@ -28,16 +28,7 @@ namespace sw
             /** @brief 감시 값 대상 오브젝트의 외형 컴포넌트입니다. 없으면 @p outValue 에 까닭을 적고 nullptr 입니다. */
             static const CharacterAppearanceComponent* findWatchTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject* pObject = query.findTargetObject();
-                if ( pObject == nullptr )
-                {
-                    outValue.setText( query.getTargetProblem() );
-                    return nullptr;
-                }
-                const CharacterAppearanceComponent* pAppearance = pObject->getComponent<CharacterAppearanceComponent>();
-                if ( pAppearance == nullptr )
-                    outValue.setText( string( "'" ) + pObject->getName().c_str() + "' has no CharacterAppearanceComponent" );
-                return pAppearance;
+                return query.findTargetComponent<CharacterAppearanceComponent>( "CharacterAppearanceComponent", outValue );
             }
 
             /** @brief 조립한 외형의 프리셋 id 입니다. 아직 조립하지 않았으면 빈 글입니다. */

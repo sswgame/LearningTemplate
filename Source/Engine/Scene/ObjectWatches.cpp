@@ -27,7 +27,7 @@ namespace sw
             const SceneComponent* pScene  = pTarget != nullptr ? pTarget->getPrimarySceneComponent() : nullptr;
             if ( pScene == nullptr )
             {
-                outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "transform" ) );
+                outValue.setText( query.describeMissing( "transform" ) );
                 return false;
             }
             outPosition = pScene->getWorldPosition();
@@ -158,13 +158,9 @@ namespace sw
         /** @brief 감시 값 `Camera.DrawnAspect` 입니다. 대상 오브젝트의 카메라가 마지막으로 그린 뷰의 가로세로 비이고, 그린 적이 없으면 0 입니다. */
         [[nodiscard]] bool readCameraDrawnAspect( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const GameObject*      pTarget = query.findTargetObject();
-            const CameraComponent* pCamera = pTarget != nullptr ? pTarget->getComponent<CameraComponent>() : nullptr;
+            const CameraComponent* pCamera = query.findTargetComponent<CameraComponent>( "CameraComponent", outValue );
             if ( pCamera == nullptr )
-            {
-                outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "CameraComponent" ) );
                 return false;
-            }
             outValue.setNumber( static_cast<float64>( pCamera->getDrawnAspect() ) );
             return true;
         }

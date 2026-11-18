@@ -39,13 +39,9 @@ namespace sw
             /** @brief 감시 값 `Surface.GroundKind` 입니다. 대상의 `GroundSurfaceComponent` 가 마지막으로 읽은 표면 종류입니다(디딘 것이 없으면 값이 없다). */
             [[nodiscard]] static bool readGroundKind( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*             pTarget = query.findTargetObject();
-                const GroundSurfaceComponent* pGround = pTarget != nullptr ? pTarget->getComponent<GroundSurfaceComponent>() : nullptr;
+                const GroundSurfaceComponent* pGround = query.findTargetComponent<GroundSurfaceComponent>( "GroundSurfaceComponent", outValue );
                 if ( pGround == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "GroundSurfaceComponent" ) );
                     return false;
-                }
                 if ( pGround->getGroundKind().empty() )
                 {
                     outValue.setText( "no ground under the target" );
@@ -58,13 +54,9 @@ namespace sw
             /** @brief 감시 값 `Surface.MoveScale` 입니다. 대상 캐릭터 컨트롤러가 지난 물리 프레임에 걷는 속도에 곱한 계수입니다. */
             [[nodiscard]] static bool readMoveScale( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*                   pTarget     = query.findTargetObject();
-                const CharacterControllerComponent* pController = pTarget != nullptr ? pTarget->getComponent<CharacterControllerComponent>() : nullptr;
+                const CharacterControllerComponent* pController = query.findTargetComponent<CharacterControllerComponent>( "CharacterControllerComponent", outValue );
                 if ( pController == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "CharacterControllerComponent" ) );
                     return false;
-                }
                 outValue.setNumber( static_cast<float64>( pController->getMoveScale() ) );
                 return true;
             }

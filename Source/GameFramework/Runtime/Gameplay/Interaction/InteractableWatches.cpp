@@ -21,13 +21,9 @@ namespace sw
             /** @brief 대상(target = 오브젝트 이름)의 상호작용 대상이 쥔 정의입니다. 없으면 까닭을 @p outValue 에 적고 nullptr 입니다. */
             [[nodiscard]] static const InteractionDef* findHeldDefinition( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*            pTarget       = query.findTargetObject();
-                const InteractableComponent* pInteractable = pTarget != nullptr ? pTarget->getComponent<InteractableComponent>() : nullptr;
+                const InteractableComponent* pInteractable = query.findTargetComponent<InteractableComponent>( "interactable", outValue );
                 if ( pInteractable == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "interactable" ) );
                     return nullptr;
-                }
                 const InteractionDef* pDef = pInteractable->getDefinition();
                 if ( pDef == nullptr )
                     outValue.setText( "the interactable holds no definition" );

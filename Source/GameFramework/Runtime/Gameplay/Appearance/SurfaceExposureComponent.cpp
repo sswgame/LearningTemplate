@@ -33,11 +33,7 @@ namespace sw
             /** @brief 감시 값 대상의 노출 컴포넌트입니다. 없으면 까닭을 적고 nullptr 입니다. */
             static const SurfaceExposureComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*               pTarget = query.findTargetObject();
-                const SurfaceExposureComponent* pFound  = pTarget != nullptr ? pTarget->getComponent<SurfaceExposureComponent>() : nullptr;
-                if ( pFound == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "SurfaceExposureComponent" ) );
-                return pFound;
+                return query.findTargetComponent<SurfaceExposureComponent>( "SurfaceExposureComponent", outValue );
             }
 
             /** @brief 감시 값 `Surface.Submersion` 입니다. 대상의 마지막 잠긴 비율(0..1)입니다. */

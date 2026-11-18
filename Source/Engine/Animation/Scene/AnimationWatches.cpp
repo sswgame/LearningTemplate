@@ -94,13 +94,9 @@ namespace sw
             /** @brief 질의 감시 값 `Animation.BoneX` 입니다. 대상 오브젝트의 스켈레탈 메시에서 본 `key` 의 월드 X(m)입니다(지난 포즈의 모델 공간 × 유닛의 월드). */
             [[nodiscard]] static bool readBoneX( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*            pTarget = query.findTargetObject();
-                const SkeletalMeshComponent* pMesh   = pTarget != nullptr ? pTarget->getComponent<SkeletalMeshComponent>() : nullptr;
+                const SkeletalMeshComponent* pMesh = query.findTargetComponent<SkeletalMeshComponent>( "SkeletalMeshComponent", outValue );
                 if ( pMesh == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "SkeletalMeshComponent" ) );
                     return false;
-                }
                 float4x4 boneModel;
                 if ( pMesh->findBoneModelTransform( hashed_string( query._key ), boneModel ) == false )
                 {
@@ -115,13 +111,9 @@ namespace sw
             /** @brief 질의 감시 값 `Animation.State` 입니다. 대상 오브젝트의 애니메이터가 지금 재생하는 상태(클립) 이름입니다. */
             [[nodiscard]] static bool readState( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*                pTarget   = query.findTargetObject();
-                const SkeletalAnimatorComponent* pAnimator = pTarget != nullptr ? pTarget->getComponent<SkeletalAnimatorComponent>() : nullptr;
+                const SkeletalAnimatorComponent* pAnimator = query.findTargetComponent<SkeletalAnimatorComponent>( "SkeletalAnimatorComponent", outValue );
                 if ( pAnimator == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "SkeletalAnimatorComponent" ) );
                     return false;
-                }
                 outValue.setText( pAnimator->getCurrentStateName().c_str() );
                 return true;
             }

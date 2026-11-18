@@ -23,18 +23,9 @@ namespace sw
          */
         [[nodiscard]] bool readWidgetMarkerVisible( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const GameObject* pTarget = query.findTargetObject();
-            if ( pTarget == nullptr )
-            {
-                outValue.setText( query.getTargetProblem() );
-                return false;
-            }
-            const WidgetComponent* pWidget = pTarget->getComponent<WidgetComponent>();
+            const WidgetComponent* pWidget = query.findTargetComponent<WidgetComponent>( "widget component", outValue );
             if ( pWidget == nullptr )
-            {
-                outValue.setText( query.describeMissing( "widget component" ) );
                 return false;
-            }
             const Widget* pContent = pWidget->getSpace() == WidgetSpace::Screen ? pWidget->getContent() : nullptr;
             outValue.setNumber( pContent != nullptr && pContent->getVisibility() != WidgetVisibility::Collapsed ? 1.0 : 0.0 );
             return true;

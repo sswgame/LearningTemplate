@@ -242,13 +242,9 @@ namespace sw
             /** @brief 감시 값 `Mesh.LODIndex` — 대상 오브젝트 첫 메시 컴포넌트의 지금 단계입니다. */
             [[nodiscard]] static bool readLODIndex( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*    pTarget = query.findTargetObject();
-                const MeshComponent* pMesh   = pTarget != nullptr ? pTarget->getComponent<MeshComponent>() : nullptr;
+                const MeshComponent* pMesh = query.findTargetComponent<MeshComponent>( "mesh component", outValue );
                 if ( pMesh == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "mesh component" ) );
                     return false;
-                }
                 outValue.setNumber( static_cast<float64>( pMesh->getLODIndex() ) );
                 return true;
             }

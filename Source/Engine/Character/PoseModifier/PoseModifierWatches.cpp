@@ -20,13 +20,9 @@ namespace sw
             /** @brief `Rig.Output` 의 몸통입니다. 대상 · 리그 · 키 모양(`노드.출력`) · 노드 출력 중 하나가 없으면 까닭을 적고 false 입니다. */
             [[nodiscard]] static bool readRigOutput( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*            pTarget = query.findTargetObject();
-                const PoseModifierComponent* pRig    = pTarget != nullptr ? pTarget->getComponent<PoseModifierComponent>() : nullptr;
+                const PoseModifierComponent* pRig = query.findTargetComponent<PoseModifierComponent>( "PoseModifierComponent", outValue );
                 if ( pRig == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "PoseModifierComponent" ) );
                     return false;
-                }
                 const size_t dot = query._key.find( '.' );
                 if ( dot == string_view::npos || dot == 0 || dot + 1 >= query._key.size() )
                 {

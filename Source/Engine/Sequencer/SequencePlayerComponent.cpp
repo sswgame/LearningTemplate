@@ -23,11 +23,7 @@ namespace sw
         {
             static const SequencePlayerComponent* findTargetPlayer( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*              pTarget = query.findTargetObject();
-                const SequencePlayerComponent* pPlayer = pTarget != nullptr ? pTarget->getComponent<SequencePlayerComponent>() : nullptr;
-                if ( pPlayer == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "sequence player" ) );
-                return pPlayer;
+                return query.findTargetComponent<SequencePlayerComponent>( "sequence player", outValue );
             }
 
             /** @brief 감시 값 `Sequence.Frame` 입니다 — 대상 플레이어의 지금 프레임입니다. */
