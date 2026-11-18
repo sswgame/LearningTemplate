@@ -287,7 +287,7 @@ namespace sw::internal
          * @details 이종 키(예: `string_view`)로 찾아도 키를 새로 만들지 않습니다 — 해시가 transparent 여야 합니다(`DefaultHash<sw::string>` 의 `string_view` 오버로드).
          */
         template <typename K>
-        size_t findDenseIndex( const K& key ) const
+        SW_INLINE size_t findDenseIndex( const K& key ) const
         {
             if ( _listBucket.empty() )
                 return _listDenseData.size();
@@ -300,9 +300,10 @@ namespace sw::internal
          * @brief 키가 있으면 그 인덱스와 false, 없으면 @p makeNode 가 만든 노드를 끝에 넣어 체인에 걸고 그 인덱스와 true 를 돌려줍니다. 키는 한 번만 해시합니다.
          * @param makeNode `Node( uint32 next, uint32 tag )` — 키가 없을 때만 불립니다(키가 있으면 넣으려던 값을 건드리지 않는다).
          * @details 키가 있으면 버킷을 늘리지 않습니다. 없을 때만 부하율(1)을 보고 버킷을 두 배로 늘린 뒤 넣습니다.
+         *          찾기 · 넣기 길의 도우미는 `SW_INLINE` 이다 — 컨테이너 함수마다 본문이 통째로 있던 예전과 같은 코드가 나오고, Debug 에서도 호출 층이 늘지 않는다.
          */
         template <typename TMakeNode>
-        pair<uint32, bool> getOrCreateNode( const Key& key, TMakeNode&& makeNode )
+        SW_INLINE pair<uint32, bool> getOrCreateNode( const Key& key, TMakeNode&& makeNode )
         {
             const uint32 tag         = makeTag( get_hasher()( key ) );
             size_t       bucketIndex = 0;
@@ -382,7 +383,7 @@ namespace sw::internal
          * @details 키를 비교하기 전에 태그부터 견줍니다. 비교자가 이종 키를 받지 못하면(`std::equal_to<Key>`) 키의 `==` 로 견줍니다.
          */
         template <typename K>
-        uint32 findInChain( const K& key, uint32 tag, size_t bucketIndex ) const
+        SW_INLINE uint32 findInChain( const K& key, uint32 tag, size_t bucketIndex ) const
         {
             const uint32* pBucketData  = std::as_const( _listBucket ).data();
             const Node*   pDenseData   = std::as_const( _listDenseData ).data();
