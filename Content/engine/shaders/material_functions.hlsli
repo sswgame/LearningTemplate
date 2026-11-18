@@ -86,7 +86,9 @@ struct SurfaceFunction
 
     // 투영
     static float3 computeTriplanarWeights( float3 normal, float sharpness );
-    static float4 sampleTriplanar( uint textureIndex, float3 position, float3 weights, float tiling );
+    static float2 computeTriplanarFaceUV( float3 position, float3 normal, uint axis );
+    static uint findDominantAxis( float3 normal );
+    static float4 sampleTriplanar( uint textureIndex, float3 position, float3 normal, float3 weights, float tiling );
     static float2 projectDominantAxis( float3 position, float3 normal );
     static float4 sampleNoTile( uint textureIndex, float2 uv, uint seed );
     static float2 rotateQuarter( float2 uv, uint rotation );
@@ -245,23 +247,40 @@ static float3 SurfaceFunction::computeTriplanarWeights( float3 normal, float sha
     return weights / ( weights.x + weights.y + weights.z );
 }
 
-/** @brief 텍스처를 세 축(x 면 = zy, y 면 = xz, z 면 = xy)에서 찍어 가중치로 섞는다(언리얼 WorldAlignedTexture). */
-static float4 SurfaceFunction::sampleTriplanar( uint textureIndex, float3 position, float3 weights, float tiling )
+/**
+ * @brief 축 @p axis(0 x 면 · 1 y 면 · 2 z 면)의 면에 월드 위치를 투영한 UV — 여섯 면 모두 바깥에서 볼 때 거울상이 아니다. C++ `MaterialProjection::computeTriplanarFaceUV` 와 같은 식.
+ * @details u 는 그 면을 보는 화면의 오른쪽(왼손: 오른쪽 = 위 × 시선, 시선 = -N), v 는 화면 아래다(벽은 -y, 바닥 · 천장은 +z 를 화면 위로 둔다).
+ *          면의 부호(@p normal 의 그 축 성분)마다 u 를 뒤집는다 — Ben Golus 3 축 노멀 매핑 · Godot 3 축 UV 와 같은 생각이다.
+ */
+static float2 SurfaceFunction::computeTriplanarFaceUV( float3 position, float3 normal, uint axis )
 {
-    const float4 sideX = MaterialTexture::sampleIndex( textureIndex, position.zy * tiling );
-    const float4 sideY = MaterialTexture::sampleIndex( textureIndex, position.xz * tiling );
-    const float4 sideZ = MaterialTexture::sampleIndex( textureIndex, position.xy * tiling );
+    const float3 faceSign = float3( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f, normal.z >= 0.0f ? 1.0f : -1.0f );
+    const float2 onX      = float2( position.z * faceSign.x, -position.y );
+    const float2 onY      = float2( position.x * faceSign.y, -position.z );
+    const float2 onZ      = float2( -position.x * faceSign.z, -position.y );
+    return ( axis == 0u ) ? onX : ( ( axis == 1u ) ? onY : onZ );
+}
+
+/** @brief 노멀이 가장 큰 축(0 x · 1 y · 2 z — 같으면 y, 그다음 x 를 먼저)입니다. */
+static uint SurfaceFunction::findDominantAxis( float3 normal )
+{
+    const float3 axis = abs( normal );
+    return ( axis.y >= axis.x && axis.y >= axis.z ) ? 1u : ( ( axis.x >= axis.z ) ? 0u : 2u );
+}
+
+/** @brief 텍스처를 세 축 면에서 찍어(computeTriplanarFaceUV — 거울상 없음) 가중치로 섞는다(언리얼 WorldAlignedTexture). */
+static float4 SurfaceFunction::sampleTriplanar( uint textureIndex, float3 position, float3 normal, float3 weights, float tiling )
+{
+    const float4 sideX = MaterialTexture::sampleIndex( textureIndex, SurfaceFunction::computeTriplanarFaceUV( position, normal, 0u ) * tiling );
+    const float4 sideY = MaterialTexture::sampleIndex( textureIndex, SurfaceFunction::computeTriplanarFaceUV( position, normal, 1u ) * tiling );
+    const float4 sideZ = MaterialTexture::sampleIndex( textureIndex, SurfaceFunction::computeTriplanarFaceUV( position, normal, 2u ) * tiling );
     return sideX * weights.x + sideY * weights.y + sideZ * weights.z;
 }
 
-/** @brief 노멀이 가장 큰 축의 면으로 월드 위치를 투영한 2 차원 좌표(벽은 위가 +v). 절차 무늬를 UV 없는 벽 · 바닥에 찍는다. */
+/** @brief 노멀이 가장 큰 축의 면으로 월드 위치를 투영한 2 차원 좌표(computeTriplanarFaceUV — 거울상 없음, 벽은 위가 -v). 절차 무늬를 UV 없는 벽 · 바닥에 찍는다. */
 static float2 SurfaceFunction::projectDominantAxis( float3 position, float3 normal )
 {
-    const float3 axis = abs( normal );
-    const float2 onX  = float2( position.z, position.y );
-    const float2 onY  = float2( position.x, position.z );
-    const float2 onZ  = float2( position.x, position.y );
-    return ( axis.y >= axis.x && axis.y >= axis.z ) ? onY : ( ( axis.x >= axis.z ) ? onX : onZ );
+    return SurfaceFunction::computeTriplanarFaceUV( position, normal, SurfaceFunction::findDominantAxis( normal ) );
 }
 
 /** @brief UV 를 타일 가운데(0.5, 0.5) 기준으로 90 도 × @p rotation 돌린다. */

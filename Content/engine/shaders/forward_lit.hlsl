@@ -31,6 +31,7 @@ SW_MATERIAL_END
 #define SW_MATERIAL_RIM_LIGHT
 #define SW_MATERIAL_DEFAULT_VARYINGS
 #include "material_shader.hlsli"
+#include "material_functions.hlsli"
 
 #if defined( MATERIAL_WORLD_UV )
 // 월드 좌표 UV(트라이플래너) — 메시 UV 대신 월드 위치로 텍스처를 읽는다. 텍스처 한 장이 1 m 이고 면의 방향(노멀)에 따라 세 축 투영을 섞는다.
@@ -42,11 +43,8 @@ float4 sampleWorldTriplanar( uint textureIndex, float3 worldPosition, float3 wor
     float3 weight = pow( abs( worldNormal ), kTriplanarSharpness );
     weight /= max( weight.x + weight.y + weight.z, 1e-4f );
     const float3 scaledPosition = worldPosition * kWorldUvTilesPerMeter;
-    // 옆면은 위(+Y)가 텍스처 위(v 가 작은 쪽)가 되게 v 를 뒤집는다.
-    const float4 alongX = MaterialTexture::sampleIndex( textureIndex, float2( scaledPosition.z, -scaledPosition.y ) );
-    const float4 alongY = MaterialTexture::sampleIndex( textureIndex, float2( scaledPosition.x, scaledPosition.z ) );
-    const float4 alongZ = MaterialTexture::sampleIndex( textureIndex, float2( scaledPosition.x, -scaledPosition.y ) );
-    return alongX * weight.x + alongY * weight.y + alongZ * weight.z;
+    // 면마다 거울상이 아닌 UV(옆면은 위가 텍스처 위) — SurfaceFunction::sampleTriplanar 와 같은 투영이다.
+    return SurfaceFunction::sampleTriplanar( textureIndex, scaledPosition, worldNormal, weight, 1.0f );
 }
 
 float4 sampleSurfaceTexture( PixelContext context )

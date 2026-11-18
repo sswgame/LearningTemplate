@@ -45,39 +45,22 @@ SW_MATERIAL_END
 #endif
 #include "material_shader.hlsli"
 #include "normal_map.hlsli"
+#include "material_functions.hlsli"
 
 /**
  * @brief 월드 축 정렬 투영 UV 와 그 탄젠트입니다. 노멀이 가장 큰 축의 면에 투영하고, 벽은 위가 이미지 위다.
- * @details 여섯 면 모두 바깥에서 볼 때 이미지가 거울상이 아니다 — u 는 그 면을 보는 화면의 오른쪽(왼손: 오른쪽 = 위 × 시선, 시선 = -N),
- *          v 는 화면 아래다(벽은 -y, 바닥 · 천장은 -z 를 화면 위로 둔다). 면의 부호마다 u 를 뒤집는다(Ben Golus 의 3 축 노멀 매핑 · Godot 3 축 UV 와 같은 생각).
+ * @details UV 는 3 축 투영과 같은 함수다(SurfaceFunction::computeTriplanarFaceUV — 여섯 면 모두 거울상이 아니다). 탄젠트는 그 UV 의 dP/du 다.
  *          탄젠트 손잡이는 메시와 같은 규약이다 — cross( N, T ) × w 가 -dP/dv(수면: UV = xz, T = +x, w = +1 — `WaterBodyComponent`).
  */
 void computeWorldAlignedUV( float3 worldPosition, float3 normal, float tileSize, out float2 outUV, out float4 outTangent )
 {
-    const float3 axisWeight = abs( normal );
-    const float3 faceSign   = float3( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f, normal.z >= 0.0f ? 1.0f : -1.0f );
-    float3       tangent;
-    float3       downV;
-    if ( axisWeight.y >= axisWeight.x && axisWeight.y >= axisWeight.z )
-    {
-        outUV   = float2( worldPosition.x * faceSign.y, -worldPosition.z );
-        tangent = float3( faceSign.y, 0.0f, 0.0f );
-        downV   = float3( 0.0f, 0.0f, -1.0f );
-    }
-    else if ( axisWeight.x >= axisWeight.z )
-    {
-        outUV   = float2( worldPosition.z * faceSign.x, -worldPosition.y );
-        tangent = float3( 0.0f, 0.0f, faceSign.x );
-        downV   = float3( 0.0f, -1.0f, 0.0f );
-    }
-    else
-    {
-        outUV   = float2( -worldPosition.x * faceSign.z, -worldPosition.y );
-        tangent = float3( -faceSign.z, 0.0f, 0.0f );
-        downV   = float3( 0.0f, -1.0f, 0.0f );
-    }
-    outUV /= tileSize;
-    outTangent = float4( tangent, dot( cross( normal, tangent ), downV ) > 0.0f ? -1.0f : 1.0f );
+    const uint   axis     = SurfaceFunction::findDominantAxis( normal );
+    const float3 faceSign = float3( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f, normal.z >= 0.0f ? 1.0f : -1.0f );
+    // computeTriplanarFaceUV 의 dP/du(탄젠트) · dP/dv(아래)
+    const float3 tangent = ( axis == 0u ) ? float3( 0.0f, 0.0f, faceSign.x ) : ( ( axis == 1u ) ? float3( faceSign.y, 0.0f, 0.0f ) : float3( -faceSign.z, 0.0f, 0.0f ) );
+    const float3 downV   = ( axis == 1u ) ? float3( 0.0f, 0.0f, -1.0f ) : float3( 0.0f, -1.0f, 0.0f );
+    outUV                = SurfaceFunction::computeTriplanarFaceUV( worldPosition, normal, axis ) / tileSize;
+    outTangent           = float4( tangent, dot( cross( normal, tangent ), downV ) > 0.0f ? -1.0f : 1.0f );
 }
 
 MaterialSurface computeMaterialSurface( PixelContext context )
