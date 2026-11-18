@@ -144,7 +144,7 @@ SW_TEST_CASE( ScheduleSystemTest, NPCObjectIsFoundByItsComponentNotItsName )
     pVillager->addComponent<sw::ScheduleNPCComponent>()->setNPCID( sw::hashed_string( "b" ) );
     sw::GameObject* pNamedOnly = manager.createGameObject( sw::hashed_string( "a" ) );
 
-    const sw::optional<sw::int32> villagerIndex = sw::ScheduleNPCComponent::findNPCIndex( schedule, *pVillager );
+    const sw::optional<int32> villagerIndex = sw::ScheduleNPCComponent::findNPCIndex( schedule, *pVillager );
     SW_REQUIRE_TRUE( villagerIndex.has_value() );
     SW_EXPECT_TRUE( schedule.getNPCID( *villagerIndex ) == sw::hashed_string( "b" ) );
     SW_EXPECT_FALSE( sw::ScheduleNPCComponent::findNPCIndex( schedule, *pNamedOnly ).has_value() );

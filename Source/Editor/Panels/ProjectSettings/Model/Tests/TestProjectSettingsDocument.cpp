@@ -36,18 +36,18 @@ namespace
             OverriddenProject project;
             project._basePath     = FileUtil::joinPath( root, "Config/Engine/EngineConfig.json" );
             project._overridePath = FileUtil::joinPath( root, PlatformConfigOverride::makeEngineConfigPath( "Test" ) );
-            SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Engine/EngineConfig.json" ), project._baseText ) );
-            SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( project._basePath ) && FileUtil::writeTextFile( project._basePath, project._baseText ) );
-            SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( project._overridePath ) && FileUtil::writeTextFile( project._overridePath, kOverrideText ) );
+            SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Engine/EngineConfig.json" ), project._baseText ) );
+            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( project._basePath ) && FileUtil::writeTextFile( project._basePath, project._baseText ) );
+            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( project._overridePath ) && FileUtil::writeTextFile( project._overridePath, kOverrideText ) );
             return project;
         }
 
         static EngineConfig readEngineConfig( const string& path )
         {
             string text;
-            SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
+            SW_EXPECT_TRUE( FileUtil::readTextFile( path, text ) );
             EngineConfig config;
-            SW_REQUIRE_TRUE( ConfigManager::readConfigJSON( config, text, path.c_str() ) );
+            SW_EXPECT_TRUE( ConfigManager::readConfigJSON( config, text, path.c_str() ) );
             return config;
         }
     };

@@ -10,6 +10,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Serialization/Inherit/ResourceFieldWrite.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
