@@ -92,8 +92,6 @@ namespace sw
          * @details 프레임은 `getOrCreateGlyph` 의 `frameIndex` 로 가른다. 값의 정본은 데이터이며 부르는 쪽(`UISystem`)이 `gv_uiGlyphRasterBudgetMicros` 에서 넣는다.
          */
         void setRasterBudgetNanoseconds( int64 budgetNanoseconds ) { _rasterBudgetNanoseconds = budgetNanoseconds; }
-        /** @brief 면 하나의 글리프를 모두 테이블에서 지웁니다(면을 닫을 때). 아틀라스 영역은 페이지를 비울 때 돌아옵니다. */
-        void removeFace( FontFaceID face );
 
         /** @brief 아틀라스입니다(렌더러에 업로드를 넘길 때 `takeUploads`). */
         GlyphAtlas&       getAtlas() { return _atlas; }

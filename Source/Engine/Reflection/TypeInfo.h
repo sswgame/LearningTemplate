@@ -472,16 +472,6 @@ namespace sw
             }
         }
 
-        /** @brief 메서드를 순회합니다. */
-        template <typename Func>
-        void forEachMethod( Func&& func ) const
-        {
-            for ( const FunctionInfo& method : _listMethod )
-            {
-                func( method );
-            }
-        }
-
         /** @brief 이 타입이 선언한 이벤트를 이름으로 찾습니다. */
         const EventInfo* findEvent( const hashed_string& eventName ) const
         {

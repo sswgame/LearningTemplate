@@ -163,8 +163,6 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 쓰기: 문서는 호출자가 소유한다
         // ------------------------------------------------------------------------------
-        /** @brief null 로 만듭니다. */
-        void setNull() const;
         /** @brief 불리언으로 만듭니다. */
         void setBool( bool value ) const;
         /** @brief 정수로 만듭니다. */
@@ -227,31 +225,6 @@ namespace sw
 
 namespace sw
 {
-    /**
-     * @brief `parent` 안의 이름 붙은 배열을 돌며 **객체 원소만** 넘겨줍니다.
-     * @param pArrayName 배열 멤버 이름("nodes", "links" 등). 없거나 배열이 아니면 아무것도 하지 않습니다.
-     * @param visit `(const JSONValue& element, size_t index)` 를 받는 호출 가능 객체입니다.
-     * @details 손으로 읽는 JSON 에셋이 함께 쓴다. 배열을 얻고, 배열인지 묻고, 개수를 세고, 원소가 객체가 아니면
-     *          건너뛰는 일을 한 곳에 모았다. `isObject` 검사를 빠뜨리면 **망가진 파일 하나로 그 에셋이 통째로 깨지므로**, 검사를
-     *          여기 한 번만 둔다.
-     * @note 인덱스를 함께 넘기는 이유는 id 가 없는 원소에 **순번을 기본값으로** 쓰는 에셋이 있기 때문입니다.
-     */
-    template <typename VisitFn>
-    void forEachObjectInArray( const JSONValue& parent, const utf8* pArrayName, VisitFn&& visit )
-    {
-        const JSONValue arrayValue = parent.get( pArrayName );
-        if ( arrayValue.isArray() == false )
-            return;
-
-        const size_t count = arrayValue.size();
-        for ( size_t index = 0; index < count; ++index )
-        {
-            const JSONValue element = arrayValue.at( index );
-            if ( element.isObject() )
-                visit( element, index );
-        }
-    }
-
     /**
      * @class JSONDocument
      * @brief JSON 트리입니다. TypeInfo 없이 손으로 읽을 때 씁니다.
@@ -331,11 +304,6 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief JSON 문자열 값의 이스케이프를 해제합니다(주변 따옴표는 제외합니다). */
         static string unescapeString( string_view value );
-        /**
-         * @brief 최상위 객체에서 필드를 문자열로 추출합니다.
-         * @details 문자열이면 내용을, 그 밖의 스칼라는 dump 한 값을 반환합니다. 객체나 배열이면 빈 문자열입니다.
-         */
-        static string extractStringField( string_view json, string_view fieldName );
 
     private:
         struct Impl;
