@@ -586,7 +586,7 @@
     "Source/Engine/Renderer/Frame/Resource/RenderPSOCache.cpp": {"hex": 3},
     "Source/Engine/Renderer/Frame/Resource/ShaderParameterBinder.cpp": {"integer": 2},
     "Source/Engine/Renderer/Frame/View/RenderViewCollector.cpp": {"float": 3},
-    "Source/Engine/Renderer/Graph/RenderGraph.cpp": {"integer": 2},
+    "Source/Engine/Renderer/Graph/RenderGraph.cpp": {"integer": 1},
     "Source/Engine/Renderer/Lighting/LightGrid.cpp": {"integer": 1},
     "Source/Engine/Renderer/Lighting/RealtimeProbeUpdater.cpp": {"float": 1},
     "Source/Engine/Renderer/Lighting/ShadowSetup.cpp": {"float": 1},

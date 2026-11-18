@@ -159,12 +159,6 @@ namespace sw
         /** @brief 위쪽 밉 업로드를 제출했고 아직 `finishUpgradeResidency` 가 끝내지 않았으면 true 입니다. */
         bool hasUpgradeInFlight() const { return _upgrade._ticket.isValid(); }
         /**
-         * @brief 가진 GPU 텍스처 · SRV 를 해제하지 않고 @p outRetired 로 내놓고 이 객체를 빈 상태(디바이스 없음)로 만듭니다(렌더 타깃 크기 변경 — `TextureCache::resizeRenderTarget`).
-         * @details `releaseRHI` 와 달리 핸들을 반환하지 않는다. 내놓은 자원은 부르는 쪽이 지연 해제 줄(`TextureCache::releaseRetiredTextures`)에 넘겨, 이미 만든 패킷이 끝난 뒤에 해제한다.
-         *          크기 · 포맷 · 렌더 타깃 표시는 남겨 다시 만들 때 쓴다(`releaseRHI` 와 같다). 렌더 타깃 전용이다 — 위쪽 밉을 올리는 중인 텍스처에는 부르지 않는다(assert).
-         */
-        void detachRHI( Texture2DRetiredResource& outRetired );
-        /**
          * @brief 옛 텍스처만 @p outRetired 로 떼고 SRV 번호는 지킵니다. 다음 업로드의 `finishUpload` 가 그 번호를 새 텍스처로 다시 묶는다(`rebindBindlessTexture`).
          * @details 렌더 타깃 크기 변경 · 핫 리로드가 쓴다 — 번호가 그대로라 그 번호를 쥔 머티리얼을 다시 묶지 않는다(감사 R-6). 번호는 그동안 옛 텍스처를 가리키고, 옛 텍스처는 해제 줄이 펜스 뒤에 지운다.
          */

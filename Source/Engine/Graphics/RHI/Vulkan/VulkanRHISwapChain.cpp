@@ -726,13 +726,6 @@ namespace sw
         return _listFramebuffer[_imageIndex];
     }
 
-    VkSemaphore VulkanRHISwapChain::getImageAvailableSemaphore( uint32 frameSlot ) const
-    {
-        if ( frameSlot >= _listImageAvailableSemaphore.size() )
-            return VK_NULL_HANDLE;
-        return _listImageAvailableSemaphore[frameSlot];
-    }
-
     VkSemaphore VulkanRHISwapChain::getRenderFinishedSemaphore() const
     {
         if ( _imageIndex >= _listRenderFinishedSemaphore.size() )

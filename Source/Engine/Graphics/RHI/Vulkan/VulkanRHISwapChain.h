@@ -170,8 +170,6 @@ namespace sw
         VkImage getCurrentImage() const;
         /** @brief 현재 이미지의 백버퍼 프레임버퍼입니다. 준비 안 됐으면 nullptr 입니다. */
         VkFramebuffer getCurrentFramebuffer() const;
-        /** @brief 이 프레임 슬롯의 acquire 세마포어입니다. 첫 제출이 이것을 기다립니다. */
-        VkSemaphore getImageAvailableSemaphore( uint32 frameSlot ) const;
         /** @brief 현재 이미지의 renderFinished 세마포어입니다. 마지막 제출이 이것을 신호합니다. */
         VkSemaphore getRenderFinishedSemaphore() const;
 
