@@ -69,7 +69,7 @@ cmake --preset Ninja-Debug
 cmake --build --preset Ninja-Debug  # App, Server, modules
 ```
 
-Outputs are in `build/Ninja-Debug/Bin`; the compilation database is `build/Ninja-Debug/compile_commands.json`.
+Outputs are in `build/Ninja-Debug/Bin`; the compilation database is `build/Ninja-Debug/compile_commands.json`. Debug is for stepping through in a debugger; the bundle verification (`preflight`) builds no Debug — it runs `Ninja-Release` (all games, scenario chains), `Ninja-Release-ASan` (CPU unit tests under clang-cl AddressSanitizer; its non-unity compile database feeds `py -3 -m Scripts tidy`) and `Ninja-Release-Server`. Asserts and checks are on in every non-Shipping build (`SW_DO_CHECKS`); a Debug-only diagnostic branches on `build::kDebug` with `if constexpr` so it still compiles in the verified builds.
 
 ## Writing — docs, comments, commit messages
 
