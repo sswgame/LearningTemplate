@@ -791,7 +791,7 @@
     "Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPreview.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutSelfTest.cpp": {"integer": 2},
-    "Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp": {"float": 1, "integer": 1},
+    "Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.cpp": {"minus-one": 7, "float": 5, "integer": 2},
     "Source/GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommanderAI.cpp": {"float": 2, "integer": 1},
