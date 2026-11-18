@@ -42,7 +42,7 @@ SW_TEST_CASE( GPUBatchMembershipPatchTest, LeaveAndEnterRewriteOnlyMembers )
     patch.addEnter( 1u, 0u );
     vector<uint32> listOrder;
     vector<uint32> listSlotToOrder( 10u, constant::invalid_index::kUint32 );
-    patch.rewriteOrder( listBatch.data(), 2u, listOldOrder, listOrder, listSlotToOrder );
+    patch.rewriteOrder( listBatch.data(), 2u, 2u, listOldOrder, listOrder, listSlotToOrder );
 
     const vector<uint32> listExpected{ 4u, 7u, 2u, 5u, 0u, 9u };
     SW_REQUIRE_TRUE( listOrder == listExpected );
@@ -72,7 +72,7 @@ SW_TEST_CASE( GPUBatchMembershipPatchTest, KeyChangedSlotMovesToItsNewBatch )
     SW_EXPECT_EQUAL( static_cast<uint32>( GPUBatchMembershipPatch::kLeave | GPUBatchMembershipPatch::kEnter ), static_cast<uint32>( patch.getFlags()[1] ) );
     vector<uint32> listOrder;
     vector<uint32> listSlotToOrder( 3u, 0u );
-    patch.rewriteOrder( listBatch.data(), 2u, listOldOrder, listOrder, listSlotToOrder );
+    patch.rewriteOrder( listBatch.data(), 2u, 2u, listOldOrder, listOrder, listSlotToOrder );
 
     const vector<uint32> listExpected{ 0u, 2u, 1u };
     SW_REQUIRE_TRUE( listOrder == listExpected );
@@ -99,7 +99,7 @@ SW_TEST_CASE( GPUBatchMembershipPatchTest, LODLevelBatchesFollowTheirHead )
     patch.addEnter( 0u, 3u );
     vector<uint32> listOrder;
     vector<uint32> listSlotToOrder( 4u, 0u );
-    patch.rewriteOrder( listBatch.data(), 3u, listOldOrder, listOrder, listSlotToOrder );
+    patch.rewriteOrder( listBatch.data(), 3u, 3u, listOldOrder, listOrder, listSlotToOrder );
 
     SW_EXPECT_EQUAL( 3u, listBatch[0]._instanceCount );
     SW_EXPECT_EQUAL( 3u, listBatch[1]._instanceBase );
@@ -109,4 +109,41 @@ SW_TEST_CASE( GPUBatchMembershipPatchTest, LODLevelBatchesFollowTheirHead )
     SW_EXPECT_EQUAL( 3u, listBatch[2]._instanceBase );
     SW_EXPECT_EQUAL( 6u, listBatch[2]._visibleBase );
     SW_EXPECT_EQUAL( 1u, listBatch[2]._visibleCapacity );
+}
+
+/**
+ * @brief [GPUBatchMembershipPatchTest] 처음 보는 키의 칸은 불투명 끝에 새로 붙인 배치로 들어가고 앞 배치의 구간 · 번호는 그대로다(다시 나누지 않는다)
+ * @details 새 배치는 빈 구간으로 붙는다 — 새 배치 시작(`freshBatchBegin`)을 넘기지 않으면 빈 배치를 LOD 단계 배치로 읽어 가시 구간을 앞 머리만큼 잡는다(음성 대조).
+ */
+SW_TEST_CASE( GPUBatchMembershipPatchTest, FreshBatchAppendsWithoutShiftingOthers )
+{
+    using Util = MembershipPatchTestUtil;
+    // 배치 0 = 칸 {0, 1}, 배치 1(새로 붙임, 빈 구간) ← 칸 1 이 키를 바꿔 옮기고 칸 2 가 새로 들어온다.
+    const vector<uint32> listOldOrder{ 0u, 1u };
+    auto                 run = [&listOldOrder]( uint32 freshBatchBegin, vector<GPUMeshBatch>& outListBatch, vector<uint32>& outListOrder )
+    {
+        outListBatch = { Util::makeBatch( 0u, 2u ), Util::makeBatch( 2u, 0u ) };
+        GPUBatchMembershipPatch patch;
+        patch.reset( 3u );
+        patch.markLeave( 1u );
+        patch.addEnter( 1u, 2u );
+        patch.addEnter( 1u, 1u );
+        vector<uint32> listSlotToOrder( 3u, 0u );
+        patch.rewriteOrder( outListBatch.data(), 2u, freshBatchBegin, listOldOrder, outListOrder, listSlotToOrder );
+    };
+    vector<GPUMeshBatch> listBatch;
+    vector<uint32>       listOrder;
+    run( 1u, listBatch, listOrder );
+    const vector<uint32> listExpected{ 0u, 1u, 2u };
+    SW_REQUIRE_TRUE( listOrder == listExpected );
+    SW_EXPECT_EQUAL( 0u, listBatch[0]._instanceBase );
+    SW_EXPECT_EQUAL( 1u, listBatch[0]._instanceCount );
+    SW_EXPECT_EQUAL( 1u, listBatch[1]._instanceBase );
+    SW_EXPECT_EQUAL( 2u, listBatch[1]._instanceCount );
+    SW_EXPECT_EQUAL( 1u, listBatch[1]._visibleBase );
+    SW_EXPECT_EQUAL( 2u, listBatch[1]._visibleCapacity );
+
+    // 음성 대조 — 새 배치라고 알리지 않으면 빈 구간을 LOD 단계로 읽어 가시 구간이 앞 머리(1)만큼이다.
+    run( 2u, listBatch, listOrder );
+    SW_EXPECT_EQUAL( 1u, listBatch[1]._visibleCapacity );
 }

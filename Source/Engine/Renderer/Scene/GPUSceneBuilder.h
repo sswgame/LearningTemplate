@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 
@@ -414,6 +415,81 @@ namespace sw
                        _pMaterial == other._pMaterial && _pInstance == other._pInstance && _permutationHash == other._permutationHash &&
                        _bReverseCulling == other._bReverseCulling && _bStaticShadowCaster == other._bStaticShadowCaster;
             }
+            /** @brief `operator==` 와 같은 필드의 해시입니다(차례 · 띠는 비교에 없어 해시에도 없다). 배치 키 표(`OpaqueBatchKeyIndex`)의 맵이 쓴다. */
+            uint64 computeHash() const
+            {
+                uint64 hash = HashUtil::kFNVOffset64;
+                hash        = HashUtil::fnvStep64( hash, static_cast<uint64>( reinterpret_cast<uintptr_t>( _pMesh ) ) );
+                hash        = HashUtil::fnvStep64( hash, ( static_cast<uint64>( _sectionFirstIndex ) << 32 ) | _sectionIndexCount );
+                hash        = HashUtil::fnvStep64( hash, static_cast<uint64>( reinterpret_cast<uintptr_t>( _pMaterial ) ) );
+                hash        = HashUtil::fnvStep64( hash, static_cast<uint64>( reinterpret_cast<uintptr_t>( _pInstance ) ) );
+                hash        = HashUtil::fnvStep64( hash, _permutationHash );
+                hash        = HashUtil::fnvStep64( hash, ( static_cast<uint64>( _bReverseCulling ) << 8 ) | _bStaticShadowCaster );
+                return HashUtil::mix64( hash );
+            }
+            /** @brief 불투명 그리기 순서(띠 → 차례)가 @p other 보다 앞서면 true 입니다. 나누기 정렬의 앞 두 키와 같은 규칙입니다(`rebuildPartitionTables`). */
+            bool isDrawnBefore( const SortKey& other ) const
+            {
+                if ( _drawBand != other._drawBand )
+                    return _drawBand < other._drawBand;
+                return _renderQueue < other._renderQueue;
+            }
+        };
+
+        /**
+         * @class OpaqueBatchKeyIndex
+         * @brief 불투명 배치 번호 → 나누기 키와, 키 → 배치 번호 맵을 한 몸으로 둡니다(언리얼 FMeshDrawCommand 캐시의 상태 버킷 · 유니티 GPU Resident Drawer 의 배치 키 해시).
+         * @details 구성원 고치기는 들어오는 후보마다 키로 배치를 찾는다 — 예전에는 배치를 하나씩 훑어 드나듦 × 배치 수였다. 표와 맵을 고치는 길은 아래 함수뿐이라 둘이 어긋날 수 없다.
+         *          LOD 단계 배치는 메시가 널인 빈 키라 맵에 넣지 않는다(어떤 후보와도 같지 않다). 같은 키의 배치가 둘이면(메시 바꾸기 뒤) 맵은 먼저 든 것을 가리킨다 — 어느 쪽에 넣어도 맞다.
+         */
+        class OpaqueBatchKeyIndex
+        {
+        public:
+            void clear()
+            {
+                _listKey.clear();
+                _mapKeyToBatch.clear();
+            }
+            /** @brief 다음 번호의 배치 키를 붙입니다. 빈 키(LOD 단계 배치)는 맵에 넣지 않습니다. */
+            void append( const SortKey& key )
+            {
+                if ( key._pMesh != nullptr )
+                    _mapKeyToBatch.emplace( key, static_cast<uint32>( _listKey.size() ) );
+                _listKey.push_back( key );
+            }
+            /** @brief 키 @p key 의 배치 번호입니다. 없으면 `constant::invalid_index::kUint32` 입니다. */
+            uint32 find( const SortKey& key ) const
+            {
+                const auto it = _mapKeyToBatch.find( key );
+                return it != _mapKeyToBatch.end() ? it->second : constant::invalid_index::kUint32;
+            }
+            /** @brief 배치 @p batchIndex 의 키 메시를 바꿉니다(`swapSingleInstanceBatchMeshes`). 맵도 새 키로 옮깁니다. */
+            void replaceMesh( uint32 batchIndex, Mesh* pMesh )
+            {
+                SortKey&   key = _listKey[batchIndex];
+                const auto it  = _mapKeyToBatch.find( key );
+                if ( it != _mapKeyToBatch.end() && it->second == batchIndex )
+                    _mapKeyToBatch.erase( it );
+                key._pMesh = pMesh;
+                if ( pMesh != nullptr )
+                    _mapKeyToBatch.emplace( key, batchIndex );
+            }
+            /** @brief 마지막 머리 배치(빈 키가 아닌)의 키입니다. 없으면 nullptr 입니다. 새 배치를 끝에 붙여도 그리기 순서가 맞는지 본다. */
+            const SortKey* findLastHeadKey() const
+            {
+                for ( size_t index = _listKey.size(); index > 0; --index )
+                {
+                    if ( _listKey[index - 1]._pMesh != nullptr )
+                        return &_listKey[index - 1];
+                }
+                return nullptr;
+            }
+            size_t         size() const { return _listKey.size(); }
+            const SortKey& operator[]( size_t index ) const { return _listKey[index]; }
+
+        private:
+            vector<SortKey>                _listKey;
+            unordered_map<SortKey, uint32> _mapKeyToBatch;
         };
 
         struct SortEntry
@@ -518,7 +594,8 @@ namespace sw
         /**
          * @brief 부분 수집에서 불투명 후보가 기존 배치에 드나들기만 했으면 다시 나누지 않고 그 배치의 구성원만 고칩니다(언리얼 FScene 의 프리미티브 더하기 · 빼기, 유니티 GPU Resident Drawer 의 배치 인스턴스 목록).
          * @details 들어온 칸 · 빠진 칸만 인스턴스 배열에 쓰고 바뀐 칸 구간으로 싣는다. 배치 순서 · 번호는 그대로라 다른 칸의 내용(배치 번호)이 바뀌지 않는다.
-         *          들어갈 키의 배치가 없거나, 배치가 비거나, 투명이 드나들면 false — 아무것도 고치지 않았고 부르는 쪽이 다시 나눈다.
+         *          처음 보는 키는 불투명 배치 끝(투명 꼬리 앞)에 새 배치로 붙인다 — 그 키의 그리기 순서(띠 → 차례)가 마지막 배치보다 앞서지 않고 LOD 그룹이 아닐 때만이다.
+         *          그 밖(순서가 앞서는 새 키 · LOD 그룹 새 키), 배치가 비거나, 투명이 드나들면 false — 아무것도 고치지 않았고 부르는 쪽이 다시 나눈다.
          *          shortcut: 배치 사이에 여유 칸이 없어 드나든 배치 뒤의 차례가 밀린다 — 차례 목록(uint32)을 O(N) 다시 쓰고 GPU 에는 바뀐 구간만 올린다.
          *          차례 복사가 측정에 드러나면 배치마다 여유 칸(유니티 GRD 의 배치 용량)을 둔다.
          */
@@ -672,6 +749,11 @@ namespace sw
          */
         void emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, BlendMode blendMode, const Material* pGroupMaterial );
         /**
+         * @brief 머리 후보 @p headCandidate 로 배치의 머리 값(메시 · 구간 · 블렌드 · 컬 반전 · 머티리얼 그룹 · 퍼뮤테이션)을 채웁니다. 인스턴스 · 가시 구간과 머리 원소는 부르는 쪽이 정한다.
+         * @details 전체 방출(`emitBatch`)과 구성원 고치기의 새 배치(`patchBatchMembership`)가 같은 규칙을 쓴다 — 한쪽에만 필드를 더하면 다른 쪽 배치가 그 값을 잃는다.
+         */
+        GPUMeshBatch makeBatchHead( const DrawCandidate& headCandidate, BlendMode blendMode, const Material* pGroupMaterial );
+        /**
          * @brief LOD 그룹의 낮은 단계 배치를 머리 배치(@p head) 바로 뒤에 붙입니다(`emitBatch` 가 머리를 붙인 직후에 부른다).
          * @details 단계 배치는 머리와 같은 머티리얼 · 메시이고 정점 구간만 단계의 것이다. 인스턴스 구간은 비고(`_instanceCount` 0, 시작은 지금의 인스턴스 끝) 가시 구간은
          *          그룹의 인스턴스 수만큼이다 — 컬링이 단계를 고른 인스턴스를 그 구간에 쓴다. 원소 표에는 빈 구간을 넣어 배치 번호와 나란히 둔다.
@@ -738,8 +820,10 @@ namespace sw
         /** @brief 이번 부분 수집에서 배치에 들어가는 · 빠지는 후보입니다(키가 바뀐 후보는 둘 다). 수집마다 비웁니다(`patchBatchMembership`). */
         vector<uint32> _listMembershipEnter;
         vector<uint32> _listMembershipLeave;
-        /** @brief 배치마다의 나누기 키입니다(불투명 배치 번호와 나란하다 — LOD 단계 배치는 메시가 널인 키). 전체 방출이 채우고 구성원 고치기가 배치를 찾는다. */
-        vector<SortKey> _listOpaqueBatchKey;
+        /** @brief 배치마다의 나누기 키와 키 → 배치 맵입니다(불투명 배치 번호와 나란하다 — LOD 단계 배치는 메시가 널인 키). 전체 방출이 채우고 구성원 고치기가 배치를 찾고 새 배치를 붙인다. */
+        OpaqueBatchKeyIndex _opaqueBatchKey;
+        /** @brief 구성원 고치기가 이번에 끝에 붙일 새 불투명 배치의 머리 후보입니다(키를 처음 본 후보). */
+        vector<uint32> _listScratchFreshBatchHead;
         /** @brief 구성원 고치기의 이번 변경(빠지는 칸 · 들어가는 칸)입니다. */
         GPUBatchMembershipPatch _membershipPatch;
         /** @brief 구성원 고치기의 작업 배열입니다(새 차례 · 배치마다 새 수 · 바뀐 칸). */

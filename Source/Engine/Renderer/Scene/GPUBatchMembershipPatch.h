@@ -46,11 +46,13 @@ namespace sw
          * @brief 배치 @p pBatch[0, @p batchCount) 의 차례를 다시 씁니다. 배치마다 지난 차례에서 빠지는 칸을 빼고, 들어오는 칸을 끝에 붙입니다.
          * @details 배치의 `_instanceBase` · `_instanceCount` · `_visibleBase` · `_visibleCapacity` 를 새 차례로 고친다. LOD 단계 배치(인스턴스가 없고 단계 수가 0)는 인스턴스 구간이 비고
          *          가시 구간은 바로 앞 머리 배치만큼이다(`GPUSceneBuilder::emitLODLevelBatches`). 들어오는 칸의 배치 번호는 @p batchCount 보다 작아야 한다.
+         *          [@p freshBatchBegin, @p batchCount) 는 이번에 끝에 새로 붙인 배치다 — 지난 구성원이 없고 LOD 단계 배치로 보지 않는다(들어오는 칸만 받는다).
+         * @param freshBatchBegin 새로 붙인 첫 배치 번호입니다. 새 배치가 없으면 @p batchCount 입니다.
          * @param listOldOrder  지난 차례 → 칸입니다. 배치들의 지난 구간이 이 번호다.
          * @param outListOrder  새 차례 → 칸입니다(앞 내용은 지운다). 배치 @p batchCount 개의 구간만 담는다.
          * @param ioListSlotToOrder 칸 → 새 차례를 적습니다(칸 수만큼 있어야 한다). 빠지기만 한 칸은 건드리지 않는다.
          */
-        void rewriteOrder( GPUMeshBatch* pBatch, uint32 batchCount, const vector<uint32>& listOldOrder, vector<uint32>& outListOrder, vector<uint32>& ioListSlotToOrder );
+        void rewriteOrder( GPUMeshBatch* pBatch, uint32 batchCount, uint32 freshBatchBegin, const vector<uint32>& listOldOrder, vector<uint32>& outListOrder, vector<uint32>& ioListSlotToOrder );
 
     private:
         vector<uint8>               _listFlag;
