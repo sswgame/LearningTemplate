@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -24,6 +25,8 @@ namespace sw
 namespace sw::editor
 {
     struct EditorPropertyGridTarget;
+
+    class EditorTransaction;
 
     /** @brief 카메라 투영 구역의 값입니다(값만). */
     struct CameraSectionValues
@@ -69,14 +72,26 @@ namespace sw::editor
 
         // 대상 값 판 — 인스펙터 확장(View)이 부른다. 모으기는 대상(씬 · 오브젝트 id · 컴포넌트 id)을 그 프레임에 풀고 없으면 false 이고,
         // 넣기는 쓰기 요청을 게임 단계에 넘긴다(UI 프레임은 씬 메모리에 쓰지 않는다 — 실행할 때 대상이 사라졌으면 아무것도 하지 않는다).
-        /** @brief 대상 @p target 의 컴포넌트입니다. 오브젝트 · 컴포넌트가 없으면 nullptr 입니다. 확장 모듈의 edit model 이 자기 형으로 바꿔 쓴다. */
-        [[nodiscard]] static Component* findComponent( const EditorPropertyGridTarget& target );
-        [[nodiscard]] static bool       gatherCamera( const EditorPropertyGridTarget& target, CameraSectionValues& outValues );
-        static void                     applyCamera( const EditorPropertyGridTarget& target, const CameraSectionValues& values );
-        [[nodiscard]] static bool       gatherTransform( const EditorPropertyGridTarget& target, TransformSectionValues& outValues );
-        static void                     setLocalPosition( const EditorPropertyGridTarget& target, const float3& position );
-        static void                     setLocalRotationDegrees( const EditorPropertyGridTarget& target, const float3& rotationDegrees );
-        static void                     setLocalScale( const EditorPropertyGridTarget& target, const float3& scale );
+        /**
+         * @brief 대상 @p target 의 컴포넌트(읽기 전용)입니다. 오브젝트 · 컴포넌트가 없으면 nullptr 입니다. 확장 모듈의 View 가 자기 형으로 바꿔 값을 읽는다.
+         * @details 쓰기 길은 `requestComponentEdit` 하나다 — 이 함수가 const 를 돌려주므로 UI 프레임에서 컴포넌트에 바로 쓰는 확장은 컴파일되지 않는다.
+         */
+        [[nodiscard]] static const Component* findComponent( const EditorPropertyGridTarget& target );
+
+        /** @brief 컴포넌트 쓰기 하나입니다 — 게임 단계가 다시 찾은 컴포넌트와 그 실행의 거래 구간을 받는다(되돌리기 기록은 `InspectorObjectEdit::applyObjectEdit`). */
+        using ComponentEditDelegate = Delegate<void( Component&, EditorTransaction& )>;
+        /**
+         * @brief 대상 @p target 의 컴포넌트에 할 쓰기 @p edit 를 게임 단계에 넘깁니다(`EditorCommandRegistry::requestSceneEdit`) — 인스펙터 확장의 유일한 쓰기 길이다.
+         * @details @p edit 는 값만 붙잡는다(포인터 · 참조를 붙잡으면 실행 프레임에 낡는다). 실행할 때 대상이 사라졌으면 부르지 않는다. 언리얼 `IDetailCustomization` 이
+         *          프로퍼티 핸들 · 트랜잭션으로만 쓰는 것과 같은 선이다.
+         */
+        static void               requestComponentEdit( const EditorPropertyGridTarget& target, const ComponentEditDelegate& edit );
+        [[nodiscard]] static bool gatherCamera( const EditorPropertyGridTarget& target, CameraSectionValues& outValues );
+        static void               applyCamera( const EditorPropertyGridTarget& target, const CameraSectionValues& values );
+        [[nodiscard]] static bool gatherTransform( const EditorPropertyGridTarget& target, TransformSectionValues& outValues );
+        static void               setLocalPosition( const EditorPropertyGridTarget& target, const float3& position );
+        static void               setLocalRotationDegrees( const EditorPropertyGridTarget& target, const float3& rotationDegrees );
+        static void               setLocalScale( const EditorPropertyGridTarget& target, const float3& scale );
         /** @brief 태그 이름을 모읍니다(@p outListTag 를 비우고 채운다 — 대상이 없으면 빈 채로). */
         static void collectTags( const EditorPropertyGridTarget& target, vector<string>& outListTag );
 
