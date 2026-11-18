@@ -1110,14 +1110,17 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeLookupCacheFollowsRegistryGenerati
     registry.unregisterTypesByModule( "TestLookupCache" );
     SW_EXPECT_NULL( cache.find( fqn ) );
     SW_EXPECT_NULL( registry.findType( fqn ) );
-    // 주소 고정 · 묘비: 같은 FQN 을 다시 등록하면 **같은 객체**가 되살아나고, 칸은 다시 찾지 않고 그것을 낸다.
+    // 같은 판 교체: 같은 FQN 을 다시 등록하면 **새 객체**가 서고(묘비는 죽은 채 남는다), 세대가 올라 칸도 새 객체를 낸다.
     registry.registerClass( typeProbe );
-    SW_EXPECT_TRUE( registry.findType( fqn ) == pProbe );
-    SW_EXPECT_TRUE( cache.find( fqn ) == pProbe );
-    SW_EXPECT_TRUE( pProbe->isAlive() );
+    const sw::TypeInfo* const pRevived = registry.findType( fqn );
+    SW_REQUIRE_NOT_NULL( pRevived );
+    SW_EXPECT_TRUE( pRevived != pProbe );
+    SW_EXPECT_TRUE( cache.find( fqn ) == pRevived );
+    SW_EXPECT_TRUE( pRevived->isAlive() );
+    SW_EXPECT_FALSE( pProbe->isAlive() );
     registry.unregisterTypesByModule( "TestLookupCache" );
     SW_EXPECT_NULL( cache.find( fqn ) );
-    SW_EXPECT_FALSE( pProbe->isAlive() );
+    SW_EXPECT_FALSE( pRevived->isAlive() );
 }
 
 /**
@@ -1858,4 +1861,95 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, InheritedPropertiesStayReadableWhileDe
     bStop.store( true );
     writer.join();
     SW_EXPECT_EQUAL( 0u, brokenCount ); // 다시 짓는 동안에도 목록이 비거나 반쯤 차지 않았다
+}
+
+namespace
+{
+    /** @brief 재등록 테스트의 타입 — 프로퍼티 @p propertyCount 개, 첫 프로퍼티는 세이브 대상(판정 비트가 켜진다). */
+    sw::TypeInfo makeReloadProbeType( const uint32 propertyCount )
+    {
+        sw::TypeInfo info;
+        info._name                          = sw::hashed_string( "ReregisterProbe" );
+        info._fullyQualifiedName            = sw::hashed_string( "swtest::ReregisterProbe" );
+        info._moduleName                    = sw::hashed_string( "TestReregister" );
+        info._size                          = 16;
+        static const utf8* const kArrName[] = { "_a", "_b", "_c" };
+        for ( uint32 index = 0; index < propertyCount; ++index )
+        {
+            info._listProperty.push_back( sw::PropertyInfo{ sw::hashed_string( kArrName[index] ), sw::hashed_string( "int32" ), index * 4u } );
+        }
+        info._listProperty[0]._metadata.edit()._bSaveGame = SW_TRUE;
+        return info;
+    }
+} // namespace
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 같은 FQN 의 재등록은 새 `TypeInfo` 로 판을 바꾸고, 옛 것은 죽은 채 내용 그대로 남는다
+ * @details 예전에는 옛 객체에 `operator=` 로 덮어써, 잠금 없이 든 포인터로 목록을 읽던 스레드가 반쯤 옮겨진 벡터를 봤다. 판정 비트는 발행 전에(잠금 안) 구해 둔다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, ReregisteringSwapsInANewTypeInfoAndRetiresTheOld )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestReregister" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const sw::hashed_string          fqn( "swtest::ReregisterProbe" );
+
+    registry.registerClass( makeReloadProbeType( 2 ) );
+    const sw::TypeInfo* const pOld = registry.findType( fqn );
+    SW_REQUIRE_NOT_NULL( pOld );
+    SW_EXPECT_TRUE( pOld->hasDerivedFlags() );
+    const uint32 typeID = pOld->_typeID;
+
+    registry.registerClass( makeReloadProbeType( 3 ) );
+    const sw::TypeInfo* const pNew = registry.findType( fqn );
+    SW_REQUIRE_NOT_NULL( pNew );
+    SW_EXPECT_TRUE( pNew != pOld );
+    SW_EXPECT_TRUE( pNew->isAlive() );
+    SW_EXPECT_EQUAL( typeID, pNew->_typeID ); // 실행 중 색인은 이어진다
+    SW_EXPECT_EQUAL( size_t( 3 ), pNew->_listProperty.size() );
+    SW_EXPECT_TRUE( pNew->hasDerivedFlags() );
+    SW_EXPECT_TRUE( pNew->hasSaveGameProperty() );
+    SW_EXPECT_NOT_NULL( pNew->findProperty( sw::hashed_string( "_c" ) ) );
+
+    // 옛 판 — 죽었고, 든 포인터로 읽으면 옛 내용이 온전히 보인다.
+    SW_EXPECT_FALSE( pOld->isAlive() );
+    SW_EXPECT_EQUAL( size_t( 2 ), pOld->_listProperty.size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), pOld->getPropertiesWithBase().size() );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 같은 타입을 쉬지 않고 다시 등록하는 동안에도 다른 스레드는 늘 온전한 판을 읽고, 찾은 타입은 늘 판정이 서 있다
+ * @details 읽기는 (1) 첫 판을 든 포인터로 목록을 읽고 (2) 이름으로 찾은 지금 판의 목록 크기와 판정(세이브 옵트인)을 본다. 제자리 교체였으면 (1) 이 옮겨지는 벡터를,
+ *          잠금 밖 판정이었으면 (2) 가 판정 없는 타입을 봤다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, TypeInfoStaysReadableWhileTheSameTypeIsRegisteredAgain, ._tags = "slow", ._timeoutSeconds = 60.0f )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestReregister" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const sw::hashed_string          fqn( "swtest::ReregisterProbe" );
+    registry.registerClass( makeReloadProbeType( 2 ) );
+    const sw::TypeInfo* const pHeld = registry.findType( fqn );
+    SW_REQUIRE_NOT_NULL( pHeld );
+
+    sw::atomic<bool> bStop{ false };
+    sw::thread       writer( sw::ThreadTestAccess::getKey(), [&registry, &bStop]()
+          {
+        uint32 round = 0;
+        while ( bStop.load() == false )
+        {
+            registry.registerClass( makeReloadProbeType( 2 + ( round++ & 1u ) ) );
+            sw::ThreadUtil::sleepForMilliseconds( 1 ); // 읽기 쪽 기아를 막는다(DerivedTypesQueryDoesNotNestTheRegistryLock 과 같은 이유)
+        }
+    } );
+    uint32           brokenCount = 0;
+    for ( uint32 round = 0; round < 20000; ++round )
+    {
+        const bool          bHeldIntact = pHeld->_listProperty.size() == 2 && pHeld->_listProperty[1]._name == sw::hashed_string( "_b" );
+        const sw::TypeInfo* pCurrent    = registry.findType( fqn );
+        const size_t        count       = pCurrent != nullptr ? pCurrent->_listProperty.size() : 0;
+        const bool          bCurrentOK  = pCurrent != nullptr && ( count == 2 || count == 3 ) && pCurrent->hasDerivedFlags() && pCurrent->hasSaveGameProperty();
+        brokenCount += bHeldIntact && bCurrentOK ? 0u : 1u;
+    }
+    bStop.store( true );
+    writer.join();
+    SW_EXPECT_EQUAL( 0u, brokenCount );
 }

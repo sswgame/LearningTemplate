@@ -118,13 +118,13 @@ namespace sw
          *        다시 찾을지 이 값으로 정합니다.
          * @details 타입 · 열거형의 등록, 별칭, 모듈 해제, 레지스트리 파괴 모두에서 오른다. 0 은 "아직 아무것도 등록되지 않음"이다.
          *          레지스트리는 엔진에 하나뿐이라 정적 함수다(서비스 조회 없이 읽는다). 인라인 경로는 `getTypeTableGeneration` 이 같은 값을 읽는다.
-         *          `findType` 이 반환한 포인터는 이 레지스트리가 살아 있는 동안 유효하다(주소 고정, 묘비). 살아 있는지는
+         *          `findType` 이 반환한 포인터는 이 레지스트리가 살아 있는 동안 유효하다(묘비, 다시 등록되면 물러난 판). 살아 있는지는
          *          `TypeInfo::isAlive()` 가 알려 준다. 레지스트리보다 오래 사는 캐시는 세대를 담은 칸(`TypeCacheSlot`)에 둔다.
          */
         static uint32 getGeneration();
         /**
-         * @brief 이름, FQN, 별칭으로 EnumInfo 를 찾습니다. 어느 이름으로 찾든 같은 객체이고, 등록이 더 일어나도 주소는 바뀌지 않습니다.
-         * @details 모듈이 언로드되면 nullptr 를 반환하지만 객체는 남는다(묘비). 같은 FQN 이 다시 로드되면 그 객체에 덮어쓴다.
+         * @brief 이름, FQN, 별칭으로 EnumInfo 를 찾습니다. 어느 이름으로 찾든 같은 객체이고, 다른 enum 이 더 등록돼도 주소는 바뀌지 않습니다.
+         * @details 모듈이 언로드되면 nullptr 를 반환하지만 객체는 남는다(묘비). 같은 FQN 이 다시 등록되면 새 객체가 서고 옛 것은 내용 그대로 남는다(세대가 오른다).
          */
         const EnumInfo* findEnum( const hashed_string& nameOrFqn ) const;
 
@@ -341,6 +341,11 @@ namespace sw
         /** @brief 이름 · 별칭으로 타입을 찾습니다(잠금 안). @p bIncludeDead 이면 묘비도 돌려줍니다 — 해제가 내려가는 타입의 자손을 찾을 때 쓴다. */
         TypeInfo* findTypeLocked( const hashed_string& nameOrFqn, bool bIncludeDead ) const SW_REQUIRES_LOCK( _mutex );
         /**
+         * @brief 판정(`TypeInfo::computeDerivedFlags`)이 잠금 안에서 칸 타입을 찾는 길(`TypeResolver::_pFind`)입니다. @p pContext 는 이 레지스트리, 살아 있는 타입만 답한다.
+         * @details 함수 포인터로 넘겨 분석이 잠금을 따라가지 못한다 — 부르는 쪽은 독점 잠금을 쥔 `relinkAffectedLocked` 하나다.
+         */
+        static const TypeInfo* findAliveTypeLocked( const void* pContext, const hashed_string& name ) SW_NO_THREAD_SAFETY_ANALYSIS;
+        /**
          * @brief @p uniqueRoot 의 타입이거나 그 자손인 살아 있는 타입을 @p outListType 에 더합니다(잠금 안). 부모 이름을 걸어 올라가 본다 — 타입 수 × 사슬 깊이.
          * @details 상속 캐시를 비우고 다시 짓는 범위다. 예전에는 등록 한 번마다 **모든** 타입을 비워 무관한 키트 하나가 오를 때도 모든 상속 목록이
          *          다시 지어졌다(밖에서 든 `const PropertyInfo*` 가 매달리고 등록이 O(타입²)). 언리얼도 클래스를 다시 올릴 때 그 자식 클래스만 다시 잇는다.
@@ -351,7 +356,7 @@ namespace sw
          * @details 이것들을 쓰는 쪽은 이 함수 하나다(레지스트리 타입). 읽기(캐스트 · 사슬 걷기 · 상속 목록)는 잠금 없이 원자값만 보고, 비는 틈이 없다.
          */
         void relinkAffectedLocked( const vector<TypeInfo*>& listType ) const SW_REQUIRES_LOCK( _mutex );
-        /** @brief @p listType 의 판정을 다시 구하고 사슬 순환 · 필드 해시 충돌을 알립니다(**잠금 밖** — 판정과 로그 리스너가 레지스트리를 다시 잠근다). 링크 · 표 · 상속 목록은 `relinkAffectedLocked` 가 이미 바꿨다. */
+        /** @brief @p listType 의 사슬 순환 · 필드 해시 충돌을 알립니다(**잠금 밖** — 로그 리스너가 레지스트리를 다시 잠근다). 링크 · 표 · 상속 목록 · 판정은 `relinkAffectedLocked` 가 이미 바꿨다. */
         void rebuildAffected( const vector<TypeInfo*>& listType ) const SW_EXCLUDES_LOCK( _mutex );
         /**
          * @brief 타입 · enum 이름 하나를 해시 표(`_wireTypeNameIndex`)에 넣습니다(잠금 안). 같은 해시에 다른 이름이 있으면 넣지 않고 처음 충돌을 @p inoutClash 에 적습니다.
@@ -373,21 +378,28 @@ namespace sw
     private:
         mutable shared_mutex _mutex;
         /**
-         * @brief FQN 하나당 TypeInfo **하나**입니다. 짧은 이름과 별칭은 값을 복사하지 않고 `_mapAliasToFqn`
+         * @brief FQN 하나당 살아 있는 TypeInfo **하나**입니다. 짧은 이름과 별칭은 값을 복사하지 않고 `_mapAliasToFqn`
          *        으로 이 항목을 가리킵니다. `const TypeInfo*` 를 키로 쓰는 쪽(컴포넌트 풀 등)이
-         *        이름을 무엇으로 조회했느냐에 따라 다른 포인터를 받으면 안 됩니다. 값은 **주소가 고정**입니다. 커져도
-         *        옮기지 않고, 모듈을 해제해도 지우지 않고 `_castHeader._bAlive` 를 내립니다(묘비).
+         *        이름을 무엇으로 조회했느냐에 따라 다른 포인터를 받으면 안 됩니다. 값은 커져도 옮기지 않고, 모듈을 해제해도 지우지 않고
+         *        `_castHeader._bAlive` 를 내립니다(묘비). 같은 FQN 을 다시 등록하면 새 객체로 바꾸고 옛 것은 `_listRetiredClassType` 으로 물린다.
          */
         unordered_map<hashed_string, unique_ptr<TypeInfo>> _mapFqnToClassType SW_GUARDED_BY( _mutex );
+        /**
+         * @brief 다시 등록되어 물러난 옛 판입니다(죽은 채 내용 그대로). 잠금 없이 든 포인터로 읽던 스레드가 끝까지 온전한 내용을 보도록 레지스트리가 사는 동안 지우지 않는다.
+         * @details 핫 리로드 한 번에 그 모듈의 타입 수만큼 는다(재등록은 개발 중에만 일어난다). 그 모듈을 내리면 내용만 비운다(`unregisterTypesByModule`).
+         */
+        vector<unique_ptr<TypeInfo>> _listRetiredClassType SW_GUARDED_BY( _mutex );
         /** @brief 짧은 이름과 별칭에서 FQN 으로 가는 맵입니다. 조회는 여기를 거쳐 `_mapFqnToClassType` 한 곳으로 모입니다. */
         unordered_map<hashed_string, hashed_string> _mapAliasToFqn SW_GUARDED_BY( _mutex );
         /**
-         * @brief FQN 하나당 EnumInfo **하나**입니다(주소 고정, 지우지 않음. TypeInfo 와 같은 규칙).
+         * @brief FQN 하나당 살아 있는 EnumInfo **하나**입니다(옮기지 않음, 지우지 않음. TypeInfo 와 같은 규칙 — 다시 등록하면 새 객체, 옛 것은 `_listRetiredEnum`).
          * @details 이 맵은 밀집 배열이라 값으로 보관하면 enum 이 하나 더 등록되어 배열이 커질 때 **모든 EnumInfo 가 옮겨져** `findEnum` 이 반환한
          *          포인터가 죽는다(워커가 씬을 만드는 동안 모듈이 로드되는 경우). 짧은 이름과 별칭도 복사본이 아니라 같은 객체를 가리킨다.
          *          복사본이면 핫 리로드로 열거자가 늘어도 별칭 쪽이 이전 목록으로 답한다.
          */
         unordered_map<hashed_string, unique_ptr<EnumInfo>> _mapFqnToEnum SW_GUARDED_BY( _mutex );
+        /** @brief 다시 등록되어 물러난 옛 EnumInfo 입니다(내용 그대로). 든 포인터의 읽기가 끝까지 온전하도록 레지스트리가 사는 동안 지우지 않는다. */
+        vector<unique_ptr<EnumInfo>> _listRetiredEnum SW_GUARDED_BY( _mutex );
         /** @brief FQN, 짧은 이름, 별칭에서 `_mapFqnToEnum` 의 객체로 가는 맵입니다. 모듈을 해제하면 여기서만 지웁니다. */
         unordered_map<hashed_string, EnumInfo*> _mapNameToEnum SW_GUARDED_BY( _mutex );
         /**
