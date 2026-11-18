@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="acf89b44a151a3f346021a416e3d4ac3"?>
+<!-- 부하 봇 로컬 서버의 순위표 — kills 는 봇의 leaderboard_top · leaderboard_submit 이 쓴다(clientSubmit — 봇이 점수를 낸다). -->
+<LeaderboardCatalog>
+	<Board id="kills" order="Descending" update="Best" reset="None" clientSubmit="true"/>
+</LeaderboardCatalog>

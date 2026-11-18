@@ -20,6 +20,7 @@ namespace sw
         static constexpr int32 kExitUsage     = 2;
         static constexpr int32 kExitStartup   = 3; ///< 엔진 · 모듈이 서지 못했다(실행 파일이 낸다)
         static constexpr int32 kExitReport    = 4; ///< 보고서(`--report`)를 쓰지 못했다 — 결과를 잃은 실행은 성공이 아니다
+        static constexpr int32 kExitLedger    = 5; ///< 끝의 원장 감사가 균형이 아니거나 저장소를 읽지 못했다(`--local-server` — 재화 총량 보존이 깨졌다, 감사 O-12)
     };
 
     /** @brief 봇 진입점 — 봇 인자 전부(@p argv[0] 은 프로그램)를 받아 종료 코드를 돌려준다. 엔진이 선 뒤에만 부른다. */

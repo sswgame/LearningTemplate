@@ -1,0 +1,28 @@
+{
+    "_name": "ledger_mix",
+    "_seed": 11,
+    "_region": "kr",
+    "_pacing": "open",
+    "_executor": "constant_arrival_rate",
+    "_arrivalRatePerSecond": 20,
+    "_gracefulStopMs": 60000,
+    "_listStep": [
+        { "_action": "login", "_mode": "guest" },
+        { "_action": "economy_redeem", "_product": "loadbot.gold_pack" },
+        { "_action": "mailbox_claim_all" },
+        { "_action": "guild_create" },
+        { "_action": "repeat", "_count": 20, "_listStep": [
+            { "_action": "pick", "_listStep": [
+                { "_action": "economy_purchase", "_offer": "gem_from_gold", "_weight": 30 },
+                { "_action": "economy_wallet", "_weight": 20 },
+                { "_action": "guild_deposit", "_asset": "cur.gold", "_amount": 3, "_weight": 15 },
+                { "_action": "guild_withdraw", "_asset": "cur.gold", "_amount": 1, "_weight": 10 },
+                { "_action": "leaderboard_submit", "_board": "kills", "_amount": 25, "_weight": 15 },
+                { "_action": "economy_redeem", "_product": "loadbot.gold_pack", "_weight": 10 }
+            ] },
+            { "_action": "wait", "_minMs": 100, "_maxMs": 400 }
+        ] },
+        { "_action": "trade", "_asset": "cur.gold", "_amount": 7, "_timeoutMs": 30000 },
+        { "_action": "logout" }
+    ]
+}

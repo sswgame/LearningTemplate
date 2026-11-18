@@ -5,6 +5,7 @@
  *          - 열린 루프(`open`): 기다림은 앞 단계를 보내려던 시각부터 센다 — 보내는 간격이 서버 속도와 무관하다. 늦게 보낸 단계의 지연은 보내려던 시각부터 잰다.
  *            기다림 없이 이어지는 단계(로그인 뒤 채널 들기)는 앞 단계의 응답이 있어야 보낼 수 있으므로 실제로 보낸 시각부터 잰다.
  *          k6 의 `constant-arrival-rate` 실행기 · Gatling 의 열린 모델 · wrk2 의 보내려던 시각 기준 지연과 같다.
+ *          - 봇 하나 안의 보내기 방식과 따로, 봇을 띄우는 시각표(도착률 실행기)는 `LoadBotArrivalSchedule` 이다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -64,5 +65,43 @@ namespace sw
         int64         _targetUs; ///< 마지막 단계를 보내려던 시각이다
         LoadBotPacing _pacing;
         uint8         _bWaited; ///< 마지막 단계 뒤에 기다림이 있었다 — 다음 단계는 시각표의 시각에 보내려던 것이다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class LoadBotArrivalSchedule
+     * @brief 도착률 실행기(`constant_arrival_rate`)의 도착 시각표입니다. 0 에 첫 도착, 그 뒤 `1 / 속도` 초마다 하나, 길이 안에서만 — 서버 속도와 무관하다(열린 모델).
+     * @details k6 `constant-arrival-rate` 의 `rate` · `duration` 과 같다. 실행기가 틱마다 `computeDueCount` 만큼 봇을 띄우고, 풀(`<Load clients>`)이 모자라면 그 도착을 버린 수로 센다.
+     *          시각은 실행기 시계의 마이크로초(실행 시작부터)다 — 가짜 시계 테스트가 같은 값을 준다.
+     */
+    class LoadBotArrivalSchedule
+    {
+    public:
+        static constexpr int64 kMicrosecondsPerSecond = 1000000;
+        static constexpr int64 kMillisecondsPerSecond = 1000;
+
+        LoadBotArrivalSchedule( int32 ratePerSecond, int64 durationMs )
+            : _ratePerSecond{ ratePerSecond }
+            , _totalCount{ static_cast<int64>( ratePerSecond ) * durationMs / kMillisecondsPerSecond }
+        {
+        }
+
+        /** @brief 길이 동안 도착할 수입니다. */
+        int64 getTotalCount() const { return _totalCount; }
+
+        /** @brief 시작부터 @p elapsedUs 까지 도착했어야 할 수입니다(길이 안의 수를 넘지 않는다). */
+        int64 computeDueCount( int64 elapsedUs ) const
+        {
+            if ( elapsedUs < 0 || _totalCount <= 0 )
+                return 0;
+            const int64 dueCount = elapsedUs * _ratePerSecond / kMicrosecondsPerSecond + 1;
+            return dueCount < _totalCount ? dueCount : _totalCount;
+        }
+
+    private:
+        int32 _ratePerSecond;
+        int64 _totalCount;
     };
 } // namespace sw

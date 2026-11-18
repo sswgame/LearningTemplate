@@ -42,6 +42,8 @@ namespace sw
             static constexpr int32       kSecretWordCount     = LoginConstant::kDeviceSecretSize / static_cast<int32>( sizeof( uint64 ) );
             static constexpr string_view kBotPlaceholder      = "{bot}";
             static constexpr string_view kSequencePlaceholder = "{seq}";
+            static constexpr string_view kFakeStoreName       = "fake"; ///< 개발 서버의 테스트 공급자(`FakeReceiptValidator`) — 실제 상점을 부르지 않는다
+            static constexpr int32       kPurchaseCount       = 1;
 
             /** @brief 봇마다 다른 씨앗 — 시나리오 씨앗과 봇 번호를 섞는다(같은 씨앗 → 같은 난수열). */
             static uint64 makeBotKey( uint32 seed, int32 botIndex ) { return HashUtil::mix64( ( static_cast<uint64>( seed ) << 32 ) | static_cast<uint32>( botIndex ) ); }
@@ -87,6 +89,9 @@ namespace sw
         , _leaderboardClient{}
         , _matchmakingClient{}
         , _liveOpsClient{}
+        , _economyClient{}
+        , _mailboxClient{}
+        , _tradeClient{}
         , _random{ static_cast<uint32>( LoadBotInternal::makeBotKey( pRunner->getScenario()._seed, botIndex ) ) }
         , _schedule{ pRunner->getScenario()._pacing }
         , _listFrame{}
@@ -97,9 +102,15 @@ namespace sw
         , _listPartySnapshot{}
         , _listPartyInvite{}
         , _listLobbySnapshot{}
+        , _listNewMail{}
+        , _listTradeReply{}
+        , _listTradeUpdate{}
+        , _listTradeLeg{}
+        , _displayName{}
         , _pRunner{ pRunner }
         , _connection{}
         , _accountID{ kInvalidAccountID }
+        , _tradeID{ 0 }
         , _waitUntilMs{ 0 }
         , _requestStartUs{ 0 }
         , _botIndex{ botIndex }
@@ -111,6 +122,8 @@ namespace sw
         , _bConnecting{ SW_FALSE }
         , _bConnectionOpen{ SW_FALSE }
         , _bFinished{ SW_FALSE }
+        , _bTradeCallPending{ SW_FALSE }
+        , _bTradeInvited{ SW_FALSE }
     {
         AccountClientInfo clientInfo;
         clientInfo._build    = LoadBotInternal::kClientBuild;
@@ -122,13 +135,18 @@ namespace sw
         _leaderboardClient.initialize( &_client );
         _matchmakingClient.initialize( &_client );
         _liveOpsClient.initialize( &_client );
-        const bool bClaimed = _chatClient.claimMessages( _chatLease ) && _socialClient.claimNotifications( _socialLease ) && _matchmakingClient.claimNotifications( _matchmakingLease );
+        _economyClient.initialize( &_client );
+        _mailboxClient.initialize( &_client );
+        _tradeClient.initialize( &_client );
+        const bool bClaimed = _chatClient.claimMessages( _chatLease ) && _socialClient.claimNotifications( _socialLease ) && _matchmakingClient.claimNotifications( _matchmakingLease ) &&
+                              _mailboxClient.claimNewMail( _mailboxLease );
         if ( bClaimed == false )
             SW_LOG_ERROR_ID( "LoadBot.LoadBotCouldNot", "Load bot %# could not claim its notification buffers", botIndex );
         const bool bRegistered = _client.registerClientService( &_accountClient ) && _client.registerClientService( &_directoryClient ) &&
                                  _client.registerClientService( &_chatClient ) && _client.registerClientService( &_socialClient ) &&
                                  _client.registerClientService( &_leaderboardClient ) && _client.registerClientService( &_matchmakingClient ) &&
-                                 _client.registerClientService( &_liveOpsClient );
+                                 _client.registerClientService( &_liveOpsClient ) && _client.registerClientService( &_economyClient ) &&
+                                 _client.registerClientService( &_mailboxClient ) && _client.registerClientService( &_tradeClient );
         if ( bRegistered == false )
             SW_LOG_ERROR_ID( "LoadBot.LoadBotCouldNot2", "Load bot %# could not register its kit clients - two kits claim one method range", botIndex );
         _listFrame.push_back( Frame{ &pRunner->getScenario()._listStep, 0, 1 } );
@@ -223,6 +241,11 @@ namespace sw
                 pollGameSession();
                 return _bFinished == SW_FALSE;
             }
+            case AwaitKind::Trade:
+            {
+                pollTrade( nowMs );
+                return _bFinished == SW_FALSE;
+            }
             case AwaitKind::Response:
             case AwaitKind::Closed:
             {
@@ -270,8 +293,8 @@ namespace sw
         while ( _listFrame.empty() == false )
         {
             Frame& frame = _listFrame.back();
-            if ( ++frame._stepIndex < static_cast<int32>( frame._pListStep->size() ) )
-                return;
+            if ( frame._bSingle == SW_FALSE && ++frame._stepIndex < static_cast<int32>( frame._pListStep->size() ) )
+                return; // `pick` 이 고른 단계(하나만)는 다음 단계로 가지 않고 끝난다
             if ( --frame._repeatRemaining > 0 )
             {
                 frame._stepIndex = 0; // 반복 — 처음부터
@@ -295,7 +318,12 @@ namespace sw
         }
         if ( step._action == LoadBotAction::Repeat )
         {
-            _listFrame.push_back( Frame{ &step._listStep, 0, step._count } ); // 단계를 묶기만 한다 — 시각표를 건드리지 않는다
+            _listFrame.push_back( Frame{ &step._listStep, 0, step._count, SW_FALSE } ); // 단계를 묶기만 한다 — 시각표를 건드리지 않는다
+            return;
+        }
+        if ( step._action == LoadBotAction::Pick )
+        {
+            startPick( step ); // 고르기만 한다 — 시각표를 건드리지 않는다
             return;
         }
         _requestStartUs = _schedule.beginStep( nowUs );
@@ -355,6 +383,11 @@ namespace sw
             case LoadBotAction::Login:
             {
                 startLogin( step );
+                return;
+            }
+            case LoadBotAction::Trade:
+            {
+                startTrade( step, nowMs );
                 return;
             }
             case LoadBotAction::Logout:
@@ -493,6 +526,63 @@ namespace sw
                 (void)_liveOpsClient.requestLiveState( region, LoadBotInternal::kLiveOpsBuild, OnlineReplyDelegate<LiveOpsMethod::GetLiveState>::create<&LoadBot::onKitReply<LiveOpsStateReply>>( this ) );
                 return true;
             }
+            case LoadBotAction::EconomyWallet:
+            {
+                callKit<EconomyMethod::GetWallet>( _economyClient, OnlineNoBody{} );
+                return true;
+            }
+            case LoadBotAction::EconomyPurchase:
+            {
+                EconomyPurchaseRequest request;
+                request._offerID = step._text;
+                request._count   = LoadBotInternal::kPurchaseCount;
+                callKit<EconomyMethod::Purchase>( _economyClient, request );
+                return true;
+            }
+            case LoadBotAction::EconomyRedeem:
+            {
+                EconomyRedeemRequest request;
+                request._storeName = string( LoadBotInternal::kFakeStoreName );
+                request._payload   = makeReceiptPayload( step._text );
+                callKit<EconomyMethod::RedeemReceipt>( _economyClient, request );
+                return true;
+            }
+            case LoadBotAction::MailboxClaimAll:
+            {
+                callKit<MailboxMethod::ClaimAll>( _mailboxClient, OnlineNoBody{} );
+                return true;
+            }
+            case LoadBotAction::GuildCreate:
+            {
+                SocialTextRequest request;
+                request._text = makeGuildName();
+                (void)_socialClient.call<SocialMethod::GuildCreate>( request, OnlineReplyDelegate<SocialMethod::GuildCreate>::create<&LoadBot::onGuildCreated>( this ) );
+                return true;
+            }
+            case LoadBotAction::GuildDeposit:
+            {
+                GuildAssetRequest request;
+                request._assetID = step._text;
+                request._amount  = step._amount;
+                callKit<SocialMethod::GuildDeposit>( _socialClient, request );
+                return true;
+            }
+            case LoadBotAction::GuildWithdraw:
+            {
+                GuildAssetRequest request; // 맡긴 사람을 비우면 공용 창고(이전 가능 자산) — 길드장인 봇이 꺼낸다
+                request._assetID = step._text;
+                request._amount  = step._amount;
+                callKit<SocialMethod::GuildWithdraw>( _socialClient, request );
+                return true;
+            }
+            case LoadBotAction::LeaderboardSubmit:
+            {
+                LeaderboardSubmitRequest request;
+                request._boardID = step._text;
+                request._score   = step._amount;
+                callKit<LeaderboardMethod::SubmitScore>( _leaderboardClient, request );
+                return true;
+            }
             default:
             {
                 return false;
@@ -522,10 +612,148 @@ namespace sw
         }
     }
 
+    void LoadBot::startPick( const LoadBotStep& step )
+    {
+        int32 totalWeight = 0;
+        for ( const LoadBotStep& child : step._listStep )
+        {
+            totalWeight += child._weight;
+        }
+        int32 roll = _random.nextInt( 0, totalWeight - 1 ); // 읽기가 자식마다 `_weight` > 0 을 지켰다
+        for ( size_t childIndex = 0; childIndex < step._listStep.size(); ++childIndex )
+        {
+            if ( roll < step._listStep[childIndex]._weight )
+            {
+                _listFrame.push_back( Frame{ &step._listStep, static_cast<int32>( childIndex ), 1, SW_TRUE } );
+                return;
+            }
+            roll -= step._listStep[childIndex]._weight;
+        }
+    }
+
+    void LoadBot::startTrade( const LoadBotStep& step, MonotonicMilliseconds nowMs )
+    {
+        if ( _pRunner->findBot( _botIndex ^ 1 ) == nullptr )
+        {
+            advance(); // 짝이 없다(홀수 마지막 봇) — 건너뛴다(지표에 적지 않는다)
+            return;
+        }
+        _listTradeReply.clear();
+        (void)_tradeClient.pollReplies( _listTradeReply ); // 지난 거래의 늦은 답(취소 등)을 버린다
+        _listTradeLeg.clear();
+        if ( ( _botIndex & 1 ) == 0 )
+        {
+            TradeLeg& leg = _listTradeLeg.emplace_back(); // 신청하는 쪽만 내놓는다 — 받는 쪽은 빈 제시로 잠근다
+            leg._assetID  = step._text;
+            leg._amount   = step._amount;
+        }
+        _tradeID           = 0;
+        _bTradeCallPending = SW_FALSE;
+        _bTradeInvited     = SW_FALSE;
+        _awaitKind         = AwaitKind::Trade;
+        _waitUntilMs       = nowMs + step._minMs;
+    }
+
+    void LoadBot::pollTrade( MonotonicMilliseconds nowMs )
+    {
+        _listTradeReply.clear();
+        (void)_tradeClient.pollReplies( _listTradeReply );
+        for ( const TradeClientReply& reply : _listTradeReply )
+        {
+            _bTradeCallPending = SW_FALSE;
+            if ( reply._errorCode != 0 || reply._result != TradeResult::Ok )
+            {
+                if ( _tradeID != 0 )
+                    (void)_tradeClient.cancel( _tradeID ); // 짝이 시한까지 기다리지 않게 닫는다
+                finishStep( reply._errorCode != 0 ? "code" + LoadBotInternal::makeNumberText( reply._errorCode )
+                                                  : "trade.result" + LoadBotInternal::makeNumberText( static_cast<int64>( reply._result ) ) );
+                return;
+            }
+            if ( _tradeID == 0 )
+                _tradeID = reply._snapshot._tradeID;
+        }
+        const TradeSnapshot&  snapshot  = _tradeClient.getSnapshot();
+        const optional<int32> sideIndex = snapshot.findSideIndex( _accountID );
+        const bool            bInvited  = _tradeID == 0 && sideIndex.has_value() && *sideIndex == 1 && snapshot._state == TradeState::Invited;
+        if ( bInvited )
+            _tradeID = snapshot._tradeID; // 받는 쪽 — 신청 알림이 스냅샷에 들어왔다
+        const bool bThisTrade = _tradeID != 0 && snapshot._tradeID == _tradeID && sideIndex.has_value();
+        if ( bThisTrade && snapshot.isClosed() )
+        {
+            finishStep( snapshot._state == TradeState::Settled ? string{} : "trade.closed" + LoadBotInternal::makeNumberText( static_cast<int64>( snapshot._closeReason ) ) );
+            return;
+        }
+        if ( nowMs >= _waitUntilMs )
+        {
+            if ( _tradeID != 0 )
+                (void)_tradeClient.cancel( _tradeID );
+            finishStep( "trade.timeout" );
+            return;
+        }
+        if ( _bTradeCallPending == SW_TRUE )
+            return;
+        const bool bInviter = ( _botIndex & 1 ) == 0;
+        if ( _tradeID == 0 )
+        {
+            const LoadBot* pPeer        = bInviter && _bTradeInvited == SW_FALSE ? _pRunner->findBot( _botIndex ^ 1 ) : nullptr;
+            const bool     bPeerWaiting = pPeer != nullptr && pPeer->isWaitingTradeInvite() && pPeer->getDisplayName().empty() == false;
+            if ( bPeerWaiting == false )
+                return; // 받는 쪽은 신청을, 신청하는 쪽은 짝이 거래 단계에 오기를 기다린다
+            _bTradeInvited     = SW_TRUE;
+            _bTradeCallPending = SW_TRUE;
+            (void)_tradeClient.invite( pPeer->getDisplayName() );
+            return;
+        }
+        if ( bThisTrade == false )
+            return; // 이 거래의 스냅샷이 아직 오지 않았다
+        if ( snapshot._state == TradeState::Invited )
+        {
+            if ( *sideIndex == 1 )
+            {
+                _bTradeCallPending = SW_TRUE;
+                (void)_tradeClient.respond( _tradeID, true );
+            }
+            return;
+        }
+        // 열린 거래 — 스냅샷마다 다음 명령 하나. 짝이 제시를 바꾸면 잠금이 풀린 스냅샷이 와서 다시 잠근다
+        const TradeSide& own  = snapshot._arrSide[*sideIndex];
+        const TradeSide& peer = snapshot._arrSide[1 - *sideIndex];
+        if ( _listTradeLeg.empty() == false && own._offerRevision == 0 )
+        {
+            _bTradeCallPending = SW_TRUE;
+            (void)_tradeClient.setOffer( _tradeID, _listTradeLeg );
+        }
+        else if ( own._bLocked == SW_FALSE )
+        {
+            _bTradeCallPending = SW_TRUE;
+            (void)_tradeClient.lock( _tradeID );
+        }
+        else if ( peer._bLocked == SW_TRUE && own._bConfirmed == SW_FALSE )
+        {
+            _bTradeCallPending = SW_TRUE;
+            (void)_tradeClient.confirm( _tradeID ); // 지금 스냅샷의 두 제시 버전으로 확정한다
+        }
+    }
+
+    string LoadBot::makeGuildName() const
+    {
+        return "lb" + LoadBotInternal::makeNumberText( _pRunner->getScenario()._seed ) + "_" + LoadBotInternal::makeNumberText( _botIndex );
+    }
+
+    string LoadBot::makeReceiptPayload( const string& productID )
+    {
+        // 가짜 스토어 영수증 `fake|<상품>|<거래 id>|ok` — 거래 id 는 실행마다(`getRunID`) · 봇마다 · 순번마다 달라 같은 계정이 다시 돌려도 새 지급이다
+        const string transactionID = "lb" + LoadBotInternal::makeNumberText( _pRunner->getRunID() ) + "." + LoadBotInternal::makeNumberText( _pRunner->getScenario()._seed ) + "." +
+                                     LoadBotInternal::makeNumberText( _botIndex ) + "." + LoadBotInternal::makeNumberText( _sendSequence );
+        ++_sendSequence;
+        return string( LoadBotInternal::kFakeStoreName ) + "|" + productID + "|" + transactionID + "|ok";
+    }
+
     void LoadBot::finishStep( string_view errorKey )
     {
         _pRunner->getMutableMetrics().recordLatency( _pendingAction, _pRunner->getNowUs() - _requestStartUs, errorKey );
-        _awaitKind = AwaitKind::None;
+        _awaitKind   = AwaitKind::None;
+        _waitUntilMs = LoadBotRunner::kRunStart; // 시한(`wait_match` · `trade`)을 쓴 단계가 일찍 끝나도 다음 단계가 그 시한까지 기다리지 않는다
         advance();
     }
 
@@ -565,6 +793,10 @@ namespace sw
         _matchmakingClient.pollInvites( _matchmakingLease, _listPartyInvite );
         _listLobbySnapshot.clear();
         _matchmakingClient.pollLobbyUpdates( _matchmakingLease, _listLobbySnapshot );
+        _listNewMail.clear();
+        _mailboxClient.pollNewMail( _mailboxLease, _listNewMail ); // 새 우편은 `mailbox_claim_all` 이 받는다 — 알림은 비우기만 한다
+        _listTradeUpdate.clear();
+        (void)_tradeClient.pollUpdates( _listTradeUpdate ); // 거래 단계는 클라이언트의 스냅샷을 본다 — 알림은 비우기만 한다
         _listSocialNotification.clear();
         _socialClient.pollNotifications( _socialLease, _listSocialNotification );
         for ( const SocialNotification& notification : _listSocialNotification )
@@ -601,7 +833,11 @@ namespace sw
             const bool bLoggedIn = reply._errorCode == 0 && reply._result == LoginResult::Ok &&
                                    ( reply._operation == AccountClientOperation::Login || reply._operation == AccountClientOperation::GuestLogin );
             if ( bLoggedIn )
-                _accountID = reply._grant._identity._accountID;
+            {
+                _accountID   = reply._grant._identity._accountID;
+                _displayName = reply._grant._identity._displayName;
+                _tradeClient.setAccountID( _accountID );
+            }
             finishWithResult( reply._errorCode, static_cast<uint8>( reply._result._result ) );
         }
     }
@@ -634,6 +870,13 @@ namespace sw
     void LoadBot::onDirectoryAssignment( const OnlineResult<ServerAssignment>& result )
     {
         finishWithResult( result._errorCode, 0 );
+    }
+
+    void LoadBot::onGuildCreated( const OnlineResult<GuildInfoReply>& result )
+    {
+        // 같은 씨앗으로 다시 돌리면(저장소가 남는 PostgreSQL) 게스트 계정이 같아 이미 길드에 있다 — 창고 단계가 그 길드를 쓴다
+        const bool bAlreadyIn = result._errorCode == 0 && result._reply._result == SocialResult::AlreadyInGuild;
+        finishWithResult( result._errorCode, bAlreadyIn ? uint8{ 0 } : static_cast<uint8>( result._reply._result ) );
     }
 
     void LoadBot::onFriendAccepted( const OnlineResult<SocialLinkReply>& reply )

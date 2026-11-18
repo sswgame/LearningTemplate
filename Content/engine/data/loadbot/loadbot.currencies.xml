@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a4096a8712dee2a2dd27f9365a8754b0"?>
+<!-- 부하 봇 로컬 서버(Source/Programs/OnlineLoadBot/LoadBot.online.json)의 화폐 — 원장 경로 시나리오(구매 · 영수증 · 우편 · 거래 · 길드 창고)가 쓴다. -->
+<CurrencyCatalog>
+  <Currency id="cur.gold" cap="999999999"/>
+  <Currency id="cur.gem"/>
+</CurrencyCatalog>

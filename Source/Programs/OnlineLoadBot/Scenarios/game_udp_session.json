@@ -1,6 +1,7 @@
 {
     "_name": "game_udp_session",
     "_pacing": "closed",
+    "_executor": "per_vu_iterations",
     "_listStep": [
         { "_action": "login", "_mode": "guest" },
         { "_action": "game_connect" },

@@ -3,6 +3,7 @@
     "_seed": 7,
     "_region": "kr",
     "_pacing": "closed",
+    "_executor": "per_vu_iterations",
     "_listStep": [
         { "_action": "login", "_mode": "guest" },
         { "_action": "directory_status" },
@@ -10,6 +11,19 @@
         { "_action": "chat_send", "_channel": "world.smoke", "_text": "smoke {bot} #{seq}" },
         { "_action": "chat_history", "_channel": "world.smoke", "_count": 10 },
         { "_action": "leaderboard_top", "_board": "kills", "_count": 10 },
+        { "_action": "economy_redeem", "_product": "loadbot.gold_pack" },
+        { "_action": "economy_wallet" },
+        { "_action": "economy_purchase", "_offer": "gem_from_gold" },
+        { "_action": "mailbox_claim_all" },
+        { "_action": "leaderboard_submit", "_board": "kills", "_amount": 10 },
+        { "_action": "guild_create" },
+        { "_action": "guild_deposit", "_asset": "cur.gold", "_amount": 5 },
+        { "_action": "guild_withdraw", "_asset": "cur.gold", "_amount": 5 },
+        { "_action": "pick", "_listStep": [
+            { "_action": "economy_wallet", "_weight": 1 },
+            { "_action": "chat_history", "_channel": "world.smoke", "_count": 5, "_weight": 1 }
+        ] },
+        { "_action": "trade", "_asset": "cur.gold", "_amount": 1, "_timeoutMs": 15000 },
         { "_action": "logout" }
     ]
 }

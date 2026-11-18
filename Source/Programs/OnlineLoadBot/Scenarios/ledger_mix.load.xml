@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 부하 봇 시나리오 ledger_mix.json 의 부하 선언 - 도착률 실행기(constant_arrival_rate): durationSeconds 동안 초당 _arrivalRatePerSecond 개를 띄우고,
+     clients 는 봇 풀이다(모자라면 버린 도착으로 센다). 도착률은 늘리는 시간을 받지 않는다(rampUpSeconds 0). 원장 경로의 Conflict 재시도율 · kBusy 비율을 잰다(감사 O-12). -->
+<Scenario name="loadbot.ledger_mix">
+	<Load clients="1200" rampUpSeconds="0" durationSeconds="60"/>
+</Scenario>

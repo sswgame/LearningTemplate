@@ -3,6 +3,7 @@
     "_seed": 7,
     "_region": "kr",
     "_pacing": "open",
+    "_executor": "per_vu_iterations",
     "_listStep": [
         { "_action": "login", "_mode": "guest" },
         { "_action": "chat_join", "_channel": "world.p99" },
