@@ -69,6 +69,6 @@ namespace sw
         vector<HousingEditReply>      _listReply;
         Subscription                  _routerSubscription; ///< 라우터에 단 처리기(`_server` 또는 `_client`)의 등록. 처리기보다 뒤에 선언한다 — 먼저 풀린다
         uint8                         _bServer  : 1;
-        uint8                         _reserved : 7;
+        [[maybe_unused]] uint8        _reserved : 7;
     };
 } // namespace sw

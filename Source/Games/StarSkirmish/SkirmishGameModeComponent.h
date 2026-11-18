@@ -262,6 +262,6 @@ namespace sw
         uint8                                _bDragPointValid         : 1;
         uint8                                _bAttackMovePending      : 1;
         uint8                                _bAutoPlayChangeReported : 1; ///< 판이 열린 뒤 자동 플레이가 바뀐 것을 한 번 알렸다
-        uint8                                _reserved                : 3;
+        [[maybe_unused]] uint8               _reserved                : 3;
     };
 } // namespace sw

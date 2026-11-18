@@ -49,8 +49,8 @@ namespace sw
         PROPERTY( Category = "Projectile", DisplayName = "Visual Lift", Tooltip = "Drawn this high above the hit point (chest height)", Units = m )
         float32 _visualLift;
 
-        uint32 _projectileID; ///< 디렉터 시뮬레이션의 탄 id(0 = 아직 없다)
-        uint8  _bFinished : 1;
-        uint8  _reserved  : 7;
+        uint32                 _projectileID; ///< 디렉터 시뮬레이션의 탄 id(0 = 아직 없다)
+        uint8                  _bFinished : 1;
+        [[maybe_unused]] uint8 _reserved  : 7;
     };
 } // namespace sw

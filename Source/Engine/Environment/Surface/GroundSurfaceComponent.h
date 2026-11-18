@@ -54,9 +54,9 @@ namespace sw
         PROPERTY( Category = "Surface", DisplayName = "Probe Length", Min = 0.05, Units = m, Tooltip = "How far below the feet the ground is looked for" )
         float32 _probeLength;
 
-        SurfaceSample _lastSample;
-        hashed_string _groundKind;
-        uint8         _bSampledThisFrame : 1; ///< 이번 프레임에 서비스보다 먼저 읽었다(`sampleGroundOnce`) — 서비스가 내린다
-        uint8         _reserved          : 7;
+        SurfaceSample          _lastSample;
+        hashed_string          _groundKind;
+        uint8                  _bSampledThisFrame : 1; ///< 이번 프레임에 서비스보다 먼저 읽었다(`sampleGroundOnce`) — 서비스가 내린다
+        [[maybe_unused]] uint8 _reserved          : 7;
     };
 } // namespace sw

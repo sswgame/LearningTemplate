@@ -309,6 +309,6 @@ namespace sw
         uint8                          _bRaining         : 1; ///< 판 상태 날씨의 비를 디렉터가 틱마다 옮겨 적은 것(뷰가 읽는다 — 저장하지 않는다, 날씨는 판 상태가 싣는다)
         uint8                          _bPossessionDirty : 1; ///< 농부 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
         uint8                          _bFarmerWalking   : 1; ///< 지난 틱에 이동 의도가 있었다(`isFarmerWalking` — 저장하지 않는다)
-        uint8                          _reserved         : 5;
+        [[maybe_unused]] uint8         _reserved         : 5;
     };
 } // namespace sw

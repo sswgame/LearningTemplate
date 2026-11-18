@@ -212,7 +212,7 @@ namespace sw
             uint32                   _sentRevision{ 0 };
             uint8                    _bSent             : 1; ///< 상태를 한 번이라도 보냈다
             uint8                    _bReachErrorLogged : 1; ///< 위치 조회가 없다는 오류를 남겼다(요청마다 남기지 않는다)
-            uint8                    _reserved          : 6;
+            [[maybe_unused]] uint8   _reserved          : 6;
 
             PlotEntry()
                 : _bSent{ SW_FALSE }

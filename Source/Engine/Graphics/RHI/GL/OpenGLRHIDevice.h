@@ -302,7 +302,7 @@ namespace sw
             RHITextureUploadSerials _uploadSerials;
             uint8                   _bDepthStencil : 1;
             uint8                   _bUAV          : 1;
-            uint8                   _reserved      : 6;
+            [[maybe_unused]] uint8  _reserved      : 6;
         };
 
         /// @brief MRT FBO 캐시 키입니다.

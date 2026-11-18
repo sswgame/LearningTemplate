@@ -392,7 +392,7 @@ namespace sw
             RHITextureDimension                 _dimension{ RHITextureDimension::Texture2D };
             uint8                               _bHasRTV  : 1;
             uint8                               _bHasDSV  : 1;
-            uint8                               _reserved : 6;
+            [[maybe_unused]] uint8              _reserved : 6;
         };
 
         /// @brief 텍스처 · 버퍼 레코드의 추적 상태입니다(`RHITrackedState` — Vulkan 이미지 레이아웃과 같은 형식).

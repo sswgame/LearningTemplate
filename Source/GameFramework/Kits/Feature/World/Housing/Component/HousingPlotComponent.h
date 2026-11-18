@@ -175,6 +175,6 @@ namespace sw
         HousingNetRole                     _netRole;
         uint8                              _bGhostShown : 1; ///< 미리보기를 켰다
         uint8                              _bGhostDirty : 1; ///< 고스트를 다시 세울 차례다
-        uint8                              _reserved    : 6;
+        [[maybe_unused]] uint8             _reserved    : 6;
     };
 } // namespace sw

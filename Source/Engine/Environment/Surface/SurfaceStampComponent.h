@@ -68,11 +68,11 @@ namespace sw
                   Tooltip = "A single move longer than this is a teleport: the path is not joined across it" )
         float32 _trailBreak;
 
-        SurfaceStampHandle _held;
-        float3             _lastPoint;
-        uint8              _bHasLastPoint : 1;
-        uint8              _bStampChecked : 1; ///< 도장 칸 사이의 규칙(`SurfaceStampDef::validate`)을 처음 찍기 전에 한 번 봤다
-        uint8              _bValidStamp   : 1; ///< 그 검사를 지났다 — 틀린 도장은 오류를 한 번 남기고 찍지 않는다
-        uint8              _reserved      : 5;
+        SurfaceStampHandle     _held;
+        float3                 _lastPoint;
+        uint8                  _bHasLastPoint : 1;
+        uint8                  _bStampChecked : 1; ///< 도장 칸 사이의 규칙(`SurfaceStampDef::validate`)을 처음 찍기 전에 한 번 봤다
+        uint8                  _bValidStamp   : 1; ///< 그 검사를 지났다 — 틀린 도장은 오류를 한 번 남기고 찍지 않는다
+        [[maybe_unused]] uint8 _reserved      : 5;
     };
 } // namespace sw

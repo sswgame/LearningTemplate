@@ -93,6 +93,6 @@ namespace sw
         int32                         _tickCount;
         uint8                         _bPatrolToB  : 1; ///< 해병이 지금 B 쪽으로 간다
         uint8                         _bViewsDirty : 1;
-        uint8                         _reserved    : 6;
+        [[maybe_unused]] uint8        _reserved    : 6;
     };
 } // namespace sw

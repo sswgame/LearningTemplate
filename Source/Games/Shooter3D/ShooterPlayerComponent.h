@@ -303,6 +303,6 @@ namespace sw
         uint8                           _bBodyRequested      : 1; ///< 틱이 끝난 뒤 몸을 스폰한다.
         uint8                           _bServerHealth       : 1; ///< 네트 클라이언트 — 체력은 서버의 값이다
         uint8                           _bMeleeActive        : 1; ///< 근접 창이 열려 있다
-        uint8                           _reserved            : 6;
+        [[maybe_unused]] uint8          _reserved            : 6;
     };
 } // namespace sw

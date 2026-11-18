@@ -77,8 +77,8 @@ namespace sw
         HealthKillParams();
 
         PROPERTY( Tooltip = "Kill even an invulnerable target (pits, engulfing sand); off respects State.Invulnerable" )
-        uint8 _bIgnoreInvulnerable : 1;
-        uint8 _reserved            : 7;
+        uint8                  _bIgnoreInvulnerable : 1;
+        [[maybe_unused]] uint8 _reserved            : 7;
     };
 
     /**

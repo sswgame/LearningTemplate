@@ -50,8 +50,8 @@ namespace sw
         PROPERTY( Required, Category = "Reaction", DisplayName = "Blocked Tag", Tooltip = "While the object has this tag, jumping does not help (engulfed)" )
         TagID _blockedTag;
 
-        uint32 _escapeCount;
-        uint8  _bWasGrounded : 1; ///< 지난 프레임에 디디고 있었다(떠오르는 순간을 점프로 본다)
-        uint8  _reserved     : 7;
+        uint32                 _escapeCount;
+        uint8                  _bWasGrounded : 1; ///< 지난 프레임에 디디고 있었다(떠오르는 순간을 점프로 본다)
+        [[maybe_unused]] uint8 _reserved     : 7;
     };
 } // namespace sw

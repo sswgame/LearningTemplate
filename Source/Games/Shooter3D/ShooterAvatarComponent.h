@@ -122,19 +122,19 @@ namespace sw
         LocomotionDirectionFilter                    _locomotion;
         unordered_map<const AnimationClip*, float32> _mapClipFootSpeed; ///< 클립마다 한 번 측정한 발 속도(m/s)
 
-        float32 _aimWeight;
-        float32 _shootWeight;
-        float32 _hitTimer;
-        float32 _bodyYaw; ///< 몸이 보는 요 — 시점을 각속도 상한으로 따라간다
-        float32 _lastStrideScale;
-        uint32  _strideAppliedCount;
-        uint32  _lastHitReaction;
-        float3  _gunPrevious;       ///< 지난 표본의 몸 무기 위치(몸 공간)
-        float3  _gunBeforePrevious; ///< 그 앞 표본
-        uint32  _gunSampleCount;    ///< 이번 걸음의 표본 수(2 차 차분은 셋째부터)
-        float32 _gunJerkMax;        ///< 이번 걸음의 2 차 차분 최댓값(`getGunJerkMax`)
-        uint8   _bYawReady         : 1;
-        uint8   _bStrideErrorShown : 1; ///< 노드가 없다는 오류를 한 번만 남긴다
-        uint8   _reserved          : 6;
+        float32                _aimWeight;
+        float32                _shootWeight;
+        float32                _hitTimer;
+        float32                _bodyYaw; ///< 몸이 보는 요 — 시점을 각속도 상한으로 따라간다
+        float32                _lastStrideScale;
+        uint32                 _strideAppliedCount;
+        uint32                 _lastHitReaction;
+        float3                 _gunPrevious;       ///< 지난 표본의 몸 무기 위치(몸 공간)
+        float3                 _gunBeforePrevious; ///< 그 앞 표본
+        uint32                 _gunSampleCount;    ///< 이번 걸음의 표본 수(2 차 차분은 셋째부터)
+        float32                _gunJerkMax;        ///< 이번 걸음의 2 차 차분 최댓값(`getGunJerkMax`)
+        uint8                  _bYawReady         : 1;
+        uint8                  _bStrideErrorShown : 1; ///< 노드가 없다는 오류를 한 번만 남긴다
+        [[maybe_unused]] uint8 _reserved          : 6;
     };
 } // namespace sw

@@ -88,6 +88,6 @@ namespace sw
         CreatureTown             _town;
         vector<GameObjectHandle> _listView;
         uint8                    _bViewsDirty : 1;
-        uint8                    _reserved    : 7;
+        [[maybe_unused]] uint8   _reserved    : 7;
     };
 } // namespace sw

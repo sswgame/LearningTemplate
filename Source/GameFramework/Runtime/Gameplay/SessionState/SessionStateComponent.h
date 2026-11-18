@@ -191,7 +191,7 @@ namespace sw
         uint8                            _bFreshGame   : 1;
         uint8                            _bWeather     : 1; ///< 날씨 카탈로그로 열었는지 여부
         PROPERTY( Tooltip = "Open with default settings at begin play - only for scenes without a kit director (showcases, tests); a director opens it with its own settings" )
-        uint8 _bOpenAtBeginPlay : 1;
-        uint8 _reserved         : 4;
+        uint8                  _bOpenAtBeginPlay : 1;
+        [[maybe_unused]] uint8 _reserved         : 4;
     };
 } // namespace sw

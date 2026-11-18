@@ -37,11 +37,11 @@ namespace sw
         void onTick( TickContext& context ) override;
 
     private:
-        SceneComponent* _pTarget;
-        float3          _basePosition;
-        float32         _phase;
-        float32         _elapsed;
-        uint8           _bWritesTransform : 1;
-        uint8           _reserved         : 7;
+        SceneComponent*        _pTarget;
+        float3                 _basePosition;
+        float32                _phase;
+        float32                _elapsed;
+        uint8                  _bWritesTransform : 1;
+        [[maybe_unused]] uint8 _reserved         : 7;
     };
 } // namespace sw

@@ -321,6 +321,6 @@ namespace sw
         uint8                               _bPacingReady : 1; ///< 프로필과 스폰 테이블을 읽었다.
         uint8                               _bPlayerAlive : 1;
         uint8                               _bReplica     : 1; ///< 네트 클라이언트의 월드다(판을 돌리지 않고 스냅샷의 적을 그린다)
-        uint8                               _reserved     : 4;
+        [[maybe_unused]] uint8              _reserved     : 4;
     };
 } // namespace sw

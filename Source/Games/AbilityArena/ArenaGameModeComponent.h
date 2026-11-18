@@ -295,6 +295,6 @@ namespace sw
         int32                   _nextUnitID;           ///< 다음 유닛 번호 — 정리해도 되돌리지 않는다(정리 전에 쏜 탄이 새 유닛을 이미 맞힌 것으로 보지 않게)
         uint8                   _bUnitsRequested  : 1; ///< 플레이어와 웨이브를 스폰하라고 요청했다(정리하면 다음 틱이 다시 요청한다).
         uint8                   _bPossessionDirty : 1; ///< 플레이어 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
-        uint8                   _reserved         : 6;
+        [[maybe_unused]] uint8  _reserved         : 6;
     };
 } // namespace sw

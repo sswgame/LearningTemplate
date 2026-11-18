@@ -127,6 +127,6 @@ namespace sw
         float32                       _growth;
         uint8                         _bReady   : 1;
         uint8                         _bOpened  : 1; ///< 시작을 시도했다(실패도 — 다시 오류를 내지 않는다)
-        uint8                         _reserved : 6;
+        [[maybe_unused]] uint8        _reserved : 6;
     };
 } // namespace sw

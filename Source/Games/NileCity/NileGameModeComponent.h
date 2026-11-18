@@ -265,6 +265,6 @@ namespace sw
         uint32                                     _demolishCount; ///< 자동화 감시 값 `Nile.DemolishCount` — 저장하지 않는 이번 판 수
         uint8                                      _bCursorValid    : 1;
         uint8                                      _bAutoPlanToggle : 1; ///< P 로 켠 자동 계획(PROPERTY 와 전역 변수와는 별개다).
-        uint8                                      _reserved        : 6;
+        [[maybe_unused]] uint8                     _reserved        : 6;
     };
 } // namespace sw
