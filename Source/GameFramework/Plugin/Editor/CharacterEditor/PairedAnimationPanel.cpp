@@ -175,7 +175,7 @@ namespace sw::editor
 
     void PairedAnimationPanel::populatePreviewScene( Scene& scene )
     {
-        (void)scene; // 역할 오브젝트는 프리팹을 고른 뒤 놓는다(syncPreviewRoles)
+        (void)scene; // 역할 오브젝트는 프리팹을 고른 뒤 놓는다(`PairedAnimationPreviewDriver::sync`)
         _previewDriver.clearSpawned();
     }
 
