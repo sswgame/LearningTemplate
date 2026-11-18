@@ -67,6 +67,21 @@ namespace sw
     {
         struct CharacterAppearanceComponentInternal
         {
+            /** @brief 두 본 비율 목록이 같은지 봅니다(순서까지). 부품 리그를 다시 시작할지 가른다(`assemble`). */
+            [[nodiscard]] static bool isSameProportion( const vector<BoneProportionEntry>& listLeft, const vector<BoneProportionEntry>& listRight )
+            {
+                if ( listLeft.size() != listRight.size() )
+                    return false;
+                for ( size_t index = 0; index < listLeft.size(); ++index )
+                {
+                    const BoneProportionEntry& left  = listLeft[index];
+                    const BoneProportionEntry& right = listRight[index];
+                    if ( left._bone != right._bone || ( left._scale == right._scale ) == false || ( left._offset == right._offset ) == false || ( left._rotation == right._rotation ) == false )
+                        return false;
+                }
+                return true;
+            }
+
             /**
              * @brief 유닛 공간(뼈가 사는 공간)의 컴포넌트입니다 — 스켈레탈 메시가 있으면 그것이고, 없으면 주 컴포넌트입니다.
              * @details 몸 메시는 캡슐(주 컴포넌트) 아래에 오프셋을 두고 붙기도 한다(모래에 빠짐 · 앉은 자리 보정). 소켓을 주 컴포넌트 공간으로 읽으면 그 오프셋을 잃어
@@ -296,6 +311,8 @@ namespace sw
         , _listShapeMorph{}
         , _bodyShapeSet{}
         , _footLift{ 0.0f }
+        , _dynamicsBodyMesh{}
+        , _listDynamicsProportion{}
         , _shapeReload{}
         , _rig{}
         , _socketCache{}
@@ -785,6 +802,24 @@ namespace sw
         }
     }
 
+    GameObjectHandle CharacterAppearanceComponent::findPartObject( const hashed_string& partName ) const
+    {
+        for ( const SpawnedPart& part : _listSpawnedPart )
+        {
+            if ( part._partName == partName && part._bMerged == SW_FALSE )
+                return part._object;
+        }
+        return GameObjectHandle{};
+    }
+
+    void CharacterAppearanceComponent::restartPartDynamics( GameObjectManager& manager, const SpawnedPart& spawned ) const
+    {
+        GameObject*            pObject = spawned._bMerged == SW_FALSE ? manager.resolveGameObject( spawned._object ) : nullptr;
+        PoseModifierComponent* pRig    = pObject != nullptr ? pObject->getComponent<PoseModifierComponent>() : nullptr;
+        if ( pRig != nullptr )
+            pRig->resetRig();
+    }
+
     GameObjectHandle CharacterAppearanceComponent::findSlotPartObject( const hashed_string& slot ) const
     {
         for ( const SpawnedPart& part : _listSpawnedPart )
@@ -889,6 +924,18 @@ namespace sw
         _socketBoneRequirement = pBody->requireBones( std::move( listSocketBone ) );
 
         syncParts( *pManager, *pBody, _bodyPart, listDetachEvent );
+        // 남긴 부품의 리그가 붙은 몸이 바뀌었으면(메시 · 본 비율) 그 시뮬레이션을 새 몸의 포즈에서 다시 시작한다(`restartPartDynamics`). 새 부품은 원래 처음부터다.
+        const bool bBodyMoved = string_view( pBody->getMeshID() ) != string_view( _dynamicsBodyMesh ) ||
+                                CharacterAppearanceComponentInternal::isSameProportion( _bodyProportion.getEntries(), _listDynamicsProportion ) == false;
+        if ( bBodyMoved )
+        {
+            for ( const SpawnedPart& spawned : _listSpawnedPart )
+            {
+                restartPartDynamics( *pManager, spawned );
+            }
+            _dynamicsBodyMesh       = string( pBody->getMeshID() );
+            _listDynamicsProportion = _bodyProportion.getEntries();
+        }
         bindSocketParts( *pManager );
         bindRigUnits( *pManager );
         applyMaterialValues( *pManager, *pBody );
@@ -1349,13 +1396,17 @@ namespace sw
         if ( pOwner != nullptr )
             Internal::forEachMesh( *pOwner, [this]( MeshComponent& mesh )
             { mesh.setVisible( _bPartsVisible ); } );
-        for ( const SpawnedPart& spawned : _listSpawnedPart )
+        for ( SpawnedPart& spawned : _listSpawnedPart )
         {
             // 숨기는 칸의 부품은 몸이 보여도 숨긴다(1인칭의 머리 · 손 무기).
             const hashed_string& owner    = _state.getResolved()._listPart[spawned._partIndex]._owner;
             const bool           bVisible = _bPartsVisible && ( owner.empty() || VectorUtil::contains( _listHiddenSlot, owner ) == false );
             forEachPartMesh( manager, spawned, [bVisible]( MeshComponent& mesh, const hashed_string& /*source*/ )
             { mesh.setVisible( bVisible ); } );
+            // 숨긴 동안 그 리그는 그리지 않는 유닛이라 쉬었을 수 있다 — 다시 보이는 순간 옛 입자 자리에서 튀지 않게 지금 포즈에서 다시 시작한다.
+            if ( bVisible && spawned._bShown == SW_FALSE )
+                restartPartDynamics( manager, spawned );
+            spawned._bShown = bVisible ? SW_TRUE : SW_FALSE;
         }
     }
 

@@ -1,0 +1,32 @@
+<?asset guid="442724e2c790421b864452745e9de723"?>
+<!-- UBC 여자 몸(Quaternius 기본 캐릭터)의 긴 머리 스프링 — 머리카락 메시를 사슬 4 뼈에 다시 묶은 hair_long_chain(정수리 뒤 hair0 → 뒷머리 끝 hair3, 뼈 자리는 모델 공간)이다.
+     뿌리(hair0)는 몸의 Head 뼈를 따른다 — 목표 이동은 Head 바인드 자리(0, 1.5496, -0.0109)에서 hair0 바인드 자리(0, 1.72, -0.06)까지를 Head 바인드 회전(x 축 1 도)으로 되돌린 Head 공간 값이다(회전 차 1 도는 두었다).
+     교체 계약: 머리 모양을 바꾸면 새 부품 · 새 리그라 처음부터, 몸이 바뀌면(체형 · 몸 메시) 외형이 남긴 부품의 시뮬레이션을 다시 시작한다(CharacterAppearanceComponent::restartPartDynamics).
+     충돌체는 몸의 머리 · 목 — 흔들린 머리카락이 머리 · 목을 뚫지 않는다. -->
+<RigAsset>
+	<targets>
+		<item name="Crown" bone="Head" skeletalMesh="Body" translation="0,0.1695,-0.0522" />
+		<item name="BodyHead" bone="Head" skeletalMesh="Body" />
+		<item name="BodyNeck" bone="neck_01" skeletalMesh="Body" />
+	</targets>
+	<nodes>
+		<item type="CopyTransform" name="Pin" bone="hair0" target="Crown" />
+		<item type="SpringChain" name="Hair" stiffness="0.2" damping="0.2" particle_radius="0.02" max_lod="2">
+			<bones>
+				<item>hair0</item>
+				<item>hair1</item>
+				<item>hair2</item>
+				<item>hair3</item>
+			</bones>
+			<joints>
+				<item stiffness="0.8" />
+				<item stiffness="0.4" />
+				<item stiffness="0.2" />
+			</joints>
+			<colliders>
+				<item target="BodyHead" shape="Capsule" a="0,0.08,0.01" b="0,0.12,0.01" radius="0.09" />
+				<item target="BodyNeck" shape="Capsule" a="0,0,0" b="0,0.12,0" radius="0.05" />
+			</colliders>
+		</item>
+	</nodes>
+</RigAsset>

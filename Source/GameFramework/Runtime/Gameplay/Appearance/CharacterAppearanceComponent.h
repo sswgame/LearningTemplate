@@ -290,6 +290,8 @@ namespace sw
          * @details 1인칭 시점 무기처럼 같은 아이템을 몸 밖에서 한 번 더 보이는 쪽이 메시 · 머티리얼을 이 부품에서 읽는다 — 외형 데이터가 하나의 원본이다.
          */
         GameObjectHandle findSlotPartObject( const hashed_string& slot ) const;
+        /** @brief 이름이 @p partName 인 첫 부품 오브젝트입니다(몸에 합친 부품은 오브젝트가 없다). 없으면 빈 손잡이입니다 — 감시 값이 부품의 리그를 읽는다. */
+        GameObjectHandle findPartObject( const hashed_string& partName ) const;
 
     private:
         /** @brief 스폰한 부품 하나입니다. */
@@ -306,6 +308,7 @@ namespace sw
             uint8            _bPooled{ SW_FALSE };                        ///< 프리팹에서 스폰한 소켓 부품이라 거둘 때 부품 풀에 쉰다(단단한 조각 · 스프라이트는 아니다)
             uint8            _bBaked{ SW_FALSE };                         ///< 베이크한 메시(체형 · 피팅)를 그린다 — 다시 조립하는 동안 숨기지 않는다
             uint8            _bMerged{ SW_FALSE };                        ///< 몸 메시에 합쳐 구간으로 그린다(오브젝트가 없다). `_listSection` 은 병합한 메시를 건 뒤에 생긴다
+            uint8            _bShown{ SW_TRUE };                          ///< 지난 `applyVisibility` 가 보이게 했다 — 숨겼다 다시 보이면 리그 시뮬레이션을 다시 시작한다
             /**
              * @brief 부품의 구간 컴포넌트입니다. 합친 부품은 조각마다 하나(몸 오브젝트에 붙는다 — `<Section>` 이 없으면 하나), 합치지 않은 스킨드 부품은 둘째 `<Section>` 부터 하나씩
              *        (부품 오브젝트에 붙는다 — 구간 머티리얼만 바뀌면 다시 만들지 않고 이것을 고친다).
@@ -381,8 +384,14 @@ namespace sw
         void unbindRigUnits();
         /** @brief 머티리얼 값을 주인의 부품마다 적용합니다. 구간을 적은 값(`ResolvedMaterialValue::_section`)은 그 구간을 그리는 메시에만 겁니다. */
         void applyMaterialValues( GameObjectManager& manager, SkeletalMeshComponent& body );
-        /** @brief 보임 여부를 몸과 부품에 적용합니다. */
+        /** @brief 보임 여부를 몸과 부품에 적용합니다. 숨겼던 부품이 다시 보이면 그 리그 시뮬레이션을 다시 시작합니다(`restartPartDynamics`). */
         void applyVisibility( GameObjectManager& manager );
+        /**
+         * @brief 자기 리그(스프링 머리카락 · 망토)를 가진 부품의 시뮬레이션을 버려 다음 평가가 지금 포즈(새 바인드 포즈 · 체형)에서 다시 시작하게 합니다.
+         * @details 교체 계약: 새 부품은 새 리그라 늘 처음부터 시작한다. 남긴 부품은 그 리그가 붙은 몸이 바뀌면(몸 메시 · 스켈레톤 · 본 비율) 머리 자리가 한 프레임에 옮겨져
+         *          입자가 그 거리만큼 뒤처져 튄다 — 언리얼 AnimDynamics `ResetDynamics` · Chaos Cloth `ForceNextUpdateTeleportAndReset`, 유니티 Spring Bone 리셋과 같은 자리다.
+         */
+        void restartPartDynamics( GameObjectManager& manager, const SpawnedPart& spawned ) const;
         /** @brief 몸의 현재 포즈로 몸 소켓에 붙은 부품의 위치를 고칩니다. 게임 스레드에서 실행합니다. */
         void refreshSocketTransforms( const SkeletalMeshComponent& body );
         /** @brief 몸 유닛에 단계 작업을 등록합니다. 이미 등록했으면 그대로 둡니다. */
@@ -480,6 +489,8 @@ namespace sw
         vector<BodyMorphWeight>                        _listShapeMorph;             ///< 체형 축이 정한 몸 모프 가중치 — 구울 때 해석의 모프에 더한다
         SharedAssetRef<BodyShapeSet>                   _bodyShapeSet;               ///< 쥐고 있는 체형 축 데이터(핫 리로드 판정)
         float32                                        _footLift;                   ///< 발 들림 축 값(m, `applyBodyShapes`)
+        string                                         _dynamicsBodyMesh;           ///< 부품 리그가 지난 조립에 붙은 몸 메시(바뀌면 남긴 부품의 시뮬레이션을 다시 시작한다)
+        vector<BoneProportionEntry>                    _listDynamicsProportion;     ///< 부품 리그가 지난 조립에 붙은 몸의 본 비율
         AssetReloadWatch<BodyShapeSet>                 _shapeReload;                ///< `applyBodyShapes` 가 본 `SharedAssetCache<BodyShapeSet>` 의 다시 읽은 횟수
         AppearanceSocketRig                            _rig;
         AppearanceSocketSetCache                       _socketCache;

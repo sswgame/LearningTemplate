@@ -53,3 +53,45 @@ SW_TEST_CASE( RigSpringColliderTest, ModelSpaceColliderPushesParticlesOut )
     SW_EXPECT_TRUE( sw::float3::getDistance( blocked, sphere._pointA ) >= sphere._radius * 0.9f );
     SW_EXPECT_TRUE( blocked._x < -0.05f );
 }
+
+/**
+ * @brief [RigSpringColliderTest] 입자 속도 · 흔들림 읽기: 첫 시뮬레이션(애니메이션 자세에서 시작)은 속도 0, 루트를 한 프레임에 0.3 m 옮기면 끝이 뒤처져 속도 · 흔들림이 오르고,
+ *        `reset` 뒤 다음 시뮬레이션은 다시 0 에서 시작한다 — 부품 교체 · 체형 변경 뒤 스프링을 새 포즈에서 다시 시작하는 계약(`CharacterAppearanceComponent::restartPartDynamics`)의 바탕
+ */
+SW_TEST_CASE( RigSpringColliderTest, SpeedAndOffsetFollowTheChainMotion )
+{
+    sw::Pose pose;
+    pose.resize( 3 );
+    for ( uint32 boneIndex = 0; boneIndex < 3; ++boneIndex )
+    {
+        sw::BoneTransform transform{};
+        transform._translation = boneIndex == 0 ? sw::float3{ 0.0f, 0.0f, 0.0f } : sw::float3{ 0.0f, -0.5f, 0.0f };
+        pose.setBoneTransform( boneIndex, transform );
+    }
+    sw::RigSpringSettings settings;
+    settings._stiffness          = 0.1f;
+    const float32      step      = settings._fixedStep;
+    const uint32       arrBone[] = { 0, 1, 2 };
+    sw::RigSpringChain chain;
+    sw::RigSolveSpace  space;
+    const auto         simulateAt = [&]( float32 rootX )
+    {
+        sw::BoneTransform root{};
+        root._translation = sw::float3{ rootX, 0.0f, 0.0f };
+        pose.setBoneTransform( 0, root );
+        sw::RigPoseBuffer buffer;
+        buffer.initialize( pose, { -1, 0, 1 } );
+        chain.simulate( buffer, arrBone, settings, {}, sw::float4x4::Identity, sw::float3{}, step * 1.5f, space ); // 스텝 경계의 부동소수 반올림을 피한다
+    };
+    SW_EXPECT_NEAR( chain.computeMaxSpeed(), 0.0f, 1.0e-6f ); // 상태가 없다
+    simulateAt( 0.0f );
+    SW_EXPECT_NEAR( chain.computeMaxSpeed(), 0.0f, 1.0e-4f );
+    SW_EXPECT_NEAR( chain.computeMaxOffset(), 0.0f, 1.0e-4f );
+    simulateAt( 0.3f );
+    SW_EXPECT_TRUE( chain.computeMaxSpeed() > 1.0f );
+    SW_EXPECT_TRUE( chain.computeMaxOffset() > 0.1f );
+    chain.reset();
+    simulateAt( 0.3f );
+    SW_EXPECT_NEAR( chain.computeMaxSpeed(), 0.0f, 1.0e-4f );
+    SW_EXPECT_NEAR( chain.computeMaxOffset(), 0.0f, 1.0e-4f );
+}

@@ -96,6 +96,7 @@ namespace sw
         , _listLength{}
         , _lastRootPosition{}
         , _accumulator{ 0.0f }
+        , _lastStep{ 0.0f }
         , _lastStepCount{ 0 }
         , _bInitialized{ SW_FALSE }
     {
@@ -105,6 +106,30 @@ namespace sw
     {
         _bInitialized = SW_FALSE;
         _accumulator  = 0.0f;
+    }
+
+    float32 RigSpringChain::computeMaxSpeed() const
+    {
+        if ( _bInitialized == SW_FALSE || _lastStep <= 0.0f )
+            return 0.0f;
+        float32 largest = 0.0f;
+        for ( size_t index = 1; index < _listPosition.size(); ++index )
+        {
+            largest = MathUtil::max( largest, ( _listPosition[index] - _listPreviousPosition[index] ).getLength() );
+        }
+        return largest / _lastStep;
+    }
+
+    float32 RigSpringChain::computeMaxOffset() const
+    {
+        if ( _bInitialized == SW_FALSE || _listAnimated.size() != _listPosition.size() )
+            return 0.0f;
+        float32 largest = 0.0f;
+        for ( size_t index = 1; index < _listPosition.size(); ++index )
+        {
+            largest = MathUtil::max( largest, ( _listPosition[index] - _listAnimated[index] ).getLength() );
+        }
+        return largest;
     }
 
     void RigSpringChain::addVelocity( const float3& worldVelocity, float32 fixedStep )
@@ -198,6 +223,7 @@ namespace sw
         }
         _lastRootPosition = root;
         _lastStepCount    = stepCount;
+        _lastStep         = step;
 
         // 본을 루트부터 입자 쪽으로 돌린다(부모를 돌리면 자식 위치가 바뀌므로 차례로 돌린다).
         const float4x4 modelFromWorld = worldFromModel.invert();
