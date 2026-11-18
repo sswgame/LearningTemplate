@@ -8,6 +8,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Console/DevCommandRegistry.h"

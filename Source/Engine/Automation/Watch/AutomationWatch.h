@@ -10,7 +10,6 @@
 #include "Core/Registry/RegistrationList.h"
 
 #include "Engine/Foundation/SceneIterationKey.h"
-#include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw
 {
@@ -99,15 +98,10 @@ namespace sw
         /**
          * @brief 대상 오브젝트의 첫 @p TComponent(파생 포함)입니다. 대상이 없거나 그 컴포넌트가 없으면 @p outValue 에 까닭(`describeMissing( pWhat )`)을 적고 nullptr 입니다.
          * @details 감시 값마다 "대상 찾기 → 컴포넌트 찾기 → 없으면 까닭 적기" 를 따로 적어 까닭 글이 자리마다 갈렸다(대상 글 대신 오브젝트 이름을 적은 곳). 한 곳에 둔다.
+         *          정의는 `AutomationWatchComponent.h` 에 있다 — 이 헤더는 GameObject 를 끌어오지 않는다(에디터 창 View 가 읽는 헤더라 씬 헤더가 금지다).
          */
         template <typename TComponent>
-        [[nodiscard]] const TComponent* findTargetComponent( const utf8* pWhat, AutomationWatchValue& outValue ) const
-        {
-            const TComponent* pComponent = _pTargetObject != nullptr ? _pTargetObject->getComponent<TComponent>() : nullptr;
-            if ( pComponent == nullptr )
-                outValue.setText( describeMissing( pWhat ) );
-            return pComponent;
-        }
+        [[nodiscard]] const TComponent* findTargetComponent( const utf8* pWhat, AutomationWatchValue& outValue ) const;
 
     private:
         AutomationWatchQuery() = default;

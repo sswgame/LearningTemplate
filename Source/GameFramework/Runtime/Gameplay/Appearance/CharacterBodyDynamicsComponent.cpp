@@ -16,6 +16,7 @@
 #include "Engine/Animation/Facial/WrinkleMap.h"
 #include "Engine/Animation/Rig/RigJiggleNode.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Character/Hit/CharacterHit.h"

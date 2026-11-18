@@ -8,6 +8,7 @@
 
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Reflection/EnumName.h"

@@ -10,6 +10,7 @@
 #include "Core/String/formatString.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Object/GameObject/GameObject.h"

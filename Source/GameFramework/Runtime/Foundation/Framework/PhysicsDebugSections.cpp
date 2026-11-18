@@ -11,6 +11,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
