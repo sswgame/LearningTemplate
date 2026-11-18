@@ -23,7 +23,7 @@ namespace sw::editor
     {
         /// 1) 단축키 · 메뉴가 미룬 패널 열기 · 씬 세션. 패널보다 앞이라 이번 프레임에 연 패널과 단축키 결과가 그대로 그려진다.
         static constexpr int32 kCommands = 100;
-        /// 2) 에셋 · 설정 파일 감시, 저장 직후 검증, 버전 관리 상태. 패널보다 앞이라 이번 프레임에 바뀐 머티리얼이 그대로 보인다.
+        /// 2) 버전 관리 상태 · 저장 직후 검증. 에셋 감시 · 리로드는 게임 단계다(`EditorGameStepOrder::kAssetReload`).
         static constexpr int32 kAssetReload = 200;
         /// 3) 패널 · 팝업 · 알림 그리기.
         static constexpr int32 kPanels = 300;
@@ -72,6 +72,8 @@ namespace sw::editor
     {
         /// 여러 프레임에 나눠 도는 베이크(라이트 프로브 · 반사 프로브).
         static constexpr int32 kBake = 100;
+        /// 에셋 · 설정 파일 감시와 임포트 결과 반영(캐시 리로드 · 씬 알림 — `AssetHotReload::update`). 다음 UI 프레임이 바뀐 에셋을 그린다.
+        static constexpr int32 kAssetReload = 200;
     };
 } // namespace sw::editor
 
