@@ -4,7 +4,7 @@
  *
  * @details 실행: `App.exe -game=PixelTown`(`Ninja-Debug` 빌드). 조작은 `Source/Games/PixelTown/README.md`.
  *          마을은 씬(`game/pixeltown/maps/town.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `TownGameModeComponent` 가 섭니다.
- *          이 클래스는 첫 씬을 열고, 디렉터를 상태 스냅샷에 올립니다.
+ *          이 클래스는 디렉터를 상태 스냅샷에 올립니다(첫 씬은 바탕 `GameInstance` 가 연다).
  */
 #include "pch.h"
 
@@ -24,9 +24,6 @@ namespace sw
     public:
         PixelTownGame();
         ~PixelTownGame() override;
-
-    protected:
-        bool onInitialize() override;
     };
 } // namespace sw
 
@@ -39,13 +36,6 @@ namespace sw
     }
 
     PixelTownGame::~PixelTownGame() = default;
-
-    bool PixelTownGame::onInitialize()
-    {
-        // 마을 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
-        (void)getSubsystem<GameSceneFlow>().requestFirstScene();
-        return true;
-    }
 } // namespace sw
 
 SW_IMPLEMENT_GAME_MODULE( sw::PixelTownGame );

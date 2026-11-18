@@ -58,8 +58,6 @@ namespace sw
         // 사운드 이벤트는 플레이어 자신의 소리라 2D 입니다. 베이스 클래스가 gamesettings 의 audioEvents 를 읽어 로드했습니다.
         if ( loadRequiredCatalog( _pBlockCatalog ) == false )
             return false;
-        // 섬 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
-        (void)getSubsystem<GameSceneFlow>().requestFirstScene();
         return true;
     }
 } // namespace sw

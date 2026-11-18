@@ -257,7 +257,7 @@ namespace sw
         // 자신도 건다 — 도는 인스턴스(`findRunningInstance`)는 지금 게임 범위에서 찾는다.
         if ( bindScopedService( this ) == false || bindScopedService( &_packConfig._data ) == false || bindScopedService( &_saveLock ) == false || applyPackConfig() == false )
             return false;
-        // 인스턴스 서브시스템을 onInitialize 앞에 세운다(의존 순서: 화면 전환 · 로딩 화면 → 씬 흐름) — 씬 흐름이 씬 로드 받아들임 알림을 걸어 첫 씬 요청(onInitialize 안)이
+        // 인스턴스 서브시스템을 onInitialize 앞에 세운다(의존 순서: 화면 전환 · 로딩 화면 → 씬 흐름) — 씬 흐름이 씬 로드 받아들임 알림을 걸어 첫 씬 요청(`startFirstScene`)이
         // 로딩 화면을 띄우고, 파생이 네트워크 역할을 보고 키트 처리기를 단다. 하나라도 서지 않으면(로딩 팁 파일을 못 읽었다) 게임을 띄우지 않는다 — 파생 초기화도 부르지 않는다.
         if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
         {
@@ -305,10 +305,16 @@ namespace sw
         _bDerivedEntered = SW_TRUE;
         if ( onInitialize() == false )
             return false;
+        startFirstScene();
         // 개발 전용 부분은 게임이 다 선 뒤에 붙는다(게임 `Dev/` 의 공장 — 배포 구성에는 없다).
         if ( IGameDevPartFactory* const pDevFactory = game::findSubsystem<IGameDevPartFactory>() )
             _pDevPart = pDevFactory->createDevPart();
         return true;
+    }
+
+    void GameInstance::startFirstScene()
+    {
+        (void)getSubsystem<GameSceneFlow>().requestFirstScene(); // 실패는 씬 흐름이 알리고, 다시 선 인스턴스는 살아 있는 씬을 쓴다
     }
 
     void GameInstance::shutdown()

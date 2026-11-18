@@ -70,7 +70,6 @@ namespace sw
                              loadRequiredCatalog( _pQuestCatalog );
         if ( bLoaded == false )
             return false;
-        (void)getSubsystem<GameSceneFlow>().requestFirstScene();
         return true;
     }
 } // namespace sw

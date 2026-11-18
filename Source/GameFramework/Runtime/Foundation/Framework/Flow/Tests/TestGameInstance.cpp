@@ -82,6 +82,8 @@ namespace
             }
             return false;
         }
+        /** @brief 수명 훅만 센다 — 씬 매니저가 없는 테스트라 첫 씬(바탕의 기본)을 요청하지 않는다. */
+        void startFirstScene() override {}
         void onShutdown() override { ++_shutdownCount; }
 
     private:

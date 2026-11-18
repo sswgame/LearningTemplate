@@ -4,7 +4,7 @@
  *
  * @details 실행: `App.exe -game=NileCity`(`Ninja-Debug` 빌드). 조작은 `Source/Games/NileCity/README.md`.
  *          도시는 씬(`game/nilecity/maps/nile.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `NileGameModeComponent` 가 섭니다.
- *          이 클래스는 첫 씬을 열고, 상태 저장 전에 디렉터의 도시 상태를 싣고 디렉터가 세운 런타임 오브젝트를 걷으며, 복원 뒤 도시 상태를 돌려줍니다.
+ *          이 클래스는 상태 저장 전에 디렉터의 도시 상태를 싣고 디렉터가 세운 런타임 오브젝트를 걷으며, 복원 뒤 도시 상태를 돌려줍니다(첫 씬은 바탕 `GameInstance` 가 연다).
  *          `-gv_nileAutoPlay=1` 이면 자동 계획표대로 짓고 달마다 `[Nile] month N pop P money M` 을 남긴다(입력 없이 도시가 크는 확인).
  */
 #include "pch.h"
@@ -25,9 +25,6 @@ namespace sw
     public:
         NileCityGame();
         ~NileCityGame() override;
-
-    protected:
-        bool onInitialize() override;
     };
 } // namespace sw
 
@@ -40,14 +37,6 @@ namespace sw
     }
 
     NileCityGame::~NileCityGame() = default;
-
-    bool NileCityGame::onInitialize()
-    {
-        // 사운드 이벤트(모두 2D — 위에서 내려다보는 도시)는 베이스가 gamesettings 의 audioEvents 로 올렸다.
-        // 도시 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
-        (void)getSubsystem<GameSceneFlow>().requestFirstScene();
-        return true;
-    }
 } // namespace sw
 
 SW_IMPLEMENT_GAME_MODULE( sw::NileCityGame );

@@ -80,7 +80,6 @@ namespace sw
         // 필수 데이터 — 디렉터 · 액션 룸이 게임 서비스로 찾는다(코드 폴백 없음). 못 읽으면 게임을 띄우지 않는다.
         if ( loadRequiredCatalog( _pRegionCatalog ) == false || loadRequiredCatalog( _pQuestCatalog ) == false || loadRequiredCatalogSnapshot( _pMonsterCatalog ) == false )
             return false;
-        (void)getSubsystem<GameSceneFlow>().requestFirstScene(); // 실패는 씬 흐름이 알린다
         return true;
     }
 } // namespace sw

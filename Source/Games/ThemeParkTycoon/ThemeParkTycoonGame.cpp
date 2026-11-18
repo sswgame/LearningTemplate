@@ -4,7 +4,7 @@
  *
  * @details 실행: `App.exe -game=ThemeParkTycoon`(`Ninja-Debug` 빌드). 조작은 `Source/Games/ThemeParkTycoon/README.md`.
  *          공원은 씬(`game/themepark/maps/park.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `ParkGameModeComponent` 가 섭니다.
- *          이 클래스는 첫 씬을 열고, 상태 저장 전에 디렉터의 공원 상태를 싣고 디렉터가 세운 런타임 오브젝트를 걷으며, 복원 뒤 공원 상태를 돌려줍니다.
+ *          이 클래스는 상태 저장 전에 디렉터의 공원 상태를 싣고 디렉터가 세운 런타임 오브젝트를 걷으며, 복원 뒤 공원 상태를 돌려줍니다(첫 씬은 바탕 `GameInstance` 가 연다).
  *          `-gv_parkAutoBuild=1` 이면 돈이 모이는 대로 다음 놀이기구를 짓는다(입력 없이 공원이 크는 확인).
  */
 #include "pch.h"
@@ -25,9 +25,6 @@ namespace sw
     public:
         ThemeParkTycoonGame();
         ~ThemeParkTycoonGame() override;
-
-    protected:
-        bool onInitialize() override;
     };
 } // namespace sw
 
@@ -40,14 +37,6 @@ namespace sw
     }
 
     ThemeParkTycoonGame::~ThemeParkTycoonGame() = default;
-
-    bool ThemeParkTycoonGame::onInitialize()
-    {
-        // 사운드 이벤트(모두 2D — 위에서 내려다보는 공원)는 베이스가 gamesettings 의 audioEvents 로 올렸다.
-        // 공원 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
-        (void)getSubsystem<GameSceneFlow>().requestFirstScene();
-        return true;
-    }
 } // namespace sw
 
 SW_IMPLEMENT_GAME_MODULE( sw::ThemeParkTycoonGame );

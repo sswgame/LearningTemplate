@@ -5,7 +5,7 @@
  * @details 실행: `App.exe -game=AbilityArena`(`Ninja-Debug` 빌드). 조작: WASD 이동, J/Space 근접, K/2 화염구(마나 · 화상), L/3 회복(데이터만),
  *          LeftShift/4 대시(무적). `-gv_arenaAutoPlay=1` 이면 플레이어도 AI 가 움직인다. 자세한 것은 `Source/Games/AbilityArena/README.md`.
  *          아레나는 씬(`game/abilityarena/maps/arena.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `ArenaGameModeComponent` 가 섭니다.
- *          이 클래스는 어빌리티 카탈로그를 들고 게임 서비스로 걸고, 첫 씬을 열고, 상태 저장 전에 판의 진행(웨이브 · 처치 수)을 싣고 디렉터가 세운 런타임 오브젝트를 걷으며, 복원 뒤 진행을 돌려줍니다.
+ *          이 클래스는 어빌리티 카탈로그를 들고 게임 서비스로 걸고, 상태 저장 전에 판의 진행(웨이브 · 처치 수)을 싣고 디렉터가 세운 런타임 오브젝트를 걷으며, 복원 뒤 진행을 돌려줍니다.
  */
 #include "pch.h"
 
@@ -64,8 +64,6 @@ namespace sw
         // 탄도 필수다 — 투사체 어빌리티의 탄속 · 사거리 · 피해가 그 탄 정의다.
         if ( loadRequiredCatalog( _pAbilityCatalog ) == false || loadRequiredCatalog( _pProjectileCatalog ) == false )
             return false;
-        // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
-        (void)getSubsystem<GameSceneFlow>().requestFirstScene();
         return true;
     }
 } // namespace sw
