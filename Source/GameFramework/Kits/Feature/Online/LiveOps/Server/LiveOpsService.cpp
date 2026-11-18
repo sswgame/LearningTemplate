@@ -83,7 +83,7 @@ namespace sw
     LiveOpsService::LiveOpsService()
         : _listEvent{}
         , _listOpenWindow{}
-        , _listStarted{}
+        , _startedBuffer{}
         , _completionBuffer{}
         , _dependencies{}
         , _lastOpenHash{ 0 }
@@ -148,11 +148,7 @@ namespace sw
 
     void LiveOpsService::takeStartedEvents( vector<LiveEventStart>& outListStart )
     {
-        for ( LiveEventStart& start : _listStarted )
-        {
-            outListStart.push_back( std::move( start ) );
-        }
-        _listStarted.clear();
+        _startedBuffer.moveAllTo( outListStart );
     }
 
     void LiveOpsService::collectStarts( UnixMilliseconds nowMs )
@@ -179,7 +175,8 @@ namespace sw
                 (void)findParameter( definition._eventID, LiveOpsPush::kLinkParameter, message._deepLink );  // 선택 값이다 — 없으면 비우고 아래가 거른다
                 if ( message._titleKey.empty() && message._bodyKey.empty() )
                     continue; // 시작 푸시를 달지 않은 이벤트이다
-                LiveEventStart& start = _listStarted.emplace_back();
+                _startedBuffer.push( LiveEventStart{} );
+                LiveEventStart& start = _startedBuffer.getLast();
                 start._message        = std::move( message );
                 start._listRegion     = definition._listRegion;
                 start._eventID        = definition._eventID;

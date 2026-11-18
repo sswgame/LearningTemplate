@@ -17,6 +17,7 @@
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
@@ -148,7 +149,7 @@ namespace sw
         mutable mutex                          _mutex; ///< 두 연결, 받은 메시지, 확인 수를 보호한다. I/O 스레드와 함께 쓴다
         RESPConnection _commandConnection      SW_GUARDED_BY( _mutex );
         RESPConnection _subscribeConnection    SW_GUARDED_BY( _mutex );
-        vector<EphemeralMessage>               _listMessage;
+        EventBuffer<EphemeralMessage>          _messageBuffer;
         vector<RESPReplyRecord>                _listRecordScratch;
         vector<RESPValue>                      _listPushScratch;
         vector<string> _listChannel            SW_GUARDED_BY( _mutex ); ///< 구독 중인 채널이다. 접두어가 없는 이름이며 다시 연결하면 다시 구독한다

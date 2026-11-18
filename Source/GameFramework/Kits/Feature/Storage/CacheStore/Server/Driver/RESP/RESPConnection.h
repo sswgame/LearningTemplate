@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
@@ -103,17 +104,17 @@ namespace sw
         void failAwaitingTags();
 
     private:
-        RESPParser              _parser;
-        deque<RESPCommandTag>   _listAwaitTag;
-        vector<RESPReplyRecord> _listReplyRecord;
-        vector<RESPValue>       _listPushValue;
-        vector<uint8>           _pendingSendBytes; ///< 연결이 열리기 전에 모은 평문이다
-        vector<uint8>           _plainBytes;
-        vector<uint8>           _cipherBytes;
-        unique_ptr<ITLSSession> _tlsSession;
-        StreamConnectionHandle  _handle;
-        RESPConnectionState     _state;
-        uint8                   _bPushMode;
-        uint8                   _bAuthRejected;
+        RESPParser                   _parser;
+        deque<RESPCommandTag>        _listAwaitTag;
+        EventBuffer<RESPReplyRecord> _replyRecordBuffer;
+        EventBuffer<RESPValue>       _pushValueBuffer;
+        vector<uint8>                _pendingSendBytes; ///< 연결이 열리기 전에 모은 평문이다
+        vector<uint8>                _plainBytes;
+        vector<uint8>                _cipherBytes;
+        unique_ptr<ITLSSession>      _tlsSession;
+        StreamConnectionHandle       _handle;
+        RESPConnectionState          _state;
+        uint8                        _bPushMode;
+        uint8                        _bAuthRejected;
     };
 } // namespace sw
