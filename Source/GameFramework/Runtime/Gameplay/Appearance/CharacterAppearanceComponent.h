@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -25,6 +26,7 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
@@ -168,7 +170,7 @@ namespace sw
             return bHasMergedParts && bMeshMerged == false && bAssemblyInFlight;
         }
 
-        /** @brief 프리셋과 시드를 바꾸고 다시 조립합니다. 슬롯 덮어쓰기는 그대로 둡니다. */
+        /** @brief 프리셋과 시드를 바꾸고 다시 조립합니다. 슬롯 덮어쓰기는 그대로 둡니다. 선택으로 입히던 것(`applySelection` · `previewSelection`)은 풀고 프리셋 길로 돌아갑니다. */
         void setPreset( const hashed_string& presetID, uint32 seed );
         /** @brief 지금 입히려는 프리셋 id 입니다(`setPreset` 이나 프로퍼티가 정한 값 — 조립이 끝났는지와 상관없다). */
         const string& getPresetID() const { return _presetID; }
@@ -179,11 +181,25 @@ namespace sw
         /**
          * @brief 미리보기 입히기 — 프리셋 id 대신 외형 선택 @p selection 을 데이터 @p database 로 조립합니다. 게임 서비스가 없는 씬(에디터 미리보기 창)이 씁니다.
          * @details 게임과 같은 길로 조립한다 — 미리보기 씬도 플레이하고 틱해야 한다(`ScenePreviewPolicy::_bPlay`, 언리얼 FPreviewScene). 플레이하지 않는 씬이면 오류를 남기고 입히지 않는다.
-         *          시작 전(방금 붙인 컴포넌트)이면 `onBeginPlay` 가 조립하고, 베이크한 메시는 틱이 받아 건다. 한 번 부르면 이 컴포넌트는 프리셋 id 와
+         *          시작 전(방금 붙인 컴포넌트)이면 `onBeginPlay` 가 조립하고, 베이크한 메시는 틱이 받아 건다. 한 번 부르면(`setPreset` 이 풀기 전까지) 이 컴포넌트는 프리셋 id 와
          *          게임 서비스 `AppearanceDatabase` 를 보지 않고 이 선택 · 데이터로만 조립한다(두 길이 섞이지 않는다). @p database 는 빌린 것이라 컴포넌트보다 오래 살아야 한다.
          *          선택을 펼치며 버리거나 되돌린 것(`AppearanceSelectionReport`)은 경고로 남긴다.
          */
         void previewSelection( const AppearanceSelection& selection, const AppearanceDatabase& database );
+        /**
+         * @brief 게임 입히기 — 플레이어의 외형 선택 @p selection(캐릭터 생성 · 저장한 프리셋 · 공유 코드 · 네트워크 동기화)을 게임 서비스 `AppearanceDatabase` 로 조립합니다.
+         * @details `previewSelection` 과 같은 펼침이되 게임 길이다 — 구운 메시 캐시와 짓는 중인 같은 차림을 나누고 피팅 결과를 남기지 않는다(언리얼 Mutable 의 런타임 인스턴스 갱신).
+         *          예전에는 게임에 선택을 입힐 길이 없어 미리보기 길(캐시를 건너뜀)을 써야 했고, 그 뒤의 `setPreset` 은 소리 없이 무시됐다.
+         *          시작 전이면 `onBeginPlay` 가 조립한다. 슬롯 덮어쓰기(`setSlotItem`)는 그 위에 그대로 덮는다.
+         */
+        void applySelection( const AppearanceSelection& selection );
+        /**
+         * @brief 지금 입히려는 모습을 전체 선택으로 담습니다(저장 · 공유 코드 · 편집의 입력). 선택 길이면 요청한 선택 위에 슬롯 덮어쓰기를 얹은 것이라 조립 전에도 맞고,
+         *        프리셋 길이면 지난 조립의 펼친 프리셋(덮어쓰기 포함)이라 아직 조립하지 않았으면 빈 선택입니다.
+         */
+        void captureSelection( AppearanceSelection& outSelection ) const;
+        /** @brief 예약한 조립도, 읽거나 짓거나 걸기를 기다리는 메시 조립도 없으면 true 입니다 — 바꾼 외형이 다 걸렸다(시나리오의 조건 대기 · 감시 값). */
+        [[nodiscard]] bool isAssemblyIdle() const { return _bAssembleScheduled == SW_FALSE && _bMeshAssemblyPending == SW_FALSE && _bMeshApplyQueued == SW_FALSE; }
         /**
          * @brief 장비를 빌립니다. 그 슬롯이 프리셋의 장비 구성을 덮어씁니다(슬롯 덮어쓰기 `setSlotItem` 은 그 위에 다시 덮는다). 다시 조립을 예약합니다.
          * @details 소유하지 않습니다 — 장비가 사라지기 전에 nullptr 로 부릅니다. 끼기 · 벗기 뒤에 같은 포인터로 다시 부르면 다시 조립하고, 장비의 버전이 그대로이면 해석은 건너뜁니다.
@@ -256,6 +272,17 @@ namespace sw
         float32 getFootLift() const { return _footLift; }
         /** @brief 이 컴포넌트가 조립에 쓰는 외형 데이터입니다(미리보기 데이터, 아니면 게임 서비스). 없으면 nullptr 입니다. */
         const AppearanceDatabase* findDatabase() const;
+        static constexpr uint32   kStateTag     = FourCCUtil::make( "CAPP" );
+        static constexpr uint32   kStateVersion = 1;
+        /**
+         * @brief `ComponentStateStore` 계약 — 게임 중 꾸민 모습을 게임 세이브에 싣습니다: 게임 선택(`applySelection` — 공유 코드, 판이 따로 있어 옛 판을 읽는다)과 슬롯 덮어쓰기.
+         * @details 프리셋 id · 시드는 프로퍼티라 씬과 함께 실린다. 미리보기 입히기(편집기 데이터)는 싣지 않는다. 장비 인스턴스(아이템 염색)는 `CharacterEquipmentComponent` 가 싣는다.
+         *          예전에는 상태가 없어 불러오면 꾸민 모습이 프리셋으로 돌아갔다. 읽기는 외형 데이터가 있어야 해 시작 뒤에만 한다 — 그 전 바이트는 `restoreState` 가 보관한다.
+         */
+        void serializeState( StateIO& io );
+        /** @brief 저장한 상태를 받습니다. 시작 전이면 보관했다가 `onBeginPlay` 가 겁니다. 읽지 못하면 알리고 지금 모습을 그대로 둡니다. */
+        void restoreState( vector<uint8>&& bytes );
+
         /** @brief 지금 스폰해 둔 부품 오브젝트입니다. */
         void collectPartObjects( vector<GameObjectHandle>& outListObject ) const;
         /**
@@ -309,6 +336,8 @@ namespace sw
         void requestAssemble( TickContext& context );
         /** @brief 예약된 조립을 돕니다(틱 뒤 작업 몸체). */
         void runScheduledAssemble();
+        /** @brief 보관한 세이브 상태를 겁니다. 건 것이 없으면 false 입니다. */
+        bool applyPendingState();
         /** @brief 펼치고, 해석하고, 조립합니다. 게임 스레드의 틱 밖에서 실행합니다. */
         void assemble();
         /** @brief 몸 부품을 이 오브젝트의 유닛에 입힙니다. 몸 부품 번호를 반환하고, 없으면 -1 입니다. */
@@ -463,8 +492,9 @@ namespace sw
         vector<hashed_string>                          _listHiddenSlot;       ///< 보임과 따로 숨기는 슬롯(`setHiddenSlots`)
         vector<hashed_string>                          _listRigUnit;          ///< 후처리 리그에 강체 유닛으로 이은 칸(`bindRigUnits`)
         TComponentHandle<SkeletalMeshComponent>        _taskUnit;             ///< 단계 작업을 등록한 몸 유닛
-        AppearanceSelection                            _previewSelection;     ///< 미리보기 입히기의 선택(`previewSelection`)
-        const AppearanceDatabase*                      _pPreviewDatabase;     ///< 미리보기 입히기의 데이터(빌린 것). 있으면 프리셋 id · 게임 서비스를 보지 않는다
+        AppearanceSelection                            _selection;            ///< 선택 입히기의 선택(`applySelection` · `previewSelection` — `_bSelectionSet` 일 때만 쓴다)
+        const AppearanceDatabase*                      _pPreviewDatabase;     ///< 미리보기 입히기의 데이터(빌린 것). 있으면 게임 서비스를 보지 않고 구운 메시 캐시를 건너뛴다
+        vector<uint8>                                  _pendingStateBytes;    ///< 시작 전에 받은 세이브 상태(`restoreState`)
         Subscription                                   _reloadSubscription;   ///< 외형 데이터 다시 읽기의 구독(플레이 중에만). 데이터 서비스가 먼저 사라지면 무효가 된다
         vector<MeshAssemblyLoad>                       _listMeshAssemblyLoad; ///< 베이크한 메시의 부품 로드(몸이 먼저)
         SharedAssetHandle<FitTables>                   _fitTablesLoad;        ///< 몸의 피팅 표 로드. 표가 없으면 요청이 없다
@@ -484,6 +514,7 @@ namespace sw
         uint8                                          _bMeshMerged          : 1; ///< 몸 유닛이 합친 메시를 그리고 구간 이름을 가졌다 — 합치지 않게 되면 되돌려야 한다
         uint8                                          _bMeshApplyQueued     : 1; ///< 다 읽은 조립의 걸기를 틱 뒤로 미뤄 두었다 — 그동안 원본 내용 id 가 아직 없어 낡음 판정을 하지 않는다
         uint8                                          _bPartsStripped       : 1; ///< 풀 반환이 부품을 걷었다 — 다음 조립까지 다시 켜진 틱이 입힌다
+        uint8                                          _bSelectionSet        : 1; ///< 프리셋 id 대신 `_selection` 으로 입힌다(`applySelection` · `previewSelection`, `setPreset` 이 푼다)
         vector<TComponentHandle<MeshSectionComponent>> _listBodySection;          ///< 몸 부품의 `<Section>` 중 둘째부터를 그리는 구간 컴포넌트(몸 오브젝트에 붙는다 — `applyBodyPart`)
         CharacterSurfaceState                          _surface;                  ///< 표면 상태(`_surfaceChannelsPath` 가 있을 때만 채널을 가진다)
         CharacterSurfaceBinding                        _surfaceBinding;           ///< 표면 상태를 부품 머티리얼에 올리고 마스크 텍스처를 쥔다

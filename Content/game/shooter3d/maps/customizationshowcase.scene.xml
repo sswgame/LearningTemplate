@@ -1,0 +1,58 @@
+<?asset guid="07fd8e4827554f62a9809a466d2785c7"?>
+<Scene formatVersion="3" name="CustomizationShowcase">
+	<!-- 게임 중 꾸미기 쇼케이스(시나리오 showcase/customizebody · customizeoutfit · customizedye) — 시나리오가 개발 명령(appearance.*)으로 외형을 바꾼다.
+	     Hero 와 Twin 은 같은 프리셋(CustomizeTownsfolk — UBC 마을 사람, 레인저 옷, 권총)이고 Hero 만 부품을 몸 메시에 합친다(_bMergeParts) — 한쪽을 바꿔도 다른 쪽이 그대로인지 본다.
+	     Brute 는 체형 슬라이더를 가진 해골 전사(CustomizeBrute — 두건 위 투구, 도끼, 방패)다.
+	     애니메이터가 없다(바인드 포즈) — 사진 시점이 에셋 대기 길이와 상관없이 같은 포즈다(itemvariant 와 같다). 체형은 쉬는 몸도 포즈를 다시 만든다(markPoseDirty).
+	     16:9 창에서 카메라(0,1.1,-5.5, fovY 0.9)가 캐릭터 x = -2 · 0 · 2 를 가로 0.29 · 0.5 · 0.71 에, 키 0 ~ 2 m 를 세로 0.71 ~ 0.31 에 놓는다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Floor">
+			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="12,1,12" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Plane" _materialPath="game/shooter3d/materials/floor.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0.310517,-2.045455,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _color="1,0.95,0.9" _intensity="1.8" _ambient="0.45" _shadowExtent="8" _shadowDistance="16" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="ViewCamera">
+			<GameObject _schemaVersion="0" _name="ViewCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent" _bActive="true" _localPosition="0,1.1,-5.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _fovY="0.9" _nearZ="0.05" _farZ="60" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Hero">
+			<GameObject _schemaVersion="0" _name="Hero" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="-2,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
+					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="CustomizeTownsfolk" _seed="0" _bMergeParts="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Twin">
+			<GameObject _schemaVersion="0" _name="Twin" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
+					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="CustomizeTownsfolk" _seed="0" _bMergeParts="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Brute">
+			<GameObject _schemaVersion="0" _name="Brute" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="2,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
+					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="CustomizeBrute" _seed="0" _bMergeParts="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

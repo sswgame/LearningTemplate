@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="aa75162de9f54fb9a9da0699004f398f"?>
+<!--
+  게임 중 꾸미기 ① 몸(본 커마) — 무대 maps/customizationshowcase 의 Brute(해골 전사, 스키마 SkeletonBody — 어깨 · 허리 폭 슬라이더, 몸 채널 매핑 skeleton_warrior.bodyshape.xml).
+  상용 캐릭터 생성기가 깨지는 자리: 체형을 극값으로 밀면 ⑴ 손 소켓이 새 뼈 자리를 따라가는가(소켓 · 든 도끼의 자리 — 옛 자리에 남으면 손에서 뜬다),
+  ⑵ 같은 프레임의 두 편집이 둘 다 남는가(앞 편집을 잃지 않음), ⑶ 장비를 바꿔도 체형이 남는가, ⑷ 커진 몸이 잘리지 않는가(사진 — 컬링 경계).
+  거짓 통과 막기: 기본 · 넓힘 · 좁힘 세 장이 몸 영역에서 서로 다르고(ExpectImagesDiffer), 바꾸기가 실제로 다시 조립했다(AssembleCount).
+  골든은 통합 담당이 뜬다(-scenario-record-missing-golden). 얼굴 모프는 이 몸(KayKit 해골)에 모프 타깃이 없어 덮지 않는다.
+  실행: App -scenario=game/shooter3d/automation/showcase/customizebody.scenario.xml -unattended
+-->
+<Scenario name="game.shooter3d.customizebody" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/shooter3d/maps/customizationshowcase.scene.xml"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Brute" equals="1" timeoutFrames="120"/>
+	<!-- 투구가 두건을 감춘다(규칙 HelmetHidesHood) -->
+	<Expect watch="Appearance.SlotItem" target="Brute" key="Head" is="helmet_skeleton"/>
+	<Expect watch="Appearance.PartCount" target="Brute" key="Hood" equals="0"/>
+	<Expect watch="Appearance.Value" target="Brute" key="ShoulderWidth" near="0"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="customizebody_base.ppm"/>
+	<ExpectImage file="customizebody_base.ppm" golden="customizebody_base"/>
+
+	<!-- 넓힘 극값 — 두 편집을 한 프레임에 보낸다(같은 프레임의 둘째 편집이 첫 편집을 잃지 않는다) -->
+	<Store watch="Appearance.SocketOffset" target="Brute" key="Blade.x" as="bladeBase"/>
+	<Store watch="Appearance.SlotPartOffset" target="Brute" key="MainHand.x" as="axeBase"/>
+	<Store watch="Appearance.AssembleCount" target="Brute" as="assemblesBase"/>
+	<DevCommand line="appearance.value Brute ShoulderWidth 1"/>
+	<DevCommand line="appearance.value Brute WaistWidth 1"/>
+	<WaitUntil watch="Appearance.AssembleCount" target="Brute" increaseFrom="assemblesBase" increaseBy="1" timeoutFrames="10"/>
+	<WaitUntil watch="Appearance.Idle" target="Brute" equals="1" timeoutFrames="120"/>
+	<Expect watch="Appearance.Value" target="Brute" key="ShoulderWidth" near="1"/>
+	<Expect watch="Appearance.Value" target="Brute" key="WaistWidth" near="1"/>
+	<!-- 소켓은 지난 프레임 포즈로 답한다 — 비율이 걸린 포즈가 한 번 돈 뒤에 옮겨 있다 -->
+	<WaitUntil watch="Appearance.SocketOffset" target="Brute" key="Blade.x" differsFrom="bladeBase" timeoutFrames="10"/>
+	<WaitUntil watch="Appearance.SlotPartOffset" target="Brute" key="MainHand.x" differsFrom="axeBase" timeoutFrames="10"/>
+	<Store watch="Appearance.SocketOffset" target="Brute" key="Blade.x" as="bladeWide"/>
+	<Store watch="Appearance.SlotPartOffset" target="Brute" key="MainHand.x" as="axeWide"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="customizebody_wide.ppm"/>
+	<ExpectImage file="customizebody_wide.ppm" golden="customizebody_wide"/>
+	<ExpectImagesDiffer first="customizebody_base.ppm" second="customizebody_wide.ppm" region="0.6,0.25,0.82,0.75" minDiffering="0.005"/>
+	<!-- 다른 캐릭터는 그대로다 -->
+	<ExpectImagesDiffer first="customizebody_base.ppm" second="customizebody_wide.ppm" region="0.18,0.25,0.6,0.75" minDiffering="0" maxDiffering="0.002"/>
+
+	<!-- 좁힘 극값 -->
+	<DevCommand line="appearance.value Brute ShoulderWidth -1"/>
+	<DevCommand line="appearance.value Brute WaistWidth -1"/>
+	<WaitUntil watch="Appearance.Value" target="Brute" key="ShoulderWidth" near="-1" timeoutFrames="2"/>
+	<WaitUntil watch="Appearance.Idle" target="Brute" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="Appearance.SocketOffset" target="Brute" key="Blade.x" differsFrom="bladeWide" timeoutFrames="10"/>
+	<WaitUntil watch="Appearance.SlotPartOffset" target="Brute" key="MainHand.x" differsFrom="axeWide" timeoutFrames="10"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="customizebody_narrow.ppm"/>
+	<ExpectImage file="customizebody_narrow.ppm" golden="customizebody_narrow"/>
+	<ExpectImagesDiffer first="customizebody_wide.ppm" second="customizebody_narrow.ppm" region="0.6,0.25,0.82,0.75" minDiffering="0.005"/>
+
+	<!-- 장비를 바꿔도 체형이 남는다 — 새 무기도 새 손 자리에 붙는다 -->
+	<DevCommand line="appearance.slot Brute MainHand blade_skeleton"/>
+	<WaitUntil watch="Appearance.SlotItem" target="Brute" key="MainHand" is="blade_skeleton" timeoutFrames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Brute" equals="1" timeoutFrames="120"/>
+	<Expect watch="Appearance.Value" target="Brute" key="ShoulderWidth" near="-1"/>
+	<Expect watch="Appearance.Value" target="Brute" key="WaistWidth" near="-1"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="customizebody_blade.ppm"/>
+	<ExpectImage file="customizebody_blade.ppm" golden="customizebody_blade"/>
+	<ExpectImagesDiffer first="customizebody_narrow.ppm" second="customizebody_blade.ppm" region="0.6,0.25,0.82,0.75" minDiffering="0.001"/>
+
+	<!-- 프리셋으로 되돌리면 처음 모습이다 — 선택으로 입힌 뒤의 setPreset 이 무시되지 않는다(도끼는 슬롯 덮어쓰기라 따로 되돌린다) -->
+	<DevCommand line="appearance.slot Brute MainHand axe_skeleton"/>
+	<DevCommand line="appearance.preset Brute CustomizeBrute 0"/>
+	<WaitUntil watch="Appearance.SlotItem" target="Brute" key="MainHand" is="axe_skeleton" timeoutFrames="10"/>
+	<WaitUntil watch="Appearance.Value" target="Brute" key="ShoulderWidth" near="0" timeoutFrames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Brute" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="Appearance.SocketOffset" target="Brute" key="Blade.x" sameAs="bladeBase" timeoutFrames="10"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="customizebody_reset.ppm"/>
+	<ExpectImagesDiffer first="customizebody_base.ppm" second="customizebody_reset.ppm" minDiffering="0" maxDiffering="0.002"/>
+	<Pass/>
+</Scenario>

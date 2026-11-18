@@ -197,9 +197,20 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 규칙이 숨긴 것 하나입니다(`<Hide target part>` — 부품이 비면 그 주인 전체). 같은 것을 여럿이 숨기면 우선순위가 가장 높은 규칙 하나만 남는다. */
+    struct ResolvedHiddenPart
+    {
+        hashed_string _owner{};
+        hashed_string _part{};
+        hashed_string _rule{};
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @brief 해석 결과입니다. 순서는 결정적이며 몸, 꾸미기 외형, 슬롯 테이블 순서의 장비 순입니다. `_hash` 가 캐시 키입니다.
-     * @details `_meshHash` 는 병합 메시에 들어가는 것(스킨드 부품, 몸 수정, 모프, 머티리얼, 숨김 영역)만 본다. 외형 상태(뽑음, 꽂음)나 부착물만 바뀌면
+     * @details `_meshHash` 는 병합 메시에 들어가는 것(스킨드 부품, 몸 수정, 모프, 머티리얼 에셋 · 구간 머티리얼, 숨김 영역)만 본다 — 머티리얼 값(염색)은 인스턴스에 걸려 넣지 않는다. 외형 상태(뽑음, 꽂음)나 부착물만 바뀌면
      *          해시가 그대로이므로 병합 메시를 다시 베이크하지 않아도 된다.
      */
     struct SW_GF_API ResolvedAppearance
@@ -214,6 +225,7 @@ namespace sw
         vector<ResolvedDetachedPart>     _listDetachedPart{};
         vector<ResolvedSkinLayer>        _listSkinLayer{}; ///< 그릴 피부 층(숨긴 층 · 모르는 층은 빠진다) — 굽기 순서
         vector<hashed_string>            _listHiddenRegion{};
+        vector<ResolvedHiddenPart>       _listHiddenByRule{};    ///< 규칙이 숨긴 주인 · 부품과 그 규칙(숨긴 이유 — 감시 값 · 편집 창). 결과 부품 목록에는 숨긴 것이 없다
         vector<hashed_string>            _listMaterialChannel{}; ///< 나온 부품의 머티리얼이 받은 몸 채널(`<ChannelMaterial>`) — 체형 축 데이터가 모르는 채널이어도 오류가 아니다
         vector<AppearanceTraceEntry>     _listTrace{};
         hashed_string                    _presetID{};
@@ -228,6 +240,8 @@ namespace sw
         bool                 hasOwner( const hashed_string& owner ) const;
         bool                 isRegionHidden( const hashed_string& region ) const;
         const ResolvedMorph* findMorph( const hashed_string& owner, const hashed_string& name ) const;
+        /** @brief 주인 @p owner 의 부품 @p partName 을 숨긴 규칙 id 입니다(주인 전체를 숨긴 규칙 포함). 규칙이 숨기지 않았으면 빈 이름입니다. */
+        hashed_string findHidingRule( const hashed_string& owner, const hashed_string& partName ) const;
         /** @brief @p source 가 남긴 설명 항목 수입니다. 테스트와 편집 창에 씁니다. */
         uint32 countTrace( const hashed_string& source ) const;
 

@@ -190,3 +190,28 @@ SW_TEST_CASE( AppearanceSectionsTest, UnreadablePropertiesFailToLoad )
     SW_EXPECT_EQUAL( report.countWithID( "Appearance.PartAttributeNotAllowed" ), uint32{ 1 } );
     SW_EXPECT_EQUAL( report.countWithID( "Appearance.SectionUnknown" ), uint32{ 1 } );
 }
+
+/** @brief [AppearanceSectionsTest] 염색(아이템 인스턴스의 색 값)은 메시 해시에 들지 않고 해석 해시에만 든다 — 색마다 같은 메시를 다시 굽지 않는다 */
+SW_TEST_CASE( AppearanceSectionsTest, DyeChangesResolveHashButNotMeshHash )
+{
+    using Util = AppearanceSectionsTestUtil;
+    AppearanceDatabase database;
+    Util::load( database, Util::kSlotsXML );
+    Util::load( database, R"(<ItemVisualCatalog>
+        <ItemVisual id="body"><Part name="Body" kind="Skinned" mesh="body.mesh" material="body.material"/></ItemVisual>
+        <ItemVisual id="cloak" customization="Dye"><Part name="Cloak" kind="Skinned" mesh="cloak.mesh" material="cloak.material"/></ItemVisual>
+    </ItemVisualCatalog>)" );
+    Util::load( database, R"(<CustomizationSchemaCatalog><Schema id="Dye">
+        <Color name="Tint" default="1 1 1 1"><Drive kind="MaterialColor" target="_color"/></Color>
+    </Schema></CustomizationSchemaCatalog>)" );
+    CharacterAppearanceSpec spec;
+    spec._bodyVisual               = hashed_string( "body" );
+    AppearanceSlotRequest& request = Util::equip( spec, "Torso", "cloak" );
+    ResolvedAppearance     plain;
+    ResolvedAppearance::resolve( database, spec, plain );
+    request._customization.setColor( hashed_string( "Tint" ), float4{ 0.8f, 0.1f, 0.1f, 1.0f } );
+    ResolvedAppearance dyed;
+    ResolvedAppearance::resolve( database, spec, dyed );
+    SW_EXPECT_EQUAL( dyed._meshHash, plain._meshHash );
+    SW_EXPECT_NOT_EQUAL( dyed._hash, plain._hash );
+}

@@ -547,3 +547,66 @@ SW_TEST_CASE( AppearanceInputUtilTest, ApplyEquipmentCopiesTheInstanceState )
     SW_EXPECT_NEAR( spec._listSlot[1]._damage, 0.0f, 1.0e-6f );
     SW_EXPECT_TRUE( spec._listSlot[1]._listDetachedPart.empty() );
 }
+
+// 부품 숨김 규칙은 입은 순서와 상관없고(A → B 와 B → A 가 같은 결과 · 같은 해시), 겹치면 우선순위가 높은 규칙이 이유가 되며, 하나를 벗으면 그 규칙만 풀린다.
+// 캐릭터 조건(태그)이 부품을 숨기고, 스킨드 부품의 숨김은 메시 해시(구운 메시 캐시 키)를 바꾼다 — 서로 다른 숨김 조합이 같은 캐시 항목을 쓰지 않는다.
+SW_TEST_CASE_F( AppearanceResolverTest, PartHideRulesIgnoreWearOrderAndReleaseOnlyTheirOwn )
+{
+    load( R"(<AppearanceRuleCatalog>
+        <Rule id="HelmHidesPad" priority="1"><When occupied="Head"/><Hide target="Torso" part="Pad"/></Rule>
+        <Rule id="ShieldHidesPad" priority="5"><When target="OffHand" tag="Weapon.Shield"/><Hide target="Torso" part="Pad"/></Rule>
+        <Rule id="SlimHidesRivet"><When characterTag="Build.Slim"/><Hide target="Torso" part="Rivet"/></Rule>
+        <Rule id="RifleHidesPlate"><When occupied="MainHand"/><Hide target="Torso" part="Plate"/></Rule>
+    </AppearanceRuleCatalog>)" );
+    const hashed_string torso( "Torso" );
+    // 순서 하나: 몸통 → 투구 → 방패
+    equip( "Torso", "armor" );
+    equip( "Head", "helmet" );
+    equip( "OffHand", "shield" );
+    resolve();
+    const ResolvedAppearance forward = _resolved;
+    // 반대 순서
+    _spec._listSlot.clear();
+    equip( "OffHand", "shield" );
+    equip( "Head", "helmet" );
+    equip( "Torso", "armor" );
+    resolve();
+    SW_EXPECT_EQUAL( _resolved._hash, forward._hash );
+    SW_EXPECT_EQUAL( _resolved._meshHash, forward._meshHash );
+    SW_REQUIRE_EQUAL( _resolved._listPart.size(), forward._listPart.size() );
+    for ( size_t index = 0; index < forward._listPart.size(); ++index )
+    {
+        SW_EXPECT_TRUE( _resolved._listPart[index]._owner == forward._listPart[index]._owner );
+        SW_EXPECT_TRUE( _resolved._listPart[index]._partName == forward._listPart[index]._partName );
+    }
+    SW_EXPECT_TRUE( findPart( "Torso", "Pad" ) == nullptr );
+    SW_EXPECT_TRUE( _resolved.findHidingRule( torso, hashed_string( "Pad" ) ) == hashed_string( "ShieldHidesPad" ) ); // 우선순위가 높은 쪽이 이유
+    SW_EXPECT_TRUE( findPart( "Torso", "Rivet" ) != nullptr );                                                        // 음성 대조: 태그가 없으면 숨기지 않는다
+    SW_EXPECT_TRUE( _resolved.findHidingRule( torso, hashed_string( "Rivet" ) ).empty() );
+
+    // 방패를 벗으면 그 규칙만 풀린다 — 투구 규칙의 숨김은 남는다
+    _spec._listSlot.pop_back();
+    _spec._listSlot.erase( _spec._listSlot.begin() );
+    equip( "Torso", "armor" );
+    resolve();
+    SW_EXPECT_TRUE( findPart( "Torso", "Pad" ) == nullptr );
+    SW_EXPECT_TRUE( _resolved.findHidingRule( torso, hashed_string( "Pad" ) ) == hashed_string( "HelmHidesPad" ) );
+    // 투구도 벗으면 보인다
+    _spec._listSlot.clear();
+    equip( "Torso", "armor" );
+    resolve();
+    SW_EXPECT_TRUE( findPart( "Torso", "Pad" ) != nullptr );
+    const uint64 plainMeshHash = _resolved._meshHash;
+
+    // 캐릭터 조건
+    _spec._tags.addTag( TagID::request( "Build.Slim" ) );
+    resolve();
+    SW_EXPECT_TRUE( findPart( "Torso", "Rivet" ) == nullptr );
+    SW_EXPECT_TRUE( _resolved.findHidingRule( torso, hashed_string( "Rivet" ) ) == hashed_string( "SlimHidesRivet" ) );
+
+    // 스킨드 부품(Plate)을 숨기면 메시 해시가 달라진다
+    equip( "MainHand", "rifle" );
+    resolve();
+    SW_EXPECT_TRUE( findPart( "Torso", "Plate" ) == nullptr );
+    SW_EXPECT_NOT_EQUAL( _resolved._meshHash, plainMeshHash );
+}
