@@ -14,7 +14,7 @@ namespace sw
         : _settings{ settings }
         , _keyCache{}
         , _listPending{}
-        , _listDone{}
+        , _verificationBuffer{}
         , _pProvider{ pProvider }
         , _pHTTPClient{ pHTTPClient }
         , _verificationIDAllocator{}
@@ -50,12 +50,8 @@ namespace sw
 
     int32 OidcLoginProvider::pollVerifications( vector<PlatformLoginVerification>& outListVerification )
     {
-        const int32 count = static_cast<int32>( _listDone.size() );
-        for ( PlatformLoginVerification& verification : _listDone )
-        {
-            outListVerification.push_back( std::move( verification ) );
-        }
-        _listDone.clear();
+        const int32 count = static_cast<int32>( _verificationBuffer.getCount() );
+        _verificationBuffer.moveAllTo( outListVerification );
         return count;
     }
 
@@ -112,7 +108,7 @@ namespace sw
                 else
                     verification._bRejected = SW_TRUE;
             }
-            _listDone.push_back( std::move( verification ) );
+            _verificationBuffer.push( std::move( verification ) );
             _listPending.erase( _listPending.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
         }
     }

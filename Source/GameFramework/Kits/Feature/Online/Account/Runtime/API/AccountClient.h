@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -130,14 +131,14 @@ namespace sw
         void finishResume( const AccountClientReply& reply );
 
     private:
-        vector<AccountClientReply> _listReply;
-        vector<AccountClientEvent> _listEvent;
-        AccountClientInfo          _clientInfo;
-        AccountIdentity            _identity;
-        LoginSessionToken          _token;
-        OnlineServiceClient*       _pServiceClient; ///< 세션 요청 보류를 걸고 푸는 데 쓴다. 기반의 서비스 클라이언트와 같다
-        uint8                      _bLoggedIn;
-        uint8                      _bResuming;
-        uint8                      _bAutomaticResume; ///< 날아가는 재접속이 다시 연결된 뒤 이 객체가 스스로 보낸 것이다
+        EventBuffer<AccountClientReply> _replyBuffer;
+        EventBuffer<AccountClientEvent> _eventBuffer;
+        AccountClientInfo               _clientInfo;
+        AccountIdentity                 _identity;
+        LoginSessionToken               _token;
+        OnlineServiceClient*            _pServiceClient; ///< 세션 요청 보류를 걸고 푸는 데 쓴다. 기반의 서비스 클라이언트와 같다
+        uint8                           _bLoggedIn;
+        uint8                           _bResuming;
+        uint8                           _bAutomaticResume; ///< 날아가는 재접속이 다시 연결된 뒤 이 객체가 스스로 보낸 것이다
     };
 } // namespace sw

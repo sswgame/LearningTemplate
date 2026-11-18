@@ -8,6 +8,7 @@
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
@@ -58,17 +59,17 @@ namespace sw
             uint64 _revocationID{ 0 };
         };
 
-        vector<PendingTicket>             _listPending;
-        vector<PlatformLoginVerification> _listDone;
-        vector<PendingRevocation>         _listPendingRevocation;
-        vector<string>                    _listRevokedSecret;
-        string                            _name;
-        string                            _linkSecret;
-        IDAllocator<uint64>               _verificationIDAllocator;
-        IDAllocator<uint64>               _revocationIDAllocator;
-        int32                             _submittedCount;
-        uint8                             _bRevocationEnabled;
-        uint8                             _bRevocationUnavailable;
-        uint8                             _bRequireServerNonce;
+        vector<PendingTicket>                  _listPending;
+        EventBuffer<PlatformLoginVerification> _verificationBuffer;
+        vector<PendingRevocation>              _listPendingRevocation;
+        vector<string>                         _listRevokedSecret;
+        string                                 _name;
+        string                                 _linkSecret;
+        IDAllocator<uint64>                    _verificationIDAllocator;
+        IDAllocator<uint64>                    _revocationIDAllocator;
+        int32                                  _submittedCount;
+        uint8                                  _bRevocationEnabled;
+        uint8                                  _bRevocationUnavailable;
+        uint8                                  _bRequireServerNonce;
     };
 } // namespace sw

@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Network/Message/NetRequest.h"
@@ -95,9 +96,9 @@ namespace sw
         void   observe( const TradeSnapshot& snapshot );
 
     private:
-        vector<TradeClientReply>  _listReply;
-        vector<TradeClientUpdate> _listUpdate;
-        TradeSnapshot             _snapshot;
-        AccountID                 _accountID;
+        EventBuffer<TradeClientReply>  _replyBuffer;
+        EventBuffer<TradeClientUpdate> _updateBuffer;
+        TradeSnapshot                  _snapshot;
+        AccountID                      _accountID;
     };
 } // namespace sw

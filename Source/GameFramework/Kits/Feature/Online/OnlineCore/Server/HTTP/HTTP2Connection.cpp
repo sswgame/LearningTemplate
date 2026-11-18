@@ -66,7 +66,7 @@ namespace sw
         , _settings{ settings }
         , _mapStream{}
         , _listQueued{}
-        , _listDone{}
+        , _responseBuffer{}
         , _inBytes{}
         , _listHeaderBlock{}
         , _headerStreamID{ 0 }
@@ -494,8 +494,9 @@ namespace sw
         const auto streamIt = _mapStream.find( streamID );
         if ( streamIt == _mapStream.end() )
             return;
-        Stream&             stream   = streamIt->second;
-        HTTPClientResponse& response = _listDone.emplace_back();
+        Stream& stream = streamIt->second;
+        _responseBuffer.push( HTTPClientResponse{} );
+        HTTPClientResponse& response = _responseBuffer.getLast();
         response._requestID          = stream._requestID;
         response._statusCode         = stream._statusCode;
         response._listHeader         = std::move( stream._listHeader );
@@ -518,7 +519,8 @@ namespace sw
 
     void HTTP2Connection::pushFailure( uint64 requestID, const utf8* pFailure )
     {
-        HTTPClientResponse& response = _listDone.emplace_back();
+        _responseBuffer.push( HTTPClientResponse{} );
+        HTTPClientResponse& response = _responseBuffer.getLast();
         response._requestID          = requestID;
         response._bTransportFailed   = SW_TRUE;
         response._failureText        = pFailure;
@@ -572,12 +574,8 @@ namespace sw
 
     int32 HTTP2Connection::takeResponses( vector<HTTPClientResponse>& outListResponse )
     {
-        const int32 count = static_cast<int32>( _listDone.size() );
-        for ( HTTPClientResponse& response : _listDone )
-        {
-            outListResponse.push_back( std::move( response ) );
-        }
-        _listDone.clear();
+        const int32 count = static_cast<int32>( _responseBuffer.getCount() );
+        _responseBuffer.moveAllTo( outListResponse );
         return count;
     }
 } // namespace sw

@@ -17,6 +17,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
@@ -85,13 +86,13 @@ namespace sw
         void                complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs = 0 );
 
     private:
-        APNSPushSettings              _settings;
-        string                        _providerToken;
-        string                        _deviceURLPrefix; ///< `<기준 주소>/3/device/`
-        vector<PushDeliveryResult>    _listDone;
-        unordered_map<uint64, uint64> _mapRequestToDelivery;
-        INetSecurityProvider*         _pSecurity;
-        HTTP2Client*                  _pHTTPClient;
-        int64                         _tokenIssuedMs;
+        APNSPushSettings                _settings;
+        string                          _providerToken;
+        string                          _deviceURLPrefix; ///< `<기준 주소>/3/device/`
+        EventBuffer<PushDeliveryResult> _resultBuffer;
+        unordered_map<uint64, uint64>   _mapRequestToDelivery;
+        INetSecurityProvider*           _pSecurity;
+        HTTP2Client*                    _pHTTPClient;
+        int64                           _tokenIssuedMs;
     };
 } // namespace sw

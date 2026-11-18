@@ -49,7 +49,7 @@ namespace sw
         : _tokenSource{ std::move( settings._credentials ), FCMPushSettings::kScope, pSecurity, pHTTPClient, settings._requestTimeoutMs }
         , _sendURL{}
         , _listWaiting{}
-        , _listDone{}
+        , _resultBuffer{}
         , _mapRequestToDelivery{}
         , _pHTTPClient{ pHTTPClient }
         , _requestTimeoutMs{ settings._requestTimeoutMs }
@@ -238,7 +238,8 @@ namespace sw
 
     void FCMPushProvider::complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs )
     {
-        PushDeliveryResult& result = _listDone.emplace_back();
+        _resultBuffer.push( PushDeliveryResult{} );
+        PushDeliveryResult& result = _resultBuffer.getLast();
         result._deliveryID         = deliveryID;
         result._status             = status;
         result._retryAfterMs       = retryAfterMs;
@@ -268,9 +269,8 @@ namespace sw
 
     int32 FCMPushProvider::pollResults( vector<PushDeliveryResult>& outListResult )
     {
-        const int32 count = static_cast<int32>( _listDone.size() );
-        outListResult.insert( outListResult.end(), _listDone.begin(), _listDone.end() );
-        _listDone.clear();
+        const int32 count = static_cast<int32>( _resultBuffer.getCount() );
+        _resultBuffer.moveAllTo( outListResult );
         return count;
     }
 } // namespace sw

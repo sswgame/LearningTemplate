@@ -36,7 +36,7 @@ namespace sw
         : _settings{ std::move( settings ) }
         , _providerToken{}
         , _deviceURLPrefix{}
-        , _listDone{}
+        , _resultBuffer{}
         , _mapRequestToDelivery{}
         , _pSecurity{ pSecurity }
         , _pHTTPClient{ pHTTPClient }
@@ -212,7 +212,8 @@ namespace sw
 
     void APNSPushProvider::complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs )
     {
-        PushDeliveryResult& result = _listDone.emplace_back();
+        _resultBuffer.push( PushDeliveryResult{} );
+        PushDeliveryResult& result = _resultBuffer.getLast();
         result._deliveryID         = deliveryID;
         result._status             = status;
         result._retryAfterMs       = retryAfterMs;
@@ -237,9 +238,8 @@ namespace sw
 
     int32 APNSPushProvider::pollResults( vector<PushDeliveryResult>& outListResult )
     {
-        const int32 count = static_cast<int32>( _listDone.size() );
-        outListResult.insert( outListResult.end(), _listDone.begin(), _listDone.end() );
-        _listDone.clear();
+        const int32 count = static_cast<int32>( _resultBuffer.getCount() );
+        _resultBuffer.moveAllTo( outListResult );
         return count;
     }
 } // namespace sw

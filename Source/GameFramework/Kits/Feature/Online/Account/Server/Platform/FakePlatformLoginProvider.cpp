@@ -17,7 +17,7 @@ namespace sw
 {
     FakePlatformLoginProvider::FakePlatformLoginProvider( string_view name )
         : _listPending{}
-        , _listDone{}
+        , _verificationBuffer{}
         , _listPendingRevocation{}
         , _listRevokedSecret{}
         , _name{ name }
@@ -54,12 +54,8 @@ namespace sw
 
     int32 FakePlatformLoginProvider::pollVerifications( vector<PlatformLoginVerification>& outListVerification )
     {
-        const int32 count = static_cast<int32>( _listDone.size() );
-        for ( PlatformLoginVerification& verification : _listDone )
-        {
-            outListVerification.push_back( std::move( verification ) );
-        }
-        _listDone.clear();
+        const int32 count = static_cast<int32>( _verificationBuffer.getCount() );
+        _verificationBuffer.moveAllTo( outListVerification );
         return count;
     }
 
@@ -69,7 +65,8 @@ namespace sw
         const string_view prefix{ FakePlatformLoginProviderInternal::kSubjectPrefix };
         for ( const PendingTicket& pending : _listPending )
         {
-            PlatformLoginVerification& verification = _listDone.emplace_back();
+            _verificationBuffer.push( PlatformLoginVerification{} );
+            PlatformLoginVerification& verification = _verificationBuffer.getLast();
             verification._verificationID            = pending._verificationID;
             const string_view text{ pending._text };
             if ( text == "down" )

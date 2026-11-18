@@ -11,8 +11,8 @@
 namespace sw
 {
     TradeClient::TradeClient()
-        : _listReply{}
-        , _listUpdate{}
+        : _replyBuffer{}
+        , _updateBuffer{}
         , _snapshot{}
         , _accountID{ kInvalidAccountID }
     {
@@ -70,23 +70,15 @@ namespace sw
 
     int32 TradeClient::pollReplies( vector<TradeClientReply>& outListReply )
     {
-        const int32 count = static_cast<int32>( _listReply.size() );
-        for ( TradeClientReply& reply : _listReply )
-        {
-            outListReply.push_back( std::move( reply ) );
-        }
-        _listReply.clear();
+        const int32 count = static_cast<int32>( _replyBuffer.getCount() );
+        _replyBuffer.moveAllTo( outListReply );
         return count;
     }
 
     int32 TradeClient::pollUpdates( vector<TradeClientUpdate>& outListUpdate )
     {
-        const int32 count = static_cast<int32>( _listUpdate.size() );
-        for ( TradeClientUpdate& update : _listUpdate )
-        {
-            outListUpdate.push_back( std::move( update ) );
-        }
-        _listUpdate.clear();
+        const int32 count = static_cast<int32>( _updateBuffer.getCount() );
+        _updateBuffer.moveAllTo( outListUpdate );
         return count;
     }
 
@@ -112,7 +104,7 @@ namespace sw
         update._snapshot    = body._snapshot;
         update._listBalance = body._listBalance;
         observe( update._snapshot );
-        _listUpdate.push_back( std::move( update ) );
+        _updateBuffer.push( std::move( update ) );
     }
 
     template <typename TMethod>
@@ -135,7 +127,7 @@ namespace sw
             reply._listBalance = result._reply._listBalance;
             observe( reply._snapshot );
         }
-        _listReply.push_back( std::move( reply ) );
+        _replyBuffer.push( std::move( reply ) );
     }
 
     void TradeClient::observe( const TradeSnapshot& snapshot )

@@ -62,8 +62,8 @@ namespace sw
 namespace sw
 {
     AccountClient::AccountClient()
-        : _listReply{}
-        , _listEvent{}
+        : _replyBuffer{}
+        , _eventBuffer{}
         , _clientInfo{}
         , _identity{}
         , _token{}
@@ -110,7 +110,8 @@ namespace sw
     {
         if ( _token.isEmpty() )
         {
-            AccountClientReply& reply = _listReply.emplace_back();
+            _replyBuffer.push( AccountClientReply{} );
+            AccountClientReply& reply = _replyBuffer.getLast();
             reply._requestID          = allocateRequestID();
             reply._operation          = AccountClientOperation::Resume;
             reply._result             = LoginResult::InvalidToken;
@@ -168,23 +169,15 @@ namespace sw
 
     int32 AccountClient::pollReplies( vector<AccountClientReply>& outListReply )
     {
-        const int32 count = static_cast<int32>( _listReply.size() );
-        for ( AccountClientReply& reply : _listReply )
-        {
-            outListReply.push_back( std::move( reply ) );
-        }
-        _listReply.clear();
+        const int32 count = static_cast<int32>( _replyBuffer.getCount() );
+        _replyBuffer.moveAllTo( outListReply );
         return count;
     }
 
     int32 AccountClient::pollEvents( vector<AccountClientEvent>& outListEvent )
     {
-        const int32 count = static_cast<int32>( _listEvent.size() );
-        for ( AccountClientEvent& event : _listEvent )
-        {
-            outListEvent.push_back( std::move( event ) );
-        }
-        _listEvent.clear();
+        const int32 count = static_cast<int32>( _eventBuffer.getCount() );
+        _eventBuffer.moveAllTo( outListEvent );
         return count;
     }
 
@@ -204,7 +197,7 @@ namespace sw
         event._reasonCode = body._reasonCode;
         _bLoggedIn        = SW_FALSE;
         _token            = LoginSessionToken{}; // 밀려난 세션은 돌아올 수 없으므로 다시 로그인해야 한다
-        _listEvent.push_back( std::move( event ) );
+        _eventBuffer.push( std::move( event ) );
     }
 
     void AccountClient::onClientReady( OnlineServiceClient& client )
@@ -277,11 +270,11 @@ namespace sw
         }
         if ( reply._operation != AccountClientOperation::Resume )
         {
-            _listReply.push_back( std::move( reply ) );
+            _replyBuffer.push( std::move( reply ) );
             return;
         }
         reply._bAutomatic = _bAutomaticResume;
-        _listReply.push_back( reply );
+        _replyBuffer.push( reply );
         finishResume( reply );
     }
 
@@ -293,7 +286,7 @@ namespace sw
             reply._result = result._reply._result;
             reply._ticket = result._reply._ticket;
         }
-        _listReply.push_back( std::move( reply ) );
+        _replyBuffer.push( std::move( reply ) );
     }
 
     void AccountClient::onNonceReply( const OnlineResult<AccountNonceReply>& result )
@@ -304,7 +297,7 @@ namespace sw
             reply._result     = result._reply._result;
             reply._loginNonce = result._reply._nonce;
         }
-        _listReply.push_back( std::move( reply ) );
+        _replyBuffer.push( std::move( reply ) );
     }
 
     void AccountClient::onLinkReply( const OnlineResult<AccountLinkReply>& result )
@@ -315,7 +308,7 @@ namespace sw
             reply._result      = result._reply._result;
             reply._linkSummary = result._reply._summary;
         }
-        _listReply.push_back( std::move( reply ) );
+        _replyBuffer.push( std::move( reply ) );
     }
 
     void AccountClient::finishResume( const AccountClientReply& reply )

@@ -11,7 +11,7 @@ namespace sw
     ProfileAPILoginProvider::ProfileAPILoginProvider( const PlatformLoginProviderConfig& settings, HTTPClient* pHTTPClient )
         : _settings{ settings }
         , _mapRequestToVerification{}
-        , _listDone{}
+        , _verificationBuffer{}
         , _pHTTPClient{ pHTTPClient }
         , _verificationIDAllocator{}
     {
@@ -31,12 +31,8 @@ namespace sw
 
     int32 ProfileAPILoginProvider::pollVerifications( vector<PlatformLoginVerification>& outListVerification )
     {
-        const int32 count = static_cast<int32>( _listDone.size() );
-        for ( PlatformLoginVerification& verification : _listDone )
-        {
-            outListVerification.push_back( std::move( verification ) );
-        }
-        _listDone.clear();
+        const int32 count = static_cast<int32>( _verificationBuffer.getCount() );
+        _verificationBuffer.moveAllTo( outListVerification );
         return count;
     }
 
@@ -50,7 +46,8 @@ namespace sw
             const auto requestIt = _mapRequestToVerification.find( response._requestID );
             if ( requestIt == _mapRequestToVerification.end() )
                 continue;
-            PlatformLoginVerification& verification = _listDone.emplace_back();
+            _verificationBuffer.push( PlatformLoginVerification{} );
+            PlatformLoginVerification& verification = _verificationBuffer.getLast();
             verification._verificationID            = requestIt->second;
             _mapRequestToVerification.erase( requestIt );
             const bool bDenied = response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden;

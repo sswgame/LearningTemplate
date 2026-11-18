@@ -13,6 +13,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -132,23 +133,23 @@ namespace sw
         [[nodiscard]] expected<void> failConnection( const Error& error );
 
     private:
-        HPACKDecoder                  _decoder;
-        HTTP2ConnectionConfig         _settings;
-        unordered_map<uint32, Stream> _mapStream;
-        vector<Queued>                _listQueued;
-        vector<HTTPClientResponse>    _listDone;
-        vector<uint8>                 _inBytes;
-        vector<uint8>                 _listHeaderBlock; ///< 이어 받는 헤더 블록
-        uint32                        _headerStreamID;
-        int64                         _connectionSendWindow;
-        int64                         _peerInitialWindow;
-        uint32                        _peerMaxFrameSize;
-        uint32                        _peerMaxConcurrentStreams;
-        uint32                        _nextStreamID;
-        uint32                        _continuationStreamID; ///< 0 이 아니면 CONTINUATION 만 와야 한다
-        uint8                         _bHeaderEndStream;
-        uint8                         _bStarted;
-        uint8                         _bGoAway;
-        uint8                         _bFailed;
+        HPACKDecoder                    _decoder;
+        HTTP2ConnectionConfig           _settings;
+        unordered_map<uint32, Stream>   _mapStream;
+        vector<Queued>                  _listQueued;
+        EventBuffer<HTTPClientResponse> _responseBuffer;
+        vector<uint8>                   _inBytes;
+        vector<uint8>                   _listHeaderBlock; ///< 이어 받는 헤더 블록
+        uint32                          _headerStreamID;
+        int64                           _connectionSendWindow;
+        int64                           _peerInitialWindow;
+        uint32                          _peerMaxFrameSize;
+        uint32                          _peerMaxConcurrentStreams;
+        uint32                          _nextStreamID;
+        uint32                          _continuationStreamID; ///< 0 이 아니면 CONTINUATION 만 와야 한다
+        uint8                           _bHeaderEndStream;
+        uint8                           _bStarted;
+        uint8                           _bGoAway;
+        uint8                           _bFailed;
     };
 } // namespace sw

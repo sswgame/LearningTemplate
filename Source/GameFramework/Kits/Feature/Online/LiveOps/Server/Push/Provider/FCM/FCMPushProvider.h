@@ -14,6 +14,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
@@ -83,12 +84,12 @@ namespace sw
         void complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs = 0 );
 
     private:
-        ServiceAccountTokenSource     _tokenSource;
-        string                        _sendURL;
-        vector<Waiting>               _listWaiting;
-        vector<PushDeliveryResult>    _listDone;
-        unordered_map<uint64, uint64> _mapRequestToDelivery;
-        HTTPClient*                   _pHTTPClient;
-        int64                         _requestTimeoutMs;
+        ServiceAccountTokenSource       _tokenSource;
+        string                          _sendURL;
+        vector<Waiting>                 _listWaiting;
+        EventBuffer<PushDeliveryResult> _resultBuffer;
+        unordered_map<uint64, uint64>   _mapRequestToDelivery;
+        HTTPClient*                     _pHTTPClient;
+        int64                           _requestTimeoutMs;
     };
 } // namespace sw

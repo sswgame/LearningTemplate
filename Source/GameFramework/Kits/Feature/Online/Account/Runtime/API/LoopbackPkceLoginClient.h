@@ -10,6 +10,7 @@
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Transport/StreamTypes.h"
 
@@ -86,14 +87,14 @@ namespace sw
         string                         makeRedirectURI() const;
 
     private:
-        HTTPServer                        _redirectServer;
-        HTTPClient                        _httpClient;
-        vector<PkceLoginProviderConfig>   _listProviderSettings;
-        vector<PendingLogin>              _listPending;
-        vector<PlatformLoginClientResult> _listDone;
-        INetSecurityProvider*             _pProvider;
-        IExternalBrowser*                 _pBrowser;
-        MonotonicMilliseconds             _nowMs;
-        IDAllocator<uint64>               _requestIDAllocator;
+        HTTPServer                             _redirectServer;
+        HTTPClient                             _httpClient;
+        vector<PkceLoginProviderConfig>        _listProviderSettings;
+        vector<PendingLogin>                   _listPending;
+        EventBuffer<PlatformLoginClientResult> _resultBuffer;
+        INetSecurityProvider*                  _pProvider;
+        IExternalBrowser*                      _pBrowser;
+        MonotonicMilliseconds                  _nowMs;
+        IDAllocator<uint64>                    _requestIDAllocator;
     };
 } // namespace sw

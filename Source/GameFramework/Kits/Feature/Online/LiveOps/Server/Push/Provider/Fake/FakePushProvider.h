@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/unordered_map.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -50,8 +51,8 @@ namespace sw
         void queueResult( uint64 deliveryID, const string& scriptKey );
 
     private:
-        vector<SentRecord>            _listSent;
-        vector<PushDeliveryResult>    _listPending;
-        unordered_map<string, Script> _mapTokenToScript;
+        vector<SentRecord>              _listSent;
+        EventBuffer<PushDeliveryResult> _resultBuffer;
+        unordered_map<string, Script>   _mapTokenToScript;
     };
 } // namespace sw

@@ -8,6 +8,7 @@
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
@@ -36,10 +37,10 @@ namespace sw
         void        update( UnixMilliseconds nowMs ) override;
 
     private:
-        PlatformLoginProviderConfig       _settings;
-        unordered_map<uint64, uint64>     _mapRequestToVerification;
-        vector<PlatformLoginVerification> _listDone;
-        HTTPClient*                       _pHTTPClient;
-        IDAllocator<uint64>               _verificationIDAllocator;
+        PlatformLoginProviderConfig            _settings;
+        unordered_map<uint64, uint64>          _mapRequestToVerification;
+        EventBuffer<PlatformLoginVerification> _verificationBuffer;
+        HTTPClient*                            _pHTTPClient;
+        IDAllocator<uint64>                    _verificationIDAllocator;
     };
 } // namespace sw

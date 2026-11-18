@@ -9,6 +9,7 @@
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
@@ -62,17 +63,17 @@ namespace sw
         Decision evaluate( const PendingTicket& pending, UnixMilliseconds now, PlatformLoginVerification& outVerification );
 
     private:
-        PlatformLoginProviderConfig       _settings;
-        JWKSKeyCache                      _keyCache;
-        vector<PendingTicket>             _listPending;
-        vector<PlatformLoginVerification> _listDone;
-        INetSecurityProvider*             _pProvider;
-        HTTPClient*                       _pHTTPClient;
-        IDAllocator<uint64>               _verificationIDAllocator;
-        uint64                            _jwksRequestID;
-        UnixMilliseconds                  _lastFetchStartMs;
-        uint32                            _fetchGeneration; ///< 끝난 받기의 횟수이다
-        int32                             _jwksFetchCount;
-        uint8                             _bLastFetchFailed;
+        PlatformLoginProviderConfig            _settings;
+        JWKSKeyCache                           _keyCache;
+        vector<PendingTicket>                  _listPending;
+        EventBuffer<PlatformLoginVerification> _verificationBuffer;
+        INetSecurityProvider*                  _pProvider;
+        HTTPClient*                            _pHTTPClient;
+        IDAllocator<uint64>                    _verificationIDAllocator;
+        uint64                                 _jwksRequestID;
+        UnixMilliseconds                       _lastFetchStartMs;
+        uint32                                 _fetchGeneration; ///< 끝난 받기의 횟수이다
+        int32                                  _jwksFetchCount;
+        uint8                                  _bLastFetchFailed;
     };
 } // namespace sw
