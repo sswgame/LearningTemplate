@@ -83,6 +83,7 @@ namespace sw
         const utf8* _pBeginWrite{ "BEGIN" };    ///< 쓰기 트랜잭션을 시작하는 문이다
         const utf8* _pNextCommitVersion{ "" };  ///< 다음 커밋 버전을 한 행 한 열로 돌려주는 문이다
         const utf8* _pLockMigrationTable{ "" }; ///< 마이그레이션 동안 다른 서버를 막는 문이다. 없으면 빈 문자열이다
+        const utf8* _pBeginSnapshotRead{ "" };  ///< 한 시점을 읽는 읽기 전용 트랜잭션을 여는 문이다(스냅샷 읽기 일). 비면 그 드라이버는 스냅샷 읽기 일을 Unavailable 로 끝낸다
     };
 } // namespace sw
 

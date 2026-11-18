@@ -32,13 +32,19 @@ namespace sw
             static constexpr int64       kCampaignLeadMs     = 60000;   ///< 시작 시각을 조금 앞에 둔다 — 서버 시각과 같은 밀리초에 받을 수 없는 일이 없게
             static constexpr int64       kCampaignLifetimeMs = 3600000; ///< 한 시간 — 남는 저장소(PostgreSQL)에 쌓이지 않게 짧게, 우편함 `_endedCampaignTTL` 이 치운다
 
-            /** @brief @p run 을 저장소 스레드에 맡기고 완료(@p complete)가 불릴 때까지 완료를 거둡니다. 저장소는 일마다 완료를 정확히 한 번 부른다 — 시한 없이 기다려도 끝난다. */
+            /**
+             * @brief @p run 을 저장소 스레드에 맡기고 완료(@p complete)가 불릴 때까지 완료를 거둡니다. 저장소는 일마다 완료를 정확히 한 번 부른다 — 시한 없이 기다려도 끝난다.
+             * @param kind 스냅샷 읽기면 @p run 의 모든 읽기가 한 시점이다(원장 감사)
+             */
             template <typename TRun, typename TComplete>
-            static void runStoreJob( IServiceStore& store, TRun&& run, TComplete&& complete )
+            static void runStoreJob( IServiceStore& store, ServiceStoreJobKind kind, TRun&& run, TComplete&& complete )
             {
                 ServiceStoreTracker tracker;
                 tracker.bindStore( &store );
-                tracker.submit( std::forward<TRun>( run ), std::forward<TComplete>( complete ) );
+                if ( kind == ServiceStoreJobKind::SnapshotRead )
+                    tracker.submitSnapshotRead( std::forward<TRun>( run ), std::forward<TComplete>( complete ) );
+                else
+                    tracker.submit( std::forward<TRun>( run ), std::forward<TComplete>( complete ) );
                 while ( tracker.isIdle() == false )
                 {
                     if ( store.pollCompletions() == 0 )
@@ -60,7 +66,7 @@ namespace sw
                 attachment._amount                = kCampaignAmount;
                 ServiceStoreResult result         = ServiceStoreResult::Unavailable;
                 runStoreJob(
-                    store, [campaign]( IServiceStoreConnection& connection )
+                    store, ServiceStoreJobKind::ReadWrite, [campaign]( IServiceStoreConnection& connection )
                 {
                     ServiceTransaction transaction;
                     if ( ServiceMailCampaign::stageCreate( campaign, transaction ) == false )
@@ -191,8 +197,9 @@ namespace sw
         ServiceStoreUtil::flushUntilIdle( &store, [&store]()
         { return store.getPendingCount() == 0; } );
         ServiceStoreRead<LedgerAuditReport> audit;
+        // 한 시점에서 읽는다 — PostgreSQL 에서 쪽마다 다른 시점이면 그사이 서버 예약 작업(만료 반환 · 정산)이 끼어 거짓 불균형을 본다
         LoadBotLocalServerInternal::runStoreJob(
-            store, []( IServiceStoreConnection& connection )
+            store, ServiceStoreJobKind::SnapshotRead, []( IServiceStoreConnection& connection )
         {
             ServiceStoreRead<LedgerAuditReport> read;
             read._result = LedgerAuditReport::computeReport( connection, read._value );

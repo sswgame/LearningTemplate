@@ -52,6 +52,8 @@ namespace sw
         uint64 computeContentHash() const;
 
     private:
+        friend class MemoryServiceSnapshot; // 한 잠금 구간에서 표를 복사한다
+
         struct Entry
         {
             vector<uint8> _bytes{};
@@ -73,6 +75,29 @@ namespace sw
         uint64 _commitCount                 SW_GUARDED_BY( _mutex );
         int32 _faultSkipCount               SW_GUARDED_BY( _mutex );
         ServiceStoreFault _armedFault       SW_GUARDED_BY( _mutex );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class MemoryServiceSnapshot
+     * @brief 메모리 데이터의 한 시점 사본입니다. 원본의 잠금 하나 안에서 표를 복사해, 그 뒤 원본에 끼는 커밋을 보지 않습니다(스냅샷 읽기 일 — `ServiceStoreJobKind::SnapshotRead`).
+     * @details 읽기만 한다 — 커밋은 `Invalid` 다. 메모리 저장소는 테스트 · 개발용이라 복사 비용을 감수한다.
+     */
+    class SW_GF_API MemoryServiceSnapshot final : public IServiceStoreConnection
+    {
+    public:
+        explicit MemoryServiceSnapshot( const MemoryServiceDatabase& source );
+
+        [[nodiscard]] ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) override;
+        [[nodiscard]] ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending,
+                                                      vector<ServiceRecord>& outListRecord ) override;
+        /** @brief 스냅샷은 읽기 전용이다 — 늘 `Invalid` 이고 아무것도 쓰지 않는다. */
+        [[nodiscard]] ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) override;
+
+    private:
+        MemoryServiceDatabase _copy; ///< 원본 표의 사본 — 읽기는 이것의 잠금만 잡는다
     };
 } // namespace sw
 

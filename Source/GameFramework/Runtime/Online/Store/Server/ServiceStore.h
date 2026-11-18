@@ -214,6 +214,21 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 일의 종류입니다. 저장소 구현이 `run` 에 넘길 연결을 이것으로 고른다.
+     * @details 스냅샷 읽기는 일 하나의 모든 읽기가 한 시점의 상태를 본다 — 테이블 전체를 여러 쪽으로 훑는 검사(원장 감사)가 그사이 끼는 다른 서버의 커밋 때문에
+     *          앞쪽(분개)과 뒤쪽(잔액)을 다른 시점으로 읽어 거짓 불균형을 보지 않게 한다. PostgreSQL `REPEATABLE READ READ ONLY` 트랜잭션, SQLite WAL 의 읽기 트랜잭션,
+     *          메모리 저장소는 한 잠금 구간에서 뜬 사본이다. 스냅샷 읽기의 커밋은 `Invalid` 다(읽기 전용). 언리얼 · 유니티 · Godot 엔 서버 저장소가 없고, Nakama 의 저장소 읽기도 DB 격리를 그대로 쓴다.
+     */
+    enum class ServiceStoreJobKind : uint8
+    {
+        ReadWrite = 0, ///< 읽고 커밋한다 — 읽기는 호출마다 그때의 상태다(조건은 커밋이 본다)
+        SnapshotRead   ///< 읽기만 한다 — 모든 읽기가 일이 시작한 시점의 상태다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class IServiceStoreJob
      * @brief 저장 왕복 하나입니다.
      * @details 입력은 맡기기 전에 이 객체에 복사해 둔다.
@@ -226,7 +241,11 @@ namespace sw
     class SW_GF_API IServiceStoreJob
     {
     public:
-        IServiceStoreJob()          = default;
+        IServiceStoreJob() = default;
+        explicit IServiceStoreJob( ServiceStoreJobKind kind )
+            : _kind{ kind }
+        {
+        }
         virtual ~IServiceStoreJob() = default;
 
         IServiceStoreJob( const IServiceStoreJob& )            = delete;
@@ -253,6 +272,8 @@ namespace sw
         void markCancelled() { _bCancelled = true; }
         /** @brief 종료 중이라 취소됐는지입니다. `complete` 에서 읽습니다(저장소 스레드의 표시는 완료 큐의 락을 거쳐 보인다). */
         bool isCancelled() const { return _bCancelled; }
+        /** @brief 스냅샷 읽기 일인지입니다. 저장소 구현은 그렇다면 한 시점의 읽기 전용 연결로 `execute` 한다(`ServiceStoreJobKind`). */
+        bool isSnapshotRead() const { return _kind == ServiceStoreJobKind::SnapshotRead; }
         /** @brief 서비스의 완료 함수에 넘기는 끝 상태입니다. `complete` 에서 부릅니다. */
         ServiceStoreCompletion getCompletion() const { return ServiceStoreCompletion{ _bCancelled }; }
 
@@ -261,8 +282,9 @@ namespace sw
         virtual void run( ServiceReadSetConnection& connection ) = 0;
 
     private:
-        LogContext _logContext{};
-        bool       _bCancelled{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        LogContext          _logContext{};
+        ServiceStoreJobKind _kind{ ServiceStoreJobKind::ReadWrite };
+        bool                _bCancelled{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

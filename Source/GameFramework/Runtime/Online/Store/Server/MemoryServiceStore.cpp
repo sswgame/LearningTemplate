@@ -297,6 +297,33 @@ namespace sw
 
 namespace sw
 {
+    MemoryServiceSnapshot::MemoryServiceSnapshot( const MemoryServiceDatabase& source )
+        : _copy{}
+    {
+        ScopedLock<mutex> lock{ source._mutex };
+        ScopedLock<mutex> copyLock{ _copy._mutex }; // 사본은 아직 아무도 보지 않지만 잠금 규칙(`SW_GUARDED_BY`)을 지킨다
+        _copy._mapTable      = source._mapTable;
+        _copy._commitVersion = source._commitVersion;
+    }
+
+    ServiceStoreResult MemoryServiceSnapshot::readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord )
+    {
+        return _copy.readRecord( table, key, outRecord );
+    }
+
+    ServiceStoreResult MemoryServiceSnapshot::listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending,
+                                                           vector<ServiceRecord>& outListRecord )
+    {
+        return _copy.listRecords( table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord );
+    }
+
+    ServiceStoreResult MemoryServiceSnapshot::commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo )
+    {
+        (void)transaction;
+        (void)pOutInfo;
+        return ServiceStoreResult::Invalid;
+    }
+
     MemoryServiceStore::MemoryServiceStore( MemoryServiceDatabase* pDatabase )
         : _mutex{}
         , _listCompleted{}
@@ -327,6 +354,11 @@ namespace sw
                 MemoryServiceStoreInternal::ClosedConnection closed;
                 job->markCancelled(); // 종료 때문에 실행하지 못한 일이다 — 저장소 고장과 가른다
                 job->execute( closed, _commitStats );
+            }
+            else if ( job->isSnapshotRead() )
+            {
+                MemoryServiceSnapshot snapshot( *_pDatabase ); // 한 잠금 구간의 사본 — 일이 도는 동안 끼는 커밋을 보지 않는다
+                job->execute( snapshot, _commitStats );
             }
             else
             {

@@ -50,19 +50,30 @@ namespace sw
 
             static SQLValue makeBytesValue( const vector<uint8>& bytes ) { return SQLValue::makeBlob( bytes.data(), static_cast<int32>( bytes.size() ) ); }
 
+            /** @brief 연결이 일 하나 동안 무엇을 하는지입니다(`IServiceStoreJob::isSnapshotRead`). */
+            enum class ConnectionMode : uint8
+            {
+                ReadWrite = 0, ///< 호출마다 그때를 읽고, 커밋은 쓰기 트랜잭션이다
+                SnapshotRead,  ///< 연 읽기 전용 트랜잭션 안에서 읽는다 — 커밋은 Invalid
+                Unusable       ///< 스냅샷 트랜잭션을 열지 못했다 — 모든 호출이 Unavailable(시점이 섞인 읽기로 대신하지 않는다)
+            };
+
             /** @brief 워커의 SQL 연결을 일 하나가 도는 동안 `IServiceStoreConnection` 으로 보이게 합니다. */
             class SQLServiceStoreConnection final : public IServiceStoreConnection
             {
             public:
-                explicit SQLServiceStoreConnection( ISQLConnection& connection )
+                SQLServiceStoreConnection( ISQLConnection& connection, ConnectionMode mode )
                     : _rowSet{}
                     , _connection{ connection }
+                    , _mode{ mode }
                 {
                 }
 
                 ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) override
                 {
                     outRecord = ServiceRecord{};
+                    if ( _mode == ConnectionMode::Unusable )
+                        return ServiceStoreResult::Unavailable;
                     if ( table.empty() || ServiceTransaction::isValidKey( key ) == false )
                         return ServiceStoreResult::Invalid;
                     const SQLValue  arrParam[] = { makeTableValue( table ), SQLValue::makeText( key ) };
@@ -79,6 +90,8 @@ namespace sw
                 ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending,
                                                 vector<ServiceRecord>& outListRecord ) override
                 {
+                    if ( _mode == ConnectionMode::Unusable )
+                        return ServiceStoreResult::Unavailable;
                     if ( table.empty() || maxCount <= 0 )
                         return ServiceStoreResult::Invalid;
                     if ( executeList( table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord ) != SQLResult::Ok )
@@ -89,8 +102,10 @@ namespace sw
                 ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo ) override
                 {
                     ServiceCommitInfo info;
-                    if ( transaction.isWellFormed() == false )
-                        return ServiceStoreResult::Invalid;
+                    if ( _mode == ConnectionMode::Unusable )
+                        return ServiceStoreResult::Unavailable;
+                    if ( _mode == ConnectionMode::SnapshotRead || transaction.isWellFormed() == false )
+                        return ServiceStoreResult::Invalid; // 스냅샷 읽기 일은 읽기 전용이다 — 열린 읽기 트랜잭션 안에서 쓰기 트랜잭션을 열지 않는다
                     const SQLResult beginResult = _connection.executeScript( _connection.getDialect()._pBeginWrite );
                     if ( beginResult != SQLResult::Ok )
                         return toStoreResult( beginResult == SQLResult::Constraint ? SQLResult::Error : beginResult );
@@ -255,6 +270,7 @@ namespace sw
             private:
                 SQLRowSet       _rowSet;
                 ISQLConnection& _connection;
+                ConnectionMode  _mode;
             };
 
             /** @brief `IServiceStoreJob` 를 풀의 일로 감쌉니다. 맡긴 스레드의 로그 컨텍스트를 저장해 두었다가 워커의 `run` 과 서비스 스레드의 `complete` 에서 다시 적용합니다. */
@@ -270,9 +286,20 @@ namespace sw
 
                 void run( ISQLConnection& connection ) override
                 {
-                    ScopedLogContext          scope( _job->getLogContext() );
-                    SQLServiceStoreConnection adapter{ connection };
+                    ScopedLogContext scope( _job->getLogContext() );
+                    if ( _job->isSnapshotRead() == false )
+                    {
+                        SQLServiceStoreConnection adapter{ connection, ConnectionMode::ReadWrite };
+                        _job->execute( adapter, *_pStats );
+                        return;
+                    }
+                    // 스냅샷 읽기 — 읽기 전용 트랜잭션 하나 안에서 돌리고 닫는다. 열지 못하면 모든 읽기가 Unavailable 이다(시점이 섞인 읽기로 대신하지 않는다)
+                    const utf8* const         pBegin  = connection.getDialect()._pBeginSnapshotRead;
+                    const bool                bOpened = pBegin[0] != '\0' && connection.executeScript( pBegin ) == SQLResult::Ok;
+                    SQLServiceStoreConnection adapter{ connection, bOpened ? ConnectionMode::SnapshotRead : ConnectionMode::Unusable };
                     _job->execute( adapter, *_pStats );
+                    if ( bOpened )
+                        (void)connection.executeScript( "ROLLBACK" ); // 읽기만 했다 — 끝내기만 한다(실패해도 다음 BEGIN 이 연결 상태를 드러낸다)
                 }
 
                 void cancel() override { _job->markCancelled(); }

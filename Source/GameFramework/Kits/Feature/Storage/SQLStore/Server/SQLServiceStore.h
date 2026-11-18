@@ -8,6 +8,7 @@
  *          - erase: `DELETE … [AND version = ?]`. 조건이 있고 바뀐 행이 0이면 Conflict 이다.
  *          - require, erase 없어야 함: `SELECT version …` 으로 비교한다. PostgreSQL 은 SERIALIZABLE 이 읽은 행의 동시 변경을 직렬화 실패로 막는다.
  *
+ *          스냅샷 읽기 일(`ServiceStoreJobKind::SnapshotRead`)은 방언의 읽기 전용 트랜잭션(PostgreSQL `REPEATABLE READ READ ONLY`, SQLite WAL `BEGIN DEFERRED`) 하나 안에서 돌고 ROLLBACK 으로 닫는다 — 커밋은 Invalid.
  *          하나라도 어긋나면 ROLLBACK 한다. 직렬화 실패는 Conflict(버전 -1)이고, 연결 끊김과 COMMIT 실패는 Unavailable 이다. Unavailable 은 적용됐는지 알 수 없다.
  *          메모리 구현과 같은 시나리오를 같은 결과로 지난다(`Tests/TestSQLServiceStore.cpp` 의 `ServiceStoreParity`).
  */
