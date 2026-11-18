@@ -3,6 +3,8 @@
 // 테스트는 자기 목록(`EngineRegistrationList`)에 자기 등록을 단다 — 엔진의 전역 목록과 칸을 건드리지 않는다.
 #include "pch.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
@@ -461,4 +463,16 @@ SW_TEST_CASE( EngineRegistrationTest, LifetimeDependencyMustFollowTheAfterList )
     // 서브시스템이 아닌 것만 건 공장(인터페이스 줄)은 대조할 것이 없다.
     const vector<vector<uint32>> listNothingBuilt{ { 0 }, {} };
     SW_EXPECT_TRUE( engine::EngineRegistrationList::findLifetimeMismatch( listBad, listNothingBuilt, scope.getCollection() ).has_value() );
+}
+
+/**
+ * @brief [EngineRegistrationTest] 서브시스템이 든 명령줄 · 전역 변수 표의 칸은 주인(명령줄 서브시스템)을 안다 — 빌린 칸이면 초기화 중 조회가 의존 검사를 빠져나간다
+ * @details 코어 범위가 `exposeMember` 로 건다(`engine::addCoreSubsystems`). 예전 `bind` 는 주인이 비어 선언을 빠뜨린 조회가 검사를 지났고, 범위를 허문 뒤에도 칸이 매달렸다.
+ */
+SW_TEST_CASE( EngineRegistrationTest, CommandLineSlotsKnowTheirOwner )
+{
+    SW_REQUIRE_TRUE( ServiceSlotOf<CommandLineManager>::getSlot()._pBound != nullptr );
+    SW_EXPECT_TRUE( ServiceSlotOf<CommandLineManager>::getSlot()._pOwner != nullptr );
+    SW_REQUIRE_TRUE( ServiceSlotOf<GlobalVariableManager>::getSlot()._pBound != nullptr );
+    SW_EXPECT_TRUE( ServiceSlotOf<GlobalVariableManager>::getSlot()._pOwner == ServiceSlotOf<CommandLineManager>::getSlot()._pOwner );
 }

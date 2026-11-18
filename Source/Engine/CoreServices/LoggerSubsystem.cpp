@@ -22,7 +22,7 @@ namespace sw
         if ( _logger == nullptr )
         {
             string logFilePath; // 비면 기본 폴더(Saved/Logs)다
-            (void)_commandLine.findCommandLine()->getArgument( CommandLineArgument::LOG_FILE, logFilePath );
+            (void)_commandLine.getCommandLine().getArgument( CommandLineArgument::LOG_FILE, logFilePath );
             _logger = make_unique<AsyncLogSink>( std::move( logFilePath ) );
             _logger->initialize();
         }

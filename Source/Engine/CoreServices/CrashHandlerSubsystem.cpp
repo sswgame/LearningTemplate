@@ -28,7 +28,7 @@ namespace sw
         if ( _pCommandLine != nullptr )
         {
             string reporterFolder;
-            _bCrashReporterRun = _pCommandLine->findCommandLine()->getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) && reporterFolder.empty() == false;
+            _bCrashReporterRun = _pCommandLine->getCommandLine().getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) && reporterFolder.empty() == false;
             if ( _bCrashReporterRun )
                 return SubsystemInitResult::Succeeded;
         }
@@ -37,7 +37,7 @@ namespace sw
         // 그 파일을 찾도록 문맥에 적는다(기본 로그는 세션 접미사로 찾는다 — `CrashContextStore::kLogFileKey`).
         _handler.setReportFolder( Logger::getGlobalSink()->getLogFolderPath() );
         string fixedLogFile;
-        if ( _pCommandLine != nullptr && _pCommandLine->findCommandLine()->getArgument( CommandLineArgument::LOG_FILE, fixedLogFile ) && fixedLogFile.empty() == false )
+        if ( _pCommandLine != nullptr && _pCommandLine->getCommandLine().getArgument( CommandLineArgument::LOG_FILE, fixedLogFile ) && fixedLogFile.empty() == false )
             _handler.setContextValue( CrashContextStore::kLogFileKey, fixedLogFile );
         _handler.install();
 
