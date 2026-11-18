@@ -57,6 +57,13 @@ namespace sw
         /** @brief 지금 층 목록입니다(사본). */
         [[nodiscard]] vector<string> getLayers() const;
         /**
+         * @brief 데이터 상속 사슬의 깊이 상한 사본을 바꿉니다(`EngineConfig::_dataInheritanceMaxDepth`). 게임 스레드만 부른다 — 에셋 매니저가 기동과 설정 다시 읽기 알림에서 뜬다.
+         * @details 로드 워커는 설정을 직접 읽지 않는다(제자리 덮기의 울타리는 렌더 스레드만 기다린다). 읽기마다 이 사본을 싣는다(`DataInheritanceResourceSource`).
+         */
+        void setInheritanceMaxDepth( uint32 maxDepth );
+        /** @brief 데이터 상속 사슬의 깊이 상한 사본입니다. 아직 뜨지 않았으면 없음이고, 읽는 쪽은 오류로 진다(`DataInheritance.NoDepthLimit`). */
+        [[nodiscard]] optional<uint32> findInheritanceMaxDepth() const;
+        /**
          * @brief 리소스 id 로 읽은 합성 하나를 적습니다(`ResourceComposer`). 로드 축 태그도 층도 없으면 지난 기록을 지웁니다.
          * @param listLoadTag 결과가 기댄 로드 축 태그(조건이 참이었든 거짓이었든 — 값이 바뀌면 결과가 바뀔 수 있다)
          * @param bLayered 덮어쓰기 층 파일을 얹었다

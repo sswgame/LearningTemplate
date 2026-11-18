@@ -18,6 +18,12 @@ namespace
     class SkeletonBoneLODTestSource final : public IDataInheritanceSource
     {
     public:
+        /** @brief 설정(`EngineConfig.json`)과 같은 깊이 상한을 싣습니다. */
+        SkeletonBoneLODTestSource()
+            : IDataInheritanceSource{ 8u }
+        {
+        }
+
         void add( const utf8* pID, const utf8* pText ) { _mapText[pID] = pText; }
 
         [[nodiscard]] bool readText( string_view assetID, string& outText ) override

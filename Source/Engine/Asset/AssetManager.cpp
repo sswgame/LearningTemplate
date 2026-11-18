@@ -100,6 +100,7 @@ namespace sw
         , _listBuiltInAssetCache{}
         , _registeredAssetCache{ "AssetManager.AssetCache", RegistrationList<AssetCacheBase>::ReleaseFunction::create<&AssetManager::releaseAssetCache>( this ) }
         , _listReloadEntry{}
+        , _configReloadedSubscription{}
     {
         // 내장 캐시는 기능 폴더가 등록표에 올린 것이다 — Resource 는 그 타입을 모른다. 모두 여기서 만들어 소유한다(정적 창구는 `getAssetCache<T>()` 로 찾는다).
         // 등록 순서는 링크 순서라 종류 이름 순으로 늘어놓아 비우기 순서를 고정한다. 등록 · "내장인가" 판정이 모두 이 목록을 본다.
@@ -167,6 +168,7 @@ namespace sw
 
     void AssetManager::shutdown()
     {
+        _configReloadedSubscription.reset();
         if ( _pPackManager != nullptr )
             _pPackManager->unmountAll();
 
@@ -368,7 +370,10 @@ namespace sw
         }
         // 쿠킹한 콘텐츠는 팩만 읽는다(낱개 파일을 읽지 않는다) — 마운트가 지면(패치 서명 · 사슬 분기 · 신뢰 키) 팩 0 개로 이어 가면 그 뒤 읽기가 모두 "없음" 이 된다.
         // 기동 실패로 멈춘다(감사 A-4, 언리얼의 필수 pak 마운트 · 서명 실패 치명 오류). 소스 콘텐츠는 느슨한 트리만 있어도 기동한다.
-        const bool bMounted = mountContent( engine::getSubsystem<EngineConfig>()._listResourcePriority, source );
+        // 읽기가 싣는 설정 사본은 여기(기동 스레드)와 다시 읽기 알림(게임 스레드)에서만 뜬다 — 로드 워커는 `EngineConfig` 를 직접 읽지 않는다.
+        publishLoadPolicy();
+        _configReloadedSubscription = engine::getSubsystem<ConfigManager>().onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &AssetManager::onConfigReloaded, this ) );
+        const bool bMounted         = mountContent( engine::getSubsystem<EngineConfig>()._listResourcePriority, source );
         if ( source == ContentSource::Cooked && bMounted == false )
         {
             SW_LOG_ERROR_ID( "AssetManager.CookedMountFailed", "Cooked content: the startup packs could not be mounted - a cooked build reads only packs, so it cannot start" );
@@ -378,6 +383,17 @@ namespace sw
         if ( installAssetRegistry( source ) == false )
             return SubsystemInitResult::Failed;
         return SubsystemInitResult::Succeeded;
+    }
+
+    void AssetManager::publishLoadPolicy()
+    {
+        engine::getSubsystem<ResourceComposition>().setInheritanceMaxDepth( engine::getSubsystem<EngineConfig>()._dataInheritanceMaxDepth );
+    }
+
+    void AssetManager::onConfigReloaded( const hashed_string& configTypeName )
+    {
+        if ( configTypeName == EngineConfig::StaticType()->_fullyQualifiedName )
+            publishLoadPolicy();
     }
 
     bool AssetManager::rebuildAssetRegistry() const

@@ -20,6 +20,12 @@ namespace
     class XTestSource final : public IDataInheritanceSource
     {
     public:
+        /** @brief 설정(`EngineConfig.json`)과 같은 깊이 상한을 싣습니다. */
+        XTestSource()
+            : IDataInheritanceSource{ 8u }
+        {
+        }
+
         [[nodiscard]] bool readText( string_view assetID, string& outText ) override
         {
             (void)assetID;

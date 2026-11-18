@@ -30,6 +30,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 /**
@@ -879,8 +880,14 @@ namespace sw
 
     string PrefabCache::findFieldOrigin( string_view assetRelativePath, string_view componentKey, string_view fieldName )
     {
+        const optional<uint32> maxDepth = engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
+        if ( maxDepth.has_value() == false )
+        {
+            DataInheritance::reportNoDepthLimit( assetRelativePath );
+            return {};
+        }
         string path{ assetRelativePath };
-        for ( uint32 depth = 0; depth <= DataInheritance::getMaxDepth(); ++depth ) // 읽힌 사슬은 상한 안이다 — 읽는 사이 파일이 바뀌어도 끝난다
+        for ( uint32 depth = 0; depth <= *maxDepth; ++depth ) // 읽힌 사슬은 상한 안이다 — 읽는 사이 파일이 바뀌어도 끝난다
         {
             const shared_ptr<const PrefabAsset> pAsset = loadPrefab( path );
             if ( pAsset == nullptr )

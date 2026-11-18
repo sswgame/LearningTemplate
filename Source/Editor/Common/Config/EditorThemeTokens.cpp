@@ -13,7 +13,8 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 #include <algorithm>
 
@@ -47,12 +48,16 @@ namespace sw::editor
             /** @brief 벌 하나를 `_base` 사슬 끝까지 읽어 합칩니다(자식의 키가 이긴다). 없는 부모 · 순환 · 깊이 초과 · 틀린 파일이면 그 파일이 대상인 오류입니다. */
             [[nodiscard]] static expected<EditorThemeDef> readThemeChain( string_view absolutePath )
             {
+                // 깊이 상한은 데이터 상속과 같은 사본이다(`ResourceComposition::findInheritanceMaxDepth`) — 없으면 대신 설정을 읽지 않고 진다.
+                const optional<uint32> maxDepth = engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
+                if ( maxDepth.has_value() == false )
+                    return unexpected( Error{ ErrorKind::Unsupported, "the inheritance depth limit is not set yet", absolutePath } );
                 vector<string>         listPath;
                 vector<EditorThemeDef> listLayer; // 자식부터
                 string                 path{ absolutePath };
                 while ( path.empty() == false )
                 {
-                    if ( VectorUtil::contains( listPath, path ) || listPath.size() >= DataInheritance::getMaxDepth() )
+                    if ( VectorUtil::contains( listPath, path ) || listPath.size() >= *maxDepth )
                         return unexpected( Error{ ErrorKind::Cycle, "the _base chain is a cycle or too deep", path } );
                     listPath.push_back( path );
                     EditorThemeDef&        layer  = listLayer.emplace_back();

@@ -27,7 +27,8 @@ namespace sw
         {
         public:
             ResourceLayerBaseSource( string_view baseID, string_view baseText )
-                : _baseID{ baseID }
+                : IDataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
+                , _baseID{ baseID }
                 , _baseText{ baseText }
             {
             }

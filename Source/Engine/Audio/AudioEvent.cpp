@@ -15,6 +15,7 @@
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -55,7 +56,8 @@ namespace sw
             {
             public:
                 explicit EventSource( const XMLNode& eventList )
-                    : _eventList{ eventList }
+                    : IDataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
+                    , _eventList{ eventList }
                 {
                 }
 

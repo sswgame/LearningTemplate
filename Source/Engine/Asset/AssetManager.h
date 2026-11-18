@@ -19,6 +19,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
@@ -216,6 +217,10 @@ namespace sw
          *          짝 잃은 `.meta`)은 경고로 남기고 결함 파일은 색인에 들지 않는다(그 GUID 참조는 읽을 때 오류다). 규칙 파일을 못 읽으면 false 입니다.
          */
         [[nodiscard]] bool installAssetRegistry( ContentSource source ) const;
+        /** @brief 읽기가 싣는 설정 사본(데이터 상속 깊이 상한 — `ResourceComposition::setInheritanceMaxDepth`)을 뜹니다. 게임 스레드(기동 · 다시 읽기 알림)만 부른다. */
+        static void publishLoadPolicy();
+        /** @brief 설정 다시 읽기 알림입니다. 엔진 설정이면 사본을 다시 뜹니다. */
+        void onConfigReloaded( const hashed_string& configTypeName );
 
     private:
         mutable mutex                      _loadStageMutex;
@@ -230,7 +235,8 @@ namespace sw
          *          같은 종류 이름의 둘째 캐시는 거절한다(이름으로 찾는 쪽이 어느 것을 받을지 정해지지 않는다).
          */
         RegistrationList<AssetCacheBase> _registeredAssetCache;
-        vector<ReloadEntry>              _listReloadEntry; ///< 리로드 함수가 있는 캐시만(배포는 늘 비었다)
+        vector<ReloadEntry>              _listReloadEntry;            ///< 리로드 함수가 있는 캐시만(배포는 늘 비었다)
+        Subscription                     _configReloadedSubscription; ///< 설정 다시 읽기 알림 구독(`publishLoadPolicy`)
 
         SW_SERVICE_SLOT( AssetManager, Required );
     };

@@ -132,7 +132,8 @@ namespace sw
             {
             public:
                 WrappedFileSource( const DataInheritanceSchema& schema, IDataInheritanceSource& source )
-                    : _schema{ schema }
+                    : IDataInheritanceSource{ source.findMaxDepth() }
+                    , _schema{ schema }
                     , _source{ source }
                 {
                 }
@@ -186,6 +187,9 @@ namespace sw
                 {
                 }
 
+                /** @brief 바깥 읽기가 실어 온 깊이 상한입니다(항목 상속도 같은 값을 쓴다). */
+                [[nodiscard]] optional<uint32> findMaxDepth() const { return _source.findMaxDepth(); }
+
                 /** @brief @p assetID 의 파일 상속을 펼친 루트입니다. 읽지 못하면 무효입니다. */
                 XMLNode findRoot( string_view assetID )
                 {
@@ -220,7 +224,8 @@ namespace sw
             {
             public:
                 EntrySource( const XMLNode& fileRoot, const utf8* pKindName, const string& keyAttribute, const DataInheritanceSchema& entrySchema, ParentFiles& parentFiles )
-                    : _fileRoot{ fileRoot }
+                    : IDataInheritanceSource{ parentFiles.findMaxDepth() }
+                    , _fileRoot{ fileRoot }
                     , _pKindName{ pKindName }
                     , _keyAttribute{ keyAttribute }
                     , _entrySchema{ entrySchema }

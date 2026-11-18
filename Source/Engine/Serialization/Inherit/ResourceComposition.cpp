@@ -57,7 +57,8 @@ namespace sw
         unordered_map<string, ResourceCompositionRecord> _mapRecord{};   ///< 리소스 id 로 합성한 리소스 모두
         unordered_map<string, vector<string>>            _mapRemapTag{}; ///< 경로 교체가 물은 로드 축 태그(`recordRemap`)
         vector<string>                                   _listPendingReload{};
-        uint64                                           _revision{ 0 }; ///< 기록의 결과가 바뀔 때마다 는다
+        uint64                                           _revision{ 0 };         ///< 기록의 결과가 바뀔 때마다 는다
+        optional<uint32>                                 _inheritanceMaxDepth{}; ///< 데이터 상속 깊이 상한 사본(`setInheritanceMaxDepth`)
     };
 
     namespace
@@ -146,6 +147,20 @@ namespace sw
         State&            state = *_pState;
         ScopedLock<mutex> lock{ state._mutex };
         return state._listLayerRoot;
+    }
+
+    void ResourceComposition::setInheritanceMaxDepth( uint32 maxDepth )
+    {
+        State&            state = *_pState;
+        ScopedLock<mutex> lock{ state._mutex };
+        state._inheritanceMaxDepth = maxDepth;
+    }
+
+    optional<uint32> ResourceComposition::findInheritanceMaxDepth() const
+    {
+        State&            state = *_pState;
+        ScopedLock<mutex> lock{ state._mutex };
+        return state._inheritanceMaxDepth;
     }
 
     string ResourceLayers::makeLayerAssetID( string_view root, string_view assetID )

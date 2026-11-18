@@ -30,10 +30,12 @@
 #include "Engine/Content/Pack/PackTypes.h"
 #include "Engine/Content/Pack/PackWriter.h"
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "sw/config/CookContract.gen.h"
@@ -433,7 +435,7 @@ namespace sw
                 const string_view text( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
                 if ( AssetCookPath::isCookableSource( relativePath ) )
                     return true;
-                DataInheritanceDiskSource source{ contentRoot };
+                DataInheritanceDiskSource source{ contentRoot, engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() };
                 string                    flatText;
                 bool                      bComposed = false;
                 if ( ResourceComposer::compose( text, absPath, ResourceContext::forPackCook( source ), flatText, bComposed ) == false )
