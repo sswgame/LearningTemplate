@@ -17,23 +17,36 @@ SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 
 
 @functools.cache
+def list_direct_imports(module_name: str) -> tuple[str, ...] | None:
+    """Scripts 안 모듈 하나가 바로 import 하는 이름들(Scripts 밖 모듈이면 None) — 파일마다 한 번만 AST 를 읽는다(규칙 스물 몇 개가 같은 도우미를 거친다)."""
+    base = SCRIPTS_DIR / module_name.replace(".", "/")
+    path = base.with_suffix(".py") if base.with_suffix(".py").is_file() else base / "__init__.py"
+    if not path.is_file():
+        return None
+    list_name: list[str] = []
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+            list_name.append(node.module)
+            list_name.extend(f"{node.module}.{alias.name}" for alias in node.names)   # `from common import Paths` 의 하위 모듈
+        elif isinstance(node, ast.Import):
+            list_name.extend(alias.name for alias in node.names)
+    return tuple(list_name)
+
+
+@functools.cache
 def list_imported_module_files(module_name: str) -> tuple[str, ...]:
     """`moduleName`(`lint.cpp_shape`)과 그것이 거쳐서라도 import 하는 Scripts 안 모듈의 파일(저장소 기준) — 손으로 적은 의존 목록은 낡는다."""
     set_seen: set[str] = set()
     list_pending = [module_name]
     while list_pending:
         name = list_pending.pop()
-        base = SCRIPTS_DIR / name.replace(".", "/")
-        path = base.with_suffix(".py") if base.with_suffix(".py").is_file() else base / "__init__.py"
-        if name in set_seen or not path.is_file():
+        if name in set_seen:
+            continue
+        list_direct = list_direct_imports(name)
+        if list_direct is None:
             continue   # 표준 · 외부 모듈
         set_seen.add(name)
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-            if isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
-                list_pending.append(node.module)
-                list_pending.extend(f"{node.module}.{alias.name}" for alias in node.names)   # `from common import Paths` 의 하위 모듈
-            elif isinstance(node, ast.Import):
-                list_pending.extend(alias.name for alias in node.names)
+        list_pending.extend(list_direct)
     return tuple(sorted(path.relative_to(SCRIPTS_DIR.parent).as_posix()
                         for name in set_seen
                         for path in (SCRIPTS_DIR / (name.replace(".", "/") + ".py"), SCRIPTS_DIR / name.replace(".", "/") / "__init__.py") if path.is_file()))

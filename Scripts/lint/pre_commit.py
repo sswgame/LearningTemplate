@@ -43,7 +43,7 @@ from common.exit_code import ExitCode  # noqa: E402
 from common.git import run_git, run_git_in_hook_repository  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.format import run_clang_format_batch  # noqa: E402
-from lint.lint_scope import LintScope, make_staged_scope, make_whole_scope, _read_bytes  # noqa: E402
+from lint.lint_scope import LintScope, clear_read_cache, make_staged_scope, make_whole_scope  # noqa: E402
 from lint.index_cache import CACHE_FOLDER  # noqa: E402
 from lint.module_imports import list_imported_module_files  # noqa: E402
 from lint.rules import Rule, format_table, RULE_BY_ID, RULES  # noqa: E402
@@ -151,7 +151,7 @@ def check_read_bound(project_root: Path) -> list[str]:
     original_open = io.open
     original_run = subprocess.run
     for probe in list_probe:
-        _read_bytes.cache_clear()
+        clear_read_cache()
         list_opened: list[tuple[str, str]] = []
         current = [""]
 
