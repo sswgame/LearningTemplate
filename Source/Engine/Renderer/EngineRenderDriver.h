@@ -82,7 +82,8 @@ namespace sw
         void onMainWindowResize( uint32 width, uint32 height );
         /**
          * @brief 주 창의 수명 이벤트입니다 — 표면이 사라지기 전에 렌더 스레드가 받은 패킷을 끝내게 합니다(창 스레드).
-         * @details shortcut: 스왑체인을 놓고 다시 만드는 일 · 오디오 멈춤은 빠져 있다. 표면이 실제로 사라지는 플랫폼(Android Vulkan)의 백엔드를 붙일 때 더한다.
+         * @details 표면을 잃으면 렌더 스레드를 쉬게 한 뒤 스왑체인 · 표면을 놓고(`IRHIDevice::releaseSurface`), 돌아오면 새 표면으로 다시 짓는다(`restoreSurface`).
+         *          앱 멈춤의 오디오 출력 닫기 · 입력 리셋은 앱 몫이다(`App::onAppLifecycle` → `IAudioService::suspendOutput`).
          */
         void onMainWindowLifecycle( WindowLifecycleEvent event );
 
