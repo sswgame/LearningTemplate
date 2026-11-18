@@ -2,6 +2,7 @@
 
 #include "Engine/Text/GlyphAtlas.h"
 
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -161,37 +162,47 @@ namespace sw
             page._listDirty.push_back( rect );
     }
 
-    void GlyphAtlas::markPageUsed( uint32 page, uint64 frameIndex )
+    void GlyphAtlas::read( const GlyphAtlasRect& rect, uint8* pOutBytes ) const
     {
-        _listPage[page]._lastUsedFrame = frameIndex;
+        const Page&  page       = _listPage[rect._page];
+        const size_t texelBytes = getBytesPerTexel();
+        for ( uint32 row = 0; row < rect._height; ++row )
+        {
+            const uint8* pSource = page._bytes.data() + ( ( static_cast<size_t>( rect._y ) + row ) * _layout._pageSize + rect._x ) * texelBytes;
+            Memory::copy( pOutBytes + static_cast<size_t>( row ) * rect._width * texelBytes, pSource, static_cast<size_t>( rect._width ) * texelBytes );
+        }
     }
 
-    bool GlyphAtlas::evictLeastRecentlyUsedPage( uint64 currentFrame, uint32& outPage )
+    void GlyphAtlas::markPageUsed( uint32 page, uint64 frameIndex )
     {
-        bool   bFound      = false;
-        uint64 oldestFrame = 0;
-        size_t oldestIndex = 0;
+        _listPage[page]._lastUsedFrame = MathUtil::max( _listPage[page]._lastUsedFrame, frameIndex );
+    }
+
+    void GlyphAtlas::listEvictablePages( uint64 beforeFrame, vector<uint32>& outListPage ) const
+    {
+        outListPage.clear();
         for ( size_t index = 0; index < _listPage.size(); ++index )
         {
-            const uint64 lastUsed = _listPage[index]._lastUsedFrame;
-            const bool   bOlder   = lastUsed < currentFrame && ( bFound == false || lastUsed < oldestFrame );
-            if ( bOlder )
-            {
-                bFound      = true;
-                oldestFrame = lastUsed;
-                oldestIndex = index;
-            }
+            if ( _listPage[index]._lastUsedFrame < beforeFrame )
+                outListPage.push_back( static_cast<uint32>( index ) );
         }
-        if ( bFound == false )
-            return false;
-        Page& page = _listPage[oldestIndex];
-        (void)Memory::set( page._bytes.data(), 0, page._bytes.size() );
-        page._listSkyline.assign( 1, SkylineNode{ 0, 0, static_cast<uint16>( _layout._pageSize ) } );
-        page._listDirty.clear();
-        page._bWholePageDirty = SW_TRUE;
+        std::sort( outListPage.begin(), outListPage.end(), [this]( uint32 a, uint32 b )
+        {
+            const uint64 frameA = _listPage[a]._lastUsedFrame;
+            const uint64 frameB = _listPage[b]._lastUsedFrame;
+            return frameA != frameB ? frameA < frameB : a < b; // 같은 프레임이면 번호 순 — 결정적이다
+        } );
+    }
+
+    void GlyphAtlas::clearPage( uint32 page )
+    {
+        Page& target = _listPage[page];
+        (void)Memory::set( target._bytes.data(), 0, target._bytes.size() );
+        target._listSkyline.assign( 1, SkylineNode{ 0, 0, static_cast<uint16>( _layout._pageSize ) } );
+        target._listDirty.clear();
+        target._lastUsedFrame   = 0;
+        target._bWholePageDirty = SW_TRUE;
         ++_generation;
-        outPage = static_cast<uint32>( oldestIndex );
-        return true;
     }
 
     void GlyphAtlas::takeUploads( vector<GlyphAtlasUpload>& outListUpload )

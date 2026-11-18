@@ -17,20 +17,27 @@
 namespace sw
 {
     /**
-     * @brief 아틀라스 페이지의 모양입니다 — 한 변(텍셀)과 페이지 수 상한. 값은 폰트 카탈로그(`FontCatalogDef::_glyphAtlasPageSize` · `_glyphAtlasMaxPageCount`)가 정본이다.
+     * @brief 아틀라스 페이지의 모양과 비우기 정책입니다 — 한 변(텍셀), 페이지 수 상한, 비울 때 살리는 최근 프레임 수.
+     *        값은 폰트 카탈로그(`FontCatalogDef::_glyphAtlasPageSize` · `_glyphAtlasMaxPageCount` · `_glyphRetainFrameCount`)가 정본이다.
      * @details 예전에는 1024² × 8 상수였다. CJK 처럼 글리프가 많으면 페이지 비우기가 잦아 흔들린다 — 언리얼 Slate 는 아틀라스 크기 · 수를 설정으로 둔다(감사 RN-14).
      */
     struct GlyphAtlasLayout
     {
-        uint32 _pageSize{ 0 };     ///< 페이지 한 변(텍셀, `kMinPageSize` ~ `kMaxPageSize`). SDF(R8)면 페이지 한 변² 바이트, MSDF(RGBA8)면 4 배
-        uint32 _maxPageCount{ 0 }; ///< 이 수를 넘으면 오래된 페이지를 비운다(1 ~ `kMaxPageCount`)
+        uint32 _pageSize{ 0 };         ///< 페이지 한 변(텍셀, `kMinPageSize` ~ `kMaxPageSize`). SDF(R8)면 페이지 한 변² 바이트, MSDF(RGBA8)면 4 배
+        uint32 _maxPageCount{ 0 };     ///< 이 수를 넘으면 오래된 페이지를 비운다(1 ~ `kMaxPageCount`)
+        uint32 _retainFrameCount{ 0 }; ///< 페이지를 비울 때 최근 이만큼의 프레임 안에 쓴 글리프는 다른 자리로 옮겨 살린다(1 ~ `kMaxRetainFrameCount`, `GlyphCache` 가 쓴다)
 
-        static constexpr uint32 kMinPageSize  = 64;
-        static constexpr uint32 kMaxPageSize  = 8192; ///< 스카이라인 마디 · 업로드 구간이 uint16 이고 GPU 텍스처 한 변 상한 안이다
-        static constexpr uint32 kMaxPageCount = 256;  ///< 페이지 번호가 uint16 이고 bindless 칸을 아틀라스가 다 먹지 않게
+        static constexpr uint32 kMinPageSize         = 64;
+        static constexpr uint32 kMaxPageSize         = 8192; ///< 스카이라인 마디 · 업로드 구간이 uint16 이고 GPU 텍스처 한 변 상한 안이다
+        static constexpr uint32 kMaxPageCount        = 256;  ///< 페이지 번호가 uint16 이고 bindless 칸을 아틀라스가 다 먹지 않게
+        static constexpr uint32 kMaxRetainFrameCount = 600;  ///< 이보다 길면 오래된 글리프가 거의 안 버려져 비우기가 자리를 못 낸다
 
         /** @brief 범위 안인지 봅니다. */
-        bool isValid() const { return _pageSize >= kMinPageSize && _pageSize <= kMaxPageSize && _maxPageCount >= 1 && _maxPageCount <= kMaxPageCount; }
+        bool isValid() const
+        {
+            return _pageSize >= kMinPageSize && _pageSize <= kMaxPageSize && _maxPageCount >= 1 && _maxPageCount <= kMaxPageCount && _retainFrameCount >= 1 &&
+                   _retainFrameCount <= kMaxRetainFrameCount;
+        }
     };
 
     /** @brief 아틀라스 안의 사각형 하나입니다(페이지와 텍셀 좌표). */
@@ -80,18 +87,19 @@ namespace sw
 
         /**
          * @brief @p width × @p height 영역을 잡습니다(여백은 이쪽이 더합니다). 지금 페이지들에 자리가 없으면 페이지를 늘립니다.
-         * @return 최대 페이지까지 다 차서 자리가 없으면 false 입니다. 부르는 쪽(GlyphCache)이 `evictLeastRecentlyUsedPage` 뒤에 다시 부릅니다.
+         * @return 최대 페이지까지 다 차서 자리가 없으면 false 입니다. 부르는 쪽(GlyphCache)이 `clearPage` 로 자리를 낸 뒤 다시 부릅니다.
          */
         [[nodiscard]] bool allocate( uint32 width, uint32 height, GlyphAtlasRect& outRect );
         /** @brief 잡은 영역에 바이트를 씁니다(행 우선, 빈틈없는 행 — 행마다 영역 너비 × 텍셀당 바이트). 업로드 구간으로 기록합니다. */
         void write( const GlyphAtlasRect& rect, const uint8* pBytes );
-        /** @brief 이번 프레임에 그 페이지를 썼다고 적습니다(비우기 순서의 근거). */
+        /** @brief 영역의 바이트를 @p pOutBytes 에 복사합니다(`write` 와 같은 배치). 비우기 전에 살릴 글리프를 떠 둘 때 씁니다. */
+        void read( const GlyphAtlasRect& rect, uint8* pOutBytes ) const;
+        /** @brief 그 페이지를 @p frameIndex 에 썼다고 적습니다(비우기 순서의 근거). 더 늦은 프레임이 이미 적혀 있으면 그대로 둡니다(옮겨 온 지난 글리프가 이번 프레임 사용 표시를 되돌리지 않게 — 이번 프레임 글리프를 지키는 근거). */
         void markPageUsed( uint32 page, uint64 frameIndex );
-        /**
-         * @brief @p currentFrame 에 쓰이지 않은 페이지 중 가장 오래 안 쓴 것을 비웁니다. 비운 페이지 번호를 돌려주고, 비울 것이 없으면(모두 이번 프레임 사용) false.
-         * @details 세대(`getGeneration`)가 오르고 그 페이지 전체 업로드가 기록됩니다.
-         */
-        [[nodiscard]] bool evictLeastRecentlyUsedPage( uint64 currentFrame, uint32& outPage );
+        /** @brief 마지막 사용이 @p beforeFrame 보다 이른 페이지를 오래 안 쓴 순서로 @p outListPage 에 채웁니다(앞을 비웁니다). 없으면 빈다. */
+        void listEvictablePages( uint64 beforeFrame, vector<uint32>& outListPage ) const;
+        /** @brief 페이지를 비웁니다 — 바이트 · 스카이라인 · 사용 프레임을 처음으로 되돌리고 세대(`getGeneration`)를 올리며 그 페이지 전체 업로드를 기록합니다. */
+        void clearPage( uint32 page );
 
         /**
          * @brief 지난 호출 뒤 바뀐 구간들을 바이트 사본과 함께 @p outListUpload 뒤에 붙이고 비웁니다(게임 스레드가 패킷을 채울 때). 붙인 것이 있으면 한 묶음 번호를 매깁니다.
