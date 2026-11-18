@@ -64,6 +64,17 @@ namespace
     };
 } // namespace
 
+// 연결 전 클라이언트와 서버는 자기 번호가 없다 — -1 같은 가짜 번호를 돌려주지 않는다.
+SW_TEST_CASE( NetEndpointTest, ClientIndexIsEmptyBeforeConnect )
+{
+    NetEndpointConfig     settings;
+    test::LoopbackCluster pair( 78u );
+    NetTestUtil::addServerAndClient( pair, settings );
+    SW_REQUIRE_TRUE( pair.getServer().listen() );
+    SW_EXPECT_FALSE( pair.getServer().getClientIndex().has_value() );
+    SW_EXPECT_FALSE( pair.getClient( 0 ).getClientIndex().has_value() );
+}
+
 SW_TEST_CASE( NetEndpointTest, HostsHandshakeExchangeAndSurviveBadNetworks )
 {
     NetEndpointConfig settings;
@@ -76,7 +87,7 @@ SW_TEST_CASE( NetEndpointTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     pair.run( 0.3 );
     SW_REQUIRE_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
     SW_EXPECT_EQUAL( 1, pair.getServer().getConnectedCount() );
-    SW_EXPECT_EQUAL( 0, pair.getClient( 0 ).getClientIndex() );
+    SW_EXPECT_EQUAL( 0, pair.getClient( 0 ).getClientIndex().value() );
     vector<NetEndpointEvent> listEvent;
     pair.getServer().pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.size() == 1 && listEvent[0]._kind == NetEndpointEvent::Kind::Connected );
@@ -507,13 +518,13 @@ SW_TEST_CASE( NetEndpointTest, LostAcceptedStillReportsClientIndex )
     // 첫째가 자리 0 을 가져가 둘째의 번호는 1 이다(기본값 0 과 갈린다).
     SW_REQUIRE_TRUE( first.connect( NetAddress::makeLoopback( 4000 ) ) );
     runAll( 0.3 );
-    SW_REQUIRE_EQUAL( 0, first.getClientIndex() );
+    SW_REQUIRE_EQUAL( 0, first.getClientIndex().value() );
     dropper._remaining = 1;
     SW_REQUIRE_TRUE( second.connect( NetAddress::makeLoopback( 4000 ) ) );
     runAll( 0.5 );
     SW_EXPECT_EQUAL( 1, dropper._droppedCount );
     SW_REQUIRE_TRUE( second.getConnectionState( 0 ) == NetConnectionState::Connected );
-    SW_EXPECT_EQUAL( 1, second.getClientIndex() );
+    SW_EXPECT_EQUAL( 1, second.getClientIndex().value() );
     SW_EXPECT_EQUAL( 2, server.getConnectedCount() );
     // 수락 앞에 왔던 데이터 패킷의 신뢰 메시지는 재전송이 메운다.
     SW_REQUIRE_TRUE( server.sendMessage( 1, NetChannelType::ReliableOrdered, NetTestUtil::makeMessage( 4321 ) ) );

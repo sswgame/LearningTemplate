@@ -339,7 +339,7 @@ namespace sw
         if ( io.isReading() && io.check( _pCatalog != nullptr ) == false )
             return;
         io.nameList( listPaletteID, [this]( const hashed_string& blockID )
-        { return _pCatalog->findBlockIndex( blockID ) != kVoxelAirBlock; } ); // 지금 카탈로그에 없는 블록은 공기로 바꾸지 않고 거절한다
+        { return _pCatalog->findBlockIndex( blockID ).has_value(); } ); // 지금 카탈로그에 없는 블록은 공기로 바꾸지 않고 거절한다
         if ( io.isOk() == false )
             return;
         // 청크 하나는 적어도 좌표(4 + 4)와 닫는 구간(번호 2 + 길이 4)이다.
@@ -393,7 +393,7 @@ namespace sw
         listRemap.push_back( kVoxelAirBlock );
         for ( const hashed_string& blockID : listPaletteID )
         {
-            listRemap.push_back( _pCatalog->findBlockIndex( blockID ) );
+            listRemap.push_back( _pCatalog->findBlockIndex( blockID ).value() ); // 위 nameList 가 모르는 id 를 거절했다 — 없으면 멈춘다
         }
         uint32 chunkCount = 0;
         io.count( kMinChunkBytes, chunkCount ); // 남은 바이트로 담을 수 없는 청크 수를 거절한다

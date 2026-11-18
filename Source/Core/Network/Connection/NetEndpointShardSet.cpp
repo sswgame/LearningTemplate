@@ -183,9 +183,11 @@ namespace sw
         return connectedCount;
     }
 
-    int32 NetEndpointShardSet::getClientIndex() const
+    optional<int32> NetEndpointShardSet::getClientIndex() const
     {
-        return getShardCount() == 1 ? _listShard.front()->getClientIndex() : constant::invalid_index::kInt32;
+        if ( getShardCount() != 1 )
+            return nullopt;
+        return _listShard.front()->getClientIndex();
     }
 
     void NetEndpointShardSet::collectConnected( vector<int32>& outListConnection ) const

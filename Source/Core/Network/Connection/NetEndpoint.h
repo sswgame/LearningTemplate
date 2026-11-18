@@ -60,6 +60,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetChallenge.h"
@@ -147,8 +148,8 @@ namespace sw
     /** @brief `connectAsync` 의 결과입니다. */
     struct NetConnectResult
     {
-        NetDisconnectReason _reason{ NetDisconnectReason::None };            ///< None 이면 연결됐다
-        int32               _clientIndex{ constant::invalid_index::kInt32 }; ///< 서버가 준 자기 번호(연결됐을 때)
+        NetDisconnectReason _reason{ NetDisconnectReason::None }; ///< None 이면 연결됐다
+        optional<int32>     _clientIndex{};                       ///< 서버가 준 자기 번호. 연결됐을 때만 있다
 
         bool isConnected() const { return _reason == NetDisconnectReason::None; }
     };
@@ -238,10 +239,10 @@ namespace sw
          * @details 게임 서버가 연결을 계정에 잇는 유일한 길이다 — 클라이언트가 보낸 이름 · 번호로 계정을 고르지 않는다(남의 계정을 주장할 수 있다).
          */
         virtual uint64 getConnectionPrincipal( int32 connectionID ) const = 0;
-        /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)입니다. 연결 전이거나 서버면 -1 입니다. */
-        virtual int32 getClientIndex() const                                     = 0;
-        virtual int32 getConnectedCount() const                                  = 0;
-        virtual void  collectConnected( vector<int32>& outListConnection ) const = 0;
+        /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)입니다. 연결 전이거나 서버면 비어 있습니다. */
+        [[nodiscard]] virtual optional<int32> getClientIndex() const                                     = 0;
+        virtual int32                         getConnectedCount() const                                  = 0;
+        virtual void                          collectConnected( vector<int32>& outListConnection ) const = 0;
         /** @brief 연결마다의 보내기 상한(초당 바이트)입니다. 샤드 묶음은 샤드마다 같은 설정을 쓴다. */
         virtual int32 getMaxBytesPerSecond() const                      = 0;
         virtual bool  isConnectionSaturated( int32 connectionID ) const = 0;
@@ -366,9 +367,9 @@ namespace sw
         const NetConnection* findConnection( int32 connectionID ) const SW_EXCLUDES_LOCK( _mutex );
         NetAddress           getConnectionAddress( int32 connectionID ) const SW_EXCLUDES_LOCK( _mutex ) override;
         int32                getConnectedCount() const SW_EXCLUDES_LOCK( _mutex ) override;
-        /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)를 반환합니다. 연결 전이면 -1 입니다. */
-        int32 getClientIndex() const SW_EXCLUDES_LOCK( _mutex ) override;
-        void  collectConnected( vector<int32>& outListConnection ) const SW_EXCLUDES_LOCK( _mutex ) override;
+        /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)를 반환합니다. 연결 전이면 비어 있습니다. */
+        [[nodiscard]] optional<int32> getClientIndex() const SW_EXCLUDES_LOCK( _mutex ) override;
+        void                          collectConnected( vector<int32>& outListConnection ) const SW_EXCLUDES_LOCK( _mutex ) override;
         /** @brief 이 엔드포인트가 지금 디버거 대기를 알리는지 반환합니다. 마지막 `update` 기준이며(`NetEndpointConfig::_debugHold`), Shipping 은 항상 false 입니다. */
         bool   isDebugHoldAnnounced() const SW_EXCLUDES_LOCK( _mutex );
         uint64 getRejectedPacketCount() const SW_EXCLUDES_LOCK( _mutex );
@@ -605,8 +606,8 @@ namespace sw
         float64 _nextDebuggerPollTime                           SW_GUARDED_BY( _mutex ); ///< 디버거가 붙었는지 다시 확인할 시각.
         float64 _nextUpdateTime                                 SW_GUARDED_BY( _mutex ); ///< 다음에 `update` 를 불러야 하는 시각(`getNextUpdateTime`). 보내기 · 연결이 앞당긴다.
         uint32 _protocolID                                      SW_GUARDED_BY( _mutex );
-        atomic<uint32>                                          _updateDepth; ///< `update` 를 두 스레드가 동시에 부르는 실수를 잡는다.
-        int32 _clientIndex                                      SW_GUARDED_BY( _mutex );
+        atomic<uint32>                                          _updateDepth;            ///< `update` 를 두 스레드가 동시에 부르는 실수를 잡는다.
+        optional<int32> _clientIndex                            SW_GUARDED_BY( _mutex ); ///< 서버가 준 자기 번호. 연결됐을 때만 있다
         int32 _receiveCursor                                    SW_GUARDED_BY( _mutex ); ///< 연결마다 받기를 고르게 돌리기 위한 시작 위치.
         uint8 _bServer                                          SW_GUARDED_BY( _mutex );
         uint8 _bConnectPending                                  SW_GUARDED_BY( _mutex );

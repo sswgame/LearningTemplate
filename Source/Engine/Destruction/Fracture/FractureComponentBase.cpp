@@ -724,8 +724,10 @@ namespace sw
         // 갓 갈라진 조각끼리는 맞닿은 채 생성된다. 그 밀어냄은 피해가 아니다(같은 오브젝트 조각끼리, 생성 후 kSpawnGraceTime 안).
         if ( collision._pOther == getOwner() )
         {
-            const FractureGroupRuntime* pSelf       = findRuntime( findGroupOfBody( collision._selfBody ) );
-            const FractureGroupRuntime* pOther      = findRuntime( findGroupOfBody( collision._otherBody ) );
+            const optional<uint32>      selfGroup   = findGroupOfBody( collision._selfBody );
+            const optional<uint32>      otherGroup  = findGroupOfBody( collision._otherBody );
+            const FractureGroupRuntime* pSelf       = selfGroup.has_value() ? findRuntime( *selfGroup ) : nullptr;
+            const FractureGroupRuntime* pOther      = otherGroup.has_value() ? findRuntime( *otherGroup ) : nullptr;
             const bool                  bYoungSelf  = pSelf != nullptr && pSelf->_bAnchored == SW_FALSE && pSelf->_age < FractureComponentBaseInternal::kSpawnGraceTime;
             const bool                  bYoungOther = pOther != nullptr && pOther->_bAnchored == SW_FALSE && pOther->_age < FractureComponentBaseInternal::kSpawnGraceTime;
             if ( bYoungSelf || bYoungOther )
@@ -988,8 +990,8 @@ namespace sw
         }
         if ( pending._kind == FracturePendingDamage::Kind::WorldPoint )
         {
-            const uint32                groupID  = findGroupOfBody( pending._hitBody );
-            const FractureGroupRuntime* pRuntime = groupID != 0 ? findRuntime( groupID ) : nullptr;
+            const optional<uint32>      groupID  = findGroupOfBody( pending._hitBody );
+            const FractureGroupRuntime* pRuntime = groupID.has_value() ? findRuntime( *groupID ) : nullptr;
             if ( pRuntime == nullptr )
             {
                 // 바디를 모르면(이미 빠진 파편이거나 광선이 아닌 요청) 붙은 구조를 기준으로 한다.
@@ -1041,10 +1043,21 @@ namespace sw
         }
     }
 
+    optional<FractureGroupPose> FractureComponentBase::makeEventGroupPose( const FractureGroupRuntime* pHit )
+    {
+        if ( pHit == nullptr || pHit->_bAnchored != SW_FALSE )
+            return nullopt;
+        FractureGroupPose pose;
+        pose._groupID  = pHit->_groupID;
+        pose._position = pHit->_position;
+        pose._rotation = pHit->_rotation;
+        pose._volume   = pHit->_volume;
+        return pose;
+    }
+
     void FractureComponentBase::applyMeshEvent( ScenePhysics& physics, const DestructionDamageEvent& event, const FractureGroupPose* pGroupPose )
     {
         // 맞은 떨어진 그룹: 보낸 쪽 자세가 왔으면 그 위치로 옮기고, 적용 직전 자세를 사건 기록 옆에 적는다(보낼 때 함께 간다).
-        FractureGroupPose     hitPose;
         FractureGroupRuntime* pHit = event._groupID != 0 ? findRuntime( event._groupID ) : nullptr;
         if ( pHit != nullptr && pHit->_bAnchored == SW_FALSE )
         {
@@ -1059,12 +1072,8 @@ namespace sw
                 }
                 _bPoseDirty = SW_TRUE;
             }
-            hitPose._groupID  = pHit->_groupID;
-            hitPose._position = pHit->_position;
-            hitPose._rotation = pHit->_rotation;
-            hitPose._volume   = pHit->_volume;
         }
-        _listEventGroupPose.push_back( hitPose );
+        _listEventGroupPose.push_back( makeEventGroupPose( pHit ) );
         DestructionChange change;
         // 흩기 시드는 상태의 사건 수다. 스냅샷을 받은 쪽은 기록이 짧아도 서버와 같은 번호가 된다.
         const uint32 eventIndex = _state.getEventCount();
@@ -1529,10 +1538,10 @@ namespace sw
 
     // --- 질의 -------------------------------------------------------------------------------------------------------------------
 
-    uint32 FractureComponentBase::findGroupOfBody( PhysicsBodyHandle body ) const
+    optional<uint32> FractureComponentBase::findGroupOfBody( PhysicsBodyHandle body ) const
     {
         if ( body.isValid() == false )
-            return 0;
+            return nullopt;
         for ( const FractureGroupRuntime& runtime : _listRuntime )
         {
             if ( runtime._body == body )
@@ -1543,7 +1552,7 @@ namespace sw
             if ( _listLeafStaticBody[leaf] == body )
                 return _state.getGroupOfLeaf( leaf );
         }
-        return 0;
+        return nullopt;
     }
 
     FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupID )

@@ -73,15 +73,15 @@ SW_TEST_CASE( NetEndpointThreadTest, ThreadedHostsConnectAsyncAndExchangeWithout
     const TaskFuture<int32>            next   = future.then( [&continuationCount]( const NetConnectResult& result )
     {
         continuationCount.fetch_add( 1 );
-        return result._clientIndex;
+        return result._clientIndex.value_or( -1 ); // 실패면 테스트가 0 과 갈라 본다
     } );
     SW_REQUIRE_TRUE( future.waitFor( NetEndpointThreadTestInternal::kFutureWaitMilli ) );
     SW_REQUIRE_TRUE( future.get().isConnected() );
-    SW_EXPECT_EQUAL( 0, future.get()._clientIndex );
+    SW_EXPECT_EQUAL( 0, future.get()._clientIndex.value() );
     SW_REQUIRE_TRUE( next.waitFor( NetEndpointThreadTestInternal::kFutureWaitMilli ) );
     SW_EXPECT_EQUAL( 0, next.get() );
     SW_EXPECT_EQUAL( 1, continuationCount.load() );
-    SW_EXPECT_EQUAL( 0, client.getClientIndex() );
+    SW_EXPECT_EQUAL( 0, client.getClientIndex().value() );
     SW_REQUIRE_TRUE( test::waitUntil( [&cluster]()
     { return cluster.getServer().getConnectedCount() == 1; } ) );
 
@@ -323,7 +323,7 @@ SW_TEST_CASE( NetEndpointThreadTest, ConnectAsyncReportsEveryFailure )
     const TaskFuture<NetConnectResult> full = cluster.getClient( 1 ).connectAsync( NetAddress::makeLoopback( 4000 ) );
     SW_REQUIRE_TRUE( full.waitFor( NetEndpointThreadTestInternal::kFutureWaitMilli ) );
     SW_EXPECT_TRUE( full.get()._reason == NetDisconnectReason::ServerFull );
-    SW_EXPECT_EQUAL( -1, full.get()._clientIndex );
+    SW_EXPECT_FALSE( full.get()._clientIndex.has_value() ); // 실패한 연결은 번호가 비어 있다
 
     // 아무도 없는 주소 — 연결 제한 시간 뒤 Timeout.
     const TaskFuture<NetConnectResult> nobody = cluster.getClient( 2 ).connectAsync( NetAddress::makeLoopback( 4999 ) );

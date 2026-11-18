@@ -128,13 +128,13 @@ namespace sw
 
         VoxelBlockCatalog();
 
-        /** @brief 블록을 추가하고 번호를 반환합니다. 같은 id 는 내용을 바꾸고 번호를 유지합니다. 255개를 넘으면 공기(0)를 반환합니다. */
-        VoxelBlockIndex addBlock( const VoxelBlockDef& block );
+        /** @brief 블록을 추가하고 번호를 반환합니다. 같은 id 이거나 255개를 넘으면 넣지 않고 비어 있습니다(공기 0 으로 대신하지 않는다 — 저장된 번호를 지킨다). */
+        [[nodiscard]] optional<VoxelBlockIndex> addBlock( const VoxelBlockDef& block );
 
         /** @brief 번호로 찾습니다. 공기이거나 모르는 번호이면 nullptr 입니다. */
         const VoxelBlockDef* findBlock( VoxelBlockIndex index ) const;
-        /** @brief id 로 번호를 찾습니다. 모르는 id 이면 공기(0)를 반환합니다. */
-        VoxelBlockIndex findBlockIndex( const hashed_string& blockID ) const;
+        /** @brief id 로 번호를 찾습니다. 모르는 id 이면 비어 있습니다 — 공기(0)로 대신하지 않는다(공기가 맞는 자리는 부르는 쪽이 `value_or( kVoxelAirBlock )` 로 적는다). */
+        [[nodiscard]] optional<VoxelBlockIndex> findBlockIndex( const hashed_string& blockID ) const;
         /** @brief 몸이 통과하지 못하는 블록이면 true 입니다. 공기이거나 모르는 번호이면 false 입니다. */
         bool isSolid( VoxelBlockIndex index ) const;
         /** @brief 이웃 면을 가리는 블록이면 true 입니다. */
