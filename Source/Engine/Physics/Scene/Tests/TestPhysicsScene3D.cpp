@@ -73,7 +73,7 @@ namespace
          */
         static bool runCrowd( uint32 chunkCount, vector<float3>& outListPosition, float3& outCratePosition )
         {
-            constexpr uint32     kCharacterCount     = 24;
+            constexpr uint32     kCharacterCount     = 8; // 24 명은 반지름 2.4 m 에서 서로 막혀 고리가 되고 상자에 닿지 못한다 — 8 명이면 약 0.8 m 까지 좁혀 상자(x 0 ~ 1)를 민다
             constexpr float32    kRingRadius         = 4.0f;
             constexpr float32    kWalkSpeed          = 2.0f;
             constexpr float32    kFallSpeed          = -2.0f; // 바닥에 붙어 있게 아래로도 민다

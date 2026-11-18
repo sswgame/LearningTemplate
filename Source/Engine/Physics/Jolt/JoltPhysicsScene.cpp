@@ -1942,16 +1942,19 @@ namespace sw
 
     void JoltPhysicsScene::runCharacterChunks( uint32 chunkStart, uint32 chunkEnd )
     {
-        const uint64 count = _listCharacterMoveJob.size();
+        // 병렬 구간 — 목록은 const 로만 읽는다(청크마다 자기 할당자 · 자기 구간만 쓴다, 컨테이너 자체는 단계 앞에서 다 지었다).
+        const vector<CharacterMoveJob>&              listJob       = _listCharacterMoveJob;
+        const vector<unique_ptr<JoltTempAllocator>>& listAllocator = _listCharacterChunkAllocator;
+        const uint64                                 count         = listJob.size();
         for ( uint32 chunk = chunkStart; chunk < chunkEnd; ++chunk )
         {
             // 청크마다 목록의 이어진 구간 — 경계는 청크 수로만 정한다.
             const size_t       begin     = static_cast<size_t>( count * chunk / _characterMoveChunkCount );
             const size_t       end       = static_cast<size_t>( count * ( chunk + 1 ) / _characterMoveChunkCount );
-            JoltTempAllocator& allocator = *_listCharacterChunkAllocator[chunk];
+            JoltTempAllocator& allocator = *listAllocator[chunk];
             for ( size_t index = begin; index < end; ++index )
             {
-                const CharacterMoveJob& job = _listCharacterMoveJob[index];
+                const CharacterMoveJob& job = listJob[index];
                 runCharacterMove( *job._pRecord, job._velocity, _characterMoveDeltaTime, allocator );
             }
         }
