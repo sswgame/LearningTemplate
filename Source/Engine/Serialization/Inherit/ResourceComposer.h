@@ -24,6 +24,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceFieldWrite.h"
 
 namespace sw
 {
@@ -84,6 +85,36 @@ namespace sw
     };
 
     /**
+     * @class ResourceSaveText
+     * @brief 저장 입구(`ResourceComposer::saveText`)에 넘기는 글 한 벌입니다 — 쓸 글과, 그 글이 칸을 뺐으면(형식 기본값 · 부모와 같은 칸) 같은 내용을 칸을 빼지 않고 쓴 글.
+     * @details 빠진 칸은 "그대로" 인지 "기본값으로 되돌림" 인지 글만으로 가릴 수 없다 — 조건(`_when`)이 정한 칸을 되돌릴 때 빼지 않은 글에서 편집한 값을 읽는다.
+     *          언리얼이 CDO 차이 저장과 별도로 플랫폼별 값을 편집 값과 함께 드는 것과 같은 몫이다. 글은 가리키기만 한다 — 부르는 쪽이 저장이 끝날 때까지 쥔다.
+     */
+    class SW_API ResourceSaveText
+    {
+    public:
+        /** @brief 칸을 빼지 않은 글입니다(쓰는 쪽이 모든 칸을 쓴다). */
+        [[nodiscard]] static ResourceSaveText makeComplete( string_view text ) { return ResourceSaveText( text, text ); }
+        /** @brief 기본값 · 부모와 같은 칸을 뺀 글 @p text 와, 같은 내용을 칸을 빼지 않고 쓴 글 @p completeText 입니다(차이 저장은 펼친 글). */
+        [[nodiscard]] static ResourceSaveText makeWithComplete( string_view text, string_view completeText ) { return ResourceSaveText( text, completeText ); }
+
+        string_view getText() const { return _text; }
+        /** @brief 칸을 빼지 않은 글입니다(뺀 칸이 없으면 `getText` 와 같다). */
+        string_view getCompleteText() const { return _completeText; }
+
+    private:
+        ResourceSaveText( string_view text, string_view completeText )
+            : _text{ text }
+            , _completeText{ completeText }
+        {
+        }
+
+    private:
+        string_view _text;
+        string_view _completeText;
+    };
+
+    /**
      * @struct ResourceComposer
      * @brief 합치기의 입구입니다. 파일 머리말 참고.
      */
@@ -109,20 +140,20 @@ namespace sw
          * @brief 저장할 글 @p savedText 에 원본 @p sourceText 의 조건을 되돌립니다. 편집기 사본은 지금 태그로 푼 값을 들어(형식의 칸에 조건이 들 자리가 없다) 그대로 쓰면 `_when` 이 사라지고 푼 값이 파일에 박힌다.
          * @details 언리얼이 플랫폼별 값을 편집 값과 따로 두는 것과 같은 결과를 글 수준에서 얻는다(기억에 의존). 규칙(열쇠 · 스키마)을 쓰지 않는다 — 읽기의 조건 단계와 같은 까닭이다.
          *          - 참인 조건이 정한 칸: 값이 그대로면 원본의 값을 되돌리고, 바뀌었으면 편집이 그 조건의 값이다(같은 태그로 다시 읽으면 편집한 값이다. 다른 태그의 값은 건드리지 않는다).
+         *            저장할 글이 그 칸을 뺐으면(기본값 · 부모와 같다) 칸을 빼지 않은 글 @p completeText 의 값이 편집한 값이다 — 기본값으로 되돌린 편집도 조건에 든다.
          *          - 그 밖의 칸: 저장할 글이 맞다. 거짓인 조건은 그대로 남는다.
          *          - 참인 조건이 뺀 원소: 사본에 없으니 원본에서 되돌린다.
          *          - 원소 짝: 같은 이름 안에서 같은 값의 속성이 가장 많은 것이다. 짝이 없는 조건 든 원소는 목록 원소면 지운 것으로 보고, 차이 저장(`_base`)이나 구조체 칸이면 남긴다(부모 · 기본값과 같아 저장이 뺀 것일 수 있다).
-         *          shortcut: 참인 조건이 정한 칸을 기본값으로 되돌린 편집은 저장할 글에 칸이 없어 "그대로" 와 가릴 수 없다(조건 값이 남는다) - 형식이 푼 값과 기본값을 함께 넘기는 저장 입구가 생기면 고친다.
          * @return 원본의 조건이 틀렸거나 두 글의 루트가 다르면 오류를 남기고 false 입니다(저장하지 않는다). 원본에 조건이 없으면 @p savedText 그대로입니다.
          */
-        [[nodiscard]] static bool restoreConditions( string_view savedText, string_view sourceText, string_view id, const ResourceTagSet& tags, string& outText );
+        [[nodiscard]] static bool restoreConditions( const ResourceSaveText& savedText, string_view sourceText, string_view id, const ResourceTagSet& tags, string& outText );
 
         /**
          * @brief 글 리소스를 디스크에 씁니다(폴더가 없으면 만듭니다). 저장 입구(직렬화기 · 형식의 `saveToFile`)가 모두 이 함수를 지납니다 — 있던 파일의 조건을 지키고(`restoreConditions`), 덮어쓰기 층을 얹어 읽은 리소스는 층 값이 원본에 박히므로 쓰지 않습니다.
          * @param pTagOverride 사본을 바꿔 끼운 태그로 읽었으면 그 축입니다(`ResourceContext::withTagOverride`) — 조건을 되돌릴 때 읽은 태그와 같아야 편집이 맞는 조건에 들어간다. nullptr 이면 엔진 태그입니다.
          * @return 쓰지 못하면 false 입니다(까닭은 로그).
          */
-        [[nodiscard]] static bool saveText( string_view absPath, string_view text, const ResourceTagSet* pTagOverride = nullptr );
+        [[nodiscard]] static bool saveText( string_view absPath, const ResourceSaveText& text, const ResourceTagSet* pTagOverride = nullptr );
 
         /**
          * @brief 부모와의 차이 글 @p deltaText 를 다시 읽어 펼친 글 @p fullText 와 같은지 봅니다. @p reread 가 비었으면 보지 않습니다.

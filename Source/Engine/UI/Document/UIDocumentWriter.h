@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 
+#include "Engine/Serialization/Inherit/ResourceFieldWrite.h"
 #include "Engine/UI/Document/UIBindingDef.h"
 
 namespace sw
@@ -24,8 +25,11 @@ namespace sw
      */
     struct SW_API UIDocumentWriter
     {
-        /** @brief 화면 서술 @p desc, 스타일 시트 목록, 루트 위젯 @p root, 바인딩 식, 애니메이션으로 문서 텍스트를 만듭니다. 애니메이션은 필드를 모두 씁니다. */
+        /**
+         * @brief 화면 서술 @p desc, 스타일 시트 목록, 루트 위젯 @p root, 바인딩 식, 애니메이션으로 문서 텍스트를 만듭니다. 애니메이션은 필드를 모두 씁니다.
+         * @param fieldWrite `OmitDefaults` 는 파일 모양(기본값과 같은 필드를 뺀다), `WriteAll` 는 저장 입구에 넘기는 빼지 않은 짝(`ResourceSaveText`)입니다.
+         */
         static string write( const UIScreenDef& desc, const vector<string>& listStyleSheet, const Widget& root, const vector<UIBindingDef>& listBinding,
-                             const vector<UIAnimation>& listAnimation );
+                             const vector<UIAnimation>& listAnimation, ResourceFieldWrite fieldWrite );
     };
 } // namespace sw

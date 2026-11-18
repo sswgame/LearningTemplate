@@ -322,7 +322,7 @@ namespace sw
              *          적는다(Debug 는 vector assert 에서 죽고, 배포본은 조용히 쓰레기 값을 쓴다). 모자란 셀은 **읽기 쪽 기본값**으로 적는다. `loadFromXML` 이 `<t>` 가 없을 때 넣는 값과 같아서
              *          왕복이 어긋나지 않는다(통행 가능, 조우 없음, 기본 틴트).
              */
-            static void appendTiles( const XMLNode& tiles, const TileMapXMLData& data )
+            static void appendTiles( const XMLNode& tiles, const TileMapXMLData& data, ResourceFieldWrite fieldWrite )
             {
                 const size_t count     = static_cast<size_t>( data._width ) * static_cast<size_t>( data._height );
                 size_t       tileCount = MathUtil::min( count, data._listVisual.size() );
@@ -347,10 +347,10 @@ namespace sw
                         const uint8 value = bHasTile ? data.getFlagLayer( info._layer )[tileIndex] : info._defaultValue;
                         if ( info._pXMLAttribute == nullptr )
                             pTextFlag = value != 0 ? "1" : "0";
-                        else if ( ( value != 0 ) != ( info._defaultValue != 0 ) )
+                        else if ( ( value != 0 ) != ( info._defaultValue != 0 ) || fieldWrite == ResourceFieldWrite::WriteAll )
                             tileNode.appendAttribute( info._pXMLAttribute, value != 0 ? 1 : 0 );
                     }
-                    if ( tileVisual._atlasID != 0 )
+                    if ( tileVisual._atlasID != 0 || fieldWrite == ResourceFieldWrite::WriteAll )
                         tileNode.appendAttribute( "atlas", static_cast<int32>( tileVisual._atlasID ) );
                     tileNode.appendAttribute( "tr", static_cast<int32>( tileVisual._tintR ) );
                     tileNode.appendAttribute( "tg", static_cast<int32>( tileVisual._tintG ) );
@@ -668,13 +668,19 @@ namespace sw
         const string xml = toXML();
         if ( xml.empty() )
             return false;
-        const bool bOk = ResourceComposer::saveText( absPath.str(), xml );
+        const string completeXML = toXML( ResourceFieldWrite::WriteAll );
+        const bool   bOk         = ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( xml, completeXML ) );
         if ( bOk )
             SW_LOG_INFO_ID( "TileMapXML.Saved", "Saved '%#' -> %#", _name, absPath.str() );
         return bOk;
     }
 
     string TileMapXMLData::toXML() const
+    {
+        return toXML( ResourceFieldWrite::OmitDefaults );
+    }
+
+    string TileMapXMLData::toXML( ResourceFieldWrite fieldWrite ) const
     {
         XMLDocument         doc;
         const XMLNode       root = doc.appendRoot( "TileMap" );
@@ -688,7 +694,7 @@ namespace sw
 
         XMLFields::writeEveryField( root.appendChild( "spawn" ), TileSpawnParams{ _spawnX, _spawnY } );
 
-        TileMapXMLInternal::appendTiles( root.appendChild( "tiles" ), *this );
+        TileMapXMLInternal::appendTiles( root.appendChild( "tiles" ), *this, fieldWrite );
         TileMapXMLInternal::appendWarps( root, *this );
         TileMapXMLInternal::appendTileLayer( root, *this );
         TileMapXMLInternal::appendDataLayers( root, *this );

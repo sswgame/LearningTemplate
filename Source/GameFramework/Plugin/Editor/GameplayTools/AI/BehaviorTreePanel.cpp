@@ -161,7 +161,8 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeVariantNotSaved", "Behavior tree '%#' was not saved: %# (%#)", path.c_str(), saveText.error().message(), saveText.error().detail() );
             return false;
         }
-        if ( ResourceComposer::saveText( diskPath->str(), *saveText ) == false )
+        const string completeText = _model.write(); // 차이(`_base`)면 부모와 같은 칸을 뺐다 — 펼친 글이 짝이다
+        if ( ResourceComposer::saveText( diskPath->str(), ResourceSaveText::makeWithComplete( *saveText, completeText ) ) == false )
         {
             _statusText = "The file could not be written";
             SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould3", "Behavior tree file '%#' could not be written", diskPath->c_str() );

@@ -312,7 +312,7 @@ namespace sw
                     if ( prop._bIsContainer && prop.hasContainerWrapper() )
                     {
                         // 프로퍼티 이름이 곧 컨테이너 요소다. 그 안에 원소들이 들어간다.
-                        if ( prop._metadata->_bSkipIfEmpty == SW_TRUE && prop._containerWrapper->getSize( propValue.get() ) == 0 )
+                        if ( prop._metadata->_bSkipIfEmpty == SW_TRUE && context.shouldWriteEmptyValues() == false && prop._containerWrapper->getSize( propValue.get() ) == 0 )
                             return ReflectVisitFlow::Continue; // 글 칸과 같은 규칙 — 스키마가 생략을 허락한 빈 목록은 쓰지 않는다
                         backend.beginMap( prop._name.c_str() );
                         ContainerWriter writer( backend, context );
@@ -335,7 +335,7 @@ namespace sw
 
                             // 기본은 "모두 쓴다" 이다. 그래야 파일에 없음과 명시적으로 비어 있음이
                             // 구분된다. 생략해도 좋다고 **스키마가 선언한** 필드만 비었을 때 뺀다.
-                            if ( prop._metadata->_bSkipIfEmpty == SW_TRUE && ss.size() == 0 )
+                            if ( prop._metadata->_bSkipIfEmpty == SW_TRUE && context.shouldWriteEmptyValues() == false && ss.size() == 0 )
                                 return ReflectVisitFlow::Continue;
 
                             backend.writeAttribute( prop._name.c_str(), ss.c_str() );
@@ -1061,7 +1061,11 @@ namespace sw
             SW_LOG_ERROR_ID( "Serialization.EmptyOutput", "Serializing %# produced no XML - %# was not written", typeInfo._name.c_str(), string{ absPath }.c_str() );
             return false;
         }
-        return ResourceComposer::saveText( absPath, text );
+        // 빈 칸을 뺐을 수 있다(`SkipIfEmpty`) — 같은 객체를 빈 칸까지 쓴 짝을 함께 넘긴다.
+        SerializeContext completeContext = context;
+        completeContext.setWriteEmptyValues( true );
+        const string completeText = serialize( pInstance, typeInfo, completeContext );
+        return ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( text, completeText ) );
     }
 
     bool XMLSerializer::loadFromAsset( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )

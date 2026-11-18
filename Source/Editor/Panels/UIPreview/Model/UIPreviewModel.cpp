@@ -384,15 +384,17 @@ namespace sw::editor
         const UIScreen*     pScreen    = pOffscreen != nullptr ? pOffscreen->findScreen( _screen ) : nullptr;
         if ( pScreen == nullptr || pDocuments == nullptr )
             return false;
-        const expected<string> text = UIPreviewLogic::makeDocumentText( *pDocuments, *pScreen, _openedDocument );
-        if ( text.has_value() == false )
+        const expected<string> text         = UIPreviewLogic::makeDocumentText( *pDocuments, *pScreen, _openedDocument, ResourceFieldWrite::OmitDefaults );
+        const expected<string> completeText = UIPreviewLogic::makeDocumentText( *pDocuments, *pScreen, _openedDocument, ResourceFieldWrite::WriteAll );
+        if ( text.has_value() == false || completeText.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "UIPreviewModel.UIPreviewCannotSaved", "UI Preview: '%#' cannot be saved - %#: %#", _openedDocument.c_str(), text.error().message(), text.error().detail() );
+            SW_LOG_ERROR_ID( "UIPreviewModel.UIPreviewCannotSaved", "UI Preview: '%#' cannot be saved - %#: %#", _openedDocument.c_str(), ( text.has_value() ? completeText : text ).error().message(),
+                             ( text.has_value() ? completeText : text ).error().detail() );
             return false;
         }
         const optional<AbsolutePath> path = editor::getSubsystem<AssetPaths>().toDiskPath( _openedDocument );
         // 미리보기 사본은 기기 견본의 태그로 합친 변형이다 — 그 태그로 원본의 조건(`_when`)을 되돌려 쓴다(FileUtil 로 바로 쓰면 푼 변형이 파일에 박힌다).
-        if ( path.has_value() == false || ResourceComposer::saveText( path->str(), *text, &pScreen->getResourceTagOverride() ) == false )
+        if ( path.has_value() == false || ResourceComposer::saveText( path->str(), ResourceSaveText::makeWithComplete( *text, *completeText ), &pScreen->getResourceTagOverride() ) == false )
         {
             SW_LOG_ERROR_ID( "UIPreviewModel.UIPreviewCouldNot", "UI Preview: '%#' could not be written", _openedDocument.c_str() );
             return false;

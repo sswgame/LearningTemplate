@@ -151,7 +151,7 @@ namespace sw
             return false;
         const string fullText = toXML();
         if ( _baseID.empty() )
-            return ResourceComposer::saveText( absPath.str(), fullText );
+            return ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeComplete( fullText ) );
         AnimationGraphAsset parent;
         if ( parent.loadFromAsset( AssetID{ _baseID } ) == false )
         {

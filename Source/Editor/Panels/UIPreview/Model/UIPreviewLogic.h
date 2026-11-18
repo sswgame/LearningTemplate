@@ -223,7 +223,7 @@ namespace sw::editor
          *          애니메이션은 화면의 재생기가 가진 문서 애니메이션을 그대로 쓴다.
          * @return 문서 텍스트. 문서나 루트가 없으면 그 까닭입니다.
          */
-        [[nodiscard]] static expected<string> makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath );
+        [[nodiscard]] static expected<string> makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath, ResourceFieldWrite fieldWrite );
         // --- 디자이너: 팔레트 · 끌어 놓기 · 슬롯 손잡이 ---------------------------------------------------------------
         /** @brief 문서 순서 번호 @p ordinal 의 위젯이 패널이면 그 패널입니다. 패널이 아니거나 범위 밖이면 nullptr 입니다. */
         static PanelWidget* findPanelByOrdinal( WidgetTree& tree, uint32 ordinal );

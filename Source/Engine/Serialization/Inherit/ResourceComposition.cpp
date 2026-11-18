@@ -54,8 +54,9 @@ namespace sw
     {
         mutex                                            _mutex{};
         vector<string>                                   _listLayerRoot{};
-        unordered_map<string, ResourceCompositionRecord> _mapRecord{};   ///< 리소스 id 로 합성한 리소스 모두
-        unordered_map<string, vector<string>>            _mapRemapTag{}; ///< 경로 교체가 물은 로드 축 태그(`recordRemap`)
+        unordered_map<string, ResourceCompositionRecord> _mapRecord{};     ///< 리소스 id 로 합성한 리소스 모두
+        unordered_map<string, vector<string>>            _mapRemapTag{};   ///< 경로 교체가 물은 로드 축 태그(`recordRemap`)
+        unordered_map<string, vector<string>>            _mapVariantTag{}; ///< 바꿔 끼운 태그로 합친 변형이 물은 로드 축 태그(`recordVariant`)
         vector<string>                                   _listPendingReload{};
         uint64                                           _revision{ 0 };         ///< 기록의 결과가 바뀔 때마다 는다
         optional<uint32>                                 _inheritanceMaxDepth{}; ///< 데이터 상속 깊이 상한 사본(`setInheritanceMaxDepth`)
@@ -198,6 +199,18 @@ namespace sw
         }
     }
 
+    void ResourceComposition::recordVariant( string_view assetID, const vector<string>& listLoadTag )
+    {
+        State&            state = *_pState;
+        ScopedLock<mutex> lock{ state._mutex };
+        vector<string>&   listTag = state._mapVariantTag[string{ assetID }];
+        for ( const string& tag : listLoadTag )
+        {
+            if ( VectorUtil::contains( listTag, tag ) == false )
+                listTag.push_back( tag );
+        }
+    }
+
     void ResourceComposition::notifyTagsChanged( const vector<string>& listChangedTag )
     {
         State&     state      = *_pState;
@@ -213,6 +226,11 @@ namespace sw
                 ResourceCompositionInternal::addPending( state, assetID );
         }
         for ( const auto& [assetID, listTag] : state._mapRemapTag )
+        {
+            if ( isAffected( listTag ) )
+                ResourceCompositionInternal::addPending( state, assetID );
+        }
+        for ( const auto& [assetID, listTag] : state._mapVariantTag )
         {
             if ( isAffected( listTag ) )
                 ResourceCompositionInternal::addPending( state, assetID );
@@ -318,6 +336,7 @@ namespace sw
         ScopedLock<mutex> lock{ state._mutex };
         state._mapRecord.clear();
         state._mapRemapTag.clear();
+        state._mapVariantTag.clear();
         state._listPendingReload.clear();
         ++state._revision; // 이미 받은 번호가 새 기록을 가리지 않게 되돌리지 않는다
     }

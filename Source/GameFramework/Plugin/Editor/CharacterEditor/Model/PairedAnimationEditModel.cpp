@@ -36,7 +36,7 @@ namespace sw::editor
 {
     PairedAnimationEditModel::PairedAnimationEditModel()
         : _content{}
-        , _state{ PairedAnimationDef::makeXMLText( PairedAnimationContentDef{} ) }
+        , _state{ PairedAnimationDef::makeXMLText( PairedAnimationContentDef{}, ResourceFieldWrite::OmitDefaults ) }
         , _scrubTime{ 0.0f }
     {
     }
@@ -67,8 +67,9 @@ namespace sw::editor
     {
         if ( isValid() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "The paired animation breaks a rule (see the log) - fix it before saving" } );
-        const string text = saveToXMLText();
-        if ( ResourceComposer::saveText( absPath.str(), text ) == false )
+        const string text         = saveToXMLText();
+        const string completeText = PairedAnimationDef::makeXMLText( _content, ResourceFieldWrite::WriteAll );
+        if ( ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( text, completeText ) ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "The file could not be written", absPath.str() } );
         _state.markSaved( text );
         return {};

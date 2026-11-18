@@ -23,6 +23,7 @@
 #include "Engine/Object/Prefab/PrefabPathStack.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -998,8 +999,26 @@ namespace sw
             return false;
         }
 
-        // 상위 폴더를 만들지 못하면 쓰지 않는다(폴더 쪽 이유는 ensure 가 남긴다). 실패는 로그로 남긴다(SceneDocument::saveToFile 과 같은 형태).
-        const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && xmlDoc.saveToFile( absPath.str() );
+        // 본문은 형식 기본값과 같은 칸을 뺐다 — 본문만 펼친 글로 바꾼 빼지 않은 짝을 함께 넘긴다(저장 입구가 조건이 정한 칸의 "기본값으로 되돌림" 을 읽는다).
+        XMLDocument   completeDoc;
+        const XMLNode completeRoot = completeDoc.appendRoot( PrefabAssetInternal::kRoot );
+        for ( XMLAttribute attribute = root.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+        {
+            completeRoot.appendAttribute( attribute.getName(), attribute.getValue() );
+        }
+        XMLDocument fullBodyDoc;
+        const bool  bFullBody = xmlBody.empty() == false && fullBodyDoc.parse( fullBody ) && fullBodyDoc.getRoot().isValid();
+        bool        bBodyDone = bFullBody == false;
+        for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
+        {
+            const bool bBody = bBodyDone == false && string_view( child.getName() ) == string_view( fullBodyDoc.getRoot().getName() );
+            (void)completeRoot.appendClone( bBody ? fullBodyDoc.getRoot() : child );
+            bBodyDone = bBodyDone || bBody;
+        }
+        const string text         = xmlDoc.saveToString();
+        const string completeText = completeDoc.saveToString();
+        // 상위 폴더는 저장 입구가 만든다. 실패는 로그로 남긴다(SceneDocument::saveToFile 과 같은 형태).
+        const bool writeOk = text.empty() == false && ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( text, completeText ) );
         if ( writeOk == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabXML", "Failed to write prefab XML: %#", absPath.str() );

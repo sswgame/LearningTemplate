@@ -811,7 +811,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Xml.EmptyDocument", "XML document is empty - %# was not written", string{ absPath }.c_str() );
             return false;
         }
-        return ResourceComposer::saveText( absPath, text );
+        return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( text ) ); // 문서는 지은 칸을 모두 든다 — 칸을 뺀 쓰는 쪽은 `ResourceComposer::saveText` 에 짝을 넘긴다
     }
 
     string XMLDocument::unescapeString( string_view text )
