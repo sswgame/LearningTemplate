@@ -335,7 +335,7 @@ SW_TEST_CASE( ZoneTest, SurfaceStampModuleChecksTheStamp )
                                                                                    {"fillSpeed",  "0.02"}
     } ) ) );
 
-    // 안쪽일수록 깊은 깔때기 — 깊이는 위치 값의 식이다(대상 없는 검사 문맥에서는 0 이라 빈 도장으로 지난다).
+    // 안쪽일수록 깊은 깔때기 — 깊이는 위치 값의 식이다(위치 값을 읽는 칸이라 규칙은 찍을 때 본다).
     SW_EXPECT_TRUE( compileOne( ZoneFixture::makeModule( "funnel", "SurfaceStamp", {
                                                                                        {    "shape",             "Funnel"},
                                                                                        {       "at",             "Center"},
@@ -520,4 +520,28 @@ SW_TEST_CASE( ZoneTest, VolumeShapeFollowsOwnerRotation )
     SW_EXPECT_TRUE( pVolume->sampleAt( float3{ 10.0f, 0.0f, 0.0f }, 1.0f, sample ) );
     SW_EXPECT_NEAR( 10.0f, sample._center._x, 1.0e-4f );            // 당김 중심(오프셋 0)은 오너 자리다
     SW_EXPECT_NEAR( 2.0f, pVolume->getHorizontalReach(), 1.0e-4f ); // 월드 경계 상자도 돌았다(x 0.5 · z 2)
+}
+
+/**
+ * @brief [ZoneTest] 도장의 규칙 칸이 문맥을 읽으면 읽을 때 거절하지 않고 찍을 때 그 대상의 값으로 본다 — 수만 든 칸은 그대로 읽을 때 거절한다
+ * @details 예전에는 대상 없는 문맥으로 평가해 `fillSpeed="0.02 * zoneDepth01"` 가 0 으로 보여 읽을 때 틀렸다. 변이: `needsStampTimeCheck` 를 늘 거짓으로 두면 첫 단언이 진다.
+ */
+SW_TEST_CASE( ZoneTest, SurfaceStampChecksContextParamsWhenStamping )
+{
+    ZoneFixture fixture;
+    ZoneProfile profile;
+    profile._listModule.push_back( ZoneFixture::makeModule( "sink", "SurfaceStamp", {
+                                                                                        {     "size",              "1,1,0"},
+                                                                                        {    "depth",               "0.06"},
+                                                                                        {"fillSpeed", "0.02 * zoneDepth01"}
+    } ) );
+    ZoneCompiledProfile compiled;
+    SW_REQUIRE_TRUE( compiled.compile( profile, "test", &fixture._catalog ) );
+
+    // 가장자리(깊이 0)에서는 메워지는 속도가 0 이다 — 찍지 않고 오류를 남긴다(영영 남는 도장을 찍지 않는다).
+    SW_EXPECT_LOG( "Surface.StampFillMissing" );
+    ZoneTracker tracker;
+    fixture.runInside( tracker, compiled, "volume:test", 0.0f, 0.1f );
+    fixture.runInside( tracker, compiled, "volume:test", 0.0f, 0.1f ); // 같은 체류 — 거절을 기억해 다시 평가하지 않는다
+    fixture.leave( tracker, compiled, "volume:test" );
 }
