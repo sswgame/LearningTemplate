@@ -28,6 +28,7 @@ import functools
 import importlib
 import io
 import os
+import subprocess
 import sys
 import tempfile
 import types
@@ -117,6 +118,20 @@ def list_probe_files(project_root: Path) -> list[str]:
     return [next(path for path in list_repo if path.startswith(root) and path.endswith(suffix)) for root, suffix in PROBE_KINDS]
 
 
+def list_blob_reads(list_argument: Sequence[str], input_data: bytes | str | None) -> list[tuple[str, str]]:
+    """git 호출 하나가 내용을 읽는 블롭의 (판, 경로) — `cat-file --batch`(표준 입력의 `<판>:<경로>` 줄) · `show <판>:<경로>`. 판이 빈 글이면 인덱스(`:경로`)다.
+    `--batch-check` 는 내용이 아니라 크기 · 종류만 읽어 세지 않는다."""
+    if not list_argument or not Path(list_argument[0]).name.lower().startswith("git"):
+        return []
+    list_spec: list[str] = []
+    if "cat-file" in list_argument and "--batch" in list_argument:
+        text = input_data.decode("utf-8", "replace") if isinstance(input_data, bytes) else (input_data or "")
+        list_spec = [line.strip() for line in text.splitlines()]
+    elif "show" in list_argument:
+        list_spec = [argument for argument in list_argument[list_argument.index("show") + 1:] if not argument.startswith("-")]
+    return [(spec.partition(":")[0], spec.partition(":")[2]) for spec in list_spec if ":" in spec and spec.partition(":")[2]]
+
+
 def check_read_bound(project_root: Path) -> list[str]:
     """
     커밋 훅이 저장소 크기에 비례하지 않는다는 것을 형식으로 지킨다(시간을 재지 않는다): 파일 하나를 스테이지한 범위로 **모든 규칙을 차례로** 돌 때
@@ -124,8 +139,8 @@ def check_read_bound(project_root: Path) -> list[str]:
     (색인 없이 저장소 · 폴더 · 짝을 읽는다) 같은 파일을 따로 읽은 것이다(`lint_scope.read_bytes` 를 거치지 않았다).
 
     사실 캐시 파일(`Saved/Lint/<저장소>/`)도 센다: 저장소마다 manifest 하나와 조각 하나까지 — 판정에 전체가 필요한 규칙은 요약(manifest)만 읽어야 한다.
+    git 으로 읽는 블롭(`cat-file --batch` · `show`, `list_blob_reads`)도 센다 — 인덱스 블롭은 그 파일을 연 것과 같고, 다른 판(HEAD)의 블롭은 스테이지 파일 자신의 옛 판만 된다.
     세지 않는 것: 규칙의 표(`Config/Rules/`, `Rule.listTables`), 규칙 코드(Scripts 모듈 — 사실 캐시의 판), 그 밖의 `Saved/`, `.git/`.
-    shortcut: `io.open` · `open` 만 센다 — git 으로 읽는 블롭(`git cat-file`)은 세지 않는다, 그런 규칙이 늘면 git 호출도 센다.
     """
     set_code = {path for rule in RULES for path in list_imported_module_files(rule.get_module_name())}
     resolved_root = project_root.resolve()
@@ -134,6 +149,7 @@ def check_read_bound(project_root: Path) -> list[str]:
         run_rule(rule, project_root, LintScope(tuple(list_probe), (), False))   # 사실 캐시 데우기
     list_problem: list[str] = []
     original_open = io.open
+    original_run = subprocess.run
     for probe in list_probe:
         _read_bytes.cache_clear()
         list_opened: list[tuple[str, str]] = []
@@ -148,13 +164,22 @@ def check_read_bound(project_root: Path) -> list[str]:
                 list_opened.append((current[0], relative))
             return original_open(file, *args, **kwargs)
 
+        def counting_run(list_argument, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003 — subprocess.run 과 같은 인자
+            if isinstance(list_argument, (list, tuple)):
+                for revision, relative in list_blob_reads([str(part) for part in list_argument], kwargs.get("input")):
+                    if relative not in set_code and not relative.startswith(("Config/Rules/", "Saved/", ".git/")):
+                        list_opened.append((current[0], f"{revision}:{relative}" if revision else relative))
+            return original_run(list_argument, *args, **kwargs)
+
         io.open = builtins.open = counting_open   # Path.read_text · read_bytes 는 io.open, 맨 open 은 builtins.open 을 부른다
+        subprocess.run = counting_run              # git 은 `run_process` · `run_git_bytes` 둘 다 subprocess.run 을 부른다
         try:
             for rule in RULES:
                 current[0] = rule.id
                 run_rule(rule, project_root, LintScope((probe,), (), False))
         finally:
             io.open = builtins.open = original_open
+            subprocess.run = original_run
         map_store_files: dict[tuple[str, str], list[str]] = {}
         for index, (rule_id, relative) in enumerate(list_opened):
             rule = RULE_BY_ID[rule_id]
@@ -164,6 +189,11 @@ def check_read_bound(project_root: Path) -> list[str]:
                     map_store_files.setdefault((rule_id, store), []).append(file_name)
                 continue
             if any(relative == table or relative.startswith(table.rstrip("/") + "/") for table in rule.list_tables()):
+                continue
+            revision, _, history_path = relative.partition(":")
+            if history_path:   # 다른 판의 블롭 — 스테이지 파일 자신의 옛 판만 된다(같은 파일의 다른 내용이라 다시 읽기가 아니다)
+                if history_path != probe:
+                    list_problem.append(f"{rule_id}: 스테이지 '{probe}' 하나에 스테이지 밖 '{history_path}' 의 {revision} 판 블롭을 읽는다 — 여러 파일을 보는 판정은 `index_cache` 색인으로")
                 continue
             if relative != probe:
                 list_problem.append(f"{rule_id}: 스테이지 '{probe}' 하나에 스테이지 밖 '{relative}' 를 읽는다 — 여러 파일을 보는 판정은 `index_cache` 색인으로")
