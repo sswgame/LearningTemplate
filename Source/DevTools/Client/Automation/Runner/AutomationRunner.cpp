@@ -425,8 +425,8 @@ namespace sw
             input.attachVirtualInput( &_inputScript, _scenario.getInputMode() );
             // 배타 시나리오는 무인 실행이다. 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 이벤트를 창 메시지 단계에서 버린다.
             input.setOSDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
-            if ( MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>(); pWindowHost != nullptr && pWindowHost->getWindow() != nullptr )
-                (void)pWindowHost->getWindow()->requestInputFocus(); // 청하지 않는 창 시스템(Windows · Wayland · 웹)은 OS 가 초점을 맡는다
+            if ( IWindow* const pWindow = MainWindowSubsystem::findMainWindow(); pWindow != nullptr )
+                (void)pWindow->requestInputFocus(); // 청하지 않는 창 시스템(Windows · Wayland · 웹)은 OS 가 초점을 맡는다
             SW_LOG_INFO_ID( "Automation.StartedAfterFrame", "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _run._waitFrameCount );
             updateCrashContext( "started" );
             startLoadWindow();
@@ -755,8 +755,7 @@ namespace sw
         // 창이 없는 호스트는 디바이스를 만들지 않아 `gv_rhiBackend` 가 설정 기본값일 뿐이다 — 그때는 적지 않는다.
         if ( engine::areEngineServicesBound() == false )
             return string{};
-        const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        if ( pWindowHost == nullptr || pWindowHost->getWindow() == nullptr )
+        if ( MainWindowSubsystem::findMainWindow() == nullptr )
             return string{};
         // 엔진 전역 칸은 Engine 이미지 밖에서 링크할 수 없다 — 이름으로 찾아 읽는다(RHIBackendSwitcher 와 같은 길).
         const GlobalVariableInfo* const pBackend = engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_rhiBackend" );

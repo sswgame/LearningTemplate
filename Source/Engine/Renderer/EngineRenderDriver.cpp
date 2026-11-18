@@ -103,11 +103,11 @@ namespace sw
             engine::getSubsystem<QuitRequest>().request( ProcessExitCode::InitializationFailed );
         }
         // 스왑체인은 주 창 크기를 따른다 — RHI 가 섰으면 주 창도 있다(RHI 가 만들어 넘긴 창이거나 호스트가 먼저 넘긴 창).
-        const MainWindowSubsystem* const pMainWindow = _pRHI != nullptr ? engine::findSubsystem<MainWindowSubsystem>() : nullptr;
-        if ( pMainWindow != nullptr && pMainWindow->getWindow() != nullptr )
+        IWindow* const pMainWindow = _pRHI != nullptr ? MainWindowSubsystem::findMainWindow() : nullptr;
+        if ( pMainWindow != nullptr )
         {
-            _mainWindowResizeSubscription    = pMainWindow->getWindow()->bindResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &EngineRenderDriver::onMainWindowResize, this ) );
-            _mainWindowLifecycleSubscription = pMainWindow->getWindow()->bindLifecycleCallback( SW_DELEGATE_METHOD( WindowLifecycleDelegate, &EngineRenderDriver::onMainWindowLifecycle, this ) );
+            _mainWindowResizeSubscription    = pMainWindow->bindResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &EngineRenderDriver::onMainWindowResize, this ) );
+            _mainWindowLifecycleSubscription = pMainWindow->bindLifecycleCallback( SW_DELEGATE_METHOD( WindowLifecycleDelegate, &EngineRenderDriver::onMainWindowLifecycle, this ) );
         }
     }
 

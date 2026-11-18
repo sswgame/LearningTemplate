@@ -73,8 +73,7 @@ namespace sw
             /** @brief 앱 멈춤을 흉내 냅니다. 메인 루프가 `ticks` 틱 동안 프레임을 돌지 않고 돌아온다(플랫폼 수명 이벤트와 같은 길). */
             static bool runAppSuspend( AutomationStepContext& runner, const AutomationStep& step )
             {
-                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow == nullptr )
                     runner.recordFailure( step, "there is no window to suspend" );
                 else
@@ -85,8 +84,7 @@ namespace sw
             /** @brief 자기 창에 포커스 이벤트를 보냅니다. 창 시스템이 보낼 길이 없으면(Wayland) 시나리오를 건너뜀으로 끝냅니다. */
             static bool runFocusMessage( AutomationStepContext& runner, const AutomationStep& step, bool bFocused )
             {
-                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow == nullptr )
                     runner.recordFailure( step, "there is no window to send a message to" );
                 else if ( pWindow->sendFocusEvent( bFocused ) == false )
@@ -97,8 +95,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
             static HWND findWindowHandle()
             {
-                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 return pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
             }
 

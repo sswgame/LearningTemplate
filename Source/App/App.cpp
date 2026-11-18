@@ -86,8 +86,7 @@ namespace sw
             /** @brief 감시 값 `Window.RenderPausedTicks` — 표면을 잃거나 앱이 멈춰 프레임을 돌지 않은 메인 루프 틱의 누적입니다. 주 창이 없으면(헤드리스) 값이 없습니다. */
             [[nodiscard]] static bool readWindowRenderPausedTicks( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                const IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow == nullptr )
                     return false;
                 outValue = static_cast<float64>( pWindow->getRenderPausedTickCount() );
@@ -97,8 +96,7 @@ namespace sw
             /** @brief 감시 값 `Window.Minimized` — 주 창이 최소화돼 있으면 1 입니다(플랫폼 통보 기준). 주 창이 없으면(헤드리스) 값이 없습니다. */
             [[nodiscard]] static bool readWindowMinimized( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                const IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow == nullptr )
                     return false;
                 outValue = pWindow->isMinimized() ? 1.0 : 0.0;

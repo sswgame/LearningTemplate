@@ -76,8 +76,7 @@ namespace sw
             /** @brief 창을 최소화하거나(@p bMinimized) 되돌립니다. 최소화 중에도 시나리오 프레임은 돈다(자동화 실행의 페이싱이 최소화보다 앞선다 — `FramePacer`). */
             static bool setMinimized( AutomationStepContext& runner, const AutomationStep& step, bool bMinimized )
             {
-                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow != nullptr && pWindow->canMinimize() == false )
                 {
                     runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": this desktop cannot minimize windows (no window manager)" );
