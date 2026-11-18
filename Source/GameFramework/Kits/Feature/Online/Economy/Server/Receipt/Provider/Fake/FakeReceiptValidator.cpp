@@ -52,29 +52,26 @@ namespace sw
 {
     FakeReceiptValidator::FakeReceiptValidator()
         : _buyerRule{}
-        , _listPending{}
-        , _listRefund{}
+        , _completionBuffer{}
+        , _refundBuffer{}
     {
     }
 
     void FakeReceiptValidator::pollRefunds( vector<ReceiptRefundNotification>& outListNotification )
     {
-        for ( ReceiptRefundNotification& notification : _listRefund )
-        {
-            outListNotification.push_back( std::move( notification ) );
-        }
-        _listRefund.clear();
+        _refundBuffer.moveAllTo( outListNotification );
     }
 
     void FakeReceiptValidator::pushRefund( string_view transactionID, int64 refundedMs )
     {
-        _listRefund.push_back( ReceiptRefundNotification{ getStoreName(), string( transactionID ), refundedMs } );
+        _refundBuffer.push( ReceiptRefundNotification{ getStoreName(), string( transactionID ), refundedMs } );
     }
 
     void FakeReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )
     {
         (void)now; // 결과가 영수증 글로 정해진다 — 시각을 보지 않는다
-        ReceiptValidationResult& result = _listPending.emplace_back();
+        _completionBuffer.push( ReceiptValidationResult{} );
+        ReceiptValidationResult& result = _completionBuffer.getLast();
         result._storeName               = request._storeName;
         result._ticket                  = request._ticket;
         result._accountID               = request._accountID;
@@ -94,10 +91,6 @@ namespace sw
 
     void FakeReceiptValidator::pollCompletions( vector<ReceiptValidationResult>& outListResult )
     {
-        for ( ReceiptValidationResult& result : _listPending )
-        {
-            outListResult.push_back( std::move( result ) );
-        }
-        _listPending.clear();
+        _completionBuffer.moveAllTo( outListResult );
     }
 } // namespace sw

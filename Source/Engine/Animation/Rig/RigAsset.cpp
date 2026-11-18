@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Rig/RigAsset.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Log/Logger.h"
@@ -134,12 +135,7 @@ namespace sw
 
     optional<uint32> RigAsset::findTargetIndex( const hashed_string& name ) const
     {
-        for ( size_t index = 0; index < _listTarget.size(); ++index )
-        {
-            if ( _listTarget[index]._name == name )
-                return static_cast<uint32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&RigTargetDef::_name, uint32>( _listTarget, name );
     }
 
     bool RigAsset::loadFromXMLText( string_view xml, string_view sourceLabel )

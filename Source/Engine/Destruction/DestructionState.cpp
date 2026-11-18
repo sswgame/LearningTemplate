@@ -107,16 +107,6 @@ namespace sw
                 return static_cast<uint32>( iter - listSorted.begin() );
             }
 
-            static void addUnique( vector<uint32>& inoutList, uint32 value )
-            {
-                for ( const uint32 existing : inoutList )
-                {
-                    if ( existing == value )
-                        return;
-                }
-                inoutList.push_back( value );
-            }
-
             /** @brief 노드와 그 노드에 이번 사건이 준 변형입니다. */
             struct NodeStrain
             {
@@ -331,7 +321,7 @@ namespace sw
         _listLinkBroken[link] = SW_TRUE;
         ++outChange._brokenLinkCount;
         vector<uint32> listDirty{ _listLeafGroup[data._leafA] };
-        DestructionStateInternal::addUnique( listDirty, _listLeafGroup[data._leafB] );
+        VectorUtil::addUnique( listDirty, _listLeafGroup[data._leafB] );
         regroup( listDirty, outChange );
         return true;
     }
@@ -776,8 +766,7 @@ namespace sw
         {
             _listScratchStrain[entry._leaf] = entry._strain;
             const uint32 groupID            = _listLeafGroup[entry._leaf];
-            if ( VectorUtil::contains( listDirtyGroup, groupID ) == false )
-                listDirtyGroup.push_back( groupID );
+            VectorUtil::addUnique( listDirtyGroup, groupID );
         }
         const uint32 brokenNodeBefore = outChange._brokenNodeCount;
         const uint32 brokenLinkBefore = outChange._brokenLinkCount;
@@ -852,8 +841,7 @@ namespace sw
             _listLinkBroken[link] = SW_TRUE;
             ++outChange._brokenLinkCount;
             const uint32 otherGroup = _listLeafGroup[data._leafB];
-            if ( VectorUtil::contains( listDirtyGroup, otherGroup ) == false )
-                listDirtyGroup.push_back( otherGroup );
+            VectorUtil::addUnique( listDirtyGroup, otherGroup );
         }
 
         const bool bChanged = outChange._brokenNodeCount != brokenNodeBefore || outChange._brokenLinkCount != brokenLinkBefore;

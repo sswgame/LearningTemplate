@@ -2,6 +2,7 @@
 
 #include "Engine/TileMap/TileSetAsset.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
@@ -167,12 +168,7 @@ namespace sw
 {
     optional<uint32> TileSetContent::findBrush( const hashed_string& name ) const
     {
-        for ( size_t brushIndex = 0; brushIndex < _listBrush.size(); ++brushIndex )
-        {
-            if ( _listBrush[brushIndex]._name == name )
-                return static_cast<uint32>( brushIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&TileBrush::_name, uint32>( _listBrush, name );
     }
 
     void TileSetContent::collectIssues( vector<TileSetIssue>& outListIssue ) const

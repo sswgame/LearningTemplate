@@ -169,12 +169,7 @@ namespace sw
 
     optional<uint32> LiveLinkFaceLayout::findChannelIndex( const hashed_string& channel ) const
     {
-        for ( size_t channelIndex = 0; channelIndex < _listChannel.size(); ++channelIndex )
-        {
-            if ( _listChannel[channelIndex] == channel )
-                return static_cast<uint32>( channelIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndex<uint32>( _listChannel, channel );
     }
 
     bool LiveLinkFaceMapping::loadFromXMLText( string_view xml, string_view sourceLabel, LiveLinkFaceLayout& outLayout )

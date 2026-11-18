@@ -472,8 +472,7 @@ namespace sw
         listCulture.push_back( _sourceCulture );
         for ( const string& culture : _listStagedCulture )
         {
-            if ( VectorUtil::contains( listCulture, culture ) == false )
-                listCulture.push_back( culture );
+            VectorUtil::addUnique( listCulture, culture );
         }
         return listCulture;
     }

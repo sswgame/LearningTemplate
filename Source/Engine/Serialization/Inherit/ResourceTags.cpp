@@ -348,8 +348,7 @@ namespace sw
             if ( pAxis->_timing == ResourceTagTiming::Load )
             {
                 compiled._timing = ResourceTagTiming::Load;
-                if ( VectorUtil::contains( compiled._listLoadTag, string{ tag } ) == false )
-                    compiled._listLoadTag.emplace_back( tag );
+                VectorUtil::addUnique( compiled._listLoadTag, tag );
             }
         } );
         if ( error.empty() == false )

@@ -537,8 +537,7 @@ namespace sw
                     if ( block._appointment.empty() || appointmentIndex.has_value() == false )
                         continue;
                     vector<hashed_string>& listAttendee = listAttendeePerAppointment[static_cast<size_t>( *appointmentIndex )];
-                    if ( VectorUtil::contains( listAttendee, npc._id ) == false )
-                        listAttendee.push_back( npc._id );
+                    VectorUtil::addUnique( listAttendee, npc._id );
                 }
             }
             (void)_npcCatalog.replace( npc );

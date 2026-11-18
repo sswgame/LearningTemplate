@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Inventory/GridInventory.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -261,12 +262,7 @@ namespace sw
 
     optional<int32> GridInventory::findItemIndex( int32 instanceID ) const
     {
-        for ( size_t itemIndex = 0; itemIndex < _listItem.size(); ++itemIndex )
-        {
-            if ( _listItem[itemIndex]._instanceID == instanceID )
-                return static_cast<int32>( itemIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&GridItem::_instanceID, int32>( _listItem, instanceID );
     }
 
     void GridInventory::computeFootprint( const GridItemShape& shape, bool bRotated, int32& outWidth, int32& outHeight ) const

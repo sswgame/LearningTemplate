@@ -260,7 +260,7 @@ namespace sw::editor
 
     string TextureImportConfig::makeSharedSourcePath( string_view domainFolder, string_view ruleName, string_view key, string_view extension )
     {
-        const string rule = ruleName.empty() ? string( kSharedDefaultRuleName ) : StringUtil::toLower( string( ruleName ).c_str() );
+        const string rule = ruleName.empty() ? string( kSharedDefaultRuleName ) : StringUtil::toLower( ruleName );
         return string( domainFolder ) + "/textures_raw/" + string( kSharedFolderName ) + "/" + rule + "/" + string( key ) + string( extension );
     }
 

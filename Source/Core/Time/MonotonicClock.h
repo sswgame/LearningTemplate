@@ -36,6 +36,8 @@ namespace sw
         }
         /** @brief 지금 시각(마이크로초)입니다. */
         static int64 nowMicroseconds() noexcept { return nowNanoseconds() / constant::time::kNanosecondsPerMicrosecond; }
+        /** @brief 지금 시각(초, 실수)입니다. 초 단위 시한 · 경과를 실수로 다루는 쪽(자동화 벽시계, 네트워크 갱신)이 변환식을 호출부마다 두지 않는다. */
+        static float64 nowSeconds() noexcept { return static_cast<float64>( nowNanoseconds() ) / static_cast<float64>( constant::time::kNanosecondsPerSecond ); }
         /** @brief 설정 · 시한의 초(@p seconds)를 이 시계의 나노초 폭으로 바꿉니다(소수 아래는 버린다). 변환식을 호출부마다 두지 않는다. */
         static constexpr int64 secondsToNanoseconds( float64 seconds ) noexcept { return static_cast<int64>( seconds * static_cast<float64>( constant::time::kNanosecondsPerSecond ) ); }
         /**

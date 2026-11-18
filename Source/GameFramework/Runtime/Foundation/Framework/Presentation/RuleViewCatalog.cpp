@@ -17,8 +17,7 @@ namespace sw
         vector<string> listPath;
         for ( const RuleViewDef& view : getAll() )
         {
-            if ( VectorUtil::contains( listPath, view._mesh.path() ) == false )
-                listPath.push_back( view._mesh.path() );
+            VectorUtil::addUnique( listPath, view._mesh.path() );
         }
         return listPath;
     }

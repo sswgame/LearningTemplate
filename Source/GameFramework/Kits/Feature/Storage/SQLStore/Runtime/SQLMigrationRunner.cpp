@@ -270,8 +270,7 @@ namespace sw
             SQLMigrationRunnerInternal::MigrationFile file;
             if ( SQLMigrationRunnerInternal::parseFileName( FileUtil::getFileNamePart( filePath.view() ), file ) == false || file._driverName.empty() )
                 continue; // 이름이 틀린 파일은 `loadMigrations` 가 오류로 멈춘다
-            if ( VectorUtil::contains( inoutListName, file._driverName ) == false )
-                inoutListName.push_back( file._driverName );
+            VectorUtil::addUnique( inoutListName, file._driverName );
         }
         return {};
     }

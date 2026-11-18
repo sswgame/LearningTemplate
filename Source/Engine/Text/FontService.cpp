@@ -31,7 +31,7 @@ namespace sw
             /** @brief (패밀리, 굵기, 기울기) 키입니다. 패밀리 이름은 대소문자를 무시합니다. */
             static string makeFamilyFaceKey( string_view family, FontWeight weight, FontSlant slant )
             {
-                string key = StringUtil::toLower( string( family ).c_str() );
+                string key = StringUtil::toLower( family );
                 key += kKeySeparator;
                 key += to_string( static_cast<uint32>( weight ) );
                 key += kKeySeparator;
@@ -42,7 +42,7 @@ namespace sw
             /** @brief (문화권, 패밀리 면) 연쇄 키입니다. */
             static string makeChainKey( string_view culture, string_view familyFaceKey )
             {
-                string key = StringUtil::toLower( string( culture ).c_str() );
+                string key = StringUtil::toLower( culture );
                 key += kKeySeparator;
                 key += familyFaceKey;
                 return key;
@@ -62,7 +62,7 @@ namespace sw
             {
                 string key = "family";
                 key += kKeySeparator;
-                key += StringUtil::toLower( string( family ).c_str() );
+                key += StringUtil::toLower( family );
                 return key;
             }
 
@@ -198,7 +198,7 @@ namespace sw
 
     void FontService::registerMemoryFontFile( string_view path, vector<uint8> bytes )
     {
-        _mapMemoryFile[StringUtil::toLower( string( path ).c_str() )] = std::move( bytes );
+        _mapMemoryFile[StringUtil::toLower( path )] = std::move( bytes );
     }
 
     FontFaceChain FontService::getFaceChain( const FontSpec& spec )

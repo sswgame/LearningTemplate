@@ -106,9 +106,9 @@ namespace sw
         , _refundWindow{ refundWindow }
         , _mapRequestToCall{}
         , _listWaiting{}
-        , _listDone{}
-        , _listRefund{}
-        , _listDeliveryDone{}
+        , _completionBuffer{}
+        , _refundBuffer{}
+        , _deliveryResultBuffer{}
         , _uniqueSetNotifiedRefund{}
         , _pHTTPClient{ pHTTPClient }
         , _bRefundIncomplete{ SW_FALSE }
@@ -188,7 +188,7 @@ namespace sw
         if ( _uniqueSetNotifiedRefund.size() >= StoreReceiptValidatorInternal::kMaxNotifiedRefundCount )
             _uniqueSetNotifiedRefund.clear(); // 상한 — 겹친 알림은 서비스가 거래 id 로 한 번만 처리한다
         _uniqueSetNotifiedRefund.insert( text );
-        _listRefund.push_back( ReceiptRefundNotification{ getStoreName(), text, refundedMs } );
+        _refundBuffer.push( ReceiptRefundNotification{ getStoreName(), text, refundedMs } );
     }
 
     void StoreReceiptValidator::removeRefund( string_view transactionID )
@@ -213,7 +213,7 @@ namespace sw
         ReceiptValidationResult result = makeResult( call );
         result._status                 = ReceiptStatus::Retry;
         result._failureText            = std::move( failureText );
-        _listDone.push_back( std::move( result ) );
+        _completionBuffer.push( std::move( result ) );
     }
 
     void StoreReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )
@@ -229,7 +229,7 @@ namespace sw
             result._productID.clear();
             result._status      = ReceiptStatus::Invalid;
             result._failureText = string( read.error().message() );
-            _listDone.push_back( std::move( result ) );
+            _completionBuffer.push( std::move( result ) );
             return;
         }
         dispatch( std::move( call ), now );
@@ -334,7 +334,7 @@ namespace sw
                 StringBuilder<constant::buffer::kMax256> failureTextBuilder;
                 failureTextBuilder.appendFormat( "%# does not know this purchase (status %#)", getStoreName(), response._statusCode );
                 result._failureText = string( failureTextBuilder.view() );
-                _listDone.push_back( std::move( result ) );
+                _completionBuffer.push( std::move( result ) );
                 return;
             }
             case ReceiptResponseKind::Answered:
@@ -361,7 +361,7 @@ namespace sw
             result._deliveryKey        = call._request._payload;
             result._deliveryDeadlineMs = info._deliveryDeadlineMs;
         }
-        _listDone.push_back( std::move( result ) );
+        _completionBuffer.push( std::move( result ) );
     }
 
     void StoreReceiptValidator::confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now )
@@ -418,16 +418,12 @@ namespace sw
 
     void StoreReceiptValidator::completeDelivery( const ReceiptCall& call, ReceiptDeliveryStatus status )
     {
-        _listDeliveryDone.push_back( ReceiptDeliveryResult{ getStoreName(), call._recordKey, status } );
+        _deliveryResultBuffer.push( ReceiptDeliveryResult{ getStoreName(), call._recordKey, status } );
     }
 
     void StoreReceiptValidator::pollDeliveryResults( vector<ReceiptDeliveryResult>& outListServiceResult )
     {
-        for ( ReceiptDeliveryResult& serviceResult : _listDeliveryDone )
-        {
-            outListServiceResult.push_back( std::move( serviceResult ) );
-        }
-        _listDeliveryDone.clear();
+        _deliveryResultBuffer.moveAllTo( outListServiceResult );
     }
 
     void StoreReceiptValidator::finishRefundPage( const ReceiptCall& call, const HTTPClientResponse& response, UnixMilliseconds now )
@@ -536,20 +532,12 @@ namespace sw
 
     void StoreReceiptValidator::pollCompletions( vector<ReceiptValidationResult>& outListResult )
     {
-        for ( ReceiptValidationResult& result : _listDone )
-        {
-            outListResult.push_back( std::move( result ) );
-        }
-        _listDone.clear();
+        _completionBuffer.moveAllTo( outListResult );
     }
 
     void StoreReceiptValidator::pollRefunds( vector<ReceiptRefundNotification>& outListNotification )
     {
-        for ( ReceiptRefundNotification& notification : _listRefund )
-        {
-            outListNotification.push_back( std::move( notification ) );
-        }
-        _listRefund.clear();
+        _refundBuffer.moveAllTo( outListNotification );
     }
 
     void StoreReceiptValidator::shutdown()

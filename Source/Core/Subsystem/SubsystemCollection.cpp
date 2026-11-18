@@ -387,8 +387,7 @@ namespace sw
                 if ( dependentIndex.has_value() == false )
                     continue;
                 vector<uint32>& listDependency = subsystemGraph._listDependency[*dependentIndex];
-                if ( VectorUtil::contains( listDependency, nodeIndex ) == false )
-                    listDependency.push_back( nodeIndex );
+                VectorUtil::addUnique( listDependency, nodeIndex );
             }
         }
 

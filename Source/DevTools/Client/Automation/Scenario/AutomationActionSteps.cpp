@@ -87,22 +87,6 @@ namespace sw
                 { return checkDurationChoice( params._frames, params._seconds, "frames", "seconds" ); } );
             }
 
-            /** @brief 바인딩이 쓰는 장치 종류입니다. */
-            static InputDeviceKind getBindingDevice( const ActionBinding& binding )
-            {
-                switch ( binding._kind )
-                {
-                    case BindingKind::GamepadStick2D:
-                        return InputDeviceKind::Gamepad;
-                    case BindingKind::MouseDelta2D:
-                    case BindingKind::MouseWheel1D:
-                    case BindingKind::VirtualJoystick2D:
-                        return InputDeviceKind::Mouse;
-                    default:
-                        return binding._arrSlot[0]._deviceKind;
-                }
-            }
-
             /**
              * @brief 액션의 바인딩 중 @p pAccept 가 받고 @p device 에 맞는 첫 것을 찾습니다(바인딩 순서 — 입력 맵 파일의 순서). 액션이 없거나 받을 바인딩이 없으면 그 이유입니다(값은 nullptr 이 아니다).
              * @details 바인딩은 시작 프레임의 맵에서 찾는다. 게임이 맵을 다시 읽어도 단계가 이미 낸 이벤트는 그대로다.
@@ -122,7 +106,7 @@ namespace sw
                 for ( uint32 bindIndex = 0; bindIndex < bindingCount; ++bindIndex )
                 {
                     const ActionBinding* pBinding = inputMap.getBinding( action, bindIndex );
-                    const bool           bUsable  = pBinding != nullptr && pAccept( *pBinding ) && ( device._bAny || getBindingDevice( *pBinding ) == device._kind );
+                    const bool           bUsable  = pBinding != nullptr && pAccept( *pBinding ) && ( device._bAny || pBinding->getDeviceKind() == device._kind );
                     if ( bUsable )
                         return pBinding;
                 }

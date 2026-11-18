@@ -14,12 +14,7 @@ namespace sw
         {
             static optional<size_t> findIndex( const vector<ModManifest>& listManifest, string_view id )
             {
-                for ( size_t index = 0; index < listManifest.size(); ++index )
-                {
-                    if ( listManifest[index]._id == id )
-                        return index;
-                }
-                return nullopt;
+                return VectorUtil::findIndexBy<&ModManifest::_id>( listManifest, id );
             }
 
             /** @brief 한 모드만 보는 검사(판 범위 · 덮어쓰기 허락 · 의존 · 충돌)입니다. */

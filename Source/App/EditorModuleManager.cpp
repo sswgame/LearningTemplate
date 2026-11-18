@@ -71,11 +71,8 @@ namespace sw
             if ( pManifest == nullptr || pManifest->_kind != ModuleKind::EditorExtension )
                 continue;
             EditorExtensionModule extension{};
-            extension._name = moduleName;
-            for ( const ModuleDependency& dependency : pManifest->_listDependency )
-            {
-                extension._listDependency.push_back( dependency._name );
-            }
+            extension._name           = moduleName;
+            extension._listDependency = pManifest->collectDependencyNames();
             _listEditorExtension.push_back( std::move( extension ) );
         }
         return GameModuleManager::loadModuleLibraries( pLiveReloadManager, catalog, resolution );

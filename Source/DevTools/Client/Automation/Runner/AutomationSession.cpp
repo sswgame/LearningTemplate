@@ -71,7 +71,7 @@ namespace sw
                 payload._wallLimitMilliseconds = static_cast<uint32>( limitSeconds * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
                 _watchdog.publish( payload );
                 AutomationHangWatchdog::Settings settings;
-                settings._startSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) / static_cast<float64>( constant::time::kMicrosecondsPerSecond );
+                settings._startSeconds = MonotonicClock::nowSeconds();
                 settings._limitSeconds = static_cast<float32>( limitSeconds );
                 settings._graceSeconds = AutomationTimeLimits::kHangGraceSeconds;
                 settings._exitCode     = getAutomationExitStatus( AutomationResult::TimedOut );
@@ -286,7 +286,7 @@ namespace sw
         }
 
         const bool    bLaterStage       = _pChain->getStageIndex() > 0;
-        const float64 resetStartSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
+        const float64 resetStartSeconds = MonotonicClock::nowSeconds();
         if ( bLaterStage )
         {
             // 앞 단계의 씬을 먼저 비운다 — 변수를 되돌리고 거는 사이에 앞 씬이 다음 단계의 설정(렌더 파이프라인)으로 그려지면 둘이 맞지 않는 조합이 생긴다
@@ -308,7 +308,7 @@ namespace sw
             if ( _pRenderDriver != nullptr )
                 _pRenderDriver->discardViewTargets();
             // 단계 사이 초기화가 든 시간이다 - 다음 시나리오가 시작하기까지의 프레임(새 게임 · 첫 씬)은 그 실행의 timeline `start` 가 센다.
-            SW_LOG_INFO_ID( "AutomationSession.StageResetTookMs", "[Scenario] stage reset took %#ms", static_cast<uint32>( ( static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 - resetStartSeconds ) * 1000.0 ) );
+            SW_LOG_INFO_ID( "AutomationSession.StageResetTookMs", "[Scenario] stage reset took %#ms", static_cast<uint32>( ( MonotonicClock::nowSeconds() - resetStartSeconds ) * 1000.0 ) );
         }
 
         _pRunner = make_unique<AutomationRunner>( _pLogPolicy );

@@ -156,8 +156,7 @@ namespace sw::editor
                 if ( pOutListIgnored == nullptr )
                     return;
                 const string name{ key };
-                if ( VectorUtil::contains( *pOutListIgnored, name ) == false )
-                    pOutListIgnored->push_back( name );
+                VectorUtil::addUnique( *pOutListIgnored, name );
             }
 
             /** @brief 객체의 키를 테이블과 대조합니다. 모르는 키가 있으면 그 이름이 대상인 오류입니다. */

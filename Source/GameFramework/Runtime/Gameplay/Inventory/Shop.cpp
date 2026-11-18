@@ -28,12 +28,7 @@ namespace sw
 
             static optional<int32> findSaturationIndex( const ShopState& runtime, const hashed_string& itemID )
             {
-                for ( size_t index = 0; index < runtime._listSaturatedItem.size(); ++index )
-                {
-                    if ( runtime._listSaturatedItem[index] == itemID )
-                        return static_cast<int32>( index );
-                }
-                return nullopt;
+                return VectorUtil::findIndex<int32>( runtime._listSaturatedItem, itemID );
             }
 
             static int32 countPieces( const vector<InventorySlot>& listPiece )
@@ -612,12 +607,7 @@ namespace sw
 
     optional<int32> ShopManager::findStockIndex( const ShopDef& shop, const hashed_string& itemID ) const
     {
-        for ( size_t index = 0; index < shop._listStock.size(); ++index )
-        {
-            if ( shop._listStock[index]._itemID == itemID )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&ShopStockDef::_itemID, int32>( shop._listStock, itemID );
     }
 
     int32 ShopManager::computeBasePrice( const ShopStockDef& stock ) const

@@ -144,8 +144,7 @@ namespace sw::editor
             {
                 if ( pOutListIgnored == nullptr )
                     return;
-                if ( VectorUtil::contains( *pOutListIgnored, path ) == false )
-                    pOutListIgnored->push_back( path );
+                VectorUtil::addUnique( *pOutListIgnored, path );
             }
 
             /** @brief 오류를 짓습니다 — 대상은 `<context>: <what> <value>`(빈 칸은 뺀다). 문장은 리터럴이고 어느 원소 · 값인지는 대상에 둔다. */

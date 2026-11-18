@@ -61,12 +61,7 @@ namespace sw
 
     optional<int32> CardPile::findIndexByID( uint16 cardID ) const
     {
-        for ( size_t index = 0; index < _listCard.size(); ++index )
-        {
-            if ( _listCard[index]._id == cardID )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&Card::_id, int32>( _listCard, cardID );
     }
 
     void CardPile::shuffle( GameRandom& random )

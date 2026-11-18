@@ -76,22 +76,12 @@ namespace sw
 
     optional<int32> AIDirectorProfile::findPhaseIndex( const hashed_string& phaseID ) const
     {
-        for ( size_t index = 0; index < _listPhase.size(); ++index )
-        {
-            if ( _listPhase[index]._id == phaseID )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&AIDirectorPhaseDef::_id, int32>( _listPhase, phaseID );
     }
 
     optional<int32> AIDirectorProfile::findSignalIndex( const hashed_string& signalID ) const
     {
-        for ( size_t index = 0; index < _intensity._listSignal.size(); ++index )
-        {
-            if ( _intensity._listSignal[index]._id == signalID )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&AIDirectorSignalDef::_id, int32>( _intensity._listSignal, signalID );
     }
 
     void AIDirectorProfile::collectEncounterIDs( vector<hashed_string>& outListID ) const
@@ -100,8 +90,7 @@ namespace sw
         {
             for ( const AIDirectorEncounterDef& encounter : pool._listEncounter )
             {
-                if ( VectorUtil::contains( outListID, encounter._id ) == false )
-                    outListID.push_back( encounter._id );
+                VectorUtil::addUnique( outListID, encounter._id );
             }
         }
     }

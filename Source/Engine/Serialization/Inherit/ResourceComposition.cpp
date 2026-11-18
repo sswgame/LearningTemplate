@@ -70,8 +70,7 @@ namespace sw
             /** @brief @p assetID 를 다시 읽을 목록에 올립니다(잠금 안에서 부른다). */
             static void addPending( ResourceComposition::State& state, const string& assetID )
             {
-                if ( VectorUtil::contains( state._listPendingReload, assetID ) == false )
-                    state._listPendingReload.push_back( assetID );
+                VectorUtil::addUnique( state._listPendingReload, assetID );
             }
 
             /** @brief 번호 @p inoutRevision 뒤에 바뀐 기록을 모읍니다. @p bVaryingOnly 면 로드 축 · 층에 기댄 것만입니다. */
@@ -134,8 +133,7 @@ namespace sw
             listTouched = state._listLayerRoot;
             for ( const string& root : listRoot )
             {
-                if ( VectorUtil::contains( listTouched, root ) == false )
-                    listTouched.push_back( root );
+                VectorUtil::addUnique( listTouched, root );
             }
             state._listLayerRoot = listRoot;
         }
@@ -194,8 +192,7 @@ namespace sw
         vector<string>&   listTag = state._mapRemapTag[string{ assetID }];
         for ( const string& tag : listLoadTag )
         {
-            if ( VectorUtil::contains( listTag, tag ) == false )
-                listTag.push_back( tag );
+            VectorUtil::addUnique( listTag, tag );
         }
     }
 
@@ -206,8 +203,7 @@ namespace sw
         vector<string>&   listTag = state._mapVariantTag[string{ assetID }];
         for ( const string& tag : listLoadTag )
         {
-            if ( VectorUtil::contains( listTag, tag ) == false )
-                listTag.push_back( tag );
+            VectorUtil::addUnique( listTag, tag );
         }
     }
 

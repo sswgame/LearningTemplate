@@ -582,6 +582,16 @@ namespace sw
         { return toLowerChar( ch ); } );
     }
 
+    string StringUtil::toLower( string_view text )
+    {
+        string result( text );
+        for ( utf8& ch : result )
+        {
+            ch = toLowerChar( ch );
+        }
+        return result;
+    }
+
     wstring StringUtil::toLower( const utf16* pInput )
     {
         return StringUtilInternal::mapEachChar<wstring>( pInput, []( utf16 ch )

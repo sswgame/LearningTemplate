@@ -228,8 +228,7 @@ namespace sw::editor
         }
         for ( size_t index = 0; pProfile != nullptr && index < pProfile->_listFluid.size(); ++index )
         {
-            if ( VectorUtil::contains( outState._listFluidTrigger, pProfile->_listFluid[index]._trigger ) == false )
-                outState._listFluidTrigger.push_back( pProfile->_listFluid[index]._trigger );
+            VectorUtil::addUnique( outState._listFluidTrigger, pProfile->_listFluid[index]._trigger );
         }
         const CharacterBodyDynamicsComponent* pDynamics = pBody->getComponent<CharacterBodyDynamicsComponent>();
         if ( pDynamics == nullptr )

@@ -2,6 +2,7 @@
 
 #include "Engine/TileMap/TileMapXML.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringUtil.h"
@@ -555,12 +556,7 @@ namespace sw
 
     optional<uint32> TileMapXMLData::findDataLayer( string_view name ) const
     {
-        for ( size_t layerIndex = 0; layerIndex < _listDataLayer.size(); ++layerIndex )
-        {
-            if ( _listDataLayer[layerIndex]._name == name )
-                return static_cast<uint32>( layerIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&DataLayer::_name, uint32>( _listDataLayer, name );
     }
 
     bool TileMapXMLData::addDataLayer( string_view name, int32 defaultValue )

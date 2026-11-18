@@ -130,8 +130,7 @@ namespace sw
                             return fail( element, string( "'" ) + pTag + "' needs a _document path" );
                         node._fragment               = normalizeDocumentPath( pFragment );
                         vector<string>& listFragment = _pAsset->_listFragment;
-                        if ( VectorUtil::contains( listFragment, node._fragment ) == false )
-                            listFragment.push_back( node._fragment );
+                        VectorUtil::addUnique( listFragment, node._fragment );
                     }
                     else if ( listChildWidget.empty() == false && pType->isDerivedFrom( PanelWidget::StaticType() ) == false )
                         return fail( listChildWidget.front(), string( "'" ) + pTag + "' cannot have children - it is not a panel" );

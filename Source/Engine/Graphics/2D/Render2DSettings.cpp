@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/2D/Render2DSettings.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
@@ -158,12 +159,7 @@ namespace sw
 
     optional<uint32> Render2DSettings::findSortingLayer( const hashed_string& layerName ) const
     {
-        for ( size_t layerIndex = 0; layerIndex < _listSortingLayer.size(); ++layerIndex )
-        {
-            if ( _listSortingLayer[layerIndex] == layerName )
-                return static_cast<uint32>( layerIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndex<uint32>( _listSortingLayer, layerName );
     }
 
     uint32 Render2DSettings::makeSortKey( uint32 layerIndex, int32 orderInLayer )

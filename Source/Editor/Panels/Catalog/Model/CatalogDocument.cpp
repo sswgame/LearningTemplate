@@ -229,8 +229,7 @@ namespace sw::editor
             pGroup->_listRow.push_back( rowIndex );
             for ( const CatalogXMLAttribute& attribute : row._listAttribute )
             {
-                if ( VectorUtil::contains( pGroup->_listColumn, attribute._name ) == false )
-                    pGroup->_listColumn.push_back( attribute._name );
+                VectorUtil::addUnique( pGroup->_listColumn, attribute._name );
             }
             _inheritance.collectInheritedColumns( row, pGroup->_listColumn ); // 물려받은 칸도 보이고 고칠 수 있어야 한다
         }

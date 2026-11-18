@@ -460,12 +460,7 @@ namespace sw
 
     optional<int32> Box2DPhysicsScene::findMaterialIndex( const hashed_string& name ) const
     {
-        for ( size_t materialIndex = 0; materialIndex < _settings._listMaterial.size(); ++materialIndex )
-        {
-            if ( _settings._listMaterial[materialIndex]._name == name )
-                return static_cast<int32>( materialIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&PhysicsMaterialDef::_name, int32>( _settings._listMaterial, name );
     }
 
     hashed_string Box2DPhysicsScene::findMaterialName( int32 materialIndex ) const

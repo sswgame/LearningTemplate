@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleCatalog.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
@@ -136,42 +137,22 @@ namespace sw
 
     optional<int32> ElementRuleCatalog::findFlag( const hashed_string& id ) const
     {
-        for ( size_t index = 0; index < _listFlag.size(); ++index )
-        {
-            if ( _listFlag[index] == id )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndex<int32>( _listFlag, id );
     }
 
     optional<int32> ElementRuleCatalog::findMaterial( const hashed_string& id ) const
     {
-        for ( size_t index = 0; index < _listMaterial.size(); ++index )
-        {
-            if ( _listMaterial[index]._id == id )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&ElementMaterialDef::_id, int32>( _listMaterial, id );
     }
 
     optional<int32> ElementRuleCatalog::findStatus( const hashed_string& id ) const
     {
-        for ( size_t index = 0; index < _listStatus.size(); ++index )
-        {
-            if ( _listStatus[index]._id == id )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&ElementStatusDef::_id, int32>( _listStatus, id );
     }
 
     optional<int32> ElementRuleCatalog::findStimulus( const hashed_string& id ) const
     {
-        for ( size_t index = 0; index < _listStimulus.size(); ++index )
-        {
-            if ( _listStimulus[index]._id == id )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&ElementStimulusDef::_id, int32>( _listStimulus, id );
     }
 
     bool ElementRuleCatalog::hasFlag( int32 material, int32 flag ) const

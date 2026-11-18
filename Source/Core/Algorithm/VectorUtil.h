@@ -89,14 +89,17 @@ namespace sw
             return false;
         }
 
-        /** @brief `value` 와 같은 첫 원소의 인덱스입니다. 없으면 빈 값입니다(언리얼 `TArray::Find`). `findIndexBy` 는 멤버 키로 찾고, 이것은 원소 값 자체로 찾습니다. */
-        template <typename TVector, typename TValue>
-        [[nodiscard]] static optional<size_t> findIndex( const TVector& list, const TValue& value )
+        /**
+         * @brief `value` 와 같은 첫 원소의 인덱스입니다. 없으면 빈 값입니다(언리얼 `TArray::Find`). `findIndexBy` 는 멤버 키로 찾고, 이것은 원소 값 자체로 찾습니다.
+         * @details 번호를 `uint32` 로 들고 다니는 표(본 · 채널 번호)는 `findIndex<uint32>( list, value )` 로 그 형식을 바로 받습니다 — 손 루프와 `static_cast` 를 호출부마다 두지 않는다.
+         */
+        template <typename TIndex = size_t, typename TVector, typename TValue>
+        [[nodiscard]] static optional<TIndex> findIndex( const TVector& list, const TValue& value )
         {
             for ( size_t index = 0; index < list.size(); ++index )
             {
                 if ( list[index] == value )
-                    return index;
+                    return static_cast<TIndex>( index );
             }
             return nullopt;
         }
@@ -146,17 +149,33 @@ namespace sw
         }
 
         /**
+         * @brief `value` 와 같은 원소가 없을 때만 끝에 더합니다(언리얼 `TArray::AddUnique`). 더했으면 true 입니다.
+         * @details "`contains` 가 아니면 `push_back`" 손 코드를 대신합니다. 앞에서부터 선형으로 찾으므로 짧은 목록에 씁니다(길면 집합을 쓴다).
+         *          원소는 `value` 에서 만듭니다(`emplace_back`) — `vector<string>` 에 `string_view` 를 넣을 때 임시 문자열을 따로 만들지 않습니다.
+         *          더했는지는 알림이라 버려도 됩니다(`[[nodiscard]]` 가 아닙니다).
+         */
+        template <typename TVector, typename TValue>
+        static bool addUnique( TVector& list, const TValue& value )
+        {
+            if ( contains( list, value ) )
+                return false;
+            list.emplace_back( value );
+            return true;
+        }
+
+        /**
          * @brief 키 `Member` 가 `value` 와 같은 첫 원소의 인덱스입니다. 없으면 빈 값입니다(언리얼 `TArray::IndexOfByKey`).
          * @details 무효 인덱스 센티넬 대신 `optional` 을 돌려주므로, 확인 없이 `list[index]` 로 쓰는 실수가 컴파일되지 않습니다.
          *          `if ( const auto index = VectorUtil::findIndexBy<&T::_id>( list, id ) ) VectorUtil::removeAtSwap( list, *index );`
+         *          이름 → 번호 표가 번호를 `uint32` 로 돌려주면 `findIndexBy<&T::_name, uint32>( list, name )` 입니다.
          */
-        template <auto Member, typename TVector, typename TValue>
-        [[nodiscard]] static optional<size_t> findIndexBy( const TVector& list, const TValue& value )
+        template <auto Member, typename TIndex = size_t, typename TVector, typename TValue>
+        [[nodiscard]] static optional<TIndex> findIndexBy( const TVector& list, const TValue& value )
         {
             for ( size_t index = 0; index < list.size(); ++index )
             {
                 if ( std::invoke( Member, list[index] ) == value )
-                    return index;
+                    return static_cast<TIndex>( index );
             }
             return nullopt;
         }

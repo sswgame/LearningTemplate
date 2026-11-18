@@ -61,7 +61,7 @@ namespace sw
 
     void AnimationSet::setClip( string_view name, string_view clipPath )
     {
-        insertEntry( StringUtil::toLower( string( name ).c_str() ), string( clipPath ) );
+        insertEntry( StringUtil::toLower( name ), string( clipPath ) );
     }
 
     string AnimationSet::saveToString() const

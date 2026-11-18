@@ -164,8 +164,7 @@ namespace sw::editor
                 return;
             for ( const VrmExpressionBind& bind : pExpression->_listBind )
             {
-                if ( VectorUtil::contains( listBlinkTarget, bind._morphTarget ) == false )
-                    listBlinkTarget.push_back( bind._morphTarget );
+                VectorUtil::addUnique( listBlinkTarget, bind._morphTarget );
                 if ( MathUtil::abs( bind._weight - 1.0f ) > 1e-4f )
                     Internal::addIgnored( pOutListIgnored, "expression '" + string( name ) + "' weights (blink targets are weight 1)" );
             }
@@ -260,8 +259,7 @@ namespace sw::editor
             {
                 for ( const uint32 colliderIndex : def._listColliderGroup[groupIndex]._listCollider )
                 {
-                    if ( VectorUtil::contains( listCollider, colliderIndex ) == false )
-                        listCollider.push_back( colliderIndex );
+                    VectorUtil::addUnique( listCollider, colliderIndex );
                 }
             }
             const XMLNode colliders = node.appendChild( "colliders" );

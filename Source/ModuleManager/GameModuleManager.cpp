@@ -532,12 +532,7 @@ namespace sw
             if ( pManifest->_kind != ModuleKind::Kit )
                 continue;
 
-            vector<string> listDependency;
-            for ( const ModuleDependency& dependency : pManifest->_listDependency )
-            {
-                listDependency.push_back( dependency._name );
-            }
-            if ( _pLiveReloadManager->registerModule( moduleName, listDependency ) == false )
+            if ( _pLiveReloadManager->registerModule( moduleName, pManifest->collectDependencyNames() ) == false )
             {
                 SW_LOG_ERROR_ID( "GameModuleManager.KitModuleRegisterFailed", "Kit module register failed (%#)", moduleName );
                 return false;

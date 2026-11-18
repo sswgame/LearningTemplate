@@ -461,7 +461,7 @@ namespace sw
         context._idempotencyKey                                               = header._key;
         context._traceID                                                      = header._traceID;
         context._principalID                                                  = principalID;
-        context._deadlineSeconds                                              = static_cast<float64>( MonotonicClock::nowNanoseconds() ) * 1.0e-9 + static_cast<float64>( header._timeoutMilli ) * 1.0e-3;
+        context._deadlineSeconds                                              = MonotonicClock::nowSeconds() + static_cast<float64>( header._timeoutMilli ) * 1.0e-3;
         context._pBody                                                        = header._pPayload;
         context._bodySize                                                     = header._payloadSize;
         _mapInFlight.emplace( inFlight._token._serial, inFlight );

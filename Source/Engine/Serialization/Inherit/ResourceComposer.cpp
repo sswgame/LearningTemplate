@@ -128,8 +128,7 @@ namespace sw
                         return false;
                     for ( const string& tag : test._listLoadTag )
                     {
-                        if ( VectorUtil::contains( inoutListLoadTag, tag ) == false )
-                            inoutListLoadTag.push_back( tag );
+                        VectorUtil::addUnique( inoutListLoadTag, tag );
                     }
                     const bool bKeep = resolvedTiming == ResourceTagTiming::Cook && ( bKeepRest || test._timing == ResourceTagTiming::Load );
                     if ( bKeep )

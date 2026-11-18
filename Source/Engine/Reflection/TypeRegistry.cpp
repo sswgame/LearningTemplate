@@ -260,8 +260,7 @@ namespace sw
         const hashed_string      retiredName{ pRetiredName };
         string                   wireNameClash;
         UniqueLock<shared_mutex> lock{ _mutex };
-        if ( VectorUtil::contains( _listRetiredTypeName, retiredName ) == false )
-            _listRetiredTypeName.push_back( retiredName );
+        VectorUtil::addUnique( _listRetiredTypeName, retiredName );
         assignWireTypeNameLocked( retiredName, hashed_string{}, WireTypeKind::Retired, wireNameClash );
         lock.unlock();
         reportWireTypeNameClash( wireNameClash );

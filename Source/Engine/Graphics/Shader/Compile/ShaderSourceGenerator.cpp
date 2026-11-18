@@ -17,14 +17,12 @@ namespace sw
 
     bool IShaderSourceGenerator::add( const IShaderSourceGenerator* pGenerator )
     {
-        return ShaderSourceGeneratorInternal::getList().withLock( [pGenerator]( RegistrationList<const IShaderSourceGenerator>& list )
-        { return list.addLogged( pGenerator, "Shader source generator", pGenerator->getName() ) == RegistrationResult::Added; } );
+        return ShaderSourceGeneratorInternal::getList().addLogged( pGenerator, "Shader source generator", pGenerator->getName() ) == RegistrationResult::Added;
     }
 
     void IShaderSourceGenerator::remove( const IShaderSourceGenerator* pGenerator )
     {
-        ShaderSourceGeneratorInternal::getList().withLock( [pGenerator]( RegistrationList<const IShaderSourceGenerator>& list )
-        { (void)list.remove( pGenerator ); } );
+        (void)ShaderSourceGeneratorInternal::getList().remove( pGenerator ); // 올라 있지 않으면 할 일이 없다
     }
 
     bool IShaderSourceGenerator::refreshAllRegistered( const AssetPaths& assetPaths, string_view contentRoot, uint32& outWrittenCount )

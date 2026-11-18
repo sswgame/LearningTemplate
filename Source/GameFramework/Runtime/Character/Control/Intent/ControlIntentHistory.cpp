@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntentHistory.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Serialization/BitStream.h"
@@ -186,12 +187,7 @@ namespace sw
 
     optional<int32> ControlIntentHistory::findTrack( const hashed_string& pawnName ) const
     {
-        for ( size_t trackIndex = 0; trackIndex < _listTrack.size(); ++trackIndex )
-        {
-            if ( _listTrack[trackIndex]._pawnName == pawnName )
-                return static_cast<int32>( trackIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&ControlIntentTrack::_pawnName, int32>( _listTrack, pawnName );
     }
 
     const ControlIntent* ControlIntentHistory::findIntent( int32 trackIndex, uint32 tick ) const

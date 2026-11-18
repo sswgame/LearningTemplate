@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
@@ -122,12 +123,7 @@ namespace sw
 
     optional<uint32> PhysicsAsset::findBodyIndex( const hashed_string& bone ) const
     {
-        for ( size_t bodyIndex = 0; bodyIndex < _listBody.size(); ++bodyIndex )
-        {
-            if ( _listBody[bodyIndex]._bone == bone )
-                return static_cast<uint32>( bodyIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&PhysicsAssetBodyDef::_bone, uint32>( _listBody, bone );
     }
 
     SW_SHARED_ASSET_CACHE( PhysicsAsset, PhysicsAsset, PhysicsAsset::kAssetType.withLoader( AssetTypeLoader::of<PhysicsAsset>( MemoryTag::Physics ) ) );

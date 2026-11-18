@@ -10,6 +10,7 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -70,17 +71,17 @@ namespace sw
         uint64 submitErase( string_view slot ) override;
         uint64 submitList( string_view groupPrefix ) override;
         int32  pollCompletions( vector<LocalStoreCompletion>& outListCompletion ) override;
-        int32  getPendingCount() const override { return static_cast<int32>( _listCompletion.size() ); }
+        int32  getPendingCount() const override { return static_cast<int32>( _completionBuffer.getCount() ); }
         void   shutdown() override;
 
     private:
         uint64 executeRequest( LocalStoreRequest& request );
 
     private:
-        vector<LocalStoreCompletion> _listCompletion;
-        LocalSealContext             _sealContext;
-        MemoryLocalDatabase*         _pDatabase;
-        IDAllocator<uint64>          _requestIDAllocator;
-        uint8                        _bShutdown;
+        EventBuffer<LocalStoreCompletion> _completionBuffer; ///< 끝난 요청 — `pollCompletions` 가 가져간다
+        LocalSealContext                  _sealContext;
+        MemoryLocalDatabase*              _pDatabase;
+        IDAllocator<uint64>               _requestIDAllocator;
+        uint8                             _bShutdown;
     };
 } // namespace sw

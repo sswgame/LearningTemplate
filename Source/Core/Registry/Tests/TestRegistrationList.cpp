@@ -160,6 +160,34 @@ SW_TEST_CASE( RegistrationListTest, CopiesNamesAndRejectsADuplicateName )
 }
 
 /**
+ * @brief [RegistrationListTest] 잠금을 든 목록의 한 줄 판(addLogged · remove · contains · findByName · collectNames · joinNames)은 목록과 같은 결과를 내고
+ *        잠금을 쥔 채 돌아오지 않는다(이어 부르는 호출이 멈추지 않는다)
+ */
+SW_TEST_CASE( RegistrationListTest, LockedListCallsMatchTheListOnes )
+{
+    RegistrationProbe first{};
+    RegistrationProbe second{};
+
+    LockedRegistrationList<RegistrationProbe> list{ "TestLockedList" };
+    SW_EXPECT_TRUE( list.addLogged( &first, "Probe", "First" ) == RegistrationResult::Added );
+    SW_EXPECT_TRUE( list.addLogged( &second, "Probe", "Second" ) == RegistrationResult::Added );
+    SW_EXPECT_TRUE( list.contains( &second ) );
+    SW_EXPECT_EQUAL( &first, list.findByName( "First" ) );
+    SW_EXPECT_TRUE( list.joinNames() == "First, Second" );
+
+    vector<string> listName{ "Kept" };
+    list.collectNames( listName ); // 뒤에 붙인다 — 있던 것은 둔다
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 3 ), listName.size() );
+    SW_EXPECT_TRUE( listName[0] == "Kept" && listName[2] == "Second" );
+
+    const uint32 generation = list.getRemovalGeneration();
+    SW_EXPECT_TRUE( list.remove( &first ) );
+    SW_EXPECT_FALSE( list.contains( &first ) );
+    SW_EXPECT_TRUE( list.getRemovalGeneration() != generation );
+    SW_EXPECT_TRUE( list.remove( &second ) ); // 비우고 끝낸다 — 저장소를 놓는다
+}
+
+/**
  * @brief [RegistrationListTest] (순서 값, 이름) 정렬 목록은 등록 순서와 무관하게 같은 순서이고, 이름을 요구하면 빈 이름을 거절한다
  * @details 에디터 확장 레지스트리가 이 모양이다 — 정적 초기화 순서는 번역 단위마다 달라 등록 순서로 보여 주면 빌드마다 메뉴가 바뀐다.
  */

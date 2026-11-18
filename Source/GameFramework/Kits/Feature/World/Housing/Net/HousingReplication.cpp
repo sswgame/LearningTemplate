@@ -229,8 +229,7 @@ namespace sw
 
     void HousingReplicationServer::onConnectionOpened( int32 connectionID )
     {
-        if ( VectorUtil::contains( _listJoined, connectionID ) == false )
-            _listJoined.push_back( connectionID );
+        VectorUtil::addUnique( _listJoined, connectionID );
     }
 
     void HousingReplicationServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )

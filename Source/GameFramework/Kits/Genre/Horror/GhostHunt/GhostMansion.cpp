@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostMansion.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -254,12 +255,7 @@ namespace sw
         if ( _pCatalog == nullptr )
             return nullopt;
         const vector<GhostFurnitureDef>& listFurniture = _pCatalog->getFurniture();
-        for ( size_t index = 0; index < listFurniture.size(); ++index )
-        {
-            if ( listFurniture[index]._id == furnitureID )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&GhostFurnitureDef::_id, int32>( listFurniture, furnitureID );
     }
 
     bool GhostMansion::isKnownRoom( const hashed_string& roomID ) const

@@ -38,8 +38,7 @@ namespace sw::editor
             {
                 if ( bone.empty() || skeleton.findBoneIndex( hashed_string( bone ) ).has_value() )
                     return;
-                if ( VectorUtil::contains( inoutListMissing, bone ) == false )
-                    inoutListMissing.push_back( bone );
+                VectorUtil::addUnique( inoutListMissing, bone );
             }
 
             /**

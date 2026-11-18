@@ -2,6 +2,7 @@
 
 #include "Programs/ReflectionParser/ParserConfig.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -92,8 +93,7 @@ namespace sw
             {
                 for ( const string& item : listSrc )
                 {
-                    if ( std::find( inoutListDst.begin(), inoutListDst.end(), item ) == inoutListDst.end() )
-                        inoutListDst.push_back( item );
+                    VectorUtil::addUnique( inoutListDst, item );
                 }
             }
 

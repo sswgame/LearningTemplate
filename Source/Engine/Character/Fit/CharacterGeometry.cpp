@@ -55,12 +55,7 @@ namespace sw
 
     optional<uint16> AppearanceGeometry::findGroup( const hashed_string& name ) const
     {
-        for ( size_t groupIndex = 0; groupIndex < _listGroupName.size(); ++groupIndex )
-        {
-            if ( _listGroupName[groupIndex] == name )
-                return static_cast<uint16>( groupIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndex<uint16>( _listGroupName, name );
     }
 
     const GeometryMorphTarget* AppearanceGeometry::findMorph( const hashed_string& name ) const
@@ -104,12 +99,7 @@ namespace sw
 
     optional<uint32> CharacterBoneArray::findBone( const hashed_string& name ) const
     {
-        for ( size_t boneIndex = 0; boneIndex < _listName.size(); ++boneIndex )
-        {
-            if ( _listName[boneIndex] == name )
-                return static_cast<uint32>( boneIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndex<uint32>( _listName, name );
     }
 
     void CharacterBoneArray::computeModelTransforms()

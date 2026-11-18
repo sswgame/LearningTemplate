@@ -48,7 +48,7 @@ namespace sw
                 }
             }
         }
-        const auto iter = _mapFileNameToPath.find( StringUtil::toLower( string( fileName ).c_str() ) );
+        const auto iter = _mapFileNameToPath.find( StringUtil::toLower( fileName ) );
         return iter != _mapFileNameToPath.end() ? iter->second : string{};
     }
 } // namespace sw

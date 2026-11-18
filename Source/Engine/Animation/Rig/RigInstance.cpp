@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Rig/RigInstance.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -185,12 +186,7 @@ namespace sw
 
     optional<uint32> RigInstance::findTargetIndex( const hashed_string& name ) const
     {
-        for ( size_t index = 0; index < _listTargetDef.size(); ++index )
-        {
-            if ( _listTargetDef[index]._name == name )
-                return static_cast<uint32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&RigTargetDef::_name, uint32>( _listTargetDef, name );
     }
 
     void RigInstance::setExternalTarget( uint32 targetIndex, const RigTargetValue& value )

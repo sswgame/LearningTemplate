@@ -99,8 +99,7 @@ namespace sw
         {
             const hashed_string group    = MeshMergerInternal::getMaterialGroup( listSource[sourceIndex], pHooks );
             listSourceGroup[sourceIndex] = group;
-            if ( VectorUtil::contains( listGroup, group ) == false )
-                listGroup.push_back( group );
+            VectorUtil::addUnique( listGroup, group );
         }
         outMerged._listPart.resize( listSource.size() );
         for ( const hashed_string& group : listGroup )

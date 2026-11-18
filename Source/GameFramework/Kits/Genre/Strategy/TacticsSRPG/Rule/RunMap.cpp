@@ -164,8 +164,7 @@ namespace sw
                     nextColumn = column; // 엇갈리면 곧게 편다
                 const int32    nextIndex = getOrCreateNode( floor + 1, nextColumn );
                 vector<int32>& listNext  = _listNode[static_cast<size_t>( nodeIndex )]._listNext;
-                if ( VectorUtil::contains( listNext, nextIndex ) == false )
-                    listNext.push_back( nextIndex );
+                VectorUtil::addUnique( listNext, nextIndex );
                 nodeIndex = nextIndex;
                 column    = nextColumn;
             }

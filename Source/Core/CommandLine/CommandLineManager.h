@@ -234,6 +234,13 @@ namespace sw
         /** @brief `parse` 가 받은 원본 인자(프로그램 이름 제외, UTF-8, 적은 순서 그대로)입니다. 재현 명령처럼 해석 전 글이 필요한 쪽이 읽습니다. */
         const vector<string>& getOriginalArguments() const { return _listOriginalArgument; }
 
+        /**
+         * @brief 인자 한 줄(`-key=value` · `--key` · `key=value`)의 이름입니다 — 앞뒤 공백, `=` 뒤, 앞의 `-` 를 뗀 것(`key`).
+         * @details `parse` 가 이름을 얻는 규칙 그대로입니다(`parse` 도 이것을 부른다). 원본 인자(`getOriginalArguments`)에서 이름을 가려내는 쪽(자식 프로세스에 넘길 인자 거르기,
+         *          재현 명령)이 `find( '=' )` · 하이픈 떼기를 따로 적으면 공백 · 빈 키 처리가 파서와 어긋난다. 등록된 이름인지는 보지 않습니다.
+         */
+        [[nodiscard]] static string_view getArgumentName( string_view argumentLine );
+
     private:
         /** @brief 보류표에 담을 키의 접두어입니다. 이것으로 시작하는 미등록 키만 남깁니다. */
         static constexpr auto kGlobalVariablePrefix = "gv_";

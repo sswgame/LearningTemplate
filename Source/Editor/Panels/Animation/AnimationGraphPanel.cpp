@@ -546,8 +546,7 @@ namespace sw::editor
         }
         for ( const int32 nodeID : listNow )
         {
-            if ( VectorUtil::contains( listOrdered, nodeID ) == false )
-                listOrdered.push_back( nodeID );
+            VectorUtil::addUnique( listOrdered, nodeID );
         }
         // 편집 대상은 캔버스 선택이 **바뀐 프레임에만** 따라간다 — 인스펙터의 전이 목록으로 고른 것을 매 프레임 덮지 않는다.
         const bool bNodesChanged = listOrdered != _listSelectionOrder;

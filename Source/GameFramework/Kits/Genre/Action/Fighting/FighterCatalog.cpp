@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/Fighting/FighterCatalog.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/String/StringUtil.h"
@@ -141,12 +142,7 @@ namespace sw
 
     optional<int32> FighterDef::findStanceIndex( const hashed_string& stance ) const
     {
-        for ( size_t index = 0; index < _listStance.size(); ++index )
-        {
-            if ( _listStance[index] == stance )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndex<int32>( _listStance, stance );
     }
 
     // ------------------------------------------------------------------------------

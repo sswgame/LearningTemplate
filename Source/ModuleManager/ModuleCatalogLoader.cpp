@@ -64,12 +64,7 @@ namespace sw
             /** @brief @p listManifest 에서 이름으로 찾은 칸 번호입니다. */
             [[nodiscard]] static optional<size_t> findIndex( const vector<ModuleManifest>& listManifest, string_view name )
             {
-                for ( size_t index = 0; index < listManifest.size(); ++index )
-                {
-                    if ( listManifest[index]._name == name )
-                        return index;
-                }
-                return nullopt;
+                return VectorUtil::findIndexBy<&ModuleManifest::_name>( listManifest, name );
             }
 
             /** @brief @p listSeed 에서 `_listDependency` 를 따라 닿는 모듈을 @p inoutListReached(@p listManifest 칸 순서)에 표시합니다. */

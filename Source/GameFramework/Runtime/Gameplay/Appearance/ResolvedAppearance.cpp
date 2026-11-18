@@ -707,8 +707,7 @@ namespace sw
                                 if ( proportion._owner.empty() && proportion._name == channelMaterial._channel )
                                     channelValue = proportion._value;
                             }
-                            if ( VectorUtil::contains( out._listMaterialChannel, channelMaterial._channel ) == false )
-                                out._listMaterialChannel.push_back( channelMaterial._channel );
+                            VectorUtil::addUnique( out._listMaterialChannel, channelMaterial._channel );
                             const float32 value = channelMaterial.computeValue( channelValue );
                             addMaterialValue( out, entry._owner, part._name, hashed_string{}, channelMaterial._name, float4( value, 0.0f, 0.0f, 0.0f ), ResolvedMaterialTarget::Parameter, 0,
                                               ResolvedMaterialShape::Scalar );

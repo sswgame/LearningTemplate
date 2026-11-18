@@ -245,13 +245,11 @@ namespace sw
         vector<hashed_string> listModule;
         for ( const TypeInfo* pType : listType )
         {
-            if ( VectorUtil::contains( listModule, pType->_moduleName ) == false )
-                listModule.push_back( pType->_moduleName );
+            VectorUtil::addUnique( listModule, pType->_moduleName );
         }
         for ( const EnumInfo* pEnum : listEnum )
         {
-            if ( VectorUtil::contains( listModule, pEnum->_moduleName ) == false )
-                listModule.push_back( pEnum->_moduleName );
+            VectorUtil::addUnique( listModule, pEnum->_moduleName );
         }
         VectorUtil::sort( listModule, HashedStringLexicalLess{} );
 

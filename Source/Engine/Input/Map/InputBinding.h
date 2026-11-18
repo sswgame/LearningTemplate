@@ -294,5 +294,24 @@ namespace sw
             , _bJoystickAnchored{ SW_FALSE }
         {
         }
+
+        /**
+         * @brief 이 바인딩이 읽는 장치 종류입니다 — 스틱은 패드, 마우스 이동 · 휠 · 가상 조이스틱은 마우스, 나머지는 첫 슬롯의 장치입니다.
+         * @details 자동화의 `ActionAxis device=…` 재생과 시나리오 녹화가 이 규칙 하나로 바인딩을 고른다(두 곳이 같은 switch 를 따로 들었다).
+         */
+        InputDeviceKind getDeviceKind() const
+        {
+            switch ( _kind )
+            {
+                case BindingKind::GamepadStick2D:
+                    return InputDeviceKind::Gamepad;
+                case BindingKind::MouseDelta2D:
+                case BindingKind::MouseWheel1D:
+                case BindingKind::VirtualJoystick2D:
+                    return InputDeviceKind::Mouse;
+                default:
+                    return _arrSlot[0]._deviceKind;
+            }
+        }
     };
 } // namespace sw

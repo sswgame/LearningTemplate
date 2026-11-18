@@ -638,12 +638,7 @@ namespace sw
 
     optional<uint32> Mesh::findSectionIndex( const hashed_string& name ) const
     {
-        for ( size_t index = 0; index < _listSection.size(); ++index )
-        {
-            if ( _listSection[index]._name == name )
-                return static_cast<uint32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&MeshSection::_name, uint32>( _listSection, name );
     }
 
     void Mesh::setMorphTargets( vector<MeshMorphTarget> listTarget )
@@ -660,12 +655,7 @@ namespace sw
 
     optional<uint32> Mesh::findMorphTargetIndex( const hashed_string& name ) const
     {
-        for ( size_t targetIndex = 0; targetIndex < _listMorphTarget.size(); ++targetIndex )
-        {
-            if ( _listMorphTarget[targetIndex]._name == name )
-                return static_cast<uint32>( targetIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&MeshMorphTarget::_name, uint32>( _listMorphTarget, name );
     }
 
     void Mesh::setVertexAnimation( shared_ptr<const MeshVertexAnimation> animation )

@@ -256,12 +256,7 @@ namespace sw
 
     optional<uint32> Material::findTextureSlot( hashed_string name ) const
     {
-        for ( size_t slot = 0; slot < _listMaterialTextureName.size(); ++slot )
-        {
-            if ( _listMaterialTextureName[slot] == name )
-                return static_cast<uint32>( slot );
-        }
-        return nullopt;
+        return VectorUtil::findIndex<uint32>( _listMaterialTextureName, name );
     }
 
     void Material::collectTexturePaths( vector<string>& outListPath ) const

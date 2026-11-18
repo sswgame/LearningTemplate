@@ -321,12 +321,9 @@ namespace sw
             /** @brief 섹션 이름의 번호입니다. 비거나 없는 이름이면 없음입니다(검사가 먼저 본다). */
             [[nodiscard]] static optional<uint32> findSection( const vector<AnimationMontageSection>& listSection, const hashed_string& name )
             {
-                for ( uint32 index = 0; index < listSection.size(); ++index )
-                {
-                    if ( name.empty() == false && listSection[index]._name == name )
-                        return index;
-                }
-                return nullopt;
+                if ( name.empty() )
+                    return nullopt;
+                return VectorUtil::findIndexBy<&AnimationMontageSection::_name, uint32>( listSection, name );
             }
 
             /** @brief 클립 처음부터 끝까지 한 섹션이다. */

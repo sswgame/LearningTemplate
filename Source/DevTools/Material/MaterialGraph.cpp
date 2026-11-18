@@ -2,6 +2,7 @@
 
 #include "DevTools/Material/MaterialGraph.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetIO.h"
@@ -84,11 +85,6 @@ namespace sw
 
     optional<uint32> MaterialGraphDef::findNodeIndex( string_view name ) const
     {
-        for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
-        {
-            if ( _listNode[nodeIndex]._name == name )
-                return static_cast<uint32>( nodeIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&MaterialGraphNodeDef::_name, uint32>( _listNode, name );
     }
 } // namespace sw

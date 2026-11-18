@@ -214,12 +214,7 @@ namespace sw
 
     optional<uint32> PairedAnimationDef::findRoleIndex( const hashed_string& roleName ) const
     {
-        for ( size_t roleIndex = 0; roleIndex < _content._listRole.size(); ++roleIndex )
-        {
-            if ( _content._listRole[roleIndex]._name == roleName )
-                return static_cast<uint32>( roleIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&PairedAnimationRoleDef::_name, uint32>( _content._listRole, roleName );
     }
 
     void PairedAnimationDef::readRoot( const XMLNode& root, CharacterDataReader& reader )

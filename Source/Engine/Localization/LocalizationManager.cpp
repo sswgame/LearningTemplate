@@ -943,8 +943,7 @@ namespace sw
             {
                 for ( const string& culture : project._listCookedCulture )
                 {
-                    if ( VectorUtil::contains( listLanguage, culture ) == false )
-                        listLanguage.push_back( culture );
+                    VectorUtil::addUnique( listLanguage, culture );
                 }
             }
         }

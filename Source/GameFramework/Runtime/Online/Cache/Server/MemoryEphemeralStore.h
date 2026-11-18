@@ -15,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Clock.h"
 
@@ -113,15 +114,15 @@ namespace sw
         void  unsubscribe( string_view channel ) override;
         int32 pollMessages( vector<EphemeralMessage>& outListMessage ) override;
 
-        int32 getPendingCount() const override { return static_cast<int32>( _listReply.size() ); }
+        int32 getPendingCount() const override { return static_cast<int32>( _replyBuffer.getCount() ); }
         void  shutdown() override;
 
     private:
-        vector<EphemeralReply>   _listReply;
-        MemoryEphemeralDatabase* _pDatabase;
-        uint64                   _inboxID;
-        Subscription             _inboxSubscription; ///< 데이터의 받은편지함. `shutdown` 이나 소멸이 지운다
-        IDAllocator<uint64>      _requestIDAllocator;
-        uint8                    _bShutdown;
+        EventBuffer<EphemeralReply> _replyBuffer; ///< 끝난 요청의 응답 — `pollReplies` 가 가져간다
+        MemoryEphemeralDatabase*    _pDatabase;
+        uint64                      _inboxID;
+        Subscription                _inboxSubscription; ///< 데이터의 받은편지함. `shutdown` 이나 소멸이 지운다
+        IDAllocator<uint64>         _requestIDAllocator;
+        uint8                       _bShutdown;
     };
 } // namespace sw

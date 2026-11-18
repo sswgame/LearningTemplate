@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
@@ -26,12 +27,7 @@ namespace sw
 
             static optional<int32> findName( const vector<hashed_string>& listName, const hashed_string& name )
             {
-                for ( size_t nameIndex = 0; nameIndex < listName.size(); ++nameIndex )
-                {
-                    if ( listName[nameIndex] == name )
-                        return static_cast<int32>( nameIndex );
-                }
-                return nullopt;
+                return VectorUtil::findIndex<int32>( listName, name );
             }
         };
     } // namespace

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
@@ -34,12 +35,7 @@ namespace sw
 
     optional<int32> MailboxClient::findMailIndex( const string& mailKey ) const
     {
-        for ( size_t mailIndex = 0; mailIndex < _listMail.size(); ++mailIndex )
-        {
-            if ( _listMail[mailIndex]._mailKey == mailKey )
-                return static_cast<int32>( mailIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&MailView::_mailKey, int32>( _listMail, mailKey );
     }
 
     void MailboxClient::onCallSucceeded( MailboxMethod::List, const MailboxListRequest& request, const MailboxListReply& reply )

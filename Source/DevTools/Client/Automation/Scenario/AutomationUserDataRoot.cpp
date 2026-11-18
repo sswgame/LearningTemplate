@@ -43,14 +43,6 @@ namespace sw
             /** @brief @p path 의 마디 가운데 `..` 가 있으면 true 입니다. */
             static bool hasParentSegment( string_view path ) { return ( "/" + FileUtil::normalizeSeparators( path ) + "/" ).find( "/../" ) != string::npos; }
 
-            /** @brief 명령줄 인자 @p argument(`-gv_x=값`)의 이름(`gv_x`)입니다. */
-            static string_view getArgumentName( string_view argument )
-            {
-                while ( argument.empty() == false && argument.front() == '-' )
-                    argument.remove_prefix( 1 );
-                return argument.substr( 0, argument.find( '=' ) );
-            }
-
             /**
              * @brief 상태 자리 변수 @p name 의 값(절대 경로)입니다. 주지 않았으면 빈 글. 상대 경로를 풀 수 없으면 오류입니다.
              * @details 에디터 변수는 기동 단계에 아직 등록 전이라(에디터 모듈이 뒤에 선다) 명령줄의 보류 값으로 읽고 작업 폴더 기준으로 푼다(`GlobalDiskPath` 와 같은 규칙).
@@ -158,7 +150,7 @@ namespace sw
         using Internal = AutomationUserDataRootInternal;
         for ( const string& argument : listArgument )
         {
-            const string_view name = Internal::getArgumentName( argument );
+            const string_view name = CommandLineManager::getArgumentName( argument );
             if ( std::find( std::begin( Internal::kArrStateVariable ), std::end( Internal::kArrStateVariable ), name ) != std::end( Internal::kArrStateVariable ) )
                 return argument;
         }

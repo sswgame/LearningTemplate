@@ -451,13 +451,11 @@ namespace sw
                 continue;
             for ( const string& sheet : ( *current )->_listStyleSheet )
             {
-                if ( VectorUtil::contains( outListStyleSheet, sheet ) == false )
-                    outListStyleSheet.push_back( sheet );
+                VectorUtil::addUnique( outListStyleSheet, sheet );
             }
             for ( const string& fragment : ( *current )->_listFragment )
             {
-                if ( VectorUtil::contains( listDocument, fragment ) == false )
-                    listDocument.push_back( fragment );
+                VectorUtil::addUnique( listDocument, fragment );
             }
         }
         return root;
@@ -541,8 +539,7 @@ namespace sw
                 continue;
             for ( const string& fragment : ( *document )->_listFragment )
             {
-                if ( VectorUtil::contains( listDocument, fragment ) == false )
-                    listDocument.push_back( fragment );
+                VectorUtil::addUnique( listDocument, fragment );
             }
         }
         return false;

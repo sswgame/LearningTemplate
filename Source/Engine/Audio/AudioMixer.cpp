@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioMixer.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Memory/Memory.h"
 
@@ -108,12 +109,7 @@ namespace sw
 
     optional<uint32> AudioMixer::findBusIndex( const hashed_string& name ) const
     {
-        for ( size_t busIndex = 0; busIndex < _listBusState.size(); ++busIndex )
-        {
-            if ( _listBusState[busIndex]._name == name )
-                return static_cast<uint32>( busIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&Bus::_name, uint32>( _listBusState, name );
     }
 
     void AudioMixer::setBusUserVolume( uint32 busIndex, float32 volume )
