@@ -228,8 +228,8 @@ def _run_mmo(argument: argparse.Namespace) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     server_config = write_configs(out_dir, _MMO_GAME_PORT, _MMO_SERVICE_PORT, _MMO_ACCOUNT, _MMO_PASSWORD, _MMO_SERVER_NAME)
     server_log = out_dir / "server.log"
-    # 서버 진행 저장소는 배포와 같은 파일 저장소다. 실행마다 새 진행으로 시작하도록 서버의 사용자 데이터 폴더를 이 실행의 빈 폴더로 옮긴다
-    # (한 서버 실행 안의 저장 → 재접속 읽기는 같은 저장소 계약을 지난다).
+    # 서버 진행 저장소는 서버 설정의 온라인 저장소(`_listStore` 의 memory — 저장소 계약 `IServiceStore`)라 실행마다 새 진행으로 시작한다
+    # (한 서버 실행 안의 저장 → 재접속 읽기는 같은 저장소를 지난다). 사용자 데이터 폴더도 실행마다 빈 폴더로 옮겨 다른 서버 파일이 섞이지 않게 한다.
     server_user_data = out_dir / "server_userdata"
     shutil.rmtree(server_user_data, ignore_errors=True)
     server_user_data.mkdir(parents=True)
