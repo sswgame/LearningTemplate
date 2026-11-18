@@ -5,8 +5,8 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionEnemyBrain.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionEnemyBrain.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 
 // ActionEnemyBrainTest — 적 패턴 상태 기계: 들어선 프레임은 넘어가지 않음, 시간 · 가까움 · 맞음 전이와 그 경계, 한 번만 쏘기, 시작 상태 없음 거절(폴백 결함), 상태 왕복과 깨진 바이트. 키트 GF_ActionPlatformer(nogpu).
 

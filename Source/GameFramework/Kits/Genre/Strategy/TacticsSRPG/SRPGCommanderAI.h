@@ -1,0 +1,71 @@
+/**
+ * @file SRPGCommanderAI.h
+ * @brief 택틱스 SRPG 의 적 AI 를 구현합니다. 갈 수 있는 셀, 무기, 표적의 조합마다 "기대 피해 - 반격 위험" 점수를 매겨 가장 좋은 것을 고릅니다(결정적).
+ */
+#pragma once
+#include "Core/Foundation/Expected.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGBattlefield.h"
+
+namespace sw
+{
+    struct SRPGCombatResult;
+
+    /** @brief 점수의 가중치입니다. */
+    struct SRPGCommanderAISettings
+    {
+        int32 _counterRiskPercent{ 100 }; ///< 반격으로 받을 기대 피해를 얼마나 크게 반영할지(%)
+        int32 _killBonus{ 1000 };         ///< 격파할 수 있으면 더하는 점수(명중률을 곱한다)
+        int32 _commanderBonus{ 500 };     ///< 표적이 지휘관이면 더하는 점수(명중률을 곱한다)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 계획한 공격 하나입니다. */
+    struct SRPGCommanderAITarget
+    {
+        int32 _weapon{ 0 };
+        int32 _target{ 0 };
+    };
+
+    /** @brief 한 유닛의 계획입니다. 공격이 비어 있으면 다가가기만 한다(예전에는 깃발과 -1 무기 · 대상 칸을 따로 들었다). */
+    struct SRPGCommanderAIPlan
+    {
+        int2                            _moveCell{};
+        optional<SRPGCommanderAITarget> _attack{};
+        int32                           _score{ 0 }; ///< 기대 피해 단위이다(명중률 %를 곱한 뒤 100 으로 나눈 값)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class SRPGCommanderAI
+     * @brief 표적이 없으면 가장 가까운 적 쪽으로 다가갑니다. 점수가 같으면 덜 걷는 셀, 그다음 셀 번호, 무기, 표적 순서로 앞선 것을 고르므로 항상 같은 답이 나옵니다.
+     * @details 점수 = 명중 x min( 피해, 표적 HP ) / 100 + 격파 가능이면 명중 x 격파 보너스 / 100 - 반격 명중 x min( 반격 피해, 내 HP ) / 100 x 위험 / 100 이다.
+     *          피해는 크리티컬을 넣지 않은 일반 피해이다.
+     */
+    class SW_KIT_API SRPGCommanderAI
+    {
+    public:
+        SRPGCommanderAI();
+
+        void                           setSettings( const SRPGCommanderAISettings& settings ) { _settings = settings; }
+        const SRPGCommanderAISettings& getSettings() const { return _settings; }
+
+        /** @brief 계획을 세웁니다. 움직일 수 없는 유닛이면 false 를 반환합니다. */
+        [[nodiscard]] bool makePlan( const SRPGBattlefield& field, int32 unitIndex, SRPGCommanderAIPlan& outPlan ) const;
+        /** @brief 계획대로 움직이고 공격한 뒤 행동을 끝냅니다. @p pOutResult 가 있으면 전투 결과를 담습니다. */
+        [[nodiscard]] bool runUnit( SRPGBattlefield& field, int32 unitIndex, SRPGCombatResult* pOutResult = nullptr ) const;
+        /** @brief 지금 페이즈 팀(@p team 일 때만)에서 행동할 수 있는 유닛을 번호 순서로 모두 움직이고, 움직인 수를 반환합니다. */
+        int32 runPhase( SRPGBattlefield& field, SRPGTeam team ) const;
+
+    private:
+        SRPGCommanderAISettings _settings;
+    };
+} // namespace sw

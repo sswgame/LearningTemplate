@@ -17,9 +17,9 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionPlatformerBody.h"
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionStageRun.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerBody.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerCatalog.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionStageRun.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 

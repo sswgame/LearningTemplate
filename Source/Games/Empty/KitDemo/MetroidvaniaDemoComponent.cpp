@@ -9,7 +9,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaDeathRestState.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaDeathRestState.h"
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"

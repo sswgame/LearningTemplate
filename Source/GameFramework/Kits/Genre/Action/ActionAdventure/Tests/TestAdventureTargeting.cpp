@@ -4,7 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureTargeting.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureTargeting.h"
 
 #include <cstring>
 #include <limits>

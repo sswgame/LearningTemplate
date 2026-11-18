@@ -11,7 +11,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h"
+#include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerCatalog.h"
 
 #include "Games/Empty/KitDemo/KitDemoComponent.h"
 

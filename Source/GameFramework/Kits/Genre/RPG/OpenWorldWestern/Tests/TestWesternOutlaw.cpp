@@ -4,8 +4,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternOutlaw.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternOutlaw.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"

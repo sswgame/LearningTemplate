@@ -15,7 +15,7 @@
 
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureVitals.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureVitals.h"
 
 namespace sw
 {

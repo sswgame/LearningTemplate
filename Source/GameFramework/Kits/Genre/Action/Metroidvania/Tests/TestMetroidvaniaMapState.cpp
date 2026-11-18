@@ -5,8 +5,8 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
-#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaMapState.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaCatalog.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaMapState.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 

@@ -5,7 +5,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureElementGrid.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureElementGrid.h"
 
 // AdventureElementGridTest — 화학 엔진: 불이 번지는 방향(바람 · 옆바람 · 지연), 타는 시간과 기류, 얼음 녹기 · 얼리기 · 끄기, 전기 흐름과 얼음 막기, 복사가 규칙 테이블을 다시 가리키는지, 고정 스텝, 상태 왕복.
 // 결함은 찾지 못했다. 키트 GF_ActionAdventure(nogpu).

@@ -7,9 +7,9 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
-#include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleGear.h"
-#include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleLoot.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleCatalog.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleGear.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleLoot.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"

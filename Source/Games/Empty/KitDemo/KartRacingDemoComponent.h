@@ -11,7 +11,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/KartTrack.h"
 
 #include "Games/Empty/KitDemo/KitDemoComponent.h"
 

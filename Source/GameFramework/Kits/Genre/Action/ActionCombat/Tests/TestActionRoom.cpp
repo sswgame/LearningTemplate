@@ -7,7 +7,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Rule/ActionRoom.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"

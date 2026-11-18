@@ -7,11 +7,11 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartAI.h"
-#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartGhost.h"
-#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
-#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartRace.h"
-#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/KartAI.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/KartGhost.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/KartItems.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/KartRace.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/KartTrack.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 
 #include <cstring>

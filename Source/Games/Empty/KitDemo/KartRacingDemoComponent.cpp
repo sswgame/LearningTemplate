@@ -10,7 +10,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartRace.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/KartRace.h"
 
 namespace sw
 {

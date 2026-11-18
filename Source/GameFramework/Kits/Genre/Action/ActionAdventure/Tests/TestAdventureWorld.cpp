@@ -4,9 +4,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureVitals.h"
-#include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureWeaponWear.h"
-#include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureWorldMap.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureVitals.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureWeaponWear.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureWorldMap.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"

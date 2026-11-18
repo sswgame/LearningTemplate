@@ -12,7 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternOutlaw.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternOutlaw.h"
 
 namespace sw
 {

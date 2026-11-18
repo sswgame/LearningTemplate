@@ -11,7 +11,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaCatalog.h"
 
 #include "Games/Empty/KitDemo/KitDemoComponent.h"
 

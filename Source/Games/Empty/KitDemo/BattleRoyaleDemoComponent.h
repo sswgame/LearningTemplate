@@ -11,7 +11,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleCatalog.h"
 
 #include "Games/Empty/KitDemo/KitDemoComponent.h"
 

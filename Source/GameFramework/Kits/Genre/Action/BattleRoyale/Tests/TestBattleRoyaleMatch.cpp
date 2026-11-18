@@ -4,8 +4,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
-#include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleMatch.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleCatalog.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleMatch.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 

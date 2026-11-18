@@ -14,7 +14,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Rule/ActionRoom.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 
 namespace sw

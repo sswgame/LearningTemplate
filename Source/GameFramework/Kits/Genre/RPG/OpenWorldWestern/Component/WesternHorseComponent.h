@@ -15,7 +15,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternHorse.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternHorse.h"
 
 namespace sw
 {

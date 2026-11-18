@@ -4,7 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureVitals.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureVitals.h"
 
 #include <cstring>
 #include <limits>

@@ -5,9 +5,9 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
-#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaDeathRestState.h"
-#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaDuelist.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaCatalog.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaDeathRestState.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaDuelist.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"

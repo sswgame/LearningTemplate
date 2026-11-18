@@ -5,9 +5,9 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
-#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaAbilitySet.h"
-#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaTrinketLoadout.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaAbilitySet.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaCatalog.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaTrinketLoadout.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 
 // MetroidvaniaCatalogTest — 카탈로그: 규칙을 기반 설정으로 옮기기, 패리 창 필수, 원소별 거절.

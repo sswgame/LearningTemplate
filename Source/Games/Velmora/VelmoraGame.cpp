@@ -15,7 +15,7 @@
 #include "Engine/Config/GameConfig.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"

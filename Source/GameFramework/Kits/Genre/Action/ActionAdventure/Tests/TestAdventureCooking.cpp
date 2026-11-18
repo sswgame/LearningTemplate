@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureCooking.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureCooking.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"

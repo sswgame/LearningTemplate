@@ -1,0 +1,421 @@
+#include "pch.h"
+
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerBody.h"
+
+#include "Core/Foundation/Constants.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
+
+#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct ActionPlatformerBodyInternal
+        {
+            static constexpr float32 kSkin       = 1.0e-3f; ///< 칸 가장자리에 붙일 때 남기는 틈
+            static constexpr float32 kProbeExtra = 0.2f;    ///< 드릴 진입 때 몸 가장자리에서 이만큼 더 앞을 본다
+
+            /** @brief 몸 상자가 벽 칸에 걸치는지 확인합니다(한쪽 발판과 사다리는 보지 않습니다). */
+            static bool isBoxBlocked( const PlatformTileMap& map, const float2& center, const float2& half )
+            {
+                const int32 minX = map.computeTileX( center._x - half._x + kSkin );
+                const int32 maxX = map.computeTileX( center._x + half._x - kSkin );
+                const int32 minY = map.computeTileY( center._y - half._y + kSkin );
+                const int32 maxY = map.computeTileY( center._y + half._y - kSkin );
+                for ( int32 y = minY; y <= maxY; ++y )
+                {
+                    for ( int32 x = minX; x <= maxX; ++x )
+                    {
+                        if ( map.getTile( x, y ) == PlatformTile::Solid )
+                            return true;
+                    }
+                }
+                return false;
+            }
+
+            /** @brief 이보다 짧은 입력 · 속도는 방향이 없다(대신값을 쓴다). */
+            static constexpr float32 kMinDirectionLength = 1.0e-2f;
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // ActionTerrainGrid
+    // ------------------------------------------------------------------------------
+    ActionTerrainGrid::ActionTerrainGrid()
+        : _listDirt{}
+        , _listGrapplePoint{}
+        , _origin{}
+        , _tileSize{ 1.0f }
+        , _topology{}
+    {
+    }
+
+    bool ActionTerrainGrid::loadFromXMLText( string_view text, float32 tileSize, const float2& origin, PlatformTileMap& outMap )
+    {
+        if ( outMap.loadFromXMLText( text, tileSize, origin ) == false )
+            return false;
+        _origin   = origin;
+        _tileSize = outMap.getTileSize();
+        _topology = GridTopology{ outMap.getWidth(), outMap.getHeight() };
+        _listDirt.assign( static_cast<size_t>( _topology.getCellCount() ), SW_FALSE );
+        _listGrapplePoint.clear();
+
+        // `PlatformTileMap::loadFromXMLText` 와 같은 방식으로 줄을 나눈다(빈 줄과 끝의 CR 을 무시한다).
+        const vector<string_view> listLine = StringUtil::split( text, "\r\n", { ._bDropEmpty = true } );
+        for ( size_t row = 0; row < listLine.size(); ++row )
+        {
+            const int32 y = _topology._height - 1 - static_cast<int32>( row );
+            for ( size_t column = 0; column < listLine[row].size(); ++column )
+            {
+                const int32 x = static_cast<int32>( column );
+                if ( listLine[row][column] == 'D' )
+                {
+                    _listDirt[static_cast<size_t>( _topology.toIndex( x, y ) )] = SW_TRUE;
+                    outMap.setTile( x, y, PlatformTile::Solid );
+                }
+                else if ( listLine[row][column] == 'O' )
+                {
+                    const float32 half = _tileSize * 0.5f;
+                    _listGrapplePoint.push_back( float2{ outMap.getTileLeft( x ) + half, outMap.getTileBottom( y ) + half } );
+                }
+            }
+        }
+        return true;
+    }
+
+    bool ActionTerrainGrid::isDirt( int32 x, int32 y ) const
+    {
+        if ( _topology.isInside( x, y ) == false )
+            return false;
+        return _listDirt[static_cast<size_t>( _topology.toIndex( x, y ) )] == SW_TRUE;
+    }
+
+    bool ActionTerrainGrid::isDirtAt( const float2& worldPosition ) const
+    {
+        return isDirt( computeTileX( worldPosition._x ), computeTileY( worldPosition._y ) );
+    }
+
+    optional<int32> ActionTerrainGrid::findGrapplePoint( const float2& position, float32 minDistance, float32 maxDistance ) const
+    {
+        optional<int32> bestIndex;
+        float32         bestDistance = 0.0f;
+        for ( size_t index = 0; index < _listGrapplePoint.size(); ++index )
+        {
+            const float32 distance = float2::getDistance( position, _listGrapplePoint[index] );
+            if ( distance < minDistance || distance > maxDistance )
+                continue;
+            if ( bestIndex.has_value() == false || distance < bestDistance )
+            {
+                bestIndex    = static_cast<int32>( index );
+                bestDistance = distance;
+            }
+        }
+        return bestIndex;
+    }
+
+    int32 ActionTerrainGrid::computeTileX( float32 worldX ) const
+    {
+        return static_cast<int32>( MathUtil::floor( ( worldX - _origin._x ) / _tileSize ) );
+    }
+
+    int32 ActionTerrainGrid::computeTileY( float32 worldY ) const
+    {
+        return static_cast<int32>( MathUtil::floor( ( worldY - _origin._y ) / _tileSize ) );
+    }
+
+    // ------------------------------------------------------------------------------
+    // ActionPlatformerBody
+    // ------------------------------------------------------------------------------
+    ActionPlatformerBody::ActionPlatformerBody()
+        : _motor{}
+        , _motorSettings{}
+        , _settings{}
+        , _position{}
+        , _velocity{}
+        , _anchor{}
+        , _ropeLength{ 0.0f }
+        , _drillSearchTimer{}
+        , _events{ 0 }
+        , _mode{ ActionMoveMode::Normal }
+        , _bInsideDirt{ SW_FALSE }
+    {
+    }
+
+    void ActionPlatformerBody::initialize( const ActionPlatformerCatalog& catalog )
+    {
+        _motorSettings = catalog.getMotorSettings();
+        _settings      = catalog.getBodySettings();
+        _motor.setSettings( _motorSettings );
+        _mode   = ActionMoveMode::Normal;
+        _events = 0;
+    }
+
+    void ActionPlatformerBody::setPosition( const float2& position )
+    {
+        if ( _mode == ActionMoveMode::Glide )
+            setGlide( false );
+        _mode     = ActionMoveMode::Normal;
+        _position = position;
+        _velocity = float2{ 0.0f, 0.0f };
+        _motor.setPosition( position );
+    }
+
+    float2 ActionPlatformerBody::getPosition() const
+    {
+        return _mode == ActionMoveMode::Grapple || _mode == ActionMoveMode::Drill ? _position : _motor.getPosition();
+    }
+
+    float2 ActionPlatformerBody::getVelocity() const
+    {
+        return _mode == ActionMoveMode::Grapple || _mode == ActionMoveMode::Drill ? _velocity : _motor.getVelocity();
+    }
+
+    void ActionPlatformerBody::update( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, float32 deltaTime )
+    {
+        _events = 0;
+        if ( deltaTime <= 0.0f )
+            return;
+        if ( _mode == ActionMoveMode::Grapple )
+        {
+            updateGrapple( map, input, deltaTime );
+            return;
+        }
+        if ( _mode == ActionMoveMode::Drill )
+        {
+            updateDrill( map, terrain, input, deltaTime );
+            return;
+        }
+
+        // 일반 모드와 활공 모드는 갈고리, 드릴, 활공 순서로 확인한다.
+        if ( input._bGrapplePressed == SW_TRUE && tryAttachGrapple( terrain ) )
+        {
+            updateGrapple( map, input, deltaTime );
+            return;
+        }
+        if ( input._bDrillHeld == SW_TRUE && tryEnterDrill( terrain, input ) )
+        {
+            updateDrill( map, terrain, input, deltaTime );
+            return;
+        }
+        const bool bWantGlide = input._bGlideHeld == SW_TRUE && _motor.isGrounded() == false;
+        if ( bWantGlide != ( _mode == ActionMoveMode::Glide ) )
+            setGlide( bWantGlide );
+        _motor.update( map, input._motor, deltaTime );
+        if ( _mode == ActionMoveMode::Glide && _motor.isGrounded() )
+            setGlide( false );
+    }
+
+    PlatformerSettings ActionPlatformerBody::makeMotorSettings( bool bGlide ) const
+    {
+        PlatformerSettings settings = _motorSettings;
+        if ( bGlide )
+        {
+            settings._maxFallSpeed     = MathUtil::min( settings._maxFallSpeed, _settings._glideFallSpeed );
+            settings._fallGravityScale = settings._fallGravityScale * _settings._glideGravityScale;
+        }
+        return settings;
+    }
+
+    void ActionPlatformerBody::setGlide( bool bGlide )
+    {
+        // 기반 몸의 설정을 바꿔 낙하 상한과 중력을 줄인다. 모드가 바뀔 때만 적용한다(setSettings 는 공중 점프와 대시 횟수를 다시 채운다).
+        const PlatformerSettings settings = makeMotorSettings( bGlide );
+        if ( bGlide )
+        {
+            _mode = ActionMoveMode::Glide;
+            _events |= ActionBodyEvent::kGlideStarted;
+        }
+        else
+        {
+            if ( _mode == ActionMoveMode::Glide )
+                _events |= ActionBodyEvent::kGlideEnded;
+            _mode = ActionMoveMode::Normal;
+        }
+        const float2 velocity = _motor.getVelocity();
+        _motor.changeTuning( settings );
+        _motor.setVelocity( velocity );
+    }
+
+    bool ActionPlatformerBody::tryAttachGrapple( const ActionTerrainGrid& terrain )
+    {
+        const float2          position = _motor.getPosition();
+        const optional<int32> index    = terrain.findGrapplePoint( position, _settings._grappleMinLength, _settings._grappleRange );
+        if ( index.has_value() == false )
+            return false;
+        if ( _mode == ActionMoveMode::Glide )
+            setGlide( false );
+        _anchor     = terrain.getGrapplePoints()[static_cast<size_t>( *index )];
+        _ropeLength = float2::getDistance( position, _anchor );
+        _position   = position;
+        _velocity   = _motor.getVelocity();
+        _mode       = ActionMoveMode::Grapple;
+        _events |= ActionBodyEvent::kGrappleAttached;
+        return true;
+    }
+
+    bool ActionPlatformerBody::tryEnterDrill( const ActionTerrainGrid& terrain, const ActionBodyInput& input )
+    {
+        const float2  position = _motor.getPosition();
+        const float2  facing{ static_cast<float32>( _motor.getFacing() ), 0.0f };
+        const float2  direction = input._motor._move.normalizeOr( _motor.getVelocity().normalizeOr( facing, ActionPlatformerBodyInternal::kMinDirectionLength ), ActionPlatformerBodyInternal::kMinDirectionLength );
+        const float2  half      = _motorSettings._halfExtents;
+        const float32 reach     = MathUtil::max( half._x, half._y ) + ActionPlatformerBodyInternal::kProbeExtra;
+        if ( terrain.isDirtAt( position + direction * reach ) == false )
+            return false;
+        if ( _mode == ActionMoveMode::Glide )
+            setGlide( false );
+        _position = position;
+        _velocity = direction * _settings._drillSpeed;
+        _drillSearchTimer.start( _settings._drillEntryTime );
+        _bInsideDirt = SW_FALSE;
+        _mode        = ActionMoveMode::Drill;
+        _events |= ActionBodyEvent::kDrillEntered;
+        return true;
+    }
+
+    void ActionPlatformerBody::updateGrapple( const PlatformTileMap& map, const ActionBodyInput& input, float32 deltaTime )
+    {
+        if ( input._bGrappleHeld == SW_FALSE )
+        {
+            // 놓을 때는 진자의 속도를 그대로 가지고 기반 몸으로 돌아간다.
+            returnToMotor( _velocity );
+            _events |= ActionBodyEvent::kGrappleReleased;
+            return;
+        }
+        float2 velocity = _velocity;
+        velocity._y -= _motor.getGravity() * deltaTime;
+        const float2  rope   = _position - _anchor;
+        const float32 length = rope.getLength();
+        if ( length > 1.0e-4f )
+        {
+            // 좌우 입력은 줄에 수직인 접선 방향으로 민다(오른쪽 입력이 +X 쪽 접선이다).
+            const float2 radial = rope * ( 1.0f / length );
+            float2       tangent{ -radial._y, radial._x };
+            if ( tangent._x < 0.0f )
+                tangent = -tangent;
+            velocity += tangent * ( MathUtil::clamp( input._motor._move._x, -1.0f, 1.0f ) * _settings._grappleSwingAcceleration * deltaTime );
+        }
+        const float32 speed = velocity.getLength();
+        if ( speed > _settings._grappleMaxSpeed )
+            velocity = velocity * ( _settings._grappleMaxSpeed / speed );
+
+        // 줄은 늘어나지 않는다. 넘친 위치를 줄 길이로 되돌리고 바깥으로 향하는 속도를 뺀다(접선 속도만 남는다).
+        float2        next      = _position + velocity * deltaTime;
+        const float2  toNext    = next - _anchor;
+        const float32 nextRange = toNext.getLength();
+        if ( nextRange > _ropeLength && nextRange > 1.0e-4f )
+        {
+            const float2 normal   = toNext * ( 1.0f / nextRange );
+            next                  = _anchor + normal * _ropeLength;
+            const float32 outward = velocity.dot( normal );
+            if ( outward > 0.0f )
+                velocity -= normal * outward;
+        }
+        if ( ActionPlatformerBodyInternal::isBoxBlocked( map, next, _motorSettings._halfExtents ) )
+        {
+            velocity = float2{ 0.0f, 0.0f }; // 벽에 부딪혔으므로 그 자리에 매달린다
+            next     = _position;
+        }
+        _position = next;
+        _velocity = velocity;
+    }
+
+    void ActionPlatformerBody::updateDrill( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, float32 deltaTime )
+    {
+        // 방향은 입력으로 정한다(입력이 없으면 지금 진행 방향을 쓴다). 속도는 항상 일정하다.
+        const float2 heading   = _velocity.normalizeOr( float2{ static_cast<float32>( _motor.getFacing() ), 0.0f }, ActionPlatformerBodyInternal::kMinDirectionLength );
+        const float2 direction = input._motor._move.normalizeOr( heading, ActionPlatformerBodyInternal::kMinDirectionLength );
+        _velocity              = direction * _settings._drillSpeed;
+        const float2 previous  = _position;
+        const float2 next      = _position + _velocity * deltaTime;
+        const int32  nextX     = map.computeTileX( next._x );
+        const int32  nextY     = map.computeTileY( next._y );
+        const bool   bDirt     = terrain.isDirtAt( next );
+        if ( bDirt == false && map.getTile( nextX, nextY ) == PlatformTile::Solid )
+        {
+            // 바위는 팔 수 없다(방향을 바꿀 때까지 멈춘다). 아직 흙에 닿지 못했으면 찾기 시간은 흐른다 — 멈추면 드릴 모드에 영영 갇힌다.
+            if ( _bInsideDirt == SW_FALSE )
+                updateDrillSearch( deltaTime );
+            return;
+        }
+        _position = next;
+        if ( bDirt )
+        {
+            _bInsideDirt = SW_TRUE;
+            return;
+        }
+        if ( _bInsideDirt == SW_FALSE )
+        {
+            updateDrillSearch( deltaTime );
+            return;
+        }
+
+        // 튀어나왔다. 몸 상자가 흙에 걸치지 않게, 빠져나온 쪽 칸 가장자리 밖으로 옮긴다.
+        const float2 half      = _motorSettings._halfExtents;
+        const int32  previousX = map.computeTileX( previous._x );
+        const int32  previousY = map.computeTileY( previous._y );
+        if ( nextY > previousY )
+            _position._y = map.getTileBottom( previousY + 1 ) + half._y + ActionPlatformerBodyInternal::kSkin;
+        else if ( nextY < previousY )
+            _position._y = map.getTileBottom( previousY ) - half._y - ActionPlatformerBodyInternal::kSkin;
+        if ( nextX > previousX )
+            _position._x = map.getTileLeft( previousX + 1 ) + half._x + ActionPlatformerBodyInternal::kSkin;
+        else if ( nextX < previousX )
+            _position._x = map.getTileLeft( previousX ) - half._x - ActionPlatformerBodyInternal::kSkin;
+
+        float2 exitVelocity = direction * _settings._drillExitSpeed;
+        _events |= ActionBodyEvent::kDrillExited;
+        if ( input._motor._bJumpHeld == SW_TRUE || input._motor._bJumpPressed == SW_TRUE )
+        {
+            exitVelocity._y = MathUtil::max( exitVelocity._y, _settings._drillJumpSpeed );
+            _events |= ActionBodyEvent::kDrillJumped;
+        }
+        returnToMotor( exitVelocity );
+    }
+
+    void ActionPlatformerBody::updateDrillSearch( float32 deltaTime )
+    {
+        _drillSearchTimer.update( deltaTime );
+        if ( _drillSearchTimer.isActive() )
+            return;
+        returnToMotor( _velocity * 0.5f );
+        _events |= ActionBodyEvent::kDrillAborted;
+    }
+
+    void ActionPlatformerBody::returnToMotor( const float2& velocity )
+    {
+        _motor.setPosition( _position );
+        _motor.setVelocity( velocity );
+        _velocity    = velocity;
+        _mode        = ActionMoveMode::Normal;
+        _bInsideDirt = SW_FALSE;
+    }
+
+    void ActionPlatformerBody::serializeState( StateIO& io )
+    {
+        io.enumValue( _mode, ActionMoveMode::Drill );
+        if ( io.isOk() == false )
+            return;
+        // 기반 몸의 설정은 모드가 정하므로(활공이면 활공 설정) 설정을 먼저 적용한 뒤 몸의 값을 읽는다.
+        if ( io.isReading() )
+        {
+            _motor.setSettings( makeMotorSettings( _mode == ActionMoveMode::Glide ) );
+            _events = 0;
+        }
+        io.value( _motor );
+        io.value( _position );
+        io.value( _velocity );
+        io.value( _anchor );
+        io.value( _ropeLength );
+        io.value( _drillSearchTimer );
+        io.flag( _bInsideDirt );
+        io.check( 0.0f <= _ropeLength );
+    }
+
+} // namespace sw

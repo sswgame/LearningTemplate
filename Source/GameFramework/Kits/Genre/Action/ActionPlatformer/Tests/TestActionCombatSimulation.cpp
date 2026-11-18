@@ -5,8 +5,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionCombatSimulation.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionCombatSimulation.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 
