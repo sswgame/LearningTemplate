@@ -35,7 +35,8 @@ struct InstanceData
     float4   _customData0;          // 사용자 값 0(C++ InstanceCustomData) — 머티리얼 셰이더가 getCustomData 로 읽는다. 배치 키가 아니다
     float4   _customData1;          // 사용자 값 1
     uint2    _motionKey;            // 움직임 기록의 열쇠(C++ GPUInstance::_motionKey, 64 비트) — 렌더 쪽 기록이 쓰고 셰이더는 읽지 않는다. 지난 월드 행렬은 g_SwPrevInstanceWorlds(binding.hlsli 8-2)
-    uint2    _motionPad;            // 16 바이트 맞춤
+    uint     _slotSerial;           // 이 GPUScene 칸에 들어온 차례(C++ GPUInstance::_slotSerial) — gpu_cull 이 LOD 전환 상태와 견주어 칸을 다시 쓴 것을 알아챈다
+    uint     _instancePad;          // 16 바이트 맞춤
 
     // 멤버 함수는 원소 레이아웃을 바꾸지 않는다. 정의는 이 파일 아래(강조 · 스프라이트 칸)와 binding.hlsli(읽기 · 정점 애니메이션)다.
     uint getHighlightStyle();

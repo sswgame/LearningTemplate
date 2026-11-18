@@ -39,7 +39,7 @@
  *   ├────────┼──────────────────┼─────────────────────────────────────────┼──────────────────────────────────────────┤
  *   │ DX12   │ 네이티브 bindless│ t0 space1 무제한 배열(힙 전체 테이블)   │ 배열 원소 번호                           │
  *   │ Vulkan │ 네이티브 bindless│ set 1 binding 0 무제한 배열             │ 배열 원소 번호                           │
- *   │ DX11   │ 슬롯 에뮬        │ 엔진 t32..t43 · 머티리얼 t16..t31       │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
+ *   │ DX11   │ 슬롯 에뮬        │ 엔진 t32..t53 · 머티리얼 t16..t31       │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
  *   │ OpenGL │ 슬롯 에뮬        │ 텍스처 유닛 16..49(결합)        │ 머티리얼: 서수 0..15 (DX11 과 같다)      │
  *   └────────┴──────────────────┴─────────────────────────────────────────┴──────────────────────────────────────────┘
  *   네이티브인지는 common.hlsli 의 `SW_NATIVE_BINDLESS` 가 정한다(ShaderCompiler 가 DX12 · Vulkan 에만 SW_BINDLESS=1 을 준다).
@@ -828,7 +828,8 @@ static InstanceData InstanceData::load( uint instanceSlot )
     instance._customData0          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
     instance._customData1          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
     instance._motionKey            = uint2( 0u, 0u ); // 기록 없음
-    instance._motionPad            = uint2( 0u, 0u );
+    instance._slotSerial           = 0u;
+    instance._instancePad          = 0u;
     return instance;
 }
 

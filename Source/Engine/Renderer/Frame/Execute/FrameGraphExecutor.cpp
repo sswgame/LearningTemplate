@@ -98,7 +98,7 @@ namespace sw
             }
             case RenderPassType::InstanceAnimation:
             {
-                dispatchInstanceAnimation( static_cast<uint32>( _state._gpuScene.getInstances().size() ) );
+                dispatchInstanceAnimation( _state._gpuScene.getInstanceSlotCount() ); // 칸 순 버퍼를 칸마다 돈다(구멍은 시드가 0 이라 건너뛴다)
                 break;
             }
             case RenderPassType::MeshMorph:
@@ -460,7 +460,8 @@ namespace sw
             return;
         const bool bCullingUnavailable = _psoManager.getEnginePSO( RenderPassType::GPUCull ) == 0 || _psoManager.getEnginePSO( RenderPassType::IndirectArgsReset ) == 0 ||
                                          _state._gpuScene.getInstanceSRV() == kInvalidDescriptorIndex ||
-                                         _state._gpuScene.getBatchInfoSRV() == kInvalidDescriptorIndex;
+                                         _state._gpuScene.getBatchInfoSRV() == kInvalidDescriptorIndex ||
+                                         _state._gpuScene.getInstanceOrderBuffer()._srv == kInvalidDescriptorIndex;
         if ( bCullingUnavailable )
             return;
 
@@ -697,9 +698,10 @@ namespace sw
         // 절두체는 **뷰가 이미 가지고 있다.** setViewProjection 이 행렬과 함께 갱신한다.
         // 여기서 다시 뽑으면 행렬만 바뀌고 평면이 바뀌지 않는 상태가 생길 수 있다.
         Memory::copy( cullParams._arrPlane, renderView._frustum._arrPlane, sizeof( cullParams._arrPlane ) );
-        cullParams._instanceCount    = instanceCount;
-        cullParams._batchCount       = _state._gpuScene.getIndirectCommandCount();
-        cullParams._visibleSlotCount = _state._gpuScene.getVisibleSlotCount();
+        cullParams._instanceCount     = instanceCount;
+        cullParams._batchCount        = _state._gpuScene.getIndirectCommandCount();
+        cullParams._visibleSlotCount  = _state._gpuScene.getVisibleSlotCount();
+        cullParams._instanceSlotCount = _state._gpuScene.getInstanceSlotCount();
         // 인스턴스 LOD 선택은 그 뷰를 그리는 카메라로 한다. 추가 뷰는 자기 카메라, 그림자 슬롯과 주 시점은 주 카메라다(그림자는 가장 고운 단계가 아니라 카메라가 보는 단계로 그린다).
         // 절두체 밖의 가림 물체는 화면 크기가 0 이 아니라 거리에서 나온 값을 받는다 — CPU 선택(`LODView::computeScreenSize`)은 그 경우 가장 낮은 단계였다.
         const RenderView& lodView = ( pExtraView != nullptr ) ? pExtraView->_cullInput : _state._arrView[static_cast<uint32>( RenderViewType::Main )];
@@ -735,13 +737,14 @@ namespace sw
         _pCmd->uavBarrier( view._indirectArgs._buffer ); // 되돌린 개수 위에서 컬링이 InterlockedAdd 로 센다
         // PSO 와 바인딩은 **뷰마다** 다시 설정한다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
         _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::GPUCull ) );
-        // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_OcclusionTiles(t2) / g_IndirectArgs(u0) / g_VisibleInstanceIDs(u1).
-        // gpu_cull.hlsl 레지스터와 1:1 로 대응한다. 인스턴스와 배치 구간은 뷰가 공유한다(절두체와 가림 타일만 다르다).
+        // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_OcclusionTiles(t2) / g_InstanceOrder(t3) / g_IndirectArgs(u0) / g_VisibleInstanceIDs(u1).
+        // gpu_cull.hlsl 레지스터와 1:1 로 대응한다. 인스턴스(칸 순) · 배치 구간 · 차례 → 칸 목록은 뷰가 공유한다(절두체와 가림 타일만 다르다).
         _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
         _pCmd->bindComputeShaderResource( _state._gpuScene.getInstanceSRV(), 0 );
         _pCmd->bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
         if ( occlusionSRV != kInvalidDescriptorIndex )
             _pCmd->bindComputeShaderResource( occlusionSRV, 2 );
+        _pCmd->bindComputeShaderResource( _state._gpuScene.getInstanceOrderBuffer()._srv, 3 );
         _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
         _pCmd->bindComputeUAV( view._visibleInstances._uav, 1 );
         // 전환 상태(u2)는 크로스페이드가 켜졌을 때만 읽고 쓴다. 없으면 자리만 채운다 — 셰이더가 진행량 0 이면 건드리지 않는다.
@@ -754,7 +757,7 @@ namespace sw
             _pCmd->bindComputeUAV( view._visibleInstances._uav, 2 );
         }
         _state._gpuMessages.bindCompute( *_pCmd ); // gpu_cull.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
-        // **인스턴스마다** 스레드 하나를 쓴다. 그래야 보이는 것을 골라 압축할 수 있다.
+        // **그리는 차례마다** 스레드 하나를 쓴다(차례의 칸은 t3 에서 읽는다). 그래야 보이는 것을 골라 압축할 수 있다.
         _pCmd->dispatchThreads( cullParams._instanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
         // 압축이 끝났으면 투명 배치의 순서를 CPU 가 정한 순서(인스턴스 번호 오름차순)로 되돌린다. 원자 연산이 준 슬롯 번호는
         // 완료 순서라 그대로 두면 블렌딩이 틀린다. 되돌리기가 GPU 에서 돌므로 투명도 압축과 컬링 이득을 받는다(instance_sort.hlsl).
@@ -790,6 +793,8 @@ namespace sw
             _pCmd->bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
             if ( rankSRV != kInvalidDescriptorIndex )
                 _pCmd->bindComputeShaderResource( rankSRV, 2 );
+            // 정렬 배치는 컬링이 차례를 적어 두었다 — 정렬한 뒤 차례 → 칸(t3)으로 바꿔 쓴다.
+            _pCmd->bindComputeShaderResource( _state._gpuScene.getInstanceOrderBuffer()._srv, 3 );
             _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
             _pCmd->bindComputeUAV( view._visibleInstances._uav, 1 );
             // 배치마다 워크그룹 하나를 쓴다. 그 배치의 목록을 그룹 공유 메모리 안에서 정렬한다.

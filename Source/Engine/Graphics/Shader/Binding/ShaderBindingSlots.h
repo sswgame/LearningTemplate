@@ -39,7 +39,7 @@ namespace sw
         // 2) SRV(t#, space0): 네 백엔드 공통 슬롯
         // ------------------------------------------------------------------------------
         /**
-         * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 레지스터 t32..t51 입니다 — 역할 하나가 칸 하나(`emulated::kEngineTextureNames` 의 순서)입니다.
+         * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 레지스터 t32..t53 입니다 — 역할 하나가 칸 하나(`emulated::kEngineTextureNames` 의 순서)입니다.
          * @details GL 텍스처 유닛은 레지스터 번호 그대로다(머티리얼 칸과 같은 규칙 — 유닛 t32..). DX12 · Vulkan 은 선언하지 않는다.
          */
         inline constexpr uint32 kEngineTexture0     = SW_SLOT_ENGINE_TEX0;
@@ -366,7 +366,7 @@ namespace sw
         /**
          * @brief WebGPU 바인드 그룹 0 의 번호입니다. binding = 레지스터 종류별 시프트 + 번호(DXC -fvk-b/t/s/u-shift 와 같은 값)이고 그룹은 하나다.
          * @details 셰이더는 이 값을 읽지 않는다 — DXC 인자(ShaderCompiler)와 백엔드의 바인드 그룹(WebGPURHICommandContext)과 리플렉션의 번호 되돌림(ShaderReflectionData)만 쓴다.
-         *          t 띠가 엔진 텍스처 칸(t32..t51)까지 가므로 t 폭이 가장 넓다. 샘플러가 따로 있다 — WGSL 은 텍스처 · 샘플러를 나눠 받는다(DX11 과 같은 모양, GL 의 결합 샘플러가 아니다).
+         *          t 띠가 엔진 텍스처 칸(t32..t53)까지 가므로 t 폭이 가장 넓다. 샘플러가 따로 있다 — WGSL 은 텍스처 · 샘플러를 나눠 받는다(DX11 과 같은 모양, GL 의 결합 샘플러가 아니다).
          */
         namespace wgpu
         {

@@ -422,7 +422,7 @@ namespace sw
         // 이름 "SwInstances" ↔ binding.hlsli 의 g_SwInstances / PassCB g_SwInstancesIndex (canonical 매칭).
         context._resourceRegistry.registerBuffer( passConstantNames()._swInstances,
                                                   _state._gpuScene.getInstanceBuffer(), _state._gpuScene.getInstanceSRV() );
-        context._passValues.setUint( passConstantNames()._swInstanceCount, static_cast<uint32>( _state._gpuScene.getInstances().size() ) );
+        context._passValues.setUint( passConstantNames()._swInstanceCount, _state._gpuScene.getInstanceSlotCount() ); // 칸 순 버퍼 — 인스턴스 번호는 칸이다
 
         // 배치 표. **패스당 한 번** 건다. 배치마다 다른 값(인스턴스 시작 · 모프 풀 시작 · 정점 풀 시작)이 모두 여기 있어
         // 드로우는 배치 번호만 실어 나른다. 그래서 같은 PSO 의 배치들을 멀티 드로우 하나로 낼 수 있다.
@@ -485,6 +485,15 @@ namespace sw
             context._resourceRegistry.registerBuffer( passConstantNames()._swVisibleInstanceIDs,
                                                       cullView._visibleInstances._buffer, cullView._visibleInstances._srv );
             context._passValues.setUint( passConstantNames()._swVisibleSlotCount, _state._gpuScene.getVisibleSlotCount() );
+            return;
+        }
+        // 컬링이 없는 길 — 인스턴스 버퍼가 칸 순이라 차례(배치 시작 + 서수)로는 읽을 수 없다. 차례 → 칸 목록을 같은 자리에 건다(컬링 목록과 같은 형식이라 한 셰이더가 두 길을 읽는다).
+        // 칸 수는 차례 수다 — 컬링 없는 간접 인자의 시작 인스턴스는 배치의 인스턴스 시작(차례)이다(`GPUScene::computeStartInstance`).
+        const RHIStructuredBuffer& instanceOrder = _state._gpuScene.getInstanceOrderBuffer();
+        if ( instanceOrder._buffer != 0 && instanceOrder._srv != kInvalidDescriptorIndex )
+        {
+            context._resourceRegistry.registerBuffer( passConstantNames()._swVisibleInstanceIDs, instanceOrder._buffer, instanceOrder._srv );
+            context._passValues.setUint( passConstantNames()._swVisibleSlotCount, static_cast<uint32>( _state._gpuScene.getInstances().size() ) );
         }
     }
 

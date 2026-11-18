@@ -17,6 +17,7 @@
 #include "Engine/Renderer/Scene/GPUInstanceMotionHistory.h"
 #include "Engine/Renderer/Scene/GPUMeshBatchBinding.h"
 #include "Engine/Renderer/Scene/GPUMeshVertexPool.h"
+#include "Engine/Renderer/Scene/GPUSceneSlotBuffer.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 namespace sw
@@ -164,8 +165,20 @@ namespace sw
         /** @brief GPU 버퍼를 해제합니다. */
         void releaseGPU( IRHIDevice* pDevice );
 
-        /** @brief 인스턴스 목록을 반환합니다. */
+        /** @brief 그리는 차례의 인스턴스 목록입니다(배치 순 — 컬링이 차례마다 스레드 하나를 돈다). GPU 버퍼는 칸 순이다(`getSlotInstances`). */
         const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
+        /** @brief 칸 순 인스턴스 목록입니다(GPU 인스턴스 버퍼의 CPU 사본 — 원소 번호가 GPUScene 칸, 구멍 포함). */
+        const vector<GPUInstance>& getSlotInstances() const { return _slotBuffer.getSlots(); }
+        /** @brief GPUScene 칸 수(칸 순 인스턴스 버퍼의 원소 수, 구멍 포함)입니다. 정점 셰이더가 읽는 인스턴스 번호의 범위다. */
+        uint32 getInstanceSlotCount() const
+        {
+            return _snapshot._pListInstanceSlot != nullptr ? _snapshot._instanceSlotCount : static_cast<uint32>( _snapshot.getInstances().size() );
+        }
+        /**
+         * @brief 차례 → 칸 목록 버퍼입니다(원소 `uint32`, 차례 수만큼). 컬링(`gpu_cull.hlsl` · `instance_sort.hlsl` 의 t3)이 차례의 칸을 읽고,
+         *        컬링이 없는 길은 이 버퍼를 가시 목록 자리(`g_SwVisibleInstanceIDs`)에 건다 — 정점 셰이더가 두 길을 같은 형식으로 읽는다.
+         */
+        const RHIStructuredBuffer& getInstanceOrderBuffer() const { return _instanceOrder; }
         /**
          * @brief 컬링 뷰 @p view 의 LOD 전환 상태를 이번 컬링에서 비워야 하면 true 를 반환하고 비운 것으로 기록합니다(상태 버퍼를 새로 만들었거나 인스턴스 번호 배치가 바뀌었다).
          */
@@ -349,16 +362,18 @@ namespace sw
         void bindBatchMaterials();
         /** @brief 배치 메시를 정점 풀에 모으고(동적 메시 포함) 배치에 풀 버퍼와 시작 정점을 적습니다. 풀 밖 배치는 자기 정점 버퍼를 만듭니다. 풀이 바뀌면 배치 테이블을 더티로 둡니다. */
         void updateVertexPool( IRHIDevice* pDevice );
-        /** @brief 인스턴스 버퍼를 확보해 통째로 또는 바뀐 구간만 올리고, 뷰마다의 가시 인스턴스 ID 버퍼를 확보합니다. */
-        void uploadInstanceAndVisibleBuffers( IRHIDevice* pDevice, uint32 instanceCount );
-        /** @brief 스냅샷의 더티 인스턴스 구간을 한 번의 호출로 올립니다. */
-        void uploadDirtyInstanceRanges( IRHIDevice* pDevice, uint32 instanceCount );
+        /** @brief 칸 순 인스턴스 버퍼를 확보해 바뀐 칸만(처음 · 다시 만든 버퍼는 전체) 올리고, 차례 → 칸 목록과 뷰마다의 가시 인스턴스 ID 버퍼를 확보합니다. */
+        void uploadInstanceAndVisibleBuffers( IRHIDevice* pDevice );
+        /** @brief 스냅샷의 그리는 순서 배열을 칸 순 사본에 흩어 바뀐 칸을 고릅니다(CPU 만 — 올리기는 `uploadInstanceAndVisibleBuffers`). 새 스냅샷마다 한 번 부른다. */
+        void syncSlotInstances();
+        /** @brief 차례 → 칸 목록 버퍼를 확보하고, 목록이 바뀌었거나 버퍼를 새로 만들었으면 올립니다. */
+        void uploadInstanceOrder( IRHIDevice* pDevice );
         /** @brief 배치 표(인스턴스 시작 · 모프 · 정점 풀 · VAT 오프셋 · 정렬 방식)를 만들어 올립니다. */
         void uploadBatchTable( IRHIDevice* pDevice, uint32 argsCount );
         /** @brief 배치마다의 간접 드로우 인자를 만듭니다(GPU 가 개수를 채우는 배치는 0 에서 시작). */
         void populateIndirectCommands( uint32 argsCount );
-        /** @brief 뷰마다 LOD 전환 상태 버퍼를 맞춥니다. LOD 그룹이 없으면 놓습니다(전환 상태는 그룹 인스턴스에만 쓴다). */
-        void ensureLODStateBuffers( IRHIDevice* pDevice, uint32 instanceCount );
+        /** @brief 뷰마다 LOD 전환 상태 버퍼(칸마다 하나)를 맞춥니다. LOD 그룹이 없으면 놓습니다(전환 상태는 그룹 인스턴스에만 쓴다). */
+        void ensureLODStateBuffers( IRHIDevice* pDevice, uint32 slotCount );
         /** @brief 간접 인자의 시작 인스턴스입니다. 컬링이 가시 목록을 만드는 프레임은 가시 구간의 시작, 아니면 인스턴스 구간의 시작입니다. */
         uint32 computeStartInstance( const GPUMeshBatch& batch ) const;
         /** @brief 렌더 쪽 값을 배치 수만큼 기본값으로 다시 깝니다(스냅샷을 받거나 비울 때). */
@@ -391,6 +406,27 @@ namespace sw
         vector<GPUBatchInfo>                          _listScratchBatchInfo;
         /// @brief 부분 인스턴스 업로드용 영역 목록입니다. 프레임마다 다시 채워 쓰며 할당을 반복하지 않습니다.
         vector<RHIBufferCopyRegion> _listScratchCopyRegion;
+        /// @brief 바뀐 칸을 모은 구간입니다(스크래치).
+        vector<GPUInstanceDirtyRange> _listScratchSlotRun;
+        /**
+         * @brief 바뀐 칸 구간이 이보다 많으면 칸 순 버퍼 전체를 올립니다. 구간은 한 번의 호출로 올라가지만(`uploadRegions`) 고르게 흩어진 변경은 통째로가 단순하고 싸다
+         *        (빌더의 차례 구간 상한 `GPUSceneBuilder::kMaxDirtyInstanceRange` 와 같은 값).
+         */
+        static constexpr uint32 kMaxInstanceScatterRunCount = 256;
+
+        /**
+         * @brief 칸 순 인스턴스 버퍼(`_instances`)의 CPU 사본과 바뀐 칸입니다. 원소 번호가 GPUScene 칸이고, 그리는 순서는 `_instanceOrder` 가 정한다.
+         * @details 언리얼 GPUScene 의 인스턴스 데이터 버퍼처럼 칸이 고정이라, 배치를 다시 나눠 차례가 바뀐 프레임에도 내용이 바뀐 칸만 흩어 올린다.
+         */
+        GPUSceneSlotBuffer _slotBuffer;
+        /// @brief 차례 → 칸 목록 버퍼입니다(`getInstanceOrderBuffer`).
+        RHIStructuredBuffer _instanceOrder;
+        /// @brief 마지막으로 칸에 흩은 차례 목록입니다(공유 목록의 포인터로 바뀌었는지 본다).
+        shared_ptr<const vector<uint32>> _pSyncedInstanceOrder;
+        /// @brief 차례 목록이 널인 스냅샷(차례가 곧 칸)에 올릴 항등 목록입니다(스크래치).
+        vector<uint32> _listScratchIdentityOrder;
+        /// @brief 차례 목록을 다시 올려야 하면 1 입니다(목록이 바뀌었다).
+        uint8 _bInstanceOrderUploadPending{ SW_TRUE };
 
         RHIStructuredBuffer _instances;
         /**

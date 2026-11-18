@@ -89,8 +89,15 @@ namespace sw
          *          순간이동이 차례를 올려 열쇠가 바뀌면 기록이 없는 것으로 보여 그 프레임의 속도가 카메라 움직임뿐이다. 셰이더는 읽지 않는다.
          */
         uint64 _motionKey{ 0 };
+        /**
+         * @brief 이 GPUScene 칸에 들어온 차례입니다(`PrimitiveRegistry::getPrimitiveSerials` · `PrimitiveInstanceEntry::_serial`). 셰이더의 `slotSerial` 이다.
+         * @details 칸 번호에 묶인 GPU 상태가 칸을 다시 쓴 것을 알아채는 근거다 — 인스턴스 LOD 전환 상태(`gpu_cull.hlsl` 의 `g_LODState`)가 차례의 아래 8 비트를 함께 적어 두고,
+         *          다르면 전환을 처음부터 한다(지난 물체의 단계 · 크로스페이드를 이어받지 않는다). 칸 순 인스턴스 버퍼(`GPUSceneSlotBuffer`)는 같은 내용이어도 차례가 다르면 다시 올린다.
+         *          지난 월드 행렬은 칸이 아니라 열쇠(`_motionKey`)로 찾으므로 차례와 무관하게 새 물체는 기록이 없다.
+         */
+        uint32 _slotSerial{ 0 };
         /** @brief 원소를 16 바이트 단위로 맞추는 칸입니다(HLSL 구조 버퍼 원소 정렬). 0 으로 둔다. */
-        uint64 _motionPad{ 0 };
+        uint32 _instancePad{ 0 };
     };
 } // namespace sw
 
@@ -417,6 +424,15 @@ namespace sw
          *          덧쓰는 칸이 없어 배치처럼 뗄 것이 없다(원소의 상수 버퍼는 `MaterialRenderProxy` 가, 그룹 버퍼는 `GPUScene` 이 따로 든다).
          */
         shared_ptr<const vector<GPUInstance>> _pListInstance;
+        /**
+         * @brief 그리는 차례(`getInstances()` 의 번호 — 배치 순) → GPUScene 칸입니다. **불변 목록을 공유합니다.** 차례가 바뀐 빌드(배치를 다시 나눔 · 투명 꼬리 재방출)만 새 목록을 싣습니다.
+         * @details GPU 인스턴스 버퍼는 칸 순이다(`GPUSceneSlotBuffer` — 원소 번호 = 레지스트리 칸 = 빌더의 후보 번호). 컬링(`gpu_cull.hlsl` t3)은 차례마다 이 칸을 읽고,
+         *          컬링이 없는 길은 이 목록을 가시 목록 자리(`g_SwVisibleInstanceIDs`)에 걸어 정점 셰이더가 차례 → 칸을 읽는다 — 한 셰이더가 두 길을 같은 형식으로 읽는다.
+         *          널이면 차례가 곧 칸이다.
+         */
+        shared_ptr<const vector<uint32>> _pListInstanceSlot;
+        /** @brief GPUScene 칸 수입니다(구멍 포함 — 빌더의 후보 배열 길이). 칸 순 인스턴스 버퍼의 원소 수입니다. `_pListInstanceSlot` 이 널이면 쓰지 않는다. */
+        uint32 _instanceSlotCount{ 0 };
         /**
          * @brief 퍼뮤테이션 목록입니다. 배치의 `_shaderPermutation` 이 가리킵니다. **불변 목록을 공유합니다.**
          * @details 문자열 경로와 define 목록이 든 값이라 프레임마다 복사하면 그 문자열들이 모두 힙 할당이다(프레임당 약 30회).

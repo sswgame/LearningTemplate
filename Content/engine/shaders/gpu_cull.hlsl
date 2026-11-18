@@ -18,8 +18,12 @@
  * 개수는 디스패치 전에 0 이어야 한다 — 같은 파일의 되돌리기 커널(`SW_CULL_RESET_ARGS`, C++ RenderPassType::IndirectArgsReset)이 컬링 바로 앞에서
  * 배치마다 0(압축을 포기한 배치는 CPU 개수)을 쓴다. CPU 는 배치 표가 바뀔 때만 인자 전체를 올린다.
  *
- * 바인딩 계약(binding_slots.hlsli): CB b0, 인스턴스 읽기 t0, 배치 구간 읽기 t1, 가림 타일 읽기 t2, 간접 인자 쓰기 u0,
+ * 바인딩 계약(binding_slots.hlsli): CB b0, 인스턴스 읽기 t0, 배치 구간 읽기 t1, 가림 타일 읽기 t2, 차례 → 칸 읽기 t3, 간접 인자 쓰기 u0,
  * 가시 ID 쓰기 u1.
+ *
+ * 인스턴스 버퍼는 **칸 순**이다(원소 번호 = GPUScene 칸, 구멍은 배치 번호가 무효 — C++ GPUSceneSlotBuffer). 스레드 하나가 **그리는 차례** 하나를 맡아
+ * t3(g_InstanceOrder)에서 그 차례의 칸을 읽는다. 가시 목록에는 칸을 적는다 — 정점 셰이더는 그 칸으로 인스턴스를 읽는다. 투명 정렬 배치(sortMode 2)만
+ * 차례를 적고 instance_sort.hlsl 이 정렬한 뒤 칸으로 바꾼다(정렬 기준이 차례다).
  *
  * 가림 판정(g_OcclusionGrid.w = 1, C++ FramePassExecutor::fillOcclusionParams): 절두체를 통과한 인스턴스의 경계 구를 감싼 상자를 지난 프레임 장면 깊이를 그린
  * 뷰-투영(g_OcclusionViewProj)으로 옮겨 화면 사각형과 가장 가까운 깊이를 구하고, 사각형이 덮는 가림 타일(occlusion_tiles.hlsl — 타일마다 최대 깊이)보다 모두
@@ -44,8 +48,8 @@ SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
     float4   g_FrustumPlanes[6];
     uint     g_InstanceCount;
     uint     g_BatchCount;
-    uint     g_VisibleSlotCount; // 가시 목록의 칸 수(가시 구간의 합) — 쓰기 범위
-    uint     g_Pad;
+    uint     g_VisibleSlotCount;   // 가시 목록의 칸 수(가시 구간의 합) — 쓰기 범위
+    uint     g_InstanceSlotCount;  // 칸 순 인스턴스 버퍼의 원소 수(GPUScene 칸 수) — 차례가 가리킨 칸의 범위
     float4x4 g_OcclusionViewProj;  // 가림 타일의 깊이를 그린 프레임의 뷰-투영(행 벡터 규약 — Transform::computeClipPosition 과 같다)
     uint4    g_OcclusionGrid;      // x 열, y 행, z 타일 한 변(px), w 가림 판정 켬 1 · 끔 0
     float4   g_OcclusionDepthSize; // xy 깊이 히스토리 크기(px)
@@ -57,6 +61,7 @@ SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
 SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_Instances, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( BatchData, g_BatchInfo, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( float, g_OcclusionTiles, 2 );
+SW_DECLARE_STRUCTURED_BUFFER( uint, g_InstanceOrder, 3 ); // 그리는 차례 → GPUScene 칸(C++ GPUSceneSnapshot::_pListInstanceSlot)
 SW_DECLARE_RW_STRUCTURED_BUFFER( SceneDrawArgs, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_LODState, 2 );
@@ -71,6 +76,9 @@ static const float kMinLODClipW = 1.0e-5f;
 static const float kLODRefineHysteresis = 0.1f;
 /// 크로스페이드 코드(가시 항목의 위쪽 5비트, instance_data.hlsli) = (직전 단계면 kLODFadeOutgoing) | 진행 L(1 ~ 15).
 static const uint kLODFadeOutgoing = 16u;
+/// LOD 전환 상태의 위쪽 8비트에 적어 두는 칸 차례(InstanceData::_slotSerial 의 아래 8비트)의 자리 — 다르면 칸을 다른 물체가 받은 것이라 전환을 처음부터 한다.
+static const uint kLODStateSerialShift = 24u;
+static const uint kLODStateSerialMask  = 0xFFu;
 
 bool isVisible( float3 center, float radius )
 {
@@ -228,8 +236,9 @@ void appendVisible( uint batchIndex, uint entry )
 
 /**
  * @brief LOD 그룹 인스턴스의 단계 전환 상태를 한 프레임 진행하고 이번 프레임에 그릴 것을 정합니다.
- * @details 상태(`g_LODState[인스턴스]`)는 뷰마다 하나이고 인스턴스 번호가 안정적인 동안 이어진다(배치를 다시 만들면 C++ 이 `g_LODControl.y` 로 비운다).
- *          비트: 0..7 지금 단계, 8..15 직전 단계, 16..23 전환 진행(0..255, 255 = 끝).
+ * @details 상태(`g_LODState[칸]`)는 뷰마다 하나이고 칸에 묶인다(배치를 다시 만들면 C++ 이 `g_LODControl.y` 로 비운다 — 2 단계에서 지운다, 칸이 고정이라 필요 없다).
+ *          비트: 0..7 지금 단계, 8..15 직전 단계, 16..23 전환 진행(0..255, 255 = 끝), 24..31 칸 차례(`@p slotSerial` 의 아래 8비트).
+ *          칸 차례가 다르면 그 칸을 다른 물체가 받은 것이다(지우고 다시 등록) — 지난 물체의 단계 · 크로스페이드를 이어받지 않고 처음 보는 인스턴스처럼 바로 그 단계다.
  *
  *          전환은 상보 디더 크로스페이드다 — 새 단계는 진행 비율만큼의 픽셀(문턱 <= L / 16), 직전 단계는 나머지 픽셀(문턱 >= L / 16)을 그려 둘이 겹치지도 비지도 않는다
  *          (binding.hlsli `Appearance::clipDither` 가 음수 등장 비율을 상보 패턴으로 읽는다). 진행 도중 단계가 또 바뀌면 지금의 새 단계가 직전 단계가 되어 새로 시작한다.
@@ -239,15 +248,17 @@ void appendVisible( uint batchIndex, uint entry )
  * @param outPrevious   직전 단계(전환 중일 때만 쓴다)
  * @param outFadeLevel  0 ~ 16. 16 = 전환 없음(새 단계만, 코드 없음), 0 = 직전 단계만, 1 ~ 15 = 둘 다(새 단계는 L, 직전 단계는 상보)
  */
-void advanceLODFade( uint instanceId, uint headBatch, uint levelCount, float screenSize, float appearance, out uint outLevel, out uint outPrevious, out uint outFadeLevel )
+void advanceLODFade( uint instanceId, uint slotSerial, uint headBatch, uint levelCount, float screenSize, float appearance, out uint outLevel, out uint outPrevious, out uint outFadeLevel )
 {
-    const bool bStateful = g_LODControl.z != 0u;
-    const uint state     = bStateful ? g_LODState[instanceId] : 0u;
-    uint       current   = state & 0xFFu;
-    uint       previous  = ( state >> 8u ) & 0xFFu;
-    uint       progress  = ( state >> 16u ) & 0xFFu;
-    uint       target    = selectLODLevel( headBatch, levelCount, screenSize );
-    const bool bReset    = g_LODControl.y != 0u || bStateful == false || current >= levelCount || previous >= levelCount;
+    const bool bStateful   = g_LODControl.z != 0u;
+    const uint state       = bStateful ? g_LODState[instanceId] : 0u;
+    const uint serialBits  = slotSerial & kLODStateSerialMask;
+    const bool bSameSerial = ( ( state >> kLODStateSerialShift ) & kLODStateSerialMask ) == serialBits;
+    uint       current     = state & 0xFFu;
+    uint       previous    = ( state >> 8u ) & 0xFFu;
+    uint       progress    = ( state >> 16u ) & 0xFFu;
+    uint       target      = selectLODLevel( headBatch, levelCount, screenSize );
+    const bool bReset      = g_LODControl.y != 0u || bStateful == false || bSameSerial == false || current >= levelCount || previous >= levelCount;
     if ( bReset == false && target < current )
         target = min( selectLODLevel( headBatch, levelCount, screenSize / ( 1.0f + kLODRefineHysteresis ) ), current );
 
@@ -270,7 +281,7 @@ void advanceLODFade( uint instanceId, uint headBatch, uint levelCount, float scr
         progress = min( 255u, progress + g_LODControl.z );
     }
     if ( bStateful )
-        g_LODState[instanceId] = current | ( previous << 8u ) | ( progress << 16u );
+        g_LODState[instanceId] = current | ( previous << 8u ) | ( progress << 16u ) | ( serialBits << kLODStateSerialShift );
 
     outLevel     = current;
     outPrevious  = previous;
@@ -293,8 +304,12 @@ SW_NUMTHREADS( 64, 1, 1 )
 void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
     SW_GPU_MESSAGE_THREAD( dispatchThreadID.x );
-    const uint instanceId = dispatchThreadID.x;
-    if ( instanceId >= g_InstanceCount )
+    // 스레드 하나가 그리는 차례 하나다. 인스턴스(칸)는 차례 → 칸 목록에서 읽는다 — 칸 순 버퍼라 차례와 칸이 다르다.
+    const uint orderIndex = dispatchThreadID.x;
+    if ( orderIndex >= g_InstanceCount )
+        return;
+    const uint instanceId = g_InstanceOrder[orderIndex];
+    if ( instanceId >= g_InstanceSlotCount )
         return;
     SW_GPU_ASSERT( instanceId <= kVisibleEntryIDMask, SW_GPU_ASSERT_ID_CULL_INSTANCE_ID, instanceId );
 
@@ -303,7 +318,7 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     if ( headBatch >= g_BatchCount )
         return;
 
-    // sortMode 1 = 압축을 포기하는 배치. 인스턴스는 배치마다 연속으로 놓이므로 (instanceId - 배치 인스턴스 시작)이 곧 배치 안 자리다 —
+    // sortMode 1 = 압축을 포기하는 배치. 차례는 배치마다 연속이므로 (차례 - 배치 인스턴스 시작)이 곧 배치 안 자리다 — 그 자리에 칸을 적는다.
     // 제자리 매핑을 가시 구간에 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는
     // 큰 투명 배치만 여기로 온다. 나머지 투명(sortMode 2)은 압축한 뒤 instance_sort.hlsl 이 CPU 정렬 순서로 되돌린다.
     // 판정(절두체 · 가림) **앞에서** 쓴다 — 개수가 배치 전체라 정점 셰이더가 모든 칸을 읽는다. 판정 뒤에 쓰면 밖으로 나간 인스턴스의 칸이 비어(초기 내용 없음) 쓰레기 번호를 그린다(RN-1).
@@ -311,9 +326,11 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     const BatchData headInfo = g_BatchInfo[headBatch];
     if ( headInfo._sortMode == 1u )
     {
-        g_VisibleInstanceIDs[headInfo._visibleBase + ( instanceId - headInfo._instanceBase )] = instanceId;
+        g_VisibleInstanceIDs[headInfo._visibleBase + ( orderIndex - headInfo._instanceBase )] = instanceId;
         return;
     }
+    // 투명 정렬 배치(sortMode 2)는 차례를 적는다 — instance_sort.hlsl 이 차례로 정렬한 뒤 칸으로 바꾼다. 나머지는 칸을 바로 적는다.
+    const uint visibleId = ( headInfo._sortMode == 2u ) ? orderIndex : instanceId;
 
     // 바운드 중심은 이미 월드 공간이다 (GPUScene 이 월드 행렬의 이동 성분으로 채우고, instance_animation 도
     // 회전 뒤에 다시 맞춘다). 여기서 또 world 를 곱하면 이동이 두 번 들어간다.
@@ -333,7 +350,7 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     // LOD 그룹이 아니면 머리 배치에 한 번 쓴다.
     if ( g_LODControl.x == 0u || headInfo._lodLevelCount <= 1u )
     {
-        appendVisible( headBatch, instanceId );
+        appendVisible( headBatch, visibleId );
         return;
     }
 
@@ -342,7 +359,8 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     uint level     = 0u;
     uint previous  = 0u;
     uint fadeLevel = 16u;
-    advanceLODFade( instanceId, headBatch, headInfo._lodLevelCount, computeLODScreenSize( instance._boundsCenter, instance._boundsRadius ), instance._appearance, level, previous, fadeLevel );
+    advanceLODFade( instanceId, instance._slotSerial, headBatch, headInfo._lodLevelCount, computeLODScreenSize( instance._boundsCenter, instance._boundsRadius ), instance._appearance, level, previous,
+                    fadeLevel );
     // LOD 단계 번호 — 그룹의 단계 수 안이어야 하고(배치 표의 머리 + 단계 행), 가시 항목의 3 비트 칸 · 크로스페이드 4 비트 칸에 들어가야 한다.
     SW_GPU_ASSERT( level < headInfo._lodLevelCount, SW_GPU_ASSERT_ID_CULL_LOD_LEVEL, level );
     SW_GPU_ASSERT( previous < headInfo._lodLevelCount, SW_GPU_ASSERT_ID_CULL_LOD_PREVIOUS, previous );

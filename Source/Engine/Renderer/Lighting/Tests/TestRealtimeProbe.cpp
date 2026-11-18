@@ -235,6 +235,58 @@ SW_TEST_CASE( SceneVoxelizerTest, VoxelizesOpaqueVisibleMeshesOnly )
 }
 
 /**
+ * @brief [SceneVoxelizerTest] 메시가 드나든 칸만 다시 칠한 격자가 처음부터 만든 격자와 같고, 격자와 상관없는 칸(반투명 · 격자 밖)의 변화로는 칠하지 않는다
+ * @details 실시간 프로브 복셀 격자는 예전에 프리미티브 집합 세대가 오를 때마다(투사체 하나가 생기고 사라져도) 씬 전체를 다시 칠했다. 이제 집합 기록(`collectMeshSetChanges`)의
+ *          칸만 보고(`SceneVoxelizer::updateGrid`) 그 칸이 덮던 · 덮는 구간만 다시 칠한다.
+ */
+SW_TEST_CASE( SceneVoxelizerTest, UpdateGridRepaintsOnlyChangedOccluders )
+{
+    const sw::shared_ptr<sw::Material> glass       = makeTranslucentMaterial();
+    const sw::shared_ptr<sw::Material> sceneOpaque = makeOpaqueMaterial();
+    sw::Scene                          scene( "SceneVoxelizerUpdate" );
+    sw::GameObjectManager*             pObjects = scene.getObjectManager();
+    SW_REQUIRE_NOT_NULL( pObjects );
+    const sw::PrimitiveRegistry& registry = pObjects->getPrimitiveRegistry();
+    const sw::AABB               bounds{
+        sw::float3{-2.0f, -2.0f, -2.0f},
+        sw::float3{ 2.0f,  2.0f,  2.0f}
+    };
+    sw::MeshComponent* pWall = addCube( pObjects, "Wall", sw::float3{ -1.0f, 0.0f, 0.0f }, nullptr, true );
+    SW_REQUIRE_NOT_NULL( pWall );
+    sw::SceneVoxelGrid grid       = sw::SceneVoxelizer::makeGrid( registry, sceneOpaque.get(), bounds, 0.25f );
+    uint64             generation = registry.getSetGeneration();
+    sw::vector<uint32> listChanged;
+
+    // 반투명 큐브와 격자 밖 큐브 — 가리개가 아니거나 닿지 않으니 칠할 것이 없다.
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Glass", sw::float3{ 0.0f, 0.0f, 0.0f }, glass.get(), true ) );
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Far", sw::float3{ 50.0f, 0.0f, 0.0f }, nullptr, true ) );
+    SW_REQUIRE_TRUE( registry.collectMeshSetChanges( generation, listChanged ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), listChanged.size() );
+    SW_EXPECT_FALSE( sw::SceneVoxelizer::updateGrid( grid, registry, sceneOpaque.get(), listChanged ) );
+    generation = registry.getSetGeneration();
+
+    // 격자 안 불투명 큐브 — 그 구간만 칠해도 처음부터 만든 것과 단어마다 같다.
+    sw::MeshComponent* pInside = addCube( pObjects, "Inside", sw::float3{ 1.0f, 0.5f, 0.0f }, nullptr, true );
+    SW_REQUIRE_NOT_NULL( pInside );
+    SW_REQUIRE_TRUE( registry.collectMeshSetChanges( generation, listChanged ) );
+    SW_EXPECT_TRUE( sw::SceneVoxelizer::updateGrid( grid, registry, sceneOpaque.get(), listChanged ) );
+    const sw::SceneVoxelGrid afterAdd = sw::SceneVoxelizer::makeGrid( registry, sceneOpaque.get(), bounds, 0.25f );
+    SW_EXPECT_TRUE( grid._listWord == afterAdd._listWord );
+    SW_EXPECT_TRUE( grid.countOccupied() > 0u );
+    generation = registry.getSetGeneration();
+
+    // 벽을 지운다 — 벽이 덮던 칸이 꺼지고 남은 큐브는 그대로다.
+    SW_REQUIRE_NOT_NULL( pWall->getOwner() );
+    pObjects->destroyGameObject( pWall->getOwner() );
+    pObjects->processDeferredDestruction();
+    SW_REQUIRE_TRUE( registry.collectMeshSetChanges( generation, listChanged ) );
+    SW_EXPECT_TRUE( sw::SceneVoxelizer::updateGrid( grid, registry, sceneOpaque.get(), listChanged ) );
+    const sw::SceneVoxelGrid afterRemove = sw::SceneVoxelizer::makeGrid( registry, sceneOpaque.get(), bounds, 0.25f );
+    SW_EXPECT_TRUE( grid._listWord == afterRemove._listWord );
+    SW_EXPECT_TRUE( afterRemove.countOccupied() < afterAdd.countOccupied() );
+}
+
+/**
  * @brief [RealtimeProbeTest] 요청들의 버퍼 배치는 앞 요청들의 복셀 단어 · 프로브 수를 누적하고, 기록 구간은 할당기가 정체마다 매긴 자리다(처음은 이어 붙는다)
  */
 SW_TEST_CASE( RealtimeProbeTest, PlanLayoutAccumulatesOffsets )

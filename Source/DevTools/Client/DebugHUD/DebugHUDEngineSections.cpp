@@ -144,7 +144,7 @@ namespace sw
                 writer.addLineFormat( "draw calls", "%#", profiler.getLastFrameCount( s_drawSlot ) );
                 writer.addLineFormat( "GPU batches", "%#", profiler.getLastFrameCount( s_batchSlot ) );
                 const GameObjectManager* pManager = findActiveObjectManager();
-                writer.addLineFormat( "instances", "%#", pManager != nullptr ? pManager->getPrimitiveRegistry().getSlotCount() : 0u );
+                writer.addLineFormat( "instances", "%#", pManager != nullptr ? pManager->getPrimitiveRegistry().getLiveSlotCount() : 0u );
                 writer.addLineFormat( "UI quads", "%#", profiler.getLastFrameCount( s_quadSlot ) );
             }
 
