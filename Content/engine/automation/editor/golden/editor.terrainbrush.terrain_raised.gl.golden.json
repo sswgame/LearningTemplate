@@ -1,0 +1,19 @@
+{
+    "backend": "gl",
+    "platform": "windows",
+    "commit": "0e849fb0f35c93c909e1f055c13bb00658d79359-dirty",
+    "recordedUnixMs": 1795012861626,
+    "reason": "failed",
+    "width": 160,
+    "height": 106,
+    "previousDifference": {
+        "differingFraction": 0.14274764150943398,
+        "meanDistance": 0.00604020224441978,
+        "largestDeepRegionPixels": 7
+    },
+    "limits": {
+        "maxDifferingFraction": 0.01,
+        "maxMeanDistance": 0.005,
+        "maxDeepRegionPixels": 16
+    }
+}

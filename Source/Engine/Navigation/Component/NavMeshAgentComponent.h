@@ -159,30 +159,30 @@ namespace sw
         PROPERTY( Category = "Movement", Tooltip = "Turns the object to face its velocity" )
         bool _bUpdateRotation;
 
-        NavMeshAgentMover _mover;
-        SceneNavigation*  _pSceneNavigation; ///< 등록한 씬의 내비게이션(등록 동안)
-        float3            _destination;
-        float3            _pendingWarp;
-        float3            _velocity;
-        float3            _desiredVelocity;
-        float3            _agentPosition;
-        float3            _nextCorner;
-        float3            _writtenPosition; ///< 마지막으로 오브젝트에 쓴 자리(바깥의 순간이동 판정)
-        NavLinkTraversal  _linkTraversal;   ///< 건너는 오프 메시 링크(`_bOnOffMeshLink`)
-        hashed_string     _linkType;        ///< 건너는 링크의 종류 이름
-        NavCrowdAgentID   _crowdAgentID;
-        uint32            _navIndex;                ///< `SceneNavigation` 의 목록 자리
-        Subscription      _navRegistration;         ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
-        uint32            _crowdIndex;              ///< 든 군중(에이전트 종류) 자리
-        uint32            _writtenTransformVersion; ///< 마지막으로 오브젝트에 쓴 뒤의 월드 변경 번호 — 같으면 바깥이 옮기지 않았다(거리 판정을 건너뜀)
-        NavMoveStatus     _moveStatus;
-        uint8             _bHasDestination   : 1;
-        uint8             _bDestinationDirty : 1; ///< 다음 갱신에 군중에 넣을 목적지 · 멈춤
-        uint8             _bWarpPending      : 1;
-        uint8             _bOnNavMesh        : 1;
-        uint8             _bHasWritten       : 1;
-        uint8             _bParamsDirty      : 1;
-        uint8             _bOnOffMeshLink    : 1;
-        uint8             _reserved          : 1;
+        NavMeshAgentMover      _mover;
+        SceneNavigation*       _pSceneNavigation; ///< 등록한 씬의 내비게이션(등록 동안)
+        float3                 _destination;
+        float3                 _pendingWarp;
+        float3                 _velocity;
+        float3                 _desiredVelocity;
+        float3                 _agentPosition;
+        float3                 _nextCorner;
+        float3                 _writtenPosition; ///< 마지막으로 오브젝트에 쓴 자리(바깥의 순간이동 판정)
+        NavLinkTraversal       _linkTraversal;   ///< 건너는 오프 메시 링크(`_bOnOffMeshLink`)
+        hashed_string          _linkType;        ///< 건너는 링크의 종류 이름
+        NavCrowdAgentID        _crowdAgentID;
+        uint32                 _navIndex;                ///< `SceneNavigation` 의 목록 자리
+        Subscription           _navRegistration;         ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
+        uint32                 _crowdIndex;              ///< 든 군중(에이전트 종류) 자리
+        uint32                 _writtenTransformVersion; ///< 마지막으로 오브젝트에 쓴 뒤의 월드 변경 번호 — 같으면 바깥이 옮기지 않았다(거리 판정을 건너뜀)
+        NavMoveStatus          _moveStatus;
+        uint8                  _bHasDestination   : 1;
+        uint8                  _bDestinationDirty : 1; ///< 다음 갱신에 군중에 넣을 목적지 · 멈춤
+        uint8                  _bWarpPending      : 1;
+        uint8                  _bOnNavMesh        : 1;
+        uint8                  _bHasWritten       : 1;
+        uint8                  _bParamsDirty      : 1;
+        uint8                  _bOnOffMeshLink    : 1;
+        [[maybe_unused]] uint8 _reserved          : 1;
     };
 } // namespace sw

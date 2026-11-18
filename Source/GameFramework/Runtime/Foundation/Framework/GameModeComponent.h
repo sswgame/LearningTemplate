@@ -265,6 +265,6 @@ namespace sw
         uint8                    _bViewsSpawned   : 1; ///< 지금 상태의 뷰 오브젝트가 스폰돼 있다(정리하면 다음 틱이 다시 스폰한다)
         uint8                    _bFlushScheduled : 1;
         uint8                    _bRuleOnSubTick  : 1; ///< 규칙이 서브틱에서 돈다(`_tickAfter`)
-        uint8                    _reserved        : 4;
+        [[maybe_unused]] uint8   _reserved        : 4;
     };
 } // namespace sw

@@ -56,10 +56,10 @@ namespace sw
         int32         _bounceLeft; ///< 남은 튕김 수
         /// 꿰뚫은 대상(겹침 없음). 쓰는 쪽의 `sweep` 은 `hasHit` 인 대상을 건너뛴다 — "방금 하나" 만 기억하면 겹친 두 대상을 번갈아 다시 맞힌다(G-10).
         /// 언리얼 GAS 타깃 데이터의 "이미 맞힌 액터" 목록(`TArray`)과 같은 자리 — 상한이 없어 관통 수가 커도 먼저 맞힌 것을 잊지 않는다. 꿰뚫지 않는 탄은 비어 있어 할당이 없다.
-        vector<int32> _listHitTarget;
-        uint8         _bAlive     : 1;
-        uint8         _bReflected : 1; ///< 되받아친 탄이다
-        uint8         _reserved   : 6;
+        vector<int32>          _listHitTarget;
+        uint8                  _bAlive     : 1;
+        uint8                  _bReflected : 1; ///< 되받아친 탄이다
+        [[maybe_unused]] uint8 _reserved   : 6;
 
         ProjectileState();
 

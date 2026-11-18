@@ -60,9 +60,9 @@ namespace sw
         PROPERTY( Required, Category = "Chunk", DisplayName = "Water Mesh", Tooltip = "Component name of the translucent water mesh" )
         hashed_string _waterMeshName;
 
-        VoxelChunkMesh _scratchMesh;
-        uint8          _bRebuildRequested : 1;
-        uint8          _bApplyScheduled   : 1;
-        uint8          _reserved          : 6;
+        VoxelChunkMesh         _scratchMesh;
+        uint8                  _bRebuildRequested : 1;
+        uint8                  _bApplyScheduled   : 1;
+        [[maybe_unused]] uint8 _reserved          : 6;
     };
 } // namespace sw

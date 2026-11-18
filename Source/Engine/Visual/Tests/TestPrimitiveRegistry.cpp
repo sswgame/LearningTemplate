@@ -345,3 +345,31 @@ SW_TEST_CASE( PrimitiveRegistryTest, WaiterRemovedDuringWalkDoesNotDropAnother )
     registry.removeAssetWaiter( asComponent( last ) );
     SW_EXPECT_EQUAL( size_t( 0 ), registry.countAssetWaiters() );
 }
+
+/**
+ * @brief [PrimitiveRegistryTest] 새 레지스트리의 세대는 앞 레지스트리의 어느 세대와도 같지 않다
+ * @details 세대가 레지스트리마다 1 에서 시작하던 때, 장면을 바꿔 새로 만든 레지스트리의 칸 배치 세대가 지난 장면 것과 같아 GPUScene 빌더가 부분 수집을 했고
+ *          지난 장면의 메시가 다음 장면에 그려졌다(dismemberment → distortion 체인). 지난 세대를 기억한 쪽은 새 레지스트리의 변경 기록도 거슬러 가지 못한다.
+ */
+SW_TEST_CASE( PrimitiveRegistryTest, NewRegistryNeverRepeatsAnOldGeneration )
+{
+    uint64 oldSet    = 0;
+    uint64 oldLayout = 0;
+    {
+        PrimitiveRegistry oldRegistry;
+        oldSet    = oldRegistry.getSetGeneration();
+        oldLayout = oldRegistry.getLayoutGeneration();
+    }
+    PrimitiveRegistry newRegistry;
+    SW_EXPECT_TRUE( newRegistry.getLayoutGeneration() != oldLayout );
+    SW_EXPECT_TRUE( newRegistry.getLayoutGeneration() != oldSet );
+    SW_EXPECT_TRUE( newRegistry.getSetGeneration() != oldSet );
+    SW_EXPECT_TRUE( newRegistry.getSetGeneration() != oldLayout );
+    vector<uint32> listSlot;
+    SW_EXPECT_FALSE( newRegistry.collectMeshSetChanges( oldSet, listSlot ) ); // 지난 레지스트리의 세대에서는 다시 만든다
+    // 두 레지스트리를 번갈아 쓸 때(에디터 월드 ↔ PIE) 뒤 레지스트리의 세대를 기억한 채 앞 레지스트리로 돌아와도 다시 만든다.
+    PrimitiveRegistry laterRegistry;
+    SW_EXPECT_FALSE( newRegistry.collectMeshSetChanges( laterRegistry.getSetGeneration(), listSlot ) );
+    SW_EXPECT_TRUE( newRegistry.collectMeshSetChanges( newRegistry.getSetGeneration(), listSlot ) );
+    SW_EXPECT_TRUE( listSlot.empty() );
+}

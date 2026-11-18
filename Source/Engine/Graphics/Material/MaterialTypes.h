@@ -133,11 +133,11 @@ namespace sw
         uint32               _size;
         MaterialTextureIndex _textureIndex;
 
-        uint8 _bHDR      : 1;
-        uint8 _bSRGB     : 1;
-        uint8 _bHidden   : 1;
-        uint8 _bAdvanced : 1;
-        uint8 _reserved  : 4;
+        uint8                  _bHDR      : 1;
+        uint8                  _bSRGB     : 1;
+        uint8                  _bHidden   : 1;
+        uint8                  _bAdvanced : 1;
+        [[maybe_unused]] uint8 _reserved  : 4;
 
         /** @brief 플래그와 범위를 끈 기본값으로 만듭니다. */
         MaterialProperty() noexcept;
@@ -158,8 +158,8 @@ namespace sw
          * @brief 1 이면 에셋이 정한 상태만 쿠킹합니다(유니티 shader_feature). 0 이면 런타임에 바꿀 수 있는 스위치이므로 켠 상태와 끈 상태를 모두 쿠킹합니다(multi_compile).
          * @details Shipping 에는 실시간 컴파일이 없다. 1 인 스위치를 코드가 `setStaticSwitch` 로 바꾸면 그 변형은 Dev 에서만 그려진다.
          */
-        uint8 _bShaderFeature : 1;
-        uint8 _reserved       : 6;
+        uint8                  _bShaderFeature : 1;
+        [[maybe_unused]] uint8 _reserved       : 6;
 
         /** @brief 꺼진 스위치로 만듭니다. */
         MaterialStaticSwitch() noexcept;

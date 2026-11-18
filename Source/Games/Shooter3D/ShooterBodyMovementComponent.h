@@ -128,13 +128,13 @@ namespace sw
         PROPERTY( Category = "Movement", DisplayName = "Radius", Tooltip = "Body radius against the blockers", Min = 0.0, Units = m )
         float32 _radius;
 
-        float3  _position;      ///< 발
-        float3  _moveVelocity;  ///< 지난 걸음의 수평 속도
-        float3  _displayOffset; ///< 그릴 때만 더하는 오프셋(예측 보정 녹이기)
-        float32 _verticalSpeed;
-        uint8   _bOnGround  : 1;
-        uint8   _bSuspended : 1;
-        uint8   _bNetDriven : 1;
-        uint8   _reserved   : 5;
+        float3                 _position;      ///< 발
+        float3                 _moveVelocity;  ///< 지난 걸음의 수평 속도
+        float3                 _displayOffset; ///< 그릴 때만 더하는 오프셋(예측 보정 녹이기)
+        float32                _verticalSpeed;
+        uint8                  _bOnGround  : 1;
+        uint8                  _bSuspended : 1;
+        uint8                  _bNetDriven : 1;
+        [[maybe_unused]] uint8 _reserved   : 5;
     };
 } // namespace sw

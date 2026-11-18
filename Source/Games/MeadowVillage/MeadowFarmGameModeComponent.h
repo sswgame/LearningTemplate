@@ -87,6 +87,6 @@ namespace sw
         SimulationViewSync<uint8> _tileViews; ///< 칸 번호(y × 너비 + x) → 모습 번호(.cpp 의 TileLook — 풀 · 갈림 · 물 줌 · 다 익음, 0 은 칸 없음)
         GameSpeedControl          _speed;     ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
         uint8                     _bViewsDirty : 1;
-        uint8                     _reserved    : 7;
+        [[maybe_unused]] uint8    _reserved    : 7;
     };
 } // namespace sw

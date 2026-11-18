@@ -204,6 +204,6 @@ namespace sw
         uint8                                             _bPendingTriggerLook : 1; ///< 클라이언트 — `_pendingTriggerYaw` · `_pendingTriggerPitch` 가 채워졌다
         uint8                                             _bRemoteRequested    : 1; ///< 서버 — 원격 조종자 빙의를 틱 뒤로 예약했다
         uint8                                             _bClaimsScheduled    : 1; ///< 서버 — 주장 확인을 틱 뒤로 예약했다
-        uint8                                             _reserved            : 5;
+        [[maybe_unused]] uint8                            _reserved            : 5;
     };
 } // namespace sw

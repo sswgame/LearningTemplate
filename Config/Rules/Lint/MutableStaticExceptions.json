@@ -407,6 +407,11 @@
             "_why": "태스크 바닥 — 태스크 프로파일 훅 칸은 워커 스레드의 문맥 없는 대기 구간이 읽는다(Core 아래 층). 매니저 번호는 스레드 지역 상태가 어느 매니저의 것인지 가르는 프로세스 번호 공간이다(매니저가 여럿 · 테스트)."
         },
         {
+            "_path": "Source/Engine/Object/GameObject/Registry/PrimitiveRegistry.cpp",
+            "_name": "s_nextRange",
+            "_why": "프리미티브 레지스트리 세대 번호 공간 — 레지스트리는 장면 · PIE · 테스트마다 GameObjectManager 가 새로 만들고, 세대를 기억하는 캐시(GPUScene 빌더 · 프로브 격자)는 그 사이를 건너 산다. 세대가 레지스트리 사이에서 겹치지 않아야 낡은 칸을 남기지 않는다(공통 주인이 없다). 상수 초기화 원자 번호다."
+        },
+        {
             "_path": "Source/Core/Task/TaskManager.cpp",
             "_name": "s_profileHookSlot",
             "_why": "태스크 바닥 — 태스크 프로파일 훅 칸은 워커 스레드의 문맥 없는 대기 구간이 읽는다(Core 아래 층). 매니저 번호는 스레드 지역 상태가 어느 매니저의 것인지 가르는 프로세스 번호 공간이다(매니저가 여럿 · 테스트)."

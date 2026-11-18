@@ -147,10 +147,10 @@ namespace sw
     {
         using ReadFunction = bool ( * )( TCatalog&, const XMLNode&, string_view );
 
-        const utf8*  _pName;
-        ReadFunction _pRead;
-        uint8        _bCounted : 1;
-        uint8        _reserved : 7;
+        const utf8*            _pName;
+        ReadFunction           _pRead;
+        uint8                  _bCounted : 1;
+        [[maybe_unused]] uint8 _reserved : 7;
 
         /** @brief 칸(또는 칸 안의 칸을 따라간 경로)이나 손 읽기 멤버 함수를 읽는 줄입니다. */
         template <auto pFirst, auto... listRest>

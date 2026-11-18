@@ -377,7 +377,7 @@ namespace sw
         PROPERTY( Category = "Rendering", DisplayName = "Appear On Teleport", Tooltip = "Dither in again after teleportTo (respawn); off for network corrections and camera cuts" )
         uint8 _bAppearOnTeleport : 1;
         PROPERTY( Category = "Rendering", DisplayName = "Static", Tooltip = "Never moves at runtime; drawn once into the shadow cache of stationary point and spot lights (gv_shadowCache)" )
-        uint8 _bStatic  : 1;
-        uint8 _reserved : 3;
+        uint8                  _bStatic  : 1;
+        [[maybe_unused]] uint8 _reserved : 3;
     };
 } // namespace sw

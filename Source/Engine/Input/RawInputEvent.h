@@ -96,11 +96,11 @@ namespace sw
 
             struct
             {
-                GamepadButton _button;
-                uint16        _axisIndex;
-                float32       _axisValue;
-                uint8         _bConnected : 1;
-                uint8         _reserved   : 7;
+                GamepadButton          _button;
+                uint16                 _axisIndex;
+                float32                _axisValue;
+                uint8                  _bConnected : 1;
+                [[maybe_unused]] uint8 _reserved   : 7;
             } _gamepadData;
 
             struct

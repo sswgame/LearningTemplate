@@ -254,6 +254,13 @@ namespace sw
         static bool takeWordBit( atomic<uint64>* pArrWord, uint32 slot );
         /** @brief 플래그 배열 @p pArrWord 의 번호 하나를 @p bDirty 로 정합니다(`_mutex` 를 쥔 채). */
         static void storeWordBit( atomic<uint64>* pArrWord, uint32 slot, bool bDirty );
+        /**
+         * @brief 이 레지스트리의 세대가 시작할 값입니다 — 레지스트리마다 겹치지 않는 2^32 구간의 첫 값이다.
+         * @details 세대를 견주는 캐시(GPUScene 빌더 · 정적 그림자 지문 · 프로브 격자)는 장면이 바뀌어 레지스트리가 새로 생겨도 같은 객체를 붙든다.
+         *          세대가 모두 1 에서 시작하면 새 레지스트리의 값이 지난 레지스트리 값과 같아 "그대로" 로 보고 지난 장면의 칸을 남긴다(체인에서 앞 단계 메시가 그려졌다).
+         *          언리얼은 월드마다 FScene 과 GPUScene 을 새로 만들어 캐시가 넘어가지 않는다 — 여기서는 세대 값 자체가 레지스트리를 가린다.
+         */
+        static uint64 issueGenerationBase();
 
     private:
         /** @brief 등록된 메시 컴포넌트입니다. 소유하지 않습니다(수명은 GameObject 가 관리합니다). */
@@ -292,11 +299,11 @@ namespace sw
         atomic<uint8> _bAnyDirty{ 0 };
         /// @brief add 와 remove(구조 변경)만 보호합니다. 더티 표시는 이 잠금을 쓰지 않습니다.
         mutable mutex                            _mutex;
-        atomic<uint64>                           _setGeneration{ 1 };
-        atomic<uint64>                           _layoutGeneration{ 1 };       ///< 칸 번호가 밀린 횟수(`getLayoutGeneration`)
-        uint32                                   _liveSlotCount{ 0 };          ///< 살아 있는 칸 수(`getLiveSlotCount`). 등록 · 해제가 잠금 안에서 고친다
-        vector<MeshSetChange> _listMeshSetChange SW_GUARDED_BY( _mutex );      ///< 메시 칸 등록 · 해제 고리(`kMeshSetChangeLogCapacity` 개까지 자란 뒤 덮어쓴다)
-        uint64 _meshSetChangeTotal               SW_GUARDED_BY( _mutex ){ 0 }; ///< 지금까지 기록한 수(고리의 다음 자리 = 이 값 % 용량)
-        uint64 _meshSetChangeLogStart            SW_GUARDED_BY( _mutex ){ 0 }; ///< 이 세대 뒤의 메시 칸 변경은 모두 고리에 있다(덮어쓴 기록의 세대)
+        atomic<uint64>                           _setGeneration{ issueGenerationBase() };
+        atomic<uint64>                           _layoutGeneration{ issueGenerationBase() };                                  ///< 칸 번호가 밀릴 때 오른다(`getLayoutGeneration`)
+        uint32                                   _liveSlotCount{ 0 };                                                         ///< 살아 있는 칸 수(`getLiveSlotCount`). 등록 · 해제가 잠금 안에서 고친다
+        vector<MeshSetChange> _listMeshSetChange SW_GUARDED_BY( _mutex );                                                     ///< 메시 칸 등록 · 해제 고리(`kMeshSetChangeLogCapacity` 개까지 자란 뒤 덮어쓴다)
+        uint64 _meshSetChangeTotal               SW_GUARDED_BY( _mutex ){ 0 };                                                ///< 지금까지 기록한 수(고리의 다음 자리 = 이 값 % 용량)
+        uint64 _meshSetChangeLogStart            SW_GUARDED_BY( _mutex ){ _setGeneration.load( std::memory_order_relaxed ) }; ///< 이 세대 뒤의 메시 칸 변경은 모두 고리에 있다(덮어쓴 기록의 세대 — 처음은 시작 세대라 다른 레지스트리의 세대는 거슬러 가지 못한다)
     };
 } // namespace sw

@@ -52,8 +52,8 @@ namespace sw
         float32 _tuning = 0.5f; ///< 저작 값 — 상태가 아니다
 
         PROPERTY( RuntimeState )
-        uint8 _bOpen    : 1;
-        uint8 _reserved : 7;
+        uint8                  _bOpen    : 1;
+        [[maybe_unused]] uint8 _reserved : 7;
 
         StateHashTestComponent()
             : _bOpen{ SW_FALSE }

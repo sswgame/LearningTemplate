@@ -39,8 +39,8 @@ namespace sw
         void hide();
 
     private:
-        float32 _remaining;
-        uint8   _bShowing : 1;
-        uint8   _reserved : 7;
+        float32                _remaining;
+        uint8                  _bShowing : 1;
+        [[maybe_unused]] uint8 _reserved : 7;
     };
 } // namespace sw

@@ -35,7 +35,7 @@ namespace sw
             {
                 struct
                 {
-                    uint64 _reserved : 64;
+                    [[maybe_unused]] uint64 _reserved : 64;
                 } _bits;
 
                 uint64 _rawData{ 0 };

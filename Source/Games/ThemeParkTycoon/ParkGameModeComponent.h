@@ -192,6 +192,6 @@ namespace sw
         int32                                _selectedPlacement;
         int32                                _ridingCoaster; ///< 0 이상이면 그 코스터에 타고 있다.
         uint8                                _bWasRiding : 1;
-        uint8                                _reserved   : 7;
+        [[maybe_unused]] uint8               _reserved   : 7;
     };
 } // namespace sw
