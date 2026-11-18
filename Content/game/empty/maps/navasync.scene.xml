@@ -3,7 +3,7 @@
 	<!-- 비동기 경로 요청 시나리오(automation/navasync)의 무대 — maps/navlinks 와 같은 바닥 · 단 · 링크 · 장애물(Barrier 가 Start 와 Goal 사이를 뚫는다).
 	     Prober(Start 자리)의 NavPathProbeComponent 가 Goal 까지의 경로를 계속 비동기로 묻고(하나 걸러 버리는 질의도 낸다), 첫 완전 경로가 오면 같은 오브젝트의
 	     내비메시 에이전트(Humanoid, 오브젝트를 옮긴다)를 Goal 로 보낸다. 언리얼 NavigationTestingActor(비동기 경로)의 자리. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

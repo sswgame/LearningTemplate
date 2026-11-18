@@ -1,7 +1,7 @@
 <?asset guid="c49d9fce5814230abfde14154ff5c368"?>
 <Scene formatVersion="3" name="MatParamReload">
 	<!-- 머티리얼 파라미터 묶음 핫 리로드 확인(editor/matparamreload)의 무대 — 두 상자가 사본 묶음을 읽는 한 머티리얼을 쓴다. 그려야 머티리얼이 묶음을 쥔다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

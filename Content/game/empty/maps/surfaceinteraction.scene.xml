@@ -8,7 +8,7 @@
 	     (VisualSinkReactionComponent · JumpEscapeReactionComponent)가 속성 · 스택만 읽어 한다. 날씨는 Weather 오브젝트의 판 상태가 연다(WeatherDirectorComponent).
 	     표면 변형 층(SurfaceDeformSystem): 눈 · 모래 패드 위의 촘촘한 지면(SnowGround · SandGround — PlaneDense + surfacedeform_*.material — 층은 엔진 텍스처 칸 SurfaceDeform 으로 걸린다)이
 	     발자국 · 끌린 자국(Dragger — SurfaceStampComponent Trail) · 깔때기(Whirl — Hold, 홈이 돈다)로 꺼진다. 패드 상자는 그 아래로 내려 두었다(꺼진 지면이 상자 윗면에 가리지 않게). -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

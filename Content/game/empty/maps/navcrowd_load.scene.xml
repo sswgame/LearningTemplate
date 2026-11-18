@@ -3,7 +3,7 @@
 	<!-- 내비 부하 시나리오(automation/load/navcrowd)의 무대 — 70 m 바닥(Static 강체 + 메시)과 내비메시 표면(Humanoid). NavLoad 의 NavCrowdSpawnerComponent 가 플레이를 시작하면
 	     떠돌이 에이전트 1 천(목표 규모)을 60 m 상자에 격자로 세우고, 에이전트마다 NavWanderComponent 가 멈추면 둘레 6 m 안의 새 목적지를 건다(네 번에 한 번 비동기 경로 질의).
 	     언리얼 Mass 군중 · 유니티 DOTS 군중 데모와 같은 크기. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

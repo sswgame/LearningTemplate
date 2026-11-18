@@ -1,7 +1,7 @@
 <?asset guid="80472fa2d1a49526a2968c9a50579798"?>
 <Scene formatVersion="3" name="LensFlareOff">
 	<!-- 시나리오 automation/lensflare 의 대조 무대 — lensflare.scene.xml 과 같고 두 점광에 렌즈 플레어(_lensFlarePath)가 없다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

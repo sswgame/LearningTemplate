@@ -1,7 +1,7 @@
 <?asset guid="116e9ff13121e955b7b21737fd2c6904"?>
 <Scene formatVersion="3" name="MatParamCollection">
 	<!-- 시나리오 automation/matparamcollection 의 무대 — 왼쪽 상자와 오른쪽 상자는 다른 머티리얼이고 같은 파라미터 묶음을 읽는다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

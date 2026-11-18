@@ -1,6 +1,6 @@
 <?asset guid="6f812da3e1e96681a15fb4238bfd10fa"?>
 <Scene formatVersion="3" name="ClothShowcase">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

@@ -734,7 +734,8 @@ namespace sw
         uint32 dependentCount    = 0;
         for ( Component* pComp : pObj->_listComponent )
         {
-            if ( pComp == nullptr || pComp->isPendingDestroy() )
+            // 나눠 짓는 셀의 컴포넌트는 틱에 들지 않는다 — 드러날 때(`GameObjectManager::releaseStagedGameObjects`) 항목을 다시 만든다.
+            if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isStaged() )
                 continue;
             if ( pComp->canEverTick() )
             {

@@ -2,7 +2,7 @@
 <Scene formatVersion="3" name="Afterimage">
 	<!-- 잔상 시나리오(automation/afterimage)의 무대 — 해골(Actor)이 쉬는 자세로 서 있고 PoseAfterimageComponent 가 0.1 초마다 포즈를 고정한 반투명 사본을 남긴다(최대 6, 0.6 초에 사라짐).
 	     시나리오가 Actor 를 옆으로 순간이동시키면 옛 자리에 잔상이 남는다. 잔상 머티리얼은 인스턴스 값 0 을 색으로 쓰는 엔진 반투명 머티리얼이다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

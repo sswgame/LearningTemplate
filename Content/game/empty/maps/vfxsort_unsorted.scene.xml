@@ -2,7 +2,7 @@
 <Scene formatVersion="2" name="VfxSortUnsorted">
 	<!-- 입자 정렬 시나리오(game/empty/automation/vfxsort)의 정렬하지 않는 무대(풀 순서) — 왼쪽 CPU 방출기(CpuPuffs) · 오른쪽 GPU 방출기(GpuPuffs)가 카메라 쪽(-z)으로 퍼프를 날린다.
 	     주 시점은 -z 쪽에서 +z 를 보고, PiP(화면 오른쪽 위)는 +z 쪽에서 반대로 본다 — 뷰 깊이 정렬은 두 뷰가 서로 다른 순서다. 정렬한 무대는 vfxsort 다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

@@ -1,6 +1,6 @@
 <?asset guid="a022cb5ceed46f84dc9d6576fe13181f"?>
 <Scene formatVersion="3" name="PixelTown">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

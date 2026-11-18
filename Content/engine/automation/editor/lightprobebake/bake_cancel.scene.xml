@@ -1,6 +1,6 @@
 <?asset guid="0cc0b2dc6af644a555cd4c373ed85956"?>
 <Scene formatVersion="3" name="LightProbeBakeCancel">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

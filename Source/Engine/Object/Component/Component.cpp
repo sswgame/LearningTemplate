@@ -166,6 +166,7 @@ namespace sw
         , _bHasBegunPlay{ SW_FALSE }
         , _bRegistered{ SW_FALSE }
         , _bPostLoadPending{ SW_FALSE }
+        , _bStaged{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _poolEntrySlot{ kNotInPoolEntry }
         , _listSubTick{}

@@ -103,6 +103,12 @@ namespace sw
 
         /** @brief 입력 전체의 해시를 반환합니다(점, 번호, 영역, 부피, 링크). 쿠킹본이 낡았는지 판정할 때 씁니다. */
         uint64 computeHash() const;
+        /**
+         * @brief XZ 영역 @p region 에 닿는 입력(삼각형 · 부피 · 링크)의 해시입니다 — 타일 하나의 입력이 쿠킹 때와 같은지 본다(`INavMeshTileStore::computeTileBakeRegion`, 언리얼 내비 타일 무효화).
+         * @details 원소마다 해시를 더해 모은다 — 모은 순서와 상관없다. 스트리밍 씬은 셀이 오른 순서대로 오브젝트가 생겨 쿠킹 때와 순서가 다르다. 색인(`rebuildSpatialIndex`)이 있으면 그것으로 고른다.
+         *          닿는 것이 없어도 0 이 아니다(0 은 쿠킹본의 "모름" 자리).
+         */
+        uint64 computeRegionHash( const AABB& region ) const;
 
         const vector<float3>&          getVertices() const { return _listVertex; }
         const vector<uint32>&          getIndices() const { return _listIndex; }

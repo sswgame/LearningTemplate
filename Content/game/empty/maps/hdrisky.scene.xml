@@ -1,7 +1,7 @@
 <?asset guid="4532f39912478246a71a9f6681e2f35c"?>
 <Scene formatVersion="3" name="HdriSky">
 	<!-- HDRI 하늘 시나리오(automation/hdrisky)의 무대 — 하늘만 보는 카메라. 낮 · 밤 하늘은 레이어로 갈아 끼우는 공용 프리팹(engine/prefabs/sky)이다. 처음 찾은 하늘이 이기므로 한 번에 하나만 켠다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 		<_listDataLayer>
 			<SceneDataLayerDef _name="Day" _bInitiallyActive="true" />

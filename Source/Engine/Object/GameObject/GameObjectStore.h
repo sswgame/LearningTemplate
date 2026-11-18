@@ -15,6 +15,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/PagedArray.h"
+#include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -198,7 +199,7 @@ namespace sw
                     // Debug 에서만 불변식을 확인한다. 소유자를 **먼저** 읽어야 한다. 컴포넌트 표시가 오브젝트 표시보다 먼저라, 오브젝트가 삭제 대기인 것을
                     // 본 뒤에는 컴포넌트도 삭제 대기로 보인다. 순서를 바꾸면 그 사이에 표시한 다른 스레드 때문에 거짓으로 걸린다.
                     SW_ASSERT( pComp->getOwner()->isPendingDestroy() == false || pComp->isPendingDestroy() );
-                    if ( pComp->isPendingDestroy() )
+                    if ( pComp->isPendingDestroy() || pComp->isStaged() ) // 나눠 짓는 셀의 컴포넌트는 다 지어 드러날 때까지 보이지 않는다
                         continue;
                     func( pComp );
                 }
@@ -232,6 +233,14 @@ namespace sw
         void processDeferredDestruction();
         /** @brief 이번 프레임에 추가된 GameObject 를 활성 목록에 합칩니다. */
         void mergePendingAdds();
+        /**
+         * @brief 아직 병합되지 않은 오브젝트(@p listObjectID)를 대기 목록에서 빼 드러나지 않게 둡니다(언리얼 레벨 스트리밍의 AddToWorld 중인 액터). 컴포넌트에 `isStaged` 를 켭니다.
+         * @details 병합 · 오브젝트 순회 · 틱 · 시작 · 타입별 순회에 들지 않고 id 로만 찾힌다(셀의 배치가 잇는다). 지우면 파괴가 이 목록에서도 빼고, 비우기(`clear`)는 함께 해체한다.
+         *          대기 목록에 없는 id(이미 병합됨 · 없음)는 건너뛴다.
+         */
+        void stageGameObjects( span<const uint64> listObjectID );
+        /** @brief `stageGameObjects` 로 둔 오브젝트를 대기 목록으로 되돌리고 `isStaged` 를 끕니다. 되돌린 오브젝트를 @p outListObject 에 담습니다(틱 항목을 다시 만들게). */
+        void releaseStagedGameObjects( span<const uint64> listObjectID, vector<GameObject*>& outListObject );
         /** @brief 오브젝트, 대기 목록, 시작 대기열을 모두 비우고 풀을 해제합니다. 다른 단위(계층, 레지스트리, 물리)는 매니저가 비웁니다. */
         void clear();
 
@@ -383,6 +392,7 @@ namespace sw
         ObjectSlotTable                                      _objectSlotTable;
         atomic<uint32>                                       _overflowObjectCount; ///< `_mapIDToObject` 의 크기다. 0 이면 읽는 쪽이 테이블에서 못 찾은 id 로 잠금을 잡지 않는다
         vector<GameObject*>                                  _listPendingAdd;
+        vector<GameObject*>                                  _listStagedObject; ///< 나눠 짓는 셀의 아직 드러나지 않은 오브젝트(`stageGameObjects`). 병합하지 않는다
         vector<GameObject*> _listPendingDestroyObject        SW_GUARDED_BY( _mutex );
         vector<ComponentHandle> _listPendingDestroyComponent SW_GUARDED_BY( _mutex ); ///< 핸들로 보관한다(`destroyComponent` 설명 참고)
         vector<GameObject*>                                  _listProcessingDestroyObject;

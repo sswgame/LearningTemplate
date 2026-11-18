@@ -1,6 +1,6 @@
 <?asset guid="d23c8112e4cd8e4e73bdbb3575df4281"?>
 <Scene formatVersion="3" name="ThemePark">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

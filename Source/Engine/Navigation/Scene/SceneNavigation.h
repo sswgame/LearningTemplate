@@ -290,6 +290,12 @@ namespace sw
         bool installCooked( NavMeshRuntime& runtime, const NavAgentTypeDef& agentType, uint64 inputHash );
         /** @brief 알린 영역을 재베이크 줄로 바꿉니다(`NavTileRebaker::processDirtyAreas` 에 이 씬의 입력을 넘긴다). 갱신은 `Defer`, 그 자리에서 끝내는 `flushTileBakes` 는 `Wait` 다. */
         void processDirtyAreas( NavMeshArrival arrival );
+        /**
+         * @brief 스트리밍 씬의 쿠킹본 타일을 씬 셀과 같은 원점 · 반경(`SceneStreamingSubsystem`)으로 올리고 내립니다 — Recast/Detour 의 타일 단위 `addTile` · `removeTile`(`replaceTile`).
+         * @details 멀어진 타일은 빼고(군중 · 경로 질의는 빠진 타일을 기존 "경로 없음" 으로 받는다), 다가온 타일은 구간을 비동기로 읽어 다음 갱신 이후에 끼운다. 끼운 타일에 장애물이 닿으면 재베이크 줄에 넣는다.
+         *          타일을 바꾸므로 쓰기 증표가 있는 자리에서만 부른다. 결정적 실행은 읽기를 그 자리에서 기다린다.
+         */
+        void updateTileStreaming( const NavMeshWriteAccess& access );
         /** @brief 내비메시를 읽는 워커가 없게 합니다 — 군중 진행을 기다리고 경로 질의를 수확한다(결과가 칸에 든다). 그 증표로 타일을 바꾼다. 게임 스레드에서만 부릅니다. */
         [[nodiscard]] NavMeshWriteAccess completeNavMeshReads();
         /** @brief ④ — 에이전트 요청 · 자리를 군중에 넣습니다(게임 스레드). */
@@ -320,9 +326,10 @@ namespace sw
         vector<NavMeshObstacleComponent*>  _listObstacle;
         vector<NavMeshLinkComponent*>      _listLink; ///< 링크 컴포넌트(등록 · 해제는 `_navIndex` 로 O(1)). 순회는 매 갱신 `applyLinkStates` 의 켜짐 표지 확인과 `findLink`(에이전트가 링크에 오른 첫 갱신) 뿐이다. 링크는 문 · 사다리 · 점프 지점이라 씬당 수십 ~ 수백이어서 선형으로 충분하다. 수천이 되면 껐다 켠 링크만 모으는 목록과 id 색인으로 바꾼다
 
-        RegistrationList<INavGeometrySource> _listGeometrySource;   ///< 구독으로 올린다. 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다. 순서가 뜻이라 순서를 버리는 `unordered_set` 으로 바꾸지 않는다(소스가 수천이 되면 순서 보존 색인이 필요하다)
-        vector<hashed_string>                _listFailedAgentType;  ///< 모르는 종류 — 오류를 한 번만
-        vector<AreaCostOverride>             _listAreaCostOverride; ///< 에이전트 종류별 영역 비용 · 통행 덮어쓰기(씬을 비울 때까지)
+        uint64                               _streamingChangeSerial{ 0 }; ///< 셀이 오르내린 번호(`SceneStreamingSubsystem::getChangeSerial`)를 어디까지 반영했는가
+        RegistrationList<INavGeometrySource> _listGeometrySource;         ///< 구독으로 올린다. 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다. 순서가 뜻이라 순서를 버리는 `unordered_set` 으로 바꾸지 않는다(소스가 수천이 되면 순서 보존 색인이 필요하다)
+        vector<hashed_string>                _listFailedAgentType;        ///< 모르는 종류 — 오류를 한 번만
+        vector<AreaCostOverride>             _listAreaCostOverride;       ///< 에이전트 종류별 영역 비용 · 통행 덮어쓰기(씬을 비울 때까지)
         NavTileRebaker                       _tileRebaker;
         NavDebugView                         _debugView;
         NavPathSolver                        _pathSolver;              ///< `_pathQueue` 의 풀이(이 내비게이션의 내비메시 표를 읽는다) — 줄보다 먼저 선언한다

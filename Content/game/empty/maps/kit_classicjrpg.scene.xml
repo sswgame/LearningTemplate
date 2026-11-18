@@ -1,6 +1,6 @@
 <?asset guid="d185c9cce307440db4b4bf465d325c38"?>
 <Scene formatVersion="2" name="KitDemoClassicJRPG">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

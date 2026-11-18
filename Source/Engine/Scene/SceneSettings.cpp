@@ -45,6 +45,11 @@ namespace sw
             SW_LOG_ERROR_ID( "SceneSettings.SceneStreamsButLoads", "Scene '%#' streams but loads no cell per frame (_maxCellLoadsPerFrame is 0)", sceneName );
             bValid = false;
         }
+        if ( _addToWorldBudgetMicroseconds == 0 )
+        {
+            SW_LOG_ERROR_ID( "SceneSettings.SceneStreamsNoBuildBudget", "Scene '%#' streams but has no time to add cells to the world (_addToWorldBudgetMicroseconds is 0)", sceneName );
+            bValid = false;
+        }
         if ( ( _unloadMargin >= 0.0f ) == false )
         {
             SW_LOG_ERROR_ID( "SceneSettings.SceneNegativeUnloadMargin", "Scene '%#' has a negative unload margin (%#)", sceneName, _unloadMargin );

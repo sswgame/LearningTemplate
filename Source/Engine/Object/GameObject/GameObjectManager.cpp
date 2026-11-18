@@ -1138,6 +1138,36 @@ namespace sw
         comp.dispatchPostLoad();
     }
 
+    void GameObjectManager::swapDeferredRegistration( vector<ComponentHandle>& inoutRegister, vector<ComponentHandle>& inoutPostLoad )
+    {
+        SW_ASSERT( _deferredRegistrationDepth != 0 );
+        _listDeferredRegister.swap( inoutRegister );
+        _listDeferredPostLoad.swap( inoutPostLoad );
+    }
+
+    void GameObjectManager::appendDeferredRegistration( const vector<ComponentHandle>& listRegister, const vector<ComponentHandle>& listPostLoad )
+    {
+        SW_ASSERT( _deferredRegistrationDepth != 0 );
+        _listDeferredRegister.insert( _listDeferredRegister.end(), listRegister.begin(), listRegister.end() );
+        _listDeferredPostLoad.insert( _listDeferredPostLoad.end(), listPostLoad.begin(), listPostLoad.end() );
+    }
+
+    void GameObjectManager::stageGameObjects( span<const uint64> listObjectID )
+    {
+        _pState->_store.stageGameObjects( listObjectID );
+    }
+
+    void GameObjectManager::releaseStagedGameObjects( span<const uint64> listObjectID )
+    {
+        vector<GameObject*> listUnstaged;
+        _pState->_store.releaseStagedGameObjects( listObjectID, listUnstaged );
+        // 드러난 컴포넌트로 틱 항목을 다시 만든다 — 숨어 있는 동안 만든 항목에는 빠져 있다.
+        for ( GameObject* pObj : listUnstaged )
+        {
+            pObj->markTickOrderDirty();
+        }
+    }
+
     void GameObjectManager::endDeferredRegistration()
     {
         SW_ASSERT( _deferredRegistrationDepth != 0 );

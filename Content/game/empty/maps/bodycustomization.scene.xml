@@ -4,7 +4,7 @@
 	     동공 · 눈물, 피부 층 마스카라 · 장미 문신)다. 열린 하늘(0,0)과 넓은 지붕 아래(-8,0, Hut)를 오가며 눈에 닿는 빛이 바뀌고, 날씨(skyLight)가 직사광을 줄인다.
 	     몸 동작(CharacterBodyDynamicsComponent)이 발 들림을 리그 몸 입력으로, 지글 물성을 Jiggle 노드(common/rigs/skeleton_bodydemo.rig.xml)로, 눈물을 표면 채널
 	     (common/characters/bodyfluid.surfacechannels.xml)로 넣는다. 눈 소켓은 소켓 표의 Eyes(머리 본 head 아래)다 — 본 이름이 아니라 소켓 이름을 적는다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

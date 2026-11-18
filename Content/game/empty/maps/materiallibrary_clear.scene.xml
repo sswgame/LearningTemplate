@@ -1,7 +1,7 @@
 <?asset guid="5d301eb20ff066d2417667f048fb4020"?>
 <Scene formatVersion="3" name="MaterialLibraryClear">
 	<!-- 시나리오 automation/materiallibrary 의 둘째 무대 — 위 줄은 무늬 벽 앞의 유리 · 창유리 · 간유리 · 반투명 커튼, 아래 줄은 눈 13 개(+Z 가 카메라 쪽이 되게 Y 로 반 바퀴). 눈의 _customData0.x 는 동공 확장, 파란 눈 하나는 _customData1 로 짝짝이다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>
