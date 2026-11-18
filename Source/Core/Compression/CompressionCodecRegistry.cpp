@@ -34,7 +34,6 @@ namespace sw
     CompressionCodecRegistry::CompressionCodecRegistry()
         : _mutex{}
         , _mapCodec{}
-        , _defaultCodecType{ CompressionCodecType::RLE }
     {
         registerBuiltinCodecs();
     }
@@ -109,24 +108,6 @@ namespace sw
                 return codec.get();
         }
         return nullptr;
-    }
-
-    ICompressionCodec* CompressionCodecRegistry::getDefaultCodec() const
-    {
-        ICompressionCodec* pCodec = getCodec( _defaultCodecType.load() );
-        if ( pCodec == nullptr )
-            pCodec = getCodec( CompressionCodecType::None );
-        return pCodec;
-    }
-
-    CompressionCodecType CompressionCodecRegistry::getDefaultCodecType() const
-    {
-        return _defaultCodecType.load();
-    }
-
-    void CompressionCodecRegistry::setDefaultCodecType( CompressionCodecType type )
-    {
-        _defaultCodecType.store( type );
     }
 
     bool CompressionCodecRegistry::isCodecRegistered( CompressionCodecType type ) const

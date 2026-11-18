@@ -1,10 +1,9 @@
 /**
  * @file CompressionCodecRegistry.h
- * @brief 압축 코덱 레지스트리입니다. 등록 · 조회 · 기본 코덱을 다룹니다.
+ * @brief 압축 코덱 레지스트리입니다. 등록 · 조회를 다룹니다(어느 코덱을 쓸지는 부르는 쪽이 `CompressionCodecType` 으로 정한다).
  */
 #pragma once
 #include "Core/Compression/ICompressionCodec.h"
-#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/unordered_map.h"
@@ -81,10 +80,6 @@ namespace sw
         ICompressionCodec* getCodec( CompressionCodecType type ) const;
         ICompressionCodec* getCodec( string_view name ) const;
 
-        ICompressionCodec*   getDefaultCodec() const;
-        CompressionCodecType getDefaultCodecType() const;
-        void                 setDefaultCodecType( CompressionCodecType type );
-
         bool isCodecRegistered( CompressionCodecType type ) const;
 
     private:
@@ -97,14 +92,6 @@ namespace sw
         unordered_map<CompressionCodecType, unique_ptr<ICompressionCodec>> _mapCodec SW_GUARDED_BY( _mutex );
         unordered_map<CompressionCodecType, uint64> _mapOwner                        SW_GUARDED_BY( _mutex ); ///< 타입마다 지금 등록의 구독 번호(내장은 없다)
         IDAllocator<uint64> _ownerIDAllocator                                        SW_GUARDED_BY( _mutex );
-        /**
-         * @brief 기본 코덱 종류입니다. `_mutex` 로 보호할 수 없어서 원자 변수로 둡니다.
-         * @details `getDefaultCodec()` 은 이 값을 읽은 직후 `getCodec()` 을 부르고, 그쪽이 `_mutex` 를 잡습니다. 여기서도 같은 뮤텍스를
-         *          잡으면 재귀 잠금으로 교착합니다(`sw::mutex` 는 재귀 뮤텍스가 아닙니다). 렌더 스레드와 잡 스레드가 함께 지나가는
-         *          경로라 보호 없이 둘 수도 없습니다.
-         */
-        atomic<CompressionCodecType> _defaultCodecType;
-
         /** @brief 이 객체가 내준 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&CompressionCodecRegistry::releaseSubscription>( this ) };
 

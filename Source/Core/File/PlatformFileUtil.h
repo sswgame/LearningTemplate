@@ -144,13 +144,6 @@ namespace sw
         static int64 tellPosition( FILE* pFile );
 
         /**
-         * @brief 열린 파일의 전체 크기를 반환하고 오프셋을 처음으로 되돌립니다.
-         * @details 호출 전의 오프셋은 보존하지 않습니다. 파일을 열 필요 없이 크기만 알고 싶으면 `FileUtil::getFileSize` 를 쓰십시오.
-         * @return 바이트 수. 실패하면 kInvalidOffset 입니다.
-         */
-        static int64 getOpenFileSizeAndRewind( FILE* pFile );
-
-        /**
          * @brief 읽기 전용으로 OS 핸들을 엽니다. 다른 프로세스의 읽기 · 쓰기 · 삭제를 막지 않습니다(`openFile` 과 같은 공유).
          * @details Windows 는 `FILE_FLAG_OVERLAPPED` 로 엽니다 — 같은 핸들로 IOCP 비동기 읽기와 `readNativeFileAt` 동기 읽기를 함께 합니다.
          * @return 열지 못했으면(없음 · 권한 · 디렉터리) `kInvalidNativeFileHandle` 입니다.

@@ -146,8 +146,6 @@ SW_TEST_CASE( CompressionTest, CodecRegistryAndDynamicLookup )
     sw::ICompressionCodec* pNull = registry.getCodec( "Null" );
     SW_EXPECT_TRUE( pNull != nullptr );
     SW_EXPECT_EQUAL( static_cast<uint32>( sw::CompressionCodecType::None ), static_cast<uint32>( pNull->getCodecType() ) );
-
-    SW_EXPECT_TRUE( registry.getDefaultCodec() != nullptr );
 }
 
 // ------------------------------------------------------------------------------

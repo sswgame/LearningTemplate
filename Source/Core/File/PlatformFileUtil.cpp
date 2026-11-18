@@ -498,20 +498,6 @@ namespace sw
 #endif
     }
 
-    int64 PlatformFileUtil::getOpenFileSizeAndRewind( FILE* pFile )
-    {
-        if ( seekTo( pFile, 0, SEEK_END ) == false )
-            return kInvalidOffset;
-
-        const int64 size = tellPosition( pFile );
-
-        // 크기를 읽었어도 처음으로 되돌리지 못하면 호출하는 쪽이 엉뚱한 위치에서 읽는다. 그래서 실패로 본다.
-        if ( seekTo( pFile, 0, SEEK_SET ) == false )
-            return kInvalidOffset;
-
-        return size;
-    }
-
     NativeFileHandle PlatformFileUtil::openNativeFileForRead( const utf8* pFilePath )
     {
         if ( pFilePath == nullptr || pFilePath[0] == '\0' )
