@@ -174,6 +174,17 @@ namespace sw::editor
              * @brief 등록된 프레임 단계를 `_order` 순서로 모두 부릅니다.
              * @details 개수와 항목을 매번 다시 읽는다. 단계가 모듈을 로드하거나 언로드해 목록이 바뀌어도 지난 배열을 읽지 않는다.
              */
+            static void runGameSteps( EditorContext& context, EditorPlaySessionWriteKey key )
+            {
+                using Registry = EditorExtensionRegistry<EditorGameStepRegistration>;
+                for ( uint32 index = 0; index < Registry::getCount(); ++index ) // 개수를 매번 다시 읽는다(`runFrameSteps` 와 같다)
+                {
+                    const EditorGameStepRegistration& registration = Registry::getAt( index );
+                    if ( registration._pfnRun != nullptr )
+                        registration._pfnRun( context, key );
+                }
+            }
+
             static void runFrameSteps( EditorContext& context )
             {
                 using Registry = EditorExtensionRegistry<EditorFrameStepRegistration>;
@@ -818,6 +829,8 @@ namespace sw::editor
         views.applyReadyAndPublishTargets();
         // 키보드 주인 — UI 프레임이 정한 값을 엔진 입력 매니저의 포커스에 입힌다(UI 는 입력 매니저를 바로 바꾸지 않는다).
         _editorContext->getSubsystem<EditorInputActions>().applyKeyboardOwner( views.getPublishedUIFrame()._bEditorOwnsKeyboard == SW_TRUE );
+        // 게임 스레드 단계(베이크) — 명령이 남긴 시작 요청을 받고 이번 프레임의 몫을 한다. 게임 스레드 입구라 세션 쓰기 열쇠를 넘긴다.
+        ImGuiEditorInternal::runGameSteps( *_editorContext, EditorPlaySessionWriteKey{} );
     }
 
     void ImGuiEditor::openFrame()
@@ -1147,6 +1160,7 @@ namespace sw::editor
 
     // 이 종류의 등록 목록 — EditorModule 이미지에 하나(확장 DLL 의 등록자도 내보낸 이 함수로 오른다).
     SW_DEFINE_EDITOR_EXTENSION_KIND( EditorFrameStepRegistration )
+    SW_DEFINE_EDITOR_EXTENSION_KIND( EditorGameStepRegistration )
 } // namespace sw::editor
 
 // ==============================================================================

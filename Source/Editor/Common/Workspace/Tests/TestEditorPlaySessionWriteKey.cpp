@@ -25,6 +25,10 @@ static_assert( std::is_same_v<decltype( &EditorPlaySession::simulate ), void ( *
 static_assert( std::is_same_v<decltype( &EditorPlaySession::pause ), void ( * )( EditorPlaySessionWriteKey )>, "pause needs the write key" );
 static_assert( std::is_same_v<decltype( &EditorPlaySession::stop ), void ( * )( EditorPlaySessionWriteKey )>, "stop needs the write key" );
 static_assert( std::is_same_v<decltype( &EditorPlaySession::findData ), PlaySessionData* (*)( EditorPlaySessionWriteKey )>, "mutable session data needs the write key" );
+// 씬 편집 막기는 열쇠를 받아서만 생기고, 쥔 객체(RAII)만 푼다 — 복사하면 두 번 풀리므로 옮기기만 된다.
+static_assert( std::is_same_v<decltype( &EditorPlaySession::holdSceneEdits ), EditorSceneEditHold ( * )( EditorPlaySessionWriteKey )>, "holding scene edits needs the write key" );
+static_assert( std::is_copy_constructible_v<EditorSceneEditHold> == false, "a copied hold would release twice" );
+static_assert( std::is_nothrow_move_constructible_v<EditorSceneEditHold>, "a hold moves into its owner" );
 
 /**
  * @brief [EditorPlaySessionWriteKeyTest] 열쇠 없이 쓰는 본체(`PlaySessionData&`)는 테스트가 가진 지역 상태만 바꾼다 — 에디터 범위의 세션은 열쇠를 받는 `findData` 로만 고칠 수 있다
@@ -36,4 +40,7 @@ SW_TEST_CASE( EditorPlaySessionWriteKeyTest, BodiesTouchOnlyGivenData )
     SW_EXPECT_TRUE( data._bStartAtPosition == SW_TRUE );
     EditorPlaySession::clearStartPosition( data );
     SW_EXPECT_TRUE( data._bStartAtPosition == SW_FALSE );
+    EditorSceneEditHold empty; // 쥐지 않은 막기는 놓아도 아무 일이 없다
+    empty.release();
+    SW_EXPECT_FALSE( empty.isHeld() );
 }

@@ -8,6 +8,7 @@
 namespace sw::editor
 {
     class EditorContext;
+    class EditorPlaySessionWriteKey;
 } // namespace sw::editor
 
 namespace sw::editor
@@ -51,6 +52,33 @@ namespace sw::editor
     };
 } // namespace sw::editor
 
+namespace sw::editor
+{
+    /**
+     * @struct EditorGameStepRegistration
+     * @brief 게임 스레드에서 프레임마다 도는 에디터 단계 하나입니다(`SW_EDITOR_GAME_STEP`) — 씬 · 엔진을 바꾸는 여러 프레임짜리 일(베이크)의 자리.
+     * @details 셸이 UI 명령을 적용한 뒤 부른다(`ImGuiEditor::applyUICommands` — 호스트의 UI 프레임 뒤 · 씬 틱 앞). ImGui 를 그리지 않는다. UI 프레임 단계(`EditorFrameStepRegistration`)와 달리
+     *          게임 스레드 입구라 플레이 세션 쓰기 열쇠(`EditorPlaySessionWriteKey`)를 받는다. UI 는 이 단계의 일을 시작하려면 요청(값)만 남긴다(언리얼 에디터의 게임 스레드 Tick 자리).
+     */
+    struct EditorGameStepRegistration : EditorExtensionRegistration
+    {
+        SW_EDITOR_EXTENSION_KIND( "gameStep" );
+
+        void ( *_pfnRun )( EditorContext& context, EditorPlaySessionWriteKey key );
+    };
+
+    /** @struct EditorGameStepOrder @brief 셸이 아는 게임 단계의 순서 값입니다. 작을수록 먼저 돕니다. */
+    struct EditorGameStepOrder
+    {
+        /// 여러 프레임에 나눠 도는 베이크(라이트 프로브 · 반사 프로브).
+        static constexpr int32 kBake = 100;
+    };
+} // namespace sw::editor
+
 /** @code SW_EDITOR_FRAME_STEP( Panels, "panels", ::sw::editor::EditorFrameStepOrder::kPanels, &drawPanels ); @endcode */
 #define SW_EDITOR_FRAME_STEP( name, pID, order, pfnRun ) \
     SW_EDITOR_REGISTER( ::sw::editor::EditorFrameStepRegistration, FrameStep_##name, { pID, order }, pfnRun )
+
+/** @code SW_EDITOR_GAME_STEP( LightProbeBake, "lightProbeBake", ::sw::editor::EditorGameStepOrder::kBake, &runBake ); @endcode */
+#define SW_EDITOR_GAME_STEP( name, pID, order, pfnRun ) \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorGameStepRegistration, GameStep_##name, { pID, order }, pfnRun )

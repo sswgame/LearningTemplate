@@ -68,9 +68,9 @@ namespace sw::editor
                 return string{ arrMessage };
             }
 
-            static void runFrame( EditorContext& /*context*/ )
+            static void runFrame( EditorContext& /*context*/, EditorPlaySessionWriteKey key )
             {
-                editor::getSubsystem<EditorReflectionProbeBakeSession>().update(); // 필수 - 에디터 서브시스템이다
+                editor::getSubsystem<EditorReflectionProbeBakeSession>().update( key ); // 필수 - 에디터 서브시스템이다
             }
 
             [[nodiscard]] static bool readBakeRunCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -168,7 +168,7 @@ namespace sw::editor
     };
 
     SW_EDITOR_SUBSYSTEM( EditorReflectionProbeBakeSession, 9110 );
-    SW_EDITOR_FRAME_STEP( ReflectionProbeBake, "reflectionProbeBake", EditorFrameStepOrder::kCommands + 21, &EditorReflectionProbeBakeSessionInternal::runFrame );
+    SW_EDITOR_GAME_STEP( ReflectionProbeBake, "reflectionProbeBake", EditorGameStepOrder::kBake + 1, &EditorReflectionProbeBakeSessionInternal::runFrame );
 
     SW_AUTOMATION_WATCH( editorReflectionProbeBakeCount, "Editor.ReflectionProbeBakeCount",
                          "Times a lighting.bakeReflectionProbes run finished (or was canceled) in the active scene", &EditorReflectionProbeBakeSessionInternal::readBakeRunCount );
@@ -184,13 +184,14 @@ namespace sw::editor
         , _run{}
         , _nextProbeIndex{ 0 }
         , _bakedCount{ 0 }
+        , _startRequested{ false }
         , _bDeferFirstSlice{ SW_FALSE }
     {
     }
 
     EditorReflectionProbeBakeSession::~EditorReflectionProbeBakeSession() = default; // 잡의 상태는 shared_ptr 라 도는 워커가 있어도 이 객체보다 오래 산다
 
-    void EditorReflectionProbeBakeSession::start()
+    void EditorReflectionProbeBakeSession::start( EditorPlaySessionWriteKey key )
     {
         Scene*             pScene       = editor::getActiveScene();
         GameObjectManager* pManager     = editor::getActiveObjectManager();
@@ -220,7 +221,7 @@ namespace sw::editor
         _bakedCount     = 0;
         _lastError.clear();
         _bDeferFirstSlice = SW_TRUE;
-        _run.begin( sceneManager.getSceneGeneration() );
+        _run.begin( key, sceneManager.getSceneGeneration() );
         if ( _listObjectID.empty() )
             finish( false );
     }
@@ -233,8 +234,10 @@ namespace sw::editor
         finish( true );
     }
 
-    void EditorReflectionProbeBakeSession::update()
+    void EditorReflectionProbeBakeSession::update( EditorPlaySessionWriteKey key )
     {
+        if ( _startRequested.exchange( false, std::memory_order_acq_rel ) )
+            start( key ); // UI 명령이 남긴 시작 요청 — 씬을 읽고 편집을 막는 일은 게임 스레드가 한다
         if ( _run.isRunning() == false )
             return;
         const utf8* pStopReason = _run.findStopReason();

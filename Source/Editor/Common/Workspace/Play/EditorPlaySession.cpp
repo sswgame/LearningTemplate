@@ -334,14 +334,24 @@ namespace sw::editor
         return true;
     }
 
-    void EditorPlaySession::holdSceneEdits()
+    void EditorSceneEditHold::release()
     {
-        PlaySessionData* pData = findDataInternal();
-        if ( pData != nullptr )
-            ++pData->_sceneEditHoldCount;
+        if ( _bHeld == SW_FALSE )
+            return;
+        _bHeld = SW_FALSE;
+        EditorPlaySession::releaseSceneEditHold();
     }
 
-    void EditorPlaySession::releaseSceneEdits()
+    EditorSceneEditHold EditorPlaySession::holdSceneEdits( EditorPlaySessionWriteKey /*key*/ )
+    {
+        PlaySessionData* pData = findDataInternal();
+        if ( pData == nullptr )
+            return EditorSceneEditHold{};
+        ++pData->_sceneEditHoldCount;
+        return EditorSceneEditHold{ true };
+    }
+
+    void EditorPlaySession::releaseSceneEditHold()
     {
         PlaySessionData* pData = findDataInternal();
         SW_ASSERT( pData == nullptr || pData->_sceneEditHoldCount > 0 );

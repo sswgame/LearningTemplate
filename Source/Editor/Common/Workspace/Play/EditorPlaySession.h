@@ -154,6 +154,50 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
+     * @class EditorSceneEditHold
+     * @brief 씬 편집 막기 하나를 쥐는 객체입니다(`EditorPlaySession::holdSceneEdits` 가 준다). 놓거나(`release`) 사라지면 막기를 풉니다(RAII).
+     * @details 예전에는 막기와 풀기가 짝 맞춘 두 함수라 아무 데서나(UI 프레임에서도) 부를 수 있었고 풀기를 빠뜨릴 수 있었다. 이제 막기는 게임 스레드 열쇠를 받아서만 생기고,
+     *          풀기는 이 객체만 한다 — 짝이 형식으로 맞는다(언리얼 `FScopedTransaction` 처럼 쥔 동안만 효력).
+     */
+    class EditorSceneEditHold final
+    {
+    public:
+        EditorSceneEditHold() = default;
+        ~EditorSceneEditHold() { release(); }
+        EditorSceneEditHold( const EditorSceneEditHold& )            = delete;
+        EditorSceneEditHold& operator=( const EditorSceneEditHold& ) = delete;
+        EditorSceneEditHold( EditorSceneEditHold&& other ) noexcept
+            : _bHeld{ other._bHeld }
+        {
+            other._bHeld = SW_FALSE;
+        }
+        EditorSceneEditHold& operator=( EditorSceneEditHold&& other ) noexcept
+        {
+            if ( this != &other )
+            {
+                release();
+                _bHeld       = other._bHeld;
+                other._bHeld = SW_FALSE;
+            }
+            return *this;
+        }
+
+        /** @brief 쥐고 있으면 막기를 풉니다. 이미 놓았으면 아무것도 하지 않습니다. */
+        void release();
+        bool isHeld() const { return _bHeld == SW_TRUE; }
+
+    private:
+        friend class EditorPlaySession;
+        explicit EditorSceneEditHold( bool bHeld )
+            : _bHeld{ bHeld ? SW_TRUE : SW_FALSE }
+        {
+        }
+
+    private:
+        uint8 _bHeld{ SW_FALSE };
+    };
+
+    /**
      * @class EditorPlaySession
      * @brief 에디터 Play-In-Editor(PIE) 시뮬레이션의 수명 주기와 씬 롤백을 관리합니다.
      * @details 에디터 서브시스템으로 상태(`PlaySessionData`)를 들고, 정적 함수가 에디터 범위에서 이 서브시스템을 찾아 조작한다(언리얼 `FSlateApplication::Get` 처럼
@@ -189,13 +233,11 @@ namespace sw::editor
          */
         [[nodiscard]] static bool refuseSceneEdit( const utf8* pAction );
         /**
-         * @brief 씬 편집을 막습니다(짝이 되는 `releaseSceneEdits` 까지). 씬을 읽으며 여러 프레임에 걸쳐 도는 작업(라이트 프로브 베이크)이 부른다.
+         * @brief 씬 편집을 막고 그 막기를 쥔 객체를 돌려줍니다(그 객체가 놓이거나 사라질 때까지). 씬을 읽으며 여러 프레임에 걸쳐 도는 게임 스레드 작업(베이크)이 부른다.
          * @details 편집 경로는 모두 `areSceneEditsAllowed` 를 묻는다 — 막는 동안 그 답이 false 라 인스펙터 · 기즈모 · 붓이 잠긴다. 플레이 시작은 막지 않는다
-         *          (작업이 정지 상태가 아니면 스스로 멈춘다).
+         *          (작업이 정지 상태가 아니면 스스로 멈춘다). 에디터 범위가 없으면 아무것도 쥐지 않은 객체다.
          */
-        static void holdSceneEdits();
-        /** @brief `holdSceneEdits` 하나를 풉니다. */
-        static void releaseSceneEdits();
+        [[nodiscard]] static EditorSceneEditHold holdSceneEdits( EditorPlaySessionWriteKey key );
         /** @brief 씬 편집을 막고 있는 작업이 있으면 true 입니다. */
         static bool areSceneEditsHeld();
         /** @brief 막는 동안 씬이 바뀌었음을 셉니다(`EditorWorkspace::markSceneDirty` 가 부른다 — 편집 허용 답을 묻지 않은 경로다). */
@@ -287,6 +329,9 @@ namespace sw::editor
     private:
         /** @brief 읽기 · 세션 안의 기록(거절 로그 · 편집 막기)용 조회입니다. 밖으로는 열쇠를 받는 `findData` 만 상태를 고칠 수 있게 내준다. */
         static PlaySessionData* findDataInternal();
+        /** @brief 막기 하나를 풉니다 — `EditorSceneEditHold` 만 부른다. */
+        static void releaseSceneEditHold();
+        friend class EditorSceneEditHold;
 
         PlaySessionData _data{};
     };
