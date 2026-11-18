@@ -62,7 +62,7 @@ namespace sw::editor
         /** @brief 메인 스택입니다. */
         CommandStack& getStack() { return _stack; }
 
-        /** @brief 게임 쪽: 포커스 창의 스택(`getFocusedCommandStack`) 값을 스냅샷으로 짓습니다. 모든 게임 단계 뒤에 돈다(`EditorGameStepOrder::kUndoHistory`). */
+        /** @brief 게임 쪽: 포커스 창의 스택(`getFocusedCommandStack`) 값을 스냅샷으로 짓습니다. 모든 게임 단계 뒤(`EditorGameStepOrder::kUndoHistory`)와 UI 프레임 직전(`ImGuiEditor::prepareFrameState`)에 돈다. */
         void publishSnapshot();
         /** @brief UI 쪽: 마지막으로 지은 스냅샷입니다. History 창은 스택 대신 이것을 읽는다. */
         const EditorUndoHistorySnapshot& getSnapshot() const { return _snapshot; }

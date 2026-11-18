@@ -53,6 +53,7 @@
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 #include "Editor/EditorModuleExports.h"
 #include "Editor/EditorSubsystemSet.h"
@@ -815,6 +816,8 @@ namespace sw::editor
         EditorPlaySession::beginUIFrame();                                                                 // 이번 UI 프레임이 읽는 플레이 상태(게임 스레드가 넘긴 값)
         // 되돌리기 알림이 남긴 선택 고칠 일 — 선택은 UI 상태라 기록 쪽은 id 만 남기고 UI 가 입힌다(`EditorSelectionUpdateQueue`). 게임 단계 · 자동화가 움직인 스택의 몫이다.
         _editorContext->getSubsystem<EditorObjectEditBindings>().applySelectionUpdates( editor::getMainSceneSelection() );
+        // History 창이 읽는 되돌리기 스냅샷도 UI 바로 앞에서 다시 짓는다 — 게임 단계 끝 스냅샷 뒤에 스택이 바뀐 몫(씬 틱 · 자동화 · 리로드 뒤 첫 프레임 · 포커스 바뀜)이 한 프레임 늦지 않게(켜짐 값 묶음과 같은 자리).
+        _editorContext->getSubsystem<EditorUndoHistory>().publishSnapshot();
         _editorContext->getSubsystem<EditorRenderViews>().beginFrameFocus();
         _editorContext->getSubsystem<EditorRenderViews>().clearViewDrawnMarks();
     }
