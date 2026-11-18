@@ -98,12 +98,22 @@ namespace sw
         const InventorySlot* pWorn = _equipment.findEquipped( slot );
         if ( _bStarted == SW_FALSE || pWorn == nullptr || pWorn->isEmpty() )
             return false;
-        InventorySlot dyed = *pWorn;
-        dyed._customization.setValue( value );
+        const AppearanceDatabase*     pDatabase = game::findSubsystem<AppearanceDatabase>();
+        const CustomizationSchemaDef* pSchema   = pDatabase != nullptr ? findItemSchema( *pDatabase, pWorn->_itemID ) : nullptr;
+        InventorySlot                 dyed      = *pWorn;
+        if ( pSchema == nullptr || pSchema->applyValue( value, false, dyed._customization ) == false )
+            return false;
         if ( _equipment.setEquippedInstance( slot, dyed ) == false )
             return false;
         updateAppearance();
         return true;
+    }
+
+    const CustomizationSchemaDef* CharacterEquipmentComponent::findItemSchema( const AppearanceDatabase& database, const hashed_string& itemID )
+    {
+        const ItemDef*       pItem   = database.getItemCatalog() != nullptr ? database.getItemCatalog()->find( itemID ) : nullptr;
+        const ItemVisualDef* pVisual = pItem != nullptr ? database.getVisuals().findVisual( pItem->_visualID ) : nullptr;
+        return pVisual != nullptr ? database.getSchemas().findSchema( pVisual->_customization ) : nullptr;
     }
 
     void CharacterEquipmentComponent::updateAppearance()
@@ -279,9 +289,7 @@ namespace sw
                 const hashed_string           slot      = hashed_string( listArgument[1] );
                 const InventorySlot*          pWorn     = pEquipment->getEquipment().findEquipped( slot );
                 const AppearanceDatabase*     pDatabase = game::findSubsystem<AppearanceDatabase>();
-                const ItemDef*                pItem     = pWorn != nullptr && pDatabase != nullptr && pDatabase->getItemCatalog() != nullptr ? pDatabase->getItemCatalog()->find( pWorn->_itemID ) : nullptr;
-                const ItemVisualDef*          pVisual   = pItem != nullptr ? pDatabase->getVisuals().findVisual( pItem->_visualID ) : nullptr;
-                const CustomizationSchemaDef* pSchema   = pVisual != nullptr ? pDatabase->getSchemas().findSchema( pVisual->_customization ) : nullptr;
+                const CustomizationSchemaDef* pSchema   = pWorn != nullptr && pDatabase != nullptr ? CharacterEquipmentComponent::findItemSchema( *pDatabase, pWorn->_itemID ) : nullptr;
                 const CustomizationParamDef*  pParam    = pSchema != nullptr ? pSchema->findParameter( hashed_string( listArgument[2] ) ) : nullptr;
                 if ( pParam == nullptr )
                 {

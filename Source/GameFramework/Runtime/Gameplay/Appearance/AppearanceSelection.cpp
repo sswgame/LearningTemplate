@@ -33,15 +33,8 @@ namespace sw
 
             static uint32 toHash32( const hashed_string& name ) { return name.empty() ? 0u : static_cast<uint32>( name.getHash() ); }
 
-            /** @brief 받는 쪽이 알지 못하는 해시의 임시 이름(`#1a2b3c4d`)입니다. 펼칠 때 "지워진 콘텐츠" 로 보고됩니다. */
-            static hashed_string makePlaceholder( uint32 hash )
-            {
-                if ( hash == 0 )
-                    return hashed_string{};
-                utf8 arrBuffer[constant::buffer::kMax16];
-                FormatString::formatstring( arrBuffer, constant::buffer::kMax16, "#%#", Fmt( hash, Format().hex().width( 8 ).zeroPad() ) );
-                return hashed_string( string_view( arrBuffer ) );
-            }
+            /** @brief 받는 쪽이 알지 못하는 해시의 임시 이름(`#1a2b3c4d`)입니다. 펼칠 때 "지워진 콘텐츠" 로 보고되고, 스키마 판 올림이 옛 이름과 맞춘다. */
+            static hashed_string makePlaceholder( uint32 hash ) { return CustomizationSchemaDef::makeHashPlaceholder( hash ); }
 
             static hashed_string findByHash( uint32 hash, const vector<hashed_string>& listCandidate )
             {
@@ -110,6 +103,45 @@ namespace sw
 
             static void writeVarCount( BitWriter& writer, size_t count ) { writer.writeVarUint( static_cast<uint64>( count ) ); }
 
+            /** @brief 값 묶음을 스키마 @p pSchema 의 지금 판으로 올립니다. 스키마가 없으면 그대로 둡니다(값을 받을 매개변수가 없어 어차피 버려진다). 실패하면 @p inoutValues 는 그대로입니다. */
+            [[nodiscard]] static expected<void> migrateInPlace( const CustomizationSchemaDef* pSchema, CustomizationValueSet& inoutValues )
+            {
+                if ( pSchema == nullptr )
+                    return {};
+                CustomizationValueSet upgraded;
+                const expected<void>  result = pSchema->migrate( inoutValues, upgraded );
+                if ( result.has_value() )
+                    inoutValues = std::move( upgraded );
+                return result;
+            }
+
+            /** @brief 선택의 꾸미기 값(몸 · 슬롯마다)을 모두 지금 판으로 올립니다. 하나라도 올리지 못하면 그 까닭입니다(앞에서 올린 묶음은 올린 채다 — 부르는 쪽이 선택을 버린다). */
+            [[nodiscard]] static expected<void> migrateSelection( const AppearanceDatabase& database, AppearanceSelection& inoutSelection )
+            {
+                if ( expected<void> result = migrateInPlace( database.getSchemas().findSchema( inoutSelection._schema ), inoutSelection._customization ); result.has_value() == false )
+                    return result;
+                for ( AppearanceSlotRequest& request : inoutSelection._listSlot )
+                {
+                    const CustomizationSchemaDef* pSchema = findVisualSchema( database, findShownVisual( database, request._itemID, request._visibleVisual ) );
+                    if ( expected<void> result = migrateInPlace( pSchema, request._customization ); result.has_value() == false )
+                        return result;
+                }
+                return {};
+            }
+
+            /** @brief 쓰기 전에 값을 지금 판으로 올립니다. 올리지 못하면(이 빌드보다 새 판) 알리고 빈 값입니다 — 받는 쪽은 기본값을 본다. 원본은 그대로다. */
+            static CustomizationValueSet migrateForWrite( const CustomizationSchemaDef* pSchema, const CustomizationValueSet& values )
+            {
+                CustomizationValueSet upgraded = values;
+                if ( const expected<void> result = migrateInPlace( pSchema, upgraded ); result.has_value() == false )
+                {
+                    SW_LOG_WARNING_ID( "AppearanceSelection.ValuesNotWritten", "Customization values of schema '%#' (version %#) cannot be written: %# - written as defaults", pSchema->_id.c_str(), values.getSchemaVersion(),
+                                       result.error().message() );
+                    return CustomizationValueSet{};
+                }
+                return upgraded;
+            }
+
             [[nodiscard]] static bool readVarCount( BitReader& reader, uint32& outCount )
             {
                 const uint64 count = reader.readVarUint();
@@ -148,11 +180,14 @@ namespace sw
                 }
             }
 
-            /** @brief 스키마가 아는 값만 씁니다(아이템 인스턴스 값 — 정한 값만 싣는다). */
-            static void writeValues( BitWriter& writer, const CustomizationValueSet& values, const CustomizationSchemaDef* pSchema )
+            /** @brief 스키마가 아는 값만 씁니다(아이템 인스턴스 값 — 정한 값만 싣는다). 판 4 부터 앞에 스키마 판을 쓴다. */
+            static void writeValues( BitWriter& writer, const CustomizationValueSet& values, const CustomizationSchemaDef* pSchema, uint32 formatVersion )
             {
+                const CustomizationValueSet upgraded = migrateForWrite( pSchema, values );
+                if ( formatVersion >= 4 )
+                    writer.writeVarUint( upgraded.getSchemaVersion() );
                 vector<const CustomizationValue*> listKnown;
-                for ( const CustomizationValue& value : values.getValues() )
+                for ( const CustomizationValue& value : upgraded.getValues() )
                 {
                     if ( pSchema != nullptr && pSchema->findParameter( value._parameter ) != nullptr )
                         listKnown.push_back( &value );
@@ -168,8 +203,11 @@ namespace sw
              * @brief 선택이 담은 카테고리의 **모든** 매개변수를 씁니다. 정하지 않은 값은 지금 기본값으로 적는다 — 쓴 모습이 그대로 남고, 뒤 판이 기본값을 바꿔도 저장된 캐릭터는
              *        바뀌지 않는다(뒤 판에 새로 생긴 매개변수만 그 판의 기본값을 따른다). 스키마가 모르는 값은 쓰지 않는다.
              */
-            static void writeAllValues( BitWriter& writer, const AppearanceSelection& selection, const CustomizationSchemaDef* pSchema )
+            static void writeAllValues( BitWriter& writer, const AppearanceSelection& selection, const CustomizationSchemaDef* pSchema, uint32 formatVersion )
             {
+                const CustomizationValueSet upgraded = migrateForWrite( pSchema, selection._customization );
+                if ( formatVersion >= 4 )
+                    writer.writeVarUint( pSchema != nullptr ? pSchema->getVersion() : CustomizationValueSet::kFirstSchemaVersion );
                 vector<const CustomizationParamDef*> listParam;
                 if ( pSchema != nullptr )
                 {
@@ -182,13 +220,18 @@ namespace sw
                 writeVarCount( writer, listParam.size() );
                 for ( const CustomizationParamDef* pParam : listParam )
                 {
-                    const CustomizationValue* pGiven = selection._customization.findValue( pParam->_name );
+                    const CustomizationValue* pGiven = upgraded.findValue( pParam->_name );
                     writeValue( writer, *pParam, pGiven != nullptr ? *pGiven : pParam->makeDefaultValue() );
                 }
             }
 
+            /**
+             * @brief 값 묶음 하나를 읽습니다. 값은 쓴 스키마 판 그대로다(판 1 ~ 3 은 스키마 판 1) — 지금 스키마가 모르는 이름 · 종류는 해시 자리 이름(`#1a2b3c4d`)으로 두어
+             *        스키마 판 올림(`CustomizationSchemaDef::migrate` — 자리 이름도 옛 이름으로 맞춘다)이 옮길 수 있게 한다.
+             */
             [[nodiscard]] static bool readValues( BitReader& reader, const CustomizationSchemaDef* pSchema, uint32 formatVersion, CustomizationValueSet& outValues )
             {
+                outValues.setSchemaVersion( formatVersion >= 4 ? reader.readVarUint32() : CustomizationValueSet::kFirstSchemaVersion );
                 uint32 count = 0;
                 if ( readVarCount( reader, count ) == false )
                     return false;
@@ -268,6 +311,21 @@ namespace sw
                 SW_LOG_WARNING_ID( "AppearanceSelection.AppearanceValueNoLonger", "Appearance value '%#' no longer exists - dropped", name.c_str() );
             }
 
+            /** @brief 값을 지금 판으로 올립니다. 올리지 못하면(이 빌드보다 새 판) 값마다 버린 것으로 보고하고 비웁니다 — 펼치기는 실패하지 않는다. */
+            static void migrateOrDrop( const CustomizationSchemaDef* pSchema, CustomizationValueSet& inoutValues, AppearanceSelectionReport& outReport )
+            {
+                const expected<void> result = migrateInPlace( pSchema, inoutValues );
+                if ( result.has_value() )
+                    return;
+                SW_LOG_WARNING_ID( "AppearanceSelection.ValuesNotMigrated", "Customization values of schema '%#' (version %#) cannot be upgraded: %# - dropped", pSchema->_id.c_str(), inoutValues.getSchemaVersion(),
+                                   result.error().message() );
+                for ( const CustomizationValue& value : inoutValues.getValues() )
+                {
+                    addDropped( outReport, value._parameter );
+                }
+                inoutValues.clear();
+            }
+
             static void addClamped( AppearanceSelectionReport& outReport, const hashed_string& name )
             {
                 outReport._listClampedParameter.push_back( name );
@@ -278,6 +336,7 @@ namespace sw
             static void filterItemValues( const CustomizationSchemaDef* pSchema, const CustomizationValueSet& values, CustomizationValueSet& outValues, AppearanceSelectionReport& outReport )
             {
                 outValues.clear();
+                outValues.setSchemaVersion( values.getSchemaVersion() );
                 for ( const CustomizationValue& value : values.getValues() )
                 {
                     const CustomizationParamDef* pParam      = pSchema != nullptr ? pSchema->findParameter( value._parameter ) : nullptr;
@@ -324,6 +383,7 @@ namespace sw
         outPartial._schema                    = selection._schema;
         outPartial._listCategory              = listCategory;
         const CustomizationSchemaDef* pSchema = database.getSchemas().findSchema( selection._schema );
+        outPartial._customization.setSchemaVersion( selection._customization.getSchemaVersion() );
         for ( const CustomizationValue& value : selection._customization.getValues() )
         {
             const CustomizationParamDef* pParam = pSchema != nullptr ? pSchema->findParameter( value._parameter ) : nullptr;
@@ -367,8 +427,12 @@ namespace sw
                 outSpec._face = selection._face;
         }
 
-        const CustomizationSchemaDef* pSchema = database.getSchemas().findSchema( outSpec._schema );
-        for ( const CustomizationValue& value : selection._customization.getValues() )
+        // 옛 판 값(옛 세이브의 몸 꾸미기 · 네트워크로 온 선택)은 지금 판으로 올린 뒤 고른다 — 두 묶음 모두 지금 판이어야 섞을 수 있다.
+        const CustomizationSchemaDef* pSchema         = database.getSchemas().findSchema( outSpec._schema );
+        CustomizationValueSet         selectionValues = selection._customization;
+        Internal::migrateOrDrop( pSchema, selectionValues, outReport );
+        Internal::migrateOrDrop( pSchema, outSpec._customization, outReport );
+        for ( const CustomizationValue& value : selectionValues.getValues() )
         {
             const CustomizationParamDef* pParam = pSchema != nullptr ? pSchema->findParameter( value._parameter ) : nullptr;
             if ( pParam == nullptr )
@@ -444,9 +508,11 @@ namespace sw
                 Internal::addFallback( outReport, request._slot, accepted._visibleVisual, accepted._itemID, AppearanceFallbackReason::MissingVisual );
                 accepted._visibleVisual = hashed_string{};
             }
-            const ItemVisualDef*  pShown = Internal::findShownVisual( database, accepted._itemID, accepted._visibleVisual );
-            CustomizationValueSet filtered;
-            Internal::filterItemValues( Internal::findVisualSchema( database, pShown ), accepted._customization, filtered, outReport );
+            const ItemVisualDef*          pShown      = Internal::findShownVisual( database, accepted._itemID, accepted._visibleVisual );
+            const CustomizationSchemaDef* pItemSchema = Internal::findVisualSchema( database, pShown );
+            CustomizationValueSet         filtered;
+            Internal::migrateOrDrop( pItemSchema, accepted._customization, outReport );
+            Internal::filterItemValues( pItemSchema, accepted._customization, filtered, outReport );
             accepted._customization = filtered;
             *pTarget                = accepted;
         }
@@ -469,9 +535,12 @@ namespace sw
         if ( selection._face.empty() == false )
             outDef._listFace.push_back( selection._face );
 
-        // 꾸미기 값 — 종류는 스키마가 안다(값만으로는 슬라이더와 색을 가를 수 없다).
+        // 꾸미기 값 — 종류는 스키마가 안다(값만으로는 슬라이더와 색을 가를 수 없다). 프리셋은 지금 콘텐츠라 값을 지금 판으로 올려 적는다.
         const CustomizationSchemaDef* pSchema = database.getSchemas().findSchema( selection._schema );
-        for ( const CustomizationValue& value : selection._customization.getValues() )
+        CustomizationValueSet         values  = selection._customization;
+        if ( expected<void> upgraded = AppearanceSelectionInternal::migrateInPlace( pSchema, values ); upgraded.has_value() == false )
+            return upgraded;
+        for ( const CustomizationValue& value : values.getValues() )
         {
             const CustomizationParamDef* pParam = pSchema != nullptr ? pSchema->findParameter( value._parameter ) : nullptr;
             if ( pParam == nullptr )
@@ -547,7 +616,7 @@ namespace sw
         {
             writer.writeUint32( Internal::toHash32( category ) );
         }
-        Internal::writeAllValues( writer, selection, database.getSchemas().findSchema( selection._schema ) );
+        Internal::writeAllValues( writer, selection, database.getSchemas().findSchema( selection._schema ), version );
         Internal::writeVarCount( writer, selection._listSlot.size() );
         for ( const AppearanceSlotRequest& request : selection._listSlot )
         {
@@ -565,7 +634,7 @@ namespace sw
                 writer.writeUint32( Internal::toHash32( part ) );
             }
             const ItemVisualDef* pShown = Internal::findShownVisual( database, request._itemID, request._visibleVisual );
-            Internal::writeValues( writer, request._customization, Internal::findVisualSchema( database, pShown ) );
+            Internal::writeValues( writer, request._customization, Internal::findVisualSchema( database, pShown ), version );
         }
         // 판 3: 피부 층. 격자는 `SkinLayerValue::quantize` 와 같다 — 받는 쪽의 굽기 결과가 보낸 쪽과 같다.
         if ( version < 3 )
@@ -750,6 +819,7 @@ namespace sw
             return unexpected( Error{ ErrorKind::Unsupported, "unsupported share code version" } );
         if ( AppearanceSelection::readSelection( reader, database, outSelection, version ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "truncated share code" } );
-        return {};
+        // 값을 지금 스키마 판으로 올린다 — 이 콘텐츠보다 새 판이면 거절한다(값을 기본값으로 바꿔 담지 않는다. 저장된 코드는 그대로 남는다)
+        return Internal::migrateSelection( database, outSelection );
     }
 } // namespace sw

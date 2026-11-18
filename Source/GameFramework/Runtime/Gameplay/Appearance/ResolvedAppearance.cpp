@@ -768,7 +768,7 @@ namespace sw
                 {
                     CustomizationValueSet normalized;
                     vector<hashed_string> listDropped;
-                    pSchema->normalize( pRequest->_customization, normalized, &listDropped );
+                    pSchema->normalize( migrateValues( *pSchema, pRequest->_customization, inoutEntry._owner, out ), normalized, &listDropped );
                     for ( const hashed_string& dropped : listDropped )
                     {
                         addTrace( out, AppearanceTraceStep::Customization, inoutEntry._owner, "'%#' is not in schema '%#' - dropped", dropped.c_str(), pSchema->_id.c_str() );
@@ -792,6 +792,21 @@ namespace sw
                 }
             }
 
+            /**
+             * @brief 값을 스키마의 지금 판으로 올립니다(옛 세이브 · 옛 공유 코드의 아이템 염색 · 몸 꾸미기). 올리지 못하면(더 새 판 · 견본 밖 번호) 추적에 남기고 빈 값(스키마 기본값)입니다.
+             * @details 해석은 실패하지 않는다(콘텐츠가 바뀌어도 모습은 나와야 한다). 원본 값은 그대로라 새 빌드 · 콘텐츠가 다시 읽으면 그 값이 돌아온다.
+             */
+            static CustomizationValueSet migrateValues( const CustomizationSchemaDef& schema, const CustomizationValueSet& values, const hashed_string& owner, ResolvedAppearance& out )
+            {
+                CustomizationValueSet upgraded;
+                const expected<void>  result = schema.migrate( values, upgraded );
+                if ( result.has_value() )
+                    return upgraded;
+                addTrace( out, AppearanceTraceStep::Customization, owner, "values of schema '%#' version %# cannot be upgraded to version %# (%#) - schema defaults used", schema._id.c_str(), values.getSchemaVersion(),
+                          schema.getVersion(), result.error().message() );
+                return CustomizationValueSet{};
+            }
+
             /** @brief 1 단계입니다. 몸 항목을 넣고 캐릭터 꾸미기를 적용합니다. */
             static void addBodyEntries( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, vector<Entry>& inoutListEntry, ResolvedAppearance& out )
             {
@@ -810,7 +825,7 @@ namespace sw
                     return;
                 CustomizationValueSet normalized;
                 vector<hashed_string> listDropped;
-                pSchema->normalize( spec._customization, normalized, &listDropped );
+                pSchema->normalize( migrateValues( *pSchema, spec._customization, hashed_string{}, out ), normalized, &listDropped );
                 for ( const hashed_string& dropped : listDropped )
                 {
                     addTrace( out, AppearanceTraceStep::Customization, dropped, "'%#' is not in schema '%#' - dropped", dropped.c_str(), pSchema->_id.c_str() );

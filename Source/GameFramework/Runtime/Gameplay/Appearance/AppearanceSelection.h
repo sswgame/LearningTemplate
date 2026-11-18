@@ -89,11 +89,13 @@ namespace sw
         // (플레이어 프리셋 저장소가 이 문자열로 저장한다 — 판을 올리면 옛 판 읽기를 남기고 옛 판 코드 테스트를 더한다).
         // 판 1: 슬라이더가 그때 스키마 범위의 16 비트 단계, 정한 값만. 판 2: 슬라이더 실제 값, 담은 카테고리의 모든 매개변수.
         // 판 3: 판 2 에 슬롯마다 플레이어 숨김 1 비트, 슬롯 뒤에 피부 층 목록(층 id 해시 · 색 · 불투명도 · 배치 · 대칭 · 숨김). @p version 으로 옛 판을 쓰면 그 판에 없는 칸이 빠진다.
-        static constexpr uint32 kShareCodeVersion       = 3;
+        // 판 4: 판 3 의 꾸미기 값 묶음(몸 · 슬롯마다)마다 앞에 그 값을 쓴 스키마 판(가변 길이 정수). 쓸 때는 값을 지금 판으로 올려 쓰고, 읽은 값은 `decode` 가 지금 판으로 올린다
+        // (판 1 ~ 3 의 값은 스키마 판 1 — `CustomizationValueSet::kFirstSchemaVersion`). 스키마가 이 빌드보다 새 판이면 `decode` 가 거절한다.
+        static constexpr uint32 kShareCodeVersion       = 4;
         static constexpr uint32 kOldestShareCodeVersion = 1;
 
         static string encode( const AppearanceSelection& selection, const AppearanceDatabase& database );
-        /** @brief 공유 코드를 해석합니다. 코드가 망가졌거나(base64 오류, 체크섬 불일치) 이 빌드가 모르는 버전이면 그 까닭입니다. */
+        /** @brief 공유 코드를 해석합니다. 코드가 망가졌거나(base64 오류, 체크섬 불일치) 이 빌드가 모르는 버전이거나 꾸미기 값이 이 콘텐츠보다 새 스키마 판이면 그 까닭입니다. 값은 지금 스키마 판으로 올려 담습니다. */
         [[nodiscard]] static expected<void> decode( string_view code, const AppearanceDatabase& database, AppearanceSelection& outSelection );
     };
 } // namespace sw
