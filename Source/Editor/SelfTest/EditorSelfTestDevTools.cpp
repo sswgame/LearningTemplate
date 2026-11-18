@@ -513,9 +513,9 @@ namespace sw::editor
                         (void)context.expect( probe._objectID != 0, "could not create the probe object" );
                         return EditorSelfTestStep::Continue;
                     }
-                    const EditorViewTarget& view        = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
-                    int32                   vertexCount = 0;
-                    const bool              bImage      = view._pTextureID != nullptr && countVerticesAfterGameImage( reinterpret_cast<ImTextureID>( view._pTextureID ), vertexCount );
+                    const EditorViewTargetState& view        = editorContext.getSubsystem<EditorRenderViews>().getUITargetState( EditorViewKind::Game );
+                    int32                        vertexCount = 0;
+                    const bool                   bImage      = view._pTextureID != nullptr && countVerticesAfterGameImage( reinterpret_cast<ImTextureID>( view._pTextureID ), vertexCount );
                     if ( bImage == false && stepIndex < kMaxWaitFrame ) // 이미지가 이 프레임에 그려졌다는 것이 조건이다(프레임 수를 어림하지 않는다)
                         return EditorSelfTestStep::Continue;
                     (void)context.expect( bImage, "the game view image was not drawn while its tab was in front" );
@@ -581,14 +581,16 @@ namespace sw::editor
                 const InputManager&  input         = editor::getSubsystem<InputManager>();
                 if ( pPanel == nullptr )
                     return EditorSelfTestStep::Done;
-                const uint32 stepIndex = context.getStepIndex();
-                const bool   bDrawn    = editorContext.getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game );
+                // 게임이 받은 자리는 마지막으로 넘긴 UI 프레임 값 묶음이다(`EditorUIFrameOutput`) — 그 묶음이 게임 뷰를 그렸고, 그 자리와 런타임 UI · 입력이 같은지 본다.
+                const uint32              stepIndex = context.getStepIndex();
+                const EditorUIFrameOutput frame     = editorContext.getSubsystem<EditorRenderViews>().getPublishedUIFrame();
+                const bool                bDrawn    = frame.wasViewDrawn( EditorViewKind::Game );
                 if ( bDrawn == false && stepIndex < kMaxWaitFrame ) // 그려졌다는 것이 조건이다(프레임 수를 어림하지 않는다)
                     return EditorSelfTestStep::Continue;
                 (void)context.expect( bDrawn, "the game view was not drawn while its tab was in front" );
 
-                const EditorViewTarget& view    = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
-                const ImGuiWindow*      pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( GameViewPanel::kPanelTitle ).c_str() );
+                const EditorUIFrameOutput::ViewMark& view    = frame._arrView[static_cast<uint32>( EditorViewKind::Game )];
+                const ImGuiWindow*                   pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( GameViewPanel::kPanelTitle ).c_str() );
                 if ( context.expect( pWindow != nullptr, "the Game window does not exist" ) == false )
                     return EditorSelfTestStep::Done;
                 // 이미지는 패널 창 안에 놓인다(주 창 클라이언트 픽셀). 주 뷰포트 자리를 빼지 않았거나 패널 밖 값이면 여기서 어긋난다.

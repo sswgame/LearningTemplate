@@ -104,6 +104,11 @@ namespace sw::editor
          *          실행을 프레임 경계로 미뤄 그리는 중인 목록이 명령 뒤에 남지 않게 한다. 글을 치는 중이어도 실행한다(고른 것이다).
          */
         void queueCommand( string_view commandID, const EditorCommandTarget& target );
+        /**
+         * @brief 게임 스레드 쪽 — UI 가 넘긴 키보드 주인(`EditorUIFrameOutput::_bEditorOwnsKeyboard`)을 엔진 키보드 포커스에 입힙니다. 에디터가 가지면 `Tool` 로 두고, 놓으면 앞의 주인으로 돌립니다.
+         * @details 셸이 UI 명령을 적용하는 자리(`ImGuiEditor::applyUICommands`)에서 부른다. UI 는 입력 매니저의 포커스를 바로 바꾸지 않는다. 그동안 다른 주인(콘솔)이 포커스를 바꿨으면 돌리지 않는다.
+         */
+        void applyKeyboardOwner( bool bEditorOwns );
 
         // ------------------------------------------------------------------------------
         // 단축키 글자 · 재배치(단축키 창이 쓴다). 바꾼 것은 곧바로 사용자 재배치 파일에 저장한다
@@ -134,11 +139,11 @@ namespace sw::editor
         /** @brief 포커스 패널을 찾아 그 레이어만 켭니다. 바뀌었을 때만 레이어를 건드립니다. */
         void syncFocusedPanelLayer();
         /**
-         * @brief 에디터 창이 키보드를 가진 동안 엔진 키보드 포커스를 `Tool` 로 두고, 놓으면 앞의 주인으로 돌립니다. 에디터 창이 키보드를 가졌으면 true 입니다.
-         * @details 에디터 창의 키는 아래 `forwardEditorKeyboard` 가 입력 매니저에 넣는다. 그 키를 게임 · 셸 · UI 맵이 보지 않게 막는 것이 이 포커스다.
+         * @brief UI 쪽 — 에디터 창이 키보드를 가졌는지 정해 이번 UI 프레임 값 묶음에 적고 돌려줍니다. 엔진 포커스는 게임 스레드가 `applyKeyboardOwner` 로 입힌다.
+         * @details 에디터 창의 키는 아래 `forwardEditorKeyboard` 가 입력 매니저에 넣는다. 그 키를 게임 · 셸 · UI 맵이 보지 않게 막는 것이 그 포커스다.
          *          Simulate 중에는 게임 뷰가 포커스여도 게임에 키를 주지 않는다(월드만 돈다).
          */
-        bool syncKeyboardOwner();
+        bool decideKeyboardOwner();
         /**
          * @brief 에디터 창(주 창 · 떼어 낸 창, 게임 뷰 밖)이 키보드를 가진 동안 ImGui 가 받은 키 변화를 엔진 입력 매니저에 넣습니다. 놓으면 누른 채 남은 키를 놓습니다.
          * @details 그동안 `ImGuiEditor::processEvent` 는 OS 키 누름을 넘기지 않는다 — 키가 두 길로 들어가지 않고, 떼어 낸 창(보조 뷰포트, OS 메시지가 입력 매니저에 닿지 않는다)과
@@ -168,7 +173,7 @@ namespace sw::editor
         vector<QueuedCommand> _listQueuedCommand;                                  ///< `queueCommand` 가 넣은 것(다음 `processFrame` 이 비운다)
         hashed_string         _focusedPanelLayer;                                  ///< 지금 켠 패널 레이어(없으면 빈 이름)
         bool                  _arrForwardedKey[static_cast<size_t>( Key::Count )]; ///< 에디터 창에서 넣은 눌린 키(키보드를 놓으면 놓는다)
-        InputKeyboardFocus    _focusBeforeTool;                                    ///< `Tool` 로 바꾸기 전의 키보드 주인
+        InputKeyboardFocus    _focusBeforeTool;                                    ///< `Tool` 로 바꾸기 전의 키보드 주인(게임 스레드 — `applyKeyboardOwner`)
         uint32                _syncedMapGeneration;                                ///< 마지막으로 더한 확장 맵 등록 세대
         uint8                 _bToolOwnsKeyboard  : 1;                             ///< 이 서브시스템이 키보드 포커스를 `Tool` 로 둔 중이면 true
         uint8                 _bCommandsSuspended : 1;                             ///< 재배치 창이 키를 받는 중이면 true

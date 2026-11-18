@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/Scene/EditorMultiEdit.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
@@ -44,6 +45,13 @@ namespace sw::editor
     {
         struct InspectorViewModelInternal
         {
+            /** @brief 씬 편집 하나를 게임 스레드에 넘깁니다(`EditorCommandRegistry::requestSceneEdit`). @p edit 는 id · 값 사본만 붙잡는다. */
+            template <typename TEdit>
+            static void requestSceneEdit( const TEdit& edit )
+            {
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create( edit ) );
+            }
+
             static EditorWorkspace& getWorkspace()
             {
                 return editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>();
@@ -154,7 +162,7 @@ namespace sw::editor
             _bFavoritesLoaded = SW_TRUE;
         }
         outState._lockedObjectID     = _lockedObjectID;
-        outState._bSceneEditsAllowed = EditorPlaySession::areSceneEditsAllowed() ? SW_TRUE : SW_FALSE;
+        outState._bSceneEditsAllowed = EditorPlaySession::getUIState().areSceneEditsAllowed() ? SW_TRUE : SW_FALSE;
         outState._listComponent.clear();
         outState._listFavorite.clear();
         outState._listDataLayer.clear();
@@ -312,52 +320,66 @@ namespace sw::editor
         InspectorViewModelInternal::getWorkspace().setScrollToComponentID( 0 );
     }
 
+    // 아래 씬 쓰기는 게임 스레드에 넘긴다(`EditorCommandRegistry::requestSceneEdit`) — 이 UI 프레임 뒤 게임 단계가 거래 하나로 실행한다. 람다는 id · 값 사본만 붙잡는다.
     void InspectorViewModel::renameObject( uint64 objectID, string_view name )
     {
-        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        GameObject*       pObj = InspectorViewModelInternal::findMainObject( objectID );
-        if ( pObj == nullptr || name.empty() )
+        if ( name.empty() )
             return;
         const hashed_string newName{ name };
-        if ( pObj->getName().isEqual( newName, NameCase::CaseSensitive ) )
-            return;
-        InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Rename GameObject", [pObj, newName]()
-        { pObj->setName( newName ); } );
+        InspectorViewModelInternal::requestSceneEdit( [objectID, newName]( EditorTransaction& transaction )
+        {
+            GameObject* pObj = InspectorViewModelInternal::findMainObject( objectID );
+            if ( pObj == nullptr || pObj->getName().isEqual( newName, NameCase::CaseSensitive ) )
+                return;
+            InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Rename GameObject", [pObj, newName]()
+            { pObj->setName( newName ); } );
+        } );
     }
 
     void InspectorViewModel::setObjectActive( uint64 objectID, bool bActive )
     {
-        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        GameObject*       pObj = InspectorViewModelInternal::findMainObject( objectID );
-        if ( pObj != nullptr )
-            EditorSceneCommands::setActive( transaction, pObj, bActive );
+        InspectorViewModelInternal::requestSceneEdit( [objectID, bActive]( EditorTransaction& transaction )
+        {
+            GameObject* pObj = InspectorViewModelInternal::findMainObject( objectID );
+            if ( pObj != nullptr )
+                EditorSceneCommands::setActive( transaction, pObj, bActive );
+        } );
     }
 
     void InspectorViewModel::detachObjectFromParent( uint64 objectID )
     {
-        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        GameObject*       pObj = InspectorViewModelInternal::findMainObject( objectID );
-        if ( pObj != nullptr )
-            InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Unparent GameObject", [pObj]()
-            { pObj->detachFromParent(); } );
+        InspectorViewModelInternal::requestSceneEdit( [objectID]( EditorTransaction& transaction )
+        {
+            GameObject* pObj = InspectorViewModelInternal::findMainObject( objectID );
+            if ( pObj != nullptr )
+                InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Unparent GameObject", [pObj]()
+                { pObj->detachFromParent(); } );
+        } );
     }
 
     void InspectorViewModel::setComponentActive( uint64 objectID, uint64 componentID, bool bActive )
     {
-        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        GameObject*       pObj  = PropertyGridModel::findSceneObject( _shownScope, objectID );
-        Component*        pComp = pObj != nullptr ? pObj->findComponentByID( componentID ) : nullptr;
-        if ( pComp != nullptr )
-            InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Toggle Component Active", [pComp, bActive]()
-            { pComp->setActive( bActive ); } );
+        const EditorPropertyGridScope scope = _shownScope;
+        InspectorViewModelInternal::requestSceneEdit( [scope, objectID, componentID, bActive]( EditorTransaction& transaction )
+        {
+            GameObject* pObj  = PropertyGridModel::findSceneObject( scope, objectID );
+            Component*  pComp = pObj != nullptr ? pObj->findComponentByID( componentID ) : nullptr;
+            if ( pComp != nullptr )
+                InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Toggle Component Active", [pComp, bActive]()
+                { pComp->setActive( bActive ); } );
+        } );
     }
 
     void InspectorViewModel::removeComponent( uint64 objectID, uint64 componentID )
     {
-        GameObject* pObj  = PropertyGridModel::findSceneObject( _shownScope, objectID );
-        Component*  pComp = pObj != nullptr ? pObj->findComponentByID( componentID ) : nullptr;
-        if ( pComp != nullptr )
-            EditorSceneObjectCommands::removeComponent( pObj, pComp ); // 메뉴의 Remove Component 와 같은 한 곳
+        const EditorPropertyGridScope scope = _shownScope;
+        InspectorViewModelInternal::requestSceneEdit( [scope, objectID, componentID]( EditorTransaction& /*transaction*/ )
+        {
+            GameObject* pObj  = PropertyGridModel::findSceneObject( scope, objectID );
+            Component*  pComp = pObj != nullptr ? pObj->findComponentByID( componentID ) : nullptr;
+            if ( pComp != nullptr )
+                EditorSceneObjectCommands::removeComponent( pObj, pComp ); // 메뉴의 Remove Component 와 같은 한 곳
+        } );
     }
 
     void InspectorViewModel::setMultiActive( bool bActive )
@@ -505,10 +527,17 @@ namespace sw::editor
 
     bool InspectorViewModel::addComponent( const hashed_string& typeName )
     {
-        GameObject* pObj = PropertyGridModel::findSceneObject( _shownScope, _shownObjectID );
-        if ( pObj == nullptr )
+        if ( PropertyGridModel::findSceneObject( _shownScope, _shownObjectID ) == nullptr )
             return false;
-        EditorTransaction transaction; // 목록에서 고른 끝 — 씬을 바꾸는 여기서 거래를 연다
-        return EditorSceneCommands::addComponent( transaction, pObj, typeName ) != nullptr;
+        // 더하기는 게임 스레드가 한다 — 여기서는 대상이 있으면 요청을 남기고 true 다. 더하지 못한 이유는 그때 명령이 알린다.
+        const EditorPropertyGridScope scope    = _shownScope;
+        const uint64                  objectID = _shownObjectID;
+        InspectorViewModelInternal::requestSceneEdit( [scope, objectID, typeName]( EditorTransaction& transaction )
+        {
+            GameObject* pObj = PropertyGridModel::findSceneObject( scope, objectID );
+            if ( pObj != nullptr )
+                (void)EditorSceneCommands::addComponent( transaction, pObj, typeName );
+        } );
+        return true;
     }
 } // namespace sw::editor

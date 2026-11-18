@@ -23,12 +23,24 @@ namespace sw::editor
     enum class EditorUICommandKind : uint8
     {
         FitViewTarget = 0, ///< 뷰 렌더 타깃을 `_width` x `_height` 로 맞춘다(`EditorRenderViews::ensureViewTargetSize`)
+        FitPreviewTarget,  ///< 미리보기 타깃 `_targetID` 를 `_width` x `_height` 로 맞춘다 — 없으면 만든다(`EditorRenderViews::ensurePreviewTargetSize`)
+        FreePreviewTarget, ///< 미리보기 타깃 `_targetID` 를 놓는다(`EditorRenderViews::freePreviewTarget`)
         StartPlay,         ///< 플레이어가 조종하는 재생을 시작한다(`_bStartAtCamera` 면 에디터 카메라 위치에서, 멈춤에서 시작할 때만)
         StartSimulate,     ///< 월드만 도는 재생을 시작한다
         Pause,
         Resume, ///< 멈춘 재생을 다시 돌린다(Paused → Playing)
         Step,   ///< `_stepFrameCount` 프레임 진행한다
         Stop,   ///< 재생을 멈추고 선택을 이름으로 편집 씬의 오브젝트에 다시 잇는다
+        /**
+         * F8 Eject/Possess — 조종 중이면 Simulate 로, Eject 한 세션이면 다시 조종으로(`EditorPlayCommands::toggleEject` 가 보낸다).
+         * 세션 종류와 `_bEjected` 를 한 명령이 함께 바꾼다 — 따로 보내면 그 사이 틱이 반쯤 바뀐 상태를 본다. 배치 · 패널 포커스는 UI 가 그 전이를 보고 정한다.
+         */
+        ToggleEject,
+        /**
+         * Keep Simulation Changes — 메인 씬에서 고른 오브젝트의 지금 상태를 Stop 뒤에도 남기게 적는다(`EditorPlaySession::keepObjectState`). 적었으면 알림을 띄운다.
+         * 고른 오브젝트는 적용할 때(게임 틱 시작) 읽는다 — UI 가 보낸 프레임과 적용 사이에 씬이 틱하지 않는다(UI 프레임 뒤 · 씬 틱 앞).
+         */
+        KeepSelectedChanges,
         Count
     };
 
@@ -41,14 +53,20 @@ namespace sw::editor
         uint32              _width{ 0 };
         uint32              _height{ 0 };
         uint32              _stepFrameCount{ 0 };
+        uint32              _targetID{ 0 }; ///< 미리보기 타깃 id(`EditorRenderViews::allocatePreviewTarget`)
 
         static EditorUICommand makeFitViewTarget( EditorViewKind view, uint32 width, uint32 height );
+        static EditorUICommand makeFitPreviewTarget( uint32 targetID, uint32 width, uint32 height );
+        static EditorUICommand makeFreePreviewTarget( uint32 targetID );
         static EditorUICommand makeStart( bool bSimulate, bool bStartAtCamera );
         static EditorUICommand makeStep( uint32 frameCount );
-        /** @brief 칸이 없는 종류(Pause · Resume · Stop)입니다. */
+        /** @brief 칸이 없는 종류(Pause · Resume · Stop · ToggleEject · KeepSelectedChanges)입니다. */
         static EditorUICommand make( EditorUICommandKind kind );
 
-        /** @brief 이 명령을 엔진 상태에 적용합니다 — 게임 스레드만 부른다(`EditorUICommandQueue::applyDue`). */
+        /**
+         * @brief 이 명령을 엔진 상태에 적용합니다 — 게임 스레드만 부른다(`EditorUICommandQueue::applyDue`).
+         * @details 플레이 세션의 게임 스레드 열쇠(`EditorPlaySessionWriteKey`)를 만드는 입구다 — UI 쪽은 열쇠가 없어 세션을 바로 바꾸지 못하고 명령을 보낸다.
+         */
         void apply() const;
     };
 

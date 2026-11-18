@@ -10,6 +10,7 @@
  *          결과 파일은 씬 파일 옆 `<씬 이름>.<오브젝트 이름(소문자)>.reflprobe` 이고 프로브의 `_probeDataPath` 에 적는다 — 씬을 저장해야 경로가 남으므로 씬을 고친 것으로 표시한다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -44,12 +45,12 @@ namespace sw::editor
         EditorReflectionProbeBakeSession( const EditorReflectionProbeBakeSession& )            = delete;
         EditorReflectionProbeBakeSession& operator=( const EditorReflectionProbeBakeSession& ) = delete;
 
-        /** @brief 활성 씬의 반사 프로브(선택한 오브젝트의 프로브, 없으면 모든 프로브)를 베이크 시작합니다. 프로브가 없으면 바로 끝납니다. 베이크하는 중이면 아무것도 하지 않습니다. */
-        void start();
+        /** @brief 활성 씬의 반사 프로브(선택한 오브젝트의 프로브, 없으면 모든 프로브)를 베이크 시작하라고 요청합니다(UI 쪽 — 다음 게임 단계가 시작한다). 프로브가 없으면 바로 끝납니다. 베이크하는 중이면 아무것도 하지 않습니다. */
+        void requestStart() { _startRequested.store( true, std::memory_order_release ); }
         /** @brief 베이크를 멈춥니다. 다 구운 프로브는 남고 나머지는 버립니다. 알림에 @p pReason 을 적습니다. */
         void cancel( const utf8* pReason );
-        /** @brief 이번 프레임의 몫을 베이크합니다(프레임 단계가 부른다). */
-        void update();
+        /** @brief 게임 스레드 단계 — 시작 요청이 있으면 시작하고 이번 프레임의 몫을 베이크합니다(`SW_EDITOR_GAME_STEP`). */
+        void update( EditorPlaySessionWriteKey key );
 
         bool isRunning() const { return _run.isRunning(); }
         /** @brief 이번 베이크의 프로브 수입니다. */
@@ -60,6 +61,9 @@ namespace sw::editor
         uint32 getFinishedRunCount( uint64 sceneGeneration ) const { return _run.getFinishedRunCount( sceneGeneration ); }
 
     private:
+        /** @brief 활성 씬의 대상을 모아 베이크를 시작합니다(게임 스레드 — 편집 잠금을 건다). 대상이 없으면 바로 끝납니다. 베이크하는 중이면 아무것도 하지 않습니다. */
+        void start( EditorPlaySessionWriteKey key );
+
         /** @brief 다음 프로브 하나를 GPU 로 찍고 접기 · 쓰기 잡을 냅니다. 실패하면 이유를 남깁니다(베이크는 다음 프로브로 계속한다). */
         void captureNextProbe( Scene& scene );
         /** @brief 끝난 접기 · 쓰기 잡의 결과를 프로브에 넘깁니다. 실패했거나 프로브가 사라졌으면 이유를 남깁니다. */
@@ -75,6 +79,7 @@ namespace sw::editor
         EditorBakeRunState                         _run;        ///< 돌고 있는가 · 편집 잠금 · 멈출 이유 · 끝난 횟수 (라이트 프로브 세션과 같은 틀)
         uint32                                     _nextProbeIndex;
         uint32                                     _bakedCount;
+        atomic<bool>                               _startRequested;       ///< UI 가 남긴 시작 요청(`requestStart`) — 게임 단계가 받는다
         uint8                                      _bDeferFirstSlice : 1; ///< 시작한 프레임의 `update` 는 굽지 않고 넘긴다(상태줄이 먼저 그려지게)
     };
 } // namespace sw::editor

@@ -6,6 +6,8 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+
 namespace sw::editor
 {
     /**
@@ -34,14 +36,14 @@ namespace sw::editor
         static constexpr int64 kFrameBudgetMilliseconds = 8;
 
         EditorBakeRunState();
-        /** @brief 돌던 중에 사라지면 편집 잠금을 풉니다. */
+        /** @brief 돌던 중에 사라지면 편집 잠금을 풉니다(`_hold` 가 사라지며 푼다). */
         ~EditorBakeRunState();
 
         EditorBakeRunState( const EditorBakeRunState& )            = delete;
         EditorBakeRunState& operator=( const EditorBakeRunState& ) = delete;
 
-        /** @brief 씬 세대 @p sceneGeneration 의 베이크를 시작합니다. 편집 잠금을 겁니다. 돌고 있지 않을 때만 부릅니다. */
-        void begin( uint64 sceneGeneration );
+        /** @brief 씬 세대 @p sceneGeneration 의 베이크를 시작합니다. 편집 잠금을 겁니다(게임 스레드 — 열쇠를 받는다). 돌고 있지 않을 때만 부릅니다. */
+        void begin( EditorPlaySessionWriteKey key, uint64 sceneGeneration );
         /** @brief 돌던 베이크를 끝냅니다(취소 포함). 편집 잠금을 풀고 끝난 횟수를 셉니다. 돌고 있을 때만 부릅니다. */
         void end();
         /**
@@ -58,10 +60,11 @@ namespace sw::editor
         uint32 getFinishedRunCount( uint64 sceneGeneration ) const { return sceneGeneration == _finishedRunSceneGeneration ? _finishedRunCount : 0u; }
 
     private:
-        uint64 _sceneGeneration;            ///< 시작할 때의 씬 세대 — 바뀌면 멈춘다
-        uint64 _finishedRunSceneGeneration; ///< `_finishedRunCount` 를 센 씬 세대
-        uint32 _heldEditCount;              ///< 시작할 때의 `EditorPlaySession::getHeldSceneEditCount` — 바뀌면(잠금을 지나친 편집) 멈춘다
-        uint32 _finishedRunCount;
-        uint8  _bRunning : 1;
+        uint64              _sceneGeneration;            ///< 시작할 때의 씬 세대 — 바뀌면 멈춘다
+        uint64              _finishedRunSceneGeneration; ///< `_finishedRunCount` 를 센 씬 세대
+        uint32              _heldEditCount;              ///< 시작할 때의 `EditorPlaySession::getHeldSceneEditCount` — 바뀌면(잠금을 지나친 편집) 멈춘다
+        uint32              _finishedRunCount;
+        EditorSceneEditHold _hold; ///< 도는 동안 쥔 씬 편집 막기 — `end` 가 놓는다
+        uint8               _bRunning : 1;
     };
 } // namespace sw::editor

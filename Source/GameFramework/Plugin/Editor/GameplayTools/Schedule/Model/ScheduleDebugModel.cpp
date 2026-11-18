@@ -28,7 +28,7 @@ namespace sw::editor
         outState._explanation.clear();
         outState._rawTimeline.clear();
         outState._selectedNPC.reset();
-        outState._bPlayStopped = EditorPlaySession::isStopped() ? SW_TRUE : SW_FALSE;
+        outState._bPlayStopped = EditorPlaySession::getUIState().isStopped() ? SW_TRUE : SW_FALSE;
         _published             = {};
 
         vector<const ScheduleSystem*> listSystem;

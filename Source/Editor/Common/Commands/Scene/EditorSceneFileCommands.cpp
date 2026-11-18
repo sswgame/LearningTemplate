@@ -13,6 +13,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -351,4 +352,23 @@ namespace sw::editor
     SW_DEV_COMMAND( OpenScene, "scene.open", "scene.open <path>",
                     "Open a scene file without the unsaved-changes prompt (a resource id, or a path relative to the working folder)",
                     &EditorSceneFileConsoleInternal::runOpenScene );
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct EditorSceneSessionStepInternal
+        {
+            /** @brief 게임 단계 — UI(메뉴 · 대화상자 · 콘텐츠 브라우저)가 남긴 씬 열기 요청을 엽니다. 씬을 여는 일(`SceneManager`)은 게임 스레드가 한다. */
+            static void run( EditorContext& context, EditorPlaySessionWriteKey /*key*/ )
+            {
+                string scenePath;
+                if ( context.getSubsystem<EditorWorkspace>().consumeLoadScene( scenePath ) )
+                    (void)EditorSceneFileCommands::tryOpenScene( scenePath ); // 실패는 tryOpenScene 이 알린다
+            }
+        };
+    } // namespace
+
+    SW_EDITOR_GAME_STEP( SceneSession, "sceneSession", EditorGameStepOrder::kSceneSession, &EditorSceneSessionStepInternal::run );
 } // namespace sw::editor

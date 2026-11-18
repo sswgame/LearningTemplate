@@ -602,13 +602,13 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
 
-                const EditorViewTarget& view         = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
-                const ImTextureID       textureID    = reinterpret_cast<ImTextureID>( view._pTextureID );
-                const ImGuiContext&     imguiContext = *ImGui::GetCurrentContext();
-                int32                   imageCommandIndex{ -1 };
-                ImVec4                  canvasRect{};
-                const ImDrawList*       pCanvasDrawList{ nullptr };
-                const ImGuiWindow*      pSceneViewWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( kSceneViewTitle ).c_str() );
+                const EditorViewTargetState& view         = editorContext.getSubsystem<EditorRenderViews>().getUITargetState( EditorViewKind::Scene );
+                const ImTextureID            textureID    = reinterpret_cast<ImTextureID>( view._pTextureID );
+                const ImGuiContext&          imguiContext = *ImGui::GetCurrentContext();
+                int32                        imageCommandIndex{ -1 };
+                ImVec4                       canvasRect{};
+                const ImDrawList*            pCanvasDrawList{ nullptr };
+                const ImGuiWindow*           pSceneViewWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( kSceneViewTitle ).c_str() );
                 for ( const ImGuiWindow* pWindow : imguiContext.Windows )
                 {
                     const bool bInSceneView          = pWindow != nullptr && pSceneViewWindow != nullptr && pWindow->RootWindow == pSceneViewWindow && pWindow->LastFrameActive == imguiContext.FrameCount;

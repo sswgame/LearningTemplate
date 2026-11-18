@@ -19,6 +19,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/InspectorPanel.h"
 #include "Editor/Panels/Profiler/ProfilerPanel.h"
@@ -750,6 +751,13 @@ namespace sw::editor
             // 해제한 ImGui 텍스처와 렌더 타깃은 그것을 그렸을 수 있는 마지막 프레임의 GPU 작업이 끝난 뒤에 해제해야 한다. 어기면 Vulkan 검증 레이어가
             // "사용 중인 디스크립터 세트 해제" 를 Error 로 남기고, 시나리오 로그 게이트가 그 줄로 진다(`selftests.scenario.xml` 이 Vulkan 에서도 돈다).
             // ------------------------------------------------------------------------------
+            /** @brief 앞 단계가 보낸 씬 뷰 크기입니다(명령은 다음 UI 프레임의 타깃 값에 보인다). */
+            struct SentSize
+            {
+                uint32 _width{ 0 };
+                uint32 _height{ 0 };
+            };
+
             static EditorSelfTestStep runSceneViewResizeEveryFrame( EditorSelfTestContext& context )
             {
                 constexpr const utf8* kSceneViewPanelID = SceneViewPanel::kPanelID;
@@ -771,14 +779,18 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 }
 
-                // 패널과 같은 순서로 크기를 맞춘 뒤 그 프레임의 텍스처를 그린다. 이 프레임에서 해제한 텍스처는 앞 프레임의 스냅샷만 그렸다.
+                // 패널과 같은 길로 크기를 보낸 뒤(명령 — 게임 스레드가 이 UI 프레임 뒤에 적용한다) 이 프레임이 받은 텍스처를 그린다. 이 프레임에 놓인 텍스처는 앞 프레임의 스냅샷만 그렸다.
                 const uint32 width  = 256u + ( stepIndex % 2u ) * 64u;
                 const uint32 height = 144u + ( stepIndex % 2u ) * 36u;
-                editorContext.getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Scene, width, height );
-                const EditorViewTarget& view = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
-                // 렌더 텍스처는 엔진이 렌더 쪽에서 만든다 — 요청한 크기는 바로 반영되고, 텍스처는 올라간 프레임부터 그린다(언리얼 `ResizeTarget` 과 같다).
+                EditorUICommandQueue::postToEditor( EditorUICommand::makeFitViewTarget( EditorViewKind::Scene, width, height ) );
+                const EditorViewTargetState& view = editorContext.getSubsystem<EditorRenderViews>().getUITargetState( EditorViewKind::Scene );
+                // 렌더 텍스처는 엔진이 렌더 쪽에서 만든다 — 요청한 크기는 다음 UI 프레임의 타깃 값에 보이고, 텍스처는 올라간 프레임부터 그린다(언리얼 `ResizeTarget` 과 같다).
                 // 이 테스트가 지키는 것은 그리던 텍스처를 매 프레임 놓아도 안전하다는 것이다(놓기는 그리기 해제 큐가 그 프레임 뒤로 미룬다).
-                (void)context.expect( view.getRequestedWidth() == width && view.getRequestedHeight() == height, "the scene view target was not requested at the requested size" );
+                SentSize& sent = context.getTestState<SentSize>();
+                if ( sent._width != 0 )
+                    (void)context.expect( view._requestedWidth == sent._width && view._requestedHeight == sent._height, "the scene view target was not requested at the size sent last frame" );
+                sent._width  = width;
+                sent._height = height;
 
                 beginProbeWindow();
                 if ( view._pTextureID != nullptr )

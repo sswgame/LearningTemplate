@@ -278,15 +278,52 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    bool EditorPlayStateSnapshot::areSceneEditsAllowed() const
+    {
+        return EditorSessionPolicy::areSceneEditsAllowed( isStopped(), _bSceneEditsHeld == SW_TRUE );
+    }
+
+    EditorPlayStateSnapshot EditorPlaySession::getUIState()
+    {
+        const EditorPlaySession* const pSession = findSubsystem<EditorPlaySession>();
+        return pSession != nullptr ? pSession->_uiState : EditorPlayStateSnapshot{};
+    }
+
+    void EditorPlaySession::publishState( EditorPlaySessionWriteKey /*key*/ )
+    {
+        EditorPlaySession* const pSession = findSubsystem<EditorPlaySession>();
+        if ( pSession == nullptr )
+            return;
+        const PlaySessionData&  data = pSession->_data;
+        EditorPlayStateSnapshot state;
+        state._state           = data._state;
+        state._bSimulate       = data._bSimulate == SW_TRUE ? SW_TRUE : SW_FALSE;
+        state._bPendingStep    = data._pendingStepCount > 0 ? SW_TRUE : SW_FALSE;
+        state._bEjected        = data._bEjected == SW_TRUE ? SW_TRUE : SW_FALSE;
+        state._bPlayQueued     = data._bStartQueued != SW_FALSE ? SW_TRUE : SW_FALSE;
+        state._bSceneEditsHeld = data._sceneEditHoldCount > 0 ? SW_TRUE : SW_FALSE;
+        ScopedLock<mutex> lock{ pSession->_stateMutex };
+        pSession->_publishedState = state;
+    }
+
+    void EditorPlaySession::beginUIFrame()
+    {
+        EditorPlaySession* const pSession = findSubsystem<EditorPlaySession>();
+        if ( pSession == nullptr )
+            return;
+        ScopedLock<mutex> lock{ pSession->_stateMutex };
+        pSession->_uiState = pSession->_publishedState;
+    }
+
     PlaySessionState EditorPlaySession::getState()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr ? pData->_state : PlaySessionState::Stopped;
     }
 
     bool EditorPlaySession::isPlaying()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         if ( pData == nullptr )
             return false;
         if ( pData->_pendingStepCount > 0 )
@@ -311,7 +348,7 @@ namespace sw::editor
 
     bool EditorPlaySession::refuseSceneEdit( const utf8* pAction )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( areSceneEditsAllowed() )
         {
             if ( pData != nullptr )
@@ -334,16 +371,26 @@ namespace sw::editor
         return true;
     }
 
-    void EditorPlaySession::holdSceneEdits()
+    void EditorSceneEditHold::release()
     {
-        PlaySessionData* pData = findData();
-        if ( pData != nullptr )
-            ++pData->_sceneEditHoldCount;
+        if ( _bHeld == SW_FALSE )
+            return;
+        _bHeld = SW_FALSE;
+        EditorPlaySession::releaseSceneEditHold();
     }
 
-    void EditorPlaySession::releaseSceneEdits()
+    EditorSceneEditHold EditorPlaySession::holdSceneEdits( EditorPlaySessionWriteKey /*key*/ )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
+        if ( pData == nullptr )
+            return EditorSceneEditHold{};
+        ++pData->_sceneEditHoldCount;
+        return EditorSceneEditHold{ true };
+    }
+
+    void EditorPlaySession::releaseSceneEditHold()
+    {
+        PlaySessionData* pData = findDataInternal();
         SW_ASSERT( pData == nullptr || pData->_sceneEditHoldCount > 0 );
         if ( pData != nullptr && pData->_sceneEditHoldCount > 0 )
             --pData->_sceneEditHoldCount;
@@ -351,38 +398,44 @@ namespace sw::editor
 
     bool EditorPlaySession::areSceneEditsHeld()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr && pData->_sceneEditHoldCount > 0;
     }
 
     void EditorPlaySession::recordSceneEditWhileHeld()
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             ++pData->_heldSceneEditCount;
     }
 
     uint32 EditorPlaySession::getHeldSceneEditCount()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr ? pData->_heldSceneEditCount : 0u;
     }
 
     bool EditorPlaySession::hasPendingStep()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr && pData->_pendingStepCount > 0;
     }
 
     bool EditorPlaySession::isSimulating()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr && pData->_state != PlaySessionState::Stopped && pData->_bSimulate == SW_TRUE;
+    }
+
+    bool EditorPlaySession::isEjected()
+    {
+        const PlaySessionData* pData = findDataInternal();
+        return pData != nullptr && pData->_state != PlaySessionState::Stopped && pData->_bEjected == SW_TRUE;
     }
 
     bool EditorPlaySession::isPlayerActive()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr && isPlayerActive( *pData );
     }
 
@@ -393,16 +446,16 @@ namespace sw::editor
         return data._pendingStepCount > 0 || data._state == PlaySessionState::Playing;
     }
 
-    void EditorPlaySession::play()
+    void EditorPlaySession::play( EditorPlaySessionWriteKey /*key*/ )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             startSession( *pData, false );
     }
 
-    void EditorPlaySession::simulate()
+    void EditorPlaySession::simulate( EditorPlaySessionWriteKey /*key*/ )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             startSession( *pData, true );
     }
@@ -414,7 +467,12 @@ namespace sw::editor
         setState( data, PlaySessionState::Playing );
     }
 
-    PlaySessionData* EditorPlaySession::findData()
+    PlaySessionData* EditorPlaySession::findData( EditorPlaySessionWriteKey /*key*/ )
+    {
+        return findDataInternal();
+    }
+
+    PlaySessionData* EditorPlaySession::findDataInternal()
     {
         // 선택 조회(필수 아님): 에디터 셸이 아직 만들어지지 않았거나 이미 종료된 시점에도 정적 함수가 불릴 수 있다(패널 정리 경로). 그때는 "정지" 로 응답한다.
         EditorPlaySession* pSession = findSubsystem<EditorPlaySession>();
@@ -457,13 +515,13 @@ namespace sw::editor
 
     bool EditorPlaySession::isPlayQueued()
     {
-        const PlaySessionData* pData = findData();
+        const PlaySessionData* pData = findDataInternal();
         return pData != nullptr && pData->_bStartQueued != SW_FALSE;
     }
 
-    void EditorPlaySession::stepFrames( uint32 frameCount )
+    void EditorPlaySession::stepFrames( EditorPlaySessionWriteKey /*key*/, uint32 frameCount )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             stepFrames( *pData, frameCount );
     }
@@ -481,9 +539,9 @@ namespace sw::editor
         data._pendingStepCount = frameCount < kMaxStepFrameCount ? frameCount : kMaxStepFrameCount;
     }
 
-    void EditorPlaySession::consumePendingStep()
+    void EditorPlaySession::consumePendingStep( EditorPlaySessionWriteKey /*key*/ )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             consumePendingStep( *pData );
     }
@@ -497,16 +555,16 @@ namespace sw::editor
             data._state = PlaySessionState::Paused;
     }
 
-    void EditorPlaySession::setState( PlaySessionState state )
+    void EditorPlaySession::setState( EditorPlaySessionWriteKey /*key*/, PlaySessionState state )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             setState( *pData, state );
     }
 
-    void EditorPlaySession::update()
+    void EditorPlaySession::update( EditorPlaySessionWriteKey /*key*/ )
     {
-        PlaySessionData* pData = findData();
+        PlaySessionData* pData = findDataInternal();
         if ( pData != nullptr )
             update( *pData );
     }
@@ -581,6 +639,7 @@ namespace sw::editor
         else if ( state == PlaySessionState::Stopped )
         {
             pData->_bStartMovePending = SW_FALSE;
+            pData->_bEjected          = SW_FALSE; // 다음 세션은 조종으로 시작한다
             EditorPlaySessionInternal::setWorldPlaying( false );
             restoreSnapshot( *pData );
             // 스냅샷이 오브젝트를 원래 id 로 되돌린 뒤이므로 맡긴 명령의 대상(id)이 다시 맞는다.

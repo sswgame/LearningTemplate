@@ -43,7 +43,7 @@ namespace sw::editor
         /** @brief 패널 @p panelID 를 띄우는 요청을 다음 프레임으로 넘깁니다(도킹을 푸는 일이 다음 NewFrame 에 끝난다). */
         static void requestFloatPanelByID( string_view panelID );
 
-        /** @brief 씬 세대가 바뀐 뒤를 맞추고, 쌓인 씬 열기 요청을 엽니다(실패는 씬 명령이 알린다). */
+        /** @brief 씬 세대가 바뀐 뒤를 맞춥니다(UI 쪽 선택 · 기록을 버린다). 쌓인 씬 열기 요청은 게임 단계가 연다(`EditorGameStepOrder::kSceneSession`). */
         static void processSceneRequests();
         /** @brief 미저장 확인을 기다리는 씬 동작입니다. 없으면 `None` 입니다. */
         [[nodiscard]] static EditorPendingSceneAction getPendingSceneAction();

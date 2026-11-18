@@ -11,6 +11,7 @@
 #include "Editor/Common/Commands/EditorCommandTarget.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
@@ -189,6 +190,45 @@ namespace sw::editor
         return true;
     }
 
+    bool EditorCommandRegistry::request( string_view commandID, const EditorCommandTarget& target )
+    {
+        const EditorCommandDesc* pDesc = find( commandID );
+        if ( pDesc == nullptr || isEnabled( *pDesc, target ) == false )
+            return false;
+        if ( EditorCommandTargetUtil::isTransacted( pDesc->_edit ) == false )
+            return executeDesc( *pDesc, target ); // 씬을 바꾸지 않는 명령(창 · 저장 · 플레이 요청)은 UI 쪽에서 바로 — 씬은 명령 안에서 다시 명령으로 넘긴다
+        ScopedLock<mutex> lock{ _requestMutex };
+        _listRequested.push_back( RequestedCommand{ string( commandID ), target, {} } );
+        return true;
+    }
+
+    void EditorCommandRegistry::requestSceneEdit( const Delegate<void( EditorTransaction& )>& edit )
+    {
+        if ( edit.isBound() == false )
+            return;
+        ScopedLock<mutex> lock{ _requestMutex };
+        _listRequested.push_back( RequestedCommand{ string{}, EditorCommandTarget{}, edit } );
+    }
+
+    void EditorCommandRegistry::runRequestedSceneCommands()
+    {
+        {
+            ScopedLock<mutex> lock{ _requestMutex };
+            _listRunning.swap( _listRequested );
+        }
+        for ( const RequestedCommand& requested : _listRunning )
+        {
+            if ( requested._commandID.empty() )
+            {
+                EditorTransaction transaction; // 한 편집이 되돌리기 한 단계다(명령 실행과 같다)
+                requested._edit( transaction );
+                continue;
+            }
+            (void)execute( requested._commandID, requested._target ); // 그 사이 꺼졌으면 아무 일도 없다(메뉴의 회색과 같은 조건)
+        }
+        _listRunning.clear();
+    }
+
     void EditorCommandRegistry::collectContextMenuItems( EditorCommandTargetKind kind, vector<EditorMenuItem>& outListItem ) const
     {
         outListItem.clear();
@@ -356,4 +396,18 @@ namespace sw::editor
 
     // 이 종류의 등록 목록 — EditorModule 이미지에 하나(확장 DLL 의 등록자도 내보낸 이 함수로 오른다).
     SW_DEFINE_EDITOR_EXTENSION_KIND( EditorCommandRegistration )
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct EditorSceneCommandStepInternal
+        {
+            /** @brief 게임 단계 — UI 가 넘긴 씬 편집 명령을 실행합니다(거래 · 되돌리기 기록은 게임 스레드가 연다). */
+            static void run( EditorContext& context, EditorPlaySessionWriteKey /*key*/ ) { context.getSubsystem<EditorCommandRegistry>().runRequestedSceneCommands(); }
+        };
+    } // namespace
+
+    SW_EDITOR_GAME_STEP( SceneCommands, "sceneCommands", EditorGameStepOrder::kSceneCommands, &EditorSceneCommandStepInternal::run );
 } // namespace sw::editor

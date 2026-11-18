@@ -201,7 +201,7 @@ namespace sw::editor
             case EditorSearchSource::Command:
             {
                 // 팔레트는 대상 없이 실행한다 — 꺼진 명령이면 아무 일도 없다
-                (void)editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>().execute( item._key, EditorCommandTarget::none() );
+                (void)editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>().request( item._key, EditorCommandTarget::none() );
                 return;
             }
             case EditorSearchSource::Panel:

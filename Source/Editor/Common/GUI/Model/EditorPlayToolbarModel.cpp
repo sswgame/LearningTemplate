@@ -28,27 +28,28 @@ namespace sw::editor
 
     void EditorPlayToolbarModel::gather( EditorPlayToolbarViewState& outState ) const
     {
-        EditorNetPlaySession&  netSession  = editor::getSubsystem<EditorContext>().getSubsystem<EditorNetPlaySession>();
-        const PlaySessionState playState   = EditorPlaySession::getState();
-        const bool             bSimulating = EditorPlaySession::isSimulating();
-        outState._netSettings              = netSession.getSettings();
-        outState._netConnectedClients      = netSession.isRunning() ? netSession.getConnectedClientCount() : 0;
-        outState._netProcessCount          = netSession.getProcessCount();
-        outState._bNetRunning              = netSession.isRunning() ? SW_TRUE : SW_FALSE;
-        outState._bNetStopping             = netSession.isStopping() ? SW_TRUE : SW_FALSE;
-        outState._bStopped                 = EditorPlaySession::isStopped() ? SW_TRUE : SW_FALSE;
-        outState._bPlayQueued              = EditorPlaySession::isPlayQueued() ? SW_TRUE : SW_FALSE;
-        outState._bPlaying                 = playState == PlaySessionState::Playing && bSimulating == false ? SW_TRUE : SW_FALSE;
-        outState._bSimulating              = playState == PlaySessionState::Playing && bSimulating ? SW_TRUE : SW_FALSE;
-        outState._bPaused                  = playState == PlaySessionState::Paused ? SW_TRUE : SW_FALSE;
-        outState._timeScale                = editor::getSubsystem<GameTimeScale>().get();
+        EditorNetPlaySession&         netSession  = editor::getSubsystem<EditorContext>().getSubsystem<EditorNetPlaySession>();
+        const EditorPlayStateSnapshot play        = EditorPlaySession::getUIState(); // UI 는 넘긴 상태만 읽는다
+        const PlaySessionState        playState   = play._state;
+        const bool                    bSimulating = play.isSimulating();
+        outState._netSettings                     = netSession.getSettings();
+        outState._netConnectedClients             = netSession.isRunning() ? netSession.getConnectedClientCount() : 0;
+        outState._netProcessCount                 = netSession.getProcessCount();
+        outState._bNetRunning                     = netSession.isRunning() ? SW_TRUE : SW_FALSE;
+        outState._bNetStopping                    = netSession.isStopping() ? SW_TRUE : SW_FALSE;
+        outState._bStopped                        = play.isStopped() ? SW_TRUE : SW_FALSE;
+        outState._bPlayQueued                     = play.isPlayQueued() ? SW_TRUE : SW_FALSE;
+        outState._bPlaying                        = playState == PlaySessionState::Playing && bSimulating == false ? SW_TRUE : SW_FALSE;
+        outState._bSimulating                     = playState == PlaySessionState::Playing && bSimulating ? SW_TRUE : SW_FALSE;
+        outState._bPaused                         = playState == PlaySessionState::Paused ? SW_TRUE : SW_FALSE;
+        outState._timeScale                       = editor::getSubsystem<GameTimeScale>().get();
     }
 
     void EditorPlayToolbarModel::requestSession( EditorPlaySessionKind session )
     {
         _uiState._pendingSession = session;
         const bool bSceneDirty   = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().isSceneDirty();
-        if ( bSceneDirty && EditorPlaySession::isStopped() )
+        if ( bSceneDirty && EditorPlaySession::getUIState().isStopped() )
             _uiState._bConfirmUnsavedPlay = SW_TRUE;
         else
             startSession( session );

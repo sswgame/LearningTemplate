@@ -59,9 +59,9 @@ namespace sw::editor
                 return pObject != nullptr ? pObject->getComponent<LightProbeVolumeComponent>() : nullptr;
             }
 
-            static void runFrame( EditorContext& /*context*/ )
+            static void runFrame( EditorContext& /*context*/, EditorPlaySessionWriteKey key )
             {
-                editor::getSubsystem<EditorLightProbeBakeSession>().update(); // 필수 - 에디터 서브시스템이다
+                editor::getSubsystem<EditorLightProbeBakeSession>().update( key ); // 필수 - 에디터 서브시스템이다
             }
 
             [[nodiscard]] static bool readBakeRunCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -96,7 +96,7 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_SUBSYSTEM( EditorLightProbeBakeSession, 9100 );
-    SW_EDITOR_FRAME_STEP( LightProbeBake, "lightProbeBake", EditorFrameStepOrder::kCommands + 20, &EditorLightProbeBakeSessionInternal::runFrame );
+    SW_EDITOR_GAME_STEP( LightProbeBake, "lightProbeBake", EditorGameStepOrder::kBake, &EditorLightProbeBakeSessionInternal::runFrame );
 
     SW_AUTOMATION_WATCH( editorLightProbeBakeCount, "Editor.LightProbeBakeCount", "Times a lighting.bakeProbes run finished (or was canceled) in the active scene",
                          &EditorLightProbeBakeSessionInternal::readBakeRunCount );
@@ -113,11 +113,12 @@ namespace sw::editor
         , _run{}
         , _nextVolumeIndex{ 0 }
         , _bakedCount{ 0 }
+        , _startRequested{ false }
         , _bJobActive{ SW_FALSE }
     {
     }
 
-    void EditorLightProbeBakeSession::start()
+    void EditorLightProbeBakeSession::start( EditorPlaySessionWriteKey key )
     {
         Scene*             pScene       = editor::getActiveScene();
         GameObjectManager* pManager     = editor::getActiveObjectManager();
@@ -141,7 +142,7 @@ namespace sw::editor
         _bakedCount      = 0;
         _lastError.clear();
         _bJobActive = SW_FALSE;
-        _run.begin( sceneManager.getSceneGeneration() );
+        _run.begin( key, sceneManager.getSceneGeneration() );
         if ( _listObjectID.empty() )
             finish( false );
     }
@@ -154,8 +155,10 @@ namespace sw::editor
         finish( true );
     }
 
-    void EditorLightProbeBakeSession::update()
+    void EditorLightProbeBakeSession::update( EditorPlaySessionWriteKey key )
     {
+        if ( _startRequested.exchange( false, std::memory_order_acq_rel ) )
+            start( key ); // UI 명령이 남긴 시작 요청 — 씬을 읽고 편집을 막는 일은 게임 스레드가 한다
         if ( _run.isRunning() == false )
             return;
         const utf8* pStopReason = _run.findStopReason();

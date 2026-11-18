@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneObjectCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
@@ -34,6 +35,13 @@ namespace sw::editor
         struct HierarchyViewModelInternal
         {
             static EditorWorkspace& getWorkspace() { return editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>(); }
+
+            /** @brief 씬 편집 하나를 게임 스레드에 넘깁니다(`EditorCommandRegistry::requestSceneEdit`). @p edit 는 id · 문자열 사본만 붙잡는다. */
+            template <typename TEdit>
+            static void requestSceneEdit( const TEdit& edit )
+            {
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create( edit ) );
+            }
 
             static GameObject* findObject( uint64 objectID )
             {
@@ -422,59 +430,73 @@ namespace sw::editor
         _bClickedThisFrame = SW_TRUE; // 키로 선택한 것이므로 따라가기 대상이 아니다
     }
 
+    // 아래 씬 쓰기는 게임 스레드에 넘긴다(`EditorCommandRegistry::requestSceneEdit`) — 이 UI 프레임 뒤 게임 단계가 거래 하나로 실행한다. 람다는 id · 문자열 사본만 붙잡는다.
     void HierarchyViewModel::createObject()
     {
-        EditorTransaction  transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        GameObjectManager* pManager = editor::getActiveObjectManager();
-        if ( pManager != nullptr )
-            (void)EditorSceneCommands::create( transaction, pManager, nullptr ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
+        HierarchyViewModelInternal::requestSceneEdit( []( EditorTransaction& transaction )
+        {
+            GameObjectManager* pManager = editor::getActiveObjectManager();
+            if ( pManager != nullptr )
+                (void)EditorSceneCommands::create( transaction, pManager, nullptr ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
+        } );
     }
 
     void HierarchyViewModel::renameObject( uint64 objectID, const utf8* pName )
     {
-        GameObject* pObj = HierarchyViewModelInternal::findObject( objectID );
-        if ( pObj == nullptr )
-            return;
-        EditorTransaction transaction;                                 // 이름 칸 확정 — 명령(`scene.object.rename`)은 칸만 열었다
-        (void)EditorSceneCommands::rename( transaction, pObj, pName ); // 빈 이름은 거절하므로 이름이 그대로 남는다
+        const string name{ pName != nullptr ? pName : "" };
+        HierarchyViewModelInternal::requestSceneEdit( [objectID, name]( EditorTransaction& transaction )
+        {
+            GameObject* pObj = HierarchyViewModelInternal::findObject( objectID );
+            if ( pObj != nullptr )
+                (void)EditorSceneCommands::rename( transaction, pObj, name.c_str() ); // 빈 이름은 거절하므로 이름이 그대로 남는다
+        } );
     }
 
     void HierarchyViewModel::dropObject( uint64 draggedID, uint64 targetID, HierarchyDropZone zone )
     {
-        EditorTransaction  transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        GameObjectManager* pManager = editor::getActiveObjectManager();
-        GameObject*        pDragged = HierarchyViewModelInternal::findObject( draggedID );
-        GameObject*        pTarget  = HierarchyViewModelInternal::findObject( targetID );
-        if ( pManager == nullptr || pDragged == nullptr || pTarget == nullptr )
-            return;
-        if ( zone == HierarchyDropZone::Onto )
-            (void)EditorSceneCommands::reparent( transaction, pDragged, pTarget ); // 순환 · 편집 잠금이면 아무것도 바꾸지 않는다
-        else
-            (void)EditorSiblingOrder::moveBeside( *pManager, pDragged, pTarget, zone == HierarchyDropZone::After, HierarchyCommands::findEditorCameraObject() ); // 실패는 아무것도 바꾸지 않는다
+        HierarchyViewModelInternal::requestSceneEdit( [draggedID, targetID, zone]( EditorTransaction& transaction )
+        {
+            GameObjectManager* pManager = editor::getActiveObjectManager();
+            GameObject*        pDragged = HierarchyViewModelInternal::findObject( draggedID );
+            GameObject*        pTarget  = HierarchyViewModelInternal::findObject( targetID );
+            if ( pManager == nullptr || pDragged == nullptr || pTarget == nullptr )
+                return;
+            if ( zone == HierarchyDropZone::Onto )
+                (void)EditorSceneCommands::reparent( transaction, pDragged, pTarget ); // 순환 · 편집 잠금이면 아무것도 바꾸지 않는다
+            else
+                (void)EditorSiblingOrder::moveBeside( *pManager, pDragged, pTarget, zone == HierarchyDropZone::After, HierarchyCommands::findEditorCameraObject() ); // 실패는 아무것도 바꾸지 않는다
+        } );
     }
 
     void HierarchyViewModel::detachToRoot( uint64 draggedID )
     {
-        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        GameObject*       pDragged = HierarchyViewModelInternal::findObject( draggedID );
-        if ( pDragged != nullptr && pDragged->getParent() != nullptr )
-            (void)EditorSceneCommands::unparent( transaction, pDragged, "Detach GameObject to Root" ); // 편집 잠금이면 아무것도 바꾸지 않는다
+        HierarchyViewModelInternal::requestSceneEdit( [draggedID]( EditorTransaction& transaction )
+        {
+            GameObject* pDragged = HierarchyViewModelInternal::findObject( draggedID );
+            if ( pDragged != nullptr && pDragged->getParent() != nullptr )
+                (void)EditorSceneCommands::unparent( transaction, pDragged, "Detach GameObject to Root" ); // 편집 잠금이면 아무것도 바꾸지 않는다
+        } );
     }
 
     void HierarchyViewModel::spawnPrefab( const utf8* pPath, uint64 parentID )
     {
-        GameObjectManager* pManager = editor::getActiveObjectManager();
-        if ( pManager != nullptr )
-            (void)EditorAssetCommands::spawnPrefab( pManager, pPath, HierarchyViewModelInternal::findObject( parentID ) ); // 실패는 명령이 알린다
+        const string path{ pPath != nullptr ? pPath : "" };
+        HierarchyViewModelInternal::requestSceneEdit( [path, parentID]( EditorTransaction& /*transaction*/ )
+        {
+            GameObjectManager* pManager = editor::getActiveObjectManager();
+            if ( pManager != nullptr )
+                (void)EditorAssetCommands::spawnPrefab( pManager, path.c_str(), HierarchyViewModelInternal::findObject( parentID ) ); // 실패는 명령이 알린다
+        } );
     }
 
     void HierarchyViewModel::addComponent( uint64 objectID, const hashed_string& typeName )
     {
-        GameObject* pObj = HierarchyViewModelInternal::findObject( objectID );
-        if ( pObj == nullptr )
-            return;
-        EditorTransaction transaction;                                          // 하위 메뉴(`scene.object.addComponent`)에서 고른 끝
-        (void)EditorSceneCommands::addComponent( transaction, pObj, typeName ); // 더했는지는 되돌리기가 기록하고 실패는 명령이 알린다
+        HierarchyViewModelInternal::requestSceneEdit( [objectID, typeName]( EditorTransaction& transaction )
+        {
+            GameObject* pObj = HierarchyViewModelInternal::findObject( objectID );
+            if ( pObj != nullptr )
+                (void)EditorSceneCommands::addComponent( transaction, pObj, typeName ); // 더했는지는 되돌리기가 기록하고 실패는 명령이 알린다
+        } );
     }
 
     void HierarchyViewModel::selectAllWith( uint64 objectID, uint32 itemIndex )

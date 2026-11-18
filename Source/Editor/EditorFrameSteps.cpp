@@ -90,9 +90,10 @@ namespace sw::editor
             /** @brief 플레이 세션 상태 이름입니다. 멈춰 있으면 nullptr(제목에 붙이지 않는다). */
             static const utf8* findPlayState()
             {
-                if ( EditorPlaySession::isStopped() )
+                const EditorPlayStateSnapshot play = EditorPlaySession::getUIState(); // UI 프레임 단계 — 넘긴 상태를 읽는다
+                if ( play.isStopped() )
                     return nullptr;
-                return EditorPlaySession::isSimulating() ? "Simulating" : ( EditorPlaySession::isPaused() ? "Paused" : "Playing" );
+                return play.isSimulating() ? "Simulating" : ( play.isPaused() ? "Paused" : "Playing" );
             }
 
             /**
@@ -136,12 +137,21 @@ namespace sw::editor
                 EditorMenuBar::processSceneSession();
             }
 
-            /** @brief 2) 에셋 · 설정 파일 감시, 버전 관리 상태를 갱신합니다. 파일 감시는 에디터 프레임에서만 돈다. */
-            static void runAssetReload( EditorContext& context )
+            /** @brief 2) 버전 관리 상태를 갱신합니다(UI 쪽 표시 상태). */
+            static void runSourceControl( EditorContext& context )
+            {
+                SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.sourceControl" );
+                context.getSubsystem<EditorSourceControl>().update();
+            }
+
+            /**
+             * @brief 게임 단계 — 에셋 · 설정 파일 감시 사건을 꺼내고 임포트 결과를 반영합니다(캐시 리로드 · 씬 알림은 엔진 상태라 게임 스레드가 한다).
+             * @details 예전에는 UI 프레임의 패널 앞에서 돌아 같은 프레임에 바뀐 머티리얼이 보였다. 이제 다음 UI 프레임이 그린다(한 프레임 늦다).
+             */
+            static void runAssetReload( EditorContext& context, EditorPlaySessionWriteKey /*key*/ )
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.assetReload" );
                 context.getSubsystem<AssetHotReload>().update();
-                context.getSubsystem<EditorSourceControl>().update();
             }
 
             /** @brief 3) 열린 패널, 팝업, 알림을 그립니다. */
@@ -186,7 +196,8 @@ namespace sw::editor
     SW_EDITOR_SUBSYSTEM( EditorWindowTitleState, 9600 );
 
     SW_EDITOR_FRAME_STEP( Commands, "commands", EditorFrameStepOrder::kCommands, &EditorFrameStepsInternal::runCommands );
-    SW_EDITOR_FRAME_STEP( AssetReload, "assetReload", EditorFrameStepOrder::kAssetReload, &EditorFrameStepsInternal::runAssetReload );
+    SW_EDITOR_FRAME_STEP( SourceControl, "sourceControl", EditorFrameStepOrder::kAssetReload, &EditorFrameStepsInternal::runSourceControl );
+    SW_EDITOR_GAME_STEP( AssetReload, "assetReload", EditorGameStepOrder::kAssetReload, &EditorFrameStepsInternal::runAssetReload );
     SW_EDITOR_FRAME_STEP( Panels, "panels", EditorFrameStepOrder::kPanels, &EditorFrameStepsInternal::runPanels );
     SW_EDITOR_FRAME_STEP( SelfTest, "selfTest", EditorFrameStepOrder::kSelfTest, &EditorFrameStepsInternal::runSelfTest );
     SW_EDITOR_FRAME_STEP( WindowTitle, "windowTitle", EditorFrameStepOrder::kWindowTitle, &EditorFrameStepsInternal::runWindowTitle );

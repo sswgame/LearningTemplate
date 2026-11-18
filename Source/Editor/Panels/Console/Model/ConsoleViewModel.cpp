@@ -13,12 +13,12 @@ namespace sw::editor
 {
     bool ConsoleViewModel::isPlayStopped()
     {
-        return EditorPlaySession::isStopped();
+        return EditorPlaySession::getUIState().isStopped();
     }
 
     bool ConsoleViewModel::isPlayRunning()
     {
-        return EditorPlaySession::isPlaying() && EditorPlaySession::isPaused() == false;
+        return EditorPlaySession::getUIState().isPlaying() && EditorPlaySession::getUIState().isPaused() == false;
     }
 
     void ConsoleViewModel::pausePlay()

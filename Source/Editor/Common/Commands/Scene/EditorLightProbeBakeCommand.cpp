@@ -19,7 +19,7 @@ namespace sw::editor
         {
             static void runBake()
             {
-                editor::getSubsystem<EditorLightProbeBakeSession>().start(); // 필수 - 에디터 서브시스템이다
+                editor::getSubsystem<EditorLightProbeBakeSession>().requestStart(); // 필수 - 에디터 서브시스템이다
             }
 
             /** @brief 씬이 있을 때 켠다. 편집 허용 답(플레이 중 · 베이크 중이면 꺼진다)은 레지스트리가 함께 묻는다(`EditorCommandEdit::SceneUnrecorded`). */

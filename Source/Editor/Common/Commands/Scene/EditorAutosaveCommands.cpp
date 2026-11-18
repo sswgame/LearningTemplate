@@ -353,7 +353,8 @@ namespace sw::editor
                 state._pendingSlotFolder.clear();
             }
 
-            static void runFrameStep( EditorContext& /*context*/ ) { EditorAutosaveCommands::tick(); }
+            /** @brief 게임 단계 — 활성 씬 사본 쓰기 · 복원 마무리는 씬을 읽고 바꾸므로 게임 스레드가 한다. */
+            static void runGameStep( EditorContext& /*context*/, EditorPlaySessionWriteKey /*key*/ ) { EditorAutosaveCommands::tick(); }
 
             static bool runNow( const vector<string>& listArgument, string& outReply )
             {
@@ -417,7 +418,7 @@ namespace sw::editor
 
     SW_EDITOR_SETTINGS( EditorAutosavePreferences, "autosave", "Editor/Autosave", 150, nullptr );
     // 명령 단계 뒤(이번 프레임의 씬 세션 처리 · 세대 동기화가 끝난 뒤)에 돈다
-    SW_EDITOR_FRAME_STEP( Autosave, "autosave", EditorFrameStepOrder::kCommands + 50, &EditorAutosaveCommandsInternal::runFrameStep );
+    SW_EDITOR_GAME_STEP( Autosave, "autosave", EditorGameStepOrder::kAutosave, &EditorAutosaveCommandsInternal::runGameStep );
     SW_DEV_COMMAND( AutosaveNow, "autosave.now", "autosave.now", "Write an autosave copy of the open scene now (ignores the interval)", &EditorAutosaveCommandsInternal::runNow );
     SW_DEV_COMMAND( AutosaveRescan, "autosave.rescan", "autosave.rescan",
                     "Treat the autosave copies on disk as left by a crashed session and offer them for recovery (Window > Recovered Work)", &EditorAutosaveCommandsInternal::runRescan );

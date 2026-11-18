@@ -3,7 +3,7 @@
  * @brief 씬 뷰 · 게임 뷰 패널이 자기 렌더 타깃(이미지)을 다루는 창구입니다 — 그릴 텍스처, 크기 맞추기, 그린 자리 알리기, 게임 뷰 초점, 스크린숏.
  * @details 뷰 렌더 타깃은 작업 공간의 `EditorRenderViews` 가 소유한다. 패널 View 는 작업 공간 · 커맨드 헤더를 보지 않으므로(`docs/agents/EditorUI.md` MVVM 계약) 여기를 지난다 —
  *          이 헤더는 값 헤더(`EditorViewTargetUtil.h`)와 Core 만 include 하고 본문(.cpp)이 작업 공간 · 스크린숏 커맨드를 부른다(언리얼 `SViewport` 가 `FSceneViewport` 를 쥐는 자리).
- *          크기 맞추기는 명령으로 게임 스레드에 보낸다(`EditorUICommandQueue` — UI 출력 계약). 나머지 쓰기(그린 자리 · 초점)는 UI 프레임 안의 값이라 UI 스레드로 옮길 때 함께 본다.
+ *          크기 맞추기는 명령으로 게임 스레드에 보낸다(`EditorUICommandQueue` — UI 출력 계약). 그린 자리 · 초점은 이번 UI 프레임의 값 묶음에 쓰고 프레임 끝에 통째로 넘긴다(`EditorUIFrameOutput`).
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -28,7 +28,7 @@ namespace sw::editor
         static void markDrawn( EditorViewKind kind, const float2& imageClientPos );
         /** @brief 이번 UI 프레임에 뷰 @p kind 를 그렸으면 true 입니다(그 패널 탭이 앞에 있다). */
         static bool wasViewDrawn( EditorViewKind kind );
-        /** @brief 이번 UI 프레임에 셸이 호스트에 뷰 @p kind 의 렌더 타깃을 알렸으면 true 입니다(`ImGuiEditor::getSceneViewport` · `getGameViewport` 와 같은 판정, 타깃이 있어야 한다). */
+        /** @brief 마지막으로 넘긴 UI 프레임에서 셸이 호스트에 뷰 @p kind 의 렌더 타깃을 알렸으면 true 입니다(`ImGuiEditor::getSceneViewport` · `getGameViewport` 와 같은 판정, 타깃이 있어야 한다). */
         static bool isViewRequested( EditorViewKind kind );
         /** @brief 게임 뷰 패널의 초점 · 마우스 올림을 알립니다(게임 입력이 이 값을 본다). */
         static void setGameViewInput( bool bFocused, bool bHovered );

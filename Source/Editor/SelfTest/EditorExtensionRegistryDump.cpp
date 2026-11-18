@@ -63,6 +63,7 @@ namespace sw::editor
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorStatusBarItemRegistration>();
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorMultiplayerTabRegistration>();
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorFrameStepRegistration>();
+        EditorExtensionRegistryDumpInternal::dumpIDs<EditorGameStepRegistration>();
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorInputMapRegistration>();
 
         const EditorCommandRegistry& registry = editorContext.getSubsystem<EditorCommandRegistry>();

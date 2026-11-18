@@ -13,11 +13,17 @@
 
 namespace sw::editor
 {
-    bool EditorRenderViews::isViewRequested( EditorViewKind kind ) const
+    void EditorRenderViews::publishUIFrame( uint32 uiRedrawReasons )
     {
-        const bool bSceneDrawn = wasViewDrawn( EditorViewKind::Scene );
-        const bool bGameDrawn  = wasViewDrawn( EditorViewKind::Game );
-        return kind == EditorViewKind::Scene ? EditorViewTargetUtil::shouldRequestSceneView( bSceneDrawn, bGameDrawn ) : EditorViewTargetUtil::shouldRequestGameView( bGameDrawn );
+        _uiFrame._redrawReasons = uiRedrawReasons;
+        ScopedLock<mutex> lock{ _publishedMutex };
+        _publishedFrame = _uiFrame;
+    }
+
+    EditorUIFrameOutput EditorRenderViews::getPublishedUIFrame() const
+    {
+        ScopedLock<mutex> lock{ _publishedMutex };
+        return _publishedFrame;
     }
 
     void EditorRenderViews::shutdownSubsystem()
@@ -29,26 +35,25 @@ namespace sw::editor
 
     void EditorRenderViews::clearViewDrawnMarks()
     {
-        // UI 프레임 시작 — 그리기 표시를 지우고, 엔진이 그사이 올린 렌더 텍스처를 받는다(패널은 크기가 바뀔 때만 `ensure*TargetSize` 를 부른다).
-        for ( EditorViewTarget& view : _arrViewTarget )
+        // UI 프레임 시작 — 그리기 표시를 지우고, 게임 스레드가 넘긴 타깃 값(받은 렌더 텍스처 · 요청한 크기)을 이번 프레임 값으로 받는다.
         {
-            view._bDrawn = SW_FALSE;
-            applyIfReady( view );
+            ScopedLock<mutex> lock{ _targetStatesMutex };
+            _uiTargets = _publishedTargets;
         }
-        for ( EditorPreviewViewTarget& preview : _listPreviewTarget )
+        for ( EditorUIFrameOutput::ViewMark& mark : _uiFrame._arrView )
         {
-            preview._target._bDrawn = SW_FALSE;
-            applyIfReady( preview._target );
+            mark._bDrawn = SW_FALSE;
         }
-        _bAnimationRequested = SW_FALSE;
+        _uiFrame._previewCount        = 0;
+        _uiFrame._bAnimationRequested = SW_FALSE;
     }
 
     void EditorRenderViews::markViewDrawn( EditorViewKind kind, const float2& imageClientPos )
     {
-        EditorViewTarget& view = _arrViewTarget[static_cast<uint32>( kind )];
-        view._windowX          = static_cast<int32>( MathUtil::round( imageClientPos._x ) );
-        view._windowY          = static_cast<int32>( MathUtil::round( imageClientPos._y ) );
-        view._bDrawn           = SW_TRUE;
+        EditorUIFrameOutput::ViewMark& mark = _uiFrame._arrView[static_cast<uint32>( kind )];
+        mark._windowX                       = static_cast<int32>( MathUtil::round( imageClientPos._x ) );
+        mark._windowY                       = static_cast<int32>( MathUtil::round( imageClientPos._y ) );
+        mark._bDrawn                        = SW_TRUE;
     }
 
     void EditorRenderViews::destroyViewTargets()
@@ -74,12 +79,27 @@ namespace sw::editor
         ensureTargetSize( _arrViewTarget[static_cast<uint32>( kind )], width, height );
     }
 
-    uint32 EditorRenderViews::allocatePreviewTarget()
+    const EditorPreviewTargetState* EditorRenderViews::findUIPreviewTargetState( uint32 id ) const
     {
-        EditorPreviewViewTarget preview;
-        preview._id = _previewTargetIDAllocator.allocate();
-        _listPreviewTarget.push_back( preview );
-        return preview._id;
+        return VectorUtil::findBy<&EditorPreviewTargetState::_id>( _uiTargets._listPreview, id );
+    }
+
+    void EditorRenderViews::applyReadyAndPublishTargets()
+    {
+        EditorTargetSnapshot states;
+        for ( uint32 kindIndex = 0; kindIndex < static_cast<uint32>( EditorViewKind::Count ); ++kindIndex )
+        {
+            applyIfReady( _arrViewTarget[kindIndex] );
+            states._arrView[kindIndex] = EditorViewTargetState::capture( _arrViewTarget[kindIndex] );
+        }
+        states._listPreview.reserve( _listPreviewTarget.size() );
+        for ( EditorPreviewViewTarget& preview : _listPreviewTarget )
+        {
+            applyIfReady( preview._target );
+            states._listPreview.push_back( EditorPreviewTargetState{ EditorViewTargetState::capture( preview._target ), preview._id } );
+        }
+        ScopedLock<mutex> lock{ _targetStatesMutex };
+        _publishedTargets = std::move( states );
     }
 
     void EditorRenderViews::freePreviewTarget( uint32 id )
@@ -96,9 +116,17 @@ namespace sw::editor
 
     void EditorRenderViews::ensurePreviewTargetSize( uint32 id, uint32 width, uint32 height )
     {
+        if ( id == 0 )
+            return;
         EditorPreviewViewTarget* pPreview = findPreviewTargetMutable( id );
-        if ( pPreview != nullptr )
-            ensureTargetSize( pPreview->_target, width, height );
+        if ( pPreview == nullptr )
+        {
+            EditorPreviewViewTarget created;
+            created._id = id;
+            _listPreviewTarget.push_back( created );
+            pPreview = &_listPreviewTarget.back();
+        }
+        ensureTargetSize( pPreview->_target, width, height );
     }
 
     const EditorPreviewViewTarget* EditorRenderViews::findPreviewTarget( uint32 id ) const
@@ -113,32 +141,41 @@ namespace sw::editor
 
     void EditorRenderViews::submitPreviewView( uint32 id, uint32 sceneKey, const float4x4& viewProj, const float3& cameraPos )
     {
-        EditorPreviewViewTarget* pPreview = findPreviewTargetMutable( id );
-        if ( pPreview == nullptr )
+        if ( id == 0 )
             return;
-        pPreview->_sceneKey       = sceneKey;
-        pPreview->_viewProj       = viewProj;
-        pPreview->_cameraPos      = cameraPos;
-        pPreview->_target._bDrawn = SW_TRUE;
         requestAnimationFrame(); // 보인 미리보기 씬은 이번 프레임에 틱한다(`ScenePreviewTick::WhenDrawn`) — 그 움직임을 그리려면 다음 프레임이 곧 와야 한다
+        if ( _uiFrame._previewCount >= kMaxPreviewSceneView )
+        {
+            if ( _bPreviewOverflowLogged == SW_FALSE )
+                SW_LOG_ERROR_ID( "EditorRenderViews.PreviewViewOverflow", "More than %# preview views were shown in one frame - the rest are not drawn", kMaxPreviewSceneView );
+            _bPreviewOverflowLogged = SW_TRUE;
+            return;
+        }
+        EditorUIFrameOutput::PreviewRequest& submit = _uiFrame._arrPreview[_uiFrame._previewCount++];
+        submit._id                                  = id;
+        submit._sceneKey                            = sceneKey;
+        submit._viewProj                            = viewProj;
+        submit._cameraPos                           = cameraPos;
     }
 
-    uint32 EditorRenderViews::collectSceneViews( PreviewSceneView* pOutView, uint32 capacity ) const
+    uint32 EditorRenderViews::collectSceneViews( const EditorUIFrameOutput& frame, PreviewSceneView* pOutView, uint32 capacity ) const
     {
         uint32 count = 0;
-        for ( const EditorPreviewViewTarget& preview : _listPreviewTarget )
+        for ( uint32 submitIndex = 0; submitIndex < frame._previewCount && count < capacity; ++submitIndex )
         {
-            const bool bVisible = preview._target._bDrawn == SW_TRUE && preview._target._renderTarget != 0 && preview._sceneKey != 0;
-            if ( bVisible == false || count >= capacity )
+            const EditorUIFrameOutput::PreviewRequest& submit   = frame._arrPreview[submitIndex];
+            const EditorPreviewViewTarget* const       pPreview = findPreviewTarget( submit._id ); // 넘긴 뒤 창이 닫혔으면 없다
+            const bool                                 bVisible = pPreview != nullptr && pPreview->_target._renderTarget != 0 && submit._sceneKey != 0;
+            if ( bVisible == false )
                 continue;
             PreviewSceneView& view     = pOutView[count];
             view                       = PreviewSceneView{};
-            view._sceneKey             = preview._sceneKey;
-            view._viewProj             = preview._viewProj;
-            view._cameraPos            = preview._cameraPos;
-            view._target._renderTarget = preview._target._renderTarget;
-            view._target._width        = preview._target._width;
-            view._target._height       = preview._target._height;
+            view._sceneKey             = submit._sceneKey;
+            view._viewProj             = submit._viewProj;
+            view._cameraPos            = submit._cameraPos;
+            view._target._renderTarget = pPreview->_target._renderTarget;
+            view._target._width        = pPreview->_target._width;
+            view._target._height       = pPreview->_target._height;
             ++count;
         }
         return count;

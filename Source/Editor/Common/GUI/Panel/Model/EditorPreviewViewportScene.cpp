@@ -9,6 +9,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorUICommandQueue.h"
 
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -105,7 +106,7 @@ namespace sw::editor
     {
         EditorContext* pContext = editor::findSubsystem<EditorContext>();
         if ( _targetID != 0 && pContext != nullptr )
-            pContext->getSubsystem<EditorRenderViews>().freePreviewTarget( _targetID );
+            EditorUICommandQueue::postToEditor( EditorUICommand::makeFreePreviewTarget( _targetID ) ); // 타깃은 게임 스레드가 가진다 — 놓기도 명령이다
         _targetID = 0;
 
         SceneManager* pSceneManager      = findSubsystem<SceneManager>();
@@ -123,8 +124,8 @@ namespace sw::editor
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         if ( _targetID == 0 )
             return 0;
-        const EditorPreviewViewTarget* pTarget = editorContext.getSubsystem<EditorRenderViews>().findPreviewTarget( _targetID );
-        return pTarget != nullptr ? pTarget->_target._renderTarget : 0;
+        const EditorPreviewTargetState* pTarget = editorContext.getSubsystem<EditorRenderViews>().findUIPreviewTargetState( _targetID );
+        return pTarget != nullptr ? pTarget->_state._renderTarget : 0;
     }
 
     void EditorPreviewViewport::setOrbit( const float3& target, float32 distance, float32 yaw, float32 pitch )
@@ -173,24 +174,25 @@ namespace sw::editor
 
     void* EditorPreviewViewport::acquireTargetTexture( const float2& size )
     {
-        EditorRenderViews&             views        = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
-        const uint32                   targetWidth  = static_cast<uint32>( size._x );
-        const uint32                   targetHeight = static_cast<uint32>( size._y );
-        const EditorPreviewViewTarget* pTarget      = views.findPreviewTarget( _targetID );
-        if ( pTarget != nullptr && EditorViewTargetUtil::needsResize( pTarget->_target.getRequestedWidth(), pTarget->_target.getRequestedHeight(), targetWidth, targetHeight ) )
-            views.ensurePreviewTargetSize( _targetID, targetWidth, targetHeight );
-        pTarget = views.findPreviewTarget( _targetID );
-        return pTarget != nullptr ? pTarget->_target._pTextureID : nullptr;
+        EditorRenderViews&              views        = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
+        const uint32                    targetWidth  = static_cast<uint32>( size._x );
+        const uint32                    targetHeight = static_cast<uint32>( size._y );
+        const EditorPreviewTargetState* pTarget      = views.findUIPreviewTargetState( _targetID );
+        // 타깃은 게임 스레드가 만든다 — 크기가 다르거나 아직 없으면 명령을 보내고, 다음 UI 프레임부터 받은 값을 읽는다(같은 크기를 두 번 보내도 적용 쪽이 견준다).
+        const bool bNeedsFit = _targetID != 0 && ( pTarget == nullptr || EditorViewTargetUtil::needsResize( pTarget->_state._requestedWidth, pTarget->_state._requestedHeight, targetWidth, targetHeight ) );
+        if ( bNeedsFit )
+            EditorUICommandQueue::postToEditor( EditorUICommand::makeFitPreviewTarget( _targetID, targetWidth, targetHeight ) );
+        return pTarget != nullptr ? pTarget->_state._pTextureID : nullptr;
     }
 
     void EditorPreviewViewport::submitView()
     {
-        EditorRenderViews&             views   = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
-        const EditorPreviewViewTarget* pTarget = views.findPreviewTarget( _targetID );
+        EditorRenderViews&              views   = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
+        const EditorPreviewTargetState* pTarget = views.findUIPreviewTargetState( _targetID );
         if ( pTarget == nullptr )
             return;
         // 렌더 타깃의 실제 크기로 비율을 잡는다(다시 만들기 전 프레임은 옛 크기다).
-        const float32 aspect = static_cast<float32>( pTarget->_target._width ) / static_cast<float32>( MathUtil::max( 1u, pTarget->_target._height ) );
+        const float32 aspect = static_cast<float32>( pTarget->_state._width ) / static_cast<float32>( MathUtil::max( 1u, pTarget->_state._height ) );
         float4x4      viewProj{};
         float3        eye{};
         computeViewProjection( aspect, viewProj, eye );
