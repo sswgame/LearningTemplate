@@ -1,0 +1,47 @@
+<?asset guid="a151ca7280eb4a118cef5eab9315acd2"?>
+<Scene formatVersion="3" name="CharacterMoveLoad">
+	<!-- 캐릭터 이동 부하 시나리오(automation/load/charactermove)의 무대 — 70 m 바닥(Static 강체 + 메시). CrowdLoad 의 CharacterCrowdSpawnerComponent 가 플레이를 시작하면
+	     캐릭터 컨트롤러 500 을 40 m 상자에 격자로 세워 가운데로 걷게 한다(서로 밀어 캐릭터 대 캐릭터 충돌이 가장 무거운 꼴). 유니티 DOTS Character Controller 군중 샘플과 같은 크기. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,55,-55" _localRotation="0.785398,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.8" _nearZ="0.1" _farZ="300" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="40" _shadowDistance="120" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="35,0.5,35" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="70,1,70" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="50" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="CrowdLoad">
+			<GameObject _schemaVersion="0" _name="CrowdLoad" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<CharacterCrowdSpawnerComponent _characterCount="500" _halfExtent="20" _walkSpeed="1.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

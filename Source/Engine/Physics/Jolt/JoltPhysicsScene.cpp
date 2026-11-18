@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Physics/Collision/PhysicsMeshShapeCache.h"
 #include "Engine/Physics/Jolt/JoltJobSystem.h"
 #include "Engine/Physics/Jolt/JoltUtil.h"
@@ -13,6 +14,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 
 #include <Jolt/Jolt.h>
+#include <Jolt/Geometry/RayAABox.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Collision/EstimateCollisionResponse.h>
@@ -26,6 +28,7 @@
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollideShape.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/CollisionDispatch.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
@@ -42,6 +45,11 @@ namespace sw
         {
             /** @brief 삼각 메시 바디에 주는 질량 상자의 가장 얇은 변(m)입니다 — 평평한 메시의 질량이 0 이 되지 않게 한다. */
             static constexpr float32 kMinMeshMassBoxSize = 0.1f;
+            /** @brief 캐릭터가 미는 충격량의 감쇠 · 겹침 해소 비율입니다 — Jolt `CharacterVirtual::HandleContact` 와 같은 값(그 셈을 확정 단계로 옮겼다). */
+            static constexpr float32 kCharacterPushDamping               = 0.9f;
+            static constexpr float32 kCharacterPushPenetrationResolution = 0.4f;
+            /** @brief 일괄 이동을 나누는 가장 작은 청크 수입니다 — 청크가 하나면 호출 스레드가 바로 돈다. */
+            static constexpr uint32 kCharacterChunkSerialThreshold = 2;
 
             static JPH::EMotionType toMotionType( PhysicsBodyType type )
             {
@@ -161,7 +169,7 @@ namespace sw
 
             /**
              * @brief 캐릭터는 트리거와 캐릭터 속 바디에 막히지 않습니다.
-             * @details 캐릭터끼리는 캐릭터 대 캐릭터 충돌(`_characterVsCharacter`)이 막는다. 속 바디는 갱신 끝에야 따라와 한 갱신 늦은 자리라, 그것에도 막히면
+             * @details 캐릭터끼리는 캐릭터 대 캐릭터 충돌(`_characterSnapshot`)이 막는다. 속 바디는 갱신 끝에야 따라와 한 갱신 늦은 자리라, 그것에도 막히면
              *          같은 캐릭터를 두 번 다른 자리에서 본다. 제 속 바디도 여기서 거른다.
              */
             class CharacterBodyFilter final : public JPH::BodyFilter
@@ -327,8 +335,14 @@ namespace sw
         , _listJoltMaterial{}
         , _bodies{}
         , _joints{}
-        , _characterVsCharacter{}
+        , _characterSnapshot{}
+        , _characterContactListener{}
         , _characters{}
+        , _listCharacterChunkAllocator{}
+        , _listCharacterMoveJob{}
+        , _characterMoveDeltaTime{ 0.0f }
+        , _characterMoveChunkCount{ 0 }
+        , _characterMoveStamp{ 0 }
         , _vehicles{ _system }
         , _softBodies{ _system, _tempAllocator }
         , _shapes{}
@@ -367,7 +381,7 @@ namespace sw
             joint._pConstraint = nullptr;
         } );
         _joints.clear();
-        _characterVsCharacter.mCharacters.clear();
+        _characterSnapshot.clear();
         _characters.clear();
         _softBodies.clear();
         JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
@@ -413,15 +427,23 @@ namespace sw
     void JoltPhysicsScene::reportTempAllocator()
     {
         // 지난 스텝부터 이번 스텝까지(사이의 캐릭터 이동 · 질의 포함)의 몫이다. 프레임 카운터는 스텝 · 씬을 더한다.
-        const size_t peakBytes     = _tempAllocator.consumePeakBytes();
-        const uint32 fallbackCount = _tempAllocator.consumeFallbackCount();
+        // 캐릭터 청크 블록도 같은 카운터에 든다(최고는 가장 큰 블록, 폴백은 합).
+        size_t       peakBytes          = _tempAllocator.consumePeakBytes();
+        const uint32 fallbackCount      = _tempAllocator.consumeFallbackCount();
+        uint32       chunkFallbackCount = 0;
+        for ( const unique_ptr<JoltTempAllocator>& pChunk : _listCharacterChunkAllocator )
+        {
+            peakBytes = MathUtil::max( peakBytes, pChunk->consumePeakBytes() );
+            chunkFallbackCount += pChunk->consumeFallbackCount();
+        }
         SW_PROFILE_COUNT( "Physics.TempAllocator.peakBytes", peakBytes );
-        SW_PROFILE_COUNT( "Physics.TempAllocator.fallbacks", fallbackCount );
-        if ( fallbackCount == 0 || _bTempFallbackWarned )
+        SW_PROFILE_COUNT( "Physics.TempAllocator.fallbacks", fallbackCount + chunkFallbackCount );
+        if ( fallbackCount + chunkFallbackCount == 0 || _bTempFallbackWarned )
             return;
         _bTempFallbackWarned = SW_TRUE; // 씬마다 한 번 — 이어지는 스텝은 카운터로 본다
-        SW_LOG_WARNING_ID( "JoltPhysicsScene.TempAllocatorFallback", "Jolt temp block (%# bytes) overflowed %# times this step - fell back to the heap; raise PhysicsSettings::_tempAllocatorBytes",
-                           _tempAllocator.getByteSize(), fallbackCount );
+        SW_LOG_WARNING_ID( "JoltPhysicsScene.TempAllocatorFallback",
+                           "Jolt temp blocks overflowed this step - scene block (%# bytes) %# times, character chunk blocks (%# bytes) %# times - fell back to the heap; raise PhysicsSettings::_tempAllocatorBytes / _characterChunkTempBytes",
+                           _tempAllocator.getByteSize(), fallbackCount, _settings._characterChunkTempBytes, chunkFallbackCount );
     }
 
     void JoltPhysicsScene::appendActiveBodies()
@@ -1203,6 +1225,89 @@ namespace sw
         _pairFilter.setPairCollision( bodyA, bodyB, bCollide );
     }
 
+    // --- 캐릭터끼리 · 캐릭터 접촉 -------------------------------------------------------------------------------------------
+
+    void JoltCharacterSnapshotCollision::add( const JPH::CharacterVirtual* pCharacter, const JPH::CharacterVirtual* pMirror )
+    {
+        _listEntry.push_back( Entry{ pCharacter, pMirror } );
+    }
+
+    void JoltCharacterSnapshotCollision::remove( const JPH::CharacterVirtual* pCharacter )
+    {
+        const auto it = std::find_if( _listEntry.begin(), _listEntry.end(), [pCharacter]( const Entry& entry )
+        { return entry._pCharacter == pCharacter; } );
+        if ( it != _listEntry.end() )
+            _listEntry.erase( it );
+    }
+
+    void JoltCharacterSnapshotCollision::CollideCharacter( const JPH::CharacterVirtual* pCharacter, JPH::RMat44Arg centerOfMassTransform,
+                                                           const JPH::CollideShapeSettings& collideShapeSettings, JPH::RVec3Arg baseOffset,
+                                                           JPH::CollideShapeCollector& ioCollector ) const
+    {
+        // Jolt 5.6.0 `CharacterVsCharacterCollisionSimple::CollideCharacter` 를 그대로 옮기고, 상대만 사본으로 읽는다.
+        const JPH::Mat44          transform1 = centerOfMassTransform.PostTranslated( -baseOffset ).ToMat44();
+        const JPH::Shape* const   pShape1    = pCharacter->GetShape();
+        JPH::CollideShapeSettings settings   = collideShapeSettings;
+        const JPH::AABox          bounds1    = pShape1->GetWorldSpaceBounds( transform1, JPH::Vec3::sOne() );
+        for ( const Entry& entry : _listEntry )
+        {
+            if ( entry._pCharacter == pCharacter || ioCollector.ShouldEarlyOut() )
+                continue;
+            const JPH::Mat44 transform2 = entry._pMirror->GetCenterOfMassTransform().PostTranslated( -baseOffset ).ToMat44();
+            // 상대의 패딩만큼 더 멀리서 잡는다 — 패딩 없는 셰이프와 부딪히고 Jolt 가 `GetContactsAtPosition` 에서 고친다.
+            settings.mMaxSeparationDistance = collideShapeSettings.mMaxSeparationDistance + entry._pMirror->GetCharacterPadding();
+            const JPH::Shape* const pShape2 = entry._pMirror->GetShape();
+            JPH::AABox              bounds2 = pShape2->GetWorldSpaceBounds( transform2, JPH::Vec3::sOne() );
+            bounds2.ExpandBy( JPH::Vec3::sReplicate( settings.mMaxSeparationDistance ) );
+            if ( bounds1.Overlaps( bounds2 ) == false )
+                continue;
+            ioCollector.SetUserData( reinterpret_cast<uint64>( entry._pMirror ) );
+            JPH::CollisionDispatch::sCollideShapeVsShape( pShape1, pShape2, JPH::Vec3::sOne(), JPH::Vec3::sOne(), transform1, transform2, JPH::SubShapeIDCreator(),
+                                                          JPH::SubShapeIDCreator(), settings, ioCollector );
+        }
+        ioCollector.SetUserData( 0 );
+    }
+
+    void JoltCharacterSnapshotCollision::CastCharacter( const JPH::CharacterVirtual* pCharacter, JPH::RMat44Arg centerOfMassTransform, JPH::Vec3Arg direction,
+                                                        const JPH::ShapeCastSettings& shapeCastSettings, JPH::RVec3Arg baseOffset, JPH::CastShapeCollector& ioCollector ) const
+    {
+        // Jolt 5.6.0 `CharacterVsCharacterCollisionSimple::CastCharacter` 를 그대로 옮기고, 상대만 사본으로 읽는다.
+        const JPH::Mat44       transform1 = centerOfMassTransform.PostTranslated( -baseOffset ).ToMat44();
+        const JPH::ShapeCast   shapeCast{ pCharacter->GetShape(), JPH::Vec3::sOne(), transform1, direction };
+        const JPH::Vec3        origin       = shapeCast.mShapeWorldBounds.GetCenter();
+        const JPH::Vec3        extents      = shapeCast.mShapeWorldBounds.GetExtent() + JPH::Vec3::sReplicate( shapeCastSettings.mExtraConvexRadius );
+        JPH::ShapeCastSettings castSettings = shapeCastSettings;
+        const JPH::ShapeFilter shapeFilter;
+        for ( const Entry& entry : _listEntry )
+        {
+            if ( entry._pCharacter == pCharacter || ioCollector.ShouldEarlyOut() )
+                continue;
+            const JPH::Mat44 transform2 = entry._pMirror->GetCenterOfMassTransform().PostTranslated( -baseOffset ).ToMat44();
+            const float32    padding    = entry._pMirror->GetCharacterPadding();
+            // 상대의 패딩만큼 겉껍질을 두껍게 쓴다 — Jolt 가 `ValidateMovement` 에서 고친다.
+            castSettings.mExtraConvexRadius = shapeCastSettings.mExtraConvexRadius + padding;
+            const JPH::Shape* const pShape2 = entry._pMirror->GetShape();
+            JPH::AABox              bounds2 = pShape2->GetWorldSpaceBounds( transform2, JPH::Vec3::sOne() );
+            bounds2.ExpandBy( extents + JPH::Vec3::sReplicate( padding ) );
+            if ( JPH::RayAABoxHits( origin, direction, bounds2.mMin, bounds2.mMax ) == false )
+                continue;
+            ioCollector.SetUserData( reinterpret_cast<uint64>( entry._pMirror ) );
+            JPH::CollisionDispatch::sCastShapeVsShapeWorldSpace( shapeCast, castSettings, pShape2, JPH::Vec3::sOne(), shapeFilter, transform2, JPH::SubShapeIDCreator(),
+                                                                 JPH::SubShapeIDCreator(), ioCollector );
+        }
+        ioCollector.SetUserData( 0 );
+    }
+
+    void JoltCharacterContactListener::OnContactAdded( const JPH::CharacterVirtual*, const JPH::CharacterContact&, JPH::CharacterContactSettings& ioSettings )
+    {
+        ioSettings.mCanReceiveImpulses = false;
+    }
+
+    void JoltCharacterContactListener::OnContactPersisted( const JPH::CharacterVirtual*, const JPH::CharacterContact&, JPH::CharacterContactSettings& ioSettings )
+    {
+        ioSettings.mCanReceiveImpulses = false;
+    }
+
     // --- 접촉 -------------------------------------------------------------------------------------------------------------
 
     JoltContactListener::JoltContactListener( JoltPhysicsScene& owner )
@@ -1663,9 +1768,14 @@ namespace sw
             _system.GetBodyInterface().SetUserData( innerBodyID, record._innerBody.packed() );
             setHandle( innerBodyID, record._innerBody );
         }
+        // 다른 캐릭터가 보는 사본 — 같은 셰이프 · 패딩 · id(접촉의 상대 id 가 캐릭터의 것이 된다), 속 바디는 없다(감사 S-8).
+        JPH::CharacterVirtualSettings mirrorSettings = settings;
+        mirrorSettings.mInnerBodyShape               = nullptr;
+        record._pMirror                              = JoltUtil::createObject<JPH::CharacterVirtual>( &mirrorSettings, JoltUtil::toJolt( desc._position ), JPH::Quat::sIdentity(), desc._userData, &_system );
         // 캐릭터끼리 막는다(감사 S-7). 실패해 돌아가는 길 뒤에 올린다 — 목록은 날 포인터라 지운 캐릭터를 남기면 안 된다.
-        _characterVsCharacter.Add( record._pCharacter.GetPtr() );
-        record._pCharacter->SetCharacterVsCharacterCollision( &_characterVsCharacter );
+        _characterSnapshot.add( record._pCharacter.GetPtr(), record._pMirror.GetPtr() );
+        record._pCharacter->SetCharacterVsCharacterCollision( &_characterSnapshot );
+        record._pCharacter->SetListener( &_characterContactListener );
         return PhysicsCharacterHandle::fromSlot( _characters.insert( std::move( record ) ) );
     }
 
@@ -1674,7 +1784,7 @@ namespace sw
         CharacterRecord record;
         if ( _characters.take( character.getSlot(), record ) == false )
             return;
-        _characterVsCharacter.Remove( record._pCharacter.GetPtr() );
+        _characterSnapshot.remove( record._pCharacter.GetPtr() );
         BodyRecord inner;
         if ( record._innerBody.isValid() && _bodies.take( record._innerBody.getSlot(), inner ) )
         {
@@ -1691,49 +1801,159 @@ namespace sw
         CharacterRecord* pRecord = _characters.get( character.getSlot() );
         if ( pRecord == nullptr || pRecord->_pCharacter == nullptr )
             return PhysicsCharacterState3D{};
-        JPH::CharacterVirtual& virtualCharacter = *pRecord->_pCharacter;
+        // 일괄 이동과 같은 두 단계를 바로 잇는다 — 다음 캐릭터는 이 캐릭터의 새 자리를 본다.
+        runCharacterMove( *pRecord, velocity, deltaTime, _tempAllocator );
+        commitCharacterMove( *pRecord, deltaTime );
+        return pRecord->_state;
+    }
+
+    void JoltPhysicsScene::runCharacterMove( CharacterRecord& record, const float3& velocity, float32 deltaTime, JPH::TempAllocator& allocator ) const
+    {
+        JPH::CharacterVirtual& virtualCharacter = *record._pCharacter;
         // 결정: 움직이는 바닥의 속도는 호출하는 쪽이 아니라 여기서 더한다 — 호출 쪽이 빠뜨릴 수 없다. 직전 스텝에 디딘 바닥(`OnGround`)의 선속도와
         // 회전이 발 밑에 만드는 속도를 합친 값(`GetGroundVelocity`)이다. 바닥이 직전 스텝 뒤에 속도를 바꿨을 수 있어 먼저 새로 읽는다(충돌 검사는 하지 않는다).
         // 바닥의 위 축 각속도(`_groundYawRate`)도 함께 내보낸다 — 캐릭터 방향을 돌리는 일은 트랜스폼을 쓰는 컴포넌트의 몫이다.
-        float3  carriedVelocity{};
-        float32 groundYawRate = 0.0f;
+        record._carriedVelocity = float3{};
+        record._groundYawRate   = 0.0f;
+        record._movedVelocity   = velocity;
+        if ( deltaTime <= 0.0f )
+            return;
+        // 순간이동(`setCharacterPosition`)이 `_groundBody` 를 비우므로, 옮긴 직후 한 스텝은 옛 바닥의 속도를 싣지 않는다.
+        if ( record._state._groundBody.isValid() && virtualCharacter.GetGroundState() == JPH::CharacterBase::EGroundState::OnGround )
+        {
+            virtualCharacter.UpdateGroundVelocity();
+            record._carriedVelocity = JoltUtil::toEngine( virtualCharacter.GetGroundVelocity() );
+            record._groundYawRate   = _system.GetBodyInterface().GetAngularVelocity( virtualCharacter.GetGroundBodyID() ).GetY();
+        }
+        record._movedVelocity = velocity + record._carriedVelocity;
+        virtualCharacter.SetLinearVelocity( JoltUtil::toJolt( record._movedVelocity ) );
+        JPH::CharacterVirtual::ExtendedUpdateSettings updateSettings;
+        updateSettings.mWalkStairsStepUp                                = JPH::Vec3{ 0.0f, record._desc._stepHeight, 0.0f };
+        updateSettings.mStickToFloorStepDown                            = JPH::Vec3{ 0.0f, -record._desc._stepHeight, 0.0f };
+        const JPH::ObjectLayer                              objectLayer = JoltLayerUtil::makeObjectLayer( record._desc._layer, true );
+        const JoltPhysicsSceneInternal::CharacterBodyFilter bodyFilter{ *this };
+        const JPH::ShapeFilter                              shapeFilter;
+        // 중력 0 — Jolt 가 그것으로 디딘 바디를 누르는 쓰기를 막는다(누르기는 `commitCharacterMove`). 캐릭터 낙하는 요청 속도에 이미 들었다.
+        virtualCharacter.ExtendedUpdate( deltaTime, JPH::Vec3::sZero(), updateSettings, _system.GetDefaultBroadPhaseLayerFilter( objectLayer ),
+                                         _system.GetDefaultLayerFilter( objectLayer ), bodyFilter, shapeFilter, allocator );
+    }
+
+    void JoltPhysicsScene::commitCharacterMove( CharacterRecord& record, float32 deltaTime )
+    {
+        JPH::CharacterVirtual& virtualCharacter = *record._pCharacter;
         if ( deltaTime > 0.0f )
         {
-            // 순간이동(`setCharacterPosition`)이 `_groundBody` 를 비우므로, 옮긴 직후 한 스텝은 옛 바닥의 속도를 싣지 않는다.
-            if ( pRecord->_state._groundBody.isValid() && virtualCharacter.GetGroundState() == JPH::CharacterBase::EGroundState::OnGround )
+            // 닿은 동적 바디를 민다 — Jolt 5.6.0 `CharacterVirtual::HandleContact` 의 셈 그대로(속도 차를 감쇠, 겹침을 덜고, 힘 상한으로 자르고, 아래로는 밀지 않는다).
+            // 원본과 다른 곳 하나: 해석 중 닿는 순간의 속도 대신 이동 뒤 접촉 · 이번 이동에 준 속도로 셈한다 — 청크 사이 바디 쓰기를 끝으로 미뤄 차례를 고정하려는 것이다.
+            JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
+            const JPH::Vec3     up            = virtualCharacter.GetUp();
+            const JPH::Vec3     movedVelocity = JoltUtil::toJolt( record._movedVelocity );
+            const float32       maxImpulse    = virtualCharacter.GetMaxStrength() * deltaTime;
+            for ( const JPH::CharacterContact& contact : virtualCharacter.GetActiveContacts() )
             {
-                virtualCharacter.UpdateGroundVelocity();
-                carriedVelocity = JoltUtil::toEngine( virtualCharacter.GetGroundVelocity() );
-                groundYawRate   = _system.GetBodyInterface().GetAngularVelocity( virtualCharacter.GetGroundBodyID() ).GetY();
+                if ( contact.mHadCollision == false || contact.mWasDiscarded || contact.mIsSensorB || contact.mBodyB.IsInvalid() ||
+                     contact.mMotionTypeB != JPH::EMotionType::Dynamic )
+                    continue;
+                const float32 projectedVelocity = ( movedVelocity - contact.mLinearVelocity ).Dot( contact.mContactNormal );
+                const float32 deltaVelocity     = -projectedVelocity * JoltPhysicsSceneInternal::kCharacterPushDamping -
+                                              MathUtil::min( contact.mDistance, 0.0f ) * JoltPhysicsSceneInternal::kCharacterPushPenetrationResolution / deltaTime;
+                if ( deltaVelocity < 0.0f )
+                    continue; // 떨어지는 중이다
+                JPH::Vec3 worldImpulse = JPH::Vec3::sZero();
+                {
+                    const JPH::BodyLockRead lock{ _system.GetBodyLockInterface(), contact.mBodyB };
+                    // Jolt 는 접촉 때 본 운동 종류를 믿는다 — 여기는 이동 뒤라 그 사이 바뀌었을 수 있어 다시 본다(`GetInverseMass` 는 동적만 된다).
+                    if ( lock.SucceededAndIsInBroadPhase() == false || lock.GetBody().IsDynamic() == false )
+                        continue;
+                    const JPH::Body& body                 = lock.GetBody();
+                    const JPH::Vec3  jacobian             = JPH::Vec3( contact.mPosition - body.GetCenterOfMassPosition() ).Cross( contact.mContactNormal );
+                    const float32    inverseEffectiveMass = body.GetInverseInertia().Multiply3x3( jacobian ).Dot( jacobian ) + body.GetMotionProperties()->GetInverseMass();
+                    worldImpulse                          = -MathUtil::min( deltaVelocity / inverseEffectiveMass, maxImpulse ) * contact.mContactNormal;
+                }
+                const float32 upImpulse = worldImpulse.Dot( up );
+                if ( upImpulse < 0.0f )
+                    worldImpulse -= upImpulse * up; // 아래로 미는 몫은 아래 무게가 준다
+                bodyInterface.AddImpulse( contact.mBodyB, worldImpulse, contact.mPosition );
             }
-            virtualCharacter.SetLinearVelocity( JoltUtil::toJolt( velocity + carriedVelocity ) );
-            JPH::CharacterVirtual::ExtendedUpdateSettings updateSettings;
-            updateSettings.mWalkStairsStepUp                                = JPH::Vec3{ 0.0f, pRecord->_desc._stepHeight, 0.0f };
-            updateSettings.mStickToFloorStepDown                            = JPH::Vec3{ 0.0f, -pRecord->_desc._stepHeight, 0.0f };
-            const JPH::ObjectLayer                              objectLayer = JoltLayerUtil::makeObjectLayer( pRecord->_desc._layer, true );
-            const JoltPhysicsSceneInternal::CharacterBodyFilter bodyFilter{ *this };
-            const JPH::ShapeFilter                              shapeFilter;
-            virtualCharacter.ExtendedUpdate( deltaTime, _system.GetGravity(), updateSettings, _system.GetDefaultBroadPhaseLayerFilter( objectLayer ),
-                                             _system.GetDefaultLayerFilter( objectLayer ), bodyFilter, shapeFilter, _tempAllocator );
+            // 디딘 바디를 캐릭터 무게로 누른다 — Jolt 5.6.0 `Update` 끝의 셈 그대로(P = M g dt 의 바닥 법선 몫, 동적이 아니면 `AddImpulse` 가 버린다).
+            const JPH::BodyID groundBodyID = virtualCharacter.GetGroundBodyID();
+            const JPH::Vec3   gravity      = _system.GetGravity();
+            if ( groundBodyID.IsInvalid() == false && virtualCharacter.GetMass() > 0.0f )
+            {
+                const float32 normalDotGravity = virtualCharacter.GetGroundNormal().Dot( gravity );
+                if ( normalDotGravity < 0.0f )
+                    bodyInterface.AddImpulse( groundBodyID, -( virtualCharacter.GetMass() * normalDotGravity / gravity.Length() * deltaTime ) * gravity,
+                                              virtualCharacter.GetGroundPosition() );
+            }
         }
-        PhysicsCharacterState3D& state = pRecord->_state;
+        PhysicsCharacterState3D& state = record._state;
         state._position                = JoltUtil::toEngine( virtualCharacter.GetPosition() );
-        state._velocity                = JoltUtil::toEngine( virtualCharacter.GetLinearVelocity() ) - carriedVelocity;
-        state._carriedVelocity         = carriedVelocity;
-        state._groundYawRate           = groundYawRate;
+        state._velocity                = JoltUtil::toEngine( virtualCharacter.GetLinearVelocity() ) - record._carriedVelocity;
+        state._carriedVelocity         = record._carriedVelocity;
+        state._groundYawRate           = record._groundYawRate;
         state._bGrounded               = virtualCharacter.GetGroundState() == JPH::CharacterBase::EGroundState::OnGround;
         state._groundNormal            = state._bGrounded ? JoltUtil::toEngine( virtualCharacter.GetGroundNormal() ) : float3{};
         state._groundBody              = state._bGrounded ? findHandle( virtualCharacter.GetGroundBodyID() ) : PhysicsBodyHandle{};
-        return state;
+        // 다른 캐릭터가 이제 이 자리를 본다.
+        JPH::CharacterVirtual& mirror = *record._pMirror;
+        mirror.SetPosition( virtualCharacter.GetPosition() );
+        mirror.SetRotation( virtualCharacter.GetRotation() );
+        mirror.SetLinearVelocity( virtualCharacter.GetLinearVelocity() );
     }
 
     void JoltPhysicsScene::moveCharacters( span<const PhysicsCharacterMove3D> listMove, float32 deltaTime )
     {
-        // shortcut: 한 스레드로 차례로 돌며 씬 임시 할당자 하나를 쓴다, `load/*` 캐릭터 500 의 PreStep(워커 1 · 4 · 8)을 재고 이득이 보이면
-        //           레인마다 `JoltTempAllocator` 를 두고 나눠 돈다(캐릭터 대 캐릭터 충돌이 다른 캐릭터 자리를 읽으므로 레인 사이 차례도 함께 정한다).
+        // 결정(감사 S-8, 유니티 DOTS Character Controller 잡 · Jolt CharacterVirtual 병렬 갱신의 모양): 청크로 나눠 Jolt 이동(질의 · 제 상태만 쓴다)을 돌리고,
+        // 바디 쓰기(미는 · 누르는 충격량)와 사본 옮기기는 모두 끝난 뒤 게임 스레드가 목록 차례로 한다. 캐릭터는 단계 앞 사본만 보므로 결과는 청크 수와 관계없다.
+        if ( ++_characterMoveStamp == 0 )
+            ++_characterMoveStamp;
+        _listCharacterMoveJob.clear();
         for ( const PhysicsCharacterMove3D& move : listMove )
         {
-            (void)moveCharacter( move._character, move._velocity, deltaTime );
+            CharacterRecord* pRecord = _characters.get( move._character.getSlot() );
+            if ( pRecord == nullptr || pRecord->_pCharacter == nullptr )
+                continue;
+            if ( pRecord->_moveStamp == _characterMoveStamp )
+            {
+                // 두 청크가 한 캐릭터를 함께 옮기면 경합이다 — 두 번째 칸은 버린다.
+                SW_LOG_ERROR_ID( "JoltPhysicsScene.MoveCharactersDuplicate", "moveCharacters: the same character is listed twice in one batch - the later entry is skipped" );
+                continue;
+            }
+            pRecord->_moveStamp = _characterMoveStamp;
+            _listCharacterMoveJob.push_back( CharacterMoveJob{ pRecord, move._velocity } );
+        }
+        const uint32 count = static_cast<uint32>( _listCharacterMoveJob.size() );
+        if ( count == 0 )
+            return;
+        _characterMoveDeltaTime  = deltaTime;
+        _characterMoveChunkCount = MathUtil::min( _settings._characterChunkCount, count );
+        while ( _listCharacterChunkAllocator.size() < _characterMoveChunkCount )
+        {
+            _listCharacterChunkAllocator.push_back( make_unique<JoltTempAllocator>( _settings._characterChunkTempBytes ) );
+        }
+        engine::runParallel( _characterMoveChunkCount, JoltPhysicsSceneInternal::kCharacterChunkSerialThreshold,
+                             SW_DELEGATE_METHOD( ParallelBlockDelegate, &JoltPhysicsScene::runCharacterChunks, this ) );
+        for ( const CharacterMoveJob& job : _listCharacterMoveJob )
+        {
+            commitCharacterMove( *job._pRecord, deltaTime );
+        }
+        _listCharacterMoveJob.clear();
+    }
+
+    void JoltPhysicsScene::runCharacterChunks( uint32 chunkStart, uint32 chunkEnd )
+    {
+        const uint64 count = _listCharacterMoveJob.size();
+        for ( uint32 chunk = chunkStart; chunk < chunkEnd; ++chunk )
+        {
+            // 청크마다 목록의 이어진 구간 — 경계는 청크 수로만 정한다.
+            const size_t       begin     = static_cast<size_t>( count * chunk / _characterMoveChunkCount );
+            const size_t       end       = static_cast<size_t>( count * ( chunk + 1 ) / _characterMoveChunkCount );
+            JoltTempAllocator& allocator = *_listCharacterChunkAllocator[chunk];
+            for ( size_t index = begin; index < end; ++index )
+            {
+                const CharacterMoveJob& job = _listCharacterMoveJob[index];
+                runCharacterMove( *job._pRecord, job._velocity, _characterMoveDeltaTime, allocator );
+            }
         }
     }
 
@@ -1755,6 +1975,8 @@ namespace sw
         JPH::CharacterVirtual&                              virtualCharacter = *pRecord->_pCharacter;
         (void)virtualCharacter.SetShape( pShape.GetPtr(), FLT_MAX, _system.GetDefaultBroadPhaseLayerFilter( objectLayer ), _system.GetDefaultLayerFilter( objectLayer ),
                                          bodyFilter, shapeFilter, _tempAllocator );
+        (void)pRecord->_pMirror->SetShape( pShape.GetPtr(), FLT_MAX, _system.GetDefaultBroadPhaseLayerFilter( objectLayer ), _system.GetDefaultLayerFilter( objectLayer ),
+                                           bodyFilter, shapeFilter, _tempAllocator );
         pRecord->_desc._radius     = radius;
         pRecord->_desc._halfHeight = halfHeight;
         // 속 바디는 같은 바디에 셰이프만 간다 — 핸들이 그대로라 접촉 쌍도 이어진다(`setBodyShape` 와 같다).
@@ -1773,6 +1995,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_pCharacter == nullptr )
             return;
         pRecord->_pCharacter->SetPosition( JoltUtil::toJolt( position ) );
+        pRecord->_pMirror->SetPosition( JoltUtil::toJolt( position ) );
         pRecord->_state._position   = position;
         pRecord->_state._groundBody = PhysicsBodyHandle{};
     }
