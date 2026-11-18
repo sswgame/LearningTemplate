@@ -440,8 +440,9 @@ SW_TEST_CASE( ServiceStoreParityTest, RangeConditionsAnswerLikeMemory, ._timeout
     vector<string>        listMemoryLine;
     SW_REQUIRE_TRUE( SQLServiceStoreTestUtil::run( memory, [&]( IServiceStoreConnection& connection )
     { listMemoryLine = ServiceRangeParity::runScenario( connection ); } ) );
-    const vector<string> listExpected{ "unchanged: 0 -1", "inserted: 2 0", "outside: 0 -1", "own write: 0 -1",
-                                       "past the page: 0 -1", "updated: 2 0", "erased: 2 0", "inserted before cursor: 2 0",
+    // 범위 조건의 충돌은 어느 쓰기에서 난 것이 아니다 — 어긋난 쓰기 번호(`ServiceCommitInfo::_conflictIndex`)는 -1(모름)이다.
+    const vector<string> listExpected{ "unchanged: 0 -1", "inserted: 2 -1", "outside: 0 -1", "own write: 0 -1",
+                                       "past the page: 0 -1", "updated: 2 -1", "erased: 2 -1", "inserted before cursor: 2 -1",
                                        "inserted after cursor: 0 -1" };
     SW_REQUIRE_EQUAL( listExpected.size(), listMemoryLine.size() );
     for ( size_t index = 0; index < listExpected.size(); ++index )
