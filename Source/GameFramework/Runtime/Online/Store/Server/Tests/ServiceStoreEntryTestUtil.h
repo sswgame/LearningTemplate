@@ -39,7 +39,8 @@ namespace sw
         static void run( IServiceStoreConnection& connection, TFunction function )
         {
             ServiceStoreEntryTestJob<TFunction> job( std::move( function ) );
-            job.execute( connection );
+            ServiceStoreCommitStats             stats; // 이 도구는 커밋 수를 보지 않는다 — 입구 계약만 따른다
+            job.execute( connection, stats );
         }
     };
 } // namespace sw
