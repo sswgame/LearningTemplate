@@ -440,8 +440,8 @@ namespace sw
         for ( const DecalDrawData& decal : _state._listFrameDecal )
         {
             // 텍스처를 적었는데 아직 읽는 중이면 이 프레임은 그 데칼을 빼고 그린다(흰색 · 평평한 노멀로 대신 그리지 않는다).
-            const Texture2D* pAlbedo = decal._albedoTexture.isSet() ? _state._postProcessTextures.findReady( decal._albedoTexture, "decal albedo" ) : nullptr;
-            const Texture2D* pNormal = decal._normalTexture.isSet() ? _state._postProcessTextures.findReady( decal._normalTexture, "decal normal" ) : nullptr;
+            const Texture2D* pAlbedo = decal._albedoTexture.isSet() ? _state._pathTextures.requestReady( decal._albedoTexture, "decal albedo" ) : nullptr;
+            const Texture2D* pNormal = decal._normalTexture.isSet() ? _state._pathTextures.requestReady( decal._normalTexture, "decal normal" ) : nullptr;
             if ( ( decal._albedoTexture.isSet() && pAlbedo == nullptr ) || ( decal._normalTexture.isSet() && pNormal == nullptr ) )
                 continue;
             FrameRenderState::FrameDecalDraw draw;
@@ -713,7 +713,7 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._surfaceDeformParams, bSurfaceDeformReady ? _state._surfaceDeform._params : float4{ 0.0f, 0.0f, 0.0f, 0.0f } );
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         // 지난 프레임 어느 뷰도 묻지 않은 후처리 텍스처를 놓는다 — 이번 프레임의 뷰들이 묻기 전에 한 번.
-        _state._postProcessTextures.pruneUnused();
+        _state._pathTextures.pruneUnused();
         _postProcessMaterials.pruneUnused();
         _passExecutor.applyViewPassConstants( context, _state._mainView );
     }
@@ -842,7 +842,7 @@ namespace sw
         _state._probeUpdater.release( _pDevice );
         _state._lensFlare.release( _pDevice );
         _state._cookieAtlas.release( _pDevice );
-        _state._postProcessTextures.release();
+        _state._pathTextures.release();
         _postProcessMaterials.release();
         _state._shadowCache.releaseLayer( _pDevice );
         // HDRI 텍스처의 참조를 놓는다 — 다음 프레임의 하늘이 새 디바이스에 다시 청한다(경로를 비워 다르게 본다).

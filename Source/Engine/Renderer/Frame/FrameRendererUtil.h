@@ -569,7 +569,7 @@ namespace sw
         hashed_string _light2DCookieAtlas{ "Light2DCookieAtlas" };
         /// 자동 노출의 이번 프레임 EV(1x1, 뷰의 `_arrAutoExposure`) — 톤맵하는 패스가 `g_AutoExposureIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
         hashed_string _autoExposure{ "AutoExposure" };
-        /// 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUT`, `FramePostProcessTextureSet`) — 톤맵하는 패스가 `g_ColorGradingLUTIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
+        /// 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUT`, `PathTextureSet`) — 톤맵하는 패스가 `g_ColorGradingLUTIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
         hashed_string _colorGradingLUT{ "ColorGradingLUT" };
         /// 겹친 볼륨이 섞는 둘째 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUTBlend`) — 톤맵하는 패스가 `g_ColorGradingLUTBlendIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
         hashed_string _colorGradingLUTBlend{ "ColorGradingLUTBlend" };

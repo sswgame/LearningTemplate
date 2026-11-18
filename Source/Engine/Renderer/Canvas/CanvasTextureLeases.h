@@ -11,6 +11,7 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Renderer/Frame/Resource/PathTextureSet.h"
 
 namespace sw
 {
@@ -55,19 +56,12 @@ namespace sw
         /** @brief 경로로 대상 상태를 찾습니다. 이번 목록과 순서가 같지 않으므로 경로로 찾습니다. 없으면 nullptr 입니다. */
         CanvasTargetLease* findTarget( const hashed_string& path );
         /** @brief 경로로 빌린 이미지의 SRV 입니다. 빌리지 않았거나 아직 읽는 중이거나 읽지 못한 경로면 kInvalidDescriptorIndex 입니다. */
-        RHIDescriptorIndex findPathTextureSRV( const hashed_string& path ) const;
+        RHIDescriptorIndex findPathTextureSRV( const hashed_string& path ) const { return _pathTextures.findReadySRV( path ); }
         /** @brief 빌린 이미지와 대상을 캐시에 돌려줍니다(다음 `prepareTargets` · `acquirePathTextures` 가 다시 빌립니다). */
         void release();
 
     private:
-        /** @brief 경로로 빌린 이미지 하나입니다(텍스처는 `TextureCache` 가 소유하고, 핸들이 참조를 쥐었다가 놓을 때 돌려줍니다). */
-        struct PathTexture
-        {
-            hashed_string _path{};
-            TextureHandle _load{}; ///< 실패해도 쥔다(캐시가 이유를 남겼으므로 다시 묻지 않는다)
-        };
-
-        vector<PathTexture>       _listPathTexture; ///< 경로 이미지(HUD 아이콘, 조준선. 몇 개뿐이라 선형 검색)
-        vector<CanvasTargetLease> _listTarget;      ///< 렌더 텍스처 대상(월드 공간 UI)
+        PathTextureSet            _pathTextures; ///< 경로 이미지(HUD 아이콘, 조준선) — 놓지 않고 `release` 까지 쥔다
+        vector<CanvasTargetLease> _listTarget;   ///< 렌더 텍스처 대상(월드 공간 UI)
     };
 } // namespace sw

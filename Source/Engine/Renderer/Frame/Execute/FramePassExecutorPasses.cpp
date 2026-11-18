@@ -1093,7 +1093,7 @@ namespace sw
             uint32 textureIndex = kInvalidDescriptorIndex;
             if ( range._pTexturePath != nullptr )
             {
-                const Texture2D* pTexture = _state._postProcessTextures.findReady( *range._pTexturePath, "lens flare sprite" );
+                const Texture2D* pTexture = _state._pathTextures.requestReady( *range._pTexturePath, "lens flare sprite" );
                 if ( pTexture == nullptr )
                     continue;
                 arrTextureSRV[0] = pTexture->getSRV();

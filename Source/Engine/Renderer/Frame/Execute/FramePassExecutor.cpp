@@ -460,7 +460,7 @@ namespace sw
         const bool bWantsLUT = view._settings.usesPostProcess() && post._colorGradingLUTIntensity > 0.0f;
         const auto findLUT   = [this]( const DataPath& path ) -> const Texture2D*
         {
-            const Texture2D* pFound = path.isSet() ? _state._postProcessTextures.findReady( path, "colour grading LUT" ) : nullptr;
+            const Texture2D* pFound = path.isSet() ? _state._pathTextures.requestReady( path, "colour grading LUT" ) : nullptr;
             if ( pFound != nullptr && PostGradeConstants::isLUTStrip( pFound->getWidth(), pFound->getHeight() ) == false )
             {
                 SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ColorGradingLUTShape", "Colour grading LUT '%#' is %#x%# - it must be an N*N wide, N tall strip (e.g. 256x16); the LUT is left out",
@@ -498,7 +498,7 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._grainParams, float4{ MathUtil::saturate( post._filmGrainIntensity ), MathUtil::max( 1.0f, post._filmGrainSize ), 0.0f, 0.0f } );
         // 블룸 렌즈(post_bloom.hlsli) — 먼지 마스크는 LUT 와 같이 세기가 있는 후처리 뷰만 묻고, 읽힌 마스크가 없으면 세기를 0 으로 보낸다(셰이더가 읽지 않는다).
         const bool       bWantsDirt = view._settings.usesPostProcess() && post._bloomDirtMaskIntensity > 0.0f;
-        const Texture2D* pDirt      = bWantsDirt ? _state._postProcessTextures.findReady( post._bloomDirtMask, "bloom dirt mask" ) : nullptr;
+        const Texture2D* pDirt      = bWantsDirt ? _state._pathTextures.requestReady( post._bloomDirtMask, "bloom dirt mask" ) : nullptr;
         view._pBloomDirtMask        = pDirt;
         context._passValues.setFloat4( passConstantNames()._bloomLens, float4{ pDirt != nullptr ? post._bloomDirtMaskIntensity : 0.0f, MathUtil::max( 0.0f, post._lensFlareIntensity ),
                                                                                MathUtil::saturate( post._lensFlareGhostSpacing ), MathUtil::saturate( post._lensFlareHaloWidth ) } );

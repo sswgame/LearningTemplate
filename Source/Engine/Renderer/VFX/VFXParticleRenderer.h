@@ -20,7 +20,7 @@
 
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Renderer/Frame/Resource/PathTextureSet.h"
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
 #include "Engine/VFX/VFXParticle.h"
 
@@ -31,7 +31,6 @@ namespace sw
 
     class IRHICommandList;
     class IRHIDevice;
-    class Texture2D;
 
     /**
      * @class VFXParticleRenderer
@@ -85,20 +84,9 @@ namespace sw
         uint64 getPendingGPUStepCount() const { return _gpuSimulation.getPendingStepCount(); }
 
     private:
-        /** @brief 경로로 빌린 입자 텍스처 하나입니다(텍스처는 `TextureCache` 가 소유하고, 핸들이 참조를 쥐었다가 놓을 때 돌려줍니다). */
-        struct PathTexture
-        {
-            hashed_string _path{};
-            TextureHandle _load{}; ///< 실패해도 쥔다(캐시가 이유를 남겼으므로 다시 묻지 않는다)
-        };
-
-        /** @brief 경로의 텍스처 SRV 입니다. 빌리지 못했거나 아직 읽는 중이거나 읽지 못했으면 kInvalidDescriptorIndex 입니다. */
-        RHIDescriptorIndex findTextureSRV( const hashed_string& path ) const;
-
-    private:
         vector<GPUParticle> _listUploadScratch; ///< 모든 방출기의 입자를 이어 붙인 사본
         vector<uint32>      _listBatchBase;     ///< 방출기마다 공유 버퍼 안 시작 위치(GPU 방출기는 자리표)
-        vector<PathTexture> _listTexture;       ///< 입자 텍스처(몇 개뿐이라 선형 검색)
+        PathTextureSet      _textures;          ///< 입자 텍스처 — 놓지 않고 `release` 까지 쥔다
         RHIStructuredBuffer _particleBuffer;
         /// @brief 방출기 안 입자의 순서 목록(`uint32`)입니다. 입자 그리기가 있는 프레임에는 비어 있어도 한 칸을 올려 늘 건다(셰이더가 선언한 슬롯을 비워 두지 않는다).
         RHIStructuredBuffer _orderBuffer;

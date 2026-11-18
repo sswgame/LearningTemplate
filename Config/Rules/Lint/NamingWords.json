@@ -107,6 +107,7 @@
     "gv_gpuBreadcrumbs": "EngineConfig _rhi._gpuBreadcrumbs + 시작 인자 -rhi-breadcrumbs(resolveRHIDiagnosticSwitch) — 장치 생성 전에 읽혀 실행 중에 바꿔도 효과가 없던 개발 변수(2026-11-18)",
     "Ninja-Debug-Server": "Ninja-Release-Server — 묶음 검증이 Debug 를 짓지 않는다(단언 · 검사는 SW_DO_CHECKS 로 Release 에도 있다, 사용자 결정 2026-11-18)",
     "_footstep": "SurfaceKindDef::_step · _wetStep(SurfaceStepResponse — 소리 이벤트 _sound · 효과 · 발자국 · 발 적시기 한 벌) — 발소리 분류 글자를 소리 경로 {surface} 에 끼우던 칸, 반응이 마름 · 젖음으로 갈리고 소리는 이벤트가 됐다(2026-11-18)",
+    "FramePostProcessTextureSet": "PathTextureSet — 후처리 텍스처만이 아니라 데칼 · 렌즈 플레어 · 캔버스 이미지 · 입자 텍스처가 같은 경로 → 로드 핸들 묶음을 쓴다(셋을 하나로 합쳤다, 2026-11-19)",
     "hasFootprints": "_step._footprint.isSet() — 발자국은 마른 · 젖은 반응마다 다르다(2026-11-18)",
     "getCompletedScreenshotSerial": "RenderThread::requestScreenshot 이 돌려준 표 + findScreenshotResult — 처리 수는 같은 실행의 다른 요청 끝을 제 끝으로 읽는다(2026-11-18)",
     "getLastScreenshotPath": "RenderThread::findScreenshotResult(표) — 마지막 경로는 다른 요청이 덮는다(2026-11-18)",

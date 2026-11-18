@@ -437,7 +437,7 @@ namespace sw
          */
         void updateLightBuffer( IRHIDevice* pDevice );
         /**
-         * @brief (셋업) 이번 프레임 데칼의 텍스처를 풀어(`_postProcessTextures` — 읽는 중이면 그 데칼은 빠진다) 그리기 목록(`_listFrameDecalDraw`)을 만듭니다.
+         * @brief (셋업) 이번 프레임 데칼의 텍스처를 풀어(`_pathTextures` — 읽는 중이면 그 데칼은 빠진다) 그리기 목록(`_listFrameDecalDraw`)을 만듭니다.
          * @details 데칼이 있는데 파이프라인에 Decal 패스가 없으면(포워드) 한 번 경고한다 — 덮을 G버퍼가 없다.
          */
         void prepareFrameDecals();

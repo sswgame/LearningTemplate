@@ -119,7 +119,7 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 |---|---|
 | 값 칸을 더한다 | `PostProcessValues` 에 칸, `PostProcessOverrides` 에 같은 차례로 `_b<칸>` 비트와 생성자 줄. 섞기 · 포즈 블렌드는 리플렉션으로 따라온다(테스트 `PostProcessVolumeTest.OverrideFlagsPairEveryValue` 가 짝을 본다). 섞을 수 없는 형식(경로)은 `blendOverrides` 에 주소로 고르는 줄을 더한다(절반에서 바꾼다) |
 | 셰이더가 읽는다 | 기본값은 지금 그림을 바꾸지 않는 중립이어야 한다. 패스 상수는 `FramePassExecutor::applyViewPassConstants` 가 뷰마다 채운다 |
-| 텍스처를 가리킨다(LUT · 먼지 마스크) | 칸은 `DataPath`, 로드는 `FramePostProcessTextureSet::findReady`(비동기 — 읽는 동안 그 효과는 빠진다), 셰이더 칸은 엔진 텍스처 표(`shaderslot::emulated::kEngineTextureNames`)의 이름이다. 에뮬(DX11 · GL)의 엔진 텍스처 칸은 GL 유닛 0..15 안이라 둘이 더 남는다 |
+| 텍스처를 가리킨다(LUT · 먼지 마스크) | 칸은 `DataPath`, 로드는 `PathTextureSet::requestReady`(비동기 — 읽는 동안 그 효과는 빠진다), 셰이더 칸은 엔진 텍스처 표(`shaderslot::emulated::kEngineTextureNames`)의 이름이다. 에뮬(DX11 · GL)의 엔진 텍스처 칸은 GL 유닛 0..15 안이라 둘이 더 남는다 |
 
 - 컬러 그레이딩 · 렌즈 왜곡 · 색수차 · 선명화 · 필름 그레인은 톤맵하는 셰이더(Tonemap 패스 · 후처리 체인 `SW_POST_TONEMAP`) 안의 함수이고, 블룸 먼지 마스크 · 블룸 고스트는 블룸을 더하는 함수(`post_bloom.hlsli`) 안이다. 이런 효과에 패스를 따로 두지 않는다(왕복 하나가 든다). 값이 모두 중립이면 C++ 가 켬 상수를 0 으로 두어 셰이더가 건너뛴다. 후처리를 끈 뷰(`SW_PASS_FLAG_SKIP_POST`)는 톤맵만 한다.
 

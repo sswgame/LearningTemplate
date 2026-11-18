@@ -6,13 +6,9 @@
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Asset/AssetManager.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Graphics/Texture/Texture2D.h"
-#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
@@ -53,7 +49,7 @@ namespace sw
     VFXParticleRenderer::VFXParticleRenderer()
         : _listUploadScratch{}
         , _listBatchBase{}
-        , _listTexture{}
+        , _textures{}
         , _particleBuffer{}
         , _orderBuffer{}
         , _gpuSimulation{}
@@ -76,20 +72,10 @@ namespace sw
         SW_PROFILE_SCOPE( "RT.VFX.Upload" );
 
         // 1) 텍스처 — 게임 스레드는 디바이스가 없어 경로만 실었다. 머티리얼 텍스처와 같은 캐시에서 빌린다(기록 전이라 만들 수 있다).
-        const bool bServices = engine::areEngineServicesBound();
         for ( const GPUParticleBatch& batch : listBatch )
         {
-            bool bKnown = false;
-            for ( const PathTexture& texture : _listTexture )
-            {
-                bKnown = bKnown || texture._path == batch._texturePath;
-            }
-            if ( bKnown || bServices == false )
-                continue;
-            // 렌더 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 그 방출기를 그리지 않는다(`drawBatches` 는 텍스처 없는 방출기를 건너뛴다).
-            PathTexture& added = _listTexture.emplace_back();
-            added._path        = batch._texturePath;
-            added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( batch._texturePath.view(), AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
+            // 다 읽기 전 프레임은 그 방출기를 그리지 않는다(`drawBatches` 는 텍스처 없는 방출기를 건너뛴다).
+            _textures.request( batch._texturePath );
         }
 
         // 2) 순서 목록 — 정렬 모드가 있는 방출기의 구간들(게임 스레드가 뷰마다 만들었다). 비어도 한 칸을 올려 슬롯을 늘 건다.
@@ -167,7 +153,7 @@ namespace sw
             const VFXGPUSimulation::DrawSource* pGPUSource  = _gpuSimulation.findDrawSource( batchIndex );
             const bool                          bGPUBatch   = batch.findGPURequest() != nullptr;
             const bool                          bSourceGone = bGPUBatch ? pGPUSource == nullptr : bSharedReady == false;
-            const RHIDescriptorIndex            srv         = findTextureSRV( batch._texturePath );
+            const RHIDescriptorIndex            srv         = _textures.findReadySRV( batch._texturePath );
             if ( srv == kInvalidDescriptorIndex || bSourceGone )
                 continue;
             const RHIDescriptorIndex particleSRV = bGPUBatch ? pGPUSource->_particleSRV : _particleBuffer._srv;
@@ -238,23 +224,11 @@ namespace sw
 
     void VFXParticleRenderer::release( IRHIDevice* pDevice )
     {
-        _listTexture.clear(); // 입자 텍스처의 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다(`Material::releaseTextureAssets` 와 같다)
+        _textures.release(); // 입자 텍스처의 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다(`Material::releaseTextureAssets` 와 같다)
         _particleBuffer.release( pDevice );
         _orderBuffer.release( pDevice );
         _gpuSimulation.release( pDevice );
         _listBatchBase.clear();
         _uploadedParticleCount = 0;
-    }
-
-    RHIDescriptorIndex VFXParticleRenderer::findTextureSRV( const hashed_string& path ) const
-    {
-        for ( const PathTexture& texture : _listTexture )
-        {
-            if ( texture._path != path )
-                continue;
-            const Texture2D* pTexture = texture._load.isReady() ? texture._load.getOperation()->getTexture() : nullptr;
-            return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getSRV() : kInvalidDescriptorIndex;
-        }
-        return kInvalidDescriptorIndex;
     }
 } // namespace sw
