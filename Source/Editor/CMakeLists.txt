@@ -59,11 +59,11 @@ endfunction()
 set(list_editor_root_source "")
 set(list_editor_part_source "")
 set(list_editor_view_model_regex "")   # 뷰 층 안 `Model` 폴더의 절대 경로 정규식(코어 리플렉션 입력 · EditorModule 훑기 제외에 같이 쓴다)
-set(editor_panel_view_source "")    # 패널 View(`SW_EDITOR_PANEL_VIEW_LAYER` 의 Model 밖 파일) — 아래 2-2) 의 부분이 MVVM 껍데기와 함께 짓는다
-set(editor_panel_view_tier "")
+set(editor_mvvm_view_count 0)       # MVVM View(`SW_EDITOR_MVVM_VIEW_PATHS` 의 Model 밖 파일) 수 — 아래 2-2) 의 티어별 부분이 MVVM 껍데기와 함께 짓는다
 foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 	set(editor_tier_model_source_${tier} "")
 	set(editor_tier_view_source_${tier} "")
+	set(editor_tier_mvvm_view_source_${tier} "")
 	foreach(layer IN LISTS SW_EDITOR_TIER_${tier}_LAYERS)
 		string(MAKE_C_IDENTIFIER "${layer}" layer_key)
 		sw_glob_editor_layer("${layer}" editor_layer_${layer_key})
@@ -82,20 +82,31 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 			list(FILTER layer_model_source INCLUDE REGEX "${layer_model_regex}")
 			list(FILTER layer_view_source EXCLUDE REGEX "${layer_model_regex}")
 			list(APPEND editor_tier_model_source_${tier} ${layer_model_source})
-			if(layer STREQUAL SW_EDITOR_PANEL_VIEW_LAYER)
-				list(APPEND editor_panel_view_source ${layer_view_source})
-				set(editor_panel_view_tier ${tier})
-			else()
-				list(APPEND editor_tier_view_source_${tier} ${layer_view_source})
-			endif()
+			# 표의 View 경로(층 · 폴더 · 파일)에 드는 파일은 MVVM View 부분이 짓는다(2-2) — 같은 티어 껍데기와 모델 · 씬 헤더 껍데기를 함께 받는다.
+			foreach(view_source IN LISTS layer_view_source)
+				file(RELATIVE_PATH view_relative "${CMAKE_CURRENT_SOURCE_DIR}" "${view_source}")
+				set(is_mvvm_view FALSE)
+				foreach(view_path IN LISTS SW_EDITOR_MVVM_VIEW_PATHS)
+					string(FIND "${view_relative}/" "${view_path}/" view_position)
+					if(view_relative STREQUAL view_path OR view_position EQUAL 0)
+						set(is_mvvm_view TRUE)
+						break()
+					endif()
+				endforeach()
+				if(is_mvvm_view)
+					list(APPEND editor_tier_mvvm_view_source_${tier} "${view_source}")
+					math(EXPR editor_mvvm_view_count "${editor_mvvm_view_count} + 1")
+				else()
+					list(APPEND editor_tier_view_source_${tier} "${view_source}")
+				endif()
+			endforeach()
 		endif()
 	endforeach()
-	list(APPEND list_editor_part_source ${editor_tier_model_source_${tier}} ${editor_tier_view_source_${tier}})
+	list(APPEND list_editor_part_source ${editor_tier_model_source_${tier}} ${editor_tier_view_source_${tier}} ${editor_tier_mvvm_view_source_${tier}})
 endforeach()
-if(NOT editor_panel_view_source)
-	message(FATAL_ERROR "[Editor] panel view layer '${SW_EDITOR_PANEL_VIEW_LAYER}' (EditorLayers.toml [panelViewBan] layer) has no view sources")
+if(editor_mvvm_view_count EQUAL 0)
+	message(FATAL_ERROR "[Editor] no MVVM view sources (EditorLayers.toml [panelViewBan] views '${SW_EDITOR_MVVM_VIEW_PATHS}')")
 endif()
-list(APPEND list_editor_part_source ${editor_panel_view_source})
 set(list_editor_unassigned_source ${list_editor_source})
 list(REMOVE_ITEM list_editor_unassigned_source ${list_editor_root_source} ${list_editor_part_source})
 if(list_editor_unassigned_source)
@@ -323,9 +334,9 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 endforeach()
 
 # ------------------------------------------------------------------------------
-# 2-2) 패널 View 의 MVVM 경계(`docs/agents/EditorUI.md` 'MVVM' 절): View(`Panels` 의 `Model` 폴더 밖)는 모델 · 씬 헤더를 include 하지 못한다.
+# 2-2) MVVM View 의 경계(`docs/agents/EditorUI.md` 'MVVM' 절): View(표 `[panelViewBan] views` 의 `Model` 폴더 밖)는 모델 · 씬 헤더를 include 하지 못한다.
 #      표 `EditorLayers.toml` 의 `[panelViewBan]`(Source 기준 정규식)에 맞는 헤더마다 `#error` 껍데기를 놓는다 — 값 · 창구 헤더(`[panelViewAllowed]`)만 뺀다.
-#      층 껍데기와 같은 장치라 헤더를 거친 전이 include 도 멈춘다. View 부분은 티어 껍데기도 받는다(같은 티어 `AssetActions` 는 씬 헤더를 쓰므로 부분을 가른다).
+#      층 껍데기와 같은 장치라 헤더를 거친 전이 include 도 멈춘다. View 는 티어마다 부분(`EditorTier<N>MVVMView`)이고 그 티어 껍데기도 받는다(아직 옮기지 않은 같은 티어 파일은 `EditorTier<N>View`).
 #      확장 모듈의 View 는 `sw_add_editor_extension( … PANEL_VIEW_SOURCES … )` 가 같은 껍데기 자리(전역 속성 SW_EDITOR_PANEL_VIEW_STUB_ROOT)를 받는다.
 #      언리얼 Slate 는 위젯이 모델을 바로 보지만, 유니티 UI Toolkit 바인딩처럼 View 는 ViewModel 값만 본다 — 목록 린트 대신 형식으로 막는다.
 # ------------------------------------------------------------------------------
@@ -352,18 +363,23 @@ foreach(header IN LISTS list_panel_view_ban_candidate)
 		endif()
 	endforeach()
 endforeach()
-sw_add_module_part(EditorPanelView
-	OWNER EditorModule
-	SOURCES ${editor_panel_view_source}
-	LINK ${list_editor_view_link}
-)
-sw_add_editor_layer_stubs(EditorPanelView ${editor_panel_view_tier})
-sw_apply_layer_stubs(EditorPanelView "${editor_panel_view_stub_root}" ${list_panel_view_stub})
+foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
+	if(NOT editor_tier_mvvm_view_source_${tier})
+		continue()
+	endif()
+	sw_add_module_part(EditorTier${tier}MVVMView
+		OWNER EditorModule
+		SOURCES ${editor_tier_mvvm_view_source_${tier}}
+		LINK ${list_editor_view_link}
+	)
+	sw_add_editor_layer_stubs(EditorTier${tier}MVVMView ${tier})
+	sw_apply_layer_stubs(EditorTier${tier}MVVMView "${editor_panel_view_stub_root}" ${list_panel_view_stub})
+	if(TARGET EditorCoreReflect)
+		add_dependencies(EditorTier${tier}MVVMView EditorCoreReflect_ReflectionGen)
+	endif()
+	list(APPEND list_editor_part EditorTier${tier}MVVMView)
+endforeach()
 set_property(GLOBAL PROPERTY SW_EDITOR_PANEL_VIEW_STUB_ROOT "${editor_panel_view_stub_root}")
-if(TARGET EditorCoreReflect)
-	add_dependencies(EditorPanelView EditorCoreReflect_ReflectionGen)
-endif()
-list(APPEND list_editor_part EditorPanelView)
 
 # ------------------------------------------------------------------------------
 # 2-1) 에디터 코드의 ImGui 입력 함수 금지(`docs/agents/EditorUI.md` 입력 절 — 형식이 먼저, 린트는 형식이 못 막는 `ImGuiIO` 필드 읽기만)
@@ -373,11 +389,12 @@ list(APPEND list_editor_part EditorPanelView)
 # ------------------------------------------------------------------------------
 option(SW_EDITOR_INPUT_BAN "Editor code fails to compile when it calls ImGui input/popup/drag functions directly (EditorInputBan.h)" ON)
 foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
-	if(TARGET EditorTier${tier}View)
-		sw_apply_editor_input_ban(EditorTier${tier}View)
-	endif()
+	foreach(view_part IN ITEMS EditorTier${tier}View EditorTier${tier}MVVMView)
+		if(TARGET ${view_part})
+			sw_apply_editor_input_ban(${view_part})
+		endif()
+	endforeach()
 endforeach()
-sw_apply_editor_input_ban(EditorPanelView)
 sw_apply_editor_input_ban(EditorModule)
 
 # 에디터는 LTO 를 받지 않는다(링크 시간 — Tools/ 와 같은 이유).
