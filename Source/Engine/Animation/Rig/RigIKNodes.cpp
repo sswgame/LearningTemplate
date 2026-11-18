@@ -716,8 +716,6 @@ namespace sw
             {
                 if ( context.findBone( _params._pelvis, _pelvis ) == false )
                     return false;
-                vector<float4x4> listReference;
-                RigIKNodesInternal::computeReferenceModel( *context._pSkeleton, listReference );
                 for ( Foot& foot : _listFoot )
                 {
                     vector<uint32> listBone;
@@ -726,11 +724,6 @@ namespace sw
                     foot._root = listBone[0];
                     foot._mid  = listBone[1];
                     foot._end  = listBone[2];
-                    // 다리 길이는 레퍼런스 포즈의 두 마디 길이 합이다(뼈 길이는 애니메이션이 바꾸지 않는다고 본다).
-                    const float3 hip   = listReference[foot._root].getTranslation();
-                    const float3 knee  = listReference[foot._mid].getTranslation();
-                    const float3 ankle = listReference[foot._end].getTranslation();
-                    foot._legLength    = ( knee - hip ).getLength() + ( ankle - knee ).getLength();
                 }
                 return true;
             }
@@ -759,8 +752,12 @@ namespace sw
                 float32 drop = 0.0f;
                 for ( const Foot& foot : _listFoot )
                 {
+                    // 다리 길이는 지금 포즈의 두 마디 길이 합이다 — 체형(본 비율)이 다리를 늘이고 줄이므로 레퍼런스 길이를 묶어 두지 않는다(2 본 IK 풀이와 같은 길이).
                     const float3  hip            = pose.getModelPosition( foot._root );
-                    const float32 reach          = foot._legLength * RigIKNodesInternal::kMaxLegExtension;
+                    const float3  knee           = pose.getModelPosition( foot._mid );
+                    const float3  ankle          = pose.getModelPosition( foot._end );
+                    const float32 legLength      = ( knee - hip ).getLength() + ( ankle - knee ).getLength();
+                    const float32 reach          = legLength * RigIKNodesInternal::kMaxLegExtension;
                     const float3  toGoal         = foot._goal - hip;
                     const float32 horizontalSq   = toGoal._x * toGoal._x + toGoal._z * toGoal._z;
                     const float32 reachHeightSq  = reach * reach - horizontalSq;
@@ -813,7 +810,6 @@ namespace sw
                 hashed_string _endName{};
                 float3        _goal{};
                 quaternion    _rotation{};
-                float32       _legLength{ 0.0f };
                 uint32        _root{ 0 };
                 uint32        _mid{ 0 };
                 uint32        _end{ 0 };
