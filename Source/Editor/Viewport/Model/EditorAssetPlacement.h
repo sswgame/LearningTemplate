@@ -8,6 +8,8 @@
 #include "Core/Math/Ray.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Viewport/Model/EditorPlacementDrag.h"
+
 #include "Engine/Physics/IPhysicsQueryScene.h"
 
 namespace sw
@@ -17,24 +19,6 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 놓을 자리를 준 표면의 종류입니다. 고스트 글과 감시 값(`Editor.PlacementSurface`)이 같은 번호를 쓴다. */
-    enum class EditorPlacementSurface : uint8
-    {
-        None,        ///< 표면을 찾지 못했다 — 놓지 않는다
-        Collider,    ///< 정적 콜라이더 · 지형(편집 중 정적 물리 사본의 레이캐스트)
-        Bounds,      ///< 콜라이더가 없는 오브젝트의 피킹 경계(메시 · 스프라이트 — `EditorViewportRayPick`)
-        GroundPlane, ///< 바닥 평면(3D 는 Y = 0, 2D 는 Z = 0)
-    };
-
-    /** @brief 놓을 자리 하나입니다. */
-    struct EditorPlacementHit
-    {
-        float3                 _position{};
-        float3                 _normal{ 0.0f, 1.0f, 0.0f };
-        float32                _distance{ 0.0f }; ///< 레이 원점에서의 거리
-        EditorPlacementSurface _surface{ EditorPlacementSurface::None };
-    };
-
     /** @brief 표면을 찾는 데 쓰는 입력입니다. 물리 사본이 없으면(2D · 물리 서비스 없음) 콜라이더 표면은 건너뛴다. */
     struct EditorPlacementQuery
     {
@@ -63,10 +47,5 @@ namespace sw::editor
         [[nodiscard]] static float3 snapToGrid( const float3& position, float32 step, bool b2DMode );
         /** @brief 표면 종류의 영어 이름입니다(로그 · 고스트 글). */
         [[nodiscard]] static const utf8* getSurfaceName( EditorPlacementSurface surface );
-        /**
-         * @brief 놓기 전 회전 @p yaw 를 @p direction(+1 · -1) 쪽으로 @p step 만큼 돌린 값입니다(라디안, 0 ~ 2π 로 감는다). @p step 이 0 이하면 그대로입니다.
-         * @details 걸음은 0 에서 센다 — 키를 네 번 누르면(직각 걸음) 처음 자세로 돌아온다. 감는 값이 2π 근처에서 떨리지 않게 걸음의 배수로 맞춘다.
-         */
-        [[nodiscard]] static float32 stepYaw( float32 yaw, float32 step, int32 direction );
     };
 } // namespace sw::editor

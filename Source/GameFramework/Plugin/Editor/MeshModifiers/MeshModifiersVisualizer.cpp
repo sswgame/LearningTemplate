@@ -29,6 +29,7 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
+#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
 #include "Engine/Localization/LocText.h"
 
@@ -82,14 +83,6 @@ namespace sw::editor
                 ImVec2 screenTo;
                 if ( EditorViewportProjectionUtil::projectSegment( *args._pViewProj, from, to, args._canvasPos, args._canvasSize, screenFrom, screenTo ) )
                     args._pDrawList->AddLine( screenFrom, screenTo, color, thickness );
-            }
-
-            static void drawSegments( const EditorViewportVisualizerArgs& args, const vector<float3>& listSegmentPoint, ImU32 color )
-            {
-                for ( size_t index = 0; index + 1 < listSegmentPoint.size(); index += 2 )
-                {
-                    drawSegment( args, listSegmentPoint[index], listSegmentPoint[index + 1], color, 1.0f );
-                }
             }
 
             /** @brief 화살표(선 + 화면 공간 머리)를 그립니다. */
@@ -719,10 +712,49 @@ namespace sw::editor
 
             /** @brief 시각화 표의 `meshmodifiers.preview` 진입점입니다. */
             static void drawPreviewOfScope( const EditorViewportVisualizerArgs& args ) { getSubsystem<MeshModifiersVisualizerState>().drawPreview( args ); }
-            /** @brief 시각화 표의 `meshmodifiers.stage` 진입점입니다. */
-            static void drawStageOfScope( const EditorViewportVisualizerArgs& args ) { getSubsystem<MeshModifiersVisualizerState>().drawStage( args ); }
+            /** @brief 시각화 표의 `meshmodifiers.preview` 모으기 진입점입니다(변형 결과 선). */
+            static void gatherPreviewOfScope( const EditorViewportVisualizerArgs& /*args*/, EditorVisualizerDrawList& outDrawList )
+            {
+                getSubsystem<MeshModifiersVisualizerState>().gatherSegments( false, outDrawList );
+            }
+            /** @brief 시각화 표의 `meshmodifiers.stage` 모으기 진입점입니다. */
+            static void gatherStageOfScope( const EditorViewportVisualizerArgs& /*args*/, EditorVisualizerDrawList& outDrawList )
+            {
+                getSubsystem<MeshModifiersVisualizerState>().gatherSegments( true, outDrawList );
+            }
 
-            /** @brief 변형 미리보기 · 범위 · 손잡이 · 제어점을 그리고 끌기를 처리합니다(`meshmodifiers.preview`). */
+            /**
+             * @brief 대상의 결과 선분을 도형 값으로 모읍니다 — @p bStage 면 고른 모디파이어까지(`meshmodifiers.stage`), 아니면 전체 변형 미리보기(`meshmodifiers.preview`, CPU 미리보기를 먼저 갱신한다).
+             * @details 그리기는 `EditorViewportVisualizer::drawAll` 이 한다. 손잡이 · 제어점 끌기는 화면 도구(`drawPreview`)다.
+             */
+            void gatherSegments( bool bStage, EditorVisualizerDrawList& outDrawList )
+            {
+                MeshModifierSession* pSession        = findSubsystem<MeshModifierSession>();
+                const bool           bNoActiveTarget = pSession == nullptr || pSession->hasTarget() == false || pSession->findTarget() == nullptr;
+                if ( bNoActiveTarget )
+                    return;
+                vector<float3>& listPoint = bStage ? _listStagePoint : _listSegmentPoint; // 프레임마다 다시 채우는 재사용 버퍼
+                if ( bStage )
+                    pSession->makeStagePreviewSegments( listPoint );
+                else
+                {
+                    pSession->refreshPreview();
+                    pSession->makePreviewSegments( listPoint );
+                }
+                EditorVisualizerLine prototype{};
+                prototype._thickness = 1.0f;
+                prototype._colorRole = EditorVisualizerColorRole::ThemeToken;
+                prototype._pThemeKey = bStage ? "Viewport.ModifierStage" : "Viewport.ModifierPreview";
+                for ( size_t index = 0; index + 1 < listPoint.size(); index += 2 )
+                {
+                    EditorVisualizerLine line = prototype;
+                    line._from                = listPoint[index];
+                    line._to                  = listPoint[index + 1];
+                    outDrawList.addLine( line );
+                }
+            }
+
+            /** @brief 범위 · 손잡이 · 제어점을 그리고 끌기를 처리합니다(`meshmodifiers.preview` 의 화면 도구 — 변형 결과 선은 `gatherSegments` 가 모은다). */
             void drawPreview( const EditorViewportVisualizerArgs& args )
             {
                 MeshModifierSession* pSession      = findSubsystem<MeshModifierSession>();
@@ -733,10 +765,6 @@ namespace sw::editor
                     return;
                 }
                 MeshModifierSession& session = *pSession;
-                session.refreshPreview();
-
-                session.makePreviewSegments( _listSegmentPoint ); // 프레임마다 다시 채우는 재사용 버퍼
-                MeshModifiersVisualizerInternal::drawSegments( args, _listSegmentPoint, MeshModifiersVisualizerInternal::themeColor( SW_THEME_COLOR( "Viewport", "ModifierPreview" ) ) );
 
                 MeshModifier*     pModifier = session.getStack().findModifier( session.getSelectedIndex() );
                 ModifierViewFrame frame{};
@@ -755,17 +783,6 @@ namespace sw::editor
 
                 (void)_pointSet.build( frame ); // 제어점 월드 목록을 프레임마다 다시 채운다 — 격자 · ffd2d 가 아니면 빈 채로 둔다
                 processEditing( args, session, frame );
-            }
-
-            /** @brief 고른 모디파이어까지의 결과 선분을 그립니다(`meshmodifiers.stage`). */
-            void drawStage( const EditorViewportVisualizerArgs& args )
-            {
-                MeshModifierSession* pSession        = findSubsystem<MeshModifierSession>();
-                const bool           bNoActiveTarget = pSession == nullptr || pSession->hasTarget() == false || pSession->findTarget() == nullptr;
-                if ( bNoActiveTarget )
-                    return;
-                pSession->makeStagePreviewSegments( _listStagePoint ); // 프레임마다 다시 채우는 재사용 버퍼
-                MeshModifiersVisualizerInternal::drawSegments( args, _listStagePoint, MeshModifiersVisualizerInternal::themeColor( SW_THEME_COLOR( "Viewport", "ModifierStage" ) ) );
             }
 
         private:
@@ -871,8 +888,9 @@ namespace sw::editor
 
     SW_EDITOR_SUBSYSTEM( MeshModifiersVisualizerState, 9500 );
 
-    SW_EDITOR_VISUALIZER( MeshModifiers, "meshmodifiers.preview", 910, SW_EDITOR_ICON_NAME( "Cube" ), SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersLabel" ),
-                          SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersTip" ), true, &MeshModifiersVisualizerState::drawPreviewOfScope );
-    SW_EDITOR_VISUALIZER( MeshModifiersStage, "meshmodifiers.stage", 911, ::sw::editor::EditorIconName{}, SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersStageLabel" ), SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersStageTip" ), false,
-                          &MeshModifiersVisualizerState::drawStageOfScope );
+    SW_EDITOR_VISUALIZER_GATHER( MeshModifiers, "meshmodifiers.preview", 910, SW_EDITOR_ICON_NAME( "Cube" ), SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersLabel" ),
+                                 SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersTip" ), true, &MeshModifiersVisualizerState::drawPreviewOfScope,
+                                 &MeshModifiersVisualizerState::gatherPreviewOfScope );
+    SW_EDITOR_VISUALIZER_GATHER( MeshModifiersStage, "meshmodifiers.stage", 911, ::sw::editor::EditorIconName{}, SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersStageLabel" ),
+                                 SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersStageTip" ), false, nullptr, &MeshModifiersVisualizerState::gatherStageOfScope );
 } // namespace sw::editor

@@ -15,16 +15,11 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorDebugHUDControls.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
 
 #include <imgui.h>
 
@@ -73,17 +68,6 @@ namespace sw::editor
                         value = arrValue[currentIndex];
                 }
                 EditorWidgets::drawTooltip( pValueTooltip );
-            }
-
-            /**
-             * @brief 호스트가 내준 FrameRenderer 입니다(없으면 nullptr).
-             * @details 렌더러는 **호스트 서비스**입니다(선택 서비스 칸 — `FrameRendererSubsystem.cpp` 의 등록) — 씬 계층은 렌더러를 모릅니다
-             *          (Scene::update 주석). 테스트 하네스처럼 렌더러가 없는 호스트에서는 nullptr 이고, 그때 콤보는
-             *          비활성입니다.
-             */
-            static FrameRenderer* findFrameRenderer()
-            {
-                return editor::findSubsystem<FrameRenderer>();
             }
         };
     } // namespace
@@ -143,15 +127,16 @@ namespace sw::editor
         }
     } // namespace
 
-    void ViewportToolbarSettings::drawViewBar( ViewportToolbarSettings& settings, bool bVertical )
+    void ViewportToolbarSettings::drawViewBar( ViewportToolbarSettings& settings, bool bVertical, const ViewportToolbarState& state )
     {
         {
             // 씬 뷰의 보기 모드다(`FrameRenderer::setSceneViewMode`) — 게임 뷰는 늘 주 출력 모드(Lit)로 그린다(언리얼 뷰포트마다의 View Mode).
-            // 값이 아니라 **렌더러 상태**가 원본이므로 프레임마다 렌더러에서 읽어 표시한다. 항목 목록은 보기 모드 표(kArrRenderViewModeInfo)를 돈다.
-            FrameRenderer*       pRenderer   = EditorViewportToolbarInternal::findFrameRenderer();
-            const RenderViewMode currentMode = ( pRenderer != nullptr ) ? pRenderer->getSceneViewMode() : RenderViewMode::Lit;
+            // 값이 아니라 **렌더러 상태**가 원본이므로 프레임마다 모은 값(`ViewportToolbarState::_sceneViewMode`)을 표시하고, 고르면 요청 칸에 적는다. 항목 목록은 보기 모드 표(kArrRenderViewModeInfo)를 돈다.
+            // 렌더러가 없는 호스트(테스트 하네스)에서는 값이 비어 콤보를 막는다.
+            const bool           bHasRenderer = state._sceneViewMode.has_value();
+            const RenderViewMode currentMode  = bHasRenderer ? *state._sceneViewMode : RenderViewMode::Lit;
 
-            ImGui::BeginDisabled( pRenderer == nullptr );
+            ImGui::BeginDisabled( bHasRenderer == false );
             EditorChrome::setNextItemWidthColumns( 13.0f );
             const bool bOpen = EditorWidgets::beginCombo( "##ViewMode", getViewModeDisplayName( currentMode ) );
             EditorSelfTestMarks::record( "viewport.viewMode" ); // 시나리오가 콤보를 열고 항목(`viewport.viewMode.<이름>`)을 누른다
@@ -161,8 +146,8 @@ namespace sw::editor
                 {
                     const RenderViewMode mode  = static_cast<RenderViewMode>( modeIndex );
                     const utf8*          pName = getRenderViewModeInfo( mode )._pName;
-                    if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( getViewModeDisplayName( mode ), pName ), mode == currentMode ) && pRenderer != nullptr )
-                        pRenderer->setSceneViewMode( mode );
+                    if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( getViewModeDisplayName( mode ), pName ), mode == currentMode ) && bHasRenderer )
+                        settings._requestedViewMode = mode;
                     const string markKey = string( "viewport.viewMode." ) + StringUtil::toLower( pName );
                     EditorSelfTestMarks::record( markKey.c_str() );
                 }
@@ -170,7 +155,7 @@ namespace sw::editor
             }
             ImGui::EndDisabled();
             const utf8* pViewModeTooltip = SW_LOCKEY( "EdCommon", "ViewModeNoRenderer" );
-            if ( pRenderer != nullptr )
+            if ( bHasRenderer )
                 pViewModeTooltip = SW_LOCKEY( "EdCommon", "ViewMode" );
             EditorWidgets::drawTooltip( pViewModeTooltip );
         }
@@ -237,7 +222,7 @@ namespace sw::editor
             settings._bSurfaceSnap = ( settings._bSurfaceSnap == false );
     }
 
-    void ViewportToolbarSettings::drawToolsBar( ViewportToolbarSettings& settings, bool bVertical )
+    void ViewportToolbarSettings::drawToolsBar( ViewportToolbarSettings& settings, bool bVertical, const ViewportToolbarState& state )
     {
         const float32 side = ImGui::GetFrameHeight();
         if ( ImGui::Button( SW_EDITOR_ICON( "Bookmark" ), ImVec2{ side, side } ) )
@@ -248,34 +233,27 @@ namespace sw::editor
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdText", "CameraBookmarksCtrl19" ) );
             ImGui::Separator();
+            for ( uint32 slot = 0; slot < ViewportToolbarState::kBookmarkSlotCount; ++slot )
             {
-                EditorWorkspace& ws = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>();
-                for ( uint32 slot = 0; slot < 9; ++slot )
+                const ViewportToolbarState::BookmarkRow& bookmark = state._arrBookmark[slot];
+                fixed_string<constant::buffer::kMax64>   arrLabel;
+                formatstring( arrLabel.data(), arrLabel.capacity(), "Slot %u: %s", slot + 1, bookmark._bValid ? bookmark._name.c_str() : "<Empty>" );
+                if ( ImGui::Selectable( arrLabel.c_str(), false ) && bookmark._bValid )
+                    settings._requestedBookmarkSlot = static_cast<uint32>( slot );
+                if ( ImGui::IsItemHovered() && bookmark._bValid )
                 {
-                    const bool                             bHas = ws.hasCameraBookmark( slot );
-                    fixed_string<constant::buffer::kMax64> arrLabel;
-                    formatstring( arrLabel.data(), arrLabel.capacity(), "Slot %u: %s", slot + 1, bHas ? ws.getCameraBookmark( slot )->_name.c_str() : "<Empty>" );
-                    if ( ImGui::Selectable( arrLabel.c_str(), false ) && bHas )
-                        settings._requestedBookmarkSlot = static_cast<uint32>( slot );
-                    if ( ImGui::IsItemHovered() && bHas )
-                    {
-                        const CameraBookmark* pBm = ws.getCameraBookmark( slot );
-                        if ( pBm != nullptr )
-                        {
-                            fixed_string<constant::buffer::kMax128> positionText;
-                            formatstring( positionText.data(), positionText.capacity(), "(%.1f, %.1f, %.1f)", static_cast<float64>( pBm->_position._x ),
-                                          static_cast<float64>( pBm->_position._y ), static_cast<float64>( pBm->_position._z ) );
-                            const string tooltipText = SW_LOCKEYFORMAT( "EdCommon", "CameraBookmarkPosition", TextArgumentList().addText( "position", positionText.c_str() ) );
-                            EditorWidgets::drawTooltip( tooltipText.c_str() );
-                        }
-                    }
+                    fixed_string<constant::buffer::kMax128> positionText;
+                    formatstring( positionText.data(), positionText.capacity(), "(%.1f, %.1f, %.1f)", static_cast<float64>( bookmark._position._x ),
+                                  static_cast<float64>( bookmark._position._y ), static_cast<float64>( bookmark._position._z ) );
+                    const string tooltipText = SW_LOCKEYFORMAT( "EdCommon", "CameraBookmarkPosition", TextArgumentList().addText( "position", positionText.c_str() ) );
+                    EditorWidgets::drawTooltip( tooltipText.c_str() );
                 }
             }
             ImGui::EndPopup();
         }
 
         // 정렬은 둘 이상 골랐을 때만 쓴다 — 단추는 늘 두고 막아 둔다(바 크기가 선택마다 바뀌지 않게).
-        const bool bCanAlign = editor::getMainSceneSelection().getSelectedObjectCount() >= 2;
+        const bool bCanAlign = state._selectedObjectCount >= 2;
         nextItem( bVertical );
         ImGui::BeginDisabled( bCanAlign == false );
         if ( ImGui::Button( SW_EDITOR_ICON( "Align" ), ImVec2{ side, side } ) )

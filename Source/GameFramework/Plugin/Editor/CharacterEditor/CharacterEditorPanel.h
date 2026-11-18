@@ -5,7 +5,8 @@
  * @details 상태와 명령(팩 데이터 · 파일 읽기 · 저장 · 프리셋 · 내보내기 · 고른 것)은 모델(`CharacterEditorModel`, 편집 모델 셋을 든다)이 하고 이 패널은 그리기와 미리보기 동기화만 한다.
  *          - **문서**: 소켓 파일(`*.sockets.xml`, 종류 `EditorAssetTypeIDs::kData`)이 이 창의 문서다(`EditorDocumentPanel` 계약). 콘텐츠 브라우저에서 소켓 파일을 고르면 이 창이 그 파일로 바뀌고,
  *            고른 것이 없으면 팩 데이터의 소켓 파일을 연다. 저장은 소켓과 레퍼런스 포즈 둘 다(미저장 확인 · 닫기 확인이 같은 계약).
- *          - **파일 가름**: 그리기 · 입력은 `CharacterEditorPanel.cpp`, 문서 · 미리보기 씬 동기화(몸 · 기즈모 대리 · 제약 리그) · 썸네일 · 감시 값은 `Model/CharacterEditorPanelScene.cpp`(ImGui 없음).
+ *          - **파일 가름**: 그리기 · 입력은 `CharacterEditorPanel.cpp`(MVVM View — 씬 헤더를 보지 않는다, `PANEL_VIEW_SOURCES`), 문서 · 미리보기 씬 동기화(몸 · 기즈모 대리 · 제약 리그) · 썸네일 · 감시 값은
+ *            `Model/CharacterEditorPanelScene.cpp`, 미리보기 탭 값 모으기(소켓 축 · 관통 점 · 몸 집기 윤곽 · 애니메이션 줄)와 그 명령은 `Model/CharacterEditorPanelPreview.cpp`(둘 다 ImGui 없음).
  *          - **미리보기 몸**: 미리보기 씬(`EditorPreviewPanel`)에 몸 오브젝트 하나(`SkeletalMeshComponent` + `CharacterAppearanceComponent`)를 세우고, 외형 선택이 바뀔 때마다
  *            `CharacterAppearanceComponent::previewSelection` 으로 이 창의 외형 데이터(모델의 `AppearanceDatabase`)를 입힌다. 게임 서비스(메인 씬의 것)는 보지 않는다.
  *            선택에 기준 프리셋이 없으면 팩 데이터의 `previewPreset` 위에 입힌다. 외형 데이터를 읽기 전에는 몸이 없다.
@@ -17,10 +18,12 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
+#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 
@@ -29,10 +32,8 @@
 
 namespace sw
 {
-    class CharacterAppearanceComponent;
     class GameObject;
     class GameObjectManager;
-    class SkeletalAnimatorComponent;
 } // namespace sw
 
 namespace sw::editor
@@ -67,6 +68,21 @@ namespace sw::editor
             uint32  _bodyLayerCount{ 0 };         ///< 외형 선택의 피부 층 수(몸 탭을 그릴 때 게시)
             uint32  _bodyHiddenSlotCount{ 0 };    ///< 플레이어가 숨긴 슬롯 수(몸 탭을 그릴 때 게시)
             uint32  _bodyDataDirty{ 0 };          ///< 몸 데이터 파일(채널 매핑 · 프로필 · 구간)에 저장하지 않은 편집이 있으면 1
+        };
+
+        /**
+         * @brief 미리보기 탭이 이번 프레임에 그릴 값입니다. 메인 스레드가 씬을 읽어 모으고(`gatherPreview`), View 는 이 값만 그린다.
+         * @details 선은 월드 선분 값(`EditorVisualizerLine`)이라 뷰포트 시각화와 같은 그리기(`EditorViewportVisualizer::drawLines`)를 쓴다.
+         */
+        struct PreviewViewState
+        {
+            vector<EditorVisualizerLine> _listSocketAxisLine;    ///< 소켓 파일의 소켓 축(고른 소켓은 길고 밝다)
+            vector<EditorVisualizerLine> _listPenetrationLine;   ///< 피팅 관통 점의 십자(점마다 셋)
+            vector<EditorVisualizerLine> _listPickLine;          ///< 몸 집기 — 강조 구간 윤곽과 집은 자리 십자
+            uint32                       _assembleCount{ 0 };    ///< 미리보기 몸이 외형을 조립한 수
+            bool                         _bHasBody{ false };     ///< NOLINT(sw-bool-flag): 값 집합체 — 미리보기 몸이 있다
+            bool                         _bHasAnimator{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 몸에 애니메이터가 있다(애니메이션 줄을 그린다)
+            bool                         _bClipPlaying{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 고른 클립을 재생 중이다
         };
 
         CharacterEditorPanel();
@@ -113,14 +129,27 @@ namespace sw::editor
         /** @brief 미리보기 탭(뷰포트)을 그립니다. 외형 데이터를 읽기 전이면 안내 글입니다. */
         void drawPreviewTab();
         /**
-         * @brief 미리보기 몸의 애니메이션 재생 줄을 그립니다 — 클립 콤보(팩 데이터의 클립 폴더), 반복, Play · Stop.
+         * @brief 미리보기 몸의 애니메이션 재생 줄을 그립니다 — 클립 콤보(팩 데이터의 클립 폴더), 반복, Play · Stop. 재생 여부는 모은 값(`PreviewViewState`)이다.
          * @details 재생 중이면 미리보기 씬의 틱이 포즈를 낸다. 몸을 다시 입혀도(체형 · 장비 변경) 재생은 이어진다 — 스켈레톤이 같은 외형이면 같은 클립이 그대로 맞는다.
          */
-        void drawAnimationControls( SkeletalAnimatorComponent& animator );
+        void drawAnimationControls();
+        /**
+         * @brief 미리보기 탭의 값을 모읍니다(`_previewState`) — 몸 · 애니메이터 유무, 조립 수, 재생 여부, 소켓 축 · 관통 점 · 집기 윤곽 선, 새 피팅 결과 올리기, 제약 리그 맞추기.
+         * @details 제약 리그 단추는 이 모으기 뒤에 그리므로 단추를 바꾼 값은 다음 프레임의 모으기가 몸에 건다.
+         */
+        void gatherPreview();
+        /** @brief 고른 클립을 미리보기 몸에서 재생합니다(반복은 `_bClipLoop`). 몸 · 애니메이터가 없거나 재생하지 못하면 false 입니다. */
+        [[nodiscard]] bool playPreviewClip();
+        /** @brief 미리보기 몸의 재생을 멈춥니다. */
+        void stopPreviewClip();
+        /** @brief 미리보기 몸 오브젝트입니다(핸들 `_previewBody` 를 푼다, 없으면 nullptr). Model 파일만 쓴다. */
+        GameObject* resolvePreviewBody() const;
+        /** @brief 몸 동작 미리보기 명령을 미리보기 몸(핸들 `_previewBody`)에 적용합니다 — View 는 값만 보낸다. */
+        void postBodyPreview( const BodyCustomizationViewModel::PreviewCommand& command );
         /** @brief 몸 오브젝트를 세우고, 외형 선택이나 외형 데이터가 바뀌었으면 다시 입힙니다. */
         void syncPreviewBody();
-        /** @brief 뷰포트 위에 소켓 파일의 소켓 축(몸이 조립한 자리)을 긋습니다. 고른 소켓은 길고 밝다. */
-        void drawSocketAxes( const CharacterAppearanceComponent& appearance );
+        /** @brief 소켓 파일의 소켓 축(편집 중 정의를 몸의 지금 포즈에 얹은 자리)을 선 값으로 모읍니다. 고른 소켓은 길고 밝다. 풀지 못하면 상태 줄에 알린다. */
+        void gatherSocketAxes( const GameObject& body );
         /**
          * @brief 미리보기 기즈모를 그 주인(`CharacterEditorModel::getGizmoTarget` — 마지막에 고른 본 · 소켓)의 월드 자리에 놓고, 기즈모로 옮긴 만큼을 주인의 데이터로 바꿉니다.
          * @details 표시 오브젝트(SceneComponent 하나)를 주인의 자리에 놓고 창 선택에 올린다. 다음 그리기에 그 월드 변환이 놓은 값과 다르면 기즈모가 옮긴 것이다 —
@@ -136,8 +165,8 @@ namespace sw::editor
         void applyGizmoWorld( CharacterGizmoTarget target, const float4x4& world, const float4x4& parentWorld );
         /** @brief 자동화가 기즈모 가운데를 끌 수 있게 그 화면 자리를 표시(`charactereditor.gizmoCenter`)로 남깁니다. */
         void recordGizmoMark();
-        /** @brief 피팅이 찾은 관통 점(`FitPenetration::_listPoint`, 바인드 공간)을 몸의 월드 변환으로 옮겨 빨간 십자로 긋습니다. 관통이 없으면 아무것도 긋지 않습니다. */
-        void drawPenetrationPoints( const GameObject& body );
+        /** @brief 피팅이 찾은 관통 점(`FitPenetration::_listPoint`, 바인드 공간)을 몸의 월드 변환으로 옮겨 빨간 십자 선 값으로 모읍니다. 관통이 없으면 비어 있다. */
+        void gatherPenetrationPoints( const GameObject& body );
         /**
          * @brief 제약 리그 미리보기를 몸에 맞춥니다 — 켜 두었으면 몸 오브젝트에 후처리 리그(`PoseModifierComponent`)를 얹어 팩 데이터의 리그를 돌리고(스트라이드 워핑 · 양손 IK 같은 것이 클립 위에 걸린다),
          *        껐으면 리그를 끈다. 리그 경로가 없는 게임(`CharacterEditorPaths::_rigPath` 가 빔)에서는 부르지 않는다.
@@ -159,7 +188,9 @@ namespace sw::editor
         /** @brief 몸 탭(슬롯 숨김 · 몸 채널과 매핑 · 염색 구간 · 피부 층 · 몸 동작 미리보기)을 그립니다 — ViewModel(`BodyCustomizationViewModel`)이 모은 상태만 읽는다. */
         void drawBodyTab();
         void drawSkinLayerRows( const BodyCustomizationViewState& state );
-        void drawBodyDynamicsPreview( const BodyCustomizationViewState& state, GameObject* pBody );
+        void drawBodyDynamicsPreview( const BodyCustomizationViewState& state );
+        /** @brief 몸 탭의 상태를 모읍니다(`BodyCustomizationViewModel::gather` 에 미리보기 몸을 넘긴다). */
+        void gatherBodyTab();
         /** @brief 몸 데이터 파일의 저장 · 되돌리기 줄입니다(채널 매핑 · 프로필 · 구간 세 파일). */
         void drawBodyDataRow();
         /** @brief 채널 표 — 값 · 매핑과, 매핑된 채널의 축 범위 편집 · 매핑이 없는 채널의 축 더하기 · 받지 않음 선언(`*.bodyshape.xml`). */
@@ -172,8 +203,13 @@ namespace sw::editor
          * @brief 미리보기 탭의 뷰포트에서 몸 표면 집기를 받습니다 — 구간 고르기(별칭 대응)와 배치 층 옮기기(끄는 동안 한 되돌리기 단계), 강조 구간 · 집은 자리 표시.
          * @details 몸 탭에서 집기를 켜고 미리보기 탭에서 누른다(뷰포트는 한 탭이다). 기즈모가 마우스를 쥐었으면 받지 않는다. Esc 가 끈다.
          *          집기 · 윤곽은 몸과 부품 오브젝트(`collectPickObjects`)를 지금 포즈로 스키닝한 표면(`BodyPickSurface`)으로 한다. 구간 고르기는 부품까지, 층 배치는 몸 피부만 본다.
+         *          윤곽 선은 모은 값(`PreviewViewState::_listPickLine`)이고, 누른 자리는 광선으로 `pickBodySurface` 에 넘긴다.
          */
-        void drawBodyPickOverlay( GameObject* pBody );
+        void drawBodyPickOverlay();
+        /** @brief 강조 구간 · 고른 구간의 윤곽과 집은 자리 십자를 선 값으로 모으고, 집기 정점 수를 게시합니다. */
+        void gatherBodyPickOutline( const GameObject& body );
+        /** @brief 뷰포트를 누른 광선 @p ray 로 몸 표면을 집습니다 — 층 배치 중이면 그 층을 옮기고(한 되돌리기 단계), 아니면 맞은 구간을 고른다. */
+        void pickBodySurface( const Ray& ray );
         /** @brief 집기 오브젝트 — 몸(첫 것)과 외형 조립이 스폰한 부품 오브젝트(옷 · 머리카락 · 소켓 부품)입니다. */
         void collectPickObjects( const GameObject& body, vector<const GameObject*>& outListObject ) const;
         void drawAppearanceDataRow();
@@ -219,6 +255,7 @@ namespace sw::editor
         CharacterGizmoTarget                    _placedGizmoTarget;        ///< 그 자리를 놓은 주인 — 바뀌면 지난 자리와 견주지 않는다
         bool                                    _bRigPreview;              ///< 제약 리그를 미리보기 몸에 켠다(`syncRigPreview`) NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
         Published                               _published;                ///< 감시 값이 읽는 게시 값
+        PreviewViewState                        _previewState;             ///< 미리보기 탭의 이번 프레임 값(`gatherPreview` — 벡터 저장소를 다시 쓴다)
         BodyCustomizationViewState              _bodyState;                ///< 몸 탭의 상태(그리기마다 `gather` — 벡터 저장소를 다시 쓴다)
         uint32                                  _bodyHighlightDrive;       ///< 강조할 드라이브의 `_listDrive` 번호(무효면 강조 없음)
         optional<uint32>                        _bodySelectedSection;      ///< 고른 구간 줄(뷰포트에서 집었거나 표에서 눌렀다). 고르지 않았으면 비어 있다.

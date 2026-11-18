@@ -27,6 +27,10 @@ namespace sw
 
 namespace sw::editor
 {
+    struct EditorVisualizerDrawList;
+    struct EditorVisualizerLine;
+    struct EditorVisualizerScreenBillboard;
+
     /** @brief 시각화 함수가 그리는 데 필요한 프레임 정보입니다. */
     struct EditorViewportVisualizerArgs
     {
@@ -62,8 +66,10 @@ namespace sw::editor
      */
     struct EditorVisualizerRegistration : EditorExtensionRegistration
     {
-        /** @brief 시각화 하나를 그립니다. */
-        using DrawFunc = void ( * )( const EditorViewportVisualizerArgs& args );
+        /** @brief 화면에 바로 그리고 마우스로 조작하는 도구(기즈모 · 손잡이 · 붓)입니다. 도형만 내는 시각화는 쓰지 않는다(`_pGather`). */
+        using ToolFunc = void ( * )( const EditorViewportVisualizerArgs& args );
+        /** @brief 컴포넌트를 읽어 그릴 도형 값을 모읍니다(Model — ImGui 를 모른다). 그리기는 `EditorViewportVisualizer::drawAll` 이 값만 보고 한다. */
+        using GatherFunc = void ( * )( const EditorViewportVisualizerArgs& args, EditorVisualizerDrawList& outDrawList );
 
         SW_EDITOR_EXTENSION_KIND( "visualizer" );
 
@@ -71,7 +77,8 @@ namespace sw::editor
         const utf8*    _pToggleLabel; ///< 짧은 이름. 툴팁의 제목이며, 아이콘이 없으면 버튼 문자로 쓴다
         const utf8*    _pTooltip;
         uint8          _bDefaultOn : 1;
-        DrawFunc       _pDraw;
+        ToolFunc       _pTool;
+        GatherFunc     _pGather{ nullptr };
     };
 } // namespace sw::editor
 
@@ -88,8 +95,18 @@ namespace sw::editor
         static uint32 getCount();
         /** @brief 순서대로 index 번째 시각화를 반환합니다. */
         static const EditorVisualizerRegistration& getAt( uint32 index );
-        /** @brief @p toggles 에서 켜진 시각화를 모두 그립니다. */
-        static void drawAll( const EditorViewportVisualizerArgs& args, const EditorVisualizerToggles& toggles );
+        /**
+         * @brief 모은 도형 값(@p drawList, `EditorVisualizerDrawList::gatherAll`)을 그리고, @p toggles 에서 켜진 도구(`_pTool`)를 부릅니다.
+         * @details 도형을 그릴 때 화면에 남은 선 · 글자 수를 `args._pStats` 에 적는다(통계는 매 프레임 다시 센다). 아이콘 배지는 그은 화면 자리를 @p outListScreenBillboard 에 남긴다(먼저 비운다) —
+         *          클릭 선택(`EditorViewportPicker`)이 그 목록으로 배지를 집는다.
+         */
+        static void drawAll( const EditorViewportVisualizerArgs& args, const EditorVisualizerToggles& toggles, const EditorVisualizerDrawList& drawList,
+                             vector<EditorVisualizerScreenBillboard>& outListScreenBillboard );
+        /**
+         * @brief 월드 선분 값들을 캔버스에 긋습니다(근평면에서 잘라 투영, 테마 색 역할을 푼다). 그린 선분 수를 돌려준다(다 잘린 것은 빼고).
+         * @details 미리보기 패널처럼 시각화 등록 밖에서 모은 선(소켓 축 · 관통 점 …)을 같은 규칙으로 그릴 때 쓴다.
+         */
+        static uint32 drawLines( ImDrawList* pDrawList, const float4x4& viewProj, const float2& canvasPos, const float2& canvasSize, const vector<EditorVisualizerLine>& listLine );
     };
 } // namespace sw::editor
 
@@ -102,9 +119,13 @@ namespace sw::editor
  * @param pToggleLabel 짧은 이름이며 툴팁의 제목입니다.
  * @param pTooltip     체크박스 툴팁입니다.
  * @param bDefaultOn   처음에 켜져 있는지 정합니다.
- * @param pDraw        `void( const EditorViewportVisualizerArgs& )` 시그니처의 그리기 함수입니다.
+ * @param pTool        `void( const EditorViewportVisualizerArgs& )` 시그니처의 그리기 함수입니다.
  */
 // pToggleLabel · pTooltip 은 현지화 키다(`SW_LOCKEYREF( "EdVisualizer", "..." )`) — 툴바가 그릴 때 지금 언어로 푼다.
-#define SW_EDITOR_VISUALIZER( name, pID, order, pIcon, pToggleLabel, pTooltip, bDefaultOn, pDraw )                                    \
+#define SW_EDITOR_VISUALIZER( name, pID, order, pIcon, pToggleLabel, pTooltip, bDefaultOn, pTool )                                    \
     SW_EDITOR_REGISTER( ::sw::editor::EditorVisualizerRegistration, Visualizer_##name, { pID, order }, pIcon, pToggleLabel, pTooltip, \
-                        bDefaultOn, pDraw )
+                        bDefaultOn, pTool )
+/** @brief 모으기 함수(`_pGather`)가 있는 시각화를 등록합니다. 앞 인자는 `SW_EDITOR_VISUALIZER` 와 같고, @p pTool 는 화면 도구가 없으면 nullptr 입니다. */
+#define SW_EDITOR_VISUALIZER_GATHER( name, pID, order, pIcon, pToggleLabel, pTooltip, bDefaultOn, pTool, pGather )                    \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorVisualizerRegistration, Visualizer_##name, { pID, order }, pIcon, pToggleLabel, pTooltip, \
+                        bDefaultOn, pTool, pGather )

@@ -45,6 +45,7 @@ namespace sw::editor
         , _bNoCameraHintShown{ SW_FALSE }
         , _forwardedButtonMask{ 0 }
         , _keyForwarder{}
+        , _inputOverlayState{}
     {
     }
 
@@ -118,6 +119,15 @@ namespace sw::editor
         ViewportInputOverlaySettings* const pSettings = editor::findSubsystem<ViewportInputOverlaySettings>();
         return pSettings != nullptr ? &pSettings->_overlay : nullptr;
     }
+    const ViewportInputOverlayState* GameViewModel::gatherInputOverlay( const ViewportInputOverlay& overlay )
+    {
+        const InputManager* const pInput = findInputManager();
+        if ( pInput == nullptr || overlay._bEnabled == SW_FALSE )
+            return nullptr;
+        ViewportInputOverlayState::gather( *pInput, overlay._bShowCommandHistory == SW_TRUE, _inputOverlayState );
+        return &_inputOverlayState;
+    }
+
     bool GameViewModel::findCameraPosition( float3& outPosition )
     {
         const Scene*           pScene  = editor::getActiveScene();

@@ -7,50 +7,27 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorProjectedLineRenderer.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportVisualizer.h"
 
-#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
-#include "Engine/Animation/Component/SkeletalMeshComponent.h"
-#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Character/CharacterDataCache.h"
-#include "Engine/Character/Fit/CharacterGeometry.h"
-#include "Engine/Character/Fit/FitSolver.h"
-#include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
-#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
-#include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
-#include "Engine/Content/AssetPaths.h"
-#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Scene/Scene.h"
 
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/BodySurfacePick.h"
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorLocalStore.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/BodyProfile.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/CharacterBodyDynamicsComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
 
+#include <algorithm>
 #include <imgui.h>
 
 namespace sw::editor
@@ -59,72 +36,24 @@ namespace sw::editor
     {
         struct CharacterEditorPanelInternal
         {
-            static constexpr float32 kDragSpeed                = 0.005f;
-            static constexpr float32 kRotationDragSpeed        = 0.5f;
-            static constexpr int32   kLayerUp                  = 1;  ///< 피부 층 한 칸 위(목록 뒤가 위다)
-            static constexpr int32   kLayerDown                = -1; ///< 피부 층 한 칸 아래
-            static constexpr float32 kPathButtonsColumns       = 32.0f;
-            static constexpr float32 kBoneTreeLines            = 10.0f;
-            static constexpr float32 kPresetListLines          = 5.0f;
-            static constexpr float32 kExplanationListLines     = 7.0f;
-            static constexpr float32 kPreviewHeight            = 260.0f; ///< 미리보기 뷰포트 높이(96 DPI 픽셀)
-            static constexpr float32 kCustomizationReserve     = 150.0f; ///< 꾸미기 머리글이 펼쳐졌을 때 뷰포트 아래에 남기는 높이(머리글 + 슬라이더 몇 줄, 96 DPI 픽셀)
-            static constexpr float32 kSocketAxisLength         = 0.08f;  ///< 미리보기 소켓 축 길이(m)
-            static constexpr float32 kSelectedSocketAxisLength = 0.18f;  ///< 고른 소켓의 축 길이(m)
-            static constexpr float32 kPenetrationMarkLength    = 0.01f;  ///< 관통 점 십자의 한 팔 길이(m)
-            static constexpr float32 kPickMarkLength           = 0.02f;  ///< 집은 자리 십자의 한 팔 길이(m)
-            static constexpr uint32  kHighlightTriangleBudget  = 4000;   ///< 강조 구간 윤곽으로 긋는 삼각형 상한(넘으면 고르게 건너뛴다 — 큰 몸에서 프레임을 지키려고)
-            static constexpr float32 kUVDragSpeed              = 0.002f; ///< 체액 경로 점을 끄는 빠르기(UV)
-            static constexpr uint32  kMaxWrinkleMask           = 7;      ///< 주름 마스크 채널의 끝 번호(0..7)
-            static constexpr float32 kMaxGravityScale          = 2.0f;   ///< 지글 중력 배율 슬라이더 끝
-            static constexpr float32 kMaxSwingDegrees          = 90.0f;  ///< 지글 흔들림 각 슬라이더 끝(도)
-            static constexpr float32 kMaxImpulseScale          = 4.0f;   ///< 지글 충격 배율 슬라이더 끝
-            static constexpr float32 kMaxWrinkleWeight         = 2.0f;   ///< 주름 세기 · 표정 무게 슬라이더 끝
-            static constexpr float32 kMaxFluidValue            = 10.0f;  ///< 체액 흐름 값(초당 줄기 · 빠르기 · 반지름) 끌기 끝
-            static constexpr float32 kFillWidth                = -1.0f;  ///< ImGui 다음 칸 폭 "남은 폭 모두"
-
-            /** @brief 오브젝트가 그리는 메시입니다(메시 컴포넌트 — 스켈레탈이면 그 사본). 없으면 nullptr 입니다. */
-            static const Mesh* findPickMesh( const GameObject& object )
-            {
-                const MeshComponent* pMesh = object.getComponent<MeshComponent>();
-                return pMesh != nullptr ? pMesh->getRawMesh() : nullptr;
-            }
-            /** @brief 집기 오브젝트들의 메시 정점 수 합입니다(감시 값 — 부품이 빠지거나 몸이 다시 구워지면 바뀐다). */
-            static uint32 countPickVertices( const vector<const GameObject*>& listObject )
-            {
-                uint32 count = 0;
-                for ( const GameObject* pObject : listObject )
-                {
-                    const Mesh* pMesh = findPickMesh( *pObject );
-                    count += pMesh != nullptr ? static_cast<uint32>( pMesh->getCPUView().getVertices().size() ) : 0u;
-                }
-                return count;
-            }
-            /**
-             * @brief 집기 오브젝트(첫 것이 몸)의 메시를 지금 포즈로 월드에 옮긴 표면을 짓습니다(`BodyPickSurface`). 스켈레탈 유닛이면 그 스킨 팔레트로 스키닝한다.
-             * @details 몸 메시가 없으면(조립 전) 첫 표면이 몸이 아니다 — 쓰는 쪽이 `_bSkin` 을 본다.
-             */
-            static void buildPickSurfaces( const vector<const GameObject*>& listObject, vector<BodyPickSurface>& outListSurface )
-            {
-                outListSurface.clear();
-                const vector<float4x4> listNoPalette{}; // 단단한 부품 — 스키닝하지 않는다
-                const vector<float32>  listNoWeight{};  // 유닛이 없으면 모프 가중치가 없다
-                for ( size_t index = 0; index < listObject.size(); ++index )
-                {
-                    const GameObject&            object = *listObject[index];
-                    const Mesh*                  pMesh  = findPickMesh( object );
-                    const SkeletalMeshComponent* pUnit  = object.getComponent<SkeletalMeshComponent>();
-                    const SceneComponent*        pScene = object.getPrimarySceneComponent();
-                    if ( pMesh == nullptr || pScene == nullptr || pMesh->getCPUView().getVertices().empty() )
-                        continue;
-                    BodyPickSurface& surface = outListSurface.emplace_back();
-                    BodyPickSurface::build( pMesh->getCPUView().getVertices(), pMesh->getMorphTargets(), pUnit != nullptr ? pUnit->getMorphWeights() : listNoWeight, pMesh->getSkinVertices(),
-                                            pUnit != nullptr ? pUnit->getSkinPalette() : listNoPalette, pScene->getWorldMatrix(), surface );
-                    surface._listIndex   = pMesh->getIndices();
-                    surface._listSection = pMesh->getSections();
-                    surface._bSkin       = index == 0 ? SW_TRUE : SW_FALSE;
-                }
-            }
+            static constexpr float32 kDragSpeed            = 0.005f;
+            static constexpr float32 kRotationDragSpeed    = 0.5f;
+            static constexpr int32   kLayerUp              = 1;  ///< 피부 층 한 칸 위(목록 뒤가 위다)
+            static constexpr int32   kLayerDown            = -1; ///< 피부 층 한 칸 아래
+            static constexpr float32 kPathButtonsColumns   = 32.0f;
+            static constexpr float32 kBoneTreeLines        = 10.0f;
+            static constexpr float32 kPresetListLines      = 5.0f;
+            static constexpr float32 kExplanationListLines = 7.0f;
+            static constexpr float32 kPreviewHeight        = 260.0f; ///< 미리보기 뷰포트 높이(96 DPI 픽셀)
+            static constexpr float32 kCustomizationReserve = 150.0f; ///< 꾸미기 머리글이 펼쳐졌을 때 뷰포트 아래에 남기는 높이(머리글 + 슬라이더 몇 줄, 96 DPI 픽셀)
+            static constexpr float32 kUVDragSpeed          = 0.002f; ///< 체액 경로 점을 끄는 빠르기(UV)
+            static constexpr uint32  kMaxWrinkleMask       = 7;      ///< 주름 마스크 채널의 끝 번호(0..7)
+            static constexpr float32 kMaxGravityScale      = 2.0f;   ///< 지글 중력 배율 슬라이더 끝
+            static constexpr float32 kMaxSwingDegrees      = 90.0f;  ///< 지글 흔들림 각 슬라이더 끝(도)
+            static constexpr float32 kMaxImpulseScale      = 4.0f;   ///< 지글 충격 배율 슬라이더 끝
+            static constexpr float32 kMaxWrinkleWeight     = 2.0f;   ///< 주름 세기 · 표정 무게 슬라이더 끝
+            static constexpr float32 kMaxFluidValue        = 10.0f;  ///< 체액 흐름 값(초당 줄기 · 빠르기 · 반지름) 끌기 끝
+            static constexpr float32 kFillWidth            = -1.0f;  ///< ImGui 다음 칸 폭 "남은 폭 모두"
 
             /** @brief 입력칸 글 버퍼입니다(별칭 · 묶음 — 그리기마다 데이터 값으로 채우고 놓을 때 쓴다). */
             using TextBuffer = fixed_string<constant::buffer::kMax128>;
@@ -275,25 +204,19 @@ namespace sw::editor
             return;
         }
         syncPreviewBody();
-        const GameObjectManager*            pManager     = findPreviewManager();
-        GameObject*                         pMutableBody = pManager != nullptr ? findPreviewManager()->resolveGameObject( _previewBody ) : nullptr;
-        const GameObject*                   pBody        = pMutableBody;
-        const CharacterAppearanceComponent* pAppearance  = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
-        SkeletalAnimatorComponent*          pAnimator    = pMutableBody != nullptr ? pMutableBody->getComponent<SkeletalAnimatorComponent>() : nullptr;
-        if ( pAnimator != nullptr )
-            drawAnimationControls( *pAnimator );
+        gatherPreview();
+        const PreviewViewState& preview = _previewState;
+        if ( preview._bHasAnimator )
+            drawAnimationControls();
         if ( _document.getPaths()._rigPath.empty() == false )
         {
             ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "PreviewConstraintRig" ), &_bRigPreview );
             EditorSelfTestMarks::record( "charactereditor.rigPreview" );
-            if ( pMutableBody != nullptr )
-                syncRigPreview( *pMutableBody );
         }
         const AppearanceSelection& selection = _document.getAppearanceModel().getSelection();
-        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "WearingOnBasePreset", TextArgumentList().addText( "wearing", selection._listSlot.empty() ? "none" : "selection" ).addText( "basePresetID", selection._basePresetID.empty() ? _document.getPreviewPresetID().c_str() : selection._basePresetID.c_str() ).addInteger( "appearance", static_cast<int64>( pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u ) ) ).c_str() );
-        _published._previewAssembleCount = pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u;
-        const float2  available          = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        const float32 minHeight          = CharacterEditorPanelInternal::kPreviewHeight * EditorThemeUtil::getDPIScale();
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "WearingOnBasePreset", TextArgumentList().addText( "wearing", selection._listSlot.empty() ? "none" : "selection" ).addText( "basePresetID", selection._basePresetID.empty() ? _document.getPreviewPresetID().c_str() : selection._basePresetID.c_str() ).addInteger( "appearance", static_cast<int64>( preview._assembleCount ) ) ).c_str() );
+        const float2  available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
+        const float32 minHeight = CharacterEditorPanelInternal::kPreviewHeight * EditorThemeUtil::getDPIScale();
         // 뷰포트가 남은 높이를 모두 차지하면 슬라이더가 늘 접힌 아래로 밀려 스크롤 없이는 닿지 못한다 — 펼쳐졌을 때는 아래 몇 줄 자리를 남긴다.
         const float32 reserve        = _bCustomizationOpen ? CharacterEditorPanelInternal::kCustomizationReserve * EditorThemeUtil::getDPIScale() : 0.0f;
         const float32 viewportHeight = available._y - reserve;
@@ -302,17 +225,19 @@ namespace sw::editor
         _gizmo.draw( *this );
         recordGizmoMark();
         EditorSelfTestMarks::record( "charactereditor.previewScene" );
-        drawBodyPickOverlay( pMutableBody );
-        if ( pAppearance != nullptr )
-            drawSocketAxes( *pAppearance );
-        if ( pBody != nullptr )
-            drawPenetrationPoints( *pBody );
-        // 미리보기 조립이 푼 피팅 결과를 확인 표시에 올린다(세대가 바뀔 때만).
-        const bool bNewFit = pAppearance != nullptr && pAppearance->getLastFitResult() != nullptr && pAppearance->getFitResultRevision() != _seenFitRevision;
-        if ( bNewFit )
+        drawBodyPickOverlay();
+        // 모은 선(소켓 축 · 관통 점)을 뷰포트 이미지 위에 긋는다. 관통 점 십자 하나는 선 셋이다.
+        const EditorPreviewViewport& viewport = getPreviewViewport();
+        const float2                 position = viewport.getImagePosition();
+        const float2                 size     = viewport.getImageSize();
+        _published._penetrationMarkCount      = 0;
+        if ( preview._bHasBody && size._x > 0.0f && size._y > 0.0f )
         {
-            _document.setFitResult( *pAppearance->getLastFitResult() );
-            _seenFitRevision = pAppearance->getFitResultRevision();
+            float4x4 viewProjection{};
+            float3   eye{};
+            viewport.computeViewProjection( size._x / size._y, viewProjection, eye );
+            (void)EditorViewportVisualizer::drawLines( ImGui::GetWindowDrawList(), viewProjection, position, size, preview._listSocketAxisLine );
+            _published._penetrationMarkCount = EditorViewportVisualizer::drawLines( ImGui::GetWindowDrawList(), viewProjection, position, size, preview._listPenetrationLine ) / 3u;
         }
         // 슬라이더는 뷰포트 아래에 둔다 — 모습이 바뀌는 것을 보며 끈다.
         _bCustomizationOpen = ImGui::CollapsingHeader( SW_LOCKEY( "EdPlugin", "CustomizeReleaseASliderToRefit" ), ImGuiTreeNodeFlags_DefaultOpen );
@@ -344,105 +269,7 @@ namespace sw::editor
         EditorSelfTestMarks::recordRect( "charactereditor.gizmoCenter", float2{ screen._x - half, screen._y - half }, float2{ screen._x + half, screen._y + half } );
     }
 
-    void CharacterEditorPanel::drawPenetrationPoints( const GameObject& body )
-    {
-        const EditorPreviewViewport& viewport = getPreviewViewport();
-        const float2                 position = viewport.getImagePosition();
-        const float2                 size     = viewport.getImageSize();
-        const SceneComponent*        pScene   = body.getPrimarySceneComponent();
-        const FitCheckSummary&       fit      = _document.getFit();
-        const bool                   bNothing = _document.hasFit() == false || fit.hasPenetration() == false || pScene == nullptr;
-        const bool                   bNoImage = size._x <= 0.0f || size._y <= 0.0f;
-        if ( bNothing || bNoImage )
-            return;
-        float4x4 viewProjection{};
-        float3   eye{};
-        viewport.computeViewProjection( size._x / size._y, viewProjection, eye );
-        EditorProjectedLineRenderer renderer{ ImGui::GetWindowDrawList(), viewProjection, position, size };
-        // 피팅은 바인드 공간에서 풀므로 몸 오브젝트의 월드 변환으로 옮긴다. 십자 표시 하나가 정점 하나다(앞쪽 일부만 들고 있다).
-        const float4x4 world = pScene->getWorldMatrix();
-        const float4   color{ 1.0f, 0.2f, 0.2f, 1.0f };
-        const float32  arm = CharacterEditorPanelInternal::kPenetrationMarkLength;
-        for ( const FitPenetrationSummary& penetration : fit._listPenetration )
-        {
-            for ( const float3& point : penetration._listPoint )
-            {
-                const float3 center = float3::transform( point, world );
-                renderer.drawLine( center - float3{ arm, 0.0f, 0.0f }, center + float3{ arm, 0.0f, 0.0f }, color );
-                renderer.drawLine( center - float3{ 0.0f, arm, 0.0f }, center + float3{ 0.0f, arm, 0.0f }, color );
-                renderer.drawLine( center - float3{ 0.0f, 0.0f, arm }, center + float3{ 0.0f, 0.0f, arm }, color );
-            }
-        }
-        _published._penetrationMarkCount = renderer.getDrawnSegmentCount() / 3;
-    }
-
-    void CharacterEditorPanel::drawSocketAxes( const CharacterAppearanceComponent& appearance )
-    {
-        using Internal                        = CharacterEditorPanelInternal;
-        const EditorPreviewViewport& viewport = getPreviewViewport();
-        const float2                 position = viewport.getImagePosition();
-        const float2                 size     = viewport.getImageSize();
-        if ( size._x <= 0.0f || size._y <= 0.0f )
-            return;
-        float4x4 viewProjection{};
-        float3   eye{};
-        viewport.computeViewProjection( size._x / size._y, viewProjection, eye );
-        EditorProjectedLineRenderer renderer{ ImGui::GetWindowDrawList(), viewProjection, position, size };
-        // 편집 중(저장 전) 소켓 정의를 몸의 지금 포즈에 얹어 자리를 구한다 — 저장하지 않아도 끄는 대로 축이 따라온다. 고른 소켓은 길고 밝게 긋는다.
-        const GameObject*            pBodyObject = appearance.getOwner();
-        const SkeletalMeshComponent* pUnit       = pBodyObject != nullptr ? pBodyObject->getComponent<SkeletalMeshComponent>() : nullptr;
-        const SceneComponent*        pBodyScene  = pBodyObject != nullptr ? pBodyObject->getPrimarySceneComponent() : nullptr;
-        if ( pUnit == nullptr || pBodyScene == nullptr )
-            return;
-        CharacterBoneArray bindBones;
-        CharacterPoseUtil::makeBindBones( pUnit->getSkeleton(), bindBones );
-        CharacterBoneArray poseBones = bindBones;
-        (void)CharacterPoseUtil::copyUnitPose( *pUnit, poseBones ); // 포즈가 아직 없으면 바인드 포즈 그대로 둔다(정상)
-        ResolvedSocketTable table;
-        CharacterIssueList  resolveIssues;
-        table.beginResolve();
-        const SocketSet& sockets   = _document.getSocketModel().getSockets();
-        const bool       bResolved = table.addUnit( hashed_string{}, 0, sockets, bindBones, nullptr, resolveIssues );
-        table.endResolve();
-        if ( bResolved == false )
-        {
-            const string resolveError = resolveIssues.joined();
-            _document.setStatus( resolveError ); // 모르는 부모 본 같은 편집 오류 — 축을 그리지 않고 알린다
-            _socketResolveError = resolveError;
-            return;
-        }
-        // 프레임마다 다시 푸는 오류라 풀리면 지운다 — 몸이 외형을 입기 전(뼈 하나짜리 스켈레톤) 프레임의 오류가 상태 줄에 남아 있었다. 다른 일이 남긴 글은 건드리지 않는다.
-        if ( _socketResolveError.empty() == false && _document.getStatus() == _socketResolveError )
-            _document.setStatus( string_view{} );
-        _socketResolveError.clear();
-        const float4x4 bodyWorld       = pBodyScene->getWorldMatrix();
-        const float4   arrAxisColor[3] = { SW_THEME_COLOR( "Viewport", "AxisX" ).toFloat4(), SW_THEME_COLOR( "Viewport", "AxisY" ).toFloat4(), SW_THEME_COLOR( "Viewport", "AxisZ" ).toFloat4() };
-        const float3   arrAxis[3]      = {
-            float3{1.0f, 0.0f, 0.0f},
-            float3{0.0f, 1.0f, 0.0f},
-            float3{0.0f, 0.0f, 1.0f}
-        };
-        for ( const SocketDef& socket : sockets.getSockets() )
-        {
-            const SocketID socketID = table.findSocket( socket._name );
-            float4x4       unitTransform{};
-            if ( socketID == kInvalidSocketID || table.computeUnitTransform( socketID, poseBones, unitTransform ) == false )
-                continue;
-            const float4x4   world     = unitTransform * bodyWorld;
-            const bool       bSelected = socket._name == _document.getSelectedSocket();
-            const float32    length    = bSelected ? Internal::kSelectedSocketAxisLength : Internal::kSocketAxisLength;
-            const float32    alpha     = bSelected ? 1.0f : 0.6f;
-            const float3     origin    = world.getTranslation();
-            const quaternion rotation  = world.getRotation();
-            for ( uint32 axis = 0; axis < 3; ++axis )
-            {
-                const float4& color = arrAxisColor[axis];
-                renderer.drawLine( origin, origin + float3::transform( arrAxis[axis], rotation ) * length, float4{ color._x, color._y, color._z, alpha } );
-            }
-        }
-    }
-
-    void CharacterEditorPanel::drawAnimationControls( SkeletalAnimatorComponent& animator )
+    void CharacterEditorPanel::drawAnimationControls()
     {
         const vector<hashed_string>& listClipName = _document.getClipNames();
         if ( listClipName.empty() )
@@ -473,7 +300,7 @@ namespace sw::editor
         ImGui::BeginDisabled( clip.empty() );
         if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Play" ), "Play##PreviewClip" ) ) )
         {
-            if ( animator.preloadClip( clip ) && animator.play( clip, _bClipLoop, 0.0f ) )
+            if ( playPreviewClip() )
                 _document.clearStatus();
             else
                 _document.setStatus( "The clip could not be played (see log)" );
@@ -482,9 +309,7 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop##PreviewClip" ) );
         if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Stop" ), "Stop##PreviewClip" ) ) )
-            animator.stop();
-        const bool bPlaying     = animator.getCurrentStateName() == clip && clip.empty() == false && animator.isAnimationActive();
-        _published._clipPlaying = bPlaying ? 1u : 0u;
+            stopPreviewClip();
     }
 
     void CharacterEditorPanel::drawFileRow()
@@ -818,11 +643,8 @@ namespace sw::editor
     void CharacterEditorPanel::drawBodyTab()
     {
         // MVVM: 그리기마다 한 번 모으고(ViewModel), 상태만 읽어 그리며, 바꿀 때는 이름 붙은 명령을 부른다.
-        const AppearanceDatabase& database   = _document.getDatabase();
-        AppearanceEditModel&      appearance = _document.getAppearanceModel();
-        GameObjectManager*        pManager   = findPreviewManager();
-        GameObject*               pBody      = pManager != nullptr ? pManager->resolveGameObject( _previewBody ) : nullptr;
-        BodyCustomizationViewModel::gather( appearance, database, pBody, _bodyHighlightDrive, _bodyState );
+        AppearanceEditModel& appearance = _document.getAppearanceModel();
+        gatherBodyTab();
         const BodyCustomizationViewState& state = _bodyState;
         _document.openBodyData( state._bodyShapes ); // 고친 파일은 다시 읽지 않는다
         _published._bodyDataDirty       = _document.isBodyDataDirty() ? 1u : 0u;
@@ -862,7 +684,7 @@ namespace sw::editor
         ImGui::Separator();
         drawSkinLayerRows( state );
         ImGui::Separator();
-        drawBodyDynamicsPreview( state, pBody );
+        drawBodyDynamicsPreview( state );
         ImGui::Separator();
         drawBodyProfileRows( state );
     }
@@ -1187,66 +1009,17 @@ namespace sw::editor
         ImGui::EndDisabled();
     }
 
-    void CharacterEditorPanel::drawBodyPickOverlay( GameObject* pBody )
+    void CharacterEditorPanel::drawBodyPickOverlay()
     {
-        using Internal                        = CharacterEditorPanelInternal;
         const EditorPreviewViewport& viewport = getPreviewViewport();
         const float2                 position = viewport.getImagePosition();
         const float2                 size     = viewport.getImageSize();
-        _published._previewPickVertexCount    = 0;
-        if ( size._x <= 0.0f || size._y <= 0.0f || pBody == nullptr )
+        if ( size._x <= 0.0f || size._y <= 0.0f || _previewState._bHasBody == false )
             return;
         float4x4 viewProjection{};
         float3   eye{};
         viewport.computeViewProjection( size._x / size._y, viewProjection, eye );
-        EditorProjectedLineRenderer renderer{ ImGui::GetWindowDrawList(), viewProjection, position, size };
-
-        vector<const GameObject*> listObject;
-        collectPickObjects( *pBody, listObject );
-        _published._previewPickVertexCount = Internal::countPickVertices( listObject );
-        // 표면(몸 + 부품)은 지금 포즈로 스키닝해 짓는다 — 윤곽을 긋거나 누른 프레임에만(CPU 스키닝이 공짜가 아니다).
-        vector<BodyPickSurface> listSurface;
-        bool                    bOutline = _bodySelectedSection.has_value() && *_bodySelectedSection < _bodyState._listSection.size();
-        for ( const BodyCustomizationViewState::SectionRow& row : _bodyState._listSection )
-            bOutline = bOutline || row._bHighlighted == SW_TRUE;
-        if ( bOutline )
-            Internal::buildPickSurfaces( listObject, listSurface );
-
-        // 드라이브가 고른 구간 · 고른 구간을 윤곽으로 긋는다(지금 포즈 — 집기와 같다). 큰 메시는 삼각형을 고르게 건너뛴다.
-        const float4 highlight = SW_THEME_COLOR( "Viewport", "SelectionOutline" ).toFloat4();
-        for ( const BodyPickSurface& surface : listSurface )
-        {
-            for ( const MeshSection& section : surface._listSection )
-            {
-                const optional<uint32> row = BodyCustomizationViewModel::findSectionRow( _bodyState, section._name );
-                if ( row.has_value() == false || *row >= _bodyState._listSection.size() ||
-                     ( _bodyState._listSection[*row]._bHighlighted == SW_FALSE && _bodySelectedSection != *row ) )
-                    continue;
-                const uint32 triangleCount = section._indexCount / 3u;
-                const uint32 stride        = triangleCount > Internal::kHighlightTriangleBudget ? triangleCount / Internal::kHighlightTriangleBudget + 1u : 1u;
-                for ( uint32 triangle = 0; triangle < triangleCount; triangle += stride )
-                {
-                    const uint32 first = section._firstIndex + triangle * 3u;
-                    if ( first + 2u >= surface._listIndex.size() )
-                        break;
-                    const float3& a = surface._listPosition[surface._listIndex[first]];
-                    const float3& b = surface._listPosition[surface._listIndex[first + 1u]];
-                    const float3& c = surface._listPosition[surface._listIndex[first + 2u]];
-                    renderer.drawLine( a, b, highlight );
-                    renderer.drawLine( b, c, highlight );
-                    renderer.drawLine( c, a, highlight );
-                }
-            }
-        }
-        if ( _bBodyPickShown == SW_TRUE )
-        {
-            for ( const float3& axis : {
-                      float3{1.0f, 0.0f, 0.0f},
-                      float3{0.0f, 1.0f, 0.0f},
-                      float3{0.0f, 0.0f, 1.0f}
-            } )
-                renderer.drawLine( _bodyPickMarker - axis * Internal::kPickMarkLength, _bodyPickMarker + axis * Internal::kPickMarkLength, highlight );
-        }
+        (void)EditorViewportVisualizer::drawLines( ImGui::GetWindowDrawList(), viewProjection, position, size, _previewState._listPickLine );
         if ( _bBodyPicking == SW_FALSE )
             return;
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "PickActiveHint" ) );
@@ -1273,30 +1046,8 @@ namespace sw::editor
             return;
         }
         Ray ray{};
-        if ( EditorViewportProjectionUtil::makeMouseRay( viewProjection.invert(), position, size, ray ) == false )
-            return;
-        if ( listSurface.empty() )
-            Internal::buildPickSurfaces( listObject, listSurface );
-        if ( listSurface.empty() || listSurface[0]._bSkin == SW_FALSE )
-            return; // 몸 메시가 아직 없다(조립 전)
-        // 층 배치는 피부(몸 표면)만 본다 — 옷 아래 피부에도 놓는다(층 UV 는 몸 UV 다). 구간 고르기는 부품까지 가장 가까운 것.
-        const vector_reference<const BodyPickSurface> listCandidate = bPlacingLayer ? vector_reference<const BodyPickSurface>{ listSurface.data(), 1 } : vector_reference<const BodyPickSurface>{ listSurface };
-        BodySurfaceHit                                hit{};
-        if ( BodySurfaceHit::pick( listCandidate, ray._origin, ray._direction, hit ) == false )
-            return;
-        _bodyPickMarker = hit._position;
-        _bBodyPickShown = SW_TRUE;
-        ++_published._bodyPickCount; // 층 배치 · 구간 고르기 모두 같은 집기다
-        if ( bPlacingLayer )
-        {
-            // 배치 — 끄는 동안 같은 층의 가운데를 맞은 UV 로 옮긴다(한 되돌리기 단계).
-            (void)BodyCustomizationViewModel::placeSkinLayer( _document.getAppearanceModel(), _bodyPickLayer, hit._uv, true );
-            _bBodyPickDrag = SW_TRUE;
-            return;
-        }
-        const BodyPickSurface& surface = listSurface[hit._surface];
-        if ( hit._section.has_value() && *hit._section < surface._listSection.size() )
-            _bodySelectedSection = BodyCustomizationViewModel::findSectionRow( _bodyState, surface._listSection[*hit._section]._name );
+        if ( EditorViewportProjectionUtil::makeMouseRay( viewProjection.invert(), position, size, ray ) )
+            pickBodySurface( ray );
     }
 
     void CharacterEditorPanel::drawSkinLayerRows( const BodyCustomizationViewState& state )
@@ -1412,8 +1163,9 @@ namespace sw::editor
         }
     }
 
-    void CharacterEditorPanel::drawBodyDynamicsPreview( const BodyCustomizationViewState& state, GameObject* pBody )
+    void CharacterEditorPanel::drawBodyDynamicsPreview( const BodyCustomizationViewState& state )
     {
+        using PreviewAction = BodyCustomizationViewModel::PreviewAction;
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "BodyDynamics" ) );
         if ( state._bHasBody == SW_FALSE || state._bodyProfile.empty() )
         {
@@ -1422,17 +1174,17 @@ namespace sw::editor
         }
         // 미리보기 단추는 몸만 바꾼다(기록 없음) — 맞음은 지글, 울기 · 침은 체액 방아쇠, 지우기는 화장 번짐.
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "PreviewHit" ) ) )
-            BodyCustomizationViewModel::previewHit( pBody );
+            postBodyPreview( { PreviewAction::Hit, {}, SW_FALSE } );
         EditorSelfTestMarks::record( "charactereditor.body.hit" );
         for ( const hashed_string& trigger : state._listFluidTrigger )
         {
             ImGui::SameLine();
             if ( ImGui::Button( trigger.c_str() ) ) // 단추 이름은 데이터의 방아쇠 이름(Cry · Drool)이다
-                BodyCustomizationViewModel::previewFluid( pBody, trigger );
+                postBodyPreview( { PreviewAction::Fluid, trigger, SW_FALSE } );
         }
         ImGui::SameLine();
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ClearSmears" ) ) )
-            BodyCustomizationViewModel::clearSmears( pBody );
+            postBodyPreview( { PreviewAction::ClearSmears, {}, SW_FALSE } );
         // 동작 태그 시험(달리기 · 공격) — 몸에 태그를 켜 지글 동작 배율을 걸고, 켠 동안 걸음 간격마다 착지 충격을 준다.
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "ActionTagTest" ) );
         bool bAnyActive = false;
@@ -1445,14 +1197,14 @@ namespace sw::editor
             const bool bToggled = ImGui::Checkbox( "##tag", &bActive );
             ImGui::PopID();
             if ( bToggled )
-                BodyCustomizationViewModel::previewActionTag( pBody, action._tag, bActive );
+                postBodyPreview( { PreviewAction::ActionTag, action._tag, bActive ? SW_TRUE : SW_FALSE } );
             bAnyActive = bAnyActive || bActive;
         }
         EditorSelfTestMarks::record( "charactereditor.body.actionTest" );
         _bodyStepTimer -= ImGui::GetIO().DeltaTime;
         if ( bAnyActive && _bodyStepTimer <= 0.0f )
         {
-            BodyCustomizationViewModel::previewStep( pBody );
+            postBodyPreview( { PreviewAction::Step, {}, SW_FALSE } );
             _bodyStepTimer = BodyCustomizationViewModel::kPreviewStepSeconds;
         }
         if ( ImGui::BeginTable( "##BodyDynamicsValues", 2, ImGuiTableFlags_SizingStretchProp ) )

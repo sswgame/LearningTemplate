@@ -1,13 +1,13 @@
 /**
  * @file PhysicsShapeVisualizer.cpp
- * @brief 강체(RigidBody · RigidBody2D)의 충돌 셰이프를 뷰포트에 와이어프레임으로 그립니다 — 편집 중에도, 플레이 중에도 같은 셰이프 목록에서 그립니다.
+ * @brief 강체(RigidBody · RigidBody2D)의 충돌 셰이프를 뷰포트 와이어프레임 도형 값으로 모읍니다 — 편집 중에도, 플레이 중에도 같은 셰이프 목록에서 모읍니다.
+ * @details 그리기는 `EditorViewportVisualizer::drawAll` 이 값만 보고 한다. 같은 토글 아래 선택한 강체의 크기 손잡이(`EditorColliderHandleTool`, 화면 도구)를 함께 등록한다.
  */
 #include "pch.h"
 
-#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Viewport/EditorColliderHandleTool.h"
-#include "Editor/Viewport/EditorProjectedLineRenderer.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
+#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -59,13 +59,11 @@ namespace sw::editor
                 }
             }
 
-            static void draw( const EditorViewportVisualizerArgs& args )
+            static void gather( const EditorViewportVisualizerArgs& args, EditorVisualizerDrawList& outDrawList )
             {
-                EditorShapeVisualizerStats& stats = args._pStats->_shape;
-                stats._physicsSegmentCount        = 0;
-                if ( args._pObjectManager == nullptr || args._pViewProj == nullptr )
+                if ( args._pObjectManager == nullptr )
                     return;
-                EditorProjectedLineRenderer renderer{ args._pDrawList, *args._pViewProj, args._canvasPos, args._canvasSize };
+                EditorVisualizerLineSink sink{ outDrawList, EditorVisualizerStatSlot::PhysicsShape };
                 // 씬 전체를 훑지 않고 물리 레지스트리의 바디 단계만 본다(빌보드 · 카메라 시각화와 같은 방식).
                 const TypeInfo*     pBody3DType = findStaticType<RigidBodyComponent>();
                 const TypeInfo*     pBody2DType = findStaticType<RigidBody2DComponent>();
@@ -78,18 +76,15 @@ namespace sw::editor
                     if ( bSkipObject )
                         continue;
                     if ( const RigidBodyComponent* pBody3D = castTo<RigidBodyComponent>( pComponent, pBody3DType ); pBody3D != nullptr )
-                        drawBody3D( renderer, *pBody3D );
+                        drawBody3D( sink, *pBody3D );
                     else if ( const RigidBody2DComponent* pBody2D = castTo<RigidBody2DComponent>( pComponent, pBody2DType ); pBody2D != nullptr )
-                        drawBody2D( renderer, *pBody2D );
+                        drawBody2D( sink, *pBody2D );
                 }
-                stats._physicsSegmentCount = renderer.getDrawnSegmentCount();
-                // 같은 시각화 켬 아래서 선택한 강체의 크기 손잡이를 그리고 끈다.
-                EditorColliderHandleTool::process( args );
             }
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( PhysicsShapes, "physics_shapes", 110, SW_EDITOR_ICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesLabel" ),
-                          SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesTip" ), false,
-                          &PhysicsShapeVisualizerInternal::draw );
+    // 손잡이 도구는 아직 씬을 바로 읽는 화면 도구다(View 로 가르기 전) — 같은 토글을 쓰려고 이 줄에 함께 둔다.
+    SW_EDITOR_VISUALIZER_GATHER( PhysicsShapes, "physics_shapes", 110, SW_EDITOR_ICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesLabel" ),
+                                 SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesTip" ), false, &EditorColliderHandleTool::process, &PhysicsShapeVisualizerInternal::gather );
 } // namespace sw::editor

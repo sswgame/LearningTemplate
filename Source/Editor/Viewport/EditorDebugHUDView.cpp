@@ -9,14 +9,9 @@
 
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
 
-#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
-
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Profiling/FrameProfiler.h"
+#include "Editor/Viewport/Model/EditorDebugHUDModel.h"
 
 #include <imgui.h>
 
@@ -35,8 +30,6 @@ namespace sw::editor
             static constexpr Color kGraphBar{ Color::fromBytes( 80, 200, 120, 200 ) };
             static constexpr Color kNote{ Color::fromBytes( 150, 150, 160, 200 ) };
 
-            /** @brief 섹션 본문을 다시 부르는 간격(초) — 게임 HUD 와 같은 4 Hz. */
-            static constexpr float32 kRefreshSeconds = 0.25f;
             /** @brief 상자 여백 · 열 간격 · 바깥 여백(픽셀, DPI 전)입니다. */
             static constexpr float32 kPadding   = 8.0f;
             static constexpr float32 kColumnGap = 12.0f;
@@ -46,88 +39,14 @@ namespace sw::editor
         };
     } // namespace
 
-    EditorDebugHUDView::EditorDebugHUDView()
-        : _listSlot{}
-        , _registryRevision{ UINT64_MAX }
-        , _refreshTimer{ 0.0f }
-        , _drawnSectionCount{ 0 }
-        , _skippedProfilerSectionCount{ 0 }
-        , _followedSelectionRevision{ UINT64_MAX }
+    float32 EditorDebugHUDView::draw( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float2& topRightInset, const EditorDebugHUDModel& model )
     {
-    }
-
-    EditorDebugHUDView::~EditorDebugHUDView() = default;
-
-    void EditorDebugHUDView::rebuildSlots()
-    {
-        // 기록(프레임 시간)은 섹션마다 따로 들므로, 남는 섹션의 쓰개는 그대로 옮긴다.
-        vector<SectionSlot> listOld;
-        listOld.swap( _listSlot );
-        for ( const DebugHUDSectionRegistration* pSection : editor::getSubsystem<DebugHUDRegistry>().getSections() )
-        {
-            SectionSlot slot{ pSection, nullptr };
-            for ( SectionSlot& old : listOld )
-            {
-                if ( old._pRegistration == pSection )
-                    slot._pWriter = std::move( old._pWriter );
-            }
-            if ( slot._pWriter == nullptr )
-                slot._pWriter = make_unique<DebugHUDSectionWriter>( editor::EditorSceneIterationAccess::getKey() );
-            _listSlot.push_back( std::move( slot ) );
-        }
-        _registryRevision = editor::getSubsystem<DebugHUDRegistry>().getRevision();
-    }
-
-    void EditorDebugHUDView::followSelection()
-    {
-        const EditorSelection& selection = editor::getMainSceneSelection();
-        if ( selection.getRevision() == _followedSelectionRevision )
-            return;
-        _followedSelectionRevision        = selection.getRevision();
-        const GameObject* const pSelected = selection.getPrimaryObject();
-        if ( pSelected != nullptr )
-            editor::getSubsystem<DebugHUDRegistry>().setTarget( GameObjectHandle::make( pSelected->getObjectID() ) );
-    }
-
-    void EditorDebugHUDView::refresh()
-    {
-        followSelection();
-        const bool bProfilerOn       = editor::getSubsystem<FrameProfiler>().isEnabled();
-        _skippedProfilerSectionCount = 0;
-        for ( SectionSlot& slot : _listSlot )
-        {
-            slot._pWriter->reset();
-            if ( DebugHUD::isSectionShown( *slot._pRegistration ) == false )
-                continue;
-            if ( ( slot._pRegistration->_flags & DebugHUDSectionFlag::kUsesFrameProfiler ) != 0 && bProfilerOn == false )
-            {
-                ++_skippedProfilerSectionCount;
-                continue;
-            }
-            slot._pRegistration->_pFunc( *slot._pWriter );
-        }
-    }
-
-    float32 EditorDebugHUDView::draw( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float2& topRightInset, float32 deltaSeconds )
-    {
+        using SectionSlot  = EditorDebugHUDModel::SectionSlot;
         _drawnSectionCount = 0;
         if ( pDrawList == nullptr )
             return 0.0f;
-        if ( _registryRevision != editor::getSubsystem<DebugHUDRegistry>().getRevision() )
-        {
-            rebuildSlots();
-            _refreshTimer = 0.0f;
-        }
-        for ( SectionSlot& slot : _listSlot )
-        {
-            slot._pWriter->recordFrameSeconds( deltaSeconds );
-        }
-        _refreshTimer -= deltaSeconds;
-        if ( _refreshTimer <= 0.0f )
-        {
-            refresh();
-            _refreshTimer = EditorDebugHUDViewInternal::kRefreshSeconds;
-        }
+        const vector<SectionSlot>& listSlot                    = model.getSlots();
+        const uint32               skippedProfilerSectionCount = model.getSkippedProfilerSectionCount();
 
         // 크기를 먼저 측정한다 — 제목 줄 · 이름 열 · 값 열 · 그래프.
         const float32                          dpiScale   = EditorThemeUtil::getDPIScale();
@@ -139,7 +58,7 @@ namespace sw::editor
         float32 labelWidth = ImGui::CalcTextSize( "view" ).x;
         float32 valueWidth = ImGui::CalcTextSize( viewLine.c_str() ).x;
         float32 height     = lineHeight;
-        for ( const SectionSlot& slot : _listSlot )
+        for ( const SectionSlot& slot : listSlot )
         {
             const DebugHUDSectionWriter& writer = *slot._pWriter;
             if ( writer.getLineCount() == 0 && writer.hasGraph() == false )
@@ -155,7 +74,7 @@ namespace sw::editor
             }
             height += writer.hasGraph() ? EditorDebugHUDViewInternal::kGraphHeight * dpiScale : 0.0f;
         }
-        if ( _skippedProfilerSectionCount > 0 )
+        if ( skippedProfilerSectionCount > 0 )
             height += lineHeight;
         const float32 width = padding * 2.0f + labelWidth + EditorDebugHUDViewInternal::kColumnGap * dpiScale + valueWidth;
         const float32 x0    = canvasPos._x + canvasSize._x - topRightInset._x - width - EditorDebugHUDViewInternal::kMargin * dpiScale;
@@ -169,7 +88,7 @@ namespace sw::editor
         pDrawList->AddText( ImVec2{ x0 + padding, y }, EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kViewText ), "view" );
         pDrawList->AddText( ImVec2{ valueX, y }, EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kViewText ), viewLine.c_str() );
         y += lineHeight;
-        for ( const SectionSlot& slot : _listSlot )
+        for ( const SectionSlot& slot : listSlot )
         {
             const DebugHUDSectionWriter& writer = *slot._pWriter;
             if ( writer.getLineCount() == 0 && writer.hasGraph() == false )
@@ -200,10 +119,10 @@ namespace sw::editor
                 y += graphH;
             }
         }
-        if ( _skippedProfilerSectionCount > 0 )
+        if ( skippedProfilerSectionCount > 0 )
         {
             fixed_string<constant::buffer::kMax64> note;
-            formatstring( note.data(), note.capacity(), "%# section(s) need the profiler", _skippedProfilerSectionCount );
+            formatstring( note.data(), note.capacity(), "%# section(s) need the profiler", skippedProfilerSectionCount );
             pDrawList->AddText( ImVec2{ x0 + padding, y }, EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kNote ), note.c_str() );
         }
         return topRightInset._y + boxH + EditorDebugHUDViewInternal::kMargin * dpiScale;

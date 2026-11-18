@@ -1,19 +1,17 @@
 /**
  * @file DebugDrawVisualizer.cpp
- * @brief 게임 코드가 `DebugDrawQueue` 에 넣은 선 · 구 · 상자 · 화살표 · 글자를 뷰포트에 그립니다(2D · 3D 뷰 모두)
+ * @brief 게임 코드가 `DebugDrawQueue` 에 넣은 선 · 구 · 상자 · 화살표 · 글자를 뷰포트 도형 값으로 모읍니다(2D · 3D 뷰 모두). 그리기는 `EditorViewportVisualizer::drawAll`.
  */
 #include "pch.h"
 
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
+#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
 #include "Engine/Console/DebugOverlayState.h"
@@ -22,17 +20,12 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"
 
-#include <imgui.h>
-
 namespace sw::editor
 {
     namespace
     {
         struct DebugDrawVisualizerInternal
         {
-            /** @brief 글자 그림자 색입니다(밝은 배경에서도 읽히게). */
-            static constexpr Color kTextShadow{ Color::fromBytes( 0, 0, 0, 200 ) };
-
             /** @brief 선분을 펼치는 재사용 버퍼들입니다(에디터 UI 는 게임 스레드 하나). 에디터 범위의 상태 저장소가 소유한다. */
             struct Scratch
             {
@@ -40,22 +33,13 @@ namespace sw::editor
                 vector<EditorWorldSegment> _listSegment;
             };
 
-            static ImU32 toColor( const float4& color )
-            {
-                return EditorColorUtil::toImU32( Color::fromFloat4( color ) );
-            }
-
             /**
-             * @brief 디버그 큐가 확정한 도형을 그립니다. 구는 대원 셋(2D 뷰는 XY 원 하나), 선분은 근평면에서 잘라 투영합니다.
+             * @brief 디버그 큐가 확정한 도형을 모읍니다. 구는 대원 셋(2D 뷰는 XY 원 하나)입니다. 그린 수는 그리는 쪽이 센다.
              * @details 큐는 `Engine::endFrame` 이 지난 프레임에 넣은 것을 확정합니다 — 게임 업데이트든 씬 틱이든 넣은 것이 모두 보인다.
-             *          재사용 버퍼 하나로 충분합니다(에디터 UI 는 게임 스레드 하나에서 돈다).
              */
-            static void draw( const EditorViewportVisualizerArgs& args )
+            static void gather( const EditorViewportVisualizerArgs& args, EditorVisualizerDrawList& outDrawList )
             {
-                EditorDebugDrawStats& stats = args._pStats->_debugDraw;
-                stats._segmentCount         = 0;
-                stats._textCount            = 0;
-                stats._frame                = ImGui::GetFrameCount();
+                outDrawList._bDebugDrawGathered = true;
                 if ( args._pDebugDrawQueue == nullptr )
                     return;
 
@@ -64,31 +48,23 @@ namespace sw::editor
                 EditorVisualizerGeometryUtil::appendDebugDrawSegments( *args._pDebugDrawQueue, args._bFlat2D, scratch._listLine, scratch._listSegment );
                 for ( const EditorWorldSegment& segment : scratch._listSegment )
                 {
-                    ImVec2 screenFrom;
-                    ImVec2 screenTo;
-                    if ( EditorViewportProjectionUtil::projectSegment( *args._pViewProj, segment._from, segment._to, args._canvasPos, args._canvasSize, screenFrom,
-                                                                       screenTo ) == false )
-                        continue;
-                    args._pDrawList->AddLine( screenFrom, screenTo, toColor( segment._color ), 1.5f );
-                    ++stats._segmentCount;
+                    EditorVisualizerLine line{};
+                    line._from     = segment._from;
+                    line._to       = segment._to;
+                    line._color    = segment._color;
+                    line._statSlot = EditorVisualizerStatSlot::DebugDraw;
+                    outDrawList.addLine( line );
                 }
-
                 for ( const DebugText& text : args._pDebugDrawQueue->getVisibleTexts() )
                 {
-                    ImVec2 screen;
-                    if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, text._position, args._canvasPos, args._canvasSize, screen ) == false )
-                        continue;
-                    // 글자 그림자를 먼저 깔아 밝은 배경에서도 읽히게 한다.
-                    args._pDrawList->AddText( ImVec2( screen.x + 1.0f, screen.y + 1.0f ), EditorColorUtil::toImU32( kTextShadow ), text._text.c_str() );
-                    args._pDrawList->AddText( screen, toColor( text._color ), text._text.c_str() );
-                    ++stats._textCount;
+                    outDrawList._listText.push_back( EditorVisualizerText{ text._position, text._color, text._text, EditorVisualizerStatSlot::DebugDraw } );
                 }
             }
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( DebugDraw, "debug_draw", 300, SW_EDITOR_ICON_NAME( "Bug" ), SW_LOCKEYREF( "EdVisualizer", "DebugDrawLabel" ), SW_LOCKEYREF( "EdVisualizer", "DebugDrawTip" ), true,
-                          &DebugDrawVisualizerInternal::draw );
+    SW_EDITOR_VISUALIZER_GATHER( DebugDraw, "debug_draw", 300, SW_EDITOR_ICON_NAME( "Bug" ), SW_LOCKEYREF( "EdVisualizer", "DebugDrawLabel" ), SW_LOCKEYREF( "EdVisualizer", "DebugDrawTip" ),
+                                 true, nullptr, &DebugDrawVisualizerInternal::gather );
 } // namespace sw::editor
 
 namespace sw::editor

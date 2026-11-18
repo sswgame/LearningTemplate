@@ -65,13 +65,22 @@ views = [
     "Common/Input/CommandPalettePopup.cpp",
     "Common/Input/EditorCommandGUI.cpp",
     "Common/Input/QuickLauncherPopup.cpp",
+    "Viewport/EditorColliderHandleTool.cpp",
+    "Viewport/EditorDebugHUDView.cpp",
+    "Viewport/EditorPreviewGizmo.cpp",
     "Viewport/EditorProjectedLineRenderer.cpp",
+    "Viewport/EditorViewportAssetPlacement.cpp",
     "Viewport/EditorViewportCamera.cpp",
     "Viewport/EditorViewportCanvasOverlay.cpp",
+    "Viewport/EditorViewportClient.cpp",
+    "Viewport/EditorViewportGizmo.cpp",
     "Viewport/EditorViewportOverlays.cpp",
+    "Viewport/EditorViewportPicker.cpp",
     "Viewport/EditorViewportProjection.cpp",
     "Viewport/EditorViewportVisualizer.cpp",
     "Viewport/ViewportInputOverlay.cpp",
+    "Viewport/TerrainBrushTool.cpp",
+    "Viewport/ViewportToolbarSettings.cpp",
     "Viewport/Visualizers/TerrainBrushVisualizer.cpp",
 ]
 patterns = [
@@ -109,3 +118,4 @@ patterns = [
 "Editor/Common/Workspace/EditorFrameStep.h" = "UI 프레임 단계 등록 줄(SW_EDITOR_FRAME_STEP)과 순서 값 — EditorExtensionRegistry 만 include 하고 EditorContext 는 앞 선언이다. 창이 닫혀도 도는 단계를 그 창 View 가 등록한다(Profiler 의 합친 트레이스 열기)"
 "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h" = "종류별 썸네일 · 열기 · 뷰포트 배치 확장 인터페이스 — Core 와 내보내기만 include 하고 씬 형식은 앞 선언이다. 콘텐츠 브라우저 View 가 카드 썸네일을 그 종류의 동작으로 그린다"
 "Editor/Common/Commands/Asset/EditorAssetMove.h" = "에셋 옮기기 · 옮기기 계획 값(EditorAssetFileCommands 에서 떼어 낸 값) — Core 만 include 한다. 콘텐츠 브라우저 확인 대화상자가 계획을 그린다"
+"Engine/Object/Component/TagSystem.h" = "태그 집합 값(TagContainer)과 질의 — Core 와 리플렉션 매크로만 include 한다. 외형 데이터 값(CharacterAppearance · ItemVisual · 장비 조건)이 들어 캐릭터 편집 창 모델 헤더를 거쳐 온다"

@@ -3,11 +3,10 @@
 #include "Editor/Viewport/EditorViewportAssetPlacement.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorDragPayload.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -15,18 +14,12 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/Asset/EditorPlacementPose.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/ViewportToolbarSettings.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 
@@ -53,38 +46,17 @@ namespace sw::editor
     } // namespace
 
     EditorViewportAssetPlacement::EditorViewportAssetPlacement()
-        : _pDragPhysics{}
-        , _pDragManager{ nullptr }
+        : _drag{}
         , _stats{}
-        , _bDragPrepared{ SW_FALSE }
-        , _reserved{ 0 }
     {
-    }
-
-    EditorViewportAssetPlacement::~EditorViewportAssetPlacement() = default;
-
-    void EditorViewportAssetPlacement::prepareDragPhysics( GameObjectManager* pManager, bool b2DMode )
-    {
-        if ( _bDragPrepared == SW_TRUE && _pDragManager == pManager )
-            return;
-        _bDragPrepared = SW_TRUE;
-        _pDragManager  = pManager;
-        _pDragPhysics.reset();
-        if ( b2DMode || pManager == nullptr )
-            return;
-        // 편집 중에는 플레이 물리 씬이 없다 — 정적 바디만 담은 사본을 끌기 동안 하나 둔다(라이트 프로브 베이크와 같은 길). 물리 서비스가 없으면 비어 경계 · 바닥만 본다.
-        _pDragPhysics = pManager->getSubsystem<ScenePhysics>().createStaticScene3D();
     }
 
     void EditorViewportAssetPlacement::process( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float4x4& viewProj, const ViewportToolbarSettings& settings )
     {
         if ( EditorInputGUI::isPayloadInFlight( EditorPayloadKindSet{ EditorPayloadKind::Asset } ) == false )
         {
-            // 끌기가 끝났다 — 사본을 버린다(다음 끌기는 그 사이의 편집을 담아 새로 만든다)
-            _pDragPhysics.reset();
-            _pDragManager  = nullptr;
-            _bDragPrepared = SW_FALSE;
-            _stats._yaw    = 0.0f; // 다음 끌기는 회전 없이 시작한다
+            _drag.end();        // 끌기가 끝났다 — 사본을 버린다
+            _stats._yaw = 0.0f; // 다음 끌기는 회전 없이 시작한다
             return;
         }
 
@@ -95,93 +67,51 @@ namespace sw::editor
         if ( EditorWidgets::previewAssetDropInRect( canvasPos, canvasMax, "##ViewportAssetDrop", assetPath, bDelivered ) == false )
             return;
 
-        Scene*             pScene   = editor::getActiveScene();
-        GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
-        if ( pManager == nullptr )
+        // 판정 · 놓기(Model) — 커서 레이와 스냅 간격만 넘긴다.
+        Ray                  mouseRay{};
+        const bool           bRay = EditorViewportProjectionUtil::makeMouseRay( viewProj.invert(), canvasPos, canvasSize, mouseRay );
+        EditorPlacementGhost ghost{};
+        if ( _drag.query( assetPath, bRay ? &mouseRay : nullptr, settings._bIs2DMode, settings._bGridSnap ? settings._gridSnapValue : 0.0f, ghost ) == false )
             return;
-
-        const bool b2DMode    = settings._bIs2DMode;
-        const bool bPlaceable = EditorAssetCommands::canPlaceInViewport( assetPath );
-        prepareDragPhysics( pManager, b2DMode );
-        if ( bPlaceable )
+        if ( ghost._bPlaceable )
             updateDragYaw();
-
-        EditorPlacementHit hit{};
-        bool               bFound = false;
-        Ray                mouseRay{};
-        if ( bPlaceable && EditorViewportProjectionUtil::makeMouseRay( viewProj.invert(), canvasPos, canvasSize, mouseRay ) )
-        {
-            EditorPlacementQuery query;
-            query._pPhysics    = _pDragPhysics.get();
-            query._pManager    = pManager;
-            query._maxDistance = getPreferences<EditorViewportPreferences>()._placementMaxDistance;
-            query._snapStep    = settings._bGridSnap ? settings._gridSnapValue : 0.0f;
-            query._b2DMode     = b2DMode ? SW_TRUE : SW_FALSE;
-            bFound             = EditorAssetPlacement::findSurface( query, mouseRay, hit );
-        }
 
         if ( bDelivered == false )
         {
-            drawGhost( pDrawList, canvasPos, canvasSize, viewProj, assetPath, bPlaceable, bFound, hit );
+            drawGhost( pDrawList, canvasPos, canvasSize, viewProj, assetPath, ghost );
             _stats._ghostFrame = ImGui::GetFrameCount();
-            _stats._surface    = hit._surface;
+            _stats._surface    = ghost._hit._surface;
             return;
         }
-
-        // 놓였다
-        if ( bPlaceable == false )
-        {
-            ++_stats._openedCount;
-            (void)EditorAssetCommands::openPath( assetPath ); // 놓을 수 없는 종류는 연다 — 고스트가 놓기 전에 그렇다고 알렸다. 실패는 openPath 가 알린다
-            return;
-        }
-        if ( EditorPlaySession::refuseSceneEdit( "Viewport asset drop" ) )
-            return; // 거절 이유가 경고 로그로 남는다
-        _stats._surface = hit._surface;
-        if ( bFound == false )
-        {
-            ++_stats._refusedCount;
-            SW_LOG_WARNING_ID( "EditorViewportAssetPlacement.NoSurface", "'%#' was not placed - no surface under the cursor within %# m (aim at an object, a collider or the ground plane)",
-                               assetPath.c_str(), getPreferences<EditorViewportPreferences>()._placementMaxDistance );
-            return;
-        }
-        ++_stats._placedCount;
-        _stats._lastPosition = hit._position;
-        _stats._lastYaw      = _stats._yaw;
-        SW_LOG_TRACE_ID( "EditorViewportAssetPlacement.Placed", "Placed '%#' on the %# at (%#, %#, %#), turned %# deg", assetPath.c_str(), EditorAssetPlacement::getSurfaceName( hit._surface ), hit._position._x,
-                         hit._position._y, hit._position._z, MathUtil::toDegree( _stats._yaw ) );
-        EditorPlacementPose pose{};
-        pose._position = hit._position;
-        pose._yaw      = _stats._yaw;
-        pose._b2DMode  = b2DMode;
-        EditorAssetCommands::placeInViewport( pManager, assetPath.c_str(), pose );
+        EditorPlacementDrag::recordDrop( _drag.drop( assetPath, ghost, _stats._yaw, settings._bIs2DMode ), ghost, _stats );
     }
 
     void EditorViewportAssetPlacement::updateDragYaw()
     {
         const float32 step = getPreferences<EditorViewportPreferences>()._placementRotateStep;
         if ( EditorInputGUI::wasActionTriggered( "viewport.placementRotate" ) )
-            _stats._yaw = EditorAssetPlacement::stepYaw( _stats._yaw, step, 1 );
+            _stats._yaw = EditorPlacementDrag::stepYaw( _stats._yaw, step, 1 );
         if ( EditorInputGUI::wasActionTriggered( "viewport.placementRotateBack" ) )
-            _stats._yaw = EditorAssetPlacement::stepYaw( _stats._yaw, step, -1 );
+            _stats._yaw = EditorPlacementDrag::stepYaw( _stats._yaw, step, -1 );
     }
 
     void EditorViewportAssetPlacement::drawGhost( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float4x4& viewProj, const string& assetPath,
-                                                  bool bPlaceable, bool bFound, const EditorPlacementHit& hit ) const
+                                                  const EditorPlacementGhost& ghost ) const
     {
-        using Internal        = EditorViewportAssetPlacementInternal;
-        const ImVec2 mousePos = ImGui::GetMousePos();
+        const EditorPlacementHit& hit = ghost._hit;
+        using Internal                = EditorViewportAssetPlacementInternal;
+        const ImVec2 mousePos         = ImGui::GetMousePos();
         const ImVec2 labelPos{ mousePos.x + 16.0f * EditorThemeUtil::getDPIScale(), mousePos.y + 16.0f * EditorThemeUtil::getDPIScale() };
         const string fileName = FileUtil::getFileNamePart( assetPath );
         EditorSelfTestMarks::record( "sceneView.placementGhost" );
 
-        if ( bPlaceable == false )
+        if ( ghost._bPlaceable == false )
         {
             const string text = SW_LOCKEYFORMAT( "EdFormat", "PlacementOpensInstead", TextArgumentList().addText( "asset", fileName.c_str() ) );
             pDrawList->AddText( labelPos, EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "Label" ) ), text.c_str() );
             return;
         }
-        if ( bFound == false )
+        if ( ghost._bFound == false )
         {
             // 색만으로 알리지 않는다 — 이유와 할 일을 글로 적는다
             const string text = SW_LOCKEYFORMAT( "EdFormat", "PlacementNoSurface", TextArgumentList().addText( "asset", fileName.c_str() ) );
@@ -220,7 +150,7 @@ namespace sw::editor
             pDrawList->AddLine( base, facingTip, markerColor, 2.0f );
 
         const string text       = SW_LOCKEYFORMAT( "EdFormat", "PlacementOnSurface",
-                                                   TextArgumentList().addText( "asset", fileName.c_str() ).addText( "surface", EditorAssetPlacement::getSurfaceName( hit._surface ) ) );
+                                                   TextArgumentList().addText( "asset", fileName.c_str() ).addText( "surface", ghost._pSurfaceName ) );
         const ImU32  labelColor = EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "Label" ) );
         pDrawList->AddText( labelPos, labelColor, text.c_str() );
         const string rotation = SW_LOCKEYFORMAT( "EdFormat", "PlacementRotation", TextArgumentList().addInteger( "degrees", static_cast<int64>( MathUtil::round( MathUtil::toDegree( _stats._yaw ) ) ) ) );

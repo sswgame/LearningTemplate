@@ -386,6 +386,28 @@ namespace sw::editor
         return model.setSkinLayer( index, value, bContinuous );
     }
 
+    void BodyCustomizationViewModel::applyPreview( GameObject* pBody, const PreviewCommand& command )
+    {
+        switch ( command._action )
+        {
+            case PreviewAction::Hit:
+                previewHit( pBody );
+                return;
+            case PreviewAction::Fluid:
+                previewFluid( pBody, command._name );
+                return;
+            case PreviewAction::ClearSmears:
+                clearSmears( pBody );
+                return;
+            case PreviewAction::ActionTag:
+                previewActionTag( pBody, command._name, command._bOn == SW_TRUE );
+                return;
+            case PreviewAction::Step:
+                previewStep( pBody );
+                return;
+        }
+    }
+
     void BodyCustomizationViewModel::previewActionTag( GameObject* pBody, const hashed_string& tag, bool bOn )
     {
         if ( pBody == nullptr || tag.empty() )

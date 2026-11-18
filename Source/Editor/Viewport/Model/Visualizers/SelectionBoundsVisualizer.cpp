@@ -1,31 +1,26 @@
 /**
  * @file SelectionBoundsVisualizer.cpp
- * @brief 고른 오브젝트를 화면에서 알아보게 그 경계 상자를 강조색 선으로 그립니다(Godot 의 선택 상자).
+ * @brief 고른 오브젝트를 화면에서 알아보게 그 경계 상자를 선 도형 값으로 모읍니다(Godot 의 선택 상자). 그리기는 `EditorViewportVisualizer::drawAll`.
  */
 #include "pch.h"
 
-#include "Editor/Viewport/Visualizers/SelectionBoundsVisualizer.h"
+#include "Editor/Viewport/Model/Visualizers/SelectionBoundsVisualizer.h"
 
 #include "Core/Math/AABB.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
-#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
+#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
-
-#include <imgui.h>
 
 namespace sw::editor
 {
@@ -41,43 +36,6 @@ namespace sw::editor
             };
 
             static DrawState& getDrawState() { return getEditorState<DrawState>(); }
-
-            /** @brief 상자 하나의 12 모서리를 그립니다. */
-            static void drawBox( const EditorViewportVisualizerArgs& args, const AABB& box, ImU32 color, float32 thickness )
-            {
-                const float3 arrCorner[8] = {
-                    {box._min._x, box._min._y, box._min._z},
-                    {box._max._x, box._min._y, box._min._z},
-                    {box._max._x, box._max._y, box._min._z},
-                    {box._min._x, box._max._y, box._min._z},
-                    {box._min._x, box._min._y, box._max._z},
-                    {box._max._x, box._min._y, box._max._z},
-                    {box._max._x, box._max._y, box._max._z},
-                    {box._min._x, box._max._y, box._max._z},
-                };
-                static constexpr uint32 kArrEdge[12][2] = {
-                    {0, 1},
-                    {1, 2},
-                    {2, 3},
-                    {3, 0},
-                    {4, 5},
-                    {5, 6},
-                    {6, 7},
-                    {7, 4},
-                    {0, 4},
-                    {1, 5},
-                    {2, 6},
-                    {3, 7}
-                };
-                for ( const auto& edge : kArrEdge )
-                {
-                    ImVec2 screenA{};
-                    ImVec2 screenB{};
-                    if ( EditorViewportProjectionUtil::projectSegment( *args._pViewProj, arrCorner[edge[0]], arrCorner[edge[1]], args._canvasPos, args._canvasSize,
-                                                                       screenA, screenB ) )
-                        args._pDrawList->AddLine( screenA, screenB, color, thickness );
-                }
-            }
 
             /** @brief 오브젝트의 씬 컴포넌트 경계를 합친 상자입니다. 경계가 있는 컴포넌트가 없으면 false 입니다. */
             static bool computeObjectBox( const GameObject& object, AABB& outBox )
@@ -102,21 +60,23 @@ namespace sw::editor
                 return bAny;
             }
 
-            static void draw( const EditorViewportVisualizerArgs& args )
+            static void gather( const EditorViewportVisualizerArgs& /*args*/, EditorVisualizerDrawList& outDrawList )
             {
                 DrawState& drawState     = getDrawState();
                 drawState._drawnBoxCount = 0;
                 vector<GameObject*> listSelected;
                 editor::getMainSceneSelection().getSelectedObjects( listSelected );
                 // 주황(유니티 선택 외곽선 색) — 테마 강조색은 파랑 계열이라 격자 · 카메라 프러스텀과 섞인다.
-                const ImU32 color = EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "SelectionOutline" ) );
+                EditorVisualizerLine selected{};
+                selected._thickness = 2.0f;
+                selected._colorRole = EditorVisualizerColorRole::SelectionOutline;
                 for ( const GameObject* pObject : listSelected )
                 {
                     AABB       box{};
                     const bool bNoObjectBox = pObject == nullptr || pObject->isRenderHidden() || computeObjectBox( *pObject, box ) == false;
                     if ( bNoObjectBox )
                         continue;
-                    drawBox( args, box, color, 2.0f );
+                    outDrawList.addBox( box, selected );
                     ++drawState._drawnBoxCount;
                 }
                 // 호버는 선택보다 약하게 — 테마의 호버 색 · 얇은 선. 이미 고른 오브젝트는 건너뛴다(선택 상자가 이미 있다).
@@ -133,7 +93,10 @@ namespace sw::editor
                 AABB                     box{};
                 if ( pHovered == nullptr || computeObjectBox( *pHovered, box ) == false )
                     return;
-                drawBox( args, box, EditorColorUtil::toImU32( EditorThemeUtil::getViewportHoverColor() ), 1.0f );
+                EditorVisualizerLine hovered{};
+                hovered._thickness = 1.0f;
+                hovered._colorRole = EditorVisualizerColorRole::Hover;
+                outDrawList.addBox( box, hovered );
             }
         };
     } // namespace
@@ -153,6 +116,6 @@ namespace sw::editor
         return SelectionBoundsVisualizerInternal::getDrawState()._drawnBoxCount;
     }
 
-    SW_EDITOR_VISUALIZER( SelectionBounds, "selection_bounds", 40, SW_EDITOR_ICON_NAME( "Cube" ), SW_LOCKEYREF( "EdVisualizer", "SelectionBoundsLabel" ), SW_LOCKEYREF( "EdVisualizer", "SelectionBoundsTip" ), true,
-                          &SelectionBoundsVisualizerInternal::draw );
+    SW_EDITOR_VISUALIZER_GATHER( SelectionBounds, "selection_bounds", 40, SW_EDITOR_ICON_NAME( "Cube" ), SW_LOCKEYREF( "EdVisualizer", "SelectionBoundsLabel" ),
+                                 SW_LOCKEYREF( "EdVisualizer", "SelectionBoundsTip" ), true, nullptr, &SelectionBoundsVisualizerInternal::gather );
 } // namespace sw::editor

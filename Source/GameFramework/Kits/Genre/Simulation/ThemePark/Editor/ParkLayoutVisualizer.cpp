@@ -1,59 +1,60 @@
 /**
  * @file ParkLayoutVisualizer.cpp
- * @brief 뷰포트 시각화 themepark.layout(툴바 "Park")을 구현합니다. 배치 파일의 놀이기구 영역, 입구, 코스터 트랙을 씬 뷰에 겹쳐 그립니다.
+ * @brief 뷰포트 시각화 themepark.layout(툴바 "Park")을 구현합니다. 배치 파일의 놀이기구 영역, 입구, 코스터 트랙을 씬 뷰 도형 값으로 모읍니다(그리기는 `EditorViewportVisualizer::drawAll`).
  */
 #include "pch.h"
 
-#include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
-#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
+#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
+#include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
 #include "Engine/Localization/LocText.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPreview.h"
 
-#include <imgui.h>
-
 namespace sw::editor
 {
     namespace
     {
-        /** @brief 배치 파일의 선분(놀이기구 영역 · 입구 · 트랙)과 놀이기구 이름을 그립니다. 이름 색은 테마 토큰 `_viewportLabel` 입니다. */
-        void drawParkLayout( const EditorViewportVisualizerArgs& args )
+        struct ParkLayoutVisualizerInternal
         {
-            ParkLayoutPreview* pPreview = findSubsystem<ParkLayoutPreview>();
-            if ( pPreview == nullptr )
-                return;
-            ParkLayoutPreview& preview = *pPreview;
-            (void)preview.refresh(); // 바뀌었을 때만 다시 읽는다. 읽기 실패는 refresh 가 알린다
-            if ( preview.isLoaded() == false )
-                return;
-            vector<EditorWorldSegment> listSegment; // 프레임마다 지역으로 채운다(재사용 버퍼를 함수 정적으로 두면 모듈 언로드 뒤까지 남는다)
-            preview.appendSegments( listSegment );
-            for ( const EditorWorldSegment& segment : listSegment )
+            /** @brief 놀이기구 이름을 영역 위로 띄우는 높이(m)입니다. */
+            static constexpr float32 kLabelLift = 0.5f;
+
+            /** @brief 배치 파일의 선분(놀이기구 영역 · 입구 · 트랙)과 놀이기구 이름을 모읍니다. 이름 색은 테마 토큰 `Viewport.Label` 입니다. */
+            static void gather( const EditorViewportVisualizerArgs& /*args*/, EditorVisualizerDrawList& outDrawList )
             {
-                ImVec2 screenFrom;
-                ImVec2 screenTo;
-                if ( EditorViewportProjectionUtil::projectSegment( *args._pViewProj, segment._from, segment._to, args._canvasPos, args._canvasSize, screenFrom,
-                                                                   screenTo ) == false )
-                    continue;
-                const ImU32 color = ImGui::ColorConvertFloat4ToU32( ImVec4{ segment._color._x, segment._color._y, segment._color._z, segment._color._w } );
-                args._pDrawList->AddLine( screenFrom, screenTo, color, 1.5f );
+                ParkLayoutPreview* pPreview = findSubsystem<ParkLayoutPreview>();
+                if ( pPreview == nullptr )
+                    return;
+                (void)pPreview->refresh(); // 바뀌었을 때만 다시 읽는다. 읽기 실패는 refresh 가 알린다
+                if ( pPreview->isLoaded() == false )
+                    return;
+                vector<EditorWorldSegment> listSegment; // 프레임마다 지역으로 채운다(재사용 버퍼를 함수 정적으로 두면 모듈 언로드 뒤까지 남는다)
+                pPreview->appendSegments( listSegment );
+                for ( const EditorWorldSegment& segment : listSegment )
+                {
+                    EditorVisualizerLine line{};
+                    line._from  = segment._from;
+                    line._to    = segment._to;
+                    line._color = segment._color;
+                    outDrawList.addLine( line );
+                }
+                for ( const ParkRidePreview& ride : pPreview->getRides() )
+                {
+                    EditorVisualizerText label{};
+                    label._position  = ride._position + float3{ 0.0f, ride._size._y + kLabelLift, 0.0f };
+                    label._text      = ride._name;
+                    label._colorRole = EditorVisualizerColorRole::ThemeToken;
+                    label._pThemeKey = "Viewport.Label";
+                    label._bShadow   = false;
+                    outDrawList._listText.push_back( label );
+                }
             }
-            const ImU32 colorLabel = EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "Label" ) );
-            for ( const ParkRidePreview& ride : preview.getRides() )
-            {
-                ImVec2       labelPos;
-                const float3 top = ride._position + float3{ 0.0f, ride._size._y + 0.5f, 0.0f };
-                if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, top, args._canvasPos, args._canvasSize, labelPos ) )
-                    args._pDrawList->AddText( labelPos, colorLabel, ride._name.c_str() );
-            }
-        }
+        };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( ParkLayout, "themepark.layout", 900, SW_EDITOR_ICON_NAME( "Map" ), SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutLabel" ), SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutTip" ), false,
-                          &drawParkLayout );
+    SW_EDITOR_VISUALIZER_GATHER( ParkLayout, "themepark.layout", 900, SW_EDITOR_ICON_NAME( "Map" ), SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutLabel" ),
+                                 SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutTip" ), false, nullptr, &ParkLayoutVisualizerInternal::gather );
 } // namespace sw::editor
