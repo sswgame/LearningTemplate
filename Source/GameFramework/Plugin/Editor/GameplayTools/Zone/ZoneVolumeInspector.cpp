@@ -14,6 +14,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorObjectEdit.h"
 
@@ -173,10 +174,12 @@ namespace sw::editor
         class ZoneVolumeInspector final : public IInspectorComponent
         {
         public:
-            void drawSection( Component* pComponent ) override
+            void drawSection( const EditorPropertyGridTarget& target ) override
             {
                 using Util                   = ZoneVolumeInspectorUtil;
-                ZoneVolumeComponent* pVolume = static_cast<ZoneVolumeComponent*>( pComponent );
+                ZoneVolumeComponent* pVolume = static_cast<ZoneVolumeComponent*>( InspectorComponentEdit::findComponent( target ) ); // 이 형에 등록한 확장이다
+                if ( pVolume == nullptr )
+                    return;
                 ImGui::SeparatorText( SW_LOCKEY( "EdSection", "ZoneModules" ) );
                 const shared_ptr<const ZoneProfile> pPreset = pVolume->getProfileRef().acquire().snapshot();
                 if ( pPreset == nullptr )

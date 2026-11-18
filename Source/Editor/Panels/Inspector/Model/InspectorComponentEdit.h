@@ -21,6 +21,8 @@ namespace sw
 
 namespace sw::editor
 {
+    struct EditorPropertyGridTarget;
+
     /** @brief 카메라 투영 구역의 값입니다(값만). */
     struct CameraSectionValues
     {
@@ -62,6 +64,18 @@ namespace sw::editor
 
         /** @brief 태그 컴포넌트 @p component 의 비지 않은 태그 이름을 모읍니다(@p outListTag 를 비우고 채운다). */
         static void collectTags( const Component& component, vector<string>& outListTag );
+
+        // 대상 값 판 — 인스펙터 확장(View)이 부른다. 대상(씬 · 오브젝트 id · 컴포넌트 id)을 그 프레임에 풀고, 없으면 모으지 않고(false) 넣지 않는다.
+        /** @brief 대상 @p target 의 컴포넌트입니다. 오브젝트 · 컴포넌트가 없으면 nullptr 입니다. 확장 모듈의 edit model 이 자기 형으로 바꿔 쓴다. */
+        [[nodiscard]] static Component* findComponent( const EditorPropertyGridTarget& target );
+        [[nodiscard]] static bool       gatherCamera( const EditorPropertyGridTarget& target, CameraSectionValues& outValues );
+        static void                     applyCamera( const EditorPropertyGridTarget& target, const CameraSectionValues& values );
+        [[nodiscard]] static bool       gatherTransform( const EditorPropertyGridTarget& target, TransformSectionValues& outValues );
+        static void                     setLocalPosition( const EditorPropertyGridTarget& target, const float3& position );
+        static void                     setLocalRotationDegrees( const EditorPropertyGridTarget& target, const float3& rotationDegrees );
+        static void                     setLocalScale( const EditorPropertyGridTarget& target, const float3& scale );
+        /** @brief 태그 이름을 모읍니다(@p outListTag 를 비우고 채운다 — 대상이 없으면 빈 채로). */
+        static void collectTags( const EditorPropertyGridTarget& target, vector<string>& outListTag );
 
         /** @brief 스프라이트 클립 도구를 엽니다(작업 공간이 다음 프레임에 연다). */
         static void openSpriteClipTool();

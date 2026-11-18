@@ -497,13 +497,15 @@ namespace sw::editor
         }
         if ( ImGui::BeginPopup( pPopupID ) )
         {
-            // 공용 목록 위젯이 오브젝트 포인터를 받는다 — 그 창구만 ViewModel 이 준다.
-            GameObject* pObj    = _viewModel.findShownObject();
-            bool        bFailed = false;
-            if ( pObj == nullptr || EditorComponentMenu::drawAddComponentList( pObj, _addComponentSearch, pMarkPrefix, ImGui::IsWindowAppearing(), bFailed ) )
-                ImGui::CloseCurrentPopup();
-            if ( bFailed )
-                SW_LOG_WARNING_ID( "InspectorPanel.CouldNotAddComponent", "Could not add the component to '%#'", _state._objectName.c_str() );
+            // 목록은 고른 종류 이름만 돌려주고, 더하기는 ViewModel 명령이 한다(되돌리기 한 단계).
+            const hashed_string typeName = EditorComponentMenu::drawComponentTypeList( _addComponentSearch, pMarkPrefix, ImGui::IsWindowAppearing() );
+            if ( typeName.empty() == false )
+            {
+                if ( _viewModel.addComponent( typeName ) )
+                    ImGui::CloseCurrentPopup();
+                else
+                    SW_LOG_WARNING_ID( "InspectorPanel.CouldNotAddComponent", "Could not add the component to '%#'", _state._objectName.c_str() );
+            }
             ImGui::EndPopup();
         }
     }
@@ -594,39 +596,32 @@ namespace sw::editor
         }
 
         // 확장은 이 타입과 그 기반 타입들에 등록된 것 전부다(기반에서 파생 순서). 각자 자기 영역을 그리고 직접 그린 리플렉션 프로퍼티만 감춘다. 나머지 리플렉션
-        // 프로퍼티는 상속한 것까지 아래에서 그린다(언리얼 Details 의 `IDetailCustomization` 과 `HideProperty`). 확장 API 는 컴포넌트 포인터를 받는다 — 그 창구만 ViewModel 이 준다.
-        const vector<IInspectorComponent*>& listInspector = InspectorViewModel::getInspectorsForType( card._typeName );
-        Component*                          pComp         = listInspector.empty() ? nullptr : _viewModel.findShownComponent( card._componentID );
+        // 프로퍼티는 상속한 것까지 아래에서 그린다(언리얼 Details 의 `IDetailCustomization` 과 `HideProperty`). 확장은 대상을 값(씬 · 오브젝트 · 컴포넌트 id)으로 받는다.
+        const vector<IInspectorComponent*>& listInspector   = InspectorViewModel::getInspectorsForType( card._typeName );
+        const EditorPropertyGridTarget      componentTarget = EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::MainScene, _state._objectID, card._componentID );
         vector<hashed_string>               listDrawnName;
-        if ( pComp != nullptr )
+        for ( IInspectorComponent* pInspector : listInspector )
         {
-            for ( IInspectorComponent* pInspector : listInspector )
-            {
-                pInspector->drawHeader( pComp );
-            }
-            for ( IInspectorComponent* pInspector : listInspector )
-            {
-                // 확장 영역도 프로퍼티 위젯과 같은 규칙으로 되돌리기와 dirty 에 남긴다. 영역을 하나로 묶어 위젯 하나처럼 추적하므로
-                // 영역이 위젯마다 추적하지 않아도 된다. 확장은 컴포넌트에 바로 쓰므로 처음 활성인 프레임에 그 컴포넌트의 값 글을 찍는다.
-                ImGui::BeginGroup();
-                pInspector->drawSection( pComp );
-                ImGui::EndGroup();
-                InspectorPropertyUndo::trackComponentRegion( _propertyGrid.editModel(), EditorPropertyGridScope::MainScene, _state._objectID, card._componentID, card._typeDisplayName.c_str() );
-                pInspector->collectDrawnProperties( listDrawnName );
-            }
+            pInspector->drawHeader( componentTarget );
+        }
+        for ( IInspectorComponent* pInspector : listInspector )
+        {
+            // 확장 영역도 프로퍼티 위젯과 같은 규칙으로 되돌리기와 dirty 에 남긴다. 영역을 하나로 묶어 위젯 하나처럼 추적하므로
+            // 영역이 위젯마다 추적하지 않아도 된다. 확장은 컴포넌트에 바로 쓰므로 처음 활성인 프레임에 그 컴포넌트의 값 글을 찍는다.
+            ImGui::BeginGroup();
+            pInspector->drawSection( componentTarget );
+            ImGui::EndGroup();
+            InspectorPropertyUndo::trackComponentRegion( _propertyGrid.editModel(), EditorPropertyGridScope::MainScene, _state._objectID, card._componentID, card._typeDisplayName.c_str() );
+            pInspector->collectDrawnProperties( listDrawnName );
         }
 
-        const EditorPropertyGridTarget componentTarget = EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::MainScene, _state._objectID, card._componentID );
         _propertyGrid.drawProperties( componentTarget, "Properties", listDrawnName );
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Methods" ) );
         _propertyGrid.drawMethodsAndEvents( componentTarget, true );
 
-        if ( pComp != nullptr )
+        for ( IInspectorComponent* pInspector : listInspector )
         {
-            for ( IInspectorComponent* pInspector : listInspector )
-            {
-                pInspector->drawFooter( pComp );
-            }
+            pInspector->drawFooter( componentTarget );
         }
     }
 } // namespace sw::editor

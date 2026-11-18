@@ -20,7 +20,7 @@ namespace sw::editor
         class SpriteComponentInspector final : public IInspectorComponent
         {
         public:
-            void drawFooter( Component* /*pComponent*/ ) override
+            void drawFooter( const EditorPropertyGridTarget& /*target*/ ) override
             {
                 if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "OpenSpriteClipTool" ) ) )
                     InspectorComponentEdit::openSpriteClipTool();

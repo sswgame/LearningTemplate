@@ -7,13 +7,11 @@
 #include "Core/Container/vector.h"
 #include "Core/Log/LogOnce.h"
 
-#include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -26,19 +24,6 @@
 
 namespace sw::editor
 {
-    bool EditorComponentMenu::drawAddComponentList( GameObject* pObj, fixed_string<constant::buffer::kMax64>& search, const utf8* pMarkPrefix, bool bFocusSearch,
-                                                    bool& outbFailed )
-    {
-        const hashed_string typeName = drawComponentTypeList( search, pMarkPrefix, bFocusSearch );
-        if ( typeName.empty() )
-            return false;
-        EditorTransaction transaction; // 목록에서 고른 끝 — 씬을 바꾸는 여기서 거래를 연다
-        if ( EditorSceneCommands::addComponent( transaction, pObj, typeName ) != nullptr )
-            return true;
-        outbFailed = true;
-        return false;
-    }
-
     hashed_string EditorComponentMenu::drawComponentTypeList( fixed_string<constant::buffer::kMax64>& search, const utf8* pMarkPrefix, bool bFocusSearch )
     {
         const vector<hashed_string> listType = GameObjectManager::getRegisteredComponentTypeNames();

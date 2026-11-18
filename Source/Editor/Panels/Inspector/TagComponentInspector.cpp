@@ -20,11 +20,9 @@ namespace sw::editor
         class TagComponentInspector final : public IInspectorComponent
         {
         public:
-            void drawFooter( Component* pComponent ) override
+            void drawFooter( const EditorPropertyGridTarget& target ) override
             {
-                if ( pComponent == nullptr )
-                    return;
-                InspectorComponentEdit::collectTags( *pComponent, _listTag );
+                InspectorComponentEdit::collectTags( target, _listTag );
                 for ( const string& tag : _listTag )
                 {
                     ImGui::SameLine();
