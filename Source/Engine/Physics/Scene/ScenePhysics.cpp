@@ -572,6 +572,7 @@ namespace sw
     {
         if ( _listCharacterMove3D.empty() )
             return;
+        SW_PROFILE_SCOPE( "GT.Physics.moveCharacters" ); // 부하 시나리오 `load/charactermove` 가 워커 수별로 잰다(감사 S-8)
         if ( _pScene3D != nullptr )
             _pScene3D->moveCharacters( _listCharacterMove3D, fixedDeltaTime );
         _listCharacterMove3D.clear();
