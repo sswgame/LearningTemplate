@@ -1,50 +1,25 @@
 #include "pch.h"
 
-#include "Core/Math/VectorMath.h"
-
+#include "Editor/AssetActions/EditorAssetThumbnailRenderer.h"
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/EditorColor.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
 
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
-#include <imgui.h>
-
 namespace sw::editor
 {
     namespace
     {
-        struct PrefabAssetTypeActionsInternal
-        {
-            static constexpr Color kCubeTop{ Color::fromBytes( 90, 160, 255, 255 ) };
-            static constexpr Color kCubeLeft{ Color::fromBytes( 50, 120, 230, 255 ) };
-            static constexpr Color kCubeRight{ Color::fromBytes( 35, 95, 195, 255 ) };
-        };
-
         /** @brief 프리팹 — 등각 큐브 썸네일. 뷰포트에 끌어 놓으면 그 위치에 스폰한다(열기는 프리팹 편집기 패널). */
         class PrefabAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:
             virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const override
             {
-                const float32 width     = maxPos._x - minPos._x;
-                const float32 centerX   = minPos._x + width * 0.5f;
-                const float32 centerY   = minPos._y + ( maxPos._y - minPos._y ) * 0.5f;
-                const float32 size      = width * 0.22f;
-                ImVec2        arrTop[4] = { ImVec2( centerX, centerY - size * 1.1f ), ImVec2( centerX + size * 0.9f, centerY - size * 0.55f ), ImVec2( centerX, centerY ),
-                                            ImVec2( centerX - size * 0.9f, centerY - size * 0.55f ) };
-                pDrawList->AddConvexPolyFilled( arrTop, 4, EditorColorUtil::toImU32( PrefabAssetTypeActionsInternal::kCubeTop ) );
-
-                ImVec2 arrLeft[4] = { ImVec2( centerX - size * 0.9f, centerY - size * 0.55f ), ImVec2( centerX, centerY ), ImVec2( centerX, centerY + size * 0.9f ),
-                                      ImVec2( centerX - size * 0.9f, centerY + size * 0.35f ) };
-                pDrawList->AddConvexPolyFilled( arrLeft, 4, EditorColorUtil::toImU32( PrefabAssetTypeActionsInternal::kCubeLeft ) );
-
-                ImVec2 arrRight[4] = { ImVec2( centerX, centerY ), ImVec2( centerX + size * 0.9f, centerY - size * 0.55f ), ImVec2( centerX + size * 0.9f, centerY + size * 0.35f ),
-                                       ImVec2( centerX, centerY + size * 0.9f ) };
-                pDrawList->AddConvexPolyFilled( arrRight, 4, EditorColorUtil::toImU32( PrefabAssetTypeActionsInternal::kCubeRight ) );
-                return true;
+                return EditorAssetThumbnailRenderer::drawPrefab( pDrawList, minPos, maxPos );
             }
 
             [[nodiscard]] virtual bool canPlaceInViewport() const override { return true; }
