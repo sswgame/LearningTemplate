@@ -108,23 +108,6 @@ namespace sw::editor
                 return session;
             }
 
-            /** @brief 사본 옆 메타 한 줄(`key=value`)을 읽습니다. 없으면 빈 글입니다. */
-            static string readMetaValue( string_view metaText, string_view key )
-            {
-                size_t lineStart = 0;
-                while ( lineStart < metaText.size() )
-                {
-                    size_t lineEnd = metaText.find( '\n', lineStart );
-                    if ( lineEnd == string_view::npos )
-                        lineEnd = metaText.size();
-                    const string_view line = metaText.substr( lineStart, lineEnd - lineStart );
-                    if ( line.size() > key.size() && line.substr( 0, key.size() ) == key && line[key.size()] == '=' )
-                        return string( line.substr( key.size() + 1 ) );
-                    lineStart = lineEnd + 1;
-                }
-                return string();
-            }
-
             /** @brief 폴더 안 사본의 세대 번호를 작은 것부터 모읍니다(`<세대>.scene.xml`). */
             static void collectGenerations( const string& slotFolder, vector<uint32>& outListGeneration )
             {
@@ -151,13 +134,6 @@ namespace sw::editor
                 fixed_string<constant::buffer::kMax64> fileName;
                 formatstring( fileName.data(), fileName.capacity(), "%#%#", generation, suffix );
                 return FileUtil::joinPath( slotFolder, fileName.view() );
-            }
-
-            /** @brief 원래 씬 @p sourceID 파일의 내용 해시입니다. 풀지 못하거나 없으면 0 입니다. */
-            static uint64 computeSourceHash( string_view sourceID )
-            {
-                const optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
-                return sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
             }
 
             /**
@@ -195,18 +171,18 @@ namespace sw::editor
                     const string                             sessionName = FileUtil::getFileNamePart( FileUtil::getDirectoryPart( slotFolder ) );
                     snapshotIDBuilder.appendFormat( "%#/%#/%#/%#%#", EditorAutosaveCommands::kDomain, sessionName, FileUtil::getFileNamePart( slotFolder ), newest, kSceneSuffix );
                     entry._snapshotID      = string( snapshotIDBuilder.view() );
-                    entry._sourceID        = readMetaValue( metaText, "source" );
-                    entry._projectRoot     = readMetaValue( metaText, "project" );
+                    entry._sourceID        = EditorAutosaveCommands::findMetaValue( metaText, "source" );
+                    entry._projectRoot     = EditorAutosaveCommands::findMetaValue( metaText, "project" );
                     entry._generationCount = static_cast<uint32>( listGeneration.size() );
-                    (void)StringUtil::parseInt64( readMetaValue( metaText, "saved" ), entry._savedTicks );
-                    (void)StringUtil::parseUint64( readMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면(옛 메타) 0 — 아래에서 바뀐 원본으로 거절한다
+                    (void)StringUtil::parseInt64( EditorAutosaveCommands::findMetaValue( metaText, "saved" ), entry._savedTicks );
+                    (void)StringUtil::parseUint64( EditorAutosaveCommands::findMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면(옛 메타) 0 — 아래에서 바뀐 원본으로 거절한다
                     // 다른 프로젝트 · 바뀐 원본에는 적용하지 않는다 — 사본이 오래된 원본 위에 덮여 남의 일을 지우지 않게.
                     // 바뀜은 내용 해시로 본다 — 쓰기 시각은 체크아웃 · 복사가 내용과 따로 바꾸고, 같은 틱의 다시 쓰기는 시각이 같다.
                     if ( FileUtil::isSameDiskPath( entry._projectRoot, projectRoot ) == false )
                         entry._refusal = "it was written for another project";
                     else if ( entry._sourceID.empty() == false ) // 새 씬(원본 없음)은 견줄 원본이 없다 — 프로젝트만 본다
                     {
-                        const uint64 currentHash = computeSourceHash( entry._sourceID );
+                        const uint64 currentHash = EditorAutosaveCommands::computeSourceHash( entry._sourceID );
                         if ( currentHash == 0 )
                             entry._refusal = "the original scene is gone";
                         else if ( currentHash != entry._sourceContentHash )
@@ -257,10 +233,10 @@ namespace sw::editor
                 state._bMounted = editor::getSubsystem<AssetPaths>().mountDiskDomain( EditorAutosaveCommands::kDomain, folder ); // 거절하면 이유를 로그로 남긴다(복원만 막힌다)
             }
 
-            /** @brief 세션 폴더들의 문서 사본을 복구 후보로 모읍니다(다른 프로젝트 · 바뀐 원본은 거절 이유를 단다). 원본 해시는 씬과 같은 `computeSourceHash` 다. */
+            /** @brief 세션 폴더들의 문서 사본을 복구 후보로 모읍니다(다른 프로젝트 · 바뀐 원본은 거절 이유를 단다). 원본 해시는 씬과 같은 `EditorAutosaveCommands::computeSourceHash` 다. */
             static void scanRecoverableDocuments( const vector<string>& listSessionFolder, vector<EditorDocumentAutosaveEntry>& outListEntry )
             {
-                EditorDocumentAutosaveEntry::scan( listSessionFolder, ProcessRoots::get()._project.str(), &computeSourceHash, outListEntry );
+                EditorDocumentAutosaveEntry::scan( listSessionFolder, ProcessRoots::get()._project.str(), &EditorAutosaveCommands::computeSourceHash, outListEntry );
             }
 
             /** @brief 지금 씬의 사본 폴더에서 @p keepCount 를 넘는 오래된 세대를 지웁니다. */
@@ -291,7 +267,7 @@ namespace sw::editor
                 const bool   bUntitled  = sourceID.empty();
                 const string slotName   = bUntitled ? makeUntitledSlotName( editor::getSubsystem<SceneManager>().getSceneGeneration() ) : EditorAutosaveCommands::makeSlotName( sourceID );
                 const string slotFolder = FileUtil::joinPath( state._sessionFolder, slotName );
-                const uint64 sourceHash = bUntitled ? 0 : computeSourceHash( sourceID ); // 새 씬은 견줄 원본이 없다(메타 sourceHash=0)
+                const uint64 sourceHash = bUntitled ? 0 : EditorAutosaveCommands::computeSourceHash( sourceID ); // 새 씬은 견줄 원본이 없다(메타 sourceHash=0)
                 if ( ( bUntitled == false && sourceHash == 0 ) || FileUtil::ensureDirectoryExists( slotFolder ) == false )
                     return false;
                 vector<uint32> listGeneration;
@@ -700,8 +676,8 @@ namespace sw::editor
         string lockText;
         if ( FileUtil::readTextFile( FileUtil::joinPath( sessionFolder, kLockFileName ), lockText ) == false )
             return false;
-        return StringUtil::parseInt( EditorAutosaveCommandsInternal::readMetaValue( lockText, "pid" ), outSession._processID ) &&
-               StringUtil::parseInt64( EditorAutosaveCommandsInternal::readMetaValue( lockText, "start" ), outSession._startTicks );
+        return StringUtil::parseInt( EditorAutosaveCommands::findMetaValue( lockText, "pid" ), outSession._processID ) &&
+               StringUtil::parseInt64( EditorAutosaveCommands::findMetaValue( lockText, "start" ), outSession._startTicks );
     }
 
     bool EditorAutosaveSession::open( string_view root, vector<string>& outListRecoveredFolder ) const
@@ -752,5 +728,27 @@ namespace sw::editor
             slot.push_back( bAllowed ? lower : '_' );
         }
         return slot;
+    }
+
+    string EditorAutosaveCommands::findMetaValue( string_view metaText, string_view key )
+    {
+        size_t lineStart = 0;
+        while ( lineStart < metaText.size() )
+        {
+            size_t lineEnd = metaText.find( '\n', lineStart );
+            if ( lineEnd == string_view::npos )
+                lineEnd = metaText.size();
+            const string_view line = metaText.substr( lineStart, lineEnd - lineStart );
+            if ( line.size() > key.size() && line.substr( 0, key.size() ) == key && line[key.size()] == '=' )
+                return string( line.substr( key.size() + 1 ) );
+            lineStart = lineEnd + 1;
+        }
+        return string();
+    }
+
+    uint64 EditorAutosaveCommands::computeSourceHash( string_view sourceID )
+    {
+        const optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
+        return sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
     }
 } // namespace sw::editor

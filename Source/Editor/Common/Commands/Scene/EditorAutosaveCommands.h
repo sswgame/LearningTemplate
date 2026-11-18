@@ -123,5 +123,9 @@ namespace sw::editor
         static uint32 getRestoredDocumentCount();
         /** @brief 씬 리소스 id 를 사본 폴더 이름(`[a-z0-9_.-]`)으로 바꿉니다. 같은 id 는 같은 이름입니다. */
         static string makeSlotName( string_view sourceID );
+        /** @brief 사본 옆 메타 글(`key=value` 줄들)에서 @p key 의 값을 찾습니다. 없으면 빈 글입니다. 씬 사본 · 문서 사본 · 세션 잠금 파일이 같은 모양이다. */
+        [[nodiscard]] static string findMetaValue( string_view metaText, string_view key );
+        /** @brief 리소스 id @p sourceID 의 원본 파일 내용 해시입니다. 풀지 못하거나 아직 없으면(새 문서) 0 입니다 — 사본을 쓸 때와 복구할 때 같은 규칙으로 견준다. */
+        [[nodiscard]] static uint64 computeSourceHash( string_view sourceID );
     };
 } // namespace sw::editor

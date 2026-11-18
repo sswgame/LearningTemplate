@@ -39,13 +39,6 @@ namespace sw::editor
 
             static State& getState() { return getEditorState<State>(); }
 
-            /** @brief 문서 @p documentPath 원본의 내용 해시입니다. 아직 없는 새 문서면 0 입니다(복구가 같은 규칙으로 견준다). */
-            static uint64 computeSourceHash( string_view documentPath )
-            {
-                const optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( documentPath );
-                return sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
-            }
-
             [[nodiscard]] static bool readCopyCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 if ( editor::findSubsystem<EditorStateStore>() == nullptr )
@@ -104,7 +97,7 @@ namespace sw::editor
             if ( take != DocumentAutosaveResult::Ready )
                 continue;
             entry._projectRoot       = ProcessRoots::get()._project.str();
-            entry._sourceContentHash = Internal::computeSourceHash( entry._documentPath );
+            entry._sourceContentHash = EditorAutosaveCommands::computeSourceHash( entry._documentPath );
             batch._listEntry.push_back( std::move( entry ) );
         }
         // 끄는 중인 문서가 있으면 주기를 다시 재지 않는다 — 구간이 끝난 첫 프레임에 그 문서가 나온다(감사 E-1 "끌기 중이면 한 프레임 미루기")
