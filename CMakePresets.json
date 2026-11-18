@@ -120,6 +120,19 @@
       }
     },
     {
+      "name": "Ninja-Release-ASan",
+      "displayName": "Windows Ninja Release + AddressSanitizer (Clang-cl)",
+      "description": "묶음 검증의 CPU 단위 테스트(`ctest -L nogpu`)와 clang-tidy 컴파일 DB 구성 — Release 최적화에 단언 · 검사(SW_DO_CHECKS)와 clang-cl ASan(/MD, 런타임 DLL 은 Bin 으로 — cmake/Toolchain/Options/Sanitizer.cmake). 언리얼 `-EnableASan`(Windows MSVC ASan, Development 구성) 자리, 유니티는 엔진 소스 ASan 구성이 없다. 게임 · 키트 범위는 Ninja-Debug 와 같고(Shooter3D — 모든 게임은 Ninja-Release 가 짓고 돈다), 유니티 빌드를 끈다(묶음 TU 는 컴파일 DB 에 원본 파일이 없어 tidy 가 고를 수 없다)",
+      "inherits": "Ninja-Release",
+      "cacheVariables": {
+        "SW_GAMES": "Shooter3D",
+        "SW_BUILD_UNUSED_KITS": "OFF",
+        "SW_ENABLE_UNITY_BUILD": "OFF",
+        "SW_ENABLE_SANITIZER": "ON",
+        "SW_SANITIZER_KIND": "address"
+      }
+    },
+    {
       "name": "Ninja-Release-Static",
       "displayName": "Windows Ninja Release - static modules (Clang-cl)",
       "description": "웹 · Android 개발 구성(Web-Release · Android-Release)과 같은 정적 모듈 개발 구성을 Windows 에서 먼저 짓고 돌린다(감사 P-9) — 배포가 아니라 DevTools(자동화 실행기 · 콘솔)와 단위 테스트를 담고, 모듈 · RHI 백엔드 하나를 App 에 정적으로 링크한다(SW_STATIC_MODULES — 핫 리로드 · 에디터 · 백엔드 교체 없음). 게임은 SW_ACTIVE_GAME 하나",
@@ -150,11 +163,13 @@
       ]
     },
     {
-      "name": "Ninja-Debug-Server",
-      "displayName": "Windows Ninja Debug - Dedicated Server (Clang-cl)",
-      "description": "전용 서버 타깃(SW_TARGET_TYPE=Server) Debug — 창 · GPU · 에디터 · RHI 백엔드 없음, Server 실행 파일만. 빌드 폴더 build/Ninja-Debug-Server",
-      "inherits": "Ninja-Debug",
+      "name": "Ninja-Release-Server",
+      "displayName": "Windows Ninja Release - Dedicated Server (Clang-cl)",
+      "description": "전용 서버 타깃(SW_TARGET_TYPE=Server) Release — 창 · GPU · 에디터 · RHI 백엔드 없음, Server 실행 파일만. 묶음 검증이 짓고 `Server --test` 를 돈다(단언 · 검사는 SW_DO_CHECKS 로 Release 에도 있다 — 언리얼 Development Server 타깃). 게임은 Ninja-Debug 와 같은 Shooter3D(온라인 키트의 서버 짝). 빌드 폴더 build/Ninja-Release-Server",
+      "inherits": "base-windows",
       "cacheVariables": {
+        "SW_GAMES": "Shooter3D",
+        "CMAKE_BUILD_TYPE": "Release",
         "SW_TARGET_TYPE": "Server"
       }
     },
@@ -251,6 +266,10 @@
       "configurePreset": "Ninja-Release"
     },
     {
+      "name": "Ninja-Release-ASan",
+      "configurePreset": "Ninja-Release-ASan"
+    },
+    {
       "name": "Ninja-Release-Static",
       "configurePreset": "Ninja-Release-Static"
     },
@@ -263,8 +282,8 @@
       "configurePreset": "Ninja-Shipping"
     },
     {
-      "name": "Ninja-Debug-Server",
-      "configurePreset": "Ninja-Debug-Server"
+      "name": "Ninja-Release-Server",
+      "configurePreset": "Ninja-Release-Server"
     },
     {
       "name": "Ninja-Shipping-Server",
