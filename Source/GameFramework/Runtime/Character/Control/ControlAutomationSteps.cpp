@@ -110,14 +110,7 @@ namespace sw
                 vector<ControlIntent> listIntent( params._frames, intent );
                 listIntent[0]._buttonTriggered = intent._buttonDown;
 
-                GameObjectManager& manager        = *pObject->getMutableManager();
-                const string       controllerName = string( IntentPlayback::kControllerPrefix ) + params._pawn;
-                GameObject*        pTrackObject   = manager.findGameObjectByName( hashed_string( controllerName ) );
-                if ( pTrackObject == nullptr )
-                    pTrackObject = manager.createGameObject( hashed_string( controllerName ) );
-                IntentTrackControllerComponent* pTrack = pTrackObject != nullptr ? pTrackObject->getComponent<IntentTrackControllerComponent>() : nullptr;
-                if ( pTrack == nullptr && pTrackObject != nullptr )
-                    pTrack = pTrackObject->addComponent<IntentTrackControllerComponent>();
+                IntentTrackControllerComponent* pTrack = IntentPlayback::findOrCreateTrackController( *pObject->getMutableManager(), params._pawn );
                 if ( pTrack == nullptr )
                     return false;
                 pTrack->play( *pPawn, listIntent, true );
