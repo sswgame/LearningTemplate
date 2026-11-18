@@ -71,7 +71,7 @@
 | `blendPreset` · `_listBlendTarget` | 패스의 블렌드를 덮는다 | 함께 적었을 때. 없는 이름. 블렌드가 켜진 값인데 `alphaMode` 가 `Blend` 가 아닐 때(쓰기 마스크만 바꾸는 값은 불투명도 받는다) |
 | `enableDepthTest` | 없음 — 첨부와 함께 움직여 패스의 것이다 | 적었을 때 |
 
-무엇을 덮을 수 있는지는 패스 종류의 표가 정한다(`RenderPassTraitFlag::kMaterialFixedState` · `kMaterialBlend`, `FrameRendererUtil::getMaterialStateScope`).
+무엇을 덮을 수 있는지는 패스 종류의 표가 정한다(`RenderPassTraitFlag::kMaterialFixedState` · `kMaterialBlend`, `RenderPassTypeInfo::getMaterialStateScope`).
 
 | 패스 | 컬 · 앞면 방향 | 깊이 · 스텐실 · 채우기 | 블렌드 · 쓰기 마스크 | 까닭 |
 |---|---|---|---|---|
@@ -119,7 +119,7 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 |---|---|
 | 값 칸을 더한다 | `PostProcessValues` 에 칸, `PostProcessOverrides` 에 같은 차례로 `_b<칸>` 비트와 생성자 줄. 섞기 · 포즈 블렌드는 리플렉션으로 따라온다(테스트 `PostProcessVolumeTest.OverrideFlagsPairEveryValue` 가 짝을 본다). 섞을 수 없는 형식(경로)은 `blendOverrides` 에 주소로 고르는 줄을 더한다(절반에서 바꾼다) |
 | 셰이더가 읽는다 | 기본값은 지금 그림을 바꾸지 않는 중립이어야 한다. 패스 상수는 `FramePassExecutor::applyViewPassConstants` 가 뷰마다 채운다 |
-| 텍스처를 가리킨다(LUT · 먼지 마스크) | 칸은 `DataPath`, 로드는 `FramePostProcessTextureSet::findReady`(비동기 — 읽는 동안 그 효과는 빠진다), 셰이더 칸은 엔진 텍스처 표(`shaderslot::emulated::kEngineTextureNames`)의 이름이다. 에뮬(DX11 · GL)의 엔진 텍스처 칸은 GL 유닛 0..15 안이라 둘이 더 남는다 |
+| 텍스처를 가리킨다(LUT · 먼지 마스크) | 칸은 `DataPath`, 로드는 `PathTextureSet::requestReady`(비동기 — 읽는 동안 그 효과는 빠진다), 셰이더 칸은 엔진 텍스처 표(`shaderslot::emulated::kEngineTextureNames`)의 이름이다. 에뮬(DX11 · GL)의 엔진 텍스처 칸은 GL 유닛 0..15 안이라 둘이 더 남는다 |
 
 - 컬러 그레이딩 · 렌즈 왜곡 · 색수차 · 선명화 · 필름 그레인은 톤맵하는 셰이더(Tonemap 패스 · 후처리 체인 `SW_POST_TONEMAP`) 안의 함수이고, 블룸 먼지 마스크 · 블룸 고스트는 블룸을 더하는 함수(`post_bloom.hlsli`) 안이다. 이런 효과에 패스를 따로 두지 않는다(왕복 하나가 든다). 값이 모두 중립이면 C++ 가 켬 상수를 0 으로 두어 셰이더가 건너뛴다. 후처리를 끈 뷰(`SW_PASS_FLAG_SKIP_POST`)는 톤맵만 한다.
 
@@ -203,7 +203,7 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 
 ## 트랜지언트 앨리어싱
 
-뷰 그래프의 첨부 중 레벨 수명이 겹치지 않고 서술(형식 · 나눗수 · RW 용도 · 클리어 값)이 같은 것은 텍스처 하나를 나눠 쓴다(`RenderGraphAliasPlan::build`, 계획은 `FramePassExecutor::buildTransientAliasPlan`). XML 에 적을 칸은 없다 — 수명은 패스의 입출력 선언이 정한다.
+뷰 그래프의 첨부 중 레벨 수명이 겹치지 않고 서술(형식 · 나눗수 · RW 용도 · 클리어 값)이 같은 것은 텍스처 하나를 나눠 쓴다(`RenderGraphAliasPlan::make`, 계획은 `FramePassExecutor::rebuildTransientAliasPlan`). XML 에 적을 칸은 없다 — 수명은 패스의 입출력 선언이 정한다.
 
 - 나누지 않는 것: 깊이 형식(장면 깊이는 다음 프레임의 깊이 히스토리가 읽는다 · 그림자 맵), `_loadOp="Load"`(프레임을 넘어 잇는다), TAA 출력, 처음 쓸 때 만드는 효과 출력(그 주인 · 별칭은 자기 텍스처다).
 - 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시(`-gv_nanCheck`)를 켠 실행은 나누지 않는다. 비교는 `-gv_transientAliasing=0`.
@@ -217,7 +217,7 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 
 ## 머티리얼 변위(테셀레이션)
 
-패스 XML 의 헐 · 도메인과 별개로, 머티리얼이 `_alwaysDefines` 에 `MATERIAL_DISPLACEMENT` 를 적으면 렌더러가 그 머티리얼의 변형 PSO 에 머티리얼 셰이더의 `HSMain` · `DSMain` 과 패치 토폴로지를 붙인다(`FrameRendererUtil::isMaterialTessellated` — 쿠커와 런타임이 같은 판정). 셰이더는 `material_displacement.hlsli`(뼈대가 보간 칸 VSMain 대신 include)다.
+패스 XML 의 헐 · 도메인과 별개로, 머티리얼이 `_alwaysDefines` 에 `MATERIAL_DISPLACEMENT` 를 적으면 렌더러가 그 머티리얼의 변형 PSO 에 머티리얼 셰이더의 `HSMain` · `DSMain` 과 패치 토폴로지를 붙인다(`RenderPassTypeInfo::isMaterialTessellated` — 쿠커와 런타임이 같은 판정). 셰이더는 `material_displacement.hlsli`(뼈대가 보간 칸 VSMain 대신 include)다.
 
 - 값은 머티리얼 칸이다: `_displacementMap`(R 높이) · `_displacementScale`(m) · `_displacementMidLevel` · `_tessellationDensity`(각 1 rad 당 분할 수) · `_tessellationMaxFactor`(64 이하). `pbrmaterial.material` 이 칸을 가진다.
 - 변 계수는 변의 두 끝점(월드 위치 · 카메라 뷰 깊이)만으로 정해 틈이 없다. 식의 C++ 짝 `MaterialDisplacement` 를 단위 테스트가 지킨다.

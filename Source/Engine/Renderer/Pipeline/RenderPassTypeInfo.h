@@ -16,6 +16,7 @@
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 
@@ -90,7 +91,7 @@ namespace sw
     /**
      * @brief 등장 중인 인스턴스(`GPUInstance::_appearance` < 1)의 퍼뮤테이션 define 입니다. 셰이더가 등장 비율만큼의 픽셀만 남긴다(binding.hlsli 8-1).
      * @details 머티리얼 에셋이 아니라 빌더가 붙인다(`GPUMaterialRegistry::computePermutationHashFor`). 등장 중인 인스턴스만 이 변형이라 다 보이는 물체는
-     *          픽셀 버리기 없이 그린다. 깊이만 쓰는 패스도 이 변형에는 픽셀 스테이지를 붙인다(`FrameRendererUtil::needsAppearanceDitherPixelStage`).
+     *          픽셀 버리기 없이 그린다. 깊이만 쓰는 패스도 이 변형에는 픽셀 스테이지를 붙인다(`RenderPassTypeInfo::needsAppearanceDitherPixelStage`).
      */
     inline constexpr const utf8* kAppearanceDitherDefine = "SW_APPEARANCE_DITHER";
 
@@ -99,7 +100,7 @@ namespace sw
 
     /**
      * @brief 높이 맵으로 표면을 노멀 방향으로 옮기는 머티리얼(`material_displacement.hlsli`)의 define 입니다. 그 배치는 헐 · 도메인 스테이지가 붙은 변형 PSO 로 그린다.
-     * @details 깊이 패스(그림자 · 깊이 프리패스)도 머티리얼 셰이더로 같은 변위를 그린다(`FrameRendererUtil::usesMaterialShaderForDepth`) — 패스 셰이더로 그리면 윤곽이 평면으로 남는다.
+     * @details 깊이 패스(그림자 · 깊이 프리패스)도 머티리얼 셰이더로 같은 변위를 그린다(`RenderPassTypeInfo::usesMaterialShaderForDepth`) — 패스 셰이더로 그리면 윤곽이 평면으로 남는다.
      *          테셀레이션이 없는 백엔드(`RHICapabilities::_bMaterialTessellation`)에서는 변형을 만들지 않고 오류를 남긴다 — 평면으로 대신 그리지 않는다.
      */
     inline constexpr const utf8* kMaterialDisplacementDefine = "MATERIAL_DISPLACEMENT";
@@ -268,7 +269,7 @@ namespace sw
         const utf8* _pPassDefine{ nullptr };
         /**
          * @brief 이 패스가 그리는 배치의 머티리얼 퍼뮤테이션에 있어야 하는 define 입니다. nullptr 이면 모든 배치를 그립니다.
-         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠집니다(`FrameRendererUtil::shouldDrawBatchInPass`).
+         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠집니다(`shouldDrawMaterial`).
          */
         const utf8* _pRequiredMaterialDefine{ nullptr };
         /** @brief 이 패스가 빼는 배치의 머티리얼 define 입니다(G버퍼의 `MATERIAL_FORWARD_ONLY`). nullptr 이면 빼지 않습니다. 빠지는 범위는 `_pRequiredMaterialDefine` 과 같습니다. */
@@ -298,6 +299,138 @@ namespace sw
 
         /** @brief 이 플래그가 켜져 있는지 확인합니다. */
         constexpr bool hasFlag( uint32 flag ) const { return ( _flags & flag ) != 0; }
+
+        // 아래 판정은 드로우 루프 · 머티리얼 PSO 변형(`FramePSOManager`) · 셰이더 쿠커(`ShaderCookRequestCollector`)가 같은 답을 보려고 이 표 하나에 둔다.
+        // @p pListMaterialDefine 은 배치 머티리얼의 define 목록이고, nullptr 이면 머티리얼이 없는 배치다.
+
+        /** @brief 뎁스만 쓰는 패스 종류인지 반환합니다. 출력 선언이 없을 때 컬러 RT 수를 정하는 기본값(0)의 근거입니다. */
+        constexpr bool isDepthOnly() const { return hasFlag( RenderPassTraitFlag::kDepthOnly ); }
+
+        /**
+         * @brief 이 패스가 씬 메시(GPUScene 배치)를 그리는지 반환합니다.
+         * @details 머티리얼 퍼뮤테이션 PSO 를 미리 만들어 둘 대상이 이 패스들이다. 풀스크린 패스는 배치를 쓰지 않는다.
+         */
+        constexpr bool shouldDrawSceneMeshes() const { return hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes ); }
+
+        /**
+         * @brief 이 패스가 **머티리얼의 셰이더**로 그리는지(아니면 패스 자신의 셰이더인지) 반환합니다.
+         * @details 언리얼에서는 패스가 셰이더 **타입**(TShadowDepthVS 같은)을 정하고 머티리얼이 그 타입의
+         *          퍼뮤테이션을 준다. 그림자와 뎁스 패스는 지오메트리만 그리므로 자기 셰이더가 기준이고, 머티리얼은
+         *          define 만 적용한다. 여기서 true 인 패스만 머티리얼이 선언한 .hlsl 로 교체한다.
+         */
+        constexpr bool usesMaterialShader() const { return hasFlag( RenderPassTraitFlag::kUsesMaterialShader ); }
+
+        /**
+         * @brief 이 패스에 뷰 모드(Unlit, Wireframe, Normals, Depth, Overdraw)를 적용하는지 반환합니다.
+         * @details 화면 색을 만드는 지오메트리 패스만 해당한다. 그림자와 뎁스 프리패스는 **제외한다**.
+         *          와이어프레임으로 그림자를 구우면 그림자가 선 몇 개로 남고, 뎁스 프리패스를
+         *          와이어프레임으로 채우면 이후 패스의 뎁스 테스트가 삼각형 내부를 모두 버려 화면이 빈다.
+         *          둘 다 "보기 방식" 이 아니라 다음 패스의 입력이므로 항상 Solid, Lit 로 둔다.
+         * @note 메시 외곽선 패스는 머티리얼 셰이더를 쓰지만 뷰 모드를 받지 않습니다. 외곽선은 보기 방식이 아니라 화면의 일부이기 때문입니다.
+         */
+        constexpr bool shouldApplyViewMode() const { return hasFlag( RenderPassTraitFlag::kAppliesViewMode ); }
+
+        /**
+         * @brief 패스 서술 없이 이 표만으로 만든 엔진 PSO 에 픽셀 스테이지가 있는지 반환합니다.
+         * @details 파이프라인에 그 종류의 패스가 없으면 `createPSOForPassType` 은 표의 컬러 타깃 수로 PSO 를 만들고, 0이면 PS 를
+         *          붙이지 않는다. 쿠커가 같은 판정으로 쿠킹한다. 서술이 있는 패스는 `FrameRendererUtil::hasPixelStage( pass, listAttachment )` 를 쓴다.
+         */
+        constexpr bool hasPixelStage() const { return _colorTargetCount > 0; }
+
+        /** @brief 이 패스 종류가 머티리얼에게 내주는 렌더 상태의 범위입니다(표: `docs/agents/RenderPipelineXml.md`). 그리는 쪽과 테스트가 같은 답을 본다. */
+        RenderStateOverride::Scope getMaterialStateScope() const
+        {
+            if ( hasFlag( RenderPassTraitFlag::kMaterialBlend ) )
+                return RenderStateOverride::Scope::FixedAndBlend;
+            return hasFlag( RenderPassTraitFlag::kMaterialFixedState ) ? RenderStateOverride::Scope::FixedState : RenderStateOverride::Scope::CullOnly;
+        }
+
+        /** @brief 이 패스가 머티리얼 define 으로 배치를 거르는지(있어야 하거나 없어야 하는 define 이 있는지) 반환합니다. 거르지 않으면 판정을 건너뛴다. */
+        bool shouldFilterBatchesByMaterial() const { return _pRequiredMaterialDefine != nullptr || _pExcludedMaterialDefine != nullptr; }
+
+        /**
+         * @brief 이 패스가 이 머티리얼 define 목록의 배치를 그리는지 반환합니다. `_pRequiredMaterialDefine` 이 있으면 그것이 있어야 하고,
+         *        `_pExcludedMaterialDefine` 이 있으면 그것이 없어야 합니다. 둘 다 없으면 항상 true 입니다.
+         * @details 드로우 루프, 머티리얼 PSO 변형, 셰이더 쿠커가 같은 판정을 쓴다. 셋이 갈리면 쿠킹하지 않은 변형을 런타임이 찾거나,
+         *          외곽선을 모르는 셰이더가 외곽선 패스의 앞면 컬링으로 그려져 뒷면이 화면을 덮는다.
+         */
+        bool shouldDrawMaterial( const vector<string>* pListMaterialDefine ) const
+        {
+            if ( _pExcludedMaterialDefine != nullptr && hasMaterialDefine( pListMaterialDefine, _pExcludedMaterialDefine ) )
+                return false;
+            if ( _pRequiredMaterialDefine == nullptr )
+                return true;
+            return hasMaterialDefine( pListMaterialDefine, _pRequiredMaterialDefine );
+        }
+
+        /**
+         * @brief 깊이만 쓰는 패스(그림자 · 깊이 프리패스)가 이 머티리얼의 배치를 패스 셰이더 대신 **머티리얼의 셰이더**로 그리는지 반환합니다.
+         * @details 깊이 패스는 지오메트리만 그리므로 보통 자기 셰이더(shadow_depth.hlsl)가 기준이다. 덮는 모양이나 정점 자리를 머티리얼 코드가 정하면
+         *          그 셰이더는 같은 모양을 못 만든다 — 알파 컷오프(머리카락 카드가 사각형 그림자를 드리운다)와 정점 변형(흔드는 식생의 그림자가 서 있다).
+         *          언리얼이 Masked · World Position Offset 머티리얼만 자기 깊이 · 그림자 셰이더를 컴파일하고 나머지는 기본 머티리얼의 것을 나눠 쓰는 것과 같다.
+         *          정점 변형은 그림자 패스만 갈아탄다 — 깊이 프리패스는 그 머티리얼을 빼므로(shadow_depth.hlsl 의 `MATERIAL_VERTEX_DEFORM`) 어긋날 깊이가 없다.
+         *          그림자를 끈 머티리얼은 패스 셰이더가 정점을 모아 그리지 않으므로 갈아타지 않는다.
+         *          갈아타는 머티리얼 셰이더는 `SW_PASS_SHADOW`(알파 컷오프면 `SW_PASS_DEPTH_PREPASS` 도) 퍼뮤테이션을 가져야 한다.
+         *          런타임 PSO 변형(`FramePSOManager::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
+         */
+        bool usesMaterialShaderForDepth( const vector<string>* pListMaterialDefine ) const
+        {
+            if ( isDepthOnly() == false )
+                return false;
+            const bool bShadowPass = _type == RenderPassType::Shadow;
+            if ( bShadowPass && hasMaterialDefine( pListMaterialDefine, kMaterialShadowCastOffDefine ) )
+                return false;
+            // 변위는 두 깊이 패스 모두 갈아탄다 — 윤곽이 바뀌므로 깊이 프리패스도 같은 자리를 써야 본 패스의 깊이 비교를 통과한다.
+            if ( hasMaterialDefine( pListMaterialDefine, kMaterialAlphaCutoffDefine ) || hasMaterialDefine( pListMaterialDefine, kMaterialDisplacementDefine ) )
+                return true;
+            return bShadowPass && hasMaterialDefine( pListMaterialDefine, kMaterialVertexDeformDefine );
+        }
+
+        /**
+         * @brief 이 패스가 이 머티리얼의 배치를 헐 · 도메인 스테이지(머티리얼 셰이더의 `HSMain` · `DSMain`)를 붙여 그리는지 반환합니다.
+         * @details 머티리얼 셰이더로 그리는 패스(본 · G버퍼 · 외곽선)와 머티리얼 셰이더로 갈아탄 깊이 패스가 변위 머티리얼(`MATERIAL_DISPLACEMENT`)을 그릴 때다.
+         *          패스 셰이더로 그리는 배치는 머티리얼의 헐 · 도메인을 모른다. 런타임 PSO 변형(`FramePSOManager::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
+         */
+        bool isMaterialTessellated( const vector<string>* pListMaterialDefine ) const
+        {
+            if ( hasMaterialDefine( pListMaterialDefine, kMaterialDisplacementDefine ) == false )
+                return false;
+            return usesMaterialShader() || usesMaterialShaderForDepth( pListMaterialDefine );
+        }
+
+        /**
+         * @brief 깊이 패스가 머티리얼 셰이더로 그릴 때 픽셀 스테이지가 있는지 반환합니다 — 알파 컷오프만 있다(버리기가 픽셀에서 일어난다).
+         * @details 정점 변형만이면 정점 스테이지뿐이다. 컬러 출력이 없으므로 픽셀 셰이더는 아무것도 쓰지 않고 `clip` 만 한다.
+         */
+        bool hasMaterialDepthPixelStage( const vector<string>* pListMaterialDefine ) const
+        {
+            return usesMaterialShaderForDepth( pListMaterialDefine ) && hasMaterialDefine( pListMaterialDefine, kMaterialAlphaCutoffDefine );
+        }
+
+        /**
+         * @brief 깊이만 쓰는 패스가 패스 셰이더(shadow_depth.hlsl)로 등장 디더 변형을 그릴 때 픽셀 스테이지를 붙이는지 반환합니다.
+         * @details 패스 셰이더의 깊이 패스는 컬러 출력이 없어 픽셀 스테이지가 없다(`hasPixelStage`). 등장 디더는 픽셀을 버리므로 그 변형에만 붙인다 —
+         *          붙이지 않으면 프리패스가 물체의 깊이를 다 써 기본 패스가 버린 픽셀 자리에 뒤의 물체가 그려지지 않는다(구멍).
+         *          머티리얼 셰이더로 그리는 깊이 배치(알파 컷오프)는 그 셰이더의 픽셀 스테이지가 이미 있고, 정점 변형만인 배치는 디더 없이 깊이를 쓴다.
+         *          런타임 PSO 변형(`FramePSOManager::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
+         */
+        bool needsAppearanceDitherPixelStage( const vector<string>* pListMaterialDefine ) const
+        {
+            return isDepthOnly() && usesMaterialShaderForDepth( pListMaterialDefine ) == false && hasMaterialDefine( pListMaterialDefine, kAppearanceDitherDefine );
+        }
+
+        /** @brief 머티리얼 define 목록에 이 define 이 있는지 반환합니다. nullptr(머티리얼 없는 배치)이면 false 입니다. */
+        static bool hasMaterialDefine( const vector<string>* pListMaterialDefine, const utf8* pDefine )
+        {
+            if ( pListMaterialDefine == nullptr )
+                return false;
+            for ( const string& define : *pListMaterialDefine )
+            {
+                if ( define == pDefine )
+                    return true;
+            }
+            return false;
+        }
     };
 } // namespace sw
 

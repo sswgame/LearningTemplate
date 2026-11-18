@@ -22,7 +22,7 @@ namespace sw
      *     _frameFenceRing.waitForRecordingSlot( [&]( uint32 slot, uint64 serial ) { return waitNative( slot ); } ); // beginFrame
      *     signalNative( _frameFenceRing.getRecordingSlot() );
      *     (void)_frameFenceRing.markSubmitted();                                                                       // endFrame
-     *     _releaseQueue.tickCompleted( _frameFenceRing.retire( [&]( uint32 slot, uint64 serial ) { return isNativeDone( slot ); } ) );
+     *     _releaseQueue.releaseCompleted( _frameFenceRing.retire( [&]( uint32 slot, uint64 serial ) { return isNativeDone( slot ); } ) );
      * @endcode
      */
     class RHIFrameFenceRing

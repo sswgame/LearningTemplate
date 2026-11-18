@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
-#include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Timeline/GPUTimestampSlotLayout.h"
 
 namespace sw
 {
@@ -100,7 +100,7 @@ namespace sw
 
         // 1) 기록된 쌍만 모은다(한쪽이라도 기록되지 않았으면 구간이 성립하지 않는다. 엔진 프로파일러와 같은 규칙이다).
         _listScratchSpan.clear();
-        const size_t passCount = MathUtil::min( listPassSite.size(), static_cast<size_t>( FrameRendererUtil::kGPUTimedPassCapacity ) );
+        const size_t passCount = MathUtil::min( listPassSite.size(), static_cast<size_t>( GPUTimestampSlotLayout::kTimedPassCapacity ) );
         for ( size_t passIndex = 0; passIndex < passCount; ++passIndex )
         {
             int64        beginNanos{ 0 };
@@ -114,8 +114,8 @@ namespace sw
         {
             int64      beginNanos{ 0 };
             int64      endNanos{ 0 };
-            const bool bWritten = findSlotNanos( frame, FrameRendererUtil::kGPUTimestampSlotComputeBegin, beginNanos ) &&
-                                  findSlotNanos( frame, FrameRendererUtil::kGPUTimestampSlotComputeEnd, endNanos ) &&
+            const bool bWritten = findSlotNanos( frame, GPUTimestampSlotLayout::kComputeBegin, beginNanos ) &&
+                                  findSlotNanos( frame, GPUTimestampSlotLayout::kComputeEnd, endNanos ) &&
                                   endNanos >= beginNanos;
             if ( bWritten )
                 _listScratchSpan.push_back( Span{ beginNanos, endNanos, &computeSite } );
@@ -127,7 +127,7 @@ namespace sw
         _listScratchChildSpan.clear();
         for ( size_t framePassIndex = 0; framePassIndex < listFramePassSite.size(); ++framePassIndex )
         {
-            const uint32 beginSlot = FrameRendererUtil::findFramePassTimestampSlot( framePassIndex );
+            const uint32 beginSlot = GPUTimestampSlotLayout::findFramePassSlot( framePassIndex );
             if ( beginSlot == constant::invalid_index::kUint32 )
                 break;
             int64      beginNanos{ 0 };
@@ -144,7 +144,7 @@ namespace sw
 
         // 3) 프레임 구간 = 프레임 첫 명령 ~ 가장 늦은 끝. 첫 명령 슬롯이 없으면 가장 이른 시작으로 둔다.
         int64 frameBegin{ 0 };
-        if ( findSlotNanos( frame, FrameRendererUtil::kGPUTimestampSlotFrameBegin, frameBegin ) == false )
+        if ( findSlotNanos( frame, GPUTimestampSlotLayout::kFrameBegin, frameBegin ) == false )
             frameBegin = _listScratchSpan.front()._beginNanos;
         int64 frameEnd = frameBegin;
         for ( const Span& span : _listScratchSpan )

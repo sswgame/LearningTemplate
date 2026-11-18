@@ -2413,7 +2413,7 @@ namespace sw
         collectTimestampsForSlot();
         _timestampRing.beginFrame( getFrameSlot() );
         // 이 칸의 앞 프레임까지 GPU 가 끝냈다. 그 시리얼 이하로 태그된 리소스 해제를 지금 실행한다.
-        _releaseQueue.tickCompleted( _frameFenceRing.getCompletedSerial() );
+        _releaseQueue.releaseCompleted( _frameFenceRing.getCompletedSerial() );
         trimIdleStagingBlocks(); // 돌려받은 업로드 블록 가운데 오래 쉰 것을 놓는다
         // 끝난 텍스처 전송도 걷는다 — 아무도 폴링하지 않는 전송(구간 갱신)의 링 구간과, 전송을 기다리던 텍스처 해제가 프레임마다 진행한다.
         retireFinishedTransfers();
@@ -3471,7 +3471,7 @@ namespace sw
             { recycleTransferJob( job ); } );
         }
         // 워터마크가 지난 전송을 기다리던 텍스처 해제를 프레임 해제 큐로 넘긴다(그 다음 프레임 펜스 뒤에 놓인다).
-        _transferReleaseQueue.tickCompleted( _transferSerials.getWatermark() );
+        _transferReleaseQueue.releaseCompleted( _transferSerials.getWatermark() );
         // 할당기가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다(GL 과 같은 규칙, 호스트 가시 메모리를 링 하나 크기 넘게 쥐고 있지 않는다).
         destroyIdleSoloBuffer( _uploadRing );
         destroyIdleSoloBuffer( _readbackRing );

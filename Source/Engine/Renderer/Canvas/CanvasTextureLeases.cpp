@@ -14,7 +14,7 @@
 namespace sw
 {
     CanvasTextureLeases::CanvasTextureLeases()
-        : _listPathTexture{}
+        : _pathTextures{}
         , _listTarget{}
     {
     }
@@ -82,8 +82,6 @@ namespace sw
 
     void CanvasTextureLeases::acquirePathTextures( const CanvasDrawList& list )
     {
-        if ( engine::areEngineServicesBound() == false )
-            return;
         for ( const CanvasBatch& batch : list._listBatch )
         {
             for ( uint32 slot = 0; slot < batch._textureCount; ++slot )
@@ -91,17 +89,8 @@ namespace sw
                 const hashed_string& path = batch._arrTexture[slot]._texturePath;
                 if ( path.empty() || batch._arrTexture[slot]._texture != nullptr )
                     continue;
-                bool bKnown = false;
-                for ( const PathTexture& pathTexture : _listPathTexture )
-                {
-                    bKnown = bKnown || pathTexture._path == path;
-                }
-                if ( bKnown )
-                    continue;
-                // 렌더 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 그 이미지를 빼고 그린다(언리얼 Slate 의 브러시도 텍스처가 스트리밍되는 동안 비어 있다).
-                PathTexture& added = _listPathTexture.emplace_back();
-                added._path        = path;
-                added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( path.view(), AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
+                // 다 읽기 전 프레임은 그 이미지를 빼고 그린다(`PathTextureSet`).
+                _pathTextures.request( path );
             }
         }
     }
@@ -111,22 +100,10 @@ namespace sw
         return VectorUtil::findBy<&CanvasTargetLease::_path>( _listTarget, path );
     }
 
-    RHIDescriptorIndex CanvasTextureLeases::findPathTextureSRV( const hashed_string& path ) const
-    {
-        for ( const PathTexture& pathTexture : _listPathTexture )
-        {
-            if ( pathTexture._path != path )
-                continue;
-            const Texture2D* pTexture = pathTexture._load.isReady() ? pathTexture._load.getOperation()->getTexture() : nullptr;
-            return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getSRV() : kInvalidDescriptorIndex;
-        }
-        return kInvalidDescriptorIndex;
-    }
-
     void CanvasTextureLeases::release()
     {
         // 경로 이미지 · 렌더 타깃의 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다(`Material::releaseTextureAssets` 와 같다).
-        _listPathTexture.clear();
+        _pathTextures.release();
         _listTarget.clear();
     }
 } // namespace sw

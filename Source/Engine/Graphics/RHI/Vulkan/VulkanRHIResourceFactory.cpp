@@ -484,7 +484,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 이미지 생성 · 메모리 · 뷰 · 초기 데이터 업로드의 순서가 곧 의미라 나누지 않는다.
-    bool VulkanRHIResourceFactory::buildImageCreateInfo( const RHITextureDesc& desc, VkImageCreateInfo& outInfo )
+    bool VulkanRHIResourceFactory::populateImageCreateInfo( const RHITextureDesc& desc, VkImageCreateInfo& outInfo )
     {
         const bool bInvalidTextureRequest = _pDevice->_device == nullptr || desc._width == 0 || desc._height == 0;
         if ( bInvalidTextureRequest )
@@ -544,7 +544,7 @@ namespace sw
     {
         // 1.2 에는 서술만으로 요구를 묻는 함수(vkGetDeviceImageMemoryRequirements, 1.3 · maintenance4)가 없다 — 임시 이미지를 만들어 묻고 지운다(셋업 단계에서 첨부마다 한 번).
         VkImageCreateInfo imageInfo{};
-        if ( buildImageCreateInfo( desc, imageInfo ) == false )
+        if ( populateImageCreateInfo( desc, imageInfo ) == false )
             return {};
         VkImage probe{ VK_NULL_HANDLE };
         if ( isVkSuccess( vkCreateImage( _pDevice->_device, &imageInfo, nullptr, &probe ), "vkCreateImage (allocation probe)" ) == false )
@@ -569,7 +569,7 @@ namespace sw
         probeDesc._bIsRenderTarget   = SW_TRUE;
         probeDesc._bIsShaderResource = SW_TRUE;
         VkImageCreateInfo imageInfo{};
-        if ( buildImageCreateInfo( probeDesc, imageInfo ) == false )
+        if ( populateImageCreateInfo( probeDesc, imageInfo ) == false )
             return 0;
         VkImage probe{ VK_NULL_HANDLE };
         if ( isVkSuccess( vkCreateImage( _pDevice->_device, &imageInfo, nullptr, &probe ), "vkCreateImage (transient heap probe)" ) == false )
@@ -624,7 +624,7 @@ namespace sw
     RHITextureHandle VulkanRHIResourceFactory::createTextureResource( const RHITextureDesc& desc, const shared_ptr<VulkanRHIDevice::VulkanHeapMemory>& pHeap, uint64 offsetBytes )
     {
         VkImageCreateInfo imageInfo{};
-        if ( buildImageCreateInfo( desc, imageInfo ) == false )
+        if ( populateImageCreateInfo( desc, imageInfo ) == false )
             return 0;
         const bool     bSliced = desc._dimension != RHITextureDimension::Texture2D;
         const VkFormat format  = imageInfo.format;

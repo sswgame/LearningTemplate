@@ -59,6 +59,7 @@
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
 #include "Engine/Renderer/Frame/Screen/FrameScreenRotation.h"
+#include "Engine/Renderer/Frame/Timeline/GPUTimestampSlotLayout.h"
 #include "Engine/Renderer/Frame/View/ViewTextureMipBiasUtil.h"
 #include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
@@ -213,9 +214,9 @@ namespace sw
         // 프레임 그래프 구간은 프로파일러 기록 중일 때만 쓴다. 게이트는 패스 타임스탬프와 같다(`onGraphPassExecute`).
         const IRHITimestampProvider* pTimestamps   = pDevice->findTimestampProvider();
         const bool                   bWriteGPUTime = pTimestamps != nullptr && _state._gpuPassTimeline.isRecording() &&
-                                   FrameRendererUtil::kGPUTimestampSlotComputeEnd < pTimestamps->getTimestampSlotCount();
+                                   GPUTimestampSlotLayout::kComputeEnd < pTimestamps->getTimestampSlotCount();
         if ( bWriteGPUTime )
-            _pCmd->writeTimestamp( FrameRendererUtil::kGPUTimestampSlotComputeBegin );
+            _pCmd->writeTimestamp( GPUTimestampSlotLayout::kComputeBegin );
 #endif
 
         // 프레임 그래프(파이프라인 XML 의 `_listFramePass`) — 깊이 히스토리 · 입자 · 변형 · 컬링 · 라이트 그리드 등, 이번 프레임에 그리는 **모든 뷰**의 몫이다.
@@ -231,7 +232,7 @@ namespace sw
 
 #if SW_PROFILE_COMPILED
         if ( bWriteGPUTime )
-            _pCmd->writeTimestamp( FrameRendererUtil::kGPUTimestampSlotComputeEnd );
+            _pCmd->writeTimestamp( GPUTimestampSlotLayout::kComputeEnd );
 #endif
 
         // 프리패스 리스트를 먼저 닫아 큐에 낸다. 뷰마다의 리스트와 병렬 패스 리스트보다 인다이렉트 인자 준비가 GPU 타임라인에서 먼저 끝나게 하려는 것이다
@@ -386,11 +387,12 @@ namespace sw
         // 변형 풀이 받지 못한 메시(상한 초과 · 버퍼 실패)는 어느 패스에서도 그리지 않는다 — 바인드 · 레스트 포즈로 대신 그리지 않는다(풀이 오류를 남겼다).
         if ( binding._bDeformRefused != SW_FALSE )
             return false;
-        if ( FrameRendererUtil::shouldFilterBatchesByMaterial( passType ) == false )
+        const RenderPassTypeInfo& passInfo = getRenderPassTypeInfo( passType );
+        if ( passInfo.shouldFilterBatchesByMaterial() == false )
             return true;
         const GPUShaderPermutation* pPermutation =
             ( batch._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _state._gpuScene.findShaderPermutation( batch._shaderPermutation );
-        return FrameRendererUtil::shouldDrawMaterialInPass( passType, pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
+        return passInfo.shouldDrawMaterial( pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
     }
 
     bool FramePassExecutor::shouldDrawCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch )
@@ -460,7 +462,7 @@ namespace sw
         const bool bWantsLUT = view._settings.usesPostProcess() && post._colorGradingLUTIntensity > 0.0f;
         const auto findLUT   = [this]( const DataPath& path ) -> const Texture2D*
         {
-            const Texture2D* pFound = path.isSet() ? _state._postProcessTextures.findReady( path, "colour grading LUT" ) : nullptr;
+            const Texture2D* pFound = path.isSet() ? _state._pathTextures.requestReady( path, "colour grading LUT" ) : nullptr;
             if ( pFound != nullptr && PostGradeConstants::isLUTStrip( pFound->getWidth(), pFound->getHeight() ) == false )
             {
                 SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ColorGradingLUTShape", "Colour grading LUT '%#' is %#x%# - it must be an N*N wide, N tall strip (e.g. 256x16); the LUT is left out",
@@ -498,7 +500,7 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._grainParams, float4{ MathUtil::saturate( post._filmGrainIntensity ), MathUtil::max( 1.0f, post._filmGrainSize ), 0.0f, 0.0f } );
         // 블룸 렌즈(post_bloom.hlsli) — 먼지 마스크는 LUT 와 같이 세기가 있는 후처리 뷰만 묻고, 읽힌 마스크가 없으면 세기를 0 으로 보낸다(셰이더가 읽지 않는다).
         const bool       bWantsDirt = view._settings.usesPostProcess() && post._bloomDirtMaskIntensity > 0.0f;
-        const Texture2D* pDirt      = bWantsDirt ? _state._postProcessTextures.findReady( post._bloomDirtMask, "bloom dirt mask" ) : nullptr;
+        const Texture2D* pDirt      = bWantsDirt ? _state._pathTextures.requestReady( post._bloomDirtMask, "bloom dirt mask" ) : nullptr;
         view._pBloomDirtMask        = pDirt;
         context._passValues.setFloat4( passConstantNames()._bloomLens, float4{ pDirt != nullptr ? post._bloomDirtMaskIntensity : 0.0f, MathUtil::max( 0.0f, post._lensFlareIntensity ),
                                                                                MathUtil::saturate( post._lensFlareGhostSpacing ), MathUtil::saturate( post._lensFlareHaloWidth ) } );
@@ -783,11 +785,11 @@ namespace sw
             SW_LOG_ERROR_ID( "FramePassExecutor.CallbackBindCompileFailed", "Callback bind compile failed" );
             return false;
         }
-        buildTransientAliasPlan();
+        rebuildTransientAliasPlan();
         return bindFramePassCallbacks();
     }
 
-    void FramePassExecutor::buildTransientAliasPlan()
+    void FramePassExecutor::rebuildTransientAliasPlan()
     {
         ++_state._transientAliasGeneration; // 뷰 풀이 다음 셋업에서 새 계획으로 다시 만든다
         _state._transientAliasPlan = RenderGraphAliasPlan{};
@@ -870,7 +872,7 @@ namespace sw
             if ( listExcluded[candidateIndex] == 0 )
                 listAliasable.push_back( listCandidate[candidateIndex] );
         }
-        _state._transientAliasPlan = RenderGraphAliasPlan::build( listAliasable );
+        _state._transientAliasPlan = RenderGraphAliasPlan::make( listAliasable );
         SW_PROFILE_COUNT( "RT.Frame.transientAliases", _state._transientAliasPlan._mapAliasToOwner.size() );
     }
 
@@ -954,7 +956,7 @@ namespace sw
         uint32 timestampBeginSlot = GPUPassScope::kNoTimestamp;
 #if SW_PROFILE_COMPILED
         const IRHITimestampProvider* pTimestamps      = _pDevice != nullptr ? _pDevice->findTimestampProvider() : nullptr;
-        const uint32                 frameSlot        = FrameRendererUtil::findFramePassTimestampSlot( iter->second );
+        const uint32                 frameSlot        = GPUTimestampSlotLayout::findFramePassSlot( iter->second );
         const bool                   bQueueComparable = pCmd == _pCmd || ( pTimestamps != nullptr && pTimestamps->isComputeQueueTimestampComparable() );
         const bool                   bWriteGPUTime    = pTimestamps != nullptr && bQueueComparable && _state._gpuPassTimeline.isRecording() && frameSlot != constant::invalid_index::kUint32 &&
                                    ( frameSlot + 1u ) < pTimestamps->getTimestampSlotCount();
@@ -1071,7 +1073,7 @@ namespace sw
         const IRHITimestampProvider* pTimestamps   = _pDevice != nullptr ? _pDevice->findTimestampProvider() : nullptr;
         const bool                   bWriteGPUTime = pTimestamps != nullptr && passContext._pCmd != nullptr && isRenderingExtraView() == false &&
                                    _state._gpuPassTimeline.isRecording() &&
-                                   static_cast<uint32>( passIndex ) < FrameRendererUtil::kGPUTimedPassCapacity &&
+                                   static_cast<uint32>( passIndex ) < GPUTimestampSlotLayout::kTimedPassCapacity &&
                                    ( timestampBegin + 1u ) < pTimestamps->getTimestampSlotCount();
         if ( bWriteGPUTime )
             passContext._pCmd->writeTimestamp( timestampBegin );

@@ -22,8 +22,8 @@
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
-#include "Engine/Renderer/Frame/PostProcess/FramePostProcessTextureSet.h"
 #include "Engine/Renderer/Frame/Resource/PassConstantRing.h"
+#include "Engine/Renderer/Frame/Resource/PathTextureSet.h"
 #include "Engine/Renderer/Frame/Timeline/GPUFrameClock.h"
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
@@ -92,7 +92,7 @@ namespace sw
         /** @brief 파이프라인 XML 의 `_listFramePass` 로 만든 프레임 그래프입니다. 프레임에 한 번, 뷰 그래프보다 먼저 돈다(`FramePassExecutor::recordFrameGraph`). */
         RenderGraph _frameGraph{};
         /**
-         * @brief 뷰 그래프의 트랜지언트 앨리어싱 계획입니다(레벨 수명이 겹치지 않고 서술이 같은 첨부가 텍스처 하나를 나눈다 — `RenderGraphAliasPlan::build`).
+         * @brief 뷰 그래프의 트랜지언트 앨리어싱 계획입니다(레벨 수명이 겹치지 않고 서술이 같은 첨부가 텍스처 하나를 나눈다 — `RenderGraphAliasPlan::make`).
          * @details 콜백을 묶을 때(`FramePassExecutor::bindPassCallbacks`) 세우고 세대를 올린다. 뷰 풀은 세대가 다르면 다시 만든다(`FrameViewResources::updateViewTransients`).
          *          파이프라인을 다시 읽으면 비우고 세대를 올린다 — 새 파이프라인의 첫 프레임은 앨리어싱 없이 만든다.
          */
@@ -107,7 +107,7 @@ namespace sw
          * @details 뷰를 얻으면 그 뷰의 값이 함께 따라온다. 주의: 이 값들을 뷰 밖 멤버로 흩어 두면 "이 값은 어느 뷰
          *          것인가" 를 사람이 기억해야 하고, 컬링 상수 버퍼를 뷰끼리 나눠 쓰게 되어 뒤 업로드가 앞 디스패치를 덮어쓴다.
          */
-        RenderView _arrView[static_cast<uint32>( RenderViewType::Count )]{};
+        RenderView _arrView[static_cast<uint32>( RenderViewKind::Count )]{};
         /**
          * @brief 주 시점 방향광 캐스케이드마다의 그림자 컬링 입력(절두체 · 자기 컬링 상수 버퍼)입니다. 앞 `_cascadeCullCount` 개만 씁니다.
          * @details 컬링 슬롯은 추가 뷰 슬롯 뒤에 붙는다(`_cascadeCullSlotBase` + 캐스케이드 번호). 추가 뷰(CCTV · PiP)는 작은 장면이라 합친 칸 하나를 그대로 쓴다.
@@ -177,8 +177,8 @@ namespace sw
         SurfaceDeformBinding   _surfaceDeform{};  ///< 이번 프레임의 표면 변형 층(패킷에서 — 핸들이 참조를 쥔다). 준비된 텍스처는 모든 패스가 건다(`FramePassExecutor::registerSurfaceDeformLayer`), 창은 프레임 시드(`FrameRenderer::updatePassConstants`)
         /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
         Light2DCookieAtlas _cookieAtlas{};
-        /** @brief 뷰의 후처리 값이 가리키는 텍스처(컬러 그레이딩 LUT · 블룸 먼지 마스크)의 로드 핸들입니다. 셋업이 뷰마다 묻고 프레임 시작에 안 쓰인 것을 놓는다. */
-        FramePostProcessTextureSet _postProcessTextures{};
+        /** @brief 셋업이 경로로 빌리는 텍스처(컬러 그레이딩 LUT · 블룸 먼지 마스크 · 데칼 · 렌즈 플레어 스프라이트)의 로드 핸들입니다. 셋업이 뷰마다 묻고 프레임 시작에 안 쓰인 것을 놓는다. */
+        PathTextureSet _pathTextures{};
         /// @brief 캔버스(화면 2D) 렌더러입니다. 아틀라스 사본, 사각형 버퍼, 일괄 드로우, 렌더 텍스처 대상(월드 공간 UI)을 렌더 스레드에서 처리합니다.
         CanvasRenderer _canvasRenderer{};
         /// @brief 파티클 렌더러입니다. 입자 버퍼와 입자 텍스처를 렌더 스레드에서 처리하고, 투명 패스가 방출기마다 빌보드를 그립니다.
@@ -217,10 +217,10 @@ namespace sw
         uint8  _bHasFrameSky{ SW_FALSE }; ///< 이번 프레임의 씬에 하늘이 있다(`_frameSky`). 기록 전에 정하고 패스 콜백은 읽기만 한다
 
         /** @brief 뷰 하나를 얻습니다. 그 뷰의 행렬, 절두체, 상수 버퍼가 함께 옵니다. */
-        RenderView&       view( RenderViewType type ) { return _arrView[static_cast<uint32>( type )]; }
-        const RenderView& view( RenderViewType type ) const { return _arrView[static_cast<uint32>( type )]; }
+        RenderView&       view( RenderViewKind kind ) { return _arrView[static_cast<uint32>( kind )]; }
+        const RenderView& view( RenderViewKind kind ) const { return _arrView[static_cast<uint32>( kind )]; }
         /** @brief 뷰 @p target 의 컬링 입력입니다. 주 시점은 `_arrView[Main]`, 추가 뷰는 자기 것입니다. */
-        RenderView& getCullInputOf( FrameViewTarget& target ) { return &target == &_mainView ? view( RenderViewType::Main ) : target._cullInput; }
+        RenderView& getCullInputOf( FrameViewTarget& target ) { return &target == &_mainView ? view( RenderViewKind::Main ) : target._cullInput; }
         /**
          * @brief 시간으로 구동하는 컴퓨트가 읽을 시간(초)입니다. 렌더러 시계(`FrameMeshDeformState::_animationTimer`)의 누적 시간을 스냅샷의 주기로 접은 값입니다.
          * @details 셰이더 칸이 float 라 접지 않으면 긴 실행에서 끊긴다(감사 C-12). 이 함수를 부르는 디스패치는 업로드된 스냅샷이 있을 때만 돈다.

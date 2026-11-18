@@ -21,7 +21,7 @@ namespace sw
     class RenderViewScheduler;
     class Scene;
 
-    /** @brief `RenderPacketViewSetup::setupMainView` 가 고른 이번 프레임의 시점입니다. 추가 뷰 고르기와 씬 내용 채우기가 읽습니다. */
+    /** @brief `RenderPacketViewSetup::populateMainView` 가 고른 이번 프레임의 시점입니다. 추가 뷰 고르기와 씬 내용 채우기가 읽습니다. */
     struct RenderPacketMainView
     {
         CameraComponent* _pCamera{ nullptr };          ///< 주 시점 카메라(없으면 주 시점 없는 프레임 — 렌더러가 그리지 않는다)
@@ -56,8 +56,8 @@ namespace sw
          * @param sceneViewCameraProvider 씬 뷰 카메라 조회입니다. 씬 뷰가 있을 때만, 씬 틱과 기본 카메라 보장 **뒤에** 부릅니다.
          * @details 주 출력 크기는 패킷에 이미 풀려 있다(`RenderPacketBuilder::populateScene` 이 백버퍼 크기까지 푼다).
          */
-        RenderPacketMainView setupMainView( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, Scene& activeScene,
-                                            const FrameRenderer* pFrameRenderer );
+        RenderPacketMainView populateMainView( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, Scene& activeScene,
+                                               const FrameRenderer* pFrameRenderer );
         /**
          * @brief 추가 뷰(캡처 카메라 · 화면 사각형) 중 이번 프레임에 그릴 것을 갱신 주기 · 보이는가 · 예산으로 고르고(쉬는 뷰도 실린다), 씬 뷰를 주 출력 여부에 맞춰 넣거나 뺍니다.
          * @details 주 시점 그림자가 정해진 **뒤에** 부릅니다(추가 뷰의 그림자는 그 뒤 `RenderPacketSceneCollector::populateViewShadows`).
@@ -66,7 +66,7 @@ namespace sw
                                 const FrameRenderer* pFrameRenderer );
         /**
          * @brief 주 시점과 추가 뷰의 후처리 블렌더블을 머티리얼로 풀어 뷰 설정에 싣고(`PostProcessMaterialSet`), 이번 프레임에 쓰이지 않은 머티리얼 참조를 놓습니다.
-         * @details 뷰 고르기(`setupMainView` · `collectExtraViews`)가 끝난 **뒤에** 부릅니다 — 블렌더블은 뷰 설정을 만들 때 볼륨을 섞은 값이다.
+         * @details 뷰 고르기(`populateMainView` · `collectExtraViews`)가 끝난 **뒤에** 부릅니다 — 블렌더블은 뷰 설정을 만들 때 볼륨을 섞은 값이다.
          */
         void resolvePostProcessMaterials( RenderFramePacket& packet );
         /** @brief 마지막 `collectExtraViews` 에서 보임 판정으로 쉰 추가 뷰 수입니다. 진단 읽기입니다(감시 값 `RenderView.HiddenCount` — 게임 스레드). */

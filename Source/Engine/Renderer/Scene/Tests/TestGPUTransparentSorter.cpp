@@ -152,7 +152,7 @@ SW_TEST_CASE( GPUTransparentSorterTest, ViewOrderRanksTailAndBatches )
 
     // 배치 0 안은 꼬리 1(순번 1)이 꼬리 0(순번 3)보다 먼저, 배치 1 안은 꼬리 3(순번 0)이 꼬리 2(순번 2)보다 먼저다(컬링 없는 백엔드의 슬롯 — RT 가 만든다).
     sw::vector<uint32> listTailSlot;
-    sw::GPUTransparentSorter::buildViewTailSlots( sw::vector_reference<const uint32>( listRank ), kTailBase, listBatch, listTailSlot );
+    sw::GPUTransparentSorter::computeViewTailSlots( sw::vector_reference<const uint32>( listRank ), kTailBase, listBatch, listTailSlot );
     SW_REQUIRE_EQUAL( listTailSlot.size(), static_cast<size_t>( 4 ) );
     SW_EXPECT_EQUAL( listTailSlot[0], kTailBase + 1 );
     SW_EXPECT_EQUAL( listTailSlot[1], kTailBase + 0 );

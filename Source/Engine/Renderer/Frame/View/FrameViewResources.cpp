@@ -304,7 +304,7 @@ namespace sw
             listItem.push_back( RenderGraphMemoryItem{ candidate._name, info._sizeBytes, info._alignment, candidate._firstLevel, candidate._lastLevel } );
             listAttachment.push_back( pAttachment );
         }
-        const RenderGraphMemoryPlan plan = RenderGraphMemoryPlan::build( listItem );
+        const RenderGraphMemoryPlan plan = RenderGraphMemoryPlan::make( listItem );
         // 겹친 바이트가 없으면(모두 수명이 겹친다) 힙이 메모리를 아끼지 않는다 — 커밋 텍스처 그대로 둔다.
         if ( plan._heapBytes == 0 || plan._heapBytes >= plan._sumBytes )
             return;

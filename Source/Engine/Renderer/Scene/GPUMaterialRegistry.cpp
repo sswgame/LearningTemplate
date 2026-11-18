@@ -70,7 +70,7 @@ namespace sw
         _bAllElementsStale = SW_TRUE;
     }
 
-    uint32 GPUMaterialRegistry::findOrAddMaterialGroup( const Material* pMaterial, GPUSceneSnapshot& inoutSnapshot )
+    uint32 GPUMaterialRegistry::getOrCreateMaterialGroup( const Material* pMaterial, GPUSceneSnapshot& inoutSnapshot )
     {
         if ( pMaterial == nullptr )
             return kInvalidMaterialGroup;

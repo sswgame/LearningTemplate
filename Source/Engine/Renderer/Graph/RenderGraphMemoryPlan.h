@@ -30,7 +30,7 @@ namespace sw
     struct SW_API RenderGraphMemoryPlan
     {
         /** @brief @p listItem 을 놓습니다. 크기 0 인 항목은 오프셋 0 · 크기 없이 둔다(부르는 쪽이 놓지 않는다). */
-        static RenderGraphMemoryPlan build( const vector<RenderGraphMemoryItem>& listItem );
+        static RenderGraphMemoryPlan make( const vector<RenderGraphMemoryItem>& listItem );
         /** @brief 두 항목의 수명(레벨 구간, 양끝 포함)이 겹치면 true 입니다 — 같은 레벨은 GPU 에서 겹칠 수 있다. */
         static bool overlapsInTime( const RenderGraphMemoryItem& left, const RenderGraphMemoryItem& right );
 

@@ -86,8 +86,6 @@ namespace sw
          */
         void recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV, RHIDescriptorIndex placeholderSRV,
                                      GPUMessageChannel& inoutMessages, bool bShowInstanceSlots );
-        /** @brief 마지막 `drawTargets` 가 다시 그린 렌더 텍스처 대상 수입니다(테스트와 진단용). */
-        uint32 getLastDrawnTargetCount() const { return _lastDrawnTargetCount; }
         /** @brief 마지막 `prepareFrame` 에서 주 출력 사각형이 버퍼에서 시작하는 위치입니다(버퍼 맨 앞은 화면 앵커입니다). */
         uint32 getMainQuadBase() const { return _quadBuffer.getMainQuadBase(); }
         /** @brief 마지막 `prepareFrame` 에서 개발 겹치기 사각형이 버퍼에서 시작하는 위치입니다. */
@@ -112,6 +110,5 @@ namespace sw
         CanvasTextureLeases     _textures;   ///< `TextureCache` 에서 빌린 경로 이미지와 렌더 텍스처 대상
         CanvasQuadBuffer        _quadBuffer; ///< 앵커 · 주 출력 · 대상 사각형을 이은 구조 버퍼
         CanvasMarkerProjection  _markers;    ///< 화면 마커 투영 컴퓨트의 입력과 디스패치
-        uint32                  _lastDrawnTargetCount;
     };
 } // namespace sw

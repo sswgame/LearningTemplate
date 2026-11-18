@@ -40,7 +40,6 @@ namespace sw
         , _textures{}
         , _quadBuffer{}
         , _markers{}
-        , _lastDrawnTargetCount{ 0 }
     {
     }
 
@@ -147,7 +146,6 @@ namespace sw
 
     void CanvasRenderer::drawTargets( IRHICommandList& cmd, IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache )
     {
-        _lastDrawnTargetCount = 0;
         for ( uint32 targetIndex = 0; targetIndex < static_cast<uint32>( frame._listTarget.size() ); ++targetIndex )
         {
             const CanvasTargetDrawList& target                 = frame._listTarget[targetIndex];
@@ -180,7 +178,6 @@ namespace sw
             cmd.prepareTextureForShaderRead( texture );
             pState->_drawnRevision = target._contentRevision;
             pState->_drawnTexture  = texture;
-            ++_lastDrawnTargetCount;
         }
     }
 

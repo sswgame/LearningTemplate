@@ -123,7 +123,7 @@ SW_TEST_CASE( LensFlareTest, BuildsOneSpritePerElement )
     listRequest.push_back( LensFlareTestUtil::makePointRequest( float3{ 3.0f, 0.0f, 0.5f } ) ); // 화면 밖
     vector<LensFlareSprite>    listSprite;
     vector<LensFlareDrawRange> listRange;
-    LensFlareSpriteBuffer::buildSprites( listRequest, float4x4::Identity, 2.0f, listSprite, listRange );
+    LensFlareSpriteBuffer::computeSprites( listRequest, float4x4::Identity, 2.0f, listSprite, listRange );
     SW_REQUIRE_EQUAL( size_t( 2 ), listSprite.size() );
     SW_REQUIRE_EQUAL( size_t( 1 ), listRange.size() ); // 절차적 모양뿐이라 텍스처 없는 구간 하나
     SW_EXPECT_TRUE( listRange[0]._pTexturePath == nullptr );
@@ -173,7 +173,7 @@ SW_TEST_CASE( LensFlareTest, GroupsImageSpritesByTexture )
 
     vector<LensFlareSprite>    listSprite;
     vector<LensFlareDrawRange> listRange;
-    LensFlareSpriteBuffer::buildSprites( listRequest, float4x4::Identity, 1.0f, listSprite, listRange );
+    LensFlareSpriteBuffer::computeSprites( listRequest, float4x4::Identity, 1.0f, listSprite, listRange );
     SW_REQUIRE_EQUAL( size_t( 8 ), listSprite.size() );
     SW_REQUIRE_EQUAL( size_t( 3 ), listRange.size() );
     SW_EXPECT_TRUE( listRange[0]._pTexturePath == nullptr );

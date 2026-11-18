@@ -24,11 +24,12 @@ namespace sw
     } // namespace
 
     VFXParticleOrder VFXParticleOrder::appendViewDepth( vector_reference<const GPUParticle> listParticle, const float4x4& world, const float3& eye, const float3& axis,
-                                                        vector<uint32>& outListOrder )
+                                                        vector<float32>& inoutListDepth, vector<uint32>& outListOrder )
     {
         // 깊이 규칙은 메시 투명 후보와 같다(GPUTransparentSorter::makeTransparentSortKey) — 축이 있으면 축 위의 거리, 없으면 눈까지의 거리 제곱.
-        const bool      bUseAxis = axis.getLengthSquared() > MathUtil::kEpsilon;
-        vector<float32> listDepth( listParticle.size() );
+        const bool       bUseAxis  = axis.getLengthSquared() > MathUtil::kEpsilon;
+        vector<float32>& listDepth = inoutListDepth;
+        listDepth.resize( listParticle.size() ); // 모든 칸을 아래에서 덮어쓴다
         for ( size_t particleIndex = 0; particleIndex < listParticle.size(); ++particleIndex )
         {
             const float4& positionSize = listParticle[particleIndex]._positionSize;

@@ -62,8 +62,8 @@ namespace sw
         return static_cast<float32>( visibleCount ) / static_cast<float32>( sampleCount );
     }
 
-    void LensFlareSpriteBuffer::buildSprites( const vector<LensFlareRequest>& listRequest, const float4x4& viewProj, float32 aspect, vector<LensFlareSprite>& outListSprite,
-                                              vector<LensFlareDrawRange>& outListRange )
+    void LensFlareSpriteBuffer::computeSprites( const vector<LensFlareRequest>& listRequest, const float4x4& viewProj, float32 aspect, vector<LensFlareSprite>& outListSprite,
+                                                vector<LensFlareDrawRange>& outListRange )
     {
         outListSprite.clear();
         outListRange.clear();
@@ -118,7 +118,7 @@ namespace sw
         _listRange.clear();
         if ( pDevice == nullptr || listRequest.empty() )
             return;
-        buildSprites( listRequest, viewProj, aspect, _listSpriteScratch, _listRange );
+        computeSprites( listRequest, viewProj, aspect, _listSpriteScratch, _listRange );
         if ( _listSpriteScratch.empty() )
             return;
         constexpr RHIBufferUsage kReadUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;

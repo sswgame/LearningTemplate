@@ -224,7 +224,7 @@ namespace sw
     {
         _gpuSceneBuilder->setGPUInstanceLODEnabled( _bGPUInstanceLODCapable && gv_gpuInstanceLod );
         _gpuSceneBuilder->setGPUInstanceLODCrossfadeSeconds( gv_lodCrossfadeSeconds );
-        buildSnapshot( packet, pActiveScene, pUploadQueue );
+        populateSnapshot( packet, pActiveScene, pUploadQueue );
     }
 
     void RenderPacketSceneCollector::fillSceneView( RenderFramePacket& outPacket, Scene& scene, const RenderSceneViewDesc& view, GPUUploadQueue* pUploadQueue )
@@ -242,10 +242,10 @@ namespace sw
         populateShadows( outPacket, lights );
         updateLODViews( outPacket, scene );
         _gpuSceneBuilder->setGPUInstanceLODEnabled( false );
-        buildSnapshot( outPacket, &scene, pUploadQueue );
+        populateSnapshot( outPacket, &scene, pUploadQueue );
     }
 
-    void RenderPacketSceneCollector::buildSnapshot( RenderFramePacket& packet, Scene* pScene, GPUUploadQueue* pUploadQueue )
+    void RenderPacketSceneCollector::populateSnapshot( RenderFramePacket& packet, Scene* pScene, GPUUploadQueue* pUploadQueue )
     {
         _gpuSceneBuilder->populateFromScene( pScene, packet._cameraPos );
         // 추가 뷰(CCTV · PiP)는 자기 눈으로 투명을 정렬한다 — 주 카메라 순서로 그리면 반대편을 보는 뷰에서 앞뒤가 뒤집힌다.

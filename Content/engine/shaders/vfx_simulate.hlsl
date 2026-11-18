@@ -48,13 +48,6 @@ struct VFXParticleState
     uint4  _particleIndex;    // xy 입자 번호(64 비트, x 가 아래), z 다중 그룹의 생존 표시, w 인스턴스 칸(빈 칸 스택에서 꺼냈다)
 };
 
-struct GPUParticle
-{
-    float4 _positionSize;
-    float4 _color;
-    float4 _rotationLife;
-};
-
 SW_DECLARE_STRUCTURED_BUFFER( uint4, g_VFXParams, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( VFXParticleState, g_VFXStateRW, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( GPUParticle, g_VFXParticlesRW, 1 );

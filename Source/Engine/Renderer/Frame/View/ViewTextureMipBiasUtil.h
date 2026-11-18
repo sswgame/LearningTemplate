@@ -1,7 +1,7 @@
 /**
  * @file ViewTextureMipBiasUtil.h
  * @brief 뷰의 머티리얼 텍스처 밉 바이어스입니다 — 렌더 해상도를 줄여 키우는(업스케일) 뷰가 텍스처를 출력 해상도만큼 선명하게 읽게 한다(감사 R-15).
- * @details 언리얼 `r.ViewTextureMipBiasUtil`(TSR · DLSS 가 log2(렌더 / 출력) 를 더한다), AMD FSR 1 의 권장(음수 밉 바이어스 log2(렌더 / 출력))과 같은 식이다.
+ * @details 언리얼 `r.ViewTextureMipBias.Min` · `MaterialTextureMipBias`(TSR · DLSS 가 log2(렌더 / 출력) 를 더한다), AMD FSR 1 의 권장(음수 밉 바이어스 log2(렌더 / 출력))과 같은 식이다.
  *          셰이더는 픽셀 단계 머티리얼 샘플에만 더한다(`MaterialTexture::sampleIndexTexture`, PassCB `g_TextureMipBias.x`).
  */
 #pragma once

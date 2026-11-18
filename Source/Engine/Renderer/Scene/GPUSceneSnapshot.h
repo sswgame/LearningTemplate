@@ -331,7 +331,7 @@ namespace sw
      * @brief 추가 뷰 하나의 투명 그리기 순서입니다. 주 뷰의 순서(꼬리 인스턴스 배치)는 그대로 두고, 이 뷰가 다르게 그릴 것만 싣습니다.
      * @details GT 가 그 뷰의 시점과 시선 축으로 꼬리를 다시 정렬해 만든다(`GPUSceneBuilder::computeViewTransparentOrders`). RT 는 순번 테이블을 정렬 디스패치(instance_sort.hlsl)에,
      *          배치 순서를 투명 패스 드로우 순서에 쓴다. 컬링이 없는 백엔드만 순번으로 배치 안을 다시 놓은 인스턴스 슬롯 스트림을 RT 에서 만든다
-     *          (`GPUTransparentSorter::buildViewTailSlots`) — 배치 안 정렬은 GPU 정렬과 CPU 정렬 중 한 곳에서만 돈다.
+     *          (`GPUTransparentSorter::computeViewTailSlots`) — 배치 안 정렬은 GPU 정렬과 CPU 정렬 중 한 곳에서만 돈다.
      *          메시 투명 배치가 없고 입자만 있는 뷰는 순번이 nullptr 이고 배치 순서가 비며 입자 자리만 싣는다.
      */
     struct GPUViewTransparentOrder

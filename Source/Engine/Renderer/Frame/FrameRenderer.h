@@ -250,8 +250,6 @@ namespace sw
         void setCanvasFrame( CanvasFrameData& inoutFrame );
         /** @brief 패킷의 글리프 아틀라스 업로드를 캔버스 거울에 옮깁니다. 그리지 않을 패킷도 받은 즉시 부릅니다(`CanvasRenderer::acceptAtlasUploads`). */
         void acceptCanvasAtlasUploads( CanvasFrameData& inoutFrame ) { _state._canvasRenderer.acceptAtlasUploads( inoutFrame ); }
-        /** @brief 캔버스(화면 2D · 렌더 텍스처 대상) 렌더러입니다. 다시 그린 대상 수 같은 진단 값을 읽을 때 씁니다. */
-        const CanvasRenderer& getCanvasRenderer() const { return _state._canvasRenderer; }
 
         /**
          * @brief 화면에 나간 첨부의 이름입니다. Present 패스가 입력으로 받는 첨부이며, 없으면 빈 문자열입니다.
@@ -311,18 +309,12 @@ namespace sw
         RHIPipelineStateHandle getEnginePSO( RenderPassType passType ) const;
         /**
          * @brief 이 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
-         * @details 판정은 `FrameRendererUtil::shouldDrawMaterialInPass` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다. 드로우 루프(`FramePassExecutor`)와 같은 함수다.
+         * @details 판정은 `RenderPassTypeInfo::shouldDrawMaterial` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다. 드로우 루프(`FramePassExecutor`)와 같은 함수다.
          */
         bool shouldDrawBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
         {
             return _passExecutor.shouldDrawBatchInPass( passType, batch, binding );
         }
-        /**
-         * @brief PSO 를 만들 때 쓴 디스크립터(셰이더 경로, define, 렌더 상태)를 반환합니다. 모르는 PSO 면 false 입니다.
-         * @details 어떤 퍼뮤테이션이 실제로 적용되었는지 밖에서 확인할 수 있는 유일한 방법이다.
-         *          픽셀로는 드러나지 않는 차이(알파 경로가 컴파일되었는가 등)를 테스트가 여기서 확인한다.
-         */
-        [[nodiscard]] bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단과 테스트용). */
         RHITextureHandle getTAAHistory() const { return _state._mainView._taaHistory; }
         /** @brief 주 시점의 첨부 풀입니다. 어느 타깃이 있고 몇 번 만들었는지 보는 진단 · 테스트용입니다(고치지 않는다). */
@@ -347,7 +339,7 @@ namespace sw
             const utf8*        _pUsage{ nullptr };
         };
         /// @brief 컴퓨트 상수 버퍼 수입니다. 고정 뷰마다 컬링과 정렬이 하나씩 있고, 인스턴스 애니메이션, 메시 모프, 메시 스킨이 하나씩 더 있습니다. 추가 뷰의 것은 그 뷰가 가집니다.
-        static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewType::Count ) * 2 + 3;
+        static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewKind::Count ) * 2 + 3;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스(그림자, 프리패스, 불투명, 반투명)에서 그려지는지의 어림값입니다.
         static constexpr uint32 _s_kDrawCbPassEstimate = 4;
         // ------------------------------------------------------------------------------
@@ -437,7 +429,7 @@ namespace sw
          */
         void updateLightBuffer( IRHIDevice* pDevice );
         /**
-         * @brief (셋업) 이번 프레임 데칼의 텍스처를 풀어(`_postProcessTextures` — 읽는 중이면 그 데칼은 빠진다) 그리기 목록(`_listFrameDecalDraw`)을 만듭니다.
+         * @brief (셋업) 이번 프레임 데칼의 텍스처를 풀어(`_pathTextures` — 읽는 중이면 그 데칼은 빠진다) 그리기 목록(`_listFrameDecalDraw`)을 만듭니다.
          * @details 데칼이 있는데 파이프라인에 Decal 패스가 없으면(포워드) 한 번 경고한다 — 덮을 G버퍼가 없다.
          */
         void prepareFrameDecals();

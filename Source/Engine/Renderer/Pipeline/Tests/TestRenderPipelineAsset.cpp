@@ -568,9 +568,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, DistortionPassTypesFollowTheTable )
     SW_EXPECT_FALSE( accumulate.hasFlag( RenderPassTraitFlag::kDepthWrite ) );
     const vector<string> listDistortion{ string( kMaterialDistortionDefine ), string( "MATERIAL_BLEND_TRANSLUCENT" ) };
     const vector<string> listPlain{ string( "MATERIAL_BLEND_TRANSLUCENT" ) };
-    SW_EXPECT_TRUE( FrameRendererUtil::shouldDrawMaterialInPass( RenderPassType::Distortion, &listDistortion ) );
-    SW_EXPECT_FALSE( FrameRendererUtil::shouldDrawMaterialInPass( RenderPassType::Distortion, &listPlain ) );
-    SW_EXPECT_FALSE( FrameRendererUtil::shouldDrawMaterialInPass( RenderPassType::Distortion, nullptr ) ); // 머티리얼 없는 배치는 왜곡이 없다
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::Distortion ).shouldDrawMaterial( &listDistortion ) );
+    SW_EXPECT_FALSE( getRenderPassTypeInfo( RenderPassType::Distortion ).shouldDrawMaterial( &listPlain ) );
+    SW_EXPECT_FALSE( getRenderPassTypeInfo( RenderPassType::Distortion ).shouldDrawMaterial( nullptr ) ); // 머티리얼 없는 배치는 왜곡이 없다
     const EngineDefaultAssets& assets = engine::getSubsystem<EngineDefaultAssets>();
     SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassType::Distortion, nullptr, nullptr, assets )._listDefine, string( kPassDistortionDefine ) ) );
     const RenderPassInputSignature* pApply = findRenderPassInputSignature( RenderPassType::DistortionApply );

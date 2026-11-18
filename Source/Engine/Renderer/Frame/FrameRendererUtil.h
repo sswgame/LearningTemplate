@@ -48,39 +48,6 @@ namespace sw
 
         static constexpr uint32 kDefaultTransientSize = 1280;
 
-        /**
-         * @brief GPU 타임스탬프 슬롯 배치입니다. 슬롯은 `constant::render::kMaxGPUTimestampSlot`(128)개입니다.
-         * @details [뷰 패스 쌍 × kGPUTimedPassCapacity][프레임 패스 쌍 × kGPUTimedFramePassCapacity][빈 칸][예약 셋]. 뷰 패스는 앞에서부터 인덱스 × 2 쌍,
-         *          프레임 패스(`_listFramePass`)는 그 뒤에서부터 인덱스 × 2 쌍을 쓴다(병렬 기록이라 흐르는 카운터가 아니라 고정 슬롯).
-         *          프레임 전체와 프레임 그래프는 **뒤쪽 네 슬롯**을 쓴다. 백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 슬롯이 먼저 기록되어도 값이 잘리지 않는다.
-         *          프레임 시작 · 끝 쌍은 `GPUFrameClock` 이 늘(Shipping 포함) 쓰고, 프레임 그래프 쌍은 프로파일러가 기록 중일 때만 쓴다.
-         */
-        static constexpr uint32 kGPUTimestampSlotFrameEnd     = constant::render::kMaxGPUTimestampSlot - 4u;
-        static constexpr uint32 kGPUTimestampSlotComputeBegin = constant::render::kMaxGPUTimestampSlot - 3u;
-        static constexpr uint32 kGPUTimestampSlotComputeEnd   = constant::render::kMaxGPUTimestampSlot - 2u;
-        static constexpr uint32 kGPUTimestampSlotFrameBegin   = constant::render::kMaxGPUTimestampSlot - 1u;
-        /// @brief GPU 시간을 측정할 수 있는 뷰 패스 수입니다(패스마다 슬롯 둘). 넘는 패스는 시간이 기록되지 않으며, 파이프라인을 로드할 때 경고합니다.
-        static constexpr uint32 kGPUTimedPassCapacity = 40;
-        /// @brief 뷰 패스 쌍이 쓰는 슬롯의 끝(미포함) = 프레임 패스 쌍의 첫 슬롯입니다.
-        static constexpr uint32 kGPUTimestampPassSlotEnd        = kGPUTimedPassCapacity * 2u;
-        static constexpr uint32 kGPUTimestampFramePassSlotBegin = kGPUTimestampPassSlotEnd;
-        /// @brief 예약 슬롯(프레임 끝 · 프레임 그래프 쌍 · 프레임 시작)의 첫 번호입니다.
-        static constexpr uint32 kGPUTimestampReservedSlotBegin = kGPUTimestampSlotFrameEnd;
-        /// @brief GPU 시간을 측정할 수 있는 프레임 패스 수입니다(프레임 패스 종류는 열하나 — `isFramePassType`). 위 예약 슬롯과 겹치지 않게 합니다.
-        static constexpr uint32 kGPUTimedFramePassCapacity = ( kGPUTimestampReservedSlotBegin - kGPUTimestampFramePassSlotBegin ) / 2u;
-
-        /** @brief 프레임 패스 @p framePassIndex(`_listFramePass` 의 번호)의 시작 슬롯입니다(끝은 + 1). 측정 칸 밖이면 `constant::invalid_index::kUint32` 입니다. */
-        static constexpr uint32 findFramePassTimestampSlot( size_t framePassIndex )
-        {
-            return framePassIndex < kGPUTimedFramePassCapacity ? kGPUTimestampFramePassSlotBegin + static_cast<uint32>( framePassIndex ) * 2u : constant::invalid_index::kUint32;
-        }
-
-        /** @brief 패스가 `passCount` 개인 파이프라인에서 GPU 시간이 기록되지 않는 패스 수입니다. 앞에서부터 `kGPUTimedPassCapacity` 개만 측정합니다. */
-        static constexpr uint32 countUntimedGPUPass( size_t passCount )
-        {
-            return passCount > kGPUTimedPassCapacity ? static_cast<uint32>( passCount - kGPUTimedPassCapacity ) : 0u;
-        }
-        static_assert( kGPUTimestampSlotFrameBegin < constant::render::kMaxGPUTimestampSlot, "타임스탬프 예약 칸이 백엔드 칸 수를 넘는다" );
         // 첨부의 클리어 색은 파이프라인 XML 의 선언이 기준이다 — 이름으로 짐작해 첨부를 만들 때 쓰던 색(SceneColor · 깊이 · 블룸)은 지웠다.
         static constexpr float4 kBlackClear = { 0.0f, 0.0f, 0.0f, 1.0f };
 
@@ -275,12 +242,6 @@ namespace sw
         /** @brief 포맷을 파이프라인 XML 이 쓰는 이름(리플렉션된 열거자 이름)으로 반환합니다. */
         SW_API static const utf8* attachmentFormatName( RHIFormat format );
 
-        /** @brief 뎁스만 쓰는 패스 타입인지 반환합니다. 출력 선언이 없을 때 컬러 RT 수를 정하는 기본값(0)의 근거입니다. */
-        static bool isDepthOnlyPassType( RenderPassType passType )
-        {
-            return getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDepthOnly );
-        }
-
         /**
          * @brief 패스의 `_listOutput` 에서 컬러 어태치먼트 포맷을 순서대로 모읍니다. 반환값은 컬러 RT 수입니다.
          * @details PSO 생성(createPSOForPassType)과 셰이더 쿠커가 **같은 답**을 내야 하는 규칙이다. 컬러
@@ -341,176 +302,10 @@ namespace sw
          */
         static bool hasPixelStage( const RenderGraphPassDesc& pass, const vector<RenderPassAttachment>& listAttachment )
         {
-            const uint32 fallbackCount = isDepthOnlyPassType( pass._type ) ? 0u : 1u;
+            const uint32 fallbackCount = getRenderPassTypeInfo( pass._type ).isDepthOnly() ? 0u : 1u;
             return collectColorOutputFormats( pass, listAttachment, nullptr, kMaxColorAttachments, fallbackCount ) > 0;
         }
 
-        /**
-         * @brief 이 패스가 씬 메시(GPUScene 배치)를 그리는지 반환합니다.
-         * @details 머티리얼 퍼뮤테이션 PSO 를 미리 만들어 둘 대상이 이 패스들이다. 풀스크린 패스는 배치를 쓰지 않는다.
-         */
-        static bool shouldDrawSceneMeshes( RenderPassType passType )
-        {
-            return getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes );
-        }
-
-        /**
-         * @brief 이 패스가 **머티리얼의 셰이더**로 그리는지(아니면 패스 자신의 셰이더인지) 반환합니다.
-         * @details 언리얼에서는 패스가 셰이더 **타입**(TShadowDepthVS 같은)을 정하고 머티리얼이 그 타입의
-         *          퍼뮤테이션을 준다. 그림자와 뎁스 패스는 지오메트리만 그리므로 자기 셰이더가 기준이고, 머티리얼은
-         *          define 만 적용한다. 여기서 true 인 패스만 머티리얼이 선언한 .hlsl 로 교체한다.
-         */
-        static bool usesMaterialShader( RenderPassType passType )
-        {
-            return getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kUsesMaterialShader );
-        }
-
-        /** @brief 이 패스 종류가 머티리얼에게 내주는 렌더 상태의 범위입니다(표: `docs/agents/RenderPipelineXml.md`). 그리는 쪽과 테스트가 같은 답을 본다. */
-        static RenderStateOverride::Scope getMaterialStateScope( RenderPassType passType )
-        {
-            const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
-            if ( info.hasFlag( RenderPassTraitFlag::kMaterialBlend ) )
-                return RenderStateOverride::Scope::FixedAndBlend;
-            return info.hasFlag( RenderPassTraitFlag::kMaterialFixedState ) ? RenderStateOverride::Scope::FixedState : RenderStateOverride::Scope::CullOnly;
-        }
-
-        /**
-         * @brief 이 패스가 이 머티리얼 define 목록의 배치를 그리는지 반환합니다. 테이블의 `_pRequiredMaterialDefine` 이 있으면 그것이 있어야 하고,
-         *        `_pExcludedMaterialDefine` 이 있으면 그것이 없어야 합니다. 둘 다 없으면 항상 true 입니다.
-         * @details 드로우 루프, 머티리얼 PSO 변형, 셰이더 쿠커가 같은 판정을 쓴다. 셋이 갈리면 쿠킹하지 않은 변형을 런타임이 찾거나,
-         *          외곽선을 모르는 셰이더가 외곽선 패스의 앞면 컬링으로 그려져 뒷면이 화면을 덮는다.
-         * @param pListMaterialDefine 배치 머티리얼의 define 목록입니다. nullptr 이면 머티리얼이 없는 배치입니다.
-         */
-        static bool shouldDrawMaterialInPass( RenderPassType passType, const vector<string>* pListMaterialDefine )
-        {
-            const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
-            if ( info._pExcludedMaterialDefine != nullptr && hasMaterialDefine( pListMaterialDefine, info._pExcludedMaterialDefine ) )
-                return false;
-            if ( info._pRequiredMaterialDefine == nullptr )
-                return true;
-            return hasMaterialDefine( pListMaterialDefine, info._pRequiredMaterialDefine );
-        }
-
-        /** @brief 이 패스가 머티리얼 define 으로 배치를 거르는지(있어야 하거나 없어야 하는 define 이 있는지) 반환합니다. 거르지 않으면 판정을 건너뛴다. */
-        static bool shouldFilterBatchesByMaterial( RenderPassType passType )
-        {
-            const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
-            return info._pRequiredMaterialDefine != nullptr || info._pExcludedMaterialDefine != nullptr;
-        }
-
-        /** @brief 머티리얼 define 목록에 이 define 이 있는지 반환합니다. nullptr(머티리얼 없는 배치)이면 false 입니다. */
-        static bool hasMaterialDefine( const vector<string>* pListMaterialDefine, const utf8* pDefine )
-        {
-            if ( pListMaterialDefine == nullptr )
-                return false;
-            for ( const string& define : *pListMaterialDefine )
-            {
-                if ( define == pDefine )
-                    return true;
-            }
-            return false;
-        }
-
-        /**
-         * @brief 깊이만 쓰는 패스(그림자 · 깊이 프리패스)가 이 머티리얼의 배치를 패스 셰이더 대신 **머티리얼의 셰이더**로 그리는지 반환합니다.
-         * @details 깊이 패스는 지오메트리만 그리므로 보통 자기 셰이더(shadow_depth.hlsl)가 기준이다. 덮는 모양이나 정점 자리를 머티리얼 코드가 정하면
-         *          그 셰이더는 같은 모양을 못 만든다 — 알파 컷오프(머리카락 카드가 사각형 그림자를 드리운다)와 정점 변형(흔드는 식생의 그림자가 서 있다).
-         *          언리얼이 Masked · World Position Offset 머티리얼만 자기 깊이 · 그림자 셰이더를 컴파일하고 나머지는 기본 머티리얼의 것을 나눠 쓰는 것과 같다.
-         *          정점 변형은 그림자 패스만 갈아탄다 — 깊이 프리패스는 그 머티리얼을 빼므로(shadow_depth.hlsl 의 `MATERIAL_VERTEX_DEFORM`) 어긋날 깊이가 없다.
-         *          그림자를 끈 머티리얼은 패스 셰이더가 정점을 모아 그리지 않으므로 갈아타지 않는다.
-         *          갈아타는 머티리얼 셰이더는 `SW_PASS_SHADOW`(알파 컷오프면 `SW_PASS_DEPTH_PREPASS` 도) 퍼뮤테이션을 가져야 한다.
-         *          런타임 PSO 변형(`FrameRenderer::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
-         */
-        static bool usesMaterialShaderForDepth( RenderPassType passType, const vector<string>* pListMaterialDefine )
-        {
-            if ( isDepthOnlyPassType( passType ) == false )
-                return false;
-            const bool bShadowPass = passType == RenderPassType::Shadow;
-            if ( bShadowPass && hasMaterialDefine( pListMaterialDefine, kMaterialShadowCastOffDefine ) )
-                return false;
-            // 변위는 두 깊이 패스 모두 갈아탄다 — 윤곽이 바뀌므로 깊이 프리패스도 같은 자리를 써야 본 패스의 깊이 비교를 통과한다.
-            if ( hasMaterialDefine( pListMaterialDefine, kMaterialAlphaCutoffDefine ) || hasMaterialDefine( pListMaterialDefine, kMaterialDisplacementDefine ) )
-                return true;
-            return bShadowPass && hasMaterialDefine( pListMaterialDefine, kMaterialVertexDeformDefine );
-        }
-
-        /**
-         * @brief 이 패스가 이 머티리얼의 배치를 헐 · 도메인 스테이지(머티리얼 셰이더의 `HSMain` · `DSMain`)를 붙여 그리는지 반환합니다.
-         * @details 머티리얼 셰이더로 그리는 패스(본 · G버퍼 · 외곽선)와 머티리얼 셰이더로 갈아탄 깊이 패스가 변위 머티리얼(`MATERIAL_DISPLACEMENT`)을 그릴 때다.
-         *          패스 셰이더로 그리는 배치는 머티리얼의 헐 · 도메인을 모른다. 런타임 PSO 변형(`FramePSOManager::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
-         */
-        static bool isMaterialTessellated( RenderPassType passType, const vector<string>* pListMaterialDefine )
-        {
-            if ( hasMaterialDefine( pListMaterialDefine, kMaterialDisplacementDefine ) == false )
-                return false;
-            return usesMaterialShader( passType ) || usesMaterialShaderForDepth( passType, pListMaterialDefine );
-        }
-
-        /**
-         * @brief 깊이 패스가 머티리얼 셰이더로 그릴 때 픽셀 스테이지가 있는지 반환합니다 — 알파 컷오프만 있다(버리기가 픽셀에서 일어난다).
-         * @details 정점 변형만이면 정점 스테이지뿐이다. 컬러 출력이 없으므로 픽셀 셰이더는 아무것도 쓰지 않고 `clip` 만 한다.
-         */
-        static bool hasMaterialDepthPixelStage( RenderPassType passType, const vector<string>* pListMaterialDefine )
-        {
-            return usesMaterialShaderForDepth( passType, pListMaterialDefine ) && hasMaterialDefine( pListMaterialDefine, kMaterialAlphaCutoffDefine );
-        }
-
-        /**
-         * @brief 깊이만 쓰는 패스가 패스 셰이더(shadow_depth.hlsl)로 등장 디더 변형을 그릴 때 픽셀 스테이지를 붙이는지 반환합니다.
-         * @details 패스 셰이더의 깊이 패스는 컬러 출력이 없어 픽셀 스테이지가 없다(`hasPixelStage`). 등장 디더는 픽셀을 버리므로 그 변형에만 붙인다 —
-         *          붙이지 않으면 프리패스가 물체의 깊이를 다 써 기본 패스가 버린 픽셀 자리에 뒤의 물체가 그려지지 않는다(구멍).
-         *          머티리얼 셰이더로 그리는 깊이 배치(알파 컷오프)는 그 셰이더의 픽셀 스테이지가 이미 있고, 정점 변형만인 배치는 디더 없이 깊이를 쓴다.
-         *          런타임 PSO 변형(`FrameRenderer::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
-         */
-        static bool needsAppearanceDitherPixelStage( RenderPassType passType, const vector<string>* pListMaterialDefine )
-        {
-            return isDepthOnlyPassType( passType ) && usesMaterialShaderForDepth( passType, pListMaterialDefine ) == false &&
-                   hasMaterialDefine( pListMaterialDefine, kAppearanceDitherDefine );
-        }
-
-        /**
-         * @brief 이 패스 타입이 셰이더에 **추가하는 define** 입니다. 파이프라인 XML 의 `_listPermutation` 위에 더해집니다.
-         * @details G버퍼 패스는 픽셀 출력 서명을 MRT 로 바꾸려고 `SW_PASS_GBUFFER=1` 을 C++ 에서 추가한다. 그래서 "이 패스의
-         *          define 집합" 은 XML 만 보고 답하면 런타임과 어긋난다. 런타임과 쿠커가 같은 테이블(`RenderPassTypeInfo`)을 본다.
-         */
-        static vector<string> getPassDefine( RenderPassType passType )
-        {
-            vector<string> listDefine;
-            const utf8*    pDefine = getRenderPassTypeInfo( passType )._pPassDefine;
-            if ( pDefine != nullptr )
-                listDefine.push_back( string{ pDefine } );
-            return listDefine;
-        }
-
-        /**
-         * @brief 이 패스에 뷰 모드(Unlit, Wireframe, Normals, Depth, Overdraw)를 적용하는지 반환합니다.
-         * @details 화면 색을 만드는 지오메트리 패스만 해당한다. 그림자와 뎁스 프리패스는 **제외한다**.
-         *          와이어프레임으로 그림자를 구우면 그림자가 선 몇 개로 남고, 뎁스 프리패스를
-         *          와이어프레임으로 채우면 이후 패스의 뎁스 테스트가 삼각형 내부를 모두 버려 화면이 빈다.
-         *          둘 다 "보기 방식" 이 아니라 다음 패스의 입력이므로 항상 Solid, Lit 로 둔다.
-         * @note 메시 외곽선 패스는 머티리얼 셰이더를 쓰지만 뷰 모드를 받지 않습니다. 외곽선은 보기 방식이 아니라 화면의 일부이기 때문입니다.
-         */
-        static bool shouldApplyViewMode( RenderPassType passType )
-        {
-            return getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kAppliesViewMode );
-        }
-
-        /**
-         * @brief 이 뷰 모드가 셰이더에 추가하는 define 입니다. 셰이더를 바꾸지 않는 모드(Lit, Wireframe)는 nullptr 입니다.
-         * @details 런타임 PSO 변형(`FrameRenderer::createMaterialPSOVariant`)과 셰이더 쿠커가 함께 보는 원본이다. 쿠커는
-         *          `RenderViewMode` 를 끝까지 훑어 define 이 있는 모드마다 변형을 쿠킹한다. 모드를 추가하면 쿠킹하는 목록이 따라온다.
-         */
-        static const utf8* findViewModeDefine( RenderViewMode viewMode ) { return getRenderViewModeInfo( viewMode )._pShaderDefine; }
-
-        /**
-         * @brief 패스 서술 없이 패스 종류 테이블만으로 만든 엔진 PSO 에 픽셀 스테이지가 있는지 반환합니다.
-         * @details 파이프라인에 그 종류의 패스가 없으면 `createPSOForPassType` 은 테이블의 컬러 타깃 수로 PSO 를 만들고, 0이면 PS 를
-         *          붙이지 않는다. 쿠커가 같은 판정으로 쿠킹한다. 서술이 있는 패스는 `hasPixelStage( pass, listAttachment )` 를 쓴다.
-         */
-        static bool hasPixelStage( RenderPassType passType )
-        {
-            return getRenderPassTypeInfo( passType )._colorTargetCount > 0;
-        }
         // 이름 목록에서 있는 첫 첨부를 고르던 도우미(`pickFirstExisting`)는 지웠다 — 선언 대신 이름으로 짐작하는 모양이라 다시 쓰지 못하게 했다.
     };
 } // namespace sw
@@ -569,7 +364,7 @@ namespace sw
         hashed_string _light2DCookieAtlas{ "Light2DCookieAtlas" };
         /// 자동 노출의 이번 프레임 EV(1x1, 뷰의 `_arrAutoExposure`) — 톤맵하는 패스가 `g_AutoExposureIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
         hashed_string _autoExposure{ "AutoExposure" };
-        /// 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUT`, `FramePostProcessTextureSet`) — 톤맵하는 패스가 `g_ColorGradingLUTIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
+        /// 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUT`, `PathTextureSet`) — 톤맵하는 패스가 `g_ColorGradingLUTIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
         hashed_string _colorGradingLUT{ "ColorGradingLUT" };
         /// 겹친 볼륨이 섞는 둘째 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUTBlend`) — 톤맵하는 패스가 `g_ColorGradingLUTBlendIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
         hashed_string _colorGradingLUTBlend{ "ColorGradingLUTBlend" };

@@ -3,7 +3,6 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/RenderState/RenderState.h"
-#include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
 using namespace sw;
@@ -12,12 +11,12 @@ using namespace sw;
 SW_TEST_CASE( MaterialRenderStateTest, ScopeComesFromThePassTable )
 {
     using Scope = RenderStateOverride::Scope;
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::Transparent ) == Scope::FixedAndBlend );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::ForwardOpaque ) == Scope::FixedAndBlend );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::ForwardOpaqueNoDepthWrite ) == Scope::FixedAndBlend );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::ForwardOnlyOpaque ) == Scope::FixedAndBlend );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::GBuffer ) == Scope::FixedState );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::Shadow ) == Scope::CullOnly );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::DepthPrepass ) == Scope::CullOnly );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::MeshOutline ) == Scope::CullOnly );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::Transparent ).getMaterialStateScope() == Scope::FixedAndBlend );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::ForwardOpaque ).getMaterialStateScope() == Scope::FixedAndBlend );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::ForwardOpaqueNoDepthWrite ).getMaterialStateScope() == Scope::FixedAndBlend );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::ForwardOnlyOpaque ).getMaterialStateScope() == Scope::FixedAndBlend );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::GBuffer ).getMaterialStateScope() == Scope::FixedState );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::Shadow ).getMaterialStateScope() == Scope::CullOnly );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::DepthPrepass ).getMaterialStateScope() == Scope::CullOnly );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::MeshOutline ).getMaterialStateScope() == Scope::CullOnly );
 }

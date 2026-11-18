@@ -103,7 +103,7 @@ namespace sw
         /// @brief 추가 뷰의 그림자 패스 컬링 입력(행렬 · 절두체 · 자기 컬링 상수 버퍼)입니다. 주 시점은 `_arrView[Shadow]` 를 씁니다.
         RenderView _shadowCullInput;
         uint32     _cullSlot{ 0 };
-        uint32     _shadowCullSlot{ static_cast<uint32>( RenderViewType::Shadow ) }; ///< 그림자 패스가 쓰는 컬링 슬롯(주 시점은 1, 추가 뷰는 자기 슬롯)
+        uint32     _shadowCullSlot{ static_cast<uint32>( RenderViewKind::Shadow ) }; ///< 그림자 패스가 쓰는 컬링 슬롯(주 시점은 1, 추가 뷰는 자기 슬롯)
         uint32     _outputWidth{ 0 };                                                ///< 출력 크기(렌더 텍스처, 화면 사각형)
         uint32     _outputHeight{ 0 };
         uint32     _shadowMapResolution{ 0 };                           ///< 풀이 가진 그림자 맵 한 변(0이면 아직 없음). 품질이 바뀌면 풀을 다시 만든다.
@@ -130,7 +130,7 @@ namespace sw
         /// 자동 노출 기록(지금 EV · 목표 EV)을 되읽는 중인 티켓입니다. 무효면 읽는 중이 아니다. 렌더 스레드가 프레임을 넘어 쥐므로 `PendingReadback`(쥔 동안 대기 전송 단언)이 아니라
         /// 날 티켓으로 둔다(`RenderThread::readRequestedRenderTarget` 와 같다) — 놓기는 `FrameAutoExposure::releaseAutoExposureHistory`.
         RHITransferTicket _exposureReadbackTicket{};
-        /// @brief 이번 프레임 이 뷰가 읽는 컬러 그레이딩 LUT 입니다(읽힌 것만, 없으면 nullptr). 셋업(`applyViewPassConstants`)이 정하고 패스가 역할 이름으로 건다 — 수명은 `FramePostProcessTextureSet` 가 쥔다.
+        /// @brief 이번 프레임 이 뷰가 읽는 컬러 그레이딩 LUT 입니다(읽힌 것만, 없으면 nullptr). 셋업(`applyViewPassConstants`)이 정하고 패스가 역할 이름으로 건다 — 수명은 `PathTextureSet` 가 쥔다.
         const Texture2D* _pColorGradingLUT{ nullptr };
         /// @brief 이번 프레임 이 뷰가 섞는 둘째 LUT 입니다(두 LUT 가 다 읽혔을 때만, 아니면 nullptr — 섞는 무게는 `g_GradeLUT.z`). LUT 와 같은 규칙이다.
         const Texture2D* _pColorGradingLUTBlend{ nullptr };

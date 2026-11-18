@@ -57,16 +57,16 @@ SW_TEST_CASE( RHIReleaseQueueTest, GPUFenceRelease )
 
     queue.enqueueGPURelease( releaseDel, 4 );
     SW_EXPECT_EQUAL( 1u, queue.getPendingReleaseCount() );
-    queue.tickCompleted( 3 );
+    queue.releaseCompleted( 3 );
     SW_EXPECT_FALSE( bDestroyed );
-    queue.tickCompleted( 4 );
+    queue.releaseCompleted( 4 );
     SW_EXPECT_TRUE( bDestroyed );
     SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
 }
 
 /**
- * @brief [RHIReleaseQueueTest] 두 스레드가 tickCompleted 를 동시에 불러도 콜백이 한 번씩만 돈다
- * @details DX12 는 렌더 스레드의 endFrame 과 리소스를 만드는 스레드의 업로드 펜스 대기가 둘 다 tickCompleted 를 부른다.
+ * @brief [RHIReleaseQueueTest] 두 스레드가 releaseCompleted 를 동시에 불러도 콜백이 한 번씩만 돈다
+ * @details DX12 는 렌더 스레드의 endFrame 과 리소스를 만드는 스레드의 업로드 펜스 대기가 둘 다 releaseCompleted 를 부른다.
  *          스크래치 목록을 잠금 없이 바꾸던 때는 두 tick 이 같은 벡터를 동시에 만졌다.
  */
 SW_TEST_CASE( RHIReleaseQueueTest, ConcurrentTicksRunEachCallbackOnce )
@@ -84,12 +84,12 @@ SW_TEST_CASE( RHIReleaseQueueTest, ConcurrentTicksRunEachCallbackOnce )
     {
         for ( uint32 index = 0; index < kCount; ++index )
         {
-            queue.tickCompleted( index );
+            queue.releaseCompleted( index );
         }
     } );
     for ( uint32 index = 0; index < kCount; ++index )
     {
-        queue.tickCompleted( index );
+        queue.releaseCompleted( index );
     }
     otherThread.join();
     SW_EXPECT_EQUAL( kCount, calledCount.load() );

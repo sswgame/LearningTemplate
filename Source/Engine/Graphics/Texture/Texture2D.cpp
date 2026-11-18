@@ -731,17 +731,6 @@ namespace sw
         return submit._result;
     }
 
-    void Texture2D::detachRHI( Texture2DRetiredResource& outRetired )
-    {
-        // 렌더 타깃은 위쪽 밉 교체가 없다 — 그 새 텍스처가 있으면 이 함수의 대상이 아니다. 0 채우기가 아직 안 끝났으면 그 티켓은 버린다(옛 텍스처는 해제 줄로 간다 · 전송 중 파괴는 계약 6).
-        SW_ASSERT( _upgrade._handle == 0 );
-        outRetired._handle = _handle.exchange( 0, std::memory_order_acq_rel );
-        outRetired._srv    = _srv.exchange( kInvalidDescriptorIndex, std::memory_order_acq_rel );
-        _uploadTicket      = RHITransferTicket{};
-        _pDevice           = nullptr;
-        _streamedMipCount  = 0;
-    }
-
     void Texture2D::releaseRHIKeepingSRV( IRHIDevice* pDevice )
     {
         const RHIDescriptorIndex kept = takeKeptSRV();

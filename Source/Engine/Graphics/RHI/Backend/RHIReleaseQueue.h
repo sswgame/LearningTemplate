@@ -65,7 +65,7 @@ namespace sw
         }
 
         /** @brief 완료된 GPU 펜스 이하의 해제 콜백을 실행합니다. */
-        void tickCompleted( uint64 completedFence );
+        void releaseCompleted( uint64 completedFence );
 
         /** @brief 대기 중인 해제를 모두 즉시 실행합니다. */
         void flushAll();

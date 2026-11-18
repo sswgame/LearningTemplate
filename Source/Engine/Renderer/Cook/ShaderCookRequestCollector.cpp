@@ -288,7 +288,7 @@ namespace sw
                             continue;
 
                         // 씬 메시를 그리는 패스는 머티리얼과의 조합까지 쿠킹해야 한다(5단계).
-                        if ( FrameRendererUtil::shouldDrawSceneMeshes( pass._type ) )
+                        if ( getRenderPassTypeInfo( pass._type ).shouldDrawSceneMeshes() )
                         {
                             MeshPassInfo passInfo;
                             passInfo._shaderPath          = passShader._shaderPath;
@@ -297,8 +297,8 @@ namespace sw
                             passInfo._listPermutation     = passShader._listDefine;
                             passInfo._passType            = pass._type;
                             passInfo._listOrigin          = pipelineOrigin;
-                            passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._type );
-                            passInfo._bAppliesViewMode    = FrameRendererUtil::shouldApplyViewMode( pass._type );
+                            passInfo._bUsesMaterialShader = getRenderPassTypeInfo( pass._type ).usesMaterialShader();
+                            passInfo._bAppliesViewMode    = getRenderPassTypeInfo( pass._type ).shouldApplyViewMode();
                             passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( pass, pipelineResource.getDesc()._listAttachment );
                             outListMeshPass.push_back( std::move( passInfo ) );
                         }
@@ -345,9 +345,9 @@ namespace sw
                     passInfo._listPermutation     = slotShader._listDefine;
                     passInfo._passType            = slotType;
                     passInfo._listOrigin          = listOrigin;
-                    passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( slotType );
-                    passInfo._bAppliesViewMode    = FrameRendererUtil::shouldApplyViewMode( slotType );
-                    passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( slotType );
+                    passInfo._bUsesMaterialShader = slotInfo.usesMaterialShader();
+                    passInfo._bAppliesViewMode    = slotInfo.shouldApplyViewMode();
+                    passInfo._bHasPixelStage      = slotInfo.hasPixelStage();
                     outListMeshPass.push_back( std::move( passInfo ) );
                     appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, slotShader._listDefine, listOrigin );
                     appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, slotShader._listDefine, listOrigin );
@@ -381,7 +381,7 @@ namespace sw
                         appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, listComputeDefine, {} );
                         continue;
                     }
-                    if ( FrameRendererUtil::shouldDrawSceneMeshes( passType ) )
+                    if ( info.shouldDrawSceneMeshes() )
                     {
                         const RenderPassShaderSelection passShader = selectRenderPassShader( passType, nullptr, nullptr, engineDefaultAssets );
                         MeshPassInfo                    passInfo;
@@ -390,9 +390,9 @@ namespace sw
                         passInfo._pixelEntryPoint     = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
                         passInfo._listPermutation     = passShader._listDefine;
                         passInfo._passType            = passType;
-                        passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( passType );
-                        passInfo._bAppliesViewMode    = FrameRendererUtil::shouldApplyViewMode( passType );
-                        passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( passType );
+                        passInfo._bUsesMaterialShader = info.usesMaterialShader();
+                        passInfo._bAppliesViewMode    = info.shouldApplyViewMode();
+                        passInfo._bHasPixelStage      = info.hasPixelStage();
                         outListMeshPass.push_back( std::move( passInfo ) );
                     }
                     // define 은 런타임이 서술 없이 만드는 엔진 PSO 와 같은 함수(selectRenderPassShader — 표의 패스 define 포함)로 정한다. 빈 목록으로 쿠킹하면
@@ -487,7 +487,7 @@ namespace sw
              * @details FrameRenderer::createMaterialPSOVariant 는 패스 PSO 의 define 위에 머티리얼 define 을, 그 위에 뷰 모드 define 을 얹어 변형 PSO 를
              *          만든다. 런타임이 찾는 것은 셋의 합집합이고, 머티리얼이 없는 배치(ensureMaterialPSOs 의 퍼뮤테이션 없는 요청)도 패스 define 위에
              *          뷰 모드를 얹는다. 쿠킹하지 않은 조합은 Shipping 에서 PSO 생성이 실패하고 패스 PSO 로 물러나 **조용히 Lit 으로** 그려지거나(뷰 모드)
-             *          드로우가 사라진다(머티리얼). 뷰 모드 define 은 런타임과 같은 FrameRendererUtil::findViewModeDefine 에서 얻는다. Wireframe 처럼
+             *          드로우가 사라진다(머티리얼). 뷰 모드 define 은 런타임과 같은 표(`getRenderViewModeInfo` 의 `_pShaderDefine`)에서 얻는다. Wireframe 처럼
              *          래스터라이저 상태만 바꾸는 모드는 define 이 없어 새 바이트코드가 필요 없다.
              */
             static void collectMeshPassVariantRequests( const vector<MeshPassInfo>& listMeshPass, const vector<MaterialVariantInfo>& listMaterialVariant,
@@ -552,19 +552,19 @@ namespace sw
                     {
                         const MaterialVariantInfo& variant = *listUniqueVariant[variantIndex];
                         // 패스가 그리지 않는 머티리얼(외곽선 패스 · 외곽선을 켜지 않은 머티리얼)은 런타임도 변형을 만들지 않는다.
-                        if ( FrameRendererUtil::shouldDrawMaterialInPass( passInfo._passType, &variant._listDefine ) == false )
+                        if ( getRenderPassTypeInfo( passInfo._passType ).shouldDrawMaterial( &variant._listDefine ) == false )
                             continue;
                         // 후처리 머티리얼은 메시에 붙지 않는다 — 풀스크린 VS · PS(정의 없는 변형, 4 단계)만 쓴다(`FramePostProcessMaterials` 의 확장 프로그램 PSO).
                         if ( VectorUtil::contains( variant._listDefine, string( kMaterialDomainPostProcessDefine ) ) )
                             continue;
                         // 머티리얼 셰이더를 쓰는 패스만 .hlsl 을 갈아탄다. 그림자 · 뎁스는 자기 셰이더에 define 만 얹고, 모양을 머티리얼이 정하는
                         // 배치(알파 컷오프 · 정점 변형)만 머티리얼 셰이더로 그린다(createMaterialPSOVariant 와 같은 판정).
-                        const bool    bMaterialDepthShader = FrameRendererUtil::usesMaterialShaderForDepth( passInfo._passType, &variant._listDefine );
+                        const bool    bMaterialDepthShader = getRenderPassTypeInfo( passInfo._passType ).usesMaterialShaderForDepth( &variant._listDefine );
                         const string& shaderPath           = ( passInfo._bUsesMaterialShader || bMaterialDepthShader ) ? variant._shaderPath : passInfo._shaderPath;
                         const bool    bHasPixelStage =
-                            bMaterialDepthShader ? FrameRendererUtil::hasMaterialDepthPixelStage( passInfo._passType, &variant._listDefine )
-                                                    : ( passInfo._bHasPixelStage || FrameRendererUtil::needsAppearanceDitherPixelStage( passInfo._passType, &variant._listDefine ) );
-                        const bool          bTessellates = FrameRendererUtil::isMaterialTessellated( passInfo._passType, &variant._listDefine );
+                            bMaterialDepthShader ? getRenderPassTypeInfo( passInfo._passType ).hasMaterialDepthPixelStage( &variant._listDefine )
+                                                    : ( passInfo._bHasPixelStage || getRenderPassTypeInfo( passInfo._passType ).needsAppearanceDitherPixelStage( &variant._listDefine ) );
+                        const bool          bTessellates = getRenderPassTypeInfo( passInfo._passType ).isMaterialTessellated( &variant._listDefine );
                         vector<OriginGroup> listOriginGroup;
                         listOriginGroup.reserve( listPassOrigin.size() * listVariantOrigins[variantIndex].size() );
                         for ( const vector<string>& passOrigin : listPassOrigin )
@@ -585,7 +585,7 @@ namespace sw
                             continue;
                         for ( uint32 viewModeIndex = 0; viewModeIndex < static_cast<uint32>( RenderViewMode::Count ); ++viewModeIndex )
                         {
-                            const utf8* pViewModeDefine = FrameRendererUtil::findViewModeDefine( static_cast<RenderViewMode>( viewModeIndex ) );
+                            const utf8* pViewModeDefine = getRenderViewModeInfo( static_cast<RenderViewMode>( viewModeIndex ) )._pShaderDefine;
                             if ( pViewModeDefine == nullptr )
                                 continue;
                             appendMeshPassRequest( outListRequest, passInfo, drawVariant, mergeDefines( drawVariant._listDefine, { string( pViewModeDefine ) } ) );

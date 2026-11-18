@@ -9,7 +9,6 @@
 #include "Engine/Environment/Surface/SurfaceDeformBinding.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
-#include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"

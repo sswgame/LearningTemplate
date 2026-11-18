@@ -232,7 +232,7 @@ namespace sw
         _snapshot.clearParticles();
         _batchElementTable.clear(); // 배치 목록과 나란한 표다. 함께 비운다.
         // 머티리얼 레지스트리는 "그룹 목록(스냅샷)" 과 "셰이더 경로에서 인덱스를 찾는 맵" 이 한 몸이다. 목록만 지우면 맵이 옛 인덱스를
-        // 반환하고 GPUMaterialRegistry::findOrAddMaterialGroup 가 범위 밖이라 조용히 건너뛴다. 그러면 배치에 머티리얼 버퍼가 실리지 않아 폴백(0)으로
+        // 반환하고 GPUMaterialRegistry::getOrCreateMaterialGroup 가 범위 밖이라 조용히 건너뛴다. 그러면 배치에 머티리얼 버퍼가 실리지 않아 폴백(0)으로
         // 그려지고, 투명 머티리얼은 알파 0이라 화면에서 사라진다(백엔드 교체 뒤 유리 큐브가 없어지던 원인이다).
         _materialRegistry.reset( _snapshot );
         _listScratchCandidate.clear();
@@ -1632,7 +1632,7 @@ namespace sw
             SW_PROFILE_SCOPE( "GT.VFX.sortParticles" );
             if ( batch._sortMode == VFXSortMode::ViewDepth )
             {
-                slot._order = VFXParticleOrder::appendViewDepth( vector_reference<const GPUParticle>( *pListParticle ), batch._world, eye, axis, listOrder );
+                slot._order = VFXParticleOrder::appendViewDepth( vector_reference<const GPUParticle>( *pListParticle ), batch._world, eye, axis, _listScratchParticleDepth, listOrder );
                 continue;
             }
             // 나이 순서는 뷰와 무관하다 — 방출기마다 한 번 만들고 뷰들이 같은 구간을 쓴다.
@@ -2258,7 +2258,7 @@ namespace sw
         batch._bReverseCulling     = headCandidate._bReverseCulling;
         batch._bStaticShadowCaster = headCandidate._bStaticShadowCaster;
         // 상수 버퍼(`_materialCb`)와 텍스처 슬롯은 렌더 스레드가 머리 원소(`_materialIndex`)의 프록시 · 사본으로 채운다(`GPUScene::upload`).
-        batch._materialGroup = _materialRegistry.findOrAddMaterialGroup( pGroupMaterial, _snapshot );
+        batch._materialGroup = _materialRegistry.getOrCreateMaterialGroup( pGroupMaterial, _snapshot );
         // 퍼뮤테이션은 **배치에 실제로 들어 있는 후보**에서 뽑는다. 합치기가 켜지면 키의 인스턴스는 nullptr 이라,
         // 키로 물으면 대표 머티리얼의 define 만 나오고 인스턴스가 켠 키워드가 통째로 빠진다. 그 배치는
         // 잘못된 셰이더로 그려진다. 한 배치의 구성원은 모두 같은 퍼뮤테이션 해시를 가지므로 아무 구성원이나 맞다.

@@ -114,7 +114,7 @@ namespace sw
         GPUPassScope( IRHICommandList& commands, string_view passName );
         /**
          * @brief 구간의 시작 · 끝에 GPU 타임스탬프도 씁니다 — 시작은 @p timestampBeginSlot, 끝은 그 다음 칸(`IRHICommandList::writeTimestamp`).
-         * @details 슬롯이 `kNoTimestamp` 면 쓰지 않는다. 쓸지는 부르는 쪽이 정한다(계측 스위치 `GPUPassTimeline::isRecording` · 칸 배치 `FrameRendererUtil`).
+         * @details 슬롯이 `kNoTimestamp` 면 쓰지 않는다. 쓸지는 부르는 쪽이 정한다(계측 스위치 `GPUPassTimeline::isRecording` · 칸 배치 `GPUTimestampSlotLayout`).
          *          타임스탬프는 이벤트 표지 안쪽이라 캡처 도구에서 같은 구간에 붙는다.
          */
         GPUPassScope( IRHICommandList& commands, string_view passName, uint32 timestampBeginSlot );
