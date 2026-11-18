@@ -539,7 +539,9 @@ namespace sw
         // 컬링 · 지난 뷰-투영(속도 기준)은 받은 @p viewProj(지터 없음)를 쓰고, 화면 속도는 셰이더가 `g_TemporalJitter` 를 빼서 물체 · 카메라 움직임만 남긴다.
         const TransientAttachmentPool& pool = view._transientPool;
         // 기록을 버리는 프레임(처음 · 컷 · 건너뛴 프레임 뒤)은 이번 원본만 남으므로 지터하지 않는다 — 한 장짜리 그림이 흔들리기만 한다.
-        const bool     bJitter   = view._bTAAHistoryWritten == SW_TRUE && view._bTAAHistoryReset == SW_FALSE;
+        const bool bJitter = view._bTAAHistoryWritten == SW_TRUE && view._bTAAHistoryReset == SW_FALSE;
+        if ( bJitter == false )
+            view._temporalJitter.restart(); // 기록이 새로 시작하면 지터도 첫 표본부터 — 그 전에 흐른 프레임 수(앞 씬 · 대기)가 그림을 바꾸지 않는다
         const float2   ndcJitter = bJitter ? view._temporalJitter.advance( pool.getWidth(), pool.getHeight() ) : float2{};
         const float4x4 raster    = TemporalJitterSequence::applyToViewProjection( viewProj, ndcJitter );
         context._passValues.setMatrix( passConstantNames()._viewProj, raster );
