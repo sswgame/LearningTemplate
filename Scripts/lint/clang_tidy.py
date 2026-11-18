@@ -48,6 +48,8 @@ HEADER_EXTENSIONS = {".h", ".hpp"}
 DIAGNOSTIC_PATTERN = re.compile(r"^(?P<path>.+?):(?P<line>\d+):(?P<column>\d+): (?P<level>warning|error): (?P<message>.*?) \[(?P<check>[^\]]+)\]$")
 #: PCH 를 쓰라는 clang-cl 플래그(/Yu<헤더> · /Fp<파일>) — 붙여 쓴 꼴이라 한 낱말이다.
 PCH_USE_PATTERN = re.compile(r'\s/(Yu|Fp)("[^"]*"|\S*)')
+#: 저장소 include 꼴(`#include "Core/…/X.h"` — `Source/` 기준 경로).
+INCLUDE_PATTERN = re.compile(r'^[ \t]*#[ \t]*include[ \t]*"([^"]+)"', re.MULTILINE)
 
 
 def main_tree_root(tree_root: Path) -> Path:
@@ -107,17 +109,59 @@ def changed_files(tree_root: Path, base: str) -> list[Path]:
             if line.strip() and Path(line.strip()).suffix.lower() in SOURCE_EXTENSIONS | HEADER_EXTENSIONS]
 
 
-def select_entries(list_entry: list[dict], list_file: list[Path]) -> tuple[list[dict], list[Path]]:
+class IncludeIndex:
+    """`Source/` 아래 파일의 역 포함 표(include 글 → 그 글을 적은 파일) — 짝 .cpp 가 없는 헤더를 포함하는 TU 를 찾는다. 처음 물을 때 한 번 훑는다."""
+
+    def __init__(self, source_root: Path) -> None:
+        self._source_root = source_root
+        self._map_includer: dict[str, list[Path]] | None = None
+
+    def get_including_files(self, include_key: str) -> list[Path]:
+        if self._map_includer is None:
+            self._map_includer = {}
+            for path in self._source_root.rglob("*"):
+                if path.suffix.lower() not in SOURCE_EXTENSIONS | HEADER_EXTENSIONS or not path.is_file():
+                    continue
+                for included in INCLUDE_PATTERN.findall(path.read_text(encoding="utf-8", errors="replace")):
+                    self._map_includer.setdefault(included.replace("\\", "/").lower(), []).append(path)
+        return self._map_includer.get(include_key.lower(), [])
+
+
+def find_including_unit(header: Path, entry_by_file: dict[str, dict], index: IncludeIndex, source_root: Path) -> dict | None:
+    """@p header 를 (헤더를 거쳐서라도) 포함하는 첫 TU 의 컴파일 DB 항목 — 가까운 것부터 넓게 찾는다. 없으면 None."""
+    visited: set[str] = set()
+    list_pending = [header]
+    while list_pending:
+        current = list_pending.pop(0)
+        try:
+            key = current.resolve().relative_to(source_root.resolve()).as_posix()
+        except ValueError:
+            continue
+        if key.lower() in visited:
+            continue
+        visited.add(key.lower())
+        for includer in index.get_including_files(key):
+            hit = entry_by_file.get(includer.resolve().as_posix().lower())
+            if hit is not None:
+                return hit
+            if includer.suffix.lower() in HEADER_EXTENSIONS:
+                list_pending.append(includer)
+    return None
+
+
+def select_entries(list_entry: list[dict], list_file: list[Path], source_root: Path) -> tuple[list[dict], list[Path]]:
     """
-    파일 목록을 TU 로 바꾼다. 헤더는 같은 폴더 · 같은 이름의 .cpp 로 본다.
-    shortcut: 짝 .cpp 가 없는 헤더는 돌지 않는다(그 헤더를 포함하는 TU 를 찾으려면 포함 그래프가 든다) — 전체 모드가 그 몫이다.
+    파일 목록을 TU 로 바꾼다. 헤더는 같은 폴더 · 같은 이름의 .cpp 로 보고, 짝이 없으면 그 헤더를 포함하는 가장 가까운 TU 로 본다(`find_including_unit`).
     """
     entry_by_file = {entry["file"].lower(): entry for entry in list_entry}
+    index = IncludeIndex(source_root)
     selected: dict[str, dict] = {}
     list_skipped: list[Path] = []
     for path in list_file:
         candidates = [path] if path.suffix.lower() in SOURCE_EXTENSIONS else [path.with_suffix(ext) for ext in sorted(SOURCE_EXTENSIONS)]
         hit = next((entry_by_file[c.resolve().as_posix().lower()] for c in candidates if c.resolve().as_posix().lower() in entry_by_file), None)
+        if hit is None and path.suffix.lower() in HEADER_EXTENSIONS:
+            hit = find_including_unit(path, entry_by_file, index, source_root)
         if hit is None:
             list_skipped.append(path)
         else:
@@ -154,9 +198,9 @@ def main(argv: list[str] | None = None) -> int:
 
     list_skipped: list[Path] = []
     if args.changed is not None:
-        list_entry, list_skipped = select_entries(list_entry, changed_files(tree_root, args.changed))
+        list_entry, list_skipped = select_entries(list_entry, changed_files(tree_root, args.changed), tree_root / "Source")
     elif args.files:
-        list_entry, list_skipped = select_entries(list_entry, [path if path.is_absolute() else tree_root / path for path in args.files])
+        list_entry, list_skipped = select_entries(list_entry, [path if path.is_absolute() else tree_root / path for path in args.files], tree_root / "Source")
     for path in list_skipped:
         print(f"[tidy] 건너뜀(컴파일 DB 에 TU 가 없다): {path}")
     if args.checks:
