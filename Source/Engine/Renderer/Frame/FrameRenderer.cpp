@@ -993,10 +993,13 @@ namespace sw
         _upscale.prepareUpscale( _state._mainView, viewportWidth, viewportHeight );
         _postProcessMaterials.prepareView( _state._mainView );
         _capture.ensurePresent( _state._outputWidth, _state._outputHeight );
-        // 주 출력이 화면일 때만 회전 대기 텍스처가 있다(돌리지 않는 장치는 놓기만 한다). 호스트 타깃(에디터 게임 뷰 · 화면 밖 렌더러)은 화면에 쓰지 않는다.
-        // shortcut: 호스트 타깃과 회전이 함께인 실행(회전한 기기의 에디터)은 렌더 스레드 UI 가 돌리지 않고 스왑체인에 쓴다, 그런 호스트가 생기면 대기 텍스처를 장치 논리 크기로 따로 둔다.
-        const bool bScreenOutput = _state._outputRenderTarget == 0;
-        _screenRotation.prepare( bScreenOutput ? _state._outputWidth : 0u, bScreenOutput ? _state._outputHeight : 0u );
+        // 회전 대기 텍스처는 화면의 논리 크기다(돌리지 않는 장치는 놓기만 한다). 주 출력이 화면이면 출력 크기, 호스트 타깃(회전한 기기의 에디터 게임 뷰)이면
+        // 주 출력은 그 타깃에 가지만 렌더 스레드 UI · 개발 겹치기는 여전히 화면에 쓰므로 스왑체인의 논리 크기로 둔다 — 화면에 쓰는 모든 것이 한 번에 돈다.
+        // 스왑체인이 없는 화면 밖 렌더러는 백버퍼 크기 0 · 회전 없음이라 대기 텍스처가 없다.
+        const bool   bScreenOutput = _state._outputRenderTarget == 0;
+        const uint32 screenWidth   = bScreenOutput ? _state._outputWidth : ( _pDevice != nullptr ? _pDevice->getBackBufferWidth() : 0u );
+        const uint32 screenHeight  = bScreenOutput ? _state._outputHeight : ( _pDevice != nullptr ? _pDevice->getBackBufferHeight() : 0u );
+        _screenRotation.prepare( screenWidth, screenHeight );
     }
 
     void FrameRenderer::releaseTransientResources()
