@@ -60,7 +60,7 @@ namespace sw
         , _listMetricLine{}
         , _listRecordLine{}
         , _listWatch{}
-        , _listStored{}
+        , _stored{}
     {
         SW_ASSERT( _pLogPolicy != nullptr );
     }
@@ -133,12 +133,7 @@ namespace sw
         {
             // 기억한 값과는 글 그대로 비교한다 — 64 비트 해시 같은 값이 수 비교(float32)에서 뭉개지지 않는다.
             const string& name    = pSameAs != nullptr ? *pSameAs : *pDiffersFrom;
-            const string* pStored = nullptr;
-            for ( const StoredValue& stored : _listStored )
-            {
-                if ( stored._name == name )
-                    pStored = &stored._text;
-            }
+            const string* pStored = _stored.find( name );
             if ( pStored == nullptr )
             {
                 outMessage = subject + ": nothing was stored as '" + name + "' (add <Store as=\"" + name + "\"> before this step)";
@@ -167,14 +162,9 @@ namespace sw
         if ( const string* pOppositeOf = step.findAttribute( "oppositeOf" ); pOppositeOf != nullptr )
         {
             // 기억한 수의 부호를 뒤집은 값과 허용 폭 안이다(미러가 좌우 본의 X 를 뒤집었는지). 수끼리 보므로 글 비교(sameAs)의 자릿수 차이에 지지 않는다.
-            const StoredValue* pStored = nullptr;
-            for ( const StoredValue& entry : _listStored )
-            {
-                if ( entry._name == *pOppositeOf )
-                    pStored = &entry;
-            }
-            float32 remembered = 0.0f;
-            if ( pStored == nullptr || StringUtil::parseFloat( string_view{ pStored->_text }, remembered ) == false )
+            const string* pStored    = _stored.find( *pOppositeOf );
+            float32       remembered = 0.0f;
+            if ( pStored == nullptr || StringUtil::parseFloat( string_view{ *pStored }, remembered ) == false )
             {
                 outMessage = subject + ": no number was remembered as '" + *pOppositeOf + "' (add <Remember as=\"" + *pOppositeOf + "\"> on a number watch before this step)";
                 return false;
@@ -184,19 +174,14 @@ namespace sw
                 return false; // 검사가 본다 — 단계가 바뀌었다(핫 리로드)
             bOk        = MathUtil::abs( value._number + static_cast<float64>( remembered ) ) <= static_cast<float64>( tolerance );
             outMatched = bOk;
-            outMessage = subject + " opposite of " + *pOppositeOf + " ('" + pStored->_text + "'), got " + valueText;
+            outMessage = subject + " opposite of " + *pOppositeOf + " ('" + *pStored + "'), got " + valueText;
             return true;
         }
         if ( const string* pIncreaseFrom = step.findAttribute( "increaseFrom" ); pIncreaseFrom != nullptr )
         {
             // 기억한 수에서 increaseBy 이상 늘었다(그린 프레임 수 같은 누적 값 — "앞으로 N 장 더" 를 고정 대기 대신 센다).
-            const StoredValue* pStored = nullptr;
-            for ( const StoredValue& entry : _listStored )
-            {
-                if ( entry._name == *pIncreaseFrom )
-                    pStored = &entry;
-            }
-            const expected<bool> increaseMatch = Internal::matchesIncrease( step, value._number, pStored != nullptr ? &pStored->_text : nullptr );
+            const string*        pStored       = _stored.find( *pIncreaseFrom );
+            const expected<bool> increaseMatch = Internal::matchesIncrease( step, value._number, pStored );
             if ( increaseMatch.has_value() == false )
             {
                 outMessage = subject + " (increaseFrom '" + *pIncreaseFrom + "'): " + AutomationStep::describeReason( increaseMatch.error() );
@@ -204,7 +189,7 @@ namespace sw
             }
             bOk        = *increaseMatch;
             outMatched = bOk;
-            outMessage = subject + " increase by " + *step.findAttribute( "increaseBy" ) + " from " + *pIncreaseFrom + " ('" + pStored->_text + "'), got " + valueText;
+            outMessage = subject + " increase by " + *step.findAttribute( "increaseBy" ) + " from " + *pIncreaseFrom + " ('" + *pStored + "'), got " + valueText;
             return true;
         }
         if ( step.findAttribute( "is" ) != nullptr )
@@ -360,15 +345,7 @@ namespace sw
         const string name = step.readValidatedProperties<AutomationStoreParams>()._as;
         string       text = AutomationStepArgsUtil::makeValueText( value );
         SW_LOG_INFO_ID( "Automation.FrameStore", "[Scenario] frame %# store %# = %# (%#)", context.getFrameIndex(), name.c_str(), text.c_str(), message.c_str() );
-        for ( StoredValue& stored : _listStored )
-        {
-            if ( stored._name == name )
-            {
-                stored._text = std::move( text );
-                return;
-            }
-        }
-        _listStored.push_back( StoredValue{ name, std::move( text ) } );
+        _stored.set( name, std::move( text ) );
     }
 
     void AutomationEvaluator::runExpectLog( AutomationStepContext& context, const AutomationStep& step )
@@ -686,7 +663,7 @@ namespace sw
     {
         _pLogPolicy->prepare( scenario );
         prepareWatches( scenario );
-        _listStored.clear();
+        _stored.clear();
         _listUpdatedGolden.clear();
         _listNearLimitGolden.clear();
         _listGoldenSample.clear();

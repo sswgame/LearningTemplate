@@ -357,25 +357,12 @@ namespace sw
 
     void AutomationRunner::storeText( string_view name, string text )
     {
-        for ( StoredText& stored : _listStoredText )
-        {
-            if ( string_view{ stored._name } == name )
-            {
-                stored._text = std::move( text );
-                return;
-            }
-        }
-        _listStoredText.push_back( StoredText{ string( name ), std::move( text ) } );
+        _storedText.set( name, std::move( text ) );
     }
 
     const string* AutomationRunner::findStoredText( string_view name ) const
     {
-        for ( const StoredText& stored : _listStoredText )
-        {
-            if ( string_view{ stored._name } == name )
-                return &stored._text;
-        }
-        return nullptr;
+        return _storedText.find( name );
     }
 
     GameObjectManager* AutomationRunner::findActiveObjectManager() const

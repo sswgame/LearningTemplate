@@ -404,12 +404,6 @@ namespace sw
         AutomationFrameStats          _frameStats{};           ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
         /// 대기 정책(`Config/Dev/ScenarioRun.json` — 정지 시한 · 정착 조건의 문턱). 렌더 정착 · 활동 수가 있는 벽시계 감시 값을 처음 기다릴 때 읽는다(`loadRunPolicy`) — 둘을 기다리지 않는 재생(데모)은 그 파일이 없어도 돈다
         optional<AutomationRunPolicy> _runPolicy{};
-        /** @brief 이 실행 안에서 이름 붙여 기억한 글(`storeText`) — 한 시나리오에 몇 개뿐이라 선형으로 찾는다. */
-        struct StoredText
-        {
-            string _name{};
-            string _text{};
-        };
-        vector<StoredText> _listStoredText{};
+        AutomationTextStore           _storedText{}; ///< 이 실행 안에서 이름 붙여 기억한 글(`storeText`)
     };
 } // namespace sw
