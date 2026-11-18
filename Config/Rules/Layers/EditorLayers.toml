@@ -56,6 +56,9 @@ SelfTest = 7
 [panelViewBan]
 views = [
     "Panels",
+    "Common/Input/CommandPalettePopup.cpp",
+    "Common/Input/EditorCommandGUI.cpp",
+    "Common/Input/QuickLauncherPopup.cpp",
 ]
 patterns = [
     "^Editor/Common/Workspace/",

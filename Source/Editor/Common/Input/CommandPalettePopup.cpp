@@ -4,12 +4,9 @@
 
 #include "Core/String/StringBuilder.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Localization/LocText.h"
 
@@ -37,22 +34,22 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     void CommandPalettePopup::open()
     {
-        editor::getSubsystem<EditorContext>().getSubsystem<EditorPopupManager>().openPopup( kPopupID );
+        EditorPopupManager::getInEditorContext().openPopup( kPopupID );
     }
 
     void CommandPalettePopup::close()
     {
-        editor::getSubsystem<EditorContext>().getSubsystem<EditorPopupManager>().closePopup( kPopupID );
+        EditorPopupManager::getInEditorContext().closePopup( kPopupID );
     }
 
     void CommandPalettePopup::toggle()
     {
-        editor::getSubsystem<EditorContext>().getSubsystem<EditorPopupManager>().togglePopup( kPopupID );
+        EditorPopupManager::getInEditorContext().togglePopup( kPopupID );
     }
 
     bool CommandPalettePopup::isOpen()
     {
-        return editor::getSubsystem<EditorContext>().getSubsystem<EditorPopupManager>().isPopupOpen( kPopupID );
+        return EditorPopupManager::getInEditorContext().isPopupOpen( kPopupID );
     }
 
     // ------------------------------------------------------------------------------
