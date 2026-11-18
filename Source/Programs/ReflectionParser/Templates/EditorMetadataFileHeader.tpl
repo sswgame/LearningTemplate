@@ -4,6 +4,7 @@ $Banner
 
 #include "pch.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
+#include "Engine/Reflection/ReflectionMetadataText.h"
 
 namespace sw::generated::editormetadata
 {

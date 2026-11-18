@@ -79,6 +79,8 @@ namespace sw
         /** @brief 메서드 호출용 invoker 람다를 출력합니다. */
         void emitMethodInvoker( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedFunctionInfo& method,
                                 const string& returnType, const string& callArgs ) const;
+        /** @brief 메서드 표의 생성자 줄 끝 칸(`FunctionDesc::_pConstruct`)을 냅니다 — placement new 한 줄짜리 람다, 파서가 더한 기본 생성자는 `ReflectDefaultCtorOf`. */
+        void emitConstructor( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedFunctionInfo& method, const string& callArgs ) const;
         /** @brief ReflectTypeTraits 특수화를 출력합니다. */
         void emitReflectTypeTraits( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
         /** @brief StaticType / getTypeInfo 접근자를 출력합니다. */

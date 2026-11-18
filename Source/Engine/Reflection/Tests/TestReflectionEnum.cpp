@@ -333,23 +333,27 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )
     }
     SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "sw::CameraRole" ) ) == pRole );
 
-    // 별칭은 같은 객체다 — 다시 등록돼 열거자가 늘면 별칭으로 찾아도 늘어 있다.
+    // 별칭은 같은 객체다 — 다시 등록되면 새 판이 서고(옛 판은 내용 그대로 남는다) 별칭도 새 판을 가리켜 늘어난 열거자를 본다.
     registry.registerEnumAlias( "OldGrowthEnum0", "swtest::GrowthEnum0" );
     const sw::EnumInfo* pGrowth = registry.findEnum( sw::hashed_string( "swtest::GrowthEnum0" ) );
     SW_REQUIRE_NOT_NULL( pGrowth );
     SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "OldGrowthEnum0" ) ) == pGrowth );
     registry.registerEnum( makeEnum( "swtest::GrowthEnum0", 3 ) );
-    SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "swtest::GrowthEnum0" ) ) == pGrowth );
-    const sw::EnumInfo* pByAlias = registry.findEnum( sw::hashed_string( "OldGrowthEnum0" ) );
-    SW_REQUIRE_NOT_NULL( pByAlias );
-    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( pByAlias->_mapValueToName.size() ) );
+    const sw::EnumInfo* pGrowthNew = registry.findEnum( sw::hashed_string( "swtest::GrowthEnum0" ) );
+    SW_REQUIRE_NOT_NULL( pGrowthNew );
+    SW_EXPECT_TRUE( pGrowthNew != pGrowth );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pGrowth->_mapValueToName.size() ) ); // 옛 판은 옛 내용 그대로다
+    SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "OldGrowthEnum0" ) ) == pGrowthNew );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( pGrowthNew->_mapValueToName.size() ) );
 
-    // 모듈이 내려가면 이름으로는 못 찾고, 다시 오르면 같은 자리에 되살아난다.
+    // 모듈이 내려가면 이름으로는 못 찾고, 다시 오르면 새 판으로 선다.
     registry.unregisterTypesByModule( "TestEnumGrowth" );
     SW_EXPECT_NULL( registry.findEnum( sw::hashed_string( "swtest::GrowthEnum0" ) ) );
     SW_EXPECT_NULL( registry.findEnum( sw::hashed_string( "OldGrowthEnum0" ) ) );
     registry.registerEnum( makeEnum( "swtest::GrowthEnum0", 2 ) );
-    SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "swtest::GrowthEnum0" ) ) == pGrowth );
+    const sw::EnumInfo* pGrowthRevived = registry.findEnum( sw::hashed_string( "swtest::GrowthEnum0" ) );
+    SW_REQUIRE_NOT_NULL( pGrowthRevived );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( pGrowthRevived->_mapValueToName.size() ) );
 }
 
 /**

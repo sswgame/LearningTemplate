@@ -173,13 +173,18 @@ namespace sw
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
         const hashed_string shortName     = stored._name; // 아래에서 `stored` 를 옮긴다
 
-        // **주소는 고정이다.** 같은 FQN 이 있으면(재등록, 묘비) 그 객체에 덮어써 복원한다. 밖에서 가진 포인터
-        // (`TypeLookupCache`, `_parentLink`, 컴포넌트 풀 키)가 모두 그대로 맞는다. 새 타입은 새 객체다.
-        // 캐시는 아래에서 이 타입과 자손만 다시 짓는다(배치 안이면 배치 끝이).
+        // 같은 FQN 이 있으면(핫 리로드 · 묘비) **새 객체로 판을 바꾼다**. 옛 객체를 제자리에서 덮으면(`operator=`) 잠금 없이 든 포인터로 목록을 읽던
+        // 스레드가 반쯤 옮겨진 벡터를 본다. 옛 객체는 죽은 채(`isAlive` false) 내용 그대로 레지스트리가 사는 동안 남는다 — 든 포인터의 읽기는 온전한
+        // 옛 내용을 끝까지 보고, 낡음은 살아 있음 · 내용 세대(`PropertyHandle`)로 안다. 이름 조회 · 세대를 담은 캐시(`TypeLookupCache`)는 세대가 올라
+        // 새 객체를 찾고, 자손의 부모 링크는 아래에서 이 타입과 자손을 다시 이을 때 새 객체로 바뀐다(배치 안이면 배치 끝이).
+        // 언리얼 핫 리로드도 새 `UClass` 를 만들고 옛 것(REINST_)을 남겨 둔다.
         if ( existingIt != _mapFqnToClassType.end() )
         {
-            *existingIt->second = std::move( stored );
-            existingIt->second->_castHeader._bAlive.store( SW_TRUE, std::memory_order_release );
+            unique_ptr<TypeInfo>& pSlot = existingIt->second;
+            pSlot->_castHeader._bAlive.store( SW_FALSE, std::memory_order_release );
+            _uniqueBatchRoot.erase( pSlot.get() ); // 배치 안 재등록 — 물러난 판은 자손 찾기의 뿌리가 아니다(새 판을 아래에서 넣는다)
+            _listRetiredClassType.push_back( std::move( pSlot ) );
+            pSlot = make_unique<TypeInfo>( std::move( stored ) );
         }
         else
         {
@@ -279,13 +284,23 @@ namespace sw
         EnumInfo stored = info;
         attachEditorMetadata( stored );
 
-        // 같은 FQN 이면 그 객체에 덮어쓴다(주소 고정이라 별칭과 밖에서 가진 포인터가 새 내용을 본다). 새 enum 은 새 객체다.
-        unique_ptr<EnumInfo>& pOwned = _mapFqnToEnum[stored._fullyQualifiedName];
-        if ( pOwned == nullptr )
-            pOwned = make_unique<EnumInfo>( std::move( stored ) );
-        else
-            *pOwned = std::move( stored );
+        // 같은 FQN 이면 새 객체로 판을 바꾼다(`registerClass` 와 같은 규칙) — 옛 객체에 덮어쓰면 잠금 없이 든 포인터로 이름 표를 읽던 스레드가 옮겨지는 맵을 본다.
+        // 옛 판은 내용 그대로 레지스트리가 사는 동안 남고, 그 판을 가리키던 이름 · 별칭은 새 판으로 옮긴다(세대를 담은 캐시 `EnumNameCache` 는 세대가 올라 다시 찾는다).
+        unique_ptr<EnumInfo>& pOwned   = _mapFqnToEnum[stored._fullyQualifiedName];
+        EnumInfo* const       pRetired = pOwned.get();
+        if ( pRetired != nullptr )
+            _listRetiredEnum.push_back( std::move( pOwned ) );
+        pOwned              = make_unique<EnumInfo>( std::move( stored ) );
         EnumInfo* pEnumInfo = pOwned.get();
+        if ( pRetired != nullptr )
+        {
+            for ( auto& [name, pNamed] : _mapNameToEnum )
+            {
+                (void)name;
+                if ( pNamed == pRetired )
+                    pNamed = pEnumInfo;
+            }
+        }
         _mapNameToEnum.insert_or_assign( pEnumInfo->_fullyQualifiedName, pEnumInfo );
         string wireNameClash;
         assignWireTypeNameLocked( pEnumInfo->_fullyQualifiedName, pEnumInfo->_fullyQualifiedName, WireTypeKind::Enum, wireNameClash );
@@ -466,21 +481,28 @@ namespace sw
         {
             pType->rebuildDerivedCaches();
         }
+        // 판정(세이브 옵트인, 검증 함수 유무, POD)도 **이 잠금 안에서** 모든 상속 목록을 지은 뒤 구한다 — 검증 판정이 칸 타입의 목록을 재귀로 읽는다.
+        // 예전에는 잠금 밖에서 구해 새로 올라온 타입이 판정 없이 보이는 틈이 있었고, 두 쓰기가 같은 타입의 판정 비트를 겹쳐 썼다. 칸 타입은 잠그지 않는 조회로 찾는다.
+        const TypeResolver resolver{ this, &TypeRegistry::findAliveTypeLocked };
+        for ( TypeInfo* pType : listType )
+        {
+            pType->computeDerivedFlags( resolver );
+        }
         _inheritedCacheInvalidations.fetch_add( listType.size(), std::memory_order_relaxed );
+    }
+
+    const TypeInfo* TypeRegistry::findAliveTypeLocked( const void* pContext, const hashed_string& name )
+    {
+        return static_cast<const TypeRegistry*>( pContext )->findTypeLocked( name, false );
     }
 
     void TypeRegistry::rebuildAffected( const vector<TypeInfo*>& listType ) const
     {
-        // 부모 링크 · 조상 표 · 상속 목록은 잠금 안에서 이미 바꿨다(`relinkAffectedLocked`). 여기는 잠금 밖에서만 할 수 있는 것 — 로그와 판정이다.
+        // 부모 링크 · 조상 표 · 상속 목록 · 판정은 잠금 안에서 이미 바꿨다(`relinkAffectedLocked`). 여기는 잠금 밖에서만 할 수 있는 것 — 로그다.
         for ( const TypeInfo* pType : listType )
         {
             if ( pType->_parentFQN.empty() == false && pType->getTypeChain().isLoop() )
                 SW_LOG_ERROR_ID( "Reflection.ParentChainLoop", "Reflection parent chain loops at '%#' - returning own properties only.", pType->_fullyQualifiedName.c_str() );
-        }
-        // 판정(세이브 옵트인, 검증 함수 유무, POD)은 모든 상속 목록을 지은 뒤 구한다 — 검증 판정이 칸 타입의 목록을 재귀로 읽는다. 조회는 읽기만 한다.
-        for ( TypeInfo* pType : listType )
-        {
-            pType->computeDerivedFlags();
         }
         reportFieldNameHashClashes( listType );
     }
@@ -671,7 +693,7 @@ namespace sw
             }
             relinkAffectedLocked( listType );
         }
-        // 판정은 **잠금 밖에서** 구한다(상속 목록은 위 잠금 안에서 바꿨다). 판정이 레지스트리를 다시 잠그는데(`isType`), shared_mutex 는 재귀가 아니라 잠금 안에서 부르면 그 자리에서 멈춘다.
+        // 로그는 **잠금 밖에서** 남긴다(링크 · 상속 목록 · 판정은 위 잠금 안에서 바꿨다) — 리스너가 레지스트리를 다시 물어도 멈추지 않게.
         rebuildAffected( listType );
     }
 
@@ -715,7 +737,7 @@ namespace sw
 
         // 지우지 않고 **묘비**를 남긴다. 밖에서 가진 포인터(`TypeLookupCache` 의 정적 슬롯, 다른 모듈 타입의 부모 포인터)가
         // 허공을 가리키지 않도록 객체는 그 자리에 둔다. `findType` 은 해제된 타입을 nullptr 로 답하고, 같은 FQN 이
-        // 다시 로드되면 같은 객체를 복원한다.
+        // 다시 로드되면 새 객체가 서고 묘비는 물러난 판으로 남는다(`registerClass`).
         for ( auto& [fqn, pInfo] : _mapFqnToClassType )
         {
             (void)fqn;
@@ -724,6 +746,14 @@ namespace sw
             // 내용은 지금 비운다. 모듈 코드를 가리키는 델리게이트를 모듈이 언로드된 뒤에 파괴하면 안 된다.
             pInfo->clearContent();
             pInfo->_castHeader._bAlive.store( SW_FALSE, std::memory_order_release );
+        }
+        // 다시 등록되어 물러난 옛 판도 같은 까닭으로 지금 비운다(객체는 레지스트리가 사는 동안 남는다). 이미 비운 판(묘비였던 판)은 건너뛴다 — 비울 때마다 빈 상속 판이 하나씩 쌓인다.
+        for ( const unique_ptr<TypeInfo>& pRetired : _listRetiredClassType )
+        {
+            const bool bHoldsContent = pRetired->_destroyInstance != nullptr || pRetired->_listProperty.empty() == false || pRetired->_listMethod.empty() == false ||
+                                       pRetired->_listEvent.empty() == false;
+            if ( pRetired->_moduleName == hashModule && bHoldsContent )
+                pRetired->clearContent();
         }
 
         // 사라진 타입을 가리키던 별칭도 같이 정리한다. 남겨 두면 조회가 빈 항목을 따라가 nullptr 를 반환한다.

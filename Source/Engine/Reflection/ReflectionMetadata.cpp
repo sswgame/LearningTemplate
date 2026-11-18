@@ -18,6 +18,7 @@
 #include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
+#include "Engine/Reflection/ReflectionMetadataText.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -108,5 +109,20 @@ namespace sw
     const FunctionEditorMetadata& FunctionMetadata::getEditor() const noexcept
     {
         return _pEditor != nullptr ? *_pEditor : FunctionEditorMetadata::getDefault();
+    }
+
+    void ReflectionMetadataText::assign( string& outText, const utf8* pText )
+    {
+        outText = pText;
+    }
+
+    void ReflectionMetadataText::assign( hashed_string& outName, const utf8* pText )
+    {
+        outName = hashed_string{ pText };
+    }
+
+    void ReflectionMetadataText::addCustomMeta( unordered_map<hashed_string, string>& outMap, const utf8* pKey, const utf8* pValue )
+    {
+        outMap.emplace( hashed_string{ pKey }, string{ pValue } );
     }
 } // namespace sw
