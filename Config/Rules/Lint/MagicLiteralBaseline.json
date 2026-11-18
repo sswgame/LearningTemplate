@@ -173,7 +173,7 @@
     "Source/Editor/Common/Backend/ImGuiOSInputFilter.cpp": {"minus-one": 1},
     "Source/Editor/Common/Backend/ImGuiRenderer.cpp": {"integer": 3},
     "Source/Editor/Common/Backend/Platform/ImGuiWaylandPlatformBackend.cpp": {"minus-one": 1, "float": 1},
-    "Source/Editor/Common/Backend/Platform/ImGuiX11PlatformBackend.cpp": {"float": 1, "integer": 3},
+    "Source/Editor/Common/Backend/Platform/ImGuiX11PlatformBackend.cpp": {"float": 1},
     "Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp": {"integer": 1},
     "Source/Editor/Common/Commands/Diagnostics/EditorAssertControl.cpp": {"integer": 1},
     "Source/Editor/Common/Commands/EditorDragPayload.h": {"integer": 1},
