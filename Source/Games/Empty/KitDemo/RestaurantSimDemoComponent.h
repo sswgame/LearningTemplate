@@ -12,8 +12,9 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -22,7 +23,7 @@ namespace sw
      * @brief 라멘 하나뿐인 메뉴로 문을 열고 손님 둘을 들여 한 시간을 돌린 뒤 닫아, 손님 수 · 매출 · 이익(매출 - 재료비 - 급여)을 봅니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Restaurant Sim Demo", Tooltip = "Runs one RestaurantSim kit business day (cook, serve, checkout, close) and keeps the summary" )
-    class RestaurantSimDemoComponent : public GameModeComponent
+    class RestaurantSimDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -33,7 +34,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getServed() const { return _served; }
         int32 getRevenue() const { return _revenue; }
         int32 getProfit() const { return _profit; }
@@ -41,8 +41,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 하루 영업을 돌리고 결산을 담습니다. 창고를 열지 못하면 false 입니다. */
@@ -56,9 +54,8 @@ namespace sw
 
         SharedAssetRef<RestaurantCatalog> _pCatalog;
         SharedAssetRef<RecipeCatalog>     _pRecipeCatalog;
-        int32                             _demoState; ///< 0 시작 전, 1 한 바퀴를 마침
-        int32                             _served;    ///< 계산까지 마친 손님 수
-        int32                             _revenue;   ///< 매출(팁 제외)
-        int32                             _profit;    ///< 이익 = 매출 + 팁 - 재료비 - 급여 - 버린 재료
+        int32                             _served;  ///< 계산까지 마친 손님 수
+        int32                             _revenue; ///< 매출(팁 제외)
+        int32                             _profit;  ///< 이익 = 매출 + 팁 - 재료비 - 급여 - 버린 재료
     };
 } // namespace sw

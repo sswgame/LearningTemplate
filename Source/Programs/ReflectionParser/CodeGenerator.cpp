@@ -151,30 +151,12 @@ namespace sw
             }
 
             /**
-             * @brief 열거형 전체 FQN(예: "sw::EState::Idle")에서 말단 열거자 이름("Idle")을 추출합니다.
-             */
-            static string_view enumeratorLeaf( string_view spec )
-            {
-                return ParserUtil::scopeLeaf( spec );
-            }
-
-            /**
              * @brief 컨테이너 필드에 대한 래퍼 타입 문자열(예: `sw::VectorWrapper<decltype(std::declval<MyClass>().myList)>`)을 생성합니다.
              */
             static string makeWrapperType( const string& containerType, const string& fqn, const string& fieldName )
             {
                 StringBuilder<constant::buffer::kMax1024> b;
                 b.appendFormat( "sw::%#Wrapper<decltype(std::declval<%#>().%#)>", containerType, fqn, fieldName );
-                return string( b.view() );
-            }
-
-            /**
-             * @brief 2중, 3중 중첩 컨테이너(예: vector<vector<int32>>)에 대한 중첩 래퍼 표기를 생성합니다.
-             */
-            static string makeNestedWrapperType( const string& containerType, int32 depth )
-            {
-                StringBuilder<constant::buffer::kMax128> b;
-                b.appendFormat( "sw::%#Wrapper<NestC%#>", containerType, depth );
                 return string( b.view() );
             }
 
@@ -1131,7 +1113,7 @@ namespace sw
     {
         if ( spec.empty() )
             return nullptr;
-        const string_view leaf = CodeGeneratorInternal::enumeratorLeaf( spec );
+        const string_view leaf = ParserUtil::scopeLeaf( spec );
         for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
         {
             if ( en._name == spec || en._name == leaf )

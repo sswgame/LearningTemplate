@@ -12,7 +12,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
      * @brief 세 대로 한 바퀴 경기를 열고, 2 번 차를 격자 앞에 세워 결승까지 몰아 경기가 끝나는 한 바퀴를 돌립니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Kart Racing Demo", Tooltip = "Runs one KartRacing kit race (grid, laps, finish, finish timeout places) and keeps the result" )
-    class KartRacingDemoComponent : public GameModeComponent
+    class KartRacingDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -32,7 +33,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getWinner() const { return _winner; }
         int32 getRunnerUp() const { return _runnerUp; }
         int32 getLast() const { return _last; }
@@ -40,8 +40,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 경기 한 판을 돌리고 결과를 담습니다. 트랙 · 경기를 열지 못하거나 차가 결승선에 닿지 못하면 오류를 남기고 false 입니다. */
@@ -52,9 +50,8 @@ namespace sw
         AssetRef<KartTrackCatalog> _catalogPath;
 
         SharedAssetRef<KartTrackCatalog> _pCatalog;
-        int32                            _demoState; ///< 0 시작 전, 1 한 판을 마침
-        int32                            _winner;    ///< 1 등 차 번호(-1 없음)
-        int32                            _runnerUp;  ///< 2 등 차 번호(-1 없음)
-        int32                            _last;      ///< 3 등 차 번호(-1 없음)
+        int32                            _winner;   ///< 1 등 차 번호(-1 없음)
+        int32                            _runnerUp; ///< 2 등 차 번호(-1 없음)
+        int32                            _last;     ///< 3 등 차 번호(-1 없음)
     };
 } // namespace sw

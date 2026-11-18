@@ -599,10 +599,7 @@ namespace sw
         _launch.getEngine().beginFrame( deltaSeconds, deltaSeconds ); // 서버에는 시간 배율이 없다 — 틱 하나가 실제 경과다.
         _launch.getModuleManager()->beginFrame();
         _launch.getModuleManager()->updateGameFrame( deltaSeconds, 1, deltaSeconds ); // 한 틱은 고정 스텝 하나다
-#if SW_WITH_DYNAMIC_MODULES
-        if ( _launch.getDevLayer() != nullptr )
-            _launch.getDevLayer()->updateModuleReload();
-#endif
+        _launch.updateModuleReload();
         if ( _bRestartServerServices == SW_TRUE )
         {
             // 리로드가 끝났다(취소됐어도 서비스는 멈춰 있다). 새 모듈의 팩토리로 다시 시작한다.

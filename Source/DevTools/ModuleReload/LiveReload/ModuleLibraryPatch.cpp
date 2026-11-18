@@ -220,21 +220,26 @@ namespace sw
                 return false;
             }
 
-            /** @brief 파일 위치 @p offset 에서 시작하는 NUL 로 끝나는 문자열입니다. 파일 끝까지 NUL 이 없으면 빈 뷰입니다. */
-            static string_view cStringAt( const vector<uint8>& bytes, uint64 offset )
+            /** @brief @p pBegin 에서 시작해 @p limit 바이트 안에서 NUL 로 끝나는 문자열입니다. 그 안에 NUL 이 없으면 빈 뷰입니다. */
+            static string_view readCString( const uint8* pBegin, uint64 limit )
             {
-                if ( offset >= bytes.size() )
-                    return {};
-                const utf8*  pBegin = reinterpret_cast<const utf8*>( bytes.data() + offset );
-                const uint64 limit  = bytes.size() - offset;
-                uint64       length{ 0 };
-                while ( length < limit && pBegin[length] != '\0' )
+                const utf8* pText = reinterpret_cast<const utf8*>( pBegin );
+                uint64      length{ 0 };
+                while ( length < limit && pText[length] != '\0' )
                 {
                     ++length;
                 }
                 if ( length == limit )
                     return {};
-                return string_view{ pBegin, static_cast<size_t>( length ) };
+                return string_view{ pText, static_cast<size_t>( length ) };
+            }
+
+            /** @brief 파일 위치 @p offset 에서 시작하는 NUL 로 끝나는 문자열입니다. 파일 끝까지 NUL 이 없으면 빈 뷰입니다. */
+            static string_view cStringAt( const vector<uint8>& bytes, uint64 offset )
+            {
+                if ( offset >= bytes.size() )
+                    return {};
+                return readCString( bytes.data() + offset, bytes.size() - offset );
             }
 
             /**
@@ -278,16 +283,7 @@ namespace sw
             {
                 if ( index >= view._stringSize )
                     return {};
-                const utf8*  pBegin = reinterpret_cast<const utf8*>( bytes.data() + view._stringOffset + index );
-                const uint64 limit  = view._stringSize - index;
-                uint64       length{ 0 };
-                while ( length < limit && pBegin[length] != '\0' )
-                {
-                    ++length;
-                }
-                if ( length == limit )
-                    return {};
-                return string_view{ pBegin, static_cast<size_t>( length ) };
+                return readCString( bytes.data() + view._stringOffset + index, view._stringSize - index );
             }
         };
     } // namespace

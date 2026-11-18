@@ -25,7 +25,6 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include <algorithm>
-#include <charconv>
 #include <cmath>
 
 namespace sw
@@ -44,21 +43,6 @@ namespace sw
             static constexpr float32 kVisibleDistance         = 0.01f; ///< 이보다 가까우면 어긋남으로 치지 않는다(선 · 글을 그리지 않음)
             static constexpr float32 kGhostHalfExtent         = 0.5f;
             static constexpr float32 kVisibleAngleDegrees     = 0.5f; ///< 이보다 덜 돌아갔으면 어긋남으로 치지 않는다
-
-            static float32 distance( const float3& left, const float3& right )
-            {
-                const float32 dx = left._x - right._x;
-                const float32 dy = left._y - right._y;
-                const float32 dz = left._z - right._z;
-                return std::sqrt( dx * dx + dy * dy + dz * dz );
-            }
-
-            static void appendFloat( string& outText, float32 value )
-            {
-                utf8                       arrBuffer[constant::buffer::kMax32];
-                const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), value );
-                outText.append( arrBuffer, result.ptr );
-            }
 
             /**
              * @brief @p rest 의 끝에서 `<keyword> v0 v1 …`(숫자 @p count 개) 묶음을 떼어 @p pOutValue 에 씁니다. 묶음이 없으면 false 이고 @p rest 는 그대로입니다.
@@ -90,11 +74,11 @@ namespace sw
 
             static void appendFloat3( string& outText, const float3& value )
             {
-                appendFloat( outText, value._x );
+                StringUtil::appendNumber( outText, value._x );
                 outText += ' ';
-                appendFloat( outText, value._y );
+                StringUtil::appendNumber( outText, value._y );
                 outText += ' ';
-                appendFloat( outText, value._z );
+                StringUtil::appendNumber( outText, value._z );
             }
 
             /** @brief 루트 씬 컴포넌트의 월드 위치 · 회전 · 히트박스(`getWorldBox`, 있으면)를 @p outPose 에 씁니다. */
@@ -214,7 +198,7 @@ namespace sw
                 outText += " rot ";
                 ServerPoseOverlayInternal::appendFloat3( outText, float3{ pose._rotation._x, pose._rotation._y, pose._rotation._z } );
                 outText += ' ';
-                ServerPoseOverlayInternal::appendFloat( outText, pose._rotation._w );
+                StringUtil::appendNumber( outText, pose._rotation._w );
             }
             if ( pose._bHasBox )
             {
@@ -257,7 +241,7 @@ namespace sw
                 delta._name                = local._name;
                 delta._local               = local._position;
                 delta._server              = server._position;
-                delta._distance            = ServerPoseOverlayInternal::distance( local._position, server._position );
+                delta._distance            = float3::getDistance( local._position, server._position );
                 delta._bHasServerRotation  = server._bHasRotation;
                 delta._serverRotation      = server._rotation;
                 delta._bHasServerBox       = server._bHasBox;
@@ -267,7 +251,7 @@ namespace sw
                     delta._angleDegrees = ServerPoseOverlayInternal::computeAngleDegrees( local._rotation, server._rotation );
                 delta._bHasBoxPair = local._bHasBox && server._bHasBox;
                 if ( delta._bHasBoxPair )
-                    delta._boxCenterDistance = ServerPoseOverlayInternal::distance( local._boxCenter, server._boxCenter );
+                    delta._boxCenterDistance = float3::getDistance( local._boxCenter, server._boxCenter );
                 break;
             }
         }
@@ -282,23 +266,23 @@ namespace sw
         {
             outText += delta._name;
             outText += ' ';
-            ServerPoseOverlayInternal::appendFloat( outText, delta._distance );
+            StringUtil::appendNumber( outText, delta._distance );
             outText += " local ";
-            ServerPoseOverlayInternal::appendFloat( outText, delta._local._x );
+            StringUtil::appendNumber( outText, delta._local._x );
             outText += ' ';
-            ServerPoseOverlayInternal::appendFloat( outText, delta._local._y );
+            StringUtil::appendNumber( outText, delta._local._y );
             outText += ' ';
-            ServerPoseOverlayInternal::appendFloat( outText, delta._local._z );
+            StringUtil::appendNumber( outText, delta._local._z );
             outText += " server ";
-            ServerPoseOverlayInternal::appendFloat( outText, delta._server._x );
+            StringUtil::appendNumber( outText, delta._server._x );
             outText += ' ';
-            ServerPoseOverlayInternal::appendFloat( outText, delta._server._y );
+            StringUtil::appendNumber( outText, delta._server._y );
             outText += ' ';
-            ServerPoseOverlayInternal::appendFloat( outText, delta._server._z );
+            StringUtil::appendNumber( outText, delta._server._z );
             outText += " angle ";
-            ServerPoseOverlayInternal::appendFloat( outText, delta._angleDegrees );
+            StringUtil::appendNumber( outText, delta._angleDegrees );
             outText += " box ";
-            ServerPoseOverlayInternal::appendFloat( outText, delta._boxCenterDistance );
+            StringUtil::appendNumber( outText, delta._boxCenterDistance );
             outText += '\n';
         }
     }
@@ -423,12 +407,12 @@ namespace sw
             queue.drawLine( delta._local, delta._server, errorColor, 0.0f, category );
             string label = delta._name;
             label += ' ';
-            ServerPoseOverlayInternal::appendFloat( label, delta._distance );
+            StringUtil::appendNumber( label, delta._distance );
             label += " m";
             if ( bAngleOff )
             {
                 label += ' ';
-                ServerPoseOverlayInternal::appendFloat( label, delta._angleDegrees );
+                StringUtil::appendNumber( label, delta._angleDegrees );
                 label += " deg";
             }
             queue.drawText( delta._server, label, errorColor, 0.0f, category );
@@ -450,11 +434,11 @@ namespace sw
             maxAngle    = delta._angleDegrees > maxAngle ? delta._angleDegrees : maxAngle;
         }
         outText = "authority ghost: ";
-        ServerPoseOverlayInternal::appendFloat( outText, static_cast<float32>( _listDelta.size() ) );
+        StringUtil::appendNumber( outText, static_cast<float32>( _listDelta.size() ) );
         outText += " matched objects, max difference ";
-        ServerPoseOverlayInternal::appendFloat( outText, maxDistance );
+        StringUtil::appendNumber( outText, maxDistance );
         outText += " m, max rotation difference ";
-        ServerPoseOverlayInternal::appendFloat( outText, maxAngle );
+        StringUtil::appendNumber( outText, maxAngle );
         outText += " deg\n";
         string report;
         writeReport( _listDelta, report );

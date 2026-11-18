@@ -60,10 +60,9 @@ namespace sw
 
         struct LoadBotMainInternal
         {
-            static constexpr uint16 kDefaultServerPort    = OnlineProtocolConstant::kDefaultPort;
-            static constexpr int64  kIdleSleepNs          = 200000; ///< 틱 사이 — 전송을 I/O 스레드 없이 돌리므로 짧게
-            static constexpr int32  kPercentScale         = 100;
-            static constexpr int32  kSpareConnectionCount = 16;
+            static constexpr uint16 kDefaultServerPort = OnlineProtocolConstant::kDefaultPort;
+            static constexpr int64  kIdleSleepNs       = 200000; ///< 틱 사이 — 전송을 I/O 스레드 없이 돌리므로 짧게
+            static constexpr int32  kPercentScale      = 100;
 
             /**
              * @brief 봇 인자를 `CommandLineManager` 로 읽습니다(엔진 표준 인자는 등록하지 않는다 — 봇 인자만 받는다).
@@ -220,7 +219,7 @@ namespace sw
                     serverTransport                    = StreamTransportFactory::createPlatformTransport();
                     serverSettings._port               = static_cast<uint16>( options._localServerPort );
                     serverSettings._region             = scenario._region;
-                    serverSettings._maxConnections     = scenario._botCount + kSpareConnectionCount;
+                    serverSettings._maxConnections     = scenario._botCount + LoadBotRunner::kSpareConnectionCount;
                     serverSettings._bLightPasswordHash = options._bLightHash;
                     serverSettings._pClock             = &serverClock;
                     const expected<void> started       = serverTransport != nullptr ? localServer.initialize( serverTransport.get(), serverSettings )

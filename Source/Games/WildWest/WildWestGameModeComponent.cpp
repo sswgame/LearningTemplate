@@ -73,6 +73,7 @@ namespace sw
         , _pWesternCatalog{}
         , _pWeatherCatalog{}
         , _hudViewModel{}
+        , _listWitness{}
         , _bAutoMountRequested{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -239,9 +240,8 @@ namespace sw
         const SceneComponent* pRoot    = pPawn != nullptr && pPawn->getOwner() != nullptr ? pPawn->getOwner()->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pRoot == nullptr || _outlaw.getWantedLevel() <= 0 )
             return;
-        vector<WesternWitness> listWitness;
-        WesternWitnessComponent::collect( *pManager, listWitness );
-        _outlaw.updateSeenByLaw( pRoot->getWorldPosition(), listWitness );
+        WesternWitnessComponent::collect( *pManager, _listWitness ); // 수집이 먼저 비운다 — 멤버는 용량만 넘긴다(수배 중 프레임마다 힙 할당을 하지 않는다)
+        _outlaw.updateSeenByLaw( pRoot->getWorldPosition(), _listWitness );
     }
 
     string WildWestGameModeComponent::formatOutlawStatus() const

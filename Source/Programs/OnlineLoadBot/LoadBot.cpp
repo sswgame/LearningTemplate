@@ -5,7 +5,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/formatString.h"
+#include "Core/String/StringUtil.h"
 
 #include "Programs/OnlineLoadBot/LoadBotRunner.h"
 
@@ -17,8 +17,6 @@ namespace sw
     {
         struct LoadBotInternal
         {
-            static constexpr int64 kMicrosecondsPerMs = 1000;
-
             struct StatusName
             {
                 SocialPresenceStatus _status;
@@ -56,23 +54,6 @@ namespace sw
                         return entry._status;
                 }
                 return SocialPresenceStatus::Online;
-            }
-
-            static string makeNumberText( int64 value )
-            {
-                utf8 arrBuffer[constant::buffer::kMax32];
-                formatstring( arrBuffer, constant::buffer::kMax32, "%#", value );
-                return string( arrBuffer );
-            }
-
-            static void replaceAll( string& inoutText, string_view pattern, const string& replacement )
-            {
-                size_t position = inoutText.find( pattern.data(), 0, pattern.size() );
-                while ( position != string::npos )
-                {
-                    inoutText.replace( position, pattern.size(), replacement );
-                    position = inoutText.find( pattern.data(), position + replacement.size(), pattern.size() );
-                }
             }
         };
     } // namespace
@@ -311,8 +292,8 @@ namespace sw
         if ( step._action == LoadBotAction::Wait )
         {
             const int32 waitMs = _random.nextInt( static_cast<int32>( step._minMs ), static_cast<int32>( step._maxMs ) );
-            const int64 wakeUs = _schedule.addWait( static_cast<int64>( waitMs ) * LoadBotInternal::kMicrosecondsPerMs, nowUs );
-            _waitUntilMs       = LoadBotRunner::kRunStart + wakeUs / LoadBotInternal::kMicrosecondsPerMs; // 열린 루프에서 이미 지났으면 다음 틱에 바로 보낸다
+            const int64 wakeUs = _schedule.addWait( static_cast<int64>( waitMs ) * constant::time::kMicrosecondsPerMillisecond, nowUs );
+            _waitUntilMs       = LoadBotRunner::kRunStart + wakeUs / constant::time::kMicrosecondsPerMillisecond; // 열린 루프에서 이미 지났으면 다음 틱에 바로 보낸다
             advance();
             return;
         }
@@ -426,9 +407,8 @@ namespace sw
         _bPasswordLogin = step._text == "password" ? SW_TRUE : SW_FALSE;
         if ( _bPasswordLogin == SW_TRUE )
         {
-            _pendingAccountOperation = AccountClientOperation::Register; // 처음이면 가입 — 이름이 있으면 그대로 로그인
-            const string loginName   = "bot" + LoadBotInternal::makeNumberText( _pRunner->getScenario()._seed ) + "_" + LoadBotInternal::makeNumberText( _botIndex );
-            (void)_accountClient.registerAccount( loginName, LoadBotInternal::kPassword ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
+            _pendingAccountOperation = AccountClientOperation::Register;                         // 처음이면 가입 — 이름이 있으면 그대로 로그인
+            (void)_accountClient.registerAccount( makeLoginName(), LoadBotInternal::kPassword ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
             return;
         }
         // 게스트 — 장치 비밀은 씨앗 · 봇 번호에서 정해진다(같은 시나리오를 다시 돌리면 같은 계정)
@@ -665,8 +645,8 @@ namespace sw
             {
                 if ( _tradeID != 0 )
                     (void)_tradeClient.cancel( _tradeID ); // 짝이 시한까지 기다리지 않게 닫는다
-                finishStep( reply._errorCode != 0 ? "code" + LoadBotInternal::makeNumberText( reply._errorCode )
-                                                  : "trade.result" + LoadBotInternal::makeNumberText( static_cast<int64>( reply._result ) ) );
+                finishStep( reply._errorCode != 0 ? "code" + to_string( reply._errorCode )
+                                                  : "trade.result" + to_string( static_cast<int64>( reply._result ) ) );
                 return;
             }
             if ( _tradeID == 0 )
@@ -680,7 +660,7 @@ namespace sw
         const bool bThisTrade = _tradeID != 0 && snapshot._tradeID == _tradeID && sideIndex.has_value();
         if ( bThisTrade && snapshot.isClosed() )
         {
-            finishStep( snapshot._state == TradeState::Settled ? string{} : "trade.closed" + LoadBotInternal::makeNumberText( static_cast<int64>( snapshot._closeReason ) ) );
+            finishStep( snapshot._state == TradeState::Settled ? string{} : "trade.closed" + to_string( static_cast<int64>( snapshot._closeReason ) ) );
             return;
         }
         if ( nowMs >= _waitUntilMs )
@@ -735,16 +715,21 @@ namespace sw
         }
     }
 
+    string LoadBot::makeLoginName() const
+    {
+        return "bot" + to_string( _pRunner->getScenario()._seed ) + "_" + to_string( _botIndex );
+    }
+
     string LoadBot::makeGuildName() const
     {
-        return "lb" + LoadBotInternal::makeNumberText( _pRunner->getScenario()._seed ) + "_" + LoadBotInternal::makeNumberText( _botIndex );
+        return "lb" + to_string( _pRunner->getScenario()._seed ) + "_" + to_string( _botIndex );
     }
 
     string LoadBot::makeReceiptPayload( const string& productID )
     {
         // 가짜 스토어 영수증 `fake|<상품>|<거래 id>|ok` — 거래 id 는 실행마다(`getRunID`) · 봇마다 · 순번마다 달라 같은 계정이 다시 돌려도 새 지급이다
-        const string transactionID = "lb" + LoadBotInternal::makeNumberText( _pRunner->getRunID() ) + "." + LoadBotInternal::makeNumberText( _pRunner->getScenario()._seed ) + "." +
-                                     LoadBotInternal::makeNumberText( _botIndex ) + "." + LoadBotInternal::makeNumberText( _sendSequence );
+        const string transactionID = "lb" + to_string( _pRunner->getRunID() ) + "." + to_string( _pRunner->getScenario()._seed ) + "." +
+                                     to_string( _botIndex ) + "." + to_string( _sendSequence );
         ++_sendSequence;
         return string( LoadBotInternal::kFakeStoreName ) + "|" + productID + "|" + transactionID + "|ok";
     }
@@ -763,12 +748,12 @@ namespace sw
             return; // 내리는 중 · 늦게 온 응답
         if ( errorCode != 0 )
         {
-            finishStep( "code" + LoadBotInternal::makeNumberText( errorCode ) );
+            finishStep( "code" + to_string( errorCode ) );
             return;
         }
         if ( result != 0 )
         {
-            finishStep( string( toString( _pendingAction ) ) + ".result" + LoadBotInternal::makeNumberText( result ) );
+            finishStep( string( toString( _pendingAction ) ) + ".result" + to_string( result ) );
             return;
         }
         finishStep( string_view{} );
@@ -776,9 +761,8 @@ namespace sw
 
     string LoadBot::expandText( const string& text )
     {
-        string expanded = text;
-        LoadBotInternal::replaceAll( expanded, LoadBotInternal::kBotPlaceholder, LoadBotInternal::makeNumberText( _botIndex ) );
-        LoadBotInternal::replaceAll( expanded, LoadBotInternal::kSequencePlaceholder, LoadBotInternal::makeNumberText( _sendSequence ) );
+        string expanded = StringUtil::replace( text, LoadBotInternal::kBotPlaceholder, to_string( _botIndex ) );
+        expanded        = StringUtil::replace( expanded, LoadBotInternal::kSequencePlaceholder, to_string( _sendSequence ) );
         ++_sendSequence;
         return expanded;
     }
@@ -826,8 +810,7 @@ namespace sw
             if ( reply._operation == AccountClientOperation::Register )
             {
                 _pendingAccountOperation = AccountClientOperation::Login; // 가입 결과(이미 있음 포함)와 상관없이 로그인
-                const string loginName   = "bot" + LoadBotInternal::makeNumberText( _pRunner->getScenario()._seed ) + "_" + LoadBotInternal::makeNumberText( _botIndex );
-                (void)_accountClient.login( loginName, LoadBotInternal::kPassword );
+                (void)_accountClient.login( makeLoginName(), LoadBotInternal::kPassword );
                 continue;
             }
             const bool bLoggedIn = reply._errorCode == 0 && reply._result == LoginResult::Ok &&
@@ -855,7 +838,7 @@ namespace sw
                 finishStep( string_view{} );
                 return;
             }
-            finishStep( "wait_match.outcome" + LoadBotInternal::makeNumberText( static_cast<int64>( assignment._result ) ) );
+            finishStep( "wait_match.outcome" + to_string( static_cast<int64>( assignment._result ) ) );
             return;
         }
         if ( nowMs >= _waitUntilMs )

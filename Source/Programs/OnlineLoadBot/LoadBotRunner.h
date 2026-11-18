@@ -49,6 +49,8 @@ namespace sw
     public:
         /** @brief 실행기 시각의 기원입니다. 봇의 시한과 시작 순서가 같은 단조 시각에서 잰다. */
         static constexpr MonotonicMilliseconds kRunStart{ 0 };
+        /** @brief 봇 수에 더 잡는 연결 수입니다 — 다시 연결하는 동안 닫히는 연결이 자리를 잡고 있다. 봇 쪽 전송과 로컬 서버가 같은 여유를 둔다. */
+        static constexpr int32 kSpareConnectionCount = 16;
         LoadBotRunner();
         ~LoadBotRunner() override;
 
@@ -71,7 +73,6 @@ namespace sw
         int32                        getBotCount() const { return static_cast<int32>( _listBot.size() ); }
         /** @brief 띄운 봇 수입니다(도착률 실행기는 풀이 바닥나면 이보다 많은 도착을 버린다 — `LoadBotMetrics::getDroppedArrivalCount`). */
         int32 getLaunchedCount() const { return _launchedCount; }
-        int32 getRunningBotCount() const;
         /** @brief 실행 하나를 가르는 값(시작한 벽시계 밀리초)입니다 — 영수증 거래 id 처럼 저장소가 남는 실행 사이에서 겹치면 안 되는 글에 붙인다. */
         int64 getRunID() const { return _runID; }
         /** @brief 시작(첫 틱)부터 지난 밀리초입니다. */

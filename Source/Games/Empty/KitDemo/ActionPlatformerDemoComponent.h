@@ -57,7 +57,7 @@ namespace sw
 
     private:
         /** @brief 씬의 지형 줄로 칸 지형과 키트 격자를 칠합니다. 줄이 없거나 읽지 못하면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool buildTerrain();
+        [[nodiscard]] bool populateTerrain();
         /** @brief 씬의 체크포인트 · 비밀 자리 수가 스테이지 정의의 id 수와 같은지 봅니다. 다르면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool checkMarkers( const ActionStageDef& stage ) const;
         /** @brief 몸을 @p position 에 멈춰 세웁니다(시작 · 되살아남). */

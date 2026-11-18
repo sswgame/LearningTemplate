@@ -49,7 +49,6 @@ namespace sw
     MetroidvaniaDemoComponent::MetroidvaniaDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _corpseCurrency{ 0 }
         , _recoveredBalance{ 0 }
         , _respawnAtRest{ 0 }
@@ -94,7 +93,7 @@ namespace sw
         _respawnAtRest                  = respawnSite == restSite ? 1 : 0;
         (void)state.tryRecoverCorpse( corpseArea, corpsePosition );
         _recoveredBalance = static_cast<int32>( wallet.getBalance( catalog.getRules()._currency ) );
-        _demoState        = 1;
+        markRunFinished();
         return true;
     }
 
@@ -110,38 +109,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.MetroidvaniaDone", "[KitDemo] metroidvania: corpse held %#, recovered balance %#, respawn at rest %#", _corpseCurrency, _recoveredBalance, _respawnAtRest );
     }
 
-    void MetroidvaniaDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void MetroidvaniaDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void MetroidvaniaDemoComponent::serializeState( StateIO& io )
     {
-        io.header( MetroidvaniaDemoComponentInternal::kStateTag, MetroidvaniaDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState        = _demoState;
-        int32 corpseCurrency   = _corpseCurrency;
-        int32 recoveredBalance = _recoveredBalance;
-        int32 respawnAtRest    = _respawnAtRest;
-        io.value( demoState );
-        io.value( corpseCurrency );
-        io.value( recoveredBalance );
-        io.value( respawnAtRest );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState        = demoState;
-        _corpseCurrency   = corpseCurrency;
-        _recoveredBalance = recoveredBalance;
-        _respawnAtRest    = respawnAtRest;
+        serializeResults( io, MetroidvaniaDemoComponentInternal::kStateTag, MetroidvaniaDemoComponentInternal::kStateVersion, { &_corpseCurrency, &_recoveredBalance, &_respawnAtRest } );
     }
 } // namespace sw

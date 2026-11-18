@@ -12,7 +12,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
      * @brief 팀 A · B 에 무기 없는 기체를 하나씩 세우고, A 가 B 를 격추 → 리스폰 → 다시 격추해 B 팀 게이지(코스트 x 2)가 바닥나는 한 바퀴를 돌립니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Mech Arena Demo", Tooltip = "Runs one MechArena kit match (destroy, respawn, gauge out, winner) and keeps the result" )
-    class MechArenaDemoComponent : public GameModeComponent
+    class MechArenaDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -32,7 +33,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getWinningTeam() const { return _winningTeam; }
         int32 getWinnerKills() const { return _winnerKills; }
         int32 getLoserGauge() const { return _loserGauge; }
@@ -40,8 +40,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 판 한 바퀴를 돌리고 결과를 담습니다. 판을 열지 못하면 오류를 남기고 false 입니다. */
@@ -52,7 +50,6 @@ namespace sw
         AssetRef<MechCatalog> _catalogPath;
 
         SharedAssetRef<MechCatalog> _pCatalog;
-        int32                       _demoState;   ///< 0 시작 전, 1 한 바퀴를 마침
         int32                       _winningTeam; ///< 이긴 팀 번호(-1 없음)
         int32                       _winnerKills; ///< A 조종사의 격추 수
         int32                       _loserGauge;  ///< 판이 끝난 뒤 B 팀 게이지

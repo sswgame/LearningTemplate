@@ -41,7 +41,6 @@ namespace sw
     AsymmetricHorrorDemoComponent::AsymmetricHorrorDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _completedGenerators{ 0 }
         , _escapedCount{ 0 }
         , _winningTeam{ AsymmetricHorrorDemoComponentInternal::kNoWinningTeam }
@@ -104,7 +103,7 @@ namespace sw
             _escapedCount += pSurvivor != nullptr && pSurvivor->_state == SurvivorState::Escaped ? 1 : 0;
         }
         _winningTeam = match.getMatch().getWinningTeam();
-        _demoState   = 1;
+        markRunFinished();
         return true;
     }
 
@@ -120,38 +119,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.AsymmetricHorrorDone", "[KitDemo] asymmetric horror: %# generators repaired, %# escaped, team %# won", _completedGenerators, _escapedCount, _winningTeam );
     }
 
-    void AsymmetricHorrorDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void AsymmetricHorrorDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void AsymmetricHorrorDemoComponent::serializeState( StateIO& io )
     {
-        io.header( AsymmetricHorrorDemoComponentInternal::kStateTag, AsymmetricHorrorDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState           = _demoState;
-        int32 completedGenerators = _completedGenerators;
-        int32 escapedCount        = _escapedCount;
-        int32 winningTeam         = _winningTeam;
-        io.value( demoState );
-        io.value( completedGenerators );
-        io.value( escapedCount );
-        io.value( winningTeam );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState           = demoState;
-        _completedGenerators = completedGenerators;
-        _escapedCount        = escapedCount;
-        _winningTeam         = winningTeam;
+        serializeResults( io, AsymmetricHorrorDemoComponentInternal::kStateTag, AsymmetricHorrorDemoComponentInternal::kStateVersion, { &_completedGenerators, &_escapedCount, &_winningTeam } );
     }
 } // namespace sw

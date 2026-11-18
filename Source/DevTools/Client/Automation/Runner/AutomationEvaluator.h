@@ -23,6 +23,51 @@
 namespace sw
 {
     /**
+     * @class AutomationTextStore
+     * @brief 이름 붙여 기억한 글의 표입니다 — `<Store as="이름">` 이 남긴 감시 값 글(판정이 든다)과 단계가 남긴 글(`storeText`, 실행기가 든다)이 같은 형식을 씁니다.
+     * @details 한 시나리오에 몇 개뿐이라 선형으로 찾는다. 이름은 하나뿐이다(`set` 이 있으면 바꾼다).
+     */
+    class AutomationTextStore
+    {
+    public:
+        /** @brief @p name 의 글을 놓습니다. 이미 있으면 바꿉니다. */
+        void set( string_view name, string text )
+        {
+            for ( Entry& entry : _listEntry )
+            {
+                if ( string_view{ entry._name } == name )
+                {
+                    entry._text = std::move( text );
+                    return;
+                }
+            }
+            _listEntry.push_back( Entry{ string( name ), std::move( text ) } );
+        }
+        /** @brief @p name 으로 기억한 글입니다. 없으면 nullptr 입니다. 포인터는 다음 `set` · `clear` 까지 산다. */
+        [[nodiscard]] const string* find( string_view name ) const
+        {
+            for ( const Entry& entry : _listEntry )
+            {
+                if ( string_view{ entry._name } == name )
+                    return &entry._text;
+            }
+            return nullptr;
+        }
+        void clear() { _listEntry.clear(); }
+
+    private:
+        struct Entry
+        {
+            string _name{};
+            string _text{};
+        };
+        vector<Entry> _listEntry{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class AutomationEvaluator
      * @brief 단언 단계의 비교와 결과 판정에 필요한 상태를 모두 쥡니다. 시간 · 입력 · 대기는 모릅니다(그것은 `AutomationStepTimeline` 과 실행기의 일).
      * @details 판정이 읽는 바깥 값(시나리오 프레임 · 산출물 경로 · 오브젝트 매니저)은 단계 문맥(`AutomationStepContext`)에서 호출마다 받는다 — 판정이 실행기를 알지 못한다.
@@ -135,17 +180,6 @@ namespace sw
             string         _key{};
         };
 
-        /**
-         * @struct StoredValue
-         * @brief `<Store as="이름">` 이 남긴 감시 값 값(끝의 0 을 정리한 글)입니다. 경계(플레이 · 백엔드 교체 · 모듈 리로드)를 넘긴 뒤 `sameAs` · `differsFrom` 이 비교합니다.
-         * @details 판정은 엔진 쪽이라 모듈 리로드와 백엔드 교체를 넘어 남는다. 시나리오가 시작할 때 비운다.
-         */
-        struct StoredValue
-        {
-            string _name{};
-            string _text{};
-        };
-
         /** @brief 미룬 `<ExpectImage>` 하나입니다. 단계는 시나리오가 들고 있어 실행 동안 산다. */
         struct DeferredImageCheck
         {
@@ -193,6 +227,7 @@ namespace sw
         vector<string>                   _listMetricLine;                                       ///< 보고에 적는 지표 값
         vector<string>                   _listRecordLine;                                       ///< 보고에 적는 기록 값(결정성 대조)
         vector<WatchHistory>             _listWatch;                                            ///< `<ExpectVisited>` 가 보는 감시 값 이력
-        vector<StoredValue>              _listStored;                                           ///< `<Store>` 가 남긴 값
+        /// `<Store as="이름">` 이 남긴 감시 값(끝의 0 을 정리한 글). 경계(플레이 · 백엔드 교체 · 모듈 리로드)를 넘긴 뒤 `sameAs` · `differsFrom` 이 비교한다 — 판정은 엔진 쪽이라 리로드 · 교체를 넘어 남고, 시나리오가 시작할 때 비운다
+        AutomationTextStore _stored;
     };
 } // namespace sw

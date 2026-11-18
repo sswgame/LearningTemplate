@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -107,6 +108,7 @@ namespace sw
         SharedAssetRef<WesternCatalog>   _pWesternCatalog;
         SharedAssetRef<WeatherCatalog>   _pWeatherCatalog;
         unique_ptr<WildWestHUDViewModel> _hudViewModel;            ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
+        vector<WesternWitness>           _listWitness;             ///< `updateLawSight` 가 프레임마다 다시 채우는 목격자 목록(용량을 다시 쓴다 — 상태가 아니다)
         uint8                            _bAutoMountRequested : 1; ///< 자동 플레이가 기수를 태우라고 한 번 청했다
         [[maybe_unused]] uint8           _reserved            : 7;
     };

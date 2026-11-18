@@ -82,7 +82,7 @@ namespace sw::test
                 if ( bResolved == false )
                     continue;
                 AutomationStepValidateFunction pfnValidate = nullptr;
-                if ( AutomationStepValidation::findValidator( step._kind, pfnValidate ) != AutomationValidatorLookup::Found )
+                if ( AutomationStepValidation::findValidator( step._kind, pfnValidate ) != AutomationValidatorResult::Found )
                     continue;
                 SW_EXPECT_EQUAL( string(), makeScenarioFailureText( pfnValidate( step ), path + " " + step.describe() ) );
             }

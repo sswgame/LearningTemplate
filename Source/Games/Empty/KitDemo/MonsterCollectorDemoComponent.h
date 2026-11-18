@@ -12,7 +12,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterCollectorCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
      * @brief 빠른 개체가 체력 1 인 야생 개체를 한 번에 쓰러뜨리는 전투와, 포획률 255 · 볼 x3 으로 반드시 잡히는 포획을 차례로 돌립니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Monster Collector Demo", Tooltip = "Runs one MonsterCollector kit wild battle (win, exp) and one capture (ball shakes) and keeps the result" )
-    class MonsterCollectorDemoComponent : public GameModeComponent
+    class MonsterCollectorDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -32,7 +33,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getWonExp() const { return _wonExp; }
         int32 getCaptured() const { return _captured; }
         int32 getCaptureShakes() const { return _captureShakes; }
@@ -40,8 +40,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 전투와 포획을 돌리고 결과를 담습니다. 개체를 만들지 못하면 오류를 남기고 false 입니다. */
@@ -52,7 +50,6 @@ namespace sw
         AssetRef<MonsterCollectorCatalog> _catalogPath;
 
         SharedAssetRef<MonsterCollectorCatalog> _pCatalog;
-        int32                                   _demoState;     ///< 0 시작 전, 1 한 바퀴를 마침
         int32                                   _wonExp;        ///< 이긴 전투에서 받은 경험치(이기지 못하면 0)
         int32                                   _captured;      ///< 포획 판이 잡음으로 끝났으면 1
         int32                                   _captureShakes; ///< 포획 판의 볼 흔들림 수

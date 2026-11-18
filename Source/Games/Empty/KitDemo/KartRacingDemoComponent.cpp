@@ -72,7 +72,6 @@ namespace sw
     KartRacingDemoComponent::KartRacingDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _winner{ KartRacingDemoComponentInternal::kNoRacer }
         , _runnerUp{ KartRacingDemoComponentInternal::kNoRacer }
         , _last{ KartRacingDemoComponentInternal::kNoRacer }
@@ -132,7 +131,7 @@ namespace sw
             else if ( place == 3 )
                 _last = index;
         }
-        _demoState = 1;
+        markRunFinished();
         return true;
     }
 
@@ -148,38 +147,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.KartRacingDone", "[KitDemo] kart racing: racer %# won, %# second, %# third", _winner, _runnerUp, _last );
     }
 
-    void KartRacingDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 판은 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void KartRacingDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void KartRacingDemoComponent::serializeState( StateIO& io )
     {
-        io.header( KartRacingDemoComponentInternal::kStateTag, KartRacingDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState = _demoState;
-        int32 winner    = _winner;
-        int32 runnerUp  = _runnerUp;
-        int32 last      = _last;
-        io.value( demoState );
-        io.value( winner );
-        io.value( runnerUp );
-        io.value( last );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState = demoState;
-        _winner    = winner;
-        _runnerUp  = runnerUp;
-        _last      = last;
+        serializeResults( io, KartRacingDemoComponentInternal::kStateTag, KartRacingDemoComponentInternal::kStateVersion, { &_winner, &_runnerUp, &_last } );
     }
 } // namespace sw

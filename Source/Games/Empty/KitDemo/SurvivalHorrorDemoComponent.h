@@ -12,7 +12,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
      * @brief 지도 없이 세션을 열고 같은 괴물을 두 번 목격(처음은 전부, 다음은 배율만큼)한 뒤 피해를 입고 약초 하나를 쓰는 한 바퀴를 돌립니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Survival Horror Demo", Tooltip = "Runs one SurvivalHorror kit session (monster sightings, damage, healing item) and keeps the result" )
-    class SurvivalHorrorDemoComponent : public GameModeComponent
+    class SurvivalHorrorDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -32,15 +33,12 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getSanity() const { return _sanity; }
         int32 getHealth() const { return _health; }
 
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 세션 한 바퀴를 돌리고 결과를 담습니다. 세션을 열지 못하거나 약초를 쓰지 못하면 오류를 남기고 false 입니다. */
@@ -51,8 +49,7 @@ namespace sw
         AssetRef<SurvivalHorrorCatalog> _catalogPath;
 
         SharedAssetRef<SurvivalHorrorCatalog> _pCatalog;
-        int32                                 _demoState; ///< 0 시작 전, 1 한 바퀴를 마침
-        int32                                 _sanity;    ///< 한 바퀴 뒤 정신력
-        int32                                 _health;    ///< 한 바퀴 뒤 체력
+        int32                                 _sanity; ///< 한 바퀴 뒤 정신력
+        int32                                 _health; ///< 한 바퀴 뒤 체력
     };
 } // namespace sw

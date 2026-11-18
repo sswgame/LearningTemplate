@@ -83,8 +83,6 @@ namespace sw
 
         const vector<string>&         getHistory() const { return _listHistory; }
         const vector<DevConsoleLine>& getOutput() const { return _listOutput; }
-        /** @brief 출력 줄을 비웁니다. */
-        void clearOutput() { _listOutput.clear(); }
         /** @brief 실행 결과가 아닌 안내(자동완성 후보 등)를 출력 줄에 더합니다. */
         void appendNote( string_view text ) { appendOutput( text, false ); }
 

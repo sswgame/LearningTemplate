@@ -117,7 +117,6 @@ namespace sw
 
         /** @brief 설정 창을 엽니다(이미 열려 있으면 그대로 둡니다). 열지 못하면(문서 오류) false 입니다. */
         [[nodiscard]] bool openWindow();
-        void               closeWindow();
         bool               isWindowOpen() const;
         /** @brief HUD 화면이 열려 있으면 true 입니다(켜짐과 다음 `update` 사이에는 다를 수 있습니다). */
         bool isScreenOpen() const;

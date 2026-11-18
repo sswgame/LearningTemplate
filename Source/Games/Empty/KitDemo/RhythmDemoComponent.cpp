@@ -36,7 +36,6 @@ namespace sw
     RhythmDemoComponent::RhythmDemoComponent()
         : _catalogPath{}
         , _pChart{}
-        , _demoState{ 0 }
         , _score{ 0 }
         , _maxCombo{ 0 }
         , _cleared{ 0 }
@@ -62,10 +61,10 @@ namespace sw
             return false;
         // 오토플레이는 판정 시각에 누르고 롱노트를 끝까지 누른다 — 곡 끝까지 한 번에 흘리면 모든 판정이 끝나 곡을 깬다.
         session.update( _pChart->getEndTime() + RhythmDemoComponentInternal::kTailMargin );
-        _score     = static_cast<int32>( session.getScore() );
-        _maxCombo  = session.getMaxCombo();
-        _cleared   = session.getState() == RhythmPlayState::Cleared ? 1 : 0;
-        _demoState = 1;
+        _score    = static_cast<int32>( session.getScore() );
+        _maxCombo = session.getMaxCombo();
+        _cleared  = session.getState() == RhythmPlayState::Cleared ? 1 : 0;
+        markRunFinished();
         return true;
     }
 
@@ -81,38 +80,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.RhythmDone", "[KitDemo] rhythm: score %#, max combo %#, cleared %#", _score, _maxCombo, _cleared );
     }
 
-    void RhythmDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void RhythmDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void RhythmDemoComponent::serializeState( StateIO& io )
     {
-        io.header( RhythmDemoComponentInternal::kStateTag, RhythmDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState = _demoState;
-        int32 score     = _score;
-        int32 maxCombo  = _maxCombo;
-        int32 cleared   = _cleared;
-        io.value( demoState );
-        io.value( score );
-        io.value( maxCombo );
-        io.value( cleared );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState = demoState;
-        _score     = score;
-        _maxCombo  = maxCombo;
-        _cleared   = cleared;
+        serializeResults( io, RhythmDemoComponentInternal::kStateTag, RhythmDemoComponentInternal::kStateVersion, { &_score, &_maxCombo, &_cleared } );
     }
 } // namespace sw

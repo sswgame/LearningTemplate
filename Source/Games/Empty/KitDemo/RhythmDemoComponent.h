@@ -12,7 +12,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmChart.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
      * @brief 채보 한 곡을 오토플레이로 연주하고 점수 · 최대 콤보 · 깸 여부를 쥡니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Rhythm Demo", Tooltip = "Runs one Rhythm kit song on autoplay (judgments, combo, score, clear) and keeps the result" )
-    class RhythmDemoComponent : public GameModeComponent
+    class RhythmDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -32,7 +33,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getScore() const { return _score; }
         int32 getMaxCombo() const { return _maxCombo; }
         int32 getCleared() const { return _cleared; }
@@ -40,8 +40,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 곡 한 바퀴를 돌리고 결과를 담습니다. 판을 열지 못하면 false 입니다. */
@@ -52,9 +50,8 @@ namespace sw
         AssetRef<RhythmChart> _catalogPath;
 
         SharedAssetRef<RhythmChart> _pChart;
-        int32                       _demoState; ///< 0 시작 전, 1 한 바퀴를 마침
-        int32                       _score;     ///< 곡이 끝난 점수
-        int32                       _maxCombo;  ///< 최대 콤보
-        int32                       _cleared;   ///< 곡을 깼으면 1
+        int32                       _score;    ///< 곡이 끝난 점수
+        int32                       _maxCombo; ///< 최대 콤보
+        int32                       _cleared;  ///< 곡을 깼으면 1
     };
 } // namespace sw

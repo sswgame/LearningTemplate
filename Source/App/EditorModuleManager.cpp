@@ -388,18 +388,6 @@ namespace sw
         return createEditorInstance();
     }
 
-    void EditorModuleManager::rebindEditorService()
-    {
-        if ( _editorAPI.bindService == nullptr )
-            return;
-
-        // 새 범위를 채워 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게.
-        unique_ptr<SubsystemScope> editorServices = make_unique<SubsystemScope>();
-        fillModuleServiceScope( *editorServices, false ); // 개발 도구 서비스는 스스로 호스트 모듈에 보인다고 선언해 부모 창구로 찾힌다(`SubsystemModuleVisibility`)
-        _editorAPI.bindService( editorServices.get() );
-        _editorServices = std::move( editorServices );
-    }
-
     void EditorModuleManager::destroyEditorInstance( bool bReleaseAPITable )
     {
         // 인스턴스가 사라지면 그 프레임을 렌더할 쪽도 없다(렌더 워커는 이미 비웠다). 남은 in-flight 표시를 풀지 않으면 종료 단계의 `waitForDrawSnapshotIdle` 이 영원히 반환하지 않는다.

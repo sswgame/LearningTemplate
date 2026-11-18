@@ -67,12 +67,6 @@ namespace sw
         /** @brief 마지막 빌드 프로세스의 종료 코드를 반환합니다(0 = 성공). */
         virtual int32 getLastExitCode() const override { return _lastExitCode.load( std::memory_order_relaxed ); }
 
-        /**
-         * @brief 마지막 빌드가 "실행 중인 바이너리를 교체할 수 없어서" 실패했는지 반환합니다.
-         * @details 엔진 자체를 다시 링크해야 하는 변경이면 핫 리로드로는 해결되지 않습니다. 이 경우 빌드 실패는 코드 오류가 아니라
-         *          환경 제약이므로, 호출하는 쪽이 구분해서 다룰 수 있게 합니다.
-         */
-        bool wasBlockedByLoadedBinary() const { return _bBlockedByLoadedBinary.load( std::memory_order_relaxed ) != 0; }
         /** @brief 현재 또는 마지막으로 컴파일한 타깃 이름을 반환합니다. */
         virtual string getTargetName() const override;
 

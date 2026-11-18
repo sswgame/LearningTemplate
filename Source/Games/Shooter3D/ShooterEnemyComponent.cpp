@@ -184,7 +184,7 @@ namespace sw
         enterPhase( phase );
     }
 
-    void ShooterEnemyComponent::tickReplica( float32 step )
+    void ShooterEnemyComponent::updateReplica( float32 step )
     {
         _phaseTime += step;
         const float3  moved    = float3{ _position._x - _replicaPreviousPosition._x, 0.0f, _position._z - _replicaPreviousPosition._z };
@@ -277,7 +277,7 @@ namespace sw
             return;
         if ( _bReplica == SW_TRUE )
         {
-            tickReplica( MathUtil::min( context.getDeltaTime(), 0.1f ) );
+            updateReplica( MathUtil::min( context.getDeltaTime(), 0.1f ) );
             return;
         }
         GameObject*                     pOwner    = getOwner();

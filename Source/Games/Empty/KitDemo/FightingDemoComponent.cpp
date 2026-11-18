@@ -43,7 +43,6 @@ namespace sw
     FightingDemoComponent::FightingDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _matchWinner{ FightingDemoComponentInternal::kNoWinner }
         , _loserHealth{ 0 }
         , _winnerRounds{ 0 }
@@ -78,7 +77,7 @@ namespace sw
         _matchWinner  = match.getMatchWinner();
         _loserHealth  = match.getFighter( FightingDemoComponentInternal::kDefender )._health;
         _winnerRounds = match.getRoundWins( FightingDemoComponentInternal::kAttacker );
-        _demoState    = 1;
+        markRunFinished();
         return true;
     }
 
@@ -94,38 +93,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.FightingDone", "[KitDemo] fighting: player %# won the match, loser health %#, %# rounds", _matchWinner, _loserHealth, _winnerRounds );
     }
 
-    void FightingDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void FightingDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void FightingDemoComponent::serializeState( StateIO& io )
     {
-        io.header( FightingDemoComponentInternal::kStateTag, FightingDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState    = _demoState;
-        int32 matchWinner  = _matchWinner;
-        int32 loserHealth  = _loserHealth;
-        int32 winnerRounds = _winnerRounds;
-        io.value( demoState );
-        io.value( matchWinner );
-        io.value( loserHealth );
-        io.value( winnerRounds );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState    = demoState;
-        _matchWinner  = matchWinner;
-        _loserHealth  = loserHealth;
-        _winnerRounds = winnerRounds;
+        serializeResults( io, FightingDemoComponentInternal::kStateTag, FightingDemoComponentInternal::kStateVersion, { &_matchWinner, &_loserHealth, &_winnerRounds } );
     }
 } // namespace sw

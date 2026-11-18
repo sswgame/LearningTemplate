@@ -297,30 +297,10 @@ namespace sw
         return false;
     }
 
-    bool AutomationRunner::startFromText( string_view xmlText, string_view reportPath )
-    {
-        markWallStart();
-        _reportWriter.setReportPath( reportPath );
-        if ( const expected<void> parsed = _scenario.parse( xmlText, "<text>" ); parsed.has_value() == false )
-        {
-            finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, string( parsed.error().message().data(), parsed.error().message().size() ) + ": " + string( parsed.error().detail().data(), parsed.error().detail().size() ), {} ) );
-            return false;
-        }
-        _outputDirectory  = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
-        _wallLimitSeconds = computeWallLimitSeconds();
-        const bool bReady = skipIfThisBuildCannotRun() == false && prepareScratchFolders();
-        if ( bReady )
-        {
-            _evaluator.startLogCapture(); // 시작을 기다리는 동안(시작 씬 로드)의 줄도 이 시나리오의 것이다
-            startHangWatchdog();
-        }
-        return bReady;
-    }
-
     bool AutomationRunner::prepareScratchFolders()
     {
         // 사본 id 는 시나리오가 적은 그대로다 — 작업 도메인이 이 프로세스의 실행 뿌리 아래라(`AssetPaths::getScratchFolderPath`) 나란히 도는 App 과 겹치지 않는다.
-        _scenario.bindOutputDirectory( _outputDirectory ); // `{out}` — 산출물 폴더도 프로세스마다다(두 시작 길 모두 여기를 지난다)
+        _scenario.bindOutputDirectory( _outputDirectory ); // `{out}` — 산출물 폴더도 프로세스마다다(시작 길 `startFromPath` 가 여기를 지난다)
         for ( const AutomationScratchFolder& folder : _scenario.getTestOptions()._listScratchFolder )
         {
             const expected<void> prepared = AutomationScratchWorkspace::prepare( folder );
@@ -357,25 +337,12 @@ namespace sw
 
     void AutomationRunner::storeText( string_view name, string text )
     {
-        for ( StoredText& stored : _listStoredText )
-        {
-            if ( string_view{ stored._name } == name )
-            {
-                stored._text = std::move( text );
-                return;
-            }
-        }
-        _listStoredText.push_back( StoredText{ string( name ), std::move( text ) } );
+        _storedText.set( name, std::move( text ) );
     }
 
     const string* AutomationRunner::findStoredText( string_view name ) const
     {
-        for ( const StoredText& stored : _listStoredText )
-        {
-            if ( string_view{ stored._name } == name )
-                return &stored._text;
-        }
-        return nullptr;
+        return _storedText.find( name );
     }
 
     GameObjectManager* AutomationRunner::findActiveObjectManager() const
@@ -542,7 +509,7 @@ namespace sw
                     break;
             }
             const bool bExitDeadlineExceeded = isActive() && _run._exitDeadlineSeconds > 0.0 &&
-                                               _run._exitDeadlineSeconds < static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
+                                               _run._exitDeadlineSeconds < AutomationRunnerInternal::readNowSeconds();
             if ( bExitDeadlineExceeded )
                 finish( AutomationRunResult::failed( AutomationFailureKind::Assertion, "the window was asked to close but the loop kept running past ExpectExitWithin", {} ) );
             // 단계 시점(`_frameIndex`)은 붙잡은 프레임(`WaitUntil` · 입력 대상 자리 잡기 · 씬 로드 …)에 서 있다(뒤 단계가 그만큼 밀린다). 프레임 시한도 이 축으로 본다 —
@@ -885,7 +852,7 @@ namespace sw
         {
             if ( _run._exitDeadlineSeconds > 0.0 )
             {
-                const float64      nowSeconds   = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
+                const float64      nowSeconds   = AutomationRunnerInternal::readNowSeconds();
                 const QuitRequest* pQuitRequest = engine::findSubsystem<QuitRequest>();
                 const int32        quitExitCode = pQuitRequest != nullptr && pQuitRequest->isRequested() ? static_cast<int32>( pQuitRequest->getExitCode() ) : 0;
                 if ( quitExitCode != _run._expectedExitCode )

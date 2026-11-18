@@ -14,7 +14,7 @@ namespace sw
     {
         struct FixedCodecBoundResolverInternal
         {
-            enum class LookupResult : uint8
+            enum class FindResult : uint8
             {
                 Found,
                 NotFound,
@@ -38,7 +38,7 @@ namespace sw
              * @brief 범위 이름을 안쪽 범위부터 바깥으로 찾습니다. 찾은 필드는 앞에 선언된 Transient 아닌 정수 · 실수여야 합니다.
              * @param bIntegerSite 범위를 받는 값이 정수입니다. 그러면 범위 필드도 정수여야 합니다. 실수 필드를 정수로 바꾸면 소수부가 잘리기 때문입니다.
              */
-            static LookupResult lookupRangeName( FixedCodecEmitState& state, const ParsedPropertyInfo& prop, const string& name, const bool bIntegerSite, FixedCodecBound& outBound )
+            static FindResult findRangeName( FixedCodecEmitState& state, const ParsedPropertyInfo& prop, const string& name, const bool bIntegerSite, FixedCodecBound& outBound )
             {
                 for ( size_t frameIndex = state._listScope.size(); frameIndex > 0; --frameIndex )
                 {
@@ -52,7 +52,7 @@ namespace sw
                         if ( index >= frame._limit )
                         {
                             state.reportError( prop, "range field '" + name + "' must be declared before this field - the reader needs its value first" );
-                            return LookupResult::Error;
+                            return FindResult::Error;
                         }
                         const FixedValueKind kind     = candidate._fixedType != nullptr ? candidate._fixedType->_kind : FixedValueKind::Ineligible;
                         const bool           bNumeric = kind == FixedValueKind::Integer || kind == FixedValueKind::Float32 || kind == FixedValueKind::Float64;
@@ -60,20 +60,20 @@ namespace sw
                         if ( ( bNumeric && bStored ) == false )
                         {
                             state.reportError( prop, "range field '" + name + "' must be a non-transient integer or floating-point field" );
-                            return LookupResult::Error;
+                            return FindResult::Error;
                         }
                         if ( bIntegerSite && kind != FixedValueKind::Integer )
                         {
                             state.reportError( prop, "range field '" + name + "' is floating-point but this field is an integer - the fraction would be cut" );
-                            return LookupResult::Error;
+                            return FindResult::Error;
                         }
                         outBound._ownerFqn   = frame._pType->_fullyQualifiedName;
                         outBound._fieldName  = name;
                         outBound._scopeDepth = static_cast<uint32>( frameIndex - 1 );
-                        return LookupResult::Found;
+                        return FindResult::Found;
                     }
                 }
-                return LookupResult::NotFound;
+                return FindResult::NotFound;
             }
         };
     } // namespace
@@ -121,12 +121,12 @@ namespace sw
                 continue;
             }
 
-            const bool                                          bNegative = term.front() == '-';
-            const string                                        name( bNegative ? term.substr( 1 ) : term );
-            const FixedCodecBoundResolverInternal::LookupResult result = FixedCodecBoundResolverInternal::lookupRangeName( state, prop, name, bInteger, bound );
-            if ( result == FixedCodecBoundResolverInternal::LookupResult::Error )
+            const bool                                        bNegative = term.front() == '-';
+            const string                                      name( bNegative ? term.substr( 1 ) : term );
+            const FixedCodecBoundResolverInternal::FindResult result = FixedCodecBoundResolverInternal::findRangeName( state, prop, name, bInteger, bound );
+            if ( result == FixedCodecBoundResolverInternal::FindResult::Error )
                 return false;
-            if ( result == FixedCodecBoundResolverInternal::LookupResult::NotFound )
+            if ( result == FixedCodecBoundResolverInternal::FindResult::NotFound )
             {
                 if ( state._listScope.size() > 1 )
                 {

@@ -103,19 +103,6 @@ namespace sw
             // ------------------------------------------------------------------------------
             // C) 손으로 넣는 줄(`REGISTER_ANNOTATION_FIELD_FN`)의 Fn
             // ------------------------------------------------------------------------------
-            /** @brief 쉼표 · 세미콜론으로 나눈 별칭(이름을 바꾸기 전의 이름)들을 붙입니다. `Alias = "OldA, OldB"`. */
-            template <typename TParsed>
-            static void appendAlias( TParsed& target, const string_view value )
-            {
-                const string_splitter parts( value, { ",", ";" } );
-                for ( const string_view token : parts.getSplitList() )
-                {
-                    const string_view trimmed = StringUtil::trim( token );
-                    if ( trimmed.empty() == false )
-                        target._listAlias.emplace_back( trimmed );
-                }
-            }
-
             /** @brief 쉼표 · 세미콜론으로 나눈 이름들을 @p outList 에 붙입니다. */
             static void appendNameList( vector<string>& outList, const string_view value )
             {
@@ -126,6 +113,13 @@ namespace sw
                     if ( trimmed.empty() == false )
                         outList.emplace_back( trimmed );
                 }
+            }
+
+            /** @brief 쉼표 · 세미콜론으로 나눈 별칭(이름을 바꾸기 전의 이름)들을 붙입니다. `Alias = "OldA, OldB"`. */
+            template <typename TParsed>
+            static void appendAlias( TParsed& target, const string_view value )
+            {
+                appendNameList( target._listAlias, value );
             }
 
             /** @brief 지운 필드 이름입니다. `RemovedField = "_oldA, _oldB"`. */

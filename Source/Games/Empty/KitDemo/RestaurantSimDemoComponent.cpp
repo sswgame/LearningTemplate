@@ -45,7 +45,6 @@ namespace sw
         , _catalog{}
         , _pCatalog{}
         , _pRecipeCatalog{}
-        , _demoState{ 0 }
         , _served{ 0 }
         , _revenue{ 0 }
         , _profit{ 0 }
@@ -84,10 +83,10 @@ namespace sw
 
         RestaurantDaySummary summary;
         simulation.closeDay( summary );
-        _served    = summary._served;
-        _revenue   = static_cast<int32>( summary._revenue );
-        _profit    = static_cast<int32>( summary._profit );
-        _demoState = 1;
+        _served  = summary._served;
+        _revenue = static_cast<int32>( summary._revenue );
+        _profit  = static_cast<int32>( summary._profit );
+        markRunFinished();
         return true;
     }
 
@@ -103,38 +102,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.RestaurantSimDone", "[KitDemo] restaurant: served %#, revenue %#, profit %#", _served, _revenue, _profit );
     }
 
-    void RestaurantSimDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void RestaurantSimDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void RestaurantSimDemoComponent::serializeState( StateIO& io )
     {
-        io.header( RestaurantSimDemoComponentInternal::kStateTag, RestaurantSimDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState = _demoState;
-        int32 served    = _served;
-        int32 revenue   = _revenue;
-        int32 profit    = _profit;
-        io.value( demoState );
-        io.value( served );
-        io.value( revenue );
-        io.value( profit );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState = demoState;
-        _served    = served;
-        _revenue   = revenue;
-        _profit    = profit;
+        serializeResults( io, RestaurantSimDemoComponentInternal::kStateTag, RestaurantSimDemoComponentInternal::kStateVersion, { &_served, &_revenue, &_profit } );
     }
 } // namespace sw

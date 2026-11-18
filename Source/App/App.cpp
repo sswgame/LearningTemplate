@@ -619,10 +619,7 @@ namespace sw
         // 조회 자체를 tick 안으로 넘긴다.
         //
         // 모듈 교체는 **틱 직전**(게임 업데이트 뒤, 씬 틱 앞)에 한다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어지기 때문이다.
-#if SW_WITH_DYNAMIC_MODULES
-        if ( _launch.getDevLayer() != nullptr )
-            _launch.getDevLayer()->updateModuleReload();
-#endif
+        _launch.updateModuleReload();
 
         const ModuleFrameState& frameState = getModuleManager()->getFrameState();
         _launch.getEngine().update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
@@ -667,7 +664,7 @@ namespace sw
         return true;
     }
 
-    bool App::tickMainLoop()
+    bool App::updateMainLoop()
     {
         if ( _pWindow->processMessages() == false )
             return false;

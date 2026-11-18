@@ -41,7 +41,6 @@ namespace sw
     PartyArenaDemoComponent::PartyArenaDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _winner{ PartyArenaDemoComponentInternal::kNoWinner }
         , _winnerTotal{ 0 }
         , _roundsPlayed{ 0 }
@@ -74,7 +73,7 @@ namespace sw
         }
         _winner      = series.getWinner();
         _winnerTotal = _winner != PartyArenaDemoComponentInternal::kNoWinner ? series.getTotal( _winner ) : PartyArenaDemoComponentInternal::kNoPoints;
-        _demoState   = 1;
+        markRunFinished();
         return true;
     }
 
@@ -90,38 +89,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.PartyArenaDone", "[KitDemo] party arena: player %# won with %# points after %# rounds", _winner, _winnerTotal, _roundsPlayed );
     }
 
-    void PartyArenaDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void PartyArenaDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void PartyArenaDemoComponent::serializeState( StateIO& io )
     {
-        io.header( PartyArenaDemoComponentInternal::kStateTag, PartyArenaDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState    = _demoState;
-        int32 winner       = _winner;
-        int32 winnerTotal  = _winnerTotal;
-        int32 roundsPlayed = _roundsPlayed;
-        io.value( demoState );
-        io.value( winner );
-        io.value( winnerTotal );
-        io.value( roundsPlayed );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState    = demoState;
-        _winner       = winner;
-        _winnerTotal  = winnerTotal;
-        _roundsPlayed = roundsPlayed;
+        serializeResults( io, PartyArenaDemoComponentInternal::kStateTag, PartyArenaDemoComponentInternal::kStateVersion, { &_winner, &_winnerTotal, &_roundsPlayed } );
     }
 } // namespace sw

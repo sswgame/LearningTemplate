@@ -12,7 +12,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Catalog/MonsterHuntCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
      * @brief griffin 계약의 조사(단서 셋, 두 단계) → 흥정(한도 1 초과 요구는 맞제안, 한도와 같은 요구는 수락) → ghoul 두 번 처치(지식 1 단계)를 돌립니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Monster Hunt RPG Demo", Tooltip = "Runs one MonsterHuntRPG kit contract (investigation, haggle, bestiary kills) and keeps the result" )
-    class MonsterHuntRPGDemoComponent : public GameModeComponent
+    class MonsterHuntRPGDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -32,7 +33,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getSolved() const { return _solved; }
         int32 getReward() const { return _reward; }
         int32 getKnowledge() const { return _knowledge; }
@@ -40,8 +40,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 계약 한 바퀴를 돌리고 결과를 담습니다. 계약을 열지 못하면 오류를 남기고 false 입니다. */
@@ -52,7 +50,6 @@ namespace sw
         AssetRef<MonsterHuntCatalog> _catalogPath;
 
         SharedAssetRef<MonsterHuntCatalog> _pCatalog;
-        int32                              _demoState; ///< 0 시작 전, 1 한 바퀴를 마침
         int32                              _solved;    ///< 조사가 풀렸으면 1
         int32                              _reward;    ///< 흥정으로 정한 보상(끝나지 않았으면 0)
         int32                              _knowledge; ///< 처치 뒤 대상의 도감 지식 단계

@@ -465,16 +465,16 @@ namespace sw
         }
     }
 
-    void GameModuleManager::rebindGameService()
+    void GameModuleManager::rebindModuleService( void ( *bindService )( const ISubsystemLocator* pService ), unique_ptr<SubsystemScope>& inoutServices, bool bGameModule ) const
     {
-        if ( _gameAPI.bindService == nullptr )
+        if ( bindService == nullptr )
             return;
 
         // 새 범위를 채워 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게.
-        unique_ptr<SubsystemScope> gameServices = make_unique<SubsystemScope>();
-        fillModuleServiceScope( *gameServices, true );
-        _gameAPI.bindService( gameServices.get() );
-        _gameServices = std::move( gameServices );
+        unique_ptr<SubsystemScope> services = make_unique<SubsystemScope>();
+        fillModuleServiceScope( *services, bGameModule );
+        bindService( services.get() );
+        inoutServices = std::move( services );
     }
 
     void GameModuleManager::destroyGameInstance( bool bReleaseAPITable )
