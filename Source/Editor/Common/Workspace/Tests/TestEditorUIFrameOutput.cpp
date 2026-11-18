@@ -96,11 +96,11 @@ SW_TEST_CASE( EditorUIFrameOutputTest, PreviewSubmitsTravelAsValues )
     // 다음 UI 프레임의 앞 정리가 그리는 중인 묶음의 미리보기를 비운다.
     views.clearViewDrawnMarks();
     SW_EXPECT_FALSE( views.isAnimationRequested() );
+    SW_EXPECT_LOG( "EditorRenderViews.PreviewViewOverflow" );
     for ( uint32 index = 0; index < kMaxPreviewSceneView + 1; ++index )
     {
         views.submitPreviewView( targetID, 7, float4x4{}, float3{} );
     }
-    SW_EXPECT_LOG( "EditorRenderViews.PreviewViewOverflow" );
     views.publishUIFrame( 0u );
     SW_EXPECT_EQUAL( kMaxPreviewSceneView, views.getPublishedUIFrame()._previewCount );
 }

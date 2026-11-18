@@ -5,10 +5,12 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoEntry.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
-#include "Editor/Panels/Scene/Model/HistoryViewModel.h"
 
-// HistoryViewModelTest — 히스토리 창의 ViewModel. 창이 스택을 직접 읽던 것을 값(ViewState)으로 옮겼으므로 이름 · 위치 · 이동이 스택과 같은지 본다.
+// HistoryViewModelTest — 히스토리 창이 읽는 값(`EditorUndoHistorySnapshot`)과 이동의 실행(`EditorUndoEntry`). ViewModel 은 이 값을 옮기고 이동을 게임 단계로 요청만 하므로,
+// 값의 이름 · 위치와 실행 쪽의 이동 · 거절을 직접 본다(실행 중인 에디터 안에서 돌아도 그 에디터의 기록을 건드리지 않는다).
 
 namespace
 {
@@ -27,7 +29,7 @@ namespace
     };
 } // namespace
 
-/** @brief [HistoryViewModelTest] gather 는 이름(빈 이름은 "Command") · 지금 위치를 담고, jumpTo · undo · redo 가 범위의 스택을 움직인다 */
+/** @brief [HistoryViewModelTest] 값 사본은 이름(빈 이름은 "Command") · 지금 위치를 담고, jumpTo · undo · redo 의 실행이 범위의 스택을 움직인다 */
 SW_TEST_CASE( HistoryViewModelTest, GatherAndJumpFollowTheStack )
 {
     using Internal = HistoryViewModelTestInternal;
@@ -43,9 +45,8 @@ SW_TEST_CASE( HistoryViewModelTest, GatherAndJumpFollowTheStack )
     SW_REQUIRE_TRUE( scope.bind( &stack ) );
     const sw::editor::ScopedEditorScope scopedEditor( scope );
 
-    sw::editor::HistoryViewModel viewModel;
-    sw::editor::HistoryViewState state;
-    viewModel.gather( state );
+    sw::editor::EditorUndoHistorySnapshot state;
+    state.captureFrom( &stack );
     SW_EXPECT_TRUE( state._bAvailable );
     SW_REQUIRE_TRUE( state._listLabel.size() == 2u );
     SW_EXPECT_TRUE( state._listLabel[0] == "Move" );
@@ -53,17 +54,17 @@ SW_TEST_CASE( HistoryViewModelTest, GatherAndJumpFollowTheStack )
     SW_EXPECT_TRUE( state._currentIndex == 2u );
     SW_EXPECT_TRUE( state._bCanUndo && state._bCanRedo == false );
 
-    viewModel.jumpTo( 0 );
-    viewModel.gather( state );
+    SW_EXPECT_TRUE( sw::editor::EditorUndoEntry::jumpTo( 0 ) );
+    state.captureFrom( &stack );
     SW_EXPECT_TRUE( state._currentIndex == 0u );
     SW_EXPECT_TRUE( state._bCanUndo == false && state._bCanRedo );
 
-    viewModel.redo();
-    viewModel.gather( state );
+    SW_EXPECT_TRUE( sw::editor::EditorUndoEntry::redo() );
+    state.captureFrom( &stack );
     SW_EXPECT_TRUE( state._currentIndex == 1u );
 
-    viewModel.undo();
-    viewModel.gather( state );
+    SW_EXPECT_TRUE( sw::editor::EditorUndoEntry::undo() );
+    state.captureFrom( &stack );
     SW_EXPECT_TRUE( state._currentIndex == 0u );
 }
 
@@ -82,19 +83,18 @@ SW_TEST_CASE( HistoryViewModelTest, RefusedWhileEditOpen )
     SW_REQUIRE_TRUE( scope.bind( &stack ) );
     const sw::editor::ScopedEditorScope scopedEditor( scope );
 
-    sw::editor::HistoryViewModel     viewModel;
     sw::CommandStackInteractionScope interaction = stack.openInteraction();
-    viewModel.jumpTo( 0 );
-    viewModel.undo();
-    viewModel.clear();
+    SW_EXPECT_FALSE( sw::editor::EditorUndoEntry::jumpTo( 0 ) );
+    SW_EXPECT_FALSE( sw::editor::EditorUndoEntry::undo() );
+    SW_EXPECT_FALSE( sw::editor::EditorUndoEntry::clear() );
     SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCommandCount() );
     SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCurrentIndex() );
 
-    sw::editor::HistoryViewState state;
-    viewModel.gather( state );
+    sw::editor::EditorUndoHistorySnapshot state;
+    state.captureFrom( &stack );
     SW_EXPECT_FALSE( state._bCanUndo ); // 끄는 동안 단추가 꺼진다
 
     interaction.reset();
-    viewModel.jumpTo( 0 );
+    SW_EXPECT_TRUE( sw::editor::EditorUndoEntry::jumpTo( 0 ) );
     SW_EXPECT_EQUAL( size_t{ 0 }, stack.getCurrentIndex() );
 }
