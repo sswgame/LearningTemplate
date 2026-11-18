@@ -242,7 +242,7 @@ namespace sw
         (void)_account.pollReplies( listReply );
         for ( const AccountClientReply& reply : listReply )
         {
-            if ( reply._operation == AccountClientOperation::Login )
+            if ( reply._operation == AccountMethodName::Login )
             {
                 if ( reply._errorCode != 0 || reply._result != LoginResult::Ok )
                     return fail( Error{ ErrorKind::ExternalFailure, "login refused", AccountTicketConnectInternal::describeFailure( reply ) } );
@@ -252,7 +252,7 @@ namespace sw
                     (void)_account.issueGameTicket( _serverID );
                 }
             }
-            else if ( reply._operation == AccountClientOperation::IssueGameTicket )
+            else if ( reply._operation == AccountMethodName::IssueGameTicket )
             {
                 if ( reply._errorCode != 0 || reply._result != LoginResult::Ok )
                     return fail( Error{ ErrorKind::ExternalFailure, "game ticket refused", AccountTicketConnectInternal::describeFailure( reply ) } );

@@ -517,7 +517,7 @@ namespace sw
                 if ( bInvalidArguments )
                     return false;
                 SceneManager* pManager = &engine::getSubsystem<SceneManager>();
-                if ( pManager->startLoadLeakProbe( listArgument[0], static_cast<uint32>( measuredRounds ) ) == false )
+                if ( pManager->startLoadLeakCheck( listArgument[0], static_cast<uint32>( measuredRounds ) ) == false )
                 {
                     outReply = "could not start (see the log)";
                     return false;

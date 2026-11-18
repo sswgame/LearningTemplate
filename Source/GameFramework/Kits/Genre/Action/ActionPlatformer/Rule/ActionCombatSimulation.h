@@ -1,5 +1,5 @@
 /**
- * @file ActionCombatRig.h
+ * @file ActionCombatSimulation.h
  * @brief 액션 플랫포머의 싸움입니다. 근접 콤보(기반 `MoveTimeline` 을 쓰며, 다음 기술은 캔슬 창에서 나가고 공격을 미리 누를 수 있음), 총(기반 `WeaponState` 를 쓰며 연사, 탄창, 재장전을 처리하고 탄은 공통 발사체),
  *        패리 반사(창 안의 적 탄을 되받아침), 히트스톱(맞힌 순간 세상이 멈춤)을 다룹니다.
  * @details 한 번 호출할 때 한 프레임(`advanceFrame`)씩 진행한다. 시간 단위가 프레임이므로 결정적이다. 히트스톱 동안은 탄, 패리 창, 공격 기억이 모두 멈추고, 기술은 자기 히트스톱만 줄인다.
@@ -63,17 +63,17 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ActionCombatRig
+     * @class ActionCombatSimulation
      * @brief 플레이어 하나의 근접, 총, 패리와 화면 위의 투사체입니다.
      */
-    class SW_KIT_API ActionCombatRig
+    class SW_KIT_API ActionCombatSimulation
     {
     public:
         static constexpr uint32  kStateTag     = FourCCUtil::make( "APCR" );
         static constexpr uint32  kStateVersion = 3;            ///< 3: 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
         static constexpr float32 kFrameTime    = 1.0f / 60.0f; ///< 한 프레임의 시간(탄과 총에 쓴다)
 
-        ActionCombatRig();
+        ActionCombatSimulation();
 
         /** @brief 화면 평면 위의 탄 하나입니다(적의 탄 · 테스트). 수명 @p lifetime 초가 지나면 사라집니다. */
         [[nodiscard]] static ProjectileState makeProjectile( const float2& position, const float2& velocity, ActionTeam team, float32 damage, float32 lifetime );

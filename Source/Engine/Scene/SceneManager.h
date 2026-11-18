@@ -18,7 +18,7 @@
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
-#include "Engine/Scene/SceneLoadLeakProbe.h"
+#include "Engine/Scene/SceneLoadLeakCheck.h"
 
 namespace sw
 {
@@ -237,12 +237,12 @@ namespace sw
          */
         void waitForPendingLoad() const;
         /**
-         * @brief 씬 로드를 되풀이해 누수 곡선을 잽니다(`SceneLoadLeakProbe`, 누수 탐지 L3). 프레임마다 `update` 가 진행하고 끝나면 판정을 로그로 남깁니다.
+         * @brief 씬 로드를 되풀이해 누수 곡선을 잽니다(`SceneLoadLeakCheck`, 누수 탐지 L3). 프레임마다 `update` 가 진행하고 끝나면 판정을 로그로 남깁니다.
          * @return 시작하지 못하면 false 입니다(이미 도는 중 · 프로파일러 없음 · 경로 없음).
          */
-        [[nodiscard]] bool startLoadLeakProbe( string_view path, uint32 measuredRounds ) { return _leakProbe.start( path, measuredRounds ); }
+        [[nodiscard]] bool startLoadLeakCheck( string_view path, uint32 measuredRounds ) { return _leakCheck.start( path, measuredRounds ); }
         /** @brief 씬 로드 누수 감시 값이 도는 중이면 true 입니다. */
-        bool isLoadLeakProbeRunning() const { return _leakProbe.isRunning(); }
+        bool isLoadLeakCheckRunning() const { return _leakCheck.isRunning(); }
         /** @brief 로드된 씬을 모두 반환합니다. */
         const vector<unique_ptr<Scene>>& getLoadedScenes() const { return _listLoadedScene; }
         /**
@@ -365,7 +365,7 @@ namespace sw
 
         unique_ptr<PreloadSet> _pScenePreload;     ///< 로드 중이거나 끝난 지 얼마 안 된 씬의 프리로드. 없으면 nullptr
         uint32                 _preloadHeldFrames; ///< 로드가 끝난 뒤 프리로드를 붙들고 지난 프레임 수
-        SceneLoadLeakProbe     _leakProbe;         ///< 씬 로드 누수 곡선 감시 값(`startLoadLeakProbe`)
+        SceneLoadLeakCheck     _leakCheck;         ///< 씬 로드 누수 곡선 감시 값(`startLoadLeakCheck`)
 
         SW_SERVICE_SLOT( SceneManager, Required );
     };

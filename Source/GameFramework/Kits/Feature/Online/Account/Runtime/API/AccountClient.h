@@ -26,21 +26,18 @@ namespace sw
 {
     struct NetConnectCredentials;
 
-    /** @brief 클라이언트 요청 종류입니다. 프로토콜 표의 메서드 이름 그대로입니다 — 같은 열거자를 두 번 적으면 메서드를 더할 때 한쪽이 빠진다. */
-    using AccountClientOperation = AccountMethodName;
-
     /** @brief 끝난 요청 하나입니다. 전송 오류나 공통 범주이면 `_errorCode`(`OnlineError`)가 0이 아니며 `_result` 도 그 범주입니다(`LoginServiceResult`). */
     struct AccountClientReply
     {
-        LoginGrant             _grant{}; ///< 공통 범주면 그 자세한 몸만 담긴다(`kRateLimited` 의 `_retryAfterMs`, `kUpdateRequired` 의 `_storeURL`)
-        NetGameTicket          _ticket{};
-        AccountLinkSummary     _linkSummary{};
-        string                 _loginNonce{}; ///< IssueLoginNonce — 제공자에 넘겨 ID 토큰에 싣고, 티켓 `토큰|nonce` 로 한 번 쓴다
-        uint64                 _requestID{ 0 };
-        uint16                 _errorCode{ 0 };
-        LoginServiceResult     _result{ LoginResult::Ok };
-        AccountClientOperation _operation{ AccountClientOperation::Login };
-        uint8                  _bAutomatic{ SW_FALSE }; ///< 다시 연결된 뒤 이 객체가 스스로 보낸 재접속이다
+        LoginGrant         _grant{}; ///< 공통 범주면 그 자세한 몸만 담긴다(`kRateLimited` 의 `_retryAfterMs`, `kUpdateRequired` 의 `_storeURL`)
+        NetGameTicket      _ticket{};
+        AccountLinkSummary _linkSummary{};
+        string             _loginNonce{}; ///< IssueLoginNonce — 제공자에 넘겨 ID 토큰에 싣고, 티켓 `토큰|nonce` 로 한 번 쓴다
+        uint64             _requestID{ 0 };
+        uint16             _errorCode{ 0 };
+        LoginServiceResult _result{ LoginResult::Ok };
+        AccountMethodName  _operation{ AccountMethodName::Login };
+        uint8              _bAutomatic{ SW_FALSE }; ///< 다시 연결된 뒤 이 객체가 스스로 보낸 재접속이다
     };
 } // namespace sw
 

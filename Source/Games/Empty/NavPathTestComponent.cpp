@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Empty/NavPathProbeComponent.h"
+#include "Games/Empty/NavPathTestComponent.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
@@ -13,10 +13,10 @@ namespace sw
 {
     namespace
     {
-        struct NavPathProbeInternal
+        struct NavPathTestInternal
         {
             /** @brief 대상 오브젝트의 탐침입니다. 없으면 까닭을 적고 nullptr 입니다. */
-            static const NavPathProbeComponent* findProbe( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            static const NavPathTestComponent* findProbe( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const GameObject* pObject = query.findTargetObject();
                 if ( pObject == nullptr )
@@ -24,16 +24,16 @@ namespace sw
                     outValue.setText( query.getTargetProblem() );
                     return nullptr;
                 }
-                const NavPathProbeComponent* pProbe = pObject->getComponent<NavPathProbeComponent>();
+                const NavPathTestComponent* pProbe = pObject->getComponent<NavPathTestComponent>();
                 if ( pProbe == nullptr )
-                    outValue.setText( query.describeMissing( "NavPathProbeComponent" ) );
+                    outValue.setText( query.describeMissing( "NavPathTestComponent" ) );
                 return pProbe;
             }
 
-            /** @brief 감시 값 `EmptyNav.ProbePathLength` — 탐침이 마지막으로 받은 비동기 경로의 길이(m)입니다. 아직 받지 못했으면 값이 없습니다. */
+            /** @brief 감시 값 `EmptyNav.TestPathLength` — 탐침이 마지막으로 받은 비동기 경로의 길이(m)입니다. 아직 받지 못했으면 값이 없습니다. */
             [[nodiscard]] static bool readPathLength( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const NavPathProbeComponent* pProbe = findProbe( query, outValue );
+                const NavPathTestComponent* pProbe = findProbe( query, outValue );
                 if ( pProbe == nullptr )
                     return false;
                 if ( pProbe->getLastPathLength() < 0.0f )
@@ -45,20 +45,20 @@ namespace sw
                 return true;
             }
 
-            /** @brief 감시 값 `EmptyNav.ProbeResultCount` — 탐침이 받은 비동기 경로 결과 수입니다. */
+            /** @brief 감시 값 `EmptyNav.TestResultCount` — 탐침이 받은 비동기 경로 결과 수입니다. */
             [[nodiscard]] static bool readResultCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const NavPathProbeComponent* pProbe = findProbe( query, outValue );
+                const NavPathTestComponent* pProbe = findProbe( query, outValue );
                 if ( pProbe == nullptr )
                     return false;
                 outValue.setNumber( static_cast<float64>( pProbe->getResultCount() ) );
                 return true;
             }
 
-            /** @brief 감시 값 `EmptyNav.ProbeCancelLeaks` — 버린 질의가 수확 뒤에도 결과를 낸 수입니다(0 이어야 한다). */
+            /** @brief 감시 값 `EmptyNav.TestCancelLeaks` — 버린 질의가 수확 뒤에도 결과를 낸 수입니다(0 이어야 한다). */
             [[nodiscard]] static bool readCancelLeaks( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const NavPathProbeComponent* pProbe = findProbe( query, outValue );
+                const NavPathTestComponent* pProbe = findProbe( query, outValue );
                 if ( pProbe == nullptr )
                     return false;
                 outValue.setNumber( static_cast<float64>( pProbe->getCancelLeakCount() ) );
@@ -70,7 +70,7 @@ namespace sw
 
 namespace sw
 {
-    NavPathProbeComponent::NavPathProbeComponent()
+    NavPathTestComponent::NavPathTestComponent()
         : _target{}
         , _pSceneNavigation{ nullptr }
         , _origin{}
@@ -86,26 +86,26 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void NavPathProbeComponent::onRegister( GameObjectManager& manager )
+    void NavPathTestComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
         _pSceneNavigation = &manager.getSubsystem<SceneNavigation>();
     }
 
-    void NavPathProbeComponent::onUnregister( GameObjectManager& manager )
+    void NavPathTestComponent::onUnregister( GameObjectManager& manager )
     {
         _pSceneNavigation = nullptr;
         Component::onUnregister( manager );
     }
 
-    void NavPathProbeComponent::onBeginPlay()
+    void NavPathTestComponent::onBeginPlay()
     {
         Component::onBeginPlay();
         const SceneComponent* pScene = getOwner()->getPrimarySceneComponent();
         _origin                      = pScene != nullptr ? pScene->getWorldPosition() : float3{};
     }
 
-    void NavPathProbeComponent::onEndPlay()
+    void NavPathTestComponent::onEndPlay()
     {
         // 요청자가 사라진다 — 줄에 남은 질의를 버린다. 씬의 내비게이션보다 먼저 놓는다.
         _probe.cancel();
@@ -113,14 +113,14 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void NavPathProbeComponent::onTick( TickContext& context )
+    void NavPathTestComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
         if ( _pSceneNavigation != nullptr )
             updateProbe();
     }
 
-    void NavPathProbeComponent::updateProbe()
+    void NavPathTestComponent::updateProbe()
     {
         NavMeshAgentComponent* pAgent    = getOwner()->getComponent<NavMeshAgentComponent>();
         const hashed_string    agentType = pAgent != nullptr ? pAgent->getAgentType() : hashed_string{};
@@ -164,9 +164,9 @@ namespace sw
             _cancelPending = _pSceneNavigation->requestPath( agentType, _origin, end );
     }
 
-    SW_AUTOMATION_QUERY_WATCH( emptyNavProbePathLength, "EmptyNav.ProbePathLength", "Length (m) of the last async navmesh path the probe on target received; absent before the first",
-                               &NavPathProbeInternal::readPathLength, true, false );
-    SW_AUTOMATION_QUERY_WATCH( emptyNavProbeResultCount, "EmptyNav.ProbeResultCount", "Async path results the probe on target received", &NavPathProbeInternal::readResultCount, true, false );
-    SW_AUTOMATION_QUERY_WATCH( emptyNavProbeCancelLeaks, "EmptyNav.ProbeCancelLeaks", "Cancelled async path queries of the probe on target that still delivered a result (must stay 0)",
-                               &NavPathProbeInternal::readCancelLeaks, true, false );
+    SW_AUTOMATION_QUERY_WATCH( emptyNavTestPathLength, "EmptyNav.TestPathLength", "Length (m) of the last async navmesh path the probe on target received; absent before the first",
+                               &NavPathTestInternal::readPathLength, true, false );
+    SW_AUTOMATION_QUERY_WATCH( emptyNavTestResultCount, "EmptyNav.TestResultCount", "Async path results the probe on target received", &NavPathTestInternal::readResultCount, true, false );
+    SW_AUTOMATION_QUERY_WATCH( emptyNavTestCancelLeaks, "EmptyNav.TestCancelLeaks", "Cancelled async path queries of the probe on target that still delivered a result (must stay 0)",
+                               &NavPathTestInternal::readCancelLeaks, true, false );
 } // namespace sw

@@ -305,22 +305,22 @@ SW_TEST_CASE( RHITransferTest, SerialsClassifyTicketsByWatermarkAndGeneration )
  */
 SW_TEST_CASE( RHITransferTest, FenceQueueRaisesWatermarkOnlyOverAContiguousPrefix )
 {
-    struct FakeProbe
+    struct FakeFence
     {
         bool _bDone;
     };
 
     RHITransferSerials               serials{ 1u }; // 장치 세대 — 시험 장치 하나
-    RHITransferFenceQueue<FakeProbe> queue{ serials };
-    const uint64                     first  = queue.enqueue( FakeProbe{ false } );
-    const uint64                     second = queue.enqueue( FakeProbe{ true } ); // 뒤의 제출이 먼저 끝났다
-    const uint64                     third  = queue.enqueue( FakeProbe{ false } );
+    RHITransferFenceQueue<FakeFence> queue{ serials };
+    const uint64                     first  = queue.enqueue( FakeFence{ false } );
+    const uint64                     second = queue.enqueue( FakeFence{ true } ); // 뒤의 제출이 먼저 끝났다
+    const uint64                     third  = queue.enqueue( FakeFence{ false } );
     SW_EXPECT_EQUAL( 3u, queue.getPendingCount() );
 
     uint32     retiredCount{ 0 };
-    const auto isDone = []( FakeProbe& probe )
+    const auto isDone = []( FakeFence& probe )
     { return probe._bDone; };
-    const auto retire = [&retiredCount]( FakeProbe& )
+    const auto retire = [&retiredCount]( FakeFence& )
     { ++retiredCount; };
 
     SW_EXPECT_FALSE( queue.retireDone( isDone, retire ) ); // 맨 앞이 안 끝났다
@@ -330,7 +330,7 @@ SW_TEST_CASE( RHITransferTest, FenceQueueRaisesWatermarkOnlyOverAContiguousPrefi
     // 맨 앞이 끝나면 앞의 둘이 함께 빠지고 워터마크는 둘째까지 오른다. 셋째는 아직이다.
     // (probe 를 줄 안에서 바꿀 수 없으므로 isDone 이 시리얼 대신 호출 횟수로 답한다.)
     uint32     askCount{ 0 };
-    const auto isDoneFirstTwo = [&askCount]( FakeProbe& )
+    const auto isDoneFirstTwo = [&askCount]( FakeFence& )
     { return ++askCount <= 2; };
     SW_EXPECT_TRUE( queue.retireDone( isDoneFirstTwo, retire ) );
     SW_EXPECT_EQUAL( 2u, retiredCount );

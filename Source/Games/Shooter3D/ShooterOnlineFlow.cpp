@@ -255,7 +255,7 @@ namespace sw
         {
             if ( reply._errorCode != OnlineError::kOk || reply._result != LoginResult::Ok )
                 SW_LOG_WARNING_ID( "Shooter.OnlineAccountFailed", "[Shooter] online account call failed (error %#, result %#)", reply._errorCode, static_cast<int32>( reply._result._result ) );
-            else if ( reply._operation == AccountClientOperation::Login )
+            else if ( reply._operation == AccountMethodName::Login )
                 SW_LOG_INFO_ID( "Shooter.OnlineLoggedIn", "[Shooter] online login done" );
         }
         pollMatches( session );

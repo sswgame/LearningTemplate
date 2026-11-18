@@ -166,7 +166,7 @@ namespace sw
     };
 
     /** @brief 전송 하나의 완료 표지입니다. 콜백이 켜고 `RHITransferFenceQueue` 가 순서대로 거둡니다. 주소가 콜백의 userdata 라 큐 안에서 움직이지 않게 따로 할당한다. */
-    struct WebGPUTransferProbe
+    struct WebGPUTransferFence
     {
         atomic<uint8>    _bDone{ SW_FALSE };
         atomic<uint8>    _bFailed{ SW_FALSE };
@@ -497,7 +497,7 @@ namespace sw
 
         RHIReleaseQueue                                        _releaseQueue;
         RHITransferSerials                                     _transferSerials;
-        RHITransferFenceQueue<unique_ptr<WebGPUTransferProbe>> _transferQueue;
+        RHITransferFenceQueue<unique_ptr<WebGPUTransferFence>> _transferQueue;
         RHIPendingReadbackTable<WebGPUTextureReadback>         _readbackTable;
         vector<RHIBufferHandle>                                _listQueuedReadbackBuffer;
 

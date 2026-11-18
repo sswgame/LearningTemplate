@@ -52,7 +52,7 @@ namespace sw::editor
             static constexpr uint32      kMaxWaitStepCount         = 180;                      ///< 폴더 목록(워커)과 파일 감시를 기다리는 최대 프레임 수
 
             /** @brief 콘텐츠 브라우저 테스트의 진행 상태입니다. */
-            struct ContentBrowserProbe
+            struct ContentBrowserTestState
             {
                 /** @brief 테스트 폴더를 비운 채 새로 만들고 그 안에 파일 하나를 씁니다. */
                 bool makeProbeFolder( const utf8* pFileName )
@@ -74,7 +74,7 @@ namespace sw::editor
                 {
                     if ( _folderAbs.empty() == false )
                         (void)context.expect( FileUtil::removeDirectory( _folderAbs ), "could not remove the self test folder" );
-                    *this = ContentBrowserProbe{};
+                    *this = ContentBrowserTestState{};
                 }
                 /** @brief 다음 단계로 넘어갑니다. 기다림 한도는 새 단계의 시작부터 셉니다. */
                 void enterPhase( uint32 phase, uint32 stepIndex )
@@ -96,9 +96,9 @@ namespace sw::editor
                     constexpr const utf8* kDeletedFileName  = "probe.txt";
                     constexpr const utf8* kAddedFileName    = "added.txt";
 
-                    ContentBrowserProbe& probe     = context.getTestState<ContentBrowserProbe>();
-                    const uint32         stepIndex = context.getStepIndex();
-                    ContentBrowserPanel* pPanel    = findVisibleContentBrowser( context );
+                    ContentBrowserTestState& probe     = context.getTestState<ContentBrowserTestState>();
+                    const uint32             stepIndex = context.getStepIndex();
+                    ContentBrowserPanel*     pPanel    = findVisibleContentBrowser( context );
                     if ( pPanel == nullptr )
                         probe.enterPhase( kPhaseCleanup, stepIndex );
 
@@ -204,7 +204,7 @@ namespace sw::editor
             // contentBrowser.treeDoesNotReadTheDiskEveryFrame: 폴더 트리는 처음 그릴 때만 하위 폴더를 디스크에서 읽는다. 프레임마다 읽으면 Debug 에서 16.8 ms 가 걸린다
             // ------------------------------------------------------------------------------
             /** @brief 폴더 트리 테스트의 진행 상태입니다. 앞 테스트가 지운 폴더의 파일 감시 이벤트가 캐시를 비울 수 있으므로 변경 번호가 멈출 때까지 기다립니다. */
-            struct FolderTreeProbe
+            struct FolderTreeTestState
             {
                 static EditorSelfTestStep runTreeDoesNotReadTheDiskEveryFrame( EditorSelfTestContext& context )
                 {
@@ -215,7 +215,7 @@ namespace sw::editor
                     constexpr uint32 kSteadyStepCount    = 10;
                     constexpr uint32 kMaxTotalStepCount  = 600;
 
-                    FolderTreeProbe&     probe         = context.getTestState<FolderTreeProbe>();
+                    FolderTreeTestState& probe         = context.getTestState<FolderTreeTestState>();
                     const uint32         stepIndex     = context.getStepIndex();
                     ContentBrowserPanel* pPanel        = findVisibleContentBrowser( context );
                     EditorContext&       editorContext = editor::getSubsystem<EditorContext>();
@@ -282,9 +282,9 @@ namespace sw::editor
             // contentBrowser.showsActivePackOnly: 게임 루트는 활성 팩(`GameConfig::_packRoot`) 하나이고, All packs 를 켜면 game/ 의 팩마다 하나다
             // ------------------------------------------------------------------------------
             /** @brief 테스트 앞의 "All packs" 스위치 상태입니다. 끝나면 되돌립니다. */
-            struct ActivePackProbe
+            struct ActivePackTestState
             {
-                ActivePackProbe()
+                ActivePackTestState()
                     : _bWasShowingAllPacks{ SW_FALSE }
                 {
                 }
@@ -297,7 +297,7 @@ namespace sw::editor
                         return EditorSelfTestStep::Done;
                     if ( stepIndex == 0 )
                     {
-                        context.getTestState<ActivePackProbe>()._bWasShowingAllPacks = pPanel->isShowingAllPacks() ? SW_TRUE : SW_FALSE;
+                        context.getTestState<ActivePackTestState>()._bWasShowingAllPacks = pPanel->isShowingAllPacks() ? SW_TRUE : SW_FALSE;
                         pPanel->setShowAllPacks( false );
                         return EditorSelfTestStep::WaitStable; // 루트는 다음 그리기에서 다시 만든다
                     }
@@ -314,7 +314,7 @@ namespace sw::editor
                     (void)AssetPaths::collectGamePackDomains( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listPackDomain ); // 없으면 아래 기대가 실패한다
                     (void)context.expect( listPackDomain.empty() == false && pPanel->getGameRootCount() == static_cast<uint32>( listPackDomain.size() ),
                                           "All packs does not list every game pack" );
-                    pPanel->setShowAllPacks( context.getTestState<ActivePackProbe>()._bWasShowingAllPacks == SW_TRUE );
+                    pPanel->setShowAllPacks( context.getTestState<ActivePackTestState>()._bWasShowingAllPacks == SW_TRUE );
                     return EditorSelfTestStep::Done;
                 }
 
@@ -325,7 +325,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // mapCheck.selectsIssueObject: 결과 행을 누르면 그 오브젝트가 선택된다. 검증 결과는 SceneValidationIssues 의 표에 replaceIssues 로 넣는다
             // ------------------------------------------------------------------------------
-            struct MapCheckProbe
+            struct MapCheckTestState
             {
                 static EditorSelfTestStep runMapCheckSelectsIssueObject( EditorSelfTestContext& context )
                 {
@@ -333,7 +333,7 @@ namespace sw::editor
 
                     EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
                     GameObjectManager* pManager      = editor::getActiveObjectManager();
-                    MapCheckProbe&     probe         = context.getTestState<MapCheckProbe>();
+                    MapCheckTestState& probe         = context.getTestState<MapCheckTestState>();
                     const uint32       stepIndex     = context.getStepIndex();
                     if ( context.expect( pManager != nullptr, "no active scene" ) == false )
                         return EditorSelfTestStep::Done;
@@ -469,9 +469,9 @@ namespace sw::editor
                                                                        UserSettingsPanel::kPanelID };
 
             /** @brief 도구 창 테스트의 진행 상태입니다. */
-            struct ToolWindowProbe
+            struct ToolWindowTestState
             {
-                ToolWindowProbe()
+                ToolWindowTestState()
                     : _panelIndex{ 0 }
                     , _openStep{ 0 }
                     , _bWasOpen{ SW_FALSE }
@@ -487,7 +487,7 @@ namespace sw::editor
                     constexpr float32 kViewportRatio      = 0.9f; ///< `EditorChrome::setNextPanelSize` 가 자르는 비율
                     constexpr float32 kEdgeTolerancePx    = 1.0f;
 
-                    ToolWindowProbe&     probe         = context.getTestState<ToolWindowProbe>();
+                    ToolWindowTestState& probe         = context.getTestState<ToolWindowTestState>();
                     EditorContext&       editorContext = editor::getSubsystem<EditorContext>();
                     const ImGuiViewport* pViewport     = ImGui::GetMainViewport();
                     if ( context.expect( pViewport != nullptr, "no main viewport" ) == false )
@@ -645,12 +645,12 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_EDITOR_SELF_TEST( ContentBrowserDelete, "contentBrowser.deleteRefreshesTheList", 1100, &EditorSelfTestPanelCasesInternal::ContentBrowserProbe::runDeleteRefreshesTheList );
-    SW_EDITOR_SELF_TEST( ContentBrowserTree, "contentBrowser.treeDoesNotReadTheDiskEveryFrame", 1120, &EditorSelfTestPanelCasesInternal::FolderTreeProbe::runTreeDoesNotReadTheDiskEveryFrame );
-    SW_EDITOR_SELF_TEST( ContentBrowserActivePack, "contentBrowser.showsActivePackOnly", 1130, &EditorSelfTestPanelCasesInternal::ActivePackProbe::runShowsActivePackOnly );
-    SW_EDITOR_SELF_TEST( MapCheckSelect, "mapCheck.selectsIssueObject", 1140, &EditorSelfTestPanelCasesInternal::MapCheckProbe::runMapCheckSelectsIssueObject );
+    SW_EDITOR_SELF_TEST( ContentBrowserDelete, "contentBrowser.deleteRefreshesTheList", 1100, &EditorSelfTestPanelCasesInternal::ContentBrowserTestState::runDeleteRefreshesTheList );
+    SW_EDITOR_SELF_TEST( ContentBrowserTree, "contentBrowser.treeDoesNotReadTheDiskEveryFrame", 1120, &EditorSelfTestPanelCasesInternal::FolderTreeTestState::runTreeDoesNotReadTheDiskEveryFrame );
+    SW_EDITOR_SELF_TEST( ContentBrowserActivePack, "contentBrowser.showsActivePackOnly", 1130, &EditorSelfTestPanelCasesInternal::ActivePackTestState::runShowsActivePackOnly );
+    SW_EDITOR_SELF_TEST( MapCheckSelect, "mapCheck.selectsIssueObject", 1140, &EditorSelfTestPanelCasesInternal::MapCheckTestState::runMapCheckSelectsIssueObject );
     SW_EDITOR_SELF_TEST( PrefabOtherFocus, "prefab.ignoresOtherFocusedAssets", 1200, &EditorSelfTestPanelCasesInternal::runPrefabIgnoresOtherFocusedAssets );
     SW_EDITOR_SELF_TEST( GlobalVariableGroups, "globalVariables.groupsStack", 1300, &EditorSelfTestPanelCasesInternal::runGlobalVariableGroupsStack );
-    SW_EDITOR_SELF_TEST( ToolWindowSize, "panels.toolWindowsOpenAtAUsableSize", 1400, &EditorSelfTestPanelCasesInternal::ToolWindowProbe::runToolWindowsOpenAtAUsableSize );
+    SW_EDITOR_SELF_TEST( ToolWindowSize, "panels.toolWindowsOpenAtAUsableSize", 1400, &EditorSelfTestPanelCasesInternal::ToolWindowTestState::runToolWindowsOpenAtAUsableSize );
     SW_EDITOR_SELF_TEST( SceneViewOverlayClip, "sceneView.overlaysStayInsideTheCanvas", 1500, &EditorSelfTestPanelCasesInternal::runOverlaysStayInsideTheCanvas );
 } // namespace sw::editor

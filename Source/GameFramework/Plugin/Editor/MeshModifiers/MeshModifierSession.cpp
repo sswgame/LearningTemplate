@@ -131,7 +131,7 @@ namespace sw::editor
         }
 
         /** @brief 시나리오(`meshmodifiers.scenario.xml`)가 읽는 감시 값입니다. 세션이 없거나 대상이 없으면 값을 내지 않습니다. */
-        struct MeshModifierSessionProbes
+        struct MeshModifierSessionWatches
         {
             static editor::MeshModifierSession* findSession()
             {
@@ -898,20 +898,20 @@ namespace sw::editor
     SW_EDITOR_SUBSYSTEM( MeshModifierSession, 9400 );
 
     SW_AUTOMATION_WATCH( meshModifierCount, "MeshModifiers.ModifierCount", "Modifiers in the mesh modifier stack (0 without a target)",
-                         &MeshModifierSessionProbes::readModifierCount );
+                         &MeshModifierSessionWatches::readModifierCount );
     SW_AUTOMATION_WATCH( meshModifierGPUPreview, "MeshModifiers.GPUPreviewActive", "1 when the target mesh is drawn by the GPU modifier program",
-                         &MeshModifierSessionProbes::readGPUPreviewActive );
+                         &MeshModifierSessionWatches::readGPUPreviewActive );
     SW_AUTOMATION_WATCH( meshModifierCenterOffset, "MeshModifiers.SelectedCenterOffset", "Distance of the selected modifier's gizmo center from the source bounds center",
-                         &MeshModifierSessionProbes::readSelectedCenterOffset );
+                         &MeshModifierSessionWatches::readSelectedCenterOffset );
     SW_AUTOMATION_WATCH( meshModifierFirstParam, "MeshModifiers.SelectedFirstParam", "First (scalar) parameter of the selected modifier",
-                         &MeshModifierSessionProbes::readSelectedFirstParam );
-    SW_AUTOMATION_WATCH( meshModifierNestedCount, "MeshModifiers.NestedCount", "Nested modifiers of the selected Deformable", &MeshModifierSessionProbes::readNestedCount );
+                         &MeshModifierSessionWatches::readSelectedFirstParam );
+    SW_AUTOMATION_WATCH( meshModifierNestedCount, "MeshModifiers.NestedCount", "Nested modifiers of the selected Deformable", &MeshModifierSessionWatches::readNestedCount );
     SW_AUTOMATION_WATCH( meshModifierCurveListItems, "MeshModifiers.CurveListItemCount", "Items of the selected modifier's first curve list",
-                         &MeshModifierSessionProbes::readCurveListItemCount );
+                         &MeshModifierSessionWatches::readCurveListItemCount );
     SW_AUTOMATION_WATCH( meshModifierCurveListKeys, "MeshModifiers.CurveListKeyCount", "Keys over all items of the selected modifier's first curve list",
-                         &MeshModifierSessionProbes::readCurveListKeyCount );
+                         &MeshModifierSessionWatches::readCurveListKeyCount );
     SW_AUTOMATION_WATCH( meshModifierReferenceList, "MeshModifiers.ReferenceListCount", "Named items of the selected modifier's first reference list",
-                         &MeshModifierSessionProbes::readReferenceListCount );
+                         &MeshModifierSessionWatches::readReferenceListCount );
     namespace
     {
         /** @brief 체인의 다음 단계 앞에서 세션을 비웁니다 — 앞 단계가 남긴 저장하지 않은 스택이 `Use Selection` 을 막아 다음 단계가 대상을 잡지 못했다(flowedit 뒤 meshmodifiers). */

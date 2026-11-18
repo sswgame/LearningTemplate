@@ -179,7 +179,7 @@ namespace sw
         int64                      _requestStartUs; ///< 지연을 잴 기준 시각이다 — 열린 루프면 보내려던 시각이다
         int32                      _botIndex;
         int32                      _sendSequence;
-        AccountClientOperation     _pendingAccountOperation;
+        AccountMethodName          _pendingAccountOperation;
         LoadBotAction              _pendingAction;
         AwaitKind                  _awaitKind;
         uint8                      _bPasswordLogin;

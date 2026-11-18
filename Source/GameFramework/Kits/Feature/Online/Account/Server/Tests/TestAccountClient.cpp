@@ -213,7 +213,7 @@ SW_TEST_CASE( AccountClientTest, LoginStoresTokenAndIdentity )
     const uint64             requestID = rig._account.login( "alice", "password123" );
     const AccountClientReply reply     = rig.take();
     SW_EXPECT_EQUAL( requestID, reply._requestID );
-    SW_EXPECT_TRUE( reply._operation == AccountClientOperation::Login );
+    SW_EXPECT_TRUE( reply._operation == AccountMethodName::Login );
     SW_EXPECT_TRUE( reply._result == LoginResult::Ok );
     SW_EXPECT_EQUAL( OnlineError::kOk, reply._errorCode );
     SW_EXPECT_TRUE( rig._account.isLoggedIn() );
@@ -422,7 +422,7 @@ SW_TEST_CASE( AccountClientTest, AutoResumeHoldsSessionRequestsUntilItSucceeds )
 
     const vector<AccountClientReply> listReply = rig.takeAll();
     SW_REQUIRE_EQUAL( size_t( 2 ), listReply.size() );
-    SW_EXPECT_TRUE( listReply[0]._operation == AccountClientOperation::Resume );
+    SW_EXPECT_TRUE( listReply[0]._operation == AccountMethodName::Resume );
     SW_EXPECT_TRUE( listReply[0]._bAutomatic == SW_TRUE );
     SW_EXPECT_EQUAL( listRequestID, listReply[1]._requestID );
     SW_EXPECT_TRUE( listReply[1]._result == LoginResult::Ok );
@@ -470,7 +470,7 @@ SW_TEST_CASE( AccountClientTest, DeadTokenEndsDeferredRequests )
     const vector<AccountClientReply> listReply = rig.takeAll();
     SW_REQUIRE_EQUAL( size_t( 2 ), listReply.size() );
     SW_EXPECT_TRUE( listReply[0]._result == LoginResult::Expired );
-    SW_EXPECT_TRUE( listReply[1]._operation == AccountClientOperation::Logout );
+    SW_EXPECT_TRUE( listReply[1]._operation == AccountMethodName::Logout );
     SW_EXPECT_TRUE( listReply[1]._result.hasError( OnlineError::kUnauthenticated ) );
     SW_EXPECT_TRUE( rig._account.getToken().isEmpty() );
     SW_EXPECT_FALSE( rig._account.isLoggedIn() );
@@ -486,7 +486,7 @@ SW_TEST_CASE( AccountClientTest, DisconnectDuringResumeFinishesEverything )
 
     const vector<AccountClientReply> listReply = rig.takeAll();
     SW_REQUIRE_EQUAL( size_t( 2 ), listReply.size() );
-    SW_EXPECT_TRUE( listReply[0]._operation == AccountClientOperation::Resume );
+    SW_EXPECT_TRUE( listReply[0]._operation == AccountMethodName::Resume );
     SW_EXPECT_TRUE( listReply[0]._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( OnlineError::kUnavailable, listReply[0]._errorCode );
     SW_EXPECT_TRUE( listReply[1]._result.hasError( OnlineError::kUnavailable ) );

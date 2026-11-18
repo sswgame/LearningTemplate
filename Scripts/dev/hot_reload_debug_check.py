@@ -1,7 +1,7 @@
 """핫 리로드 뒤 디버거 브레이크포인트가 새 모듈에서 잡히는지 자동으로 본다(py -3 Scripts/dev/hot_reload_debug_check.py [--preset 프리셋] [--variant code|layout]).
 
 lldb(Tools/LLVM — `Scripts/setup/llvm.py` 가 둔다) 아래에서 Empty 의 확인 시나리오(`game/empty/automation/debugger/hotreload<변형>.scenario.xml`)를 띄우고:
-1. `HotReloadProbeComponent::computeVersion` 브레이크포인트가 처음 멈추면(리로드 전 모듈) 소스를 바꿔 SWGame 만 다시 짓는다 — 디버거가 PDB 를 쥔 채 링크가 되는지.
+1. `HotReloadTestComponent::computeVersion` 브레이크포인트가 처음 멈추면(리로드 전 모듈) 소스를 바꿔 SWGame 만 다시 짓는다 — 디버거가 PDB 를 쥔 채 링크가 되는지.
    변형 code 는 `.cpp` 의 판 숫자만, layout 은 헤더에 PROPERTY 칸 하나와 그 생성자 값 7 을 더한다(리로드가 리플렉션 칸으로 상태를 옮기는지 — 시나리오가 본다).
 2. 이어서 시나리오가 `module.reload SWGame` 을 하고, 같은 브레이크포인트가 **다른 모듈 파일**(새 섀도 복사본)에서 멈추고 소스 줄이 풀리는지 본다.
 3. 시나리오 종료 코드(0 = 통과)를 함께 보고, 끝나면 소스를 되돌려 다시 짓는다.
@@ -17,9 +17,9 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common import app_arguments  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-PROBE_H = REPO / 'Source/Games/Empty/HotReloadProbeComponent.h'
-PROBE_CPP = REPO / 'Source/Games/Empty/HotReloadProbeComponent.cpp'
-FUNCTION = 'sw::HotReloadProbeComponent::computeVersion'
+PROBE_H = REPO / 'Source/Games/Empty/HotReloadTestComponent.h'
+PROBE_CPP = REPO / 'Source/Games/Empty/HotReloadTestComponent.cpp'
+FUNCTION = 'sw::HotReloadTestComponent::computeVersion'
 
 # lldb 안에서 도는 쪽(lldb 의 Python — 임베드 3.10). 결과는 JSON 한 줄로 낸다.
 DRIVER = r'''
@@ -56,7 +56,7 @@ print("HOTRELOAD_RESULT " + json.dumps(result))
 PATCH_CODE = r'''
 import pathlib
 p = pathlib.Path(cfg["probe_cpp"]); t = p.read_text(encoding="utf-8")
-p.write_text(t.replace("kProbeVersion = 100;", "kProbeVersion = 101;"), encoding="utf-8", newline="")
+p.write_text(t.replace("kTestVersion = 100;", "kTestVersion = 101;"), encoding="utf-8", newline="")
 '''
 PATCH_LAYOUT = PATCH_CODE + r'''
 h = pathlib.Path(cfg["probe_h"]); t = h.read_text(encoding="utf-8")
@@ -107,7 +107,7 @@ def main():
         '링크(디버거가 PDB 를 쥔 채)': result['build_rc'] == 0,
         '리로드 전 멈춤': len(hits) >= 1,
         '리로드 뒤 새 모듈에서 멈춤': len(hits) >= 2 and hits[-1]['module'] != hits[0]['module'],
-        '소스 줄이 풀림': bool(hits) and all(h['file'].replace('\\', '/').endswith('HotReloadProbeComponent.cpp') for h in hits),
+        '소스 줄이 풀림': bool(hits) and all(h['file'].replace('\\', '/').endswith('HotReloadTestComponent.cpp') for h in hits),
         '시나리오 통과': result['exit_code'] == 0,
         '원래 소스로 다시 지음': restore == 0,
     }

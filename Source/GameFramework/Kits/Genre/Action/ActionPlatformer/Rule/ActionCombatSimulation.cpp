@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionCombatRig.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionCombatSimulation.h"
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
@@ -44,7 +44,7 @@ namespace sw
 
 namespace sw
 {
-    ActionCombatRig::ActionCombatRig()
+    ActionCombatSimulation::ActionCombatSimulation()
         : _pCatalog{ nullptr }
         , _pMoves{ nullptr }
         , _pCombo{ nullptr }
@@ -61,7 +61,7 @@ namespace sw
         _projectiles.setPlaneNormal( float3{ 0.0f, 0.0f, 1.0f } ); // 화면 평면(XY)
     }
 
-    ProjectileState ActionCombatRig::makeProjectile( const float2& position, const float2& velocity, ActionTeam team, float32 damage, float32 lifetime )
+    ProjectileState ActionCombatSimulation::makeProjectile( const float2& position, const float2& velocity, ActionTeam team, float32 damage, float32 lifetime )
     {
         ProjectileState projectile;
         projectile._position         = float3{ position._x, position._y, 0.0f };
@@ -73,7 +73,7 @@ namespace sw
         return projectile;
     }
 
-    bool ActionCombatRig::initialize( const ActionPlatformerCatalog* pCatalog, const MoveCatalog* pMoves, const hashed_string& comboID )
+    bool ActionCombatSimulation::initialize( const ActionPlatformerCatalog* pCatalog, const MoveCatalog* pMoves, const hashed_string& comboID )
     {
         _pCatalog = pCatalog;
         _pMoves   = pMoves;
@@ -85,7 +85,7 @@ namespace sw
             {
                 if ( _pMoves->find( moveID ) != nullptr )
                     continue;
-                SW_LOG_ERROR_ID( "ActionCombatRig.ComboMoveUnknown", "ActionCombatRig: combo '%#' names an unknown move '%#'", comboID.c_str(), moveID.c_str() );
+                SW_LOG_ERROR_ID( "ActionCombatSimulation.ComboMoveUnknown", "ActionCombatSimulation: combo '%#' names an unknown move '%#'", comboID.c_str(), moveID.c_str() );
                 _pCombo = nullptr;
                 break;
             }
@@ -100,11 +100,11 @@ namespace sw
         return _pCombo != nullptr && _pMoves != nullptr;
     }
 
-    bool ActionCombatRig::equipGun( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 seed )
+    bool ActionCombatSimulation::equipGun( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 seed )
     {
         if ( projectile._speed <= 0.0f )
         {
-            SW_LOG_ERROR_ID( "ActionCombatRig.GunNeedsFlyingProjectile", "ActionCombatRig: weapon '%#' loads projectile '%#' with speed 0 - 2D shots must fly (set speed)", weapon._id.c_str(),
+            SW_LOG_ERROR_ID( "ActionCombatSimulation.GunNeedsFlyingProjectile", "ActionCombatSimulation: weapon '%#' loads projectile '%#' with speed 0 - 2D shots must fly (set speed)", weapon._id.c_str(),
                              projectile._id.c_str() );
             return false;
         }
@@ -114,13 +114,13 @@ namespace sw
         return true;
     }
 
-    void ActionCombatRig::pressAttack()
+    void ActionCombatSimulation::pressAttack()
     {
         if ( _pCatalog != nullptr )
             _attackBufferFrames = MathUtil::max( 1, _pCatalog->getParryRules()._attackBufferFrames );
     }
 
-    void ActionCombatRig::pressParry()
+    void ActionCombatSimulation::pressParry()
     {
         if ( _pCatalog == nullptr )
             return;
@@ -128,7 +128,7 @@ namespace sw
         pushEvent( ActionCombatEventKind::ParryStarted, hashed_string{}, _parryFrames );
     }
 
-    WeaponFireResult ActionCombatRig::fireGun( const float2& origin, const float2& aim, bool bTriggerJustPressed )
+    WeaponFireResult ActionCombatSimulation::fireGun( const float2& origin, const float2& aim, bool bTriggerJustPressed )
     {
         if ( _bGunEquipped == SW_FALSE )
             return WeaponFireResult::OutOfAmmo;
@@ -156,12 +156,12 @@ namespace sw
         return result;
     }
 
-    uint32 ActionCombatRig::spawnProjectile( const ProjectileState& projectile )
+    uint32 ActionCombatSimulation::spawnProjectile( const ProjectileState& projectile )
     {
         return _projectiles.spawn( projectile );
     }
 
-    void ActionCombatRig::registerMeleeContact( bool bBlocked )
+    void ActionCombatSimulation::registerMeleeContact( bool bBlocked )
     {
         if ( _timeline.isPlaying() == false )
             return;
@@ -169,7 +169,7 @@ namespace sw
         startHitstop( _timeline.getMove()._hitstop );
     }
 
-    void ActionCombatRig::advanceFrame( const PlatformTileMap* pMap, const float2& playerPosition )
+    void ActionCombatSimulation::advanceFrame( const PlatformTileMap* pMap, const float2& playerPosition )
     {
         // 히트스톱은 세상을 멈춘다. 기술은 자기 히트스톱만 같이 줄인다(남은 수가 같으면 함께 풀린다).
         if ( _hitstopFrames > 0 )
@@ -233,7 +233,7 @@ namespace sw
         (void)_projectiles.step( kFrameTime, query ); // 사건은 쓰지 않는다
     }
 
-    int32 ActionCombatRig::takeProjectileHits( ActionTeam team, const float2& center, float32 radius, vector<ProjectileState>& outListHit )
+    int32 ActionCombatSimulation::takeProjectileHits( ActionTeam team, const float2& center, float32 radius, vector<ProjectileState>& outListHit )
     {
         outListHit.clear();
         if ( radius < 0.0f )
@@ -251,12 +251,12 @@ namespace sw
         return static_cast<int32>( outListHit.size() );
     }
 
-    void ActionCombatRig::pollEvents( vector<ActionCombatEvent>& outListEvent )
+    void ActionCombatSimulation::pollEvents( vector<ActionCombatEvent>& outListEvent )
     {
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    bool ActionCombatRig::startMove( int32 comboIndex )
+    bool ActionCombatSimulation::startMove( int32 comboIndex )
     {
         const hashed_string& moveID = _pCombo->_listMove[static_cast<size_t>( comboIndex )];
         const MoveFrameData* pMove  = _pMoves->find( moveID );
@@ -267,7 +267,7 @@ namespace sw
         return true;
     }
 
-    void ActionCombatRig::startHitstop( int32 frames )
+    void ActionCombatSimulation::startHitstop( int32 frames )
     {
         if ( frames <= _hitstopFrames )
             return;
@@ -275,7 +275,7 @@ namespace sw
         pushEvent( ActionCombatEventKind::HitstopStarted, hashed_string{}, frames );
     }
 
-    void ActionCombatRig::pushEvent( ActionCombatEventKind type, const hashed_string& id, int32 value )
+    void ActionCombatSimulation::pushEvent( ActionCombatEventKind type, const hashed_string& id, int32 value )
     {
         ActionCombatEvent event;
         event._type  = type;
@@ -284,7 +284,7 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void ActionCombatRig::serializeState( StateIO& io )
+    void ActionCombatSimulation::serializeState( StateIO& io )
     {
         if ( io.check( _pCatalog != nullptr && _pMoves != nullptr ) == false )
             return;

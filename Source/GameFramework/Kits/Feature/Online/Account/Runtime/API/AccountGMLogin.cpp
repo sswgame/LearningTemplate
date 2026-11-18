@@ -62,7 +62,7 @@ namespace sw
         (void)_account.pollReplies( listReply );
         for ( const AccountClientReply& reply : listReply )
         {
-            const bool bLoginReply = reply._operation == AccountClientOperation::Login || reply._operation == AccountClientOperation::Resume;
+            const bool bLoginReply = reply._operation == AccountMethodName::Login || reply._operation == AccountMethodName::Resume;
             if ( bLoginReply == false )
                 continue;
             _password.clear(); // 응답이 왔으면 비밀번호는 더 쓰지 않는다

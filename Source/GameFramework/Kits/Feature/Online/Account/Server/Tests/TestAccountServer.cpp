@@ -466,7 +466,7 @@ SW_TEST_CASE( AccountServerTest, DisconnectThenResumeOnANewConnection )
     const int32              second = rig.addClient( &token );
     const AccountClientReply reply  = rig.take( second );
     SW_REQUIRE_TRUE( reply._result == LoginResult::Ok );
-    SW_EXPECT_TRUE( reply._operation == AccountClientOperation::Resume );
+    SW_EXPECT_TRUE( reply._operation == AccountMethodName::Resume );
     SW_EXPECT_TRUE( reply._bAutomatic == SW_TRUE );
     SW_EXPECT_EQUAL( token._sessionID, rig.getAccount( second ).getToken()._sessionID );
     SW_EXPECT_NOT_EQUAL( 0, Memory::compare( token._arrSecret, rig.getAccount( second ).getToken()._arrSecret, sizeof( token._arrSecret ) ) );

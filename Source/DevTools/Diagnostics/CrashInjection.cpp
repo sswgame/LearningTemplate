@@ -20,18 +20,18 @@ namespace sw
         struct CrashInjectionInternal
         {
             /** @brief 생성자에서 순수 가상 함수를 (한 단계 건너) 부르는 기반 클래스입니다(`CrashInjectionKind::PureVirtualCall`). */
-            struct PureCallProbeBase
+            struct PureVirtualCallerBase
             {
-                PureCallProbeBase() { callThrough(); }
-                virtual ~PureCallProbeBase() = default;
+                PureVirtualCallerBase() { callThrough(); }
+                virtual ~PureVirtualCallerBase() = default;
                 /** @brief 생성자에서 바로 부르면 컴파일러가 막는다. 한 단계 건너 부른다. */
-                void         callThrough() { onProbe(); }
-                virtual void onProbe() = 0;
+                void         callThrough() { onCalled(); }
+                virtual void onCalled() = 0;
             };
 
-            struct PureCallProbe final : PureCallProbeBase
+            struct PureVirtualCaller final : PureVirtualCallerBase
             {
-                void onProbe() override {}
+                void onCalled() override {}
             };
 
             /** @brief stderr 를 쥐고 @p pHeld 를 올린 뒤 영원히 잡니다. @p pHeld 는 부른 쪽의 지역 값이다 — 그 쪽은 올라온 것을 본 뒤 죽는다(이 스레드보다 먼저 사라지지 않는다). */
@@ -104,7 +104,7 @@ namespace sw
             case CrashInjectionKind::PureVirtualCall:
             {
                 SW_LOG_ERROR_ID( "CrashInjection.CallingPureVirtualFunction", "[CrashTest] calling a pure virtual function during construction" );
-                CrashInjectionInternal::PureCallProbe probe;
+                CrashInjectionInternal::PureVirtualCaller caller;
                 break;
             }
             case CrashInjectionKind::AssertFailure:

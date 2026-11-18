@@ -14,17 +14,17 @@ namespace sw
     {
         struct AccountClientInternal
         {
-            static bool isGrantOperation( AccountClientOperation operation )
+            static bool isGrantOperation( AccountMethodName operation )
             {
-                return operation == AccountClientOperation::Login || operation == AccountClientOperation::GuestLogin ||
-                       operation == AccountClientOperation::PlatformLogin || operation == AccountClientOperation::Resume;
+                return operation == AccountMethodName::Login || operation == AccountMethodName::GuestLogin ||
+                       operation == AccountMethodName::PlatformLogin || operation == AccountMethodName::Resume;
             }
 
             /** @brief 서술자 번호(와이어 메서드 번호)를 요청 종류로 바꿉니다. 번호는 표의 열거자 순서다(`OnlineMethodTable::toMethod` 의 역). */
-            static AccountClientOperation toOperation( uint16 method )
+            static AccountMethodName toOperation( uint16 method )
             {
                 SW_ASSERT( AccountMethod::kFirstMethod <= method && method < AccountMethod::kFirstMethod + AccountMethod::kCount );
-                return static_cast<AccountClientOperation>( method - AccountMethod::kFirstMethod );
+                return static_cast<AccountMethodName>( method - AccountMethod::kFirstMethod );
             }
         };
     } // namespace
@@ -84,7 +84,7 @@ namespace sw
             _replyBuffer.push( AccountClientReply{} );
             AccountClientReply& reply = _replyBuffer.getLast();
             reply._requestID          = allocateRequestID();
-            reply._operation          = AccountClientOperation::Resume;
+            reply._operation          = AccountMethodName::Resume;
             reply._result             = LoginResult::InvalidToken;
             return reply._requestID;
         }
@@ -232,14 +232,14 @@ namespace sw
             _token     = reply._grant._token;
             _identity  = reply._grant._identity;
         }
-        if ( bOk && ( reply._operation == AccountClientOperation::LinkCredential || reply._operation == AccountClientOperation::LinkPlatform ) )
+        if ( bOk && ( reply._operation == AccountMethodName::LinkCredential || reply._operation == AccountMethodName::LinkPlatform ) )
             _identity = reply._grant._identity;
-        if ( bOk && ( reply._operation == AccountClientOperation::Logout || reply._operation == AccountClientOperation::RequestDeletion ) )
+        if ( bOk && ( reply._operation == AccountMethodName::Logout || reply._operation == AccountMethodName::RequestDeletion ) )
         {
             _bLoggedIn = SW_FALSE;
             _token     = LoginSessionToken{};
         }
-        if ( reply._operation != AccountClientOperation::Resume )
+        if ( reply._operation != AccountMethodName::Resume )
         {
             _replyBuffer.push( std::move( reply ) );
             return;

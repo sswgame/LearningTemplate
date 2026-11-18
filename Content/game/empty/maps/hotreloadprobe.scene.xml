@@ -15,7 +15,7 @@
 		<entity id="2" name="Probe">
 			<GameObject _schemaVersion="0" _name="Probe" _bActive="true">
 				<_listComponent>
-					<HotReloadProbeComponent _keptValue="42" />
+					<HotReloadTestComponent _keptValue="42" />
 				</_listComponent>
 			</GameObject>
 		</entity>

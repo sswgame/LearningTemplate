@@ -1385,5 +1385,257 @@
     "old": "isClaimed",
     "new": "isCaptured",
     "why": "EditorViewportMouseClaim → EditorViewportMouseCapture 를 따른다"
+  },
+  {
+    "old": "HotReloadProbeComponent",
+    "new": "HotReloadTestComponent",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "HotReloadProbeInternal",
+    "new": "HotReloadTestInternal",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "kProbeVersion",
+    "new": "kTestVersion",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)",
+    "ban": false
+  },
+  {
+    "old": "hotReloadProbeVersion",
+    "new": "hotReloadTestVersion",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "hotReloadProbeKept",
+    "new": "hotReloadTestKept",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "hotReloadProbeAdded",
+    "new": "hotReloadTestAdded",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "NavPathProbeComponent",
+    "new": "NavPathTestComponent",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "NavPathProbeInternal",
+    "new": "NavPathTestInternal",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "emptyNavProbePathLength",
+    "new": "emptyNavTestPathLength",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "emptyNavProbeResultCount",
+    "new": "emptyNavTestResultCount",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "emptyNavProbeCancelLeaks",
+    "new": "emptyNavTestCancelLeaks",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "SceneLoadLeakProbe",
+    "new": "SceneLoadLeakCheck",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 씬 로드를 되풀이해 누수 곡선을 재는 검사(언리얼 MapCheck 와 같은 끝말)"
+  },
+  {
+    "old": "SceneLoadLeakProbeInternal",
+    "new": "SceneLoadLeakCheckInternal",
+    "why": "SceneLoadLeakProbe → SceneLoadLeakCheck 를 따른다"
+  },
+  {
+    "old": "startLoadLeakProbe",
+    "new": "startLoadLeakCheck",
+    "why": "SceneLoadLeakProbe → SceneLoadLeakCheck 를 따른다"
+  },
+  {
+    "old": "isLoadLeakProbeRunning",
+    "new": "isLoadLeakCheckRunning",
+    "why": "SceneLoadLeakProbe → SceneLoadLeakCheck 를 따른다"
+  },
+  {
+    "old": "_leakProbe",
+    "new": "_leakCheck",
+    "why": "SceneLoadLeakProbe → SceneLoadLeakCheck 를 따른다"
+  },
+  {
+    "old": "WebGPUTransferProbe",
+    "new": "WebGPUTransferFence",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 전송 하나의 완료 표지는 fence(RHITransferFenceQueue 의 원소, D3D12 · Vulkan Fence)"
+  },
+  {
+    "old": "TransferProbe",
+    "new": "TransferFence",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 전송 하나의 완료 표지는 fence(RHITransferFenceQueue 의 원소)"
+  },
+  {
+    "old": "MeshModifierSessionProbes",
+    "new": "MeshModifierSessionWatches",
+    "why": "시나리오가 읽는 감시 값 묶음은 Watch — Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp)"
+  },
+  {
+    "old": "PortProbeHandler",
+    "new": "NullStreamHandler",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 아무 일도 하지 않는 처리기는 Null 객체"
+  },
+  {
+    "old": "PureCallProbeBase",
+    "new": "PureVirtualCallerBase",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 순수 가상 호출을 일으키는 크래시 주입 형식"
+  },
+  {
+    "old": "PureCallProbe",
+    "new": "PureVirtualCaller",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 순수 가상 호출을 일으키는 크래시 주입 형식"
+  },
+  {
+    "old": "AccountClientOperation",
+    "new": "AccountMethodName",
+    "why": "AccountMethodName 의 별칭이었다 — 한 형식에 이름 하나",
+    "allowExisting": true
+  },
+  {
+    "old": "ActionCombatRig",
+    "new": "ActionCombatSimulation",
+    "why": "Rig 은 애니메이션 리그만(NamingCpp) — 프레임마다 나아가는 결정적 전투 시뮬레이션(ProjectileSimulation 과 같은 끝말)"
+  },
+  {
+    "old": "ActionCombatRigTest",
+    "new": "ActionCombatSimulationTest",
+    "why": "ActionCombatRig → ActionCombatSimulation 을 따른다"
+  },
+  {
+    "old": "ActionCombatRigTestUtil",
+    "new": "ActionCombatSimulationTestUtil",
+    "why": "ActionCombatRig → ActionCombatSimulation 을 따른다"
+  },
+  {
+    "old": "ContentBrowserProbe",
+    "new": "ContentBrowserTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "FolderTreeProbe",
+    "new": "FolderTreeTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "ActivePackProbe",
+    "new": "ActivePackTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "MapCheckProbe",
+    "new": "MapCheckTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "ToolWindowProbe",
+    "new": "ToolWindowTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "TypingProbe",
+    "new": "TypingTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "HitTestProbe",
+    "new": "HitTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "SwatchProbe",
+    "new": "SwatchTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "ToggleProbe",
+    "new": "ToggleTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "RowProbe",
+    "new": "RowTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "AutoplayProbe",
+    "new": "AutoplayTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "GizmoProbe",
+    "new": "GizmoTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "OverlayProbe",
+    "new": "OverlayTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "EveryPanelProbe",
+    "new": "EveryPanelTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "DockResizeProbe",
+    "new": "DockResizeTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "InspectorProbe",
+    "new": "InspectorTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "HierarchyProbe",
+    "new": "HierarchyTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "OffscreenRowProbe",
+    "new": "OffscreenRowTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "DPIProbe",
+    "new": "DPITestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "FakeProbe",
+    "new": "FakeFence",
+    "why": "TransferProbe → TransferFence 를 따른다(테스트 대역)",
+    "ban": false
   }
 ]

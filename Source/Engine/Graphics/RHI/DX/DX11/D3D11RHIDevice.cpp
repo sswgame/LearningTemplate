@@ -694,7 +694,7 @@ namespace sw
         }
         _frameFenceRing.reset();
         // 낸 전송의 쿼리와 아직 가져가지 않은 읽기는 장치와 함께 놓는다(COM 이 GPU 가 쓰는 동안 자원을 붙들어 준다).
-        _transferQueue.retireAll( []( TransferProbe& probe )
+        _transferQueue.retireAll( []( TransferFence& probe )
         { probe._query.Reset(); } );
         _listFreeTransferQuery.clear();
         _immediateContext.shutdown();
@@ -1106,7 +1106,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "D3D11.WaitIdleGPUDidNot", "waitIdle: the GPU did not finish within %# ms", D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
             _frameFenceRing.markAllCompleted(); // GPU 가 쉰다 — 낸 프레임이 모두 끝났다
             // 낸 전송도 모두 끝났다. 쿼리를 풀로 돌려주고 워터마크를 올린다(업로드 스테이징은 항목과 함께 놓인다).
-            _transferQueue.retireAll( [this]( TransferProbe& probe )
+            _transferQueue.retireAll( [this]( TransferFence& probe )
             { _listFreeTransferQuery.push_back( std::move( probe._query ) ); } );
         }
         _releaseQueue.flushAll();
@@ -1164,7 +1164,7 @@ namespace sw
     uint64 D3D11RHIDevice::endTransfer( const D3D11ImmediateContext::ScopedLock& context, Microsoft::WRL::ComPtr<ID3D11Query> query, UploadStaging staging )
     {
         context->End( query.Get() );
-        return _transferQueue.enqueue( TransferProbe{ std::move( query ), std::move( staging ) } );
+        return _transferQueue.enqueue( TransferFence{ std::move( query ), std::move( staging ) } );
     }
 
     void D3D11RHIDevice::retireFinishedTransfers( const D3D11ImmediateContext::ScopedLock& context )
@@ -1172,7 +1172,7 @@ namespace sw
         // 플래그 0 으로 묻는다 — 명령을 GPU 로 내보내므로 프레임을 돌리지 않아도 되풀이 폴링이 끝에 이른다.
         // 끝난 항목의 업로드 스테이징은 큐에서 빠질 때 놓이고 예산이 돌아온다.
         _transferQueue.retireDone(
-            [this, &context]( TransferProbe& probe )
+            [this, &context]( TransferFence& probe )
         {
             BOOL          bDone = FALSE;
             const HRESULT hr    = context->GetData( probe._query.Get(), &bDone, sizeof( bDone ), 0 );
@@ -1183,7 +1183,7 @@ namespace sw
             }
             return hr != S_FALSE && bDone != FALSE;
         },
-            [this]( TransferProbe& probe )
+            [this]( TransferFence& probe )
         { _listFreeTransferQuery.push_back( std::move( probe._query ) ); } );
     }
 

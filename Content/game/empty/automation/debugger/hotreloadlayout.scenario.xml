@@ -6,16 +6,16 @@
 -->
 <Scenario name="game.empty.debugger.hotreloadlayout" fixedDelta="0.0166667" timeoutFrames="7200" startAfter="Immediately" input="exclusive">
 	<LoadScene path="game/empty/maps/hotreloadprobe.scene.xml" timeoutFrames="600"/>
-	<WaitUntil watch="HotReload.ProbeKept" equals="42" timeoutFrames="30"/> <!-- 탐침이 값을 받았다 -->
-	<Expect watch="HotReload.ProbeKept" equals="42"/>
-	<Expect watch="HotReload.ProbeAdded" equals="0"/>
-	<Store watch="HotReload.ProbeVersion" as="before"/>
+	<WaitUntil watch="HotReload.TestKept" equals="42" timeoutFrames="30"/> <!-- 탐침이 값을 받았다 -->
+	<Expect watch="HotReload.TestKept" equals="42"/>
+	<Expect watch="HotReload.TestAdded" equals="0"/>
+	<Store watch="HotReload.TestVersion" as="before"/>
 	<DevCommand line="module.reload SWGame"/>
 	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="600"/>
-	<WaitUntil watch="HotReload.ProbeVersion" differsFrom="before" timeoutFrames="30"/> <!-- 새 모듈의 코드가 돈다 -->
+	<WaitUntil watch="HotReload.TestVersion" differsFrom="before" timeoutFrames="30"/> <!-- 새 모듈의 코드가 돈다 -->
 	<Expect watch="Module.GraphBroken" equals="0"/>
-	<Expect watch="HotReload.ProbeKept" equals="42"/>
-	<Expect watch="HotReload.ProbeAdded" equals="7"/>
-	<Expect watch="HotReload.ProbeVersion" differsFrom="before"/> <!-- 새 모듈의 코드를 부른다 — 스크립트는 여기서 같은 브레이크포인트가 새 모듈에서 멈추는지 본다 -->
+	<Expect watch="HotReload.TestKept" equals="42"/>
+	<Expect watch="HotReload.TestAdded" equals="7"/>
+	<Expect watch="HotReload.TestVersion" differsFrom="before"/> <!-- 새 모듈의 코드를 부른다 — 스크립트는 여기서 같은 브레이크포인트가 새 모듈에서 멈추는지 본다 -->
 	<Pass/>
 </Scenario>

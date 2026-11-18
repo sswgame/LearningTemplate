@@ -158,7 +158,7 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 |---|---|
 | Asset = 콘텐츠(`Engine/Asset`, 데이터 폴더 `Content/`), Resource = GPU · RHI 자원만 | 언리얼 Content · FRenderResource |
 | 업계 공용어는 그대로(Cook = 원본을 런타임 바이너리로 굽기, Pawn · Possess). 한 엔진 · 게임만의 고유 이름 · 브랜드 · 약어는 내용으로 바꾼다(`BugReport`) | 이름은 내용으로 |
-| Pack(`.pack`) · Watch(자동화 감시 값 — Probe 는 라이트 · 리플렉션 프로브만) · Scene(씬 컨테이너 — World 는 월드 공간 뜻만) | 같은 단어 한 뜻 |
+| Pack(`.pack`) · Watch(자동화 감시 값 — Probe 는 라이트 · 리플렉션 프로브, 카메라 충돌 프로브(언리얼 SpringArm ProbeSize), 운영 상태 프로브(Kubernetes probe)만. 확인용 컴포넌트는 `…TestComponent`, 자체 테스트 상태는 `…TestState`) · Scene(씬 컨테이너 — World 는 월드 공간 뜻만) | 같은 단어 한 뜻 |
 | Module 은 동적으로 올리는 코드 단위만(`IModuleLoader` · `ModuleLoadStage`; 모듈 문맥의 Image → Library). 렌더러 확장점은 `RenderExtension` | 언리얼 SceneViewExtension |
 | Host = 엔진을 돌리는 프로세스(App · Server · 테스트 하네스)와 그 쪽(`HostService`, 엔진 쪽 짝 `EngineServices`). 네트워크 끝점 `NetEndpoint*`, 에디터 패널 진입점 `IEditorPanelService`, 온라인 키트 `IOnlineServerService` · `IOnlineClientService` | 같은 단어 한 뜻 |
 | Runtime = 모든 호스트에서 도는 것(키트 `Runtime/`) · 실행 중. 모듈 C-ABI 계약은 `Source/ModuleAPI` | 언리얼 모듈 형식 Runtime |

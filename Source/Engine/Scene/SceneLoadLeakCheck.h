@@ -1,5 +1,5 @@
 /**
- * @file SceneLoadLeakProbe.h
+ * @file SceneLoadLeakCheck.h
  * @brief 진짜 씬 로드를 되풀이해 누수 곡선(`LeakCurveCriteria::evaluate`)을 재는 감시 값입니다(누수 탐지 L3).
  * @details 언리얼의 `memreport` 를 로드 전후로 되풀이해 보는 일, 유니티 메모리 프로파일러의 스냅샷 비교에 해당하는 일을 한 명령으로 묶는다.
  *          한 회차는 "창 열기 → 씬 로드 → 빈 씬으로 교체(로드한 씬 언로드) → 몇 프레임 기다림 → 창 닫기" 이고, 창이 닫힐 때 아직 살아 있는 블록이 그 회차의 남은 양이다.
@@ -21,13 +21,13 @@ namespace sw
     class Scene;
 
     /**
-     * @class SceneLoadLeakProbe
+     * @class SceneLoadLeakCheck
      * @brief 씬 로드 곡선 감시 값입니다. `SceneManager` 가 하나 들고 프레임마다 `update` 를 부릅니다(메인 스레드).
      */
-    class SW_API SceneLoadLeakProbe
+    class SW_API SceneLoadLeakCheck
     {
     public:
-        SceneLoadLeakProbe();
+        SceneLoadLeakCheck();
 
         /**
          * @brief 측정을 시작합니다. 워밍업(`LeakCurveCriteria::kDefaultWarmupRounds`)과 @p measuredRounds 회의 로드를 되풀이합니다.
@@ -46,7 +46,7 @@ namespace sw
         {
             Idle,
             Loading,     ///< 씬 로드 요청이 끝나기를 기다린다(대조 회차는 건너뛴다)
-            Stabilizing, ///< 빈 씬으로 바꾼 뒤 지연 해제가 다 돌 프레임(`SceneLoadLeakProbeInternal::kStabilityFrames`)을 기다린다
+            Stabilizing, ///< 빈 씬으로 바꾼 뒤 지연 해제가 다 돌 프레임(`SceneLoadLeakCheckInternal::kStabilityFrames`)을 기다린다
         };
 
         /** @brief 회차 하나를 시작합니다 — 창을 열고(대조 회차가 아니면) 로드를 요청합니다. */

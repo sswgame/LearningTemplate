@@ -731,7 +731,7 @@
     "Source/GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureVitals.cpp": {"float": 2},
     "Source/GameFramework/Kits/Genre/Action/ActionCombat/Component/MeleeHitboxComponent.cpp": {"float": 1},
     "Source/GameFramework/Kits/Genre/Action/ActionCombat/Rule/ActionRoom.cpp": {"float": 13, "integer": 1},
-    "Source/GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionCombatRig.cpp": {"float": 2},
+    "Source/GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionCombatSimulation.cpp": {"float": 2},
     "Source/GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionEnemyBrain.cpp": {"minus-one": 1},
     "Source/GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionPlatformerBody.cpp": {"float": 2},
     "Source/GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionStageRun.cpp": {"minus-one": 1, "float": 2},
