@@ -188,7 +188,7 @@
     "Source/Editor/Common/Commands/Scene/LightProbeBakeInput.cpp": {"float": 1},
     "Source/Editor/Common/Config/EditorPreferences.cpp": {"integer": 4},
     "Source/Editor/Common/GUI/EditorChrome.cpp": {"float": 4},
-    "Source/Editor/Common/GUI/EditorMenuBar.cpp": {"float": 6},
+    "Source/Editor/Common/GUI/EditorMenuBar.cpp": {"float": 4},
     "Source/Editor/Common/GUI/EditorPlayToolbar.cpp": {"float": 1},
     "Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp": {"float": 1},
     "Source/Editor/Common/GUI/Panel/EditorPanelManager.cpp": {"integer": 2},
