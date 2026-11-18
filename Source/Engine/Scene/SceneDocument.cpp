@@ -40,9 +40,12 @@ namespace sw
             // 엔티티 하나: 이름 · 프리팹 경로 · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXML`) · id 범위 · 앵커 파일 id · 레이어 목록 · 인스턴스 덮어쓰기 목록.
             // 프리팹은 경로 하나로 가리킨다(판 5 에서 GUID 칸을 지웠다). 판 6 에서 조립 칸을 더했다. 판 7 부터 상태의 컴포넌트 키가 고정 지역 id(`_localID`, `ComponentStableKey` — 감사 A-2)다. 셀에는 레이어 목록이 붙는다.
             // 판 8 부터 셀 목록은 색인(좌표 · 레이어 · 내용 구간)이고 셀 내용(엔티티 목록)은 색인 뒤에 셀마다 이어 붙는다 — 씬을 열 때 색인만 풀고 내용은 셀을 올릴 때 구간으로 읽는다(감사 A-13).
-            // 구간의 시작은 색인 끝에서 센 값으로 적는다(색인 길이가 레이어 이름에 달려 쓰기 전에 절대 위치를 모른다).
+            // 판 9 부터 매직 · 판 뒤에 머리 길이(이 고정 머리 포함) · 내용 길이가 온다 — 로더는 고정 머리와 머리만 구간으로 읽고 셀 내용은 읽지 않는다.
+            // 구간의 시작은 머리 끝에서 센 값으로 적는다(머리 길이가 레이어 이름에 달려 쓰기 전에 절대 위치를 모른다).
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
-            static constexpr uint32 kBinVersion = 8;
+            static constexpr uint32 kBinVersion = 9;
+            // 고정 머리: 매직 · 판 · 머리 길이 · 내용 길이.
+            static constexpr uint64 kFixedHeadBytes = 2u * sizeof( uint32 ) + 2u * sizeof( uint64 );
             // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯, 목록 수 둘, 파일 id · id 범위 · 앵커 id(8바이트씩)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
             static constexpr uint32 kMinBytesPerEntity = 7u * sizeof( uint32 ) + 3u * sizeof( uint64 );
             /** @brief 지운 칸입니다. 프리팹은 경로로만 가리킨다 — 이 속성이 남은 씬은 오류로 읽지 않는다(옛 GUID 를 말없이 버리면 그 엔티티가 무엇을 가리켰는지 모른다). */
@@ -639,33 +642,40 @@ namespace sw
         _sourcePath            = path;
 
         // 낱개 파일 허용 정책(OS 절대 경로 · 작업 경로 포함)은 `AssetIO` 한 곳이 본다 — 실패 뒤 디스크를 다시 열지 않는다.
-        vector<uint8> bytes;
+        // 고정 머리와 머리(이름 · 월드 설정 · 늘 올라 있는 엔티티 · 셀 색인)만 구간으로 읽는다 — 셀 내용은 스트리밍이 셀을 올릴 때 읽는다.
         const string  absPath{ path };
-        Archive       arch;
-        if ( AssetIO::readBinaryAsset( assetID, bytes ) )
-            arch = Archive( bytes.data(), bytes.size() );
-        if ( arch.getSize() < 12 )
+        vector<uint8> fixedHead;
+        if ( AssetIO::readBinaryAssetRange( assetID, 0, SceneDocumentInternal::kFixedHeadBytes, fixedHead ) == false )
         {
             SW_LOG_ERROR_ID( "SceneDocument.BinaryReadFailedToo", "Binary read failed or too small: %#", absPath );
             return false;
         }
-
-        uint32 magic{ 0 };
-        arch >> magic;
+        Archive fixedArch( fixedHead.data(), fixedHead.size() );
+        uint32  magic{ 0 };
+        uint32  version{ 0 };
+        uint64  headSize{ 0 };
+        uint64  contentSize{ 0 };
+        fixedArch >> magic >> version >> headSize >> contentSize;
         if ( magic != SceneDocumentInternal::kBinMagic )
         {
             SW_LOG_ERROR_ID( "SceneDocument.BadBinaryMagic", "Bad binary magic: %#", absPath );
             return false;
         }
-
-        uint32 version{ 0 };
-        arch >> version;
         if ( version != SceneDocumentInternal::kBinVersion )
         {
             SW_LOG_ERROR_ID( "Scene.UnsupportedBinaryVersion", "Unsupported binary version %# in %# (this build reads %#) - cook the scene again", version, absPath,
                              SceneDocumentInternal::kBinVersion );
             return false;
         }
+        vector<uint8> head;
+        const bool    bHeadRead = headSize > SceneDocumentInternal::kFixedHeadBytes &&
+                               AssetIO::readBinaryAssetRange( assetID, SceneDocumentInternal::kFixedHeadBytes, headSize - SceneDocumentInternal::kFixedHeadBytes, head );
+        if ( fixedArch.isError() || bHeadRead == false )
+        {
+            SW_LOG_ERROR_ID( "SceneDocument.BinarySceneHeadUnreadable", "Binary scene head (%# bytes) could not be read: %#", headSize, absPath );
+            return false;
+        }
+        Archive arch( head.data(), head.size() );
 
         arch >> _name;
         if ( BinarySerializer::deserialize( &_sceneSettings, *SceneSettings::StaticType(), arch ) == false || _sceneSettings.validate( _name ) == false )
@@ -708,12 +718,11 @@ namespace sw
                 return false;
             }
         }
-        // 셀 내용은 색인 바로 뒤부터다 — 구간을 파일 안 절대 위치로 바꾸고 파일 끝을 넘는 구간은 받지 않는다(런타임 읽기가 `OutOfRange` 로 지기 전에 여기서 멈춘다).
-        const uint64 contentBase = arch.getOffset();
+        // 셀 내용은 머리 바로 뒤부터다 — 구간을 파일 안 절대 위치로 바꾸고 내용 영역을 넘는 구간은 받지 않는다(런타임 읽기가 `OutOfRange` 로 지기 전에 여기서 멈춘다).
+        const uint64 contentBase = headSize;
         for ( StreamingCell& cell : _listStreamingCell )
         {
-            const uint64 remaining     = arch.getSize() - contentBase;
-            const bool   bRangeOutside = cell._contentSize == 0 || cell._contentOffset > remaining || cell._contentSize > remaining - cell._contentOffset;
+            const bool bRangeOutside = cell._contentSize == 0 || cell._contentOffset > contentSize || cell._contentSize > contentSize - cell._contentOffset;
             if ( bRangeOutside )
             {
                 SW_LOG_ERROR_ID( "SceneDocument.BinarySceneCellOutside", "Binary scene cell (%#, %#) content lies outside the file in %#", cell._cell._x, cell._cell._z, absPath );
@@ -748,9 +757,8 @@ namespace sw
             return false;
         }
 
+        // 머리(이름 · 월드 설정 · 늘 올라 있는 엔티티 · 셀 색인)와 셀 내용을 따로 짓고, 고정 머리에 둘의 길이를 적는다(판 9).
         Archive arch;
-        arch << SceneDocumentInternal::kBinMagic;
-        arch << SceneDocumentInternal::kBinVersion;
         arch << _name;
         if ( BinarySerializer::serialize( &_sceneSettings, *SceneSettings::StaticType(), arch ) == false )
         {
@@ -774,9 +782,13 @@ namespace sw
             SceneDocumentInternal::writeTextList( arch, cell._listDataLayer );
             arch << contentOffset << static_cast<uint64>( content.getSize() - contentOffset );
         }
-        arch.writeBytes( content.getData(), content.getSize() );
+        Archive file;
+        file << SceneDocumentInternal::kBinMagic << SceneDocumentInternal::kBinVersion << static_cast<uint64>( SceneDocumentInternal::kFixedHeadBytes + arch.getSize() )
+             << static_cast<uint64>( content.getSize() );
+        file.writeBytes( arch.getData(), arch.getSize() );
+        file.writeBytes( content.getData(), content.getSize() );
 
-        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && arch.saveToFile( absPath.str() );
+        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && file.saveToFile( absPath.str() );
         if ( bOk )
             SW_LOG_INFO_ID( "SceneDocument.SavedBinaryEntitiesStreaming", "Saved binary '%#' (%# entities, %# streaming cells) -> %#", _name, static_cast<uint32>( computeTotalEntityCount() ),
                             static_cast<uint32>( _listStreamingCell.size() ), absPath.str() );

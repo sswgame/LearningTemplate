@@ -96,6 +96,12 @@ namespace sw
          */
         [[nodiscard]] static optional<uint64> findAssetSize( const AssetID& id );
         static AsyncReadHandle                readBinaryAssetRangeAsync( const AssetID& id, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete );
+        /**
+         * @brief 리소스의 구간 [@p offset, @p offset + @p size) 를 동기로 읽습니다 — 찾는 순서는 `readBinaryAsset` 와 같다(낱개 파일은 위치 지정 읽기 `AsyncFileHandle::readAt`, 팩은 `PackReader::readRange`).
+         * @details 쿠킹본의 머리만 읽는 로더(씬 셀 색인 · 내비메시 타일 색인)가 쓴다 — 파일 전체를 읽지 않는다. 쿠킹 작업 안이면 실패한다(구간만으로는 입력 해시를 만들 수 없다 — 쿠커는 전체를 읽는다).
+         * @return 어디에도 없거나 구간이 파일 끝을 넘으면 false 이고 @p outBytes 는 비어 있습니다.
+         */
+        [[nodiscard]] static bool readBinaryAssetRange( const AssetID& id, uint64 offset, uint64 size, vector<uint8>& outBytes );
 
         /**
          * @brief 리소스가 있는지 검사합니다(VFS 팩 또는 낱개 파일). 찾는 규칙은 읽기와 같습니다 — OS 경로는 오류 로그를 남기고 false 입니다.

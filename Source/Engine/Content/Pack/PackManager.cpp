@@ -647,6 +647,24 @@ namespace sw
         return pReader->readRangeAsync( io, pathHash, offset, size, priority, onComplete ); // 걸친 블록만 읽어 푼다(Blocks) · 저장 구간 그대로(Stored)
     }
 
+    bool PackManager::readRange( string_view relativePath, uint64 offset, uint64 size, vector<uint8>& outBytes ) const
+    {
+        if ( relativePath.empty() )
+            return false;
+
+        uint64                       pathHash{ 0 };
+        string                       pathInPack;
+        const shared_ptr<PackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
+        if ( pReader == nullptr )
+            return false;
+        if ( size > UINT32_MAX )
+        {
+            SW_LOG_ERROR_ID( "PackManager.RangeReadTooLarge", "Pack range read of '%#' asks %# bytes - a range is at most 4 GB", relativePath, size );
+            return false;
+        }
+        return pReader->readRange( pathHash, offset, size, outBytes );
+    }
+
     void PackManager::setDLCEntitlementValidator( DLCEntitlementDelegate validator )
     {
         ScopedLock<mutex> lock{ _vfsMutex };
