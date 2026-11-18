@@ -200,6 +200,10 @@ namespace sw::editor
         /** @brief 이 종류의 에셋 목록 팝업을 그립니다. */
         void drawOpenDocumentPopup( const utf8* pMarkPrefix );
         void drawUnsavedDocumentPopup();
+        /** @brief 열기 팝업의 후보(이 종류이고 받을 수 있는 에셋)를 에디터 에셋 색인에서 모읍니다. */
+        void collectOpenCandidates();
+        /** @brief 문서 바꾸기를 취소했을 때 작업 공간의 포커스 에셋을 지금 문서로 되돌립니다. */
+        void restoreFocusAfterCancel();
         void restoreDocumentFromUndo( string_view text );
         /** @brief 이 문서(이미 읽은 문서)의 자동 저장 복원 청이 있으면 사본 글을 되돌릴 수 있는 편집 한 단계로 적용합니다(`updateFocusedDocument` 가 그리기마다 부른다). */
         void applyPendingAutosaveRestore();
