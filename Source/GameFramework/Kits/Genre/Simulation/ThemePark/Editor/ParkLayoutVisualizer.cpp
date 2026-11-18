@@ -56,5 +56,5 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_VISUALIZER_GATHER( ParkLayout, "themepark.layout", 900, SW_EDITOR_ICON_NAME( "Map" ), SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutLabel" ),
-                                 SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutTip" ), false, nullptr, &ParkLayoutVisualizerInternal::gather );
+                                 SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutTip" ), false, &ParkLayoutVisualizerInternal::gather );
 } // namespace sw::editor

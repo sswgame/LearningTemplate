@@ -59,7 +59,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( RigTargetGizmo, "rig_target_gizmo", RigTargetGizmoVisualizerInternal::kVisualizerOrder, ::sw::editor::EditorIconName{}, SW_LOCKEYREF( "EdVisualizer", "RigTargetGizmoLabel" ),
-                          SW_LOCKEYREF( "EdVisualizer", "RigTargetGizmoTip" ), true,
-                          &RigTargetGizmoVisualizerInternal::process );
+    SW_EDITOR_VISUALIZER_TOOL( RigTargetGizmo, "rig_target_gizmo", RigTargetGizmoVisualizerInternal::kVisualizerOrder, ::sw::editor::EditorIconName{}, SW_LOCKEYREF( "EdVisualizer", "RigTargetGizmoLabel" ),
+                               SW_LOCKEYREF( "EdVisualizer", "RigTargetGizmoTip" ), true,
+                               &RigTargetGizmoVisualizerInternal::process, nullptr );
 } // namespace sw::editor

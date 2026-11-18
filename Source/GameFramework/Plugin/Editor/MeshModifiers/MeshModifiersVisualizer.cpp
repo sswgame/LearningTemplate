@@ -253,9 +253,9 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER_GATHER( MeshModifiers, "meshmodifiers.preview", 910, SW_EDITOR_ICON_NAME( "Cube" ), SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersLabel" ),
-                                 SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersTip" ), true, &MeshModifiersVisualizerInternal::process,
-                                 &MeshModifierPreviewGatherer::gatherPreview );
+    SW_EDITOR_VISUALIZER_TOOL( MeshModifiers, "meshmodifiers.preview", 910, SW_EDITOR_ICON_NAME( "Cube" ), SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersLabel" ),
+                               SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersTip" ), true, &MeshModifiersVisualizerInternal::process,
+                               &MeshModifierPreviewGatherer::gatherPreview );
     SW_EDITOR_VISUALIZER_GATHER( MeshModifiersStage, "meshmodifiers.stage", 911, ::sw::editor::EditorIconName{}, SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersStageLabel" ),
-                                 SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersStageTip" ), false, nullptr, &MeshModifierPreviewGatherer::gatherStage );
+                                 SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersStageTip" ), false, &MeshModifierPreviewGatherer::gatherStage );
 } // namespace sw::editor

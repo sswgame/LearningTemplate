@@ -14,6 +14,9 @@
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorColliderHandleEdit.h"
+#include "Editor/Viewport/Model/Visualizers/PhysicsShapeVisualizer.h"
+
+#include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
 
@@ -25,6 +28,8 @@ namespace sw::editor
         {
             /** @brief 손잡이 사각형의 반 변(픽셀)입니다. 마우스가 올라오면 키운다. */
             static constexpr float32 kHandleHalfSize = 4.0f;
+            /** @brief 물리 셰이프 시각화 토글의 툴바 순서입니다. */
+            static constexpr int32 kPhysicsShapesOrder = 110;
             /** @brief 손잡이를 집을 수 있는 마우스 거리(픽셀)입니다. */
             static constexpr float32 kPickRadius = 9.0f;
 
@@ -118,4 +123,8 @@ namespace sw::editor
         const EditorColliderHandleSession& session = EditorColliderHandleSession::get();
         return session._bCapturing && session._frame == ImGui::GetFrameCount();
     }
+
+    // 물리 셰이프 시각화와 같은 토글이다 — 셰이프 선은 Model 의 모으기(`PhysicsShapeGatherer`), 손잡이는 이 화면 도구.
+    SW_EDITOR_VISUALIZER_TOOL( PhysicsShapes, "physics_shapes", EditorColliderHandleToolInternal::kPhysicsShapesOrder, SW_EDITOR_ICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesLabel" ),
+                               SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesTip" ), false, &EditorColliderHandleTool::process, &PhysicsShapeGatherer::gather );
 } // namespace sw::editor

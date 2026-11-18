@@ -41,5 +41,5 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_VISUALIZER_GATHER( BoxCollider2D, "box_collider_2d", 100, SW_EDITOR_ICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "BoxCollider2DLabel" ),
-                                 SW_LOCKEYREF( "EdVisualizer", "BoxCollider2DTip" ), true, nullptr, &gatherBoxCollider2DWire );
+                                 SW_LOCKEYREF( "EdVisualizer", "BoxCollider2DTip" ), true, &gatherBoxCollider2DWire );
 } // namespace sw::editor
