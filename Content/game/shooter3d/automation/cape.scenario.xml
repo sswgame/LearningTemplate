@@ -25,7 +25,6 @@
 	<Screenshot file="stopped.ppm" stability="assets"/>
 	<Wait frames="78"/>
 	<Screenshot file="settled.ppm" stability="assets"/>
-	<Wait frames="5"/>
 	<ExpectImage file="standing.ppm" golden="standing"/>
 	<ExpectImage file="start.ppm" golden="start"/>
 	<ExpectImage file="running.ppm" golden="running"/>

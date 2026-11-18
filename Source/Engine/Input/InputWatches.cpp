@@ -1,6 +1,6 @@
 /**
  * @file InputWatches.cpp
- * @brief 입력 관리자의 자동화 감시 값입니다 — `Input.OSDeviceInputBlocked` · `Input.VirtualCursorEnabled` · `Input.MouseX` · `Input.MouseY` · `Input.RawMouseEvents`.
+ * @brief 입력 관리자의 자동화 감시 값입니다 — `Input.OSDeviceInputBlocked` · `Input.VirtualCursorEnabled` · `Input.MouseX` · `Input.MouseY` · `Input.RawMouseEvents` · `Input.MouseLockActive` · `Input.WindowFocused`.
  * @details 입력 폴더(층 3)는 감시 값 레지스트리(`Automation/Watch`, 층 5)보다 아래라 이 파일만 층 표에 파일 키(층 5)로 올려 주인 곁에서 등록합니다. 읽기는 `InputManager` 의 공개 getter 뿐입니다.
  */
 #include "pch.h"
@@ -65,6 +65,24 @@ namespace sw
             outValue = static_cast<float64>( engine::getSubsystem<InputManager>().getRawMouseEventCount() );
             return true;
         }
+
+        /** @brief 감시 값 `Input.MouseLockActive` 입니다. 엔진이 지금 OS 에 마우스 잠금을 걸려는 상태(`InputManager::isMouseLockActive`)면 1 입니다 — 시나리오가 잠금 · 풀림을 고정 대기 없이 기다린다. */
+        [[nodiscard]] bool readMouseLockActive( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            if ( engine::areEngineServicesBound() == false )
+                return false;
+            outValue = engine::getSubsystem<InputManager>().isMouseLockActive() ? 1.0 : 0.0;
+            return true;
+        }
+
+        /** @brief 감시 값 `Input.WindowFocused` 입니다. 입력 관리자가 받은 창 포커스 상태(포커스 메시지로 갱신)면 1 입니다 — 보낸 포커스 메시지가 처리됐는지 기다린다. */
+        [[nodiscard]] bool readWindowFocused( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            if ( engine::areEngineServicesBound() == false )
+                return false;
+            outValue = engine::getSubsystem<InputManager>().isWindowFocused() ? 1.0 : 0.0;
+            return true;
+        }
     } // namespace
 
     SW_AUTOMATION_WATCH( inputOSDeviceInputBlocked, "Input.OSDeviceInputBlocked", "1 while unattended automation drops the person's mouse and keyboard window events",
@@ -75,4 +93,7 @@ namespace sw
     SW_AUTOMATION_WATCH( inputMouseY, "Input.MouseY", "Mouse pointer Y in window client pixels (the gamepad virtual cursor moves it too)", &readMouseY );
     SW_AUTOMATION_WATCH( inputRawMouseEvents, "Input.RawMouseEvents", "Raw mouse motion reports the OS delivered so far (Win32 WM_INPUT, registered only while the cursor is locked); only grows",
                          &readRawMouseEvents );
+    SW_AUTOMATION_WATCH( inputMouseLockActive, "Input.MouseLockActive", "1 while the engine wants the OS mouse lock on (a lock mode is requested and the game owns the pointer)",
+                         &readMouseLockActive );
+    SW_AUTOMATION_WATCH( inputWindowFocused, "Input.WindowFocused", "1 while the input manager holds window focus (updated by focus messages; true without a window)", &readWindowFocused );
 } // namespace sw

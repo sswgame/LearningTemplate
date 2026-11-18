@@ -18,7 +18,7 @@
 	<DevCommand line="panel.focus multiplayer"/>
 	<EditorWaitStable/>
 	<EditorClick mark="multiplayer.tab.inprocess" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="multiplayer.tab.inprocess" state="Up"/>
 	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
 	<DevCommand line="netsim.start 1 MeadowVillage: housing"/>
@@ -49,7 +49,7 @@
 	<!-- 끝: 다음 시나리오에 스위치와 세션을 남기지 않는다 -->
 	<Variable name="gv_meadowAutoPlay" value="0"/>
 	<EditorClick mark="multiplayer.inprocess.stop" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="multiplayer.inprocess.stop" state="Up"/>
 	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
 	<Pass/>

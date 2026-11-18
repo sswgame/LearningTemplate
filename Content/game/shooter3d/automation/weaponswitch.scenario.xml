@@ -12,23 +12,19 @@
 	<!-- E 를 한 프레임 -->
 	<Wait frames="20"/>
 	<Tap slot="Key.E" hold="1"/>
-	<Wait frames="10"/>
-	<Expect watch="Shooter3D.WeaponIndex" equals="1"/>
+	<WaitUntil watch="Shooter3D.WeaponIndex" equals="1" timeoutFrames="30"/>
 	<!-- E 를 세 프레임 -->
 	<Wait frames="10"/>
 	<Tap slot="Key.E" hold="3"/>
-	<Wait frames="10"/>
-	<Expect watch="Shooter3D.WeaponIndex" equals="2"/>
+	<WaitUntil watch="Shooter3D.WeaponIndex" equals="2" timeoutFrames="30"/>
 	<!-- E 를 같은 프레임에 누르고 뗌(초고속 탭) — 한 번으로 인정 -->
 	<Wait frames="10"/>
 	<Tap slot="Key.E" hold="0"/>
-	<Wait frames="10"/>
-	<Expect watch="Shooter3D.WeaponIndex" equals="0"/>
+	<WaitUntil watch="Shooter3D.WeaponIndex" equals="0" timeoutFrames="30"/>
 	<!-- Q 를 두 프레임 → 이전 -->
 	<Wait frames="10"/>
 	<Tap slot="Key.Q" hold="2"/>
-	<Wait frames="10"/>
-	<Expect watch="Shooter3D.WeaponIndex" equals="2"/>
+	<WaitUntil watch="Shooter3D.WeaponIndex" equals="2" timeoutFrames="30"/>
 	<!-- E 를 1 초(60 프레임) 누른 채 — 그래도 한 칸 -->
 	<Wait frames="10"/>
 	<Tap slot="Key.E" hold="60"/>
@@ -44,8 +40,7 @@
 	<!-- 숫자 키는 그 칸으로(Weapon2 = Digit2 → 산탄총) -->
 	<Wait frames="10"/>
 	<Tap slot="Key.Digit2" hold="2"/>
-	<Wait frames="10"/>
-	<Expect watch="Shooter3D.WeaponIndex" equals="1"/>
+	<WaitUntil watch="Shooter3D.WeaponIndex" equals="1" timeoutFrames="30"/>
 	<!-- 전제: 그동안 쓰러지지 않았다(쓰러지면 판이 다시 시작해 무기가 0 으로 돌아가 단언이 거짓 실패한다). 교체마다 [Shooter] 줄이 하나씩. -->
 	<Wait frames="10"/>
 	<Expect watch="Shooter3D.PlayerAlive" equals="1"/>

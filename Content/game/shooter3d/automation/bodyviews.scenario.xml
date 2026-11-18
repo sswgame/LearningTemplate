@@ -74,7 +74,6 @@
 	<Expect watch="Shooter3D.GunJerkMax" atMost="0.01"/>
 	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
 	<Release slot="Key.W"/>
-	<Wait frames="5"/>
 	<ExpectImage file="firstperson_level.ppm" golden="firstperson_level"/>
 	<ExpectImage file="firstperson_down_a.ppm" golden="firstperson_down_a"/>
 	<ExpectImage file="firstperson_down_b.ppm" golden="firstperson_down_b"/>
