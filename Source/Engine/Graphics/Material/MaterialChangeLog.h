@@ -48,4 +48,42 @@ namespace sw
         vector<Entry> _listEntry SW_GUARDED_BY( _lock ); ///< 고리(`kCapacity` 칸). 세대 g 는 g % kCapacity 칸이다
         atomic<uint64>           _generation;
     };
+
+    /**
+     * @class MaterialCompletionWatch
+     * @brief 늦게 끝나는 일(덮어쓴 텍스처의 비동기 로드)을 기다리는 머티리얼 · 인스턴스를 들고, 끝나면(성공 · 실패 모두) 그 주인을 변경 기록에 적습니다.
+     * @details 변경 기록은 값을 바꾼 쪽이 적는다 — 그런데 로드가 끝나는 때는 아무도 그 주인을 만지지 않는다. 그 주인이 다시 맞춰지지 않으면 실패한 덮어쓰기가
+     *          부모 텍스처로 되돌아가지 않는다(전에는 다른 머티리얼이 바뀔 때의 전체 맞추기에 우연히 실렸다). 언리얼은 텍스처 스트리밍이 끝나면 그 텍스처를 참조하는
+     *          머티리얼의 유니폼 표현식 캐시를 무효화한다(`FMaterialRenderProxy::CacheUniformExpressions`). 머티리얼 캐시가 프레임마다(게임 스레드) `pollAll` 한다.
+     *          주인이 사라질 때 `unwatch` 해야 한다 — 폴링과 같은 잠금이라 폴링 중인 주인이 사라지지 않는다.
+     */
+    class SW_API MaterialCompletionWatch
+    {
+    public:
+        /** @brief 주인의 늦은 일이 끝났는지입니다. */
+        enum class PollResult : uint8
+        {
+            Pending,  ///< 아직 기다린다
+            Complete, ///< 끝났다(성공 · 실패) — 주인을 변경 기록에 적고 지켜보기를 그친다
+        };
+        using PollFn = PollResult ( * )( void* pOwner );
+
+        /** @brief @p pOwner 를 지켜봅니다. 이미 지켜보는 주인이면 그대로 둡니다. */
+        void watch( void* pOwner, PollFn poll );
+        /** @brief @p pOwner 를 더 지켜보지 않습니다(주인의 소멸자). 없으면 아무것도 하지 않습니다. */
+        void unwatch( const void* pOwner );
+        /** @brief 지켜보는 주인마다 묻고, 끝난 주인을 @p log 에 적은 뒤 뺍니다. @return 끝난 주인 수. */
+        uint32 pollAll( MaterialChangeLog& log );
+        /** @brief 지켜보는 주인 수입니다. */
+        uint32 getWatchCount() const;
+
+    private:
+        struct Entry
+        {
+            void*  _pOwner{ nullptr };
+            PollFn _poll{ nullptr };
+        };
+        mutable SpinLock         _lock;
+        vector<Entry> _listEntry SW_GUARDED_BY( _lock );
+    };
 } // namespace sw

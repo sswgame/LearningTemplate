@@ -41,4 +41,45 @@ namespace sw
         VectorUtil::sortUnique( outListOwner );
         return true;
     }
+
+    void MaterialCompletionWatch::watch( void* pOwner, PollFn poll )
+    {
+        SW_ASSERT( pOwner != nullptr && poll != nullptr );
+        ScopedLock<SpinLock> guard( _lock );
+        for ( const Entry& entry : _listEntry )
+        {
+            if ( entry._pOwner == pOwner )
+                return;
+        }
+        _listEntry.push_back( Entry{ pOwner, poll } );
+    }
+
+    void MaterialCompletionWatch::unwatch( const void* pOwner )
+    {
+        ScopedLock<SpinLock> guard( _lock );
+        VectorUtil::removeIf( _listEntry, [pOwner]( const Entry& entry )
+        { return entry._pOwner == pOwner; } );
+    }
+
+    uint32 MaterialCompletionWatch::pollAll( MaterialChangeLog& log )
+    {
+        // 잠근 채 묻는다 — 주인의 소멸자(`unwatch`)가 이 잠금을 기다리므로 묻는 동안 주인이 사라지지 않는다. 지켜보는 주인은 로드 중인 것뿐이라 적다.
+        ScopedLock<SpinLock> guard( _lock );
+        uint32               completeCount = 0;
+        VectorUtil::removeIf( _listEntry, [&log, &completeCount]( const Entry& entry )
+        {
+            if ( entry._poll( entry._pOwner ) == PollResult::Pending )
+                return false;
+            log.record( entry._pOwner );
+            ++completeCount;
+            return true;
+        } );
+        return completeCount;
+    }
+
+    uint32 MaterialCompletionWatch::getWatchCount() const
+    {
+        ScopedLock<SpinLock> guard( _lock );
+        return static_cast<uint32>( _listEntry.size() );
+    }
 } // namespace sw

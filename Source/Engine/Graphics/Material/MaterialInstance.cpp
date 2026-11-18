@@ -10,6 +10,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
@@ -152,6 +153,24 @@ namespace sw
     {
         // 텍스처를 요청한 디바이스가 죽었으면 clearRHI 가 이미 비웠다 — 남아 있으면 살아 있는 디바이스다. 상수 버퍼는 프록시가 놓는다.
         releaseTextureOverrides();
+        MaterialCache* const pCache = MaterialCache::findBound();
+        if ( pCache != nullptr )
+            pCache->getCompletionWatch().unwatch( this ); // 로드를 기다리던 중이면 지켜보기에서 뺀다(폴링과 같은 잠금 — 묻는 중에 사라지지 않는다)
+    }
+
+    MaterialCompletionWatch::PollResult MaterialInstance::pollTextureCompletion( void* pOwner )
+    {
+        return static_cast<const MaterialInstance*>( pOwner )->hasPendingTextureLoad() ? MaterialCompletionWatch::PollResult::Pending : MaterialCompletionWatch::PollResult::Complete;
+    }
+
+    bool MaterialInstance::hasPendingTextureLoad() const
+    {
+        for ( const TextureOverride& texture : _listTextureOverride )
+        {
+            if ( texture._load.isValid() && texture._load.isReady() == false && texture._load.hasFailed() == false )
+                return true;
+        }
+        return false;
     }
 
     void MaterialInstance::clearRHI( IRHIDevice* pDevice )
@@ -332,6 +351,11 @@ namespace sw
                 // 스트리밍 중인 텍스처 파라미터는 낮은 밉 · 기본 텍스처로 그린다). 요청이 곧바로 번호를 주고 업로드가 끝나면 같은 번호를 다시 묶으므로(R-6) 다시 패킹하지 않는다.
                 if ( texture._assetPath.empty() == false )
                     texture._load = textures.request( texture._assetPath, AssetLoadStart::Async, TextureStreamingGroup::Streamable );
+                // 끝나는 때(성공 · 실패)를 머티리얼 캐시가 지켜본다 — 끝나면 이 인스턴스가 렌더 값 변경 기록에 실려 다음 맞추기가 다시 본다(실패면 부모 텍스처로 다시 패킹).
+                // 아무도 이 인스턴스를 만지지 않는 프레임에 실패가 오면, 바뀐 주인만 맞추는 장면 빌더가 그것을 보지 못한다.
+                MaterialCache* const pCache = MaterialCache::findBound();
+                if ( pCache != nullptr && hasPendingTextureLoad() )
+                    pCache->getCompletionWatch().watch( this, &MaterialInstance::pollTextureCompletion );
             }
             if ( texture._load.hasFailed() )
             {

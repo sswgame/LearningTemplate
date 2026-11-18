@@ -136,6 +136,8 @@ namespace sw
         /** @brief 퍼뮤테이션 변경 기록입니다(`MaterialPermutation::recordPermutationChange` 가 적는다). 장면 빌더는 바뀐 주인을 쓰는 프리미티브만 다시 모은다. */
         MaterialChangeLog&       getPermutationLog() { return _permutationLog; }
         const MaterialChangeLog& getPermutationLog() const { return _permutationLog; }
+        /** @brief 늦게 끝나는 일(덮어쓴 텍스처 로드)을 기다리는 주인입니다. 끝나면 렌더 값 변경 기록에 적힌다 — `initializePending` 이 프레임마다 묻는다. */
+        MaterialCompletionWatch& getCompletionWatch() { return _completionWatch; }
 
     private:
         struct Impl;
@@ -145,9 +147,10 @@ namespace sw
         void appendRuntimeSwitchWarmEntries( const Material& material );
 
     private:
-        unique_ptr<Impl>  _impl;
-        MaterialChangeLog _renderValueLog; ///< `getRenderValueLog`
-        MaterialChangeLog _permutationLog; ///< `getPermutationLog`
+        unique_ptr<Impl>        _impl;
+        MaterialChangeLog       _renderValueLog;  ///< `getRenderValueLog`
+        MaterialChangeLog       _permutationLog;  ///< `getPermutationLog`
+        MaterialCompletionWatch _completionWatch; ///< `getCompletionWatch`
     };
 } // namespace sw
 

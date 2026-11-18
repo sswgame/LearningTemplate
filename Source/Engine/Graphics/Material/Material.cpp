@@ -825,7 +825,10 @@ namespace sw
         _desc._listProperty = _data._listProperty;
 
         if ( prop->_type == MaterialPropertyType::Keyword || prop->_type == MaterialPropertyType::Bool )
+        {
             _bDefinesDirty = SW_TRUE;
+            MaterialPermutation::recordPermutationChange( this ); // 키워드 · 불 프로퍼티는 define 이다 — 이 머티리얼을 쓰는 칸이 해시를 다시 구한다
+        }
 
         return true;
     }
@@ -903,6 +906,7 @@ namespace sw
             multiCompile._listOption.push_back( string( selectedOption ) );
         _desc._permutations._listMultiCompile.push_back( std::move( multiCompile ) );
         _bDefinesDirty = SW_TRUE;
+        MaterialPermutation::recordPermutationChange( this );
     }
 
     bool Material::setScalarParameter( hashed_string name, float32 value )
@@ -1314,6 +1318,8 @@ namespace sw
         }
 
         _bDefinesDirty = SW_TRUE;
+        // 다시 읽기(에디터 미리보기 · 머티리얼 패널)는 같은 객체를 제자리에서 바꾼다 — 셰이더 · define 이 달라졌을 수 있다. 주인을 적어 장면 빌더가 이 머티리얼을 쓰는 칸만 다시 모은다.
+        MaterialPermutation::recordPermutationChange( this );
         applyDescToRuntime();
         return true;
     }
@@ -1328,6 +1334,8 @@ namespace sw
         _elementStride       = 0;
         rebuildCollectionBindings();
         rebuildPackedBuffer();
+        // 바이트를 새로 쌓았다 — 렌더 값 변경 기록에 이 머티리얼을 적어 다음 맞추기가 이것과 그 인스턴스의 원소를 다시 맞춘다(레이아웃 맞추기는 그때 `syncRenderState` 가 한다).
+        _bufferGeneration.bump( this );
     }
 
     void Material::rebuildPropertyNames()
