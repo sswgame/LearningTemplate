@@ -37,6 +37,9 @@ endif()
 # 셰이더도 같은 스테이징에 굽고(바뀐 것만) 소스와 맞는지 본 뒤 팩에 담는다(`cookShadersForPack`) — 따로 주는 인자가 없다.
 # 쿠킹 로그는 고정 자리(`<빌드>/Testing/Logs/Cook.log`)에 남긴다 — 빌드 출력에 섞이면 첫 굽기만 틀린 일(팩에 빠진 셰이더 바이너리)을 나중에 볼 수 없었다.
 # `Scripts/dev/shipping_check.py` 가 실패할 때 이 로그의 오류 · 경고를 함께 찍는다(같은 자리 이름 `COOK_LOG_NAME`).
+# 꾸미기 스키마를 출시 스냅숏과 먼저 견준다(Scripts/dev/customization_release.py) — 옛 세이브 · 공유 코드를 올릴 단계가 빠진 바뀜은 굽지 않는다.
+# 추론할 수 있는 것(매개변수 제거)은 --fix 가 소스에 Remove 단계 · 판 올림을 적고(커밋할 바뀜으로 알린다), 이름 · 종류 바꾸기는 적을 줄을 안내하고 멈춘다.
+set(customization_release_check "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/customization_release.py" check --fix)
 set(cook_args --cook-all "--cooked-dir=${CMAKE_BINARY_DIR}/Cooked" "--pack-dir=${pack_output_dir}" "-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Cook.log")
 # 정적 모듈 구성(Shipping · 웹 · Android 개발)은 활성 게임(SW_ACTIVE_GAME)의 팩만 굽는다 — 링크한 게임이 하나라 다른 팩은 쓰이지 않는다(`Pack` 도 그 게임의 팩만 고른다).
 # 동적 Dev 프리셋은 실행할 때 `-game=` 으로 게임을 고르므로 어느 팩이 필요할지 몰라 모두 굽는다.
@@ -73,6 +76,7 @@ if(CMAKE_CROSSCOMPILING)
 	set(cross_backend_flag "-${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_COMMAND_LINE_NAME}")
 	add_custom_target(CookAssets
 		COMMAND "${CMAKE_COMMAND}" --build "${SW_HOST_BUILD_DIR}"
+		COMMAND ${customization_release_check}
 		# 원본(`textures_raw/`)을 `textures/*.dds` 로 먼저 임포트한다(바뀐 것만 — 내용 해시). 임포트 산출물은 저장소에 없어(.gitignore) 깨끗한 트리에서는 팩이 참조를 못 찾고 멈춘다.
 		COMMAND "${host_cook_app}" --import-textures
 		COMMAND "${host_cook_app}" --cook-texture-variants
@@ -85,12 +89,14 @@ if(CMAKE_CROSSCOMPILING)
 	unset(host_cook_app)
 else()
 	add_custom_target(CookAssets
+		COMMAND ${customization_release_check}
 		COMMAND "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>" ${cook_args}
 		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 		COMMENT "Cooking scenes, prefabs (XML/JSON) and Resource packs to binary (${SW_COOK_HOST_TARGET} --cook-all)..."
 		VERBATIM
 	)
 endif()
+unset(customization_release_check)
 set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
 
 # 서드파티 고지 — 배포물(Bin · Shipping 패키지)에 함께 놓는다. vcpkg 설치 트리의 `share/<포트>/copyright` 를 이 매니페스트가

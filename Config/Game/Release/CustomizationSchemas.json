@@ -1,0 +1,88 @@
+{
+    "_comment": "꾸미기 스키마 출시 스냅숏 — 출시 때 `py -3 -m Scripts customization-release accept` 가 쓴다. 쿠킹이 이것과 견주어 판 올림 단계가 빠진 바뀜을 막는다.",
+    "schemas": {
+        "Adventurer": {
+            "version": 1,
+            "parameters": {
+                "OutfitDye": "Color",
+                "Roughness": "Slider"
+            }
+        },
+        "ArmorDye": {
+            "version": 1,
+            "parameters": {
+                "Tint": "Color"
+            }
+        },
+        "Gun": {
+            "version": 1,
+            "parameters": {
+                "Finish": "Choice"
+            }
+        },
+        "HelmetFinish": {
+            "version": 1,
+            "parameters": {
+                "Finish": "Choice"
+            }
+        },
+        "HumanoidCustom": {
+            "version": 1,
+            "parameters": {
+                "EyeScale": "Slider",
+                "EyeShine": "Slider",
+                "EyeSpacing": "Slider",
+                "Heterochromia": "Choice",
+                "IrisColor": "Color",
+                "IrisColorRight": "Color",
+                "PupilShape": "Slider",
+                "PupilSize": "Slider",
+                "ShoulderWidth": "Slider",
+                "WaistWidth": "Slider"
+            }
+        },
+        "Skeleton": {
+            "version": 1,
+            "parameters": {
+                "BoneTint": "Color",
+                "Hood": "Choice"
+            }
+        },
+        "SkeletonBody": {
+            "version": 1,
+            "parameters": {
+                "BoneTint": "Color",
+                "Hood": "Choice",
+                "LegLength": "Slider",
+                "ShoulderWidth": "Slider",
+                "WaistWidth": "Slider"
+            }
+        },
+        "TownsfolkFemale": {
+            "version": 1,
+            "parameters": {
+                "Hair": "Choice",
+                "HairHighlight": "Color",
+                "HairHighlightAmount": "Slider",
+                "HairLength": "Slider",
+                "HairRoot": "Color",
+                "HairTip": "Color",
+                "Hood": "Choice",
+                "Outfit": "Choice"
+            }
+        },
+        "TownsfolkMale": {
+            "version": 1,
+            "parameters": {
+                "Hair": "Choice",
+                "HairHighlight": "Color",
+                "HairHighlightAmount": "Slider",
+                "HairLength": "Slider",
+                "HairRoot": "Color",
+                "HairTip": "Color",
+                "Hood": "Choice",
+                "Outfit": "Choice"
+            }
+        }
+    }
+}
