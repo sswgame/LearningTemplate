@@ -154,17 +154,17 @@ SW_TEST_CASE( EditorAssetPlacementTest, TwoDimensionalUsesZPlane )
 // 놓기 전 회전: 걸음의 배수로 돌고 0 ~ 2π 로 감는다(직각 걸음 네 번이면 처음 자세), 반대쪽은 2π 아래로 감는다. 자세는 3D 요 · 2D 롤에 더한다.
 SW_TEST_CASE( EditorAssetPlacementTest, RotateStepsWrapAndMapToTheUpAxis )
 {
-    using sw::editor::EditorAssetPlacement;
+    using sw::editor::EditorPlacementDrag;
     const float32 step = sw::MathUtil::kHalfPi;
     float32       yaw  = 0.0f;
-    yaw                = EditorAssetPlacement::stepYaw( yaw, step, 1 );
+    yaw                = EditorPlacementDrag::stepYaw( yaw, step, 1 );
     SW_EXPECT_NEAR( step, yaw, 1e-5f );
     for ( int32 index = 0; index < 3; ++index )
-        yaw = EditorAssetPlacement::stepYaw( yaw, step, 1 );
+        yaw = EditorPlacementDrag::stepYaw( yaw, step, 1 );
     SW_EXPECT_NEAR( 0.0f, yaw, 1e-6f ); // 네 번 — 한 바퀴
-    yaw = EditorAssetPlacement::stepYaw( 0.0f, step, -1 );
+    yaw = EditorPlacementDrag::stepYaw( 0.0f, step, -1 );
     SW_EXPECT_NEAR( 3.0f * step, yaw, 1e-5f );
-    SW_EXPECT_NEAR( 0.7f, EditorAssetPlacement::stepYaw( 0.7f, 0.0f, 1 ), 1e-6f ); // 걸음이 없으면 그대로
+    SW_EXPECT_NEAR( 0.7f, EditorPlacementDrag::stepYaw( 0.7f, 0.0f, 1 ), 1e-6f ); // 걸음이 없으면 그대로
 
     sw::editor::EditorPlacementPose pose{};
     pose._yaw                   = step;
@@ -175,4 +175,28 @@ SW_TEST_CASE( EditorAssetPlacementTest, RotateStepsWrapAndMapToTheUpAxis )
     const sw::float3 rotation2D = pose.makeRotationOffset();
     SW_EXPECT_NEAR( 0.0f, rotation2D._y, 1e-6f );
     SW_EXPECT_NEAR( step, rotation2D._z, 1e-6f );
+}
+
+// 놓기 결과의 통계: 연 것 · 거절 · 놓은 것을 세고, 놓으면 자리와 그때의 회전을 남긴다. 플레이 중 거절은 아무것도 세지 않는다.
+SW_TEST_CASE( EditorAssetPlacementTest, DropResultUpdatesStats )
+{
+    using sw::editor::EditorPlacementDrag;
+    using sw::editor::EditorPlacementDropResult;
+    sw::editor::EditorPlacementStats stats{};
+    sw::editor::EditorPlacementGhost ghost{};
+    ghost._hit._position = sw::float3{ 1.0f, 2.0f, 3.0f };
+    ghost._hit._surface  = sw::editor::EditorPlacementSurface::GroundPlane;
+    stats._yaw           = 0.5f;
+
+    EditorPlacementDrag::recordDrop( EditorPlacementDropResult::Blocked, ghost, stats );
+    SW_EXPECT_EQUAL( sw::uint32{ 0 }, stats._placedCount + stats._refusedCount + stats._openedCount );
+    EditorPlacementDrag::recordDrop( EditorPlacementDropResult::Opened, ghost, stats );
+    EditorPlacementDrag::recordDrop( EditorPlacementDropResult::Refused, ghost, stats );
+    EditorPlacementDrag::recordDrop( EditorPlacementDropResult::Placed, ghost, stats );
+    SW_EXPECT_EQUAL( sw::uint32{ 1 }, stats._openedCount );
+    SW_EXPECT_EQUAL( sw::uint32{ 1 }, stats._refusedCount );
+    SW_EXPECT_EQUAL( sw::uint32{ 1 }, stats._placedCount );
+    SW_EXPECT_NEAR( 2.0f, stats._lastPosition._y, 1e-6f );
+    SW_EXPECT_NEAR( 0.5f, stats._lastYaw, 1e-6f );
+    SW_EXPECT_TRUE( stats._surface == sw::editor::EditorPlacementSurface::GroundPlane );
 }

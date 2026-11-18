@@ -69,6 +69,7 @@ views = [
     "Viewport/EditorDebugHUDView.cpp",
     "Viewport/EditorPreviewGizmo.cpp",
     "Viewport/EditorProjectedLineRenderer.cpp",
+    "Viewport/EditorViewportAssetPlacement.cpp",
     "Viewport/EditorViewportCamera.cpp",
     "Viewport/EditorViewportCanvasOverlay.cpp",
     "Viewport/EditorViewportGizmo.cpp",
