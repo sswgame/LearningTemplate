@@ -47,6 +47,7 @@ namespace sw
         bool ( *initialize )( EditorHandle editor, WindowHandle window, RHIDeviceHandle rhiDevice ){ nullptr }; /**< @brief 윈도우 및 RHI 디바이스로 에디터를 초기화합니다. */
         void ( *shutdown )( EditorHandle editor ){ nullptr };                                                   /**< @brief 에디터를 종료합니다. */
         void ( *updateUI )( EditorHandle editor ){ nullptr };                                                   /**< @brief 메인 스레드에서 에디터 UI 및 플랫폼 윈도우를 갱신합니다. */
+        void ( *applyUICommands )( EditorHandle editor ){ nullptr };                                            /**< @brief UI 가 보낸 명령(뷰 크기 · 재생)을 적용합니다. 게임 스레드가 씬 틱 · 틱 여부 질의 앞에서 부릅니다. */
         void ( *prepareRender )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                   /**< @brief 렌더 패스 밖에서 이번 프레임 UI 의 업로드(그리기 목록 · 텍스처 연산 · bindless 등록)를 합니다. */
         void ( *render )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                          /**< @brief 열린 백버퍼 패스 안에서 에디터 UI 를 그립니다(업로드는 `prepareRender` 가 했다). */
         void ( *postPresent )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                     /**< @brief 렌더링 결과가 출력된 후 호출됩니다 (멀티 뷰포트 처리용). */

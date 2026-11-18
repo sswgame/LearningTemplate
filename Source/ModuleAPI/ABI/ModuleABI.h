@@ -24,7 +24,7 @@
 namespace sw
 {
     /** @brief `GameAPI`/`EditorAPI` 표의 모양이 바뀔 때마다 올립니다. */
-    inline constexpr uint32 kModuleABIVersion = 11;
+    inline constexpr uint32 kModuleABIVersion = 12;
 
     /**
      * @brief 표의 지문입니다. 버전과 함께 바꿉니다.
@@ -39,8 +39,9 @@ namespace sw
      *        v9: `EditorAPI::getRedrawReasons` 를 더하고(에디터가 조용하면 앱 루프가 잔다) 재정의하는 패널이 없던 `EditorAPI::preRender` 를 지움(EditorAPI 19항목).
      *        v10: `GameAPI::initialize` 가 RHI 디바이스를 받지 않음 — 게임은 디바이스를 쓰지 않는다(렌더 자원은 엔진이 붙은 디바이스로 만든다).
      *        v11: `EditorAPI::prepareRender` 를 더함(EditorAPI 20항목) — UI 업로드를 백버퍼 패스 밖에서 한다. Vulkan 은 패스 안의 복사가 그 패스를 닫아 UI 가 그려지지 않았다.
+     *        v12: `EditorAPI::applyUICommands` 를 더함(EditorAPI 21항목) — UI 가 보낸 명령(뷰 크기 · 재생)을 호스트가 씬 틱 앞에서 적용한다(`EditorUICommandQueue`).
      */
-    inline constexpr auto kModuleABIStamp = "module-abi-v11-2026-11-editor-prepare-render";
+    inline constexpr auto kModuleABIStamp = "module-abi-v12-2026-11-editor-ui-commands";
 
     using PFN_GetModuleABIVersion = uint32 ( * )();
     using PFN_GetModuleABIStamp   = const utf8* (*)();

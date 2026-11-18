@@ -47,6 +47,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
@@ -780,6 +781,16 @@ namespace sw::editor
             (void)EditorPreferencesStore::loadNewSections( EditorPreferencesStore::getDefaultFilePath() ); // 입힌 수는 쓰지 않는다
         _editorContext->getSubsystem<EditorRenderViews>().beginFrameFocus();
         _editorContext->getSubsystem<EditorRenderViews>().clearViewDrawnMarks();
+    }
+
+    void ImGuiEditor::applyUICommands()
+    {
+        // UI 출력 계약 — 이번 UI 프레임이 넣은 명령(뷰 크기 · Play/Pause/Step)을 씬 틱 앞에서 적용한다(`EditorUICommandQueue`). 호스트가 부르는 자리는 게임 스레드라
+        // UI 프레임이 UI 스레드로 옮겨 가도 그대로다.
+        if ( _bInitialized == SW_FALSE || _editorContext == nullptr )
+            return;
+        SW_EDITOR_PROFILE_SCOPE( "GT.Editor.applyUICommands" );
+        _editorContext->getSubsystem<EditorUICommandQueue>().applyDue();
     }
 
     void ImGuiEditor::openFrame()
