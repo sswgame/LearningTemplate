@@ -62,6 +62,18 @@ namespace sw
     };
 
     /**
+     * @class IAutomationLogCounter
+     * @brief 시나리오 실행기가 모은 로그 줄을 세는 창구입니다. 실행기가 감시 값 문맥(`AutomationWatchQuery::_pLogCounter`)으로 넘긴다 — 감시 값이 전역 수집기를 찾지 않는다.
+     */
+    class IAutomationLogCounter
+    {
+    public:
+        virtual ~IAutomationLogCounter() = default;
+        /** @brief 실행이 시작된 뒤 모은 줄 가운데 종류 id 가 @p id 인 줄 수입니다(`<ExpectLog id>` 가 세는 줄과 같다). */
+        [[nodiscard]] virtual uint32 countLogLinesWithID( string_view id ) const = 0;
+    };
+
+    /**
      * @class AutomationWatchQuery
      * @brief 질의 감시 값이 받는 인자입니다. 단계의 `target` · `key` 속성이 들어옵니다. 만드는 길은 `make` 하나라 대상 고르기 규칙(`AutomationTarget`)을 건너뛸 수 없습니다.
      * @details 오브젝트가 아닌 대상(일정 NPC id)은 `_target` 글로 찾고, 오브젝트 대상은 `findTargetObject` 로 받는다. 못 찾았으면 `getTargetProblem` 이 실패 줄에 실을 까닭이다.
@@ -69,9 +81,10 @@ namespace sw
     class SW_API AutomationWatchQuery
     {
     public:
-        const GameObjectManager* _pManager{ nullptr };
-        string_view              _target{};
-        string_view              _key{};
+        const GameObjectManager*     _pManager{ nullptr };
+        string_view                  _target{};
+        string_view                  _key{};
+        const IAutomationLogCounter* _pLogCounter{ nullptr }; ///< 실행기가 모은 로그 줄(`Log.Count`) — 실행기 밖(녹화기)에서는 없다
 
         /** @brief 활성 씬 @p pManager 에서 @p target 을 고르기 규칙으로 찾아 둔 질의를 만듭니다. @p target 이 비면 대상이 없는 질의입니다. */
         [[nodiscard]] static AutomationWatchQuery make( const GameObjectManager* pManager, string_view target, string_view key );

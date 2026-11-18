@@ -1201,6 +1201,9 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( shooterWeaponIndex, "Shooter3D.WeaponIndex", "Weapon slot of the first shooter player (0 rifle, 1 shotgun, 2 pistol)", ShooterPlayerComponent, &ShooterPlayerComponent::getWeaponIndex );
     SW_AUTOMATION_GETTER_WATCH( shooterPlayerAlive, "Shooter3D.PlayerAlive", "1 while the first shooter player is alive", ShooterPlayerComponent, &ShooterPlayerComponent::isAlive );
     SW_AUTOMATION_GETTER_WATCH( shooterShotCount, "Shooter3D.ShotCount", "Shots the first shooter player fired", ShooterPlayerComponent, &ShooterPlayerComponent::getShotCount );
+    SW_AUTOMATION_GETTER_WATCH( shooterFireReady, "Shooter3D.FireReady", "1 while the first shooter player's weapon can fire its next shot (cooldown and reload over, ammo in the magazine)", ShooterPlayerComponent,
+                                &ShooterPlayerComponent::isFireReady );
+    SW_AUTOMATION_GETTER_WATCH( shooterOnGround, "Shooter3D.OnGround", "1 while the first shooter player stands on the ground", ShooterPlayerComponent, &ShooterPlayerComponent::isOnGround );
     SW_AUTOMATION_COMPONENT_WATCH( shooterShotDamage, "Shooter3D.ShotDamage", "Damage of one pellet of the projectile loaded in the first shooter player's weapon", ShooterPlayerComponent, &ShooterPlayerComponentInternal::readShotDamage );
     SW_AUTOMATION_GETTER_WATCH( shooterTracerWidth, "Shooter3D.TracerWidth", "Width of the last tracer the first shooter player drew (the projectile's trail)", ShooterPlayerComponent, &ShooterPlayerComponent::getLastTracerWidth );
     SW_AUTOMATION_GETTER_WATCH( shooterTracerStartAhead, "Shooter3D.TracerStartAhead",

@@ -14,6 +14,8 @@
 
 #include "DevTools/DevToolsAPI.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
+
 namespace sw
 {
     struct AutomationLogCheckResult;
@@ -39,12 +41,12 @@ namespace sw
      *          실행기 자신의 줄(`[Scenario]`)은 모으지 않는다 — 실패 줄이 단언 문구를 반복해 `ExpectLog` 를 맞추지 않게 하기 위해서다.
      *          리스너가 `this` 를 가리키므로 복사 · 이동하지 않는다.
      */
-    class SW_DEVTOOLS_API AutomationLogCapture
+    class SW_DEVTOOLS_API AutomationLogCapture final : public IAutomationLogCounter
     {
     public:
         AutomationLogCapture();
         /** @brief 아직 등록돼 있으면 리스너를 해제합니다. */
-        ~AutomationLogCapture();
+        ~AutomationLogCapture() override;
 
         AutomationLogCapture( const AutomationLogCapture& )            = delete;
         AutomationLogCapture& operator=( const AutomationLogCapture& ) = delete;
@@ -61,6 +63,8 @@ namespace sw
          * @details 사건은 id 로 센다 — 문구가 바뀌어도 같은 사건을 센다. @p contains 는 그 사건의 값(경로 · 수)을 좁히는 데만 쓴다.
          */
         uint32 countLinesWithID( const string& id, const string& contains, uint32 sinceFrame ) const;
+        /** @brief 감시 값 `Log.Count` 의 창구입니다 — 시작부터 종류 id 가 @p id 인 줄 수(`countLinesWithID` 와 같은 셈). */
+        [[nodiscard]] uint32 countLogLinesWithID( string_view id ) const override { return countLinesWithID( string( id ), string{}, 0 ); }
         /** @brief 모은 줄을 모두 @p policy 로 판정해 처리하지 않은 줄 · 허용 항목이 맞은 id 를 돌려줍니다. */
         AutomationLogCheckResult evaluateLines( const AutomationLogPolicy& policy ) const;
         /** @brief 모은 줄 가운데 @p needle 을 담은 줄이 있으면 true 입니다(프레임 무관). */

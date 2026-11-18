@@ -17,8 +17,26 @@ namespace sw
         {
             /** @brief 시나리오 동안 모으는 로그 줄 상한입니다. 넘치면 더 모으지 않습니다(`ExpectLog` 는 그때까지만 셉니다). */
             static constexpr size_t kMaxLogLine = 20000;
+
+            /**
+             * @brief 감시 값 `Log.Count` 입니다. 실행기가 모은 줄 가운데 종류 id 가 key 인 줄 수 — 로그로만 드러나는 비동기 사건(GPU 메시지 되읽기)을 고정 대기 없이 `<WaitUntil>` 로 기다린다.
+             * @details 수집기는 실행기의 값 멤버라 감시 값 문맥으로 받는다(`AutomationWatchQuery::_pLogCounter`) — 전역 수집기를 찾지 않는다. 문맥이 없으면(녹화기) 값이 없다.
+             */
+            [[nodiscard]] static bool readLogCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                if ( query._pLogCounter == nullptr )
+                {
+                    outValue.setText( "no scenario run is collecting log lines here" );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( query._pLogCounter->countLogLinesWithID( query._key ) ) );
+                return true;
+            }
         };
     } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( logCount, "Log.Count", "Log lines whose log id is key, collected since the scenario started (the same lines <ExpectLog> counts)", &AutomationLogCaptureInternal::readLogCount,
+                               false, true );
 } // namespace sw
 
 namespace sw
