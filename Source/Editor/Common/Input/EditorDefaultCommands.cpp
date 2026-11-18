@@ -79,12 +79,23 @@ namespace sw::editor
             //
             // 인자를 고정하는 경우에도 값마다 함수를 하나씩 만들지 않는다. 축처럼 값만 다른 것은 템플릿 인자로 받는다.
             // ------------------------------------------------------------------------------
+            /**
+             * @brief 씬 열기 창의 결과(디스크 절대 경로)를 리소스 id 로 바꿔 게임 단계에 열기를 요청합니다.
+             * @details 씬은 리소스 id 로만 연다(`loadSceneWithoutPrompt`) — 디스크 경로를 그대로 넘기면 id 정규화가 비워 "씬이 아니다" 로 졌다.
+             *          리소스 트리 · 붙인 디스크 도메인 밖의 파일은 씬의 소스가 될 수 없어 알리고 요청하지 않는다(개발 명령 `scene.open` 과 같은 규칙).
+             */
             static void onOpenSceneDialogResult( const vector<string>& listPath )
             {
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-
-                if ( listPath.empty() == false )
-                    editorContext.getSubsystem<EditorWorkspace>().requestLoadScene( listPath[0] );
+                if ( listPath.empty() )
+                    return;
+                const string sceneID = editor::getSubsystem<AssetPaths>().toAssetID( listPath[0] );
+                if ( sceneID.empty() )
+                {
+                    SW_LOG_ERROR_ID( "Editor.OpenSceneOutsideContent", "Open Scene: '%#' is outside the content root and every mounted disk domain", listPath[0] );
+                    warn( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneOpenFailed" ) );
+                    return;
+                }
+                editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().requestLoadScene( sceneID );
             }
 
             /// @brief 테이블은 `void()` 를 요구하는데 `tryCreateNewScene` 은 `bool` 을 반환합니다. 이 차이를 맞추려고 둡니다.
