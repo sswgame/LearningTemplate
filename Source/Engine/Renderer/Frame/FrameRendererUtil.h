@@ -239,9 +239,6 @@ namespace sw
             return unorm8::fromFloat( value.toFloat() ).getRaw();
         }
 
-        /** @brief 포맷을 파이프라인 XML 이 쓰는 이름(리플렉션된 열거자 이름)으로 반환합니다. */
-        SW_API static const utf8* attachmentFormatName( RHIFormat format );
-
         /**
          * @brief 패스의 `_listOutput` 에서 컬러 어태치먼트 포맷을 순서대로 모읍니다. 반환값은 컬러 RT 수입니다.
          * @details PSO 생성(createPSOForPassType)과 셰이더 쿠커가 **같은 답**을 내야 하는 규칙이다. 컬러

@@ -2,11 +2,17 @@
 
 #include "Engine/Renderer/Capture/PortraitStudio.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/string_splitter.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -16,6 +22,7 @@
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
@@ -81,6 +88,39 @@ namespace sw
                 outRadius = MathUtil::max( 0.05f, ( boundsMax - boundsMin ).getLength() * 0.5f );
                 return true;
             }
+
+            /** @brief 읽은 장을 쓰지 않고 들고 있는 바이트의 상한입니다 — 넘으면 그때까지 읽은 장을 쓰고 비운다(큰 장 수백 장이 메모리를 그만큼 올리지 않게). 4096² 장 넷 남짓이다. */
+            static constexpr size_t kMaxHeldCaptureBytes = 256 * constant::memory::kBytesPerMegabyte;
+
+            /** @brief 읽은 장을 RGBA8 로 옮겨 DDS · PNG 로 쓰는 병렬 본문입니다. 입력은 const 포인터로만 읽고, 결과는 장마다 제 칸(`_pWritten`)에 쓴다. */
+            struct WriteJob
+            {
+                const PortraitCapture* _pCapture{ nullptr };
+                const string*          _pBase{ nullptr }; ///< 확장자 앞까지의 쓸 경로
+                uint8*                 _pWritten{ nullptr };
+
+                void runRange( uint32 start, uint32 end )
+                {
+                    for ( uint32 index = start; index < end; ++index )
+                    {
+                        const PortraitCapture& capture = _pCapture[index];
+                        // 행 간격을 풀어 빈틈없는 RGBA8(알파 255)로 — 스크린샷 · 에디터 UI 캡처와 같은 풀기다
+                        RHITextureMipSpan layout{};
+                        layout._width    = capture._width;
+                        layout._height   = capture._height;
+                        layout._rowBytes = capture._rowBytes;
+                        vector<uint8> rgbaBytes;
+                        if ( RenderTargetImageFile::unpackRGBA8( capture._bytes, layout, constant::render::kOffscreenColorFormat, rgbaBytes ) == false )
+                        {
+                            _pWritten[index] = 0;
+                            continue;
+                        }
+                        const bool bDDS  = ImageFileWriter::writeDDSRGBA8( _pBase[index] + ".dds", rgbaBytes, capture._width, capture._height );
+                        const bool bPNG  = ImageFileWriter::writePNGRGBA8( _pBase[index] + ".png", rgbaBytes, capture._width, capture._height );
+                        _pWritten[index] = bDDS && bPNG ? 1 : 0;
+                    }
+                }
+            };
         };
     } // namespace
 } // namespace sw
@@ -204,5 +244,72 @@ namespace sw
             return false;
         }
         return true;
+    }
+
+    bool PortraitStudio::renderPrefabList( RenderThread& renderThread, const SceneEngineServices& services, string_view prefabList, string_view outputDirectory, uint32 size )
+    {
+        if ( prefabList.empty() )
+            return false;
+        const string directory = outputDirectory.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Portraits" ) : string( outputDirectory );
+        (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
+
+        // 그리기 · 읽기(GPU)는 이 스레드가 차례로 하고, 옮기기(RGBA8) · 인코딩 · 쓰기(DDS · PNG)는 읽은 장이 상한(`kMaxHeldCaptureBytes`)에 닿거나 끝나면 장마다 워커가 제 칸에 한다(`WriteJob`).
+        PortraitStudio          portrait;
+        bool                    bAllSucceeded = portrait.initialize( renderThread, services );
+        vector<PortraitCapture> listCapture;
+        vector<string>          listPath;
+        size_t                  heldBytes   = 0;
+        const auto              flushWrites = [&]()
+        {
+            vector<string> listBase;
+            listBase.reserve( listPath.size() );
+            for ( const string& path : listPath )
+            {
+                listBase.push_back( directory + "/" + string( makeFileStem( path ) ) + ".portrait" );
+            }
+            vector<uint8>                    listWritten( listCapture.size(), 0 ); // 장마다 제 칸(워커가 쓴다) - 아래 직렬 단계가 정해진 차례로 모은다
+            PortraitStudioInternal::WriteJob job{ listCapture.data(), listBase.data(), listWritten.data() };
+            engine::runParallelByCost( static_cast<uint32>( listCapture.size() ), SW_DELEGATE_METHOD( ParallelBlockDelegate, &PortraitStudioInternal::WriteJob::runRange, &job ) );
+            for ( size_t index = 0; index < listCapture.size(); ++index )
+            {
+                bAllSucceeded = bAllSucceeded && listWritten[index] != 0;
+                SW_LOG_INFO_ID( "PortraitStudio.PortraitDdsPngX", "Portrait '%#' -> %#.dds / .png (%#x%#)", listPath[index].c_str(), listBase[index].c_str(), listCapture[index]._width, listCapture[index]._height );
+            }
+            listCapture.clear();
+            listPath.clear();
+            heldBytes = 0;
+        };
+        const string_splitter parts( prefabList, { "," } );
+        for ( const string_view part : parts.getSplitList() )
+        {
+            const string_view path = StringUtil::trim( part );
+            if ( path.empty() || bAllSucceeded == false )
+                continue;
+            PortraitRequest request;
+            request._prefabPath = string( path );
+            request._width      = MathUtil::clamp( size, 16u, 4096u );
+            request._height     = request._width;
+            PortraitCapture capture;
+            if ( portrait.renderPrefab( request, capture ) == false )
+            {
+                bAllSucceeded = false;
+                continue;
+            }
+            heldBytes += capture._bytes.size();
+            listCapture.push_back( std::move( capture ) );
+            listPath.push_back( string( path ) );
+            if ( heldBytes >= PortraitStudioInternal::kMaxHeldCaptureBytes )
+                flushWrites();
+        }
+        portrait.shutdown();
+        flushWrites();
+        return bAllSucceeded;
+    }
+
+    string_view PortraitStudio::makeFileStem( string_view prefabPath )
+    {
+        string_view stem;
+        FileUtil::getFileNamePart( prefabPath, stem );
+        return stem.substr( 0, stem.find( '.' ) );
     }
 } // namespace sw
