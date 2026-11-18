@@ -32,6 +32,7 @@
         "_detailTexturePath",
         "_document",
         "_documentPath",
+        "_effect",
         "_effectPath",
         "_facialRigPath",
         "_file",
@@ -179,6 +180,7 @@
         "_uiTooltip",
         "_userSettingsSchema",
         "_waterMaterial",
+        "_wetnessCollection",
         "_zoneProfile",
         "albedo",
         "albedoTexture",
@@ -210,6 +212,7 @@
         "detailTexturePath",
         "document",
         "documentPath",
+        "effect",
         "effectPath",
         "facialRigPath",
         "file",
@@ -361,6 +364,7 @@
         "uiTooltip",
         "userSettingsSchema",
         "waterMaterial",
+        "wetnessCollection",
         "zoneProfile"
       ],
       "listAssetRefField": [
@@ -464,6 +468,7 @@
         "_defaultForwardPipeline",
         "_defaultMaterial",
         "_defaultSocketKinds",
+        "_effect",
         "_file",
         "_foliageMaterial",
         "_fontCatalog",
@@ -582,6 +587,7 @@
         "_uiTooltip",
         "_userSettingsSchema",
         "_waterMaterial",
+        "_wetnessCollection",
         "_zoneProfile",
         "albedo",
         "albedoTexture",
@@ -604,6 +610,7 @@
         "defaultForwardPipeline",
         "defaultMaterial",
         "defaultSocketKinds",
+        "effect",
         "file",
         "foliageMaterial",
         "fontCatalog",
@@ -726,6 +733,7 @@
         "uiTooltip",
         "userSettingsSchema",
         "waterMaterial",
+        "wetnessCollection",
         "zoneProfile"
       ]
     },
