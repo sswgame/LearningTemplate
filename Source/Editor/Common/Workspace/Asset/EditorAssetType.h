@@ -238,7 +238,7 @@ namespace sw::editor
 } // namespace sw::editor
 
 /**
- * @brief 애셋 종류 하나를 등록합니다. 종류의 파일(보통 `Editor/AssetActions/<종류>AssetTypeActions.cpp`, 플러그인은 그 모듈 파일)에 한 줄 둡니다.
+ * @brief 애셋 종류 하나를 등록합니다. 종류의 파일(보통 `Editor/AssetActions/Model/<종류>AssetTypeActions.cpp` — 썸네일 그리기는 View `EditorAssetThumbnailRenderer`, 플러그인은 그 모듈 파일)에 한 줄 둡니다.
  * @param name 파일 안에서 유일한 식별자 조각
  * @param pID 종류의 id. 엔진 포맷이 있으면 `X::kAssetType._name.data()`, 없으면 `EditorAssetTypeIDs::k…`
  * @details 나머지 인자는 `EditorAssetTypeRegistration` 의 필드 순서다(표시 이름 · 브라우저 라벨 · 패널 제목 · 아이콘 이름 · 색 키 · Other 제외 · 임포트 · 규칙 표 · 규칙 수 · 새 에셋 틀 · 동작).

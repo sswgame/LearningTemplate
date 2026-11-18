@@ -10,6 +10,7 @@
 #include "Core/Container/array.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
@@ -20,23 +21,31 @@
 
 namespace sw
 {
+    /** @brief 요청한 사진을 어디로 내는지입니다. */
+    enum class ScreenshotOutput : uint8
+    {
+        File,     ///< `_path` 에 이미지 파일(확장자가 `.png` 면 PNG, 아니면 PPM)로 쓴다
+        PNGBytes, ///< PNG 바이트로 그 표에 둔다(`takePNGBytes`) — `_path` 는 로그에 남길 요청 이름이다. 파일을 거치지 않는다(언리얼 `ReadPixels` 처럼 픽셀을 메모리로 받는다)
+    };
+
     /**
      * @struct ScreenshotRequest
      * @brief 렌더 스레드가 우편함에서 꺼낸 요청 하나입니다.
      */
     struct ScreenshotRequest
     {
-        string           _path;                                ///< 쓸 파일 경로
+        string           _path;                                ///< 쓸 파일 경로. 바이트 요청이면 로그에 남길 요청 이름
         RHITextureHandle _texture{ 0 };                        ///< 0 이면 화면에 나간 이미지(Present 결과), 아니면 그 렌더 타깃
         RHIFormat        _format{ RHIFormat::R8G8B8A8_UNORM }; ///< `_texture` 의 포맷
-        uint32           _ticket{ 0 };                         ///< `put` 이 돌려준 표 — 끝 알림(`reportCompleted`)이 이 표로 결과를 남긴다
+        uint32           _ticket{ 0 };                         ///< `put` · `putForPNGBytes` 가 돌려준 표 — 끝 알림(`reportCompleted` · `reportCompletedPNGBytes`)이 이 표로 결과를 남긴다
+        ScreenshotOutput _output{ ScreenshotOutput::File };
     };
 
     /** @brief 요청 표 하나의 상태입니다(`ScreenshotRequestQueue::findResult`). */
     enum class ScreenshotTicketState : uint8
     {
         Pending, ///< 아직 처리하지 않았다
-        Written, ///< 파일을 썼다
+        Written, ///< 파일을 썼다(바이트 요청이면 PNG 바이트를 만들어 표에 두었다)
         Failed,  ///< 처리했지만 쓰지 못했다(읽기 · 쓰기 실패, 줄이 넘쳤다)
         Unknown  ///< 받은 적이 없거나 결과 기록 창(`kResultHistoryCount`)을 벗어났다
     };
@@ -76,12 +85,21 @@ namespace sw
          * @details 경로는 `AbsolutePath` 라 빈 값일 수 없다 — 빈 칸이 "요청 없음" 이라, 빈 경로를 받으면 받은 수만 올라 `hasUnfinishedRequest` 가 영영 참이었다.
          */
         uint32 put( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat );
+        /**
+         * @brief PNG 바이트로 받을 요청을 줄 끝에 넣고 그 표를 돌려줍니다(파일 요청과 같은 줄 · 같은 표). 결과는 그 표로 `takePNGBytes` 해 받는다.
+         * @details @p requestName 은 로그에 남길 이름이다(결과를 가리는 열쇠는 표다). 비었으면 오류를 남기고 0(표 없음 — `findResult` 가 `Unknown`)을 돌려준다.
+         */
+        [[nodiscard]] uint32 putForPNGBytes( string_view requestName, RHITextureHandle sourceTexture, RHIFormat sourceFormat );
         /** @brief 줄 맨 앞의 요청을 꺼냅니다. 요청이 없으면 false 입니다. */
         [[nodiscard]] bool take( ScreenshotRequest& outRequest );
         /** @brief 표 @p ticket 의 요청을 처리했음을 알립니다(성공과 실패 모두). @p bWritten 이 true 면 @p writtenPath 가 마지막 경로가 되고, 아니면 마지막 경로가 비워집니다. */
         void reportCompleted( uint32 ticket, bool bWritten, const string& writtenPath );
+        /** @brief 바이트 요청 표 @p ticket 을 처리했음을 알립니다. @p bEncoded 이면 @p pngBytes 를 그 표에 둔다(`takePNGBytes`). */
+        void reportCompletedPNGBytes( uint32 ticket, bool bEncoded, vector<uint8> pngBytes );
         /** @brief 표 @p ticket 의 지금 상태입니다. */
         [[nodiscard]] ScreenshotTicketState findResult( uint32 ticket ) const;
+        /** @brief 바이트 요청 표 @p ticket 이 성공했으면 그 PNG 바이트를 @p outPNGBytes 로 옮기고 true 입니다(한 번만 받는다). 다른 요청의 결과는 표가 달라 읽히지 않는다. */
+        [[nodiscard]] bool takePNGBytes( uint32 ticket, vector<uint8>& outPNGBytes );
         /** @brief 처리한 요청 수입니다(성공과 실패 모두 셉니다). */
         uint32 getCompletedSerial() const { return _completedSerial.load( std::memory_order_acquire ); }
         /** @brief 받았지만 아직 처리하지 않은 요청(`put` 으로 넣고 `reportCompleted` 전)이나 패킷에 싣지 않은 패킷 사진이 있으면 true 입니다. */
@@ -107,11 +125,16 @@ namespace sw
         uint32 getCompletedPacketSerial() const { return _completedPacketSerial.load( std::memory_order_acquire ); }
 
     private:
+        /** @brief 요청 @p request 를 줄 끝에 넣고 표를 매겨 돌려줍니다(`put` · `putForPNGBytes` 공통). */
+        uint32 enqueue( ScreenshotRequest request ) SW_REQUIRES_LOCK( _mutex );
+
+    private:
         /** @brief 처리한 표 하나의 결과입니다. */
         struct TicketResult
         {
-            uint32 _ticket{ 0 };       ///< 0 이면 빈 칸(아직 처리하지 않았다)
-            bool   _bWritten{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            uint32        _ticket{ 0 };       ///< 0 이면 빈 칸(아직 처리하지 않았다)
+            bool          _bWritten{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            vector<uint8> _pngBytes;          ///< 바이트 요청의 PNG(`takePNGBytes` 가 옮겨 간다)
         };
 
         mutable mutex                                       _mutex;

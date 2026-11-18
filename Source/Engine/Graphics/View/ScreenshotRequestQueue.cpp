@@ -12,18 +12,35 @@ namespace sw
     uint32 ScreenshotRequestQueue::put( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
         const ScopedLock<mutex> lock{ _mutex };
+        return enqueue( ScreenshotRequest{ filePath.str(), sourceTexture, sourceFormat, 0, ScreenshotOutput::File } );
+    }
+
+    uint32 ScreenshotRequestQueue::putForPNGBytes( string_view requestName, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
+    {
+        if ( requestName.empty() )
+        {
+            SW_LOG_ERROR_ID( "ScreenshotRequestQueue.EmptyByteRequestName", "A screenshot byte request needs a name - nothing was requested" );
+            return 0;
+        }
+        const ScopedLock<mutex> lock{ _mutex };
+        return enqueue( ScreenshotRequest{ string{ requestName }, sourceTexture, sourceFormat, 0, ScreenshotOutput::PNGBytes } );
+    }
+
+    uint32 ScreenshotRequestQueue::enqueue( ScreenshotRequest request )
+    {
         _lastTicket          = _lastTicket == MathUtil::kMaxUInt32 ? 1u : _lastTicket + 1; // 0 은 "표 없음" 이다
         const uint32  ticket = _lastTicket;
         TicketResult& slot   = _arrResult[ticket % kResultHistoryCount];
         if ( _listPending.size() >= kMaxPendingCount )
         {
-            SW_LOG_ERROR_ID( "Screenshot.QueueFull", "Screenshot '%#' was not requested - %# requests are already waiting", filePath.str(), kMaxPendingCount );
-            slot = TicketResult{ ticket, false };
+            SW_LOG_ERROR_ID( "Screenshot.QueueFull", "Screenshot '%#' was not requested - %# requests are already waiting", request._path, kMaxPendingCount );
+            slot = TicketResult{ ticket, false, {} };
             return ticket;
         }
         slot = TicketResult{}; // 받았지만 아직 처리하지 않았다 — 칸을 비워 옛 표의 결과로 읽히지 않게
         (void)_requestedSerial.fetch_add( 1, std::memory_order_acq_rel );
-        _listPending.push_back( ScreenshotRequest{ filePath.str(), sourceTexture, sourceFormat, ticket } );
+        request._ticket = ticket;
+        _listPending.push_back( std::move( request ) );
         return ticket;
     }
 
@@ -42,7 +59,16 @@ namespace sw
         {
             const ScopedLock<mutex> lock{ _mutex };
             _lastPath                                = bWritten ? writtenPath : string{};
-            _arrResult[ticket % kResultHistoryCount] = TicketResult{ ticket, bWritten };
+            _arrResult[ticket % kResultHistoryCount] = TicketResult{ ticket, bWritten, {} };
+        }
+        _completedSerial.fetch_add( 1, std::memory_order_acq_rel );
+    }
+
+    void ScreenshotRequestQueue::reportCompletedPNGBytes( uint32 ticket, bool bEncoded, vector<uint8> pngBytes )
+    {
+        {
+            const ScopedLock<mutex> lock{ _mutex };
+            _arrResult[ticket % kResultHistoryCount] = TicketResult{ ticket, bEncoded, bEncoded ? std::move( pngBytes ) : vector<uint8>{} };
         }
         _completedSerial.fetch_add( 1, std::memory_order_acq_rel );
     }
@@ -58,6 +84,18 @@ namespace sw
         if ( result._ticket == ticket )
             return result._bWritten ? ScreenshotTicketState::Written : ScreenshotTicketState::Failed;
         return result._ticket == 0 ? ScreenshotTicketState::Pending : ScreenshotTicketState::Unknown;
+    }
+
+    bool ScreenshotRequestQueue::takePNGBytes( uint32 ticket, vector<uint8>& outPNGBytes )
+    {
+        const ScopedLock<mutex> lock{ _mutex };
+        TicketResult&           result = _arrResult[ticket % kResultHistoryCount];
+        const bool              bMine  = ticket != 0 && result._ticket == ticket && result._bWritten && result._pngBytes.empty() == false;
+        if ( bMine == false )
+            return false;
+        outPNGBytes = std::move( result._pngBytes );
+        result._pngBytes.clear();
+        return true;
     }
 
     bool ScreenshotRequestQueue::putForNextPacket( const AbsolutePath& filePath )

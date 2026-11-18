@@ -2,14 +2,16 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorLocalStore.h"
 
-#include "Core/File/FileUtil.h"
-#include "Core/File/UserDataPath.h"
+#include "Core/Foundation/Constants.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/GameSelection.h"
+
+#include "GameFramework/Runtime/Gameplay/Appearance/UserAppearancePresetStore.h"
 
 namespace sw::editor
 {
@@ -46,23 +48,23 @@ namespace sw::editor
         _channel.close();
     }
 
-    string CharacterEditorLocalStore::makeThumbnailSlot( string_view presetName )
+    string CharacterEditorLocalStore::makeThumbnailSlot( const UserAppearancePresetStore& store, string_view presetName )
     {
-        string slot{ CharacterEditorLocalStoreInternal::kThumbnailSlotPrefix };
-        for ( const utf8 character : presetName )
+        const vector<UserAppearancePreset>& listPreset = store.getPresets();
+        const UserAppearancePreset*         pPreset    = store.findPresetByName( presetName );
+        if ( pPreset != nullptr && pPreset->_thumbnailSlot.empty() == false )
+            return pPreset->_thumbnailSlot;
+        // 프리셋 수 + 1 개의 번호 가운데 하나는 반드시 비어 있다.
+        for ( uint32 number = 0;; ++number )
         {
-            if ( slot.size() >= static_cast<size_t>( ILocalStore::kMaxSlotNameSize ) )
-                break;
-            const utf8 lower    = ( 'A' <= character && character <= 'Z' ) ? static_cast<utf8>( character - 'A' + 'a' ) : character;
-            const bool bAllowed = ( 'a' <= lower && lower <= 'z' ) || ( '0' <= lower && lower <= '9' ) || lower == '_' || lower == '-';
-            slot.push_back( bAllowed ? lower : '_' );
+            fixed_string<constant::buffer::kMax64> slot;
+            formatstring( slot.data(), slot.capacity(), "%s%u", CharacterEditorLocalStoreInternal::kThumbnailSlotPrefix, number );
+            bool bTaken = false;
+            for ( const UserAppearancePreset& preset : listPreset )
+                bTaken = bTaken || string_view( preset._thumbnailSlot.c_str() ) == string_view( slot.c_str() );
+            if ( bTaken == false )
+                return string{ slot.c_str() };
         }
-        return slot;
-    }
-
-    string CharacterEditorLocalStore::makeCaptureImagePath()
-    {
-        return FileUtil::joinPath( FileUtil::joinPath( UserDataPath::getDataDirectory( GameSelection::getName() ), kDirectory ), "thumbnail.capture.png" );
     }
 
     SW_EDITOR_SUBSYSTEM( CharacterEditorLocalStore, 300 );

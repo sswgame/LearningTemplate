@@ -4,7 +4,6 @@
 
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
-#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/GamepadButtonUtil.h"
@@ -181,6 +180,4 @@ namespace sw::editor
         if ( pInputMap != nullptr && _bShowCommandHistory == SW_TRUE )
             frame.drawActiveActions( *pInputMap );
     }
-
-    SW_EDITOR_SUBSYSTEM( ViewportInputOverlaySettings, 20 );
 } // namespace sw::editor

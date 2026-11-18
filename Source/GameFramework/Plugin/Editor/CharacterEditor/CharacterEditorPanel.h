@@ -5,6 +5,7 @@
  * @details 상태와 명령(팩 데이터 · 파일 읽기 · 저장 · 프리셋 · 내보내기 · 고른 것)은 모델(`CharacterEditorModel`, 편집 모델 셋을 든다)이 하고 이 패널은 그리기와 미리보기 동기화만 한다.
  *          - **문서**: 소켓 파일(`*.sockets.xml`, 종류 `EditorAssetTypeIDs::kData`)이 이 창의 문서다(`EditorDocumentPanel` 계약). 콘텐츠 브라우저에서 소켓 파일을 고르면 이 창이 그 파일로 바뀌고,
  *            고른 것이 없으면 팩 데이터의 소켓 파일을 연다. 저장은 소켓과 레퍼런스 포즈 둘 다(미저장 확인 · 닫기 확인이 같은 계약).
+ *          - **파일 가름**: 그리기 · 입력은 `CharacterEditorPanel.cpp`, 문서 · 미리보기 씬 동기화(몸 · 기즈모 대리 · 제약 리그) · 썸네일 · 감시 값은 `Model/CharacterEditorPanelScene.cpp`(ImGui 없음).
  *          - **미리보기 몸**: 미리보기 씬(`EditorPreviewPanel`)에 몸 오브젝트 하나(`SkeletalMeshComponent` + `CharacterAppearanceComponent`)를 세우고, 외형 선택이 바뀔 때마다
  *            `CharacterAppearanceComponent::previewSelection` 으로 이 창의 외형 데이터(모델의 `AppearanceDatabase`)를 입힌다. 게임 서비스(메인 씬의 것)는 보지 않는다.
  *            선택에 기준 프리셋이 없으면 팩 데이터의 `previewPreset` 위에 입힌다. 외형 데이터를 읽기 전에는 몸이 없다.
@@ -89,7 +90,7 @@ namespace sw::editor
         AppearanceEditModel&        getAppearanceModel() { return _document.getAppearanceModel(); }
         const Published&            getPublished() const { return _published; }
         /** @brief 요청한 썸네일 캡처를 아직 거두지 않았으면 true 입니다 — 자동화의 끝 차단(`CharacterEditorThumbnail`)이 캡처 · 저장 사이 틈을 진행 중인 일로 본다. */
-        [[nodiscard]] bool isThumbnailCapturePending() const { return _thumbnailCapturePath.empty() == false; }
+        [[nodiscard]] bool isThumbnailCapturePending() const { return _thumbnailCaptureTicket != 0; }
 
     private:
         /**
@@ -144,15 +145,17 @@ namespace sw::editor
         void syncRigPreview( GameObject& body );
         /** @brief 미리보기 씬의 매니저입니다. 씬이 없으면 nullptr 입니다. */
         GameObjectManager* findPreviewManager() const;
-        void               drawFileRow();
-        void               drawSocketTab();
-        void               drawSocketList();
-        void               drawSocketIssues(); ///< 소켓 표의 검사 결과(이름 겹침 · 없는 부모 …)
-        void               drawSocketDetail( const SocketDef& socket );
-        void               drawSkeletonTab();
-        void               drawBoneNode( uint32 boneIndex );
-        void               drawBoneDetail();
-        void               drawAppearanceTab();
+        /** @brief 문서 저장 · 외부 변경 판정이 함께 쓰는 지금 시각(초, 단조 시계)입니다 — 두 쪽이 같은 시계를 봐야 저장 직후 다시 읽기를 우리 것으로 가린다. */
+        [[nodiscard]] static float64 readNowSeconds();
+        void                         drawFileRow();
+        void                         drawSocketTab();
+        void                         drawSocketList();
+        void                         drawSocketIssues(); ///< 소켓 표의 검사 결과(이름 겹침 · 없는 부모 …)
+        void                         drawSocketDetail( const SocketDef& socket );
+        void                         drawSkeletonTab();
+        void                         drawBoneNode( uint32 boneIndex );
+        void                         drawBoneDetail();
+        void                         drawAppearanceTab();
         /** @brief 몸 탭(슬롯 숨김 · 몸 채널과 매핑 · 염색 구간 · 피부 층 · 몸 동작 미리보기)을 그립니다 — ViewModel(`BodyCustomizationViewModel`)이 모은 상태만 읽는다. */
         void drawBodyTab();
         void drawSkinLayerRows( const BodyCustomizationViewState& state );
@@ -185,10 +188,7 @@ namespace sw::editor
         void drawCustomizationSliders( const AppearanceSelection& selection );
         /** @brief 미리보기 몸의 지금 모습 캡처를 요청합니다(`pollThumbnailCapture` 가 받아 같은 이름 프리셋의 썸네일 슬롯에 넣는다). 프리셋을 먼저 저장해야 합니다. */
         void saveThumbnail();
-        /**
-         * @brief 요청한 캡처가 끝났으면 그 PNG 를 읽어 문서에 넘기고(`CharacterEditorModel::attachThumbnail`) 임시 파일을 지웁니다.
-         * @details shortcut: 렌더 스레드 스크린샷 창구가 파일로만 내놓아 사용자 데이터 폴더의 임시 파일을 거친다, 창구가 바이트를 내주게 되면 바로 받는다.
-         */
+        /** @brief 요청한 캡처가 끝났으면 그 PNG 바이트(`EditorPreviewViewport::takeImagePNGBytes` 에 요청 표로 — 파일을 거치지 않는다)를 문서에 넘깁니다(`CharacterEditorModel::attachThumbnail`). */
         void pollThumbnailCapture();
         void drawExplanation();
         void drawFitCheck();
@@ -226,8 +226,8 @@ namespace sw::editor
         float3                                  _bodyPickMarker;           ///< 마지막으로 집은 월드 자리
         float32                                 _bodyStepTimer;            ///< 동작 태그 시험의 다음 걸음까지 남은 시간(초)
         string                                  _socketResolveError;       ///< 미리보기가 지난 프레임에 상태 줄에 올린 소켓 풀기 오류(풀리면 지운다)
-        string                                  _thumbnailCapturePath;     ///< 요청한 썸네일 캡처의 임시 파일(비면 요청 없음)
         string                                  _thumbnailCapturePreset;   ///< 그 캡처를 붙일 프리셋 이름
         uint32                                  _thumbnailCaptureSerial;   ///< 요청할 때의 스크린샷 처리 수(`EditorPreviewViewport::getCompletedImageFileSerial`)
+        uint32                                  _thumbnailCaptureTicket;   ///< 그 캡처 요청의 표(`EditorPreviewViewport::requestImagePNGBytes`), 요청이 없으면 0
     };
 } // namespace sw::editor

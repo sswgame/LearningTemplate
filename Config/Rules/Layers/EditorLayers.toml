@@ -50,12 +50,13 @@ SelfTest = 7
 
 # MVVM View(`views` 의 층 · 폴더 · 파일 가운데 `Model` 폴더 밖 파일)가 include 하지 못하는 모델 · 씬 헤더(Source 기준 경로의 정규식). docs/agents/EditorUI.md 'MVVM' 절.
 # Source/Editor/CMakeLists.txt 가 티어마다 View 를 따로 짓는 부분(`EditorTier<N>MVVMView`)에 이 헤더마다 `#error` 껍데기를 놓는다 — 전이 include 도 멈춘다.
-# `views` 는 Source/Editor 기준 경로다(층 이름 · 하위 폴더 · 파일). 옮긴 파일만 더한다 — 같은 티어의 나머지(`AssetActions` 등)는 아직 씬 헤더를 쓴다.
+# `views` 는 Source/Editor 기준 경로다(층 이름 · 하위 폴더 · 파일). 옮긴 파일만 더한다.
 # 확장 모듈의 View 는 `sw_add_editor_extension` 의 PANEL_VIEW_SOURCES 로 같은 껍데기를 받는다.
 # 언리얼은 Slate 위젯이 모델을 보지만(규칙 없음), 유니티 UI Toolkit 의 바인딩처럼 View 는 ViewModel 값만 본다 — 형식(껍데기)으로 막는다.
 [panelViewBan]
 views = [
     "Panels",
+    "AssetActions",
     "Common/GUI/EditorMenuBar.cpp",
     "Common/GUI/EditorPlayToolbar.cpp",
     "Common/GUI/Panel/EditorDocumentPanel.cpp",
@@ -64,6 +65,14 @@ views = [
     "Common/Input/CommandPalettePopup.cpp",
     "Common/Input/EditorCommandGUI.cpp",
     "Common/Input/QuickLauncherPopup.cpp",
+    "Viewport/EditorProjectedLineRenderer.cpp",
+    "Viewport/EditorViewportCamera.cpp",
+    "Viewport/EditorViewportCanvasOverlay.cpp",
+    "Viewport/EditorViewportOverlays.cpp",
+    "Viewport/EditorViewportProjection.cpp",
+    "Viewport/EditorViewportVisualizer.cpp",
+    "Viewport/ViewportInputOverlay.cpp",
+    "Viewport/Visualizers/TerrainBrushVisualizer.cpp",
 ]
 patterns = [
     "^Editor/Common/Workspace/",

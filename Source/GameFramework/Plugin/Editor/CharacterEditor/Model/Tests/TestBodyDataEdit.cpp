@@ -157,7 +157,7 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFindsNearestSectionAndUV )
     };
 
     vector<BodyPickSurface> listSurface( 1 );
-    BodyPickSurface::build( listVertex, {}, {}, float4x4::Identity, listSurface[0] );
+    BodyPickSurface::build( listVertex, {}, {}, {}, {}, float4x4::Identity, listSurface[0] );
     listSurface[0]._listIndex   = listIndex;
     listSurface[0]._listSection = listSection;
 
@@ -197,7 +197,7 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFollowsPoseAndParts )
     const vector<float4x4>       listPalette{ float4x4::makeTranslation( 2.0f, 0.0f, 0.0f ) };
 
     vector<BodyPickSurface> listSurface( 1 );
-    BodyPickSurface::build( listVertex, listSkin, listPalette, float4x4::Identity, listSurface[0] );
+    BodyPickSurface::build( listVertex, {}, {}, listSkin, listPalette, float4x4::Identity, listSurface[0] );
     listSurface[0]._listIndex = listIndex;
 
     BodySurfaceHit hit{};
@@ -208,11 +208,51 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFollowsPoseAndParts )
 
     // 부품 표면 — 같은 사각형을 몸 앞(z = 1)에 단단하게 둔다.
     listSurface.emplace_back();
-    BodyPickSurface::build( listVertex, {}, {}, float4x4::makeTranslation( 2.0f, 0.0f, 1.0f ), listSurface[1] );
+    BodyPickSurface::build( listVertex, {}, {}, {}, {}, float4x4::makeTranslation( 2.0f, 0.0f, 1.0f ), listSurface[1] );
     listSurface[1]._listIndex = listIndex;
     SW_REQUIRE_TRUE( BodySurfaceHit::pick( listSurface, float3{ 2.25f, 0.5f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
     SW_EXPECT_EQUAL( 1u, hit._surface );
     SW_EXPECT_NEAR( 4.0f, hit._distance, 1e-4f );
+}
+
+/**
+ * @brief [BodyDataEditTest] 표면 집기는 모프 타깃 가중치(표정)만큼 옮긴 자리로 맞춘다 — 가중치 수가 타깃 수와 다르면 모프를 넣지 않는다
+ * @details 정점 넷을 모두 x 로 4 옮기는 타깃에 가중치 0.5 면 사각형은 x 2 ~ 3 에 있다(그 뒤 팔레트 · 월드는 그대로).
+ */
+SW_TEST_CASE( BodyDataEditTest, SurfacePickAppliesMorphWeights )
+{
+    vector<RHIVertex> listVertex( 4 );
+    const float32     arrCorner[4][2] = {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
+        {0.0f, 1.0f}
+    };
+    MeshMorphTarget target;
+    target._name = hashed_string( "smile" );
+    for ( uint32 corner = 0; corner < 4; ++corner )
+    {
+        listVertex[corner]._arrPosition[0] = arrCorner[corner][0];
+        listVertex[corner]._arrPosition[1] = arrCorner[corner][1];
+        MeshMorphDelta delta;
+        delta._vertexIndex = corner;
+        delta._position    = float3{ 4.0f, 0.0f, 0.0f };
+        target._listDelta.push_back( delta );
+    }
+    const vector<MeshMorphTarget> listTarget{ target };
+    const vector<float32>         listWeight{ 0.5f };
+    const vector<uint32>          listIndex{ 0, 1, 2, 0, 2, 3 };
+
+    vector<BodyPickSurface> listSurface( 1 );
+    BodyPickSurface::build( listVertex, listTarget, listWeight, {}, {}, float4x4::Identity, listSurface[0] );
+    listSurface[0]._listIndex = listIndex;
+    BodySurfaceHit hit{};
+    SW_EXPECT_FALSE( BodySurfaceHit::pick( listSurface, float3{ 0.5f, 0.5f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
+    SW_REQUIRE_TRUE( BodySurfaceHit::pick( listSurface, float3{ 2.5f, 0.5f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
+    SW_EXPECT_NEAR( 2.5f, hit._position._x, 1e-4f );
+
+    BodyPickSurface::build( listVertex, listTarget, {}, {}, {}, float4x4::Identity, listSurface[0] ); // 가중치가 없으면 레스트 그대로
+    SW_EXPECT_TRUE( BodySurfaceHit::pick( listSurface, float3{ 0.5f, 0.5f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
 }
 
 /**

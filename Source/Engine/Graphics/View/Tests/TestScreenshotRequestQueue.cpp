@@ -102,3 +102,36 @@ SW_TEST_CASE( ScreenshotRequestQueueTest, EarlierTicketSurvivesLaterResults )
     SW_EXPECT_TRUE( queue.findResult( editorTicket ) == ScreenshotTicketState::Written );
     SW_EXPECT_TRUE( queue.findResult( startupTicket ) == ScreenshotTicketState::Failed );
 }
+
+/** @brief [ScreenshotRequestQueueTest] 바이트 요청은 이름이 있어야 하고, 결과는 제 표로 한 번만 받는다 — 뒤에 끝난 다른 요청(파일 · 바이트)이 앞 표의 결과를 덮지 않는다 */
+SW_TEST_CASE( ScreenshotRequestQueueTest, PNGBytesAreTakenOnceByTicket )
+{
+    ScreenshotRequestQueue queue;
+    SW_EXPECT_EQUAL( 0u, queue.putForPNGBytes( "", RHITextureHandle{ 7 }, RHIFormat::R8G8B8A8_UNORM ) );
+    SW_EXPECT_FALSE( queue.hasUnfinishedRequest() );
+
+    const uint32 ticketA = queue.putForPNGBytes( "thumb.a", RHITextureHandle{ 7 }, RHIFormat::R8G8B8A8_UNORM );
+    const uint32 ticketB = queue.putForPNGBytes( "thumb.b", RHITextureHandle{ 7 }, RHIFormat::R8G8B8A8_UNORM );
+    const uint32 ticketC = queue.put( makeShotPath( "c.png" ), RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
+    SW_REQUIRE_TRUE( ticketA != 0 && ticketB != 0 );
+    ScreenshotRequest request;
+    SW_REQUIRE_TRUE( queue.take( request ) );
+    SW_EXPECT_TRUE( request._output == ScreenshotOutput::PNGBytes );
+    SW_EXPECT_EQUAL( string{ "thumb.a" }, request._path );
+    SW_EXPECT_EQUAL( ticketA, request._ticket );
+    queue.reportCompletedPNGBytes( request._ticket, true, vector<uint8>{ 1, 2, 3 } );
+    SW_REQUIRE_TRUE( queue.take( request ) );
+    queue.reportCompletedPNGBytes( request._ticket, true, vector<uint8>{ 4 } );
+    SW_REQUIRE_TRUE( queue.take( request ) );
+    SW_EXPECT_TRUE( request._output == ScreenshotOutput::File );
+    queue.reportCompleted( request._ticket, true, request._path );
+
+    vector<uint8> bytes;
+    SW_EXPECT_FALSE( queue.takePNGBytes( ticketC, bytes ) ); // 파일 요청 표에는 바이트가 없다
+    SW_REQUIRE_TRUE( queue.takePNGBytes( ticketA, bytes ) ); // 뒤 요청이 끝났어도 제 표로 받는다
+    SW_EXPECT_TRUE( bytes.size() == 3 );
+    SW_EXPECT_FALSE( queue.takePNGBytes( ticketA, bytes ) ); // 한 번만
+    SW_REQUIRE_TRUE( queue.takePNGBytes( ticketB, bytes ) );
+    SW_EXPECT_TRUE( bytes.size() == 1 );
+    SW_EXPECT_TRUE( queue.findResult( ticketA ) == ScreenshotTicketState::Written );
+}
