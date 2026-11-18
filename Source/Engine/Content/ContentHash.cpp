@@ -21,7 +21,7 @@ namespace sw
             static constexpr int64 kFileTimeEpochOffsetMs = 11644473600000LL;
             /**
              * @brief 바깥 도구가 이보다 최근에 쓴 파일의 해시는 캐시에 두지 않는다(밀리초). 쓰기 시각은 시계 틱(Windows 약 16 ms) 단위라 그 안에서 같은 크기로 다시 쓰면 도장이 같다.
-             * @details 이 프로세스의 쓰기는 이 창을 거치지 않는다 — 쓰기 관찰자가 그 자리에서 알린다(`recordOwnWrite`). 바깥 쓰기는 알릴 길이 없어 시간 창만 남는다(git racy-git 과 같은 자리).
+             * @details 이 프로세스의 쓰기도 이 창을 거친다 — 쓰기 관찰자(`recordOwnWrite`)는 같은 도장의 옛 해시를 지울 뿐이고, 그 틱에 바깥 쓰기가 겹칠 수 있다(git racy-git 과 같은 자리).
              */
             static constexpr int64 kRacyWindowMs = 2000;
             /** @brief `FileStamp::_writeTime` 의 100 ns 눈금이 1 ms 에 드는 수입니다. */
@@ -149,7 +149,6 @@ namespace sw
         const string key = makeKey( absPath );
         FileStamp    stamp{};
         const bool   bStamped   = FileUtil::getFileStamp( absPath, stamp );
-        bool         bOwnWrite  = false;
         uint64       serialSeen = 0;
         bool         bHadEntry  = false;
         if ( bStamped )
@@ -160,17 +159,14 @@ namespace sw
             if ( bHadEntry )
             {
                 serialSeen = iter->second._writeSerial;
-                if ( iter->second._stamp == stamp )
-                {
-                    if ( iter->second._hash != 0 )
-                        return iter->second._hash;
-                    bOwnWrite = true; // 이 도장의 내용은 이 프로세스가 썼다 — 읽은 해시를 시간 창 없이 캐시한다
-                }
+                if ( iter->second._stamp == stamp && iter->second._hash != 0 )
+                    return iter->second._hash; // 자기 쓰기 표(해시 0)면 다시 읽는다
             }
         }
 
         const uint64 hash = ContentHashInternal::readFileHash( absPath, _hashedByteCount );
-        if ( bStamped == false || hash == 0 || ( bOwnWrite == false && ContentHashInternal::isCompleted( stamp ) == false ) )
+        // 자기 쓰기도 시간 창이 지나야 남긴다 — 쓴 그 틱에 바깥 도구가 같은 크기로 다시 쓰면 도장으로 알 길이 없다(두 프로세스의 순서 없는 경합).
+        if ( bStamped == false || hash == 0 || ContentHashInternal::isCompleted( stamp ) == false )
             return hash;
         ScopedLock<mutex> lock{ _mutex };
         // 읽는 사이에 자기 쓰기가 끼었으면(번호가 바뀌었거나 새 표가 생겼다) 읽은 내용이 어느 쓰기의 것인지 모른다 — 남기지 않는다. 바깥 쓰기가 끼었으면 다음 조회의 도장이 달라 다시 읽는다.
