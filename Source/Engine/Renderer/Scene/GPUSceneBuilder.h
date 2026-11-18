@@ -210,7 +210,7 @@ namespace sw
             uint32                                _meshCount{ 0 }; ///< 슬롯 공간에서 메시 컴포넌트 수(그 뒤가 인스턴스 배치 항목)
             uint32                                _slotCount{ 0 };
             bool                                  _bHasCache{ false };        ///< 지난 프레임 후보가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                                  _bSetSame{ false };         ///< 프리미티브 집합 세대가 같다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                  _bSetSame{ false };         ///< 레지스트리 칸 배치 세대가 같다(칸 번호가 그대로) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool                                  _bPermutationSame{ false }; ///< 퍼뮤테이션 세대가 같다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /** @brief 수집 결과입니다. 두 수집(부분 · 전체)이 같은 뜻으로 채웁니다. */
@@ -508,11 +508,13 @@ namespace sw
         };
         /** @brief `populateFromScene` 의 메시 쪽입니다(프리미티브 수집 · 나누기 · 투명 정렬). 바뀐 것이 없거나 후보가 없으면 일찍 끝난다. */
         void populateMeshesFromScene( Scene* pScene, const float3& cameraPos );
-        /** @brief 더티 슬롯만 제자리에서 다시 채웁니다. 실릴지가 바뀌는 등 조건이 어긋나면 되돌리고 `_bPartialDone == false` 입니다. */
+        /** @brief 레지스트리 칸 @p slot 의 후보가 실렸는지 반환합니다(후보 번호 = 칸 번호, 실리지 않은 칸은 구멍). */
+        bool isCandidateIncluded( uint32 slot ) const { return slot < _listPrimitiveToCandidate.size() && _listPrimitiveToCandidate[slot] != kInvalidCandidateIndex; }
+        /** @brief 더티 칸만 제자리에서 다시 채웁니다(더하기 · 지우기 · 실릴지 바뀜도 그 칸만 고친다). 칸이 번호 공간 밖이면 되돌리고 `_bPartialDone == false` 입니다. */
         [[nodiscard]] MeshCollectResult collectDirtyCandidatesInPlace( const MeshCollectInput& input );
-        /** @brief 모든 슬롯을 다시 채우고(임계값을 넘으면 병렬) 지난 프레임과 슬롯마다 비교한 뒤 앞으로 당깁니다. */
+        /** @brief 모든 슬롯을 다시 채우고(임계값을 넘으면 병렬) 지난 프레임과 칸마다 비교한 뒤 칸 표를 새로 씁니다(후보 번호 = 칸 번호). */
         [[nodiscard]] MeshCollectResult collectAllCandidates( const MeshCollectInput& input );
-        /** @brief 전체 수집이 남긴 슬롯 표시로 실린 후보를 앞으로 당기고, 지난 프레임과 같은지를 하나로 줄입니다(직렬 구간). */
+        /** @brief 전체 수집이 남긴 칸 표시로 칸 표를 새로 쓰고(옮기지 않는다 — 실리지 않은 칸은 구멍), 지난 프레임과 같은지를 하나로 줄입니다(직렬 구간). */
         [[nodiscard]] MeshCollectResult compactCollectedCandidates( uint32 primitiveCount, bool bPrevAligned );
         /** @brief 후보의 raw 페이로드를 채우고(@p bOnlyDirtySlots 면 더티 슬롯만), 배치 키가 바뀌었으면 분할 테이블을 다시 짓습니다. */
         void fillPayloadsAndPartition( bool bOnlyDirtySlots, bool bBatchKeysSame );
@@ -726,14 +728,21 @@ namespace sw
         vector<uint32> _listTransformDirtyPrimitive;
         /** @brief 이번 부분 수집에서 메시만 바뀐 불투명 후보의 인덱스입니다(`swapSingleInstanceBatchMeshes`). 수집마다 비웁니다. */
         vector<uint32> _listMeshSwapCandidate;
-        /** @brief 레지스트리 인덱스에서 후보 인덱스를 찾는 배열입니다(`kInvalidCandidateIndex` 는 후보에 실리지 않았다는 뜻). */
+        /**
+         * @brief 레지스트리 칸에서 후보 번호를 찾는 배열입니다. 실린 칸은 **자기 칸 번호**, 실리지 않은 칸은 `kInvalidCandidateIndex` 입니다.
+         * @details 후보 배열은 칸 번호로 줄 세운다(구멍 있음). 레지스트리 칸이 고정(프리리스트)이라 하나를 더하거나 지워도 다른 후보의 번호가 그대로이고,
+         *          부분 수집이 그 칸 하나만 고친다(언리얼 `FScene` 의 영속 프리미티브 칸, 유니티 GPU Resident Drawer 의 인스턴스 칸). 전체 수집은 처음과 배치 세대
+         *          변경(영역 늘리기) · 퍼뮤테이션 세대 · 캐시 무효화(장치 잃음 · 합치기 토글) 때만 한다.
+         */
         vector<uint32> _listPrimitiveToCandidate;
-        /// @brief 전체 수집이 프리미티브 번호 위치에 남긴 `CollectFlag` 입니다. 앞으로 당겨 올 때 읽습니다.
+        /// @brief 전체 수집이 칸 위치에 남긴 `CollectFlag` 입니다. 칸 표를 새로 쓸 때 읽습니다.
         vector<uint8> _listCollectFlag;
         /** @brief 후보 인덱스에서 인스턴스 슬롯을 찾는 배열입니다(`kInvalidCandidateIndex` 는 인스턴스 없음). `_listInstanceSrcIndex` 의 역방향입니다. */
         vector<uint32> _listCandidateToInstance;
-        /** @brief 마지막 수집이 만든 후보 수입니다. 부분 수집이 이 슬롯 수를 그대로 이어받습니다. */
-        size_t          _lastCandidateCount{ 0 };
+        /** @brief 마지막 수집이 만든 후보 배열의 길이(= 칸 수, 구멍 포함)입니다. 부분 수집이 이 길이를 이어받습니다. */
+        size_t _lastCandidateCount{ 0 };
+        /** @brief 후보 배열에서 실린 칸 수입니다. 전체 수집이 세고 부분 수집이 들고 남에 따라 더하고 뺀다. 0 이면 스냅샷을 비운다. */
+        size_t          _includedCount{ 0 };
         NotReadyCounter _notReadySkipped;
         /** @brief 부분 수집이 프리미티브 하나를 채워 볼 임시 후보입니다. 프레임마다 할당하지 않습니다. */
         DrawCandidate _candidateProbe;
@@ -784,8 +793,10 @@ namespace sw
         vector<uint32>    _listBuiltTransparentIdx;
         BatchElementTable _batchElementTable;
 
-        /** @brief 마지막으로 반영한 프리미티브 집합 세대입니다. 달라졌으면 레지스트리가 바뀐 것입니다. */
+        /** @brief 마지막으로 반영한 프리미티브 집합 세대입니다. 정적 그림자 지문만 이 값으로 다시 잰다(`updateStaticShadowGeneration`). */
         uint64 _lastPrimitiveSetGeneration{ 0 };
+        /** @brief 마지막으로 반영한 레지스트리 칸 배치 세대입니다(`PrimitiveRegistry::getLayoutGeneration`). 달라졌으면 칸 번호가 밀려 전체를 다시 모은다. */
+        uint64 _lastPrimitiveLayoutGeneration{ 0 };
         uint64 _staticShadowSignature{ 0 }; ///< 정적 메시 집합의 지문(포인터 섞은 값의 합 — 순서와 무관하다). `updateStaticShadowGeneration`
         uint32 _staticShadowCount{ 0 };     ///< 정적 메시 수. 지문과 함께 집합이 바뀌었는지 본다
         float3 _lastCameraPos{};

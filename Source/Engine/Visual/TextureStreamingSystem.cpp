@@ -56,6 +56,12 @@ namespace sw
             {
                 // 화면 크기 × UV 밀도 / 반지름 — 화면에서 UV 한 단위가 덮는 픽셀의 대리값이다(배율은 밀도 · 반지름에 같이 들어 지워진다). 같은 화면 크기라도
                 // UV 를 촘촘히 펼친 메시가 위쪽 밉을 먼저 받는다(언리얼 텍스처 스트리밍의 UV density). UV 가 없는 메시는 0 이라 알리지 않는다.
+                // 빈 칸(지운 프리미티브 — 레지스트리는 칸을 옮기지 않고 비워 둔다)은 0 이라 알리지 않는다.
+                if ( listPrimitive[index] == nullptr )
+                {
+                    arrScreenSize[index] = 0.0f;
+                    continue;
+                }
                 const MeshComponent& mesh    = static_cast<const MeshComponent&>( *listPrimitive[index] );
                 const Mesh* const    pMesh   = mesh.getMesh().get();
                 const float32        density = pMesh != nullptr ? pMesh->getUVDensity() / MathUtil::max( pMesh->getBoundingRadius(), MathUtil::kEpsilon ) : 0.0f;
@@ -67,8 +73,10 @@ namespace sw
         _mapMaterialScreenSize.clear();
         for ( uint32 index = 0; index < count; ++index )
         {
+            if ( arrScreenSize[index] <= 0.0f ) // 빈 칸도 여기서 빠진다
+                continue;
             const Material* pMaterial = static_cast<MeshComponent&>( *listPrimitive[index] ).getMaterial();
-            if ( pMaterial == nullptr || arrScreenSize[index] <= 0.0f )
+            if ( pMaterial == nullptr )
                 continue;
             float32& maxScreenSize = _mapMaterialScreenSize[pMaterial];
             maxScreenSize          = MathUtil::max( maxScreenSize, arrScreenSize[index] );

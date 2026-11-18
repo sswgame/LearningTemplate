@@ -209,11 +209,12 @@ namespace sw
     void GPUSceneBuilder::invalidateBuildCache()
     {
         _listBuiltCandidate.clear();
-        _lastCameraPos              = float3{};
-        _lastTransparentSortAxis    = float3{};
-        _lastPrimitiveSetGeneration = 0;
-        _lastPermutationGeneration  = 0;
-        _snapshot._bCPUDirty        = SW_TRUE;
+        _lastCameraPos                 = float3{};
+        _lastTransparentSortAxis       = float3{};
+        _lastPrimitiveSetGeneration    = 0;
+        _lastPrimitiveLayoutGeneration = 0;
+        _lastPermutationGeneration     = 0;
+        _snapshot._bCPUDirty           = SW_TRUE;
     }
 
     void GPUSceneBuilder::clear()
@@ -229,6 +230,7 @@ namespace sw
         // 그려지고, 투명 머티리얼은 알파 0이라 화면에서 사라진다(백엔드 교체 뒤 유리 큐브가 없어지던 원인이다).
         _materialRegistry.reset( _snapshot );
         _listScratchCandidate.clear();
+        _includedCount = 0;
         _listScratchRaw.clear();
         _listScratchOpaqueEntry.clear();
         _listScratchOpaqueIdx.clear();
@@ -272,6 +274,9 @@ namespace sw
 
         for ( uint32 instanceIndex = 0; instanceIndex < count; ++instanceIndex )
         {
+            // 후보 번호는 레지스트리 칸 번호다 — 실리지 않은 칸(빈 칸 · 숨김 · 준비 안 된 머티리얼)은 구멍이라 건너뛴다.
+            if ( isCandidateIncluded( instanceIndex ) == false )
+                continue;
             const DrawCandidate& candidate = _listScratchCandidate[instanceIndex];
             if ( static_cast<BlendMode>( candidate._blendMode ) == BlendMode::Transparent )
             {
@@ -673,12 +678,14 @@ namespace sw
         // 셰이더 레이아웃과 다시 올린 텍스처의 SRV 는 머티리얼이 사본을 만들 때 맞춘다(`Material::getRenderBinding` — 매 빌드 `refreshMaterialBindings`).
         _skinPaletteCollector.collect( pObjects->getSubsystem<AnimationSystem>(), _snapshot );
 
-        const PrimitiveRegistry& primitives    = pObjects->getPrimitiveRegistry();
-        const uint64             setGeneration = primitives.getSetGeneration();
+        const PrimitiveRegistry& primitives       = pObjects->getPrimitiveRegistry();
+        const uint64             setGeneration    = primitives.getSetGeneration();
+        const uint64             layoutGeneration = primitives.getLayoutGeneration();
         MeshCollectInput         input{};
         input._pScene    = pScene;
         input._bHasCache = _listBuiltCandidate.empty() == false;
-        input._bSetSame  = input._bHasCache && ( setGeneration == _lastPrimitiveSetGeneration );
+        // 칸 번호가 그대로인지는 배치 세대로 본다. 등록 · 해제는 칸을 옮기지 않고 그 칸만 더티로 올리므로(PrimitiveRegistry 의 고정 칸 · 프리리스트) 집합 세대가 올라도 부분 수집이다.
+        input._bSetSame = input._bHasCache && ( layoutGeneration == _lastPrimitiveLayoutGeneration );
         // 정렬 축이 바뀌어도(직교와 원근 카메라 전환) 투명 순서가 바뀐다. 카메라가 그대로인 것으로 보지 않는다.
         const bool bCamSame = input._bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::kEpsilon ) &&
                               ( float3::getDistanceSquared( _transparentSorter.getAxis(), _lastTransparentSortAxis ) <= MathUtil::kEpsilon );
@@ -721,13 +728,15 @@ namespace sw
         if ( _listScratchCandidate.size() < input._slotCount )
             _listScratchCandidate.resize( input._slotCount );
 
-        // **바뀐 것만 다시 모은다.** 집합 세대가 그대로이면 레지스트리의 슬롯 배치가 그대로이므로, 지난
-        // 프레임 후보를 그대로 두고 더티 프리미티브의 슬롯만 새로 채우면 된다(8000개 중 10개만
-        // 움직인 프레임에 8000개를 모두 다시 모으면 모두 움직일 때와 같은 244µs 가 든다).
+        // **바뀐 것만 다시 모은다.** 배치 세대가 그대로이면 레지스트리의 칸 번호가 그대로이므로, 지난
+        // 프레임 후보를 그대로 두고 더티 프리미티브의 칸만 새로 채우면 된다(8000개 중 10개만
+        // 움직인 프레임에 8000개를 모두 다시 모으면 모두 움직일 때와 같은 244µs 가 든다). 더하기 · 지우기 · 실릴지 바뀜도
+        // 그 칸 하나의 일이다 — 후보 번호가 칸 번호라 다른 후보는 자리가 그대로다(언리얼 `FScene` 의 영속 칸, 유니티 GPU Resident Drawer).
         //
         // 조건이 하나라도 어긋나면 **아래 전체 수집으로 떨어진다**. 부분 갱신이 틀리는 것보다 느린
         // 것이 낫고, 두 경로가 같은 `fillCandidateFromPrimitive` 를 쓰므로 채우는 규칙이 갈리지 않는다.
-        const bool bCanPartial = input._bSetSame && input._bPermutationSame && _listPrimitiveToCandidate.size() == input._slotCount &&
+        // 칸 수는 배치 세대가 같으면 줄지 않는다(끝에 붙은 인스턴스 항목만큼 는다) — 는 칸은 모두 더티로 오므로 부분 수집이 표를 늘려 채운다.
+        const bool bCanPartial = input._bSetSame && input._bPermutationSame && _listPrimitiveToCandidate.size() <= input._slotCount &&
                                  _lastCandidateCount <= _listScratchCandidate.size() + _listBuiltCandidate.size() &&
                                  _listDirtyPrimitive.size() * 4 < input._slotCount;
         MeshCollectResult collect{};
@@ -740,7 +749,7 @@ namespace sw
             collect = collectAllCandidates( input );
         _lastCandidateCount = collect._candidateCount;
 
-        if ( _listScratchCandidate.empty() )
+        if ( _includedCount == 0 )
         {
             clear();
             return;
@@ -756,8 +765,9 @@ namespace sw
             // 두 프레임 전 후보와 비교하고, 그 위의 분할 테이블이 실제 후보와 어긋난다.
             if ( collect._bPartialDone )
                 _listBuiltCandidate.swap( _listScratchCandidate );
-            _lastPrimitiveSetGeneration = setGeneration;
-            _lastPermutationGeneration  = permutationGeneration;
+            _lastPrimitiveSetGeneration    = setGeneration;
+            _lastPrimitiveLayoutGeneration = layoutGeneration;
+            _lastPermutationGeneration     = permutationGeneration;
             return;
         }
 
@@ -777,8 +787,8 @@ namespace sw
                 bBatchKeysSame = swapSingleInstanceBatchMeshes();
         }
         const uint32 count = static_cast<uint32>( _listScratchCandidate.size() );
-        // 크기가 그대로면 raw 의 지난 프레임 값이 살아 있다. 부분 채우기의 전제다(전체 수집은 raw 를 통째로 새로 썼다).
-        const bool bRawKept = ( _listScratchRaw.size() == count );
+        // 크기가 그대로거나 끝에 칸이 붙기만 했으면 raw 의 지난 프레임 값이 살아 있다(붙은 칸은 모두 더티라 채운다). 부분 채우기의 전제다(전체 수집은 raw 를 통째로 새로 썼다).
+        const bool bRawKept = _listScratchRaw.empty() == false && _listScratchRaw.size() <= count;
         _listScratchRaw.resize( count );
         if ( bContentSame == false )
             fillPayloadsAndPartition( collect._bPartialDone && bRawKept, bBatchKeysSame );
@@ -787,11 +797,12 @@ namespace sw
         // scratch 를 기준 집합으로 넘기고 낡은 기준을 scratch 로 돌려받는다. 복사 없이 두 버퍼를
         // 번갈아 쓰므로 프레임당 힙 할당이 생기지 않는다.
         _listBuiltCandidate.swap( _listScratchCandidate );
-        _lastCameraPos              = cameraPos;
-        _lastTransparentSortAxis    = _transparentSorter.getAxis();
-        _lastPrimitiveSetGeneration = setGeneration;
-        _lastPermutationGeneration  = permutationGeneration;
-        _snapshot._bCPUDirty        = SW_TRUE;
+        _lastCameraPos                 = cameraPos;
+        _lastTransparentSortAxis       = _transparentSorter.getAxis();
+        _lastPrimitiveSetGeneration    = setGeneration;
+        _lastPrimitiveLayoutGeneration = layoutGeneration;
+        _lastPermutationGeneration     = permutationGeneration;
+        _snapshot._bCPUDirty           = SW_TRUE;
 
         // **내용이 바뀐 이 지점에서만 발행한다.** 내용이 그대로인 프레임은 여기까지 오지 않으므로 지난 배열이 그대로 실린다.
         // 발행은 링 슬롯의 포인터를 넘기는 것이다. 복사도 옮기기도 되복사도 없다(GPUInstanceRing.h).
@@ -811,36 +822,56 @@ namespace sw
         _listScratchCandidate.swap( _listBuiltCandidate );
         bool bDone = _listScratchCandidate.size() >= _lastCandidateCount;
 
+        // 범위를 먼저 본다 — 표를 고치기 시작한 뒤에 되돌리면 전체 수집이 고친 표를 지난 프레임 것으로 읽는다.
+        for ( const uint32 slot : _listDirtyPrimitive )
+        {
+            if ( slot >= input._slotCount )
+                bDone = false;
+        }
         if ( bDone )
+        {
             moveTransformSlotsWithoutCandidate( input._meshCount );
+            // 끝에 붙은 칸(새 인스턴스 배치)만큼 두 표를 늘린다. 붙은 칸은 모두 더티로 와서 아래에서 채워진다.
+            if ( _listScratchCandidate.size() < input._slotCount )
+                _listScratchCandidate.resize( input._slotCount );
+            if ( _listPrimitiveToCandidate.size() < input._slotCount )
+                _listPrimitiveToCandidate.resize( input._slotCount, kInvalidCandidateIndex );
+        }
 
         for ( uint32 slot : _listDirtyPrimitive )
         {
             if ( bDone == false )
                 break;
-            if ( slot >= input._slotCount )
-            {
-                bDone = false;
-                break;
-            }
-            const uint32 candidateIndex = _listPrimitiveToCandidate[slot];
-            const bool   bWasIncluded   = ( candidateIndex != kInvalidCandidateIndex );
+            const bool bWasIncluded = isCandidateIncluded( slot );
 
             _candidateProbe      = DrawCandidate{};
             const bool bIncluded = ( slot < input._meshCount ) ? fillCandidateFromPrimitive( listPrimitive[slot], input._pScene, _candidateProbe )
                                                                : fillCandidateFromInstanceEntry( listInstanceEntry[slot - input._meshCount], input._pScene, _candidateProbe );
             if ( bIncluded )
                 assignPermutationHash( _candidateProbe );
-            // 실릴지 말지가 바뀌면 슬롯 배치가 달라진다. 그때는 통째로 다시 모은다.
-            if ( bIncluded != bWasIncluded || ( bIncluded && candidateIndex >= _lastCandidateCount ) )
+            // 후보 번호는 칸 번호다. 실릴지가 바뀌면(더하기 · 지우기 · 숨김 토글) 그 칸만 채우거나 비우고 배치를 다시 나눈다 — 다른 후보는 자리가 그대로다.
+            DrawCandidate& candidate = _listScratchCandidate[slot];
+            if ( bIncluded != bWasIncluded )
             {
-                bDone = false;
-                break;
+                bKeysSame                       = false;
+                bAnyChange                      = true;
+                _listPrimitiveToCandidate[slot] = bIncluded ? slot : kInvalidCandidateIndex;
+                if ( bIncluded )
+                {
+                    candidate = _candidateProbe;
+                    ++_includedCount;
+                }
+                else
+                {
+                    candidate = DrawCandidate{}; // 지운 메시 · 머티리얼의 소유권을 여기(게임 스레드)서 놓는다
+                    --_includedCount;
+                }
+                continue;
             }
             if ( bIncluded == false )
                 continue;
 
-            DrawCandidate& candidate = _listScratchCandidate[candidateIndex];
+            const uint32 candidateIndex = slot;
             if ( candidate.hasSameBatchKey( _candidateProbe ) == false )
             {
                 // 메시만 바뀐 불투명 후보는 배치의 메시만 바꿔 볼 수 있다(`swapSingleInstanceBatchMeshes`). 그 밖의 키 변경은 다시 나눈다.
@@ -872,7 +903,7 @@ namespace sw
             _listScratchCandidate.swap( _listBuiltCandidate );
             return result;
         }
-        result._candidateCount = _lastCandidateCount;
+        result._candidateCount = _listScratchCandidate.size();
         result._bPartialDone   = true;
         result._bKeysSame      = bKeysSame;
         result._bContentSame   = bAnyChange == false;
@@ -884,7 +915,7 @@ namespace sw
         // 레지스트리에는 그릴 수 있는 것만 들어 있다. 타입 검사가 없다.
         //
         // **워커가 자기 슬롯에서 비교까지 끝낸다**. 후보 채우기, 지난 후보와의 배치 키와 내용 비교, 퍼뮤테이션
-        // 해시 재사용이 그것이다. 직렬 패스로 같은 슬롯들을 다시 지나가지 않는다. 직렬에 남는 것은 앞으로 당기기와,
+        // 해시 재사용이 그것이다. 직렬 패스로 같은 슬롯들을 다시 지나가지 않는다. 직렬에 남는 것은 칸 표 쓰기와,
         // 머티리얼, 인스턴스, 세대 중 하나가 달라진 슬롯의 해시 기록(지연 캐시라 직렬)뿐이다.
         //
         // raw 페이로드는 **여기서 쓰지 않는다.** 워커가 자기 슬롯의 raw 까지 쓰면 채우기 패스가 사라진 만큼이 수집과 배치에
@@ -894,7 +925,7 @@ namespace sw
         const uint32 primitiveCount = input._slotCount;
         _listCollectFlag.resize( primitiveCount );
 
-        // 지난 프레임의 "프리미티브에서 후보로" 테이블은 집합 세대가 같을 때만 의미가 있다(해제는 슬롯을 옮긴다).
+        // 지난 프레임의 "칸에서 후보로" 테이블은 배치 세대가 같을 때만 의미가 있다(영역을 늘리면 인스턴스 항목 칸이 밀린다).
         // 테이블이 그 크기가 아니면 지난 후보와 짝을 지을 수 없으니 전부 "처음 본 것" 으로 처리한다.
         const bool bPrevAligned = input._bHasCache && input._bSetSame && _listPrimitiveToCandidate.size() == primitiveCount;
         if ( bPrevAligned == false )
@@ -973,38 +1004,43 @@ namespace sw
 
     GPUSceneBuilder::MeshCollectResult GPUSceneBuilder::compactCollectedCandidates( uint32 primitiveCount, bool bPrevAligned )
     {
-        // **앞으로 당긴다.** 모두 실리는 씬(벤치가 그렇다)에서는 슬롯이 그대로라 한 개도 옮기지 않는다.
-        // "지난 프레임과 같다" 는 슬롯마다의 표시를 여기서 하나로 줄인다. 위치까지 같아야 한다(prevIndex == 새 위치).
+        // **옮기지 않는다.** 후보 번호가 칸 번호라 실리지 않은 칸은 구멍으로 남는다(나누기가 건너뛴다). 그래서 다음 프레임의 부분 수집이 더하기 · 지우기를
+        // 그 칸 하나로 끝낸다 — 앞으로 당기면 빠진 칸 뒤의 후보가 모두 자리를 옮겨 전체를 다시 모아야 했다.
+        // "지난 프레임과 같다" 는 칸마다의 표시를 여기서 하나로 줄인다. 실렸다가 빠진 칸도 다른 것이다.
         MeshCollectResult result{};
         bool              bAllKeySame     = bPrevAligned;
         bool              bAllContentSame = bPrevAligned;
-        size_t            candidateCount  = 0;
-        for ( uint32 primitiveIndex = 0; primitiveIndex < primitiveCount; ++primitiveIndex )
+        size_t            includedCount   = 0;
+        for ( uint32 slot = 0; slot < primitiveCount; ++slot )
         {
-            const uint8  flag      = _listCollectFlag[primitiveIndex];
-            const uint32 prevIndex = _listPrimitiveToCandidate[primitiveIndex]; // 쓰기 전에 읽는다. 같은 테이블을 제자리에서 새로 쓴다.
+            const uint8 flag         = _listCollectFlag[slot];
+            const bool  bWasIncluded = _listPrimitiveToCandidate[slot] != kInvalidCandidateIndex; // 쓰기 전에 읽는다. 같은 테이블을 제자리에서 새로 쓴다
             if ( ( flag & kCollectIncluded ) == 0u )
             {
-                _listPrimitiveToCandidate[primitiveIndex] = kInvalidCandidateIndex;
+                bAllKeySame                     = bAllKeySame && bWasIncluded == false;
+                bAllContentSame                 = bAllContentSame && bWasIncluded == false;
+                _listPrimitiveToCandidate[slot] = kInvalidCandidateIndex;
+                // 채우다 만 칸이 든 소유권을 여기(게임 스레드)서 놓는다. 워커에서 놓으면 마지막 참조일 때 메시가 워커에서 소멸한다.
+                DrawCandidate& hole = _listScratchCandidate[slot];
+                if ( hole._mesh != nullptr || hole._material != nullptr || hole._instance != nullptr )
+                    hole = DrawCandidate{};
                 continue;
             }
-            if ( candidateCount != primitiveIndex )
-                _listScratchCandidate[candidateCount] = std::move( _listScratchCandidate[primitiveIndex] );
-            // 지연 캐시를 건드리는 해시는 여기 직렬 구간에서, 달라진 슬롯만 기록한다.
+            // 지연 캐시를 건드리는 해시는 여기 직렬 구간에서, 달라진 칸만 기록한다.
             if ( ( flag & kCollectNeedsStamp ) != 0u )
-                assignPermutationHash( _listScratchCandidate[candidateCount] );
-            const bool bSamePlace                     = ( prevIndex == candidateCount );
-            bAllKeySame                               = bAllKeySame && bSamePlace && ( flag & kCollectKeySame ) != 0u;
-            bAllContentSame                           = bAllContentSame && bSamePlace && ( flag & kCollectContentSame ) != 0u;
-            _listPrimitiveToCandidate[primitiveIndex] = static_cast<uint32>( candidateCount );
-            ++candidateCount;
+                assignPermutationHash( _listScratchCandidate[slot] );
+            bAllKeySame                     = bAllKeySame && bWasIncluded && ( flag & kCollectKeySame ) != 0u;
+            bAllContentSame                 = bAllContentSame && bWasIncluded && ( flag & kCollectContentSame ) != 0u;
+            _listPrimitiveToCandidate[slot] = slot;
+            ++includedCount;
         }
-        // 걸러진 만큼 줄인다. 남은 원소는 여기서 소유권을 놓는다.
-        _listScratchCandidate.resize( candidateCount );
-        // 지난 후보가 더 많았다면(무언가 빠졌다) 같을 수 없다.
-        result._candidateCount = candidateCount;
-        result._bKeysSame      = bAllKeySame && ( candidateCount == _listBuiltCandidate.size() );
-        result._bContentSame   = bAllContentSame && ( candidateCount == _listBuiltCandidate.size() );
+        // 칸 수만큼 둔다. 그보다 긴 꼬리(지난 장면)는 여기서 소유권을 놓는다.
+        _listScratchCandidate.resize( primitiveCount );
+        _includedCount = includedCount;
+        // 지난 후보 표의 길이가 다르면(칸이 붙었다) 같다고 보지 않는다.
+        result._candidateCount = primitiveCount;
+        result._bKeysSame      = bAllKeySame && ( primitiveCount == _listBuiltCandidate.size() );
+        result._bContentSame   = bAllContentSame && ( primitiveCount == _listBuiltCandidate.size() );
         return result;
     }
 
