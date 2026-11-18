@@ -1,16 +1,47 @@
 # ==============================================================================
 # @file .clang-tidy
-# @brief 버그를 찾는 검사만 켠다. 스타일은 clang-format 이 본다.
+# @brief 결함을 찾는 검사를 켠다. 이름 · 포맷은 clang-format 과 저장소 린트(Scripts/lint)가 본다.
 #
 # 끈 검사는 **이 코드베이스에서 쓸 수 없다고 실측한 것만** 적는다. 끈 이유를 같이 남긴다 —
 # 이유가 없으면 다음 사람이 다시 켜고 같은 오탐을 다시 분류한다. 개별 자리의 예외는 여기가
-# 아니라 그 자리의 NOLINTNEXTLINE 으로 두고, 왜 의도된 것인지 주석을 붙인다.
+# 아니라 그 자리의 NOLINTNEXTLINE(검사명) 으로 두고, 왜 의도된 것인지 주석을 붙인다.
+# 실행: `py -3 -m Scripts tidy` (전체 · --changed · --files — Scripts/lint/clang_tidy.py).
 # ==============================================================================
 Checks: >
   -*,
   bugprone-*,
   clang-analyzer-*,
   performance-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  readability-*,
+  misc-*,
+  concurrency-*,
+  portability-*,
+  cert-dcl50-cpp,
+  cert-dcl58-cpp,
+  cert-env33-c,
+  cert-err33-c,
+  cert-err52-cpp,
+  cert-err60-cpp,
+  cert-flp30-c,
+  cert-mem57-cpp,
+  cert-msc50-cpp,
+  cert-msc51-cpp,
+  cert-oop57-cpp,
+  cert-oop58-cpp,
+  google-build-explicit-make-pair,
+  google-build-namespaces,
+  google-default-arguments,
+  google-explicit-constructor,
+  google-global-names-in-headers,
+  google-readability-casting,
+  google-runtime-int,
+  google-runtime-operator,
+  hicpp-exception-baseclass,
+  hicpp-ignored-remove-result,
+  hicpp-multiway-paths-covered,
+  hicpp-no-assembler,
   -performance-enum-size,
   -performance-no-int-to-ptr,
   -bugprone-easily-swappable-parameters,
@@ -18,7 +49,112 @@ Checks: >
   -bugprone-derived-method-shadowing-base-method,
   -bugprone-std-namespace-modification,
   -clang-analyzer-optin.core.EnumCastOutOfRange,
-  -clang-analyzer-optin.performance.Padding
+  -clang-analyzer-optin.performance.Padding,
+  -modernize-use-trailing-return-type,
+  -readability-uppercase-literal-suffix,
+  -misc-non-private-member-variables-in-classes,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -readability-braces-around-statements,
+  -misc-include-cleaner,
+  -readability-redundant-member-init,
+  -readability-magic-numbers,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-simplify-boolean-expr,
+  -modernize-use-nodiscard,
+  -modernize-avoid-c-arrays,
+  -cppcoreguidelines-avoid-c-arrays,
+  -readability-identifier-length,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-special-member-functions,
+  -modernize-use-default-member-init,
+  -cppcoreguidelines-use-default-member-init,
+  -misc-use-anonymous-namespace,
+  -readability-redundant-access-specifiers,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-union-access,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-pro-type-static-cast-downcast,
+  -cppcoreguidelines-pro-type-const-cast,
+  -cppcoreguidelines-owning-memory,
+  -misc-const-correctness,
+  -readability-math-missing-parentheses,
+  -modernize-use-auto,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -readability-function-cognitive-complexity,
+  -portability-template-virtual-member-function,
+  -readability-named-parameter,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-missing-std-forward,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -readability-convert-member-functions-to-static,
+  -readability-use-anyofallof,
+  -readability-avoid-nested-conditional-operator,
+  -misc-no-recursion,
+  -modernize-return-braced-init-list,
+  -modernize-raw-string-literal,
+  -modernize-concat-nested-namespaces
+
+# 2026-11-12 검사 확대. cppcoreguidelines · modernize · readability · misc · concurrency · portability 는 군째로 켜고,
+# cert · google · hicpp 는 **별칭이 아닌 것만** 이름으로 켠다(나머지는 위 군의 별칭이라 같은 진단을 두 번 돈다 — 예:
+# hicpp-use-override = modernize-use-override, cert-oop54-cpp = bugprone-unhandled-self-assignment).
+# clang-analyzer 의 alpha.* 는 켜지 않는다 — clang-tidy 20 은 숨은 플래그(--allow-enabling-analyzer-alpha-checkers)
+# 없이는 켜지도 않고, LLVM 문서가 실험 단계(오탐 · 크래시 가능)로 둔 것이다. optin.* 은 clang-analyzer-* 로 이미 켜져 있다.
+# 뺀 cert · google · hicpp 중 별칭이 아닌 것: cert-err58-cpp(정적 객체 생성의 예외 — 예외를 쓰지 않는다, 721),
+# google-build-using-namespace(.cpp 의 using namespace 는 허용, 69), google-readability-todo(TODO 형식, 문체),
+# google-upgrade-googletest-case · google-objc-*(쓰지 않는 라이브러리), hicpp-signed-bitwise(플래그 상수의 부호 있는 비트 연산, 264 — 취향).
+#
+# 아래 건수는 표본 실측이다(`py -3 -m Scripts tidy --every 8` — 2828 TU 중 354 TU, 헤더 진단은 중복을 뺐다). 전체는 대략 몇 배다.
+# 끈 까닭은 셋 중 하나다: (규약) 저장소 규칙과 정면으로 부딪힌다, (린트) 같은 일을 저장소 린트가 허용 목록과 함께 이미 본다,
+# (취향) 결함이 아니라 문체 제안이라 고칠 값이 없다.
+#
+# -modernize-use-trailing-return-type            17026  (규약) 반환형을 앞에 쓴다 — 저장소 전체가 그 꼴이다.
+# -readability-uppercase-literal-suffix           6744  (규약) `1.0f` 처럼 소문자 접미사를 쓴다(cert-dcl16-c · hicpp 별칭도 같은 검사).
+# -misc/cppcoreguidelines-non-private-member-variables-in-classes  6104+198
+#                                                       (규약) 리플렉션 데이터 형식(REFLECT 필드)과 POD 설명자는 공개 필드가 본질이다.
+# -readability-braces-around-statements           4744  (규약) 한 줄 if 는 중괄호를 뺀다(docs/agents/CppStyle.md "Braces").
+# -misc-include-cleaner                           4720  (린트) include 는 저장소 린트(IncludeOrder · LayerIncludes · Includes.md 의 층)가 본다.
+#                                                       이 검사는 PCH · 강제 포함 헤더를 모르고 "직접 포함" 을 요구해 층 규칙과 어긋난다.
+# -readability-redundant-member-init              3383  (규약) 필드는 생성자 초기화 목록에서 모두 적는다(CppStyle — `_value{}` 도 의도다).
+# -readability/cppcoreguidelines-magic-numbers    2567  (린트) 매직 리터럴은 MagicLiterals 린트가 정책 값만 골라 본다. 수학 · 그래픽스 상수까지 짚는다.
+# -readability-simplify-boolean-expr              2140  (규약) 불리언은 `== false` 로 비교한다(CppStyle "Booleans") — 그 꼴을 전부 짚는다.
+# -modernize-use-nodiscard                        1167  (규약) [[nodiscard]] 는 읽기 결과 형식(sw::expected · sw::optional)에 붙여 형식으로 막는다.
+#                                                       모든 const 게터에 붙이라는 이 검사는 -Werror=unused-result 와 맞물려 호출부를 무더기로 깬다.
+# -modernize/cppcoreguidelines-avoid-c-arrays      828  (취향) constexpr 정적 표 · 고정 버퍼다. std::array 로 바꿔도 결함이 줄지 않는다.
+# -readability-identifier-length                   820  (린트) 이름은 NamingWords 린트와 docs/agents/NamingCpp.md 가 본다(i · x · y 는 관례).
+# -cppcoreguidelines-avoid-do-while                699  (취향) 매크로의 `do { } while (0)` 이 거의 전부다.
+# -cppcoreguidelines-special-member-functions      620  (취향) 가상 소멸자 하나만 둔 인터페이스까지 다섯 멤버를 다 적으라 한다(hicpp 별칭 포함).
+# -modernize/cppcoreguidelines-use-default-member-init  591
+#                                                       (규약) 필드 초기화는 생성자에서만 한다(CppStyle · .cpp 생성자) — 정반대를 요구한다.
+# -misc-use-anonymous-namespace                    588  (규약) 483 건이 SW_TEST_CASE · 등록 매크로가 펼친 `static` 이다. 매크로는 아무 자리에서
+#                                                       익명 네임스페이스를 열 수 없다. 손으로 쓴 도우미는 Helpers.md 가 익명 네임스페이스 하나로 모은다.
+# -readability-redundant-access-specifiers         520  (취향) REFLECT 매크로 · 접근 구역을 묶음별로 다시 여는 것이 의도다.
+# -cppcoreguidelines-pro-bounds-*        496+323+317  (취향) GSL(span · at) 전제 규칙이다. 엔진 저수준(직렬화 · RHI · 컨테이너)은 포인터 산술이 본질이다.
+# -cppcoreguidelines-pro-type-reinterpret-cast/union-access/vararg/static-cast-downcast/const-cast  87+67+34+26+13
+#                                                       (취향) 같은 GSL 묶음이다. 바이트 직렬화 · 수학 공용체 · formatString · 형식 검사 뒤 내림 변환.
+# -cppcoreguidelines-owning-memory                   5  (취향) gsl::owner<> 를 쓰지 않는다.
+# -misc-const-correctness                          386  (취향) 지역 변수마다 const 를 붙이라 한다. 가장 느린 검사 축이기도 하다.
+# -readability-math-missing-parentheses            359  (취향) 연산자 우선순위를 괄호로 다시 적으라 한다.
+# -modernize-use-auto                              311  (규약) auto 는 반복자 · 구조적 바인딩에만(CppStyle).
+# -cppcoreguidelines-avoid-non-const-global-variables  170
+#                                                       (린트) MutableStatics 린트가 허용 목록(테스트 전역 gv_ · 등록 표)과 함께 본다.
+# -readability-function-cognitive-complexity       146  (취향) 길이 지표다. 결함이 아니다.
+# -portability-template-virtual-member-function    119  (취향) MSVC 와 다른 컴파일러의 인스턴스화 차이를 짚는다. 모든 플랫폼이 Clang 이다.
+# -readability-named-parameter                     111  (취향) 쓰지 않는 인자의 이름을 빼는 것이 관례다.
+# -cppcoreguidelines-macro-usage                    90  (규약) REFLECT · SW_TEST_CASE · 등록 매크로가 저장소의 장치다.
+# -cppcoreguidelines-missing-std-forward            79  (취향) 콜백 `fn&&` 을 여러 번 부르는 자리다 — 거기서 forward 하면 오히려 결함이다.
+# -cppcoreguidelines-avoid-const-or-ref-data-members  58  (취향) 수명이 묶인 참조 필드(뷰 · 컨텍스트)는 의도다.
+# -readability-convert-member-functions-to-static   56  (취향) 뷰모델 · 패널 메서드는 지금 상태를 안 볼 뿐 멤버로 두는 것이 API 다.
+# -readability-use-anyofallof · avoid-nested-conditional-operator  30+29
+#                                                       (취향) 반복문 · 삼항을 다른 꼴로 바꾸라는 제안이다.
+# -misc-no-recursion                                27  (취향) 트리 · 그래프 순회는 재귀가 맞다.
+# -modernize-return-braced-init-list · raw-string-literal · concat-nested-namespaces  25+24+12
+#                                                       (취향) 문체 제안이다.
+#
+# 켜 두고 남은 경고는 묶음 검증을 막지 않는다 — 바뀐 파일 실행(`--changed`)이 손대는 사람에게 보여 주고 그때 고친다.
+# 오류로 올리는 검사(WarningsAsErrors)는 전체 TU 에서 0 건인 결함 검사만 둔다 — 남은 것이 있는 검사를 올리면 그 파일을 건드린 묶음이 남의 빚으로 진다.
 
 # performance-*
 #     2026-09-20 에 켰다. 켜자마자 314건이 나왔고 그 중 실제로 고칠 값어치가 있던 것이 42+27+12 건이다
