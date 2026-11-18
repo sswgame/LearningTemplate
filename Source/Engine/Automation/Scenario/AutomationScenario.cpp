@@ -68,64 +68,58 @@ namespace sw
                 return value;
             }
 
-            /** @brief 음이 아닌 초를 프레임으로 바꿉니다(고정 프레임 시간으로 반올림). 형식이 틀리면 그 이유입니다. */
-            [[nodiscard]] static expected<uint32> readSeconds( const utf8* pValue, const utf8* pName, float32 fixedDelta )
+            /** @brief `<AdvanceSimulation>` 하나의 읽은 값입니다. */
+            struct AdvanceRead
             {
-                float32 seconds = 0.0f;
-                if ( StringUtil::parseFloat( string_view{ pValue }, seconds ) == false || seconds < 0.0f )
-                    return unexpected( makeValueError( "must be a non-negative number of seconds", pName, pValue ) );
-                return static_cast<uint32>( seconds / fixedDelta + 0.5f );
-            }
+                uint32 _frames{ 0 };
+                bool   _bRender{ false }; ///< `render="true"` — 모든 프레임을 그린다. NOLINT(sw-bool-flag): 읽기 결과 집합체다
+            };
 
             /**
-             * @brief `<Wait frames="N"/>` · `<Wait seconds="S"/>` 의 프레임 수입니다(초는 고정 프레임 시간으로 바꾼다). 둘 가운데 정확히 하나여야 합니다.
-             * @details 시간은 이것만 흘린다 — 단계는 적은 순서대로 지금 프레임에 돈다. 조건을 기다리는 것은 `<WaitUntil>` 이다(그동안 시계가 서 있다).
+             * @brief `<AdvanceSimulation frames="N" [render="true"]/>` 를 읽습니다. 시뮬레이션을 고정 프레임 N 개 진행합니다 — 시간 자체가 테스트 내용인 구간(누른 채인 구간 · 이동 거리 ·
+             *        "다음 프레임에" 단언 · 프레임 경계 맞추기 · 사진 앞 진행 · "아무 일도 안 일어난다" 를 본 뒤의 `<Expect>`)에만 쓴다. 무엇이 끝나기를 기다리는 것은 `<WaitUntil>`(시한은 넘으면 실패)이다.
+             * @details 고정 프레임 시간이 있는 시나리오(루트 `fixedDelta`)만 받는다 — 벽시계로 도는 시나리오에서 N 프레임은 몇 초인지 정해지지 않는다.
+             *          기본은 그리지 않고 진행하고 마지막 몇 프레임만 그린다(수는 `Config/Dev/GoldenImage.json` 의 `_advanceDrawnFrames` — 실행기가 정한다, TAA 기록 · 노출 적응 · GPU 입자가 사진 전에 자리 잡게).
+             *          `render="true"` 는 모든 프레임을 그린다 — 그린 프레임 자체가 내용인 구간(프레임 시간 측정 · 부하 측정 창 · 그리지 않는 진행과 견줄 기준 · 에디터 UI 가 그려야 도는 입력).
+             *          언리얼 기능 테스트의 `FWaitForFrames` 잠복 명령 · 유니티 테스트의 `yield return new WaitForFixedUpdate()` 반복 · Godot GUT 의 `simulate( obj, N, delta )` 와 같은 자리다.
+             *          예전의 `<Wait frames>` 는 그리며 흘리는 진행이었다 — 이제 `render="true"` 가 그 자리다(V3 `render=false` 결정을 기본값으로 뒤집었다).
              */
-            [[nodiscard]] static expected<uint32> readWait( const XMLNode& waitNode, float32 fixedDelta )
+            [[nodiscard]] static expected<AdvanceRead> readAdvanceSimulation( const XMLNode& node, bool bFixedDeltaDeclared )
             {
-                // shortcut: 옮기는 동안만 받는다 — 모든 시나리오가 `<WaitUntil>` · `<AdvanceSimulation>` 으로 옮겨지면 이 요소를 지운다.
-                uint32 timingCount = 0;
-                uint32 frames      = 0;
-                for ( XMLAttribute attribute = waitNode.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                if ( bFixedDeltaDeclared == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "<AdvanceSimulation> needs a fixed frame time - set fixedDelta on <Scenario> (frames on the wall clock have no fixed length)" } );
+                AdvanceRead read{};
+                bool        bFramesGiven = false;
+                for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
-                    const string_view name  = attribute.getName();
-                    const utf8*       pText = attribute.getValue();
-                    if ( name != "frames" && name != "seconds" )
-                        return unexpected( Error{ ErrorKind::InvalidArgument, "unknown <Wait> attribute (frames · seconds)", name } );
-                    const expected<uint32> read = name == "frames" ? readUint( pText, "frames" ) : readSeconds( pText, "seconds", fixedDelta );
-                    if ( read.has_value() == false )
-                        return read;
-                    frames = *read;
-                    ++timingCount;
+                    const string_view name = attribute.getName();
+                    if ( name == "frames" )
+                    {
+                        const expected<uint32> frames = readUint( attribute.getValue(), "frames" );
+                        if ( frames.has_value() == false )
+                            return unexpected( frames.error() );
+                        read._frames = *frames;
+                        bFramesGiven = true;
+                    }
+                    else if ( name == "render" )
+                    {
+                        const expected<bool> bRender = readBool( "render", attribute.getValue() );
+                        if ( bRender.has_value() == false )
+                            return unexpected( bRender.error() );
+                        read._bRender = *bRender;
+                    }
+                    else
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "unknown <AdvanceSimulation> attribute (frames · render)", name } );
                 }
-                if ( timingCount != 1 || frames == 0 )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "<Wait> needs exactly one of frames=\"N\" · seconds=\"S\" and more than zero frames" } );
-                return frames;
+                if ( bFramesGiven == false || read._frames == 0 )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "<AdvanceSimulation> needs frames=\"N\" (more than zero)" } );
+                return read;
             }
 
             /**
              * @brief `<Launch variable="gv_…" value="…"/>` 하나를 읽어 @p inoutList 에 더합니다.
              * @details 값은 명령줄 토큰 하나가 되므로 공백 · 따옴표를 받지 않는다. 같은 변수를 두 번 적으면 어느 쪽이 이기는지 모호하므로 오류다.
              */
-            /**
-             * @brief `<AdvanceSimulation frames="N"/>` 의 프레임 수입니다. 시뮬레이션을 고정 프레임 N 개 진행합니다 — 시간 자체가 시험 내용인 구간(누른 채인 구간 · 이동 거리 ·
-             *        "다음 프레임에" 단언 · 프레임 경계 맞추기)에만 쓴다. 무엇이 끝나기를 기다리는 것은 `<WaitUntil>`(시한은 넘으면 실패)이다.
-             * @details 고정 프레임 시간이 있는 시나리오(루트 `fixedDelta`)만 받는다 — 벽시계로 도는 시나리오에서 N 프레임은 몇 초인지 정해지지 않는다.
-             *          언리얼 기능 테스트의 틱 진행 · 유니티 테스트의 `yield return new WaitForFixedUpdate()` 반복 · Godot GUT 의 `simulate( obj, N, delta )` 와 같은 자리다.
-             */
-            [[nodiscard]] static expected<uint32> readAdvanceSimulation( const XMLNode& node, bool bFixedDeltaDeclared )
-            {
-                if ( bFixedDeltaDeclared == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "<AdvanceSimulation> needs a fixed frame time - set fixedDelta on <Scenario> (frames on the wall clock have no fixed length)" } );
-                const XMLAttribute first = node.getFirstAttribute();
-                if ( first.isValid() == false || string_view{ first.getName() } != "frames" || first.getNext().isValid() )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "<AdvanceSimulation> needs exactly frames=\"N\" (more than zero)" } );
-                const expected<uint32> frames = readUint( first.getValue(), "frames" );
-                if ( frames.has_value() && *frames == 0 )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "<AdvanceSimulation> needs more than zero frames" } );
-                return frames;
-            }
-
             [[nodiscard]] static expected<void> readLaunchVariable( const XMLNode& node, vector<AutomationAttribute>& inoutList )
             {
                 AutomationAttribute entry{};
@@ -497,20 +491,23 @@ namespace sw
                 return unexpected( Error{ ErrorKind::Unsupported,
                                           "<At frame> is gone - write the steps in the order they run and put <WaitUntil> where something must finish and <AdvanceSimulation frames=\"N\"/> where simulated time itself is the test",
                                           _sourcePath } );
-            if ( elementName == "Wait" || elementName == "AdvanceSimulation" )
+            if ( elementName == "Wait" )
+                return unexpected( Error{ ErrorKind::Unsupported,
+                                          "<Wait> is gone - put <WaitUntil> where something must finish, <AdvanceSimulation frames=\"N\"/> where simulated time itself is the test "
+                                          "and <AdvanceSimulation frames=\"N\" render=\"true\"/> where every drawn frame is the test (frame time · load windows)",
+                                          _sourcePath } );
+            if ( elementName == "AdvanceSimulation" )
             {
-                const expected<uint32> frames = elementName == "Wait" ? Internal::readWait( atNode, _fixedDelta ) : Internal::readAdvanceSimulation( atNode, _bFixedDeltaDeclared == SW_TRUE );
-                if ( frames.has_value() == false )
-                    return unexpected( frames.error() );
+                const expected<Internal::AdvanceRead> advance = Internal::readAdvanceSimulation( atNode, _bFixedDeltaDeclared == SW_TRUE );
+                if ( advance.has_value() == false )
+                    return unexpected( advance.error() );
                 // 진행 구간은 앞 단계가 돈 프레임 뒤부터 다음 단계가 도는 프레임 앞까지다 — 단계가 도는 프레임(판정 · 사진)은 늘 보통 프레임이다.
-                if ( elementName == "AdvanceSimulation" )
-                {
-                    const uint32 firstFrame = bCursorFrameUsed ? frameCursor + 1u : frameCursor;
-                    const uint32 endFrame   = frameCursor + *frames; // 다음 단계의 프레임(빼고)
-                    if ( endFrame > firstFrame )
-                        _listAdvanceSpan.push_back( AdvanceSpan{ firstFrame, endFrame - firstFrame } );
-                }
-                frameCursor += *frames;
+                // 모두 그리는 진행(`render="true"`)은 구간을 두지 않는다 — 그 프레임은 보통 프레임이다.
+                const uint32 firstFrame = bCursorFrameUsed ? frameCursor + 1u : frameCursor;
+                const uint32 endFrame   = frameCursor + advance->_frames; // 다음 단계의 프레임(빼고)
+                if ( advance->_bRender == false && endFrame > firstFrame )
+                    _listAdvanceSpan.push_back( AdvanceSpan{ firstFrame, endFrame - firstFrame } );
+                frameCursor += advance->_frames;
                 bCursorFrameUsed  = false;
                 bFrameEndAtCursor = false;
                 continue;

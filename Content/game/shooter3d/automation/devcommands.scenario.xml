@@ -7,24 +7,24 @@
 -->
 <Scenario name="game.shooter3d.devcommands" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Variable name="gv_shooterAutoPlay" value="0"/>
-	<Wait frames="60"/>
+	<AdvanceSimulation frames="60"/>
 	<DevCommand line="autoplay off"/>
 	<DevCommand line="photo.on"/>
 	<ExpectLog id="DevCommand.Reply" contains="photo mode: on (game paused)" atLeast="1"/>
-	<Wait frames="5"/>
+	<AdvanceSimulation frames="5"/>
 	<DevCommand line="photo.shot"/>
-	<Wait frames="5"/>
+	<AdvanceSimulation frames="5"/>
 	<DevCommand line="photo.off"/>
 	<ExpectLog id="DevCommand.Reply" contains="photo mode: off" atLeast="1"/>
-	<Wait frames="5"/>
+	<AdvanceSimulation frames="5"/>
 	<DevCommand line="intent.record 120"/>
 	<ExpectLog id="DevCommand.Reply" contains="intent: recording every pawn" atLeast="1"/>
-	<Wait frames="30"/>
+	<AdvanceSimulation frames="30"/>
 	<DevCommand line="intent.save {out}/devcommands.swintent"/>
 	<ExpectLog id="DevCommand.Reply" contains="track(s) written" atLeast="1"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="intent.play {out}/devcommands.swintent"/>
 	<ExpectLog id="DevCommand.Reply" contains="intent: playing" atLeast="1"/>
-	<Wait frames="10"/>
+	<AdvanceSimulation frames="10"/>
 	<Pass/>
 </Scenario>

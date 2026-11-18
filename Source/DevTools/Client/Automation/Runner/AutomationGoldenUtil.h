@@ -63,6 +63,8 @@ namespace sw
         AutomationImageThreshold _measure{};
         AutomationGoldenLimits   _limits{};
         float64                  _nearLimitRatio{ 0.0 }; ///< 한 축이 상한의 이 비율을 넘으면 근접(0..1 사이, 끝 제외)
+        /// `<AdvanceSimulation>`(그리지 않는 진행)의 마지막 이 수만큼은 그린다 — TAA 기록 · 노출 적응 · GPU 입자가 사진 전에 자리 잡게. 시나리오가 줄일 수 없다(`AutomationRunner::advanceSimulation`)
+        uint32 _advanceDrawnFrames{ 0 };
     };
 
     /** @struct AutomationGoldenMeta @brief 골든 옆 `*.golden.json` 한 편의 내용입니다 — 언제(커밋) · 어디서(백엔드) · 왜 · 그때 무엇을 쟀는지. */

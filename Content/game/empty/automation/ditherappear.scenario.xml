@@ -16,11 +16,11 @@
 	<AdvanceSimulation frames="20"/> <!-- 순간이동 앞 간격 -->
 	<DevCommand line="teleport DitherCube 0 1 0"/>
 	<Screenshot file="dither_0.ppm" stability="none"/>
-	<Wait frames="59"/>
+	<AdvanceSimulation frames="59"/>
 	<Screenshot file="dither_25.ppm" stability="none"/>
-	<Wait frames="60"/>
+	<AdvanceSimulation frames="60"/>
 	<Screenshot file="dither_50.ppm" stability="none"/>
-	<Wait frames="60"/>
+	<AdvanceSimulation frames="60"/>
 	<Screenshot file="dither_75.ppm" stability="none"/>
 	<Screenshot file="dither_end.ppm"/>
 

@@ -12,81 +12,81 @@
 	<Load durationSeconds="20"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<DevCommand line="move GameCamera 5 30 5"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 15 30 15"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 25 30 25"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 35 30 35"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 45 30 45"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 55 30 55"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 65 30 65"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 75 30 75"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 85 30 85"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 95 30 95"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 105 30 105"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 115 30 115"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 125 30 125"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 135 30 135"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 145 30 145"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 155 30 155"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 165 30 165"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 175 30 175"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 185 30 185"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 195 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 185 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 175 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 165 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 155 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 145 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 135 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 125 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 115 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 105 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 95 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 85 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 75 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 65 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 55 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 45 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 35 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 25 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 15 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 	<DevCommand line="move GameCamera 5 30 195"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15" render="true"/>
 </Scenario>

@@ -11,11 +11,12 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
 	<Launch variable="gv_gpuMessages" value="1"/>
 	<Launch variable="gv_renderScale" value="1"/>
-	<Wait frames="20"/>
+	<WaitUntil watch="Log.Count" key="GPUMessage.RingReady" atLeast="1" timeoutFrames="60"/> <!-- 메시지 링이 섰다 -->
 	<ExpectLog id="GPUMessage.RingReady" count="1"/>
 	<ExpectLog id="GPUMessage.Print" count="0"/>
 	<DevCommand line="gpu.inspect 16 16"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Log.Count" key="GPUInspect.Pixel" atLeast="1" timeoutFrames="60"/> <!-- 렌더 스레드가 고른 픽셀 값을 냈다 -->
+	<WaitUntil watch="Log.Count" key="GPUMessage.Print" atLeast="1" timeoutFrames="60"/> <!-- 셰이더 메시지가 되읽혀 왔다(몇 프레임 늦다) -->
 	<ExpectLog id="GPUInspect.Pixel" contains="pixel 16,16" atLeast="1"/>
 	<ExpectLog id="GPUMessage.Print" contains="present pixel color" atLeast="1"/>
 	<ExpectLog id="GPUMessage.UnknownID" count="0"/>
