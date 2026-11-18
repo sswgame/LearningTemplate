@@ -4,7 +4,6 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/fixed_string.h"
 
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
