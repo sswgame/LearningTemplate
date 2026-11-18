@@ -115,6 +115,8 @@ namespace sw
         const vector<string>& getMetricLines() const { return _listMetricLine; }
         /** @brief 기록 값 줄들입니다(`frame 300 Scene.TransformHash = 12345` — 백엔드끼리 같아야 한다). */
         const vector<string>& getRecordLines() const { return _listRecordLine; }
+        /** @brief 시작 때 읽은 판정 정책(`Config/Dev/GoldenImage.json`)입니다. 못 읽었으면 그 이유입니다 — `<AdvanceSimulation>` 의 그리는 끝 프레임 수도 여기서 읽는다. */
+        const expected<AutomationGoldenPolicy>& getGoldenPolicy() const { return _goldenPolicy; }
 
         /** @brief 단계의 감시 값 · 대상 · 키를 읽어 값을 냅니다. 없으면 false 이고(`<SkipUnless>` 같은 단계도 같은 읽기를 쓴다) @p outMessage 에 이유를 씁니다. */
         [[nodiscard]] bool readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const;

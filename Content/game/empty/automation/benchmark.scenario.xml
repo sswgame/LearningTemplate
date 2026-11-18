@@ -11,7 +11,7 @@
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<BeginFrameStats/>
-	<Wait frames="120"/>
+	<AdvanceSimulation frames="120" render="true"/>
 	<EndFrameStats file="bench.json"/>
 	<Pass/>
 </Scenario>

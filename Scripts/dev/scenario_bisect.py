@@ -10,7 +10,7 @@
   py -3 Scripts/dev/scenario_bisect.py --self-check
   py -3 Scripts/dev/scenario_bisect.py shooter3d --rerun-failed --preset Ninja-Release   # 마지막 체인에서 진 단계: 혼자 → 앞을 붙여 → 이분 탐색
   py -3 Scripts/dev/scenario_bisect.py shooter3d --from-stage enemydeath --backend vk     # 그 단계부터 끝까지만
-  py -3 Scripts/dev/scenario_bisect.py shooter3d --fixed-waits                           # 고정 대기 목록(condition · photo · other)
+  py -3 Scripts/dev/scenario_bisect.py shooter3d --advances                              # 진행(AdvanceSimulation) 목록(condition · photo · other, render)
   py -3 Scripts/dev/scenario_bisect.py --golden-margins [보고 폴더…]                # 흔들리는 골든: 보고의 goldenSamples[] 를 모아 골든별 최대 · 여유
   py -3 Scripts/dev/scenario_bisect.py --golden-coverage                            # 플랫폼 · 백엔드마다 골든 수(체인 백엔드 표와 대조)
 
@@ -155,7 +155,7 @@ def stage_failed_in_reports(list_report: Sequence[dict], stage_name: str) -> boo
 
 
 # ------------------------------------------------------------------------------
-# 진 단계 다시 돌기(--rerun-failed) · 단계부터 끝까지(--from-stage) · 고정 대기 목록(--fixed-waits) — DesignBacklog 검증 시간 절 V1
+# 진 단계 다시 돌기(--rerun-failed) · 단계부터 끝까지(--from-stage) · 진행 목록(--advances) — DesignBacklog 검증 시간 절 V1
 # ------------------------------------------------------------------------------
 
 def find_latest_per_backend_folder(automation_dir: pathlib.Path, stage_names: set[str]) -> pathlib.Path | None:
@@ -235,28 +235,30 @@ WAIT_PHOTO_STEPS = frozenset({'Screenshot', 'ExpectImage', 'ExpectImagesDiffer',
 STEP_TAG = re.compile(r'<!--.*?-->|<([A-Za-z]\w*)\b([^>]*)>', re.S)
 
 
-def list_fixed_waits(scenario_text: str) -> list[dict]:
-    """시나리오 글의 고정 대기(`<Wait frames="N"/>`)마다 프레임 수 · 다음 단계 종류 · 분류를 낸다.
-    분류: condition(바로 뒤가 `<Expect watch>` — 조건 대기로 바꿀 후보), photo(바로 뒤가 사진 — 진행 시간이라 그리지 않는 대기 후보), other."""
+def list_advance_steps(scenario_text: str) -> list[dict]:
+    """시나리오 글의 진행(`<AdvanceSimulation frames="N" [render="true"]/>`)마다 프레임 수 · render · 다음 단계 종류 · 분류를 낸다.
+    분류: condition(바로 뒤가 `<Expect watch>` — 조건 대기로 바꿀 후보이거나 "아무 일도 안 일어난다" 확인), photo(바로 뒤가 사진 — 사진 앞 진행 시간), other.
+    render 는 모든 프레임을 그리는 진행이다(측정 창 · 비교 기준) — 그리는 비용이 그대로 든다."""
     steps = [(match.group(1), match.group(2)) for match in STEP_TAG.finditer(scenario_text) if match.group(1) and match.group(1) != 'Scenario']
     rows = []
     for index, (tag, attributes) in enumerate(steps):
         frames = re.search(r'\bframes="(\d+)"', attributes)
-        if tag != 'Wait' or frames is None:
+        if tag != 'AdvanceSimulation' or frames is None:
             continue
         next_tag, next_attributes = steps[index + 1] if index + 1 < len(steps) else ('-', '')
         kind = 'condition' if next_tag == 'Expect' and re.search(r'\bwatch=', next_attributes) else ('photo' if next_tag in WAIT_PHOTO_STEPS else 'other')
-        rows.append({'frames': int(frames.group(1)), 'next': next_tag, 'kind': kind})
+        rows.append({'frames': int(frames.group(1)), 'render': re.search(r'\brender="true"', attributes) is not None, 'next': next_tag, 'kind': kind})
     return rows
 
 
-def print_fixed_waits(paths: list[str]) -> int:
-    """체인의 고정 대기 목록과 분류별 프레임 합 — 조건 대기로 바꿀 것(condition)과 그리지 않는 대기 후보(photo)를 가른다."""
+def print_advance_steps(paths: list[str]) -> int:
+    """체인의 진행 목록과 분류별 프레임 합 — 조건 대기로 바꿀 후보(condition) · 사진 앞 진행 시간(photo) · 모두 그리는 진행(render)을 가른다."""
     totals: dict[str, int] = {}
     for path in paths:
-        for row in list_fixed_waits((REPO / 'Content' / path).read_text(encoding='utf-8')):
-            totals[row['kind']] = totals.get(row['kind'], 0) + row['frames']
-            print(f'{row["kind"]:9s} {row["frames"]:5d}  → {row["next"]:18s} {path}')
+        for row in list_advance_steps((REPO / 'Content' / path).read_text(encoding='utf-8')):
+            kind = row['kind'] + (' render' if row['render'] else '')
+            totals[kind] = totals.get(kind, 0) + row['frames']
+            print(f'{kind:16s} {row["frames"]:5d}  → {row["next"]:18s} {path}')
     print('프레임 합:', ', '.join(f'{kind} {frames}' for kind, frames in sorted(totals.items())) or '없음')
     return 0
 
@@ -403,10 +405,12 @@ def self_check() -> int:
     list_report = [('dx12', {'name': 'a', 'result': 'Passed'}), ('dx12', {'name': 'b', 'result': 'Failed'}), ('vk', {'name': 'a', 'result': 'Skipped'})]
     assert select_failed_stages({'dx12': ['a', 'b', 'c'], 'vk': ['a', 'b']}, list_report) == [('dx12', 'b'), ('dx12', 'c'), ('vk', 'b')]
     assert select_failed_stages({'dx12': ['a']}, list_report) == []
-    # 대기 분류: 뒤가 Expect watch 면 condition, 사진이면 photo, 그 밖 other. 주석 안의 대기 · 조건 대기(WaitUntil)는 세지 않는다.
-    waits = list_fixed_waits('<Scenario name="x"><!-- <Wait frames="9"/> --><Wait frames="2"/><Expect watch="A" equals="1"/>'
-                             '<Wait frames="600"/><Screenshot name="s"/><WaitUntil watch="B" atLeast="1"/><Wait frames="5"/><Click x="1"/><Wait frames="7"/></Scenario>')
-    assert [(row['frames'], row['next'], row['kind']) for row in waits] == [(2, 'Expect', 'condition'), (600, 'Screenshot', 'photo'), (5, 'Click', 'other'), (7, '-', 'other')], waits
+    # 진행 분류: 뒤가 Expect watch 면 condition, 사진이면 photo, 그 밖 other. render="true" 를 따로 적는다. 주석 안의 진행 · 조건 대기(WaitUntil)는 세지 않는다.
+    advances = list_advance_steps('<Scenario name="x"><!-- <AdvanceSimulation frames="9"/> --><AdvanceSimulation frames="2"/><Expect watch="A" equals="1"/>'
+                             '<AdvanceSimulation frames="600"/><Screenshot name="s"/><WaitUntil watch="B" atLeast="1"/><AdvanceSimulation frames="5" render="true"/><Click x="1"/>'
+                             '<AdvanceSimulation frames="7"/></Scenario>')
+    assert [(row['frames'], row['render'], row['next'], row['kind']) for row in advances] == [
+        (2, False, 'Expect', 'condition'), (600, False, 'Screenshot', 'photo'), (5, True, 'Click', 'other'), (7, False, '-', 'other')], advances
     print('self-check ok')
     return 0
 
@@ -426,7 +430,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--rerun-failed', action='store_true',
                         help='단계 대신: 마지막 체인 실행(Bin/Saved/Automation 의 per-backend 보고)에서 진 단계를 그 백엔드로 혼자 → 앞 단계를 붙여 → 이분 탐색으로 다시 돈다')
     parser.add_argument('--from-stage', metavar='단계', help='단계 대신: 그 단계부터 체인 끝까지만 --backend 로 돌고 진 단계를 낸다')
-    parser.add_argument('--fixed-waits', action='store_true', help='단계 대신: 체인의 고정 대기(<Wait frames>)마다 프레임 수 · 다음 단계 · 분류(condition · photo · other)')
+    parser.add_argument('--advances', action='store_true', help='단계 대신: 체인의 진행(<AdvanceSimulation>)마다 프레임 수 · render · 다음 단계 · 분류(condition · photo · other)')
     options = parser.parse_args(argv)
     if options.self_check:
         return self_check()
@@ -434,16 +438,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         return print_golden_coverage()
     if options.golden_margins is not None:
         return print_golden_margins(options.golden_margins, options.preset)
-    chain_mode = options.rerun_failed or options.from_stage or options.fixed_waits
+    chain_mode = options.rerun_failed or options.from_stage or options.advances
     if not options.chain or (not options.stage and not chain_mode):
-        parser.error('체인과 단계를 적는다 (예: empty surfacefootprint) — 또는 체인과 --rerun-failed · --from-stage · --fixed-waits')
+        parser.error('체인과 단계를 적는다 (예: empty surfacefootprint) — 또는 체인과 --rerun-failed · --from-stage · --advances')
 
     build_dir = REPO / 'build' / options.preset
     log_dir = build_dir / 'Testing' / 'Logs'
     command = app_arguments.find_chain_command(build_dir, options.chain)
     paths = app_arguments.read_chain_stages(command)
-    if options.fixed_waits:
-        return print_fixed_waits(paths)
+    if options.advances:
+        return print_advance_steps(paths)
     build_preset_or_exit(options.preset)
     dropped = ('unattended',) if options.show else ()
     base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report', *dropped)

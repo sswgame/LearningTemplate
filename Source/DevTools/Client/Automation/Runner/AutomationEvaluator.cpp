@@ -90,11 +90,12 @@ namespace sw
             outMessage = watchName + " is no longer registered";
             return false;
         }
-        const string*              pTarget = step.findAttribute( "target" );
-        const string*              pKey    = step.findAttribute( "key" );
-        const AutomationWatchQuery query   = AutomationWatchQuery::make( context.findActiveObjectManager(), pTarget != nullptr ? string_view{ *pTarget } : string_view{},
-                                                                       pKey != nullptr ? string_view{ *pKey } : string_view{} );
-          string subject = watchName;
+        const string*        pTarget = step.findAttribute( "target" );
+        const string*        pKey    = step.findAttribute( "key" );
+        AutomationWatchQuery query   = AutomationWatchQuery::make( context.findActiveObjectManager(), pTarget != nullptr ? string_view{ *pTarget } : string_view{},
+                                                                 pKey != nullptr ? string_view{ *pKey } : string_view{} );
+          query._pLogCounter = &_logCapture; // 로그 수 감시 값(`Log.Count`)이 이 실행의 줄을 센다
+        string subject               = watchName;
         if ( pTarget != nullptr )
             subject += "(" + *pTarget + ( pKey != nullptr ? ", " + *pKey : string() ) + ")";
         else if ( pKey != nullptr )

@@ -128,6 +128,8 @@ namespace sw
         /** @brief 지난 틱의 수평 속도(월드, m/s)입니다. */
         float3 getMoveVelocity() const;
         bool   isOnGround() const;
+        /** @brief 지금 무기가 다음 발을 쏠 수 있으면 true 입니다 — 연사 쿨다운 · 재장전이 끝났고 탄창에 탄이 있다(시나리오 감시 값 `Shooter3D.FireReady`). */
+        bool isFireReady() const { return getCurrentWeapon().isCoolingDown() == false && getCurrentWeapon().isReloading() == false && getCurrentWeapon().getMagazineAmmo() > 0; }
         /** @brief 마지막으로 쏜 뒤 지난 시간(s)입니다. */
         float32 getTimeSinceShot() const { return _timeSinceShot; }
         /** @brief 맞을 때마다 하나씩 오르는 수입니다(몸이 움찔 클립을 트는 신호). */

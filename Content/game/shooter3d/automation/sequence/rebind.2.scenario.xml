@@ -9,21 +9,21 @@
 <Scenario name="game.shooter3d.rebind.2" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<!-- 파일에서 읽은 J 가 점프한다. -->
-	<Wait frames="12"/>
+	<AdvanceSimulation frames="12"/> <!-- 자동 플레이를 끈 뒤 간격(볼 상태가 없다) -->
 	<Tap slot="Key.J" hold="1"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
 	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1.2"/> <!-- 내려앉았다 -->
 	<!-- 기본 키 Space 는 점프하지 않는다. -->
-	<Wait frames="2"/>
+	<WaitUntil watch="Shooter3D.OnGround" equals="1" timeoutFrames="30"/> <!-- 서 있다 -->
 	<Tap slot="Key.Space" hold="1"/>
-	<Wait seconds="0.2"/>
+	<AdvanceSimulation frames="12"/> <!-- 0.2 초 동안 점프하지 않는지 본다 -->
 	<Expect watch="Object.Y" target="Player" atMost="1.74"/>
 	<!-- 같은 액션의 패드 바인딩(A)은 그대로다. -->
-	<Wait frames="2"/>
+	<WaitUntil watch="Shooter3D.OnGround" equals="1" timeoutFrames="30"/> <!-- 서 있다 -->
 	<Action name="Jump" device="Gamepad"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
 	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1.2"/> <!-- 내려앉았다 -->
-	<Wait frames="2"/>
+	<WaitUntil watch="Shooter3D.OnGround" equals="1" timeoutFrames="30"/> <!-- 서 있다 -->
 	<DevCommand line="settings.apply controls.jump=Key.Space"/>
 	<Pass/>
 </Scenario>

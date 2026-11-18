@@ -20,7 +20,7 @@ py -3 Scripts/dev/linux_scenarios.py stages 이름 앞단계,이름
 
 - 에디터 자체 테스트는 케이스 하나만: `-scenario=engine/automation/editor/selftests.scenario.xml -gv_editorSelfTestPattern=hierarchy.tagFilter` (시나리오 사본을 만들지 않는다).
 - 옛 바이너리로 재현하지 않는다: `App.exe` 를 직접 띄울 때는 고친 뒤 증분 빌드를 먼저 한다. `scenario_bisect.py` · `watch_scenarios.py` 는 돌리기 전에 프리셋을 스스로 증분 빌드하고, Linux 의 `chain` · `stages` · `bisect` 는 지은 커밋이 HEAD 와 다르면 멈춘다(`build` 를 먼저).
-- 체인을 처음부터 다시 돌리지 않는다: 진 단계와 의심 앞 단계만 `-scenario=` 에 넘긴다. 첫 걸음은 `scenario_bisect.py <체인> --rerun-failed`(Linux `rerun <체인>`) — 마지막 체인 보고(통과가 아니거나 보고가 없는 단계)를 읽어 진 단계를 그 백엔드로 혼자 돌리고, 통과하면 "체인에서만 진다" 로 앞 단계를 붙여 다시 돌린 뒤 이분 탐색으로 넘어간다. 한 단계부터 끝까지만은 `--from-stage <단계>`, 고정 대기 목록(조건 대기로 바꿀 것 · 사진 앞 진행 시간)은 `--fixed-waits`.
+- 체인을 처음부터 다시 돌리지 않는다: 진 단계와 의심 앞 단계만 `-scenario=` 에 넘긴다. 첫 걸음은 `scenario_bisect.py <체인> --rerun-failed`(Linux `rerun <체인>`) — 마지막 체인 보고(통과가 아니거나 보고가 없는 단계)를 읽어 진 단계를 그 백엔드로 혼자 돌리고, 통과하면 "체인에서만 진다" 로 앞 단계를 붙여 다시 돌린 뒤 이분 탐색으로 넘어간다. 한 단계부터 끝까지만은 `--from-stage <단계>`, 진행(`<AdvanceSimulation>`) 목록(조건 대기로 바꿀 후보 · 사진 앞 진행 시간 · 모두 그리는 `render="true"`)은 `--advances`.
 - `-scenario-keep-going` 을 빼지 않는다. 앞 단계가 건너뜀 · 실패하면 뒤 단계가 돌지 않아 통과로 착각한다.
 - 게임 시나리오는 그 시나리오 `<Launch>` 값을 인자로 함께 넘긴다.
 - 단독으로만 지면: 앞 단계의 상태에 가려진 진짜 결함이나 타이밍이다. 단독 실행이 정답에 가깝다.

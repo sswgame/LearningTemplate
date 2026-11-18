@@ -11,14 +11,14 @@
 <Scenario name="game.shooter3d.projectilecombo" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<Expect watch="Shooter3D.WeaponIndex" equals="0"/>
-	<Wait frames="20"/>
+	<AdvanceSimulation frames="20"/> <!-- 자동 플레이를 끈 뒤 조종이 사람 입력으로 넘어오는 간격(볼 상태가 없다) -->
 	<Expect watch="Shooter3D.ShotDamage" equals="14"/>
 	<Tap slot="Mouse.Left" hold="1"/>
 	<WaitUntil watch="Shooter3D.ShotCount" equals="1" timeoutFrames="10"/>
 	<WaitUntil watch="Shooter3D.TracerWidth" equals="0.025" timeoutFrames="10"/>
 	<Expect watch="Shooter3D.TracerStartAhead" atLeast="0.4"/>
-	<!-- 탄도선이 사라지고(0.07 초) 연사 간격이 지난 뒤 탄을 바꾼다 -->
-	<Wait frames="30"/>
+	<!-- 연사 간격이 지난 뒤 탄을 바꾼다(둘째 탭이 쿨다운에 막히지 않게) -->
+	<WaitUntil watch="Shooter3D.FireReady" equals="1" timeoutFrames="60"/>
 	<DevCommand line="cheat.shooter.projectile incendiary_round"/>
 	<WaitUntil watch="Shooter3D.ShotDamage" equals="11" timeoutFrames="10"/>
 	<Tap slot="Mouse.Left" hold="1"/>

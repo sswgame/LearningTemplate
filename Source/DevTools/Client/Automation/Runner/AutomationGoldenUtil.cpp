@@ -55,9 +55,13 @@ namespace sw
         const optional<float64> maxMean        = root.readRequired<float64>( "_maxMeanDistance" );
         const optional<uint32>  maxRegion      = root.readRequired<uint32>( "_maxDeepRegionPixels" );
         const optional<float64> nearLimitRatio = root.readRequired<float64>( "_nearLimitRatio" );
-        const bool              bAllRead       = differing.has_value() && deep.has_value() && maxFraction.has_value() && maxMean.has_value() && maxRegion.has_value() && nearLimitRatio.has_value();
+        const optional<uint32>  advanceDrawn   = root.readRequired<uint32>( "_advanceDrawnFrames" );
+        const bool              bAllRead       = differing.has_value() && deep.has_value() && maxFraction.has_value() && maxMean.has_value() && maxRegion.has_value() && nearLimitRatio.has_value() &&
+                              advanceDrawn.has_value();
         if ( bAllRead == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the golden policy needs _differingMinDistance, _deepMinDistance, _maxDifferingFraction, _maxMeanDistance, _maxDeepRegionPixels, _nearLimitRatio", sourceName } );
+            return unexpected( Error{ ErrorKind::InvalidArgument,
+                                      "the golden policy needs _differingMinDistance, _deepMinDistance, _maxDifferingFraction, _maxMeanDistance, _maxDeepRegionPixels, _nearLimitRatio, _advanceDrawnFrames",
+                                      sourceName } );
         const bool bDistancesInRange = *differing >= 1 && *differing <= AutomationImage::kMaxColorDistance && *deep >= *differing && *deep <= AutomationImage::kMaxColorDistance;
         const bool bLimitsInRange    = Internal::isFraction( *maxFraction ) && Internal::isFraction( *maxMean ) && *nearLimitRatio > 0.0 && *nearLimitRatio < 1.0;
         if ( bDistancesInRange == false || bLimitsInRange == false )
@@ -70,6 +74,7 @@ namespace sw
         policy._limits._maxMeanDistance       = *maxMean;
         policy._limits._maxDeepRegionPixels   = *maxRegion;
         policy._nearLimitRatio                = *nearLimitRatio;
+        policy._advanceDrawnFrames            = *advanceDrawn;
         return policy;
     }
 

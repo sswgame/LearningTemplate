@@ -19,7 +19,7 @@ namespace
         static constexpr AutomationGoldenLimits   kLimits{ 0.01, 0.005, 16 };
         static constexpr float64                  kNearLimitRatio = 0.5;
         static constexpr string_view              kPolicyText =
-            R"({ "_differingMinDistance": 12, "_deepMinDistance": 96, "_maxDifferingFraction": 0.01, "_maxMeanDistance": 0.005, "_maxDeepRegionPixels": 16, "_nearLimitRatio": 0.5 })";
+            R"({ "_differingMinDistance": 12, "_deepMinDistance": 96, "_maxDifferingFraction": 0.01, "_maxMeanDistance": 0.005, "_maxDeepRegionPixels": 16, "_nearLimitRatio": 0.5, "_advanceDrawnFrames": 16 })";
 
         static AutomationImage makeImage( uint32 width, uint32 height, uint8 value )
         {
@@ -115,7 +115,7 @@ SW_TEST_CASE( AutomationGoldenTest, RecordMissingWritesOnlyMissing )
     SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, false, GoldenResult::Fail, GoldenWriteMode::Missing ) == GoldenAction::FailUnreadable );
 }
 
-/** @brief [AutomationGoldenTest] 정책은 칸 여섯이 모두 있어야 하고 범위 안이어야 한다 — 기본값으로 떨어지지 않는다 */
+/** @brief [AutomationGoldenTest] 정책은 칸 일곱이 모두 있어야 하고 범위 안이어야 한다 — 기본값으로 떨어지지 않는다 */
 SW_TEST_CASE( AutomationGoldenTest, PolicyNeedsEveryField )
 {
     const expected<AutomationGoldenPolicy> policy = AutomationGoldenUtil::parsePolicy( Util::kPolicyText, "test" );
@@ -123,11 +123,12 @@ SW_TEST_CASE( AutomationGoldenTest, PolicyNeedsEveryField )
     SW_EXPECT_EQUAL( 96u, policy->_measure._deepMinDistance );
     SW_EXPECT_EQUAL( 16u, policy->_limits._maxDeepRegionPixels );
     SW_EXPECT_NEAR( 0.5, policy->_nearLimitRatio, 0.0 );
+    SW_EXPECT_EQUAL( 16u, policy->_advanceDrawnFrames );
 
     SW_EXPECT_LOG( "JSON.MissingMember" );
     SW_EXPECT_FALSE( AutomationGoldenUtil::parsePolicy( R"({ "_differingMinDistance": 12 })", "test" ).has_value() );
     const string outOfRange =
-        R"({ "_differingMinDistance": 12, "_deepMinDistance": 8, "_maxDifferingFraction": 0.01, "_maxMeanDistance": 0.005, "_maxDeepRegionPixels": 16, "_nearLimitRatio": 0.5 })";
+        R"({ "_differingMinDistance": 12, "_deepMinDistance": 8, "_maxDifferingFraction": 0.01, "_maxMeanDistance": 0.005, "_maxDeepRegionPixels": 16, "_nearLimitRatio": 0.5, "_advanceDrawnFrames": 16 })";
     SW_EXPECT_FALSE( AutomationGoldenUtil::parsePolicy( outOfRange, "test" ).has_value() );
 }
 

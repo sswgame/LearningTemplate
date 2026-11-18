@@ -22,7 +22,7 @@ namespace sw
         BackgroundHold, ///< 앞 실행이 남긴 백그라운드 작업(저장 검증 · 색인 …)이 시계를 붙잡은 프레임
         ConditionHold,  ///< `<WaitUntil>` · `<Screenshot>` 같은 조건 대기가 시계를 붙잡은 프레임(조건이 참이 될 때까지)
         StepRan,        ///< 단계가 하나 이상 돈 프레임
-        ScheduledWait,  ///< 돌 단계 없이 `<Wait frames>` 만 흘린 프레임 — 고정 프레임 대기다
+        ScheduledWait,  ///< 돌 단계 없이 그리며 흘린 프레임 — `<AdvanceSimulation render="true">` 와 그리지 않는 진행의 그리는 끝 프레임이다
         SimulationOnly, ///< 그리지 않고 진행한 프레임(`SimulationOnlyFrameQueue` — `<AdvanceSimulation>`). 대기와 같이 단계 앞 대기에 쌓인다
     };
 

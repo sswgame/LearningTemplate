@@ -65,6 +65,21 @@ SW_TEST_CASE( ScenarioFilesTest, AdvanceSimulationNeedsAFixedFrameTime )
     SW_EXPECT_FALSE( scenario.isAdvanceSimulationFrame( 3 ) );
 }
 
+// `render="true"` 는 모든 프레임을 그리는 진행이다 - 프레임 수는 같고 그리지 않는 구간을 두지 않는다. 옛 `<Wait>` 는 읽기 오류다(대신 쓸 요소를 알린다).
+SW_TEST_CASE( ScenarioFilesTest, RenderedAdvanceKeepsEveryFrameAndWaitIsGone )
+{
+    AutomationScenario scenario;
+    SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.advance\" fixedDelta=\"0.0166667\"><Expect watch=\"Scene.Transitioning\" equals=\"0\"/><AdvanceSimulation frames=\"3\" render=\"true\"/><Pass/></Scenario>",
+                                     "test.scenario.xml" )
+                         .has_value() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, scenario.getSteps().size() );
+    SW_EXPECT_EQUAL( scenario.getSteps()[0]._frameIndex + 3u, scenario.getSteps()[1]._frameIndex );
+    SW_EXPECT_FALSE( scenario.isAdvanceSimulationFrame( 1 ) );
+    SW_EXPECT_FALSE( scenario.isAdvanceSimulationFrame( 2 ) );
+    SW_EXPECT_FALSE( scenario.parse( "<Scenario name=\"test.advance\" fixedDelta=\"0.0166667\"><AdvanceSimulation frames=\"3\" render=\"maybe\"/><Pass/></Scenario>", "test.scenario.xml" ).has_value() );
+    SW_EXPECT_FALSE( scenario.parse( "<Scenario name=\"test.wait\" fixedDelta=\"0.0166667\"><Wait frames=\"3\"/><Pass/></Scenario>", "test.scenario.xml" ).has_value() );
+}
+
 namespace ScenarioFilesTestUtil
 {
     /** @brief `<WaitUntil>` 한 줄(@p attributes 는 watch · 시한 뒤에 붙는 비교)을 읽어 실행기와 같은 단계 검사에 넣습니다. */

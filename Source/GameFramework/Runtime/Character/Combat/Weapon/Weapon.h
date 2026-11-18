@@ -217,7 +217,9 @@ namespace sw
         int32               getReserveAmmo() const { return _reserveAmmo; }
         float32             getCurrentSpread() const { return _currentSpread; }
         bool                isReloading() const { return _reload.isActive(); }
-        float32             getReloadRemaining() const { return _reload.getRemaining(); }
+        /** @brief 연사 쿨다운이 남았으면 true 입니다(다음 발까지 기다린다). */
+        bool    isCoolingDown() const { return _cooldown.isActive(); }
+        float32 getReloadRemaining() const { return _reload.getRemaining(); }
 
         /**
          * @brief 무기 정의 id, 장전한 탄 id, 난수, 쿨다운, 장전, 퍼짐, 탄창, 예비탄을 씁니다. 정의와 조합은 `equip` · `loadProjectile` 의 것이라 id 만 싣고, 읽을 때 지금 것과 id 가 다르면 거절합니다.

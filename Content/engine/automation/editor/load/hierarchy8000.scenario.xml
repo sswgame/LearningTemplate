@@ -73,7 +73,7 @@
 	<EditorKey key="Escape"/>
 	<EditorWaitStable/>
 	<Store watch="Editor.HierarchyRowRebuildCount" as="flatRows"/>
-	<Wait frames="120"/>
+	<AdvanceSimulation frames="120" render="true"/>
 	<Record watch="Editor.HierarchyRowRebuildCount"/>
 	<Expect watch="Editor.HierarchyRowRebuildCount" sameAs="flatRows"/>
 	<!-- 전체 선택(Ctrl+A) — 그 프레임의 시간은 느린 프레임 트레이스가 남긴다 -->
@@ -173,7 +173,7 @@
 	<EditorKey key="Escape"/>
 	<EditorWaitStable/>
 	<Store watch="Editor.HierarchyRowRebuildCount" as="treeRows"/>
-	<Wait frames="120"/>
+	<AdvanceSimulation frames="120" render="true"/>
 	<Record watch="Editor.HierarchyRowRebuildCount"/>
 	<Expect watch="Editor.HierarchyRowRebuildCount" sameAs="treeRows"/>
 	<EditorKey key="Ctrl+A"/>
