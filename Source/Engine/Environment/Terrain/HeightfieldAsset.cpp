@@ -30,14 +30,6 @@ namespace sw
         return _listHeight.size() == sampleCount && ( _listHoleCell.empty() || _listHoleCell.size() == cellCount );
     }
 
-    bool HeightfieldAsset::isHoleCell( uint32 cellX, uint32 cellZ ) const
-    {
-        const bool bNoHoleAtCell = _listHoleCell.empty() || cellX + 1 >= _resolution || cellZ + 1 >= _resolution;
-        if ( bNoHoleAtCell )
-            return false;
-        return _listHoleCell[static_cast<size_t>( cellZ ) * ( _resolution - 1 ) + cellX] != 0;
-    }
-
     bool HeightfieldAsset::loadFromMemory( const vector<uint8>& bytes, string_view sourceName )
     {
         using Internal = HeightfieldAssetInternal;

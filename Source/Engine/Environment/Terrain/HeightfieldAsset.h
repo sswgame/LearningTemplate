@@ -51,8 +51,6 @@ namespace sw
         bool isValid() const;
         /** @brief 샘플 (x, z) 의 원시 높이입니다. */
         uint16 getSample( uint32 sampleX, uint32 sampleZ ) const { return _listHeight[static_cast<size_t>( sampleZ ) * _resolution + sampleX]; }
-        /** @brief 셀 (x, z) 가 구멍이면 true 를 반환합니다. */
-        bool isHoleCell( uint32 cellX, uint32 cellZ ) const;
 
         /** @brief 바이트 배열에서 읽습니다. 형식이 틀리면 이유를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromMemory( const vector<uint8>& bytes, string_view sourceName );
