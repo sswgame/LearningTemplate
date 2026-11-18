@@ -1,15 +1,15 @@
 {
     "backend": "vk",
     "platform": "windows",
-    "commit": "e87779f0560893b070b2af0af157267955c66bbc-dirty",
-    "recordedUnixMs": 1794927578100,
+    "commit": "0e849fb0f35c93c909e1f055c13bb00658d79359-dirty",
+    "recordedUnixMs": 1795012804996,
     "reason": "failed",
     "width": 160,
     "height": 90,
     "previousDifference": {
-        "differingFraction": 0.02423611111111111,
-        "meanDistance": 0.0033366013071895423,
-        "largestDeepRegionPixels": 110
+        "differingFraction": 0.07583333333333334,
+        "meanDistance": 0.011700163398692811,
+        "largestDeepRegionPixels": 300
     },
     "limits": {
         "maxDifferingFraction": 0.01,
