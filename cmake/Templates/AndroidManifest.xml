@@ -3,7 +3,7 @@
   Android 앱 매니페스트 틀 — `py -3 -m Scripts android-apk` 가 달러 · 중괄호 자리를 Config/Environment/android_package.json 과 프리셋 값으로 채워 aapt2 에 넘긴다.
   Java 코드가 없는 NativeActivity 앱이다(hasCode=false) — 시스템의 android.app.NativeActivity 가 lib_name 의 lib<이름>.so 를 열고 android_main 을 부른다(Source/App/Android/AndroidMain.cpp).
   configChanges 는 회전 · 크기 바뀜에 액티비티를 다시 만들지 않고 창 크기 바뀜으로 받는다(CallbackInputWindow::applyPlatformResize).
-  Vulkan 1.2 가 필수다(docs/PlatformTargets.md 요구 판) — 못 주는 기기는 스토어가 거른다.
+  Vulkan 1.2 가 필수다(docs/agents/Platform.md 요구 판) — 못 주는 기기는 스토어가 거른다.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="${applicationId}"

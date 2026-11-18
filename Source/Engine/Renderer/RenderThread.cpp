@@ -124,7 +124,7 @@ namespace sw
     } // namespace
 
     // 전용 렌더 스레드를 쓸지 정한다(false 면 게임 스레드가 바로 제출한다). 읽는 곳은 이 파일뿐이다(`attach` 와 `submit`).
-    // 웹은 끈다 — 브라우저의 WebGPU 장치는 만든 스레드(메인)에서만 쓸 수 있다(JS 객체는 워커를 넘지 못한다, docs/PlatformTargets.md).
+    // 웹은 끈다 — 브라우저의 WebGPU 장치는 만든 스레드(메인)에서만 쓸 수 있다(JS 객체는 워커를 넘지 못한다, docs/agents/Platform.md).
 #if defined( SW_PLATFORM_WEB )
     constexpr bool kUseRenderThreadByDefault = false;
 #elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )

@@ -467,7 +467,7 @@ namespace sw
         {
             if ( wgpuAdapterHasFeature( _adapter, feature ) == false )
             {
-                SW_LOG_ERROR_ID( "WebGPU.RequiredFeatureMissing", "WebGPU: the adapter lacks a required feature (%#) - see docs/PlatformTargets.md", static_cast<uint32>( feature ) );
+                SW_LOG_ERROR_ID( "WebGPU.RequiredFeatureMissing", "WebGPU: the adapter lacks a required feature (%#) - see docs/agents/Platform.md", static_cast<uint32>( feature ) );
                 _initResult = RHIInitResult::DriverUnsupported;
                 return false;
             }

@@ -671,7 +671,7 @@ namespace sw
             return RHITransferSubmit::rejected();
         if ( bDepth && pRecord->_wgpuFormat != WGPUTextureFormat_Depth32FloatStencil8 && pRecord->_wgpuFormat != WGPUTextureFormat_Depth32Float )
         {
-            // depth24plus 는 복사 원본이 될 수 없다(명세) — 이 장치는 depth32float-stencil8 이 없다(docs/PlatformTargets.md).
+            // depth24plus 는 복사 원본이 될 수 없다(명세) — 이 장치는 depth32float-stencil8 이 없다(docs/agents/Platform.md).
             SW_LOG_ERROR_ID( "WebGPU.DepthReadbackUnsupported", "WebGPU: depth readback needs depth32float-stencil8, which this device lacks" );
             return RHITransferSubmit::rejected();
         }

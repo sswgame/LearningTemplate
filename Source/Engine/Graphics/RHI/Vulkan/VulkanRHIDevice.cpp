@@ -1257,7 +1257,7 @@ namespace sw
         properties2.pNext = &indexing;
         vkGetPhysicalDeviceProperties2( device, &properties2 );
 
-        // 텍스처 세트(set 1)의 두 배열이 쓰는 기능 · 한도다(createDescriptorResources). 데스크톱 드라이버는 모두 넘고, 모바일은 장치마다 다르다(docs/PlatformTargets.md).
+        // 텍스처 세트(set 1)의 두 배열이 쓰는 기능 · 한도다(createDescriptorResources). 데스크톱 드라이버는 모두 넘고, 모바일은 장치마다 다르다(docs/agents/Platform.md).
         const bool bFeatures = features12.runtimeDescriptorArray == VK_TRUE && features12.descriptorBindingPartiallyBound == VK_TRUE &&
                                features12.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE && features12.descriptorBindingStorageImageUpdateAfterBind == VK_TRUE &&
                                features12.shaderSampledImageArrayNonUniformIndexing == VK_TRUE;

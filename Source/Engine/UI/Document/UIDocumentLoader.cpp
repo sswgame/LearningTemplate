@@ -413,7 +413,7 @@ namespace sw
         UIDocumentAsset asset{};
         asset._path = Internal::normalizeDocumentPath( path );
 
-        // 리소스 글의 한 길(조건 · 층)을 지난다 — 예전에는 원문을 바로 읽어 `_when="screen.compact"` 가 풀리지 않았다(`docs/PlatformTargets.md`).
+        // 리소스 글의 한 길(조건 · 층)을 지난다 — 예전에는 원문을 바로 읽어 `_when="screen.compact"` 가 풀리지 않았다(`docs/agents/Platform.md`).
         string flatText;
         bool   bComposed = false;
         if ( ResourceComposer::compose( sourceText, path, composeContext, flatText, bComposed ) == false )

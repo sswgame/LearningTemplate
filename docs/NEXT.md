@@ -2,7 +2,7 @@
 
 > 질문: 무엇이 남았고 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: 할 일 목록은 이 문서 하나다. **남은 일**만 적고 끝나면 줄을 지운다(끝난 일은 git 기록에). 판단은 [DesignBacklog](DesignBacklog.md), 플랫폼 판정은 [PlatformTargets](PlatformTargets.md), 규칙은 CLAUDE.md · AGENTS.md · `docs/agents/` · 스킬에 있다.
+> 결론: 할 일 목록은 이 문서 하나다. **남은 일**만 적고 끝나면 줄을 지운다(끝난 일은 git 기록에). 판단은 [DesignBacklog](DesignBacklog.md), 플랫폼 판정은 [Platform](agents/Platform.md), 규칙은 CLAUDE.md · AGENTS.md · `docs/agents/` · 스킬에 있다.
 
 절차의 정본은 스킬이다: 묶음 끝 검증 · push `preflight`, Linux `linux-verify`, 시나리오 실패 `scenario-debug`. 시나리오 체계는 `Test/README.md`, 사람이 보는 실행은 `py -3 Scripts/dev/watch_scenarios.py`. 코드 주석의 `감사 <ID>` 가 가리키는 닫힌 항목은 `git log --grep '감사 <ID>'`(앞 커밋 몇은 `<ID>` 만 — `git log --grep '<ID>'`)로 찾는다.
 
@@ -32,7 +32,7 @@
 - **Linux `editor.screenrectview` 골든:** 2026-11-13 · 11-18 두 번 모두 정확히 1.09375 % (허용 1 %) — `all`(체인 넷 동시)에서만 진다. 앞 142 단계를 붙인 이분 탐색(혼자 도는 체인)은 통과. 부하에 따른 정착 차이로 본다 — 다시 지면 `/tmp/lt.chain.editor.out` 과 화소 자리(`scenario_bisect --golden-margins`)로 어느 화소인지 보고 그 사진 앞 대기를 정착 조건으로 바꾼다.
 - 흔들리는 게임 골든: 다시 지면 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다.
 
-## 3. 플랫폼 (판정 · 요구 판은 [PlatformTargets](PlatformTargets.md))
+## 3. 플랫폼 (판정 · 요구 판은 [Platform](agents/Platform.md))
 
 순서: 웹부터(언리얼은 웹을 내렸고 Godot 웹은 GL Compatibility 만이라 WebGPU 길은 참고할 상용 사례가 적다).
 

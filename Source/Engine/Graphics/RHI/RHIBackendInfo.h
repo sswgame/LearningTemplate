@@ -110,7 +110,7 @@ namespace sw
         }
 
         /**
-         * @brief WebGPU 의 능력입니다. bindless 는 DX11 · GL 과 같은 고정 슬롯 에뮬이고, 멀티 드로우 · 와이어프레임 · 병렬 기록이 없다(docs/PlatformTargets.md 의 표).
+         * @brief WebGPU 의 능력입니다. bindless 는 DX11 · GL 과 같은 고정 슬롯 에뮬이고, 멀티 드로우 · 와이어프레임 · 병렬 기록이 없다(docs/agents/Platform.md 의 표).
          * @details 장치는 만든 스레드에서만 쓴다 — 브라우저의 JS 객체는 워커를 넘지 못한다. GPU 컬링은 컴퓨트가 간접 인자를 저장 버퍼로 쓰고 같은 버퍼를 간접 드로우로 읽는다
          *          (WebGPU 는 한 버퍼에 Storage | Indirect 를 같이 준다 — DX11 이 컬링을 끈 까닭이 없다). 웨이브 연산은 쿠킹이 뺀다(`SW_NO_WAVE_OPS`).
          */

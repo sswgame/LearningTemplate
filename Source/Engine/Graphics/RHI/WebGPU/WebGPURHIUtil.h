@@ -1,7 +1,7 @@
 /**
  * @file WebGPURHIUtil.h
  * @brief WebGPU 백엔드 조각들이 함께 쓰는 변환 표 · 글 뷰 도우미입니다(형식 · 블렌드 · 비교 · 스텐실 · 위상 · 정점 형식).
- * @details 헤더는 `webgpu/webgpu.h`(webgpu-headers — Dawn 과 Emscripten 의 emdawnwebgpu 포트가 같은 헤더를 낸다)다. 판은 붙일 때 고정한다(docs/PlatformTargets.md):
+ * @details 헤더는 `webgpu/webgpu.h`(webgpu-headers — Dawn 과 Emscripten 의 emdawnwebgpu 포트가 같은 헤더를 낸다)다. 판은 붙일 때 고정한다(docs/agents/Platform.md):
  *          콜백 모양(콜백 정보 구조체 + userdata 둘)과 `WGPUStringView` 는 2025 년 판 기준이다(기억). 판이 바뀌면 이 파일과 콜백을 받는 자리만 고친다.
  */
 #pragma once
