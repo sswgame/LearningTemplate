@@ -82,6 +82,8 @@ namespace sw
         static constexpr uint32 kMaxLayerCount = CollisionLayers::kLayerCount;
         /** @brief 2D 일꾼 수의 상한입니다(`_workerCount2D`). Box2D 의 상한(`B2_MAX_WORKERS`)보다 작다. */
         static constexpr uint32 kMaxWorkerCount2D = 16;
+        /** @brief 3D 캐릭터 일괄 이동 청크 수의 상한입니다(`_characterChunkCount`). */
+        static constexpr uint32 kMaxCharacterChunkCount = 64;
 
         PROPERTY( Tooltip = "3D gravity", Units = "m/s2" )
         float3 _gravity{ 0.0f, -constant::physics::kDefaultGravity, 0.0f };
@@ -115,6 +117,17 @@ namespace sw
          */
         PROPERTY( Min = 1, Tooltip = "Bytes of the per-scene temporary block (step, character moves, soft bodies); overflow falls back to the heap with a warning" )
         uint32 _tempAllocatorBytes{ 0 };
+        /**
+         * @brief 3D 캐릭터 일괄 이동(`moveCharacters`)을 나누는 청크 수입니다 — 청크마다 임시 블록(`_characterChunkTempBytes`)을 하나씩 둔다(감사 S-8).
+         * @details 청크는 작업 풀의 병렬 for 가 나눠 돈다. 워커보다 넉넉히 두면 무거운 캐릭터(모여 서로 미는 무리)가 한 청크에 몰려도 다른 워커가 나머지를 가져간다.
+         *          결과는 청크 수와 관계없이 같다(캐릭터끼리는 단계 앞 사본을 보고, 바디에 주는 힘은 단계 끝에 목록 차례로 준다 — `PhysicsCharacterTest.BatchMoveEqualsOneByOne`).
+         *          측정하는 법은 부하 시나리오 `load/charactermove`(워커 1 · 4 · 8).
+         */
+        PROPERTY( Min = 1, Max = kMaxCharacterChunkCount, Tooltip = "Chunks a 3D scene splits a character batch move into; each chunk owns a temporary block" )
+        uint32 _characterChunkCount{ 16 };
+        /** @brief 캐릭터 이동 청크 하나의 임시 블록 크기(바이트)입니다. 넘치면 힙으로 이어 가며 씬 임시 블록과 같은 카운터 · 경고로 알린다(`JoltTempAllocator`). */
+        PROPERTY( Min = 1, Tooltip = "Bytes of each character-move chunk's temporary block; overflow falls back to the heap with a warning" )
+        uint32 _characterChunkTempBytes{ 262144 };
         /** @brief 한 씬의 모든 파괴 오브젝트가 함께 드는 떨어진 덩어리 바디의 상한입니다. 넘으면 씬 전체에서 작은 것 · 오래된 것부터 사라진다(`DebrisBudget`). 0 이면 `validate` 가 오류다. */
         PROPERTY( Min = 1, Tooltip = "Most falling destruction debris bodies one scene keeps; past it the smallest, oldest pieces scene-wide fade out" )
         uint32 _maxDebrisBodyCount{ 0 };

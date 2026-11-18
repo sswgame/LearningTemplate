@@ -61,6 +61,12 @@ namespace sw
             SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsSettingsAskD", "Physics settings ask for %# 2D workers - use 1 to %#", _workerCount2D, kMaxWorkerCount2D );
             bValid = false;
         }
+        if ( _characterChunkCount == 0 || _characterChunkCount > kMaxCharacterChunkCount || _characterChunkTempBytes == 0 )
+        {
+            SW_LOG_ERROR_ID( "PhysicsSettings.CharacterChunks", "Physics settings ask for %# character chunks of %# bytes - use 1 to %# chunks and a positive size",
+                             _characterChunkCount, _characterChunkTempBytes, kMaxCharacterChunkCount );
+            bValid = false;
+        }
         // 3D 씬 용량은 데이터가 정한다 — 코드 기본값으로 채우지 않는다(감사 S-2).
         if ( _maxBodyCount == 0 || _maxBodyPairCount == 0 || _maxContactCount == 0 || _tempAllocatorBytes == 0 || _maxDebrisBodyCount == 0 )
         {
