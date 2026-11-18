@@ -26,7 +26,7 @@ namespace sw
         return isVoiceAudio( assetID ) ? VisemeTrack::makePathForAudio( assetID ) : string{};
     }
 
-    uint32 LipSyncImport::importAll( const string& resourceRoot, const LipSyncSettings& settings, uint32& outFailedCount )
+    uint32 LipSyncImport::importAll( const string& resourceRoot, const string& outputRoot, const LipSyncSettings& settings, uint32& outFailedCount )
     {
         IVoiceDecoder* const pDecoder = IVoiceDecoder::find();
         if ( pDecoder == nullptr )
@@ -60,9 +60,9 @@ namespace sw
             }
             VisemeTrack track;
             VisemeTrack::analyze( listSample, sampleRate, settings, track );
-            const string                 trackPath = VisemeTrack::makePathForAudio( normalized );
+            const string                 trackPath = VisemeTrack::makePathForAudio( outputRoot.empty() ? normalized : FileUtil::joinPath( outputRoot, relative ) );
             const optional<AbsolutePath> trackFile = FileUtil::requireAbsolutePath( trackPath );
-            if ( trackFile.has_value() == false || track.saveToFile( *trackFile ) == false )
+            if ( trackFile.has_value() == false || FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( trackPath ) ) == false || track.saveToFile( *trackFile ) == false )
             {
                 SW_LOG_ERROR_ID( "LipSync.WriteFailed", "Lip sync import could not write '%#'", trackPath.c_str() );
                 ++outFailedCount;

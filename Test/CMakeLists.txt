@@ -168,12 +168,12 @@ add_test(NAME Tool.WriteReflectionDocs
 	COMMAND $<TARGET_FILE:App> --write-reflection-docs=${CMAKE_BINARY_DIR}/Testing/ReflectionDocs -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Tool.WriteReflectionDocs.log
 	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 set_tests_properties(Tool.WriteReflectionDocs PROPERTIES LABELS nogpu TIMEOUT 300)
-# 립싱크 임포트: 커밋된 음성의 트랙을 다시 쓰고 되돌린다(`Tool/RunImportLipSync.cmake`). 소스 트리의 트랙을 잠깐 고쳐 쓰므로 혼자 돈다(그 트랙을 읽는 시나리오와 겹치지 않게).
+# 립싱크 임포트: 트랙을 소스 트리가 아니라 `Testing/` 아래 출력 폴더(`-lipsync-dir`)에 쓴다(`Tool/RunImportLipSync.cmake`).
 add_test(NAME Tool.ImportLipSync
-	COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DCONTENT_DIR=${CMAKE_SOURCE_DIR}/Content" "-DBACKUP_DIR=${CMAKE_BINARY_DIR}/Testing/LipSyncBackup"
-		"-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs" -P "${CMAKE_CURRENT_SOURCE_DIR}/Tool/RunImportLipSync.cmake"
+	COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DOUT_DIR=${CMAKE_BINARY_DIR}/Testing/LipSync" "-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs"
+		-P "${CMAKE_CURRENT_SOURCE_DIR}/Tool/RunImportLipSync.cmake"
 	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-set_tests_properties(Tool.ImportLipSync PROPERTIES LABELS nogpu TIMEOUT 300 RUN_SERIAL TRUE)
+set_tests_properties(Tool.ImportLipSync PROPERTIES LABELS nogpu TIMEOUT 300)
 # 리타깃 베이크: 커밋된 프로필로 임포트한 기사 클립 하나를 굽는다(`Tool/RunBakeRetarget.cmake`).
 add_test(NAME Tool.BakeRetarget
 	COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DCONTENT_DIR=${CMAKE_SOURCE_DIR}/Content" "-DOUT_DIR=${CMAKE_BINARY_DIR}/Testing/Retarget"

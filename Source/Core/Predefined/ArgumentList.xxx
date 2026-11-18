@@ -134,7 +134,9 @@ SW_REGISTER_ARGUMENT( IMPORT_MODELS, false, false, "import-models" )
 SW_REGISTER_ARGUMENT( CHECK_MODELS, false, false, "check-models" )
 
 // 음성(`voice/` 폴더의 .wav · .ogg)을 분석해 곁에 비즘 트랙(`.visemes.xml`)을 쓴다 — 립싱크 오프라인 분석(엔진 일, 헤드리스).
+// `-lipsync-dir` 을 주면 곁이 아니라 그 폴더 아래 같은 리소스 상대 경로에 쓴다(소스 트리를 건드리지 않는 실행 — ctest `Tool.ImportLipSync`)
 SW_REGISTER_ARGUMENT( IMPORT_LIPSYNC, false, false, "import-lipsync" )
+SW_REGISTER_ARGUMENT( LIPSYNC_DIR, CommandLineDiskPath{}, false, "lipsync-dir" )
 
 // 리타깃 베이크. 값은 `<프로필 *.retarget.xml>,<원본 .animclip>,<출력 .animclip>` 이다. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 베이크하고 끝낸다(헤드리스).
 SW_REGISTER_ARGUMENT( BAKE_RETARGET, "", false, "bake-retarget" )
