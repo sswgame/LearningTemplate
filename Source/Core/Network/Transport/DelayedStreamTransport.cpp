@@ -13,7 +13,7 @@
 namespace sw
 {
     DelayedStreamTransport::DelayedStreamTransport( unique_ptr<IStreamTransport> pInner, float64 sendDelaySeconds )
-        : _pInner{ std::move( pInner ) }
+        : StreamTransportDecorator{ std::move( pInner ) }
         , _delayNanoseconds{ sendDelaySeconds > 0.0 ? MonotonicClock::secondsToNanoseconds( sendDelaySeconds ) : 0 }
         , _mutex{}
         , _listItem{}

@@ -16,28 +16,22 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Network/Transport/StreamTransportDecorator.h"
 #include "Core/Network/Transport/WebSocketProtocol.h"
 
 namespace sw
 {
-    class SW_API WebSocketAcceptTransport final : public IStreamTransport
+    class SW_API WebSocketAcceptTransport final : public StreamTransportDecorator
     {
     public:
         /** @param pInner 감쌀 전송(소유권을 받는다 — 보통 `StreamTransportFactory::createPlatformTransport()`). */
         explicit WebSocketAcceptTransport( unique_ptr<IStreamTransport> pInner );
         ~WebSocketAcceptTransport() override;
 
-        [[nodiscard]] bool     initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override;
-        void                   shutdown() override { _pInner->shutdown(); }
-        [[nodiscard]] bool     listen( const NetAddress& bindAddress ) override { return _pInner->listen( bindAddress ); }
-        uint16                 getListenPort() const override { return _pInner->getListenPort(); }
-        StreamConnectionHandle connect( const NetAddress& remote ) override { return _pInner->connect( remote ); }
-        StreamSendResult       send( StreamConnectionHandle handle, const uint8* pData, int32 size ) override;
-        void                   close( StreamConnectionHandle handle, StreamCloseMode mode ) override;
-        void                   setReceivePaused( StreamConnectionHandle handle, bool bPaused ) override { _pInner->setReceivePaused( handle, bPaused ); }
-        int32                  pollIO( int32 timeoutMilli ) override { return _pInner->pollIO( timeoutMilli ); }
-        NetAddress             getRemoteAddress( StreamConnectionHandle handle ) const override { return _pInner->getRemoteAddress( handle ); }
-        StreamTransportStats   getStats() const override { return _pInner->getStats(); }
+        // 덮어쓰지 않은 함수(shutdown · listen · connect · pollIO · getRemoteAddress · getStats …)는 기반이 안쪽 전송에 그대로 넘긴다.
+        [[nodiscard]] bool initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override;
+        StreamSendResult   send( StreamConnectionHandle handle, const uint8* pData, int32 size ) override;
+        void               close( StreamConnectionHandle handle, StreamCloseMode mode ) override;
 
     private:
         /** @brief 받은 연결의 갈래입니다. 받기 길(한 연결에 한 스레드씩)만 바꾸고, 바꿀 때는 그 연결의 보내기 잠금을 쥔다. */
@@ -88,7 +82,6 @@ namespace sw
         StreamSendResult sendFrameLocked( StreamConnectionHandle handle, WebSocketFrameKind kind, const uint8* pData, int32 size );
 
     private:
-        unique_ptr<IStreamTransport>                  _pInner;
         InnerHandler                                  _innerHandler;
         IStreamHandler*                               _pHandler;
         int32                                         _maxQueuedSendBytes;

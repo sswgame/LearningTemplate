@@ -8,7 +8,7 @@
 namespace sw
 {
     ProxyProtocolAcceptTransport::ProxyProtocolAcceptTransport( unique_ptr<IStreamTransport> pInner, vector<uint32> listTrustedProxy )
-        : _pInner{ std::move( pInner ) }
+        : StreamTransportDecorator{ std::move( pInner ) }
         , _innerHandler{ *this }
         , _pHandler{ nullptr }
         , _listTrustedProxy{ std::move( listTrustedProxy ) }

@@ -14,10 +14,11 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Network/Transport/StreamTransportDecorator.h"
 
 namespace sw
 {
-    class SW_API ProxyProtocolAcceptTransport final : public IStreamTransport
+    class SW_API ProxyProtocolAcceptTransport final : public StreamTransportDecorator
     {
     public:
         /**
@@ -27,17 +28,9 @@ namespace sw
         ProxyProtocolAcceptTransport( unique_ptr<IStreamTransport> pInner, vector<uint32> listTrustedProxy );
         ~ProxyProtocolAcceptTransport() override;
 
-        [[nodiscard]] bool     initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override;
-        void                   shutdown() override { _pInner->shutdown(); }
-        [[nodiscard]] bool     listen( const NetAddress& bindAddress ) override { return _pInner->listen( bindAddress ); }
-        uint16                 getListenPort() const override { return _pInner->getListenPort(); }
-        StreamConnectionHandle connect( const NetAddress& remote ) override { return _pInner->connect( remote ); }
-        StreamSendResult       send( StreamConnectionHandle handle, const uint8* pData, int32 size ) override { return _pInner->send( handle, pData, size ); }
-        void                   close( StreamConnectionHandle handle, StreamCloseMode mode ) override { _pInner->close( handle, mode ); }
-        void                   setReceivePaused( StreamConnectionHandle handle, bool bPaused ) override { _pInner->setReceivePaused( handle, bPaused ); }
-        int32                  pollIO( int32 timeoutMilli ) override { return _pInner->pollIO( timeoutMilli ); }
-        NetAddress             getRemoteAddress( StreamConnectionHandle handle ) const override;
-        StreamTransportStats   getStats() const override { return _pInner->getStats(); }
+        // 덮어쓰지 않은 함수(shutdown · listen · connect · send · close · pollIO · getStats …)는 기반이 안쪽 전송에 그대로 넘긴다.
+        [[nodiscard]] bool initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override;
+        NetAddress         getRemoteAddress( StreamConnectionHandle handle ) const override;
 
         /** @brief @p address 가 신뢰 프록시면 true 입니다. */
         [[nodiscard]] bool isTrustedProxy( const NetAddress& address ) const;
@@ -76,7 +69,6 @@ namespace sw
         shared_ptr<Connection> findConnection( StreamConnectionHandle handle ) const;
 
     private:
-        unique_ptr<IStreamTransport>                  _pInner;
         InnerHandler                                  _innerHandler;
         IStreamHandler*                               _pHandler;
         vector<uint32>                                _listTrustedProxy;
