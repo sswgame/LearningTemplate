@@ -142,9 +142,11 @@ SW_TEST_CASE( PrimitiveRegistryTest, MeshSlotsStayFixedAndFreedSlotIsReused )
         SW_REQUIRE_TRUE( pMesh->getPrimitiveIndex() != ScenePrimitive::kInvalidPrimitiveIndex );
         listSlot.push_back( pMesh->getPrimitiveIndex() );
     }
-    const uint64   layoutBefore = registry.getLayoutGeneration();
-    vector<uint32> listStateSlot;
-    vector<uint32> listTransformSlot;
+    const uint64 layoutBefore = registry.getLayoutGeneration();
+    // 칸마다 들어온 차례 — 칸을 다시 쓰면 그 칸만 바뀐다(칸에 묶인 GPU 상태가 지난 물체를 이어받지 않는 근거).
+    const vector<uint32> listSerialBefore = registry.getPrimitiveSerials();
+    vector<uint32>       listStateSlot;
+    vector<uint32>       listTransformSlot;
     registry.consumeDirty( listStateSlot, listTransformSlot );
 
     // 둘째를 지운다 — 나머지는 번호가 그대로이고, 지운 칸 하나만 더티다.
@@ -176,6 +178,32 @@ SW_TEST_CASE( PrimitiveRegistryTest, MeshSlotsStayFixedAndFreedSlotIsReused )
     SW_EXPECT_EQUAL( listSlot[0], listMesh[0]->getPrimitiveIndex() );
     SW_EXPECT_EQUAL( listSlot[3], listMesh[3]->getPrimitiveIndex() );
     SW_EXPECT_EQUAL( layoutBefore, registry.getLayoutGeneration() );
+    SW_EXPECT_TRUE( registry.getPrimitiveSerials()[removedSlot] != listSerialBefore[removedSlot] );
+    SW_EXPECT_EQUAL( listSerialBefore[listSlot[0]], registry.getPrimitiveSerials()[listSlot[0]] );
+    SW_EXPECT_EQUAL( listSerialBefore[listSlot[3]], registry.getPrimitiveSerials()[listSlot[3]] );
+}
+
+/**
+ * @brief [PrimitiveRegistryTest] 지운 배치의 항목 칸을 다른 배치가 받으면 그 칸들의 차례가 바뀌고, 다른 배치의 차례는 그대로다
+ * @details 칸 순 GPUScene 의 칸 상태(인스턴스 LOD 전환)는 차례가 다르면 처음부터 한다(gpu_cull.hlsl) — 같은 칸에 같은 메시가 다시 와도 지난 물체의 전환을 이어받지 않는다.
+ */
+SW_TEST_CASE( PrimitiveRegistryTest, ReusedEntrySlotGetsNewSerial )
+{
+    PrimitiveRegistry                     registry;
+    vector<unique_ptr<MeshInstanceBatch>> listBatch;
+    for ( uint32 batchIndex = 0; batchIndex < 3; ++batchIndex )
+        listBatch.push_back( make_unique<MeshInstanceBatch>( nullptr, nullptr, nullptr, 4u, MeshInstanceWriter::CPU ) );
+    registry.addInstanceBatch( listBatch[0].get() );
+    registry.addInstanceBatch( listBatch[1].get() );
+    const uint32 firstOfRemoved = listBatch[0]->getFirstEntrySlot();
+    const uint32 serialBefore   = registry.getInstanceEntries()[firstOfRemoved]._serial;
+    const uint32 otherSerial    = registry.getInstanceEntries()[listBatch[1]->getFirstEntrySlot()]._serial;
+
+    registry.removeInstanceBatch( listBatch[0].get() );
+    registry.addInstanceBatch( listBatch[2].get() ); // 같은 크기 — 비운 구간을 받는다
+    SW_REQUIRE_EQUAL( firstOfRemoved, listBatch[2]->getFirstEntrySlot() );
+    SW_EXPECT_TRUE( registry.getInstanceEntries()[firstOfRemoved]._serial != serialBefore );
+    SW_EXPECT_EQUAL( otherSerial, registry.getInstanceEntries()[listBatch[1]->getFirstEntrySlot()]._serial );
 }
 
 namespace

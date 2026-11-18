@@ -515,7 +515,9 @@ namespace sw
         /** @brief 모든 슬롯을 다시 채우고(임계값을 넘으면 병렬) 지난 프레임과 칸마다 비교한 뒤 칸 표를 새로 씁니다(후보 번호 = 칸 번호). */
         [[nodiscard]] MeshCollectResult collectAllCandidates( const MeshCollectInput& input );
         /** @brief 전체 수집이 남긴 칸 표시로 칸 표를 새로 쓰고(옮기지 않는다 — 실리지 않은 칸은 구멍), 지난 프레임과 같은지를 하나로 줄입니다(직렬 구간). */
-        [[nodiscard]] MeshCollectResult compactCollectedCandidates( uint32 primitiveCount, bool bPrevAligned );
+        [[nodiscard]] MeshCollectResult compactCollectedCandidates( const MeshCollectInput& input, uint32 primitiveCount, bool bPrevAligned );
+        /** @brief 레지스트리 칸 @p slot 에 들어온 차례입니다(메시 칸은 `PrimitiveRegistry::getPrimitiveSerials`, 인스턴스 항목은 `PrimitiveInstanceEntry::_serial`). */
+        static uint32 readSlotSerial( const MeshCollectInput& input, uint32 slot );
         /** @brief 후보의 raw 페이로드를 채우고(@p bOnlyDirtySlots 면 더티 슬롯만), 배치 키가 바뀌었으면 분할 테이블을 다시 짓습니다. */
         void fillPayloadsAndPartition( bool bOnlyDirtySlots, bool bBatchKeysSame );
         /** @brief 투명을 정렬하고 배치를 제자리 갱신하거나 다시 지은 뒤 쓰지 않는 머티리얼 원소를 놓습니다. */
@@ -737,6 +739,11 @@ namespace sw
         vector<uint32> _listPrimitiveToCandidate;
         /// @brief 전체 수집이 칸 위치에 남긴 `CollectFlag` 입니다. 칸 표를 새로 쓸 때 읽습니다.
         vector<uint8> _listCollectFlag;
+        /**
+         * @brief 칸마다 마지막으로 본 차례입니다(`readSlotSerial`). 실린 칸만 맞춘다. raw 페이로드의 `GPUInstance::_slotSerial` 이 이 값이다.
+         * @details 같은 칸을 다른 물체가 받으면(지우고 같은 프레임에 다시 등록) 후보 내용이 같아도 차례가 달라 내용이 바뀐 것으로 본다 — 칸 번호에 묶인 GPU 상태(LOD 전환)가 다시 시작한다.
+         */
+        vector<uint32> _listSlotSerial;
         /** @brief 후보 인덱스에서 인스턴스 슬롯을 찾는 배열입니다(`kInvalidCandidateIndex` 는 인스턴스 없음). `_listInstanceSrcIndex` 의 역방향입니다. */
         vector<uint32> _listCandidateToInstance;
         /** @brief 마지막 수집이 만든 후보 배열의 길이(= 칸 수, 구멍 포함)입니다. 부분 수집이 이 길이를 이어받습니다. */
@@ -809,5 +816,7 @@ namespace sw
         uint8 _bGPULODActive{ SW_FALSE };
         /// @brief 꼬리를 재방출하는 중이면 true 입니다. `emitBatch` 가 원소를 테이블에서 다시 조회하지 않고 `_listCandidateMaterialElement` 를 읽습니다.
         uint8 _bReuseMaterialElement{ SW_FALSE };
+        /// @brief 그리는 차례(`_listInstanceSrcIndex`)가 마지막 발행 뒤 바뀌었으면 1 입니다. 발행이 차례 → 칸 목록(`GPUSceneSnapshot::_pListInstanceSlot`)을 새로 싣는다.
+        uint8 _bInstanceOrderChanged{ SW_TRUE };
     };
 } // namespace sw

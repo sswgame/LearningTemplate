@@ -158,7 +158,7 @@ namespace sw
                        instance._blendMode != raw._blendMode || instance._spinSeed != raw._spinSeed || instance._sprite != raw._sprite || instance._customData != raw._customData ||
                        instance._highlight != raw._highlight || instance._skinSlot != raw._skinSlot || instance._motionKey != raw._motionKey ||
                        Memory::compare( &instance._vertexAnimationPhase, &raw._vertexAnimationPhase, sizeof( instance._vertexAnimationPhase ) ) != 0 ||
-                       Memory::compare( &instance._appearance, &raw._appearance, sizeof( instance._appearance ) ) != 0;
+                       Memory::compare( &instance._appearance, &raw._appearance, sizeof( instance._appearance ) ) != 0 || instance._slotSerial != raw._slotSerial;
             }
 
             /** @brief raw 의 페이로드를 인스턴스에 옮깁니다. `_meshBatchIndex` 와 `_materialIndex` 는 그대로 둡니다. 배치 구성이 같을 때만 부릅니다. */
@@ -176,6 +176,7 @@ namespace sw
                 outInstance._motionKey            = raw._motionKey;
                 outInstance._vertexAnimationPhase = raw._vertexAnimationPhase;
                 outInstance._appearance           = raw._appearance;
+                outInstance._slotSerial           = raw._slotSerial;
             }
 
             /**
@@ -221,6 +222,10 @@ namespace sw
     {
         _instanceRing.clear();
         _snapshot._pListInstance.reset();
+        _snapshot._pListInstanceSlot.reset();
+        _snapshot._instanceSlotCount = 0;
+        _bInstanceOrderChanged       = SW_TRUE;
+        _listSlotSerial.clear();
         _snapshot.clearBatches();
         _snapshot.clearParticles();
         ++_snapshot._instanceLayoutGeneration;
@@ -836,6 +841,8 @@ namespace sw
                 _listScratchCandidate.resize( input._slotCount );
             if ( _listPrimitiveToCandidate.size() < input._slotCount )
                 _listPrimitiveToCandidate.resize( input._slotCount, kInvalidCandidateIndex );
+            if ( _listSlotSerial.size() < input._slotCount )
+                _listSlotSerial.resize( input._slotCount, 0u );
         }
 
         for ( uint32 slot : _listDirtyPrimitive )
@@ -858,7 +865,8 @@ namespace sw
                 _listPrimitiveToCandidate[slot] = bIncluded ? slot : kInvalidCandidateIndex;
                 if ( bIncluded )
                 {
-                    candidate = _candidateProbe;
+                    candidate             = _candidateProbe;
+                    _listSlotSerial[slot] = readSlotSerial( input, slot );
                     ++_includedCount;
                 }
                 else
@@ -886,6 +894,13 @@ namespace sw
             {
                 bAnyChange = true;
                 candidate  = _candidateProbe;
+            }
+            // 같은 칸을 다른 물체가 받았으면(지우고 같은 프레임에 다시 등록) 내용이 같아도 바뀐 것이다 — 칸에 묶인 GPU 상태가 다시 시작해야 한다.
+            const uint32 serial = readSlotSerial( input, slot );
+            if ( _listSlotSerial[slot] != serial )
+            {
+                bAnyChange            = true;
+                _listSlotSerial[slot] = serial;
             }
         }
 
@@ -999,10 +1014,21 @@ namespace sw
         job._bPermutationSame = input._bPermutationSame;
 
         engine::runParallel( primitiveCount, kParallelCollectPrimitiveCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &CollectJob::fillRange, &job ) );
-        return compactCollectedCandidates( primitiveCount, bPrevAligned );
+        return compactCollectedCandidates( input, primitiveCount, bPrevAligned );
     }
 
-    GPUSceneBuilder::MeshCollectResult GPUSceneBuilder::compactCollectedCandidates( uint32 primitiveCount, bool bPrevAligned )
+    uint32 GPUSceneBuilder::readSlotSerial( const MeshCollectInput& input, uint32 slot )
+    {
+        if ( slot < input._meshCount )
+        {
+            const vector<uint32>& listSerial = input._pPrimitives->getPrimitiveSerials();
+            return slot < listSerial.size() ? listSerial[slot] : 0u;
+        }
+        const uint32 entryIndex = slot - input._meshCount;
+        return entryIndex < input._pListInstanceEntry->size() ? ( *input._pListInstanceEntry )[entryIndex]._serial : 0u;
+    }
+
+    GPUSceneBuilder::MeshCollectResult GPUSceneBuilder::compactCollectedCandidates( const MeshCollectInput& input, uint32 primitiveCount, bool bPrevAligned )
     {
         // **옮기지 않는다.** 후보 번호가 칸 번호라 실리지 않은 칸은 구멍으로 남는다(나누기가 건너뛴다). 그래서 다음 프레임의 부분 수집이 더하기 · 지우기를
         // 그 칸 하나로 끝낸다 — 앞으로 당기면 빠진 칸 뒤의 후보가 모두 자리를 옮겨 전체를 다시 모아야 했다.
@@ -1011,6 +1037,7 @@ namespace sw
         bool              bAllKeySame     = bPrevAligned;
         bool              bAllContentSame = bPrevAligned;
         size_t            includedCount   = 0;
+        _listSlotSerial.resize( primitiveCount, 0u );
         for ( uint32 slot = 0; slot < primitiveCount; ++slot )
         {
             const uint8 flag         = _listCollectFlag[slot];
@@ -1029,8 +1056,12 @@ namespace sw
             // 지연 캐시를 건드리는 해시는 여기 직렬 구간에서, 달라진 칸만 기록한다.
             if ( ( flag & kCollectNeedsStamp ) != 0u )
                 assignPermutationHash( _listScratchCandidate[slot] );
+            // 같은 칸을 다른 물체가 받았으면 내용이 같아도 바뀐 것이다(부분 수집과 같은 규칙).
+            const uint32 serial             = readSlotSerial( input, slot );
+            const bool   bSameSlot          = _listSlotSerial[slot] == serial;
+            _listSlotSerial[slot]           = serial;
             bAllKeySame                     = bAllKeySame && bWasIncluded && ( flag & kCollectKeySame ) != 0u;
-            bAllContentSame                 = bAllContentSame && bWasIncluded && ( flag & kCollectContentSame ) != 0u;
+            bAllContentSame                 = bAllContentSame && bWasIncluded && bSameSlot && ( flag & kCollectContentSame ) != 0u;
             _listPrimitiveToCandidate[slot] = slot;
             ++includedCount;
         }
@@ -1066,6 +1097,7 @@ namespace sw
                 if ( candidateIndex >= count )
                     continue;
                 fillPayload( _listScratchCandidate[candidateIndex], _listScratchRaw[candidateIndex] );
+                _listScratchRaw[candidateIndex]._slotSerial = candidateIndex < _listSlotSerial.size() ? _listSlotSerial[candidateIndex] : 0u;
             }
         }
         else
@@ -1073,6 +1105,7 @@ namespace sw
             for ( uint32 candidateIndex = 0; candidateIndex < count; ++candidateIndex )
             {
                 fillPayload( _listScratchCandidate[candidateIndex], _listScratchRaw[candidateIndex] );
+                _listScratchRaw[candidateIndex]._slotSerial = candidateIndex < _listSlotSerial.size() ? _listSlotSerial[candidateIndex] : 0u;
             }
         }
 
@@ -1115,6 +1148,13 @@ namespace sw
         }
         _snapshot._highlightStyleMask = highlightStyleMask;
         _snapshot._pListInstance      = _instanceRing.publish( _snapshot._bAllInstancesDirty != SW_FALSE, _snapshot._listDirtyInstanceRange );
+        // 차례 → 칸 목록은 차례가 바뀐 빌드만 새로 싣는다(공유 목록 — 렌더 스레드가 포인터가 같으면 칸을 다시 흩지 않는다). 칸 수는 후보 배열 길이(구멍 포함)다.
+        _snapshot._instanceSlotCount = static_cast<uint32>( _lastCandidateCount );
+        if ( _bInstanceOrderChanged != SW_FALSE || _snapshot._pListInstanceSlot == nullptr )
+        {
+            _snapshot._pListInstanceSlot = sw::make_shared<const vector<uint32>>( _listInstanceSrcIndex );
+            _bInstanceOrderChanged       = SW_FALSE;
+        }
     }
 
     void GPUSceneBuilder::requestGPUUploads( GPUUploadQueue& queue ) const
@@ -1321,8 +1361,9 @@ namespace sw
             const uint32 primitiveSlot  = firstSlot + entryIndex;
             const uint32 candidateIndex = primitiveSlot < _listPrimitiveToCandidate.size() ? _listPrimitiveToCandidate[primitiveSlot] : kInvalidCandidateIndex;
             const uint32 instanceSlot   = candidateIndex < _listCandidateToInstance.size() ? _listCandidateToInstance[candidateIndex] : kInvalidCandidateIndex;
+            // GPU 가 쓰는 칸은 칸 순 인스턴스 버퍼의 원소다(GPUScene 칸 = 후보 번호). 불투명 구간에 실린 후보만 받는다.
             if ( instanceSlot < opaqueCount )
-                ( *pListSlot )[entryIndex] = instanceSlot;
+                ( *pListSlot )[entryIndex] = candidateIndex;
         }
         GPUVFXMeshEmitter& emitter = _snapshot._listVFXMeshEmitter.emplace_back();
         emitter._request           = request;
@@ -1784,7 +1825,7 @@ namespace sw
         const bool   bConsistent = slot != kInvalidCandidateIndex && slot < _listInstanceSrcIndex.size() && _listInstanceSrcIndex[slot] == candidate;
         if ( bConsistent == false || slot >= _snapshot.getOpaqueInstanceCount() )
             return nullopt;
-        return slot;
+        return candidate; // 칸 순 인스턴스 버퍼의 원소 번호(GPUScene 칸)다 — 차례가 아니다
     }
 
     void GPUSceneBuilder::populateBatches()
@@ -1796,6 +1837,7 @@ namespace sw
         instanceJob().reserve( _listScratchCandidate.size() );
         _listInstanceSrcIndex.clear();
         _listInstanceSrcIndex.reserve( _listScratchCandidate.size() );
+        _bInstanceOrderChanged = SW_TRUE;
         // 후보에서 인스턴스 슬롯으로 가는 역매핑이다. 더티 후보의 인스턴스 위치를 바로 찾기 위한 것이다.
         _listCandidateToInstance.assign( _listScratchCandidate.size(), kInvalidCandidateIndex );
         _listCandidateMaterialElement.assign( _listScratchCandidate.size(), 0u );
@@ -1879,6 +1921,7 @@ namespace sw
         const uint32 opaqueInstanceCount = _snapshot.getOpaqueInstanceCount();
         instanceJob().resize( opaqueInstanceCount );
         _listInstanceSrcIndex.resize( opaqueInstanceCount );
+        _bInstanceOrderChanged = SW_TRUE;
         _batchElementTable.truncateToBatches( _snapshot.getOpaqueBatchCount() );
         _snapshot.truncateToOpaqueBatches();
         // 배치 키가 그대로인 프레임에만 오는 경로다. 원소 인덱스는 지난 방출의 것을 그대로 쓴다(영속 ID).

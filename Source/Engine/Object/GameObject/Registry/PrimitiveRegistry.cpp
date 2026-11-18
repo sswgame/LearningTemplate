@@ -33,6 +33,7 @@ namespace sw
         _listFreePrimitiveSlot.pop_back();
         _listPrimitive[slot]              = pComp;
         _listPrimitiveTransformSlot[slot] = pComp->getTransformSlot();
+        ++_listPrimitiveSerial[slot]; // 다시 쓰는 칸이면 지난 물체의 칸 상태(LOD 전환 · 칸 순 인스턴스)를 이어받지 않게 차례가 바뀐다
         pComp->setPrimitiveIndex( slot );
         // 집합 세대만으로 알리면 빌더가 모든 칸을 다시 모은다. 새 칸 하나를 더티로 올려 그 칸만 모으게 한다.
         markSlotDirty( slot );
@@ -75,6 +76,7 @@ namespace sw
         const uint32 newCount = ( oldCount == 0 ) ? kInitialMeshSlotCount : oldCount * 2u;
         _listPrimitive.resize( newCount, nullptr );
         _listPrimitiveTransformSlot.resize( newCount, SceneTransformStorage::kInvalidSlot );
+        _listPrimitiveSerial.resize( newCount, 0u );
         // 스택이라 끝에서 꺼낸다 — 작은 번호부터 쓰이게 큰 번호를 먼저 넣는다.
         _listFreePrimitiveSlot.reserve( _listFreePrimitiveSlot.size() + ( newCount - oldCount ) );
         for ( uint32 slot = newCount; slot > oldCount; --slot )
@@ -301,7 +303,11 @@ namespace sw
         pBatch->_firstEntry = first;
         for ( uint32 index = 0; index < count; ++index )
         {
-            _listInstanceEntry[first + index] = PrimitiveInstanceEntry{ pBatch, index };
+            // 차례는 칸에 남아 있던 값에서 잇는다(지운 배치의 항목도 차례를 남겨 둔다).
+            PrimitiveInstanceEntry& entry = _listInstanceEntry[first + index];
+            entry._pBatch                 = pBatch;
+            entry._index                  = index;
+            ++entry._serial;
         }
         _listInstanceBatch.push_back( pBatch );
         growDirtyFlags( getSlotCount() );
@@ -396,7 +402,9 @@ namespace sw
                 continue; // 항목 목록과 어긋난 배치 — 항목은 건드리지 않는다
             for ( uint32 index = 0; index < count; ++index )
             {
-                _listInstanceEntry[first + index] = PrimitiveInstanceEntry{};
+                // 차례는 남긴다 — 다음에 이 칸을 받는 항목이 다른 차례가 되게.
+                _listInstanceEntry[first + index]._pBatch = nullptr;
+                _listInstanceEntry[first + index]._index  = 0;
                 markSlotDirty( meshRegion + first + index );
             }
             _liveSlotCount -= count;

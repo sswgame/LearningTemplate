@@ -181,8 +181,8 @@ namespace sw
             float32 _arrPlane[6][4]{};
             uint32  _instanceCount{ 0 };
             uint32  _batchCount{ 0 };
-            uint32  _visibleSlotCount{ 0 }; ///< 가시 목록의 칸 수(가시 구간의 합). 셰이더 g_VisibleSlotCount
-            uint32  _pad{ 0 };
+            uint32  _visibleSlotCount{ 0 };  ///< 가시 목록의 칸 수(가시 구간의 합). 셰이더 g_VisibleSlotCount
+            uint32  _instanceSlotCount{ 0 }; ///< 칸 순 인스턴스 버퍼의 원소 수(GPUScene 칸 수). 셰이더 g_InstanceSlotCount — 차례 → 칸 목록이 가리킨 칸의 범위다
             float32 _arrOcclusionViewProj[16]{};
             uint32  _arrOcclusionGrid[4]{};
             float32 _arrOcclusionDepthSize[4]{};

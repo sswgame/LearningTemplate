@@ -41,6 +41,8 @@ namespace sw
     {
         ScenePrimitiveBatch* _pBatch{ nullptr };
         uint32               _index{ 0 };
+        /// @brief 이 칸에 들어온 차례입니다(`PrimitiveRegistry::getPrimitiveSerials` 와 같은 뜻 — 칸을 다시 쓸 때마다 오른다). 지운 뒤에도 남겨 다음 차례가 이어진다.
+        uint32 _serial{ 0 };
     };
 } // namespace sw
 
@@ -142,6 +144,12 @@ namespace sw
          * @details 슬롯 번호는 컴포넌트 수명 동안 바뀌지 않으므로 등록할 때 한 번 기록하고, 제거할 때 위치 이동을 따라간다.
          */
         const vector<uint32>& getTransformSlots() const { return _listPrimitiveTransformSlot; }
+        /**
+         * @brief 메시 칸마다 그 칸에 들어온 차례입니다(`getAll()` 과 같은 길이). 등록이 칸을 받을 때마다 오른다(지운 칸을 다시 쓰면 다른 값).
+         * @details 칸 번호에 묶인 GPU 상태(인스턴스 LOD 전환 · 칸 순 인스턴스 버퍼)가 칸을 다시 쓴 것을 알아채는 근거다 — 같은 칸 · 같은 내용이어도 차례가 다르면 다른 물체다.
+         *          인스턴스 항목 칸의 차례는 `PrimitiveInstanceEntry::_serial` 이다.
+         */
+        const vector<uint32>& getPrimitiveSerials() const { return _listPrimitiveSerial; }
 
         /**
          * @brief 인스턴스 배치를 등록합니다. 항목마다 프리미티브 번호 하나를 받습니다(메시 컴포넌트 뒤에 이어서). 집합 세대가 오릅니다.
@@ -252,6 +260,7 @@ namespace sw
         vector<ScenePrimitive*> _listPrimitive;
         /** @brief `_listPrimitive` 와 같은 위치의 트랜스폼 슬롯 번호입니다(`getTransformSlots`). 빈 칸은 무효 번호입니다. */
         vector<uint32>                                  _listPrimitiveTransformSlot;
+        vector<uint32>                                  _listPrimitiveSerial;                ///< 메시 칸마다 들어온 차례(`getPrimitiveSerials`)
         vector<uint32> _listFreePrimitiveSlot           SW_GUARDED_BY( _mutex );             ///< 메시 칸 프리리스트(스택 — 끝에서 꺼낸다). 늘릴 때 작은 번호가 끝에 오게 넣는다
         vector<EntrySpan> _listFreeEntrySpan            SW_GUARDED_BY( _mutex );             ///< 빈 인스턴스 항목 구간(자리 순, 이웃끼리 합쳐 둔다)
         vector<PrimitiveInstanceEntry>                  _listInstanceEntry;                  ///< 배치 순서대로 이어 붙은 항목들
