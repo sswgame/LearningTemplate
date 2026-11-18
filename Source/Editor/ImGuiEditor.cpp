@@ -47,6 +47,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
@@ -782,6 +783,14 @@ namespace sw::editor
         _editorContext->getSubsystem<EditorRenderViews>().clearViewDrawnMarks();
     }
 
+    void ImGuiEditor::applyUICommands()
+    {
+        if ( _editorContext == nullptr )
+            return;
+        SW_EDITOR_PROFILE_SCOPE( "GT.Editor.applyUICommands" );
+        _editorContext->getSubsystem<EditorUICommandQueue>().applyDue();
+    }
+
     void ImGuiEditor::openFrame()
     {
         // 프레임 열기는 단계로 옮기지 않는다. 메뉴 · 툴바는 도크스페이스보다 먼저 그려야 도크 영역이 그만큼 줄고, 도크스페이스는 어느 단계보다 먼저 열려야
@@ -850,6 +859,9 @@ namespace sw::editor
         // 하위 구간은 `GT.Editor.updateUI`(App) 의 시간이 어디에 쓰이는지 나눠 보여 준다. 패널별 시간은 `-gv_editorPanelTimes=N` 으로 본다.
         // 앞 UI 프레임이 다 그려지기를 기다리지 않는다 — 렌더 스레드가 그것을 그리는 동안 이 프레임을 만든다. 기다림은 쓸 칸 받기 · 게시에만 있다(`closeAndPublishFrame`).
         // 그 구간(`GT.Editor.waitDrawSnapshot` · `GT.Editor.publishDrawSnapshot`)이 크면 UI 작업이 아니라 RT, GPU, Present 가 길다는 뜻이다.
+        // UI 출력 계약 — 앞 UI 프레임이 넣은 명령(뷰 크기 · Play/Pause/Step)을 이 게임 프레임의 맨 앞에서 적용한다. 그 결과는 이번 UI 프레임이 본다(한 프레임 지연).
+        // UI 프레임이 UI 스레드로 옮겨 가도 이 자리(게임 스레드, UI 프레임을 넘기기 전)는 그대로다(`EditorUICommandQueue`).
+        applyUICommands();
         prepareFrameState();
         openFrame();
 

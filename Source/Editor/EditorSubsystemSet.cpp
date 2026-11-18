@@ -30,6 +30,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
@@ -78,6 +79,7 @@ namespace sw::editor
         scope.emplaceSubsystem<EditorDefaultObjects>();
         scope.emplaceSubsystem<EditorNetPlaySession>();
         scope.emplaceSubsystem<EditorRenderViews>();
+        scope.emplaceSubsystem<EditorUICommandQueue>();
         scope.emplaceSubsystem<EditorPlaySession>();
         scope.emplaceSubsystem<EditorTheme>();
         scope.emplaceSubsystem<EditorUICapture>();
