@@ -3,7 +3,7 @@
  * @brief 애플 앱 스토어 결제 영수증 검증 제공자입니다(OnlineKits H3, 스팀 → 구글 → 애플 순서의 셋째). 스토어 이름은 `apple` 입니다. 판단은 틀(`StoreReceiptValidator`)이 하고 여기는 요청과 파싱만 적습니다.
  * @details App Store Server API 를 씁니다. 영수증은 StoreKit 2 의 거래 id(십진 숫자 글)이다.
  *          - 인증: 서버가 서명 키(.p8 PEM)로 만든 JWT(ES256: `kid` = 키 id, `iss` = 발급자 id, `aud` = `appstoreconnect-v1`, `bid` = 번들 id, 수명 20 분)를 `Authorization: Bearer` 로 보낸다.
- *            서명 키는 설정 파일에 쓰지 않고 환경 변수에서 읽는다(`ReceiptProviderSet`).
+ *            서명 키는 설정 파일에 쓰지 않고 환경 변수에서 읽는다(`ReceiptProviderManager`).
  *          - 검증: `GET /inApps/v1/transactions/{id}` 의 `signedTransactionInfo`(JWS)를 확인한다. JWS 머리의 `x5c` 사슬을 설정이 정한 애플 루트 인증서(`rootCertificateFile`)까지 이어
  *            (`INetSecurityProvider::verifyCertificateChain` — 리프와 그 발급자의 애플 확장 표지 포함) 확인하고 리프 키로 서명을 확인한다. 번들 id 와 거래 id 가 요청과 같아야 한다.
  *            `revocationDate` 가 있으면 환불, 없으면 지급이다. `environment` 가 정확히 Production 인 것만 운영 결제이고 없으면 거절한다. 구매자는 `appAccountToken` 이다 — 클라이언트가 구매 옵션에 `ReceiptBuyerToken` 을 찍어야 온다.
@@ -49,7 +49,7 @@ namespace sw
         string           _bundleID{};
         string           _baseURL{ kProductionBaseURL };
         string           _trustedRootsPem{}; ///< 애플 루트 인증서(Apple Root CA - G3) PEM
-        ReceiptBuyerRule _buyerRule{};       ///< 설정의 `buyerBinding`(`ReceiptProviderSet`). 애플은 `AccountToken` 이나 명시적 `None` 이다
+        ReceiptBuyerRule _buyerRule{};       ///< 설정의 `buyerBinding`(`ReceiptProviderManager`). 애플은 `AccountToken` 이나 명시적 `None` 이다
         int64            _requestTimeoutMs{ 10000 };
         int64            _historyPollIntervalMs{ 3600000 };
         int64            _historyLookbackMs{ 172800000 };  ///< 알림 기록을 지난 성공 조회 시각보다 이만큼 앞에서부터 읽는다(2 일)
@@ -85,9 +85,9 @@ namespace sw
         string makeHistoryURL( string_view paginationToken ) const;
 
     private:
-        [[nodiscard]] expected<void> readPayload( string_view payload, ReceiptAsk& outAsk ) const override;
+        [[nodiscard]] expected<void> readPayload( string_view payload, ReceiptQuery& outQuery ) const override;
         HTTPClientRequest            makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds now ) override;
-        void                         parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderFacts& outFacts ) override;
+        void                         parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderInfo& outInfo ) override;
         void                         parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage ) override;
         void                         onCredentialRejected( const HTTPClientResponse& response ) override;
         string                       makeAuthorization( UnixMilliseconds now );

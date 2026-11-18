@@ -2,7 +2,7 @@
  * @file GoogleReceiptValidator.h
  * @brief 구글 플레이 결제 영수증 검증 제공자입니다(OnlineKits H3, 스팀 → 구글 → 애플 순서의 둘째). 스토어 이름은 `google` 입니다. 판단은 틀(`StoreReceiptValidator`)이 하고 여기는 요청과 파싱만 적습니다.
  * @details - 영수증은 `<상품 id>|<구매 토큰>` 입니다. 서버가 서비스 계정 OAuth 토큰(범위 `androidpublisher`, `ServiceAccountTokenSource`)으로
- *            `purchases.products.get` 을 불러 확인합니다. 서비스 계정 JSON 은 설정 파일에 쓰지 않고 환경 변수에서 읽습니다(`ReceiptProviderSet`).
+ *            `purchases.products.get` 을 불러 확인합니다. 서비스 계정 JSON 은 설정 파일에 쓰지 않고 환경 변수에서 읽습니다(`ReceiptProviderManager`).
  *          - 상태 대응: `purchaseState` 0(구매됨) Valid, 1(취소됨) Refunded, 2(보류) Retry. 401 · 403 은 토큰을 버린다. `purchaseType` 0 은 라이선스 테스트 구매라 샌드박스로 표시한다. 거래 id 는 `orderId` 다.
  *            답이 `productId` · `purchaseToken` 을 말하면 물은 것과 같아야 한다. 구매자는 `obfuscatedExternalAccountId` 다 — 클라이언트가 `BillingFlowParams.setObfuscatedAccountId` 에 `ReceiptBuyerToken` 을 찍어야 온다.
  *          - 구매 확인(acknowledge): 구글 문서의 순서는 "검증 → 지급 → 확인" 이고, 3 일 안에 확인하지 않으면 자동 환불되며, 지급하지 못한 구매는 확인하면 안 된다. 그래서 여기서 보내지 않는다 — 확인 상태가 0 인 Valid 결과에 키(`_deliveryKey`)와
@@ -37,7 +37,7 @@ namespace sw
         ServiceAccountCredentials _credentials{}; ///< `_tokenURL` 은 서비스 계정의 `token_uri` 이고 설정이 덮어쓸 수 있다(가짜 서버)
         string                    _packageName{};
         string                    _baseURL{ kDefaultBaseURL };
-        ReceiptBuyerRule          _buyerRule{}; ///< 설정의 `buyerBinding`(`ReceiptProviderSet`). 구글은 `AccountToken` 이나 명시적 `None` 이다
+        ReceiptBuyerRule          _buyerRule{}; ///< 설정의 `buyerBinding`(`ReceiptProviderManager`). 구글은 `AccountToken` 이나 명시적 `None` 이다
         int64                     _requestTimeoutMs{ 10000 };
         int64                     _voidedPollIntervalMs{ 3600000 };
         int64                     _voidedLookbackMs{ 172800000 }; ///< 무효 구매 목록을 지난 조회 시각보다 이만큼 앞에서부터 읽는다(2 일)
@@ -73,9 +73,9 @@ namespace sw
         string makeVoidedURL( int64 sinceUnixMs, string_view pageToken ) const;
 
     private:
-        [[nodiscard]] expected<void> readPayload( string_view payload, ReceiptAsk& outAsk ) const override;
+        [[nodiscard]] expected<void> readPayload( string_view payload, ReceiptQuery& outQuery ) const override;
         HTTPClientRequest            makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds now ) override;
-        void                         parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderFacts& outFacts ) override;
+        void                         parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderInfo& outInfo ) override;
         void                         parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage ) override;
         void                         onCredentialRejected( const HTTPClientResponse& response ) override;
         AuthState                    prepareAuth( UnixMilliseconds now ) override;

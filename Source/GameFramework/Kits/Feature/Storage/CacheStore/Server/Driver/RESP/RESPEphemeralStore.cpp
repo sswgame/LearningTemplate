@@ -44,7 +44,7 @@ namespace sw
         , _mutex{}
         , _commandConnection{ false }
         , _subscribeConnection{ true }
-        , _listMessage{}
+        , _messageBuffer{}
         , _listRecordScratch{}
         , _listPushScratch{}
         , _listChannel{}
@@ -221,12 +221,8 @@ namespace sw
                 handlePushValue( value );
             }
         }
-        const int32 messageCount = static_cast<int32>( _listMessage.size() );
-        for ( EphemeralMessage& message : _listMessage )
-        {
-            outListMessage.push_back( std::move( message ) );
-        }
-        _listMessage.clear();
+        const int32 messageCount = static_cast<int32>( _messageBuffer.getCount() );
+        _messageBuffer.moveAllTo( outListMessage );
         return messageCount;
     }
 
@@ -250,7 +246,7 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             _listChannel.clear();
         }
-        _listMessage.clear();
+        _messageBuffer.clear();
         _blockingRequestID = 0;
     }
 
@@ -759,7 +755,8 @@ namespace sw
         const string_view channel = value._listElement[1].getText();
         if ( channel.substr( 0, _settings->_keyPrefix.size() ) != _settings->_keyPrefix )
             return;
-        EphemeralMessage& message = _listMessage.emplace_back();
+        _messageBuffer.push( EphemeralMessage{} );
+        EphemeralMessage& message = _messageBuffer.getLast();
         message._channel          = string( channel.substr( _settings->_keyPrefix.size() ) );
         message._bytes            = value._listElement[2]._bytes;
     }

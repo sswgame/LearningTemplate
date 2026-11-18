@@ -215,12 +215,7 @@ namespace sw
 
             PendingMove* findPendingMove( int32 connectionID )
             {
-                for ( PendingMove& pending : _listPendingMove )
-                {
-                    if ( pending._connectionID == connectionID )
-                        return &pending;
-                }
-                return nullptr;
+                return VectorUtil::findBy<&PendingMove::_connectionID>( _listPendingMove, connectionID );
             }
 
             PendingMove& acquirePendingMove( int32 connectionID )
@@ -417,12 +412,7 @@ namespace sw
 
             Shown* findShown( uint32 entityID )
             {
-                for ( Shown& shown : _listShown )
-                {
-                    if ( shown._entityID == entityID )
-                        return &shown;
-                }
-                return nullptr;
+                return VectorUtil::findBy<&Shown::_entityID>( _listShown, entityID );
             }
 
             static float32 approach( float32 current, float32 target )

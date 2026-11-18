@@ -3,13 +3,13 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/FCM/FCMPushProvider.h"
 
 #include "Core/Foundation/Constants.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushPayloadUtil.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/URLTextUtil.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 
 namespace sw
@@ -49,7 +49,7 @@ namespace sw
         : _tokenSource{ std::move( settings._credentials ), FCMPushSettings::kScope, pSecurity, pHTTPClient, settings._requestTimeoutMs }
         , _sendURL{}
         , _listWaiting{}
-        , _listDone{}
+        , _resultBuffer{}
         , _mapRequestToDelivery{}
         , _pHTTPClient{ pHTTPClient }
         , _requestTimeoutMs{ settings._requestTimeoutMs }
@@ -61,22 +61,13 @@ namespace sw
 
     bool FCMPushProvider::isValidTopic( string_view topic )
     {
-        if ( topic.empty() )
-            return false;
-        for ( const utf8 character : topic )
-        {
-            const bool bAlphaNumeric = ( character >= '0' && character <= '9' ) || ( character >= 'a' && character <= 'z' ) || ( character >= 'A' && character <= 'Z' );
-            const bool bMark         = character == '-' || character == '_' || character == '.' || character == '~' || character == '%';
-            if ( bAlphaNumeric == false && bMark == false )
-                return false;
-        }
-        return true;
+        return URLTextUtil::isSafeText( topic, "-_.~%" );
     }
 
     string FCMPushProvider::makeMessageJSON( string_view token, string_view topic, const PushNotificationMessage& message )
     {
         const int32 argumentCount = PushPayloadUtil::countArguments( message );
-        const bool  bHasAlert     = message._titleKey.empty() == false || message._bodyKey.empty() == false;
+        const bool  bHasAlert     = PushPayloadUtil::hasAlert( message );
         const bool  bHasData      = bHasAlert || message._deepLink.empty() == false || argumentCount > 0;
         string      json;
         JSONWriter  writer{ json };
@@ -89,16 +80,7 @@ namespace sw
         {
             writer.key( "data" );
             writer.beginObject();
-            PushPayloadUtil::writeOptionalText( writer, "deep_link", message._deepLink );
-            PushPayloadUtil::writeOptionalText( writer, "title_key", message._titleKey );
-            PushPayloadUtil::writeOptionalText( writer, "body_key", message._bodyKey );
-            for ( int32 index = 0; index < argumentCount; ++index )
-            {
-                StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "arg%#", index );
-                writer.key( textBuilder.view() );
-                writer.valueString( message._arrArgument[index] );
-            }
+            PushPayloadUtil::writeAppData( writer, message, argumentCount );
             writer.endObject();
         }
         if ( bHasAlert )
@@ -119,17 +101,7 @@ namespace sw
             writer.beginObject();
             writer.key( "aps" );
             writer.beginObject();
-            writer.key( "alert" );
-            writer.beginObject();
-            PushPayloadUtil::writeOptionalText( writer, "title-loc-key", message._titleKey );
-            PushPayloadUtil::writeOptionalText( writer, "loc-key", message._bodyKey );
-            PushPayloadUtil::writeArguments( writer, "loc-args", message, argumentCount );
-            writer.endObject();
-            if ( message._badgeCount >= 0 )
-            {
-                writer.key( "badge" );
-                writer.valueInt( message._badgeCount );
-            }
+            PushPayloadUtil::writeAlert( writer, message, argumentCount );
             writer.endObject();
             writer.endObject();
             writer.endObject();
@@ -238,10 +210,7 @@ namespace sw
 
     void FCMPushProvider::complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs )
     {
-        PushDeliveryResult& result = _listDone.emplace_back();
-        result._deliveryID         = deliveryID;
-        result._status             = status;
-        result._retryAfterMs       = retryAfterMs;
+        _resultBuffer.push( PushDeliveryResult{ deliveryID, retryAfterMs, status } );
     }
 
     void FCMPushProvider::update( UnixMilliseconds nowMs )
@@ -268,9 +237,8 @@ namespace sw
 
     int32 FCMPushProvider::pollResults( vector<PushDeliveryResult>& outListResult )
     {
-        const int32 count = static_cast<int32>( _listDone.size() );
-        outListResult.insert( outListResult.end(), _listDone.begin(), _listDone.end() );
-        _listDone.clear();
+        const int32 count = static_cast<int32>( _resultBuffer.getCount() );
+        _resultBuffer.moveAllTo( outListResult );
         return count;
     }
 } // namespace sw

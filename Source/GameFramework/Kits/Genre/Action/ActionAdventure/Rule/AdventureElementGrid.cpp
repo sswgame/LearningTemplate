@@ -57,7 +57,7 @@ namespace sw
         , _table{}
         , _grid{}
         , _listGridEvent{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _burningStatus{ constant::invalid_index::kInt32 }
         , _chargedStatus{ constant::invalid_index::kInt32 }
         , _updraftFlag{ constant::invalid_index::kInt32 }
@@ -72,7 +72,7 @@ namespace sw
         , _table{ other._table }
         , _grid{ other._grid }
         , _listGridEvent{}
-        , _listEvent{ other._listEvent }
+        , _eventBuffer{ other._eventBuffer }
         , _burningStatus{ other._burningStatus }
         , _chargedStatus{ other._chargedStatus }
         , _updraftFlag{ other._updraftFlag }
@@ -90,7 +90,7 @@ namespace sw
         _settings         = other._settings;
         _table            = other._table;
         _grid             = other._grid;
-        _listEvent        = other._listEvent;
+        _eventBuffer      = other._eventBuffer;
         _burningStatus    = other._burningStatus;
         _chargedStatus    = other._chargedStatus;
         _updraftFlag      = other._updraftFlag;
@@ -197,7 +197,7 @@ namespace sw
         populateRuleTable();
         if ( _grid.initialize( width, height, &_table ) == false )
             return false;
-        _listEvent.clear();
+        _eventBuffer.clear();
         return true;
     }
 
@@ -250,10 +250,9 @@ namespace sw
             AdventureElementEvent event;
             event._cell = gridEvent._cell;
             if ( AdventureElementGridInternal::findEventType( gridEvent._name, event._type ) )
-                _listEvent.push_back( event );
+                _eventBuffer.push( event );
         }
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     bool AdventureElementGrid::isBurning( const int2& cell ) const
@@ -300,7 +299,7 @@ namespace sw
         if ( io.isReading() )
         {
             _listGridEvent.clear();
-            _listEvent.clear();
+            _eventBuffer.clear();
         }
     }
 

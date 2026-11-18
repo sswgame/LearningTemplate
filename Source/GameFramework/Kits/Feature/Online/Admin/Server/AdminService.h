@@ -52,7 +52,7 @@ namespace sw
 namespace sw
 {
     /** @brief GM 명령 하나가 응답을 기다리는 동안 드는 칸입니다. 저장소 완료 뒤 세션 끊기 · 넘기기 · 알림이 읽는다. */
-    struct AdminCallExtra
+    struct AdminCallRecord
     {
         UnixMilliseconds _nowMs{ 0 };
         AdminRequest     _request{}; ///< 점검 · 공지 · 라이브 이벤트 명령만 쓴다. 등급 확인 뒤 그 키트에 넘긴다
@@ -113,17 +113,17 @@ namespace sw
         /** @brief 호출을 끝냅니다. 원격이면 공통 범주는 `finishCall`, 같은 프로세스면 `OnlineResult` 로 답합니다. */
         void respondCall( uint64 callID, const AdminServiceResult& serviceResult, const AdminReply& reply );
         /** @brief 등급을 확인한 점검과 공지 명령을 서버 디렉터리 키트에 넘깁니다. 넘겼으면 true 이며 완료는 `update` 가 회수한다. */
-        [[nodiscard]] bool forwardDirectoryCall( uint64 callID, const AdminCallExtra& pending );
+        [[nodiscard]] bool forwardDirectoryCall( uint64 callID, const AdminCallRecord& pending );
         /** @brief 등급을 확인한 라이브 이벤트 명령을 라이브 운영 키트에 넘깁니다. 목록은 바로 @p inoutReply 에 채우고 false, 바꾸기는 넘기고 true 입니다. */
-        [[nodiscard]] bool forwardLiveEventCall( uint64 callID, const AdminCallExtra& pending, AdminServiceResult& inoutServiceResult, AdminReply& inoutReply );
+        [[nodiscard]] bool forwardLiveEventCall( uint64 callID, const AdminCallRecord& pending, AdminServiceResult& inoutServiceResult, AdminReply& inoutReply );
         /** @brief 넘긴 키트(서버 디렉터리, 라이브 운영)의 완료를 거두어 응답합니다. */
         void pollForwardedCompletions();
         /** @brief 넘긴 명령 하나를 그 결과로 끝냅니다. */
         void finishForwardedCall( uint64 callID, AdminServiceResult result );
 
     private:
-        LocalCallTable                        _localCalls;
-        unordered_map<uint64, AdminCallExtra> _mapCallToExtra; ///< 응답을 기다리는 명령의 칸이다
-        AdminServiceConfig                    _settings;
+        LocalCallTable                         _localCalls;
+        unordered_map<uint64, AdminCallRecord> _mapCallToRecord; ///< 응답을 기다리는 명령의 칸이다
+        AdminServiceConfig                     _settings;
     };
 } // namespace sw

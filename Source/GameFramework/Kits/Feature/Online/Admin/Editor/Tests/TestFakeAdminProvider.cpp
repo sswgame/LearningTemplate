@@ -159,7 +159,7 @@ SW_TEST_CASE( FakeAdminProviderTest, AmountLimits )
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( FakeAdminProvider::kMaxAdjustAmount ) ) == AdminResult::Ok );
 }
 
-/** @brief 결함: 길이만 봐 서버가 거절할 자산 이름(대문자 · 공백)이 메모리 제공자에서는 잔액 줄이 되었다 — 서버 없이 시험한 절차가 서버에서 진다. */
+/** @brief 결함: 길이만 봐 서버가 거절할 자산 이름(대문자 · 공백)이 메모리 제공자에서는 잔액 줄이 되었다 — 서버 없이 테스트한 절차가 서버에서 진다. */
 SW_TEST_CASE( FakeAdminProviderTest, AssetIDFollowsTheServerRule )
 {
     FakeAdminProvider provider{ kNowMs };

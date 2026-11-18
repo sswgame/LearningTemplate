@@ -244,11 +244,6 @@ namespace sw
 
     const ModDependency* ModManifest::findDependency( string_view id ) const
     {
-        for ( const ModDependency& dependency : _listDependency )
-        {
-            if ( dependency._id == id )
-                return &dependency;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&ModDependency::_id>( _listDependency, id );
     }
 } // namespace sw

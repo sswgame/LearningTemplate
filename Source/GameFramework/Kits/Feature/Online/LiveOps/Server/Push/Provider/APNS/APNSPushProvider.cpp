@@ -4,7 +4,6 @@
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/JSON/JSONWriter.h"
@@ -36,7 +35,7 @@ namespace sw
         : _settings{ std::move( settings ) }
         , _providerToken{}
         , _deviceURLPrefix{}
-        , _listDone{}
+        , _resultBuffer{}
         , _mapRequestToDelivery{}
         , _pSecurity{ pSecurity }
         , _pHTTPClient{ pHTTPClient }
@@ -49,11 +48,6 @@ namespace sw
     APNSPushProvider::~APNSPushProvider()
     {
         Memory::set( _settings._privateKeyPem.data(), 0, _settings._privateKeyPem.size() ); // 키가 든 글을 남기지 않는다
-    }
-
-    bool APNSPushProvider::hasAlert( const PushNotificationMessage& message )
-    {
-        return message._titleKey.empty() == false || message._bodyKey.empty() == false;
     }
 
     bool APNSPushProvider::isValidDeviceToken( string_view token )
@@ -77,36 +71,15 @@ namespace sw
         writer.beginObject();
         writer.key( "aps" );
         writer.beginObject();
-        if ( hasAlert( message ) )
-        {
-            writer.key( "alert" );
-            writer.beginObject();
-            PushPayloadUtil::writeOptionalText( writer, "title-loc-key", message._titleKey );
-            PushPayloadUtil::writeOptionalText( writer, "loc-key", message._bodyKey );
-            PushPayloadUtil::writeArguments( writer, "loc-args", message, argumentCount );
-            writer.endObject();
-            if ( message._badgeCount >= 0 )
-            {
-                writer.key( "badge" );
-                writer.valueInt( message._badgeCount );
-            }
-        }
+        if ( PushPayloadUtil::hasAlert( message ) )
+            PushPayloadUtil::writeAlert( writer, message, argumentCount );
         else
         {
             writer.key( "content-available" ); // 조용한 알림 — 앱이 깨어나 스스로 갱신한다
             writer.valueInt( 1 );
         }
         writer.endObject();
-        PushPayloadUtil::writeOptionalText( writer, "deep_link", message._deepLink );
-        PushPayloadUtil::writeOptionalText( writer, "title_key", message._titleKey );
-        PushPayloadUtil::writeOptionalText( writer, "body_key", message._bodyKey );
-        for ( int32 index = 0; index < argumentCount; ++index )
-        {
-            StringBuilder<constant::buffer::kMax256> textBuilder;
-            textBuilder.appendFormat( "arg%#", index );
-            writer.key( textBuilder.view() );
-            writer.valueString( message._arrArgument[index] );
-        }
+        PushPayloadUtil::writeAppData( writer, message, argumentCount );
         writer.endObject();
         return json;
     }
@@ -182,7 +155,7 @@ namespace sw
                 complete( deliveryID, PushDeliveryStatus::Rejected );
             return;
         }
-        const bool        bAlert = hasAlert( message );
+        const bool        bAlert = PushPayloadUtil::hasAlert( message );
         HTTPClientRequest request;
         request._method    = HTTPMethod::Post;
         request._url       = _deviceURLPrefix + deviceToken;
@@ -212,10 +185,7 @@ namespace sw
 
     void APNSPushProvider::complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs )
     {
-        PushDeliveryResult& result = _listDone.emplace_back();
-        result._deliveryID         = deliveryID;
-        result._status             = status;
-        result._retryAfterMs       = retryAfterMs;
+        _resultBuffer.push( PushDeliveryResult{ deliveryID, retryAfterMs, status } );
     }
 
     void APNSPushProvider::update( UnixMilliseconds nowMs )
@@ -237,9 +207,8 @@ namespace sw
 
     int32 APNSPushProvider::pollResults( vector<PushDeliveryResult>& outListResult )
     {
-        const int32 count = static_cast<int32>( _listDone.size() );
-        outListResult.insert( outListResult.end(), _listDone.begin(), _listDone.end() );
-        _listDone.clear();
+        const int32 count = static_cast<int32>( _resultBuffer.getCount() );
+        _resultBuffer.moveAllTo( outListResult );
         return count;
     }
 } // namespace sw

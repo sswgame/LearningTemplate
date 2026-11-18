@@ -9,6 +9,7 @@
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
@@ -92,9 +93,9 @@ namespace sw
             string _ticketText{};
         };
 
-        vector<Preset>                    _listPreset;
-        vector<PlatformLoginClientResult> _listPending;
-        vector<PlatformLoginClientResult> _listDone;
-        IDAllocator<uint64>               _requestIDAllocator;
+        vector<Preset>                         _listPreset;
+        vector<PlatformLoginClientResult>      _listPending;
+        EventBuffer<PlatformLoginClientResult> _resultBuffer;
+        IDAllocator<uint64>                    _requestIDAllocator;
     };
 } // namespace sw

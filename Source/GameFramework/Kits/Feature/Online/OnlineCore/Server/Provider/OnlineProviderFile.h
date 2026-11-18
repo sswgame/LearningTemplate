@@ -47,6 +47,21 @@ namespace sw
             return {};
         }
 
+        /** @brief 항목 @p entry 의 글 칸 @p pKey 입니다. 없거나 글이 아니면 @p fallback 입니다 — 필수 칸이 비었는지는 항목을 읽는 쪽이 검사합니다. */
+        [[nodiscard]] static string readText( const JSONValue& entry, const utf8* pKey, string_view fallback = {} )
+        {
+            const JSONValue value = entry.get( pKey );
+            return value.isString() ? value.asString() : string( fallback );
+        }
+
+        /** @brief 제공자 하나를 만들다 난 오류 @p error 의 대상 앞에 제공자 이름을 붙입니다(`<이름>: <원래 대상>`) — 여러 제공자 가운데 어느 것이 틀렸는지 기동 오류가 말하게 합니다. */
+        [[nodiscard]] static Error makeProviderError( const Error& error, string_view providerName )
+        {
+            Error named{ error.kind(), error.message().data(), providerName };
+            named.appendDetail( ": " ).appendDetail( error.detail() );
+            return named;
+        }
+
         /** @brief 신뢰 PEM 옵션을 제공자의 TLS 등록이 받는 글로 바꿉니다. 정하지 않았으면 빈 글(그때 `https://` 제공자는 등록이 거절한다)입니다. */
         [[nodiscard]] static string_view getTrustText( const optional<AbsolutePath>& trustFile ) { return trustFile.has_value() ? string_view( trustFile->str() ) : string_view{}; }
 

@@ -160,7 +160,7 @@ namespace sw
     private:
         vector<LiveEventDef>           _listEvent;
         vector<OpenWindow>             _listOpenWindow; ///< 지난번 판정에서 열려 있던 창
-        vector<LiveEventStart>         _listStarted;
+        EventBuffer<LiveEventStart>    _startedBuffer;
         EventBuffer<LiveOpsCompletion> _completionBuffer;
         LiveOpsDependencies            _dependencies;
         uint64                         _lastOpenHash;

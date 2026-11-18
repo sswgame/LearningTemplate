@@ -765,7 +765,7 @@ namespace sw
         if ( static_cast<int32>( _listHistoryQueue.size() ) >= _settings._maxQueuedHistory )
         {
             SW_LOG_WARNING_ID( "ChatService.ChatServiceChatHistoryQueue", "ChatService: chat history queue is full (%#) - dropping the oldest record", _listHistoryQueue.size() );
-            _listHistoryQueue.erase( _listHistoryQueue.begin() );
+            _listHistoryQueue.pop_front();
         }
         _listHistoryQueue.push_back( message );
     }
@@ -802,8 +802,13 @@ namespace sw
                 listSenderIndexKey.push_back( senderKey );
             ++takeCount;
         }
-        vector<ChatMessage> listMessage( _listHistoryQueue.begin(), _listHistoryQueue.begin() + static_cast<ptrdiff_t>( takeCount ) );
-        _listHistoryQueue.erase( _listHistoryQueue.begin(), _listHistoryQueue.begin() + static_cast<ptrdiff_t>( takeCount ) );
+        vector<ChatMessage> listMessage;
+        listMessage.reserve( takeCount );
+        for ( size_t index = 0; index < takeCount; ++index )
+        {
+            listMessage.push_back( std::move( _listHistoryQueue.front() ) );
+            _listHistoryQueue.pop_front();
+        }
         _bHistoryWriting         = SW_TRUE;
         const int32 messageCount = static_cast<int32>( listMessage.size() );
         _store.submit( [listMessage = std::move( listMessage ), listIndexKey]( IServiceStoreConnection& connection )

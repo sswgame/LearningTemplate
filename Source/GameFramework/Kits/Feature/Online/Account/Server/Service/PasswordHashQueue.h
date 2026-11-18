@@ -12,6 +12,7 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
@@ -148,7 +149,7 @@ namespace sw
         mutable mutex                  _finishedMutex;
         vector<HashJob*> _listFinished SW_GUARDED_BY( _finishedMutex ); ///< 워커가 끝낸 일 — 주인이 `pollCompletions` 에서 거둔다
         vector<unique_ptr<HashJob>>    _listRunning;                    ///< 작업 풀에 맡긴 일 — 주인만 넣고 뺀다(워커는 자기 칸만 쓴다)
-        vector<unique_ptr<HashJob>>    _listWaiting;                    ///< 돌 자리를 기다리는 일(맡긴 순서)
+        deque<unique_ptr<HashJob>>     _listWaiting;                    ///< 돌 자리를 기다리는 일(맡긴 순서)
         TaskStageHandle                _stage;                          ///< 맡긴 해시 전부 — 종료가 기다린다
         TaskManager*                   _pTaskManager;
         IPasswordHasher*               _pHasher;

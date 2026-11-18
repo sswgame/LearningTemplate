@@ -10,7 +10,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderManager.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
@@ -140,7 +140,7 @@ namespace sw
             {
                 vector<ReceiptProviderConfig> listSettings;
                 if ( expected<void> read = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, trustFile, "_receiptProvidersFile", "_receiptTrustFile",
-                                                                                            &ReceiptProviderSet::readEntry, listSettings );
+                                                                                            &ReceiptProviderManager::readEntry, listSettings );
                      read.has_value() == false )
                     return read;
                 if ( expected<void> providers = _receiptProviders.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock ); providers.has_value() == false )
@@ -169,7 +169,7 @@ namespace sw
             shared_ptr<const CurrencyCatalog>                            _pCurrencyCatalog; ///< 공유 캐시의 한 벌
             SharedAssetRef<OfferCatalog>                                 _pOfferCatalog;    ///< 공유 캐시의 한 벌
             unique_ptr<IReceiptValidator>                                _pFakeValidator;   ///< `_bFakeReceipts` 의 가짜 스토어(DevOnline 단위가 만든다). 레지스트리보다 오래 산다(먼저 선언)
-            ReceiptProviderSet                                           _receiptProviders; ///< 레지스트리보다 오래 산다(먼저 선언)
+            ReceiptProviderManager                                       _receiptProviders; ///< 레지스트리보다 오래 산다(먼저 선언)
             ReceiptValidatorRegistry                                     _receiptRegistry;
             EconomyService                                               _service;
             AfterDeleteAccountFunction<&EconomyStoreLogic::eraseAccount> _afterDeleteAccount;

@@ -1,25 +1,26 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderManager.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/Provider/Apple/AppleLoginProvider.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/HTTP/OwnedHTTPClient.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 
 namespace sw
 {
-    PlatformLoginProviderSet::PlatformLoginProviderSet()
+    PlatformLoginProviderManager::PlatformLoginProviderManager()
         : _listEntry{}
     {
     }
 
-    PlatformLoginProviderSet::~PlatformLoginProviderSet()
+    PlatformLoginProviderManager::~PlatformLoginProviderManager()
     {
         shutdown();
     }
 
-    expected<void> PlatformLoginProviderSet::initialize( const vector<PlatformLoginProviderConfig>& listSettings, string_view trustFile, const IClock& clock )
+    expected<void> PlatformLoginProviderManager::initialize( const vector<PlatformLoginProviderConfig>& listSettings, string_view trustFile, const IClock& clock )
     {
         shutdown();
         for ( const PlatformLoginProviderConfig& settings : listSettings )
@@ -37,8 +38,7 @@ namespace sw
             } );
             if ( tlsReady.has_value() == false )
             {
-                Error error{ tlsReady.error().kind(), tlsReady.error().message().data(), settings._name };
-                error.appendDetail( ": " ).appendDetail( tlsReady.error().detail() );
+                const Error error = OnlineProviderFile::makeProviderError( tlsReady.error(), settings._name );
                 shutdown();
                 return unexpected( error );
             }
@@ -57,8 +57,7 @@ namespace sw
                         : expected<void>{ unexpected( Error{ ErrorKind::ExternalFailure, "cannot start the HTTP client" } ) };
                 if ( secondReady.has_value() == false )
                 {
-                    Error error{ secondReady.error().kind(), secondReady.error().message().data(), settings._name };
-                    error.appendDetail( ": " ).appendDetail( secondReady.error().detail() );
+                    const Error error = OnlineProviderFile::makeProviderError( secondReady.error(), settings._name );
                     shutdown();
                     return unexpected( error );
                 }
@@ -75,7 +74,7 @@ namespace sw
         return {};
     }
 
-    void PlatformLoginProviderSet::shutdown()
+    void PlatformLoginProviderManager::shutdown()
     {
         for ( Entry& entry : _listEntry )
         {

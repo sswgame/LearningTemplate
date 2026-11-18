@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
@@ -12,6 +12,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/APNS/APNSPushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/FCM/FCMPushProvider.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/OwnedHTTP2Client.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/HTTP/OwnedHTTPClient.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
@@ -20,7 +21,7 @@ namespace sw
 {
     namespace
     {
-        struct PushProviderSetInternal
+        struct PushProviderManagerInternal
         {
             static constexpr const utf8* kKindFCM  = "fcm";
             static constexpr const utf8* kKindAPNS = "apns";
@@ -31,12 +32,6 @@ namespace sw
             /** @brief 재서명 최소 간격의 허용 범위(초)입니다. APNs 는 20 분보다 자주 갱신하면 429 로, 60 분을 넘긴 토큰은 403 으로 거절한다. */
             static constexpr int64 kTokenRefreshFloorSeconds   = 20 * constant::time::kSecondsPerMinute;
             static constexpr int64 kTokenRefreshCeilingSeconds = 60 * constant::time::kSecondsPerMinute;
-
-            static string readText( const JSONValue& object, const utf8* pKey )
-            {
-                const JSONValue value = object.get( pKey );
-                return value.isString() ? value.asString() : string();
-            }
 
             /** @brief 환경 변수의 서비스 계정으로 FCM 제공자를 만들고 HTTP 클라이언트의 TLS 를 준비합니다. */
             [[nodiscard]] static expected<unique_ptr<IPushNotificationProvider>> createFCM( const PushProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient )
@@ -97,20 +92,20 @@ namespace sw
 
 namespace sw
 {
-    PushProviderSet::PushProviderSet()
+    PushProviderManager::PushProviderManager()
         : _listEntry{}
     {
     }
 
-    PushProviderSet::~PushProviderSet()
+    PushProviderManager::~PushProviderManager()
     {
         shutdown();
     }
 
-    expected<void> PushProviderSet::readEntry( const JSONValue& entry, PushProviderConfig& outConfig )
+    expected<void> PushProviderManager::readEntry( const JSONValue& entry, PushProviderConfig& outConfig )
     {
-        using Internal  = PushProviderSetInternal;
-        outConfig._kind = Internal::readText( entry, "kind" );
+        using Internal  = PushProviderManagerInternal;
+        outConfig._kind = OnlineProviderFile::readText( entry, "kind" );
         const bool bFCM = outConfig._kind == Internal::kKindFCM;
         if ( bFCM == false && outConfig._kind != Internal::kKindAPNS )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the push provider kind is unknown (fcm, apns)", outConfig._kind } );
@@ -124,19 +119,19 @@ namespace sw
                 return unexpected( error );
             }
         }
-        outConfig._sendBaseURL = Internal::readText( entry, "sendUrl" );
+        outConfig._sendBaseURL = OnlineProviderFile::readText( entry, "sendUrl" );
         if ( bFCM )
         {
-            outConfig._serviceAccountEnvironment = Internal::readText( entry, "serviceAccountEnvironment" );
-            outConfig._tokenURL                  = Internal::readText( entry, "tokenUrl" );
+            outConfig._serviceAccountEnvironment = OnlineProviderFile::readText( entry, "serviceAccountEnvironment" );
+            outConfig._tokenURL                  = OnlineProviderFile::readText( entry, "tokenUrl" );
             if ( outConfig._serviceAccountEnvironment.empty() )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "push provider 'fcm' needs serviceAccountEnvironment" } );
             return {};
         }
-        outConfig._keyEnvironment               = Internal::readText( entry, "keyEnvironment" );
-        outConfig._keyID                        = Internal::readText( entry, "keyId" );
-        outConfig._teamID                       = Internal::readText( entry, "teamId" );
-        outConfig._topic                        = Internal::readText( entry, "topic" );
+        outConfig._keyEnvironment               = OnlineProviderFile::readText( entry, "keyEnvironment" );
+        outConfig._keyID                        = OnlineProviderFile::readText( entry, "keyId" );
+        outConfig._teamID                       = OnlineProviderFile::readText( entry, "teamId" );
+        outConfig._topic                        = OnlineProviderFile::readText( entry, "topic" );
         const optional<int64> refreshMinSeconds = entry.get( "tokenRefreshMinSeconds" ).read<int64>();
         if ( refreshMinSeconds.has_value() == false || *refreshMinSeconds < Internal::kTokenRefreshFloorSeconds || *refreshMinSeconds > Internal::kTokenRefreshCeilingSeconds )
             return unexpected( Error{ ErrorKind::InvalidArgument, "push provider 'apns' needs tokenRefreshMinSeconds in [1200, 3600] (APNs refuses refreshes more often than every 20 minutes)" } );
@@ -148,9 +143,9 @@ namespace sw
         return {};
     }
 
-    expected<void> PushProviderSet::initialize( const vector<PushProviderConfig>& listSettings, string_view trustFile, const IClock& clock )
+    expected<void> PushProviderManager::initialize( const vector<PushProviderConfig>& listSettings, string_view trustFile, const IClock& clock )
     {
-        using Internal = PushProviderSetInternal;
+        using Internal = PushProviderManagerInternal;
         shutdown();
         for ( const PushProviderConfig& config : listSettings )
         {
@@ -176,8 +171,7 @@ namespace sw
                 bFCM ? Internal::createFCM( config, trustFile, *entry._httpClient ) : Internal::createAPNS( config, trustFile, *entry._http2Client );
             if ( provider.has_value() == false )
             {
-                Error error{ provider.error().kind(), provider.error().message().data(), config._kind };
-                error.appendDetail( ": " ).appendDetail( provider.error().detail() );
+                const Error error = OnlineProviderFile::makeProviderError( provider.error(), config._kind );
                 shutdown();
                 return unexpected( error );
             }
@@ -186,7 +180,7 @@ namespace sw
         return {};
     }
 
-    void PushProviderSet::shutdown()
+    void PushProviderManager::shutdown()
     {
         for ( Entry& entry : _listEntry )
         {

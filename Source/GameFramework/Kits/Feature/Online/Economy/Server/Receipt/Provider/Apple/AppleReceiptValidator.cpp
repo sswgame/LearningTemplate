@@ -123,11 +123,11 @@ namespace sw
         return _authorization;
     }
 
-    expected<void> AppleReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk ) const
+    expected<void> AppleReceiptValidator::readPayload( string_view payload, ReceiptQuery& outQuery ) const
     {
         if ( isTransactionID( payload ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "apple receipt must be the numeric transaction id" } );
-        outAsk._transactionID = string( payload );
+        outQuery._transactionID = string( payload );
         return {};
     }
 
@@ -139,7 +139,7 @@ namespace sw
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
         if ( call._kind != ReceiptCall::Kind::RefundPage )
         {
-            request._url = makeTransactionURL( call._ask._transactionID );
+            request._url = makeTransactionURL( call._query._transactionID );
             return request;
         }
         string     body;
@@ -159,7 +159,7 @@ namespace sw
         return request;
     }
 
-    void AppleReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderFacts& outFacts )
+    void AppleReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderInfo& outInfo )
     {
         using Internal                         = AppleReceiptValidatorInternal;
         const JSONValue             signedInfo = root.get( "signedTransactionInfo" );
@@ -167,42 +167,42 @@ namespace sw
         if ( verified.has_value() == false )
         {
             // 영수증은 거래 id 뿐이고 이 글은 TLS 너머 애플이 준다 — 확인이 안 되면 루트 파일이나 중간 장비 탓이지 "그런 거래가 없다" 가 아니다. Invalid 면 결제한 사람의 영수증을 버린다.
-            outFacts._status      = ReceiptStatus::Retry;
-            outFacts._failureText = "the signed transaction does not verify against the Apple root";
-            SW_LOG_ERROR_ID( "AppleReceiptValidator.SignedTransactionAppleDoes", "The signed transaction %# from Apple does not verify - check rootCertificateFile", call._ask._transactionID.c_str() );
+            outInfo._status      = ReceiptStatus::Retry;
+            outInfo._failureText = "the signed transaction does not verify against the Apple root";
+            SW_LOG_ERROR_ID( "AppleReceiptValidator.SignedTransactionAppleDoes", "The signed transaction %# from Apple does not verify - check rootCertificateFile", call._query._transactionID.c_str() );
             return;
         }
         const JWTVerified& token = *verified;
-        (void)token.findText( "transactionId", outFacts._transactionID );  // 없으면 틀이 거절한다
-        (void)token.findText( "productId", outFacts._productID );          // 없으면 틀이 거절한다(환불이면 상관없다)
-        (void)token.findText( "appAccountToken", outFacts._storeBuyerID ); // 클라이언트가 구매 때 찍은 값(`ReceiptBuyerToken`)
+        (void)token.findText( "transactionId", outInfo._transactionID );  // 없으면 틀이 거절한다
+        (void)token.findText( "productId", outInfo._productID );          // 없으면 틀이 거절한다(환불이면 상관없다)
+        (void)token.findText( "appAccountToken", outInfo._storeBuyerID ); // 클라이언트가 구매 때 찍은 값(`ReceiptBuyerToken`)
         int64 purchaseMs = 0;
         if ( token.findInteger( "purchaseDate", purchaseMs ) )
-            outFacts._purchaseTimeMs = purchaseMs; // 이 숫자는 밀리초다(findInteger 가 초 클레임용으로 쓰지만 값은 그대로 읽는다)
+            outInfo._purchaseTimeMs = purchaseMs; // 이 숫자는 밀리초다(findInteger 가 초 클레임용으로 쓰지만 값은 그대로 읽는다)
         string bundleID;
         if ( token.findText( "bundleId", bundleID ) == false || bundleID != _settings._bundleID )
         {
-            outFacts._status      = ReceiptStatus::Invalid;
-            outFacts._failureText = "the signed transaction belongs to another bundle";
+            outInfo._status      = ReceiptStatus::Invalid;
+            outInfo._failureText = "the signed transaction belongs to another bundle";
             return;
         }
         string environment;
         if ( token.findText( "environment", environment ) == false )
         {
-            outFacts._status      = ReceiptStatus::Invalid; // 서명한 답이 환경을 말하지 않으면 운영 결제로 치지 않는다
-            outFacts._failureText = "the signed transaction has no environment";
+            outInfo._status      = ReceiptStatus::Invalid; // 서명한 답이 환경을 말하지 않으면 운영 결제로 치지 않는다
+            outInfo._failureText = "the signed transaction has no environment";
             return;
         }
-        // 운영이라고 정확히 말한 것만 운영 결제다 — Sandbox 말고도 Xcode · LocalTesting 같은 시험 환경이 있다(기억에 의존). 샌드박스 서버의 답은 모두 샌드박스다.
-        outFacts._bSandbox = environment != Internal::kEnvironmentProduction || _settings._bSandboxServer == SW_TRUE ? SW_TRUE : SW_FALSE;
+        // 운영이라고 정확히 말한 것만 운영 결제다 — Sandbox 말고도 Xcode · LocalTesting 같은 테스트 환경이 있다(기억에 의존). 샌드박스 서버의 답은 모두 샌드박스다.
+        outInfo._bSandbox  = environment != Internal::kEnvironmentProduction || _settings._bSandboxServer == SW_TRUE ? SW_TRUE : SW_FALSE;
         int64 revocationMs = 0;
         if ( token.findInteger( "revocationDate", revocationMs ) )
         {
-            outFacts._status      = ReceiptStatus::Refunded;
-            outFacts._failureText = "apple revoked this transaction";
+            outInfo._status      = ReceiptStatus::Refunded;
+            outInfo._failureText = "apple revoked this transaction";
             return;
         }
-        outFacts._status = ReceiptStatus::Valid;
+        outInfo._status = ReceiptStatus::Valid;
     }
 
     void AppleReceiptValidator::parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage )

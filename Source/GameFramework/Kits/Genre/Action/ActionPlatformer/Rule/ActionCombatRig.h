@@ -75,7 +75,7 @@ namespace sw
 
         ActionCombatRig();
 
-        /** @brief 화면 평면 위의 탄 하나입니다(적의 탄 · 시험). 수명 @p lifetime 초가 지나면 사라집니다. */
+        /** @brief 화면 평면 위의 탄 하나입니다(적의 탄 · 테스트). 수명 @p lifetime 초가 지나면 사라집니다. */
         [[nodiscard]] static ProjectileState makeProjectile( const float2& position, const float2& velocity, ActionTeam team, float32 damage, float32 lifetime );
 
         /** @brief 규칙, 기술 테이블, 사용할 콤보를 설정합니다. 모르는 콤보이거나 콤보가 기술 테이블에 없는 기술을 들면 false 를 반환합니다(근접 없이 총과 패리만 씁니다). */

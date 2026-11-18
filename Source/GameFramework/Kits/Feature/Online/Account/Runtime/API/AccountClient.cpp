@@ -20,40 +20,11 @@ namespace sw
                        operation == AccountClientOperation::PlatformLogin || operation == AccountClientOperation::Resume;
             }
 
-            /** @brief 서술자 번호를 요청 종류로 바꿉니다. 표의 메서드는 모두 짝이 있다. */
+            /** @brief 서술자 번호(와이어 메서드 번호)를 요청 종류로 바꿉니다. 번호는 표의 열거자 순서다(`OnlineMethodTable::toMethod` 의 역). */
             static AccountClientOperation toOperation( uint16 method )
             {
-                switch ( method )
-                {
-                    case AccountMethod::IssueLoginNonce::kID:
-                        return AccountClientOperation::IssueLoginNonce;
-                    case AccountMethod::Register::kID:
-                        return AccountClientOperation::Register;
-                    case AccountMethod::Login::kID:
-                        return AccountClientOperation::Login;
-                    case AccountMethod::GuestLogin::kID:
-                        return AccountClientOperation::GuestLogin;
-                    case AccountMethod::PlatformLogin::kID:
-                        return AccountClientOperation::PlatformLogin;
-                    case AccountMethod::Resume::kID:
-                        return AccountClientOperation::Resume;
-                    case AccountMethod::Logout::kID:
-                        return AccountClientOperation::Logout;
-                    case AccountMethod::LinkCredential::kID:
-                        return AccountClientOperation::LinkCredential;
-                    case AccountMethod::LinkPlatform::kID:
-                        return AccountClientOperation::LinkPlatform;
-                    case AccountMethod::IssueGameTicket::kID:
-                        return AccountClientOperation::IssueGameTicket;
-                    case AccountMethod::UnlinkPlatform::kID:
-                        return AccountClientOperation::UnlinkPlatform;
-                    case AccountMethod::ListLinks::kID:
-                        return AccountClientOperation::ListLinks;
-                    case AccountMethod::RequestDeletion::kID:
-                        return AccountClientOperation::RequestDeletion;
-                    default:
-                        return AccountClientOperation::CancelDeletion;
-                }
+                SW_ASSERT( AccountMethod::kFirstMethod <= method && method < AccountMethod::kFirstMethod + AccountMethod::kCount );
+                return static_cast<AccountClientOperation>( method - AccountMethod::kFirstMethod );
             }
         };
     } // namespace
@@ -62,8 +33,8 @@ namespace sw
 namespace sw
 {
     AccountClient::AccountClient()
-        : _listReply{}
-        , _listEvent{}
+        : _replyBuffer{}
+        , _eventBuffer{}
         , _clientInfo{}
         , _identity{}
         , _token{}
@@ -110,7 +81,8 @@ namespace sw
     {
         if ( _token.isEmpty() )
         {
-            AccountClientReply& reply = _listReply.emplace_back();
+            _replyBuffer.push( AccountClientReply{} );
+            AccountClientReply& reply = _replyBuffer.getLast();
             reply._requestID          = allocateRequestID();
             reply._operation          = AccountClientOperation::Resume;
             reply._result             = LoginResult::InvalidToken;
@@ -168,23 +140,15 @@ namespace sw
 
     int32 AccountClient::pollReplies( vector<AccountClientReply>& outListReply )
     {
-        const int32 count = static_cast<int32>( _listReply.size() );
-        for ( AccountClientReply& reply : _listReply )
-        {
-            outListReply.push_back( std::move( reply ) );
-        }
-        _listReply.clear();
+        const int32 count = static_cast<int32>( _replyBuffer.getCount() );
+        _replyBuffer.moveAllTo( outListReply );
         return count;
     }
 
     int32 AccountClient::pollEvents( vector<AccountClientEvent>& outListEvent )
     {
-        const int32 count = static_cast<int32>( _listEvent.size() );
-        for ( AccountClientEvent& event : _listEvent )
-        {
-            outListEvent.push_back( std::move( event ) );
-        }
-        _listEvent.clear();
+        const int32 count = static_cast<int32>( _eventBuffer.getCount() );
+        _eventBuffer.moveAllTo( outListEvent );
         return count;
     }
 
@@ -204,7 +168,7 @@ namespace sw
         event._reasonCode = body._reasonCode;
         _bLoggedIn        = SW_FALSE;
         _token            = LoginSessionToken{}; // 밀려난 세션은 돌아올 수 없으므로 다시 로그인해야 한다
-        _listEvent.push_back( std::move( event ) );
+        _eventBuffer.push( std::move( event ) );
     }
 
     void AccountClient::onClientReady( OnlineServiceClient& client )
@@ -277,11 +241,11 @@ namespace sw
         }
         if ( reply._operation != AccountClientOperation::Resume )
         {
-            _listReply.push_back( std::move( reply ) );
+            _replyBuffer.push( std::move( reply ) );
             return;
         }
         reply._bAutomatic = _bAutomaticResume;
-        _listReply.push_back( reply );
+        _replyBuffer.push( reply );
         finishResume( reply );
     }
 
@@ -293,7 +257,7 @@ namespace sw
             reply._result = result._reply._result;
             reply._ticket = result._reply._ticket;
         }
-        _listReply.push_back( std::move( reply ) );
+        _replyBuffer.push( std::move( reply ) );
     }
 
     void AccountClient::onNonceReply( const OnlineResult<AccountNonceReply>& result )
@@ -304,7 +268,7 @@ namespace sw
             reply._result     = result._reply._result;
             reply._loginNonce = result._reply._nonce;
         }
-        _listReply.push_back( std::move( reply ) );
+        _replyBuffer.push( std::move( reply ) );
     }
 
     void AccountClient::onLinkReply( const OnlineResult<AccountLinkReply>& result )
@@ -315,7 +279,7 @@ namespace sw
             reply._result      = result._reply._result;
             reply._linkSummary = result._reply._summary;
         }
-        _listReply.push_back( std::move( reply ) );
+        _replyBuffer.push( std::move( reply ) );
     }
 
     void AccountClient::finishResume( const AccountClientReply& reply )

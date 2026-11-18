@@ -58,7 +58,7 @@ namespace sw
         /** @brief 클라이언트의 알림을 꺼내 반영합니다. 화면이 틱마다 부릅니다. */
         void update();
 
-        // 클라이언트의 응답과 알림이 들어오는 길입니다. 시험도 같은 길로 값을 넣습니다.
+        // 클라이언트의 응답과 알림이 들어오는 길입니다. 테스트도 같은 길로 값을 넣습니다.
         void onLinksReply( const OnlineResult<SocialLinksReply>& reply );
         /** @brief 관계 목록 응답에서 친구 줄(접속 상태는 아직 `Offline`)과 받은 신청 수를 만듭니다. 상태는 바꾸지 않는다 — 접속 상태 응답이 와야 `Loaded` 다. */
         void applyLinks( const SocialLinksReply& reply );

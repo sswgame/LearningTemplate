@@ -1,7 +1,7 @@
 /**
  * @file APNSPushProvider.h
  * @brief iOS 푸시 제공자(APNs 토큰 기반 인증 HTTP/2 API)입니다(OnlineKits G4 · H2-5). 인증 키(.p8)로 서명한 제공자 토큰(JWT ES256)을 캐시하고, 기기 토큰마다 `POST /3/device/<토큰>` 을 HTTP/2 로 보냅니다.
- * @details - 자격(인증 키 PEM)은 설정 파일에 쓰지 않고 환경 변수(서버 비밀)에서 읽는다(`PushProviderSet`). 키 id · 팀 id · 번들 id(`apns-topic`)는 비밀이 아니라 설정에 쓴다. 설정이 없으면 이 제공자를 만들지 않는다.
+ * @details - 자격(인증 키 PEM)은 설정 파일에 쓰지 않고 환경 변수(서버 비밀)에서 읽는다(`PushProviderManager`). 키 id · 팀 id · 번들 id(`apns-topic`)는 비밀이 아니라 설정에 쓴다. 설정이 없으면 이 제공자를 만들지 않는다.
  *          - 제공자 토큰은 `iss`(팀 id) · `iat` 만 있는 JWT 다(헤더 `kid` = 키 id). APNs 는 20 분보다 자주 갱신하면 429, 60 분을 넘기면 403 으로 거절하므로 40 분마다 새로 서명한다(`kTokenRefreshMs`).
  *            서명은 로컬이라 기다림이 없다. 서명하지 못하면(키가 틀림) 오류 로그와 함께 그 배달을 `Rejected` 로 끝낸다.
  *          - 문구는 현지화 키다. `aps.alert` 의 `title-loc-key` · `loc-key` · `loc-args` 에 싣고 기기가 자기 언어로 푼다 — 서버는 언어를 모르고 `send` 의 @p locale 을 쓰지 않는다.
@@ -11,12 +11,13 @@
  *            서명하지 않고 남은 시간만큼 `RateLimited` — 403 마다 곧바로 다시 서명하면 APNs 가 갱신이 잦다며 429 로 막는다),
  *            그 밖의 4xx Rejected(400 `BadDeviceToken` 은 개발 · 운영 환경이 어긋난 토큰일 수 있어 기기를 지우지 않는다).
  *          - 토픽 발송은 없다(APNs 에 토픽 구독이 없다) — `supportsTopics` 는 false 다.
- *          제품 이름(`apns`)은 이 설정의 `kind` 값과 `Provider/Apns/` 안에만 쓴다.
+ *          제품 이름(`apns`)은 이 설정의 `kind` 값과 `Provider/APNS/` 안에만 쓴다.
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
@@ -64,10 +65,8 @@ namespace sw
         void        update( UnixMilliseconds nowMs ) override;
         int32       pollResults( vector<PushDeliveryResult>& outListResult ) override;
 
-        /** @brief 알림 본문(JSON)입니다. 문구가 없으면 조용한 알림(`content-available`)입니다. 테스트가 봅니다. */
+        /** @brief 알림 본문(JSON)입니다. 문구가 없으면(`PushPayloadUtil::hasAlert` 가 false — `apns-push-type` 이 `background`) 조용한 알림(`content-available`)입니다. 테스트가 봅니다. */
         static string makePayloadJSON( const PushNotificationMessage& message );
-        /** @brief 문구가 있어 보이는 알림인가(`apns-push-type` 이 `alert`) — 없으면 `background` 다. */
-        static bool hasAlert( const PushNotificationMessage& message );
         /** @brief 기기 토큰 규칙(16진 글자 1..200 자)입니다. */
         static bool isValidDeviceToken( string_view token );
         /** @brief 응답을 배달 결과로 바꿉니다(`Retry-After` 는 따로 읽는다). */
@@ -85,13 +84,13 @@ namespace sw
         void                complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs = 0 );
 
     private:
-        APNSPushSettings              _settings;
-        string                        _providerToken;
-        string                        _deviceURLPrefix; ///< `<기준 주소>/3/device/`
-        vector<PushDeliveryResult>    _listDone;
-        unordered_map<uint64, uint64> _mapRequestToDelivery;
-        INetSecurityProvider*         _pSecurity;
-        HTTP2Client*                  _pHTTPClient;
-        int64                         _tokenIssuedMs;
+        APNSPushSettings                _settings;
+        string                          _providerToken;
+        string                          _deviceURLPrefix; ///< `<기준 주소>/3/device/`
+        EventBuffer<PushDeliveryResult> _resultBuffer;
+        unordered_map<uint64, uint64>   _mapRequestToDelivery;
+        INetSecurityProvider*           _pSecurity;
+        HTTP2Client*                    _pHTTPClient;
+        int64                           _tokenIssuedMs;
     };
 } // namespace sw

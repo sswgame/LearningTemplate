@@ -81,11 +81,7 @@ namespace sw
         bool                bValid = XMLFields::readProperties( node, zone, sourceName );
         for ( XMLNode phaseNode = node.findChild( "Phase" ); phaseNode; phaseNode = phaseNode.findNextSibling( "Phase" ) )
         {
-            BattleRoyaleZonePhaseDef phase;
-            if ( XMLFields::readProperties( phaseNode, phase, sourceName ) )
-                zone._listPhase.push_back( phase );
-            else
-                bValid = false;
+            bValid = GameDataXML::readInto( phaseNode, sourceName, zone._listPhase ) && bValid;
         }
         if ( bValid == false )
             return false;

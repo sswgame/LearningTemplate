@@ -1414,7 +1414,19 @@
     "SavedAbilityModifier": "EvaluatedModifier — 칸이 같은 두 형식을 하나로(활성 이펙트가 든 값을 그대로 세이브에 싣는다)(2026-11-19)",
     "findOrAddLocked": "getOrCreateLocked — 없으면 만들어 돌려주는 것은 getOrCreate 다(AudioClipCache, 2026-11-19)",
     "findOrAddLayer": "getOrCreateLayer — 없으면 만들어 돌려주는 것은 getOrCreate 다(SceneSpatialGrid, 2026-11-19)",
-    "findOrCreateBucket": "getOrCreateBucket — 없으면 만들어 돌려주는 것은 getOrCreate 다(AnimationCrowd, 2026-11-19)"
+    "findOrCreateBucket": "getOrCreateBucket — 없으면 만들어 돌려주는 것은 getOrCreate 다(AnimationCrowd, 2026-11-19)",
+    "TicketQueryLoginProvider": "ProfileAPILoginProvider — 응답을 읽는 규칙이 같은 두 제공자를 합쳤다(묻는 방식은 설정 _kind 가 고른다)(2026-11-19)",
+    "ReceiptAsk": "ReceiptQuery — ask 는 결제 API 가 쓰지 않는 말이다 — 스토어에 보낸 조회다(2026-11-19)",
+    "ReceiptOrderFacts": "ReceiptOrderInfo — facts 는 결제 API 가 쓰지 않는 말이다 — 스토어가 답한 주문 정보다(유니티 IAP IOrderInfo)(2026-11-19)",
+    "applyOrderFacts": "applyOrderInfo — 같은 형식(2026-11-19)",
+    "_askedKey": "_queryKey — 같은 형식(2026-11-19)",
+    "GhostSuctionTick": "GhostSuctionResult — tick 은 틱 시스템만 — 갱신 한 번의 결과다(2026-11-19)",
+    "AdminCallExtra": "AdminCallRecord — 주인이 관리 대상마다 드는 칸은 Record(2026-11-19)",
+    "CoasterPieceType": "CoasterPieceKind — 값의 갈래를 고르는 열거형은 …Kind(2026-11-19)",
+    "SRPGMoveType": "SRPGMoveKind — 값의 갈래를 고르는 열거형은 …Kind(2026-11-19)",
+    "PlatformLoginProviderSet": "PlatformLoginProviderManager — Set 은 GAS 이름과 한 에셋 안의 이름 묶음만 — 제공자와 HTTP 클라이언트의 수명을 가진 쪽은 …Manager(2026-11-19)",
+    "PushProviderSet": "PushProviderManager — Set 은 GAS 이름과 한 에셋 안의 이름 묶음만 — 제공자와 HTTP 클라이언트의 수명을 가진 쪽은 …Manager(2026-11-19)",
+    "ReceiptProviderSet": "ReceiptProviderManager — Set 은 GAS 이름과 한 에셋 안의 이름 묶음만 — 제공자와 HTTP 클라이언트의 수명을 가진 쪽은 …Manager(2026-11-19)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",

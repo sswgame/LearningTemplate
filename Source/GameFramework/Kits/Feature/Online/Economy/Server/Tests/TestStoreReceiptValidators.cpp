@@ -13,7 +13,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Google/GoogleReceiptValidator.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderManager.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/StoreReceiptValidator.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
@@ -331,64 +331,64 @@ SW_TEST_CASE( StoreReceiptValidatorTest, ClassifyResponse )
 /** @brief [StoreReceiptValidatorTest] 요청 대조: 물은 거래 · 키 · 상품과 답이 다르면 Invalid, 거래 id 나 상품이 없으면 Invalid 이고, 답이 상품을 말하지 않으면 물은 상품을 쓴다. 정해지지 않은 답은 대조하지 않는다 */
 SW_TEST_CASE( StoreReceiptValidatorTest, ApplyOrderFactsComparesWithTheAsk )
 {
-    const auto apply = []( const ReceiptAsk& ask, const ReceiptOrderFacts& facts )
+    const auto apply = []( const ReceiptQuery& query, const ReceiptOrderInfo& info )
     {
         ReceiptValidationResult result;
-        result._transactionID = ask._transactionID;
-        result._productID     = ask._productID;
-        StoreReceiptValidator::applyOrderFacts( ask, facts, result );
+        result._transactionID = query._transactionID;
+        result._productID     = query._productID;
+        StoreReceiptValidator::applyOrderInfo( query, info, result );
         return result;
     };
 
-    ReceiptAsk askOrder;
-    askOrder._transactionID = "1";
-    ReceiptOrderFacts facts;
-    facts._status        = ReceiptStatus::Valid;
-    facts._transactionID = "1";
-    facts._productID     = "p";
-    facts._storeBuyerID  = "b";
-    SW_EXPECT_TRUE( apply( askOrder, facts )._status == ReceiptStatus::Valid );
-    SW_EXPECT_EQUAL( string( "b" ), apply( askOrder, facts )._storeBuyerID );
+    ReceiptQuery queryOrder;
+    queryOrder._transactionID = "1";
+    ReceiptOrderInfo info;
+    info._status        = ReceiptStatus::Valid;
+    info._transactionID = "1";
+    info._productID     = "p";
+    info._storeBuyerID  = "b";
+    SW_EXPECT_TRUE( apply( queryOrder, info )._status == ReceiptStatus::Valid );
+    SW_EXPECT_EQUAL( string( "b" ), apply( queryOrder, info )._storeBuyerID );
 
-    ReceiptOrderFacts otherOrder = facts;
-    otherOrder._transactionID    = "2";
-    SW_EXPECT_TRUE( apply( askOrder, otherOrder )._status == ReceiptStatus::Invalid );
-    SW_EXPECT_EQUAL( string( "1" ), apply( askOrder, otherOrder )._transactionID ); // 물은 거래로 남는다
+    ReceiptOrderInfo otherOrder = info;
+    otherOrder._transactionID   = "2";
+    SW_EXPECT_TRUE( apply( queryOrder, otherOrder )._status == ReceiptStatus::Invalid );
+    SW_EXPECT_EQUAL( string( "1" ), apply( queryOrder, otherOrder )._transactionID ); // 물은 거래로 남는다
 
-    ReceiptOrderFacts otherRefund = otherOrder;
-    otherRefund._status           = ReceiptStatus::Refunded;
-    SW_EXPECT_TRUE( apply( askOrder, otherRefund )._status == ReceiptStatus::Invalid );
+    ReceiptOrderInfo otherRefund = otherOrder;
+    otherRefund._status          = ReceiptStatus::Refunded;
+    SW_EXPECT_TRUE( apply( queryOrder, otherRefund )._status == ReceiptStatus::Invalid );
 
-    ReceiptOrderFacts noOrder = facts;
+    ReceiptOrderInfo noOrder = info;
     noOrder._transactionID.clear();
-    SW_EXPECT_TRUE( apply( askOrder, noOrder )._status == ReceiptStatus::Invalid );
+    SW_EXPECT_TRUE( apply( queryOrder, noOrder )._status == ReceiptStatus::Invalid );
 
-    ReceiptOrderFacts noProduct = facts;
+    ReceiptOrderInfo noProduct = info;
     noProduct._productID.clear();
-    SW_EXPECT_TRUE( apply( askOrder, noProduct )._status == ReceiptStatus::Invalid );
-    ReceiptOrderFacts refundedNoProduct = noProduct;
-    refundedNoProduct._status           = ReceiptStatus::Refunded;
-    SW_EXPECT_TRUE( apply( askOrder, refundedNoProduct )._status == ReceiptStatus::Refunded ); // 환불은 지급할 것을 고르지 않는다
+    SW_EXPECT_TRUE( apply( queryOrder, noProduct )._status == ReceiptStatus::Invalid );
+    ReceiptOrderInfo refundedNoProduct = noProduct;
+    refundedNoProduct._status          = ReceiptStatus::Refunded;
+    SW_EXPECT_TRUE( apply( queryOrder, refundedNoProduct )._status == ReceiptStatus::Refunded ); // 환불은 지급할 것을 고르지 않는다
 
-    ReceiptAsk askProduct;
-    askProduct._productID = "p";
-    askProduct._askedKey  = "k";
-    ReceiptOrderFacts silent;
+    ReceiptQuery queryProduct;
+    queryProduct._productID = "p";
+    queryProduct._queryKey  = "k";
+    ReceiptOrderInfo silent;
     silent._status        = ReceiptStatus::Valid;
     silent._transactionID = "9";
-    SW_EXPECT_TRUE( apply( askProduct, silent )._status == ReceiptStatus::Valid );
-    SW_EXPECT_EQUAL( string( "p" ), apply( askProduct, silent )._productID );
-    SW_EXPECT_EQUAL( string( "9" ), apply( askProduct, silent )._transactionID );
-    ReceiptOrderFacts otherProduct = silent;
-    otherProduct._productID        = "q";
-    SW_EXPECT_TRUE( apply( askProduct, otherProduct )._status == ReceiptStatus::Invalid );
-    ReceiptOrderFacts otherKey = silent;
-    otherKey._answeredKey      = "x";
-    SW_EXPECT_TRUE( apply( askProduct, otherKey )._status == ReceiptStatus::Invalid );
+    SW_EXPECT_TRUE( apply( queryProduct, silent )._status == ReceiptStatus::Valid );
+    SW_EXPECT_EQUAL( string( "p" ), apply( queryProduct, silent )._productID );
+    SW_EXPECT_EQUAL( string( "9" ), apply( queryProduct, silent )._transactionID );
+    ReceiptOrderInfo otherProduct = silent;
+    otherProduct._productID       = "q";
+    SW_EXPECT_TRUE( apply( queryProduct, otherProduct )._status == ReceiptStatus::Invalid );
+    ReceiptOrderInfo otherKey = silent;
+    otherKey._answeredKey     = "x";
+    SW_EXPECT_TRUE( apply( queryProduct, otherKey )._status == ReceiptStatus::Invalid );
 
-    ReceiptOrderFacts pending;
+    ReceiptOrderInfo pending;
     pending._status = ReceiptStatus::Retry;
-    SW_EXPECT_TRUE( apply( askProduct, pending )._status == ReceiptStatus::Retry );
+    SW_EXPECT_TRUE( apply( queryProduct, pending )._status == ReceiptStatus::Retry );
 }
 
 /** @brief [StoreReceiptValidatorTest] 조회 구간: 첫 조회가 기준이 되어 실패해도 시작점이 밀리지 않고, 끝까지 읽어야 옮겨지며, 잘리면 그 시각에서 바로 잇고 끝난 뒤에 처음 시작 시각으로 옮겨진다 */
@@ -496,7 +496,7 @@ SW_TEST_CASE( StoreReceiptValidatorTest, ProviderEntryRequiresABuyerBinding )
     {
         JSONDocument document;
         SW_EXPECT_TRUE( document.tryParse( text ) );
-        return ReceiptProviderSet::readEntry( document.getRoot(), outConfig ).has_value();
+        return ReceiptProviderManager::readEntry( document.getRoot(), outConfig ).has_value();
     };
     {
         ReceiptProviderConfig config;

@@ -41,7 +41,7 @@ namespace sw
         , _httpClient{ clock }
         , _listProviderSettings{}
         , _listPending{}
-        , _listDone{}
+        , _resultBuffer{}
         , _pProvider{ nullptr }
         , _pBrowser{ nullptr }
         , _nowMs{ 0 }
@@ -168,12 +168,8 @@ namespace sw
 
     int32 LoopbackPkceLoginClient::pollResults( vector<PlatformLoginClientResult>& outListResult )
     {
-        const int32 count = static_cast<int32>( _listDone.size() );
-        for ( PlatformLoginClientResult& result : _listDone )
-        {
-            outListResult.push_back( std::move( result ) );
-        }
-        _listDone.clear();
+        const int32 count = static_cast<int32>( _resultBuffer.getCount() );
+        _resultBuffer.moveAllTo( outListResult );
         return count;
     }
 
@@ -250,7 +246,8 @@ namespace sw
 
     void LoopbackPkceLoginClient::finish( PendingLogin& pending, bool bSucceeded, bool bCancelled, string_view failureText, vector<uint8> ticketBytes )
     {
-        PlatformLoginClientResult& result = _listDone.emplace_back();
+        _resultBuffer.push( PlatformLoginClientResult{} );
+        PlatformLoginClientResult& result = _resultBuffer.getLast();
         result._requestID                 = pending._requestID;
         result._provider                  = pending._provider;
         result._ticket                    = std::move( ticketBytes );

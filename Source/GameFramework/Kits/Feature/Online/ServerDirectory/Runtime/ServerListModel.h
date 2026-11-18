@@ -1,6 +1,6 @@
 /**
  * @file ServerListModel.h
- * @brief 서버 고르기 화면이 읽는 서버 목록 상태입니다. `ServerDirectoryClient::requestServerList` 의 응답을 받아 목록과 상태(`Loading` · `Loaded` · `Failed`)를 보관합니다.
+ * @brief 서버 고르기 화면이 읽는 서버 목록 상태입니다. 서버 목록 요청(`ServerDirectoryMethod::ListServers`)의 응답을 받아 목록과 상태(`Loading` · `Loaded` · `Failed`)를 보관합니다.
  * @details 화면(`ServerPickerScreen`)은 요청을 직접 보내지 않고 이 객체를 읽는다 — 응답 델리게이트가 화면 수명에 묶이지 않게 한다. 이 객체는 클라이언트와 함께(또는 먼저 요청이 끝난 뒤) 소멸해야 한다
  *          (`ServerDirectoryClient` 의 다른 사용처와 같은 규칙). 목록이 바뀔 때마다 `getRevision` 이 올라가 화면이 다시 그릴지 판단한다.
  *          목록을 받지 못하면(`Failed`) 이전 목록을 남기지 않고 비운다 — 낡은 목록을 새것처럼 보이지 않게 한다.

@@ -1,5 +1,5 @@
 /**
- * @file ReceiptProviderSet.h
+ * @file ReceiptProviderManager.h
  * @brief 설정 목록(`ReceiptProviderConfig`)에서 실제 영수증 검증 제공자를 만들고, 제공자마다 쓸 HTTP 클라이언트와 TLS 컨텍스트를 소유합니다(OnlineKits H3).
  * @details - 설정 파일은 `{"providers":[{"kind":"steam","appId":"480","keySecretEnvironment":"<변수>","sandbox":false,"reportPollSeconds":3600,"buyerBinding":"linkedLogin","buyerLoginProvider":"steam"},
  *            {"kind":"google","packageName":"com.example.game","serviceAccountEnvironment":"<변수>","voidedPollSeconds":3600,"buyerBinding":"accountToken"},
@@ -48,17 +48,17 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ReceiptProviderSet
+     * @class ReceiptProviderManager
      * @brief 서버 하나의 실제 영수증 제공자 그룹입니다. 서비스 스레드에서만 씁니다.
      */
-    class SW_KIT_SERVER_API ReceiptProviderSet
+    class SW_KIT_SERVER_API ReceiptProviderManager
     {
     public:
-        ReceiptProviderSet();
-        ~ReceiptProviderSet();
+        ReceiptProviderManager();
+        ~ReceiptProviderManager();
 
-        ReceiptProviderSet( const ReceiptProviderSet& )            = delete;
-        ReceiptProviderSet& operator=( const ReceiptProviderSet& ) = delete;
+        ReceiptProviderManager( const ReceiptProviderManager& )            = delete;
+        ReceiptProviderManager& operator=( const ReceiptProviderManager& ) = delete;
 
         /** @brief 제공자 파일(`OnlineProviderFile::read`)의 항목 하나를 읽습니다. 모르는 키, 모르는 종류, 빠진 필수 키는 오류입니다 — 철자가 틀린 설정이 조용히 기본값이 되지 않게 한다. */
         [[nodiscard]] static expected<void> readEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig );

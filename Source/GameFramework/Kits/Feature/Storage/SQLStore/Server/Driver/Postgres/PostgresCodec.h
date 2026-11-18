@@ -1,6 +1,6 @@
 /**
  * @file PostgresCodec.h
- * @brief PostgreSQL 드라이버의 변환입니다. 자리표시자 바꾸기, 매개변수 인코딩, 이진 결과 칸 읽기, SQLSTATE 분류를 libpq 없이 합니다(RESP 의 `RespCodec` 과 같은 나눔).
+ * @brief PostgreSQL 드라이버의 변환입니다. 자리표시자 바꾸기, 매개변수 인코딩, 이진 결과 칸 읽기, SQLSTATE 분류를 libpq 없이 합니다(RESP 드라이버의 `RESPCodec.h` 와 같은 나눔).
  * @details 서버가 돌려준 바이트와 호출한 쪽이 넘긴 값이 지나는 경계라 DB 없이 테스트한다. libpq 를 부르는 쪽은 `PostgresDriver.cpp` 하나다.
  */
 #pragma once

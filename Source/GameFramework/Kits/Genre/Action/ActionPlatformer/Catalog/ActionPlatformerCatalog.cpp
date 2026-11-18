@@ -94,11 +94,7 @@ namespace sw
         bool               bValid = XMLFields::readProperties( node, grading, sourceName );
         for ( XMLNode child = node.findChild( "Grade" ); child; child = child.findNextSibling( "Grade" ) )
         {
-            ActionGradeDef grade;
-            if ( XMLFields::readProperties( child, grade, sourceName ) )
-                grading._listGrade.push_back( grade );
-            else
-                bValid = false;
+            bValid = GameDataXML::readInto( child, sourceName, grading._listGrade ) && bValid;
         }
         if ( grading._listGrade.empty() )
         {
@@ -156,11 +152,7 @@ namespace sw
         bool             bValid = XMLFields::readProperties( node, pattern, sourceName );
         for ( XMLNode child = node.findChild( "State" ); child; child = child.findNextSibling( "State" ) )
         {
-            ActionPatternStateDef state;
-            if ( XMLFields::readProperties( child, state, sourceName ) )
-                pattern._listState.push_back( state );
-            else
-                bValid = false;
+            bValid = GameDataXML::readInto( child, sourceName, pattern._listState ) && bValid;
         }
         if ( pattern._listState.empty() )
         {

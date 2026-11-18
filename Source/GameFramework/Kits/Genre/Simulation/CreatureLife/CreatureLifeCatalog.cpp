@@ -278,11 +278,7 @@ namespace sw
         bool          bValid = XMLFields::readProperties( node, appeal, sourceName );
         for ( XMLNode tierNode = node.findChild( "Tier" ); tierNode; tierNode = tierNode.findNextSibling( "Tier" ) )
         {
-            TownAppealTier tier;
-            if ( XMLFields::readProperties( tierNode, tier, sourceName ) )
-                appeal._listTier.push_back( tier );
-            else
-                bValid = false;
+            bValid = GameDataXML::readInto( tierNode, sourceName, appeal._listTier ) && bValid;
         }
         if ( appeal._listTier.empty() )
         {

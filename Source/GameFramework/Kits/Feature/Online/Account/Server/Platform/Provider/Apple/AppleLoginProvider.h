@@ -16,6 +16,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
@@ -82,21 +83,21 @@ namespace sw
         uint64 submitForm( const string& url, const vector<HTTPHeader>& listForm, UnixMilliseconds nowMs );
 
     private:
-        PlatformLoginProviderConfig       _settings;
-        OidcLoginProvider                 _oidc;
-        string                            _signingKeyPem;
-        string                            _clientSecret;
-        string                            _tokenURL;
-        string                            _revokeURL;
-        vector<PendingVerification>       _listPending;
-        vector<PlatformLoginVerification> _listDone;
-        vector<PlatformLoginRevocation>   _listRevocationDone;
-        vector<PlatformLoginVerification> _listInnerScratch;
-        unordered_map<uint64, uint64>     _mapRequestToRevocation;
-        INetSecurityProvider*             _pSecurity;
-        HTTPClient*                       _pAppleHTTPClient;
-        int64                             _secretExpiresMs;
-        IDAllocator<uint64>               _verificationIDAllocator;
-        IDAllocator<uint64>               _revocationIDAllocator;
+        PlatformLoginProviderConfig            _settings;
+        OidcLoginProvider                      _oidc;
+        string                                 _signingKeyPem;
+        string                                 _clientSecret;
+        string                                 _tokenURL;
+        string                                 _revokeURL;
+        vector<PendingVerification>            _listPending;
+        EventBuffer<PlatformLoginVerification> _verificationBuffer;
+        EventBuffer<PlatformLoginRevocation>   _revocationBuffer;
+        vector<PlatformLoginVerification>      _listInnerScratch;
+        unordered_map<uint64, uint64>          _mapRequestToRevocation;
+        INetSecurityProvider*                  _pSecurity;
+        HTTPClient*                            _pAppleHTTPClient;
+        int64                                  _secretExpiresMs;
+        IDAllocator<uint64>                    _verificationIDAllocator;
+        IDAllocator<uint64>                    _revocationIDAllocator;
     };
 } // namespace sw

@@ -64,14 +64,6 @@ namespace sw
                 outMonth              = monthPart < 10 ? monthPart + 3 : monthPart - 9;
                 outYear               = yearOfEra + era * 400 + ( outMonth <= 2 ? 1 : 0 );
             }
-
-            /** @brief 점 경로의 글입니다. 없으면 빈 글입니다(응답 판정이 빈 글을 "다르다"로 읽는다). */
-            static string readText( const JSONValue& object, string_view path )
-            {
-                string text;
-                (void)object.findPathText( path, text );
-                return text;
-            }
         };
     } // namespace
 } // namespace sw
@@ -174,54 +166,52 @@ namespace sw
                string( textBuilder.view() );
     }
 
-    expected<void> SteamReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk ) const
+    expected<void> SteamReceiptValidator::readPayload( string_view payload, ReceiptQuery& outQuery ) const
     {
         if ( isOrderID( payload ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "steam receipt must be the numeric order id" } );
-        outAsk._transactionID = string( payload );
+        outQuery._transactionID = string( payload );
         return {};
     }
 
     HTTPClientRequest SteamReceiptValidator::makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds /*now*/ )
     {
         HTTPClientRequest request;
-        request._url       = call._kind == ReceiptCall::Kind::RefundPage ? makeReportURL( getRefundWindow().getFromMs() ) : makeQueryURL( call._ask._transactionID );
+        request._url       = call._kind == ReceiptCall::Kind::RefundPage ? makeReportURL( getRefundWindow().getFromMs() ) : makeQueryURL( call._query._transactionID );
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
         return request;
     }
 
-    void SteamReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& /*call*/, UnixMilliseconds /*now*/, ReceiptOrderFacts& outFacts )
+    void SteamReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& /*call*/, UnixMilliseconds /*now*/, ReceiptOrderInfo& outInfo )
     {
-        using Internal = SteamReceiptValidatorInternal;
-        if ( Internal::readText( root, "response.result" ) != "OK" )
+        if ( readText( root, "response.result" ) != "OK" )
         {
-            outFacts._status      = ReceiptStatus::Invalid;
-            outFacts._failureText = "steam answered " + Internal::readText( root, "response.error.errordesc" );
+            outInfo._status      = ReceiptStatus::Invalid;
+            outInfo._failureText = "steam answered " + readText( root, "response.error.errordesc" );
             return;
         }
-        const string status     = Internal::readText( root, "response.params.status" );
-        outFacts._status        = mapOrderStatus( status );
-        outFacts._failureText   = outFacts._status == ReceiptStatus::Valid ? string() : "steam order status " + status;
-        outFacts._transactionID = Internal::readText( root, "response.params.orderid" );
-        outFacts._storeBuyerID  = Internal::readText( root, "response.params.steamid" );
-        outFacts._bSandbox      = _settings._bSandbox;
-        const JSONValue items   = root.get( "response" ).get( "params" ).get( "items" );
+        const string status    = readText( root, "response.params.status" );
+        outInfo._status        = mapOrderStatus( status );
+        outInfo._failureText   = outInfo._status == ReceiptStatus::Valid ? string() : "steam order status " + status;
+        outInfo._transactionID = readText( root, "response.params.orderid" );
+        outInfo._storeBuyerID  = readText( root, "response.params.steamid" );
+        outInfo._bSandbox      = _settings._bSandbox;
+        const JSONValue items  = root.get( "response" ).get( "params" ).get( "items" );
         if ( items.isArray() && items.size() > 0 )
-            outFacts._productID = Internal::readText( items.at( 0 ), "itemid" );
+            outInfo._productID = readText( items.at( 0 ), "itemid" );
         int64 purchaseMs = 0;
-        if ( parseTime( Internal::readText( root, "response.params.time" ), purchaseMs ) )
-            outFacts._purchaseTimeMs = purchaseMs;
+        if ( parseTime( readText( root, "response.params.time" ), purchaseMs ) )
+            outInfo._purchaseTimeMs = purchaseMs;
     }
 
     void SteamReceiptValidator::parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage )
     {
-        using Internal = SteamReceiptValidatorInternal;
         // 결과가 OK 가 아닌 200 도 실패다 — 성공으로 치면 읽지 못한 구간을 지나쳐 그 환불을 영영 놓친다.
-        if ( Internal::readText( root, "response.result" ) != "OK" )
+        if ( readText( root, "response.result" ) != "OK" )
         {
             outPage._bIncomplete = SW_TRUE;
-            SW_LOG_WARNING_ID( "SteamReceiptValidator.SteamRefundReportNotOk", "Steam refund report answered '%#' - the next poll reads from the last successful one", Internal::readText( root, "response.error.errordesc" ) );
+            SW_LOG_WARNING_ID( "SteamReceiptValidator.SteamRefundReportNotOk", "Steam refund report answered '%#' - the next poll reads from the last successful one", readText( root, "response.error.errordesc" ) );
             return;
         }
         const JSONValue orders = root.get( "response" ).get( "params" ).get( "orders" );
@@ -231,12 +221,12 @@ namespace sw
         {
             const JSONValue order    = orders.at( index );
             int64           orderMs  = 0;
-            const bool      bHasTime = parseTime( Internal::readText( order, "time" ), orderMs );
+            const bool      bHasTime = parseTime( readText( order, "time" ), orderMs );
             if ( bHasTime && orderMs > outPage._cursorMs )
                 outPage._cursorMs = orderMs; // 잘리면 다음 조회는 여기서 잇는다(스팀 보고서는 쪽 토큰이 없다)
-            if ( isRefundStatus( Internal::readText( order, "status" ) ) == false )
+            if ( isRefundStatus( readText( order, "status" ) ) == false )
                 continue;
-            const string orderID = Internal::readText( order, "orderid" );
+            const string orderID = readText( order, "orderid" );
             if ( isOrderID( orderID ) == false ) // 지급 때의 거래 id 는 늘 주문 번호다 — 다른 모양은 깨진 줄이다
                 continue;
             addRefund( orderID, bHasTime ? orderMs : now.count() );

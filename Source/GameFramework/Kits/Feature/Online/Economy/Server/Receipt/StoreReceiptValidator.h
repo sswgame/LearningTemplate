@@ -4,7 +4,7 @@
  * @details 틀이 정하는 것:
  *          - **응답 분류**(`classifyResponse`): 전송 실패 · 429 · 5xx 는 Retry, 401 · 403 은 우리 자격 문제라 Retry(오류 로그는 스토어가 남긴다), 그 밖의 4xx 는 Invalid, 2xx 인데 JSON 이 아니면 Retry 다.
  *            "스토어가 없다고 답했다" 만 Invalid 이다 — 읽지 못한 답을 Invalid 로 하면 결제한 사람의 영수증이 버려진다.
- *          - **요청과의 대조**(`applyOrderFacts`): 물은 거래 · 상품 · 키와 답이 다르면 Invalid, 판정에 필요한 거래 id · 상품이 없으면 Invalid 이다. 스토어는 답이 말한 값을 옮겨 적기만 한다.
+ *          - **요청과의 대조**(`applyOrderInfo`): 물은 거래 · 상품 · 키와 답이 다르면 Invalid, 판정에 필요한 거래 id · 상품이 없으면 Invalid 이다. 스토어는 답이 말한 값을 옮겨 적기만 한다.
  *          - **조회 구간**(`ReceiptPollWindow`): 끝까지 읽은 조회만 구간을 옮긴다. 실패 · 읽지 못한 항목 · 잇지 못한 잘림은 그대로 둬 다음 조회가 다시 읽는다 — 구간을 지나치면 그 환불을 영영 놓친다.
  *            기준 시각은 서비스가 저장소(`econ_refund_cursor`)에 남긴다. 받기 전(`restoreRefundCursor`)에는 조회하지 않아 재시작이 구간을 비우지 않고, 스토어의 한계를 넘겨 멈춘 동안 놓친 구간은 경고한다.
  *          - **지급 알림**(`confirmDelivery`): 답이 "지급 뒤에 알려라" 고 하면(`_bNeedsDeliveryConfirm`) 결과에 키만 실어 내고, 알림은 서비스가 지급을 커밋한 뒤에 맡긴다. 2xx Confirmed, 그 밖의 4xx Refused, 닿지 못함 · 자격 거절 Retry 다.
@@ -46,15 +46,15 @@ namespace sw
 namespace sw
 {
     /** @brief 영수증을 읽어 알게 된, 스토어에 무엇을 물었는가입니다. 스토어마다 아는 칸이 다르고 모르는 칸은 비워 둡니다. */
-    struct ReceiptAsk
+    struct ReceiptQuery
     {
         string _transactionID{}; ///< 거래 id 를 물었다(스팀 주문 번호, 애플 거래 id). 답의 거래 id 가 이것과 같아야 한다
         string _productID{};     ///< 상품을 정해 물었다(구글). 답이 상품을 말하면 이것과 같아야 하고, 말하지 않으면 이 값을 쓴다
-        string _askedKey{};      ///< 거래 id 가 아닌 물음의 키(구글 구매 토큰). 답이 되풀이하면 같아야 한다
+        string _queryKey{};      ///< 거래 id 가 아닌 물음의 키(구글 구매 토큰). 답이 되풀이하면 같아야 한다
     };
 
     /** @brief 스토어 답이 말한 사실입니다. 파싱이 옮겨 적기만 하고 판단은 틀이 합니다. */
-    struct ReceiptOrderFacts
+    struct ReceiptOrderInfo
     {
         string        _transactionID{};
         string        _productID{};
@@ -88,7 +88,7 @@ namespace sw
         };
 
         ReceiptValidationRequest _request{};
-        ReceiptAsk               _ask{};
+        ReceiptQuery             _query{};
         string                   _recordKey{}; ///< ConfirmDelivery — 결과에 그대로 돌려주는 저장소 키
         string                   _pageToken{}; ///< RefundPage — 첫 쪽이면 비어 있다
         int32                    _page{ 0 };   ///< RefundPage — 몇 번째 쪽인가
@@ -157,7 +157,7 @@ namespace sw
         /** @brief 응답을 분류합니다. */
         static ReceiptResponseKind classifyResponse( const HTTPClientResponse& response );
         /** @brief 답의 사실을 물은 것과 대조해 결과를 채웁니다. @p inoutResult 의 표 · 계정 · 물은 값은 이미 있습니다. */
-        static void applyOrderFacts( const ReceiptAsk& ask, const ReceiptOrderFacts& facts, ReceiptValidationResult& inoutResult );
+        static void applyOrderInfo( const ReceiptQuery& query, const ReceiptOrderInfo& info, ReceiptValidationResult& inoutResult );
 
         const ReceiptBuyerRule& getBuyerRule() const final { return _buyerRule; }
         void                    submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) final;
@@ -186,16 +186,19 @@ namespace sw
         StoreReceiptValidator( ReceiptBuyerRule buyerRule, ReceiptPollWindow refundWindow, HTTPClient* pHTTPClient );
         ~StoreReceiptValidator() override;
 
-        /** @brief 영수증 글을 읽어 @p outAsk 를 채웁니다. 요청에 실을 수 없는 글이면 그 까닭(문장이 실패 글이다)입니다 — 스토어에 묻지 않고 Invalid 로 끝납니다. */
-        [[nodiscard]] virtual expected<void> readPayload( string_view payload, ReceiptAsk& outAsk ) const = 0;
+        /** @brief 영수증 글을 읽어 @p outQuery 를 채웁니다. 요청에 실을 수 없는 글이면 그 까닭(문장이 실패 글이다)입니다 — 스토어에 묻지 않고 Invalid 로 끝납니다. */
+        [[nodiscard]] virtual expected<void> readPayload( string_view payload, ReceiptQuery& outQuery ) const = 0;
         /** @brief @p call 의 HTTP 요청을 만듭니다. */
         virtual HTTPClientRequest makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds now ) = 0;
         /** @brief 영수증 확인 답을 사실로 옮겨 적습니다. @p root 는 JSON 이지만 모양은 보장하지 않습니다. */
-        virtual void parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderFacts& outFacts ) = 0;
+        virtual void parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderInfo& outInfo ) = 0;
         /** @brief 환불 조회 답 한 쪽을 읽어 `addRefund` 로 알립니다. @p root 는 JSON 이지만 모양은 보장하지 않습니다. */
         virtual void parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage ) = 0;
         /** @brief 401 · 403 을 받았습니다. 자격을 버리고 오류 로그를 남깁니다. */
         virtual void onCredentialRejected( const HTTPClientResponse& response ) = 0;
+
+        /** @brief 스토어 답 @p object 의 점 경로 @p path 의 글입니다. 없으면 빈 글입니다(틀과 응답 판정이 빈 글을 "없다 · 다르다" 로 읽는다). 답을 옮겨 적는 `parseOrder` · `parseRefundPage` 가 씁니다. */
+        [[nodiscard]] static string readText( const JSONValue& object, string_view path );
 
         /** @brief 호출 전에 자격을 준비합니다. 기본은 늘 준비됨입니다. */
         virtual AuthState prepareAuth( UnixMilliseconds now )

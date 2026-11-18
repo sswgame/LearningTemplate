@@ -7,7 +7,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderManager.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/AccountNameIndex.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
@@ -200,15 +200,15 @@ namespace sw
             }
 
         private:
-            NetSecurityLoginCrypto    _crypto;
-            NetSecurityPasswordHasher _hasher;
-            LoginSecretVault          _secretVault;       ///< 로그인 서비스보다 오래 산다(먼저 선언)
-            PlatformLoginProviderSet  _platformProviders; ///< 로그인 서비스보다 오래 산다(먼저 선언)
-            LoginService              _loginService;
-            AccountServer             _accountServer;
-            AccountNameIndex          _nameIndex;
-            AccountExternalLinks      _externalLinks;
-            vector<LoginCredential>   _listSeedAccount; ///< 첫 틱에 가입시킬 개발용 계정(`_listSeedTestAccount`)
+            NetSecurityLoginCrypto       _crypto;
+            NetSecurityPasswordHasher    _hasher;
+            LoginSecretVault             _secretVault;       ///< 로그인 서비스보다 오래 산다(먼저 선언)
+            PlatformLoginProviderManager _platformProviders; ///< 로그인 서비스보다 오래 산다(먼저 선언)
+            LoginService                 _loginService;
+            AccountServer                _accountServer;
+            AccountNameIndex             _nameIndex;
+            AccountExternalLinks         _externalLinks;
+            vector<LoginCredential>      _listSeedAccount; ///< 첫 틱에 가입시킬 개발용 계정(`_listSeedTestAccount`)
         };
 
         struct AccountDevOnlineInternal

@@ -392,7 +392,7 @@ namespace sw
         , _ghostCandidate{}
         , _ghostCheck{}
         , _ghost{}
-        , _listOutgoingEdit{}
+        , _outgoingEditBuffer{}
         , _viewRevision{ 0 }
         , _pendingRequestCount{ 0 }
         , _lastResult{ HousingPlaceResult::Ok }
@@ -436,7 +436,7 @@ namespace sw
             }
             _netRole = pLink->get()._role == NetLinkRole::Server ? HousingNetRole::Server : HousingNetRole::Client;
         }
-        _listOutgoingEdit.clear();
+        _outgoingEditBuffer.clear();
         _pendingRequestCount = 0;
         _replicatedOwner     = HousingPlotOwner::None;
         _layout.initialize( _settings, *_pCatalog );
@@ -624,7 +624,7 @@ namespace sw
     {
         if ( _netRole != HousingNetRole::Client )
             return false;
-        _listOutgoingEdit.push_back( request );
+        _outgoingEditBuffer.push( request );
         ++_pendingRequestCount;
         _lastResult = HousingPlaceResult::Pending;
         outResult   = HousingPlaceResult::Pending;
@@ -729,8 +729,7 @@ namespace sw
 
     void HousingPlotComponent::takeOutgoingEdits( vector<HousingEditRequest>& outListRequest )
     {
-        outListRequest.insert( outListRequest.end(), _listOutgoingEdit.begin(), _listOutgoingEdit.end() );
-        _listOutgoingEdit.clear();
+        _outgoingEditBuffer.moveAllTo( outListRequest );
     }
 
     void HousingPlotComponent::receiveNetReply( HousingPlaceResult result )

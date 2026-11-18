@@ -17,7 +17,7 @@ namespace sw
 {
     AdminService::AdminService()
         : _localCalls{}
-        , _mapCallToExtra{}
+        , _mapCallToRecord{}
         , _settings{}
     {
         setReady( false );
@@ -55,7 +55,7 @@ namespace sw
         { pollForwardedCompletions(); } );
         _calls.abandonAll();
         _localCalls.clear();
-        _mapCallToExtra.clear();
+        _mapCallToRecord.clear();
         setReady( false );
         _store.bindStore( nullptr );
     }
@@ -67,15 +67,15 @@ namespace sw
 
     void AdminService::startCall( uint64 callID, AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs )
     {
-        AdminCallExtra extra;
-        extra._nowMs    = nowMs; // 요청의 시각은 필수 인자다 — 마지막 틱 시각으로 메우지 않는다
-        extra._targetID = request._accountID;
-        extra._adminID  = adminID;
-        extra._method   = method;
+        AdminCallRecord record;
+        record._nowMs    = nowMs; // 요청의 시각은 필수 인자다 — 마지막 틱 시각으로 메우지 않는다
+        record._targetID = request._accountID;
+        record._adminID  = adminID;
+        record._method   = method;
         if ( AdminMethod::isForwardedMethod( method ) )
-            extra._request = request;
-        const int32 methodIndex = AdminMethod::toIndex( method );
-        _mapCallToExtra[callID] = extra;
+            record._request = request;
+        const int32 methodIndex  = AdminMethod::toIndex( method );
+        _mapCallToRecord[callID] = record;
 
         AdminCommand command;
         command._request       = request;
@@ -135,14 +135,14 @@ namespace sw
 
     void AdminService::completeCall( uint64 callID, AdminServiceResult serviceResult, AdminReply& inoutReply )
     {
-        const auto extraIt = _mapCallToExtra.find( callID );
-        if ( extraIt == _mapCallToExtra.end() )
+        const auto recordIt = _mapCallToRecord.find( callID );
+        if ( recordIt == _mapCallToRecord.end() )
         {
             _calls.warnUnknownCall( callID );
             return;
         }
-        const AdminCallExtra pending              = extraIt->second; // 알림 · 넘기기가 표를 건드려도 칸이 남게 복사한다
-        const bool           bLookupWithDirectory = pending._method == AdminMethod::LookupAccount::kID && serviceResult == AdminResult::Ok && _settings._pDirectory != nullptr;
+        const AdminCallRecord pending              = recordIt->second; // 알림 · 넘기기가 표를 건드려도 칸이 남게 복사한다
+        const bool            bLookupWithDirectory = pending._method == AdminMethod::LookupAccount::kID && serviceResult == AdminResult::Ok && _settings._pDirectory != nullptr;
         if ( bLookupWithDirectory ) // 신원은 저장소 조회가 채웠다(이름으로 찾았으면 계정 id 도). 접속 여부만 이 프로세스로 본다
             inoutReply._bOnline = _settings._pDirectory->isAccountOnline( inoutReply._identity._accountID ) ? SW_TRUE : SW_FALSE;
         const bool bRevoke = serviceResult == AdminResult::Ok && inoutReply._bRevokeSessions == SW_TRUE && inoutReply._bReplayed == SW_FALSE;
@@ -172,7 +172,7 @@ namespace sw
 
     void AdminService::respondCall( uint64 callID, const AdminServiceResult& serviceResult, const AdminReply& reply )
     {
-        _mapCallToExtra.erase( callID );
+        _mapCallToRecord.erase( callID );
         if ( LocalCallTable::isLocal( callID ) )
         {
             OnlineResult<AdminReply> local; // 원격 클라이언트가 받는 것과 같은 모양이다 — 공통 범주는 `_errorCode`
@@ -185,7 +185,7 @@ namespace sw
             _calls.warnUnknownCall( callID );
     }
 
-    bool AdminService::forwardDirectoryCall( uint64 callID, const AdminCallExtra& pending )
+    bool AdminService::forwardDirectoryCall( uint64 callID, const AdminCallRecord& pending )
     {
         IServerDirectoryControl* const pControl = _settings._pDirectoryControl;
         if ( pControl == nullptr )
@@ -235,7 +235,7 @@ namespace sw
         }
     }
 
-    bool AdminService::forwardLiveEventCall( uint64 callID, const AdminCallExtra& pending, AdminServiceResult& inoutServiceResult, AdminReply& inoutReply )
+    bool AdminService::forwardLiveEventCall( uint64 callID, const AdminCallRecord& pending, AdminServiceResult& inoutServiceResult, AdminReply& inoutReply )
     {
         ILiveEventControl* const pControl = _settings._pLiveEventControl;
         if ( pControl == nullptr )

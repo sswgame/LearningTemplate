@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
@@ -13,6 +13,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Google/GoogleReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Steam/SteamReceiptValidator.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/HTTP/OwnedHTTPClient.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
@@ -21,7 +22,7 @@ namespace sw
 {
     namespace
     {
-        struct ReceiptProviderSetInternal
+        struct ReceiptProviderManagerInternal
         {
             static constexpr const utf8* kKindSteam  = "steam";
             static constexpr const utf8* kKindGoogle = "google";
@@ -37,12 +38,6 @@ namespace sw
             static constexpr const utf8* kBuyerNone         = "none";
             static constexpr const utf8* kBuyerLinkedLogin  = "linkedLogin";
             static constexpr const utf8* kBuyerAccountToken = "accountToken";
-
-            static string readText( const JSONValue& object, const utf8* pKey )
-            {
-                const JSONValue value = object.get( pKey );
-                return value.isString() ? value.asString() : string();
-            }
 
             using ValidatorResult = expected<unique_ptr<IReceiptValidator>>;
 
@@ -132,8 +127,8 @@ namespace sw
              */
             [[nodiscard]] static expected<void> readBuyerRule( const JSONValue& entry, ReceiptBuyerBinding allowedBinding, ReceiptProviderConfig& outConfig )
             {
-                const string binding                = readText( entry, "buyerBinding" );
-                outConfig._buyerRule._loginProvider = readText( entry, "buyerLoginProvider" );
+                const string binding                = OnlineProviderFile::readText( entry, "buyerBinding" );
+                outConfig._buyerRule._loginProvider = OnlineProviderFile::readText( entry, "buyerLoginProvider" );
                 const bool bLinked                  = binding == kBuyerLinkedLogin && allowedBinding == ReceiptBuyerBinding::LinkedLogin;
                 const bool bToken                   = binding == kBuyerAccountToken && allowedBinding == ReceiptBuyerBinding::AccountToken;
                 if ( bLinked == false && bToken == false && binding != kBuyerNone )
@@ -154,8 +149,8 @@ namespace sw
             /** @brief 스팀 항목의 설정을 읽고 검사합니다. 틀리면 오류를 남기고 false 입니다. */
             [[nodiscard]] static expected<void> readSteamEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig )
             {
-                outConfig._appID                = readText( entry, "appId" );
-                outConfig._keySecretEnvironment = readText( entry, "keySecretEnvironment" );
+                outConfig._appID                = OnlineProviderFile::readText( entry, "appId" );
+                outConfig._keySecretEnvironment = OnlineProviderFile::readText( entry, "keySecretEnvironment" );
                 if ( expected<void> read = readSandbox( entry, kKindSteam, outConfig ).and_then( [&]
                 { return readBuyerRule( entry, ReceiptBuyerBinding::LinkedLogin, outConfig ); } );
                      read.has_value() == false )
@@ -168,11 +163,11 @@ namespace sw
             /** @brief 애플 항목의 설정을 읽고 검사합니다. 틀리면 오류를 남기고 false 입니다. */
             [[nodiscard]] static expected<void> readAppleEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig )
             {
-                outConfig._issuerID                    = readText( entry, "issuerId" );
-                outConfig._keyID                       = readText( entry, "keyId" );
-                outConfig._bundleID                    = readText( entry, "bundleId" );
-                outConfig._signingKeySecretEnvironment = readText( entry, "signingKeySecretEnvironment" );
-                outConfig._rootCertificateFile         = readText( entry, "rootCertificateFile" );
+                outConfig._issuerID                    = OnlineProviderFile::readText( entry, "issuerId" );
+                outConfig._keyID                       = OnlineProviderFile::readText( entry, "keyId" );
+                outConfig._bundleID                    = OnlineProviderFile::readText( entry, "bundleId" );
+                outConfig._signingKeySecretEnvironment = OnlineProviderFile::readText( entry, "signingKeySecretEnvironment" );
+                outConfig._rootCertificateFile         = OnlineProviderFile::readText( entry, "rootCertificateFile" );
                 if ( expected<void> read = readSandbox( entry, kKindApple, outConfig ).and_then( [&]
                 { return readBuyerRule( entry, ReceiptBuyerBinding::AccountToken, outConfig ); } );
                      read.has_value() == false )
@@ -187,9 +182,9 @@ namespace sw
             /** @brief 구글 항목의 설정을 읽고 검사합니다. 틀리면 오류를 남기고 false 입니다. */
             [[nodiscard]] static expected<void> readGoogleEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig )
             {
-                outConfig._packageName               = readText( entry, "packageName" );
-                outConfig._serviceAccountEnvironment = readText( entry, "serviceAccountEnvironment" );
-                outConfig._tokenURL                  = readText( entry, "tokenUrl" );
+                outConfig._packageName               = OnlineProviderFile::readText( entry, "packageName" );
+                outConfig._serviceAccountEnvironment = OnlineProviderFile::readText( entry, "serviceAccountEnvironment" );
+                outConfig._tokenURL                  = OnlineProviderFile::readText( entry, "tokenUrl" );
                 if ( expected<void> result = readBuyerRule( entry, ReceiptBuyerBinding::AccountToken, outConfig ); result.has_value() == false )
                     return result;
                 if ( outConfig._packageName.empty() || outConfig._serviceAccountEnvironment.empty() )
@@ -202,26 +197,26 @@ namespace sw
 
 namespace sw
 {
-    ReceiptProviderSet::ReceiptProviderSet()
+    ReceiptProviderManager::ReceiptProviderManager()
         : _listEntry{}
     {
     }
 
-    ReceiptProviderSet::~ReceiptProviderSet()
+    ReceiptProviderManager::~ReceiptProviderManager()
     {
         shutdown();
     }
 
-    expected<void> ReceiptProviderSet::readEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig )
+    expected<void> ReceiptProviderManager::readEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig )
     {
-        using Internal = ReceiptProviderSetInternal;
+        using Internal = ReceiptProviderManagerInternal;
         for ( const string& key : entry.getMemberNames() )
         {
             if ( VectorUtil::contains( Internal::kKnownKeys, key ) == false )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "unknown receipt provider setting", key } );
         }
-        outConfig._kind       = Internal::readText( entry, "kind" );
-        outConfig._baseURL    = Internal::readText( entry, "baseUrl" );
+        outConfig._kind       = OnlineProviderFile::readText( entry, "kind" );
+        outConfig._baseURL    = OnlineProviderFile::readText( entry, "baseUrl" );
         const bool bSteam     = outConfig._kind == Internal::kKindSteam;
         const bool bGoogle    = outConfig._kind == Internal::kKindGoogle;
         const bool bApple     = outConfig._kind == Internal::kKindApple;
@@ -242,14 +237,14 @@ namespace sw
         return Internal::readGoogleEntry( entry, outConfig );
     }
 
-    expected<void> ReceiptProviderSet::initialize( const vector<ReceiptProviderConfig>& listSettings, string_view trustFile, const IClock& clock )
+    expected<void> ReceiptProviderManager::initialize( const vector<ReceiptProviderConfig>& listSettings, string_view trustFile, const IClock& clock )
     {
-        using Internal = ReceiptProviderSetInternal;
+        using Internal = ReceiptProviderManagerInternal;
         shutdown();
         for ( const ReceiptProviderConfig& config : listSettings )
         {
             if ( config._buyerRule._binding == ReceiptBuyerBinding::None )
-                SW_LOG_WARNING_ID( "ReceiptProviderSet.ReceiptProviderHasNoBuyerBinding", "Receipt provider '%#' does not bind receipts to buyers - the first account to submit a receipt receives it", config._kind );
+                SW_LOG_WARNING_ID( "ReceiptProviderManager.ReceiptProviderHasNoBuyerBinding", "Receipt provider '%#' does not bind receipts to buyers - the first account to submit a receipt receives it", config._kind );
             Entry& entry      = _listEntry.emplace_back();
             entry._httpClient = make_unique<OwnedHTTPClient>( clock );
             if ( entry._httpClient->initialize() == false )
@@ -262,8 +257,7 @@ namespace sw
                                                                                       : Internal::createGoogle( config, trustFile, *entry._httpClient );
             if ( provider.has_value() == false )
             {
-                Error error{ provider.error().kind(), provider.error().message().data(), config._kind };
-                error.appendDetail( ": " ).appendDetail( provider.error().detail() );
+                const Error error = OnlineProviderFile::makeProviderError( provider.error(), config._kind );
                 shutdown();
                 return unexpected( error );
             }
@@ -272,7 +266,7 @@ namespace sw
         return {};
     }
 
-    void ReceiptProviderSet::shutdown()
+    void ReceiptProviderManager::shutdown()
     {
         for ( Entry& entry : _listEntry )
         {

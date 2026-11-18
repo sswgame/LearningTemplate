@@ -10,8 +10,8 @@ namespace sw
     RESPConnection::RESPConnection( bool bPushMode )
         : _parser{}
         , _listAwaitTag{}
-        , _listReplyRecord{}
-        , _listPushValue{}
+        , _replyRecordBuffer{}
+        , _pushValueBuffer{}
         , _pendingSendBytes{}
         , _plainBytes{}
         , _cipherBytes{}
@@ -154,20 +154,12 @@ namespace sw
 
     void RESPConnection::takeReplyRecords( vector<RESPReplyRecord>& outListRecord )
     {
-        for ( RESPReplyRecord& record : _listReplyRecord )
-        {
-            outListRecord.push_back( std::move( record ) );
-        }
-        _listReplyRecord.clear();
+        _replyRecordBuffer.moveAllTo( outListRecord );
     }
 
     void RESPConnection::takePushValues( vector<RESPValue>& outListValue )
     {
-        for ( RESPValue& value : _listPushValue )
-        {
-            outListValue.push_back( std::move( value ) );
-        }
-        _listPushValue.clear();
+        _pushValueBuffer.moveAllTo( outListValue );
     }
 
     bool RESPConnection::writePlainLocked( IStreamTransport& transport, const uint8* pData, size_t size )
@@ -217,12 +209,13 @@ namespace sw
             }
             if ( _bPushMode == SW_TRUE )
             {
-                _listPushValue.push_back( std::move( value ) );
+                _pushValueBuffer.push( std::move( value ) );
                 continue;
             }
             if ( _listAwaitTag.empty() )
                 return false; // 보낸 적 없는 답이므로 순서가 어긋난 것이다
-            RESPReplyRecord& record = _listReplyRecord.emplace_back();
+            _replyRecordBuffer.push( RESPReplyRecord{} );
+            RESPReplyRecord& record = _replyRecordBuffer.getLast();
             record._tag             = _listAwaitTag.front();
             record._value           = std::move( value );
             _listAwaitTag.pop_front();
@@ -235,7 +228,8 @@ namespace sw
         {
             if ( tag._step == kAuthStep )
                 continue;
-            RESPReplyRecord& record = _listReplyRecord.emplace_back();
+            _replyRecordBuffer.push( RESPReplyRecord{} );
+            RESPReplyRecord& record = _replyRecordBuffer.getLast();
             record._tag             = tag;
             record._bFailed         = SW_TRUE;
         }

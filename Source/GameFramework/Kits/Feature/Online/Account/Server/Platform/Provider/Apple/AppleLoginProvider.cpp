@@ -47,8 +47,8 @@ namespace sw
         , _tokenURL{ settings._tokenURL.empty() ? string( kDefaultTokenURL ) : settings._tokenURL }
         , _revokeURL{ settings._revokeURL.empty() ? string( kDefaultRevokeURL ) : settings._revokeURL }
         , _listPending{}
-        , _listDone{}
-        , _listRevocationDone{}
+        , _verificationBuffer{}
+        , _revocationBuffer{}
         , _listInnerScratch{}
         , _mapRequestToRevocation{}
         , _pSecurity{ pSecurity }
@@ -149,7 +149,7 @@ namespace sw
         const string clientSecret = makeClientSecret( nowMs );
         if ( clientSecret.empty() )
         {
-            _listDone.push_back( pending._verified ); // 연동 비밀 없이 끝낸다 — 로그인은 성공이다
+            _verificationBuffer.push( pending._verified ); // 연동 비밀 없이 끝낸다 — 로그인은 성공이다
             pending._outerID = 0;
             return;
         }
@@ -173,18 +173,14 @@ namespace sw
         if ( pending._verified._linkSecret.empty() )
             SW_LOG_WARNING_ID( "AppleLoginProvider.LoginProviderCouldNot", "Login provider '%#' could not exchange the authorization code (status %#) - the account has no token to revoke later", _settings._name.c_str(),
                                response._statusCode );
-        _listDone.push_back( std::move( pending._verified ) );
+        _verificationBuffer.push( std::move( pending._verified ) );
         pending._outerID = 0;
     }
 
     int32 AppleLoginProvider::pollVerifications( vector<PlatformLoginVerification>& outListVerification )
     {
-        const int32 count = static_cast<int32>( _listDone.size() );
-        for ( PlatformLoginVerification& verification : _listDone )
-        {
-            outListVerification.push_back( std::move( verification ) );
-        }
-        _listDone.clear();
+        const int32 count = static_cast<int32>( _verificationBuffer.getCount() );
+        _verificationBuffer.moveAllTo( outListVerification );
         return count;
     }
 
@@ -206,7 +202,7 @@ namespace sw
                     submitExchange( pending, nowMs );
                 else
                 {
-                    _listDone.push_back( std::move( pending._verified ) );
+                    _verificationBuffer.push( std::move( pending._verified ) );
                     pending._outerID = 0;
                 }
                 break;
@@ -250,7 +246,8 @@ namespace sw
         const string clientSecret = makeClientSecret( nowMs );
         if ( clientSecret.empty() )
         {
-            PlatformLoginRevocation& done = _listRevocationDone.emplace_back();
+            _revocationBuffer.push( PlatformLoginRevocation{} );
+            PlatformLoginRevocation& done = _revocationBuffer.getLast();
             done._revocationID            = revocationID;
             done._bUnavailable            = SW_TRUE;
             return revocationID;
@@ -266,8 +263,9 @@ namespace sw
 
     void AppleLoginProvider::finishRevocation( uint64 revocationID, const HTTPClientResponse& response )
     {
-        using Internal                = AppleLoginProviderInternal;
-        PlatformLoginRevocation& done = _listRevocationDone.emplace_back();
+        using Internal = AppleLoginProviderInternal;
+        _revocationBuffer.push( PlatformLoginRevocation{} );
+        PlatformLoginRevocation& done = _revocationBuffer.getLast();
         done._revocationID            = revocationID;
         if ( response.isSuccess() )
             return; // 철회했다
@@ -282,9 +280,8 @@ namespace sw
 
     int32 AppleLoginProvider::pollRevocations( vector<PlatformLoginRevocation>& outListRevocation )
     {
-        const int32 count = static_cast<int32>( _listRevocationDone.size() );
-        outListRevocation.insert( outListRevocation.end(), _listRevocationDone.begin(), _listRevocationDone.end() );
-        _listRevocationDone.clear();
+        const int32 count = static_cast<int32>( _revocationBuffer.getCount() );
+        _revocationBuffer.moveAllTo( outListRevocation );
         return count;
     }
 } // namespace sw

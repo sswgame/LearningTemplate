@@ -7,7 +7,7 @@ namespace sw
     FakePlatformLoginClient::FakePlatformLoginClient()
         : _listPreset{}
         , _listPending{}
-        , _listDone{}
+        , _resultBuffer{}
         , _requestIDAllocator{}
     {
     }
@@ -54,19 +54,15 @@ namespace sw
                 result._ticket.assign( reinterpret_cast<const uint8*>( pPreset->_ticketText.data() ), reinterpret_cast<const uint8*>( pPreset->_ticketText.data() ) + pPreset->_ticketText.size() );
                 result._bSucceeded = SW_TRUE;
             }
-            _listDone.push_back( std::move( result ) );
+            _resultBuffer.push( std::move( result ) );
         }
         _listPending.clear();
     }
 
     int32 FakePlatformLoginClient::pollResults( vector<PlatformLoginClientResult>& outListResult )
     {
-        const int32 count = static_cast<int32>( _listDone.size() );
-        for ( PlatformLoginClientResult& result : _listDone )
-        {
-            outListResult.push_back( std::move( result ) );
-        }
-        _listDone.clear();
+        const int32 count = static_cast<int32>( _resultBuffer.getCount() );
+        _resultBuffer.moveAllTo( outListResult );
         return count;
     }
 } // namespace sw

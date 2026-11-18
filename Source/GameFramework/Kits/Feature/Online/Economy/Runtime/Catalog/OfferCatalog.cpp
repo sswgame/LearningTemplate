@@ -32,11 +32,7 @@ namespace sw
                 bool bValid = true;
                 for ( XMLNode node = parent.findChild( pElement ); node; node = node.findNextSibling( pElement ) )
                 {
-                    TDef def;
-                    if ( XMLFields::readProperties( node, def, sourceName ) )
-                        outListDef.push_back( def );
-                    else
-                        bValid = false;
+                    bValid = GameDataXML::readInto( node, sourceName, outListDef ) && bValid;
                 }
                 return bValid;
             }

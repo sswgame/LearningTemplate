@@ -6,7 +6,7 @@ namespace sw
 {
     FakePushProvider::FakePushProvider()
         : _listSent{}
-        , _listPending{}
+        , _resultBuffer{}
         , _mapTokenToScript{}
     {
     }
@@ -45,14 +45,13 @@ namespace sw
             result._retryAfterMs = scriptIt->second._retryAfterMs;
             --scriptIt->second._remainingCount;
         }
-        _listPending.push_back( result );
+        _resultBuffer.push( result );
     }
 
     int32 FakePushProvider::pollResults( vector<PushDeliveryResult>& outListResult )
     {
-        const int32 count = static_cast<int32>( _listPending.size() );
-        outListResult.insert( outListResult.end(), _listPending.begin(), _listPending.end() );
-        _listPending.clear();
+        const int32 count = static_cast<int32>( _resultBuffer.getCount() );
+        _resultBuffer.moveAllTo( outListResult );
         return count;
     }
 } // namespace sw

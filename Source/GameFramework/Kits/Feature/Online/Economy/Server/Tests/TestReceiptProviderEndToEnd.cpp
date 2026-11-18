@@ -20,7 +20,7 @@
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderManager.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
@@ -208,7 +208,7 @@ namespace
         FakeStoreEndpoint        _endpoint{};
         ReceiptCredentials       _secrets{};
         SystemMonotonicClock     _clock{};
-        ReceiptProviderSet       _providers{};
+        ReceiptProviderManager   _providers{};
         ReceiptValidatorRegistry _registry{};
 
         ReceiptEndToEndTest()
@@ -230,7 +230,7 @@ namespace
             const optional<AbsolutePath>  providersFile = AbsolutePath::tryMake( _secrets.writeProvidersFile( _endpoint.makeBaseURL() ) );
             const optional<AbsolutePath>  trustFile     = AbsolutePath::tryMake( _endpoint._trustFile );
             vector<ReceiptProviderConfig> listConfig;
-            if ( expected<void> read = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, trustFile, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderSet::readEntry, listConfig );
+            if ( expected<void> read = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, trustFile, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderManager::readEntry, listConfig );
                  read.has_value() == false )
                 return read;
             if ( expected<void> providers = _providers.initialize( listConfig, OnlineProviderFile::getTrustText( trustFile ), _clock ); providers.has_value() == false )
@@ -413,7 +413,7 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, ExternalSampleConfigReads )
     const optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Shooter3D.receipts.json", ProcessRoots::get()._project );
     SW_REQUIRE_TRUE( providersFile.has_value() );
     vector<ReceiptProviderConfig> listConfig;
-    const expected<void>          read = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, sw::nullopt, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderSet::readEntry, listConfig );
+    const expected<void>          read = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, sw::nullopt, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderManager::readEntry, listConfig );
     SW_REQUIRE_TRUE_MSG( read.has_value(), read.has_value() ? string_view{} : read.error().message() );
     SW_EXPECT_EQUAL( size_t( 3 ), listConfig.size() );
 }

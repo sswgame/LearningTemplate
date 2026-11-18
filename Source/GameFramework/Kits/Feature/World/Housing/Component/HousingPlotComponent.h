@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -166,7 +167,7 @@ namespace sw
         HousingCandidate                   _ghostCandidate;
         HousingPlaceCheck                  _ghostCheck;
         GameObjectHandle                   _ghost;
-        vector<HousingEditRequest>         _listOutgoingEdit;    ///< 클라이언트 — 세션이 다음 틱 뒤에 보낼 요청
+        EventBuffer<HousingEditRequest>    _outgoingEditBuffer;  ///< 클라이언트 — 세션이 다음 틱 뒤에 보낼 요청
         uint32                             _viewRevision;        ///< 뷰가 맞춘 레이아웃 판
         uint32                             _pendingRequestCount; ///< 클라이언트 — 보냈거나 쌓였고 아직 답이 없는 요청
         HousingPlaceResult                 _lastResult;

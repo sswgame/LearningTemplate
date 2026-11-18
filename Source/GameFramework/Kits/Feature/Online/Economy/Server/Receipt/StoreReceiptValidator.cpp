@@ -144,39 +144,39 @@ namespace sw
         return response.isSuccess() ? ReceiptResponseKind::Answered : ReceiptResponseKind::Refused;
     }
 
-    void StoreReceiptValidator::applyOrderFacts( const ReceiptAsk& ask, const ReceiptOrderFacts& facts, ReceiptValidationResult& inoutResult )
+    void StoreReceiptValidator::applyOrderInfo( const ReceiptQuery& query, const ReceiptOrderInfo& info, ReceiptValidationResult& inoutResult )
     {
         using Internal              = StoreReceiptValidatorInternal;
-        inoutResult._status         = facts._status;
-        inoutResult._failureText    = facts._failureText;
-        inoutResult._storeBuyerID   = facts._storeBuyerID;
-        inoutResult._purchaseTimeMs = facts._purchaseTimeMs;
-        inoutResult._bSandbox       = facts._bSandbox;
-        if ( facts._productID.empty() == false )
-            inoutResult._productID = facts._productID;
+        inoutResult._status         = info._status;
+        inoutResult._failureText    = info._failureText;
+        inoutResult._storeBuyerID   = info._storeBuyerID;
+        inoutResult._purchaseTimeMs = info._purchaseTimeMs;
+        inoutResult._bSandbox       = info._bSandbox;
+        if ( info._productID.empty() == false )
+            inoutResult._productID = info._productID;
         if ( inoutResult._transactionID.empty() )
-            inoutResult._transactionID = facts._transactionID;
-        const bool bDecided = facts._status == ReceiptStatus::Valid || facts._status == ReceiptStatus::Refunded;
+            inoutResult._transactionID = info._transactionID;
+        const bool bDecided = info._status == ReceiptStatus::Valid || info._status == ReceiptStatus::Refunded;
         if ( bDecided == false )
             return; // 거절이거나 아직 정해지지 않았다 — 지급으로 이어지지 않으니 대조할 것이 없다
-        if ( facts._transactionID.empty() )
+        if ( info._transactionID.empty() )
         {
             Internal::reject( inoutResult, "the store answer has no transaction id" ); // 분개 키를 만들 수 없다
             return;
         }
-        const bool bOtherTransaction = ask._transactionID.empty() == false && facts._transactionID != ask._transactionID;
-        const bool bOtherKey         = ask._askedKey.empty() == false && facts._answeredKey.empty() == false && facts._answeredKey != ask._askedKey;
+        const bool bOtherTransaction = query._transactionID.empty() == false && info._transactionID != query._transactionID;
+        const bool bOtherKey         = query._queryKey.empty() == false && info._answeredKey.empty() == false && info._answeredKey != query._queryKey;
         if ( bOtherTransaction || bOtherKey )
         {
             Internal::reject( inoutResult, "the store answered for another order" ); // 묻지 않은 주문의 답으로 지급하지 않는다
             return;
         }
-        if ( ask._productID.empty() == false && facts._productID.empty() == false && facts._productID != ask._productID )
+        if ( query._productID.empty() == false && info._productID.empty() == false && info._productID != query._productID )
         {
             Internal::reject( inoutResult, "the store answered for another product" );
             return;
         }
-        if ( facts._status == ReceiptStatus::Valid && inoutResult._productID.empty() )
+        if ( info._status == ReceiptStatus::Valid && inoutResult._productID.empty() )
             Internal::reject( inoutResult, "the store order has no product" ); // 상품이 없는 주문은 지급할 것이 없다
     }
 
@@ -202,8 +202,8 @@ namespace sw
         result._storeName     = call._request._storeName;
         result._ticket        = call._request._ticket;
         result._accountID     = call._request._accountID;
-        result._transactionID = call._ask._transactionID;
-        result._productID     = call._ask._productID;
+        result._transactionID = call._query._transactionID;
+        result._productID     = call._query._productID;
         result._buyerRule     = _buyerRule;
         return result;
     }
@@ -221,7 +221,7 @@ namespace sw
         ReceiptCall call;
         call._kind    = ReceiptCall::Kind::Validate;
         call._request = request;
-        if ( const expected<void> read = readPayload( request._payload, call._ask ); read.has_value() == false )
+        if ( const expected<void> read = readPayload( request._payload, call._query ); read.has_value() == false )
         {
             // 요청에 실을 수 없는 영수증은 스토어에 묻지 않고 거절한다(다른 인자를 끼워 넣는 길을 막는다).
             ReceiptValidationResult result = makeResult( call );
@@ -351,15 +351,15 @@ namespace sw
             completeRetry( call, string( textBuilder.view() ) );
             return;
         }
-        ReceiptOrderFacts facts;
-        parseOrder( document.getRoot(), call, now, facts );
+        ReceiptOrderInfo info;
+        parseOrder( document.getRoot(), call, now, info );
         ReceiptValidationResult result = makeResult( call );
-        applyOrderFacts( call._ask, facts, result );
-        if ( result._status == ReceiptStatus::Valid && facts._bNeedsDeliveryConfirm == SW_TRUE )
+        applyOrderInfo( call._query, info, result );
+        if ( result._status == ReceiptStatus::Valid && info._bNeedsDeliveryConfirm == SW_TRUE )
         {
             // 여기서 알리지 않는다 — 구매자 대조 · 지급이 남았다. 지급이 진 영수증을 알리면 스토어가 환불하지 않아 돈만 받은 구매가 남는다.
             result._deliveryKey        = call._request._payload;
-            result._deliveryDeadlineMs = facts._deliveryDeadlineMs;
+            result._deliveryDeadlineMs = info._deliveryDeadlineMs;
         }
         _listDone.push_back( std::move( result ) );
     }
@@ -371,7 +371,7 @@ namespace sw
         call._recordKey          = task._recordKey;
         call._request._storeName = task._storeName;
         call._request._payload   = task._deliveryKey;
-        if ( const expected<void> read = readPayload( task._deliveryKey, call._ask ); read.has_value() == false )
+        if ( const expected<void> read = readPayload( task._deliveryKey, call._query ); read.has_value() == false )
         {
             SW_LOG_ERROR_ID( "StoreReceiptValidator.DeliveryKeyUnreadable", "A %# delivery record has an unreadable key (%#) - it is dropped, the store refunds that purchase when its deadline passes", getStoreName(),
                              read.error().message() );
@@ -525,6 +525,13 @@ namespace sw
                 }
             }
         }
+    }
+
+    string StoreReceiptValidator::readText( const JSONValue& object, string_view path )
+    {
+        string text;
+        (void)object.findPathText( path, text ); // 없으면 빈 글이다
+        return text;
     }
 
     void StoreReceiptValidator::pollCompletions( vector<ReceiptValidationResult>& outListResult )

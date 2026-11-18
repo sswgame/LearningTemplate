@@ -33,7 +33,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /** @brief 트랙 조각의 종류입니다. 데이터(XML)에는 열거자 이름 그대로 적습니다(철자 그대로 — `ENUM()` 이름). */
     ENUM()
-    enum class CoasterPieceType : uint8
+    enum class CoasterPieceKind : uint8
     {
         Station = 0, ///< 수평 직선에 스테이션 표시가 붙는다(열차를 정해진 속도로 맞춘다)
         Straight,    ///< 수평 직선
@@ -67,7 +67,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Required )
-        CoasterPieceType _type{ CoasterPieceType::Straight };
+        CoasterPieceKind _type{ CoasterPieceKind::Straight };
         PROPERTY( Min = 0.1 )
         float32 _length{ 10.0f }; ///< 수평 길이(m)이다. Station, Straight, LiftHill, Drop, Hill, Brakes, Booster 가 쓴다
         PROPERTY()
@@ -187,7 +187,7 @@ namespace sw
         /** @brief 진행 방향의 수평 단위 벡터를 반환합니다. */
         float3 computeForward() const;
         /** @brief 수평 길이 @p length 동안 높이를 @p heightAt( t ) 로 바꾸며 직진하는 조각을 붙입니다(t 는 0..1). */
-        void appendProfile( float32 length, float32 height, CoasterPieceType type, uint8 flags );
+        void appendProfile( float32 length, float32 height, CoasterPieceKind type, uint8 flags );
         void appendTurn( const CoasterTrackPiece& piece, float32 directionSign );
         void appendLoop( const CoasterTrackPiece& piece );
         /** @brief 점 하나를 더합니다. 위쪽 벡터는 세계 위쪽을 접선에 직교로 맞춘 것에, 뱅크(라디안)만큼 접선 둘레로 돌린 값입니다. */

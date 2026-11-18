@@ -1,5 +1,5 @@
 /**
- * @file PlatformLoginProviderSet.h
+ * @file PlatformLoginProviderManager.h
  * @brief 설정 목록(`PlatformLoginProviderConfig`)에서 외부 로그인 제공자를 만들고, 제공자마다 쓸 HTTP 클라이언트와 TLS 컨텍스트를 소유합니다.
  * @details - 제공자는 응답을 자기만 회수하므로(`PlatformLoginProviderConfig::create`) 제공자마다 HTTP 클라이언트 하나를 둡니다.
  *            애플 로그인(`AppleSignIn`)은 JWKS 용과 교환 · 철회 용 둘을 둡니다.
@@ -23,17 +23,17 @@ namespace sw
     class OwnedHTTPClient;
 
     /**
-     * @class PlatformLoginProviderSet
+     * @class PlatformLoginProviderManager
      * @brief 서버 하나의 외부 로그인 제공자 그룹입니다. 서비스 스레드에서만 씁니다.
      */
-    class SW_KIT_SERVER_API PlatformLoginProviderSet
+    class SW_KIT_SERVER_API PlatformLoginProviderManager
     {
     public:
-        PlatformLoginProviderSet();
-        ~PlatformLoginProviderSet();
+        PlatformLoginProviderManager();
+        ~PlatformLoginProviderManager();
 
-        PlatformLoginProviderSet( const PlatformLoginProviderSet& )            = delete;
-        PlatformLoginProviderSet& operator=( const PlatformLoginProviderSet& ) = delete;
+        PlatformLoginProviderManager( const PlatformLoginProviderManager& )            = delete;
+        PlatformLoginProviderManager& operator=( const PlatformLoginProviderManager& ) = delete;
 
         /** @brief 설정마다 HTTP 클라이언트, TLS 컨텍스트, 제공자를 만듭니다. 하나라도 실패하면 만든 것을 모두 버리고 오류입니다. */
         [[nodiscard]] expected<void> initialize( const vector<PlatformLoginProviderConfig>& listSettings, string_view trustFile, const IClock& clock );

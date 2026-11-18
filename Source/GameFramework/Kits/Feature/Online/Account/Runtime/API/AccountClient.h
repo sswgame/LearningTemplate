@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -25,24 +26,8 @@ namespace sw
 {
     struct NetConnectCredentials;
 
-    /** @brief 클라이언트 요청 종류입니다. */
-    enum class AccountClientOperation : uint8
-    {
-        Register = 0,
-        Login,
-        GuestLogin,
-        PlatformLogin,
-        Resume,
-        Logout,
-        LinkCredential,
-        LinkPlatform,
-        IssueGameTicket,
-        UnlinkPlatform,
-        ListLinks,
-        RequestDeletion,
-        CancelDeletion,
-        IssueLoginNonce
-    };
+    /** @brief 클라이언트 요청 종류입니다. 프로토콜 표의 메서드 이름 그대로입니다 — 같은 열거자를 두 번 적으면 메서드를 더할 때 한쪽이 빠진다. */
+    using AccountClientOperation = AccountMethodName;
 
     /** @brief 끝난 요청 하나입니다. 전송 오류나 공통 범주이면 `_errorCode`(`OnlineError`)가 0이 아니며 `_result` 도 그 범주입니다(`LoginServiceResult`). */
     struct AccountClientReply
@@ -130,14 +115,14 @@ namespace sw
         void finishResume( const AccountClientReply& reply );
 
     private:
-        vector<AccountClientReply> _listReply;
-        vector<AccountClientEvent> _listEvent;
-        AccountClientInfo          _clientInfo;
-        AccountIdentity            _identity;
-        LoginSessionToken          _token;
-        OnlineServiceClient*       _pServiceClient; ///< 세션 요청 보류를 걸고 푸는 데 쓴다. 기반의 서비스 클라이언트와 같다
-        uint8                      _bLoggedIn;
-        uint8                      _bResuming;
-        uint8                      _bAutomaticResume; ///< 날아가는 재접속이 다시 연결된 뒤 이 객체가 스스로 보낸 것이다
+        EventBuffer<AccountClientReply> _replyBuffer;
+        EventBuffer<AccountClientEvent> _eventBuffer;
+        AccountClientInfo               _clientInfo;
+        AccountIdentity                 _identity;
+        LoginSessionToken               _token;
+        OnlineServiceClient*            _pServiceClient; ///< 세션 요청 보류를 걸고 푸는 데 쓴다. 기반의 서비스 클라이언트와 같다
+        uint8                           _bLoggedIn;
+        uint8                           _bResuming;
+        uint8                           _bAutomaticResume; ///< 날아가는 재접속이 다시 연결된 뒤 이 객체가 스스로 보낸 것이다
     };
 } // namespace sw
