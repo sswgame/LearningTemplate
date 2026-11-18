@@ -88,11 +88,16 @@ def collect_reflected_properties(map_header: Mapping[str, str]) -> dict[str, lis
     return properties
 
 
-def make_serialized_pattern(name: str) -> re.Pattern[str]:
+def is_xml_path(path: str) -> bool:
+    return path.lower().endswith(".xml")
+
+
+def make_serialized_pattern(name: str, xml: bool = False) -> re.Pattern[str]:
     """직렬화 이름이 적히는 꼴만 — 속성 · `이름=값` 토큰(`name=`), 요소(`<name>` · `</name>`), 따옴표로 감싼 키(`"name"`). 글 속 영어 낱말은 건드리지 않는다.
-    shortcut: `name = "x"` 처럼 `=` 앞을 띄운 XML 속성은 보지 않는다(저장소 XML 에 없다), 그런 데이터가 생기면 XML 파일에만 공백을 허용한다."""
+    @p xml 이면 `name = "x"` 처럼 `=` 둘레를 띄운 속성도 본다(XML 문법이 허용한다) — 코드의 `string name = "x"` 는 변수라 XML 파일에만 건다."""
     word = re.escape(name)
-    return re.compile(rf'(?<![\w.-]){word}(?==[^=])|(?<=<){word}(?=[\s/>])|(?<=</){word}(?=>)|(?<="){word}(?=\\?")')
+    spaced = rf'|(?<![\w.-]){word}(?=\s+=\s*["\'])' if xml else ""
+    return re.compile(rf'(?<![\w.-]){word}(?==[^=])|(?<=<){word}(?=[\s/>])|(?<=</){word}(?=>)|(?<="){word}(?=\\?")' + spaced)
 
 
 def plan_serialized_rename(properties: Mapping[str, list[tuple[str, str]]], map_text: Mapping[str, str], old: str, new: str) -> tuple[tuple[str, str] | None, list[str]]:
@@ -103,8 +108,7 @@ def plan_serialized_rename(properties: Mapping[str, list[tuple[str, str]]], map_
     serialized_old, serialized_new = make_serialized_name(old), make_serialized_name(new)
     if (old not in properties and new not in properties) or serialized_old == serialized_new:
         return None, []
-    pattern = make_serialized_pattern(serialized_old)
-    list_use = [path for path, text in map_text.items() if serialized_old in text and pattern.search(text)]
+    list_use = [path for path, text in map_text.items() if serialized_old in text and make_serialized_pattern(serialized_old, is_xml_path(path)).search(text)]
     if not list_use:
         return None, []
     # 이름만으로는 어느 타입의 칸인지 모른다 — 같은 직렬화 이름을 쓰는 다른 멤버가 있으면 데이터의 그 이름이 누구 것인지 가릴 수 없다.
@@ -117,10 +121,11 @@ def plan_serialized_rename(properties: Mapping[str, list[tuple[str, str]]], map_
     return (serialized_old, serialized_new), []
 
 
-def replace_serialized_name(text: str, serialized_old: str, serialized_new: str) -> tuple[str, int]:
+def replace_serialized_name(text: str, serialized_old: str, serialized_new: str, path: str = "") -> tuple[str, int]:
+    """@p path 는 그 글의 파일(XML 이면 `=` 둘레를 띄운 속성도 바꾼다 — `make_serialized_pattern`)."""
     if serialized_old not in text:
         return text, 0
-    return make_serialized_pattern(serialized_old).subn(lambda _: serialized_new, text)
+    return make_serialized_pattern(serialized_old, is_xml_path(path)).subn(lambda _: serialized_new, text)
 
 
 def check_serialized_rename() -> None:
@@ -149,6 +154,10 @@ def check_serialized_rename() -> None:
     assert replace_serialized_name(data["a.scenario.xml"], *pair) == ('<Shot outputPath="a.ppm" holdFrame="true" otherFileName="x"><outputPath>b</outputPath></Shot>', 3)
     assert replace_serialized_name(data["Steps.cpp"], *pair) == ('find( "outputPath" ); parse( "Shot outputPath=a" ); string fileName = "a"; if ( fileName == b )', 2)
     assert replace_serialized_name(data["notes.md"], *pair) == (data["notes.md"], 0), "글 속 낱말은 남긴다"
+    # XML 은 `=` 둘레를 띄워도 속성이다 — 코드의 `string fileName = "a"` 는 변수라 바꾸지 않는다
+    assert replace_serialized_name('<Shot fileName = "a.ppm"/>', *pair, path="a.scenario.xml") == ('<Shot outputPath = "a.ppm"/>', 1)
+    assert replace_serialized_name('string fileName = "a";', *pair, path="Steps.cpp") == ('string fileName = "a";', 0)
+    assert plan_serialized_rename(properties, {"b.xml": '<Shot fileName ="x"/>'}, "_fileName", "_outputPath") == (("fileName", "outputPath"), [])
     # 병합 뒤 다시 돌리기: 선언은 이미 새 이름이다
     renamed = collect_reflected_properties({"Shot.h": header.replace("_fileName", "_outputPath")})
     assert plan_serialized_rename(renamed, data, "_fileName", "_outputPath") == (("fileName", "outputPath"), [])

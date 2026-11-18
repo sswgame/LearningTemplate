@@ -57,6 +57,13 @@ namespace sw
         uint8                  _bDown      : 1;
         [[maybe_unused]] uint8 _reserved   : 6;
     };
+
+    /** @brief 묶음 파일 하나의 리소스 id 와 글입니다(`InputMap::writeSourceText` 의 글 — `loadBundleTexts` 가 읽는다). */
+    struct InputMapSourceText
+    {
+        string _assetPath;
+        string _text;
+    };
 } // namespace sw
 
 namespace sw
@@ -100,6 +107,11 @@ namespace sw
          * @return 모두 읽었고 겹침이 없으면 true 입니다. 실패하면 맵을 비운다(일부만 든 맵으로 게임을 띄우지 않는다).
          */
         [[nodiscard]] bool loadBundle( const vector<AssetID>& listAsset );
+        /**
+         * @brief `writeSourceText` 로 만든 파일마다의 글을 묶음 차례로 읽습니다 — `loadBundle` 과 같은 규칙이고 디스크를 보지 않는다.
+         * @details 에디터 InputMap 패널이 묶음을 고칠 때의 되돌리기 글이다(파일마다 몫을 그대로 돌려야 저장이 같은 파일로 간다). 실패하면 맵을 비운다.
+         */
+        [[nodiscard]] bool loadBundleTexts( const vector<InputMapSourceText>& listSource );
         /** @brief 읽은 파일 수입니다(`loadFromAsset` 은 1, `loadBundle` 은 묶음 길이, 파일에서 읽지 않은 맵은 0). */
         uint32 getSourceCount() const { return static_cast<uint32>( _listSource.size() ); }
         /** @brief 읽은 파일 @p sourceIndex 의 리소스 id 입니다. */
@@ -524,6 +536,8 @@ namespace sw
         [[nodiscard]] bool loadDefinition( const AssetID& assetID, bool bAppend, bool bCheckConflicts );
         /** @brief `loadDefinition` · `loadFromXMLText` 의 본문입니다 — 읽은 문서 @p doc 의 `<InputMap>` 을 받습니다(@p absPath 는 오류에 적는 이름). */
         [[nodiscard]] bool loadDefinitionDocument( const XMLDocument& doc, string_view relativePath, string_view absPath, bool bAppend, bool bCheckConflicts );
+        /** @brief `loadBundle` · `loadBundleTexts` 의 끝입니다 — 다 읽은 맵의 겹침을 보고, 실패면 알리고 맵을 비웁니다(@p sourceName 은 마지막 파일). */
+        [[nodiscard]] bool finishBundle( bool bValid, string_view sourceName );
         /** @brief `saveToAsset` · `saveToXMLText` 의 본문입니다 — 맵 전체를 `<InputMap>` 문서로 채운다. 형식이 담지 못하는 바인딩이 있으면 false 입니다. */
         [[nodiscard]] bool fillMapDocument( XMLDocument& outDoc ) const;
         /** @brief `loadDefinition` 의 맵 전체 값 단계입니다. 시간 문턱 · 가상 커서 · 기본 레이어를 읽고, 더하지 않을 때만 맵을 비우고 적용합니다. 깨졌거나 거절되면 false 입니다. */

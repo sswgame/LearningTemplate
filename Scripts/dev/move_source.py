@@ -378,9 +378,9 @@ def main_rename(argv: list[str]) -> int:
     if clash:
         return ExitCode.VIOLATION
 
-    def rewrite_serialized(part: str) -> str:
+    def rewrite_serialized(part: str, relative: str) -> str:
         for serialized_old, serialized_new in list_serialized:
-            part = replace_serialized_name(part, serialized_old, serialized_new)[0]
+            part = replace_serialized_name(part, serialized_old, serialized_new, relative)[0]
         return part
 
     list_word_rule = [(re.compile(rf"\b{re.escape(old)}\b"), new) for old, new in list_pair]
@@ -395,7 +395,8 @@ def main_rename(argv: list[str]) -> int:
     for path, text in map_text.items():
         rewritten = rewrite_file(path, text, rewrite_words)
         if list_serialized:   # 직렬화 이름은 문자열 · 데이터 안에 산다 — 문자열 건너뛰기와 따로 건다
-            rewritten = rewrite_rename_target(path.relative_to(root).as_posix(), rewritten, rewrite_serialized)
+            relative = path.relative_to(root).as_posix()
+            rewritten = rewrite_rename_target(relative, rewritten, lambda part, relative=relative: rewrite_serialized(part, relative))
         if rewritten != text:
             changed_count += 1
             list_changed.append(path)

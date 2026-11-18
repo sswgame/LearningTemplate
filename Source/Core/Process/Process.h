@@ -113,6 +113,12 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 분리 실행한 프로세스의 id 입니다 — Windows 는 띄운 프로세스, POSIX 는 두 번 fork 한 손자(실제로 명령을 도는 쪽)의 id 다(`Process::launchDetached`). */
+    struct DetachedProcessID
+    {
+        uint32 _value{ 0 };
+    };
+
     /**
      * @class Process
      * @brief 외부 OS 프로세스를 만들고, 표준 출력을 파이프로 받아 오고, 종료를 기다리는 클래스입니다.
@@ -240,8 +246,15 @@ namespace sw
          *          언리얼의 `CreateProc( bLaunchDetached )` 에 해당합니다.
          *          자식은 이 프로세스의 핸들 · 서술자를 하나도 물려받지 않습니다(POSIX 는 표준 입출력을 /dev/null 로, 두 번 fork 해
          *          좀비를 남기지 않습니다).
+         * @return 띄운 프로세스의 id 입니다(`waitForDetachedExit` 로 끝을 기다릴 수 있다). 띄우지 못했으면 없음이고 이유는 로그로 남겼다.
          */
-        static bool launchDetached( const ProcessCommand& command, const ProcessOptions& options = {} );
+        static optional<DetachedProcessID> launchDetached( const ProcessCommand& command, const ProcessOptions& options = {} );
+        /**
+         * @brief 분리 실행한 프로세스 @p id 가 끝날 때까지 많아야 @p timeoutMilliseconds 기다립니다. 끝났거나 이미 없으면 true 입니다.
+         * @details 핸들을 들지 않은 실행이라 id 로 찾는다 — 끝난 뒤 같은 id 를 다른 프로세스가 받으면 그것을 기다릴 수 있다(짧게 기다리는 쪽 — 테스트 · 도구 — 만 쓴다).
+         *          Windows 는 `OpenProcess( SYNCHRONIZE )` 의 대기, POSIX 는 손자를 init 이 거둘 때까지 `kill( pid, 0 )` 을 짧은 간격으로 본다.
+         */
+        [[nodiscard]] static bool waitForDetachedExit( DetachedProcessID id, uint32 timeoutMilliseconds );
 
         /**
          * @brief 기본 브라우저(주소의 기본 처리기)로 @p url 을 엽니다. 기다리지 않습니다. 띄웠으면 true 입니다.

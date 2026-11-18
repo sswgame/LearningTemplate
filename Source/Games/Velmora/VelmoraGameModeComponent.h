@@ -57,7 +57,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "VLDR" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; ///< 2: 액션 룸의 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
 
         VelmoraGameModeComponent();
         virtual ~VelmoraGameModeComponent() override;

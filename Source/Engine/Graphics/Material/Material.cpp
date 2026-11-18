@@ -1099,10 +1099,12 @@ namespace sw
     bool Material::saveToFile( const AbsolutePath& absPath ) const
     {
 
+        // 부모를 가리키면 부모와 다른 칸만 쓴다 — 펼친 글을 빼지 않은 짝으로 함께 넘긴다(조건이 정한 칸을 부모 값으로 되돌린 편집도 조건에 든다).
         XMLDocument doc;
-        if ( doc.parse( saveToString() ) == false )
+        XMLDocument fullDoc;
+        if ( doc.parse( saveToString() ) == false || fullDoc.parse( saveFullToString() ) == false )
             return false;
-        return doc.saveToFile( absPath.str() );
+        return ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( doc.saveToString(), fullDoc.saveToString() ) );
     }
 
     string Material::saveToString() const

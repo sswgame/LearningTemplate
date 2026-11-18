@@ -9,6 +9,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
@@ -326,4 +327,64 @@ SW_TEST_CASE( PhysicsScene3DTest, CharacterTriggersBeginAndEnd )
     SW_EXPECT_TRUE( pWalker->getSimulatedPosition()._x > 1.0f ); // 트리거에 막히지 않았다
     SW_EXPECT_EQUAL( 1u, begin );
     SW_EXPECT_EQUAL( 1u, end );
+}
+
+/**
+ * @brief [PhysicsCharacterTest] 캐릭터끼리 막기는 씬의 레이어 표를 본다 — 표가 막지 않는 두 레이어의 캐릭터는 마주 걸어 서로 지나친다
+ * @details 예전에는 캐릭터 대 캐릭터가 레이어 표를 보지 않아 통과시킬 레이어(유령 · 같은 편 겹침)도 늘 막혔다. 변이: `CollideCharacter` 의 레이어 검사를 빼면 자리가 바뀌지 않는다.
+ */
+SW_TEST_CASE( PhysicsCharacterTest, CharactersOnNonCollidingLayersPassThrough )
+{
+    const PhysicsSystem&              system = engine::getSubsystem<PhysicsSystem>();
+    const unique_ptr<IPhysicsScene3D> pScene = system.createScene3D();
+    SW_REQUIRE_NOT_NULL( pScene.get() );
+    CollisionLayers layers;
+    layers.setLayerCollision( 1, 2, false );
+    pScene->setLayerCollision( layers );
+    PhysicsCharacterDesc3D desc;
+    desc._layer                            = 1;
+    desc._position                         = float3{ -1.5f, 0.0f, 0.0f };
+    const PhysicsCharacterHandle left      = pScene->createCharacter( desc );
+    desc._layer                            = 2;
+    desc._position                         = float3{ 1.5f, 0.0f, 0.0f };
+    const PhysicsCharacterHandle right     = pScene->createCharacter( desc );
+    const PhysicsCharacterMove3D arrMove[] = {
+        { left,  float3{ 2.0f, 0.0f, 0.0f }},
+        {right, float3{ -2.0f, 0.0f, 0.0f }}
+    };
+    for ( uint32 step = 0; step < 90; ++step )
+    {
+        pScene->moveCharacters( arrMove, TestPhysicsScene3DInternal::kFrame );
+    }
+    PhysicsCharacterState3D leftState{};
+    PhysicsCharacterState3D rightState{};
+    SW_REQUIRE_TRUE( pScene->getCharacterState( left, leftState ) );
+    SW_REQUIRE_TRUE( pScene->getCharacterState( right, rightState ) );
+    SW_EXPECT_TRUE( leftState._position._x > rightState._position._x ); // 자리를 바꿨다
+}
+
+/**
+ * @brief [PhysicsCharacterTest] 캡슐 키 줄이기는 다음 물리 프레임에 캐릭터를 다시 짓지 않고 판정 캡슐만 낮추고, 지은 반 높이 칸은 그대로 둔다
+ * @details 예전에는 늪에 빠진 캐릭터의 캡슐이 지면에 남아 빠진 몸 위 허공도 맞았다(키를 바꾸려면 반 높이 칸을 고쳐 캐릭터를 다시 지어야 했다). 변이: `bResize` 를 빼면 반 높이가 그대로라 첫 단언이 진다.
+ */
+SW_TEST_CASE( PhysicsCharacterTest, HeightReductionShortensTheCapsuleInPlace )
+{
+    using Internal = TestPhysicsScene3DInternal;
+    GameObjectManager manager;
+    SW_REQUIRE_NOT_NULL( Internal::addFloor( manager ) );
+    CharacterControllerComponent* pWalker = Internal::addWalker( manager, "Sinker", float3{ 0.0f, 0.05f, 0.0f } );
+    SW_REQUIRE_NOT_NULL( pWalker );
+    manager.beginPlay();
+    manager.update( Internal::kFrame );
+    const float32 authored = pWalker->getHalfHeight();
+    const float32 before   = pWalker->getScaledCapsule()._halfHeight;
+
+    pWalker->setHeightReduction( 0.4f );
+    manager.update( Internal::kFrame );
+    SW_EXPECT_NEAR( before - 0.2f, pWalker->getScaledCapsule()._halfHeight, 1.0e-4f );
+    SW_EXPECT_EQUAL( authored, pWalker->getHalfHeight() ); // 지은 칸은 그대로
+
+    pWalker->setHeightReduction( 0.0f );
+    manager.update( Internal::kFrame );
+    SW_EXPECT_NEAR( before, pWalker->getScaledCapsule()._halfHeight, 1.0e-4f );
 }

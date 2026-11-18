@@ -47,8 +47,9 @@ namespace sw
         /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(텍스트와 힌트는 보이는 텍스트를 다시 만듭니다). */
         void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
-        bool supportsFocus() const override { return true; }
-        bool supportsTextInput() const override { return true; }
+        bool    supportsFocus() const override { return true; }
+        bool    supportsTextInput() const override { return true; }
+        float32 getTextCaretLocalX() const override { return computeEdgeX( _caretByte ); }
 
         /** @brief 텍스트를 바꿉니다(알림은 부르지 않으며, 코드가 정한 값입니다). 선택은 풀고 커서는 끝으로 갑니다. */
         void          setText( string_view text );

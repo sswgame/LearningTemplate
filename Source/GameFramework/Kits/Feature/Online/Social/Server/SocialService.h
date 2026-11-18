@@ -17,6 +17,7 @@
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Event/EventBuffer.h"
@@ -170,15 +171,16 @@ namespace sw
 
     private:
         unordered_map<AccountID, LocalAccount> _mapAccountToLocal;
-        /// 친구 id → 그를 친구(`Friend`)로 둔 이 서버 계정들이다. 접속 상태 한 건의 전달 비용을 그 계정의 관계 수에 맞춘다(Nakama status follow · EOS Presence 의 구독자 역색인)
-        unordered_map<AccountID, vector<AccountID>> _mapFriendToWatchers;
-        unordered_map<uint64, PresenceRead>         _mapCacheRequestToRead;
-        unordered_map<uint64, PresenceQuery>        _mapQuery;
-        EventBuffer<SocialCompletion>               _completionBuffer;
-        EventBuffer<SocialNotification>             _notificationBuffer;
-        SocialServiceDependencies                   _dependencies;
-        Subscription                                _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
-        IDAllocator<uint64>                         _queryIDAllocator;
-        ServiceStoreTracker                         _store; ///< 저장소에 맡긴 일의 앞이다
+        /// 친구 id → 그를 친구(`Friend`)로 둔 이 서버 계정들이다. 접속 상태 한 건의 전달 비용을 그 계정의 관계 수에 맞춘다(Nakama status follow · EOS Presence 의 구독자 역색인).
+        /// 집합이라 관계 하나를 뺄 때 지켜보는 계정 수와 무관하다(유명한 계정 하나를 수천이 친구로 둬도 떠날 때마다 훑지 않는다)
+        unordered_map<AccountID, unordered_set<AccountID>> _mapFriendToWatchers;
+        unordered_map<uint64, PresenceRead>                _mapCacheRequestToRead;
+        unordered_map<uint64, PresenceQuery>               _mapQuery;
+        EventBuffer<SocialCompletion>                      _completionBuffer;
+        EventBuffer<SocialNotification>                    _notificationBuffer;
+        SocialServiceDependencies                          _dependencies;
+        Subscription                                       _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        IDAllocator<uint64>                                _queryIDAllocator;
+        ServiceStoreTracker                                _store; ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

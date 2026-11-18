@@ -40,6 +40,8 @@ namespace sw::constant::file
 {
     /** @brief 파일 시스템 최대 경로 길이 (Windows MAX_PATH 호환) */
     inline constexpr uint32 kMaxPathSize = 260;
+    /** @brief Windows 확장 경로(긴 경로 접두)의 절대 상한(문자 수)입니다. OS 가 알린 크기로 버퍼를 키우는 호출의 멈춤 상한입니다. */
+    inline constexpr uint32 kMaxExtendedPathSize = 32768;
     /** @brief 파일 읽기 호출 하나가 읽는 최대 바이트(1 GiB)입니다. 길이 칸이 32 비트인 OS 호출(ReadFile · io_uring SQE)에 맞춥니다. 큰 구간은 이어서 읽습니다. */
     inline constexpr uint64 kMaxFileReadChunkBytes = uint64{ 1 } << 30;
 } // namespace sw::constant::file

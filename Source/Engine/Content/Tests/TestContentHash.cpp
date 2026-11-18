@@ -86,7 +86,7 @@ SW_TEST_CASE( ContentHashCacheTest, SecondProcessReadsNoBytes )
 
 /**
  * @brief [ContentHashCacheTest] 저장 시각의 시간 창 안에 고쳐진 도장은 싣지 않는다 — 저장 뒤 같은 틱에 같은 크기로 다시 쓴 파일을 뒤 프로세스가 다시 해시한다.
- * @details 앞 캐시는 자기 쓰기로 알린 항목을 시간 창 없이 캐시한다. 그 항목이 저장되면 같은 도장의 다른 내용을 뒤 프로세스가 옛 해시로 믿는다.
+ * @details 앞 캐시는 창 안의 도장을 남기지 않지만(자기 쓰기도), 저장 쪽도 같은 창으로 거른다 — 그 항목이 저장되면 같은 도장의 다른 내용을 뒤 프로세스가 옛 해시로 믿는다.
  */
 SW_TEST_CASE( ContentHashCacheTest, StampInsideTheWriteWindowIsHashedAgain )
 {
@@ -109,6 +109,22 @@ SW_TEST_CASE( ContentHashCacheTest, StampInsideTheWriteWindowIsHashedAgain )
     SW_REQUIRE_TRUE( second.load( cachePath ).has_value() );
     SW_EXPECT_EQUAL( second.computeFile( path ), ContentHash::computeBytes( makeBytes( "bbbb" ) ) );
     SW_EXPECT_EQUAL( second.getHashedByteCount(), uint64( 4 ) );
+}
+
+/** @brief [ContentHashCacheTest] 자기 쓰기 뒤 같은 틱에 바깥 도구가 같은 크기로 다시 쓴 파일도 새 해시다 — 자기 쓰기도 시간 창이 지나야 캐시에 남는다. */
+SW_TEST_CASE( ContentHashCacheTest, ExternalRewriteInTheOwnWriteTickIsSeen )
+{
+    const string path = test::makeScratchPath( "ownrace.txt" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "aaaa" ) );
+    int64 writeTicks = 0;
+    SW_REQUIRE_TRUE( FileUtil::getFileWriteTime( path, writeTicks ) );
+    ContentHashCache cache;
+    cache.recordOwnWrite( path );
+    SW_EXPECT_EQUAL( cache.computeFile( path ), ContentHash::computeBytes( makeBytes( "aaaa" ) ) );
+    // 바깥 도구가 같은 틱에 같은 크기로 다시 썼다 — 도장이 같고 이 캐시에는 알림이 없다.
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "bbbb" ) );
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, writeTicks ) );
+    SW_EXPECT_EQUAL( cache.computeFile( path ), ContentHash::computeBytes( makeBytes( "bbbb" ) ) );
 }
 
 /** @brief [ContentHashCacheTest] 다른 판의 캐시 파일은 빈 캐시로 읽는다 — 항목을 믿지 않고 다시 해시한다(오류가 아니다). */

@@ -35,24 +35,33 @@ namespace sw
                 return;
             const wstring executableFolder  = StringUtil::utf8ToUTF16( FileUtil::toNativeSeparators( FileUtil::getDirectoryPart( executablePath ) ).c_str() );
             const utf16*  pExecutableFolder = executableFolder.c_str();
-            utf16         arrSearchPath[constant::buffer::kMax4096]{};
-            if ( SymGetSearchPathW( process, arrSearchPath, constant::buffer::kMax4096 ) == FALSE )
-                arrSearchPath[0] = L'\0';
-            const size_t used = wcslen( arrSearchPath );
-            if ( used + 1 + wcslen( pExecutableFolder ) + 1 > constant::buffer::kMax4096 )
-                return;
-            if ( used > 0 )
-                wcscat_s( arrSearchPath, constant::buffer::kMax4096, L";" );
-            wcscat_s( arrSearchPath, constant::buffer::kMax4096, pExecutableFolder );
+            // SymGetSearchPathW 는 필요한 크기를 알리지 않는다 - 끝 0 앞까지 꽉 차면 잘렸을 수 있어 버퍼를 키워 다시 묻는다.
+            // 예전 4096 자 버퍼는 긴 `_NT_SYMBOL_PATH` 에서 우리 폴더를 소리 없이 빼먹었다.
+            wstring searchPath( constant::buffer::kMax4096, L' ' );
+            for ( ;; )
+            {
+                if ( SymGetSearchPathW( process, searchPath.data(), static_cast<DWORD>( searchPath.size() ) ) == FALSE )
+                {
+                    searchPath.clear();
+                    break;
+                }
+                const size_t used = wcslen( searchPath.c_str() );
+                if ( used + 1 < searchPath.size() )
+                {
+                    searchPath.resize( used );
+                    break;
+                }
+                searchPath.resize( searchPath.size() * 2 );
+            }
+            if ( searchPath.empty() == false )
+                searchPath += L";";
+            searchPath += pExecutableFolder;
             // Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(모듈 DLL 은 `Bin/Modules`) — 그 폴더도 추가한다.
             const wstring symbolFolder = StringUtil::utf8ToUTF16(
                 FileUtil::toNativeSeparators( FileUtil::joinPath( ProcessRoots::get()._binary.str(), ModuleLibraryUtil::kSymbolFolder ) ).c_str() );
-            if ( wcslen( arrSearchPath ) + 1 + symbolFolder.size() + 1 <= constant::buffer::kMax4096 )
-            {
-                wcscat_s( arrSearchPath, constant::buffer::kMax4096, L";" );
-                wcscat_s( arrSearchPath, constant::buffer::kMax4096, symbolFolder.c_str() );
-            }
-            (void)SymSetSearchPathW( process, arrSearchPath );
+            searchPath += L";";
+            searchPath += symbolFolder;
+            (void)SymSetSearchPathW( process, searchPath.c_str() );
         }
     } // namespace
 

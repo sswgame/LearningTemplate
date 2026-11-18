@@ -3,6 +3,7 @@
 // 공개 길드 신청, 경험치 · 레벨, 알림과 이벤트, 저장소 실패. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
@@ -10,6 +11,7 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -29,6 +31,14 @@ namespace
     public:
         int64 getBalanceCap( string_view /*assetID*/ ) const override { return 0; }
         bool  isTransferable( string_view assetID ) const override { return assetID != "cur.gem"; }
+    };
+
+    /** @brief "gem." 으로 시작하는 자산만 이전 불가인 정책입니다(맡긴 사람별 몫을 여러 자산으로 채운다). */
+    class GemPrefixPolicy final : public ILedgerPolicy
+    {
+    public:
+        int64 getBalanceCap( string_view /*assetID*/ ) const override { return 0; }
+        bool  isTransferable( string_view assetID ) const override { return assetID.substr( 0, 4 ) != "gem."; }
     };
 
     /** @brief 이벤트를 모읍니다. */
@@ -85,6 +95,18 @@ namespace
                 return GuildCompletion{};
             SW_EXPECT_EQUAL( tag, listCompletion[0]._requestTag );
             return std::move( listCompletion[0] );
+        }
+
+        /** @brief 창고 한 쪽을 읽습니다. @p cursor 는 앞 쪽의 `_storageNextCursor` 이고 처음은 빈 커서입니다. */
+        GuildCompletion listStorage( AccountID accountID, const GuildStorageCursor& cursor = GuildStorageCursor{}, int32 maxCount = GuildLimit::kMaxStoragePage )
+        {
+            GuildRequest request;
+            request._operation       = GuildOperation::ListStorage;
+            request._accountID       = accountID;
+            request._storageCursor   = cursor;
+            request._storageMaxCount = maxCount;
+            request._nowMs           = UnixMilliseconds{ kNowMs };
+            return runRequest( request );
         }
 
         SocialServiceResult setRole( AccountID accountID, AccountID targetID, GuildRole role )
@@ -469,7 +491,7 @@ SW_TEST_CASE( GuildServiceTest, StorageMovesFundsOnce )
     SW_EXPECT_EQUAL( int64( 50 ), withdrawn._listStorage[0]._amount );
     SW_EXPECT_EQUAL( int64( 10 ), rig.getBalanceOf( kOfficer ) );
 
-    const GuildCompletion listed = rig.run( GuildOperation::ListStorage, kMember );
+    const GuildCompletion listed = rig.listStorage( kMember );
     SW_REQUIRE_EQUAL( size_t( 1 ), listed._listStorage.size() );
     SW_EXPECT_EQUAL( string( "cur.gold" ), listed._listStorage[0]._assetID );
     SW_EXPECT_EQUAL( int64( 50 ), listed._listStorage[0]._amount );
@@ -708,7 +730,7 @@ SW_TEST_CASE( GuildServiceTest, NonTransferableShareNeedsDepositorGrant )
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gold.wd", "cur.gold", kMember )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gold.wd" )._result == SocialResult::Ok );
 
-    const GuildCompletion listed = rig.run( GuildOperation::ListStorage, kOfficer );
+    const GuildCompletion listed = rig.listStorage( kOfficer );
     SW_REQUIRE_EQUAL( size_t( 2 ), listed._listStorage.size() );
     SW_EXPECT_EQUAL( string( "cur.gold" ), listed._listStorage[0]._assetID );
     SW_EXPECT_EQUAL( int64( 9 ), listed._listStorage[0]._amount );
@@ -752,7 +774,7 @@ SW_TEST_CASE( GuildServiceTest, DepositorShareReturnsOnLeaveAndKick )
 
     SW_EXPECT_TRUE( rig.runKeyed( GuildOperation::Kick, kMaster, kOfficer, "test/kick.1" ) == SocialResult::Ok );
     SW_EXPECT_EQUAL( int64( 20 ), rig.getBalanceOf( kOfficer, "cur.gem" ) );
-    SW_EXPECT_TRUE( rig.run( GuildOperation::ListStorage, kMaster )._listStorage.empty() );
+    SW_EXPECT_TRUE( rig.listStorage( kMaster )._listStorage.empty() );
     SW_EXPECT_TRUE( rig.runKeyed( GuildOperation::Leave, kMaster, kInvalidAccountID, "test/leave.2" ) == SocialResult::Ok ); // 남은 몫 · 허용이 없어 해산된다
 }
 
@@ -1029,4 +1051,222 @@ SW_TEST_CASE( GuildServiceTest, ApplicationBetweenReadAndCommitKeepsTheCap )
     apply._nowMs     = UnixMilliseconds{ kNowMs };
     SW_EXPECT_TRUE( runOnSecondServer( connection, apply )._result == SocialResult::PendingLimit );
     SW_EXPECT_EQUAL( static_cast<int32>( GuildLimit::kMaxApplication ), static_cast<int32>( rig._database.countRecords( hashed_string( "social_guild_application" ) ) ) ); // 목록 응답은 상한에서 잘리므로 표를 센다
+}
+
+/**
+ * @brief [GuildServiceTest] 창고 품목 300 개(공용 창고 291, 맡긴 사람 셋의 몫 9)를 커서로 쪽마다 읽으면 끝까지 빠짐 · 겹침 없이 키 순서로 오고, 마지막 쪽 뒤 커서가 빈다
+ * @details 쪽 크기 7 은 보유자 경계(공용 창고 → 몫, 몫 → 몫)를 쪽 가운데에 걸치게 한다. 옛 구현은 상한 128 에서 잘라 뒤 172 개를 보이지 않았다.
+ */
+SW_TEST_CASE( GuildServiceTest, StoragePagesReachEveryItem )
+{
+    GemPrefixPolicy policy;
+    GuildFixture    rig;
+    rig._service.setLedgerPolicy( &policy );
+    const uint64 guildID = rig.makeGuild();
+
+    constexpr int32 kCommonCount = 291;
+    for ( int32 index = 0; index < kCommonCount; ++index )
+    {
+        string assetID = to_string( index );
+        assetID        = "item.a" + string( 3 - assetID.size(), '0' ) + assetID;
+        LedgerTransferRequest request;
+        request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeEscrow( "guild", ServiceKeyUtil::makeHex64( guildID ) ), assetID, 1 + index } );
+        request._journalKey = "test/storage/" + assetID;
+        request._reason     = "test.grant";
+        LedgerTransferResult result;
+        SW_REQUIRE_TRUE( Ledger::executeTransfer( rig._database, request, result ) == LedgerResult::Ok );
+    }
+    for ( const AccountID depositorID : { kMaster, kOfficer, kMember } )
+    {
+        for ( const string_view assetID : { "gem.blue", "gem.green", "gem.red" } )
+        {
+            rig.grant( depositorID, 5, assetID );
+            const string journalKey = "test/share/" + to_string( depositorID ) + "/" + string( assetID );
+            SW_REQUIRE_TRUE( rig.transfer( GuildOperation::Deposit, depositorID, 5, journalKey, assetID )._result == SocialResult::Ok );
+        }
+    }
+
+    vector<GuildStorageItem> listAll;
+    GuildStorageCursor       cursor;
+    int32                    pageCount = 0;
+    while ( true )
+    {
+        GuildCompletion page = rig.listStorage( kMember, cursor, 7 );
+        SW_REQUIRE_TRUE( page._result == SocialResult::Ok );
+        SW_REQUIRE_TRUE( page._listStorage.size() <= size_t( 7 ) );
+        listAll.insert( listAll.end(), page._listStorage.begin(), page._listStorage.end() );
+        ++pageCount;
+        SW_REQUIRE_TRUE( pageCount <= 50 ); // 커서가 나아가지 않으면 멈춘다
+        if ( page._storageNextCursor.isEnd() )
+            break;
+        cursor = page._storageNextCursor;
+    }
+    SW_REQUIRE_EQUAL( size_t( 300 ), listAll.size() );
+    for ( size_t index = 1; index < listAll.size(); ++index ) // 키 순서로 엄격히 늘어난다 — 겹침이 없다
+    {
+        const GuildStorageItem& before     = listAll[index - 1];
+        const GuildStorageItem& after      = listAll[index];
+        const bool              bAscending = before._depositorID < after._depositorID || ( before._depositorID == after._depositorID && before._assetID < after._assetID );
+        SW_EXPECT_TRUE( bAscending );
+    }
+    for ( int32 index = 0; index < kCommonCount; ++index ) // 공용 창고가 먼저, 양까지 그대로
+    {
+        SW_EXPECT_EQUAL( kInvalidAccountID, listAll[static_cast<size_t>( index )]._depositorID );
+        SW_EXPECT_EQUAL( int64( 1 + index ), listAll[static_cast<size_t>( index )]._amount );
+    }
+    SW_EXPECT_EQUAL( kMaster, listAll[static_cast<size_t>( kCommonCount )]._depositorID );
+    SW_EXPECT_EQUAL( string( "gem.blue" ), listAll[static_cast<size_t>( kCommonCount )]._assetID );
+    SW_EXPECT_EQUAL( kMember, listAll.back()._depositorID );
+    SW_EXPECT_EQUAL( string( "gem.red" ), listAll.back()._assetID );
+}
+
+/**
+ * @brief [GuildServiceTest] 클라이언트가 보낸 쪽 크기는 서버 상한(`kMaxStoragePage`)으로 잘리고, 1 보다 작은 크기 · 자산 id 가 아닌 커서 · 자산 없이 맡긴 사람만 든 커서는 규칙 밖이다
+ */
+SW_TEST_CASE( GuildServiceTest, StoragePageSizeIsCappedByTheServer )
+{
+    GuildFixture rig;
+    const uint64 guildID = rig.makeGuild();
+    for ( int32 index = 0; index < GuildLimit::kMaxStoragePage + 10; ++index )
+    {
+        const string          assetID = "item.b" + to_string( 100 + index );
+        LedgerTransferRequest request;
+        request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeEscrow( "guild", ServiceKeyUtil::makeHex64( guildID ) ), assetID, 1 } );
+        request._journalKey = "test/storage/" + assetID;
+        request._reason     = "test.grant";
+        LedgerTransferResult result;
+        SW_REQUIRE_TRUE( Ledger::executeTransfer( rig._database, request, result ) == LedgerResult::Ok );
+    }
+
+    const GuildCompletion capped = rig.listStorage( kMember, GuildStorageCursor{}, 1000000 );
+    SW_REQUIRE_TRUE( capped._result == SocialResult::Ok );
+    SW_EXPECT_EQUAL( size_t( GuildLimit::kMaxStoragePage ), capped._listStorage.size() );
+    SW_REQUIRE_FALSE( capped._storageNextCursor.isEnd() );
+    const GuildCompletion rest = rig.listStorage( kMember, capped._storageNextCursor, 1000000 );
+    SW_EXPECT_EQUAL( size_t( 10 ), rest._listStorage.size() );
+    SW_EXPECT_TRUE( rest._storageNextCursor.isEnd() );
+
+    SW_EXPECT_TRUE( rig.listStorage( kMember, GuildStorageCursor{}, 0 )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.listStorage( kMember, GuildStorageCursor{}, -5 )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.listStorage( kMember, GuildStorageCursor{ "BAD/../key", kInvalidAccountID } )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.listStorage( kMember, GuildStorageCursor{ "", kMaster } )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.listStorage( kOutside )._result == SocialResult::NotInGuild );
+}
+
+namespace
+{
+    /** @brief 서비스 레코드를 저장소에 바로 씁니다 — API 로는 만들 수 없는 "상한 한 쪽보다 많은" 상태를 세운다(옛 데이터 · 다른 판 서버 · 불변식이 깨진 뒤). */
+    struct GuildRawRecord
+    {
+        static vector<uint8> encode( std::initializer_list<int64> listValue )
+        {
+            BitWriter writer;
+            writer.writeBits( 1, 8 ); // 서비스의 레코드 형식 판
+            for ( const int64 value : listValue )
+            {
+                writer.writeVarInt( value );
+            }
+            return writer.getBytes();
+        }
+
+        static string makePairKey( uint64 first, uint64 second ) { return ServiceKeyUtil::makeHex64( first ) + "/" + ServiceKeyUtil::makeHex64( second ); }
+
+        static void put( MemoryServiceDatabase& database, const utf8* pTable, const string& key, const vector<uint8>& bytes )
+        {
+            ServiceTransaction transaction;
+            transaction.put( hashed_string( pTable ), key, bytes, ServiceRecord::kAnyVersion );
+            SW_REQUIRE_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
+        }
+
+        static int32 countPrefix( MemoryServiceDatabase& database, const utf8* pTable, const string& prefix )
+        {
+            int32                    count  = 0;
+            const ServiceStoreResult listed = ServiceRecordReader::visitAll( database, hashed_string( pTable ), prefix, 64, [&]( const ServiceRecord& )
+            {
+                ++count;
+                return true;
+            } );
+            SW_EXPECT_TRUE( listed == ServiceStoreResult::Ok );
+            return count;
+        }
+    };
+} // namespace
+
+/**
+ * @brief [GuildServiceTest] 죽은 신청 60 개가 키 앞을 채우고 살아 있는 신청이 50 개면, 새 신청은 PendingLimit 이고 목록은 살아 있는 50 개를 모두 보인다
+ * @details 옛 구현은 한 쪽(50)만 읽어 앞의 죽은 신청만 보고 살아 있는 수를 0 으로 셌다 — 상한을 넘겨 받고, 목록은 비었다.
+ */
+SW_TEST_CASE( GuildServiceTest, ApplicationCapCountsPastDeadApplications )
+{
+    GuildFixture rig;
+    const uint64 guildID = rig.makeGuild();
+    SW_EXPECT_TRUE( rig.setOpen( kMaster, true ) == SocialResult::Ok );
+    for ( AccountID applicant = 10; applicant < 70; ++applicant ) // 죽은 신청(키가 앞이다)
+    {
+        GuildRawRecord::put( rig._database, "social_guild_application", GuildRawRecord::makePairKey( guildID, applicant ), GuildRawRecord::encode( { kNowMs - 2000, kNowMs - 1000 } ) );
+    }
+    for ( AccountID applicant = 1000; applicant < 1000 + static_cast<AccountID>( GuildLimit::kMaxApplication ); ++applicant ) // 살아 있는 신청
+    {
+        GuildRawRecord::put( rig._database, "social_guild_application", GuildRawRecord::makePairKey( guildID, applicant ),
+                             GuildRawRecord::encode( { kNowMs, kNowMs + GuildLimit::kApplicationLifetimeMs } ) );
+    }
+
+    SW_EXPECT_TRUE( rig.run( GuildOperation::Apply, 5000, kInvalidAccountID, "", guildID )._result == SocialResult::PendingLimit );
+    const GuildCompletion listed = rig.run( GuildOperation::ListApplications, kOfficer );
+    SW_REQUIRE_TRUE( listed._result == SocialResult::Ok );
+    SW_EXPECT_EQUAL( size_t( GuildLimit::kMaxApplication ), listed._listApplication.size() );
+}
+
+/**
+ * @brief [GuildServiceTest] 맡긴 사람이 떠나면 그가 준 꺼내기 허용을 상한(32)보다 많아도 모두 지운다 — 옛 구현은 한 쪽만 지워 남은 허용이 다시 들어온 멤버에게 살아났다
+ */
+SW_TEST_CASE( GuildServiceTest, LeavingErasesEveryGrantPastOnePage )
+{
+    PaidGemPolicy policy;
+    GuildFixture  rig;
+    rig._service.setLedgerPolicy( &policy );
+    const uint64 guildID = rig.makeGuild();
+    rig.grant( kMember, 10, "cur.gem" );
+    SW_REQUIRE_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 10, "test/grant.dep", "cur.gem" )._result == SocialResult::Ok );
+    const string    prefix      = GuildRawRecord::makePairKey( guildID, kMember ) + "/";
+    constexpr int32 kGrantCount = GuildLimit::kMaxStorageGrant + 8;
+    for ( int32 index = 0; index < kGrantCount; ++index )
+    {
+        const string key = prefix + ServiceKeyUtil::makeHex64( kOfficer ) + "/cur.g" + to_string( 100 + index );
+        GuildRawRecord::put( rig._database, "social_guild_storage_grant", key, GuildRawRecord::encode( { 1 } ) );
+    }
+
+    SW_REQUIRE_TRUE( rig.runKeyed( GuildOperation::Leave, kMember, kInvalidAccountID, "test/grant.leave" ) == SocialResult::Ok );
+    SW_EXPECT_EQUAL( 0, GuildRawRecord::countPrefix( rig._database, "social_guild_storage_grant", prefix ) );
+    SW_EXPECT_EQUAL( int64( 10 ), rig.getBalanceOf( kMember, "cur.gem" ) );
+}
+
+/**
+ * @brief [GuildServiceTest] 혼자 남은 길드장의 계정을 지우면 맡긴 사람 기록이 한 쪽(100)보다 많아도 모두 태우고 지운다 — 옛 구현은 뒤의 몫을 해산한 길드에 남겼다
+ */
+SW_TEST_CASE( GuildServiceTest, AccountDeletionBurnsEveryShareRecordPastOnePage )
+{
+    GuildFixture rig;
+    const uint64 guildID = rig.run( GuildOperation::Create, kOutside, kInvalidAccountID, "Solo" )._info._guildID;
+    SW_REQUIRE_TRUE( guildID != 0 );
+    constexpr AccountID kLastDepositor = 10 + static_cast<AccountID>( GuildLimit::kMaxMember ) + 20;
+    for ( AccountID depositorID = 10; depositorID <= kLastDepositor; ++depositorID )
+    {
+        GuildRawRecord::put( rig._database, "social_guild_depositor", GuildRawRecord::makePairKey( guildID, depositorID ), vector<uint8>{ 1 } );
+    }
+    // 마지막 기록의 몫에 잔액을 둔다 — 한 쪽 밖이다
+    string token = ServiceKeyUtil::makeHex64( guildID ) + ".";
+    ServiceKeyUtil::appendHex64( token, kLastDepositor );
+    LedgerTransferRequest request;
+    request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeEscrow( "guild", token ), "cur.gem", 7 } );
+    request._journalKey = "test/share.last";
+    request._reason     = "test.grant";
+    LedgerTransferResult result;
+    SW_REQUIRE_TRUE( Ledger::executeTransfer( rig._database, request, result ) == LedgerResult::Ok );
+
+    SW_REQUIRE_TRUE( GuildService::eraseAccount( rig._database, kOutside, kNowMs ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "social_guild_depositor" ) ) );
+    vector<LedgerBalance> listShare;
+    SW_REQUIRE_TRUE( Ledger::listBalances( rig._database, LedgerHolder::makeEscrow( "guild", token ), listShare ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listShare.empty() );
 }

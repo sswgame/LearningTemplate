@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
@@ -28,6 +29,7 @@ namespace sw
     VisualSinkReactionComponent::VisualSinkReactionComponent()
         : _attribute{}
         , _scale{ 1.0f }
+        , _capsuleStep{ 0.1f }
         , _listVisual{}
         , _appliedDepth{ 0.0f }
     {
@@ -78,12 +80,15 @@ namespace sw
             if ( MeshComponent* pMesh = VisualSinkReactionInternal::findOwnMesh( *pOwner, visual._mesh ) )
                 pMesh->setLocalPosition( visual._localPosition - float3{ 0.0f, depth, 0.0f } );
         }
+        // 판정 캡슐도 깊이를 따른다 — 단계로 내려 가라앉는 동안 프레임마다 캡슐을 다시 짓지 않는다.
+        if ( CharacterControllerComponent* pController = pOwner->getComponent<CharacterControllerComponent>() )
+            pController->setHeightReduction( MathUtil::floor( depth / _capsuleStep ) * _capsuleStep );
         _appliedDepth = depth;
     }
 
     void VisualSinkReactionComponent::restoreVisuals()
     {
-        const GameObject* const pOwner = getOwner();
+        GameObject* const pOwner = getOwner();
         for ( const SunkVisual& visual : _listVisual )
         {
             MeshComponent* const pMesh = pOwner != nullptr ? VisualSinkReactionInternal::findOwnMesh( *pOwner, visual._mesh ) : nullptr;
@@ -91,6 +96,11 @@ namespace sw
                 pMesh->setLocalPosition( visual._localPosition );
         }
         _listVisual.clear();
+        if ( _appliedDepth > 0.0f && pOwner != nullptr )
+        {
+            if ( CharacterControllerComponent* pController = pOwner->getComponent<CharacterControllerComponent>() )
+                pController->setHeightReduction( 0.0f );
+        }
         _appliedDepth = 0.0f;
     }
 

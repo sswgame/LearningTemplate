@@ -19,7 +19,7 @@ namespace sw
         struct KartRacingDemoComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "KDKR" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 탄의 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
 
             static constexpr const utf8* kTrackID        = "ring"; ///< 카탈로그의 한 바퀴 고리 트랙
             static constexpr int32       kRacerCount     = 3;

@@ -7,7 +7,7 @@
  *          **런타임 영역**: 같은 컴포넌트에 수명(`_lifetime` — 끝나면 오브젝트를 지운다)과 퍼짐(`_growthRate` · `_maxGrowth` — 크기가 는다)을 두면 독가스 살포 프리팹이 된다.
  *          **세 층**: 프리셋 · 변형은 프로필 파일이, 이 자리의 차이는 `_listModuleOverride`(같은 형식, 이름 열쇠 · `_op`)가 맡는다 — 같은 사구라도 빠지는 속도 · NPC 반응을 자리마다.
  *          S6 의 `AbilityEffectVolumeComponent` 를 대신한다 — 이펙트 하나 · 진입/체류/이탈 정책이던 것이 프로필의 할 일 모듈이 됐다. 언리얼 `APhysicsVolume` · GAS 이펙트 볼륨, 유니티 트리거 + Effector 자리(기억).
- *          shortcut: 모양은 오너 월드 자리를 가운데로 한 축 정렬이다(회전 · 배율은 보지 않는다 — 지형과 같은 규칙). 기울인 영역이 필요하면 오너 역회전으로 자리를 옮겨 잰다.
+ *          모양 · 당김 중심 · 흐름 점은 오너 로컬 공간이다 — 회전 · 배율을 따른다(언리얼 볼륨 브러시 · 유니티 트리거 콜라이더와 같다). 기울인 늪 · 돌린 상자 영역이 그대로 맞는다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -59,7 +59,7 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
 
-        /** @brief 모양의 수평 반 크기 중 큰 쪽(퍼짐 포함, m)입니다 — 지역 후보 격자의 셀을 정한다. */
+        /** @brief 월드 경계 상자의 수평 반 크기 중 큰 쪽(퍼짐 · 회전 · 배율 포함, m)입니다. */
         float32 getHorizontalReach() const;
         /** @brief 이 볼륨이 건 효과의 출처(`volume:<오브젝트 이름>`)입니다. */
         hashed_string getSourceName() const;
@@ -92,8 +92,12 @@ namespace sw
     private:
         /** @brief 프로필을 합치고 컴파일해 입력을 엽니다. */
         void activateZone();
-        /** @brief 흐름 점이 있으면 @p position 에서 가장 가까운 구간의 방향(단위, 월드)입니다. 없으면 0 입니다. */
-        float3 computeFlowDirection( const float3& center, const float3& position ) const;
+        /** @brief 흐름 점(오너 로컬, @p world 로 옮긴다)이 있으면 @p position 에서 가장 가까운 구간의 방향(단위, 월드)입니다. 없으면 0 입니다. */
+        float3 computeFlowDirection( const float4x4& world, const float3& position ) const;
+        /** @brief 모양을 감싸는 로컬 반 크기(퍼짐 포함)입니다 — 구 · 원기둥은 반지름을 x · z 에 둔다. 월드 경계 상자의 바탕이다. */
+        float3 computeLocalHalfExtents() const;
+        /** @brief `sampleAt` 의 본문입니다 — 오너 월드 행렬 @p world 와 그 역 @p worldInverse 를 받는다(`updateZone` 이 프레임에 한 번 푼다). */
+        [[nodiscard]] bool sampleInWorld( const float4x4& world, const float4x4& worldInverse, const float3& position, float32 bodyHeight, ZoneSample& outSample ) const;
 
     private:
         PROPERTY( Required, Category = "Zone", DisplayName = "Zone Profile", Tooltip = "Zone profile (*.zone.xml) this volume runs" )

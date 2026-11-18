@@ -85,6 +85,7 @@ namespace sw
         vector<LeaderboardStat>     _listStat{};
         vector<AchievementState>    _listAchievement{};
         vector<AchievementProgress> _listProgress{};
+        string                      _nextCursor{}; ///< Stats · Achievements 의 쪽이 가득 찼으면 다음 쪽의 커서(마지막 이름)이다. 비면 끝
         uint64                      _periodID{ 0 };
         uint64                      _requestTag{ 0 };
         int64                       _score{ 0 }; ///< Submit 과 StatChange 의 적용 뒤 값이다
@@ -161,7 +162,11 @@ namespace sw
         /** @brief 통계를 바꿉니다. @p update 방식을 따르며 Best 는 큰 값을 씁니다. 그 통계에 연결된 보드에 같은 값을 냅니다. */
         void changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, const NetIdempotencyKey& idempotencyKey,
                          UnixMilliseconds nowMs, uint64 requestTag );
-        void readStats( AccountID accountID, uint64 requestTag );
+        /**
+         * @brief 계정의 통계를 이름 순으로 @p cursor 다음부터 한 쪽 읽습니다. @p maxCount 는 `kMaxStatCount` 로 자르고, 1 보다 작거나 커서가 이름 규칙 밖이면 Invalid 입니다.
+         * @details 쪽이 가득 차면 완료의 `_nextCursor` 가 다음 쪽의 커서다 — 상한에서 잘린 것을 숨기지 않는다.
+         */
+        void readStats( AccountID accountID, string_view cursor, int32 maxCount, uint64 requestTag );
         // IAccountStatSource. 바인딩이 계정이 붙을 때 · 떠날 때 부르고, 매칭이 다른 서버의 파티원을 줄 세우는 동안 부른다
         AccountStatLookup findStat( AccountID accountID, string_view statName, int64& outValue ) const override;
         void              retainStats( AccountID accountID ) override;
@@ -171,7 +176,8 @@ namespace sw
         void setScheduler( ServiceScheduler* pScheduler ) { _pScheduler = pScheduler; }
         /** @brief 업적을 등록합니다. 기동할 때 게임 데이터로 부르며, 규칙에 맞지 않으면 false 를 반환합니다. */
         [[nodiscard]] bool registerAchievement( const OnlineAchievementDef& definition );
-        void               readAchievements( AccountID accountID, uint64 requestTag );
+        /** @brief 달성한 업적을 id 순으로 @p cursor 다음부터 한 쪽 읽습니다. 규칙은 `readStats` 와 같고 상한은 `kMaxAchievementCount` 입니다. */
+        void readAchievements( AccountID accountID, string_view cursor, int32 maxCount, uint64 requestTag );
         /** @brief 등록한 업적마다 진행률(연결된 통계 값)과 달성 시각을 읽습니다. 숨긴 업적은 달성 전에 가립니다. id 순서입니다. */
         void readAchievementProgress( AccountID accountID, uint64 requestTag );
         /**
@@ -218,11 +224,11 @@ namespace sw
         /** @brief 저장소 일의 완료입니다. */
         void applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
                               LeaderboardServiceResult result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs );
-        void applyStats( uint64 requestTag, LeaderboardServiceResult result, vector<LeaderboardStat>&& listStat );
+        void applyStats( uint64 requestTag, LeaderboardServiceResult result, vector<LeaderboardStat>&& listStat, string&& nextCursor );
         void applyStatCache( AccountID accountID, bool bReadOk, ServiceStoreCompletion completion, vector<LeaderboardStat>&& listStat );
         void applyRebuildRead( const string& rankKey, vector<LeaderboardScoreRow>&& listScore, bool bReadOk );
         void applyAchievementUnlock( AccountID accountID, const AchievementState& achievement, bool bUnlocked );
-        void applyAchievements( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementState>&& listAchievement );
+        void applyAchievements( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementState>&& listAchievement, string&& nextCursor );
         void applyAchievementProgress( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementProgress>&& listProgress );
         void applyScores( uint64 requestTag, uint64 periodID, LeaderboardServiceResult result, vector<LeaderboardEntry>&& listEntry );
         void applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardServiceResult result, const LeaderboardEntry& entry );

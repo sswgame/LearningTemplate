@@ -188,7 +188,14 @@ namespace sw
         ObjectSnapshot snapshot;
         if ( pObj == nullptr )
             return snapshot;
-        snapshot._xml      = ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Authoring } );
+        const expected<string> state = ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Authoring } );
+        if ( state.has_value() == false )
+        {
+            // 되돌리기가 이 스냅샷으로 복원하면 읽기가 거절한다(빈 상태) — 왜 되돌릴 수 없는지 여기서 남긴다.
+            SW_LOG_ERROR_ID( "ObjectSnapshot.StateNotSaved", "Undo snapshot of '%#' could not be saved: %# (%#)", pObj->getName().c_str(), state.error().message(), state.error().detail() );
+            return snapshot;
+        }
+        snapshot._xml      = *state;
         snapshot._identity = ObjectStateSerializer::captureIdentity( pObj );
         return snapshot;
     }

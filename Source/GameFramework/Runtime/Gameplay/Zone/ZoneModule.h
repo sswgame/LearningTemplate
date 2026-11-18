@@ -144,11 +144,12 @@ namespace sw
     /** @brief 처리기가 대상 · 모듈 하나마다 드는 작은 기억입니다(주기 · 조건 전환 · 지연). */
     struct ZoneModuleMemory
     {
-        float32 _timer{ 0.0f };        ///< 다음 주기까지 남은 초
-        float32 _heldSeconds{ 0.0f };  ///< 조건이 이어서 참이었던 초
-        uint8   _bWasTrue{ SW_FALSE }; ///< 지난 체류에서 조건이 참이었다
-        uint8   _bFired{ SW_FALSE };   ///< 이번 참 구간에 전환 할 일을 했다
-        uint8   _arrReserved[2]{};
+        float32 _timer{ 0.0f };         ///< 다음 주기까지 남은 초
+        float32 _heldSeconds{ 0.0f };   ///< 조건이 이어서 참이었던 초
+        uint8   _bWasTrue{ SW_FALSE };  ///< 지난 체류에서 조건이 참이었다
+        uint8   _bFired{ SW_FALSE };    ///< 이번 참 구간에 전환 할 일을 했다
+        uint8   _bRejected{ SW_FALSE }; ///< 이번 체류에 처리기가 틀린 값으로 할 일을 거절했다(오류를 한 번만 남긴다)
+        uint8   _reserved{ 0 };
     };
 
     /** @brief 처리기 사건 하나의 문맥입니다. 대상 역할을 푼 대상마다 하나입니다. */

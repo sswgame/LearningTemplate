@@ -87,6 +87,11 @@ namespace sw
         static void* loadSystemLibrary( string_view libraryName );
         /** @brief 이미 로드된 라이브러리 @p libraryName 을 찾아 프로세스 끝까지 내려가지 않게 고정합니다(주입된 RenderDoc 같은 남의 라이브러리를 빌릴 때). 없으면 nullptr 입니다. */
         static void* findLoadedLibrary( string_view libraryName );
+        /**
+         * @brief 주소 @p pAddress 를 담은 라이브러리를 프로세스 끝까지 내려가지 않게 고정합니다. 고정했으면 true 입니다.
+         * @details 떼어 낸 스레드가 아직 그 라이브러리의 코드를 돌 수 있을 때 쓴다(언로드 뒤 남은 몇 명령이 빈 주소를 돈다). 리로드는 새 사본을 따로 싣으므로 옛 사본만 남는다.
+         */
+        static bool pinLibraryContaining( const void* pAddress );
         /** @brief 동적 라이브러리에서 심볼 주소를 찾습니다. */
         static void* getDynamicSymbol( void* pHandle, string_view symbolName );
         /** @brief 로드한 동적 라이브러리를 메모리에서 내립니다. */

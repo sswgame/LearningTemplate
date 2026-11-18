@@ -162,6 +162,7 @@ namespace sw::editor
         uint32                         _frameCount;          ///< 최근 프레임 수(1 · 4 · 16)
         ProfilerCallTreeWindow         _callTree;            ///< 최근 N 프레임의 호출 트리(새 프레임만 더하고 빠진 프레임은 뺀다, Freeze 면 그대로)
         vector<ProfilerTimelineThread> _listCallFrame;       ///< 호출 트리에 더할 한 프레임의 사건(다시 쓰는 버퍼)
+        vector<uint64>                 _listCallFrameBegin;  ///< 호출 트리에 아직 더하지 않은 프레임 시작 시각(다시 쓰는 버퍼)
         uint64                         _callTreeFrameEnd;    ///< 호출 트리에 마지막으로 더한 프레임의 끝(같으면 새 프레임이 없다)
         float64                        _callTreeOrderTime;   ///< 호출 트리의 정렬을 마지막으로 다시 지은 시각(초)
         uint8                          _bTimelineFrozen : 1; ///< Freeze 상태다. 녹화는 계속하고 화면만 멈춘다

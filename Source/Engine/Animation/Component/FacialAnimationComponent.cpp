@@ -583,7 +583,7 @@ namespace sw
         if ( _wrinkleWeights._maskA == _pushedWrinkleWeights._maskA && _wrinkleWeights._maskB == _pushedWrinkleWeights._maskB )
             return;
         // 외형의 표면 상태(`CharacterSurfaceBinding::acquireInstance`)와 같은 인스턴스를 나눈다 — 있으면 그것, 없으면 메시 머티리얼로 하나 만든다.
-        // shortcut: 메시의 주 머티리얼 인스턴스 하나에만 넣는다 — 얼굴이 따로 구간 머티리얼이면 구간 인스턴스로 넓힌다.
+        // 메시 컴포넌트는 머티리얼 하나다(구간 머티리얼이 없다) — 얼굴이 따로 머티리얼이면 따로 메시 컴포넌트이고, 그 메시가 이 컴포넌트가 모프를 모는 얼굴 메시다.
         shared_ptr<MaterialInstance> instance = skeletalMesh.getMaterialInstance();
         if ( instance == nullptr && skeletalMesh.getMaterial() != nullptr )
         {

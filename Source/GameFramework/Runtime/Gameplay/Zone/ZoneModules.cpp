@@ -51,6 +51,17 @@ namespace sw
                 SW_LOG_ERROR_ID( "Zone.ChoiceInvalid", "%# module '%#': %# '%#' is not one of the allowed values", sourceName, module._name.c_str(), pParam, text.c_str() );
                 return false;
             }
+
+            /** @brief 수치 칸 @p pParam 의 식이 문맥(대상 속성 · 위치 값 · 플래그)을 읽으면 true 입니다 — 수만 든 식은 읽을 때 값이 정해진다. */
+            static bool usesContext( const ZoneCompiledModule& module, const utf8* pParam )
+            {
+                const ZoneCompiledParam* const pFound = module.findParam( hashed_string( pParam ) );
+                bool                           bReads = false;
+                if ( pFound != nullptr )
+                    pFound->_expr.forEachCall( [&bReads]( ConditionFunction, const void* )
+                    { bReads = true; } );
+                return bReads;
+            }
         };
 
         /**
@@ -345,8 +356,11 @@ namespace sw
             {
                 bool bOk = ZoneModulesInternal::checkChoice( module, "shape", { "Print", "Trail", "Funnel" }, sourceName );
                 bOk      = ZoneModulesInternal::checkChoice( module, "at", { "Target", "Center" }, sourceName ) && bOk;
-                // shortcut: 칸 사이 규칙(크기 · 메워지는 속도)은 대상 없는 문맥으로 평가해 본다 — 대상 속성만 읽는 식은 0 으로 보여 오류가 된다. 그런 식이 필요해지면 찍을 때 검사로 옮긴다.
-                return bOk && makeStamp( module, GameplayContext{} ).validate( sourceName, module._name.c_str() );
+                // 칸 사이 규칙(크기 · 메워지는 속도 · 테두리)은 규칙 칸이 수만 들었으면 읽을 때 본다. 문맥을 읽는 칸이 있으면 대상 없는 값(0)은 뜻이 없어
+                // 찍을 때 그 대상의 값으로 본다(`onStay`) — 언리얼 데이터 검증이 정적 값만 보고 런타임 값은 쓰는 자리에서 거르는 것과 같다.
+                if ( bOk == false || needsStampTimeCheck( module ) )
+                    return bOk;
+                return makeStamp( module, GameplayContext{} ).validate( sourceName, module._name.c_str() );
             }
 
             void onEnter( ZoneEventContext& context ) const override { context._pMemory->_timer = 0.0f; } // 들어온 프레임에 찍고 시작한다
@@ -363,8 +377,15 @@ namespace sw
                 const float32             interval = module.evaluateNumber( hashed_string( "interval" ), context._world );
                 memory._timer                      = interval > 0.0f ? MathUtil::max( 0.0f, memory._timer + interval ) : 0.0f; // 밀린 주기는 따라잡지 않는다
                 const SurfaceStampDef stamp        = makeStamp( module, context._world );
-                const ZoneSample&     sample       = *context._pSample;
-                const bool            bAtCenter    = module.getText( hashed_string( "at" ) ) == "Center";
+                if ( memory._bRejected == SW_TRUE )
+                    return; // 이번 체류에 이미 틀린 도장이었다 — 오류를 프레임마다 되풀이하지 않는다(나갔다 들어오면 다시 본다)
+                if ( needsStampTimeCheck( module ) && stamp.validate( "zone stamp", module._name.c_str() ) == false )
+                {
+                    memory._bRejected = SW_TRUE;
+                    return;
+                }
+                const ZoneSample& sample    = *context._pSample;
+                const bool        bAtCenter = module.getText( hashed_string( "at" ) ) == "Center";
                 // 깔때기는 머문 시간만큼 홈을 돌리고, 나머지는 대상이 보는 쪽으로 눕힌다(끌린 자국 · 발 모양).
                 float32 yaw = sample._timeInside * stamp._spinSpeed;
                 if ( stamp._shape != SurfaceStampShape::Funnel )
@@ -376,6 +397,14 @@ namespace sw
             }
 
         private:
+            /** @brief 칸 사이 규칙에 드는 칸(`SurfaceStampDef::validate` · `isSet`) 중 문맥을 읽는 것이 있으면 true 입니다 — 규칙을 찍을 때 본다. */
+            static bool needsStampTimeCheck( const ZoneCompiledModule& module )
+            {
+                using Internal = ZoneModulesInternal;
+                return Internal::usesContext( module, "depth" ) || Internal::usesContext( module, "fillSpeed" ) || Internal::usesContext( module, "rimHeight" ) ||
+                       Internal::usesContext( module, "rimWidth" );
+            }
+
             /** @brief 모듈 칸을 @p world 로 평가한 도장입니다. */
             static SurfaceStampDef makeStamp( const ZoneCompiledModule& module, const GameplayContext& world )
             {

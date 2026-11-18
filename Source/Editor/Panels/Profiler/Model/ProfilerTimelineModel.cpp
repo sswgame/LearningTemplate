@@ -25,6 +25,7 @@ namespace sw::editor
         , _frameCount{ 4 }
         , _callTree{}
         , _listCallFrame{}
+        , _listCallFrameBegin{}
         , _callTreeFrameEnd{ 0 }
         , _callTreeOrderTime{ -1.0 }
         , _bTimelineFrozen{ SW_FALSE }
@@ -272,15 +273,16 @@ namespace sw::editor
         }
         if ( _bCallTreeFrozen == SW_TRUE )
             return;
-        // 끝난 마지막 프레임 하나만 읽는다. 끝이 지난번과 같으면 새 프레임이 없다.
-        // shortcut: 두 그리기 사이에 프레임이 여럿 끝났으면 마지막 것만 더한다 — 패널이 매 프레임 그리지 않는 경우가 생기면 collectFrameBegins 로 빠진 프레임을 채운다.
-        uint64     frameBegin{ 0 };
-        uint64     frameEnd{ 0 };
-        const bool bHasFrame = timeline.collectRecentFrames( 1, _listCallFrame, frameBegin, frameEnd );
-        if ( bHasFrame && frameEnd != _callTreeFrameEnd )
+        // 지난번 뒤로 끝난 프레임을 하나씩 더한다 — 두 그리기 사이에 여럿 끝났어도 빠뜨리지 않는다. 마지막 시작은 지금 도는 프레임이라 끝이 없다.
+        // 창보다 많이 밀렸으면(처음 · 오래 그리지 않았다) 창 크기만큼만 더한다 — 앞 것은 `addFrame` 이 곧 빼므로 헛일이다.
+        timeline.collectFrameBegins( _callTreeFrameEnd, std::numeric_limits<uint64>::max(), _listCallFrameBegin );
+        const size_t beginCount = _listCallFrameBegin.size();
+        const size_t firstBegin = beginCount > size_t{ _frameCount } + 1 ? beginCount - _frameCount - 1 : 0;
+        for ( size_t beginIndex = firstBegin; beginIndex + 1 < beginCount; ++beginIndex )
         {
+            timeline.collectSpan( _listCallFrameBegin[beginIndex], _listCallFrameBegin[beginIndex + 1], _listCallFrame );
             _callTree.addFrame( _listCallFrame );
-            _callTreeFrameEnd = frameEnd;
+            _callTreeFrameEnd = _listCallFrameBegin[beginIndex + 1];
         }
         const bool bOrderDue            = nowSeconds - _callTreeOrderTime >= kCallTreeOrderSeconds;
         const bool bFirstRootsAvailable = _callTree.getRoots().empty() && _callTree.getFrameCount() > 0;

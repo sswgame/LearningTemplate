@@ -45,8 +45,30 @@ namespace sw
         {
             bValid = loadDefinition( listAsset[index], index > 0, false );
         }
+        return finishBundle( bValid, listAsset.back().view() );
+    }
+
+    bool InputMap::loadBundleTexts( const vector<InputMapSourceText>& listSource )
+    {
+        if ( listSource.empty() )
+        {
+            SW_LOG_ERROR_ID( "InputMap.BundleEmpty", "InputMap: a bundle needs at least its base map" );
+            clear();
+            return false;
+        }
+        bool bValid = true;
+        for ( size_t index = 0; index < listSource.size() && bValid; ++index )
+        {
+            const InputMapSourceText& source = listSource[index];
+            XMLDocument               doc;
+            bValid = doc.parse( source._text, source._assetPath ) && loadDefinitionDocument( doc, source._assetPath, source._assetPath, index > 0, false );
+        }
+        return finishBundle( bValid, listSource.back()._assetPath );
+    }
+
+    bool InputMap::finishBundle( bool bValid, string_view sourceName )
+    {
         // 뒤 파일의 `virtualCursor` 는 앞 파일의 바인딩과도 겹칠 수 있고, 앞 파일끼리의 겹침은 뒤 파일이 풀 수 있다 — 검사는 다 읽은 맵에 한 번 한다.
-        const string_view sourceName = listAsset.back().view();
         if ( bValid )
             bValid = countVirtualCursorConflicts( sourceName ) == 0 && countAllSameLayerInputConflicts( sourceName ) == 0;
         if ( bValid == false )
@@ -435,7 +457,7 @@ namespace sw
         XMLDocument doc;
         if ( fillMapDocument( doc ) == false )
             return false;
-        if ( doc.saveToFile( absPath.str() ) == false )
+        if ( doc.saveCompleteToFile( absPath.str() ) == false )
         {
             SW_LOG_ERROR_ID( "InputMap.CouldNotWriteInputMap", "Could not write InputMap %#", absPath.str() );
             return false;
@@ -571,7 +593,7 @@ namespace sw
         XMLDocument doc;
         if ( fillSourceDocument( sourceIndex, doc ) == false )
             return false;
-        if ( doc.saveToFile( absPath.str() ) == false )
+        if ( doc.saveCompleteToFile( absPath.str() ) == false )
         {
             SW_LOG_ERROR_ID( "InputMap.CouldNotWriteInputMap", "Could not write InputMap %#", absPath.str() );
             return false;

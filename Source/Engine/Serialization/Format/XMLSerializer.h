@@ -4,6 +4,8 @@
  * @note 리플렉션이 아닌 콘텐츠(테이블, 타일맵, 툴)는 Serialization/XML/XMLDocument 를 씁니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
+
 #include "Engine/Content/AssetID.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
@@ -251,9 +253,9 @@ namespace sw
                                                                     vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
                                                                     const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
-        /** @brief 루트 속성 `_schemaVersion` 을 붙여 XML 로 직렬화합니다. */
-        static string serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
-                                          const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        /** @brief 루트 속성 `_schemaVersion` 을 붙여 XML 로 직렬화합니다. 문서를 글로 쓰지 못하면 그 까닭입니다(빈 글을 실패로 돌려주지 않는다 — JSON 과 같은 계약). */
+        [[nodiscard]] static expected<string> serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
+                                                                  const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief 이미 열린 부모 요소에 `_schemaVersion` 과 PROPERTY 를 씁니다. 스칼라는 속성으로 씁니다. */
         static void serializeVersionedInto( IXMLBackend& backend, uint32 version, const void* pInstance, const TypeInfo& typeInfo,

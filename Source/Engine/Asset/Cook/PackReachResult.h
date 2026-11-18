@@ -54,6 +54,7 @@ namespace sw
         vector<string>        _listGameDomain;                                ///< 굽는 게임 팩 도메인(`game/empty`) — 그 게임 설정이 필수 데이터 뿌리를 더한다
         PackAutomationContent _automation{ PackAutomationContent::Excluded }; ///< 자동화 전용 묶음을 뿌리로 쓰는가
         vector<string>        _listCodeRoot;                                  ///< 코드가 상수로 읽는 에셋(`AssetCookRootRegistry` — 쿠커가 채운다). 어디에도 없으면 빠진 참조와 같은 오류다
+        unordered_set<string> _setDeferredRoot;                               ///< 항상 담기에 맞아도 뿌리로 쓰지 않는 파일(씬 청크로 미루는 씬 — 기동 필수 고르기). 다른 뿌리가 참조로 닿으면 담는다
     };
 
     /** @struct SW_API PackReachResult @brief 고르기 결과입니다. */
@@ -70,6 +71,12 @@ namespace sw
          */
         [[nodiscard]] static bool collect( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source,
                                            PackReachResult& outResult );
+        /**
+         * @brief 뿌리 @p listRoot(정규화한 id — 담을 수 있는 파일)에서만 닿는 파일을 모읍니다. 씬 하나의 닿음(씬 청크 나누기 — `PackSceneChunkPlan`)에 쓴다.
+         * @return `collect` 와 같은 실패 규칙입니다.
+         */
+        [[nodiscard]] static bool collectFromRoots( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source,
+                                                    const vector<string>& listRoot, PackReachResult& outResult );
     };
 
     /** @struct PackDomainSources @brief 도메인 하나의 있는 모든 원본 id 입니다(스테이징 산출물의 원본을 가린다). */

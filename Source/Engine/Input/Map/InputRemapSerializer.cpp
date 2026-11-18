@@ -53,7 +53,7 @@ namespace sw
         {
             bAllWritten = InputMapXML::writeAction( root, map, actionName ) && bAllWritten;
         }
-        return bAllWritten && doc.saveToFile( filePath );
+        return bAllWritten && doc.saveCompleteToFile( filePath );
     }
 
     bool InputRemapSerializer::load( InputMap& map, string_view filePath )

@@ -95,6 +95,8 @@ namespace sw
         };
 
         TradeServiceResult readSession( uint64 tradeID, SessionRead& outSession );
+        /** @brief 주인 줄 @p owned(키 앞 @p prefix 뒤가 거래 id)의 거래가 열려 있으면 ServerRestart 로 닫고, 이미 닫혔거나 없으면 주인 줄만 지웁니다. */
+        TradeServiceResult recoverOne( const ServiceRecord& owned, const string& prefix, int64 nowMs, vector<TradeSnapshot>& outListClosed );
         /** @brief 거래를 @p reason 이유로 Cancelled 로 닫아 커밋합니다. 닫은 스냅숏은 @p outClosed 에 담습니다. */
         CloseResult commitClose( const SessionRead& session, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outClosed );
         /**

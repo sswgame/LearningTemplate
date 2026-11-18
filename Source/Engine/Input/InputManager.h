@@ -235,10 +235,14 @@ namespace sw
         void               onTextComposition( string_view text );
         /**
          * @brief 창이 낸 조합 · 확정 글(`NativeWindowEvent::kMessageTextInput`)을 큐에 넣습니다.
-         * @details 글 이벤트의 칸보다 긴 확정 글은 글자 경계에서 나눠 넣는다(입력기는 문장을 한 번에 확정할 수 있다 - 자르면 글을 잃는다).
-         *          shortcut: 조합 글은 칸(`RawInputEvent::kMaxTextBytes`)에서 잘린다, 보여 주는 글이고 확정 글은 온전하다 - 일본어 긴 변환을 게임 UI 에서 보이게 되면 칸을 늘린다.
+         * @details 글 이벤트의 칸보다 긴 확정 글은 글자 경계에서 나눠 넣는다(입력기는 문장을 한 번에 확정할 수 있다 - 자르면 글을 잃는다). 조합 글은 `postTextComposition` 이다.
          */
         void postWindowTextInput( const WindowTextInputEvent& event );
+        /**
+         * @brief 조합 글을 큐에 넣습니다. 칸보다 길면 글자 경계에서 나누고 앞 조각에 이어짐(`_bTextContinued`)을 켠다 — 큐를 비울 때 이어 붙여 콜백은 온전한 글을 한 번 받는다.
+         * @details 조합은 지금 상태 전체를 매번 다시 알린다 - 자르면 일본어 긴 변환이 위젯에서 끝이 잘려 보였다.
+         */
+        void postTextComposition( string_view text );
         /** @brief 글 커서의 자리를 주 창의 입력기에 알립니다(창 픽셀). 창이 없으면 아무것도 하지 않습니다. 런타임 UI 글자 입력이 부른다. */
         void setTextInputArea( const WindowTextInputArea& area );
 
@@ -500,6 +504,7 @@ namespace sw
         DelegateSlot<GamepadConnectionDelegate>   _onGamepadConnectionChanged;
         DelegateSlot<TextInputDelegate>           _arrOnTextInput[kKeyboardFocusCount];       /**< 키보드 포커스 주인마다의 글자 콜백입니다. */
         DelegateSlot<TextInputDelegate>           _arrOnTextComposition[kKeyboardFocusCount]; /**< 키보드 포커스 주인마다의 조합 중 글자 콜백입니다. */
+        string                                    _pendingComposition;                        /**< 이어지는 조합 조각(`_bTextContinued`)을 마지막 조각까지 모으는 글입니다. 큐를 비우는 스레드만 쓴다. */
         uint64                                    _arrCapturedKeyMask[kKeyMaskWordCount];     /**< 포커스가 `Game` 이 아닐 때 눌려서 게임에 보이지 않게 가린 키입니다(뗀 다음 프레임에 해제). */
         uint32                                    _arrCapturedGamepadMask[kMaxGamepadSlot];   /**< 개발 콘솔이 키보드를 쥔 동안 눌려서 게임에 보이지 않게 가린 패드 컨트롤입니다(비트는 `makeGamepadControlBit`). */
         uint32                                    _arrSavedAccessibilityFlags[3];             /**< 접근성 단축키를 끄기 전의 OS 값입니다 — Windows 는 고정 · 토글 · 필터 키의 dwFlags, X11 은 [0] 에 XKB enabled_ctrls. */

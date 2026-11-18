@@ -386,8 +386,15 @@ namespace sw
 
         ObjectSaveOptions options{ SerializePurpose::Authoring };
         options._bOmitExternalParent = SW_TRUE;
-        outStateXML                  = ObjectStateSerializer::saveToXMLString( pBase, options );
-        return outStateXML.empty() == false;
+        expected<string> state       = ObjectStateSerializer::saveToXMLString( pBase, options );
+        if ( state.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "PrefabOverrides.BaseStateNotSaved", "Prefab base state could not be saved: %# (%#)", state.error().message(), state.error().detail() );
+            outStateXML.clear();
+            return false;
+        }
+        outStateXML = std::move( *state );
+        return true;
     }
 
     expected<void> PrefabOverrides::computeOverrides( string_view instanceStateXML, string_view baseStateXML, string& outOverrideXML )
@@ -596,8 +603,9 @@ namespace sw
         GameObject* pDefaultObject   = scratch.createGameObject( hashed_string( PrefabOverridesInternal::kBaseName ) );
         if ( pDefaultObject == nullptr )
             return false;
-        XMLDocument defaultDoc;
-        if ( defaultDoc.parse( ObjectStateSerializer::saveToXMLString( pDefaultObject, options ) ) == false || defaultDoc.getRoot().isValid() == false )
+        XMLDocument            defaultDoc;
+        const expected<string> defaultState = ObjectStateSerializer::saveToXMLString( pDefaultObject, options );
+        if ( defaultState.has_value() == false || defaultDoc.parse( *defaultState ) == false || defaultDoc.getRoot().isValid() == false )
             return false;
 
         XMLDocument   outDoc;
@@ -627,13 +635,14 @@ namespace sw
         {
             if ( PrefabOverridesInternal::isElement( component ) == false )
                 continue;
-            const hashed_string typeName( component.getName() );
-            GameObject*         pHolder    = scratch.createGameObject( hashed_string( PrefabOverridesInternal::kBaseName ) );
-            Component*          pComponent = pHolder != nullptr ? scratch.addComponentByName( pHolder, typeName, false ) : nullptr;
-            XMLDocument         holderDoc;
-            const XMLNode       defaultElement = pComponent != nullptr && holderDoc.parse( ObjectStateSerializer::saveToXMLString( pHolder, options ) )
-                                                   ? PrefabOverridesInternal::findChildElement( PrefabOverridesInternal::findChildElement( holderDoc.getRoot(), PrefabOverridesInternal::kComponentList ), component.getName() )
-                                                   : XMLNode{};
+            const hashed_string    typeName( component.getName() );
+            GameObject*            pHolder    = scratch.createGameObject( hashed_string( PrefabOverridesInternal::kBaseName ) );
+            Component*             pComponent = pHolder != nullptr ? scratch.addComponentByName( pHolder, typeName, false ) : nullptr;
+            XMLDocument            holderDoc;
+            const expected<string> holderState    = ObjectStateSerializer::saveToXMLString( pHolder, options );
+            const XMLNode          defaultElement = pComponent != nullptr && holderState.has_value() && holderDoc.parse( *holderState )
+                                                      ? PrefabOverridesInternal::findChildElement( PrefabOverridesInternal::findChildElement( holderDoc.getRoot(), PrefabOverridesInternal::kComponentList ), component.getName() )
+                                                      : XMLNode{};
             if ( defaultElement.isValid() == false )
             {
                 (void)outList.appendClone( component ); // 만들지 못한 타입 — 기본값을 모른다

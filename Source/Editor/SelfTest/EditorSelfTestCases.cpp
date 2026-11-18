@@ -522,8 +522,11 @@ namespace sw::editor
                             return EditorSelfTestStep::Done;
                         pCamera->setRole( CameraRole::Custom );
                         pCamera->setOrthographic( true );
+                        const expected<string> before = ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } );
+                        if ( context.expect( before.has_value(), "the probe object could not be saved" ) == false )
+                            return EditorSelfTestStep::Done;
                         probe._objectID  = pObj->getObjectID();
-                        probe._xmlBefore = ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } );
+                        probe._xmlBefore = *before;
                         (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<InspectorPanel>( true );
                         editorContext.getSubsystem<EditorWorkspace>().selectGameObject( pObj );
                         return EditorSelfTestStep::WaitStable; // 정지는 같은 배치를 두 번 연속 본 뒤라 인스펙터가 적어도 두 번 그렸다
@@ -536,7 +539,8 @@ namespace sw::editor
                         const CameraComponent* pCamera = pObj->getComponent<CameraComponent>();
                         (void)context.expect( pCamera != nullptr && pCamera->getRole() == CameraRole::Custom, "the inspector changed the camera role" );
                         (void)context.expect( pCamera != nullptr && pCamera->isOrthographic(), "the inspector cleared the bool next to the enum" );
-                        (void)context.expect( ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } ) == probe._xmlBefore, "drawing the inspector changed the object" );
+                        const expected<string> after = ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } );
+                        (void)context.expect( after.has_value() && *after == probe._xmlBefore, "drawing the inspector changed the object" );
                     }
                     const ImGuiWindow* pInspector = ImGui::FindWindowByName( EditorPanelText::makeWindowID( InspectorPanel::kPanelTitle ).c_str() );
                     (void)context.expect( pInspector != nullptr && pInspector->Hidden == false, "the inspector was not drawn" );

@@ -443,7 +443,7 @@ namespace sw
     {
         if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false )
             return false;
-        return ResourceComposer::saveText( absPath.str(), toXML() );
+        return ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }
 } // namespace sw
 

@@ -546,7 +546,7 @@ namespace sw
         XMLDocument xmlDoc;
         if ( buildXML( xmlDoc ) == false )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || xmlDoc.saveToFile( absPath.str() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || xmlDoc.saveCompleteToFile( absPath.str() ) == false )
         {
             SW_LOG_ERROR_ID( "SceneDocument.FailedWrite", "Failed to write: %#", absPath.str() );
             return false;

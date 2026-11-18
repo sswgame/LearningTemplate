@@ -408,22 +408,22 @@ namespace sw
         return true;
     }
 
-    bool Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
+    optional<DetachedProcessID> Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
     {
         if ( options._bEndWithParent )
         {
             SW_LOG_ERROR_ID( "Process.DetachedEndWithParent", "A detached process cannot end with its parent - launch it attached" );
-            return false;
+            return nullopt;
         }
         if ( command._executable.empty() )
         {
             SW_LOG_ERROR_ID( "Process.NoExecutable", "Detached process launch needs an executable" );
-            return false;
+            return nullopt;
         }
         if ( options._listEnvironment.empty() == false )
         {
             SW_LOG_ERROR_ID( "Process.DetachedEnvironment", "Detached process launch does not take environment overrides - use Process::launch" );
-            return false;
+            return nullopt;
         }
         const string  cmdStr      = command.toCommandLine();
         wstring       wsCmdLine   = StringUtil::utf8ToUTF16( cmdStr.c_str() );
@@ -439,12 +439,22 @@ namespace sw
         if ( bCreated == FALSE )
         {
             SW_LOG_ERROR_ID( "Process.LaunchDetachedFailed", "Failed to launch detached command: %#", cmdStr.c_str() );
-            return false;
+            return nullopt;
         }
 
         CloseHandle( pi.hThread );
         CloseHandle( pi.hProcess );
-        return true;
+        return DetachedProcessID{ static_cast<uint32>( pi.dwProcessId ) };
+    }
+
+    bool Process::waitForDetachedExit( DetachedProcessID id, uint32 timeoutMilliseconds )
+    {
+        HANDLE hProcess = OpenProcess( SYNCHRONIZE, FALSE, static_cast<DWORD>( id._value ) );
+        if ( hProcess == nullptr )
+            return GetLastError() == ERROR_INVALID_PARAMETER; // 그 id 의 프로세스가 없다 — 이미 끝났다
+        const DWORD waited = WaitForSingleObject( hProcess, timeoutMilliseconds );
+        CloseHandle( hProcess );
+        return waited == WAIT_OBJECT_0;
     }
 
     bool Process::launchURL( string_view url )

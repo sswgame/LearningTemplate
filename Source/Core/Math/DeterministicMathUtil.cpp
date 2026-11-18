@@ -2,8 +2,10 @@
 
 #include "Core/Math/DeterministicMathUtil.h"
 
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include <array>
 #include <cmath>
 #include <limits>
 
@@ -55,13 +57,78 @@ namespace sw
                 return 1.0 + rest2 * poly;
             }
 
+            /** @brief 작은 각도 축약(Cody-Waite)이 정확한 |x| 상한입니다 — 몫이 2^20 미만이라 앞 조각(33 비트)과의 곱이 정확하다(2^20 · π/2 ≈ 1.647e6 아래로 둔다). */
+            static constexpr float64 kSmallAngleLimit = 1.6e6;
+            /** @brief 2/π 의 소수 비트(앞에서부터 32 비트씩, fdlibm `ipio2` 와 같은 수). float32 지수 상한(2^104 · 24 비트 가수)의 축약 창(96 비트)까지 덮는다. */
+            static constexpr std::array<uint32, 8> kArrTwoOverPiBits = { 0xA2F9836Eu, 0x4E441529u, 0xFC2757D1u, 0xF534DDC0u, 0xDB629599u, 0x3C439041u, 0xFE5163ABu, 0xDEBBC561u };
+            static constexpr int32                 kWordBits         = 32;
+            static constexpr int32                 kWordIndexMask    = kWordBits - 1;
+            /** @brief float32 비트 배치 — 가수 23 비트, 숨은 1, 가수를 정수로 볼 때의 지수 치우침(127 + 23). */
+            static constexpr int32  kFloatMantissaBits = 23;
+            static constexpr uint32 kFloatMantissaMask = ( 1u << kFloatMantissaBits ) - 1u;
+            static constexpr uint32 kFloatHiddenBit    = 1u << kFloatMantissaBits;
+            static constexpr int32  kFloatIntegerBias  = 127 + kFloatMantissaBits;
+            /** @brief 축약 결과(아래 96 비트)에서 사분면 2 비트를 뺀 맨 윗 단어의 소수 부분입니다. */
+            /** @brief 64 비트 정수 소수를 [0, 1) 로 바꾸는 배율(2^-64)입니다. */
+            static constexpr float64 kFractionScale   = 0x1p-64;
+            static constexpr uint32  kTopFractionMask = ( 1u << ( kWordBits - 2 ) ) - 1u;
+
+            /** @brief 2/π 의 소수 비트 @p start 번째(1 부터, 2^-start 자리)부터 32 비트입니다. 0 이하 자리는 0 이다(2/π < 1). */
+            static uint32 readTwoOverPiWord( int32 start )
+            {
+                uint64 word = 0;
+                for ( int32 bit = 0; bit < kWordBits; ++bit )
+                {
+                    const int32  index = start + bit - 1; // 0 부터 센 비트 번호
+                    const uint32 value = index < 0 ? 0u : ( kArrTwoOverPiBits[index >> 5] >> ( kWordIndexMask - ( index & kWordIndexMask ) ) ) & 1u;
+                    word               = ( word << 1 ) | value;
+                }
+                return static_cast<uint32>( word );
+            }
+
             /**
-             * @brief 사분면(0~3)과 [-π/4, π/4] 의 나머지로 나눕니다.
-             * @details shortcut: |x| 가 2^20 · π/2(약 1.6e6)를 넘으면 앞 조각 곱이 정확하지 않아 정확도가 떨어진다(결정성은 그대로). 시뮬레이션 각도는 그보다 훨씬 작다 —
-             *          큰 각도가 필요해지면 Payne-Hanek 축약으로 바꾼다.
+             * @brief Payne-Hanek 축약 — |x| = m · 2^e(m 은 24 비트 정수)에 2/π 의 필요한 96 비트 창만 정수로 곱해 x · 2/π 의 mod 4 를 얻습니다.
+             * @details 창보다 앞 비트(자리 e-2 이하)는 4 의 배수만 보태 버리고, 창 뒤 비트는 2^-70 아래라 float32 결과에 닿지 않는다. 정수 연산과 한 번의 float64 변환이라
+             *          결정적이다. 큰 각도에서 Cody-Waite 의 앞 조각 곱이 정확하지 않아 값이 틀어지던 것을 대신한다(OS libm 도 같은 방법이다).
              */
+            static int32 reduceLarge( float64 magnitude, float64& outRest )
+            {
+                const uint32 bits     = BitUtil::floatToBits( static_cast<float32>( magnitude ) );
+                const int32  exponent = static_cast<int32>( ( bits >> kFloatMantissaBits ) & 0xFFu ) - kFloatIntegerBias; // 정규 수만 온다(큰 값)
+                const uint64 mantissa = ( bits & kFloatMantissaMask ) | kFloatHiddenBit;
+                const int32  start    = exponent - 1;
+                // 창 W = w2·2^64 + w1·2^32 + w0, 값은 m · W · 2^-94 이고 mod 4 는 곱의 아래 96 비트다.
+                const uint64 product0 = mantissa * readTwoOverPiWord( start + 2 * kWordBits );
+                const uint64 product1 = mantissa * readTwoOverPiWord( start + kWordBits ) + ( product0 >> 32 );
+                const uint64 product2 = mantissa * readTwoOverPiWord( start ) + ( product1 >> 32 );
+                const uint32 top      = static_cast<uint32>( product2 ); // 비트 95..64
+                // 비트 93..30 을 64 비트 소수로 모은다(맨 윗 비트가 0.5 자리).
+                const uint64 fraction = ( static_cast<uint64>( top & kTopFractionMask ) << 34 ) | ( ( product1 & 0xFFFFFFFFu ) << 2 ) | ( ( product0 & 0xFFFFFFFFu ) >> 30 );
+                int32        quadrant = static_cast<int32>( top >> 30 );
+                float64      part     = 0.0;
+                if ( ( fraction >> 63 ) != 0 ) // 0.5 이상이면 다음 사분면에서 음의 나머지
+                {
+                    quadrant = ( quadrant + 1 ) & 3;
+                    part     = -static_cast<float64>( 0 - fraction );
+                }
+                else
+                {
+                    part = static_cast<float64>( fraction );
+                }
+                outRest = part * kFractionScale * kHalfPi;
+                return quadrant;
+            }
+
+            /** @brief 사분면(0~3)과 [-π/4, π/4] 의 나머지로 나눕니다. 작은 각도는 Cody-Waite, 큰 각도는 Payne-Hanek 입니다. */
             static int32 reduce( float64 x, float64& outRest )
             {
+                if ( std::fabs( x ) > kSmallAngleLimit )
+                {
+                    float64     rest     = 0.0;
+                    const int32 quadrant = reduceLarge( std::fabs( x ), rest );
+                    outRest              = x < 0.0 ? -rest : rest;
+                    return x < 0.0 ? ( 4 - quadrant ) & 3 : quadrant;
+                }
                 const float64 quotient = std::floor( x * kInvHalfPi + 0.5 );
                 outRest                = ( x - quotient * kHalfPiHigh ) - quotient * kHalfPiLow;
                 return static_cast<int32>( quotient - 4.0 * std::floor( quotient * 0.25 ) );

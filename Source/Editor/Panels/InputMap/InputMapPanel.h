@@ -111,7 +111,7 @@ namespace sw::editor
         void drawAddActionSection();
         void drawCaptureModal();
         void drawGamepadStickVisualizer( const utf8* pLabel, float32 stickX, float32 stickY, float32 deadzone );
-        /** @brief 편집하는 맵의 저장 글입니다(문서 되돌리기 — 감사 E-13). 묶음이면 빈 글이다(`InputMapModel::captureText`). */
+        /** @brief 편집하는 맵의 저장 글입니다(문서 되돌리기 — 감사 E-13). 묶음이면 파일마다 몫을 잇는다(`InputMapModel::captureText`). */
         string captureDocumentText() const override;
         /** @brief 되돌리기가 준 글로 맵을 다시 읽습니다. */
         void applyDocumentText( string_view text ) override;

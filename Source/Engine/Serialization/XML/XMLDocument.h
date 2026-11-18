@@ -370,8 +370,12 @@ namespace sw
         XMLNode appendRoot( const utf8* pName );
         /** @brief 현재 문서를 XML 문자열로 직렬화합니다. */
         string saveToString() const;
-        /** @brief 현재 문서를 절대 경로에 씁니다. */
-        [[nodiscard]] bool saveToFile( string_view absPath ) const;
+        /**
+         * @brief 칸을 빼지 않은(쓰는 쪽이 모든 칸을 지은) 문서를 절대 경로에 씁니다 — 저장 입구(`ResourceComposer::saveText`)에 이 문서 그대로를 빼지 않은 짝으로 넘긴다.
+         * @details 기본값 · 부모와 같은 칸을 뺀 문서(차이 · 기본값 생략)는 이 함수를 쓰지 않고 빼지 않은 짝과 함께 `ResourceComposer::saveText( ResourceSaveText::makeWithComplete )` 로 쓴다 —
+         *          이름이 갈라 섞어 쓸 수 없다(빠진 칸을 "그대로" 로 읽어 조건이 정한 칸의 되돌림을 잃는다).
+         */
+        [[nodiscard]] bool saveCompleteToFile( string_view absPath ) const;
 
         // ------------------------------------------------------------------------------
         // 6) 문자열 유틸: escape, unescape

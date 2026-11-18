@@ -69,12 +69,6 @@ namespace sw
                     inoutBuilder.addString( text );
                     return true;
                 }
-                if ( name == "GameObjectHandle" )
-                {
-                    // shortcut: 핸들 번호는 프로세스마다 달라 가리키는지만 접는다 — 대상이 갈리는 것까지 잡으려면 대상 오브젝트 이름을 매니저에서 찾아 접는다.
-                    inoutBuilder.addUint8( static_cast<const GameObjectHandle*>( pValue )->isValid() ? 1 : 0 );
-                    return true;
-                }
                 for ( const utf8* pIntegerName : kArrIntegerTypeName )
                 {
                     if ( name != pIntegerName )

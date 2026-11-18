@@ -6,11 +6,13 @@
  *          - 검증 짝(`validate*`)은 지어낸 번호 · 경계 밖 좌표 · 자기 초대 같은 조작만 거른다(실패하면 연결을 끊는다). 사거리 · 재사용 대기 같은 게임 규칙은 결과로 알린다.
  *          - 계정: 접속 인증기의 주체(`INetPeers::getConnectionPrincipal` — 게임 접속 티켓의 계정)만 쓴다. 주체가 없는 연결(자격 없이 붙은)은 받지 않는다 —
  *            클라이언트가 보낸 이름으로 계정을 고르면 남의 진행을 가져갈 수 있다. 같은 계정이 다시 붙으면 앞 연결을 저장한 뒤 끊는다(재접속이 옛 연결을 기다리지 않는다).
- *          - 저장: 접속 끝 · 주기(`ValeRules::_autosaveSeconds`) · 서버 내림에 쓴다. 읽기는 접속 때 한 번이다(`ValeProfileStore`).
+ *          - 저장: 접속 끝 · 주기(`ValeRules::_autosaveSeconds`) · 서버 내림에 쓴다. 읽기는 접속 때 한 번이다(서버 전용 `Server/ValeProfileStore`).
+ *          - 서버 링크(`Server/ValeServerLink`)는 서버 전용 코드라 여기에는 공유 창구(`IValeServer` · `IValeServerFactory`)만 둔다.
  */
 #pragma once
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -22,13 +24,10 @@
 #include "GameFramework/Kits/Feature/Network/NetClientServer/RemoteCall.h"
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 
-#include "Games/LanternVale/ValeProfileStore.h"
 #include "Games/LanternVale/ValeWorld.h"
 
 namespace sw
 {
-    class ValeServerLink;
-
     /**
      * @brief 연결 하나의 세션 객체입니다. 서버에서는 그 연결의 아바타를 움직이고, 클라이언트에서는 서버가 알린 진행을 들고 있습니다.
      * @details 같은 형식이 양쪽에 있다(언리얼 PlayerController 처럼). `Server` 함수 몸은 서버에서만, `Client` 함수 몸은 클라이언트에서만 불린다(`RemoteCall` 이 역할로 막는다).
@@ -60,8 +59,9 @@ namespace sw
         PROPERTY()
         int32 _resultCount{ 0 };
 
-        ValeServerLink* _pServer{ nullptr }; ///< 서버 — 이 연결의 링크. 클라이언트는 비어 있다
-        int32           _connectionID{ -1 }; ///< 서버 — 이 객체의 연결
+        ValeWorld*                                           _pWorld{ nullptr };  ///< 서버 — 판정하는 골짜기. 클라이언트는 비어 있다
+        Delegate<void( ValeAvatarAgent&, ValeActionResult )> _onAction{};         ///< 서버 — 판정을 알릴 곳(서버 링크)
+        int32                                                _connectionID{ -1 }; ///< 서버 — 이 객체의 연결
 
         /** @brief 짐승 하나를 칩니다. */
         FUNCTION( Server, Reliable, Validate )
@@ -108,107 +108,36 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 서버 링크의 셈입니다(진단 · 테스트). */
-    struct ValeServerStats
+    /** @brief 복제 엔티티의 종류 번호입니다(서버가 올리고 클라이언트 보기가 가른다). */
+    struct ValeEntityType
     {
-        uint64 _admittedCount{ 0 }; ///< 들인 접속
-        uint64 _refusedCount{ 0 };  ///< 주체가 없거나 진행을 읽지 못해 받지 않은 접속
-        uint64 _replacedCount{ 0 }; ///< 같은 계정이 다시 붙어 끊은 앞 접속
-        uint64 _actionCount{ 0 };   ///< 판정한 행동
-        uint64 _publishCount{ 0 };  ///< 복제기에 올린 엔티티 갱신(`setEntity`) — 바뀐 엔티티만 센다
-    };
-
-    /** @brief 복제기에 마지막으로 올린 엔티티 값입니다. 같으면 다시 올리지 않습니다(언리얼 Push Model · Iris 의 더티 표시 자리). */
-    struct ValePublishedEntity
-    {
-        float3 _position{};
-        int32  _stateValue{ 0 };
-        uint32 _typeID{ 0 };
-
-        bool operator==( const ValePublishedEntity& other ) const { return _position == other._position && _stateValue == other._stateValue && _typeID == other._typeID; }
-        bool operator!=( const ValePublishedEntity& other ) const { return ( *this == other ) == false; }
+        static constexpr uint32 kAvatar   = 1;
+        static constexpr uint32 kCreature = 2;
+        static constexpr uint32 kHerb     = 3;
     };
 
     /**
-     * @class ValeServerLink
-     * @brief 서버 쪽입니다. 골짜기 규칙 · 원격 호출 · MMO 복제 · 진행 저장을 묶습니다. 라우터에는 사건만 받는 처리기로 달린다(게임 영역, 마스크 0).
+     * @class IValeServer
+     * @brief 서버 쪽 골짜기(서버 링크)의 공유 창구입니다. 구현은 서버 전용 폴더(`Server/ValeServerLink`)에 있고, 씬 오브젝트는 공장(`IValeServerFactory`)으로만 만든다 —
+     *        클라이언트 구성에는 서버 코드가 없다(키트의 `Server/` 와 같은 갈림, 언리얼 `WITH_SERVER_CODE` 자리).
      */
-    class ValeServerLink final : public INetMessageHandler
+    class IValeServer
     {
     public:
-        static constexpr uint32 kAvatarTypeID   = 1;
-        static constexpr uint32 kCreatureTypeID = 2;
-        static constexpr uint32 kHerbTypeID     = 3;
-
-        ValeServerLink();
-        ~ValeServerLink() override;
-
-        ValeServerLink( const ValeServerLink& )            = delete;
-        ValeServerLink& operator=( const ValeServerLink& ) = delete;
-
-        /**
-         * @brief 골짜기를 세우고 라우터에 답니다. @p pStore 는 진행 저장소이고 링크가 가집니다.
-         * @return 규칙 · 관심 격자 · 복제 설정이 틀렸거나 라우터 등록이 겹치면 오류를 남기고 false 입니다(링크는 서지 않는다)
-         */
-        [[nodiscard]] bool initialize( INetPeers& peers, NetMessageRouter& router, const ValeRules& rules, const StreamingCellGridDef& gridDef, unique_ptr<ILocalStore> pStore );
-        /** @brief 접속한 모두의 진행을 쓰고 저장소를 닫습니다(남은 쓰기를 마친다). 두 번 불러도 됩니다. */
-        void shutdown();
+        virtual ~IValeServer() = default;
         /** @brief 규칙 · 저장 · 복제를 한 틱 돌립니다. */
-        void update( float32 deltaSeconds );
+        virtual void update( float32 deltaSeconds ) = 0;
+        /** @brief 접속한 모두의 진행 쓰기를 맡기고 라우터에서 뗍니다. 두 번 불러도 됩니다. */
+        virtual void shutdown() = 0;
+    };
 
-        /**
-         * @brief 연결을 계정 @p accountID 로 들입니다 — 진행 읽기를 맡기고, 읽히면 아바타를 세운다. 계정이 0 이면 받지 않고 끊습니다.
-         * @details 연결 열림(`onConnectionOpened`)이 주체로 부른다. 테스트는 주체 없는 루프백 연결에 계정을 직접 넘긴다.
-         */
-        void acceptConnection( int32 connectionID, uint64 accountID );
-        /** @brief 아바타 행동 하나의 판정을 알립니다(`ValeAvatarAgent` 의 `Server` 함수 몸이 부른다). */
-        void reportAction( ValeAvatarAgent& agent, ValeActionResult result );
-
-        uint8           getMessageRangeBase() const override { return NetMessageRange::kGame; }
-        uint16          getMessageKindMask() const override { return 0; }
-        uint32          getWireVersion() const override { return kNoMessageTable; } // 연결 사건만 받는다 — 게임 메시지는 키트 표(RemoteCall · MMO)가 싣는다
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
-        void            onConnectionOpened( int32 connectionID ) override;
-        void            onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
-
-        bool                    isActive() const { return _pPeers != nullptr; }
-        ValeWorld&              getWorld() { return _world; }
-        const ValeWorld&        getWorld() const { return _world; }
-        const ValeServerStats&  getStats() const { return _stats; }
-        const RemoteCallStats&  getRemoteCallStats() const { return _remoteCalls.getStats(); }
-        const ValeProfileStore& getProfiles() const { return _profiles; }
-        int32                   getOnlineCount() const { return static_cast<int32>( _mapAgent.size() ); }
-
-    private:
-        /** @brief 읽힌 진행으로 아바타를 세우고 세션 대상으로 등록합니다. 그 사이 연결이 닫혔으면 버립니다. */
-        void completeAdmission( const ValeProfileLoad& load );
-        /** @brief 진행을 쓰고 아바타를 내보냅니다. */
-        void releaseAgent( int32 connectionID );
-        void sendProgress( const ValeAvatarAgent& agent );
-        void saveAll();
-        /** @brief 복제 엔티티(아바타 · 놓인 것) 가운데 지난번 올린 값과 다른 것만 이번 틱 상태로 올립니다. */
-        void publishEntities();
-        /** @brief 엔티티 하나를 올립니다. 지난번 올린 값과 같으면 아무것도 하지 않습니다. */
-        void publishEntity( uint32 entityID, const ValePublishedEntity& value, float32 importance );
-        /** @brief 엔티티를 복제기에서 내립니다. 올린 적이 없으면 아무것도 하지 않습니다. */
-        void removePublishedEntity( uint32 entityID );
-
-    private:
-        ValeWorld                                         _world;
-        ValeProfileStore                                  _profiles;
-        unique_ptr<ILocalStore>                           _pStore;
-        RemoteCallServer                                  _remoteCalls;
-        StreamingCellGrid                                 _grid; ///< 복제기보다 먼저 선언한다 — 복제기가 빌려 쓴다
-        MMOReplicator                                     _replicator;
-        unordered_map<int32, unique_ptr<ValeAvatarAgent>> _mapAgent;          ///< 연결 → 세션 객체(들인 접속)
-        unordered_map<int32, uint64>                      _mapPendingAccount; ///< 진행을 읽는 중인 연결 → 계정
-        vector<ValeProfileLoad>                           _listLoadScratch;
-        vector<uint8>                                     _listStateScratch;
-        unordered_map<uint32, ValePublishedEntity>        _mapPublished;     ///< 엔티티 id → 복제기에 마지막으로 올린 값
-        vector<Subscription>                              _listSubscription; ///< 라우터 등록. 처리기들보다 뒤에 선언한다 — 먼저 풀린다
-        ValeServerStats                                   _stats;
-        INetPeers*                                        _pPeers;
-        float32                                           _autosaveTimer;
+    /** @class IValeServerFactory @brief 서버 링크를 만드는 쪽입니다(서버 코드의 모듈 부분 — 클라이언트 구성에는 없다). */
+    class IValeServerFactory
+    {
+    public:
+        virtual ~IValeServerFactory() = default;
+        /** @brief 골짜기를 세우고 라우터에 답니다. 진행 저장소는 전용 서버의 온라인 조립 저장소다. 세우지 못하면 오류를 남기고 비어 있습니다. */
+        [[nodiscard]] virtual unique_ptr<IValeServer> createServer( INetPeers& peers, NetMessageRouter& router, const ValeRules& rules, const StreamingCellGridDef& gridDef ) = 0;
     };
 } // namespace sw
 

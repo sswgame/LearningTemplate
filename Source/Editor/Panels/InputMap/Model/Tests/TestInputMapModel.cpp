@@ -399,3 +399,34 @@ SW_TEST_CASE( InputMapModelTest, EditNotifiesAndUndoTextRoundTrips )
     SW_EXPECT_TRUE( document.captureText() == before ); // 저장한 글로 돌아왔다(미저장 판정은 문서 패널이 글로 한다)
     SW_EXPECT_TRUE( document.captureText() == before );
 }
+
+/** @brief [InputMapModelTest] 묶음도 되돌리기 글이 파일마다 몫을 담아 돌아온다 — 되돌린 뒤 액션은 원래 파일로 간다 */
+SW_TEST_CASE( InputMapModelTest, BundleUndoTextRoundTrips )
+{
+    InputMapModelTestRecorder recorder;
+    InputMapModel             document{ recorder._recorder };
+    SW_REQUIRE_TRUE( document.editInputMapPath().commit( "game/empty/input/bundletest/data/gamesettings.xml" ) );
+    SW_REQUIRE_TRUE( document.reload() );
+    const string before = document.captureText();
+    SW_REQUIRE_TRUE( before.empty() == false );
+
+    SW_REQUIRE_TRUE( document.deleteAction( hashed_string( "Use" ) ) );
+    SW_REQUIRE_TRUE( document.applyText( before ) );
+    SW_EXPECT_EQUAL( uint32{ 3 }, document.getInputMap().getSourceCount() );
+    SW_EXPECT_EQUAL( string( "game/empty/input/bundletest/diff.input.xml" ), document.describeActionSource( hashed_string( "Use" ) ) );
+    SW_EXPECT_TRUE( document.captureText() == before );
+}
+
+/** @brief [InputMapModelTest] 깨진 묶음 글(바이트 수가 글보다 길다 · 빈 글)은 나누지 않는다 */
+SW_TEST_CASE( InputMapModelTest, BrokenBundleTextIsRejected )
+{
+    vector<InputMapSourceText> listSource;
+    SW_EXPECT_FALSE( InputMapModel::parseBundleText( "a.input.xml\n99\n<InputMap/>", listSource ) );
+    listSource.clear();
+    SW_EXPECT_FALSE( InputMapModel::parseBundleText( "", listSource ) );
+    listSource.clear();
+    SW_REQUIRE_TRUE( InputMapModel::parseBundleText( "a.input.xml\n3\nabcb.input.xml\n0\n", listSource ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listSource.size() );
+    SW_EXPECT_EQUAL( string( "abc" ), listSource[0]._text );
+    SW_EXPECT_EQUAL( string( "b.input.xml" ), listSource[1]._assetPath );
+}

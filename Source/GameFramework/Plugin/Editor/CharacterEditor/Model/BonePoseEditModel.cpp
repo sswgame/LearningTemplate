@@ -211,7 +211,7 @@ namespace sw::editor
     bool BonePoseEditModel::saveDocument( const AbsolutePath& absPath )
     {
         const string text = _override.saveToXMLText();
-        if ( ResourceComposer::saveText( absPath.str(), text ) == false )
+        if ( ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeComplete( text ) ) == false ) // 뼈마다 모든 칸을 쓴다
         {
             SW_LOG_ERROR_ID( "BonePoseEditModel.ReferencePoseFileCould2", "Reference pose file could not be written: %#", string( absPath.str() ).c_str() );
             return false;

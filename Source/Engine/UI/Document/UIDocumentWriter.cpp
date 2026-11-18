@@ -114,7 +114,7 @@ namespace sw
             }
 
             /** @brief 위젯 @p widget 과 그 자식을 @p parent 아래 원소로 씁니다. */
-            static void writeWidget( const Widget& widget, const XMLNode& parent, const vector<UIBindingDef>& listBinding )
+            static void writeWidget( const Widget& widget, const XMLNode& parent, const vector<UIBindingDef>& listBinding, ResourceFieldWrite fieldWrite )
             {
                 const TypeInfo* pType = widget.getTypeInfo();
                 if ( pType == nullptr )
@@ -126,7 +126,7 @@ namespace sw
                 if ( currentDocument.parse( XMLSerializer::serialize( &widget, *pType ) ) )
                 {
                     const unique_ptr<Widget> defaults  = UIDocumentLoader::createWidget( *pType );
-                    const bool               bDefaults = defaults != nullptr && defaultDocument.parse( XMLSerializer::serialize( defaults.get(), *pType ) );
+                    const bool               bDefaults = fieldWrite == ResourceFieldWrite::OmitDefaults && defaults != nullptr && defaultDocument.parse( XMLSerializer::serialize( defaults.get(), *pType ) );
                     // 다른 필드가 없어도 위젯 요소는 남긴다(타입이 곧 내용이다). 적었는지는 반환하지 않는다
                     (void)writeDifference( currentDocument.getRoot(), bDefaults ? defaultDocument.getRoot() : XMLNode{}, element, *pType );
                 }
@@ -141,7 +141,7 @@ namespace sw
                     return;
                 for ( const unique_ptr<Widget>& child : widget.getChildren() )
                 {
-                    writeWidget( *child, element, listBinding );
+                    writeWidget( *child, element, listBinding, fieldWrite );
                 }
             }
         };
@@ -151,7 +151,7 @@ namespace sw
 namespace sw
 {
     string UIDocumentWriter::write( const UIScreenDef& desc, const vector<string>& listStyleSheet, const Widget& root, const vector<UIBindingDef>& listBinding,
-                                    const vector<UIAnimation>& listAnimation )
+                                    const vector<UIAnimation>& listAnimation, ResourceFieldWrite fieldWrite )
     {
         using Internal = UIDocumentWriterInternal;
         XMLDocument   document;
@@ -167,7 +167,7 @@ namespace sw
         {
             XMLDocument   scratch;
             const XMLNode scratchElement = scratch.appendRoot( descType._name.c_str() );
-            if ( Internal::writeDifference( currentDesc.getRoot(), defaultDesc.getRoot(), scratchElement, descType ) )
+            if ( Internal::writeDifference( currentDesc.getRoot(), fieldWrite == ResourceFieldWrite::OmitDefaults ? defaultDesc.getRoot() : XMLNode{}, scratchElement, descType ) )
                 (void)documentRoot.appendClone( scratchElement );
         }
 
@@ -194,7 +194,7 @@ namespace sw
             }
         }
 
-        Internal::writeWidget( root, documentRoot, listBinding );
+        Internal::writeWidget( root, documentRoot, listBinding, fieldWrite );
         return document.saveToString();
     }
 } // namespace sw

@@ -223,7 +223,7 @@ namespace sw::editor
          *          애니메이션은 화면의 재생기가 가진 문서 애니메이션을 그대로 쓴다.
          * @return 문서 텍스트. 문서나 루트가 없으면 그 까닭입니다.
          */
-        [[nodiscard]] static expected<string> makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath );
+        [[nodiscard]] static expected<string> makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath, ResourceFieldWrite fieldWrite );
         // --- 디자이너: 팔레트 · 끌어 놓기 · 슬롯 손잡이 ---------------------------------------------------------------
         /** @brief 문서 순서 번호 @p ordinal 의 위젯이 패널이면 그 패널입니다. 패널이 아니거나 범위 밖이면 nullptr 입니다. */
         static PanelWidget* findPanelByOrdinal( WidgetTree& tree, uint32 ordinal );
@@ -241,6 +241,8 @@ namespace sw::editor
         static Widget* insertWidget( WidgetTree& tree, const TypeInfo& type, uint32 parentOrdinal, uint32 index );
         /** @brief 문서 순서 번호 @p parentOrdinal 인 패널의 @p index 번째 자식을 분리해 소유권을 돌려줍니다(지우거나 되돌릴 때 다시 끼운다). 없으면 빈 포인터입니다. */
         static unique_ptr<Widget> detachWidget( WidgetTree& tree, uint32 parentOrdinal, uint32 index );
+        /** @brief 위젯 @p widget 과 그 아래 트리가 차지하는 바이트입니다 — 위젯마다 동적 타입의 크기(`TypeInfo::_size`)를 더한다. 지운 트리를 쥔 되돌리기 단계가 바이트 한도에 적는다. */
+        static uint64 measureWidgetBytes( const Widget& widget );
         /** @brief 분리한 위젯을 같은 위치에 다시 끼웁니다(지우기 되돌리기). 못 끼우면 nullptr 입니다. */
         static Widget* attachWidget( WidgetTree& tree, unique_ptr<Widget> widget, uint32 parentOrdinal, uint32 index );
         /** @brief 위젯의 슬롯을 손잡이로 고칠 수 있으면 true 입니다 — 부모가 캔버스 패널(앵커와 오프셋)일 때입니다. */

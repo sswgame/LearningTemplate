@@ -177,7 +177,7 @@ def rename_all(root: Path, list_pair: Sequence[dict], dry_run: bool, reapply: bo
 
                 def rewrite_serialized(part: str) -> str:
                     nonlocal serialized_count
-                    rewritten, part_count = replace_serialized_name(part, *serialized_pairs[old])
+                    rewritten, part_count = replace_serialized_name(part, *serialized_pairs[old], path=path.name)
                     serialized_count += part_count
                     return rewritten
 

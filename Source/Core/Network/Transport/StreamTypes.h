@@ -66,12 +66,13 @@ namespace sw
     /** @brief 스트림 전송 설정입니다. 시간은 초, 크기는 바이트입니다. */
     struct StreamTransportConfig
     {
-        int32   _ioThreadCount{ 1 };                                            ///< 0 = 전용 스레드 없음 — 부르는 쪽이 `pollIO` 를 돈다
-        int32   _maxConnections{ 1024 };                                        ///< 넘는 수락은 바로 닫는다
-        int32   _receiveChunkBytes{ 16 * 1024 };                                ///< 읽기 한 번의 버퍼(연결마다 하나)
-        int32   _sendHighWatermarkBytes{ 256 * 1024 };                          ///< 줄이 이것을 넘으면 `QueuedAboveHighWatermark`
-        int32   _sendLowWatermarkBytes{ 64 * 1024 };                            ///< 높은 물금을 넘었던 줄이 이 아래로 내려가면 `onStreamWritable`
-        int32   _maxQueuedSendBytes{ StreamLimit::kDefaultMaxQueuedSendBytes }; ///< 넘으면 `QueueFull`
+        int32   _ioThreadCount{ 1 };                                                 ///< 0 = 전용 스레드 없음 — 부르는 쪽이 `pollIO` 를 돈다
+        int32   _maxConnections{ 1024 };                                             ///< 넘는 수락은 바로 닫는다
+        int32   _receiveChunkBytes{ 16 * 1024 };                                     ///< 읽기 한 번의 버퍼(연결마다 하나)
+        int32   _sendHighWatermarkBytes{ 256 * 1024 };                               ///< 줄이 이것을 넘으면 `QueuedAboveHighWatermark`
+        int32   _sendLowWatermarkBytes{ 64 * 1024 };                                 ///< 높은 물금을 넘었던 줄이 이 아래로 내려가면 `onStreamWritable`
+        int32   _maxQueuedSendBytes{ StreamLimit::kDefaultMaxQueuedSendBytes };      ///< 넘으면 `QueueFull`
+        int32   _maxHeldReceiveBytes{ StreamLimit::kDefaultMaxPendingReceiveBytes }; ///< 읽기를 멈출 수 없는 전송(웹)이 멈춘 동안 들고 있는 바이트 상한 — 넘으면 닫는다
         int32   _listenBacklog{ 512 };
         float64 _idleTimeoutSeconds{ 60.0 }; ///< 0 = 끈다. 위 층의 핑 간격보다 길게
         float64 _connectTimeoutSeconds{ 10.0 };

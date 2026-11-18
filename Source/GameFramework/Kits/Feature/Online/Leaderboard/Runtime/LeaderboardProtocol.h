@@ -92,6 +92,20 @@ namespace sw
         uint32 _seasonID{ 0 };
     };
 
+    /**
+     * @brief 계정 목록 한 쪽(`GetStats` · `GetAchievements`)의 요청입니다. 이름 순 키셋 쪽 읽기다(PlayFab · Steam 통계 목록의 페이지 API 와 같은 자리).
+     * @details 쪽 크기가 목록 상한(통계 `kMaxStatCount`, 업적 `kMaxAchievementCount`)보다 크면 서버가 그 값으로 자른다.
+     */
+    REFLECT()
+    struct LeaderboardListPageRequest
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxIDSize )
+        string _cursor{}; ///< 앞 응답의 `_nextCursor`(마지막 이름)이다. 처음에는 빈 글이다
+        PROPERTY( Min = 1 )
+        int32 _maxCount{ LeaderboardLimit::kMaxStatCount }; ///< 위 끝은 두지 않는다 — 서버가 상한으로 자른다
+    };
+
     /** @brief 친구 순위표(`GetScoresOf`)의 요청입니다. */
     REFLECT()
     struct LeaderboardScoresRequest
@@ -126,6 +140,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = LeaderboardLimit::kMaxStatCount )
         vector<LeaderboardStat> _listStat{}; ///< 상한은 `LeaderboardLimit::kMaxStatCount` 와 같다
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxIDSize )
+        string _nextCursor{}; ///< 쪽이 가득 찼으면 다음 요청의 `_cursor` 이다. 비면 더 없다
     };
 
     /** @brief 점수 제출(`SubmitScore`)의 응답입니다. */
@@ -149,6 +165,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = LeaderboardLimit::kMaxAchievementCount )
         vector<AchievementState> _listAchievement{}; ///< 상한은 `LeaderboardLimit::kMaxAchievementCount` 와 같다
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxIDSize )
+        string _nextCursor{}; ///< 쪽이 가득 찼으면 다음 요청의 `_cursor` 이다. 비면 더 없다
     };
 
     /** @brief 업적 진행률(`GetAchievementProgress`)의 응답입니다. */
@@ -181,9 +199,9 @@ namespace sw
     {
         using GetTop                 = Method<MethodName::GetTop, LeaderboardTopRequest, LeaderboardEntriesReply>;                                                  ///< 기간 id 와 항목 목록을 돌려준다
         using GetAround              = Method<MethodName::GetAround, LeaderboardAroundRequest, LeaderboardEntriesReply>;                                            ///< 내 주변 항목을 나를 포함해 돌려준다
-        using GetStats               = Method<MethodName::GetStats, OnlineNoBody, LeaderboardStatsReply>;                                                           ///< 내 통계 목록을 돌려준다
+        using GetStats               = Method<MethodName::GetStats, LeaderboardListPageRequest, LeaderboardStatsReply>;                                             ///< 내 통계 목록 한 쪽을 돌려준다
         using SubmitScore            = Method<MethodName::SubmitScore, LeaderboardSubmitRequest, LeaderboardSubmitReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 적용한 뒤의 점수를 돌려준다. 다시 보내도 합산 보드에 두 번 들어가지 않는다. 클라이언트 제출이 켜진 보드만 받는다
-        using GetAchievements        = Method<MethodName::GetAchievements, OnlineNoBody, LeaderboardAchievementsReply>;                                             ///< 달성한 업적 목록을 돌려준다
+        using GetAchievements        = Method<MethodName::GetAchievements, LeaderboardListPageRequest, LeaderboardAchievementsReply>;                               ///< 달성한 업적 목록 한 쪽을 돌려준다
         using GetSeasonResult        = Method<MethodName::GetSeasonResult, LeaderboardSeasonRequest, LeaderboardSeasonReply>;                                       ///< 내 결과를 돌려준다. 없으면 NotRanked 이다
         using GetScoresOf            = Method<MethodName::GetScoresOf, LeaderboardScoresRequest, LeaderboardEntriesReply>;                                          ///< 이번 기간 점수를 목록 안 순위로 돌려준다
         using GetAchievementProgress = Method<MethodName::GetAchievementProgress, OnlineNoBody, LeaderboardProgressReply>;                                          ///< 등록한 업적마다 진행률을 돌려준다. 숨긴 업적은 달성 전에 가린다

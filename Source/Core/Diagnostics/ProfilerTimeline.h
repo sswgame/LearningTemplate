@@ -77,6 +77,8 @@ namespace sw
          */
         [[nodiscard]] bool collectRecentFrames( uint32 frameCount, vector<ProfilerTimelineThread>& outListThread, uint64& outBeginNanos,
                                                 uint64& outEndNanos ) const;
+        /** @brief 구간 (@p beginNanos, @p endNanos) 과 겹치는 사건을 스레드마다 모읍니다 — 담는 규칙은 `collectRecentFrames` 와 같다(프레임 하나씩 읽는 호출 트리가 쓴다). */
+        void collectSpan( uint64 beginNanos, uint64 endNanos, vector<ProfilerTimelineThread>& outListThread ) const;
         /** @brief [@p beginNanos, @p endNanos] 안의 프레임 시작 시각을 오름차순으로 담습니다(타임라인의 프레임 경계선). */
         void collectFrameBegins( uint64 beginNanos, uint64 endNanos, vector<uint64>& outListFrameBegin ) const;
         /** @brief 최근 @p frameCount 프레임 구간에 사건을 남긴 스레드 수입니다(감시 값 · 테스트용). */
