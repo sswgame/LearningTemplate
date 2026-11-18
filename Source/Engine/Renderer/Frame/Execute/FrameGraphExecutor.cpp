@@ -77,12 +77,14 @@ namespace sw
         _transparentRankPlaceholder.release( _pDevice );
         _occlusion.release( _pDevice );
         _state._gpuMessages.shutdown();
+        _state._vfxMeshReadback.release( _pDevice );
     }
 
     void FrameGraphExecutor::beginFrame()
     {
         _bGPUCullingActive = 0;
         _state._gpuMessages.poll();
+        _state._vfxMeshReadback.poll();
         // 이번 프레임의 출력 선택(`gpu.inspect` · `gpu.thread`)과 로그 예산 — 프레임의 기록보다 먼저 큐에 들어간다.
         const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
         _state._gpuMessages.updateControl( pInspector != nullptr ? pInspector->getSelection() : GPUMessageSelection{}, RenderDiagnostics::get()._gpuMessageLogBudget );
@@ -173,6 +175,13 @@ namespace sw
     {
         // 메시지가 켜진 디스패치(컬링 · 모프 · 마커)가 끝났다 — 링을 읽기 버퍼로 복사하는 명령을 넣는다(그래픽스 패스의 기록은 다음 프레임 사본에 실린다).
         _state._gpuMessages.requestReadback( cmd );
+        // GPU 메시 입자의 살아 있는 수 · 주 시점이 그린 수 — 컬링과 그리기가 끝난 프레임 끝이다(자동화 감시 값 `VFX.GPUMesh*`).
+        if ( _pDevice != nullptr )
+        {
+            _state._particleRenderer.collectGPUMeshProbeSources( _listScratchMeshProbeSource );
+            _state._vfxMeshReadback.requestReadback( *_pDevice, cmd, _listScratchMeshProbeSource, _state._gpuScene.getInstances(), _state._gpuScene.getIndirectArgsBuffer(),
+                                                     isGPUCullingActive() );
+        }
     }
 
     bool FrameGraphExecutor::usesGPUGeneratedCommands() const

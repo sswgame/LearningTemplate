@@ -505,6 +505,8 @@ namespace sw
             meshEmitter._batch      = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), meshEmitter._material->getMaterial(), meshEmitter._material->getInstance(),
                                                                           def._maxParticles, bGPUWritten ? MeshInstanceWriter::GPU : MeshInstanceWriter::CPU );
             meshEmitter._batch->setOwnerComponent( this );
+            if ( bGPUWritten )
+                meshEmitter._batch->setVisible( _bPlaying && isEmitterEnabled( emitterIndex ) ); // 컴퓨트가 칸을 쓰는 동안만 보인다(`publishParticles`)
             if ( bGPUWritten == false )
             {
                 meshEmitter._visibility.reset( *meshEmitter._batch ); // 등록 전이라 더티를 올리지 않는다 — 살아 있는 칸만 아래에서 보인다
@@ -603,6 +605,10 @@ namespace sw
             {
                 // 입자는 렌더 스레드의 GPU 버퍼에 있다 — 재생 중일 때만 누적 단계 수를 싣는다(멈추면 렌더 스레드가 그 상태를 놓는다). 꺼진 방출기도 싣지 않는다.
                 _listGPURequest[emitterIndex] = _bPlaying && bEnabled ? pGPUEmitter->makeRequest() : VFXGPUEmitterRequest{};
+                // 싣지 않는 동안 GPU 메시 배치는 숨긴다 — 컴퓨트가 칸을 쓰지 않으니 배치 구성이 바뀌어 다시 올린 CPU 자리표(빈 칸 플래그 없음)가 그려지지 않게.
+                MeshInstanceBatch* pGPUBatch = emitterIndex < _listMeshEmitter.size() ? _listMeshEmitter[emitterIndex]._batch.get() : nullptr;
+                if ( pGPUBatch != nullptr )
+                    pGPUBatch->setVisible( _bPlaying && bEnabled );
                 continue;
             }
             const VFXCPUSimulation& simulation = std::get<VFXCPUSimulation>( _listSimulation[emitterIndex] );

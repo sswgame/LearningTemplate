@@ -6,6 +6,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -104,6 +105,13 @@ namespace sw
             RHIBufferHandle    _argsBuffer{ 0 };                        ///< 간접 인자(RHIDrawIndirectCommand 가 맨 앞)
         };
 
+        /** @brief 이번 프레임 GPU 메시 방출기 하나의 되읽기 출처입니다(`VFXGPUMeshReadback` — 자동화 감시 값). */
+        struct MeshProbeSource
+        {
+            RHIBufferHandle _argsBuffer{ 0 };                                  ///< 인자 버퍼(살아 있는 수 `SW_VFX_ARGS_WORD_ALIVE`)
+            uint32          _instanceSlot{ constant::invalid_index::kUint32 }; ///< 방출기 배치에 실린 첫 GPUScene 칸 — 그 칸의 배치 번호가 간접 인자 행이다
+        };
+
         VFXGPUSimulation();
         ~VFXGPUSimulation();
 
@@ -143,6 +151,8 @@ namespace sw
          * @details 그리지 않고 진행한 프레임(`SimulationOnlyFrameQueue`) 뒤에 따라잡는 중이면 0 이 아니다 — 캡처 준비가 이것이 0 이 될 때까지 기다린다.
          */
         uint64 getPendingStepCount() const { return _pendingStepCount; }
+        /** @brief 이번 프레임에 인스턴스 칸을 쓰는 GPU 메시 방출기마다 되읽기 출처를 @p outListSource 에 채웁니다(앞의 내용은 지운다). 실린 칸이 없는 방출기는 넣지 않는다. */
+        void collectMeshProbeSources( vector<MeshProbeSource>& outListSource ) const;
         /** @brief 지금 든 GPU 방출기 상태의 수입니다(테스트와 진단용). */
         uint32 getEmitterStateCount() const { return static_cast<uint32>( _mapState.size() ); }
 
@@ -186,6 +196,7 @@ namespace sw
             const EmitterState* _pState{ nullptr }; ///< 이번 프레임 안에서만 빌린다
             uint32              _paramRow{ 0 };
             uint32              _groupCount{ 0 };
+            uint32              _firstInstanceSlot{ constant::invalid_index::kUint32 }; ///< 실린 첫 GPUScene 칸(`collectMeshProbeSources`)
         };
 
         /** @brief 풀이 커서 단계마다 디스패치 셋으로 도는 방출기입니다(`SW_VFX_MULTI_GROUP_MIN_POOL` — 두 경로는 같은 결과다). */

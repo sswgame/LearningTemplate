@@ -620,6 +620,23 @@ namespace sw
         dispatch._pState       = &state;
         dispatch._paramRow     = paramRow;
         dispatch._groupCount   = ( poolSize + SW_VFX_MESH_INSTANCE_THREAD_COUNT - 1u ) / SW_VFX_MESH_INSTANCE_THREAD_COUNT;
+        for ( const uint32 slot : listSlot )
+        {
+            if ( slot == SW_VFX_INVALID_SLOT )
+                continue;
+            dispatch._firstInstanceSlot = slot;
+            break;
+        }
+    }
+
+    void VFXGPUSimulation::collectMeshProbeSources( vector<MeshProbeSource>& outListSource ) const
+    {
+        outListSource.clear();
+        for ( const MeshDispatch& dispatch : _listMeshDispatch )
+        {
+            if ( dispatch._firstInstanceSlot != SW_VFX_INVALID_SLOT )
+                outListSource.push_back( MeshProbeSource{ dispatch._pState->_argsBuffer._buffer, dispatch._firstInstanceSlot } );
+        }
     }
 
     bool VFXGPUSimulation::usesMultiGroup( const VFXEmitterDef& def )
