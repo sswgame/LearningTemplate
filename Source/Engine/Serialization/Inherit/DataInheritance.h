@@ -166,6 +166,14 @@ namespace sw
         static constexpr const utf8* kWhenElement = "_when";
         static constexpr const utf8* kIfAttribute = "_if"; ///< 조건 원소: 리소스 조건식(`ResourceTags::compileTest`)
 
+        /** @brief 조건 원소(`_when`)인지 봅니다. 칸 · 목록 원소가 아니라 쌓이는 조건부 차이입니다. */
+        [[nodiscard]] static bool isWhenElement( const XMLNode& node );
+        /**
+         * @brief 글이 XML 처럼 시작하는지(앞 공백 · UTF-8 BOM 뒤 첫 글자가 `<`) 봅니다. 파싱하지 않습니다.
+         * @details 팩 쿠커 · 런타임 읽기가 모든 파일을 지나 보내는 자리에서 바이너리 · 셰이더를 XML 파서에 넣지 않으려고 먼저 봅니다.
+         */
+        [[nodiscard]] static bool isLikelyXMLText( string_view text );
+
         /** @brief @p text 의 루트가 `_base` 를 적었으면 그 값입니다. XML 이 아니거나 없으면 빈 글입니다. 부모를 가리키지 않는 파일은 글 검색 한 번으로 끝납니다. */
         [[nodiscard]] static string findBasePath( string_view text );
 

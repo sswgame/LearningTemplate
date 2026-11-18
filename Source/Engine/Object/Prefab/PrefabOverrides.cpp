@@ -55,12 +55,6 @@ namespace sw
                 bool isKey( string_view key ) const { return key.empty() == false && ( _key == key || _legacyKey == key ); }
             };
 
-            /** @brief 원소 노드인지 봅니다(글 · 주석 노드는 이름이 비어 있다). */
-            static bool isElement( const XMLNode& node )
-            {
-                return node.isValid() && StringUtil::isNullOrEmpty( node.getName() ) == false;
-            }
-
             /** @brief 이름이 정확히 같은 첫 자식 원소입니다. 없으면 무효 노드입니다. */
             static XMLNode findChildElement( const XMLNode& parent, const utf8* pName )
             {
@@ -68,7 +62,7 @@ namespace sw
                     return {};
                 for ( XMLNode child = parent.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
-                    if ( isElement( child ) && StringUtil::equals( child.getName(), pName, false ) )
+                    if ( child.isElement() && StringUtil::equals( child.getName(), pName, false ) )
                         return child;
                 }
                 return {};
@@ -79,7 +73,7 @@ namespace sw
             {
                 for ( XMLNode child = parent.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
-                    if ( isElement( child ) )
+                    if ( child.isElement() )
                         return child;
                 }
                 return {};
@@ -98,7 +92,7 @@ namespace sw
                 unordered_map<string, int32> mapCount;
                 for ( XMLNode child = listNode.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
-                    if ( isElement( child ) == false )
+                    if ( child.isElement() == false )
                         continue;
                     const utf8*                              pLabel     = child.findAttribute( kComponentName );
                     const bool                               bNoLabel   = StringUtil::isNullOrEmpty( pLabel ) || StringUtil::equals( pLabel, "None" );
@@ -153,7 +147,7 @@ namespace sw
                 }
                 for ( XMLNode child = instance.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
-                    if ( isElement( child ) == false || ( bRoot && isRootOnlyField( child.getName() ) ) )
+                    if ( child.isElement() == false || ( bRoot && isRootOnlyField( child.getName() ) ) )
                         continue;
                     const XMLNode baseChild = findChildElement( base, child.getName() );
                     if ( baseChild.isValid() == false || baseChild.toString() != child.toString() )
@@ -201,7 +195,7 @@ namespace sw
                 bool bListWritten = false;
                 for ( XMLNode child = base.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
-                    if ( isElement( child ) == false )
+                    if ( child.isElement() == false )
                         continue;
                     if ( pListWriter != nullptr && StringUtil::equals( child.getName(), kComponentList, false ) )
                     {
@@ -216,7 +210,7 @@ namespace sw
                 {
                     for ( XMLNode child = partial.findChild(); child.isValid(); child = child.findNextSibling() )
                     {
-                        if ( isElement( child ) && findChildElement( base, child.getName() ).isValid() == false )
+                        if ( child.isElement() && findChildElement( base, child.getName() ).isValid() == false )
                             out.appendClone( child );
                     }
                 }
@@ -633,7 +627,7 @@ namespace sw
         const XMLNode list    = PrefabOverridesInternal::findChildElement( stateRoot, PrefabOverridesInternal::kComponentList );
         for ( XMLNode component = list.isValid() ? list.findChild() : XMLNode{}; component.isValid(); component = component.findNextSibling() )
         {
-            if ( PrefabOverridesInternal::isElement( component ) == false )
+            if ( component.isElement() == false )
                 continue;
             const hashed_string    typeName( component.getName() );
             GameObject*            pHolder    = scratch.createGameObject( hashed_string( PrefabOverridesInternal::kBaseName ) );

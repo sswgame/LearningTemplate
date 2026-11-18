@@ -74,6 +74,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 엘리먼트 이름을 반환합니다. */
         const utf8* getName() const;
+        /** @brief 원소 노드이면 true 입니다(글 · 주석 노드는 이름이 비어 있다). 자식을 `findChild()` · `findNextSibling()` 으로 훑을 때 원소만 고릅니다. */
+        bool isElement() const;
         /** @brief 엘리먼트 텍스트입니다. 노드가 유효하면 빈 문자열이어도 nullptr 이 아닙니다. */
         const utf8* getText() const;
         /**

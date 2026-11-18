@@ -328,6 +328,11 @@ namespace sw
         return pNode.name();
     }
 
+    bool XMLNode::isElement() const
+    {
+        return isValid() && StringUtil::isNullOrEmpty( getName() ) == false;
+    }
+
     const utf8* XMLNode::getText() const
     {
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
