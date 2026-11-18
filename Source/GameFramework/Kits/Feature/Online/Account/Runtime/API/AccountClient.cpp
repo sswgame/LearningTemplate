@@ -20,40 +20,11 @@ namespace sw
                        operation == AccountClientOperation::PlatformLogin || operation == AccountClientOperation::Resume;
             }
 
-            /** @brief 서술자 번호를 요청 종류로 바꿉니다. 표의 메서드는 모두 짝이 있다. */
+            /** @brief 서술자 번호(와이어 메서드 번호)를 요청 종류로 바꿉니다. 번호는 표의 열거자 순서다(`OnlineMethodTable::toMethod` 의 역). */
             static AccountClientOperation toOperation( uint16 method )
             {
-                switch ( method )
-                {
-                    case AccountMethod::IssueLoginNonce::kID:
-                        return AccountClientOperation::IssueLoginNonce;
-                    case AccountMethod::Register::kID:
-                        return AccountClientOperation::Register;
-                    case AccountMethod::Login::kID:
-                        return AccountClientOperation::Login;
-                    case AccountMethod::GuestLogin::kID:
-                        return AccountClientOperation::GuestLogin;
-                    case AccountMethod::PlatformLogin::kID:
-                        return AccountClientOperation::PlatformLogin;
-                    case AccountMethod::Resume::kID:
-                        return AccountClientOperation::Resume;
-                    case AccountMethod::Logout::kID:
-                        return AccountClientOperation::Logout;
-                    case AccountMethod::LinkCredential::kID:
-                        return AccountClientOperation::LinkCredential;
-                    case AccountMethod::LinkPlatform::kID:
-                        return AccountClientOperation::LinkPlatform;
-                    case AccountMethod::IssueGameTicket::kID:
-                        return AccountClientOperation::IssueGameTicket;
-                    case AccountMethod::UnlinkPlatform::kID:
-                        return AccountClientOperation::UnlinkPlatform;
-                    case AccountMethod::ListLinks::kID:
-                        return AccountClientOperation::ListLinks;
-                    case AccountMethod::RequestDeletion::kID:
-                        return AccountClientOperation::RequestDeletion;
-                    default:
-                        return AccountClientOperation::CancelDeletion;
-                }
+                SW_ASSERT( AccountMethod::kFirstMethod <= method && method < AccountMethod::kFirstMethod + AccountMethod::kCount );
+                return static_cast<AccountClientOperation>( method - AccountMethod::kFirstMethod );
             }
         };
     } // namespace

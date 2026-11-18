@@ -26,24 +26,8 @@ namespace sw
 {
     struct NetConnectCredentials;
 
-    /** @brief 클라이언트 요청 종류입니다. */
-    enum class AccountClientOperation : uint8
-    {
-        Register = 0,
-        Login,
-        GuestLogin,
-        PlatformLogin,
-        Resume,
-        Logout,
-        LinkCredential,
-        LinkPlatform,
-        IssueGameTicket,
-        UnlinkPlatform,
-        ListLinks,
-        RequestDeletion,
-        CancelDeletion,
-        IssueLoginNonce
-    };
+    /** @brief 클라이언트 요청 종류입니다. 프로토콜 표의 메서드 이름 그대로입니다 — 같은 열거자를 두 번 적으면 메서드를 더할 때 한쪽이 빠진다. */
+    using AccountClientOperation = AccountMethodName;
 
     /** @brief 끝난 요청 하나입니다. 전송 오류나 공통 범주이면 `_errorCode`(`OnlineError`)가 0이 아니며 `_result` 도 그 범주입니다(`LoginServiceResult`). */
     struct AccountClientReply
