@@ -14,10 +14,11 @@ namespace sw
         {
             static constexpr uint32 kAtlasResolution = 2048;
 
-            /** @brief 칸 @p cellIndex 의 타일입니다. 행렬의 이동 칸 하나가 빛 위치를 대신한다. */
-            static ShadowTileDraw makeTile( uint32 cellIndex, float32 lightX )
+            /** @brief 칸 @p cellIndex 의 타일입니다. 행렬의 이동 칸 하나가 빛 위치를 대신하고, 정체는 칸이 처음 가리킨 빛(@p lightKey)이다. */
+            static ShadowTileDraw makeTile( uint32 cellIndex, float32 lightX, uint64 lightKey )
             {
                 ShadowTileDraw tile{};
+                tile._key          = lightKey;
                 tile._viewProj     = float4x4::Identity;
                 tile._viewProj._41 = lightX;
                 tile._cell._x      = cellIndex * 512u;
@@ -36,7 +37,7 @@ SW_TEST_CASE( ShadowCacheTest, StationaryLightsRebuildOnceThenReuse )
 {
     using Internal = sw::ShadowCacheTestInternal;
     using Action   = sw::ShadowCacheTileAction;
-    const sw::vector<sw::ShadowTileDraw> listTile{ Internal::makeTile( 0, 1.0f ), Internal::makeTile( 1, 2.0f ) };
+    const sw::vector<sw::ShadowTileDraw> listTile{ Internal::makeTile( 0, 1.0f, 1u ), Internal::makeTile( 1, 2.0f, 2u ) };
     sw::ShadowCache                      cache;
 
     cache.update( listTile, Internal::kAtlasResolution, 7, false );
@@ -64,21 +65,21 @@ SW_TEST_CASE( ShadowCacheTest, MovingLightDrawsAllAndRebuildsWhenItStops )
     using Internal = sw::ShadowCacheTestInternal;
     using Action   = sw::ShadowCacheTileAction;
     sw::ShadowCache cache;
-    cache.update( { Internal::makeTile( 0, 1.0f ), Internal::makeTile( 1, 2.0f ) }, Internal::kAtlasResolution, 1, true );
-    cache.update( { Internal::makeTile( 0, 1.0f ), Internal::makeTile( 1, 2.0f ) }, Internal::kAtlasResolution, 1, true );
+    cache.update( { Internal::makeTile( 0, 1.0f, 1u ), Internal::makeTile( 1, 2.0f, 2u ) }, Internal::kAtlasResolution, 1, true );
+    cache.update( { Internal::makeTile( 0, 1.0f, 1u ), Internal::makeTile( 1, 2.0f, 2u ) }, Internal::kAtlasResolution, 1, true );
 
     // 빛 0 이 움직인다 — 그 타일은 다 그리고, 빛 1 은 캐시를 그대로 쓴다.
-    cache.update( { Internal::makeTile( 0, 1.5f ), Internal::makeTile( 1, 2.0f ) }, Internal::kAtlasResolution, 1, true );
+    cache.update( { Internal::makeTile( 0, 1.5f, 1u ), Internal::makeTile( 1, 2.0f, 2u ) }, Internal::kAtlasResolution, 1, true );
     SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::DrawAll );
     SW_EXPECT_TRUE( cache.getAction( 1 ) == Action::Reuse );
     SW_EXPECT_FALSE( cache.needsRebuild() );
 
     // 계속 움직이면 계속 DrawAll 이다.
-    cache.update( { Internal::makeTile( 0, 1.75f ), Internal::makeTile( 1, 2.0f ) }, Internal::kAtlasResolution, 1, true );
+    cache.update( { Internal::makeTile( 0, 1.75f, 1u ), Internal::makeTile( 1, 2.0f, 2u ) }, Internal::kAtlasResolution, 1, true );
     SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::DrawAll );
 
     // 멈추면 층을 통째로 다시 그린다(빛 1 도 다시 그린다 — 층을 지우므로).
-    cache.update( { Internal::makeTile( 0, 1.75f ), Internal::makeTile( 1, 2.0f ) }, Internal::kAtlasResolution, 1, true );
+    cache.update( { Internal::makeTile( 0, 1.75f, 1u ), Internal::makeTile( 1, 2.0f, 2u ) }, Internal::kAtlasResolution, 1, true );
     SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::Rebuild && cache.getAction( 1 ) == Action::Rebuild );
     SW_EXPECT_TRUE( cache.needsRebuild() );
 }
@@ -90,7 +91,7 @@ SW_TEST_CASE( ShadowCacheTest, StaticSceneChangeAndResolutionChangeRebuildEveryT
 {
     using Internal = sw::ShadowCacheTestInternal;
     using Action   = sw::ShadowCacheTileAction;
-    const sw::vector<sw::ShadowTileDraw> listTile{ Internal::makeTile( 0, 1.0f ), Internal::makeTile( 1, 2.0f ) };
+    const sw::vector<sw::ShadowTileDraw> listTile{ Internal::makeTile( 0, 1.0f, 1u ), Internal::makeTile( 1, 2.0f, 2u ) };
     sw::ShadowCache                      cache;
     cache.update( listTile, Internal::kAtlasResolution, 3, true ); // 처음 본 빛 — 다 그린다
     cache.update( listTile, Internal::kAtlasResolution, 3, true ); // 멈췄다 — 층을 채운다(Rebuild)
@@ -105,8 +106,8 @@ SW_TEST_CASE( ShadowCacheTest, StaticSceneChangeAndResolutionChangeRebuildEveryT
     cache.update( listTile, Internal::kAtlasResolution / 2u, 4, true ); // 그림자 품질이 바뀌었다
     SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::Rebuild && cache.getAction( 1 ) == Action::Rebuild );
 
-    // 우선순위가 바뀌어 빛이 다른 칸을 받으면 키가 다르다 — 그 프레임은 DrawAll, 그다음 Rebuild.
-    const sw::vector<sw::ShadowTileDraw> listSwapped{ Internal::makeTile( 1, 1.0f ), Internal::makeTile( 0, 2.0f ) };
+    // 같은 빛이 다른 칸을 받으면(해상도 · 크기가 바뀌어 할당기가 다시 쌓았다) 내용이 다르다 — 그 프레임은 DrawAll, 그다음 Rebuild.
+    const sw::vector<sw::ShadowTileDraw> listSwapped{ Internal::makeTile( 1, 1.0f, 1u ), Internal::makeTile( 0, 2.0f, 2u ) };
     cache.update( listSwapped, Internal::kAtlasResolution / 2u, 4, true );
     SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::DrawAll && cache.getAction( 1 ) == Action::DrawAll );
     SW_EXPECT_FALSE( cache.usesCacheLayer() );
@@ -114,7 +115,7 @@ SW_TEST_CASE( ShadowCacheTest, StaticSceneChangeAndResolutionChangeRebuildEveryT
     SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::Rebuild && cache.getAction( 1 ) == Action::Rebuild );
 
     // 타일이 늘면 새 타일은 지난 키가 없어 DrawAll 이다. 줄면 남은 것만 본다.
-    const sw::vector<sw::ShadowTileDraw> listGrown{ Internal::makeTile( 1, 1.0f ), Internal::makeTile( 0, 2.0f ), Internal::makeTile( 2, 3.0f ) };
+    const sw::vector<sw::ShadowTileDraw> listGrown{ Internal::makeTile( 1, 1.0f, 1u ), Internal::makeTile( 0, 2.0f, 2u ), Internal::makeTile( 2, 3.0f, 3u ) };
     cache.update( listGrown, Internal::kAtlasResolution / 2u, 4, true );
     SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::Reuse && cache.getAction( 2 ) == Action::DrawAll );
 

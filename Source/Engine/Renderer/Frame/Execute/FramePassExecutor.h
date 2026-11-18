@@ -301,14 +301,21 @@ namespace sw
         /** @brief 역할의 셰이더 이름입니다. intern 된 hashed_string 입니다. */
         const hashed_string& inputRoleName( RenderPassInputRole role ) const;
         /**
-         * @brief 그림자 패스 하나를 그립니다 — 지금 뷰의 캐스케이드 타일과 프레임의 점광 · 스폿 타일을 아틀라스의 자기 칸(뷰포트)에 그립니다.
-         * @details 타일마다 `g_LightViewProj` 를 그 타일의 행렬로 바꿔 씬을 한 번씩 그린다. 컬링은 모든 타일을 덮는 상자(`ViewShadowData::_cullViewProj`) 하나다.
-         *          @p bCacheLayer 면 그림자 캐시가 캐시하는 점광 · 스폿 타일(`ShadowCache::getAction` 이 DrawAll 이 아닌 것)은 캐시 층을 옮기고 움직이는 배치만 그린다.
+         * @brief 방향광 그림자 패스(깊이 첨부가 ShadowMap 역할)를 그립니다 — 지금 뷰의 캐스케이드 타일을 방향광 아틀라스의 자기 칸(뷰포트)에 그립니다.
+         * @details 타일마다 `g_LightViewProj` 를 그 타일의 행렬로 바꿔 씬을 한 번씩 그린다. 주 시점 캐스케이드는 자기 컬링 슬롯, 추가 뷰는 합친 칸이다.
          */
-        void drawShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer );
+        void drawCascadeShadowTiles( FramePassContext& context, bool bTransparentBatch );
+        /**
+         * @brief 점광 · 스폿 그림자 패스(깊이 첨부가 LocalShadowMap 역할)를 그립니다 — 프레임의 점광 · 스폿 타일을 점광 · 스폿 아틀라스의 자기 칸에 그립니다.
+         * @details 타일마다 그 빛의 컬링 슬롯(`findLocalShadowCullSlot`)이다. @p bCacheLayer 면 그림자 캐시가 캐시하는 타일(`ShadowCache::getAction` 이 DrawAll 이 아닌 것)은
+         *          캐시 층을 옮기고 움직이는 배치만 그린다.
+         */
+        void drawLocalShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer );
+        /** @brief 그림자 타일 하나의 칸을 뷰포트로 잡고 새 상수 슬롯에 그 타일의 행렬을 올립니다. 링이 고갈되면 false 이고 그 타일은 그리지 않는다(앞 타일의 행렬로 그리지 않는다). */
+        [[nodiscard]] bool beginShadowTile( FramePassContext& context, const ShadowTileDraw& tile );
         /** @brief 점광 · 스폿 타일 @p localTileIndex 를 그릴 컬링 슬롯입니다. 그 빛이 자기 슬롯을 가지면 그것이고(감사 RN-5), 아니면 지금 뷰의 합친 그림자 칸입니다. */
         uint32 findLocalShadowCullSlot( uint32 localTileIndex ) const;
-        /** @brief 그림자 캐시 층을 그래프 기록 전에 만듭니다(그림자 아틀라스와 같은 형식 · 크기). 기록 중에는 자원을 만들 수 없다. */
+        /** @brief 그림자 캐시 층을 그래프 기록 전에 만듭니다(점광 · 스폿 아틀라스와 같은 형식 · 크기). 기록 중에는 자원을 만들 수 없다. */
         void prepareShadowCacheLayerResource();
         /**
          * @brief 그림자 캐시 층을 이번 프레임에 씁니다 — 층(기록 전에 `prepareShadowCacheLayerResource` 가 만든다)이 아틀라스(@p atlasName)와 맞으면, 다시 그릴 프레임이면 정적 배치만 그리고, 셰이더 읽기로 돌린다.

@@ -213,7 +213,7 @@ namespace sw
         CanvasMarker,
         /**
          * @brief 그림자 캐시 복원 풀스크린(shadow_cache_restore.hlsl)입니다. 점광 · 스폿 타일 칸을 뷰포트로 잡고 캐시 층(정적 메시의 깊이, `ShadowCache`)의 텍셀을
-         *        픽셀 깊이(SV_Depth)로 그림자 아틀라스에 옮긴다 — 그 위에 움직이는 메시만 그린다(`FramePassExecutor::drawShadowTiles`). 컬러 출력이 없고 픽셀 스테이지가 있다(`kWritesPixelDepth`).
+         *        픽셀 깊이(SV_Depth)로 그림자 아틀라스에 옮긴다 — 그 위에 움직이는 메시만 그린다(`FramePassExecutor::drawLocalShadowTiles`). 컬러 출력이 없고 픽셀 스테이지가 있다(`kWritesPixelDepth`).
          */
         ShadowCacheRestore,
         /**
@@ -416,6 +416,12 @@ namespace sw
          *          샤드 뮤텍스를 잡게 된다.
          */
         hashed_string _resolvedDepthAttachment;
+
+        /**
+         * @brief `_depthAttachment` 의 역할(`RenderPassInputRole` 정수 — 이 헤더는 그 enum 을 모른다)입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다.
+         * @details 그림자 패스는 이 값으로 그릴 타일을 고른다 — ShadowMap 이면 방향광 캐스케이드, LocalShadowMap 이면 점광 · 스폿 타일(아틀라스 둘, 감사 RN-4).
+         */
+        uint8 _resolvedDepthRole{ 0 };
 
         /**
          * @brief 해석한 첨부 하나(이름, 역할)입니다. 입력 목록과 컬러 출력 목록이 같은 구조를 씁니다.

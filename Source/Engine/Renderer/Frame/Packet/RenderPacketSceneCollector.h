@@ -125,8 +125,10 @@ namespace sw
         unique_ptr<GPUSceneBuilder> _gpuSceneBuilder;
         /** @brief 애니메이션 LOD · 메시 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
         vector<LODView> _listLODView;
-        /** @brief 그림자를 켠 점광과 스폿의 라이트 원소 번호입니다(`collectSceneLights` → `FrameShadowData::populateFrame`). 프레임마다 재사용합니다. */
-        vector<uint32> _listShadowLightIndex;
+        /** @brief 그림자를 켠 점광과 스폿의 라이트 원소 번호와 정체입니다(`collectSceneLights` → `FrameShadowData::populateFrame`). 프레임마다 재사용합니다. */
+        vector<LocalShadowLight> _listShadowLight;
+        /** @brief 점광 · 스폿 아틀라스 할당기입니다. 서 있는 빛의 칸을 지키도록 프레임을 넘어 유지합니다(`LocalShadowAtlas`). */
+        LocalShadowAtlas _localShadowAtlas;
         /** @brief 프로브 버퍼 원소 묶음입니다(`collectSceneLights`). 내용이 그대로면 지난 묶음을 다시 주도록 프레임을 넘어 유지합니다. */
         LightProbeElementBuilder _lightProbeElement;
         /** @brief 읽은 렌즈 플레어 파일(경로 → 데이터, 못 읽은 경로는 nullptr)입니다. 프레임을 넘어 유지한다. */

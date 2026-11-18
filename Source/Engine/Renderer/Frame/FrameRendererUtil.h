@@ -33,6 +33,7 @@ namespace sw
             static constexpr auto kSceneColor        = "SceneColor";
             static constexpr auto kSceneDepth        = "SceneDepth";
             static constexpr auto kShadowMap         = "ShadowMap";
+            static constexpr auto kLocalShadowMap    = "LocalShadowMap";
             static constexpr auto kGBufferAlbedo     = "GBufferAlbedo";
             static constexpr auto kGBufferNormal     = "GBufferNormal";
             static constexpr auto kGBufferMaterial   = "GBufferMaterial";
@@ -531,6 +532,8 @@ namespace sw
         hashed_string _sceneColor{ FrameRendererUtil::Attachment::kSceneColor };
         hashed_string _sceneDepth{ FrameRendererUtil::Attachment::kSceneDepth };
         hashed_string _shadowMap{ FrameRendererUtil::Attachment::kShadowMap };
+        /// 점광 · 스폿 그림자 아틀라스 — 첨부 이름이 곧 역할 이름(`g_LocalShadowMapIndex`)이다. 그림자 캐시 층도 복원 드로우 동안 이 이름으로 건다.
+        hashed_string _localShadowMap{ FrameRendererUtil::Attachment::kLocalShadowMap };
         hashed_string _gbufferAlbedo{ FrameRendererUtil::Attachment::kGBufferAlbedo };
         hashed_string _gbufferNormal{ FrameRendererUtil::Attachment::kGBufferNormal };
         hashed_string _gbufferMaterial{ FrameRendererUtil::Attachment::kGBufferMaterial };

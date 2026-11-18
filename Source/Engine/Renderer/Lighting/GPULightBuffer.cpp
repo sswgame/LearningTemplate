@@ -225,7 +225,7 @@ namespace sw
         _pElements = std::move( pElements );
     }
 
-    void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex, LightProbeElementBuilder* pOutProbeElement,
+    void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<LocalShadowLight>* pOutListShadowLight, LightProbeElementBuilder* pOutProbeElement,
                              vector<GPULightCookie>* pOutListCookie, vector<RealtimeProbeRequest>* pOutListRealtimeProbe )
     {
         outList.clear();
@@ -235,8 +235,8 @@ namespace sw
             pOutListCookie->clear();
         if ( pOutProbeElement != nullptr )
             pOutProbeElement->begin();
-        if ( pOutListShadowLightIndex != nullptr )
-            pOutListShadowLightIndex->clear();
+        if ( pOutListShadowLight != nullptr )
+            pOutListShadowLight->clear();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
             if ( pOutProbeElement != nullptr )
@@ -261,9 +261,9 @@ namespace sw
                 pLight->writeGPULight( light );
                 if ( pLight == pShadowLight )
                     light._params._x = 1.0f;
-                // 그림자를 드리우는 점광과 스폿은 번호만 적는다. 아틀라스 슬롯(`_params.x`, `_params.w`)은 슬롯 수를 아는 쪽이 나눠 준다(FrameShadowData).
-                if ( pOutListShadowLightIndex != nullptr && GPULightBufferInternal::castsLocalShadow( *pLight ) )
-                    pOutListShadowLightIndex->push_back( static_cast<uint32>( outList.size() ) );
+                // 그림자를 드리우는 점광과 스폿은 번호와 정체만 적는다. 아틀라스 슬롯(`_params.x`, `_params.w`)은 슬롯 수를 아는 쪽이 나눠 준다(FrameShadowData).
+                if ( pOutListShadowLight != nullptr && GPULightBufferInternal::castsLocalShadow( *pLight ) )
+                    pOutListShadowLight->push_back( LocalShadowLight{ static_cast<uint32>( outList.size() ), pLight->getComponentID() } );
                 const hashed_string cookiePath = pLight->getCookieTexturePath();
                 if ( pOutListCookie != nullptr && cookiePath.empty() == false )
                     pOutListCookie->push_back( GPULightCookie{ static_cast<uint32>( outList.size() ), cookiePath } );

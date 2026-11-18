@@ -37,6 +37,7 @@ namespace sw
         {
             uint8 _bObjectMotion{ SW_FALSE };      ///< 기록이 있는 물체가 움직였다(`GPUScene::hasObjectMotion` — 업로드 앞이라 지난 프레임 값이다. 막 움직이기 시작한 한 프레임은 모션 블러가 늦게 켜진다)
             uint8 _bContactShadows{ SW_FALSE };    ///< 접촉 그림자를 받는 빛이 있다(`FrameShadowData::hasContactShadows`) — 없으면 접촉 그림자 패스가 빠진다
+            uint8 _bLocalShadows{ SW_FALSE };      ///< 그림자 칸을 받은 점광 · 스폿이 있다(`FrameShadowData::_listLocalTile` 이 비지 않았다) — 없으면 점광 · 스폿 아틀라스 패스가 빠진다
             uint8 _bRefractionBatches{ SW_FALSE }; ///< 굴절 머티리얼(`MATERIAL_REFRACTION` — 물 · 유리) 배치가 있다(`GPUScene::hasRefractionBatches`) — 없으면 반투명 패스가 장면 색 · 깊이 사본을 필요로 하지 않는다(언리얼 MaterialUsesSceneColorCopy)
             uint8 _bDistortionBatches{ SW_FALSE }; ///< 왜곡 배치가 있다(`GPUScene::hasDistortionBatches`) — 없으면 왜곡 누적 · 적용이 비활성이다
         };

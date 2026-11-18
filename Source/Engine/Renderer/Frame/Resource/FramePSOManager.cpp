@@ -18,6 +18,7 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -914,22 +915,13 @@ namespace sw
                     desc._pixelEntryPoint = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
                 bChanged = true;
             }
+            // 같은 이름은 머티리얼 값으로 바꾼다(패스의 MATERIAL_TEXTURE_COUNT=0 → 머티리얼 칸 수) — 쿠커와 같은 함수(MaterialPermutation::mergeDefine).
             for ( const string& defineStr : pPermutation->_listDefine )
             {
-                bool bFound{ false };
-                for ( const string& existing : desc._listShaderDefine )
-                {
-                    if ( existing == defineStr )
-                    {
-                        bFound = true;
-                        break;
-                    }
-                }
-                if ( bFound == false )
-                {
-                    desc._listShaderDefine.push_back( defineStr );
-                    bChanged = true;
-                }
+                if ( VectorUtil::contains( desc._listShaderDefine, defineStr ) )
+                    continue;
+                MaterialPermutation::mergeDefine( desc._listShaderDefine, defineStr );
+                bChanged = true;
             }
         }
 

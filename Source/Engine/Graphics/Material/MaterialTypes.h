@@ -29,6 +29,8 @@ namespace sw
 
     /** @brief `alphaMode="Mask"` 머티리얼의 define 입니다. 깊이 패스(그림자, 깊이 프리패스)도 머티리얼 셰이더로 그려 같은 형태로 오립니다(`FrameRendererUtil::usesMaterialShaderForDepth`). 머티리얼 XML 에 직접 적지 않습니다(읽기 오류). */
     inline constexpr const utf8* kMaterialAlphaCutoffDefine = "MATERIAL_ALPHA_CUTOFF";
+    /// @brief 머티리얼 변형의 텍스처 칸 수 define 의 이름입니다(`MATERIAL_TEXTURE_COUNT=N`, `Material::getTextureSlotCount`). 웹 에뮬 셰이더가 이 칸만 선언한다.
+    inline constexpr const utf8* kMaterialTextureCountDefine = "MATERIAL_TEXTURE_COUNT";
     /** @brief `twoSidedLighting="true"` 머티리얼의 define 입니다. 셰이더가 뒷면 노멀을 뒤집습니다. 머티리얼 XML 에 직접 적지 않습니다(읽기 오류). */
     inline constexpr const utf8* kMaterialTwoSidedDefine = "MATERIAL_TWO_SIDED";
 

@@ -462,6 +462,9 @@ namespace sw
             {
                 pass._resolvedDepthAttachment =
                     pass._depthAttachment.empty() ? hashed_string{} : hashed_string( pass._depthAttachment.c_str() );
+                const RenderPassAttachment* pDepth = pass._depthAttachment.empty() ? nullptr : findAttachment( desc, pass._depthAttachment );
+                pass._resolvedDepthRole            = pass._depthAttachment.empty() ? static_cast<uint8>( RenderPassInputRole::Invalid )
+                                                                                   : static_cast<uint8>( resolveRenderPassInputRole( pass._depthAttachment, true, pDepth != nullptr ? string_view( pDepth->_role ) : string_view{} ) );
                 pass._listResolvedInput.clear();
                 pass._listResolvedOutput.clear();
                 pass._listResolvedColorOutput.clear();

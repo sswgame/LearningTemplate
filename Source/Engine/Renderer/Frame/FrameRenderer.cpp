@@ -696,8 +696,7 @@ namespace sw
         // 게임 스레드가 배치를 만들지 않은 프레임(씬 없음)이거나 그림자 품질이 그 사이 바뀌었으면 아틀라스 레이아웃을 지금 크기로 다시 만든다.
         const uint32 atlasResolution = getShadowMapResolution();
         if ( _state._frameShadow._layout.getAtlasResolution() != atlasResolution )
-            _state._frameShadow._layout = ShadowAtlasLayout::make( atlasResolution, _state._frameShadow._layout.getCascadeCount(), static_cast<uint32>( _state._frameShadow._listLocalTile.size() ),
-                                                                   engine::getSubsystem<EngineConfig>()._render._shadowLocalMinTileResolution );
+            _state._frameShadow._layout = ShadowAtlasLayout::make( atlasResolution, _state._frameShadow._layout.getCascadeCount() );
         // 게임 스레드가 그림자 배치를 만들지 않은 프레임(씬 없음)은 그림자 없는 뷰다. 빛이 없는데 그림자 볼륨을 지어내지 않는다.
         if ( _state._frameShadow._mainView._bValid == SW_FALSE )
             _state._frameShadow._mainView = FrameShadowData::makeUnshadowedView( _state._frameShadow._layout );
@@ -711,6 +710,7 @@ namespace sw
         FrameViewResources::ViewPassSceneState sceneState{};
         sceneState._bObjectMotion      = _state._gpuScene.hasObjectMotion() ? SW_TRUE : SW_FALSE;
         sceneState._bContactShadows    = _state._frameShadow.hasContactShadows() ? SW_TRUE : SW_FALSE;
+        sceneState._bLocalShadows      = _state._frameShadow._listLocalTile.empty() ? SW_FALSE : SW_TRUE;
         sceneState._bRefractionBatches = _state._gpuScene.hasRefractionBatches() ? SW_TRUE : SW_FALSE;
         sceneState._bDistortionBatches = _state._gpuScene.hasDistortionBatches() ? SW_TRUE : SW_FALSE;
         return sceneState;
