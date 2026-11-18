@@ -112,5 +112,5 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorHousingPlotFrames, "Editor.HousingPlotFrames", "Housing plots in the active scene whose bounds the viewport can draw", &HousingPlotVisualizerInternal::readPlotFrames );
 
     SW_EDITOR_VISUALIZER_GATHER( HousingPlot, "housing.plot", 910, SW_EDITOR_ICON_NAME( "Grid" ), SW_LOCKEYREF( "EdPluginVisualizer", "HousingPlotLabel" ),
-                                 SW_LOCKEYREF( "EdPluginVisualizer", "HousingPlotTip" ), true, nullptr, &HousingPlotVisualizerInternal::gatherPlots );
+                                 SW_LOCKEYREF( "EdPluginVisualizer", "HousingPlotTip" ), true, &HousingPlotVisualizerInternal::gatherPlots );
 } // namespace sw::editor

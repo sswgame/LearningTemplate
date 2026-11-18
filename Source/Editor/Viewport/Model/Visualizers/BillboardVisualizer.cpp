@@ -99,5 +99,5 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_VISUALIZER_GATHER( Billboard, "billboard", 50, SW_EDITOR_ICON_NAME( "LightPoint" ), SW_LOCKEYREF( "EdVisualizer", "BillboardLabel" ),
-                                 SW_LOCKEYREF( "EdVisualizer", "BillboardTip" ), true, nullptr, &BillboardVisualizerInternal::gather );
+                                 SW_LOCKEYREF( "EdVisualizer", "BillboardTip" ), true, &BillboardVisualizerInternal::gather );
 } // namespace sw::editor

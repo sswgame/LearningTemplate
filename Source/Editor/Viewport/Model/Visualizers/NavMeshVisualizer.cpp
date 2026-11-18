@@ -30,5 +30,5 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_VISUALIZER_GATHER( NavMesh, "navmesh", 120, SW_EDITOR_ICON_NAME( "Navigation" ), SW_LOCKEYREF( "EdVisualizer", "NavMeshLabel" ), SW_LOCKEYREF( "EdVisualizer", "NavMeshTip" ),
-                                 false, nullptr, &gatherNavMesh );
+                                 false, &gatherNavMesh );
 } // namespace sw::editor

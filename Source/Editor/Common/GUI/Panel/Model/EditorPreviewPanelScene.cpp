@@ -95,6 +95,7 @@ namespace sw::editor
         , _bPreviewPaused{ SW_FALSE }
         , _bFloorShown{ SW_TRUE }
         , _bAxesShown{ SW_TRUE }
+        , _bFloorChanged{ SW_FALSE }
         , _seenCommandCount{ 0 }
         , _previewBarSize{}
         , _speedIndex{ EditorPreviewPanelInternal::kDefaultSpeedIndex }
@@ -173,8 +174,19 @@ namespace sw::editor
         state._bAxesShown            = _bAxesShown;
     }
 
-    void EditorPreviewPanel::applyPreviewTimeScale( float32 speed )
+    void EditorPreviewPanel::preparePreviewFrame( bool bFocused )
     {
+        ensurePreviewScene();
+        applyWindowFocus( bFocused );
+    }
+
+    void EditorPreviewPanel::applyPreviewBar( float32 speed )
+    {
+        if ( _bFloorChanged )
+        {
+            _viewport.setFloorVisible( _bFloorShown );
+            _bFloorChanged = SW_FALSE;
+        }
         Scene*        pScene        = _viewport.getScene();
         SceneManager* pSceneManager = findSubsystem<SceneManager>();
         const bool    bOwnScene     = pScene != nullptr && pSceneManager != nullptr && pSceneManager->findPreviewPolicy( pScene ) != nullptr;

@@ -81,6 +81,7 @@ views = [
     "Viewport/ViewportInputOverlay.cpp",
     "Viewport/TerrainBrushTool.cpp",
     "Viewport/ViewportToolbarSettings.cpp",
+    "Viewport/Visualizers/RigTargetGizmoVisualizer.cpp",
     "Viewport/Visualizers/TerrainBrushVisualizer.cpp",
 ]
 patterns = [

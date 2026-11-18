@@ -30,8 +30,7 @@ namespace sw::editor
 
     void EditorPreviewPanel::beginPreviewFrame()
     {
-        ensurePreviewScene();
-        applyWindowFocus( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
+        preparePreviewFrame( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
     }
 
     float2 EditorPreviewPanel::computeViewportFillSize( float32 minHeight ) const
@@ -50,7 +49,7 @@ namespace sw::editor
         // 막대는 이미지보다 먼저 연 자식 창이다 — 자식 창은 부모 내용 위에 그려지고 마우스도 먼저 받으며, 뒤에 놓는 이미지가 커서를 정상으로 되돌린다.
         drawPreviewBar( float2{ origin.x, origin.y }, size );
         ImGui::SetCursorScreenPos( origin );
-        applyPreviewTimeScale( EditorPreviewPanelViewInternal::kArrPreviewSpeed[_speedIndex] );
+        applyPreviewBar( EditorPreviewPanelViewInternal::kArrPreviewSpeed[_speedIndex] );
         _viewport.draw( size, ( bFocused || bHovered ) && bOrbitBlocked == false );
         const bool bImageHovered = ImGui::IsItemHovered();
         if ( _bAxesShown )
@@ -70,7 +69,7 @@ namespace sw::editor
 
     void EditorPreviewPanel::drawPreviewBar( const float2& origin, const float2& size )
     {
-        if ( _viewport.getScene() == nullptr || size._x <= 1.0f || size._y <= 1.0f )
+        if ( _viewport.isInitialized() == false || size._x <= 1.0f || size._y <= 1.0f )
             return;
         const string  scope  = string{ getDocumentKind().getID() } + ".preview";
         const float32 margin = ImGui::GetStyle().ItemSpacing.x;
@@ -139,8 +138,8 @@ namespace sw::editor
                 ImGui::PushStyleColor( ImGuiCol_Button, _bFloorShown ? toggleOn : toggleOff );
                 if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "PreviewFloor" ), "PreviewFloor" ) ) )
                 {
-                    _bFloorShown = _bFloorShown == false;
-                    _viewport.setFloorVisible( _bFloorShown );
+                    _bFloorShown   = _bFloorShown == false;
+                    _bFloorChanged = SW_TRUE; // 씬의 바닥 오브젝트는 Model(`applyPreviewBar`)이 켜고 끈다
                 }
                 ImGui::PopStyleColor();
                 EditorSelfTestMarks::record( ( scope + ".floor" ).c_str() );

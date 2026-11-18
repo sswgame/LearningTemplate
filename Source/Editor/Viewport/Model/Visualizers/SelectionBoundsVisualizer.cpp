@@ -117,5 +117,5 @@ namespace sw::editor
     }
 
     SW_EDITOR_VISUALIZER_GATHER( SelectionBounds, "selection_bounds", 40, SW_EDITOR_ICON_NAME( "Cube" ), SW_LOCKEYREF( "EdVisualizer", "SelectionBoundsLabel" ),
-                                 SW_LOCKEYREF( "EdVisualizer", "SelectionBoundsTip" ), true, nullptr, &SelectionBoundsVisualizerInternal::gather );
+                                 SW_LOCKEYREF( "EdVisualizer", "SelectionBoundsTip" ), true, &SelectionBoundsVisualizerInternal::gather );
 } // namespace sw::editor

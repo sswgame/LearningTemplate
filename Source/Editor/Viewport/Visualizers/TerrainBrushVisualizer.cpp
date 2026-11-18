@@ -12,7 +12,7 @@
 
 namespace sw::editor
 {
-    SW_EDITOR_VISUALIZER( TerrainBrush, "terrainbrush", 140, SW_EDITOR_ICON_NAME( "Heightfield" ), SW_LOCKEYREF( "EdVisualizer", "TerrainBrushLabel" ),
-                          SW_LOCKEYREF( "EdVisualizer", "TerrainBrushTip" ), false,
-                          &TerrainBrushTool::process );
+    SW_EDITOR_VISUALIZER_TOOL( TerrainBrush, "terrainbrush", 140, SW_EDITOR_ICON_NAME( "Heightfield" ), SW_LOCKEYREF( "EdVisualizer", "TerrainBrushLabel" ),
+                               SW_LOCKEYREF( "EdVisualizer", "TerrainBrushTip" ), false,
+                               &TerrainBrushTool::process, nullptr );
 } // namespace sw::editor

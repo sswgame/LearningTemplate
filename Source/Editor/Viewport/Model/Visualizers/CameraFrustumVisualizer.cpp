@@ -56,5 +56,5 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_VISUALIZER_GATHER( CameraFrustum, "camera_frustum", 200, SW_EDITOR_ICON_NAME( "Camera" ), SW_LOCKEYREF( "EdVisualizer", "CameraFrustumLabel" ),
-                                 SW_LOCKEYREF( "EdVisualizer", "CameraFrustumTip" ), true, nullptr, &gatherCameraFrustums );
+                                 SW_LOCKEYREF( "EdVisualizer", "CameraFrustumTip" ), true, &gatherCameraFrustums );
 } // namespace sw::editor

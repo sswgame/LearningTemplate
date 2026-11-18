@@ -64,7 +64,7 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_VISUALIZER_GATHER( DebugDraw, "debug_draw", 300, SW_EDITOR_ICON_NAME( "Bug" ), SW_LOCKEYREF( "EdVisualizer", "DebugDrawLabel" ), SW_LOCKEYREF( "EdVisualizer", "DebugDrawTip" ),
-                                 true, nullptr, &DebugDrawVisualizerInternal::gather );
+                                 true, &DebugDrawVisualizerInternal::gather );
 } // namespace sw::editor
 
 namespace sw::editor

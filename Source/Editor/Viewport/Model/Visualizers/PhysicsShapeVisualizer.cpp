@@ -1,15 +1,15 @@
 /**
  * @file PhysicsShapeVisualizer.cpp
  * @brief 강체(RigidBody · RigidBody2D)의 충돌 셰이프를 뷰포트 와이어프레임 도형 값으로 모읍니다 — 편집 중에도, 플레이 중에도 같은 셰이프 목록에서 모읍니다.
- * @details 그리기는 `EditorViewportVisualizer::drawAll` 이 값만 보고 한다. 같은 토글 아래 선택한 강체의 크기 손잡이(`EditorColliderHandleTool`, 화면 도구)를 함께 등록한다.
+ * @details 그리기는 `EditorViewportVisualizer::drawAll` 이 값만 보고 한다. 등록 줄은 같은 토글 아래의 크기 손잡이 화면 도구와 함께 View(`EditorColliderHandleTool.cpp`)에 있다.
  */
 #include "pch.h"
 
-#include "Editor/Viewport/EditorColliderHandleTool.h"
+#include "Editor/Viewport/Model/Visualizers/PhysicsShapeVisualizer.h"
+
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
-#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
@@ -84,7 +84,8 @@ namespace sw::editor
         };
     } // namespace
 
-    // 손잡이 도구는 아직 씬을 바로 읽는 화면 도구다(View 로 가르기 전) — 같은 토글을 쓰려고 이 줄에 함께 둔다.
-    SW_EDITOR_VISUALIZER_GATHER( PhysicsShapes, "physics_shapes", 110, SW_EDITOR_ICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesLabel" ),
-                                 SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesTip" ), false, &EditorColliderHandleTool::process, &PhysicsShapeVisualizerInternal::gather );
+    void PhysicsShapeGatherer::gather( const EditorViewportVisualizerArgs& args, EditorVisualizerDrawList& outDrawList )
+    {
+        PhysicsShapeVisualizerInternal::gather( args, outDrawList );
+    }
 } // namespace sw::editor

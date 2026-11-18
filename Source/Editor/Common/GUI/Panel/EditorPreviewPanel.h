@@ -99,7 +99,7 @@ namespace sw::editor
         /** @brief 문지르기 막대를 끌었을 때 그 시각(초)으로 옮깁니다. `readPreviewTimeline` 이 true 인 창만 불린다. */
         virtual void seekPreviewTimeline( float32 /*seconds*/ ) {}
 
-        /** @brief 그리기 앞부분에서 부릅니다. 처음이면 씬을 만들고, 창 포커스에 따라 초점 씬과 Undo 스택을 등록하거나 해제합니다. */
+        /** @brief 그리기 앞부분에서 부릅니다(View — 창 포커스만 읽는다). 씬 만들기와 초점은 Model `preparePreviewFrame` 이 한다. */
         void beginPreviewFrame();
         /** @brief 창 Undo 스택의 지금 길이까지를 "저장했거나 버린 편집"으로 삼습니다. 파생 창이 저장에 성공한 직후 부르며, 그 뒤의 편집만 다시 dirty 로 만듭니다. */
         void acknowledgePreviewEdits();
@@ -131,8 +131,17 @@ namespace sw::editor
          * @details 재생과 속도는 미리보기 씬의 시간 배율(`ScenePreviewPolicy::_timeScale`)로 건다 — 애니메이션 · 파티클 · 물리가 한 번에 따른다.
          */
         void drawPreviewBar( const float2& origin, const float2& size );
-        /** @brief 멈춤 · 속도(@p speed — 재생 막대가 고른 칸) · 한 프레임 요청을 미리보기 씬의 시간 배율로 겁니다. 그리기마다 부릅니다. */
-        void applyPreviewTimeScale( float32 speed );
+        /**
+         * @brief 재생 막대가 고친 값을 미리보기 씬에 겁니다(Model) — 바뀐 바닥 보임(`_bFloorChanged`)을 바닥 오브젝트에, 멈춤 · 속도(@p speed — 고른 칸) · 한 프레임 요청을 시간 배율에.
+         * @details 막대(View)는 값만 고치고 씬을 만지지 않는다. 막대를 그린 뒤 같은 프레임에 부르므로 예전처럼 그 프레임의 씬 틱부터 따른다.
+         */
+        void applyPreviewBar( float32 speed );
+        /**
+         * @brief 미리보기 씬이 아직 없으면 만들고(`ensurePreviewScene`) @p bFocused 로 초점 씬 · 창 선택을 등록하거나 해제합니다(Model). `beginPreviewFrame` 이 부른다.
+         * @details 미리보기 씬은 창(UI)이 쥔 씬이다 — 언리얼 `FPreviewScene` 을 에셋 편집기가 들고 유니티 `PreviewRenderUtility` 를 창이 드는 것과 같다. 에디터 UI 는 게임 스레드에서 돌므로
+         *          (스레드 분리는 하지 않는다) 만들기 · 지우기 · 편집을 게임 단계 명령으로 미루지 않고, View 가 씬을 만지지 않게 Model 함수 한 곳으로만 들어간다.
+         */
+        void preparePreviewFrame( bool bFocused );
         /** @brief 미리보기 씬이 아직 없으면 만들고, 창 선택을 그 씬에 묶고, 파생 창이 내용을 채우게 하고, 카메라를 맞춥니다. */
         void ensurePreviewScene();
         /** @brief 재생 막대 상태(시간 배율 · 바닥 · 축)를 감시 값이 읽는 자리에 남깁니다(가장 최근에 그린 창의 것). */
@@ -156,6 +165,7 @@ namespace sw::editor
         uint8                       _bPreviewPaused : 1; ///< 재생 막대의 멈춤
         uint8                       _bFloorShown    : 1; ///< 바닥을 보인다
         uint8                       _bAxesShown     : 1; ///< 축 방향 표시를 그린다
+        uint8                       _bFloorChanged  : 1; ///< 막대가 바닥 보임을 바꿨다 — `applyPreviewBar` 가 씬에 걸고 지운다
         size_t                      _seenCommandCount;   ///< 지난 그리기의 창 Undo 스택 길이. 달라지면 문서를 고친 것이다
         float2                      _previewBarSize;     ///< 앞 프레임 재생 막대 크기
         uint32                      _speedIndex;         ///< 재생 속도 칸(`kArrPreviewSpeed` 의 번호)
