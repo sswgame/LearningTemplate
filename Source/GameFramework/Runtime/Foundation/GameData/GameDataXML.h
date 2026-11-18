@@ -11,6 +11,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -20,12 +21,9 @@
 
 namespace sw
 {
-    // XML 구현 헤더를 끌어오지 않는다. 노드를 직접 읽는 .cpp 가 Engine/Serialization/XML/XMLDocument.h 를 스스로 include 한다.
     struct FloatCurve;
     struct TypeInfo;
 
-    class XMLDocument;
-    class XMLNode;
     class XMLCatalogRoot;
 
     /**
@@ -107,6 +105,20 @@ namespace sw
                 return false;
             outList.push_back( def );
             return true;
+        }
+        /**
+         * @brief @p parent 의 @p pElement 자식을 모두 스키마 @p TDef 로 읽어 목록 뒤에 붙입니다. 하나라도 틀리면 false 입니다.
+         * @details 틀린 원소만 빼고 끝까지 읽는다(오류를 한 번에 다 보인다). 카탈로그마다 같은 `findChild` · `findNextSibling` 루프를 적던 자리다.
+         */
+        template <typename TDef>
+        [[nodiscard]] static bool readChildrenInto( const XMLNode& parent, const utf8* pElement, string_view sourceName, vector<TDef>& outList )
+        {
+            bool bValid = true;
+            for ( XMLNode node = parent.findChild( pElement ); node; node = node.findNextSibling( pElement ) )
+            {
+                bValid = readInto( node, sourceName, outList ) && bValid;
+            }
+            return bValid;
         }
         /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 @p outSetting 을 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
         template <typename TDef>

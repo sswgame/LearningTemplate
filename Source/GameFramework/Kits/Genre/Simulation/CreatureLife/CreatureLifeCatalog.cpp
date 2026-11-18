@@ -276,10 +276,7 @@ namespace sw
     {
         TownAppealDef appeal;
         bool          bValid = XMLFields::readProperties( node, appeal, sourceName );
-        for ( XMLNode tierNode = node.findChild( "Tier" ); tierNode; tierNode = tierNode.findNextSibling( "Tier" ) )
-        {
-            bValid = GameDataXML::readInto( tierNode, sourceName, appeal._listTier ) && bValid;
-        }
+        bValid               = GameDataXML::readChildrenInto( node, "Tier", sourceName, appeal._listTier ) && bValid;
         if ( appeal._listTier.empty() )
         {
             SW_LOG_ERROR_ID( "CreatureLifeCatalog.AppealNoTier", "%#: <Appeal> has no <Tier>", sourceName );

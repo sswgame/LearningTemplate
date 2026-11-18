@@ -126,10 +126,7 @@ namespace sw
         {
             MonsterHuntContractStepDef step;
             bValid = XMLFields::readProperties( stepNode, step, sourceName ) && bValid;
-            for ( XMLNode clueNode = stepNode.findChild( "Clue" ); clueNode; clueNode = clueNode.findNextSibling( "Clue" ) )
-            {
-                bValid = GameDataXML::readInto( clueNode, sourceName, step._listClue ) && bValid;
-            }
+            bValid = GameDataXML::readChildrenInto( stepNode, "Clue", sourceName, step._listClue ) && bValid;
             contract._listStep.push_back( step );
         }
         if ( bValid )

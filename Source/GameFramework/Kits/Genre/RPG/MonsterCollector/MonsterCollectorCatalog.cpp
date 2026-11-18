@@ -305,10 +305,7 @@ namespace sw
     {
         MonsterEncounterDef def;
         bool                bValid = XMLFields::readProperties( node, def, sourceName );
-        for ( XMLNode child = node.findChild( "Slot" ); child; child = child.findNextSibling( "Slot" ) )
-        {
-            bValid = GameDataXML::readInto( child, sourceName, def._listSlot ) && bValid;
-        }
+        bValid                     = GameDataXML::readChildrenInto( node, "Slot", sourceName, def._listSlot ) && bValid;
         return bValid && GameDataXML::addUnique( def, sourceName, _encounterCatalog );
     }
 } // namespace sw

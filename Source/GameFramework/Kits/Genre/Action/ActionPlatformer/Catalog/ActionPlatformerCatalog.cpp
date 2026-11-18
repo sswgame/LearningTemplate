@@ -92,10 +92,7 @@ namespace sw
     {
         ActionGradingRules grading;
         bool               bValid = XMLFields::readProperties( node, grading, sourceName );
-        for ( XMLNode child = node.findChild( "Grade" ); child; child = child.findNextSibling( "Grade" ) )
-        {
-            bValid = GameDataXML::readInto( child, sourceName, grading._listGrade ) && bValid;
-        }
+        bValid                    = GameDataXML::readChildrenInto( node, "Grade", sourceName, grading._listGrade ) && bValid;
         if ( grading._listGrade.empty() )
         {
             SW_LOG_ERROR_ID( "ActionPlatformerCatalog.GradingNeedsLeastOne", "%#: <Grading> needs at least one <Grade>", sourceName );
@@ -150,10 +147,7 @@ namespace sw
     {
         ActionPatternDef pattern;
         bool             bValid = XMLFields::readProperties( node, pattern, sourceName );
-        for ( XMLNode child = node.findChild( "State" ); child; child = child.findNextSibling( "State" ) )
-        {
-            bValid = GameDataXML::readInto( child, sourceName, pattern._listState ) && bValid;
-        }
+        bValid                  = GameDataXML::readChildrenInto( node, "State", sourceName, pattern._listState ) && bValid;
         if ( pattern._listState.empty() )
         {
             SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternIdNoState", "%#: <Pattern id=\"%#\"> has no <State>", sourceName, pattern._id.c_str() );
