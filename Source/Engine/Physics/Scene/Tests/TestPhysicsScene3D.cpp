@@ -9,6 +9,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
@@ -326,4 +327,38 @@ SW_TEST_CASE( PhysicsScene3DTest, CharacterTriggersBeginAndEnd )
     SW_EXPECT_TRUE( pWalker->getSimulatedPosition()._x > 1.0f ); // 트리거에 막히지 않았다
     SW_EXPECT_EQUAL( 1u, begin );
     SW_EXPECT_EQUAL( 1u, end );
+}
+
+/**
+ * @brief [PhysicsCharacterTest] 캐릭터끼리 막기는 씬의 레이어 표를 본다 — 표가 막지 않는 두 레이어의 캐릭터는 마주 걸어 서로 지나친다
+ * @details 예전에는 캐릭터 대 캐릭터가 레이어 표를 보지 않아 통과시킬 레이어(유령 · 같은 편 겹침)도 늘 막혔다. 변이: `CollideCharacter` 의 레이어 검사를 빼면 자리가 바뀌지 않는다.
+ */
+SW_TEST_CASE( PhysicsCharacterTest, CharactersOnNonCollidingLayersPassThrough )
+{
+    const PhysicsSystem&              system = engine::getSubsystem<PhysicsSystem>();
+    const unique_ptr<IPhysicsScene3D> pScene = system.createScene3D();
+    SW_REQUIRE_NOT_NULL( pScene.get() );
+    CollisionLayers layers;
+    layers.setLayerCollision( 1, 2, false );
+    pScene->setLayerCollision( layers );
+    PhysicsCharacterDesc3D desc;
+    desc._layer                            = 1;
+    desc._position                         = float3{ -1.5f, 0.0f, 0.0f };
+    const PhysicsCharacterHandle left      = pScene->createCharacter( desc );
+    desc._layer                            = 2;
+    desc._position                         = float3{ 1.5f, 0.0f, 0.0f };
+    const PhysicsCharacterHandle right     = pScene->createCharacter( desc );
+    const PhysicsCharacterMove3D arrMove[] = {
+        { left,  float3{ 2.0f, 0.0f, 0.0f }},
+        {right, float3{ -2.0f, 0.0f, 0.0f }}
+    };
+    for ( uint32 step = 0; step < 90; ++step )
+    {
+        pScene->moveCharacters( arrMove, TestPhysicsScene3DInternal::kFrame );
+    }
+    PhysicsCharacterState3D leftState{};
+    PhysicsCharacterState3D rightState{};
+    SW_REQUIRE_TRUE( pScene->getCharacterState( left, leftState ) );
+    SW_REQUIRE_TRUE( pScene->getCharacterState( right, rightState ) );
+    SW_EXPECT_TRUE( leftState._position._x > rightState._position._x ); // 자리를 바꿨다
 }

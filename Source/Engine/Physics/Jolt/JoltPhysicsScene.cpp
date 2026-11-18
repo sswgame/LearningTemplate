@@ -335,7 +335,7 @@ namespace sw
         , _listJoltMaterial{}
         , _bodies{}
         , _joints{}
-        , _characterSnapshot{}
+        , _characterSnapshot{ _objectLayerPairFilter }
         , _characterContactListener{}
         , _characters{}
         , _listCharacterChunkAllocator{}
@@ -1227,9 +1227,25 @@ namespace sw
 
     // --- 캐릭터끼리 · 캐릭터 접촉 -------------------------------------------------------------------------------------------
 
-    void JoltCharacterSnapshotCollision::add( const JPH::CharacterVirtual* pCharacter, const JPH::CharacterVirtual* pMirror )
+    JoltCharacterSnapshotCollision::JoltCharacterSnapshotCollision( const JoltObjectLayerPairFilter& layerFilter )
+        : _pLayerFilter{ &layerFilter }
+        , _listEntry{}
     {
-        _listEntry.push_back( Entry{ pCharacter, pMirror } );
+    }
+
+    void JoltCharacterSnapshotCollision::add( const JPH::CharacterVirtual* pCharacter, const JPH::CharacterVirtual* pMirror, uint8 layer )
+    {
+        _listEntry.push_back( Entry{ pCharacter, pMirror, layer } );
+    }
+
+    uint8 JoltCharacterSnapshotCollision::findLayer( const JPH::CharacterVirtual* pCharacter ) const
+    {
+        for ( const Entry& entry : _listEntry )
+        {
+            if ( entry._pCharacter == pCharacter )
+                return entry._layer;
+        }
+        return 0;
     }
 
     void JoltCharacterSnapshotCollision::remove( const JPH::CharacterVirtual* pCharacter )
@@ -1249,9 +1265,11 @@ namespace sw
         const JPH::Shape* const   pShape1    = pCharacter->GetShape();
         JPH::CollideShapeSettings settings   = collideShapeSettings;
         const JPH::AABox          bounds1    = pShape1->GetWorldSpaceBounds( transform1, JPH::Vec3::sOne() );
+        const uint8               layer1     = findLayer( pCharacter );
+        const CollisionLayers&    layers     = _pLayerFilter->getLayers();
         for ( const Entry& entry : _listEntry )
         {
-            if ( entry._pCharacter == pCharacter || ioCollector.ShouldEarlyOut() )
+            if ( entry._pCharacter == pCharacter || ioCollector.ShouldEarlyOut() || layers.shouldCollide( layer1, entry._layer ) == false )
                 continue;
             const JPH::Mat44 transform2 = entry._pMirror->GetCenterOfMassTransform().PostTranslated( -baseOffset ).ToMat44();
             // 상대의 패딩만큼 더 멀리서 잡는다 — 패딩 없는 셰이프와 부딪히고 Jolt 가 `GetContactsAtPosition` 에서 고친다.
@@ -1278,9 +1296,11 @@ namespace sw
         const JPH::Vec3        extents      = shapeCast.mShapeWorldBounds.GetExtent() + JPH::Vec3::sReplicate( shapeCastSettings.mExtraConvexRadius );
         JPH::ShapeCastSettings castSettings = shapeCastSettings;
         const JPH::ShapeFilter shapeFilter;
+        const uint8            layer1 = findLayer( pCharacter );
+        const CollisionLayers& layers = _pLayerFilter->getLayers();
         for ( const Entry& entry : _listEntry )
         {
-            if ( entry._pCharacter == pCharacter || ioCollector.ShouldEarlyOut() )
+            if ( entry._pCharacter == pCharacter || ioCollector.ShouldEarlyOut() || layers.shouldCollide( layer1, entry._layer ) == false )
                 continue;
             const JPH::Mat44 transform2 = entry._pMirror->GetCenterOfMassTransform().PostTranslated( -baseOffset ).ToMat44();
             const float32    padding    = entry._pMirror->GetCharacterPadding();
@@ -1773,7 +1793,7 @@ namespace sw
         mirrorSettings.mInnerBodyShape               = nullptr;
         record._pMirror                              = JoltUtil::createObject<JPH::CharacterVirtual>( &mirrorSettings, JoltUtil::toJolt( desc._position ), JPH::Quat::sIdentity(), desc._userData, &_system );
         // 캐릭터끼리 막는다(감사 S-7). 실패해 돌아가는 길 뒤에 올린다 — 목록은 날 포인터라 지운 캐릭터를 남기면 안 된다.
-        _characterSnapshot.add( record._pCharacter.GetPtr(), record._pMirror.GetPtr() );
+        _characterSnapshot.add( record._pCharacter.GetPtr(), record._pMirror.GetPtr(), desc._layer );
         record._pCharacter->SetCharacterVsCharacterCollision( &_characterSnapshot );
         record._pCharacter->SetListener( &_characterContactListener );
         return PhysicsCharacterHandle::fromSlot( _characters.insert( std::move( record ) ) );
