@@ -11,8 +11,9 @@
  *    읽는 중이면 읽기를 취소하고, 지어 있으면 오브젝트의 지금 상태를 셀 엔티티로 떠 둔 뒤(`Scene::captureCellNodes`) 내린다 — 다시 올리면 그 상태로 짓는다(상태 보존).
  * 2. 읽기: 원점마다 로딩 반경 안의 셀(`StreamingCellGrid::computeCellsInRange`, 합집합) 중 내용이 없는 셀을 가까운 순으로 프레임당 `_maxCellLoadsPerFrame` 개까지
  *    쿠킹본의 구간으로 비동기로 읽는다(`AssetIO::readBinaryAssetRangeAsync` — IO 스레드가 읽고 태스크 워커가 엔티티 목록으로 푼다, `SceneDocument::readStreamingCellContent`).
- * 3. 짓기: 내용이 온 셀을 가까운 순으로 게임 스레드에서 짓는다(`Scene::instantiateCell`). 시간 예산(`_addToWorldBudgetMicroseconds`, 언리얼 AddToWorld 시간 예산)을 넘으면
- *    남은 셀은 다음 프레임에 잇는다 — 프레임마다 하나는 짓는다. 셀의 엔티티는 같은 셀이나 늘 올라 있는 엔티티만 가리키므로(쿠커가 검사했다) 셀 하나를 따로 지어도 참조가 끊기지 않는다.
+ * 3. 짓기: 내용이 온 셀을 가까운 순으로 게임 스레드에서 **엔티티 단위로** 짓는다(`Scene::beginCellBuild` · `continueCellBuild`). 시간 예산(`_addToWorldBudgetMicroseconds`, 언리얼 AddToWorld 시간 예산)에
+ *    닿으면 셀 한가운데서도 멈추고 다음 프레임에 잇는다 — 짓는 중인 셀을 먼저 잇고, 프레임마다 엔티티 하나는 짓는다. 다 짓기 전의 오브젝트는 드러나지 않고(병합 · 틱 · 시작 · 등록 밖)
+ *    다 지은 뒤 배치를 잇고 한 번에 드러난다(언리얼 레벨 가시성 단계). 셀의 엔티티는 같은 셀이나 늘 올라 있는 엔티티만 가리키므로(쿠커가 검사했다) 셀 하나를 따로 지어도 참조가 끊기지 않는다.
  * 셀의 오브젝트는 셀마다 id 목록으로 묶어 함께 내린다(`Scene::unloadCell`). 이 단계에서 만든 오브젝트는 다음 프레임의 병합 단계에서 틱에 든다.
  * 결정적 실행(`DeterministicRunPolicy::_bFinishAssetJobsEachFrame`)은 읽기를 그 프레임에 기다리고 예산 없이 짓는다 — 도착이 워커 순서에 달리지 않게.
  *
@@ -41,6 +42,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneSettings.h"
 #include "Engine/Scene/StreamingCellGrid.h"
@@ -112,6 +114,7 @@ namespace sw
             Unloaded, ///< 오브젝트가 없다. 내용은 `_bContentHeld` 이면 `_listNode` 에 있다
             Loading,  ///< 쿠킹본의 구간을 읽는 중이다(`_pRead`)
             Ready,    ///< 내용(`_listNode`)이 있고 짓기를 기다린다
+            Building, ///< 엔티티 단위로 짓는 중이다(`_pBuild`) — 지은 오브젝트는 아직 드러나지 않았다
             Loaded,   ///< 오브젝트를 지었다(`_listObjectID`)
             Failed,   ///< 읽기 · 짓기가 실패했다 — 다시 시도하지 않는다(프레임마다 같은 오류를 내지 않게)
         };
@@ -128,6 +131,7 @@ namespace sw
             uint64                                 _contentSize{ 0 };   ///< 내용의 바이트 수. 0 이면 내용이 처음부터 메모리에 있다
             vector<SceneDocument::SceneObjectNode> _listNode;           ///< 지을 엔티티 — 읽어 온 내용, 떠 둔 상태, 또는 메모리 문서의 내용
             shared_ptr<CellContentRead>            _pRead;              ///< 읽는 중인 결과(`Loading` 일 때만)
+            shared_ptr<Scene::CellBuild>           _pBuild;             ///< 짓는 중인 진행(`Building` 일 때만). `_listNode` 를 가리킨다 — 짓는 동안 `_listNode` 를 바꾸지 않는다
             AsyncReadHandle                        _readHandle;         ///< 읽기 요청(취소 · 결정적 실행의 기다림). 결과와 따로 든다 — 요청의 완료 콜백이 결과를 쥐어 결과가 요청을 쥐면 고리가 된다
             vector<uint64>                         _listObjectID;       ///< 지은 오브젝트(엔티티마다 하나, 부품 제외). 내릴 때 자식까지 지운다
             CellState                              _state{ CellState::Unloaded };
@@ -144,8 +148,11 @@ namespace sw
         void requestCellContent( CellSlot& slot );
         /** @brief 읽기가 끝났으면 거둡니다(`Loading` → `Ready` · `Failed`). 끝나지 않았으면 그대로입니다. */
         void collectCellContent( CellSlot& slot );
-        /** @brief 셀을 짓습니다(`Ready` → `Loaded`). 실패하면 오류를 남기고 반쯤 지은 것을 내린 뒤 `Failed` 입니다. */
-        void buildCell( CellSlot& slot );
+        /**
+         * @brief 셀을 이어 짓습니다(`Ready` → `Building` → `Loaded`). @p stopwatch 가 예산에 닿으면 멈추고 false 입니다(다음 프레임에 잇는다). @p bForceProgress 면 엔티티 하나는 짓습니다.
+         * @details 실패하면 오류를 남기고 지은 것을 내린 뒤 `Failed` 입니다(그때도 true — 이 셀은 끝났다).
+         */
+        [[nodiscard]] bool buildCell( CellSlot& slot, const Stopwatch& stopwatch, int64 budgetNanoseconds, bool bForceProgress );
         /** @brief 셀을 내립니다 — 읽기는 취소하고, 지은 오브젝트는 @p bKeepState 면 상태를 떠 둔 뒤 지웁니다(`Unloaded`). */
         void unloadCell( CellSlot& slot, bool bKeepState );
         /** @brief 조각의 데이터 레이어가 모두 켜져 있으면 true 입니다. */

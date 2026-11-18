@@ -5,6 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
@@ -20,6 +21,7 @@ namespace sw
     class GameObject;
     class GameObjectManager;
     class Material;
+    class Stopwatch;
 
     /**
      * @class Scene
@@ -53,16 +55,31 @@ namespace sw
          *          (`PrefabCache::spawnNestedInstances`) — 부품은 씬 파일에 없고 로드할 때마다 원본에서 다시 만듭니다.
          */
         [[nodiscard]] bool instantiate( const SceneDocument& doc, const StopToken& stopToken = {} );
+        /** @brief 여러 프레임에 나눠 짓는 스트리밍 셀 하나의 진행입니다(`beginCellBuild`). 정의는 Scene.cpp — 배치 · 커서 · 셀이 따로 든 등록 줄입니다. 버리면 배치를 연결하지 않고 놓습니다(지은 오브젝트는 부르는 쪽이 `unloadCell` 로 내린다). */
+        struct CellBuild;
+        /** @brief `continueCellBuild` 의 결과입니다. */
+        enum class CellBuildResult : uint8
+        {
+            InProgress, ///< 예산에 닿아 남았다 — 지은 오브젝트는 드러나지 않은 채다(다음 프레임에 잇는다)
+            Done,       ///< 다 지어 배치를 잇고 한 번에 드러냈다
+            Failed,     ///< 잇지 못했다(오류를 남겼다) — 부르는 쪽이 지은 오브젝트를 내린다
+        };
         /**
-         * @brief 스트리밍 셀 하나의 엔티티를 이 씬에 더해 짓습니다(`SceneStreamingSubsystem` 이 부릅니다). 지은 오브젝트 id 를 @p outListObjectID 에 더합니다.
-         * @details 셀의 엔티티는 같은 셀이나 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 지금 씬에 있는 파일 id 의 오브젝트를 같은 배치에 기록해
-         *          그 참조를 잇는다. 실패해도 그때까지 지은 오브젝트 id 는 @p outListObjectID 에 남는다(부르는 쪽이 `unloadCell` 로 내린다).
+         * @brief 스트리밍 셀 하나(@p listNode)를 엔티티 단위로 나눠 짓기 시작합니다(`SceneStreamingSubsystem` 이 부릅니다 — 언리얼 레벨 스트리밍의 시간 나눈 AddToWorld).
+         * @details @p listNode 는 짓기가 끝나거나 버려질 때까지 살아 있어야 합니다(배치가 엔티티를 가리킨다).
          */
-        [[nodiscard]] bool instantiateCell( const vector<SceneDocument::SceneObjectNode>& listNode, vector<uint64>& outListObjectID );
-        /** @brief `instantiateCell` 이 지은 오브젝트를 자식(중첩 프리팹 부품)까지 지우고 파일 id · 프리팹 기록을 뺍니다. */
+        [[nodiscard]] shared_ptr<CellBuild> beginCellBuild( const vector<SceneDocument::SceneObjectNode>& listNode );
+        /**
+         * @brief 셀을 이어 짓습니다. @p stopwatch 가 @p budgetNanoseconds 에 닿으면 멈춥니다(0 이하면 끝까지). @p bForceProgress 면 예산이 다 찼어도 엔티티 하나는 짓습니다(멈추지 않게).
+         * @details 남은 동안 지은 오브젝트는 드러나지 않는다(`GameObjectManager::stageGameObjects` — 병합 · 틱 · 시작 · 순회 밖, 등록은 셀이 미뤄 든다). 다 지으면 셀의 엔티티는 같은 셀이나
+         *          늘 올라 있는 엔티티를 파일 id 로 가리키므로 지금 씬의 그 오브젝트를 배치에 기록해 잇고, 숨긴 것을 드러내 한 번에 등록한다 — 반쯤 지은 셀의 참조가 보이지 않는다(언리얼 레벨 가시성 단계).
+         *          지은 오브젝트 id(엔티티마다 하나, 부품 제외)를 @p inoutListObjectID 에 더한다 — 실패 · 버림에도 남아 부르는 쪽이 `unloadCell` 로 내린다.
+         */
+        [[nodiscard]] CellBuildResult continueCellBuild( CellBuild& build, const Stopwatch& stopwatch, int64 budgetNanoseconds, bool bForceProgress, vector<uint64>& inoutListObjectID );
+        /** @brief 셀 짓기(`continueCellBuild`)가 지은 오브젝트를 자식(중첩 프리팹 부품)까지 지우고 파일 id · 프리팹 기록을 뺍니다. */
         void unloadCell( const vector<uint64>& listObjectID );
         /**
-         * @brief `instantiateCell` 이 지은 오브젝트의 지금 상태를 셀 엔티티로 씁니다(비우고 채웁니다). 스트리밍이 셀을 내리기 전에 불러 다시 올릴 때 이것으로 짓는다(셀 상태 보존).
+         * @brief 셀 짓기(`continueCellBuild`)가 지은 오브젝트의 지금 상태를 셀 엔티티로 씁니다(비우고 채웁니다). 스트리밍이 셀을 내리기 전에 불러 다시 올릴 때 이것으로 짓는다(셀 상태 보존).
          * @details 저장과 같은 길이다(`serializeToDocument` 의 엔티티 쓰기) — 프리팹 엔티티는 원형과 다른 것만(`PrefabOverrides` 델타), 그 밖은 저장 대상 프로퍼티 전체(`SerializePurpose::Authoring`)를 적고
          *          파일 id · 레이어 · 인스턴스 앵커를 그대로 둔다. 상태는 이미 평평한 파일 id 라 id 범위는 0 이다. 플레이 중 지운 오브젝트는 적지 않아 다시 올려도 없다(언리얼 레벨 스트리밍의 상태 보존 · 세이브 델타와 같은 생각).
          */
@@ -227,10 +244,18 @@ namespace sw
             DataLayer, ///< 데이터 레이어 묶음 — 셀처럼 배치에 기록하되, 프리팹을 찾지 못한 엔티티는 보관한다(소스에서 연 씬은 저장한다)
         };
         /**
-         * @brief 엔티티 목록을 한 배치로 지어 이 씬에 더합니다(`instantiate` · `instantiateCell` · `instantiateLayerNodes` 의 본문). 문서 · 셀 · 레이어 묶음 · 펼친 인스턴스가 모두 이 한 길입니다.
+         * @brief 엔티티 목록을 한 배치로 지어 이 씬에 더합니다(`instantiate` · `instantiateLayerNodes` 의 본문). 문서 · 레이어 묶음 · 펼친 인스턴스가 이 길이고, 셀은 같은 단계(`buildEntityNode` · `finishNodeBuild`)를 프레임에 나눈다(`continueCellBuild`).
          * @param pOutListObjectID 주면 지은 오브젝트 id 를 더합니다(엔티티마다 하나, 중첩 프리팹 부품 제외).
          */
         [[nodiscard]] bool instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, NodeBuild build, vector<uint64>* pOutListObjectID, const StopToken& stopToken = {} );
+        /** @brief 짓는 배치 하나의 상태입니다(배치 · 프리팹 원형 · 프리팹 엔티티). 정의는 Scene.cpp. */
+        struct NodeBuildContext;
+        /** @brief 지금 씬의 파일 id 가진 오브젝트를 배치에 가리킴 대상으로 기록합니다 — 셀 · 레이어 묶음이 늘 올라 있는 엔티티를 파일 id 로 가리킨다. @p pExcludedObjectID 의 오브젝트(이 배치가 지은 것)는 뺍니다. */
+        void addReferenceTargets( NodeBuildContext& context, const vector<uint64>* pExcludedObjectID ) const;
+        /** @brief 엔티티 하나의 오브젝트를 만들고 상태를 배치에 읽습니다(연결은 `finishNodeBuild`). 프리팹을 찾지 못하면 만들지 않습니다. */
+        void buildEntityNode( const SceneDocument::SceneObjectNode& entity, NodeBuild build, NodeBuildContext& context, vector<uint64>* pOutListObjectID );
+        /** @brief 배치를 잇고(부착 · 핸들), 인스턴스 멤버를 앵커에 붙이고, 중첩 프리팹 부품을 스폰한 뒤 병합합니다. 잇지 못하면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool finishNodeBuild( const vector<SceneDocument::SceneObjectNode>& listNode, NodeBuildContext& context );
 
         /** @brief 컴포넌트 핸들로 카메라를 다시 찾습니다. */
         CameraComponent* resolveCamera( TComponentHandle<CameraComponent> handle ) const;

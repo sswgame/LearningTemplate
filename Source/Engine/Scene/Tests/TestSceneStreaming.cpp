@@ -41,8 +41,11 @@ namespace
             return node;
         }
 
-        /** @brief 셀 (0,0) · (1,0) · (2,0) 에 엔티티 둘씩(파일 id 1 부터, 셀 x 의 엔티티는 x*10+2 · x*10+8 자리)인 스트리밍 문서입니다. 셀 한 변 10 m, 로딩 반경 6 m. */
-        static SceneDocument makeDocument( uint32 budgetMicroseconds )
+        /**
+         * @brief 셀 (0,0) · (1,0) · … 에 엔티티 @p entitiesPerCell 개씩(파일 id 1 부터)인 스트리밍 문서입니다. 셀 한 변 10 m, 로딩 반경 6 m.
+         * @details 셀 x 의 엔티티는 x*10+2 · x*10+8 · 그 뒤는 x*10+3..7 자리(z 5)다.
+         */
+        static SceneDocument makeDocument( uint32 budgetMicroseconds, uint32 cellCount = kCellCount, uint32 entitiesPerCell = kEntitiesPerCell )
         {
             SceneDocument doc{};
             doc._name                                        = "Streamed";
@@ -54,13 +57,14 @@ namespace
             doc._sceneSettings._addToWorldBudgetMicroseconds = budgetMicroseconds;
             doc._bValid                                      = true;
             uint64 fileID                                    = 1;
-            for ( int32 x = 0; x < static_cast<int32>( kCellCount ); ++x )
+            for ( int32 x = 0; x < static_cast<int32>( cellCount ); ++x )
             {
                 SceneDocument::StreamingCell cell{};
                 cell._cell = StreamingCellCoord{ x, 0 };
-                for ( uint32 entityIndex = 0; entityIndex < kEntitiesPerCell; ++entityIndex )
+                for ( uint32 entityIndex = 0; entityIndex < entitiesPerCell; ++entityIndex )
                 {
-                    const string position = sw::to_string( static_cast<int64>( x * 10 + ( entityIndex == 0 ? 2 : 8 ) ) ) + ",0,5";
+                    const int32  offset   = entityIndex == 0 ? 2 : ( entityIndex == 1 ? 8 : 3 + static_cast<int32>( entityIndex % 5 ) );
+                    const string position = sw::to_string( static_cast<int64>( x * 10 + offset ) ) + ",0,5";
                     cell._listSceneObjectNode.push_back( makeNode( fileID, "Crate" + sw::to_string( static_cast<int64>( fileID ) ), position ) );
                     fileID += 1;
                 }
@@ -190,30 +194,40 @@ namespace
     };
 } // namespace
 
-/** @brief [SceneStreamingTest] 예산이 작으면 짓기가 프레임마다 셀 하나씩 나뉘고, 결과(이름 · 자리)는 한 번에 지은 것과 같다 */
-SW_TEST_CASE( SceneStreamingTest, SmallBudgetSplitsBuildingAcrossFrames )
+/**
+ * @brief [SceneStreamingTest] 예산이 작으면 오브젝트 많은 셀 하나의 짓기가 엔티티 단위로 여러 프레임에 나뉘고, 다 짓기 전에는 드러나지 않으며, 결과(이름 · 자리)는 한 번에 지은 것과 같다
+ */
+SW_TEST_CASE( SceneStreamingTest, SmallBudgetSplitsCellAcrossFramesHiddenUntilDone )
 {
+    constexpr uint32              kEntityCount = 24;
     const ScopedFreeRunningPolicy policy;
-    const float3                  source{ 15.0f, 0.0f, 5.0f }; // 셀 셋이 모두 반경 안이다
+    const float3                  source{ 5.0f, 0.0f, 5.0f }; // 셀 (0,0) 하나뿐이다
+    const StreamingCellCoord      cell{ 0, 0 };
 
     Scene sliced{ "Sliced" };
-    SW_REQUIRE_TRUE( sliced.instantiate( Util::makeDocument( 1u ) ) ); // 셀 하나가 1 us 보다 오래 걸린다 — 프레임마다 하나만 짓는다
+    SW_REQUIRE_TRUE( sliced.instantiate( Util::makeDocument( 1u, 1, kEntityCount ) ) ); // 엔티티 하나가 1 us 보다 오래 걸린다 — 프레임마다 하나씩 짓는다
     SceneStreamingSubsystem& slicedStreaming = sliced.getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
     Util::setSource( slicedStreaming, source );
-    for ( uint32 frame = 1; frame <= Util::kCellCount; ++frame )
+    slicedStreaming.update( 0.0f );
+    SW_EXPECT_FALSE( slicedStreaming.isCellLoaded( cell ) );
+    SW_EXPECT_TRUE( Util::findByFileID( sliced, 1 ) == nullptr ); // 지었지만 드러나지 않았다(순회 밖)
+    uint32 frameCount = 1;
+    while ( slicedStreaming.isCellLoaded( cell ) == false && frameCount < kEntityCount + 2 )
     {
         slicedStreaming.update( 0.0f );
-        SW_EXPECT_EQUAL( frame, slicedStreaming.getLoadedCellCount() );
+        frameCount += 1;
     }
+    SW_REQUIRE_TRUE( slicedStreaming.isCellLoaded( cell ) );
+    SW_EXPECT_TRUE( frameCount > 1 );
 
     Scene whole{ "Whole" };
-    SW_REQUIRE_TRUE( whole.instantiate( Util::makeDocument( Util::kWholeBudgetMicroseconds ) ) );
+    SW_REQUIRE_TRUE( whole.instantiate( Util::makeDocument( Util::kWholeBudgetMicroseconds, 1, kEntityCount ) ) );
     SceneStreamingSubsystem& wholeStreaming = whole.getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
     Util::setSource( wholeStreaming, source );
     wholeStreaming.update( 0.0f );
-    SW_EXPECT_EQUAL( Util::kCellCount, wholeStreaming.getLoadedCellCount() );
+    SW_REQUIRE_TRUE( wholeStreaming.isCellLoaded( cell ) );
 
-    for ( uint64 fileID = 1; fileID <= Util::kCellCount * Util::kEntitiesPerCell; ++fileID )
+    for ( uint64 fileID = 1; fileID <= kEntityCount; ++fileID )
     {
         const GameObject* pSliced = Util::findByFileID( sliced, fileID );
         const GameObject* pWhole  = Util::findByFileID( whole, fileID );

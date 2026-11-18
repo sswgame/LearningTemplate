@@ -123,6 +123,7 @@ namespace sw
         {
             if ( slot._state == CellState::Loading )
                 (void)slot._readHandle.cancel();
+            slot._pBuild.reset(); // 짓던 오브젝트는 매니저가 함께 비웠다 — 배치만 놓는다
         }
         _listCell.clear();
         _mapCellIndex.clear();
@@ -257,19 +258,25 @@ namespace sw
             collectCellContent( slot );
         }
 
-        // 5. 내용이 온 셀을 가까운 순으로 시간 예산 안에서 짓는다(언리얼 AddToWorld 시간 예산). 하나는 예산과 상관없이 짓는다 — 셀 하나가 예산보다 커도 멈추지 않게.
-        const int64     budgetNanoseconds = static_cast<int64>( _settings._addToWorldBudgetMicroseconds ) * constant::time::kNanosecondsPerMicrosecond;
+        // 5. 셀을 가까운 순으로 시간 예산 안에서 엔티티 단위로 짓는다(언리얼 AddToWorld 시간 예산). 짓는 중인 셀을 먼저 잇고(반쯤 지은 셀이 쌓이지 않게) 그다음 내용이 온 셀을 시작한다.
+        //    엔티티 하나는 예산과 상관없이 짓는다 — 엔티티 하나가 예산보다 커도 멈추지 않게. 결정적 실행은 예산 없이 끝까지 짓는다.
+        const int64     budgetNanoseconds = bFinishEachFrame ? 0 : static_cast<int64>( _settings._addToWorldBudgetMicroseconds ) * constant::time::kNanosecondsPerMicrosecond;
         const Stopwatch stopwatch;
-        uint32          buildCount = 0;
-        for ( const uint32 slotIndex : _listScratchLoad )
+        bool            bProgressed = false;
+        for ( const CellState pass : { CellState::Building, CellState::Ready } )
         {
-            CellSlot& slot = _listCell[slotIndex];
-            if ( slot._state != CellState::Ready || areEarlierSlotsBuilt( slotIndex ) == false )
-                continue;
-            if ( buildCount > 0 && bFinishEachFrame == false && stopwatch.getElapsedNanoseconds() >= budgetNanoseconds )
-                break; // 남은 셀은 다음 프레임에 잇는다
-            buildCell( slot );
-            buildCount += 1;
+            for ( const uint32 slotIndex : _listScratchLoad )
+            {
+                CellSlot& slot = _listCell[slotIndex];
+                if ( slot._state != pass || ( pass == CellState::Ready && areEarlierSlotsBuilt( slotIndex ) == false ) )
+                    continue;
+                if ( bProgressed && budgetNanoseconds > 0 && stopwatch.getElapsedNanoseconds() >= budgetNanoseconds )
+                    return; // 남은 셀은 다음 프레임에 잇는다
+                const bool bFinished = buildCell( slot, stopwatch, budgetNanoseconds, bProgressed == false );
+                bProgressed          = true;
+                if ( bFinished == false )
+                    return; // 예산에 닿았다
+            }
         }
     }
 
@@ -361,26 +368,36 @@ namespace sw
         slot._readHandle = AsyncReadHandle{};
     }
 
-    void SceneStreamingSubsystem::buildCell( CellSlot& slot )
+    bool SceneStreamingSubsystem::buildCell( CellSlot& slot, const Stopwatch& stopwatch, const int64 budgetNanoseconds, const bool bForceProgress )
     {
-        slot._listObjectID.clear();
-        const bool bBuilt = _pScene->instantiateCell( slot._listNode, slot._listObjectID );
+        if ( slot._state == CellState::Ready )
+        {
+            slot._listObjectID.clear();
+            slot._pBuild = _pScene->beginCellBuild( slot._listNode );
+            slot._state  = CellState::Building;
+        }
+        const Scene::CellBuildResult result = slot._pBuild != nullptr ? _pScene->continueCellBuild( *slot._pBuild, stopwatch, budgetNanoseconds, bForceProgress, slot._listObjectID )
+                                                                      : Scene::CellBuildResult::Failed;
+        if ( result == Scene::CellBuildResult::InProgress )
+            return false;
+        slot._pBuild.reset();
         // 파일에서 읽은 내용은 지은 뒤 버린다 — 다시 올리면 다시 읽는다(색인만 상주).
         if ( slot._bContentHeld == false )
         {
             slot._listNode.clear();
             slot._listNode.shrink_to_fit();
         }
-        if ( bBuilt == false )
+        if ( result == Scene::CellBuildResult::Failed )
         {
             SW_LOG_ERROR_ID( "SceneStreaming.SceneCouldNotLoad", "Scene '%#' could not load cell (%#, %#) - it stays unloaded", _pScene->getName(), slot._cell._x, slot._cell._z );
             // 반쯤 지은 것을 남기지 않는다.
             _pScene->unloadCell( slot._listObjectID );
             slot._listObjectID.clear();
             slot._state = CellState::Failed;
-            return;
+            return true;
         }
         slot._state = CellState::Loaded;
+        return true;
     }
 
     void SceneStreamingSubsystem::unloadCell( CellSlot& slot, const bool bKeepState )
@@ -394,6 +411,17 @@ namespace sw
                 slot._readHandle = AsyncReadHandle{};
                 break;
             case CellState::Ready:
+                if ( slot._bContentHeld == false )
+                {
+                    slot._listNode.clear();
+                    slot._listNode.shrink_to_fit();
+                }
+                break;
+            case CellState::Building:
+                // 드러난 적이 없다 — 상태를 뜨지 않는다. 진행을 먼저 버리고(배치를 잇지 않는다, `_listNode` 를 가리킨다) 지은 오브젝트를 지운다.
+                slot._pBuild.reset();
+                _pScene->unloadCell( slot._listObjectID );
+                slot._listObjectID.clear();
                 if ( slot._bContentHeld == false )
                 {
                     slot._listNode.clear();
