@@ -143,8 +143,14 @@ namespace sw
         const vector<VoxelBlockDef>& getBlocks() const { return _catalog.getAll(); }
         int32                        getAtlasColumns() const { return _atlasColumns; }
         int32                        getAtlasRows() const { return _atlasRows; }
-        /** @brief 아틀라스 타일 한 변의 텍셀 수입니다. 셰이더가 타일 안쪽으로 반 텍셀 들일 때 쓰는 값과 같아야 합니다(blocks.material `_atlasGrid`). */
+        /** @brief 아틀라스 타일 한 변의 텍셀 수입니다. */
         int32 getTileTexels() const { return _tileTexels; }
+        /**
+         * @brief 블록 머티리얼의 아틀라스 칸 파라미터(`_atlasGrid` = 열 수, 행 수, 타일 텍셀)가 이 카탈로그와 같은지 봅니다. 카탈로그가 정본이다.
+         * @details 메셔는 카탈로그의 열 수로 타일 칸 UV 를 싣고 셰이더는 머티리얼 값으로 푼다 — 둘이 다르면 엉뚱한 타일을 그리므로 맞춰 쓰지 않고 오류로 멈춘다.
+         * @return 같으면 true. 다르면 @p materialName 과 두 값을 적은 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool checkAtlasGrid( const float4& atlasGrid, string_view materialName ) const;
 
     private:
         static constexpr const utf8* kXMLRootName = "VoxelBlockCatalog"; ///< 루트 요소(`XMLCatalog`)

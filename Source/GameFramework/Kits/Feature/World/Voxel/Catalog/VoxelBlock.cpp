@@ -105,6 +105,16 @@ namespace sw
         return pBlock != nullptr && pBlock->_bOpaque != SW_FALSE;
     }
 
+    bool VoxelBlockCatalog::checkAtlasGrid( const float4& atlasGrid, string_view materialName ) const
+    {
+        const bool bSame = atlasGrid._x == static_cast<float32>( _atlasColumns ) && atlasGrid._y == static_cast<float32>( _atlasRows ) &&
+                           atlasGrid._z == static_cast<float32>( _tileTexels );
+        if ( bSame == false )
+            SW_LOG_ERROR_ID( "VoxelBlockCatalog.AtlasGridMismatch", "VoxelBlockCatalog: material '%#' _atlasGrid (%#, %#, %#) differs from the catalog atlas %# x %# with %# texel tiles",
+                             materialName, atlasGrid._x, atlasGrid._y, atlasGrid._z, _atlasColumns, _atlasRows, _tileTexels );
+        return bSame;
+    }
+
     uint32 VoxelBlockCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).

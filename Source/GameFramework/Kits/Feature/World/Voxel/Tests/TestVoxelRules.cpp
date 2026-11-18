@@ -140,6 +140,19 @@ SW_TEST_CASE( VoxelBlockCatalogTest, IndexStartsAfterAirAndDuplicateIsRefused )
     SW_EXPECT_FALSE( rig._catalog.isOpaque( rig._glass ) );
 }
 
+// 블록 머티리얼의 아틀라스 칸(_atlasGrid)은 카탈로그를 따라야 한다 — 메셔는 카탈로그 열 수로 타일 칸 UV 를 싣고 셰이더는 머티리얼 값으로 푼다. 다르면 맞춰 쓰지 않고 오류다.
+SW_TEST_CASE( VoxelBlockCatalogTest, MaterialAtlasGridMustMatchTheCatalog )
+{
+    VoxelFixture rig;
+    const float4 catalogGrid{ static_cast<float32>( rig._catalog.getAtlasColumns() ), static_cast<float32>( rig._catalog.getAtlasRows() ),
+                              static_cast<float32>( rig._catalog.getTileTexels() ), 0.0f };
+    SW_EXPECT_TRUE( rig._catalog.checkAtlasGrid( catalogGrid, "same.material" ) );
+
+    SW_EXPECT_LOG( "VoxelBlockCatalog.AtlasGridMismatch" );
+    const float4 otherGrid{ catalogGrid._x + 1.0f, catalogGrid._y, catalogGrid._z, 0.0f };
+    SW_EXPECT_FALSE( rig._catalog.checkAtlasGrid( otherGrid, "other.material" ) );
+}
+
 // ---- 월드 ----
 
 SW_TEST_CASE( VoxelWorldTest, OutsideReadsAirAndRefusesWrites )

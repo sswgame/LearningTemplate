@@ -43,7 +43,10 @@ namespace sw
         void requestRebuild() { _bRebuildRequested = SW_TRUE; }
 
     private:
-        /** @brief 메싱한 정점을 엔진 메시로 옮겨 적용합니다. 틱이 끝난 뒤 게임 스레드에서 부르고, 정점이 없으면 메시를 숨깁니다. */
+        /**
+         * @brief 메싱한 정점을 엔진 메시로 옮겨 적용합니다. 틱이 끝난 뒤 게임 스레드에서 부르고, 정점이 없으면 메시를 숨깁니다.
+         *        처음 한 번 메시 머티리얼의 아틀라스 칸(`_atlasGrid`)을 블록 카탈로그와 견주어, 다르면 오류를 남기고 메시를 그리지 않습니다(맞춰 쓰지 않는다).
+         */
         void           applyMeshes();
         MeshComponent* findWaterMesh() const;
 
@@ -58,6 +61,8 @@ namespace sw
         VoxelChunkMesh _scratchMesh;
         uint8          _bRebuildRequested : 1;
         uint8          _bApplyScheduled   : 1;
-        uint8          _reserved          : 6;
+        uint8          _bAtlasChecked     : 1; ///< 머티리얼 아틀라스 칸을 카탈로그와 견주었다
+        uint8          _bAtlasMatches     : 1; ///< 견준 결과가 같았다 — 다르면 메시를 그리지 않는다
+        uint8          _reserved          : 4;
     };
 } // namespace sw
