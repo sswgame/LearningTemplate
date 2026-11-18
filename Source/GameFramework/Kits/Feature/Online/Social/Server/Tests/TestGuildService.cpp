@@ -909,12 +909,14 @@ namespace
         vector<unique_ptr<IServiceStoreJob>> _listDone{};
     };
 
-    /** @brief 첫 커밋 바로 앞에 다른 서버(같은 데이터베이스의 두 번째 길드 서비스)에서 길드장이 임원을 멤버로 내리는 일을 끼워 넣는 연결입니다. */
+    /** @brief 첫 커밋 바로 앞에 다른 서버(같은 데이터베이스에 붙은 @p otherServer)의 일 @p cut 을 한 번 끼워 넣는 연결입니다. */
+    template <typename TCut>
     class InterleavingConnection final : public IServiceStoreConnection
     {
     public:
-        explicit InterleavingConnection( GuildFixture& otherServer )
+        InterleavingConnection( GuildFixture& otherServer, TCut cut )
             : _otherServer{ otherServer }
+            , _cut{ std::move( cut ) }
         {
         }
 
@@ -931,15 +933,33 @@ namespace
             if ( _cutCount == 0 )
             {
                 ++_cutCount;
-                SW_EXPECT_TRUE( _otherServer.setRole( kMaster, kOfficer, GuildRole::Member ) == SocialResult::Ok );
+                _cut();
             }
             return _otherServer._database.commit( transaction, pOutInfo );
         }
 
     private:
         GuildFixture& _otherServer;
+        TCut          _cut;
         int32         _cutCount{ 0 };
     };
+
+    /** @brief 두 번째 길드 서비스(서버)가 @p connection 으로 요청 하나를 처리한 완료입니다. */
+    GuildCompletion runOnSecondServer( IServiceStoreConnection& connection, const GuildRequest& request )
+    {
+        ConnectionServiceStore store( connection );
+        GuildService           service;
+        service.initialize( &store );
+        service.submit( request, 1 );
+        while ( store.pollCompletions() > 0 )
+        {
+        }
+        vector<GuildCompletion> listCompletion;
+        service.takeCompletions( listCompletion );
+        service.shutdown();
+        SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
+        return listCompletion.empty() ? GuildCompletion{} : std::move( listCompletion[0] );
+    }
 } // namespace
 
 /** @brief [GuildServiceTest] 역할을 읽은 뒤 커밋 전에 멤버로 내려간 임원의 공지는 들어가지 않는다 — 멤버 역할 읽기가 커밋 조건이라 다시 읽고 NotAllowed 다(감사 "다음 할 일" 5 번) */
@@ -947,24 +967,66 @@ SW_TEST_CASE( GuildServiceTest, DemotionBetweenReadAndCommitRefusesTheAnnounceme
 {
     GuildFixture rig; // 다른 서버 — 같은 데이터베이스에 붙은 길드 서비스
     (void)rig.makeGuild();
-    InterleavingConnection connection( rig );
-    ConnectionServiceStore store( connection );
-    GuildService           service;
-    service.initialize( &store );
+    InterleavingConnection connection( rig, [&rig]
+    { SW_EXPECT_TRUE( rig.setRole( kMaster, kOfficer, GuildRole::Member ) == SocialResult::Ok ); } );
 
     GuildRequest request;
     request._operation = GuildOperation::SetAnnouncement;
     request._accountID = kOfficer;
     request._text      = "officer notice";
     request._nowMs     = UnixMilliseconds{ kNowMs };
-    service.submit( request, 1 );
-    while ( store.pollCompletions() > 0 )
-    {
-    }
-    vector<GuildCompletion> listCompletion;
-    service.takeCompletions( listCompletion );
-    SW_REQUIRE_EQUAL( size_t( 1 ), listCompletion.size() );
-    SW_EXPECT_TRUE( listCompletion[0]._result == SocialResult::NotAllowed );
+    SW_EXPECT_TRUE( runOnSecondServer( connection, request )._result == SocialResult::NotAllowed );
     SW_EXPECT_EQUAL( string(), rig.run( GuildOperation::Get, kMember )._info._announcement );
-    service.shutdown();
+}
+
+/**
+ * @brief [GuildServiceTest] 떠나는 임원이 허용 목록을 읽은 뒤 커밋 전에 그에게 준 허용은 떠나기와 함께 지워진다 — 허용 목록은 읽기 집합이 걸지 못해(팬텀) 부여가 멤버 레코드를 다시 써
+ *        떠나기 커밋이 Conflict 로 다시 읽는다. 다시 들어와도 그 허용으로 꺼내지 못한다(감사 "다음 할 일" 5 번)
+ */
+SW_TEST_CASE( GuildServiceTest, GrantBetweenReadAndCommitEndsWithTheLeave )
+{
+    PaidGemPolicy policy;
+    GuildFixture  rig;
+    rig._service.setLedgerPolicy( &policy );
+    const uint64 guildID = rig.makeGuild();
+    rig.grant( kMember, 20, "cur.gem" );
+    SW_REQUIRE_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 10, "test/gem.dep", "cur.gem" )._result == SocialResult::Ok );
+    InterleavingConnection connection( rig, [&rig]
+    { SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 5, 1 ) == SocialResult::Ok ); } );
+
+    GuildRequest leave;
+    leave._operation  = GuildOperation::Leave;
+    leave._accountID  = kOfficer;
+    leave._journalKey = "test/leave.1";
+    leave._nowMs      = UnixMilliseconds{ kNowMs };
+    SW_EXPECT_TRUE( runOnSecondServer( connection, leave )._result == SocialResult::Ok );
+    SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_guild_storage_grant", kOfficer, 2 ) ); // 키 `<길드>/<맡긴 사람>/<받는 계정>/<자산>`
+    SW_EXPECT_TRUE( rig.run( GuildOperation::Invite, kMaster, kOfficer )._result == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::Accept, kOfficer, kInvalidAccountID, "", guildID )._result == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gem.wd", "cur.gem", kMember )._result == SocialResult::NotAllowed );
+}
+
+/** @brief [GuildServiceTest] 신청 목록을 읽은 뒤 커밋 전에 다른 신청이 마지막 자리를 채우면 이 신청은 PendingLimit 다 — 신청끼리 길드 레코드로 줄을 서서 상한을 넘지 않는다(감사 "다음 할 일" 5 번) */
+SW_TEST_CASE( GuildServiceTest, ApplicationBetweenReadAndCommitKeepsTheCap )
+{
+    GuildFixture rig;
+    const uint64 guildID = rig.makeGuild();
+    SW_REQUIRE_TRUE( rig.setOpen( kMaster, true ) == SocialResult::Ok );
+    constexpr AccountID kFirstApplicant = 100;
+    const auto          nApplicants     = static_cast<AccountID>( GuildLimit::kMaxApplication ) - 1;
+    for ( AccountID offset = 0; offset < nApplicants; ++offset )
+    {
+        SW_REQUIRE_TRUE( rig.run( GuildOperation::Apply, kFirstApplicant + offset, kInvalidAccountID, "", guildID )._result == SocialResult::Ok );
+    }
+    constexpr AccountID    kOtherApplicant = 900;
+    InterleavingConnection connection( rig, [&rig, guildID]
+    { SW_EXPECT_TRUE( rig.run( GuildOperation::Apply, kOtherApplicant, kInvalidAccountID, "", guildID )._result == SocialResult::Ok ); } );
+
+    GuildRequest apply;
+    apply._operation = GuildOperation::Apply;
+    apply._accountID = kOtherApplicant + 1;
+    apply._guildID   = guildID;
+    apply._nowMs     = UnixMilliseconds{ kNowMs };
+    SW_EXPECT_TRUE( runOnSecondServer( connection, apply )._result == SocialResult::PendingLimit );
+    SW_EXPECT_EQUAL( static_cast<int32>( GuildLimit::kMaxApplication ), static_cast<int32>( rig._database.countRecords( hashed_string( "social_guild_application" ) ) ) ); // 목록 응답은 상한에서 잘리므로 표를 센다
 }

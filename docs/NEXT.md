@@ -92,9 +92,8 @@
 
 ## 7. 감사 열린 항목
 
-상용 대비 감사(2026-11-12, 기준 main `e480b07498` — 줄 번호의 기준. 원문 · 닫힌 항목은 `git show e480b07498:docs/CommercialGapAudit.md`). 순서: 결함 · 계약 줄([5] · [14] · [35])을 먼저, 성능 줄은 측정이 문턱을 넘은 것만. 줄 앞은 감사 ID 와 옛 "다음 할 일" 번호 `[n]`(코드 주석 · DesignBacklog 제목이 가리킨다 — 다시 매기지 않는다). 온라인 줄은 `security-and-hardening`, 외부 API 주장은 기억 기준이라 context7 로 대조한다.
+상용 대비 감사(2026-11-12, 기준 main `e480b07498` — 줄 번호의 기준. 원문 · 닫힌 항목은 `git show e480b07498:docs/CommercialGapAudit.md`). 순서: 결함 · 계약 줄([14] · [35])을 먼저, 성능 줄은 측정이 문턱을 넘은 것만. 줄 앞은 감사 ID 와 옛 "다음 할 일" 번호 `[n]`(코드 주석 · DesignBacklog 제목이 가리킨다 — 다시 매기지 않는다). 온라인 줄은 `security-and-hardening`, 외부 API 주장은 기억 기준이라 context7 로 대조한다.
 
-- **[5] 읽은 것을 커밋 조건으로** — Admin · Mailbox · Guild 저장 로직이 판단에 쓴 읽기를 커밋 조건으로 거는지 점검(`ServiceReadSetConnection`, 경제 키트는 영수증 레코드 하나 — O-1). 상용: 엔진엔 계정 서버가 없다(EOS · UGS 관리형). 확인: `AdminStoreLogicTest` · `MailboxStoreLogicTest` · `GuildServiceTest` 의 "읽은 뒤 커밋 전에" 케이스.
 - **P-4 [14] Android IME 조합** — Android 가 미확정 글을 못 받는다(웹 조합 · 소프트 키보드는 섰다). 상용: 유니티 `TouchScreenKeyboard`, Godot `virtual_keyboard_show`. 제안 GameTextInput. 확인: `WindowTextInputTest` Android 조합 케이스, `web-check` 의 `compositionend` 화면.
 - **C-9 [20] 컨테이너 복잡도** — `unordered_map.h:645` `reserve` 가 밀집 배열을 예약하지 않고 `map.h:308` 범위 `insert` 가 O(n²). 상용: `TMap::Reserve` · `TSortedMap`. 확인: `ContainerBenchTest` 10 만 키(꺼 둔 벤치) — 문턱을 넘은 것만(AC-2).
 - **O-12 [30] 부하 봇이 원장 경로를 치지 않는다** — `LoadBotScenario.cpp` 에 구매 · 영수증 · 우편 · 거래 · 길드 창고 · 점수가 없고 `Shooter3D.online.json` `_bLightPasswordHash: true`. 상용: k6 · Gatling 도착률 실행기. 확인: `Shooter3D.external.json`(PostgreSQL) Conflict 재시도율 · `kBusy` 비율, 끝에 `LedgerAuditReport` 균형.
