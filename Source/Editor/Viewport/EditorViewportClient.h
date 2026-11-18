@@ -87,6 +87,11 @@ namespace sw::editor
         bool isMaximized() const { return _bMaximized == SW_TRUE; }
         /** @brief 마우스 아래의 오브젝트 id 입니다. 호버 강조에 쓰며, 없거나 막혀 있으면 0 입니다. */
         uint64 getHoveredObjectID() const { return _picker.getHoveredObjectID(); }
+        /**
+         * @brief 지난 그리기에서 오브젝트 @p objectID 의 아이콘 배지에 넘긴 글리프의 코드 포인트입니다(감시 값 `Editor.BillboardIcon`).
+         *        그리지 않았거나 글이 한 글자가 아니면(무효 메모리를 읽은 쓰레기 문자열) 0 입니다.
+         */
+        [[nodiscard]] uint32 findDrawnBillboardGlyph( uint64 objectID ) const;
 
     private:
         /** @brief 비행 중이 아닐 때의 단축키를 처리합니다. W, E, R 은 기즈모 모드(Q 와 Space 는 순환), 키패드는 직교 보기, Shift+Space 는 최대화입니다. */
@@ -97,28 +102,29 @@ namespace sw::editor
          * @brief 우클릭 메뉴를 엽니다. 캔버스를 오른쪽 단추로 누르고 끌지 않고 놓았을 때, 등록된 Viewport 항목이 있을 때만 엽니다.
          * @details 오른쪽 단추를 끌면 비행 · 궤도 줌이므로 메뉴를 열지 않는다(언리얼 뷰포트와 같다). 연 순간의 맞은 오브젝트와 바닥 교점을 담아 둔다.
          */
-        void processContextMenu( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered );
+        void processContextMenu( const EditorViewportPickInput& pickInput, bool bCanvasHovered );
 
     private:
-        ViewportToolbarSettings      _toolbarSettings;
-        ViewportToolbarState         _toolbarState;             ///< 오버레이 바가 이번 프레임에 보일 편집 상태 값(`drawOverlays` 가 모은다)
-        float32                      _canvasHeight;             ///< 지난 `draw` 의 캔버스 높이(픽셀). 아직 그리지 않았으면 0 이고 팬은 쉰다
-        EditorViewportCamera         _camera;                   ///< 씬 뷰 카메라 값과 비행 · 궤도 · 북마크 입력
-        EditorViewportPicker         _picker;                   ///< 클릭 선택과 호버
-        EditorViewportGizmo          _gizmo;                    ///< 트랜스폼 기즈모(View — 스냅샷을 그리고 명령을 낸다)
-        EditorGizmoEdit              _gizmoEdit;                ///< 기즈모 명령의 적용과 그 되돌리기(Model)
-        EditorGizmoViewState         _gizmoState;               ///< 기즈모가 이번 프레임에 그릴 대상 스냅샷
-        EditorViewportCanvasOverlay  _canvasOverlay;            ///< 격자, 자, 방향 큐브
-        EditorViewportOverlays       _overlays;                 ///< 씬 뷰 위의 오버레이 바 목록
-        EditorDebugHUDModel          _hudModel;                 ///< HUD 박스의 섹션 줄(4 Hz 로 다시 적는다)
-        EditorDebugHUDView           _hudView;                  ///< 오른쪽 위의 HUD 박스(그 줄을 그린다)
-        EditorVisualizerStats        _visualizerStats;          ///< 시각화가 마지막으로 그린 양(그리기 인자로 시각화에 넘긴다)
-        EditorVisualizerDrawList     _visualizerDrawList;       ///< 이번 프레임에 모은 시각화 도형 값(모으기 → 그리기, 프레임마다 다시 쓴다)
-        EditorViewportAssetPlacement _assetPlacement;           ///< 끌어 온 애셋의 고스트 · 표면 배치(끄는 동안 정적 물리 사본을 든다)
-        uint64                       _contextMenuObjectID;      ///< 우클릭 메뉴를 연 순간 맞은 오브젝트 id. 0 이면 빈 곳. 메뉴가 열린 동안 프레임마다 다시 찾는다
-        float3                       _contextMenuWorldPosition; ///< 우클릭 메뉴를 연 순간의 바닥 평면 교점
-        uint8                        _bContextMenuHasWorldPosition : 1;
-        uint8                        _bMaximized                   : 1;
-        [[maybe_unused]] uint8       _reserved                     : 7;
+        ViewportToolbarSettings                 _toolbarSettings;
+        ViewportToolbarState                    _toolbarState;             ///< 오버레이 바가 이번 프레임에 보일 편집 상태 값(`drawOverlays` 가 모은다)
+        float32                                 _canvasHeight;             ///< 지난 `draw` 의 캔버스 높이(픽셀). 아직 그리지 않았으면 0 이고 팬은 쉰다
+        EditorViewportCamera                    _camera;                   ///< 씬 뷰 카메라 값과 비행 · 궤도 · 북마크 입력
+        EditorViewportPicker                    _picker;                   ///< 클릭 선택과 호버
+        EditorViewportGizmo                     _gizmo;                    ///< 트랜스폼 기즈모(View — 스냅샷을 그리고 명령을 낸다)
+        EditorGizmoEdit                         _gizmoEdit;                ///< 기즈모 명령의 적용과 그 되돌리기(Model)
+        EditorGizmoViewState                    _gizmoState;               ///< 기즈모가 이번 프레임에 그릴 대상 스냅샷
+        EditorViewportCanvasOverlay             _canvasOverlay;            ///< 격자, 자, 방향 큐브
+        EditorViewportOverlays                  _overlays;                 ///< 씬 뷰 위의 오버레이 바 목록
+        EditorDebugHUDModel                     _hudModel;                 ///< HUD 박스의 섹션 줄(4 Hz 로 다시 적는다)
+        EditorDebugHUDView                      _hudView;                  ///< 오른쪽 위의 HUD 박스(그 줄을 그린다)
+        EditorVisualizerStats                   _visualizerStats;          ///< 시각화가 마지막으로 그린 양(그리기 인자로 시각화에 넘긴다)
+        EditorVisualizerDrawList                _visualizerDrawList;       ///< 이번 프레임에 모은 시각화 도형 값(모으기 → 그리기, 프레임마다 다시 쓴다)
+        vector<EditorVisualizerScreenBillboard> _listScreenBillboard;      ///< 이번 프레임에 그은 아이콘 배지의 화면 자리(피커가 레이 피킹보다 먼저 본다)
+        EditorViewportAssetPlacement            _assetPlacement;           ///< 끌어 온 애셋의 고스트 · 표면 배치(끄는 동안 정적 물리 사본을 든다)
+        uint64                                  _contextMenuObjectID;      ///< 우클릭 메뉴를 연 순간 맞은 오브젝트 id. 0 이면 빈 곳. 메뉴가 열린 동안 프레임마다 다시 찾는다
+        float3                                  _contextMenuWorldPosition; ///< 우클릭 메뉴를 연 순간의 바닥 평면 교점
+        uint8                                   _bContextMenuHasWorldPosition : 1;
+        uint8                                   _bMaximized                   : 1;
+        [[maybe_unused]] uint8                  _reserved                     : 7;
     };
 } // namespace sw::editor

@@ -11,6 +11,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 
 #include "Engine/Physics/PhysicsDebugDraw.h"
 
@@ -70,6 +71,29 @@ namespace sw::editor
         const utf8*               _pThemeKey{ nullptr }; ///< `ThemeToken` 역할의 테마 토큰 이름(문자열 리터럴)
         bool                      _bShadow{ true };      ///< NOLINT(sw-bool-flag): 값 집합체 — 그림자를 깔아 밝은 배경에서도 읽히게 한다(디버그 글자). 라벨은 끈다
     };
+
+    /**
+     * @brief 메시가 없는 컴포넌트(빛 · 카메라 · 오디오 …)의 아이콘 배지 하나입니다 — 언리얼 `UBillboardComponent` · 유니티 Gizmo 아이콘 · Godot 3D 기즈모 아이콘 자리.
+     * @details 모으는 쪽(빌보드 시각화)이 캔버스 안에 보이는 것만 오브젝트마다 하나 낸다. 그리는 쪽이 배지를 긋고 그 화면 자리를 `EditorVisualizerScreenBillboard` 로 남겨 클릭 선택이 쓴다.
+     */
+    struct EditorVisualizerBillboard
+    {
+        uint64                 _objectID{ 0 };
+        uint64                 _componentID{ 0 };
+        EditorComponentIconRow _row{};      ///< 값으로 보관한다 — `findRow` 는 값을 돌려주므로 그 주소는 모으기가 끝나면 무효다
+        float3                 _position{}; ///< 배지 가운데(월드)
+        string                 _name;       ///< 오브젝트 이름(셀프테스트 마크 `viewport.billboard.<이름>`)
+    };
+
+    /** @brief 그리는 쪽이 이번 프레임에 그은 배지의 화면 자리입니다. 피커가 레이 피킹보다 먼저 본다(배지가 맞으면 그 컴포넌트를 고른다). */
+    struct EditorVisualizerScreenBillboard
+    {
+        uint64  _objectID{ 0 };
+        uint64  _componentID{ 0 };
+        float2  _screen{};       ///< 배지 가운데(캔버스 화면 좌표)
+        float32 _radius{ 0.0f }; ///< 배지 반지름(픽셀 — DPI 배율을 먹였다)
+        uint32  _codePoint{ 0 }; ///< 넘긴 글리프의 코드 포인트. 글이 한 글자가 아니면(무효 메모리를 읽은 쓰레기 문자열) 0 — 감시 값 `Editor.BillboardIcon`
+    };
 } // namespace sw::editor
 
 namespace sw::editor
@@ -83,9 +107,10 @@ namespace sw::editor
         /** @brief 꺾은선이 선분을 내는 가장 적은 점 수입니다. */
         static constexpr uint32 kMinLoopPointCount = 2;
 
-        vector<EditorVisualizerLine> _listLine;
-        vector<EditorVisualizerText> _listText;
-        bool                         _bDebugDrawGathered{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 디버그 드로우 시각화가 이번 프레임에 돌았다(그리는 쪽이 프레임 번호를 적는다)
+        vector<EditorVisualizerLine>      _listLine;
+        vector<EditorVisualizerText>      _listText;
+        vector<EditorVisualizerBillboard> _listBillboard;
+        bool                              _bDebugDrawGathered{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 디버그 드로우 시각화가 이번 프레임에 돌았다(그리는 쪽이 프레임 번호를 적는다)
 
         /** @brief 목록을 비웁니다(용량은 남긴다). */
         void clear();

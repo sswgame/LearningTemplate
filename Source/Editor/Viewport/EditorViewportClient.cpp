@@ -58,15 +58,6 @@ namespace sw::editor
         {
             /** @brief 오른쪽 단추를 누른 동안 켜는 비행 레이어입니다(`editor.input.xml`). */
             static constexpr string_view kFlyLayer = "Editor.Viewport.Fly";
-
-            /** @brief 선택 밖 오브젝트 위에서 메뉴를 열면 그것만 고릅니다(R2). */
-            static void selectOnlyObject( uint64 objectID )
-            {
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByID( objectID ) : nullptr;
-                if ( pObject != nullptr )
-                    editor::getMainSceneSelection().selectObject( pObject, SelectionMode::Replace );
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -88,6 +79,7 @@ namespace sw::editor
         , _hudView{}
         , _visualizerStats{}
         , _visualizerDrawList{}
+        , _listScreenBillboard{}
         , _assetPlacement{}
         , _contextMenuObjectID{ 0 }
         , _contextMenuWorldPosition{}
@@ -104,6 +96,16 @@ namespace sw::editor
         _toolbarSettings._bShowHUD                   = preferences._bShowHUD;
         _toolbarSettings._bShowGrid                  = preferences._bShowGrid;
         _toolbarSettings._bShowOrientationCube       = preferences._bShowOrientationCube;
+    }
+
+    uint32 EditorViewportClient::findDrawnBillboardGlyph( uint64 objectID ) const
+    {
+        for ( const EditorVisualizerScreenBillboard& badge : _listScreenBillboard )
+        {
+            if ( badge._objectID == objectID )
+                return badge._codePoint;
+        }
+        return 0;
     }
 
     void EditorViewportClient::resetCameraToDefault()
@@ -262,20 +264,27 @@ namespace sw::editor
             EditorViewportMouseClaim::beginFrame( static_cast<uint64>( ImGui::GetFrameCount() ) );
             // 모으기(Model, 씬을 읽는다) → 그리기(View, 값만 본다) — 언리얼 컴포넌트 비주얼라이저가 FPrimitiveDrawInterface 에 값을 넘기는 가름.
             _visualizerDrawList.gatherAll( visualizerArgs, _toolbarSettings._visualizerToggles );
-            EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerToggles, _visualizerDrawList );
+            EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerToggles, _visualizerDrawList, _listScreenBillboard );
 
             _canvasOverlay.processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj, _toolbarSettings._bShowRuler );
             pCanvasDrawList->PopClipRect();
 
             // 피킹과 호버는 기즈모보다 먼저 본다. ImGuizmo::IsOver · IsUsing 은 지난 프레임에 그린 기즈모의 상태다.
-            const bool bGizmoBusy = _gizmo.isMouseOverDrawnGizmo();
-            _picker.processClick( canvasPos, canvasSize, pCamera, bCanvasClicked && ( EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed() ) == false, bGizmoBusy, _toolbarSettings );
+            const bool              bGizmoBusy = _gizmo.isMouseOverDrawnGizmo();
+            EditorViewportPickInput pickInput{};
+            pickInput._viewProj             = viewProj;
+            pickInput._canvasPos            = canvasPos;
+            pickInput._canvasSize           = canvasSize;
+            pickInput._skipObjectID         = pCamera->getOwner() != nullptr ? pCamera->getOwner()->getObjectID() : 0;
+            pickInput._pListScreenBillboard = &_listScreenBillboard;
+            pickInput._b2DMode              = _toolbarSettings._bIs2DMode;
+            _picker.processClick( pickInput, bCanvasClicked && ( EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed() ) == false, bGizmoBusy );
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
-            _picker.processMarquee( canvasPos, canvasSize, pCamera, pCanvasDrawList );
+            _picker.processMarquee( pickInput, pCanvasDrawList );
             pCanvasDrawList->PopClipRect();
-            _picker.processHover( canvasPos, canvasSize, pCamera, bCanvasHovered, bGizmoBusy, _toolbarSettings );
+            _picker.processHover( pickInput, bCanvasHovered, bGizmoBusy );
             SelectionBoundsVisualizer::setHoveredObjectID( _picker.getHoveredObjectID() );
-            processContextMenu( canvasPos, canvasSize, pCamera, bCanvasHovered );
+            processContextMenu( pickInput, bCanvasHovered );
 
             {
                 GameObjectManager* pObjectManager = editor::getActiveObjectManager();
@@ -311,7 +320,7 @@ namespace sw::editor
         }
     }
 
-    void EditorViewportClient::processContextMenu( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered )
+    void EditorViewportClient::processContextMenu( const EditorViewportPickInput& pickInput, bool bCanvasHovered )
     {
         // 오른쪽 단추를 끌기 문턱 안에서 떼고 그 누름 동안 날지 않았으면 메뉴다(R1). 끌었거나 WASD 로 날았으면 비행이었다 — 비행과 메뉴는 이 캔버스가 가른다.
         // 오브젝트 위면 오브젝트 메뉴(계층 창과 같은 명령 — R4), 빈 곳이면 뷰포트 메뉴(여기 만들기 · 붙여 넣기 — 확장이 없어도 열린다).
@@ -320,19 +329,15 @@ namespace sw::editor
         const bool               bOpen    = bCanvasHovered && bClicked && pointer.hasModifier( ModifierKey::Alt ) == false;
         if ( bOpen )
         {
-            GameObject* pObject    = nullptr;
-            Component*  pComponent = nullptr;
-            _contextMenuObjectID   = _picker.findObjectUnderMouse( canvasPos, canvasSize, pCamera, _toolbarSettings, pObject, pComponent ) ? pObject->getObjectID() : 0;
+            EditorViewportPickHit hit{};
+            _contextMenuObjectID = EditorViewportPicker::findObjectUnderMouse( pickInput, hit ) ? hit._objectID : 0;
 
-            const float32 aspect = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
-            Ray           mouseRay{};
-            const uint32  planeAxis       = _toolbarSettings._bIs2DMode ? 2u : 1u; // 애셋 드롭과 같은 바닥: 2D 는 Z = 0, 3D 는 Y = 0
-            _bContextMenuHasWorldPosition = EditorViewportProjectionUtil::makeMouseRay( pCamera->getViewProjectionMatrix( aspect ).invert(), canvasPos, canvasSize, mouseRay ) &&
+            Ray          mouseRay{};
+            const uint32 planeAxis        = _toolbarSettings._bIs2DMode ? 2u : 1u; // 애셋 드롭과 같은 바닥: 2D 는 Z = 0, 3D 는 Y = 0
+            _bContextMenuHasWorldPosition = EditorViewportProjectionUtil::makeMouseRay( pickInput._viewProj.invert(), pickInput._canvasPos, pickInput._canvasSize, mouseRay ) &&
                                             EditorViewportRayPick::rayHitsAxisPlane( mouseRay, planeAxis, _contextMenuWorldPosition );
         }
 
-        vector<GameObject*> listSelected;
-        editor::getMainSceneSelection().getSelectedObjects( listSelected );
         EditorContextMenuSubject subject{};
         subject._pPopupID           = _contextMenuObjectID != 0 ? "##ViewportObjectMenu" : "##ViewportContextMenu";
         subject._kind               = _contextMenuObjectID != 0 ? EditorCommandTargetKind::GameObject : EditorCommandTargetKind::Viewport;
@@ -341,11 +346,8 @@ namespace sw::editor
         subject._bHasWorldPosition  = _bContextMenuHasWorldPosition;
         subject._bCallerDecidesOpen = true;
         subject._bOpenRequested     = bOpen;
-        for ( const GameObject* pSelected : listSelected )
-        {
-            subject._listSelectedID.push_back( pSelected->getObjectID() );
-        }
-        subject._selectOnly = &EditorViewportClientInternal::selectOnlyObject;
+        EditorViewportPick::getSelectedIDs( subject._listSelectedID );
+        subject._selectOnly = &EditorViewportPick::selectOnly;
         (void)EditorInputGUI::drawContextMenu( subject ); // 열렸는지는 쓰지 않는다
     }
 } // namespace sw::editor

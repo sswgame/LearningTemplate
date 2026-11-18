@@ -29,6 +29,7 @@ namespace sw::editor
 {
     struct EditorVisualizerDrawList;
     struct EditorVisualizerLine;
+    struct EditorVisualizerScreenBillboard;
 
     /** @brief 시각화 함수가 그리는 데 필요한 프레임 정보입니다. */
     struct EditorViewportVisualizerArgs
@@ -96,9 +97,11 @@ namespace sw::editor
         static const EditorVisualizerRegistration& getAt( uint32 index );
         /**
          * @brief 모은 도형 값(@p drawList, `EditorVisualizerDrawList::gatherAll`)을 그리고, @p toggles 에서 켜진 도구(`_pDraw`)를 부릅니다.
-         * @details 도형을 그릴 때 화면에 남은 선 · 글자 수를 `args._pStats` 에 적는다(통계는 매 프레임 다시 센다).
+         * @details 도형을 그릴 때 화면에 남은 선 · 글자 수를 `args._pStats` 에 적는다(통계는 매 프레임 다시 센다). 아이콘 배지는 그은 화면 자리를 @p outListScreenBillboard 에 남긴다(먼저 비운다) —
+         *          클릭 선택(`EditorViewportPicker`)이 그 목록으로 배지를 집는다.
          */
-        static void drawAll( const EditorViewportVisualizerArgs& args, const EditorVisualizerToggles& toggles, const EditorVisualizerDrawList& drawList );
+        static void drawAll( const EditorViewportVisualizerArgs& args, const EditorVisualizerToggles& toggles, const EditorVisualizerDrawList& drawList,
+                             vector<EditorVisualizerScreenBillboard>& outListScreenBillboard );
         /**
          * @brief 월드 선분 값들을 캔버스에 긋습니다(근평면에서 잘라 투영, 테마 색 역할을 푼다). 그린 선분 수를 돌려준다(다 잘린 것은 빼고).
          * @details 미리보기 패널처럼 시각화 등록 밖에서 모은 선(소켓 축 · 관통 점 …)을 같은 규칙으로 그릴 때 쓴다.
@@ -122,3 +125,7 @@ namespace sw::editor
 #define SW_EDITOR_VISUALIZER( name, pID, order, pIcon, pToggleLabel, pTooltip, bDefaultOn, pDraw )                                    \
     SW_EDITOR_REGISTER( ::sw::editor::EditorVisualizerRegistration, Visualizer_##name, { pID, order }, pIcon, pToggleLabel, pTooltip, \
                         bDefaultOn, pDraw )
+/** @brief 모으기 함수(`_pGather`)가 있는 시각화를 등록합니다. 앞 인자는 `SW_EDITOR_VISUALIZER` 와 같고, @p pDraw 는 화면 도구가 없으면 nullptr 입니다. */
+#define SW_EDITOR_VISUALIZER_GATHER( name, pID, order, pIcon, pToggleLabel, pTooltip, bDefaultOn, pDraw, pGather )                    \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorVisualizerRegistration, Visualizer_##name, { pID, order }, pIcon, pToggleLabel, pTooltip, \
+                        bDefaultOn, pDraw, pGather )

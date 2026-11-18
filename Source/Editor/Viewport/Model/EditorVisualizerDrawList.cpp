@@ -13,6 +13,7 @@ namespace sw::editor
     {
         _listLine.clear();
         _listText.clear();
+        _listBillboard.clear();
         _bDebugDrawGathered = false;
     }
 

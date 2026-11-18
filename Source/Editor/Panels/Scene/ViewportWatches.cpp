@@ -14,7 +14,6 @@
 #include "Editor/Panels/Scene/Model/SceneViewModel.h"
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
-#include "Editor/Viewport/EditorViewportBillboardItem.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorGridLevel.h"
 #include "Editor/Viewport/Model/EditorViewportOverlayLayout.h"
@@ -268,10 +267,11 @@ namespace sw::editor
         /** @brief `-gv_editorWatchObject` 이름의 오브젝트에 씬 뷰가 지난 그리기에서 넘긴 빌보드 글리프의 코드 포인트입니다. 쓰레기 문자열이면 0 입니다. */
         [[nodiscard]] bool readBillboardIcon( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const GameObject* pObject = findWatchedObject();
-            if ( pObject == nullptr )
+            const GameObject*           pObject = findWatchedObject();
+            const EditorViewportClient* pClient = findSceneViewClient();
+            if ( pObject == nullptr || pClient == nullptr )
                 return false;
-            outValue = static_cast<float64>( EditorViewportBillboardItem::findDrawnGlyph( *pObject ) );
+            outValue = static_cast<float64>( pClient->findDrawnBillboardGlyph( pObject->getObjectID() ) );
             return true;
         }
 
