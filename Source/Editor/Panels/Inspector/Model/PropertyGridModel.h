@@ -22,6 +22,7 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Panels/Inspector/Model/InspectorEditRecorder.h"
 #include "Editor/Panels/Inspector/Model/InspectorLayoutCache.h"
+#include "Editor/Panels/Inspector/Model/PropertyEditRequest.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 
 #include "Engine/Reflection/TextAddress.h"
@@ -72,7 +73,7 @@ namespace sw::editor
         uint64                                _objectID{ 0 };                          ///< 씬 대상의 오브젝트 id(되돌리기의 주인)
         uint64                                _componentID{ 0 };                       ///< 씬 대상의 컴포넌트 id. 0 이면 오브젝트 자신의 프로퍼티다
         EditorPropertyGridScope               _scope{ EditorPropertyGridScope::None }; ///< 오브젝트를 찾을 씬
-        Delegate<void( const PropertyInfo& )> _onEdited;                               ///< 씬 밖 객체(환경설정, 문서)의 변경을 받는 델리게이트. 비어 있으면 씬 대상만 받는다
+        Delegate<void( const PropertyInfo& )> _onEdited;                               ///< 씬 밖 객체(환경설정, 문서)의 변경을 받는 델리게이트. 씬 대상은 부르지 않는다(게임 단계 적용이 알린다)
         Delegate<bool( const PropertyInfo& )> _isMixed;                                ///< 다중 선택에서 값이 오브젝트마다 다르면 true 이다. 비어 있으면 혼합이 없다
         Delegate<void( vector<Component*>& )> _collectEditTargets;                     ///< 다중 선택에서 편집이 닿는 컴포넌트 전부(주 대상 포함 — 되돌리기 대상). 비어 있으면 주 대상 하나다
 
@@ -158,12 +159,14 @@ namespace sw::editor
         void toggleFavorite( string_view favoriteKey );
 
         // ------------------------------------------------------------------------------
-        // 명령 — 값을 바꾸는 한 길. 행 번호로 받는다. 묶은 대상에 알리고(`onPropertyChanged` · `_onEdited` — 자식 행은 깊이 0 조상 프로퍼티로),
-        // 씬 대상이면 쓰기 직전에 편집 구간을 연다(`PropertyEditSpan` — 대상마다 그 프로퍼티의 값 글만 찍는다). 구간은 위젯이 풀리면 한 단계로 오른다
+        // 명령 — 값을 바꾸는 한 길. 행 번호로 받아 편집 요청(`PropertyEditRequest` — 경로 · 종류 · 새 값)으로 바꾼다. 씬 대상은 요청을 게임 단계에 넘기고
+        // (UI 프레임은 씬 메모리에 쓰지 않는다 — 적용 · 알림은 `EditorCommandRegistry::requestSceneEdit` 의 실행이 한다), 넘기기 전에 편집 구간을 연다
+        // (`PropertyEditSpan` — 대상마다 그 프로퍼티의 값 글만 찍는다). 구간은 위젯이 풀리면 한 단계로 오른다. 씬 밖 대상은 바로 적용하고 `_onEdited` 로 알린다
         // ------------------------------------------------------------------------------
         /**
          * @brief 내장 값 행 @p rowID 에 위젯이 고친 사본 @p value 를 씁니다(`Builtin` 은 그 C++ 타입, `BitField` 는 bool). 끄는 동안 프레임마다 불린다.
          * @details 첫 쓰기가 그 행의 편집 구간을 열고 끄는 동안의 쓰기는 그 구간을 잇는다 — 위젯이 풀린 프레임의 마감이 한 단계로 올린다(`PropertyEditSpanSet`).
+         *          끄는 동안의 값은 프레임마다 요청으로 적용돼 뷰포트에 바로 보이고(언리얼 `InteractiveChange`), 되돌리기는 놓을 때 한 단계다.
          */
         void setRowValue( uint32 rowID, const TaskValue& value );
         /** @brief 숫자 행 @p rowID 에 저장 단위 값 @p storedValue 를 허용 범위(`Min` · `Max`)로 자른 뒤 씁니다. 되돌리기는 `setRowValue` 와 같다. */
@@ -199,14 +202,15 @@ namespace sw::editor
         /**
          * @brief 묶은 대상의 FUNCTION @p method 를 호출하고 반환값 글을 `getLastInvokeResult` 에 둡니다. 인자 없는 Run 단추와 Invoke 단추가 같은 길을 씁니다.
          * @details 주인 오브젝트가 있으면 호출을 오브젝트 편집 하나로 감싼다 — 바뀐 것이 있으면 되돌리기 한 단계와 씬 dirty, 없으면 아무것도 남기지 않는다.
-         *          Play 중에는 기록 없이 호출한다(`InspectorObjectEdit::applyObjectEdit` 와 같은 규칙).
+         *          Play 중에는 기록 없이 호출한다(`InspectorObjectEdit::applyObjectEdit` 와 같은 규칙). 씬 대상의 호출은 게임 단계가 한다(쓰기 명령과 같은 줄 — 결과 글은
+         *          같은 프레임의 게임 단계 뒤에 오른다). 씬 밖 대상은 바로 부른다.
          */
         void invokeMethod( const FunctionInfo& method, const TaskArgs& args );
         /** @brief 마지막으로 부른 메서드의 반환값 글입니다. 부른 적이 없으면 빈 글입니다. */
-        const utf8* getLastInvokeResult() const { return _lastInvokeResult.c_str(); }
+        const utf8* getLastInvokeResult() const { return _pLastInvokeResult->c_str(); }
         /** @brief 묶은 대상의 이벤트 @p event 에 받는 쪽이 걸려 있으면 true 입니다. */
         [[nodiscard]] bool isEventBound( const EventInfo& event ) const;
-        /** @brief 묶은 대상의 이벤트 @p event 를 인자 없이 방송합니다. */
+        /** @brief 묶은 대상의 이벤트 @p event 를 인자 없이 방송합니다. 씬 대상은 게임 단계가 이벤트 이름으로 다시 찾아 방송한다. */
         void broadcastEvent( const EventInfo& event );
 
         // ------------------------------------------------------------------------------
@@ -232,7 +236,10 @@ namespace sw::editor
          *        구간을 잇고, 처음 활성인 프레임에는 그 컴포넌트 프로퍼티 전부를 찍어 엽니다(@p label 은 되돌리기 이름의 머리). 플레이 중이거나 대상이 없으면 아무것도 하지 않는다.
          */
         void trackComponentRegion( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, bool bActive, string_view label );
-        /** @brief 프레임 끝: 닫힌 구간(풀린 위젯 · 한 번 쓰기 · 그려지지 않은 위젯)을 되돌리기에 남깁니다. 그리드를 쓰는 패널이 그리기를 마친 뒤 한 번 부른다. */
+        /**
+         * @brief 프레임 끝: 닫힌 구간(풀린 위젯 · 한 번 쓰기 · 그려지지 않은 위젯)을 되돌리기에 남깁니다. 그리드를 쓰는 패널이 그리기를 마친 뒤 한 번 부른다.
+         * @details 남기기도 게임 단계에 넘긴다 — 이번 프레임의 쓰기 요청 뒤에 서므로 쓰기가 적용된 값과 견준다.
+         */
         void endFrame();
 
         // ------------------------------------------------------------------------------
@@ -249,11 +256,14 @@ namespace sw::editor
         /** @brief 행 표의 한 줄입니다 — 값 행이 가리키는 값 자리. 이 표만 인스턴스 주소를 든다. */
         struct RowBinding
         {
-            MutableObjectAddress _instance{ nullptr }; ///< 프로퍼티를 가진 객체(원소 · 맵 값은 그 값 자리 — 원소 프로퍼티의 오프셋이 0 이다)
-            const PropertyInfo*  _pProp{ nullptr };    ///< 프로퍼티(원소 프로퍼티는 `_listElementProp` 의 것). 카테고리 머리 · 화면 밖 행은 nullptr
-            uint64               _key{ 0 };            ///< `PropertyValueRow::_key`
-            uint32               _rootRowID{ 0 };      ///< 깊이 0 조상 행 — 알림은 그 프로퍼티로 한다
-            uint8                _bDefaultOpen{ 0 };   ///< 펼침 상태를 적지 않았을 때 펼쳐져 있다(카테고리 머리)
+            MutableObjectAddress _instance{ nullptr };             ///< 프로퍼티를 가진 객체(원소 · 맵 값은 그 값 자리 — 원소 프로퍼티의 오프셋이 0 이다)
+            const PropertyInfo*  _pProp{ nullptr };                ///< 프로퍼티(원소 프로퍼티는 `_listElementProp` 의 것). 카테고리 머리 · 화면 밖 행은 nullptr
+            uint64               _key{ 0 };                        ///< `PropertyValueRow::_key`
+            uint32               _rootRowID{ 0 };                  ///< 깊이 0 조상 행 — 알림은 그 프로퍼티로 한다
+            uint32               _parentRowID{ 0 };                ///< 부모 행. 깊이 0 행은 자신이다 — 편집 경로(`buildEditPath`)가 이것으로 올라간다
+            uint32               _ordinal{ 0 };                    ///< 원소 · 맵 항목의 자리(경로 마디)
+            PropertyRowChild     _child{ PropertyRowChild::None }; ///< 부모 아래 갈래(경로 마디의 종류). None 이고 부모가 있으면 값 자리가 부모와 같다(키 원소)
+            uint8                _bDefaultOpen{ 0 };               ///< 펼침 상태를 적지 않았을 때 펼쳐져 있다(카테고리 머리)
         };
 
         /** @brief 행 @p rowID 의 행 표 줄입니다. 없으면 nullptr 입니다. */
@@ -301,33 +311,42 @@ namespace sw::editor
          */
         void notifyPropertyEdited( const PropertyInfo& prop );
         /**
-         * @brief 행 @p binding 에 쓰기 **직전**입니다 — 씬 대상이면 그 깊이 0 프로퍼티의 편집 구간을 잇거나 엽니다(@p label 은 되돌리기 이름, 비면 프로퍼티 표시 이름).
+         * @brief 행 @p binding 의 쓰기 요청을 내기 **직전**입니다 — 씬 대상이면 그 깊이 0 프로퍼티의 편집 구간을 잇거나 엽니다(@p label 은 되돌리기 이름, 비면 프로퍼티 표시 이름).
          * @details 값을 쓰는 명령은 모두 이것을 먼저 부른다("명령 한 길"). 씬 밖 대상 · 플레이 중에는 아무것도 하지 않는다.
          */
         void ensureEditSpan( const RowBinding& binding, string_view label );
-        /** @brief 컨테이너 행 @p rowID 의 편집 하나: 컨테이너 자리 · 프로퍼티로 @p edit 를 편집 구간 안에서 부르고 알립니다. 없는 행이면 아무것도 하지 않습니다. */
-        template <typename EditFunc>
-        void applyContainerEdit( uint32 rowID, string_view undoLabel, EditFunc&& edit );
+        /** @brief 행 @p rowID 의 값 자리까지의 경로(깊이 0 프로퍼티 + 필드 · 원소 · 맵 항목 마디)를 @p outPath 에 채웁니다. 값 행이 아니면 false 입니다. */
+        bool buildEditPath( uint32 rowID, PropertyEditPath& outPath ) const;
+        /**
+         * @brief 행 @p rowID 의 편집 요청 @p request 를 냅니다(경로는 여기서 채운다) — 명령의 한 길이다. 씬 대상은 편집 구간을 열고(@p undoLabel 은 되돌리기 이름,
+         *        비면 프로퍼티 표시 이름) 게임 단계에 넘기며, 씬 밖 대상은 바로 적용하고 알린다.
+         */
+        void submitEdit( uint32 rowID, PropertyEditRequest&& request, string_view undoLabel );
+        /** @brief 컨테이너 행 @p rowID 의 편집 하나(종류 @p kind, 자리 @p ordinal, 글 @p text)를 냅니다. 컨테이너 행이 아니면 아무것도 하지 않습니다. */
+        void submitContainerEdit( uint32 rowID, PropertyEditKind kind, uint32 ordinal, string_view text, string_view undoLabel );
 
     private:
-        Component*                              _pComponent;         ///< 묶은 컴포넌트 대상. `onPropertyChanged` 를 받는다
-        GameObject*                             _pObject;            ///< 묶은 대상의 주인 오브젝트(되돌리기의 주인). 컴포넌트가 없으면 `onPropertyChanged` 도 받는다
-        void*                                   _pInstance;          ///< 묶은 대상의 인스턴스
-        const TypeInfo*                         _pType;              ///< 묶은 대상의 타입
-        Delegate<void( const PropertyInfo& )>   _onEdited;           ///< 묶은 대상의 `_onEdited`
-        Delegate<bool( const PropertyInfo& )>   _isMixed;            ///< 묶은 대상의 `_isMixed`
-        Delegate<void( vector<Component*>& )>   _collectEditTargets; ///< 묶은 대상의 `_collectEditTargets`
-        PropertyEditSpanSet                     _editSpans;          ///< 이 그리드의 편집 구간(인스펙터 창마다 따로 닫힌다)
-        InspectorFavorites*                     _pFavorites;         ///< 즐겨찾기 집합. nullptr 이면 즐겨찾기를 쓰지 않는다
-        InspectorLayoutCache                    _layoutCache;        ///< 타입 · 확장이 그린 이름 · 검색 글 · 레지스트리 세대마다 지은 묶음과 프로퍼티별 표시 정보
-        InspectorPropertyDisplay                _scratchDisplay;     ///< 묶음 밖 임시 프로퍼티(컨테이너 원소)의 표시 정보 — 주소가 매번 달라 캐시하지 않고 부를 때마다 다시 채운다
-        vector<InspectorPropertyGroup>          _listFilteredGroup;  ///< 즐겨찾기 · 바뀐 것만 보기로 거른 묶음 사본(저장 공간을 다시 쓴다)
-        vector<RowBinding>                      _listBinding;        ///< 이번 `gather` 의 행 표(행 번호 → 값 자리)
-        vector<unique_ptr<PropertyInfo>>        _listElementProp;    ///< 이번 `gather` 의 원소 · 맵 값 프로퍼티(행 표가 주소를 들므로 따로 할당한다)
-        unordered_map<uint64, float32>          _mapRowHeight;       ///< 행 키 → 지난번에 잰 높이
-        unordered_set<uint64>                   _setFlippedKey;      ///< 펼침 상태가 기본과 다른 행 키
-        unordered_set<uint64>                   _setReportedHandle;  ///< 선택기를 그릴 수 없다는 오류를 이미 남긴 행 키
-        uint64                                  _targetSalt;         ///< 묶은 대상의 키 씨앗(씬 대상은 범위 · id, 씬 밖 대상은 타입) — 같은 타입의 두 컴포넌트가 펼침 · 높이를 나눠 갖지 않는다
-        fixed_string<constant::buffer::kMax256> _lastInvokeResult;   ///< 마지막으로 부른 메서드의 반환값 글
+        Component*                            _pComponent;         ///< 묶은 컴포넌트 대상. `onPropertyChanged` 를 받는다
+        GameObject*                           _pObject;            ///< 묶은 대상의 주인 오브젝트(되돌리기의 주인). 컴포넌트가 없으면 `onPropertyChanged` 도 받는다
+        void*                                 _pInstance;          ///< 묶은 대상의 인스턴스
+        const TypeInfo*                       _pType;              ///< 묶은 대상의 타입
+        Delegate<void( const PropertyInfo& )> _onEdited;           ///< 묶은 대상의 `_onEdited`
+        Delegate<bool( const PropertyInfo& )> _isMixed;            ///< 묶은 대상의 `_isMixed`
+        Delegate<void( vector<Component*>& )> _collectEditTargets; ///< 묶은 대상의 `_collectEditTargets`
+        PropertyEditSpanSet                   _editSpans;          ///< 이 그리드의 편집 구간(인스펙터 창마다 따로 닫힌다)
+        InspectorFavorites*                   _pFavorites;         ///< 즐겨찾기 집합. nullptr 이면 즐겨찾기를 쓰지 않는다
+        InspectorLayoutCache                  _layoutCache;        ///< 타입 · 확장이 그린 이름 · 검색 글 · 레지스트리 세대마다 지은 묶음과 프로퍼티별 표시 정보
+        InspectorPropertyDisplay              _scratchDisplay;     ///< 묶음 밖 임시 프로퍼티(컨테이너 원소)의 표시 정보 — 주소가 매번 달라 캐시하지 않고 부를 때마다 다시 채운다
+        vector<InspectorPropertyGroup>        _listFilteredGroup;  ///< 즐겨찾기 · 바뀐 것만 보기로 거른 묶음 사본(저장 공간을 다시 쓴다)
+        vector<RowBinding>                    _listBinding;        ///< 이번 `gather` 의 행 표(행 번호 → 값 자리)
+        vector<unique_ptr<PropertyInfo>>      _listElementProp;    ///< 이번 `gather` 의 원소 · 맵 값 프로퍼티(행 표가 주소를 들므로 따로 할당한다)
+        unordered_map<uint64, float32>        _mapRowHeight;       ///< 행 키 → 지난번에 잰 높이
+        unordered_set<uint64>                 _setFlippedKey;      ///< 펼침 상태가 기본과 다른 행 키
+        unordered_set<uint64>                 _setReportedHandle;  ///< 선택기를 그릴 수 없다는 오류를 이미 남긴 행 키
+        uint64                                _targetSalt;         ///< 묶은 대상의 키 씨앗(씬 대상은 범위 · id, 씬 밖 대상은 타입) — 같은 타입의 두 컴포넌트가 펼침 · 높이를 나눠 갖지 않는다
+        uint64                                _targetObjectID;     ///< 묶은 씬 대상의 오브젝트 id(쓰기 요청이 대상을 다시 찾는 값)
+        uint64                                _targetComponentID;  ///< 묶은 씬 대상의 컴포넌트 id. 0 이면 오브젝트 자신
+        EditorPropertyGridScope               _targetScope;        ///< 묶은 씬 대상의 범위. 씬 밖 대상이면 None
+        shared_ptr<string>                    _pLastInvokeResult;  ///< 마지막으로 부른 메서드의 반환값 글 — 게임 단계의 호출이 쓰는 결과 칸이라 요청과 함께 나눠 든다(그리드가 먼저 사라져도 칸은 산다)
     };
 } // namespace sw::editor

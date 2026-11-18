@@ -5,8 +5,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 
@@ -19,6 +21,20 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct InspectorComponentEditInternal
+        {
+            /** @brief 거래가 필요 없는 컴포넌트 쓰기 @p edit(`void( Component& )`)를 요청으로 넘깁니다 — 되돌리기는 인스펙터 틀의 확장 영역 구간이 남긴다. */
+            template <typename TEdit>
+            static void requestComponentWrite( const EditorPropertyGridTarget& target, const TEdit& edit )
+            {
+                InspectorComponentEdit::requestComponentEdit( target, InspectorComponentEdit::ComponentEditDelegate::create( [edit]( Component& component, EditorTransaction& /*transaction*/ )
+                { edit( component ); } ) );
+            }
+        };
+    } // namespace
+
     const TypeInfo* InspectorComponentEdit::getCameraComponentType()
     {
         return CameraComponent::StaticType();
@@ -101,10 +117,26 @@ namespace sw::editor
         }
     }
 
-    Component* InspectorComponentEdit::findComponent( const EditorPropertyGridTarget& target )
+    const Component* InspectorComponentEdit::findComponent( const EditorPropertyGridTarget& target )
     {
-        GameObject* pObject = PropertyGridModel::findSceneObject( target._scope, target._objectID );
+        const GameObject* pObject = PropertyGridModel::findSceneObject( target._scope, target._objectID );
         return pObject != nullptr ? pObject->findComponentByID( target._componentID ) : nullptr;
+    }
+
+    void InspectorComponentEdit::requestComponentEdit( const EditorPropertyGridTarget& target, const ComponentEditDelegate& edit )
+    {
+        if ( edit.isBound() == false )
+            return;
+        const EditorPropertyGridScope scope       = target._scope;
+        const uint64                  objectID    = target._objectID;
+        const uint64                  componentID = target._componentID;
+        EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create( [scope, objectID, componentID, edit]( EditorTransaction& transaction )
+        {
+            GameObject* pObject    = PropertyGridModel::findSceneObject( scope, objectID );
+            Component*  pComponent = ( pObject != nullptr && pObject->isPendingDestroy() == false ) ? pObject->findComponentByID( componentID ) : nullptr;
+            if ( pComponent != nullptr ) // 그 사이 사라졌으면 아무것도 하지 않는다
+                edit( *pComponent, transaction );
+        } ) );
     }
 
     bool InspectorComponentEdit::gatherCamera( const EditorPropertyGridTarget& target, CameraSectionValues& outValues )
@@ -117,8 +149,8 @@ namespace sw::editor
 
     void InspectorComponentEdit::applyCamera( const EditorPropertyGridTarget& target, const CameraSectionValues& values )
     {
-        if ( Component* pComponent = findComponent( target ) )
-            applyCamera( *pComponent, values );
+        InspectorComponentEditInternal::requestComponentWrite( target, [values]( Component& component )
+        { applyCamera( component, values ); } );
     }
 
     bool InspectorComponentEdit::gatherTransform( const EditorPropertyGridTarget& target, TransformSectionValues& outValues )
@@ -131,20 +163,20 @@ namespace sw::editor
 
     void InspectorComponentEdit::setLocalPosition( const EditorPropertyGridTarget& target, const float3& position )
     {
-        if ( Component* pComponent = findComponent( target ) )
-            setLocalPosition( *pComponent, position );
+        InspectorComponentEditInternal::requestComponentWrite( target, [position]( Component& component )
+        { setLocalPosition( component, position ); } );
     }
 
     void InspectorComponentEdit::setLocalRotationDegrees( const EditorPropertyGridTarget& target, const float3& rotationDegrees )
     {
-        if ( Component* pComponent = findComponent( target ) )
-            setLocalRotationDegrees( *pComponent, rotationDegrees );
+        InspectorComponentEditInternal::requestComponentWrite( target, [rotationDegrees]( Component& component )
+        { setLocalRotationDegrees( component, rotationDegrees ); } );
     }
 
     void InspectorComponentEdit::setLocalScale( const EditorPropertyGridTarget& target, const float3& scale )
     {
-        if ( Component* pComponent = findComponent( target ) )
-            setLocalScale( *pComponent, scale );
+        InspectorComponentEditInternal::requestComponentWrite( target, [scale]( Component& component )
+        { setLocalScale( component, scale ); } );
     }
 
     void InspectorComponentEdit::collectTags( const EditorPropertyGridTarget& target, vector<string>& outListTag )

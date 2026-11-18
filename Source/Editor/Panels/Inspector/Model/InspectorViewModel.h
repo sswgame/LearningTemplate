@@ -165,12 +165,10 @@ namespace sw::editor
         void setDataLayer( uint64 objectID, string_view layerName, bool bOn );
 
         // ------------------------------------------------------------------------------
-        // 다중 선택 그리드 — 그리드 대상의 `_onEdited` · `_isMixed` 가 부른다
+        // 다중 선택 그리드 — 그리드 대상의 `_collectEditTargets` · `_isMixed` 가 부른다(값 입히기는 그리드의 편집 요청이 나머지 대상에 한다)
         // ------------------------------------------------------------------------------
         /** @brief 공통 컴포넌트 @p index 를 이번에 그리는 것으로 둡니다. `kNoMultiComponent` 이면 풉니다. */
         void setCurrentMultiComponent( uint32 index ) { _currentMultiComponent = index; }
-        /** @brief 고친 프로퍼티를 나머지 오브젝트의 같은 컴포넌트에 입힙니다. */
-        void copyEditToOthers( const PropertyInfo& prop );
         /** @brief 이번에 그리는 공통 컴포넌트의 오브젝트마다의 컴포넌트(주 선택 먼저)를 @p outListComponent 에 더합니다 — 편집 구간이 되돌리기 대상으로 찍는다. */
         void collectMultiEditTargets( vector<Component*>& outListComponent );
         /** @brief 그 프로퍼티 값이 오브젝트마다 다르면 true 입니다. */

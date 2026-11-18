@@ -24,6 +24,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class EditorTransaction;
+
     /** @brief 편집 구간 하나 — 연 때의 대상 · 값 글입니다. 닫힐 때 지금 값과 견줘 바뀐 대상만 남긴다(`commit`). */
     struct SW_EDITOR_API PropertyEditSpan
     {
@@ -45,12 +47,12 @@ namespace sw::editor
          */
         static PropertyEditSpan captureComponent( const Component& component, string_view label );
         /**
-         * @brief 닫힌 구간 @p inoutListSpan 을 되돌리기에 남기고 비웁니다. 바뀐 대상만 프로퍼티 경로마다 한 단계(`PropertyEditTarget::applyPropertyText` 한 쌍)이고,
-         *        이번 마감의 단계들은 거래 하나로 묶인다. 바뀐 것이 없으면 남기지 않는다.
+         * @brief 닫힌 구간 @p inoutListSpan 을 거래 @p transaction 에 남기고 비웁니다. 바뀐 대상만 프로퍼티 경로마다 한 단계(`PropertyEditTarget::applyPropertyText` 한 쌍)이고,
+         *        이번 마감의 단계들은 그 거래 하나로 묶인다. 바뀐 것이 없으면 남기지 않는다. 그리드는 쓰기 요청 뒤 게임 단계에서 부른다(`PropertyGridModel::endFrame`).
          * @details 스택은 오브젝트가 사는 씬이 고른다(`EditorTransaction::recordObjectCommand` — 미리보기 창이면 그 창의 스택). 플레이 중 편집은 남기지 않는다 —
          *          편집 내역은 맡겨 두었고(`CommandStack::suspendHistory`) Stop 이 스냅샷으로 되돌린다.
          */
-        static void commit( vector<PropertyEditSpan>& inoutListSpan );
+        static void commit( EditorTransaction& transaction, vector<PropertyEditSpan>& inoutListSpan );
     };
 
     /**

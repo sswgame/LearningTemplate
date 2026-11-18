@@ -53,7 +53,8 @@ namespace sw::editor
         NoScene,         ///< 씬을 바꾸지 않는다(창 열기 · 저장 · 빌드 · 플레이 조작)
         Scene,           ///< 이 호출이 활성 씬의 오브젝트를 바꾼다(붙여넣기 · 정렬 · 만들기 · 지우기) — 거래 구간을 받는다
         SceneDuringPlay, ///< `Scene` 과 같이 거래 구간을 받지만 편집 허용 답을 묻지 않는다 — 플레이 중에도 사본을 바로 바꾸고 Stop 이 되돌린다(컴포넌트 지우기 · 옮기기 · 붙여넣기, 인스펙터 편집 규칙)
-        SceneUnrecorded, ///< 편집 허용 답은 묻지만 이 호출은 거래를 열지 않는다 — 되돌리기 · 다시 하기(기록을 오간다), 이름 칸 · 프리셋 창 · 하위 메뉴(씬을 바꾸는 완료 함수가 `EditorTransaction&` 를 받는다 — `EditorSceneCommands::rename` · `EditorTransformCommands::loadComponentPreset`), 굽기(결과는 파생 데이터라 기록하지 않는다 — 언리얼 Build Lighting 도 트랜잭션 밖)
+        History,         ///< 되돌리기 스택을 움직인다(되돌리기 · 다시 하기) — 편집 허용 답을 묻고 거래를 열지 않는다. UI 입구(`request`)는 씬 편집과 같은 줄에 세워 게임 단계가 실행한다(되돌리기 실행이 씬을 바꾼다)
+        SceneUnrecorded, ///< 편집 허용 답은 묻지만 이 호출은 거래를 열지 않는다 — 이름 칸 · 프리셋 창 · 하위 메뉴(씬을 바꾸는 완료 함수가 `EditorTransaction&` 를 받는다 — `EditorSceneCommands::rename` · `EditorTransformCommands::loadComponentPreset`), 굽기(결과는 파생 데이터라 기록하지 않는다 — 언리얼 Build Lighting 도 트랜잭션 밖)
     };
 } // namespace sw::editor
 
@@ -128,7 +129,12 @@ namespace sw::editor
         /** @brief @p edit 명령을 레지스트리가 거래 구간 안에서 부르면(동작이 `EditorSceneCommandActionFn`) true 입니다. */
         static constexpr bool isTransacted( EditorCommandEdit edit ) { return edit == EditorCommandEdit::Scene || edit == EditorCommandEdit::SceneDuringPlay; }
         /** @brief @p edit 명령이 편집 허용 답(플레이 중 · 베이크 중이면 꺼짐)을 물으면 true 입니다. */
-        static constexpr bool isBlockedByEditLock( EditorCommandEdit edit ) { return edit == EditorCommandEdit::Scene || edit == EditorCommandEdit::SceneUnrecorded; }
+        static constexpr bool isBlockedByEditLock( EditorCommandEdit edit )
+        {
+            return edit == EditorCommandEdit::Scene || edit == EditorCommandEdit::SceneUnrecorded || edit == EditorCommandEdit::History;
+        }
+        /** @brief @p edit 명령을 UI 입구(`EditorCommandRegistry::request`)가 게임 단계로 넘기면 true 입니다 — 씬을 바꾸는 거래 명령과 되돌리기 스택 움직임. */
+        static constexpr bool isRequested( EditorCommandEdit edit ) { return isTransacted( edit ) || edit == EditorCommandEdit::History; }
 
         /** @brief 등록 줄의 동작 칸입니다. 거래를 받는 명령(`isTransacted`)은 씬 동작 칸(`getSceneActionFor`)에 들고 이 칸은 비운다. */
         template <auto TFunction, EditorCommandEdit TEdit>
@@ -279,6 +285,11 @@ namespace sw::editor
          *          실행할 때 대상이 사라졌으면 아무것도 하지 않아야 한다. 언리얼 Slate 가 게임 스레드에 넘기는 편집과 같은 자리다.
          */
         void requestSceneEdit( const Delegate<void( EditorTransaction& )>& edit );
+        /**
+         * @brief UI 쪽 — 되돌리기 스택 움직임(History 창의 그 시점으로 가기 · 기록 지우기)을 게임 스레드에 넘깁니다. 씬 편집과 같은 줄에 요청 순서대로 서고, 거래를 열지 않는다
+         *        (열린 거래 안에서는 스택이 움직임을 거절한다). @p move 는 값만 붙잡는다 — 스택은 실행할 때 찾는다.
+         */
+        void requestHistoryMove( const Delegate<void()>& move );
         /** @brief 게임 스레드 쪽 — `request` · `requestSceneEdit` 가 넘긴 씬 편집을 요청한 순서대로 실행합니다(게임 단계가 부른다). */
         void runRequestedSceneCommands();
         /**
@@ -317,7 +328,8 @@ namespace sw::editor
         {
             string                               _commandID; ///< 비어 있으면 `_edit` 를 실행한다
             EditorCommandTarget                  _target;
-            Delegate<void( EditorTransaction& )> _edit; ///< `requestSceneEdit` 의 편집(값만 붙잡는다)
+            Delegate<void( EditorTransaction& )> _edit;        ///< `requestSceneEdit` 의 편집(값만 붙잡는다)
+            Delegate<void()>                     _moveHistory; ///< `requestHistoryMove` 의 되돌리기 스택 움직임(거래 밖)
         };
 
         vector<EditorCommandDesc>               _listCommand;

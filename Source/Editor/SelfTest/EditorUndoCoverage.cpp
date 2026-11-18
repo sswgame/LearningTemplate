@@ -317,6 +317,8 @@ namespace sw::editor
                     if ( editRow( model, row, delta ) == false )
                         break;
                     model.endFrame();
+                    // 씬 대상의 쓰기와 마감은 게임 단계 요청이다 — 콘솔은 게임 스레드라 그 단계를 지금 돌린다(호스트 프레임의 `applyUICommands` 자리와 같다).
+                    EditorCommandRegistry::getInEditorContext().runRequestedSceneCommands();
                     if ( computeEditedSceneHash( after ) == false )
                     {
                         ++inoutCount._failed;

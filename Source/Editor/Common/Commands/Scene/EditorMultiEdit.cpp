@@ -62,22 +62,4 @@ namespace sw::editor
         }
         return false;
     }
-
-    uint32 EditorMultiEditComponent::copyPropertyToOthers( const PropertyInfo& prop, const vector<Component*>& listComponent )
-    {
-        if ( listComponent.size() < 2 || listComponent[0] == nullptr )
-            return 0;
-        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        const string            text    = SerializerUtil::formatPropertyText( prop, ObjectAddress{ listComponent[0] }, context );
-        uint32                  copiedCount{ 0 };
-        for ( size_t index = 1; index < listComponent.size(); ++index )
-        {
-            Component* pComponent = listComponent[index];
-            if ( pComponent == nullptr || SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pComponent }, text, context ) == false )
-                continue;
-            pComponent->onPropertyChanged( prop._name );
-            ++copiedCount;
-        }
-        return copiedCount;
-    }
 } // namespace sw::editor

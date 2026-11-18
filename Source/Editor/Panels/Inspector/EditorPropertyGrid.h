@@ -56,7 +56,7 @@ namespace sw::editor
         void endFrame()
         {
             _openAllRequest = OpenAllRequest::None;
-            _model.endFrame(); // 닫힌 편집 구간을 되돌리기에 남긴다(그리기를 모두 마친 뒤 — 다중 선택의 값 입히기가 끝났다)
+            _model.endFrame(); // 닫힌 편집 구간을 되돌리기에 남긴다(그리기를 모두 마친 뒤 — 남기기는 이번 프레임의 쓰기 요청 뒤 게임 단계에 선다)
         }
         /** @brief 이 그리드의 편집 모델입니다 — 확장 영역의 편집 구간을 여는 View(`InspectorPropertyUndo::trackComponentRegion`)가 쓴다. */
         PropertyGridModel& editModel() { return _model; }

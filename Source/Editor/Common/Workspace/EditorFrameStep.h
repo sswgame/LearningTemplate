@@ -82,6 +82,8 @@ namespace sw::editor
         static constexpr int32 kAssetReload = 200;
         /// 활성 씬의 자동 저장 사본 쓰기와 복원 마무리(`EditorAutosaveCommands::tick`). 씬 편집 명령 뒤라 이번 프레임 편집이 사본에 든다.
         static constexpr int32 kAutosave = 300;
+        /// 되돌리기 기록 스냅샷(`EditorUndoHistory::publishSnapshot`) — 모든 게임 단계 뒤라 이번 프레임의 편집 · 되돌리기가 든다. 다음 UI 프레임의 History 창이 읽는다.
+        static constexpr int32 kUndoHistory = 1000;
     };
 } // namespace sw::editor
 

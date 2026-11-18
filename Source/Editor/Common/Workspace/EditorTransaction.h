@@ -7,6 +7,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/Workspace/EditorSelectionUpdateQueue.h"
 #include "Editor/Common/Workspace/Undo/ObjectSnapshot.h"
 
 namespace sw
@@ -104,7 +105,8 @@ namespace sw::editor
 {
     /**
      * @class EditorObjectEditBindings
-     * @brief 데이터 명령의 알림(`CommandStack::ObjectEditEvent`)을 이 모듈이 받게 거는 주인입니다 — 선택을 맞추고 씬을 dirty 로 표시합니다.
+     * @brief 데이터 명령의 알림(`CommandStack::ObjectEditEvent`)을 이 모듈이 받게 거는 주인입니다 — 선택에 입힐 일을 줄에 남기고(`EditorSelectionUpdateQueue`) 씬을 dirty 로 표시합니다.
+     *        선택은 바로 고치지 않는다 — 선택은 되돌리기 기록 밖이고 UI 가 줄을 입힌다(`applySelectionUpdates`).
      * @details 스택의 알림 칸은 주인이 하나다(`DelegateSlot`). 이 서브시스템(에디터 범위)이 스택마다의 구독을 쥐고, 범위가 내려가면 함께 놓는다.
      *          에디터가 설 때 전역 스택에, 오브젝트 편집을 기록할 때 그 스택(미리보기 창의 스택 포함)에 겁니다. 모듈 언로드 훑기가 칸을 비웠으면 다시 겁니다 —
      *          리로드 전에 기록한 명령도 새 모듈의 처리기로 알린다. 에디터 컨텍스트 없이 도는 테스트는 커맨드 스택 서비스와 함께 이것을 범위에 둔다.
@@ -118,8 +120,13 @@ namespace sw::editor
 
         /** @brief @p stack 의 알림 칸이 비어 있으면 이 모듈의 처리기를 겁니다(이미 걸려 있으면 아무것도 하지 않는다). */
         void ensureBound( CommandStack& stack );
+        /** @brief 기록 쪽: 알림 @p event 에서 선택에 입힐 일을 줄에 남깁니다. */
+        void queueSelectionUpdate( const CommandStack::ObjectEditEvent& event ) { _selectionUpdates.push( event ); }
+        /** @brief UI 쪽: 남은 선택 고칠 일을 메인 선택 @p selection 에 입힙니다. UI 프레임 시작과 UI 의 되돌리기 입구가 부른다. */
+        void applySelectionUpdates( EditorSelection& selection ) { _selectionUpdates.applyTo( selection ); }
 
     private:
-        vector<Subscription> _listSubscription; ///< 스택마다의 구독(스택이 먼저 사라지면 무효가 되고 다음 걸 때 걷힌다)
+        vector<Subscription>       _listSubscription; ///< 스택마다의 구독(스택이 먼저 사라지면 무효가 되고 다음 걸 때 걷힌다)
+        EditorSelectionUpdateQueue _selectionUpdates; ///< 전역 스택의 알림이 남긴 선택 고칠 일(메인 선택에 입힌다)
     };
 } // namespace sw::editor

@@ -5,7 +5,10 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -24,6 +27,35 @@ namespace sw::editor
             static constexpr uint64 kBytesPerMegabyte = uint64{ 1 } << 20;
         };
     } // namespace
+
+    void EditorUndoHistorySnapshot::captureFrom( const CommandStack* pStack )
+    {
+        _bAvailable = pStack != nullptr ? SW_TRUE : SW_FALSE;
+        if ( pStack == nullptr )
+        {
+            _listLabel.clear();
+            _currentIndex = 0;
+            _bCanUndo     = SW_FALSE;
+            _bCanRedo     = SW_FALSE;
+            return;
+        }
+        const size_t count = pStack->getCommandCount();
+        _listLabel.resize( count );
+        for ( size_t index = 0; index < count; ++index )
+        {
+            const string& label = pStack->getCommand( index )._label;
+            _listLabel[index]   = label.empty() == false ? label : string( "Command" );
+        }
+        _currentIndex = pStack->getCurrentIndex();
+        _bCanUndo     = pStack->canUndo() ? SW_TRUE : SW_FALSE;
+        _bCanRedo     = pStack->canRedo() ? SW_TRUE : SW_FALSE;
+    }
+
+    void EditorUndoHistory::publishSnapshot()
+    {
+        // Ctrl+Z 가 가는 스택(포커스한 문서 패널 · 미리보기 창의 스택, 없으면 메인) — 문서마다 스택이라(감사 E-3) 메인만 보이면 문서 기록이 보이지 않는다.
+        _snapshot.captureFrom( getFocusedCommandStack() );
+    }
 
     UndoBufferLimit EditorUndoHistory::readConfiguredLimit( const EditorToolDefaults& defaults )
     {
@@ -68,4 +100,18 @@ namespace sw::editor
         pStore->store( EditorUndoHistoryInternal::kStoreKey, vector<uint8>( archive.getData(), archive.getData() + archive.getSize() ) );
         _stack.clear();
     }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct EditorUndoHistoryStepInternal
+        {
+            /** @brief 게임 단계 끝 — 이번 프레임의 편집 · 되돌리기가 끝난 스택 값을 다음 UI 프레임이 읽을 스냅샷으로 짓습니다. */
+            static void run( EditorContext& context, EditorPlaySessionWriteKey /*key*/ ) { context.getSubsystem<EditorUndoHistory>().publishSnapshot(); }
+        };
+    } // namespace
+
+    SW_EDITOR_GAME_STEP( UndoHistory, "undoHistory", EditorGameStepOrder::kUndoHistory, &EditorUndoHistoryStepInternal::run );
 } // namespace sw::editor

@@ -105,22 +105,15 @@ namespace sw::editor
             }
 
             /**
-             * @brief 데이터 명령이 오브젝트에 한 일을 에디터 상태에 맞춥니다. 없앨 오브젝트는 선택에서 빼고(파괴는 지연이라 남겨 두면 인스펙터 · 기즈모가
-             *        계속 잡는다), 복원한 오브젝트는 선택하고, 씬을 dirty 로 표시합니다.
+             * @brief 데이터 명령이 오브젝트에 한 일을 에디터 상태에 맞춥니다 — 선택에 입힐 일(지운 오브젝트 빼기 · 되살린 오브젝트 고르기)은 줄에 남기고, 씬을 dirty 로 표시합니다.
+             * @details 선택은 바로 고치지 않는다 — 선택은 UI 상태이고 되돌리기 기록 밖이다(`EditorSelectionUpdateQueue`). 이 처리기는 전역 스택에만 걸린다 — 전역 스택은 메인 씬
+             *          오브젝트만 받는다(미리보기 씬 것은 창의 스택, `findPreviewScopeOf`).
              */
             static void onObjectEdit( const CommandStack::ObjectEditEvent& event )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                GameObject*    pTarget  = editor::findGameObject( GameObjectHandle::make( event._objectID ) );
-                if ( pContext != nullptr && pTarget != nullptr )
-                {
-                    // 이 처리기는 전역 스택에만 걸린다 — 전역 스택은 메인 씬 오브젝트만 받는다(미리보기 씬 것은 창의 스택, `findPreviewScopeOf`).
-                    EditorSelection& selection = editor::getMainSceneSelection();
-                    if ( event._kind == ObjectEditKind::Destroyed && selection.hasObject( pTarget ) )
-                        selection.selectObject( pTarget, SelectionMode::Remove );
-                    else if ( event._kind == ObjectEditKind::Recreated )
-                        selection.selectObject( pTarget, SelectionMode::Replace );
-                }
+                EditorObjectEditBindings* const pBindings = editor::findSubsystem<EditorObjectEditBindings>();
+                if ( pBindings != nullptr )
+                    pBindings->queueSelectionUpdate( event );
                 EditorTransaction::markActiveSceneDirty();
             }
 
@@ -255,7 +248,16 @@ namespace sw::editor
         const EditorSelection* pPreviewScope = EditorTransactionInternal::findPreviewScopeOf( *pObj );
         if ( pPreviewScope != nullptr )
         {
-            pPreviewScope->recordModify( *pObj, before, after, label ); // 창의 스택 — 메인 씬은 dirty 가 아니다
+            // 창의 스택에 남긴다 — 메인 씬은 dirty 가 아니다. 명령은 기록할 때의 씬 키를 기억해 활성 씬이 바뀌어도 그 미리보기 씬에서 되돌린다(`ObjectSnapshot`).
+            // 선택은 범위(씬 · 스택)만 알려 주고 기록하지 않는다 — 선택은 되돌리기 기록 밖이다(`EditorSelectionUpdateQueue`).
+            SceneManager* pPreviewSceneManager = editor::findSubsystem<SceneManager>();
+            CommandStack* pPreviewStack        = pPreviewScope->findPreviewCommandStack();
+            if ( pPreviewSceneManager == nullptr || pPreviewStack == nullptr )
+            {
+                SW_LOG_ERROR_ID( "EditorTransaction.NoSceneManagerEditPreview", "No SceneManager - the edit of '%#' in the preview scene is not recorded", pObj->getName().c_str() );
+                return;
+            }
+            pPreviewStack->push( ObjectSnapshot::makeModify( *pPreviewSceneManager, *pObj, before, after, label ) );
             return;
         }
 
