@@ -22,6 +22,8 @@
 
 namespace sw
 {
+    class ISubsystem;
+
     /** @brief 서비스 칸의 필수 여부입니다. `Required` 는 바인딩 검사에 들고 `getSubsystem` 이 되며, `Optional` 은 `findSubsystem` 만 된다. */
     enum class ServiceRequirement : uint8
     {
@@ -32,7 +34,8 @@ namespace sw
     /** @brief 서비스 칸입니다. 바인딩 전 · 묶을 객체가 없으면 nullptr 입니다. 아무것도 소유하지 않는다(소유는 범위). */
     struct ServiceSlot
     {
-        void* _pBound; ///< 묶은 객체(그 타입으로 바꾼 주소)
+        void*             _pBound; ///< 묶은 객체(그 타입으로 바꾼 주소)
+        const ISubsystem* _pOwner; ///< 그 객체를 가진, 묶은 범위의 컬렉션이 소유한 서브시스템(빌려 건 객체는 nullptr). 창구가 초기화 중 의존 검사에 알린다(`SubsystemCollection::recordInitializeLookup`)
     };
 
     /** @brief 칸 선언이 형식에 남기는 값입니다(`SW_SERVICE_SLOT` 의 숨은 friend 가 돌려주는 형식 — 평가하지 않는 문맥에서만 쓴다). */

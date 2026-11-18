@@ -352,12 +352,12 @@ namespace sw::engine
 #define SW_ENGINE_REGISTRATION_UNPAREN( ... ) __VA_ARGS__
 
 /** @brief 서비스 칸을 정의하고 목록에 답니다. namespace `sw` 안에 둔다. */
-#define SW_ENGINE_SERVICE( Type, visibility )                                                                                                                                   \
-    ServiceSlot                                    Type::s_serviceSlot{ nullptr }; /* 정의는 namespace `sw` 안이라야 한다(`::sw::ServiceSlot ::sw::…` 는 한 이름으로 읽힌다) */ \
-    static const ::sw::engine::EngineServiceRecord s_engineServiceRecord_##Type                                                                                                 \
-    {                                                                                                                                                                           \
-        ::sw::engine::EngineRegistrationList::getGlobal(), ServiceSlotOf<Type>::kTypeName, ::sw::getSubsystemTypeHash<Type>(), ServiceSlotOf<Type>::getSlot(),                  \
-            &::sw::engine::EngineRegistrationOps<Type>::bind, ServiceSlotOf<Type>::kRequirement, ::sw::engine::EngineServiceVisibility::visibility                              \
+#define SW_ENGINE_SERVICE( Type, visibility )                                                                                                                                            \
+    ServiceSlot                                    Type::s_serviceSlot{ nullptr, nullptr }; /* 정의는 namespace `sw` 안이라야 한다(`::sw::ServiceSlot ::sw::…` 는 한 이름으로 읽힌다) */ \
+    static const ::sw::engine::EngineServiceRecord s_engineServiceRecord_##Type                                                                                                          \
+    {                                                                                                                                                                                    \
+        ::sw::engine::EngineRegistrationList::getGlobal(), ServiceSlotOf<Type>::kTypeName, ::sw::getSubsystemTypeHash<Type>(), ServiceSlotOf<Type>::getSlot(),                           \
+            &::sw::engine::EngineRegistrationOps<Type>::bind, ServiceSlotOf<Type>::kRequirement, ::sw::engine::EngineServiceVisibility::visibility                                       \
     }
 
 /**

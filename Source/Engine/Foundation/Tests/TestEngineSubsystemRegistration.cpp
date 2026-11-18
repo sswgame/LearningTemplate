@@ -3,6 +3,7 @@
 // 테스트는 자기 목록(`EngineRegistrationList`)에 자기 등록을 단다 — 엔진의 전역 목록과 칸을 건드리지 않는다.
 #include "pch.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -72,12 +73,55 @@ namespace sw::engine_registration_test
     using Delta   = OrderedSubsystem<3, 0>; // Alpha 에 기댄다
     using Echo    = OrderedSubsystem<4, 3>; // Delta(그리고 간접으로 Alpha)에 기댄다
     using Foxtrot = OrderedSubsystem<5>;    // 아무것에도 기대지 않는다
+
+    /** @brief 칸을 가진 서브시스템입니다 — 칸 길(`engine::getSubsystem`) 조회가 초기화 의존 검사를 지나는지 본다. */
+    class SlotProbeSubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::EngineMisc;
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return "SlotProbe"; }
+
+        SW_SERVICE_SLOT( SlotProbeSubsystem, Required );
+    };
+
+    /**
+     * @brief 초기화에서 칸 길로 `SlotProbeSubsystem` 을 찾는 서브시스템입니다(범위를 거치지 않는다). 의존 선언은 @p listDependency 입니다.
+     * @tparam TTag 한 범위에 둘을 걸 때 타입을 가른다 — 범위는 타입마다 하나만 등록한다.
+     */
+    template <int32 TTag>
+    class SlotLookupSubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::EngineMisc;
+
+        SlotLookupSubsystem( const utf8* pName, vector<const utf8*> listDependency )
+            : _pName{ pName }
+            , _listDependency{ std::move( listDependency ) }
+        {
+        }
+        SubsystemInitResult initializeSubsystem() override
+        {
+            (void)engine::getSubsystem<SlotProbeSubsystem>();
+            return SubsystemInitResult::Succeeded;
+        }
+        void                    shutdownSubsystem() override {}
+        const utf8*             getSubsystemName() const override { return _pName; }
+        span<const utf8* const> getSubsystemDependencies() const override { return _listDependency; }
+
+    private:
+        const utf8*         _pName;
+        vector<const utf8*> _listDependency;
+    };
 } // namespace sw::engine_registration_test
 
 namespace sw
 {
-    ServiceSlot engine_registration_test::RequiredValue::s_serviceSlot{ nullptr };
-    ServiceSlot engine_registration_test::OptionalValue::s_serviceSlot{ nullptr };
+    ServiceSlot engine_registration_test::RequiredValue::s_serviceSlot{ nullptr, nullptr };
+    ServiceSlot engine_registration_test::OptionalValue::s_serviceSlot{ nullptr, nullptr };
+    ServiceSlot engine_registration_test::SlotProbeSubsystem::s_serviceSlot{ nullptr, nullptr };
 } // namespace sw
 
 using namespace sw;
@@ -176,6 +220,41 @@ SW_TEST_CASE( EngineRegistrationTest, BindFillsSlotAndAccessReadsIt )
     list.unbindServices( scope );
     SW_EXPECT_NULL( engine::findSubsystem<RequiredValue>() );
     SW_EXPECT_NULL( engine::findSubsystem<OptionalValue>() );
+}
+
+/**
+ * @brief [EngineRegistrationTest] 초기화에서 같은 목록의 서브시스템을 칸 길로 의존 선언 없이 찾으면 기동이 진다 — 범위 조회와 같은 검사다
+ * @details 칸은 `initializeAll` 앞에 묶이므로 아직 서지 않은 객체를 줄 수 있다. 찾는 쪽 이름("ZLookup")이 뒤라 이름 순서로는 대상이 먼저 서지만 선언이 빠졌으면 진다.
+ */
+SW_TEST_CASE( EngineRegistrationTest, UndeclaredSlotLookupDuringInitializeFailsStartup )
+{
+    engine::EngineRegistrationList              list;
+    const TestServiceRecord<SlotProbeSubsystem> probeRecord{ list, engine::EngineServiceVisibility::GameVisible };
+    SubsystemScope                              scope;
+    (void)scope.emplaceSubsystem<SlotProbeSubsystem>();
+    (void)scope.emplaceSubsystem<SlotLookupSubsystem<0>>( "ZLookup", vector<const utf8*>{} );
+    SW_REQUIRE_TRUE( list.bindServices( scope ).isBound() );
+
+    const bool    bInitialized = scope.getCollection().initializeAll( SubsystemHostMask::All );
+    const string& error        = scope.getCollection().getError();
+    SW_EXPECT_FALSE( bInitialized );
+    SW_EXPECT_TRUE_MSG( StringUtil::contains( error, "'ZLookup' failed to initialize" ), error.c_str() );
+    SW_EXPECT_TRUE_MSG( StringUtil::contains( error, "looked up 'SlotProbe' without declaring it as a dependency" ), error.c_str() );
+    list.unbindServices( scope );
+}
+
+/** @brief [EngineRegistrationTest] 칸 길 조회도 선언한 의존이면 초기화 중에 찾아도 된다 */
+SW_TEST_CASE( EngineRegistrationTest, DeclaredSlotLookupDuringInitializeIsAllowed )
+{
+    engine::EngineRegistrationList              list;
+    const TestServiceRecord<SlotProbeSubsystem> probeRecord{ list, engine::EngineServiceVisibility::GameVisible };
+    SubsystemScope                              scope;
+    (void)scope.emplaceSubsystem<SlotProbeSubsystem>();
+    (void)scope.emplaceSubsystem<SlotLookupSubsystem<0>>( "ZLookup", vector<const utf8*>{ "SlotProbe" } );
+    SW_REQUIRE_TRUE( list.bindServices( scope ).isBound() );
+
+    SW_EXPECT_TRUE_MSG( scope.getCollection().initializeAll( SubsystemHostMask::All ), scope.getCollection().getError().c_str() );
+    list.unbindServices( scope );
 }
 
 /** @brief [EngineRegistrationTest] 필수 칸이 비면 그 타입 이름으로 알린다. 선택 칸은 비어도 알리지 않는다 */

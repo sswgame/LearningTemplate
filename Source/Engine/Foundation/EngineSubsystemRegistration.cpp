@@ -25,6 +25,17 @@ namespace sw::engine
                 return nullptr;
             }
 
+            /** @brief @p pScope 부터 상위로 올라가며 @p typeHash 를 처음 찾은 범위의 소유 서브시스템입니다(`locate` 와 같은 범위 — 빌려 건 칸이면 nullptr). */
+            static const ISubsystem* locateOwner( const ISubsystemLocator* pScope, uint64 typeHash )
+            {
+                for ( ; pScope != nullptr; pScope = pScope->getParentScope() )
+                {
+                    if ( pScope->findInScope( typeHash ) != nullptr )
+                        return pScope->findOwnerInScope( typeHash );
+                }
+                return nullptr;
+            }
+
             /** @brief 이름 순으로 앞인지입니다(링크 순서와 무관하게 결정적인 보고 · 동점 순서). */
             static bool isNameBefore( const utf8* pLeft, const utf8* pRight ) { return string_view{ pLeft } < string_view{ pRight }; }
 
@@ -132,6 +143,7 @@ namespace sw::engine
         for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
             pRecord->_pSlot->_pBound = EngineRegistrationListInternal::locate( &subsystems, pRecord->_typeHash );
+            pRecord->_pSlot->_pOwner = EngineRegistrationListInternal::locateOwner( &subsystems, pRecord->_typeHash );
         }
         _pBoundScope               = &subsystems;
         const utf8* const pMissing = findMissingRequiredService();
@@ -147,6 +159,7 @@ namespace sw::engine
         for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
             pRecord->_pSlot->_pBound = nullptr;
+            pRecord->_pSlot->_pOwner = nullptr;
         }
         _pBoundScope = nullptr;
     }
