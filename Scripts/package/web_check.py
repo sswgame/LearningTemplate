@@ -192,14 +192,12 @@ def evaluate_run(name: str, report: RunReport) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts web-check", description="Web-Shipping 묶음을 브라우저에서 띄워 기동 · WebGPU · 화면 · IDBFS 영속을 본다")
     parser.add_argument("--game", required=True, help="게임 프리셋 이름(Config/Game/<게임>.json)")
-    parser.add_argument("--build-dir", default=f"build/{PRESET_NAME}", help="Web-Shipping 빌드 폴더(저장소 기준)")
-    parser.add_argument("--skip-package", action="store_true", help="묶음을 다시 만들지 않는다(<build-dir>/Web/<게임> 을 그대로 쓴다)")
+    parser.add_argument("--skip-package", action="store_true", help="묶음을 다시 만들지 않는다(build/Web-Shipping/Web/<게임> 을 그대로 쓴다)")
     parser.add_argument("--seconds", type=int, default=DEFAULT_SECONDS, help="실행마다 앱을 돌리는 시간(초) — 그 뒤 화면 · 표지를 본다")
-    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="로컬 서버 포트")
     parser.add_argument("--headed", action="store_true", help="처음부터 브라우저 창을 띄운다(헤드리스가 어댑터를 못 받으면 알아서 창으로 다시 돈다)")
     args = parser.parse_args(argv)
     project_root = get_project_root()
-    build_dir = (project_root / args.build_dir).resolve()
+    build_dir = (project_root / "build" / PRESET_NAME).resolve()
     folder = build_dir / "Web" / args.game
     if args.skip_package is False:
         try:
@@ -221,14 +219,14 @@ def main(argv: list[str] | None = None) -> int:
     shutil.rmtree(out_dir, ignore_errors=True)
     out_dir.mkdir(parents=True)
     handler = functools.partial(CheckRequestHandler, directory=str(folder))
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", args.port), handler)
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", DEFAULT_PORT), handler)
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
     list_failure: list[str] = []
     try:
         with tempfile.TemporaryDirectory(prefix="swwebcheck-") as profile:
             timeout_seconds = args.seconds + LOAD_ALLOWANCE_SECONDS
-            base_url = f"http://localhost:{args.port}/{CHECK_PAGE_NAME}"
+            base_url = f"http://localhost:{DEFAULT_PORT}/{CHECK_PAGE_NAME}"
             headed = args.headed
             first = run_browser(browser, Path(profile), f"{base_url}?probe=write", headed, timeout_seconds)
             if headed is False and first.gpu == "yes" and first.adapter == "no":

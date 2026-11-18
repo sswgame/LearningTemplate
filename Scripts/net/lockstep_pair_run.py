@@ -29,6 +29,9 @@ from net.net_pair_run import _stop, _wait_for_text
 _OPENED = re.compile(r"\[Skirmish\] lockstep match - you are player (\d)")
 _STATUS = re.compile(r"skirmish lockstep: player (\d) tick (\d+) stalls (\d+) desynced (\d) applied (\d+) (\d+)")
 _PROBLEM_LINE = re.compile(r"\[(Error|Warning)\]")
+_PRESET = "Ninja-Debug"  # build/<프리셋>/Bin 의 App 을 쓴다
+_GAME = "StarSkirmish"
+_TIMEOUT_SECONDS = 90.0  # 락스텝 시작 줄을 기다리는 최대 초
 
 
 @dataclass
@@ -98,16 +101,16 @@ def _send(process: subprocess.Popen, line: str) -> None:
 
 def _run(argument: argparse.Namespace) -> int:
     root = get_project_root()
-    bin_dir = root / "build" / argument.preset / "Bin"
+    bin_dir = root / "build" / _PRESET / "Bin"
     client_exe = bin_dir / executable_name("App")
     if not client_exe.exists():
-        print(f"[lockstep-pair] FAIL: {client_exe} does not exist - build the '{argument.preset}' preset first")
+        print(f"[lockstep-pair] FAIL: {client_exe} does not exist - build the '{_PRESET}' preset first")
         return int(ExitCode.CHECK_INVALID)
-    out_dir = Path(argument.out) if argument.out else root / "Saved" / "LockstepPairRun"
+    out_dir = root / "Saved" / "LockstepPairRun"
     out_dir.mkdir(parents=True, exist_ok=True)
     port = _free_port()
     # -unattended: 무인 실행이라 세이브 · 사용자 데이터는 프로세스마다 Saved/Automation/UserData 아래로 간다(사람의 폴더를 쓰지 않는다 — AutomationUserDataRoot).
-    common = [app_arguments.option("game", argument.game), app_arguments.flag("unattended"), app_arguments.variable("gv_standardInputCommands", "1"), app_arguments.variable("gv_skirmishAutoPlay", "1")]
+    common = [app_arguments.option("game", _GAME), app_arguments.flag("unattended"), app_arguments.variable("gv_standardInputCommands", "1"), app_arguments.variable("gv_skirmishAutoPlay", "1")]
     host_args = [str(client_exe), *common, app_arguments.variable("gv_netListenPort", port), app_arguments.variable("gv_userSettingsFile", out_dir / 'host.usersettings.json')]
     client_args = [str(client_exe), *common, app_arguments.variable("gv_netConnectAddress", f"127.0.0.1:{port}"), app_arguments.variable("gv_userSettingsFile", out_dir / 'client.usersettings.json')]
     host_log = out_dir / "host.log"
@@ -118,7 +121,7 @@ def _run(argument: argparse.Namespace) -> int:
         host = subprocess.Popen(host_args, cwd=str(bin_dir), stdin=subprocess.PIPE, stdout=host_out, stderr=subprocess.STDOUT)
         client = subprocess.Popen(client_args, cwd=str(bin_dir), stdin=subprocess.PIPE, stdout=client_out, stderr=subprocess.STDOUT)
         try:
-            is_opened = _wait_for_text(host_log, _OPENED, argument.timeout, host) and _wait_for_text(client_log, _OPENED, argument.timeout, client)
+            is_opened = _wait_for_text(host_log, _OPENED, _TIMEOUT_SECONDS, host) and _wait_for_text(client_log, _OPENED, _TIMEOUT_SECONDS, client)
             if is_opened:
                 time.sleep(argument.seconds / 2)  # AI 가 병력을 모을 때까지
                 _send(client, "skirmish.order 32 32")
@@ -146,10 +149,6 @@ def main(list_argument: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts lockstep-pair", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="mode", required=True)
     run_parser = sub.add_parser("run", help="호스트와 클라이언트를 띄워 락스텝 대전을 돌리고 판정한다")
-    run_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 App 을 쓴다)")
-    run_parser.add_argument("--game", default="StarSkirmish", help="게임 이름")
     run_parser.add_argument("--seconds", type=float, default=60.0, help="락스텝이 선 뒤 판을 돌리는 초(반에 1 번 명령을 낸다)")
     run_parser.add_argument("--min-ticks", type=int, default=600, help="두 프로세스가 넘어야 할 락스텝 틱 수(20 Hz)")
-    run_parser.add_argument("--timeout", type=float, default=90.0, help="락스텝 시작 줄을 기다리는 최대 초")
-    run_parser.add_argument("--out", default="", help="로그를 둘 폴더(기본 Saved/LockstepPairRun)")
     return _run(parser.parse_args(list_argument))

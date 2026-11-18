@@ -30,6 +30,10 @@ from common.paths import get_project_root
 from net.net_pair_run import _stop, _wait_for_text
 
 _DEFAULT_CONFIG = "Config/Server/Online/Shooter3D.json"
+_PRESET = "Ninja-Debug"  # build/<프리셋>/Bin 의 Server · App 을 쓴다
+_GAME = "Shooter3D"
+_CLIENT_DELAY_SECONDS = 8.0  # 클라이언트를 띄운 뒤 명령을 보낼 때까지
+_TIMEOUT_SECONDS = 60.0  # 서버 기동 · 응답을 기다리는 최대 초
 _LISTENING = re.compile(r"Online services listening on port")
 _LOGGED_IN = re.compile(r"online login done")
 _MAIL_LIST = re.compile(r"online mail list: \d+ mails")
@@ -76,44 +80,44 @@ def _send(process: subprocess.Popen, line: str) -> None:
 
 def _run(argument: argparse.Namespace) -> int:
     root = get_project_root()
-    bin_dir = root / "build" / argument.preset / "Bin"
+    bin_dir = root / "build" / _PRESET / "Bin"
     server_exe = bin_dir / executable_name("Server")
     client_exe = bin_dir / executable_name("App")
     for exe in (server_exe, client_exe):
         if not exe.exists():
-            print(f"[online-local] FAIL: {exe} does not exist - build the '{argument.preset}' preset first")
+            print(f"[online-local] FAIL: {exe} does not exist - build the '{_PRESET}' preset first")
             return int(ExitCode.CHECK_INVALID)
     server_config = (root / argument.server_config).resolve()
     service_port = json.loads(server_config.read_text(encoding="utf-8"))["_servicePort"]
-    out_dir = Path(argument.out) if argument.out else root / "Saved" / "OnlineLocalRun"
+    out_dir = root / "Saved" / "OnlineLocalRun"
     out_dir.mkdir(parents=True, exist_ok=True)
     server_log = out_dir / "server.log"
     client_log = out_dir / "client.log"
-    server_args = [str(server_exe), app_arguments.option("game", argument.game), app_arguments.option("server-config", server_config)]
-    client_args = [str(client_exe), app_arguments.option("game", argument.game), app_arguments.variable("gv_standardInputCommands", "1"), app_arguments.variable("gv_onlineServerAddress", f"127.0.0.1:{service_port}")]
+    server_args = [str(server_exe), app_arguments.option("game", _GAME), app_arguments.option("server-config", server_config)]
+    client_args = [str(client_exe), app_arguments.option("game", _GAME), app_arguments.variable("gv_standardInputCommands", "1"), app_arguments.variable("gv_onlineServerAddress", f"127.0.0.1:{service_port}")]
     print(f"[online-local] server: {' '.join(server_args)}")
     print(f"[online-local] client: {' '.join(client_args)}")
     with server_log.open("wb") as server_out, client_log.open("wb") as client_out:
         server = subprocess.Popen(server_args, cwd=str(bin_dir), stdin=subprocess.PIPE, stdout=server_out, stderr=subprocess.STDOUT)
-        if not _wait_for_text(server_log, _LISTENING, argument.timeout, server):
+        if not _wait_for_text(server_log, _LISTENING, _TIMEOUT_SECONDS, server):
             print(f"[online-local] FAIL: the server never opened its service port (log: {server_log})")
             _stop(server, False, 5)
             return int(ExitCode.VIOLATION)
         client = subprocess.Popen(client_args, cwd=str(bin_dir), stdin=subprocess.PIPE, stdout=client_out, stderr=subprocess.STDOUT)
-        time.sleep(argument.client_delay)  # 클라이언트가 게임 인스턴스를 세우고 표준 입력 명령을 받을 때까지
+        time.sleep(_CLIENT_DELAY_SECONDS)  # 클라이언트가 게임 인스턴스를 세우고 표준 입력 명령을 받을 때까지
         try:
             _send(client, "online.connect")
             time.sleep(2.0)  # Hello 앞의 요청은 세션이 모았다가 보내지만, 연결 실패를 로그인 실패와 가르기 위해 잠깐 둔다
             _send(client, "shooter.online.login")
-            if _wait_for_text(client_log, _LOGGED_IN, argument.timeout, client):
+            if _wait_for_text(client_log, _LOGGED_IN, _TIMEOUT_SECONDS, client):
                 _send(client, "shooter.online.listmail")
-                _wait_for_text(client_log, _MAIL_LIST, argument.timeout, client)
+                _wait_for_text(client_log, _MAIL_LIST, _TIMEOUT_SECONDS, client)
                 _send(client, "shooter.online.match")
-                _wait_for_text(client_log, _MATCH_FOUND, argument.timeout, client)
+                _wait_for_text(client_log, _MATCH_FOUND, _TIMEOUT_SECONDS, client)
                 _send(client, "shooter.online.submitkills 5")
-                if _wait_for_text(client_log, _SCORE_SUBMITTED, argument.timeout, client):
+                if _wait_for_text(client_log, _SCORE_SUBMITTED, _TIMEOUT_SECONDS, client):
                     _send(client, "shooter.online.topkills")
-                    _wait_for_text(client_log, _TOP_SCORES, argument.timeout, client)
+                    _wait_for_text(client_log, _TOP_SCORES, _TIMEOUT_SECONDS, client)
             time.sleep(1.0)  # 늦게 나는 경고도 잡는다
         except OSError:
             print(f"[online-local] FAIL: the client exited before it took the commands (log: {client_log})")
@@ -141,12 +145,7 @@ def main(list_argument: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts online-local", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="mode", required=True)
     run_parser = sub.add_parser("run", help="서버와 클라이언트를 띄워 로그인 → 우편 목록 → 매칭 → 순위표를 돈다")
-    run_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    run_parser.add_argument("--game", default="Shooter3D", help="게임 이름")
     run_parser.add_argument("--server-config", default=_DEFAULT_CONFIG, help="서버 설정(옆 .online.json 과 함께) — 저장소 · 키트 · 제공자를 고른다")
-    run_parser.add_argument("--client-delay", type=float, default=8.0, help="클라이언트를 띄운 뒤 명령을 보낼 때까지 기다리는 초")
-    run_parser.add_argument("--timeout", type=float, default=60.0, help="서버 기동 · 응답을 기다리는 최대 초")
-    run_parser.add_argument("--out", default="", help="로그를 둘 폴더(기본 Saved/OnlineLocalRun)")
     check_parser = sub.add_parser("check", help="이미 있는 서버 · 클라이언트 로그를 판정한다")
     check_parser.add_argument("server_log")
     check_parser.add_argument("client_log")

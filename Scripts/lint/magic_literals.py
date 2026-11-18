@@ -409,7 +409,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--ratchet", action="store_true", help="줄어든 파일의 기준선을 낮추고 없어진 파일을 지운다(올리지 않는다)")
     parser.add_argument("--accept", nargs="+", default=None, metavar="FILE", help="그 파일들의 기준선을 지금 수로 바꾼다(올리는 유일한 길 — 통합에서만)")
     parser.add_argument("--meaning", default=None, help="이 뜻의 `-1` 줄을 찍는다(unclassified · index-sentinel · unlimited …)")
-    parser.add_argument("--place", default=None, help="--meaning 과 함께 장소를 고른다(없으면 code · named-definition · table-row, test 도 고를 수 있다)")
     parser.add_argument("--limit", type=int, default=100, help="찍는 줄 수 상한")
     parser.add_argument("--out", default=None, help="모든 줄을 TSV 로 쓴다(검토 목록 — 경로 · 줄 · 종류 · 값 · 장소 · 뜻 · 흔한 값 · 문맥)")
     parser.add_argument("--self-check", action="store_true", help="분류 · 래칫 규칙의 자체 시험")
@@ -457,7 +456,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.meaning is None:
         print_summary(list_row)
         return ExitCode.PASSED
-    list_match = [row for row in list_row if row.kind == "minus-one" and row.meaning == args.meaning and row.place in ((args.place,) if args.place else REVIEW_PLACES)]
+    list_match = [row for row in list_row if row.kind == "minus-one" and row.meaning == args.meaning and row.place in REVIEW_PLACES]
     for row in list_match[: args.limit]:
         print(f"{row.path}:{row.line}: [{row.place}] {row.context}")
     print(f"[MagicLiterals] {len(list_match)} lines ({min(len(list_match), args.limit)} shown)")

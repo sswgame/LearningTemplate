@@ -169,7 +169,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--package", type=Path, help="`pack.py --target Server` 가 만든 리눅스 서버 패키지 폴더")
     parser.add_argument("--config", type=Path, help="운영 설정(ServerConfig JSON) — 비밀은 넣지 않는다")
     parser.add_argument("--game", help="게임 이름(설치 폴더 · 유닛 이름)")
-    parser.add_argument("--output", type=Path, default=Path("Saved") / "ServerImages")
     parser.add_argument("--image", help="docker 이미지 태그 — 주면 deploy/docker/Dockerfile 로 이미지도 짓는다")
     parser.add_argument("--self-check", action="store_true")
     arguments = parser.parse_args(argv)
@@ -180,7 +179,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not (arguments.package and arguments.config and arguments.game):
         parser.error("--package · --config · --game 이 모두 있어야 한다")
     try:
-        out_path = make_server_image(arguments.package, arguments.config, arguments.game, arguments.output, arguments.image)
+        out_path = make_server_image(arguments.package, arguments.config, arguments.game, Path("Saved") / "ServerImages", arguments.image)
     except ServerImageError as exception:
         print(f"[server-image] FAILED: {exception}")
         return ExitCode.VIOLATION

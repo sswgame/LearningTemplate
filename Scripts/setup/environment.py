@@ -265,13 +265,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="기존 캐시를 무시하고 설정을 처음부터 다시 탐색합니다.",
     )
-    parser.add_argument("--verbose", action="store_true", help="상세 로그를 출력합니다.")
     # configure 는 이 뒤에 늘 ToolchainVars.cmake 를 만든다 — 같은 프로세스에서 해 파이썬을 한 번 덜 띄운다(DetectToolchain.cmake).
     parser.add_argument("--cmake-vars", type=Path, help="toolchain_config.json 을 CMake set() 목록으로도 쓴다(toolchain_cmake.py 와 같은 출력)")
     args = parser.parse_args(argv)
 
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(level=log_level, format="%(message)s")
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     manager = EnvironmentSetupManager(force_refresh=args.force)
     manager.run()

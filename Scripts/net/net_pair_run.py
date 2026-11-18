@@ -41,6 +41,10 @@ _TICKET_KEY = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
 _CONNECTED = re.compile(r"Net session client \d+ connected")
 _LISTENING = re.compile(r"Net session listening on UDP port")
 _PROBLEM_LINE = re.compile(r"\[(Error|Warning)\]")
+_GAME_PORT = 17777  # 서버 게임(UDP) 포트
+_SERVICE_PORT = 17780  # 서버 서비스(TCP · 로그인) 포트
+_CLIENT_DELAY_SECONDS = 5.0  # 클라이언트를 띄운 뒤 명령을 보낼 때까지
+_TIMEOUT_SECONDS = 60.0  # 서버 기동 · 접속을 기다리는 최대 초(mmo 의 클라이언트 하나는 이 네 배까지)
 
 
 @dataclass
@@ -143,26 +147,26 @@ def _run(argument: argparse.Namespace) -> int:
         if not exe.exists():
             print(f"[net-pair] FAIL: {exe} does not exist - build the '{argument.preset}' preset first")
             return int(ExitCode.CHECK_INVALID)
-    out_dir = Path(argument.out) if argument.out else root / "Saved" / "NetPairRun"
+    out_dir = root / "Saved" / "NetPairRun"
     out_dir.mkdir(parents=True, exist_ok=True)
-    server_config = write_configs(out_dir, argument.game_port, argument.service_port)
+    server_config = write_configs(out_dir, _GAME_PORT, _SERVICE_PORT)
     server_log = out_dir / "server.log"
     client_log = out_dir / "client.log"
     server_args = [str(server_exe), app_arguments.option("game", _GAME), app_arguments.option("server-config", server_config)]
     client_args = [str(client_exe), app_arguments.option("game", _GAME), app_arguments.variable("gv_standardInputCommands", "1")]
-    ticket_command = (f"net.ticketconnect 127.0.0.1:{argument.service_port} {_ACCOUNT} {_PASSWORD} {_SERVER_NAME} "
-                     f"127.0.0.1:{argument.game_port}\n")
+    ticket_command = (f"net.ticketconnect 127.0.0.1:{_SERVICE_PORT} {_ACCOUNT} {_PASSWORD} {_SERVER_NAME} "
+                     f"127.0.0.1:{_GAME_PORT}\n")
     print(f"[net-pair] server: {' '.join(server_args)}")
     print(f"[net-pair] client: {' '.join(client_args)}")
     with server_log.open("wb") as server_out, client_log.open("wb") as client_out:
         server_environment = {**os.environ, _TICKET_KEY_ENVIRONMENT: _TICKET_KEY}
         server = subprocess.Popen(server_args, cwd=str(bin_dir), env=server_environment, stdin=subprocess.PIPE, stdout=server_out, stderr=subprocess.STDOUT)
-        if not _wait_for_text(server_log, _LISTENING, argument.timeout, server):
+        if not _wait_for_text(server_log, _LISTENING, _TIMEOUT_SECONDS, server):
             print(f"[net-pair] FAIL: the server never opened its game port (log: {server_log})")
             _stop(server, False, 5)
             return int(ExitCode.VIOLATION)
         client = subprocess.Popen(client_args, cwd=str(bin_dir), stdin=subprocess.PIPE, stdout=client_out, stderr=subprocess.STDOUT)
-        time.sleep(argument.client_delay)  # 클라이언트가 게임 인스턴스를 세우고 표준 입력 명령을 받을 때까지
+        time.sleep(_CLIENT_DELAY_SECONDS)  # 클라이언트가 게임 인스턴스를 세우고 표준 입력 명령을 받을 때까지
         try:
             client.stdin.write(ticket_command.encode("utf-8"))
             client.stdin.flush()
@@ -170,7 +174,7 @@ def _run(argument: argparse.Namespace) -> int:
             print(f"[net-pair] FAIL: the client exited before it took the command (log: {client_log})")
             _stop(server, True, 10)
             return int(ExitCode.VIOLATION)
-        connected = _wait_for_text(server_log, _CONNECTED, argument.timeout, server)
+        connected = _wait_for_text(server_log, _CONNECTED, _TIMEOUT_SECONDS, server)
         if connected:
             time.sleep(1.0)  # 접속 뒤 잠깐 두어 늦게 나는 경고도 잡는다
         _stop(client, True, 10)
@@ -224,7 +228,7 @@ def _run_mmo(argument: argparse.Namespace) -> int:
         if not exe.exists():
             print(f"[net-pair] FAIL: {exe} does not exist - build the '{argument.preset}' preset first")
             return int(ExitCode.CHECK_INVALID)
-    out_dir = Path(argument.out) if argument.out else root / "Saved" / "NetPairRun" / "mmo"
+    out_dir = root / "Saved" / "NetPairRun" / "mmo"
     out_dir.mkdir(parents=True, exist_ok=True)
     server_config = write_configs(out_dir, _MMO_GAME_PORT, _MMO_SERVICE_PORT, _MMO_ACCOUNT, _MMO_PASSWORD, _MMO_SERVER_NAME)
     server_log = out_dir / "server.log"
@@ -239,7 +243,7 @@ def _run_mmo(argument: argparse.Namespace) -> int:
     with server_log.open("wb") as server_out:
         server_environment = {**os.environ, _TICKET_KEY_ENVIRONMENT: _TICKET_KEY, _USER_DATA_ROOT_ENVIRONMENT: str(server_user_data)}
         server = subprocess.Popen(server_args, cwd=str(bin_dir), env=server_environment, stdin=subprocess.PIPE, stdout=server_out, stderr=subprocess.STDOUT)
-        if not _wait_for_text(server_log, _LISTENING, argument.timeout, server):
+        if not _wait_for_text(server_log, _LISTENING, _TIMEOUT_SECONDS, server):
             print(f"[net-pair] FAIL: the server never opened its game port (log: {server_log})")
             _stop(server, False, 5)
             return int(ExitCode.VIOLATION)
@@ -251,7 +255,7 @@ def _run_mmo(argument: argparse.Namespace) -> int:
             with client_log.open("wb") as client_out:
                 client = subprocess.Popen(client_args, cwd=str(bin_dir), stdout=client_out, stderr=subprocess.STDOUT)
                 try:
-                    client.wait(timeout=argument.timeout * 4)
+                    client.wait(timeout=_TIMEOUT_SECONDS * 4)
                 except subprocess.TimeoutExpired:
                     client.kill()
                     client.wait()
@@ -291,15 +295,8 @@ def main(list_argument: list[str]) -> int:
     sub = parser.add_subparsers(dest="mode", required=True)
     run_parser = sub.add_parser("run", help="서버와 클라이언트를 띄워 로그인 → 티켓 → 게임 접속을 돈다")
     run_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    run_parser.add_argument("--game-port", type=int, default=17777, help="서버 게임(UDP) 포트")
-    run_parser.add_argument("--service-port", type=int, default=17780, help="서버 서비스(TCP · 로그인) 포트")
-    run_parser.add_argument("--client-delay", type=float, default=5.0, help="클라이언트를 띄운 뒤 명령을 보낼 때까지 기다리는 초")
-    run_parser.add_argument("--timeout", type=float, default=60.0, help="서버 기동 · 접속을 기다리는 최대 초")
-    run_parser.add_argument("--out", default="", help="설정 · 로그를 둘 폴더(기본 Saved/NetPairRun)")
     mmo_parser = sub.add_parser("mmo", help="LanternVale 서버와 클라이언트 둘(첫 접속 → 재접속)을 차례로 띄워 서버 권위 행동 · 저장 후 재접속을 본다")
     mmo_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    mmo_parser.add_argument("--timeout", type=float, default=60.0, help="서버 기동을 기다리는 최대 초(클라이언트 하나는 이 네 배까지)")
-    mmo_parser.add_argument("--out", default="", help="설정 · 로그를 둘 폴더(기본 Saved/NetPairRun/mmo)")
     check_parser = sub.add_parser("check", help="이미 있는 서버 · 클라이언트 로그를 판정한다")
     check_parser.add_argument("server_log")
     check_parser.add_argument("client_log")
