@@ -51,9 +51,9 @@ namespace sw
          */
         [[nodiscard]] static float32 computeHeightMipLevel( const float2& uv0, const float2& uv1, const float2& uv2, float32 insideFactor, const float2& textureSize ) noexcept
         {
-            const float2  edge0( ( uv1.x - uv0.x ) * textureSize.x, ( uv1.y - uv0.y ) * textureSize.y );
-            const float2  edge1( ( uv2.x - uv1.x ) * textureSize.x, ( uv2.y - uv1.y ) * textureSize.y );
-            const float2  edge2( ( uv0.x - uv2.x ) * textureSize.x, ( uv0.y - uv2.y ) * textureSize.y );
+            const float2  edge0( ( uv1._x - uv0._x ) * textureSize._x, ( uv1._y - uv0._y ) * textureSize._y );
+            const float2  edge1( ( uv2._x - uv1._x ) * textureSize._x, ( uv2._y - uv1._y ) * textureSize._y );
+            const float2  edge2( ( uv0._x - uv2._x ) * textureSize._x, ( uv0._y - uv2._y ) * textureSize._y );
             const float32 texelSpan = MathUtil::max( MathUtil::max( edge0.getLength(), edge1.getLength() ), edge2.getLength() ) / MathUtil::max( insideFactor, 1.0f );
             return MathUtil::log2( MathUtil::max( texelSpan, 1.0f ) );
         }
@@ -73,12 +73,12 @@ namespace sw
             const float3   edge2   = position2 - position0;
             const float2   uvEdge1 = uv1 - uv0;
             const float2   uvEdge2 = uv2 - uv0;
-            const float32  det     = uvEdge1.x * uvEdge2.y - uvEdge2.x * uvEdge1.y;
+            const float32  det     = uvEdge1._x * uvEdge2._y - uvEdge2._x * uvEdge1._y;
             UVTangentFrame frame{ float3::Zero, float3::Zero };
             if ( MathUtil::abs( det ) < kMinUVArea )
                 return frame;
-            frame._tangent   = ( edge1 * uvEdge2.y - edge2 * uvEdge1.y ) / det;
-            frame._bitangent = ( edge2 * uvEdge1.x - edge1 * uvEdge2.x ) / det;
+            frame._tangent   = ( edge1 * uvEdge2._y - edge2 * uvEdge1._y ) / det;
+            frame._bitangent = ( edge2 * uvEdge1._x - edge1 * uvEdge2._x ) / det;
             return frame;
         }
 
