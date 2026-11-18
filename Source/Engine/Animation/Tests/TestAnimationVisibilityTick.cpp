@@ -250,3 +250,23 @@ SW_TEST_CASE( AnimationVisibilityTickTest, HitDetectionRequiresBonesWhenNotRende
     pMesh->setVisibilityBasedTickOption( VisibilityBasedAnimationTickOption::AlwaysTickPoseAndRefreshBones );
     SW_EXPECT_TRUE( pMesh->requireBonesWhenNotRendered( "RagdollComponent" ) );
 }
+
+/** @brief [AnimationVisibilityTickTest] 계층에서 꺼진 오브젝트의 유닛은 프레임을 시작하지 않는다 — 풀에 쉬는 적이 일하는 유닛 · 군중 수(`Animation.CrowdSoloMeshes`)에 남지 않는다. 다시 켜면 다시 일한다. */
+SW_TEST_CASE( AnimationVisibilityTickTest, InactiveOwnerDoesNotStartAnimationFrame )
+{
+    using namespace AnimationVisibilityTickTestInternal;
+    GameObjectManager manager;
+    GameObject*       pActor = manager.createGameObject( hashed_string( "PooledEnemy" ) );
+    SW_REQUIRE_NOT_NULL( pActor );
+    SkeletalMeshComponent* pMesh = pActor->addComponent<SkeletalMeshComponent>();
+    SW_REQUIRE_NOT_NULL( pMesh );
+    pMesh->setSkeleton( makeArmSkeleton() );
+    ScriptedSwingTask  task; // 늘 일하는 작업 — 꺼짐만이 프레임을 막는다
+    const Subscription registration = pMesh->registerAnimationPhaseTask( &task );
+    const float32      deltaSeconds = 1.0f / 60.0f;
+    SW_EXPECT_TRUE( pMesh->beginAnimationFrame( deltaSeconds, 1 ) );
+    pActor->setActive( false );
+    SW_EXPECT_FALSE( pMesh->beginAnimationFrame( deltaSeconds, 2 ) );
+    pActor->setActive( true );
+    SW_EXPECT_TRUE( pMesh->beginAnimationFrame( deltaSeconds, 3 ) );
+}
