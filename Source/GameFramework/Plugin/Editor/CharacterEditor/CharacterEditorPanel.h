@@ -227,7 +227,6 @@ namespace sw::editor
         float32                                 _bodyStepTimer;            ///< 동작 태그 시험의 다음 걸음까지 남은 시간(초)
         string                                  _socketResolveError;       ///< 미리보기가 지난 프레임에 상태 줄에 올린 소켓 풀기 오류(풀리면 지운다)
         string                                  _thumbnailCapturePreset;   ///< 그 캡처를 붙일 프리셋 이름
-        uint32                                  _thumbnailCaptureSerial;   ///< 요청할 때의 스크린샷 처리 수(`EditorPreviewViewport::getCompletedImageFileSerial`)
         uint32                                  _thumbnailCaptureTicket;   ///< 그 캡처 요청의 표(`EditorPreviewViewport::requestImagePNGBytes`), 요청이 없으면 0
     };
 } // namespace sw::editor

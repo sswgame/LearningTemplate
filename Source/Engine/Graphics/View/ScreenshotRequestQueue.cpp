@@ -54,11 +54,10 @@ namespace sw
         return true;
     }
 
-    void ScreenshotRequestQueue::reportCompleted( uint32 ticket, bool bWritten, const string& writtenPath )
+    void ScreenshotRequestQueue::reportCompleted( uint32 ticket, bool bWritten )
     {
         {
             const ScopedLock<mutex> lock{ _mutex };
-            _lastPath                                = bWritten ? writtenPath : string{};
             _arrResult[ticket % kResultHistoryCount] = TicketResult{ ticket, bWritten, {} };
         }
         _completedSerial.fetch_add( 1, std::memory_order_acq_rel );
@@ -121,12 +120,6 @@ namespace sw
         outPath = std::move( _pendingPacketPath );
         _pendingPacketPath.clear();
         return true;
-    }
-
-    string ScreenshotRequestQueue::getLastPath() const
-    {
-        const ScopedLock<mutex> lock{ _mutex };
-        return _lastPath;
     }
 } // namespace sw
 

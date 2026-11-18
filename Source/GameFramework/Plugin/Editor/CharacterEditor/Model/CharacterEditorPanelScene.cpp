@@ -228,7 +228,6 @@ namespace sw::editor
         , _bodyPickMarker{}
         , _bodyStepTimer{ 0.0f }
         , _thumbnailCapturePreset{}
-        , _thumbnailCaptureSerial{ 0 }
         , _thumbnailCaptureTicket{ 0 }
     {
     }
@@ -572,7 +571,6 @@ namespace sw::editor
             return; // 까닭은 상태 줄에 남았다
         const string presetName  = string{ _document.getPaths()._presetName.c_str() };
         const string requestName = "charactereditor.thumbnail." + presetName;
-        const uint32 serial      = EditorPreviewViewport::getCompletedImageFileSerial(); // 요청 전에 읽는다 - 이 값이 바뀌면 그 뒤에 처리한 요청이다
         const uint32 ticket      = getPreviewViewport().requestImagePNGBytes( requestName );
         if ( ticket == 0 )
         {
@@ -581,18 +579,20 @@ namespace sw::editor
         }
         _thumbnailCaptureTicket = ticket;
         _thumbnailCapturePreset = presetName;
-        _thumbnailCaptureSerial = serial;
         SW_LOG_INFO_ID( "CharacterEditorPanel.CharacterEditorThumbnailPreset", "Character Editor: thumbnail of preset '%#' requested", _thumbnailCapturePreset.c_str() );
     }
 
     void CharacterEditorPanel::pollThumbnailCapture()
     {
-        if ( _thumbnailCaptureTicket == 0 || EditorPreviewViewport::getCompletedImageFileSerial() == _thumbnailCaptureSerial )
+        if ( _thumbnailCaptureTicket == 0 )
+            return;
+        // 제 표의 결과만 읽는다 — 같은 실행의 다른 요청(개발 명령 screenshot · 에디터 버튼)이 끝나도 이 요청의 끝으로 읽히지 않는다.
+        if ( EditorPreviewViewport::findImageFileResult( _thumbnailCaptureTicket ) == ScreenshotTicketState::Pending )
             return;
         const uint32 ticket     = _thumbnailCaptureTicket;
         _thumbnailCaptureTicket = 0;
         vector<uint8> pngBytes;
-        // 제 표의 결과만 받는다 — 인코딩에 실패했으면 받지 못한다.
+        // 인코딩에 실패했거나 결과 기록 창을 벗어났으면(`Unknown`) 받지 못한다.
         if ( EditorPreviewViewport::takeImagePNGBytes( ticket, pngBytes ) == false )
         {
             _document.setStatus( "The thumbnail capture failed - try again" );

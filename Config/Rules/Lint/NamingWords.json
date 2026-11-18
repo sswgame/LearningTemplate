@@ -96,6 +96,12 @@
     "should"
   ],
   "_bannedNames": {
+    "getCompletedScreenshotSerial": "RenderThread::requestScreenshot 이 돌려준 표 + findScreenshotResult — 처리 수는 같은 실행의 다른 요청 끝을 제 끝으로 읽는다(2026-11-18)",
+    "getLastScreenshotPath": "RenderThread::findScreenshotResult(표) — 마지막 경로는 다른 요청이 덮는다(2026-11-18)",
+    "getCompletedImageFileSerial": "EditorPreviewViewport::requestImageFile 이 돌려준 표 + findImageFileResult(2026-11-18)",
+    "getLastImageFilePath": "EditorPreviewViewport::findImageFileResult(표)(2026-11-18)",
+    "takeLastScreenshotPNGBytes": "RenderThread::requestScreenshotPNGBytes 가 돌려준 표 + takeScreenshotPNGBytes(표) — 이름으로 마지막 결과를 읽으면 다른 요청의 결과를 제 것으로 읽는다(2026-11-18)",
+    "takeLastPNGBytes": "ScreenshotRequestQueue::takePNGBytes(표)(2026-11-18)",
     "isStableIgnoringMotion": "RenderStabilityUtil::evaluateTemporalAccumulation · evaluateAutoExposure — 사진 앞 정착은 세 값 정착 조건(TAA 는 카메라 기준)이고 합성 0/1 판정은 없다(ST-3, 2026-11-18)",
     "RenderStabilityThreshold": "없음 — 정착 조건의 문턱은 조건을 등록한 기능이 Config/Dev/ScenarioRun.json 의 _conditions 에서 읽는다(ST-3, 2026-11-18)",
     "RenderStabilityConfig": "없음 — 배포 엔진 설정(EngineConfig)에 테스트 전용 문턱을 두지 않는다. Config/Dev/ScenarioRun.json 의 _conditions(ST-3, 2026-11-18)",

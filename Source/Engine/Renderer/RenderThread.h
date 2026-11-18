@@ -31,7 +31,7 @@ namespace sw
     class IRHIDevice;
     class Scene;
 
-    enum class ScreenshotTicketState : uint8; // Engine/Graphics/View/ScreenshotRequestQueue.h
+    enum class ScreenshotTicketState : uint8; // Engine/Graphics/View/ScreenshotTicketState.h
 
     /** @brief 렌더 스레드에서 실행할 일 하나입니다(`RenderThread::executeAndWait`). 디바이스는 그 스레드가 컨텍스트를 잡은 것입니다. */
     SW_DECLARE_DELEGATE( void, RenderCommandDelegate, IRHIDevice& );
@@ -152,10 +152,6 @@ namespace sw
         static uint32 requestScreenshot( const AbsolutePath& filePath, RHITextureHandle sourceTexture = 0, RHIFormat sourceFormat = RHIFormat::R8G8B8A8_UNORM );
         /** @brief 표 @p ticket 의 요청 상태입니다(`requestScreenshot` 의 반환). 우편함이 없으면 `Unknown` 입니다. */
         [[nodiscard]] static ScreenshotTicketState findScreenshotResult( uint32 ticket );
-        /** @brief `requestScreenshot` 요청을 처리한 수입니다(성공과 실패 모두 셉니다). 값이 바뀌면 `getLastScreenshotPath` 가 그 결과를 가리킵니다. */
-        static uint32 getCompletedScreenshotSerial();
-        /** @brief 마지막으로 처리한 `requestScreenshot` 이 쓴 파일 경로입니다. 실패했으면 빈 문자열입니다. */
-        static string getLastScreenshotPath();
         /**
          * @brief 렌더 타깃 @p sourceTexture(포맷 @p sourceFormat)를 읽어 PNG 바이트로 받을 요청을 넣고 그 표를 돌려줍니다 — 파일을 거치지 않는다. 파일 요청과 같은 줄 · 같은 표다.
          * @details 끝은 `findScreenshotResult( 표 )` 가 알리고, 결과는 `takeScreenshotPNGBytes( 표, … )` 로 받는다(언리얼 `FScreenshotRequest` 의 전역 마지막 결과 대신 요청 핸들 하나로 묻는다).

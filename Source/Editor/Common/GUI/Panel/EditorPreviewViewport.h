@@ -14,6 +14,7 @@
 
 #include "Editor/Common/EditorExports.h"
 
+#include "Engine/Graphics/View/ScreenshotTicketState.h"
 #include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
 
 namespace sw
@@ -95,11 +96,12 @@ namespace sw::editor
         /**
          * @brief 이 뷰포트의 렌더 타깃을 @p path(디스크 경로)에 이미지로 씁니다 — 확장자가 `.png` 면 PNG, 아니면 PPM 입니다(`RenderThread::requestScreenshot`). 파일은 몇 프레임 뒤에 생깁니다.
          * @details 한 번이라도 그린 뷰포트만 쓸 수 있다. 시나리오 눈 확인(`-gv_editorPreviewScreenshot`)이 쓴다.
-         * @return 렌더 타깃이 없거나 아직 그리지 않았거나 경로가 비어 있으면 false 이고 아무것도 요청하지 않습니다.
+         * @return 이 요청의 표입니다 — 결과는 `findImageFileResult` 로 읽는다(같은 실행의 다른 요청과 섞이지 않는다). 렌더 타깃이 없거나 아직 그리지 않았거나
+         *         경로가 절대 경로가 아니면 0 이고 아무것도 요청하지 않습니다.
          */
-        [[nodiscard]] bool requestImageFile( string_view path );
+        [[nodiscard]] uint32 requestImageFile( string_view path );
         /**
-         * @brief 이 뷰포트의 렌더 타깃을 PNG 바이트로 받을 요청을 넣고 그 표를 돌려줍니다 — 파일을 거치지 않는다(`RenderThread::requestScreenshotPNGBytes`). 결과는 몇 프레임 뒤 그 표로 `takeImagePNGBytes` 해 받는다.
+         * @brief 이 뷰포트의 렌더 타깃을 PNG 바이트로 받을 요청을 넣고 그 표를 돌려줍니다 — 파일을 거치지 않는다(`RenderThread::requestScreenshotPNGBytes`). 끝은 그 표로 `findImageFileResult`, 바이트는 `takeImagePNGBytes` 로 받는다.
          * @details 한 번이라도 그린 뷰포트만 쓸 수 있다. 캐릭터 편집 창의 프리셋 썸네일이 쓴다. @p requestName 은 로그에 남길 이름이다.
          * @return 렌더 타깃이 없거나 아직 그리지 않았거나 요청 이름이 비면 0 이고 아무것도 요청하지 않습니다.
          */
@@ -107,10 +109,10 @@ namespace sw::editor
         /** @brief 바이트 요청 표 @p ticket 이 성공했으면 그 PNG 를 @p outPNGBytes 로 옮기고 true 입니다(한 번만 받는다 — 다른 요청의 결과는 표가 달라 읽히지 않는다). */
         [[nodiscard]] static bool takeImagePNGBytes( uint32 ticket, vector<uint8>& outPNGBytes );
         /**
-         * @brief 처리한 이미지 요청 수입니다(파일 · 바이트, 성공 · 실패 모두 — 요청 앞에 읽어 두고 바뀌면 그 뒤 요청이 끝났다).
+         * @brief 표 @p ticket(`requestImageFile` · `requestImagePNGBytes` 의 반환)의 요청 상태입니다.
          * @details 렌더 스레드 창구(`RenderThread`)를 .cpp 에만 둔다 — 이 헤더를 읽는 에디터 확장(게임 GPU 게이트 안)이 RHI 헤더를 전이로 보지 않게.
          */
-        static uint32 getCompletedImageFileSerial();
+        [[nodiscard]] static ScreenshotTicketState findImageFileResult( uint32 ticket );
 
         /** @brief 오빗 카메라를 정합니다. 각은 라디안입니다. */
         void setOrbit( const float3& target, float32 distance, float32 yaw, float32 pitch );
