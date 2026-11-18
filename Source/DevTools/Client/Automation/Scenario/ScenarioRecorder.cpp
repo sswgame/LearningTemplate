@@ -109,22 +109,6 @@ namespace sw
                 bool                 _bOpen{ false };       ///< 0 이 아닌 값의 구간이 열려 있다 NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
             };
 
-            /** @brief 바인딩이 쓰는 장치 종류입니다. `ActionAxis` 재생이 `device` 로 바인딩을 고르는 규칙(AutomationActionSteps `getBindingDevice`)과 같다. */
-            static InputDeviceKind getBindingDevice( const ActionBinding& binding )
-            {
-                switch ( binding._kind )
-                {
-                    case BindingKind::GamepadStick2D:
-                        return InputDeviceKind::Gamepad;
-                    case BindingKind::MouseDelta2D:
-                    case BindingKind::MouseWheel1D:
-                    case BindingKind::VirtualJoystick2D:
-                        return InputDeviceKind::Mouse;
-                    default:
-                        return binding._arrSlot[0]._deviceKind;
-                }
-            }
-
             /**
              * @brief 패드 @p pad 의 스틱 @p stick 이 어떤 액션의, `ActionAxis device="Gamepad"` 가 고를 바인딩(그 액션의 첫 패드 축 바인딩)이면 그 액션 이름입니다. 없으면 nullptr 입니다.
              * @details 재생은 그 바인딩의 스틱 두 축에 값을 낸다 — 같은 패드 · 같은 스틱의 2D 바인딩일 때만 같은 입력이 재현된다(한 성분 바인딩은 x 를 그 성분에 낸다).
@@ -138,7 +122,7 @@ namespace sw
                     for ( uint32 bindIndex = 0; bindIndex < bindingCount; ++bindIndex )
                     {
                         const ActionBinding* pBinding = inputMap.getBinding( action, bindIndex );
-                        if ( pBinding == nullptr || getBindingDevice( *pBinding ) != InputDeviceKind::Gamepad )
+                        if ( pBinding == nullptr || pBinding->getDeviceKind() != InputDeviceKind::Gamepad )
                             continue;
                         const bool bComposite = pBinding->_kind == BindingKind::Axis1DComposite || pBinding->_kind == BindingKind::Vector2DComposite;
                         if ( bComposite == false && pBinding->_kind != BindingKind::GamepadStick2D )
