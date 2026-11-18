@@ -140,17 +140,28 @@ SW_TEST_CASE( VoxelBlockCatalogTest, IndexStartsAfterAirAndDuplicateIsRefused )
     SW_EXPECT_FALSE( rig._catalog.isOpaque( rig._glass ) );
 }
 
-// 블록 머티리얼의 아틀라스 칸(_atlasGrid)은 카탈로그를 따라야 한다 — 메셔는 카탈로그 열 수로 타일 칸 UV 를 싣고 셰이더는 머티리얼 값으로 푼다. 다르면 맞춰 쓰지 않고 오류다.
+// 블록 머티리얼의 아틀라스 칸(_atlasGrid)은 카탈로그를 따라야 한다 — 메셔는 카탈로그 열 수로 타일 칸 UV 를 싣고 셰이더는 머티리얼 값으로 푼다.
+// 검사는 월드당 한 번: 머티리얼이 준비되기 전에는 그리지 않고, 다르면 오류 한 줄 뒤 계속 그리지 않는다(맞춰 쓰지 않는다).
 SW_TEST_CASE( VoxelBlockCatalogTest, MaterialAtlasGridMustMatchTheCatalog )
 {
     VoxelFixture rig;
     const float4 catalogGrid{ static_cast<float32>( rig._catalog.getAtlasColumns() ), static_cast<float32>( rig._catalog.getAtlasRows() ),
                               static_cast<float32>( rig._catalog.getTileTexels() ), 0.0f };
-    SW_EXPECT_TRUE( rig._catalog.checkAtlasGrid( catalogGrid, "same.material" ) );
-
-    SW_EXPECT_LOG( "VoxelBlockCatalog.AtlasGridMismatch" );
     const float4 otherGrid{ catalogGrid._x + 1.0f, catalogGrid._y, catalogGrid._z, 0.0f };
-    SW_EXPECT_FALSE( rig._catalog.checkAtlasGrid( otherGrid, "other.material" ) );
+
+    VoxelAtlasGridGate same;
+    SW_EXPECT_FALSE( same.update( rig._catalog, false, nullptr, nullptr, "same.material" ) ); // 준비 전 — 견주지 않고 그리지 않는다
+    SW_EXPECT_TRUE( same.isPending() );
+    SW_EXPECT_TRUE( same.update( rig._catalog, true, &catalogGrid, &catalogGrid, "same.material" ) );
+
+    SW_EXPECT_LOG( "VoxelBlockCatalog.AtlasGridMismatch" ); // 한 줄 — 아래에서 거듭 불러도 다시 견주지 않는다
+    VoxelAtlasGridGate other;
+    SW_EXPECT_FALSE( other.update( rig._catalog, true, &otherGrid, &otherGrid, "other.material" ) );
+    SW_EXPECT_FALSE( other.update( rig._catalog, true, &catalogGrid, &catalogGrid, "other.material" ) );
+    SW_EXPECT_FALSE( other.isPending() );
+
+    VoxelAtlasGridGate missing; // 머티리얼에 칸이 없으면 다른 것이다
+    SW_EXPECT_FALSE( missing.update( rig._catalog, true, &catalogGrid, nullptr, "missing.material" ) );
 }
 
 // ---- 월드 ----

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="9eb1d1a8e15248eae83ea9abd53317d4"?>
 <!-- 블록 청크의 불투명 머티리얼 — _albedoMap 이 Kenney Voxel Pack 타일 아틀라스다. 셰이더(voxel_blocks.hlsl)가 메셔의 타일 칸 · 블록 좌표 UV 로 칸을 고르고 합친 면에서 타일을 되풀이한다.
-     _atlasGrid 는 (열 수, 행 수, 타일 한 변 텍셀, 쓰지 않음)이며 data/blocks.xml 의 atlasColumns · atlasRows · tileTexels 와 같아야 한다 — 카탈로그가 정본이고, 다르면 청크가 오류(VoxelBlockCatalog.AtlasGridMismatch)를 남기고 그리지 않는다. 프로퍼티는 그 셰이더의 머티리얼 구조체와 이름 · 순서가 같다. -->
+     _atlasGrid 는 (열 수, 행 수, 타일 한 변 텍셀, 쓰지 않음)이며 data/blocks.xml 의 atlasColumns · atlasRows · tileTexels 와 같아야 한다 — 카탈로그가 정본이고, 다르면 게임 모드가 월드당 한 번 오류(VoxelBlockCatalog.AtlasGridMismatch)를 남기고 블록 메시를 그리지 않는다. 프로퍼티는 그 셰이더의 머티리얼 구조체와 이름 · 순서가 같다. -->
 <MaterialDef formatVersion="0" name="VoxelBlocks" shaderPath="game/voxelcraft/shaders/voxel_blocks.hlsl" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>

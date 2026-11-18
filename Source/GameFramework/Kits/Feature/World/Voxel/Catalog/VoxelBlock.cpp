@@ -115,6 +115,17 @@ namespace sw
         return bSame;
     }
 
+    bool VoxelAtlasGridGate::update( const VoxelBlockCatalog& catalog, bool bMaterialsReady, const float4* pOpaqueGrid, const float4* pWaterGrid, string_view materialName )
+    {
+        if ( _state == State::Pending && bMaterialsReady )
+        {
+            const bool bSame = catalog.checkAtlasGrid( pOpaqueGrid != nullptr ? *pOpaqueGrid : float4{}, materialName ) &&
+                               catalog.checkAtlasGrid( pWaterGrid != nullptr ? *pWaterGrid : float4{}, materialName );
+            _state = bSame ? State::Matches : State::Differs;
+        }
+        return canDraw();
+    }
+
     uint32 VoxelBlockCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).

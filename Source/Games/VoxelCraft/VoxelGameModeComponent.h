@@ -63,6 +63,8 @@ namespace sw
 
         // ---- 다른 컴포넌트가 읽는 값입니다(PrePhysics 뒤의 그룹에서 읽습니다) ----
         const VoxelWorld& getWorld() const { return _world; }
+        /** @brief 블록 · 물 머티리얼의 아틀라스 칸을 카탈로그와 견주어 같았으면 true 입니다. 견주기 전 · 달랐으면 청크가 메시를 그리지 않습니다. */
+        bool canDrawBlockMeshes() const { return _atlasGate.canDraw(); }
         /** @brief 가운데에서 시작해 나선으로 찾은 첫 땅(물이 아닌 곳)의 위쪽 위치입니다. */
         float3 findSpawnPosition() const;
 
@@ -82,6 +84,11 @@ namespace sw
         void syncChunkViews( GameObjectManager& manager );
         /** @brief 몸(놓기 전이면 월드 가운데) 둘레의 청크만 월드에 올립니다. 그릴 청크가 바뀌면 플러시에서 뷰를 맞추도록 표시합니다. */
         void updateResidency();
+        /**
+         * @brief 견주기 전이면 청크 뷰 하나의 블록 · 물 머티리얼이 준비됐는지 보고, 준비됐으면 아틀라스 칸을 카탈로그와 월드당 한 번 견줍니다(틱 뒤 게임 스레드).
+         *        같으면 모든 뷰에 다시 메싱을 요청한다(그동안 그리지 않았다). 다르면 오류 한 줄이 남고 이 월드의 블록 메시는 그리지 않는다.
+         */
+        void checkAtlasGrid( GameObjectManager& manager );
         void scheduleRebuilds();
         void logStatus( float32 deltaTime );
         /** @brief 플레이어 폰의 조종자를 자동 플레이 스위치에 맞게 바꿉니다. 틱 밖의 게임 스레드에서 부릅니다. */
@@ -138,5 +145,6 @@ namespace sw
         int32                                   _centerChunkZ;
         int8                                    _appliedAutoPlay;  ///< 플레이어 폰에 적용한 자동 플레이 상태입니다(−1 아직 없음, 0 끔, 1 켬).
         uint8                                   _bChunkViewsStale; ///< 그릴 청크가 바뀌어 플러시에서 뷰를 맞춰야 합니다.
+        VoxelAtlasGridGate                      _atlasGate;        ///< 블록 머티리얼 아틀라스 칸 검사(월드당 한 번). 카탈로그가 정본이다
     };
 } // namespace sw

@@ -5,6 +5,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -73,6 +74,7 @@ namespace sw
         , _centerChunkZ{ 0 }
         , _appliedAutoPlay{ -1 }
         , _bChunkViewsStale{ SW_FALSE }
+        , _atlasGate{}
     {
     }
 
@@ -104,7 +106,8 @@ namespace sw
 
     bool VoxelGameModeComponent::hasPendingSpawn() const
     {
-        return _bChunkViewsStale != SW_FALSE || _appliedAutoPlay != ( isAutoPlayOn() ? 1 : 0 );
+        const bool bAtlasCheckWaiting = _atlasGate.isPending() && _mapChunkView.empty() == false; // 머티리얼이 준비될 때까지 플러시에서 다시 본다
+        return bAtlasCheckWaiting || _bChunkViewsStale != SW_FALSE || _appliedAutoPlay != ( isAutoPlayOn() ? 1 : 0 );
     }
 
     void VoxelGameModeComponent::syncAutoPlayPossession( GameObjectManager& manager )
@@ -242,6 +245,8 @@ namespace sw
     {
         if ( bRespawnViews || _bChunkViewsStale != SW_FALSE )
             syncChunkViews( manager );
+        if ( _atlasGate.isPending() )
+            checkAtlasGrid( manager );
         if ( _appliedAutoPlay != ( isAutoPlayOn() ? 1 : 0 ) )
             syncAutoPlayPossession( manager );
     }
@@ -262,6 +267,34 @@ namespace sw
         }
         if ( _world.updateResidency( _centerChunkX, _centerChunkZ, _residentChunkRadius, _chunkLoadsPerFrame ) > 0 )
             _bChunkViewsStale = SW_TRUE;
+    }
+
+    void VoxelGameModeComponent::checkAtlasGrid( GameObjectManager& manager )
+    {
+        if ( _mapChunkView.empty() )
+            return;
+        const GameObject*          pObject = manager.resolveGameObject( _mapChunkView.begin()->second );
+        const VoxelChunkComponent* pChunk  = pObject != nullptr ? pObject->getComponent<VoxelChunkComponent>() : nullptr;
+        if ( pChunk == nullptr )
+            return;
+        MeshComponent* pOpaque = nullptr;
+        MeshComponent* pWater  = nullptr;
+        pChunk->findMeshes( pOpaque, pWater );
+        const Material* pOpaqueMaterial = pOpaque != nullptr ? pOpaque->getMaterial() : nullptr;
+        const Material* pWaterMaterial  = pWater != nullptr ? pWater->getMaterial() : nullptr;
+        if ( pOpaqueMaterial == nullptr || pWaterMaterial == nullptr )
+            return; // 아직 준비되지 않았다 — 다음 플러시에서 다시 본다(그동안 청크는 그리지 않는다)
+        const bool bCanDraw = _atlasGate.update( *_world.getCatalog(), true, static_cast<const float4*>( pOpaqueMaterial->getParameterData( "_atlasGrid" ) ),
+                                                 static_cast<const float4*>( pWaterMaterial->getParameterData( "_atlasGrid" ) ), pOpaque->getMaterialPath().c_str() );
+        if ( bCanDraw == false )
+            return;
+        for ( const auto& entry : _mapChunkView )
+        {
+            const GameObject*    pViewObject = manager.resolveGameObject( entry.second );
+            VoxelChunkComponent* pView       = pViewObject != nullptr ? pViewObject->getComponent<VoxelChunkComponent>() : nullptr;
+            if ( pView != nullptr )
+                pView->requestRebuild();
+        }
     }
 
     void VoxelGameModeComponent::syncChunkViews( GameObjectManager& manager )

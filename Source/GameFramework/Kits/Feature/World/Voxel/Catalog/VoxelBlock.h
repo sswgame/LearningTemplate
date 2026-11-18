@@ -165,6 +165,31 @@ namespace sw
         int32                      _tileTexels;
     };
 
+    /**
+     * @struct VoxelAtlasGridGate
+     * @brief 월드 하나의 블록 머티리얼 아틀라스 칸 검사입니다. 머티리얼이 모두 준비되면 한 번만 견주고 결과를 쥡니다.
+     * @details 견주기 전(`Pending`)과 다를 때(`Differs`)는 블록 메시를 그리지 않는다 — 검사 없이 그리는 때가 없고, 오류는 월드당 한 줄이다.
+     */
+    struct SW_KIT_API VoxelAtlasGridGate
+    {
+        enum class State : uint8
+        {
+            Pending, ///< 머티리얼이 아직 준비되지 않았다
+            Matches,
+            Differs
+        };
+
+        State _state{ State::Pending };
+
+        /**
+         * @brief 견주기 전이고 @p bMaterialsReady 이면 불투명 · 물 머티리얼의 `_atlasGrid`(칸이 없으면 nullptr — 다르다)를 카탈로그와 견줍니다. 처음 다른 칸에서 멈춰 오류는 한 줄이다.
+         * @return 블록 메시를 그려도 되면(같다고 견주었으면) true 입니다.
+         */
+        bool update( const VoxelBlockCatalog& catalog, bool bMaterialsReady, const float4* pOpaqueGrid, const float4* pWaterGrid, string_view materialName );
+        bool canDraw() const { return _state == State::Matches; }
+        bool isPending() const { return _state == State::Pending; }
+    };
+
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<VoxelBlockCatalog>::acquire` 로 한 벌을 받습니다. */
     SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, VoxelBlockCatalog );
 } // namespace sw

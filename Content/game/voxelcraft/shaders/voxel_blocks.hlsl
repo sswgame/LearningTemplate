@@ -13,7 +13,7 @@
 SW_MATERIAL_BEGIN
 {
     float4 _color;
-    float4 _atlasGrid; ///< x 열 수, y 행 수, z 타일 한 변 텍셀 — 블록 카탈로그(blocks.xml)의 atlasColumns · atlasRows · tileTexels 와 같다(VoxelChunkComponent 가 견주어 다르면 그리지 않는다)
+    float4 _atlasGrid; ///< x 열 수, y 행 수, z 타일 한 변 텍셀 — 블록 카탈로그(blocks.xml)의 atlasColumns · atlasRows · tileTexels 와 같다(VoxelGameModeComponent 가 월드당 한 번 견주어 다르면 그리지 않는다)
     float  _roughness;
     float  _metallic;
     uint   _albedoMap;

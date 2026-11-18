@@ -39,13 +39,15 @@ namespace sw
 
         /** @brief 디렉터와 청크 번호를 정합니다. 디렉터가 청크를 스폰한 뒤에 부릅니다. */
         void assignChunk( GameObjectHandle gameMode, int32 chunkX, int32 chunkZ );
+        /** @brief 불투명 메시(첫 메시 컴포넌트, 물 메시와 같으면 nullptr)와 물 메시(이름 `_waterMeshName`)입니다. 디렉터가 머티리얼 아틀라스 칸을 견줄 때 씁니다. */
+        void findMeshes( MeshComponent*& outOpaque, MeshComponent*& outWater ) const;
         /** @brief 다음 틱에 메시를 다시 만들도록 요청합니다. 디렉터가 `PrePhysics` 에서 부릅니다. */
         void requestRebuild() { _bRebuildRequested = SW_TRUE; }
 
     private:
         /**
          * @brief 메싱한 정점을 엔진 메시로 옮겨 적용합니다. 틱이 끝난 뒤 게임 스레드에서 부르고, 정점이 없으면 메시를 숨깁니다.
-         *        처음 한 번 메시 머티리얼의 아틀라스 칸(`_atlasGrid`)을 블록 카탈로그와 견주어, 다르면 오류를 남기고 메시를 그리지 않습니다(맞춰 쓰지 않는다).
+         *        디렉터가 블록 머티리얼의 아틀라스 칸을 견주기 전이거나 달랐으면 그리지 않습니다(`VoxelGameModeComponent::canDrawBlockMeshes`). 같다고 견주면 디렉터가 다시 메싱을 요청한다.
          */
         void           applyMeshes();
         MeshComponent* findWaterMesh() const;
@@ -61,8 +63,6 @@ namespace sw
         VoxelChunkMesh _scratchMesh;
         uint8          _bRebuildRequested : 1;
         uint8          _bApplyScheduled   : 1;
-        uint8          _bAtlasChecked     : 1; ///< 머티리얼 아틀라스 칸을 카탈로그와 견주었다
-        uint8          _bAtlasMatches     : 1; ///< 견준 결과가 같았다 — 다르면 메시를 그리지 않는다
-        uint8          _reserved          : 4;
+        uint8          _reserved          : 6;
     };
 } // namespace sw
