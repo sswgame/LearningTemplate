@@ -908,27 +908,27 @@
 		</entry>
 		<entry key="EdCommon.LiveCodingAllModules" source="All Modules">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+				<item>Source/Editor/Common/GUI/Model/EditorMenuBarModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.LiveCodingFailed" source="{target} build failed (exit code {code}). See the Output Log.">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+				<item>Source/Editor/Common/GUI/Model/EditorMenuBarModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.LiveCodingFailedTitle" source="Live Coding Failed">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+				<item>Source/Editor/Common/GUI/Model/EditorMenuBarModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.LiveCodingSucceeded" source="{target} compiled and reloaded in {seconds}s">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+				<item>Source/Editor/Common/GUI/Model/EditorMenuBarModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.LiveCodingSucceededTitle" source="Live Coding Succeeded">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+				<item>Source/Editor/Common/GUI/Model/EditorMenuBarModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.MoveRefusedTitle" source="Move refused">
@@ -1036,7 +1036,7 @@
 		</entry>
 		<entry key="EdCommon.NotifyClipboardEmpty" source="Clipboard is empty">
 			<origins>
-				<item>Source/Editor/Common/Input/EditorCommandGUI.cpp</item>
+				<item>Source/Editor/Common/Input/EditorDefaultCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyDocumentSaveFailed" source="Document save failed">
@@ -1066,7 +1066,7 @@
 		</entry>
 		<entry key="EdCommon.NotifyPasteTitle" source="Paste">
 			<origins>
-				<item>Source/Editor/Common/Input/EditorCommandGUI.cpp</item>
+				<item>Source/Editor/Common/Input/EditorDefaultCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyPlayNewWindowSaveFirst"
@@ -1087,12 +1087,12 @@
 		</entry>
 		<entry key="EdCommon.NotifyPlayTitle" source="Play">
 			<origins>
-				<item>Source/Editor/Common/Input/EditorCommandGUI.cpp</item>
+				<item>Source/Editor/Common/Input/EditorDefaultCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyPlayUnsaved" source="The scene has unsaved changes. Use Play on the toolbar to confirm.">
 			<origins>
-				<item>Source/Editor/Common/Input/EditorCommandGUI.cpp</item>
+				<item>Source/Editor/Common/Input/EditorDefaultCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyPrefabIsolated" source="Opened the prefab in the Prefab Window">
@@ -1112,17 +1112,17 @@
 		</entry>
 		<entry key="EdCommon.NotifyPresetApplyFailed" source="Failed to apply the preset to this component">
 			<origins>
-				<item>Source/Editor/Common/Input/EditorCommandGUI.cpp</item>
+				<item>Source/Editor/Common/Input/EditorDefaultCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyPresetTitle" source="Preset">
 			<origins>
-				<item>Source/Editor/Common/Input/EditorCommandGUI.cpp</item>
+				<item>Source/Editor/Common/Input/EditorDefaultCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyPresetWriteFailed" source="Failed to write the preset file">
 			<origins>
-				<item>Source/Editor/Common/Input/EditorCommandGUI.cpp</item>
+				<item>Source/Editor/Common/Input/EditorDefaultCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifySaveFailed" source="Save failed">
@@ -1167,12 +1167,12 @@
 		</entry>
 		<entry key="EdCommon.NotifySelectComponent" source="Select a component first">
 			<origins>
-				<item>Source/Editor/Common/Input/EditorCommandGUI.cpp</item>
+				<item>Source/Editor/Common/Input/EditorDefaultCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifySelectObject" source="Select an object first">
 			<origins>
-				<item>Source/Editor/Common/Input/EditorCommandGUI.cpp</item>
+				<item>Source/Editor/Common/Input/EditorDefaultCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyStopPlayFirst" source="Stop play before opening or creating a scene">
