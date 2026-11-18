@@ -213,8 +213,8 @@ namespace sw::editor
             const EditorVisualizerRegistration& registration = getAt( index );
             if ( toggles.isOn( registration ) == false )
                 continue;
-            if ( registration._pDraw != nullptr )
-                registration._pDraw( args );
+            if ( registration._pTool != nullptr )
+                registration._pTool( args );
         }
     }
 
