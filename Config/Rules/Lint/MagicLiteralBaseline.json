@@ -727,7 +727,7 @@
     "Source/GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.cpp": {"minus-one": 3},
     "Source/GameFramework/Kits/Feature/World/Voxel/Rule/VoxelBody.cpp": {"float": 4},
     "Source/GameFramework/Kits/Feature/World/Voxel/Rule/VoxelRayHit.cpp": {"float": 2},
-    "Source/GameFramework/Kits/Feature/World/Voxel/Rule/VoxelTerrain.cpp": {"float": 2, "integer": 1, "hex": 1},
+    "Source/GameFramework/Kits/Feature/World/Voxel/Rule/VoxelTerrain.cpp": {"float": 2, "integer": 1},
     "Source/GameFramework/Kits/Feature/World/Voxel/View/VoxelMesher.cpp": {"float": 7},
     "Source/GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureDungeon.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureTargeting.cpp": {"float": 1},
