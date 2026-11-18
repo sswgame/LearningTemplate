@@ -1,6 +1,6 @@
 /**
  * @file TestEditorUICommandQueue.cpp
- * @brief UI 출력 계약(`EditorUICommandQueue`)을 봅니다 — UI 프레임 N 에 넣은 명령은 다음 게임 프레임 시작(`takeDue`)에 넣은 순서대로 나오고, 뒤 프레임 번호 칸은 그 프레임까지 남는다.
+ * @brief UI 출력 계약(`EditorUICommandQueue`)을 봅니다 — UI 프레임 N 에 넣은 명령은 게임 틱 N+1 시작(`takeDue`)에 넣은 순서대로 나오고(예전 직접 변경과 같은 지연), 뒤 프레임 번호 칸은 그 프레임까지 남는다.
  * @details 큐는 지역 객체로 만든다. 에디터 범위의 큐(`EditorUICommands::post`)에 넣으면 실제 다음 프레임이 플레이 세션을 바꾼다.
  */
 #include "pch.h"
@@ -13,7 +13,7 @@ using namespace sw;
 using namespace sw::editor;
 
 /**
- * @brief [EditorUICommandQueueTest] UI 프레임이 넣은 명령은 그 뒤의 게임 프레임 시작에 처음 나온다(한 프레임 지연). 이미 꺼낸 프레임 뒤에 넣은 명령은 다음 프레임으로 간다
+ * @brief [EditorUICommandQueueTest] UI 프레임 N 이 넣은 명령은 바로 뒤의 게임 틱 N+1 시작에 처음 나온다. 이미 꺼낸 틱 뒤에 넣은 명령은 다음 틱으로 간다
  */
 SW_TEST_CASE( EditorUICommandQueueTest, PostedCommandAppearsNextFrame )
 {
@@ -21,12 +21,12 @@ SW_TEST_CASE( EditorUICommandQueueTest, PostedCommandAppearsNextFrame )
     vector<EditorUICommand> listDue;
     const uint32            firstFrame = queue.getCollectingFrame();
 
-    // 게임 프레임 1 시작 — 아직 아무도 넣지 않았다.
+    // 게임 틱 1 시작 — 앞 UI 프레임이 없어 아무것도 없다.
     queue.takeDue( listDue );
     SW_EXPECT_TRUE( listDue.empty() );
     SW_EXPECT_EQUAL( firstFrame + 1, queue.getCollectingFrame() );
 
-    // UI 프레임 1 이 Pause 를 넣는다 — 게임 프레임 1 은 이미 시작했으니 적용은 게임 프레임 2 다.
+    // UI 프레임 1 이 Pause 를 넣는다 — 바로 뒤의 게임 틱 2 시작에 나온다(그 틱이 멈춤을 본다).
     SW_REQUIRE_TRUE( queue.post( EditorUICommand::make( EditorUICommandKind::Pause ) ) );
     queue.takeDue( listDue );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listDue.size() );

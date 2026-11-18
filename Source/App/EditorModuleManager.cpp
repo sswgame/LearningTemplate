@@ -164,9 +164,13 @@ namespace sw
         }
         if ( _editorAPI.updateUI != nullptr )
             _editorAPI.updateUI( _editor );
+        // UI 가 보낸 명령(뷰 크기 · Play/Pause/Step)을 씬 틱 앞, 틱 여부 질의 앞에서 적용한다 — 이 프레임의 씬 틱이 받는다(예전 직접 변경과 같은 지연, `EditorUICommandQueue`).
+        // UI 를 게임 틱과 나란히 돌리게 되어도 이 자리(게임 스레드)는 그대로다.
+        if ( _editorAPI.applyUICommands != nullptr )
+            _editorAPI.applyUICommands( _editor );
 
-        // 에디터 갱신 **뒤에** 확정한다. 앞 UI 프레임이 보낸 Step 은 이 갱신의 맨 앞(`ImGuiEditor::applyUICommands`)에서 적용되고, 씬을 한 틱 진행한 다음
-        // endEditorFrame 에서 소비된다. 이 질의를 그 적용 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
+        // 명령을 적용한 **뒤에** 확정한다. Step 은 위에서 적용되고, 씬을 한 틱 진행한 다음 endEditorFrame 에서 소비된다.
+        // 이 질의를 적용 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
         getMutableFrameState()._bTickScene = queryTickScene() ? SW_TRUE : SW_FALSE;
         sampleViewTargets();
         // 다시 그릴 까닭은 이번 프레임의 UI 를 다 돈 뒤에 묻는다(입력 · 잡은 항목 · 알림 · 패널 요청이 이 프레임 것으로 정해졌다).

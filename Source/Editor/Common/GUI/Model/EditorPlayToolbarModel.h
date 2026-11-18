@@ -71,7 +71,7 @@ namespace sw::editor
 
         /** @brief 미저장 씬이고 멈춰 있으면 확인 모달을 열게 하고, 아니면 바로 시작합니다. */
         void requestSession( EditorPlaySessionKind session );
-        // 재생 명령(시작 · 멈춤 · Step · 정지)은 플레이 세션을 바로 바꾸지 않고 UI 명령으로 보낸다 — 다음 게임 프레임 시작에 적용되고 결과는 다음 `gather` 가 본다(`EditorUICommandQueue`).
+        // 재생 명령(시작 · 멈춤 · Step · 정지)은 플레이 세션을 바로 바꾸지 않고 UI 명령으로 보낸다 — 이 UI 프레임 뒤 게임 틱 시작에 적용되고 결과는 다음 `gather` 가 본다(`EditorUICommandQueue`).
         /** @brief 세션 시작을 보냅니다. 카메라에서 시작이 켜져 있으면 에디터 카메라 위치를 시작 위치로 넘깁니다(멈춤에서 시작할 때만). */
         void startSession( EditorPlaySessionKind session );
         void pause();

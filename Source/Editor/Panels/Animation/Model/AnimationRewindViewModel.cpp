@@ -170,7 +170,7 @@ namespace sw::editor
         AnimationRewindRecorder* pRewind = AnimationRewindViewModelInternal::findActiveRewind();
         if ( pRewind == nullptr )
             return;
-        // 훑기는 PIE 를 멈춘다 — 멈추지 않으면 다음 틱이 새 기록을 쌓아 막대가 밀린다. 멈춤은 다음 게임 프레임 시작에 적용된다(UI 출력 계약 — 이번 프레임 틱 한 번은 기록된다).
+        // 훑기는 PIE 를 멈춘다 — 멈추지 않으면 다음 틱이 새 기록을 쌓아 막대가 밀린다. 멈춤은 이 UI 프레임 뒤 게임 틱 시작(씬 틱 앞)에 적용된다(UI 출력 계약).
         if ( EditorPlaySession::isPlaying() )
             EditorUICommandQueue::postToEditor( EditorUICommand::make( EditorUICommandKind::Pause ) );
         pRewind->setScrubTime( pRewind->getLatestTime() - static_cast<float64>( secondsAgo ) );

@@ -1,8 +1,9 @@
 /**
  * @file EditorUICommandQueue.h
- * @brief 에디터 UI 가 엔진 상태(뷰 렌더 타깃 크기 · 플레이 세션)를 바꾸려는 의도를 담는 명령 큐입니다. UI 는 넣기만 하고 게임 스레드가 다음 프레임 시작에 적용합니다.
- * @details 에디터 UI 스레드 분리 3 단계의 출력 계약이다(`docs/DesignBacklog.md` "에디터 UI 스레드 분리 검토" 3). **UI 프레임 N 에 넣은 명령은 게임 프레임 N+1 시작에 적용되고,
- *          그 결과는 UI 프레임 N+1 이 본다(한 프레임 지연이 계약).** UI 가 어느 스레드에서 돌든 같은 명령이 같은 게임 프레임에 닿는다. 입력 큐(`InputManager::postRawEventAt`)와
+ * @brief 에디터 UI 가 엔진 상태(뷰 렌더 타깃 크기 · 플레이 세션)를 바꾸려는 의도를 담는 명령 큐입니다. UI 는 넣기만 하고 게임 스레드가 다음 게임 틱 시작에 적용합니다.
+ * @details 에디터 UI 스레드 분리 3 단계의 출력 계약이다(`docs/DesignBacklog.md` "에디터 UI 스레드 분리 검토" 3). **UI 프레임 N 에 넣은 명령은 게임 틱 N+1 시작에 적용된다 — 예전 직접 변경과
+ *          지연이 같다.** 호스트 프레임은 게임 모듈 갱신 → UI 프레임 → 씬 틱 순이고, 호스트가 UI 프레임 뒤 · 씬 틱과 틱 여부 질의 앞에서 `applyUICommands` 를 부르므로(게임 스레드)
+ *          UI 프레임 N 의 Step · Pause 는 바로 뒤의 씬 틱이, Play 는 다음 게임 모듈 갱신이 받는다. UI 를 게임 틱과 나란히 돌리게 되면 그때 한 프레임 지연이 생긴다(DesignBacklog 3). 입력 큐(`InputManager::postRawEventAt`)와
  *          같은 모양이다 — 칸마다 적용할 프레임 번호를 들고, `takeDue` 가 그 번호까지를 넣은 순서대로 꺼내고 뒤 번호는 남긴다. 언리얼 Slate 가 게임 스레드에 명령을 큐로 넘기는 자리다.
  *          적용(엔진 상태를 실제로 바꾸는 쪽)은 `applyDue` · `EditorUICommand::apply` 이고 본문(.cpp)만 엔진을 본다 — 이 헤더는 값과 큐만 안다(큐는 엔진 없이 테스트한다).
  */
@@ -72,11 +73,11 @@ namespace sw::editor
         /** @brief 지금 명령을 모으는 프레임 번호입니다(1 부터). 다음 `takeDue` 가 이 번호까지를 꺼내고 하나 올린다. */
         uint32 getCollectingFrame() const { return _collectingFrame.load( std::memory_order_acquire ); }
         /**
-         * @brief 게임 프레임 시작 — 지금 프레임 번호까지의 명령을 넣은 순서대로 @p outList 에 담고(비운 뒤) 번호를 하나 올립니다. 뒤 번호 칸은 남깁니다.
+         * @brief 게임 틱 시작 — 지금 프레임 번호까지의 명령을 넣은 순서대로 @p outList 에 담고(비운 뒤) 번호를 하나 올립니다. 뒤 번호 칸은 남깁니다.
          * @details 번호를 먼저 올린다 — 올리기 전에 번호를 읽고 꺼낸 뒤에 넣은 명령은 지난 번호라 다음 `takeDue` 가 꺼낸다(잃지 않는다).
          */
         void takeDue( vector<EditorUICommand>& outList );
-        /** @brief 게임 프레임 시작에 부른다 — `takeDue` 로 이번 프레임 차례의 명령을 꺼내 넣은 순서대로 적용합니다(`ImGuiEditor::updateUI` 의 맨 앞). */
+        /** @brief 게임 틱 시작에 부른다 — `takeDue` 로 이번 프레임 차례의 명령을 꺼내 넣은 순서대로 적용합니다(호스트가 UI 프레임 뒤 · 씬 틱 앞에서 부르는 `ImGuiEditor::applyUICommands`). */
         void applyDue();
         /** @brief @p command 를 지금 에디터 범위의 큐에 넣습니다(UI 쪽 창구). 에디터 컨텍스트가 없으면 아무것도 하지 않습니다(컨텍스트 없이 도는 테스트 · 종료 정리). */
         static void postToEditor( const EditorUICommand& command );

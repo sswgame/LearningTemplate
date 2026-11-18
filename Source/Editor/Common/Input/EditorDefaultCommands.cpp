@@ -152,7 +152,8 @@ namespace sw::editor
                                                                                   NotificationKind::Warning );
                     return;
                 }
-                EditorUICommandQueue::postToEditor( EditorUICommand::makeStart( false, false ) ); // 다음 게임 프레임 시작에 적용된다(UI 출력 계약)
+                // 이 UI 프레임 뒤 게임 틱 시작에 적용된다(UI 출력 계약). 단축키 Play 는 카메라에서 시작을 쓰지 않으므로 앞 툴바 세션이 남긴 시작 위치를 지운다(언리얼 Play 도 "Play From Here" 가 아니면 기본 시작점).
+                EditorUICommandQueue::postToEditor( EditorUICommand::makeStart( false, false ) );
             }
 
             /** @brief 전역 명령이 고칠 오브젝트 — 겨누는 창의 선택의 주 오브젝트입니다(언리얼은 포커스된 툴킷의 명령 목록이 받는다). */

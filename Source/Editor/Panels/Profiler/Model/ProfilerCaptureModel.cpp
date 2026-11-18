@@ -105,7 +105,7 @@ namespace sw::editor
         _bCapturePaused        = SW_TRUE;
         _rowQuery._frameOffset = 0;
         if ( EditorPlaySession::isPlaying() )
-            EditorUICommandQueue::postToEditor( EditorUICommand::make( EditorUICommandKind::Pause ) ); // 다음 게임 프레임 시작에 적용된다(UI 출력 계약)
+            EditorUICommandQueue::postToEditor( EditorUICommand::make( EditorUICommandKind::Pause ) ); // 이 UI 프레임 뒤 게임 틱 시작에 적용된다(UI 출력 계약)
         SW_LOG_INFO_ID( "Profiler.SpikePaused", "Profiler paused on a spike: GT.Frame %# ms (threshold %# ms)", Fmt( static_cast<float64>( frameMicro ) / constant::time::kMicrosecondsPerMillisecond, Format().precision( 2 ) ),
                         Fmt( static_cast<float64>( _spikeThresholdMs ), Format().precision( 1 ) ) );
     }

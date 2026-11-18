@@ -35,7 +35,7 @@ namespace sw::editor
         EditorRenderViews* const pViews = EditorViewSurfaceInternal::findRenderViews();
         if ( pViews == nullptr )
             return;
-        // UI 는 타깃을 바로 바꾸지 않고 명령으로 보낸다 — 다음 게임 프레임 시작에 적용되고 그 UI 프레임부터 새 크기를 요청한 것으로 본다(`EditorUICommandQueue` 한 프레임 지연).
+        // UI 는 타깃을 바로 바꾸지 않고 명령으로 보낸다 — 이 UI 프레임 뒤 게임 틱 시작에 적용되고 다음 UI 프레임부터 새 크기를 요청한 것으로 본다(`EditorUICommandQueue`).
         const EditorViewTarget& view = pViews->getViewTarget( kind );
         if ( EditorViewTargetUtil::needsResize( view.getRequestedWidth(), view.getRequestedHeight(), width, height ) )
             EditorUICommandQueue::postToEditor( EditorUICommand::makeFitViewTarget( kind, width, height ) );

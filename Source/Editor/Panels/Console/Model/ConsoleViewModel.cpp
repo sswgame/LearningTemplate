@@ -23,7 +23,7 @@ namespace sw::editor
 
     void ConsoleViewModel::pausePlay()
     {
-        EditorUICommandQueue::postToEditor( EditorUICommand::make( EditorUICommandKind::Pause ) ); // 다음 게임 프레임 시작에 적용된다(UI 출력 계약)
+        EditorUICommandQueue::postToEditor( EditorUICommand::make( EditorUICommandKind::Pause ) ); // 이 UI 프레임 뒤 게임 틱 시작에 적용된다(UI 출력 계약)
     }
 
     bool ConsoleViewModel::showInFileExplorer( string_view absolutePath )

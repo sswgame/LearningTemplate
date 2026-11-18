@@ -22,7 +22,7 @@ namespace sw::editor
     {
         /** @brief 뷰 @p kind 가 지금 그릴 텍스처 id 입니다(ImGui 이미지). 타깃이 아직 없으면 nullptr 입니다. */
         static void* getTextureID( EditorViewKind kind );
-        /** @brief 뷰 @p kind 의 렌더 타깃을 @p width x @p height 로 맞추라고 보냅니다 — 다음 게임 프레임 시작에 적용된다(`EditorUICommandQueue`). 1 픽셀 차이는 무시한다(`EditorViewTargetUtil::needsResize`). */
+        /** @brief 뷰 @p kind 의 렌더 타깃을 @p width x @p height 로 맞추라고 보냅니다 — 이 UI 프레임 뒤 게임 틱 시작에 적용된다(`EditorUICommandQueue`). 1 픽셀 차이는 무시한다(`EditorViewTargetUtil::needsResize`). */
         static void fitTargetSize( EditorViewKind kind, uint32 width, uint32 height );
         /** @brief 이번 프레임에 뷰 @p kind 를 그렸고 이미지 왼쪽 위가 주 창 클라이언트 픽셀 @p imageClientPos 에 놓였다고 알립니다(호스트가 포인터를 뷰 픽셀로 옮긴다). */
         static void markDrawn( EditorViewKind kind, const float2& imageClientPos );

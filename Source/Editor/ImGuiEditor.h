@@ -48,6 +48,8 @@ namespace sw::editor
         void shutdown() override;
         /** @brief 메인 스레드에서 ImGui 프레임을 갱신하고, 패널을 그리고, 플랫폼 창을 갱신합니다. */
         void updateUI() override;
+        /** @brief UI 가 보낸 명령을 적용합니다(`EditorUICommandQueue::applyDue`). 호스트가 `updateUI` 뒤, 씬 틱 앞에서 부릅니다. */
+        void applyUICommands() override;
         /** @brief 에디터 UI 의 DrawData 를 GPU 로 그립니다. */
         void render( IRHIDevice* pRHIDevice ) override;
         /** @brief 메인 스왑체인 Present 뒤에 멀티 뷰포트를 그립니다. */
@@ -116,8 +118,6 @@ namespace sw::editor
         void endFrame();
         /** @brief ImGui 렌더러 백엔드로 주어진 DrawData 를 그립니다. */
         void renderBackend( IRHIDevice* pRHIDevice, ImDrawData* pDrawData );
-        /** @brief 앞 UI 프레임이 넣은 UI 명령을 적용합니다(게임 스레드, UI 프레임 앞 — `EditorUICommandQueue` 의 한 프레임 지연 계약). */
-        void applyUICommands();
         /** @brief 프레임을 열기 전의 상태 정리입니다 — 확장 등록 맞추기, 테마 토큰 다시 읽기, 새 환경설정 섹션, 뷰 표시 지우기. 메뉴 · 패널이 이번 프레임에 읽을 값이라 프레임 앞이어야 한다. */
         void prepareFrameState();
         /** @brief ImGui 프레임을 열고 메뉴 · 툴바를 그린 뒤 도크스페이스를 엽니다(순서는 ImGui 가 정한다). */

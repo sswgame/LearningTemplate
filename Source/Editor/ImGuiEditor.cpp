@@ -785,7 +785,9 @@ namespace sw::editor
 
     void ImGuiEditor::applyUICommands()
     {
-        if ( _editorContext == nullptr )
+        // UI 출력 계약 — 이번 UI 프레임이 넣은 명령(뷰 크기 · Play/Pause/Step)을 씬 틱 앞에서 적용한다(`EditorUICommandQueue`). 호스트가 부르는 자리는 게임 스레드라
+        // UI 프레임이 UI 스레드로 옮겨 가도 그대로다.
+        if ( _bInitialized == SW_FALSE || _editorContext == nullptr )
             return;
         SW_EDITOR_PROFILE_SCOPE( "GT.Editor.applyUICommands" );
         _editorContext->getSubsystem<EditorUICommandQueue>().applyDue();
@@ -859,9 +861,6 @@ namespace sw::editor
         // 하위 구간은 `GT.Editor.updateUI`(App) 의 시간이 어디에 쓰이는지 나눠 보여 준다. 패널별 시간은 `-gv_editorPanelTimes=N` 으로 본다.
         // 앞 UI 프레임이 다 그려지기를 기다리지 않는다 — 렌더 스레드가 그것을 그리는 동안 이 프레임을 만든다. 기다림은 쓸 칸 받기 · 게시에만 있다(`closeAndPublishFrame`).
         // 그 구간(`GT.Editor.waitDrawSnapshot` · `GT.Editor.publishDrawSnapshot`)이 크면 UI 작업이 아니라 RT, GPU, Present 가 길다는 뜻이다.
-        // UI 출력 계약 — 앞 UI 프레임이 넣은 명령(뷰 크기 · Play/Pause/Step)을 이 게임 프레임의 맨 앞에서 적용한다. 그 결과는 이번 UI 프레임이 본다(한 프레임 지연).
-        // UI 프레임이 UI 스레드로 옮겨 가도 이 자리(게임 스레드, UI 프레임을 넘기기 전)는 그대로다(`EditorUICommandQueue`).
-        applyUICommands();
         prepareFrameState();
         openFrame();
 
