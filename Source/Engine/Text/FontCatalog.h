@@ -107,6 +107,9 @@ namespace sw
         uint32 _glyphAtlasPageSize{ 0 };
         PROPERTY( Required, Min = 1, Max = 256, Tooltip = "Glyph atlas page count before the least recently used page is evicted (CJK text needs more)" )
         uint32 _glyphAtlasMaxPageCount{ 0 };
+        PROPERTY( Required, Min = 1, Max = 600,
+                  Tooltip = "When the glyph atlas is full and a page is evicted, glyphs used within this many recent frames are copied to free space instead of being dropped and re-rasterized" )
+        uint32 _glyphRetainFrameCount{ 0 };
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 키, 검사 실패) 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );

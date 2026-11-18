@@ -1,5 +1,5 @@
 <?asset guid="64b288a8dc8ce06ea4011e7b7e58b5f5"?>
-<FontCatalogDef _defaultFamily="Kenney Future" _glyphAtlasPageSize="1024" _glyphAtlasMaxPageCount="8">
+<FontCatalogDef _defaultFamily="Kenney Future" _glyphAtlasPageSize="1024" _glyphAtlasMaxPageCount="8" _glyphRetainFrameCount="2">
 	<_listFamily>
 		<FontFamilyDef _name="Kenney Future">
 			<_listFace>
