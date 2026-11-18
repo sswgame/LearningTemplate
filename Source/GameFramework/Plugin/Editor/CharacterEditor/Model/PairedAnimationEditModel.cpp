@@ -14,7 +14,7 @@ namespace sw::editor
         struct PairedAnimationEditModelInternal
         {
             /** @brief 값이 유한하고 0 이상이 아니면 오류입니다(대상은 칸 이름). */
-            static expected<void> checkNonNegative( float32 value, const utf8* pField )
+            static expected<void> validateNonNegative( float32 value, const utf8* pField )
             {
                 if ( MathUtil::isFinite( value ) && value >= 0.0f )
                     return {};
@@ -83,7 +83,7 @@ namespace sw::editor
 
     expected<void> PairedAnimationEditModel::setDuration( float32 seconds, bool bContinuous )
     {
-        if ( expected<void> check = PairedAnimationEditModelInternal::checkNonNegative( seconds, "Duration" ); check.has_value() == false )
+        if ( expected<void> check = PairedAnimationEditModelInternal::validateNonNegative( seconds, "Duration" ); check.has_value() == false )
             return check;
         if ( seconds <= 0.0f )
             return unexpected( Error{ ErrorKind::InvalidArgument, "Duration must be positive" } );
@@ -95,8 +95,8 @@ namespace sw::editor
 
     expected<void> PairedAnimationEditModel::setRoleStart( uint32 roleIndex, float32 seconds, bool bContinuous )
     {
-        if ( expected<void> check = checkRoleIndex( roleIndex ).and_then( [seconds]()
-        { return PairedAnimationEditModelInternal::checkNonNegative( seconds, "Start" ); } );
+        if ( expected<void> check = validateRoleIndex( roleIndex ).and_then( [seconds]()
+        { return PairedAnimationEditModelInternal::validateNonNegative( seconds, "Start" ); } );
              check.has_value() == false )
             return check;
         if ( _content._listRole[roleIndex]._bAnchor )
@@ -108,11 +108,11 @@ namespace sw::editor
 
     expected<void> PairedAnimationEditModel::setRoleBlend( uint32 roleIndex, float32 enterSeconds, float32 exitSeconds, bool bContinuous )
     {
-        const expected<void> check = checkRoleIndex( roleIndex )
+        const expected<void> check = validateRoleIndex( roleIndex )
                                          .and_then( [enterSeconds]()
-        { return PairedAnimationEditModelInternal::checkNonNegative( enterSeconds, "Enter blend" ); } )
+        { return PairedAnimationEditModelInternal::validateNonNegative( enterSeconds, "Enter blend" ); } )
                                          .and_then( [exitSeconds]()
-        { return PairedAnimationEditModelInternal::checkNonNegative( exitSeconds, "Exit blend" ); } );
+        { return PairedAnimationEditModelInternal::validateNonNegative( exitSeconds, "Exit blend" ); } );
         if ( check.has_value() == false )
             return check;
         recordUndo( bContinuous ? PairedAnimationEditModelInternal::makeCoalesceKey( "blend", roleIndex ) : string{} );
@@ -123,7 +123,7 @@ namespace sw::editor
 
     expected<void> PairedAnimationEditModel::setRoleOffset( uint32 roleIndex, const float3& offset, float32 yawDegrees, bool bContinuous )
     {
-        if ( expected<void> check = checkRoleIndex( roleIndex ); check.has_value() == false )
+        if ( expected<void> check = validateRoleIndex( roleIndex ); check.has_value() == false )
             return check;
         PairedAnimationRoleDef& role     = _content._listRole[roleIndex];
         const bool              bAligned = role._bAnchor == false && role._align != PairedAnimationAlign::None;
@@ -150,8 +150,8 @@ namespace sw::editor
 
     expected<void> PairedAnimationEditModel::setRoleWarpEnd( uint32 roleIndex, float32 seconds, bool bContinuous )
     {
-        if ( expected<void> check = checkRoleIndex( roleIndex ).and_then( [seconds]()
-        { return PairedAnimationEditModelInternal::checkNonNegative( seconds, "Warp end" ); } );
+        if ( expected<void> check = validateRoleIndex( roleIndex ).and_then( [seconds]()
+        { return PairedAnimationEditModelInternal::validateNonNegative( seconds, "Warp end" ); } );
              check.has_value() == false )
             return check;
         PairedAnimationRoleDef& role = _content._listRole[roleIndex];
@@ -183,7 +183,7 @@ namespace sw::editor
 
     expected<void> PairedAnimationEditModel::removeNotify( uint32 notifyIndex )
     {
-        if ( expected<void> check = checkNotifyIndex( notifyIndex ); check.has_value() == false )
+        if ( expected<void> check = validateNotifyIndex( notifyIndex ); check.has_value() == false )
             return check;
         recordUndo( string_view{} );
         _content._listNotify.erase( _content._listNotify.begin() + static_cast<ptrdiff_t>( notifyIndex ) );
@@ -192,7 +192,7 @@ namespace sw::editor
 
     expected<void> PairedAnimationEditModel::setNotifyTime( uint32 notifyIndex, float32 time, bool bContinuous )
     {
-        if ( expected<void> check = checkNotifyIndex( notifyIndex ); check.has_value() == false )
+        if ( expected<void> check = validateNotifyIndex( notifyIndex ); check.has_value() == false )
             return check;
         const bool bTimeInRange = MathUtil::isFinite( time ) && 0.0f <= time && time <= _content._duration;
         if ( bTimeInRange == false )
@@ -204,7 +204,7 @@ namespace sw::editor
 
     expected<void> PairedAnimationEditModel::setNotifyRole( uint32 notifyIndex, const hashed_string& role )
     {
-        if ( expected<void> check = checkNotifyIndex( notifyIndex ); check.has_value() == false )
+        if ( expected<void> check = validateNotifyIndex( notifyIndex ); check.has_value() == false )
             return check;
         bool bRoleKnown = false;
         for ( const PairedAnimationRoleDef& roleDef : _content._listRole )
@@ -283,14 +283,14 @@ namespace sw::editor
         _state.record( _content, coalesceKey );
     }
 
-    expected<void> PairedAnimationEditModel::checkRoleIndex( uint32 roleIndex ) const
+    expected<void> PairedAnimationEditModel::validateRoleIndex( uint32 roleIndex ) const
     {
         if ( roleIndex < _content._listRole.size() )
             return {};
         return unexpected( Error{ ErrorKind::InvalidArgument, "Role index is out of range" } );
     }
 
-    expected<void> PairedAnimationEditModel::checkNotifyIndex( uint32 notifyIndex ) const
+    expected<void> PairedAnimationEditModel::validateNotifyIndex( uint32 notifyIndex ) const
     {
         if ( notifyIndex < _content._listNotify.size() )
             return {};

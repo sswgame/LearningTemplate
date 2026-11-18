@@ -188,7 +188,7 @@ namespace sw
         /** @brief 경우 목록을 받으면 true 입니다. */
         virtual bool supportsCaseList() const { return false; }
         /** @brief 읽은 모듈의 칸 사이 규칙(고르기 글의 값 · 범위)을 봅니다. 틀리면 까닭을 오류 로그로 남기고 false 입니다(로드 실패). */
-        virtual bool checkModule( const ZoneCompiledModule& module, string_view sourceName ) const
+        virtual bool validateModule( const ZoneCompiledModule& module, string_view sourceName ) const
         {
             (void)module;
             (void)sourceName;

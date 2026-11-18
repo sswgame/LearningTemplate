@@ -43,7 +43,7 @@ namespace sw
                 return false;
             }
 
-            static bool checkChoice( const ZoneCompiledModule& module, const utf8* pParam, std::initializer_list<const utf8*> listAllowed, string_view sourceName )
+            static bool validateChoice( const ZoneCompiledModule& module, const utf8* pParam, std::initializer_list<const utf8*> listAllowed, string_view sourceName )
             {
                 const string& text = module.getText( hashed_string( pParam ) );
                 if ( isOneOf( text, listAllowed ) )
@@ -82,9 +82,9 @@ namespace sw
             }
             bool supportsActionParams() const override { return true; }
             bool supportsCaseList() const override { return true; }
-            bool checkModule( const ZoneCompiledModule& module, string_view sourceName ) const override
+            bool validateModule( const ZoneCompiledModule& module, string_view sourceName ) const override
             {
-                return ZoneModulesInternal::checkChoice( module, "on", { "Enter", "Stay", "Exit", "Became", "Lost" }, sourceName );
+                return ZoneModulesInternal::validateChoice( module, "on", { "Enter", "Stay", "Exit", "Became", "Lost" }, sourceName );
             }
 
             void onEnter( ZoneEventContext& context ) const override
@@ -178,9 +178,9 @@ namespace sw
                 outListSpec.push_back( ZoneParamSpec{ "fluidDensity", ZoneParamKind::Number, "0" } );
                 outListSpec.push_back( ZoneParamSpec{ "friction", ZoneParamKind::Number, "1" } );
             }
-            bool checkModule( const ZoneCompiledModule& module, string_view sourceName ) const override
+            bool validateModule( const ZoneCompiledModule& module, string_view sourceName ) const override
             {
-                return ZoneModulesInternal::checkChoice( module, "direction", { "Uniform", "ToCenter", "Swirl", "Flow" }, sourceName );
+                return ZoneModulesInternal::validateChoice( module, "direction", { "Uniform", "ToCenter", "Swirl", "Flow" }, sourceName );
             }
 
             void onStay( ZoneEventContext& context, float32 deltaTime ) const override
@@ -352,10 +352,10 @@ namespace sw
                 outListSpec.push_back( ZoneParamSpec{ "at", ZoneParamKind::Text, "Target" } );
                 outListSpec.push_back( ZoneParamSpec{ "interval", ZoneParamKind::Number, "0" } );
             }
-            bool checkModule( const ZoneCompiledModule& module, string_view sourceName ) const override
+            bool validateModule( const ZoneCompiledModule& module, string_view sourceName ) const override
             {
-                bool bOk = ZoneModulesInternal::checkChoice( module, "shape", { "Print", "Trail", "Funnel" }, sourceName );
-                bOk      = ZoneModulesInternal::checkChoice( module, "at", { "Target", "Center" }, sourceName ) && bOk;
+                bool bOk = ZoneModulesInternal::validateChoice( module, "shape", { "Print", "Trail", "Funnel" }, sourceName );
+                bOk      = ZoneModulesInternal::validateChoice( module, "at", { "Target", "Center" }, sourceName ) && bOk;
                 // 칸 사이 규칙(크기 · 메워지는 속도 · 테두리)은 규칙 칸이 수만 들었으면 읽을 때 본다. 문맥을 읽는 칸이 있으면 대상 없는 값(0)은 뜻이 없어
                 // 찍을 때 그 대상의 값으로 본다(`onStay`) — 언리얼 데이터 검증이 정적 값만 보고 런타임 값은 쓰는 자리에서 거르는 것과 같다.
                 if ( bOk == false || needsStampTimeCheck( module ) )

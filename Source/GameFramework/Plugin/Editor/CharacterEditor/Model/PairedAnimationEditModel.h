@@ -123,8 +123,8 @@ namespace sw::editor
         /** @brief 편집 직전에 부릅니다. */
         void recordUndo( string_view coalesceKey );
         /** @brief 역할 인덱스가 범위 밖이면 오류입니다. */
-        [[nodiscard]] expected<void> checkRoleIndex( uint32 roleIndex ) const;
-        [[nodiscard]] expected<void> checkNotifyIndex( uint32 notifyIndex ) const;
+        [[nodiscard]] expected<void> validateRoleIndex( uint32 roleIndex ) const;
+        [[nodiscard]] expected<void> validateNotifyIndex( uint32 notifyIndex ) const;
 
     private:
         PairedAnimationContentDef                      _content;

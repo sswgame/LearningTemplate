@@ -204,7 +204,7 @@ namespace sw
                     bOk            = compileActions( caseDef._do, sourceName, pCatalog, compiled._listCall ) && bOk;
                     outModule._listCase.push_back( std::move( compiled ) );
                 }
-                return bOk && outModule._pProcessor->checkModule( outModule, sourceName );
+                return bOk && outModule._pProcessor->validateModule( outModule, sourceName );
             }
         };
     } // namespace

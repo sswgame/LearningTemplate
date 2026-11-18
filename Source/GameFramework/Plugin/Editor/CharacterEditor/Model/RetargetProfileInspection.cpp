@@ -28,7 +28,7 @@ namespace sw::editor
                 optional<uint32> previous{};
                 for ( const hashed_string& name : listBone )
                 {
-                    // 없는 본은 `checkBone` 이 문제 줄로 알린다 — 길이는 있는 본만 잇는다.
+                    // 없는 본은 `validateBone` 이 문제 줄로 알린다 — 길이는 있는 본만 잇는다.
                     const optional<uint32> bone = skeleton.findBoneIndex( name );
                     if ( bone.has_value() == false )
                         continue;
@@ -40,7 +40,7 @@ namespace sw::editor
             }
 
             /** @brief @p name 이 스켈레톤에 있는지 보고, 없으면 까닭을 한 줄 남깁니다. */
-            static void checkBone( const Skeleton& skeleton, const hashed_string& name, string_view where, const utf8* pSide, vector<string>& outListProblem )
+            static void validateBone( const Skeleton& skeleton, const hashed_string& name, string_view where, const utf8* pSide, vector<string>& outListProblem )
             {
                 string line{ where };
                 if ( name.empty() )
@@ -72,10 +72,10 @@ namespace sw::editor
             /** @brief 런타임 묶기가 거절할 이름을 모두 모읍니다(리타기터는 첫 하나에서 멈추고 로그만 남긴다). */
             static void collectProblems( const RetargetProfile& profile, const Skeleton& source, const Skeleton& target, vector<string>& outListProblem )
             {
-                checkBone( source, profile.getSourceRoot(), "Root", "source", outListProblem );
-                checkBone( target, profile.getTargetRoot(), "Root", "target", outListProblem );
-                checkBone( source, profile.getSourcePelvis(), "Pelvis", "source", outListProblem );
-                checkBone( target, profile.getTargetPelvis(), "Pelvis", "target", outListProblem );
+                validateBone( source, profile.getSourceRoot(), "Root", "source", outListProblem );
+                validateBone( target, profile.getTargetRoot(), "Root", "target", outListProblem );
+                validateBone( source, profile.getSourcePelvis(), "Pelvis", "source", outListProblem );
+                validateBone( target, profile.getTargetPelvis(), "Pelvis", "target", outListProblem );
                 for ( const RetargetChain& chain : profile.getChains() )
                 {
                     const string label = makeChainLabel( chain );
@@ -85,21 +85,21 @@ namespace sw::editor
                         outListProblem.push_back( label + ": no target bones" );
                     for ( const hashed_string& name : chain._listSourceBone )
                     {
-                        checkBone( source, name, label, "source", outListProblem );
+                        validateBone( source, name, label, "source", outListProblem );
                     }
                     for ( const hashed_string& name : chain._listTargetBone )
                     {
-                        checkBone( target, name, label, "target", outListProblem );
+                        validateBone( target, name, label, "target", outListProblem );
                     }
                 }
                 for ( const RetargetBonePair& pair : profile.getBonePairs() )
                 {
-                    checkBone( source, pair._source, "Bone map", "source", outListProblem );
-                    checkBone( target, pair._target, "Bone map", "target", outListProblem );
+                    validateBone( source, pair._source, "Bone map", "source", outListProblem );
+                    validateBone( target, pair._target, "Bone map", "target", outListProblem );
                 }
                 for ( const RetargetPoseBone& poseBone : profile.getTargetPose() )
                 {
-                    checkBone( target, poseBone._bone, "Retarget pose", "target", outListProblem );
+                    validateBone( target, poseBone._bone, "Retarget pose", "target", outListProblem );
                 }
             }
 
@@ -120,7 +120,7 @@ namespace sw::editor
             {
                 for ( size_t index = 1; index < listBone.size(); ++index )
                 {
-                    // 없는 본은 `checkBone` 이 따로 알린다 — 그 사슬은 뿌리 → 끝 순서를 말할 수 없다.
+                    // 없는 본은 `validateBone` 이 따로 알린다 — 그 사슬은 뿌리 → 끝 순서를 말할 수 없다.
                     const optional<uint32> ancestor = skeleton.findBoneIndex( listBone[index - 1] );
                     const optional<uint32> bone     = skeleton.findBoneIndex( listBone[index] );
                     if ( ancestor.has_value() == false || bone.has_value() == false || isAncestor( skeleton, *ancestor, *bone ) == false )

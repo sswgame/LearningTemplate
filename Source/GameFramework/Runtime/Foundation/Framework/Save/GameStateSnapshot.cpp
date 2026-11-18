@@ -78,7 +78,7 @@ namespace sw
              * @details 복원은 활성 씬을 비우고 채우므로, 다른 씬(타이틀 · 다른 맵) 위에서 풀면 그 씬에 다른 맵의 오브젝트가 선다. 언리얼 게임은 세이브에 맵 이름을 적고
              *          `OpenLevel` 뒤에 적용한다 — 슬롯 불러오기는 `GameInstance` 가 머리(`readSceneID`)를 보고 그 씬을 먼저 연다. 여기는 그 흐름을 거치지 않은 읽기의 마지막 막기다.
              */
-            static bool checkScene( const string& savedSceneID, const string& activeSceneID )
+            static bool validateScene( const string& savedSceneID, const string& activeSceneID )
             {
                 if ( savedSceneID == activeSceneID )
                     return true;
@@ -95,7 +95,7 @@ namespace sw
              * @details 머리는 신뢰하지 않는 파일의 글이다. 구성이 없는 실행이 모드를 켠 세이브를 받으면 없는 리소스를 가리키게 되므로 거절한다(빈 글이면 늘 받는다 —
              *          모드 없는 세이브는 모드를 켠 실행에서도 읽힌다, 새 모드는 내용을 더할 뿐이다).
              */
-            static bool checkContent( const string& savedText )
+            static bool validateContent( const string& savedText )
             {
                 const IContentConfiguration* const pContent = findContent();
                 if ( pContent != nullptr )
@@ -238,8 +238,8 @@ namespace sw
         StateEnvelopeInternal::Header header;
         if ( StateEnvelopeInternal::readHeader( pInBuffer, size, arch, header ) == false )
             return rejected;
-        if ( StateEnvelopeInternal::checkContent( header._contentText ) == false ||
-             StateEnvelopeInternal::checkScene( header._sceneID, GameStateSnapshotInternal::findActiveSceneID() ) == false )
+        if ( StateEnvelopeInternal::validateContent( header._contentText ) == false ||
+             StateEnvelopeInternal::validateScene( header._sceneID, GameStateSnapshotInternal::findActiveSceneID() ) == false )
             return rejected;
         const bool              bSameProcess = ( header._processToken == ObjectStateSerializer::getProcessToken() );
         const SceneObjectFormat format       = bSameProcess ? SceneObjectFormat::RestoreIdentity : SceneObjectFormat::WithIdentity;

@@ -55,7 +55,7 @@ namespace sw
             }
 
             /** @brief GM 리슨 없이 GM 서비스(`Admin`)를 올리려 하면 대상이 메서드 영역인 오류입니다. 플레이어 포트로 받는 숨은 폴백은 두지 않는다. */
-            [[nodiscard]] static expected<void> checkExposure( const IOnlineServerService& service, bool bHasAdminListener )
+            [[nodiscard]] static expected<void> validateExposure( const IOnlineServerService& service, bool bHasAdminListener )
             {
                 if ( bHasAdminListener || service.getExposure() != OnlineServiceExposure::Admin )
                     return {};
@@ -270,7 +270,7 @@ namespace sw
         }
         for ( IOnlineServerService* pService : _listService )
         {
-            if ( expected<void> exposure = OnlineServiceHostInternal::checkExposure( *pService, _listenerTransport->hasAdminListener() ); exposure.has_value() == false )
+            if ( expected<void> exposure = OnlineServiceHostInternal::validateExposure( *pService, _listenerTransport->hasAdminListener() ); exposure.has_value() == false )
             {
                 releaseTransportSide();
                 return exposure;
@@ -355,7 +355,7 @@ namespace sw
         }
         if ( _bInitialized == SW_TRUE )
         {
-            if ( const expected<void> exposure = OnlineServiceHostInternal::checkExposure( *pService, _listenerTransport->hasAdminListener() ); exposure.has_value() == false )
+            if ( const expected<void> exposure = OnlineServiceHostInternal::validateExposure( *pService, _listenerTransport->hasAdminListener() ); exposure.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "OnlineHost.ExposureRefused", "%# (%#)", exposure.error().message(), exposure.error().detail() );
                 return false;
