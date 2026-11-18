@@ -69,9 +69,8 @@ namespace sw
 
         bool isOpen() const { return _bOpen == SW_TRUE; }
         /** @brief 열고 닫습니다. 열면 키보드 포커스를 가져오고, 닫으면 게임에 돌려줍니다. */
-        void          setOpen( bool bOpen );
-        const string& getInputLine() const { return _inputLine; }
-        DevConsole&   getConsole() { return _console; }
+        void        setOpen( bool bOpen );
+        DevConsole& getConsole() { return _console; }
 
         /** @brief 그릴 줄입니다. 마지막 출력 `kVisibleOutputCount` 줄과 입력 줄(`] 입력_`)로 이루어집니다. */
         void collectVisibleLines( vector<string>& outListLine, vector<uint8>& outListErrorFlag ) const;
