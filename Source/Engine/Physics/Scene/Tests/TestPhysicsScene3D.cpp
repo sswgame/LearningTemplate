@@ -362,3 +362,29 @@ SW_TEST_CASE( PhysicsCharacterTest, CharactersOnNonCollidingLayersPassThrough )
     SW_REQUIRE_TRUE( pScene->getCharacterState( right, rightState ) );
     SW_EXPECT_TRUE( leftState._position._x > rightState._position._x ); // 자리를 바꿨다
 }
+
+/**
+ * @brief [PhysicsCharacterTest] 캡슐 키 줄이기는 다음 물리 프레임에 캐릭터를 다시 짓지 않고 판정 캡슐만 낮추고, 지은 반 높이 칸은 그대로 둔다
+ * @details 예전에는 늪에 빠진 캐릭터의 캡슐이 지면에 남아 빠진 몸 위 허공도 맞았다(키를 바꾸려면 반 높이 칸을 고쳐 캐릭터를 다시 지어야 했다). 변이: `bResize` 를 빼면 반 높이가 그대로라 첫 단언이 진다.
+ */
+SW_TEST_CASE( PhysicsCharacterTest, HeightReductionShortensTheCapsuleInPlace )
+{
+    using Internal = TestPhysicsScene3DInternal;
+    GameObjectManager manager;
+    SW_REQUIRE_NOT_NULL( Internal::addFloor( manager ) );
+    CharacterControllerComponent* pWalker = Internal::addWalker( manager, "Sinker", float3{ 0.0f, 0.05f, 0.0f } );
+    SW_REQUIRE_NOT_NULL( pWalker );
+    manager.beginPlay();
+    manager.update( Internal::kFrame );
+    const float32 authored = pWalker->getHalfHeight();
+    const float32 before   = pWalker->getScaledCapsule()._halfHeight;
+
+    pWalker->setHeightReduction( 0.4f );
+    manager.update( Internal::kFrame );
+    SW_EXPECT_NEAR( before - 0.2f, pWalker->getScaledCapsule()._halfHeight, 1.0e-4f );
+    SW_EXPECT_EQUAL( authored, pWalker->getHalfHeight() ); // 지은 칸은 그대로
+
+    pWalker->setHeightReduction( 0.0f );
+    manager.update( Internal::kFrame );
+    SW_EXPECT_NEAR( before, pWalker->getScaledCapsule()._halfHeight, 1.0e-4f );
+}

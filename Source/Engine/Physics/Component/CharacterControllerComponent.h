@@ -130,14 +130,21 @@ namespace sw
          * @details 캡슐 크기로 질의 · 판정하는 코드는 속성(`getRadius` · `getHalfHeight`)이 아니라 이것을 읽는다(언리얼 `GetScaledCapsuleRadius` 와 같은 나눔).
          */
         PhysicsShapeDesc3D getScaledCapsule() const;
-        float32            getRadius() const { return _radius; }
-        void               setRadius( float32 radius );
-        float32            getHalfHeight() const { return _halfHeight; }
-        void               setHalfHeight( float32 halfHeight );
-        float32            getStepHeight() const { return _stepHeight; }
-        void               setStepHeight( float32 stepHeight );
-        float32            getMaxSlopeAngle() const { return _maxSlopeAngle; }
-        void               setMaxSlopeAngle( float32 angle );
+        /**
+         * @brief 캡슐 키를 런타임에 @p meters 만큼 줄입니다(발은 그대로, 머리가 내려온다 — 지은 반 높이 칸 `_halfHeight` 는 바꾸지 않는다). 0 이면 원래 키입니다.
+         * @details 언리얼 `Crouch` 가 캡슐 반 높이를 줄이고 기본값을 남기는 것과 같다 — 늪에 빠진 캐릭터 · 웅크림이 판정 캡슐을 낮춘다. 캐릭터는 다시 짓지 않고 다음 물리 프레임에 크기만 간다(`setCharacterSize`).
+         *          어느 스레드에서 불러도 된다(물리 프레임 시작이 읽는다). 줄인 키는 캡슐의 원기둥 길이까지다(반구 둘은 남는다).
+         */
+        void    setHeightReduction( float32 meters ) { _requestedHeightReduction.store( meters, std::memory_order_relaxed ); }
+        float32 getHeightReduction() const { return _requestedHeightReduction.load( std::memory_order_relaxed ); }
+        float32 getRadius() const { return _radius; }
+        void    setRadius( float32 radius );
+        float32 getHalfHeight() const { return _halfHeight; }
+        void    setHalfHeight( float32 halfHeight );
+        float32 getStepHeight() const { return _stepHeight; }
+        void    setStepHeight( float32 stepHeight );
+        float32 getMaxSlopeAngle() const { return _maxSlopeAngle; }
+        void    setMaxSlopeAngle( float32 angle );
 
     protected:
         /** @brief `stopMovementImmediately` 입니다(`TeleportType::ResetPhysics`). */
@@ -196,8 +203,10 @@ namespace sw
         float3                                  _worldScale;    ///< 트랜스폼의 월드 배율(변경 번호가 바뀔 때만 다시 읽는다)
         quaternion                              _worldRotation; ///< 트랜스폼의 월드 회전(바닥이 돈 각을 얹어 쓴다). 변경 번호가 같으면 그대로다
         float32                                 _verticalSpeed;
-        float32                                 _pendingGroundYaw; ///< 마지막 쓰기 뒤 디딘 바닥이 위 축 둘레로 돈 각(rad) — 다음 트랜스폼 쓰기에 얹는다
-        vector<StepRecord>                      _listStepHistory;  ///< 스텝 기록 고리(`setStepHistoryEnabled` 가 켜졌을 때 처음 칸을 만든다 — 꺼져 있으면 비어 있다)
-        uint32                                  _stepHistoryCount; ///< 기록한 스텝의 누계(고리의 다음 칸은 `% kStepHistoryCapacity`)
+        float32                                 _pendingGroundYaw;         ///< 마지막 쓰기 뒤 디딘 바닥이 위 축 둘레로 돈 각(rad) — 다음 트랜스폼 쓰기에 얹는다
+        atomic<float32>                         _requestedHeightReduction; ///< 줄일 키(m, `setHeightReduction`) — 아무 스레드가 쓰고 물리 프레임 시작이 읽는다
+        float32                                 _appliedHeightReduction;   ///< 백엔드 캡슐을 지은 줄인 키(m) — `getScaledCapsule` 이 뺀다
+        vector<StepRecord>                      _listStepHistory;          ///< 스텝 기록 고리(`setStepHistoryEnabled` 가 켜졌을 때 처음 칸을 만든다 — 꺼져 있으면 비어 있다)
+        uint32                                  _stepHistoryCount;         ///< 기록한 스텝의 누계(고리의 다음 칸은 `% kStepHistoryCapacity`)
     };
 } // namespace sw
