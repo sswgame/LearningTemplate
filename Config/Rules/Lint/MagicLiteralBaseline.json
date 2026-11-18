@@ -179,7 +179,7 @@
     "Source/Editor/Common/Commands/EditorDragPayload.h": {"integer": 1},
     "Source/Editor/Common/Commands/Play/EditorNetConditions.cpp": {"minus-one": 1},
     "Source/Editor/Common/Commands/Play/EditorScenarioRecordCommands.cpp": {"integer": 1},
-    "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp": {"float": 1, "integer": 2},
+    "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp": {"float": 1, "integer": 1},
     "Source/Editor/Common/Commands/Scene/EditorLightProbeBakeSession.cpp": {"integer": 1},
     "Source/Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.cpp": {"integer": 1},
     "Source/Editor/Common/Commands/Scene/EditorSceneCommands.cpp": {"float": 1},
