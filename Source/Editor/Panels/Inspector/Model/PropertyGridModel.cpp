@@ -10,6 +10,7 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -24,6 +25,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
 #include "Editor/Panels/Inspector/Model/InspectorObjectEdit.h"
 #include "Editor/Panels/Inspector/Model/PropertyEditConditionExpr.h"
+#include "Editor/Panels/Inspector/Model/PropertyEditStep.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Localization/LocText.h"
@@ -69,6 +71,53 @@ namespace sw::editor
                 if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
                     return nullptr;
                 return pScene->getObjectManager()->findGameObjectByID( objectID );
+            }
+
+            /**
+             * @brief 씬 대상 편집 하나를 적용합니다(게임 단계) — 대상을 id 로 다시 찾고, 경로를 풀어 쓰고, 모델의 쓰기 길대로 알린다(깊이 0 프로퍼티로).
+             * @details 다중 선택은 깊이 0 프로퍼티를 통째로 나머지에 입힌다(예전 `copyPropertyToOthers` 와 같은 단위 — 되돌리기 구간도 그 단위다). 그 사이 사라진 대상은 건너뛴다.
+             */
+            static void applySceneEdit( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, uint32 sceneKey, const vector<PropertyEditTarget>& listOther,
+                                        const PropertyEditRequest& request )
+            {
+                GameObject* pObject = findObject( scope, objectID );
+                if ( pObject == nullptr || pObject->isPendingDestroy() )
+                    return;
+                Component* pComponent = componentID != 0 ? pObject->findComponentByID( componentID ) : nullptr;
+                if ( componentID != 0 && pComponent == nullptr )
+                    return;
+                const TypeInfo* pType     = pComponent != nullptr ? pComponent->getTypeInfo() : pObject->getTypeInfo();
+                void* const     pInstance = pComponent != nullptr ? static_cast<void*>( pComponent ) : static_cast<void*>( pObject );
+                if ( pType == nullptr || request.applyTo( MutableObjectAddress{ pInstance }, *pType, PropertyGridModel::getTypeRegistry() ) == false )
+                    return;
+                // 이 알림을 빠뜨리면 값에 반응하는 상태(트랜스폼 캐시 · 렌더 상태)가 어긋난다. 검증은 로그 없이 맵 검사 결과만 바꾼다(끄는 동안 프레임마다 온다).
+                if ( pComponent != nullptr )
+                    pComponent->onPropertyChanged( request._path._root );
+                else
+                    pObject->onPropertyChanged( request._path._root );
+                (void)ObjectValidation::reportGameObject( *pObject, false );
+                if ( listOther.empty() )
+                    return;
+                const PropertyInfo* pRootProp = pType->findPropertyInHierarchy( request._path._root );
+                if ( pRootProp == nullptr )
+                    return;
+                const string text = SerializerUtil::formatPropertyText( *pRootProp, ObjectAddress{ pInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                const string path{ request._path._root.c_str() };
+                for ( const PropertyEditTarget& other : listOther )
+                {
+                    GameObject* pOther = PropertyEditTarget::findObject( sceneKey, other._objectID );
+                    if ( pOther != nullptr )
+                        (void)other.applyTo( *pOther, path, text ); // 알림 · 검증은 `applyTo` 가 한다
+                }
+            }
+
+            /** @brief 씬 대상 편집 하나를 게임 단계에 넘깁니다(`EditorCommandRegistry::requestSceneEdit`) — 람다는 범위 · id · 요청 값만 붙잡는다. */
+            static void requestSceneEdit( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, uint32 sceneKey, vector<PropertyEditTarget>&& listOther,
+                                          PropertyEditRequest&& request )
+            {
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create(
+                    [scope, objectID, componentID, sceneKey, listOther = std::move( listOther ), request = std::move( request )]( EditorTransaction& /*transaction*/ )
+                { applySceneEdit( scope, objectID, componentID, sceneKey, listOther, request ); } ) );
             }
 
             /** @brief 편집 하나입니다. 주인 오브젝트가 있으면 되돌리기에 남기고(`InspectorObjectEdit`), 없으면(씬 밖 객체) 그냥 바꿉니다. */
@@ -193,6 +242,9 @@ namespace sw::editor
         , _setFlippedKey{}
         , _setReportedHandle{}
         , _targetSalt{ 0 }
+        , _targetObjectID{ 0 }
+        , _targetComponentID{ 0 }
+        , _targetScope{ EditorPropertyGridScope::None }
         , _lastInvokeResult{}
     {
     }
@@ -227,6 +279,10 @@ namespace sw::editor
             _pInstance  = pComponent != nullptr ? static_cast<void*>( pComponent ) : static_cast<void*>( pObject );
             _pType      = pType;
             _targetSalt = HashUtil::combine( HashUtil::combine( static_cast<uint64>( target._scope ), target._objectID ), target._componentID );
+            // 쓰기 요청은 포인터가 아니라 이 값으로 대상을 다시 찾는다(`submitEdit`).
+            _targetScope       = target._scope;
+            _targetObjectID    = target._objectID;
+            _targetComponentID = target._componentID;
         }
         _onEdited           = target._onEdited;
         _isMixed            = target._isMixed;
@@ -243,6 +299,9 @@ namespace sw::editor
         _onEdited           = {};
         _isMixed            = {};
         _collectEditTargets = {};
+        _targetScope        = EditorPropertyGridScope::None;
+        _targetObjectID     = 0;
+        _targetComponentID  = 0;
         _listBinding.clear();
         _listElementProp.clear();
     }
@@ -405,8 +464,9 @@ namespace sw::editor
         row._rowID       = rowID;
         row._parentRowID = rowID;
         RowBinding binding{};
-        binding._key       = key;
-        binding._rootRowID = rowID;
+        binding._key         = key;
+        binding._rootRowID   = rowID;
+        binding._parentRowID = rowID; // 자식 행은 부모가 고쳐 쓴다(`appendChildRows`)
         _listBinding.push_back( binding );
         if ( kind != PropertyRowKind::Category && kind != PropertyRowKind::Skipped )
             ++outState._filledCount;
@@ -424,6 +484,7 @@ namespace sw::editor
         bind._instance          = instance;
         bind._pProp             = &prop;
         bind._rootRowID         = rootRowID == constant::invalid_index::kUint32 ? rowID : rootRowID;
+        bind._child             = child;
 
         const bool bReadOnly = prop._metadata->_bReadOnly != SW_FALSE;
         row._child           = child;
@@ -558,6 +619,7 @@ namespace sw::editor
                 appendValueRow( outState, MutableObjectAddress{ pNestedPtr }, nestedProp, childDepth, rootRowID, HashUtil::combine( parentKey, static_cast<uint64>( nestedProp._name.getHash() ) ),
                                 PropertyRowChild::Field, bDisabled || editState == PropertyEditState::Disabled );
                 setParent( childRowID );
+                _listBinding[childRowID]._parentRowID = rowID;
             }, true ); // 구조체의 기반 필드도 그린다(컴포넌트와 같은 규칙)
             return;
         }
@@ -582,11 +644,13 @@ namespace sw::editor
                 const uint32 childRowID = outState._rowCount;
                 appendValueRow( outState, MutableObjectAddress{ pValue }, valueProp, childDepth, rootRowID, HashUtil::combine( parentKey, static_cast<uint64>( ordinal ) ),
                                 PropertyRowChild::MapEntry, bElementDisabled );
-                PropertyValueRow& entry = outState._listRow[childRowID];
-                entry._parentRowID      = rowID;
-                entry._ordinal          = ordinal;
-                entry._label            = Internal::formatValueText( pKey, prop._keyTypeName );
-                entry._bRemovable       = bReadOnly ? SW_FALSE : SW_TRUE;
+                PropertyValueRow& entry               = outState._listRow[childRowID];
+                entry._parentRowID                    = rowID;
+                entry._ordinal                        = ordinal;
+                entry._label                          = Internal::formatValueText( pKey, prop._keyTypeName );
+                entry._bRemovable                     = bReadOnly ? SW_FALSE : SW_TRUE;
+                _listBinding[childRowID]._parentRowID = rowID;
+                _listBinding[childRowID]._ordinal     = ordinal;
                 ++ordinal;
             } ) );
             return;
@@ -603,6 +667,7 @@ namespace sw::editor
                 bind._instance            = instance;
                 bind._pProp               = &prop;
                 bind._rootRowID           = rootRowID;
+                bind._parentRowID         = rowID; // 값 자리가 컨테이너 행과 같다 — 경로 마디가 없다(`_child` 는 None)
                 element._parentRowID      = rowID;
                 element._ordinal          = static_cast<uint32>( elemIndex );
                 element._valueText        = Internal::formatValueText( pSeq->getElementConst( pContainer, elemIndex ), prop._elementTypeName );
@@ -628,9 +693,11 @@ namespace sw::editor
             PropertyValueRow&                      element = outState._listRow[childRowID];
             fixed_string<constant::buffer::kMax32> label;
             formatstring( label.data(), label.capacity(), "[%#]", elemIndex );
-            element._label       = label.c_str();
-            element._parentRowID = rowID;
-            element._ordinal     = static_cast<uint32>( elemIndex );
+            element._label                        = label.c_str();
+            element._parentRowID                  = rowID;
+            element._ordinal                      = static_cast<uint32>( elemIndex );
+            _listBinding[childRowID]._parentRowID = rowID;
+            _listBinding[childRowID]._ordinal     = static_cast<uint32>( elemIndex );
         }
     }
 
@@ -861,63 +928,27 @@ namespace sw::editor
 
     void PropertyGridModel::setRowValue( uint32 rowID, const TaskValue& value )
     {
-        const RowBinding* pBinding = findValueBinding( rowID );
-        if ( pBinding == nullptr )
-            return;
-        const PropertyInfo& prop = *pBinding->_pProp;
-        void* const         pObj = pBinding->_instance.get();
-        ensureEditSpan( *pBinding, {} );
-        if ( prop._bIsBitField == SW_TRUE )
-        {
-            const bool* pValue = value.getStoredSize() == sizeof( bool ) ? value.getPtr<bool>() : nullptr;
-            if ( pValue == nullptr )
-                return;
-            prop.setValue<bool>( pObj, *pValue );
-        }
-        else
-        {
-            const InspectorBuiltinValue* pBuiltin = InspectorBuiltinValue::findBuiltin( prop._typeName.c_str() );
-            void*                        pMember  = prop.getValuePtr<void>( pObj );
-            if ( pBuiltin == nullptr || pMember == nullptr || pBuiltin->_pWriteValue( value, pMember ) == false )
-                return;
-        }
-        notifyRowEdited( rowID );
+        PropertyEditRequest request;
+        request._kind  = PropertyEditKind::SetValue;
+        request._value = value;
+        submitEdit( rowID, std::move( request ), {} );
     }
 
     void PropertyGridModel::setRowNumber( uint32 rowID, float64 storedValue )
     {
-        const RowBinding* pBinding = findValueBinding( rowID );
-        if ( pBinding == nullptr )
-            return;
-        const PropertyInfo&          prop     = *pBinding->_pProp;
-        const InspectorBuiltinValue* pBuiltin = InspectorBuiltinValue::findBuiltin( prop._typeName.c_str() );
-        void*                        pMember  = prop.getValuePtr<void>( pBinding->_instance.get() );
-        if ( pBuiltin == nullptr || pMember == nullptr || pBuiltin->_widget != InspectorValueWidget::Number )
-            return;
-        // 위젯은 `UIMin` · `UIMax` 안에서 움직이고, 값은 항상 `Min` · `Max` 로 제한한다(`InspectorNumericRange` — 직접 입력이 범위 밖일 수 있다).
-        const InspectorNumericRange range   = InspectorPropertyLayout::getNumericRange( prop, ObjectAddress{ pBinding->_instance } );
-        const float64               clamped = InspectorPropertyLayout::clampToAllowedRange( range, storedValue );
-        ensureEditSpan( *pBinding, {} );
-        if ( ReflectedValueUtil::writeNumber( static_cast<ReflectBuiltinIndex>( pBuiltin->_index ), pMember, clamped ) == false )
-            return;
-        notifyRowEdited( rowID );
+        PropertyEditRequest request;
+        request._kind   = PropertyEditKind::SetNumber;
+        request._number = storedValue;
+        submitEdit( rowID, std::move( request ), {} );
     }
 
     void PropertyGridModel::setPropertyText( uint32 rowID, string_view text, const utf8* pUndoLabel )
     {
-        const RowBinding* pBinding = findValueBinding( rowID );
-        if ( pBinding == nullptr )
-            return;
-        // 그 프로퍼티 하나만 쓰고(비트필드는 그 비트만) 알린다. `{"이름":값}` 을 JSON 으로 읽히면 읽기에서 빠진
-        // 프로퍼티마다 기본값을 채우므로 다른 프로퍼티까지 바뀐다. 그래서 텍스트 하나로 프로퍼티 하나만 쓴다.
-        // 다중 편집 대상은 `_onEdited` 가 값을 나머지에도 입힌다 — 구간이 편집이 닿는 컴포넌트 전부를 찍으므로 되돌리기가 나머지도 돌린다.
-        const PropertyInfo& prop = *pBinding->_pProp;
-        const string        value{ text };
-        ensureEditSpan( *pBinding, pUndoLabel != nullptr ? string_view{ pUndoLabel } : string_view{} );
-        if ( SerializerUtil::applyPropertyText( prop, pBinding->_instance, value, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
-            notifyRowEdited( rowID );
-        else
-            SW_LOG_WARNING_ID( "EditorPropertyGrid.CouldNotApplied", "'%#' could not be applied to %#", value.c_str(), prop._name.c_str() );
+        // 다중 편집 대상은 적용이 깊이 0 프로퍼티 값 글을 나머지에도 입힌다 — 구간이 편집이 닿는 컴포넌트 전부를 찍으므로 되돌리기가 나머지도 돌린다.
+        PropertyEditRequest request;
+        request._kind = PropertyEditKind::SetText;
+        request._text = string{ text };
+        submitEdit( rowID, std::move( request ), pUndoLabel != nullptr ? string_view{ pUndoLabel } : string_view{} );
     }
 
     bool PropertyGridModel::setAssetPath( uint32 rowID, string_view path )
@@ -962,134 +993,129 @@ namespace sw::editor
 
     void PropertyGridModel::setEnumValue( uint32 rowID, int64 value )
     {
-        const RowBinding* pBinding = findValueBinding( rowID );
-        if ( pBinding == nullptr )
-            return;
-        const PropertyInfo& prop      = *pBinding->_pProp;
-        const EnumInfo*     pEnumInfo = getTypeRegistry().findEnum( prop._typeName );
-        void*               pMemory   = prop.getValuePtr<void>( pBinding->_instance.get() );
-        if ( pEnumInfo == nullptr || pMemory == nullptr )
-            return;
         // 콤보에서 고른 값은 고르는 순간 바뀐다 — 고른 항목은 팝업 창의 다른 위젯이라 한 번 쓰기 구간이 된다(다음 마감에 오른다).
-        // enum 의 실제 크기로 쓴다. int32 로 쓰면 uint8 enum 뒤의 필드를 덮어쓴다(`CameraComponent::_role` 을 고르면 `_bOrthographic` 이 꺼졌다).
-        ensureEditSpan( *pBinding, {} );
-        pEnumInfo->writeValueToMemory( pMemory, value );
-        notifyRowEdited( rowID );
+        PropertyEditRequest request;
+        request._kind    = PropertyEditKind::SetEnum;
+        request._integer = value;
+        submitEdit( rowID, std::move( request ), {} );
     }
 
-    template <typename EditFunc>
-    void PropertyGridModel::applyContainerEdit( uint32 rowID, string_view undoLabel, EditFunc&& edit )
+    void PropertyGridModel::submitContainerEdit( uint32 rowID, PropertyEditKind kind, uint32 ordinal, string_view text, string_view undoLabel )
     {
         const RowBinding* pBinding = findValueBinding( rowID );
         if ( pBinding == nullptr || pBinding->_pProp->_containerWrapper == nullptr )
             return;
-        const PropertyInfo& prop       = *pBinding->_pProp;
-        void* const         pContainer = prop.getRawPtr( pBinding->_instance.get() );
-        if ( pContainer == nullptr )
-            return;
-        ensureEditSpan( *pBinding, undoLabel );
-        edit( prop, pContainer );
-        notifyRowEdited( rowID );
+        PropertyEditRequest request;
+        request._kind    = kind;
+        request._ordinal = ordinal;
+        request._text    = string{ text };
+        submitEdit( rowID, std::move( request ), undoLabel );
     }
 
     void PropertyGridModel::addElement( uint32 rowID )
     {
-        applyContainerEdit( rowID, "Add Element", []( const PropertyInfo& prop, void* pContainer )
-        {
-            if ( const ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence() )
-                pSeq->addElementDefault( pContainer );
-        } );
+        submitContainerEdit( rowID, PropertyEditKind::AddElement, 0, {}, "Add Element" );
     }
 
     void PropertyGridModel::clearElements( uint32 rowID )
     {
-        applyContainerEdit( rowID, "Clear Elements", []( const PropertyInfo& prop, void* pContainer )
-        {
-            if ( const ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence() )
-                pSeq->clear( pContainer );
-        } );
+        submitContainerEdit( rowID, PropertyEditKind::ClearElements, 0, {}, "Clear Elements" );
     }
 
     void PropertyGridModel::removeMapEntry( uint32 rowID, size_t ordinal )
     {
-        applyContainerEdit( rowID, "Remove Map Entry", [ordinal]( const PropertyInfo& prop, void* pContainer )
-        {
-            if ( const IMapContainerWrapper* pMap = prop._containerWrapper->asMap() )
-                (void)pMap->eraseAt( pContainer, ordinal );
-        } );
+        submitContainerEdit( rowID, PropertyEditKind::RemoveMapEntry, static_cast<uint32>( ordinal ), {}, "Remove Map Entry" );
     }
 
     void PropertyGridModel::addMapEntry( uint32 rowID, string_view keyText )
     {
-        const RowBinding* pBinding = findValueBinding( rowID );
-        if ( pBinding == nullptr || pBinding->_pProp->_containerWrapper == nullptr || pBinding->_pProp->_containerWrapper->asMap() == nullptr )
-            return;
-        const PropertyInfo&         prop       = *pBinding->_pProp;
-        const IMapContainerWrapper& mapWrapper = *prop._containerWrapper->asMap();
-        void* const                 pContainer = prop.getRawPtr( pBinding->_instance.get() );
-        const SerializeContext&     context    = SerializeContext::getDefault( SerializePurpose::Authoring );
-        if ( pContainer == nullptr )
-            return;
-        // 키를 키 타입으로 읽어 본다. 같은 키(텍스트가 같다)가 이미 있으면 값을 덮어쓰지 않는다.
-        const MemoryBlock keyBlock   = MemoryBlock::allocateAligned( mapWrapper.getKeySize(), alignof( std::max_align_t ) );
-        const MemoryBlock valueBlock = MemoryBlock::allocateAligned( mapWrapper.getValueSize(), alignof( std::max_align_t ) );
-        void* const       pKey       = keyBlock.get();
-        void* const       pValue     = valueBlock.get();
-        mapWrapper.defaultConstructKey( pKey );
-        mapWrapper.defaultConstructValue( pValue );
-        if ( SerializerUtil::parseTextValue( MutableValueAddress{ pKey }, prop._keyTypeName, keyText, context ) )
-        {
-            const string stagedText = SerializerUtil::formatValueText( ValueAddress{ pKey }, prop._keyTypeName, context );
-            bool         bExists    = false;
-            mapWrapper.forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [&]( const void* pExistingKey, const void* )
-            {
-                if ( SerializerUtil::formatValueText( ValueAddress{ pExistingKey }, prop._keyTypeName, context ) == stagedText )
-                    bExists = true;
-            } ) );
-            if ( bExists == false )
-            {
-                ensureEditSpan( *pBinding, "Add Map Entry" );
-                mapWrapper.insertKeyValue( pContainer, pKey, pValue );
-                notifyRowEdited( rowID );
-            }
-        }
-        mapWrapper.destroyKey( pKey );
-        mapWrapper.destroyValue( pValue );
+        submitContainerEdit( rowID, PropertyEditKind::AddMapEntry, 0, keyText, "Add Map Entry" );
     }
 
     void PropertyGridModel::replaceKeyedElement( uint32 rowID, size_t index, string_view text )
     {
-        applyContainerEdit( rowID, "Edit Set Element", [index, text]( const PropertyInfo& prop, void* pContainer )
-        {
-            const ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
-            if ( pSeq == nullptr )
-                return;
-            const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-            (void)pSeq->replaceElement( pContainer, index, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
-            { return SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, prop._elementTypeName, text, context ); } ) );
-        } );
+        submitContainerEdit( rowID, PropertyEditKind::ReplaceKeyedElement, static_cast<uint32>( index ), text, "Edit Set Element" );
     }
 
     void PropertyGridModel::removeKeyedElement( uint32 rowID, size_t index )
     {
-        applyContainerEdit( rowID, "Remove Set Element", [index]( const PropertyInfo& prop, void* pContainer )
-        {
-            if ( const ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence() )
-                (void)pSeq->eraseAt( pContainer, index );
-        } );
+        submitContainerEdit( rowID, PropertyEditKind::RemoveKeyedElement, static_cast<uint32>( index ), {}, "Remove Set Element" );
     }
 
     void PropertyGridModel::addKeyedElement( uint32 rowID, string_view text )
     {
-        applyContainerEdit( rowID, "Add Set Element", [text]( const PropertyInfo& prop, void* pContainer )
+        submitContainerEdit( rowID, PropertyEditKind::AddKeyedElement, 0, text, "Add Set Element" );
+    }
+
+    bool PropertyGridModel::buildEditPath( uint32 rowID, PropertyEditPath& outPath ) const
+    {
+        outPath._listNode.clear();
+        uint32 current = rowID;
+        for ( ;; )
         {
-            const ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
-            if ( pSeq == nullptr )
-                return;
-            const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-            (void)pSeq->appendElement( pContainer, pSeq->getSize( pContainer ), SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
-            { return SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, prop._elementTypeName, text, context ); } ) );
-        } );
+            const RowBinding* pBinding = findValueBinding( current );
+            if ( pBinding == nullptr )
+                return false;
+            if ( pBinding->_parentRowID == current )
+            {
+                outPath._root = pBinding->_pProp->_name; // 깊이 0 행
+                break;
+            }
+            PropertyPathNode node{};
+            switch ( pBinding->_child )
+            {
+                case PropertyRowChild::Field:
+                    node._step = PropertyPathStep::Field;
+                    node._name = pBinding->_pProp->_name;
+                    outPath._listNode.push_back( node );
+                    break;
+                case PropertyRowChild::Element:
+                    node._step    = PropertyPathStep::Element;
+                    node._ordinal = pBinding->_ordinal;
+                    outPath._listNode.push_back( node );
+                    break;
+                case PropertyRowChild::MapEntry:
+                    node._step    = PropertyPathStep::MapValue;
+                    node._ordinal = pBinding->_ordinal;
+                    outPath._listNode.push_back( node );
+                    break;
+                case PropertyRowChild::None:
+                    break; // 원소가 곧 키인 시퀀스의 원소 행 — 값 자리가 부모(컨테이너 행)와 같다
+            }
+            current = pBinding->_parentRowID;
+        }
+        VectorUtil::reverse( outPath._listNode );
+        return true;
+    }
+
+    void PropertyGridModel::submitEdit( uint32 rowID, PropertyEditRequest&& request, string_view undoLabel )
+    {
+        const RowBinding* pBinding = findValueBinding( rowID );
+        if ( pBinding == nullptr || _pType == nullptr || buildEditPath( rowID, request._path ) == false )
+            return;
+        if ( _pObject == nullptr )
+        {
+            // 씬 밖 대상(환경설정 · 문서) — 주인 패널이 인스턴스 수명을 든다. 지금 적용하고 그 패널에 알린다.
+            if ( request.applyTo( MutableObjectAddress{ _pInstance }, *_pType, getTypeRegistry() ) )
+                notifyRowEdited( rowID );
+            return;
+        }
+        // 씬 대상 — UI 프레임은 씬 메모리에 쓰지 않는다. 편집 구간은 지금 연다(쓰기 전 값 — 앞 요청은 지난 게임 단계가 이미 적용했다).
+        ensureEditSpan( *pBinding, undoLabel );
+        vector<PropertyEditTarget> listOther;
+        uint32                     sceneKey = 0;
+        if ( _collectEditTargets.isBound() )
+        {
+            sceneKey = PropertyEditTarget::findSceneKey( *_pObject );
+            vector<Component*> listComponent;
+            _collectEditTargets( listComponent );
+            for ( const Component* pEdited : listComponent )
+            {
+                if ( pEdited != nullptr && pEdited != _pComponent && pEdited->getOwner() != nullptr )
+                    listOther.push_back( PropertyEditTarget::make( *pEdited->getOwner(), pEdited ) );
+            }
+        }
+        PropertyGridModelInternal::requestSceneEdit( _targetScope, _targetObjectID, _targetComponentID, sceneKey, std::move( listOther ), std::move( request ) );
     }
 
     void PropertyGridModel::ensureEditSpan( const RowBinding& binding, string_view label )
@@ -1143,7 +1169,14 @@ namespace sw::editor
     {
         vector<PropertyEditSpan> listClosed;
         _editSpans.collectClosed( listClosed );
-        PropertyEditSpan::commit( listClosed );
+        if ( listClosed.empty() )
+            return;
+        // 마감도 게임 단계다 — 이번 프레임의 쓰기 요청 뒤에 서서(요청 순서) 쓰기가 적용된 다음 지금 값과 견준다. 끌기 한 번이 되돌리기 한 단계다.
+        EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create( [listClosed]( EditorTransaction& transaction )
+        {
+            vector<PropertyEditSpan> listSpan = listClosed;
+            PropertyEditSpan::commit( transaction, listSpan );
+        } ) );
     }
 
     void PropertyGridModel::invokeMethod( const FunctionInfo& method, const TaskArgs& args )

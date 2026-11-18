@@ -168,7 +168,7 @@ namespace sw::editor
         return span;
     }
 
-    void PropertyEditSpan::commit( vector<PropertyEditSpan>& inoutListSpan )
+    void PropertyEditSpan::commit( EditorTransaction& transaction, vector<PropertyEditSpan>& inoutListSpan )
     {
         if ( inoutListSpan.empty() )
             return;
@@ -177,7 +177,6 @@ namespace sw::editor
             inoutListSpan.clear();
             return;
         }
-        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다 — 이번 마감의 명령들은 되돌리기 한 단계다
         for ( const PropertyEditSpan& span : inoutListSpan )
         {
             vector<size_t> listChanged;

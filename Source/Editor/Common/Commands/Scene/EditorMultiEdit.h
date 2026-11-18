@@ -32,10 +32,5 @@ namespace sw::editor
         static void collectCommonComponents( const vector<GameObject*>& listObject, vector<EditorMultiEditComponent>& outListCommon );
         /** @brief 프로퍼티 @p prop 의 값이 @p listInstance 사이에서 다르면 true 입니다(프로퍼티 글로 비교). */
         static bool hasMixedValues( const PropertyInfo& prop, const vector<ObjectAddress>& listInstance );
-        /**
-         * @brief 첫 컴포넌트의 @p prop 값을 나머지에 입힙니다. 프로퍼티 글 하나만 옮기므로 다른 프로퍼티의 값은 그대로입니다. 입힌 수입니다.
-         * @details 입힌 컴포넌트마다 `onPropertyChanged` 를 부릅니다. Undo 기록은 부르는 쪽(인스펙터)이 한 트랜잭션으로 감쌉니다.
-         */
-        static uint32 copyPropertyToOthers( const PropertyInfo& prop, const vector<Component*>& listComponent );
     };
 } // namespace sw::editor

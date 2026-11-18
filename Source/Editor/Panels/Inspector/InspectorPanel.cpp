@@ -212,7 +212,6 @@ namespace sw::editor
             {
                 _viewModel.setCurrentMultiComponent( index );
                 EditorPropertyGridTarget target = EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::MainScene, _state._objectID, card._componentID );
-                target._onEdited                = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &InspectorViewModel::copyEditToOthers, &_viewModel );
                 target._isMixed                 = SW_DELEGATE_METHOD( Delegate<bool( const PropertyInfo& )>, &InspectorViewModel::isMultiEditMixed, &_viewModel );
                 target._collectEditTargets      = SW_DELEGATE_METHOD( Delegate<void( vector<Component*>& )>, &InspectorViewModel::collectMultiEditTargets, &_viewModel );
                 _propertyGrid.drawProperties( target, nullptr, {} );

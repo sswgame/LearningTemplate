@@ -445,12 +445,6 @@ namespace sw::editor
         (void)pScene->setEntityDataLayers( objectID, listLayer ); // 앵커 멤버는 gather 가 줄을 비워 여기 오지 않는다
     }
 
-    void InspectorViewModel::copyEditToOthers( const PropertyInfo& prop )
-    {
-        if ( _currentMultiComponent < _pMultiEdit->_listCommon.size() )
-            (void)EditorMultiEditComponent::copyPropertyToOthers( prop, _pMultiEdit->_listCommon[_currentMultiComponent]._listComponent ); // 수는 쓰지 않는다 — 되돌리기는 편집 구간이 모두를 담는다
-    }
-
     void InspectorViewModel::collectMultiEditTargets( vector<Component*>& outListComponent )
     {
         if ( _currentMultiComponent < _pMultiEdit->_listCommon.size() )

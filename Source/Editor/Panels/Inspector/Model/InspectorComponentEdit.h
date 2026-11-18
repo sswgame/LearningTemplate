@@ -67,7 +67,8 @@ namespace sw::editor
         /** @brief 태그 컴포넌트 @p component 의 비지 않은 태그 이름을 모읍니다(@p outListTag 를 비우고 채운다). */
         static void collectTags( const Component& component, vector<string>& outListTag );
 
-        // 대상 값 판 — 인스펙터 확장(View)이 부른다. 대상(씬 · 오브젝트 id · 컴포넌트 id)을 그 프레임에 풀고, 없으면 모으지 않고(false) 넣지 않는다.
+        // 대상 값 판 — 인스펙터 확장(View)이 부른다. 모으기는 대상(씬 · 오브젝트 id · 컴포넌트 id)을 그 프레임에 풀고 없으면 false 이고,
+        // 넣기는 쓰기 요청을 게임 단계에 넘긴다(UI 프레임은 씬 메모리에 쓰지 않는다 — 실행할 때 대상이 사라졌으면 아무것도 하지 않는다).
         /** @brief 대상 @p target 의 컴포넌트입니다. 오브젝트 · 컴포넌트가 없으면 nullptr 입니다. 확장 모듈의 edit model 이 자기 형으로 바꿔 쓴다. */
         [[nodiscard]] static Component* findComponent( const EditorPropertyGridTarget& target );
         [[nodiscard]] static bool       gatherCamera( const EditorPropertyGridTarget& target, CameraSectionValues& outValues );

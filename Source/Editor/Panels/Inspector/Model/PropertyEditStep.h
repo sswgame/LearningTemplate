@@ -4,7 +4,7 @@
  * @details 유니티 `Undo.RecordObject` 의 `PropertyModification`(대상 · `propertyPath` · 값), Godot `add_do_property` / `add_undo_property` 와 같은 단위다.
  *          예전에는 위젯이 활성화되면 선택 전체를 직렬화했다(8000 선택에서 숫자 한 칸이 XML 16000 개, 감사 E-7).
  *          컴포넌트는 영속 지역 id(`ComponentStableKey::getLocalID` — 프리팹 오버라이드 키 `#<16진>` 의 값)이고 0 이면 오브젝트 자신이다(지역 id 는 0 이 아니다).
- *          프로퍼티 경로는 깊이 0 프로퍼티 이름이다 — 중첩 필드 · 원소 편집도 다중 선택은 그 프로퍼티를 통째로 입히므로(`EditorMultiEditComponent::copyPropertyToOthers`) 단위가 같다.
+ *          프로퍼티 경로는 깊이 0 프로퍼티 이름이다 — 중첩 필드 · 원소 편집도 다중 선택은 그 프로퍼티를 통째로 입히므로(`PropertyGridModel` 의 편집 요청 적용) 단위가 같다.
  *          값 글은 `SerializerUtil::formatPropertyText` 꼴이다(`PropertyGridModel::setPropertyText` 와 같다).
  *          단계 하나는 경로 하나와 대상 목록이고 값 글은 겹치지 않게 한 벌만 든다 — 다중 선택은 대개 값이 하나라 8000 선택의 거래도 대상 수 × 20 바이트 남짓이다.
  */
