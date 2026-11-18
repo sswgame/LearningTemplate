@@ -252,31 +252,25 @@ namespace sw::editor
         const string path      = gv_editorPreviewScreenshot.get();
         if ( path.empty() || bNotReady )
             return;
-        if ( requestImageFile( path ) == false )
+        if ( requestImageFile( path ) == 0 )
             return;
         SW_LOG_INFO_ID( "PreviewViewport.Screenshot", "Preview viewport screenshot (scene key %#) -> %#", _sceneKey, path.c_str() );
         gv_editorPreviewScreenshot.set( {} ); // 한 번만
     }
 
-    bool EditorPreviewViewport::requestImageFile( string_view path )
+    uint32 EditorPreviewViewport::requestImageFile( string_view path )
     {
         const uint64                 renderTarget = getRenderTarget();
         const bool                   bNotDrawn    = renderTarget == 0 || _submittedFrameCount == 0;
         const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( path );
         if ( absolutePath.has_value() == false || bNotDrawn )
-            return false;
-        RenderThread::requestScreenshot( *absolutePath, renderTarget, RHIFormat::R8G8B8A8_UNORM );
-        return true;
+            return 0;
+        return RenderThread::requestScreenshot( *absolutePath, renderTarget, RHIFormat::R8G8B8A8_UNORM );
     }
 
-    uint32 EditorPreviewViewport::getCompletedImageFileSerial()
+    ScreenshotTicketState EditorPreviewViewport::findImageFileResult( uint32 ticket )
     {
-        return RenderThread::getCompletedScreenshotSerial();
-    }
-
-    string EditorPreviewViewport::getLastImageFilePath()
-    {
-        return RenderThread::getLastScreenshotPath();
+        return RenderThread::findScreenshotResult( ticket );
     }
 
     bool EditorPreviewViewport::hasFloor() const

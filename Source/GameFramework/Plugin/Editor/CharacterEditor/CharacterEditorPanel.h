@@ -228,6 +228,6 @@ namespace sw::editor
         string                                  _socketResolveError;       ///< 미리보기가 지난 프레임에 상태 줄에 올린 소켓 풀기 오류(풀리면 지운다)
         string                                  _thumbnailCapturePath;     ///< 요청한 썸네일 캡처의 임시 파일(비면 요청 없음)
         string                                  _thumbnailCapturePreset;   ///< 그 캡처를 붙일 프리셋 이름
-        uint32                                  _thumbnailCaptureSerial;   ///< 요청할 때의 스크린샷 처리 수(`EditorPreviewViewport::getCompletedImageFileSerial`)
+        uint32                                  _thumbnailCaptureTicket;   ///< 그 캡처 요청의 표(`EditorPreviewViewport::requestImageFile`), 요청이 없으면 0
     };
 } // namespace sw::editor

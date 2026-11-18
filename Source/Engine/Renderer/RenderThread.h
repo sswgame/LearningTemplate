@@ -29,7 +29,7 @@ namespace sw
     class IRHIDevice;
     class Scene;
 
-    enum class ScreenshotTicketState : uint8; // Engine/Graphics/View/ScreenshotRequestQueue.h
+    enum class ScreenshotTicketState : uint8; // Engine/Graphics/View/ScreenshotTicketState.h
 
     /** @brief 렌더 스레드에서 실행할 일 하나입니다(`RenderThread::executeAndWait`). 디바이스는 그 스레드가 컨텍스트를 잡은 것입니다. */
     SW_DECLARE_DELEGATE( void, RenderCommandDelegate, IRHIDevice& );

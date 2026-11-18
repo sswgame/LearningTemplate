@@ -354,7 +354,7 @@ namespace sw::editor
         , _bodyStepTimer{ 0.0f }
         , _thumbnailCapturePath{}
         , _thumbnailCapturePreset{}
-        , _thumbnailCaptureSerial{ 0 }
+        , _thumbnailCaptureTicket{ 0 }
     {
     }
 
@@ -2205,33 +2205,36 @@ namespace sw::editor
         if ( _document.canAttachThumbnail() == false )
             return; // 까닭은 상태 줄에 남았다
         const string imagePath = CharacterEditorLocalStore::makeCaptureImagePath();
-        const uint32 serial    = EditorPreviewViewport::getCompletedImageFileSerial(); // 요청 전에 읽는다 - 이 값이 바뀌면 그 뒤에 처리한 요청이다
-        const bool   bReady    = FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( imagePath ) ) && getPreviewViewport().requestImageFile( imagePath );
-        if ( bReady == false )
+        const uint32 ticket    = FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( imagePath ) ) ? getPreviewViewport().requestImageFile( imagePath ) : 0u;
+        if ( ticket == 0 )
         {
             _document.setStatus( "The thumbnail needs the Preview tab drawn at least once (and a writable user data folder)" );
             return;
         }
         _thumbnailCapturePath   = imagePath;
         _thumbnailCapturePreset = string{ _document.getPaths()._presetName.c_str() };
-        _thumbnailCaptureSerial = serial;
+        _thumbnailCaptureTicket = ticket;
         SW_LOG_INFO_ID( "CharacterEditorPanel.CharacterEditorThumbnailPreset", "Character Editor: thumbnail of preset '%#' requested", _thumbnailCapturePreset.c_str() );
     }
 
     void CharacterEditorPanel::pollThumbnailCapture()
     {
-        if ( _thumbnailCapturePath.empty() || EditorPreviewViewport::getCompletedImageFileSerial() == _thumbnailCaptureSerial )
+        if ( _thumbnailCapturePath.empty() )
+            return;
+        // 제 표의 결과만 읽는다 — 같은 실행의 다른 요청(개발 명령 screenshot · 에디터 버튼)이 끝나도 이 요청의 끝으로 읽히지 않는다.
+        const ScreenshotTicketState state = EditorPreviewViewport::findImageFileResult( _thumbnailCaptureTicket );
+        if ( state == ScreenshotTicketState::Pending )
             return;
         const string imagePath = std::move( _thumbnailCapturePath );
         _thumbnailCapturePath.clear();
+        _thumbnailCaptureTicket = 0;
         vector<uint8> pngBytes;
-        // 다른 요청이 이 요청을 덮었거나(앞 요청이 남아 있으면 덮어쓴다) 쓰기에 실패하면 마지막 경로가 다르다.
-        const bool bCaptured = EditorPreviewViewport::getLastImageFilePath() == imagePath && FileUtil::readFile( imagePath, pngBytes ) && pngBytes.empty() == false;
+        const bool    bCaptured = state == ScreenshotTicketState::Written && FileUtil::readFile( imagePath, pngBytes ) && pngBytes.empty() == false;
         if ( FileUtil::exists( imagePath ) && FileUtil::removeFile( imagePath ) == false )
             SW_LOG_WARNING_ID( "CharacterEditorPanel.CharacterEditorThumbnailCapture", "Character Editor: the thumbnail capture file %# could not be removed", imagePath.c_str() );
         if ( bCaptured == false )
         {
-            _document.setStatus( "The thumbnail capture failed or was replaced by another screenshot - try again" );
+            _document.setStatus( "The thumbnail capture failed - try again" );
             return;
         }
         _document.attachThumbnail( _thumbnailCapturePreset, std::move( pngBytes ) );

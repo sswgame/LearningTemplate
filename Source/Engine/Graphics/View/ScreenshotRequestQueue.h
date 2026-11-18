@@ -17,6 +17,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/View/ScreenshotTicketState.h"
 
 namespace sw
 {
@@ -30,15 +31,6 @@ namespace sw
         RHITextureHandle _texture{ 0 };                        ///< 0 이면 화면에 나간 이미지(Present 결과), 아니면 그 렌더 타깃
         RHIFormat        _format{ RHIFormat::R8G8B8A8_UNORM }; ///< `_texture` 의 포맷
         uint32           _ticket{ 0 };                         ///< `put` 이 돌려준 표 — 끝 알림(`reportCompleted`)이 이 표로 결과를 남긴다
-    };
-
-    /** @brief 요청 표 하나의 상태입니다(`ScreenshotRequestQueue::findResult`). */
-    enum class ScreenshotTicketState : uint8
-    {
-        Pending, ///< 아직 처리하지 않았다
-        Written, ///< 파일을 썼다
-        Failed,  ///< 처리했지만 쓰지 못했다(읽기 · 쓰기 실패, 줄이 넘쳤다)
-        Unknown  ///< 받은 적이 없거나 결과 기록 창(`kResultHistoryCount`)을 벗어났다
     };
 } // namespace sw
 
