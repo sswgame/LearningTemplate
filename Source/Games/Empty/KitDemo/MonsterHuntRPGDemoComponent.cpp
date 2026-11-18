@@ -41,7 +41,6 @@ namespace sw
     MonsterHuntRPGDemoComponent::MonsterHuntRPGDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _solved{ 0 }
         , _reward{ 0 }
         , _knowledge{ 0 }
@@ -83,7 +82,7 @@ namespace sw
             (void)bestiary.recordKill( monsterID );
         }
         _knowledge = bestiary.getKnowledge( monsterID );
-        _demoState = 1;
+        markRunFinished();
         return true;
     }
 
@@ -99,38 +98,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.MonsterHuntRPGDone", "[KitDemo] monster hunt: solved %#, reward %#, knowledge %#", _solved, _reward, _knowledge );
     }
 
-    void MonsterHuntRPGDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void MonsterHuntRPGDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void MonsterHuntRPGDemoComponent::serializeState( StateIO& io )
     {
-        io.header( MonsterHuntRPGDemoComponentInternal::kStateTag, MonsterHuntRPGDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState = _demoState;
-        int32 solved    = _solved;
-        int32 reward    = _reward;
-        int32 knowledge = _knowledge;
-        io.value( demoState );
-        io.value( solved );
-        io.value( reward );
-        io.value( knowledge );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState = demoState;
-        _solved    = solved;
-        _reward    = reward;
-        _knowledge = knowledge;
+        serializeResults( io, MonsterHuntRPGDemoComponentInternal::kStateTag, MonsterHuntRPGDemoComponentInternal::kStateVersion, { &_solved, &_reward, &_knowledge } );
     }
 } // namespace sw

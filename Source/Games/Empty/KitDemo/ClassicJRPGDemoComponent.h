@@ -12,7 +12,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
      * @brief 용사 하나의 파티로 체력 1 인 적과 전투를 열고, 공격 한 번으로 이겨 보상(경험치 · 골드)이 파티와 지갑으로 가는 한 바퀴를 돌립니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Classic JRPG Demo", Tooltip = "Runs one ClassicJRPG kit battle (attack command, victory, rewards) and keeps the result" )
-    class ClassicJRPGDemoComponent : public GameModeComponent
+    class ClassicJRPGDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -32,7 +33,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getBattleResult() const { return _battleResult; }
         int32 getHeroExp() const { return _heroExp; }
         int32 getGold() const { return _gold; }
@@ -40,8 +40,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 전투 한 바퀴를 돌리고 결과를 담습니다. 멤버를 넣지 못하거나 전투가 열리지 않으면 오류를 남기고 false 입니다. */
@@ -52,7 +50,6 @@ namespace sw
         AssetRef<JRPGCatalog> _catalogPath;
 
         SharedAssetRef<JRPGCatalog> _pCatalog;
-        int32                       _demoState;    ///< 0 시작 전, 1 한 바퀴를 마침
         int32                       _battleResult; ///< `JRPGBattleResult` 값(0 진행, 1 승리, 2 패배, 3 도망)
         int32                       _heroExp;      ///< 용사가 받은 경험치
         int32                       _gold;         ///< 지갑의 기본 통화 잔액

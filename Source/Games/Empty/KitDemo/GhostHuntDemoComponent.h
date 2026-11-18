@@ -12,7 +12,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
      * @brief 유령 하나를 공격 동작까지 기다려 손전등으로 기절시키고, 흡입으로 서지 게이지를 채운 뒤 서지로 잡는 한 바퀴를 돌립니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Ghost Hunt Demo", Tooltip = "Runs one GhostHunt kit fight (beam stun, suction, surge, catch) and keeps the result" )
-    class GhostHuntDemoComponent : public GameModeComponent
+    class GhostHuntDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -32,7 +33,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getStunnedCount() const { return _stunnedCount; }
         int32 getCaughtCoins() const { return _caughtCoins; }
         int32 getRemainingGhosts() const { return _remainingGhosts; }
@@ -40,8 +40,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 싸움 한 바퀴를 돌리고 결과를 담습니다. 싸움을 열지 못하거나 흡입이 시작되지 않으면 오류를 남기고 false 입니다. */
@@ -52,7 +50,6 @@ namespace sw
         AssetRef<GhostCatalog> _catalogPath;
 
         SharedAssetRef<GhostCatalog> _pCatalog;
-        int32                        _demoState;       ///< 0 시작 전, 1 한 바퀴를 마침
         int32                        _stunnedCount;    ///< 손전등이 기절시킨 유령 수
         int32                        _caughtCoins;     ///< 잡은 유령이 떨어뜨린 동전
         int32                        _remainingGhosts; ///< 싸움이 끝난 뒤 잡히지 않은 유령

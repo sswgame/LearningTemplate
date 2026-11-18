@@ -12,7 +12,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
      * @brief 팀 A(둘) 대 팀 B(하나)의 판을 열고 B 가 A 를 모두 쓰러뜨려 판이 끝나는 한 바퀴를 돌립니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Battle Royale Demo", Tooltip = "Runs one BattleRoyale kit match (zone ticks, knocks, team wipe, winner) and keeps the result" )
-    class BattleRoyaleDemoComponent : public GameModeComponent
+    class BattleRoyaleDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -32,7 +33,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getWinningTeam() const { return _winningTeam; }
         int32 getWinnerKills() const { return _winnerKills; }
         int32 getRemainingPlayers() const { return _remainingPlayers; }
@@ -40,8 +40,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 판 한 바퀴를 돌리고 결과를 담습니다. 판을 열지 못하면 오류를 남기고 false 입니다. */
@@ -52,7 +50,6 @@ namespace sw
         AssetRef<BattleRoyaleCatalog> _catalogPath;
 
         SharedAssetRef<BattleRoyaleCatalog> _pCatalog;
-        int32                               _demoState;        ///< 0 시작 전, 1 한 바퀴를 마침
         int32                               _winningTeam;      ///< 이긴 팀 번호(-1 없음)
         int32                               _winnerKills;      ///< 이긴 사람의 처치 수
         int32                               _remainingPlayers; ///< 판이 끝난 뒤 남은 사람

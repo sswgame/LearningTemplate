@@ -38,7 +38,6 @@ namespace sw
     CardGameDemoComponent::CardGameDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _phase{ 0 }
         , _turn{ 0 }
         , _playerHP{ 0 }
@@ -76,10 +75,10 @@ namespace sw
             }
             battle.endTurn();
         }
-        _phase     = static_cast<int32>( battle.getPhase() );
-        _turn      = battle.getTurn();
-        _playerHP  = battle.getPlayerHP();
-        _demoState = 1;
+        _phase    = static_cast<int32>( battle.getPhase() );
+        _turn     = battle.getTurn();
+        _playerHP = battle.getPlayerHP();
+        markRunFinished();
         return true;
     }
 
@@ -95,38 +94,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.CardGameDone", "[KitDemo] card game: battle phase %# on turn %#, player HP %#", _phase, _turn, _playerHP );
     }
 
-    void CardGameDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 판은 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void CardGameDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void CardGameDemoComponent::serializeState( StateIO& io )
     {
-        io.header( CardGameDemoComponentInternal::kStateTag, CardGameDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState = _demoState;
-        int32 phase     = _phase;
-        int32 turn      = _turn;
-        int32 playerHP  = _playerHP;
-        io.value( demoState );
-        io.value( phase );
-        io.value( turn );
-        io.value( playerHP );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState = demoState;
-        _phase     = phase;
-        _turn      = turn;
-        _playerHP  = playerHP;
+        serializeResults( io, CardGameDemoComponentInternal::kStateTag, CardGameDemoComponentInternal::kStateVersion, { &_phase, &_turn, &_playerHP } );
     }
 } // namespace sw

@@ -40,7 +40,6 @@ namespace sw
     CoopScavengerDemoComponent::CoopScavengerDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _soldValue{ 0 }
         , _credits{ 0 }
         , _nextQuota{ 0 }
@@ -107,7 +106,7 @@ namespace sw
             return false;
         _credits   = static_cast<int32>( expedition.getCredits() );
         _nextQuota = expedition.getQuota().getQuota();
-        _demoState = 1;
+        markRunFinished();
         return true;
     }
 
@@ -126,38 +125,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.CoopScavengerDone", "[KitDemo] coop scavenger: sold %#, credits %#, next quota %#", _soldValue, _credits, _nextQuota );
     }
 
-    void CoopScavengerDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void CoopScavengerDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void CoopScavengerDemoComponent::serializeState( StateIO& io )
     {
-        io.header( CoopScavengerDemoComponentInternal::kStateTag, CoopScavengerDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState = _demoState;
-        int32 soldValue = _soldValue;
-        int32 credits   = _credits;
-        int32 nextQuota = _nextQuota;
-        io.value( demoState );
-        io.value( soldValue );
-        io.value( credits );
-        io.value( nextQuota );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState = demoState;
-        _soldValue = soldValue;
-        _credits   = credits;
-        _nextQuota = nextQuota;
+        serializeResults( io, CoopScavengerDemoComponentInternal::kStateTag, CoopScavengerDemoComponentInternal::kStateVersion, { &_soldValue, &_credits, &_nextQuota } );
     }
 } // namespace sw

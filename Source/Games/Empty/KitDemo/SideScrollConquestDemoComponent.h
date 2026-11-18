@@ -12,7 +12,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
      * @brief 판을 열고 창병 둘을 전초기지 · 요새에 세워 적 거점이 없어질 때까지 고정 걸음을 돌립니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Side Scroll Conquest Demo", Tooltip = "Runs one SideScrollConquest kit match (capture outpost and keep, victory) and keeps the result" )
-    class SideScrollConquestDemoComponent : public GameModeComponent
+    class SideScrollConquestDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -32,7 +33,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getVictory() const { return _victory; }
         int32 getTerritory() const { return _territory; }
         int32 getSquadSize() const { return _squadSize; }
@@ -40,8 +40,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 판 한 바퀴를 돌리고 결과를 담습니다. 병종을 모르면 오류를 남기고 false 입니다. */
@@ -52,7 +50,6 @@ namespace sw
         AssetRef<ConquestCatalog> _catalogPath;
 
         SharedAssetRef<ConquestCatalog> _pCatalog;
-        int32                           _demoState; ///< 0 시작 전, 1 한 바퀴를 마침
         int32                           _victory;   ///< 1 승리, 0 아님
         int32                           _territory; ///< 판이 끝난 뒤 플레이어 거점 수
         int32                           _squadSize; ///< 지휘관 부대의 병사 수

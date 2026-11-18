@@ -12,7 +12,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
      * @brief 생존자 하나 · 발전기 둘 · 탈출문 하나의 판을 열고, 수리 → 전원 → 문 열기 → 탈출로 판이 끝나는 한 바퀴를 돌립니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Asymmetric Horror Demo", Tooltip = "Runs one AsymmetricHorror kit match (repair, power, open gate, escape) and keeps the result" )
-    class AsymmetricHorrorDemoComponent : public GameModeComponent
+    class AsymmetricHorrorDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -32,7 +33,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getCompletedGenerators() const { return _completedGenerators; }
         int32 getEscapedCount() const { return _escapedCount; }
         int32 getWinningTeam() const { return _winningTeam; }
@@ -40,8 +40,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 판 한 바퀴를 돌리고 결과를 담습니다. 판을 열지 못하면 오류를 남기고 false 입니다. */
@@ -52,7 +50,6 @@ namespace sw
         AssetRef<AsymmetricHorrorRulesCatalog> _catalogPath;
 
         SharedAssetRef<AsymmetricHorrorRulesCatalog> _pCatalog;
-        int32                                        _demoState;           ///< 0 시작 전, 1 한 바퀴를 마침
         int32                                        _completedGenerators; ///< 고친 발전기 수
         int32                                        _escapedCount;        ///< 탈출한 생존자 수
         int32                                        _winningTeam;         ///< 이긴 팀 번호(-1 없음, 0 생존자)

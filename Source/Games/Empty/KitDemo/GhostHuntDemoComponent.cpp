@@ -38,7 +38,6 @@ namespace sw
     GhostHuntDemoComponent::GhostHuntDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _stunnedCount{ 0 }
         , _caughtCoins{ 0 }
         , _remainingGhosts{ 0 }
@@ -80,7 +79,7 @@ namespace sw
                 _caughtCoins += event._coins;
         }
         _remainingGhosts = encounter.countRemaining();
-        _demoState       = 1;
+        markRunFinished();
         return true;
     }
 
@@ -96,38 +95,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.GhostHuntDone", "[KitDemo] ghost hunt: %# stunned, %# coins, %# ghosts left", _stunnedCount, _caughtCoins, _remainingGhosts );
     }
 
-    void GhostHuntDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void GhostHuntDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void GhostHuntDemoComponent::serializeState( StateIO& io )
     {
-        io.header( GhostHuntDemoComponentInternal::kStateTag, GhostHuntDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState       = _demoState;
-        int32 stunnedCount    = _stunnedCount;
-        int32 caughtCoins     = _caughtCoins;
-        int32 remainingGhosts = _remainingGhosts;
-        io.value( demoState );
-        io.value( stunnedCount );
-        io.value( caughtCoins );
-        io.value( remainingGhosts );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState       = demoState;
-        _stunnedCount    = stunnedCount;
-        _caughtCoins     = caughtCoins;
-        _remainingGhosts = remainingGhosts;
+        serializeResults( io, GhostHuntDemoComponentInternal::kStateTag, GhostHuntDemoComponentInternal::kStateVersion, { &_stunnedCount, &_caughtCoins, &_remainingGhosts } );
     }
 } // namespace sw

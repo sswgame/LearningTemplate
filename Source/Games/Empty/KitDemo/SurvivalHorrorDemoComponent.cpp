@@ -39,7 +39,6 @@ namespace sw
     SurvivalHorrorDemoComponent::SurvivalHorrorDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _sanity{ 0 }
         , _health{ 0 }
     {
@@ -75,9 +74,9 @@ namespace sw
             SW_LOG_ERROR_ID( "KitDemo.SurvivalHorrorHerbRefused", "Survival horror demo: the session refused to use item 'herb'" );
             return false;
         }
-        _sanity    = static_cast<int32>( session.getSanity().getValue() );
-        _health    = static_cast<int32>( session.getHealth() );
-        _demoState = 1;
+        _sanity = static_cast<int32>( session.getSanity().getValue() );
+        _health = static_cast<int32>( session.getHealth() );
+        markRunFinished();
         return true;
     }
 
@@ -93,35 +92,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.SurvivalHorrorDone", "[KitDemo] survival horror: sanity %#, health %#", _sanity, _health );
     }
 
-    void SurvivalHorrorDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void SurvivalHorrorDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void SurvivalHorrorDemoComponent::serializeState( StateIO& io )
     {
-        io.header( SurvivalHorrorDemoComponentInternal::kStateTag, SurvivalHorrorDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState = _demoState;
-        int32 sanity    = _sanity;
-        int32 health    = _health;
-        io.value( demoState );
-        io.value( sanity );
-        io.value( health );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState = demoState;
-        _sanity    = sanity;
-        _health    = health;
+        serializeResults( io, SurvivalHorrorDemoComponentInternal::kStateTag, SurvivalHorrorDemoComponentInternal::kStateVersion, { &_sanity, &_health } );
     }
 } // namespace sw

@@ -40,7 +40,6 @@ namespace sw
     SideScrollConquestDemoComponent::SideScrollConquestDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _victory{ 0 }
         , _territory{ 0 }
         , _squadSize{ 0 }
@@ -68,7 +67,7 @@ namespace sw
         _victory   = world.isVictory() ? 1 : 0;
         _territory = world.computeTerritory();
         _squadSize = world.getSquadSize();
-        _demoState = 1;
+        markRunFinished();
         return true;
     }
 
@@ -84,38 +83,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.SideScrollConquestDone", "[KitDemo] side scroll conquest: victory %#, %# sites held, squad of %#", _victory, _territory, _squadSize );
     }
 
-    void SideScrollConquestDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void SideScrollConquestDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void SideScrollConquestDemoComponent::serializeState( StateIO& io )
     {
-        io.header( SideScrollConquestDemoComponentInternal::kStateTag, SideScrollConquestDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState = _demoState;
-        int32 victory   = _victory;
-        int32 territory = _territory;
-        int32 squadSize = _squadSize;
-        io.value( demoState );
-        io.value( victory );
-        io.value( territory );
-        io.value( squadSize );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState = demoState;
-        _victory   = victory;
-        _territory = territory;
-        _squadSize = squadSize;
+        serializeResults( io, SideScrollConquestDemoComponentInternal::kStateTag, SideScrollConquestDemoComponentInternal::kStateVersion, { &_victory, &_territory, &_squadSize } );
     }
 } // namespace sw

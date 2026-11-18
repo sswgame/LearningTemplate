@@ -41,7 +41,6 @@ namespace sw
     ClassicJRPGDemoComponent::ClassicJRPGDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _battleResult{ 0 }
         , _heroExp{ 0 }
         , _gold{ 0 }
@@ -79,7 +78,7 @@ namespace sw
         _battleResult = static_cast<int32>( battle.getResult() );
         _heroExp      = static_cast<int32>( party.getMember( ClassicJRPGDemoComponentInternal::kHeroIndex )._level.getXP() );
         _gold         = static_cast<int32>( wallet.getBalance( Wallet::getDefaultCurrency() ) );
-        _demoState    = 1;
+        markRunFinished();
         return true;
     }
 
@@ -95,38 +94,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.ClassicJRPGDone", "[KitDemo] classic JRPG: result %#, hero exp %#, gold %#", _battleResult, _heroExp, _gold );
     }
 
-    void ClassicJRPGDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void ClassicJRPGDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void ClassicJRPGDemoComponent::serializeState( StateIO& io )
     {
-        io.header( ClassicJRPGDemoComponentInternal::kStateTag, ClassicJRPGDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState    = _demoState;
-        int32 battleResult = _battleResult;
-        int32 heroExp      = _heroExp;
-        int32 gold         = _gold;
-        io.value( demoState );
-        io.value( battleResult );
-        io.value( heroExp );
-        io.value( gold );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState    = demoState;
-        _battleResult = battleResult;
-        _heroExp      = heroExp;
-        _gold         = gold;
+        serializeResults( io, ClassicJRPGDemoComponentInternal::kStateTag, ClassicJRPGDemoComponentInternal::kStateVersion, { &_battleResult, &_heroExp, &_gold } );
     }
 } // namespace sw

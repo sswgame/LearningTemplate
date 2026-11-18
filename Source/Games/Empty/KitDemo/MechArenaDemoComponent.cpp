@@ -45,7 +45,6 @@ namespace sw
     MechArenaDemoComponent::MechArenaDemoComponent()
         : _catalogPath{}
         , _pCatalog{}
-        , _demoState{ 0 }
         , _winningTeam{ MechArenaDemoComponentInternal::kNoWinningTeam }
         , _winnerKills{ 0 }
         , _loserGauge{ 0 }
@@ -97,7 +96,7 @@ namespace sw
         _winningTeam = world.getMatch().getWinningTeam();
         _winnerKills = world.findPilot( attacker.value() )->_kills;
         _loserGauge  = world.getTeamGauge( MechArenaDemoComponentInternal::kTeamB );
-        _demoState   = 1;
+        markRunFinished();
         return true;
     }
 
@@ -113,38 +112,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.MechArenaDone", "[KitDemo] mech arena: team %# won with %# kills, loser gauge %#", _winningTeam, _winnerKills, _loserGauge );
     }
 
-    void MechArenaDemoComponent::updateGame( float32 deltaTime )
-    {
-        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
-        (void)deltaTime;
-    }
-
-    void MechArenaDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습이 없어 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void MechArenaDemoComponent::serializeState( StateIO& io )
     {
-        io.header( MechArenaDemoComponentInternal::kStateTag, MechArenaDemoComponentInternal::kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState   = _demoState;
-        int32 winningTeam = _winningTeam;
-        int32 winnerKills = _winnerKills;
-        int32 loserGauge  = _loserGauge;
-        io.value( demoState );
-        io.value( winningTeam );
-        io.value( winnerKills );
-        io.value( loserGauge );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState   = demoState;
-        _winningTeam = winningTeam;
-        _winnerKills = winnerKills;
-        _loserGauge  = loserGauge;
+        serializeResults( io, MechArenaDemoComponentInternal::kStateTag, MechArenaDemoComponentInternal::kStateVersion, { &_winningTeam, &_winnerKills, &_loserGauge } );
     }
 } // namespace sw

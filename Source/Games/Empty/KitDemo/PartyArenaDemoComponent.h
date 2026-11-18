@@ -13,7 +13,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyRoundSeries.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -22,7 +23,7 @@ namespace sw
      * @brief 카탈로그의 라운드 목록 · 순위 점수 · 우승 점수로 세 사람의 시리즈를 열고, 같은 라운드 점수를 우승자가 나올 때까지 넘기는 한 바퀴를 돌립니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Party Arena Demo", Tooltip = "Runs one PartyArena kit round series (round ranks, placement points, series winner) and keeps the result" )
-    class PartyArenaDemoComponent : public GameModeComponent
+    class PartyArenaDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -33,7 +34,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getWinner() const { return _winner; }
         int32 getWinnerTotal() const { return _winnerTotal; }
         int32 getRoundsPlayed() const { return _roundsPlayed; }
@@ -41,8 +41,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 시리즈 한 바퀴를 돌리고 결과를 담습니다. 시리즈를 열지 못하면 오류를 남기고 false 입니다. */
@@ -53,7 +51,6 @@ namespace sw
         AssetRef<PartyRoundSeries> _catalogPath;
 
         SharedAssetRef<PartyRoundSeries> _pCatalog;
-        int32                            _demoState;    ///< 0 시작 전, 1 한 바퀴를 마침
         int32                            _winner;       ///< 우승한 사람 번호(-1 없음)
         int32                            _winnerTotal;  ///< 우승한 사람의 총점
         int32                            _roundsPlayed; ///< 결과를 넘긴 라운드 수

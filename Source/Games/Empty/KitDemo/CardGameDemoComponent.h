@@ -13,7 +13,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle/CardBattle.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+
+#include "Games/Empty/KitDemo/KitDemoComponent.h"
 
 namespace sw
 {
@@ -22,7 +23,7 @@ namespace sw
      * @brief 공격 카드 다섯 장으로 전투를 열고, 턴마다 낼 수 있는 패를 모두 낸 뒤 턴을 마쳐 적을 쓰러뜨리는 한 판을 돌립니다.
      */
     REFLECT( Category = "KitDemo", DisplayName = "Card Game Demo", Tooltip = "Runs one CardGame kit deck battle (play cards, enemy intent, win) and keeps the result" )
-    class CardGameDemoComponent : public GameModeComponent
+    class CardGameDemoComponent : public KitDemoComponent
     {
     public:
         REFLECT_BODY();
@@ -33,7 +34,6 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
-        int32 getDemoState() const { return _demoState; }
         int32 getPhase() const { return _phase; }
         int32 getTurn() const { return _turn; }
         int32 getPlayerHP() const { return _playerHP; }
@@ -41,8 +41,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 전투 한 판을 돌리고 결과를 담습니다. 전투를 열지 못하면 오류를 남기고 false 입니다. */
@@ -53,9 +51,8 @@ namespace sw
         AssetRef<CardBattleCatalog> _catalogPath;
 
         SharedAssetRef<CardBattleCatalog> _pCatalog;
-        int32                             _demoState; ///< 0 시작 전, 1 한 판을 마침
-        int32                             _phase;     ///< 끝난 단계(`CardBattlePhase` 0 내 턴, 1 승리, 2 패배)
-        int32                             _turn;      ///< 끝난 턴 번호(1 부터)
-        int32                             _playerHP;  ///< 끝난 뒤 내 체력
+        int32                             _phase;    ///< 끝난 단계(`CardBattlePhase` 0 내 턴, 1 승리, 2 패배)
+        int32                             _turn;     ///< 끝난 턴 번호(1 부터)
+        int32                             _playerHP; ///< 끝난 뒤 내 체력
     };
 } // namespace sw
