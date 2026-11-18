@@ -24,7 +24,7 @@
 	<DevCommand line="gpu.show off"/>
 	<DevCommand line="gpu.thread 0"/>
 	<DevCommand line="gpu.timings on"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="GPU.PassMs" key="Frame" atLeast="0" timeoutFrames="60"/> <!-- 측정한 프레임의 GPU 시간이 돌아왔다(되읽기는 몇 프레임 늦다) -->
 	<DevCommand line="gpu.timings"/>
 	<ExpectLog id="GPUTiming.Pass" atLeast="1"/>
 	<Expect watch="GPU.FrameMs" atLeast="0"/>

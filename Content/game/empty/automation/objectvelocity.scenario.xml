@@ -19,17 +19,17 @@
 
 	<!-- 이어진 움직임 — 프레임마다 0.05 m. TAA 기록이 움직이는 동안 몇 프레임 쌓인 뒤 찍는다. -->
 	<DevCommand line="move GameCamera 0.05 1.6 -6"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 다음 단계를 다음 프레임에(프레임 경계 — 그리지 않는 프레임 없음) -->
 	<DevCommand line="move GameCamera 0.10 1.6 -6"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 다음 단계를 다음 프레임에(프레임 경계 — 그리지 않는 프레임 없음) -->
 	<DevCommand line="move GameCamera 0.15 1.6 -6"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 다음 단계를 다음 프레임에(프레임 경계 — 그리지 않는 프레임 없음) -->
 	<DevCommand line="move GameCamera 0.20 1.6 -6"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 다음 단계를 다음 프레임에(프레임 경계 — 그리지 않는 프레임 없음) -->
 	<DevCommand line="move GameCamera 0.25 1.6 -6"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 다음 단계를 다음 프레임에(프레임 경계 — 그리지 않는 프레임 없음) -->
 	<DevCommand line="move GameCamera 0.30 1.6 -6"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 다음 단계를 다음 프레임에(프레임 경계 — 그리지 않는 프레임 없음) -->
 	<DevCommand line="move GameCamera 0.35 1.6 -6"/>
 	<Screenshot file="moving.ppm" stability="none"/>
 	<DevCommand line="move GameCamera 0.40 1.6 -6"/>
