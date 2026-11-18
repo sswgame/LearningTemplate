@@ -74,14 +74,9 @@ namespace sw
         [[nodiscard]] expected<string> formatJSON( const LoadBotScenario& scenario, int64 elapsedMs ) const;
 
         int64 getCompletedCount( LoadBotAction action ) const;
-        int64 getErrorCount( LoadBotAction action ) const;
         int64 getTotalCompletedCount() const;
         int64 getTotalErrorCount() const;
         int64 getErrorKeyCount( string_view errorKey ) const;
-        int64 getPushCount( uint16 pushKind ) const;
-        int64 getOpenedConnectionCount() const { return _openedCount; }
-        int64 getFailedConnectionCount() const { return _failedCount; }
-        int64 getDisconnectCount() const { return _disconnectCount; }
         /** @brief 서로 다른 경기 id 수입니다. */
         int64                     getDistinctMatchCount() const;
         int64                     getDroppedArrivalCount() const { return _droppedArrivalCount; }

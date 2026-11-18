@@ -8,6 +8,7 @@
  *          - 봇 하나 안의 보내기 방식과 따로, 봇을 띄우는 시각표(도착률 실행기)는 `LoadBotArrivalSchedule` 이다.
  */
 #pragma once
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
@@ -79,12 +80,9 @@ namespace sw
     class LoadBotArrivalSchedule
     {
     public:
-        static constexpr int64 kMicrosecondsPerSecond = 1000000;
-        static constexpr int64 kMillisecondsPerSecond = 1000;
-
         LoadBotArrivalSchedule( int32 ratePerSecond, int64 durationMs )
             : _ratePerSecond{ ratePerSecond }
-            , _totalCount{ static_cast<int64>( ratePerSecond ) * durationMs / kMillisecondsPerSecond }
+            , _totalCount{ static_cast<int64>( ratePerSecond ) * durationMs / constant::time::kMillisecondsPerSecond }
         {
         }
 
@@ -96,7 +94,7 @@ namespace sw
         {
             if ( elapsedUs < 0 || _totalCount <= 0 )
                 return 0;
-            const int64 dueCount = elapsedUs * _ratePerSecond / kMicrosecondsPerSecond + 1;
+            const int64 dueCount = elapsedUs * _ratePerSecond / constant::time::kMicrosecondsPerSecond + 1;
             return dueCount < _totalCount ? dueCount : _totalCount;
         }
 

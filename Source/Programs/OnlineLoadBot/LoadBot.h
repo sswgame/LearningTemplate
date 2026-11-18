@@ -110,9 +110,11 @@ namespace sw
         void               startPick( const LoadBotStep& step );
         void               startTrade( const LoadBotStep& step, MonotonicMilliseconds nowMs );
         void               pollTrade( MonotonicMilliseconds nowMs );
-        string             makeGuildName() const;
-        string             makeReceiptPayload( const string& productID );
-        void               stop();
+        /** @brief 비밀번호 로그인의 계정 이름입니다 — 가입과 로그인이 같은 이름을 써야 한다(씨앗 · 봇 번호). */
+        string makeLoginName() const;
+        string makeGuildName() const;
+        string makeReceiptPayload( const string& productID );
+        void   stop();
 
         /** @brief 키트 응답 처리기입니다(지연 · 오류만 본다). 응답 타입마다 하나가 생긴다 — 결과 칸이 없는 응답은 끝났으면 0 이다. */
         template <typename TReply>

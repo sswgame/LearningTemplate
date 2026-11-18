@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -24,7 +25,6 @@ namespace sw
             static constexpr int32  kPercentileHigh       = 95;
             static constexpr int32  kPercentileTail       = 99;
             static constexpr int32  kJSONIndent           = 2;
-            static constexpr int64  kMicrosecondsPerMs    = 1000;
             static constexpr int64  kMicrosecondsPerTenth = 100;
             static constexpr int32  kActionColumnWidth    = 22;
             static constexpr int32  kNumberColumnWidth    = 10;
@@ -43,7 +43,7 @@ namespace sw
                 return string( arrBuffer );
             }
 
-            static string makeBusyErrorKey() { return "code" + makeNumberText( OnlineError::kBusy ); }
+            static string makeBusyErrorKey() { return "code" + to_string( OnlineError::kBusy ); }
 
             /** @brief 칸 하나를 너비에 맞춰 붙입니다(글은 왼쪽, 수는 오른쪽 정렬). */
             static void appendCell( string& outText, string_view cell, int32 width, bool bLeft )
@@ -57,19 +57,12 @@ namespace sw
                 outText += ' ';
             }
 
-            static string makeNumberText( int64 value )
-            {
-                utf8 arrBuffer[constant::buffer::kMax32];
-                formatstring( arrBuffer, constant::buffer::kMax32, "%#", value );
-                return string( arrBuffer );
-            }
-
             /** @brief 마이크로초를 "밀리초.한 자리" 글로 씁니다. */
             static string makeMillisecondText( int64 microseconds )
             {
                 utf8 arrBuffer[constant::buffer::kMax32];
-                formatstring( arrBuffer, constant::buffer::kMax32, "%#.%#", microseconds / kMicrosecondsPerMs,
-                              ( microseconds % kMicrosecondsPerMs ) / kMicrosecondsPerTenth );
+                formatstring( arrBuffer, constant::buffer::kMax32, "%#.%#", microseconds / constant::time::kMicrosecondsPerMillisecond,
+                              ( microseconds % constant::time::kMicrosecondsPerMillisecond ) / kMicrosecondsPerTenth );
                 return string( arrBuffer );
             }
         };
@@ -171,8 +164,8 @@ namespace sw
         for ( const LoadBotActionSummary& summary : listSummary )
         {
             Internal::appendCell( text, summary._actionName, Internal::kActionColumnWidth, true );
-            Internal::appendCell( text, Internal::makeNumberText( summary._count ), Internal::kNumberColumnWidth, false );
-            Internal::appendCell( text, Internal::makeNumberText( summary._errorCount ), Internal::kNumberColumnWidth, false );
+            Internal::appendCell( text, to_string( summary._count ), Internal::kNumberColumnWidth, false );
+            Internal::appendCell( text, to_string( summary._errorCount ), Internal::kNumberColumnWidth, false );
             Internal::appendCell( text, Internal::makeMillisecondText( summary._p50Us ), Internal::kNumberColumnWidth, false );
             Internal::appendCell( text, Internal::makeMillisecondText( summary._p95Us ), Internal::kNumberColumnWidth, false );
             Internal::appendCell( text, Internal::makeMillisecondText( summary._p99Us ), Internal::kNumberColumnWidth, false );
@@ -249,7 +242,7 @@ namespace sw
         mapPush.setObject();
         for ( const auto& [pushKind, count] : _mapPushKindToCount )
         {
-            mapPush.set( LoadBotMetricsInternal::makeNumberText( pushKind ) ).setInt( count );
+            mapPush.set( to_string( pushKind ) ).setInt( count );
         }
         const JSONValue connection = root.set( "_connection" );
         connection.setObject();
@@ -283,11 +276,6 @@ namespace sw
         return static_cast<int64>( _listSampleByAction[static_cast<size_t>( action )].size() );
     }
 
-    int64 LoadBotMetrics::getErrorCount( LoadBotAction action ) const
-    {
-        return _listErrorCountByAction[static_cast<size_t>( action )];
-    }
-
     int64 LoadBotMetrics::getTotalCompletedCount() const
     {
         int64 count = 0;
@@ -317,12 +305,6 @@ namespace sw
     int64 LoadBotMetrics::getBusyCount() const
     {
         return getErrorKeyCount( LoadBotMetricsInternal::makeBusyErrorKey() );
-    }
-
-    int64 LoadBotMetrics::getPushCount( uint16 pushKind ) const
-    {
-        const auto pushIt = _mapPushKindToCount.find( pushKind );
-        return pushIt != _mapPushKindToCount.end() ? pushIt->second : 0;
     }
 
     int64 LoadBotMetrics::getDistinctMatchCount() const

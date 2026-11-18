@@ -2,6 +2,7 @@
 
 #include "Programs/OnlineLoadBot/LoadBotRunner.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/MonotonicClock.h"
@@ -10,18 +11,6 @@
 #include "Programs/OnlineLoadBot/LoadBot.h"
 
 #include <algorithm>
-
-namespace sw
-{
-    namespace
-    {
-        struct LoadBotRunnerInternal
-        {
-            static constexpr int64 kMicrosecondsPerMs    = 1000;
-            static constexpr int32 kSpareConnectionCount = 16; ///< 다시 연결하는 동안 닫히는 연결이 자리를 잡고 있다
-        };
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -68,7 +57,7 @@ namespace sw
         }
         StreamTransportConfig transportSettings;
         transportSettings._ioThreadCount  = 0;
-        transportSettings._maxConnections = MathUtil::max( transportSettings._maxConnections, _scenario._botCount + LoadBotRunnerInternal::kSpareConnectionCount );
+        transportSettings._maxConnections = MathUtil::max( transportSettings._maxConnections, _scenario._botCount + kSpareConnectionCount );
         StreamEndpointConfig endpointSettings;
         endpointSettings._security._pTLSContext = settings._pTLSContext;
         const bool bTransportSetupFailed        = pTransport == nullptr || _endpoint.initialize( pTransport, endpointSettings ) == false || pTransport->initialize( &_endpoint, transportSettings ) == false;
@@ -113,13 +102,13 @@ namespace sw
     int64 LoadBotRunner::getNowUs() const
     {
         if ( _bManualClock == SW_TRUE )
-            return ( _manualNowMs - _manualStartMs ) * LoadBotRunnerInternal::kMicrosecondsPerMs;
+            return ( _manualNowMs - _manualStartMs ) * constant::time::kMicrosecondsPerMillisecond;
         return _startUs > 0 ? MonotonicClock::nowMicroseconds() - _startUs : 0;
     }
 
     MonotonicMilliseconds LoadBotRunner::getNowMs() const
     {
-        return kRunStart + getNowUs() / LoadBotRunnerInternal::kMicrosecondsPerMs;
+        return kRunStart + getNowUs() / constant::time::kMicrosecondsPerMillisecond;
     }
 
     int64 LoadBotRunner::computeLaunchMs( int32 botIndex ) const
@@ -178,16 +167,6 @@ namespace sw
             }
         }
         return _arrivedCount == _arrivalSchedule.getTotalCount();
-    }
-
-    int32 LoadBotRunner::getRunningBotCount() const
-    {
-        int32 runningCount = 0;
-        for ( int32 botIndex = 0; botIndex < _launchedCount; ++botIndex )
-        {
-            runningCount += _listBot[static_cast<size_t>( botIndex )]->isFinished() ? 0 : 1;
-        }
-        return runningCount;
     }
 
     LoadBot* LoadBotRunner::findBot( int32 botIndex ) const
