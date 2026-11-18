@@ -12,7 +12,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 돌(불투명, 칸 3) · 유리(반투명, 칸 5) 카탈로그와 2 x 2 청크 월드입니다. */
+    /** @brief 돌(불투명, 칸 3) · 유리(반투명, 칸 5) 카탈로그와 2 x 2 청크 월드입니다(공기 생성 훅으로 네 청크가 모두 올라와 있다). */
     struct VoxelMesherFixture
     {
         VoxelBlockCatalog _catalog;
@@ -25,6 +25,8 @@ namespace
             _stone = addBlock( "stone", true, 3, 1.0f );
             _glass = addBlock( "glass", false, 5, 0.5f );
             SW_REQUIRE_TRUE( _world.initialize( 2, 2, &_catalog ) );
+            _world.setChunkGenerator( []( const VoxelWorld&, int32, int32, vector<VoxelBlockIndex>& ) {} );
+            SW_REQUIRE_EQUAL( uint32( 4 ), _world.updateResidency( 0, 0, 1, 4 ) );
         }
 
         VoxelBlockIndex addBlock( const utf8* pID, bool bOpaque, int32 tile, float32 alpha )
@@ -241,4 +243,22 @@ SW_TEST_CASE( VoxelMesherTest, FlatFloorIsOneQuadPerSide )
         SW_EXPECT_TRUE( localU == 0.0f || localU == static_cast<float32>( kVoxelChunkSize ) );
     }
     SW_EXPECT_TRUE( bFoundTop );
+}
+
+// 올라오지 않은 이웃 청크는 공기로 읽힌다 — 그 경계 면이 드러난다. 그래서 게임은 상주 반경보다 한 칸 안쪽 청크만 그린다(VoxelGameModeComponent).
+SW_TEST_CASE( VoxelMesherTest, MissingNeighborChunkReadsAsAir )
+{
+    VoxelMesherFixture rig;
+    for ( int32 z = 0; z < rig._world.getSizeZ(); ++z )
+    {
+        for ( int32 x = 0; x < rig._world.getSizeX(); ++x )
+        {
+            SW_REQUIRE_TRUE( rig._world.setBlock( x, 2, z, rig._stone ) );
+        }
+    }
+    (void)rig._world.updateResidency( 0, 0, 0, 1 ); // (0, 0) 만 남는다
+    SW_REQUIRE_EQUAL( uint32( 1 ), rig._world.getResidentChunkCount() );
+    VoxelChunkMesh mesh;
+    VoxelMesher::fillChunkMesh( rig._world, 0, 0, mesh );
+    SW_EXPECT_EQUAL( size_t( 6 * 6 ), mesh._listOpaqueVertex.size() ); // 위 · 아래 · 네 옆면(+X · +Z 는 내려간 이웃 쪽)
 }
