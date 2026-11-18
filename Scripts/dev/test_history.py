@@ -222,9 +222,10 @@ PAIR_SUFFIX = re.compile(r"\.[12]\.scenario\.xml$")   # 두 번 기동 쌍(`sequ
 LAUNCH_VALUE = re.compile(r'variable="([^"]+)"[ \t]+value="([^"]*)"')   # Test/Scenario/CMakeLists.txt 의 sw_read_scenario_launch 와 같은 꼴
 MERGE_SUBJECT = re.compile(r"^Merge (?:remote-tracking )?branch '(?:origin/)?([^']+)'")
 SOURCE_PATH = re.compile(r"(?:^|/)(Source/.+)$")
-# shortcut: 시한을 항목마다 고정한다 — 체인 시한(단계 초 × 단계 수 × 물결)을 한 시나리오로 나눠 읽지 않는다. 한 시나리오가 15 분을 넘는 날 ctest TIMEOUT 속성을 읽는다.
-UNIT_TIMEOUT_SECONDS = 600
-SCENARIO_TIMEOUT_SECONDS = 900
+# 시한은 ctest 항목의 TIMEOUT 속성이다(없으면 ctest 의 기본 1500 초). 단계가 여럿인 체인에서 꺼낸 시나리오 하나만 체인 시한(단계 초 × 단계 수 × 물결)을 나눠 쓸 수 없어
+# — 단계 몫에는 기동 · 종료가 없다 — App 의 단일 시나리오 프로세스 시한(`AutomationTimeLimits::getChainKillSeconds( 1 )` 545 초) 위에 기동 · 셰이더 여유를 둔 값을 쓴다.
+CTEST_DEFAULT_TIMEOUT_SECONDS = 1500
+SINGLE_SCENARIO_TIMEOUT_SECONDS = 900
 # 단위 실행의 기준 파일 없음(`SnapshotMissing`)은 시나리오와 같은 이름으로 적는다 — 표의 한 칸이 "기록했으니 보고 커밋할 것" 을 뜻한다.
 UNIT_KIND_ALIAS = {"SnapshotMissing": "MissingBaseline"}
 
@@ -240,6 +241,7 @@ class CtestItem:
     name: str
     command: tuple[str, ...]
     working_directory: str
+    timeout_seconds: int = CTEST_DEFAULT_TIMEOUT_SECONDS   # ctest TIMEOUT 속성
 
 
 @dataclass
@@ -331,13 +333,14 @@ def select_scenarios(list_changed: Sequence[ChangedFile], list_scenario_file: Se
 
 
 def parse_ctest_items(json_text: str) -> list[CtestItem]:
-    """`ctest --show-only=json-v1` 의 항목(이름 · 명령 · 작업 폴더). 명령이 없는 항목(꺼 둔 것)은 뺀다."""
+    """`ctest --show-only=json-v1` 의 항목(이름 · 명령 · 작업 폴더 · 시한). 명령이 없는 항목(꺼 둔 것)은 뺀다."""
     list_item: list[CtestItem] = []
     for test in json.loads(json_text).get("tests", []):
         if not test.get("command"):
             continue
-        working = next((prop["value"] for prop in test.get("properties", []) if prop.get("name") == "WORKING_DIRECTORY"), "")
-        list_item.append(CtestItem(test["name"], tuple(test["command"]), working))
+        properties = {prop.get("name"): prop.get("value") for prop in test.get("properties", [])}
+        timeout = int(float(properties.get("TIMEOUT", CTEST_DEFAULT_TIMEOUT_SECONDS)))
+        list_item.append(CtestItem(test["name"], tuple(test["command"]), properties.get("WORKING_DIRECTORY", ""), timeout))
     return list_item
 
 
@@ -402,7 +405,7 @@ def make_unit_runs(list_item: Sequence[CtestItem], map_folder: dict[str, list[Ch
         command = set_argument(command, "log-file", str(output / f"{name}.log"))
         command.append(f"{dash}record-missing-snapshots")
         list_changed = [changed for folder in list_folder for changed in map_folder[folder]]
-        list_run.append(ChangedRun(name, list_changed, command, item.working_directory, output / f"{name}.json", UNIT_TIMEOUT_SECONDS))
+        list_run.append(ChangedRun(name, list_changed, command, item.working_directory, output / f"{name}.json", item.timeout_seconds))
     return list_run
 
 
@@ -444,14 +447,15 @@ def make_scenario_runs(list_item: Sequence[CtestItem], map_scenario: dict[str, l
         folder = output / "scenario" / scenario.replace("/", ".")
         item = next((item for item in list_item if scenario in (get_argument(item.command, "scenario") or "").split(",")), None)
         if item is not None:
+            alone = len((get_argument(item.command, "scenario") or "").split(",")) == 1   # 시나리오 하나짜리 항목(부하 등)은 제 시한 그대로다
             list_run.append(ChangedRun(scenario, list_changed, make_scenario_command(item, scenario, content_root, folder), item.working_directory, folder,
-                                       SCENARIO_TIMEOUT_SECONDS, is_scenario=True))
+                                       item.timeout_seconds if alone else SINGLE_SCENARIO_TIMEOUT_SECONDS, is_scenario=True))
             continue
         pair = PAIR_SUFFIX.sub("", scenario)
         pair_item = next((item for item in list_item if f"-DPAIR={pair}" in item.command), None) if pair != scenario else None
         if pair_item is not None:
             list_run.append(ChangedRun(scenario, list_changed, ["ctest", "-R", f"^{re.escape(pair_item.name)}$", "--output-on-failure"], str(build_dir),
-                                       folder, SCENARIO_TIMEOUT_SECONDS))
+                                       folder, pair_item.timeout_seconds))
             continue
         list_row.append(ChangedRow(scenario, describe_change(list_changed), "", "ctest 항목에 없다(조건이 붙은 하위 폴더) — 손으로 돈다",
                                    find_branch(list_changed[0].path)))
@@ -666,16 +670,18 @@ def run_changed_self_check() -> None:
 
     shown = json.dumps({"tests": [
         {"name": "UnitTests", "command": ["App.exe", "--test", "-unattended", "-log-file=L/UnitTests.log", "--test-report=R/UnitTests.json"],
-         "properties": [{"name": "WORKING_DIRECTORY", "value": "B/Bin"}]},
+         "properties": [{"name": "WORKING_DIRECTORY", "value": "B/Bin"}, {"name": "TIMEOUT", "value": 600.0}]},
         {"name": "UnitTests.OtherWorkingFolder", "command": ["App.exe", "--test", "--test-filter=FileSystemTest.*"]},
         {"name": "UnitTests.Rpg", "command": ["App.exe", "--test", "-game=Rpg", "--test-source=Source/GameFramework/Kits/Feature/Inv/,Source/Games/Rpg/"]},
         {"name": "UnitTests.OnlineKits", "command": ["Bot.exe", "-test", "-test-source=Source/GameFramework/Kits/Online/"]},
         {"name": "Scenario.g", "command": ["App.exe", "-scenario=game/g/automation/first.scenario.xml,game/g/automation/new.scenario.xml", "-scenario-keep-going",
                                            "-scenario-backends=all", "-scenario-backend-split=independent", "-unattended", "-log-file=L/Scenario.g.log", "-gv_first=1"]},
-        {"name": "Scenario.g.sequence.pair", "command": ["cmake", "-DAPP=App.exe", "-DPAIR=game/g/automation/sequence/pair", "-P", "Run.cmake"]},
+        {"name": "Scenario.g.sequence.pair", "command": ["cmake", "-DAPP=App.exe", "-DPAIR=game/g/automation/sequence/pair", "-P", "Run.cmake"],
+         "properties": [{"name": "TIMEOUT", "value": 600}]},
         {"name": "Disabled"}]})
     list_item = parse_ctest_items(shown)
     assert [item.name for item in list_item][-1] == "Scenario.g.sequence.pair" and list_item[0].working_directory == "B/Bin"
+    assert list_item[0].timeout_seconds == 600 and list_item[1].timeout_seconds == CTEST_DEFAULT_TIMEOUT_SECONDS, "시한은 ctest TIMEOUT, 없으면 ctest 기본"
     by_item = {run.item: run for run in make_unit_runs(list_item, map_folder, Path("O"))}
     assert sorted(by_item) == ["UnitTests", "UnitTests.Rpg"], by_item   # 거르개 항목은 빠지고, 온라인 키트는 바뀐 폴더가 없다
     assert sorted(get_argument(by_item["UnitTests"].command, "test-source").split(",")) == ["Source/Engine/Bar/", "Source/Engine/Foo/"]
@@ -696,7 +702,8 @@ def run_changed_self_check() -> None:
     assert get_argument(command, "scenario") == "game/g/automation/new.scenario.xml" and get_argument(command, "scenario-backends") == "all"
     assert get_argument(command, "scenario-backend-split") is None and get_argument(command, "scenario-keep-going") is None, "모든 백엔드에서 혼자"
     assert "-gv_first=1" not in command and command[-1] == "-gv_new=two words" and "-scenario-record-missing-golden" in command, command
-    assert any(run.command[0] == "ctest" and "^Scenario\\.g\\.sequence\\.pair$" in run.command for run in list_scenario_run), "쌍은 ctest 항목 그대로"
+    assert any(run.command[0] == "ctest" and "^Scenario\\.g\\.sequence\\.pair$" in run.command and run.timeout_seconds == 600 for run in list_scenario_run), "쌍은 ctest 항목 그대로"
+    assert next(run.timeout_seconds for run in list_scenario_run if run.item == "game/g/automation/new.scenario.xml") == SINGLE_SCENARIO_TIMEOUT_SECONDS, "체인에서 꺼낸 하나"
     assert [row.item for row in list_row] == ["engine/automation/rhiswap/x.scenario.xml"] and list_row[0].kind == "", "체인 밖은 실패가 아니다"
 
     def make_report(backend: str, result: str, kind: str = "", step: str = "", reason: str = "") -> dict:
