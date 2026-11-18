@@ -303,7 +303,7 @@ namespace sw
         }
         io.value( _law );
         io.value( _survival );
-        const auto checkAnimal = [&]( const hashed_string& animalID )
+        const auto validateAnimal = [&]( const hashed_string& animalID )
         {
             if ( io.isReading() )
             {
@@ -313,14 +313,14 @@ namespace sw
         io.list( _listCarcass, 1, [&]( WesternCarcass& carcass )
         {
             io.value( carcass._animalID );
-            checkAnimal( carcass._animalID );
+            validateAnimal( carcass._animalID );
             io.value( carcass._ageHours );
             io.value( carcass._stars );
         } );
         io.list( _listPelt, 1, [&]( WesternPelt& pelt )
         {
             io.value( pelt._animalID );
-            checkAnimal( pelt._animalID );
+            validateAnimal( pelt._animalID );
             io.value( pelt._stars );
         } );
         io.value( _centsCarry );

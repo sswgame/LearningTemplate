@@ -338,7 +338,7 @@ namespace sw
         for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
             const string path = makePath( layerIndex, key );
-            if ( CookRecordInternal::reportEntry( path, checkEntry( path, keyDescription, outBytes ) ) == false )
+            if ( CookRecordInternal::reportEntry( path, validateEntry( path, keyDescription, outBytes ) ) == false )
                 continue;
             // 뒤 층 히트는 앞의 쓰기 가능 층에 채운다 — 다음 찾기는 가까운 층에서 끝난다. 채우기 실패는 히트를 무르지 않는다(다음에 다시 채운다).
             const uint64 payloadHash = ContentHash::computeBytes( outBytes );
@@ -426,7 +426,7 @@ namespace sw
         return bAllWritten;
     }
 
-    DerivedDataEntryState DerivedDataCache::checkEntry( string_view path, string_view keyDescription, vector<uint8>& outBytes )
+    DerivedDataEntryState DerivedDataCache::validateEntry( string_view path, string_view keyDescription, vector<uint8>& outBytes )
     {
         outBytes.clear();
         uint64                      payloadHash = 0;

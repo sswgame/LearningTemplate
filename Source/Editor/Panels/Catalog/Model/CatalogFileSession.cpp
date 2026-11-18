@@ -30,7 +30,7 @@ namespace sw::editor
         clearValidation();
     }
 
-    bool CatalogFileSession::checkDiskBeforeSave( string_view diskText )
+    bool CatalogFileSession::validateDiskBeforeSave( string_view diskText )
     {
         if ( diskText == string_view( _document.getSavedText() ) )
             return true;

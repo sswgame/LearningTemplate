@@ -23,7 +23,7 @@ namespace
     class AllowGuard final : public IServiceWriteGuard
     {
     public:
-        ServiceStoreResult checkAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::Ok; }
+        ServiceStoreResult validateAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::Ok; }
     };
 
     ServiceOperator makeGM()

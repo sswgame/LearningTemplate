@@ -88,7 +88,7 @@ namespace sw
 
     private:
         /** @brief 요청의 필수 칸 · 로그인 주소를 봅니다. 연결을 열기 전에 거절한다. */
-        static expected<NetAddress> checkRequest( const AccountTicketRequest& request );
+        static expected<NetAddress> validateRequest( const AccountTicketRequest& request );
         /** @brief 연결을 닫고 @p error 를 돌려줍니다(실패 길 한 곳). */
         unexpected<Error> fail( Error error );
 

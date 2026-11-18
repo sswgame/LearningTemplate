@@ -41,7 +41,7 @@ SW_MATERIAL_BEGIN
     float  _coverageDither;   // 1 이면 화면 노이즈 문턱으로 버린다(정렬 없는 부드러운 가장자리 — TAA 가 모은다)
     uint   _albedoMap;        // 기본 텍스처(rgb 색 · a 덮임)
     uint   _highlightMap;     // 하이라이트 마스크(r)
-    float  _highlightAmount;  // 하이라이트 세기 배율(꾸미기 슬라이더) — 원소 크기를 16 의 배수로 지키는 자리이기도 하다(ShaderBindingValidator::checkStructuredElementLayouts)
+    float  _highlightAmount;  // 하이라이트 세기 배율(꾸미기 슬라이더) — 원소 크기를 16 의 배수로 지키는 자리이기도 하다(ShaderBindingValidator::validateStructuredElementLayouts)
 }
 SW_MATERIAL_END
 

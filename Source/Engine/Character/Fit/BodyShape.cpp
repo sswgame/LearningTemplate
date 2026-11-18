@@ -129,7 +129,7 @@ namespace sw
         inoutBones.computeModelTransforms();
     }
 
-    bool BoneProportion::checkBones( const Skeleton& skeleton, string_view sourceLabel ) const
+    bool BoneProportion::validateBones( const Skeleton& skeleton, string_view sourceLabel ) const
     {
         bool bValid = true;
         for ( const BoneProportionEntry& entry : _listEntry )
@@ -146,7 +146,7 @@ namespace sw
     {
         for ( const BoneProportionEntry& entry : _listEntry )
         {
-            // 스켈레톤에 없는 본은 `checkBones` 가 알렸다.
+            // 스켈레톤에 없는 본은 `validateBones` 가 알렸다.
             const optional<uint32> boneIndex = skeleton.findBoneIndex( entry._bone );
             if ( boneIndex.has_value() == false || *boneIndex >= inoutPose.getBoneCount() )
                 continue;

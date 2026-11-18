@@ -608,18 +608,18 @@ namespace sw
         if ( io.isWriting() || io.isOk() == false )
             return;
         // 시신 번호는 나중에 `_listCrew` 를 그대로 가리킨다. 사람 수 밖이면 시신을 싣는 순간 범위 밖을 쓴다.
-        const auto checkBodies = [&]( const vector<ScavengerScrap>& listScrap )
+        const auto validateBodies = [&]( const vector<ScavengerScrap>& listScrap )
         {
             for ( const ScavengerScrap& scrap : listScrap )
             {
                 io.check( scrap._bodyOf < crewCount );
             }
         };
-        checkBodies( _listShipScrap );
-        checkBodies( _facility.getGroundScrap() );
+        validateBodies( _listShipScrap );
+        validateBodies( _facility.getGroundScrap() );
         for ( const ScavengerCrewMember& member : _listCrew )
         {
-            checkBodies( member._carry.getScraps() );
+            validateBodies( member._carry.getScraps() );
         }
         _eventBuffer.clear();
     }

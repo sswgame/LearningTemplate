@@ -8,7 +8,7 @@
 
 #include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 
-// AutomationUserDataRootTest — 시나리오 실행의 사용자 데이터 뿌리가 자동화 폴더(`Saved/Automation`) 밖이면 세션 시작이 거절되는 규칙(`checkUnderBase` · `resolve`)과
+// AutomationUserDataRootTest — 시나리오 실행의 사용자 데이터 뿌리가 자동화 폴더(`Saved/Automation`) 밖이면 세션 시작이 거절되는 규칙(`validateUnderBase` · `resolve`)과
 // 사람의 폴더가 바뀌었는지 보는 도장(`UserDataFolderStamp`)(nogpu).
 
 namespace
@@ -44,15 +44,15 @@ namespace
 SW_TEST_CASE( AutomationUserDataRootTest, OnlyRootsUnderTheAutomationFolderPass )
 {
     const sw::string base = sw::AutomationUserDataRoot::getBaseFolder();
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkUnderBase( base + "/Runs/12-34/userdata", base ).has_value() );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkUnderBase( base + "/Runs/12-34/dx12/userdata", base ).has_value() );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkUnderBase( base + "/UserData/sequence.velmora.carry/", base ).has_value() );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateUnderBase( base + "/Runs/12-34/userdata", base ).has_value() );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateUnderBase( base + "/Runs/12-34/dx12/userdata", base ).has_value() );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateUnderBase( base + "/UserData/sequence.velmora.carry/", base ).has_value() );
 
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( base, base ).has_value() );
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( base + "2/Runs/12-34", base ).has_value() );
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( base + "/../../../escaped", base ).has_value() );
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( "Saved/Automation/Runs/12-34/userdata", base ).has_value() );
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( sw::FileUtil::getDirectoryPart( base ) + "/Other", base ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( base, base ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( base + "2/Runs/12-34", base ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( base + "/../../../escaped", base ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( "Saved/Automation/Runs/12-34/userdata", base ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( sw::FileUtil::getDirectoryPart( base ) + "/Other", base ).has_value() );
 }
 
 /**
@@ -64,9 +64,9 @@ SW_TEST_CASE( AutomationUserDataRootTest, CaseOnlyDifferenceFollowsTheOSRule )
     const sw::string base       = sw::AutomationUserDataRoot::getBaseFolder(); // `.../Saved/Automation`
     const sw::string otherCased = sw::FileUtil::getDirectoryPart( base ) + "/automation/Runs/12-34";
 #if defined( SW_PLATFORM_WINDOWS )
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkUnderBase( otherCased, base ).has_value() );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateUnderBase( otherCased, base ).has_value() );
 #elif defined( SW_PLATFORM_POSIX )
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( otherCased, base ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( otherCased, base ).has_value() );
 #else
     #error "Unsupported platform"
 #endif
@@ -81,10 +81,10 @@ SW_TEST_CASE( AutomationUserDataRootTest, StatePathsMayNotPointAtThePersonFolder
     const sw::string             base   = sw::AutomationUserDataRoot::getBaseFolder();
     const sw::string             person = sw::FileUtil::getDirectoryPart( base ) + "/PersonEditor";
     const sw::vector<sw::string> listPerson{ person };
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkStatePath( "gv_editorStateDir", person, listPerson ).has_value() );
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkStatePath( "gv_userSettingsFile", person + "/usersettings.json", listPerson ).has_value() );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkStatePath( "gv_editorStateDir", person + "2", listPerson ).has_value() );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkStatePath( "gv_editorStateDir", base + "/statedir.layout", listPerson ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateStatePath( "gv_editorStateDir", person, listPerson ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateStatePath( "gv_userSettingsFile", person + "/usersettings.json", listPerson ).has_value() );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateStatePath( "gv_editorStateDir", person + "2", listPerson ).has_value() );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateStatePath( "gv_editorStateDir", base + "/statedir.layout", listPerson ).has_value() );
     SW_EXPECT_FALSE( sw::AutomationUserDataRoot::makePersonFolders().empty() ); // 적어도 `Saved/Editor`
 
     const sw::optional<sw::string> shared = sw::AutomationUserDataRoot::findSharedStateArgument( { "-unattended", "-gv_editorStateDir=C:/x", "-gv_firstScene=a" } );

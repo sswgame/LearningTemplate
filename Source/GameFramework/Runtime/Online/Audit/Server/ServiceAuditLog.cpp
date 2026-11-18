@@ -190,7 +190,7 @@ namespace sw
             ServiceAuditLog::commitRejection( connection, _auditEntry );
             return ServiceAuditedWriteResult::Forbidden;
         }
-        const ServiceStoreResult allowed = _pGuard->checkAllowed( connection );
+        const ServiceStoreResult allowed = _pGuard->validateAllowed( connection );
         if ( allowed == ServiceStoreResult::NotFound )
         {
             ServiceAuditLog::commitRejection( connection, _auditEntry );

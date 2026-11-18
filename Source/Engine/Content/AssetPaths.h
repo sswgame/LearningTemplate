@@ -125,7 +125,7 @@ namespace sw
          * @brief 새로 만드는 디스크 자리 @p diskPath 가 리소스 트리(`Content/`) 아래면 그 아래 부분이 소문자인지 봅니다(`FileUtil::setCreateRule` — `initialize` 가 건다).
          * @return 대문자가 있으면 그 상대 경로가 대상인 오류입니다. 리소스 트리 밖은 늘 통과합니다.
          */
-        [[nodiscard]] static expected<void> checkLowercaseResourceName( string_view diskPath );
+        [[nodiscard]] static expected<void> validateLowercaseResourceName( string_view diskPath );
         /**
          * @brief @p diskPath 가 버전 관리 트리(`Content/`, 작업 도메인 `scratch/` 는 뺀다)이면 true 입니다 — 그 자리의 읽기 전용은 체크아웃하지 않은 파일이다(`FileUtil::setCheckoutRule`).
          * @details `scratch/` 는 추적하지 않는 작업 사본이다. 시나리오가 잠긴(읽기 전용) 원본을 복사하면 속성이 따라오는데, 그 사본의 정리를 막으면 안 된다.

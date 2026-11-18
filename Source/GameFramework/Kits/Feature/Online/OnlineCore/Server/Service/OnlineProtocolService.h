@@ -342,7 +342,7 @@ namespace sw
         /**
          * @brief 요청마다 본문을 읽기 전에 불립니다. `kOk` 가 아닌 값을 돌려주면 그 공통 오류로 끝납니다(원격 기능 플래그 등). 기본은 모두 받습니다.
          */
-        virtual uint16 checkRequest( OnlineServiceHost& host, const OnlineCallContext& context )
+        virtual uint16 validateRequest( OnlineServiceHost& host, const OnlineCallContext& context )
         {
             (void)host;
             (void)context;
@@ -416,7 +416,7 @@ namespace sw
                 (void)fail( call, OnlineError::kBusy ); // 저장소 대기열의 상한이다(감사 O-3) — 저장소에 맡기지 않고 클라이언트가 같은 키로 다시 한다
                 return;
             }
-            const uint16 checkError = checkRequest( host, context );
+            const uint16 checkError = validateRequest( host, context );
             if ( checkError != OnlineError::kOk )
             {
                 (void)fail( call, checkError );

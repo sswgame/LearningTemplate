@@ -84,7 +84,7 @@ namespace sw
         return true;
     }
 
-    bool ActionPlatformerDemoComponent::checkMarkers( const ActionStageDef& stage ) const
+    bool ActionPlatformerDemoComponent::validateMarkers( const ActionStageDef& stage ) const
     {
         const bool bCheckpointsMatch = _listCheckpointX.size() == stage._listCheckpoint.size();
         const bool bSecretsMatch     = _listSecretPosition.size() == stage._listSecret.size();
@@ -110,7 +110,7 @@ namespace sw
             SW_LOG_ERROR_ID( "KitDemo.PlatformerUnknownStage", "Action platformer demo: stage '%#' is not in the catalog - the stage does not open", _stageID.c_str() );
             return false;
         }
-        if ( checkMarkers( *_run.getStage() ) == false || populateTerrain() == false )
+        if ( validateMarkers( *_run.getStage() ) == false || populateTerrain() == false )
             return false;
         placeBody( _startPosition );
         _bJumpHeldLastFrame = SW_FALSE;

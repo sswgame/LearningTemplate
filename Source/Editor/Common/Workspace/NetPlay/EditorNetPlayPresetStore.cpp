@@ -29,7 +29,7 @@ namespace sw::editor
         string                  jsonText;
         EditorNetPlayPresetFile loaded{};
         const bool              bRead      = FileUtil::readTextFile( filePath, jsonText ) && ConfigManager::readConfigJSON( loaded, jsonText, _filePath.c_str() );
-        const expected<void>    consistent = bRead ? checkConsistent( loaded ) : expected<void>( unexpected( Error{ ErrorKind::InvalidArgument, "not a preset file - see the errors above" } ) );
+        const expected<void>    consistent = bRead ? validateConsistent( loaded ) : expected<void>( unexpected( Error{ ErrorKind::InvalidArgument, "not a preset file - see the errors above" } ) );
         if ( consistent.has_value() )
         {
             _file = std::move( loaded );
@@ -97,7 +97,7 @@ namespace sw::editor
         return EditorPaths::resolveEditorStateFile( kFileName );
     }
 
-    expected<void> EditorNetPlayPresetStore::checkConsistent( const EditorNetPlayPresetFile& file )
+    expected<void> EditorNetPlayPresetStore::validateConsistent( const EditorNetPlayPresetFile& file )
     {
         for ( size_t presetIndex = 0; presetIndex < file._listPreset.size(); ++presetIndex )
         {

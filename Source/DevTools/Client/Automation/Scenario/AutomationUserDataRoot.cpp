@@ -73,7 +73,7 @@ namespace sw
             [[nodiscard]] static bool readIsolated( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 string     root;
-                const bool bUnder = ProcessEnvironment::tryReadNonEmpty( kUserDataRootVariable, root ) && AutomationUserDataRoot::checkUnderBase( root, AutomationUserDataRoot::getBaseFolder() ).has_value();
+                const bool bUnder = ProcessEnvironment::tryReadNonEmpty( kUserDataRootVariable, root ) && AutomationUserDataRoot::validateUnderBase( root, AutomationUserDataRoot::getBaseFolder() ).has_value();
                 outValue          = bUnder ? 1.0 : 0.0;
                 return true;
             }
@@ -116,7 +116,7 @@ namespace sw
         return FileUtil::joinPath( runRoot, kRunSubfolder );
     }
 
-    expected<void> AutomationUserDataRoot::checkUnderBase( string_view root, string_view baseFolder )
+    expected<void> AutomationUserDataRoot::validateUnderBase( string_view root, string_view baseFolder )
     {
         using Internal = AutomationUserDataRootInternal;
         if ( AbsolutePath::isStrictAbsolute( root ) == false )
@@ -142,7 +142,7 @@ namespace sw
         return listFolder;
     }
 
-    expected<void> AutomationUserDataRoot::checkStatePath( string_view name, string_view path, const vector<string>& listPersonFolder )
+    expected<void> AutomationUserDataRoot::validateStatePath( string_view name, string_view path, const vector<string>& listPersonFolder )
     {
         for ( const string& folder : listPersonFolder )
         {
@@ -172,7 +172,7 @@ namespace sw
         {
             if ( bAllowOutside )
                 return root;
-            if ( expected<void> under = checkUnderBase( root, getBaseFolder() ); under.has_value() == false )
+            if ( expected<void> under = validateUnderBase( root, getBaseFolder() ); under.has_value() == false )
                 return unexpected( under.error() );
             return root;
         }
@@ -180,7 +180,7 @@ namespace sw
             return string{}; // 사람이 고른 OS 사용자 폴더 그대로
         // 실행 뿌리는 실행마다 새 폴더다 — 옛 실행의 세이브가 없어 비울 것도, 거둘 형제도 없다(거두기는 `SavedRetention`).
         root = makeRunUserDataRoot( ProcessRoots::get()._run.str() );
-        if ( expected<void> under = checkUnderBase( root, getBaseFolder() ); under.has_value() == false )
+        if ( expected<void> under = validateUnderBase( root, getBaseFolder() ); under.has_value() == false )
             return unexpected( under.error() ); // 부모가 실행 뿌리를 자동화 폴더 밖에 줬다
         if ( ProcessEnvironment::trySet( kUserDataRootVariable, root ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not set the user data root variable", root } );
@@ -234,7 +234,7 @@ namespace sw
                     return reject( path.error() );
                 if ( path->empty() )
                     continue;
-                if ( expected<void> allowed = AutomationUserDataRoot::checkStatePath( name, *path, listPersonFolder ); allowed.has_value() == false )
+                if ( expected<void> allowed = AutomationUserDataRoot::validateStatePath( name, *path, listPersonFolder ); allowed.has_value() == false )
                     return reject( allowed.error() );
             }
         }

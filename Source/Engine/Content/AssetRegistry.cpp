@@ -21,7 +21,7 @@ namespace sw
             static string toLowerID( string_view assetID ) { return StringUtil::toLower( string( assetID ).c_str() ); }
 
             /** @brief 한 층 안에 GUID · 경로(대소문자 무시)가 겹치지 않으면 빈 결과, 겹치면 그 까닭입니다. */
-            [[nodiscard]] static expected<void> checkLayer( const AssetRegistryLayer& layer )
+            [[nodiscard]] static expected<void> validateLayer( const AssetRegistryLayer& layer )
             {
                 unordered_set<AssetGUID> setGUID;
                 unordered_set<string>    setPath;
@@ -99,7 +99,7 @@ namespace sw
         AssetRegistry registry;
         for ( const AssetRegistryLayer& layer : listLayer )
         {
-            const expected<void> checked = AssetRegistryInternal::checkLayer( layer );
+            const expected<void> checked = AssetRegistryInternal::validateLayer( layer );
             if ( checked.has_value() == false )
                 return unexpected( Error{ checked.error().kind(), checked.error().message().data(), layer._sourceName + ": " + string( checked.error().detail() ) } );
             for ( const AssetRegistryEntry& entry : layer._listEntry )

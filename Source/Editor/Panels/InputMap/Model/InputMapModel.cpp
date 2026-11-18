@@ -153,7 +153,7 @@ namespace sw::editor
         // 묶음은 읽기 실패가 맵을 비우므로(`InputMap::loadBundle`) 맵에 넣기 전에 묶음만 먼저 검사한다.
         const AssetID assetID{ _inputMapPath.c_str() };
         const bool    bBundle = isBundlePath();
-        if ( bBundle && InputMapBundle::checkSettings( assetID ) == false )
+        if ( bBundle && InputMapBundle::validateSettings( assetID ) == false )
         {
             SW_LOG_ERROR_ID( "InputMapModel.CouldNotReloadInputMap", "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
             return false;

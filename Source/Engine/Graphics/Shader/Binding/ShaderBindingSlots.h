@@ -353,7 +353,7 @@ namespace sw
             };
 
             /** @brief GL 이 보고한 프래그먼트 · 결합 텍스처 유닛 수로 이 백엔드를 쓸 수 있는지 봅니다(OpenGLRHIDevice 초기화 — 단위 테스트가 같은 함수를 부른다). */
-            [[nodiscard]] constexpr TextureUnitCheck checkTextureUnits( int32 maxFragmentTextureUnit, int32 maxCombinedTextureUnit )
+            [[nodiscard]] constexpr TextureUnitCheck validateTextureUnits( int32 maxFragmentTextureUnit, int32 maxCombinedTextureUnit )
             {
                 if ( maxCombinedTextureUnit < static_cast<int32>( kCombinedTextureUnitCount ) )
                     return TextureUnitCheck::Combined;

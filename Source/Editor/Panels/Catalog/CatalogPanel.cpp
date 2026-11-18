@@ -427,7 +427,7 @@ namespace sw::editor
         }
         // 연 뒤 밖에서 바뀐 파일을 말없이 덮어쓰지 않는다. 지워진 파일(읽지 못함)은 다시 만든다.
         string diskText;
-        if ( FileUtil::readTextFile( absolutePath->str(), diskText ) && _session.checkDiskBeforeSave( diskText ) == false )
+        if ( FileUtil::readTextFile( absolutePath->str(), diskText ) && _session.validateDiskBeforeSave( diskText ) == false )
             return false;
         if ( FileUtil::writeTextFile( absolutePath->str(), _session.getDocument().getText() ) == false )
         {
@@ -473,7 +473,7 @@ namespace sw::editor
         {
             CatalogWarningCollector collector;
             const ScopedLogContext  context{ collector.makeContext() };
-            bLoaded     = AssetTypeRegistry::checkLoad( *pKind, AssetID{ _session.getAssetID() } );
+            bLoaded     = AssetTypeRegistry::validateLoad( *pKind, AssetID{ _session.getAssetID() } );
             listWarning = collector.take();
         }
         _session.onValidated( bLoaded, std::move( listWarning ) );

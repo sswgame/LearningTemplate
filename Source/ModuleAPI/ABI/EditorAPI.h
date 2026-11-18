@@ -107,8 +107,8 @@ namespace sw
     /** @brief 헤드리스 에셋 참조 검사 진입점의 형입니다(심볼 이름: `kCheckEditorAssetReferencesSymbol`). */
     using PFN_CheckEditorAssetReferences = int32 ( * )( const ISubsystemLocator* pService );
 
-    /** @brief `checkEditorAssetReferences` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --check-asset-refs`). */
-    inline constexpr const utf8* kCheckEditorAssetReferencesSymbol = "checkEditorAssetReferences";
+    /** @brief `validateEditorAssetReferences` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --check-asset-refs`). */
+    inline constexpr const utf8* kCheckEditorAssetReferencesSymbol = "validateEditorAssetReferences";
 } // namespace sw
 
 extern "C"
@@ -145,5 +145,5 @@ extern "C"
      * @details 에디터 인스턴스 · 창 · RHI 없이 부릅니다. 모든 타입 공급자 모듈이 올라온 뒤여야 리플렉션 프로퍼티를 다 봅니다. 칸 목록은 `Config/Dev/AssetReferenceFields.json` 입니다.
      * @return 문제 수입니다(0 이면 통과). 칸 목록이나 트리를 읽지 못하면 음수입니다.
      */
-    SW_MODULE_API int32 checkEditorAssetReferences( const sw::ISubsystemLocator* pService );
+    SW_MODULE_API int32 validateEditorAssetReferences( const sw::ISubsystemLocator* pService );
 }

@@ -223,7 +223,7 @@ namespace sw
         /** @brief 변환이 덮는 칸(양 끝 포함)입니다. 회전한 점유 상자의 축 정렬 상자로 셉니다. */
         void computeCells( const HousingPartDef& part, const HousingTransform& transform, int2& outMin, int2& outMax ) const;
         /** @brief 층 · 부지 범위 · 겹침 · 받침을 봅니다. @p ignoreID 의 칸은 빈 칸으로 봅니다. */
-        HousingPlaceResult checkFootprint( const HousingPartDef& part, const HousingTransform& transform, uint32 ignoreID, int2& outMin, int2& outMax ) const;
+        HousingPlaceResult validateFootprint( const HousingPartDef& part, const HousingTransform& transform, uint32 ignoreID, int2& outMin, int2& outMax ) const;
         bool               isSupported( const HousingPartDef& part, int32 level, const int2& cellMin, const int2& cellMax, uint32 ignoreID ) const;
         /** @brief @p placement 를 빼면 받침을 잃는 배치가 있으면 true 입니다. */
         bool supportsOthers( const HousingPlacement& placement ) const;

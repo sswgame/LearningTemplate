@@ -256,7 +256,7 @@ namespace sw
          *          엔진 PassCB 는 모든 역할의 인덱스 칸을 가지므로 칸이 있는 것이 아니라 읽는 것을 본다. 쓰임을 모르는 리플렉션(SPIR-V · GLSL · 쿠킹 매니페스트)은 건너뛴다 —
          *          DX 백엔드의 개발 실행 · 시나리오가 잡는다(언리얼 RDG 가 패스 파라미터 밖 자원 접근을 검증 단계에서 잡는 자리).
          */
-        bool checkPassInputContract( RenderPassKind passType, const ShaderBindingLayout& layout )
+        bool validatePassInputContract( RenderPassKind passType, const ShaderBindingLayout& layout )
         {
             const RenderPassInputSignature* const pContract = findRenderPassInputSignature( passType );
             if ( pContract == nullptr )
@@ -462,7 +462,7 @@ namespace sw
             registerLayout( pso, job._desc );
             const ShaderBindingLayout* const pLayout = pso != 0 ? findLayout( pso ) : nullptr;
             if ( pLayout != nullptr )
-                (void)checkPassInputContract( job._passType, *pLayout ); // 오류는 남겼다 — 그래도 그린다(다른 패스로 대신하지 않는다)
+                (void)validatePassInputContract( job._passType, *pLayout ); // 오류는 남겼다 — 그래도 그린다(다른 패스로 대신하지 않는다)
             if ( job._outputFormat != RHIFormat::Unknown )
             {
                 // 주 출력에 그리는 PSO 다 — 없으면 화면에 아무것도 낼 수 없고, 다른 PSO · 복사로 대신하지 않으므로 여기서 멈춘다.

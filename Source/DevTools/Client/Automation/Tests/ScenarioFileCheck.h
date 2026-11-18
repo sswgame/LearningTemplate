@@ -50,7 +50,7 @@ namespace sw::test
      * @brief 한 폴더의 시나리오를 실행기와 같은 읽기 · 단계 검사에 넣습니다. 폴더에 시나리오가 있으면 true 입니다.
      * @param pModuleLoader 호스트의 모듈 창구 — `requiresModule` 의 모듈이 꺼진 시나리오는 이름 검사를 건너뛴다. 엔진 · 편집기가 저마다의 창구로 찾아 넘긴다.
      */
-    inline bool checkScenarioFolder( string_view folder, const IModuleLoader* pModuleLoader )
+    inline bool validateScenarioFolder( string_view folder, const IModuleLoader* pModuleLoader )
     {
         vector<AssetID> listScenario;
         if ( AssetIO::collectAssets( AssetID{ folder }, ".scenario.xml", listScenario ) != AssetFolderListing::Listed )

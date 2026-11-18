@@ -306,7 +306,7 @@ namespace sw
         return bFloor == false;
     }
 
-    HousingPlaceResult HousingLayout::checkFootprint( const HousingPartDef& part, const HousingTransform& transform, uint32 ignoreID, int2& outMin, int2& outMax ) const
+    HousingPlaceResult HousingLayout::validateFootprint( const HousingPartDef& part, const HousingTransform& transform, uint32 ignoreID, int2& outMin, int2& outMax ) const
     {
         using Internal = HousingLayoutInternal;
         if ( transform._level < 0 || transform._level >= _settings._levelCount )
@@ -371,7 +371,7 @@ namespace sw
         check._cost             = pPart->_cost;
         if ( check._result != HousingPlaceResult::Ok )
             return check;
-        check._result = checkFootprint( *pPart, check._transform, 0, check._cellMin, check._cellMax );
+        check._result = validateFootprint( *pPart, check._transform, 0, check._cellMin, check._cellMax );
         if ( check._result != HousingPlaceResult::Ok || pPart->_cost == 0 )
             return check;
         if ( _pWallet == nullptr )
@@ -391,7 +391,7 @@ namespace sw
             return HousingPlaceResult::UnknownPart; // 이력의 부품이 다시 읽은 카탈로그에서 빠졌다
         int2                     cellMin;
         int2                     cellMax;
-        const HousingPlaceResult result = checkFootprint( *pPart, placement._transform, 0, cellMin, cellMax );
+        const HousingPlaceResult result = validateFootprint( *pPart, placement._transform, 0, cellMin, cellMax );
         if ( result != HousingPlaceResult::Ok )
             return result;
         if ( charge > 0 )
@@ -443,7 +443,7 @@ namespace sw
             return HousingPlaceResult::SupportsOthers;
         int2                     cellMin;
         int2                     cellMax;
-        const HousingPlaceResult result = checkFootprint( *pPart, transform, placementID, cellMin, cellMax );
+        const HousingPlaceResult result = validateFootprint( *pPart, transform, placementID, cellMin, cellMax );
         if ( result != HousingPlaceResult::Ok )
             return result;
         HousingPlacement& moved = _listPlacement[static_cast<size_t>( pPlacement - _listPlacement.data() )];
@@ -593,7 +593,7 @@ namespace sw
             const HousingPartDef* pPart = _pCatalog->findPart( placement._partID );
             int2                  cellMin;
             int2                  cellMax;
-            HousingPlaceResult    result = checkFootprint( *pPart, placement._transform, 0, cellMin, cellMax );
+            HousingPlaceResult    result = validateFootprint( *pPart, placement._transform, 0, cellMin, cellMax );
             if ( result == HousingPlaceResult::NoSupport )
                 result = HousingPlaceResult::Ok; // 받침은 2) 에서 본다
             if ( result != HousingPlaceResult::Ok )

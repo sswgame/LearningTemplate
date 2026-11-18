@@ -97,7 +97,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 그 밖에 형식마다 해야 할 일은 둘이다.
 
 - 참조 칸 표(`Config/Dev/AssetReferenceFields.generated.json`)에는 `_base` 가 이미 있다. 핫 리로드가 있는 종류면 그 칸을 `AssetReferenceUse::InlinedAtLoad` 로 둔다 — 부모가 바뀌면 `AssetReloadCascade` 가 자식을 의존 순서로 다시 읽는다(따라가는 것은 `_base` 칸뿐).
-- 저장은 부모와의 차이로 쓴다. 읽을 때 부모 id 를 들고(`DataInheritance::findBasePath`) 저장한다 — 펼친 한 벌을 쓰면 `_base` 가 끊긴다. 리플렉션 형식은 `ReflectedXMLFile::saveDescAsChild`(부모와 다른 칸) · `saveDesc`(형식 기본값과 다른 칸), 손 형식은 `ResourceComposer::saveDelta`(차이 · 다시 읽어 대조 · 쓰기), 카탈로그는 `DataCatalogInheritance::makeFileDelta` + `ResourceComposer::checkDeltaReadsBack`. 두 글은 같은 직렬화기가 쓴 것이어야 한다. 차이로 적을 수 없는 편집(부모가 적은 칸을 지움)은 오류이고, 부모 없는 한 벌로 쓰는 대체는 두지 않는다. 본보기: `SocketSet::saveToFile` · `AnimationGraphAsset::saveToFile` · `BehaviorTreeEditModel::makeSaveText`. 원문을 그대로 고치는 저장(`RigSaveParams` · 카탈로그 창)은 물려받은 줄을 고치면 열쇠 이름의 덮어쓰기 줄을 더한다. 되돌리기로 복원한 값에는 문서의 부모를 다시 단다.
+- 저장은 부모와의 차이로 쓴다. 읽을 때 부모 id 를 들고(`DataInheritance::findBasePath`) 저장한다 — 펼친 한 벌을 쓰면 `_base` 가 끊긴다. 리플렉션 형식은 `ReflectedXMLFile::saveDescAsChild`(부모와 다른 칸) · `saveDesc`(형식 기본값과 다른 칸), 손 형식은 `ResourceComposer::saveDelta`(차이 · 다시 읽어 대조 · 쓰기), 카탈로그는 `DataCatalogInheritance::makeFileDelta` + `ResourceComposer::validateDeltaReadsBack`. 두 글은 같은 직렬화기가 쓴 것이어야 한다. 차이로 적을 수 없는 편집(부모가 적은 칸을 지움)은 오류이고, 부모 없는 한 벌로 쓰는 대체는 두지 않는다. 본보기: `SocketSet::saveToFile` · `AnimationGraphAsset::saveToFile` · `BehaviorTreeEditModel::makeSaveText`. 원문을 그대로 고치는 저장(`RigSaveParams` · 카탈로그 창)은 물려받은 줄을 고치면 열쇠 이름의 덮어쓰기 줄을 더한다. 되돌리기로 복원한 값에는 문서의 부모를 다시 단다.
 
 ## 쿠킹과 런타임
 
@@ -285,7 +285,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 | 코드 | 까닭 |
 |---|---|
-| `PrefabOverrides` 의 합치기 | 컴포넌트 목록의 열쇠가 칸 값이 아니라 `이름#n` 이고 원소 이름이 타입이다. 씬 인스턴스는 프리팹에서 사라진 대상을 오류가 아니라 경고로 넘겨야 한다(프리팹을 고쳤다고 씬이 읽히지 않으면 안 된다). 변형은 같은 형식을 쓰되 `checkOverrideTargets` 로 엄격하게 먼저 본다 |
+| `PrefabOverrides` 의 합치기 | 컴포넌트 목록의 열쇠가 칸 값이 아니라 `이름#n` 이고 원소 이름이 타입이다. 씬 인스턴스는 프리팹에서 사라진 대상을 오류가 아니라 경고로 넘겨야 한다(프리팹을 고쳤다고 씬이 읽히지 않으면 안 된다). 변형은 같은 형식을 쓰되 `validateOverrideTargets` 로 엄격하게 먼저 본다 |
 | `_listRenderPassRef` | 부모 하나가 아니라 여러 파일을 섞는 믹스인이다. 단일 부모로 옮기면 첨부 묶음을 파이프라인마다 베껴야 한다. 합친 결과의 이름이 겹치면 오류인 것도 다르다(덮어쓰지 않는다) |
 | JSON 형식 | 설정은 층(`ConfigManager`)으로 겹친다. 프리팹 JSON 은 변형을 읽고 쓰지만 기본값은 빼지 않는다. 에디터 테마 토큰(`*.tokens.json`)은 파일이 자기 부모를 고르므로 `_base` 를 적고 키 표를 덮는다(`EditorThemeTokens`) |
 | 오디오 이벤트의 `_parentEvent` | 이벤트가 `_listEvent` 래퍼 안에 있어 카탈로그 규칙(루트 바로 아래 되풀이)에 맞지 않는다. 합치기는 `DataInheritance` 그대로이고 이벤트 하나를 가상의 문서로 넘긴다. 파일 합치기가 목록 원소의 `_base` 를 지우므로 이름이 다르다 |

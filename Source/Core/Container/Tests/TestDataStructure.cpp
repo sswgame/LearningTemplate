@@ -100,7 +100,7 @@ namespace
     }
 
     /** @brief try_lock · unlock 을 단언 안에서 확인합니다. 잠금 상태를 단언 매크로 안에서 바꾸는 검사라 잠금 분석이 경로를 따라가지 못해 분석하지 않는다. */
-    SW_NO_THREAD_SAFETY_ANALYSIS void checkSpinLockTryLock( sw::SpinLock& spinLock )
+    SW_NO_THREAD_SAFETY_ANALYSIS void expectSpinLockTryLock( sw::SpinLock& spinLock )
     {
         SW_EXPECT_TRUE( spinLock.try_lock() );
         SW_EXPECT_TRUE( spinLock.isLocked() );
@@ -656,7 +656,7 @@ SW_TEST_CASE( DataStructureTest, SpinLockMutualExclusion )
     SW_EXPECT_FALSE( spinLock.isLocked() );
 
     // 1) try_lock 및 unlock
-    checkSpinLockTryLock( spinLock );
+    expectSpinLockTryLock( spinLock );
 
     // 2) lock & ScopedLock 연동
     {

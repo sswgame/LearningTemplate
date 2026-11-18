@@ -73,7 +73,7 @@ namespace
             string                       _relativePath;
             const PackEntryCatalog*      _pRule;
 
-            void checkValue( string_view field, string_view value ) const
+            void expectValue( string_view field, string_view value ) const
             {
                 if ( _setAllowed.contains( string( field ) ) )
                     return;
@@ -88,11 +88,11 @@ namespace
                 {
                     if ( bEntry && StringUtil::equals( attribute.getName(), string_view( _pRule->_idAttribute ) ) )
                         continue;
-                    checkValue( attribute.getName(), attribute.getValue() );
+                    expectValue( attribute.getName(), attribute.getValue() );
                 }
                 const string_view name = node.getName();
                 if ( StringUtil::isNullOrEmpty( node.getText() ) == false )
-                    checkValue( name == "item" ? parentName : name, node.getText() ); // 목록 원소(`<_listX><item>id</item></_listX>`)의 칸은 목록이다
+                    expectValue( name == "item" ? parentName : name, node.getText() ); // 목록 원소(`<_listX><item>id</item></_listX>`)의 칸은 목록이다
             }
 
             void traverse( const XMLNode& node, string_view parentName, bool bEntry, bool bRoot ) const

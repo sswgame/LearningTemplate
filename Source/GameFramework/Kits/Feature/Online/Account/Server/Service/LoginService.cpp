@@ -504,7 +504,7 @@ namespace sw
     }
 
     template <typename TContinue>
-    void LoginService::checkSharedAttempt( uint64 clientKey, LoginOperation operation, uint64 requestTag, const LoginGrant& grant, TContinue&& onAllowed )
+    void LoginService::validateSharedAttempt( uint64 clientKey, LoginOperation operation, uint64 requestTag, const LoginGrant& grant, TContinue&& onAllowed )
     {
         if ( _pRouter == nullptr || _settings._sharedAttemptLimit <= 0 )
         {
@@ -588,7 +588,7 @@ namespace sw
             pushImmediate( LoginOperation::Register, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), limited );
             return;
         }
-        checkSharedAttempt( clientKey, LoginOperation::Register, requestTag, limited, [this, credential, nowMs, requestTag]()
+        validateSharedAttempt( clientKey, LoginOperation::Register, requestTag, limited, [this, credential, nowMs, requestTag]()
         { seedAccount( credential, nowMs, requestTag ); } );
     }
 
@@ -618,7 +618,7 @@ namespace sw
         input._credential         = credential;
         input._bUpdateRecommended = buildGrant._bUpdateRecommended;
         input._storeURL           = buildGrant._storeURL;
-        checkSharedAttempt( clientKey, LoginOperation::Login, requestTag, buildGrant, [this, input = std::move( input )]() mutable
+        validateSharedAttempt( clientKey, LoginOperation::Login, requestTag, buildGrant, [this, input = std::move( input )]() mutable
         { (void)submitPasswordCall( std::move( input ) ); } ); // 해시 자리가 없으면 kBusy 완료를 이미 쌓았다
     }
 
@@ -641,7 +641,7 @@ namespace sw
         Memory::copy( input._arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
         input._bUpdateRecommended = buildGrant._bUpdateRecommended;
         input._storeURL           = buildGrant._storeURL;
-        checkSharedAttempt( clientKey, LoginOperation::GuestLogin, requestTag, buildGrant, [this, input = std::move( input )]() mutable
+        validateSharedAttempt( clientKey, LoginOperation::GuestLogin, requestTag, buildGrant, [this, input = std::move( input )]() mutable
         { submitCall( std::move( input ) ); } );
     }
 
@@ -660,7 +660,7 @@ namespace sw
             pushImmediate( LoginOperation::PlatformLogin, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
-        checkSharedAttempt( clientKey, LoginOperation::PlatformLogin, requestTag, buildGrant, [this, provider = string( provider ), ticketBytes, buildGrant, nowMs, requestTag]()
+        validateSharedAttempt( clientKey, LoginOperation::PlatformLogin, requestTag, buildGrant, [this, provider = string( provider ), ticketBytes, buildGrant, nowMs, requestTag]()
         { beginVerification( LoginOperation::PlatformLogin, provider, ticketBytes, LoginSessionToken{}, buildGrant, nowMs, requestTag ); } );
     }
 
@@ -682,7 +682,7 @@ namespace sw
         input._token              = token;
         input._bUpdateRecommended = buildGrant._bUpdateRecommended;
         input._storeURL           = buildGrant._storeURL;
-        checkSharedAttempt( clientKey, LoginOperation::Resume, requestTag, buildGrant, [this, input = std::move( input )]() mutable
+        validateSharedAttempt( clientKey, LoginOperation::Resume, requestTag, buildGrant, [this, input = std::move( input )]() mutable
         { submitCall( std::move( input ) ); } );
     }
 
@@ -791,9 +791,9 @@ namespace sw
         LoginMaintenanceInput input;
         input._nowMs           = nowMs;
         const int32 checkCount = MathUtil::min( maxCount, static_cast<int32>( listOnline.size() ) );
-        for ( int32 checkIndex = 0; checkIndex < checkCount; ++checkIndex )
+        for ( int32 validateIndex = 0; validateIndex < checkCount; ++validateIndex )
         {
-            input._listOnline.push_back( listOnline[( _refreshCursor + static_cast<size_t>( checkIndex ) ) % listOnline.size()] );
+            input._listOnline.push_back( listOnline[( _refreshCursor + static_cast<size_t>( validateIndex ) ) % listOnline.size()] );
         }
         _refreshCursor = ( _refreshCursor + static_cast<size_t>( checkCount ) ) % listOnline.size();
         submitMaintenance( std::move( input ) );

@@ -78,7 +78,7 @@ namespace sw
         IServiceWriteGuard& operator=( const IServiceWriteGuard& ) = delete;
 
         /** @brief 허락하면 Ok, 권한이 없으면 NotFound(허락할 근거가 없다), 읽지 못하면 Unavailable 입니다. */
-        [[nodiscard]] virtual ServiceStoreResult checkAllowed( IServiceStoreConnection& connection ) const = 0;
+        [[nodiscard]] virtual ServiceStoreResult validateAllowed( IServiceStoreConnection& connection ) const = 0;
     };
 
     /**

@@ -25,7 +25,7 @@ namespace sw::editor
         /** @brief 상태 문서는 되돌리기 기록을 자기 모델(`EditSnapshotHistory` · 세션)에 두어 문서 글 왕복이 없다 — 전수 시나리오가 이 패널을 고르면 실패로 알린다. */
         /** @brief 상태 문서는 연 에셋 파일이 없어 사본을 두지 않는다(shortcut: 프로젝트 설정 · 전역 변수 · 메시 모디파이어는 자동 저장이 없다 — 사고가 잦으면 상태 글을 같은 폴더에 둔다). */
         [[nodiscard]] DocumentAutosaveResult takeAutosaveCopy( string& /*outDocumentPath*/, string& /*outText*/ ) final { return DocumentAutosaveResult::Nothing; }
-        [[nodiscard]] expected<void>         checkUndoRoundTrip() final
+        [[nodiscard]] expected<void>         validateUndoRoundTrip() final
         {
             return unexpected( Error{ ErrorKind::Unsupported, "a state document keeps its undo in its own model - it has no document text round trip", getPanelTitle() } );
         }

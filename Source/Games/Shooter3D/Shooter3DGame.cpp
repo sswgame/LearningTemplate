@@ -44,7 +44,7 @@ namespace sw
 
     private:
         /** @brief 탄마다 이 게임의 두 표면(적의 몸 `Body`, 상자 · 바닥 `Cover`)에 맞음 표 줄이 있는지 봅니다. 없으면 탄마다 오류를 남기고 false 입니다(탄착이 말없이 사라지지 않게). */
-        [[nodiscard]] bool checkImpacts() const;
+        [[nodiscard]] bool validateImpacts() const;
 
     private:
         SharedAssetRef<WeaponCatalog>     _pWeaponCatalog;     ///< 공유 캐시의 한 벌(게임 범위 서비스)
@@ -80,7 +80,7 @@ namespace sw
         if ( loadRequiredCatalog( _pWeaponCatalog ) == false || loadRequiredCatalog( _pProjectileCatalog ) == false )
             return false;
         // 무기는 기본 탄을 받아야 하고(태그 조건), 탄마다 두 표면의 탄착이 있어야 한다 — 틀리면 이유를 남기고 게임을 띄우지 않는다.
-        if ( _pWeaponCatalog->checkProjectiles( *_pProjectileCatalog ) == false || checkImpacts() == false )
+        if ( _pWeaponCatalog->validateProjectiles( *_pProjectileCatalog ) == false || validateImpacts() == false )
             return false;
         const ItemCatalog*          pItemCatalog = game::findSubsystem<const ItemCatalog>();
         vector<WeaponItemReference> listUnknownItem;
@@ -111,7 +111,7 @@ namespace sw
         _onlineFlow.update( getSubsystem<OnlineSession>() );
     }
 
-    bool Shooter3DGame::checkImpacts() const
+    bool Shooter3DGame::validateImpacts() const
     {
         const hashed_string arrSurface[] = { hashed_string( "Body" ), hashed_string( "Cover" ) };
         bool                bComplete    = true;

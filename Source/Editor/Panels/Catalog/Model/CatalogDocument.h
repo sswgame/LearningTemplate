@@ -146,7 +146,7 @@ namespace sw::editor
         /** @brief 자식 편집의 글을 넣습니다. 펼치지 못하게 되는 글이면 없던 일로 하고 false 입니다. */
         [[nodiscard]] bool commitChildEdit( string_view text );
         /** @brief 항목 표의 행이고 훑은 문서면 true 이고, 아니면 `_error` 를 적고 false 입니다. */
-        [[nodiscard]] bool checkChildRow( int32 rowIndex );
+        [[nodiscard]] bool validateChildRow( int32 rowIndex );
 
     private:
         string                      _text;

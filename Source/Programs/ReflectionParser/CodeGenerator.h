@@ -56,7 +56,7 @@ namespace sw
         bool hasHandleArgument() const;
         /** @brief TypeRegistrar 본문을 출력합니다. */
         void emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo, size_t typeIndex ) const;
-        /** @brief 파일 머리에 `PROPERTY()` 값 타입 검사 템플릿(`sw::generated::checkPropertyValue`)을 한 번 냅니다(parser_config 의 금지 기반 목록이 비면 생략). */
+        /** @brief 파일 머리에 `PROPERTY()` 값 타입 검사 템플릿(`sw::generated::isPropertyValueAllowed`)을 한 번 냅니다(parser_config 의 금지 기반 목록이 비면 생략). */
         void emitPropertyValueCheck( CodeEmitBuffer& outBuffer ) const;
         /** @brief 서술자 표 앞에 둘 것(값 타입 검사 · 옛 이름 배열 · 중첩 컨테이너의 정적 객체)을 출력합니다. 이름은 @p propIndex 로 가릅니다. */
         void emitPropertyStatics( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, uint32 propIndex ) const;

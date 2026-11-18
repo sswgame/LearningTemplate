@@ -536,7 +536,7 @@ namespace sw
         } );
     }
 
-    bool EditorModuleManager::checkAssetReferencesWithEditorModule()
+    bool EditorModuleManager::validateAssetReferencesWithEditorModule()
     {
         return EditorModuleManagerHeadlessInternal::callEditorModuleEntry<PFN_CheckEditorAssetReferences>(
             getModuleSymbols(), kCheckEditorAssetReferencesSymbol, "Asset reference check", []( PFN_CheckEditorAssetReferences pfnCheck, const ISubsystemLocator& service )

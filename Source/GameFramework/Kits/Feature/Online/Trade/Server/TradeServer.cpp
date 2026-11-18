@@ -44,7 +44,7 @@ namespace sw
         setReady( false );
     }
 
-    uint16 TradeServer::checkRequest( OnlineServiceHost& host, const OnlineCallContext& context )
+    uint16 TradeServer::validateRequest( OnlineServiceHost& host, const OnlineCallContext& context )
     {
         _nowMs                      = context._nowMs;
         const RemoteConfig* pConfig = host.getRemoteConfig();

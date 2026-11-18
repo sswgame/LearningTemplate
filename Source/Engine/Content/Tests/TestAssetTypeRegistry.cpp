@@ -69,8 +69,8 @@ SW_TEST_CASE( AssetTypeRegistryTest, RegistrarCarriesRuleAndLoader )
         SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listMatch.size() );
         SW_EXPECT_TRUE( listMatch[0] == pType );
 
-        SW_EXPECT_FALSE( AssetTypeRegistry::checkLoad( *pType, AssetID{ "game/x/data/bad.xml" } ) );
-        SW_EXPECT_TRUE( AssetTypeRegistry::checkLoad( *pType, AssetID{ "game/x/data/good.xml" } ) );
+        SW_EXPECT_FALSE( AssetTypeRegistry::validateLoad( *pType, AssetID{ "game/x/data/bad.xml" } ) );
+        SW_EXPECT_TRUE( AssetTypeRegistry::validateLoad( *pType, AssetID{ "game/x/data/good.xml" } ) );
         SW_EXPECT_EQUAL( 2, AssetTypeTestAsset::s_loadCount );
     }
     SW_EXPECT_TRUE( AssetTypeRegistry::findType( "assettypetest" ) == nullptr );
@@ -82,7 +82,7 @@ SW_TEST_CASE( AssetTypeRegistryTest, RegistrarCarriesRuleAndLoader )
 SW_TEST_CASE( AssetTypeRegistryTest, EveryDataKindHasALoaderAndOwnsItsPaths )
 {
     const AssetTypeDef noLoader{ "noLoader" };
-    SW_EXPECT_FALSE( AssetTypeRegistry::checkLoad( noLoader, AssetID{ "game/x.xml" } ) );
+    SW_EXPECT_FALSE( AssetTypeRegistry::validateLoad( noLoader, AssetID{ "game/x.xml" } ) );
 
     vector<string> listProblem;
     AssetTypeRegistry::collectProblems( listProblem );
@@ -93,7 +93,7 @@ SW_TEST_CASE( AssetTypeRegistryTest, EveryDataKindHasALoaderAndOwnsItsPaths )
     {
         if ( pType->_pathRule.isEmpty() )
             continue;
-        SW_EXPECT_TRUE( pType->_loader._pCheckLoad != nullptr );
+        SW_EXPECT_TRUE( pType->_loader._pValidateLoad != nullptr );
         AssetTypeRegistry::collectPathMatches( AssetTypeRegistryTestUtil::makeSampleID( pType->_pathRule ), listMatch );
         SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listMatch.size() );
     }

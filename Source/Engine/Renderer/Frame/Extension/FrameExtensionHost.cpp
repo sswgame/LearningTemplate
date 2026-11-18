@@ -232,7 +232,7 @@ namespace sw
         if ( entryIndex >= _listPassCheck.size() )
             _listPassCheck.resize( entryIndex + 1 );
         PassDeclarationCheck& check = _listPassCheck[entryIndex];
-        check                       = checkPassDeclaration( params );
+        check                       = validatePassDeclaration( params );
         return check;
     }
 
@@ -258,7 +258,7 @@ namespace sw
         return false;
     }
 
-    FrameExtensionHost::PassDeclarationCheck FrameExtensionHost::checkPassDeclaration( const ExtensionPassParams& params ) const
+    FrameExtensionHost::PassDeclarationCheck FrameExtensionHost::validatePassDeclaration( const ExtensionPassParams& params ) const
     {
         // 차례는 예전 검사와 같다 — 첫 어긋남이 이유다. 이름 · 중복 · 실행 콜백은 부르는 쪽이 본다(다른 패스 · 이번 프레임 콜백에 기댄다).
         PassDeclarationCheck check{};

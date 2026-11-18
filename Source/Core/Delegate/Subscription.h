@@ -135,7 +135,7 @@ namespace sw
     public:
         SubscriptionSource() noexcept = default;
         /** @brief 파생 소멸자가 닫았는지 확인합니다. 닫지 않았으면 멈춥니다. */
-        virtual ~SubscriptionSource() { checkClosed(); }
+        virtual ~SubscriptionSource() { assertClosed(); }
 
         /** @brief 복사본은 구독을 넘겨받지 않습니다. */
         SubscriptionSource( const SubscriptionSource& ) noexcept
@@ -200,7 +200,7 @@ namespace sw
         /** @brief 구독을 무효화하고 블록 참조를 놓습니다(이동 대입 — 출처는 산다). 진행 중인 해제는 기다리지 않습니다. */
         SW_API void dropControl() noexcept;
         /** @brief 닫히지 않았으면 멈춥니다(소멸자). */
-        SW_API void checkClosed() const noexcept;
+        SW_API void assertClosed() const noexcept;
 
     private:
         atomic<SubscriptionControl*> _pControl{ nullptr }; ///< 제어 블록. 첫 구독 전에는 nullptr, 닫히면 닫힘 표시(`Subscription.cpp`)

@@ -284,7 +284,7 @@ namespace sw::editor
             markDocumentDirty();
     }
 
-    expected<void> EditorDocumentPanel::checkUndoRoundTrip()
+    expected<void> EditorDocumentPanel::validateUndoRoundTrip()
     {
         if ( isDocumentLoaded() == false || isDocumentLoadFailed() )
             return unexpected( Error{ ErrorKind::NotFound, "no document is loaded in the panel", getPanelTitle() } );

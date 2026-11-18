@@ -125,12 +125,12 @@ namespace sw
         }
     }
 
-    bool AssetTypeRegistry::checkLoad( const AssetTypeDef& def, const AssetID& assetID )
+    bool AssetTypeRegistry::validateLoad( const AssetTypeDef& def, const AssetID& assetID )
     {
-        if ( def._loader._pCheckLoad == nullptr )
+        if ( def._loader._pValidateLoad == nullptr )
             return false;
         const ScopedMemoryTag memoryScope{ def._loader._memoryTag };
-        return def._loader._pCheckLoad( assetID ); // 잠금 밖이다 — 로더가 다른 종류를 찾는다
+        return def._loader._pValidateLoad( assetID ); // 잠금 밖이다 — 로더가 다른 종류를 찾는다
     }
 
     vector<const AssetTypeDef*> AssetTypeRegistry::collectTypes()

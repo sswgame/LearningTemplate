@@ -10,7 +10,7 @@
 
 struct BatchData
 {
-    // 3 성분 벡터를 맨 앞 16 바이트 경계에 둔다(GL std430 — ShaderBindingValidator::checkStructuredElementLayouts). 메시 공간 경계(언리얼 FBoxSphereBounds) — 컬링이 인스턴스 월드 행렬로 상자를 옮겨 절두체 · 가림을 상자로 판정한다(구보다 가늘고 긴 물체에서 훨씬 촘촘하다).
+    // 3 성분 벡터를 맨 앞 16 바이트 경계에 둔다(GL std430 — ShaderBindingValidator::validateStructuredElementLayouts). 메시 공간 경계(언리얼 FBoxSphereBounds) — 컬링이 인스턴스 월드 행렬로 상자를 옮겨 절두체 · 가림을 상자로 판정한다(구보다 가늘고 긴 물체에서 훨씬 촘촘하다).
     float3 _localBoundsCenter;   // 상자 중심(= 구 중심)
     float  _localBoundsRadius;   // 상자 중심 기준 구 반지름. 0 이면 상자가 없다(구로만 판정)
     float3 _localBoundsExtent;   // 상자 반 크기

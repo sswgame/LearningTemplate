@@ -1040,7 +1040,7 @@ namespace sw
         }
         // 암묵 스켈레톤은 몸을 입기 전이다 — 몸 스켈레톤이 정해진 뒤에만 견준다.
         if ( body.hasDataSkeleton() )
-            (void)_bodyProportion.checkBones( body.getSkeleton(), _presetID ); // 없는 본은 오류로 남았다. 있는 본의 비율은 그대로 건다
+            (void)_bodyProportion.validateBones( body.getSkeleton(), _presetID ); // 없는 본은 오류로 남았다. 있는 본의 비율은 그대로 건다
         // 본 비율이 있을 때만 단계 작업을 등록한다 — 포즈를 쓰는 작업이 둘이면 몸의 군중 공유가 꺼지므로, 비율이 없는 몸은 공유를 지킨다.
         const bool bWantsTask = _bodyProportion.getEntries().empty() == false;
         if ( bWantsTask && _bProportionTask == SW_FALSE )

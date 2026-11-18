@@ -92,7 +92,7 @@ namespace sw
             SW_LOG_ERROR_ID( "RHI.DrawSkippedIndexBufferDestroyed", "%# indexed draw skipped: its index buffer (handle %#) was destroyed while bound - rebind before drawing", getBackendName(), handle );
     }
 
-    bool RHIDrawDiagnostics::checkVertexSlotsBound( const RHIVertexLayout& input, const RHIGeometryBindings& bindings ) const
+    bool RHIDrawDiagnostics::validateVertexSlotsBound( const RHIVertexLayout& input, const RHIGeometryBindings& bindings ) const
     {
         const uint32              vertexSlotMask   = input._slotMask;
         const RHIMeshVertexFormat meshVertexFormat = input._format;

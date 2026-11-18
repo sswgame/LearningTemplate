@@ -148,5 +148,582 @@
     "old": "UserSettingTypeTraits",
     "new": "UserSettingKindTraits",
     "why": "열거형 UserSettingType → UserSettingKind 를 따른다"
+  },
+  {
+    "old": "checkAllowed",
+    "new": "validateAllowed",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAnchor",
+    "new": "validateAnchor",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAnimal",
+    "new": "validateAnimal",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAssetReferences",
+    "new": "validateAssetReferences",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAssetReferencesWithEditorModule",
+    "new": "validateAssetReferencesWithEditorModule",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAtlasGrid",
+    "new": "validateAtlasGrid",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAttachmentStoreOps",
+    "new": "validateAttachmentStoreOps",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAttachments",
+    "new": "validateAttachments",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkBindings",
+    "new": "validateBindings",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate",
+    "allowExisting": true
+  },
+  {
+    "old": "checkBodies",
+    "new": "validateBodies",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkBones",
+    "new": "validateBones",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate",
+    "allowExisting": true
+  },
+  {
+    "old": "checkBypassPasses",
+    "new": "validateBypassPasses",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkCanvasAndSky",
+    "new": "validateCanvasAndSky",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkChildRow",
+    "new": "validateChildRow",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkClipNamesMatched",
+    "new": "validateClipNamesMatched",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkCollisionsAfter",
+    "new": "validateCollisionsAfter",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkColorOutputLimit",
+    "new": "validateColorOutputLimit",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkCommand",
+    "new": "validateCommand",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkComputePasses",
+    "new": "validateComputePasses",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkConditionalReflectMacros",
+    "new": "validateConditionalReflectMacros",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkConsistent",
+    "new": "validateConsistent",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDataLayerReferences",
+    "new": "validateDataLayerReferences",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDataLayersDeclared",
+    "new": "validateDataLayersDeclared",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDecalPasses",
+    "new": "validateDecalPasses",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDeltaReadsBack",
+    "new": "validateDeltaReadsBack",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDigest",
+    "new": "validateDigest",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDiskBeforeSave",
+    "new": "validateDiskBeforeSave",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDurationChoice",
+    "new": "validateDurationChoice",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDx12SlotLimit",
+    "new": "validateDx12SlotLimit",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDx12Space",
+    "new": "validateDx12Space",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkEditorAssetReferences",
+    "new": "validateEditorAssetReferences",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkEntry",
+    "new": "validateEntry",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkExpressions",
+    "new": "validateExpressions",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkFile",
+    "new": "validateFile",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate",
+    "allowExisting": true
+  },
+  {
+    "old": "checkFinishedJob",
+    "new": "validateFinishedJob",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkFolder",
+    "new": "validateFolder",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkFolderMatchesList",
+    "new": "validateFolderMatchesList",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkFootprint",
+    "new": "validateFootprint",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkFrameGraph",
+    "new": "validateFrameGraph",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkGBufferLayout",
+    "new": "validateGBufferLayout",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkGeometryColorOutputs",
+    "new": "validateGeometryColorOutputs",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkGroups",
+    "new": "validateGroups",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkID",
+    "new": "validateID",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkImpacts",
+    "new": "validateImpacts",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkIndex",
+    "new": "validateIndex",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkInputContracts",
+    "new": "validateInputContracts",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkInside",
+    "new": "validateInside",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkKeys",
+    "new": "validateKeys",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkLayer",
+    "new": "validateLayer",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate",
+    "allowExisting": true
+  },
+  {
+    "old": "checkLeafNameCollision",
+    "new": "validateLeafNameCollision",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkLoad",
+    "new": "validateLoad",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkLowercaseResourceName",
+    "new": "validateLowercaseResourceName",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkMarkers",
+    "new": "validateMarkers",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkMaxHP",
+    "new": "validateMaxHP",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkMergePart",
+    "new": "validateMergePart",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkMessageSlot",
+    "new": "validateMessageSlot",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkMinPostQuality",
+    "new": "validateMinPostQuality",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkMod",
+    "new": "validateMod",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkModifiers",
+    "new": "validateModifiers",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkModuleShaderList",
+    "new": "validateModuleShaderList",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkNames",
+    "new": "validateNames",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate",
+    "allowExisting": true
+  },
+  {
+    "old": "checkNode",
+    "new": "validateNode",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkNumericSettings",
+    "new": "validateNumericSettings",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkOmittedPasses",
+    "new": "validateOmittedPasses",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkOutputDivisors",
+    "new": "validateOutputDivisors",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkOverridePath",
+    "new": "validateOverridePath",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkOverrideTargets",
+    "new": "validateOverrideTargets",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPack",
+    "new": "validatePack",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPad",
+    "new": "validatePad",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPart",
+    "new": "validatePart",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPassDeclaration",
+    "new": "validatePassDeclaration",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPassDepth",
+    "new": "validatePassDepth",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPassInputContract",
+    "new": "validatePassInputContract",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPassNamesUnique",
+    "new": "validatePassNamesUnique",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPassRenderState",
+    "new": "validatePassRenderState",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPassTypeAndAttachments",
+    "new": "validatePassTypeAndAttachments",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPostProcessMaterialPasses",
+    "new": "validatePostProcessMaterialPasses",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkProjectiles",
+    "new": "validateProjectiles",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPropertyRow",
+    "new": "validatePropertyRow",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkRanges",
+    "new": "validateRanges",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkReflectedProperties",
+    "new": "validateReflectedProperties",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkRequest",
+    "new": "validateRequest",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkReservedBindings",
+    "new": "validateReservedBindings",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkSameDivisor",
+    "new": "validateSameDivisor",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkSaveCompatible",
+    "new": "validateSaveCompatible",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkScenarioFolder",
+    "new": "validateScenarioFolder",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkServerConfig",
+    "new": "validateServerConfig",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkSettings",
+    "new": "validateSettings",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkShadingModel",
+    "new": "validateShadingModel",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkSharedAttempt",
+    "new": "validateSharedAttempt",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkSizeInRange",
+    "new": "validateSizeInRange",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkSlotRulesAndCollisions",
+    "new": "validateSlotRulesAndCollisions",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkStageTextureUnitLimit",
+    "new": "validateStageTextureUnitLimit",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkStatePath",
+    "new": "validateStatePath",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkStructuredElementLayouts",
+    "new": "validateStructuredElementLayouts",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkTargetExists",
+    "new": "validateTargetExists",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkTargets",
+    "new": "validateTargets",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkTextureUnits",
+    "new": "validateTextureUnits",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkUnderBase",
+    "new": "validateUnderBase",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkUndoRoundTrip",
+    "new": "validateUndoRoundTrip",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkUnique",
+    "new": "validateUnique",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate",
+    "allowExisting": true
+  },
+  {
+    "old": "checkVelocityOutputs",
+    "new": "validateVelocityOutputs",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkVertexInputs",
+    "new": "validateVertexInputs",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkVertexSlotsBound",
+    "new": "validateVertexSlotsBound",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkVulkanSet",
+    "new": "validateVulkanSet",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "_pCheckLoad",
+    "new": "_pValidateLoad",
+    "why": "checkLoad → validateLoad 를 따른다"
+  },
+  {
+    "old": "checkClosed",
+    "new": "assertClosed",
+    "why": "단언하는 void 검사는 assert*(NamingCpp)"
+  },
+  {
+    "old": "checkRegistrationOrder",
+    "new": "assertRegistrationOrder",
+    "why": "단언하는 void 검사는 assert*(NamingCpp)"
+  },
+  {
+    "old": "checkRoundTrip",
+    "new": "expectRoundTrip",
+    "why": "테스트 기대값을 적는 도우미 — check* 는 술어가 아니다(NamingCpp), gtest EXPECT",
+    "allowExisting": true
+  },
+  {
+    "old": "checkValue",
+    "new": "expectValue",
+    "why": "테스트 기대값을 적는 도우미 — check* 는 술어가 아니다(NamingCpp), gtest EXPECT"
+  },
+  {
+    "old": "checkSpinLockTryLock",
+    "new": "expectSpinLockTryLock",
+    "why": "테스트 기대값을 적는 도우미 — check* 는 술어가 아니다(NamingCpp), gtest EXPECT"
+  },
+  {
+    "old": "checkMark",
+    "new": "updateMarkState",
+    "why": "검사가 아니라 레이블의 그려짐 · 자리 잡힘 상태를 모은다 — check* 는 술어가 아니다(NamingCpp)"
+  },
+  {
+    "old": "checkSegment",
+    "new": "appendSegmentEvents",
+    "why": "검사가 아니라 구간에서 임계값을 지난 사건을 더한다 — check* 는 술어가 아니다(NamingCpp)"
+  },
+  {
+    "old": "checkPropertyValue",
+    "new": "isPropertyValueAllowed",
+    "why": "static_assert 가 읽는 constexpr bool 술어 — bool 을 돌려주는 check* 는 is*(NamingCpp)"
   }
 ]

@@ -104,7 +104,7 @@ namespace sw
         IAccountPresence* getPresence() { return &_presence; }
 
     protected:
-        uint16 checkRequest( OnlineServiceHost& host, const OnlineCallContext& context ) override;
+        uint16 validateRequest( OnlineServiceHost& host, const OnlineCallContext& context ) override;
 
     private:
         /** @brief 세션 끊기 창구입니다. 바인딩의 `revokeAccountSessions` 로 넘깁니다. 바인딩이 멤버로 들어 수명이 같다. */

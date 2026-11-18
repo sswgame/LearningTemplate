@@ -420,7 +420,7 @@ namespace sw
             void report( const string& resource, string&& message ) { Internal::report( _pOutIssue, _shaderLabel, resource, std::move( message ), _issueCount ); }
 
             /** @brief 1) 예약 리소스: 종류와 위치가 이 백엔드 계약과 같은가. */
-            void checkReservedBindings( const vector<Internal::ReflectedBinding>& listReflected )
+            void validateReservedBindings( const vector<Internal::ReflectedBinding>& listReflected )
             {
                 const utf8* pLocationFormat = _bVulkan ? "set/binding" : "space/register";
                 for ( const Internal::ReflectedBinding& reflected : listReflected )
@@ -456,7 +456,7 @@ namespace sw
             }
 
             /** @brief DX12 space0 슬롯 하나가 루트 시그니처의 슬롯 수 안인지 봅니다. */
-            void checkDx12SlotLimit( const Internal::ReflectedBinding& reflected )
+            void validateDx12SlotLimit( const Internal::ReflectedBinding& reflected )
             {
                 const Internal::RegisterClass registerClass = Internal::getRegisterClassOf( reflected._kind );
                 uint32                        limit         = 0;
@@ -496,12 +496,12 @@ namespace sw
             }
 
             /** @brief 3) DX12: space0 = 슬롯(CB 는 루트 CBV, t · u 는 디스크립터 테이블, 그리고 정적 샘플러), space1 = 텍스처 배열(t0, 무제한), space2 = 루트 상수(b0). 그 밖은 루트 시그니처에 없다. */
-            void checkDx12Space( const Internal::ReflectedBinding& reflected )
+            void validateDx12Space( const Internal::ReflectedBinding& reflected )
             {
                 namespace bindless = shaderslot::bindless;
                 if ( reflected._space == 0 )
                 {
-                    checkDx12SlotLimit( reflected );
+                    validateDx12SlotLimit( reflected );
                 }
                 else if ( reflected._space == bindless::kTextureSpace )
                 {
@@ -524,7 +524,7 @@ namespace sw
             }
 
             /** @brief 3) Vulkan: 세트 0 은 종류별 시프트 범위, 세트 1 은 텍스처 배열 · 샘플러 · RW 텍스처 배열 전용이다. 그 밖의 세트는 파이프라인 레이아웃에 없다. */
-            void checkVulkanSet( const Internal::ReflectedBinding& reflected )
+            void validateVulkanSet( const Internal::ReflectedBinding& reflected )
             {
                 namespace bindless = shaderslot::bindless;
                 namespace vk       = shaderslot::vk;
@@ -562,7 +562,7 @@ namespace sw
             }
 
             /** @brief 2) 리소스 @p indexA 가 뒤의 리소스와 같은 자리를 차지하는지 봅니다(백엔드마다 이름공간이 다르다). */
-            void checkCollisionsAfter( const vector<Internal::ReflectedBinding>& listReflected, size_t indexA )
+            void validateCollisionsAfter( const vector<Internal::ReflectedBinding>& listReflected, size_t indexA )
             {
                 const Internal::ReflectedBinding& reflectedA = listReflected[indexA];
                 for ( size_t indexB = indexA + 1; indexB < listReflected.size(); ++indexB )
@@ -600,15 +600,15 @@ namespace sw
             }
 
             /** @brief 2 · 3) 리소스마다 백엔드 자리 규칙(DX12 space / Vulkan set · 범위 / GL set 0)을 보고 뒤 리소스와의 충돌을 봅니다. */
-            void checkSlotRulesAndCollisions( const vector<Internal::ReflectedBinding>& listReflected )
+            void validateSlotRulesAndCollisions( const vector<Internal::ReflectedBinding>& listReflected )
             {
                 for ( size_t indexA = 0; indexA < listReflected.size(); ++indexA )
                 {
                     const Internal::ReflectedBinding& reflectedA = listReflected[indexA];
                     if ( _bDx12 && reflectedA._kind != ShaderBindingKind::Unknown )
-                        checkDx12Space( reflectedA );
+                        validateDx12Space( reflectedA );
                     if ( _bVulkan && reflectedA._kind != ShaderBindingKind::Unknown )
-                        checkVulkanSet( reflectedA );
+                        validateVulkanSet( reflectedA );
                     if ( _bOpenGl && reflectedA._space != 0 )
                     {
                         StringBuilder<constant::buffer::kMax256> textBuilder;
@@ -616,8 +616,8 @@ namespace sw
                         report( reflectedA._name, string( "OpenGL 은 descriptor set 을 무시하는데 set " ) + to_string( reflectedA._space ) + " 로 선언돼 있습니다 — binding " +
                                                       string( textBuilder.view() ) );
                     }
-                    checkMessageSlot( reflectedA );
-                    checkCollisionsAfter( listReflected, indexA );
+                    validateMessageSlot( reflectedA );
+                    validateCollisionsAfter( listReflected, indexA );
                 }
             }
 
@@ -625,7 +625,7 @@ namespace sw
              * @brief 쓰기 슬롯 u4 는 셰이더 메시지 링(g_GPUMessageRW) 전용이고, 그 링은 u4 에만 놓인다(컴퓨트 · 그래픽스 단계 모두).
              * @details SPIR-V 는 RW 구조버퍼도 StorageBuffer(읽기 구조버퍼와 같은 종류)로 보고하므로 종류로 거르면 Vulkan · GL 에서 이 검사가 돌지 않는다 — 스토리지 버퍼는 모두 본다.
              */
-            void checkMessageSlot( const Internal::ReflectedBinding& reflected )
+            void validateMessageSlot( const Internal::ReflectedBinding& reflected )
             {
                 // SPIR-V 의 StorageBuffer 는 읽기 · 쓰기를 모른다(Vulkan · GL) — 다만 WebGPU 리플렉션은 띠로 정확히 가른 이름을 준다(`reflectWebGPU`).
                 const bool bAmbiguousStorage = Internal::isSPIRV( _targetFormat ) && _targetFormat != ShaderTargetFormat::WGSL_WebGPU;
@@ -651,7 +651,7 @@ namespace sw
              *          std430 으로 읽어 52 바이트 머티리얼 원소를 64 간격으로 읽었다, AMD 는 SPIR-V 값을 따라 숨어 있었다). 그래서 백엔드와 상관없이 같은 규칙으로 막는다:
              *          2 성분 벡터는 8, 3 · 4 성분 벡터와 행렬은 16 바이트 경계에서 시작하고, 원소 크기는 가장 큰 정렬의 배수여야 한다. 언리얼은 셰이더 매개변수 구조체를 같은 규칙(16 바이트 행)으로 맞춘다.
              */
-            void checkStructuredElementLayouts( const ShaderReflectionData& reflection )
+            void validateStructuredElementLayouts( const ShaderReflectionData& reflection )
             {
                 for ( const ShaderBufferInfo& element : reflection._listStructuredElement )
                 {
@@ -695,7 +695,7 @@ namespace sw
              * @details 단위는 텍스처 바인딩 자리 하나다 — GL 은 결합 샘플러라 같은 binding 의 텍스처 · 샘플러가 한 단위이고, 배열은 원소마다 한 단위다.
              *          넘어도 DXC 는 컴파일하고 드라이버마다 결과가 갈린다(Mesa 는 링크 실패, NVIDIA 는 통과) — 그래서 쿠킹이 모든 드라이버의 한도로 멈춘다.
              */
-            void checkStageTextureUnitLimit( const vector<Internal::ReflectedBinding>& listReflected )
+            void validateStageTextureUnitLimit( const vector<Internal::ReflectedBinding>& listReflected )
             {
                 const optional<uint32> limit = ShaderBindingValidatorIssue::findStageTextureUnitLimit( _targetFormat );
                 if ( limit.has_value() == false )
@@ -724,7 +724,7 @@ namespace sw
                 report( "", string( textBuilder.view() ) );
             }
 
-            void checkVertexInputs( const ShaderReflectionData& reflection )
+            void validateVertexInputs( const ShaderReflectionData& reflection )
             {
                 for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )
                 {
@@ -773,11 +773,11 @@ namespace sw
         checks._bVulkan      = ( targetFormat == ShaderTargetFormat::SPIRV_Vulkan );
         checks._bOpenGl      = ( targetFormat == ShaderTargetFormat::SPIRV_OpenGL );
         checks._bDx12        = ( targetFormat == ShaderTargetFormat::DXIL_D3D12 );
-        checks.checkReservedBindings( listReflected );
-        checks.checkSlotRulesAndCollisions( listReflected );
-        checks.checkVertexInputs( reflection );
-        checks.checkStructuredElementLayouts( reflection );
-        checks.checkStageTextureUnitLimit( listReflected );
+        checks.validateReservedBindings( listReflected );
+        checks.validateSlotRulesAndCollisions( listReflected );
+        checks.validateVertexInputs( reflection );
+        checks.validateStructuredElementLayouts( reflection );
+        checks.validateStageTextureUnitLimit( listReflected );
         return checks._issueCount;
     }
 

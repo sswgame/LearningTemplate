@@ -51,7 +51,7 @@ namespace sw
              *          런타임 경고만 남기고 다른 타입을 만든다 — 같은 모듈 안이면 생성 단계에서 막는다. 이름 비교는 `hashed_string` 처럼 대소문자를 무시한다.
              *          모듈 사이의 겹침(게임이 엔진 이름을 다시 쓰는 것)은 올리는 순서의 문제라 런타임 경고(`TypeRegistry::registerClass`)에 남긴다.
              */
-            static bool checkLeafNameCollision( const vector<string>& listLine, const string& moduleName )
+            static bool validateLeafNameCollision( const vector<string>& listLine, const string& moduleName )
             {
                 unordered_map<string, string> mapLeafToFqn;
                 bool                          bUnique = true;
@@ -739,7 +739,7 @@ namespace sw
             return false;
         }
         VectorUtil::sortUnique( listLine );
-        if ( ReflectionPipelineInternal::checkLeafNameCollision( listLine, _pOptions->_moduleName ) == false )
+        if ( ReflectionPipelineInternal::validateLeafNameCollision( listLine, _pOptions->_moduleName ) == false )
             return false;
         string text;
         for ( const string& line : listLine )

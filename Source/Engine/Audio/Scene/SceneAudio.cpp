@@ -374,9 +374,9 @@ namespace sw
         if ( pQuery != nullptr && emitterCount > 0 )
         {
             const uint32 checkCount = MathUtil::min( emitterCount, kOcclusionChecksPerFrame );
-            for ( uint32 checkIndex = 0; checkIndex < checkCount; ++checkIndex )
+            for ( uint32 validateIndex = 0; validateIndex < checkCount; ++validateIndex )
             {
-                AudioEmitterComponent* pEmitter = _listEmitterSnapshot[( _occlusionCursor + checkIndex ) % emitterCount];
+                AudioEmitterComponent* pEmitter = _listEmitterSnapshot[( _occlusionCursor + validateIndex ) % emitterCount];
                 if ( pEmitter->usesOcclusion() == false )
                     continue;
                 audioEngine.setEmitterPropagation( pEmitter->getEmitterID(), pQuery->computePropagation( _primaryListenerPosition, pEmitter->_lastAudioPosition ) );

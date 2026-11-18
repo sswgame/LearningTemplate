@@ -93,7 +93,7 @@ namespace sw::editor
          *          적용해 돌리므로, 적용 → 직렬화가 같은 글이 아니면 Ctrl+Z 가 문서를 다른 상태로 돌린다. 두 기반이 정한다(순수 가상) — 상태 문서는 기록을
          *          자기 모델에 두어 글 왕복이 없다고 답한다. 언리얼 트랜잭션 테스트 · 유니티 Undo 테스트의 실행 → 되돌리기 → 상태 비교와 같은 자리다.
          */
-        [[nodiscard]] virtual expected<void> checkUndoRoundTrip() = 0;
+        [[nodiscard]] virtual expected<void> validateUndoRoundTrip() = 0;
         /**
          * @brief 자동 저장 사본으로 쓸 문서 id 와 글을 꺼냅니다(감사 E-1 — 문서 패널 자동 저장). 꺼냈으면 같은 글은 다시 내지 않는다.
          * @details 두 기반이 정한다(순수 가상) — 에셋 문서는 연 문서의 글(문서 되돌리기와 같은 `captureDocumentText`), 상태 문서는 기록을 자기 모델에 두어 사본이 없다고 답한다.

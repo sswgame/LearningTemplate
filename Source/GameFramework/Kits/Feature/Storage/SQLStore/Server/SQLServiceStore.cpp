@@ -175,7 +175,7 @@ namespace sw
                  * @details PostgreSQL 은 직렬화 가능 격리(SSI)라 이 재검증이 술어 읽기로 잡혀, 재검증 뒤 커밋 전에 끼는 삽입과 서로 어긋나면 한쪽이 직렬화 실패(Conflict)다.
                  *          SQLite 는 `BEGIN IMMEDIATE` 로 쓰기 트랜잭션이 하나씩 돈다.
                  */
-                ServiceStoreResult checkRanges( const vector<ServiceWrite>& listWrite, ServiceCommitInfo& outInfo )
+                ServiceStoreResult validateRanges( const vector<ServiceWrite>& listWrite, ServiceCommitInfo& outInfo )
                 {
                     for ( size_t writeIndex = 0; writeIndex < listWrite.size(); ++writeIndex )
                     {
@@ -202,7 +202,7 @@ namespace sw
 
                 ServiceStoreResult applyWrites( const ServiceTransaction& transaction, ServiceCommitInfo& outInfo )
                 {
-                    if ( const ServiceStoreResult ranged = checkRanges( transaction.getWrites(), outInfo ); ranged != ServiceStoreResult::Ok )
+                    if ( const ServiceStoreResult ranged = validateRanges( transaction.getWrites(), outInfo ); ranged != ServiceStoreResult::Ok )
                         return ranged;
                     SQLResult  result                    = _connection.execute( _connection.getDialect()._pNextCommitVersion, nullptr, 0, &_rowSet );
                     const bool bCommitVersionUnavailable = result != SQLResult::Ok || _rowSet._listRow.empty() || _rowSet._listRow[0].empty();
@@ -214,7 +214,7 @@ namespace sw
                     {
                         const ServiceWrite& write = listWrite[writeIndex];
                         if ( write._kind == ServiceWrite::Kind::RequireRange )
-                            continue; // `checkRanges` 가 쓰기 전에 봤다
+                            continue; // `validateRanges` 가 쓰기 전에 봤다
                         const SQLValue table    = makeTableValue( write._table );
                         const SQLValue key      = SQLValue::makeText( write._key );
                         const bool     bAny     = write._expectedVersion == ServiceRecord::kAnyVersion;

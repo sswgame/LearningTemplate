@@ -115,7 +115,7 @@ namespace sw
             }
 
             /** @brief 1) 첨부: 포맷이 렌더 타깃이 될 수 있는가, 이름이 겹치지 않는가, 나눗수 · 역할 표기가 맞는가. */
-            static uint32 checkAttachments( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateAttachments( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( uint32 attachmentIndex = 0; attachmentIndex < desc._listAttachment.size(); ++attachmentIndex )
@@ -156,7 +156,7 @@ namespace sw
             }
 
             /** @brief 셰이딩 방식이 아는 글이고 패스 구성과 맞는가. 이름만 Deferred 인 파이프라인을 막는다. */
-            static uint32 checkShadingModel( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateShadingModel( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 const auto hasPassType = [&desc]( RenderPassKind type )
                 {
@@ -236,7 +236,7 @@ namespace sw
             /**
              * @brief 3-8) 저장하지 않는 첨부(`_storeOp` DontCare)는 쓰는 패스가 하나이고 읽는 패스가 없어야 한다. 그렇지 않으면 다음 패스가 정의되지 않은 값을 읽는다.
              */
-            static uint32 checkAttachmentStoreOps( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateAttachmentStoreOps( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( const RenderPassAttachment& attachment : desc._listAttachment )
@@ -265,7 +265,7 @@ namespace sw
              * @details 깊이 테스트는 그 패스 실행이 깊이를 붙일 때만 켤 수 있고(표의 kDepthTest), 깊이를 시험하지 않으면 붙이지 않는다 — 어긋나면 PSO 와 렌더 패스의 깊이 형식이 달라 백엔드 검증 오류가 난다.
              *          풀스크린 삼각형에는 앞뒤 의미가 없어 컬링이 화면을 비운다. 반투명 패스의 블렌드를 끄는 것은 고를 수 있지만 대개 실수라 경고한다.
              */
-            static uint32 checkPassRenderState( RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validatePassRenderState( RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( RenderGraphPassDesc& pass : desc._listPass )
@@ -327,7 +327,7 @@ namespace sw
              *          패스: 타입이 프레임 패스이고 한 번만 나오며(실행이 종류마다 한 번 모든 뷰를 돈다), 입출력이 선언한 자원이고, 이름이 뷰 패스와 겹치지 않는다.
              *          셰이더 · 진입점 · 퍼뮤테이션 · 깊이 첨부 칸은 비어 있어야 한다 — 셰이더는 표(`RenderPassKindInfo`)의 것이고 쿠커 · 엔진 PSO 가 같은 표를 본다. 적어도 실행이 읽지 않으면 XML 이 거짓말을 한다.
              */
-            static uint32 checkFrameGraph( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateFrameGraph( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32     issueCount{ 0 };
                 const auto report = [&]( const utf8* pID, string_view name, const utf8* pReason )
@@ -398,7 +398,7 @@ namespace sw
             }
 
             /** @brief 선택 스테이지 칸과 컴퓨트 패스의 선언이 실행과 맞는가. 컬러 출력 하나, 깊이 형식이 아닌 입력 최대 둘(RW 슬롯 — 에뮬 백엔드의 슬롯이 셋이다), 고른 셰이더, 블렌드 없음. 진입점 칸은 컴퓨트 패스만 쓴다. */
-            static uint32 checkComputePasses( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateComputePasses( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 static constexpr size_t kMaxInputCount = 2;
                 uint32                  issueCount{ 0 };
@@ -443,7 +443,7 @@ namespace sw
             }
 
             /** @brief 2-0) 패스 이름은 하나뿐이어야 한다 — 이름이 패스의 열쇠라 뒤의 것은 버려진다. */
-            static uint32 checkPassNamesUnique( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validatePassNamesUnique( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
@@ -496,7 +496,7 @@ namespace sw
             }
 
             /** @brief 2-1) 패스 하나의 타입 표기가 해석되는가, 입출력이 선언된 첨부를 가리키는가. */
-            static uint32 checkPassTypeAndAttachments( const RenderPipelineDesc& desc, const RenderGraphPassDesc& pass, string_view sourcePath )
+            static uint32 validatePassTypeAndAttachments( const RenderPipelineDesc& desc, const RenderGraphPassDesc& pass, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 if ( isViewPassType( pass._type ) == false )
@@ -565,7 +565,7 @@ namespace sw
              * @brief 2-2) 뎁스 첨부: 비어 있는 것은 "일부러 뎁스를 안 쓴다" 는 뜻이라 정상이다. 다만 이름을 적었으면 그 첨부가 실재하고 뎁스 포맷이어야 한다.
              * @details 컬러 첨부를 뎁스로 바인딩하면 렌더 패스가 통째로 비호환이 된다. 뎁스를 출력에 적어 놓고 바인딩하지 않는 것도 앞뒤가 맞지 않는다.
              */
-            static uint32 checkPassDepth( const RenderPipelineDesc& desc, const RenderGraphPassDesc& pass, string_view sourcePath )
+            static uint32 validatePassDepth( const RenderPipelineDesc& desc, const RenderGraphPassDesc& pass, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 if ( pass._depthAttachment.empty() == false )
@@ -604,14 +604,14 @@ namespace sw
                 for ( RenderGraphPassDesc& pass : desc._listPass )
                 {
                     resolvePass( desc, pass );
-                    issueCount += checkPassTypeAndAttachments( desc, pass, sourcePath );
-                    issueCount += checkPassDepth( desc, pass, sourcePath );
+                    issueCount += validatePassTypeAndAttachments( desc, pass, sourcePath );
+                    issueCount += validatePassDepth( desc, pass, sourcePath );
                 }
                 return issueCount;
             }
 
             /** @brief 2-2) 모듈 셰이더 목록의 경로는 비지 않고 겹치지 않아야 한다 — 쿠커가 경로마다 한 번 굽고, 런타임이 이 목록으로 모듈 패스의 프로그램을 거른다. */
-            static uint32 checkModuleShaderList( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateModuleShaderList( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( size_t shaderIndex = 0; shaderIndex < desc._listExtensionShader.size(); ++shaderIndex )
@@ -636,7 +636,7 @@ namespace sw
             }
 
             /** @brief 3) 컬러 첨부가 여러 개인 패스는 MRT 로 묶인다. 포맷은 서로 달라도 되지만 개수에는 한계가 있다. */
-            static uint32 checkColorOutputLimit( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateColorOutputLimit( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
@@ -664,13 +664,13 @@ namespace sw
              * @brief 3-0) 한 패스의 출력(컬러 · 깊이)은 크기가 같아야 한다 — 렌더 패스의 타깃은 한 크기다.
              * @details 나눗수가 다르면 D3D 는 렌더 패스를 거부하고 Vulkan 은 프레임버퍼를 못 만든다.
              */
-            static uint32 checkOutputDivisors( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateOutputDivisors( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
-                    const RenderPassAttachment* pFirst           = nullptr;
-                    auto                        checkSameDivisor = [&]( string_view attachmentName )
+                    const RenderPassAttachment* pFirst              = nullptr;
+                    auto                        validateSameDivisor = [&]( string_view attachmentName )
                     {
                         const RenderPassAttachment* pAttachment = findAttachment( desc, attachmentName );
                         if ( pAttachment == nullptr )
@@ -688,10 +688,10 @@ namespace sw
                     };
                     for ( const string& outputName : pass._listOutput )
                     {
-                        checkSameDivisor( outputName );
+                        validateSameDivisor( outputName );
                     }
                     if ( pass._depthAttachment.empty() == false )
-                        checkSameDivisor( pass._depthAttachment );
+                        validateSameDivisor( pass._depthAttachment );
                 }
                 return issueCount;
             }
@@ -701,7 +701,7 @@ namespace sw
              * @details 컬러 출력이 없으면 그릴 곳이 없다(없는 첨부의 핸들 0 은 백버퍼라, 그대로 두면 화면에 그린다). G버퍼의 컬러 수가 표의 값과 다르면
              *          PSO 와 렌더 패스가 어긋나거나, 노멀이 없어 Lighting · SSAO 가 읽을 것이 없다.
              */
-            static uint32 checkGeometryColorOutputs( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateGeometryColorOutputs( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32       issueCount{ 0 };
                 const uint32 expectedGBufferColorCount = getRenderPassKindInfo( RenderPassKind::GBuffer )._colorTargetCount;
@@ -725,7 +725,7 @@ namespace sw
                                      sourcePath, pass._name, getEnumName( pass._type ), static_cast<uint32>( pass._listResolvedColorOutput.size() ), expectedGBufferColorCount );
                     ++issueCount;
                 }
-                issueCount += checkGBufferLayout( desc, sourcePath );
+                issueCount += validateGBufferLayout( desc, sourcePath );
                 return issueCount;
             }
 
@@ -734,7 +734,7 @@ namespace sw
              * @details 셰이더는 명세의 슬롯 순서 · 인코딩으로 쓰고(SV_TARGET0 ..) PSO 포맷도 명세에서 온다. 첨부 이름은 파이프라인이 고른다(역할로 읽는다).
              *          XML 의 포맷이 다르면 PSO 와 첨부가 어긋나고, 클리어 값이 다르면 "그려지지 않은 픽셀" 표시(알파 0)가 깨진다 — 로드 오류로 막는다.
              */
-            static uint32 checkGBufferLayout( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateGBufferLayout( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
@@ -765,9 +765,9 @@ namespace sw
             /**
              * @brief 3-3) 화면 속도 출력(Velocity 역할)은 깊이를 쓰는 불투명 지오메트리 패스(`kWritesVelocity`)만 선언하고, 첨부는 명세의 포맷 · 클리어 값(`GBufferLayout::kVelocitySlot`)이다.
              * @details 포워드 패스의 셰이더는 색을 `SV_TARGET0`, 속도를 `SV_TARGET1` 에 쓴다(binding_output.hlsli) — 컬러 출력이 [색, 속도] 둘이 아니면 PSO 와 타깃이 어긋난다.
-             *          G버퍼는 명세의 슬롯 순서를 `checkGBufferLayout` 이 본다. 클리어 0 은 "그리지 않은 픽셀 = 움직임 없음" 이고 읽는 쪽(TAA · 모션 블러)은 깊이 1 로 그 픽셀을 가린다.
+             *          G버퍼는 명세의 슬롯 순서를 `validateGBufferLayout` 이 본다. 클리어 0 은 "그리지 않은 픽셀 = 움직임 없음" 이고 읽는 쪽(TAA · 모션 블러)은 깊이 1 로 그 픽셀을 가린다.
              */
-            static uint32 checkVelocityOutputs( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateVelocityOutputs( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32                       issueCount{ 0 };
                 const GBufferAttachmentSpec& velocitySpec = GBufferLayout::kArrAttachment[GBufferLayout::kVelocitySlot];
@@ -810,7 +810,7 @@ namespace sw
              * @brief 4) 풀스크린 패스의 입력이 그 타입의 계약과 맞는가. "선언만 있고 아무도 안 읽는 입력" 을 여기서 잡는다.
              * @details 그런 입력은 오류 없이 지나가고, 그것을 만드는 패스(예: SSAO)만 매 프레임 돌고 버려진다. 실행은 같은 해석(_listResolvedInput)을 그대로 건다.
              */
-            static uint32 checkInputContracts( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateInputContracts( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
@@ -857,7 +857,7 @@ namespace sw
              * @details 뒤에 Swapchain 을 쓰는 패스가 있으면 UI 가 덮이고, 스크린샷 캡처 → 백버퍼 복사(마지막 Swapchain 쓰기 패스 끝)가 UI 앞에서 일어난다.
              *          UI 가 없는 파이프라인(Canvas 없음)은 허용한다. 하늘은 깊이 테스트로 빈 곳만 칠한다 — 뎁스 첨부가 없으면 장면 위를 통째로 덮는다.
              */
-            static uint32 checkCanvasAndSky( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateCanvasAndSky( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32                     issueCount{ 0 };
                 const RenderGraphPassDesc* pCanvas = nullptr;
@@ -895,7 +895,7 @@ namespace sw
              * @brief 3-5) 후처리 품질로 건너뛰는 패스(`_minPostQuality`)는 후처리를 끈 뷰처럼 건너뛸 수 있는 타입(kSkipsWithoutPostProcess — 원본을 넘기거나 기본 클리어)만이다.
              * @details 다른 타입을 건너뛰면 출력 첨부에 지난 프레임 값이 남는다.
              */
-            static uint32 checkMinPostQuality( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateMinPostQuality( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
@@ -921,7 +921,7 @@ namespace sw
              * @details 꺼진 뷰에서는 출력 이름이 원본 텍스처를 가리킨다(`TransientAttachmentPool::forward`). 형식 · 크기가 다르면 읽는 쪽 PSO · 텍셀 크기와 어긋나고,
              *          출력을 다른 패스도 쓰면 그 쓰기가 원본을 덮고, 뒤에서 원본을 쓰면 출력을 읽는 쪽이 나중 판을 읽는다.
              */
-            static uint32 checkBypassPasses( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateBypassPasses( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
@@ -929,7 +929,7 @@ namespace sw
                     const RenderGraphPassDesc& pass = desc._listPass[passIndex];
                     if ( getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kBypassesToSource ) == false )
                         continue;
-                    // 톤맵 대신 자리는 원본을 가리키는 끄기가 없다 — 톤맵 출력 위에 그리므로 꺼지면 아무것도 하지 않는다(checkPostProcessMaterialPasses 가 본다).
+                    // 톤맵 대신 자리는 원본을 가리키는 끄기가 없다 — 톤맵 출력 위에 그리므로 꺼지면 아무것도 하지 않는다(validatePostProcessMaterialPasses 가 본다).
                     if ( pass._blendableLocation == PostProcessBlendableLocation::ReplacingTonemap )
                         continue;
                     const RenderGraphPassDesc::ResolvedAttachment* pSource     = nullptr;
@@ -987,7 +987,7 @@ namespace sw
              * @brief 3-9) 데칼 패스의 컬러 출력은 DBufferA · B · C 셋이고 이 차례다 — 셰이더가 SV_TARGET0..2 에 그 칸의 프리멀티플라이 값으로 쓴다(decal.hlsl).
              * @details 다른 첨부(G버퍼 · 장면 색)에 쓰면 베이스 패스가 섞을 값이 아니라 데칼 값이 그대로 덮인다. 베이스 패스가 같은 셋을 선택 입력으로 읽는다.
              */
-            static uint32 checkDecalPasses( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateDecalPasses( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32                    issueCount{ 0 };
                 const RenderPassInputRole arrExpected[] = { RenderPassInputRole::DBufferA, RenderPassInputRole::DBufferB, RenderPassInputRole::DBufferC };
@@ -1013,7 +1013,7 @@ namespace sw
              * @brief 3-8) 후처리 머티리얼 패스는 자리마다 하나다. 톤맵 대신 자리는 출력 하나를 앞의 패스(톤맵)가 이미 썼어야 한다 — 그 위에 무게만큼 덮는다.
              * @details 같은 자리의 패스가 둘이면 같은 블렌더블을 두 번 그린다. 톤맵 대신 자리의 출력을 아무도 앞에서 쓰지 않으면 무게 1 미만에서 지난 프레임 값과 섞인다.
              */
-            static uint32 checkPostProcessMaterialPasses( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validatePostProcessMaterialPasses( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
@@ -1060,7 +1060,7 @@ namespace sw
              * @details 꺼진 뷰에서는 출력 이름이 아무 첨부도 가리키지 않는다(`TransientAttachmentPool::markAbsent`). 읽는 쪽은 그 역할을 바인딩하지 않아 셰이더 기본값(AO = 1)을 쓴다 —
              *          필수 입력이거나 계약이 없는 패스가 읽으면 그 기본값이 없다.
              */
-            static uint32 checkOmittedPasses( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 validateOmittedPasses( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
@@ -1116,26 +1116,26 @@ namespace sw
     {
         using Internal = RenderPipelineValidationInternal;
         // 순서가 있다 — 패스 해석(2)이 채운 `_resolved*` 를 뒤 규칙들이 읽는다.
-        uint32 issueCount = Internal::checkAttachments( _desc, sourcePath );
-        issueCount += Internal::checkShadingModel( _desc, sourcePath );
-        issueCount += Internal::checkPassNamesUnique( _desc, sourcePath );
+        uint32 issueCount = Internal::validateAttachments( _desc, sourcePath );
+        issueCount += Internal::validateShadingModel( _desc, sourcePath );
+        issueCount += Internal::validatePassNamesUnique( _desc, sourcePath );
         issueCount += Internal::resolveAndCheckPassAttachments( _desc, sourcePath );
-        issueCount += Internal::checkPassRenderState( _desc, sourcePath );
-        issueCount += Internal::checkComputePasses( _desc, sourcePath );
-        issueCount += Internal::checkFrameGraph( _desc, sourcePath );
-        issueCount += Internal::checkModuleShaderList( _desc, sourcePath );
-        issueCount += Internal::checkColorOutputLimit( _desc, sourcePath );
-        issueCount += Internal::checkOutputDivisors( _desc, sourcePath );
-        issueCount += Internal::checkGeometryColorOutputs( _desc, sourcePath );
-        issueCount += Internal::checkVelocityOutputs( _desc, sourcePath );
-        issueCount += Internal::checkInputContracts( _desc, sourcePath );
-        issueCount += Internal::checkCanvasAndSky( _desc, sourcePath );
-        issueCount += Internal::checkMinPostQuality( _desc, sourcePath );
-        issueCount += Internal::checkBypassPasses( _desc, sourcePath );
-        issueCount += Internal::checkOmittedPasses( _desc, sourcePath );
-        issueCount += Internal::checkPostProcessMaterialPasses( _desc, sourcePath );
-        issueCount += Internal::checkDecalPasses( _desc, sourcePath );
-        issueCount += Internal::checkAttachmentStoreOps( _desc, sourcePath );
+        issueCount += Internal::validatePassRenderState( _desc, sourcePath );
+        issueCount += Internal::validateComputePasses( _desc, sourcePath );
+        issueCount += Internal::validateFrameGraph( _desc, sourcePath );
+        issueCount += Internal::validateModuleShaderList( _desc, sourcePath );
+        issueCount += Internal::validateColorOutputLimit( _desc, sourcePath );
+        issueCount += Internal::validateOutputDivisors( _desc, sourcePath );
+        issueCount += Internal::validateGeometryColorOutputs( _desc, sourcePath );
+        issueCount += Internal::validateVelocityOutputs( _desc, sourcePath );
+        issueCount += Internal::validateInputContracts( _desc, sourcePath );
+        issueCount += Internal::validateCanvasAndSky( _desc, sourcePath );
+        issueCount += Internal::validateMinPostQuality( _desc, sourcePath );
+        issueCount += Internal::validateBypassPasses( _desc, sourcePath );
+        issueCount += Internal::validateOmittedPasses( _desc, sourcePath );
+        issueCount += Internal::validatePostProcessMaterialPasses( _desc, sourcePath );
+        issueCount += Internal::validateDecalPasses( _desc, sourcePath );
+        issueCount += Internal::validateAttachmentStoreOps( _desc, sourcePath );
         if ( issueCount > 0 )
             SW_LOG_ERROR_ID( "RenderPipelineAsset.PipelineValidationFoundIssues", "[%#] Pipeline validation found %# issues - the render result may be wrong or the GPU may die",
                              sourcePath, issueCount );

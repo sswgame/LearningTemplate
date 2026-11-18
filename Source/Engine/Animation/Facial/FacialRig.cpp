@@ -102,8 +102,8 @@ namespace sw
     {
         auto hasTarget = [&listMorphTargetName]( const hashed_string& name )
         { return VectorUtil::contains( listMorphTargetName, name ); };
-        bool bValid       = true;
-        auto checkTargets = [&]( const vector<FacialPose>& listPose )
+        bool bValid          = true;
+        auto validateTargets = [&]( const vector<FacialPose>& listPose )
         {
             for ( const FacialPose& pose : listPose )
             {
@@ -117,7 +117,7 @@ namespace sw
                 }
             }
         };
-        checkTargets( _listExpression );
+        validateTargets( _listExpression );
         // 표정 이름 = 표정 커브 이름이다. 타깃과 이름이 같으면(대소문자 무시) 그 커브가 타깃과 표정을 둘 다 움직인다.
         for ( const FacialPose& expression : _listExpression )
         {
@@ -127,7 +127,7 @@ namespace sw
                              expression._name.c_str() );
             bValid = false;
         }
-        checkTargets( _listViseme );
+        validateTargets( _listViseme );
         for ( const hashed_string& target : _blink._listTarget )
         {
             if ( hasTarget( target ) )

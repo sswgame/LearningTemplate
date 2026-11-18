@@ -41,7 +41,7 @@ namespace sw
         outWeights._maskB = float4{ MathUtil::saturate( arrChannel[4] ), MathUtil::saturate( arrChannel[5] ), MathUtil::saturate( arrChannel[6] ), MathUtil::saturate( arrChannel[7] ) };
     }
 
-    bool WrinkleMap::checkExpressions( span<const hashed_string> listExpressionName, vector<hashed_string>* pOutMissing ) const
+    bool WrinkleMap::validateExpressions( span<const hashed_string> listExpressionName, vector<hashed_string>* pOutMissing ) const
     {
         bool bValid = true;
         for ( const WrinkleRegionDef& region : _listRegion )

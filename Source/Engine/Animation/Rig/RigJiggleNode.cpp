@@ -76,7 +76,7 @@ namespace sw
         const RigBodyInput&         input  = context._pInstance->getBodyInput();
         const RigJiggleGroupParams* pGroup = input.findJiggleGroup( _group );
         if ( pGroup == nullptr )
-            return; // 묶음이 없는 것은 `checkGroups` 가 오류로 알렸다 — 프레임마다 다시 남기지 않는다
+            return; // 묶음이 없는 것은 `validateGroups` 가 오류로 알렸다 — 프레임마다 다시 남기지 않는다
         const RigSpringSettings settings = makeSettings( *pGroup, input.getMotionScale() );
         const float3            impulse  = input.getFrameImpulse() * ( pGroup->_impulseScale * input.getMotionScale() );
         if ( impulse.getLengthSquared() > 0.0f )
@@ -91,7 +91,7 @@ namespace sw
         inoutListBone.insert( inoutListBone.end(), _listBone.begin(), _listBone.end() );
     }
 
-    bool RigJiggleNode::checkGroups( const RigInstance& instance, string_view label )
+    bool RigJiggleNode::validateGroups( const RigInstance& instance, string_view label )
     {
         bool bValid = true;
         for ( uint32 nodeIndex = 0; nodeIndex < instance.getNodeCount(); ++nodeIndex )

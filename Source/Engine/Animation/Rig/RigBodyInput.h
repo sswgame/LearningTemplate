@@ -69,7 +69,7 @@ namespace sw
         /** @brief 이번 프레임에 노드가 쓸 충격입니다(워커가 읽는다). */
         const float3& getFrameImpulse() const { return _frameImpulse; }
 
-        /** @brief 지글 묶음 물성을 바꿉니다. 리그의 `Jiggle` 노드가 가리키는 묶음이 모두 있는지는 `RigJiggleNode::checkGroups` 가 본다. */
+        /** @brief 지글 묶음 물성을 바꿉니다. 리그의 `Jiggle` 노드가 가리키는 묶음이 모두 있는지는 `RigJiggleNode::validateGroups` 가 본다. */
         void                                setJiggleGroups( vector<RigJiggleGroupParams> listGroup ) { _listJiggleGroup = std::move( listGroup ); }
         const vector<RigJiggleGroupParams>& getJiggleGroups() const { return _listJiggleGroup; }
         /** @brief 이름의 지글 묶음입니다. 없으면 nullptr 입니다. */

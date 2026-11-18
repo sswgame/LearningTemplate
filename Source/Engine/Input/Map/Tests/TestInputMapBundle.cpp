@@ -280,6 +280,6 @@ SW_TEST_CASE( InputMapBundleTest, EveryGamePackBundleLoads )
     {
         GameConfig preset;
         SW_REQUIRE_TRUE_MSG( ConfigManager::readConfigFile( preset, presetPath ) == ConfigReadResult::Loaded, presetPath.c_str() );
-        SW_EXPECT_TRUE_MSG( InputMapBundle::checkPack( preset._packRoot.get() ), presetPath.c_str() );
+        SW_EXPECT_TRUE_MSG( InputMapBundle::validatePack( preset._packRoot.get() ), presetPath.c_str() );
     }
 }

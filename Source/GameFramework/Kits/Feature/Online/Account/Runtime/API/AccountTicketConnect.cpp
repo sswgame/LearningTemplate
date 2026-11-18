@@ -145,7 +145,7 @@ namespace sw
         return unexpected( std::move( error ) );
     }
 
-    expected<NetAddress> AccountTicketConnector::checkRequest( const AccountTicketRequest& request )
+    expected<NetAddress> AccountTicketConnector::validateRequest( const AccountTicketRequest& request )
     {
         const bool bComplete = request._loginAddress.empty() == false && request._loginName.empty() == false && request._password.empty() == false &&
                                request._serverID.empty() == false && request._timeoutMilliseconds > 0;
@@ -161,7 +161,7 @@ namespace sw
     {
         shutdown();
         // 전송 · TLS 를 만들기 전에 거절한다 — 빈 요청은 연결도 보안 공급자도 건드리지 않는다.
-        if ( const expected<NetAddress> checked = checkRequest( request ); checked.has_value() == false )
+        if ( const expected<NetAddress> checked = validateRequest( request ); checked.has_value() == false )
             return unexpected( checked.error() );
         _pTransport = StreamTransportFactory::createPlatformTransport();
         if ( _pTransport == nullptr )
@@ -190,7 +190,7 @@ namespace sw
     {
         _client.shutdown(); // 이전 연결만 닫는다 — 부르는 쪽의 전송 · TLS(`acquire` 가 막 만든 것)는 그대로 쓴다
         _bPending                               = SW_FALSE;
-        const expected<NetAddress> loginAddress = checkRequest( request );
+        const expected<NetAddress> loginAddress = validateRequest( request );
         if ( loginAddress.has_value() == false )
             return unexpected( loginAddress.error() );
         if ( _bServiceRegistered == false )

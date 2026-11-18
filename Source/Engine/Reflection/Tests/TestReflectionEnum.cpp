@@ -275,7 +275,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
     sw::string report;
     registry.forEachEnum( [&report]( const sw::EnumInfo& info )
     {
-        const auto checkRoundTrip = [&report, &info]( int64 expected )
+        const auto expectRoundTrip = [&report, &info]( int64 expected )
         {
             const sw::string written{ info._bIsBitFlag ? info.toStringFlags( expected ) : info.toString( expected ) };
             int64            parsed = -1;
@@ -285,13 +285,13 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
         int64 allBits = 0;
         for ( const auto& [enumValue, name] : info._mapValueToName )
         {
-            checkRoundTrip( enumValue );
+            expectRoundTrip( enumValue );
             allBits |= enumValue;
         }
         if ( info._bIsBitFlag )
         {
-            checkRoundTrip( 0 );
-            checkRoundTrip( allBits );
+            expectRoundTrip( 0 );
+            expectRoundTrip( allBits );
         }
     } );
     SW_EXPECT_TRUE_MSG( report.empty(), ( "enum text that does not read back:" + report ).c_str() );

@@ -478,12 +478,12 @@ namespace sw
                                    static_cast<int32>( maxVertexSsbo ), shaderslot::kSRVSlotCount );
             }
             // 결합 유닛은 엔진 칸 끝(머티리얼 t16..t31 위 엔진 t32..)까지, 프래그먼트 유닛은 한 셰이더의 샘플러 예산(머티리얼 + 쓰는 엔진 칸)만큼 있어야 한다.
-            // 유닛이 모자라면 큰 번호의 텍스처가 조용히 흰색이 되거나 링크가 지므로 이 백엔드를 쓰지 않는다(판정은 shaderslot::gl::checkTextureUnits 하나).
+            // 유닛이 모자라면 큰 번호의 텍스처가 조용히 흰색이 되거나 링크가 지므로 이 백엔드를 쓰지 않는다(판정은 shaderslot::gl::validateTextureUnits 하나).
             GLint maxFragmentTextureUnit{ 0 };
             GLint maxCombinedTextureUnit{ 0 };
             glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextureUnit );
             glGetIntegerv( GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &maxCombinedTextureUnit );
-            const shaderslot::gl::TextureUnitCheck unitCheck = shaderslot::gl::checkTextureUnits( maxFragmentTextureUnit, maxCombinedTextureUnit );
+            const shaderslot::gl::TextureUnitCheck unitCheck = shaderslot::gl::validateTextureUnits( maxFragmentTextureUnit, maxCombinedTextureUnit );
             if ( unitCheck == shaderslot::gl::TextureUnitCheck::Combined )
             {
                 SW_LOG_WARNING_ID( "OpenGL.OpenGLBackendUnusableCombined", "The OpenGL backend is unusable - %# combined texture units, but engine texture slots need %#.",

@@ -48,7 +48,7 @@ namespace sw::editor
         /** @brief 이 문서의 되돌리기 스택이다 — 창에 포커스가 오면 Ctrl+Z 가 이리 간다(`EditorPanelManager::updateFocusedCommandStack`). */
         CommandStack* findPanelCommandStack() override { return _pDocumentStack.get(); }
         /** @brief 지금 문서 글을 되돌리기와 같은 길(`restoreDocumentFromUndo`)로 적용하고 다시 직렬화한 글이 같은지 봅니다. 읽은 문서가 없거나 문서 글이 비면(글 되돌리기가 없다) 실패입니다. */
-        [[nodiscard]] expected<void> checkUndoRoundTrip() final;
+        [[nodiscard]] expected<void> validateUndoRoundTrip() final;
         /**
          * @brief 연 문서가 dirty 이고 지난 사본과 글이 다르면 그 id 와 글을 꺼냅니다. 상호작용 구간 중이면 미룹니다. 읽지 못한 문서 · 문서 글이 없는 패널은 사본이 없다.
          * @details 글은 주기(`EditorToolDefaults::_documentAutosaveSeconds`)마다 한 번만 만든다 — 편집 알림마다 직렬화하지 않는다(감사 E-9).

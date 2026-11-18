@@ -97,9 +97,9 @@ namespace sw
          */
         [[nodiscard]] static bool loadFromSettings( InputMap& map, const AssetID& settingsAssetID );
         /** @brief 빈 맵에 묶음을 읽어 검사만 합니다. 패널이 편집 중인 맵을 건드리기 전에 부릅니다. */
-        [[nodiscard]] static bool checkSettings( const AssetID& settingsAssetID );
-        /** @brief `checkSettings` 를 팩 루트 @p packRoot 의 게임 설정 파일로 부릅니다 — 쿠킹이 씬을 굽기 전에 부른다. */
-        [[nodiscard]] static bool checkPack( string_view packRoot );
+        [[nodiscard]] static bool validateSettings( const AssetID& settingsAssetID );
+        /** @brief `validateSettings` 를 팩 루트 @p packRoot 의 게임 설정 파일로 부릅니다 — 쿠킹이 씬을 굽기 전에 부른다. */
+        [[nodiscard]] static bool validatePack( string_view packRoot );
     };
 } // namespace sw
 

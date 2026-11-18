@@ -513,7 +513,7 @@ namespace sw
         return false;
     }
 
-    expected<void> AssetPaths::checkLowercaseResourceName( string_view diskPath )
+    expected<void> AssetPaths::validateLowercaseResourceName( string_view diskPath )
     {
         // 리소스 id 는 소문자이고 디스크 이름이 곧 id 다 — 대문자 이름은 리눅스에서 id 로 다시 찾지 못하고 Windows 에서는 소문자 파일과 겹친다.
         string relative;
@@ -538,7 +538,7 @@ namespace sw
     bool AssetPaths::initialize()
     {
         // 리소스 트리에 새로 생기는 이름은 소문자 — 쓰기 경로 하나가 막는다(입구마다 접는 것을 잊어도 대문자 파일이 생기지 않는다). 함수가 상태 없이 루트를 읽어 다시 걸어도 같다.
-        FileUtil::setCreateRule( &AssetPaths::checkLowercaseResourceName );
+        FileUtil::setCreateRule( &AssetPaths::validateLowercaseResourceName );
         // 리소스 트리의 읽기 전용 파일은 체크아웃하지 않은 파일이다 — 지우기 · 옮기기 · 덮는 복사가 모두 Core 입구에서 거절된다(임포트 정리 · 옮기기 · 삭제가 따로 묻지 않는다).
         (void)FileUtil::setCheckoutRule( &AssetPaths::isUnderSourceControl );
         // `_bInitialized` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다 — 루트를 못 찾아 false 로 나가면 다음 호출이 다시 찾는다.

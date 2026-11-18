@@ -29,7 +29,7 @@ namespace sw
             }
 
             /** @brief 한 변 텍셀 수와 단계 수가 범위 안인지 봅니다. 텍셀을 잡기 전에 부릅니다 — 범위 밖 값이 큰 할당을 일으키지 않게. */
-            [[nodiscard]] static expected<void> checkSizeInRange( uint32 resolution, uint32 levelCount )
+            [[nodiscard]] static expected<void> validateSizeInRange( uint32 resolution, uint32 levelCount )
             {
                 if ( resolution < ReflectionProbeAsset::kMinResolution || ReflectionProbeAsset::kMaxResolution < resolution )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe resolution is out of range" } );
@@ -137,7 +137,7 @@ namespace sw
 
     expected<void> ReflectionProbeAsset::validate() const
     {
-        if ( expected<void> size = ReflectionProbeAssetInternal::checkSizeInRange( _resolution, _levelCount ); size.has_value() == false )
+        if ( expected<void> size = ReflectionProbeAssetInternal::validateSizeInRange( _resolution, _levelCount ); size.has_value() == false )
             return size;
         if ( _listTexel.size() != static_cast<size_t>( _resolution ) * _resolution * _levelCount )
             return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe texels do not match its size" } );
@@ -286,7 +286,7 @@ namespace sw
             if ( bFaceFits == false )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a captured face is empty or its pixels do not match its size" } );
         }
-        if ( expected<void> size = Internal::checkSizeInRange( resolution, levelCount ); size.has_value() == false )
+        if ( expected<void> size = Internal::validateSizeInRange( resolution, levelCount ); size.has_value() == false )
             return size;
         outData._capturePosition = capturePosition;
         outData._resolution      = resolution;

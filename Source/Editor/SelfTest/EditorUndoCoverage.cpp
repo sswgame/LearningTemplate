@@ -132,7 +132,7 @@ namespace sw::editor
              * @brief 명령 하나를 실행하고 되돌린 뒤 해시를 맞댑니다. 맞으면 true 입니다(씬을 바꾸지 않은 실행도 true).
              * @details 실패 셋을 가른다: 씬을 바꾸고 기록이 없음(`Unrecorded`), 한 번 실행이 두 단계 이상(`Steps` — 거래가 하나로 묶지 못했다), 되돌려도 해시가 다름(`Mismatch`).
              */
-            static bool checkCommand( const EditorCommandDesc& desc, const EditorCommandTarget& target, CommandStack& stack )
+            static bool validateCommand( const EditorCommandDesc& desc, const EditorCommandTarget& target, CommandStack& stack )
             {
                 const string commandID = desc._id; // 실행이 레지스트리를 다시 지으면 desc 가 사라진다 — 알림에 쓸 id 는 미리 둔다
                 uint64       before    = 0;
@@ -232,7 +232,7 @@ namespace sw::editor
                         continue;
                     }
                     ++checked;
-                    if ( checkCommand( desc, *pTarget, stack ) == false )
+                    if ( validateCommand( desc, *pTarget, stack ) == false )
                         ++failed;
                 }
                 restoreSelection( *pManager, listSelectedID );
@@ -301,7 +301,7 @@ namespace sw::editor
              * @details 실패 셋은 명령 전수와 같다: 씬을 바꾸고 기록이 없음(`PropertyUnrecorded`), 한 쓰기가 두 단계 이상(`PropertySteps`), 되돌려도 해시가 다름(`PropertyMismatch` —
              *          그 프로퍼티는 값 글 하나로 되돌릴 수 없는 결합이 있다: 거래에 오브젝트 스냅샷을 함께 싣는다).
              */
-            static void checkPropertyRow( PropertyGridModel& model, const PropertyValueRow& row, CommandStack& stack, PropertyCoverageCount& inoutCount )
+            static void validatePropertyRow( PropertyGridModel& model, const PropertyValueRow& row, CommandStack& stack, PropertyCoverageCount& inoutCount )
             {
                 uint64 before = 0;
                 if ( computeEditedSceneHash( before ) == false )
@@ -358,7 +358,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief `editor.undoCoverageProperties` — 고른 오브젝트와 그 컴포넌트의 깊이 0 프로퍼티마다 `checkPropertyRow`. 실패가 하나라도 있거나 본 것이 없으면 false 입니다. */
+            /** @brief `editor.undoCoverageProperties` — 고른 오브젝트와 그 컴포넌트의 깊이 0 프로퍼티마다 `validatePropertyRow`. 실패가 하나라도 있거나 본 것이 없으면 false 입니다. */
             static bool runProperties( [[maybe_unused]] const vector<string>& listArgument, string& outReply )
             {
                 if ( editor::getActiveObjectManager() == nullptr )
@@ -397,7 +397,7 @@ namespace sw::editor
                         const PropertyValueRow& row = state._listRow[index];
                         if ( row._depth != 0 || row._bReadOnly != SW_FALSE || row._bDisabled != SW_FALSE )
                             continue;
-                        checkPropertyRow( model, row, stack, count );
+                        validatePropertyRow( model, row, stack, count );
                     }
                     model.endTarget();
                 }

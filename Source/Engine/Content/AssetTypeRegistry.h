@@ -68,7 +68,7 @@ namespace sw
 
     /**
      * @struct AssetTypeLoader
-     * @brief 종류의 진짜 로더와 읽는 방식입니다. 검증 전용 로더는 없다 — 스키마 테스트와 카탈로그 편집기의 검사(`AssetTypeRegistry::checkLoad`)도, 공유 캐시(`SharedAssetCache`)도 같은 함수를 부른다.
+     * @brief 종류의 진짜 로더와 읽는 방식입니다. 검증 전용 로더는 없다 — 스키마 테스트와 카탈로그 편집기의 검사(`AssetTypeRegistry::validateLoad`)도, 공유 캐시(`SharedAssetCache`)도 같은 함수를 부른다.
      * @details 표는 형식을 모르므로 함수를 지운 꼴(`void*`)로 든다. 형식을 아는 쪽은 `of` · `with` 를 고르는 등록 줄뿐이고, 캐시는 같은 이름으로 인스턴스화한 자기 형식의 칸을 넘긴다.
      */
     struct AssetTypeLoader
@@ -77,7 +77,7 @@ namespace sw
         using CheckLoadFunction = bool ( * )( const AssetID& assetID );
 
         LoadIntoFunction  _pLoadInto{ nullptr };          ///< 만들어 둔 에셋에 읽습니다(공유 캐시). 읽지 못하면 오류를 남기고 false 입니다
-        CheckLoadFunction _pCheckLoad{ nullptr };         ///< 새 에셋에 읽어 보고 버립니다. 모르는 키 · 열거자 · 참조는 로더가 알리고 false 입니다
+        CheckLoadFunction _pValidateLoad{ nullptr };      ///< 새 에셋에 읽어 보고 버립니다. 모르는 키 · 열거자 · 참조는 로더가 알리고 false 입니다
         MemoryTag         _memoryTag{ MemoryTag::Asset }; ///< 읽는 동안 거는 할당 태그
 
         /** @brief `bool TAsset::loadFromAsset( const AssetID& )` 로 읽는 종류입니다. */
@@ -91,7 +91,7 @@ namespace sw
         template <typename TAsset, bool ( *pfnLoad )( const AssetID&, TAsset& )>
         [[nodiscard]] static constexpr AssetTypeLoader with( MemoryTag memoryTag = MemoryTag::Asset )
         {
-            return AssetTypeLoader{ &loadInto<TAsset, pfnLoad>, &checkLoad<TAsset, pfnLoad>, memoryTag };
+            return AssetTypeLoader{ &loadInto<TAsset, pfnLoad>, &validateLoad<TAsset, pfnLoad>, memoryTag };
         }
 
     private:
@@ -108,7 +108,7 @@ namespace sw
         }
 
         template <typename TAsset, bool ( *pfnLoad )( const AssetID&, TAsset& )>
-        [[nodiscard]] static bool checkLoad( const AssetID& assetID )
+        [[nodiscard]] static bool validateLoad( const AssetID& assetID )
         {
             TAsset asset;
             return pfnLoad( assetID, asset );
@@ -230,7 +230,7 @@ namespace sw
          * @brief @p def 의 진짜 로더로 @p assetID 를 읽어 보고 버립니다(메모리 태그를 겁니다). 카탈로그 편집기의 검사와 스키마 테스트가 부릅니다.
          * @return 로더가 없는 종류이거나 읽지 못하면 false 입니다(읽기 오류는 로더가 남긴다).
          */
-        [[nodiscard]] static bool checkLoad( const AssetTypeDef& def, const AssetID& assetID );
+        [[nodiscard]] static bool validateLoad( const AssetTypeDef& def, const AssetID& assetID );
         /** @brief 올라온 종류들입니다(올린 순서, 사본). */
         static vector<const AssetTypeDef*> collectTypes();
 

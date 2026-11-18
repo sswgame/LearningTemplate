@@ -42,9 +42,9 @@ SW_TEST_CASE( WriteIDTest, MixedCaseIDWritesLowercaseInTheResourceTree )
 SW_TEST_CASE( WriteIDTest, NewNamesUnderContentMustBeLowercase )
 {
     const string content = ProcessRoots::get()._content.str();
-    SW_EXPECT_FALSE( AssetPaths::checkLowercaseResourceName( content + "/engine/write_id_test_not_yet/Upper.txt" ).has_value() );
-    SW_EXPECT_TRUE( AssetPaths::checkLowercaseResourceName( content + "/engine/write_id_test_not_yet/lower.txt" ).has_value() );
-    SW_EXPECT_TRUE( AssetPaths::checkLowercaseResourceName( ProcessRoots::get()._saved.str() + "/Automation/Upper.txt" ).has_value() );
+    SW_EXPECT_FALSE( AssetPaths::validateLowercaseResourceName( content + "/engine/write_id_test_not_yet/Upper.txt" ).has_value() );
+    SW_EXPECT_TRUE( AssetPaths::validateLowercaseResourceName( content + "/engine/write_id_test_not_yet/lower.txt" ).has_value() );
+    SW_EXPECT_TRUE( AssetPaths::validateLowercaseResourceName( ProcessRoots::get()._saved.str() + "/Automation/Upper.txt" ).has_value() );
 
     // 쓰기 경로가 그 규칙을 지난다(엔진이 선 프로세스는 규칙이 걸려 있다) — 파일이 생기지 않는다.
     const string upperFile = content + "/scratch/write_id_test_not_yet/Upper.txt";

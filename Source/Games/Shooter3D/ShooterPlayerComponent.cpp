@@ -649,7 +649,7 @@ namespace sw
                 bArmed = false;
                 continue;
             }
-            // 기본 탄과 받음은 게임이 기동할 때 봤다(`WeaponCatalog::checkProjectiles`). 여기서 틀리면 그 슬롯이 서지 않는다.
+            // 기본 탄과 받음은 게임이 기동할 때 봤다(`WeaponCatalog::validateProjectiles`). 여기서 틀리면 그 슬롯이 서지 않는다.
             const ProjectileDef* pProjectile = pProjectiles->find( pDef->_projectileID );
             const bool           bEquipped   = pProjectile != nullptr &&
                                    _arrWeapon[weaponIndex].equip( *pDef, *pProjectile, pDef->_maxReserveAmmo / 2, 0x51ed270bu + static_cast<uint32>( weaponIndex ) );

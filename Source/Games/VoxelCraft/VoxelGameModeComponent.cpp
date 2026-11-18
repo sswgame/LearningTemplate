@@ -246,7 +246,7 @@ namespace sw
         if ( bRespawnViews || _bChunkViewsStale != SW_FALSE )
             syncChunkViews( manager );
         if ( _atlasGate.isPending() )
-            checkAtlasGrid( manager );
+            validateAtlasGrid( manager );
         if ( _appliedAutoPlay != ( isAutoPlayOn() ? 1 : 0 ) )
             syncAutoPlayPossession( manager );
     }
@@ -269,7 +269,7 @@ namespace sw
             _bChunkViewsStale = SW_TRUE;
     }
 
-    void VoxelGameModeComponent::checkAtlasGrid( GameObjectManager& manager )
+    void VoxelGameModeComponent::validateAtlasGrid( GameObjectManager& manager )
     {
         if ( _mapChunkView.empty() )
             return;

@@ -789,7 +789,7 @@ namespace sw
         const string_view baseState = base.getStateFormat() == PrefabStateFormat::XML ? string_view( base.getStateData() ) : string_view( convertedBase );
 
         vector<PrefabPartOverride> listOwnPart;
-        if ( PrefabOverrides::checkOverrideTargets( baseState, overrideXML, sourceName ) == false || PrefabOverrides::collectPartOverrides( overrideXML, listOwnPart ) == false )
+        if ( PrefabOverrides::validateOverrideTargets( baseState, overrideXML, sourceName ) == false || PrefabOverrides::collectPartOverrides( overrideXML, listOwnPart ) == false )
             return false;
         if ( PrefabOverrides::makeInstanceState( baseState, overrideXML, _name, _stateData ) == false )
         {

@@ -59,7 +59,7 @@ namespace sw
          *          (언리얼의 빈 정점 선언 · Godot 의 빈 정점 포맷) 빈 슬롯은 메시를 걸지 않고 메시 셰이더로 그린 부르는 쪽의 결함이다. 원소 크기가 다르면
          *          메시의 정점 형식과 PSO 의 형식이 다르다(지형 메시를 일반 형식 PSO 로 그렸다) — 그대로 그리면 속성을 엉뚱한 바이트에서 읽는다.
          */
-        [[nodiscard]] bool checkVertexSlotsBound( const RHIVertexLayout& input, const RHIGeometryBindings& bindings ) const;
+        [[nodiscard]] bool validateVertexSlotsBound( const RHIVertexLayout& input, const RHIGeometryBindings& bindings ) const;
 
     private:
         /** @brief 횟수를 1 증가시키고 증가 전 값을 돌려줍니다. */

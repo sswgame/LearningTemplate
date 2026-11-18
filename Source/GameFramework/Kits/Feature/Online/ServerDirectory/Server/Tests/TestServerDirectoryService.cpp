@@ -29,14 +29,14 @@ namespace
     class AllowGuard final : public IServiceWriteGuard
     {
     public:
-        ServiceStoreResult checkAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::Ok; }
+        ServiceStoreResult validateAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::Ok; }
     };
 
     /** @brief 운영자가 아닌 계정의 가드입니다(허락할 근거가 없다). */
     class DenyGuard final : public IServiceWriteGuard
     {
     public:
-        ServiceStoreResult checkAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::NotFound; }
+        ServiceStoreResult validateAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::NotFound; }
     };
 
     ServiceOperator makeGM()

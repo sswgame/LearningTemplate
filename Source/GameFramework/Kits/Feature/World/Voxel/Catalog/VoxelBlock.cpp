@@ -107,7 +107,7 @@ namespace sw
         return pBlock != nullptr && pBlock->_bOpaque != SW_FALSE;
     }
 
-    bool VoxelBlockCatalog::checkAtlasGrid( const float4& atlasGrid, string_view materialName ) const
+    bool VoxelBlockCatalog::validateAtlasGrid( const float4& atlasGrid, string_view materialName ) const
     {
         const bool bSame = atlasGrid._x == static_cast<float32>( _atlasColumns ) && atlasGrid._y == static_cast<float32>( _atlasRows ) &&
                            atlasGrid._z == static_cast<float32>( _tileTexels );
@@ -121,8 +121,8 @@ namespace sw
     {
         if ( _state == State::Pending && bMaterialsReady )
         {
-            const bool bSame = catalog.checkAtlasGrid( pOpaqueGrid != nullptr ? *pOpaqueGrid : float4{}, materialName ) &&
-                               catalog.checkAtlasGrid( pWaterGrid != nullptr ? *pWaterGrid : float4{}, materialName );
+            const bool bSame = catalog.validateAtlasGrid( pOpaqueGrid != nullptr ? *pOpaqueGrid : float4{}, materialName ) &&
+                               catalog.validateAtlasGrid( pWaterGrid != nullptr ? *pWaterGrid : float4{}, materialName );
             _state = bSame ? State::Matches : State::Differs;
         }
         return canDraw();

@@ -43,15 +43,15 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         // 같은 이름은 같은 검사다. 서비스를 멈췄다 다시 시작해도(모듈 리로드) 보고에 같은 줄이 둘 생기지 않는다.
-        for ( size_t checkIndex = 0; checkIndex < _listCheck.size(); ++checkIndex )
+        for ( size_t validateIndex = 0; validateIndex < _listCheck.size(); ++validateIndex )
         {
-            Check& existing = _listCheck[checkIndex];
+            Check& existing = _listCheck[validateIndex];
             if ( existing._name != name )
                 continue;
             existing._state = HealthState::Failing;
             existing._detail.clear();
             existing._bRequiredForReady = bRequiredForReady ? SW_TRUE : SW_FALSE;
-            return static_cast<int32>( checkIndex );
+            return static_cast<int32>( validateIndex );
         }
         Check& check             = _listCheck.emplace_back();
         check._name              = string( name );
@@ -59,12 +59,12 @@ namespace sw
         return static_cast<int32>( _listCheck.size() ) - 1;
     }
 
-    void ServiceHealthRegistry::setCheck( int32 checkIndex, HealthState state, string_view detail )
+    void ServiceHealthRegistry::setCheck( int32 validateIndex, HealthState state, string_view detail )
     {
         ScopedLock<mutex> lock{ _mutex };
-        if ( checkIndex < 0 || checkIndex >= static_cast<int32>( _listCheck.size() ) )
+        if ( validateIndex < 0 || validateIndex >= static_cast<int32>( _listCheck.size() ) )
             return;
-        Check& check  = _listCheck[static_cast<size_t>( checkIndex )];
+        Check& check  = _listCheck[static_cast<size_t>( validateIndex )];
         check._state  = state;
         check._detail = string( detail );
     }

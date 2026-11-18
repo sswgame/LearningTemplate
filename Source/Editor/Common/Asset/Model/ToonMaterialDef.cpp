@@ -162,7 +162,7 @@ namespace sw::editor
 
             /** @brief 객체의 키를 테이블과 대조합니다. 모르는 키가 있으면 그 이름이 대상인 오류입니다. */
             template <size_t Count>
-            [[nodiscard]] static expected<void> checkKeys( const JSONValue& object, const string_view ( &arrKnown )[Count] )
+            [[nodiscard]] static expected<void> validateKeys( const JSONValue& object, const string_view ( &arrKnown )[Count] )
             {
                 for ( const string& key : object.getMemberNames() )
                 {
@@ -534,7 +534,7 @@ namespace sw::editor
         desc._name                   = materialProperty.get( "name" ).asString();
         const string         context = "VRM 0.x material '" + desc._name + "'";
         const string         shader  = materialProperty.get( "shader" ).asString();
-        const expected<void> keys    = Internal::checkKeys( materialProperty, Internal::kArrVrm0RootKey );
+        const expected<void> keys    = Internal::validateKeys( materialProperty, Internal::kArrVrm0RootKey );
         if ( keys.has_value() == false )
             return unexpected( Internal::withContext( keys.error(), context ) );
 
@@ -582,7 +582,7 @@ namespace sw::editor
             Internal::makeFlat( desc );
             return desc;
         }
-        const expected<void> keys = Internal::checkKeys( mtoon, Internal::kArrMtoon1Key );
+        const expected<void> keys = Internal::validateKeys( mtoon, Internal::kArrMtoon1Key );
         if ( keys.has_value() == false )
             return unexpected( Internal::withContext( keys.error(), context + ": VRMC_materials_mtoon" ) );
 

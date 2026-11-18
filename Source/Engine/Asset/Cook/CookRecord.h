@@ -121,7 +121,7 @@ namespace sw
         /** @brief `store` 의 파일 꼴입니다 — 파일 @p sourcePath 를 조각으로 읽어 항목으로 씁니다(메모리로 들지 않는다). */
         [[nodiscard]] bool store( uint64 key, string_view keyDescription, string_view sourcePath ) const;
         /** @brief 항목 파일 @p path 를 검증합니다. Valid 면 @p outBytes 에 본문을 담습니다. 로그를 남기지 않습니다. */
-        [[nodiscard]] static DerivedDataEntryState checkEntry( string_view path, string_view keyDescription, vector<uint8>& outBytes );
+        [[nodiscard]] static DerivedDataEntryState validateEntry( string_view path, string_view keyDescription, vector<uint8>& outBytes );
         /** @brief 층 @p layerIndex 의 키 파일 경로입니다. */
         string                          makePath( size_t layerIndex, uint64 key ) const;
         const vector<DerivedDataLayer>& getLayers() const { return _listLayer; }

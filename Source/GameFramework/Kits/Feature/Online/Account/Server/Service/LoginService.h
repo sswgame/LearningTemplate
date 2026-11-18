@@ -222,7 +222,7 @@ namespace sw
          * @details 캐시가 없거나 닿지 못하면 이 서버의 버킷(`consumeAttempt`, 이미 지났다)만으로 막고 계속한다 — 캐시 장애가 로그인 전체를 멈추지 않게 한다.
          */
         template <typename TContinue>
-        void checkSharedAttempt( uint64 clientKey, LoginOperation operation, uint64 requestTag, const LoginGrant& grant, TContinue&& onAllowed );
+        void validateSharedAttempt( uint64 clientKey, LoginOperation operation, uint64 requestTag, const LoginGrant& grant, TContinue&& onAllowed );
         void onCacheReply( const EphemeralReply& reply );
         /** @brief 제공자를 찾아 확인을 맡깁니다. 서버 nonce 를 쓰는 제공자면 그 앞에서 nonce 를 소비합니다(`beginVerification`). */
         void startVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token, const LoginGrant& buildGrant,

@@ -438,7 +438,7 @@ namespace sw
                 }
 
                 /** @brief 수치 설정이 형식에 맞는지 봅니다(식에 쓰이지 않는 `Min` · `Default` 도 데이터의 오타를 잡는다). */
-                void checkNumericSettings( const MaterialGraphNodeKind& kind, const MaterialGraphNodeDef& node, string_view scope )
+                void validateNumericSettings( const MaterialGraphNodeKind& kind, const MaterialGraphNodeDef& node, string_view scope )
                 {
                     for ( uint32 index = 0; index < kind.getSettingCount(); ++index )
                     {
@@ -524,7 +524,7 @@ namespace sw
                         listValue.push_back( resolveInput( graph, listResult, node, pin._name, pin._type, pin._default, scope ) );
                         bAllRead = bAllRead && listValue.back()._type != MaterialGraphValueKind::Invalid;
                     }
-                    checkNumericSettings( kind, node, scope );
+                    validateNumericSettings( kind, node, scope );
                     const MaterialGraphValueKind anyType = resolveAny( kind, listValue, node, scope );
                     vector<string>               listInput;
                     for ( uint32 index = 0; index < kind.getInputCount(); ++index )
@@ -761,7 +761,7 @@ namespace sw
                         report( scope, node._name, "BadName", "layer node name prefixes material fields - use letters, digits and '_'" );
                         return;
                     }
-                    checkNumericSettings( kind, node, scope );
+                    validateNumericSettings( kind, node, scope );
                     MaterialGraphDef layer;
                     if ( loadSubgraph( node, scope, layer ) == false )
                         return;
@@ -974,7 +974,7 @@ namespace sw
                     return _listIssue.size() == issueCount;
                 }
 
-                /** @brief 칸 선언입니다. 원소 크기가 16 의 배수여야 해 float4 를 앞에 두고 끝을 채운다(`ShaderBindingValidatorIssue::checkStructuredElementLayouts`). */
+                /** @brief 칸 선언입니다. 원소 크기가 16 의 배수여야 해 float4 를 앞에 두고 끝을 채운다(`ShaderBindingValidatorIssue::validateStructuredElementLayouts`). */
                 [[nodiscard]] string makeFieldLines() const
                 {
                     string text;

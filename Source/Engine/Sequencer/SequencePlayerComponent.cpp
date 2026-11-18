@@ -171,7 +171,7 @@ namespace sw
     {
         // 다시 틀기는 지금 재생을 끝내고 시작한다 — 되돌릴 값은 이번 재생의 시작 상태여야 한다.
         endPlayback( SequenceHistoryKind::Stopped );
-        if ( checkBindings() == false )
+        if ( validateBindings() == false )
             return;
         _player.setFramesPerSecond( _framesPerSecond );
         _player.setLoop( _bLoop == SW_TRUE );
@@ -191,7 +191,7 @@ namespace sw
         endPlayback( SequenceHistoryKind::Stopped );
     }
 
-    bool SequencePlayerComponent::checkBindings()
+    bool SequencePlayerComponent::validateBindings()
     {
         GameObject*    pOwner = getOwner();
         vector<uint32> listUnbound;

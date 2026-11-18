@@ -23,7 +23,7 @@ namespace sw
             }
 
             /** @brief 한 모드만 보는 검사(판 범위 · 덮어쓰기 허락 · 의존 · 충돌)입니다. */
-            [[nodiscard]] static bool checkMod( const vector<ModManifest>& listManifest, size_t modIndex, const ModSupportSettings& settings )
+            [[nodiscard]] static bool validateMod( const vector<ModManifest>& listManifest, size_t modIndex, const ModSupportSettings& settings )
             {
                 const ModManifest& manifest = listManifest[modIndex];
                 if ( settings._contentVersion < manifest._minContentVersion || settings._contentVersion > manifest._maxContentVersion )
@@ -107,7 +107,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "ModResolver.DuplicateID", "Mod '%#' is enabled twice", listManifest[index]._id );
                 return false;
             }
-            if ( Internal::checkMod( listManifest, index, settings ) == false )
+            if ( Internal::validateMod( listManifest, index, settings ) == false )
                 return false;
         }
 

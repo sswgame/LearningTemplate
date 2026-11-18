@@ -427,7 +427,7 @@ namespace sw::editor
                     imported._fileStem    = ModelImportUtil::makeNumberedStem( baseStem, useCount );
                     inoutResult._listClip.push_back( std::move( imported ) );
                 }
-                return checkClipNamesMatched( rule, listRequestedFound, mapExtra, sourcePath );
+                return validateClipNamesMatched( rule, listRequestedFound, mapExtra, sourcePath );
             }
 
             /** @brief 클립 부가 데이터(루프 덮어쓰기 · 알림 · 커브)를 가져온 클립에 얹습니다. */
@@ -449,8 +449,8 @@ namespace sw::editor
              * @brief 규칙이 고른 클립이 원본에 모두 있었는지, 부가 데이터가 가리킨 클립이 모두 가져와졌는지 봅니다. 하나라도 어긋나면 이름을 남기고 false 입니다.
              * @details 부가 데이터에 남은 이름은 원본(또는 규칙이 고른 클립)에 없는 클립입니다. 철자가 틀린 알림이 조용히 사라지지 않도록 오류로 처리합니다.
              */
-            [[nodiscard]] static bool checkClipNamesMatched( const ModelImportRule& rule, const vector<uint8>& listRequestedFound,
-                                                             const unordered_map<string, ModelImportAnimation::ClipExtra>& mapLeftoverExtra, string_view sourcePath )
+            [[nodiscard]] static bool validateClipNamesMatched( const ModelImportRule& rule, const vector<uint8>& listRequestedFound,
+                                                                const unordered_map<string, ModelImportAnimation::ClipExtra>& mapLeftoverExtra, string_view sourcePath )
             {
                 bool bValid = true;
                 for ( size_t requestIndex = 0; requestIndex < rule._listClipName.size(); ++requestIndex )

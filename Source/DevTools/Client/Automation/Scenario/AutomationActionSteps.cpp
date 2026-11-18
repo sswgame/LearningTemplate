@@ -55,7 +55,7 @@ namespace sw
             }
 
             /** @brief 프레임과 초를 함께 적었으면 두 속성 이름이 대상인 오류입니다. */
-            [[nodiscard]] static expected<void> checkDurationChoice( uint32 frames, float32 seconds, const utf8* pFramesName, const utf8* pSecondsName )
+            [[nodiscard]] static expected<void> validateDurationChoice( uint32 frames, float32 seconds, const utf8* pFramesName, const utf8* pSecondsName )
             {
                 if ( frames == kAutomationNoFrames || seconds == kAutomationNoSeconds )
                     return {};
@@ -75,16 +75,16 @@ namespace sw
                 AutomationActionParams params;
                 return step.readProperties( params )
                     .and_then( [&]()
-                { return checkDurationChoice( params._hold, params._seconds, "hold", "seconds" ); } )
+                { return validateDurationChoice( params._hold, params._seconds, "hold", "seconds" ); } )
                     .and_then( [&]()
-                { return checkDurationChoice( params._interval, params._intervalSeconds, "interval", "intervalSeconds" ); } );
+                { return validateDurationChoice( params._interval, params._intervalSeconds, "interval", "intervalSeconds" ); } );
             }
 
             static expected<void> validateAxis( const AutomationStep& step )
             {
                 AutomationActionAxisParams params;
                 return step.readProperties( params ).and_then( [&]()
-                { return checkDurationChoice( params._frames, params._seconds, "frames", "seconds" ); } );
+                { return validateDurationChoice( params._frames, params._seconds, "frames", "seconds" ); } );
             }
 
             /** @brief 바인딩이 쓰는 장치 종류입니다. */

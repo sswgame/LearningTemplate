@@ -125,7 +125,7 @@ namespace sw
                 }
                 else
                 {
-                    return EditorModuleManager::checkAssetReferencesWithEditorModule() ? TaskResult::Succeeded : TaskResult::Failed;
+                    return EditorModuleManager::validateAssetReferencesWithEditorModule() ? TaskResult::Succeeded : TaskResult::Failed;
                 }
             }
 

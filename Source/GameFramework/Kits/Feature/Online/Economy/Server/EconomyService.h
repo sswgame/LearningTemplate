@@ -242,7 +242,7 @@ namespace sw
 
     protected:
         /** @brief 구매 · 지급 · 철회는 원격 설정의 기능 플래그가 꺼져 있으면 본문을 읽기 전에 `kFeatureDisabled` 로 끝냅니다. 조회는 된다. */
-        uint16 checkRequest( OnlineServiceHost& host, const OnlineCallContext& context ) override;
+        uint16 validateRequest( OnlineServiceHost& host, const OnlineCallContext& context ) override;
 
     private:
         /** @brief 잔액 변경 알림 창구입니다. 서비스의 `notifyBalancesChanged` 로 넘깁니다. 서비스가 멤버로 들어 수명이 같다. */

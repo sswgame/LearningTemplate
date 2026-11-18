@@ -106,7 +106,7 @@ namespace sw
         /** @brief `_sequencePath` 의 시퀀스를 플레이어에 엽니다. 경로가 비었으면 아무것도 하지 않고, 열지 못하면 경고합니다. */
         void loadSequenceFromPath();
         /** @brief 재생에 필요한 바인딩이 모두 묶였으면 true 입니다. 아니면 비어 있는 바인딩마다 오류와 기록을 남긴다. */
-        [[nodiscard]] bool checkBindings();
+        [[nodiscard]] bool validateBindings();
 
         PROPERTY( Category = "Sequence", DisplayName = "Sequence", Tooltip = "Sequence asset (.seq.xml)" )
         AssetRef<SequenceAsset> _sequencePath;

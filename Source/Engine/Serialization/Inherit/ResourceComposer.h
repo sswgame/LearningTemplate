@@ -160,8 +160,8 @@ namespace sw
          * @details 칸을 형식 기본값으로 되돌린 편집은 차이로 적을 수 없다. 그때 부모 없는 한 벌로 쓰면 변형이 끊기므로 쓰지 않고 알린다(언리얼 Blueprint 의 CDO 차이 저장, Godot 씬 상속의 프로퍼티 복원과 같은 자리 — 기억에 의존).
          * @return 다르면 그 까닭입니다(로그는 부르는 쪽이 남깁니다).
          */
-        [[nodiscard]] static expected<void> checkDeltaReadsBack( const string& deltaText, string_view fullText, string_view baseID, const ResourceRereadFunction& reread );
-        /** @brief 차이를 만들어(`DataInheritance::makeDelta`) 다시 읽어 봅니다(`checkDeltaReadsBack`). 편집 창처럼 까닭을 화면에 적는 쪽이 부릅니다. */
+        [[nodiscard]] static expected<void> validateDeltaReadsBack( const string& deltaText, string_view fullText, string_view baseID, const ResourceRereadFunction& reread );
+        /** @brief 차이를 만들어(`DataInheritance::makeDelta`) 다시 읽어 봅니다(`validateDeltaReadsBack`). 편집 창처럼 까닭을 화면에 적는 쪽이 부릅니다. */
         [[nodiscard]] static expected<void> makeCheckedDelta( string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, const ResourceRereadFunction& reread, string& outDeltaText );
         /**
          * @brief `_base` 문서 저장의 한 벌입니다. 부모와의 차이를 만들고, 다시 읽어 대조하고, 씁니다. 실패는 오류 로그(`ResourceSave.DeltaNotSaved` · `ResourceSave.WriteFailed`)를 남기고 false 입니다.

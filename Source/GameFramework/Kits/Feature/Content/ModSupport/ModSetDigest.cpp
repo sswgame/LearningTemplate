@@ -103,7 +103,7 @@ namespace sw
         return {};
     }
 
-    bool ModSetDigest::checkSaveCompatible( const ModSetDigest& saved ) const
+    bool ModSetDigest::validateSaveCompatible( const ModSetDigest& saved ) const
     {
         for ( const ModDigestEntry& savedEntry : saved._listEntry )
         {

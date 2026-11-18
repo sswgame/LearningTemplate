@@ -33,7 +33,7 @@ namespace sw
         [[nodiscard]] static bool parseXMLText( string_view text, string_view sourceName, ModAllowList& outList );
 
         /** @brief 구성 @p digest 의 모든 모드가 id · 판 · 내용 해시까지 목록에 있으면 true 입니다. 아니면 첫 모드의 이유를 오류로 남기고 false 입니다. */
-        [[nodiscard]] bool checkDigest( const ModSetDigest& digest ) const;
+        [[nodiscard]] bool validateDigest( const ModSetDigest& digest ) const;
 
     private:
         /** @brief `<Mod>` 한 줄을 읽습니다(카탈로그 표의 손 읽기, `parseXMLText`). */

@@ -33,7 +33,7 @@ SW_MATERIAL_BEGIN
     float4 _influencer3;
     uint   _albedoMap;
     float  _alphaCutoff; // MATERIAL_ALPHA_CUTOFF 일 때 이 값보다 작은 알파를 버린다(잎 · 꽃 카드)
-    // 원소 크기를 16 의 배수로 — DX 의 촘촘한 간격과 GL std430 배열 간격이 같아야 한다(ShaderBindingValidator::checkStructuredElementLayouts). 머티리얼 속성이 아니다
+    // 원소 크기를 16 의 배수로 — DX 의 촘촘한 간격과 GL std430 배열 간격이 같아야 한다(ShaderBindingValidator::validateStructuredElementLayouts). 머티리얼 속성이 아니다
     uint _swPad0;
     uint _swPad1;
 }

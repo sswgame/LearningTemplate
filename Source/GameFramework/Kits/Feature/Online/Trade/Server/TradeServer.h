@@ -55,7 +55,7 @@ namespace sw
 
     protected:
         /** @brief 원격 설정의 기능 플래그가 꺼져 있으면 본문을 읽기 전에 `kFeatureDisabled` 로 끝냅니다. */
-        uint16 checkRequest( OnlineServiceHost& host, const OnlineCallContext& context ) override;
+        uint16 validateRequest( OnlineServiceHost& host, const OnlineCallContext& context ) override;
 
     private:
         struct PendingLookup

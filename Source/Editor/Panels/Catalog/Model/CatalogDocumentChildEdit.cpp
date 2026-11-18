@@ -269,7 +269,7 @@ namespace sw::editor
         return false;
     }
 
-    bool CatalogDocument::checkChildRow( int32 rowIndex )
+    bool CatalogDocument::validateChildRow( int32 rowIndex )
     {
         if ( canCreateVariant( rowIndex ) )
             return true;
@@ -280,7 +280,7 @@ namespace sw::editor
     bool CatalogDocument::setChildCell( int32 rowIndex, const CatalogChildPath& path, string_view column, string_view value )
     {
         using Internal = CatalogDocumentChildEditInternal;
-        if ( checkChildRow( rowIndex ) == false || path.empty() )
+        if ( validateChildRow( rowIndex ) == false || path.empty() )
             return false;
         const CatalogXMLElement& row         = _parsed.getElement( rowIndex );
         const XMLNode            parentEntry = _inheritance.findParentEntry( row );
@@ -335,7 +335,7 @@ namespace sw::editor
 
     bool CatalogDocument::unsetChildCell( int32 rowIndex, const CatalogChildPath& path, string_view column )
     {
-        if ( checkChildRow( rowIndex ) == false || path.empty() )
+        if ( validateChildRow( rowIndex ) == false || path.empty() )
             return false;
         CatalogChildDraft     draft{ _text, rowIndex, *this };
         const optional<int32> written = draft.find( path );
@@ -351,7 +351,7 @@ namespace sw::editor
 
     bool CatalogDocument::addChildNode( int32 rowIndex, const CatalogChildPath& ownerPath, string_view name, string_view keyAttribute )
     {
-        if ( checkChildRow( rowIndex ) == false )
+        if ( validateChildRow( rowIndex ) == false )
             return false;
         const CatalogXMLElement& row = _parsed.getElement( rowIndex );
         CatalogChildDraft        draft{ _text, rowIndex, *this };
@@ -432,7 +432,7 @@ namespace sw::editor
     bool CatalogDocument::removeChildNode( int32 rowIndex, const CatalogChildPath& path )
     {
         using Internal = CatalogDocumentChildEditInternal;
-        if ( checkChildRow( rowIndex ) == false || path.empty() )
+        if ( validateChildRow( rowIndex ) == false || path.empty() )
             return false;
         const CatalogXMLElement& row         = _parsed.getElement( rowIndex );
         const XMLNode            parentEntry = _inheritance.findParentEntry( row );
@@ -480,7 +480,7 @@ namespace sw::editor
 
     bool CatalogDocument::restoreChildNode( int32 rowIndex, const CatalogChildPath& path )
     {
-        if ( checkChildRow( rowIndex ) == false || path.empty() )
+        if ( validateChildRow( rowIndex ) == false || path.empty() )
             return false;
         CatalogChildDraft     draft{ _text, rowIndex, *this };
         const optional<int32> written = draft.find( path );
@@ -493,7 +493,7 @@ namespace sw::editor
 
     bool CatalogDocument::moveChildNode( int32 rowIndex, const CatalogChildPath& path, bool bEarlier )
     {
-        if ( checkChildRow( rowIndex ) == false || path.empty() || path.back()._keyAttribute.empty() )
+        if ( validateChildRow( rowIndex ) == false || path.empty() || path.back()._keyAttribute.empty() )
             return false;
         const CatalogChildStep& leaf      = path.back();
         const XMLNode           flatOwner = CatalogInheritanceView::findByPath( _inheritance.findFlatEntry( _parsed.getElement( rowIndex ) ), CatalogDocumentChildEditInternal::makeOwnerPath( path ) );
@@ -530,7 +530,7 @@ namespace sw::editor
 
     bool CatalogDocument::resetChildOrder( int32 rowIndex, const CatalogChildPath& path )
     {
-        if ( checkChildRow( rowIndex ) == false || path.empty() )
+        if ( validateChildRow( rowIndex ) == false || path.empty() )
             return false;
         CatalogChildDraft     draft{ _text, rowIndex, *this };
         const optional<int32> written = draft.find( path );
@@ -545,7 +545,7 @@ namespace sw::editor
 
     bool CatalogDocument::clearChildGroup( int32 rowIndex, const CatalogChildPath& ownerPath, string_view name )
     {
-        if ( checkChildRow( rowIndex ) == false )
+        if ( validateChildRow( rowIndex ) == false )
             return false;
         CatalogChildDraft     draft{ _text, rowIndex, *this };
         const optional<int32> ownerIndex = draft.ensure( ownerPath );
@@ -560,7 +560,7 @@ namespace sw::editor
 
     bool CatalogDocument::inheritChildGroup( int32 rowIndex, const CatalogChildPath& ownerPath, string_view name )
     {
-        if ( checkChildRow( rowIndex ) == false )
+        if ( validateChildRow( rowIndex ) == false )
             return false;
         CatalogChildDraft     draft{ _text, rowIndex, *this };
         const optional<int32> ownerIndex = draft.find( ownerPath );
@@ -573,7 +573,7 @@ namespace sw::editor
 
     bool CatalogDocument::overrideChildGroup( int32 rowIndex, const CatalogChildPath& ownerPath, string_view name )
     {
-        if ( checkChildRow( rowIndex ) == false )
+        if ( validateChildRow( rowIndex ) == false )
             return false;
         const string  nameText{ name };
         const XMLNode parentEntry = _inheritance.findParentEntry( _parsed.getElement( rowIndex ) );

@@ -131,6 +131,6 @@ SW_TEST_CASE( DerivedDataCacheTest, ExistingSameEntryIsKept )
     vector<uint8> bytes;
     SW_REQUIRE_TRUE( cache.find( kKey, "job-a", bytes ) );
     SW_EXPECT_TRUE( bytes == changed );
-    SW_EXPECT_TRUE( DerivedDataCache::checkEntry( path, "job-a", bytes ) == DerivedDataEntryState::Valid );
-    SW_EXPECT_TRUE( DerivedDataCache::checkEntry( path, "job-b", bytes ) == DerivedDataEntryState::KeyCollision );
+    SW_EXPECT_TRUE( DerivedDataCache::validateEntry( path, "job-a", bytes ) == DerivedDataEntryState::Valid );
+    SW_EXPECT_TRUE( DerivedDataCache::validateEntry( path, "job-b", bytes ) == DerivedDataEntryState::KeyCollision );
 }

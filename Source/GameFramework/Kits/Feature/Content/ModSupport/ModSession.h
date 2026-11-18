@@ -77,8 +77,8 @@ namespace sw
         uint64 getContentConfigHash() const override { return _digest._configHash; }
         /** @brief 세이브 머리에 적는 구성 글(`ModSetDigest::toText`)입니다. */
         string makeContentConfigText() const override { return _digest.toText(); }
-        /** @brief 세이브 머리의 구성 글을 읽어 지금 구성과 견줍니다(`ModSetDigest::checkSaveCompatible`). 글이 틀렸으면 거절한다. */
-        [[nodiscard]] bool checkSaveCompatible( string_view savedText ) const override;
+        /** @brief 세이브 머리의 구성 글을 읽어 지금 구성과 견줍니다(`ModSetDigest::validateSaveCompatible`). 글이 틀렸으면 거절한다. */
+        [[nodiscard]] bool validateSaveCompatible( string_view savedText ) const override;
 
         /** @brief 모드 설치 폴더입니다 — 패키지는 실행 파일 옆 `Mods`, 저장소는 `Test/Mods`(시연 모드는 시나리오 · 테스트 자료). */
         static string getInstallFolder();
@@ -102,7 +102,7 @@ namespace sw
          * @brief 팩을 검사하고 내용 해시를 구합니다(크기 · 도메인 없음 · 항목 수 · 항목 크기 · 경로 꼴 · 모드 접두 또는 밝힌 덮어쓰기 · 밝힌 덮어쓰기와 층이 모두 들었고 기본 리소스가 있음).
          * @details 층 폴더(`mods/<id>/layer/`)의 항목은 밝힌 층이어야 한다 — 엔진 층은 그 뿌리 아래 파일이면 무엇이든 얹으므로, 밝히지 않은 층 파일은 정책(`<Overridable>`)을 지나지 않고 기본 리소스를 바꾼다.
          */
-        [[nodiscard]] static bool checkPack( string_view packPath, const ModManifest& manifest, const ModSupportSettings& settings, uint64& outContentHash );
+        [[nodiscard]] static bool validatePack( string_view packPath, const ModManifest& manifest, const ModSupportSettings& settings, uint64& outContentHash );
 
     private:
         AssetManager&          _assets;
