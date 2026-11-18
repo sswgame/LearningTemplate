@@ -3,6 +3,7 @@
 // 공개 길드 신청, 경험치 · 레벨, 알림과 이벤트, 저장소 실패. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
@@ -10,6 +11,7 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -1149,4 +1151,122 @@ SW_TEST_CASE( GuildServiceTest, StoragePageSizeIsCappedByTheServer )
     SW_EXPECT_TRUE( rig.listStorage( kMember, GuildStorageCursor{ "BAD/../key", kInvalidAccountID } )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.listStorage( kMember, GuildStorageCursor{ "", kMaster } )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.listStorage( kOutside )._result == SocialResult::NotInGuild );
+}
+
+namespace
+{
+    /** @brief 서비스 레코드를 저장소에 바로 씁니다 — API 로는 만들 수 없는 "상한 한 쪽보다 많은" 상태를 세운다(옛 데이터 · 다른 판 서버 · 불변식이 깨진 뒤). */
+    struct GuildRawRecord
+    {
+        static vector<uint8> encode( std::initializer_list<int64> listValue )
+        {
+            BitWriter writer;
+            writer.writeBits( 1, 8 ); // 서비스의 레코드 형식 판
+            for ( const int64 value : listValue )
+            {
+                writer.writeVarInt( value );
+            }
+            return writer.getBytes();
+        }
+
+        static string makePairKey( uint64 first, uint64 second ) { return ServiceKeyUtil::makeHex64( first ) + "/" + ServiceKeyUtil::makeHex64( second ); }
+
+        static void put( MemoryServiceDatabase& database, const utf8* pTable, const string& key, const vector<uint8>& bytes )
+        {
+            ServiceTransaction transaction;
+            transaction.put( hashed_string( pTable ), key, bytes, ServiceRecord::kAnyVersion );
+            SW_REQUIRE_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
+        }
+
+        static int32 countPrefix( MemoryServiceDatabase& database, const utf8* pTable, const string& prefix )
+        {
+            int32                    count  = 0;
+            const ServiceStoreResult listed = ServiceRecordReader::visitAll( database, hashed_string( pTable ), prefix, 64, [&]( const ServiceRecord& )
+            {
+                ++count;
+                return true;
+            } );
+            SW_EXPECT_TRUE( listed == ServiceStoreResult::Ok );
+            return count;
+        }
+    };
+} // namespace
+
+/**
+ * @brief [GuildServiceTest] 죽은 신청 60 개가 키 앞을 채우고 살아 있는 신청이 50 개면, 새 신청은 PendingLimit 이고 목록은 살아 있는 50 개를 모두 보인다
+ * @details 옛 구현은 한 쪽(50)만 읽어 앞의 죽은 신청만 보고 살아 있는 수를 0 으로 셌다 — 상한을 넘겨 받고, 목록은 비었다.
+ */
+SW_TEST_CASE( GuildServiceTest, ApplicationCapCountsPastDeadApplications )
+{
+    GuildFixture rig;
+    const uint64 guildID = rig.makeGuild();
+    SW_EXPECT_TRUE( rig.setOpen( kMaster, true ) == SocialResult::Ok );
+    for ( AccountID applicant = 10; applicant < 70; ++applicant ) // 죽은 신청(키가 앞이다)
+    {
+        GuildRawRecord::put( rig._database, "social_guild_application", GuildRawRecord::makePairKey( guildID, applicant ), GuildRawRecord::encode( { kNowMs - 2000, kNowMs - 1000 } ) );
+    }
+    for ( AccountID applicant = 1000; applicant < 1000 + static_cast<AccountID>( GuildLimit::kMaxApplication ); ++applicant ) // 살아 있는 신청
+    {
+        GuildRawRecord::put( rig._database, "social_guild_application", GuildRawRecord::makePairKey( guildID, applicant ),
+                             GuildRawRecord::encode( { kNowMs, kNowMs + GuildLimit::kApplicationLifetimeMs } ) );
+    }
+
+    SW_EXPECT_TRUE( rig.run( GuildOperation::Apply, 5000, kInvalidAccountID, "", guildID )._result == SocialResult::PendingLimit );
+    const GuildCompletion listed = rig.run( GuildOperation::ListApplications, kOfficer );
+    SW_REQUIRE_TRUE( listed._result == SocialResult::Ok );
+    SW_EXPECT_EQUAL( size_t( GuildLimit::kMaxApplication ), listed._listApplication.size() );
+}
+
+/**
+ * @brief [GuildServiceTest] 맡긴 사람이 떠나면 그가 준 꺼내기 허용을 상한(32)보다 많아도 모두 지운다 — 옛 구현은 한 쪽만 지워 남은 허용이 다시 들어온 멤버에게 살아났다
+ */
+SW_TEST_CASE( GuildServiceTest, LeavingErasesEveryGrantPastOnePage )
+{
+    PaidGemPolicy policy;
+    GuildFixture  rig;
+    rig._service.setLedgerPolicy( &policy );
+    const uint64 guildID = rig.makeGuild();
+    rig.grant( kMember, 10, "cur.gem" );
+    SW_REQUIRE_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 10, "test/grant.dep", "cur.gem" )._result == SocialResult::Ok );
+    const string    prefix      = GuildRawRecord::makePairKey( guildID, kMember ) + "/";
+    constexpr int32 kGrantCount = GuildLimit::kMaxStorageGrant + 8;
+    for ( int32 index = 0; index < kGrantCount; ++index )
+    {
+        const string key = prefix + ServiceKeyUtil::makeHex64( kOfficer ) + "/cur.g" + to_string( 100 + index );
+        GuildRawRecord::put( rig._database, "social_guild_storage_grant", key, GuildRawRecord::encode( { 1 } ) );
+    }
+
+    SW_REQUIRE_TRUE( rig.runKeyed( GuildOperation::Leave, kMember, kInvalidAccountID, "test/grant.leave" ) == SocialResult::Ok );
+    SW_EXPECT_EQUAL( 0, GuildRawRecord::countPrefix( rig._database, "social_guild_storage_grant", prefix ) );
+    SW_EXPECT_EQUAL( int64( 10 ), rig.getBalanceOf( kMember, "cur.gem" ) );
+}
+
+/**
+ * @brief [GuildServiceTest] 혼자 남은 길드장의 계정을 지우면 맡긴 사람 기록이 한 쪽(100)보다 많아도 모두 태우고 지운다 — 옛 구현은 뒤의 몫을 해산한 길드에 남겼다
+ */
+SW_TEST_CASE( GuildServiceTest, AccountDeletionBurnsEveryShareRecordPastOnePage )
+{
+    GuildFixture rig;
+    const uint64 guildID = rig.run( GuildOperation::Create, kOutside, kInvalidAccountID, "Solo" )._info._guildID;
+    SW_REQUIRE_TRUE( guildID != 0 );
+    constexpr AccountID kLastDepositor = 10 + static_cast<AccountID>( GuildLimit::kMaxMember ) + 20;
+    for ( AccountID depositorID = 10; depositorID <= kLastDepositor; ++depositorID )
+    {
+        GuildRawRecord::put( rig._database, "social_guild_depositor", GuildRawRecord::makePairKey( guildID, depositorID ), vector<uint8>{ 1 } );
+    }
+    // 마지막 기록의 몫에 잔액을 둔다 — 한 쪽 밖이다
+    string token = ServiceKeyUtil::makeHex64( guildID ) + ".";
+    ServiceKeyUtil::appendHex64( token, kLastDepositor );
+    LedgerTransferRequest request;
+    request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeEscrow( "guild", token ), "cur.gem", 7 } );
+    request._journalKey = "test/share.last";
+    request._reason     = "test.grant";
+    LedgerTransferResult result;
+    SW_REQUIRE_TRUE( Ledger::executeTransfer( rig._database, request, result ) == LedgerResult::Ok );
+
+    SW_REQUIRE_TRUE( GuildService::eraseAccount( rig._database, kOutside, kNowMs ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "social_guild_depositor" ) ) );
+    vector<LedgerBalance> listShare;
+    SW_REQUIRE_TRUE( Ledger::listBalances( rig._database, LedgerHolder::makeEscrow( "guild", token ), listShare ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listShare.empty() );
 }

@@ -545,11 +545,18 @@ namespace sw
                 LeaderboardRead<vector<AchievementProgress>> read;
                 vector<ServiceRecord>                        listStatRecord;
                 vector<ServiceRecord>                        listAchievementRecord;
-                const string                                 prefix  = ServiceKeyUtil::makeHex64( accountID ) + "/";
-                const bool                                   bReadOk = ServiceRecordReader::readPage( connection, Internal::getStatTable(), prefix, "", LeaderboardLimit::kMaxStatCount, false, listStatRecord )._result ==
-                                         ServiceStoreResult::Ok &&
-                                     ServiceRecordReader::readPage( connection, Internal::getAchievementTable(), prefix, "", LeaderboardLimit::kMaxAchievementCount, false, listAchievementRecord )._result ==
-                                         ServiceStoreResult::Ok;
+                const string                                 prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
+                // 끝까지 읽는다 — 통계는 쓰기에 계정당 상한이 없어 한 쪽만 읽으면 뒤의 통계를 쓰는 업적의 진행률이 0 으로 보인다
+                const auto collectInto = [&]( const hashed_string& table, int32 pageSize, vector<ServiceRecord>& outList )
+                {
+                    return ServiceRecordReader::visitAll( connection, table, prefix, pageSize, [&]( const ServiceRecord& record )
+                    {
+                        outList.push_back( record );
+                        return true;
+                    } ) == ServiceStoreResult::Ok;
+                };
+                const bool bReadOk = collectInto( Internal::getStatTable(), LeaderboardLimit::kMaxStatCount, listStatRecord ) &&
+                                     collectInto( Internal::getAchievementTable(), LeaderboardLimit::kMaxAchievementCount, listAchievementRecord );
                 if ( bReadOk == false )
                     return read;
                 for ( const OnlineAchievementDef& definition : listDefinition )

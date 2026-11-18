@@ -976,3 +976,23 @@ SW_TEST_CASE( LeaderboardServiceTest, AccountDeletionErasesScoresAndStats )
     SW_EXPECT_EQUAL( 1, countAccountKeys( world._database, "lb_season_result", 2 ) );
     SW_EXPECT_TRUE( rig._service.eraseAccount( world._database, 1, kNowMs ) == ServiceStoreResult::Ok ); // 멱등
 }
+
+/**
+ * @brief [LeaderboardServiceTest] 계정의 통계가 한 쪽(256)보다 많아도 업적 진행률은 키 뒤쪽 통계의 값을 읽는다 — 옛 구현은 한 쪽만 읽어 진행률을 0 으로 보였다
+ */
+SW_TEST_CASE( LeaderboardServiceTest, ProgressReadsStatsPastOnePage )
+{
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
+    rig.addAchievement( "late_kills", "zz_kills", 100 );
+    for ( int32 index = 0; index < LeaderboardLimit::kMaxStatCount + 44; ++index )
+    {
+        (void)rig.stat( 1, "s" + to_string( 1000 + index ), 1, LeaderboardUpdate::Latest );
+    }
+    (void)rig.stat( 1, "zz_kills", 42, LeaderboardUpdate::Latest ); // 키 순서로 맨 뒤다
+
+    rig._service.readAchievementProgress( 1, 77 );
+    const LeaderboardCompletion progress = rig.take( 77 );
+    SW_REQUIRE_EQUAL( size_t( 1 ), progress._listProgress.size() );
+    SW_EXPECT_EQUAL( int64( 42 ), progress._listProgress[0]._progress );
+}
