@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
@@ -497,4 +498,26 @@ SW_TEST_CASE( ZoneOverrideTest, RevertKeepsOtherPropertiesAndSkipsReplace )
     SW_EXPECT_FALSE( sw::ZoneModuleDef::setOverrideParam( listOverride, kModule, sw::hashed_string( "speed" ), "1" ) );
     SW_EXPECT_TRUE( sw::ZoneModuleDef::revertOverrideModule( listOverride, kModule ) );
     SW_EXPECT_TRUE( listOverride.empty() );
+}
+
+/**
+ * @brief [ZoneTest] 볼륨 모양은 오너 회전을 따른다 — 요 90° 로 돌린 긴 상자는 월드 z 로 길다
+ * @details 예전에는 회전을 보지 않고 축 정렬로 재 돌린 상자가 놓인 자리와 다르게 맞았다. 변이: `sampleInWorld` 의 역행렬 대신 자리 빼기로 되돌리면 첫 두 단언이 진다.
+ */
+SW_TEST_CASE( ZoneTest, VolumeShapeFollowsOwnerRotation )
+{
+    GameObjectManager manager;
+    GameObject*       pSwamp = manager.createGameObject( hashed_string( "Swamp" ) );
+    SceneComponent*   pScene = pSwamp->addComponent<SceneComponent>();
+    pScene->setLocalPosition( float3{ 10.0f, 0.0f, 0.0f } );
+    pScene->setLocalRotation( float3{ 0.0f, MathUtil::kHalfPi, 0.0f } );
+    ZoneVolumeComponent* pVolume = pSwamp->addComponent<ZoneVolumeComponent>();
+    pVolume->configure( "", ZoneVolumeShape::Box, float3{ 2.0f, 1.0f, 0.5f } ); // 로컬 x 로 긴 상자
+
+    ZoneSample sample;
+    SW_EXPECT_TRUE( pVolume->sampleAt( float3{ 10.0f, 0.0f, 1.5f }, 1.0f, sample ) );  // 돌린 긴 축(월드 z) 안
+    SW_EXPECT_FALSE( pVolume->sampleAt( float3{ 11.5f, 0.0f, 0.0f }, 1.0f, sample ) ); // 돌린 짧은 축(월드 x) 밖
+    SW_EXPECT_TRUE( pVolume->sampleAt( float3{ 10.0f, 0.0f, 0.0f }, 1.0f, sample ) );
+    SW_EXPECT_NEAR( 10.0f, sample._center._x, 1.0e-4f );            // 당김 중심(오프셋 0)은 오너 자리다
+    SW_EXPECT_NEAR( 2.0f, pVolume->getHorizontalReach(), 1.0e-4f ); // 월드 경계 상자도 돌았다(x 0.5 · z 2)
 }
