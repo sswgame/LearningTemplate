@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/FCM/FCMPushProvider.h"
 
 #include "Core/Foundation/Constants.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -76,7 +75,7 @@ namespace sw
     string FCMPushProvider::makeMessageJSON( string_view token, string_view topic, const PushNotificationMessage& message )
     {
         const int32 argumentCount = PushPayloadUtil::countArguments( message );
-        const bool  bHasAlert     = message._titleKey.empty() == false || message._bodyKey.empty() == false;
+        const bool  bHasAlert     = PushPayloadUtil::hasAlert( message );
         const bool  bHasData      = bHasAlert || message._deepLink.empty() == false || argumentCount > 0;
         string      json;
         JSONWriter  writer{ json };
@@ -89,16 +88,7 @@ namespace sw
         {
             writer.key( "data" );
             writer.beginObject();
-            PushPayloadUtil::writeOptionalText( writer, "deep_link", message._deepLink );
-            PushPayloadUtil::writeOptionalText( writer, "title_key", message._titleKey );
-            PushPayloadUtil::writeOptionalText( writer, "body_key", message._bodyKey );
-            for ( int32 index = 0; index < argumentCount; ++index )
-            {
-                StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "arg%#", index );
-                writer.key( textBuilder.view() );
-                writer.valueString( message._arrArgument[index] );
-            }
+            PushPayloadUtil::writeAppData( writer, message, argumentCount );
             writer.endObject();
         }
         if ( bHasAlert )
@@ -119,17 +109,7 @@ namespace sw
             writer.beginObject();
             writer.key( "aps" );
             writer.beginObject();
-            writer.key( "alert" );
-            writer.beginObject();
-            PushPayloadUtil::writeOptionalText( writer, "title-loc-key", message._titleKey );
-            PushPayloadUtil::writeOptionalText( writer, "loc-key", message._bodyKey );
-            PushPayloadUtil::writeArguments( writer, "loc-args", message, argumentCount );
-            writer.endObject();
-            if ( message._badgeCount >= 0 )
-            {
-                writer.key( "badge" );
-                writer.valueInt( message._badgeCount );
-            }
+            PushPayloadUtil::writeAlert( writer, message, argumentCount );
             writer.endObject();
             writer.endObject();
             writer.endObject();
@@ -238,11 +218,7 @@ namespace sw
 
     void FCMPushProvider::complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs )
     {
-        _resultBuffer.push( PushDeliveryResult{} );
-        PushDeliveryResult& result = _resultBuffer.getLast();
-        result._deliveryID         = deliveryID;
-        result._status             = status;
-        result._retryAfterMs       = retryAfterMs;
+        _resultBuffer.push( PushDeliveryResult{ deliveryID, retryAfterMs, status } );
     }
 
     void FCMPushProvider::update( UnixMilliseconds nowMs )

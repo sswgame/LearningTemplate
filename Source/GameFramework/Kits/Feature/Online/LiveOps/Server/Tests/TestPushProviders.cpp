@@ -12,6 +12,7 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/APNS/APNSPushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/FCM/FCMPushProvider.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushPayloadUtil.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
@@ -268,7 +269,7 @@ SW_TEST_CASE( APNSPushProviderTest, RetryAfter )
 SW_TEST_CASE( APNSPushProviderTest, Payload )
 {
     const PushNotificationMessage alert = PushTestUtil::makeAlert();
-    SW_EXPECT_TRUE( APNSPushProvider::hasAlert( alert ) );
+    SW_EXPECT_TRUE( PushPayloadUtil::hasAlert( alert ) );
     JSONDocument document;
     SW_REQUIRE_TRUE( document.tryParse( APNSPushProvider::makePayloadJSON( alert ) ) );
     SW_EXPECT_EQUAL( string( "title.key" ), PushTestUtil::readText( document, "aps.alert.title-loc-key" ) );
@@ -278,7 +279,7 @@ SW_TEST_CASE( APNSPushProviderTest, Payload )
 
     PushNotificationMessage silent;
     silent._deepLink = "event/x";
-    SW_EXPECT_FALSE( APNSPushProvider::hasAlert( silent ) );
+    SW_EXPECT_FALSE( PushPayloadUtil::hasAlert( silent ) );
     JSONDocument silentDocument;
     SW_REQUIRE_TRUE( silentDocument.tryParse( APNSPushProvider::makePayloadJSON( silent ) ) );
     SW_EXPECT_TRUE( PushTestUtil::readText( silentDocument, "aps.alert.loc-key" ).empty() );
