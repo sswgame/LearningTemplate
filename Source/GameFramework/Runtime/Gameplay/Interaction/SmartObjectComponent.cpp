@@ -14,10 +14,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     void SmartObjectSlots::initialize( const SmartObjectDef& def )
     {
         _def = def;

@@ -22,10 +22,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     PlayerControllerComponent::PlayerControllerComponent()
         : _viewBlend{}
         , _playerIndex{ 0 }

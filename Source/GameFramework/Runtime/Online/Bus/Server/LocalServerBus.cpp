@@ -8,10 +8,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     LocalServerBusHub::LocalServerBusHub()
         : _mutex{}
         , _mapInbox{}

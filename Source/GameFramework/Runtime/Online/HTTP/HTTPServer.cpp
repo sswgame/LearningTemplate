@@ -4,10 +4,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     HTTPServer::HTTPServer()
         : _mutex{}
         , _mapPeer{}

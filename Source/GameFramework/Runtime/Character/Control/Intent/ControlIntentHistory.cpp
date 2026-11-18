@@ -11,10 +11,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     ControlIntentHistory::ControlIntentHistory()
         : _listTrack{}
         , _mapComponentIDToTrack{}
