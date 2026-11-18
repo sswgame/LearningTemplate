@@ -17,6 +17,7 @@
 
     #include <cerrno>
     #include <climits>
+    #include <cstdlib>
     #include <cstring>
     #include <dirent.h>
     #include <fcntl.h>
@@ -229,19 +230,27 @@ namespace sw
     {
         if ( path.empty() )
             return false;
-        utf8 arrResolved[PATH_MAX];
-        if ( realpath( PosixFileSystemInternal::toNative( path ).c_str(), arrResolved ) == nullptr )
+        // 버퍼를 넘기지 않으면 realpath 가 맞는 크기로 할당한다(POSIX.1-2008) - PATH_MAX 버퍼는 그보다 깊은 경로를 실패로 돌렸다.
+        utf8* const pResolved = realpath( PosixFileSystemInternal::toNative( path ).c_str(), nullptr );
+        if ( pResolved == nullptr )
             return false;
-        outResult = arrResolved;
+        outResult = pResolved;
+        ::free( pResolved );
         return true;
     }
 
     bool PlatformFileSystem::getCurrentDirectory( string& outResult )
     {
-        utf8 arrCurrent[PATH_MAX];
-        if ( getcwd( arrCurrent, sizeof( arrCurrent ) ) == nullptr )
-            return false;
-        outResult = arrCurrent;
+        // PATH_MAX 보다 깊은 작업 폴더도 있다 - ERANGE 면 버퍼를 키워 다시 묻는다.
+        string buffer( PATH_MAX, '\0' );
+        while ( getcwd( buffer.data(), buffer.size() ) == nullptr )
+        {
+            if ( errno != ERANGE )
+                return false;
+            buffer.resize( buffer.size() * 2 );
+        }
+        buffer.resize( std::strlen( buffer.c_str() ) );
+        outResult = std::move( buffer );
         return true;
     }
 

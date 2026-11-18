@@ -306,6 +306,9 @@ namespace sw
         , _dlcValidator{}
         , _contentSource{ kBuildContentSource }
         , _patchPackCount{ 0 }
+        , _patchTrust{}
+        , _chunkManifest{}
+        , _packsDirectory{}
     {
     }
 
@@ -319,6 +322,8 @@ namespace sw
         ScopedLock<mutex> lock{ other._vfsMutex };
         _listMountedPack = std::move( other._listMountedPack );
         _dlcValidator    = std::move( other._dlcValidator );
+        _chunkManifest   = std::move( other._chunkManifest );
+        _packsDirectory  = std::move( other._packsDirectory );
         _contentSource.store( other._contentSource.load( std::memory_order_relaxed ), std::memory_order_relaxed );
         _patchPackCount.store( PackManagerInternal::countPatchPacks( _listMountedPack ), std::memory_order_release );
         other._patchPackCount.store( 0, std::memory_order_release );
@@ -331,6 +336,8 @@ namespace sw
             ScopedLockPair<mutex> lock{ _vfsMutex, other._vfsMutex };
             _listMountedPack = std::move( other._listMountedPack );
             _dlcValidator    = std::move( other._dlcValidator );
+            _chunkManifest   = std::move( other._chunkManifest );
+            _packsDirectory  = std::move( other._packsDirectory );
             _contentSource.store( other._contentSource.load( std::memory_order_relaxed ), std::memory_order_relaxed );
             refreshPatchPackCount();
             other._patchPackCount.store( 0, std::memory_order_release );
@@ -763,6 +770,26 @@ namespace sw
         if ( listCandidateFile.empty() )
             return false;
 
+        // 청크 목록이 적은 팩(씬 청크 · 공유 청크)은 기동 필수가 아니다 — 씬을 열 때 마운트한다(`PackChunkLoader`). 목록을 못 읽으면 어느 팩이 필수인지 모르므로 아무것도 마운트하지 않는다.
+        _packsDirectory = string( packsDirectory );
+        _chunkManifest  = PackChunkManifest{};
+        for ( const string& candidate : listCandidateFile )
+        {
+            string_view fileName;
+            FileUtil::getFileNamePart( candidate, fileName );
+            if ( PackChunkManifest::isFileName( fileName ) == false )
+                continue;
+            // 도메인마다 한 파일이다 — 씬이 다른 도메인의 청크를 가리키므로 모두 합친다(같은 청크 · 씬이 두 파일에 있으면 오류).
+            string            text;
+            PackChunkManifest domainManifest;
+            if ( source.readTextFile( candidate, text ) == false || PackChunkManifest::parse( text, candidate, domainManifest ) == false ||
+                 _chunkManifest.merge( domainManifest, candidate ) == false )
+            {
+                SW_LOG_ERROR_ID( "PackManager.ChunkManifestUnreadable", "Pack chunk manifest '%#' could not be read - no pack is mounted", candidate );
+                return false;
+            }
+        }
+
         // 패치 목록이 가리키는 팩은 기본 팩이 아니다 — 지움 목록과 함께 사슬 순서로 따로 마운트한다. 목록을 못 읽으면 어느 팩이 패치인지 모르므로 아무것도 마운트하지 않는다.
         vector<PackPatchManifest> listManifest;
         if ( PackManagerInternal::collectPatchManifests( listCandidateFile, listManifest ) == false )
@@ -779,6 +806,10 @@ namespace sw
         for ( const string& packPath : listCandidateFile )
         {
             if ( FileUtil::hasAnyExtension( packPath, { ".pack", ".swpk" } ) == false || PackManagerInternal::isPatchPackFile( packPath, uniquePatchFileNameLower ) )
+                continue;
+            string_view packFileName;
+            FileUtil::getFileNamePart( packPath, packFileName );
+            if ( _chunkManifest.isDeferredPack( packFileName ) )
                 continue;
 
             if ( mountPack( packPath ) ) // 우선순위는 팩의 마운트 도메인으로 정한다(`mountReader`)

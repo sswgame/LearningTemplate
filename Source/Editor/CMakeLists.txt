@@ -184,7 +184,7 @@ function(sw_apply_editor_core_settings TARGET_NAME)
 	target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"Editor\"" "SW_REGISTRAR_MODULE=\"${SW_TARGET_EDITOR_MODULE}\"" SW_MODULE_EXPORTS SW_EDITOR_EXPORTS)
 	target_include_directories(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source")
 	sw_apply_target_layer_guard(${TARGET_NAME} editor)
-	target_link_libraries(${TARGET_NAME} PRIVATE Engine DevTools ModuleAPI Microsoft::DirectXTex cgltf meshoptimizer stb sw_global_options)
+	target_link_libraries(${TARGET_NAME} PRIVATE Engine DevTools ModuleAPI Microsoft::DirectXTex astcenc etcpak cgltf meshoptimizer stb sw_global_options)
 	set_target_properties(${TARGET_NAME} PROPERTIES
 		FOLDER "Source/Editor"
 		EXCLUDE_FROM_ALL ON
@@ -288,7 +288,7 @@ if(skip_editor)
 endif()
 
 # 뷰 코드가 링크하는 것(EditorModule 과 뷰 부분이 같은 목록을 쓴다).
-set(list_editor_view_link Engine DevTools ModuleAPI imgui imgui_nodeeditor imguizmo implot Microsoft::DirectXTex cgltf meshoptimizer stb sw_graphics_libs)
+set(list_editor_view_link Engine DevTools ModuleAPI imgui imgui_nodeeditor imguizmo implot Microsoft::DirectXTex astcenc etcpak cgltf meshoptimizer stb sw_graphics_libs)
 
 sw_add_module_library(EditorModule
 	KIND editor

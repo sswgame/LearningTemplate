@@ -18,6 +18,7 @@
 #include "Engine/Asset/AssetPackIndex.h"
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Asset/Cook/PackReachResult.h"
+#include "Engine/Asset/Cook/PackSceneChunkPlan.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameConfig.h"
@@ -26,6 +27,7 @@
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
+#include "Engine/Content/Pack/PackChunkManifest.h"
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Content/Pack/PackTypes.h"
 #include "Engine/Content/Pack/PackWriter.h"
@@ -93,9 +95,12 @@ namespace sw
             /** @brief 고르기 결과입니다 — 담을 원본 id, 닿았지만 제외 규칙이 뺀 원본 id(모두 정규화한 리소스 id), 스테이징 산출물의 고르기입니다. */
             struct PackSelection
             {
-                unordered_set<string> _setIncluded;
-                unordered_set<string> _setReferencedExcluded;
-                PackStagedSelection   _staged;
+                unordered_set<string>         _setIncluded;
+                unordered_set<string>         _setReferencedExcluded;
+                PackStagedSelection           _staged;
+                vector<PackSceneReach>        _listSceneReach; ///< 씬 청크로 미룬 씬마다의 닿음(`PackSplitConfig::_listScenePattern` 이 비면 빈 목록)
+                PackSceneChunkPlan            _scenePlan;      ///< 기동 필수가 아닌 에셋의 청크
+                unordered_map<string, string> _mapStemChunk;   ///< `<폴더 id>/<줄기>` → 청크 — 스테이징 산출물(씬 쿠킹본 · 프리로드 목록)이 원본의 청크를 따른다
             };
 
             /** @brief 고르기가 글을 읽는 디스크 입구입니다. 읽기는 `AssetIO::readBinaryFile` 이라 고르기 범위(`PackReach`)가 받아 준다(그 범위의 기록은 쓰지 않는다). */
@@ -106,6 +111,12 @@ namespace sw
 
                 bool readText( const string& assetID, string& outText ) const override
                 {
+                    // 씬 청크 나누기는 씬마다 다시 훑는다 — 같은 글(카탈로그 · 공용 데이터)을 디스크에서 씬 수만큼 읽지 않게 담아 둔다.
+                    if ( const auto itCached = _mapText.find( assetID ); itCached != _mapText.end() )
+                    {
+                        outText = itCached->second;
+                        return true;
+                    }
                     const auto itPath = _mapAbsolutePath.find( assetID );
                     if ( itPath == _mapAbsolutePath.end() )
                         return false;
@@ -113,8 +124,12 @@ namespace sw
                     if ( AssetIO::readBinaryFile( itPath->second, bytes ) == false )
                         return false;
                     outText = string( string_view( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() ) );
+                    _mapText.emplace( assetID, outText );
                     return true;
                 }
+
+            private:
+                mutable unordered_map<string, string> _mapText; ///< 읽은 글(고르기 한 번 동안 — 한 스레드)
             };
 
             /** @brief 도메인 하나의 후보 파일(정규화 id · 절대 경로)입니다. 요약 로그가 담은 수 · 크기를 센다. */
@@ -241,7 +256,90 @@ namespace sw
                 outSelection._staged.build( listSources, reach );
                 outSelection._setIncluded           = std::move( reach._setIncluded );
                 outSelection._setReferencedExcluded = std::move( reach._setReferencedExcluded );
+                return planSceneChunks( config, properties, files, source, outSelection );
+            }
+
+            /**
+             * @brief 씬 청크를 정합니다(`PackSceneChunkPlan`). 씬 패턴이 비면 할 일이 없다.
+             * @details 기동 필수는 씬 패턴에 맞는 씬을 뿌리로 쓰지 않고 다시 고른 집합이다 — 게임 설정의 첫 씬처럼 다른 뿌리가 참조로 닿는 씬은 그 안에 든다.
+             *          남은 씬마다 그 씬에서만 다시 훑어 닿음을 얻는다.
+             */
+            [[nodiscard]] static bool planSceneChunks( const PackConfig& config, const AssetReferenceFields& properties, const PackReachFiles& files, const IPackReachSource& source,
+                                                       PackSelection& inoutSelection )
+            {
+                if ( config._split._listScenePattern.empty() )
+                    return true;
+                PackReachFiles startupFiles = files;
+                for ( const string& assetID : inoutSelection._setIncluded )
+                {
+                    if ( matchesAnyPattern( config._split._listScenePattern, assetID ) )
+                        startupFiles._setDeferredRoot.insert( assetID );
+                }
+                PackReachResult startupReach;
+                if ( PackReachResult::collect( properties, config._cookRules, startupFiles, source, startupReach ) == false )
+                {
+                    SW_LOG_ERROR_ID( "PackCooker.SceneChunkEssentialFailed", "Pack cook: following references without the deferred scenes failed (reasons above) - no pack is written" );
+                    return false;
+                }
+                vector<string> listScene;
+                for ( const string& sceneID : startupFiles._setDeferredRoot )
+                {
+                    if ( startupReach._setIncluded.contains( sceneID ) == false )
+                        listScene.push_back( sceneID );
+                }
+                VectorUtil::sort( listScene );
+                for ( const string& sceneID : listScene )
+                {
+                    PackReachResult sceneReach;
+                    if ( PackReachResult::collectFromRoots( properties, config._cookRules, files, source, { sceneID }, sceneReach ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "PackCooker.SceneChunkReachFailed", "Pack cook: following references from scene '%#' failed (reasons above) - no pack is written", sceneID );
+                        return false;
+                    }
+                    PackSceneReach& reach = inoutSelection._listSceneReach.emplace_back();
+                    reach._sceneID        = sceneID;
+                    reach._setReached     = std::move( sceneReach._setIncluded );
+                }
+                expected<PackSceneChunkPlan> plan = PackSceneChunkPlan::plan( startupReach._setIncluded, inoutSelection._listSceneReach );
+                if ( plan.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "PackCooker.SceneChunkPlanInvalid", "Pack cook: scene chunks could not be planned - %# (%#)", plan.error().message(), plan.error().detail() );
+                    return false;
+                }
+                inoutSelection._scenePlan = std::move( *plan );
+                for ( const auto& [assetID, chunk] : inoutSelection._scenePlan._mapAssetChunk )
+                {
+                    inoutSelection._mapStemChunk.try_emplace( makeStemKey( assetID ), chunk );
+                }
+                SW_LOG_INFO_ID( "PackCooker.SceneChunkPlan", "Pack cook: %# scenes deferred to scene chunks, %# assets outside the startup set (%# startup assets)",
+                                static_cast<uint64>( listScene.size() ), static_cast<uint64>( inoutSelection._scenePlan._mapAssetChunk.size() ), static_cast<uint64>( startupReach._setIncluded.size() ) );
                 return true;
+            }
+
+            /** @brief `<폴더 id>/<첫 . 앞 줄기>` 입니다 — 산출물과 그 원본이 같은 키다(`PackStagedSelection` 과 같은 규칙). */
+            static string makeStemKey( string_view assetID )
+            {
+                const size_t      slash    = assetID.rfind( '/' );
+                const string_view fileName = slash == string_view::npos ? assetID : assetID.substr( slash + 1 );
+                const string_view folder   = slash == string_view::npos ? string_view{} : assetID.substr( 0, slash );
+                return string( folder ) + "/" + string( fileName.substr( 0, fileName.find( '.' ) ) );
+            }
+
+            /** @brief 항목 하나의 씬 청크입니다 — 원본은 계획의 것, 스테이징 산출물은 같은 줄기 원본의 것. 없으면 빈 글(기본 청크)입니다. */
+            static string findAssignedChunk( const PackSelection& selection, const string& domain, const PackItem& item )
+            {
+                const string assetID = makeAssetID( domain, item._relativePath );
+                if ( item._source == PackItemSource::Source )
+                {
+                    const auto itChunk = selection._scenePlan._mapAssetChunk.find( assetID );
+                    return itChunk != selection._scenePlan._mapAssetChunk.end() ? itChunk->second : string{};
+                }
+                if ( item._source == PackItemSource::Staged )
+                {
+                    const auto itChunk = selection._mapStemChunk.find( makeStemKey( assetID ) );
+                    return itChunk != selection._mapStemChunk.end() ? itChunk->second : string{};
+                }
+                return {};
             }
 
             /** @brief 도메인 팩 작업의 설정 해시입니다 — 쿠킹 설정 해시에 그 도메인에서 고른 파일 목록(정렬)을 섞는다. 다른 팩의 참조가 바뀌어 고른 것이 달라지면 다시 굽는다. */
@@ -667,6 +765,35 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief 미루는 청크의 목록을 굽은 도메인마다 팩 폴더에 씁니다(`PackCooker::writeChunkManifests`). 쓰기 전에 씬마다 닿는 에셋이 기동 필수거나 그 씬의 청크에 놓였는지 본다 —
+             *        빠지면 그 씬을 열 때 에셋을 찾지 못하므로 쿠킹 오류다(`PackSceneChunkPlan::findUncovered`).
+             * @param mapPlacedChunk 담긴 에셋 id → 놓인 청크(기동 필수는 빈 글, 미룬 청크는 `<도메인 줄기>.<청크>`)
+             */
+            [[nodiscard]] static bool writeChunkManifest( const string& packOutputDir, const vector<string>& listDomain, const PackSelection& selection,
+                                                          const unordered_map<string, string>& mapPlacedChunk, unordered_map<string, vector<string>>& mapChunkPack )
+            {
+                const unordered_set<string> setStartupChunk{ string{} };
+                PackChunkManifest           manifest;
+                manifest._listScene                    = PackSceneChunkPlan::makeSceneChunks( selection._listSceneReach, mapPlacedChunk, setStartupChunk );
+                const vector<PackChunkIssue> listIssue = PackSceneChunkPlan::findUncovered( selection._listSceneReach, mapPlacedChunk, setStartupChunk, manifest._listScene );
+                for ( const PackChunkIssue& gap : listIssue )
+                {
+                    SW_LOG_ERROR_ID( "PackCooker.SceneChunkGap", "Pack cook: scene '%#' uses '%#' but it is in chunk '%#' - neither a startup chunk nor one the scene mounts", gap._sceneID, gap._assetID,
+                                     gap._chunk );
+                }
+                if ( listIssue.empty() == false )
+                    return false;
+                for ( auto& [chunk, listPack] : mapChunkPack )
+                {
+                    VectorUtil::sort( listPack );
+                    manifest._listChunk.push_back( PackChunkFiles{ chunk, listPack } );
+                }
+                VectorUtil::sort( manifest._listChunk, []( const PackChunkFiles& left, const PackChunkFiles& right )
+                { return left._name < right._name; } );
+                return PackCooker::writeChunkManifests( packOutputDir, listDomain, manifest );
+            }
+
             /** @brief 장부를 이름 순으로 씁니다. */
             [[nodiscard]] static bool writeCookedPackLedger( const string& packOutputDir, const unordered_set<string>& setName )
             {
@@ -824,8 +951,32 @@ namespace sw
         return sizeof( PackHeader ) + kPackSectorAlignment;
     }
 
-    expected<vector<PackPart>> PackCooker::splitIntoParts( const vector<PackSplitEntry>& listEntry, const PackSplitConfig& split )
+    expected<vector<PackPart>> PackCooker::splitIntoParts( const vector<PackSplitEntry>& listEntry, const PackSplitConfig& split, const unordered_map<string, string>& mapAssignedChunk )
     {
+        // 청크 이름 표 — 기본(빈 글), 이름 붙은 패턴 청크(규칙 순서), 씬 청크(이름순).
+        vector<string> listChunkName{ string{} };
+        for ( const PackChunkRule& rule : split._listChunkRule )
+        {
+            listChunkName.push_back( rule._name );
+        }
+        {
+            vector<string> listAssigned;
+            for ( const auto& [relativePath, chunk] : mapAssignedChunk )
+            {
+                if ( VectorUtil::contains( listAssigned, chunk ) == false )
+                    listAssigned.push_back( chunk );
+            }
+            VectorUtil::sort( listAssigned );
+            for ( const string& chunk : listAssigned )
+            {
+                for ( const PackChunkRule& rule : split._listChunkRule )
+                {
+                    if ( StringUtil::equals( rule._name, chunk, true ) )
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a scene chunk has the name of a pack chunk rule", chunk } );
+                }
+                listChunkName.push_back( chunk );
+            }
+        }
         // 청크 이름은 파일 이름의 한 마디다 — 비었거나 다른 글자가 들었거나 겹치면 이름이 어긋난다.
         for ( size_t ruleIndex = 0; ruleIndex < split._listChunkRule.size(); ++ruleIndex )
         {
@@ -850,7 +1001,7 @@ namespace sw
             uint64 _pathHash{ 0 };
             uint64 _sizeBytes{ 0 };
         };
-        vector<vector<Placed>> listChunkPlaced( split._listChunkRule.size() + 1 );
+        vector<vector<Placed>> listChunkPlaced( listChunkName.size() );
         for ( const PackSplitEntry& entry : listEntry )
         {
             size_t chunkIndex = 0;
@@ -864,6 +1015,11 @@ namespace sw
                         break;
                     }
                 }
+            }
+            if ( chunkIndex == 0 )
+            {
+                if ( const auto itAssigned = mapAssignedChunk.find( entry._relativePath ); itAssigned != mapAssignedChunk.end() )
+                    chunkIndex = static_cast<size_t>( std::find( listChunkName.begin(), listChunkName.end(), itAssigned->second ) - listChunkName.begin() );
             }
             listChunkPlaced[chunkIndex].push_back( Placed{ PackStreamWriter::makePathHash( entry._relativePath ), estimateEntryPackBytes( entry._relativePath, entry._sizeBytes ) } );
         }
@@ -879,7 +1035,7 @@ namespace sw
             VectorUtil::sort( listPlaced, []( const Placed& left, const Placed& right )
             { return left._pathHash < right._pathHash; } );
             PackPart part;
-            part._chunk = chunkIndex == 0 ? string{} : split._listChunkRule[chunkIndex - 1]._name;
+            part._chunk = listChunkName[chunkIndex];
             for ( const Placed& placed : listPlaced )
             {
                 const bool bOverLimit = part._listPathHash.empty() == false && placed._sizeBytes > budget - std::min( part._packBytes, budget );
@@ -985,6 +1141,36 @@ namespace sw
         return false;
     }
 
+    bool PackCooker::writeChunkManifests( const string& packOutputDir, const vector<string>& listDomain, const PackChunkManifest& manifest )
+    {
+        if ( FileUtil::ensureDirectoryExists( packOutputDir ) == false )
+            return false;
+        for ( const string& domain : listDomain )
+        {
+            const string      chunkPrefix = PackChunkManifest::makeDomainStem( domain ) + ".";
+            const string      scenePrefix = FileUtil::normalizePath( domain ).str() + "/";
+            PackChunkManifest domainManifest;
+            for ( const PackChunkFiles& files : manifest._listChunk )
+            {
+                if ( StringUtil::startsWith( files._name, chunkPrefix ) )
+                    domainManifest._listChunk.push_back( files );
+            }
+            for ( const PackSceneEntry& entry : manifest._listScene )
+            {
+                if ( StringUtil::startsWith( entry._sceneID, scenePrefix ) )
+                    domainManifest._listScene.push_back( entry );
+            }
+            // 미룬 청크가 없는 도메인도 쓴다 — 지난 쿠킹의 목록이 남아 이번에 쓰지 않은 팩을 가리키지 않게.
+            const string path = FileUtil::joinPath( packOutputDir, PackChunkManifest::makeFileName( domain ) );
+            if ( FileUtil::writeTextFile( path, PackChunkManifest::makeText( domainManifest ) ) == false )
+            {
+                SW_LOG_ERROR_ID( "PackCooker.ChunkManifestUnwritable", "Pack cook: the chunk manifest %# could not be written", path );
+                return false;
+            }
+        }
+        return true;
+    }
+
     bool PackCooker::cookAllPacks( const PackConfig& engineConfig, const PackCookParams& params, const CookStore& store, uint32& outPackCount )
     {
         outPackCount = 0;
@@ -1042,6 +1228,14 @@ namespace sw
             SW_LOG_ERROR_ID( "PackCooker.PackLedgerUnreadable", "Pack cook: the cooked pack ledger in %# could not be read", params._packOutputDir );
             return false;
         }
+        // 기동 때 마운트하는 청크 — 기본과 이름 붙은 패턴 청크. 씬 청크 · 공유 청크는 도메인마다의 목록(`packchunks.<도메인 줄기>.xml`)에 적어 씬을 열 때 마운트한다.
+        unordered_set<string> setStartupChunk{ string{} };
+        for ( const PackChunkRule& rule : config._split._listChunkRule )
+        {
+            setStartupChunk.insert( rule._name );
+        }
+        unordered_map<string, string>         mapPlacedChunk; // 담긴 에셋 id → 놓인 청크(기동 필수는 빈 글, 미룬 청크는 `<도메인 줄기>.<청크>`)
+        unordered_map<string, vector<string>> mapChunkPack;   // 미루는 청크(`<도메인 줄기>.<청크>`) → 팩 파일 이름
         for ( const string& domain : listDomain )
         {
             // 나누기는 쿠킹 전에 정한다 — 목록과 디스크 크기만 본다. 목록은 여기서 한 번 고르고 몫마다 나눠 넘긴다. 목록 · 크기 묻기는 리소스 읽기가 아니라
@@ -1069,7 +1263,14 @@ namespace sw
                 ++failedCount;
                 continue;
             }
-            const expected<vector<PackPart>> split = splitIntoParts( listSplitEntry, config._split );
+            unordered_map<string, string> mapAssignedChunk;
+            for ( const PackCookerInternal::PackItem& item : listing._listItem )
+            {
+                string chunk = PackCookerInternal::findAssignedChunk( selection, domain, item );
+                if ( chunk.empty() == false )
+                    mapAssignedChunk.emplace( item._relativePath, std::move( chunk ) );
+            }
+            const expected<vector<PackPart>> split = splitIntoParts( listSplitEntry, config._split, mapAssignedChunk );
             if ( split.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "PackCooker.PackSplitInvalid", "Pack cook: %# could not be split - %# '%#'", domain, split.error().message(), split.error().detail() );
@@ -1078,9 +1279,21 @@ namespace sw
             }
 
             vector<string> listWrittenName;
+            for ( const PackCookerInternal::PackItem& item : listing._listItem )
+            {
+                for ( const PackPart& part : *split )
+                {
+                    // 미룬 청크는 도메인마다 따로 적는다(`<도메인 줄기>.<청크>`) — 목록 파일이 도메인 단위라 한 게임만 구워도 다른 도메인의 목록이 남는다.
+                    if ( part.contains( item._pathHash ) )
+                        mapPlacedChunk.emplace( PackCookerInternal::makeAssetID( domain, item._relativePath ),
+                                                setStartupChunk.contains( part._chunk ) ? string{} : PackChunkManifest::makeDomainStem( domain ) + "." + part._chunk );
+                }
+            }
             for ( const PackPart& part : *split )
             {
-                const string packName   = makePackFileName( domain, part._chunk, part._number );
+                const string packName = makePackFileName( domain, part._chunk, part._number );
+                if ( setStartupChunk.contains( part._chunk ) == false )
+                    mapChunkPack[PackChunkManifest::makeDomainStem( domain ) + "." + part._chunk].push_back( packName );
                 const string outputPath = FileUtil::joinPath( params._packOutputDir, packName );
                 listWrittenName.push_back( packName );
                 // 기록은 타깃 · 백엔드마다 따로 둔다 — 같은 팩 이름을 다른 설정으로 번갈아 베이크해도 서로의 기록을 덮지 않는다.
@@ -1101,6 +1314,8 @@ namespace sw
             if ( PackCookerInternal::removeStaleSiblingPacks( params._packOutputDir, domain, listWrittenName, setLedger ) == false )
                 ++failedCount;
         }
+        if ( failedCount == 0 && PackCookerInternal::writeChunkManifest( params._packOutputDir, listDomain, selection, mapPlacedChunk, mapChunkPack ) == false )
+            ++failedCount;
         if ( PackCookerInternal::writeCookedPackLedger( params._packOutputDir, setLedger ) == false )
         {
             SW_LOG_ERROR_ID( "PackCooker.PackLedgerUnwritable", "Pack cook: the cooked pack ledger in %# could not be written", params._packOutputDir );

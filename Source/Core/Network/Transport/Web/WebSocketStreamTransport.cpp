@@ -166,15 +166,47 @@ namespace sw
 
     void WebSocketStreamTransport::setReceivePaused( StreamConnectionHandle handle, bool bPaused )
     {
-        // shortcut: 브라우저 WebSocket 에 읽기 멈춤이 없어 받는 대로 올린다, 위 층 받은 줄 상한(_maxPendingReceiveBytes)이 넘으면 위 층이 닫는다 — WebSocketStream(백프레셔) API 가 널리 쓰이면 그것으로.
-        (void)handle;
-        (void)bPaused;
+        // 브라우저 WebSocket 에는 읽기 멈춤이 없다 — 멈춘 동안 받은 것은 칸의 `_receiveHold` 가 들고, 다시 열면 다음 pollIO 가 넘긴다.
+        // 여기서 바로 넘기지 않는다: 위 층은 자기 연결 잠금을 쥔 채 이것을 부른다.
+        if ( bPaused && _settings._ioThreadCount != 0 )
+        {
+            // pollIO 를 도는 쪽이 없으면 든 바이트가 영영 넘어가지 않아 연결이 조용히 멈춘다 — 그 대신 끊고 알린다.
+            SW_LOG_ERROR_ID( "WebSocketStreamTransport.PauseNeedsManualPoll", "WebSocketStreamTransport: pausing receive needs _ioThreadCount == 0 (held bytes are released by pollIO) - closing the connection" );
+            close( handle, StreamCloseMode::Abort );
+            return;
+        }
+        ScopedLock<mutex>      lock{ _mutex };
+        const optional<uint32> slotIndex = findSlotLocked( handle );
+        if ( slotIndex.has_value() )
+            _listSlot[*slotIndex]._receiveHold.setPaused( bPaused );
     }
 
     int32 WebSocketStreamTransport::pollIO( int32 timeoutMilli )
     {
-        (void)timeoutMilli;
-        return 0; // 이벤트는 브라우저 이벤트 루프가 메인 스레드로 준다
+        (void)timeoutMilli; // 소켓 이벤트는 브라우저 이벤트 루프가 메인 스레드로 준다 — 여기서는 다시 연 연결의 든 바이트만 넘긴다
+        struct HeldChunk
+        {
+            StreamConnectionHandle _handle;
+            vector<uint8>          _bytes;
+        };
+        vector<HeldChunk> listReleased;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            for ( size_t slotIndex = 0; slotIndex < _listSlot.size(); ++slotIndex )
+            {
+                Slot& slot = _listSlot[slotIndex];
+                if ( slot._socket == 0 || slot._bClosing != SW_FALSE )
+                    continue;
+                vector<uint8> bytes = slot._receiveHold.takeReleasable();
+                if ( bytes.empty() == false )
+                    listReleased.push_back( HeldChunk{ StreamConnectionHandle::make( static_cast<uint32>( slotIndex ), slot._generation ), std::move( bytes ) } );
+            }
+        }
+        for ( const HeldChunk& released : listReleased )
+        {
+            _pHandler->onStreamReceived( released._handle, released._bytes.data(), static_cast<int32>( released._bytes.size() ) );
+        }
+        return static_cast<int32>( listReleased.size() );
     }
 
     NetAddress WebSocketStreamTransport::getRemoteAddress( StreamConnectionHandle handle ) const
@@ -211,22 +243,28 @@ namespace sw
 
     void WebSocketStreamTransport::onSocketMessage( int32 socket, const uint8* pData, int32 size, bool bText )
     {
-        StreamConnectionHandle handle;
+        StreamConnectionHandle  handle;
+        StreamReceiveHoldResult holdResult = StreamReceiveHoldResult::Deliver;
         {
             ScopedLock<mutex>      lock{ _mutex };
             const optional<uint32> slotIndex = findSlotLocked( socket );
             if ( slotIndex.has_value() == false )
                 return;
-            handle = StreamConnectionHandle::make( *slotIndex, _listSlot[*slotIndex]._generation );
+            Slot& slot = _listSlot[*slotIndex];
+            handle     = StreamConnectionHandle::make( *slotIndex, slot._generation );
             _stats._receivedBytes += static_cast<uint64>( size );
             ++_stats._receiveCallCount;
+            if ( bText == false )
+                holdResult = slot._receiveHold.accept( pData, size, _settings._maxHeldReceiveBytes );
         }
-        if ( bText )
+        // 수락 쪽은 이진만 보낸다 — 텍스트는 다른 서버다. 멈춘 동안 든 바이트가 상한을 넘으면 느린 소비자다(OS 소켓이면 TCP 윈도우가 상대를 멈췄다).
+        if ( bText || holdResult == StreamReceiveHoldResult::Overflow )
         {
-            close( handle, StreamCloseMode::Abort ); // 수락 쪽은 이진만 보낸다 — 텍스트는 다른 서버다
+            close( handle, StreamCloseMode::Abort );
             return;
         }
-        _pHandler->onStreamReceived( handle, pData, size );
+        if ( holdResult == StreamReceiveHoldResult::Deliver )
+            _pHandler->onStreamReceived( handle, pData, size );
     }
 
     void WebSocketStreamTransport::onSocketClose( int32 socket, bool bWasClean )
@@ -282,6 +320,7 @@ namespace sw
         slot._socket   = 0;
         slot._bOpen    = SW_FALSE;
         slot._bClosing = SW_FALSE;
+        slot._receiveHold.clear();
         return reason;
     }
 } // namespace sw

@@ -174,10 +174,10 @@ SW_TEST_CASE( PackCookerTest, SplitIsDeterministicAndBounded )
     listEntry.push_back( PackSplitEntry{ "audio/music/b.ogg", 40000 } );
     listEntry.push_back( PackSplitEntry{ "textures/huge.dds", 200000 } );
 
-    const expected<vector<PackPart>> parts = PackCooker::splitIntoParts( listEntry, split );
+    const expected<vector<PackPart>> parts = PackCooker::splitIntoParts( listEntry, split, {} );
     SW_REQUIRE_TRUE( parts.has_value() );
     vector<PackSplitEntry>           listReversed( listEntry.rbegin(), listEntry.rend() );
-    const expected<vector<PackPart>> reversedParts = PackCooker::splitIntoParts( listReversed, split );
+    const expected<vector<PackPart>> reversedParts = PackCooker::splitIntoParts( listReversed, split, {} );
     SW_REQUIRE_TRUE( reversedParts.has_value() );
     SW_REQUIRE_EQUAL( parts->size(), reversedParts->size() );
     for ( size_t index = 0; index < parts->size(); ++index )
@@ -207,12 +207,12 @@ SW_TEST_CASE( PackCookerTest, SplitIsDeterministicAndBounded )
     SW_EXPECT_TRUE( mapHashToChunk[PackStreamWriter::makePathHash( "data/item07.xml" )].empty() );
 
     // 빈 도메인도 첫 팩이 있고, 파일 이름에 쓸 수 없는 청크 이름은 오류다.
-    const expected<vector<PackPart>> emptyParts = PackCooker::splitIntoParts( vector<PackSplitEntry>{}, split );
+    const expected<vector<PackPart>> emptyParts = PackCooker::splitIntoParts( vector<PackSplitEntry>{}, split, {} );
     SW_REQUIRE_TRUE( emptyParts.has_value() && emptyParts->size() == 1 );
     SW_EXPECT_TRUE( emptyParts->front().isFirstPack() );
     PackSplitConfig badName              = split;
     badName._listChunkRule.front()._name = "music.hd";
-    SW_EXPECT_FALSE( PackCooker::splitIntoParts( listEntry, badName ).has_value() );
+    SW_EXPECT_FALSE( PackCooker::splitIntoParts( listEntry, badName, {} ).has_value() );
 
     SW_EXPECT_EQUAL( string( "game_empty.pack" ), PackCooker::makePackFileName( "game/empty" ) );
     SW_EXPECT_EQUAL( string( "game_empty.2.pack" ), PackCooker::makePackFileName( "game/empty", "", 2 ) );

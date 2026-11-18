@@ -41,5 +41,6 @@ namespace sw
         void*  _pDisplay;       ///< Display*
         uint64 _windowHandle;   ///< Window (XID)
         void*  _pRenderContext; ///< GLXContext
+        uint64 _visualID;       ///< 문맥을 건 주 창의 비주얼(VisualID) — 다른 창은 같은 비주얼이어야 이 문맥을 건다
     };
 } // namespace sw

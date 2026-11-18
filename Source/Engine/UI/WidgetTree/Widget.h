@@ -157,6 +157,8 @@ namespace sw
         virtual bool supportsFocus() const { return false; }
         /** @brief 포커스를 가지면 키보드 글자를 받는지 나타냅니다(텍스트 입력 필드). 그동안 게임은 키를 보지 못합니다. */
         virtual bool supportsTextInput() const { return false; }
+        /** @brief 글 커서(조합이 시작하는 자리)의 가로 위치입니다(이 위젯 로컬 UI 단위). 입력기 후보 창이 커서를 따라간다 — 글자 배치를 아는 텍스트 입력 위젯이 답한다. */
+        virtual float32 getTextCaretLocalX() const { return 0.0f; }
         /** @brief 지금 포커스를 가지고 있으면 true 입니다. */
         bool hasFocus() const;
 

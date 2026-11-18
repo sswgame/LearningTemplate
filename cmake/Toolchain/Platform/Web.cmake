@@ -25,6 +25,7 @@ target_link_options(sw_platform_web INTERFACE
 	-sFORCE_FILESYSTEM=1
 	-lidbfs.js # 세이브 · 설정의 영속 폴더(App/AppEntry.cpp 의 IDBFS 마운트)
 	-sEXPORTED_RUNTIME_METHODS=FS # 확인 페이지(py -3 -m Scripts web-check)가 IDBFS 표지를 쓰고 읽는다
+	-sFETCH=1 # 미룬 팩 청크 받기(Engine/Content/Pack/Web/WebPackChunkSource — emscripten/fetch.h)
 	-lwebsocket.js # 스트림 전송(Core/Network/Transport/Web/WebSocketStreamTransport — emscripten/websocket.h)
 	-sEXIT_RUNTIME=1
 )

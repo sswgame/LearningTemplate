@@ -1,8 +1,8 @@
 /**
  * @file TextureBlockEncoder.h
  * @brief RGBA8 밉 하나를 모바일 압축 형식(ASTC 4x4 · ETC2 RGBA8 · EAC R11 · RG11)으로 인코딩합니다. BC 는 DirectXTex 가 한다(`TextureImporter`).
- * @details shortcut: 품질은 낮다 — ASTC 는 분할 없는 고정 모드(4x4 가중치 2 비트, 끝점 8 비트) 하나, ETC2 는 개별 모드(2x4 두 칸, 기본색 4 비트) 하나다. 대상을 실제로 출시할 때 astc-encoder · etcpak 으로
- *          바꾼다(바이트 형식은 같아 로더와 표는 그대로다). 지금은 쿠킹 → 고르기 → 업로드 길을 외부 의존 없이 끝까지 돌린다. 언리얼 · 유니티는 astcenc 를 쓴다(기억에 의존한 비교).
+ * @details ASTC 는 Arm astc-encoder(`-medium` 품질, 언리얼 · 유니티와 같은 인코더), ETC2 · EAC 는 etcpak 이 한다(둘 다 ThirdParty 오버레이 포트, 에디터 전용).
+ *          두 라이브러리 모두 -march 없이 지어 빌드 기계와 상관없이 같은 블록을 낸다(astcenc 부동 소수 불변 · etcpak 스칼라 길) — 결과가 DDC 키로 쓰인다.
  *          행은 빈틈없이 이어져야 하고, 4 로 나누어떨어지지 않는 가장자리 블록은 마지막 화소를 되풀이해 채운다(`computeRHITextureMipLayout` 과 같은 블록 수).
  */
 #pragma once

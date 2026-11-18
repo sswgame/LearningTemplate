@@ -9,6 +9,7 @@
 #include "Core/Math/ValueNoise.h"
 #include "Core/Testing/TestFramework.h"
 
+#include <cmath>
 #include <limits>
 
 namespace sw
@@ -48,6 +49,21 @@ SW_TEST_CASE( DeterministicMathTest, SinCosMatchRecordedBits )
         SW_EXPECT_EQUAL( sample._second, BitUtil::floatToBits( DeterministicMathUtil::cos( sample._input ) ) );
     }
     SW_EXPECT_TRUE( MathUtil::isNan( static_cast<float64>( DeterministicMathUtil::sin( std::numeric_limits<float32>::infinity() ) ) ) );
+}
+
+/**
+ * @brief [DeterministicMathTest] 2^20 · π/2 를 넘는 큰 각도도 float64 libm 과 2 ulp 안이다 — Payne-Hanek 축약(Cody-Waite 의 앞 조각 곱은 거기서 정확하지 않았다).
+ */
+SW_TEST_CASE( DeterministicMathTest, SinCosStayAccurateForLargeAngles )
+{
+    constexpr float32 kArrInput[] = { 1.7e6f, -1.0e7f, 3.0e8f, 123456789.0f, 1.0e20f, -1.0e20f, 1.0e30f, 3.4e38f };
+    for ( const float32 input : kArrInput )
+    {
+        const float64 expectedSin = std::sin( static_cast<float64>( input ) );
+        const float64 expectedCos = std::cos( static_cast<float64>( input ) );
+        SW_EXPECT_TRUE( std::fabs( static_cast<float64>( DeterministicMathUtil::sin( input ) ) - expectedSin ) < 2.0e-7 );
+        SW_EXPECT_TRUE( std::fabs( static_cast<float64>( DeterministicMathUtil::cos( input ) ) - expectedCos ) < 2.0e-7 );
+    }
 }
 
 /**

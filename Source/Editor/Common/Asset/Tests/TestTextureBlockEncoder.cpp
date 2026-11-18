@@ -1,8 +1,10 @@
-// TextureBlockEncoder — 인코더가 쓴 블록을 명세대로 푼 값이 원본과 가까운지 본다. 디코더는 인코더가 쓰는 모드만 푼다. 실제 장치 대조는 Vulkan lavapipe(ETC2 · ASTC 지원)로 통합 뒤에 한다.
+// TextureBlockEncoder — astc-encoder · etcpak 이 쓴 블록을 같은 라이브러리의 디코더로 풀어 원본과 가까운지, 같은 입력에서 같은 바이트인지 본다(DDC 키).
+// 실제 장치 대조는 Vulkan lavapipe(ETC2 · ASTC 지원)로 통합 뒤에 한다.
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/Texture/TextureBlockEncoder.h"
@@ -14,6 +16,9 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"
 
+#include <astcenc/astcenc.h>
+#include <etcpak/Decode.hpp>
+
 using namespace sw;
 using namespace sw::editor;
 
@@ -21,182 +26,134 @@ namespace
 {
     struct TextureBlockEncoderTestUtil
     {
-        /** @brief 4x4 RGBA 그라디언트입니다(블록 안에서 값이 고르게 변한다). */
+        static constexpr uint32 kSize = 8;
+
+        /** @brief 8x8 RGBA 그라디언트입니다(x · y 로 따로 변하는 매끈한 색 — 블록 압축이 잘 맞는 입력). */
         static vector<uint8> makeGradient()
         {
-            vector<uint8> listByte( 16 * 4 );
-            for ( uint32 y = 0; y < 4; ++y )
+            vector<uint8> listByte( kSize * kSize * 4 );
+            for ( uint32 y = 0; y < kSize; ++y )
             {
-                for ( uint32 x = 0; x < 4; ++x )
+                for ( uint32 x = 0; x < kSize; ++x )
                 {
-                    uint8* pPixel = listByte.data() + ( y * 4 + x ) * 4;
-                    pPixel[0]     = static_cast<uint8>( 40 + x * 40 );
-                    pPixel[1]     = static_cast<uint8>( 200 - y * 40 );
-                    pPixel[2]     = static_cast<uint8>( 100 + x * 10 + y * 10 );
-                    pPixel[3]     = static_cast<uint8>( 255 - x * 30 );
+                    uint8* pPixel = listByte.data() + ( y * kSize + x ) * 4;
+                    pPixel[0]     = static_cast<uint8>( 40 + x * 20 );
+                    pPixel[1]     = static_cast<uint8>( 200 - y * 20 );
+                    pPixel[2]     = static_cast<uint8>( 100 + x * 5 + y * 5 );
+                    pPixel[3]     = static_cast<uint8>( 255 - x * 15 );
                 }
             }
             return listByte;
         }
 
-        /** @brief 색이 한 직선 위에서 변하는 4x4 입니다. 고정 모드 인코더는 끝점 둘로 직선 하나만 나타낸다 — x · y 로 따로 변하는 색은 원래 멀어진다. */
-        static vector<uint8> makeLineGradient()
+        /** @brief astcenc 로 ASTC 4x4 블록을 RGBA8 로 풉니다. 실패하면 빈 벡터입니다. */
+        static vector<uint8> decodeASTC( const vector<uint8>& listBlock, uint32 width, uint32 height )
         {
-            vector<uint8> listByte( 16 * 4 );
-            for ( uint32 index = 0; index < 16; ++index )
+            vector<uint8>    listPixel( static_cast<size_t>( width ) * height * 4 );
+            astcenc_config   config{};
+            astcenc_context* pContext = nullptr;
+            if ( astcenc_config_init( ASTCENC_PRF_LDR, 4, 4, 1, ASTCENC_PRE_FASTEST, ASTCENC_FLG_DECOMPRESS_ONLY, &config ) != ASTCENC_SUCCESS ||
+                 astcenc_context_alloc( &config, 1, &pContext, nullptr ) != ASTCENC_SUCCESS )
+                return {};
+            void*         pSlice = listPixel.data();
+            astcenc_image image{};
+            image.dim_x     = width;
+            image.dim_y     = height;
+            image.dim_z     = 1;
+            image.data_type = ASTCENC_TYPE_U8;
+            image.data      = &pSlice;
+            const astcenc_swizzle swizzle{ ASTCENC_SWZ_R, ASTCENC_SWZ_G, ASTCENC_SWZ_B, ASTCENC_SWZ_A };
+            const astcenc_error   status = astcenc_decompress_image( pContext, listBlock.data(), listBlock.size(), &image, &swizzle, 0 );
+            astcenc_context_free( pContext );
+            return status == ASTCENC_SUCCESS ? listPixel : vector<uint8>{};
+        }
+
+        /** @brief etcpak 으로 ETC2 RGBA8 · EAC R11 · RG11 블록을 RGBA8 로 풉니다(크기는 4 의 배수). */
+        static vector<uint8> decodeETC( RHIFormat format, const vector<uint8>& listBlock, uint32 width, uint32 height )
+        {
+            vector<uint64> listWord( listBlock.size() / sizeof( uint64 ) );
+            Memory::copy( listWord.data(), listBlock.data(), listBlock.size() );
+            vector<uint32> listPixel( static_cast<size_t>( width ) * height );
+            if ( format == RHIFormat::ETC2_RGBA8_UNORM )
+                DecodeRGBA( listWord.data(), listPixel.data(), static_cast<int32_t>( width ), static_cast<int32_t>( height ) );
+            else if ( format == RHIFormat::EAC_RG11_UNORM )
+                DecodeRG( listWord.data(), listPixel.data(), static_cast<int32_t>( width ), static_cast<int32_t>( height ) );
+            else
+                DecodeR( listWord.data(), listPixel.data(), static_cast<int32_t>( width ), static_cast<int32_t>( height ) );
+            vector<uint8> listByte( listPixel.size() * 4 );
+            for ( size_t index = 0; index < listPixel.size(); ++index )
             {
-                uint8* pPixel = listByte.data() + index * 4;
-                pPixel[0]     = static_cast<uint8>( 40 + index * 10 );
-                pPixel[1]     = static_cast<uint8>( 200 - index * 8 );
-                pPixel[2]     = static_cast<uint8>( 100 + index * 5 );
-                pPixel[3]     = static_cast<uint8>( 255 - index * 6 );
+                for ( uint32 channel = 0; channel < 4; ++channel )
+                {
+                    listByte[index * 4 + channel] = static_cast<uint8>( listPixel[index] >> ( channel * 8 ) ); // 디코더는 R 이 아래 바이트다
+                }
             }
             return listByte;
         }
 
-        static uint32 readBits( const uint8* pBlock, uint32 bitOffset, uint32 bitCount )
+        /** @brief 두 RGBA8 그림의 채널 @p firstChannel ~ @p lastChannel 에서 가장 큰 차이입니다. */
+        static int32 measureMaxError( const vector<uint8>& listSource, const vector<uint8>& listDecoded, uint32 firstChannel, uint32 lastChannel )
         {
-            uint32 value = 0;
-            for ( uint32 index = 0; index < bitCount; ++index )
+            int32 maxError = 0;
+            for ( size_t pixel = 0; pixel * 4 < listSource.size(); ++pixel )
             {
-                const uint32 bit = bitOffset + index;
-                value |= static_cast<uint32>( ( pBlock[bit / 8] >> ( bit % 8 ) ) & 1u ) << index;
+                for ( uint32 channel = firstChannel; channel <= lastChannel; ++channel )
+                {
+                    maxError = MathUtil::max( maxError, MathUtil::abs( static_cast<int32>( listSource[pixel * 4 + channel] ) - static_cast<int32>( listDecoded[pixel * 4 + channel] ) ) );
+                }
             }
-            return value;
-        }
-
-        /** @brief 고정 모드 ASTC 블록의 화소 하나를 풉니다. */
-        static int32 decodeASTC( const uint8* pBlock, uint32 x, uint32 y, uint32 channel )
-        {
-            constexpr int32 kArrWeight[4] = { 0, 21, 43, 64 };
-            const uint32    index         = y * 4 + x;
-            const uint32    weightIndex   = readBits( pBlock, 127 - index * 2, 1 ) | ( readBits( pBlock, 126 - index * 2, 1 ) << 1 );
-            const int32     first         = static_cast<int32>( readBits( pBlock, 17 + channel * 16, 8 ) );
-            const int32     second        = static_cast<int32>( readBits( pBlock, 25 + channel * 16, 8 ) );
-            return ( first * ( 64 - kArrWeight[weightIndex] ) + second * kArrWeight[weightIndex] + 32 ) / 64;
-        }
-
-        /** @brief EAC 블록의 화소 하나를 8 비트 값으로 풉니다(명세의 식). */
-        static int32 decodeEAC( const uint8* pBlock, uint32 x, uint32 y )
-        {
-            constexpr int32 kArrModifier[16][8] = {
-                {-3, -6,  -9, -15, 2, 5, 8, 14},
-                {-3, -7, -10, -13, 2, 6, 9, 12},
-                {-2, -5,  -8, -13, 1, 4, 7, 12},
-                {-2, -4,  -6, -13, 1, 3, 5, 12},
-                {-3, -6,  -8, -12, 2, 5, 7, 11},
-                {-3, -7,  -9, -11, 2, 6, 8, 10},
-                {-4, -7,  -8, -11, 3, 6, 7, 10},
-                {-3, -5,  -8, -11, 2, 4, 7, 10},
-                {-2, -6,  -8, -10, 1, 5, 7,  9},
-                {-2, -5,  -8, -10, 1, 4, 7,  9},
-                {-2, -4,  -8, -10, 1, 3, 7,  9},
-                {-2, -5,  -7, -10, 1, 4, 6,  9},
-                {-3, -4,  -7, -10, 2, 3, 6,  9},
-                {-1, -2,  -3, -10, 0, 1, 2,  9},
-                {-4, -6,  -8,  -9, 3, 5, 7,  8},
-                {-3, -5,  -7,  -9, 2, 4, 6,  8},
-            };
-            uint64 bits = 0;
-            for ( uint32 index = 2; index < 8; ++index )
-            {
-                bits = ( bits << 8 ) | pBlock[index];
-            }
-            const uint32 pixelIndex = x * 4 + y;
-            const uint32 modifier   = static_cast<uint32>( bits >> ( 45 - pixelIndex * 3 ) ) & 7u;
-            const int32  multiplier = pBlock[1] >> 4;
-            return MathUtil::clamp( pBlock[0] + kArrModifier[pBlock[1] & 15][modifier] * multiplier, 0, 255 );
-        }
-
-        /** @brief ETC2 개별 모드 블록의 화소 하나를 풉니다. */
-        static int32 decodeETC( const uint8* pBlock, uint32 x, uint32 y, uint32 channel )
-        {
-            constexpr int32 kArrModifier[8][2] = {
-                { 2,   8},
-                { 5,  17},
-                { 9,  29},
-                {13,  42},
-                {18,  60},
-                {24,  80},
-                {33, 106},
-                {47, 183}
-            };
-            const bool   bSecond  = x >= 2;
-            const int32  base     = ( bSecond ? pBlock[channel] & 15 : pBlock[channel] >> 4 ) * 17;
-            const uint32 table    = bSecond ? ( pBlock[3] >> 2 ) & 7u : pBlock[3] >> 5;
-            const uint32 bit      = x * 4 + y;
-            const uint32 msb      = ( ( static_cast<uint32>( pBlock[4] ) << 8 | pBlock[5] ) >> bit ) & 1u;
-            const uint32 lsb      = ( ( static_cast<uint32>( pBlock[6] ) << 8 | pBlock[7] ) >> bit ) & 1u;
-            const int32  modifier = kArrModifier[table][lsb] * ( msb != 0 ? -1 : 1 );
-            return MathUtil::clamp( base + modifier, 0, 255 );
+            return maxError;
         }
     };
 } // namespace
 
 /**
- * @brief [TextureBlockEncoderTest] ASTC 4x4 블록은 고정 모드 비트를 쓰고, 끝점 합이 줄지 않아(파랑 수축 없음) 푼 값이 원본 근처다
+ * @brief [TextureBlockEncoderTest] ASTC 4x4 는 astcenc 로 풀어 원본 근처이고, 같은 입력은 같은 바이트다(쿠킹 결과가 DDC 키다)
  */
-SW_TEST_CASE( TextureBlockEncoderTest, ASTCBlockDecodesNearTheSource )
+SW_TEST_CASE( TextureBlockEncoderTest, ASTCRoundTripsNearTheSourceDeterministically )
 {
-    const vector<uint8> listSource = TextureBlockEncoderTestUtil::makeLineGradient();
+    using Util                     = TextureBlockEncoderTestUtil;
+    const vector<uint8> listSource = Util::makeGradient();
     vector<uint8>       listBlock;
-    SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::ASTC_4x4_UNORM, listSource.data(), 4, 4, listBlock ) );
-    SW_REQUIRE_EQUAL( size_t( 16 ), listBlock.size() );
-    SW_EXPECT_EQUAL( 0x042u, TextureBlockEncoderTestUtil::readBits( listBlock.data(), 0, 11 ) );
-    SW_EXPECT_EQUAL( 12u, TextureBlockEncoderTestUtil::readBits( listBlock.data(), 13, 4 ) );
-    uint32 firstSum  = 0;
-    uint32 secondSum = 0;
-    for ( uint32 channel = 0; channel < 3; ++channel )
-    {
-        firstSum += TextureBlockEncoderTestUtil::readBits( listBlock.data(), 17 + channel * 16, 8 );
-        secondSum += TextureBlockEncoderTestUtil::readBits( listBlock.data(), 25 + channel * 16, 8 );
-    }
-    SW_EXPECT_TRUE( secondSum >= firstSum );
-    for ( uint32 y = 0; y < 4; ++y )
-    {
-        for ( uint32 x = 0; x < 4; ++x )
-        {
-            for ( uint32 channel = 0; channel < 4; ++channel )
-            {
-                const int32 decoded = TextureBlockEncoderTestUtil::decodeASTC( listBlock.data(), x, y, channel );
-                const int32 source  = listSource[( y * 4 + x ) * 4 + channel];
-                SW_EXPECT_TRUE_MSG( MathUtil::abs( decoded - source ) <= 30, "ASTC pixel is far from the source" );
-            }
-        }
-    }
+    SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::ASTC_4x4_UNORM, listSource.data(), Util::kSize, Util::kSize, listBlock ) );
+    SW_REQUIRE_EQUAL( size_t( 4 * 16 ), listBlock.size() );
+    const vector<uint8> listDecoded = Util::decodeASTC( listBlock, Util::kSize, Util::kSize );
+    SW_REQUIRE_EQUAL( listSource.size(), listDecoded.size() );
+    SW_EXPECT_TRUE_MSG( Util::measureMaxError( listSource, listDecoded, 0, 3 ) <= 8, "ASTC pixel is far from the source" );
+
+    vector<uint8> listAgain;
+    SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::ASTC_4x4_UNORM, listSource.data(), Util::kSize, Util::kSize, listAgain ) );
+    SW_EXPECT_TRUE( listAgain == listBlock );
 }
 
 /**
- * @brief [TextureBlockEncoderTest] ETC2 RGBA8 은 EAC 알파 8 바이트 + 색 8 바이트이고, EAC R11 · RG11 은 R · RG 채널을 푼 값이 원본 근처다
+ * @brief [TextureBlockEncoderTest] ETC2 RGBA8(EAC 알파 + 색) · EAC RG11 · R11 은 etcpak 으로 풀어 원본 근처이고, 같은 입력은 같은 바이트다
  */
-SW_TEST_CASE( TextureBlockEncoderTest, ETC2AndEACBlocksDecodeNearTheSource )
+SW_TEST_CASE( TextureBlockEncoderTest, ETC2AndEACRoundTripNearTheSourceDeterministically )
 {
-    const vector<uint8> listSource = TextureBlockEncoderTestUtil::makeGradient();
+    using Util                     = TextureBlockEncoderTestUtil;
+    const vector<uint8> listSource = Util::makeGradient();
     vector<uint8>       listBlock;
-    SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::ETC2_RGBA8_UNORM, listSource.data(), 4, 4, listBlock ) );
-    SW_REQUIRE_EQUAL( size_t( 16 ), listBlock.size() );
-    for ( uint32 y = 0; y < 4; ++y )
-    {
-        for ( uint32 x = 0; x < 4; ++x )
-        {
-            const uint8* pSource = listSource.data() + ( y * 4 + x ) * 4;
-            SW_EXPECT_TRUE( MathUtil::abs( TextureBlockEncoderTestUtil::decodeEAC( listBlock.data(), x, y ) - pSource[3] ) <= 20 );
-            for ( uint32 channel = 0; channel < 3; ++channel )
-            {
-                SW_EXPECT_TRUE( MathUtil::abs( TextureBlockEncoderTestUtil::decodeETC( listBlock.data() + 8, x, y, channel ) - pSource[channel] ) <= 70 );
-            }
-        }
-    }
+    SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::ETC2_RGBA8_UNORM, listSource.data(), Util::kSize, Util::kSize, listBlock ) );
+    SW_REQUIRE_EQUAL( size_t( 4 * 16 ), listBlock.size() );
+    vector<uint8> listDecoded = Util::decodeETC( RHIFormat::ETC2_RGBA8_UNORM, listBlock, Util::kSize, Util::kSize );
+    SW_EXPECT_TRUE_MSG( Util::measureMaxError( listSource, listDecoded, 0, 2 ) <= 24, "ETC2 color is far from the source" );
+    SW_EXPECT_TRUE_MSG( Util::measureMaxError( listSource, listDecoded, 3, 3 ) <= 8, "ETC2 alpha is far from the source" );
+    vector<uint8> listAgain;
+    SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::ETC2_RGBA8_UNORM, listSource.data(), Util::kSize, Util::kSize, listAgain ) );
+    SW_EXPECT_TRUE( listAgain == listBlock );
 
     listBlock.clear();
-    SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::EAC_RG11_UNORM, listSource.data(), 4, 4, listBlock ) );
-    SW_REQUIRE_EQUAL( size_t( 16 ), listBlock.size() );
-    SW_EXPECT_TRUE( MathUtil::abs( TextureBlockEncoderTestUtil::decodeEAC( listBlock.data(), 1, 2 ) - listSource[( 2 * 4 + 1 ) * 4 + 0] ) <= 20 );
-    SW_EXPECT_TRUE( MathUtil::abs( TextureBlockEncoderTestUtil::decodeEAC( listBlock.data() + 8, 1, 2 ) - listSource[( 2 * 4 + 1 ) * 4 + 1] ) <= 20 );
+    SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::EAC_RG11_UNORM, listSource.data(), Util::kSize, Util::kSize, listBlock ) );
+    SW_REQUIRE_EQUAL( size_t( 4 * 16 ), listBlock.size() );
+    listDecoded = Util::decodeETC( RHIFormat::EAC_RG11_UNORM, listBlock, Util::kSize, Util::kSize );
+    SW_EXPECT_TRUE_MSG( Util::measureMaxError( listSource, listDecoded, 0, 1 ) <= 8, "EAC RG11 is far from the source" );
 
     listBlock.clear();
-    SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::EAC_R11_UNORM, listSource.data(), 4, 4, listBlock ) );
-    SW_EXPECT_EQUAL( size_t( 8 ), listBlock.size() );
+    SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::EAC_R11_UNORM, listSource.data(), Util::kSize, Util::kSize, listBlock ) );
+    SW_REQUIRE_EQUAL( size_t( 4 * 8 ), listBlock.size() );
+    listDecoded = Util::decodeETC( RHIFormat::EAC_R11_UNORM, listBlock, Util::kSize, Util::kSize );
+    SW_EXPECT_TRUE_MSG( Util::measureMaxError( listSource, listDecoded, 0, 0 ) <= 8, "EAC R11 is far from the source" );
 }
 
 /**

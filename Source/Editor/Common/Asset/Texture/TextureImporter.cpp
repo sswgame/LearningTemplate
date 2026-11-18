@@ -514,7 +514,7 @@ namespace sw::editor
 
         private:
             /** @brief `TextureBlockEncoder` 의 판입니다. 같은 입력에서 다른 바이트가 나오게 바꾸면 올립니다. */
-            static constexpr uint64 kVariantEncoderVersion = 1;
+            static constexpr uint64 kVariantEncoderVersion = 2; // 2: astc-encoder · etcpak 으로 바꿨다
 
             const TextureFormatFamily& _family;
             const string               _stampFileName;
