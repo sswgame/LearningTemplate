@@ -68,7 +68,7 @@ SW_TEST_CASE( MeshModifierHandleCommandTest, PressHandleBeginsAndPressPointSelec
     using Util                              = MeshModifierHandleCommandTestUtil;
     const MeshModifierHandleViewState state = Util::makeState();
     vector<MeshModifierHandleCommand> listCommand;
-    MeshModifierHandleCommand::press( state, 0, nullopt, Ray{}, listCommand );
+    MeshModifierHandleCommand::press( state, optional<int32>{ 0 }, nullopt, Ray{}, listCommand );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listCommand.size() );
     SW_EXPECT_TRUE( listCommand[0]._kind == MeshModifierHandleCommandKind::Begin );
     SW_EXPECT_TRUE( listCommand[0]._handle._kind == MeshModifierHandleKind::GizmoMove );
@@ -76,7 +76,7 @@ SW_TEST_CASE( MeshModifierHandleCommandTest, PressHandleBeginsAndPressPointSelec
     SW_EXPECT_FALSE( listCommand[0]._bSelectPoint );
 
     listCommand.clear();
-    MeshModifierHandleCommand::press( state, nullopt, 1, Ray{}, listCommand );
+    MeshModifierHandleCommand::press( state, nullopt, optional<int32>{ 1 }, Ray{}, listCommand );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listCommand.size() );
     SW_EXPECT_TRUE( listCommand[0]._handle._kind == MeshModifierHandleKind::PointFree );
     SW_EXPECT_TRUE( listCommand[0]._bSelectPoint );
