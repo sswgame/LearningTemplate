@@ -178,6 +178,7 @@ namespace sw
         , _inventory{}
         , _pWeatherCatalog{}
         , _weather{}
+        , _weatherMaterial{}
         , _land{}
         , _listClockEvent{}
         , _pendingStateBytes{}
@@ -213,6 +214,7 @@ namespace sw
         _pWeatherCatalog = settings._pWeatherCatalog;
         _weather.initialize( _pWeatherCatalog.get(), settings._weatherSeed, _clock.getSeasonName() );
         _bWeather = settings._pWeatherCatalog != nullptr ? SW_TRUE : SW_FALSE;
+        _weatherMaterial.open( _pWeatherCatalog.get() ); // 강수를 칸으로 적은 카탈로그면 지면 머티리얼이 날씨를 따른다(없으면 열지 않는다)
         _land.initialize( settings._landWidth, settings._landHeight, settings._landCellSize, settings._landOrigin );
         _listClockEvent.clear();
         _bInitialized = SW_TRUE;
@@ -263,6 +265,16 @@ namespace sw
         }
         if ( _bWeather == SW_TRUE && _clock.isPaused() == false )
             (void)_weather.update( context.getDeltaTime() * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
+        // 묶음은 게임 스레드만 고친다 — 쓰기는 틱 뒤에 한다.
+        if ( _weatherMaterial.isOpen() )
+            context.deferPostTickOnComponent( *this, []( SessionStateComponent& state )
+            { state._weatherMaterial.apply( state._weather ); } );
+    }
+
+    void SessionStateComponent::onEndPlay()
+    {
+        _weatherMaterial.close();
+        Component::onEndPlay();
     }
 
     void SessionStateComponent::serializeState( StateIO& io )

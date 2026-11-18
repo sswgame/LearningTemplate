@@ -60,10 +60,38 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 머티리얼 파라미터 묶음 칸 하나와 그 채널마다의 날씨 값 이름입니다(`<MaterialBinding parameter="Weather" valueX="wetness" valueY="puddle"/>`).
+     * @details 비운 채널은 묶음 파일의 값 그대로다(설선 높이처럼 날씨가 정하지 않는 값). 판 상태의 쓰개(`WeatherMaterialWriter`)가 틱마다 쓴다.
+     */
+    REFLECT()
+    struct SW_GF_API WeatherMaterialBinding
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Parameter of the material parameter collection the weather writes" )
+        hashed_string _parameter{};
+        PROPERTY( Tooltip = "Weather value written to x (empty: the file value)" )
+        hashed_string _valueX{};
+        PROPERTY( Tooltip = "Weather value written to y (empty: the file value)" )
+        hashed_string _valueY{};
+        PROPERTY( Tooltip = "Weather value written to z (empty: the file value)" )
+        hashed_string _valueZ{};
+        PROPERTY( Tooltip = "Weather value written to w (empty: the file value)" )
+        hashed_string _valueW{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class WeatherCatalog
      * @brief 날씨 카탈로그(`<WeatherCatalog>`)를 읽습니다.
+     * @details `materialCollection` 과 `<MaterialBinding>` 은 날씨 값을 지면 머티리얼이 읽는 파라미터 묶음 칸에 잇는다 — 날씨를 연 판 상태가 늘 쓴다(`WeatherMaterialWriter`).
+     *          바인딩이 있는데 묶음이 없으면 읽기 오류다.
      * @code
-     *     <WeatherCatalog transition="60"><Weather id="rain" weight="1" seasons="Spring:3,Summer:1" minDuration="600" maxDuration="1800">
+     *     <WeatherCatalog transition="60" materialCollection="engine/materials/weather.matparams.xml">
+     *         <MaterialBinding parameter="Weather" valueX="wetness"/>
+     *         <Weather id="rain" weight="1" seasons="Spring:3,Summer:1" minDuration="600" maxDuration="1800">
      *         <Values wetness="1" wind="0.4"/></Weather></WeatherCatalog>
      * @endcode
      */
@@ -75,6 +103,8 @@ namespace sw
 
         PROPERTY( Min = 0.0, Units = s )
         float32 _transition{ 0.0f };
+        PROPERTY( Tooltip = "Material parameter collection (*.matparams.xml) the <MaterialBinding> rows write (empty: the weather drives no materials)" )
+        string _materialCollection{};
     };
 
     class SW_GF_API WeatherCatalog : public GameCatalog<WeatherDef, XMLCatalog<WeatherCatalog>>
@@ -90,14 +120,21 @@ namespace sw
         static constexpr AssetTypeDef kAssetType{ "WeatherCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         float32 getTransitionTime() const { return _transitionTime; }
+        /** @brief 바인딩이 쓰는 머티리얼 파라미터 묶음 경로입니다(없으면 비어 있다). */
+        const string& getMaterialCollection() const { return _materialCollection; }
+        /** @brief 날씨 값 → 묶음 칸 바인딩입니다(`<MaterialBinding>`). */
+        const vector<WeatherMaterialBinding>& getMaterialBindings() const { return _listMaterialBinding; }
 
     private:
         static constexpr const utf8* kXMLRootName = "WeatherCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadWeather( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadMaterialBinding( const XMLNode& node, string_view sourceName );
 
     private:
-        float32 _transitionTime{ 60.0f };
+        float32                        _transitionTime{ 60.0f };
+        string                         _materialCollection{};
+        vector<WeatherMaterialBinding> _listMaterialBinding{};
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<WeatherCatalog>::acquire` 로 한 벌을 받습니다. */

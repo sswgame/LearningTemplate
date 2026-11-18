@@ -20,6 +20,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
+#include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
@@ -116,8 +117,13 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 틱 그룹을 디렉터와 같은 `PrePhysics` 로 정합니다. */
         void onBeginPlay() override;
-        /** @brief 열렸으면 시계를 진행하고(날씨는 시계 뒤에 게임 초 단위로, 날이 넘어갈 때마다 평판이 식음) 이번 틱의 시계 알림을 모읍니다. */
+        /**
+         * @brief 열렸으면 시계를 진행하고(날씨는 시계 뒤에 게임 초 단위로, 날이 넘어갈 때마다 평판이 식음) 이번 틱의 시계 알림을 모읍니다.
+         * @details 날씨가 머티리얼 칸을 적은 카탈로그면 틱 뒤 게임 스레드에서 그 값을 묶음에 쓴다(`WeatherMaterialWriter`) — 장면마다 따로 놓지 않는다.
+         */
         void onTick( TickContext& context ) override;
+        /** @brief 날씨가 쓴 머티리얼 칸을 연 때의 값으로 되돌립니다. */
+        void onEndPlay() override;
 
         /** @brief 구간 여덟 개(지갑, 플래그, 시계, 일지, 평판, 가방, 날씨, 땅)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. 열리기 전이면 보관하고 있던 바이트를 그대로 씁니다. */
         SW_DECLARE_STATE_IO_IN_PLACE();
@@ -184,7 +190,8 @@ namespace sw
         Inventory                        _inventory;       ///< 플레이어 가방
         shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 날씨가 가리키는 카탈로그의 판(열 때의 스냅숏 — 다시 읽기 정리가 놓아도 날씨의 항목 포인터가 끊기지 않는다)
         WeatherSystem                    _weather;
-        LandRegistry                     _land; ///< 공유 땅. 격자와 배치 키트가 셀을 얻어 쓴다
+        WeatherMaterialWriter            _weatherMaterial; ///< 날씨 → 지면 머티리얼 묶음(카탈로그의 바인딩). `_pWeatherCatalog` 뒤에 둔다 — 먼저 사라진다
+        LandRegistry                     _land;            ///< 공유 땅. 격자와 배치 키트가 셀을 얻어 쓴다
         vector<WorldClockEvent>          _listClockEvent;
         vector<uint8>                    _pendingStateBytes; ///< 열리기 전에 받은 복원 바이트
         uint8                            _bInitialized : 1;

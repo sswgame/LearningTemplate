@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="f4d756b52a404f1b90e435883e0c93c3"?>
-<!-- 빗마당(maps/rainyard)의 날씨 — 무대의 WeatherMaterialComponent 가 wetness · puddle 을 묶음 Weather 의 x · y 에, rain 을 Rain 의 x 에 쓴다
+<!-- 빗마당(maps/rainyard)의 날씨 — 판 상태가 <MaterialBinding> 대로 wetness · puddle 을 묶음 Weather 의 x · y 에, rain 을 Rain 의 x 에 쓴다(WeatherMaterialWriter)
      (engine/materials/weather.matparams.xml — 지면이 젖고 웅덩이가 차고 빗방울 링이 돈다. 발걸음의 젖은 반응도 같은 Weather.x 를 읽는다).
      시나리오가 cheat.weather 로 바꾸므로 맑음만 고를 무게를 갖고 비는 무게 0 이다(저절로 오지 않는다). -->
-<WeatherCatalog transition="5">
+<WeatherCatalog transition="5" materialCollection="engine/materials/weather.matparams.xml">
+	<MaterialBinding parameter="Weather" valueX="wetness" valueY="puddle"/>
+	<MaterialBinding parameter="Rain" valueX="rain"/>
 	<Weather id="clear" weight="1" minDuration="100000" maxDuration="100000">
 		<Values wetness="0" puddle="0" rain="0"/>
 	</Weather>

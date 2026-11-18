@@ -5,7 +5,7 @@
 	     패드는 2 cm 두께의 정적 상자(물리 재질 = 표면 종류)와 그 위의 변형 지면(PlaneDense)이다 — 발걸음은 패드 재질로, 웅덩이는 물(WaterBodyComponent)로 종류를 정한다.
 	     걷는 이(Walker — 스켈레톤 전사, 제자리 걷기 Walking_A, 발 알림 FootL · FootR)는 무대 밖 돌 바닥(16, -18)에서 시작하고 시나리오가 object.place 로 옮긴다.
 	     플레이어 몸(prefabs/player_body.prefab.xml)도 발 닿음 감지로 발걸음을 낸다(common/characters/ubc/ubc_body.notifies.xml).
-	     날씨는 Weather 엔티티의 판 상태가 rainyard.weather.xml 로 열고 WeatherMaterialComponent 가 지면 머티리얼 묶음에 쓴다(비: 젖음 · 웅덩이 · 빗방울 링).
+	     날씨는 Weather 엔티티의 판 상태가 rainyard.weather.xml 로 열고, 카탈로그의 머티리얼 바인딩대로 판 상태가 지면 머티리얼 묶음에 쓴다(비: 젖음 · 웅덩이 · 빗방울 링).
 	     적은 나오지 않는다(게임 모드의 스폰 표만 rainyard.spawns.xml — 예산 0). 길을 막는 엄폐물 Cover_10 (0, 1, -12) 은 뺀다(Cover_6 (4, 0.6, -4) 은 패드 옆이라 둔다). -->
 	<entities>
 		<entity id="37" _op="Remove" />
@@ -121,12 +121,6 @@
 				<_listComponent>
 					<SessionStateComponent />
 					<WeatherDirectorComponent _weatherDataPath="game/shooter3d/data/rainyard.weather.xml" _startWeather="clear" _seed="7" />
-					<WeatherMaterialComponent _collectionPath="engine/materials/weather.matparams.xml">
-						<_listBinding>
-							<WeatherMaterialBinding _parameter="Weather" _valueX="wetness" _valueY="puddle" />
-							<WeatherMaterialBinding _parameter="Rain" _valueX="rain" />
-						</_listBinding>
-					</WeatherMaterialComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

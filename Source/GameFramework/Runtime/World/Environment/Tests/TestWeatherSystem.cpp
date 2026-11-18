@@ -4,6 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
 using namespace sw;
@@ -255,4 +256,35 @@ SW_TEST_CASE( WeatherSystemTest, RefusedStateLeavesTheSystemAlone )
     Archive truncated( written.getData(), written.getSize() - 2 );
     SW_EXPECT_FALSE( saved.readState( truncated ) );
     SW_EXPECT_TRUE( saved.getCurrent() == hashed_string( "Clear" ) );
+}
+
+/**
+ * @brief [WeatherSystemTest] 카탈로그의 `<MaterialBinding>` 은 날씨 값을 묶음 칸 채널에 잇는다 — 적은 채널은 날씨 값(날씨가 없으면 0), 빈 채널은 파일 값.
+ *        묶음 없는 바인딩은 읽기 오류다
+ */
+SW_TEST_CASE( WeatherSystemTest, MaterialBindingsMapWeatherValuesToChannels )
+{
+    WeatherCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<WeatherCatalog transition="10" materialCollection="engine/materials/weather.matparams.xml">
+        <MaterialBinding parameter="Weather" valueX="wetness" valueY="puddle"/>
+        <Weather id="Rain" minDuration="50" maxDuration="50"><Values wetness="1" puddle="0.5"/></Weather>
+    </WeatherCatalog>)",
+                                              "weather" ) );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( catalog.getMaterialBindings().size() ) );
+    SW_EXPECT_TRUE( catalog.getMaterialCollection() == "engine/materials/weather.matparams.xml" );
+    WeatherSystem weather;
+    weather.initialize( &catalog, 1, WeatherSystemTestUtil::kSpring );
+    const float4 fileValue{ 0.25f, 0.5f, 0.75f, 18.0f };
+    const float4 rain = WeatherMaterialWriter::computeValue( catalog.getMaterialBindings().front(), fileValue, &weather );
+    SW_EXPECT_NEAR( 1.0f, rain._x, 1.0e-6f );
+    SW_EXPECT_NEAR( 0.5f, rain._y, 1.0e-6f );
+    SW_EXPECT_NEAR( 0.75f, rain._z, 1.0e-6f );
+    SW_EXPECT_NEAR( 18.0f, rain._w, 1.0e-6f );
+    const float4 none = WeatherMaterialWriter::computeValue( catalog.getMaterialBindings().front(), fileValue, nullptr );
+    SW_EXPECT_NEAR( 0.0f, none._x, 1.0e-6f );
+
+    WeatherCatalog broken;
+    SW_EXPECT_LOG( "WeatherSystem.MaterialBindingNoCollection" );
+    (void)broken.loadFromXMLText( R"(<WeatherCatalog><MaterialBinding parameter="Weather" valueX="wetness"/><Weather id="Clear" minDuration="100" maxDuration="100"/></WeatherCatalog>)", "weather" );
+    SW_EXPECT_TRUE( broken.getMaterialBindings().empty() );
 }
