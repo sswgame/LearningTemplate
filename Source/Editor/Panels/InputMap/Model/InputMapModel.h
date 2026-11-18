@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Widgets/EditableAssetPath.h"
 #include "Editor/Panels/InputMap/Model/InputMapConflict.h"
@@ -36,6 +37,29 @@ namespace sw::editor
         uint8 _modifierMask{ 0 };             ///< 그때 누른 수식 키(`ModifierKey`)
         Key   _pressedKey{ Key::Unknown };    ///< 이번 프레임에 새로 눌린 아무 키(`_chordKey` 가 없으면 수식 키다)
         bool  _bPendingModifierDown{ false }; ///< `getPendingCaptureModifier` 의 키가 아직 눌려 있다. NOLINT(sw-bool-flag): 집합체다
+    };
+
+    /**
+     * @struct InputMapDeviceState
+     * @brief Debug 탭 장치 모니터가 그리는 입력 장치 값 묶음입니다(`InputMapModel::gatherDeviceState`). 패널(View)은 입력 매니저를 보지 않고 이 값만 읽는다.
+     */
+    struct InputMapDeviceState
+    {
+        const utf8* _pActiveDeviceName{ "" };    ///< 활성 입력 장치 종류의 표시 이름(`InputGlyphStyle`)
+        vector<Key> _listHeldKey{};              ///< 게임에 보이는 눌린 키(`InputManager::isKeyDown`), 키 번호 순
+        int2        _mousePosition{};            ///< 마우스 위치(창 픽셀)
+        int2        _mouseDelta{};               ///< 이번 프레임 마우스 변화량
+        float2      _mouseSmoothDelta{};         ///< 부드럽게 한 변화량
+        float32     _mouseWheel{ 0.0f };         ///< 휠
+        const utf8* _pBatteryName{ "" };         ///< 0 번 패드 배터리 잔량의 표시 이름. 패드가 없으면 빈 글
+        float2      _leftStick{};                ///< 0 번 패드 왼쪽 스틱
+        float2      _rightStick{};               ///< 0 번 패드 오른쪽 스틱
+        float32     _leftTrigger{ 0.0f };        ///< 0 번 패드 왼쪽 트리거
+        float32     _rightTrigger{ 0.0f };       ///< 0 번 패드 오른쪽 트리거
+        bool        _bMouseLeftDown{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool        _bMouseRightDown{ false };   ///< NOLINT(sw-bool-flag): 위와 같다
+        bool        _bMouseMiddleDown{ false };  ///< NOLINT(sw-bool-flag): 위와 같다
+        bool        _bGamepadConnected{ false }; ///< 0 번 패드가 연결됐다. NOLINT(sw-bool-flag): 위와 같다
     };
 
     /**
@@ -67,10 +91,11 @@ namespace sw::editor
         explicit InputMapModel( const DocumentEditRecorder& recorder );
 
         /**
-         * @brief 패널이 열려 있는 프레임마다 부릅니다. InputMap 을 @p input 에 붙여 갱신하고, 그래프 표본을 담고, 녹화 중이면 입력 프레임을 기록하고, 끝난 재생을 뗍니다.
+         * @brief 패널이 열려 있는 프레임마다 부릅니다. InputMap 을 호스트 입력 매니저에 붙여 갱신하고, 그래프 표본을 담고, 녹화 중이면 입력 프레임을 기록하고, 끝난 재생을 뗍니다.
          * @details ActionPhase 상태 머신 · 커맨드 히스토리 · 버퍼 만료 타이머는 `InputMap::update` 안에서만 갱신되므로 프레임마다 불러야 액션 표 · 콤보 테스터가 동작한다.
+         *          입력 매니저는 모델이 찾는다 — 패널(View)은 엔진 입력 상태를 쥐지 않는다(MVVM 계약).
          */
-        void tick( InputManager& input, float32 deltaTime );
+        void tick( float32 deltaTime );
         /**
          * @brief 패널이 닫히거나 내려갈 때 부릅니다. 녹화를 끝내고, 재생 중인 리플레이를 입력에서 떼고, 키 잡기를 그만둡니다.
          * @details 닫힌 패널은 `tick` 이 돌지 않는다. 그대로 두면 끝난 재생을 뗄 사람이 없어 입력이 독점(`Exclusive`)된 채 멈추고, 패널이 사라지면 입력이 해제된 리플레이를 가리킨다.
@@ -142,8 +167,21 @@ namespace sw::editor
          * @details 2D 합성 · 스틱 · 마우스 축 · 가상 조이스틱 · AnyKey 는 매 프레임 읽는 값이라 형식에 이 칸이 없다(`InputMapXML`). 고치게 두면 저장 뒤 말없이 사라진다.
          */
         static bool canSaveTriggerProperties( BindingKind kind );
-        /** @brief 호스트의 입력 매니저입니다. 에디터가 서 있을 때(그리기)만 부른다 — 없으면 멈춘다. 패널이 작업 공간 헤더를 보지 않게 여기서 찾는다(MVVM 계약). */
-        static InputManager& getInputManager();
+        // ------------------------------------------------------------------------------
+        // 장치 모니터 · 입력 주입 — 패널은 입력 매니저를 쥐지 않고 값 묶음을 읽고 이 명령을 낸다
+        // ------------------------------------------------------------------------------
+        /** @brief 호스트 입력 매니저의 장치 값을 @p outState 에 담습니다. 에디터가 서 있을 때(그리기)만 부른다. */
+        static void gatherDeviceState( InputMapDeviceState& outState );
+        /** @brief @p input 의 장치 값을 @p outState 에 담습니다(위의 몸 — 테스트가 지역 입력 매니저로 부른다). */
+        static void gatherDeviceState( const InputManager& input, InputMapDeviceState& outState );
+        /** @brief 가상 키 누름 · 뗌을 호스트 입력에 넣습니다(다음 입력 프레임에 적용된다). 큐가 차서 못 넣으면 경고합니다. */
+        static void postKey( Key key, bool bDown );
+        /** @brief 0 번 패드의 왼쪽 스틱 축(0 · 1)을 @p stick 으로 둡니다. 패드가 없으면 아무것도 하지 않습니다. */
+        static void setVirtualStick( float2 stick );
+        /** @brief 0 번 패드를 @p seconds 동안 진동시킵니다. 패드가 없으면 아무것도 하지 않습니다. */
+        static void playGamepadVibration( float32 leftMotor, float32 rightMotor, float32 seconds );
+        /** @brief 0 번 패드의 진동을 멈춥니다. */
+        static void stopGamepadVibration();
         /** @brief 게임 뷰 입력 오버레이 설정입니다(에디터 서브시스템 `ViewportInputOverlaySettings`). 에디터가 서 있을 때만 부른다 — 없으면 멈춘다. 보기 설정이라 되돌리기에 남지 않는다. */
         static ViewportInputOverlay& editViewportOverlay();
 
@@ -175,7 +213,7 @@ namespace sw::editor
         /** @brief 잡은 슬롯(패드 버튼)으로 끝냅니다. 단일 바인딩과 새 바인딩만 받습니다. 받지 않으면 잡기를 이어 가고 false 입니다. */
         bool finishSlotCapture( const InputSlot& slot );
         /** @brief 키 잡기 중 0 번 패드에서 새로 눌린 버튼이 있으면 그것으로 끝냅니다. 패널이 키 잡기 창을 그리는 동안 프레임마다 부릅니다. */
-        void pollGamepadCapture( InputManager& input );
+        void pollGamepadCapture();
 
         /** @brief 바인딩 충돌을 다시 모읍니다. Mappings 탭이 그리기 전에 부릅니다. */
         void                            refreshConflicts();
@@ -197,21 +235,24 @@ namespace sw::editor
         // 4) 입력 녹화 · 재생 — 재생은 리플레이를 가상 입력으로 붙이는 것이고, 일시정지 · 탐색은 그 프레임으로 seekTo 하는 것이다
         // ------------------------------------------------------------------------------
         const InputReplay& getReplay() const { return _replay; }
-        /** @brief 리플레이를 @p input 에 붙여 재생 중이면 true 입니다. */
-        bool isReplayPlaying( const InputManager& input ) const;
+        /** @brief 리플레이를 호스트 입력에 붙여 재생 중이면 true 입니다. */
+        bool isReplayPlaying() const;
         /** @brief 지금 보이는 리플레이 프레임입니다(재생 중이면 진행한 프레임까지 더한다). */
-        uint32 getReplayCurrentFrame( const InputManager& input ) const;
-        void   startRecording( const InputManager& input );
+        uint32 getReplayCurrentFrame() const;
+        void   startRecording();
         void   stopRecording() { _replay.stopRecording(); }
         /** @brief 처음부터(끝에 있었으면 되감아) 재생합니다. */
-        void playReplay( InputManager& input );
-        void seekReplay( InputManager& input, uint32 frame ) { _replay.seekTo( input, frame ); }
+        void playReplay();
+        /** @brief 리플레이를 @p frame 의 상태로 맞춥니다(일시정지 · 탐색 — 상태를 재현한 뒤 뗀다). */
+        void seekReplay( uint32 frame );
         /** @brief 확정한 리플레이 경로에 씁니다. 실패는 로그로 알립니다. */
         void saveReplay() const;
         /** @brief 확정한 리플레이 경로에서 읽습니다. 재생 중이면 먼저 뗍니다. 실패는 로그로 알립니다. */
-        void loadReplay( InputManager& input );
+        void loadReplay();
 
     private:
+        /** @brief 호스트의 입력 매니저입니다. 에디터가 서 있을 때만 부른다 — 없으면 멈춘다. 모델 안에서만 쓴다(패널은 쥐지 않는다). */
+        static InputManager& getInputManager();
         /** @brief 이번 프레임의 스틱 · 트리거 · 마우스 변화량을 그래프 고리 버퍼에 담습니다. */
         void sampleInput( InputManager& input );
         /** @brief 묶음의 파일마다 고친 몫을 원래 자리에 씁니다. */

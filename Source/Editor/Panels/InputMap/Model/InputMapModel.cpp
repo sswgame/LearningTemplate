@@ -15,6 +15,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
+#include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"
@@ -23,6 +24,46 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct InputMapModelInternal
+        {
+            /** @brief 활성 입력 장치 종류의 표시 이름입니다(장치 모니터). */
+            static const utf8* glyphStyleName( InputGlyphStyle type )
+            {
+                switch ( type )
+                {
+                    case InputGlyphStyle::KeyboardMouse:
+                        return "Keyboard & Mouse";
+                    case InputGlyphStyle::GamepadXbox:
+                        return "Xbox Gamepad";
+                    case InputGlyphStyle::GamepadPlayStation:
+                        return "PlayStation Gamepad";
+                    case InputGlyphStyle::GamepadSwitch:
+                        return "Nintendo Switch Gamepad";
+                }
+                return "Unknown";
+            }
+
+            /** @brief 게임패드 배터리 잔량의 표시 이름입니다. */
+            static const utf8* batteryLevelName( GamepadBatteryLevel level )
+            {
+                switch ( level )
+                {
+                    case GamepadBatteryLevel::Empty:
+                        return "Empty";
+                    case GamepadBatteryLevel::Low:
+                        return "Low";
+                    case GamepadBatteryLevel::Medium:
+                        return "Medium";
+                    case GamepadBatteryLevel::Full:
+                        return "Full (100%)";
+                }
+                return "Unknown";
+            }
+        };
+    } // namespace
+
     InputMapModel::InputMapModel( const DocumentEditRecorder& recorder )
         : _pRecorder{ &recorder }
         , _inputMap{}
@@ -42,8 +83,9 @@ namespace sw::editor
     {
     }
 
-    void InputMapModel::tick( InputManager& input, float32 deltaTime )
+    void InputMapModel::tick( float32 deltaTime )
     {
+        InputManager& input = getInputManager();
         if ( _inputMap.getInputManager() != &input )
             _inputMap.setInputManager( &input );
         _inputMap.update( deltaTime );
@@ -526,9 +568,9 @@ namespace sw::editor
         return recordCapturedBinding( action, bindIndex );
     }
 
-    void InputMapModel::pollGamepadCapture( InputManager& input )
+    void InputMapModel::pollGamepadCapture()
     {
-        GamepadDevice* pGamepad = input.getGamepad( 0 );
+        GamepadDevice* pGamepad = getInputManager().getGamepad( 0 );
         if ( canCaptureSlot() == false || pGamepad == nullptr || pGamepad->isConnected() == false )
             return;
         for ( uint32 buttonIndex = 0; buttonIndex < static_cast<uint32>( GamepadButton::Count ); ++buttonIndex )
@@ -563,27 +605,33 @@ namespace sw::editor
         return true;
     }
 
-    bool InputMapModel::isReplayPlaying( const InputManager& input ) const
+    bool InputMapModel::isReplayPlaying() const
     {
-        return input.getVirtualInput() == &_replay;
+        return getInputManager().getVirtualInput() == &_replay;
     }
 
-    uint32 InputMapModel::getReplayCurrentFrame( const InputManager& input ) const
+    uint32 InputMapModel::getReplayCurrentFrame() const
     {
-        return _replay.getStartFrameIndex() + ( isReplayPlaying( input ) ? input.getVirtualFrameIndex() : 0u );
+        return _replay.getStartFrameIndex() + ( isReplayPlaying() ? getInputManager().getVirtualFrameIndex() : 0u );
     }
 
-    void InputMapModel::startRecording( const InputManager& input )
+    void InputMapModel::startRecording()
     {
         _replay.startRecording( "GameplaySession" );
-        _recordedBeginFrameCount = input.getBeginFrameCount();
+        _recordedBeginFrameCount = getInputManager().getBeginFrameCount();
     }
 
-    void InputMapModel::playReplay( InputManager& input )
+    void InputMapModel::playReplay()
     {
-        if ( getReplayCurrentFrame( input ) >= _replay.getFrameCount() )
+        InputManager& input = getInputManager();
+        if ( getReplayCurrentFrame() >= _replay.getFrameCount() )
             _replay.seekTo( input, 0 );
         input.attachVirtualInput( &_replay, VirtualInputMode::Exclusive, false );
+    }
+
+    void InputMapModel::seekReplay( uint32 frame )
+    {
+        _replay.seekTo( getInputManager(), frame );
     }
 
     void InputMapModel::saveReplay() const
@@ -593,8 +641,9 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "InputMapModel.CouldNotSaveInput", "Could not save input replay '%#'", _replayFilePath.c_str() );
     }
 
-    void InputMapModel::loadReplay( InputManager& input )
+    void InputMapModel::loadReplay()
     {
+        InputManager& input = getInputManager();
         if ( input.getVirtualInput() == &_replay )
             input.detachVirtualInput();
         _replay.stopRecording(); // 녹화 중이면 읽은 프레임 뒤에 이어 적는다
@@ -608,6 +657,68 @@ namespace sw::editor
     InputManager& InputMapModel::getInputManager()
     {
         return editor::getSubsystem<InputManager>();
+    }
+
+    void InputMapModel::gatherDeviceState( InputMapDeviceState& outState )
+    {
+        gatherDeviceState( getInputManager(), outState );
+    }
+
+    void InputMapModel::gatherDeviceState( const InputManager& input, InputMapDeviceState& outState )
+    {
+        outState._pActiveDeviceName = InputMapModelInternal::glyphStyleName( input.getActiveGlyphStyle() );
+        outState._listHeldKey.clear();
+        for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
+        {
+            const Key key = static_cast<Key>( keyIndex );
+            if ( input.isKeyDown( key ) )
+                outState._listHeldKey.push_back( key );
+        }
+        const MouseDevice* pMouse   = input.getMouse();
+        outState._mousePosition     = input.getMousePosition();
+        outState._mouseDelta        = input.getMouseDelta();
+        outState._mouseSmoothDelta  = pMouse != nullptr ? pMouse->getSmoothDelta() : float2{};
+        outState._mouseWheel        = input.getMouseWheel();
+        outState._bMouseLeftDown    = input.isMouseButtonDown( MouseButton::Left );
+        outState._bMouseRightDown   = input.isMouseButtonDown( MouseButton::Right );
+        outState._bMouseMiddleDown  = input.isMouseButtonDown( MouseButton::Middle );
+        const GamepadDevice* pPad   = input.getGamepad( 0 );
+        outState._bGamepadConnected = pPad != nullptr && pPad->isConnected();
+        outState._pBatteryName      = outState._bGamepadConnected ? InputMapModelInternal::batteryLevelName( pPad->getBatteryInfo()._level ) : "";
+        outState._leftStick         = outState._bGamepadConnected ? pPad->getLeftStick() : float2{};
+        outState._rightStick        = outState._bGamepadConnected ? pPad->getRightStick() : float2{};
+        outState._leftTrigger       = outState._bGamepadConnected ? pPad->getLeftTrigger() : 0.0f;
+        outState._rightTrigger      = outState._bGamepadConnected ? pPad->getRightTrigger() : 0.0f;
+    }
+
+    void InputMapModel::postKey( Key key, bool bDown )
+    {
+        const RawInputEvent event = bDown ? RawInputEvent::makeKeyDown( key ) : RawInputEvent::makeKeyUp( key );
+        if ( getInputManager().postRawEvent( event ) == false )
+            SW_LOG_WARNING_ID( "InputMapModel.InjectQueueFull", "Input Map: the input queue is full - the injected key %# was dropped", KeyCodeUtil::toName( key ) );
+    }
+
+    void InputMapModel::setVirtualStick( float2 stick )
+    {
+        GamepadDevice* pGamepad = getInputManager().getGamepad( 0 );
+        if ( pGamepad == nullptr )
+            return;
+        pGamepad->setAxis( 0, stick._x );
+        pGamepad->setAxis( 1, stick._y );
+    }
+
+    void InputMapModel::playGamepadVibration( float32 leftMotor, float32 rightMotor, float32 seconds )
+    {
+        GamepadDevice* pGamepad = getInputManager().getGamepad( 0 );
+        if ( pGamepad != nullptr )
+            pGamepad->playVibration( leftMotor, rightMotor, seconds );
+    }
+
+    void InputMapModel::stopGamepadVibration()
+    {
+        GamepadDevice* pGamepad = getInputManager().getGamepad( 0 );
+        if ( pGamepad != nullptr )
+            pGamepad->stopVibration();
     }
 
     ViewportInputOverlay& InputMapModel::editViewportOverlay()
