@@ -32,6 +32,7 @@ namespace sw
             static constexpr uint32 kStateHalfCount = 2;
             static_assert( SW_VFX_ARGS_WORD_ALIVE * sizeof( uint32 ) >= sizeof( RHIDrawIndirectCommand ), "the alive count must sit after the draw arguments" );
             static_assert( SW_VFX_ARGS_WORD_DROPPED < SW_VFX_ARGS_WORD_COUNT, "the dropped counter must sit inside the arguments buffer" );
+            static_assert( SW_VFX_ARGS_WORD_DEAD_FIRST >= SW_VFX_ARGS_WORD_COUNT, "the dead slot stack must sit after the fixed words" );
 
             static uint32 lowWord( uint64 value ) { return static_cast<uint32>( value ); }
             static uint32 highWord( uint64 value ) { return static_cast<uint32>( value >> 32 ); }
@@ -435,7 +436,7 @@ namespace sw
             _listTransitionBeforeSimulate.push_back( RHIBufferTransition{ _frameInput._lightBuffer, RHIBufferState::UnorderedAccess } );
             _listTransitionAfterSimulate.push_back( RHIBufferTransition{ _frameInput._lightBuffer, RHIBufferState::ShaderResource } );
         }
-        // 메시 입자 — 인스턴스 칸에 쓰기 전에 UAV 로, 살아 있는 수는 인자 버퍼(SRV)에서 읽는다(이번 프레임에 시뮬레이션을 건너뛴 방출기도 지난 값이 그대로 맞다).
+        // 메시 입자 — 인스턴스 칸에 쓰기 전에 UAV 로, 살아 있는 수 · 빈 칸 스택 · 살아 있는 칸 목록은 인자 버퍼(SRV)에서 읽는다(이번 프레임에 시뮬레이션을 건너뛴 방출기도 지난 값이 그대로 맞다).
         if ( _listMeshDispatch.empty() == false && _frameInput._instanceBuffer != 0 )
             _listTransitionBeforeMesh.push_back( RHIBufferTransition{ _frameInput._instanceBuffer, RHIBufferState::UnorderedAccess } );
         for ( const MeshDispatch& dispatch : _listMeshDispatch )
@@ -462,8 +463,8 @@ namespace sw
         constexpr RHIBufferUsage kStateUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
         constexpr RHIBufferUsage kArgsUsage =
             RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
-        // 다중 그룹 경로는 고정 단어 뒤에 그룹마다 한 칸(생존 수 · 시작 위치)이 더 든다.
-        const uint32   argsWordCount = SW_VFX_ARGS_WORD_COUNT + ( usesMultiGroup( def ) ? getGroupCount( def ) : 0u );
+        // 고정 단어 뒤에 빈 인스턴스 칸 스택 · 살아 있는 칸 목록(풀 크기씩 — 셰이더가 재생 시작에 채운다), 다중 그룹 경로는 그 뒤에 그룹마다 한 칸(생존 수 · 시작 위치)이 더 든다.
+        const uint32   argsWordCount = SW_VFX_ARGS_WORD_GROUP_FIRST( def._maxParticles ) + ( usesMultiGroup( def ) ? getGroupCount( def ) : 0u );
         vector<uint32> listInitialArgs( argsWordCount, 0u );
         listInitialArgs[0]       = GPUParticle::kVertexCount;
         const uint32 stateCount  = def._maxParticles * Internal::kStateHalfCount;
@@ -602,7 +603,7 @@ namespace sw
         Internal::appendRow( _listParamWord, poolSize, 0u, BitUtil::floatToBits( emitter._meshRadius ), BitUtil::floatToBits( emitter._sizeScale ) );
         Internal::appendMatrixRows( _listParamWord, emitter._world );
         static_assert( SW_VFX_MESH_ROW_FIRST_SLOT == 5u, "the mesh header rows above must match vfx_simulate.hlsli" );
-        // 풀 자리마다 칸 — 행 하나에 넷. 배치 항목 수는 풀 크기와 같다(`VFXComponent::rebuildMeshEmitters`). 모자란 자리는 쓰지 않는다.
+        // 입자 인스턴스 칸(0 ~ 풀 - 1, 입자가 수명 내내 쥔다 — vfx_simulate.hlsl 의 빈 칸 스택)마다 GPUScene 칸 — 행 하나에 넷. 배치 항목 수는 풀 크기와 같다(`VFXComponent::rebuildMeshEmitters`). 모자란 칸은 쓰지 않는다.
         const uint32 slotRowCount = ( poolSize + Internal::kWordsPerRow - 1u ) / Internal::kWordsPerRow;
         for ( uint32 slotRow = 0; slotRow < slotRowCount; ++slotRow )
         {

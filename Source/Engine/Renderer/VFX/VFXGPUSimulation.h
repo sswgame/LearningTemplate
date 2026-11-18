@@ -88,7 +88,8 @@ namespace sw
      * @details 기록 전(`prepareFrame`)에 상태를 만들고 매개변수(방출기 상수 · 단계마다의 일정 · 커브 키 · 해시 상수 · 방출기 행렬 · 깊이 히스토리)를 한 버퍼로 올린다.
      *          일정은 게임 스레드와 같은 시계(`VFXEmitterClock`)를 여기서 다시 돌려 얻는다 — 요청이 누적 단계 수라 패킷을 건너뛴 프레임도 다음 프레임에 이어 돈다
      *          (디스패치마다 상한 SW_VFX_MAX_STEPS_PER_DISPATCH, 넘친 단계는 다음 프레임). 프레임 그래프(`recordDispatches`)는 인스턴스 애니메이션 · 컬링 **앞에**
-     *          방출기마다 그룹 하나(풀이 `SW_VFX_MULTI_GROUP_MIN_POOL` 이상이면 단계마다 적분 · 접두사 합 · 압축 디스패치 셋 — 같은 결과, 언리얼 Niagara GPU 압축 · 유니티 VFX Graph dead list 와 같은 선)를 디스패치하고, 메시 방출기는 이어서 인스턴스 칸을 쓴다(vfx_mesh_instance.hlsl — 매 프레임. 배치 구성이 바뀌어 CPU 자리표가
+     *          방출기마다 그룹 하나(풀이 `SW_VFX_MULTI_GROUP_MIN_POOL` 이상이면 단계마다 적분 · 접두사 합 · 압축 디스패치 셋 — 같은 결과)를 디스패치한다. 입자는 수명 내내 인스턴스 칸 하나를 쥔다 —
+     *          빈 칸 스택(언리얼 Niagara GPU free ID, 유니티 VFX Graph dead list)에서 꺼내고 죽으면 돌려준다. 메시 방출기는 이어서 인스턴스 칸을 쓰고 빈 칸은 컬링이 빼는 플래그를 켠다(vfx_mesh_instance.hlsl — 매 프레임. 배치 구성이 바뀌어 CPU 자리표가
      *          올라온 프레임도 그리기 전에 다시 쓴다). 빌보드 · 띠는 투명 패스가 렌더 입력을 t11 에 걸고 간접 인자로 그린다(`VFXParticleRenderer::drawBatches`).
      *          이번 프레임에 없고 재생 토큰을 이 상태만 든 재생(다시 재생했거나 컴포넌트가 사라졌다)의 상태는 놓는다. 숨었다 다시 실린 재생은 상태를 이어 쓰고,
      *          수명 창보다 오래 밀린 단계는 일정만 옮긴다(`VFXEmitterClock::skipExpiredSteps`) — 처음부터 빨리감지 않는다.
@@ -154,7 +155,7 @@ namespace sw
             uint64                           _doneStepCount;  ///< 디스패치에 실은 단계 수
             RHIStructuredBuffer              _stateBuffer;    ///< 입자 상태(풀 크기 × 2)
             RHIStructuredBuffer              _particleBuffer; ///< 렌더 입력(풀 크기)
-            RHIStructuredBuffer              _argsBuffer;     ///< 간접 인자 · 살아 있는 수 · 버린 수(SW_VFX_ARGS_WORD_COUNT 단어)
+            RHIStructuredBuffer              _argsBuffer;     ///< 간접 인자 · 살아 있는 수 · 버린 수 · 빈 인스턴스 칸 스택 · 살아 있는 칸 목록(vfx_simulate.hlsli 의 SW_VFX_ARGS_WORD_*)
             DrawSource                       _drawSource;
             shared_ptr<const VFXGPURunToken> _pRunToken;       ///< 이 상태의 재생 토큰 — 들고 있어 열쇠(토큰 주소)가 다른 재생에 다시 쓰이지 않는다
             uint8                            _bNeedsReset : 1; ///< 아직 한 번도 디스패치하지 않았다

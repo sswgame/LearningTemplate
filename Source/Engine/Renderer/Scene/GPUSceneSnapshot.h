@@ -96,8 +96,11 @@ namespace sw
          *          지난 월드 행렬은 칸이 아니라 열쇠(`_motionKey`)로 찾으므로 차례와 무관하게 새 물체는 기록이 없다.
          */
         uint32 _slotSerial{ 0 };
-        /** @brief 원소를 16 바이트 단위로 맞추는 칸입니다(HLSL 구조 버퍼 원소 정렬). 0 으로 둔다. */
-        uint32 _instancePad{ 0 };
+        /**
+         * @brief 인스턴스 플래그입니다(instance_data.hlsli 의 `kInstanceFlag*`). CPU 는 늘 0 을 올린다. 셰이더의 `instanceFlags` 다.
+         * @details GPU 가 값을 쓰는 칸만 켠다 — GPU 메시 입자의 빈 칸(`kInstanceFlagEmpty`, vfx_mesh_instance.hlsl)은 컬링이 빼서 간접 인자의 수가 살아 있는 수다.
+         */
+        uint32 _instanceFlags{ 0 };
     };
 } // namespace sw
 

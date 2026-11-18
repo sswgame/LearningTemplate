@@ -329,6 +329,10 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
         g_VisibleInstanceIDs[headInfo._visibleBase + ( orderIndex - headInfo._instanceBase )] = instanceId;
         return;
     }
+    // 빈 칸(GPU 메시 입자의 죽은 칸 — vfx_mesh_instance.hlsl)은 세지 않는다. 그래서 간접 인자의 인스턴스 수가 살아 있는 수이고 CPU 는 그 수를 모른다(Niagara · VFX Graph 와 같다).
+    // 위 압축 포기 배치(투명)는 개수가 CPU 값이라 여기 오지 않는다 — GPU 메시 입자는 불투명뿐이다(VFXComponent::rebuildMeshEmitters).
+    if ( ( instance._instanceFlags & kInstanceFlagEmpty ) != 0u )
+        return;
     // 투명 정렬 배치(sortMode 2)는 차례를 적는다 — instance_sort.hlsl 이 차례로 정렬한 뒤 칸으로 바꾼다. 나머지는 칸을 바로 적는다.
     const uint visibleId = ( headInfo._sortMode == 2u ) ? orderIndex : instanceId;
 
