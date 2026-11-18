@@ -9,7 +9,6 @@
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/TicketQueryLoginProvider.h"
 
 namespace sw
 {
@@ -47,11 +46,9 @@ namespace sw
                 return nullptr;
             return make_unique<OidcLoginProvider>( settings, pProvider, pHTTPClient );
         }
-        if ( settings._kind == PlatformLoginProviderKind::TicketQuery )
-            return TicketQueryLoginProvider::create( settings, pHTTPClient ); // 비밀 키를 읽지 못하면 nullptr(그 함수가 알린다)
         if ( settings._kind == PlatformLoginProviderKind::AppleSignIn )
-            return nullptr; // HTTP 클라이언트가 둘 필요해 `PlatformLoginProviderSet` 이 `AppleLoginProvider::create` 로 만든다
-        return make_unique<ProfileAPILoginProvider>( settings, pHTTPClient );
+            return nullptr;                                              // HTTP 클라이언트가 둘 필요해 `PlatformLoginProviderSet` 이 `AppleLoginProvider::create` 로 만든다
+        return ProfileAPILoginProvider::create( settings, pHTTPClient ); // `TicketQuery` 는 비밀 키를 읽지 못하면 nullptr(그 함수가 알린다)
     }
 
     expected<void> PlatformLoginProviderConfig::readEntry( const JSONValue& entry, PlatformLoginProviderConfig& outSettings )
@@ -126,7 +123,7 @@ namespace sw
             const bool bHasKey    = settings._keyParam.empty() == false && settings._keySecretEnvironment.empty() == false;
             const bool bHasResult = settings._resultPath.empty() == false && settings._resultValue.empty() == false;
             // 스팀 웹 API 티켓(`GetAuthTicketForWebApi`)은 받을 서비스 이름(identity)으로 묶인다 — 이름 없이 물으면 그 티켓은 확인되지 않는다(partner.steamgames.com ISteamUserAuth 문서).
-            const bool bHasIdentity = TicketQueryLoginProvider::isQuerySafe( settings._identityParam ) && TicketQueryLoginProvider::isQuerySafe( settings._identity );
+            const bool bHasIdentity = ProfileAPILoginProvider::isQuerySafe( settings._identityParam ) && ProfileAPILoginProvider::isQuerySafe( settings._identity );
             return bHasQuery && bHasKey && bHasResult && bHasIdentity;
         }
         return settings._profileURL.empty() == false;

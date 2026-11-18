@@ -28,7 +28,7 @@ namespace sw
         Oidc = 0,           ///< 티켓이 OIDC ID 토큰(JWT, 선택적으로 `|<nonce>`)이며 JWKS 로 서명을 확인한다
         AccessTokenProfile, ///< 티켓이 액세스 토큰이다. 프로필 API 를 `Authorization: Bearer` 로 호출해 주체 id 를 얻는다
         /**
-         * @brief 티켓(16 진 글)과 서버 비밀 키를 확인 API 의 쿼리 인자로 보내 주체 id 를 얻는다(`TicketQueryLoginProvider`).
+         * @brief 티켓(16 진 글)과 서버 비밀 키를 확인 API 의 쿼리 인자로 보내 주체 id 를 얻는다(`ProfileAPILoginProvider`).
          * @details 세션 티켓을 웹 API 로 확인하는 제공자(예: 게임 플랫폼의 사용자 인증 티켓)를 데이터로 정의한다 — 주소 · 인자 이름 · 결과 경로가 설정이다.
          */
         TicketQuery,

@@ -3,7 +3,7 @@
  * @brief 외부 계정(구글, 애플, 카카오, 네이버, 스팀 등)의 로그인 티켓을 확인해 그 제공자 안의 주체 id 를 돌려주는 계약입니다.
  * @details - 확인은 제공자 서버(JWKS, 프로필 API)에 묻는 일이라 기다려야 한다. 그래서 확인을 맡기고(`submitVerification`) 결과를 회수한다(`pollVerifications`). 모든 호출은 서비스 스레드에서 한다.
  *          - 공통 구현은 둘이다. OIDC ID 토큰을 확인하는 `OidcLoginProvider` 는 서명, iss, aud, exp, nonce 를 검사하고 JWKS 를 캐시한다.
- *            액세스 토큰으로 조회하는 `ProfileAPILoginProvider` 는 프로필 API 응답에서 주체 id 의 경로를 읽는다.
+ *            액세스 토큰이나 세션 티켓으로 확인 API 에 묻는 `ProfileAPILoginProvider` 는 응답 JSON 에서 주체 id 의 경로를 읽는다.
  *            제공자는 **데이터**(`PlatformLoginProviderConfig`)로 정의하는 것이 기본이고, 코드가 필요한 예외만 `Provider/<제품>/` 폴더에 둔다. 테스트와 개발 서버는 가짜를 쓴다.
  *          - 주체 id(`sub`)만 키로 쓴다. 이메일은 비공개 릴레이가 있고 제공자마다 바뀔 수 있으므로 식별자로 쓰지 않는다.
  *          - 탈퇴한 계정의 연동 토큰을 철회하도록 요구하는 제공자(애플, App Store 심사 지침 5.1.1(v))는 확인 결과에 연동 비밀(`_linkSecret` — 인가 코드를 교환해 받은 refresh token)을 싣고

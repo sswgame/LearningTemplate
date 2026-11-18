@@ -1,4 +1,4 @@
-// OidcLoginProviderTest · ProfileAPILoginProviderTest · TicketQueryLoginProviderTest · AppleLoginProviderTest — 외부 로그인 제공자 본체의 요청 모양과 응답 대응.
+// OidcLoginProviderTest · ProfileAPILoginProviderTest · AppleLoginProviderTest — 외부 로그인 제공자 본체의 요청 모양과 응답 대응.
 // 실제 HTTP 클라이언트가 루프백 망의 가짜 제공자 서버와 말한다 — 바깥 서비스는 없다. 서명은 가짜 보안 제공자(서명 확인은 늘 맞다)라 서명 바깥의 규칙(iss · aud · exp · nonce · kid · 경로)을 본다.
 // 애플 주소 · 폼 이름은 애플 문서(Sign in with Apple REST API — Generate and validate tokens, Revoke tokens, 2026-11-07 대조)와 같게 비교한다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
@@ -15,7 +15,6 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/Provider/Apple/AppleLoginProvider.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/TicketQueryLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Security/JSONWebToken.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
@@ -347,8 +346,8 @@ SW_TEST_CASE( ProfileAPILoginProviderTest, MapsStatusAndBodyToRejectedOrUnavaila
     SW_EXPECT_TRUE( failed._subject.empty() );
 }
 
-/** @brief [TicketQueryLoginProviderTest] 키 · 티켓 · 받을 서비스 이름(identity)을 쿼리 인자로 덧붙여(주소에 `?` 가 있으면 `&`) 보내고, 결과 글이 성공 값이면 주체를 읽는다 — 스팀 AuthenticateUserTicket 모양 */
-SW_TEST_CASE( TicketQueryLoginProviderTest, SendsKeyAndTicketAndReadsTheResult )
+/** @brief [ProfileAPILoginProviderTest] 키 · 티켓 · 받을 서비스 이름(identity)을 쿼리 인자로 덧붙여(주소에 `?` 가 있으면 `&`) 보내고, 결과 글이 성공 값이면 주체를 읽는다 — 스팀 AuthenticateUserTicket 모양 */
+SW_TEST_CASE( ProfileAPILoginProviderTest, TicketQuerySendsKeyAndTicketAndReadsTheResult )
 {
     ProviderHTTPFixture         rig;
     PlatformLoginProviderConfig settings;
@@ -362,7 +361,7 @@ SW_TEST_CASE( TicketQueryLoginProviderTest, SendsKeyAndTicketAndReadsTheResult )
     settings._resultPath    = "response.params.result";
     settings._resultValue   = "OK";
     settings._subjectPath   = "response.params.steamid";
-    TicketQueryLoginProvider provider( settings, "SECRETKEY", &rig._client );
+    ProfileAPILoginProvider provider( settings, &rig._client, "SECRETKEY" );
     SW_EXPECT_EQUAL( rig._baseURL + "/ISteamUserAuth/AuthenticateUserTicket/v1/?appid=480&key=SECRETKEY&ticket=AB12&identity=swlogin", provider.makeRequestURL( "AB12" ) );
 
     rig._profileBody                             = R"({"response":{"params":{"result":"OK","steamid":"76561197960287930"}}})";
@@ -391,13 +390,13 @@ SW_TEST_CASE( TicketQueryLoginProviderTest, SendsKeyAndTicketAndReadsTheResult )
     SW_EXPECT_TRUE( rig.verify( provider, "AB12" )._bUnavailable == SW_TRUE );
 }
 
-/** @brief [TicketQueryLoginProviderTest] 쿼리에 실을 수 없는 티켓은 묻지 않고 거절하고(인자 끼워 넣기 차단), 키 환경 변수가 없으면 제공자를 만들지 않는다 */
-SW_TEST_CASE( TicketQueryLoginProviderTest, UnsafeTicketAndMissingKeyAreRefused )
+/** @brief [ProfileAPILoginProviderTest] 쿼리에 실을 수 없는 티켓은 묻지 않고 거절하고(인자 끼워 넣기 차단), 키 환경 변수가 없으면 제공자를 만들지 않는다 */
+SW_TEST_CASE( ProfileAPILoginProviderTest, TicketQueryUnsafeTicketAndMissingKeyAreRefused )
 {
-    SW_EXPECT_TRUE( TicketQueryLoginProvider::isQuerySafe( "aZ09-_." ) );
-    SW_EXPECT_FALSE( TicketQueryLoginProvider::isQuerySafe( "" ) );
-    SW_EXPECT_FALSE( TicketQueryLoginProvider::isQuerySafe( "a&key=x" ) );
-    SW_EXPECT_FALSE( TicketQueryLoginProvider::isQuerySafe( "a b" ) );
+    SW_EXPECT_TRUE( ProfileAPILoginProvider::isQuerySafe( "aZ09-_." ) );
+    SW_EXPECT_FALSE( ProfileAPILoginProvider::isQuerySafe( "" ) );
+    SW_EXPECT_FALSE( ProfileAPILoginProvider::isQuerySafe( "a&key=x" ) );
+    SW_EXPECT_FALSE( ProfileAPILoginProvider::isQuerySafe( "a b" ) );
 
     ProviderHTTPFixture         rig;
     PlatformLoginProviderConfig settings;
@@ -410,14 +409,14 @@ SW_TEST_CASE( TicketQueryLoginProviderTest, UnsafeTicketAndMissingKeyAreRefused 
     settings._identity      = "swlogin";
     settings._resultPath    = "result";
     settings._resultValue   = "OK";
-    TicketQueryLoginProvider provider( settings, "K", &rig._client );
+    ProfileAPILoginProvider provider( settings, &rig._client, "K" );
     SW_EXPECT_TRUE( rig.verify( provider, "AB&key=evil" )._bRejected == SW_TRUE );
     SW_EXPECT_TRUE( rig._listRequest.empty() );
 
     settings._keySecretEnvironment = "SW_TEST_LOGIN_KEY_THAT_IS_NEVER_SET_3F7A";
     SW_EXPECT_LOG( "Server.SecretNotSet" );
-    SW_EXPECT_LOG( "TicketQueryLoginProvider.LoginProviderKeyEnvironment" );
-    SW_EXPECT_TRUE( TicketQueryLoginProvider::create( settings, &rig._client ) == nullptr );
+    SW_EXPECT_LOG( "ProfileAPILoginProvider.LoginProviderKeyEnvironment" );
+    SW_EXPECT_TRUE( ProfileAPILoginProvider::create( settings, &rig._client ) == nullptr );
 }
 
 namespace
