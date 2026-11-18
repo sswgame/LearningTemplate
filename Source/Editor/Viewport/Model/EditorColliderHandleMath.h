@@ -12,8 +12,6 @@
 #include "Engine/Physics/Collision/PhysicsShape.h"
 
 namespace sw::editor
-
-    namespace sw::editor
 {
     /**
      * @struct EditorColliderHandleMath

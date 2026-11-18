@@ -633,7 +633,7 @@ namespace sw
                     case GuildOperation::Deposit:
                     case GuildOperation::Withdraw:
                     {
-                        return runStorageTransfer( connection, guildID, info, guildRecord, selfMember, selfMemberRecord );
+                        return runStorageTransfer( connection, guildID, info, guildRecord, selfMember );
                     }
                     case GuildOperation::SetJoinPolicy:
                     {
@@ -658,7 +658,7 @@ namespace sw
                     case GuildOperation::GrantWithdrawal:
                     case GuildOperation::RevokeWithdrawal:
                     {
-                        return runStorageGrant( connection, guildID, selfMemberRecord );
+                        return runStorageGrant( connection, guildID );
                     }
                     default:
                     {
@@ -1048,8 +1048,7 @@ namespace sw
              * @details 이전 불가 자산(유료 재화)은 맡긴 사람별 보유자에 든다 — 공용 창고에 섞이면 다른 임원이 꺼내 계정 사이로 옮겨진다. 맡긴 당사자가 허용한 권한 안에서만
              *          다른 계정으로 간다(사용자 결정 2026-11-12, 감사 O-10). 정책이 없으면(화폐 카탈로그 없이 조립한 서버) 유료 재화도 없어 모두 공용 창고이다.
              */
-            ServiceStoreResult runStorageTransfer( IServiceStoreConnection& connection, uint64 guildID, const GuildInfo& info, const ServiceRecord& guildRecord,
-                                                   const GuildMember& selfMember, const ServiceRecord& selfMemberRecord )
+            ServiceStoreResult runStorageTransfer( IServiceStoreConnection& connection, uint64 guildID, const GuildInfo& info, const ServiceRecord& guildRecord, const GuildMember& selfMember )
             {
                 using Internal      = GuildServiceInternal;
                 const bool bDeposit = _request._operation == GuildOperation::Deposit;
@@ -1163,7 +1162,7 @@ namespace sw
              *          부여 · 회수는 멱등 기록(`ServiceIdempotency`, 지우지 않는다)을 같은 트랜잭션에 남긴다 — 같은 키의 재전송은 상태를 바꾸지 않고 Ok 만 돌려주므로,
              *          쓴 만큼 줄어든 한도가 되돌아가거나 회수 뒤 늦게 다시 온 부여가 허용을 되살리지 않는다(Stripe Idempotency-Key 와 같다).
              */
-            ServiceStoreResult runStorageGrant( IServiceStoreConnection& connection, uint64 guildID, const ServiceRecord& selfMemberRecord )
+            ServiceStoreResult runStorageGrant( IServiceStoreConnection& connection, uint64 guildID )
             {
                 using Internal    = GuildServiceInternal;
                 const bool bGrant = _request._operation == GuildOperation::GrantWithdrawal;

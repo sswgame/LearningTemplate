@@ -189,13 +189,13 @@ SW_TEST_CASE( EditorAssetPlacementTest, DropResultUpdatesStats )
     stats._yaw           = 0.5f;
 
     EditorPlacementDrag::recordDrop( EditorPlacementDropResult::Blocked, ghost, stats );
-    SW_EXPECT_EQUAL( sw::uint32{ 0 }, stats._placedCount + stats._refusedCount + stats._openedCount );
+    SW_EXPECT_EQUAL( uint32{ 0 }, stats._placedCount + stats._refusedCount + stats._openedCount );
     EditorPlacementDrag::recordDrop( EditorPlacementDropResult::Opened, ghost, stats );
     EditorPlacementDrag::recordDrop( EditorPlacementDropResult::Refused, ghost, stats );
     EditorPlacementDrag::recordDrop( EditorPlacementDropResult::Placed, ghost, stats );
-    SW_EXPECT_EQUAL( sw::uint32{ 1 }, stats._openedCount );
-    SW_EXPECT_EQUAL( sw::uint32{ 1 }, stats._refusedCount );
-    SW_EXPECT_EQUAL( sw::uint32{ 1 }, stats._placedCount );
+    SW_EXPECT_EQUAL( uint32{ 1 }, stats._openedCount );
+    SW_EXPECT_EQUAL( uint32{ 1 }, stats._refusedCount );
+    SW_EXPECT_EQUAL( uint32{ 1 }, stats._placedCount );
     SW_EXPECT_NEAR( 2.0f, stats._lastPosition._y, 1e-6f );
     SW_EXPECT_NEAR( 0.5f, stats._lastYaw, 1e-6f );
     SW_EXPECT_TRUE( stats._surface == sw::editor::EditorPlacementSurface::GroundPlane );

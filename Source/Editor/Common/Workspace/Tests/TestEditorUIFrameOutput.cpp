@@ -10,6 +10,8 @@
 
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 
+#include "Engine/Graphics/View/FrameViewports.h"
+
 using namespace sw;
 using namespace sw::editor;
 

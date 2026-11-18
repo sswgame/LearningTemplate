@@ -1197,7 +1197,7 @@ namespace sw::editor
             const bool bToggled = ImGui::Checkbox( "##tag", &bActive );
             ImGui::PopID();
             if ( bToggled )
-                postBodyPreview( { PreviewAction::ActionTag, action._tag, bActive ? SW_TRUE : SW_FALSE } );
+                postBodyPreview( { PreviewAction::ActionTag, action._tag, static_cast<uint8>( bActive ? SW_TRUE : SW_FALSE ) } );
             bAnyActive = bAnyActive || bActive;
         }
         EditorSelfTestMarks::record( "charactereditor.body.actionTest" );

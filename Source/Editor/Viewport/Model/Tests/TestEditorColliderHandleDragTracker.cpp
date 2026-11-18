@@ -32,8 +32,8 @@ SW_TEST_CASE( EditorColliderHandleDragTrackerTest, PressDragReleaseIsCaptureDrag
     SW_EXPECT_TRUE( tracker.step( true, true, &ray, listCommand ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listCommand.size() );
     SW_EXPECT_TRUE( isKind( listCommand, 0, EditorColliderHandleCommandKind::Drag ) );
-    SW_EXPECT_EQUAL( sw::uint32{ 2 }, listCommand[0]._handle._shapeIndex );
-    SW_EXPECT_EQUAL( sw::uint64{ 7 }, listCommand[0]._object.objectID() );
+    SW_EXPECT_EQUAL( uint32{ 2 }, listCommand[0]._handle._shapeIndex );
+    SW_EXPECT_EQUAL( uint64{ 7 }, listCommand[0]._object.objectID() );
 
     listCommand.clear();
     SW_EXPECT_FALSE( tracker.step( true, false, &ray, listCommand ) );

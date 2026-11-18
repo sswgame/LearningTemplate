@@ -267,11 +267,11 @@ namespace sw::editor
         /** @brief `-gv_editorWatchObject` 이름의 오브젝트에 씬 뷰가 지난 그리기에서 넘긴 빌보드 글리프의 코드 포인트입니다. 쓰레기 문자열이면 0 입니다. */
         [[nodiscard]] bool readBillboardIcon( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const GameObject*           pObject = findWatchedObject();
-            const EditorViewportClient* pClient = findSceneViewClient();
-            if ( pObject == nullptr || pClient == nullptr )
+            const uint64                objectID = findWatchedObjectID();
+            const EditorViewportClient* pClient  = findSceneViewClient();
+            if ( objectID == 0 || pClient == nullptr )
                 return false;
-            outValue = static_cast<float64>( pClient->findDrawnBillboardGlyph( pObject->getObjectID() ) );
+            outValue = static_cast<float64>( pClient->findDrawnBillboardGlyph( objectID ) );
             return true;
         }
 

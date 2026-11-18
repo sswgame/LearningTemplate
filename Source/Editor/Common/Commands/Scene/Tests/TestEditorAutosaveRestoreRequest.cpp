@@ -22,13 +22,13 @@ SW_TEST_CASE( EditorAutosaveRestoreRequestTest, FindsTheRequestedCopyAfterRowsSh
     listEntry[1]._snapshotID = "autosave/maps_b.scene.xml/2.scene.xml";
     listEntry[2]._snapshotID = "./autosave/maps_c.scene.xml/1.scene.xml"; // 견줄 때 정규화한다
 
-    sw::uint32 index = 0;
+    uint32 index = 0;
     SW_REQUIRE_TRUE( EditorAutosaveCommands::findRecoverableIndex( listEntry, "autosave/maps_c.scene.xml/1.scene.xml", index ) );
-    SW_EXPECT_EQUAL( sw::uint32{ 2 }, index );
+    SW_EXPECT_EQUAL( uint32{ 2 }, index );
 
     listEntry.erase( listEntry.begin() ); // 요청 뒤 실행 전에 앞 줄을 지웠다
     SW_REQUIRE_TRUE( EditorAutosaveCommands::findRecoverableIndex( listEntry, "autosave/maps_c.scene.xml/1.scene.xml", index ) );
-    SW_EXPECT_EQUAL( sw::uint32{ 1 }, index );
+    SW_EXPECT_EQUAL( uint32{ 1 }, index );
 
     SW_EXPECT_FALSE( EditorAutosaveCommands::findRecoverableIndex( listEntry, "autosave/maps_a.scene.xml/1.scene.xml", index ) );
 }

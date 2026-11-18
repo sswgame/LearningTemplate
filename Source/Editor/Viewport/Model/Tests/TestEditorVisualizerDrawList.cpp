@@ -24,7 +24,7 @@ SW_TEST_CASE( EditorVisualizerDrawListTest, BoxAddsTwelveEdgesWithPrototypeStyle
         SW_EXPECT_EQUAL( 2.0f, line._thickness );
         SW_EXPECT_TRUE( line._colorRole == sw::editor::EditorVisualizerColorRole::SelectionOutline );
         // 모서리는 한 축만 바뀐다.
-        const sw::uint32 changedAxes = ( line._from._x != line._to._x ? 1u : 0u ) + ( line._from._y != line._to._y ? 1u : 0u ) + ( line._from._z != line._to._z ? 1u : 0u );
+        const uint32 changedAxes = ( line._from._x != line._to._x ? 1u : 0u ) + ( line._from._y != line._to._y ? 1u : 0u ) + ( line._from._z != line._to._z ? 1u : 0u );
         SW_EXPECT_EQUAL( 1u, changedAxes );
     }
 }

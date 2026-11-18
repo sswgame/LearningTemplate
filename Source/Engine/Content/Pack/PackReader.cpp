@@ -644,10 +644,12 @@ namespace sw
             }
             _pDigestProvider = pTrust->_pProvider;
         }
-        const auto copyIndexPart = [this, &listIndexByte]( uint64 offset, void* pDest, size_t size )
+        // 잠금을 쥔 이 함수에서 값을 떠 넘긴다 — 람다 본문은 쥔 잠금을 물려받지 않는다(스레드 안전성 분석).
+        const uint64 indexOffset   = _header._indexOffset;
+        const auto   copyIndexPart = [indexOffset, &listIndexByte]( uint64 offset, void* pDest, size_t size )
         {
             if ( size > 0 )
-                Memory::copy( pDest, listIndexByte.data() + ( offset - _header._indexOffset ), size );
+                Memory::copy( pDest, listIndexByte.data() + ( offset - indexOffset ), size );
         };
         vector<PackFileEntryOnDisk> listDiskEntry( _header._fileCount );
         _listBlock.resize( _header._blockCount );

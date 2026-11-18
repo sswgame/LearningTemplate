@@ -66,6 +66,7 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"

@@ -8,7 +8,7 @@
 
 namespace
 {
-    sw::editor::EditorVisualizerScreenBillboard makeBillboard( sw::uint64 objectID, float x, float y )
+    sw::editor::EditorVisualizerScreenBillboard makeBillboard( uint64 objectID, float x, float y )
     {
         sw::editor::EditorVisualizerScreenBillboard billboard{};
         billboard._objectID    = objectID;
@@ -22,15 +22,15 @@ namespace
 SW_TEST_CASE( EditorViewportPickTest, BillboardInsideRadiusIsFound )
 {
     const sw::vector<sw::editor::EditorVisualizerScreenBillboard> listBillboard{ makeBillboard( 1, 100.0f, 100.0f ) };
-    SW_EXPECT_EQUAL( sw::uint32{ 0 }, sw::editor::EditorViewportPick::findBillboardAt( listBillboard, sw::float2{ 110.0f, 105.0f } ) );
+    SW_EXPECT_EQUAL( uint32{ 0 }, sw::editor::EditorViewportPick::findBillboardAt( listBillboard, sw::float2{ 110.0f, 105.0f } ) );
     SW_EXPECT_EQUAL( sw::constant::invalid_index::kUint32, sw::editor::EditorViewportPick::findBillboardAt( listBillboard, sw::float2{ 120.0f, 100.0f } ) );
 }
 
 SW_TEST_CASE( EditorViewportPickTest, OverlappingBillboardPicksNearest )
 {
     const sw::vector<sw::editor::EditorVisualizerScreenBillboard> listBillboard{ makeBillboard( 1, 100.0f, 100.0f ), makeBillboard( 2, 110.0f, 100.0f ) };
-    SW_EXPECT_EQUAL( sw::uint32{ 1 }, sw::editor::EditorViewportPick::findBillboardAt( listBillboard, sw::float2{ 108.0f, 100.0f } ) );
-    SW_EXPECT_EQUAL( sw::uint32{ 0 }, sw::editor::EditorViewportPick::findBillboardAt( listBillboard, sw::float2{ 101.0f, 100.0f } ) );
+    SW_EXPECT_EQUAL( uint32{ 1 }, sw::editor::EditorViewportPick::findBillboardAt( listBillboard, sw::float2{ 108.0f, 100.0f } ) );
+    SW_EXPECT_EQUAL( uint32{ 0 }, sw::editor::EditorViewportPick::findBillboardAt( listBillboard, sw::float2{ 101.0f, 100.0f } ) );
 }
 
 SW_TEST_CASE( EditorViewportPickTest, NoBillboardFindsNothing )

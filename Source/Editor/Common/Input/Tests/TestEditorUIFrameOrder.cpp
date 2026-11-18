@@ -25,7 +25,7 @@ SW_TEST_CASE( EditorUIFrameOrderTest, MenusReadValuesPublishedBeforeTheUIFrame )
     sw::editor::EditorCommandGUI::registerDefaults();                                      // 모듈 리로드 · 기동과 같은 다시 만들기
     const sw::editor::EditorCommandDesc* pDesc = registry.find( "editor.commandPalette" ); // 켜짐 조건 없는 전역 명령(기본 표)
     SW_REQUIRE_NOT_NULL( pDesc );
-    const sw::uint32 commandIndex = static_cast<sw::uint32>( pDesc - registry.getCommands().data() );
+    const uint32 commandIndex = static_cast<uint32>( pDesc - registry.getCommands().data() );
     SW_EXPECT_FALSE( registry.isEnabledInSnapshot( commandIndex ) ); // 다시 만든 뒤 아직 내지 않았다 — 낡은 인덱스를 읽지 않는다
 
     sw::editor::EditorCommandGUI::syncWithRegistry(); // UI 프레임을 열기 직전(셸이 프레임마다 부른다)

@@ -37,7 +37,7 @@ SW_TEST_CASE( ViewportInputOverlayStateTest, PadButtonsBecomeOverlayButtonBits )
     pPad->setButtonDown( sw::GamepadButton::Y, false );
     pPad->setVirtualConnected( false );
     sw::editor::ViewportInputOverlayState::gather( input, true, state );
-    SW_EXPECT_EQUAL( 0u, static_cast<sw::uint32>( state._faceButtonDownMask ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( state._faceButtonDownMask ) );
     SW_EXPECT_EQUAL( 0.0f, state._leftTrigger );
     SW_EXPECT_EQUAL( 0.0f, state._leftStick._x );
     input.shutdown();

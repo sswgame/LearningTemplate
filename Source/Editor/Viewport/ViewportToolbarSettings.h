@@ -7,7 +7,7 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Viewport/Model/EditorVisualizerToggles.h"
 
-#include "Engine/Graphics/View/RenderViewSettings.h"
+#include "Engine/Graphics/View/RenderViewMode.h"
 
 namespace sw::editor
 {

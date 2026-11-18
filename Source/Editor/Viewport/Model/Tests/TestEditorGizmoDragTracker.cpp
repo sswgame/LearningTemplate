@@ -10,7 +10,7 @@ namespace
     using sw::editor::EditorGizmoCommand;
     using sw::editor::EditorGizmoCommandKind;
 
-    sw::editor::EditorGizmoTarget makeTarget( sw::uint64 objectID )
+    sw::editor::EditorGizmoTarget makeTarget( uint64 objectID )
     {
         return sw::editor::EditorGizmoTarget{ sw::GameObjectHandle::make( objectID ), sw::float4x4{} };
     }

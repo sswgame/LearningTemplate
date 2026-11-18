@@ -9,10 +9,13 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 
 namespace sw::editor
 {
+    static_assert( kMaxEditorPreviewView == kMaxPreviewSceneView, "에디터가 한 프레임에 받는 미리보기 뷰 수는 호스트가 받는 수와 같아야 한다" );
+
     void EditorRenderViews::publishUIFrame( uint32 uiRedrawReasons )
     {
         _uiFrame._redrawReasons = uiRedrawReasons;

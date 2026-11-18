@@ -218,7 +218,7 @@ namespace sw::editor
     private:
         friend class EditorPlaySession;
         explicit EditorSceneEditHold( bool bHeld )
-            : _bHeld{ bHeld ? SW_TRUE : SW_FALSE }
+            : _bHeld{ static_cast<uint8>( bHeld ? SW_TRUE : SW_FALSE ) }
         {
         }
 

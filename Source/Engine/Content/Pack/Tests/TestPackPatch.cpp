@@ -118,7 +118,7 @@ SW_TEST_CASE( PackPatchTest, TamperedPayloadBlockFailsAtRead )
     string        tamperedPath;
     string        intactPath;
     PackFileEntry entry;
-    for ( const string path : { string( "game/test/data/a.xml" ), string( "game/test/data/b.xml" ) } )
+    for ( const string& path : { string( "game/test/data/a.xml" ), string( "game/test/data/b.xml" ) } )
     {
         SW_REQUIRE_TRUE( reader.getFileEntry( path, entry ) );
         ( entry._dataOffset == 0 ? tamperedPath : intactPath ) = path;

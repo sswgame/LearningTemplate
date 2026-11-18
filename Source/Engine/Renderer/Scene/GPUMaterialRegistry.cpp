@@ -305,7 +305,7 @@ namespace sw
         }
         else
         {
-            SW_PROFILE_COUNT( GT.Material.refreshBindingsAll, 1 );
+            SW_PROFILE_COUNT( "GT.Material.refreshBindingsAll", 1 );
             for ( uint32 groupIndex = 0; groupIndex < _listMaterialGroupState.size(); ++groupIndex )
             {
                 const uint32 entryCount = static_cast<uint32>( _listMaterialGroupState[groupIndex]._listEntryOwner.size() );
@@ -317,8 +317,8 @@ namespace sw
             }
         }
         _listNewElement.clear();
-        SW_PROFILE_COUNT( GT.Material.refreshBindings, 1 );
-        SW_PROFILE_COUNT( GT.Material.refreshVisited, visitCount );
-        SW_PROFILE_COUNT( GT.Material.refreshChanged, changeCount );
+        SW_PROFILE_COUNT( "GT.Material.refreshBindings", 1 );
+        SW_PROFILE_COUNT( "GT.Material.refreshVisited", visitCount );
+        SW_PROFILE_COUNT( "GT.Material.refreshChanged", changeCount );
     }
 } // namespace sw

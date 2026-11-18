@@ -765,7 +765,7 @@ SW_TEST_CASE( CultureInfoTest, RootWithoutPluralRulesIsAnError )
 SW_TEST_CASE( CultureInfoTest, ParentCycleIsAnError )
 {
     constexpr const utf8* kLatin  = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
-    const auto            rejects = [kLatin]( const sw::string& cultures )
+    const auto            rejects = []( const sw::string& cultures )
     {
         sw::CultureTable         table;
         const sw::expected<void> loaded = table.loadFromXMLText( sw::string( "<CultureTable>" ) + kLatin + "<cultures>" + cultures + "</cultures></CultureTable>", "cycle.cultures.xml" );

@@ -39,6 +39,9 @@ namespace sw::editor
 
         EditorDebugHUDModel();
         ~EditorDebugHUDModel();
+        // 내보낸 클래스는 암시적 복사 연산을 모든 번역 단위에서 만든다 — 섹션 쓰개는 혼자 가진다(불완전 형식 · 복사 불가).
+        EditorDebugHUDModel( const EditorDebugHUDModel& )            = delete;
+        EditorDebugHUDModel& operator=( const EditorDebugHUDModel& ) = delete;
 
         /** @brief 한 프레임을 진행합니다 — 프레임 시간을 적고, 레지스트리가 바뀌었으면 목록을 다시 짓고, 4 Hz 마다 섹션 본문을 다시 부른다(메인 스레드). */
         void update( float32 deltaSeconds );

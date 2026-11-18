@@ -20,16 +20,22 @@
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
 
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Graphics/View/FrameViewports.h"
 
 namespace sw
 {
     class IRHIDevice;
+    struct PreviewSceneView;
 } // namespace sw
 
 namespace sw::editor
 {
     class ImGuiRenderer;
+
+    /**
+     * @brief 한 프레임에 받는 미리보기 뷰 수입니다 — 호스트가 받는 수(`kMaxPreviewSceneView`)와 같다(.cpp 의 static_assert).
+     * @details 호스트 형식 헤더(`FrameViewports.h`)는 RHI 핸들을 담아 이 헤더를 읽는 하위 대상(에디터 확장 플러그인)이 볼 수 없다 — 그래서 수만 여기 둔다.
+     */
+    inline constexpr uint32 kMaxEditorPreviewView = 8;
 
     /** @brief 에디터가 소유하는 뷰 렌더 타깃 하나입니다. 씬 뷰와 게임 뷰가 각각 하나씩 가집니다. 호스트는 프레임마다 핸들만 조회합니다(`ImGuiEditor::getSceneViewport`, `getGameViewport`). */
     struct EditorViewTarget
@@ -136,7 +142,7 @@ namespace sw::editor
         };
 
         ViewMark       _arrView[static_cast<uint32>( EditorViewKind::Count )]{};
-        PreviewRequest _arrPreview[kMaxPreviewSceneView]{};
+        PreviewRequest _arrPreview[kMaxEditorPreviewView]{};
         uint32         _previewCount{ 0 };
         uint32         _redrawReasons{ 0 };                   ///< UI 쪽 다시 그릴 까닭(`EditorRedrawReason` 비트 — 입력 · 잡은 항목 · 연속 프레임 요청). 게임 쪽 까닭은 읽는 쪽이 더한다
         uint8          _bGameViewFocused{ SW_FALSE };         ///< 게임 뷰 창이 포커스를 가졌다

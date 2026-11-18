@@ -772,13 +772,13 @@ SW_TEST_CASE( FileTest, LinuxTrashUsesVolumeTrashAcrossFileSystems )
     const bool bHadDataHome = sw::ProcessEnvironment::tryRead( "XDG_DATA_HOME", savedDataHome );
     SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", root + "/data" ) );
 
-    const sw::string name = "sw_volume_trash_" + sw::to_string( static_cast<sw::uint64>( ::getpid() ) ) + ".txt";
+    const sw::string name = "sw_volume_trash_" + sw::to_string( static_cast<uint64>( ::getpid() ) ) + ".txt";
     const sw::string path = "/dev/shm/" + name;
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "volume" ) );
     SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path } ) );
     SW_EXPECT_FALSE( sw::FileUtil::exists( path ) );
 
-    const sw::string volumeTrash = "/dev/shm/.Trash-" + sw::to_string( static_cast<sw::uint64>( ::getuid() ) );
+    const sw::string volumeTrash = "/dev/shm/.Trash-" + sw::to_string( static_cast<uint64>( ::getuid() ) );
     sw::string       text;
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( volumeTrash + "/files/" + name, text ) );
     SW_EXPECT_EQUAL( sw::string( "volume" ), text );
