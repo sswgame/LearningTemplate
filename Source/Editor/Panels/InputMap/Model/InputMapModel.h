@@ -97,12 +97,14 @@ namespace sw::editor
         string describeActionSource( const hashed_string& action ) const;
 
         /**
-         * @brief 편집하는 맵을 저장과 같은 글로 씁니다(문서 되돌리기의 글). 묶음(게임 설정 파일)이면 빈 글입니다.
-         * @details shortcut: 묶음은 파일마다 몫(어느 파일이 액션을 정했는지)을 들어 글 하나로 돌릴 수 없어 되돌리기가 없다 — 묶음을 고치는 일이 잦아지면 파일마다 글(`InputMap::writeSourceText`)을 이어 쓴다.
+         * @brief 편집하는 맵을 저장과 같은 글로 씁니다(문서 되돌리기의 글). 형식이 담지 못하는 바인딩이 있으면 빈 글입니다.
+         * @details 묶음(게임 설정 파일)이면 파일마다 몫(`InputMap::writeSourceText`)을 리소스 id · 바이트 수와 함께 이어 쓴다 — 어느 파일이 액션을 정했는지까지 한 단계로 돌린다.
          */
         string captureText() const;
-        /** @brief 되돌리기가 준 글로 맵을 다시 읽습니다. 미저장 판정은 문서 패널이 글로 한다. 묶음이거나 읽지 못하면 false 입니다(읽지 못하면 파일에서 다시 읽는다). */
+        /** @brief 되돌리기가 준 글로 맵을 다시 읽습니다. 미저장 판정은 문서 패널이 글로 한다. 읽지 못하면 false 입니다(그때는 파일에서 다시 읽는다). */
         bool applyText( string_view text );
+        /** @brief 묶음의 되돌리기 글(`captureText`)을 파일마다 나눕니다. 틀이 깨졌거나 비었으면 false 입니다. */
+        [[nodiscard]] static bool parseBundleText( string_view text, vector<InputMapSourceText>& outListSource );
 
         EditableAssetPath& editInputMapPath() { return _inputMapPath; }
         EditableAssetPath& editReplayFilePath() { return _replayFilePath; }
