@@ -454,8 +454,9 @@ namespace sw
                     foot._mid           = listBone[1];
                     foot._end           = listBone[2];
                     foot._animatedModel = listReference[foot._end].getTranslation();
-                    // 디딘 발의 발목 높이 — 발바닥 틈(`sole_gap`)의 기준이다.
+                    // 디딘 발의 발목 높이 — 발바닥 틈(`sole_gap`)의 기준이다. 엉덩 관절 높이는 쉬는 자세의 다리 길이 보정(`rest_leg_lift`)의 기준이다.
                     foot._referenceAnkleY = foot._animatedModel._y;
+                    foot._referenceHipY   = listReference[foot._root].getTranslation()._y;
                 }
                 return true;
             }
@@ -468,6 +469,7 @@ namespace sw
                 _outputPelvisOffset = _pelvisOffset;
                 _outputFootLift     = _footLift;
                 _outputLegLift      = _legLift;
+                _outputRestLegLift  = _restLegLift;
                 _outputSoleGap      = _soleGap;
                 _outputSoleGapPeak  = MathUtil::max( _soleGapPeak, _soleGapPeakPrevious );
                 _outputHitCount     = 0;
@@ -496,7 +498,8 @@ namespace sw
                 const float32  blend  = ( _params._interpSpeed > 0.0f ) ? MathUtil::saturate( _params._interpSpeed * context._deltaSeconds ) : 1.0f;
                 float32        lowest = 0.0f;
                 // 체형이 바꾼 다리 길이 — 엉덩 관절 → 디딘 발목의 세로 거리를 다리 길이 비만큼 늘인다(두 마디가 같은 비율이면 정확하다).
-                float32 legLiftSum = 0.0f;
+                float32 legLiftSum  = 0.0f;
+                float32 restLiftSum = 0.0f;
                 for ( Foot& foot : _listFoot )
                 {
                     const float3  rootModel = pose.getModelPosition( foot._root );
@@ -509,8 +512,10 @@ namespace sw
                     const float32 ratio      = restLength > MathUtil::kEpsilon ? length / restLength : 1.0f;
                     foot._legLift            = ( ratio - 1.0f ) * ( rootModel._y - foot._referenceAnkleY );
                     legLiftSum += foot._legLift;
+                    restLiftSum += ( ratio - 1.0f ) * ( foot._referenceHipY - foot._referenceAnkleY );
                 }
-                _legLift = _listFoot.empty() ? 0.0f : legLiftSum / static_cast<float32>( _listFoot.size() );
+                _legLift     = _listFoot.empty() ? 0.0f : legLiftSum / static_cast<float32>( _listFoot.size() );
+                _restLegLift = _listFoot.empty() ? 0.0f : restLiftSum / static_cast<float32>( _listFoot.size() );
                 for ( Foot& foot : _listFoot )
                 {
                     foot._animatedModel = pose.getModelPosition( foot._end ) + float3{ 0.0f, foot._legLift, 0.0f };
@@ -573,7 +578,7 @@ namespace sw
 
             /**
              * @brief 출력: `pelvis_offset`(땅 보정으로 골반을 옮긴 높이, 미터 · 음수면 내림 · 굽 제외), `foot_lift`(골반 · 발에 더 올린 굽 높이, 미터),
-             *        `foot_offset_<번호>`(`feet` 순서의 발 높이 보정), `ground_hits`(땅에 닿은 발 수), `leg_lift`(체형의 다리 길이로 골반을 옮긴 높이),
+             *        `foot_offset_<번호>`(`feet` 순서의 발 높이 보정), `ground_hits`(땅에 닿은 발 수), `leg_lift`(체형의 다리 길이로 골반을 옮긴 높이), `rest_leg_lift`(같은 비를 쉬는 자세 엉덩 높이에 건 값 — 흔들리지 않는다, 1인칭 눈높이),
              *        `sole_gap`(가장 낮은 발목 - (땅 + 레퍼런스 발목 높이 + 굽), 미터 — 음수면 땅에 묻힘), `sole_gap_peak`(최근 1 ~ 2 초 `sole_gap` 절댓값의 최댓값 — 걷기 한 주기를 덮는다).
              */
             [[nodiscard]] bool getOutputValue( const hashed_string& output, float32& outValue ) const override
@@ -598,6 +603,11 @@ namespace sw
                 if ( name == "leg_lift" )
                 {
                     outValue = _outputLegLift;
+                    return true;
+                }
+                if ( name == "rest_leg_lift" )
+                {
+                    outValue = _outputRestLegLift;
                     return true;
                 }
                 if ( name == "sole_gap" )
@@ -656,6 +666,7 @@ namespace sw
                 float32       _offset{ 0.0f };
                 float32       _outputOffset{ 0.0f };    ///< 게임 스레드 사본(준비 단계가 `_offset` 에서 옮긴다)
                 float32       _referenceAnkleY{ 0.0f }; ///< 레퍼런스 포즈의 발목 높이(디딘 발이 땅 위에 있는 높이)
+                float32       _referenceHipY{ 0.0f };   ///< 레퍼런스 포즈의 엉덩 관절 높이
                 float32       _legLift{ 0.0f };         ///< 이번 평가에서 다리 길이 비가 이 발에 요구한 골반 높이 보정
                 uint32        _root{ 0 };
                 uint32        _mid{ 0 };
@@ -667,20 +678,23 @@ namespace sw
             vector<Foot> _listFoot{};
             float32      _maxAlignAngle{ 0.5f };
             float32      _pelvisOffset{ 0.0f };
-            float32      _outputPelvisOffset{ 0.0f };  ///< 게임 스레드 사본(준비 단계가 `_pelvisOffset` 에서 옮긴다)
-            float32      _footLift{ 0.0f };            ///< 지난 평가가 건 굽 높이(몸 입력의 발 들림)
-            float32      _outputFootLift{ 0.0f };      ///< 게임 스레드 사본(준비 단계가 `_footLift` 에서 옮긴다)
-            float32      _legLift{ 0.0f };             ///< 지난 평가가 체형의 다리 길이로 골반에 더한 높이(발 평균)
-            float32      _outputLegLift{ 0.0f };       ///< 게임 스레드 사본
-            float32      _soleGap{ 0.0f };             ///< 지난 평가의 가장 낮은 발 틈(`updateSoleGap`)
-            float32      _outputSoleGap{ 0.0f };       ///< 게임 스레드 사본
-            float32      _soleGapPeak{ 0.0f };         ///< 지금 칸의 `|_soleGap|` 최댓값
-            float32      _soleGapPeakPrevious{ 0.0f }; ///< 앞 칸의 최댓값
-            float32      _soleGapPeakSeconds{ 0.0f };  ///< 지금 칸이 흐른 시간
-            float32      _outputSoleGapPeak{ 0.0f };   ///< 게임 스레드 사본(두 칸의 최댓값)
-            uint32       _outputHitCount{ 0 };         ///< 지난 준비 단계에서 땅에 닿은 발 수
-            uint32       _pelvis{ 0 };
-            uint8        _bPelvisInitialized{ SW_FALSE };
+            float32      _outputPelvisOffset{ 0.0f }; ///< 게임 스레드 사본(준비 단계가 `_pelvisOffset` 에서 옮긴다)
+            float32      _footLift{ 0.0f };           ///< 지난 평가가 건 굽 높이(몸 입력의 발 들림)
+            float32      _outputFootLift{ 0.0f };     ///< 게임 스레드 사본(준비 단계가 `_footLift` 에서 옮긴다)
+            float32      _legLift{ 0.0f };            ///< 지난 평가가 체형의 다리 길이로 골반에 더한 높이(발 평균)
+            float32      _outputLegLift{ 0.0f };      ///< 게임 스레드 사본
+            /// 쉬는 자세(레퍼런스 엉덩 높이)에서 같은 다리 길이 비가 요구하는 골반 높이(발 평균) — 클립의 골반 출렁임이 없어 흔들리지 않는다. 1인칭 눈높이가 읽는다
+            float32 _restLegLift{ 0.0f };
+            float32 _outputRestLegLift{ 0.0f };   ///< 게임 스레드 사본
+            float32 _soleGap{ 0.0f };             ///< 지난 평가의 가장 낮은 발 틈(`updateSoleGap`)
+            float32 _outputSoleGap{ 0.0f };       ///< 게임 스레드 사본
+            float32 _soleGapPeak{ 0.0f };         ///< 지금 칸의 `|_soleGap|` 최댓값
+            float32 _soleGapPeakPrevious{ 0.0f }; ///< 앞 칸의 최댓값
+            float32 _soleGapPeakSeconds{ 0.0f };  ///< 지금 칸이 흐른 시간
+            float32 _outputSoleGapPeak{ 0.0f };   ///< 게임 스레드 사본(두 칸의 최댓값)
+            uint32  _outputHitCount{ 0 };         ///< 지난 준비 단계에서 땅에 닿은 발 수
+            uint32  _pelvis{ 0 };
+            uint8   _bPelvisInitialized{ SW_FALSE };
         };
 
         /**

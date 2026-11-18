@@ -63,7 +63,8 @@
 
 	<!-- ⑸ 1인칭 — 시점 총의 Grip · SupportHand 를 긴 팔 · 짧은 팔로 잡는다 -->
 	<DevCommand line="camera.preset firstperson"/>
-	<DevCommand line="appearance.value PlayerBody LegLength 0"/> <!-- 다리는 기본 — 시점 총은 카메라(캡슐 눈높이)에 붙어 다리가 짧으면 몸만 내려간다 -->
+	<!-- 다리는 ⑷ 의 짧은 다리 그대로 — 1인칭 눈높이가 몸(rest_leg_lift)을 따라 내려가 시점 총도 함께 내려간다 -->
+	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.rest_leg_lift" atMost="-0.03" timeoutFrames="10"/>
 	<DevCommand line="appearance.value PlayerBody ArmLength 1"/>
 	<WaitUntil watch="Appearance.Value" target="PlayerBody" key="ArmLength" near="1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="PlayerBody" equals="1" timeoutFrames="300"/>

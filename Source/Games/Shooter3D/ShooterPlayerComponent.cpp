@@ -53,6 +53,25 @@ namespace sw
     {
         struct ShooterPlayerComponentInternal
         {
+            /**
+             * @brief 몸 리그가 체형의 다리 길이로 몸을 올린 높이(`rest_leg_lift` 를 내는 노드 — 발 디딤)입니다. 리그가 없거나 아직 묶이지 않았으면 0 입니다.
+             * @details 쉬는 자세의 값이라 걷기 클립의 골반 출렁임이 섞이지 않는다 — 눈높이 · 조준 원점이 프레임마다 흔들리지 않는다.
+             */
+            static float32 readBodyLegLift( const GameObject* pBody )
+            {
+                const PoseModifierComponent* pRig = pBody != nullptr ? pBody->getComponent<PoseModifierComponent>() : nullptr;
+                if ( pRig == nullptr || pRig->isRigReady() == false )
+                    return 0.0f;
+                const RigInstance& instance = pRig->getRigInstance();
+                for ( uint32 nodeIndex = 0; nodeIndex < instance.getNodeCount(); ++nodeIndex )
+                {
+                    float32 lift = 0.0f;
+                    if ( instance.getNode( nodeIndex ).getOutputValue( hashed_string( "rest_leg_lift" ), lift ) )
+                        return lift;
+                }
+                return 0.0f;
+            }
+
             static constexpr const utf8* kArrWeaponAction[ShooterPlayerComponent::kWeaponCount] = { "Weapon1", "Weapon2", "Weapon3" };
             // 폰 스키마의 버튼과 아날로그 이름이다(플레이어는 같은 이름의 입력 맵 액션을 쓰고, 자동 플레이 AI 는 그 이름을 누른다).
             static constexpr const utf8* kFireButton         = "Fire";
@@ -302,6 +321,7 @@ namespace sw
         , _timeSinceShot{ 10.0f }
         , _downTimer{ 0.0f }
         , _bodyEyeHeight{ 0.0f }
+        , _bodyLegLift{ 0.0f }
         , _lookYaw{ 0.0f }
         , _lastTracerWidth{ 0.0f }
         , _lastTracerStartAhead{ 0.0f }
@@ -391,6 +411,7 @@ namespace sw
         }
         _body           = GameObjectHandle{};
         _bodyEyeHeight  = 0.0f;
+        _bodyLegLift    = 0.0f;
         _bBodyRequested = SW_TRUE;
     }
 
@@ -413,14 +434,17 @@ namespace sw
             _bFirstPerson   = bFirstPerson ? SW_TRUE : SW_FALSE;
             _bViewModeDirty = SW_TRUE;
         }
-        // 눈높이는 몸의 Eyes 소켓(바인드 포즈)이 정한다. 몸이 조립되기 전에는 속성 값을 쓴다.
-        if ( _bodyEyeHeight <= 0.0f )
+        // 눈높이는 몸의 Eyes 소켓(바인드 포즈)이 정하고, 체형의 다리 길이가 몸을 올린 만큼 따라 오른다. 몸이 조립되기 전에는 속성 값을 쓴다.
         {
-            const GameObject*                   pBody       = findBodyObject();
-            const CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
-            float4x4                            eyes;
-            if ( pAppearance != nullptr && pAppearance->findBindSocketTransform( hashed_string( ShooterPlayerComponentInternal::kEyesSocket ), eyes ) )
-                _bodyEyeHeight = MathUtil::max( 0.5f, eyes.getTranslation()._y );
+            const GameObject* pBody = findBodyObject();
+            if ( _bodyEyeHeight <= 0.0f )
+            {
+                const CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
+                float4x4                            eyes;
+                if ( pAppearance != nullptr && pAppearance->findBindSocketTransform( hashed_string( ShooterPlayerComponentInternal::kEyesSocket ), eyes ) )
+                    _bodyEyeHeight = MathUtil::max( 0.5f, eyes.getTranslation()._y );
+            }
+            _bodyLegLift = ShooterPlayerComponentInternal::readBodyLegLift( pBody );
         }
 
         for ( WeaponState& weapon : _arrWeapon )
@@ -550,7 +574,7 @@ namespace sw
 
     float3 ShooterPlayerComponent::getEyePosition() const
     {
-        return getDisplayFeetPosition() + float3{ 0.0f, _bodyEyeHeight > 0.0f ? _bodyEyeHeight : _eyeHeight, 0.0f };
+        return getDisplayFeetPosition() + float3{ 0.0f, _bodyEyeHeight > 0.0f ? _bodyEyeHeight + _bodyLegLift : _eyeHeight, 0.0f };
     }
 
     float3 ShooterPlayerComponent::getFeetPosition() const

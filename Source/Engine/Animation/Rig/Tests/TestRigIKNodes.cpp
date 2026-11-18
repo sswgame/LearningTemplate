@@ -572,6 +572,9 @@ SW_TEST_CASE_F( RigIKTest, FootPlacementLiftsThePelvisForLongerLegs )
     float32 value = 1.0f;
     SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "leg_lift" ), value ) );
     SW_EXPECT_NEAR( value, 0.18f, 2.0e-3f );
+    // 쉬는 자세의 값(1인칭 눈높이) — 같은 비 × (레퍼런스 엉덩 1.0 - 발목 0.1)
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "rest_leg_lift" ), value ) );
+    SW_EXPECT_NEAR( value, 0.18f, 2.0e-3f );
     SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "sole_gap" ), value ) );
     SW_EXPECT_NEAR( value, 0.0f, 2.0e-3f );
     SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "sole_gap_peak" ), value ) );
@@ -595,6 +598,8 @@ SW_TEST_CASE_F( RigIKTest, FootPlacementIgnoresClipBoneLengths )
     }
     float32 value = 1.0f;
     SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "leg_lift" ), value ) );
+    SW_EXPECT_NEAR( value, 0.0f, 1.0e-4f );
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "rest_leg_lift" ), value ) );
     SW_EXPECT_NEAR( value, 0.0f, 1.0e-4f );
 }
 

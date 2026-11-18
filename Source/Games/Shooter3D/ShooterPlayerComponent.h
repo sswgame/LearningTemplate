@@ -47,7 +47,8 @@ namespace sw
      *          상태(발, 요, 속도, 사격, 맞음, 쓰러짐, 무기)를 읽어 스스로 움직이고, 무기는 외형의 MainHand 슬롯 아이템(무기 표의 `item`)이 된다.
      *          시점 카메라의 프리셋이 1인칭(`CameraPresetMode::FirstPerson`)이면 몸의 머리 · 머리 장비 · 몸 무기만 숨기고(`ShooterAvatarComponent::setFirstPerson`)
      *          손에 든 총과 조준선을 보이며, 아니면 반대로 한다. 눈높이는 몸 소켓
-     *          `Eyes` 의 바인드 포즈 높이다(없으면 `_eyeHeight`).
+     *          `Eyes` 의 바인드 포즈 높이에 체형의 다리 길이가 몸을 올린 높이(몸 리그 `rest_leg_lift`)를 더한 값이다(없으면 `_eyeHeight`) — 1인칭 카메라가
+     *          머리를 따른다(언리얼 트루 1인칭 · 스카이림 종족 키). 애니메이션 머리 흔들림은 섞지 않아 조준 원점이 흔들리지 않는다.
      *
      *          **HUD**: 게임의 뷰모델(`ShooterHUDViewModel`)을 이 컴포넌트가 들고 틱이 끝난 뒤 값을 넣으며, `IHUDViewModelBinder` 로 같은 오브젝트의 HUD 에 건다(전용 서버는 창구가 없어 걸지 않는다). 조준선(1인칭이고 살아 있을 때),
      *          맞음 표시(맞힌 직후, 1인칭), 체력, 탄약(탄창과 예비), 무기 이름(무기의 장비 아이템 표의 이름이 곧 현지화 키)이 대상이다. 위젯은 문서(`game/shooter3d/ui/hud.ui.xml`)의
@@ -284,6 +285,7 @@ namespace sw
         float32                         _timeSinceShot;
         float32                         _downTimer;     ///< 쓰러진 뒤 지난 시간(쓰러졌을 때만).
         float32                         _bodyEyeHeight; ///< 몸 소켓 Eyes 의 높이(0은 아직 모른다는 뜻).
+        float32                         _bodyLegLift;   ///< 체형의 다리 길이가 몸을 올린 높이(몸 리그 `rest_leg_lift`) — 눈높이가 몸을 따른다
         float32                         _lookYaw;
         float32                         _lastTracerWidth;      ///< 마지막 탄도선 두께(감시 값 `Shooter3D.TracerWidth`)
         float32                         _lastTracerStartAhead; ///< 마지막 탄도선 시작점의 눈 앞 거리(감시 값 `Shooter3D.TracerStartAhead`)
