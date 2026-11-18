@@ -89,7 +89,7 @@ namespace sw
     }
 
     LiveShaderBytecodeProvider::LiveShaderBytecodeProvider( bool bDebugCodegen )
-        : _bDebugCodegen{ bDebugCodegen ? SW_TRUE : SW_FALSE }
+        : _bDebugCodegen{ static_cast<uint8>( bDebugCodegen ? SW_TRUE : SW_FALSE ) }
     {
     }
 

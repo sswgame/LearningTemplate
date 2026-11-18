@@ -13,7 +13,6 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 #include <algorithm>
@@ -49,7 +48,7 @@ namespace sw::editor
             [[nodiscard]] static expected<EditorThemeDef> readThemeChain( string_view absolutePath )
             {
                 // 깊이 상한은 데이터 상속과 같은 사본이다(`ResourceComposition::findInheritanceMaxDepth`) — 없으면 대신 설정을 읽지 않고 진다.
-                const optional<uint32> maxDepth = engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
+                const optional<uint32> maxDepth = editor::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
                 if ( maxDepth.has_value() == false )
                     return unexpected( Error{ ErrorKind::Unsupported, "the inheritance depth limit is not set yet", absolutePath } );
                 vector<string>         listPath;
