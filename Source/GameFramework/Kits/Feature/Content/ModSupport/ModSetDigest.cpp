@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSetDigest.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -162,11 +163,6 @@ namespace sw
 
     const ModDigestEntry* ModSetDigest::findEntry( string_view id ) const
     {
-        for ( const ModDigestEntry& entry : _listEntry )
-        {
-            if ( entry._id == id )
-                return &entry;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&ModDigestEntry::_id>( _listEntry, id );
     }
 } // namespace sw
