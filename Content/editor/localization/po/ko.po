@@ -2075,12 +2075,12 @@ msgctxt "EdFormat.MoveToRecycleBin"
 msgid "Move '{file}' to the Recycle Bin?"
 msgstr "'{file}' 을 휴지통으로 옮길까요?"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EdFormat.Nested"
 msgid "Nested: {prefabIndex}"
 msgstr "중첩: {prefabIndex}"
 
-#: Source/Editor/Panels/Inspector/Model/PropertyGridModel.cpp
+#: Source/Editor/Panels/Inspector/Model/PropertyGridViewModel.cpp
 msgctxt "EdFormat.NoInspectorFor"
 msgid "No inspector for {type}"
 msgstr "{type} 에는 인스펙터가 없습니다"
@@ -2165,7 +2165,7 @@ msgctxt "EdFormat.Position"
 msgid "Position: ({mx}, {my})"
 msgstr "위치: ({mx}, {my})"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EdFormat.PrefabWindow"
 msgid "Prefab Window: {prefabPath}"
 msgstr "프리팹 창: {prefabPath}"
@@ -2776,7 +2776,7 @@ msgctxt "EdLabel.ShowLiveActionTriggerStream"
 msgid "Show Live Action Trigger Stream"
 msgstr "실시간 액션 발동 흐름 보이기"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EdLabel.ShowModifiedPropertiesOnly"
 msgid "Show Modified Properties Only"
 msgstr "바뀐 프로퍼티만 보이기"
@@ -3029,7 +3029,7 @@ msgctxt "EdSection.MouseStatus"
 msgid "Mouse Status"
 msgstr "마우스 상태"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EdSection.NestedPrefabsSubAssets"
 msgid "Nested Prefabs & Sub-Assets"
 msgstr "중첩 프리팹 · 하위 에셋"
@@ -3214,7 +3214,7 @@ msgctxt "EdText.AnimationsNameFirstFrameFrameCountLoopNone"
 msgid "Animations (name, first frame, frame count, loop) - none means the whole clip is one loop"
 msgstr "애니메이션(이름 · 첫 프레임 · 프레임 수 · 반복) — 없으면 클립 전체가 한 반복이다"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EdText.ApplyAllOverridesToTemplate"
 msgid "Apply All Overrides to Template"
 msgstr "덮어쓴 값을 모두 원본에 적용"
@@ -3393,7 +3393,7 @@ msgctxt "EdText.EdgeWarpPresets"
 msgid "Edge Warp Presets"
 msgstr "가장자리 이동 프리셋"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EdText.Edit"
 msgid "Edit"
 msgstr "편집"
@@ -3418,7 +3418,7 @@ msgctxt "EdText.Event"
 msgid "Event"
 msgstr "이벤트"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EdText.ExitIsolation"
 msgid "Exit Isolation"
 msgstr "격리 나가기"
@@ -3639,7 +3639,7 @@ msgctxt "EdText.OpenInGameSettingsWindow"
 msgid "Open in-game settings window"
 msgstr "게임 안 설정 창 열기"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EdText.OpenPrefabWindow"
 msgid "Open Prefab Window"
 msgstr "프리팹 창 열기"
@@ -3756,7 +3756,7 @@ msgctxt "EdText.RefreshFilesAlt"
 msgid "Refresh Files"
 msgstr "파일 새로 고침"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EdText.RefreshOverrides"
 msgid "Refresh Overrides"
 msgstr "덮어쓴 값 새로 고침"
@@ -3855,7 +3855,7 @@ msgctxt "EdText.Resume"
 msgid "Resume"
 msgstr "이어 하기"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EdText.RevertAllOverrides"
 msgid "Revert All Overrides"
 msgstr "덮어쓴 값 모두 되돌리기"
@@ -3910,7 +3910,7 @@ msgctxt "EdText.SaveLocalization"
 msgid "Save Localization"
 msgstr "현지화 저장"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EdText.SavePrefabExitIsolation"
 msgid "Save Prefab & Exit Isolation"
 msgstr "프리팹 저장하고 격리 나가기"
@@ -4434,7 +4434,7 @@ msgstr "초기화"
 #: Source/Editor/Panels/Catalog/CatalogPanel.cpp
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 #: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 #: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
 msgctxt "EdVerb.Revert"
 msgid "Revert"
@@ -6867,12 +6867,12 @@ msgctxt "EditorMaterial.ApplyToSelectionTip"
 msgid "Show the edited material on the selected object in the viewport without saving, to judge it with the real shader and lighting."
 msgstr "저장하지 않고 편집한 머티리얼을 뷰포트의 선택한 오브젝트에 입혀, 실제 셰이더와 라이팅으로 판단할 수 있게 합니다."
 
-#: Source/Editor/Panels/Material/Model/MaterialModel.cpp
+#: Source/Editor/Panels/Material/Model/MaterialViewModel.cpp
 msgctxt "EditorMaterial.LoadFailedStatus"
 msgid "Load failed - saving is disabled so the file is not overwritten"
 msgstr "읽기 실패 - 파일을 덮어쓰지 않도록 저장을 막았습니다"
 
-#: Source/Editor/Panels/Material/Model/MaterialModel.cpp
+#: Source/Editor/Panels/Material/Model/MaterialViewModel.cpp
 msgctxt "EditorMaterial.LoadedStatus"
 msgid "Loaded"
 msgstr "읽음"
@@ -6897,7 +6897,7 @@ msgctxt "EditorMaterial.ReloadTip"
 msgid "Read the material from disk again, discarding unsaved edits."
 msgstr "저장하지 않은 편집을 버리고 디스크에서 머티리얼을 다시 읽습니다."
 
-#: Source/Editor/Panels/Material/Model/MaterialModel.cpp
+#: Source/Editor/Panels/Material/Model/MaterialViewModel.cpp
 msgctxt "EditorMaterial.SaveFailedStatus"
 msgid "Save failed"
 msgstr "저장하지 못했습니다"
@@ -6907,7 +6907,7 @@ msgctxt "EditorMaterial.SaveTip"
 msgid "Write the material file and reload it in the running scene."
 msgstr "머티리얼 파일을 쓰고 실행 중인 씬에서 다시 읽습니다."
 
-#: Source/Editor/Panels/Material/Model/MaterialModel.cpp
+#: Source/Editor/Panels/Material/Model/MaterialViewModel.cpp
 msgctxt "EditorMaterial.SavedStatus"
 msgid "Saved"
 msgstr "저장했습니다"
@@ -7522,7 +7522,7 @@ msgctxt "EditorRigDebug.SelectRig"
 msgid "Select an object with a Pose Modifier component"
 msgstr "Pose Modifier 컴포넌트가 있는 오브젝트를 고르세요"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.ApplyAllOverrides"
 msgid "Write every override of this instance back to the prefab template"
 msgstr "이 인스턴스의 모든 오버라이드를 프리팹 템플릿에 반영합니다"
@@ -7542,12 +7542,12 @@ msgctxt "EditorScene.DebugDrawCategories"
 msgid "Turn DebugDrawQueue categories on or off"
 msgstr "DebugDrawQueue 카테고리를 켜고 끕니다"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.EditNestedPrefab"
 msgid "Open this nested prefab in isolation mode"
 msgstr "이 중첩 프리팹을 격리 모드로 엽니다"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.ExitIsolation"
 msgid "Leave isolation mode without saving the prefab"
 msgstr "프리팹을 저장하지 않고 격리 모드를 나갑니다"
@@ -7632,7 +7632,7 @@ msgctxt "EditorScene.MaximizeOnPlay"
 msgid "Maximize On Play - keep only the game view while playing and restore the layout on Stop"
 msgstr "Maximize On Play - 플레이하는 동안 게임 뷰만 남기고, Stop 하면 배치를 되돌립니다"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.OpenPrefabIsolation"
 msgid "Edit the selected prefab on its own in isolation mode"
 msgstr "고른 프리팹을 격리 모드에서 따로 편집합니다"
@@ -7647,42 +7647,42 @@ msgctxt "EditorScene.PlayModeRunning"
 msgid "Play mode is running (scene edits are restricted)"
 msgstr "플레이 모드 실행 중 (씬 편집 제한)"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.PrefabAssetLabel"
 msgid "Prefab"
 msgstr "프리팹"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.PrefabInstanceLabel"
 msgid "Instance"
 msgstr "인스턴스"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.PrefabNoInstance"
 msgid "Select a prefab instance in the Hierarchy to see and apply its overrides."
 msgstr "하이어라키에서 프리팹 인스턴스를 고르면 덮어쓴 값을 보고 적용할 수 있습니다."
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.RefreshOverrides"
 msgid "Scan the instance for overrides again"
 msgstr "인스턴스의 오버라이드를 다시 검사합니다"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.RevertAllOverrides"
 msgid "Discard every override of this instance and match the prefab template"
 msgstr "이 인스턴스의 모든 오버라이드를 버리고 프리팹 템플릿과 맞춥니다"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.RevertOverride"
 msgid "Revert this property to the prefab value"
 msgstr "이 프로퍼티를 프리팹 값으로 되돌립니다"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.SavePrefabExitIsolation"
 msgid "Save the prefab and leave isolation mode"
 msgstr "프리팹을 저장하고 격리 모드를 나갑니다"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.SceneEditsLocked"
 msgid "Scene edits locked until Stop."
 msgstr "Stop 할 때까지 씬 편집이 잠깁니다."
@@ -7692,7 +7692,7 @@ msgctxt "EditorScene.SceneViewScreenshot"
 msgid "Save the scene view image (editor camera) to Saved/Screenshots/<time>.png - the grid and gizmos are ImGui overlays and are not included"
 msgstr "씬 뷰 그림(에디터 카메라)을 Saved/Screenshots/<시각>.png 로 저장합니다 — 격자 · 기즈모는 ImGui 오버레이라 들지 않습니다"
 
-#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
 msgctxt "EditorScene.ShowModifiedOnly"
 msgid "Show only the properties that differ from the prefab"
 msgstr "프리팹과 다른 프로퍼티만 보입니다"
@@ -8602,7 +8602,7 @@ msgctxt "EditorSpriteClip.AnimationLoopTip"
 msgid "Repeat from the first frame after the last one; off stops on the last frame."
 msgstr "마지막 프레임 다음에 첫 프레임부터 반복합니다. 끄면 마지막 프레임에서 멈춥니다."
 
-#: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
+#: Source/Editor/Panels/Animation/Model/SpriteClipViewModel.cpp
 msgctxt "EditorSpriteClip.AnimationNameRejectedStatus"
 msgid "Animation name not changed: it is empty or already used"
 msgstr "애니메이션 이름을 바꾸지 않았습니다: 비었거나 이미 쓰는 이름입니다"
@@ -8612,7 +8612,7 @@ msgctxt "EditorSpriteClip.AnimationNameTip"
 msgid "Name game code uses to play this animation."
 msgstr "게임 코드가 이 애니메이션을 재생할 때 쓰는 이름입니다."
 
-#: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
+#: Source/Editor/Panels/Animation/Model/SpriteClipViewModel.cpp
 msgctxt "EditorSpriteClip.AnimationNeedsFrameStatus"
 msgid "Animation not added: the clip has no frames"
 msgstr "애니메이션을 더하지 않았습니다: 클립에 프레임이 없습니다"
@@ -8647,7 +8647,7 @@ msgctxt "EditorSpriteClip.Border"
 msgid "Border"
 msgstr "테두리"
 
-#: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
+#: Source/Editor/Panels/Animation/Model/SpriteClipViewModel.cpp
 msgctxt "EditorSpriteClip.BorderNeedsAtlasSizeStatus"
 msgid "A frame with a border needs the atlas size in pixels"
 msgstr "테두리가 있는 프레임에는 아틀라스 픽셀 크기가 필요합니다"
@@ -8747,7 +8747,7 @@ msgctxt "EditorSpriteClip.PreviewTip"
 msgid "Play the selected animation, or every frame when none is selected."
 msgstr "고른 애니메이션을 재생합니다. 고른 것이 없으면 모든 프레임을 재생합니다."
 
-#: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
+#: Source/Editor/Panels/Animation/Model/SpriteClipViewModel.cpp
 msgctxt "EditorSpriteClip.SaveFailedStatus"
 msgid "Save failed"
 msgstr "저장하지 못했습니다"
@@ -8757,7 +8757,7 @@ msgctxt "EditorSpriteClip.SaveTip"
 msgid "Write the frames, animations and keys to the clip file."
 msgstr "프레임, 애니메이션, 키를 클립 파일에 씁니다."
 
-#: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
+#: Source/Editor/Panels/Animation/Model/SpriteClipViewModel.cpp
 msgctxt "EditorSpriteClip.SavedStatus"
 msgid "Saved {path}"
 msgstr "{path} 저장됨"
@@ -8857,7 +8857,7 @@ msgctxt "EditorTileMap.DataLayerNameTip"
 msgid "Name of the new data layer. The game reads the layer by this name."
 msgstr "새 데이터 레이어의 이름입니다. 게임은 이 이름으로 레이어를 읽습니다."
 
-#: Source/Editor/Panels/TileMap/Model/TileMapModel.cpp
+#: Source/Editor/Panels/TileMap/Model/TileMapViewModel.cpp
 msgctxt "EditorTileMap.DataLayerRejectedStatus"
 msgid "Data layer not added: the name is empty or already used"
 msgstr "데이터 레이어를 더하지 못했습니다: 이름이 비었거나 이미 있습니다"
@@ -8952,7 +8952,7 @@ msgctxt "EditorTileMap.ResetViewTip"
 msgid "Reset zoom and pan to the start (wheel: zoom, middle or right drag: pan)"
 msgstr "확대와 이동을 처음으로 되돌립니다 (휠: 확대, 가운데 · 오른쪽 끌기: 이동)"
 
-#: Source/Editor/Panels/TileMap/Model/TileMapModel.cpp
+#: Source/Editor/Panels/TileMap/Model/TileMapViewModel.cpp
 msgctxt "EditorTileMap.SaveFailedStatus"
 msgid "Save failed"
 msgstr "저장하지 못했습니다"
@@ -8962,17 +8962,17 @@ msgctxt "EditorTileMap.SaveTip"
 msgid "Write the map to Path."
 msgstr "맵을 Path 에 씁니다."
 
-#: Source/Editor/Panels/TileMap/Model/TileMapModel.cpp
+#: Source/Editor/Panels/TileMap/Model/TileMapViewModel.cpp
 msgctxt "EditorTileMap.SavedStatus"
 msgid "Saved {path}"
 msgstr "{path} 저장됨"
 
-#: Source/Editor/Panels/TileMap/Model/TileMapModel.cpp
+#: Source/Editor/Panels/TileMap/Model/TileMapViewModel.cpp
 msgctxt "EditorTileMap.SizeOutOfRange"
 msgid "Size is out of range."
 msgstr "크기가 범위를 벗어났습니다."
 
-#: Source/Editor/Panels/TileMap/Model/TileMapModel.cpp
+#: Source/Editor/Panels/TileMap/Model/TileMapViewModel.cpp
 msgctxt "EditorTileMap.SpawnOutsideStatus"
 msgid "Spawn not changed: the cell is outside the map"
 msgstr "스폰을 바꾸지 않았습니다: 맵 밖의 칸입니다"
@@ -8987,7 +8987,7 @@ msgctxt "EditorTileMap.SpawnYTip"
 msgid "Cell row where the player starts on this map."
 msgstr "이 맵에서 플레이어가 시작하는 칸의 행입니다."
 
-#: Source/Editor/Panels/TileMap/Model/TileMapModel.cpp
+#: Source/Editor/Panels/TileMap/Model/TileMapViewModel.cpp
 msgctxt "EditorTileMap.TileSetReadFailed"
 msgid "Tile set could not be read: {path}"
 msgstr "타일셋을 읽지 못했습니다: {path}"
@@ -9312,7 +9312,7 @@ msgctxt "EditorUIPreview.AnchorTopRight"
 msgid "Top Right"
 msgstr "오른쪽 위"
 
-#: Source/Editor/Panels/UIPreview/Model/UIPreviewModel.cpp
+#: Source/Editor/Panels/UIPreview/Model/UIPreviewViewModel.cpp
 msgctxt "EditorUIPreview.BuildFailed"
 msgid "Could not build the document (see the log)."
 msgstr "문서를 만들지 못했습니다(로그를 확인합니다)."
