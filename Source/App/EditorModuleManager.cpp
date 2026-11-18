@@ -165,8 +165,8 @@ namespace sw
         if ( _editorAPI.updateUI != nullptr )
             _editorAPI.updateUI( _editor );
 
-        // 에디터가 이번 프레임 입력을 처리한 **뒤에** 확정한다. Step 버튼은 이 갱신에서 눌리고, 씬을 한 틱 진행한 다음
-        // endEditorFrame 에서 소비된다. 이 질의를 프레임 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
+        // 에디터 갱신 **뒤에** 확정한다. 앞 UI 프레임이 보낸 Step 은 이 갱신의 맨 앞(`ImGuiEditor::applyUICommands`)에서 적용되고, 씬을 한 틱 진행한 다음
+        // endEditorFrame 에서 소비된다. 이 질의를 그 적용 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
         getMutableFrameState()._bTickScene = queryTickScene() ? SW_TRUE : SW_FALSE;
         sampleViewTargets();
         // 다시 그릴 까닭은 이번 프레임의 UI 를 다 돈 뒤에 묻는다(입력 · 잡은 항목 · 알림 · 패널 요청이 이 프레임 것으로 정해졌다).
