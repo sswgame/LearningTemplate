@@ -63,9 +63,7 @@ namespace sw
                 DataInheritanceSchema settings = DataInheritanceSchema::makeFromType( *SceneSettings::StaticType() );
                 settings._name                 = SceneSettings::kElementName;
                 schema._listField.push_back( std::move( settings ) );
-                DataInheritanceSchema entities{ kEntities };
-                entities._keyAttribute = "id";
-                schema._listField.push_back( std::move( entities ) );
+                schema._listField.push_back( DataInheritanceSchema::makeKeyedList( kEntities, "id" ) );
                 return schema;
             }
 

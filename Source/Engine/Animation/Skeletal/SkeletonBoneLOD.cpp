@@ -283,9 +283,7 @@ namespace sw
     DataInheritanceSchema SkeletonBoneLOD::makeInheritanceSchema()
     {
         DataInheritanceSchema schema{ "SkeletonBoneLOD" };
-        DataInheritanceSchema coreBones{ "coreBones" };
-        coreBones._keyAttribute = "name";
-        schema._listField.push_back( std::move( coreBones ) );
+        schema._listField.push_back( DataInheritanceSchema::makeKeyedList( "coreBones", "name" ) );
         return schema; // `levels` 는 규칙에 없어 자식이 적으면 통째로 바뀐다(단계 표는 한 벌로 맞춘다)
     }
 

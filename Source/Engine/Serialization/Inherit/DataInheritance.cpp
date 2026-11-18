@@ -679,6 +679,13 @@ namespace sw
     {
     }
 
+    DataInheritanceSchema DataInheritanceSchema::makeKeyedList( string_view name, string_view keyAttribute )
+    {
+        DataInheritanceSchema list{ name };
+        list._keyAttribute = keyAttribute;
+        return list;
+    }
+
     const DataInheritanceSchema* DataInheritanceSchema::findField( string_view name ) const
     {
         for ( const DataInheritanceSchema& field : _listField )

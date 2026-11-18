@@ -107,6 +107,8 @@ namespace sw
 
         /** @brief 이름 @p name 의 노드를 만듭니다. */
         explicit DataInheritanceSchema( string_view name );
+        /** @brief 자식들이 속성 @p keyAttribute 를 열쇠로 하는 목록 원소 @p name 의 노드를 만듭니다(손으로 읽는 XML 형식의 규칙에서 `<nodes>` · `<chains>` 같은 목록 한 줄). */
+        [[nodiscard]] static DataInheritanceSchema makeKeyedList( string_view name, string_view keyAttribute );
         /** @brief @p name 의 자식 칸입니다. 없으면 nullptr 이고, 그 칸은 통째로 바뀝니다. */
         [[nodiscard]] const DataInheritanceSchema* findField( string_view name ) const;
         /** @brief 리플렉션 형식의 규칙을 만듭니다. 구조체 칸 · `InheritKey` 칸이 있는 구조체 목록은 합치고, 필수 칸(`Required`)은 저장이 지우지 않습니다. */
