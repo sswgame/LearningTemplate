@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/list.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -171,16 +172,22 @@ namespace sw
         {
             shared_ptr<const AudioClipData> _pClip{};
             uint64                          _byteCount{ 0 };                    ///< `_pClip->getByteCount()` 를 넣을 때 적어 둔다
-            mutable uint64                  _lastUse{ 0 };                      ///< 마지막으로 찾거나 넣은 때의 `_useClock` 이다(찾기는 const 라 mutable)
+            list<hashed_string>::iterator   _itPathByUse{};                     ///< `_listPathByUse` 에서 이 엔트리의 자리다(앞이 가장 오래 안 쓴 것)
             AssetLoadState                  _status{ AssetLoadState::Loading }; ///< 엔트리는 요청(`requestClip`)이나 결과(`storeResult`)가 만든다
         };
 
+        /** @brief 경로의 엔트리를 찾거나 만들고 최근 사용 목록 맨 뒤로 옮깁니다. */
+        Entry& findOrAddLocked( const hashed_string& path ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 엔트리를 최근 사용 목록 맨 뒤로 옮깁니다(찾기는 const 라 목록은 mutable). */
+        void markUsedLocked( const Entry& entry ) const SW_REQUIRES_LOCK( _mutex );
+
+    private:
         unordered_map<hashed_string, Entry, hashed_string::HashFunc> _mapPathToEntry SW_GUARDED_BY( _mutex ); /**< 경로에서 엔트리로 가는 맵입니다. */
         AudioFallbackDecodeFunction                                                  _pFallbackDecoder;       /**< 대체 디코더입니다(없으면 nullptr). */
         float32                                                                      _streamMinSeconds;       /**< 이보다 긴 소리는 스트리밍합니다. */
         uint64 _budgetBytes                                                          SW_GUARDED_BY( _mutex ); /**< 캐시 예산(바이트)입니다. 0 이면 아직 정하지 않았다. */
         uint64 _cachedBytes                                                          SW_GUARDED_BY( _mutex ); /**< 든 클립 바이트의 합입니다. */
-        mutable uint64 _useClock                                                     SW_GUARDED_BY( _mutex ); /**< 찾기 · 넣기마다 하나씩 오르는 LRU 시계입니다. */
+        mutable list<hashed_string> _listPathByUse                                   SW_GUARDED_BY( _mutex ); /**< 최근 사용 순서입니다 — 앞이 가장 오래 안 쓴 것, 찾기 · 넣기가 맨 뒤로 옮긴다(언리얼 `FLruCache` 의 연결 목록). */
         mutable mutex                                                                _mutex;                  /**< `_mapPathToEntry` 를 지킵니다. */
         bool _bSubmittedDecode                                                       SW_GUARDED_BY( _mutex ); /**< 워커 디코드를 띄운 적이 있으면 true - 소멸자가 에셋 로드 단계를 기다린다(`AssetManager::waitLoadTasks`). */
     };
