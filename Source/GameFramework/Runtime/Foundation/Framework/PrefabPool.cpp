@@ -26,7 +26,6 @@ namespace sw
         , _createdCount{ 0 }
         , _bContractChecked{ SW_FALSE }
         , _bRefused{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 

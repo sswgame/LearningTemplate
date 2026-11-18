@@ -32,7 +32,7 @@ namespace sw
     class ContentPreparationToken
     {
         friend class GameInstance;
-        friend const ContentPreparationToken& getContentPreparationTokenForTest();
+        friend SW_GF_API const ContentPreparationToken& getContentPreparationTokenForTest();
 
     public:
         ContentPreparationToken( const ContentPreparationToken& )            = delete;

@@ -109,6 +109,5 @@ namespace sw
         uint32                   _createdCount;
         uint8                    _bContractChecked : 1; ///< 처음 만든 인스턴스로 풀 계약을 확인했다
         uint8                    _bRefused         : 1; ///< 풀 계약을 어긴 프리팹이다 — 더 만들지 않는다
-        uint8                    _reserved         : 6;
     };
 } // namespace sw
