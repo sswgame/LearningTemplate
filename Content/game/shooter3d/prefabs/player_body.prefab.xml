@@ -32,6 +32,9 @@
 			                           _syncWeight="1"
 			                           _bExtractRootMotion="false"
 			                           _bPlayOnBegin="true" />
+			<AnimationNotifyComponent _componentName="AnimationNotifyComponent"
+			                          _bActive="true"
+			                          _notifyTablePath="common/characters/ubc/ubc_body.notifies.xml" />
 			<PoseModifierComponent _componentName="PoseModifierComponent"
 			                       _bActive="true"
 			                       _rigPath="common/rigs/ubc_player_body.rig.xml"

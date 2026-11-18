@@ -32,6 +32,27 @@ namespace sw
     class GameObjectManager;
 
     /**
+     * @brief 발걸음 기록 한 벌입니다 — 종류마다 센 수와 마지막 발걸음의 반응(종류 · 마름/젖음 · 소리 · 효과). 씬 전체 한 벌과 걸은 오브젝트마다 한 벌을 둔다
+     *        (여럿이 함께 걸어도 한 오브젝트의 반응을 따로 본다 — 감시 값 `Surface.Object*`).
+     */
+    struct SW_API SurfaceFootstepRecord
+    {
+        unordered_map<hashed_string, uint32> _mapCount{}; ///< 종류 이름 → 밟은 발걸음 수(누적)
+        hashed_string                        _lastKind{};
+        hashed_string                        _lastSound{};
+        string                               _lastEffect{};
+        uint8                                _bLastWet : 1;
+
+        SurfaceFootstepRecord();
+        /** @brief 종류 @p kind 를 밟은 발걸음 수입니다. */
+        uint32 getCount( const hashed_string& kind ) const;
+        /** @brief 마지막 발걸음이 젖은 반응을 골랐는지입니다. */
+        bool isLastWet() const { return _bLastWet == SW_TRUE; }
+        /** @brief 발걸음 하나(종류 @p kind, 고른 반응 @p step, 젖음 @p bWet)를 적습니다. */
+        void note( const hashed_string& kind, const SurfaceStepResponse& step, bool bWet );
+    };
+
+    /**
      * @class SurfaceFootprintSystem
      * @brief 씬마다 하나 있는 발걸음 반응입니다(파일 머리말 참고).
      */
@@ -65,16 +86,12 @@ namespace sw
         uint32 getPlacedCount() const { return _placedCount; }
         /** @brief 이 씬에서 찍은 젖은 자국 수입니다(누적). */
         uint32 getWetPrintCount() const { return _wetPrintCount; }
-        /** @brief 종류 @p kind 를 밟은 발걸음 수입니다(누적). */
-        uint32 getFootstepCount( const hashed_string& kind ) const;
-        /** @brief 마지막 발걸음의 종류입니다(없으면 비어 있다). */
-        const hashed_string& getLastKind() const { return _lastKind; }
-        /** @brief 마지막 발걸음이 젖은 반응을 골랐는지입니다. */
-        bool isLastWet() const { return _bLastWet == SW_TRUE; }
-        /** @brief 마지막 발걸음 반응의 소리 이벤트입니다(조용하면 비어 있다). */
-        const hashed_string& getLastSound() const { return _lastSound; }
-        /** @brief 마지막 발걸음 반응의 효과 경로입니다(없으면 비어 있다). */
-        const string& getLastEffect() const { return _lastEffect; }
+        /** @brief 종류 @p kind 를 밟은 발걸음 수입니다(씬 전체, 누적). */
+        uint32 getFootstepCount( const hashed_string& kind ) const { return _sceneRecord.getCount( kind ); }
+        /** @brief 씬 전체의 발걸음 기록입니다. */
+        const SurfaceFootstepRecord& getSceneRecord() const { return _sceneRecord; }
+        /** @brief 오브젝트 @p objectID 의 발걸음 기록입니다. 걸은 적이 없으면 nullptr 입니다. */
+        const SurfaceFootstepRecord* findObjectRecord( uint64 objectID ) const;
 
     private:
         /** @brief 걸은 오브젝트 하나의 젖은 발입니다. */
@@ -90,14 +107,11 @@ namespace sw
         void playSound( const hashed_string& sound, const float3& point ) const;
 
     private:
-        GameObjectManager*                   _pManager;
-        unordered_map<hashed_string, uint32> _mapFootstepCount;
-        unordered_map<uint64, WetFeetState>  _mapWetFeet; ///< 걸은 오브젝트 id → 젖은 발(자국을 다 남기면 지운다)
-        hashed_string                        _lastKind;
-        hashed_string                        _lastSound;
-        string                               _lastEffect;
-        uint32                               _placedCount;
-        uint32                               _wetPrintCount;
-        uint8                                _bLastWet : 1;
+        GameObjectManager*                           _pManager;
+        SurfaceFootstepRecord                        _sceneRecord;
+        unordered_map<uint64, SurfaceFootstepRecord> _mapObjectRecord; ///< 걸은 오브젝트 id → 그 오브젝트의 기록
+        unordered_map<uint64, WetFeetState>          _mapWetFeet;      ///< 걸은 오브젝트 id → 젖은 발(자국을 다 남기면 지운다)
+        uint32                                       _placedCount;
+        uint32                                       _wetPrintCount;
     };
 } // namespace sw
