@@ -23,7 +23,6 @@
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
 
@@ -175,10 +174,10 @@ namespace sw::editor
                                 EditorColorUtil::toImU32( kHintText ), kHint );
         }
 
-        InputManager* const         pInput   = GameViewModel::findInputManager();
-        ViewportInputOverlay* const pOverlay = GameViewModel::findInputOverlay();
-        if ( imageSize.x > 1.0f && imageSize.y > 1.0f && pInput != nullptr && pOverlay != nullptr )
-            pOverlay->draw( pDrawList, imagePos, imageSize, pInput, &pInput->getInputMap() );
+        const ViewportInputOverlay* const      pOverlay = GameViewModel::findInputOverlay();
+        const ViewportInputOverlayState* const pState   = pOverlay != nullptr ? _model.gatherInputOverlay( *pOverlay ) : nullptr;
+        if ( imageSize.x > 1.0f && imageSize.y > 1.0f && pState != nullptr )
+            pOverlay->draw( pDrawList, imagePos, imageSize, *pState );
     }
 
     void GameViewPanel::drawToolbar()

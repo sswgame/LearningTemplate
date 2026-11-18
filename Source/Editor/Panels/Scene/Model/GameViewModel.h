@@ -11,6 +11,7 @@
 
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
+#include "Editor/Viewport/ViewportInputOverlay.h"
 
 namespace sw
 {
@@ -20,7 +21,6 @@ namespace sw
 namespace sw::editor
 {
     struct EditorPointerState;
-    struct ViewportInputOverlay;
 
     /**
      * @class GameViewModel
@@ -65,15 +65,21 @@ namespace sw::editor
         static InputManager* findInputManager();
         /** @brief 뷰포트 입력 오버레이(눌린 키 · 패드 표시)입니다. 없으면 nullptr 입니다. */
         static ViewportInputOverlay* findInputOverlay();
+        /**
+         * @brief 오버레이 @p overlay 가 켜졌으면 이번 프레임의 입력 값을 모아 돌려줍니다(View 는 입력 관리자 대신 이 값을 그린다). 꺼졌거나 입력 관리자가 없으면 nullptr 입니다.
+         * @details 값은 이 모델이 들고 프레임마다 다시 쓴다(액션 목록 용량은 남는다).
+         */
+        const ViewportInputOverlayState* gatherInputOverlay( const ViewportInputOverlay& overlay );
         /** @brief 게임 뷰가 그리는 카메라(활성 씬의 게임 카메라)의 월드 위치를 @p outPosition 에 담습니다. 없으면 false 입니다(감시 값이 읽는다). */
         [[nodiscard]] static bool findCameraPosition( float3& outPosition );
         /** @brief 주 출력(게임 뷰)의 보기 모드 번호(`RenderViewMode`)를 @p outMode 에 담습니다. 렌더러가 없으면(필수 서비스 — 버그) 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool findViewMode( uint32& outMode );
 
     private:
-        EditorGameViewAspect _aspect;                 ///< 이미지 화면 비율(자유 · 16:9)
-        uint8                _bNoCameraHintShown : 1; ///< 마지막 판정에 카메라가 없었다
-        uint8                _forwardedButtonMask;    ///< 보조 창에서 게임으로 누름을 넣은 단추(비트 = 넘기는 단추 표 순서). 패널 밖에서 떼도 뗌을 넣는다
-        DetachedKeyForwarder _keyForwarder;           ///< 보조 창의 키를 게임으로 넣고, 누름을 넣은 채 남은 키를 기억한다
+        EditorGameViewAspect      _aspect;                 ///< 이미지 화면 비율(자유 · 16:9)
+        uint8                     _bNoCameraHintShown : 1; ///< 마지막 판정에 카메라가 없었다
+        uint8                     _forwardedButtonMask;    ///< 보조 창에서 게임으로 누름을 넣은 단추(비트 = 넘기는 단추 표 순서). 패널 밖에서 떼도 뗌을 넣는다
+        DetachedKeyForwarder      _keyForwarder;           ///< 보조 창의 키를 게임으로 넣고, 누름을 넣은 채 남은 키를 기억한다
+        ViewportInputOverlayState _inputOverlayState;      ///< 입력 오버레이가 이번 프레임에 그릴 입력 값(`gatherInputOverlay`)
     };
 } // namespace sw::editor

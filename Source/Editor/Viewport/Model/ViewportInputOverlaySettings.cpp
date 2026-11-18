@@ -1,10 +1,46 @@
-// 뷰포트 입력 오버레이 설정 서브시스템의 등록입니다(ImGui 없음). 그리기는 `ViewportInputOverlay.cpp`(MVVM View)다 — 등록 줄이 작업 공간 헤더를 보므로 View 밖에 둔다.
+// 뷰포트 입력 오버레이의 Model 쪽(ImGui 없음) — 설정 서브시스템 등록과 입력 값 모으기. 그리기는 `ViewportInputOverlay.cpp`(MVVM View)이고 이 값만 본다.
 #include "pch.h"
 
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
+#include "Engine/Input/Devices/GamepadDevice.h"
+#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/InputGlyphResolver.h"
+#include "Engine/Input/Map/InputMap.h"
+
 namespace sw::editor
 {
     SW_EDITOR_SUBSYSTEM( ViewportInputOverlaySettings, 20 );
+
+    void ViewportInputOverlayState::gather( const InputManager& input, bool bWithActions, ViewportInputOverlayState& outState )
+    {
+        // 오버레이 버튼 차례(`ViewportOverlayFaceButton`)의 패드 버튼이다.
+        static constexpr GamepadButton kArrPadButton[] = { GamepadButton::A, GamepadButton::B, GamepadButton::X, GamepadButton::Y };
+        static_assert( sizeof( kArrPadButton ) / sizeof( kArrPadButton[0] ) == static_cast<size_t>( ViewportOverlayFaceButton::Count ), "버튼 표가 오버레이 버튼 차례와 맞아야 한다" );
+
+        const GamepadDevice* pGamepad   = input.getGamepad( 0 );
+        const bool           bConnected = pGamepad != nullptr && pGamepad->isConnected();
+        outState._leftStick             = bConnected ? pGamepad->getLeftStick() : float2{};
+        outState._rightStick            = bConnected ? pGamepad->getRightStick() : float2{};
+        outState._leftTrigger           = bConnected ? pGamepad->getLeftTrigger() : 0.0f;
+        outState._rightTrigger          = bConnected ? pGamepad->getRightTrigger() : 0.0f;
+        outState._faceButtonDownMask    = 0;
+        for ( uint32 index = 0; index < static_cast<uint32>( ViewportOverlayFaceButton::Count ); ++index )
+        {
+            if ( pGamepad != nullptr && pGamepad->isButtonDown( kArrPadButton[index] ) )
+                outState._faceButtonDownMask |= static_cast<uint8>( 1u << index );
+        }
+
+        outState._listActiveAction.clear();
+        if ( bWithActions == false )
+            return;
+        const InputMap& inputMap = input.getInputMap();
+        for ( const hashed_string& action : inputMap.getActionNames() )
+        {
+            if ( inputMap.isActionDown( action ) )
+                outState._listActiveAction.push_back( InputGlyphResolver::findActionGlyph( inputMap, sw::hashed_string( action.view() ) ) + " " + string( action.c_str() ) );
+        }
+    }
 } // namespace sw::editor

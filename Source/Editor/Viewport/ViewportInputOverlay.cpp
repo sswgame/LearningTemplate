@@ -5,13 +5,6 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 
-#include "Engine/Input/Devices/GamepadDevice.h"
-#include "Engine/Input/GamepadButtonUtil.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/KeyCodeUtil.h"
-#include "Engine/Input/Map/InputGlyphResolver.h"
-#include "Engine/Input/Map/InputMap.h"
-
 #include <imgui.h>
 
 namespace sw::editor
@@ -47,29 +40,26 @@ namespace sw::editor
             }
 
             /** @brief 양쪽 스틱과 두 트리거를 그립니다. 패드가 없으면 모두 가운데 · 0 입니다. */
-            void drawSticksAndTriggers( GamepadDevice* pGamepad ) const
+            void drawSticksAndTriggers( const ViewportInputOverlayState& state ) const
             {
-                const bool    bConnected  = pGamepad != nullptr && pGamepad->isConnected();
-                const float2  leftStick   = bConnected ? pGamepad->getLeftStick() : float2{};
-                const float2  rightStick  = bConnected ? pGamepad->getRightStick() : float2{};
                 const float32 stickRadius = 24.0f * _scale;
-                drawStick( at( 40.0f, 55.0f ), stickRadius, leftStick, 4.0f );
-                drawStick( at( 105.0f, 75.0f ), stickRadius * 0.8f, rightStick, 3.5f );
+                drawStick( at( 40.0f, 55.0f ), stickRadius, state._leftStick, 4.0f );
+                drawStick( at( 105.0f, 75.0f ), stickRadius * 0.8f, state._rightStick, 3.5f );
 
                 const ImVec2 ltBarMin = ImVec2( _boxMin.x + 10.0f, at( 0.0f, 100.0f ).y );
-                drawTrigger( ltBarMin, at( 70.0f, 110.0f ), bConnected ? pGamepad->getLeftTrigger() : 0.0f );
-                drawTrigger( at( 80.0f, 100.0f ), at( 140.0f, 110.0f ), bConnected ? pGamepad->getRightTrigger() : 0.0f );
+                drawTrigger( ltBarMin, at( 70.0f, 110.0f ), state._leftTrigger );
+                drawTrigger( at( 80.0f, 100.0f ), at( 140.0f, 110.0f ), state._rightTrigger );
             }
 
             /** @brief 페이스 버튼 다이아몬드(A · B · X · Y)를 그립니다(`kArrFaceButton`). */
-            void drawFaceButtons( GamepadDevice* pGamepad ) const
+            void drawFaceButtons( const ViewportInputOverlayState& state ) const
             {
                 const ImVec2  faceCenter = at( 200.0f, 60.0f );
                 const float32 btnDist    = 18.0f * _scale;
                 const float32 btnRadius  = 7.0f * _scale;
                 for ( const FaceButton& face : kArrFaceButton )
                 {
-                    const bool   bDown = pGamepad != nullptr && pGamepad->isButtonDown( face._button );
+                    const bool   bDown = state.isFaceButtonDown( face._button );
                     const ImVec2 pos   = ImVec2( faceCenter.x + face._offsetX * btnDist, faceCenter.y + face._offsetY * btnDist );
                     _pDrawList->AddCircleFilled( pos, btnRadius, color( EditorThemeUtil::findColor( hashed_string{ bDown ? face._pDownColorKey : face._pUpColorKey } ) ) );
                     _pDrawList->AddText( ImVec2( pos.x - 3.0f, pos.y - 6.0f ), color( SW_THEME_COLOR( "InputOverlay", "ButtonLabel" ) ), face._pLabel );
@@ -77,15 +67,12 @@ namespace sw::editor
             }
 
             /** @brief 지금 눌린 입력 맵 액션을 상자 안에 들어가는 만큼 적습니다. */
-            void drawActiveActions( const InputMap& inputMap ) const
+            void drawActiveActions( const ViewportInputOverlayState& state ) const
             {
                 const float32 boxH    = kBoxHeight * _scale;
                 float32       offsetY = 100.0f * _scale;
-                for ( const hashed_string& act : inputMap.getActionNames() )
+                for ( const string& text : state._listActiveAction )
                 {
-                    if ( inputMap.isActionDown( act ) == false )
-                        continue;
-                    const string text = InputGlyphResolver::findActionGlyph( inputMap, sw::hashed_string( act.view() ) ) + " " + string( act.c_str() );
                     _pDrawList->AddText( ImVec2( at( 150.0f, 0.0f ).x, _boxMin.y + offsetY ), color( SW_THEME_COLOR( "InputOverlay", "ActiveAction" ) ), text.c_str() );
                     offsetY += 14.0f;
                     if ( offsetY > boxH - 10.0f )
@@ -97,19 +84,19 @@ namespace sw::editor
             /** @brief 페이스 버튼 하나의 위치와 색입니다. 다이아몬드의 네 버튼이 이 테이블 한 줄씩입니다. */
             struct FaceButton
             {
-                GamepadButton _button;
-                float32       _offsetX; ///< 다이아몬드 중심에서의 방향(-1 · 0 · 1) — 거리는 `btnDist`
-                float32       _offsetY;
-                const utf8*   _pDownColorKey; ///< 눌렸을 때의 테마 색 토큰(`InputOverlay.*`)
-                const utf8*   _pUpColorKey;   ///< 뗐을 때의 테마 색 토큰
-                const utf8*   _pLabel;
+                ViewportOverlayFaceButton _button;
+                float32                   _offsetX; ///< 다이아몬드 중심에서의 방향(-1 · 0 · 1) — 거리는 `btnDist`
+                float32                   _offsetY;
+                const utf8*               _pDownColorKey; ///< 눌렸을 때의 테마 색 토큰(`InputOverlay.*`)
+                const utf8*               _pUpColorKey;   ///< 뗐을 때의 테마 색 토큰
+                const utf8*               _pLabel;
             };
 
             static constexpr FaceButton kArrFaceButton[] = {
-                {GamepadButton::A,  0.0f,  1.0f, "InputOverlay.ButtonADown", "InputOverlay.ButtonAUp", "A"}, // 아래
-                {GamepadButton::B,  1.0f,  0.0f, "InputOverlay.ButtonBDown", "InputOverlay.ButtonBUp", "B"}, // 오른쪽
-                {GamepadButton::X, -1.0f,  0.0f, "InputOverlay.ButtonXDown", "InputOverlay.ButtonXUp", "X"}, // 왼쪽
-                {GamepadButton::Y,  0.0f, -1.0f, "InputOverlay.ButtonYDown", "InputOverlay.ButtonYUp", "Y"}, // 위
+                {ViewportOverlayFaceButton::A,  0.0f,  1.0f, "InputOverlay.ButtonADown", "InputOverlay.ButtonAUp", "A"}, // 아래
+                {ViewportOverlayFaceButton::B,  1.0f,  0.0f, "InputOverlay.ButtonBDown", "InputOverlay.ButtonBUp", "B"}, // 오른쪽
+                {ViewportOverlayFaceButton::X, -1.0f,  0.0f, "InputOverlay.ButtonXDown", "InputOverlay.ButtonXUp", "X"}, // 왼쪽
+                {ViewportOverlayFaceButton::Y,  0.0f, -1.0f, "InputOverlay.ButtonYDown", "InputOverlay.ButtonYUp", "Y"}, // 위
             };
 
             /** @brief 설정의 모서리에 맞춰 상자의 왼쪽 위를 정합니다. */
@@ -164,20 +151,19 @@ namespace sw::editor
         };
     } // namespace
 
-    void ViewportInputOverlay::draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const InputMap* pInputMap ) const
+    void ViewportInputOverlay::draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const ViewportInputOverlayState& state ) const
     {
-        const bool bOverlayHidden = pDrawList == nullptr || _bEnabled == SW_FALSE || pInput == nullptr;
+        const bool bOverlayHidden = pDrawList == nullptr || _bEnabled == SW_FALSE;
         if ( bOverlayHidden )
             return;
 
         const ViewportInputOverlayFrame frame{ pDrawList, *this, viewportScreenPos, viewportSize };
         frame.drawBackground();
-        GamepadDevice* pGamepad = pInput->getGamepad( 0 );
         if ( _bShowStick == SW_TRUE )
-            frame.drawSticksAndTriggers( pGamepad );
+            frame.drawSticksAndTriggers( state );
         if ( _bShowButtons == SW_TRUE )
-            frame.drawFaceButtons( pGamepad );
-        if ( pInputMap != nullptr && _bShowCommandHistory == SW_TRUE )
-            frame.drawActiveActions( *pInputMap );
+            frame.drawFaceButtons( state );
+        if ( _bShowCommandHistory == SW_TRUE )
+            frame.drawActiveActions( state );
     }
 } // namespace sw::editor
