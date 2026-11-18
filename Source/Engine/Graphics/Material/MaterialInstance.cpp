@@ -82,18 +82,22 @@ namespace sw
                 return true;
             }
 
+            /** @brief 값을 넣거나 바꿉니다. 이미 같은 값이면 false 입니다(매 프레임 같은 키워드를 켜는 코드가 퍼뮤테이션 변경을 적지 않게). */
             template <typename T>
-            static void insertOrAssign( vector<pair<hashed_string, T>>& listPair, hashed_string key, const T& val )
+            static bool insertOrAssign( vector<pair<hashed_string, T>>& listPair, hashed_string key, const T& val )
             {
                 for ( auto& pair : listPair )
                 {
                     if ( pair.first == key )
                     {
+                        if ( pair.second == val )
+                            return false;
                         pair.second = val;
-                        return;
+                        return true;
                     }
                 }
                 listPair.push_back( { key, val } );
+                return true;
             }
 
             template <typename T>
@@ -396,23 +400,25 @@ namespace sw
         _listMultiCompileOverride.clear();
         _qualityOverride = MaterialQualityLevel::Count;
         _bDefinesDirty   = SW_TRUE;
-        MaterialPermutation::bumpPermutationGeneration();
+        MaterialPermutation::recordPermutationChange( this );
         markRenderDirty();
     }
 
     void MaterialInstance::enableKeyword( hashed_string keyword )
     {
-        MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, true );
+        if ( MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, true ) == false )
+            return; // 이미 켰다 — 퍼뮤테이션이 그대로다
         _bDefinesDirty = SW_TRUE;
-        MaterialPermutation::bumpPermutationGeneration();
+        MaterialPermutation::recordPermutationChange( this );
         markRenderDirty();
     }
 
     void MaterialInstance::disableKeyword( hashed_string keyword )
     {
-        MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, false );
+        if ( MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, false ) == false )
+            return; // 이미 껐다 — 퍼뮤테이션이 그대로다
         _bDefinesDirty = SW_TRUE;
-        MaterialPermutation::bumpPermutationGeneration();
+        MaterialPermutation::recordPermutationChange( this );
         markRenderDirty();
     }
 
@@ -420,7 +426,7 @@ namespace sw
     {
         _pParentMaterial = pParentMaterial;
         _bDefinesDirty   = SW_TRUE;
-        MaterialPermutation::bumpPermutationGeneration();
+        MaterialPermutation::recordPermutationChange( this );
         markRenderDirty();
     }
 
@@ -480,16 +486,17 @@ namespace sw
         {
             _qualityOverride = level;
             _bDefinesDirty   = SW_TRUE;
-            MaterialPermutation::bumpPermutationGeneration();
+            MaterialPermutation::recordPermutationChange( this );
             markRenderDirty();
         }
     }
 
     void MaterialInstance::setMultiCompile( hashed_string name, string_view selectedOption )
     {
-        MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, name, string( selectedOption ) );
+        if ( MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, name, string( selectedOption ) ) == false )
+            return; // 이미 고른 값이다 — 퍼뮤테이션이 그대로다
         _bDefinesDirty = SW_TRUE;
-        MaterialPermutation::bumpPermutationGeneration();
+        MaterialPermutation::recordPermutationChange( this );
         markRenderDirty();
     }
 

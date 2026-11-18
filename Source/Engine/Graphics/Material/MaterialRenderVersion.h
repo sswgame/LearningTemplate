@@ -27,8 +27,11 @@ namespace sw
         {
         }
 
-        /** @brief 렌더 값이 바뀌었다 — 이 칸의 번호와 렌더 값 세대를 함께 올립니다. */
-        void bump();
+        /**
+         * @brief 렌더 값이 바뀌었다 — 이 칸의 번호를 올리고 렌더 값 변경 기록(`MaterialCache::getRenderValueLog`)에 @p pOwner 를 적습니다.
+         * @param pOwner 이 칸을 가진 머티리얼 · 인스턴스입니다. 장면 빌더는 그 주인의 원소만 다시 맞춘다. 모두에 닿는 값(묶음)은 nullptr 이다 — 읽는 쪽이 전부 다시 본다.
+         */
+        void bump( const void* pOwner );
         /** @brief 이 칸의 번호입니다(같으면 이 칸의 렌더 값이 그대로다). */
         uint32 get() const { return _value; }
 

@@ -128,8 +128,6 @@ namespace sw
     MaterialCache::MaterialCache()
         : AssetCacheBase{ CacheTracking::counted( kAssetKindName ) }
         , _impl{ make_unique<Impl>() }
-        , _renderValueGeneration{ 1 }
-        , _permutationGeneration{ 1 }
     {
     }
 

@@ -14,14 +14,14 @@ namespace sw
     uint64 MaterialPermutation::getPermutationGeneration()
     {
         const MaterialCache* const pCache = MaterialCache::findBound();
-        return pCache != nullptr ? pCache->getPermutationGeneration() : 0u; // 0 = 모름(세대는 1 부터)
+        return pCache != nullptr ? pCache->getPermutationLog().getGeneration() : 0u; // 0 = 모름(세대는 1 부터)
     }
 
-    void MaterialPermutation::bumpPermutationGeneration()
+    void MaterialPermutation::recordPermutationChange( const void* pOwner )
     {
         MaterialCache* const pCache = MaterialCache::findBound();
         if ( pCache != nullptr )
-            pCache->bumpPermutationGeneration(); // 엔진 없이 만든 머티리얼은 읽는 쪽도 "모름" 이라 올릴 곳이 없다
+            pCache->getPermutationLog().record( pOwner ); // 엔진 없이 만든 머티리얼은 읽는 쪽도 "모름" 이라 적을 곳이 없다
     }
 
     void MaterialPermutation::appendUniqueDefine( vector<string>& outListDefine, string_view define )

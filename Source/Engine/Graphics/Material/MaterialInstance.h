@@ -180,7 +180,7 @@ namespace sw
         /** @brief 런타임 오버라이드를 Desc 에 다시 씁니다. */
         void syncDescOverrides() const;
         /** @brief 덮어쓰기가 바뀌었다 — 다음 `getRenderBinding` 이 사본을 다시 만들고, 렌더 값의 전역 번호가 오른다(`MaterialRenderVersion`). */
-        void markRenderDirty() { _overrideRevision.bump(); }
+        void markRenderDirty() { _overrideRevision.bump( this ); }
         /** @brief 부모 바이트에 덮어쓰기를 패킹하고 텍스처 슬롯을 채운 새 사본을 만듭니다(`getRenderBinding`). */
         void rebuildRenderData( IRHIDevice* pDevice );
         /** @brief 부모의 매개변수 모양과 어긋난 스칼라 · 벡터 덮어쓰기를 알리고 지웁니다(`rebuildRenderData` 가 부모 초기화 뒤 게임 스레드에서 부른다). */

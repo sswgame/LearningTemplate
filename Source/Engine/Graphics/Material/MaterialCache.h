@@ -3,7 +3,6 @@
  * @brief 경로를 키로 Material 소유권을 관리합니다.
  */
 #pragma once
-#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -13,6 +12,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Graphics/Material/MaterialChangeLog.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 
 namespace sw
@@ -127,15 +127,15 @@ namespace sw
          */
         [[nodiscard]] static MaterialCache* findBound();
         /**
-         * @brief 렌더 값 세대입니다(`MaterialRenderVersion::bump` 가 올린다). 같으면 어느 머티리얼 · 인스턴스 · 묶음의 렌더 값도 바뀌지 않았다.
-         * @details 머티리얼 틱(물 · 식생)이 워커에서 값을 넣을 수 있어 원자값이다. 세대는 1 부터라 0 은 "모름" 이다. 프로세스 정적 칸이 아니라 이 캐시(엔진 범위)의 칸이다 —
-         *          엔진을 다시 세우면 새로 시작한다(언리얼은 머티리얼 인스턴스가 바뀌면 렌더 쪽 유니폼 표현을 무효화해 그 프레임에만 다시 모은다 — 기억에 의존).
+         * @brief 렌더 값 변경 기록입니다(`MaterialRenderVersion::bump` 가 바꾼 머티리얼 · 인스턴스를 적는다). 세대가 같으면 어느 머티리얼 · 인스턴스 · 묶음의 렌더 값도 바뀌지 않았다.
+         * @details 머티리얼 틱(물 · 식생)이 워커에서 값을 넣을 수 있어 잠금 고리다. 세대는 1 부터라 0 은 "모름" 이다. 프로세스 정적 칸이 아니라 이 캐시(엔진 범위)의 칸이다 —
+         *          엔진을 다시 세우면 새로 시작한다. 장면 빌더는 바뀐 주인의 원소만 다시 맞춘다(`GPUMaterialRegistry::refreshMaterialBindings` — 유니티 SRP Batcher 의 바뀐 CBUFFER 만 올리기).
          */
-        uint64 getRenderValueGeneration() const { return _renderValueGeneration.load( std::memory_order_relaxed ); }
-        void   bumpRenderValueGeneration() { _renderValueGeneration.fetch_add( 1u, std::memory_order_relaxed ); }
-        /** @brief 퍼뮤테이션 세대입니다(`MaterialPermutation::bumpPermutationGeneration` 이 올린다). 1 부터라 0 은 "모름" 이다. */
-        uint64 getPermutationGeneration() const { return _permutationGeneration.load( std::memory_order_relaxed ); }
-        void   bumpPermutationGeneration() { _permutationGeneration.fetch_add( 1u, std::memory_order_relaxed ); }
+        MaterialChangeLog&       getRenderValueLog() { return _renderValueLog; }
+        const MaterialChangeLog& getRenderValueLog() const { return _renderValueLog; }
+        /** @brief 퍼뮤테이션 변경 기록입니다(`MaterialPermutation::recordPermutationChange` 가 적는다). 장면 빌더는 바뀐 주인을 쓰는 프리미티브만 다시 모은다. */
+        MaterialChangeLog&       getPermutationLog() { return _permutationLog; }
+        const MaterialChangeLog& getPermutationLog() const { return _permutationLog; }
 
     private:
         struct Impl;
@@ -145,9 +145,9 @@ namespace sw
         void appendRuntimeSwitchWarmEntries( const Material& material );
 
     private:
-        unique_ptr<Impl> _impl;
-        atomic<uint64>   _renderValueGeneration; ///< `getRenderValueGeneration`
-        atomic<uint64>   _permutationGeneration; ///< `getPermutationGeneration`
+        unique_ptr<Impl>  _impl;
+        MaterialChangeLog _renderValueLog; ///< `getRenderValueLog`
+        MaterialChangeLog _permutationLog; ///< `getPermutationLog`
     };
 } // namespace sw
 
