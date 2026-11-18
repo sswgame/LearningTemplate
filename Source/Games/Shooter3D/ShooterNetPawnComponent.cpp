@@ -294,11 +294,12 @@ namespace sw
         RemoteControllerComponent* pRemote = findRemoteController();
         _server.beginTick( _tick ); // 입력을 꺼내기 전에 — 보던 틱은 서버의 지금 틱으로 자른다(`getClientViewTick`)
         // 조종 연결 — 처음 붙은 클라이언트가 이 몸을 맡고, 끊기면 다음 클라이언트가 처음부터 맡는다.
-        vector<int32> listConnection;
-        peers.collectConnected( listConnection );
         const bool bControllerGone = _controllerID < 0 || peers.getConnectionState( _controllerID ) != NetConnectionState::Connected;
         if ( bControllerGone )
         {
+            // 연결 목록은 조종자를 새로 고를 때만 쓴다 — 틱마다 모으지 않는다(목록 할당 · 순회가 조종자가 붙어 있는 틱에서 빠진다).
+            vector<int32> listConnection;
+            peers.collectConnected( listConnection );
             if ( _controllerAccountID != 0 )
                 ShooterNetPawnComponentInternal::reportPlayerLeft( _controllerAccountID ); // 끊긴 연결의 주체는 이 틱에 이미 0 이라 맡을 때 적어 둔 계정을 쓴다
             _controllerID        = listConnection.empty() ? -1 : listConnection.front();
