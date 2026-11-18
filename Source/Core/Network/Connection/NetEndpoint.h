@@ -24,7 +24,9 @@
  *
  *          **대역폭 상한**: 연결마다 토큰 버킷(`NetEndpointConfig::_maxBytesPerSecond`, 언리얼의 `NetSpeed`)을 둔다.
  *          토큰이 남아 있으면 한 번의 전송에 패킷을 여럿(`kMaxPacketsPerSend` 까지) 보낸다.
- *          토큰을 다 쓰면 메시지 없이 헤더(확인과 연결 유지)만 보내므로, 대역폭이 포화돼도 연결은 끊기지 않는다.
+ *          토큰을 다 쓰면 메시지 없이 헤더(확인과 연결 유지)만 보내므로, 대역폭이 포화돼도 연결은 끊기지 않는다. 헤더만 담은 패킷은 토큰에서 빼지 않는다(제어 몫은 따로다 —
+ *          보내기 간격이 그 양을 묶는다). 토큰이 차는 속도는 `NetEndpointConfig::_sendThrottle` 이 있으면 연결마다 RTT · 손실로 조절한다(`NetSendThrottle`, 감사 N-11).
+ *          조절 속도는 하한이 있고, 패킷 안에서는 신뢰와 비신뢰를 번갈아 앞세우므로(`NetConnection::writePacket`) 신뢰 메시지가 스로틀에 굶지 않는다.
  *          키트의 틱 예산은 `NetSendBudget::computeTickBudget` 이 이 값에서 할당받는다.
  *
  *          **스레드**: 공개 함수는 모두 잠금 하나로 보호하므로 어느 스레드에서나 부를 수 있다.
@@ -65,6 +67,7 @@
 #include "Core/Network/Connection/NetChallenge.h"
 #include "Core/Network/Connection/NetEndpointSecurity.h"
 #include "Core/Network/Connection/NetPacketSealer.h"
+#include "Core/Network/Connection/NetSendThrottle.h"
 #include "Core/Network/Connection/NetSlotTable.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetTransport.h"
@@ -97,20 +100,26 @@ namespace sw
     /** @brief 엔드포인트 설정입니다. 시간은 초입니다. */
     struct NetEndpointConfig
     {
-        uint32            _gameID{ NetProtocol::kDefaultGameID }; ///< 게임마다 다르게 정한다. 다르면 연결을 Rejected 로 거절한다.
-        uint32            _wireVersion{ 0 };                      ///< 게임과 키트 계층의 버전(`NetWireVersion::combine`). 다르면 VersionMismatch 가 된다. Core 버전은 자동으로 섞인다.
-        uint64            _saltSeed{ 0 };                         ///< 챌린지 값의 시드. 0이면 운영체제 난수를 쓴다(위조 연결을 막는다). 테스트에서는 고정해도 된다.
-        float64           _timeoutSeconds{ 5.0 };
-        float64           _connectTimeout{ 5.0 };
-        float64           _connectRetryInterval{ 0.2 };
-        float64           _sendInterval{ 1.0 / 30.0 };                                         ///< 연결마다 패킷을 보내는 최소 간격.
-        float64           _keepAliveInterval{ 0.25 };                                          ///< 보낼 것(메시지, 재전송, 확인)이 없으면 이 간격으로만 보낸다(연결 유지와 RTT 측정).
-        float64           _debugHoldTimeoutSeconds{ 600.0 };                                   ///< 상대가 디버거 대기를 알린 연결의 타임아웃(개발 빌드만). 중단점에 오래 멈춰도 끊지 않는다.
-        float64           _maxUnreliableAgeSeconds{ NetConnection::kDefaultMaxUnreliableAge }; ///< 비신뢰 메시지가 보낼 줄에서 기다릴 수 있는 시간. 넘으면 버린다(0 = 상한 없음).
-        int32             _maxConnections{ 16 };
-        int32             _maxBytesPerSecond{ 100000 }; ///< 연결마다 보내는 바이트 상한(토큰 버킷, 언리얼 `NetSpeed` 기본값과 같다). 다 쓰면 메시지는 기다리고 확인과 연결 유지 패킷만 나간다. 패킷 하나(1200바이트)보다 작은 값은 패킷 하나 크기로 올려 쓴다.
-        NetSecurityConfig _security{};                  ///< 암호화와 토큰 결속 설정(기본값은 꺼짐). 양쪽이 같아야 연결된다.
-        NetDebugHold      _debugHold{ NetDebugHold::WhenDebuggerAttached };
+        uint32  _gameID{ NetProtocol::kDefaultGameID }; ///< 게임마다 다르게 정한다. 다르면 연결을 Rejected 로 거절한다.
+        uint32  _wireVersion{ 0 };                      ///< 게임과 키트 계층의 버전(`NetWireVersion::combine`). 다르면 VersionMismatch 가 된다. Core 버전은 자동으로 섞인다.
+        uint64  _saltSeed{ 0 };                         ///< 챌린지 값의 시드. 0이면 운영체제 난수를 쓴다(위조 연결을 막는다). 테스트에서는 고정해도 된다.
+        float64 _timeoutSeconds{ 5.0 };
+        float64 _connectTimeout{ 5.0 };
+        float64 _connectRetryInterval{ 0.2 };
+        float64 _sendInterval{ 1.0 / 30.0 };                                         ///< 연결마다 패킷을 보내는 최소 간격.
+        float64 _keepAliveInterval{ 0.25 };                                          ///< 보낼 것(메시지, 재전송, 확인)이 없으면 이 간격으로만 보낸다(연결 유지와 RTT 측정).
+        float64 _debugHoldTimeoutSeconds{ 600.0 };                                   ///< 상대가 디버거 대기를 알린 연결의 타임아웃(개발 빌드만). 중단점에 오래 멈춰도 끊지 않는다.
+        float64 _maxUnreliableAgeSeconds{ NetConnection::kDefaultMaxUnreliableAge }; ///< 비신뢰 메시지가 보낼 줄에서 기다릴 수 있는 시간. 넘으면 버린다(0 = 상한 없음).
+        int32   _maxConnections{ 16 };
+        int32   _maxBytesPerSecond{ 100000 }; ///< 연결마다 보내는 바이트 상한(토큰 버킷, 언리얼 `NetSpeed` 기본값과 같다). 다 쓰면 메시지는 기다리고 확인과 연결 유지 패킷만 나간다. 패킷 하나(1200바이트)보다 작은 값은 패킷 하나 크기로 올려 쓴다.
+        /**
+         * @brief 송신 속도 조절(AIMD, `NetSendThrottle`)의 계수입니다. 비어 있으면 상한 고정 버킷입니다.
+         * @details 게임 세션(`GameNetSession::initialize`)은 `Config/Engine/NetSendThrottle.json` 으로 늘 채운다(없거나 틀리면 세션을 열지 않는다).
+         *          비워 두는 것은 고정 속도를 재는 단위 테스트 · 도구뿐이다. 채우면 `initialize` 가 `NetSendThrottle::validate` 로 검사한다.
+         */
+        optional<NetSendThrottleConfig> _sendThrottle{};
+        NetSecurityConfig               _security{}; ///< 암호화와 토큰 결속 설정(기본값은 꺼짐). 양쪽이 같아야 연결된다.
+        NetDebugHold                    _debugHold{ NetDebugHold::WhenDebuggerAttached };
     };
 } // namespace sw
 
