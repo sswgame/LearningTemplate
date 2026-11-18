@@ -1,6 +1,6 @@
 /**
  * @file EditorViewportCamera.h
- * @brief 씬 뷰 카메라의 상태(위치 · 회전 · 궤도 · 직교)와 그 입력(비행 · 궤도 · 북마크 · 초점)입니다.
+ * @brief 씬 뷰 카메라의 상태(위치 · 회전 · 궤도 · 직교)와 그 입력(비행 · 궤도 · 북마크 · 초점)입니다. 입력 읽기는 `EditorViewportCamera.cpp`(View), 값 · 씬 쓰기는 `Model/EditorViewportCameraScene.cpp` 다.
  */
 #pragma once
 #include "Core/Foundation/Expected.h"
@@ -35,8 +35,12 @@ namespace sw::editor
         void dolly( float32 mouseWheel );
         /** @brief 가운데 단추 팬입니다. 마우스 이동 픽셀(@p pixelX, @p pixelY)만큼 화면 평면에서 카메라와 궤도 중심을 같이 옮깁니다. @p viewportHeightPixels 는 뷰포트의 실제 높이이고 0 이하이면 옮기지 않습니다. */
         void pan( float32 pixelX, float32 pixelY, float32 viewportHeightPixels );
-        /** @brief 숫자 키 1~9 북마크입니다. Ctrl 과 함께 누르면 저장하고, 수식 키 없이 누르면 불러옵니다. */
+        /** @brief 숫자 키 1~9 북마크입니다. Ctrl 과 함께 누르면 저장하고(`saveBookmark`), 수식 키 없이 누르면 불러옵니다(`goToBookmark`). */
         void processBookmarkKeys();
+        /** @brief 지금 시점을 작업 공간 북마크 @p slot(0 부터)에 저장합니다. */
+        void saveBookmark( uint32 slot );
+        /** @brief 작업 공간 북마크 @p slot 이 있으면 그 시점으로 갑니다. */
+        void goToBookmark( uint32 slot );
 
         /** @brief 툴바가 요청한 북마크(@p inoutSlot)를 불러오고 요청을 비웁니다. */
         void applyBookmarkRequest( optional<uint32>& inoutSlot );
@@ -82,7 +86,14 @@ namespace sw::editor
         bool hasFlownThisRightHold() const { return _bFlownThisRightHold == SW_TRUE; }
 
     private:
-        void applyBookmark( const CameraBookmark& bookmark );
+        /** @brief 숫자 북마크 키의 수(1 ~ 9)입니다. */
+        static constexpr uint32 kBookmarkKeyCount = 9;
+        /** @brief 궤도 거리(m)의 최솟값입니다. 이보다 가까이 당기면 궤도 중심을 지나친다. */
+        static constexpr float32 kOrbitDistanceMin = 0.5f;
+
+        /** @brief 회전(도, 피치 · 요)에서 시선 방향을 계산합니다. */
+        static float3 computeForward( const float3& rotation );
+        void          applyBookmark( const CameraBookmark& bookmark );
         /**
          * @brief 궤도 중심을 시선 앞 궤도 거리로 다시 정합니다. 위치 · 회전 · 궤도 거리를 직접 놓는 모든 곳(생성 · 비행 · 외부 이동 · 북마크 · setPose)이 이 하나를 거친다.
          * @details 불변식: `_orbitTarget == _position + 시선 * _orbitDistance`. 깨지면 Alt 궤도가 옛 중심으로 튄다.
