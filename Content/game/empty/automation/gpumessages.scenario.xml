@@ -11,7 +11,6 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
 	<Launch variable="gv_gpuMessages" value="1"/>
 	<Launch variable="gv_renderScale" value="1"/>
-	<WaitUntil watch="Log.Count" key="GPUMessage.RingReady" atLeast="1" timeoutFrames="60"/> <!-- 메시지 링이 섰다 -->
 	<ExpectLog id="GPUMessage.RingReady" count="1"/>
 	<ExpectLog id="GPUMessage.Print" count="0"/>
 	<DevCommand line="gpu.inspect 16 16"/>

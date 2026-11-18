@@ -103,6 +103,7 @@ SW_TEST_CASE( ScreenshotRequestQueueTest, EarlierTicketSurvivesLaterResults )
 SW_TEST_CASE( ScreenshotRequestQueueTest, PNGBytesAreTakenOnceByTicket )
 {
     ScreenshotRequestQueue queue;
+    SW_EXPECT_LOG( "ScreenshotRequestQueue.EmptyByteRequestName" ); // 이름 없는 요청은 오류로 거절한다
     SW_EXPECT_EQUAL( 0u, queue.putForPNGBytes( "", RHITextureHandle{ 7 }, RHIFormat::R8G8B8A8_UNORM ) );
     SW_EXPECT_FALSE( queue.hasUnfinishedRequest() );
 
