@@ -257,8 +257,7 @@ namespace sw
                                                                                       : Internal::createGoogle( config, trustFile, *entry._httpClient );
             if ( provider.has_value() == false )
             {
-                Error error{ provider.error().kind(), provider.error().message().data(), config._kind };
-                error.appendDetail( ": " ).appendDetail( provider.error().detail() );
+                const Error error = OnlineProviderFile::makeProviderError( provider.error(), config._kind );
                 shutdown();
                 return unexpected( error );
             }
