@@ -71,7 +71,7 @@ namespace sw
         vector<float4x4>     listReference;
         reference.setToReference( skeleton );
         reference.computeModelSpace( listParent, listReference );
-        const auto legLength = [&listParent]( const vector<float4x4>& listTransform, uint32 foot, uint32 knee, uint32 hip )
+        const auto legLength = []( const vector<float4x4>& listTransform, uint32 foot, uint32 knee, uint32 hip )
         {
             const float3 footPosition = listTransform[foot].getTranslation();
             const float3 kneePosition = listTransform[knee].getTranslation();
