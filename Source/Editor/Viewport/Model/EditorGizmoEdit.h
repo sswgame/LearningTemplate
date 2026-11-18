@@ -54,6 +54,37 @@ namespace sw::editor
     };
 
     /**
+     * @class EditorGizmoDragTracker
+     * @brief 기즈모 View 가 내는 명령의 순서(잡기 → 끌기들 → 놓기)를 정합니다. ImGuizmo 의 누름 · 사용 상태만 받아 ImGui · 씬 없이 테스트한다.
+     * @details 끄는 중에 대상이 바뀌면(선택이 바뀌었거나 그룹에서 하나로) 앞 드래그를 놓기로 닫고 새 대상을 잡는다 — 앞 스냅샷이 새 대상에 커밋되거나 새 대상의 끌기가 기록 없이 남지 않는다.
+     */
+    class SW_EDITOR_API EditorGizmoDragTracker
+    {
+    public:
+        /**
+         * @brief 대상 하나의 프레임입니다. @p bPressed 는 기즈모 위를 이번 프레임에 눌렀는지, @p bUsing 은 ImGuizmo 가 끄는 중인지, @p pMovedWorld 는 이번 프레임에 바뀐 월드 행렬(없으면 nullptr)이다.
+         */
+        void stepSingle( const EditorGizmoTarget& target, bool bPressed, bool bUsing, const float4x4* pMovedWorld, bool bSurfaceSnap, vector<EditorGizmoCommand>& outListCommand );
+        /** @brief 그룹을 잡습니다(누른 순간). 앞 드래그는 닫는다. */
+        void captureGroup( const vector<EditorGizmoTarget>& listTarget, vector<EditorGizmoCommand>& outListCommand );
+        /** @brief 그룹의 프레임입니다 — @p listMovedWorld 는 이번 프레임에 바뀐 대상 행렬(없으면 빈 목록)이다. */
+        void stepGroup( bool bUsing, vector<EditorGizmoTarget>&& listMovedWorld, vector<EditorGizmoCommand>& outListCommand );
+        /** @brief 진행 중인 드래그(또는 잡아 둔 것)가 있으면 놓기 명령을 냅니다. */
+        void end( vector<EditorGizmoCommand>& outListCommand );
+        bool isTracking() const { return _bTracking; }
+        /** @brief 지금 잡은 대상 하나입니다(그룹이거나 없으면 무효). */
+        GameObjectHandle getTrackedObject() const { return _tracked; }
+
+    private:
+        void use( bool bUsing, vector<EditorGizmoTarget>&& listMovedWorld, bool bSurfaceSnap, vector<EditorGizmoCommand>& outListCommand );
+
+    private:
+        GameObjectHandle _tracked{};          ///< 잡은 대상 하나(그룹이면 무효)
+        bool             _bTracking{ false }; ///< NOLINT(sw-bool-flag): 끄는 중이다
+        bool             _bCaptured{ false }; ///< NOLINT(sw-bool-flag): 잡기 명령을 냈고 아직 닫지 않았다
+    };
+
+    /**
      * @class EditorGizmoEdit
      * @brief 기즈모 드래그의 적용과 기록입니다. 드래그 하나(잡기 → 끌기들 → 놓기)를 그 선택의 범위(메인은 씬 명령, 미리보기는 창의 스택)에 되돌리기 하나로 남깁니다.
      */
@@ -86,5 +117,6 @@ namespace sw::editor
         unique_ptr<EditorGizmoEditUndo> _pUndo;      ///< 시작 전 스냅샷과 열린 상호작용 — 되돌리기 형식은 .cpp 만 본다
         vector<GameObjectHandle>        _listObject; ///< 스냅샷을 찍은 대상(`_pUndo->_listBefore` 와 같은 순서)
         EditorSelection*                _pTarget;    ///< 지금 드래그의 선택(빌림)
+        bool                            _bDragged;   ///< NOLINT(sw-bool-flag): 잡은 뒤 끌기 명령을 받았다 — 끌지 않은 잡기는 기록하지 않는다(예전처럼 기즈모가 잡은 드래그만 남긴다)
     };
 } // namespace sw::editor

@@ -27,6 +27,7 @@ namespace sw::editor
         : _pUndo{ make_unique<EditorGizmoEditUndo>() }
         , _listObject{}
         , _pTarget{ nullptr }
+        , _bDragged{ false }
     {
     }
 
@@ -76,6 +77,7 @@ namespace sw::editor
                     }
                     break;
                 case EditorGizmoCommandKind::Drag:
+                    _bDragged = true;
                     openStackInteraction();
                     applyWorlds( command );
                     break;
@@ -129,7 +131,7 @@ namespace sw::editor
     {
         // 상호작용을 먼저 닫는다 — 다음 Ctrl+Z 는 이 드래그의 단계를 되돌려야 한다.
         _pUndo->_interaction.reset();
-        if ( _pTarget != nullptr && EditorPlaySession::areSceneEditsAllowed() )
+        if ( _bDragged && _pTarget != nullptr && EditorPlaySession::areSceneEditsAllowed() )
         {
             const uint32 count = static_cast<uint32>( _listObject.size() );
             for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
@@ -147,5 +149,69 @@ namespace sw::editor
         }
         _listObject.clear();
         _pUndo->_listBefore.clear();
+        _bDragged = false;
+    }
+
+    void EditorGizmoDragTracker::stepSingle( const EditorGizmoTarget& target, bool bPressed, bool bUsing, const float4x4* pMovedWorld, bool bSurfaceSnap,
+                                             vector<EditorGizmoCommand>& outListCommand )
+    {
+        const bool bOtherTarget = ( _bTracking || _bCaptured ) && _tracked != target._object;
+        if ( bOtherTarget )
+        {
+            // 끄는 중에 대상이 바뀌었다 — 앞 드래그를 닫고, 아직 끄는 중이면 새 대상을 잡아 이 끌기도 되돌리기에 남긴다.
+            const bool bStillUsing = _bTracking && bUsing;
+            end( outListCommand );
+            bPressed = bPressed || bStillUsing;
+        }
+        if ( _bTracking == false && bPressed )
+        {
+            outListCommand.push_back( EditorGizmoCommand{ EditorGizmoCommandKind::Capture, { target }, false } );
+            _bCaptured = true;
+        }
+        _tracked = target._object;
+        vector<EditorGizmoTarget> listMoved;
+        if ( pMovedWorld != nullptr )
+            listMoved.push_back( EditorGizmoTarget{ target._object, *pMovedWorld } );
+        use( bUsing, std::move( listMoved ), bSurfaceSnap, outListCommand );
+    }
+
+    void EditorGizmoDragTracker::captureGroup( const vector<EditorGizmoTarget>& listTarget, vector<EditorGizmoCommand>& outListCommand )
+    {
+        end( outListCommand );
+        outListCommand.push_back( EditorGizmoCommand{ EditorGizmoCommandKind::Capture, listTarget, false } );
+        _bCaptured = true;
+        _tracked   = GameObjectHandle{};
+    }
+
+    void EditorGizmoDragTracker::stepGroup( bool bUsing, vector<EditorGizmoTarget>&& listMovedWorld, vector<EditorGizmoCommand>& outListCommand )
+    {
+        if ( ( _bTracking || _bCaptured ) && _tracked.isValid() )
+            end( outListCommand ); // 대상 하나의 드래그였다
+        use( bUsing, std::move( listMovedWorld ), false, outListCommand );
+    }
+
+    void EditorGizmoDragTracker::use( bool bUsing, vector<EditorGizmoTarget>&& listMovedWorld, bool bSurfaceSnap, vector<EditorGizmoCommand>& outListCommand )
+    {
+        if ( bUsing )
+        {
+            // 클릭 없이 시작된 드래그(잡기가 없다)는 Model 에 스냅샷이 없어 끝에서 기록하지 않는다.
+            _bTracking = true;
+            outListCommand.push_back( EditorGizmoCommand{ EditorGizmoCommandKind::Drag, std::move( listMovedWorld ), bSurfaceSnap } );
+            return;
+        }
+        if ( listMovedWorld.empty() == false )
+            outListCommand.push_back( EditorGizmoCommand{ EditorGizmoCommandKind::Drag, std::move( listMovedWorld ), bSurfaceSnap } );
+        // 놓았거나, 눌렀지만 기즈모가 잡지 않았다 — 닫는다(끌기 없는 잡기는 Model 이 기록하지 않는다).
+        if ( _bTracking || _bCaptured )
+            end( outListCommand );
+    }
+
+    void EditorGizmoDragTracker::end( vector<EditorGizmoCommand>& outListCommand )
+    {
+        if ( _bTracking || _bCaptured )
+            outListCommand.push_back( EditorGizmoCommand{ EditorGizmoCommandKind::End, {}, false } );
+        _bTracking = false;
+        _bCaptured = false;
+        _tracked   = GameObjectHandle{};
     }
 } // namespace sw::editor

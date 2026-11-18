@@ -75,7 +75,7 @@ namespace sw::editor
         , _arrGroupMatrix{}
         , _lastDrawFrame{ -1 }
         , _lastObjectCount{ 0 }
-        , _bTracking{ SW_FALSE }
+        , _tracker{}
         , _bHovered{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -116,9 +116,6 @@ namespace sw::editor
             manipulateGroup( state, pView, pProj, op, mode, pSnap );
             return;
         }
-        // 그룹 드래그였다면 대상 하나로 바뀌는 순간 정리한다 — 그 스냅샷을 이 대상에 커밋하지 않는다(Model 의 Capture 가 앞 드래그를 끝낸다).
-        if ( _listDragTarget.empty() == false )
-            endDrag();
         // 표면 붙이기는 이동에서만, 미리 보기 범위가 아닐 때만 한다.
         const bool bSurfaceSnap = setup._operation == ImGuizmo::TRANSLATE && settings._bSurfaceSnap && state._bPreviewScope == false;
         manipulateSingle( state._listTarget[0], pView, pProj, op, mode, pSnap, bSurfaceSnap );
@@ -129,24 +126,20 @@ namespace sw::editor
     {
         float32 arrMatrix[16];
         EditorViewportProjectionUtil::storeGizmoMatrix( arrMatrix, target._world );
-        if ( _bTracking == SW_FALSE && EditorViewportGizmoInternal::wasGizmoPressed() )
-            _listCommand.push_back( EditorGizmoCommand{ EditorGizmoCommandKind::Capture, { target }, false } );
-
-        vector<EditorGizmoTarget> listWorld;
-        if ( ImGuizmo::Manipulate( pView, pProj, static_cast<ImGuizmo::OPERATION>( operation ), static_cast<ImGuizmo::MODE>( gizmoMode ), arrMatrix, nullptr, pSnap ) )
-        {
-            EditorGizmoTarget moved{ target._object, float4x4{} };
-            EditorViewportProjectionUtil::loadGizmoMatrix( moved._world, arrMatrix );
-            listWorld.push_back( moved );
-        }
+        const bool bPressed = EditorViewportGizmoInternal::wasGizmoPressed();
+        float4x4   movedWorld{};
+        const bool bMoved = ImGuizmo::Manipulate( pView, pProj, static_cast<ImGuizmo::OPERATION>( operation ), static_cast<ImGuizmo::MODE>( gizmoMode ), arrMatrix, nullptr, pSnap );
+        if ( bMoved )
+            EditorViewportProjectionUtil::loadGizmoMatrix( movedWorld, arrMatrix );
         _bHovered = ImGuizmo::IsOver() ? SW_TRUE : SW_FALSE;
-        trackUse( std::move( listWorld ), bSurfaceSnap );
+        _listDragTarget.clear();
+        _tracker.stepSingle( target, bPressed, ImGuizmo::IsUsing(), bMoved ? &movedWorld : nullptr, bSurfaceSnap, _listCommand );
     }
 
     void EditorViewportGizmo::manipulateGroup( const EditorGizmoViewState& state, const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode,
                                                const float32* pSnap )
     {
-        if ( _bTracking == SW_FALSE )
+        if ( _tracker.isTracking() == false )
         {
             float4x4 groupWorld{};
             groupWorld.setTranslation( EditorViewportGizmoInternal::computeCentroid( state._listTarget ) );
@@ -160,7 +153,7 @@ namespace sw::editor
                 {
                     _listDragTarget.push_back( EditorGizmoTarget{ target._object, target._world * invGroup } );
                 }
-                _listCommand.push_back( EditorGizmoCommand{ EditorGizmoCommandKind::Capture, state._listTarget, false } );
+                _tracker.captureGroup( state._listTarget, _listCommand );
             }
         }
 
@@ -175,32 +168,13 @@ namespace sw::editor
             }
         }
         _bHovered = ImGuizmo::IsOver() ? SW_TRUE : SW_FALSE;
-        trackUse( std::move( listWorld ), false );
-    }
-
-    void EditorViewportGizmo::trackUse( vector<EditorGizmoTarget>&& listWorld, bool bSurfaceSnap )
-    {
-        if ( ImGuizmo::IsUsing() )
-        {
-            // 클릭 없이 시작된 드래그(Capture 가 없다)는 Model 에 스냅샷이 없어 끝에서 기록하지 않는다.
-            _bTracking = SW_TRUE;
-            _listCommand.push_back( EditorGizmoCommand{ EditorGizmoCommandKind::Drag, std::move( listWorld ), bSurfaceSnap } );
-        }
-        else
-        {
-            if ( listWorld.empty() == false )
-                _listCommand.push_back( EditorGizmoCommand{ EditorGizmoCommandKind::Drag, std::move( listWorld ), bSurfaceSnap } );
-            if ( _bTracking == SW_TRUE )
-                endDrag();
-        }
+        _tracker.stepGroup( ImGuizmo::IsUsing(), std::move( listWorld ), _listCommand );
     }
 
     void EditorViewportGizmo::endDrag()
     {
-        if ( _bTracking == SW_TRUE || _listDragTarget.empty() == false )
-            _listCommand.push_back( EditorGizmoCommand{ EditorGizmoCommandKind::End, {}, false } );
+        _tracker.end( _listCommand );
         _listDragTarget.clear();
-        _bTracking = SW_FALSE;
     }
 
     void EditorViewportGizmo::recordCenterMark( const utf8* pMark, const vector<EditorGizmoTarget>& listTarget, const float32* pView, const float32* pProj, const float2& canvasPos,

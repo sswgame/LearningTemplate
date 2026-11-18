@@ -36,7 +36,7 @@ namespace sw::editor
         const vector<EditorGizmoCommand>& getCommands() const { return _listCommand; }
 
         /** @brief 기즈모를 끄는 중이면 true 입니다. 호버 강조를 막는 데 씁니다. */
-        bool isDragging() const { return _bTracking == SW_TRUE; }
+        bool isDragging() const { return _tracker.isTracking(); }
         /** @brief 지난 `draw` 에서 마우스가 기즈모 위에 있었으면 true 입니다. 미리보기 뷰포트가 오빗 입력을 양보하는 데 씁니다. */
         bool isHovered() const { return _bHovered == SW_TRUE; }
         /**
@@ -55,8 +55,6 @@ namespace sw::editor
         /** @brief 대상 하나의 기즈모입니다. */
         void manipulateSingle( const EditorGizmoTarget& target, const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode, const float32* pSnap,
                                bool bSurfaceSnap );
-        /** @brief ImGuizmo 사용 상태로 끌기 명령 · 놓기 명령을 냅니다. @p listWorld 는 이번 프레임에 바뀐 대상 행렬(없으면 빈 목록)이다. */
-        void trackUse( vector<EditorGizmoTarget>&& listWorld, bool bSurfaceSnap );
         /** @brief 진행 중인 드래그를 끝내는 명령을 내고 중간 값을 비웁니다. */
         void endDrag();
         /** @brief 기즈모 가운데(대상 하나면 그 위치, 여럿이면 무게중심 — `manipulateGroup` 과 같은 점)의 화면 자리를 마크 @p pMark 로 적습니다. 카메라 뒤면 적지 않는다. */
@@ -69,8 +67,8 @@ namespace sw::editor
         float32                    _arrGroupMatrix[16]; ///< 그룹 기즈모 행렬(ImGuizmo 가 고친다)
         int32                      _lastDrawFrame;
         uint32                     _lastObjectCount;
-        uint8                      _bTracking : 1;
-        uint8                      _bHovered  : 1;
-        [[maybe_unused]] uint8     _reserved  : 6;
+        EditorGizmoDragTracker     _tracker; ///< 명령 순서(잡기 → 끌기들 → 놓기, 대상이 바뀌면 닫고 다시 잡기)
+        uint8                      _bHovered : 1;
+        [[maybe_unused]] uint8     _reserved : 7;
     };
 } // namespace sw::editor
