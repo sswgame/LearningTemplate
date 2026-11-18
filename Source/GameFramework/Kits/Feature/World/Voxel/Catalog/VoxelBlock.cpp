@@ -105,18 +105,25 @@ namespace sw
         return pBlock != nullptr && pBlock->_bOpaque != SW_FALSE;
     }
 
-    void VoxelBlockCatalog::computeTileUV( int32 tile, float2& outMin, float2& outMax ) const
+    bool VoxelBlockCatalog::checkAtlasGrid( const float4& atlasGrid, string_view materialName ) const
     {
-        const int32   tileCount = _atlasColumns * _atlasRows;
-        const int32   safeTile  = ( tile >= 0 && tile < tileCount ) ? tile : 0;
-        const int32   column    = safeTile % _atlasColumns;
-        const int32   row       = safeTile / _atlasColumns;
-        const float32 cellU     = 1.0f / static_cast<float32>( _atlasColumns );
-        const float32 cellV     = 1.0f / static_cast<float32>( _atlasRows );
-        const float32 insetU    = cellU * 0.5f / static_cast<float32>( _tileTexels );
-        const float32 insetV    = cellV * 0.5f / static_cast<float32>( _tileTexels );
-        outMin                  = float2{ cellU * static_cast<float32>( column ) + insetU, cellV * static_cast<float32>( row ) + insetV };
-        outMax                  = float2{ cellU * static_cast<float32>( column + 1 ) - insetU, cellV * static_cast<float32>( row + 1 ) - insetV };
+        const bool bSame = atlasGrid._x == static_cast<float32>( _atlasColumns ) && atlasGrid._y == static_cast<float32>( _atlasRows ) &&
+                           atlasGrid._z == static_cast<float32>( _tileTexels );
+        if ( bSame == false )
+            SW_LOG_ERROR_ID( "VoxelBlockCatalog.AtlasGridMismatch", "VoxelBlockCatalog: material '%#' _atlasGrid (%#, %#, %#) differs from the catalog atlas %# x %# with %# texel tiles",
+                             materialName, atlasGrid._x, atlasGrid._y, atlasGrid._z, _atlasColumns, _atlasRows, _tileTexels );
+        return bSame;
+    }
+
+    bool VoxelAtlasGridGate::update( const VoxelBlockCatalog& catalog, bool bMaterialsReady, const float4* pOpaqueGrid, const float4* pWaterGrid, string_view materialName )
+    {
+        if ( _state == State::Pending && bMaterialsReady )
+        {
+            const bool bSame = catalog.checkAtlasGrid( pOpaqueGrid != nullptr ? *pOpaqueGrid : float4{}, materialName ) &&
+                               catalog.checkAtlasGrid( pWaterGrid != nullptr ? *pWaterGrid : float4{}, materialName );
+            _state = bSame ? State::Matches : State::Differs;
+        }
+        return canDraw();
     }
 
     uint32 VoxelBlockCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )

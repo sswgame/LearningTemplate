@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -16,7 +17,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 돌 · 물 · 유리 카탈로그와 2 x 2 청크 월드입니다. y = 10 의 돌 바닥을 깔 수 있습니다. */
+    /** @brief 돌 · 물 · 유리 카탈로그와 2 x 2 청크 월드입니다(공기 생성 훅으로 모든 청크가 올라와 있다). 돌 바닥을 깔 수 있습니다. */
     struct VoxelFixture
     {
         VoxelBlockCatalog _catalog;
@@ -31,6 +32,15 @@ namespace
             _water = addBlock( "water", false, false );
             _glass = addBlock( "glass", true, false );
             SW_REQUIRE_TRUE( _world.initialize( 2, 2, &_catalog ) );
+            loadAll( _world );
+        }
+
+        /** @brief 공기 생성 훅을 걸고(저장본이 없는 청크는 공기) 모든 청크를 올립니다. */
+        static void loadAll( VoxelWorld& world )
+        {
+            world.setChunkGenerator( []( const VoxelWorld&, int32, int32, vector<VoxelBlockIndex>& ) {} );
+            const int32 chunkCount = world.getChunkCountX() * world.getChunkCountZ();
+            SW_REQUIRE_TRUE( world.updateResidency( 0, 0, MathUtil::max( world.getChunkCountX(), world.getChunkCountZ() ), chunkCount ) == static_cast<uint32>( chunkCount ) );
         }
 
         VoxelBlockIndex addBlock( const utf8* pID, bool bSolid, bool bOpaque )
@@ -65,7 +75,7 @@ namespace
             }
         }
 
-        /** @brief 세이브에서 첫 구간이 시작하는 바이트 자리입니다. 머리 · 청크 수 · 팔레트를 같은 칸 함수로 써서 잰다. */
+        /** @brief 세이브에서 첫 청크의 첫 구간이 시작하는 바이트 자리입니다. 머리 · 청크 수 · 팔레트 · 실린 청크 수 · 첫 청크 좌표를 같은 칸 함수로 써서 잰다. */
         static size_t measureRunsOffset( const VoxelWorld& world )
         {
             Archive               prefix;
@@ -81,6 +91,12 @@ namespace
             io.value( chunkCountX );
             io.value( chunkCountZ );
             io.list( listPaletteID );
+            uint32 savedChunkCount = 1;
+            int32  firstChunkX     = 0;
+            int32  firstChunkZ     = 0;
+            io.value( savedChunkCount );
+            io.value( firstChunkX );
+            io.value( firstChunkZ );
             return prefix.getSize();
         }
 
@@ -122,6 +138,30 @@ SW_TEST_CASE( VoxelBlockCatalogTest, IndexStartsAfterAirAndDuplicateIsRefused )
     SW_EXPECT_TRUE( rig._catalog.isSolid( rig._stone ) );
     SW_EXPECT_FALSE( rig._catalog.isSolid( rig._water ) );
     SW_EXPECT_FALSE( rig._catalog.isOpaque( rig._glass ) );
+}
+
+// 블록 머티리얼의 아틀라스 칸(_atlasGrid)은 카탈로그를 따라야 한다 — 메셔는 카탈로그 열 수로 타일 칸 UV 를 싣고 셰이더는 머티리얼 값으로 푼다.
+// 검사는 월드당 한 번: 머티리얼이 준비되기 전에는 그리지 않고, 다르면 오류 한 줄 뒤 계속 그리지 않는다(맞춰 쓰지 않는다).
+SW_TEST_CASE( VoxelBlockCatalogTest, MaterialAtlasGridMustMatchTheCatalog )
+{
+    VoxelFixture rig;
+    const float4 catalogGrid{ static_cast<float32>( rig._catalog.getAtlasColumns() ), static_cast<float32>( rig._catalog.getAtlasRows() ),
+                              static_cast<float32>( rig._catalog.getTileTexels() ), 0.0f };
+    const float4 otherGrid{ catalogGrid._x + 1.0f, catalogGrid._y, catalogGrid._z, 0.0f };
+
+    VoxelAtlasGridGate same;
+    SW_EXPECT_FALSE( same.update( rig._catalog, false, nullptr, nullptr, "same.material" ) ); // 준비 전 — 견주지 않고 그리지 않는다
+    SW_EXPECT_TRUE( same.isPending() );
+    SW_EXPECT_TRUE( same.update( rig._catalog, true, &catalogGrid, &catalogGrid, "same.material" ) );
+
+    SW_EXPECT_LOG( "VoxelBlockCatalog.AtlasGridMismatch" ); // 한 줄 — 아래에서 거듭 불러도 다시 견주지 않는다
+    VoxelAtlasGridGate other;
+    SW_EXPECT_FALSE( other.update( rig._catalog, true, &otherGrid, &otherGrid, "other.material" ) );
+    SW_EXPECT_FALSE( other.update( rig._catalog, true, &catalogGrid, &catalogGrid, "other.material" ) );
+    SW_EXPECT_FALSE( other.isPending() );
+
+    VoxelAtlasGridGate missing; // 머티리얼에 칸이 없으면 다른 것이다
+    SW_EXPECT_FALSE( missing.update( rig._catalog, true, &catalogGrid, nullptr, "missing.material" ) );
 }
 
 // ---- 월드 ----
@@ -198,14 +238,21 @@ SW_TEST_CASE( VoxelWorldTest, StateRoundTripsAndBumpsRevisions )
 
 SW_TEST_CASE( VoxelWorldTest, CraftedStateLeavesTheWorldAlone )
 {
-    VoxelFixture        rig;
+    VoxelFixture rig;
+    SW_REQUIRE_TRUE( rig._world.setBlock( 1, 1, 1, rig._stone ) ); // 청크 (0, 0) 만 바뀌었다 — 세이브에 청크 하나
     const vector<uint8> listSaved = VoxelFixture::save( rig._world );
 
-    // 청크 수가 줄었다(감사 A-6): 밖의 청크가 공기면 같은 청크 좌표로 읽고, 블록이 남으면 버리지 않고 거절한다
+    // 청크 수가 줄었다(감사 A-6): 실린 청크가 줄어든 월드 안이거나 밖이어도 공기면 읽고, 밖에 블록이 남으면 버리지 않고 거절한다
     VoxelFixture target;
     VoxelWorld   other;
     SW_REQUIRE_TRUE( other.initialize( 1, 1, &target._catalog ) );
-    Archive emptyOutside( listSaved.data(), listSaved.size() );
+    Archive inside( listSaved.data(), listSaved.size() );
+    SW_EXPECT_TRUE( other.readState( inside ) );
+    VoxelFixture outsideAir;
+    SW_REQUIRE_TRUE( outsideAir._world.setBlock( 20, 9, 20, outsideAir._stone ) ); // 청크 (1, 1) 을 바꿨다가 되돌린다 — 실리지만 공기다
+    SW_REQUIRE_TRUE( outsideAir._world.setBlock( 20, 9, 20, kVoxelAirBlock ) );
+    const vector<uint8> listOutsideAir = VoxelFixture::save( outsideAir._world );
+    Archive             emptyOutside( listOutsideAir.data(), listOutsideAir.size() );
     SW_EXPECT_TRUE( other.readState( emptyOutside ) );
     VoxelFixture outside;
     SW_REQUIRE_TRUE( outside._world.setBlock( 20, 9, 20, outside._stone ) ); // 청크 (1, 1)
@@ -213,9 +260,9 @@ SW_TEST_CASE( VoxelWorldTest, CraftedStateLeavesTheWorldAlone )
     Archive             wrongSize( listOutside.data(), listOutside.size() );
     SW_EXPECT_FALSE( other.readState( wrongSize ) );
 
-    SW_REQUIRE_TRUE( target._world.setBlock( 1, 1, 1, target._stone ) );
+    SW_REQUIRE_TRUE( target._world.setBlock( 2, 2, 2, target._stone ) );
 
-    // 팔레트 밖 번호 — 머리 · 청크 수 · 팔레트 뒤 첫 구간의 번호(uint16 낮은 바이트)다
+    // 팔레트 밖 번호 — 머리 · 청크 수 · 팔레트 · 실린 청크 수 · 첫 청크 좌표 뒤 첫 구간의 번호(uint16 낮은 바이트)다
     const size_t  firstBlockOffset = VoxelFixture::measureRunsOffset( rig._world );
     vector<uint8> listBadBlock     = listSaved;
     listBadBlock[firstBlockOffset] = 200;
@@ -239,7 +286,112 @@ SW_TEST_CASE( VoxelWorldTest, CraftedStateLeavesTheWorldAlone )
     Archive longRun( listLongRun.data(), listLongRun.size() );
     SW_EXPECT_FALSE( target._world.readState( longRun ) );
 
-    SW_EXPECT_TRUE( target._world.getBlock( 1, 1, 1 ) == target._stone ); // 거절은 상태를 바꾸지 않는다
+    // 월드 밖 청크 좌표 — 첫 청크 x 를 저장된 청크 수(2)로 바꾼다
+    vector<uint8> listBadChunk                                         = listSaved;
+    listBadChunk[firstBlockOffset - sizeof( int32 ) - sizeof( int32 )] = 2;
+    Archive badChunk( listBadChunk.data(), listBadChunk.size() );
+    SW_EXPECT_FALSE( target._world.readState( badChunk ) );
+
+    SW_EXPECT_TRUE( target._world.getBlock( 2, 2, 2 ) == target._stone ); // 거절은 상태를 바꾸지 않는다
+}
+
+// 청크 사전: 가운데에서 반경 안만 올라오고, 한 번에 올리는 수는 한도를 지키며 가까운 청크부터다. 올라오지 않은 청크는 공기로 읽히고 쓰기를 거절한다.
+SW_TEST_CASE( VoxelWorldTest, ResidencyLoadsOnlyTheRadiusNearestFirst )
+{
+    VoxelFixture rig;
+    VoxelWorld   world;
+    SW_REQUIRE_TRUE( world.initialize( 8, 8, &rig._catalog ) );
+    world.setChunkGenerator( [&rig]( const VoxelWorld&, int32, int32, vector<VoxelBlockIndex>& outBlocks )
+    { outBlocks[0] = rig._stone; } ); // 청크마다 모서리 블록 하나
+    SW_EXPECT_EQUAL( uint32( 3 ), world.updateResidency( 4, 4, 2, 3 ) );
+    SW_EXPECT_EQUAL( uint32( 3 ), world.getResidentChunkCount() );
+    SW_EXPECT_TRUE( world.isChunkResident( 4, 4 ) ); // 가운데가 먼저다
+    SW_EXPECT_EQUAL( uint32( 25 - 3 ), world.updateResidency( 4, 4, 2, 100 ) );
+    SW_EXPECT_EQUAL( uint32( 25 ), world.getResidentChunkCount() );
+    SW_EXPECT_FALSE( world.isChunkResident( 7, 4 ) );
+    SW_EXPECT_TRUE( world.getBlock( 4 * kVoxelChunkSize, 0, 4 * kVoxelChunkSize ) == rig._stone );
+    SW_EXPECT_TRUE( world.getBlock( 7 * kVoxelChunkSize, 0, 4 * kVoxelChunkSize ) == kVoxelAirBlock );
+    SW_EXPECT_FALSE( world.setBlock( 7 * kVoxelChunkSize, 5, 4 * kVoxelChunkSize, rig._stone ) );
+    SW_EXPECT_EQUAL( uint32( 0 ), world.updateResidency( 4, 4, 2, 100 ) ); // 바뀐 것이 없다
+
+    // 가운데가 옮겨 가면 밖의 청크는 내려간다(바뀌지 않았으니 저장본은 없다)
+    (void)world.updateResidency( 0, 0, 1, 100 );
+    SW_EXPECT_EQUAL( uint32( 4 ), world.getResidentChunkCount() ); // 월드 모서리라 2 x 2
+    SW_EXPECT_EQUAL( uint32( 0 ), world.getStoredChunkCount() );
+}
+
+// 내릴 때는 바뀐 청크만 저장본에 남고, 다시 올리면 생성 훅 대신 저장본을 푼다. 세이브에도 바뀐 청크만 실린다.
+SW_TEST_CASE( VoxelWorldTest, UnloadStoresOnlyChangedChunksAndReloadRestoresThem )
+{
+    VoxelFixture rig;
+    VoxelWorld   world;
+    int32        generatedCount = 0;
+    SW_REQUIRE_TRUE( world.initialize( 4, 4, &rig._catalog ) );
+    world.setChunkGenerator( [&rig, &generatedCount]( const VoxelWorld&, int32, int32, vector<VoxelBlockIndex>& outBlocks )
+    {
+        ++generatedCount;
+        outBlocks[0] = rig._stone;
+    } );
+    (void)world.updateResidency( 1, 1, 1, 100 );
+    SW_REQUIRE_EQUAL( 9, generatedCount );
+    SW_REQUIRE_TRUE( world.setBlock( 20, 7, 20, rig._glass ) ); // 청크 (1, 1)
+
+    (void)world.updateResidency( 3, 3, 0, 100 ); // 아홉 청크 모두 내린다
+    SW_EXPECT_FALSE( world.isChunkResident( 1, 1 ) );
+    SW_EXPECT_EQUAL( uint32( 1 ), world.getStoredChunkCount() );
+
+    generatedCount = 0;
+    (void)world.updateResidency( 1, 1, 1, 100 );
+    SW_EXPECT_EQUAL( 8, generatedCount ); // (1, 1) 은 저장본에서 왔다
+    SW_EXPECT_TRUE( world.getBlock( 20, 7, 20 ) == rig._glass );
+    SW_EXPECT_TRUE( world.getBlock( kVoxelChunkSize, 0, kVoxelChunkSize ) == rig._stone );
+    (void)world.updateResidency( 3, 3, 0, 100 ); // 바뀌지 않은 채 다시 내려도 저장본은 하나 그대로다
+    SW_EXPECT_EQUAL( uint32( 1 ), world.getStoredChunkCount() );
+
+    // 세이브는 저장본 하나만 싣는다 — 같은 생성 훅의 새 월드가 읽으면 바뀐 블록과 생성 블록이 함께 나온다
+    const vector<uint8> listSaved = VoxelFixture::save( world );
+    VoxelWorld          restored;
+    SW_REQUIRE_TRUE( restored.initialize( 4, 4, &rig._catalog ) );
+    restored.setChunkGenerator( []( const VoxelWorld&, int32, int32, vector<VoxelBlockIndex>& ) {} );
+    Archive reading( listSaved.data(), listSaved.size() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_EQUAL( uint32( 1 ), restored.getStoredChunkCount() );
+    SW_REQUIRE_TRUE( restored.loadChunk( 1, 1 ) );
+    SW_EXPECT_TRUE( restored.getBlock( 20, 7, 20 ) == rig._glass );
+    SW_EXPECT_TRUE( VoxelFixture::save( restored ) == listSaved );
+}
+
+// 판 2 세이브(모든 청크를 순서대로)는 판 올림 단계가 판 3 으로 옮긴다 — 옛 세이브의 블록이 그대로 읽힌다.
+SW_TEST_CASE( VoxelWorldTest, Version2SaveIsUpgraded )
+{
+    VoxelFixture rig;
+    Archive      writing;
+    {
+        StateIO               io( writing );
+        int32                 chunkCountX = 2;
+        int32                 chunkCountZ = 2;
+        vector<hashed_string> listPaletteID{ hashed_string( "stone" ), hashed_string( "water" ), hashed_string( "glass" ) };
+        io.header( VoxelWorld::kStateTag, 2 );
+        io.value( chunkCountX );
+        io.value( chunkCountZ );
+        io.list( listPaletteID );
+        for ( int32 chunkIndex = 0; chunkIndex < 4; ++chunkIndex )
+        {
+            uint16 paletteNumber = chunkIndex == 3 ? 1 : 0; // 마지막 청크 (1, 1) 만 돌로 찼다
+            uint32 length        = static_cast<uint32>( kVoxelChunkVolume );
+            uint16 closeNumber   = 0;
+            uint32 closeLength   = 0;
+            io.value( paletteNumber );
+            io.value( length );
+            io.value( closeNumber );
+            io.value( closeLength );
+        }
+    }
+    Archive reading( writing.getData(), writing.getSize() );
+    SW_REQUIRE_TRUE( rig._world.readState( reading ) );
+    SW_EXPECT_EQUAL( uint32( 4 ), rig._world.getStoredChunkCount() ); // 판 2 는 바뀐 청크를 가리지 않았다 — 모두 저장본이다
+    SW_EXPECT_TRUE( rig._world.getBlock( 20, 9, 20 ) == rig._stone );
+    SW_EXPECT_TRUE( rig._world.getBlock( 3, 9, 3 ) == kVoxelAirBlock );
 }
 
 // 세이브는 블록을 id 팔레트로 적는다 — blocks.xml 중간에 블록이 끼어 순서가 바뀌어도 옛 세이브는 같은 블록으로 읽혀야 한다.
@@ -270,6 +422,7 @@ SW_TEST_CASE( VoxelWorldTest, SaveSurvivesCatalogReorder )
 
     Archive reading( listSaved.data(), listSaved.size() );
     SW_REQUIRE_TRUE( world.readState( reading ) );
+    VoxelFixture::loadAll( world ); // 바닥을 깐 네 청크 모두 저장본에서 올라온다
     SW_EXPECT_TRUE( world.getBlock( 20, 9, 20 ) == glass );
     SW_EXPECT_TRUE( world.getBlock( 3, 4, 5 ) == water );
     SW_EXPECT_EQUAL( uint32( 32 * 32 ), world.countBlocks( stone ) );
@@ -585,28 +738,84 @@ SW_TEST_CASE( VoxelTerrainTest, SameSeedSameWorldAndColumnsAreLayered )
     (void)rig.addBlock( "sand", true, true );
 
     VoxelTerrainSettings settings;
-    settings._treeChance            = 0.0f;
-    const VoxelTerrainReport report = VoxelTerrainSettings::fillWorld( rig._world, settings );
+    settings._treeChance   = 0.0f;
+    const auto loadTerrain = [&rig, &settings]( VoxelWorld& world )
+    {
+        SW_REQUIRE_TRUE( world.initialize( 2, 2, &rig._catalog ) );
+        world.setChunkGenerator( VoxelTerrainSettings::makeChunkGenerator( settings ) );
+        SW_REQUIRE_EQUAL( uint32( 4 ), world.updateResidency( 0, 0, 1, 4 ) );
+    };
+    VoxelWorld world;
+    loadTerrain( world );
+    vector<VoxelBlockIndex>  listBlock;
+    const VoxelTerrainReport report = VoxelTerrainSettings::fillChunk( world, settings, 0, 0, listBlock );
     SW_EXPECT_TRUE( report._minHeight <= report._maxHeight );
     SW_EXPECT_EQUAL( uint32( 0 ), report._treeCount );
-    SW_EXPECT_TRUE( rig._world.getBlock( 3, 0, 3 ) == bedrock );
-    SW_EXPECT_TRUE( rig._world.countBlocks( grass ) > 0 );
-    SW_EXPECT_TRUE( rig._world.countBlocks( dirt ) > 0 );
+    SW_EXPECT_TRUE( listBlock == world.findChunk( 0, 0 )->_listBlock ); // 생성 훅이 낸 청크와 같다
+    SW_EXPECT_TRUE( world.getBlock( 3, 0, 3 ) == bedrock );
+    SW_EXPECT_TRUE( world.countBlocks( grass ) > 0 );
+    SW_EXPECT_TRUE( world.countBlocks( dirt ) > 0 );
+    SW_EXPECT_EQUAL( uint32( 0 ), world.getStoredChunkCount() ); // 생성한 청크는 바뀐 청크가 아니다
 
     const int32 surface = VoxelTerrainSettings::computeSurfaceHeight( 3, 3, settings );
     SW_EXPECT_TRUE( report._minHeight <= surface && surface <= report._maxHeight );
-    SW_EXPECT_TRUE( rig._world.findTopSolidY( 3, 3 ) == surface ); // 나무가 없으면 맨 위 단단한 블록이 지면이다
+    SW_EXPECT_TRUE( world.findTopSolidY( 3, 3 ) == surface ); // 나무가 없으면 맨 위 단단한 블록이 지면이다
 
-    VoxelFixture again;
-    (void)again.addBlock( "grass", true, true );
-    (void)again.addBlock( "dirt", true, true );
-    (void)again.addBlock( "bedrock", true, true );
-    (void)again.addBlock( "sand", true, true );
-    (void)VoxelTerrainSettings::fillWorld( again._world, settings );
-    SW_EXPECT_TRUE( VoxelFixture::save( again._world ) == VoxelFixture::save( rig._world ) );
+    VoxelWorld again;
+    loadTerrain( again );
+    for ( int32 chunkZ = 0; chunkZ < 2; ++chunkZ )
+    {
+        for ( int32 chunkX = 0; chunkX < 2; ++chunkX )
+        {
+            SW_EXPECT_TRUE( again.findChunk( chunkX, chunkZ )->_listBlock == world.findChunk( chunkX, chunkZ )->_listBlock );
+        }
+    }
 }
 
-// ---- 지형 ----
+// 청크마다 따로 생성해도 청크 경계를 넘는 나무가 맞물린다 — 나무 자리는 이웃 청크를 읽지 않고 정해지고, 잎은 걸친 청크마다 같은 자리에 온다.
+SW_TEST_CASE( VoxelTerrainTest, TreesMatchAcrossChunksGeneratedApart )
+{
+    VoxelFixture          rig;
+    const VoxelBlockIndex log    = rig.addBlock( "log", true, true );
+    const VoxelBlockIndex leaves = rig.addBlock( "leaves", true, false );
+    (void)rig.addBlock( "grass", true, true );
+    (void)rig.addBlock( "dirt", true, true );
+    VoxelTerrainSettings settings;
+    settings._treeChance      = 0.3f;
+    settings._waterLevel      = 0; // 물 · 모래가 없어 모든 기둥이 풀이다
+    settings._heightAmplitude = 0;
+    VoxelWorld world;
+    SW_REQUIRE_TRUE( world.initialize( 2, 1, &rig._catalog ) );
+    // 경계(x = 15 | 16)에 맞닿은 두 기둥: 한쪽에 줄기가 있으면 맞은편 같은 높이는 잎이다(잎 덩어리 반경 안). 경계에 나무가 서는 씨앗이 나올 때까지 씨앗을 바꿔 본다.
+    uint32 matchedCount = 0;
+    for ( uint32 seed = 1; seed <= 64 && matchedCount == 0; ++seed )
+    {
+        settings._seed = seed;
+        vector<VoxelBlockIndex> listLeft;
+        vector<VoxelBlockIndex> listRight;
+        (void)VoxelTerrainSettings::fillChunk( world, settings, 0, 0, listLeft );
+        (void)VoxelTerrainSettings::fillChunk( world, settings, 1, 0, listRight );
+        for ( int32 z = 0; z < kVoxelChunkSize; ++z )
+        {
+            for ( int32 y = settings._baseHeight + 4; y < kVoxelChunkHeight; ++y ) // 줄기 맨 위 아래 두 칸까지가 잎 높이다
+            {
+                const VoxelBlockIndex leftEdge  = listLeft[static_cast<size_t>( ( y * kVoxelChunkSize + z ) * kVoxelChunkSize + kVoxelChunkSize - 1 )];
+                const VoxelBlockIndex rightEdge = listRight[static_cast<size_t>( ( y * kVoxelChunkSize + z ) * kVoxelChunkSize )];
+                if ( leftEdge == log )
+                {
+                    SW_EXPECT_TRUE( rightEdge == leaves );
+                    ++matchedCount;
+                }
+                if ( rightEdge == log )
+                {
+                    SW_EXPECT_TRUE( leftEdge == leaves );
+                    ++matchedCount;
+                }
+            }
+        }
+    }
+    SW_EXPECT_TRUE( matchedCount > 0 );
+}
 
 /** @brief [VoxelTerrainTest] 광석 자리는 지형 씨앗을 따른다: 같은 씨앗이면 같은 자리, 다른 씨앗이면 다른 자리다(감사 K-8 — 씨앗 없는 해시로 꾸미면 씨앗을 바꿔도 그대로다) */
 SW_TEST_CASE( VoxelTerrainTest, DecorationsFollowSeed )
@@ -624,7 +833,8 @@ SW_TEST_CASE( VoxelTerrainTest, DecorationsFollowSeed )
         settings._listOreLayer    = {
             VoxelOreLayer{ hashed_string( "coal" ), 0.05f, kVoxelChunkHeight }
         };
-        (void)VoxelTerrainSettings::fillWorld( world, settings );
+        world.setChunkGenerator( VoxelTerrainSettings::makeChunkGenerator( settings ) );
+        (void)world.updateResidency( 0, 0, 1, 4 );
         uint64 digest = 14695981039346656037ull;
         int32  count  = 0;
         for ( int32 z = 0; z < world.getSizeZ(); ++z )

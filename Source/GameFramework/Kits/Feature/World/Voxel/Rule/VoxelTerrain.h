@@ -9,11 +9,11 @@
 #include "Core/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
 
 namespace sw
 {
     struct VoxelTerrainReport;
-    class VoxelWorld;
 
     /** @brief 돌 속 광석 한 층입니다. 층들의 확률은 앞에서부터 쌓여 한 칸에 광석 하나만 고른다. */
     struct VoxelOreLayer
@@ -48,22 +48,26 @@ namespace sw
         int32                 _snowHeight{ 0 }; ///< 풀 꼭대기가 이 높이(y) 이상이면 눈으로 덮는다
         vector<VoxelOreLayer> _listOreLayer{};  ///< 돌 속 광석. 지면 3 블록 아래부터 y = 1 까지
 
-        // 월드를 지형으로 채웁니다. 기둥마다 아래에서 위로 기반암, 돌, 흙을 채우고, 맨 위는 물가 2블록 안이면 모래, 아니면 풀로 덮습니다. 물 높이까지는 물로 채웁니다.
-        // 풀 위에는 시드 해시로 나무(줄기 4~6블록과 잎 덩어리)를 세운다. 나무는 청크 경계를 넘어도 되지만 월드 밖으로는 잘라 낸다.
-        // 끝으로 높은 풀 꼭대기를 눈으로 덮고 돌 속에 광석을 시드 해시로 놓는다.
+        // 청크 하나를 지형으로 채웁니다(생성 훅 — `VoxelWorld::setChunkGenerator`). 기둥마다 아래에서 위로 기반암, 돌, 흙을 채우고, 맨 위는 물가 2블록 안이면 모래,
+        // 아니면 풀로 덮습니다. 물 높이까지는 물로 채웁니다. 이웃 청크를 읽지 않고 같은 씨앗이면 같은 블록이 나오므로, 내린 청크를 다시 올려도 같다.
+        // 나무는 풀 위에 시드 해시로 서고(줄기 4~6블록과 잎 덩어리), 3블록 안의 다른 나무 자리보다 해시가 클 때만 선다 — 이웃 청크에 선 나무의 잎도 순서 없이 같은 자리에 온다.
+        // 나무는 월드 가장자리 2블록 안에는 서지 않는다. 끝으로 높은 풀 꼭대기를 눈으로 덮고 돌 속에 광석을 시드 해시로 놓는다.
         /** @brief 기둥의 지면 높이(맨 위 블록의 y)입니다. 월드를 쓰지 않으므로 미리보기와 스폰 위치에도 씁니다. */
-        static int32              computeSurfaceHeight( int32 x, int32 z, const VoxelTerrainSettings& settings );
-        static VoxelTerrainReport fillWorld( VoxelWorld& world, const VoxelTerrainSettings& settings );
+        static int32 computeSurfaceHeight( int32 x, int32 z, const VoxelTerrainSettings& settings );
+        /** @brief 청크 (@p chunkX, @p chunkZ) 의 블록을 @p outBlocks(`kVoxelChunkVolume` 칸, 공기로 받는다)에 채웁니다. 월드는 크기와 카탈로그만 읽습니다. */
+        static VoxelTerrainReport fillChunk( const VoxelWorld& world, const VoxelTerrainSettings& settings, int32 chunkX, int32 chunkZ, vector<VoxelBlockIndex>& outBlocks );
+        /** @brief @p settings 사본으로 `fillChunk` 를 부르는 생성 훅입니다. */
+        static VoxelChunkGenerator makeChunkGenerator( const VoxelTerrainSettings& settings );
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 생성 결과입니다. 테스트와 로그에 씁니다. */
+    /** @brief 청크 하나의 생성 결과입니다. 테스트와 로그에 씁니다. */
     struct VoxelTerrainReport
     {
         int32  _minHeight{ 0 };
         int32  _maxHeight{ 0 };
-        uint32 _treeCount{ 0 };
+        uint32 _treeCount{ 0 }; ///< 줄기가 이 청크에 선 나무 수
     };
 } // namespace sw

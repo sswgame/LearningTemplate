@@ -54,7 +54,9 @@ namespace sw
         void onTick( TickContext& context ) override;
 
         // ---- 다른 컴포넌트가 읽는 값입니다(이 컴포넌트가 쓰지 않는 그룹에서 읽습니다) ----
-        const VoxelBody&   getBody() const { return _body; }
+        const VoxelBody& getBody() const { return _body; }
+        /** @brief 월드가 생성된 뒤 첫 땅에 몸을 놓았으면 true 입니다. 그 전의 몸 위치는 뜻이 없습니다(상주 범위의 가운데로 쓰지 않는다). */
+        bool               isBodyPlaced() const { return _bBodyPlaced != SW_FALSE; }
         const VoxelHotbar& getHotbar() const { return _hotbar; }
         /** @brief 폰 의도의 버튼 이름입니다. 씬 데이터에서 읽으며, 자동 플레이 AI 도 같은 이름의 버튼을 누릅니다. */
         const hashed_string& getJumpButton() const { return _jumpButton; }

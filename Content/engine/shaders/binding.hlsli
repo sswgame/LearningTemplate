@@ -27,7 +27,7 @@
  *   엔진 텍스처  Bindless::sampleIndex · sampleIndexWith(샘플러 고르기) · sampleShadowComparison
  *   패스 입력    PassTexture::sampleShadow · sampleAlbedo · sampleNormal · sampleDepth · sampleSource · sampleDepthPoint · sampleSourcePoint ·
  *                sampleDepthCross · gatherDepthRed · sampleAmbientOcclusion
- *   머티리얼     MaterialTexture::sampleIndex · samplePoint · computeSize
+ *   머티리얼     MaterialTexture::sampleIndex · samplePoint · sampleGrad · computeSize
  *   컴퓨트 RW    Bindless::storeRwTexture2D · loadRwTexture2D
  *   함수는 구조체의 static 멤버로 묶는다 — FXC(DX11)에 네임스페이스가 없어 구조체가 그 자리를 맡는다. 묶음의 선언은 아래 0-1 절이다.
  *   `SW_NATIVE_BINDLESS` · `__spirv__` 분기와 `g_SwBindlessTex2D` · `g_SwEngineTex#` · `g_SwMaterialTex#` 는 **이 파일 안에서만** 쓴다.
@@ -203,6 +203,7 @@ struct MaterialTexture
     static float4 sampleIndexTexture( uint index, float2 uv ); // 텍스처를 읽는다(보기 모드 Mipmaps 가 아닐 때의 sampleIndex)
     static float4 samplePoint( uint index, float2 uv );
     static float4 sampleLevelZero( uint index, float2 uv );
+    static float4 sampleGrad( uint index, float2 uv, float2 gradX, float2 gradY ); // 준 미분으로 — 아틀라스 타일을 frac 로 되풀이할 때
     static float2 computeSize( uint index );
     static float4 sampleMipColor( uint index, float2 uv );
 };

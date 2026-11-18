@@ -139,14 +139,18 @@ namespace sw
         bool isSolid( VoxelBlockIndex index ) const;
         /** @brief 이웃 면을 가리는 블록이면 true 입니다. */
         bool isOpaque( VoxelBlockIndex index ) const;
-        /** @brief 면의 아틀라스 타일 UV 사각형(왼쪽 위와 오른쪽 아래)입니다. 타일 가장자리에서 반 텍셀 안쪽으로 들여 이웃 타일의 색이 번지지 않게 합니다. */
-        void computeTileUV( int32 tile, float2& outMin, float2& outMax ) const;
 
         const vector<VoxelBlockDef>& getBlocks() const { return _catalog.getAll(); }
         int32                        getAtlasColumns() const { return _atlasColumns; }
         int32                        getAtlasRows() const { return _atlasRows; }
-        /** @brief 아틀라스 타일 한 변의 텍셀 수입니다. UV 를 안쪽으로 들일 때 씁니다. */
+        /** @brief 아틀라스 타일 한 변의 텍셀 수입니다. */
         int32 getTileTexels() const { return _tileTexels; }
+        /**
+         * @brief 블록 머티리얼의 아틀라스 칸 파라미터(`_atlasGrid` = 열 수, 행 수, 타일 텍셀)가 이 카탈로그와 같은지 봅니다. 카탈로그가 정본이다.
+         * @details 메셔는 카탈로그의 열 수로 타일 칸 UV 를 싣고 셰이더는 머티리얼 값으로 푼다 — 둘이 다르면 엉뚱한 타일을 그리므로 맞춰 쓰지 않고 오류로 멈춘다.
+         * @return 같으면 true. 다르면 @p materialName 과 두 값을 적은 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool checkAtlasGrid( const float4& atlasGrid, string_view materialName ) const;
 
     private:
         static constexpr const utf8* kXMLRootName = "VoxelBlockCatalog"; ///< 루트 요소(`XMLCatalog`)
@@ -159,6 +163,31 @@ namespace sw
         int32                      _atlasColumns;
         int32                      _atlasRows;
         int32                      _tileTexels;
+    };
+
+    /**
+     * @struct VoxelAtlasGridGate
+     * @brief 월드 하나의 블록 머티리얼 아틀라스 칸 검사입니다. 머티리얼이 모두 준비되면 한 번만 견주고 결과를 쥡니다.
+     * @details 견주기 전(`Pending`)과 다를 때(`Differs`)는 블록 메시를 그리지 않는다 — 검사 없이 그리는 때가 없고, 오류는 월드당 한 줄이다.
+     */
+    struct SW_KIT_API VoxelAtlasGridGate
+    {
+        enum class State : uint8
+        {
+            Pending, ///< 머티리얼이 아직 준비되지 않았다
+            Matches,
+            Differs
+        };
+
+        State _state{ State::Pending };
+
+        /**
+         * @brief 견주기 전이고 @p bMaterialsReady 이면 불투명 · 물 머티리얼의 `_atlasGrid`(칸이 없으면 nullptr — 다르다)를 카탈로그와 견줍니다. 처음 다른 칸에서 멈춰 오류는 한 줄이다.
+         * @return 블록 메시를 그려도 되면(같다고 견주었으면) true 입니다.
+         */
+        bool update( const VoxelBlockCatalog& catalog, bool bMaterialsReady, const float4* pOpaqueGrid, const float4* pWaterGrid, string_view materialName );
+        bool canDraw() const { return _state == State::Matches; }
+        bool isPending() const { return _state == State::Pending; }
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<VoxelBlockCatalog>::acquire` 로 한 벌을 받습니다. */

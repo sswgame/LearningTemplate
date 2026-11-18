@@ -156,6 +156,8 @@
 					                        _chunkCountX="8"
 					                        _chunkCountZ="8"
 					                        _chunkBuildsPerFrame="4"
+					                        _residentChunkRadius="5"
+					                        _chunkLoadsPerFrame="4"
 					                        _waterBlock="water"
 					                        _stoneBlock="stone"
 					                        _grassBlock="grass"

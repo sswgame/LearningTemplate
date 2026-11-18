@@ -85,14 +85,24 @@ namespace sw
         { chunk.applyMeshes(); } );
     }
 
+    void VoxelChunkComponent::findMeshes( MeshComponent*& outOpaque, MeshComponent*& outWater ) const
+    {
+        GameObject* pOwner = getOwner();
+        outOpaque          = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        outWater           = findWaterMesh();
+        if ( outOpaque == outWater )
+            outOpaque = nullptr; // 물 메시만 있으면 불투명은 없다
+    }
+
     void VoxelChunkComponent::applyMeshes()
     {
         _bApplyScheduled       = SW_FALSE;
-        GameObject*    pOwner  = getOwner();
-        MeshComponent* pOpaque = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
-        MeshComponent* pWater  = findWaterMesh();
-        if ( pOpaque == pWater )
-            pOpaque = nullptr; // 물 메시만 있으면 불투명은 없다
+        MeshComponent* pOpaque = nullptr;
+        MeshComponent* pWater  = nullptr;
+        findMeshes( pOpaque, pWater );
+        const VoxelGameModeComponent* pGameMode = findGameMode<VoxelGameModeComponent>();
+        if ( pGameMode == nullptr || pGameMode->canDrawBlockMeshes() == false )
+            _scratchMesh.clear(); // 아틀라스 칸을 견주기 전 · 달랐으면 그리지 않는다
         VoxelChunkComponentInternal::applyVertices( pOpaque, _scratchMesh._listOpaqueVertex );
         VoxelChunkComponentInternal::applyVertices( pWater, _scratchMesh._listTranslucentVertex );
     }

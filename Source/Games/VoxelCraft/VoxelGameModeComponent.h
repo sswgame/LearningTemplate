@@ -6,12 +6,14 @@
  *          블록, 월드, 지형, 광선, 메싱의 규칙은 키트(`GF_Voxel`)가 맡습니다.
  *          몸, 손, 핫바는 플레이어 컴포넌트(`VoxelPlayerComponent`)가, 청크 하나의 메시는 `VoxelChunkComponent` 가 맡습니다.
  *
- *          틱 규칙은 다음과 같습니다. 디렉터는 `TickGroup::PrePhysics` 에서, 블록이 바뀐 청크 중 몸에서 가까운 몇 개에 다시 메싱을 요청합니다.
+ *          틱 규칙은 다음과 같습니다. 디렉터는 `TickGroup::PrePhysics` 에서 몸 둘레의 청크만 월드에 올리고(멀어진 청크는 내린다 — 바뀐 청크만 저장본에 남는다),
+ *          블록이 바뀐 청크 중 몸에서 가까운 몇 개에 다시 메싱을 요청합니다. 청크 오브젝트(뷰)는 상주 반경보다 한 칸 안쪽 청크에만 두어, 그리는 청크의 이웃은 늘 올라와 있다.
  *          플레이어와 청크(`DuringPhysics`)는 월드를 **읽기만** 하고, 청크는 같은 그룹에서 서로 나란히 메싱합니다.
  *          블록 바꾸기는 틱이 끝난 뒤 게임 스레드에서만 합니다(`applyBlockEdit`).
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -35,7 +37,7 @@ namespace sw
      * @brief 월드 한 판을 맡습니다. 플레이가 시작되면 시드로 지형을 생성하고 청크 오브젝트를 스폰합니다.
      * @details 블록(부수거나 놓은 것 포함)은 PROPERTY 가 아니라 `writeState` 로 저장합니다.
      *          게임 상태 스냅샷의 컴포넌트 섹션에 실려서 핫 리로드와 세이브를 거쳐도 유지됩니다(`VoxelCraftGame`).
-     *          스폰한 청크는 핸들로 보관했다가 상태를 저장하기 전에 정리합니다(`despawnViews`).
+     *          스폰한 청크는 핸들로 보관했다가 상태를 저장하기 전에 정리합니다(`despawnViews`). 몸이 움직여 그릴 청크가 바뀌면 틱 뒤 플러시에서 뷰를 맞춘다(`syncChunkViews`).
      *          정리된 뒤 남은 디렉터는 다음 틱에 청크를 다시 스폰하고 전부 다시 메싱합니다. 블록은 그대로입니다.
      *
      *          **자동 플레이는 AI 조종자가 폰에 빙의하는 방식입니다.** 자동 플레이 스위치(`gv_voxelAutoPlay`, 씬의 `_bAutoPlay`)가 바뀌면
@@ -61,6 +63,8 @@ namespace sw
 
         // ---- 다른 컴포넌트가 읽는 값입니다(PrePhysics 뒤의 그룹에서 읽습니다) ----
         const VoxelWorld& getWorld() const { return _world; }
+        /** @brief 블록 · 물 머티리얼의 아틀라스 칸을 카탈로그와 견주어 같았으면 true 입니다. 견주기 전 · 달랐으면 청크가 메시를 그리지 않습니다. */
+        bool canDrawBlockMeshes() const { return _atlasGate.canDraw(); }
         /** @brief 가운데에서 시작해 나선으로 찾은 첫 땅(물이 아닌 곳)의 위쪽 위치입니다. */
         float3 findSpawnPosition() const;
 
@@ -76,7 +80,15 @@ namespace sw
         bool hasPendingSpawn() const override;
 
     private:
-        void spawnChunks( GameObjectManager& manager );
+        /** @brief 그릴 청크(가운데에서 `_residentChunkRadius - 1` 안의 올라온 청크)에만 청크 오브젝트가 있게 스폰 · 정리합니다. 틱 뒤 게임 스레드에서 부릅니다. */
+        void syncChunkViews( GameObjectManager& manager );
+        /** @brief 몸(놓기 전이면 월드 가운데) 둘레의 청크만 월드에 올립니다. 그릴 청크가 바뀌면 플러시에서 뷰를 맞추도록 표시합니다. */
+        void updateResidency();
+        /**
+         * @brief 견주기 전이면 청크 뷰 하나의 블록 · 물 머티리얼이 준비됐는지 보고, 준비됐으면 아틀라스 칸을 카탈로그와 월드당 한 번 견줍니다(틱 뒤 게임 스레드).
+         *        같으면 모든 뷰에 다시 메싱을 요청한다(그동안 그리지 않았다). 다르면 오류 한 줄이 남고 이 월드의 블록 메시는 그리지 않는다.
+         */
+        void checkAtlasGrid( GameObjectManager& manager );
         void scheduleRebuilds();
         void logStatus( float32 deltaTime );
         /** @brief 플레이어 폰의 조종자를 자동 플레이 스위치에 맞게 바꿉니다. 틱 밖의 게임 스레드에서 부릅니다. */
@@ -97,6 +109,10 @@ namespace sw
         int32 _chunkCountZ;
         PROPERTY( Category = "World", DisplayName = "Chunk Builds Per Frame", Tooltip = "Changed chunks handed out for meshing each frame, nearest to the body first", Min = 1 )
         int32 _chunkBuildsPerFrame;
+        PROPERTY( Required, Category = "World", DisplayName = "Resident Chunk Radius", Tooltip = "Chunks within this many chunks of the body stay loaded; chunks one closer are drawn", Min = 2 )
+        int32 _residentChunkRadius;
+        PROPERTY( Required, Category = "World", DisplayName = "Chunk Loads Per Frame", Tooltip = "Missing chunks loaded (generated or read back) each frame, nearest to the body first", Min = 1 )
+        int32 _chunkLoadsPerFrame;
         PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
         float32 _statusLogInterval;
         // ---- 블록 이름 · 지형 규칙(광석 확률 · 높이)입니다. 씬 데이터가 정본이고 C++ 기본값이 없다(필수 칸 — 빠지면 씬 로드 실패, 감사 K-4). 블록 id 는 게임을 시작할 때 모두 있는지 확인합니다 ----
@@ -121,10 +137,14 @@ namespace sw
         PROPERTY( Required, Category = "World", DisplayName = "Iron Ore Max Height", Tooltip = "Iron is placed only below this height", Min = 0 )
         int32 _ironOreMaxHeight;
 
-        VoxelWorld               _world;
-        vector<GameObjectHandle> _listChunk;          ///< 청크 번호(z × 청크 수 X + x) 순서입니다.
-        GameObjectHandle         _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트입니다. 스폰한 오브젝트라 정리 목록에 들어갑니다.
-        float32                  _statusTimer;
-        int8                     _appliedAutoPlay; ///< 플레이어 폰에 적용한 자동 플레이 상태입니다(−1 아직 없음, 0 끔, 1 켬).
+        VoxelWorld                              _world;
+        unordered_map<uint64, GameObjectHandle> _mapChunkView;       ///< 그리는 청크의 오브젝트입니다. 키는 `VoxelWorld::makeChunkKey` 입니다.
+        GameObjectHandle                        _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트입니다. 스폰한 오브젝트라 정리 목록에 들어갑니다.
+        float32                                 _statusTimer;
+        int32                                   _centerChunkX; ///< 상주 범위의 가운데 청크입니다(몸이 든 청크).
+        int32                                   _centerChunkZ;
+        int8                                    _appliedAutoPlay;  ///< 플레이어 폰에 적용한 자동 플레이 상태입니다(−1 아직 없음, 0 끔, 1 켬).
+        uint8                                   _bChunkViewsStale; ///< 그릴 청크가 바뀌어 플러시에서 뷰를 맞춰야 합니다.
+        VoxelAtlasGridGate                      _atlasGate;        ///< 블록 머티리얼 아틀라스 칸 검사(월드당 한 번). 카탈로그가 정본이다
     };
 } // namespace sw

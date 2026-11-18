@@ -922,6 +922,106 @@ static float4 MaterialTexture::sampleLevelZero( uint index, float2 uv )
     #endif
 }
 
+/**
+ * @brief 머티리얼 텍스처를 준 UV 미분으로 읽습니다(밉 단계를 미분이 고른다). 인덱스의 뜻은 `MaterialTexture::sampleIndex` 와 같고 텍스처가 없으면 흰색입니다.
+ * @details 아틀라스 타일을 `frac` 로 되풀이하는 셰이더(복셀 블록 — voxel_blocks.hlsl)가 쓴다. 되풀이 경계에서 암시 미분이 튀어 가장 작은 밉으로 읽는 줄무늬를
+ *          연속인 UV 의 미분으로 막는다(언리얼 `Texture2DSampleGrad` · 유니티 `SAMPLE_TEXTURE2D_GRAD` 자리). 뷰의 밉 바이어스는 미분을 2^바이어스 배로 늘여 같게 맞춘다.
+ *          보기 모드 Mipmaps 는 `sampleIndex` 처럼 밉 단계 색을 낸다.
+ */
+static float4 MaterialTexture::sampleGrad( uint index, float2 uv, float2 gradX, float2 gradY )
+{
+    #if defined( SW_VIEWMODE_MIPMAPS )
+    return MaterialTexture::sampleMipColor( index, uv );
+    #else
+    const float biasScale = exp2( g_TextureMipBias.x );
+    gradX *= biasScale;
+    gradY *= biasScale;
+        #if defined( SW_NATIVE_BINDLESS )
+    if ( index == kInvalidIndex )
+        return float4( 1, 1, 1, 1 );
+    const uint slot = Bindless::textureSlot( index );
+            #if defined( __spirv__ )
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleGrad( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv, gradX, gradY );
+            #else
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            #endif
+        #else
+    switch ( index )
+    {
+            #if defined( SW_SEPARATE_SAMPLER_EMULATION )
+        case 0u:
+            return g_SwMaterialTex0.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 1u:
+            return g_SwMaterialTex1.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 2u:
+            return g_SwMaterialTex2.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 3u:
+            return g_SwMaterialTex3.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 4u:
+            return g_SwMaterialTex4.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 5u:
+            return g_SwMaterialTex5.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 6u:
+            return g_SwMaterialTex6.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 7u:
+            return g_SwMaterialTex7.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 8u:
+            return g_SwMaterialTex8.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 9u:
+            return g_SwMaterialTex9.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 10u:
+            return g_SwMaterialTex10.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 11u:
+            return g_SwMaterialTex11.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 12u:
+            return g_SwMaterialTex12.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 13u:
+            return g_SwMaterialTex13.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 14u:
+            return g_SwMaterialTex14.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+        case 15u:
+            return g_SwMaterialTex15.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+            #else
+        case 0u:
+            return g_SwMaterialTex0.SampleGrad( g_SwMaterialTex0Sampler, uv, gradX, gradY );
+        case 1u:
+            return g_SwMaterialTex1.SampleGrad( g_SwMaterialTex1Sampler, uv, gradX, gradY );
+        case 2u:
+            return g_SwMaterialTex2.SampleGrad( g_SwMaterialTex2Sampler, uv, gradX, gradY );
+        case 3u:
+            return g_SwMaterialTex3.SampleGrad( g_SwMaterialTex3Sampler, uv, gradX, gradY );
+        case 4u:
+            return g_SwMaterialTex4.SampleGrad( g_SwMaterialTex4Sampler, uv, gradX, gradY );
+        case 5u:
+            return g_SwMaterialTex5.SampleGrad( g_SwMaterialTex5Sampler, uv, gradX, gradY );
+        case 6u:
+            return g_SwMaterialTex6.SampleGrad( g_SwMaterialTex6Sampler, uv, gradX, gradY );
+        case 7u:
+            return g_SwMaterialTex7.SampleGrad( g_SwMaterialTex7Sampler, uv, gradX, gradY );
+        case 8u:
+            return g_SwMaterialTex8.SampleGrad( g_SwMaterialTex8Sampler, uv, gradX, gradY );
+        case 9u:
+            return g_SwMaterialTex9.SampleGrad( g_SwMaterialTex9Sampler, uv, gradX, gradY );
+        case 10u:
+            return g_SwMaterialTex10.SampleGrad( g_SwMaterialTex10Sampler, uv, gradX, gradY );
+        case 11u:
+            return g_SwMaterialTex11.SampleGrad( g_SwMaterialTex11Sampler, uv, gradX, gradY );
+        case 12u:
+            return g_SwMaterialTex12.SampleGrad( g_SwMaterialTex12Sampler, uv, gradX, gradY );
+        case 13u:
+            return g_SwMaterialTex13.SampleGrad( g_SwMaterialTex13Sampler, uv, gradX, gradY );
+        case 14u:
+            return g_SwMaterialTex14.SampleGrad( g_SwMaterialTex14Sampler, uv, gradX, gradY );
+        case 15u:
+            return g_SwMaterialTex15.SampleGrad( g_SwMaterialTex15Sampler, uv, gradX, gradY );
+            #endif
+        default:
+            return float4( 1, 1, 1, 1 );
+    }
+        #endif
+    #endif
+}
+
 /** @brief 머티리얼 텍스처의 크기(텍셀)입니다. 텍스처가 없으면 (1, 1) 입니다. 인덱스의 뜻은 `MaterialTexture::sampleIndex` 와 같습니다. */
 static float2 MaterialTexture::computeSize( uint index )
 {
