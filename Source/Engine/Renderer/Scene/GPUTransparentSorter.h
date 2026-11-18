@@ -164,6 +164,8 @@ namespace sw
         vector<GPUTransparentSortKey> _listViewKey;
         /// @brief 추가 뷰의 배치 순서마다 가장 먼저 그리는 인스턴스의 키입니다(입자 자리 정하기). 뷰마다 다시 씁니다.
         vector<GPUTransparentSortKey> _listViewBatchHeadKey;
+        /// @brief 추가 뷰의 배치마다 가장 먼저 그릴 인스턴스의 순번입니다(`computeViewOrder`). 뷰마다 다시 씁니다.
+        vector<uint32> _listViewBatchFirstRank;
         /** @brief 투명 정렬의 깊이 축입니다. 영벡터면 카메라까지의 거리를 씁니다. */
         float3 _axis{};
     };

@@ -1632,7 +1632,7 @@ namespace sw
             SW_PROFILE_SCOPE( "GT.VFX.sortParticles" );
             if ( batch._sortMode == VFXSortMode::ViewDepth )
             {
-                slot._order = VFXParticleOrder::appendViewDepth( vector_reference<const GPUParticle>( *pListParticle ), batch._world, eye, axis, listOrder );
+                slot._order = VFXParticleOrder::appendViewDepth( vector_reference<const GPUParticle>( *pListParticle ), batch._world, eye, axis, _listScratchParticleDepth, listOrder );
                 continue;
             }
             // 나이 순서는 뷰와 무관하다 — 방출기마다 한 번 만들고 뷰들이 같은 구간을 쓴다.

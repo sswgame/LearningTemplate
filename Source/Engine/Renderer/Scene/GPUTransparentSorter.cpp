@@ -90,7 +90,8 @@ namespace sw
         }
 
         // 2) 배치마다 가장 먼저 그릴 인스턴스의 rank. 배치 안의 순서는 GPU 정렬(컬링) 또는 RT 의 buildViewTailSlots(컬링 없음)가 정한다.
-        vector<uint32> listBatchFirstRank( listBatch.size(), MathUtil::kMaxUInt32 );
+        vector<uint32>& listBatchFirstRank = _listViewBatchFirstRank;
+        listBatchFirstRank.assign( listBatch.size(), MathUtil::kMaxUInt32 );
         for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
         {
             const GPUMeshBatch& batch          = listBatch[batchIndex];

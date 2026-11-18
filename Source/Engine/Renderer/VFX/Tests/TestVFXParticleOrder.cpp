@@ -47,15 +47,16 @@ SW_TEST_CASE( VFXParticleOrderTest, ViewDepthDrawsFarthestFirst )
 {
     const vector<GPUParticle> listParticle = makeLine();
     vector<uint32>            listOrder{ 99u }; // 앞 방출기의 구간
+    vector<float32>           listDepth;        // 깊이 작업 버퍼(호출마다 다시 쓴다)
     const float3              eye{ 0.0f, 0.0f, -10.0f };
     const float3              axis{ 0.0f, 0.0f, 1.0f };
-    const VFXParticleOrder    range = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, eye, axis, listOrder );
+    const VFXParticleOrder    range = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, eye, axis, listDepth, listOrder );
     SW_EXPECT_EQUAL( range._first, 1u );
     SW_EXPECT_TRUE( isOrder( listOrder, range, vector<uint32>{ 1u, 3u, 2u, 0u } ) );
     SW_EXPECT_EQUAL( listOrder[0], 99u );
 
     // 축이 없으면 눈까지의 거리로 잰다 — 같은 순서다.
-    const VFXParticleOrder distanceRange = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, eye, float3{}, listOrder );
+    const VFXParticleOrder distanceRange = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, eye, float3{}, listDepth, listOrder );
     SW_EXPECT_TRUE( isOrder( listOrder, distanceRange, vector<uint32>{ 1u, 3u, 2u, 0u } ) );
 }
 
@@ -64,9 +65,10 @@ SW_TEST_CASE( VFXParticleOrderTest, OppositeEyeReversesOrder )
 {
     const vector<GPUParticle> listParticle = makeLine();
     vector<uint32>            listOrder;
+    vector<float32>           listDepth;
     const float4x4            world = float4x4::makeTranslation( float3{ 0.0f, 0.0f, 100.0f } );
-    const VFXParticleOrder    front = VFXParticleOrder::appendViewDepth( listParticle, world, float3{ 0.0f, 0.0f, 90.0f }, float3{ 0.0f, 0.0f, 1.0f }, listOrder );
-    const VFXParticleOrder    back  = VFXParticleOrder::appendViewDepth( listParticle, world, float3{ 0.0f, 0.0f, 110.0f }, float3{ 0.0f, 0.0f, -1.0f }, listOrder );
+    const VFXParticleOrder    front = VFXParticleOrder::appendViewDepth( listParticle, world, float3{ 0.0f, 0.0f, 90.0f }, float3{ 0.0f, 0.0f, 1.0f }, listDepth, listOrder );
+    const VFXParticleOrder    back  = VFXParticleOrder::appendViewDepth( listParticle, world, float3{ 0.0f, 0.0f, 110.0f }, float3{ 0.0f, 0.0f, -1.0f }, listDepth, listOrder );
     SW_EXPECT_TRUE( isOrder( listOrder, front, vector<uint32>{ 1u, 3u, 2u, 0u } ) );
     SW_EXPECT_TRUE( isOrder( listOrder, back, vector<uint32>{ 0u, 2u, 3u, 1u } ) );
 }
@@ -81,7 +83,8 @@ SW_TEST_CASE( VFXParticleOrderTest, EqualDepthKeepsIndexOrder )
     listParticle.push_back( makeParticle( 5.0f, 0.0f ) );
     listParticle.push_back( makeParticle( 2.0f, 0.0f ) );
     vector<uint32>         listOrder;
-    const VFXParticleOrder range = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, float3{ 0.0f, 0.0f, -10.0f }, float3{ 0.0f, 0.0f, 1.0f }, listOrder );
+    vector<float32>        listDepth;
+    const VFXParticleOrder range = VFXParticleOrder::appendViewDepth( listParticle, float4x4::Identity, float3{ 0.0f, 0.0f, -10.0f }, float3{ 0.0f, 0.0f, 1.0f }, listDepth, listOrder );
     SW_EXPECT_TRUE( isOrder( listOrder, range, vector<uint32>{ 1u, 3u, 0u, 2u, 4u } ) );
 }
 
