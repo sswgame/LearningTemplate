@@ -1465,7 +1465,7 @@ namespace sw
                     bComplete = false;
                     return;
                 }
-                CharacterSurfaceBinding::applyValues( _surface, *pInstance );
+                _surfaceBinding.applyValues( _surface, *pInstance );
                 _surfaceBinding.applyMasks( ownerKey, _surface, partIndex, *pInstance );
             };
             if ( static_cast<int32>( partIndex ) == _bodyPart )

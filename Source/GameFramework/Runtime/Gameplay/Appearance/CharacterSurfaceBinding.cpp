@@ -76,12 +76,45 @@ namespace sw
         return instance.get(); // 메시가 쥐고 있다
     }
 
+    void CharacterSurfaceBinding::populateParameterNames( const vector<SurfaceChannelDef>& listChannel, uint32 regionCount, uint32 chunkCount )
+    {
+        bool bSameChannels = _listChannelSource.size() == listChannel.size();
+        for ( size_t channelIndex = 0; bSameChannels && channelIndex < listChannel.size(); ++channelIndex )
+        {
+            bSameChannels = _listChannelSource[channelIndex] == listChannel[channelIndex]._name;
+        }
+        if ( bSameChannels == false )
+        {
+            _listChannelSource.clear();
+            _listChannelName.clear();
+            for ( const SurfaceChannelDef& channel : listChannel )
+            {
+                _listChannelSource.push_back( channel._name );
+                _listChannelName.push_back( SurfaceParameterNames::makeChannel( channel._name ) );
+            }
+        }
+        if ( _regionChunkCount == chunkCount && _listRegionName.size() == static_cast<size_t>( regionCount ) * chunkCount )
+            return;
+        _regionChunkCount = chunkCount;
+        _listRegionName.clear();
+        for ( uint32 region = 0; region < regionCount; ++region )
+        {
+            for ( uint32 chunk = 0; chunk < chunkCount; ++chunk )
+            {
+                _listRegionName.push_back( SurfaceParameterNames::makeRegion( region, chunk ) );
+            }
+        }
+    }
+
     void CharacterSurfaceBinding::applyValues( const CharacterSurfaceState& state, MaterialInstance& instance )
     {
         const vector<SurfaceChannelDef>& listChannel  = state.getChannels();
         const uint32                     channelCount = static_cast<uint32>( listChannel.size() );
-        vector<float32>                  listValue;
-        vector<float32>                  listMax( channelCount, 0.0f );
+        const uint32                     chunkCount   = ( channelCount + SurfaceParameterNames::kChannelsPerVector - 1 ) / SurfaceParameterNames::kChannelsPerVector;
+        populateParameterNames( listChannel, state.getRegionCount(), chunkCount );
+        vector<float32>& listValue = _listValueScratch;
+        vector<float32>& listMax   = _listMaxScratch;
+        listMax.assign( channelCount, 0.0f );
         for ( uint32 region = 0; region < state.getRegionCount(); ++region )
         {
             state.getRegionParameters( region, listValue );
@@ -90,7 +123,7 @@ namespace sw
                 listMax[channelIndex] = MathUtil::max( listMax[channelIndex], listValue[channelIndex] );
             }
             // 영역 벡터는 채널 순서로 네 개씩 묶는다.
-            for ( uint32 chunk = 0; chunk * SurfaceParameterNames::kChannelsPerVector < channelCount; ++chunk )
+            for ( uint32 chunk = 0; chunk < chunkCount; ++chunk )
             {
                 float32 arrComponent[SurfaceParameterNames::kChannelsPerVector] = {};
                 for ( uint32 lane = 0; lane < SurfaceParameterNames::kChannelsPerVector; ++lane )
@@ -98,12 +131,12 @@ namespace sw
                     const uint32 channelIndex = chunk * SurfaceParameterNames::kChannelsPerVector + lane;
                     arrComponent[lane]        = channelIndex < channelCount ? listValue[channelIndex] : 0.0f;
                 }
-                instance.setVectorParameter( SurfaceParameterNames::makeRegion( region, chunk ), float4{ arrComponent[0], arrComponent[1], arrComponent[2], arrComponent[3] } );
+                instance.setVectorParameter( _listRegionName[static_cast<size_t>( region ) * chunkCount + chunk], float4{ arrComponent[0], arrComponent[1], arrComponent[2], arrComponent[3] } );
             }
         }
         for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
         {
-            instance.setScalarParameter( SurfaceParameterNames::makeChannel( listChannel[channelIndex]._name ), listMax[channelIndex] );
+            instance.setScalarParameter( _listChannelName[channelIndex], listMax[channelIndex] );
         }
     }
 
