@@ -83,7 +83,7 @@ namespace sw
 
             // 셰이딩을 바꾸는 모드(Unlit, Normals, Depth, Overdraw)는 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이다.
             // define 은 쿠커와 같은 원본(findViewModeDefine)에서 얻는다. 쿠커가 쿠킹하지 않은 define 은 Shipping 에서 PSO 를 만들 수 없다.
-            const utf8* pViewModeDefine = FrameRendererUtil::findViewModeDefine( viewMode );
+            const utf8* pViewModeDefine = getRenderViewModeInfo( viewMode )._pShaderDefine;
             if ( pViewModeDefine == nullptr )
                 return bChanged;
             for ( const string& existing : desc._listShaderDefine )
@@ -125,7 +125,7 @@ namespace sw
             if ( info.hasFlag( RenderPassTraitFlag::kBlend ) )
                 state.setAllBlendTargets( info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) ? BlendTargetState::makePremultipliedAlpha() : BlendTargetState::makeStraightAlpha() );
             // 풀스크린 삼각형의 와인딩에는 앞뒤 의미가 없다. 컬링하면 화면이 빈다.
-            if ( FrameRendererUtil::shouldDrawSceneMeshes( passType ) == false )
+            if ( getRenderPassTypeInfo( passType ).shouldDrawSceneMeshes() == false )
                 state._cullMode = CullMode::None;
             else
                 state._cullMode = info.hasFlag( RenderPassTraitFlag::kCullFront ) ? CullMode::Front : CullMode::Back;
@@ -911,11 +911,12 @@ namespace sw
             return RenderPSOCache::MaterialPSOEntry::failed();
         }
 
-        bool bChanged{ false };
+        const RenderPassTypeInfo& passInfo = getRenderPassTypeInfo( passType );
+        bool                      bChanged{ false };
         if ( pPermutation != nullptr )
         {
             // 패스 → 머티리얼 순서로 합친다. 무엇을 덮는지는 패스 종류의 표가 정한다(`RenderStateOverride::Scope`). 값이 같으면 PSO 를 더 만들지 않는다.
-            const RenderState merged = pPermutation->_renderStateOverride.applyTo( desc._renderState, FrameRendererUtil::getMaterialStateScope( passType ) );
+            const RenderState merged = pPermutation->_renderStateOverride.applyTo( desc._renderState, passInfo.getMaterialStateScope() );
             if ( merged != desc._renderState )
             {
                 desc._renderState = merged;
@@ -923,20 +924,20 @@ namespace sw
             }
             // 머티리얼 셰이더를 쓰는 패스만 경로를 교체한다. 그림자와 뎁스는 자기 지오메트리 셰이더가 기준이고, 모양을 머티리얼 코드가 정하는
             // 배치(알파 컷오프 · 정점 변형)만 머티리얼 셰이더의 깊이 퍼뮤테이션으로 그린다(usesMaterialShaderForDepth — 쿠커와 같은 판정).
-            const bool bMaterialDepthShader = FrameRendererUtil::usesMaterialShaderForDepth( passType, &pPermutation->_listDefine );
-            const bool bReplaceShaderPath   = ( FrameRendererUtil::usesMaterialShader( passType ) || bMaterialDepthShader ) && pPermutation->_shaderPath.empty() == false &&
+            const bool bMaterialDepthShader = passInfo.usesMaterialShaderForDepth( &pPermutation->_listDefine );
+            const bool bReplaceShaderPath   = ( passInfo.usesMaterialShader() || bMaterialDepthShader ) && pPermutation->_shaderPath.empty() == false &&
                                             pPermutation->_shaderPath != desc._vertexShaderPath;
             if ( bReplaceShaderPath )
             {
                 desc._vertexShaderPath = pPermutation->_shaderPath;
                 desc._pixelShaderPath  = pPermutation->_shaderPath;
                 // 깊이 패스는 컬러 출력이 없다 — 픽셀 스테이지는 알파 컷오프의 버리기에만 둔다.
-                if ( bMaterialDepthShader && FrameRendererUtil::hasMaterialDepthPixelStage( passType, &pPermutation->_listDefine ) == false )
+                if ( bMaterialDepthShader && passInfo.hasMaterialDepthPixelStage( &pPermutation->_listDefine ) == false )
                     desc._pixelShaderPath.clear();
                 bChanged = true;
             }
             // 변위 머티리얼은 머티리얼 셰이더의 헐 · 도메인을 붙인다(쿠커와 같은 판정). 테셀레이션이 없는 백엔드에서는 평면으로 대신 그리지 않고 이 조합을 그리지 않는다.
-            if ( FrameRendererUtil::isMaterialTessellated( passType, &pPermutation->_listDefine ) )
+            if ( passInfo.isMaterialTessellated( &pPermutation->_listDefine ) )
             {
                 if ( _pDevice->getCapabilities()._bMaterialTessellation == SW_FALSE )
                 {
@@ -951,7 +952,7 @@ namespace sw
                 bChanged               = true;
             }
             // 등장 디더 변형은 패스 셰이더의 깊이 패스에도 픽셀 스테이지가 있어야 한다 — 기본 패스와 같은 픽셀을 버린다(쿠커와 같은 판정).
-            if ( FrameRendererUtil::needsAppearanceDitherPixelStage( passType, &pPermutation->_listDefine ) && desc._pixelShaderPath.empty() )
+            if ( passInfo.needsAppearanceDitherPixelStage( &pPermutation->_listDefine ) && desc._pixelShaderPath.empty() )
             {
                 desc._pixelShaderPath = desc._vertexShaderPath;
                 if ( desc._pixelEntryPoint.empty() )
@@ -977,7 +978,7 @@ namespace sw
 
         // 뷰 모드는 머티리얼 퍼뮤테이션 **뒤에** 적용한다. 순서가 반대면 머티리얼이 셰이더 경로를
         // 교체할 때 방금 넣은 define 이 다른 셰이더로 넘어가 의미가 달라진다.
-        if ( FrameRendererUtil::shouldApplyViewMode( passType ) && applyViewModeToDesc( desc, viewMode ) )
+        if ( passInfo.shouldApplyViewMode() && applyViewModeToDesc( desc, viewMode ) )
             bChanged = true;
 
         // 거울 변환 배치는 감김이 뒤집혀 있다. 패스의 컬 모드를 맞바꿔야 같은 면(바깥 면)이 남는다. 와이어프레임처럼 컬링이 없는
@@ -1026,7 +1027,7 @@ namespace sw
         bool bCreatedVariant{ false };
         for ( const auto& [passType, passPSO] : _pCache->getEnginePSOs() )
         {
-            if ( passPSO == 0 || FrameRendererUtil::shouldDrawSceneMeshes( passType ) == false )
+            if ( passPSO == 0 || getRenderPassTypeInfo( passType ).shouldDrawSceneMeshes() == false )
                 continue;
             const bool                        bTransparentPass = getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
             const vector<MaterialPSORequest>& listRequest      = bTransparentPass ? listTransparentRequest : listOpaqueRequest;
@@ -1068,8 +1069,8 @@ namespace sw
                 for ( const auto& [passType, passPSO] : _pCache->getEnginePSOs() )
                 {
                     const bool bTransparentPass = getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
-                    const bool bSkippedPass     = passPSO == 0 || FrameRendererUtil::shouldDrawSceneMeshes( passType ) == false || bTransparentPass != bTransparentMaterial;
-                    if ( bSkippedPass || FrameRendererUtil::shouldDrawMaterialInPass( passType, &permutation._listDefine ) == false )
+                    const bool bSkippedPass     = passPSO == 0 || getRenderPassTypeInfo( passType ).shouldDrawSceneMeshes() == false || bTransparentPass != bTransparentMaterial;
+                    if ( bSkippedPass || getRenderPassTypeInfo( passType ).shouldDrawMaterial( &permutation._listDefine ) == false )
                         continue;
                     for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
                     {
@@ -1114,7 +1115,7 @@ namespace sw
         // 이 패스가 그리지 않는 배치(외곽선을 켜지 않은 머티리얼)의 변형은 만들지 않는다. 쿠커도 그것을 쿠킹하지 않는다.
         const GPUShaderPermutation* pRequestPermutation =
             ( request._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( request._shaderPermutation );
-        if ( FrameRendererUtil::shouldDrawMaterialInPass( passType, pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
+        if ( getRenderPassTypeInfo( passType ).shouldDrawMaterial( pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
             return false;
         bool bCreatedVariant{ false };
         for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
@@ -1126,7 +1127,7 @@ namespace sw
             {
                 // 퍼뮤테이션이 없는 배치를 위한 변형이다. 적용하는 것이 뷰 모드와 컬 반전뿐이다. Lit 이고 거울이 아니면 만들 것이 없다
                 // (그때는 패스 PSO 가 그대로 정답이고 psoForBatch 도 캐시를 보지 않는다).
-                const bool bAppliesViewMode = ( viewMode != RenderViewMode::Lit ) && FrameRendererUtil::shouldApplyViewMode( passType );
+                const bool bAppliesViewMode = ( viewMode != RenderViewMode::Lit ) && getRenderPassTypeInfo( passType ).shouldApplyViewMode();
                 const bool bNeedsVariant    = bAppliesViewMode || bReverseCulling || request._vertexFormat != RHIMeshVertexFormat::Packed;
                 if ( bNeedsVariant && ensureMaterialPSOVariant( passPSO, passType, nullptr, 0, bReverseCulling, viewMode, request._vertexFormat ) )
                     bCreatedVariant = true;

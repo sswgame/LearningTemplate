@@ -98,7 +98,7 @@ namespace sw
         void setInputRoleEnabled( RenderPassInputRole role, bool bEnabled );
         /**
          * @brief 이 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
-         * @details 판정은 `FrameRendererUtil::shouldDrawMaterialInPass` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
+         * @details 판정은 `RenderPassTypeInfo::shouldDrawMaterial` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
          */
         bool shouldDrawBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
         /**
