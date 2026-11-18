@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetEndpointSecurity.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 
 namespace sw

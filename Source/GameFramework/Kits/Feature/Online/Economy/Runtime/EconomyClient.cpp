@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/EconomyClient.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyClient.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/EconomyMirror.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyMirror.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 
 namespace sw

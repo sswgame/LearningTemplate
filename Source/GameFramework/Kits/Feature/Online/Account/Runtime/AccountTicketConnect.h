@@ -16,7 +16,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
 
 namespace sw

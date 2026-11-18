@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/API/SystemExternalBrowser.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/SystemExternalBrowser.h"
 
 #include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"

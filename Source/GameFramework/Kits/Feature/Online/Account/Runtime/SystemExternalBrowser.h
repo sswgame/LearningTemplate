@@ -10,7 +10,7 @@
 #include "Core/Container/string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/API/PlatformLoginClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/PlatformLoginClient.h"
 
 namespace sw
 {

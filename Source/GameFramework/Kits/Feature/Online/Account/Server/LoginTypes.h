@@ -10,7 +10,7 @@
 #include "Core/Network/Security/NetSecurityTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTypes.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 
 namespace sw

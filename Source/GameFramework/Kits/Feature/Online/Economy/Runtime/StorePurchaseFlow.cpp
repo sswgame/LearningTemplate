@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/StorePurchaseFlow.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/StorePurchaseFlow.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/ReceiptBuyerToken.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/ReceiptBuyerToken.h"
 
 namespace sw
 {

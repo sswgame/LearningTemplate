@@ -6,7 +6,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTypes.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"

@@ -17,8 +17,8 @@
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountProtocol.h"
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTypes.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolClient.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
 

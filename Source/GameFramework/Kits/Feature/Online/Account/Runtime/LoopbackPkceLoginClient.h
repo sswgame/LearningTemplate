@@ -15,7 +15,7 @@
 #include "Core/Network/Transport/StreamTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/API/PlatformLoginClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/PlatformLoginClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
 

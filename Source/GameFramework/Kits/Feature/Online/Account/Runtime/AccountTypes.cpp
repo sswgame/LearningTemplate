@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTypes.h"
 
 namespace sw
 {

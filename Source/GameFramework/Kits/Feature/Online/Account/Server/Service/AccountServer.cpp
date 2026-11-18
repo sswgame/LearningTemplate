@@ -4,7 +4,7 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountProtocol.h"
 
 namespace sw
 {

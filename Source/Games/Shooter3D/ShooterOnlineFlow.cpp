@@ -7,7 +7,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/EconomyClient.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyClient.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardClient.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingClient.h"

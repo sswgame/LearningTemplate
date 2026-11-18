@@ -13,7 +13,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/EconomyProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolClient.h"
 
 namespace sw

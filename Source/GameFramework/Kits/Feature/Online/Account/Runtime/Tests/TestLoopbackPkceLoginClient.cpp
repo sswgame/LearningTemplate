@@ -10,7 +10,7 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/API/LoopbackPkceLoginClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/LoopbackPkceLoginClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
 

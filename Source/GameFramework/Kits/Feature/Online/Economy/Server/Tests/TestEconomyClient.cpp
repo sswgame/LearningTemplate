@@ -4,10 +4,10 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/EconomyClient.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/EconomyMirror.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/StorePurchaseFlow.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/ReceiptBuyerToken.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyClient.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyMirror.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/ReceiptBuyerToken.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/StorePurchaseFlow.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"

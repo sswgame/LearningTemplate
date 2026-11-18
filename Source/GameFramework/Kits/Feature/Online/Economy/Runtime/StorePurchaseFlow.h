@@ -16,8 +16,8 @@
 #include "Core/Network/Message/NetRequest.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/EconomyClient.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/EconomyProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyClient.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyProtocol.h"
 
 namespace sw
 {

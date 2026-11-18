@@ -14,7 +14,7 @@
 #include "Core/Event/ConsumerLock.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"

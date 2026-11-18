@@ -17,9 +17,9 @@
 #include "Core/Network/Transport/StreamTypes.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatClient.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/EconomyClient.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyClient.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardClient.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsClient.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
