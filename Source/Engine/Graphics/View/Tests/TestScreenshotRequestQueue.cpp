@@ -86,3 +86,19 @@ SW_TEST_CASE( ScreenshotRequestQueueTest, PacketSlotHoldsOne )
     SW_EXPECT_TRUE( queue.isPacketSlotFree() );
     SW_EXPECT_FALSE( queue.takeForPacket( path ) );
 }
+
+/** @brief [ScreenshotRequestQueueTest] 앞 요청의 결과는 뒤 요청이 끝난 뒤에도 제 표로 읽힌다 — 에디터 버튼과 시작 인자 사진이 겹쳐도 남의 경로를 제 결과로 읽지 않는다 */
+SW_TEST_CASE( ScreenshotRequestQueueTest, EarlierTicketSurvivesLaterResults )
+{
+    ScreenshotRequestQueue queue;
+    const uint32           editorTicket  = queue.put( makeShotPath( "editor.png" ), RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
+    const uint32           startupTicket = queue.put( makeShotPath( "startup.png" ), RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
+    ScreenshotRequest      request;
+    SW_REQUIRE_TRUE( queue.take( request ) );
+    queue.reportCompleted( request._ticket, true, request._path );
+    SW_REQUIRE_TRUE( queue.take( request ) );
+    queue.reportCompleted( request._ticket, false, request._path ); // 뒤 요청은 실패했다 — 마지막 경로가 빈다
+    SW_EXPECT_TRUE( queue.getLastPath().empty() );
+    SW_EXPECT_TRUE( queue.findResult( editorTicket ) == ScreenshotTicketState::Written );
+    SW_EXPECT_TRUE( queue.findResult( startupTicket ) == ScreenshotTicketState::Failed );
+}
