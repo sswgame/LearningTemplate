@@ -137,6 +137,15 @@ namespace
             refreshModel();
         }
 
+        /** @brief 본 하나의 로컬 스케일을 정합니다 — 체형 비율이 거는 길(`BoneProportion::applyToPose`)과 같다. 자식의 로컬 이동은 그대로이고 모델 공간 길이만 늘어난다. */
+        void setBoneScale( uint32 bone, const float3& scale )
+        {
+            BoneTransform transform = _pose.getBoneTransform( bone );
+            transform._scale        = scale;
+            _pose.setBoneTransform( bone, transform );
+            refreshModel();
+        }
+
         /** @brief 준비와 평가를 한 번 돌립니다. @p lodState 는 유닛의 LOD 판정입니다(기본은 등급 0 — 모든 노드가 켜진다). */
         void run( const IRigGroundQuery* pGround = nullptr, float32 deltaSeconds = 1.0f / 60.0f, const AnimationLODState& lodState = AnimationLODState{} )
         {
@@ -542,17 +551,15 @@ SW_TEST_CASE_F( RigIKTest, FootPlacementRaisesByTheHeelLift )
     SW_EXPECT_NEAR( position( kFootL )._y, 0.18f, 2.0e-3f );
 }
 
-// 체형이 다리를 1.2 배로 늘이면(마디 길이) 디딘 발이 땅 아래로 간다 — 골반을 다리 길이 비만큼 올려 발목이 레퍼런스 높이(0.1)에 선다. 발바닥 틈은 0 이다.
+// 체형이 다리를 1.2 배로 늘이면(허벅지 스케일 — 체형 비율이 거는 길) 디딘 발이 땅 아래로 간다 — 골반을 다리 길이 비만큼 올려 발목이 레퍼런스 높이(0.1)에 선다. 발바닥 틈은 0 이다.
 SW_TEST_CASE_F( RigIKTest, FootPlacementLiftsThePelvisForLongerLegs )
 {
     SW_REQUIRE_TRUE( load( makeFootPlacement( R"(interp_speed="0")" ) ) );
     const auto stretchLegs = [this]()
     {
         _pose.setToReference( _skeleton );
-        setBone( kKneeL, float3{ 0.0f, -0.54f, 0.024f } );
-        setBone( kFootL, float3{ 0.0f, -0.54f, -0.024f } );
-        setBone( kKneeR, float3{ 0.0f, -0.54f, 0.024f } );
-        setBone( kFootR, float3{ 0.0f, -0.54f, -0.024f } );
+        setBoneScale( kHipL, float3{ 1.2f, 1.2f, 1.2f } ); // 무릎 · 발목의 로컬 이동은 그대로 — 두 마디가 모두 1.2 배다
+        setBoneScale( kHipR, float3{ 1.2f, 1.2f, 1.2f } );
     };
     FakeRigGround ground;
     stretchLegs();
@@ -569,6 +576,26 @@ SW_TEST_CASE_F( RigIKTest, FootPlacementLiftsThePelvisForLongerLegs )
     SW_EXPECT_NEAR( value, 0.0f, 2.0e-3f );
     SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "sole_gap_peak" ), value ) );
     SW_EXPECT_NEAR( value, 0.0f, 2.0e-3f );
+}
+
+// 결함: 다리 길이 비를 바인드 포즈 길이로 나눠, 클립이 다른 뼈 길이를 실으면(다른 골격에서 옮긴 애니메이션) 체형이 없는 몸도 골반을 옮겼다(UBC 플레이어 5 cm).
+// 클립의 로컬 뼈 길이가 바뀐 것은 체형이 아니다 — 골반을 옮기지 않는다(음성 대조: 위 테스트는 같은 길이를 스케일로 늘여 옮긴다).
+SW_TEST_CASE_F( RigIKTest, FootPlacementIgnoresClipBoneLengths )
+{
+    SW_REQUIRE_TRUE( load( makeFootPlacement( R"(interp_speed="0")" ) ) );
+    FakeRigGround ground;
+    for ( uint32 frame = 0; frame < 2; ++frame ) // 출력은 다음 준비가 옮긴다
+    {
+        _pose.setToReference( _skeleton );
+        setBone( kKneeL, float3{ 0.0f, -0.54f, 0.024f } );
+        setBone( kFootL, float3{ 0.0f, -0.54f, -0.024f } );
+        setBone( kKneeR, float3{ 0.0f, -0.54f, 0.024f } );
+        setBone( kFootR, float3{ 0.0f, -0.54f, -0.024f } );
+        run( &ground );
+    }
+    float32 value = 1.0f;
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "leg_lift" ), value ) );
+    SW_EXPECT_NEAR( value, 0.0f, 1.0e-4f );
 }
 
 // 발바닥 틈: 땅이 없어 발이 공중(애니메이션 그대로)이면 틈이 땅 높이 0 에서 잰 값이고, 최댓값이 그 절댓값을 지킨다.

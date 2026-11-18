@@ -5,11 +5,11 @@
      시나리오 shooter3d/bodyshapehands 가 팔 · 다리 극값에서 Shooter3D.HandReachError 와 발바닥 틈(Feet.sole_gap_peak)을 본다.
      Hair.Length 는 머리 부품의 머티리얼 채널이다(두건이 머리카락을 감추면 몸 축으로 남는다 — 이 리그는 받지 않는다). -->
 <BodyShapeSet>
-  <!-- 어깨 폭 — 쇄골을 부모(spine_03) 공간 x 로 벌린다. spine_03 을 키우면 목 · 머리까지 넓어진다. -->
+  <!-- 어깨 폭 — 쇄골을 부모(spine_03) 공간 x 로 벌린다. spine_03 을 키우면 목 · 머리까지 넓어진다. 넓은 쪽 2.5 cm 는 짧은 팔(-1)과 겹쳐도 3인칭 두 손 견착이 총에 닿는 범위다(bodyshapehands ③). -->
   <Axis name="Shoulder.Width" min="-1" max="1" default="0">
     <Positive>
-      <Bone name="clavicle_l" offset="0.03 0 0"/>
-      <Bone name="clavicle_r" offset="-0.03 0 0"/>
+      <Bone name="clavicle_l" offset="0.025 0 0"/>
+      <Bone name="clavicle_r" offset="-0.025 0 0"/>
     </Positive>
     <Negative>
       <Bone name="clavicle_l" offset="-0.015 0 0"/>

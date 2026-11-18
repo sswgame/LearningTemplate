@@ -454,11 +454,8 @@ namespace sw
                     foot._mid           = listBone[1];
                     foot._end           = listBone[2];
                     foot._animatedModel = listReference[foot._end].getTranslation();
-                    // 디딘 발의 발목 높이와 다리 마디 길이 — 체형 보정과 발바닥 틈(`sole_gap`)의 기준이다.
-                    const float3 rootModel = listReference[foot._root].getTranslation();
-                    const float3 midModel  = listReference[foot._mid].getTranslation();
-                    foot._referenceAnkleY  = foot._animatedModel._y;
-                    foot._referenceLength  = ( midModel - rootModel ).getLength() + ( foot._animatedModel - midModel ).getLength();
+                    // 디딘 발의 발목 높이 — 발바닥 틈(`sole_gap`)의 기준이다.
+                    foot._referenceAnkleY = foot._animatedModel._y;
                 }
                 return true;
             }
@@ -506,8 +503,11 @@ namespace sw
                     const float3  midModel  = pose.getModelPosition( foot._mid );
                     const float3  endModel  = pose.getModelPosition( foot._end );
                     const float32 length    = ( midModel - rootModel ).getLength() + ( endModel - midModel ).getLength();
-                    const float32 ratio     = foot._referenceLength > MathUtil::kEpsilon ? length / foot._referenceLength : 1.0f;
-                    foot._legLift           = ( ratio - 1.0f ) * ( rootModel._y - foot._referenceAnkleY );
+                    // 체형이 준 비만 본다 — 분모는 지금 클립의 로컬 뼈 길이(부모 스케일 전)다. 바인드 포즈 길이로 나누면 클립이 실은 뼈 길이 차이까지
+                    // 체형으로 오인해 기본 몸에서도 골반을 옮겼다(UBC 플레이어 5 cm — 1인칭 손이 시점 총에 닿지 못했다).
+                    const float32 restLength = pose.getLocalTranslation( foot._mid ).getLength() + pose.getLocalTranslation( foot._end ).getLength();
+                    const float32 ratio      = restLength > MathUtil::kEpsilon ? length / restLength : 1.0f;
+                    foot._legLift            = ( ratio - 1.0f ) * ( rootModel._y - foot._referenceAnkleY );
                     legLiftSum += foot._legLift;
                 }
                 _legLift = _listFoot.empty() ? 0.0f : legLiftSum / static_cast<float32>( _listFoot.size() );
@@ -656,7 +656,6 @@ namespace sw
                 float32       _offset{ 0.0f };
                 float32       _outputOffset{ 0.0f };    ///< 게임 스레드 사본(준비 단계가 `_offset` 에서 옮긴다)
                 float32       _referenceAnkleY{ 0.0f }; ///< 레퍼런스 포즈의 발목 높이(디딘 발이 땅 위에 있는 높이)
-                float32       _referenceLength{ 0.0f }; ///< 레퍼런스 포즈의 두 마디 길이 합(체형 비율 없는 다리)
                 float32       _legLift{ 0.0f };         ///< 이번 평가에서 다리 길이 비가 이 발에 요구한 골반 높이 보정
                 uint32        _root{ 0 };
                 uint32        _mid{ 0 };

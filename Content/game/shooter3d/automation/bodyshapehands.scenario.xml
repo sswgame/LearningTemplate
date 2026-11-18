@@ -4,7 +4,7 @@
   Shooter3D 플레이어 몸 체형 — 몸 부품(UBC)의 체형 축(common/characters/ubc/ubc.bodyshape.xml: Shoulder.Width · Arm.Length · Leg.Length)을 마을 사람 스키마 슬라이더
   (ShoulderWidth · ArmLength · LegLength)로 바꾼 뒤에도 손 IK 가 총의 Grip · SupportHand 에 닿고(Shooter3D.HandReachError ≤ 0.03 m, bodyviews 와 같은 한도)
   발이 땅에 서는지(발 디딤 Feet.sole_gap_peak 가 다리를 바꾸기 전 기준에서 1.5 cm 안) 본다. 손 IK(TwoBoneIK)는 지금 포즈의 마디 길이로 풀고, 발 디딤은 다리 길이 비만큼 골반을 옮긴다(leg_lift).
-  소총(1 — 두 손 견착)을 든 채 3인칭(시작 카메라)에서 걷고, 1인칭(시점 총)에서 다시 걷는다. 값으로 판정한다(사진 없음).
+  소총(1 — 두 손 견착)을 든 채 3인칭(camera.preset thirdperson)에서 걷고, 1인칭(시점 총)에서 다시 걷는다. 값으로 판정한다(사진 없음).
   실행: App -scenario=game/shooter3d/automation/bodyshapehands.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
 -->
 <Scenario name="game.shooter3d.bodyshapehands" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -16,7 +16,8 @@
 	<AdvanceSimulation frames="25"/>
 	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
 
-	<!-- ⑴ 긴 팔 · 3인칭 걷기 -->
+	<!-- ⑴ 긴 팔 · 3인칭 걷기 — 시작 카메라는 1인칭이라 3인칭으로 바꾼다(1인칭 손 IK 가 켜져 있으면 시점 총을 잡는 손을 본다) -->
+	<DevCommand line="camera.preset thirdperson"/>
 	<DevCommand line="appearance.value PlayerBody ArmLength 1"/>
 	<WaitUntil watch="Appearance.Value" target="PlayerBody" key="ArmLength" near="1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="PlayerBody" equals="1" timeoutFrames="300"/>
@@ -32,7 +33,7 @@
 	<AdvanceSimulation frames="60"/>
 	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
 	<Release slot="Key.S"/>
-	<!-- ⑶ 어깨 폭 극값(짧은 팔 그대로 — 가장 멀다) -->
+	<!-- ⑶ 어깨 폭 극값(짧은 팔 그대로 — 가장 멀다. 넓은 쪽 2.5 cm 가 이 조합에서 닿는 한도다) -->
 	<DevCommand line="appearance.value PlayerBody ShoulderWidth 1"/>
 	<WaitUntil watch="Appearance.Value" target="PlayerBody" key="ShoulderWidth" near="1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="PlayerBody" equals="1" timeoutFrames="300"/>
@@ -62,6 +63,7 @@
 
 	<!-- ⑸ 1인칭 — 시점 총의 Grip · SupportHand 를 긴 팔 · 짧은 팔로 잡는다 -->
 	<DevCommand line="camera.preset firstperson"/>
+	<DevCommand line="appearance.value PlayerBody LegLength 0"/> <!-- 다리는 기본 — 시점 총은 카메라(캡슐 눈높이)에 붙어 다리가 짧으면 몸만 내려간다 -->
 	<DevCommand line="appearance.value PlayerBody ArmLength 1"/>
 	<WaitUntil watch="Appearance.Value" target="PlayerBody" key="ArmLength" near="1" timeoutFrames="2"/>
 	<WaitUntil watch="Appearance.Idle" target="PlayerBody" equals="1" timeoutFrames="300"/>
