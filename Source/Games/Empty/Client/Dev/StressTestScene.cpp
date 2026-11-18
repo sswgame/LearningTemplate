@@ -49,6 +49,7 @@
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 #include "Games/Empty/Client/Dev/StressTestCombatComponent.h"
@@ -408,6 +409,13 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestSpawnChurn, 0, "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 레지스트리 측정)" );
 
     /**
+     * @brief `-gv_stressTestAppearanceChurn=N`: N 프레임마다 프리팹 캐릭터(`-gv_stressTestCharacterPrefab`)마다 외형 씨앗을 바꿔 다시 입힙니다(게임 중 꾸미기 · 차림 교체가 잦은 게임의 패턴).
+     * @details 씨앗은 `kAppearanceChurnSeeds` 개 안에서 돈다 — 차림 수가 유한해 구운 메시 캐시가 적중하기 시작하고, 수백 번 바꿔도 오브젝트 · 캐시 항목이 늘지 않아야 한다
+     *          (시나리오 load/appearancechurn 이 `Scene.ObjectCount` · `Appearance.BakedMeshEntries` 로 본다). 외형이 없는 프리팹이면 아무것도 하지 않는다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestAppearanceChurn, 0, "N 프레임마다 벤치 캐릭터의 외형 씨앗을 바꿔 다시 입힌다 (0=끔 · 꾸미기 교체 · 캐시 · 수명 측정)" );
+
+    /**
      * @brief `-gv_stressTestViews=N`: 격자를 둘러보는 캡처 카메라(CCTV) N 개를 둡니다(렌더 텍스처 512², 프레임마다 그립니다).
      * @details 추가 뷰의 비용(컬링 항목, 풀, 그림자 패스, 기록)을 측정합니다. 한 프레임에 그리는 추가 뷰는 `gv_renderViewBudget`(뷰 수)과 `gv_renderViewMegapixelBudget`(픽셀 합)이 제한합니다.
      */
@@ -426,6 +434,7 @@ namespace sw
         , _listChurnInstance{}
         , _churnRandom{}
         , _churnFrame{ 0 }
+        , _appearanceChurnFrame{ 0 }
         , _benchElapsed{ 0.0f }
         , _benchGridSide{ 0 }
         , _probeFrame{ 0 }
@@ -1231,6 +1240,29 @@ namespace sw
         }
     }
 
+    void StressTestScene::updateAppearanceChurn( GameObjectManager* pObjects )
+    {
+        // 씨앗 수 — 마을 사람 프리셋은 머리 셋 × 옷 둘이라 여덟이면 차림이 모두 나오고 되풀이된다(캐시 적중).
+        constexpr uint32 kAppearanceChurnSeeds = 8;
+        const uint32     every                 = ( gv_stressTestAppearanceChurn > 0 ) ? static_cast<uint32>( gv_stressTestAppearanceChurn ) : 0u;
+        if ( every == 0 || pObjects == nullptr )
+            return;
+        ++_appearanceChurnFrame;
+        if ( ( _appearanceChurnFrame % every ) != 0 )
+            return;
+        const uint64 round = _appearanceChurnFrame / every;
+        for ( size_t index = 0; index < _listBenchExtra.size(); ++index )
+        {
+            Component*                    pComponent  = pObjects->resolveComponent( _listBenchExtra[index] );
+            GameObject*                   pOwner      = pComponent != nullptr ? pComponent->getOwner() : nullptr;
+            CharacterAppearanceComponent* pAppearance = pOwner != nullptr ? pOwner->getComponent<CharacterAppearanceComponent>() : nullptr;
+            if ( pAppearance == nullptr )
+                continue; // 라이트 · 바닥 · 외형 없는 프리팹
+            const uint32 seed = static_cast<uint32>( ( index + round ) % kAppearanceChurnSeeds );
+            pAppearance->setPreset( hashed_string( pAppearance->getPresetID() ), seed );
+        }
+    }
+
     float4 StressTestScene::makeBenchColor( uint32 index )
     {
         // 결정적 해시를 씁니다. 실행마다 같은 이미지가 나와야 스크린샷 비교가 의미를 갖습니다.
@@ -1583,6 +1615,7 @@ namespace sw
         updateProbes( pObjects );
         updateMaterialChurn( pObjects );
         updateSpawnChurn( pObjects, pScene );
+        updateAppearanceChurn( pObjects );
         updateRigCharacters( deltaTime );
         updateRagdollChurn( pObjects );
 

@@ -208,6 +208,8 @@ namespace sw
          * @details `-gv_stressTestMaterialChurn*` 스위치 세 개가 모두 꺼져 있으면 바로 반환합니다. 자세한 이유는 그 스위치들의 주석에 있습니다.
          */
         void updateMaterialChurn( GameObjectManager* pObjects );
+        /** @brief 외형 교체 스트레스(`-gv_stressTestAppearanceChurn=N`)입니다. N 프레임마다 프리팹 캐릭터의 외형 씨앗을 돌려 차림을 바꿉니다. */
+        void updateAppearanceChurn( GameObjectManager* pObjects );
         /** @brief 인스턴스 하나의 값(색, 러프니스)을 무작위로 바꿉니다. */
         void churnInstanceValue( MaterialInstance* pInstance );
         /** @brief 목록에서 인스턴스를 해제합니다(마지막 참조면 여기서 파괴됩니다). 없으면 아무것도 하지 않습니다. */
@@ -265,6 +267,8 @@ namespace sw
         DeterministicRandom32 _churnRandom;
         /** @brief 스트레스가 돈 프레임 수입니다. 키워드를 바꾸는 주기에 씁니다. */
         uint64 _churnFrame;
+        /** @brief 외형 교체 스트레스가 돈 프레임 수입니다(`updateAppearanceChurn`). */
+        uint64 _appearanceChurnFrame;
         /** @brief 애니메이션 누적 시간입니다. */
         float32 _benchElapsed;
         /** @brief 격자 한 변의 큐브 수. 카메라를 다시 맞출 때 씁니다. */
