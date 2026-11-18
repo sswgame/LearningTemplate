@@ -128,8 +128,8 @@ namespace sw
 
         VoxelBlockCatalog();
 
-        /** @brief 블록을 추가하고 번호를 반환합니다. 같은 id 는 내용을 바꾸고 번호를 유지합니다. 255개를 넘으면 공기(0)를 반환합니다. */
-        VoxelBlockIndex addBlock( const VoxelBlockDef& block );
+        /** @brief 블록을 추가하고 번호를 반환합니다. 같은 id 이거나 255개를 넘으면 넣지 않고 비어 있습니다(공기 0 으로 대신하지 않는다 — 저장된 번호를 지킨다). */
+        [[nodiscard]] optional<VoxelBlockIndex> addBlock( const VoxelBlockDef& block );
 
         /** @brief 번호로 찾습니다. 공기이거나 모르는 번호이면 nullptr 입니다. */
         const VoxelBlockDef* findBlock( VoxelBlockIndex index ) const;

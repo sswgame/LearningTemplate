@@ -186,9 +186,11 @@ namespace sw
         bool                       hasFractureData() const { return _asset != nullptr; }
         const DestructionState&    getState() const { return _state; }
         const DestructionEventLog& getEventLog() const { return _eventLog; }
-        /** @brief 사건 기록과 같은 인덱스의 값입니다. 그 사건이 맞힌 떨어진 그룹의 적용 직전 자세입니다. 앵커 그룹이거나 그룹이 없으면 `_groupID` 가 0 입니다. */
-        const vector<FractureGroupPose>& getEventGroupPoses() const { return _listEventGroupPose; }
-        const FractureAsset*             findAsset() const { return _asset.get(); }
+        /** @brief 사건 기록과 같은 인덱스의 값입니다. 그 사건이 맞힌 떨어진 그룹의 적용 직전 자세입니다. 앵커 그룹이거나 그룹이 없으면 비어 있습니다. */
+        const vector<optional<FractureGroupPose>>& getEventGroupPoses() const { return _listEventGroupPose; }
+        /** @brief 맞은 그룹 @p pHit 의 사건 자세입니다. 그룹이 없거나 앵커 그룹이면 비어 있습니다(그룹 번호 0 으로 대신하지 않는다). */
+        [[nodiscard]] static optional<FractureGroupPose> makeEventGroupPose( const FractureGroupRuntime* pHit );
+        const FractureAsset*                             findAsset() const { return _asset.get(); }
         /** @brief 지금 있는 동적 바디 수(떨어진 그룹)입니다. */
         uint32 getDynamicBodyCount() const;
         /** @brief 지금 있는 정적 조각 바디 수(붙은 조각)입니다. */
@@ -362,7 +364,7 @@ namespace sw
         SharedAssetRef<DestructionProfile>     _pProfile; ///< 상태를 시작할 때 받은 프로필(공유 캐시의 한 벌). 구조 상태는 그때의 값을 따로 든다
         DestructionState                       _state;
         DestructionEventLog                    _eventLog;
-        vector<FractureGroupPose>              _listEventGroupPose; ///< `_eventLog` 와 같은 인덱스다. 맞은 떨어진 그룹의 적용 직전 자세다.
+        vector<optional<FractureGroupPose>>    _listEventGroupPose; ///< `_eventLog` 와 같은 인덱스다. 맞은 떨어진 그룹의 적용 직전 자세다(없으면 비어 있다).
         FractureNetworkSync                    _networkSync;        ///< 최근 상태 해시, `driveGroup` 의 자세 목표, 스냅샷 형식이다.
         LockedSwapQueue<FracturePendingDamage> _pendingDamage;      ///< 맞은 사건(물리 콜백 · 네트워크가 쌓고 틱이 가져간다)
         vector<PhysicsBodyHandle>              _listLeafStaticBody; ///< 잎마다 정적 바디다(앵커 그룹의 잎만).

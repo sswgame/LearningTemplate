@@ -43,7 +43,10 @@ namespace
             SW_REQUIRE_TRUE( world.updateResidency( 0, 0, MathUtil::max( world.getChunkCountX(), world.getChunkCountZ() ), chunkCount ) == static_cast<uint32>( chunkCount ) );
         }
 
-        VoxelBlockIndex addBlock( const utf8* pID, bool bSolid, bool bOpaque )
+        /** @brief 블록을 넣습니다. 넣지 못하면 멈춘다(픽스처 준비는 성공해야 한다). */
+        VoxelBlockIndex addBlock( const utf8* pID, bool bSolid, bool bOpaque ) { return tryAddBlock( pID, bSolid, bOpaque ).value(); }
+
+        optional<VoxelBlockIndex> tryAddBlock( const utf8* pID, bool bSolid, bool bOpaque )
         {
             VoxelBlockDef block;
             block._id      = hashed_string( pID );
@@ -141,7 +144,7 @@ SW_TEST_CASE( VoxelBlockCatalogTest, IndexStartsAfterAirAndDuplicateIsRefused )
     SW_EXPECT_TRUE( rig._catalog.findBlockIndex( hashed_string( "glass" ) ).value() == rig._glass );
 
     SW_EXPECT_LOG( "GameCatalog.DuplicateID" );
-    SW_EXPECT_TRUE( rig.addBlock( "stone", false, false ) == kVoxelAirBlock );
+    SW_EXPECT_FALSE( rig.tryAddBlock( "stone", false, false ).has_value() ); // 겹친 id 는 공기 0 이 아니라 비어 있다
     SW_EXPECT_TRUE( rig._catalog.isSolid( rig._stone ) );
     SW_EXPECT_FALSE( rig._catalog.isSolid( rig._water ) );
     SW_EXPECT_FALSE( rig._catalog.isOpaque( rig._glass ) );
@@ -418,7 +421,7 @@ SW_TEST_CASE( VoxelWorldTest, SaveSurvivesCatalogReorder )
         VoxelBlockDef block;
         block._id   = hashed_string( pID );
         block._name = pID;
-        return reordered.addBlock( block );
+        return reordered.addBlock( block ).value();
     };
     const VoxelBlockIndex sand  = addBlock( "sand" );
     const VoxelBlockIndex glass = addBlock( "glass" );
@@ -446,7 +449,7 @@ SW_TEST_CASE( VoxelWorldTest, SaveWithUnknownBlockIsRefused )
     VoxelBlockDef     block;
     block._id   = hashed_string( "stone" );
     block._name = "stone";
-    SW_REQUIRE_TRUE( onlyStone.addBlock( block ) != kVoxelAirBlock );
+    SW_REQUIRE_TRUE( onlyStone.addBlock( block ).has_value() );
     VoxelWorld world;
     SW_REQUIRE_TRUE( world.initialize( 2, 2, &onlyStone ) );
     Archive reading( listSaved.data(), listSaved.size() );
@@ -715,7 +718,7 @@ SW_TEST_CASE( VoxelHotbarTest, SaveSurvivesCatalogReorder )
         VoxelBlockDef block;
         block._id   = hashed_string( pID );
         block._name = pID;
-        SW_REQUIRE_TRUE( reordered.addBlock( block ) != kVoxelAirBlock );
+        SW_REQUIRE_TRUE( reordered.addBlock( block ).has_value() );
     }
     const VoxelBlockIndex glass = reordered.findBlockIndex( hashed_string( "glass" ) ).value();
     SW_REQUIRE_TRUE( glass != rig._glass );
@@ -728,7 +731,7 @@ SW_TEST_CASE( VoxelHotbarTest, SaveSurvivesCatalogReorder )
     VoxelBlockDef     sand;
     sand._id   = hashed_string( "sand" );
     sand._name = "sand";
-    SW_REQUIRE_TRUE( onlySand.addBlock( sand ) != kVoxelAirBlock );
+    SW_REQUIRE_TRUE( onlySand.addBlock( sand ).has_value() );
     VoxelHotbar missing{ &onlySand };
     Archive     readingMissing( listSaved.data(), listSaved.size() );
     SW_EXPECT_FALSE( missing.readState( readingMissing ) );

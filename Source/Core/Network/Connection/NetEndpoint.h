@@ -148,8 +148,8 @@ namespace sw
     /** @brief `connectAsync` 의 결과입니다. */
     struct NetConnectResult
     {
-        NetDisconnectReason _reason{ NetDisconnectReason::None };            ///< None 이면 연결됐다
-        int32               _clientIndex{ constant::invalid_index::kInt32 }; ///< 서버가 준 자기 번호(연결됐을 때)
+        NetDisconnectReason _reason{ NetDisconnectReason::None }; ///< None 이면 연결됐다
+        optional<int32>     _clientIndex{};                       ///< 서버가 준 자기 번호. 연결됐을 때만 있다
 
         bool isConnected() const { return _reason == NetDisconnectReason::None; }
     };
@@ -606,8 +606,8 @@ namespace sw
         float64 _nextDebuggerPollTime                           SW_GUARDED_BY( _mutex ); ///< 디버거가 붙었는지 다시 확인할 시각.
         float64 _nextUpdateTime                                 SW_GUARDED_BY( _mutex ); ///< 다음에 `update` 를 불러야 하는 시각(`getNextUpdateTime`). 보내기 · 연결이 앞당긴다.
         uint32 _protocolID                                      SW_GUARDED_BY( _mutex );
-        atomic<uint32>                                          _updateDepth; ///< `update` 를 두 스레드가 동시에 부르는 실수를 잡는다.
-        int32 _clientIndex                                      SW_GUARDED_BY( _mutex );
+        atomic<uint32>                                          _updateDepth;            ///< `update` 를 두 스레드가 동시에 부르는 실수를 잡는다.
+        optional<int32> _clientIndex                            SW_GUARDED_BY( _mutex ); ///< 서버가 준 자기 번호. 연결됐을 때만 있다
         int32 _receiveCursor                                    SW_GUARDED_BY( _mutex ); ///< 연결마다 받기를 고르게 돌리기 위한 시작 위치.
         uint8 _bServer                                          SW_GUARDED_BY( _mutex );
         uint8 _bConnectPending                                  SW_GUARDED_BY( _mutex );

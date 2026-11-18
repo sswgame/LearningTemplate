@@ -122,7 +122,7 @@ namespace sw
         , _nextUpdateTime{ std::numeric_limits<float64>::lowest() }
         , _protocolID{ 0 }
         , _updateDepth{ 0 }
-        , _clientIndex{ constant::invalid_index::kInt32 }
+        , _clientIndex{}
         , _receiveCursor{ 0 }
         , _bServer{ SW_FALSE }
         , _bConnectPending{ SW_FALSE }
@@ -153,7 +153,7 @@ namespace sw
             _authenticationFailureCount = 0;
             _replayRejectedCount        = 0;
             _mismatchLogCount           = 0;
-            _clientIndex                = constant::invalid_index::kInt32;
+            _clientIndex                = nullopt;
             _bServer                    = SW_FALSE;
             _bHasCredentials            = SW_FALSE;
             _bDebugHold                 = SW_FALSE;
@@ -380,7 +380,7 @@ namespace sw
             return;
         _bConnectPending = SW_FALSE;
         FinishedConnect finished{
-            std::move( _connectPromise ), NetConnectResult{ reason, reason == NetDisconnectReason::None ? _clientIndex : constant::invalid_index::kInt32 }
+            std::move( _connectPromise ), NetConnectResult{ reason, reason == NetDisconnectReason::None ? _clientIndex : nullopt }
         };
         _listFinished.push_back( std::move( finished ) );
     }
@@ -1287,7 +1287,7 @@ namespace sw
         if ( bWasVisible )
             pushEvent( NetEndpointEvent{ slotIndex, reason, NetEndpointEvent::Kind::Disconnected } );
         if ( _bServer == SW_FALSE )
-            _clientIndex = constant::invalid_index::kInt32;
+            _clientIndex = nullopt;
     }
 
     bool NetEndpoint::sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
@@ -1514,8 +1514,6 @@ namespace sw
     optional<int32> NetEndpoint::getClientIndex() const
     {
         ScopedLock<mutex> lock{ _mutex };
-        if ( _clientIndex == constant::invalid_index::kInt32 )
-            return nullopt;
         return _clientIndex;
     }
 

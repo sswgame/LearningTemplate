@@ -1043,10 +1043,21 @@ namespace sw
         }
     }
 
+    optional<FractureGroupPose> FractureComponentBase::makeEventGroupPose( const FractureGroupRuntime* pHit )
+    {
+        if ( pHit == nullptr || pHit->_bAnchored != SW_FALSE )
+            return nullopt;
+        FractureGroupPose pose;
+        pose._groupID  = pHit->_groupID;
+        pose._position = pHit->_position;
+        pose._rotation = pHit->_rotation;
+        pose._volume   = pHit->_volume;
+        return pose;
+    }
+
     void FractureComponentBase::applyMeshEvent( ScenePhysics& physics, const DestructionDamageEvent& event, const FractureGroupPose* pGroupPose )
     {
         // 맞은 떨어진 그룹: 보낸 쪽 자세가 왔으면 그 위치로 옮기고, 적용 직전 자세를 사건 기록 옆에 적는다(보낼 때 함께 간다).
-        FractureGroupPose     hitPose;
         FractureGroupRuntime* pHit = event._groupID != 0 ? findRuntime( event._groupID ) : nullptr;
         if ( pHit != nullptr && pHit->_bAnchored == SW_FALSE )
         {
@@ -1061,12 +1072,8 @@ namespace sw
                 }
                 _bPoseDirty = SW_TRUE;
             }
-            hitPose._groupID  = pHit->_groupID;
-            hitPose._position = pHit->_position;
-            hitPose._rotation = pHit->_rotation;
-            hitPose._volume   = pHit->_volume;
         }
-        _listEventGroupPose.push_back( hitPose );
+        _listEventGroupPose.push_back( makeEventGroupPose( pHit ) );
         DestructionChange change;
         // 흩기 시드는 상태의 사건 수다. 스냅샷을 받은 쪽은 기록이 짧아도 서버와 같은 번호가 된다.
         const uint32 eventIndex = _state.getEventCount();

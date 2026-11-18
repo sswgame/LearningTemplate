@@ -40,7 +40,7 @@ namespace
             {
                 faceTile = tile;
             }
-            return _catalog.addBlock( block );
+            return _catalog.addBlock( block ).value(); // 픽스처 준비는 성공해야 한다
         }
     };
 

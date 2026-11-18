@@ -67,17 +67,19 @@ namespace sw
     {
     }
 
-    VoxelBlockIndex VoxelBlockCatalog::addBlock( const VoxelBlockDef& block )
+    optional<VoxelBlockIndex> VoxelBlockCatalog::addBlock( const VoxelBlockDef& block )
     {
         // 블록 번호는 인덱스 + 1 이다. 저장된 월드가 이 번호를 쓰므로 겹친 id 는 카탈로그가 거절한다(앞 블록의 번호와 값을 지킨다).
         if ( _catalog.getCount() >= VoxelBlockInternal::kMaxBlockCount )
         {
             SW_LOG_WARNING_ID( "VoxelBlockCatalog.BlockCatalogFullSkipped", "Block catalog is full - '%#' skipped", block._id.c_str() );
-            return kVoxelAirBlock;
+            return nullopt;
         }
         VoxelBlockDef stored = block;
         stored._index        = static_cast<VoxelBlockIndex>( _catalog.getCount() + 1 );
-        return _catalog.add( stored ) >= 0 ? stored._index : kVoxelAirBlock;
+        if ( _catalog.add( stored ) < 0 )
+            return nullopt; // 겹친 id — 카탈로그가 오류를 남겼다
+        return stored._index;
     }
 
     const VoxelBlockDef* VoxelBlockCatalog::findBlock( VoxelBlockIndex index ) const
@@ -192,7 +194,7 @@ namespace sw
         block._arrFaceTile[static_cast<int32>( VoxelFace::NegativeZ )] = side;
         block._arrFaceTile[static_cast<int32>( VoxelFace::PositiveY )] = top;
         block._arrFaceTile[static_cast<int32>( VoxelFace::NegativeY )] = bottom;
-        return bValid && addBlock( block ) != kVoxelAirBlock;
+        return bValid && addBlock( block ).has_value();
     }
 } // namespace sw
 
