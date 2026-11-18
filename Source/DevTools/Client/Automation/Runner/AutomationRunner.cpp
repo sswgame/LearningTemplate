@@ -635,7 +635,7 @@ namespace sw
         const expected<AutomationGoldenPolicy>& policy = _evaluator.getGoldenPolicy();
         if ( policy.has_value() == false )
         {
-            finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, "<AdvanceSimulation> needs _advanceDrawnFrames from the golden policy", AutomationStep::describeReason( policy.error() ) ) );
+            finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, "<AdvanceSimulation> needs _advanceDrawnFrames from the golden policy: " + AutomationStep::describeReason( policy.error() ), {} ) );
             return;
         }
         if ( frameCount <= policy->_advanceDrawnFrames )
