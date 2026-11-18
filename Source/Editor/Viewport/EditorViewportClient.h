@@ -105,7 +105,9 @@ namespace sw::editor
         float32                      _canvasHeight;             ///< 지난 `draw` 의 캔버스 높이(픽셀). 아직 그리지 않았으면 0 이고 팬은 쉰다
         EditorViewportCamera         _camera;                   ///< 씬 뷰 카메라 값과 비행 · 궤도 · 북마크 입력
         EditorViewportPicker         _picker;                   ///< 클릭 선택과 호버
-        EditorViewportGizmo          _gizmo;                    ///< 트랜스폼 기즈모와 그 되돌리기
+        EditorViewportGizmo          _gizmo;                    ///< 트랜스폼 기즈모(View — 스냅샷을 그리고 명령을 낸다)
+        EditorGizmoEdit              _gizmoEdit;                ///< 기즈모 명령의 적용과 그 되돌리기(Model)
+        EditorGizmoViewState         _gizmoState;               ///< 기즈모가 이번 프레임에 그릴 대상 스냅샷
         EditorViewportCanvasOverlay  _canvasOverlay;            ///< 격자, 자, 방향 큐브
         EditorViewportOverlays       _overlays;                 ///< 씬 뷰 위의 오버레이 바 목록
         EditorDebugHUDModel          _hudModel;                 ///< HUD 박스의 섹션 줄(4 Hz 로 다시 적는다)

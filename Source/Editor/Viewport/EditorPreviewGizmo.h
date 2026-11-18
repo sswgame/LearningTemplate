@@ -5,7 +5,13 @@
 #pragma once
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Viewport/EditorViewportGizmo.h"
+#include "Editor/Viewport/Model/EditorGizmoEdit.h"
 #include "Editor/Viewport/ViewportToolbarSettings.h"
+
+namespace sw
+{
+    struct Ray;
+} // namespace sw
 
 namespace sw::editor
 {
@@ -32,7 +38,18 @@ namespace sw::editor
         void draw( EditorPreviewPanel& panel );
 
     private:
-        EditorViewportGizmo     _gizmo;
+        // Model 쪽(`Model/EditorPreviewGizmoScene.cpp`, ImGui 없음) — 창 선택 · 미리보기 씬을 읽고 고친다.
+        /** @brief 창 선택이 미리보기 씬에 묶였으면 씬 변환을 맞추고 기즈모 대상을 `_state` 에 모읍니다. 묶이지 않았거나 씬이 없으면 false 입니다. */
+        [[nodiscard]] bool gatherTargets( EditorPreviewPanel& panel );
+        /** @brief 기즈모가 낸 명령을 창 선택의 범위에 적용합니다(되돌리기는 창의 스택). */
+        void applyCommands( EditorPreviewPanel& panel );
+        /** @brief 창 선택의 씬에서 @p ray 가 처음 맞는 오브젝트를 그 선택에 놓습니다(@p bToggle 이면 토글, 아니면 바꾸기 — 빈 곳이면 비운다). */
+        static void pick( EditorPreviewPanel& panel, const Ray& ray, bool bToggle );
+
+    private:
+        EditorViewportGizmo     _gizmo;    ///< View — 스냅샷을 그리고 명령을 낸다
+        EditorGizmoEdit         _edit;     ///< Model — 명령 적용과 되돌리기
+        EditorGizmoViewState    _state;    ///< 이번 프레임의 기즈모 대상 스냅샷
         ViewportToolbarSettings _settings; ///< 스냅 설정. 창에는 툴바가 없어 기본값(스냅 끔)이다
     };
 } // namespace sw::editor

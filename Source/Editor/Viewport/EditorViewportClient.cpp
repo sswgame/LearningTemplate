@@ -80,6 +80,8 @@ namespace sw::editor
         , _camera{}
         , _picker{}
         , _gizmo{}
+        , _gizmoEdit{}
+        , _gizmoState{}
         , _canvasOverlay{}
         , _overlays{}
         , _hudModel{}
@@ -282,7 +284,13 @@ namespace sw::editor
                 // 콜라이더 손잡이나 확장 도구(EditorViewportMouseClaim) 위에서는 기즈모가 마우스를 양보한다 — 손잡이는 기즈모 축 위에 놓인다.
                 const bool bGizmoYields = EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed();
                 if ( bGizmoYields == false )
-                    _gizmo.draw( editor::getMainSceneSelection(), arrView, arrProj, canvasPos, canvasSize, _toolbarSettings, "sceneView.gizmoCenter" ); // 메인 뷰포트는 메인 선택
+                {
+                    // 모으기(Model) → 기즈모(View, 스냅샷만 읽고 명령을 낸다) → 적용 · 되돌리기(Model). 메인 뷰포트는 메인 선택이다.
+                    EditorSelection& selection = editor::getMainSceneSelection();
+                    EditorGizmoEdit::gather( selection, _gizmoState );
+                    _gizmo.draw( _gizmoState, arrView, arrProj, canvasPos, canvasSize, _toolbarSettings, "sceneView.gizmoCenter" );
+                    _gizmoEdit.apply( selection, _gizmo.getCommands() );
+                }
             }
 
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );

@@ -1,54 +1,39 @@
 /**
  * @file EditorViewportGizmo.h
- * @brief 씬 뷰의 트랜스폼 기즈모(ImGuizmo)입니다. 단일 · 다중 선택 조작과 드래그 하나를 되돌리기 하나로 기록하는 일을 합니다.
+ * @brief 씬 뷰의 트랜스폼 기즈모(ImGuizmo) View 입니다. 대상 스냅샷(`EditorGizmoViewState`)만 읽고, 조작은 명령(`EditorGizmoCommand`)으로 냅니다 — 적용과 되돌리기는 `EditorGizmoEdit`(Model)이 합니다.
  */
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Memory/Memory.h"
 
-#include "Engine/Foundation/GameObjectHandle.h"
-
-namespace sw
-{
-    struct ObjectSnapshot;
-
-    class GameObject;
-} // namespace sw
+#include "Editor/Viewport/Model/EditorGizmoEdit.h"
 
 namespace sw::editor
 {
-    struct EditorViewportGizmoUndo;
     struct ViewportToolbarSettings;
-
-    class EditorSelection;
 
     /**
      * @class EditorViewportGizmo
-     * @brief 선택한 오브젝트에 기즈모를 그리고 조작을 입힙니다. 드래그가 끝나면 시작 전 스냅샷으로 되돌리기를 남깁니다.
-     * @details `EditorViewportClient` 가 메인 선택으로, 미리보기 창(`EditorPreviewPanel`)이 창의 선택으로 값 멤버를 들고 부릅니다. 대상과 기록 범위는 넘긴 선택이
-     *          정합니다 — 핸들을 그 선택의 씬에서 풀고(`EditorSelection::findObject`), 드래그 하나를 그 선택의 범위에 기록합니다(메인은 씬 명령, 미리보기는 창의 스택).
+     * @brief 대상에 기즈모를 그리고 조작을 명령으로 냅니다. 드래그 중간 값(그룹 행렬 · 대상의 그룹 기준 상대 행렬)은 이 쪽이 들고, 바뀐 월드 행렬을 프레임마다 명령 하나로 보낸다.
+     * @details `EditorViewportClient` 와 미리보기 기즈모(`EditorPreviewGizmo`)가 값 멤버로 들고, 모으기(`EditorGizmoEdit::gather`) → `draw` → 적용(`EditorGizmoEdit::apply( getCommands() )`) 순으로 부른다.
      *          헤더는 ImGuizmo 를 include 하지 않습니다.
      */
     class EditorViewportGizmo
     {
     public:
         EditorViewportGizmo();
-        ~EditorViewportGizmo();
-        EditorViewportGizmo( const EditorViewportGizmo& )            = delete;
-        EditorViewportGizmo& operator=( const EditorViewportGizmo& ) = delete;
 
         /**
-         * @brief @p selection 의 오브젝트에 기즈모를 그리고 조작합니다. 편집이 막혔거나(Play) 선택이 비면 진행 중인 드래그를 정리하고 반환합니다.
-         * @details 드래그 중 다른 선택이 넘어오면 앞 드래그를 그 선택의 범위에 정리한다. @p selection 은 이 기즈모보다 오래 살거나 그 전에 `endDrag` 가 불려야 한다
-         *          (미리보기 창은 기즈모와 선택을 함께 가진다). 표면 붙이기는 메인 선택에만 쓴다(활성 씬을 레이캐스트한다).
+         * @brief @p state 의 대상에 기즈모를 그리고 이번 프레임의 명령을 모읍니다(앞 프레임 명령은 비운다). 편집이 막혔거나(Play) 대상이 없으면 진행 중인 드래그를 끝내는 명령만 낸다.
          * @param pCenterMark 기즈모 가운데(화면 평면 이동 손잡이)를 적을 셀프테스트 마크 이름입니다. nullptr 이면 적지 않는다 — 한 프레임에 기즈모가 여럿(씬 뷰 · 미리보기 창)이라
          *        이름은 부르는 쪽이 정한다(시나리오가 `EditorDrag` 로 끈다).
          */
-        void draw( EditorSelection& selection, const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize,
+        void draw( const EditorGizmoViewState& state, const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize,
                    const ViewportToolbarSettings& settings, const utf8* pCenterMark );
+        /** @brief 지난 `draw` 가 낸 명령입니다(Model 이 적용한다). */
+        const vector<EditorGizmoCommand>& getCommands() const { return _listCommand; }
 
         /** @brief 기즈모를 끄는 중이면 true 입니다. 호버 강조를 막는 데 씁니다. */
         bool isDragging() const { return _bTracking == SW_TRUE; }
@@ -65,44 +50,27 @@ namespace sw::editor
         uint32 getLastObjectCount() const { return _lastObjectCount; }
 
     private:
-        /** @brief 다중 선택 기즈모를 조작합니다. 열거형은 ImGuizmo 에 의존하지 않도록 uint32 로 받습니다. */
-        void manipulateGroup( const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode, const vector<GameObject*>& listGizmo, bool bUseSnap,
-                              const float32* pSnap );
-        /** @brief 오브젝트 하나의 기즈모를 조작하고 드래그 추적(되돌리기 스냅샷)을 갱신합니다. 열거형은 `manipulateGroup` 과 같이 uint32 로 받습니다. */
-        void manipulateSingle( GameObject& object, const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode,
-                               const float32* pSnap, bool bSurfaceSnap );
-        /**
-         * @brief 끊긴 기즈모 드래그를 정리합니다. 대상이 아직 있고 편집이 허용되면 그 대상에 되돌리기를 남기고, 아니면 버립니다.
-         * @details 드래그 도중 선택이 비거나(Delete, 생성 되돌리기) 편집이 막히면(Play) `draw` 가 앞에서 반환하므로, 추적 표시와
-         *          A 의 스냅샷이 남는다. 정리하지 않으면 다음에 B 를 선택한 첫 프레임이 그 스냅샷을 B 에 커밋해서 엉뚱한 "Gizmo Transform" 항목이 생기고
-         *          redo 가 잘리며, 그것을 되돌리면 A 의 XML(컴포넌트 id 포함)이 B 에 들어간다.
-         */
+        /** @brief 다중 대상 기즈모 — 무게중심의 그룹 행렬을 끌고, 누른 순간의 상대 행렬로 대상마다 월드 행렬을 낸다. 열거형은 ImGuizmo 에 의존하지 않도록 uint32 로 받습니다. */
+        void manipulateGroup( const EditorGizmoViewState& state, const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode, const float32* pSnap );
+        /** @brief 대상 하나의 기즈모입니다. */
+        void manipulateSingle( const EditorGizmoTarget& target, const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode, const float32* pSnap,
+                               bool bSurfaceSnap );
+        /** @brief ImGuizmo 사용 상태로 끌기 명령 · 놓기 명령을 냅니다. @p listWorld 는 이번 프레임에 바뀐 대상 행렬(없으면 빈 목록)이다. */
+        void trackUse( vector<EditorGizmoTarget>&& listWorld, bool bSurfaceSnap );
+        /** @brief 진행 중인 드래그를 끝내는 명령을 내고 중간 값을 비웁니다. */
         void endDrag();
-        /**
-         * @brief 드래그를 받을 스택(메인 선택은 메인 스택, 미리보기 선택은 그 창의 스택)에 상호작용을 엽니다(`CommandStack::openInteraction` — 핸들은 `_pUndo` 가 쥐어 기즈모가 사라지면 닫힌다). 이미 열었으면 아무것도 하지 않는다.
-         * @details 끄는 동안 Ctrl+Z · History 가 그 스택을 움직이면, 끝의 단계가 쥔 "전" 이 낡아 되돌린 편집을 다시 덮고 다시 하기 기록을 자른다(감사 E-2). 닫기는 `endDrag` 다.
-         */
-        void openStackInteraction();
-        /** @brief 드래그 대상 선택의 범위에서 핸들을 풉니다. */
-        GameObject* findTracked( GameObjectHandle handle ) const;
-        /** @brief 드래그 하나를 대상 선택의 범위에 기록합니다. */
-        void commitDrag( GameObject& obj, const ObjectSnapshot& before ) const;
-        /** @brief 기즈모 가운데(@p listGizmo 하나면 그 위치, 여럿이면 무게중심 — `manipulateGroup` 과 같은 점)의 화면 자리를 마크 @p pMark 로 적습니다. 카메라 뒤면 적지 않는다. */
-        static void recordCenterMark( const utf8* pMark, const vector<GameObject*>& listGizmo, const float32* pView, const float32* pProj, const float2& canvasPos,
+        /** @brief 기즈모 가운데(대상 하나면 그 위치, 여럿이면 무게중심 — `manipulateGroup` 과 같은 점)의 화면 자리를 마크 @p pMark 로 적습니다. 카메라 뒤면 적지 않는다. */
+        static void recordCenterMark( const utf8* pMark, const vector<EditorGizmoTarget>& listTarget, const float32* pView, const float32* pProj, const float2& canvasPos,
                                       const float2& canvasSize );
 
     private:
-        /// 드래그 시작 전 스냅샷(단일 · 그룹). 되돌리기 형식(`Workspace/Undo`)은 .cpp 만 본다 — 이 헤더를 include 하는 패널 View 가 작업 공간 헤더에 닿지 않게(언리얼 FScopedTransaction 이 기즈모 구현 안에 있는 자리)
-        unique_ptr<EditorViewportGizmoUndo> _pUndo;
-        GameObjectHandle                    _object;     ///< `_pUndo->_before` 의 대상이다. 드래그가 여러 프레임에 걸치므로 핸들로 보관한다
-        vector<GameObjectHandle>            _listObject; ///< 그룹 기즈모의 대상이다. 드래그하는 동안 여러 프레임에 걸치므로 핸들로 보관한다
-        vector<float4x4>                    _listRelativeWorld;
-        EditorSelection*                    _pTarget; ///< 지금 드래그(또는 마지막으로 그린)의 대상 선택(빌림)
-        float32                             _arrGroupMatrix[16];
-        int32                               _lastDrawFrame;
-        uint32                              _lastObjectCount;
-        uint8                               _bTracking : 1;
-        uint8                               _bHovered  : 1;
-        [[maybe_unused]] uint8              _reserved  : 6;
+        vector<EditorGizmoCommand> _listCommand;        ///< 이번 프레임에 낸 명령
+        vector<EditorGizmoTarget>  _listDragTarget;     ///< 그룹 드래그의 대상과 그룹 기준 상대 행렬(누른 순간) — 드래그 중간 값
+        float32                    _arrGroupMatrix[16]; ///< 그룹 기즈모 행렬(ImGuizmo 가 고친다)
+        int32                      _lastDrawFrame;
+        uint32                     _lastObjectCount;
+        uint8                      _bTracking : 1;
+        uint8                      _bHovered  : 1;
+        [[maybe_unused]] uint8     _reserved  : 6;
     };
 } // namespace sw::editor
