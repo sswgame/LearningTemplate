@@ -49,6 +49,11 @@ namespace sw
         void onBeginPlay() override;
         /** @brief `_bStopOnEndPlay` 면 이 자리의 소리를 이벤트의 페이드로 멈춥니다. */
         void onEndPlay() override;
+        /**
+         * @brief 주인이 계층에서 꺼지면 이 자리의 소리를 바로 멈추고, 다시 켜지면 `_bPlayOnBeginPlay` 일 때 `_event` 를 다시 냅니다(시작한 뒤만).
+         * @details 유니티 AudioSource 가 GameObject 를 끄면 멈추고 켜면 Play On Awake 로 다시 내는 것과 같다 — 풀에 든 적의 소리가 마지막 자리에서 계속 나지 않게.
+         */
+        void onOwnerActiveInHierarchyChanged() override;
 
         /** @brief 이 자리에서 이벤트를 냅니다. 엔진이 없으면(헤드리스) 0 입니다. 어느 스레드에서 불러도 됩니다. */
         AudioPlayingID post( const hashed_string& eventName );

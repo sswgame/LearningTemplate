@@ -5,6 +5,7 @@
  *            점검 표 · 라이브 이벤트 · 공지 · 길드 창고)을 형식으로 막는다. 결과 형식은 `[[nodiscard]]` 라 받지 않으면 컴파일 경고(오류)이다.
  *          - `readPage`: 커서로 직접 넘기는 쪽 읽기. 쪽이 가득 찼으면 `_nextCursor` 가 그 쪽의 마지막 키다(비면 끝).
  *          - `readAll`: 처음부터 끝까지 쪽으로 넘기며 읽는다. `maxTotal` 에 닿으면 `_bTruncated` 를 켠다 — 부른 쪽이 그 뜻(오류 · 이전 상태 유지 · 다음에 이어 읽기)을 정한다.
+ *          - `visitAll`: 상한 없이 끝까지 쪽으로 넘기며 레코드마다 방문한다. 전체를 봐야 맞는 일(해산 · 정산 · 이전 · 삭제)은 이것을 쓴다 — 한 쪽만 읽고 나머지를 두는 모양이 결과를 틀리게 한다.
  *          언리얼 · 유니티 백엔드 SDK 의 페이지 토큰(PlayFab `ContinuationToken` · Nakama `cursor`)과 같은 계약이다.
  */
 #pragma once
@@ -52,6 +53,33 @@ namespace sw
             if ( page.isOk() && maxCount > 0 && readCount == static_cast<size_t>( maxCount ) )
                 page._nextCursor = outListRecord.back()._key;
             return page;
+        }
+
+        /**
+         * @brief @p keyPrefix 의 키를 처음부터 끝까지 @p pageSize 씩 넘기며 레코드마다 @p visitor(`bool( const ServiceRecord& )`)를 부릅니다. 상한이 없습니다.
+         * @details @p visitor 가 false 면 거기서 멈추고 Ok 다(부른 쪽이 자기 오류를 따로 들고 멈출 때도 쓴다). 읽기가 실패하면 그 결과다.
+         *          읽기 집합 연결에서는 읽은 쪽마다 다음 커밋에 범위 조건이 하나씩 붙는다(`ServiceTransaction::kMaxConditionCount`) — 한 트랜잭션으로 끝낼 일은 쪽을 크게 잡고,
+         *          그보다 큰 표를 지우는 일은 쪽마다 커밋한다(`ServiceStoreUtil::erasePrefix` 모양).
+         */
+        template <typename Visitor>
+        [[nodiscard]] static ServiceStoreResult visitAll( IServiceStoreConnection& connection, const hashed_string& table, string_view keyPrefix, int32 pageSize, Visitor&& visitor )
+        {
+            string cursorKey;
+            for ( ;; )
+            {
+                vector<ServiceRecord>   listRecord;
+                const ServiceRecordPage page = readPage( connection, table, keyPrefix, cursorKey, pageSize, false, listRecord );
+                if ( page.isOk() == false )
+                    return page._result;
+                for ( const ServiceRecord& record : listRecord )
+                {
+                    if ( visitor( record ) == false )
+                        return ServiceStoreResult::Ok;
+                }
+                if ( page.hasMore() == false )
+                    return ServiceStoreResult::Ok;
+                cursorKey = page._nextCursor;
+            }
         }
 
         /**

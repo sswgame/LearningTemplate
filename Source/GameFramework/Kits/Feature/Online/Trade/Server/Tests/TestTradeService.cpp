@@ -410,3 +410,24 @@ SW_TEST_CASE( TradeServiceTest, StoreFailureLeavesTradeIntact )
     SW_EXPECT_TRUE( rig.respond( kBob, tradeID )._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_TRUE( rig.respond( kBob, tradeID )._result == TradeResult::Ok );
 }
+
+/**
+ * @brief [TradeServiceTest] 기동 복구는 한 쪽(256)보다 많은 열린 거래도 끝까지 닫는다 — 한 쪽만 닫으면 뒤의 거래 당사자는 주인 서버 없는 거래에 묶여 남았다
+ */
+SW_TEST_CASE( TradeServiceTest, RestartRecoversEveryOwnedTradePastOnePage )
+{
+    TradeWorld      world;
+    constexpr int32 kTradeCount = 300;
+    for ( int32 index = 0; index < kTradeCount; ++index )
+    {
+        const AccountID fromID = 1000 + static_cast<AccountID>( index ) * 2;
+        SW_REQUIRE_TRUE( world._rig.invite( fromID, fromID + 1 )._result == TradeResult::Ok );
+    }
+    (void)world._rig.takeUpdates();
+
+    TradeFixture restarted( world._database );
+    restarted._service.recoverOwnedTrades( UnixMilliseconds{ kNowMs } );
+    SW_EXPECT_EQUAL( size_t( kTradeCount ), restarted.takeUpdates().size() );
+    restarted._service.recoverOwnedTrades( UnixMilliseconds{ kNowMs } );
+    SW_EXPECT_TRUE( restarted.takeUpdates().empty() ); // 남은 열린 거래가 없다
+}

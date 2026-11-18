@@ -40,9 +40,9 @@ namespace sw
         // 프로토콜 표의 메서드 - 결과는 호출 번호로 `takeCompletions` 에서 받는다.
         void handleCall( OnlineServerCall<LeaderboardMethod::GetTop> call, const OnlineCallContext& context, const LeaderboardTopRequest& request );
         void handleCall( OnlineServerCall<LeaderboardMethod::GetAround> call, const OnlineCallContext& context, const LeaderboardAroundRequest& request );
-        void handleCall( OnlineServerCall<LeaderboardMethod::GetStats> call, const OnlineCallContext& context, const OnlineNoBody& request );
+        void handleCall( OnlineServerCall<LeaderboardMethod::GetStats> call, const OnlineCallContext& context, const LeaderboardListPageRequest& request );
         void handleCall( OnlineServerCall<LeaderboardMethod::SubmitScore> call, const OnlineCallContext& context, const LeaderboardSubmitRequest& request );
-        void handleCall( OnlineServerCall<LeaderboardMethod::GetAchievements> call, const OnlineCallContext& context, const OnlineNoBody& request );
+        void handleCall( OnlineServerCall<LeaderboardMethod::GetAchievements> call, const OnlineCallContext& context, const LeaderboardListPageRequest& request );
         void handleCall( OnlineServerCall<LeaderboardMethod::GetSeasonResult> call, const OnlineCallContext& context, const LeaderboardSeasonRequest& request );
         void handleCall( OnlineServerCall<LeaderboardMethod::GetScoresOf> call, const OnlineCallContext& context, const LeaderboardScoresRequest& request );
         void handleCall( OnlineServerCall<LeaderboardMethod::GetAchievementProgress> call, const OnlineCallContext& context, const OnlineNoBody& request );

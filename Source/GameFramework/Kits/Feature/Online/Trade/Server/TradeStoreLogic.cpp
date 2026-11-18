@@ -21,7 +21,7 @@ namespace sw
         struct TradeStoreLogicInternal
         {
             static constexpr uint64 kSettleAuditUnique = 0x5E771Eull; ///< 정산 감사 기록은 거래당 하나이다. 재시도가 둘을 만들지 않게 한다
-            static constexpr int32  kMaxRecoverCount   = 256;
+            static constexpr int32  kRecoverPageSize   = 256;
             /**
              * @brief 정산 트랜잭션의 쓰기 상한입니다. 원장: 잔액(두 계정 × 양쪽 항목 자산) + 묘비 조건 2 + 분개 · 분개 TTL 색인 · 내역 2,
              *        거래: 레코드 · TTL 색인 · 활성 2 · 주인, 감사: 줄 · TTL 색인. 원장 상한 64 를 넘으면 정산이 Invalid 로 진다.
@@ -382,36 +382,52 @@ namespace sw
         using Internal = TradeStoreLogicInternal;
         string prefix  = ServiceKeyUtil::makeHex64( _serverID );
         prefix.push_back( '/' );
-        vector<ServiceRecord> listOwned;
-        if ( ServiceRecordReader::readPage( _connection, getOwnerTable(), prefix, "", Internal::kMaxRecoverCount, false, listOwned )._result != ServiceStoreResult::Ok )
-            return TradeServiceResult::fail( OnlineError::kUnavailable );
-        for ( const ServiceRecord& owned : listOwned )
+        // 이 서버가 연 거래를 끝까지 닫는다 — 한 쪽만 닫으면 뒤의 거래는 주인 서버가 없는 채 열려 남는다(기동 때 한 번만 돈다)
+        string cursorKey;
+        while ( true )
         {
-            uint64 tradeID = 0;
-            if ( ServiceKeyUtil::parseHex64( string_view( owned._key ).substr( prefix.size() ), tradeID ) == false )
-                continue;
-            for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+            vector<ServiceRecord>   listOwned;
+            const ServiceRecordPage page = ServiceRecordReader::readPage( _connection, getOwnerTable(), prefix, cursorKey, Internal::kRecoverPageSize, false, listOwned );
+            if ( page.isOk() == false )
+                return TradeServiceResult::fail( OnlineError::kUnavailable );
+            for ( const ServiceRecord& owned : listOwned )
             {
-                SessionRead              session;
-                const TradeServiceResult read = readSession( tradeID, session );
-                if ( read == TradeResult::NotFound || ( read == TradeResult::Ok && session._snapshot.isClosed() ) )
-                {
-                    ServiceTransaction transaction;
-                    transaction.erase( getOwnerTable(), owned._key );
-                    (void)_connection.commit( transaction );
-                    break;
-                }
-                if ( read != TradeResult::Ok )
-                    return read;
-                TradeSnapshot     closed;
-                const CloseResult serviceResult = commitClose( session, TradeCloseReason::ServerRestart, nowMs, closed );
-                if ( serviceResult._bRetry )
-                    continue;
-                if ( serviceResult._result != TradeResult::Ok )
-                    return serviceResult._result;
-                outListClosed.push_back( closed );
-                break;
+                const TradeServiceResult recovered = recoverOne( owned, prefix, nowMs, outListClosed );
+                if ( recovered != TradeResult::Ok )
+                    return recovered;
             }
+            if ( page.hasMore() == false )
+                return TradeResult::Ok;
+            cursorKey = page._nextCursor;
+        }
+    }
+
+    TradeServiceResult TradeStoreLogic::recoverOne( const ServiceRecord& owned, const string& prefix, int64 nowMs, vector<TradeSnapshot>& outListClosed )
+    {
+        uint64 tradeID = 0;
+        if ( ServiceKeyUtil::parseHex64( string_view( owned._key ).substr( prefix.size() ), tradeID ) == false )
+            return TradeResult::Ok;
+        for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+        {
+            SessionRead              session;
+            const TradeServiceResult read = readSession( tradeID, session );
+            if ( read == TradeResult::NotFound || ( read == TradeResult::Ok && session._snapshot.isClosed() ) )
+            {
+                ServiceTransaction transaction;
+                transaction.erase( getOwnerTable(), owned._key );
+                (void)_connection.commit( transaction );
+                return TradeResult::Ok;
+            }
+            if ( read != TradeResult::Ok )
+                return read;
+            TradeSnapshot     closed;
+            const CloseResult serviceResult = commitClose( session, TradeCloseReason::ServerRestart, nowMs, closed );
+            if ( serviceResult._bRetry )
+                continue;
+            if ( serviceResult._result != TradeResult::Ok )
+                return serviceResult._result;
+            outListClosed.push_back( closed );
+            return TradeResult::Ok;
         }
         return TradeResult::Ok;
     }
