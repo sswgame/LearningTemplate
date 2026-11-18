@@ -10,6 +10,12 @@
     <When target="Head" tag="Helmet.Full"/>
     <Hide target="Hood"/>
   </Rule>
+  <!-- 투구는 머리카락 부품을 감춘다(눈썹 · 수염은 투구 밖이라 남긴다) — 사람 몸(UBC)에 투구를 씌우면 머리카락이 투구를 뚫고 나왔다(시나리오 showcase/customizeoutfit).
+       두건 규칙과 같은 대상을 같게 감춘다 — 우선순위만 다르게 둔다. -->
+  <Rule id="HelmetHidesHair" priority="5">
+    <When target="Head" tag="Helmet.Full"/>
+    <Hide target="Hair" part="Hair"/>
+  </Rule>
   <!-- 레인저 두건은 머리카락 부품만 감춘다(꾸미기 "Hair" 의 "Hair" 부품) — 눈썹 · 수염은 두건 밖이라 남긴다(<Hide part>). -->
   <Rule id="RangerHoodHidesHair" priority="10">
     <When target="Hood" tag="Hood.Ranger"/>

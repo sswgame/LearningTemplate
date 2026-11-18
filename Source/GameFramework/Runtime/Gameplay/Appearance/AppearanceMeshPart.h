@@ -78,6 +78,17 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 구운 메시 캐시의 셈입니다(`AppearanceBakedMeshCache::readCounters`). 찾기 수는 차림 하나의 조립마다 구운 키 · 합친 키로 두 번까지 오른다. */
+    struct AppearanceBakedMeshCounters
+    {
+        uint64 _hitCount{ 0 };    ///< 찾아서 내준 횟수(누적)
+        uint64 _cachedBytes{ 0 }; ///< 지금 쥔 바이트
+        uint32 _entryCount{ 0 };  ///< 지금 쥔 차림 수
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct AppearanceBakedMeshCache
      * @brief 같은 차림(키 — 해석의 메시 해시 · 부품 · 원본 내용 토큰의 키 · 데이터 판)의 베이크한 메시를 나눠 줍니다. 수명은 씬이 아니라 캐시의 예산이다
@@ -97,5 +108,7 @@ namespace sw
          * @param listSourceContent 키에 섞은 원본 내용 토큰들 — 원본이 다시 읽혀 토큰이 바뀌면 그 항목은 낡았다(`tryGet` 이 치운다)
          */
         static void store( uint64 key, const vector<shared_ptr<Mesh>>& listMesh, const vector<shared_ptr<Mesh>>& listSource, const vector<IdentityToken>& listSourceContent );
+        /** @brief 적중 · 항목 수 · 바이트입니다(감시 값 — 같은 차림으로 되돌리면 적중하는지, 교체를 반복해도 자라지 않는지). 표가 없는 실행은 모두 0 입니다. */
+        [[nodiscard]] static AppearanceBakedMeshCounters readCounters();
     };
 } // namespace sw

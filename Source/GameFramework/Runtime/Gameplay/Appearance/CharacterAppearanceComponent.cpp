@@ -477,7 +477,30 @@ namespace sw
 
     void CharacterAppearanceComponent::captureSelection( AppearanceSelection& outSelection ) const
     {
-        AppearanceSelection::captureSelection( _state.getSpec(), outSelection );
+        // 선택 길은 요청한 선택이 정본이다 — 아직 조립하지 않은 같은 프레임의 둘째 편집이 첫 편집을 잃지 않는다. 프리셋 길은 지난 조립의 펼친 프리셋이다.
+        if ( _bSelectionSet == SW_FALSE )
+        {
+            AppearanceSelection::captureSelection( _state.getSpec(), outSelection );
+            return;
+        }
+        outSelection = _selection;
+        for ( const SlotOverride& slotOverride : _listSlotOverride )
+        {
+            AppearanceSlotRequest* pSlot = nullptr;
+            for ( AppearanceSlotRequest& slot : outSelection._listSlot )
+            {
+                pSlot = slot._slot == slotOverride._slot ? &slot : pSlot;
+            }
+            if ( pSlot == nullptr )
+            {
+                outSelection._listSlot.push_back( AppearanceSlotRequest{} );
+                pSlot        = &outSelection._listSlot.back();
+                pSlot->_slot = slotOverride._slot;
+            }
+            pSlot->_itemID        = slotOverride._itemID; // 조립과 같은 덮어쓰기(`assemble`)
+            pSlot->_visibleVisual = hashed_string{};
+            pSlot->_state         = hashed_string{};
+        }
     }
 
     void CharacterAppearanceComponent::setSlotItem( const hashed_string& slot, const hashed_string& itemID )

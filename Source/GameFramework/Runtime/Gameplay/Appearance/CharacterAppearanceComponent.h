@@ -191,7 +191,10 @@ namespace sw
          *          시작 전이면 `onBeginPlay` 가 조립한다. 슬롯 덮어쓰기(`setSlotItem`)는 그 위에 그대로 덮는다.
          */
         void applySelection( const AppearanceSelection& selection );
-        /** @brief 지금 입은 모습(지난 조립의 펼친 프리셋 — 선택 · 슬롯 덮어쓰기 포함)을 전체 선택으로 담습니다. 저장 · 공유 코드의 입력이다. 아직 조립하지 않았으면 빈 선택입니다. */
+        /**
+         * @brief 지금 입히려는 모습을 전체 선택으로 담습니다(저장 · 공유 코드 · 편집의 입력). 선택 길이면 요청한 선택 위에 슬롯 덮어쓰기를 얹은 것이라 조립 전에도 맞고,
+         *        프리셋 길이면 지난 조립의 펼친 프리셋(덮어쓰기 포함)이라 아직 조립하지 않았으면 빈 선택입니다.
+         */
         void captureSelection( AppearanceSelection& outSelection ) const;
         /** @brief 예약한 조립도, 읽거나 짓거나 걸기를 기다리는 메시 조립도 없으면 true 입니다 — 바꾼 외형이 다 걸렸다(시나리오의 조건 대기 · 감시 값). */
         [[nodiscard]] bool isAssemblyIdle() const { return _bAssembleScheduled == SW_FALSE && _bMeshAssemblyPending == SW_FALSE && _bMeshApplyQueued == SW_FALSE; }

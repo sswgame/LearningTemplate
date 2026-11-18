@@ -102,4 +102,13 @@
     <Value name="Hair" option="Buzzed"/>
     <Value name="Outfit" option="Ranger"/>
   </CharacterAppearance>
-  <CharacterAppearance id="SectionShowcaseGilded" parent="SectionShowcase" tags="Showcase.SectionGilded"/></CharacterAppearanceCatalog>
+  <CharacterAppearance id="SectionShowcaseGilded" parent="SectionShowcase" tags="Showcase.SectionGilded"/>
+  <!-- 게임 중 꾸미기 쇼케이스(maps/customizationshowcase · 시나리오 showcase/customize*) — 시나리오가 개발 명령(appearance.*)으로 머리 모양 · 옷 · 칸 · 염색 · 체형을 바꾼다. -->
+  <CharacterAppearance id="CustomizeTownsfolk" parent="TownsfolkMale">
+    <Value name="Hair" option="SimpleParted"/>
+    <Value name="Outfit" option="Ranger"/>
+    <Equip slot="MainHand" item="scifi_pistol"/>
+  </CharacterAppearance>
+  <!-- 두건 위에 투구(규칙 HelmetHidesHood) · 도끼 · 방패를 든 해골 전사에 체형 슬라이더(스키마 SkeletonBody)와 몸 채널 매핑(body_skeleton_bodydemo)을 단다. -->
+  <CharacterAppearance id="CustomizeBrute" parent="SkeletonWarrior" schema="SkeletonBody" body="body_skeleton_bodydemo"/>
+</CharacterAppearanceCatalog>

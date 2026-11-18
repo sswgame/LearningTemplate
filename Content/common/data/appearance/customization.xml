@@ -39,6 +39,17 @@
       <Option name="Hooded" visual="hood_skeleton"/>
     </Choice>
   </Schema>
+  <!-- 체형을 고르는 해골(시나리오 showcase/customizebody) — Skeleton 의 칸에 몸 채널 슬라이더를 더한다. 채널은 몸 부품의 *.bodyshape.xml 이 본으로 옮긴다
+       (body_skeleton_bodydemo 만 매핑을 단다 — 다른 해골 몸은 이 스키마를 쓰지 않는다). -->
+  <Schema id="SkeletonBody">
+    <Color name="BoneTint" category="Dye" default="1 1 1 1"><Drive kind="MaterialColor" target="_color"/></Color>
+    <Choice name="Hood" category="Head" default="Bare">
+      <Option name="Bare"/>
+      <Option name="Hooded" visual="hood_skeleton"/>
+    </Choice>
+    <Slider name="ShoulderWidth" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Shoulder.Width"/></Slider>
+    <Slider name="WaistWidth" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Waist.Width"/></Slider>
+  </Schema>
   <Schema id="HelmetFinish">
     <Choice name="Finish" category="Dye" default="Standard">
       <Option name="Standard"/>
