@@ -105,20 +105,6 @@ namespace sw
         return pBlock != nullptr && pBlock->_bOpaque != SW_FALSE;
     }
 
-    void VoxelBlockCatalog::computeTileUV( int32 tile, float2& outMin, float2& outMax ) const
-    {
-        const int32   tileCount = _atlasColumns * _atlasRows;
-        const int32   safeTile  = ( tile >= 0 && tile < tileCount ) ? tile : 0;
-        const int32   column    = safeTile % _atlasColumns;
-        const int32   row       = safeTile / _atlasColumns;
-        const float32 cellU     = 1.0f / static_cast<float32>( _atlasColumns );
-        const float32 cellV     = 1.0f / static_cast<float32>( _atlasRows );
-        const float32 insetU    = cellU * 0.5f / static_cast<float32>( _tileTexels );
-        const float32 insetV    = cellV * 0.5f / static_cast<float32>( _tileTexels );
-        outMin                  = float2{ cellU * static_cast<float32>( column ) + insetU, cellV * static_cast<float32>( row ) + insetV };
-        outMax                  = float2{ cellU * static_cast<float32>( column + 1 ) - insetU, cellV * static_cast<float32>( row + 1 ) - insetV };
-    }
-
     uint32 VoxelBlockCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).

@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="a0e03ba1f37f11fd6d6d9f2b6077d26d"?>
-<!-- 블록 청크의 물(반투명) 머티리얼 — 유리 머티리얼과 같은 블렌드에 _albedoMap 이 블록 아틀라스다. 알파는 메셔의 정점 색이 준다. -->
-<MaterialDef formatVersion="0" name="VoxelWater" _base="engine/materials/benchtextured.material" alphaMode="Blend">
-	<_properties>
-		<item name="_albedoMap" assetPath="game/voxelcraft/textures/blocks.dds" />
-	</_properties>
+<!-- 블록 청크의 물(반투명) 머티리얼 — 불투명 블록 머티리얼(셰이더 · 아틀라스 · _atlasGrid)을 물려받고 유리 머티리얼과 같은 블렌드를 쓴다. 알파는 메셔의 정점 색이 준다. -->
+<MaterialDef formatVersion="0" name="VoxelWater" _base="game/voxelcraft/materials/blocks.material" alphaMode="Blend">
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>
 			<item>MATERIAL_DOMAIN_SURFACE</item>

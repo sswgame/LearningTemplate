@@ -139,13 +139,11 @@ namespace sw
         bool isSolid( VoxelBlockIndex index ) const;
         /** @brief 이웃 면을 가리는 블록이면 true 입니다. */
         bool isOpaque( VoxelBlockIndex index ) const;
-        /** @brief 면의 아틀라스 타일 UV 사각형(왼쪽 위와 오른쪽 아래)입니다. 타일 가장자리에서 반 텍셀 안쪽으로 들여 이웃 타일의 색이 번지지 않게 합니다. */
-        void computeTileUV( int32 tile, float2& outMin, float2& outMax ) const;
 
         const vector<VoxelBlockDef>& getBlocks() const { return _catalog.getAll(); }
         int32                        getAtlasColumns() const { return _atlasColumns; }
         int32                        getAtlasRows() const { return _atlasRows; }
-        /** @brief 아틀라스 타일 한 변의 텍셀 수입니다. UV 를 안쪽으로 들일 때 씁니다. */
+        /** @brief 아틀라스 타일 한 변의 텍셀 수입니다. 셰이더가 타일 안쪽으로 반 텍셀 들일 때 쓰는 값과 같아야 합니다(blocks.material `_atlasGrid`). */
         int32 getTileTexels() const { return _tileTexels; }
 
     private:
