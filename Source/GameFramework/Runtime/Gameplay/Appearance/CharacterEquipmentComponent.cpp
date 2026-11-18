@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
@@ -26,7 +27,31 @@ namespace sw
     {
         /** @brief 장비 칸과 가방을 게임 세이브에 싣습니다(모든 게임 — 게임마다 올리지 않는다). */
         const StatefulComponentRegistrar<CharacterEquipmentComponent> s_stateRegistration{ "CharacterEquipmentComponent" };
+
+        struct CharacterEquipmentStateInternal
+        {
+            /** @brief 판 1 → 2: 낀 칸(칸 이름 + 슬롯)과 가방(인벤토리 판 2 본문)의 슬롯마다 꾸미기 스키마 판(1)을 넣는다. */
+            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
+            {
+                StateIO inOld( inOldBody );
+                StateIO outNew( outNewBody );
+                uint32  wornCount = 0;
+                inOld.count( 4 + Inventory::kUnversionedSlotMinBytes, wornCount );
+                outNew.count( 4 + Inventory::kSlotStateMinBytes, wornCount );
+                for ( uint32 index = 0; index < wornCount && inOld.isOk(); ++index )
+                {
+                    hashed_string slotName;
+                    inOld.value( slotName );
+                    outNew.value( slotName );
+                    Inventory::upgradeSlotFromUnversioned( inOld, outNew );
+                }
+                Inventory::upgradeStateFrom2( inOld, outNew );
+                return inOld.isOk() && outNew.isOk();
+            }
+        };
     } // namespace
+
+    SW_STATE_FORMAT_UPGRADE( characterEquipment1To2, "CEQP", 1, 2, &CharacterEquipmentStateInternal::upgradeStateFrom1 );
 
     CharacterEquipmentComponent::CharacterEquipmentComponent()
         : _equipment{}

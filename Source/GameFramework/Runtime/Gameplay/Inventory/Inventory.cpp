@@ -22,6 +22,8 @@ namespace sw
     {
         struct InventoryInternal
         {
+            static constexpr uint32 kValueStateMinBytes = 24; ///< 꾸미기 값 하나 — 이름 두 개(8) + 숫자 네 개(16)
+
             /** @brief 판 1 → 2: 최대 무게 뒤에 빈 넘침 목록(개수 0)을 넣는다. 슬롯 수와 슬롯은 그대로 옮긴다(꼬리). */
             [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
             {
@@ -30,10 +32,20 @@ namespace sw
                 outNewBody << maxWeight << uint32{ 0 };
                 return inOldBody.isOk();
             }
+
+            /** @brief 판 2 → 3: 슬롯마다 꾸미기 값의 스키마 판(1)을 넣는다(넘침 목록 · 슬롯 목록). */
+            [[nodiscard]] static bool upgradeStateFrom2( Archive& inOldBody, Archive& outNewBody )
+            {
+                StateIO inOld( inOldBody );
+                StateIO outNew( outNewBody );
+                Inventory::upgradeStateFrom2( inOld, outNew );
+                return inOld.isOk() && outNew.isOk();
+            }
         };
     } // namespace
 
     SW_STATE_FORMAT_UPGRADE( inventory1To2, "INVT", 1, 2, &InventoryInternal::upgradeStateFrom1 );
+    SW_STATE_FORMAT_UPGRADE( inventory2To3, "INVT", 2, 3, &InventoryInternal::upgradeStateFrom2 );
 
     Inventory::Inventory()
         : _listSlot{}
@@ -486,7 +498,7 @@ namespace sw
         ++_revision;
     }
 
-    void Inventory::serializeSlot( StateIO& io, InventorySlot& inoutSlot ) // 슬롯마다 이름(4) + 개수, 내구도, 피해(12) + 꾸미기 수, 부품 수(8)
+    void Inventory::serializeSlot( StateIO& io, InventorySlot& inoutSlot ) // 슬롯마다 이름(4) + 개수, 내구도, 피해(12) + 꾸미기 판(4) + 꾸미기 수, 부품 수(8)
     {
         InventorySlot& slot = inoutSlot;
         {
@@ -498,9 +510,10 @@ namespace sw
             io.value( slot._count );
             io.value( slot._durability );
             io.value( slot._damage );
-            // 값마다 이름 두 개(8) + 숫자 네 개(16)
+            uint32 schemaVersion = slot._customization.getSchemaVersion();
+            io.value( schemaVersion );
             uint32 valueCount = static_cast<uint32>( slot._customization.getValues().size() );
-            io.count( 24, valueCount );
+            io.count( InventoryInternal::kValueStateMinBytes, valueCount );
             for ( uint32 valueIndex = 0; valueIndex < valueCount && io.isOk(); ++valueIndex )
             {
                 CustomizationValue value = io.isWriting() ? slot._customization.getValues()[valueIndex] : CustomizationValue{};
@@ -513,8 +526,57 @@ namespace sw
                 }
             }
             io.list( slot._listDetachedPart );
+            if ( io.isReading() )
+            {
+                slot._customization.setSchemaVersion( schemaVersion );
+            }
             (void)io.check( 0 <= slot._count && ( slot._count == 0 || slot._itemID.empty() == false ) );
         }
+    }
+
+    void Inventory::upgradeSlotFromUnversioned( StateIO& inOld, StateIO& outNew )
+    {
+        // 옛 모양: 이름 · 개수 · 내구도 · 피해 · 꾸미기 수 + 값들 · 뗀 부품 — 판 칸만 없다
+        InventorySlot slot;
+        inOld.value( slot._itemID );
+        inOld.value( slot._count );
+        inOld.value( slot._durability );
+        inOld.value( slot._damage );
+        uint32 valueCount = 0;
+        inOld.count( InventoryInternal::kValueStateMinBytes, valueCount );
+        for ( uint32 valueIndex = 0; valueIndex < valueCount && inOld.isOk(); ++valueIndex )
+        {
+            CustomizationValue value;
+            inOld.value( value._parameter );
+            inOld.value( value._option );
+            inOld.value( value._number );
+            slot._customization.setValue( value );
+        }
+        inOld.list( slot._listDetachedPart );
+        if ( inOld.isOk() == false )
+            return;
+        slot._customization.setSchemaVersion( CustomizationValueSet::kFirstSchemaVersion );
+        serializeSlot( outNew, slot );
+    }
+
+    void Inventory::upgradeSlotListFromUnversioned( StateIO& inOld, StateIO& outNew )
+    {
+        uint32 count = 0;
+        inOld.count( kUnversionedSlotMinBytes, count );
+        outNew.count( kSlotStateMinBytes, count );
+        for ( uint32 index = 0; index < count && inOld.isOk(); ++index )
+        {
+            upgradeSlotFromUnversioned( inOld, outNew );
+        }
+    }
+
+    void Inventory::upgradeStateFrom2( StateIO& inOld, StateIO& outNew )
+    {
+        float32 maxWeight = 0.0f;
+        inOld.value( maxWeight );
+        outNew.value( maxWeight );
+        upgradeSlotListFromUnversioned( inOld, outNew ); // 넘침 목록
+        upgradeSlotListFromUnversioned( inOld, outNew ); // 슬롯
     }
 
 } // namespace sw
