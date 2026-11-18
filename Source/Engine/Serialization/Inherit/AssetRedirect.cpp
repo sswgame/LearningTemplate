@@ -263,7 +263,7 @@ namespace sw
             return false;
         AssetRedirectInternal::State& state = pTable->getState();
         ScopedLock<mutex>             lock{ state._mutex };
-        const auto                    it = state._mapOldToNew.find( string{ assetID } );
+        const auto                    it = state._mapOldToNew.find( assetID );
         if ( it == state._mapOldToNew.end() )
             return false;
         outAssetID = it->second;

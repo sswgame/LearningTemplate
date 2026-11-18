@@ -321,7 +321,7 @@ namespace sw
     {
         State&            state = *_pState;
         ScopedLock<mutex> lock{ state._mutex };
-        const auto        it = state._mapRecord.find( string{ assetID } );
+        const auto        it = state._mapRecord.find( assetID );
         return it != state._mapRecord.end() && it->second._bLayered == SW_TRUE;
     }
 

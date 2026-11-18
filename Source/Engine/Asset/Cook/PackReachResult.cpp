@@ -214,7 +214,7 @@ namespace sw
                 /** @brief 파일 @p assetID 안의 칸 @p fieldName 이 id 칸이면 그 이름 공간, 아니면 nullptr 입니다 — 그 파일의 팩에 닿는 칸만 본다(`PackRuleScope`). */
                 const string* findIDFieldKind( string_view fieldName, string_view assetID ) const
                 {
-                    const auto itField = _mapIDFieldKind.find( string( fieldName ) );
+                    const auto itField = _mapIDFieldKind.find( fieldName );
                     if ( itField == _mapIDFieldKind.end() )
                         return nullptr;
                     for ( const PackEntryIDField* pField : itField->second )
