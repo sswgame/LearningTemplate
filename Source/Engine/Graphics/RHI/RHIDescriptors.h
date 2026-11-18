@@ -285,15 +285,15 @@ namespace sw
         PROPERTY( Transient )
         bool _bPreferMinimumPower{ false }; ///< 하드웨어 어댑터를 저전력 순서로 고른다(하이브리드 노트북의 내장 GPU — 언리얼 -preferIntel 자리). 기본은 고성능 순서(제조사와 무관)
 
-        /// @brief 업로드 스테이징 용량(바이트)입니다(`gv_rhiStagingRingMegabytes`). GL · Vulkan 은 링 크기, DX11 은 GPU 가 아직 복사 중인 스테이징 텍스처의 합의 상한으로 읽고,
+        /// @brief 업로드 스테이징 용량(바이트)입니다(`_rhi._stagingRingMegabytes`). GL · Vulkan 은 링 크기, DX11 은 GPU 가 아직 복사 중인 스테이징 텍스처의 합의 상한으로 읽고,
         ///        0 이면 그 백엔드가 초기화를 거절합니다. 실행마다 정하는 설정이라 리플렉션하지 않는다.
         uint64 _stagingRingBytes{ 0 };
-        /// @brief 이 크기(바이트) 이하의 텍스처 업로드는 스테이징 없이 드라이버 복사 호출로 바로 올립니다(`gv_rhiDirectUploadMaxKilobytes`, 지금은 DX11 만 읽는다). 리플렉션하지 않는다.
+        /// @brief 이 크기(바이트) 이하의 텍스처 업로드는 스테이징 없이 드라이버 복사 호출로 바로 올립니다(`_rhi._directUploadMaxKilobytes`, 지금은 DX11 만 읽는다). 리플렉션하지 않는다.
         uint64 _directUploadMaxBytes{ 0 };
 
-        /// @brief 텍스처 되읽기 링의 용량(바이트)입니다(`gv_rhiReadbackRingMegabytes`). 링을 쓰는 백엔드(GL · Vulkan)가 읽고, 0 이면 그 백엔드가 초기화를 거절합니다. 리플렉션하지 않는다.
+        /// @brief 텍스처 되읽기 링의 용량(바이트)입니다(`_rhi._readbackRingMegabytes`). 링을 쓰는 백엔드(GL · Vulkan)가 읽고, 0 이면 그 백엔드가 초기화를 거절합니다. 리플렉션하지 않는다.
         uint64 _readbackRingBytes{ 0 };
-        /// @brief 링보다 큰 전송 한 장을 링 밖의 일회성 버퍼로 받는 상한(바이트)입니다(`gv_rhiStagingSingleMaxMegabytes`). 링을 쓰는 백엔드(GL · Vulkan)가 업로드 · 되읽기 링에 같이 쓰고,
+        /// @brief 링보다 큰 전송 한 장을 링 밖의 일회성 버퍼로 받는 상한(바이트)입니다(`_rhi._stagingSingleMaxMegabytes`). 링을 쓰는 백엔드(GL · Vulkan)가 업로드 · 되읽기 링에 같이 쓰고,
         ///        0 이면 링보다 큰 한 장은 `Rejected` 입니다. 리플렉션하지 않는다.
         uint64 _stagingSoloMaxBytes{ 0 };
         /// @brief 장치 메모리 할당 수 한도에서 남겨 둘 칸입니다(`EngineConfig::_rhi._allocationCountReserve`). 할당을 세는 백엔드(Vulkan)는 0 이면 초기화를 거절한다. 리플렉션하지 않는다.

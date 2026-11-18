@@ -8,7 +8,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/BuildInfo.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringUtil.h"
@@ -484,36 +483,6 @@ namespace sw
     {
     }
 
-    // 요청 백버퍼 포맷. 언리얼 r.DefaultBackBufferPixelFormat 과 같은 자리다. RGBA8 = R8G8B8A8(계약 기본), BGRA8 = B8G8R8A8.
-    // 백엔드가 실제로 채택한 값은 getBackBufferFormat() 이 답한다(DX 는 요청대로, Vulkan 은 서피스와 협상, GL 은 창 픽셀
-    // 포맷이라 항상 기본). 백버퍼를 타깃으로 하는 PSO 는 그 값으로 만들어야 한다. 이 변수는 그 경로를 다른 포맷으로
-    // 실제 돌려 보는 스위치이기도 하다(`-gv_rhiBackBufferFormat=BGRA8`). 명령줄은 열거자 이름만 받는다(숫자는 오류).
-    SW_GLOBAL_VARIABLE( RHIBackBufferFormat, gv_rhiBackBufferFormat, RHIBackBufferFormat::RGBA8, "요청 백버퍼 포맷: RGBA8=R8G8B8A8_UNORM, BGRA8=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat)" );
-    // 소프트웨어 어댑터(WARP · CPU Vulkan)로 띄운다 — GPU 없는 CI 러너와 같은 래스터라이저를 이 PC 에서 고른다. 환경 변수 SW_RHI_SOFTWARE_ADAPTER=1 도 같다
-    // (ctest 가 인자 없이 켠다). 언제 켤지는 엔진이 정하고, 어떻게 고를지는 백엔드가 안다.
-    // 켜고 끄는 값이라 종류가 아니라 bool 이다(`-gv_rhiSoftwareAdapter=true`, `=1` 도 받는다). 배포본에도 둔다 — GPU 없는 기계에서 띄우는 길이고(환경 변수도 배포본에 있다), 언리얼 `-warp` 도 모든 구성에서 받는다.
-    SW_GLOBAL_VARIABLE( bool, gv_rhiSoftwareAdapter, false, "소프트웨어 어댑터로 띄운다: false=하드웨어, true=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
-    // 하드웨어 어댑터는 고성능 순서(OS 의 GPU 선호 · Vulkan 장치 종류 — 제조사와 무관)로 고른다. 켜면 저전력 순서다(하이브리드 노트북의 내장 GPU) — 언리얼 -preferIntel 처럼
-    // 같은 기계에서 다른 GPU 로 그림을 비교한다. GL 은 어댑터를 고르는 API 가 없어 실행 파일 내보내기(NvOptimusEnablement · AmdPowerXpress…)를 따른다.
-    SW_GLOBAL_VARIABLE( bool, gv_rhiPreferMinimumPower, false, "하드웨어 어댑터를 저전력 순서로 고른다(DX11 · DX12 · Vulkan): false=고성능(외장 GPU), true=저전력(내장 GPU). GL 은 드라이버가 정한다" );
-    // 업로드 스테이징 용량. 64 MiB 는 측정값이 아니라 4096² BC7 밉 체인(약 21 MiB) 몇 장을 동시에 담는 추정이다(RHIAsyncUploads 2.2, M1 이 조정한다).
-    // GL · Vulkan 링보다 큰 업로드 하나는 링이 빌 때 혼자 일회성 버퍼로 들어간다(gv_rhiStagingSingleMaxMegabytes 까지). DX11 은 스테이징을 업로드마다 만들어, 이보다 큰 업로드 하나가
-    // 예산 전부를 잡고 혼자 들어간다.
-    SW_GLOBAL_VARIABLE( int32, gv_rhiStagingRingMegabytes, 64,
-                        "업로드 스테이징 용량(MiB): GL · Vulkan 은 링 크기(이보다 큰 업로드 하나는 링이 빌 때 혼자 들어간다), DX11 은 복사 중인 스테이징 텍스처 합의 상한(이보다 큰 업로드 하나는 혼자 들어간다)" );
-    // 텍스처 되읽기 링 용량. 64 MiB 는 측정값이 아니라 4K RGBA16F 렌더 타깃 한 장(약 63.3 MiB)을 담는 추정이다. 구간은 결과를 가져가거나 버릴 때 돌아오므로
-    // 가져가지 않은 읽기가 쌓이면 Busy, 링보다 큰 읽기 하나는 업로드와 같이 링이 빌 때 혼자 들어간다.
-    SW_GLOBAL_VARIABLE( int32, gv_rhiReadbackRingMegabytes, 64, "텍스처 되읽기 링 용량(MiB). 이보다 큰 텍스처 읽기 하나는 링이 빌 때 혼자 들어간다(GL · Vulkan)" );
-    // 링보다 큰 전송 한 장의 상한. 512 MiB 는 측정값이 아니라 8192² RGBA8 그림자 스냅샷(256 MiB)과 8K RGBA16F 뷰(약 253 MiB)를 받고 그 두 배에서 멈추는 추정이다.
-    // 크기에 한도가 없으면 잘못된 요청 하나가 그 크기의 버퍼를 만든다. 넘는 한 장은 Rejected 이고 이 설정 이름을 로그로 알린다.
-    SW_GLOBAL_VARIABLE( int32, gv_rhiStagingSingleMaxMegabytes, 512,
-                        "링보다 큰 업로드 · 텍스처 읽기 한 장을 일회성 버퍼로 받는 상한(MiB). 넘으면 Rejected, 0 이면 링보다 큰 한 장은 모두 Rejected 다(GL · Vulkan)" );
-    // DX11 은 이 크기 이하의 업로드를 스테이징 없이 UpdateSubresource 로 올린다(소스 복사가 즉시 컨텍스트 잠금 안에서 일어난다).
-    // 256 KiB 는 측정값이 아니라 추정이다: 잠금 안의 복사가 수십 µs(메모리 복사 5 ~ 10 GB/s)라 프레임(16.6 ms)에 비해 작고, 스테이징 한 장의 생성 · 추가 복사 명령의
-    // 고정 비용과 비슷한 자리다. 글리프 아틀라스 구간 갱신(수 KB)과 256² RGBA8 이하 텍스처가 이 아래로 간다. M1(RHIAsyncUploads 측정)이 조정한다.
-    // 위 스테이징 용량들과 같은 성능 설정이라 배포본에도 둔다(언리얼 `r.*` 업로드 cvar 와 같은 자리).
-    SW_GLOBAL_VARIABLE( int32, gv_rhiDirectUploadMaxKilobytes, 256, "이 크기(KiB) 이하의 텍스처 업로드는 스테이징 없이 바로 올린다(지금은 DX11 만 쓴다). 0 이면 모두 스테이징" );
-
     bool IRHIDevice::initialize()
     {
         // 백엔드가 이유를 좁히지 않고 물러나면 결함일 수 있는 실패다. 환경 탓이면 백엔드가 initializeInternal 안에서 고쳐 적는다.
@@ -522,9 +491,12 @@ namespace sw
         if ( _pSurface == nullptr )
             return false;
 
-        // 요청 포맷은 모든 열거자를 나열한 switch 로 고른다. 범위 밖 값(에디터 · 콘솔이 숫자를 넣은 경우)은 기본 포맷으로 대신하지 않고 멈춘다.
+        // 정책 값은 EngineConfig 의 `_rhi` 하나다 — 장치를 만들 때 한 번 읽는 기동 값이라 실행 중에 바꾸는 개발 변수로 두지 않는다.
+        const RHIConfig& rhiConfig = engine::getSubsystem<EngineConfig>()._rhi;
+
+        // 요청 포맷은 모든 열거자를 나열한 switch 로 고른다. 범위 밖 값은 기본 포맷으로 대신하지 않고 멈춘다.
         RHIFormat requestedFormat = RHIFormat::Unknown;
-        switch ( gv_rhiBackBufferFormat )
+        switch ( rhiConfig._backBufferFormat )
         {
             case RHIBackBufferFormat::RGBA8:
             {
@@ -539,7 +511,8 @@ namespace sw
         }
         if ( requestedFormat == RHIFormat::Unknown )
         {
-            SW_LOG_ERROR_ID( "RHI.GvRhiBackBufferFormatNoBack", "gv_rhiBackBufferFormat has no back buffer format for the value %# (RGBA8 or BGRA8)", static_cast<uint32>( gv_rhiBackBufferFormat ) );
+            SW_LOG_ERROR_ID( "RHI.BackBufferFormatUnknown", "EngineConfig _rhi._backBufferFormat has no back buffer format for the value %# (RGBA8 or BGRA8)",
+                             static_cast<uint32>( rhiConfig._backBufferFormat ) );
             return false;
         }
 
@@ -556,13 +529,11 @@ namespace sw
         swapChainDesc._bufferCount    = kBackBufferCount;
         swapChainDesc._format         = requestedFormat;
         swapChainDesc._bVSync         = _bPreferredVSync;
-        // 0 이하는 0 으로 넘긴다 — 스테이징 · 링을 쓰는 백엔드가 0 을 오류로 거절한다(기본값으로 바꿔 주지 않는다).
-        swapChainDesc._stagingRingBytes     = gv_rhiStagingRingMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingRingMegabytes ) * constant::memory::kBytesPerMegabyte : 0u;
-        swapChainDesc._readbackRingBytes    = gv_rhiReadbackRingMegabytes > 0 ? static_cast<uint64>( gv_rhiReadbackRingMegabytes ) * constant::memory::kBytesPerMegabyte : 0u;
-        swapChainDesc._directUploadMaxBytes = gv_rhiDirectUploadMaxKilobytes > 0 ? static_cast<uint64>( gv_rhiDirectUploadMaxKilobytes ) * constant::memory::kBytesPerKilobyte : 0u;
-        swapChainDesc._stagingSoloMaxBytes  = gv_rhiStagingSingleMaxMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingSingleMaxMegabytes ) * constant::memory::kBytesPerMegabyte : 0u;
-        // 정책 값은 EngineConfig 의 `_rhi` 하나다. 0 은 그대로 넘긴다 — 쓰는 백엔드가 오류로 거절한다(기본값으로 바꿔 주지 않는다).
-        const RHIConfig& rhiConfig                      = engine::getSubsystem<EngineConfig>()._rhi;
+        // 0 은 그대로 넘긴다 — 쓰는 백엔드가 오류로 거절한다(기본값으로 바꿔 주지 않는다).
+        swapChainDesc._stagingRingBytes                 = static_cast<uint64>( rhiConfig._stagingRingMegabytes ) * constant::memory::kBytesPerMegabyte;
+        swapChainDesc._readbackRingBytes                = static_cast<uint64>( rhiConfig._readbackRingMegabytes ) * constant::memory::kBytesPerMegabyte;
+        swapChainDesc._directUploadMaxBytes             = static_cast<uint64>( rhiConfig._directUploadMaxKilobytes ) * constant::memory::kBytesPerKilobyte;
+        swapChainDesc._stagingSoloMaxBytes              = static_cast<uint64>( rhiConfig._stagingSingleMaxMegabytes ) * constant::memory::kBytesPerMegabyte;
         swapChainDesc._allocationCountReserve           = rhiConfig._allocationCountReserve;
         swapChainDesc._uploadStagingBytes               = static_cast<uint64>( rhiConfig._uploadStagingMegabytes ) * constant::memory::kBytesPerMegabyte;
         swapChainDesc._uploadStagingIdleFrames          = rhiConfig._uploadStagingIdleFrames;
@@ -609,8 +580,8 @@ namespace sw
                 SW_LOG_ERROR_ID( "RHI.SWRHISOFTWAREADAPTER", "SW_RHI_SOFTWARE_ADAPTER=\"%#\" is not a boolean (use 1, 0, true, false, yes, no, on or off)", softwareEnv.c_str() );
                 return false;
             }
-            swapChainDesc._bSoftwareAdapter    = gv_rhiSoftwareAdapter || bSoftwareEnv;
-            swapChainDesc._bPreferMinimumPower = gv_rhiPreferMinimumPower;
+            swapChainDesc._bSoftwareAdapter    = rhiConfig._bSoftwareAdapter || bSoftwareEnv;
+            swapChainDesc._bPreferMinimumPower = rhiConfig._bPreferMinimumPower;
         }
         _bSoftwareAdapter = SW_FALSE;
         if ( engine::areEngineServicesBound() )
@@ -637,9 +608,9 @@ namespace sw
         {
             // 요청대로 섰으면 알림이다(소프트웨어 렌더러 CI 묶음 `swrender` 가 일부러 켠다 — 호스트 스위트는 Warning 을 실패로 센다). 요청을 무시한 것만 경고다.
             if ( _bSoftwareAdapter )
-                SW_LOG_INFO_ID( "RHI.RHIRunningSoftwareAdapter", "RHI %# is running on a software adapter (gv_rhiSoftwareAdapter) - timings are not representative", getBackendName() );
+                SW_LOG_INFO_ID( "RHI.RHIRunningSoftwareAdapter", "RHI %# is running on a software adapter (EngineConfig _rhi._bSoftwareAdapter) - timings are not representative", getBackendName() );
             else
-                SW_LOG_WARNING_ID( "RHI.RHIIgnoredSoftwareAdapter", "RHI %# ignored the software adapter request (gv_rhiSoftwareAdapter) - it runs on the hardware adapter", getBackendName() );
+                SW_LOG_WARNING_ID( "RHI.RHIIgnoredSoftwareAdapter", "RHI %# ignored the software adapter request (EngineConfig _rhi._bSoftwareAdapter) - it runs on the hardware adapter", getBackendName() );
         }
         // 요청과 채택이 다를 수 있다(Vulkan 서피스 협상). 백버퍼 PSO 는 채택값으로 만들어진다. 어느 쪽인지 로그로 남긴다.
         SW_LOG_INFO_ID( "RHI.BackBufferFormatRequested", "Back buffer format: requested %# -> adopted %# (getBackBufferFormat)",

@@ -271,6 +271,19 @@ namespace sw
     };
 
     /**
+     * @enum RHIBackBufferFormat
+     * @brief 요청할 수 있는 백버퍼 포맷입니다(EngineConfig `_rhi._backBufferFormat`). 언리얼 `r.DefaultBackBufferPixelFormat` 과 같은 자리입니다.
+     * @details `RHIFormat` 전체가 아니라 백버퍼로 쓸 수 있는 둘만 담는다 — 깊이 · 압축 포맷을 요청하는 모양을 만들 수 없게 한다.
+     *          백엔드가 실제로 채택한 값은 `IRHIDevice::getBackBufferFormat()` 이 답한다. 장치를 만들 때 한 번 읽는 기동 값이다.
+     */
+    ENUM()
+    enum class RHIBackBufferFormat : uint8
+    {
+        RGBA8, ///< R8G8B8A8_UNORM — 계약 기본값(`constant::render::kBackBufferFormat`)
+        BGRA8, ///< B8G8R8A8_UNORM — 백버퍼를 타깃으로 하는 PSO 가 이 포맷으로도 만들어지는지 돌려 보는 스위치
+    };
+
+    /**
      * @struct RHIConfig
      * @brief 렌더 장치(`IRHIDevice::initialize`)가 읽는 정책 값입니다. 장치는 `RHISwapChainDesc` 로 받는다.
      * @details 값은 모두 `Config/Engine/EngineConfig.json` 의 `_rhi` 에 있다 — 빠진 숫자 키는 범위 검사(`Min`)에서 로드 오류다.
@@ -302,6 +315,55 @@ namespace sw
         /** @brief 파이프라인 캐시(Vulkan `VkPipelineCache`)를 디스크에 저장하는 주기(초)입니다. 종료 전에 죽어도 그 주기 앞까지의 컴파일이 남는다(R-13). */
         PROPERTY( Min = 1, Units = s )
         float64 _pipelineCacheSaveIntervalSeconds{};
+
+        /**
+         * @brief 요청 백버퍼 포맷입니다(`RHIBackBufferFormat`, 언리얼 `r.DefaultBackBufferPixelFormat`). 백엔드가 실제로 채택한 값은 `IRHIDevice::getBackBufferFormat()` 이다.
+         * @details DX 는 요청대로, Vulkan 은 서피스와 협상, GL 은 창 픽셀 포맷이라 늘 기본이다. 백버퍼를 타깃으로 하는 PSO 는 채택값으로 만든다.
+         */
+        PROPERTY( Required )
+        RHIBackBufferFormat _backBufferFormat{};
+
+        /**
+         * @brief 소프트웨어 어댑터(WARP · CPU Vulkan)로 띄웁니다 — GPU 없는 CI 러너와 같은 래스터라이저를 이 PC 에서 고른다. 환경 변수 `SW_RHI_SOFTWARE_ADAPTER=1` 도 켠다.
+         * @details 배포본에도 듣는다 — GPU 없는 기계에서 띄우는 길이다(언리얼 `-warp` 도 모든 구성에서 받는다). 언제 켤지는 엔진이, 어떻게 고를지는 백엔드가 정한다.
+         */
+        PROPERTY( Required )
+        bool _bSoftwareAdapter{};
+
+        /**
+         * @brief 하드웨어 어댑터를 저전력 순서(하이브리드 노트북의 내장 GPU)로 고릅니다. 끄면 고성능 순서(OS 의 GPU 선호 · Vulkan 장치 종류)다 — 언리얼 `-preferIntel` 자리.
+         * @details DX11 · DX12 · Vulkan 만 듣는다. GL 은 어댑터를 고르는 API 가 없어 실행 파일 내보내기(NvOptimusEnablement · AmdPowerXpress…)를 따른다.
+         */
+        PROPERTY( Required )
+        bool _bPreferMinimumPower{};
+
+        /**
+         * @brief 업로드 스테이징 용량(MB)입니다. GL · Vulkan 은 링 크기(이보다 큰 업로드 하나는 링이 빌 때 혼자 들어간다), DX11 은 복사 중인 스테이징 텍스처 합의 상한이다.
+         * @details 64 는 측정값이 아니라 4096² BC7 밉 체인(약 21 MiB) 몇 장을 동시에 담는 추정이다(RHIAsyncUploads 2.2, M1 이 조정한다).
+         */
+        PROPERTY( Min = 1, Meta = "Units=MB" )
+        uint32 _stagingRingMegabytes{};
+
+        /**
+         * @brief 텍스처 되읽기 링 용량(MB)입니다(GL · Vulkan). 이보다 큰 읽기 하나는 링이 빌 때 혼자 들어간다.
+         * @details 64 는 측정값이 아니라 4K RGBA16F 렌더 타깃 한 장(약 63.3 MiB)을 담는 추정이다.
+         */
+        PROPERTY( Min = 1, Meta = "Units=MB" )
+        uint32 _readbackRingMegabytes{};
+
+        /**
+         * @brief 링보다 큰 업로드 · 텍스처 읽기 한 장을 일회성 버퍼로 받는 상한(MB)입니다(GL · Vulkan). 넘으면 `Rejected`, 0 이면 링보다 큰 한 장은 모두 `Rejected` 다.
+         * @details 512 는 측정값이 아니라 8192² RGBA8 그림자 스냅샷(256 MiB)과 8K RGBA16F 뷰(약 253 MiB)를 받고 그 두 배에서 멈추는 추정이다. 한도가 없으면 잘못된 요청 하나가 그 크기의 버퍼를 만든다.
+         */
+        PROPERTY( Required, Meta = "Units=MB" )
+        uint32 _stagingSingleMaxMegabytes{};
+
+        /**
+         * @brief 이 크기(KB) 이하의 텍스처 업로드는 스테이징 없이 바로 올립니다(지금은 DX11 `UpdateSubresource` 만). 0 이면 모두 스테이징이다.
+         * @details 256 은 추정이다 — 잠금 안의 복사가 수십 µs 라 프레임에 비해 작고, 스테이징 한 장의 생성 · 추가 복사의 고정 비용과 비슷한 자리다(M1 이 조정한다).
+         */
+        PROPERTY( Required, Meta = "Units=KB" )
+        uint32 _directUploadMaxKilobytes{};
 
         /**
          * @brief 그래픽 API 검증 층(D3D12 · D3D11 디버그 레이어, Vulkan 검증 레이어)을 켤지의 기본값입니다. 시작 인자 `-rhi-validation` 이 이긴다.

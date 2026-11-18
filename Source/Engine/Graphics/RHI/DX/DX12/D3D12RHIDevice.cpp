@@ -691,11 +691,11 @@ namespace sw
         if ( FAILED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
             return false;
 
-        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(gv_rhiSoftwareAdapter).
+        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(_rhi._bSoftwareAdapter).
         Microsoft::WRL::ComPtr<IDXGIAdapter1> softwareAdapter;
         if ( desc._bSoftwareAdapter && FAILED( factory->EnumWarpAdapter( IID_PPV_ARGS( softwareAdapter.GetAddressOf() ) ) ) )
         {
-            SW_LOG_ERROR_ID( "D3D12.WARPAdapterNotAvailable", "WARP adapter is not available (gv_rhiSoftwareAdapter)" );
+            SW_LOG_ERROR_ID( "D3D12.WARPAdapterNotAvailable", "WARP adapter is not available (_rhi._bSoftwareAdapter)" );
             return false;
         }
 
@@ -2236,7 +2236,7 @@ namespace sw
     {
         if ( desc._stagingRingBytes == 0 || desc._readbackRingBytes == 0 )
         {
-            SW_LOG_ERROR_ID( "D3D12.D3D12BackendNeedsStaging", "The D3D12 backend needs staging and readback ring capacities (gv_rhiStagingRingMegabytes · gv_rhiReadbackRingMegabytes must be positive)" );
+            SW_LOG_ERROR_ID( "D3D12.D3D12BackendNeedsStaging", "The D3D12 backend needs staging and readback ring capacities (_rhi._stagingRingMegabytes · _rhi._readbackRingMegabytes must be positive)" );
             return false;
         }
         return createStagingRing( _uploadRing, D3D12_HEAP_TYPE_UPLOAD, desc._stagingRingBytes, desc._stagingSoloMaxBytes ) &&
@@ -2292,7 +2292,7 @@ namespace sw
         const bool bCreated = heapType == D3D12_HEAP_TYPE_READBACK ? createMappedReadbackBuffer( sizeBytes, outBuffer, pMapped ) : createMappedUploadBuffer( sizeBytes, outBuffer, pMapped );
         if ( bCreated == false )
         {
-            SW_LOG_ERROR_ID( "D3D12.FailedCreateMapD3D12", "Failed to create or map the D3D12 staging upload buffer (%# bytes, gv_rhiStagingRingMegabytes · gv_rhiStagingSingleMaxMegabytes)", sizeBytes );
+            SW_LOG_ERROR_ID( "D3D12.FailedCreateMapD3D12", "Failed to create or map the D3D12 staging upload buffer (%# bytes, _rhi._stagingRingMegabytes · _rhi._stagingSingleMaxMegabytes)", sizeBytes );
             return false;
         }
         pOutMapped = static_cast<uint8*>( pMapped );

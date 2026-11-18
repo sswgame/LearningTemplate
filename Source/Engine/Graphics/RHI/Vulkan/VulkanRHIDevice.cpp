@@ -1182,7 +1182,7 @@ namespace sw
                                    constant::render::kVulkanRequiredMinor );
                 continue;
             }
-            // 소프트웨어 어댑터를 요청했으면(gv_rhiSoftwareAdapter) CPU 디바이스(lavapipe · SwiftShader)만 후보다.
+            // 소프트웨어 어댑터를 요청했으면(_rhi._bSoftwareAdapter) CPU 디바이스(lavapipe · SwiftShader)만 후보다.
             if ( bSoftwareAdapter && candidateProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_CPU )
                 continue;
             // 셰이더는 네이티브 bindless(SW_BINDLESS)로만 쿠킹한다 — 기능 · 한도가 모자란 장치(모바일에 흔하다)는 텍스처 세트를 만들지 못하고 그리지 못한다.
@@ -1233,7 +1233,7 @@ namespace sw
         if ( _physicalDevice == nullptr && bSoftwareAdapter )
         {
             // 환경 탓이다(CPU 구현이 설치되지 않았다) — 결함으로 알리지 않는다.
-            SW_LOG_WARNING_ID( "Vulkan.NoCPUVulkanDevice", "No CPU Vulkan device (lavapipe / SwiftShader) for gv_rhiSoftwareAdapter - Vulkan does not start" );
+            SW_LOG_WARNING_ID( "Vulkan.NoCPUVulkanDevice", "No CPU Vulkan device (lavapipe / SwiftShader) for _rhi._bSoftwareAdapter - Vulkan does not start" );
             _initResult = RHIInitResult::DriverUnsupported;
         }
         else if ( _physicalDevice == nullptr )
@@ -3208,7 +3208,7 @@ namespace sw
     {
         if ( desc._stagingRingBytes == 0 || desc._readbackRingBytes == 0 )
         {
-            SW_LOG_ERROR_ID( "Vulkan.VulkanBackendNeedsStaging", "The Vulkan backend needs staging ring capacities (gv_rhiStagingRingMegabytes and gv_rhiReadbackRingMegabytes must be positive)" );
+            SW_LOG_ERROR_ID( "Vulkan.VulkanBackendNeedsStaging", "The Vulkan backend needs staging ring capacities (_rhi._stagingRingMegabytes and _rhi._readbackRingMegabytes must be positive)" );
             return false;
         }
 
@@ -3289,7 +3289,7 @@ namespace sw
         if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &outBuffer ) != VK_SUCCESS )
         {
             outBuffer = VK_NULL_HANDLE;
-            SW_LOG_ERROR_ID( "Vulkan.FailedCreateVulkanStaging", "Failed to create the Vulkan %# staging buffer (%# bytes, gv_rhiStagingRingMegabytes · gv_rhiReadbackRingMegabytes · gv_rhiStagingSingleMaxMegabytes)",
+            SW_LOG_ERROR_ID( "Vulkan.FailedCreateVulkanStaging", "Failed to create the Vulkan %# staging buffer (%# bytes, _rhi._stagingRingMegabytes · _rhi._readbackRingMegabytes · _rhi._stagingSingleMaxMegabytes)",
                              pName, capacityBytes );
             return false;
         }

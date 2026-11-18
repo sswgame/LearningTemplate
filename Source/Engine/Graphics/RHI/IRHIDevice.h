@@ -149,7 +149,7 @@ namespace sw
          * @details 백엔드는 환경 때문에 물러날 때만 `initializeInternal` 안에서 `_initResult` 를 `DriverUnsupported` 로 기록하고 false 를 반환한다.
          */
         RHIInitResult getInitResult() const { return _initResult; }
-        /** @brief 실제로 소프트웨어 어댑터(WARP, CPU Vulkan)를 쓰는지 반환합니다(`gv_rhiSoftwareAdapter`, 환경 변수 `SW_RHI_SOFTWARE_ADAPTER`). */
+        /** @brief 실제로 소프트웨어 어댑터(WARP, CPU Vulkan)를 쓰는지 반환합니다(`_rhi._bSoftwareAdapter`, 환경 변수 `SW_RHI_SOFTWARE_ADAPTER`). */
         bool isRunningOnSoftwareAdapter() const { return _bSoftwareAdapter; }
         /**
          * @brief 이 장치가 GPU 브레드크럼(패스 표지 · Vulkan 체크포인트)을 켰는지입니다 — `initialize` 가 백엔드를 부르기 전에 한 번 정한다(EngineConfig `_rhi._gpuBreadcrumbs`, `-rhi-breadcrumbs`).

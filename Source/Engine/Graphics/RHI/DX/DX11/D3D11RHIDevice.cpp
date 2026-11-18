@@ -476,7 +476,7 @@ namespace sw
         // 큰 업로드는 스테이징 예산 안에서만 받는다. 0 이면 큰 업로드를 하나도 받지 못하므로 기본값으로 바꾸지 않고 초기화를 멈춘다.
         if ( desc._stagingRingBytes == 0 )
         {
-            SW_LOG_ERROR_ID( "D3D11.UploadStagingBudgetGv", "The upload staging budget is 0 (gv_rhiStagingRingMegabytes) - Direct3D 11 does not start" );
+            SW_LOG_ERROR_ID( "D3D11.UploadStagingBudgetZero", "The upload staging budget is 0 (_rhi._stagingRingMegabytes) - Direct3D 11 does not start" );
             return false;
         }
         _uploadStagingBudget.initialize( desc._stagingRingBytes );
@@ -519,7 +519,7 @@ namespace sw
 
         Microsoft::WRL::ComPtr<IDXGISwapChain>      createdSwapChain;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> createdContext;
-        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(gv_rhiSoftwareAdapter). 하드웨어는 고성능 순서의 첫 어댑터다(RHIDxgiAdapter.h — 기본 어댑터는 하이브리드 노트북의 내장 GPU).
+        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(_rhi._bSoftwareAdapter). 하드웨어는 고성능 순서의 첫 어댑터다(RHIDxgiAdapter.h — 기본 어댑터는 하이브리드 노트북의 내장 GPU).
         Microsoft::WRL::ComPtr<IDXGIFactory1> factory;
         Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
         if ( desc._bSoftwareAdapter == false )

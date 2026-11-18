@@ -965,7 +965,7 @@ namespace sw
         mutex _transferSubmitMutex;
         /// @brief 제출 순서대로 쌓인 전송 작업입니다. 전송 펜스가 앞에서부터 연속으로 지난 만큼 워터마크를 올립니다(`retireCompletedTransfers`).
         RHITransferFenceQueue<D3D12TransferJob> _transferFenceQueue;
-        /// @brief 업로드 스테이징 링입니다(`gv_rhiStagingRingMegabytes`).
+        /// @brief 업로드 스테이징 링입니다(`_rhi._stagingRingMegabytes`).
         D3D12StagingRing _uploadRing;
         D3D12StagingRing _readbackRing; ///< 텍스처 되읽기 도착지(READBACK 힙). 예전에는 되읽기마다 읽기 버퍼를 새로 만들었다
         /// @brief 놀고 있는 전송 작업 목록입니다. 펜스 줄의 회수 콜백 안에서도 잡는 잎 락(`_transferJobMutex`)이 지킵니다.
