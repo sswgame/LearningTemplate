@@ -493,7 +493,7 @@ namespace sw
         if ( instanceOrder._buffer != 0 && instanceOrder._srv != kInvalidDescriptorIndex )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swVisibleInstanceIDs, instanceOrder._buffer, instanceOrder._srv );
-            context._passValues.setUint( passConstantNames()._swVisibleSlotCount, static_cast<uint32>( _state._gpuScene.getInstances().size() ) );
+            context._passValues.setUint( passConstantNames()._swVisibleSlotCount, _state._gpuScene.getInstanceOrderCount() );
         }
     }
 

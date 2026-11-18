@@ -43,8 +43,9 @@ namespace sw
          * @details 뷰마다 하나다 — 뷰마다 보는 거리와 갱신 주기가 달라 전환 진행이 다르다.
          */
         RHIStructuredBuffer _lodState;
-        /// @brief `_lodState` 가 맞춰 둔 인스턴스 배치 세대(`GPUSceneSnapshot::_instanceLayoutGeneration`)입니다. 다르면 다음 컬링이 상태를 비운다(`GPUScene::takeLODStateReset`).
-        uint32 _lodStateLayoutGeneration{ 0xFFFFFFFFu };
+        /// @brief `_lodState` 를 새로 만들어 내용이 정해지지 않았으면 1 입니다. 다음 컬링이 비운다(`GPUScene::takeLODStateReset`). 칸이 고정이라 배치를 다시 나눠도 비우지 않는다 —
+        ///        칸을 다른 물체가 받은 것은 상태에 함께 적은 차례(`GPUInstance::_slotSerial`)로 컬링이 알아챈다.
+        uint8 _bLODStateUndefined{ SW_TRUE };
     };
 } // namespace sw
 
@@ -165,22 +166,19 @@ namespace sw
         /** @brief GPU 버퍼를 해제합니다. */
         void releaseGPU( IRHIDevice* pDevice );
 
-        /** @brief 그리는 차례의 인스턴스 목록입니다(배치 순 — 컬링이 차례마다 스레드 하나를 돈다). GPU 버퍼는 칸 순이다(`getSlotInstances`). */
+        /** @brief 칸 순 인스턴스 목록입니다(원소 번호가 GPUScene 칸, 구멍 포함). 그리는 순서는 차례 → 칸 목록(`getInstanceOrderBuffer`)이 정한다. */
         const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
-        /** @brief 칸 순 인스턴스 목록입니다(GPU 인스턴스 버퍼의 CPU 사본 — 원소 번호가 GPUScene 칸, 구멍 포함). */
-        const vector<GPUInstance>& getSlotInstances() const { return _slotBuffer.getSlots(); }
         /** @brief GPUScene 칸 수(칸 순 인스턴스 버퍼의 원소 수, 구멍 포함)입니다. 정점 셰이더가 읽는 인스턴스 번호의 범위다. */
-        uint32 getInstanceSlotCount() const
-        {
-            return _snapshot._pListInstanceSlot != nullptr ? _snapshot._instanceSlotCount : static_cast<uint32>( _snapshot.getInstances().size() );
-        }
+        uint32 getInstanceSlotCount() const { return static_cast<uint32>( _snapshot.getInstances().size() ); }
+        /** @brief 그리는 차례의 수(배치에 실린 인스턴스 수)입니다. 컬링은 차례마다 스레드 하나를 돈다. */
+        uint32 getInstanceOrderCount() const { return _snapshot.getInstanceOrderCount(); }
         /**
          * @brief 차례 → 칸 목록 버퍼입니다(원소 `uint32`, 차례 수만큼). 컬링(`gpu_cull.hlsl` · `instance_sort.hlsl` 의 t3)이 차례의 칸을 읽고,
          *        컬링이 없는 길은 이 버퍼를 가시 목록 자리(`g_SwVisibleInstanceIDs`)에 건다 — 정점 셰이더가 두 길을 같은 형식으로 읽는다.
          */
         const RHIStructuredBuffer& getInstanceOrderBuffer() const { return _instanceOrder; }
         /**
-         * @brief 컬링 뷰 @p view 의 LOD 전환 상태를 이번 컬링에서 비워야 하면 true 를 반환하고 비운 것으로 기록합니다(상태 버퍼를 새로 만들었거나 인스턴스 번호 배치가 바뀌었다).
+         * @brief 컬링 뷰 @p view 의 LOD 전환 상태를 이번 컬링에서 비워야 하면 true 를 반환하고 비운 것으로 기록합니다(상태 버퍼를 새로 만들었다).
          */
         bool takeLODStateReset( uint32 cullViewIndex );
         /** @brief 컬링 뷰 @p view 에 LOD 전환 상태 버퍼가 있으면 true 입니다(LOD 그룹이 있고 버퍼를 만들었다). */
@@ -364,9 +362,9 @@ namespace sw
         void updateVertexPool( IRHIDevice* pDevice );
         /** @brief 칸 순 인스턴스 버퍼를 확보해 바뀐 칸만(처음 · 다시 만든 버퍼는 전체) 올리고, 차례 → 칸 목록과 뷰마다의 가시 인스턴스 ID 버퍼를 확보합니다. */
         void uploadInstanceAndVisibleBuffers( IRHIDevice* pDevice );
-        /** @brief 스냅샷의 그리는 순서 배열을 칸 순 사본에 흩어 바뀐 칸을 고릅니다(CPU 만 — 올리기는 `uploadInstanceAndVisibleBuffers`). 새 스냅샷마다 한 번 부른다. */
+        /** @brief 스냅샷의 바뀐 칸을 칸 순 사본에 받습니다(CPU 만 — 올리기는 `uploadInstanceAndVisibleBuffers`). 새 스냅샷마다 한 번 부른다. */
         void syncSlotInstances();
-        /** @brief 차례 → 칸 목록 버퍼를 확보하고, 목록이 바뀌었거나 버퍼를 새로 만들었으면 올립니다. */
+        /** @brief 차례 → 칸 목록 버퍼를 확보하고, 목록이 바뀌었으면 바뀐 구간만(버퍼를 새로 만들었으면 전체) 올립니다. */
         void uploadInstanceOrder( IRHIDevice* pDevice );
         /** @brief 배치 표(인스턴스 시작 · 모프 · 정점 풀 · VAT 오프셋 · 정렬 방식)를 만들어 올립니다. */
         void uploadBatchTable( IRHIDevice* pDevice, uint32 argsCount );
@@ -417,12 +415,13 @@ namespace sw
         /**
          * @brief 칸 순 인스턴스 버퍼(`_instances`)의 CPU 사본과 바뀐 칸입니다. 원소 번호가 GPUScene 칸이고, 그리는 순서는 `_instanceOrder` 가 정한다.
          * @details 언리얼 GPUScene 의 인스턴스 데이터 버퍼처럼 칸이 고정이라, 배치를 다시 나눠 차례가 바뀐 프레임에도 내용이 바뀐 칸만 흩어 올린다.
+         *          스냅샷이 칸 순 배열과 바뀐 칸 구간을 싣고, 이 사본은 그 구간만 비교해 받는다.
          */
         GPUSceneSlotBuffer _slotBuffer;
         /// @brief 차례 → 칸 목록 버퍼입니다(`getInstanceOrderBuffer`).
         RHIStructuredBuffer _instanceOrder;
-        /// @brief 마지막으로 칸에 흩은 차례 목록입니다(공유 목록의 포인터로 바뀌었는지 본다).
-        shared_ptr<const vector<uint32>> _pSyncedInstanceOrder;
+        /// @brief 마지막으로 GPU 에 올린 차례 목록입니다(공유 목록의 포인터로 바뀌었는지 보고, 바뀐 구간만 올린다).
+        shared_ptr<const vector<uint32>> _pUploadedInstanceOrder;
         /// @brief 차례 목록이 널인 스냅샷(차례가 곧 칸)에 올릴 항등 목록입니다(스크래치).
         vector<uint32> _listScratchIdentityOrder;
         /// @brief 차례 목록을 다시 올려야 하면 1 입니다(목록이 바뀌었다).

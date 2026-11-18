@@ -1,4 +1,4 @@
-// GPUSceneSlotBufferTest — 칸 순 인스턴스 버퍼의 CPU 사본: 바뀐 칸만 흩어 올리고, 그리는 순서만 바뀌면 올리지 않으며, 빠진 칸은 구멍 · 다시 쓴 칸은 차례로 가른다(nogpu).
+// GPUSceneSlotBufferTest — 칸 순 인스턴스 버퍼의 CPU 사본: 바뀐 칸 구간만 비교해 올리고, 배치 번호가 그대로인 재구성은 올리지 않으며, 빠진 칸은 구멍 · 다시 쓴 칸은 차례로 가른다(nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
@@ -22,13 +22,13 @@ namespace
             return instance;
         }
 
-        /** @brief 칸 @p listSlot 의 차례대로 놓인(그리는 순서의) 배열입니다 — 칸 s 의 인스턴스는 x = s. */
-        static vector<GPUInstance> makeOrdered( const vector<uint32>& listSlot )
+        /** @brief 칸 s 의 인스턴스가 x = s 인 칸 순 배열입니다(@p holeSlot 칸은 구멍). */
+        static vector<GPUInstance> makeSlots( uint32 slotCount, uint32 holeSlot = constant::invalid_index::kUint32 )
         {
-            vector<GPUInstance> listOrdered;
-            for ( const uint32 slot : listSlot )
-                listOrdered.push_back( makeInstance( static_cast<float32>( slot ) ) );
-            return listOrdered;
+            vector<GPUInstance> listSlot;
+            for ( uint32 slot = 0; slot < slotCount; ++slot )
+                listSlot.push_back( slot == holeSlot ? GPUSceneSlotBuffer::makeHole() : makeInstance( static_cast<float32>( slot ) ) );
+            return listSlot;
         }
 
         /** @brief 바뀐 칸 구간을 모으고 올렸다고 기록합니다. */
@@ -43,24 +43,23 @@ namespace
 
 /**
  * @brief [GPUSceneSlotBufferTest] 처음은 전체를 올리고, 그 뒤 한 인스턴스가 움직이면 그 칸 하나만 올린다
- * @details 그리는 순서(차례 1)의 인스턴스가 칸 0 에 있다 — 차례 구간이 칸으로 옮겨져야 한다(차례 번호를 칸으로 쓰면 다른 칸을 올린다).
+ * @details 빌더가 준 바뀐 칸 구간만 본다 — 구간 밖의 칸은 비교하지 않는다.
  */
 SW_TEST_CASE( GPUSceneSlotBufferTest, MovedInstanceUploadsOnlyItsSlot )
 {
     using Util = SlotBufferTestUtil;
     GPUSceneSlotBuffer            buffer;
-    const vector<uint32>          listOrder{ 2u, 0u, 1u };
-    vector<GPUInstance>           listOrdered = Util::makeOrdered( listOrder );
+    vector<GPUInstance>           listSlot = Util::makeSlots( 4u, 3u );
     vector<GPUInstanceDirtyRange> listRun;
-    buffer.apply( listOrdered, &listOrder, 4u, true, {}, true );
+    buffer.apply( listSlot, {}, true );
     SW_EXPECT_FALSE( Util::takeRuns( buffer, listRun ) ); // 처음 — 전체
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( buffer.getSlots().size() ) );
     SW_EXPECT_NEAR( 2.0f, buffer.getSlots()[2]._world._41, 0.0f );
-    SW_EXPECT_EQUAL( GPUSceneSlotBuffer::kHoleBatchIndex, buffer.getSlots()[3]._meshBatchIndex ); // 차례가 가리키지 않은 칸은 구멍
+    SW_EXPECT_EQUAL( GPUSceneSlotBuffer::kHoleBatchIndex, buffer.getSlots()[3]._meshBatchIndex );
 
-    listOrdered[1]._world._41 = 10.0f; // 차례 1 = 칸 0
-    buffer.apply( listOrdered, &listOrder, 4u, false, {
-                                                          GPUInstanceDirtyRange{ 1u, 1u }
+    listSlot[0]._world._41 = 10.0f;
+    buffer.apply( listSlot, {
+                                GPUInstanceDirtyRange{ 0u, 1u }
     },
                   false );
     SW_REQUIRE_TRUE( Util::takeRuns( buffer, listRun ) );
@@ -71,30 +70,60 @@ SW_TEST_CASE( GPUSceneSlotBufferTest, MovedInstanceUploadsOnlyItsSlot )
 }
 
 /**
- * @brief [GPUSceneSlotBufferTest] 배치를 다시 나눠 그리는 순서만 바뀌면 올릴 칸이 없고, 빠진 칸은 구멍으로 그 칸만 올린다
- * @details 예전 버퍼는 그리는 순서였다 — 배치를 다시 나누면 인스턴스 전체를 올렸다. 칸 순이면 내용이 그대로인 칸은 그대로다.
+ * @brief [GPUSceneSlotBufferTest] 전체로 받아도 내용이 같은 칸은 올리지 않고, 빠진 칸은 구멍으로 그 칸만 올린다
+ * @details 배치를 다시 나눠도 배치 번호가 그대로인 칸은 그대로다 — 빌더가 "전체" 로 보내도 비교가 가른다.
  */
-SW_TEST_CASE( GPUSceneSlotBufferTest, ReorderUploadsNothingAndRemovedSlotBecomesHole )
+SW_TEST_CASE( GPUSceneSlotBufferTest, SameContentUploadsNothingAndRemovedSlotBecomesHole )
 {
     using Util = SlotBufferTestUtil;
     GPUSceneSlotBuffer            buffer;
     vector<GPUInstanceDirtyRange> listRun;
-    const vector<uint32>          listOrder{ 0u, 1u, 2u };
-    buffer.apply( Util::makeOrdered( listOrder ), &listOrder, 3u, true, {}, true );
+    buffer.apply( Util::makeSlots( 3u ), {}, true );
     (void)Util::takeRuns( buffer, listRun );
 
-    const vector<uint32> listReordered{ 2u, 0u, 1u }; // 같은 내용, 다른 그리는 순서
-    buffer.apply( Util::makeOrdered( listReordered ), &listReordered, 3u, true, {}, true );
+    buffer.apply( Util::makeSlots( 3u ), {}, true );
     SW_REQUIRE_TRUE( Util::takeRuns( buffer, listRun ) );
     SW_EXPECT_TRUE( listRun.empty() );
 
-    const vector<uint32> listWithoutOne{ 2u, 0u }; // 칸 1 이 빠졌다
-    buffer.apply( Util::makeOrdered( listWithoutOne ), &listWithoutOne, 3u, true, {}, true );
+    buffer.apply( Util::makeSlots( 3u, 1u ), {
+                                                 GPUInstanceDirtyRange{ 1u, 1u }
+    },
+                  false ); // 칸 1 이 빠졌다
     SW_REQUIRE_TRUE( Util::takeRuns( buffer, listRun ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), listRun.size() );
     SW_EXPECT_EQUAL( 1u, listRun[0]._start );
     SW_EXPECT_EQUAL( 1u, listRun[0]._count );
     SW_EXPECT_EQUAL( GPUSceneSlotBuffer::kHoleBatchIndex, buffer.getSlots()[1]._meshBatchIndex );
+}
+
+/**
+ * @brief [GPUSceneSlotBufferTest] 칸이 늘면 구간에 없어도 새 칸을 받아 올리고, 올리지 못한 변경은 다음 업로드까지 쌓인다
+ * @details 업로드를 건너뛴 프레임(빈 장면 · 장치 없음)의 변경을 잃으면 GPU 의 칸이 낡은 채로 남는다.
+ */
+SW_TEST_CASE( GPUSceneSlotBufferTest, GrownSlotsAndSkippedUploadsAccumulate )
+{
+    using Util = SlotBufferTestUtil;
+    GPUSceneSlotBuffer            buffer;
+    vector<GPUInstanceDirtyRange> listRun;
+    buffer.apply( Util::makeSlots( 2u ), {}, true );
+    (void)Util::takeRuns( buffer, listRun );
+
+    vector<GPUInstance> listSlot = Util::makeSlots( 4u );
+    listSlot[0]._world._41       = 5.0f;
+    buffer.apply( listSlot, {
+                                GPUInstanceDirtyRange{ 0u, 1u }
+    },
+                  false ); // 올리지 않는다
+    listSlot[1]._world._41 = 6.0f;
+    buffer.apply( listSlot, {
+                                GPUInstanceDirtyRange{ 1u, 1u }
+    },
+                  false );
+    SW_REQUIRE_TRUE( Util::takeRuns( buffer, listRun ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listRun.size() );
+    SW_EXPECT_EQUAL( 0u, listRun[0]._start );
+    SW_EXPECT_EQUAL( 4u, listRun[0]._count ); // 칸 0 · 1(쌓인 변경) + 칸 2 · 3(새 칸)
+    SW_EXPECT_NEAR( 3.0f, buffer.getSlots()[3]._world._41, 0.0f );
 }
 
 /**
@@ -106,14 +135,13 @@ SW_TEST_CASE( GPUSceneSlotBufferTest, ReusedSlotWithNewSerialIsReuploaded )
     using Util = SlotBufferTestUtil;
     GPUSceneSlotBuffer            buffer;
     vector<GPUInstanceDirtyRange> listRun;
-    const vector<uint32>          listOrder{ 0u, 1u };
-    vector<GPUInstance>           listOrdered{ Util::makeInstance( 0.0f, 1u ), Util::makeInstance( 1.0f, 1u ) };
-    buffer.apply( listOrdered, &listOrder, 2u, true, {}, true );
+    vector<GPUInstance>           listSlot{ Util::makeInstance( 0.0f, 1u ), Util::makeInstance( 1.0f, 1u ) };
+    buffer.apply( listSlot, {}, true );
     (void)Util::takeRuns( buffer, listRun );
 
-    listOrdered[1] = Util::makeInstance( 1.0f, 2u ); // 같은 자리 · 같은 내용, 다른 차례
-    buffer.apply( listOrdered, &listOrder, 2u, false, {
-                                                          GPUInstanceDirtyRange{ 1u, 1u }
+    listSlot[1] = Util::makeInstance( 1.0f, 2u ); // 같은 자리 · 같은 내용, 다른 차례
+    buffer.apply( listSlot, {
+                                GPUInstanceDirtyRange{ 1u, 1u }
     },
                   false );
     SW_REQUIRE_TRUE( Util::takeRuns( buffer, listRun ) );

@@ -113,7 +113,7 @@ namespace sw
             }
             case RenderPassType::GPUCull:
             {
-                dispatchCullAndSort( static_cast<uint32>( _state._gpuScene.getInstances().size() ) );
+                dispatchCullAndSort( _state._gpuScene.getInstanceOrderCount() ); // 차례마다 스레드 하나(인스턴스 버퍼는 칸 순 — 차례 → 칸 목록으로 찾는다)
                 break;
             }
             case RenderPassType::LightGrid:

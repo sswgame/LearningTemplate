@@ -15,10 +15,10 @@ namespace sw
         return hole;
     }
 
-    void GPUSceneSlotBuffer::apply( const vector<GPUInstance>& listOrdered, const vector<uint32>* pListOrderToSlot, uint32 slotCount, bool bOrderChanged,
-                                    const vector<GPUInstanceDirtyRange>& listDirtyRange, bool bAllDirty )
+    void GPUSceneSlotBuffer::apply( const vector<GPUInstance>& listSlotInstance, const vector<GPUInstanceDirtyRange>& listDirtyRange, bool bAllDirty )
     {
-        const uint32 oldCount = static_cast<uint32>( _listSlot.size() );
+        const uint32 slotCount = static_cast<uint32>( listSlotInstance.size() );
+        const uint32 oldCount  = static_cast<uint32>( _listSlot.size() );
         if ( slotCount != oldCount )
         {
             _listSlot.resize( slotCount, makeHole() );
@@ -34,59 +34,28 @@ namespace sw
                 }
                 _listDirtySlot.resize( keptCount );
             }
-            // 새 칸의 GPU 내용은 모른다 — 구멍을 올리게 바뀐 칸으로 센다.
+            // 새 칸의 GPU 내용은 모른다 — 바뀐 칸으로 세고 내용을 받는다(구간에 없어도).
             for ( uint32 slot = oldCount; slot < slotCount; ++slot )
             {
+                _listSlot[slot]      = listSlotInstance[slot];
                 _listDirtyFlag[slot] = 1u;
                 _listDirtySlot.push_back( slot );
             }
-            bOrderChanged = true;
         }
 
-        const uint32 orderedCount = static_cast<uint32>( listOrdered.size() );
-        auto         toSlot       = [pListOrderToSlot]( uint32 orderIndex ) -> uint32
+        // 구간이 비고 "전체" 가 아니면 바뀐 칸이 없다(빌더는 바뀐 칸을 모두 구간으로 싣고, 넘치면 "전체" 로 보낸다 — 카메라만 움직인 빌드).
+        if ( bAllDirty )
         {
-            if ( pListOrderToSlot == nullptr )
-                return orderIndex;
-            return orderIndex < pListOrderToSlot->size() ? ( *pListOrderToSlot )[orderIndex] : kHoleBatchIndex;
-        };
-
-        const bool bScanAll = bOrderChanged || bAllDirty || listDirtyRange.empty();
-        if ( bScanAll == false )
-        {
-            // 차례 목록이 그대로다 — 바뀐 차례만 그 칸으로 옮긴다. 구멍은 그대로다.
-            for ( const GPUInstanceDirtyRange& range : listDirtyRange )
-            {
-                const uint32 end = MathUtil::min( range._start + range._count, orderedCount );
-                for ( uint32 orderIndex = range._start; orderIndex < end; ++orderIndex )
-                {
-                    const uint32 slot = toSlot( orderIndex );
-                    if ( slot < slotCount )
-                        writeSlot( slot, listOrdered[orderIndex] );
-                }
-            }
+            // 비교만 한다 — 내용이 같은 칸은 올리지 않는다(배치를 다시 나눠 배치 번호가 그대로인 칸).
+            for ( uint32 slot = 0; slot < slotCount; ++slot )
+                writeSlot( slot, listSlotInstance[slot] );
             return;
         }
-
-        // 모든 차례를 보고(비교만 — 내용이 같은 칸은 올리지 않는다), 차례 목록에 없는 칸은 구멍으로 만든다. 그리는 순서만 바뀐 프레임은 바뀐 칸이 없다.
-        const bool bTrackSeen = pListOrderToSlot != nullptr;
-        if ( bTrackSeen )
-            _listSeenScratch.assign( slotCount, 0u );
-        for ( uint32 orderIndex = 0; orderIndex < orderedCount; ++orderIndex )
+        for ( const GPUInstanceDirtyRange& range : listDirtyRange )
         {
-            const uint32 slot = toSlot( orderIndex );
-            if ( slot >= slotCount )
-                continue;
-            if ( bTrackSeen )
-                _listSeenScratch[slot] = 1u;
-            writeSlot( slot, listOrdered[orderIndex] );
-        }
-        const GPUInstance hole = makeHole();
-        for ( uint32 slot = bTrackSeen ? 0u : orderedCount; slot < slotCount; ++slot )
-        {
-            if ( bTrackSeen && _listSeenScratch[slot] != 0u )
-                continue;
-            writeSlot( slot, hole );
+            const uint32 end = MathUtil::min( range._start + range._count, slotCount );
+            for ( uint32 slot = range._start; slot < end; ++slot )
+                writeSlot( slot, listSlotInstance[slot] );
         }
     }
 
@@ -143,7 +112,6 @@ namespace sw
         _listSlot.clear();
         _listDirtySlot.clear();
         _listDirtyFlag.clear();
-        _listSeenScratch.clear();
         _bFullUploadPending = SW_TRUE;
     }
 } // namespace sw
