@@ -256,7 +256,7 @@ namespace sw
 {
     /**
      * @enum RHIDiagnosticSwitch
-     * @brief 장치를 만들 때 켜는 GPU 진단(검증 층 · DRED)의 기본값입니다. 진단마다 시작 인자(`-rhi-validation` · `-rhi-dred`, `=0` 은 끔)가 이긴다(`resolveRHIDiagnosticSwitch`).
+     * @brief 장치를 만들 때 켜는 GPU 진단(검증 층 · DRED · GPU 브레드크럼)의 기본값입니다. 진단마다 시작 인자(`-rhi-validation` · `-rhi-dred` · `-rhi-breadcrumbs`, `=0` 은 끔)가 이긴다(`resolveRHIDiagnosticSwitch`).
      * @details 진단은 장치를 만들기 전에만 걸 수 있어 시작할 때 한 번 정한다 — 실행 중에 바꾸는 개발 변수가 아니다. 언리얼 Development 빌드의 `-d3ddebug` · `-gpucrashdebugging` 과 같다.
      *          게임은 Release 에서만 지어지므로 게임 결함은 Release 에서 인자로 켜서 본다.
      */
@@ -312,10 +312,17 @@ namespace sw
 
         /**
          * @brief D3D12 DRED(Device Removed Extended Data — 자동 브레드크럼 · 페이지 폴트)를 켤지의 기본값입니다. 시작 인자 `-rhi-dred` 가 이긴다.
-         * @details DRED 는 런타임 기능이라 배포 구성에서도 인자로 켤 수 있다(플레이어 기계의 장치 소실을 좇을 때, 언리얼 `-gpucrashdebugging`). 패스 표지(`-gv_gpuBreadcrumbs`)와는 따로다.
+         * @details DRED 는 런타임 기능이라 배포 구성에서도 인자로 켤 수 있다(플레이어 기계의 장치 소실을 좇을 때, 언리얼 `-gpucrashdebugging`). 패스 표지(`_gpuBreadcrumbs`)와는 따로다.
          */
         PROPERTY()
         RHIDiagnosticSwitch _dred{ RHIDiagnosticSwitch::None };
+
+        /**
+         * @brief GPU 브레드크럼(패스마다 GPU 표지 · Vulkan 체크포인트 — 장치 소실 뒤 마지막 패스 이름)을 켤지의 기본값입니다. 시작 인자 `-rhi-breadcrumbs` 가 이긴다.
+         * @details 표지 한 번이 패스당 GPU 쓰기 하나라 값싸다. 배포 구성에서도 인자로 켤 수 있다(언리얼 `-gpucrashdebugging`). DRED(`_dred`)와는 따로다.
+         */
+        PROPERTY()
+        RHIDiagnosticSwitch _gpuBreadcrumbs{ RHIDiagnosticSwitch::None };
 
         /** @brief GPU 기반 검증(D3D12 `SetEnableGPUBasedValidation` · Vulkan `VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT`)을 켭니다. 디버그 레이어가 켜진 실행에서만 듣는다(R-9). */
         PROPERTY()

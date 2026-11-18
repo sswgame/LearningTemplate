@@ -15,6 +15,7 @@
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
@@ -470,6 +471,7 @@ namespace sw
         , _bImmediateSubmit{ SW_FALSE }
         , _bSoftwareAdapter{ SW_FALSE }
         , _bShutDown{ SW_FALSE }
+        , _bGPUBreadcrumbs{ SW_FALSE }
         , _bParallelRecording{ false }
         , _parallelBarrierReportCount{ 0 }
         , _initResult{ RHIInitResult::NotStarted }
@@ -568,7 +570,7 @@ namespace sw
         swapChainDesc._bGPUBasedValidation              = rhiConfig._bGPUBasedValidation;
         swapChainDesc._bSynchronizationValidation       = rhiConfig._bSynchronizationValidation;
         {
-            // 검증 층 · DRED 는 장치를 만들기 전에만 걸 수 있어 여기서 한 번 정한다(설정 기본값, 시작 인자가 이긴다). 배포 구성은 검증 층을 짓지 않아 늘 끈다.
+            // 검증 층 · DRED · GPU 브레드크럼은 장치를 만들기 전에만 걸 수 있어 여기서 한 번 정한다(설정 기본값, 시작 인자가 이긴다). 배포 구성은 검증 층을 짓지 않아 늘 끈다.
 #if defined( SW_SHIPPING )
             constexpr RHIDiagnosticBuild kBuild = RHIDiagnosticBuild::Shipping;
 #elif defined( SW_DEBUG )
@@ -579,7 +581,8 @@ namespace sw
             const CommandLineManager* pCommandLine = engine::areEngineServicesBound() ? &engine::getSubsystem<CommandLineManager>() : nullptr;
             const expected<bool>      validation   = resolveRHIDiagnosticSwitch( rhiConfig._validationLayer, CommandLineArgument::RHI_VALIDATION, pCommandLine, kBuild );
             const expected<bool>      dred         = resolveRHIDiagnosticSwitch( rhiConfig._dred, CommandLineArgument::RHI_DRED, pCommandLine, kBuild );
-            for ( const expected<bool>* pResult : { &validation, &dred } )
+            const expected<bool>      breadcrumbs  = resolveRHIDiagnosticSwitch( rhiConfig._gpuBreadcrumbs, CommandLineArgument::RHI_BREADCRUMBS, pCommandLine, kBuild );
+            for ( const expected<bool>* pResult : { &validation, &dred, &breadcrumbs } )
             {
                 if ( pResult->has_value() == false )
                 {
@@ -589,8 +592,13 @@ namespace sw
             }
             swapChainDesc._bValidationLayer = build::kShipping == false && *validation;
             swapChainDesc._bDRED            = *dred;
-            SW_LOG_INFO_ID( "RHI.DiagnosticSwitches", "Graphics API validation layer: %#, DRED: %# (EngineConfig _rhi._validationLayer · _dred, -rhi-validation · -rhi-dred)",
-                            swapChainDesc._bValidationLayer ? "on" : "off", swapChainDesc._bDRED ? "on" : "off" );
+            _bGPUBreadcrumbs                = *breadcrumbs ? SW_TRUE : SW_FALSE;
+            // 패스 표 쪽(`GPUBreadcrumbs::registerPass`)도 같은 기동 값을 본다. 서비스 범위가 없는 실행은 표가 없어 표지를 남기지 않는다.
+            if ( GPUBreadcrumbLog* const pLog = engine::findSubsystem<GPUBreadcrumbLog>() )
+                pLog->setEnabledAtDeviceCreation( *breadcrumbs );
+            SW_LOG_INFO_ID( "RHI.DiagnosticSwitches",
+                            "Graphics API validation layer: %#, DRED: %#, GPU breadcrumbs: %# (EngineConfig _rhi._validationLayer · _dred · _gpuBreadcrumbs, -rhi-validation · -rhi-dred · -rhi-breadcrumbs)",
+                            swapChainDesc._bValidationLayer ? "on" : "off", swapChainDesc._bDRED ? "on" : "off", _bGPUBreadcrumbs ? "on" : "off" );
         }
         {
             string softwareEnv;

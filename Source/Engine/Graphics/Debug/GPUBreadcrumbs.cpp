@@ -3,8 +3,6 @@
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 
 #include "Core/Diagnostics/CrashHandler.h"
-#include "Core/Foundation/BuildInfo.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
@@ -16,15 +14,6 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_gpuBreadcrumbs=0|1`: 패스마다 GPU 표지를 남길지 정한다(기본은 개발 구성에서 켬 · 배포 구성에서 끔). 끄면 Vulkan 의 체크포인트 확장도 켜지 않는다.
-     *        DX12 DRED 는 따로 EngineConfig `_rhi._dred` · `-rhi-dred` 가 켠다.
-     * @details 디바이스를 만들기 **전에** 읽는다(체크포인트 확장은 디바이스 생성 전에만 켤 수 있다). 배포본에도 둔다 — 플레이어 기계의 디바이스 소실을 좇을 때 실행 인자로 켠다
-     *          (언리얼 `-gpucrashdebugging` · `r.GPUCrashDebugging` 이 배포 구성에서도 같은 일을 한다).
-     */
-    constexpr bool kGPUBreadcrumbsByDefault = build::kShipping == false;
-    SW_GLOBAL_VARIABLE( bool, gv_gpuBreadcrumbs, kGPUBreadcrumbsByDefault, "GPU 브레드크럼(패스마다 GPU 표지 · Vulkan 체크포인트)을 켠다 - 디바이스 소실 때 마지막 패스 이름을 보고한다 (기본: 개발 구성 켬 · 배포 끔)" );
-
     uint32 GPUBreadcrumbLog::registerPass( string_view name )
     {
         const uint64      hash = HashUtil::computeStringHash64( name, false );
@@ -56,7 +45,8 @@ namespace sw
 
     bool GPUBreadcrumbs::isEnabled()
     {
-        return gv_gpuBreadcrumbs;
+        const GPUBreadcrumbLog* const pLog = engine::findSubsystem<GPUBreadcrumbLog>();
+        return pLog != nullptr && pLog->isEnabled(); // 서비스 범위가 없는 도구 · 테스트는 표지를 남기지 않는다
     }
 
     uint32 GPUBreadcrumbs::registerPass( string_view name )

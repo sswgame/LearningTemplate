@@ -907,7 +907,7 @@ namespace sw
         static constexpr uint32 kBreadcrumbQueueCount = 2;
         /**
          * @brief 큐 하나의 GPU 브레드크럼 버퍼입니다(`IRHICommandList::writeBreadcrumb`) - 읽기 힙의 uint32 두 칸 버퍼를 영속 매핑해 두고 `WriteBufferImmediate` 가 패스 id 를 쓴다(시작 MARKER_IN · 끝 MARKER_OUT).
-         * @details 디바이스를 잃은 뒤에도 CPU 가 이 매핑으로 마지막으로 닿은 패스를 읽는다(`readLastBreadcrumbs`). 만들지 못했거나 `-gv_gpuBreadcrumbs` 가 꺼졌으면 주소가 0 이다.
+         * @details 디바이스를 잃은 뒤에도 CPU 가 이 매핑으로 마지막으로 닿은 패스를 읽는다(`readLastBreadcrumbs`). 만들지 못했거나 `-rhi-breadcrumbs`(`_rhi._gpuBreadcrumbs`)가 꺼졌으면 주소가 0 이다.
          *          **큐마다 따로다** — 한 버퍼를 두 큐가 쓰면 서로 기다리지 않는 쓰기라 디버그 레이어가 큐 사이 경합(id 1047)으로 막았다(같은 버퍼의 다른 칸이어도 자원 단위로 본다).
          */
         struct BreadcrumbTrack

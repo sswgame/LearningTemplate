@@ -152,6 +152,11 @@ namespace sw
         /** @brief 실제로 소프트웨어 어댑터(WARP, CPU Vulkan)를 쓰는지 반환합니다(`gv_rhiSoftwareAdapter`, 환경 변수 `SW_RHI_SOFTWARE_ADAPTER`). */
         bool isRunningOnSoftwareAdapter() const { return _bSoftwareAdapter; }
         /**
+         * @brief 이 장치가 GPU 브레드크럼(패스 표지 · Vulkan 체크포인트)을 켰는지입니다 — `initialize` 가 백엔드를 부르기 전에 한 번 정한다(EngineConfig `_rhi._gpuBreadcrumbs`, `-rhi-breadcrumbs`).
+         * @details 체크포인트 확장은 장치를 만들기 전에만 켤 수 있어 기동 값이다 — 실행 중에 바꾸는 길이 없다. 장치가 실제로 표지를 쓰는지는 `RHICapabilities::_bGPUBreadcrumbs` 다.
+         */
+        bool isGPUBreadcrumbsEnabled() const { return _bGPUBreadcrumbs; }
+        /**
          * @brief 디바이스를 종료합니다. 단계 순서는 이 함수 하나가 정하고, 백엔드는 단계별 훅만 채웁니다.
          * @details 1) 자원을 가진 쪽에 알린다(`RHIRenderResource::releaseAllForDevice`). 디바이스가 살아 있으므로 자원을 돌려줄 수 있다.
          *          2) GPU 를 기다리고 해제 큐를 비운다(`waitIdleInternal`). 1단계에서 넘긴 자원이 여기서 실제로 사라진다.
@@ -715,6 +720,8 @@ namespace sw
         uint8 _bSoftwareAdapter : 1;
         /// @brief `shutdown` 을 끝냈다. 그 뒤에 쌓인 해제는 다음 `shutdown`(백엔드 소멸자)이 단언한다. `initialize` 가 지운다.
         uint8 _bShutDown : 1;
+        /// @brief GPU 브레드크럼을 켰다(`isGPUBreadcrumbsEnabled`). `initialize` 만 쓴다.
+        uint8 _bGPUBreadcrumbs : 1;
         /// @brief 지금이 병렬 패스 기록 구간인지 나타냅니다(setParallelRecording 참고). 렌더 스레드가 쓰고 등록 · 해제를 감시하는 다른 스레드가 읽으므로 atomic 입니다.
         atomic<bool>           _bParallelRecording;
         mutable atomic<uint32> _parallelBarrierReportCount; ///< 병렬 기록 중 배리어 진단을 남긴 횟수(장치마다 앞 8 번만 — `reportBarrierDuringRecording`)

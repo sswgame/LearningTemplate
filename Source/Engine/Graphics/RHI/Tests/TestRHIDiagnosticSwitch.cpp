@@ -71,6 +71,21 @@ SW_TEST_CASE( RHIDiagnosticSwitchTest, EachSwitchReadsItsOwnArgument )
     SW_EXPECT_FALSE( resolveValidation( RHIDiagnosticSwitch::DebugBuildOnly, &commandLine, RHIDiagnosticBuild::Release ) );
 }
 
+/** @brief [RHIDiagnosticSwitchTest] `-rhi-breadcrumbs=0` 은 개발 구성 기본(켬)의 GPU 브레드크럼을 끄고, `-rhi-breadcrumbs` 는 배포 구성에서 켠다 — 검증 층은 건드리지 않는다. */
+SW_TEST_CASE( RHIDiagnosticSwitchTest, BreadcrumbsArgumentDecidesAtStartup )
+{
+    CommandLineManager commandLineOff;
+    parseDiagnosticCommandLine( commandLineOff, "-rhi-breadcrumbs=0" );
+    const expected<bool> off = resolveRHIDiagnosticSwitch( RHIDiagnosticSwitch::NonShippingOnly, CommandLineArgument::RHI_BREADCRUMBS, &commandLineOff, RHIDiagnosticBuild::Release );
+    SW_EXPECT_TRUE( off.has_value() && *off == false );
+
+    CommandLineManager commandLineOn;
+    parseDiagnosticCommandLine( commandLineOn, "-rhi-breadcrumbs" );
+    const expected<bool> on = resolveRHIDiagnosticSwitch( RHIDiagnosticSwitch::NonShippingOnly, CommandLineArgument::RHI_BREADCRUMBS, &commandLineOn, RHIDiagnosticBuild::Shipping );
+    SW_EXPECT_TRUE( on.has_value() && *on );
+    SW_EXPECT_TRUE( resolveValidation( RHIDiagnosticSwitch::DebugBuildOnly, &commandLineOn, RHIDiagnosticBuild::Debug ) );
+}
+
 /** @brief [RHIDiagnosticSwitchTest] 파일에 값이 없으면(None) 인자가 있어도 오류다 — 기본값을 짐작하지 않고, 오류 대상은 인자 철자다. */
 SW_TEST_CASE( RHIDiagnosticSwitchTest, MissingConfigValueIsAnError )
 {

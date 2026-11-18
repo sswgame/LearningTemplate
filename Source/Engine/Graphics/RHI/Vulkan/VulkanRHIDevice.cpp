@@ -1477,7 +1477,7 @@ namespace sw
         }
         // VK_NV_device_diagnostic_checkpoints(진단 전용): GPU 브레드크럼 - 패스마다 `vkCmdSetCheckpointNV` 로 id 를 남기고 소실 뒤 큐에서 읽는다(`readLastBreadcrumbs`).
         // 그래픽스 큐 패밀리가 체크포인트를 지원하는 단계(checkpointExecutionStageMask)가 있어야 쓴다. 없으면 켜지 않는다 - 이 능력이 없는 드라이버는 CPU 가 마지막으로 기록한 패스만 보고한다.
-        if ( GPUBreadcrumbs::isEnabled() && VulkanRHIUtil::hasExtension( listAvailableExt, VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME ) )
+        if ( isGPUBreadcrumbsEnabled() && VulkanRHIUtil::hasExtension( listAvailableExt, VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME ) )
         {
             uint32 familyCount = 0;
             vkGetPhysicalDeviceQueueFamilyProperties2( _physicalDevice, &familyCount, nullptr );
@@ -1499,7 +1499,7 @@ namespace sw
         }
         // VK_AMD_buffer_marker(진단 전용): NV 체크포인트가 없는 드라이버(AMD · 인텔 Mesa)의 GPU 브레드크럼 — 패스 id 를 호스트 보임 버퍼에 쓰고 소실 뒤 매핑으로 읽는다.
         // https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdWriteBufferMarkerAMD.html (dstOffset 은 4 의 배수, 버퍼는 TRANSFER_DST 용도)
-        if ( GPUBreadcrumbs::isEnabled() && _breadcrumbMode == VulkanBreadcrumbMode::None && VulkanRHIUtil::hasExtension( listAvailableExt, VK_AMD_BUFFER_MARKER_EXTENSION_NAME ) )
+        if ( isGPUBreadcrumbsEnabled() && _breadcrumbMode == VulkanBreadcrumbMode::None && VulkanRHIUtil::hasExtension( listAvailableExt, VK_AMD_BUFFER_MARKER_EXTENSION_NAME ) )
         {
             listDeviceExtension.push_back( VK_AMD_BUFFER_MARKER_EXTENSION_NAME );
             _breadcrumbMode = VulkanBreadcrumbMode::AMDBufferMarker;
