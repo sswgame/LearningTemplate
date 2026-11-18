@@ -389,7 +389,7 @@ namespace sw
         HousingReplicationStats _stats;
         NetMessageWriter        _writer;
         INetPeers*              _pHost;
-        uint8                   _bServerReached : 1; ///< 서버와 한 번이라도 붙었다(`isAwaitingServer`)
         uint32                  _nextRequestID;
+        uint8                   _bServerReached : 1; ///< 서버와 한 번이라도 붙었다(`isAwaitingServer`)
     };
 } // namespace sw
