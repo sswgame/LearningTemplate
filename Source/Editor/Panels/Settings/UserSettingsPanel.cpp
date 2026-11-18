@@ -15,7 +15,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputGlyphStyle.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/UserSettings/UserSettingsManager.h"

@@ -20,7 +20,7 @@
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
 #include "Engine/Input/GamepadButtonUtil.h"
-#include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputGlyphStyle.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"
 #include "Engine/Input/Map/InputMap.h"

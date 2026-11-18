@@ -13,6 +13,8 @@
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
+#include "Engine/Window/CursorShape.h"
+
 namespace sw
 {
     class InputManager;
@@ -61,8 +63,8 @@ namespace sw::editor
         static void setDebugDrawShown( bool bShown );
         /** @brief 개발 겹치기 렌더 텍스처(`CanvasFrameData::kDevOverlayTargetPath`)의 RHI 핸들입니다. 아직 없거나 GPU 에 올라가지 않았으면 0 입니다. */
         static uint64 findDevOverlayTexture();
-        /** @brief 에디터 범위의 입력 관리자입니다(커서 모양 · 입력 오버레이). 없으면 nullptr 입니다. View 가 서비스 창구를 보지 않게 여기서 찾는다. */
-        static InputManager* findInputManager();
+        /** @brief 게임 UI 가 호버한 위젯의 커서 모양(손 · 글 상자 …)을 @p outShape 에 담습니다. 입력 관리자가 없으면 false 입니다(View 는 입력 관리자를 쥐지 않는다). */
+        [[nodiscard]] static bool readGameCursorShape( CursorShape& outShape );
         /** @brief 뷰포트 입력 오버레이(눌린 키 · 패드 표시)입니다. 없으면 nullptr 입니다. */
         static ViewportInputOverlay* findInputOverlay();
         /**

@@ -22,7 +22,6 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
 
@@ -149,9 +148,9 @@ namespace sw::editor
         {
             ImGui::Image( reinterpret_cast<ImTextureID>( pTextureID ), imageSize );
             // 에디터에서는 ImGui 가 OS 커서를 쥐어 엔진이 창에 건 커서가 덮이므로, 게임 UI 가 호버한 위젯의 모양(손 · 글 상자 …)을 ImGui 커서로 낸다.
-            const InputManager* pCursorInput = GameViewModel::findInputManager();
-            if ( pCursorInput != nullptr && ImGui::IsItemHovered() )
-                ImGui::SetMouseCursor( toImGuiCursor( pCursorInput->getCursorShape() ) );
+            CursorShape cursorShape{};
+            if ( ImGui::IsItemHovered() && GameViewModel::readGameCursorShape( cursorShape ) )
+                ImGui::SetMouseCursor( toImGuiCursor( cursorShape ) );
         }
         else
             ImGui::Dummy( ImVec2{ MathUtil::max( imageSize.x, 1.0f ), MathUtil::max( imageSize.y, 1.0f ) } );
