@@ -1555,6 +1555,24 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
         previousKey = entry.first;
     }
 
+    // 정렬 구간(16)을 넘는 입력 — 병합 단계를 지나도 같은 키는 먼저 온 값이 남는다.
+    sw::vector<sw::pair<int32, int32>> listLong;
+    for ( int32 index = 0; index < 200; ++index )
+    {
+        listLong.emplace_back( ( index * 7 ) % 37, index );
+    }
+    sw::map<int32, int32> mapLong{
+        { 36, -1 }
+    };
+    mapLong.insert( listLong.begin(), listLong.end() );
+    SW_REQUIRE_EQUAL( 37u, mapLong.size() );
+    SW_EXPECT_EQUAL( -1, mapLong.at( 36 ) );
+    for ( int32 index = 0; index < 37; ++index )
+    {
+        if ( ( index * 7 ) % 37 != 36 )
+            SW_EXPECT_EQUAL( index, mapLong.at( ( index * 7 ) % 37 ) ); // 7 과 37 이 서로소라 첫 37 개가 키를 한 번씩 덮는다
+    }
+
     sw::set<int32>          setGrown{ 3, 1, 3 };
     const sw::vector<int32> listMore{ 4, 0, 1, 4, 2 };
     setGrown.insert( listMore.begin(), listMore.end() );

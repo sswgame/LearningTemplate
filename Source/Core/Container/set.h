@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Container/SortedVectorMerge.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -244,7 +245,7 @@ namespace sw
 
         /**
          * @brief [first, last) 를 넣습니다. 이미 있거나 범위 안에서 겹치면 먼저 온 것(있던 원소, 그다음 입력 순서) 하나만 남습니다.
-         * @details 꼬리에 붙여 안정 정렬하고 겹친 값을 걸러 한 번 병합한다 — O(n log n)(감사 C-9: 원소마다 정렬 위치에 끼우면 O(n²)였다. `map` 과 같은 모양).
+         * @details 꼬리에 붙여 안정 정렬하고 겹친 값을 걸러 한 번 병합한다(`internal::mergeAppendedRange`) — O(n log n)(감사 C-9: 원소마다 정렬 위치에 끼우면 O(n²)였다. `map` 과 같은 모양).
          */
         template <class InputIt>
         void insert( InputIt first, InputIt last )
@@ -254,15 +255,7 @@ namespace sw
             for ( ; first != last; ++first )
                 _data.emplace_back( *first );
 
-            const auto middle = _data.begin() + static_cast<difference_type>( oldSize );
-            std::stable_sort( middle, _data.end(), _comp );
-            // 정렬된 꼬리에서 같은 값의 첫 원소만 남기고, 앞쪽(있던 원소)에 있는 값을 뺀다.
-            auto tailEnd = std::unique( middle, _data.end(), [this]( const value_type& kept, const value_type& next )
-            { return _comp( kept, next ) == false; } );
-            tailEnd      = std::remove_if( middle, tailEnd, [&]( const value_type& value )
-                 { return std::binary_search( _data.begin(), middle, value, _comp ); } );
-            _data.erase( tailEnd, _data.end() );
-            std::inplace_merge( _data.begin(), _data.begin() + static_cast<difference_type>( oldSize ), _data.end(), _comp );
+            internal::mergeAppendedRange( _data, oldSize, _comp );
         }
 
         void insert( std::initializer_list<value_type> ilist ) { insert( ilist.begin(), ilist.end() ); }
