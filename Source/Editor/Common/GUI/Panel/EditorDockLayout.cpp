@@ -533,4 +533,32 @@ namespace sw::editor
         _bFrontTabPending   = SW_TRUE;
         _frontTabFrameCount = 0;
     }
+
+    const ImGuiDockNode* EditorDockLayout::findMainDockspace()
+    {
+        const ImGuiViewport* pMain       = ImGui::GetMainViewport();
+        ImGuiDockContext&    dockContext = ImGui::GetCurrentContext()->DockContext;
+        for ( int32 nodeIndex = 0; nodeIndex < dockContext.Nodes.Data.Size; ++nodeIndex )
+        {
+            const ImGuiDockNode* pNode     = static_cast<const ImGuiDockNode*>( dockContext.Nodes.Data[nodeIndex].val_p );
+            const bool           bMainRoot = pNode != nullptr && pNode->ParentNode == nullptr && pNode->IsDockSpace() && pNode->HostWindow != nullptr &&
+                                   pNode->HostWindow->Viewport == pMain;
+            if ( bMainRoot )
+                return pNode;
+        }
+        return nullptr;
+    }
+
+    void EditorDockLayout::collectVisibleLeaves( const ImGuiDockNode* pNode, vector<const ImGuiDockNode*>& outListLeaf )
+    {
+        if ( pNode == nullptr || pNode->IsVisible == false )
+            return;
+        if ( pNode->IsLeafNode() )
+        {
+            outListLeaf.push_back( pNode );
+            return;
+        }
+        collectVisibleLeaves( pNode->ChildNodes[0], outListLeaf );
+        collectVisibleLeaves( pNode->ChildNodes[1], outListLeaf );
+    }
 } // namespace sw::editor

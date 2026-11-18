@@ -9,6 +9,7 @@
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
+#include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/EditorPanelText.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -350,12 +351,12 @@ namespace sw::editor
                                               isNear( pMain->Size.y, static_cast<float32>( window.getHeight() ), kPixelTolerance ),
                                           "the main viewport does not match the window client size" );
 
-                    const ImGuiDockNode* pRoot = findMainDockspace();
+                    const ImGuiDockNode* pRoot = EditorDockLayout::findMainDockspace();
                     if ( context.expect( pRoot != nullptr && pRoot->Size.x > 0.0f && pRoot->Size.y > 0.0f, "no main dockspace" ) == false )
                         return;
 
                     vector<const ImGuiDockNode*> listLeaf;
-                    collectVisibleLeaves( pRoot, listLeaf );
+                    EditorDockLayout::collectVisibleLeaves( pRoot, listLeaf );
                     DockResizeProbe& probe = context.getTestState<DockResizeProbe>();
                     const ImVec2     workMax{ pMain->WorkPos.x + pMain->WorkSize.x, pMain->WorkPos.y + pMain->WorkSize.y };
                     for ( const ImGuiDockNode* pLeaf : listLeaf )
@@ -451,40 +452,11 @@ namespace sw::editor
             static bool isWindowSizeApplied( const IWindow& window )
             {
                 const ImGuiViewport* pMain  = ImGui::GetMainViewport();
-                const ImGuiDockNode* pRoot  = findMainDockspace();
+                const ImGuiDockNode* pRoot  = EditorDockLayout::findMainDockspace();
                 const float32        width  = static_cast<float32>( window.getWidth() );
                 const float32        height = static_cast<float32>( window.getHeight() );
                 return pRoot != nullptr && isNear( pMain->Size.x, width, 1.0f ) && isNear( pMain->Size.y, height, 1.0f ) && isNear( pRoot->Size.x, pMain->WorkSize.x, 1.0f ) &&
                        isNear( pRoot->Size.y, pMain->WorkSize.y, 1.0f );
-            }
-
-            /** @brief 메인 뷰포트를 덮는 도크스페이스의 루트 노드입니다. 없으면 nullptr 입니다. */
-            static const ImGuiDockNode* findMainDockspace()
-            {
-                const ImGuiViewport* pMain       = ImGui::GetMainViewport();
-                ImGuiDockContext&    dockContext = ImGui::GetCurrentContext()->DockContext;
-                for ( int32 nodeIndex = 0; nodeIndex < dockContext.Nodes.Data.Size; ++nodeIndex )
-                {
-                    const ImGuiDockNode* pNode     = static_cast<const ImGuiDockNode*>( dockContext.Nodes.Data[nodeIndex].val_p );
-                    const bool           bMainRoot = pNode != nullptr && pNode->ParentNode == nullptr && pNode->IsDockSpace() && pNode->HostWindow != nullptr &&
-                                           pNode->HostWindow->Viewport == pMain;
-                    if ( bMainRoot )
-                        return pNode;
-                }
-                return nullptr;
-            }
-
-            static void collectVisibleLeaves( const ImGuiDockNode* pNode, vector<const ImGuiDockNode*>& outListLeaf )
-            {
-                if ( pNode == nullptr || pNode->IsVisible == false )
-                    return;
-                if ( pNode->IsLeafNode() )
-                {
-                    outListLeaf.push_back( pNode );
-                    return;
-                }
-                collectVisibleLeaves( pNode->ChildNodes[0], outListLeaf );
-                collectVisibleLeaves( pNode->ChildNodes[1], outListLeaf );
             }
 
             static void expectTransformBarStaysInSceneView( EditorSelfTestContext& context )

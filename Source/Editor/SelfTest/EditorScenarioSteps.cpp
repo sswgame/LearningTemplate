@@ -13,6 +13,7 @@
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -558,33 +559,6 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // EditorExpectDockLayout: 메인 뷰포트가 창과 같고, 보이는 도크 노드가 모두 화면 안에 있고 최소 변 이상이며, 창이 최소 크기 이상인지 검사한다
             // ------------------------------------------------------------------------------
-            static const ImGuiDockNode* findMainDockspace()
-            {
-                const ImGuiViewport* pMain       = ImGui::GetMainViewport();
-                ImGuiDockContext&    dockContext = ImGui::GetCurrentContext()->DockContext;
-                for ( int32 nodeIndex = 0; nodeIndex < dockContext.Nodes.Data.Size; ++nodeIndex )
-                {
-                    const ImGuiDockNode* pNode     = static_cast<const ImGuiDockNode*>( dockContext.Nodes.Data[nodeIndex].val_p );
-                    const bool           bMainRoot = pNode != nullptr && pNode->ParentNode == nullptr && pNode->IsDockSpace() && pNode->HostWindow != nullptr &&
-                                           pNode->HostWindow->Viewport == pMain;
-                    if ( bMainRoot )
-                        return pNode;
-                }
-                return nullptr;
-            }
-
-            static void collectVisibleLeaves( const ImGuiDockNode* pNode, vector<const ImGuiDockNode*>& outListLeaf )
-            {
-                if ( pNode == nullptr || pNode->IsVisible == false )
-                    return;
-                if ( pNode->IsLeafNode() )
-                {
-                    outListLeaf.push_back( pNode );
-                    return;
-                }
-                collectVisibleLeaves( pNode->ChildNodes[0], outListLeaf );
-                collectVisibleLeaves( pNode->ChildNodes[1], outListLeaf );
-            }
 
             static bool runDockLayout( AutomationStepContext& runner, const AutomationStep& step )
             {
@@ -611,7 +585,7 @@ namespace sw::editor
                 if ( bSameAsWindow == false )
                     runner.recordFailure( step, "the main viewport does not match the window client size" );
 
-                const ImGuiDockNode* pRoot            = findMainDockspace();
+                const ImGuiDockNode* pRoot            = EditorDockLayout::findMainDockspace();
                 const bool           bNoDockspaceArea = pRoot == nullptr || pRoot->Size.x <= 0.0f || pRoot->Size.y <= 0.0f;
                 if ( bNoDockspaceArea )
                 {
@@ -619,7 +593,7 @@ namespace sw::editor
                     return true;
                 }
                 vector<const ImGuiDockNode*> listLeaf;
-                collectVisibleLeaves( pRoot, listLeaf );
+                EditorDockLayout::collectVisibleLeaves( pRoot, listLeaf );
                 const ImVec2 workMax{ pMain->WorkPos.x + pMain->WorkSize.x, pMain->WorkPos.y + pMain->WorkSize.y };
                 for ( const ImGuiDockNode* pLeaf : listLeaf )
                 {
