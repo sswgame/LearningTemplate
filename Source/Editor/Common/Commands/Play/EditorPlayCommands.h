@@ -28,7 +28,11 @@ namespace sw::editor
          * @details 시작과 정지는 플레이 툴바 · 단축키 · 시나리오 어디서든 올 수 있어 상태 전이를 여기서 한 번에 본다.
          */
         static void update();
-        /** @brief F8 — 플레이어 조종 중이면 Simulate 로 바꾸고 씬 뷰를 앞으로(Eject), Eject 한 세션이면 다시 조종하고 게임 뷰를 앞으로 둡니다(Possess). */
+        /**
+         * @brief F8 — Eject/Possess 를 UI 명령으로 보냅니다(`EditorUICommandKind::ToggleEject`). 이 UI 프레임 뒤 게임 틱 시작에 적용됩니다 — 플레이어 조종 중이면 Simulate 로 바꾸고
+         *        씬 뷰를 앞으로(Eject), Eject 한 세션이면 다시 조종하고 게임 뷰를 앞으로 둡니다(Possess).
+         * @details UI(메뉴 · 단축키 · 게임 뷰 툴바)는 세션을 바로 바꾸지 않는다 — UI 출력 계약(`EditorUICommandQueue`).
+         */
         static void toggleEject();
         /** @brief 고른 오브젝트의 지금 상태를 Stop 뒤에도 남기게 적습니다. 적은 오브젝트 수입니다(플레이 중이 아니면 0). */
         static uint32 keepSelectedChanges();

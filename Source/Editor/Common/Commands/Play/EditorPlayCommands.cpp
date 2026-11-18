@@ -18,6 +18,7 @@
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/IEditorPanelService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
@@ -89,30 +90,7 @@ namespace sw::editor
 
     void EditorPlayCommands::toggleEject()
     {
-        EditorContext&   editorContext        = editor::getSubsystem<EditorContext>();
-        PlaySessionData* pData                = EditorPlaySession::findData();
-        const bool       bNoActivePlaySession = pData == nullptr || pData->_state == PlaySessionState::Stopped;
-        if ( bNoActivePlaySession )
-            return;
-        if ( EditorPlaySession::isPlayerActive( *pData ) )
-        {
-            // 조종을 놓는다 — 월드는 계속 돌고(Simulate) 에디터 카메라로 둘러본다. 최대화 중이면 씬 뷰가 닫혀 있으니 배치를 먼저 되돌린다.
-            if ( pData->_bMaximizedForPlay == SW_TRUE )
-            {
-                pData->_bMaximizedForPlay = SW_FALSE;
-                (void)editorContext.getSubsystem<IEditorPanelService>().restoreMaximizedLayout(); // 없으면 지금 배치 그대로 씬 뷰를 연다
-            }
-            EditorPlaySession::simulate();
-            pData->_bEjected = SW_TRUE;
-            (void)editorContext.getSubsystem<IEditorPanelService>().focusPanel( editorpanel::kSceneView ); // 패널이 없으면 세션만 바뀐다
-            return;
-        }
-        if ( pData->_bEjected == SW_TRUE )
-        {
-            EditorPlaySession::play();
-            pData->_bEjected = SW_FALSE;
-            (void)editorContext.getSubsystem<IEditorPanelService>().focusPanel( editorpanel::kGameView ); // 패널이 없으면 세션만 바뀐다
-        }
+        EditorUICommandQueue::postToEditor( EditorUICommand::make( EditorUICommandKind::ToggleEject ) );
     }
 
     uint32 EditorPlayCommands::keepSelectedChanges()

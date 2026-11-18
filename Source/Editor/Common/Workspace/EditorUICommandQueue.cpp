@@ -7,6 +7,7 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/IEditorPanelService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
@@ -128,6 +129,38 @@ namespace sw::editor
                     editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().remapSelectionByObjectName( pObjectManager );
             }
 
+            /**
+             * @brief F8 Eject/Possess — 세션 칸(`_bEjected` · 최대화 배치)과 패널 포커스를 이 한 적용이 함께 바꾼다. 패널 포커스는 다음 UI 프레임에 여는 요청이다(`IEditorPanelService::focusPanel`).
+             * @details 플레이어 조종 중이면 조종을 놓는다 — 월드는 계속 돌고(Simulate) 에디터 카메라로 둘러본다. Eject 한 세션이면 다시 조종한다(언리얼 F8 Eject/Possess).
+             */
+            static void toggleEject()
+            {
+                PlaySessionData* pData                = EditorPlaySession::findData();
+                const bool       bNoActivePlaySession = pData == nullptr || pData->_state == PlaySessionState::Stopped;
+                if ( bNoActivePlaySession )
+                    return;
+                IEditorPanelService& panels = editor::getSubsystem<EditorContext>().getSubsystem<IEditorPanelService>();
+                if ( EditorPlaySession::isPlayerActive( *pData ) )
+                {
+                    // 최대화 중이면 씬 뷰가 닫혀 있으니 배치를 먼저 되돌린다.
+                    if ( pData->_bMaximizedForPlay == SW_TRUE )
+                    {
+                        pData->_bMaximizedForPlay = SW_FALSE;
+                        (void)panels.restoreMaximizedLayout(); // 없으면 지금 배치 그대로 씬 뷰를 연다
+                    }
+                    EditorPlaySession::simulate();
+                    pData->_bEjected = SW_TRUE;
+                    (void)panels.focusPanel( editorpanel::kSceneView ); // 패널이 없으면 세션만 바뀐다
+                    return;
+                }
+                if ( pData->_bEjected == SW_TRUE )
+                {
+                    EditorPlaySession::play();
+                    pData->_bEjected = SW_FALSE;
+                    (void)panels.focusPanel( editorpanel::kGameView ); // 패널이 없으면 세션만 바뀐다
+                }
+            }
+
             static void fitViewTarget( const EditorUICommand& command )
             {
                 EditorRenderViews&      views = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
@@ -180,6 +213,9 @@ namespace sw::editor
                 break;
             case EditorUICommandKind::Stop:
                 Internal::stop();
+                break;
+            case EditorUICommandKind::ToggleEject:
+                Internal::toggleEject();
                 break;
             case EditorUICommandKind::Count:
                 SW_LOG_ERROR_ID( "EditorUICommandQueue.EmptyCommand", "An editor UI command without a kind reached the game thread" );

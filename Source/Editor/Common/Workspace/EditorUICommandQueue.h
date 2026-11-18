@@ -29,6 +29,11 @@ namespace sw::editor
         Resume, ///< 멈춘 재생을 다시 돌린다(Paused → Playing)
         Step,   ///< `_stepFrameCount` 프레임 진행한다
         Stop,   ///< 재생을 멈추고 선택을 이름으로 편집 씬의 오브젝트에 다시 잇는다
+        /**
+         * F8 Eject/Possess — 조종 중이면 Simulate 로 바꾸고 씬 뷰를 앞으로, Eject 한 세션이면 다시 조종하고 게임 뷰를 앞으로(`EditorPlayCommands::toggleEject` 가 보낸다).
+         * 세션 칸(`_bEjected` · 최대화)과 패널 포커스를 한 명령이 함께 바꾼다 — 따로 보내면 그 사이 프레임이 반쯤 바뀐 상태를 본다.
+         */
+        ToggleEject,
         Count
     };
 
@@ -45,7 +50,7 @@ namespace sw::editor
         static EditorUICommand makeFitViewTarget( EditorViewKind view, uint32 width, uint32 height );
         static EditorUICommand makeStart( bool bSimulate, bool bStartAtCamera );
         static EditorUICommand makeStep( uint32 frameCount );
-        /** @brief 칸이 없는 종류(Pause · Resume · Stop)입니다. */
+        /** @brief 칸이 없는 종류(Pause · Resume · Stop · ToggleEject)입니다. */
         static EditorUICommand make( EditorUICommandKind kind );
 
         /** @brief 이 명령을 엔진 상태에 적용합니다 — 게임 스레드만 부른다(`EditorUICommandQueue::applyDue`). */

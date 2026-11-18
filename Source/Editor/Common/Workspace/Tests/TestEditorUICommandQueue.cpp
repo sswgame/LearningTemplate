@@ -114,3 +114,19 @@ SW_TEST_CASE( EditorUICommandQueueTest, ShutdownDropsPending )
     }
     SW_EXPECT_EQUAL( 0u, queue.getDroppedCount() );
 }
+
+/**
+ * @brief [EditorUICommandQueueTest] Eject/Possess 는 명령 하나로 건너간다 — 세션 칸과 패널 포커스를 한 적용이 함께 바꾸므로 그 사이 틱이 반쯤 바뀐 상태를 보지 않는다
+ */
+SW_TEST_CASE( EditorUICommandQueueTest, EjectIsOneCommand )
+{
+    EditorUICommandQueue    queue;
+    vector<EditorUICommand> listDue;
+
+    SW_REQUIRE_TRUE( queue.post( EditorUICommand::makeStart( false, false ) ) );
+    SW_REQUIRE_TRUE( queue.post( EditorUICommand::make( EditorUICommandKind::ToggleEject ) ) );
+    queue.takeDue( listDue );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listDue.size() );
+    SW_EXPECT_TRUE( listDue[0]._kind == EditorUICommandKind::StartPlay );
+    SW_EXPECT_TRUE( listDue[1]._kind == EditorUICommandKind::ToggleEject );
+}
