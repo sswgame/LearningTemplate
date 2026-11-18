@@ -32,6 +32,16 @@ namespace sw
     {
     }
 
+    SpawnStateReset ShooterBodyMovementComponent::resetToSpawnState()
+    {
+        _moveVelocity  = float3{ 0.0f, 0.0f, 0.0f };
+        _displayOffset = float3{ 0.0f, 0.0f, 0.0f };
+        _verticalSpeed = 0.0f;
+        _bOnGround     = SW_TRUE;
+        _bSuspended    = SW_FALSE;
+        return SpawnStateReset::Reset;
+    }
+
     bool ShooterBodyMovementComponent::stepMovement( const vector<ShooterArenaBox>& listBox, float32 deltaTime )
     {
         if ( deltaTime <= 0.0f || _bNetDriven == SW_TRUE )

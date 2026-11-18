@@ -74,6 +74,11 @@ namespace sw
 
         /** @brief 메시를 설정합니다. 저장되지 않는 런타임 지정이며, 메시 id 가 바뀔 때까지 유지됩니다. */
         void setMesh( shared_ptr<Mesh> mesh );
+        /**
+         * @brief 풀 반환: 메시 컴포넌트는 스스로 바꾸는 실행 상태가 없습니다 — 메시 · 보임 · 머티리얼을 바꾼 쪽(절단 · 외형 · 효과)이 자기 되돌리기에서 되돌립니다.
+         * @details 스켈레탈 메시 · 구간 메시도 이것을 잇는다. 파생이 자기 실행 상태를 더하면 재정의한다.
+         */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override { return SpawnStateReset::Reset; }
         /** @brief 메시를 반환합니다. */
         const shared_ptr<Mesh>& getMesh() const { return _mesh; }
         /** @brief 원시 메시 포인터를 반환합니다. */

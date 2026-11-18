@@ -34,6 +34,7 @@ namespace sw
         : _bAutoPlay{ false }
         , _tickAfter{}
         , _listSpawned{}
+        , _listPool{}
         , _pendingStateBytes{}
         , _soundQueue{}
         , _compactThreshold{ GameModeComponentInternal::kMinCompactThreshold }
@@ -154,8 +155,13 @@ namespace sw
             {
                 destroySpawned( *pManager, handle );
             }
+            for ( PrefabPool& pool : _listPool )
+            {
+                pool.destroyAll( *pManager );
+            }
         }
         _listSpawned.clear();
+        _listPool.clear();
         _compactThreshold = GameModeComponentInternal::kMinCompactThreshold;
         _bViewsSpawned    = SW_FALSE;
         onViewsDespawned();
@@ -219,6 +225,34 @@ namespace sw
         if ( pObject != nullptr )
             trackSpawned( *pObject );
         return pObject;
+    }
+
+    GameObject* GameModeComponent::spawnPrefab( GameObjectManager& manager, string_view prefabPath, const utf8* pName, const PrefabPoolPolicy& pool )
+    {
+        if ( pool._maxIdleCount == 0 )
+            return spawnPrefab( manager, prefabPath, pName );
+        PrefabPool* pPool = nullptr;
+        for ( PrefabPool& existing : _listPool )
+        {
+            if ( string_view( existing.getPrefabPath() ) == prefabPath )
+                pPool = &existing;
+        }
+        if ( pPool == nullptr )
+            pPool = &_listPool.emplace_back( string( prefabPath ), pool._maxIdleCount );
+        return pPool->acquire( manager, pName );
+    }
+
+    void GameModeComponent::releaseSpawned( GameObjectManager& manager, string_view prefabPath, GameObjectHandle& inoutHandle )
+    {
+        for ( PrefabPool& pool : _listPool )
+        {
+            if ( string_view( pool.getPrefabPath() ) != prefabPath )
+                continue;
+            pool.release( manager, inoutHandle );
+            inoutHandle = GameObjectHandle{};
+            return;
+        }
+        destroySpawned( manager, inoutHandle ); // 풀 정책 0 — 매번 스폰한 것이다
     }
 
     void GameModeComponent::trackSpawned( const GameObject& object )

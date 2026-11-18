@@ -107,7 +107,7 @@
 - **S-8 [37] 캐릭터 이동이 차례로 돈다** — `moveCharacters` 는 섰고 구현이 차례, `ExtendedUpdate` 가 씬 공용 `_tempAllocator` 를 받는다. 상용: 유니티 DOTS Character Controller 잡. 제안 레인별 임시 할당자. 확인: `load/*` 캐릭터 500 PreStep(워커 1 · 4 · 8)을 먼저 잰다(PO-3).
 - **N-11 [43] 송신률 조절** — 코드 끝(`NetSendThrottle` AIMD, 계수 `Config/Engine/NetSendThrottle.json`). 통합 확인: `App --test --test-filter=NetSendThrottleTest.*,NetEndpointTest.*,ConfigFileSchemaTest.*,GameNetSessionFrameHooksTest.*` — 손실 20 % 에서 조절 연결의 `_resentMessageCount` 가 고정 버킷의 3/4 미만이고 속도가 하한(20000)에 머무는지, 손실 0 에서 상한으로 돌아오는지.
 - **A-24 [47]** 리플렉션 묶음 TU 가 헤더 하나에 전체를 다시 파싱 — 1 절 5-4 리플렉션.
-- **K-11 [50] 슈터 적이 매번 스폰** — `spawnPrefab` 이 풀 정책(데이터)을 받는다(아레나 투사체는 `PrefabPool`). 상용: Lyra · Boss Room 풀. 확인: Tracy `GameModeFlush` 를 먼저 잰다(성능 줄 — 문턱을 넘은 것만). 막힌 점(11-18 조사): `PrefabPool` 은 `setActive` 만 바꾸고 원형으로 되돌리지 않는다. 그런데 죽은 적은 `RagdollComponent::detachBoneBodies`(되돌리지 않는다고 적혀 있다) · `DismembermentComponent` 절단 · 애니메이터 `Dead` · 떨어진 소켓 무기 · AI 조종자 빙의가 남아 다시 쓸 수 없다. 선행 조건은 이 컴포넌트들의 "스폰 상태로 되돌리기" API(래그돌은 물리 에셋을 다시 읽기)와 그 단위 테스트다. 외형 부품은 이미 `SocketPartPool` 이 다시 쓰고, 넷 id 는 `launch` 마다 `_nextEnemyNetID++` 로 새로 매기므로 풀링해도 겹치지 않는다.
+- **K-11 [50] 슈터 적 풀링 확인(통합)** — 코드는 섰다(`Component::resetToSpawnState` 풀 계약 · `PrefabPoolPolicy` · 종류마다 `_pool`). 통합 담당이 Tracy `GameModeFlush` 를 풀 전후로 재고, shooter3d 시나리오(`enemydeath` · `dismemberment` · `effectpool` · `autoplay`)를 한 번에 돌린다 — 다시 꺼낸 적이 래그돌 · 절단 · 무기 · 빙의 없이 서는지.
 
 ## 8. 다음 감사 범위
 

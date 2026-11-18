@@ -109,6 +109,8 @@ namespace sw
         float32       getWalkSpeed() const { return _walkSpeed; }
         /** @brief 걷기 빠르기를 바꿉니다(웨이브마다 빨라지는 적). */
         void setWalkSpeed( float32 speed ) { _walkSpeed = speed; }
+        /** @brief 풀 반환: 속도 · 낙하 · 그리기 오프셋을 비우고 땅에 선 채 멈춘 몸으로 돌립니다. 자리 · 걷기 빠르기는 꺼낸 쪽(`teleport` · `setWalkSpeed`)이 정합니다. */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
 
     private:
         PROPERTY( Category = "Movement", DisplayName = "Sprint Button", Tooltip = "Intent button that sprints while held (empty: no sprint)" )

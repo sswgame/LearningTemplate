@@ -69,6 +69,14 @@ namespace sw
         bindToAnimator();
     }
 
+    SpawnStateReset AnimationNotifyComponent::resetToSpawnState()
+    {
+        closeAllStates();
+        _listPendingFired.clear();
+        _listFootContact.clear(); // 다음 처리에서 표 크기로 다시 만든다(`processFootContacts`)
+        return SpawnStateReset::Reset;
+    }
+
     void AnimationNotifyComponent::onEndPlay()
     {
         closeAllStates();

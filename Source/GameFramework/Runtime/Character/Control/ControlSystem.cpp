@@ -249,7 +249,9 @@ namespace sw
         _listAutoPossessPawn.clear();
         for ( PawnComponent* pPawn : manager.getComponentRegistry().getAll<PawnComponent>() )
         {
-            const bool bWantsController = pPawn != nullptr && pPawn->getAutoPossess() != PawnAutoPossess::None && pPawn->_bAutoPossessDone == SW_FALSE;
+            // 꺼진 폰(풀에서 쉬는 인스턴스)은 켜질 때까지 쥐지 않는다 — 시도한 것으로 적지 않는다.
+            const bool bWantsController = pPawn != nullptr && pPawn->getAutoPossess() != PawnAutoPossess::None && pPawn->_bAutoPossessDone == SW_FALSE &&
+                                          pPawn->getOwner() != nullptr && pPawn->getOwner()->isActiveInHierarchy();
             if ( bWantsController == false )
                 continue;
             pPawn->_bAutoPossessDone = SW_TRUE;

@@ -291,6 +291,23 @@ namespace sw
         }
     }
 
+    void CharacterSurfaceState::clear()
+    {
+        for ( float32& value : _listRegionValue )
+        {
+            if ( value != 0.0f )
+                ++_revision;
+            value = 0.0f;
+        }
+        for ( SurfaceMask& mask : _listMask )
+        {
+            const uint32 revisionBefore = mask.getRevision();
+            mask.decay( MathUtil::kMaxFloat ); // 모든 셀을 0 으로(감쇠는 0 아래로 내려가지 않는다)
+            if ( mask.getRevision() != revisionBefore )
+                ++_revision;
+        }
+    }
+
     void CharacterSurfaceState::applyWater( float32 deltaSeconds, float32 submersion )
     {
         const float32 exposure = deltaSeconds * MathUtil::saturate( submersion );

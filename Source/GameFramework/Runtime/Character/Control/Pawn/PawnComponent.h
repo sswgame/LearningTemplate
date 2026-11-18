@@ -59,6 +59,11 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 조종자와의 끈을 끊고 레지스트리에서 빠집니다. */
         void onUnregister( GameObjectManager& manager ) override;
+        /**
+         * @brief 풀 반환: 빙의를 풀고(자동 빙의가 이 폰을 위해 세운 AI 조종자는 지운다) 의도 · 조종 회전 요청을 비우고 자동 빙의를 다시 하게 둡니다.
+         * @details 다시 켜진 뒤 조종 시스템이 갓 스폰한 폰처럼 다시 빙의시킨다 — 꺼져 있는 동안은 쥐지 않는다(`ControlSystem::autoPossess`).
+         */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
 
         /** @brief 이번 틱의 의도입니다. */
         const ControlIntent& getIntent() const { return _intent; }
@@ -149,7 +154,7 @@ namespace sw
         atomic<int32>                         _requestedPitchUnits;  ///< 요청된 조종 피치
         atomic<bool>                          _bRotationRequested;   ///< 요청 값이 남아 있다(값을 쓴 뒤 release 로 설정한다)
         uint32                                _inputPeer;            ///< 의도를 내는 연결(0 = 로컬)
-        uint8                                 _bAutoPossessDone : 1; ///< 자동 빙의를 한 번 시도했다(실패해도 다시 하지 않는다)
+        uint8                                 _bAutoPossessDone : 1; ///< 자동 빙의를 한 번 시도했다(실패해도 다시 하지 않는다 — 풀 반환만 되돌린다)
         [[maybe_unused]] uint8                _reserved         : 7;
     };
 } // namespace sw

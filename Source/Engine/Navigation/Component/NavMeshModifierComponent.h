@@ -26,6 +26,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        /** @brief 풀 반환: 영역 표시는 데이터뿐이라 되돌릴 실행 상태가 없습니다. */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override { return SpawnStateReset::Reset; }
+
         NavMeshModifierComponent();
         ~NavMeshModifierComponent() override = default;
 

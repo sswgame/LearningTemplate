@@ -29,6 +29,19 @@ namespace sw
         _remaining -= context.getDeltaTime();
         if ( _remaining > 0.0f )
             return;
+        hide();
+    }
+
+    SpawnStateReset ShooterEffectComponent::resetToSpawnState()
+    {
+        if ( _bShowing == SW_TRUE )
+            hide();
+        _remaining = 0.0f;
+        return SpawnStateReset::Reset;
+    }
+
+    void ShooterEffectComponent::hide()
+    {
         _bShowing             = SW_FALSE;
         GameObject*    pOwner = getOwner();
         MeshComponent* pMesh  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;

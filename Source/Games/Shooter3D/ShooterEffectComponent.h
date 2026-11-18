@@ -31,6 +31,12 @@ namespace sw
         void activate( float32 lifetime );
         /** @brief 숨어 있어 다시 꺼낼 수 있으면 true 입니다. */
         bool isIdle() const { return _bShowing == SW_FALSE; }
+        /** @brief 풀 반환: 보이는 중이면 수명이 다한 것처럼 메시를 숨기고 쉬는 상태로 돌립니다(프리팹의 메시는 숨긴 채 스폰한다). */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
+
+    private:
+        /** @brief 메시를 숨기고 쉬는 상태로 둡니다(자기 오브젝트). */
+        void hide();
 
     private:
         float32 _remaining;

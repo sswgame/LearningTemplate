@@ -1,0 +1,89 @@
+// ArenaUnitPoolResetTest — 아레나 적의 몸과 AI 조종자를 풀(`PrefabPool`)에 돌려주면 다시 꺼낸 것이 갓 스폰한 것과 같다:
+// 몸은 쓰러짐 표시 · 어트리뷰트 세트가 걷히고(디렉터가 다시 세트를 준다), AI 조종자는 쥔 폰을 놓는다. 인스턴스는 프리팹 대신 같은 컴포넌트를 코드로 단 오브젝트다(nogpu, 에셋 없음).
+#include "pch.h"
+
+#include "Core/Testing/TestFramework.h"
+
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Visual/Component/MeshComponent.h"
+
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
+
+#include "Games/AbilityArena/ArenaEnemyAIComponent.h"
+#include "Games/AbilityArena/ArenaUnitComponent.h"
+
+using namespace sw;
+
+namespace
+{
+    struct ArenaUnitPoolResetTestUtil
+    {
+        /** @brief 졸개 몸(메시 · 어빌리티 · 폰 · 아레나 유닛)을 만드는 풀입니다. */
+        static PrefabPool makeBodyPool()
+        {
+            PrefabPool pool{ string{}, 4 };
+            pool.setSpawner( PrefabPool::SpawnDelegate::create( []( GameObjectManager& manager, const utf8* pName )
+            {
+                GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
+                (void)pObject->addComponent<MeshComponent>();
+                (void)pObject->addComponent<AbilityComponent>();
+                (void)pObject->addComponent<PawnComponent>();
+                (void)pObject->addComponent<ArenaUnitComponent>();
+                return pObject;
+            } ) );
+            return pool;
+        }
+
+        /** @brief 졸개 AI 조종자를 만드는 풀입니다. */
+        static PrefabPool makeAIPool()
+        {
+            PrefabPool pool{ string{}, 4 };
+            pool.setSpawner( PrefabPool::SpawnDelegate::create( []( GameObjectManager& manager, const utf8* pName )
+            {
+                GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
+                (void)pObject->addComponent<ArenaEnemyAIComponent>();
+                return pObject;
+            } ) );
+            return pool;
+        }
+    };
+    using Util = ArenaUnitPoolResetTestUtil;
+} // namespace
+
+/** @brief [ArenaUnitPoolResetTest] 쓰러진 졸개를 돌려주고 다시 꺼내면 같은 몸에 쓰러짐 표시 · 어트리뷰트 세트가 없고, AI 조종자는 폰을 놓은 채 다시 나온다 */
+SW_TEST_CASE( ArenaUnitPoolResetTest, FallenGruntAndItsAIComeBackFresh )
+{
+    GameObjectManager manager;
+    PrefabPool        bodyPool = Util::makeBodyPool();
+    PrefabPool        aiPool   = Util::makeAIPool();
+    GameObject*       pBody    = bodyPool.acquire( manager, "ArenaGrunt" );
+    GameObject*       pAIBody  = aiPool.acquire( manager, "ArenaGruntAI" );
+    SW_REQUIRE_TRUE( pBody != nullptr && pAIBody != nullptr ); // 처음 만든 인스턴스로 풀 계약을 확인했다
+    AbilityComponent*      pAbility = pBody->getComponent<AbilityComponent>();
+    PawnComponent*         pPawn    = pBody->getComponent<PawnComponent>();
+    ArenaEnemyAIComponent* pAI      = pAIBody->getComponent<ArenaEnemyAIComponent>();
+    SW_REQUIRE_TRUE( pAbility != nullptr && pPawn != nullptr && pAI != nullptr );
+
+    // 디렉터가 세트를 주고 AI 가 쥔 뒤 쓰러졌다.
+    SW_REQUIRE_NOT_NULL( pAbility->addAttributeSet<CombatAttributeSet>() );
+    pAI->possess( *pPawn );
+    SW_REQUIRE_TRUE( pPawn->isPossessed() );
+    pAbility->getOwnedTagCounts().updateCount( CombatAttributeSet::getDeadTag(), 1 );
+
+    // 디렉터의 정리 순서 — 조종자를 먼저, 그다음 몸(`ArenaGameModeComponent::retireUnit`).
+    aiPool.release( manager, pAIBody->getHandle() );
+    SW_EXPECT_FALSE( pPawn->isPossessed() );
+    bodyPool.release( manager, pBody->getHandle() );
+
+    SW_REQUIRE_TRUE( bodyPool.acquire( manager, "ArenaGrunt" ) == pBody );
+    SW_REQUIRE_TRUE( aiPool.acquire( manager, "ArenaGruntAI" ) == pAIBody );
+    SW_EXPECT_FALSE( pAbility->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) );
+    SW_EXPECT_TRUE( pAbility->findAttributeSetFor( CombatAttributes::health() ) == nullptr );
+    SW_EXPECT_FALSE( pPawn->isPossessed() );
+    SW_EXPECT_EQUAL( 1u, bodyPool.getCreatedCount() );
+    SW_EXPECT_EQUAL( 1u, aiPool.getCreatedCount() );
+}

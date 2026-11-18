@@ -52,6 +52,11 @@ namespace sw
 
         AIControllerComponent();
         ~AIControllerComponent() override = default;
+        /**
+         * @brief 풀 반환: 쥔 폰을 놓고 행동 트리 실행을 처음으로(도는 작업 중단), 블랙보드 · 목적지 · 초점 · 누른 버튼 · 판단 상태를 비웁니다.
+         * @details 읽은 트리(`_pBehaviorTree`)는 그대로 쓴다. 파생 조종자가 자기 실행 상태를 더하면 재정의한다.
+         */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
 
         void produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent ) final;
 
