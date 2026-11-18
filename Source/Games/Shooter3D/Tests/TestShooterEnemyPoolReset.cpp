@@ -11,6 +11,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
+#include "GameFramework/Runtime/Foundation/Framework/Tests/PrefabPoolComponentSpawner.h"
 
 #include "Games/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
@@ -21,22 +22,12 @@ namespace
 {
     struct ShooterEnemyPoolResetTestUtil
     {
-        /** @brief 적 프리팹의 규칙 · 몸 컴포넌트를 단 오브젝트를 만드는 풀입니다(그리기 · 내비 · 외형은 에셋이 있어야 해서 뺀다). */
+        /** @brief 적 프리팹의 규칙 · 몸 컴포넌트를 단 오브젝트를 만드는 풀입니다(그리기 · 내비 · 외형은 에셋이 있어야 해서 뺀다). 폰은 프리팹처럼 AI 가 자동 빙의한다. */
         static PrefabPool makePool()
         {
-            PrefabPool pool{ string{}, 4 };
-            pool.setSpawner( PrefabPool::SpawnDelegate::create( []( GameObjectManager& manager, const utf8* pName )
-            {
-                GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
-                (void)pObject->addComponent<SkeletalAnimatorComponent>();
-                (void)pObject->addComponent<RagdollComponent>();
-                (void)pObject->addComponent<ShooterEnemyComponent>();
-                PawnComponent* pPawn = pObject->addComponent<PawnComponent>();
-                pPawn->setAutoPossess( PawnAutoPossess::AI );
-                (void)pObject->addComponent<ShooterBodyMovementComponent>();
-                return pObject;
-            } ) );
-            return pool;
+            return PrefabPoolComponentSpawner<SkeletalAnimatorComponent, RagdollComponent, ShooterEnemyComponent, PawnComponent, ShooterBodyMovementComponent>::makePool(
+                4, []( GameObject& object )
+            { object.getComponent<PawnComponent>()->setAutoPossess( PawnAutoPossess::AI ); } );
         }
 
         /** @brief 쓰러뜨리는 맞음입니다. */
