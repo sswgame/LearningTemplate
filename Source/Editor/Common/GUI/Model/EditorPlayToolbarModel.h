@@ -71,13 +71,14 @@ namespace sw::editor
 
         /** @brief 미저장 씬이고 멈춰 있으면 확인 모달을 열게 하고, 아니면 바로 시작합니다. */
         void requestSession( EditorPlaySessionKind session );
-        /** @brief 세션을 시작합니다. 카메라에서 시작이 켜져 있으면 에디터 카메라 위치를 시작 위치로 넘깁니다(멈춤에서 시작할 때만). */
+        // 재생 명령(시작 · 멈춤 · Step · 정지)은 플레이 세션을 바로 바꾸지 않고 UI 명령으로 보낸다 — 다음 게임 프레임 시작에 적용되고 결과는 다음 `gather` 가 본다(`EditorUICommandQueue`).
+        /** @brief 세션 시작을 보냅니다. 카메라에서 시작이 켜져 있으면 에디터 카메라 위치를 시작 위치로 넘깁니다(멈춤에서 시작할 때만). */
         void startSession( EditorPlaySessionKind session );
         void pause();
         void stepOnce();
-        /** @brief Step N 칸의 프레임 수만큼 진행합니다. */
+        /** @brief Step N 칸의 프레임 수만큼 진행을 보냅니다. */
         void stepFrames();
-        /** @brief 재생을 멈추고, 선택을 이름으로 편집 씬의 오브젝트에 다시 잇습니다. */
+        /** @brief 정지를 보냅니다. 적용 쪽이 재생을 멈추고 선택을 이름으로 편집 씬의 오브젝트에 다시 잇습니다. */
         void stop();
         /** @brief Step N 칸 값을 1 ~ 세션 상한으로 자릅니다. */
         void clampStepFrameCount();

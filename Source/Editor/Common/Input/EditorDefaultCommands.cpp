@@ -31,6 +31,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoEntry.h"
@@ -151,7 +152,7 @@ namespace sw::editor
                                                                                   NotificationKind::Warning );
                     return;
                 }
-                EditorPlaySession::play();
+                EditorUICommandQueue::postToEditor( EditorUICommand::makeStart( false, false ) ); // 다음 게임 프레임 시작에 적용된다(UI 출력 계약)
             }
 
             /** @brief 전역 명령이 고칠 오브젝트 — 겨누는 창의 선택의 주 오브젝트입니다(언리얼은 포커스된 툴킷의 명령 목록이 받는다). */

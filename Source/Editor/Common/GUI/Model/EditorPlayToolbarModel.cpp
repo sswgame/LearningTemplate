@@ -4,16 +4,15 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Config/GameTimeScale.h"
-#include "Engine/Object/Component/CameraComponent.h"
 
 namespace sw::editor
 {
@@ -57,44 +56,30 @@ namespace sw::editor
 
     void EditorPlayToolbarModel::startSession( EditorPlaySessionKind session )
     {
-        // 카메라에서 시작은 플레이어가 조종하는 세션만 쓴다(Simulate 는 옮길 플레이어가 없다). 멈춤에서 시작할 때만 정한다.
-        PlaySessionData* pData = EditorPlaySession::findData();
-        if ( pData != nullptr && EditorPlaySession::isStopped() )
-        {
-            const CameraComponent* pEditorCamera = EditorCamera::find( editor::getActiveScene() );
-            if ( _uiState._bStartAtCamera != SW_FALSE && pEditorCamera != nullptr )
-                EditorPlaySession::setStartPosition( *pData, pEditorCamera->getWorldPosition() );
-            else
-                EditorPlaySession::clearStartPosition( *pData );
-        }
-        if ( session == EditorPlaySessionKind::Simulate )
-            EditorPlaySession::simulate();
-        else
-            EditorPlaySession::play();
+        // 카메라에서 시작은 플레이어가 조종하는 세션만 쓴다(Simulate 는 옮길 플레이어가 없다). 멈춤에서 시작할 때만 정하는 것은 적용 쪽이 본다.
+        const bool bSimulate = session == EditorPlaySessionKind::Simulate;
+        EditorUICommandQueue::postToEditor( EditorUICommand::makeStart( bSimulate, bSimulate == false && _uiState._bStartAtCamera != SW_FALSE ) );
     }
 
     void EditorPlayToolbarModel::pause()
     {
-        EditorPlaySession::pause();
+        EditorUICommandQueue::postToEditor( EditorUICommand::make( EditorUICommandKind::Pause ) );
     }
 
     void EditorPlayToolbarModel::stepOnce()
     {
-        EditorPlaySession::stepOnce();
+        EditorUICommandQueue::postToEditor( EditorUICommand::makeStep( 1 ) );
     }
 
     void EditorPlayToolbarModel::stepFrames()
     {
         clampStepFrameCount();
-        EditorPlaySession::stepFrames( static_cast<uint32>( _uiState._stepFrameCount ) );
+        EditorUICommandQueue::postToEditor( EditorUICommand::makeStep( static_cast<uint32>( _uiState._stepFrameCount ) ) );
     }
 
     void EditorPlayToolbarModel::stop()
     {
-        EditorPlaySession::stop();
-        GameObjectManager* pObjectManager = editor::getActiveObjectManager();
-        if ( pObjectManager != nullptr )
-            editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().remapSelectionByObjectName( pObjectManager );
+        EditorUICommandQueue::postToEditor( EditorUICommand::make( EditorUICommandKind::Stop ) );
     }
 
     void EditorPlayToolbarModel::clampStepFrameCount()
