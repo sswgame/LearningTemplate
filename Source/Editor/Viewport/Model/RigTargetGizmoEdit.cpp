@@ -12,7 +12,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
+#include "Editor/Viewport/Model/EditorViewportMouseCapture.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Rig/RigAsset.h"
@@ -107,7 +107,7 @@ namespace sw::editor
         Internal::Target target{};
         if ( pActiveCamera == nullptr || Internal::resolveTarget( edit, target ) == false )
         {
-            EditorViewportMouseClaim::release( &edit );
+            EditorViewportMouseCapture::release( &edit );
             return;
         }
         const RigTargetDef& def = *target._pDef;
@@ -119,7 +119,7 @@ namespace sw::editor
             edit._bPending = SW_FALSE;
         const BoneTransform offset = edit._bPending == SW_TRUE ? edit._pending : def._offset;
 
-        EditorViewportMouseClaim::acquire( &edit );
+        EditorViewportMouseCapture::acquire( &edit );
         outState._view       = pActiveCamera->getViewMatrix();
         outState._projection = pActiveCamera->getProjectionMatrix( canvasAspect );
         outState._world      = offset.toMatrix() * target._parentWorld;

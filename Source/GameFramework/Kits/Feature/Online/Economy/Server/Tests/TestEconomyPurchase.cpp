@@ -4,8 +4,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/CurrencyCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"

@@ -199,22 +199,22 @@ namespace sw
     {
         switch ( rawEvent._type )
         {
-            case RawInputEventType::KeyDown:
-            case RawInputEventType::GamepadButtonDown:
+            case RawInputEventKind::KeyDown:
+            case RawInputEventKind::GamepadButtonDown:
             {
                 outMode = UIInputMode::Navigation;
                 return true;
             }
-            case RawInputEventType::GamepadAxis:
+            case RawInputEventKind::GamepadAxis:
             {
                 if ( MathUtil::abs( rawEvent._payload._gamepadData._axisValue ) < UIInputRouterInternal::kGamepadAxisActivity )
                     return false;
                 outMode = UIInputMode::Navigation;
                 return true;
             }
-            case RawInputEventType::MouseMove:
-            case RawInputEventType::MouseButtonDown:
-            case RawInputEventType::MouseWheel:
+            case RawInputEventKind::MouseMove:
+            case RawInputEventKind::MouseButtonDown:
+            case RawInputEventKind::MouseWheel:
             {
                 outMode = UIInputMode::Pointer;
                 return true;
@@ -234,7 +234,7 @@ namespace sw
         {
             // 커서 이동은 위치가 실제로 바뀔 때만 포인터 방식으로 본다. 창이 뜰 때나 포커스를 받을 때 OS 가 같은 위치로 보내는 이동 이벤트가
             // 패드로 고른 포커스를 지우지 않게 하기 위해서다(첫 이벤트는 위치만 기억한다).
-            if ( rawEvent._type == RawInputEventType::MouseMove )
+            if ( rawEvent._type == RawInputEventKind::MouseMove )
             {
                 const int2 pixel{ rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y };
                 const bool bMoved = _bMousePixelKnown == SW_TRUE && ( pixel._x != _lastMousePixel._x || pixel._y != _lastMousePixel._y );

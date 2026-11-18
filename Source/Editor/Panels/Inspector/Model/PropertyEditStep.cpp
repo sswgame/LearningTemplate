@@ -95,7 +95,7 @@ namespace sw::editor
                                object.getName().c_str() );
             return false;
         }
-        // 모델의 쓰기 길과 같은 알림(`PropertyGridModel::notifyPropertyEdited`) — 빠뜨리면 값에 반응하는 상태(트랜스폼 캐시 · 렌더 상태)가 어긋난다.
+        // 모델의 쓰기 길과 같은 알림(`PropertyGridViewModel::notifyPropertyEdited`) — 빠뜨리면 값에 반응하는 상태(트랜스폼 캐시 · 렌더 상태)가 어긋난다.
         if ( slot._pComponent != nullptr )
             slot._pComponent->onPropertyChanged( slot._pProp->_name );
         else

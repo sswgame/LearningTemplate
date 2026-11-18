@@ -76,12 +76,12 @@ namespace sw::editor
                 if ( post( event ) == false )
                     continue; // 큐가 차면 이 사건만 잃는다
                 // 누름은 먼저 지우고 넣어 중복 없이 한 번만 든다(자동 반복 누름이 여럿 와도 뗌은 한 번이다).
-                if ( event._type == RawInputEventType::KeyDown )
+                if ( event._type == RawInputEventKind::KeyDown )
                 {
                     VectorUtil::removeValue( _listHeldKey, event._payload._keyData._key );
                     _listHeldKey.push_back( event._payload._keyData._key );
                 }
-                else if ( event._type == RawInputEventType::KeyUp )
+                else if ( event._type == RawInputEventKind::KeyUp )
                 {
                     VectorUtil::removeValue( _listHeldKey, event._payload._keyData._key );
                 }

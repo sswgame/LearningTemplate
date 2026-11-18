@@ -33,7 +33,7 @@ namespace sw
      *          (1) 자동 빙의를 처리한다. (2) 조종자 없는 폰의 의도를 0 으로 둔다. (3) 조종자마다 의도를 만들어 폰에 넣는다.
      *          조종자와 폰 목록은 씬을 훑지 않고 레지스트리(`ComponentRegistry`)에서 읽는다. 등록 순서대로 돌므로 결정적이다.
      *          의도는 `quantize` 를 거쳐 폰에 넣으므로, 로컬 플레이어도 네트워크나 재생과 같은 값으로 움직인다.
-     *          첫 폰이나 조종자가 등록될 때 `findOrCreate` 가 매니저에 붙이고(매니저가 소유), 마지막 것이 빠질 때 `releaseIfUnused` 가 뗀다.
+     *          첫 폰이나 조종자가 등록될 때 `getOrCreate` 가 매니저에 붙이고(매니저가 소유), 마지막 것이 빠질 때 `releaseIfUnused` 가 뗀다.
      *          GameFramework 모듈이 내려가기 전에 그 컴포넌트가 먼저 지워지므로, 매니저에 이 타입의 객체가 남지 않는다.
      *          에디터가 씬을 멈추면 `GameObjectManager::update` 이 돌지 않으므로 이 단계도 돌지 않는다.
      */
@@ -47,14 +47,14 @@ namespace sw
         ~ControlSystem() override = default;
 
         /** @brief @p manager 의 조종 시스템을 반환합니다. 없으면 붙입니다. */
-        static ControlSystem& findOrCreate( GameObjectManager& manager );
+        static ControlSystem& getOrCreate( GameObjectManager& manager );
         /** @brief @p manager 의 조종 시스템을 반환합니다. 없으면 nullptr 이며, 씬을 비우는 중에도 시스템이 먼저 떨어지므로 nullptr 입니다. */
         static ControlSystem* find( const GameObjectManager& manager );
         /**
          * @brief 로컬 플레이어 @p playerIndex 의 조종자를 반환합니다. 없으면 오브젝트 하나를 생성해 만듭니다. 언리얼의 GameMode 가 플레이어마다 PlayerController 를 생성하는 것과 같습니다.
          * @details 오브젝트를 만들기 때문에 게임 스레드의 틱 밖에서 불러야 한다. 자동 빙의나 자동 플레이를 끌 때 플레이어에게 폰을 돌려주는 곳이 쓴다.
          */
-        static PlayerControllerComponent* findOrCreatePlayerController( GameObjectManager& manager, uint32 playerIndex );
+        static PlayerControllerComponent* getOrCreatePlayerController( GameObjectManager& manager, uint32 playerIndex );
         /** @brief @p pawn 을 지금 @p controllerObject 위의 조종자가 쥐고 있으면 true 입니다. 디렉터가 자동 플레이 AI 가 폰을 가졌는지 묻는다. */
         static bool isPawnControlledBy( const GameObjectManager& manager, const PawnComponent& pawn, GameObjectHandle controllerObject );
         /**

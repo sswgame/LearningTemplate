@@ -1,5 +1,5 @@
 /**
- * deferred_tile_classify.hlsl — 디퍼드 조명 타일 분류(컴퓨트, RenderPassType::DeferredTileClassify — 언리얼 Substrate 타일 분류 · 유니티 HDRP 디퍼드 타일).
+ * deferred_tile_classify.hlsl — 디퍼드 조명 타일 분류(컴퓨트, RenderPassKind::DeferredTileClassify — 언리얼 Substrate 타일 분류 · 유니티 HDRP 디퍼드 타일).
  *
  * 그룹 하나가 타일 하나(SW_DEFERRED_TILE_SIZE² px)다. 픽셀마다 G버퍼 알베도 알파의 셰이딩 모델 번호를 그룹 공유 비트에 OR 하고, 첫 스레드가 비트로 종류를 골라
  * (deferred_tile_class.hlsli) 그 종류의 간접 인자 인스턴스 수를 하나 올려 받은 자리에 타일 좌표(x | y << 16)를 적는다 — 그리지 않은 타일(번호가 모두 NONE)은 어느 목록에도 들지 않는다.

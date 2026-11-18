@@ -44,7 +44,7 @@
 
 순서: 측정이 문턱을 넘은 것만 고친다. 이득이 없으면 값을 DesignBacklog "측정과 성능 후보(S8)" 에 한 줄 적고 줄을 지운다. "켤 코드" 커밋은 따로라 값이 흔들림 안이면 그 커밋만 되돌린다. 설계 절의 측정 문턱은 DesignBacklog 각 절의 "측정" 이다.
 
-- **에디터 첫 패널 · Hierarchy 8000(DesignBacklog "에디터 첫 패널 · Hierarchy 8000 측정 계획", E1):** `App -EnableEditor -gv_editorPanelTimes=120 -gv_traceSlowTickMs=100`(`Saved/Editor` 지운 것 · 둔 것) — 첫 그리기 max 50 ms 넘는 패널은 준비를 `onPanelOpened` 잡으로(`ModulesModel::ensureLoaded` 후보), 100 ms 넘는 프레임 0. 큐브 8000 씬: Hierarchy 정지 avg 0.5 ms 미만 · 구조 세대가 같으면 수집 0 회, Ctrl+A 16 ms 미만, 이름 거르기 글자마다 16 ms 미만, 한 줄 옮기기 · 칸 끌기는 형제 순서 · 프로퍼티 기록 절의 판정.
+- **에디터 첫 패널 · Hierarchy 8000(DesignBacklog "에디터 첫 패널 · Hierarchy 8000 측정 계획", E1):** `App -EnableEditor -gv_editorPanelTimes=120 -gv_traceSlowTickMs=100`(`Saved/Editor` 지운 것 · 둔 것) — 첫 그리기 max 50 ms 넘는 패널은 준비를 `onPanelOpened` 잡으로(`ModulesViewModel::ensureLoaded` 후보), 100 ms 넘는 프레임 0. 큐브 8000 씬: Hierarchy 정지 avg 0.5 ms 미만 · 구조 세대가 같으면 수집 0 회, Ctrl+A 16 ms 미만, 이름 거르기 글자마다 16 ms 미만, 한 줄 옮기기 · 칸 끌기는 형제 순서 · 프로퍼티 기록 절의 판정.
 - **검증 시간(Windows 19 분 — 2026-11-13 증분, 11-12 의 53 분에서):** build 5 분(배포 프리셋 셋이 4 분) · cpu 2.7 분 · Release ctest 11.3 분. 공통 헤더 · CMake 폴더를 고치면 전체 재빌드라 50 분대. Linux `all` 21 분(shooter3d 체인 872 초) + sanitize 3 분.
 - **S8 후보(Release, 반복):**
   - 대기 호출 표: `OnlineServerCallTableTest.CompletionCostByPending` P 16 · 256 · 4096 ns/완료 · `service_store_pending_peak` — 차이가 흔들림보다 크면 `_mapCall` 을 둔다.

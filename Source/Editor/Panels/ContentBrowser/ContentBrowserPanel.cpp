@@ -102,7 +102,7 @@ namespace sw::editor
             [[nodiscard]] static bool readReferenceIndexReady( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 bool bCurrent = false;
-                if ( ContentBrowserModel::readReferenceIndexCurrent( bCurrent ) == false )
+                if ( ContentBrowserViewModel::readReferenceIndexCurrent( bCurrent ) == false )
                     return false;
                 outValue = bCurrent ? 1.0 : 0.0;
                 return true;
@@ -216,7 +216,7 @@ namespace sw::editor
                 return path.empty() == false && EditorAssetIndex::isTextAsset( path );
             }
 
-            static void showInExplorer( const EditorCommandTarget& target ) { ContentBrowserModel::showInFileExplorer( findTargetPath( target ) ); }
+            static void showInExplorer( const EditorCommandTarget& target ) { ContentBrowserViewModel::showInFileExplorer( findTargetPath( target ) ); }
 
             static void copyRelativePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( EditorPaths::getAssetPaths().toAssetID( findTargetPath( target ) ).c_str() ); }
 
@@ -236,7 +236,7 @@ namespace sw::editor
                     pPanel->showReferences( findTargetPath( target ), true );
             }
 
-            static EditorSourceControl& getSourceControl() { return ContentBrowserModel::getSourceControl(); }
+            static EditorSourceControl& getSourceControl() { return ContentBrowserViewModel::getSourceControl(); }
 
             static bool canLock( const EditorCommandTarget& target )
             {
@@ -452,11 +452,11 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawSourceControlBadge( ImDrawList* pDrawList, const float2& topRight, const AssetEntry& entry )
     {
-        const string statusText = ContentBrowserModel::describeSourceControlStatus( entry );
+        const string statusText = ContentBrowserViewModel::describeSourceControlStatus( entry );
         if ( statusText.empty() )
             return;
         // 잠금은 누가 걸었든 주황 자물쇠로, 읽기 전용(잠그기 전)은 회색 자물쇠로 그린다. 바로 아래 버튼의 툴팁이 이유를 설명한다.
-        const bool   bLocked  = ContentBrowserModel::isLocked( entry );
+        const bool   bLocked  = ContentBrowserViewModel::isLocked( entry );
         const ImU32  color    = bLocked ? EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeLocked ) : EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeReadOnly );
         const ImVec2 textSize = ImGui::CalcTextSize( SW_EDITOR_ICON( "Lock" ) );
         pDrawList->AddText( ImVec2( topRight._x - textSize.x, topRight._y ), color, SW_EDITOR_ICON( "Lock" ) );
@@ -698,7 +698,7 @@ namespace sw::editor
             {
                 ImGui::Selectable( assetID.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick );
                 if ( EditorInputGUI::wasItemDoubleClicked() )
-                    (void)ContentBrowserModel::openAsset( assetID ); // 실패는 openPath 가 알린다
+                    (void)ContentBrowserViewModel::openAsset( assetID ); // 실패는 openPath 가 알린다
                 EditorWidgets::drawAssetDragSource( assetID.c_str() );
             }
             else
@@ -731,7 +731,7 @@ namespace sw::editor
             return;
 
         const string&           pendingDeleteAbs = _model.getPendingDeletePath();
-        const EditorAssetIndex& referenceIndex   = ContentBrowserModel::getReferenceIndex();
+        const EditorAssetIndex& referenceIndex   = ContentBrowserViewModel::getReferenceIndex();
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "MoveToRecycleBin", TextArgumentList().addText( "file", FileUtil::getFileNamePart( pendingDeleteAbs ) ) ).c_str() );
         // 지우기 전에 이 에셋을 쓰는 곳을 보여 준다. 언리얼의 Delete Assets 대화상자가 보여 주는 참조 수와 같다.
         if ( referenceIndex.isReady() )
@@ -946,7 +946,7 @@ namespace sw::editor
         ImGui::TextUnformatted( bDependencies ? "Dependencies of" : "References to" );
         ImGui::SameLine();
         ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferenceQueryText ), "%s", referenceSearch.getQueryID().c_str() );
-        if ( ContentBrowserModel::getReferenceIndex().isReady() == false )
+        if ( ContentBrowserViewModel::getReferenceIndex().isReady() == false )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorContentBrowser", "IndexingReferences" ) );
             ImGui::EndPopup();
@@ -988,7 +988,7 @@ namespace sw::editor
         }
         ImGui::EndPopup();
         if ( openPath.empty() == false )
-            (void)ContentBrowserModel::openAsset( openPath ); // 실패는 openPath 가 알린다
+            (void)ContentBrowserViewModel::openAsset( openPath ); // 실패는 openPath 가 알린다
     }
 
     void ContentBrowserPanel::drawContent()
@@ -1066,7 +1066,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AddAsset" ) );
         drawAddMenu();
 
-        _syncedAssetID                  = ContentBrowserModel::findMainSelectionAssetID(); // 메인 씬 칸만 따른다(미리보기 창의 선택은 아니다)
+        _syncedAssetID                  = ContentBrowserViewModel::findMainSelectionAssetID(); // 메인 씬 칸만 따른다(미리보기 창의 선택은 아니다)
         const utf8* const pFindSelected = SW_LOCKEY( "EditorContentBrowser", "FindSelected" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pFindSelected ) );
         ImGui::BeginDisabled( _syncedAssetID.empty() );
@@ -1183,7 +1183,7 @@ namespace sw::editor
         {
             const string favoritePath = kArrFavorites[favoriteIndex]._bEngine
                                           ? EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEnginePack, kArrFavorites[favoriteIndex]._pRelPath ) )
-                                          : EditorPaths::findContentFolder( FileUtil::joinPath( ContentBrowserModel::getGamePackRoot(), kArrFavorites[favoriteIndex]._pRelPath ) );
+                                          : EditorPaths::findContentFolder( FileUtil::joinPath( ContentBrowserViewModel::getGamePackRoot(), kArrFavorites[favoriteIndex]._pRelPath ) );
             const bool   bSelected    = FileUtil::isSameDiskPath( favoritePath, _model.getSelectedFolderPath() );
 
             if ( ImGui::Selectable( kArrFavorites[favoriteIndex]._pLabel, bSelected ) )
@@ -1291,7 +1291,7 @@ namespace sw::editor
         EditorChrome::endSection();
 
         EditorWidgets::drawCountLabel( static_cast<uint32>( listVisible.size() ), 0, SW_LOCKEY( "EdWidget", "Items" ) );
-        if ( ContentBrowserModel::isReferenceScanPending() && ContentBrowserModel::getReferenceIndex().isReady() == false )
+        if ( ContentBrowserViewModel::isReferenceScanPending() && ContentBrowserViewModel::getReferenceIndex().isReady() == false )
         {
             ImGui::SameLine();
             ImGui::TextDisabled( "|  Indexing references..." );
@@ -1453,7 +1453,7 @@ namespace sw::editor
                     ImGui::TableSetColumnIndex( 0 );
                     const utf8*  pAssetIcon   = EditorThemeUtil::getAssetIconForPath( entry._name, entry._bIsDirectory );
                     const Color  assetColor   = EditorThemeUtil::getAssetColorForPath( entry._name, entry._bIsDirectory );
-                    const string statusText   = ContentBrowserModel::describeSourceControlStatus( entry );
+                    const string statusText   = ContentBrowserViewModel::describeSourceControlStatus( entry );
                     const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name + ( statusText.empty() ? string() : string( "  " ) + SW_EDITOR_ICON( "Lock" ) );
                     ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( assetColor ) );
                     const bool bSelected = ImGui::Selectable( nameWithIcon.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );

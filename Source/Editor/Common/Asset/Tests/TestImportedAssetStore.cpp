@@ -6,8 +6,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/ImportedAssetStore.h"
-#include "Editor/Common/Asset/Model/ModelImportConfig.h"
-#include "Editor/Common/Asset/Model/ModelImportMaterial.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportMaterial.h"
 #include "Editor/Common/Asset/Tests/EditorScratchDomain.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 
@@ -170,7 +170,7 @@ SW_TEST_CASE( ImportedAssetStoreTest, SlotRoundTripsAndInstanceValuesDoNotMix )
     SW_EXPECT_EQUAL( string( "0.5" ), pRoughness->_defaultValue );
     SW_EXPECT_EQUAL( string( "common/textures/a.dds" ), pAlbedo->_assetPath );
     SW_EXPECT_EQUAL( string( "Base Color" ), pColor->_displayName );
-    SW_EXPECT_TRUE( pColor->_shaderType == MaterialPropertyType::Float4 ); // 파일에 적지 않은 칸 형식
+    SW_EXPECT_TRUE( pColor->_shaderType == MaterialPropertyKind::Float4 ); // 파일에 적지 않은 칸 형식
 
     // 인스턴스 값은 부모(공유 머티리얼)를 고치지 않는다.
     shared_ptr<MaterialInstance> first  = MaterialInstance::create( material.get() );

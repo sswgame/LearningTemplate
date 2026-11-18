@@ -39,12 +39,12 @@ namespace sw::editor
      */
     struct ClipSequence : ImSequencer::SequenceInterface
     {
-        SequenceModel&         _document;
+        SequenceEditModel&     _document;
         mutable string         _labelScratch;
         uint8                  _bDraftOpened : 1; ///< 이번 `Add` 가 항목 대신 초안을 열었다 — 패널이 위젯의 "끝 항목 고르기" 를 버릴지 본다
         [[maybe_unused]] uint8 _reserved     : 7;
 
-        explicit ClipSequence( SequenceModel& document )
+        explicit ClipSequence( SequenceEditModel& document )
             : _document{ document }
             , _labelScratch{}
             , _bDraftOpened{ SW_FALSE }
@@ -214,7 +214,7 @@ namespace sw::editor
             }
 
             /** @brief 키 띠에서 포인터 x 에 가장 가까운 키 프레임입니다(마름모 반지름 안). 없으면 비어 있습니다. */
-            static optional<float32> findKeyUnderPointer( const SequenceModel& document, const vector<float32>& listKeyFrame, float32 originX, float32 width, float32 radius, float32 pointerX )
+            static optional<float32> findKeyUnderPointer( const SequenceEditModel& document, const vector<float32>& listKeyFrame, float32 originX, float32 width, float32 radius, float32 pointerX )
             {
                 optional<float32> hit;
                 float32           bestDistance = radius;
@@ -1061,10 +1061,10 @@ namespace sw::editor
         {
             ImGui::PushID( static_cast<int32>( channelIndex ) );
             const bool bKeyed    = track.findChannelKey( channelIndex, frame ).has_value();
-            const bool bRotation = SequenceModel::isRotationChannel( track, channelIndex );
+            const bool bRotation = SequenceEditModel::isRotationChannel( track, channelIndex );
             // 키가 없는 채널은 대상의 지금 값을 보인다.
             const float32 currentValue = channelIndex < kSequenceMaxChannelCount ? pArrCurrent[channelIndex] : 0.0f;
-            float32       value        = SequenceModel::computeChannelDisplayValue( track, channelIndex, frame, currentValue );
+            float32       value        = SequenceEditModel::computeChannelDisplayValue( track, channelIndex, frame, currentValue );
             // 키가 있는 프레임이면 표식을 강조색으로 — 언리얼 Sequencer 채널 줄의 키 마름모에 해당한다.
             ImGui::TextColored( bKeyed ? ImGui::GetStyleColorVec4( ImGuiCol_CheckMark ) : ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ), bKeyed ? "<>" : "--" );
             ImGui::SameLine();

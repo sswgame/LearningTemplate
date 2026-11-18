@@ -5,8 +5,8 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionStageRun.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerCatalog.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionStageRun.h"
 
 // ActionStageRunTest — 스테이지 한 판: 시간 · 피격 · 수집 점수와 등급 경계, 체크포인트 순서, 죽으면 다시 놓이는 비밀, 게임 오버 뒤 멈춤, 깨진 상태 바이트 거절(스테이지 없는 진행 판 · 겹친 비밀).
 // ActionPlatformerCatalogTest — 카탈로그 거절: 등급표 없음 · 가중치 0 · 겹친 이름 · 모르는 상태. 키트 GF_ActionPlatformer(nogpu).

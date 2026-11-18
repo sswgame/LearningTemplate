@@ -877,7 +877,7 @@ namespace sw
         return FileUtil::writeTextFile( absPath, AssetGUIDHeader::carryOver( sourceText, restoredText ) );
     }
 
-    expected<void> ResourceComposer::checkDeltaReadsBack( const string& deltaText, const string_view fullText, const string_view baseID, const ResourceRereadFunction& reread )
+    expected<void> ResourceComposer::validateDeltaReadsBack( const string& deltaText, const string_view fullText, const string_view baseID, const ResourceRereadFunction& reread )
     {
         if ( reread.isBound() == false || string_view{ reread( deltaText ) } == fullText )
             return {};
@@ -888,7 +888,7 @@ namespace sw
                                                        string& outDeltaText )
     {
         if ( DataInheritance::makeDelta( fullText, parentFullText, schema, baseID, outDeltaText ) )
-            return checkDeltaReadsBack( outDeltaText, fullText, baseID, reread );
+            return validateDeltaReadsBack( outDeltaText, fullText, baseID, reread );
         return unexpected( Error{ ErrorKind::InvalidArgument, "the difference from base could not be made (see the log)", baseID } );
     }
 

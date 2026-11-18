@@ -21,7 +21,7 @@ namespace sw
 
     /** @brief 필드 값의 타입입니다. */
     ENUM()
-    enum class TelemetryFieldType : uint8
+    enum class TelemetryFieldKind : uint8
     {
         Bool = 0,
         Int,
@@ -29,7 +29,7 @@ namespace sw
         String
     };
 
-    SW_API const utf8* toString( TelemetryFieldType type );
+    SW_API const utf8* toString( TelemetryFieldKind type );
 
     /** @brief 스키마 파일 루트(`<TelemetrySchema version>`)의 칸입니다. 적지 않으면 판 1 이다. */
     REFLECT()
@@ -55,7 +55,7 @@ namespace sw
         PROPERTY( Required )
         hashed_string _name;
         PROPERTY( Required )
-        TelemetryFieldType _type;
+        TelemetryFieldKind _type;
         PROPERTY()
         uint8 _bRequired : 1; ///< 적지 않으면 선택 칸이다
     };

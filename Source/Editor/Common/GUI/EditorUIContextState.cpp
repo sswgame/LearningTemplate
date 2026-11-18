@@ -151,13 +151,13 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 문서 패널의 되돌리기가 문서를 그대로 돌리는지 봅니다(`IEditorDocumentPanel::checkUndoRoundTrip`, 되돌리기 전수 시나리오의 문서 패널 단계). 아니면 실패입니다. */
+            /** @brief 문서 패널의 되돌리기가 문서를 그대로 돌리는지 봅니다(`IEditorDocumentPanel::validateUndoRoundTrip`, 되돌리기 전수 시나리오의 문서 패널 단계). 아니면 실패입니다. */
             static bool runPanelExpectUndoRoundTrip( const vector<string>& listArgument, string& outReply )
             {
                 IEditorDocumentPanel* pDocument = findDocumentPanel( listArgument, outReply );
                 if ( pDocument == nullptr )
                     return false;
-                const expected<void> roundTrip = pDocument->checkUndoRoundTrip();
+                const expected<void> roundTrip = pDocument->validateUndoRoundTrip();
                 if ( roundTrip.has_value() == false )
                 {
                     outReply = listArgument[0] + ": " + string{ roundTrip.error().message() } + " (" + string{ roundTrip.error().detail() } + ")";

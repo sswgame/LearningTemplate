@@ -4,7 +4,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/API/PlatformLoginClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/PlatformLoginClient.h"
 
 using namespace sw;
 

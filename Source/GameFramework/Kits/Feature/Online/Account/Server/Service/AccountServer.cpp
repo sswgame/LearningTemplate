@@ -4,7 +4,7 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountProtocol.h"
 
 namespace sw
 {
@@ -73,7 +73,7 @@ namespace sw
         _bHostAttached = SW_FALSE;
     }
 
-    uint16 AccountServer::checkRequest( OnlineServiceHost& host, const OnlineCallContext& context )
+    uint16 AccountServer::validateRequest( OnlineServiceHost& host, const OnlineCallContext& context )
     {
         (void)host;
         _nowMs = context._nowMs;

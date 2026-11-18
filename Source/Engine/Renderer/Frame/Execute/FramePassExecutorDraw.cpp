@@ -59,7 +59,7 @@
 #include "Engine/Renderer/Frame/Screen/FrameScreenRotation.h"
 #include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -168,7 +168,7 @@ namespace sw
         if ( cache.usesCacheLayer() == false || context._pCmd == nullptr )
             return false;
         // 복원 PSO 가 없으면(셋업이 알렸다) 캐시한 타일의 정적 메시가 빠진다 — 이 프레임은 캐시 없이 다 그린다.
-        if ( _psoManager.getEnginePSO( RenderPassType::ShadowCacheRestore ) == 0 )
+        if ( _psoManager.getEnginePSO( RenderPassKind::ShadowCacheRestore ) == 0 )
         {
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ShadowCacheNoRestorePSO", "Shadow cache restore PSO is missing - cached point/spot shadows are drawn without the cache" );
             return false;
@@ -193,7 +193,7 @@ namespace sw
             beginInfo._height           = layer._height;
             context._pCmd->beginRenderPass( beginInfo );
             const PassConstantNames&     names     = passConstantNames();
-            const RHIPipelineStateHandle pso       = _psoManager.getEnginePSO( RenderPassType::Shadow );
+            const RHIPipelineStateHandle pso       = _psoManager.getEnginePSO( RenderPassKind::Shadow );
             const uint32                 viewCull  = context._cullViewIndex;
             context._shadowCasterFilter            = ShadowCasterFilter::StaticOnly;
             const vector<ShadowTileDraw>& listTile = _state._frameShadow._listLocalTile;
@@ -242,7 +242,7 @@ namespace sw
     {
         // 그림자는 모든 타일을 덮는 상자로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링에 해당한다). 끝나면 지금 뷰의 슬롯으로 돌아간다.
         const ViewShadowData&        shadow   = _pActiveView->_shadow;
-        const RHIPipelineStateHandle pso      = _psoManager.getEnginePSO( RenderPassType::Shadow );
+        const RHIPipelineStateHandle pso      = _psoManager.getEnginePSO( RenderPassKind::Shadow );
         const uint32                 viewCull = context._cullViewIndex;
         context._cullViewIndex                = _pActiveView->_shadowCullSlot;
 
@@ -271,7 +271,7 @@ namespace sw
 
     void FramePassExecutor::drawLocalShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer )
     {
-        const RHIPipelineStateHandle  pso      = _psoManager.getEnginePSO( RenderPassType::Shadow );
+        const RHIPipelineStateHandle  pso      = _psoManager.getEnginePSO( RenderPassKind::Shadow );
         const uint32                  viewCull = context._cullViewIndex;
         const vector<ShadowTileDraw>& listTile = _state._frameShadow._listLocalTile;
         // 캐시한 타일은 캐시 층의 깊이를 픽셀 깊이로 옮긴 뒤(ShadowCacheRestore — 층을 LocalShadowMap 역할 이름으로 건다) 움직이는 배치만 그린다.
@@ -280,7 +280,7 @@ namespace sw
             const TransientAttachmentPool::Attachment layer = _state._shadowCache.getLayer();
             context._resourceRegistry.registerTexture( attachmentNames()._localShadowMap, layer._texture, layer._srv );
         }
-        const RHIPipelineStateHandle restorePSO = _psoManager.getEnginePSO( RenderPassType::ShadowCacheRestore );
+        const RHIPipelineStateHandle restorePSO = _psoManager.getEnginePSO( RenderPassKind::ShadowCacheRestore );
         for ( uint32 tileIndex = 0; tileIndex < static_cast<uint32>( listTile.size() ); ++tileIndex )
         {
             if ( beginShadowTile( context, listTile[tileIndex] ) == false )
@@ -396,7 +396,7 @@ namespace sw
         return _pLastSwapchainWriter == nullptr || &passDesc == _pLastSwapchainWriter;
     }
 
-    const RenderGraphPassDesc* FramePassExecutor::findPassDescByType( RenderPassType passType ) const
+    const RenderGraphPassDesc* FramePassExecutor::findPassDescByType( RenderPassKind passType ) const
     {
         // 값만 비교한다 — 표기는 읽을 때 enum 으로 검사했다.
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
@@ -627,7 +627,7 @@ namespace sw
         context._lastCbLayoutHash      = cbLayoutHash;
 
         // 셰이더 메시지 변형 패스(표의 kGPUMessageTarget — Present 의 fullscreen_blit)는 드로우마다 링을 u4 에 건다. 링이 없으면(-gv_gpuMessages 꺼짐) 아무것도 하지 않는다.
-        if ( getRenderPassTypeInfo( context._passType ).hasFlag( RenderPassTraitFlag::kGPUMessageTarget ) )
+        if ( getRenderPassKindInfo( context._passType ).hasFlag( RenderPassTraitFlag::kGPUMessageTarget ) )
             _state._gpuMessages.bindGraphics( *context._pCmd );
         return true;
     }
@@ -790,7 +790,7 @@ namespace sw
         // 겹침 모드(ShadedWireframe)는 배치를 두 번 그린다 — Lit PSO 로 한 번, 그 모드의 PSO(선 · 깊이 바이어스)로 한 번. 입자는 첫 번째에만 끼운다.
         // 보기 모드는 지금 그리는 뷰의 설정이다(씬 뷰만 ShadedWireframe 이고 게임 뷰는 Lit 일 수 있다).
         const RenderViewMode viewMode       = _pActiveView->_settings._viewMode;
-        const bool           bOverlayDraw   = getRenderViewModeInfo( viewMode )._bOverlay && getRenderPassTypeInfo( state._passType ).shouldApplyViewMode();
+        const bool           bOverlayDraw   = getRenderViewModeInfo( viewMode )._bOverlay && getRenderPassKindInfo( state._passType ).shouldApplyViewMode();
         const RenderViewMode arrDrawMode[]  = { bOverlayDraw ? RenderViewMode::Lit : viewMode, viewMode };
         const uint32         drawRoundCount = bOverlayDraw ? 2u : 1u;
         for ( uint32 drawRound = 0; drawRound < drawRoundCount; ++drawRound )
@@ -818,7 +818,7 @@ namespace sw
         return false;
     }
 
-    bool FramePassExecutor::isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head,
+    bool FramePassExecutor::isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassKind passType, RenderViewMode drawMode, const GPUMeshBatch& head,
                                              const GPUMeshBatchBinding& headBinding, const GPUMeshBatch& other, const GPUMeshBatchBinding& otherBinding ) const
     {
         const bool bOtherBatchNotDrawable = otherBinding.hasGeometry() == false || other.hasDrawSlots() == false || shouldDrawBatchInPass( passType, other, otherBinding ) == false;
@@ -924,7 +924,7 @@ namespace sw
         }
 
         // 칸에 옮겨 그리는 PSO(전체 화면 블릿 셰이더, 아틀라스 포맷)는 PSO 관리자가 저장소에 둔다 — 디바이스를 바꾸면 저장소가 비고 다시 만든다.
-        const RHIPipelineStateHandle pso = _psoManager.findOrCreateCookieAtlasPSO( pAtlas->getFormat() );
+        const RHIPipelineStateHandle pso = _psoManager.getOrCreateCookieAtlasPSO( pAtlas->getFormat() );
         if ( pso == 0 )
         {
             _state._cookieAtlas.clearPendingDraws();
@@ -1029,7 +1029,7 @@ namespace sw
                 textures.deferLayerBake( std::move( request ) ); // 읽는 중이거나 디바이스 교체로 다시 만드는 중 — 다음 프레임에 다시
                 continue;
             }
-            const RHIPipelineStateHandle pso = _psoManager.findOrCreateLayerBakePSO( arrTarget[1][0]->getFormat() );
+            const RHIPipelineStateHandle pso = _psoManager.getOrCreateLayerBakePSO( arrTarget[1][0]->getFormat() );
             if ( pso == 0 )
                 continue; // 못 만든 까닭은 PSO 관리자가 남겼다
 

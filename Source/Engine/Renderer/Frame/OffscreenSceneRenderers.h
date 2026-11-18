@@ -69,7 +69,7 @@ namespace sw
             string                    _pipelinePath; ///< 비면 주 렌더러의 파이프라인(PSO 저장소를 함께 쓴다)
         };
         /** @brief (씬 키, 파이프라인)의 렌더러를 찾고 없으면 만듭니다. 만들지 못하면 nullptr 입니다. */
-        FrameRenderer* findOrCreate( FrameRenderer& mainRenderer, IRHIDevice* pDevice, uint32 sceneKey, string_view pipelinePath );
+        FrameRenderer* getOrCreate( FrameRenderer& mainRenderer, IRHIDevice* pDevice, uint32 sceneKey, string_view pipelinePath );
 
     private:
         vector<Entry>  _listEntry;

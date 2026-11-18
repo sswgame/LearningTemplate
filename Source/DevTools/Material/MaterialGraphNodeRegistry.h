@@ -16,7 +16,7 @@
 namespace sw
 {
     /** @brief 그래프 값의 형식입니다. 벡터 네 칸의 수는 값 그대로입니다(`getComponentCount`). */
-    enum class MaterialGraphValueType : uint8
+    enum class MaterialGraphValueKind : uint8
     {
         Invalid = 0,
         Float   = 1,
@@ -43,7 +43,7 @@ namespace sw
     {
         string_view            _name;
         string_view            _default; ///< 잇지 않았을 때의 값. 비면 없다
-        MaterialGraphValueType _type{ MaterialGraphValueType::Invalid };
+        MaterialGraphValueKind _type{ MaterialGraphValueKind::Invalid };
         bool                   _bRequired{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다)
     };
 
@@ -52,7 +52,7 @@ namespace sw
     {
         string_view            _name;
         string_view            _expression;
-        MaterialGraphValueType _type{ MaterialGraphValueType::Invalid };
+        MaterialGraphValueKind _type{ MaterialGraphValueKind::Invalid };
     };
 
     /** @brief 설정 선언 하나입니다. `Name:type=기본값`. 잇지 못하는 값이고 노드 값(`_listValue`)에 적습니다. */
@@ -60,7 +60,7 @@ namespace sw
     {
         string_view            _name;
         string_view            _default;
-        MaterialGraphValueType _type{ MaterialGraphValueType::Invalid };
+        MaterialGraphValueKind _type{ MaterialGraphValueKind::Invalid };
     };
 
     /**
@@ -136,9 +136,9 @@ namespace sw
         /** @brief 문법이 틀린 등록을 글로 @p outListProblem 에 더합니다(단위 테스트가 본다). */
         static void collectProblems( vector<string>& outListProblem );
         /** @brief 형식 이름(`float3`)의 형식입니다. 모르면 `Invalid` 입니다. */
-        [[nodiscard]] static MaterialGraphValueType parseValueType( string_view name );
+        [[nodiscard]] static MaterialGraphValueKind parseValueType( string_view name );
         /** @brief 형식의 HLSL 이름입니다(`float3`). */
-        [[nodiscard]] static const utf8* getHLSLTypeName( MaterialGraphValueType type );
+        [[nodiscard]] static const utf8* getHLSLTypeName( MaterialGraphValueKind type );
     };
 } // namespace sw
 

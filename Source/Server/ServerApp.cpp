@@ -167,7 +167,7 @@ namespace sw
 
         if ( loadServerConfig() == false )
             return false;
-        const bool bConfigValid = checkServerConfig( *_pServerConfig );
+        const bool bConfigValid = validateServerConfig( *_pServerConfig );
         if ( bConfigValid == false || _bConfigCheckOnly == SW_TRUE )
             return bConfigValid; // 검사만이면 여기서 끝난다(서비스 · 포트를 열지 않는다)
         _tickNanoseconds = constant::time::kNanosecondsPerSecond / static_cast<int64>( _pServerConfig->_tickRateHz );
@@ -251,7 +251,7 @@ namespace sw
         return true;
     }
 
-    bool ServerApp::checkServerConfig( const ServerConfig& config )
+    bool ServerApp::validateServerConfig( const ServerConfig& config )
     {
         bool bValid = true;
         if ( config._opsPort > 0 )

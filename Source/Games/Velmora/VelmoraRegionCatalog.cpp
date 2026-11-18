@@ -18,7 +18,7 @@ namespace sw
         struct VelmoraRegionCatalogInternal
         {
             /** @brief 자리 @p point 가 지역 경계 안인지 봅니다. 밖이면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool checkInside( const VelmoraRegionDef& region, const float2& point, const utf8* pWhat, string_view where )
+            [[nodiscard]] static bool validateInside( const VelmoraRegionDef& region, const float2& point, const utf8* pWhat, string_view where )
             {
                 if ( region.contains( point ) )
                     return true;
@@ -101,7 +101,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Velmora.RegionEmptyBounds", "%#: min must be below max on both axes", where );
             bValid = false;
         }
-        bValid = bValid && Internal::checkInside( region, region._respawn, "respawn", where );
+        bValid = bValid && Internal::validateInside( region, region._respawn, "respawn", where );
         if ( attribute._startQuest.empty() == false )
             XMLReadUtil::parseNameList( attribute._startQuest.c_str(), ", ", region._listStartQuest );
 
@@ -109,13 +109,13 @@ namespace sw
         {
             const string_view name = child.getName() != nullptr ? string_view( child.getName() ) : string_view{};
             if ( name == "Camp" )
-                bValid = Internal::readSite( child, where, region._camp ) && Internal::checkInside( region, region._camp._position, "camp", where );
+                bValid = Internal::readSite( child, where, region._camp ) && Internal::validateInside( region, region._camp._position, "camp", where );
             else if ( name == "Beacon" )
-                bValid = Internal::readSite( child, where, region._beacon ) && Internal::checkInside( region, region._beacon._position, "beacon", where );
+                bValid = Internal::readSite( child, where, region._beacon ) && Internal::validateInside( region, region._beacon._position, "beacon", where );
             else if ( name == "Hall" )
-                bValid = Internal::readSpawn( child, where, region._listHallSpawn ) && Internal::checkInside( region, region._listHallSpawn.back()._position, "hall spawn", where );
+                bValid = Internal::readSpawn( child, where, region._listHallSpawn ) && Internal::validateInside( region, region._listHallSpawn.back()._position, "hall spawn", where );
             else if ( name == "Boss" )
-                bValid = Internal::readSpawn( child, where, region._listBossSpawn ) && Internal::checkInside( region, region._listBossSpawn.back()._position, "boss spawn", where );
+                bValid = Internal::readSpawn( child, where, region._listBossSpawn ) && Internal::validateInside( region, region._listBossSpawn.back()._position, "boss spawn", where );
             else
             {
                 SW_LOG_ERROR_ID( "Velmora.RegionUnknownChild", "%#: unknown child <%#>", where, name );

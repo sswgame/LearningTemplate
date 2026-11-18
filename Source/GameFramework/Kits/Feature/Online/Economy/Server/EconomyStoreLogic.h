@@ -17,7 +17,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/EconomyProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"

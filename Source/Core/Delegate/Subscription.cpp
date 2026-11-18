@@ -289,7 +289,7 @@ namespace sw
         pControl->releaseReference();
     }
 
-    void SubscriptionSource::checkClosed() const noexcept
+    void SubscriptionSource::assertClosed() const noexcept
     {
         if ( _pControl.load( std::memory_order_acquire ) != getClosedControl() )
             SW_LOW_LEVEL_FATAL( "SubscriptionSource destroyed without closeSubscriptions - call it first in the derived destructor" );

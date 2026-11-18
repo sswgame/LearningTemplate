@@ -29,7 +29,7 @@ namespace sw
      * @code
      *     BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kInput );
      *     writer.writeVarUint( tick );
-     *     (void)_messageWriter.send( *_pHost, connectionID, NetChannelType::ReliableOrdered );
+     *     (void)_messageWriter.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered );
      * @endcode
      */
     class SW_API NetMessageWriter
@@ -39,11 +39,11 @@ namespace sw
 
         /** @brief 비우고 종류 바이트를 씁니다. 본문은 돌려준 `BitWriter` 에 이어 씁니다. */
         BitWriter&         begin( uint8 kind );
-        [[nodiscard]] bool send( INetPeers& peers, int32 connectionID, NetChannelType channel ) const;
+        [[nodiscard]] bool send( INetPeers& peers, int32 connectionID, NetChannelKind channel ) const;
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
-        int32 broadcast( INetPeers& peers, NetChannelType channel, int32 exceptID = constant::invalid_index::kInt32 ) const;
+        int32 broadcast( INetPeers& peers, NetChannelKind channel, int32 exceptID = constant::invalid_index::kInt32 ) const;
         /** @brief 상대 모두에게 보냅니다. 서버는 연결된 모두에게, 클라이언트는 서버(연결 0)에게 보냅니다. 반환값은 보낸 수이며, 락스텝이나 롤백처럼 모두가 같은 메시지를 나눌 때 씁니다. */
-        int32 sendToPeers( INetPeers& peers, NetChannelType channel ) const;
+        int32 sendToPeers( INetPeers& peers, NetChannelKind channel ) const;
 
         const vector<uint8>& getBytes() const { return _writer.getBytes(); }
         int32                getByteCount() const { return _writer.getByteCount(); }
@@ -72,7 +72,7 @@ namespace sw
         const uint8*   _pMessage{ nullptr }; ///< 처리기 호출 동안만 유효하다.
         int32          _messageSize{ 0 };
         int32          _connectionID{ constant::invalid_index::kInt32 };
-        NetChannelType _channel{ NetChannelType::ReliableOrdered };
+        NetChannelKind _channel{ NetChannelKind::ReliableOrdered };
         uint8          _kind{ 0 };
     };
 } // namespace sw
@@ -135,7 +135,7 @@ namespace sw
          * @brief 메시지 하나(첫 바이트가 종류)를 라우터 없이 직접 전달합니다. 라우터를 쓰지 않는 게임이나 테스트에서 씁니다. 맡은 종류가 아니면 NotMine 을 반환합니다.
          * @details 직접 전달하는 쪽은 연결 사건도 `onConnectionOpened` 와 `onConnectionClosed` 로 직접 넘긴다.
          */
-        NetHandleResult handleMessage( int32 connectionID, const uint8* pData, int32 size, NetChannelType channel = NetChannelType::ReliableOrdered );
+        NetHandleResult handleMessage( int32 connectionID, const uint8* pData, int32 size, NetChannelKind channel = NetChannelKind::ReliableOrdered );
         NetHandleResult handleMessage( int32 connectionID, const vector<uint8>& buffer )
         {
             return handleMessage( connectionID, buffer.data(), static_cast<int32>( buffer.size() ) );
@@ -150,7 +150,7 @@ namespace sw
     {
         vector<uint8>  _buffer{};
         int32          _connectionID{ constant::invalid_index::kInt32 };
-        NetChannelType _channel{ NetChannelType::ReliableOrdered };
+        NetChannelKind _channel{ NetChannelKind::ReliableOrdered };
     };
 } // namespace sw
 

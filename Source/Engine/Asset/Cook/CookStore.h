@@ -143,7 +143,7 @@ namespace sw
         /** @brief 작업이 쓰면서 센 출력 해시로 기록을 쓰고 출력 파일을 DDC 로 복사합니다. */
         [[nodiscard]] CookResult finishStreamedCook( const CookJob& job, const CookStreamedStep& step, string_view outputID, string_view outputPath ) const;
         /** @brief 끝난 작업이 기록할 수 있는지 봅니다 — `Skipped` · `Failed` 는 그 결과를, 입력이 없는 작업은 `Failed` 를, 기록할 것이면 nullopt 입니다. */
-        [[nodiscard]] static optional<CookResult> checkFinishedJob( const CookJob& job, CookStep step, string_view outputID );
+        [[nodiscard]] static optional<CookResult> validateFinishedJob( const CookJob& job, CookStep step, string_view outputID );
         /** @brief 에셋 캐시를 모두 비웁니다(작업의 시작 조건 — 파일 머리말). */
         static void clearAssetCachesForJob();
         /** @brief 결과 하나를 세고, 요청받은 출력 id 로 적어 둡니다(`Skipped` 는 요청이 아니다). `cookFile` 의 모든 반환이 이것을 지난다 — 한 갈래가 빠지면 멀쩡한 출력이 지워진다. */

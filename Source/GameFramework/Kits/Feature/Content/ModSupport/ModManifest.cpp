@@ -20,7 +20,7 @@ namespace sw
         struct ModManifestInternal
         {
             /** @brief 읽은 id @p text 의 꼴(a-z · 0-9 · _, 1 ~ kMaxIDLength 자)을 봅니다. 틀리면 이유를 남기고 false 입니다. */
-            [[nodiscard]] static bool checkID( string_view text, const utf8* pElement, string_view sourceName )
+            [[nodiscard]] static bool validateID( string_view text, const utf8* pElement, string_view sourceName )
             {
                 if ( ModManifest::isValidID( text ) == false )
                 {
@@ -46,7 +46,7 @@ namespace sw
              * @brief 덮어쓰기 경로를 확인합니다. 정규형(소문자 · `/` · `..` 없음)이고, 도메인 아래 파일이며, 모드 도메인(`mods/`) 밖이어야 합니다.
              * @details 정규화해서 받지 않고 정규형만 받는다 — 매니페스트와 팩 항목이 같은 글이어야 팩 검사가 글 비교 하나로 끝나고, 대소문자 · 구분자가 다른 같은 경로가 둘로 갈리지 않는다.
              */
-            [[nodiscard]] static bool checkOverridePath( string_view path, string_view sourceName )
+            [[nodiscard]] static bool validateOverridePath( string_view path, string_view sourceName )
             {
                 const string normalized = AssetPaths::normalizeAssetID( path );
                 if ( normalized.empty() || normalized != path || path.find( '/' ) == string_view::npos || StringUtil::endsWith( path, "/" ) )
@@ -141,7 +141,7 @@ namespace sw
         if ( XMLFields::readProperties( root, rootDef, sourceName ) == false )
             return false;
         ModManifest manifest;
-        if ( Internal::checkID( rootDef._id, kRootElement, sourceName ) == false || Internal::parseVersion( rootDef._version, "version", kRootElement, sourceName, manifest._version ) == false )
+        if ( Internal::validateID( rootDef._id, kRootElement, sourceName ) == false || Internal::parseVersion( rootDef._version, "version", kRootElement, sourceName, manifest._version ) == false )
             return false;
         manifest._id                = rootDef._id;
         manifest._minContentVersion = rootDef._minContentVersion;
@@ -180,7 +180,7 @@ namespace sw
     {
         using Internal = ModManifestInternal;
         ModDependencyDef def;
-        if ( XMLFields::readProperties( node, def, sourceName ) == false || Internal::checkID( def._id, "Dependency", sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false || Internal::validateID( def._id, "Dependency", sourceName ) == false )
             return false;
         ModDependency dependency;
         if ( Internal::parseVersion( def._minVersion, "minVersion", "Dependency", sourceName, dependency._minVersion ) == false )
@@ -199,7 +199,7 @@ namespace sw
     bool ModManifest::readConflict( const XMLNode& node, string_view sourceName )
     {
         ModConflictDef def;
-        if ( XMLFields::readProperties( node, def, sourceName ) == false || ModManifestInternal::checkID( def._id, "Conflict", sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false || ModManifestInternal::validateID( def._id, "Conflict", sourceName ) == false )
             return false;
         string conflictID = def._id;
         if ( conflictID == _id || VectorUtil::contains( _listConflict, conflictID ) )
@@ -214,7 +214,7 @@ namespace sw
     bool ModManifest::readOverride( const XMLNode& node, string_view sourceName )
     {
         ModPathDef def;
-        if ( XMLFields::readProperties( node, def, sourceName ) == false || ModManifestInternal::checkOverridePath( def._path, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false || ModManifestInternal::validateOverridePath( def._path, sourceName ) == false )
             return false;
         const string_view path = def._path;
         if ( VectorUtil::contains( _listOverride, string{ path } ) || VectorUtil::contains( _listLayer, string{ path } ) )
@@ -230,7 +230,7 @@ namespace sw
     {
         // 층은 덮어쓰기와 같은 경로 규칙이다(정규형 · 기본 리소스만) — 한 리소스를 통째로 바꾸면서 그 위에 차이를 얹는 것은 뜻이 없어 겹치면 거절한다.
         ModPathDef def;
-        if ( XMLFields::readProperties( node, def, sourceName ) == false || ModManifestInternal::checkOverridePath( def._path, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false || ModManifestInternal::validateOverridePath( def._path, sourceName ) == false )
             return false;
         const string_view path = def._path;
         if ( VectorUtil::contains( _listOverride, string{ path } ) || VectorUtil::contains( _listLayer, string{ path } ) )

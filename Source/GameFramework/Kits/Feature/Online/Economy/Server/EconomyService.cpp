@@ -8,8 +8,8 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/CurrencyCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Fake/FakeReceiptValidator.h"
@@ -161,7 +161,7 @@ namespace sw
         startCall( call, _localCalls.open( onReply ) );
     }
 
-    uint16 EconomyService::checkRequest( OnlineServiceHost& host, const OnlineCallContext& context )
+    uint16 EconomyService::validateRequest( OnlineServiceHost& host, const OnlineCallContext& context )
     {
         const bool          bMutating = context._method == EconomyMethod::Purchase::kID || context._method == EconomyMethod::RedeemReceipt::kID || context._method == EconomyMethod::WithdrawPurchase::kID;
         const RemoteConfig* pConfig   = host.getRemoteConfig();

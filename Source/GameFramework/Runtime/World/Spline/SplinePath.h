@@ -21,7 +21,7 @@ namespace sw
 {
     /** @brief 조절점을 곡선으로 연결하는 방식입니다. */
     ENUM()
-    enum class SplineType : uint8
+    enum class SplineKind : uint8
     {
         CatmullRom = 0, ///< 모든 조절점을 지난다(이웃 점으로 접선을 정한다)
         Bezier,         ///< 3차 베지어. 점 열은 [끝점, 손잡이, 손잡이, 끝점, 손잡이, 손잡이, 끝점 …]. 열린 곡선은 3n+1 개, 닫힌 곡선은 3n 개
@@ -64,7 +64,7 @@ namespace sw
          * @details 필요한 점 수는 Catmull-Rom 과 꺾은선이 둘, 베지어가 열린 곡선 4 개와 닫힌 곡선 3 개이다. 베지어는 개수 규칙이 어긋나도 실패한다.
          * @param samplesPerSegment 구간마다 호 길이 표에 넣는 샘플 수(1 이상)이다. 많을수록 길이가 정확하다.
          */
-        [[nodiscard]] bool initialize( const vector<float3>& listControlPoint, SplineType type, bool bClosed, int32 samplesPerSegment = 16 );
+        [[nodiscard]] bool initialize( const vector<float3>& listControlPoint, SplineKind type, bool bClosed, int32 samplesPerSegment = 16 );
         /** @brief 비웁니다. */
         void clear();
 
@@ -89,7 +89,7 @@ namespace sw
         bool                      isValid() const { return _listTablePoint.size() >= 2; }
         bool                      isClosed() const { return _bClosed == SW_TRUE; }
         float32                   getLength() const { return _length; }
-        SplineType                getType() const { return _type; }
+        SplineKind                getType() const { return _type; }
         int32                     getSegmentCount() const { return _segmentCount; }
         const vector<float3>&     getControlPoints() const { return _listControlPoint; }
         const vector<TablePoint>& getTablePoints() const { return _listTablePoint; }
@@ -105,7 +105,7 @@ namespace sw
         vector<TablePoint> _listTablePoint;
         float32            _length;
         int32              _segmentCount;
-        SplineType         _type;
+        SplineKind         _type;
         uint8              _bClosed;
     };
 } // namespace sw

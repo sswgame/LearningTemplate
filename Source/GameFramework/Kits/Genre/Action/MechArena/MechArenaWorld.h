@@ -221,7 +221,7 @@ namespace sw
      *     // 기동: MechArenaWorld::registerSnapshotMessage( channel, kSnapshotKind ) → channel.seal( base, hostSettings ) → 그 설정으로 호스트를 연다
      *     if ( world.writeSnapshotMessage( channel, kSnapshotKind, writer ) == false ) // 범위 밖 값이면 잘라 쓰지 않고 실패한다
      *         return false;
-     *     (void)writer.broadcast( peers, NetChannelType::UnreliableSequenced );
+     *     (void)writer.broadcast( peers, NetChannelKind::UnreliableSequenced );
      * @endcode
      */
     class SW_KIT_API MechArenaWorld

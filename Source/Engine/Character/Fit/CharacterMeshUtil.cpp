@@ -66,7 +66,7 @@ namespace sw
             }
 
             /** @brief 부품 하나가 병합에 들어갈 수 있는지 봅니다. 못 들어가면 그 까닭(대상은 부품 이름)입니다. */
-            [[nodiscard]] static expected<void> checkMergePart( const MeshMergePart& part )
+            [[nodiscard]] static expected<void> validateMergePart( const MeshMergePart& part )
             {
                 if ( part._pMesh == nullptr )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "a merge part has no mesh", part._name.c_str() } );
@@ -216,7 +216,7 @@ namespace sw
             {
                 for ( const MeshMergePart& part : listPart )
                 {
-                    if ( expected<void> checked = checkMergePart( part ); checked.has_value() == false )
+                    if ( expected<void> checked = validateMergePart( part ); checked.has_value() == false )
                         return checked;
                 }
                 const Mesh& first    = *listPart[0]._pMesh;

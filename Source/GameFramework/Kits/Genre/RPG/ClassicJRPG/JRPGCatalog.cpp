@@ -42,7 +42,7 @@ namespace sw
             }
 
             /** @brief 최대 HP 는 1 이상이어야 합니다(0 이면 처음부터 쓰러진 상태다). */
-            [[nodiscard]] static bool checkMaxHP( const int32 ( &arrStat )[kJRPGStatCount], const XMLNode& node, string_view sourceName )
+            [[nodiscard]] static bool validateMaxHP( const int32 ( &arrStat )[kJRPGStatCount], const XMLNode& node, string_view sourceName )
             {
                 if ( arrStat[static_cast<size_t>( JRPGStat::MaxHP )] >= 1 )
                     return true;
@@ -102,7 +102,7 @@ namespace sw
                                                            "growIntellect", "growLuck" } );
         bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrBase ) && bValid;
         bValid              = Internal::readStats( node, Internal::kArrGrowthName, sourceName, def._arrGrowth ) && bValid;
-        bValid              = Internal::checkMaxHP( def._arrBase, node, sourceName ) && bValid;
+        bValid              = Internal::validateMaxHP( def._arrBase, node, sourceName ) && bValid;
         bValid              = GameDataXML::readChildrenInto( node, "Learn", sourceName, def._listLearn ) && bValid;
         return bValid && GameDataXML::addUnique( def, sourceName, _classCatalog );
     }
@@ -134,7 +134,7 @@ namespace sw
         JRPGEnemyDef def;
         bool         bValid = XMLFields::readProperties( node, def, sourceName, { "hp", "mp", "str", "agi", "vit", "intellect", "luck" } );
         bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrStat ) && bValid;
-        bValid              = Internal::checkMaxHP( def._arrStat, node, sourceName ) && bValid;
+        bValid              = Internal::validateMaxHP( def._arrStat, node, sourceName ) && bValid;
         return bValid && GameDataXML::addUnique( def, sourceName, _enemyCatalog );
     }
 

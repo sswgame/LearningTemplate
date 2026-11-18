@@ -25,7 +25,7 @@ namespace sw
                                                  CompressionCodecRegistry* pRegistry )
     {
         outBytes.clear();
-        const bool bCompressionSkipped = settings._codec == CompressionCodecType::None || size < settings._minInputBytes || size <= 0;
+        const bool bCompressionSkipped = settings._codec == CompressionCodecKind::None || size < settings._minInputBytes || size <= 0;
         if ( bCompressionSkipped )
             return false;
         CompressionCodecRegistry* pResolved = NetCompressionInternal::resolveRegistry( pRegistry );
@@ -61,10 +61,10 @@ namespace sw
         const bool  bInvalidCompressedHeader = bReadSize == false || rawSize == 0 || rawSize > static_cast<uint32>( maxRawSize );
         if ( bInvalidCompressedHeader )
             return false; // 폭탄 · 깨진 크기 — 코덱을 부르기 전에 끊는다
-        if ( pData[0] == static_cast<uint8>( CompressionCodecType::None ) )
+        if ( pData[0] == static_cast<uint8>( CompressionCodecKind::None ) )
             return false;
         CompressionCodecRegistry* pResolved = NetCompressionInternal::resolveRegistry( pRegistry );
-        ICompressionCodec*        pCodec    = pResolved != nullptr ? pResolved->getCodec( static_cast<CompressionCodecType>( pData[0] ) ) : nullptr;
+        ICompressionCodec*        pCodec    = pResolved != nullptr ? pResolved->getCodec( static_cast<CompressionCodecKind>( pData[0] ) ) : nullptr;
         if ( pCodec == nullptr )
             return false;
         if ( rawSize > pCodec->decompressBound( static_cast<size_t>( size - 1 - sizeBytes ) ) )

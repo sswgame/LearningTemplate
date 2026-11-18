@@ -2,7 +2,7 @@
  * @file FogSettings.h
  * @brief 높이 · 거리 지수 안개 한 벌(색, 밀도, 높이 감쇠, 기준 높이, 시작 거리, 최대 불투명도, 방향광 쪽 산란)과 시선을 따라 쌓인 불투명도 식입니다.
  * @details 값은 씬의 `FogComponent`(와 물속 안개)가 정하고 렌더 패킷(`RenderFramePacket::_fog`)이 렌더 스레드로 나른다. 렌더러가 컴포넌트 헤더를 보지 않도록 값 타입만 따로 둔다.
- *          안개 패스(`RenderPassType::Fog`, fog.hlsl)가 같은 식을 셰이더로 센다 — 식은 언리얼 ExponentialHeightFog 와 같은 모양이다:
+ *          안개 패스(`RenderPassKind::Fog`, fog.hlsl)가 같은 식을 셰이더로 센다 — 식은 언리얼 ExponentialHeightFog 와 같은 모양이다:
  *          밀도(h) = `_density` · exp( -`_heightFalloff` · ( h - `_baseHeight` ) ), 시선 위 광학 두께 = 밀도의 선적분, 불투명도 = min( `_maxOpacity`, 1 - exp( -광학 두께 ) ).
  *          `_startDistance` 안쪽 구간은 적분에서 뺀다. 셰이더 상수는 `g_FogColorDensity`(rgb 색, a 밀도) · `g_FogHeightParams`(x 높이 감쇠, y 기준 높이, z 시작 거리, w 최대 불투명도) ·
  *          `g_FogInscatter`(rgb 방향광 산란 색 × 세기, w 지수) · `g_FogVolumeParams`(x 볼륨 안개를 켠 1 · 끈 0, y 볼륨 거리, z 산란 배율, w 이방성)로 싣는다.

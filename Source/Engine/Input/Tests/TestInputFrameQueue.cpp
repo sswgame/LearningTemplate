@@ -25,9 +25,9 @@ SW_TEST_CASE( InputFrameQueueTest, AppliesEventsInPostOrder )
 
     const vector<RawInputEvent>& listEvent = input.getLastFrameEvents();
     SW_REQUIRE_EQUAL( size_t{ 3 }, listEvent.size() );
-    SW_EXPECT_TRUE( listEvent[0]._type == RawInputEventType::KeyDown && listEvent[0]._payload._keyData._key == Key::B );
-    SW_EXPECT_TRUE( listEvent[1]._type == RawInputEventType::MouseMove );
-    SW_EXPECT_TRUE( listEvent[2]._type == RawInputEventType::KeyDown && listEvent[2]._payload._keyData._key == Key::A );
+    SW_EXPECT_TRUE( listEvent[0]._type == RawInputEventKind::KeyDown && listEvent[0]._payload._keyData._key == Key::B );
+    SW_EXPECT_TRUE( listEvent[1]._type == RawInputEventKind::MouseMove );
+    SW_EXPECT_TRUE( listEvent[2]._type == RawInputEventKind::KeyDown && listEvent[2]._payload._keyData._key == Key::A );
     input.endFrame();
     input.shutdown();
 }

@@ -1,7 +1,7 @@
 /**
  * @file FractureSettings.h
  * @brief 쪼개기 설정(시드 배치 방식 · 부피 · 조각 수)입니다. 런타임 2D 쪼개기(`PolygonFractureUtil`, `Fracture2DComponent`)와 에디터의 3D 모델 임포트 쪼개기(`MeshFractureUtil`)가 함께 씁니다.
- * @details 3D 메시 쪼개기 알고리즘은 모델 임포트만 부르므로 에디터(`Editor/Common/Asset/Model/MeshFracture.h`)에 있다 — 언리얼도 쪼개기는 편집기(Fracture Mode)가,
+ * @details 3D 메시 쪼개기 알고리즘은 모델 임포트만 부르므로 에디터(`Editor/Common/Asset/ModelImport/MeshFracture.h`)에 있다 — 언리얼도 쪼개기는 편집기(Fracture Mode)가,
  *          결과(Geometry Collection)는 런타임이 든다. 런타임은 구운 결과 `FractureAsset` 만 읽는다.
  */
 #pragma once

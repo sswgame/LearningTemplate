@@ -111,7 +111,7 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawDocumentContent()
     {
-        using PackDataState = CharacterEditorModel::PackDataState;
+        using PackDataState = CharacterEditorViewModel::PackDataState;
         _document.ensurePackData();
         if ( _document.getPaths()._rigPath.empty() )
             _bRigPreview = false; // 리그가 없는 게임으로 바뀌면 켜 둔 단추도 내린다

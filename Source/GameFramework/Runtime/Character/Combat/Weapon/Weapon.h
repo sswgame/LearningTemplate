@@ -139,7 +139,7 @@ namespace sw
          * @brief 무기마다 기본 탄(`projectile`)이 @p projectiles 에 있고 그 무기가 받는 탄(`accepts`)인지 봅니다. 아니면 무기마다 오류를 남기고 false 입니다.
          * @details 두 카탈로그는 따로 읽으므로 둘 다 읽은 뒤 게임이 한 번 부른다. 틀리면 게임을 띄우지 않는다(쏘려 해도 말없이 탄이 없는 무기를 만들지 않는다).
          */
-        [[nodiscard]] bool checkProjectiles( const ProjectileCatalog& projectiles ) const;
+        [[nodiscard]] bool validateProjectiles( const ProjectileCatalog& projectiles ) const;
 
     private:
         static constexpr const utf8* kXMLRootName = "WeaponCatalog"; ///< 루트 원소(`XMLCatalog`)

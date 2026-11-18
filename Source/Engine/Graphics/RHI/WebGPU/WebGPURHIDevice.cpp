@@ -137,7 +137,7 @@ namespace sw
         return true;
     }
 
-    WGPUBindGroup WebGPUBindGroupCache::findOrCreate( WGPUDevice device, WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry )
+    WGPUBindGroup WebGPUBindGroupCache::getOrCreate( WGPUDevice device, WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry )
     {
         vector<CachedGroup>& listBucket = _mapGroup[makeKeyHash( layout, listEntry )];
         for ( const CachedGroup& cached : listBucket )
@@ -899,7 +899,7 @@ namespace sw
     {
         // GPU 는 종료 2단계(waitIdle)에서 쉬었다 — 남은 해제는 모두 비었다. 장치 객체를 놓는다.
         _releaseQueue.flushAll();
-        _transferQueue.retireAll( []( unique_ptr<WebGPUTransferProbe>& probe )
+        _transferQueue.retireAll( []( unique_ptr<WebGPUTransferFence>& probe )
         { (void)probe; } );
         _readbackTable.clear();
         for ( WebGPUFrameFence& fence : _arrFrameFence )
@@ -1332,9 +1332,9 @@ namespace sw
         // 네이티브(Dawn)는 이벤트를 돌려야 콜백이 온다. 브라우저는 이벤트 루프가 이미 불렀다 — 불러도 해가 없다.
         wgpuInstanceProcessEvents( _instance );
         retireFinishedFrames();
-        (void)_transferQueue.retireDone( []( const unique_ptr<WebGPUTransferProbe>& probe )
+        (void)_transferQueue.retireDone( []( const unique_ptr<WebGPUTransferFence>& probe )
         { return probe->_bDone.load( std::memory_order_acquire ) != SW_FALSE; },
-                                         []( unique_ptr<WebGPUTransferProbe>& probe )
+                                         []( unique_ptr<WebGPUTransferFence>& probe )
         { (void)probe; } );
     }
 

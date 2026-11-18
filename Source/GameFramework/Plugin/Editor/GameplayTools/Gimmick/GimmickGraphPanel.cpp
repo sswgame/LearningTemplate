@@ -44,9 +44,9 @@ namespace sw::editor
             static constexpr const utf8* kCanvasSettingsFile = "GimmickGraphCanvas.json";
             static constexpr float32     kSidePanelWidth     = 340.0f; ///< 96 DPI 기준입니다
 
-            // 핀 번호 = 노드 그래프 번호 × 64 + (출력이면 32) + 포트 번호. 포트는 종류마다 최대 32 개다(`GimmickGraphModel::kMaxPortCount`).
-            static constexpr int32 kPinsPerNode   = 2 * GimmickGraphModel::kMaxPortCount;
-            static constexpr int32 kOutputPinBase = GimmickGraphModel::kMaxPortCount;
+            // 핀 번호 = 노드 그래프 번호 × 64 + (출력이면 32) + 포트 번호. 포트는 종류마다 최대 32 개다(`GimmickGraphEditModel::kMaxPortCount`).
+            static constexpr int32 kPinsPerNode   = 2 * GimmickGraphEditModel::kMaxPortCount;
+            static constexpr int32 kOutputPinBase = GimmickGraphEditModel::kMaxPortCount;
 
             static int32 makeInputPin( int32 nodeID, int32 port ) { return nodeID * kPinsPerNode + port; }
             static int32 makeOutputPin( int32 nodeID, int32 port ) { return nodeID * kPinsPerNode + kOutputPinBase + port; }
@@ -269,7 +269,7 @@ namespace sw::editor
         vector<EditorGraphNodeIssue> listNodeIssue;
         for ( const GimmickGraphIssue& issue : _listIssue )
         {
-            if ( issue._nodeGraphID == GimmickGraphModel::kNoGraphID )
+            if ( issue._nodeGraphID == GimmickGraphEditModel::kNoGraphID )
                 continue;
             EditorGraphNodeIssue nodeIssue;
             nodeIssue._nodeID  = issue._nodeGraphID;
@@ -482,7 +482,7 @@ namespace sw::editor
                 if ( ImGui::IsItemHovered() )
                     ImGui::SetTooltip( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "ParamDefault", TextArgumentList().addText( "hasDefault", spec._defaultText.empty() ? "no" : "yes" ).addText( "value", spec._defaultText ) ).c_str() );
                 string       newValue;
-                const string current = GimmickGraphModel::readParam( node._params, spec._name.c_str() );
+                const string current = GimmickGraphEditModel::readParam( node._params, spec._name.c_str() );
                 if ( drawCommittedText( ( string( "gimmick.param." ) + spec._name.c_str() ).c_str(), current, newValue ) )
                 {
                     editSetParam( node._graphID, spec._name.c_str(), newValue );

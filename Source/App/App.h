@@ -129,7 +129,7 @@ namespace sw
         /** @brief 주 창 수명 이벤트를 입력 · 오디오에 넘깁니다 — 앱이 멈추면 입력을 놓고 진동 · 소리를 멈춘다(감사 P-6). 표면은 렌더러가 따로 받는다. */
         void onAppLifecycle( WindowLifecycleEvent event );
         /** @brief 창의 모달 루프(Win32 끌기 · 크기 조절) 동안 메인 루프 대신 프레임 하나를 돌립니다. 메인 루프 밖이거나 표면이 멈췄으면 아무것도 하지 않는다. */
-        void onWindowModalLoopTick();
+        void onWindowModalLoopUpdate();
         /** @brief 에디터 준비 훅 콜백입니다(렌더 스레드, 백버퍼 패스를 열기 전 — UI 업로드). EditorModuleManager 로 넘깁니다. */
         void onEditorPrepareRender( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
         /** @brief 에디터 렌더 훅 콜백입니다(렌더 스레드, 열린 백버퍼 패스 안 — 그리기만). EditorModuleManager 로 넘깁니다. */
@@ -168,8 +168,8 @@ namespace sw
         Subscription _configReloadedSubscription;
         /** @brief 주 창의 메시지 처리기 칸 구독입니다(`bindHostCallbacks`). 창이 엔진 종료 때 파괴되면 무효가 된다. 크기 칸은 엔진이 쥔다(스왑체인). */
         Subscription _windowMessageSubscription;
-        Subscription _appLifecycleSubscription;  ///< 주 창 수명 구독자(`onAppLifecycle`)
-        Subscription _modalLoopTickSubscription; ///< 주 창 모달 루프 틱 칸 구독(`onWindowModalLoopTick`)
+        Subscription _appLifecycleSubscription;    ///< 주 창 수명 구독자(`onAppLifecycle`)
+        Subscription _modalLoopUpdateSubscription; ///< 주 창 모달 루프 틱 칸 구독(`onWindowModalLoopUpdate`)
         /// @brief 메인 루프가 쓰는 페이서입니다(`beginMainLoop` 이 주 창 서비스에서 받는다). 루프 밖이면 nullptr 입니다.
         FramePacer* _pFramePacer;
         /// @brief `initialize` 가 시작된 시각(마이크로초, `MonotonicClock`)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.

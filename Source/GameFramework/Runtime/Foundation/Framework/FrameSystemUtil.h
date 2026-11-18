@@ -16,7 +16,7 @@ namespace sw
 {
     /**
      * @struct FrameSystemUtil
-     * @brief `TSystem::kFrameSystemKey` 로 매니저의 프레임 시스템을 다룹니다. 키 하나에는 한 형식만 붙입니다(`findOrCreate`) — 그래서 찾은 것을 그 형식으로 봅니다.
+     * @brief `TSystem::kFrameSystemKey` 로 매니저의 프레임 시스템을 다룹니다. 키 하나에는 한 형식만 붙입니다(`getOrCreate`) — 그래서 찾은 것을 그 형식으로 봅니다.
      */
     struct FrameSystemUtil
     {
@@ -37,7 +37,7 @@ namespace sw
 
         /** @brief 매니저의 시스템을 반환합니다. 없으면 기본 생성해 붙입니다(게임 스레드, 틱 밖). */
         template <typename TSystem>
-        static TSystem& findOrCreate( GameObjectManager& manager )
+        static TSystem& getOrCreate( GameObjectManager& manager )
         {
             TSystem* pSystem = find<TSystem>( manager );
             if ( pSystem != nullptr )

@@ -15,7 +15,7 @@
  * 주의: 보이는 **개수만** 세어 `instanceCount` 에 넣으면 드로우는 늘 배치 앞쪽 N 개를 그린다 — 앞이 안 보이고 뒤가
  * 보이는 상황에서 **보이는 쪽이 사라지고 안 보이는 쪽이 그려진다**. 개수만으로는 무엇을 그릴지 고를 수 없어 압축 목록을 만든다.
  *
- * 개수는 디스패치 전에 0 이어야 한다 — 같은 파일의 되돌리기 커널(`SW_CULL_RESET_ARGS`, C++ RenderPassType::IndirectArgsReset)이 컬링 바로 앞에서
+ * 개수는 디스패치 전에 0 이어야 한다 — 같은 파일의 되돌리기 커널(`SW_CULL_RESET_ARGS`, C++ RenderPassKind::IndirectArgsReset)이 컬링 바로 앞에서
  * 배치마다 0(압축을 포기한 배치는 CPU 개수)을 쓴다. CPU 는 배치 표가 바뀔 때만 인자 전체를 올린다.
  *
  * 바인딩 계약(binding_slots.hlsli): CB b0, 인스턴스 읽기 t0, 배치 구간 읽기 t1, 가림 타일 읽기 t2, 차례 → 칸 읽기 t3, 간접 인자 쓰기 u0,

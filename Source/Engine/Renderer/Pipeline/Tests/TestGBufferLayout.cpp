@@ -5,7 +5,7 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 
 // G버퍼 명세 한 벌 — 셰이더 판 번호 · PSO 포맷 · 값 풀이가 같은 표를 본다.
 
@@ -34,7 +34,7 @@ SW_TEST_CASE( GBufferLayoutTest, ShaderVersionMatchesTheLayout )
  */
 SW_TEST_CASE( GBufferLayoutTest, PassFormatsComeFromTheLayout )
 {
-    const RenderPassTypeInfo& info = getRenderPassTypeInfo( RenderPassType::GBuffer );
+    const RenderPassKindInfo& info = getRenderPassKindInfo( RenderPassKind::GBuffer );
     SW_REQUIRE_EQUAL( GBufferLayout::kAttachmentCount, info._colorTargetCount );
     for ( uint32 slot = 0; slot < GBufferLayout::kAttachmentCount; ++slot )
     {

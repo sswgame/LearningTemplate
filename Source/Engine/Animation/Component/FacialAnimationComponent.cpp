@@ -553,7 +553,7 @@ namespace sw
         for ( const FacialPose& pose : getFacialRig().getExpressions() )
             listName.push_back( pose._name );
         vector<hashed_string> listMissing;
-        if ( _pWrinkleMap->checkExpressions( span<const hashed_string>( listName.data(), listName.size() ), &listMissing ) )
+        if ( _pWrinkleMap->validateExpressions( span<const hashed_string>( listName.data(), listName.size() ), &listMissing ) )
             return;
         for ( const hashed_string& missing : listMissing )
             SW_LOG_ERROR_ID( "Facial.WrinkleExpressionUnknown", "Facial rig '%#': wrinkle source expression '%#' is not one of its expressions - it adds nothing", getFacialRigPath().c_str(), missing.c_str() );

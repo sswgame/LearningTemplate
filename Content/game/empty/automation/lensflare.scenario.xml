@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="5cdaecabcc611f4db47e9071c252dd5b"?>
 <!--
-  빛마다의 렌즈 플레어(LightComponent::_lensFlarePath · RenderPassType::LensFlare) — 플레어가 없는 무대와 두 점광에 플레어를 단 무대를 같은 실행에서 견준다.
+  빛마다의 렌즈 플레어(LightComponent::_lensFlarePath · RenderPassKind::LensFlare) — 플레어가 없는 무대와 두 점광에 플레어를 단 무대를 같은 실행에서 견준다.
   오른쪽 빛은 보여 빛무리 · 줄이 그 자리에 그려진다(오른쪽 위 띠가 달라진다). 왼쪽 빛은 기둥 뒤라 깊이 가림(빛 자리 둘레 표본 아홉)으로 플레어가 없다 — 켠 그림의 골든이 지킨다.
   기본 포워드 · 디퍼드 파이프라인에 패스가 있다(플레어를 단 빛이 없으면 그리지 않아 다른 시나리오의 그림은 그대로다). 골든 lensflare 는 통합에서 기록한다.
   실행: ctest -R Scenario.game.empty.lensflare

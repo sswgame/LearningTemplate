@@ -59,7 +59,7 @@ SW_TEST_CASE( VirtualCursorTest, StickMovesTheCursorByVelocityTimesFrameTime )
     pPad->setAxis( 2, 1.0f );
     cursor.emitFrame( pPad, sw::int2{ 100, 100 }, TestVirtualCursorInternal::kClientSize, 0.01f, listEvent );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listEvent.size() ) );
-    SW_EXPECT_TRUE( listEvent[0]._type == sw::RawInputEventType::MouseMove );
+    SW_EXPECT_TRUE( listEvent[0]._type == sw::RawInputEventKind::MouseMove );
     SW_EXPECT_EQUAL( 110, listEvent[0]._payload._mouseData._x );
     SW_EXPECT_EQUAL( 100, listEvent[0]._payload._mouseData._y );
     SW_EXPECT_TRUE( cursor.didEmitLastFrame() );
@@ -112,7 +112,7 @@ SW_TEST_CASE( VirtualCursorTest, PadButtonsBecomeMouseButtons )
     pPad->setButtonDown( sw::GamepadButton::A, true );
     cursor.emitFrame( pPad, position, TestVirtualCursorInternal::kClientSize, 0.016f, listEvent );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listEvent.size() ) );
-    SW_EXPECT_TRUE( listEvent[0]._type == sw::RawInputEventType::MouseButtonDown );
+    SW_EXPECT_TRUE( listEvent[0]._type == sw::RawInputEventKind::MouseButtonDown );
     SW_EXPECT_TRUE( listEvent[0]._payload._mouseData._button == sw::MouseButton::Left );
     SW_EXPECT_EQUAL( 200, listEvent[0]._payload._mouseData._x );
 
@@ -125,9 +125,9 @@ SW_TEST_CASE( VirtualCursorTest, PadButtonsBecomeMouseButtons )
     pPad->setButtonDown( sw::GamepadButton::B, true );
     cursor.emitFrame( pPad, position, TestVirtualCursorInternal::kClientSize, 0.016f, listEvent );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( listEvent.size() ) );
-    SW_EXPECT_TRUE( listEvent[0]._type == sw::RawInputEventType::MouseButtonUp );
+    SW_EXPECT_TRUE( listEvent[0]._type == sw::RawInputEventKind::MouseButtonUp );
     SW_EXPECT_TRUE( listEvent[0]._payload._mouseData._button == sw::MouseButton::Left );
-    SW_EXPECT_TRUE( listEvent[1]._type == sw::RawInputEventType::MouseButtonDown );
+    SW_EXPECT_TRUE( listEvent[1]._type == sw::RawInputEventKind::MouseButtonDown );
     SW_EXPECT_TRUE( listEvent[1]._payload._mouseData._button == sw::MouseButton::Right );
 
     // 꺼 두면 아무것도 내지 않는다.
@@ -173,7 +173,7 @@ SW_TEST_CASE( VirtualCursorTest, DistanceDoesNotDependOnFrameRate )
             cursor.emitFrame( pPad, mouse, TestVirtualCursorInternal::kClientSize, arrFrameSeconds[caseIndex], listEvent );
             for ( const sw::RawInputEvent& event : listEvent )
             {
-                if ( event._type == sw::RawInputEventType::MouseMove )
+                if ( event._type == sw::RawInputEventKind::MouseMove )
                     mouse = sw::int2{ event._payload._mouseData._x, event._payload._mouseData._y };
             }
         }

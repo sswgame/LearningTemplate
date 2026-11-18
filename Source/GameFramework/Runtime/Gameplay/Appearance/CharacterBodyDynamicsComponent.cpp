@@ -276,7 +276,7 @@ namespace sw
             if ( _bJiggleApplied == SW_FALSE )
             {
                 input.setJiggleGroups( pProfile != nullptr ? pProfile->_listJiggle : vector<RigJiggleGroupParams>{} );
-                (void)RigJiggleNode::checkGroups( pModifier->getRigInstance(), pModifier->getRigPath() ); // 없는 묶음은 오류로 남는다 — 그 노드는 쉰다
+                (void)RigJiggleNode::validateGroups( pModifier->getRigInstance(), pModifier->getRigPath() ); // 없는 묶음은 오류로 남는다 — 그 노드는 쉰다
                 _bJiggleApplied = SW_TRUE;
             }
         }

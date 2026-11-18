@@ -30,7 +30,7 @@ SW_MATERIAL_BEGIN
     float _displacementMidLevel;
     float _tessellationDensity;   // 각 1 rad 당 분할 수 — 1 m 변을 10 m 에서 보면 0.1 rad × 밀도
     float _tessellationMaxFactor; // 변 계수 상한(64 이하)
-    // 원소 크기를 16 의 배수로 — DX 의 촘촘한 간격과 GL std430 배열 간격이 같아야 한다(ShaderBindingValidator::checkStructuredElementLayouts). 머티리얼 속성이 아니다
+    // 원소 크기를 16 의 배수로 — DX 의 촘촘한 간격과 GL std430 배열 간격이 같아야 한다(ShaderBindingValidator::validateStructuredElementLayouts). 머티리얼 속성이 아니다
     uint _swPad0;
     uint _swPad1;
 }

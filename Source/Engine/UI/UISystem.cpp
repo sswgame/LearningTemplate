@@ -427,7 +427,7 @@ namespace sw
                                                       vector<string>& outListStyleSheet )
     {
         unique_ptr<Widget>                                root;
-        const expected<shared_ptr<const UIDocumentAsset>> loaded = _pDocumentCache->findOrLoad( documentPath, tagOverride );
+        const expected<shared_ptr<const UIDocumentAsset>> loaded = _pDocumentCache->acquire( documentPath, tagOverride );
         if ( loaded.has_value() == false )
         {
             SW_LOG_ERROR_ID( "UISystem.ScreenDocumentNotLoaded", "[UI] Screen document is not loaded: %# (%#)", loaded.error().message(), loaded.error().detail() );
@@ -446,7 +446,7 @@ namespace sw
         vector<string> listDocument{ document->_path };
         for ( size_t index = 0; index < listDocument.size(); ++index )
         {
-            const expected<shared_ptr<const UIDocumentAsset>> current = _pDocumentCache->findOrLoad( listDocument[index], tagOverride );
+            const expected<shared_ptr<const UIDocumentAsset>> current = _pDocumentCache->acquire( listDocument[index], tagOverride );
             if ( current.has_value() == false )
                 continue;
             for ( const string& sheet : ( *current )->_listStyleSheet )
@@ -474,7 +474,7 @@ namespace sw
     {
         // 애니메이션은 문서의 것을 쓴다(방금 만들었으므로 캐시에 이미 있다).
         screen._animationPlayer.stopAll();
-        const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->findOrLoad( screen._documentPath, screen._resourceTagOverride );
+        const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->acquire( screen._documentPath, screen._resourceTagOverride );
         screen._animationPlayer.setAnimations( document.has_value() ? ( *document )->_listAnimation : vector<UIAnimation>{} );
     }
 
@@ -534,7 +534,7 @@ namespace sw
         {
             if ( listDocument[index] == usedPath )
                 return true;
-            const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->findOrLoad( listDocument[index], screen._resourceTagOverride );
+            const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->acquire( listDocument[index], screen._resourceTagOverride );
             if ( document.has_value() == false )
                 continue;
             for ( const string& fragment : ( *document )->_listFragment )

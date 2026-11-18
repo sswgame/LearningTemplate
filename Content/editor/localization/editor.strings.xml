@@ -908,27 +908,27 @@
 		</entry>
 		<entry key="EdCommon.LiveCodingAllModules" source="All Modules">
 			<origins>
-				<item>Source/Editor/Common/GUI/Model/EditorMenuBarModel.cpp</item>
+				<item>Source/Editor/Common/GUI/Model/EditorMenuBarViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.LiveCodingFailed" source="{target} build failed (exit code {code}). See the Output Log.">
 			<origins>
-				<item>Source/Editor/Common/GUI/Model/EditorMenuBarModel.cpp</item>
+				<item>Source/Editor/Common/GUI/Model/EditorMenuBarViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.LiveCodingFailedTitle" source="Live Coding Failed">
 			<origins>
-				<item>Source/Editor/Common/GUI/Model/EditorMenuBarModel.cpp</item>
+				<item>Source/Editor/Common/GUI/Model/EditorMenuBarViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.LiveCodingSucceeded" source="{target} compiled and reloaded in {seconds}s">
 			<origins>
-				<item>Source/Editor/Common/GUI/Model/EditorMenuBarModel.cpp</item>
+				<item>Source/Editor/Common/GUI/Model/EditorMenuBarViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.LiveCodingSucceededTitle" source="Live Coding Succeeded">
 			<origins>
-				<item>Source/Editor/Common/GUI/Model/EditorMenuBarModel.cpp</item>
+				<item>Source/Editor/Common/GUI/Model/EditorMenuBarViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.MoveRefusedTitle" source="Move refused">
@@ -2075,12 +2075,12 @@
 		</entry>
 		<entry key="EdFormat.Nested" source="Nested: {prefabIndex}">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.NoInspectorFor" source="No inspector for {type}">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/Model/PropertyGridModel.cpp</item>
+				<item>Source/Editor/Panels/Inspector/Model/PropertyGridViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.NoSamples" source="{seriesName}: no samples">
@@ -2170,7 +2170,7 @@
 		</entry>
 		<entry key="EdFormat.PrefabWindow" source="Prefab Window: {prefabPath}">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.PreviewNode" source="Preview node #{previewNodeID}">
@@ -2795,7 +2795,7 @@
 		</entry>
 		<entry key="EdLabel.ShowModifiedPropertiesOnly" source="Show Modified Properties Only">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.ShowOnlyModifiedProperties" source="Show Only Modified Properties">
@@ -3048,7 +3048,7 @@
 		</entry>
 		<entry key="EdSection.NestedPrefabsSubAssets" source="Nested Prefabs &amp; Sub-Assets">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSection.Panels" source="Panels">
@@ -3234,7 +3234,7 @@
 		</entry>
 		<entry key="EdText.ApplyAllOverridesToTemplate" source="Apply All Overrides to Template">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.ApplyInstanceOverrides" source="Save Overrides to Scene">
@@ -3414,7 +3414,7 @@
 		</entry>
 		<entry key="EdText.Edit" source="Edit">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.EditAKeySTimeValueAndInterpolation"
@@ -3441,7 +3441,7 @@
 		</entry>
 		<entry key="EdText.ExitIsolation" source="Exit Isolation">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.ExpectedByTest" source="expected by test">
@@ -3665,7 +3665,7 @@
 		</entry>
 		<entry key="EdText.OpenPrefabWindow" source="Open Prefab Window">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.OpenSpriteClipTool" source="Open Sprite Clip Tool">
@@ -3784,7 +3784,7 @@
 		</entry>
 		<entry key="EdText.RefreshOverrides" source="Refresh Overrides">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.RefreshStats" source="Refresh stats">
@@ -3883,7 +3883,7 @@
 		</entry>
 		<entry key="EdText.RevertAllOverrides" source="Revert All Overrides">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.RevertAllToDefault" source="Revert All to Default">
@@ -3938,7 +3938,7 @@
 		</entry>
 		<entry key="EdText.SavePrefabExitIsolation" source="Save Prefab &amp; Exit Isolation">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.SavePreset" source="Save preset">
@@ -4495,7 +4495,7 @@
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 				<item>Source/Editor/Panels/Settings/UserSettingsPanel.cpp</item>
 			</origins>
 		</entry>
@@ -7063,12 +7063,12 @@
 		</entry>
 		<entry key="EditorMaterial.LoadFailedStatus" source="Load failed - saving is disabled so the file is not overwritten">
 			<origins>
-				<item>Source/Editor/Panels/Material/Model/MaterialModel.cpp</item>
+				<item>Source/Editor/Panels/Material/Model/MaterialViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorMaterial.LoadedStatus" source="Loaded">
 			<origins>
-				<item>Source/Editor/Panels/Material/Model/MaterialModel.cpp</item>
+				<item>Source/Editor/Panels/Material/Model/MaterialViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorMaterial.NameTip" source="Display name stored in the material file.">
@@ -7095,7 +7095,7 @@
 		</entry>
 		<entry key="EditorMaterial.SaveFailedStatus" source="Save failed">
 			<origins>
-				<item>Source/Editor/Panels/Material/Model/MaterialModel.cpp</item>
+				<item>Source/Editor/Panels/Material/Model/MaterialViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorMaterial.SaveTip" source="Write the material file and reload it in the running scene.">
@@ -7105,7 +7105,7 @@
 		</entry>
 		<entry key="EditorMaterial.SavedStatus" source="Saved">
 			<origins>
-				<item>Source/Editor/Panels/Material/Model/MaterialModel.cpp</item>
+				<item>Source/Editor/Panels/Material/Model/MaterialViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorMaterial.ShaderTip"
@@ -7770,7 +7770,7 @@
 		</entry>
 		<entry key="EditorScene.ApplyAllOverrides" source="Write every override of this instance back to the prefab template">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.CommandStackUnavailable" source="CommandStack service is not available.">
@@ -7790,12 +7790,12 @@
 		</entry>
 		<entry key="EditorScene.EditNestedPrefab" source="Open this nested prefab in isolation mode">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.ExitIsolation" source="Leave isolation mode without saving the prefab">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.GameViewAspect"
@@ -7885,7 +7885,7 @@
 		</entry>
 		<entry key="EditorScene.OpenPrefabIsolation" source="Edit the selected prefab on its own in isolation mode">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.PickableInViewport" source="Pickable in the viewport - click to lock">
@@ -7900,44 +7900,44 @@
 		</entry>
 		<entry key="EditorScene.PrefabAssetLabel" source="Prefab">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.PrefabInstanceLabel" source="Instance">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.PrefabNoInstance"
 		       source="Select a prefab instance in the Hierarchy to see and apply its overrides.">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.RefreshOverrides" source="Scan the instance for overrides again">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.RevertAllOverrides"
 		       source="Discard every override of this instance and match the prefab template">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.RevertOverride" source="Revert this property to the prefab value">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.SavePrefabExitIsolation" source="Save the prefab and leave isolation mode">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.SceneEditsLocked" source="Scene edits locked until Stop.">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.SceneViewScreenshot"
@@ -7948,7 +7948,7 @@
 		</entry>
 		<entry key="EditorScene.ShowModifiedOnly" source="Show only the properties that differ from the prefab">
 			<origins>
-				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorScene.VisibleInEditor" source="Visible in the editor - click to hide (not saved)">
@@ -8908,7 +8908,7 @@
 		<entry key="EditorSpriteClip.AnimationNameRejectedStatus"
 		       source="Animation name not changed: it is empty or already used">
 			<origins>
-				<item>Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp</item>
+				<item>Source/Editor/Panels/Animation/Model/SpriteClipViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSpriteClip.AnimationNameTip" source="Name game code uses to play this animation.">
@@ -8918,7 +8918,7 @@
 		</entry>
 		<entry key="EditorSpriteClip.AnimationNeedsFrameStatus" source="Animation not added: the clip has no frames">
 			<origins>
-				<item>Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp</item>
+				<item>Source/Editor/Panels/Animation/Model/SpriteClipViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSpriteClip.AtlasCellTip"
@@ -8957,7 +8957,7 @@
 		<entry key="EditorSpriteClip.BorderNeedsAtlasSizeStatus"
 		       source="A frame with a border needs the atlas size in pixels">
 			<origins>
-				<item>Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp</item>
+				<item>Source/Editor/Panels/Animation/Model/SpriteClipViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSpriteClip.BorderTip"
@@ -9061,7 +9061,7 @@
 		</entry>
 		<entry key="EditorSpriteClip.SaveFailedStatus" source="Save failed">
 			<origins>
-				<item>Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp</item>
+				<item>Source/Editor/Panels/Animation/Model/SpriteClipViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSpriteClip.SaveTip" source="Write the frames, animations and keys to the clip file.">
@@ -9071,7 +9071,7 @@
 		</entry>
 		<entry key="EditorSpriteClip.SavedStatus" source="Saved {path}">
 			<origins>
-				<item>Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp</item>
+				<item>Source/Editor/Panels/Animation/Model/SpriteClipViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSpriteClip.SliceColumnsTip" source="Number of grid columns the atlas is cut into, 1 to 64.">
@@ -9181,7 +9181,7 @@
 		</entry>
 		<entry key="EditorTileMap.DataLayerRejectedStatus" source="Data layer not added: the name is empty or already used">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/Model/TileMapModel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.DataValueTip" source="Integer to paint on the selected data layer.">
@@ -9281,7 +9281,7 @@
 		</entry>
 		<entry key="EditorTileMap.SaveFailedStatus" source="Save failed">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/Model/TileMapModel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.SaveTip" source="Write the map to Path.">
@@ -9291,17 +9291,17 @@
 		</entry>
 		<entry key="EditorTileMap.SavedStatus" source="Saved {path}">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/Model/TileMapModel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.SizeOutOfRange" source="Size is out of range.">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/Model/TileMapModel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.SpawnOutsideStatus" source="Spawn not changed: the cell is outside the map">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/Model/TileMapModel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.SpawnXTip" source="Cell column where the player starts on this map.">
@@ -9316,7 +9316,7 @@
 		</entry>
 		<entry key="EditorTileMap.TileSetReadFailed" source="Tile set could not be read: {path}">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/Model/TileMapModel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.TileSetTip"
@@ -9656,7 +9656,7 @@
 		</entry>
 		<entry key="EditorUIPreview.BuildFailed" source="Could not build the document (see the log).">
 			<origins>
-				<item>Source/Editor/Panels/UIPreview/Model/UIPreviewModel.cpp</item>
+				<item>Source/Editor/Panels/UIPreview/Model/UIPreviewViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorUIPreview.DocumentPathTip"

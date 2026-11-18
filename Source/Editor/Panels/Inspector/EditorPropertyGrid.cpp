@@ -582,7 +582,7 @@ namespace sw::editor
     bool EditorPropertyGrid::drawRowWidget( const PropertyValueRow& row )
     {
         // 그리기 확장(내장 값 위젯 포함)이 먼저 그린다. 맡지 않으면 행 종류대로 그린다.
-        IInspectorProperty* pDrawer = PropertyGridModel::getPropertyManager().find( row._typeName.c_str() );
+        IInspectorProperty* pDrawer = PropertyGridViewModel::getPropertyManager().find( row._typeName.c_str() );
         if ( pDrawer != nullptr && pDrawer->draw( row, _model ) )
             return false;
         switch ( row._kind )

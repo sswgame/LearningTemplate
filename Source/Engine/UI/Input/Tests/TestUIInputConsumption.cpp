@@ -169,7 +169,7 @@ SW_TEST_CASE( UIInputRouterTest, RawEventsPointAtAMode )
     SW_EXPECT_FALSE( UIInputRouter::tryGetInputMode( RawInputEvent::makeKeyUp( Key::A ), mode ) );
 
     RawInputEvent axis;
-    axis._type                            = RawInputEventType::GamepadAxis;
+    axis._type                            = RawInputEventKind::GamepadAxis;
     axis._payload._gamepadData._axisValue = 0.1f;
     SW_EXPECT_FALSE( UIInputRouter::tryGetInputMode( axis, mode ) );
     axis._payload._gamepadData._axisValue = -0.9f;

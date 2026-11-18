@@ -255,7 +255,7 @@ namespace sw
         PROPERTY( Name = "bone", Required )
         hashed_string _bone{};
         PROPERTY( Name = "type", Required )
-        RigJointLimitType _type{ RigJointLimitType::None };
+        RigJointLimitKind _type{ RigJointLimitKind::None };
         PROPERTY( Name = "swing_degrees", Units = deg )
         float32 _swingDegrees{ 180.0f };
         PROPERTY( Name = "twist_degrees", Units = deg )

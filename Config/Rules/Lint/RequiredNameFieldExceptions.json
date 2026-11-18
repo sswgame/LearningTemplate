@@ -36,13 +36,13 @@
         "Source/GameFramework/Runtime/Online/Server/OnlineServerConfig.h::OnlineServerConfig::_region": "(2) 자기 이름표(서버 지역) — 로컬 개발 서버의 기본",
         "Source/GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryKitConfig.h::ServerDirectoryKitConfig::_listServerKind": "(2) 엔진이 정한 서버 종류 이름(game) — OnlineServerConfig::_serverKind 와 짝",
         "Source/GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h::MatchModeDef::_serverKind": "(2) 엔진이 정한 서버 종류 이름(game) — OnlineServerConfig::_serverKind 와 짝",
-        "Source/GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Catalog/MonsterHuntCatalog.h::MonsterHuntCombatDef::_intensityStat": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
+        "Source/GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntCatalog.h::MonsterHuntCombatDef::_intensityStat": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
         "Source/GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h::GhostHuntRootDef::_currency": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
-        "Source/GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h::ScavengerRootDef::_terminalShopID": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
-        "Source/GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h::ScavengerRootDef::_currency": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
-        "Source/GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h::MetroidvaniaCatalogRootDef::_currency": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
-        "Source/GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureCooking.h::AdventureCookingRulesDef::_station": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
-        "Source/GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureCooking.h::AdventureCookingRulesDef::_genericDish": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
-        "Source/GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureCooking.h::AdventureCookingRulesDef::_dubiousDish": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)"
+        "Source/GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerCatalog.h::ScavengerRootDef::_terminalShopID": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
+        "Source/GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerCatalog.h::ScavengerRootDef::_currency": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
+        "Source/GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaCatalog.h::MetroidvaniaCatalogRootDef::_currency": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
+        "Source/GameFramework/Kits/Genre/Action/ActionAdventure/AdventureCooking.h::AdventureCookingRulesDef::_station": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
+        "Source/GameFramework/Kits/Genre/Action/ActionAdventure/AdventureCooking.h::AdventureCookingRulesDef::_genericDish": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)",
+        "Source/GameFramework/Kits/Genre/Action/ActionAdventure/AdventureCooking.h::AdventureCookingRulesDef::_dubiousDish": "(3) 쓰는 게임 데이터가 없는 킷(테스트만)"
     }
 }

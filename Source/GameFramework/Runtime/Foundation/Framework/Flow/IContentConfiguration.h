@@ -50,12 +50,12 @@ namespace sw
 
         /** @brief 구성 해시입니다. 구성이 비었으면 0 입니다 — 넷 와이어 버전에 섞인다(`GameNetSession::combineWireContent`). */
         virtual uint64 getContentConfigHash() const = 0;
-        /** @brief 세이브 봉투 머리에 적는 글입니다(빈 구성은 빈 글). `checkSaveCompatible` 이 이 글을 받는다. */
+        /** @brief 세이브 봉투 머리에 적는 글입니다(빈 구성은 빈 글). `validateSaveCompatible` 이 이 글을 받는다. */
         virtual string makeContentConfigText() const = 0;
         /**
          * @brief 세이브 머리에 적힌 구성 @p savedText 의 세이브를 지금 구성으로 읽어도 되면 true 입니다. 아니면 까닭을 오류로 남기고 false 입니다.
          * @details 세이브의 모드가 지금 꺼졌거나 판이 다르면 거절한다(없는 리소스를 가리키는 세이브를 조용히 비우지 않는다). 새로 켠 모드는 받는다.
          */
-        [[nodiscard]] virtual bool checkSaveCompatible( string_view savedText ) const = 0;
+        [[nodiscard]] virtual bool validateSaveCompatible( string_view savedText ) const = 0;
     };
 } // namespace sw

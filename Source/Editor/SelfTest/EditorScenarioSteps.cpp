@@ -154,7 +154,7 @@ namespace sw::editor
             }
 
             /** @brief 레이블 @p pMark 가 그려졌는지 · 자리 잡았는지 봅니다. 잘려 있으면 그 창을 스크롤해 보이게 하고 자리 잡지 않은 것으로 센다. nullptr(적지 않은 칸)는 둘 다 참입니다. */
-            static void checkMark( const string* pMark, bool& inoutDrawn, bool& inoutStable )
+            static void updateMarkState( const string* pMark, bool& inoutDrawn, bool& inoutStable )
             {
                 if ( pMark == nullptr )
                     return;
@@ -189,8 +189,8 @@ namespace sw::editor
                     return AutomationStepHold::Run; // 호버 풀기 · 누른 것 놓기 — 누를 곳이 없다
                 bool bDrawn  = true;
                 bool bStable = true;
-                checkMark( pMark, bDrawn, bStable );
-                checkMark( step.findAttribute( "toMark" ), bDrawn, bStable );
+                updateMarkState( pMark, bDrawn, bStable );
+                updateMarkState( step.findAttribute( "toMark" ), bDrawn, bStable );
                 const bool bReady = bStable && EditorSelfTestInput::hasPendingEvents() == false;
                 return holdInputTarget( runner, step, input, bReady,
                                         "editor widget '" + *pMark + ( bDrawn ? "' to settle (same rect two frames in a row, no pending input)" : "' to be drawn" ), *pMark );
@@ -213,8 +213,8 @@ namespace sw::editor
                 const TParams params  = step.readValidatedProperties<TParams>();
                 bool          bDrawn  = true;
                 bool          bStable = true;
-                checkMark( &params._mark, bDrawn, bStable );
-                checkMark( step.findAttribute( "toMark" ), bDrawn, bStable );
+                updateMarkState( &params._mark, bDrawn, bStable );
+                updateMarkState( step.findAttribute( "toMark" ), bDrawn, bStable );
                 const bool bInputFlushed = EditorSelfTestInput::hasPendingEvents() == false;
                 // 플랫폼이 다음 프레임에 실제 커서를 다시 넣으므로 옮기기 한 번으로는 머물지 않는다 - 입구가 프레임마다 붙잡는다. 단계가 놓는다.
                 string              coverName;

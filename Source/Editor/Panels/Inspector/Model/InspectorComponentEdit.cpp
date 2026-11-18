@@ -10,7 +10,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -119,7 +119,7 @@ namespace sw::editor
 
     const Component* InspectorComponentEdit::findComponent( const EditorPropertyGridTarget& target )
     {
-        const GameObject* pObject = PropertyGridModel::findSceneObject( target._scope, target._objectID );
+        const GameObject* pObject = PropertyGridViewModel::findSceneObject( target._scope, target._objectID );
         return pObject != nullptr ? pObject->findComponentByID( target._componentID ) : nullptr;
     }
 
@@ -132,7 +132,7 @@ namespace sw::editor
         const uint64                  componentID = target._componentID;
         EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create( [scope, objectID, componentID, edit]( EditorTransaction& transaction )
         {
-            GameObject* pObject    = PropertyGridModel::findSceneObject( scope, objectID );
+            GameObject* pObject    = PropertyGridViewModel::findSceneObject( scope, objectID );
             Component*  pComponent = ( pObject != nullptr && pObject->isPendingDestroy() == false ) ? pObject->findComponentByID( componentID ) : nullptr;
             if ( pComponent != nullptr ) // 그 사이 사라졌으면 아무것도 하지 않는다
                 edit( *pComponent, transaction );

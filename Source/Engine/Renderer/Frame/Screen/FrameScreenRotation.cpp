@@ -101,7 +101,7 @@ namespace sw
             return;
         // 장치가 이번 프레임에 알린 회전으로 돌린다. 대기 텍스처 크기가 장치의 논리 크기와 잠깐 어긋나도(크기 바뀜 직후) UV 로 읽으므로 화면 전체를 덮는다.
         const RHISurfaceRotation     rotation = _pDevice->getSurfaceRotation();
-        const RHIPipelineStateHandle pso      = _psoManager.findOutputPSO( RenderPassType::ScreenRotation, _pDevice->getBackBufferFormat() ); // 셋업에 없으면 멈춘다
+        const RHIPipelineStateHandle pso      = _psoManager.findOutputPSO( RenderPassKind::ScreenRotation, _pDevice->getBackBufferFormat() ); // 셋업에 없으면 멈춘다
         const RHISurfaceRect         viewRect = rotation.mapLogicalRect( RHISurfaceRect{ 0, 0, rotation._logicalWidth, rotation._logicalHeight } );
 
         cmd.prepareTextureForShaderRead( _texture );

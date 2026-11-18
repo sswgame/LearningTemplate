@@ -104,9 +104,9 @@ namespace sw::editor
         const float32 dpiScale = EditorThemeUtil::getDPIScale();
 
         ImGui::BeginDisabled( bBusy );
-        Internal::drawOptionCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Target" ), "Target" ), 120.0f * dpiScale, PackagingModel::getTargetName( _model.getTargetIndex() ), PackagingModel::getTargetCount(),
+        Internal::drawOptionCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Target" ), "Target" ), 120.0f * dpiScale, PackagingViewModel::getTargetName( _model.getTargetIndex() ), PackagingViewModel::getTargetCount(),
                                    []( uint32 index )
-        { return PackagingModel::getTargetName( index ); }, _model.editTargetIndex() );
+        { return PackagingViewModel::getTargetName( index ); }, _model.editTargetIndex() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Target" ) );
         ImGui::SameLine();
         const vector<string>& listGame     = _model.getGames();
@@ -116,9 +116,9 @@ namespace sw::editor
         { return listGame[index].c_str(); }, _model.editGameIndex() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Game" ) );
         ImGui::SameLine();
-        Internal::drawOptionCombo( "RHI", 150.0f * dpiScale, PackagingModel::getBackendName( _model.getRHIIndex() ), PackagingModel::getBackendCount(),
+        Internal::drawOptionCombo( "RHI", 150.0f * dpiScale, PackagingViewModel::getBackendName( _model.getRHIIndex() ), PackagingViewModel::getBackendCount(),
                                    []( uint32 index )
-        { return PackagingModel::getBackendName( index ); }, _model.editRHIIndex() );
+        { return PackagingViewModel::getBackendName( index ); }, _model.editRHIIndex() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "RHIBackend" ) );
 
         EditorChrome::setNextItemWidthColumns( 43.0f );
@@ -197,11 +197,11 @@ namespace sw::editor
         if ( ImGui::BeginChild( "##packaging_log", ImVec2( 0.0f, 0.0f ), ImGuiChildFlags_Borders ) )
         {
             const vector<string>& listLine  = _model.getLines();
-            const size_t          firstLine = listLine.size() > PackagingModel::kVisibleLineCount ? listLine.size() - PackagingModel::kVisibleLineCount : 0;
+            const size_t          firstLine = listLine.size() > PackagingViewModel::kVisibleLineCount ? listLine.size() - PackagingViewModel::kVisibleLineCount : 0;
             for ( size_t lineIndex = firstLine; lineIndex < listLine.size(); ++lineIndex )
             {
                 const string& line = listLine[lineIndex];
-                if ( PackagingModel::isErrorLine( line ) )
+                if ( PackagingViewModel::isErrorLine( line ) )
                     EditorThemeUtil::textError( line.c_str() );
                 else
                     ImGui::TextUnformatted( line.c_str() );

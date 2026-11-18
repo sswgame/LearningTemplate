@@ -245,7 +245,7 @@ namespace sw
 
     private:
         /** @brief 명령 종류입니다. */
-        enum class CommandType : uint8
+        enum class CommandKind : uint8
         {
             PlayClip,
             PostEvent,
@@ -290,7 +290,7 @@ namespace sw
             uint64                              _seed{ 0 };     ///< SetRandomSeed
             float32                             _value{ 0.0f }; ///< 볼륨, 페이드, 파라미터, 세기 값이다.
             uint32                              _index{ 0 };    ///< 리스너 번호다.
-            CommandType                         _type{ CommandType::PlayClip };
+            CommandKind                         _type{ CommandKind::PlayClip };
             bool                                _bFlag{ false }; ///< 음소거, 솔로, 일시정지 플래그다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 

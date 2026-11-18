@@ -42,13 +42,13 @@ namespace sw
             static constexpr uint32 kEnumVariable    = SW_BIT( static_cast<uint32>( GlobalVariableType::Enum ) );
 
             /** @brief 설정 종류의 성질 표입니다. 열거자 순서대로 한 줄씩 둡니다 — 아래 static_assert 가 순서와 줄 수를 지킵니다. */
-            static constexpr UserSettingTypeTraits kArrTypeTraits[] = {
-                {                                                 kBooleanVariable,       UserSettingType::Bool,   UserSettingStorageKind::Bool, false},
-                {                                   kInt32Variable | kEnumVariable,        UserSettingType::Int, UserSettingStorageKind::Number,  true},
-                {                                                   kFloatVariable,      UserSettingType::Float, UserSettingStorageKind::Number,  true},
-                {kInt32Variable | kEnumVariable | kStringVariable | kFloatVariable,       UserSettingType::Enum,   UserSettingStorageKind::Text, false},
-                {                                                                0, UserSettingType::KeyBinding,   UserSettingStorageKind::Text, false},
-                {                                                  kStringVariable,     UserSettingType::String,   UserSettingStorageKind::Text, false},
+            static constexpr UserSettingKindTraits kArrTypeTraits[] = {
+                {                                                 kBooleanVariable,       UserSettingKind::Bool,   UserSettingStorageKind::Bool, false},
+                {                                   kInt32Variable | kEnumVariable,        UserSettingKind::Int, UserSettingStorageKind::Number,  true},
+                {                                                   kFloatVariable,      UserSettingKind::Float, UserSettingStorageKind::Number,  true},
+                {kInt32Variable | kEnumVariable | kStringVariable | kFloatVariable,       UserSettingKind::Enum,   UserSettingStorageKind::Text, false},
+                {                                                                0, UserSettingKind::KeyBinding,   UserSettingStorageKind::Text, false},
+                {                                                  kStringVariable,     UserSettingKind::String,   UserSettingStorageKind::Text, false},
             };
             static constexpr NamedValue<uint8> kArrPlatformName[] = {
                 {"windows", UserSettingsPlatform::kWindows},
@@ -217,7 +217,7 @@ namespace sw
                     outDef._listOption.push_back( option );
                 }
                 bOk = parseTarget( node.getAttributeText( "target" ), outDef, sourceName ) && bOk;
-                if ( outDef._type == UserSettingType::KeyBinding && outDef._targetKind == UserSettingTargetKind::None )
+                if ( outDef._type == UserSettingKind::KeyBinding && outDef._targetKind == UserSettingTargetKind::None )
                 {
                     outDef._targetKind = UserSettingTargetKind::Handler;
                     outDef._targetName = hashed_string( kKeyBindingHandler );
@@ -317,7 +317,7 @@ namespace sw
                     return false;
                 }
                 bool bOk = true;
-                if ( def._type == UserSettingType::Enum && pVariable->_type == GlobalVariableType::Float )
+                if ( def._type == UserSettingKind::Enum && pVariable->_type == GlobalVariableType::Float )
                 {
                     // 실수 변수는 선택지 순번으로 채울 수 없다 — 모든 선택지가 수인 targetValue 를 가져야 한다(순번으로 떨어지는 길이 없다).
                     for ( const UserSettingOption& option : def._listOption )
@@ -402,9 +402,9 @@ namespace sw
                         bOk = false;
                     }
                 }
-                if ( def._type == UserSettingType::Enum )
+                if ( def._type == UserSettingKind::Enum )
                     bOk = validateEnumSetting( def, registry ) && bOk;
-                if ( def._type == UserSettingType::KeyBinding && def._action.empty() )
+                if ( def._type == UserSettingKind::KeyBinding && def._action.empty() )
                 {
                     SW_LOG_ERROR_ID( "UserSettingsSchema.KeyBindingSettingNo", "key binding setting '%#' has no action", pID );
                     bOk = false;
@@ -441,7 +441,7 @@ namespace sw
             [[nodiscard]] static bool validateScalabilityGroup( const UserSettingsSchema& schema, const ScalabilityGroupDef& group )
             {
                 const UserSettingDef* pGroupSetting = schema.findSetting( group._settingID );
-                if ( pGroupSetting == nullptr || pGroupSetting->_type != UserSettingType::Enum )
+                if ( pGroupSetting == nullptr || pGroupSetting->_type != UserSettingKind::Enum )
                 {
                     SW_LOG_ERROR_ID( "UserSettingsSchema.ScalabilitySettingNotEnum", "<Scalability> setting '%#' is not an enum setting", group._settingID.c_str() );
                     return false;
@@ -510,9 +510,9 @@ namespace sw
             }
         };
 
-        static_assert( UserSettingsSchemaInternal::isTypeTraitsInEnumOrder(), "kArrTypeTraits rows must follow UserSettingType order" );
-        static_assert( std::size( UserSettingsSchemaInternal::kArrTypeTraits ) == static_cast<size_t>( UserSettingType::String ) + 1,
-                       "kArrTypeTraits needs one row per UserSettingType" );
+        static_assert( UserSettingsSchemaInternal::isTypeTraitsInEnumOrder(), "kArrTypeTraits rows must follow UserSettingKind order" );
+        static_assert( std::size( UserSettingsSchemaInternal::kArrTypeTraits ) == static_cast<size_t>( UserSettingKind::String ) + 1,
+                       "kArrTypeTraits needs one row per UserSettingKind" );
     } // namespace
 } // namespace sw
 
@@ -725,7 +725,7 @@ namespace sw
         return nullptr;
     }
 
-    const UserSettingTypeTraits& UserSettingsSchema::getTypeTraits( UserSettingType type )
+    const UserSettingKindTraits& UserSettingsSchema::getTypeTraits( UserSettingKind type )
     {
         return UserSettingsSchemaInternal::kArrTypeTraits[static_cast<size_t>( type )];
     }
@@ -736,7 +736,7 @@ namespace sw
         const string_view value = StringUtil::trim( text );
         switch ( def._type )
         {
-            case UserSettingType::Bool:
+            case UserSettingKind::Bool:
             {
                 bool bValue{ false };
                 if ( StringUtil::tryParseBool( value, bValue ) == false )
@@ -744,7 +744,7 @@ namespace sw
                 outValue = bValue ? "true" : "false";
                 return UserSettingValueResult::Accepted;
             }
-            case UserSettingType::Int:
+            case UserSettingKind::Int:
             {
                 float64 number{ 0.0 };
                 if ( StringUtil::parseDouble( value, number ) == false )
@@ -755,7 +755,7 @@ namespace sw
                 outValue               = Internal::formatInt( static_cast<int64>( MathUtil::round( fitted ) ) );
                 return bClamped ? UserSettingValueResult::Clamped : UserSettingValueResult::Accepted;
             }
-            case UserSettingType::Float:
+            case UserSettingKind::Float:
             {
                 float64 number{ 0.0 };
                 if ( StringUtil::parseDouble( value, number ) == false )
@@ -764,7 +764,7 @@ namespace sw
                 outValue            = Internal::formatFloat( number );
                 return bClamped ? UserSettingValueResult::Clamped : UserSettingValueResult::Accepted;
             }
-            case UserSettingType::Enum:
+            case UserSettingKind::Enum:
             {
                 if ( def._listOption.empty() || def._optionProvider.empty() == false )
                 {
@@ -783,7 +783,7 @@ namespace sw
                 }
                 return UserSettingValueResult::Rejected;
             }
-            case UserSettingType::KeyBinding:
+            case UserSettingKind::KeyBinding:
             {
                 if ( value.empty() )
                 {
@@ -796,7 +796,7 @@ namespace sw
                 outValue = InputSlot::toText( slot );
                 return UserSettingValueResult::Accepted;
             }
-            case UserSettingType::String:
+            case UserSettingKind::String:
             {
                 outValue = string( value );
                 return UserSettingValueResult::Accepted;

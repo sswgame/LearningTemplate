@@ -79,8 +79,8 @@ namespace sw
         return getSceneFrame( *this ) <= _cutFrame + 1;
     }
 
-    CameraComponent* CameraComponent::findOrCreateNamed( GameObjectManager* pObjectManager, hashed_string objectName, CameraRole role,
-                                                         const float3& position, const float3& lookTarget )
+    CameraComponent* CameraComponent::getOrCreateNamed( GameObjectManager* pObjectManager, hashed_string objectName, CameraRole role,
+                                                        const float3& position, const float3& lookTarget )
     {
         if ( pObjectManager == nullptr )
             return nullptr;

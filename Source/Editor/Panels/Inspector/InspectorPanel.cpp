@@ -423,7 +423,7 @@ namespace sw::editor
     void InspectorPanel::drawComponentList()
     {
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Components" ) );
-        const TypeRegistry& registry = PropertyGridModel::getTypeRegistry();
+        const TypeRegistry& registry = PropertyGridViewModel::getTypeRegistry();
         // 카드는 gather 의 사본이라 아래에서 컴포넌트를 제거해도 순회가 깨지지 않는다. 제거하면 이번 프레임은 거기서 멈춘다.
         for ( const InspectorComponentCard& card : _state._listComponent )
         {

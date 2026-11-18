@@ -25,7 +25,7 @@
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/RenderStability.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 
 namespace sw
@@ -81,7 +81,7 @@ namespace sw
         RHITextureDesc desc{};
         desc._width                   = 1;
         desc._height                  = 1;
-        desc._format                  = getRenderPassTypeInfo( RenderPassType::AutoExposure )._pColorFormat[0]; // 측정 PSO 와 같은 포맷 한 곳(R 지금 EV · G 목표 EV)
+        desc._format                  = getRenderPassKindInfo( RenderPassKind::AutoExposure )._pColorFormat[0]; // 측정 PSO 와 같은 포맷 한 곳(R 지금 EV · G 목표 EV)
         desc._bIsRenderTarget         = SW_TRUE;
         desc._bIsShaderResource       = SW_TRUE;
         IRHIResourceFactory* pFactory = _pDevice->getResourceFactory();
@@ -129,7 +129,7 @@ namespace sw
             return;
         }
         const bool bHasHistory = view._arrAutoExposureSRV[0] != kInvalidDescriptorIndex && view._arrAutoExposureSRV[1] != kInvalidDescriptorIndex;
-        const bool bMeasures   = view._settings.usesPostProcess() && bHasHistory && _psoManager.getEnginePSO( RenderPassType::AutoExposure ) != 0;
+        const bool bMeasures   = view._settings.usesPostProcess() && bHasHistory && _psoManager.getEnginePSO( RenderPassKind::AutoExposure ) != 0;
         if ( bMeasures == false )
             return;
         readBackAdaptation( view ); // 칸을 바꾸기 전 — 지난 프레임이 쓴 칸(`_autoExposureWrite`)을 읽는다
@@ -214,7 +214,7 @@ namespace sw
         beginInfo._width             = 1;
         beginInfo._height            = 1;
         cmd.beginRenderPass( beginInfo );
-        cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassType::AutoExposure ) );
+        cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassKind::AutoExposure ) );
         // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(auto_exposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                               bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameAutoExposureInternal::RootConstants constants{};

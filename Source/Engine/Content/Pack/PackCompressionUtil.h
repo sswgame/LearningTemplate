@@ -1,6 +1,6 @@
 /**
  * @file PackCompressionUtil.h
- * @brief 팩의 압축 종류(`PackCompressionType`, 디스크 번호)를 압축 코덱 레지스트리의 종류(`CompressionCodecType`)로 잇는 표와 코덱 조회입니다.
+ * @brief 팩의 압축 종류(`PackCompressionKind`, 디스크 번호)를 압축 코덱 레지스트리의 종류(`CompressionCodecKind`)로 잇는 표와 코덱 조회입니다.
  *
  * 두 enum 은 서로 다른 파일의 독립된 디스크 포맷이라 값이 다릅니다(팩 Zlib=2 · 스트림 LZ4=2). 숫자를 건너다니지 않고 **이 표 한 곳**에서
  * 잇습니다 — 어느 쪽 번호도 바뀌지 않습니다. 코덱 구현은 레지스트리가 들고 있으므로, 팩 리더와 팩을 쓰는 쪽은 코덱 클래스를 직접 만들지 않습니다.
@@ -23,30 +23,30 @@ namespace sw
         /** @brief 표 한 줄입니다. */
         struct CodecMapping
         {
-            PackCompressionType  _packType;
-            CompressionCodecType _codecType;
+            PackCompressionKind  _packType;
+            CompressionCodecKind _codecType;
         };
 
         /**
          * @brief 팩이 아는 코덱 종류입니다. `Custom` 은 팩을 쿠킹한 쪽이 정의하는 것이라 엔진이 모르므로 줄이 없습니다.
          * @details 팩 종류를 늘리면 여기 한 줄입니다. 빠뜨리면 `PackTest.EveryPackCodecRoundTrips` 가 리플렉션된
-         *          `PackCompressionType` 의 모든 값을 돌며 짚습니다.
+         *          `PackCompressionKind` 의 모든 값을 돌며 짚습니다.
          */
         static constexpr CodecMapping kArrCodecMapping[] = {
-            {PackCompressionType::None, CompressionCodecType::None},
-            { PackCompressionType::RLE,  CompressionCodecType::RLE},
-            {PackCompressionType::Zlib, CompressionCodecType::Zlib},
-            { PackCompressionType::LZ4,  CompressionCodecType::LZ4},
-            {PackCompressionType::Zstd, CompressionCodecType::Zstd},
+            {PackCompressionKind::None, CompressionCodecKind::None},
+            { PackCompressionKind::RLE,  CompressionCodecKind::RLE},
+            {PackCompressionKind::Zlib, CompressionCodecKind::Zlib},
+            { PackCompressionKind::LZ4,  CompressionCodecKind::LZ4},
+            {PackCompressionKind::Zstd, CompressionCodecKind::Zstd},
         };
 
         /** @brief 팩 종류에 대응하는 코덱 종류를 찾습니다. 표에 없으면(`Custom` · 모르는 디스크 값) false 입니다. */
-        [[nodiscard]] static bool findCodecType( PackCompressionType packType, CompressionCodecType& outCodecType );
+        [[nodiscard]] static bool findCodecType( PackCompressionKind packType, CompressionCodecKind& outCodecType );
 
         /**
          * @brief 팩 종류의 코덱을 활성 레지스트리(`CompressionCodecRegistry::getActive`)에서 찾습니다. 표에 없거나 레지스트리에 없으면 nullptr 입니다.
          * @details 엔진 코덱(LZ4 · Zstd · Zlib)은 레지스트리를 세우는 슬롯 공장이 함께 올린다 — 엔진 · 테스트 하네스가 같은 길이다. 코덱은 상태가 없어 여러 스레드가 같이 쓴다.
          */
-        static ICompressionCodec* findCodec( PackCompressionType packType );
+        static ICompressionCodec* findCodec( PackCompressionKind packType );
     };
 } // namespace sw

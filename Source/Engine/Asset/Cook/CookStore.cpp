@@ -81,7 +81,7 @@ namespace sw
         return hash;
     }
 
-    optional<CookResult> CookStore::checkFinishedJob( const CookJob& job, CookStep step, string_view outputID )
+    optional<CookResult> CookStore::validateFinishedJob( const CookJob& job, CookStep step, string_view outputID )
     {
         if ( step == CookStep::Skipped )
             return CookResult::Skipped;
@@ -98,7 +98,7 @@ namespace sw
 
     CookResult CookStore::finishStreamedCook( const CookJob& job, const CookStreamedStep& step, string_view outputID, string_view outputPath ) const
     {
-        const optional<CookResult> finished = checkFinishedJob( job, step._step, outputID );
+        const optional<CookResult> finished = validateFinishedJob( job, step._step, outputID );
         if ( finished.has_value() )
             return *finished;
         const CookRecord record = CookRecord::make( job, step._outputHash );
@@ -112,7 +112,7 @@ namespace sw
 
     CookResult CookStore::finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const
     {
-        const optional<CookResult> finished = checkFinishedJob( job, step, outputID );
+        const optional<CookResult> finished = validateFinishedJob( job, step, outputID );
         if ( finished.has_value() )
             return *finished;
         // 출력 해시는 파일을 조각으로 읽어 센다(내용 해시 캐시가 그 값을 남긴다). DDC 에는 파일을 복사한다 — 출력을 한 벡터로 들지 않는다.

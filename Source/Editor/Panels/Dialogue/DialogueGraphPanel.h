@@ -4,7 +4,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorGraphDocumentPanel.h"
-#include "Editor/Panels/Dialogue/Model/DialogueGraphPreviewModel.h"
+#include "Editor/Panels/Dialogue/Model/DialogueGraphPreviewViewModel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
 #include "Engine/Behavior/ActionRegistry.h"
@@ -83,14 +83,14 @@ namespace sw::editor
         void drawPreviewToolbar();
 
     private:
-        int32                     _selectedNodeID;
-        DialogueGraphPreviewModel _preview;
-        EditorPropertyGrid        _actionGrid;           ///< 고른 동작의 칸
-        InstancedStruct           _actionProperties;     ///< 지금 그리는 노드의 칸 값
-        string                    _actionPropertiesText; ///< `_actionProperties` 를 푼 글. 노드 글이 바뀌면 다시 푼다
-        string                    _actionError;          ///< 글을 풀지 못한 까닭
-        vector<string>            _listActionName;       ///< 고르기 목록
-        const ActionEntry*        _pActionEntry;         ///< `_actionProperties` 의 등록 줄
-        DialogueNode*             _pActionTargetNode;    ///< 그리는 동안만 쓴다 — 칸을 고치면 이 노드의 명령을 모델 연산으로 고친다
+        int32                         _selectedNodeID;
+        DialogueGraphPreviewViewModel _preview;
+        EditorPropertyGrid            _actionGrid;           ///< 고른 동작의 칸
+        InstancedStruct               _actionProperties;     ///< 지금 그리는 노드의 칸 값
+        string                        _actionPropertiesText; ///< `_actionProperties` 를 푼 글. 노드 글이 바뀌면 다시 푼다
+        string                        _actionError;          ///< 글을 풀지 못한 까닭
+        vector<string>                _listActionName;       ///< 고르기 목록
+        const ActionEntry*            _pActionEntry;         ///< `_actionProperties` 의 등록 줄
+        DialogueNode*                 _pActionTargetNode;    ///< 그리는 동안만 쓴다 — 칸을 고치면 이 노드의 명령을 모델 연산으로 고친다
     };
 } // namespace sw::editor

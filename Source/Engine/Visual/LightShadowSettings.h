@@ -18,7 +18,7 @@ namespace sw
      * @details 언리얼의 `SourceRadius`(점광 · 스폿) · `LightSourceAngle`(방향광)와 같은 자리입니다. 원천 크기는 PCSS(그림자 필터 `gv_shadowFilter` 1)만 읽고,
      *          값싼 3x3 PCF 는 읽지 않습니다 — 그래서 기본값이 있어도 PCF 의 그림은 바뀌지 않습니다.
      *          접촉 그림자는 화면 공간에서 빛 쪽으로 짧게 걸어 그림자 맵이 놓친 가까운 가림(발치 · 틈)을 잡습니다(언리얼 `ContactShadowLength` 자리, 0 = 끔).
-     *          켜진 빛은 한 프레임에 넷까지 접촉 그림자 패스(`RenderPassType::ContactShadow`)의 채널을 받습니다(`FrameShadowData::populateContactShadows`).
+     *          켜진 빛은 한 프레임에 넷까지 접촉 그림자 패스(`RenderPassKind::ContactShadow`)의 채널을 받습니다(`FrameShadowData::populateContactShadows`).
      *          GPU 원소의 `_extra.x` 원천 크기 · `_extra.y` 접촉 길이에 실립니다(`writeGPULightProperties`, 3D 빛의 덧칸 규약은 `GPULight::_extra`).
      */
     REFLECT()

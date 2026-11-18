@@ -34,7 +34,7 @@ namespace
         {
             (void)to;
             AcceptedDropper& dropper = *static_cast<AcceptedDropper*>( pContext );
-            if ( dropper._remaining <= 0 || NetEndpoint::peekPacketType( pData, size ) != NetEndpoint::PacketType::Accepted )
+            if ( dropper._remaining <= 0 || NetEndpoint::peekPacketKind( pData, size ) != NetEndpoint::PacketKind::Accepted )
                 return false;
             --dropper._remaining;
             ++dropper._droppedCount;
@@ -47,7 +47,7 @@ namespace
             for ( int32 index = 0; index < count; ++index )
             {
                 const vector<uint8> message = NetTestUtil::makePatternMessage( static_cast<uint32>( 100 + index ), NetConnection::kMaxReliableMessageSize );
-                if ( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, message ) == false )
+                if ( cluster.getClient( 0 ).sendMessage( 0, NetChannelKind::ReliableOrdered, message ) == false )
                     return -1.0;
             }
             vector<vector<uint8>> listReceived;
@@ -103,14 +103,14 @@ SW_TEST_CASE( NetEndpointTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     for ( int32 index = 0; index < 200; ++index )
     {
         const vector<uint8> buffer = NetTestUtil::makeMessage( index, 24 );
-        SW_REQUIRE_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, buffer ) );
+        SW_REQUIRE_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelKind::ReliableOrdered, buffer ) );
     }
     vector<int32> listReceived;
     for ( int32 frame = 0; frame < 60 * 20 && listReceived.size() < 200; ++frame )
     {
         pair.run( 1.0 / 60.0 );
         int32          connectionID = -1;
-        NetChannelType channel      = NetChannelType::Unreliable;
+        NetChannelKind channel      = NetChannelKind::Unreliable;
         vector<uint8>  buffer;
         while ( pair.getServer().receiveMessage( connectionID, channel, buffer ) )
         {
@@ -128,7 +128,7 @@ SW_TEST_CASE( NetEndpointTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     for ( int32 frame = 0; frame < 60 * 6; ++frame )
     {
         const vector<uint8> input = NetTestUtil::makeMessage( frame, 8 );
-        SW_REQUIRE_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::Unreliable, input ) );
+        SW_REQUIRE_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelKind::Unreliable, input ) );
         pair.run( 1.0 / 60.0 );
     }
     SW_EXPECT_TRUE( pair.getServer().getRejectedPacketCount() > 0 );          // 깨진 패킷을 체크섬이 걸렀다
@@ -139,14 +139,14 @@ SW_TEST_CASE( NetEndpointTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     // 서버 → 클라이언트 방송.
     pair.setConditions( NetEmulationConditions{} );
     const vector<uint8> hello = NetTestUtil::makeMessage( 4242 );
-    SW_EXPECT_EQUAL( 1, pair.getServer().broadcast( NetChannelType::ReliableOrdered, hello.data(), 4 ) );
+    SW_EXPECT_EQUAL( 1, pair.getServer().broadcast( NetChannelKind::ReliableOrdered, hello.data(), 4 ) );
     pair.run( 0.2 );
     int32          connectionID = -1;
-    NetChannelType channel      = NetChannelType::Unreliable;
+    NetChannelKind channel      = NetChannelKind::Unreliable;
     vector<uint8>  buffer;
     SW_REQUIRE_TRUE( pair.getClient( 0 ).receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_EQUAL( 4242, NetTestUtil::readMessageValue( buffer ) );
-    SW_EXPECT_TRUE( channel == NetChannelType::ReliableOrdered );
+    SW_EXPECT_TRUE( channel == NetChannelKind::ReliableOrdered );
 }
 
 /**
@@ -168,18 +168,18 @@ SW_TEST_CASE( NetEndpointTest, EveryChannelPairsItsSendAndReceiveFlows )
     struct FlowCase
     {
         uint8          _kind;
-        NetChannelType _channel;
+        NetChannelKind _channel;
         int32          _count;
         bool           _bFromServer;
     };
     // 순서만은 같은 종류의 아직 나가지 않은 것을 새것으로 바꾸므로 하나만 보낸다.
     const FlowCase arrCase[] = {
-        {0xE1,     NetChannelType::ReliableOrdered, 3, false},
-        {0xE3,          NetChannelType::Unreliable, 2, false},
-        {0xE4, NetChannelType::UnreliableSequenced, 1, false},
-        {0xE5,   NetChannelType::ReliableUnordered, 2, false},
-        {0xE2,     NetChannelType::ReliableOrdered, 1,  true},
-        {0xE6,          NetChannelType::Unreliable, 1,  true},
+        {0xE1,     NetChannelKind::ReliableOrdered, 3, false},
+        {0xE3,          NetChannelKind::Unreliable, 2, false},
+        {0xE4, NetChannelKind::UnreliableSequenced, 1, false},
+        {0xE5,   NetChannelKind::ReliableUnordered, 2, false},
+        {0xE2,     NetChannelKind::ReliableOrdered, 1,  true},
+        {0xE6,          NetChannelKind::Unreliable, 1,  true},
     };
 
     // 흐름 링은 프로세스에 하나라 앞 케이스 · 앞 회차의 흐름이 남아 있다 — 이 케이스가 기록한 구간만 읽는다.
@@ -207,7 +207,7 @@ SW_TEST_CASE( NetEndpointTest, EveryChannelPairsItsSendAndReceiveFlows )
         pair.run( 1.0 / 60.0 );
         NetTestUtil::pollServerMessages( pair, listServerReceived );
         int32          connectionID = -1;
-        NetChannelType channel      = NetChannelType::Unreliable;
+        NetChannelKind channel      = NetChannelKind::Unreliable;
         vector<uint8>  buffer;
         while ( pair.getClient( 0 ).receiveMessage( connectionID, channel, buffer ) )
         {
@@ -355,7 +355,7 @@ SW_TEST_CASE( NetEndpointTest, ClosedSlotIsNotReusedBeforeTheGameThreadSeesTheDi
     runAll( 0.5 );
     SW_EXPECT_TRUE( second.getConnectionState( 0 ) != NetConnectionState::Connected );
     const uint8 payload[] = { 1, 2, 3 };
-    SW_EXPECT_FALSE( server.sendMessage( 0, NetChannelType::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) ); // A 의 번호는 비었다 — B 에게 가지 않는다
+    SW_EXPECT_FALSE( server.sendMessage( 0, NetChannelKind::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) ); // A 의 번호는 비었다 — B 에게 가지 않는다
 
     listEvent.clear();
     server.pollEvents( listEvent ); // 게임 스레드가 A 의 끊김을 본다 — 이제 번호를 다시 준다
@@ -418,10 +418,10 @@ SW_TEST_CASE( NetEndpointTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
     SW_EXPECT_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
     const vector<uint8> hello = NetTestUtil::makeMessage( 77 );
-    SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, hello ) );
+    SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelKind::ReliableOrdered, hello ) );
     runForSeconds( 0.3, true, true );
     int32          connectionID = -1;
-    NetChannelType channel      = NetChannelType::Unreliable;
+    NetChannelKind channel      = NetChannelKind::Unreliable;
     vector<uint8>  buffer;
     SW_REQUIRE_TRUE( server.receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_EQUAL( 77, NetTestUtil::readMessageValue( buffer ) );
@@ -527,10 +527,10 @@ SW_TEST_CASE( NetEndpointTest, LostAcceptedStillReportsClientIndex )
     SW_EXPECT_EQUAL( 1, second.getClientIndex().value() );
     SW_EXPECT_EQUAL( 2, server.getConnectedCount() );
     // 수락 앞에 왔던 데이터 패킷의 신뢰 메시지는 재전송이 메운다.
-    SW_REQUIRE_TRUE( server.sendMessage( 1, NetChannelType::ReliableOrdered, NetTestUtil::makeMessage( 4321 ) ) );
+    SW_REQUIRE_TRUE( server.sendMessage( 1, NetChannelKind::ReliableOrdered, NetTestUtil::makeMessage( 4321 ) ) );
     runAll( 0.5 );
     int32          connectionID = -1;
-    NetChannelType channel      = NetChannelType::Unreliable;
+    NetChannelKind channel      = NetChannelKind::Unreliable;
     vector<uint8>  buffer;
     SW_REQUIRE_TRUE( second.receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_EQUAL( 4321, NetTestUtil::readMessageValue( buffer ) );
@@ -601,14 +601,14 @@ SW_TEST_CASE( NetEndpointTest, IdleConnectionsSendKeepAlivesInsteadOfEveryInterv
 
     // 보낼 것이 생기면 바로 — 다음 유지 시각을 기다리지 않는다. 메시지 길이 칸(11 비트)의 끝 1024 바이트(조각 하나)까지 한 패킷에 실린다.
     const vector<uint8> largest = NetTestUtil::makeMessage( 777, NetConnection::kMaxSingleMessageSize );
-    SW_REQUIRE_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, largest ) );
+    SW_REQUIRE_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelKind::ReliableOrdered, largest ) );
     {
         SW_EXPECT_LOG( "Net.MessageTooLarge" ); // 조각나지 않는 채널은 조각 하나를 넘는 메시지를 오류와 함께 거절한다
-        SW_EXPECT_FALSE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::Unreliable, NetTestUtil::makeMessage( 0, NetConnection::kMaxSingleMessageSize + 1 ) ) );
+        SW_EXPECT_FALSE( pair.getClient( 0 ).sendMessage( 0, NetChannelKind::Unreliable, NetTestUtil::makeMessage( 0, NetConnection::kMaxSingleMessageSize + 1 ) ) );
     }
     pair.run( 2.0 / 30.0 );
     int32          connectionID = -1;
-    NetChannelType channel      = NetChannelType::Unreliable;
+    NetChannelKind channel      = NetChannelKind::Unreliable;
     vector<uint8>  buffer;
     SW_REQUIRE_TRUE( pair.getServer().receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_EQUAL( NetConnection::kMaxSingleMessageSize, static_cast<int32>( buffer.size() ) );
@@ -658,10 +658,10 @@ SW_TEST_CASE( NetEndpointTest, UpdateVisitsOnlyDueConnectionsNotEverySlot )
     SW_EXPECT_EQUAL( kClientCount, server.getConnectedCount() ); // 기한 큐가 유지 패킷 · 타임아웃을 놓치지 않는다
 
     // 보낼 것이 생기면 다음 유지 시각을 기다리지 않는다 — 넣은 메시지가 그 연결을 바로 기한으로 만든다.
-    SW_REQUIRE_TRUE( server.sendMessage( 3, NetChannelType::ReliableOrdered, NetTestUtil::makeMessage( 33 ) ) );
+    SW_REQUIRE_TRUE( server.sendMessage( 3, NetChannelKind::ReliableOrdered, NetTestUtil::makeMessage( 33 ) ) );
     runSteady( 40 ); // 보내기 간격(1/30 초)이 지나기를 기다릴 수 있다 — 유지 간격(0.25 초)보다 짧다
     int32          connectionID = -1;
-    NetChannelType channel      = NetChannelType::Unreliable;
+    NetChannelKind channel      = NetChannelKind::Unreliable;
     vector<uint8>  buffer;
     bool           bArrived = false;
     for ( NetEndpoint& client : arrClient )
@@ -705,11 +705,11 @@ SW_TEST_CASE( NetEndpointTest, ServerTellsManyClientsApartByAddress )
     // 클라이언트마다 자기 번호를 보낸다 — 서버의 연결 id 가 그 클라이언트의 주소와 맞아야 한다.
     for ( int32 index = 0; index < kClientCount; ++index )
     {
-        SW_REQUIRE_TRUE( arrClient[index].sendMessage( 0, NetChannelType::ReliableOrdered, NetTestUtil::makeMessage( index ) ) );
+        SW_REQUIRE_TRUE( arrClient[index].sendMessage( 0, NetChannelKind::ReliableOrdered, NetTestUtil::makeMessage( index ) ) );
     }
     runAll( 0.2 );
     int32          connectionID = -1;
-    NetChannelType channel      = NetChannelType::Unreliable;
+    NetChannelKind channel      = NetChannelKind::Unreliable;
     vector<uint8>  buffer;
     int32          receivedCount = 0;
     while ( server.receiveMessage( connectionID, channel, buffer ) )
@@ -727,7 +727,7 @@ SW_TEST_CASE( NetEndpointTest, ServerTellsManyClientsApartByAddress )
     SW_REQUIRE_TRUE( arrClient[7].connect( NetAddress::makeLoopback( 4000 ) ) );
     runAll( 0.5 );
     SW_REQUIRE_EQUAL( kClientCount, server.getConnectedCount() );
-    SW_REQUIRE_TRUE( arrClient[7].sendMessage( 0, NetChannelType::ReliableOrdered, NetTestUtil::makeMessage( 7 ) ) );
+    SW_REQUIRE_TRUE( arrClient[7].sendMessage( 0, NetChannelKind::ReliableOrdered, NetTestUtil::makeMessage( 7 ) ) );
     runAll( 0.2 );
     SW_REQUIRE_TRUE( server.receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_EQUAL( 6007, static_cast<int32>( server.getConnectionAddress( connectionID )._port ) );
@@ -757,7 +757,7 @@ SW_TEST_CASE( NetEndpointTest, ReliableMessagesUpTo64KbArriveWholeOverABadLine )
                                              NetTestUtil::makePatternMessage( 3u, 40000 ), NetTestUtil::makePatternMessage( 4u, NetConnection::kMaxSingleMessageSize + 1 ) };
     for ( const vector<uint8>& message : listSent )
     {
-        SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, message ) );
+        SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelKind::ReliableOrdered, message ) );
     }
 
     vector<vector<uint8>> listReceived;
@@ -789,7 +789,7 @@ SW_TEST_CASE( NetEndpointTest, DisconnectMidMessageLeavesNoFragmentsBehind )
     NetTestUtil::addServerAndClient( cluster, NetEndpointConfig{} );
     SW_REQUIRE_TRUE( cluster.connectClients( 30 ) );
     const vector<uint8> large = NetTestUtil::makePatternMessage( 8u, NetConnection::kMaxReliableMessageSize );
-    SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, large ) );
+    SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelKind::ReliableOrdered, large ) );
     cluster.run( 0.2 ); // 조각 몇 개만 — 64 개가 다 가기 전
     vector<vector<uint8>> listReceived;
     NetTestUtil::pollServerMessages( cluster, listReceived );
@@ -806,7 +806,7 @@ SW_TEST_CASE( NetEndpointTest, DisconnectMidMessageLeavesNoFragmentsBehind )
     SW_REQUIRE_TRUE( cluster.areClientsConnected() );
 
     const vector<uint8> smallMessage = NetTestUtil::makePatternMessage( 9u, 16 );
-    SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, smallMessage ) );
+    SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelKind::ReliableOrdered, smallMessage ) );
     cluster.run( 0.5 );
     NetTestUtil::pollServerMessages( cluster, listReceived );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listReceived.size() );
@@ -859,7 +859,7 @@ SW_TEST_CASE( NetEndpointTest, SaturatedConnectionIsReportedUntilTheQueueDrains 
     const vector<uint8> payload = NetTestUtil::makePatternMessage( 9u, 1000 );
     for ( int32 index = 0; index < 20; ++index )
     {
-        SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelType::Unreliable, payload ) );
+        SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelKind::Unreliable, payload ) );
     }
     cluster.step( 1.0 / 60.0 );
     SW_EXPECT_TRUE( client.isConnectionSaturated( 0 ) );
@@ -902,7 +902,7 @@ SW_TEST_CASE( NetEndpointTest, FullReliableWindowClosesInsteadOfDroppingMessages
     // 클라이언트가 멈췄다(확인이 오지 않는다) — 창이 찰 때까지 넣는다
     const uint8 payload[]   = { 7, 1, 2 };
     int32       queuedCount = 0;
-    while ( server.trySendMessage( 0, NetChannelType::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) )
+    while ( server.trySendMessage( 0, NetChannelKind::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) )
     {
         ++queuedCount;
     }
@@ -910,7 +910,7 @@ SW_TEST_CASE( NetEndpointTest, FullReliableWindowClosesInsteadOfDroppingMessages
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() ); // 역압만 알렸다
 
     SW_EXPECT_LOG( "Net.ReliableOverflow" );
-    SW_EXPECT_FALSE( server.sendMessage( 0, NetChannelType::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) );
+    SW_EXPECT_FALSE( server.sendMessage( 0, NetChannelKind::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) );
     listEvent.clear();
     server.pollEvents( listEvent );
     SW_REQUIRE_TRUE( listEvent.empty() == false );
@@ -940,7 +940,7 @@ SW_TEST_CASE( NetEndpointTest, NextDueTimeTakesEarliestOfRetryTimeoutAndSendInte
     slot._lastReceiveTime = 10.0;
     SW_EXPECT_NEAR( 10.25, NetEndpoint::computeNextDueTime( 10.0, slot, settings, 5.0 ), 1.0e-9 ); // 한가하면 유지(하트비트) 간격
     SW_EXPECT_NEAR( 10.1, NetEndpoint::computeNextDueTime( 10.0, slot, settings, 0.1 ), 1.0e-9 );  // 타임아웃이 더 이르다
-    SW_REQUIRE_TRUE( slot._connection->sendMessage( NetChannelType::ReliableOrdered, NetTestUtil::makeMessage( 1 ).data(), 4 ) );
+    SW_REQUIRE_TRUE( slot._connection->sendMessage( NetChannelKind::ReliableOrdered, NetTestUtil::makeMessage( 1 ).data(), 4 ) );
     SW_EXPECT_NEAR( 10.0 + 1.0 / 30.0, NetEndpoint::computeNextDueTime( 10.0, slot, settings, 5.0 ), 1.0e-9 ); // 보낼 것 · 재전송이 있으면 보내기 간격
 }
 

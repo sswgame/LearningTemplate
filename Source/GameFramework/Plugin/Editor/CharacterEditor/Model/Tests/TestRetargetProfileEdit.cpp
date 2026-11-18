@@ -4,7 +4,7 @@
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
 
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetPreviewModel.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetPreviewViewModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileEdit.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileInspection.h"
 
@@ -218,12 +218,12 @@ SW_TEST_CASE( RetargetProfileInspectionTest, SuspiciousMappingsWarnButStillBind 
 // ---------------------------------------------------------------------- 미리보기
 
 // 값 하나를 고쳐도 스켈레톤 경로가 그대로면 디스크를 읽지 않고 카메라를 되돌리지 않는다.
-SW_TEST_CASE( RetargetPreviewModelTest, OnlyASkeletonPathChangeIsStaleAndFramesTheCamera )
+SW_TEST_CASE( RetargetPreviewViewModelTest, OnlyASkeletonPathChangeIsStaleAndFramesTheCamera )
 {
     const Skeleton  skeleton = Util::makeSkeleton();
     RetargetProfile profile  = Util::makeProfile();
     profile.setSkeletonPaths( "a.skeleton.xml", "b.skeleton.xml" );
-    RetargetPreviewModel preview;
+    RetargetPreviewViewModel preview;
     SW_EXPECT_TRUE( preview.isStale( profile ) );
     SW_EXPECT_FALSE( preview.isAnyReady() );
     float3  center{};
@@ -245,14 +245,14 @@ SW_TEST_CASE( RetargetPreviewModelTest, OnlyASkeletonPathChangeIsStaleAndFramesT
     SW_EXPECT_TRUE( preview.isStale( profile ) );
 }
 
-SW_TEST_CASE( RetargetPreviewModelTest, RetargetPoseMovesOnlyThePosedTarget )
+SW_TEST_CASE( RetargetPreviewViewModelTest, RetargetPoseMovesOnlyThePosedTarget )
 {
     const Skeleton  skeleton = Util::makeSkeleton();
     RetargetProfile profile  = Util::makeProfile();
     profile.setTargetPose( {
         RetargetPoseBone{ hashed_string( "root" ), float3{ 90.0f, 0.0f, 0.0f } }
     } );
-    RetargetPreviewModel preview;
+    RetargetPreviewViewModel preview;
     preview.applySkeletons( profile, &skeleton, &skeleton );
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( preview.getTargetPosePositions().size() ) );
     const float3 end       = preview.getTargetPosePositions().back();
@@ -274,10 +274,10 @@ SW_TEST_CASE( RetargetPreviewModelTest, RetargetPoseMovesOnlyThePosedTarget )
     SW_EXPECT_NEAR( 0.0f, ( preview.getTargetPosePositions().back() - reference ).getLength(), 1e-4f );
 }
 
-SW_TEST_CASE( RetargetPreviewModelTest, FrameSphereHoldsEveryBoneAndAMissingSideIsNotReady )
+SW_TEST_CASE( RetargetPreviewViewModelTest, FrameSphereHoldsEveryBoneAndAMissingSideIsNotReady )
 {
-    const Skeleton       skeleton = Util::makeSkeleton();
-    RetargetPreviewModel preview;
+    const Skeleton           skeleton = Util::makeSkeleton();
+    RetargetPreviewViewModel preview;
     preview.applySkeletons( Util::makeProfile(), nullptr, &skeleton );
     SW_EXPECT_FALSE( preview.isSourceReady() );
     SW_EXPECT_TRUE( preview.isTargetReady() );
@@ -290,5 +290,5 @@ SW_TEST_CASE( RetargetPreviewModelTest, FrameSphereHoldsEveryBoneAndAMissingSide
     float32 radius = 0.0f;
     SW_REQUIRE_TRUE( preview.findFrameSphere( center, radius ) );
     SW_EXPECT_NEAR( 2.5f, center._y, 1e-4f ); // 본은 1 ~ 4 m 높이에 있다
-    SW_EXPECT_NEAR( 1.5f * RetargetPreviewModel::kFramePadding, radius, 1e-4f );
+    SW_EXPECT_NEAR( 1.5f * RetargetPreviewViewModel::kFramePadding, radius, 1e-4f );
 }

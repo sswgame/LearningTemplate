@@ -303,28 +303,28 @@ SW_TEST_CASE( ModSetDigestTest, SaveWithRemovedModIsRejected )
     const ModSetDigest updated = ModSetDigest::make( {
         ModDigestEntry{ "lantern", ModVersion{ 2, 0, 0 }, 1u }
     } );
-    SW_EXPECT_TRUE( none.checkSaveCompatible( none ) ); // 모드 없는 세이브 · 실행은 그대로다
-    SW_EXPECT_TRUE( more.checkSaveCompatible( saved ) );
+    SW_EXPECT_TRUE( none.validateSaveCompatible( none ) ); // 모드 없는 세이브 · 실행은 그대로다
+    SW_EXPECT_TRUE( more.validateSaveCompatible( saved ) );
     SW_EXPECT_LOG( "ModSetDigest.SaveModMissing" );
-    SW_EXPECT_TRUE( none.checkSaveCompatible( saved ) ); // 빠진 모드는 경고 뒤 불러온다(상용 대조 — ModSetDigest::checkSaveCompatible)
+    SW_EXPECT_TRUE( none.validateSaveCompatible( saved ) ); // 빠진 모드는 경고 뒤 불러온다(상용 대조 — ModSetDigest::validateSaveCompatible)
     SW_EXPECT_LOG( "ModSetDigest.SaveModVersion" );
-    SW_EXPECT_FALSE( updated.checkSaveCompatible( saved ) );
+    SW_EXPECT_FALSE( updated.validateSaveCompatible( saved ) );
 }
 
 SW_TEST_CASE( ModAllowListTest, AllowsOnlyListedContent )
 {
     ModAllowList list;
     SW_REQUIRE_TRUE( ModAllowList::parseXMLText( R"(<ModAllowList><Mod id="lantern" version="1.0.0" contentHash="000000000000abcd"/></ModAllowList>)", "test", list ) );
-    SW_EXPECT_TRUE( list.checkDigest( ModSetDigest::make( {
+    SW_EXPECT_TRUE( list.validateDigest( ModSetDigest::make( {
         ModDigestEntry{ "lantern", ModVersion{ 1, 0, 0 }, 0xABCDu }
     } ) ) );
-    SW_EXPECT_TRUE( list.checkDigest( ModSetDigest::make( {} ) ) );
+    SW_EXPECT_TRUE( list.validateDigest( ModSetDigest::make( {} ) ) );
     SW_EXPECT_LOG( "ModAllowList.Mismatch" );
-    SW_EXPECT_FALSE( list.checkDigest( ModSetDigest::make( {
+    SW_EXPECT_FALSE( list.validateDigest( ModSetDigest::make( {
         ModDigestEntry{ "lantern", ModVersion{ 1, 0, 0 }, 0xABCEu }
     } ) ) );
     SW_EXPECT_LOG( "ModAllowList.NotAllowed" );
-    SW_EXPECT_FALSE( list.checkDigest( ModSetDigest::make( {
+    SW_EXPECT_FALSE( list.validateDigest( ModSetDigest::make( {
         ModDigestEntry{ "cheat", ModVersion{ 1, 0, 0 }, 0xABCDu }
     } ) ) );
     SW_EXPECT_LOG( "ModAllowList.BadEntry" );

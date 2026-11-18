@@ -10,7 +10,7 @@ namespace sw
     SplineComponent::SplineComponent()
         : _listControlPoint{}
         , _samplesPerSegment{ 16 }
-        , _type{ SplineType::CatmullRom }
+        , _type{ SplineKind::CatmullRom }
         , _bClosed{ false }
         , _localPath{}
         , _worldPath{}
@@ -39,7 +39,7 @@ namespace sw
         bakeWorldPath();
     }
 
-    void SplineComponent::setControlPoints( const vector<float3>& listControlPoint, SplineType type, bool bClosed )
+    void SplineComponent::setControlPoints( const vector<float3>& listControlPoint, SplineKind type, bool bClosed )
     {
         _listControlPoint = listControlPoint;
         _type             = type;

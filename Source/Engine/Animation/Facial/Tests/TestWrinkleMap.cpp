@@ -62,7 +62,7 @@ SW_TEST_CASE( WrinkleMapTest, ReportsUnknownExpressions )
     const sw::WrinkleMap          map       = makeMap( 1.0f );
     const sw::hashed_string       arrName[] = { sw::hashed_string( "Happy" ), sw::hashed_string( "BrowUp" ) };
     sw::vector<sw::hashed_string> listMissing;
-    SW_EXPECT_FALSE( map.checkExpressions( sw::span<const sw::hashed_string>( arrName, 2 ), &listMissing ) );
+    SW_EXPECT_FALSE( map.validateExpressions( sw::span<const sw::hashed_string>( arrName, 2 ), &listMissing ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listMissing.size() );
     SW_EXPECT_TRUE( listMissing[0] == sw::hashed_string( "Squint" ) );
 }

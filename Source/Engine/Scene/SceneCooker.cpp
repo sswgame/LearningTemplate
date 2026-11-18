@@ -253,7 +253,7 @@ namespace sw
              * @brief 데이터 레이어를 넘는 참조를 찾습니다. 대상의 레이어가 가리키는 쪽의 레이어에 모두 들어 있어야 한다 — 그래야 가리키는 쪽이 오를 때 대상이 늘 올라 있다. 셀을 넘는 참조와 같은 규칙이다.
              * @return 위반이 있으면 엔티티마다 오류를 남기고 false 입니다. 레이어를 쓰지 않는 씬은 짓지 않고 true 입니다.
              */
-            [[nodiscard]] static bool checkDataLayerReferences( const SceneEngineServices& services, const SceneDocument& doc, string_view scenePath )
+            [[nodiscard]] static bool validateDataLayerReferences( const SceneEngineServices& services, const SceneDocument& doc, string_view scenePath )
             {
                 bool                                                         bHasLayered = false;
                 unordered_map<uint64, const SceneDocument::SceneObjectNode*> mapNodeByFileID;
@@ -440,7 +440,7 @@ namespace sw
                                        statefulCount );
                 }
                 // 레이어를 넘는 참조도 쿠킹 실패다 — 레이어를 끈 채 오른 쪽의 참조가 조용히 끊긴다.
-                if ( checkDataLayerReferences( services, doc, scenePath ) == false )
+                if ( validateDataLayerReferences( services, doc, scenePath ) == false )
                     return CookStep::Failed;
                 // 스트리밍하는 씬은 엔티티를 셀로 나눈다. 셀을 넘는 참조가 있으면 쿠킹 실패다 — 런타임에 조용히 끊기는 참조를 싣지 않는다.
                 if ( SceneCooker::splitStreamingCells( services, doc, scenePath ) == false )

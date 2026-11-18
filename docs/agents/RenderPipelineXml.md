@@ -2,7 +2,7 @@
 
 > 질문: 렌더 패스를 코드 없이 데이터로 어떻게 바꾸는가?
 > 독자: 파이프라인 · 렌더 패스 XML 을 쓰거나 패스 코드를 고치는 사람과 에이전트.
-> 결론: 파이프라인 XML 에 적힌 값이 곧 실행되는 값이다. 패스와 머티리얼은 같은 렌더 상태 칸을 쓰고 실행은 패스 → 머티리얼 순서로 합친다. 실행이 받아 줄 수 없는 조합은 무시되지 않고 읽기 오류다. 표(`RenderPassTypeInfo`)는 XML 이 없는 내부 슬롯, XML 이 비운 기본값, 머티리얼에게 내주는 범위만 정한다.
+> 결론: 파이프라인 XML 에 적힌 값이 곧 실행되는 값이다. 패스와 머티리얼은 같은 렌더 상태 칸을 쓰고 실행은 패스 → 머티리얼 순서로 합친다. 실행이 받아 줄 수 없는 조합은 무시되지 않고 읽기 오류다. 표(`RenderPassKindInfo`)는 XML 이 없는 내부 슬롯, XML 이 비운 기본값, 머티리얼에게 내주는 범위만 정한다.
 
 ## 파일
 
@@ -32,7 +32,7 @@
 
 | 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
 |---|---|---|
-| `_type` | `RenderPassType` | 그 밖의 글. 내부 슬롯 |
+| `_type` | `RenderPassKind` | 그 밖의 글. 내부 슬롯 |
 | `_depthAttachment` | 붙일 깊이 첨부 | 깊이 테스트를 끄고 적었을 때 |
 | `_blendPreset` | 모든 렌더 타깃의 블렌드 프리셋. 비면 불투명. 곧은 알파인지 프리멀티플라이인지는 셰이더의 출력 규약에 맞춘다(캔버스 · 안개는 `Premultiplied`) | 없는 이름. `_listBlendTarget` 과 함께. 컴퓨트 패스. 반투명 패스에서 끄면 경고만 한다 |
 | `_listBlendTarget` | 렌더 타깃마다의 `BlendTargetState`. 하나면 모든 타깃에 같다 | 둘 이상인데 컬러 출력 수와 다를 때. 알파 계수 자리의 색 계수 |
@@ -71,7 +71,7 @@
 | `blendPreset` · `_listBlendTarget` | 패스의 블렌드를 덮는다 | 함께 적었을 때. 없는 이름. 블렌드가 켜진 값인데 `alphaMode` 가 `Blend` 가 아닐 때(쓰기 마스크만 바꾸는 값은 불투명도 받는다) |
 | `enableDepthTest` | 없음 — 첨부와 함께 움직여 패스의 것이다 | 적었을 때 |
 
-무엇을 덮을 수 있는지는 패스 종류의 표가 정한다(`RenderPassTraitFlag::kMaterialFixedState` · `kMaterialBlend`, `RenderPassTypeInfo::getMaterialStateScope`).
+무엇을 덮을 수 있는지는 패스 종류의 표가 정한다(`RenderPassTraitFlag::kMaterialFixedState` · `kMaterialBlend`, `RenderPassKindInfo::getMaterialStateScope`).
 
 | 패스 | 컬 · 앞면 방향 | 깊이 · 스텐실 · 채우기 | 블렌드 · 쓰기 마스크 | 까닭 |
 |---|---|---|---|---|
@@ -217,7 +217,7 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 
 ## 머티리얼 변위(테셀레이션)
 
-패스 XML 의 헐 · 도메인과 별개로, 머티리얼이 `_alwaysDefines` 에 `MATERIAL_DISPLACEMENT` 를 적으면 렌더러가 그 머티리얼의 변형 PSO 에 머티리얼 셰이더의 `HSMain` · `DSMain` 과 패치 토폴로지를 붙인다(`RenderPassTypeInfo::isMaterialTessellated` — 쿠커와 런타임이 같은 판정). 셰이더는 `material_displacement.hlsli`(뼈대가 보간 칸 VSMain 대신 include)다.
+패스 XML 의 헐 · 도메인과 별개로, 머티리얼이 `_alwaysDefines` 에 `MATERIAL_DISPLACEMENT` 를 적으면 렌더러가 그 머티리얼의 변형 PSO 에 머티리얼 셰이더의 `HSMain` · `DSMain` 과 패치 토폴로지를 붙인다(`RenderPassKindInfo::isMaterialTessellated` — 쿠커와 런타임이 같은 판정). 셰이더는 `material_displacement.hlsli`(뼈대가 보간 칸 VSMain 대신 include)다.
 
 - 값은 머티리얼 칸이다: `_displacementMap`(R 높이) · `_displacementScale`(m) · `_displacementMidLevel` · `_tessellationDensity`(각 1 rad 당 분할 수) · `_tessellationMaxFactor`(64 이하). `pbrmaterial.material` 이 칸을 가진다.
 - 변 계수는 변의 두 끝점(월드 위치 · 카메라 뷰 깊이)만으로 정해 틈이 없다. 식의 C++ 짝 `MaterialDisplacement` 를 단위 테스트가 지킨다.

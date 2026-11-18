@@ -96,7 +96,7 @@ namespace sw
         , _requestStartUs{ 0 }
         , _botIndex{ botIndex }
         , _sendSequence{ 0 }
-        , _pendingAccountOperation{ AccountClientOperation::Login }
+        , _pendingAccountOperation{ AccountMethodName::Login }
         , _pendingAction{ LoadBotAction::Wait }
         , _awaitKind{ AwaitKind::None }
         , _bPasswordLogin{ SW_FALSE }
@@ -374,7 +374,7 @@ namespace sw
             case LoadBotAction::Logout:
             {
                 _awaitKind               = AwaitKind::Response;
-                _pendingAccountOperation = AccountClientOperation::Logout;
+                _pendingAccountOperation = AccountMethodName::Logout;
                 (void)_accountClient.logout();
                 return;
             }
@@ -407,7 +407,7 @@ namespace sw
         _bPasswordLogin = step._text == "password" ? SW_TRUE : SW_FALSE;
         if ( _bPasswordLogin == SW_TRUE )
         {
-            _pendingAccountOperation = AccountClientOperation::Register;                         // 처음이면 가입 — 이름이 있으면 그대로 로그인
+            _pendingAccountOperation = AccountMethodName::Register;                              // 처음이면 가입 — 이름이 있으면 그대로 로그인
             (void)_accountClient.registerAccount( makeLoginName(), LoadBotInternal::kPassword ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
             return;
         }
@@ -419,7 +419,7 @@ namespace sw
             const uint64 word = HashUtil::mix64( botKey + HashUtil::kGoldenRatio64 * static_cast<uint64>( wordIndex + 1 ) );
             Memory::copy( arrSecret + wordIndex * static_cast<int32>( sizeof( uint64 ) ), &word, sizeof( uint64 ) );
         }
-        _pendingAccountOperation = AccountClientOperation::GuestLogin;
+        _pendingAccountOperation = AccountMethodName::GuestLogin;
         (void)_accountClient.guestLogin( arrSecret );
     }
 
@@ -807,14 +807,14 @@ namespace sw
             }
             if ( _awaitKind != AwaitKind::Response || reply._operation != _pendingAccountOperation )
                 continue;
-            if ( reply._operation == AccountClientOperation::Register )
+            if ( reply._operation == AccountMethodName::Register )
             {
-                _pendingAccountOperation = AccountClientOperation::Login; // 가입 결과(이미 있음 포함)와 상관없이 로그인
+                _pendingAccountOperation = AccountMethodName::Login; // 가입 결과(이미 있음 포함)와 상관없이 로그인
                 (void)_accountClient.login( makeLoginName(), LoadBotInternal::kPassword );
                 continue;
             }
             const bool bLoggedIn = reply._errorCode == 0 && reply._result == LoginResult::Ok &&
-                                   ( reply._operation == AccountClientOperation::Login || reply._operation == AccountClientOperation::GuestLogin );
+                                   ( reply._operation == AccountMethodName::Login || reply._operation == AccountMethodName::GuestLogin );
             if ( bLoggedIn )
             {
                 _accountID   = reply._grant._identity._accountID;

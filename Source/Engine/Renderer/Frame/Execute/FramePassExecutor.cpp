@@ -63,7 +63,7 @@
 #include "Engine/Renderer/Frame/View/ViewTextureMipBiasUtil.h"
 #include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -310,7 +310,7 @@ namespace sw
             return;
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
         {
-            if ( pass._type != RenderPassType::Shadow || pass._resolvedDepthRole != static_cast<uint8>( RenderPassInputRole::LocalShadowMap ) )
+            if ( pass._type != RenderPassKind::Shadow || pass._resolvedDepthRole != static_cast<uint8>( RenderPassInputRole::LocalShadowMap ) )
                 continue;
             const TransientAttachmentPool::Attachment atlas = findTransientAttachment( pass._resolvedDepthAttachment );
             if ( atlas._texture != 0 )
@@ -382,12 +382,12 @@ namespace sw
         _pActiveView = &_state._mainView;
     }
 
-    bool FramePassExecutor::shouldDrawBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
+    bool FramePassExecutor::shouldDrawBatchInPass( RenderPassKind passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
     {
         // 변형 풀이 받지 못한 메시(상한 초과 · 버퍼 실패)는 어느 패스에서도 그리지 않는다 — 바인드 · 레스트 포즈로 대신 그리지 않는다(풀이 오류를 남겼다).
         if ( binding._bDeformRefused != SW_FALSE )
             return false;
-        const RenderPassTypeInfo& passInfo = getRenderPassTypeInfo( passType );
+        const RenderPassKindInfo& passInfo = getRenderPassKindInfo( passType );
         if ( passInfo.shouldFilterBatchesByMaterial() == false )
             return true;
         const GPUShaderPermutation* pPermutation =
@@ -608,7 +608,7 @@ namespace sw
         // Present 의 SourceColor 입력이 원본이다(계약의 필수 입력 — 로드가 선언을 요구한다). 이름 후보로 "가장 나중 컬러" 를 짐작하지 않는다.
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
         {
-            if ( pass._type != RenderPassType::Present )
+            if ( pass._type != RenderPassKind::Present )
                 continue;
             for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
             {
@@ -639,7 +639,7 @@ namespace sw
     {
         if ( _nanCheck.isActive() == false || pDevice == nullptr )
             return;
-        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::NanCheck );
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassKind::NanCheck );
         if ( pso == 0 )
         {
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.GvNanCheckButNaN", "The NaN check is on but its PSO is missing (shader not cooked?) - no output is scanned" );
@@ -696,7 +696,7 @@ namespace sw
         size_t       anchorOutput = listPass.size();
         for ( size_t anchorIndex = 0; anchorIndex < listPass.size(); ++anchorIndex )
         {
-            const RenderPassTypeInfo& anchorInfo = getRenderPassTypeInfo( listPass[anchorIndex]._type );
+            const RenderPassKindInfo& anchorInfo = getRenderPassKindInfo( listPass[anchorIndex]._type );
             if ( anchorPost == listPass.size() && ( anchorInfo.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) || anchorInfo.hasFlag( RenderPassTraitFlag::kOutputPass ) ) )
                 anchorPost = anchorIndex;
             if ( anchorOutput == listPass.size() && anchorInfo.hasFlag( RenderPassTraitFlag::kOutputPass ) )
@@ -839,13 +839,13 @@ namespace sw
         vector<RenderGraphAliasJoin> listJoin;
         for ( const RenderGraphPassDesc& pass : listPass )
         {
-            const RenderPassTypeInfo& info = getRenderPassTypeInfo( pass._type );
+            const RenderPassKindInfo& info = getRenderPassKindInfo( pass._type );
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
             {
                 const auto outputIt = mapCandidateIndex.find( output._attachment );
                 if ( outputIt == mapCandidateIndex.end() )
                     continue;
-                if ( pass._type == RenderPassType::TAA )
+                if ( pass._type == RenderPassKind::TAA )
                     listExcluded[outputIt->second] = 1;
                 if ( info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) == false )
                     continue;

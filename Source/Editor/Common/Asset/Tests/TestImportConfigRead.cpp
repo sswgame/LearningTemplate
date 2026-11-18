@@ -3,7 +3,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Common/Asset/Model/ModelImportConfig.h"
+#include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 
 #include "Engine/Asset/AssetDatabase.h"

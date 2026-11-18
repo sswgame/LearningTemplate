@@ -113,7 +113,7 @@ namespace sw
          * @brief 메시지를 채널에 넣습니다. 채널 상한(`getMaxMessageSize`)을 넘으면 오류 로그와 함께 false 를 반환하고,
          *        신뢰 창이 메시지 전체(조각 모두)를 받을 수 없으면 로그 없이 false 를 반환합니다. 둘 다 아무것도 넣지 않으므로 반쪽 메시지가 생기지 않습니다.
          */
-        [[nodiscard]] bool sendMessage( NetChannelType channel, const uint8* pData, int32 size );
+        [[nodiscard]] bool sendMessage( NetChannelKind channel, const uint8* pData, int32 size );
         /** @brief @p size 바이트 신뢰 메시지(조각 모두)를 지금 신뢰 창이 받을 수 없으면 true 입니다. */
         bool isReliableWindowFull( int32 size ) const;
         /**
@@ -124,11 +124,11 @@ namespace sw
         /** @brief 판정이 난 전달 통지를 @p inoutListNotification 뒤에 옮깁니다. 연결 ID 는 -1 로 둡니다(엔드포인트가 채운다). */
         void pollDeliveryNotifications( vector<NetDeliveryNotification>& inoutListNotification );
         /** @brief 채널 하나의 메시지 상한입니다. 신뢰 순서는 `kMaxReliableMessageSize`, 나머지는 `kMaxSingleMessageSize` 입니다. */
-        static int32 getMaxMessageSize( NetChannelType channel );
+        static int32 getMaxMessageSize( NetChannelKind channel );
         /** @brief 받은 메시지 하나를 꺼냅니다. 없으면 false 를 반환합니다. @p outBuffer 의 옛 용량은 연결이 받아 다시 쓴다(같은 버퍼로 계속 받으면 할당이 없다). */
-        [[nodiscard]] bool receiveMessage( NetChannelType channel, vector<uint8>& outBuffer );
+        [[nodiscard]] bool receiveMessage( NetChannelKind channel, vector<uint8>& outBuffer );
         /** @brief 받은 메시지 하나를 꺼내 @p inoutBytes 뒤에 덧붙입니다. 여러 메시지를 아레나 하나에 모을 때 중간 버퍼 복사가 없습니다. 없으면 false 이고 그대로 둡니다. */
-        [[nodiscard]] bool receiveMessageAppend( NetChannelType channel, vector<uint8>& inoutBytes );
+        [[nodiscard]] bool receiveMessageAppend( NetChannelKind channel, vector<uint8>& inoutBytes );
 
         /**
          * @brief 패킷 본문을 씁니다. 헤더(시퀀스, ack, ack 비트), 들어가는 만큼의 메시지, 확인 요청 비트 순서입니다.
@@ -194,7 +194,7 @@ namespace sw
             uint8          _bResendNow{ SW_FALSE };                     ///< 실린 패킷을 잃었다. 재전송 간격을 기다리지 않는다.
             uint8          _backoffShift{ 0 };                          ///< 시한으로 다시 실은 횟수(`kMaxResendBackoffShift` 까지) — 시한은 기본 시한 × 2^이 값이다. 빠른 재전송은 늘리지 않는다
             uint8          _bMore{ SW_FALSE };                          ///< 다음 ID가 같은 메시지의 이어지는 조각이다(신뢰 순서만).
-            NetChannelType _channel{ NetChannelType::ReliableOrdered }; ///< 신뢰 순서와 신뢰 순서 없음이 ID와 창을 하나로 공유한다.
+            NetChannelKind _channel{ NetChannelKind::ReliableOrdered }; ///< 신뢰 순서와 신뢰 순서 없음이 ID와 창을 하나로 공유한다.
 
             /** @brief 모든 필드를 기본값으로 되돌리되 버퍼 용량은 남깁니다(`SequenceBuffer` 가 슬롯을 다시 쓸 때 부른다). */
             void resetForReuse()
@@ -243,7 +243,7 @@ namespace sw
         {
             vector<uint8>  _buffer{};
             uint16         _id{ 0 };
-            NetChannelType _channel{ NetChannelType::Unreliable };
+            NetChannelKind _channel{ NetChannelKind::Unreliable };
             uint8          _bMore{ SW_FALSE }; ///< 신뢰 순서에서 다음 ID가 같은 메시지다.
         };
 
@@ -269,7 +269,7 @@ namespace sw
             uint16      _sequence{ 0 }; ///< 이 패킷의 번호 — 비신뢰 · 순서만 메시지의 흐름 id 가 (번호, 패킷 안 자리)다
 
             /** @brief 메시지 하나를 "더 있다" 1비트와 함께 씁니다. 예산이나 메시지 수 상한을 넘으면 쓰지 않고 false 를 반환합니다. */
-            [[nodiscard]] bool tryWriteMessage( NetChannelType channel, uint16 messageID, const vector<uint8>& buffer, bool bMore );
+            [[nodiscard]] bool tryWriteMessage( NetChannelKind channel, uint16 messageID, const vector<uint8>& buffer, bool bMore );
         };
 
         /** @brief 비신뢰 줄의 나이를 셉니다. 처음 만난 메시지는 지금으로 적고, @p maxAgeSeconds 를 넘게 기다린 것은 버립니다. */
@@ -294,7 +294,7 @@ namespace sw
          * @brief 메시지 하나의 흐름 사건을 남깁니다(`NetFlowLog`). 흐름 신원(`setFlowIdentity`)이 없으면 아무것도 하지 않습니다.
          * @param wireIndex 양쪽이 같게 아는 메시지 번호 — 신뢰 순서는 넣은 · 꺼낸 순번, 신뢰 순서 없음은 신뢰 ID, 비신뢰 · 순서만은 (패킷 번호 << 8 | 자리)
          */
-        void recordFlow( NetChannelType channel, uint64 wireIndex, const uint8* pData, size_t size, bool bReceive ) const;
+        void recordFlow( NetChannelKind channel, uint64 wireIndex, const uint8* pData, size_t size, bool bReceive ) const;
 
         /** @brief 다시 쓸 메시지 버퍼 하나를 꺼냅니다. 없으면 빈 버퍼입니다(처음 쓸 때 할당한다). */
         vector<uint8> acquireBuffer();
@@ -310,11 +310,11 @@ namespace sw
         uint32  computeAckBits( uint16 ack ) const;
         float64 computeResendDelay() const;
         /** @brief 신뢰 메시지를 보낼 큐에 넣습니다(신뢰 순서는 조각으로 나눠 넣습니다). 창이 조각 모두를 받을 수 없으면 아무것도 넣지 않고 false 를 반환합니다. */
-        bool queueReliable( NetChannelType channel, const uint8* pData, int32 size );
+        bool queueReliable( NetChannelKind channel, const uint8* pData, int32 size );
         /** @brief 순서가 온 신뢰 조각 하나를 넘기거나(조각이 하나뿐인 경우) 모읍니다(마지막 조각에서 한 메시지로 넘깁니다). */
         void deliverReliable( IncomingReliable& incoming );
         /** @brief 받은 메시지를 채널 큐에 넣습니다. 큐가 `kMaxPendingReceiveBytes` 를 넘게 되면 넣지 않고 `_bReceiveOverflowed` 를 세운다. @p buffer 는 빈다. */
-        void pushIncoming( NetChannelType channel, vector<uint8>& buffer );
+        void pushIncoming( NetChannelKind channel, vector<uint8>& buffer );
         /** @brief 채널 큐의 맨 앞 메시지를 빼고 바이트 수를 줄입니다. 큐가 비어 있지 않아야 한다. */
         void popIncoming( IncomingQueue& queue );
 
@@ -323,7 +323,7 @@ namespace sw
         SequenceBuffer<ReceivedPacket, kPacketWindow>                            _receivedPackets;
         SequenceBuffer<OutgoingReliable, static_cast<uint32>( kReliableWindow )> _outgoingReliable;
         SequenceBuffer<IncomingReliable, static_cast<uint32>( kReliableWindow )> _incomingReliable;
-        IncomingQueue                                                            _arrIncoming[static_cast<int32>( NetChannelType::Count )];
+        IncomingQueue                                                            _arrIncoming[static_cast<int32>( NetChannelKind::Count )];
         vector<vector<uint8>>                                                    _listOutgoingSequenced; ///< 종류(첫 바이트)마다 가장 새 메시지 하나. 쌓인 순서대로 보관한다.
         deque<QueuedUnreliable>                                                  _listOutgoingUnreliable;
         vector<ParsedMessage>                                                    _listParsedScratch;        ///< 받은 패킷을 먼저 다 읽어 두는 스크래치 버퍼(용량을 다시 쓴다).

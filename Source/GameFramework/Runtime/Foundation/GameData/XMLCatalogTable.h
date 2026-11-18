@@ -58,7 +58,7 @@ namespace sw
         template <typename TCatalog, size_t Count>
         [[nodiscard]] static XMLCatalogReadResult readInDocumentOrder( TCatalog& catalog, const XMLCatalogRoot& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
         {
-            XMLCatalogReadResult result = checkNames( root._node, sourceName, arrElement );
+            XMLCatalogReadResult result = validateNames( root._node, sourceName, arrElement );
             for ( XMLNode node = root._node.findChild(); node; node = node.findNextSibling() )
             {
                 for ( const XMLCatalogElement<TCatalog>& element : arrElement )
@@ -78,7 +78,7 @@ namespace sw
         template <typename TCatalog, size_t Count>
         [[nodiscard]] static XMLCatalogReadResult readInTableOrder( TCatalog& catalog, const XMLCatalogRoot& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
         {
-            XMLCatalogReadResult result = checkNames( root._node, sourceName, arrElement );
+            XMLCatalogReadResult result = validateNames( root._node, sourceName, arrElement );
             for ( const XMLCatalogElement<TCatalog>& element : arrElement )
             {
                 for ( XMLNode node = root._node.findChild( element._pName ); node; node = node.findNextSibling( element._pName ) )
@@ -93,7 +93,7 @@ namespace sw
     private:
         /** @brief 표에 없는 이름의 원소를 모두 알리고 그 수만큼 실패로 세어 시작합니다. */
         template <typename TCatalog, size_t Count>
-        [[nodiscard]] static XMLCatalogReadResult checkNames( const XMLNode& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
+        [[nodiscard]] static XMLCatalogReadResult validateNames( const XMLNode& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
         {
             const utf8* arrName[Count];
             for ( size_t index = 0; index < Count; ++index )

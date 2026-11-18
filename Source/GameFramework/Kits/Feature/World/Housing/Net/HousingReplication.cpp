@@ -138,7 +138,7 @@ namespace sw
         return true;
     }
 
-    HousingReplicationServer::PlotEntry& HousingReplicationServer::findOrAddEntry( uint64 plotHash )
+    HousingReplicationServer::PlotEntry& HousingReplicationServer::getOrCreateEntry( uint64 plotHash )
     {
         if ( PlotEntry* pEntry = VectorUtil::findIf( _listPlot, [plotHash]( const PlotEntry& entry )
         { return entry._plotHash == plotHash; } ) )
@@ -292,7 +292,7 @@ namespace sw
                 if ( request._plotHash == plotHash && VectorUtil::contains( listFresh, request._connectionID ) == false )
                     listFresh.push_back( request._connectionID );
             }
-            sendPlotChanges( findOrAddEntry( plotHash ), plot, listFresh );
+            sendPlotChanges( getOrCreateEntry( plotHash ), plot, listFresh );
         }
         _listJoined.clear();
         _listSnapshotRequest.clear();
@@ -382,7 +382,7 @@ namespace sw
                     startTransfer( plot, entry._plotHash, connectionID, readBytes() ); // 바뀐 것이 많다 — 조각 전송이 창을 나눠 쓴다
                     continue;
                 }
-                if ( _writer.send( *_pHost, connectionID, NetChannelType::ReliableOrdered ) )
+                if ( _writer.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered ) )
                     ++_stats._deltaSentCount;
                 else
                     ++_stats._sendFailedCount;
@@ -439,7 +439,7 @@ namespace sw
                 writer.writeVarUint( static_cast<uint64>( transfer._offset ) );
                 writer.writeBlob( transfer._bytes.data() + transfer._offset, chunkSize );
                 // 창이 차면 닫지 않고 다음 틱에 잇는다(조각 여럿을 한 틱에 밀어 넣으면 신뢰 창을 넘는다).
-                if ( _pHost->trySendMessage( transfer._connectionID, NetChannelType::ReliableOrdered, _writer.getBytes().data(), _writer.getByteCount() ) == false )
+                if ( _pHost->trySendMessage( transfer._connectionID, NetChannelKind::ReliableOrdered, _writer.getBytes().data(), _writer.getByteCount() ) == false )
                     break;
                 ++_stats._snapshotChunkCount;
                 transfer._offset += chunkSize;
@@ -457,7 +457,7 @@ namespace sw
             return HousingPlaceResult::UnknownPlot;
         const HousingNetPlotRef& plot        = listPlot[plotIndex];
         HousingLayout&           layout      = *plot._pLayout;
-        PlotEntry&               entry       = findOrAddEntry( edit._plotHash );
+        PlotEntry&               entry       = getOrCreateEntry( edit._plotHash );
         const uint64             callerOwner = findCallerOwner( edit._connectionID );
         if ( edit._op == HousingEditOp::Claim )
         {
@@ -572,7 +572,7 @@ namespace sw
         writer.writeVarUint( plotHash );
         writer.writeBits( static_cast<uint32>( result ), Internal::kResultBits );
         writer.writeVarUint( placementID );
-        if ( _writer.send( *_pHost, connectionID, NetChannelType::ReliableOrdered ) == false )
+        if ( _writer.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered ) == false )
             ++_stats._sendFailedCount;
     }
 } // namespace sw
@@ -644,7 +644,7 @@ namespace sw
             case HousingEditOp::Count:
                 break;
         }
-        if ( _writer.send( *_pHost, 0, NetChannelType::ReliableOrdered ) == false )
+        if ( _writer.send( *_pHost, 0, NetChannelKind::ReliableOrdered ) == false )
         {
             ++_stats._sendFailedCount;
             return 0;
@@ -786,7 +786,7 @@ namespace sw
         _listAwaitingSnapshot.push_back( plotHash );
         BitWriter& writer = _writer.begin( NetHousingMessage::kSnapshotRequest );
         writer.writeVarUint( plotHash );
-        if ( _writer.send( *_pHost, 0, NetChannelType::ReliableOrdered ) )
+        if ( _writer.send( *_pHost, 0, NetChannelKind::ReliableOrdered ) )
             ++_stats._snapshotRequestCount;
         else
             ++_stats._sendFailedCount;

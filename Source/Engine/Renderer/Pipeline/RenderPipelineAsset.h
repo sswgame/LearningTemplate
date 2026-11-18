@@ -121,7 +121,7 @@ namespace sw
          * @brief 이 파이프라인이 프레임 패스 @p type 을 선언했는지입니다. 선언하지 않은 종류의 일(컬링이 채울 간접 인자 · GPU 라이트 그리드 · 스킨 결과 · 볼륨 안개 등)은
          *        준비 단계부터 하지 않는다 — 채우는 패스가 없는 버퍼를 읽게 두지 않는다.
          */
-        bool hasFramePass( RenderPassType type ) const;
+        bool hasFramePass( RenderPassKind type ) const;
 
     private:
         /** @brief `_listRenderPassRef` 의 첨부 · 자원 · 프레임 패스를 이 파이프라인 목록 앞에 합칩니다. 렌더 패스 파일을 읽지 못하면 오류를 남기고 false 입니다. */

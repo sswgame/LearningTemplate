@@ -38,9 +38,9 @@ namespace sw
          * @brief 뿌리 @p root 가 @p baseFolder 의 아래(그 폴더 자신은 아님)인 엄격한 절대 경로인지 봅니다. `..` 마디는 거절합니다(정규화 전 글로 폴더를 벗어날 수 있다).
          * @return 아니면 그 이유(뿌리가 대상)입니다.
          */
-        [[nodiscard]] static expected<void> checkUnderBase( string_view root, string_view baseFolder );
+        [[nodiscard]] static expected<void> validateUnderBase( string_view root, string_view baseFolder );
         /**
-         * @brief 이 프로세스의 뿌리를 정합니다. 환경 변수가 있으면 `checkUnderBase` 로 보고 그대로 쓰고, 없으면 `<실행 뿌리>/userdata` 를 환경 변수에 겁니다(다시 불러도 같은 값).
+         * @brief 이 프로세스의 뿌리를 정합니다. 환경 변수가 있으면 `validateUnderBase` 로 보고 그대로 쓰고, 없으면 `<실행 뿌리>/userdata` 를 환경 변수에 겁니다(다시 불러도 같은 값).
          * @param bAllowOutside `-gv_automationAllowOutsideUserData` — 참이면 검사하지 않는다. 환경 변수가 없으면 빈 글(OS 사용자 폴더 그대로)이다.
          * @return 정한 뿌리(OS 폴더를 그대로 쓰면 빈 글)입니다. 자동화 폴더 밖이거나 환경 변수를 걸지 못하면 오류입니다.
          */
@@ -50,7 +50,7 @@ namespace sw
         /** @brief 사람의 폴더들입니다 — 에디터 상태(`<프로젝트>/Saved/Editor`)와 OS 사용자 데이터 · 설정 폴더(게임들의 부모, 모르면 뺀다). */
         static vector<string> makePersonFolders();
         /** @brief 상태 자리 변수 @p name 의 값 @p path 가 @p listPersonFolder 의 어느 것 자신이거나 아래면 오류입니다(대소문자는 OS 규칙). */
-        [[nodiscard]] static expected<void> checkStatePath( string_view name, string_view path, const vector<string>& listPersonFolder );
+        [[nodiscard]] static expected<void> validateStatePath( string_view name, string_view path, const vector<string>& listPersonFolder );
         /** @brief 넘겨줄 인자 @p listArgument 가운데 상태 자리 변수(`-gv_editorStateDir=…` 등)가 있으면 그 인자입니다 — 백엔드별 자식이 모두 같은 자리를 쓰게 된다. */
         [[nodiscard]] static optional<string> findSharedStateArgument( const vector<string>& listArgument );
     };

@@ -1,14 +1,14 @@
 /**
  * @file PreferencesPanel.h
  * @brief 에디터 환경설정 창입니다(Edit > Preferences). 등록된 섹션(`SW_EDITOR_SETTINGS`)을 프로퍼티 그리드로 그리고, 바뀌면 잠시 뒤 저장합니다.
- * @details 섹션 목록 · 고른 섹션 · 숨길 프로퍼티 · 되돌리기 · 저장 기다리기는 `PreferencesModel`(Model/, ImGui 없음)이 들고, 이 창은 목록 · 그리드 그리기와 검색 칸만 든다.
+ * @details 섹션 목록 · 고른 섹션 · 숨길 프로퍼티 · 되돌리기 · 저장 기다리기는 `PreferencesViewModel`(Model/, ImGui 없음)이 들고, 이 창은 목록 · 그리드 그리기와 검색 칸만 든다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
-#include "Editor/Panels/Settings/Model/PreferencesModel.h"
+#include "Editor/Panels/Settings/Model/PreferencesViewModel.h"
 
 namespace sw
 {
@@ -42,7 +42,7 @@ namespace sw::editor
 
     private:
         EditorPropertyGrid    _grid; ///< 검색 칸(`getFilterText`)도 든다
-        PreferencesModel      _model;
+        PreferencesViewModel  _model;
         vector<hashed_string> _listHidden; ///< "Modified only" 가 숨길 프로퍼티(멤버로 두어 프레임마다 할당하지 않는다)
     };
 } // namespace sw::editor

@@ -69,7 +69,7 @@ namespace sw
             ExtensionProgramDesc program;
             program._shaderPath                               = draw._shaderPath;
             program._bBlend                                   = true; // 프리멀티플라이 — 셰이더가 (색 × 무게, 무게)를 낸다
-            const RHIPipelineStateHandle             pso      = _psoManager.findOrCreateExtensionProgramPSO( program, outputFormat, false );
+            const RHIPipelineStateHandle             pso      = _psoManager.getOrCreateExtensionProgramPSO( program, outputFormat, false );
             const RHIStructuredBuffer*               pElement = ensureElementBuffer( draw._materialPath, draw._binding._data );
             FrameViewTarget::PostProcessMaterialPass drawPass;
             drawPass._pso         = pso;
@@ -124,7 +124,7 @@ namespace sw
     {
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
         {
-            if ( pass._type != RenderPassType::PostProcessMaterial || pass._blendableLocation != location || pass._listResolvedColorOutput.empty() )
+            if ( pass._type != RenderPassKind::PostProcessMaterial || pass._blendableLocation != location || pass._listResolvedColorOutput.empty() )
                 continue;
             for ( const RenderPassAttachment& attachment : _pipeline.getDesc()._listAttachment )
             {

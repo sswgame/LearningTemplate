@@ -84,7 +84,7 @@ namespace sw
     };
 
     /** @brief 체력 알림(이벤트)의 종류입니다. */
-    enum class HealthEventType : uint8
+    enum class HealthEventKind : uint8
     {
         Damaged = 0,       ///< `_amount` = 실드 + 체력(또는 출혈 체력) 피해
         ShieldBroken,      ///< 실드가 0 이 됐다
@@ -103,7 +103,7 @@ namespace sw
     {
         float32         _amount{ 0.0f };
         optional<int32> _instigatorID{}; ///< 없으면 환경(자기장 · 낙사)이나 회복
-        HealthEventType _type{ HealthEventType::Damaged };
+        HealthEventKind _type{ HealthEventKind::Damaged };
     };
 } // namespace sw
 
@@ -222,7 +222,7 @@ namespace sw
         void enterDowned( optional<int32> instigatorID );
         void enterDead( optional<int32> instigatorID );
         void finishRevive();
-        void pushEvent( HealthEventType type, float32 amount, optional<int32> instigatorID );
+        void pushEvent( HealthEventKind type, float32 amount, optional<int32> instigatorID );
 
     private:
         HealthSettings           _settings;

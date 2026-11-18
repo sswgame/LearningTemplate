@@ -96,7 +96,7 @@ namespace
                 server.sendSnapshots();
                 cluster.step( 1.0 / 60.0 );
                 int32          connectionID = -1;
-                NetChannelType channel      = NetChannelType::Unreliable;
+                NetChannelKind channel      = NetChannelKind::Unreliable;
                 while ( cluster.getServer().receiveMessage( connectionID, channel, buffer ) )
                 {
                     (void)server.handleMessage( connectionID, buffer ); // 클라이언트의 확인 — 판의 결과는 해시가 본다

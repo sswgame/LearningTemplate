@@ -26,8 +26,8 @@ namespace
         int32         _sendBudget{ -1 }; ///< 남은 보내기 수. 음수면 무한이다
         uint8         _bWindowFull{ SW_FALSE };
 
-        bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override { return trySendMessage( connectionID, channel, pData, size ); }
-        bool trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override
+        bool sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override { return trySendMessage( connectionID, channel, pData, size ); }
+        bool trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override
         {
             (void)channel;
             if ( _bWindowFull != SW_FALSE || _sendBudget == 0 )
@@ -38,7 +38,7 @@ namespace
             return true;
         }
         bool               sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
-        int32              broadcast( NetChannelType, const uint8*, int32, int32 ) override { return 0; }
+        int32              broadcast( NetChannelKind, const uint8*, int32, int32 ) override { return 0; }
         void               disconnect( int32 connectionID ) override { _listDisconnected.push_back( connectionID ); }
         void               pollInbound( NetInbound& ) override {}
         bool               isServer() const override { return true; }
@@ -98,7 +98,7 @@ namespace
                     _listClient[static_cast<size_t>( index )]->_peers._listSent.clear();
                     for ( const FakeTurnPeers::Sent& sent : listSent )
                     {
-                        SW_EXPECT_TRUE( _server.handleMessage( index, sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
+                        SW_EXPECT_TRUE( _server.handleMessage( index, sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
                         bMoved = true;
                     }
                 }
@@ -106,7 +106,7 @@ namespace
                 _serverPeers._listSent.clear();
                 for ( const FakeTurnPeers::Sent& sent : listOut )
                 {
-                    SW_EXPECT_TRUE( _listClient[static_cast<size_t>( sent._connectionID )]->_relay.handleMessage( 0, sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
+                    SW_EXPECT_TRUE( _listClient[static_cast<size_t>( sent._connectionID )]->_relay.handleMessage( 0, sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
                     bMoved = true;
                 }
             }
@@ -381,7 +381,7 @@ SW_TEST_CASE_F( TurnRelayTest, SeatsCannotBeStolen )
     writer.writeVarInt( -1 );
     writer.writeUint32( relay( 0 ).getToken() );
     writer.writeVarUint( 0 );
-    SW_EXPECT_TRUE( _server.handleMessage( 3, writer.getBytes().data(), writer.getByteCount(), NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( _server.handleMessage( 3, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
     poll();
     listEvent = pollAll( thief._relay );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
@@ -428,7 +428,7 @@ SW_TEST_CASE_F( TurnRelayTest, ActionsWaitBehindQueuedNotifications )
     vector<FakeTurnPeers::Sent> listSubmit = std::move( _listClient[0]->_peers._listSent );
     _listClient[0]->_peers._listSent.clear();
     SW_REQUIRE_EQUAL( listSubmit.size(), size_t{ 1 } );
-    SW_EXPECT_TRUE( _server.handleMessage( 0, listSubmit[0]._bytes.data(), static_cast<int32>( listSubmit[0]._bytes.size() ), NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( _server.handleMessage( 0, listSubmit[0]._bytes.data(), static_cast<int32>( listSubmit[0]._bytes.size() ), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_TRUE( _serverPeers._listSent.empty() );
 
     _server.update();
@@ -479,7 +479,7 @@ SW_TEST_CASE_F( TurnRelayTest, OversizedActionsAreRefused )
     writer.writeVarUint( 0 );
     const vector<uint8> tooLong( static_cast<size_t>( NetTurnRelayMessage::kMaxActionBytes ) + 1, 0 );
     writer.writeBlob( tooLong.data(), static_cast<int32>( tooLong.size() ) );
-    SW_EXPECT_TRUE( _server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelType::ReliableOrdered ) == NetHandleResult::Malformed );
+    SW_EXPECT_TRUE( _server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
 }
 
 // 결함: 받은 메시지마다 방 · 기록을 끝없이 늘릴 수 있었다 - 방 수와 방의 행동 수에 상한을 둔다(설정).
@@ -534,7 +534,7 @@ SW_TEST_CASE( TurnRelayPolicyTest, BadConfigRefusesToStart )
     writer.writeVarInt( -1 );
     writer.writeUint32( 0 );
     writer.writeVarUint( 0 );
-    SW_EXPECT_TRUE( server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_TRUE( server.findRoom( 7 ) == nullptr );
     SW_EXPECT_TRUE( peers._listSent.empty() );
 }
@@ -543,14 +543,14 @@ SW_TEST_CASE( TurnRelayPolicyTest, BadConfigRefusesToStart )
 SW_TEST_CASE_F( TurnRelayTest, TruncatedMessagesAreMalformed )
 {
     const uint8 arrJoin[] = { NetTurnRelayMessage::kJoin };
-    SW_EXPECT_TRUE( _server.handleMessage( 0, arrJoin, 1, NetChannelType::ReliableOrdered ) == NetHandleResult::Malformed );
+    SW_EXPECT_TRUE( _server.handleMessage( 0, arrJoin, 1, NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
     const uint8 arrAction[] = { NetTurnRelayMessage::kAction, 7 };
-    SW_EXPECT_TRUE( _server.handleMessage( 0, arrAction, 2, NetChannelType::ReliableOrdered ) == NetHandleResult::Malformed );
+    SW_EXPECT_TRUE( _server.handleMessage( 0, arrAction, 2, NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
     SW_EXPECT_TRUE( _server.findRoom( 7 ) == nullptr );
 
     Client& client = addClient();
     client._relay.join( 7 );
     const uint8 arrShort[] = { NetTurnRelayMessage::kApplied, 7 };
-    SW_EXPECT_TRUE( client._relay.handleMessage( 0, arrShort, 2, NetChannelType::ReliableOrdered ) == NetHandleResult::Malformed );
+    SW_EXPECT_TRUE( client._relay.handleMessage( 0, arrShort, 2, NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
     SW_EXPECT_TRUE( client._relay.getActions().empty() );
 }

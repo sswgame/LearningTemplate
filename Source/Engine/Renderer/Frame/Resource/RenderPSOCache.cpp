@@ -67,23 +67,23 @@ namespace sw
         }
     }
 
-    void RenderPSOCache::setEnginePSO( RenderPassType passType, RHIPipelineStateHandle pso )
+    void RenderPSOCache::setEnginePSO( RenderPassKind passType, RHIPipelineStateHandle pso )
     {
         _mapEnginePSO.insert_or_assign( passType, pso );
     }
 
-    RHIPipelineStateHandle RenderPSOCache::findEnginePSO( RenderPassType passType ) const
+    RHIPipelineStateHandle RenderPSOCache::findEnginePSO( RenderPassKind passType ) const
     {
         const auto it = _mapEnginePSO.find( passType );
         return ( it != _mapEnginePSO.end() ) ? it->second : 0;
     }
 
-    void RenderPSOCache::setOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle pso )
+    void RenderPSOCache::setOutputPSO( RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle pso )
     {
         _mapOutputPSO.insert_or_assign( makeOutputPSOKey( passType, targetFormat ), pso );
     }
 
-    bool RenderPSOCache::findOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const
+    bool RenderPSOCache::findOutputPSO( RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const
     {
         const auto it = _mapOutputPSO.find( makeOutputPSOKey( passType, targetFormat ) );
         if ( it == _mapOutputPSO.end() )

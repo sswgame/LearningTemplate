@@ -5,7 +5,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorGraphDocumentPanel.h"
 #include "Editor/Panels/Animation/AnimationGraphLayerEditor.h"
-#include "Editor/Panels/Animation/Model/AnimationGraphPreviewModel.h"
+#include "Editor/Panels/Animation/Model/AnimationGraphPreviewViewModel.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 
@@ -13,7 +13,7 @@ namespace sw::editor
 {
     /**
      * @brief imgui-node-editor 로 만든 애니메이션 그래프 편집 패널입니다.
-     * @details 미리보기(그래프 사본 · 플레이어 · 저절로 넘기기 · 전이 흐름)는 `AnimationGraphPreviewModel`(Model/, ImGui 없음)이 든다.
+     * @details 미리보기(그래프 사본 · 플레이어 · 저절로 넘기기 · 전이 흐름)는 `AnimationGraphPreviewViewModel`(Model/, ImGui 없음)이 든다.
      */
     class AnimationGraphPanel : public EditorGraphDocumentPanel<AnimationGraphAsset>
     {
@@ -111,17 +111,17 @@ namespace sw::editor
         void linkSelectedNodes();
 
     private:
-        AnimationGraphPreviewModel _preview;             ///< 미리보기 그래프 사본 · 플레이어 · 재생 상태
-        AnimationGraphLayerEditor  _layerEditor;         ///< 레이어 탭의 레이어 · 본 마스크 편집
-        string                     _nameEditBuffer;      ///< 상태 이름 입력란의 텍스트
-        string                     _parameterEditBuffer; ///< 조건 파라미터 입력란의 텍스트
-        string                     _nameFieldBuffer;     ///< 치는 중인 이름 칸의 텍스트(`drawNameField`)
-        string                     _nameFieldShown;      ///< 치지 않는 이름 칸이 보이는 텍스트(프레임마다 값에서 다시 쓴다)
-        vector<hashed_string>      _listPoseTypeName;    ///< 노드 더하기 메뉴의 포즈 노드 종류(`collectAddKinds` 가 채운다)
-        uint32                     _nameFieldID;         ///< 치는 중인 이름 칸의 ImGui id(0 = 없음)
-        vector<int32>              _listSelectionOrder;  ///< 캔버스에서 선택한 노드를 선택한 순서대로 담는다
-        int32                      _selectedNodeID;
-        int32                      _selectedLinkID;
-        int32                      _canvasLinkID; ///< 지난 프레임에 캔버스에서 선택한 링크다. 바뀐 때만 따라간다
+        AnimationGraphPreviewViewModel _preview;             ///< 미리보기 그래프 사본 · 플레이어 · 재생 상태
+        AnimationGraphLayerEditor      _layerEditor;         ///< 레이어 탭의 레이어 · 본 마스크 편집
+        string                         _nameEditBuffer;      ///< 상태 이름 입력란의 텍스트
+        string                         _parameterEditBuffer; ///< 조건 파라미터 입력란의 텍스트
+        string                         _nameFieldBuffer;     ///< 치는 중인 이름 칸의 텍스트(`drawNameField`)
+        string                         _nameFieldShown;      ///< 치지 않는 이름 칸이 보이는 텍스트(프레임마다 값에서 다시 쓴다)
+        vector<hashed_string>          _listPoseTypeName;    ///< 노드 더하기 메뉴의 포즈 노드 종류(`collectAddKinds` 가 채운다)
+        uint32                         _nameFieldID;         ///< 치는 중인 이름 칸의 ImGui id(0 = 없음)
+        vector<int32>                  _listSelectionOrder;  ///< 캔버스에서 선택한 노드를 선택한 순서대로 담는다
+        int32                          _selectedNodeID;
+        int32                          _selectedLinkID;
+        int32                          _canvasLinkID; ///< 지난 프레임에 캔버스에서 선택한 링크다. 바뀐 때만 따라간다
     };
 } // namespace sw::editor

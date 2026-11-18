@@ -99,7 +99,7 @@ namespace sw
             {
                 const IContentConfiguration* const pContent = findContent();
                 if ( pContent != nullptr )
-                    return pContent->checkSaveCompatible( savedText );
+                    return pContent->validateSaveCompatible( savedText );
                 if ( savedText.empty() )
                     return true;
                 SW_LOG_ERROR_ID( "GameStateSnapshot.SaveNeedsContent", "This save was made with content '%#' (mods) but this run has no content configuration - start with the same mods to load it",

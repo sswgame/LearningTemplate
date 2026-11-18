@@ -79,7 +79,7 @@ namespace sw
         /** @brief 종류 @p kind 의 접촉을 @p inoutList 에 합칩니다(같은 종류면 큰 값). 프로필이 없는 종류는 넣지 않는다. */
         static void addContact( vector<ContactRecord>& inoutList, const SurfaceKindTable& table, const ContactRecord& contact );
         /** @brief 종류의 지역을 찾거나 처음이면 프로필을 읽어 컴파일합니다. */
-        SurfaceZone& findOrAddSurfaceZone( const SurfaceKindTable& table, const hashed_string& kind );
+        SurfaceZone& getOrCreateSurfaceZone( const SurfaceKindTable& table, const hashed_string& kind );
         /** @brief 올린 접촉 유지(`ContactStayListener`)를 받습니다 — 시작과 같이 접촉으로 적는다. */
         static void receiveCollisionStay( Component& self, const CollisionInfo& collision );
         /** @brief 강체 접촉 하나를 다음 갱신에 넘길 접촉으로 적습니다. */

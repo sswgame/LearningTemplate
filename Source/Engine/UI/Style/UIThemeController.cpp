@@ -54,7 +54,7 @@ namespace sw
         {
             for ( const string& path : listPath )
             {
-                const expected<shared_ptr<const UIStyleSheetAsset>> sheet = styleSheetCache.findOrLoad( path, tagOverride );
+                const expected<shared_ptr<const UIStyleSheetAsset>> sheet = styleSheetCache.acquire( path, tagOverride );
                 if ( sheet.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "UIThemeController.StyleSheetNotLoaded", "[UI] Style sheet is not loaded: %# (%#)", sheet.error().message(), sheet.error().detail() );

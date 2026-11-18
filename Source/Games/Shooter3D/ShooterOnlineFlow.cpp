@@ -7,7 +7,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/EconomyClient.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyClient.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardClient.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingClient.h"
@@ -255,7 +255,7 @@ namespace sw
         {
             if ( reply._errorCode != OnlineError::kOk || reply._result != LoginResult::Ok )
                 SW_LOG_WARNING_ID( "Shooter.OnlineAccountFailed", "[Shooter] online account call failed (error %#, result %#)", reply._errorCode, static_cast<int32>( reply._result._result ) );
-            else if ( reply._operation == AccountClientOperation::Login )
+            else if ( reply._operation == AccountMethodName::Login )
                 SW_LOG_INFO_ID( "Shooter.OnlineLoggedIn", "[Shooter] online login done" );
         }
         pollMatches( session );

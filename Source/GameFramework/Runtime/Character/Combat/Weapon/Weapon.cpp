@@ -109,7 +109,7 @@ namespace sw
         return true;
     }
 
-    bool WeaponCatalog::checkProjectiles( const ProjectileCatalog& projectiles ) const
+    bool WeaponCatalog::validateProjectiles( const ProjectileCatalog& projectiles ) const
     {
         bool bComplete = true;
         for ( const WeaponDef& weapon : getAll() )

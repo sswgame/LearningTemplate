@@ -535,7 +535,7 @@ namespace sw
         return _listRuntime.back().get();
     }
 
-    NavMeshRuntime* SceneNavigation::findOrCreateRuntime( const hashed_string& agentType, NavMeshArrival arrival )
+    NavMeshRuntime* SceneNavigation::getOrCreateRuntime( const hashed_string& agentType, NavMeshArrival arrival )
     {
         NavMeshRuntime* pRuntime = findRuntime( agentType );
         return pRuntime != nullptr ? pRuntime : createRuntime( agentType, arrival );
@@ -544,7 +544,7 @@ namespace sw
     const INavMeshTileStore* SceneNavigation::ensureNavMesh( const hashed_string& agentType )
     {
         // 도구 · 테스트 · 쿠킹이 "지금" 마련하는 길이다 — 결과를 그 자리에서 쓰므로 메시를 그 자리에서 읽는다(갱신은 `Defer` 로 기다리지 않는다).
-        NavMeshRuntime* pRuntime = findOrCreateRuntime( agentType, NavMeshArrival::Wait );
+        NavMeshRuntime* pRuntime = getOrCreateRuntime( agentType, NavMeshArrival::Wait );
         return pRuntime != nullptr ? pRuntime->_pNavMesh.get() : nullptr;
     }
 
@@ -733,12 +733,12 @@ namespace sw
                 // 있게만 한다 — 모르는 종류 · 기하 없음은 createRuntime 이 이미 남긴다. 메시를 읽는 중이면 다음 갱신이 다시 마련한다(게임 스레드가 디스크를 기다리지 않는다).
                 if ( pSurface->getAgentTypes().empty() )
                 {
-                    (void)findOrCreateRuntime( hashed_string{}, NavMeshArrival::Defer );
+                    (void)getOrCreateRuntime( hashed_string{}, NavMeshArrival::Defer );
                     continue;
                 }
                 for ( const hashed_string& agentType : pSurface->getAgentTypes() )
                 {
-                    (void)findOrCreateRuntime( agentType, NavMeshArrival::Defer );
+                    (void)getOrCreateRuntime( agentType, NavMeshArrival::Defer );
                 }
             }
         }
@@ -990,7 +990,7 @@ namespace sw
             }
             NavMeshRuntime* pRuntime = agent._crowdIndex < _listRuntime.size() ? _listRuntime[agent._crowdIndex].get() : nullptr;
             if ( pRuntime == nullptr )
-                pRuntime = findOrCreateRuntime( agent._agentType, NavMeshArrival::Defer );
+                pRuntime = getOrCreateRuntime( agent._agentType, NavMeshArrival::Defer );
             // 기하의 메시를 아직 읽는 중이라 마련을 미뤘다 — 실패로 두지 않고 다음 갱신에 다시 마련한다(목적지는 그대로 기다린다).
             if ( pRuntime == nullptr && _waitingMeshCount > 0 )
                 continue;

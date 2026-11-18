@@ -1,7 +1,7 @@
 /**
  * @file AudioGraphPanel.h
  * @brief 소리 그래프 창입니다(Window > Audio Graph). `*.audiograph.xml` 문서 하나를 캔버스(노드 · 연결)와 속성 그리드로 고치고, 검사를 통과하면 저장하며, 미리 들어 봅니다.
- * @details 그래프 사본 · 고른 노드 · 편집 명령 · 미리 듣기는 `AudioGraphModel`(Model/, ImGui 없음)이 들고, 이 창은 캔버스 · 그리드 그리기만 든다.
+ * @details 그래프 사본 · 고른 노드 · 편집 명령 · 미리 듣기는 `AudioGraphViewModel`(Model/, ImGui 없음)이 들고, 이 창은 캔버스 · 그리드 그리기만 든다.
  *          여닫기 · dirty · 되돌리기 · 닫기 확인은 문서 기반(`EditorDocumentPanel`)이다 — 예전에는 경로 입력란과 자기 dirty 를 따로 들어 Ctrl+S · 닫기 확인 · 되돌리기가 이 창의 편집을 보지 못했다.
  */
 #pragma once
@@ -10,7 +10,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
-#include "Editor/Panels/AudioGraph/Model/AudioGraphModel.h"
+#include "Editor/Panels/AudioGraph/Model/AudioGraphViewModel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
 namespace sw
@@ -25,7 +25,7 @@ namespace sw::editor
     /**
      * @class AudioGraphPanel
      * @brief 언리얼 MetaSounds 편집기의 자리입니다. 왼쪽 캔버스가 노드를 놓고 잇고(오른쪽 클릭으로 노드 넣기, Delete 로 지우기), 오른쪽이 그래프 설정과 고른 노드의 값을 고칩니다.
-     * @details 캔버스와 그리드는 같은 사본(`AudioGraphModel::editGraph`)을 고친다. 연결의 기준은 받는 노드의 입력 목록이고 캔버스 링크는 그것을 그린 것이다(`AudioGraphEditUtil`).
+     * @details 캔버스와 그리드는 같은 사본(`AudioGraphViewModel::editGraph`)을 고친다. 연결의 기준은 받는 노드의 입력 목록이고 캔버스 링크는 그것을 그린 것이다(`AudioGraphEditUtil`).
      *          노드 위치는 데이터(`_editorPosition`)에 실린다. "저장" 은 검사를 통과할 때만 쓴다(`AudioGraphDef::saveToAsset`). 엔진이 이미 읽은 그래프는 저장한 파일을
      *          에셋 핫 리로드(`IAudioService::reloadDataFile` → `AudioClipCache::reloadClip`)가 다시 굳히고, 재생 중인 소리는 옛 그래프로 끝난다.
      *          "미리 듣기" 는 저장된 파일을 2D 로 한 번 낸다(`AudioEngine::playClip`, 버스 `ui`).
@@ -70,10 +70,10 @@ namespace sw::editor
         void onGraphEdited( const PropertyInfo& prop );
 
     private:
-        AudioGraphModel    _model;
-        EditorNodeGraph    _nodeGraph; ///< 캔버스
-        EditorPropertyGrid _graphGrid; ///< 그래프 설정(출력 · 길이)의 그리드
-        EditorPropertyGrid _nodeGrid;  ///< 고른 노드의 그리드
-        EditorGraphRemoval _removal;   ///< 이번 프레임에 캔버스가 지운 것(멤버로 두어 프레임마다 할당하지 않는다)
+        AudioGraphViewModel _model;
+        EditorNodeGraph     _nodeGraph; ///< 캔버스
+        EditorPropertyGrid  _graphGrid; ///< 그래프 설정(출력 · 길이)의 그리드
+        EditorPropertyGrid  _nodeGrid;  ///< 고른 노드의 그리드
+        EditorGraphRemoval  _removal;   ///< 이번 프레임에 캔버스가 지운 것(멤버로 두어 프레임마다 할당하지 않는다)
     };
 } // namespace sw::editor

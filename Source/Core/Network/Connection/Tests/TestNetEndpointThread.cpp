@@ -88,13 +88,13 @@ SW_TEST_CASE( NetEndpointThreadTest, ThreadedHostsConnectAsyncAndExchangeWithout
     // 서버 → 클라이언트, 클라이언트 → 서버 신뢰 메시지 — 받는 쪽은 게임 스레드에서 꺼내기만 한다.
     for ( int32 index = 0; index < 50; ++index )
     {
-        SW_REQUIRE_TRUE( cluster.getServer().sendMessage( 0, NetChannelType::ReliableOrdered, NetEndpointThreadTestInternal::makeTaggedMessage( 1, index ) ) );
-        SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, NetEndpointThreadTestInternal::makeTaggedMessage( 2, index ) ) );
+        SW_REQUIRE_TRUE( cluster.getServer().sendMessage( 0, NetChannelKind::ReliableOrdered, NetEndpointThreadTestInternal::makeTaggedMessage( 1, index ) ) );
+        SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelKind::ReliableOrdered, NetEndpointThreadTestInternal::makeTaggedMessage( 2, index ) ) );
     }
     int32          clientReceived = 0;
     int32          serverReceived = 0;
     int32          connectionID   = -1;
-    NetChannelType channel        = NetChannelType::Unreliable;
+    NetChannelKind channel        = NetChannelKind::Unreliable;
     vector<uint8>  buffer;
     const bool     bAllReceived = test::waitUntil( [&]()
     {
@@ -149,7 +149,7 @@ SW_TEST_CASE( NetEndpointThreadTest, GameThreadsSendAndReceiveConcurrently )
             {
                 const vector<uint8> message = NetEndpointThreadTestInternal::makeTaggedMessage( sender, sequence );
                 // 신뢰 창이 차면 거절된다 — 잠깐 쉬었다가 다시(보내는 속도를 줄이는 쪽은 게임이다).
-                while ( client.trySendMessage( 0, NetChannelType::ReliableOrdered, message ) == false )
+                while ( client.trySendMessage( 0, NetChannelKind::ReliableOrdered, message ) == false )
                 {
                     ThreadUtil::sleepForMicroseconds( 200 );
                 }
@@ -172,7 +172,7 @@ SW_TEST_CASE( NetEndpointThreadTest, GameThreadsSendAndReceiveConcurrently )
         listReceiver.emplace_back( ThreadTestAccess::getKey(), [&, receiver]()
         {
             int32          connectionID = -1;
-            NetChannelType channel      = NetChannelType::Unreliable;
+            NetChannelKind channel      = NetChannelKind::Unreliable;
             vector<uint8>  buffer;
             while ( bStop.load() == false )
             {
@@ -253,11 +253,11 @@ SW_TEST_CASE( NetEndpointThreadTest, ConnectionsChurnWhileGameThreadsSendAndPoll
             server.collectConnected( listConnection );
             for ( const int32 connectionID : listConnection )
             {
-                (void)server.trySendMessage( connectionID, NetChannelType::ReliableOrdered, NetEndpointThreadTestInternal::makeTaggedMessage( connectionID, sequence ) );
-                (void)server.sendMessage( connectionID, NetChannelType::Unreliable, NetEndpointThreadTestInternal::makeTaggedMessage( connectionID, sequence ) );
+                (void)server.trySendMessage( connectionID, NetChannelKind::ReliableOrdered, NetEndpointThreadTestInternal::makeTaggedMessage( connectionID, sequence ) );
+                (void)server.sendMessage( connectionID, NetChannelKind::Unreliable, NetEndpointThreadTestInternal::makeTaggedMessage( connectionID, sequence ) );
             }
             const vector<uint8> message = NetEndpointThreadTestInternal::makeTaggedMessage( -1, sequence );
-            (void)server.broadcast( NetChannelType::Unreliable, message.data(), static_cast<int32>( message.size() ) );
+            (void)server.broadcast( NetChannelKind::Unreliable, message.data(), static_cast<int32>( message.size() ) );
             ++sequence;
             ThreadUtil::sleepForMilliseconds( 1 ); // 클라이언트는 꺼내지 않는다 — 받은 큐 상한(1 MiB)에 닿지 않을 만큼만
         }
@@ -353,7 +353,7 @@ SW_TEST_CASE( NetEndpointThreadTest, ConnectionsSurviveStalledGameThread )
     constexpr int32 kStallMessageCount = 10;
     for ( int32 index = 0; index < kStallMessageCount; ++index )
     {
-        SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, NetEndpointThreadTestInternal::makeTaggedMessage( 9, index ) ) );
+        SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelKind::ReliableOrdered, NetEndpointThreadTestInternal::makeTaggedMessage( 9, index ) ) );
     }
     // 멈춤 자체가 이 케이스의 입력이다 — 게임 스레드는 연결 타임아웃(0.5 초)의 두 배 동안 아무것도 부르지 않는다.
     ThreadUtil::sleepForMilliseconds( 1000 );
@@ -370,7 +370,7 @@ SW_TEST_CASE( NetEndpointThreadTest, ConnectionsSurviveStalledGameThread )
     SW_EXPECT_TRUE( stats._rtt > 0.0f && stats._rtt < static_cast<float32>( settings._timeoutSeconds ) );
     int32          received     = 0;
     int32          connectionID = -1;
-    NetChannelType channel      = NetChannelType::Unreliable;
+    NetChannelKind channel      = NetChannelKind::Unreliable;
     vector<uint8>  buffer;
     SW_EXPECT_TRUE( test::waitUntil( [&]()
     {
@@ -410,11 +410,11 @@ SW_TEST_CASE( NetEndpointThreadTest, UDPHostsRunOnThreadsOverLocalhost )
     SW_REQUIRE_TRUE( future.get().isConnected() );
     for ( int32 index = 0; index < 20; ++index )
     {
-        SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, NetEndpointThreadTestInternal::makeTaggedMessage( 7, index ) ) );
+        SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelKind::ReliableOrdered, NetEndpointThreadTestInternal::makeTaggedMessage( 7, index ) ) );
     }
     int32          received     = 0;
     int32          connectionID = -1;
-    NetChannelType channel      = NetChannelType::Unreliable;
+    NetChannelKind channel      = NetChannelKind::Unreliable;
     vector<uint8>  buffer;
     SW_EXPECT_TRUE( test::waitUntil( [&]()
     {
@@ -457,12 +457,12 @@ SW_TEST_CASE( NetEndpointThreadTest, LargeReliableMessagesCrossHostThreads )
         {
             message[index] = static_cast<uint8>( index * 7u + static_cast<size_t>( size ) );
         }
-        SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, message ) );
+        SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelKind::ReliableOrdered, message ) );
         listSent.push_back( std::move( message ) );
     }
     vector<vector<uint8>> listReceived;
     int32                 connectionID = -1;
-    NetChannelType        channel      = NetChannelType::Unreliable;
+    NetChannelKind        channel      = NetChannelKind::Unreliable;
     vector<uint8>         buffer;
     const bool            bAllReceived = test::waitUntil( [&]()
     {
@@ -496,9 +496,9 @@ SW_TEST_CASE( NetEndpointThreadTest, SendRateCapHoldsOnHostThreads )
 
     const vector<uint8> message( static_cast<size_t>( NetConnection::kMaxReliableMessageSize ), static_cast<uint8>( 0x5A ) );
     const Stopwatch     stopwatch;
-    SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, message ) );
+    SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelKind::ReliableOrdered, message ) );
     int32          connectionID = -1;
-    NetChannelType channel      = NetChannelType::Unreliable;
+    NetChannelKind channel      = NetChannelKind::Unreliable;
     vector<uint8>  buffer;
     SW_REQUIRE_TRUE( test::waitUntil( [&]()
     { return cluster.getServer().receiveMessage( connectionID, channel, buffer ); }, 5.0 ) );

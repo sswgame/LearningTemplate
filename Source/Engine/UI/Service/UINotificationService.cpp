@@ -252,7 +252,7 @@ namespace sw
             return;
         }
         UIDocumentCache&                                  documents = engine::getSubsystem<UIDocumentCache>();
-        const expected<shared_ptr<const UIDocumentAsset>> document  = documents.findOrLoad( _pUI->getEngineDocuments()._notificationEntry );
+        const expected<shared_ptr<const UIDocumentAsset>> document  = documents.acquire( _pUI->getEngineDocuments()._notificationEntry );
         vector<UIBindingDef>                              listBinding;
         expected<unique_ptr<Widget>>                      built = document.has_value() ? UIDocumentLoader::instantiate( **document, documents, ResourceTagSet{}, listBinding ) : unexpected( document.error() );
         if ( built.has_value() == false )

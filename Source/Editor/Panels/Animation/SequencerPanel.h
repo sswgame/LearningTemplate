@@ -8,7 +8,7 @@
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditorState.h"
 #include "Editor/Panels/Animation/Model/SequenceClipTiming.h"
-#include "Editor/Panels/Animation/Model/SequenceModel.h"
+#include "Editor/Panels/Animation/Model/SequenceEditModel.h"
 #include "Editor/Panels/Animation/Model/SequencerViewModel.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -54,7 +54,7 @@ namespace sw::editor
         /** @brief 고른 키 트랙의 키 프레임 수입니다(채널마다 같은 프레임의 키는 하나로 센다). 고른 트랙이 없으면 false 입니다. */
         [[nodiscard]] bool findSelectedTrackKeyFrameCount( uint32& outCount ) const;
         /** @brief 편집 중인 문서입니다(감시 값 · 테스트가 읽는다). */
-        const SequenceModel& getDocument() const { return _document; }
+        const SequenceEditModel& getDocument() const { return _document; }
         /** @brief 바인딩 문맥(이 시퀀스를 트는 플레이어)에서 묶이지 않은 바인딩 수입니다. 문맥이 없으면 모든 바인딩입니다. */
         [[nodiscard]] uint32 countUnboundBindings() const;
 
@@ -122,7 +122,7 @@ namespace sw::editor
         void addKeyTrack( SequenceTrackKind kind );
 
     private:
-        SequenceModel                  _document; ///< 애셋 · 고른 번호(`_sequence` 가 참조하므로 먼저 선언한다)
+        SequenceEditModel              _document; ///< 애셋 · 고른 번호(`_sequence` 가 참조하므로 먼저 선언한다)
         unique_ptr<ClipSequence>       _sequence;
         unique_ptr<sw::SequencePlayer> _previewPlayer;
         vector<SequenceClipTiming>     _listTimingBefore; ///< 타임라인 위젯을 부르기 전 배치(멤버라 프레임마다 할당하지 않는다)

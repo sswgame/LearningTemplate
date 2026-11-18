@@ -48,7 +48,7 @@ namespace sw
         , _listTablePoint{}
         , _length{ 0.0f }
         , _segmentCount{ 0 }
-        , _type{ SplineType::CatmullRom }
+        , _type{ SplineKind::CatmullRom }
         , _bClosed{ SW_FALSE }
     {
     }
@@ -61,7 +61,7 @@ namespace sw
         _segmentCount = 0;
     }
 
-    bool SplinePath::initialize( const vector<float3>& listControlPoint, SplineType type, bool bClosed, int32 samplesPerSegment )
+    bool SplinePath::initialize( const vector<float3>& listControlPoint, SplineKind type, bool bClosed, int32 samplesPerSegment )
     {
         clear();
         _type             = type;
@@ -70,13 +70,13 @@ namespace sw
         int32       segmentCount{ 0 };
         switch ( type )
         {
-            case SplineType::CatmullRom:
-            case SplineType::Linear:
+            case SplineKind::CatmullRom:
+            case SplineKind::Linear:
             {
                 segmentCount = count < 2 ? 0 : ( bClosed ? count : count - 1 );
                 break;
             }
-            case SplineType::Bezier:
+            case SplineKind::Bezier:
             {
                 const bool bOpenShape   = bClosed == false && count >= 4 && ( count - 1 ) % 3 == 0;
                 const bool bClosedShape = bClosed && count >= 3 && count % 3 == 0;
@@ -136,18 +136,18 @@ namespace sw
         splitParameter( parameter, segment, t );
         switch ( _type )
         {
-            case SplineType::CatmullRom:
+            case SplineKind::CatmullRom:
             {
                 return SplinePathInternal::evaluateCatmullRom( getControlPointWrapped( segment - 1 ), getControlPointWrapped( segment ), getControlPointWrapped( segment + 1 ),
                                                                getControlPointWrapped( segment + 2 ), t );
             }
-            case SplineType::Bezier:
+            case SplineKind::Bezier:
             {
                 const int32 base = segment * 3;
                 return SplinePathInternal::evaluateBezier( getControlPointWrapped( base ), getControlPointWrapped( base + 1 ), getControlPointWrapped( base + 2 ),
                                                            getControlPointWrapped( base + 3 ), t );
             }
-            case SplineType::Linear:
+            case SplineKind::Linear:
             {
                 return float3::lerp( getControlPointWrapped( segment ), getControlPointWrapped( segment + 1 ), t );
             }
@@ -164,18 +164,18 @@ namespace sw
         splitParameter( parameter, segment, t );
         switch ( _type )
         {
-            case SplineType::CatmullRom:
+            case SplineKind::CatmullRom:
             {
                 return SplinePathInternal::evaluateCatmullRomDerivative( getControlPointWrapped( segment - 1 ), getControlPointWrapped( segment ),
                                                                          getControlPointWrapped( segment + 1 ), getControlPointWrapped( segment + 2 ), t );
             }
-            case SplineType::Bezier:
+            case SplineKind::Bezier:
             {
                 const int32 base = segment * 3;
                 return SplinePathInternal::evaluateBezierDerivative( getControlPointWrapped( base ), getControlPointWrapped( base + 1 ), getControlPointWrapped( base + 2 ),
                                                                      getControlPointWrapped( base + 3 ), t );
             }
-            case SplineType::Linear:
+            case SplineKind::Linear:
             {
                 return getControlPointWrapped( segment + 1 ) - getControlPointWrapped( segment );
             }

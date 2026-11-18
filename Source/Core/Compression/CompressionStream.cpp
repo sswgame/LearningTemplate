@@ -28,7 +28,7 @@ namespace sw
              *          (2) 알 수 없는 `_codecType` 이 든 스트림도 "해제" 해, 체크섬 플래그가 꺼진 스트림이면 그 쓰레기가 **성공으로** 반환됩니다.
              *          내장 코덱으로 대신하는 것은 실제로 구현된 두 가지(None · RLE)뿐입니다.
              */
-            static ICompressionCodec* findCodec( CompressionCodecType type, const CompressionCodecRegistry* pRegistry )
+            static ICompressionCodec* findCodec( CompressionCodecKind type, const CompressionCodecRegistry* pRegistry )
             {
                 if ( pRegistry == nullptr )
                     pRegistry = CompressionCodecRegistry::getActive();
@@ -39,9 +39,9 @@ namespace sw
                         return pCodec;
                 }
 
-                if ( type == CompressionCodecType::None )
+                if ( type == CompressionCodecKind::None )
                     return &s_nullCodec;
-                if ( type == CompressionCodecType::RLE )
+                if ( type == CompressionCodecKind::RLE )
                     return &s_rleCodec;
 
                 return nullptr;
@@ -116,7 +116,7 @@ namespace sw
     bool CompressionStream::compressBuffer( const void*                     pSrc,
                                             size_t                          srcSize,
                                             vector<uint8>&                  outBytes,
-                                            CompressionCodecType            codecType,
+                                            CompressionCodecKind            codecType,
                                             int32                           compressionLevel,
                                             const CompressionCodecRegistry* pRegistry )
     {

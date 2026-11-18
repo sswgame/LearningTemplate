@@ -25,7 +25,7 @@ namespace sw
 
     /** @brief 이벤트가 클립을 고르는 방식입니다. */
     ENUM()
-    enum class AudioContainerType : uint8
+    enum class AudioContainerKind : uint8
     {
         Random = 0, ///< 가중치로 하나를 고른다(바로 앞에 낸 것은 피한다. `_bAvoidRepeat`).
         Sequence,   ///< 적은 순서대로 하나씩 낸다. 끝나면 처음으로 돌아가며 이벤트마다 커서를 둔다.
@@ -172,7 +172,7 @@ namespace sw
         PROPERTY( Min = 0, Max = 100, Tooltip = "Higher keeps a real voice when voices run out" )
         int32 _priority{ 50 };
         PROPERTY( Tooltip = "Clip choice" )
-        AudioContainerType _container{ AudioContainerType::Random };
+        AudioContainerKind _container{ AudioContainerKind::Random };
         PROPERTY( Tooltip = "What to do when the instance limit is reached" )
         AudioStealPolicy _steal{ AudioStealPolicy::Oldest };
         PROPERTY( Tooltip = "What to do when inaudible or out of real voices" )

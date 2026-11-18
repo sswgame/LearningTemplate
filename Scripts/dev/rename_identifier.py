@@ -44,7 +44,8 @@ from common.rename_scope import (  # noqa: E402
 
 ROOTS = ("Source", "Content", "Config", "docs", "Scripts", "Test", "cmake", ".claude/skills", "AGENTS.md", "CLAUDE.md", "CMakeLists.txt", "CMakePresets.json", "ThirdParty")
 TEXT_SUFFIXES = {".h", ".cpp", ".inl", ".hlsl", ".hlsli", ".py", ".md", ".json", ".xml", ".txt", ".cmake", ".material", ".ini", ".toml", ".yaml", ".yml",
-                 ".in", ".manifest"}   # .in · .manifest: cmake/Templates
+                 ".in", ".manifest",   # .in · .manifest: cmake/Templates
+                 ".po", ".xxx", ".natvis", ".tpl"}   # move_source.TEXT_SUFFIX 와 같은 범위 — .po 가 빠져 파일 이름을 바꾼 개명이 번역 파일의 출처 줄(`#: Source/…`)을 남겼다
 # ThirdParty 는 우리 감싸기(`ThirdParty/<lib>/CMakeLists.txt` — sw_add_vcpkg_package 를 부른다)만 본다. vcpkg 포트(`vcpkg-port/`)는 남의 코드다.
 SKIP_PARTS = {"vcpkg-port", "build", ".git", "graphify-out", "__pycache__", "node_modules"}
 CMAKE_SCOPE = "cmake"

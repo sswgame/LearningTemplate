@@ -42,7 +42,7 @@ namespace sw
         return _pParse( text, path, ResourceContext::forDocument().withAsset( AssetID{ path } ).withTagOverride( tagOverride ) );
     }
 
-    expected<shared_ptr<const void>> UITextAssetCache::findOrLoadAsset( string_view path, const ResourceTagSet& tagOverride )
+    expected<shared_ptr<const void>> UITextAssetCache::acquireAsset( string_view path, const ResourceTagSet& tagOverride )
     {
         const string normalized = AssetRedirect::toCacheKey( path );
         const string key        = makeKey( normalized, tagOverride );

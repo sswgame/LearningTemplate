@@ -298,7 +298,7 @@ namespace sw
             const ModManifest& manifest = listManifest[manifestIndex];
             string             packPath;
             ModDigestEntry     entry;
-            if ( preparePack( request, manifest, settings, packPath ) == false || checkPack( packPath, manifest, settings, entry._contentHash ) == false )
+            if ( preparePack( request, manifest, settings, packPath ) == false || validatePack( packPath, manifest, settings, entry._contentHash ) == false )
             {
                 release();
                 return false;
@@ -309,7 +309,7 @@ namespace sw
             listPackPath.push_back( std::move( packPath ) );
         }
         const ModSetDigest digest = ModSetDigest::make( std::move( listEntry ) );
-        if ( request._pAllowList != nullptr && request._pAllowList->checkDigest( digest ) == false )
+        if ( request._pAllowList != nullptr && request._pAllowList->validateDigest( digest ) == false )
         {
             release();
             return false;
@@ -528,7 +528,7 @@ namespace sw
         return true;
     }
 
-    bool ModSession::checkPack( string_view packPath, const ModManifest& manifest, const ModSupportSettings& settings, uint64& outContentHash )
+    bool ModSession::validatePack( string_view packPath, const ModManifest& manifest, const ModSupportSettings& settings, uint64& outContentHash )
     {
         uint64 packSize = 0;
         if ( FileUtil::tryGetFileSize( packPath, packSize ) == false || packSize > settings._maxPackBytes )
@@ -652,12 +652,12 @@ namespace sw
 
     SW_AUTOMATION_WATCH( modActiveCount, "Mods.ActiveCount", "Mods mounted for this game session", &ModSessionInternal::readActiveCount );
 
-    bool ModSession::checkSaveCompatible( string_view savedText ) const
+    bool ModSession::validateSaveCompatible( string_view savedText ) const
     {
         // 세이브 머리는 신뢰하지 않는 파일의 글이다 — 읽지 못하면 거절한다(구성을 짐작하지 않는다).
         ModSetDigest saved;
         if ( ModSetDigest::parseText( savedText, saved ) == false )
             return false;
-        return _digest.checkSaveCompatible( saved );
+        return _digest.validateSaveCompatible( saved );
     }
 } // namespace sw

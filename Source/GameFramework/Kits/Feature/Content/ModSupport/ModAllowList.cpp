@@ -72,7 +72,7 @@ namespace sw
         return true;
     }
 
-    bool ModAllowList::checkDigest( const ModSetDigest& digest ) const
+    bool ModAllowList::validateDigest( const ModSetDigest& digest ) const
     {
         for ( const ModDigestEntry& active : digest._listEntry )
         {

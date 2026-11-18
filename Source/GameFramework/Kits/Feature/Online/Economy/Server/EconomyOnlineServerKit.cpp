@@ -4,8 +4,8 @@
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/CurrencyCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"

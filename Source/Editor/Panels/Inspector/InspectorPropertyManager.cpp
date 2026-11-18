@@ -24,7 +24,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -99,7 +99,7 @@ namespace sw::editor
             }
 
             /** @brief 비트필드는 포인터를 잡을 수 없으므로 모델이 값으로 읽어 bool 사본을 준다. 정수 계열과 bool 이 같은 체크박스를 씁니다. */
-            bool drawBitFieldCheckbox( const PropertyValueRow& row, PropertyGridModel& model )
+            bool drawBitFieldCheckbox( const PropertyValueRow& row, PropertyGridViewModel& model )
             {
                 const bool* pValue = findRowValue<bool>( row );
                 if ( pValue == nullptr )
@@ -123,7 +123,7 @@ namespace sw::editor
              *          키 입력마다 인턴하면 그 문자열이 모두 테이블에 남기 때문이다. 드롭과 지우기의 처리도 호출하는 쪽이 한다(받는 종류는 모델이 가린다 — `setAssetPath`).
              */
             template <typename DrawInputFn>
-            AssetFieldAction drawAssetPathField( DrawInputFn&& drawInput, const PropertyValueRow& row, PropertyGridModel& model, string_view currentPath, string& outDroppedPath )
+            AssetFieldAction drawAssetPathField( DrawInputFn&& drawInput, const PropertyValueRow& row, PropertyGridViewModel& model, string_view currentPath, string& outDroppedPath )
             {
                 const float32    kButtonWidth = ImGui::GetFrameHeight();
                 AssetFieldAction action       = AssetFieldAction::None;
@@ -199,7 +199,7 @@ namespace sw::editor
             }
 
             /** @brief 끌어 놓기 · 지우기 단추의 결과를 모델에 돌려줍니다. 처리했으면 true 입니다(입력란의 글 편집은 쓰지 않는다). */
-            static bool applyAssetFieldAction( AssetFieldAction action, const PropertyValueRow& row, PropertyGridModel& model, const string& droppedPath )
+            static bool applyAssetFieldAction( AssetFieldAction action, const PropertyValueRow& row, PropertyGridViewModel& model, const string& droppedPath )
             {
                 // 받는 종류(`FileFilter` · `AssetRef<T>` 의 대상 종류)가 아니면 모델이 받지 않는다. 드롭, 선택, 지우기는 모델 명령이라야 알림과 되돌리기에 남는다.
                 if ( action == AssetFieldAction::Dropped )
@@ -463,7 +463,7 @@ namespace sw::editor
             static constexpr bool kIsInteger = std::is_integral_v<T>;
 
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 if ( row._kind == PropertyRowKind::BitField )
                     return drawBitFieldCheckbox( row, model );
@@ -509,7 +509,7 @@ namespace sw::editor
         class CheckboxProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 if ( row._kind == PropertyRowKind::BitField )
                     return drawBitFieldCheckbox( row, model );
@@ -525,7 +525,7 @@ namespace sw::editor
                 T          edited   = *pValue;
                 const bool bChanged = drawValueWidget( kValueWidgetID, edited );
                 showTooltipIfHovered( row );
-                // atomic<bool> 을 되돌리기에서 빼는 일은 모델이 한다(`PropertyGridModel::ensureEditSpan`).
+                // atomic<bool> 을 되돌리기에서 빼는 일은 모델이 한다(`PropertyGridViewModel::ensureEditSpan`).
                 if ( bChanged )
                     model.setRowValue( row._rowID, TaskValue{ std::move( edited ) } );
                 return true;
@@ -537,7 +537,7 @@ namespace sw::editor
         class ValueProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 const T* pValue = findRowValue<T>( row );
                 if ( pValue == nullptr )
@@ -564,7 +564,7 @@ namespace sw::editor
         class ComponentHandleProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 if ( row._bHandlePicker == SW_FALSE )
                     return _untyped.draw( row, model );
@@ -603,7 +603,7 @@ namespace sw::editor
              * @details 고를 수 있는 값은 "(none)" 과 @p targetTypeName 의 열거한 컴포넌트 핸들뿐이다. 목록은 콤보가 열린 프레임에만 @p inoutListChoice 에 모은다.
              * @return 지금 값과 다른 것을 골랐으면 true 이고 @p outPicked 에 담습니다.
              */
-            static bool drawPicker( const utf8* pLabel, const string& preview, InspectorHandleState state, ComponentHandle current, const PropertyGridModel& model,
+            static bool drawPicker( const utf8* pLabel, const string& preview, InspectorHandleState state, ComponentHandle current, const PropertyGridViewModel& model,
                                     const hashed_string& targetTypeName, vector<InspectorComponentChoice>& inoutListChoice, ComponentHandle& outPicked )
             {
                 const bool bColored = state == InspectorHandleState::Missing || state == InspectorHandleState::WrongType;
@@ -647,7 +647,7 @@ namespace sw::editor
         class StringProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 const string* pValue = findRowValue<string>( row );
                 if ( pValue == nullptr )
@@ -683,7 +683,7 @@ namespace sw::editor
         class HashedStringProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 const hashed_string* pValue = findRowValue<hashed_string>( row );
                 if ( pValue == nullptr )
@@ -723,7 +723,7 @@ namespace sw::editor
         class AssetRefProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 if ( row._bReadOnly != SW_FALSE )
                 {
@@ -754,7 +754,7 @@ namespace sw::editor
         class Float3Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 const float3* pValue = findRowValue<float3>( row );
                 if ( pValue == nullptr )
@@ -788,7 +788,7 @@ namespace sw::editor
         class Float2Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 const float2* pValue = findRowValue<float2>( row );
                 if ( pValue == nullptr )
@@ -810,7 +810,7 @@ namespace sw::editor
         class Float4Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 const float4* pValue = findRowValue<float4>( row );
                 if ( pValue == nullptr )
@@ -927,7 +927,7 @@ namespace sw::editor
         registerType( AssetRefBase::kTypeName, make_unique<AssetRefProperty>() );
     }
 
-    bool InspectorPropertyManager::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const PropertyGridModel& model,
+    bool InspectorPropertyManager::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const PropertyGridViewModel& model,
                                                   vector<InspectorComponentChoice>& inoutListChoice )
     {
         if ( slot._value.hasValue() == false || slot._builtinIndex >= std::size( kArrDrawMethodArg ) )

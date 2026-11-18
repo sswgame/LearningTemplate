@@ -41,7 +41,7 @@ namespace sw
 
             [[nodiscard]] static bool readValue( BitReader& reader, RemoteConfigValue& outValue )
             {
-                outValue._type        = static_cast<RemoteConfigValueType>( reader.readBits( kTypeBitCount ) );
+                outValue._type        = static_cast<RemoteConfigValueKind>( reader.readBits( kTypeBitCount ) );
                 outValue._integer     = reader.readVarInt();
                 const uint64 lowBits  = reader.readUint32();
                 const uint64 highBits = reader.readUint32();
@@ -57,12 +57,12 @@ namespace sw
 
             static bool isValidValue( const RemoteConfigValue& value )
             {
-                const bool bBasicOk = value._type <= RemoteConfigValueType::Experiment && value._text.size() <= static_cast<size_t>( RemoteConfigValue::kMaxTextSize ) &&
+                const bool bBasicOk = value._type <= RemoteConfigValueKind::Experiment && value._text.size() <= static_cast<size_t>( RemoteConfigValue::kMaxTextSize ) &&
                                       0 <= value._rolloutBasisPoints && value._rolloutBasisPoints <= RemoteConfigValue::kFullRolloutPoints;
                 if ( bBasicOk == false )
                     return false;
                 vector<RemoteConfigVariant> listVariant;
-                return value._type != RemoteConfigValueType::Experiment || RemoteConfig::parseVariants( value._text, listVariant );
+                return value._type != RemoteConfigValueKind::Experiment || RemoteConfig::parseVariants( value._text, listVariant );
             }
 
             static bool isCodeText( string_view text )
@@ -211,7 +211,7 @@ namespace sw
 
     bool RemoteConfig::findInteger( string_view key, int64& outValue ) const
     {
-        const Entry* pEntry = findEntry( key, RemoteConfigValueType::Integer );
+        const Entry* pEntry = findEntry( key, RemoteConfigValueKind::Integer );
         if ( pEntry == nullptr )
             return false;
         outValue = pEntry->_value._integer;
@@ -220,7 +220,7 @@ namespace sw
 
     bool RemoteConfig::findReal( string_view key, float64& outValue ) const
     {
-        const Entry* pEntry = findEntry( key, RemoteConfigValueType::Real );
+        const Entry* pEntry = findEntry( key, RemoteConfigValueKind::Real );
         if ( pEntry == nullptr )
             return false;
         outValue = pEntry->_value._real;
@@ -229,7 +229,7 @@ namespace sw
 
     bool RemoteConfig::findText( string_view key, string& outValue ) const
     {
-        const Entry* pEntry = findEntry( key, RemoteConfigValueType::Text );
+        const Entry* pEntry = findEntry( key, RemoteConfigValueKind::Text );
         if ( pEntry == nullptr )
             return false;
         outValue = pEntry->_value._text;
@@ -238,7 +238,7 @@ namespace sw
 
     bool RemoteConfig::isFeatureEnabled( string_view flag, uint64 accountID, bool bDefault ) const
     {
-        const Entry* pEntry = findEntry( flag, RemoteConfigValueType::Flag );
+        const Entry* pEntry = findEntry( flag, RemoteConfigValueKind::Flag );
         if ( pEntry == nullptr )
             return bDefault;
         if ( pEntry->_value._integer == 0 )
@@ -335,7 +335,7 @@ namespace sw
 
     bool RemoteConfig::findVariant( string_view experiment, uint64 accountID, string& outVariant ) const
     {
-        const Entry* pEntry = findEntry( experiment, RemoteConfigValueType::Experiment );
+        const Entry* pEntry = findEntry( experiment, RemoteConfigValueKind::Experiment );
         if ( pEntry == nullptr )
             return false;
         vector<RemoteConfigVariant> listVariant;
@@ -367,7 +367,7 @@ namespace sw
         return static_cast<int32>( HashUtil::mix64( hash ) % static_cast<uint64>( RemoteConfigValue::kFullRolloutPoints ) );
     }
 
-    const RemoteConfig::Entry* RemoteConfig::findEntry( string_view key, RemoteConfigValueType type ) const
+    const RemoteConfig::Entry* RemoteConfig::findEntry( string_view key, RemoteConfigValueKind type ) const
     {
         const auto entryIt = _mapEntry.find( key );
         if ( entryIt == _mapEntry.end() || entryIt->second._value._type != type )

@@ -177,7 +177,7 @@ namespace sw
             }
 
             /** @brief 폴더의 `.sql` 이 모두 목록의 마이그레이션(공통이나 방언 분기)인지 대조합니다. */
-            [[nodiscard]] static expected<void> checkFolderMatchesList( string_view folder, const vector<ListEntry>& listEntry )
+            [[nodiscard]] static expected<void> validateFolderMatchesList( string_view folder, const vector<ListEntry>& listEntry )
             {
                 vector<AssetID> listFilePath;
                 if ( expected<void> result = collectMigrationFiles( folder, listFilePath ); result.has_value() == false )
@@ -216,7 +216,7 @@ namespace sw
         vector<SQLMigrationRunnerInternal::ListEntry> listEntry;
         if ( expected<void> result = SQLMigrationRunnerInternal::readList( folder, listEntry ); result.has_value() == false )
             return result;
-        if ( expected<void> result = SQLMigrationRunnerInternal::checkFolderMatchesList( folder, listEntry ); result.has_value() == false )
+        if ( expected<void> result = SQLMigrationRunnerInternal::validateFolderMatchesList( folder, listEntry ); result.has_value() == false )
             return result;
         for ( size_t stemIndex = 0; stemIndex < listEntry.size(); ++stemIndex )
         {

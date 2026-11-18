@@ -3,7 +3,7 @@
  * @brief 바이너리 아카이브를 읽고 쓰는 클래스입니다. 리플렉션 직렬화는 선택입니다.
  */
 #pragma once
-#include "Core/Compression/CompressionCodecType.h"
+#include "Core/Compression/CompressionCodecKind.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -244,17 +244,17 @@ namespace sw
         // 2) 압축 섹션 및 압축 객체 직렬화 (CompressionStream / BinarySerializer 연계)
         // ------------------------------------------------------------------------------
         /** @brief 압축 코덱을 적용해 페이로드 블록을 기록합니다. */
-        [[nodiscard]] bool writeCompressedSection( const void* pData, uint32 byteSize, CompressionCodecType codecType = CompressionCodecType::RLE );
+        [[nodiscard]] bool writeCompressedSection( const void* pData, uint32 byteSize, CompressionCodecKind codecType = CompressionCodecKind::RLE );
         /** @brief 압축된 페이로드 블록을 읽고 원본 바이트로 복원합니다. */
         [[nodiscard]] bool readCompressedSection( vector<uint8>& outBytes );
 
         /** @brief 객체를 압축 바이너리로 직렬화해 기록합니다. */
-        [[nodiscard]] bool serializeCompressedObject( const void* pInstance, const TypeInfo& typeInfo, CompressionCodecType codecType = CompressionCodecType::RLE );
+        [[nodiscard]] bool serializeCompressedObject( const void* pInstance, const TypeInfo& typeInfo, CompressionCodecKind codecType = CompressionCodecKind::RLE );
         /** @brief 아카이브의 압축 바이너리에서 객체를 역직렬화합니다. */
         [[nodiscard]] bool deserializeCompressedObject( void* pInstance, const TypeInfo& typeInfo );
 
         template <typename T>
-        [[nodiscard]] bool serializeCompressedObject( const T& instance, CompressionCodecType codecType = CompressionCodecType::RLE )
+        [[nodiscard]] bool serializeCompressedObject( const T& instance, CompressionCodecKind codecType = CompressionCodecKind::RLE )
         {
             return serializeCompressedObject( &instance, *T::StaticType(), codecType );
         }

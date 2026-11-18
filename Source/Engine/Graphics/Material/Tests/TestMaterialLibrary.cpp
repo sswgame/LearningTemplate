@@ -142,7 +142,7 @@ SW_TEST_CASE( MaterialLibraryTest, RootDeclaresSkinLayerSurfaceMap )
     SW_REQUIRE_TRUE( root->loadFromAsset( AssetID{ MaterialLibraryTestUtil::kRootID } ) );
     bool bDeclared = false;
     for ( const MaterialProperty& property : root->getProperties() )
-        bDeclared = bDeclared || ( property._name == "_skinLayerSurfaceMap" && property._type == MaterialPropertyType::Texture2D ); // GameFramework 의 이름 — Engine 테스트라 글로 적는다
+        bDeclared = bDeclared || ( property._name == "_skinLayerSurfaceMap" && property._type == MaterialPropertyKind::Texture2D ); // GameFramework 의 이름 — Engine 테스트라 글로 적는다
     SW_EXPECT_TRUE( bDeclared );
 }
 

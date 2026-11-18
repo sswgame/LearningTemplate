@@ -215,7 +215,7 @@ namespace sw
                 continue;
             BitWriter& writer = _writer.begin( NetPairedAnimationMessage::kSessionEnd );
             writer.writeVarUint( sessionID );
-            (void)_writer.broadcast( *_pHost, NetChannelType::ReliableOrdered ); // 연결이 없으면 보낼 곳이 없다 — 늦게 들어온 쪽은 재생 중인 세션만 받는다
+            (void)_writer.broadcast( *_pHost, NetChannelKind::ReliableOrdered ); // 연결이 없으면 보낼 곳이 없다 — 늦게 들어온 쪽은 재생 중인 세션만 받는다
             ++_stats._endSentCount;
             SW_LOG_INFO_ID( "PairedAnimationReplication.ServerEnd", "%#", formatEventLine( "server", "end", sessionID, 0.0f ).c_str() );
             _listAnnouncedID.erase( _listAnnouncedID.begin() + static_cast<ptrdiff_t>( index - 1 ) );
@@ -246,7 +246,7 @@ namespace sw
                 ++_stats._unreplicableCount;
                 continue;
             }
-            (void)_writer.broadcast( *_pHost, NetChannelType::ReliableOrdered ); // 연결이 없어도 기록한다 — 나중에 들어온 쪽은 늦은 참가로 받는다
+            (void)_writer.broadcast( *_pHost, NetChannelKind::ReliableOrdered ); // 연결이 없어도 기록한다 — 나중에 들어온 쪽은 늦은 참가로 받는다
             ++_stats._stateSentCount;
             SW_LOG_INFO_ID( "PairedAnimationReplication.ServerStart", "%#", formatEventLine( "server", "start", session.getID(), state._snapshot._anchorTime ).c_str() );
             _listAnnouncedID.push_back( session.getID() );
@@ -267,7 +267,7 @@ namespace sw
                 continue; // 처음에 복제한 세션이라 여기서 실패하지 않는다 — 실패하면 오류는 남겼다
             for ( const int32 connectionID : _listJoiningConnection )
             {
-                if ( _writer.send( *_pHost, connectionID, NetChannelType::ReliableOrdered ) )
+                if ( _writer.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered ) )
                 {
                     ++_stats._stateSentCount;
                     SW_LOG_INFO_ID( "PairedAnimationReplication.ServerJoin", "%#", formatEventLine( "server", "join", sessionID, state._snapshot._anchorTime ).c_str() );

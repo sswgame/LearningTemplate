@@ -36,13 +36,13 @@ namespace sw
     /** @brief 턴 중계 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetTurnRelayMessage
     {
-        using Join     = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered>;
-        using Joined   = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
-        using Action   = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered, 3>; ///< 판 3: 행동 상한이 8 KB 이다
-        using Applied  = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 3>;
-        using Rejected = NetMessageDef<4, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
-        using Started  = NetMessageDef<5, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
-        using Denied   = NetMessageDef<6, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
+        using Join     = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>;
+        using Joined   = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
+        using Action   = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, 3>; ///< 판 3: 행동 상한이 8 KB 이다
+        using Applied  = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 3>;
+        using Rejected = NetMessageDef<4, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
+        using Started  = NetMessageDef<5, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
+        using Denied   = NetMessageDef<6, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
         using Table    = NetMessageTable<NetKitMessageRange::kTurnRelay, Join, Joined, Action, Applied, Rejected, Started, Denied>;
 
         static constexpr uint8 kJoin     = Table::getKindOf<Join>();

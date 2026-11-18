@@ -6,7 +6,7 @@
 
 namespace sw
 {
-    AudioBiquadCoefficients AudioBiquadCoefficients::make( AudioBiquadType type, float32 frequencyHz, float32 q, float32 gainDb, float32 sampleRate )
+    AudioBiquadCoefficients AudioBiquadCoefficients::make( AudioBiquadKind type, float32 frequencyHz, float32 q, float32 gainDb, float32 sampleRate )
     {
         const float64 nyquist   = static_cast<float64>( sampleRate ) * 0.5;
         const float64 frequency = MathUtil::clamp( static_cast<float64>( frequencyHz ), 1.0, nyquist * 0.999 );
@@ -25,7 +25,7 @@ namespace sw
         float64 a2 = 0.0;
         switch ( type )
         {
-            case AudioBiquadType::LowPass:
+            case AudioBiquadKind::LowPass:
             {
                 b0 = ( 1.0 - cosOmega ) * 0.5;
                 b1 = 1.0 - cosOmega;
@@ -35,7 +35,7 @@ namespace sw
                 a2 = 1.0 - alpha;
                 break;
             }
-            case AudioBiquadType::HighPass:
+            case AudioBiquadKind::HighPass:
             {
                 b0 = ( 1.0 + cosOmega ) * 0.5;
                 b1 = -( 1.0 + cosOmega );
@@ -45,7 +45,7 @@ namespace sw
                 a2 = 1.0 - alpha;
                 break;
             }
-            case AudioBiquadType::BandPass:
+            case AudioBiquadKind::BandPass:
             {
                 b0 = alpha;
                 b1 = 0.0;
@@ -55,7 +55,7 @@ namespace sw
                 a2 = 1.0 - alpha;
                 break;
             }
-            case AudioBiquadType::Peaking:
+            case AudioBiquadKind::Peaking:
             {
                 b0 = 1.0 + alpha * amplitude;
                 b1 = -2.0 * cosOmega;
@@ -65,7 +65,7 @@ namespace sw
                 a2 = 1.0 - alpha / amplitude;
                 break;
             }
-            case AudioBiquadType::LowShelf:
+            case AudioBiquadKind::LowShelf:
             {
                 const float64 twoSqrtAAlpha = 2.0 * std::sqrt( amplitude ) * alpha;
                 b0                          = amplitude * ( ( amplitude + 1.0 ) - ( amplitude - 1.0 ) * cosOmega + twoSqrtAAlpha );
@@ -76,7 +76,7 @@ namespace sw
                 a2                          = ( amplitude + 1.0 ) + ( amplitude - 1.0 ) * cosOmega - twoSqrtAAlpha;
                 break;
             }
-            case AudioBiquadType::HighShelf:
+            case AudioBiquadKind::HighShelf:
             {
                 const float64 twoSqrtAAlpha = 2.0 * std::sqrt( amplitude ) * alpha;
                 b0                          = amplitude * ( ( amplitude + 1.0 ) + ( amplitude - 1.0 ) * cosOmega + twoSqrtAAlpha );

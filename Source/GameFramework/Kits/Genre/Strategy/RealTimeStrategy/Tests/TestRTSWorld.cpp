@@ -77,7 +77,7 @@ namespace
                 {
                     if ( second == 0 )
                     {
-                        const sw::RTSUnitID mineral = _world.findNearestResource( _world.findUnit( _arrWorker[player][0] )->_position, sw::RTSResourceType::Minerals, 20.0f );
+                        const sw::RTSUnitID mineral = _world.findNearestResource( _world.findUnit( _arrWorker[player][0] )->_position, sw::RTSResourceKind::Minerals, 20.0f );
                         for ( size_t index = 1; index < _arrWorker[player].size(); ++index )
                             (void)_world.issueGather( _arrWorker[player][index], mineral );
                         (void)_world.train( _arrDepot[player], kWorker );
@@ -217,7 +217,7 @@ namespace
             outArchive << resourceLeft;
             outArchive << cargoAmount;
             outArchive << supplyReserved;
-            outArchive << static_cast<uint8>( sw::RTSResourceType::None );
+            outArchive << static_cast<uint8>( sw::RTSResourceKind::None );
             outArchive << static_cast<uint8>( sw::RTSGatherPhase::ToResource );
             outArchive << bAlive;
             outArchive << static_cast<uint8>( SW_FALSE );
@@ -241,7 +241,7 @@ namespace
                 sw::StateIO::writeInt2( written, sw::int2{ -1, -1 } );
                 written << static_cast<uint64>( 0 );
                 written << _arriveRadius;
-                written << static_cast<uint8>( sw::RTSOrderType::Move );
+                written << static_cast<uint8>( sw::RTSOrderKind::Move );
                 written << _bFlowField;
             }
             written << static_cast<uint32>( _listProduction.size() );

@@ -12,7 +12,7 @@ namespace sw
     {
     }
 
-    TelemetryValue& TelemetryEvent::acquireValue( const hashed_string& name, TelemetryFieldType type )
+    TelemetryValue& TelemetryEvent::acquireValue( const hashed_string& name, TelemetryFieldKind type )
     {
         for ( TelemetryValue& value : _listValue )
         {
@@ -33,25 +33,25 @@ namespace sw
 
     TelemetryEvent& TelemetryEvent::setBool( const hashed_string& name, bool bValue )
     {
-        acquireValue( name, TelemetryFieldType::Bool )._bValue = bValue ? SW_TRUE : SW_FALSE;
+        acquireValue( name, TelemetryFieldKind::Bool )._bValue = bValue ? SW_TRUE : SW_FALSE;
         return *this;
     }
 
     TelemetryEvent& TelemetryEvent::setInt( const hashed_string& name, int64 value )
     {
-        acquireValue( name, TelemetryFieldType::Int )._integer = value;
+        acquireValue( name, TelemetryFieldKind::Int )._integer = value;
         return *this;
     }
 
     TelemetryEvent& TelemetryEvent::setFloat( const hashed_string& name, float64 value )
     {
-        acquireValue( name, TelemetryFieldType::Float )._number = value;
+        acquireValue( name, TelemetryFieldKind::Float )._number = value;
         return *this;
     }
 
     TelemetryEvent& TelemetryEvent::setString( const hashed_string& name, string_view value )
     {
-        acquireValue( name, TelemetryFieldType::String )._text.assign( value.data(), value.size() );
+        acquireValue( name, TelemetryFieldKind::String )._text.assign( value.data(), value.size() );
         return *this;
     }
 

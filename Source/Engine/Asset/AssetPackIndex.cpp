@@ -21,7 +21,7 @@ namespace sw
             static constexpr const utf8* kPathAttr    = "path";
 
             /** @brief 줄들에 겹친 GUID · 경로(대소문자 무시)가 없으면 빈 결과, 있으면 그 까닭입니다. 정렬된 목록을 받는다. */
-            [[nodiscard]] static expected<void> checkUnique( const vector<AssetPackIndexEntry>& listSorted )
+            [[nodiscard]] static expected<void> validateUnique( const vector<AssetPackIndexEntry>& listSorted )
             {
                 unordered_set<string> setPath;
                 for ( size_t index = 0; index < listSorted.size(); ++index )
@@ -47,7 +47,7 @@ namespace sw
         using Internal                         = AssetPackIndexInternal;
         vector<AssetPackIndexEntry> listSorted = _listEntry;
         Internal::sortByGUID( listSorted );
-        if ( const expected<void> unique = Internal::checkUnique( listSorted ); unique.has_value() == false )
+        if ( const expected<void> unique = Internal::validateUnique( listSorted ); unique.has_value() == false )
             return unexpected( unique.error() );
         XMLDocument   document;
         const XMLNode root = document.appendRoot( Internal::kRootName );
@@ -80,7 +80,7 @@ namespace sw
         }
         vector<AssetPackIndexEntry> listSorted = index._listEntry;
         Internal::sortByGUID( listSorted );
-        if ( const expected<void> unique = Internal::checkUnique( listSorted ); unique.has_value() == false )
+        if ( const expected<void> unique = Internal::validateUnique( listSorted ); unique.has_value() == false )
             return unexpected( unique.error() );
         return index;
     }

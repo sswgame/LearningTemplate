@@ -55,12 +55,12 @@ namespace sw
 
         /**
          * @brief PSO 가 읽는 정점 슬롯(@p layout)에만 겁니다. 알림은 그 디바이스의 진단(@p diagnostics — `IRHIDevice::getDrawDiagnostics`)으로 낸다. 슬롯 하나를 실제로 거는 일은 백엔드의 @p bindSlot( slot, binding ) 이 하고, 걸 버퍼가 없으면 false 를 돌려준다.
-         * @return 읽는 슬롯이 비었거나 원소 크기가 형식과 다르면(`RHIDrawDiagnostics::checkVertexSlotsBound`), 건 버퍼가 부서졌으면 알리고 false 입니다 — 부르는 쪽은 그 드로우를 버린다.
+         * @return 읽는 슬롯이 비었거나 원소 크기가 형식과 다르면(`RHIDrawDiagnostics::validateVertexSlotsBound`), 건 버퍼가 부서졌으면 알리고 false 입니다 — 부르는 쪽은 그 드로우를 버린다.
          */
         template <typename BindSlotFn>
         [[nodiscard]] bool bindVertexBuffersForDraw( const RHIDrawDiagnostics& diagnostics, const RHIVertexLayout& layout, BindSlotFn&& bindSlot ) const
         {
-            if ( diagnostics.checkVertexSlotsBound( layout, *this ) == false )
+            if ( diagnostics.validateVertexSlotsBound( layout, *this ) == false )
                 return false;
             for ( uint32 slot = 0; slot < constant::render::kVertexBufferSlotCount; ++slot )
             {

@@ -47,7 +47,7 @@ namespace sw
         };
 
         /** @brief @p path 의 항목을 찾거나 참조를 확보해 만듭니다. 확보하지 못하면 nullptr 입니다. */
-        Entry* findOrAcquire( const hashed_string& path );
+        Entry* getOrCreateEntry( const hashed_string& path );
 
     private:
         vector<Entry> _listEntry;

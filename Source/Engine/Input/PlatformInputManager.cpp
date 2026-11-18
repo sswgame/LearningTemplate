@@ -260,8 +260,8 @@ namespace sw
             case PlatformInputKind::TouchMove:
             case PlatformInputKind::TouchUp:
             {
-                const RawInputEventType type = input._kind == PlatformInputKind::TouchDown ? RawInputEventType::TouchDown
-                                                                                           : ( input._kind == PlatformInputKind::TouchMove ? RawInputEventType::TouchMove : RawInputEventType::TouchUp );
+                const RawInputEventKind type = input._kind == PlatformInputKind::TouchDown ? RawInputEventKind::TouchDown
+                                                                                           : ( input._kind == PlatformInputKind::TouchMove ? RawInputEventKind::TouchMove : RawInputEventKind::TouchUp );
                 postRawEvent( RawInputEvent::makeTouch( type, input._pointerIndex, input._x, input._y ) );
                 break;
             }

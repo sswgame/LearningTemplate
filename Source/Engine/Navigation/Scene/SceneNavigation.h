@@ -284,7 +284,7 @@ namespace sw
          */
         NavMeshRuntime* createRuntime( const hashed_string& agentType, NavMeshArrival arrival );
         /** @brief 마련한 내비메시가 있으면 그것을, 없으면 `createRuntime` 입니다. */
-        NavMeshRuntime*        findOrCreateRuntime( const hashed_string& agentType, NavMeshArrival arrival );
+        NavMeshRuntime*        getOrCreateRuntime( const hashed_string& agentType, NavMeshArrival arrival );
         const NavAgentTypeDef* resolveAgentType( const hashed_string& agentType );
         /** @brief 쿠킹본이 맞으면 그것으로 채웁니다. */
         bool installCooked( NavMeshRuntime& runtime, const NavAgentTypeDef& agentType, uint64 inputHash );

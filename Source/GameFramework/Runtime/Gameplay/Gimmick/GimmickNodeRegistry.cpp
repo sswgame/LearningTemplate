@@ -36,7 +36,7 @@ namespace sw
                 PingPong
             };
 
-            static GimmickParamSpec makeParam( const utf8* pName, const utf8* pDefault, GimmickParamType type = GimmickParamType::Number )
+            static GimmickParamSpec makeParam( const utf8* pName, const utf8* pDefault, GimmickParamKind type = GimmickParamKind::Number )
             {
                 GimmickParamSpec spec;
                 spec._name        = hashed_string( pName );
@@ -718,8 +718,8 @@ namespace sw
         constexpr GimmickNodeCategory kS        = GimmickNodeCategory::Sensor;
         constexpr GimmickNodeCategory kO        = GimmickNodeCategory::Operator;
         constexpr GimmickNodeCategory kA        = GimmickNodeCategory::Actuator;
-        constexpr GimmickParamType    kV        = GimmickParamType::Vector;
-        constexpr GimmickParamType    kT        = GimmickParamType::Text;
+        constexpr GimmickParamKind    kV        = GimmickParamKind::Vector;
+        constexpr GimmickParamKind    kT        = GimmickParamKind::Text;
         const GimmickNodeKind         arrKind[] = {
             // 센서
             Internal::makeKind( "Volume", kS, {}, { "Occupied", "Empty", "OnEnter", "OnExit" }, { Internal::makeParam( "minCount", "1" ) }, 0, 1, nullptr,

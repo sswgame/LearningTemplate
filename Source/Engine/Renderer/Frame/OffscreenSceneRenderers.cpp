@@ -43,13 +43,13 @@ namespace sw
         outputPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
         outputPass._arrClearColor[0]  = clearColor;
         pFrameStream->clearRenderTargets( outputPass );
-        FrameRenderer* const pRenderer = findOrCreate( mainRenderer, pDevice, packet._sceneKey, pipelinePath );
+        FrameRenderer* const pRenderer = getOrCreate( mainRenderer, pDevice, packet._sceneKey, pipelinePath );
         const bool           bDrew     = pRenderer != nullptr && pRenderer->executePacket( pDevice, packet ); // 보기 모드는 패킷의 뷰 설정이 정한다
         pFrameStream->prepareTextureForShaderRead( outputTarget );
         return bDrew ? pRenderer : nullptr;
     }
 
-    FrameRenderer* OffscreenSceneRenderers::findOrCreate( FrameRenderer& mainRenderer, IRHIDevice* pDevice, uint32 sceneKey, string_view pipelinePath )
+    FrameRenderer* OffscreenSceneRenderers::getOrCreate( FrameRenderer& mainRenderer, IRHIDevice* pDevice, uint32 sceneKey, string_view pipelinePath )
     {
         const bool        bMainPipeline = pipelinePath.empty() || pipelinePath == mainRenderer.getPipelinePath();
         const string_view keyPath       = bMainPipeline ? string_view{} : pipelinePath;

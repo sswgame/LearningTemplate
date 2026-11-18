@@ -3,7 +3,7 @@
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 
 namespace sw
 {
@@ -107,9 +107,9 @@ namespace sw
         return false;
     }
 
-    const RenderPassInputSignature* findRenderPassInputSignature( RenderPassType type )
+    const RenderPassInputSignature* findRenderPassInputSignature( RenderPassKind type )
     {
-        const RenderPassTypeInfo& info = getRenderPassTypeInfo( type );
+        const RenderPassKindInfo& info = getRenderPassKindInfo( type );
         return info.hasFlag( RenderPassTraitFlag::kHasInputContract ) ? &info._inputContract : nullptr;
     }
 } // namespace sw

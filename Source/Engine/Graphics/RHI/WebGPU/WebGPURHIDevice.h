@@ -129,7 +129,7 @@ namespace sw
         WebGPUBindGroupCache();
 
         /** @brief @p layout · @p listEntry 의 그룹입니다. 없으면 지어 넣습니다(지은 그룹은 캐시가 가진다 — 부르는 쪽은 놓지 않는다). 짓지 못하면 nullptr 입니다. */
-        [[nodiscard]] WGPUBindGroup findOrCreate( WGPUDevice device, WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry );
+        [[nodiscard]] WGPUBindGroup getOrCreate( WGPUDevice device, WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry );
         /** @brief 지은 그룹을 모두 놓습니다(프레임 시작 · 종료). 기록한 커맨드는 그룹을 구현이 끝날 때까지 살린다(명세). */
         void   clear();
         uint32 getCreatedCount() const { return _createdCount; }
@@ -166,7 +166,7 @@ namespace sw
     };
 
     /** @brief 전송 하나의 완료 표지입니다. 콜백이 켜고 `RHITransferFenceQueue` 가 순서대로 거둡니다. 주소가 콜백의 userdata 라 큐 안에서 움직이지 않게 따로 할당한다. */
-    struct WebGPUTransferProbe
+    struct WebGPUTransferFence
     {
         atomic<uint8>    _bDone{ SW_FALSE };
         atomic<uint8>    _bFailed{ SW_FALSE };
@@ -497,7 +497,7 @@ namespace sw
 
         RHIReleaseQueue                                        _releaseQueue;
         RHITransferSerials                                     _transferSerials;
-        RHITransferFenceQueue<unique_ptr<WebGPUTransferProbe>> _transferQueue;
+        RHITransferFenceQueue<unique_ptr<WebGPUTransferFence>> _transferQueue;
         RHIPendingReadbackTable<WebGPUTextureReadback>         _readbackTable;
         vector<RHIBufferHandle>                                _listQueuedReadbackBuffer;
 

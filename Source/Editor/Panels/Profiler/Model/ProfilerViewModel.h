@@ -2,8 +2,8 @@
  * @file ProfilerViewModel.h
  * @brief 프로파일러 창의 ViewModel — 창이 닿는 에디터 · 엔진 서비스(프레임 프로파일러 · 메모리 프로파일러 · RHI 장치 · 작업 관리자 · 멀티 프로세스 재생)와
  *        활성 씬의 컴포넌트 분포(`gatherScene`), "Tracy 열기" 명령을 맡습니다. ImGui 를 모릅니다(`docs/agents/EditorUI.md` MVVM 계약).
- * @details 구간 수집 · 타임라인 · 성능 탭의 상태는 원래대로 창 상태 모델(`ProfilerCaptureModel` · `ProfilerTimelineModel` · `ProfilerPerformanceModel`)이 들고,
- *          이 ViewModel 은 View 가 작업 공간 · 씬 · 명령 헤더를 보지 않게 그 밖의 모델 접근을 한 곳에 모은다(엔진 서비스는 Model 의 정적 함수로 찾는다 — `AudioMixerModel::getAudioService` 와 같다).
+ * @details 구간 수집 · 타임라인 · 성능 탭의 상태는 원래대로 창 상태 모델(`ProfilerCaptureViewModel` · `ProfilerTimelineViewModel` · `ProfilerPerformanceViewModel`)이 들고,
+ *          이 ViewModel 은 View 가 작업 공간 · 씬 · 명령 헤더를 보지 않게 그 밖의 모델 접근을 한 곳에 모은다(엔진 서비스는 Model 의 정적 함수로 찾는다 — `AudioMixerViewModel::getAudioService` 와 같다).
  *          아무것도 문서 데이터를 바꾸지 않으므로 되돌리기를 남기지 않는다.
  */
 #pragma once

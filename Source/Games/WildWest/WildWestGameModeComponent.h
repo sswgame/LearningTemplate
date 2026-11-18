@@ -15,9 +15,9 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternGameModeComponent.h"
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternOutlaw.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternOutlaw.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
 namespace sw

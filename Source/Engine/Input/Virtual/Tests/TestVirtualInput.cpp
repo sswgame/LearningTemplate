@@ -64,7 +64,7 @@ SW_TEST_CASE( VirtualInputScriptTest, TapsAndBadSlots )
     SW_EXPECT_TRUE( emit( script, 2 ).empty() );
     const vector<RawInputEvent> listUp = emit( script, 3 );
     SW_REQUIRE_EQUAL( size_t( 1 ), listUp.size() );
-    SW_EXPECT_TRUE( listUp[0]._type == RawInputEventType::KeyUp );
+    SW_EXPECT_TRUE( listUp[0]._type == RawInputEventKind::KeyUp );
 
     VirtualInputScript sameFrame;
     SW_REQUIRE_TRUE( sameFrame.addTap( 1, InputSlot::fromKey( Key::A ), 0 ) );
@@ -132,7 +132,7 @@ SW_TEST_CASE( VirtualInputScriptTest, DelayKeepsReleaseOfEmittedTap )
     SW_EXPECT_TRUE( emit( script, 2 ).empty() );
     const vector<RawInputEvent> listRelease = emit( script, 3 );
     SW_REQUIRE_EQUAL( size_t( 1 ), listRelease.size() ); // 떼기는 밀리지 않았다
-    SW_EXPECT_TRUE( listRelease[0]._type == RawInputEventType::KeyUp );
+    SW_EXPECT_TRUE( listRelease[0]._type == RawInputEventKind::KeyUp );
     SW_EXPECT_TRUE( emit( script, 5 ).empty() ); // 아직 나가지 않은 둘째 탭은 둘 다 밀렸다
     SW_REQUIRE_EQUAL( size_t( 1 ), emit( script, 7 ).size() );
     SW_REQUIRE_EQUAL( size_t( 1 ), emit( script, 9 ).size() );

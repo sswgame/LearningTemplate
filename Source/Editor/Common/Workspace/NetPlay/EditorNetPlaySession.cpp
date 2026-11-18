@@ -101,7 +101,7 @@ namespace sw::editor
             }
 
             /** @brief 빈 TCP 포트를 고르는 동안만 쓰는 처리기입니다 — 받기만 열고 연결은 받지 않는다. */
-            struct PortProbeHandler final : IStreamHandler
+            struct NullStreamHandler final : IStreamHandler
             {
                 void onStreamOpened( StreamConnectionHandle /*handle*/, const NetAddress& /*remote*/, bool /*bAccepted*/ ) override {}
                 void onStreamReceived( StreamConnectionHandle /*handle*/, const uint8* /*pData*/, int32 /*size*/ ) override {}
@@ -357,8 +357,8 @@ namespace sw::editor
 
     uint16 EditorNetPlaySession::findFreeStreamPort()
     {
-        unique_ptr<IStreamTransport>                   probe = StreamTransportFactory::createPlatformTransport();
-        EditorNetPlaySessionInternal::PortProbeHandler handler;
+        unique_ptr<IStreamTransport>                    probe = StreamTransportFactory::createPlatformTransport();
+        EditorNetPlaySessionInternal::NullStreamHandler handler;
         if ( probe == nullptr || probe->initialize( &handler, StreamTransportConfig{} ) == false )
             return 0;
         uint16 port = 0;

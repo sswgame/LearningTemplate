@@ -31,7 +31,7 @@ namespace sw
     class RemoteConfig;
 
     /** @brief 값 종류입니다. */
-    enum class RemoteConfigValueType : uint8
+    enum class RemoteConfigValueKind : uint8
     {
         Integer = 0,
         Real,
@@ -60,7 +60,7 @@ namespace sw
         int64                 _integer{ 0 };
         float64               _real{ 0.0 };
         int32                 _rolloutBasisPoints{ kFullRolloutPoints }; ///< Flag 에서 켜진 계정 비율(만분율)
-        RemoteConfigValueType _type{ RemoteConfigValueType::Integer };
+        RemoteConfigValueKind _type{ RemoteConfigValueKind::Integer };
         uint8                 _bClientVisible{ SW_FALSE };
     };
 } // namespace sw
@@ -146,7 +146,7 @@ namespace sw
             uint64            _version{ 0 };
         };
 
-        const Entry* findEntry( string_view key, RemoteConfigValueType type ) const;
+        const Entry* findEntry( string_view key, RemoteConfigValueKind type ) const;
         void         recomputeSnapshotHash();
         void         onReloadCompleted( ServiceStoreResult result, bool bCancelled, map<string, Entry>& inoutMapEntry );
         void         onSetCompleted( ServiceStoreResult result, const string& key, const RemoteConfigValue& value, uint64 version );

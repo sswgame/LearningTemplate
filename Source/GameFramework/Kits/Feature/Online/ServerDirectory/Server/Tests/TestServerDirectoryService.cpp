@@ -29,14 +29,14 @@ namespace
     class AllowGuard final : public IServiceWriteGuard
     {
     public:
-        ServiceStoreResult checkAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::Ok; }
+        ServiceStoreResult validateAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::Ok; }
     };
 
     /** @brief 운영자가 아닌 계정의 가드입니다(허락할 근거가 없다). */
     class DenyGuard final : public IServiceWriteGuard
     {
     public:
-        ServiceStoreResult checkAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::NotFound; }
+        ServiceStoreResult validateAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::NotFound; }
     };
 
     ServiceOperator makeGM()
@@ -127,7 +127,7 @@ namespace
         }
 
         /** @brief 서비스와 등록을 한 번 돌리고 캐시 · 저장소 답을 끝까지 나눠 줍니다. */
-        void tick( int64 nowMs )
+        void update( int64 nowMs )
         {
             _service.update( UnixMilliseconds{ nowMs } );
             if ( _registration.getStatus()._descriptor._serverID != 0 )
@@ -160,7 +160,7 @@ namespace
             // 색인 → 기록 두 왕복과 읽기 주기를 지나게 시각을 조금씩 민다
             for ( int64 offset = 0; offset < 4; ++offset )
             {
-                tick( nowMs + offset );
+                update( nowMs + offset );
             }
         }
 
@@ -251,7 +251,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, MaintenanceBlocksAssignment )
 
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
     SW_EXPECT_TRUE( rig.assign( kPlayer, makeAssignment() ) == ServerDirectoryResult::Ok ); // 아직 다시 읽기 전이다
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
 
     ServerAssignment blocked;
     SW_EXPECT_FALSE( rig.assign( kPlayer, makeAssignment(), &blocked ).isFailed() );
@@ -267,7 +267,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, MaintenanceBlocksAssignment )
 
     rig._service.clearMaintenance( "game", makeGM(), "memo", nowMs, 2 );
     SW_REQUIRE_TRUE( rig.finishOne() == ServerDirectoryResult::Ok );
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_FALSE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
 }
 
@@ -281,7 +281,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, AllowedAccountPassesMaintenance )
     MaintenanceWindow window = makeWindow( MaintenanceWindow::kScopeAll );
     window._listAllowedAccount.push_back( kTester );
     SW_REQUIRE_TRUE( rig.setMaintenance( window ) == ServerDirectoryResult::Ok );
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
 
     SW_EXPECT_TRUE( rig.assign( kTester, makeAssignment() ) == ServerDirectoryResult::Ok );
     SW_EXPECT_TRUE( rig.assign( kPlayer, makeAssignment() ) == ServerDirectoryResult::Maintenance );
@@ -384,7 +384,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, OperatorGuardRefusesNonOperators )
 
     // 운영자는 통과하고 효과 줄이 남는다
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_TRUE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
     listEntry.clear();
     SW_REQUIRE_TRUE( ServiceAuditLog::listEntries( rig._database, "sd/", "", 10, listEntry, nextCursor ) == ServiceStoreResult::Ok );
@@ -398,17 +398,17 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StoreFailuresKeepPreviousState )
     DirectoryServiceFixture rig;
     const UnixMilliseconds  nowMs{ kNowMs };
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_REQUIRE_TRUE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
 
     rig._database.armFault( ServiceStoreFault::RejectCommit );
     SW_EXPECT_TRUE( rig.setMaintenance( makeWindow( "chat" ) ).hasError( OnlineError::kUnavailable ) );
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_FALSE( rig._service.isBlockedByMaintenance( "chat", kPlayer, nowMs ) );
 
     rig._database.armFault( ServiceStoreFault::RejectRead );
     rig._service.notifyChanged();
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_TRUE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
     SW_EXPECT_EQUAL( 0, rig._service.getPendingCount() );
 }
@@ -420,11 +420,11 @@ SW_TEST_CASE( ServerDirectoryServiceTest, BadRecordKeepsPreviousState )
     DirectoryServiceFixture rig;
     const UnixMilliseconds  nowMs{ kNowMs };
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
 
     rig.writeMaintenanceDirectly( makeWindow( "chat", 10, 5 ) ); // 기간이 뒤집혔다
     rig._service.notifyChanged();
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_TRUE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
     SW_EXPECT_FALSE( rig._service.isBlockedByMaintenance( "chat", kPlayer, nowMs ) );
 }
@@ -434,19 +434,19 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ReloadOnNotifyAndPeriod )
 {
     DirectoryServiceFixture rig;
     const UnixMilliseconds  nowMs{ kNowMs };
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
 
     rig.writeMaintenanceDirectly( makeWindow( "game" ) );
-    rig.tick( kNowMs + 1 );
+    rig.update( kNowMs + 1 );
     SW_EXPECT_FALSE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
     rig._service.notifyChanged();
-    rig.tick( kNowMs + 2 );
+    rig.update( kNowMs + 2 );
     SW_EXPECT_TRUE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
 
     rig.writeMaintenanceDirectly( makeWindow( "chat" ) );
-    rig.tick( kNowMs + 3 );
+    rig.update( kNowMs + 3 );
     SW_EXPECT_FALSE( rig._service.isBlockedByMaintenance( "chat", kPlayer, nowMs ) );
-    rig.tick( kNowMs + 2 + 30000 );
+    rig.update( kNowMs + 2 + 30000 );
     SW_EXPECT_TRUE( rig._service.isBlockedByMaintenance( "chat", kPlayer, nowMs ) );
 }
 
@@ -458,7 +458,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StatusShowsActiveByPriority )
     SW_REQUIRE_TRUE( rig.postAnnouncement( makeAnnouncement( 2, kNowMs - 1, 0, 9 ) ) == ServerDirectoryResult::Ok );
     SW_REQUIRE_TRUE( rig.postAnnouncement( makeAnnouncement( 3, kNowMs + 500, 0, 99 ) ) == ServerDirectoryResult::Ok ); // 아직 시작 전이다
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
 
     const ServerDirectoryStatus status = rig._service.makeStatus( UnixMilliseconds{ kNowMs } );
     SW_REQUIRE_EQUAL( size_t( 2 ), status._listAnnouncement.size() );
@@ -472,19 +472,19 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StatusShowsActiveByPriority )
 SW_TEST_CASE( ServerDirectoryServiceTest, StatusChangeMarksOnVisibleChange )
 {
     DirectoryServiceFixture rig;
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_FALSE( rig._service.takeStatusChange() );
 
     SW_REQUIRE_TRUE( rig.postAnnouncement( makeAnnouncement( 1, kNowMs + 100, kNowMs + 200 ) ) == ServerDirectoryResult::Ok );
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_FALSE( rig._service.takeStatusChange() ); // 아직 기간 전이라 보이지 않는다
 
-    rig.tick( kNowMs + 100 );
+    rig.update( kNowMs + 100 );
     SW_EXPECT_TRUE( rig._service.takeStatusChange() );
     SW_EXPECT_FALSE( rig._service.takeStatusChange() );
     const uint64 revision = rig._service.getStatusRevision();
 
-    rig.tick( kNowMs + 200 );
+    rig.update( kNowMs + 200 );
     SW_EXPECT_TRUE( rig._service.takeStatusChange() );
     SW_EXPECT_EQUAL( revision + 1, rig._service.getStatusRevision() );
 }
@@ -495,25 +495,25 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StatusChangeCoversEveryVisibleField )
     DirectoryServiceFixture rig;
     SW_REQUIRE_TRUE( rig.postAnnouncement( makeAnnouncement( 1, kNowMs - 1, kNowMs + 1000 ) ) == ServerDirectoryResult::Ok );
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_TRUE( rig._service.takeStatusChange() );
 
     SW_REQUIRE_TRUE( rig.postAnnouncement( makeAnnouncement( 1, kNowMs - 1, kNowMs + 2000 ) ) == ServerDirectoryResult::Ok ); // 끝 시각만 늘렸다
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_TRUE( rig._service.takeStatusChange() );
 
     SW_REQUIRE_TRUE( rig.postAnnouncement( makeAnnouncement( 1, kNowMs - 2, kNowMs + 2000 ) ) == ServerDirectoryResult::Ok ); // 시작 시각만 바꿨다
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_TRUE( rig._service.takeStatusChange() );
 
     ServiceAnnouncement literal = makeAnnouncement( 1, kNowMs - 2, kNowMs + 2000 );
     literal._bLiteralText       = SW_TRUE;
     SW_REQUIRE_TRUE( rig.postAnnouncement( literal ) == ServerDirectoryResult::Ok );
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_TRUE( rig._service.takeStatusChange() );
 
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow( "game", kNowMs - 2 ) ) == ServerDirectoryResult::Ok ); // 점검 시작 시각만 바꿨다
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_TRUE( rig._service.takeStatusChange() );
 }
 
@@ -562,7 +562,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ControlInterfaceMapsResults )
     SW_EXPECT_TRUE( getResultOf( 14 ) == ServerDirectoryControlResult::Ok );
     SW_EXPECT_TRUE( getResultOf( 15 ) == ServerDirectoryControlResult::Unavailable );
 
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     const ServerDirectoryStatus status = rig._service.makeStatus( nowMs );
     SW_REQUIRE_EQUAL( size_t( 1 ), status._listAnnouncement.size() );
     SW_EXPECT_EQUAL( string( "literal" ), status._listAnnouncement[0]._text );
@@ -582,6 +582,6 @@ SW_TEST_CASE( ServerDirectoryServiceTest, MaintenanceBeyondTheFirstPageStillBloc
     }
     rig.writeMaintenanceDirectly( makeWindow( "game" ) );
     rig._service.notifyChanged();
-    rig.tick( kNowMs );
+    rig.update( kNowMs );
     SW_EXPECT_TRUE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
 }

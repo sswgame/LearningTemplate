@@ -58,7 +58,7 @@ namespace sw::editor
                 return pFound;
             }
 
-            /** @brief 인스턴스 @p root(타입 @p type)에서 @p path 를 풉니다. 그리드의 모으기(`PropertyGridModel::appendChildRows`)와 같은 걸음이다. */
+            /** @brief 인스턴스 @p root(타입 @p type)에서 @p path 를 풉니다. 그리드의 모으기(`PropertyGridViewModel::appendChildRows`)와 같은 걸음이다. */
             static bool resolve( MutableObjectAddress root, const TypeInfo& type, const TypeRegistry& registry, const PropertyEditPath& path, Slot& outSlot )
             {
                 const PropertyInfo* pProp = type.findPropertyInHierarchy( path._root );

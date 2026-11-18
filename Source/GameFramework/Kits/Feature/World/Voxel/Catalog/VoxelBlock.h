@@ -150,7 +150,7 @@ namespace sw
          * @details 메셔는 카탈로그의 열 수로 타일 칸 UV 를 싣고 셰이더는 머티리얼 값으로 푼다 — 둘이 다르면 엉뚱한 타일을 그리므로 맞춰 쓰지 않고 오류로 멈춘다.
          * @return 같으면 true. 다르면 @p materialName 과 두 값을 적은 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] bool checkAtlasGrid( const float4& atlasGrid, string_view materialName ) const;
+        [[nodiscard]] bool validateAtlasGrid( const float4& atlasGrid, string_view materialName ) const;
 
     private:
         static constexpr const utf8* kXMLRootName = "VoxelBlockCatalog"; ///< 루트 요소(`XMLCatalog`)

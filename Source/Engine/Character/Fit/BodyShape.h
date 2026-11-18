@@ -93,7 +93,7 @@ namespace sw
          */
         void applyToPose( const Skeleton& skeleton, Pose& inoutPose ) const;
         /** @brief 비율이 가리키는 본이 스켈레톤에 모두 있는지 봅니다. 없는 본은 오류를 남기고 false 입니다(`apply` · `applyToPose` 는 프레임마다 돌아 건너뛰기만 한다). */
-        [[nodiscard]] bool checkBones( const Skeleton& skeleton, string_view sourceLabel ) const;
+        [[nodiscard]] bool validateBones( const Skeleton& skeleton, string_view sourceLabel ) const;
 
     private:
         BoneProportionEntry& getOrCreateEntry( const hashed_string& bone );

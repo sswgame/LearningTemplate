@@ -44,9 +44,9 @@ namespace sw
         , _renderPausedTickCount{ 0 }
         , _simulatedInterruptionTicks{ 0 }
         , _onResize{}
-        , _onModalLoopTick{}
+        , _onModalLoopUpdate{}
         , _bResizePending{ SW_FALSE }
-        , _bInModalLoopTick{ SW_FALSE }
+        , _bInModalLoopUpdate{ SW_FALSE }
         , _reservedResize{ 0 }
     {
     }
@@ -71,13 +71,13 @@ namespace sw
             _onResize.get()( _width, _height );
     }
 
-    void IWindow::tickModalLoop()
+    void IWindow::updateModalLoop()
     {
-        if ( _bInModalLoopTick == SW_TRUE || _bRecreating == SW_TRUE || _onModalLoopTick.isBound() == false )
+        if ( _bInModalLoopUpdate == SW_TRUE || _bRecreating == SW_TRUE || _onModalLoopUpdate.isBound() == false )
             return;
-        _bInModalLoopTick = SW_TRUE;
-        _onModalLoopTick.get()();
-        _bInModalLoopTick = SW_FALSE;
+        _bInModalLoopUpdate = SW_TRUE;
+        _onModalLoopUpdate.get()();
+        _bInModalLoopUpdate = SW_FALSE;
     }
 
     void IWindow::notifyLifecycleEvent( const WindowLifecycleEvent event )
@@ -325,7 +325,7 @@ namespace sw
         if ( _arrTitle[0] == '\0' )
             return false;
         // 모달 루프 틱 안에서 창을 부수면 그 창에서 도는 OS 모달 루프가 사라진 창을 붙든다 — 부르는 쪽(`App::runFrame`)이 건너뛴다.
-        SW_ASSERT( isInModalLoopTick() == false );
+        SW_ASSERT( isInModalLoopUpdate() == false );
 
         // 다시 만들어도 **보이던 창은 보여야 한다**. 빠뜨리면 백엔드 교체 뒤 창이 사라진다.
         //

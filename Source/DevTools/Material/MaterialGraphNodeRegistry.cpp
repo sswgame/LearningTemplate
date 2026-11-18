@@ -70,7 +70,7 @@ namespace sw
             const bool        bRequired = type.empty() == false && type.back() == '!';
             const string_view plainType = bRequired ? type.substr( 0, type.size() - 1 ) : type;
             _arrInput[_inputCount++]    = MaterialGraphPinDecl{ name, rest, MaterialGraphNodeRegistry::parseValueType( plainType ), bRequired };
-            if ( _arrInput[_inputCount - 1]._type == MaterialGraphValueType::Invalid )
+            if ( _arrInput[_inputCount - 1]._type == MaterialGraphValueKind::Invalid )
                 _pProblem = "an input has an unknown type";
         }
         text = pOutputs;
@@ -82,7 +82,7 @@ namespace sw
                 break;
             }
             _arrOutput[_outputCount++] = MaterialGraphOutputDecl{ name, rest, MaterialGraphNodeRegistry::parseValueType( type ) };
-            if ( _arrOutput[_outputCount - 1]._type == MaterialGraphValueType::Invalid )
+            if ( _arrOutput[_outputCount - 1]._type == MaterialGraphValueKind::Invalid )
                 _pProblem = "an output has an unknown type";
         }
         text = pSettings;
@@ -94,7 +94,7 @@ namespace sw
                 break;
             }
             _arrSetting[_settingCount++] = MaterialGraphSettingDecl{ name, rest, MaterialGraphNodeRegistry::parseValueType( type ) };
-            if ( _arrSetting[_settingCount - 1]._type == MaterialGraphValueType::Invalid )
+            if ( _arrSetting[_settingCount - 1]._type == MaterialGraphValueKind::Invalid )
                 _pProblem = "a setting has an unknown type";
         }
         const string_view parameter{ pParameter };
@@ -168,38 +168,38 @@ namespace sw
         }
     }
 
-    MaterialGraphValueType MaterialGraphNodeRegistry::parseValueType( string_view name )
+    MaterialGraphValueKind MaterialGraphNodeRegistry::parseValueType( string_view name )
     {
         if ( name == "float" )
-            return MaterialGraphValueType::Float;
+            return MaterialGraphValueKind::Float;
         if ( name == "float2" )
-            return MaterialGraphValueType::Float2;
+            return MaterialGraphValueKind::Float2;
         if ( name == "float3" )
-            return MaterialGraphValueType::Float3;
+            return MaterialGraphValueKind::Float3;
         if ( name == "float4" )
-            return MaterialGraphValueType::Float4;
+            return MaterialGraphValueKind::Float4;
         if ( name == "any" )
-            return MaterialGraphValueType::Any;
+            return MaterialGraphValueKind::Any;
         if ( name == "string" )
-            return MaterialGraphValueType::String;
-        return MaterialGraphValueType::Invalid;
+            return MaterialGraphValueKind::String;
+        return MaterialGraphValueKind::Invalid;
     }
 
-    const utf8* MaterialGraphNodeRegistry::getHLSLTypeName( MaterialGraphValueType type )
+    const utf8* MaterialGraphNodeRegistry::getHLSLTypeName( MaterialGraphValueKind type )
     {
         switch ( type )
         {
-            case MaterialGraphValueType::Float:
+            case MaterialGraphValueKind::Float:
                 return "float";
-            case MaterialGraphValueType::Float2:
+            case MaterialGraphValueKind::Float2:
                 return "float2";
-            case MaterialGraphValueType::Float3:
+            case MaterialGraphValueKind::Float3:
                 return "float3";
-            case MaterialGraphValueType::Float4:
+            case MaterialGraphValueKind::Float4:
                 return "float4";
-            case MaterialGraphValueType::Any:
-            case MaterialGraphValueType::String:
-            case MaterialGraphValueType::Invalid:
+            case MaterialGraphValueKind::Any:
+            case MaterialGraphValueKind::String:
+            case MaterialGraphValueKind::Invalid:
                 break;
         }
         return "";

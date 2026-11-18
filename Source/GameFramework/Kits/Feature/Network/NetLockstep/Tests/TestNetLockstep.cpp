@@ -173,7 +173,7 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
         {
             NetEndpoint&   host         = cluster.getEndpoint( index );
             int32          connectionID = -1;
-            NetChannelType channel      = NetChannelType::Unreliable;
+            NetChannelKind channel      = NetChannelKind::Unreliable;
             while ( host.receiveMessage( connectionID, channel, buffer ) )
             {
                 SW_EXPECT_TRUE( NetHandleResult::Handled == listSession[static_cast<size_t>( index )].handleMessage( connectionID, buffer ) );
@@ -224,7 +224,7 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
         for ( int32 index = 0; index < 3; ++index )
         {
             int32          connectionID = -1;
-            NetChannelType channel      = NetChannelType::Unreliable;
+            NetChannelKind channel      = NetChannelKind::Unreliable;
             while ( cluster.getEndpoint( index ).receiveMessage( connectionID, channel, buffer ) )
             {
                 (void)listSession[static_cast<size_t>( index )].handleMessage( connectionID, buffer );
@@ -265,7 +265,7 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
         for ( int32 index = 0; index < 2; ++index )
         {
             int32          connectionID = -1;
-            NetChannelType channel      = NetChannelType::Unreliable;
+            NetChannelKind channel      = NetChannelKind::Unreliable;
             while ( cluster.getEndpoint( index ).receiveMessage( connectionID, channel, buffer ) )
             {
                 SW_EXPECT_TRUE( NetHandleResult::Handled == arrSession[index].handleMessage( connectionID, buffer ) );

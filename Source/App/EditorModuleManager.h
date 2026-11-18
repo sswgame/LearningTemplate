@@ -68,7 +68,7 @@ namespace sw
          * @brief 에디터 인스턴스 없이 에디터 모듈만 로드해 에셋 참조를 검사합니다(`App --check-asset-refs`). 임포트와 같은 경로이고 Shipping 에서는 실패합니다.
          * @return 끊어진 참조 · 목록에 없는 `AssetPath` 프로퍼티가 하나도 없으면 true 를 반환합니다.
          */
-        [[nodiscard]] static bool checkAssetReferencesWithEditorModule();
+        [[nodiscard]] static bool validateAssetReferencesWithEditorModule();
 
         // 프레임 단위 처리
         /**

@@ -4,7 +4,7 @@
  * @details 값 모으기 · 집기 판정 · 명령 순서 · 적용(끌기 하나가 되돌리기 하나)은 Model `MeshModifierHandleEdit`(파일 머리말 참고), 변형 결과 선은 모으기(`MeshModifierPreviewGatherer`)가
  *          도형 값으로 내고 `EditorViewportVisualizer::drawAll` 이 그린다(실시간 GPU 미리보기는 2 단계 — 컴퓨트 셰이더).
  *          meshmodifiers.stage(툴바 "Stage")는 고른 모디파이어까지만 건 결과를 다른 색으로 겹쳐 그린다(변형 영향 미리보기).
- *          뷰포트는 시각화를 그린 뒤에 클릭 선택을 처리하므로 잡기 명령이 같은 프레임에 마우스를 가져가 첫 클릭도 새지 않는다(`EditorViewportMouseClaim` 헤더의 프레임 순서 계약).
+ *          뷰포트는 시각화를 그린 뒤에 클릭 선택을 처리하므로 잡기 명령이 같은 프레임에 마우스를 가져가 첫 클릭도 새지 않는다(`EditorViewportMouseCapture` 헤더의 프레임 순서 계약).
  */
 #include "pch.h"
 

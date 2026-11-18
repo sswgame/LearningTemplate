@@ -272,7 +272,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_STATIC_MODULES)
 
 	# 모델 임포트의 메시 쪼개기는 같은 모델 · 설정 · 시드면 구성마다 같은 조각을 굽는다 — Engine 에 있을 때의 결정성 표시를 그대로 옮긴다.
 	# 그 파일을 짓는 부분을 소스 목록으로 찾는다(티어 번호를 적지 않는다). 못 찾으면 결정성이 소리 없이 꺼지므로 멈춘다.
-	set(editor_fracture_source "${CMAKE_CURRENT_SOURCE_DIR}/Common/Asset/Model/MeshFracture.cpp")
+	set(editor_fracture_source "${CMAKE_CURRENT_SOURCE_DIR}/Common/Asset/ModelImport/MeshFracture.cpp")
 	set(fracture_marked FALSE)
 	foreach(part IN LISTS list_editor_core_target)
 		get_target_property(list_part_source ${part} SOURCES)

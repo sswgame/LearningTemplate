@@ -85,22 +85,22 @@ namespace sw::editor
 
     uint32 AudioMixerPanel::getBusCount()
     {
-        return AudioMixerModel::getWatchValues()._busCount;
+        return AudioMixerViewModel::getWatchValues()._busCount;
     }
 
     uint32 AudioMixerPanel::getMutedCount()
     {
-        return AudioMixerModel::getWatchValues()._mutedCount;
+        return AudioMixerViewModel::getWatchValues()._mutedCount;
     }
 
     uint32 AudioMixerPanel::getSoloCount()
     {
-        return AudioMixerModel::getWatchValues()._soloCount;
+        return AudioMixerViewModel::getWatchValues()._soloCount;
     }
 
     float32 AudioMixerPanel::getWatchedBusVolume()
     {
-        return AudioMixerModel::getWatchValues()._watchedBusVolume;
+        return AudioMixerViewModel::getWatchValues()._watchedBusVolume;
     }
 
     void AudioMixerPanel::drawPreviewBar( IAudioService& audio )
@@ -156,7 +156,7 @@ namespace sw::editor
         // 띠는 앞 띠 옆(SameLine)에 놓여 그 줄의 글자 기준선(단추 높이)을 물려받는다 — 첫 띠만 기준선이 없어 6px 위에 그려졌다(uiaudit 26). 모든 띠를 단추 기준선에 맞춘다.
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted( name.c_str() );
-        if ( heldDb < AudioMixerModel::kMeterFloorDb )
+        if ( heldDb < AudioMixerViewModel::kMeterFloorDb )
             ImGui::TextDisabled( "-inf dB" );
         else
             ImGui::Text( "%.1f dB", static_cast<float64>( heldDb ) );
@@ -174,7 +174,7 @@ namespace sw::editor
         ImDrawList*  pDrawList = ImGui::GetWindowDrawList();
         const ImVec2 meterMax{ meterMin.x + meterSize.x, meterMin.y + meterSize.y };
         pDrawList->AddRectFilled( meterMin, meterMax, EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "FrameBg" ) ) );
-        const float32 fill = AudioMixerModel::computeMeterFill( heldDb );
+        const float32 fill = AudioMixerViewModel::computeMeterFill( heldDb );
         if ( fill > 0.0f )
         {
             const ImVec2 fillMin{ meterMin.x, meterMax.y - meterSize.y * fill };
@@ -200,7 +200,7 @@ namespace sw::editor
 
     void AudioMixerPanel::drawContent()
     {
-        IAudioService& audio = AudioMixerModel::getAudioService();
+        IAudioService& audio = AudioMixerViewModel::getAudioService();
         if ( audio.isInitialized() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "TheAudioServiceIsNotRunning" ) );

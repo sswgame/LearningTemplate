@@ -18,8 +18,8 @@
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Panels/Material/Model/MaterialModel.h"
 #include "Editor/Panels/Material/Model/MaterialPreviewInputs.h"
+#include "Editor/Panels/Material/Model/MaterialViewModel.h"
 
 #include "Engine/Localization/LocText.h"
 
@@ -40,7 +40,7 @@ namespace sw::editor
             static constexpr float32 kPreviewRadius = 0.75f;
 
             /** @brief 형식의 핀 색 번호입니다. `any` 는 색 표 밖이라 글자색이다. */
-            [[nodiscard]] static uint32 toPinColorIndex( MaterialGraphValueType type )
+            [[nodiscard]] static uint32 toPinColorIndex( MaterialGraphValueKind type )
             {
                 const uint32 count  = static_cast<uint32>( type );
                 const bool   bTyped = 1 <= count && count <= 4;
@@ -125,8 +125,8 @@ namespace sw::editor
         bool   bInput    = false;
         if ( _model.tryDecodePin( pinID, nodeIndex, slot, bInput ) == false )
             return false;
-        const MaterialGraphValueType type    = bInput ? _model.getInputPins( nodeIndex )[slot]._type : _model.getOutputPins( nodeIndex )[slot]._type;
-        const bool                   bWidens = bInput == false && type == MaterialGraphValueType::Float;
+        const MaterialGraphValueKind type    = bInput ? _model.getInputPins( nodeIndex )[slot]._type : _model.getOutputPins( nodeIndex )[slot]._type;
+        const bool                   bWidens = bInput == false && type == MaterialGraphValueKind::Float;
         outInfo._type                        = bWidens ? EditorNodeGraphRules::kWildcardPinType : MaterialGraphPanelInternal::toPinColorIndex( type );
         outInfo._bInput                      = bInput;
         return true;
@@ -144,7 +144,7 @@ namespace sw::editor
     void MaterialGraphPanel::drawCanvasNode( uint32 nodeIndex )
     {
         const MaterialGraphNodeDef& node   = _model.getGraph()._listNode[nodeIndex];
-        const int32                 nodeID = MaterialGraphModel::makeNodeID( nodeIndex );
+        const int32                 nodeID = MaterialGraphViewModel::makeNodeID( nodeIndex );
         _nodeGraph.beginNode( nodeID );
         ImGui::TextUnformatted( node._name.c_str() );
         EditorThemeUtil::textMuted( node._kind.c_str() );
@@ -152,7 +152,7 @@ namespace sw::editor
         const vector<MaterialGraphPinInfo>& listInput = _model.getInputPins( nodeIndex );
         for ( uint32 slot = 0; slot < static_cast<uint32>( listInput.size() ); ++slot )
         {
-            _nodeGraph.beginPin( MaterialGraphModel::makeInputPinID( nodeIndex, slot ), true );
+            _nodeGraph.beginPin( MaterialGraphViewModel::makeInputPinID( nodeIndex, slot ), true );
             _nodeGraph.drawPinIcon( MaterialGraphPanelInternal::toPinColorIndex( listInput[slot]._type ), node.findLink( listInput[slot]._name ) != nullptr );
             ImGui::SameLine();
             ImGui::TextUnformatted( listInput[slot]._name.c_str() );
@@ -164,7 +164,7 @@ namespace sw::editor
         const vector<MaterialGraphPinInfo>& listOutput = _model.getOutputPins( nodeIndex );
         for ( uint32 slot = 0; slot < static_cast<uint32>( listOutput.size() ); ++slot )
         {
-            _nodeGraph.beginPin( MaterialGraphModel::makeOutputPinID( nodeIndex, slot ), false );
+            _nodeGraph.beginPin( MaterialGraphViewModel::makeOutputPinID( nodeIndex, slot ), false );
             ImGui::TextUnformatted( listOutput[slot]._name.c_str() );
             ImGui::SameLine();
             _nodeGraph.drawPinIcon( MaterialGraphPanelInternal::toPinColorIndex( listOutput[slot]._type ), true );
@@ -229,8 +229,8 @@ namespace sw::editor
                 {
                     if ( listOutput[outputSlot]._name != pLink->_fromPin )
                         continue;
-                    const int32 inputPin = MaterialGraphModel::makeInputPinID( readerIndex, slot );
-                    ed::Link( toLinkID( inputPin ), toPinID( MaterialGraphModel::makeOutputPinID( *from, outputSlot ) ), toPinID( inputPin ) );
+                    const int32 inputPin = MaterialGraphViewModel::makeInputPinID( readerIndex, slot );
+                    ed::Link( toLinkID( inputPin ), toPinID( MaterialGraphViewModel::makeOutputPinID( *from, outputSlot ) ), toPinID( inputPin ) );
                 }
             }
         }
@@ -242,7 +242,7 @@ namespace sw::editor
             const string_view      outerName{ string_view( issue._nodeName ).substr( 0, issue._nodeName.find( '/' ) ) };
             const optional<uint32> nodeIndex = graph.findNodeIndex( outerName );
             if ( nodeIndex.has_value() )
-                listIssue.push_back( EditorGraphNodeIssue{ MaterialGraphModel::makeNodeID( *nodeIndex ), issue._message } );
+                listIssue.push_back( EditorGraphNodeIssue{ MaterialGraphViewModel::makeNodeID( *nodeIndex ), issue._message } );
         }
         _nodeGraph.setNodeIssues( std::move( listIssue ) );
         _nodeGraph.drawNodeIssues();
@@ -264,7 +264,7 @@ namespace sw::editor
             const uint32 movedNodeCount = static_cast<uint32>( graph._listNode.size() );
             for ( uint32 nodeIndex = 0; nodeIndex < movedNodeCount; ++nodeIndex )
             {
-                const ImVec2 position = ed::GetNodePosition( toNodeID( MaterialGraphModel::makeNodeID( nodeIndex ) ) );
+                const ImVec2 position = ed::GetNodePosition( toNodeID( MaterialGraphViewModel::makeNodeID( nodeIndex ) ) );
                 _model.recordNodePosition( nodeIndex, float2{ position.x, position.y } );
             }
             if ( _nodeGraph.syncCommentLayout( _model.editGraph()._listComment ) )
@@ -280,7 +280,7 @@ namespace sw::editor
         ImGui::EndChild();
     }
 
-    void MaterialGraphPanel::drawValueRow( uint32 nodeIndex, const utf8* pName, MaterialGraphValueType type, string_view defaultText, bool bColor )
+    void MaterialGraphPanel::drawValueRow( uint32 nodeIndex, const utf8* pName, MaterialGraphValueKind type, string_view defaultText, bool bColor )
     {
         ImGui::PushID( pName );
         const string text = _model.readValue( nodeIndex, pName, defaultText );
@@ -290,7 +290,7 @@ namespace sw::editor
         uint32       count    = 0;
         switch ( type )
         {
-            case MaterialGraphValueType::Float:
+            case MaterialGraphValueKind::Float:
             {
                 float32 arrOne[1]{};
                 bRead = MaterialPreviewInputs::parseFloats( text, arrOne );
@@ -303,7 +303,7 @@ namespace sw::editor
                 count = 1;
                 break;
             }
-            case MaterialGraphValueType::Float2:
+            case MaterialGraphValueKind::Float2:
             {
                 float32 arrTwo[2]{};
                 bRead = MaterialPreviewInputs::parseFloats( text, arrTwo );
@@ -317,7 +317,7 @@ namespace sw::editor
                 count = 2;
                 break;
             }
-            case MaterialGraphValueType::Float3:
+            case MaterialGraphValueKind::Float3:
             {
                 float32 arrThree[3]{};
                 bRead = MaterialPreviewInputs::parseFloats( text, arrThree );
@@ -332,7 +332,7 @@ namespace sw::editor
                 count = 3;
                 break;
             }
-            case MaterialGraphValueType::Float4:
+            case MaterialGraphValueKind::Float4:
             {
                 bRead = MaterialPreviewInputs::parseFloats( text, arrValue );
                 if ( bRead && bColor )
@@ -355,15 +355,15 @@ namespace sw::editor
                 count = 4;
                 break;
             }
-            case MaterialGraphValueType::Any:
-            case MaterialGraphValueType::String:
-            case MaterialGraphValueType::Invalid:
+            case MaterialGraphValueKind::Any:
+            case MaterialGraphValueKind::String:
+            case MaterialGraphValueKind::Invalid:
                 break;
         }
         if ( bChanged )
         {
             string written;
-            MaterialModel::writeFloats( written, arrValue, count );
+            MaterialViewModel::writeFloats( written, arrValue, count );
             _model.setValue( nodeIndex, pName, written );
         }
         if ( bRead == false )
@@ -414,7 +414,7 @@ namespace sw::editor
                 continue;
             const string name{ pin._name };
             // `any` 핀은 float 로 시작한다. 기본값이 식이면(메시 UV 등) 글 칸이 그 식을 보인다.
-            const MaterialGraphValueType rowType = pin._type == MaterialGraphValueType::Any ? MaterialGraphValueType::Float : pin._type;
+            const MaterialGraphValueKind rowType = pin._type == MaterialGraphValueKind::Any ? MaterialGraphValueKind::Float : pin._type;
             drawValueRow( nodeIndex, name.c_str(), rowType, pin._default.empty() ? string_view{ "0" } : pin._default, false );
         }
     }

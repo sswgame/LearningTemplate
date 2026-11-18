@@ -91,11 +91,11 @@ namespace
             GimmickParamSpec move;
             move._name        = hashed_string( "Move" );
             move._defaultText = "0 3 0";
-            move._type        = GimmickParamType::Vector;
+            move._type        = GimmickParamKind::Vector;
             GimmickParamSpec label;
             label._name         = hashed_string( "Label" );
             label._defaultText  = "door";
-            label._type         = GimmickParamType::Text;
+            label._type         = GimmickParamKind::Text;
             ranged._listParam   = { amount, move, label };
             ranged._pInitialize = &initRanged;
             ranged._pStep       = &stepNothing;

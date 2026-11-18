@@ -13,7 +13,7 @@ namespace sw
         [[nodiscard]] bool loadGameSettings( const AssetID& id, GameSettings& outSettings )
         {
             // 입력 맵 묶음도 이 파일의 내용이다 — 카탈로그 편집기의 검사가 겹침을 함께 잡는다.
-            return outSettings.loadFromAsset( id ) && InputMapBundle::checkSettings( id );
+            return outSettings.loadFromAsset( id ) && InputMapBundle::validateSettings( id );
         }
     } // namespace
 

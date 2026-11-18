@@ -117,7 +117,7 @@ namespace sw
         writer.writeVarUint( tick );
         writer.writeBlob( listInput.data(), static_cast<int32>( listInput.size() ) );
         if ( _pHost != nullptr )
-            (void)_messageWriter.sendToPeers( *_pHost, NetChannelType::ReliableOrdered );
+            (void)_messageWriter.sendToPeers( *_pHost, NetChannelKind::ReliableOrdered );
         return true;
     }
 
@@ -200,7 +200,7 @@ namespace sw
         writer.writeVarUint( tick );
         writer.writeUint32( checksum );
         if ( _pHost != nullptr )
-            (void)_messageWriter.sendToPeers( *_pHost, NetChannelType::ReliableOrdered );
+            (void)_messageWriter.sendToPeers( *_pHost, NetChannelKind::ReliableOrdered );
     }
 
     void LockstepSession::applyLeave( int32 player, uint32 tick )
@@ -230,7 +230,7 @@ namespace sw
         BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kLeave );
         writer.writeVarUint( static_cast<uint64>( player ) );
         writer.writeVarUint( tick );
-        (void)_messageWriter.broadcast( *_pHost, NetChannelType::ReliableOrdered );
+        (void)_messageWriter.broadcast( *_pHost, NetChannelKind::ReliableOrdered );
     }
 
     NetHandleResult LockstepSession::receive( NetLockstepMessage::Leave, const NetMessageContext& context, BitReader& body )

@@ -1,5 +1,5 @@
 /**
- * decal.hlsl — DBuffer 데칼(RenderPassType::Decal — 언리얼 DBuffer Decal · 유니티 HDRP DBuffer). 깊이 프리패스 뒤 · 베이스 패스 앞에 데칼마다 상자 볼륨의 뒷면을 그려,
+ * decal.hlsl — DBuffer 데칼(RenderPassKind::Decal — 언리얼 DBuffer Decal · 유니티 HDRP DBuffer). 깊이 프리패스 뒤 · 베이스 패스 앞에 데칼마다 상자 볼륨의 뒷면을 그려,
  * 장면 깊이에서 월드 위치를 복원하고 데칼 상자(-0.5..0.5) 안의 픽셀만 DBufferA · B · C 에 프리멀티플라이로 쌓는다. 베이스 패스(G버퍼 · 포워드 불투명)가 그 셋을 읽어
  * 셰이딩 전에 표면에 섞는다(material_shader_main.hlsli MaterialSurface::applyDBuffer) — 디퍼드 · 포워드가 같은 데칼을 받는다.
  *

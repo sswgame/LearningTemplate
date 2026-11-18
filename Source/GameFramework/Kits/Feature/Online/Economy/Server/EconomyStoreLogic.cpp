@@ -4,9 +4,9 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/ReceiptBuyerToken.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/CurrencyCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/ReceiptBuyerToken.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"

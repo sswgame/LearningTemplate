@@ -63,7 +63,7 @@ namespace sw
             pState->_drawnRevision = 0;
             // 준비될 때 한 번 대상 포맷을 셋업 PSO 와 대조한다 — 없으면 거절을 알리고 그리지 않는다(`CanvasRenderer::drawTargets` 는 다른 포맷의 PSO 로 대신 그리지 않는다).
             RHIPipelineStateHandle pso{ 0 };
-            const bool             bHasPSO = psoCache.findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat(), pso ) && pso != 0;
+            const bool             bHasPSO = psoCache.findOutputPSO( RenderPassKind::Canvas, pState->_pTexture->getFormat(), pso ) && pso != 0;
             if ( bHasPSO == false )
                 SW_LOG_ERROR_ID( "Canvas.CanvasTargetFormatNo", "Canvas target '%#' has format %# with no canvas PSO from setup - it is rejected and never drawn (add the format to FramePSOManager::collectOutputPSOJobs)",
                                  target._targetPath.c_str(), static_cast<uint32>( pState->_pTexture->getFormat() ) );

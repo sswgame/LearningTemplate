@@ -209,7 +209,7 @@ namespace sw
         ValeActionResult leaveParty( uint32 avatarID );
 
         /** @brief 재사용 대기와 다시 나기를 흘립니다. */
-        void tick( float32 deltaSeconds );
+        void update( float32 deltaSeconds );
 
         /** @brief @p placementID 가 그 갈래의 놓인 것인지 봅니다(살아 있는지와 상관없이) — 클라이언트가 지어낸 번호를 거르는 검증이 씁니다. */
         bool isPlacementOfKind( uint32 placementID, ValePlacementKind kind ) const;

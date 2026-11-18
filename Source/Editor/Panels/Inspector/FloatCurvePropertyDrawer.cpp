@@ -11,7 +11,7 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorCurveEditorState.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -34,7 +34,7 @@ namespace sw::editor
         class FloatCurvePropertyDrawer final : public IInspectorProperty
         {
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 if ( readCurve( row ) == false )
                     return false;

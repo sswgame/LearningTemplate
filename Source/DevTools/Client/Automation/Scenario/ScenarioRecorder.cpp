@@ -327,39 +327,39 @@ namespace sw
                         continue; // 시나리오 재생이 낸 입력이다
                     switch ( event._type )
                     {
-                        case RawInputEventType::KeyDown:
+                        case RawInputEventKind::KeyDown:
                         {
                             if ( event._bRepeat == SW_FALSE )
                                 writeSlotStep( writer, settings, outResult, "Press", InputSlot::fromKey( event._payload._keyData._key ) );
                             break;
                         }
-                        case RawInputEventType::KeyUp:
+                        case RawInputEventKind::KeyUp:
                         {
                             writeSlotStep( writer, settings, outResult, "Release", InputSlot::fromKey( event._payload._keyData._key ) );
                             break;
                         }
-                        case RawInputEventType::MouseButtonDown:
-                        case RawInputEventType::MouseDoubleClick:
+                        case RawInputEventKind::MouseButtonDown:
+                        case RawInputEventKind::MouseDoubleClick:
                         {
                             writeSlotStep( writer, settings, outResult, "Press", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
                             break;
                         }
-                        case RawInputEventType::MouseButtonUp:
+                        case RawInputEventKind::MouseButtonUp:
                         {
                             writeSlotStep( writer, settings, outResult, "Release", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
                             break;
                         }
-                        case RawInputEventType::GamepadButtonDown:
+                        case RawInputEventKind::GamepadButtonDown:
                         {
                             writeSlotStep( writer, settings, outResult, "Press", InputSlot::fromGamepadButton( event._payload._gamepadData._button, event._deviceIndex ) );
                             break;
                         }
-                        case RawInputEventType::GamepadButtonUp:
+                        case RawInputEventKind::GamepadButtonUp:
                         {
                             writeSlotStep( writer, settings, outResult, "Release", InputSlot::fromGamepadButton( event._payload._gamepadData._button, event._deviceIndex ) );
                             break;
                         }
-                        case RawInputEventType::MouseMove:
+                        case RawInputEventKind::MouseMove:
                         {
                             if ( settings._clientWidth == 0 || settings._clientHeight == 0 )
                             {
@@ -371,47 +371,47 @@ namespace sw
                             accumulator._positionY    = event._payload._mouseData._y;
                             break;
                         }
-                        case RawInputEventType::MouseRawDelta:
+                        case RawInputEventKind::MouseRawDelta:
                         {
                             accumulator._bHasDelta = true;
                             accumulator._deltaX += event._payload._mouseData._rawDelta._x;
                             accumulator._deltaY += event._payload._mouseData._rawDelta._y;
                             break;
                         }
-                        case RawInputEventType::MouseWheel:
+                        case RawInputEventKind::MouseWheel:
                         {
                             accumulator._bHasWheel = true;
                             accumulator._wheelY += event._payload._mouseData._wheelDelta;
                             break;
                         }
-                        case RawInputEventType::MouseWheelHorizontal:
+                        case RawInputEventKind::MouseWheelHorizontal:
                         {
                             accumulator._bHasWheel = true;
                             accumulator._wheelX += event._payload._mouseData._wheelDelta;
                             break;
                         }
-                        case RawInputEventType::GamepadAxis:
+                        case RawInputEventKind::GamepadAxis:
                         {
                             // 액션의 스틱이면 값 구간을 ActionAxis 로 쓴다(advanceStickRuns) — 스틱 배치를 바꿔도 녹화가 산다.
                             if ( trackStickAxis( event, settings, inoutListTrack ) == false )
                                 writeGamepadAxisStep( writer, event, outResult );
                             break;
                         }
-                        case RawInputEventType::TextInput:
+                        case RawInputEventKind::TextInput:
                         {
                             writeTextStep( writer, event, outResult );
                             break;
                         }
-                        case RawInputEventType::None:
-                        case RawInputEventType::GamepadConnectionChanged:
-                        case RawInputEventType::TextComposition:
-                        case RawInputEventType::FocusGained:
-                        case RawInputEventType::FocusLost:
-                        case RawInputEventType::PointerEntered:
-                        case RawInputEventType::PointerLeft:
-                        case RawInputEventType::TouchDown: // 시나리오에 터치 단계가 없다
-                        case RawInputEventType::TouchMove:
-                        case RawInputEventType::TouchUp:
+                        case RawInputEventKind::None:
+                        case RawInputEventKind::GamepadConnectionChanged:
+                        case RawInputEventKind::TextComposition:
+                        case RawInputEventKind::FocusGained:
+                        case RawInputEventKind::FocusLost:
+                        case RawInputEventKind::PointerEntered:
+                        case RawInputEventKind::PointerLeft:
+                        case RawInputEventKind::TouchDown: // 시나리오에 터치 단계가 없다
+                        case RawInputEventKind::TouchMove:
+                        case RawInputEventKind::TouchUp:
                         {
                             // 조합 중 글자는 확정 뒤 TextInput 으로 다시 오고, 포커스 · 포인터 출입 · 패드 연결은 창과 장치의 상태라
                             // 시나리오 단계로 낼 뜻이 없다(실행기는 창을 가진 채 입력만 넣는다).

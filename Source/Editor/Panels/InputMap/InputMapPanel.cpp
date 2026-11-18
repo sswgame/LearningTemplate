@@ -323,7 +323,7 @@ namespace sw::editor
         ImGui::Text( "%u  %s", bindIndex, _document.describeBinding( action, bindIndex ).c_str() );
         ImGui::SameLine( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "InputMapLayerColumnEm" ) );
         drawBindingLayerCombo( action, bindIndex );
-        const bool bTriggerProperties = InputMapModel::canSaveTriggerProperties( binding._kind ); // 파일에 남지 않는 칸은 보이지 않는다
+        const bool bTriggerProperties = InputMapViewModel::canSaveTriggerProperties( binding._kind ); // 파일에 남지 않는 칸은 보이지 않는다
         if ( bTriggerProperties )
         {
             ImGui::SameLine( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "InputMapActionColumnEm" ) );
@@ -636,7 +636,7 @@ namespace sw::editor
     void InputMapPanel::drawDeviceMonitorTab()
     {
         // 장치 값은 모델이 한 번 모은다 — 패널은 입력 매니저를 쥐지 않는다(MVVM).
-        InputMapModel::gatherDeviceState( _deviceState );
+        InputMapViewModel::gatherDeviceState( _deviceState );
 
         // 1) 활성 장치 상태
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "ActiveDevice" ) );
@@ -741,11 +741,11 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RightMotorTip" ) );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "TestPulse03s" ) ) );
                 if ( ImGui::Button( SW_LOCKEY( "EdText", "TestPulse03s" ) ) )
-                    InputMapModel::playGamepadVibration( _testVibrationLeft, _testVibrationRight, 0.3f );
+                    InputMapViewModel::playGamepadVibration( _testVibrationLeft, _testVibrationRight, 0.3f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TestPulseTip" ) );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
                 if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )
-                    InputMapModel::stopGamepadVibration();
+                    InputMapViewModel::stopGamepadVibration();
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StopVibrationTip" ) );
             }
             else
@@ -820,17 +820,17 @@ namespace sw::editor
         EditorWidgets::combo( SW_WIDGET_ID( "##Key" ), &_simKeyToInject, arrCommonKeys, 11 );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "InjectKeyDown" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "InjectKeyDown" ) ) )
-            InputMapModel::postKey( arrKeyValues[_simKeyToInject], true );
+            InputMapViewModel::postKey( arrKeyValues[_simKeyToInject], true );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "InjectKeyDownTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "InjectKeyUp" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "InjectKeyUp" ) ) )
-            InputMapModel::postKey( arrKeyValues[_simKeyToInject], false );
+            InputMapViewModel::postKey( arrKeyValues[_simKeyToInject], false );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "InjectKeyUpTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "TapKeyDownUp" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "TapKeyDownUp" ) ) )
         {
-            InputMapModel::postKey( arrKeyValues[_simKeyToInject], true );
-            InputMapModel::postKey( arrKeyValues[_simKeyToInject], false );
+            InputMapViewModel::postKey( arrKeyValues[_simKeyToInject], true );
+            InputMapViewModel::postKey( arrKeyValues[_simKeyToInject], false );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TapKeyTip" ) );
 
@@ -843,13 +843,13 @@ namespace sw::editor
         EditorWidgets::sliderFloat( SW_WIDGET_ID( "##SimStickY" ), &_simStick._y, -1.0f, 1.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SimStickYTip" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "InjectStickTilt" ) ) )
-            InputMapModel::setVirtualStick( _simStick );
+            InputMapViewModel::setVirtualStick( _simStick );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "InjectStickTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ResetStickToCenter" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetStickToCenter" ) ) )
         {
             _simStick = float2{ 0.0f, 0.0f };
-            InputMapModel::setVirtualStick( _simStick );
+            InputMapViewModel::setVirtualStick( _simStick );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ResetStickTip" ) );
     }
@@ -958,7 +958,7 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "GameViewportOnScreenControllerOverlayHUDSettings" ) );
         ImGui::Separator();
 
-        ViewportInputOverlay& config = InputMapModel::editViewportOverlay();
+        ViewportInputOverlay& config = InputMapViewModel::editViewportOverlay();
 
         bool bEnabled = ( config._bEnabled == SW_TRUE );
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "EnableViewportOnScreenHUDOverlay" ), &bEnabled ) )
@@ -1000,7 +1000,7 @@ namespace sw::editor
 
     bool InputMapPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
-        return InputMapModel::isDocumentPath( assetPath );
+        return InputMapViewModel::isDocumentPath( assetPath );
     }
 
     ToolAssetLoadResult InputMapPanel::loadDocument()

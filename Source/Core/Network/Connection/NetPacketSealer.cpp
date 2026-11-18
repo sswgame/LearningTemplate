@@ -111,7 +111,7 @@ namespace sw
     {
         const uint64 packetNumber = security._sendPacketNumber++;
         uint8        arrHead[kSecureHeadSize]{};
-        arrHead[0] = typeByte; // 종류 3비트와 0 5비트다. BitWriter 는 낮은 비트부터 쓰므로 받는 쪽의 readBits( 3 )과 peekPacketType 이 그대로 읽는다.
+        arrHead[0] = typeByte; // 종류 3비트와 0 5비트다. BitWriter 는 낮은 비트부터 쓰므로 받는 쪽의 readBits( 3 )과 peekPacketKind 이 그대로 읽는다.
         LittleEndianUtil::writeUint32( arrHead + 1, connectionToken );
         for ( int32 index = 0; index < 8; ++index )
         {

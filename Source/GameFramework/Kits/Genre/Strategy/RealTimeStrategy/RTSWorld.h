@@ -50,7 +50,7 @@ namespace sw
 namespace sw
 {
     /** @brief 명령 종류입니다. */
-    enum class RTSOrderType : uint8
+    enum class RTSOrderKind : uint8
     {
         Move = 0,
         AttackMove, ///< 이동 중 적을 만나면 싸운다
@@ -69,7 +69,7 @@ namespace sw
         RTSUnitID        _targetUnit{};
         const FlowField* _pFlowField{ nullptr }; ///< 무리 이동에 쓴다. 월드가 빌려 준 흐름장이며 명령이 끝나면 돌려준다
         float32          _arriveRadius{ 0.0f };  ///< 무리 이동에 쓴다. 목표에서 이 거리 안이면 도착한 것으로 본다(모두가 한 점에 설 수는 없다)
-        RTSOrderType     _type{ RTSOrderType::Move };
+        RTSOrderKind     _type{ RTSOrderKind::Move };
     };
 } // namespace sw
 
@@ -128,7 +128,7 @@ namespace sw
         int32                                    _resourceLeft{ 0 };
         int32                                    _cargoAmount{ 0 };
         int32                                    _supplyReserved{ 0 }; ///< 건물이 쓴다. 생산 중인 유닛이 쓸 보급
-        RTSResourceType                          _cargoType{ RTSResourceType::None };
+        RTSResourceKind                          _cargoType{ RTSResourceKind::None };
         RTSGatherPhase                           _gatherPhase{ RTSGatherPhase::ToResource };
         uint8                                    _bAlive{ SW_TRUE };
         uint8                                    _bHasRally{ SW_FALSE };
@@ -299,7 +299,7 @@ namespace sw
         /** @brief @p nearPosition 둘레에서 건물을 놓을 자리를 찾습니다. 건물 둘레 한 셀은 비워 둡니다(AI 와 자동 배치용). 정제소는 가까운 빈 간헐천을 고릅니다. */
         [[nodiscard]] bool findBuildSite( const hashed_string& buildingID, const float3& nearPosition, int32 minRadius, int32 maxRadius, int2& outCell ) const;
         /** @brief @p position 에서 가장 가까운 그 종류의 자원을 반환합니다. @p maxDistance 밖이면 무효 id 입니다. */
-        RTSUnitID findNearestResource( const float3& position, RTSResourceType type, float32 maxDistance ) const;
+        RTSUnitID findNearestResource( const float3& position, RTSResourceKind type, float32 maxDistance ) const;
         /** @brief 그 플레이어의 가장 가까운, 건설이 끝난 본진을 반환합니다. */
         RTSUnitID findNearestDepot( int32 player, const float3& position ) const;
 

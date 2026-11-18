@@ -7,7 +7,7 @@
  *          - 범위: 매개변수 정의의 힌트 · 이름으로 반경(구) · 하한/상한(주축 단면 사각형) · 중심(점) · 방향(화살표)을 월드 도형 값으로 낸다(`ModifierGizmoLogic::computeRangeKind`).
  *          - 제어점: 격자(lattice · ffd2 · ffd3 · ffd4)와 ffd2d 의 점. 점을 누르면 고르고(세션의 `setSelectedControlPoint`) 그대로 끌면 카메라를 마주 보는 평면에서,
  *            축 화살표를 끌면 그 축으로 옮긴다. 세션의 대칭 설정이 켜져 있으면 짝 점도 함께 옮긴다.
- *          마우스 양보(`EditorViewportMouseClaim`)는 적용이 한다: 잡을 때 가져가고 끄는 동안 끌기 명령마다 다시 잡으며 놓을 때 돌려준다.
+ *          마우스 양보(`EditorViewportMouseCapture`)는 적용이 한다: 잡을 때 가져가고 끄는 동안 끌기 명령마다 다시 잡으며 놓을 때 돌려준다.
  */
 #pragma once
 #include "Core/Container/vector.h"

@@ -8,7 +8,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphModel.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphEditModel.h"
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
@@ -41,7 +41,7 @@ namespace sw::editor
             /** @brief 모델이 확장 이미지 안에서 노드 · 배선을 만들고 내보내는지 확인합니다. 기본 노드 종류 레지스트리가 확장에서도 보여야 합니다. */
             static EditorSelfTestStep runModelBuildsACircuit( EditorSelfTestContext& context )
             {
-                GimmickGraphModel     model( game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() );
+                GimmickGraphEditModel model( game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() );
                 const expected<int32> plateID = model.addNode( hashed_string( "Signal" ) );
                 const expected<int32> doorID  = model.addNode( hashed_string( "Door" ) );
                 context.expect( plateID.has_value() && doorID.has_value(), "the default node registry has no Signal or Door" );
@@ -68,8 +68,8 @@ namespace sw::editor
                 vector<GimmickWireDesc>  listWire;
                 vector<GraphCommentBox>  listComment;
                 model.exportTo( listNode, listTarget, listWire, listComment );
-                const uint64      signature = model.computeSignature();
-                GimmickGraphModel reloaded( game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() );
+                const uint64          signature = model.computeSignature();
+                GimmickGraphEditModel reloaded( game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() );
                 reloaded.populate( listNode, listTarget, listWire, listComment );
                 const bool bKept = reloaded.getNodes()[0]._position == float2{ 123.0f, -45.0f } && reloaded.getMutableComments().size() == 1 && reloaded.computeSignature() == signature;
                 context.expect( bKept, "node positions or comment boxes did not survive a component round trip" );
@@ -79,5 +79,5 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_SELF_TEST( GimmickGraphPanel, "gimmick.panelDraws", 9200, &GimmickGraphSelfTestInternal::runPanelDraws );
-    SW_EDITOR_SELF_TEST( GimmickGraphModel, "gimmick.modelBuildsACircuit", 9210, &GimmickGraphSelfTestInternal::runModelBuildsACircuit );
+    SW_EDITOR_SELF_TEST( GimmickGraphEditModel, "gimmick.modelBuildsACircuit", 9210, &GimmickGraphSelfTestInternal::runModelBuildsACircuit );
 } // namespace sw::editor

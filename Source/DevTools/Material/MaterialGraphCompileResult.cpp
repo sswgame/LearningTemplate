@@ -25,7 +25,7 @@ namespace sw
             struct Value
             {
                 string                 _expression;
-                MaterialGraphValueType _type{ MaterialGraphValueType::Invalid };
+                MaterialGraphValueKind _type{ MaterialGraphValueKind::Invalid };
             };
 
             struct NamedValue
@@ -96,14 +96,14 @@ namespace sw
             }
 
             /** @brief @p value 를 @p type 으로 편 식입니다. float 만 넓어지고, 다른 벡터 크기는 false 입니다. */
-            [[nodiscard]] static bool coerce( const Value& value, MaterialGraphValueType type, string& outExpression )
+            [[nodiscard]] static bool coerce( const Value& value, MaterialGraphValueKind type, string& outExpression )
             {
                 if ( value._type == type )
                 {
                     outExpression = value._expression;
                     return true;
                 }
-                if ( value._type != MaterialGraphValueType::Float )
+                if ( value._type != MaterialGraphValueKind::Float )
                     return false;
                 const uint32 count = static_cast<uint32>( type );
                 outExpression      = MaterialGraphNodeRegistry::getHLSLTypeName( type );
@@ -121,7 +121,7 @@ namespace sw
              * @brief 수치 글(공백 · 쉼표로 나눈다)을 HLSL 상수로 읽습니다. @p type 이 `Any` 면 수의 개수가 형식이고, 벡터인데 수가 하나면 모든 칸에 씁니다.
              * @return 수가 아니거나 개수가 맞지 않으면 false 입니다.
              */
-            [[nodiscard]] static bool makeLiteral( string_view text, MaterialGraphValueType type, Value& outValue )
+            [[nodiscard]] static bool makeLiteral( string_view text, MaterialGraphValueKind type, Value& outValue )
             {
                 float32 arrValue[4]{};
                 uint32  count = 0;
@@ -135,12 +135,12 @@ namespace sw
                 }
                 if ( count == 0 )
                     return false;
-                const MaterialGraphValueType resolved = type == MaterialGraphValueType::Any ? static_cast<MaterialGraphValueType>( count ) : type;
+                const MaterialGraphValueKind resolved = type == MaterialGraphValueKind::Any ? static_cast<MaterialGraphValueKind>( count ) : type;
                 const uint32                 wanted   = static_cast<uint32>( resolved );
                 if ( wanted > 4 || ( count != 1 && count != wanted ) )
                     return false;
                 outValue._type = resolved;
-                if ( resolved == MaterialGraphValueType::Float )
+                if ( resolved == MaterialGraphValueKind::Float )
                 {
                     outValue._expression = formatFloatLiteral( arrValue[0] );
                     return true;
@@ -157,13 +157,13 @@ namespace sw
             }
 
             /** @brief 등록의 기본값 글입니다 — 수로 시작하면 상수이고, 아니면 선언한 형식의 HLSL 식입니다. */
-            [[nodiscard]] static bool makeDefault( string_view text, MaterialGraphValueType type, Value& outValue )
+            [[nodiscard]] static bool makeDefault( string_view text, MaterialGraphValueKind type, Value& outValue )
             {
                 const utf8 first    = text.empty() ? '\0' : text.front();
                 const bool bNumeric = ( '0' <= first && first <= '9' ) || first == '-' || first == '.';
                 if ( bNumeric )
                     return makeLiteral( text, type, outValue );
-                if ( text.empty() || type == MaterialGraphValueType::Any )
+                if ( text.empty() || type == MaterialGraphValueKind::Any )
                     return false;
                 outValue._expression = string{ text };
                 outValue._type       = type;
@@ -175,7 +175,7 @@ namespace sw
             {
                 string_view            _pin;   ///< 층 그래프가 쓰는 이름(`Output` 노드의 핀과 같다)
                 string_view            _field; ///< `MaterialGraphOutput` 의 칸
-                MaterialGraphValueType _type;
+                MaterialGraphValueKind _type;
             };
 
             /**
@@ -183,11 +183,11 @@ namespace sw
              *        언리얼 Material Layers 는 Material Attributes 를 통째로 섞는다(기억에 의존). 여기서는 층이 내지 않은 칸은 아래 값 그대로다(젖음은 거칠기 · 색만 바꾼다).
              */
             static constexpr LayerAttribute kArrLayerAttribute[] = {
-                {"BaseColor", "_baseColor", MaterialGraphValueType::Float3},
-                { "Metallic",  "_metallic",  MaterialGraphValueType::Float},
-                {"Roughness", "_roughness",  MaterialGraphValueType::Float},
-                {   "Normal",    "_normal", MaterialGraphValueType::Float3},
-                { "Emissive",  "_emissive", MaterialGraphValueType::Float3},
+                {"BaseColor", "_baseColor", MaterialGraphValueKind::Float3},
+                { "Metallic",  "_metallic",  MaterialGraphValueKind::Float},
+                {"Roughness", "_roughness",  MaterialGraphValueKind::Float},
+                {   "Normal",    "_normal", MaterialGraphValueKind::Float3},
+                { "Emissive",  "_emissive", MaterialGraphValueKind::Float3},
             };
 
             /** @brief 층 상한입니다(`Config/Dev/MaterialLayers.json`). 층마다 칸 · 텍스처 표본 · 섞기 줄이 늘어 셰이더 비용의 상한을 데이터로 둔다. */
@@ -324,7 +324,7 @@ namespace sw
                  * @brief 입력 핀 하나의 값입니다: 링크 → 노드 값(상수) → 등록의 기본값. 필수인데 아무것도 없으면 문제를 남기고 `Invalid` 입니다.
                  * @param defaultText 기본값 글. 비면 필수 핀이다
                  */
-                [[nodiscard]] Value resolveInput( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDef& node, string_view pin, MaterialGraphValueType type, string_view defaultText, string_view scope )
+                [[nodiscard]] Value resolveInput( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDef& node, string_view pin, MaterialGraphValueKind type, string_view defaultText, string_view scope )
                 {
                     Value                    value;
                     const MaterialGraphLink* pLink = node.findLink( pin );
@@ -368,15 +368,15 @@ namespace sw
                 }
 
                 /** @brief `any` 핀들의 형식을 정합니다. 서로 다른 크기의 벡터가 섞이면 문제를 남깁니다. */
-                [[nodiscard]] MaterialGraphValueType resolveAny( const MaterialGraphNodeKind& kind, const vector<Value>& listInput, const MaterialGraphNodeDef& node, string_view scope )
+                [[nodiscard]] MaterialGraphValueKind resolveAny( const MaterialGraphNodeKind& kind, const vector<Value>& listInput, const MaterialGraphNodeDef& node, string_view scope )
                 {
-                    MaterialGraphValueType resolved = MaterialGraphValueType::Float;
+                    MaterialGraphValueKind resolved = MaterialGraphValueKind::Float;
                     for ( uint32 index = 0; index < kind.getInputCount(); ++index )
                     {
-                        const MaterialGraphValueType type = listInput[index]._type;
-                        if ( kind.getInput( index )._type != MaterialGraphValueType::Any || type == MaterialGraphValueType::Invalid || type == MaterialGraphValueType::Float )
+                        const MaterialGraphValueKind type = listInput[index]._type;
+                        if ( kind.getInput( index )._type != MaterialGraphValueKind::Any || type == MaterialGraphValueKind::Invalid || type == MaterialGraphValueKind::Float )
                             continue;
-                        if ( resolved != MaterialGraphValueType::Float && resolved != type )
+                        if ( resolved != MaterialGraphValueKind::Float && resolved != type )
                         {
                             string message{ "pin '" };
                             message.append( kind.getInput( index )._name ).append( "' is " ).append( MaterialGraphNodeRegistry::getHLSLTypeName( type ) ).append( " but another input is " ).append( MaterialGraphNodeRegistry::getHLSLTypeName( resolved ) );
@@ -438,12 +438,12 @@ namespace sw
                 }
 
                 /** @brief 수치 설정이 형식에 맞는지 봅니다(식에 쓰이지 않는 `Min` · `Default` 도 데이터의 오타를 잡는다). */
-                void checkNumericSettings( const MaterialGraphNodeKind& kind, const MaterialGraphNodeDef& node, string_view scope )
+                void validateNumericSettings( const MaterialGraphNodeKind& kind, const MaterialGraphNodeDef& node, string_view scope )
                 {
                     for ( uint32 index = 0; index < kind.getSettingCount(); ++index )
                     {
                         const MaterialGraphSettingDecl& setting = kind.getSetting( index );
-                        if ( setting._type == MaterialGraphValueType::String )
+                        if ( setting._type == MaterialGraphValueKind::String )
                             continue;
                         Value        value;
                         const string text = readSettingText( kind, node, setting._name );
@@ -522,17 +522,17 @@ namespace sw
                     {
                         const MaterialGraphPinDecl& pin = kind.getInput( index );
                         listValue.push_back( resolveInput( graph, listResult, node, pin._name, pin._type, pin._default, scope ) );
-                        bAllRead = bAllRead && listValue.back()._type != MaterialGraphValueType::Invalid;
+                        bAllRead = bAllRead && listValue.back()._type != MaterialGraphValueKind::Invalid;
                     }
-                    checkNumericSettings( kind, node, scope );
-                    const MaterialGraphValueType anyType = resolveAny( kind, listValue, node, scope );
+                    validateNumericSettings( kind, node, scope );
+                    const MaterialGraphValueKind anyType = resolveAny( kind, listValue, node, scope );
                     vector<string>               listInput;
                     for ( uint32 index = 0; index < kind.getInputCount(); ++index )
                     {
                         const MaterialGraphPinDecl&  pin    = kind.getInput( index );
-                        const MaterialGraphValueType wanted = pin._type == MaterialGraphValueType::Any ? anyType : pin._type;
+                        const MaterialGraphValueKind wanted = pin._type == MaterialGraphValueKind::Any ? anyType : pin._type;
                         string                       expression;
-                        if ( listValue[index]._type != MaterialGraphValueType::Invalid && coerce( listValue[index], wanted, expression ) == false )
+                        if ( listValue[index]._type != MaterialGraphValueKind::Invalid && coerce( listValue[index], wanted, expression ) == false )
                         {
                             string message{ "pin '" };
                             message.append( pin._name ).append( "' wants " ).append( MaterialGraphNodeRegistry::getHLSLTypeName( wanted ) ).append( " but got " ).append( MaterialGraphNodeRegistry::getHLSLTypeName( listValue[index]._type ) );
@@ -555,7 +555,7 @@ namespace sw
                     for ( uint32 index = 0; index < kind.getOutputCount(); ++index )
                     {
                         const MaterialGraphOutputDecl&         output = kind.getOutput( index );
-                        const MaterialGraphValueType           type   = output._type == MaterialGraphValueType::Any ? anyType : output._type;
+                        const MaterialGraphValueKind           type   = output._type == MaterialGraphValueKind::Any ? anyType : output._type;
                         fixed_string<constant::buffer::kMax64> variableName;
                         formatstring( variableName.data(), variableName.capacity(), "n%#_%#", variable, output._name );
                         const string expression = expand( output._expression, kind, listInput, outResult._listOutput, parameterName, node, scope );
@@ -574,7 +574,7 @@ namespace sw
                     {
                         const MaterialGraphPinDecl& pin   = kind.getInput( index );
                         const Value                 value = resolveInput( graph, listResult, node, pin._name, pin._type, pin._default, scope );
-                        if ( value._type == MaterialGraphValueType::Invalid )
+                        if ( value._type == MaterialGraphValueKind::Invalid )
                             continue;
                         string expression;
                         if ( coerce( value, pin._type, expression ) == false )
@@ -651,7 +651,7 @@ namespace sw
                         if ( inner._kind != pInputKind->getName() )
                             continue;
                         const string                 pinName = readSettingText( *pInputKind, inner, "Name" );
-                        const MaterialGraphValueType type    = MaterialGraphNodeRegistry::parseValueType( readSettingText( *pInputKind, inner, "Type" ) );
+                        const MaterialGraphValueKind type    = MaterialGraphNodeRegistry::parseValueType( readSettingText( *pInputKind, inner, "Type" ) );
                         if ( static_cast<uint32>( type ) < 1 || static_cast<uint32>( type ) > 4 )
                         {
                             report( scope, inner._name, "BadValue", "GraphInput type must be float, float2, float3 or float4" );
@@ -660,7 +660,7 @@ namespace sw
                         }
                         const Value value = resolveInput( graph, listResult, node, pinName, type, {}, scope );
                         string      expression;
-                        if ( value._type == MaterialGraphValueType::Invalid )
+                        if ( value._type == MaterialGraphValueKind::Invalid )
                         {
                             bAllRead = false;
                             continue;
@@ -717,8 +717,8 @@ namespace sw
                 {
                     if ( node.findLink( "Mask" ) != nullptr || node.findValue( "Mask" ) != nullptr )
                     {
-                        const Value value = resolveInput( graph, listResult, node, "Mask", MaterialGraphValueType::Float, {}, scope );
-                        return value._type == MaterialGraphValueType::Invalid ? string{} : value._expression;
+                        const Value value = resolveInput( graph, listResult, node, "Mask", MaterialGraphValueKind::Float, {}, scope );
+                        return value._type == MaterialGraphValueKind::Invalid ? string{} : value._expression;
                     }
                     const string channel = readSettingText( kind, node, "MaskChannel" );
                     if ( channel == "None" )
@@ -761,7 +761,7 @@ namespace sw
                         report( scope, node._name, "BadName", "layer node name prefixes material fields - use letters, digits and '_'" );
                         return;
                     }
-                    checkNumericSettings( kind, node, scope );
+                    validateNumericSettings( kind, node, scope );
                     MaterialGraphDef layer;
                     if ( loadSubgraph( node, scope, layer ) == false )
                         return;
@@ -964,8 +964,8 @@ namespace sw
                             }
                             case MaterialGraphNodeRole::GraphOutput:
                             {
-                                const Value value = resolveInput( graph, listResult, node, "Value", MaterialGraphValueType::Any, {}, scope );
-                                if ( value._type != MaterialGraphValueType::Invalid )
+                                const Value value = resolveInput( graph, listResult, node, "Value", MaterialGraphValueKind::Any, {}, scope );
+                                if ( value._type != MaterialGraphValueKind::Invalid )
                                     outListGraphOutput.push_back( NamedValue{ readSettingText( kind, node, "Name" ), value } );
                                 break;
                             }
@@ -974,7 +974,7 @@ namespace sw
                     return _listIssue.size() == issueCount;
                 }
 
-                /** @brief 칸 선언입니다. 원소 크기가 16 의 배수여야 해 float4 를 앞에 두고 끝을 채운다(`ShaderBindingValidatorIssue::checkStructuredElementLayouts`). */
+                /** @brief 칸 선언입니다. 원소 크기가 16 의 배수여야 해 float4 를 앞에 두고 끝을 채운다(`ShaderBindingValidatorIssue::validateStructuredElementLayouts`). */
                 [[nodiscard]] string makeFieldLines() const
                 {
                     string text;
@@ -1136,7 +1136,7 @@ namespace sw
                     outListInput.push_back( MaterialGraphPinInfo{ MaterialGraphCompilerInternal::Session::readSettingText( *pInnerKind, inner, "Name" ), MaterialGraphNodeRegistry::parseValueType( typeName ) } );
                 }
                 if ( pInnerKind->getRole() == MaterialGraphNodeRole::GraphOutput )
-                    outListOutput.push_back( MaterialGraphPinInfo{ MaterialGraphCompilerInternal::Session::readSettingText( *pInnerKind, inner, "Name" ), MaterialGraphValueType::Any } );
+                    outListOutput.push_back( MaterialGraphPinInfo{ MaterialGraphCompilerInternal::Session::readSettingText( *pInnerKind, inner, "Name" ), MaterialGraphValueKind::Any } );
             }
             return true;
         }

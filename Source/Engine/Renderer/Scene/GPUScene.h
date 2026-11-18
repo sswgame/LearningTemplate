@@ -301,7 +301,7 @@ namespace sw
         void setIndirectCountsFilledByGPU( bool bByGPU );
         /**
          * @brief GPU 가 개수를 맡지 못하게 된 업로드(컬링 뷰 버퍼를 다 갖추지 못함)에서 인자를 CPU 개수로 다시 올립니다.
-         * @details GPU 가 개수를 맡는 동안의 프레임마다 되돌리기는 CPU 가 하지 않는다 — 컬링 앞의 GPU 커널(`RenderPassType::IndirectArgsReset`)이 한다.
+         * @details GPU 가 개수를 맡는 동안의 프레임마다 되돌리기는 CPU 가 하지 않는다 — 컬링 앞의 GPU 커널(`RenderPassKind::IndirectArgsReset`)이 한다.
          */
         void uploadCPUIndirectCounts( IRHIDevice* pDevice );
         /** @brief 모든 컬링 뷰가 간접 인자와 가시 목록을 다 갖췄는지 확인합니다. 하나라도 없으면 GPU 개수를 쓰면 안 됩니다. */

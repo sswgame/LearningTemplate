@@ -4,7 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionPlatformerBody.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerBody.h"
 
 #include <cstring>
 #include <limits>

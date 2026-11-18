@@ -12,7 +12,7 @@ namespace sw::editor
 {
     enum class EditorPropertyGridScope : uint8;
 
-    class PropertyGridModel;
+    class PropertyGridViewModel;
 } // namespace sw::editor
 
 namespace sw::editor
@@ -23,13 +23,13 @@ namespace sw::editor
         /** @brief 지금 활성 위젯이 이번 프레임에 이미 그려졌으면 true 입니다. 행을 그리기 **전에** 읽어 `trackRow` 에 넘긴다. */
         [[nodiscard]] static bool isActiveItemDrawn();
         /** @brief 행 @p rowID 를 그린 뒤 부릅니다 — 그리기 전(@p bActiveDrawnBefore)에는 없던 활성 위젯이 그 사이 그려졌으면 그 행의 구간을 잇는다. */
-        static void trackRow( PropertyGridModel& model, uint32 rowID, bool bActiveDrawnBefore );
+        static void trackRow( PropertyGridViewModel& model, uint32 rowID, bool bActiveDrawnBefore );
         /**
          * @brief 방금 그린 확장 영역(`ImGui::EndGroup` 으로 닫은 그룹)을 행 하나처럼 추적합니다 — 안의 위젯이 활성이면 @p scope 씬 오브젝트 @p objectID 의
          *        컴포넌트 @p componentID 구간을 잇거나(처음이면 그 컴포넌트 프로퍼티 전부를 찍어) 엽니다(@p pLabel 은 되돌리기 이름).
          * @details 확장(Transform · Camera …)은 컴포넌트에 바로 써 모델의 쓰기 길을 지나지 않는다 — 유니티 `Undo.RecordObject` 처럼 대상 하나를 찍고 차이를 프로퍼티로 남긴다.
          *          ImGui 는 그룹 안의 활성 항목을 그룹의 상태로 넘긴다.
          */
-        static void trackComponentRegion( PropertyGridModel& model, EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const utf8* pLabel );
+        static void trackComponentRegion( PropertyGridViewModel& model, EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const utf8* pLabel );
     };
 } // namespace sw::editor

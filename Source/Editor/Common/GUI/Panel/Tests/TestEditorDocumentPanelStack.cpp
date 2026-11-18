@@ -106,8 +106,8 @@ SW_TEST_CASE( EditorDocumentPanelStackTest, UndoRoundTripCatchesLossyApply )
     StackProbePanel panel;
     panel.syncDocumentUndoBaseline();
     panel.edit( "abc" );
-    SW_EXPECT_TRUE( panel.checkUndoRoundTrip().has_value() );
+    SW_EXPECT_TRUE( panel.validateUndoRoundTrip().has_value() );
 
     panel.makeApplyLossy();
-    SW_EXPECT_FALSE( panel.checkUndoRoundTrip().has_value() );
+    SW_EXPECT_FALSE( panel.validateUndoRoundTrip().has_value() );
 }

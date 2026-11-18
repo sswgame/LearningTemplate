@@ -9,7 +9,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerExpedition.h"
+#include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerExpedition.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"

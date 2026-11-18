@@ -193,7 +193,7 @@ namespace sw
                 return;
             }
             _role = Role::Server;
-            (void)MeleeSweepHistory::findOrCreate( *getOwner()->getMutableManager() ); // 서버만 켠다 — 권위 있는 스윕이 여기에 적힌다
+            (void)MeleeSweepHistory::getOrCreate( *getOwner()->getMutableManager() ); // 서버만 켠다 — 권위 있는 스윕이 여기에 적힌다
         }
         else
         {

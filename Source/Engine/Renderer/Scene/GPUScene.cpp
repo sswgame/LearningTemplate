@@ -15,7 +15,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
 #include "Engine/Renderer/Scene/GPUVertexAnimationPool.h"
 
@@ -152,7 +152,7 @@ namespace sw
 
         // CPU 스냅샷이 그대로면 인스턴스 버퍼 · 간접 인자 재업로드를 생략한다.
         // 컬링 컴퓨트가 개수를 InterlockedAdd 로 만드는 동안 개수는 매 프레임 0 으로 되돌아가야 하는데, 그 일은 GPU 가 컬링 바로 앞에서 한다
-        // (RenderPassType::IndirectArgsReset — FrameGraphExecutor::dispatchCullView). 그 커널이 없으면 GPU 가 개수를 맡지 않는다(usesGPUGeneratedCommands).
+        // (RenderPassKind::IndirectArgsReset — FrameGraphExecutor::dispatchCullView). 그 커널이 없으면 GPU 가 개수를 맡지 않는다(usesGPUGeneratedCommands).
         // 배치 표 · 간접 인자는 스냅샷이 그대로여도 풀 오프셋이 바뀌면(_bBatchTablesDirty) 다시 올린다.
         const bool bCPUDirty = _snapshot._bCPUDirty != SW_FALSE || _instances._buffer == 0 || getIndirectArgsBuffer() == 0;
         if ( bCPUDirty == false && _bBatchTablesDirty == SW_FALSE )

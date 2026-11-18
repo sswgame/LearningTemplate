@@ -50,7 +50,7 @@ namespace sw
                     RigJointLimitParams params;
                     bool                bOk = limitReader.readProperties( params );
                     bOk                     = limitReader.finish() && bOk;
-                    if ( bOk == false || params._type == RigJointLimitType::None )
+                    if ( bOk == false || params._type == RigJointLimitKind::None )
                     {
                         reader.fail( "malformed limit (type is Cone or Hinge)" );
                         return false;

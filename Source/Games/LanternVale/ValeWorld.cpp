@@ -250,7 +250,7 @@ namespace sw
         return ValeActionResult::Ok;
     }
 
-    void ValeWorld::tick( float32 deltaSeconds )
+    void ValeWorld::update( float32 deltaSeconds )
     {
         for ( auto& entry : _mapAvatar )
         {

@@ -45,7 +45,7 @@ namespace sw
          * @details 번호는 채널마다 다르다(`NetConnection::recordFlow`): 신뢰 순서는 넣은 · 꺼낸 순번, 신뢰 순서 없음은 신뢰 ID, 비신뢰 · 순서만은 (패킷 번호 << 8 | 패킷 안 자리).
          *          값은 53 비트 안이다(트레이스 뷰어가 JSON 수를 배정밀도로 읽는다). 위 27 비트가 연결과 방향, 2 비트가 채널, 아래 24 비트가 번호(돌면 겹친다 — 트레이스 한 판은 몇 초다).
          */
-        static uint64 makeFlowID( uint64 connectionToken, bool bFromServer, NetChannelType channel, uint64 wireIndex );
+        static uint64 makeFlowID( uint64 connectionToken, bool bFromServer, NetChannelKind channel, uint64 wireIndex );
 
         /** @brief 기록하는 쪽을 하나 더합니다 · 뺍니다(타임라인 기록이 켜지고 꺼질 때). 하나라도 있으면 `record` 가 남깁니다. */
         static void addRecorder();

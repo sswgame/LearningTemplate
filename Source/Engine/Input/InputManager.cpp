@@ -251,9 +251,9 @@ namespace sw
     void InputManager::recordFramePress( const RawInputEvent& rawEvent )
     {
         InputSlot  slot{};
-        const bool bKeyPress     = rawEvent._type == RawInputEventType::KeyDown && rawEvent._bRepeat == SW_FALSE;
-        const bool bMousePress   = rawEvent._type == RawInputEventType::MouseButtonDown || rawEvent._type == RawInputEventType::MouseDoubleClick;
-        const bool bGamepadPress = rawEvent._type == RawInputEventType::GamepadButtonDown;
+        const bool bKeyPress     = rawEvent._type == RawInputEventKind::KeyDown && rawEvent._bRepeat == SW_FALSE;
+        const bool bMousePress   = rawEvent._type == RawInputEventKind::MouseButtonDown || rawEvent._type == RawInputEventKind::MouseDoubleClick;
+        const bool bGamepadPress = rawEvent._type == RawInputEventKind::GamepadButtonDown;
         if ( bKeyPress )
             slot = InputSlot::fromKey( rawEvent._payload._keyData._key );
         else if ( bMousePress )
@@ -465,7 +465,7 @@ namespace sw
         {
             recordFramePress( rawEvent );
             dispatchRawEvent( rawEvent );
-            if ( rawEvent._type == RawInputEventType::MouseRawDelta )
+            if ( rawEvent._type == RawInputEventKind::MouseRawDelta )
                 _frameLookDelta += rawEvent._payload._mouseData._rawDelta;
         }
 
@@ -551,7 +551,7 @@ namespace sw
     {
         switch ( rawEvent._type )
         {
-            case RawInputEventType::KeyDown:
+            case RawInputEventKind::KeyDown:
             {
                 const Key    key      = rawEvent._payload._keyData._key;
                 const size_t keyIndex = static_cast<size_t>( key );
@@ -570,14 +570,14 @@ namespace sw
                 break;
             }
 
-            case RawInputEventType::KeyUp:
+            case RawInputEventKind::KeyUp:
             {
                 if ( _pKeyboard != nullptr )
                     _pKeyboard->setKeyDown( rawEvent._payload._keyData._key, false );
                 break;
             }
 
-            case RawInputEventType::MouseMove:
+            case RawInputEventKind::MouseMove:
             {
                 if ( _pMouse != nullptr )
                     _pMouse->setPosition( rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y );
@@ -585,7 +585,7 @@ namespace sw
                 break;
             }
 
-            case RawInputEventType::MouseButtonDown:
+            case RawInputEventKind::MouseButtonDown:
             {
                 if ( _pMouse != nullptr )
                 {
@@ -596,7 +596,7 @@ namespace sw
                 break;
             }
 
-            case RawInputEventType::MouseButtonUp:
+            case RawInputEventKind::MouseButtonUp:
             {
                 if ( _pMouse != nullptr )
                 {
@@ -606,7 +606,7 @@ namespace sw
                 break;
             }
 
-            case RawInputEventType::MouseDoubleClick:
+            case RawInputEventKind::MouseDoubleClick:
             {
                 if ( _pMouse != nullptr )
                 {
@@ -617,21 +617,21 @@ namespace sw
                 break;
             }
 
-            case RawInputEventType::MouseWheel:
+            case RawInputEventKind::MouseWheel:
             {
                 if ( _pMouse != nullptr )
                     _pMouse->addWheelDelta( rawEvent._payload._mouseData._wheelDelta );
                 break;
             }
 
-            case RawInputEventType::MouseWheelHorizontal:
+            case RawInputEventKind::MouseWheelHorizontal:
             {
                 if ( _pMouse != nullptr )
                     _pMouse->addHorizontalWheelDelta( rawEvent._payload._mouseData._wheelDelta );
                 break;
             }
 
-            case RawInputEventType::GamepadButtonDown:
+            case RawInputEventKind::GamepadButtonDown:
             {
                 GamepadDevice* pPad = getGamepad( rawEvent._deviceIndex );
                 if ( pPad != nullptr )
@@ -640,7 +640,7 @@ namespace sw
                 break;
             }
 
-            case RawInputEventType::GamepadButtonUp:
+            case RawInputEventKind::GamepadButtonUp:
             {
                 GamepadDevice* pPad = getGamepad( rawEvent._deviceIndex );
                 if ( pPad != nullptr )
@@ -648,7 +648,7 @@ namespace sw
                 break;
             }
 
-            case RawInputEventType::GamepadAxis:
+            case RawInputEventKind::GamepadAxis:
             {
                 GamepadDevice* pPad = getGamepad( rawEvent._deviceIndex );
                 if ( pPad != nullptr )
@@ -656,7 +656,7 @@ namespace sw
                 break;
             }
 
-            case RawInputEventType::GamepadConnectionChanged:
+            case RawInputEventKind::GamepadConnectionChanged:
             {
                 // 가상 연결 이벤트가 가상 세션 동안 패드의 연결 여부를 정한다(실제 연결은 폴링이 정한다).
                 GamepadDevice* pPad = getGamepad( rawEvent._deviceIndex );
@@ -667,13 +667,13 @@ namespace sw
                 break;
             }
 
-            case RawInputEventType::TextInput:
+            case RawInputEventKind::TextInput:
             {
                 onTextInput( rawEvent._payload._textData._arrUTF8 );
                 break;
             }
 
-            case RawInputEventType::TextComposition:
+            case RawInputEventKind::TextComposition:
             {
                 _pendingComposition += rawEvent._payload._textData._arrUTF8;
                 if ( rawEvent._bTextContinued == SW_FALSE )
@@ -684,27 +684,27 @@ namespace sw
                 break;
             }
 
-            case RawInputEventType::FocusGained:
+            case RawInputEventKind::FocusGained:
             {
                 onWindowFocusGained();
                 break;
             }
 
-            case RawInputEventType::FocusLost:
+            case RawInputEventKind::FocusLost:
             {
                 onWindowFocusLost();
                 break;
             }
 
-            case RawInputEventType::PointerEntered:
-            case RawInputEventType::PointerLeft:
+            case RawInputEventKind::PointerEntered:
+            case RawInputEventKind::PointerLeft:
             {
                 if ( _pMouse != nullptr )
-                    _pMouse->setPointerInsideState( rawEvent._type == RawInputEventType::PointerEntered );
+                    _pMouse->setPointerInsideState( rawEvent._type == RawInputEventKind::PointerEntered );
                 break;
             }
 
-            case RawInputEventType::MouseRawDelta:
+            case RawInputEventKind::MouseRawDelta:
             {
                 if ( _pMouse != nullptr )
                     _pMouse->addRawDelta( rawEvent._payload._mouseData._rawDelta._x, rawEvent._payload._mouseData._rawDelta._y );
@@ -712,19 +712,19 @@ namespace sw
                 break;
             }
 
-            case RawInputEventType::TouchDown:
-            case RawInputEventType::TouchMove:
-            case RawInputEventType::TouchUp:
+            case RawInputEventKind::TouchDown:
+            case RawInputEventKind::TouchMove:
+            case RawInputEventKind::TouchUp:
             {
                 if ( _pTouch != nullptr )
                 {
-                    const bool bDown = rawEvent._type != RawInputEventType::TouchUp;
+                    const bool bDown = rawEvent._type != RawInputEventKind::TouchUp;
                     _pTouch->setPointerState( rawEvent._payload._touchData._pointerIndex, rawEvent._payload._touchData._x, rawEvent._payload._touchData._y, bDown );
                 }
                 break;
             }
 
-            case RawInputEventType::None:
+            case RawInputEventKind::None:
             {
                 break;
             }

@@ -15,7 +15,7 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 
 namespace sw
@@ -29,7 +29,7 @@ namespace sw::editor
     /**
      * @class EditorPropertyGrid
      * @brief 리플렉션 객체의 프로퍼티를 그리고 편집합니다. 상속한 프로퍼티, 카테고리, EditCondition, 컨테이너, enum, 중첩 구조체를 지원합니다.
-     * @details 언리얼의 `IDetailsView` 에 해당한다. 대상 하나마다 모델이 값 행을 모으고(`PropertyGridModel::gather`), 그리드는 행을 그려 편집을 행 번호로
+     * @details 언리얼의 `IDetailsView` 에 해당한다. 대상 하나마다 모델이 값 행을 모으고(`PropertyGridViewModel::gather`), 그리드는 행을 그려 편집을 행 번호로
      *          모델 명령에 돌려준다 — 멤버 주소를 보지 않는다. 화면 밖 행은 높이만 차지한다(값을 채우지 않는다). 검색 입력란은 그리드가 가지고 있다.
      */
     class SW_EDITOR_API EditorPropertyGrid
@@ -59,7 +59,7 @@ namespace sw::editor
             _model.endFrame(); // 닫힌 편집 구간을 되돌리기에 남긴다(그리기를 모두 마친 뒤 — 남기기는 이번 프레임의 쓰기 요청 뒤 게임 단계에 선다)
         }
         /** @brief 이 그리드의 편집 모델입니다 — 확장 영역의 편집 구간을 여는 View(`InspectorPropertyUndo::trackComponentRegion`)가 쓴다. */
-        PropertyGridModel& editModel() { return _model; }
+        PropertyGridViewModel& editModel() { return _model; }
         /** @brief 현재 검색어를 반환합니다. 비어 있으면 빈 문자열입니다. 환경설정 창이 섹션을 거를 때 씁니다. */
         const utf8* getFilterText() const { return _propertyFilter.c_str(); }
         /**
@@ -170,7 +170,7 @@ namespace sw::editor
         unordered_map<string, vector<InspectorMethodArgSlot>>          _mapMethodArgSlot;    ///< FUNCTION() 인자 슬롯. 키는 타입과 메서드 이름 원문
         unordered_map<uint32, fixed_string<constant::buffer::kMax256>> _mapContainerAddText; ///< 컨테이너 "추가" 입력란의 텍스트. 키는 그 입력란의 ImGui id
         vector<InspectorComponentChoice>                               _listMethodArgChoice; ///< 메서드 인자 핸들 선택기의 선택지 — 콤보가 열린 프레임에만 채운다
-        PropertyGridModel                                              _model;               ///< 편집 모델 — 대상 · 값 행 · 배치 캐시 · 즐겨찾기 · 명령
+        PropertyGridViewModel                                          _model;               ///< 편집 모델 — 대상 · 값 행 · 배치 캐시 · 즐겨찾기 · 명령
         PropertyGridViewState                                          _viewState;           ///< 그리는 대상의 값 행(저장 공간을 다시 쓴다)
         vector<OpenRowScope>                                           _listOpenScope;       ///< 지금 열린 행 범위(바깥에서 안쪽 순서)
         string                                                         _pendingEditText;     ///< 미룬 편집의 글(붙여넣기 · 키 · 원소)

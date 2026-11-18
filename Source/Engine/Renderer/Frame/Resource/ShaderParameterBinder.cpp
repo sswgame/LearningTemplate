@@ -103,7 +103,7 @@ namespace sw
     {
         /**
          * @brief `bindGraphics` 의 단계들입니다. 드로우마다 불리므로 이름 intern · 힙 할당을 하지 않습니다(레이아웃이 미리 계산해 둔 키만 읽는다).
-         * @details bindless 인덱스 검사(`BindlessIndexValidator`)는 배포 구성에서 사라진다 — `checkIndex` 하나가 그 분기를 가진다.
+         * @details bindless 인덱스 검사(`BindlessIndexValidator`)는 배포 구성에서 사라진다 — `validateIndex` 하나가 그 분기를 가진다.
          */
         struct ShaderParameterBinderInternal
         {
@@ -114,8 +114,8 @@ namespace sw
             }
 
             /** @brief 넘기는 bindless 인덱스가 살아 있는 슬롯인지 봅니다. 죽은 번호는 DX12 · Vulkan 에서 디바이스 손실로 끝나므로 검사가 로그로 남긴다. */
-            static void checkIndex( const BindlessIndexCheckSite* pIndexCheck, bool bCheck, RHIBindlessIndexSpace space, RHIDescriptorIndex index,
-                                    const hashed_string& name, uint32 elementIndex = 0 )
+            static void validateIndex( const BindlessIndexCheckSite* pIndexCheck, bool bCheck, RHIBindlessIndexSpace space, RHIDescriptorIndex index,
+                                       const hashed_string& name, uint32 elementIndex = 0 )
             {
                 if ( bCheck == false )
                     return;
@@ -164,7 +164,7 @@ namespace sw
                                 autoIndex = pBuffer->_index;
                             autoSpace = RHIBindlessIndexSpace::Buffer;
                         }
-                        checkIndex( pIndexCheck, bCheckIndex, autoSpace, autoIndex, member._valueKey );
+                        validateIndex( pIndexCheck, bCheckIndex, autoSpace, autoIndex, member._valueKey );
                         pValue    = reinterpret_cast<const uint8*>( &autoIndex );
                         valueSize = sizeof( uint32 );
                     }
@@ -196,7 +196,7 @@ namespace sw
                         continue;
                     const bool               bMaterialCb = slot._name == s_materialCbName;
                     const RHIDescriptorIndex cbIndex     = bMaterialCb ? materialCb : engineCb._index;
-                    checkIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Buffer, cbIndex, slot._name );
+                    validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Buffer, cbIndex, slot._name );
                     if ( cbIndex != kInvalidDescriptorIndex )
                         cmd.bindConstantBuffer( cbIndex, bMaterialCb ? shaderslot::kMaterialConstantBuffer : shaderslot::kPassConstantBuffer );
                 }
@@ -214,7 +214,7 @@ namespace sw
                 static const hashed_string s_materialTextureName{ "MaterialTexture" };
                 for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
                 {
-                    checkIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Texture, pMaterialTexSRV[texIndex], s_materialTextureName, texIndex );
+                    validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Texture, pMaterialTexSRV[texIndex], s_materialTextureName, texIndex );
                 }
                 if ( bNativeBindless )
                     return;
@@ -242,7 +242,7 @@ namespace sw
                         const RegisteredTexture* pTex = registry.findTexture( bind._lookupKey );
                         if ( pTex != nullptr && pTex->_srv != kInvalidDescriptorIndex )
                         {
-                            checkIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Texture, pTex->_srv, bind._lookupKey );
+                            validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Texture, pTex->_srv, bind._lookupKey );
                             cmd.bindShaderResource( pTex->_srv, bind._registerIndex );
                         }
                         continue;
@@ -250,7 +250,7 @@ namespace sw
                     const RegisteredBuffer* pBuffer = registry.findBuffer( bind._lookupKey );
                     if ( pBuffer != nullptr && pBuffer->_index != kInvalidDescriptorIndex )
                     {
-                        checkIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Buffer, pBuffer->_index, bind._lookupKey );
+                        validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Buffer, pBuffer->_index, bind._lookupKey );
                         cmd.bindStructuredBuffer( pBuffer->_index, bind._registerIndex );
                     }
                 }

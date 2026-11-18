@@ -67,18 +67,18 @@ namespace sw
         const wstring filterText = makeFilterText( params );
         ofn.lpstrFilter          = filterText.c_str();
         ofn.Flags                = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
-        if ( params._bEnableMultiselect && params._type == FileDialogParams::Type::Open )
+        if ( params._bEnableMultiselect && params._type == FileDialogParams::Kind::Open )
             ofn.Flags |= OFN_ALLOWMULTISELECT;
 
         BOOL result = FALSE;
         switch ( params._type )
         {
-            case FileDialogParams::Type::Open:
+            case FileDialogParams::Kind::Open:
             {
                 result = GetOpenFileNameW( &ofn );
                 break;
             }
-            case FileDialogParams::Type::Save:
+            case FileDialogParams::Kind::Save:
             {
                 result = GetSaveFileNameW( &ofn );
                 break;

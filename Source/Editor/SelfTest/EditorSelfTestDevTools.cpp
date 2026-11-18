@@ -65,7 +65,7 @@ namespace sw::editor
             class SelfTestPropertyDrawer final : public IInspectorProperty
             {
             public:
-                bool draw( const PropertyValueRow& /*row*/, PropertyGridModel& /*model*/ ) override { return true; }
+                bool draw( const PropertyValueRow& /*row*/, PropertyGridViewModel& /*model*/ ) override { return true; }
             };
 
             /** @brief 그리기 확장 등록 항목이 프로퍼티 매니저에 등록되고 내장 위젯은 그대로 남습니다. */
@@ -183,12 +183,12 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // toolbar.autoplayButton: 게임이 자동 플레이를 등록하면 상단 툴바에 버튼이 생기고, 스위치가 그 게임의 값을 켠다
             // ------------------------------------------------------------------------------
-            struct AutoplayProbe
+            struct AutoplayTestState
             {
                 static EditorSelfTestStep runAutoplayButton( EditorSelfTestContext& context )
                 {
-                    AutoplayProbe& probe     = context.getTestState<AutoplayProbe>();
-                    const uint32   stepIndex = context.getStepIndex();
+                    AutoplayTestState& probe     = context.getTestState<AutoplayTestState>();
+                    const uint32       stepIndex = context.getStepIndex();
                     if ( stepIndex == 0 )
                     {
                         probe._registration._pValue = &probe._value;
@@ -315,9 +315,9 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // sceneView.gizmoMovesTheSelection: 선택한 오브젝트의 이동 기즈모 가운데(화면 평면 이동)를 드래그하면 오브젝트가 움직인다
             // ------------------------------------------------------------------------------
-            struct GizmoProbe
+            struct GizmoTestState
             {
-                GizmoProbe()
+                GizmoTestState()
                     : _objectID{ 0 }
                     , _hoverSteps{ 0 }
                     , _startPosition{}
@@ -345,7 +345,7 @@ namespace sw::editor
                     Scene*                pScene           = editor::getActiveScene();
                     if ( openSceneView( context ) == nullptr || context.expect( pManager != nullptr && pScene != nullptr, "no active scene" ) == false )
                         return EditorSelfTestStep::Done;
-                    GizmoProbe&      probe     = context.getTestState<GizmoProbe>();
+                    GizmoTestState&  probe     = context.getTestState<GizmoTestState>();
                     const uint32     stepIndex = context.getStepIndex() - probe._hoverSteps; // 조준하는 동안 같은 단계에 머문다
                     CameraComponent* pCamera   = EditorCamera::find( pScene );
                     if ( context.expect( pCamera != nullptr, "no editor camera" ) == false )
@@ -460,7 +460,7 @@ namespace sw::editor
             }
 
             /** @brief 격자 · 기즈모 · 게임 뷰 오버레이 테스트가 만든 선택 오브젝트입니다. */
-            struct OverlayProbe
+            struct OverlayTestState
             {
                 static EditorSelfTestStep runGridAndGizmoDraw( EditorSelfTestContext& context )
                 {
@@ -472,8 +472,8 @@ namespace sw::editor
                                                       context.expect( pManager != nullptr && pCamera != nullptr, "no active scene or editor camera" ) == false;
                     if ( bMissingSceneContext )
                         return EditorSelfTestStep::Done;
-                    OverlayProbe& probe     = context.getTestState<OverlayProbe>();
-                    const uint32  stepIndex = context.getStepIndex();
+                    OverlayTestState& probe     = context.getTestState<OverlayTestState>();
+                    const uint32      stepIndex = context.getStepIndex();
                     if ( stepIndex == 0 )
                     {
                         probe._objectID = createSelectedProbe( pManager, pCamera );
@@ -504,8 +504,8 @@ namespace sw::editor
                                                       context.expect( pManager != nullptr && pCamera != nullptr, "no active scene or editor camera" ) == false;
                     if ( bMissingSceneContext )
                         return EditorSelfTestStep::Done;
-                    OverlayProbe& probe     = context.getTestState<OverlayProbe>();
-                    const uint32  stepIndex = context.getStepIndex();
+                    OverlayTestState& probe     = context.getTestState<OverlayTestState>();
+                    const uint32      stepIndex = context.getStepIndex();
                     if ( stepIndex == 0 )
                     {
                         // 선택이 있어야 "기즈모를 그리지 않는다" 는 검사가 의미가 있다.
@@ -611,7 +611,7 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_SELF_TEST( SceneViewDebugDraw, "sceneView.debugDraw", 710, &EditorSelfTestDevToolsInternal::runDebugDrawReachesTheSceneView );
-    SW_EDITOR_SELF_TEST( ToolbarAutoplay, "toolbar.autoplayButton", 725, &EditorSelfTestDevToolsInternal::AutoplayProbe::runAutoplayButton );
+    SW_EDITOR_SELF_TEST( ToolbarAutoplay, "toolbar.autoplayButton", 725, &EditorSelfTestDevToolsInternal::AutoplayTestState::runAutoplayButton );
     SW_EDITOR_SELF_TEST( ConsoleTagFilter, "console.tagFilter", 730, &EditorSelfTestDevToolsInternal::runConsoleTagFilter );
     SW_EDITOR_SELF_TEST( ConsoleDevCommands, "console.devCommands", 735, &EditorSelfTestDevToolsInternal::runConsoleDevCommands );
     SW_EDITOR_SELF_TEST( HierarchySelectAllWith, "hierarchy.selectAllWith", 740, &EditorSelfTestDevToolsInternal::runSelectAllWithTag );
@@ -620,8 +620,8 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( PropertyDrawer, "inspector.propertyDrawerRegistered", 760, &EditorSelfTestDevToolsInternal::runPropertyDrawerRegistered );
     // 등록 항목 커맨드의 예제다. 테이블이 아닌 파일에서 한 줄로 추가한 커맨드가 팔레트에 나온다. 메뉴 경로가 없으면 팔레트와 단축키만 쓴다.
     SW_EDITOR_COMMAND( SelfTestPing, "selftest.ping", &EditorSelfTestDevToolsInternal::runPingCommand, nullptr, NoScene );
-    SW_EDITOR_SELF_TEST( SceneViewGizmo, "sceneView.gizmoMovesTheSelection", 760, &EditorSelfTestDevToolsInternal::GizmoProbe::runGizmoMovesTheSelection );
-    SW_EDITOR_SELF_TEST( SceneViewGridAndGizmo, "sceneView.gridAndGizmoDraw", 765, &EditorSelfTestDevToolsInternal::OverlayProbe::runGridAndGizmoDraw );
-    SW_EDITOR_SELF_TEST( GameViewNoOverlays, "gameView.hidesEditorOverlays", 770, &EditorSelfTestDevToolsInternal::OverlayProbe::runGameViewHidesEditorOverlays );
+    SW_EDITOR_SELF_TEST( SceneViewGizmo, "sceneView.gizmoMovesTheSelection", 760, &EditorSelfTestDevToolsInternal::GizmoTestState::runGizmoMovesTheSelection );
+    SW_EDITOR_SELF_TEST( SceneViewGridAndGizmo, "sceneView.gridAndGizmoDraw", 765, &EditorSelfTestDevToolsInternal::OverlayTestState::runGridAndGizmoDraw );
+    SW_EDITOR_SELF_TEST( GameViewNoOverlays, "gameView.hidesEditorOverlays", 770, &EditorSelfTestDevToolsInternal::OverlayTestState::runGameViewHidesEditorOverlays );
     SW_EDITOR_SELF_TEST( GameViewPointerOrigin, "gameView.pointerOriginReachesTheGame", 772, &EditorSelfTestDevToolsInternal::runGameViewPointerOriginReachesTheGame );
 } // namespace sw::editor

@@ -62,7 +62,7 @@ namespace sw::editor
             }
 
             /** @brief 놀이기구의 배치 문제를 한 줄로 만듭니다. */
-            static string makeIssueText( const ParkLayoutModel& model, const ParkRidePreview& ride )
+            static string makeIssueText( const ParkLayoutViewModel& model, const ParkRidePreview& ride )
             {
                 string text;
                 for ( const ParkRideIssue& issue : ride._listIssue )
@@ -120,7 +120,7 @@ namespace sw::editor
         if ( bReread && bForce )
             SW_LOG_INFO_ID( "ParkLayoutPanel.ParkLayoutReloadedRequest", "Park layout reloaded on request" );
 
-        ParkLayoutModel& model = preview.editModel();
+        ParkLayoutViewModel& model = preview.editModel();
         ImGui::SameLine();
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Map" ), SW_LOCKEY( "EdPluginParkLayout", "FocusGate" ), "FocusGate" ) ) )
             (void)EditorSceneViewUtil::focusOn( model.getGatePosition(), ParkLayoutPanelInternal::kGateFocusRadius ); // 씬 뷰가 닫혀 있으면 할 일이 없다

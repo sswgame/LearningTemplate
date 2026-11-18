@@ -142,13 +142,13 @@ namespace sw
             }
 
             /** @brief 필터 노드 종류의 바이쿼드 형태입니다. */
-            static AudioBiquadType getBiquadType( AudioGraphNodeKind type )
+            static AudioBiquadKind getBiquadType( AudioGraphNodeKind type )
             {
                 if ( type == AudioGraphNodeKind::HighPass )
-                    return AudioBiquadType::HighPass;
+                    return AudioBiquadKind::HighPass;
                 if ( type == AudioGraphNodeKind::BandPass )
-                    return AudioBiquadType::BandPass;
-                return AudioBiquadType::LowPass;
+                    return AudioBiquadKind::BandPass;
+                return AudioBiquadKind::LowPass;
             }
         };
     } // namespace

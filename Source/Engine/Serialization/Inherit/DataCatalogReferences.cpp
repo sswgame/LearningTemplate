@@ -224,9 +224,9 @@ namespace sw
             {
                 if ( rule._bInEntry )
                     Internal::collectIDs( entry, rule, listTargetID );
-                const string_view entryID   = entry.getAttributeText( "id" );
-                const string_view ownerName = entryID.empty() ? string_view{ entry.getName() } : entryID;
-                const auto        checkNode = [&]( const XMLNode& owner )
+                const string_view entryID      = entry.getAttributeText( "id" );
+                const string_view ownerName    = entryID.empty() ? string_view{ entry.getName() } : entryID;
+                const auto        validateNode = [&]( const XMLNode& owner )
                 {
                     Internal::visitIDs( owner.getAttributeText( rule._attribute.c_str() ), rule._bNamed, [&]( string_view id )
                     {
@@ -244,9 +244,9 @@ namespace sw
                     } );
                 };
                 if ( rule._listOwnerPath.size() == 1 )
-                    checkNode( entry );
+                    validateNode( entry );
                 else
-                    Internal::visitOwners( entry, rule._listOwnerPath, 1, checkNode );
+                    Internal::visitOwners( entry, rule._listOwnerPath, 1, validateNode );
             }
         }
         return bValid;
@@ -255,8 +255,8 @@ namespace sw
     bool DataCatalogReferenceRules::validateUnique( const XMLNode& root, const DataCatalogReferenceRule& rule, string_view sourceName )
     {
         unordered_set<string_view> uniqueSeen; // 줄마다 본 값 목록을 훑지 않는다(카탈로그 줄 수의 제곱). 값은 문서가 든 글이다
-        bool                       bValid    = true;
-        const auto                 checkNode = [&]( const XMLNode& owner )
+        bool                       bValid       = true;
+        const auto                 validateNode = [&]( const XMLNode& owner )
         {
             const string_view value = owner.getAttributeText( rule._attribute.c_str() );
             if ( value.empty() )
@@ -270,9 +270,9 @@ namespace sw
         for ( XMLNode entry = root.findChild( rule._listOwnerPath[0].c_str() ); entry.isValid(); entry = entry.findNextSibling( rule._listOwnerPath[0].c_str() ) )
         {
             if ( rule._listOwnerPath.size() == 1 )
-                checkNode( entry );
+                validateNode( entry );
             else
-                DataCatalogReferencesInternal::visitOwners( entry, rule._listOwnerPath, 1, checkNode );
+                DataCatalogReferencesInternal::visitOwners( entry, rule._listOwnerPath, 1, validateNode );
         }
         return bValid;
     }

@@ -2,7 +2,7 @@
 #include "fullscreen.hlsli"
 
 /**
- * contact_shadow.hlsl — 접촉 그림자 패스(RenderPassType::ContactShadow).
+ * contact_shadow.hlsl — 접촉 그림자 패스(RenderPassKind::ContactShadow).
  *
  * 장면 깊이에서 복원한 점마다 접촉 그림자를 켠 빛(채널 넷, g_ContactShadowLights — C++ FrameShadowData::populateContactShadows) 쪽으로
  * 월드 공간에서 짧게(빛의 _extra.y m) 걷는다. 걸음마다 그 점을 화면에 투영해 깊이 버퍼의 면이 그 점보다 앞(카메라 쪽)에 두께 안으로 있으면 가려졌다.

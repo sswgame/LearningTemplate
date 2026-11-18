@@ -27,11 +27,11 @@ SW_TEST_CASE( EnumNameTest, DenseEnumNamesByIndex )
  */
 SW_TEST_CASE( EnumNameTest, SparseEnumNamesOnlyDeclaredValues )
 {
-    SW_EXPECT_EQUAL( string( "Zlib" ), string( getEnumName( PackCompressionType::Zlib ) ) );
-    SW_EXPECT_EQUAL( string( "Custom" ), string( getEnumName( PackCompressionType::Custom ) ) );
-    SW_EXPECT_EQUAL( string( EnumNameCache::kUnknownName ), string( getEnumName( static_cast<PackCompressionType>( 7 ) ) ) );
+    SW_EXPECT_EQUAL( string( "Zlib" ), string( getEnumName( PackCompressionKind::Zlib ) ) );
+    SW_EXPECT_EQUAL( string( "Custom" ), string( getEnumName( PackCompressionKind::Custom ) ) );
+    SW_EXPECT_EQUAL( string( EnumNameCache::kUnknownName ), string( getEnumName( static_cast<PackCompressionKind>( 7 ) ) ) );
 
-    const hashed_string& fqn  = typeFqn<PackCompressionType>();
+    const hashed_string& fqn  = typeFqn<PackCompressionKind>();
     const utf8*          pLZ4 = findEnumName( fqn, 3 );
     SW_REQUIRE_TRUE( pLZ4 != nullptr );
     SW_EXPECT_EQUAL( string( "LZ4" ), string( pLZ4 ) );
@@ -56,9 +56,9 @@ SW_TEST_CASE( EnumNameTest, NamesParseBackToValues )
 {
     const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
 
-    PackCompressionType codec = PackCompressionType::None;
+    PackCompressionKind codec = PackCompressionKind::None;
     SW_EXPECT_TRUE( registry.enumFromString( "Zstd", codec ) );
-    SW_EXPECT_TRUE( codec == PackCompressionType::Zstd );
+    SW_EXPECT_TRUE( codec == PackCompressionKind::Zstd );
     SW_EXPECT_FALSE( registry.enumFromString( "Brotli", codec ) );
 
     PackFlag flags = PackFlag::None;

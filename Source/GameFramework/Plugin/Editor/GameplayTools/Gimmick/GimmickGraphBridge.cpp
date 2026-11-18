@@ -22,7 +22,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool GimmickGraphBridge::load( const GimmickCircuitComponent& component, GimmickGraphModel& outModel )
+    bool GimmickGraphBridge::load( const GimmickCircuitComponent& component, GimmickGraphEditModel& outModel )
     {
         const PropertyInfo* pNode            = findProperty( component, "_listNode" );
         const PropertyInfo* pTarget          = findProperty( component, "_listNodeTarget" );
@@ -44,13 +44,13 @@ namespace sw::editor
 
     uint64 GimmickGraphBridge::computeSignature( const GimmickCircuitComponent& component )
     {
-        GimmickGraphModel scratch( game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() );
+        GimmickGraphEditModel scratch( game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() );
         if ( load( component, scratch ) == false )
             return 0;
         return scratch.computeSignature();
     }
 
-    bool GimmickGraphBridge::apply( GimmickCircuitComponent& component, const GimmickGraphModel& model )
+    bool GimmickGraphBridge::apply( GimmickCircuitComponent& component, const GimmickGraphEditModel& model )
     {
         const PropertyInfo* pNode            = findProperty( component, "_listNode" );
         const PropertyInfo* pTarget          = findProperty( component, "_listNodeTarget" );

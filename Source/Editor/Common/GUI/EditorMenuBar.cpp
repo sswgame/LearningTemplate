@@ -6,7 +6,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/GUI/Model/EditorMenuBarModel.h"
+#include "Editor/Common/GUI/Model/EditorMenuBarViewModel.h"
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/EditorPanelText.h"
@@ -37,7 +37,7 @@ namespace sw::editor
     {
         struct EditorMenuBarInternal
         {
-            static EditorMenuBarUIState& getState() { return EditorMenuBarModel::editUIState(); }
+            static EditorMenuBarUIState& getState() { return EditorMenuBarViewModel::editUIState(); }
         };
     } // namespace
 } // namespace sw::editor
@@ -65,7 +65,7 @@ namespace sw::editor
             EditorAssetTypeRegistry::forEachToolPanel( []( EditorAssetType kind, const utf8* pTitle )
             {
                 if ( ImGui::MenuItem( pTitle ) )
-                    EditorMenuBarModel::requestOpenDocumentPanel( kind );
+                    EditorMenuBarViewModel::requestOpenDocumentPanel( kind );
             } );
             ImGui::EndMenu();
         }
@@ -119,7 +119,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "SaveLayout" ) );
 
         vector<string> listName;
-        EditorMenuBarModel::collectLayoutNames( listName );
+        EditorMenuBarViewModel::collectLayoutNames( listName );
         if ( listName.empty() )
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "NoSavedLayouts" ) );
         for ( const string& name : listName )
@@ -128,7 +128,7 @@ namespace sw::editor
             if ( ImGui::MenuItem( name.c_str() ) )
                 (void)dockLayout.requestLoadNamedLayout( name ); // 파일이 사라졌으면 경고만 남긴다
             ImGui::SameLine( ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "MenuTrailingIconEm" ) );
-            if ( ImGui::SmallButton( "x" ) && EditorMenuBarModel::removeLayout( name ) == false )
+            if ( ImGui::SmallButton( "x" ) && EditorMenuBarViewModel::removeLayout( name ) == false )
                 SW_LOG_WARNING_ID( "Editor.CouldNotDeleteLayout", "Could not delete layout '%#'", name.c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DeleteLayout" ) );
             ImGui::PopID();
@@ -138,9 +138,9 @@ namespace sw::editor
 
     void EditorMenuBar::drawStatusArea()
     {
-        IModuleCompiler* pCompiler = EditorMenuBarModel::findModuleCompiler(); // 선택: Shipping 에는 모듈 컴파일러가 없다(GameModuleManager 가 SW_SHIPPING 에서 만들지 않는다)
+        IModuleCompiler* pCompiler = EditorMenuBarViewModel::findModuleCompiler(); // 선택: Shipping 에는 모듈 컴파일러가 없다(GameModuleManager 가 SW_SHIPPING 에서 만들지 않는다)
         if ( pCompiler != nullptr )
-            EditorMenuBarModel::notifyLiveCodingResult( *pCompiler );
+            EditorMenuBarViewModel::notifyLiveCodingResult( *pCompiler );
 
         // 상태 영역은 지난 프레임에 측정한 너비로 오른쪽 끝에 붙인다. 메뉴와 겹칠 위치면 이번 프레임은 그리지 않는다 — 창을 줄여도 메뉴가
         // 가려지지 않고, 넓히면 다시 나온다. 첫 프레임은 너비를 모르므로 오른쪽 끝에서 그려 측정한다.
@@ -218,7 +218,7 @@ namespace sw::editor
             ImGui::SameLine();
         }
 
-        const utf8* pBackend = EditorMenuBarModel::getRHIBackendName();
+        const utf8* pBackend = EditorMenuBarViewModel::getRHIBackendName();
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "RHI", TextArgumentList().addText( "backend", pBackend ).addDecimal( "framerate", static_cast<float64>( ImGui::GetIO().Framerate ), 0 ) ).c_str() );
         if ( ImGui::IsItemHovered() )
         {
@@ -251,7 +251,7 @@ namespace sw::editor
     void EditorMenuBar::processOpenPanelRequests()
     {
         EditorPanelOpenRequest request;
-        if ( EditorMenuBarModel::consumeOpenPanel( request ) == false )
+        if ( EditorMenuBarViewModel::consumeOpenPanel( request ) == false )
             return;
         const EditorPanelManager& panelManager = EditorPanelManager::getInEditorContext();
         IEditorPanel*             pPanel       = request._documentKind.isUnknown() == false ? panelManager.findDocumentPanel( request._documentKind ) : panelManager.findPanelByID( request._panelID );
@@ -275,7 +275,7 @@ namespace sw::editor
         if ( pWindow->DockNode != nullptr )
         {
             ImGui::DockContextQueueUndockWindow( ImGui::GetCurrentContext(), pWindow );
-            EditorMenuBarModel::requestFloatPanelByID( request._panelID );
+            EditorMenuBarViewModel::requestFloatPanelByID( request._panelID );
             return;
         }
         const ImGuiViewport* const pMain = ImGui::GetMainViewport();
@@ -285,8 +285,8 @@ namespace sw::editor
 
     void EditorMenuBar::processSceneSession()
     {
-        EditorMenuBarModel::processSceneRequests();
-        const EditorPendingSceneAction action = EditorMenuBarModel::getPendingSceneAction();
+        EditorMenuBarViewModel::processSceneRequests();
+        const EditorPendingSceneAction action = EditorMenuBarViewModel::getPendingSceneAction();
         if ( action == EditorPendingSceneAction::None )
             return;
 
@@ -303,7 +303,7 @@ namespace sw::editor
 
         const EditorUnsavedChoice choice = EditorWidgets::drawUnsavedChangesModal( "##UnsavedSceneAction", pMessage );
         if ( choice != EditorUnsavedChoice::None )
-            EditorMenuBarModel::requestUnsavedSceneChoice( choice );
+            EditorMenuBarViewModel::requestUnsavedSceneChoice( choice );
     }
 
     // 이 종류의 등록 목록 — EditorModule 이미지에 하나(확장 DLL 의 등록자도 내보낸 이 함수로 오른다).

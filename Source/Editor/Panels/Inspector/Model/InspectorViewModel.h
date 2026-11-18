@@ -15,7 +15,7 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
 #include "Editor/Panels/Inspector/Model/InspectorImportSettings.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 
 namespace sw
 {

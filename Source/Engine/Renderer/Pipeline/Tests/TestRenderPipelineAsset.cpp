@@ -11,7 +11,7 @@
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -69,7 +69,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, XMLStateReachesThePSO )
     RenderPipelineAsset asset;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"false\" _blendPreset=\"Transparent\" _cullMode=\"None\"" ) );
     RHIPipelineStateDesc desc{};
-    FramePSOManager::applyPassRenderState( desc, RenderPassType::ForwardOpaque, &asset.getGraphPass()[0] );
+    FramePSOManager::applyPassRenderState( desc, RenderPassKind::ForwardOpaque, &asset.getGraphPass()[0] );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( desc._renderState._bEnableDepthTest ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthWrite ) );                // 표는 깊이를 쓴다
     SW_EXPECT_TRUE( desc._renderState._arrBlendTarget[0] == BlendTargetState::makeStraightAlpha() ); // 표는 섞지 않는다
@@ -78,7 +78,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, XMLStateReachesThePSO )
 
     RenderPipelineAsset noDepth;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::loadMeshState( noDepth, "_bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _cullMode=\"Front\"", "ForwardOpaque", false ) );
-    FramePSOManager::applyPassRenderState( desc, RenderPassType::ForwardOpaque, &noDepth.getGraphPass()[0] );
+    FramePSOManager::applyPassRenderState( desc, RenderPassKind::ForwardOpaque, &noDepth.getGraphPass()[0] );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthTest ) );
     SW_EXPECT_TRUE( desc._depthStencilFormat == RHIFormat::Unknown );
     SW_EXPECT_TRUE( desc._renderState._cullMode == CullMode::Front );
@@ -88,12 +88,12 @@ SW_TEST_CASE( RenderPipelineAssetTest, XMLStateReachesThePSO )
 SW_TEST_CASE( RenderPipelineAssetTest, InternalSlotsUseTheTable )
 {
     RHIPipelineStateDesc desc{};
-    FramePSOManager::applyPassRenderState( desc, RenderPassType::ForwardOpaqueNoDepthWrite, nullptr );
+    FramePSOManager::applyPassRenderState( desc, RenderPassKind::ForwardOpaqueNoDepthWrite, nullptr );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( desc._renderState._bEnableDepthTest ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthWrite ) );
     SW_EXPECT_TRUE( desc._renderState._cullMode == CullMode::Back );
 
-    FramePSOManager::applyPassRenderState( desc, RenderPassType::Canvas, nullptr );
+    FramePSOManager::applyPassRenderState( desc, RenderPassKind::Canvas, nullptr );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthTest ) );
     SW_EXPECT_TRUE( desc._renderState._arrBlendTarget[0] == BlendTargetState::makePremultipliedAlpha() );
     SW_EXPECT_TRUE( desc._renderState._cullMode == CullMode::None );
@@ -225,10 +225,10 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputePassLoads )
     RenderPipelineAsset asset;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, ComputePassTestUtil::makeXML( ComputePassTestUtil::withShader( "_computeEntryPoint=\"MyCS\" _threadGroupSize=\"4\"" ), "<item>A</item>", "<item>B</item>" ) ) );
     const RenderGraphPassDesc& pass = asset.getGraphPass()[0];
-    SW_EXPECT_TRUE( pass._type == RenderPassType::Compute );
+    SW_EXPECT_TRUE( pass._type == RenderPassKind::Compute );
     SW_EXPECT_EQUAL( string( "MyCS" ), pass._computeEntryPoint );
     SW_EXPECT_EQUAL( 4u, pass._threadGroupSize );
-    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::Compute ).hasFlag( RenderPassTraitFlag::kPipelineCompute ) );
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::Compute ).hasFlag( RenderPassTraitFlag::kPipelineCompute ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 컴퓨트 패스: 실행이 받아 줄 수 없는 선언은 읽기 오류다. 진입점 칸은 컴퓨트 패스만 쓴다 */
@@ -298,10 +298,10 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesLoad )
     SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ string_view( "engine/pipeline/deferredpipeline.xml" ) } ) );
     for ( const RenderGraphPassDesc& pass : deferred.getGraphPass() )
     {
-        if ( pass._type == RenderPassType::Transparent )
+        if ( pass._type == RenderPassKind::Transparent )
             SW_EXPECT_TRUE( pass._resolvedRenderState.isAnyBlendEnabled() );
         // 디퍼드 조명은 G버퍼 패스가 장면 색에 먼저 적은 자체 발광 위에 더한다(G버퍼 명세 판 3).
-        if ( pass._type == RenderPassType::Lighting )
+        if ( pass._type == RenderPassKind::Lighting )
             SW_EXPECT_TRUE( pass._resolvedRenderState.isAnyBlendEnabled() );
     }
 }
@@ -433,7 +433,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, StencilNeedsTheDepthAttachment )
     RenderPipelineAsset asset;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableStencil=\"true\" _stencilRef=\"7\" _stencilFrontCompare=\"Equal\" _stencilFrontPass=\"Replace\"" ) );
     RHIPipelineStateDesc desc{};
-    FramePSOManager::applyPassRenderState( desc, RenderPassType::ForwardOpaque, &asset.getGraphPass()[0] );
+    FramePSOManager::applyPassRenderState( desc, RenderPassKind::ForwardOpaque, &asset.getGraphPass()[0] );
     SW_EXPECT_EQUAL( 7, static_cast<int32>( desc._renderState._stencilRef ) );
     SW_EXPECT_TRUE( desc._renderState._stencilFrontCompare == CompareFunc::Equal );
     SW_EXPECT_TRUE( desc._renderState._stencilFrontPass == StencilOp::Replace );
@@ -493,19 +493,19 @@ SW_TEST_CASE( RenderPipelineAssetTest, VelocityOutputIsDeclaredByThePipeline )
     RenderPipelineAsset asset;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, VelocityTestUtil::makeXML( "ForwardOpaque", "<item>SceneColor</item><item>SceneVelocity</item><item>SceneDepth</item>" ) ) );
     const RenderGraphPassDesc& pass = asset.getGraphPass()[0];
-    SW_EXPECT_TRUE( passWritesVelocity( RenderPassType::ForwardOpaque, &pass ) );
-    SW_EXPECT_TRUE( passWritesVelocity( RenderPassType::ForwardOpaqueNoDepthWrite, &pass ) ); // 내부 슬롯은 ForwardOpaque 의 선언을 본다
-    SW_EXPECT_FALSE( passWritesVelocity( RenderPassType::Transparent, &pass ) );              // 반투명은 속도를 쓰지 않는다
-    SW_EXPECT_FALSE( passWritesVelocity( RenderPassType::ForwardOpaque, nullptr ) );
+    SW_EXPECT_TRUE( passWritesVelocity( RenderPassKind::ForwardOpaque, &pass ) );
+    SW_EXPECT_TRUE( passWritesVelocity( RenderPassKind::ForwardOpaqueNoDepthWrite, &pass ) ); // 내부 슬롯은 ForwardOpaque 의 선언을 본다
+    SW_EXPECT_FALSE( passWritesVelocity( RenderPassKind::Transparent, &pass ) );              // 반투명은 속도를 쓰지 않는다
+    SW_EXPECT_FALSE( passWritesVelocity( RenderPassKind::ForwardOpaque, nullptr ) );
     const EngineDefaultAssets& assets = engine::getSubsystem<EngineDefaultAssets>();
-    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassType::ForwardOpaque, &pass, &pass, assets )._listDefine, kVelocityDefine ) );
-    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassType::ForwardOpaqueNoDepthWrite, nullptr, &pass, assets )._listDefine, kVelocityDefine ) );
-    SW_EXPECT_FALSE( VectorUtil::contains( selectRenderPassShader( RenderPassType::ForwardOpaqueNoDepthWrite, nullptr, nullptr, assets )._listDefine, kVelocityDefine ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassKind::ForwardOpaque, &pass, &pass, assets )._listDefine, kVelocityDefine ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassKind::ForwardOpaqueNoDepthWrite, nullptr, &pass, assets )._listDefine, kVelocityDefine ) );
+    SW_EXPECT_FALSE( VectorUtil::contains( selectRenderPassShader( RenderPassKind::ForwardOpaqueNoDepthWrite, nullptr, nullptr, assets )._listDefine, kVelocityDefine ) );
 
     // 속도를 선언하지 않은 파이프라인은 첨부도 define 도 없다.
     RenderPipelineAsset withoutVelocity;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( withoutVelocity, VelocityTestUtil::makeXML( "ForwardOpaque", "<item>SceneColor</item><item>SceneDepth</item>" ) ) );
-    SW_EXPECT_FALSE( passWritesVelocity( RenderPassType::ForwardOpaque, &withoutVelocity.getGraphPass()[0] ) );
+    SW_EXPECT_FALSE( passWritesVelocity( RenderPassKind::ForwardOpaque, &withoutVelocity.getGraphPass()[0] ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 화면 속도 출력은 깊이를 쓰는 불투명 패스의 둘째 컬러 출력이고 명세의 포맷이다 — 어기면 읽기 오류다 */
@@ -547,7 +547,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesWireVelocity )
         for ( const RenderGraphPassDesc& pass : asset.getGraphPass() )
         {
             bAnyWriter         = bAnyWriter || passWritesVelocity( pass._type, &pass );
-            const bool bReader = pass._type == RenderPassType::TAA || pass._type == RenderPassType::MotionBlur;
+            const bool bReader = pass._type == RenderPassKind::TAA || pass._type == RenderPassKind::MotionBlur;
             if ( bReader == false )
                 continue;
             const bool bReadsVelocity = VectorUtil::containsIf( pass._listResolvedInput, []( const RenderGraphPassDesc::ResolvedAttachment& input )
@@ -561,19 +561,19 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesWireVelocity )
 /** @brief [RenderPipelineAssetTest] 화면 왜곡 누적은 왜곡 머티리얼(MATERIAL_DISTORTION)의 반투명 배치만 왜곡 퍼뮤테이션으로 그리고, 적용은 사본 · 왜곡 · 깊이를 읽는다 */
 SW_TEST_CASE( RenderPipelineAssetTest, DistortionPassTypesFollowTheTable )
 {
-    SW_EXPECT_TRUE( isPipelinePassType( RenderPassType::Distortion ) );
-    SW_EXPECT_TRUE( isPipelinePassType( RenderPassType::DistortionApply ) );
-    const RenderPassTypeInfo& accumulate = getRenderPassTypeInfo( RenderPassType::Distortion );
+    SW_EXPECT_TRUE( isPipelinePassType( RenderPassKind::Distortion ) );
+    SW_EXPECT_TRUE( isPipelinePassType( RenderPassKind::DistortionApply ) );
+    const RenderPassKindInfo& accumulate = getRenderPassKindInfo( RenderPassKind::Distortion );
     SW_EXPECT_TRUE( accumulate.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) );
     SW_EXPECT_FALSE( accumulate.hasFlag( RenderPassTraitFlag::kDepthWrite ) );
     const vector<string> listDistortion{ string( kMaterialDistortionDefine ), string( "MATERIAL_BLEND_TRANSLUCENT" ) };
     const vector<string> listPlain{ string( "MATERIAL_BLEND_TRANSLUCENT" ) };
-    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::Distortion ).shouldDrawMaterial( &listDistortion ) );
-    SW_EXPECT_FALSE( getRenderPassTypeInfo( RenderPassType::Distortion ).shouldDrawMaterial( &listPlain ) );
-    SW_EXPECT_FALSE( getRenderPassTypeInfo( RenderPassType::Distortion ).shouldDrawMaterial( nullptr ) ); // 머티리얼 없는 배치는 왜곡이 없다
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::Distortion ).shouldDrawMaterial( &listDistortion ) );
+    SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::Distortion ).shouldDrawMaterial( &listPlain ) );
+    SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::Distortion ).shouldDrawMaterial( nullptr ) ); // 머티리얼 없는 배치는 왜곡이 없다
     const EngineDefaultAssets& assets = engine::getSubsystem<EngineDefaultAssets>();
-    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassType::Distortion, nullptr, nullptr, assets )._listDefine, string( kPassDistortionDefine ) ) );
-    const RenderPassInputSignature* pApply = findRenderPassInputSignature( RenderPassType::DistortionApply );
+    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassKind::Distortion, nullptr, nullptr, assets )._listDefine, string( kPassDistortionDefine ) ) );
+    const RenderPassInputSignature* pApply = findRenderPassInputSignature( RenderPassKind::DistortionApply );
     SW_REQUIRE_TRUE( pApply != nullptr );
     SW_EXPECT_TRUE( pApply->hasRole( RenderPassInputRole::SceneColorCopy ) );
     SW_EXPECT_TRUE( pApply->hasRole( RenderPassInputRole::Distortion ) );
@@ -594,9 +594,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesWireDistortion )
         size_t                             transparentIndex = listPass.size();
         for ( size_t index = 0; index < listPass.size(); ++index )
         {
-            accumulateIndex  = listPass[index]._type == RenderPassType::Distortion ? index : accumulateIndex;
-            applyIndex       = listPass[index]._type == RenderPassType::DistortionApply ? index : applyIndex;
-            transparentIndex = listPass[index]._type == RenderPassType::Transparent ? index : transparentIndex;
+            accumulateIndex  = listPass[index]._type == RenderPassKind::Distortion ? index : accumulateIndex;
+            applyIndex       = listPass[index]._type == RenderPassKind::DistortionApply ? index : applyIndex;
+            transparentIndex = listPass[index]._type == RenderPassKind::Transparent ? index : transparentIndex;
         }
         SW_REQUIRE_TRUE_MSG( accumulateIndex < applyIndex && applyIndex < transparentIndex, pPath );
         const RenderGraphPassDesc& accumulate = listPass[accumulateIndex];
@@ -681,7 +681,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, PostProcessMaterialPassesNameOneLocation 
     uint32 locationMask = 0;
     for ( const RenderGraphPassDesc& pass : deferred.getGraphPass() )
     {
-        if ( pass._type == RenderPassType::PostProcessMaterial )
+        if ( pass._type == RenderPassKind::PostProcessMaterial )
             locationMask |= 1u << static_cast<uint32>( pass._blendableLocation );
     }
     const uint32 expected = ( 1u << static_cast<uint32>( PostProcessBlendableLocation::BeforeTonemap ) ) | ( 1u << static_cast<uint32>( PostProcessBlendableLocation::AfterTonemap ) ) |
@@ -706,7 +706,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, DecalPassWritesTheDBuffer )
     RenderPipelineAsset asset;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, xml ) );
 
-    const RenderPassType arrBasePass[] = { RenderPassType::GBuffer, RenderPassType::ForwardOpaque };
+    const RenderPassKind arrBasePass[] = { RenderPassKind::GBuffer, RenderPassKind::ForwardOpaque };
     const string_view    arrPath[]     = { "engine/pipeline/deferredpipeline.xml", "engine/pipeline/forwardprepasspipeline.xml" };
     for ( size_t pipelineIndex = 0; pipelineIndex < std::size( arrPath ); ++pipelineIndex )
     {
@@ -718,8 +718,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, DecalPassWritesTheDBuffer )
         size_t                             baseIndex    = listPass.size();
         for ( size_t index = 0; index < listPass.size(); ++index )
         {
-            prepassIndex = listPass[index]._type == RenderPassType::DepthPrepass ? index : prepassIndex;
-            decalIndex   = listPass[index]._type == RenderPassType::Decal ? index : decalIndex;
+            prepassIndex = listPass[index]._type == RenderPassKind::DepthPrepass ? index : prepassIndex;
+            decalIndex   = listPass[index]._type == RenderPassKind::Decal ? index : decalIndex;
             baseIndex    = listPass[index]._type == arrBasePass[pipelineIndex] ? index : baseIndex;
         }
         SW_REQUIRE_TRUE( prepassIndex < decalIndex && decalIndex < baseIndex && baseIndex < listPass.size() );
@@ -768,10 +768,10 @@ SW_TEST_CASE( RenderPipelineAssetTest, FrameGraphDeclarationsLoad )
     SW_REQUIRE_EQUAL( size_t( 3 ), asset.getResources().size() );
     SW_EXPECT_TRUE( asset.getResources()[2]._kind == RenderGraphResourceKind::Persistent );
     SW_REQUIRE_EQUAL( size_t( 1 ), asset.getFramePass().size() );
-    SW_EXPECT_TRUE( asset.getFramePass()[0]._type == RenderPassType::GPUCull );
+    SW_EXPECT_TRUE( asset.getFramePass()[0]._type == RenderPassKind::GPUCull );
     SW_EXPECT_EQUAL( size_t( 2 ), asset.getFramePass()[0]._listInput.size() );
-    SW_EXPECT_TRUE( asset.hasFramePass( RenderPassType::GPUCull ) );
-    SW_EXPECT_FALSE( asset.hasFramePass( RenderPassType::LightGrid ) );
+    SW_EXPECT_TRUE( asset.hasFramePass( RenderPassKind::GPUCull ) );
+    SW_EXPECT_FALSE( asset.hasFramePass( RenderPassKind::LightGrid ) );
 }
 
 /**
@@ -821,7 +821,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, QueueAttributeIsForFrameComputePasses )
     RenderPipelineAsset asset;
     const string        asyncGrid = "<RenderGraphPassDesc _name=\"LightGrid\" _type=\"LightGrid\" _queue=\"AsyncCompute\"><_listOutput><item>CullResults</item></_listOutput></RenderGraphPassDesc>";
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, asyncGrid ) ) );
-    SW_EXPECT_TRUE( asset.getFramePass()[0]._queue == RHIQueueType::AsyncCompute );
+    SW_EXPECT_TRUE( asset.getFramePass()[0]._queue == RHIQueueKind::AsyncCompute );
     // 깊이 히스토리는 풀스크린 드로우다 — 컴퓨트 큐는 렌더 타깃을 모른다.
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"DepthHistory\" _type=\"DepthHistory\" _queue=\"AsyncCompute\"/>" ) ) );
     // 뷰 패스는 뷰마다 다시 돌아 포크 · 조인 자리가 없다.
@@ -837,9 +837,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesDeclareFramePasses )
     {
         RenderPipelineAsset asset;
         SW_REQUIRE_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( pPath ) } ), pPath );
-        for ( const RenderPassType type : { RenderPassType::DepthHistory, RenderPassType::OcclusionTiles, RenderPassType::VFXSimulation, RenderPassType::InstanceAnimation, RenderPassType::MeshMorph,
-                                            RenderPassType::MeshSkin, RenderPassType::GPUCull, RenderPassType::LightGrid, RenderPassType::VolumetricFog, RenderPassType::ProbeUpdate,
-                                            RenderPassType::CanvasMarker } )
+        for ( const RenderPassKind type : { RenderPassKind::DepthHistory, RenderPassKind::OcclusionTiles, RenderPassKind::VFXSimulation, RenderPassKind::InstanceAnimation, RenderPassKind::MeshMorph,
+                                            RenderPassKind::MeshSkin, RenderPassKind::GPUCull, RenderPassKind::LightGrid, RenderPassKind::VolumetricFog, RenderPassKind::ProbeUpdate,
+                                            RenderPassKind::CanvasMarker } )
         {
             SW_EXPECT_TRUE_MSG( asset.hasFramePass( type ), pPath );
         }
@@ -854,16 +854,16 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputeImplementationIsATableChoice )
     SW_EXPECT_LOG( "RenderPipelineAsset.PassNoComputeImplementation" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
-    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::BloomDownsample ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
-    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::DepthOfField ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
-    SW_EXPECT_FALSE( getRenderPassTypeInfo( RenderPassType::Bloom ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::BloomDownsample ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::DepthOfField ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
+    SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::Bloom ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
 
     // 셰이더는 픽셀 구현과 같은 파일 · define 에 컴퓨트 define 하나를 더한다 — 쿠커와 런타임이 같은 함수를 부른다.
     RenderGraphPassDesc downsample{};
-    downsample._type                        = RenderPassType::BloomDownsample;
+    downsample._type                        = RenderPassKind::BloomDownsample;
     downsample._implementation              = RenderPassExecutionMode::Compute;
     const EngineDefaultAssets&      assets  = engine::getSubsystem<EngineDefaultAssets>();
-    const RenderPassShaderSelection pixel   = selectRenderPassShader( RenderPassType::BloomDownsample, &downsample, &downsample, assets );
+    const RenderPassShaderSelection pixel   = selectRenderPassShader( RenderPassKind::BloomDownsample, &downsample, &downsample, assets );
     const RenderPassShaderSelection compute = selectRenderPassComputeShader( downsample, assets );
     SW_EXPECT_EQUAL( pixel._shaderPath, compute._shaderPath );
     SW_EXPECT_TRUE( VectorUtil::contains( compute._listDefine, string( kPassComputeImplementationDefine ) ) );
@@ -885,17 +885,17 @@ SW_TEST_CASE( RenderPipelineAssetTest, DeferredTileVariantsAddTheClassDefine )
     RenderPipelineAsset deferred;
     SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ string_view( "engine/pipeline/deferredpipeline.xml" ) } ) );
     const RenderGraphPassDesc* pLighting = VectorUtil::findIf( deferred.getGraphPass(), []( const RenderGraphPassDesc& pass )
-    { return pass._type == RenderPassType::Lighting; } );
+    { return pass._type == RenderPassKind::Lighting; } );
     SW_REQUIRE_NOT_NULL( pLighting );
     const EngineDefaultAssets&      assets   = engine::getSubsystem<EngineDefaultAssets>();
-    const RenderPassShaderSelection lighting = selectRenderPassShader( RenderPassType::Lighting, pLighting, pLighting, assets );
+    const RenderPassShaderSelection lighting = selectRenderPassShader( RenderPassKind::Lighting, pLighting, pLighting, assets );
     const RenderPassShaderSelection complex  = selectDeferredTileLightingShader( *pLighting, SW_DEFERRED_TILE_CLASS_COMPLEX, assets );
     const RenderPassShaderSelection simple   = selectDeferredTileLightingShader( *pLighting, SW_DEFERRED_TILE_CLASS_SIMPLE, assets );
     SW_EXPECT_EQUAL( lighting._shaderPath, simple._shaderPath );
     SW_EXPECT_EQUAL( lighting._listDefine.size() + 1, simple._listDefine.size() );
     SW_EXPECT_TRUE( VectorUtil::contains( simple._listDefine, string( "SW_DEFERRED_TILE_CLASS=1" ) ) );
     SW_EXPECT_TRUE( VectorUtil::contains( complex._listDefine, string( "SW_DEFERRED_TILE_CLASS=0" ) ) );
-    const RenderPassTypeInfo& classify = getRenderPassTypeInfo( RenderPassType::DeferredTileClassify );
+    const RenderPassKindInfo& classify = getRenderPassKindInfo( RenderPassKind::DeferredTileClassify );
     SW_EXPECT_TRUE( classify.hasFlag( RenderPassTraitFlag::kCompute ) && classify.hasFlag( RenderPassTraitFlag::kRequiresNativeBindless ) &&
                     classify.hasFlag( RenderPassTraitFlag::kRequiresGPUCulling ) );
 }
@@ -916,11 +916,11 @@ SW_TEST_CASE( RenderPipelineAssetTest, AmbientOcclusionFeedsLightingOnly )
     for ( size_t passIndex = 0; passIndex < listPass.size(); ++passIndex )
     {
         const RenderGraphPassDesc& pass = listPass[passIndex];
-        if ( pass._type == RenderPassType::SSAO )
+        if ( pass._type == RenderPassKind::SSAO )
             ssaoIndex = passIndex;
         const bool bReadsAO = VectorUtil::containsIf( pass._listResolvedInput, []( const RenderGraphPassDesc::ResolvedAttachment& input )
         { return input._attachment == hashed_string( "AOColor" ); } );
-        if ( pass._type == RenderPassType::Lighting )
+        if ( pass._type == RenderPassKind::Lighting )
         {
             lightIndex   = passIndex;
             bLightReadAO = bReadsAO;

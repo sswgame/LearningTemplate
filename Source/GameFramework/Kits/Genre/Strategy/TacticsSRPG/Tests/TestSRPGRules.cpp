@@ -7,12 +7,12 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/RunMap.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGBattlefield.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCombat.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCommanderAI.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGProgress.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/RunMap.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGBattlefield.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCombat.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCommanderAI.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGProgress.h"
 #include "GameFramework/Runtime/Character/Navigation/GridReachability.h"
 
 // 택틱스 SRPG 키트의 규칙: 전투 공식(명중 · 피해 · 크리티컬), 공격 순서(반격 · 지원 · 동기 · MAP), 전장(지형 · 이동 · ZOC · 차례 · 개발), AI 계획, 승패, 로그라이트 지도와 캠페인, 카탈로그 오류, 상태 바이트의 범위 검사.

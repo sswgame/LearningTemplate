@@ -40,7 +40,7 @@ namespace sw
             /** @brief 설정 종류 하나의 행 UI — 행 문서(엔진 UI 문서 묶음의 칸)와 값 위젯에 연결하는 필드(설정 바인딩 규약)입니다. */
             struct RowWidgetDef
             {
-                UserSettingType _type;
+                UserSettingKind _type;
                 const utf8*     _pValueProperty;                     ///< 키 바인딩은 버튼이라 nullptr 입니다.
                 string UIEngineDocuments::* _pRowDocument;           ///< 마우스 · 키보드 모드의 행 문서 칸입니다.
                 string UIEngineDocuments::* _pNavigationRowDocument; ///< 패드 탐색 모드(`UIInputMode::Navigation`)의 행 문서 칸입니다.
@@ -48,12 +48,12 @@ namespace sw
 
             /** @brief 종류마다 한 줄, 열거자 순서입니다 — 아래 static_assert 가 순서와 줄 수를 지킵니다. 경로 값은 엔진 기본 에셋 표에 있다. */
             static constexpr RowWidgetDef kArrRowWidget[] = {
-                {      UserSettingType::Bool,      "_bChecked",       &UIEngineDocuments::_optionsRowBool,       &UIEngineDocuments::_optionsRowBool},
-                {       UserSettingType::Int,         "_value",        &UIEngineDocuments::_optionsRowInt,        &UIEngineDocuments::_optionsRowInt},
-                {     UserSettingType::Float,         "_value",      &UIEngineDocuments::_optionsRowFloat,      &UIEngineDocuments::_optionsRowFloat},
-                {      UserSettingType::Enum, "_selectedIndex",       &UIEngineDocuments::_optionsRowEnum,    &UIEngineDocuments::_optionsRowEnumPad},
-                {UserSettingType::KeyBinding,          nullptr, &UIEngineDocuments::_optionsRowKeyBinding, &UIEngineDocuments::_optionsRowKeyBinding},
-                {    UserSettingType::String,          "_text",     &UIEngineDocuments::_optionsRowString,     &UIEngineDocuments::_optionsRowString},
+                {      UserSettingKind::Bool,      "_bChecked",       &UIEngineDocuments::_optionsRowBool,       &UIEngineDocuments::_optionsRowBool},
+                {       UserSettingKind::Int,         "_value",        &UIEngineDocuments::_optionsRowInt,        &UIEngineDocuments::_optionsRowInt},
+                {     UserSettingKind::Float,         "_value",      &UIEngineDocuments::_optionsRowFloat,      &UIEngineDocuments::_optionsRowFloat},
+                {      UserSettingKind::Enum, "_selectedIndex",       &UIEngineDocuments::_optionsRowEnum,    &UIEngineDocuments::_optionsRowEnumPad},
+                {UserSettingKind::KeyBinding,          nullptr, &UIEngineDocuments::_optionsRowKeyBinding, &UIEngineDocuments::_optionsRowKeyBinding},
+                {    UserSettingKind::String,          "_text",     &UIEngineDocuments::_optionsRowString,     &UIEngineDocuments::_optionsRowString},
             };
 
             static constexpr bool isRowWidgetInEnumOrder()
@@ -66,7 +66,7 @@ namespace sw
                 return true;
             }
 
-            static const RowWidgetDef& getRowWidget( UserSettingType type ) { return kArrRowWidget[static_cast<size_t>( type )]; }
+            static const RowWidgetDef& getRowWidget( UserSettingKind type ) { return kArrRowWidget[static_cast<size_t>( type )]; }
 
             /** @brief @p widget 과 그 자손의 이름을 `<접두>.<이름>` 으로 감쌉니다(같은 견본을 행마다 써도 이름이 겹치지 않게). */
             static void prefixNames( Widget& widget, const string& prefix )
@@ -83,9 +83,9 @@ namespace sw
             }
         };
 
-        static_assert( OptionsMenuScreenInternal::isRowWidgetInEnumOrder(), "kArrRowWidget rows must follow UserSettingType order" );
-        static_assert( std::size( OptionsMenuScreenInternal::kArrRowWidget ) == static_cast<size_t>( UserSettingType::String ) + 1,
-                       "kArrRowWidget needs one row per UserSettingType" );
+        static_assert( OptionsMenuScreenInternal::isRowWidgetInEnumOrder(), "kArrRowWidget rows must follow UserSettingKind order" );
+        static_assert( std::size( OptionsMenuScreenInternal::kArrRowWidget ) == static_cast<size_t>( UserSettingKind::String ) + 1,
+                       "kArrRowWidget needs one row per UserSettingKind" );
     } // namespace
 
     OptionsMenuScreen::OptionsMenuScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
@@ -332,7 +332,7 @@ namespace sw
             return false;
         const string&                                     documentPath = findRowDocument( pUI->getEngineDocuments(), setting, pUI->getInputRouter().getInputMode() );
         UIDocumentCache&                                  documents    = engine::getSubsystem<UIDocumentCache>();
-        const expected<shared_ptr<const UIDocumentAsset>> document     = documents.findOrLoad( documentPath );
+        const expected<shared_ptr<const UIDocumentAsset>> document     = documents.acquire( documentPath );
         vector<UIBindingDef>                              listBinding;
         expected<unique_ptr<Widget>>                      built = document.has_value() ? UIDocumentLoader::instantiate( **document, documents, ResourceTagSet{}, listBinding ) : unexpected( document.error() );
         if ( built.has_value() == false )

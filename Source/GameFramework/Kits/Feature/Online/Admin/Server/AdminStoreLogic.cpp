@@ -250,7 +250,7 @@ namespace sw
             }
 
             /** @brief 대상 계정 @p accountID 가 있는지 계정 키트의 이름 색인으로 봅니다. 색인이 없으면 확인할 수 없어 Unavailable 이다(오타 계정에 재화가 Ok 로 들어가지 않게). */
-            static AdminServiceResult checkTargetExists( IServiceStoreConnection& connection, const AdminCommand& command, AccountID accountID )
+            static AdminServiceResult validateTargetExists( IServiceStoreConnection& connection, const AdminCommand& command, AccountID accountID )
             {
                 if ( command._pNameIndex == nullptr )
                     return AdminServiceResult::fail( OnlineError::kUnavailable );
@@ -262,7 +262,7 @@ namespace sw
             }
 
             /** @brief 계정 하나를 대상으로 바꾸는 명령이면 그 계정, 일괄 우편이면 받는 계정 모두가 있는지 봅니다. */
-            static AdminServiceResult checkTargets( IServiceStoreConnection& connection, const AdminCommand& command )
+            static AdminServiceResult validateTargets( IServiceStoreConnection& connection, const AdminCommand& command )
             {
                 switch ( command._method )
                 {
@@ -271,13 +271,13 @@ namespace sw
                     case AdminMethod::SendMail::kID:
                     case AdminMethod::SetRole::kID:
                     {
-                        return checkTargetExists( connection, command, command._request._accountID );
+                        return validateTargetExists( connection, command, command._request._accountID );
                     }
                     case AdminMethod::BulkMail::kID:
                     {
                         for ( const AccountID recipient : command._request._listAccountID )
                         {
-                            const AdminServiceResult checked = checkTargetExists( connection, command, recipient );
+                            const AdminServiceResult checked = validateTargetExists( connection, command, recipient );
                             if ( checked != AdminResult::Ok )
                                 return checked;
                         }
@@ -293,7 +293,7 @@ namespace sw
             static AdminServiceResult stageEffect( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply )
             {
                 const AdminRequest& request = command._request;
-                if ( const AdminServiceResult checked = checkTargets( connection, command ); checked != AdminResult::Ok )
+                if ( const AdminServiceResult checked = validateTargets( connection, command ); checked != AdminResult::Ok )
                     return checked;
                 ServiceAuditEntry audit;
                 audit._actor              = ServiceAuditLog::makeOperatorActor( command._adminID );
@@ -496,7 +496,7 @@ namespace sw
             {
             }
 
-            ServiceStoreResult checkAllowed( IServiceStoreConnection& connection ) const override
+            ServiceStoreResult validateAllowed( IServiceStoreConnection& connection ) const override
             {
                 AdminRole                role    = AdminRole::None;
                 uint64                   version = 0;

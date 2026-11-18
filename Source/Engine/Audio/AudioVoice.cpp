@@ -245,7 +245,7 @@ namespace sw
             _lowPass.reset();
         _lowPassHz = cutoff;
         if ( cutoff < audio::kFilterOpenHz )
-            _lowPass._coefficients = AudioBiquadCoefficients::make( AudioBiquadType::LowPass, cutoff, 0.7071f, 0.0f, static_cast<float32>( audio::kSampleRate ) );
+            _lowPass._coefficients = AudioBiquadCoefficients::make( AudioBiquadKind::LowPass, cutoff, 0.7071f, 0.0f, static_cast<float32>( audio::kSampleRate ) );
     }
 
     void AudioVoice::mix( const AudioBlockView& bus )

@@ -18,7 +18,7 @@
 
 #include "Engine/Foundation/GameObjectHandle.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphModel.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphEditModel.h"
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/Model/GimmickCircuitEditSession.h"
 
 namespace sw::editor
@@ -88,7 +88,7 @@ namespace sw::editor
         void editSetInvert( int32 wireID, bool bInvert );
 
     private:
-        GimmickGraphModel         _model;
+        GimmickGraphEditModel     _model;
         EditorNodeGraph           _nodeGraph;
         vector<GimmickGraphIssue> _listIssue;
         GimmickCircuitEditSession _session; ///< 편집하는 회로(핸들)와 읽기 · 쓰기

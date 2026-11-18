@@ -1,7 +1,7 @@
 /**
  * @file GlobalVariablesPanel.h
  * @brief 전역 변수(치트, 디버그 플래그, 환경 설정 등)를 살펴보고 편집하는 에디터 창입니다.
- * @details 보일 목록 · 핀 · 프리셋은 `GlobalVariablesModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 검색 글 · 프리셋 이름 입력란 · 모듈별 묶기 토글만 든다.
+ * @details 보일 목록 · 핀 · 프리셋은 `GlobalVariablesViewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 검색 글 · 프리셋 이름 입력란 · 모듈별 묶기 토글만 든다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -10,7 +10,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorStateDocumentPanel.h"
-#include "Editor/Panels/Settings/Model/GlobalVariablesModel.h"
+#include "Editor/Panels/Settings/Model/GlobalVariablesViewModel.h"
 
 namespace sw
 {
@@ -52,7 +52,7 @@ namespace sw::editor
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 91.0f, 25.0f ); }
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
         [[nodiscard]] bool saveDocument() override;
-        /** @brief 세션 프리셋 문서 하나입니다(`GlobalVariablesModel::collectFilesToSave`). */
+        /** @brief 세션 프리셋 문서 하나입니다(`GlobalVariablesViewModel::collectFilesToSave`). */
         void collectFilesToSave( vector<string>& outListPath ) const override;
         void revertDocument() override;
         /** @brief 값은 전역 변수 관리자에 바로 적용되어 있어 창을 닫아도 잃는 것이 없다 — 닫기에 확인을 두면 저장하거나 값을 초기화하지 않고는 창을 숨길 수 없다. */
@@ -66,7 +66,7 @@ namespace sw::editor
         void markSessionDirty();
 
     private:
-        GlobalVariablesModel                    _model;
+        GlobalVariablesViewModel                _model;
         fixed_string<constant::buffer::kMax128> _searchFilter;
         fixed_string<constant::buffer::kMax64>  _presetNameBuf;
         bool                                    _bGroupByModule; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다

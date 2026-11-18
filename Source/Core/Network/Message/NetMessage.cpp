@@ -20,17 +20,17 @@ namespace sw
         return _writer;
     }
 
-    bool NetMessageWriter::send( INetPeers& peers, int32 connectionID, NetChannelType channel ) const
+    bool NetMessageWriter::send( INetPeers& peers, int32 connectionID, NetChannelKind channel ) const
     {
         return peers.sendMessage( connectionID, channel, _writer.getBytes().data(), _writer.getByteCount() );
     }
 
-    int32 NetMessageWriter::broadcast( INetPeers& peers, NetChannelType channel, int32 exceptID ) const
+    int32 NetMessageWriter::broadcast( INetPeers& peers, NetChannelKind channel, int32 exceptID ) const
     {
         return peers.broadcast( channel, _writer.getBytes().data(), _writer.getByteCount(), exceptID );
     }
 
-    int32 NetMessageWriter::sendToPeers( INetPeers& peers, NetChannelType channel ) const
+    int32 NetMessageWriter::sendToPeers( INetPeers& peers, NetChannelKind channel ) const
     {
         if ( peers.isServer() )
             return broadcast( peers, channel );
@@ -45,7 +45,7 @@ namespace sw
         return ( ( getMessageKindMask() >> ( kind - rangeBase ) ) & 1u ) != 0;
     }
 
-    NetHandleResult INetMessageHandler::handleMessage( int32 connectionID, const uint8* pData, int32 size, NetChannelType channel )
+    NetHandleResult INetMessageHandler::handleMessage( int32 connectionID, const uint8* pData, int32 size, NetChannelKind channel )
     {
         const bool bMessageNotHandled = pData == nullptr || size <= 0 || isMessageKindHandled( pData[0] ) == false;
         if ( bMessageNotHandled )
@@ -156,9 +156,9 @@ namespace sw
             writer.writeUint32( entry._wireVersion );
         }
         if ( connectionID == constant::invalid_index::kInt32 )
-            (void)messageWriter.sendToPeers( peers, NetChannelType::ReliableOrdered ); // 연결이 없으면 보낼 곳이 없다 — 연결이 열릴 때 다시 보낸다
+            (void)messageWriter.sendToPeers( peers, NetChannelKind::ReliableOrdered ); // 연결이 없으면 보낼 곳이 없다 — 연결이 열릴 때 다시 보낸다
         else
-            (void)messageWriter.send( peers, connectionID, NetChannelType::ReliableOrdered ); // 닫히는 중이면 보낼 곳이 없다
+            (void)messageWriter.send( peers, connectionID, NetChannelKind::ReliableOrdered ); // 닫히는 중이면 보낼 곳이 없다
     }
 
     void NetMessageRouter::receiveWireVersions( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size )

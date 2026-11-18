@@ -11,7 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"

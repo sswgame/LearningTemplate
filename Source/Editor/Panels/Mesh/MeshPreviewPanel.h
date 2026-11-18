@@ -1,13 +1,13 @@
 /**
  * @file MeshPreviewPanel.h
  * @brief 메시 에셋(`*.mesh`)을 미리보기 씬에서 돌려 보고 LOD 단계를 골라 견주는 창입니다(유니티 모델 임포터 미리보기의 LOD 보기, 언리얼 Static Mesh 에디터의 LOD 선택에 해당합니다).
- * @details 메시 걸기 · 카메라 맞출 경계 · 고른 LOD 는 `MeshPreviewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
+ * @details 메시 걸기 · 카메라 맞출 경계 · 고른 LOD 는 `MeshPreviewViewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
-#include "Editor/Panels/Mesh/Model/MeshPreviewModel.h"
+#include "Editor/Panels/Mesh/Model/MeshPreviewViewModel.h"
 
 namespace sw::editor
 {
@@ -50,9 +50,9 @@ namespace sw::editor
         void drawLODTable();
 
     private:
-        MeshPreviewModel    _model;
-        float3              _frameCenter; ///< 맞춤(F)이 담을 구의 중심 — 대상을 바꿀 때 그 경계 구로 정한다
-        float32             _frameRadius;
-        MeshPreviewLODState _lodState; ///< 프레임마다 다시 채운다(LOD 표가 그린다)
+        MeshPreviewViewModel _model;
+        float3               _frameCenter; ///< 맞춤(F)이 담을 구의 중심 — 대상을 바꿀 때 그 경계 구로 정한다
+        float32              _frameRadius;
+        MeshPreviewLODState  _lodState; ///< 프레임마다 다시 채운다(LOD 표가 그린다)
     };
 } // namespace sw::editor

@@ -88,7 +88,7 @@ namespace sw::editor
             // --------------------------------------------------------------------------------------------------
             // input.hierarchySearchTyping: 검색 입력란을 클릭하고 타이핑하면 `tag:` 필터가 걸리고, 없는 이름은 0건 안내를 그린다
             // --------------------------------------------------------------------------------------------------
-            struct TypingProbe
+            struct TypingTestState
             {
                 void finishTyping( HierarchyPanel* pHierarchy, GameObjectManager* pManager ) const
                 {
@@ -111,7 +111,7 @@ namespace sw::editor
                     if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
                         return EditorSelfTestStep::Done;
 
-                    TypingProbe& probe = context.getTestState<TypingProbe>();
+                    TypingTestState& probe = context.getTestState<TypingTestState>();
                     switch ( probe._phase )
                     {
                         case 0:
@@ -158,7 +158,7 @@ namespace sw::editor
                         case 4:
                         {
                             // 글자 이벤트가 마우스 이벤트와 같은 프레임에 들어오면 ImGui 가 다음 프레임으로 흘려 보낸다(io.ConfigInputTrickleEventQueue). 그래서 몇 프레임 기다린다.
-                            if ( pHierarchy->getFilterText() != "tag:SwSelfTest" && probe._waitFrames < TypingProbe::kMaxWaitFrames )
+                            if ( pHierarchy->getFilterText() != "tag:SwSelfTest" && probe._waitFrames < TypingTestState::kMaxWaitFrames )
                             {
                                 ++probe._waitFrames;
                                 return EditorSelfTestStep::Continue;
@@ -191,7 +191,7 @@ namespace sw::editor
                         }
                         default:
                         {
-                            if ( pHierarchy->getFilterText() != "zzSelfTestNoSuchObject" && probe._waitFrames < TypingProbe::kMaxWaitFrames )
+                            if ( pHierarchy->getFilterText() != "zzSelfTestNoSuchObject" && probe._waitFrames < TypingTestState::kMaxWaitFrames )
                             {
                                 ++probe._waitFrames;
                                 return EditorSelfTestStep::Continue;
@@ -319,7 +319,7 @@ namespace sw::editor
             // input.coveredMarkHitTest: 같은 창의 자식 오버레이가 덮은 레이블은 "가려짐", 덮지 않은 레이블 · 레이블이 담은 자식 창은 "닿음" 이다(`EditorSelfTestInput::hoverMark`)
             // --------------------------------------------------------------------------------------------------
             /** @brief 지금 조준하는 레이블과 그 판정을 기다린 프레임 수입니다. */
-            struct HitTestProbe
+            struct HitTestState
             {
                 uint32 _caseIndex{ 0 };
                 uint32 _waitSteps{ 0 };
@@ -378,7 +378,7 @@ namespace sw::editor
                 drawHitTestProbeWindow();
                 if ( context.getStepIndex() == 0 )
                     return EditorSelfTestStep::Continue; // 레이블이 생기도록 한 번 그린다
-                HitTestProbe& probe = context.getTestState<HitTestProbe>();
+                HitTestState& probe = context.getTestState<HitTestState>();
                 if ( probe._caseIndex >= std::size( kArrCase ) )
                 {
                     EditorSelfTestInput::moveMouseAway();
@@ -408,9 +408,9 @@ namespace sw::editor
             // input.themeSwatch: 기본이 아닌 테마(라이트)에서 테마 대화상자의 스와치를 누르면 액센트가 바뀐다. 끝나면 원래 테마로 되돌린다
             // --------------------------------------------------------------------------------------------------
             /** @brief 테스트 앞의 테마와 에디터 설정 파일 바이트입니다. 스와치 클릭은 설정 파일을 다시 쓰므로(saveToConfig), 끝나면 바이트째 되돌립니다. */
-            struct SwatchProbe
+            struct SwatchTestState
             {
-                SwatchProbe()
+                SwatchTestState()
                     : _theme{}
                     , _configBytes{}
                     , _hoverSteps{ 0 }
@@ -423,13 +423,13 @@ namespace sw::editor
                     // 세 번째 스와치(Neon Violet)의 색은 대화상자와 같은 토큰에서 읽는다 — 숫자를 따로 적으면 토큰 값(#RRGGBB 반올림)이 바뀔 때 어긋났다.
                     const Color violet = SW_THEME_COLOR( "AccentSwatch", "NeonViolet" );
                     // 스와치를 조준하는 동안(`pressOnMark` 가 Hovering) 같은 단계에 머문다 — 조준에 쓴 프레임만큼 단계 번호를 뺀다.
-                    SwatchProbe& stepProbe = context.getTestState<SwatchProbe>();
+                    SwatchTestState& stepProbe = context.getTestState<SwatchTestState>();
                     switch ( context.getStepIndex() - stepProbe._hoverSteps )
                     {
                         case 0:
                         {
-                            SwatchProbe& probe = context.getTestState<SwatchProbe>();
-                            probe._theme       = EditorThemeUtil::getActiveTheme();
+                            SwatchTestState& probe = context.getTestState<SwatchTestState>();
+                            probe._theme           = EditorThemeUtil::getActiveTheme();
                             // 파일이 없을 수 있다. Saved/Editor 는 git 이 무시하므로 새 체크아웃에는 없다. 없으면 읽지 않는다. readFile 은 없는 파일을 오류로 남기기 때문이다.
                             const string configPath = getEditorConfigPath();
                             probe._bConfigExisted   = ( FileUtil::isRegularFile( configPath ) && FileUtil::readFile( configPath, probe._configBytes ) ) ? SW_TRUE : SW_FALSE;
@@ -472,7 +472,7 @@ namespace sw::editor
                         }
                     }
                     // 되돌린다. 사용자의 에디터 설정에 테스트의 테마가 남지 않게 하기 위해서다. 메모리(활성 설정)는 저장으로, 파일은 원래 바이트로 되돌린다. 저장기가 줄 끝과 마지막 줄바꿈을 바꾸기 때문이다.
-                    SwatchProbe& probe = context.getTestState<SwatchProbe>();
+                    SwatchTestState& probe = context.getTestState<SwatchTestState>();
                     EditorMenuBar::closeThemeDialog();
                     EditorThemeUtil::applyTheme( probe._theme );
                     EditorThemeUtil::saveToConfig();
@@ -498,7 +498,7 @@ namespace sw::editor
             // hierarchy.visibilityToggleFits: Hierarchy 가시성 토글이 아이콘을 담을 수 있다. 폭이 글꼴과 DPI 배율을 따른다
             // --------------------------------------------------------------------------------------------------
             /** @brief 이 테스트가 만든 오브젝트입니다. */
-            struct ToggleProbe
+            struct ToggleTestState
             {
                 static EditorSelfTestStep runVisibilityToggleFits( EditorSelfTestContext& context )
                 {
@@ -508,7 +508,7 @@ namespace sw::editor
                         return EditorSelfTestStep::Done;
                     (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
                     HierarchyPanel* pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
-                    uint64&         objectID   = context.getTestState<ToggleProbe>()._objectID;
+                    uint64&         objectID   = context.getTestState<ToggleTestState>()._objectID;
                     const uint32    stepIndex  = context.getStepIndex();
                     if ( stepIndex == 0 )
                     {
@@ -559,7 +559,7 @@ namespace sw::editor
             // hierarchy.selectedRowLeavesTheToggleVisible: 선택한 행의 선택 배경과 클릭 영역이 가시성 토글을 덮지 않는다
             // --------------------------------------------------------------------------------------------------
             /** @brief 이 테스트가 만든 오브젝트입니다. */
-            struct RowProbe
+            struct RowTestState
             {
                 static EditorSelfTestStep runSelectedRowLeavesTheToggleVisible( EditorSelfTestContext& context )
                 {
@@ -571,7 +571,7 @@ namespace sw::editor
                         return EditorSelfTestStep::Done;
                     (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
                     HierarchyPanel* pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
-                    uint64&         objectID   = context.getTestState<RowProbe>()._objectID;
+                    uint64&         objectID   = context.getTestState<RowTestState>()._objectID;
                     const uint32    stepIndex  = context.getStepIndex();
                     if ( stepIndex == 0 )
                     {
@@ -612,11 +612,11 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_SELF_TEST( HierarchySearchTyping, "input.hierarchySearchTyping", 1000, &EditorSelfTestInputCasesInternal::TypingProbe::runHierarchySearchTyping );
+    SW_EDITOR_SELF_TEST( HierarchySearchTyping, "input.hierarchySearchTyping", 1000, &EditorSelfTestInputCasesInternal::TypingTestState::runHierarchySearchTyping );
     SW_EDITOR_SELF_TEST( TooltipOnHover, "input.tooltipOnHover", 1010, &EditorSelfTestInputCasesInternal::runTooltipOnHover );
     SW_EDITOR_SELF_TEST( CoveredMarkHitTest, "input.coveredMarkHitTest", 1015, &EditorSelfTestInputCasesInternal::runCoveredMarkHitTest );
-    SW_EDITOR_SELF_TEST( ThemeSwatch, "input.themeSwatch", 1020, &EditorSelfTestInputCasesInternal::SwatchProbe::runThemeSwatch );
-    SW_EDITOR_SELF_TEST( VisibilityToggleFits, "hierarchy.visibilityToggleFits", 1030, &EditorSelfTestInputCasesInternal::ToggleProbe::runVisibilityToggleFits );
+    SW_EDITOR_SELF_TEST( ThemeSwatch, "input.themeSwatch", 1020, &EditorSelfTestInputCasesInternal::SwatchTestState::runThemeSwatch );
+    SW_EDITOR_SELF_TEST( VisibilityToggleFits, "hierarchy.visibilityToggleFits", 1030, &EditorSelfTestInputCasesInternal::ToggleTestState::runVisibilityToggleFits );
     SW_EDITOR_SELF_TEST( SelectedRowToggle, "hierarchy.selectedRowLeavesTheToggleVisible", 1040,
-                         &EditorSelfTestInputCasesInternal::RowProbe::runSelectedRowLeavesTheToggleVisible );
+                         &EditorSelfTestInputCasesInternal::RowTestState::runSelectedRowLeavesTheToggleVisible );
 } // namespace sw::editor

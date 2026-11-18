@@ -101,14 +101,14 @@ namespace sw
         return listAsset.empty() || map.loadBundle( listAsset );
     }
 
-    bool InputMapBundle::checkSettings( const AssetID& settingsAssetID )
+    bool InputMapBundle::validateSettings( const AssetID& settingsAssetID )
     {
         InputMap scratch; // 입력 장치에 붙이지 않는다 — 읽기와 겹침 검사만 한다
         return loadFromSettings( scratch, settingsAssetID );
     }
 
-    bool InputMapBundle::checkPack( string_view packRoot )
+    bool InputMapBundle::validatePack( string_view packRoot )
     {
-        return checkSettings( AssetID{ FileUtil::joinPath( packRoot, constant::path::kGameSettingsFile ) } );
+        return validateSettings( AssetID{ FileUtil::joinPath( packRoot, constant::path::kGameSettingsFile ) } );
     }
 } // namespace sw

@@ -18,7 +18,7 @@
 namespace sw
 {
     /** @brief 값의 종류입니다. */
-    enum class BlackboardValueType : uint8
+    enum class BlackboardValueKind : uint8
     {
         None = 0,
         Float,
@@ -35,7 +35,7 @@ namespace sw
         uint64              _object{ 0 };
         float32             _float{ 0.0f };
         int32               _int{ 0 };
-        BlackboardValueType _type{ BlackboardValueType::None };
+        BlackboardValueKind _type{ BlackboardValueKind::None };
 
         /** @brief 비교에 쓰는 수치입니다. 참거짓과 오브젝트는 0 이 아니면 1 입니다. */
         float32 computeNumeric() const;
@@ -102,7 +102,7 @@ namespace sw
         void collectKeys( vector<hashed_string>& outListKey ) const;
 
     private:
-        BlackboardValue& acquireValue( const hashed_string& key, BlackboardValueType type );
+        BlackboardValue& acquireValue( const hashed_string& key, BlackboardValueKind type );
 
     private:
         unordered_map<hashed_string, BlackboardValue> _mapValue;

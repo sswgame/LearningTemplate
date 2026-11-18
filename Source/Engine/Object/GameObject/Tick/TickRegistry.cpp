@@ -551,7 +551,7 @@ namespace sw
              * @brief 그룹 @p group 의 레벨 0 에서 @p slot 번째 스테이지의 자리를 찾고, 없으면 레벨 0 의 끝(같은 그룹의 더 높은 레벨이나 다음 그룹이 시작하는 자리)에 만듭니다.
              * @return 그 스테이지의 `listStage` 안 자리입니다.
              */
-            static size_t findOrCreateLevelZeroStage( vector<TickStage>& inoutListStage, uint8 group, uint32 slot )
+            static size_t getOrCreateLevelZeroStage( vector<TickStage>& inoutListStage, uint8 group, uint32 slot )
             {
                 size_t stageIndex = inoutListStage.size();
                 size_t insertAt   = inoutListStage.size();
@@ -905,7 +905,7 @@ namespace sw
             if ( bSuperseded )
                 continue;
             const uint8  group      = insertion._item._group;
-            const size_t stageIndex = TickRegistryInternal::findOrCreateLevelZeroStage( _listStage, group, insertion._slot );
+            const size_t stageIndex = TickRegistryInternal::getOrCreateLevelZeroStage( _listStage, group, insertion._slot );
             TickRegistryInternal::insertIntoStage( _listStage[stageIndex], insertion._item, insertion._stageOrder );
             ++_stageItemCount;
             if ( insertion._bMarkApplyBefore == SW_TRUE )

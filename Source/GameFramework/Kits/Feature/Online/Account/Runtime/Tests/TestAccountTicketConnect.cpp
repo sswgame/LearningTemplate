@@ -5,7 +5,7 @@
 #include "Core/Network/Connection/NetEndpointSecurity.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountTicketConnect.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTicketConnect.h"
 
 using namespace sw;
 

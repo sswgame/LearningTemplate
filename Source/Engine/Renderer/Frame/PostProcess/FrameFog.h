@@ -1,7 +1,7 @@
 /**
  * @file FrameFog.h
  * @brief 안개와 볼륨 안개(fog.hlsl · volumetric_fog.hlsl)입니다 — 이번 프레임의 안개 상수, 볼륨 안개 버퍼 · 입력, 볼륨 컴퓨트 기록.
- * @details 안개 패스 자체(`RenderPassType::Fog`)는 다른 풀스크린 패스처럼 렌더러의 패스 실행이 그리고, 여기서는 그 패스가 읽을 값과 볼륨 버퍼를 준다. 렌더러가 소유한다.
+ * @details 안개 패스 자체(`RenderPassKind::Fog`)는 다른 풀스크린 패스처럼 렌더러의 패스 실행이 그리고, 여기서는 그 패스가 읽을 값과 볼륨 버퍼를 준다. 렌더러가 소유한다.
  */
 #pragma once
 #include "Core/Container/string.h"

@@ -1,6 +1,6 @@
 /**
  * @file HierarchyViewModel.h
- * @brief 계층 창의 ViewModel — 행 트리(`HierarchyRowModel`)에서 화면에 보이는 범위의 행만 세부 값으로 모으고(`gather`), 선택 · 펼침 · 이름 바꾸기 · 끌어 놓기 · 눈 · 자물쇠를 id 명령으로 받습니다.
+ * @brief 계층 창의 ViewModel — 행 트리(`HierarchyRowTree`)에서 화면에 보이는 범위의 행만 세부 값으로 모으고(`gather`), 선택 · 펼침 · 이름 바꾸기 · 끌어 놓기 · 눈 · 자물쇠를 id 명령으로 받습니다.
  *        ImGui 를 모릅니다(`docs/agents/EditorUI.md` MVVM 계약).
  * @details 상태는 에디터 범위의 상태 저장소가 든다(`get`) — 맥락 메뉴 명령(이름 바꾸기 요청 · 하위 메뉴 검색어)이 패널 인스턴스 없이 닿기 때문이다.
  *          화면 밖의 행은 세부(라벨 · 배지 · 선택 · 프리팹 판정)를 만들지 않고 높이만 묶어 넘긴다(`HierarchyRowEntry::_skippedObjectRows`). 큐브 8000 개 루트 씬에서 프레임의 일은
@@ -16,7 +16,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorCommandTarget.h"
-#include "Editor/Panels/Scene/Model/HierarchyRowModel.h"
+#include "Editor/Panels/Scene/Model/HierarchyRowTree.h"
 
 namespace sw
 {
@@ -192,7 +192,7 @@ namespace sw::editor
         void appendSkippedRun( uint32 firstRow, uint32 endRow, vector<HierarchyRowEntry>& outListEntry ) const;
 
     private:
-        HierarchyRowModel                      _rowModel;
+        HierarchyRowTree                       _rowModel;
         vector<uint32>                         _listDetailRow;         ///< 세부를 채울 행 번호(gather 마다 다시 쓴다 — 저장소를 재사용한다)
         vector<uint64>                         _listRowIDScratch;      ///< 범위 선택 · 위아래 이동에 쓰는 오브젝트 행 id(저장소를 재사용한다)
         uint64                                 _anchorObjectID;        ///< 범위 선택의 시작 행. 마지막으로 그냥 클릭하거나 Ctrl 을 누르고 클릭한 행이다

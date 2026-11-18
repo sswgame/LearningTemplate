@@ -58,7 +58,7 @@ namespace sw::test
         static void pollServerMessages( LoopbackCluster& cluster, vector<vector<uint8>>& outListMessage )
         {
             int32          connectionID = -1;
-            NetChannelType channel      = NetChannelType::Unreliable;
+            NetChannelKind channel      = NetChannelKind::Unreliable;
             vector<uint8>  buffer;
             while ( cluster.getServer().receiveMessage( connectionID, channel, buffer ) )
             {

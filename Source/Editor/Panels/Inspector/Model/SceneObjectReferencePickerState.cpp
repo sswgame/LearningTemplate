@@ -9,7 +9,7 @@
 
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -55,7 +55,7 @@ namespace sw::editor
     {
     }
 
-    bool SceneObjectReferencePickerState::gatherPreview( const PropertyGridModel& model, uint32 rowID, SceneObjectReferencePickerState& outChoices )
+    bool SceneObjectReferencePickerState::gatherPreview( const PropertyGridViewModel& model, uint32 rowID, SceneObjectReferencePickerState& outChoices )
     {
         using Internal = SceneObjectReferencePickerStateInternal;
         outChoices._listScene.clear();
@@ -103,7 +103,7 @@ namespace sw::editor
         return true;
     }
 
-    void SceneObjectReferencePickerState::gatherScenes( const PropertyGridModel& model, uint32 rowID, SceneObjectReferencePickerState& inoutChoices )
+    void SceneObjectReferencePickerState::gatherScenes( const PropertyGridViewModel& model, uint32 rowID, SceneObjectReferencePickerState& inoutChoices )
     {
         using Internal = SceneObjectReferencePickerStateInternal;
         inoutChoices._listScene.clear();

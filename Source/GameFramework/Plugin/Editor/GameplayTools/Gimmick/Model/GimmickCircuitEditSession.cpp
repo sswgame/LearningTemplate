@@ -42,7 +42,7 @@ namespace sw::editor
         };
     } // namespace
 
-    GimmickCircuitSync GimmickCircuitEditSession::sync( GimmickGraphModel& outModel, uint64 signature, bool& outLoadFailed )
+    GimmickCircuitSync GimmickCircuitEditSession::sync( GimmickGraphEditModel& outModel, uint64 signature, bool& outLoadFailed )
     {
         outLoadFailed = false;
         // 선택에 회로가 없으면 보던 회로를 이어서 본다 - 대상 오브젝트를 고르려고 다른 오브젝트를 고른 경우다
@@ -98,7 +98,7 @@ namespace sw::editor
         return listSelected.empty() == false && listSelected[0] != nullptr ? listSelected[0]->getHandle() : GameObjectHandle{};
     }
 
-    bool GimmickCircuitEditSession::commit( const GimmickGraphModel& model, const utf8* pLabel )
+    bool GimmickCircuitEditSession::commit( const GimmickGraphEditModel& model, const utf8* pLabel )
     {
         GimmickCircuitComponent* pCircuit = GimmickCircuitEditSessionInternal::findHeldCircuit( _ownerHandle );
         if ( pCircuit == nullptr || pCircuit->getOwner() == nullptr )

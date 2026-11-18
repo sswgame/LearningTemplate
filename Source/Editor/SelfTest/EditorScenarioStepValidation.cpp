@@ -15,7 +15,7 @@ namespace sw::editor
         struct EditorScenarioStepValidationInternal
         {
             /** @brief 레이블 안의 위치(0..1)인지 봅니다. 아니면 그 이유입니다. */
-            [[nodiscard]] static expected<void> checkAnchor( const float2& anchor )
+            [[nodiscard]] static expected<void> validateAnchor( const float2& anchor )
             {
                 if ( anchor._x >= 0.0f && anchor._x <= 1.0f && anchor._y >= 0.0f && anchor._y <= 1.0f )
                     return {};
@@ -23,7 +23,7 @@ namespace sw::editor
             }
 
             /** @brief 수정자 글을 봅니다. 모르는 낱말이면 그 글이 대상인 오류입니다. */
-            [[nodiscard]] static expected<void> checkModifiers( const string& mods )
+            [[nodiscard]] static expected<void> validateModifiers( const string& mods )
             {
                 uint8 mask = 0;
                 if ( EditorScenarioStepValidation::parseModifiers( mods, mask ) )
@@ -87,8 +87,8 @@ namespace sw::editor
             return read;
         if ( params._count == 2 && params._state != EditorPressState::Tap )
             return unexpected( Error{ ErrorKind::InvalidArgument, "count=\"2\" (double click) needs a whole click - drop state" } );
-        return Internal::checkAnchor( params._anchor ).and_then( [&]()
-        { return Internal::checkModifiers( params._mods ); } );
+        return Internal::validateAnchor( params._anchor ).and_then( [&]()
+        { return Internal::validateModifiers( params._mods ); } );
     }
 
     expected<void> EditorScenarioStepValidation::validateDrag( const AutomationStep& step )
@@ -100,8 +100,8 @@ namespace sw::editor
             return read;
         if ( params._toMark.empty() == false && ( step.findAttribute( "dx" ) != nullptr || step.findAttribute( "dy" ) != nullptr ) )
             return unexpected( Error{ ErrorKind::InvalidArgument, "give either toMark or dx/dy, not both" } );
-        return Internal::checkAnchor( params._anchor ).and_then( [&]()
-        { return Internal::checkModifiers( params._mods ); } );
+        return Internal::validateAnchor( params._anchor ).and_then( [&]()
+        { return Internal::validateModifiers( params._mods ); } );
     }
 
     expected<void> EditorScenarioStepValidation::validateHover( const AutomationStep& step )
@@ -114,7 +114,7 @@ namespace sw::editor
         const bool bRelease = step.findAttribute( "release" ) != nullptr;
         if ( bRelease == ( params._mark.empty() == false ) )
             return unexpected( Error{ ErrorKind::InvalidArgument, "give either mark (and anchor) or release=\"true\"" } );
-        return Internal::checkAnchor( params._anchor );
+        return Internal::validateAnchor( params._anchor );
     }
 
     expected<void> EditorScenarioStepValidation::validateKey( const AutomationStep& step )

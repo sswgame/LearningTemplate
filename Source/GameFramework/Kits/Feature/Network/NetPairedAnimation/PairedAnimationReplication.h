@@ -44,8 +44,8 @@ namespace sw
     /** @brief 페어드 애니메이션 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetPairedAnimationMessage
     {
-        using SessionState = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 2>; ///< 세션 상태(시작 · 늦은 참가). 판 2: 참가 오브젝트 번호 64 비트(`NetObjectID`)
-        using SessionEnd   = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;    ///< 세션 끝(id) — 상태 메시지 뒤에 닿아야 한다
+        using SessionState = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>; ///< 세션 상태(시작 · 늦은 참가). 판 2: 참가 오브젝트 번호 64 비트(`NetObjectID`)
+        using SessionEnd   = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;    ///< 세션 끝(id) — 상태 메시지 뒤에 닿아야 한다
         using Table        = NetMessageTable<NetKitMessageRange::kPairedAnimation, SessionState, SessionEnd>;
 
         static constexpr uint8 kSessionState = Table::getKindOf<SessionState>();

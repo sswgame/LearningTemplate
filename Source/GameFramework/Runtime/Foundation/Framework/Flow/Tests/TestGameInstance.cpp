@@ -92,7 +92,7 @@ namespace
         {
             uint64     getContentConfigHash() const override { return kTestContentHash; }
             sw::string makeContentConfigText() const override { return sw::string( "test" ); }
-            bool       checkSaveCompatible( sw::string_view savedText ) const override { return savedText == "test"; }
+            bool       validateSaveCompatible( sw::string_view savedText ) const override { return savedText == "test"; }
         };
         static constexpr uint64 kTestContentHash = 0x5eedu;
 

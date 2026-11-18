@@ -43,8 +43,8 @@ namespace
         {
         }
 
-        bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override { return trySendMessage( connectionID, channel, pData, size ); }
-        bool trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override
+        bool sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override { return trySendMessage( connectionID, channel, pData, size ); }
+        bool trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override
         {
             (void)channel;
             if ( _sendBudget == 0 )
@@ -55,7 +55,7 @@ namespace
             return true;
         }
         bool  sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
-        int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID ) override
+        int32 broadcast( NetChannelKind channel, const uint8* pData, int32 size, int32 exceptID ) override
         {
             int32 count = 0;
             for ( const int32 connectionID : _listConnected )
@@ -196,14 +196,14 @@ namespace
         void send( size_t clientIndex, const HousingEditRequest& request ) { SW_EXPECT_TRUE( _listClient[clientIndex]->_replication.sendEdit( _settings._plotID, request ) != 0 ); }
 
         /** @brief 서버 틱 하나: 클라이언트 → 서버를 나르고, 서버가 판정 · 방송하고, 서버 → 클라이언트를 나르고, 클라이언트가 적용합니다. */
-        void tick()
+        void update()
         {
             for ( size_t index = 0; index < _listClient.size(); ++index )
             {
                 vector<FakeHousingPeers::Sent> listSent = std::move( _listClient[index]->_peers._listSent );
                 _listClient[index]->_peers._listSent.clear();
                 for ( const FakeHousingPeers::Sent& sent : listSent )
-                    (void)_server.handleMessage( static_cast<int32>( index ), sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelType::ReliableOrdered );
+                    (void)_server.handleMessage( static_cast<int32>( index ), sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelKind::ReliableOrdered );
             }
             _server.update( vector<HousingNetPlotRef>{ _pServerPlot->makeNetPlot() } );
             vector<FakeHousingPeers::Sent> listOut = std::move( _serverPeers._listSent );
@@ -211,7 +211,7 @@ namespace
             for ( const FakeHousingPeers::Sent& sent : listOut )
             {
                 Client& client = *_listClient[static_cast<size_t>( sent._connectionID )];
-                SW_EXPECT_TRUE( client._replication.handleMessage( 0, sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
+                SW_EXPECT_TRUE( client._replication.handleMessage( 0, sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
             }
             for ( unique_ptr<Client>& pClient : _listClient )
             {
@@ -248,11 +248,11 @@ SW_TEST_CASE( HousingReplicationTest, ServerRefusesOthersPlotOverlapAndBudget )
 
     // 주인 없는 부지의 편집은 거절, 차지는 먼저 온 쪽이 이긴다.
     rig.send( 1, HousingNetRig::makePlace( "floor", 0.5f, 0.5f ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.lastReply( 1 ) == HousingPlaceResult::NotOwner );
     rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Claim ) );
     rig.send( 1, HousingNetRig::makeOp( HousingEditOp::Claim ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::Ok );
     SW_EXPECT_TRUE( rig.lastReply( 1 ) == HousingPlaceResult::NotOwner );
     SW_EXPECT_TRUE( rig._pServerPlot->_owner == HousingOwnerID::makeForConnection( 0, 0 ) ); // 계정 없는 연결 — 세션 주체
@@ -262,7 +262,7 @@ SW_TEST_CASE( HousingReplicationTest, ServerRefusesOthersPlotOverlapAndBudget )
     // 남의 부지: 클라이언트 1 의 놓기 · 되돌리기는 판정 전에 거절된다.
     rig.send( 1, HousingNetRig::makePlace( "floor", 0.5f, 0.5f ) );
     rig.send( 1, HousingNetRig::makeOp( HousingEditOp::Undo ) );
-    rig.tick();
+    rig.update();
     SW_REQUIRE_EQUAL( size_t{ 2 }, rig._listClient[1]->_listReply.size() );
     SW_EXPECT_TRUE( rig._listClient[1]->_listReply[0]._result == HousingPlaceResult::NotOwner );
     SW_EXPECT_TRUE( rig._listClient[1]->_listReply[1]._result == HousingPlaceResult::NotOwner );
@@ -272,7 +272,7 @@ SW_TEST_CASE( HousingReplicationTest, ServerRefusesOthersPlotOverlapAndBudget )
     rig.send( 0, HousingNetRig::makePlace( "floor", 0.4f, 0.6f ) );
     rig.send( 0, HousingNetRig::makePlace( "floor", 0.5f, 0.5f ) );
     rig.send( 0, HousingNetRig::makePlace( "floor", 1.5f, 0.5f ) );
-    rig.tick();
+    rig.update();
     SW_REQUIRE_EQUAL( size_t{ 3 }, rig._listClient[0]->_listReply.size() );
     SW_EXPECT_TRUE( rig._listClient[0]->_listReply[0]._result == HousingPlaceResult::Ok );
     SW_EXPECT_EQUAL( 1u, rig._listClient[0]->_listReply[0]._placementID );
@@ -292,7 +292,7 @@ SW_TEST_CASE( HousingReplicationTest, ServerRefusesOthersPlotOverlapAndBudget )
     // 모르는 부지 · 모르는 부품.
     SW_EXPECT_TRUE( rig._listClient[0]->_replication.sendEdit( hashed_string( "elsewhere" ), HousingNetRig::makeOp( HousingEditOp::Undo ) ) != 0 );
     rig.send( 0, HousingNetRig::makePlace( "throne", 2.5f, 2.5f ) );
-    rig.tick();
+    rig.update();
     SW_REQUIRE_EQUAL( size_t{ 1 }, rig._listClient[0]->_listReply.size() ); // 모르는 부지의 답은 클라이언트가 버린다(그 부지가 없다)
     SW_EXPECT_TRUE( rig._listClient[0]->_listReply[0]._result == HousingPlaceResult::UnknownPart );
     SW_EXPECT_EQUAL( uint64{ 2 }, rig._server.getStats()._appliedCount ); // 적용은 차지 하나 + 놓기 하나
@@ -313,7 +313,7 @@ SW_TEST_CASE( HousingReplicationTest, ServerChecksReachRateAndRawValues )
         rig.connect();
         rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Claim ) );
         rig.send( 0, HousingNetRig::makePlace( "floor", 0.5f, 0.5f ) );
-        rig.tick();
+        rig.update();
         SW_REQUIRE_EQUAL( size_t{ 2 }, rig._listClient[0]->_listReply.size() );
         SW_EXPECT_TRUE( rig._listClient[0]->_listReply[1]._result == HousingPlaceResult::OutOfReach );
         SW_EXPECT_TRUE( rig._pServerPlot->_layout.getPlacements().empty() );
@@ -326,7 +326,7 @@ SW_TEST_CASE( HousingReplicationTest, ServerChecksReachRateAndRawValues )
         rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Claim ) );
         rig.send( 0, HousingNetRig::makePlace( "floor", 0.5f, 0.5f ) );
         rig.send( 0, HousingNetRig::makePlace( "floor", 1.5f, 0.5f ) );
-        rig.tick();
+        rig.update();
         SW_REQUIRE_EQUAL( size_t{ 3 }, rig._listClient[0]->_listReply.size() );
         SW_EXPECT_TRUE( rig._listClient[0]->_listReply[1]._result == HousingPlaceResult::OutOfReach );
         SW_EXPECT_TRUE( rig._listClient[0]->_listReply[2]._result == HousingPlaceResult::OutOfReach );
@@ -338,7 +338,7 @@ SW_TEST_CASE( HousingReplicationTest, ServerChecksReachRateAndRawValues )
         rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Claim ) );
         rig.send( 0, HousingNetRig::makePlace( "floor", 0.5f, 0.5f ) );
         rig.send( 0, HousingNetRig::makePlace( "floor", 1.5f, 0.5f ) );
-        rig.tick();
+        rig.update();
         SW_REQUIRE_EQUAL( size_t{ 3 }, rig._listClient[0]->_listReply.size() );
         SW_EXPECT_TRUE( rig._listClient[0]->_listReply[0]._result == HousingPlaceResult::RateLimited ); // 바로 답했다 — 줄의 둘보다 먼저 온다
         SW_EXPECT_TRUE( rig._listClient[0]->_listReply[1]._result == HousingPlaceResult::Ok );
@@ -346,7 +346,7 @@ SW_TEST_CASE( HousingReplicationTest, ServerChecksReachRateAndRawValues )
         SW_EXPECT_EQUAL( size_t{ 1 }, rig._pServerPlot->_layout.getPlacements().size() );
         // 다음 틱에는 다시 받는다.
         rig.send( 0, HousingNetRig::makePlace( "floor", 1.5f, 0.5f ) );
-        rig.tick();
+        rig.update();
         SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::Ok );
     }
     {
@@ -363,12 +363,12 @@ SW_TEST_CASE( HousingReplicationTest, ServerChecksReachRateAndRawValues )
         body.writeVarInt( 0 );
         body.writeFloat( 0.0f );
         body.writeBool( false );
-        SW_EXPECT_TRUE( rig._server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelType::ReliableOrdered ) == NetHandleResult::Malformed );
+        SW_EXPECT_TRUE( rig._server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
         BitWriter& badOp = writer.begin( NetHousingMessage::kEdit );
         badOp.writeVarUint( 2 );
         badOp.writeVarUint( static_cast<uint64>( hashed_string( "home" ).getHash() ) );
         badOp.writeBits( 7u, 3 );
-        SW_EXPECT_TRUE( rig._server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelType::ReliableOrdered ) == NetHandleResult::Malformed );
+        SW_EXPECT_TRUE( rig._server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
         SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._editCount );
     }
 }
@@ -385,19 +385,19 @@ SW_TEST_CASE( HousingReplicationTest, LateJoinerReceivesTheSamePlotState )
     rig.send( 0, HousingNetRig::makePlace( "floor", 1.5f, 0.5f ) );
     rig.send( 0, HousingNetRig::makePlace( "wall", 0.5f, 0.5f ) );
     rig.send( 0, HousingNetRig::makePlace( "floor", 2.5f, 0.5f ) );
-    rig.tick();
+    rig.update();
     HousingEditRequest remove;
     remove._op          = HousingEditOp::Remove;
     remove._placementID = 4; // 마지막 바닥 — 다음 id 는 5 로 남는다
     rig.send( 0, remove );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::Ok );
     SW_REQUIRE_EQUAL( size_t{ 3 }, rig._pServerPlot->_layout.getPlacements().size() );
 
     // 늦은 참가 — 부지는 이번 틱에 바뀌지 않았어도 들어온 연결은 상태를 받는다.
     HousingNetRig::Client& late = rig.connect();
     SW_EXPECT_TRUE( late._pPlot->_layout.getPlacements().empty() );
-    rig.tick();
+    rig.update();
     const HousingLayout& serverLayout = rig._pServerPlot->_layout;
     const HousingLayout& lateLayout   = late._pPlot->_layout;
     SW_REQUIRE_EQUAL( serverLayout.getPlacements().size(), lateLayout.getPlacements().size() );
@@ -416,11 +416,11 @@ SW_TEST_CASE( HousingReplicationTest, LateJoinerReceivesTheSamePlotState )
 
     // 주인이 떠나면 주인 없음 — 늦게 들어온 쪽이 차지하고, 앞 주인의 편집은 되돌리지 못한다(이력을 비웠다).
     rig.disconnect( 0 );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( late._replication.findOwner( hashed_string( "home" ) ) == HousingPlotOwner::None );
     rig.send( 1, HousingNetRig::makeOp( HousingEditOp::Claim ) );
     rig.send( 1, HousingNetRig::makeOp( HousingEditOp::Undo ) );
-    rig.tick();
+    rig.update();
     SW_REQUIRE_EQUAL( size_t{ 2 }, late._listReply.size() );
     SW_EXPECT_TRUE( late._listReply[0]._result == HousingPlaceResult::Ok );
     SW_EXPECT_TRUE( late._listReply[1]._result == HousingPlaceResult::NothingToUndo );
@@ -438,31 +438,31 @@ SW_TEST_CASE( HousingReplicationTest, OwnerIsThePrincipalAcrossReconnects )
     rig.connect( kAccount );
     rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Claim ) );
     rig.send( 0, HousingNetRig::makePlace( "floor", 0.5f, 0.5f ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::Ok );
     SW_EXPECT_EQUAL( kAccount, rig._pServerPlot->_owner );
 
     // 끊겨도 계정 주인은 남는다(세이브에 실리는 값).
     rig.disconnect( 0 );
-    rig.tick();
+    rig.update();
     SW_EXPECT_EQUAL( kAccount, rig._pServerPlot->_owner );
     SW_EXPECT_TRUE( HousingOwnerID::isPersistent( rig._pServerPlot->_owner ) );
 
     // 같은 계정이 새 연결로 붙으면 내 부지로 받고 바로 짓는다.
     HousingNetRig::Client& back = rig.connect( kAccount );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( back._replication.findOwner( hashed_string( "home" ) ) == HousingPlotOwner::Self );
     rig.send( 1, HousingNetRig::makePlace( "floor", 1.5f, 0.5f ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.lastReply( 1 ) == HousingPlaceResult::Ok );
 
     // 다른 계정은 남의 부지 — 차지도 편집도 거절된다.
     HousingNetRig::Client& other = rig.connect( kOtherAccount );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( other._replication.findOwner( hashed_string( "home" ) ) == HousingPlotOwner::Other );
     rig.send( 2, HousingNetRig::makeOp( HousingEditOp::Claim ) );
     rig.send( 2, HousingNetRig::makeOp( HousingEditOp::Undo ) );
-    rig.tick();
+    rig.update();
     SW_REQUIRE_EQUAL( size_t{ 2 }, other._listReply.size() );
     SW_EXPECT_TRUE( other._listReply[0]._result == HousingPlaceResult::NotOwner );
     SW_EXPECT_TRUE( other._listReply[1]._result == HousingPlaceResult::NotOwner );
@@ -489,26 +489,26 @@ SW_TEST_CASE( HousingReplicationTest, UndoAndRedoAreJudgedByTheirTargetReach )
     remove._op          = HousingEditOp::Remove;
     remove._placementID = 2;
     rig.send( 0, remove );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::Ok );
     SW_REQUIRE_EQUAL( size_t{ 1 }, rig._pServerPlot->_layout.getPlacements().size() );
 
     // 요청자가 멀어지면 치운 바닥을 되돌리는 것(그 자리에 다시 놓기)도 닿지 않는다.
     caller = float3{ 100.0f, 0.0f, 100.0f };
     rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Undo ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::OutOfReach );
     SW_EXPECT_EQUAL( size_t{ 1 }, rig._pServerPlot->_layout.getPlacements().size() );
 
     // 돌아오면 되돌린다. 다시 멀어지면 다시 하기(그 자리에서 치우기)도 닿지 않는다.
     caller = float3{ 0.0f, 0.0f, 0.0f };
     rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Undo ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::Ok );
     SW_EXPECT_EQUAL( size_t{ 2 }, rig._pServerPlot->_layout.getPlacements().size() );
     caller = float3{ 100.0f, 0.0f, 100.0f };
     rig.send( 0, HousingNetRig::makeOp( HousingEditOp::Redo ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_TRUE( rig.lastReply( 0 ) == HousingPlaceResult::OutOfReach );
     SW_EXPECT_EQUAL( size_t{ 2 }, rig._pServerPlot->_layout.getPlacements().size() );
 }
@@ -535,12 +535,12 @@ SW_TEST_CASE( HousingReplicationTest, LargePlotTravelsInChunksThenAsDeltas )
     HousingNetRig::Client& late = rig.connect();
     // 신뢰 창이 조각 둘만 받는다 — 나머지는 서버가 들고 있다가 다음 틱에 잇는다(연결을 닫지 않는다).
     rig._serverPeers._sendBudget = 2;
-    rig.tick();
+    rig.update();
     SW_EXPECT_EQUAL( uint64{ 2 }, rig._server.getStats()._snapshotChunkCount );
     SW_EXPECT_EQUAL( size_t{ 1 }, rig._server.getTransferCount() );
     SW_EXPECT_TRUE( late._pPlot->_layout.getPlacements().empty() );
     rig._serverPeers._sendBudget = -1;
-    rig.tick();
+    rig.update();
     SW_EXPECT_EQUAL( size_t{ 0 }, rig._server.getTransferCount() );
     SW_EXPECT_TRUE( rig._server.getStats()._snapshotChunkCount > 4 ); // 4096 배치는 64 KB 를 넘는다 — 조각이 여럿이다
     SW_REQUIRE_EQUAL( size_t{ 4096 }, late._pPlot->_layout.getPlacements().size() );
@@ -554,7 +554,7 @@ SW_TEST_CASE( HousingReplicationTest, LargePlotTravelsInChunksThenAsDeltas )
                                                             0, 0.0f
     },
                                                      HousingPlacementMode::Grid ) == HousingPlaceResult::Ok );
-    rig.tick();
+    rig.update();
     SW_EXPECT_EQUAL( chunkCount, rig._server.getStats()._snapshotChunkCount );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._deltaSentCount );
     SW_EXPECT_EQUAL( uint64{ 1 }, late._replication.getStats()._deltaAppliedCount );

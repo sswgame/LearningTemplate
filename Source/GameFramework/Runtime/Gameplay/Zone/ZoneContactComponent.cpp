@@ -62,7 +62,7 @@ namespace sw
         Component::onRegister( manager );
         manager.getComponentRegistry().add<ZoneContactComponent>( this );
         ZoneOccupantIndex::addLayerReader( manager ); // 표면 지역의 근처 역할이 물리 층을 질의한다(`ZoneTracker::resolveRoleTargets`)
-        (void)ZoneSystem::findOrCreate( manager );
+        (void)ZoneSystem::getOrCreate( manager );
         manager.getSubsystem<ScenePhysics>().registerContactStayListener( *this, ContactStayListener{ &ZoneContactComponent::receiveCollisionStay, nullptr } );
     }
 
@@ -154,7 +154,7 @@ namespace sw
         inoutList.push_back( contact );
     }
 
-    ZoneContactComponent::SurfaceZone& ZoneContactComponent::findOrAddSurfaceZone( const SurfaceKindTable& table, const hashed_string& kind )
+    ZoneContactComponent::SurfaceZone& ZoneContactComponent::getOrCreateSurfaceZone( const SurfaceKindTable& table, const hashed_string& kind )
     {
         for ( unique_ptr<SurfaceZone>& pZone : _listSurfaceZone )
         {
@@ -262,7 +262,7 @@ namespace sw
         // 종류마다 같은 처리 길 — 이번 프레임에 닿은 종류는 안, 아닌 종류는 나간다.
         for ( const ContactRecord& contact : listContact )
         {
-            (void)findOrAddSurfaceZone( *pTable, contact._kind );
+            (void)getOrCreateSurfaceZone( *pTable, contact._kind );
         }
         for ( unique_ptr<SurfaceZone>& pZone : _listSurfaceZone )
         {

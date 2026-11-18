@@ -48,7 +48,7 @@
 		<Reference owner="Pickup" attribute="charm" target="Charm"/>
 	</Catalog>
 	<!-- 무기(WeaponCatalog)의 projectile · item 은 다른 파일(탄 · 아이템 카탈로그)을 가리켜 이 표에 적지 않는다 — 둘을 함께 쥐는 쪽(게임 · 키트 월드)이
-	     시작할 때 WeaponCatalog::checkProjectiles · findUnknownItems 로 보고, 깨지면 서지 않는다(Shooter3DGame · MechArenaWorld). -->
+	     시작할 때 WeaponCatalog::validateProjectiles · findUnknownItems 로 보고, 깨지면 서지 않는다(Shooter3DGame · MechArenaWorld). -->
 	<Catalog root="RTSCatalog">
 		<Reference owner="Unit" attribute="producedBy" target="Unit"/>
 		<Reference owner="Unit" attribute="requires" target="Unit"/>

@@ -20,9 +20,9 @@ namespace sw
         return FrameSystemUtil::find<SurfaceExposureSystem>( manager );
     }
 
-    SurfaceExposureSystem& SurfaceExposureSystem::findOrCreate( GameObjectManager& manager )
+    SurfaceExposureSystem& SurfaceExposureSystem::getOrCreate( GameObjectManager& manager )
     {
-        return FrameSystemUtil::findOrCreate<SurfaceExposureSystem>( manager );
+        return FrameSystemUtil::getOrCreate<SurfaceExposureSystem>( manager );
     }
 
     void SurfaceExposureSystem::releaseIfUnused( GameObjectManager& manager )

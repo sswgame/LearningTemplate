@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"

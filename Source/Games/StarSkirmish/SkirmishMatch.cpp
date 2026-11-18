@@ -227,7 +227,7 @@ namespace sw
         } );
         for ( const RTSUnitID workerID : listWorker )
         {
-            const RTSUnitID mineralID = _world.findNearestResource( pPlayer->_startPosition, RTSResourceType::Minerals, 16.0f );
+            const RTSUnitID mineralID = _world.findNearestResource( pPlayer->_startPosition, RTSResourceKind::Minerals, 16.0f );
             if ( mineralID.isValid() )
                 (void)_world.issueGather( workerID, mineralID );
         }

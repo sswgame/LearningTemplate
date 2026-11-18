@@ -195,7 +195,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "SocketSet.DeltaNotMade", "Socket set '%#': the difference from base '%#' could not be made (rule <SocketSet> in %#)", absPath.str(), _baseID, DataCatalogInheritance::kTableAssetID );
                 return false;
             }
-            const expected<void> isBackRead = ResourceComposer::checkDeltaReadsBack( text, fullText, _baseID, [&absPath, &kinds]( const string& deltaText )
+            const expected<void> isBackRead = ResourceComposer::validateDeltaReadsBack( text, fullText, _baseID, [&absPath, &kinds]( const string& deltaText )
             {
                 SocketSet reread;
                 return reread.loadFromXMLText( deltaText, absPath.str(), kinds ) ? reread.saveToXMLText() : string{};

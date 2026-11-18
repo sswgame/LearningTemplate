@@ -41,17 +41,17 @@ namespace
             _rig._server.start();
             _clientIndex = _rig._clients.connect( _rig._server._port, { &_client } );
             _client.initialize( &_rig._clients.getClient( _clientIndex ) );
-            tick();
+            update();
             if ( bLogin )
             {
                 _rig._clients.login( _clientIndex, kPlayer );
-                tick();
+                update();
             }
         }
 
         ~MailboxFixture() { _service.shutdown(); }
 
-        void tick( int64 nowMs = kNowMs ) { test::updateAll( { &_rig._server }, _rig._clients, nowMs ); }
+        void update( int64 nowMs = kNowMs ) { test::updateAll( { &_rig._server }, _rig._clients, nowMs ); }
 
         template <typename TMethod>
         OnlineResult<typename TMethod::Reply> call( const typename TMethod::Request& request, const NetIdempotencyKey& key = NetIdempotencyKey{}, int64 nowMs = kNowMs )
@@ -65,7 +65,7 @@ namespace
                 bReplied = true;
             } },
                                                   key );
-            tick( nowMs );
+            update( nowMs );
             SW_EXPECT_TRUE( bReplied );
             return result;
         }
@@ -82,7 +82,7 @@ namespace
                 errorCode = response._errorCode;
                 bReplied  = true;
             } } );
-            tick();
+            update();
             SW_EXPECT_TRUE( bReplied );
             return errorCode;
         }
@@ -241,14 +241,14 @@ SW_TEST_CASE( MailboxServiceTest, CampaignsAppearInFirstPage )
     SW_REQUIRE_TRUE( rig._rig._database.commit( transaction ) == ServiceStoreResult::Ok );
 
     SW_EXPECT_TRUE( rig.list()._reply._listMail.empty() ); // 아직 다시 읽지 않았다
-    rig.tick( kNowMs + 1000 );
+    rig.update( kNowMs + 1000 );
     SW_EXPECT_EQUAL( size_t( 1 ), rig.list( kNowMs + 1000 )._reply._listMail.size() );
 
     rig._rig._database.armFault( ServiceStoreFault::RejectRead );
-    rig.tick( kNowMs + 2000 );
+    rig.update( kNowMs + 2000 );
     SW_EXPECT_EQUAL( size_t( 1 ), rig.list( kNowMs + 2000 )._reply._listMail.size() );
 
-    rig.tick( kNowMs + 12000 );
+    rig.update( kNowMs + 12000 );
     SW_EXPECT_TRUE( rig.list( kNowMs + 12000 )._reply._listMail.empty() );
 }
 
@@ -292,7 +292,7 @@ SW_TEST_CASE( MailboxServiceTest, SweepRemovesExpiredMail )
     MailboxFixture rig( settings );
     (void)rig.sendMail( 5, kNowMs + 10 );
     rig._service.requestSweep();
-    rig.tick( kNowMs + 11 );
+    rig.update( kNowMs + 11 );
     SW_EXPECT_TRUE( rig.list( kNowMs + 11 )._reply._listMail.empty() );
     SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kPlayer ) ); // 발행한 재원은 받지 않으면 사라진다
 }
@@ -326,10 +326,10 @@ SW_TEST_CASE( MailboxServiceTest, SweepRemovesClaimedMail )
     const string   mailKey = rig.sendMail( 5, kNowMs + 10 );
     SW_EXPECT_TRUE( rig.call<MailboxMethod::Claim>( MailboxServiceTestUtil::makeMailRequest( mailKey ) ).isOk() );
     rig._service.requestSweep();
-    rig.tick( kNowMs + 11 );
+    rig.update( kNowMs + 11 );
     SW_EXPECT_EQUAL( 1, rig._rig._database.countRecords( ServiceMail::getMailTable() ) ); // 원래 만료가 지났어도 보관 기간까지 남는다
     rig._service.requestSweep();
-    rig.tick( kNowMs + kClaimedRetentionMs );
+    rig.update( kNowMs + kClaimedRetentionMs );
     SW_EXPECT_EQUAL( 0, rig._rig._database.countRecords( ServiceMail::getMailTable() ) );
     SW_EXPECT_EQUAL( int64( 5 ), rig.getBalanceOf( kPlayer ) );
 }
@@ -364,7 +364,7 @@ SW_TEST_CASE( MailboxServiceTest, NewMailPushReachesTheClient )
     settings._notificationIntervalMs = 1;
     MailboxFixture rig( settings );
     const string   mailKey = rig.sendMail( 5 );
-    rig.tick( kNowMs + 10 );
+    rig.update( kNowMs + 10 );
 
     ConsumerLease lease;
     SW_REQUIRE_TRUE( rig._client.claimNewMail( lease ) );
@@ -383,7 +383,7 @@ SW_TEST_CASE( MailboxServiceTest, NewMailGoesToOfflinePushWhenAway )
     settings._pOfflinePush           = &offlinePush;
     MailboxFixture rig( settings, false );
     (void)rig.sendMail( 5 );
-    rig.tick( kNowMs + 10 );
+    rig.update( kNowMs + 10 );
     SW_REQUIRE_EQUAL( size_t( 1 ), offlinePush._listAccount.size() );
     SW_EXPECT_EQUAL( kPlayer, offlinePush._listAccount[0] );
 }

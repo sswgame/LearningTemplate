@@ -104,16 +104,16 @@ namespace sw
         // 2) 엔진 패스 PSO 와 출력 포맷별 PSO. Present 와 Canvas 처럼 주 출력에 그리는 패스는 대상 포맷마다 PSO 가 다르다
         // ------------------------------------------------------------------------------
         /** @brief 패스 타입의 엔진 PSO 를 둡니다(있으면 덮어씁니다). */
-        void setEnginePSO( RenderPassType passType, RHIPipelineStateHandle pso );
+        void setEnginePSO( RenderPassKind passType, RHIPipelineStateHandle pso );
         /** @brief 패스 타입의 엔진 PSO 입니다. 없으면 0 입니다. */
-        RHIPipelineStateHandle findEnginePSO( RenderPassType passType ) const;
+        RHIPipelineStateHandle findEnginePSO( RenderPassKind passType ) const;
         /** @brief 엔진 PSO 모두입니다. 머티리얼 변형을 만들 때 씬 메시 패스를 고르려고 훑습니다(기록 전). */
-        const unordered_map<RenderPassType, RHIPipelineStateHandle>& getEnginePSOs() const { return _mapEnginePSO; }
+        const unordered_map<RenderPassKind, RHIPipelineStateHandle>& getEnginePSOs() const { return _mapEnginePSO; }
 
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다. 부르는 쪽이 폴백으로 갑니다. */
-        void setOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle pso );
+        void setOutputPSO( RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle pso );
         /** @brief 그 패스와 대상 포맷의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
-        [[nodiscard]] bool findOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const;
+        [[nodiscard]] bool findOutputPSO( RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const;
 
         /** @brief 모듈 확장 패스 프로그램(`ExtensionProgramDesc`) 하나의 PSO 를 프로그램 키(셰이더 · 상태 · 타깃 포맷을 이은 글)로 둡니다. 실패(0)도 기록합니다(만들기를 되풀이하지 않는다). */
         void setExtensionProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle pso );
@@ -179,7 +179,7 @@ namespace sw
 
     private:
         /** @brief (패스 << 32 | 대상 포맷) 키입니다. */
-        static uint64 makeOutputPSOKey( RenderPassType passType, RHIFormat targetFormat )
+        static uint64 makeOutputPSOKey( RenderPassKind passType, RHIFormat targetFormat )
         {
             return ( static_cast<uint64>( passType ) << 32 ) | static_cast<uint64>( targetFormat );
         }
@@ -190,7 +190,7 @@ namespace sw
         unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc> _mapPSODesc         SW_GUARDED_BY( _layoutMutex );
         mutable mutex                                                                   _layoutMutex;
         /// @brief 엔진이 만들어 둔 패스별 PSO 입니다. 키가 enum 이라 조회에 문자열을 만들지 않습니다.
-        unordered_map<RenderPassType, RHIPipelineStateHandle> _mapEnginePSO;
+        unordered_map<RenderPassKind, RHIPipelineStateHandle> _mapEnginePSO;
         /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPSOKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
         unordered_map<uint64, RHIPipelineStateHandle> _mapOutputPSO;
         /// @brief 모듈 프로그램의 PSO 입니다(키 = 프로그램 키). 모듈 패스는 셰이더가 패스마다 달라 패스 종류 하나로 둘 수 없습니다.

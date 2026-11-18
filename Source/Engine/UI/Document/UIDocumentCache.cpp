@@ -51,14 +51,14 @@ namespace sw
         return kArrDependency;
     }
 
-    expected<shared_ptr<const UIDocumentAsset>> UIDocumentCache::findOrLoad( string_view path )
+    expected<shared_ptr<const UIDocumentAsset>> UIDocumentCache::acquire( string_view path )
     {
-        return findOrLoad( path, ResourceTagSet{} );
+        return acquire( path, ResourceTagSet{} );
     }
 
-    expected<shared_ptr<const UIDocumentAsset>> UIDocumentCache::findOrLoad( string_view path, const ResourceTagSet& tagOverride )
+    expected<shared_ptr<const UIDocumentAsset>> UIDocumentCache::acquire( string_view path, const ResourceTagSet& tagOverride )
     {
-        return _cache.findOrLoadAsset( path, tagOverride ).transform( []( const shared_ptr<const void>& pAsset )
+        return _cache.acquireAsset( path, tagOverride ).transform( []( const shared_ptr<const void>& pAsset )
         { return std::static_pointer_cast<const UIDocumentAsset>( pAsset ); } );
     }
 } // namespace sw

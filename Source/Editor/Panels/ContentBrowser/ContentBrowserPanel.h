@@ -11,7 +11,7 @@
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserCollectionStore.h"
-#include "Editor/Panels/ContentBrowser/Model/ContentBrowserModel.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserViewModel.h"
 
 struct ImDrawList;
 
@@ -19,7 +19,7 @@ namespace sw::editor
 {
     /**
      * @brief 콘텐츠 루트를 탐색하고 애셋을 선택하거나 여는 창입니다.
-     * @details 창은 그리기(뷰)만 한다. 루트 · 목록 · 이력 · 선택 · 파일 관리 · 참조 역색인은 모델(`ContentBrowserModel`)이 가지고, 아래 공개 함수는 모델로 넘긴다.
+     * @details 창은 그리기(뷰)만 한다. 루트 · 목록 · 이력 · 선택 · 파일 관리 · 참조 역색인은 모델(`ContentBrowserViewModel`)이 가지고, 아래 공개 함수는 모델로 넘긴다.
      *          창이 가진 것은 화면 상태뿐이다(입력란 글, 타일 크기, 보기 모드, 팝업을 열 표시, 썸네일 캐시).
      */
     class ContentBrowserPanel : public IEditorPanel
@@ -86,7 +86,7 @@ namespace sw::editor
          */
         bool isWaitingForReferenceIndex() const;
         /** @brief 참조 역색인을 반환합니다. */
-        const EditorAssetIndex& getReferenceIndex() const { return ContentBrowserModel::getReferenceIndex(); }
+        const EditorAssetIndex& getReferenceIndex() const { return ContentBrowserViewModel::getReferenceIndex(); }
         /**
          * @brief 에셋의 참조를 찾아 결과 창을 엽니다.
          * @param bDependencies false 면 그 에셋을 사용하는 쪽(Find References)을, true 면 그 에셋이 사용하는 쪽(Show Dependencies)을 찾습니다.
@@ -129,7 +129,7 @@ namespace sw::editor
             List
         };
 
-        using AssetEntry = ContentBrowserModel::AssetEntry;
+        using AssetEntry = ContentBrowserViewModel::AssetEntry;
 
         // ------------------------------------------------------------------------------
         // 3) 패널 그리기: 툴바, 소스 트리, 타일과 리스트
@@ -190,7 +190,7 @@ namespace sw::editor
         static void drawSourceControlBadge( ImDrawList* pDrawList, const float2& topRight, const AssetEntry& entry );
 
     private:
-        ContentBrowserModel _model; /**< 루트 · 목록 · 이력 · 선택 · 파일 관리 · 참조 역색인 · 종류 필터 */
+        ContentBrowserViewModel _model; /**< 루트 · 목록 · 이력 · 선택 · 파일 관리 · 참조 역색인 · 종류 필터 */
         /**
          * @brief 이번 프레임에 보일 엔트리입니다. 모델의 목록을 가리키기만 합니다.
          * @details 멤버로 두면 용량이 남아 첫 프레임 이후로는 할당이 없다. 포인터이므로 엔트리(`string` 네 개)를 복사하지도 않는다.

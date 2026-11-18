@@ -411,7 +411,7 @@ namespace sw
         emit.line( "{" );
         emit.push();
         emit.line( "template <typename TDecl>" );
-        emit.line( "constexpr bool checkPropertyValue()" );
+        emit.line( "constexpr bool isPropertyValueAllowed()" );
         emit.line( "{" );
         emit.push();
         emit.line( "using TValue = std::remove_cv_t<std::remove_reference_t<TDecl>>;" );
@@ -596,7 +596,7 @@ namespace sw
         const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::PropertyStatics };
         // PROPERTY() 에 값으로 담으면 안 되는 기반 타입은 파일 머리의 검사 템플릿(`emitPropertyValueCheck`)이 막는다.
         if ( _session._config._listValueForbiddenBaseType.empty() == false )
-            emit.linef( "static_assert( ::sw::generated::checkPropertyValue<%#>() );", makePropertyDeclType( typeInfo, prop ) );
+            emit.linef( "static_assert( ::sw::generated::isPropertyValueAllowed<%#>() );", makePropertyDeclType( typeInfo, prop ) );
         if ( prop._listAlias.empty() == false )
         {
             string aliases;

@@ -54,9 +54,9 @@ namespace sw
          * @brief 호출 하나 — 순번(varuint) · 대상 id(varuint) · 함수 번호(32 비트, 이름 해시) · 인자 수(varuint) · 인자 글(blob 들). 클라이언트 → 서버는 `Server` 함수, 서버 → 클라이언트는 `Client` · `Multicast` 함수다.
          *        판 2: 함수 이름 글 대신 함수 번호를 싣는다.
          */
-        using Call = NetMessageDef<0, NetMessageDirection::Both, NetChannelType::ReliableOrdered, 2>;
+        using Call = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, 2>;
         /** @brief 서버 → 클라이언트. 받지 못한 호출 — 순번(varuint) · 까닭(1 바이트 `RemoteCallError`). 판 2: 까닭에 `RateLimited` 가 더해졌다 */
-        using Rejected = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 2>;
+        using Rejected = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>;
         using Table    = NetMessageTable<NetKitMessageRange::kRemoteCall, Call, Rejected>;
 
         static constexpr uint8 kCall     = Table::getKindOf<Call>();

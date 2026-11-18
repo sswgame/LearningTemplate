@@ -56,13 +56,13 @@ namespace sw
         clang_visitChildren( clang_getTranslationUnitCursor( _translationUnit ), visitCursor, this );
         for ( uint32 index = 0; index < _listTargetFile.size(); ++index )
         {
-            if ( checkConditionalReflectMacros( _listTargetFile[index], _listTargetPath[index] ) == false )
+            if ( validateConditionalReflectMacros( _listTargetFile[index], _listTargetPath[index] ) == false )
                 markHeaderError( _listHeader[index] );
         }
         return _bHasError == SW_FALSE;
     }
 
-    bool AstVisitor::checkConditionalReflectMacros( CXFile file, const string& path ) const
+    bool AstVisitor::validateConditionalReflectMacros( CXFile file, const string& path ) const
     {
         // 파서는 한 구성(정의 한 벌)만 본다 — `#if` 아래의 PROPERTY · FUNCTION · REFLECT 는 그 구성에서 꺼져 있으면 오류 없이 빠지고, 켜져 있으면
         // 구성마다 레이아웃이 달라진다. 조건부 멤버는 리플렉션 밖에 두고, 리플렉션 멤버는 조건 없이 선언한다. 지금 트리에는 0 건이다.

@@ -43,7 +43,7 @@ namespace sw
     {
     public:
         /** @brief 패스의 렌더 상태를 @p desc 에 정합니다. 파이프라인 패스(@p pPassDesc)는 XML 값 그대로이고, 내부 슬롯(nullptr)은 표의 값입니다. */
-        static void applyPassRenderState( RHIPipelineStateDesc& desc, RenderPassType passType, const RenderGraphPassDesc* pPassDesc );
+        static void applyPassRenderState( RHIPipelineStateDesc& desc, RenderPassKind passType, const RenderGraphPassDesc* pPassDesc );
 
         /**
          * @brief 렌더러의 디바이스 변수 · 파이프라인 에셋 · GPUScene 을 읽는 관리자를 만듭니다. 셋은 이 관리자보다 오래 산다(렌더러의 멤버).
@@ -78,8 +78,8 @@ namespace sw
         void onShaderRecompiled( string_view shaderPath );
 
         /** @brief 패스 타입에 해당하는 엔진 PSO 입니다. 없으면 0 입니다. 프레임 패스(`isFramePassType`)는 이 파이프라인이 선언하지 않았으면 0 입니다. */
-        RHIPipelineStateHandle getEnginePSO( RenderPassType passType ) const;
-        /** @brief 파이프라인 컴퓨트 패스(`RenderPassType::Compute`) @p passName 의 PSO 입니다. 없으면 0 입니다. */
+        RHIPipelineStateHandle getEnginePSO( RenderPassKind passType ) const;
+        /** @brief 파이프라인 컴퓨트 패스(`RenderPassKind::Compute`) @p passName 의 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle findPipelineComputePSO( const hashed_string& passName ) const;
         /**
          * @brief 디퍼드 조명 타일 종류 @p tileClass 의 PSO(조명 패스 서술 + 그 종류의 엽만 — deferred_lighting.hlsl VSTile)입니다. 없으면 0 입니다.
@@ -91,7 +91,7 @@ namespace sw
          * @details **조회만 한다.** 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 된다. 셋업에 없는 포맷이면 대신 그리지 않고 멈춘다(`SW_FATAL`) —
          *          돌려준 PSO 는 0 이 아니다. 언리얼이 PSO 초기화자의 RenderTargetFormats 를 바인딩된 타깃에서 뽑아 PSO 캐시 키로 삼는 것과 같다.
          */
-        RHIPipelineStateHandle findOutputPSO( RenderPassType passType, RHIFormat targetFormat ) const;
+        RHIPipelineStateHandle findOutputPSO( RenderPassKind passType, RHIFormat targetFormat ) const;
         /** @brief PSO 핸들의 바인딩 레이아웃을 조회합니다. 없으면 nullptr 입니다. */
         const ShaderBindingLayout* findLayout( RHIPipelineStateHandle pso ) const;
         /** @brief PSO 를 만들 때 쓴 디스크립터를 반환합니다. 모르는 PSO 면 false 입니다. */
@@ -100,12 +100,12 @@ namespace sw
         const RHIStructuredBuffer* findMaterialFallback( const ShaderBindingLayout* pLayout ) const;
 
         /**
-         * @brief 패스 종류 테이블(RenderPassTypeInfo)과 파이프라인 XML 의 패스 서술로 패스 PSO 를 만듭니다.
+         * @brief 패스 종류 테이블(RenderPassKindInfo)과 파이프라인 XML 의 패스 서술로 패스 PSO 를 만듭니다.
          * @param pRTVFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(Present 변형). nullptr 이면 테이블의 고정 포맷을 쓰고, 없으면 출력 선언 순서를 따릅니다.
          */
-        RHIPipelineStateHandle createPSOForPassType( RenderPassType passType, const RHIFormat* pRTVFormatOverride = nullptr );
+        RHIPipelineStateHandle createPSOForPassType( RenderPassKind passType, const RHIFormat* pRTVFormatOverride = nullptr );
         /** @brief `createPSOForPassType` 의 몸체입니다. 패스 서술을 직접 받습니다 — 같은 종류의 패스가 여럿인 모듈 패스가 패스마다 부릅니다. */
-        RHIPipelineStateHandle createPSOForPass( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride );
+        RHIPipelineStateHandle createPSOForPass( RenderPassKind passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride );
         /** @brief 모듈 확장 패스 프로그램 PSO 하나의 요청입니다(키 = 셰이더 · 고정 상태 · 타깃 포맷 · 깊이 테스트). 프로그램은 부르는 쪽 것을 빌린다. */
         struct ExtensionProgramRequest
         {
@@ -114,7 +114,7 @@ namespace sw
             bool                        _bDepthTest{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /**
-         * @brief 아직 PSO 가 없는 확장 프로그램들의 셰이더를 워커가 한 번에 데웁니다(셋업 — PSO 는 뒤의 `findOrCreateExtensionProgramPSO` 가 차례로 만든다).
+         * @brief 아직 PSO 가 없는 확장 프로그램들의 셰이더를 워커가 한 번에 데웁니다(셋업 — PSO 는 뒤의 `getOrCreateExtensionProgramPSO` 가 차례로 만든다).
          * @details `createPassPSOS` 와 같은 "셰이더 병렬 데우기 → PSO 직렬 생성" 이다 — 처음 보는 프로그램이 여럿인 프레임에 렌더 스레드가 하나씩 컴파일하지 않게.
          */
         void warmExtensionPrograms( const vector<ExtensionProgramRequest>& listRequest ) const;
@@ -122,11 +122,11 @@ namespace sw
          * @brief 모듈 확장 패스의 프로그램(`ExtensionProgramDesc`) PSO 를 셋업에서 찾거나 만듭니다(키 = 셰이더 · 고정 상태 · 타깃 포맷). 기록 중에는 부르지 않습니다.
          * @return 0 이면 만들지 못한 것입니다(오류를 남겼다 — 부르는 쪽은 그 패스를 그리지 않는다).
          */
-        RHIPipelineStateHandle findOrCreateExtensionProgramPSO( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest );
+        RHIPipelineStateHandle getOrCreateExtensionProgramPSO( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest );
         /** @brief 2D 빛 쿠키 아틀라스 칸에 옮겨 그리는 PSO(전체 화면 블릿 셰이더, 아틀라스 포맷)를 찾거나 만듭니다. 기록 전(프레임 프리패스)에만 부릅니다. 못 만들면 0 입니다. */
-        RHIPipelineStateHandle findOrCreateCookieAtlasPSO( RHIFormat atlasFormat );
+        RHIPipelineStateHandle getOrCreateCookieAtlasPSO( RHIFormat atlasFormat );
         /** @brief UV 공간 층 굽기 PSO(층 굽기 셰이더, 타깃 둘 — @p targetFormat)를 찾거나 만듭니다. 기록 전(프레임 프리패스)에만 부릅니다. 못 만들면 0 입니다. */
-        RHIPipelineStateHandle findOrCreateLayerBakePSO( RHIFormat targetFormat );
+        RHIPipelineStateHandle getOrCreateLayerBakePSO( RHIFormat targetFormat );
 
         /**
          * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 모두 만들어 둡니다.
@@ -180,7 +180,7 @@ namespace sw
         struct PassPSOJob
         {
             RHIPipelineStateDesc _desc{};
-            RenderPassType       _passType{ RenderPassType::Invalid };
+            RenderPassKind       _passType{ RenderPassKind::Invalid };
             RHIFormat            _outputFormat{ RHIFormat::Unknown };
         };
 
@@ -190,7 +190,7 @@ namespace sw
          * @brief 패스 종류 표와 파이프라인 XML 의 패스 서술로 패스 PSO 의 desc 를 정합니다(PSO 는 만들지 않는다). 컬러 포맷을 정할 근거가 없으면 오류를 남기고 false 입니다.
          * @param pRTVFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(출력 변형). nullptr 이면 표의 고정 포맷을 쓰고, 없으면 출력 선언 순서를 따릅니다.
          */
-        [[nodiscard]] bool makePassPSODesc( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride, RHIPipelineStateDesc& outDesc ) const;
+        [[nodiscard]] bool makePassPSODesc( RenderPassKind passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 셋업이 만들 컴퓨트 패스 PSO 하나입니다(셰이더 경로 · define 은 쿠커와 같은 `selectRenderPassShader`). */
         struct ComputePSOJob
         {
@@ -198,14 +198,14 @@ namespace sw
             string         _entryPoint; ///< 비면 스테이지 기본값입니다
             vector<string> _listDefine;
             hashed_string  _pipelinePassName; ///< 파이프라인 컴퓨트 패스면 그 이름입니다(비면 엔진 슬롯 `_passType`)
-            RenderPassType _passType{ RenderPassType::Invalid };
+            RenderPassKind _passType{ RenderPassKind::Invalid };
         };
 
         /** @brief 그래픽스 PSO desc 의 셰이더 요청(정점 · 있으면 픽셀)을 @p inoutListShader 에 더합니다. 백엔드 팩토리와 같은 해석이라(`RHIShaderRequest::resolveGraphics`) 캐시 키가 같다. */
         void appendShaderWarm( const RHIPipelineStateDesc& desc, vector<ShaderCompileDesc>& inoutListShader ) const;
         /**
          * @brief @p listShader 를 워커가 나눠 읽거나 컴파일해 `ShaderCache` 에 올립니다(PSO 는 만들지 않는다 — 뒤의 생성이 캐시에서 받는다).
-         * @details 셰이더 바이트코드는 디바이스를 쓰지 않아 백엔드와 상관없이 병렬로 된다. PSO 생성은 이 스레드가 차례로 한다(`createPassPSOS` · `findOrCreateExtensionProgramPSO`).
+         * @details 셰이더 바이트코드는 디바이스를 쓰지 않아 백엔드와 상관없이 병렬로 된다. PSO 생성은 이 스레드가 차례로 한다(`createPassPSOS` · `getOrCreateExtensionProgramPSO`).
          */
         void warmShaders( const vector<ShaderCompileDesc>& listShader ) const;
         /**
@@ -216,30 +216,30 @@ namespace sw
         /** @brief PSO 생성 desc 로 레이아웃을 만들고 PSO 핸들에 연결합니다. */
         void registerLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
         /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
-        const RenderGraphPassDesc* findPassDescByType( RenderPassType passType ) const;
+        const RenderGraphPassDesc* findPassDescByType( RenderPassKind passType ) const;
         /**
          * @brief 패스 PSO 의 컬러 RT 수와 포맷을 정합니다. 고정 배열이 있으면 그것을, 없으면 출력 선언 순서를 씁니다.
          * @return 컬러 RT 가 있는데 포맷을 정할 근거가 없거나 출력 선언에 포맷을 모르는 출력(Swapchain)이 있으면 false 입니다 — RGBA8 로 짐작하지 않는다.
          */
         [[nodiscard]] bool fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormats, uint32 numRenderTargets ) const;
         /** @brief 이 패스 종류의 컬러 포맷을 정할 근거(표의 고정 포맷 · 컬러 없음 · 파이프라인의 출력 선언)가 있는지 반환합니다. 없으면 이 파이프라인에서 실행되지 않는 패스입니다. */
-        bool hasRenderTargetFormatSource( RenderPassType passType ) const;
+        bool hasRenderTargetFormatSource( RenderPassKind passType ) const;
         /**
          * @brief 패스 PSO 에 머티리얼 퍼뮤테이션, 뷰 모드, 컬 반전을 적용한 변형을 만듭니다. 적용할 것이 없으면 패스 PSO 를 그대로 반환합니다.
          * @details 렌더 상태는 패스 → 머티리얼 → 보기 모드 → 컬 반전 순서로 합친다. RT 포맷은 패스의 것이다.
          */
-        RenderPSOCache::MaterialPSOEntry createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation,
+        RenderPSOCache::MaterialPSOEntry createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassKind passType, const GPUShaderPermutation* pPermutation,
                                                                    RenderViewMode viewMode, bool bReverseCulling, RHIMeshVertexFormat vertexFormat, RHIPipelineStateDesc* pOutDeferredDesc );
         /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전, 정점 형식) 조합을 중복 없이 모읍니다. 퍼뮤테이션이 없는 배치도 넣습니다. */
         static void collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest );
         /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
-        [[nodiscard]] bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
+        [[nodiscard]] bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPSORequest& request, uint32 viewModeMask );
         /**
          * @brief 변형 하나가 저장소에 없으면 만들어 넣습니다. 셰이더를 컴파일해야 하는 변형은 `Building` 으로 올리고 빌더 줄에 넣습니다(`pollMaterialPSOBuilds` 가 합칩니다).
          * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOs`)는 false 입니다.
          * @return 이 호출에서 `Ready` · `Failed` 로 끝난 변형이 있으면 true 입니다(`Building` 으로 넘긴 것은 false).
          */
-        [[nodiscard]] bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
+        [[nodiscard]] bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassKind passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
                                                      bool bReverseCulling, RenderViewMode viewMode, RHIMeshVertexFormat vertexFormat, bool bUrgent = true );
 
     private:

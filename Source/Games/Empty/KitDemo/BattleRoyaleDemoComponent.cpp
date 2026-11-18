@@ -9,7 +9,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleMatch.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleMatch.h"
 
 namespace sw
 {

@@ -116,7 +116,7 @@ namespace sw
         };
         // clang-format on
 
-        /** @brief MRT 포맷 표입니다(`RenderPassTypeInfo` 의 G버퍼 패스 행이 PSO 포맷으로 쓴다). */
+        /** @brief MRT 포맷 표입니다(`RenderPassKindInfo` 의 G버퍼 패스 행이 PSO 포맷으로 쓴다). */
         static constexpr RHIFormat kArrColorFormat[kAttachmentCount] = { kArrAttachment[0]._format, kArrAttachment[1]._format, kArrAttachment[2]._format, kArrAttachment[3]._format,
                                                                          kArrAttachment[4]._format, kArrAttachment[5]._format };
 

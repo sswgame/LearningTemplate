@@ -12,8 +12,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureVitals.h"
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Rule/ActionRoom.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureVitals.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"

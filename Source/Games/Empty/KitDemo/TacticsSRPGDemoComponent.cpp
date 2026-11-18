@@ -13,7 +13,7 @@
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCombat.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCombat.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
 

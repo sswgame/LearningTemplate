@@ -1,7 +1,7 @@
 /**
  * @file FogComponent.h
  * @brief 씬의 안개입니다. 높이 · 거리 지수 안개(색, 밀도, 높이 감쇠, 기준 높이, 시작 거리, 최대 불투명도)와 방향광 쪽 산란, 선택으로 라이트 산란을 넣는 볼륨 안개를 정합니다.
- * @details 렌더러는 이 값을 패킷으로 받아 안개 패스(`RenderPassType::Fog`, fog.hlsl)가 불투명 · 반투명을 그린 뒤 장면 색에 섞는다(`FogSettings` 머리 주석의 식).
+ * @details 렌더러는 이 값을 패킷으로 받아 안개 패스(`RenderPassKind::Fog`, fog.hlsl)가 불투명 · 반투명을 그린 뒤 장면 색에 섞는다(`FogSettings` 머리 주석의 식).
  *          언리얼 ExponentialHeightFog(+ Volumetric Fog), 유니티 HDRP Fog 자리다.
  *          카메라가 물속이면(`WaterBodyComponent::findUnderwaterFog`) 물의 안개 값이 이 컴포넌트의 값을 덮는다 — 균일한 안개이고 안개 컴포넌트가 없는 씬도 물속은 안개가 낀다(`findFog`).
  */

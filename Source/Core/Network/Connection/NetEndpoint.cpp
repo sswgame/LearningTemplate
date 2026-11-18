@@ -33,9 +33,9 @@ namespace sw
              * @brief 채널 상한을 넘는 메시지면 `NetConnection` 과 같은 오류를 남기고 true 입니다. 엔드포인트 잠금을 잡기 전에 부른다 —
              *        연결의 같은 로그는 엔드포인트 잠금 안에서 남게 되어 잎 잠금 규칙(`mutex`)에 어긋난다.
              */
-            [[nodiscard]] static bool reportOversizeMessage( NetChannelType channel, const uint8* pData, int32 size )
+            [[nodiscard]] static bool reportOversizeMessage( NetChannelKind channel, const uint8* pData, int32 size )
             {
-                const bool bCheckable = size > 0 && pData != nullptr && channel != NetChannelType::Count;
+                const bool bCheckable = size > 0 && pData != nullptr && channel != NetChannelKind::Count;
                 if ( bCheckable == false || size <= NetConnection::getMaxMessageSize( channel ) )
                     return false;
                 SW_LOG_ERROR_ID( "Net.MessageTooLarge", "NetConnection: a %# byte message exceeds the %# byte limit of channel %# - not sent", size,
@@ -177,13 +177,13 @@ namespace sw
         return true;
     }
 
-    NetEndpoint::PacketType NetEndpoint::peekPacketType( const uint8* pData, int32 size )
+    NetEndpoint::PacketKind NetEndpoint::peekPacketKind( const uint8* pData, int32 size )
     {
         if ( pData == nullptr || size <= NetEndpointInternal::kHeaderSize )
-            return PacketType::Count;
+            return PacketKind::Count;
         BitReader    reader( pData + NetEndpointInternal::kHeaderSize, size - NetEndpointInternal::kHeaderSize );
         const uint32 type = reader.readBits( NetEndpointInternal::kTypeBits );
-        return type < static_cast<uint32>( PacketType::Count ) ? static_cast<PacketType>( type ) : PacketType::Count;
+        return type < static_cast<uint32>( PacketKind::Count ) ? static_cast<PacketKind>( type ) : PacketKind::Count;
     }
 
     uint32 NetEndpoint::computePacketChecksum( uint32 headerID, const uint8* pBody, int32 size )
@@ -395,7 +395,7 @@ namespace sw
         _listFinished.push_back( std::move( finished ) );
     }
 
-    void NetEndpoint::sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB )
+    void NetEndpoint::sendControl( const NetAddress& to, PacketKind type, uint64 valueA, uint64 valueB )
     {
         BitWriter& writer = _packetWriter;
         writer.clear();
@@ -409,14 +409,14 @@ namespace sw
 
     void NetEndpoint::sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt )
     {
-        sendControl( to, PacketType::Denied, static_cast<uint64>( reason ) | ( static_cast<uint64>( _protocolID ) << 32 ), clientSalt );
+        sendControl( to, PacketKind::Denied, static_cast<uint64>( reason ) | ( static_cast<uint64>( _protocolID ) << 32 ), clientSalt );
     }
 
     void NetEndpoint::sendChallengeResponse( NetEndpointSlot& slot )
     {
         BitWriter& writer = _packetWriter;
         writer.clear();
-        writer.writeBits( static_cast<uint32>( PacketType::ChallengeResponse ), NetEndpointInternal::kTypeBits );
+        writer.writeBits( static_cast<uint32>( PacketKind::ChallengeResponse ), NetEndpointInternal::kTypeBits );
         writer.writeBits( static_cast<uint32>( slot._clientSalt ), 32 );
         writer.writeBits( static_cast<uint32>( slot._clientSalt >> 32 ), 32 );
         writer.writeBits( static_cast<uint32>( slot._serverSalt ), 32 );
@@ -443,7 +443,7 @@ namespace sw
         const NetEndpointSlot& slot   = _slotTable.get( slotIndex );
         BitWriter&             writer = _packetWriter;
         writer.clear();
-        writer.writeBits( static_cast<uint32>( PacketType::Accepted ), NetEndpointInternal::kTypeBits );
+        writer.writeBits( static_cast<uint32>( PacketKind::Accepted ), NetEndpointInternal::kTypeBits );
         writer.writeBits( static_cast<uint32>( slotIndex ), 32 );
         writer.writeBits( 0u, 32 );
         writer.writeBits( static_cast<uint32>( slot._serverSalt ), 32 );
@@ -522,7 +522,7 @@ namespace sw
         return true;
     }
 
-    int32 NetEndpoint::sendSealed( NetEndpointSlot& slot, PacketType type, const uint8* pPlain, int32 plainSize )
+    int32 NetEndpoint::sendSealed( NetEndpointSlot& slot, PacketKind type, const uint8* pPlain, int32 plainSize )
     {
         if ( _sealer.seal( *slot._security, static_cast<uint8>( type ), static_cast<uint32>( slot.getConnectionToken() ), _protocolID, _bServer == SW_TRUE, pPlain, plainSize,
                            _packetWriter ) == false )
@@ -541,7 +541,7 @@ namespace sw
             const int32 maxBytes =
                 slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetEndpointInternal::kHeaderSize - NetPacketSealer::kSecureHeadSize - NetSecurityConstant::kAEADTagSize : 0;
             slot._connection->writePacket( nowSeconds, _plainWriter, maxBytes, _settings._keepAliveInterval, _settings._maxUnreliableAgeSeconds );
-            const int32 sentBytes = sendSealed( slot, PacketType::Payload, _plainWriter.getBytes().data(), _plainWriter.getByteCount() );
+            const int32 sentBytes = sendSealed( slot, PacketKind::Payload, _plainWriter.getBytes().data(), _plainWriter.getByteCount() );
             if ( maxBytes > 0 )
                 slot._sendCredit -= static_cast<float64>( sentBytes ); // 헤더만 담은 패킷(확인 · 연결 유지)은 제어 몫이라 빼지 않는다
             slot._lastSendTime = nowSeconds;
@@ -549,7 +549,7 @@ namespace sw
         }
         BitWriter& writer = _packetWriter;
         writer.clear();
-        writer.writeBits( static_cast<uint32>( PacketType::Payload ), NetEndpointInternal::kTypeBits );
+        writer.writeBits( static_cast<uint32>( PacketKind::Payload ), NetEndpointInternal::kTypeBits );
         // 연결 값(두 솔트를 섞은 값)으로 같은 주소의 옛 연결이나 위조 패킷을 걸러 낸다.
         writer.writeBits( static_cast<uint32>( slot.getConnectionToken() ), 32 );
         writer.writeBits( _bDebugHold == SW_TRUE ? 1u : 0u, 1 ); // 디버거 대기 비트.
@@ -816,7 +816,7 @@ namespace sw
                         if ( slot._serverSalt != 0 )
                             sendChallengeResponse( slot );
                         else
-                            sendControl( slot._address, PacketType::ConnectRequest, slot._clientSalt,
+                            sendControl( slot._address, PacketKind::ConnectRequest, slot._clientSalt,
                                          ( static_cast<uint64>( _settings._gameID ) << 32 ) | _protocolID );
                         slot._lastSendTime = nowSeconds;
                     }
@@ -886,8 +886,8 @@ namespace sw
             return;
         }
         BitReader        reader( pData + NetEndpointInternal::kHeaderSize, size - NetEndpointInternal::kHeaderSize );
-        const PacketType type = static_cast<PacketType>( reader.readBits( NetEndpointInternal::kTypeBits ) );
-        if ( type >= PacketType::Count || isHandshakeFramed( type ) != ( headerID == NetProtocol::kHandshakeID ) )
+        const PacketKind type = static_cast<PacketKind>( reader.readBits( NetEndpointInternal::kTypeBits ) );
+        if ( type >= PacketKind::Count || isHandshakeFramed( type ) != ( headerID == NetProtocol::kHandshakeID ) )
         {
             ++_rejectedPacketCount;
             return;
@@ -895,12 +895,12 @@ namespace sw
         const optional<int32> slotIndex = _slotTable.findByAddress( from );
         if ( slotIndex.has_value() )
             _slotTable.markDue( *slotIndex ); // 받은 것이 확인 · 응답 · 상태를 바꿨을 수 있다 — 이번 갱신에서 그 슬롯을 본다
-        if ( isEncrypted() && ( type == PacketType::Payload || type == PacketType::Disconnect ) )
+        if ( isEncrypted() && ( type == PacketKind::Payload || type == PacketKind::Disconnect ) )
         {
             queueSealedPacket( nowSeconds, type, slotIndex, pData + NetEndpointInternal::kHeaderSize, size - NetEndpointInternal::kHeaderSize );
             return;
         }
-        if ( type == PacketType::Payload )
+        if ( type == PacketKind::Payload )
         {
             handlePayloadPacket( nowSeconds, slotIndex, reader );
             return;
@@ -954,17 +954,17 @@ namespace sw
             closeSlot( *slotIndex, NetDisconnectReason::ReceiveOverflow, true );
     }
 
-    void NetEndpoint::handleControlPacket( PacketType type, const ControlPacket& packet, BitReader& reader )
+    void NetEndpoint::handleControlPacket( PacketKind type, const ControlPacket& packet, BitReader& reader )
     {
         const optional<int32> slotIndex = packet._slotIndex;
         switch ( type )
         {
-            case PacketType::ConnectRequest:
+            case PacketKind::ConnectRequest:
             {
                 handleConnectRequest( packet );
                 return;
             }
-            case PacketType::Challenge:
+            case PacketKind::Challenge:
             {
                 if ( _bServer || slotIndex.has_value() == false )
                     return;
@@ -976,12 +976,12 @@ namespace sw
                 slot._lastSendTime = packet._nowSeconds;
                 return;
             }
-            case PacketType::ChallengeResponse:
+            case PacketKind::ChallengeResponse:
             {
                 handleChallengeResponse( packet, reader );
                 return;
             }
-            case PacketType::Accepted:
+            case PacketKind::Accepted:
             {
                 if ( _bServer || slotIndex.has_value() == false )
                     return;
@@ -1000,7 +1000,7 @@ namespace sw
                 pushEvent( NetEndpointEvent{ 0, NetDisconnectReason::None, NetEndpointEvent::Kind::Connected } );
                 return;
             }
-            case PacketType::Denied:
+            case PacketKind::Denied:
             {
                 if ( _bServer || slotIndex.has_value() == false )
                     return;
@@ -1018,14 +1018,14 @@ namespace sw
                 closeSlot( *slotIndex, reason, false );
                 return;
             }
-            case PacketType::Disconnect:
+            case PacketKind::Disconnect:
             {
                 if ( slotIndex.has_value() && packet._valueA == _slotTable.get( *slotIndex ).getConnectionToken() )
                     closeSlot( *slotIndex, NetDisconnectReason::Remote, false );
                 return;
             }
-            case PacketType::Payload:
-            case PacketType::Count:
+            case PacketKind::Payload:
+            case PacketKind::Count:
             {
                 return;
             }
@@ -1074,7 +1074,7 @@ namespace sw
             return;
         }
         // 슬롯을 할당하지 않고 챌린지 값만 돌려준다. 그 값은 이 주소로 보낸 패킷에만 있으므로, 되돌려 준 응답이 와야 주소가 진짜임이 확인된다.
-        sendControl( packet._from, PacketType::Challenge, packet._valueA, _challenge.makeToken( packet._from, packet._valueA, packet._nowSeconds ) );
+        sendControl( packet._from, PacketKind::Challenge, packet._valueA, _challenge.makeToken( packet._from, packet._valueA, packet._nowSeconds ) );
     }
 
     void NetEndpoint::handleChallengeResponse( const ControlPacket& packet, BitReader& reader )
@@ -1131,7 +1131,7 @@ namespace sw
         sendAccepted( freeIndex );
     }
 
-    void NetEndpoint::queueSealedPacket( float64 nowSeconds, PacketType type, const optional<int32> slotIndex, const uint8* pBody, int32 bodySize )
+    void NetEndpoint::queueSealedPacket( float64 nowSeconds, PacketKind type, const optional<int32> slotIndex, const uint8* pBody, int32 bodySize )
     {
         // 본문 형식은 [종류와 0][연결 값 4바이트][패킷 번호 8바이트][AEAD + 태그]다. 바이트 정렬이므로 BitReader 를 거치지 않는다.
         const uint32     token  = bodySize >= 5 ? LittleEndianUtil::readUint32( pBody + 1 ) : 0u;
@@ -1141,7 +1141,7 @@ namespace sw
         if ( bReady == false )
         {
             // 평문 방식과 같다. 클라이언트가 Accepted 를 받지 못했으면 응답을 다시 보내(서버가 수락을 다시 보낸다), 아니면 버린다.
-            const bool bClientAwaitingAcceptPayload = type == PacketType::Payload && _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
+            const bool bClientAwaitingAcceptPayload = type == PacketKind::Payload && _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
                                                       token == static_cast<uint32>( pSlot->getConnectionToken() );
             if ( bClientAwaitingAcceptPayload )
             {
@@ -1212,7 +1212,7 @@ namespace sw
             }
         }
         NetEndpointSlot& slot = _slotTable.get( slotIndex );
-        if ( sealed._type == PacketType::Disconnect )
+        if ( sealed._type == PacketKind::Disconnect )
         {
             if ( sealed._plainSize == 0 )
                 closeSlot( slotIndex, NetDisconnectReason::Remote, false );
@@ -1283,9 +1283,9 @@ namespace sw
             for ( int32 repeat = 0; repeat < 3; ++repeat )
             {
                 if ( slot._security == nullptr )
-                    sendControl( slot._address, PacketType::Disconnect, slot.getConnectionToken(), 0 );
+                    sendControl( slot._address, PacketKind::Disconnect, slot.getConnectionToken(), 0 );
                 else if ( slot._security->_bKeysReady == SW_TRUE )
-                    (void)sendSealed( slot, PacketType::Disconnect, nullptr, 0 );
+                    (void)sendSealed( slot, PacketKind::Disconnect, nullptr, 0 );
             }
         }
         const bool bWasVisible = slot._state == NetConnectionState::Connected || _bServer == SW_FALSE;
@@ -1305,7 +1305,7 @@ namespace sw
             _clientIndex = nullopt;
     }
 
-    bool NetEndpoint::sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
+    bool NetEndpoint::sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size )
     {
         if ( NetEndpointInternal::reportOversizeMessage( channel, pData, size ) )
             return false;
@@ -1320,7 +1320,7 @@ namespace sw
         return bQueued;
     }
 
-    bool NetEndpoint::trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
+    bool NetEndpoint::trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size )
     {
         if ( NetEndpointInternal::reportOversizeMessage( channel, pData, size ) )
             return false;
@@ -1335,7 +1335,7 @@ namespace sw
         return bQueued;
     }
 
-    bool NetEndpoint::sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size, WindowFullPolicy policy )
+    bool NetEndpoint::sendMessageLocked( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size, WindowFullPolicy policy )
     {
         NetEndpointSlot* pSlot   = _slotTable.findConnected( connectionID );
         const bool       bQueued = pSlot != nullptr && pSlot->_connection->sendMessage( channel, pData, size );
@@ -1346,7 +1346,7 @@ namespace sw
             requestWake( pSlot->_lastSendTime + _settings._sendInterval ); // 보내기 간격이 차는 때 — 자는 네트워크 스레드가 그때 깬다
             return true;
         }
-        const bool bReliable    = channel == NetChannelType::ReliableOrdered || channel == NetChannelType::ReliableUnordered;
+        const bool bReliable    = channel == NetChannelKind::ReliableOrdered || channel == NetChannelKind::ReliableUnordered;
         const bool bCloseOnFull = pSlot != nullptr && bReliable && policy == WindowFullPolicy::Close && pSlot->_connection->isReliableWindowFull( size );
         if ( bCloseOnFull )
         {
@@ -1383,7 +1383,7 @@ namespace sw
         outTable.addTable( _sentKindStats );
     }
 
-    int32 NetEndpoint::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID )
+    int32 NetEndpoint::broadcast( NetChannelKind channel, const uint8* pData, int32 size, int32 exceptID )
     {
         if ( NetEndpointInternal::reportOversizeMessage( channel, pData, size ) )
             return 0;
@@ -1405,7 +1405,7 @@ namespace sw
         return sentCount;
     }
 
-    bool NetEndpoint::receiveMessage( int32& outConnectionID, NetChannelType& outChannel, vector<uint8>& outBuffer )
+    bool NetEndpoint::receiveMessage( int32& outConnectionID, NetChannelKind& outChannel, vector<uint8>& outBuffer )
     {
         ScopedLock<mutex> lock{ _mutex };
         const int32       slotCount = _slotTable.getCount();
@@ -1415,12 +1415,12 @@ namespace sw
             NetEndpointSlot& slot  = _slotTable.get( index );
             if ( slot._state != NetConnectionState::Connected )
                 continue;
-            for ( int32 channel = 0; channel < static_cast<int32>( NetChannelType::Count ); ++channel )
+            for ( int32 channel = 0; channel < static_cast<int32>( NetChannelKind::Count ); ++channel )
             {
-                if ( slot._connection->receiveMessage( static_cast<NetChannelType>( channel ), outBuffer ) )
+                if ( slot._connection->receiveMessage( static_cast<NetChannelKind>( channel ), outBuffer ) )
                 {
                     outConnectionID = index;
-                    outChannel      = static_cast<NetChannelType>( channel );
+                    outChannel      = static_cast<NetChannelKind>( channel );
                     _receiveCursor  = index; // 다음에는 같은 연결부터 이어서 비운다.
                     return true;
                 }
@@ -1501,18 +1501,18 @@ namespace sw
             {
                 outInbound._listDeliveryNotification[notificationIndex]._connectionID = index;
             }
-            for ( int32 channel = 0; channel < static_cast<int32>( NetChannelType::Count ); ++channel )
+            for ( int32 channel = 0; channel < static_cast<int32>( NetChannelKind::Count ); ++channel )
             {
                 // 메시지를 아레나 뒤에 바로 덧붙인다(중간 버퍼를 거치지 않는다).
                 int32 offset = static_cast<int32>( outInbound._bytes.size() );
-                while ( slot._connection->receiveMessageAppend( static_cast<NetChannelType>( channel ), outInbound._bytes ) )
+                while ( slot._connection->receiveMessageAppend( static_cast<NetChannelKind>( channel ), outInbound._bytes ) )
                 {
                     const int32       end = static_cast<int32>( outInbound._bytes.size() );
                     NetInboundMessage message;
                     message._connectionID = index;
                     message._offset       = offset;
                     message._size         = end - offset;
-                    message._channel      = static_cast<NetChannelType>( channel );
+                    message._channel      = static_cast<NetChannelKind>( channel );
                     outInbound._listMessage.push_back( message );
                     offset = end;
                 }

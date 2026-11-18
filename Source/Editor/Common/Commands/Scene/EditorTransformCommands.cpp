@@ -285,7 +285,7 @@ namespace sw::editor
         EditorTransaction::endTransaction();
     }
 
-    void EditorTransformCommands::alignSelectedObjects( AlignAxis axis, AlignType type )
+    void EditorTransformCommands::alignSelectedObjects( AlignAxis axis, AlignKind type )
     {
         // 전역 명령이므로 대상 창의 선택을 쓴다. 미리보기 창이면 그 씬의 오브젝트이고, 기록은 그 창의 스택에 남는다(`EditorTransaction`).
         const EditorSelection* pSelection = editor::getFocusedSelection();
@@ -297,16 +297,16 @@ namespace sw::editor
         alignObjects( listSel, axis, type );
     }
 
-    void EditorTransformCommands::alignObjects( const vector<GameObject*>& listSelected, AlignAxis axis, AlignType type )
+    void EditorTransformCommands::alignObjects( const vector<GameObject*>& listSelected, AlignAxis axis, AlignKind type )
     {
         const vector<GameObject*> listSel = EditorSelection::filterTopLevel( listSelected ); // 자식은 부모를 따라 움직인다
         if ( listSel.size() < 2 )
             return;
 
         float32 targetVal = 0.0f;
-        if ( type == AlignType::Min )
+        if ( type == AlignKind::Min )
             targetVal = 1e9f;
-        else if ( type == AlignType::Max )
+        else if ( type == AlignKind::Max )
             targetVal = -1e9f;
 
         float32 sumVal     = 0.0f;
@@ -319,9 +319,9 @@ namespace sw::editor
 
             const float32 val = EditorTransformCommandsInternal::getAxisValue( pGo->getPrimarySceneComponent()->getWorldPosition(), axis );
 
-            if ( type == AlignType::Min )
+            if ( type == AlignKind::Min )
                 targetVal = MathUtil::min( targetVal, val );
-            else if ( type == AlignType::Max )
+            else if ( type == AlignKind::Max )
                 targetVal = MathUtil::max( targetVal, val );
 
             sumVal += val;
@@ -331,7 +331,7 @@ namespace sw::editor
         if ( validCount == 0 )
             return;
 
-        if ( type == AlignType::Center )
+        if ( type == AlignKind::Center )
             targetVal = sumVal / static_cast<float32>( validCount );
 
         EditorTransaction::beginTransaction( "Align Objects" );

@@ -5,11 +5,11 @@
 #include "Core/Time/Clock.h"
 
 #include "Editor/Panels/Profiler/Model/ProfilerCallNode.h"
-#include "Editor/Panels/Profiler/Model/ProfilerCaptureModel.h"
-#include "Editor/Panels/Profiler/Model/ProfilerPerformanceModel.h"
+#include "Editor/Panels/Profiler/Model/ProfilerCaptureViewModel.h"
+#include "Editor/Panels/Profiler/Model/ProfilerPerformanceViewModel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerScopeHistory.h"
 #include "Editor/Panels/Profiler/Model/ProfilerTimelineLayout.h"
-#include "Editor/Panels/Profiler/Model/ProfilerTimelineModel.h"
+#include "Editor/Panels/Profiler/Model/ProfilerTimelineViewModel.h"
 
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -480,10 +480,10 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, CapturingAfterALoadStartsANewRecording )
 
 // ---------------------------------------------------------------------- 수집 모델
 
-SW_TEST_CASE( ProfilerCaptureModelTest, TickTurnsTheProfilerOnAndCaptures )
+SW_TEST_CASE( ProfilerCaptureViewModelTest, TickTurnsTheProfilerOnAndCaptures )
 {
     unique_ptr<FrameProfiler> pProfiler = make_unique<FrameProfiler>();
-    ProfilerCaptureModel      model;
+    ProfilerCaptureViewModel  model;
     model.update( *pProfiler );
     SW_EXPECT_TRUE( pProfiler->isEnabled() );
     SW_EXPECT_EQUAL( uint64{ 1 }, model.getHistory().getCapturedFrameCount() );
@@ -496,10 +496,10 @@ SW_TEST_CASE( ProfilerCaptureModelTest, TickTurnsTheProfilerOnAndCaptures )
     SW_EXPECT_FALSE( pProfiler->isEnabled() ); // 끈 수집은 다시 켜지 않는다
 }
 
-SW_TEST_CASE( ProfilerCaptureModelTest, PauseStopsCapturingResumeClearsTheSelection )
+SW_TEST_CASE( ProfilerCaptureViewModelTest, PauseStopsCapturingResumeClearsTheSelection )
 {
     unique_ptr<FrameProfiler> pProfiler = Util::makeProfiler();
-    ProfilerCaptureModel      model;
+    ProfilerCaptureViewModel  model;
     model.update( *pProfiler );
     model.pause();
     model.selectFrameOffset( 3 );
@@ -519,11 +519,11 @@ SW_TEST_CASE( ProfilerCaptureModelTest, PauseStopsCapturingResumeClearsTheSelect
     SW_EXPECT_EQUAL( 0u, model.getSelectedFrameOffset() );
 }
 
-SW_TEST_CASE( ProfilerCaptureModelTest, SpikeOverTheThresholdPausesOnlyWhenAsked )
+SW_TEST_CASE( ProfilerCaptureViewModelTest, SpikeOverTheThresholdPausesOnlyWhenAsked )
 {
     unique_ptr<FrameProfiler> pProfiler = Util::makeProfiler();
     const uint32              slot      = pProfiler->registerScope( "GT.Frame" );
-    ProfilerCaptureModel      model;
+    ProfilerCaptureViewModel  model;
     model.editSpikeThresholdMs() = 10.0f;
 
     pProfiler->addSample( slot, 20u * 1000u * 1000u );
@@ -546,11 +546,11 @@ SW_TEST_CASE( ProfilerCaptureModelTest, SpikeOverTheThresholdPausesOnlyWhenAsked
 // ---------------------------------------------------------------------- 성능 탭
 
 // 창이 차기 전에도 평균은 담은 표본의 평균이다. 빈 칸을 0 으로 세면 처음 2 초 동안 FPS 가 몇십 배로 보인다.
-SW_TEST_CASE( ProfilerPerformanceModelTest, AverageCountsOnlyTheSamplesTaken )
+SW_TEST_CASE( ProfilerPerformanceViewModelTest, AverageCountsOnlyTheSamplesTaken )
 {
     // 시계는 손으로 민다 — 잠들지 않고 경과를 정하므로 통계를 정확한 값으로 본다.
-    ManualClock                          clock{ MonotonicMilliseconds{ 1000 } };
-    unique_ptr<ProfilerPerformanceModel> pModel = make_unique<ProfilerPerformanceModel>( clock );
+    ManualClock                              clock{ MonotonicMilliseconds{ 1000 } };
+    unique_ptr<ProfilerPerformanceViewModel> pModel = make_unique<ProfilerPerformanceViewModel>( clock );
     clock.advanceMilliseconds( 2 );
     const ProfilerFrameTimeStats first = pModel->sampleFrame();
     SW_EXPECT_NEAR( 2.0f, first._currentMs, 1e-3f );
@@ -568,10 +568,10 @@ SW_TEST_CASE( ProfilerPerformanceModelTest, AverageCountsOnlyTheSamplesTaken )
 }
 
 // 창이 차면 가장 오래된 표본이 나간다(오프셋은 처음으로 돈다).
-SW_TEST_CASE( ProfilerPerformanceModelTest, HistoryWrapsAround )
+SW_TEST_CASE( ProfilerPerformanceViewModelTest, HistoryWrapsAround )
 {
-    unique_ptr<ProfilerPerformanceModel> pModel = make_unique<ProfilerPerformanceModel>();
-    for ( uint32 index = 0; index < ProfilerPerformanceModel::kHistoryCount + 3; ++index )
+    unique_ptr<ProfilerPerformanceViewModel> pModel = make_unique<ProfilerPerformanceViewModel>();
+    for ( uint32 index = 0; index < ProfilerPerformanceViewModel::kHistoryCount + 3; ++index )
     {
         (void)pModel->sampleFrame();
     }
@@ -579,13 +579,13 @@ SW_TEST_CASE( ProfilerPerformanceModelTest, HistoryWrapsAround )
 }
 
 // 녹화를 켜면 수집도 켜지고 지난 사건이 비워진다. 끄면 녹화만 멈추고 수집은 남는다(다른 탭이 쓴다).
-SW_TEST_CASE( ProfilerTimelineModelTest, ToggleRecordingStartsCollecting )
+SW_TEST_CASE( ProfilerTimelineViewModelTest, ToggleRecordingStartsCollecting )
 {
     for ( const ProfilerRecordingView view : { ProfilerRecordingView::Timeline, ProfilerRecordingView::CallTree } )
     {
         unique_ptr<FrameProfiler> pProfiler = make_unique<FrameProfiler>();
-        ProfilerCaptureModel      capture;
-        ProfilerTimelineModel     timeline;
+        ProfilerCaptureViewModel  capture;
+        ProfilerTimelineViewModel timeline;
         SW_REQUIRE_FALSE( pProfiler->getTimeline().isRecording() );
 
         timeline.toggleRecording( *pProfiler, capture, view );
@@ -600,10 +600,10 @@ SW_TEST_CASE( ProfilerTimelineModelTest, ToggleRecordingStartsCollecting )
 }
 
 // 두 그리기 사이에 프레임이 여럿 끝났으면 호출 트리가 그 프레임을 모두 더한다(마지막 하나만 더하면 평균이 그리기 주기에 끌려간다).
-SW_TEST_CASE( ProfilerTimelineModelTest, CallTreeAddsEveryFrameSinceTheLastDraw )
+SW_TEST_CASE( ProfilerTimelineViewModelTest, CallTreeAddsEveryFrameSinceTheLastDraw )
 {
-    ProfilerTimeline      timeline;
-    ProfilerTimelineModel model;
+    ProfilerTimeline          timeline;
+    ProfilerTimelineViewModel model;
     timeline.setRecording( true );
     model.beginCallTreeRecording( timeline );
     for ( uint64 frame = 1; frame <= 3; ++frame )

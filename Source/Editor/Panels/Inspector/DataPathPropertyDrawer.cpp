@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 
 #include "Engine/Localization/LocText.h"
@@ -30,7 +30,7 @@ namespace sw::editor
         class DataPathPropertyDrawer final : public IInspectorProperty
         {
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 ImGui::PushID( row._propName.c_str() );
                 if ( ImGui::GetActiveID() != ImGui::GetID( "##path" ) )

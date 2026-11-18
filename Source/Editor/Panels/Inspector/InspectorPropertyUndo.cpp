@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
-#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -16,13 +16,13 @@ namespace sw::editor
         return context.ActiveId != 0 && context.ActiveIdIsAlive == context.ActiveId;
     }
 
-    void InspectorPropertyUndo::trackRow( PropertyGridModel& model, uint32 rowID, bool bActiveDrawnBefore )
+    void InspectorPropertyUndo::trackRow( PropertyGridViewModel& model, uint32 rowID, bool bActiveDrawnBefore )
     {
         if ( bActiveDrawnBefore == false && isActiveItemDrawn() )
             model.touchRow( rowID );
     }
 
-    void InspectorPropertyUndo::trackComponentRegion( PropertyGridModel& model, EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const utf8* pLabel )
+    void InspectorPropertyUndo::trackComponentRegion( PropertyGridViewModel& model, EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const utf8* pLabel )
     {
         model.trackComponentRegion( scope, objectID, componentID, ImGui::IsItemActive(), pLabel != nullptr ? string_view{ pLabel } : string_view{} );
     }

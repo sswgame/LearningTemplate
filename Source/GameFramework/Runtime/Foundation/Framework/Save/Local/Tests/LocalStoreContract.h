@@ -146,9 +146,9 @@ namespace sw::test
         static void runCompressionRoundTrips( FixtureType& fixture )
         {
             const CompressionCodecRegistry* pRegistry = CompressionCodecRegistry::getActive();
-            const bool                      bZstd     = pRegistry != nullptr && pRegistry->isCodecRegistered( CompressionCodecType::Zstd );
+            const bool                      bZstd     = pRegistry != nullptr && pRegistry->isCodecRegistered( CompressionCodecKind::Zstd );
             LocalStoreWriteOptions          options;
-            options._compressionCodec = static_cast<uint8>( bZstd ? CompressionCodecType::Zstd : CompressionCodecType::RLE );
+            options._compressionCodec = static_cast<uint8>( bZstd ? CompressionCodecKind::Zstd : CompressionCodecKind::RLE );
             vector<uint8> repetitiveBytes( 20000, 'x' );
             SW_EXPECT_TRUE( write( fixture.getStore(), "packed", repetitiveBytes, options ) == LocalStoreResult::Ok );
             vector<uint8> envelopeBytes;
@@ -191,7 +191,7 @@ namespace sw::test
         {
             LocalStoreWriteOptions options;
             options._seal             = LocalStoreSeal::Encrypted;
-            options._compressionCodec = static_cast<uint8>( CompressionCodecType::RLE );
+            options._compressionCodec = static_cast<uint8>( CompressionCodecKind::RLE );
             const vector<uint8> body  = makeText( "link-token:abcdefabcdefabcdefabcdef" );
             SW_EXPECT_TRUE( write( fixture.getStore(), "account/link", body, options ) == LocalStoreResult::Ok );
             vector<uint8> envelopeBytes;

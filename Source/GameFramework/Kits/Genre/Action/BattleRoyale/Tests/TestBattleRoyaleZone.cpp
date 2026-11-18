@@ -6,8 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleDrop.h"
-#include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleZone.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleDrop.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleZone.h"
 
 #include <limits>
 

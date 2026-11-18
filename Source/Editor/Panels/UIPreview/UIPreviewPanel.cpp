@@ -270,8 +270,8 @@ namespace sw::editor
                          &UIPreviewPanelInternal::readLanguageIndex );
 
     UIPreviewPanel::UIPreviewPanel()
-        : EditorDocumentPanel( EditorAssetType{ UIDocumentAsset::kAssetType }, true ) // 열면 포커스가 없어도 처음 문서(에디터 도구 기본값)를 짓는다
-        , _model{ UIPreviewModel::getDefaultDocument(), getDocumentCommandStack() }   // 기반이 먼저 섰다 — 문서의 스택이 있다
+        : EditorDocumentPanel( EditorAssetType{ UIDocumentAsset::kAssetType }, true )   // 열면 포커스가 없어도 처음 문서(에디터 도구 기본값)를 짓는다
+        , _model{ UIPreviewViewModel::getDefaultDocument(), getDocumentCommandStack() } // 기반이 먼저 섰다 — 문서의 스택이 있다
         , _grid{}
         , _paletteFilter{}
         , _listTreeRow{}
@@ -337,7 +337,7 @@ namespace sw::editor
 
     ToolAssetLoadResult UIPreviewPanel::loadDocument()
     {
-        // 짓기는 다음 그리기의 `syncPreview` 가 한다 — 짓지 못하면 미리보기가 오류를 보이고 저장은 모델이 막는다(`UIPreviewModel::canSaveDocument`).
+        // 짓기는 다음 그리기의 `syncPreview` 가 한다 — 짓지 못하면 미리보기가 오류를 보이고 저장은 모델이 막는다(`UIPreviewViewModel::canSaveDocument`).
         _model.openDocument( acceptDocumentToLoad() );
         return ToolAssetLoadResult::Loaded;
     }
@@ -1080,15 +1080,15 @@ namespace sw::editor
         using Internal = UIPreviewPanelInternal;
         updateFocusedDocument();
         ensureDocumentLoaded();
-        UISystem* pUI = UIPreviewModel::findUISystem();
+        UISystem* pUI = UIPreviewViewModel::findUISystem();
         if ( pUI == nullptr || pUI->isInitialized() == false )
         {
             _model.resetWatchValues();
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorUIPreview", "UINotRunning" ) );
             return;
         }
-        drawToolbar( UIPreviewModel::getThemeController() );
-        UIOffscreenScreens& offscreen = UIPreviewModel::getOffscreenScreens();
+        drawToolbar( UIPreviewViewModel::getThemeController() );
+        UIOffscreenScreens& offscreen = UIPreviewViewModel::getOffscreenScreens();
         _model.syncPreview( *pUI, offscreen ); // 렌더 텍스처를 바꾸면 그 전에 releaseTexture 를 부른다
         _model.syncLanguage( offscreen );
         syncTexture();

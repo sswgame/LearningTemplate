@@ -1,14 +1,14 @@
 /**
  * @file PackagingPanel.h
  * @brief 패키징 창입니다. 타깃 · 게임 · 백엔드 · 산출 폴더를 고르고 `Scripts/package/pack.py` 를 새 프로세스로 띄웁니다(언리얼 Package Project).
- * @details 설정 · 게임 목록 · 실행 잡 · 진행 · 로그 줄은 `PackagingModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기만 한다.
+ * @details 설정 · 게임 목록 · 실행 잡 · 진행 · 로그 줄은 `PackagingViewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기만 한다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Process/Process.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-#include "Editor/Panels/Packaging/Model/PackagingModel.h"
+#include "Editor/Panels/Packaging/Model/PackagingViewModel.h"
 
 namespace sw::editor
 {
@@ -52,6 +52,6 @@ namespace sw::editor
         void drawLogList();
 
     private:
-        PackagingModel _model; ///< 소멸자가 도는 패키징을 끝내고 기다린다
+        PackagingViewModel _model; ///< 소멸자가 도는 패키징을 끝내고 기다린다
     };
 } // namespace sw::editor

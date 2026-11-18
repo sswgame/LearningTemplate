@@ -147,7 +147,7 @@ namespace sw
          *          PSO 의 입력 레이아웃은 표에서 **그 정점 셰이더가 읽는 속성만** 골라 만든다(`RHIShaderRequest::computeConsumedVertexAttributeMask`).
          *          정점을 SV_VertexID 로 만드는 셰이더(`VertexInput` 을 받지 않는다 — 풀스크린 · 캔버스 · 입자 · 에디터 UI)는 레이아웃이 비어 정점 버퍼 없이
          *          몇 정점이든 그린다(언리얼의 빈 정점 선언 · Godot 의 빈 정점 포맷). 읽는 슬롯에 버퍼가 없거나 속성 스트림의 원소 크기가 PSO 의 형식과 다른
-         *          드로우는 버린다(`RHIDrawDiagnostics::checkVertexSlotsBound`).
+         *          드로우는 버린다(`RHIDrawDiagnostics::validateVertexSlotsBound`).
          * @note 오프셋은 손으로 적지 않는다. `SW_OFFSET_OF` 를 쓰므로 구조체를 바꾸면 자동으로 따라온다.
          */
         inline constexpr RHIVertexAttribute arrPackedMeshVertexAttribute[] = {
@@ -527,7 +527,7 @@ namespace sw
         /**
          * @brief 정점 셰이더가 메시 속성을 읽을 때 쓸 속성 스트림 형식입니다(입력 레이아웃 표를 고른다). 정점 입력이 없는 셰이더는 쓰지 않는다.
          * @details 그리는 메시의 형식과 같아야 한다 — 머티리얼 PSO 는 배치의 형식으로 짓는다(`RenderPSOCache::materialPSOKey`). 다르면 속성 스트림 원소 크기가 달라
-         *          드로우가 버려진다(`RHIDrawDiagnostics::checkVertexSlotsBound`). 언리얼에서 정점 선언이 vertex factory 로 PSO 에 드는 자리다.
+         *          드로우가 버려진다(`RHIDrawDiagnostics::validateVertexSlotsBound`). 언리얼에서 정점 선언이 vertex factory 로 PSO 에 드는 자리다.
          */
         RHIMeshVertexFormat _meshVertexFormat;
 

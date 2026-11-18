@@ -179,9 +179,9 @@ namespace sw::editor
             if ( input.postRawEvent( event ) == false )
                 continue; // 큐가 차면 이 사건만 잃는다
             const size_t keyIndex = static_cast<size_t>( event._payload._keyData._key );
-            if ( event._type == RawInputEventType::KeyDown )
+            if ( event._type == RawInputEventKind::KeyDown )
                 _arrForwardedKey[keyIndex] = true;
-            else if ( event._type == RawInputEventType::KeyUp )
+            else if ( event._type == RawInputEventKind::KeyUp )
                 _arrForwardedKey[keyIndex] = false;
         }
     }

@@ -56,7 +56,7 @@ namespace sw
          * @brief 프레임 패스 하나를 @p cmd 에 기록합니다(리스트는 부르는 쪽이 열고 닫는다). @p type 은 `isFramePassType` 이어야 합니다(로드 검증이 막는다).
          * @details 같은 종류를 두 번 선언할 수 없다(검증) — 컬링 · 그리드는 프레임에 한 번 모든 뷰를 돈다.
          */
-        void executePass( RenderPassType type, IRHICommandList& cmd );
+        void executePass( RenderPassKind type, IRHICommandList& cmd );
         /** @brief 프레임 그래프가 끝난 뒤 부릅니다. assert 가 켜진 디스패치(컬링 · 모프 · 마커)의 링 되읽기를 @p cmd 에 요청합니다. */
         void endFrame( IRHICommandList& cmd );
         /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */

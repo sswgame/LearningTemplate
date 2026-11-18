@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/View/PostProcessValues.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 
 // 화면 공간 반사 — 패스 종류 줄(전용 실행 · 블렌드 · 입력 계약)과 기본값(꺼짐).
 
@@ -15,8 +15,8 @@ using namespace sw;
  */
 SW_TEST_CASE( ScreenSpaceReflectionTest, PassTypeRowDeclaresBlendedDrawOverSceneColor )
 {
-    const RenderPassTypeInfo& info = getRenderPassTypeInfo( RenderPassType::ScreenSpaceReflection );
-    SW_EXPECT_TRUE( isPipelinePassType( RenderPassType::ScreenSpaceReflection ) );
+    const RenderPassKindInfo& info = getRenderPassKindInfo( RenderPassKind::ScreenSpaceReflection );
+    SW_EXPECT_TRUE( isPipelinePassType( RenderPassKind::ScreenSpaceReflection ) );
     SW_EXPECT_TRUE( info.hasFlag( RenderPassTraitFlag::kBlend ) );
     SW_EXPECT_TRUE( info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) );
     SW_EXPECT_FALSE( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) );

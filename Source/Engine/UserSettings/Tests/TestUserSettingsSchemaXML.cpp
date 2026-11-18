@@ -24,7 +24,7 @@ SW_TEST_CASE( UserSettingsSchemaXMLTest, ReadsDefinitionsThroughSchemas )
     SW_EXPECT_EQUAL( uint32{ 3 }, schema.getOwners()[0]._version );
     const sw::UserSettingDef* pMaster = schema.findSetting( sw::hashed_string( "audio.master" ) );
     SW_REQUIRE_TRUE( pMaster != nullptr );
-    SW_EXPECT_TRUE( pMaster->_type == sw::UserSettingType::Float && pMaster->_applyTiming == sw::UserSettingApplyTiming::Immediate );
+    SW_EXPECT_TRUE( pMaster->_type == sw::UserSettingKind::Float && pMaster->_applyTiming == sw::UserSettingApplyTiming::Immediate );
     SW_EXPECT_EQUAL( sw::string( "0.5" ), pMaster->_defaultValue ); // 기본값은 정규화된다
     SW_EXPECT_EQUAL( 0.1, pMaster->_step );
     const sw::UserSettingDef* pMode = schema.findSetting( sw::hashed_string( "audio.mode" ) );

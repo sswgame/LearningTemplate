@@ -119,7 +119,7 @@ namespace sw
             }
 
             /** @brief 엔티티가 쓰는 레이어를 씬이 모두 선언했는지 봅니다 — 이름을 잘못 적으면 그 엔티티가 영영 오르지 않는다. 없으면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool checkDataLayersDeclared( const SceneDocument& doc, string_view absPath )
+            [[nodiscard]] static bool validateDataLayersDeclared( const SceneDocument& doc, string_view absPath )
             {
                 for ( const SceneDocument::SceneObjectNode& node : doc._listSceneObjectNode )
                 {
@@ -374,7 +374,7 @@ namespace sw
             }
         }
 
-        if ( expandSceneInstances( absPath, inoutListChain ) == false || SceneDocumentInternal::checkDataLayersDeclared( *this, absPath ) == false )
+        if ( expandSceneInstances( absPath, inoutListChain ) == false || SceneDocumentInternal::validateDataLayersDeclared( *this, absPath ) == false )
         {
             *this = {};
             return false;

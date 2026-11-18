@@ -853,7 +853,7 @@ namespace sw
             const VulkanRHIDevice::VulkanBufferRecord* pBuffer = _pDevice->resolveAllocatedBuffer( binding._buffer );
             if ( pBuffer == nullptr || pBuffer->_buffer == VK_NULL_HANDLE )
                 return false;
-            const VkDeviceSize vkOffset = static_cast<VkDeviceSize>( binding._offset ); // stride 는 파이프라인의 바인딩이 가진다(checkVertexSlotsBound 가 같은지 봤다)
+            const VkDeviceSize vkOffset = static_cast<VkDeviceSize>( binding._offset ); // stride 는 파이프라인의 바인딩이 가진다(validateVertexSlotsBound 가 같은지 봤다)
             vkCmdBindVertexBuffers( cmd, slot, 1, &pBuffer->_buffer, &vkOffset );
             return true;
         } );

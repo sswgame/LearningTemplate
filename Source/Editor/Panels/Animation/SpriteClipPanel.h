@@ -5,14 +5,14 @@
 
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
-#include "Editor/Panels/Animation/Model/SpriteClipModel.h"
+#include "Editor/Panels/Animation/Model/SpriteClipViewModel.h"
 
 namespace sw::editor
 {
     /**
      * @brief 프레임 목록 · 이름 붙은 애니메이션 구간 · 선택적 TransformAnimation 키를 편집합니다 (AnimationGraph과 별개)
      * @details 문서는 런타임 타입 `SpriteClipAsset` 하나입니다 — 게임이 읽는 것과 같은 파서 · 같은 구조체를 편집합니다.
-     *          문서 상태와 명령은 `SpriteClipModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기 · 아틀라스 썸네일 · 문서 dirty · 되돌리기 기록만 맡는다.
+     *          문서 상태와 명령은 `SpriteClipViewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기 · 아틀라스 썸네일 · 문서 dirty · 되돌리기 기록만 맡는다.
      */
     class SpriteClipPanel : public EditorDocumentPanel
     {
@@ -29,7 +29,7 @@ namespace sw::editor
         /** @brief 스프라이트 클립 편집 UI를 그립니다. */
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
-        /** @brief 포커스한 이미지가 아니라 곁 클립 파일(`SpriteClipModel::computeClipPath`)에 쓴다. */
+        /** @brief 포커스한 이미지가 아니라 곁 클립 파일(`SpriteClipViewModel::computeClipPath`)에 쓴다. */
         void collectFilesToSave( vector<string>& outListPath ) const override;
         /** @brief 아틀라스 이미지를 해제합니다. */
         void shutdown() override;
@@ -40,7 +40,7 @@ namespace sw::editor
         /** @brief 문서의 이름 붙은 애니메이션 구간 수입니다(감시 값 `Editor.SpriteClipAnimationCount`). */
         uint32 getAnimationCount() const { return static_cast<uint32>( _model.getAnimations().size() ); }
         /** @brief 창의 모델입니다(감시 값이 고른 프레임의 크기를 읽는다). */
-        const SpriteClipModel& getModel() const { return _model; }
+        const SpriteClipViewModel& getModel() const { return _model; }
 
     private:
         /** @brief 아틀라스 경로 입력, 불러오기 · 저장 단추입니다. */
@@ -61,7 +61,7 @@ namespace sw::editor
         void drawAnimationSection();
         /**
          * @brief 아틀라스 이미지를 열 · 행 셀로 나눠 보이고, 누른 셀을 고른 프레임의 UV 로 넣습니다(Shift 는 새 프레임으로 더한다).
-         * @details 유니티 Sprite Editor 의 Slice by Cell Count 와 같다. 셀 계산은 `SpriteClipModel::pickAtlasCell`(`AtlasGridUtil`).
+         * @details 유니티 Sprite Editor 의 Slice by Cell Count 와 같다. 셀 계산은 `SpriteClipViewModel::pickAtlasCell`(`AtlasGridUtil`).
          */
         void drawAtlasPicker();
         /**
@@ -76,7 +76,7 @@ namespace sw::editor
         ToolAssetLoadResult loadDocument() override;
 
     private:
-        SpriteClipModel           _model;
+        SpriteClipViewModel       _model;
         EditorThumbnailCache      _atlasThumbnail;
         float2                    _dragStartUV;     ///< 아틀라스 끌기를 시작한 uv
         optional<SpriteFrameEdge> _dragEdge;        ///< 끄는 가장자리. 비어 있으면 사각형 끌기거나 끌지 않는다

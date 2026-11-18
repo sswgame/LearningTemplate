@@ -87,7 +87,7 @@ namespace sw
          */
         void evaluate( span<const hashed_string> listExpressionName, span<const float32> listExpressionWeight, WrinkleWeights& outWeights ) const;
         /** @brief 출처의 표정 이름이 모두 @p listExpressionName 에 있는지 봅니다. 없는 이름은 @p pOutMissing 에 담고 false 입니다. */
-        [[nodiscard]] bool checkExpressions( span<const hashed_string> listExpressionName, vector<hashed_string>* pOutMissing ) const;
+        [[nodiscard]] bool validateExpressions( span<const hashed_string> listExpressionName, vector<hashed_string>* pOutMissing ) const;
 
     private:
         vector<WrinkleRegionDef> _listRegion;

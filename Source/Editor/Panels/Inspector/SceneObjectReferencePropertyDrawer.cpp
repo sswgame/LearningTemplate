@@ -2,7 +2,7 @@
  * @file SceneObjectReferencePropertyDrawer.cpp
  * @brief `SceneObjectReference` 프로퍼티의 그리기 확장입니다 — 올라와 있는 씬들의 오브젝트에서 하나를 고르는 콤보(다른 씬 · 프리팹 파일의 오브젝트 참조).
  * @details 미리보기와 고를 줄은 Model `SceneObjectReferencePickerState` 가 값으로 모은다(씬 매니저를 읽는 일은 거기 있다). 고르면 그 줄의 값 글을 편집 모델의 한 길
- *          (`PropertyGridModel::setPropertyText`)로 쓴다. 지금 값이 올라와 있지 않은 씬을 가리키면 정상 상태(하위 레벨 · 셀이 내려감)로, 씬은 있는데
+ *          (`PropertyGridViewModel::setPropertyText`)로 쓴다. 지금 값이 올라와 있지 않은 씬을 가리키면 정상 상태(하위 레벨 · 셀이 내려감)로, 씬은 있는데
  *          오브젝트가 없으면 결함으로 미리보기에 색을 달리해 알린다.
  */
 #include "pch.h"
@@ -10,7 +10,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 #include "Editor/Panels/Inspector/Model/SceneObjectReferencePickerState.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -24,7 +24,7 @@ namespace sw::editor
         class SceneObjectReferencePropertyDrawer final : public IInspectorProperty
         {
         public:
-            bool draw( const PropertyValueRow& row, PropertyGridModel& model ) override
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
             {
                 if ( SceneObjectReferencePickerState::gatherPreview( model, row._rowID, _choices ) == false )
                     return false;

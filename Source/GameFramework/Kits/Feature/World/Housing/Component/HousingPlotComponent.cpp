@@ -872,7 +872,7 @@ namespace sw
         vector<string> listProblem;
         for ( const HousingPartDef& part : pCatalog->getParts() )
         {
-            (void)pCatalog->checkPart( part, listProblem );
+            (void)pCatalog->validatePart( part, listProblem );
             const bool bFits        = part._sizeX <= _settings._sizeX && part._sizeZ <= _settings._sizeZ;
             const bool bFitsRotated = part._sizeZ <= _settings._sizeX && part._sizeX <= _settings._sizeZ;
             if ( bFits == false && bFitsRotated == false )

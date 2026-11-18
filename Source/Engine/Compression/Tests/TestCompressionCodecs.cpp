@@ -156,7 +156,7 @@ SW_TEST_CASE( CompressionCodecTest, ZlibReportsTruncatedInputAndShortBuffers )
 SW_TEST_CASE_F( EngineCodecRegistryFixture, RegisteredExternalCodecsAreReachableFromStream )
 {
     const sw::vector<uint8> listOriginal = makeSampleBuffer( 64 * 1024 );
-    for ( sw::CompressionCodecType type : sw::EngineCompressionCodecUtil::kArrCodecType )
+    for ( sw::CompressionCodecKind type : sw::EngineCompressionCodecUtil::kArrCodecType )
     {
         SW_EXPECT_TRUE( _registry.isCodecRegistered( type ) );
 

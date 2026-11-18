@@ -8,8 +8,8 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"
-#include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -466,7 +466,7 @@ SW_TEST_CASE( AccountServerTest, DisconnectThenResumeOnANewConnection )
     const int32              second = rig.addClient( &token );
     const AccountClientReply reply  = rig.take( second );
     SW_REQUIRE_TRUE( reply._result == LoginResult::Ok );
-    SW_EXPECT_TRUE( reply._operation == AccountClientOperation::Resume );
+    SW_EXPECT_TRUE( reply._operation == AccountMethodName::Resume );
     SW_EXPECT_TRUE( reply._bAutomatic == SW_TRUE );
     SW_EXPECT_EQUAL( token._sessionID, rig.getAccount( second ).getToken()._sessionID );
     SW_EXPECT_NOT_EQUAL( 0, Memory::compare( token._arrSecret, rig.getAccount( second ).getToken()._arrSecret, sizeof( token._arrSecret ) ) );
@@ -601,7 +601,7 @@ SW_TEST_CASE( AccountServerTest, UpdateRequiredCarriesTheStoreURL )
     const auto           setText = [&]( string_view key, string_view text, int64 version )
     {
         RemoteConfigValue value;
-        value._type = RemoteConfigValueType::Text;
+        value._type = RemoteConfigValueKind::Text;
         value._text = string( text );
         ServiceAuditEntry audit;
         audit._actor   = "gm.0000000000000001";

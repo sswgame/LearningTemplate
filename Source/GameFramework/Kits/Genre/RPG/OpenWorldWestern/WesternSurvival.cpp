@@ -1,0 +1,229 @@
+#include "pch.h"
+
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternSurvival.h"
+
+#include "Core/Math/MathUtil.h"
+
+#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
+
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
+#include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 틱마다 쓰는 이름입니다. 리터럴을 매번 intern 하지 않도록 한 번만 만듭니다. */
+        const hashed_string& getTemperatureName()
+        {
+            static const hashed_string name( "temperature" );
+            return name;
+        }
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    WesternSurvival::WesternSurvival()
+        : _listClothing{}
+        , _listMark{}
+        , _arrGauge{}
+        , _arrCore{}
+        , _pCatalog{ nullptr }
+        , _deadEyeLevel{ 1 }
+        , _bDeadEyeActive{ SW_FALSE }
+    {
+        for ( float32& core : _arrCore )
+        {
+            core = kCoreMax;
+        }
+    }
+
+    bool WesternSurvival::initialize( const WesternCatalog* pCatalog )
+    {
+        if ( pCatalog == nullptr )
+        {
+            SW_LOG_ERROR_ID( "WesternSurvival.WesternSurvivalRefusedNoCatalog", "WesternSurvival: refused - no catalog (the survival numbers come from the catalog, there is no default set)" );
+            return false;
+        }
+        const WesternSurvivalDef& survival = pCatalog->getSurvival();
+        ResourceGaugeSettings     healthSettings;
+        healthSettings._max        = survival._health;
+        healthSettings._regenRate  = survival._healthRegen;
+        healthSettings._regenDelay = 4.0f;
+        ResourceGaugeSettings staminaSettings;
+        staminaSettings._max              = survival._stamina;
+        staminaSettings._regenRate        = survival._staminaRegen;
+        staminaSettings._regenDelay       = 1.0f;
+        staminaSettings._exhaustThreshold = survival._stamina * 0.2f;
+        ResourceGaugeSettings deadEyeSettings;
+        deadEyeSettings._max            = survival._deadEye;
+        deadEyeSettings._regenRate      = survival._deadEyeRegen;
+        deadEyeSettings._regenDelay     = 2.0f;
+        deadEyeSettings._drainPerSecond = survival._deadEyeDrain;
+        // 따로 만들어 셋 다 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
+        ResourceGauge health;
+        ResourceGauge stamina;
+        ResourceGauge deadEye;
+        const bool    bHealthAccepted  = health.initialize( healthSettings );
+        const bool    bStaminaAccepted = stamina.initialize( staminaSettings );
+        const bool    bDeadEyeAccepted = deadEye.initialize( deadEyeSettings );
+        const bool    bAllAccepted     = bHealthAccepted && bStaminaAccepted && bDeadEyeAccepted;
+        if ( bAllAccepted == false )
+            return false;
+        _pCatalog                                              = pCatalog;
+        _arrGauge[static_cast<size_t>( WesternCore::Health )]  = health;
+        _arrGauge[static_cast<size_t>( WesternCore::Stamina )] = stamina;
+        _arrGauge[static_cast<size_t>( WesternCore::DeadEye )] = deadEye;
+        for ( float32& core : _arrCore )
+        {
+            core = kCoreMax;
+        }
+        _listClothing.clear();
+        _listMark.clear();
+        _deadEyeLevel   = 1;
+        _bDeadEyeActive = SW_FALSE;
+        return true;
+    }
+
+    void WesternSurvival::update( float32 deltaTime, float32 gameHours, float32 airTemperature )
+    {
+        if ( _pCatalog == nullptr )
+            return;
+        const WesternSurvivalDef& survival = _pCatalog->getSurvival();
+        if ( gameHours > 0.0f )
+        {
+            const float32 felt    = computeFeltTemperature( airTemperature );
+            const float32 cold    = MathUtil::max( 0.0f, survival._comfortMin - felt );
+            const float32 heat    = MathUtil::max( 0.0f, felt - survival._comfortMax );
+            const float32 base    = survival._coreDrainPerHour * gameHours;
+            float32&      health  = _arrCore[static_cast<size_t>( WesternCore::Health )];
+            float32&      stamina = _arrCore[static_cast<size_t>( WesternCore::Stamina )];
+            float32&      deadEye = _arrCore[static_cast<size_t>( WesternCore::DeadEye )];
+            health                = MathUtil::max( 0.0f, health - base - cold * survival._temperatureDrain * gameHours );
+            stamina               = MathUtil::max( 0.0f, stamina - base - heat * survival._temperatureDrain * gameHours );
+            deadEye               = MathUtil::max( 0.0f, deadEye - base );
+        }
+        if ( deltaTime <= 0.0f )
+            return;
+        ResourceGauge& deadEyeGauge = getGauge( WesternCore::DeadEye );
+        if ( _bDeadEyeActive != SW_FALSE && deadEyeGauge.drain( deltaTime ) == false )
+            deactivateDeadEye(); // 바닥났다. 표시한 대상은 게임이 이미 쐈거나 놓친 것이다
+        for ( size_t index = 0; index < kCoreCount; ++index )
+        {
+            if ( index == static_cast<size_t>( WesternCore::DeadEye ) && _bDeadEyeActive != SW_FALSE )
+                continue; // 켜 둔 동안은 차지 않는다
+            _arrGauge[index].setRegenScale( computeRegenScale( static_cast<WesternCore>( index ) ) );
+            _arrGauge[index].update( deltaTime );
+        }
+    }
+
+    float32 WesternSurvival::computeAirTemperature( const WeatherSystem& weather, float32 regionBaseTemperature )
+    {
+        return regionBaseTemperature + weather.computeValue( getTemperatureName() );
+    }
+
+    bool WesternSurvival::eat( const hashed_string& foodID )
+    {
+        const WesternFoodDef* pFood = _pCatalog != nullptr ? _pCatalog->findFood( foodID ) : nullptr;
+        if ( pFood == nullptr )
+            return false;
+        setCore( WesternCore::Health, getCore( WesternCore::Health ) + pFood->_healthCore );
+        setCore( WesternCore::Stamina, getCore( WesternCore::Stamina ) + pFood->_staminaCore );
+        setCore( WesternCore::DeadEye, getCore( WesternCore::DeadEye ) + pFood->_deadEyeCore );
+        getGauge( WesternCore::Health ).restore( pFood->_health );
+        getGauge( WesternCore::Stamina ).restore( pFood->_stamina );
+        return true;
+    }
+
+    bool WesternSurvival::setClothing( const vector<hashed_string>& listClothing )
+    {
+        for ( const hashed_string& clothingID : listClothing )
+        {
+            if ( _pCatalog == nullptr || _pCatalog->findClothing( clothingID ) == nullptr )
+                return false;
+        }
+        _listClothing = listClothing;
+        return true;
+    }
+
+    float32 WesternSurvival::computeWarmth() const
+    {
+        float32 warmth = 0.0f;
+        if ( _pCatalog == nullptr )
+            return warmth;
+        for ( const hashed_string& clothingID : _listClothing )
+        {
+            const WesternClothingDef* pClothing = _pCatalog->findClothing( clothingID );
+            warmth += pClothing != nullptr ? pClothing->_warmth : 0.0f;
+        }
+        return warmth;
+    }
+
+    bool WesternSurvival::activateDeadEye()
+    {
+        if ( _bDeadEyeActive != SW_FALSE || _pCatalog == nullptr )
+            return false;
+        const ResourceGauge& gauge = getGauge( WesternCore::DeadEye );
+        if ( gauge.canUse() == false || gauge.getValue() < _pCatalog->getSurvival()._deadEyeMinimum )
+            return false;
+        _bDeadEyeActive = SW_TRUE;
+        _listMark.clear();
+        return true;
+    }
+
+    bool WesternSurvival::markTarget( uint64 targetID )
+    {
+        if ( _bDeadEyeActive == SW_FALSE || static_cast<int32>( _listMark.size() ) >= getMarkLimit() )
+            return false;
+        _listMark.push_back( targetID ); // 같은 대상에 여러 번 표시해도 된다(한 발씩 쏜다)
+        return true;
+    }
+
+    float32 WesternSurvival::getTimeScale() const
+    {
+        if ( _bDeadEyeActive == SW_FALSE || _pCatalog == nullptr )
+            return 1.0f;
+        const WesternDeadEyeLevelDef* pLevel = _pCatalog->findDeadEyeLevel( _deadEyeLevel );
+        return pLevel != nullptr ? pLevel->_timeScale : 1.0f;
+    }
+
+    int32 WesternSurvival::getMarkLimit() const
+    {
+        const WesternDeadEyeLevelDef* pLevel = _pCatalog != nullptr ? _pCatalog->findDeadEyeLevel( _deadEyeLevel ) : nullptr;
+        return pLevel != nullptr ? pLevel->_markCount : 0;
+    }
+
+    void WesternSurvival::setCore( WesternCore core, float32 value )
+    {
+        _arrCore[static_cast<size_t>( core )] = MathUtil::clamp( value, 0.0f, kCoreMax );
+    }
+
+    float32 WesternSurvival::computeRegenScale( WesternCore core ) const
+    {
+        const float32 minScale = _pCatalog != nullptr ? _pCatalog->getSurvival()._minRegenScale : 0.2f;
+        return MathUtil::lerp( minScale, 1.0f, MathUtil::saturate( getCore( core ) / kCoreMax ) );
+    }
+
+    void WesternSurvival::serializeState( StateIO& io )
+    {
+        io.list( _listClothing );
+        io.list( _listMark );
+        for ( size_t coreIndex = 0; coreIndex < kCoreCount; ++coreIndex )
+        {
+            io.value( _arrGauge[coreIndex] );
+            io.value( _arrCore[coreIndex] );
+            if ( io.check( 0.0f <= _arrCore[coreIndex] && _arrCore[coreIndex] <= kCoreMax ) == false )
+                return;
+        }
+        io.value( _deadEyeLevel );
+        io.flag( _bDeadEyeActive );
+        if ( io.isOk() )
+        {
+            // 표시는 켜 둔 동안 단계의 개수까지만 찍는다(`markTarget`). 단계를 읽은 뒤라야 상한을 안다.
+            io.check( 0 <= _deadEyeLevel && ( _bDeadEyeActive != SW_FALSE ? static_cast<int32>( _listMark.size() ) <= getMarkLimit() : _listMark.empty() ) );
+        }
+    }
+
+} // namespace sw

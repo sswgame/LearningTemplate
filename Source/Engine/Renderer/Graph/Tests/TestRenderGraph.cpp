@@ -428,9 +428,9 @@ namespace
     void addQueueGraph( RenderGraph& graph, atomic<int32>& callCount )
     {
         graph.addPass( hashed_string( "Depth" ), {}, { hashed_string( "DepthHistory" ) }, makeCountingPass( callCount ) );
-        graph.addPass( hashed_string( "Light" ), {}, { hashed_string( "LightGrid" ) }, makeCountingPass( callCount ), RHIQueueType::AsyncCompute );
+        graph.addPass( hashed_string( "Light" ), {}, { hashed_string( "LightGrid" ) }, makeCountingPass( callCount ), RHIQueueKind::AsyncCompute );
         graph.addPass( hashed_string( "Anim" ), {}, { hashed_string( "InstanceBuffer" ) }, makeCountingPass( callCount ) );
-        graph.addPass( hashed_string( "Occl" ), { hashed_string( "DepthHistory" ) }, { hashed_string( "OcclusionTiles" ) }, makeCountingPass( callCount ), RHIQueueType::AsyncCompute );
+        graph.addPass( hashed_string( "Occl" ), { hashed_string( "DepthHistory" ) }, { hashed_string( "OcclusionTiles" ) }, makeCountingPass( callCount ), RHIQueueKind::AsyncCompute );
         graph.addPass( hashed_string( "Fog" ), { hashed_string( "LightGrid" ) }, { hashed_string( "FogVolume" ) }, makeCountingPass( callCount ) );
         graph.addPass( hashed_string( "Cull" ), { hashed_string( "InstanceBuffer" ), hashed_string( "OcclusionTiles" ) }, { hashed_string( "CullResults" ) }, makeCountingPass( callCount ) );
     }
@@ -455,10 +455,10 @@ SW_TEST_CASE( RenderGraphTest, AsyncComputePlanForksAndJoinsOnDependencies )
     const vector<RenderGraphQueueStep>& steps = graph.getQueueSteps();
     SW_REQUIRE_EQUAL( size_t( 6 ), steps.size() );
     SW_EXPECT_EQUAL( uint32( 2 ), graph.getAsyncBatchCount() );
-    SW_EXPECT_TRUE( steps[0]._queue == RHIQueueType::Graphics );
-    SW_EXPECT_TRUE( steps[1]._queue == RHIQueueType::AsyncCompute && steps[1]._bBeginsBatch != 0 && steps[1]._bEndsBatch != 0 && steps[1]._batch == 0 );
+    SW_EXPECT_TRUE( steps[0]._queue == RHIQueueKind::Graphics );
+    SW_EXPECT_TRUE( steps[1]._queue == RHIQueueKind::AsyncCompute && steps[1]._bBeginsBatch != 0 && steps[1]._bEndsBatch != 0 && steps[1]._batch == 0 );
     SW_EXPECT_TRUE( steps[2]._listJoinBatch.empty() ); // Anim 은 컴퓨트와 겹친다
-    SW_EXPECT_TRUE( steps[3]._queue == RHIQueueType::AsyncCompute && steps[3]._batch == 1 );
+    SW_EXPECT_TRUE( steps[3]._queue == RHIQueueKind::AsyncCompute && steps[3]._batch == 1 );
     SW_REQUIRE_EQUAL( size_t( 1 ), steps[4]._listJoinBatch.size() ); // Fog 가 Light 묶음을 기다린다
     SW_EXPECT_EQUAL( uint32( 0 ), steps[4]._listJoinBatch[0] );
     SW_REQUIRE_EQUAL( size_t( 1 ), steps[5]._listJoinBatch.size() ); // Cull 이 Occl 묶음을 기다린다
@@ -478,7 +478,7 @@ SW_TEST_CASE( RenderGraphTest, AsyncComputeWithoutCapabilityRunsOnGraphics )
     SW_EXPECT_EQUAL( uint32( 0 ), graph.getAsyncBatchCount() );
     for ( const RenderGraphQueueStep& step : graph.getQueueSteps() )
     {
-        SW_EXPECT_TRUE( step._queue == RHIQueueType::Graphics );
+        SW_EXPECT_TRUE( step._queue == RHIQueueKind::Graphics );
         SW_EXPECT_TRUE( step._listJoinBatch.empty() );
     }
 }
@@ -490,7 +490,7 @@ SW_TEST_CASE( RenderGraphTest, UnreadAsyncBatchJoinsAtTheEnd )
 {
     RenderGraph graph;
     graph.addPass( hashed_string( "Anim" ), {}, { hashed_string( "InstanceBuffer" ) } );
-    graph.addPass( hashed_string( "Probe" ), {}, { hashed_string( "ProbeIrradiance" ) }, {}, RHIQueueType::AsyncCompute );
+    graph.addPass( hashed_string( "Probe" ), {}, { hashed_string( "ProbeIrradiance" ) }, {}, RHIQueueKind::AsyncCompute );
     graph.setAsyncComputeSupported( true );
     SW_REQUIRE_TRUE( graph.compile() );
     SW_REQUIRE_EQUAL( size_t( 1 ), graph.getFinalJoinBatches().size() );

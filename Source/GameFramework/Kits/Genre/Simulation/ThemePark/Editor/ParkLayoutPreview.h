@@ -1,6 +1,6 @@
 /**
  * @file ParkLayoutPreview.h
- * @brief ThemePark 배치 파일을 찾아 읽어 모델(`ParkLayoutModel`)에 넘기는 서브시스템입니다(ImGui 에 의존하지 않습니다).
+ * @brief ThemePark 배치 파일을 찾아 읽어 모델(`ParkLayoutViewModel`)에 넘기는 서브시스템입니다(ImGui 에 의존하지 않습니다).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -11,7 +11,7 @@
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
-#include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/Model/ParkLayoutModel.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/Model/ParkLayoutViewModel.h"
 
 namespace sw::editor
 {
@@ -42,8 +42,8 @@ namespace sw::editor
         /** @brief 모델의 선분을 테마 색으로 @p outListSegment 뒤에 붙입니다. */
         void appendSegments( vector<EditorWorldSegment>& outListSegment ) const;
 
-        const ParkLayoutModel&         getModel() const { return _model; }
-        ParkLayoutModel&               editModel() { return _model; }
+        const ParkLayoutViewModel&     getModel() const { return _model; }
+        ParkLayoutViewModel&           editModel() { return _model; }
         const vector<ParkRidePreview>& getRides() const { return _model.getRides(); }
         bool                           isLoaded() const { return _model.getState() == ParkLayoutState::Loaded; }
         /** @brief 활성 게임 팩에 공원 배치 파일이 없습니다(이 게임은 공원 배치 데이터가 없다). */
@@ -57,13 +57,13 @@ namespace sw::editor
         void onDataFolderChanged() { _bFolderChanged = SW_TRUE; }
 
     private:
-        ParkLayoutModel _model;
-        Subscription    _layoutWatch;  ///< 배치 파일 폴더 감시
-        Subscription    _coasterWatch; ///< 코스터 파일 폴더 감시(배치와 같은 폴더면 비어 있다)
-        string          _layoutPath;   ///< 활성 팩의 배치 파일(`ParkLayout::kDataKind`)
-        string          _watchedLayoutPath;
-        string          _watchedCoasterPath;
-        uint8           _bFolderChanged : 1; ///< 폴더 감시가 알린 뒤 아직 다시 읽지 않았다
-        uint8           _bWarned        : 1; ///< 경로 · 읽기 실패를 알렸다(읽히면 다시 알린다)
+        ParkLayoutViewModel _model;
+        Subscription        _layoutWatch;  ///< 배치 파일 폴더 감시
+        Subscription        _coasterWatch; ///< 코스터 파일 폴더 감시(배치와 같은 폴더면 비어 있다)
+        string              _layoutPath;   ///< 활성 팩의 배치 파일(`ParkLayout::kDataKind`)
+        string              _watchedLayoutPath;
+        string              _watchedCoasterPath;
+        uint8               _bFolderChanged : 1; ///< 폴더 감시가 알린 뒤 아직 다시 읽지 않았다
+        uint8               _bWarned        : 1; ///< 경로 · 읽기 실패를 알렸다(읽히면 다시 알린다)
     };
 } // namespace sw::editor

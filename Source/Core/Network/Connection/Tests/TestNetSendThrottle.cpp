@@ -60,7 +60,7 @@ namespace
             for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += kStep )
             {
                 int32 queuedCount = 0;
-                while ( queuedCount < 8 && cluster.getClient( 0 ).trySendMessage( 0, NetChannelType::ReliableUnordered, payload ) )
+                while ( queuedCount < 8 && cluster.getClient( 0 ).trySendMessage( 0, NetChannelKind::ReliableUnordered, payload ) )
                 {
                     ++queuedCount; // 창이 차면 false — 늘 꽉 채워 둔다
                 }

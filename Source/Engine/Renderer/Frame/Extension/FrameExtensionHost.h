@@ -105,7 +105,7 @@ namespace sw
         /** @brief 선언 차례 @p entryIndex 의 검사 결과입니다. 같은 자리의 지난 결과와 선언이 같으면 그것, 아니면 새로 검사해 그 자리에 둡니다. */
         const PassDeclarationCheck& findPassCheck( size_t entryIndex, const ExtensionPassParams& params );
         /** @brief 선언 하나를 검사합니다(이름 · 중복 · 실행 콜백은 부르는 쪽이 본다). */
-        [[nodiscard]] PassDeclarationCheck checkPassDeclaration( const ExtensionPassParams& params ) const;
+        [[nodiscard]] PassDeclarationCheck validatePassDeclaration( const ExtensionPassParams& params ) const;
         /** @brief 첨부 이름의 포맷 — 파이프라인 XML 의 첨부, 아니면 이번 프레임의 임시 텍스처 요청입니다. 없으면 false 입니다. */
         [[nodiscard]] bool findAttachmentFormat( const string& name, RHIFormat& outFormat ) const;
         /** @brief 요소가 쓰는 메시를 찾거나 읽기를 맡기고 GPU 에 올립니다. 기록 전에만 부릅니다. 아직 읽는 중이면 nullptr(그 요소는 이번 프레임 건너뛴다), 얻지 못하면 nullptr 입니다(이름마다 한 번 오류를 남겼다). */

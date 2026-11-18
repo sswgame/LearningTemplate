@@ -2,7 +2,7 @@
 #include "light_data.hlsli"
 
 /**
- * probe_update.hlsl — 실시간 라이트 프로브 갱신 컴퓨트(RenderPassType::ProbeUpdate, RealtimeGlobalIllumination.md R6). 유니티 APV 의 갱신, 언리얼 Lumen 의 프로브 갱신 자리다.
+ * probe_update.hlsl — 실시간 라이트 프로브 갱신 컴퓨트(RenderPassKind::ProbeUpdate, RealtimeGlobalIllumination.md R6). 유니티 APV 의 갱신, 언리얼 Lumen 의 프로브 갱신 자리다.
  *
  * 스레드 하나가 프로브 하나다(볼륨들의 프로브를 이어 붙인 번호). 프로브마다 프레임에 두 가지를 한다.
  *   (1) 이번 프레임의 조(프로브 번호 % 갱신 주기 == 프레임 번호 % 갱신 주기)면 광선 N 개를 쏘아 SH9 계수를 새로 구해 기록(history)에 섞는다.

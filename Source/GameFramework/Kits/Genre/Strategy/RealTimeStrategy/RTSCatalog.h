@@ -32,7 +32,7 @@ namespace sw
 
     /** @brief 자원의 종류입니다. */
     ENUM()
-    enum class RTSResourceType : uint8
+    enum class RTSResourceKind : uint8
     {
         Minerals = 0,
         Gas,
@@ -90,7 +90,7 @@ namespace sw
         PROPERTY()
         RTSUnitKind _kind{ RTSUnitKind::Unit };
         PROPERTY( Name = "resource" )
-        RTSResourceType _resourceType{ RTSResourceType::None }; ///< 자원이면 무엇을 주는지, 건물(정제소)이면 무엇을 뽑아 올리는지를 나타낸다
+        RTSResourceKind _resourceType{ RTSResourceKind::None }; ///< 자원이면 무엇을 주는지, 건물(정제소)이면 무엇을 뽑아 올리는지를 나타낸다
         PROPERTY()
         bool _bWorker{ false };
         PROPERTY()

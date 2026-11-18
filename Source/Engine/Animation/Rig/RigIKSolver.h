@@ -34,7 +34,7 @@ namespace sw
 {
     /** @brief 관절 제한의 종류입니다(파일에는 이름으로 적는다 — `Cone` · `Hinge`). */
     ENUM()
-    enum class RigJointLimitType : uint8
+    enum class RigJointLimitKind : uint8
     {
         None = 0, ///< 제한이 없다.
         Cone,     ///< 본 축의 흔들림(swing)을 원뿔 각 안으로, 비틀림(twist)을 ± 각 안으로 제한한다.
@@ -54,7 +54,7 @@ namespace sw
         float32           _twistLimit{ MathUtil::kPi };
         float32           _minAngle{ -MathUtil::kPi };
         float32           _maxAngle{ MathUtil::kPi };
-        RigJointLimitType _type{ RigJointLimitType::None };
+        RigJointLimitKind _type{ RigJointLimitKind::None };
     };
 } // namespace sw
 

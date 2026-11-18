@@ -40,7 +40,7 @@ namespace sw
             static void onQueueWorkDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
             {
                 (void)pUserdata2;
-                WebGPUTransferProbe* const pProbe = static_cast<WebGPUTransferProbe*>( pUserdata1 );
+                WebGPUTransferFence* const pProbe = static_cast<WebGPUTransferFence*>( pUserdata1 );
                 if ( status != WGPUQueueWorkDoneStatus_Success )
                 {
                     SW_LOG_ERROR_ONCE_ID( "WebGPU.TransferWorkFailed", "WebGPU: a transfer submission did not complete (status %#): %#", static_cast<uint32>( status ), WebGPURHIUtil::fromStringView( message ) );
@@ -586,8 +586,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     uint64 WebGPURHIResourceFactory::enqueueQueueFence()
     {
-        unique_ptr<WebGPUTransferProbe> probe  = make_unique<WebGPUTransferProbe>();
-        WebGPUTransferProbe* const      pProbe = probe.get();
+        unique_ptr<WebGPUTransferFence> probe  = make_unique<WebGPUTransferFence>();
+        WebGPUTransferFence* const      pProbe = probe.get();
         const uint64                    serial = _pDevice->_transferQueue.enqueue( std::move( probe ) );
         WGPUQueueWorkDoneCallbackInfo   info{};
         info.mode      = WGPUCallbackMode_AllowSpontaneous;
@@ -715,8 +715,8 @@ namespace sw
         payload._layout                        = outLayout;
         payload._paddedRowBytes                = paddedRowBytes;
         payload._bDepth                        = bDepth ? SW_TRUE : SW_FALSE;
-        unique_ptr<WebGPUTransferProbe> probe  = make_unique<WebGPUTransferProbe>();
-        WebGPUTransferProbe* const      pProbe = probe.get();
+        unique_ptr<WebGPUTransferFence> probe  = make_unique<WebGPUTransferFence>();
+        WebGPUTransferFence* const      pProbe = probe.get();
         const uint64                    serial = _pDevice->_transferQueue.enqueue( std::move( probe ) );
         pProbe->_pDevice                       = _pDevice;
         pProbe->_serial                        = serial;
@@ -733,7 +733,7 @@ namespace sw
     void WebGPURHIResourceFactory::onReadbackMapped( WGPUMapAsyncStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
     {
         (void)pUserdata2;
-        WebGPUTransferProbe* const pProbe  = static_cast<WebGPUTransferProbe*>( pUserdata1 );
+        WebGPUTransferFence* const pProbe  = static_cast<WebGPUTransferFence*>( pUserdata1 );
         WebGPURHIDevice* const     pDevice = pProbe->_pDevice;
         const uint64               serial  = pProbe->_serial;
         WebGPUTextureReadback      payload{};

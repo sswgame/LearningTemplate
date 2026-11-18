@@ -42,7 +42,7 @@ namespace sw
      *
      *          **자동 플레이는 AI 조종자가 폰에 빙의하는 방식입니다.** 자동 플레이 스위치(`gv_voxelAutoPlay`, 씬의 `_bAutoPlay`)가 바뀌면
      *          틱이 끝난 뒤 플러시에서 플레이어 폰의 조종자를 바꿉니다.
-     *          켜면 `VoxelAutoPlayControllerComponent`(스폰한 오브젝트)에게, 끄면 플레이어 0의 조종자(`ControlSystem::findOrCreatePlayerController`)에게 넘깁니다.
+     *          켜면 `VoxelAutoPlayControllerComponent`(스폰한 오브젝트)에게, 끄면 플레이어 0의 조종자(`ControlSystem::getOrCreatePlayerController`)에게 넘깁니다.
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Game Mode", Tooltip = "Owns the voxel world: terrain, block edits, chunk spawns and rebuild scheduling" )
     class VoxelGameModeComponent : public GameModeComponent
@@ -88,7 +88,7 @@ namespace sw
          * @brief 견주기 전이면 청크 뷰 하나의 블록 · 물 머티리얼이 준비됐는지 보고, 준비됐으면 아틀라스 칸을 카탈로그와 월드당 한 번 견줍니다(틱 뒤 게임 스레드).
          *        같으면 모든 뷰에 다시 메싱을 요청한다(그동안 그리지 않았다). 다르면 오류 한 줄이 남고 이 월드의 블록 메시는 그리지 않는다.
          */
-        void checkAtlasGrid( GameObjectManager& manager );
+        void validateAtlasGrid( GameObjectManager& manager );
         void scheduleRebuilds();
         void logStatus( float32 deltaTime );
         /** @brief 플레이어 폰의 조종자를 자동 플레이 스위치에 맞게 바꿉니다. 틱 밖의 게임 스레드에서 부릅니다. */

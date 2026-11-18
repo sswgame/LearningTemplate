@@ -43,7 +43,7 @@ namespace sw::editor
         template <typename TState>
         TState& get()
         {
-            void* pValue = findOrCreate( getSubsystemTypeHash<TState>(), sizeof( TState ), &EditorStateStore::createHolder<TState> );
+            void* pValue = getOrCreate( getSubsystemTypeHash<TState>(), sizeof( TState ), &EditorStateStore::createHolder<TState> );
             return *static_cast<TState*>( pValue );
         }
 
@@ -92,7 +92,7 @@ namespace sw::editor
         }
 
         /** @brief @p typeHash 의 값 주소를 반환합니다. 없으면 @p pfnCreate 로 만들어 더합니다. 같은 열쇠에 크기가 다르면 두 타입이 겹친 것이라 멈춘다. */
-        void* findOrCreate( uint64 typeHash, size_t size, CreateFunc pfnCreate );
+        void* getOrCreate( uint64 typeHash, size_t size, CreateFunc pfnCreate );
 
     private:
         mutable mutex            _mutex;

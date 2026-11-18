@@ -1,13 +1,13 @@
 /**
  * @file AnimationClipPreviewPanel.h
  * @brief 애니메이션 클립(`*.animclip`)을 고른 몸(프리팹)에 입혀 미리보기 씬에서 재생해 보는 창입니다(유니티 Animation 창 미리보기, 언리얼 Animation Sequence 에디터에 해당합니다).
- * @details 몸 놓기 · 클립 재생 · 속도 · 반복 · 멈춤은 `AnimationClipPreviewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
+ * @details 몸 놓기 · 클립 재생 · 속도 · 반복 · 멈춤은 `AnimationClipPreviewViewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
-#include "Editor/Panels/Animation/Model/AnimationClipPreviewModel.h"
+#include "Editor/Panels/Animation/Model/AnimationClipPreviewViewModel.h"
 
 namespace sw::editor
 {
@@ -48,6 +48,6 @@ namespace sw::editor
         void drawClipInfo();
 
     private:
-        AnimationClipPreviewModel _model;
+        AnimationClipPreviewViewModel _model;
     };
 } // namespace sw::editor

@@ -25,7 +25,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -145,7 +145,7 @@ namespace sw
                 string         _vertexEntryPoint;
                 string         _pixelEntryPoint;
                 vector<string> _listPermutation;
-                RenderPassType _passType{ RenderPassType::Invalid };
+                RenderPassKind _passType{ RenderPassKind::Invalid };
                 vector<string> _listOrigin;                   ///< 이 패스를 낸 파이프라인(`ShaderCookRequest::_listOrigin` 의 한 묶음 — 표의 패스는 비었다)
                 bool           _bUsesMaterialShader{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 bool           _bAppliesViewMode{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -227,7 +227,7 @@ namespace sw
             static void appendPipelinePassStages( RequestList& outListRequest, const RenderGraphPassDesc& pass, const RenderPipelineAsset& pipeline, const EngineDefaultAssets& engineDefaultAssets,
                                                   const string& shaderPath, const vector<string>& listPassDefine, const vector<string>& listOrigin )
             {
-                if ( pass._type == RenderPassType::Compute )
+                if ( pass._type == RenderPassKind::Compute )
                 {
                     appendRequestUnique( outListRequest, shaderPath, string( resolveEntryPoint( pass._computeEntryPoint, ShaderStage::Compute ) ), ShaderStage::Compute, listPassDefine, listOrigin );
                     return;
@@ -288,7 +288,7 @@ namespace sw
                             continue;
 
                         // 씬 메시를 그리는 패스는 머티리얼과의 조합까지 쿠킹해야 한다(5단계).
-                        if ( getRenderPassTypeInfo( pass._type ).shouldDrawSceneMeshes() )
+                        if ( getRenderPassKindInfo( pass._type ).shouldDrawSceneMeshes() )
                         {
                             MeshPassInfo passInfo;
                             passInfo._shaderPath          = passShader._shaderPath;
@@ -297,15 +297,15 @@ namespace sw
                             passInfo._listPermutation     = passShader._listDefine;
                             passInfo._passType            = pass._type;
                             passInfo._listOrigin          = pipelineOrigin;
-                            passInfo._bUsesMaterialShader = getRenderPassTypeInfo( pass._type ).usesMaterialShader();
-                            passInfo._bAppliesViewMode    = getRenderPassTypeInfo( pass._type ).shouldApplyViewMode();
+                            passInfo._bUsesMaterialShader = getRenderPassKindInfo( pass._type ).usesMaterialShader();
+                            passInfo._bAppliesViewMode    = getRenderPassKindInfo( pass._type ).shouldApplyViewMode();
                             passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( pass, pipelineResource.getDesc()._listAttachment );
                             outListMeshPass.push_back( std::move( passInfo ) );
                         }
                         appendPipelinePassStages( outListRequest, pass, pipelineResource, engineDefaultAssets, passShader._shaderPath, passShader._listDefine, pipelineOrigin );
                         appendInternalSlotMeshPasses( pass, engineDefaultAssets, pipelineOrigin, outListMeshPass, outListRequest );
                         // 디퍼드 조명의 타일 종류 변형 — 런타임(FramePSOManager::createPassPSOs)과 같은 함수로 define 을 정하고 정점 진입점은 타일 사각형(VSTile)이다.
-                        for ( uint32 tileClass = 0; pass._type == RenderPassType::Lighting && tileClass < kDeferredTileClassCount; ++tileClass )
+                        for ( uint32 tileClass = 0; pass._type == RenderPassKind::Lighting && tileClass < kDeferredTileClassCount; ++tileClass )
                         {
                             const RenderPassShaderSelection tileShader = selectDeferredTileLightingShader( pass, tileClass, engineDefaultAssets );
                             appendRequestUnique( outListRequest, tileShader._shaderPath, kDeferredTileVertexEntryPoint, ShaderStage::Vertex, tileShader._listDefine, pipelineOrigin );
@@ -331,10 +331,10 @@ namespace sw
             static void appendInternalSlotMeshPasses( const RenderGraphPassDesc& pass, const EngineDefaultAssets& engineDefaultAssets, const vector<string>& listOrigin,
                                                       vector<MeshPassInfo>& outListMeshPass, RequestList& outListRequest )
             {
-                for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
+                for ( uint32 typeIndex = 0; typeIndex < kRenderPassKindCount; ++typeIndex )
                 {
-                    const RenderPassType      slotType = static_cast<RenderPassType>( typeIndex );
-                    const RenderPassTypeInfo& slotInfo = getRenderPassTypeInfo( slotType );
+                    const RenderPassKind      slotType = static_cast<RenderPassKind>( typeIndex );
+                    const RenderPassKindInfo& slotInfo = getRenderPassKindInfo( slotType );
                     if ( slotInfo._targetSourceType != pass._type || passWritesVelocity( slotType, &pass ) == false || slotInfo._pDefaultShader == nullptr )
                         continue;
                     const RenderPassShaderSelection slotShader = selectRenderPassShader( slotType, nullptr, &pass, engineDefaultAssets );
@@ -355,7 +355,7 @@ namespace sw
             }
 
             /**
-             * @brief 2) 패스 종류 표(RenderPassTypeInfo)의 엔진 셰이더입니다. 런타임이 패스 서술 없이도 만드는 PSO 의 셰이더다.
+             * @brief 2) 패스 종류 표(RenderPassKindInfo)의 엔진 셰이더입니다. 런타임이 패스 서술 없이도 만드는 PSO 의 셰이더다.
              * @details 컴퓨트 패스는 CSMain, 나머지는 VSMain · PSMain 을 define 없이 쿠킹한다. 런타임(FrameRenderer::ensurePassResources)은 로드한
              *          파이프라인과 무관하게 표의 **모든** 패스 종류로 엔진 PSO 를 만들고, 씬 메시 패스면 그 위에 머티리얼 · 뷰 모드 변형을 얹는다.
              *          파이프라인에 그 종류가 없으면 서술 없이 표만으로 만든다 — 그 메시 패스도 5) 의 곱에 넣는다. XML 에 나오는 패스만 곱하면
@@ -364,10 +364,10 @@ namespace sw
             static void collectPassTypeTableRequests( const EngineDefaultAssets& engineDefaultAssets, vector<MeshPassInfo>& outListMeshPass,
                                                       RequestList& outListRequest )
             {
-                for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
+                for ( uint32 typeIndex = 0; typeIndex < kRenderPassKindCount; ++typeIndex )
                 {
-                    const RenderPassType      passType = static_cast<RenderPassType>( typeIndex );
-                    const RenderPassTypeInfo& info     = getRenderPassTypeInfo( passType );
+                    const RenderPassKind      passType = static_cast<RenderPassKind>( typeIndex );
+                    const RenderPassKindInfo& info     = getRenderPassKindInfo( passType );
                     // 파이프라인 퍼뮤테이션을 요구하는 패스는 1) 의 파이프라인 패스로만 쿠킹한다(런타임도 서술 없이는 만들지 않는다).
                     if ( info._pDefaultShader == nullptr || info.hasFlag( RenderPassTraitFlag::kRequiresPassDesc ) )
                         continue;
@@ -552,19 +552,19 @@ namespace sw
                     {
                         const MaterialVariantInfo& variant = *listUniqueVariant[variantIndex];
                         // 패스가 그리지 않는 머티리얼(외곽선 패스 · 외곽선을 켜지 않은 머티리얼)은 런타임도 변형을 만들지 않는다.
-                        if ( getRenderPassTypeInfo( passInfo._passType ).shouldDrawMaterial( &variant._listDefine ) == false )
+                        if ( getRenderPassKindInfo( passInfo._passType ).shouldDrawMaterial( &variant._listDefine ) == false )
                             continue;
                         // 후처리 머티리얼은 메시에 붙지 않는다 — 풀스크린 VS · PS(정의 없는 변형, 4 단계)만 쓴다(`FramePostProcessMaterials` 의 확장 프로그램 PSO).
                         if ( VectorUtil::contains( variant._listDefine, string( kMaterialDomainPostProcessDefine ) ) )
                             continue;
                         // 머티리얼 셰이더를 쓰는 패스만 .hlsl 을 갈아탄다. 그림자 · 뎁스는 자기 셰이더에 define 만 얹고, 모양을 머티리얼이 정하는
                         // 배치(알파 컷오프 · 정점 변형)만 머티리얼 셰이더로 그린다(createMaterialPSOVariant 와 같은 판정).
-                        const bool    bMaterialDepthShader = getRenderPassTypeInfo( passInfo._passType ).usesMaterialShaderForDepth( &variant._listDefine );
+                        const bool    bMaterialDepthShader = getRenderPassKindInfo( passInfo._passType ).usesMaterialShaderForDepth( &variant._listDefine );
                         const string& shaderPath           = ( passInfo._bUsesMaterialShader || bMaterialDepthShader ) ? variant._shaderPath : passInfo._shaderPath;
                         const bool    bHasPixelStage =
-                            bMaterialDepthShader ? getRenderPassTypeInfo( passInfo._passType ).hasMaterialDepthPixelStage( &variant._listDefine )
-                                                    : ( passInfo._bHasPixelStage || getRenderPassTypeInfo( passInfo._passType ).needsAppearanceDitherPixelStage( &variant._listDefine ) );
-                        const bool          bTessellates = getRenderPassTypeInfo( passInfo._passType ).isMaterialTessellated( &variant._listDefine );
+                            bMaterialDepthShader ? getRenderPassKindInfo( passInfo._passType ).hasMaterialDepthPixelStage( &variant._listDefine )
+                                                    : ( passInfo._bHasPixelStage || getRenderPassKindInfo( passInfo._passType ).needsAppearanceDitherPixelStage( &variant._listDefine ) );
+                        const bool          bTessellates = getRenderPassKindInfo( passInfo._passType ).isMaterialTessellated( &variant._listDefine );
                         vector<OriginGroup> listOriginGroup;
                         listOriginGroup.reserve( listPassOrigin.size() * listVariantOrigins[variantIndex].size() );
                         for ( const vector<string>& passOrigin : listPassOrigin )

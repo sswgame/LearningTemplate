@@ -1,5 +1,5 @@
 /**
- * ssgi.hlsl — 화면 공간 간접 확산광(RenderPassType::ScreenSpaceGI). 조명 첨부에 가산 블렌드(`_blendPreset="Additive"` — 출력 알파가 세기)로 더한다.
+ * ssgi.hlsl — 화면 공간 간접 확산광(RenderPassKind::ScreenSpaceGI). 조명 첨부에 가산 블렌드(`_blendPreset="Additive"` — 출력 알파가 세기)로 더한다.
  *
  * 픽셀마다 화면 방향 몇 개로 깊이를 걸어, 반경 안에서 이 면을 마주 보는 가까운 면의 색(반투명 앞에 떠 둔 장면 색 사본)을 모은다:
  *   간접 조도 ≈ 평균( 색(표본) × max( N · L, 0 ) × max( N표본 · -L, 0 ) × 감쇠 ) — L 은 이 면에서 표본으로 가는 단위 방향이다.

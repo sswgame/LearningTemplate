@@ -1,8 +1,8 @@
 /**
  * @file ProfilerPanel.h
  * @brief 엔진 프로파일러의 실시간 구간 테이블, GPU 패스 테이블, 프레임 그래프, 메모리, "Tracy 열기" 를 보여 주는 프로파일링 창입니다.
- * @details 상태와 명령은 ImGui 에 의존하지 않는 모델(`Model/` — 구간 수집 `ProfilerCaptureModel`, 타임라인 · 호출 트리 `ProfilerTimelineModel`,
- *          성능 `ProfilerPerformanceModel`)이 맡고, 이 창은 그리기와 입력 읽기만 한다(인스펙터의 `Model/` 과 같은 나눔). 엔진 테이블만 읽으므로 Tracy 가 없는 빌드에서도 같게 동작한다.
+ * @details 상태와 명령은 ImGui 에 의존하지 않는 모델(`Model/` — 구간 수집 `ProfilerCaptureViewModel`, 타임라인 · 호출 트리 `ProfilerTimelineViewModel`,
+ *          성능 `ProfilerPerformanceViewModel`)이 맡고, 이 창은 그리기와 입력 읽기만 한다(인스펙터의 `Model/` 과 같은 나눔). 엔진 테이블만 읽으므로 Tracy 가 없는 빌드에서도 같게 동작한다.
  *          Timeline 탭은 최근 몇 프레임의 계측 구간을 스레드별로 펼친다(`ProfilerTimeline`, 배치는 ImGui 에 의존하지 않는 `ProfilerTimelineLayout`). 빠른 확인용이다.
  *          긴 시간축 분석(GPU 큐, 락, 컨텍스트 전환)은 외부 Tracy 뷰어가 맡는다(`EditorTracyLauncher`).
  *          MVVM View — 작업 공간 · 씬 · 명령과 엔진 서비스는 `ProfilerViewModel` 로만 닿는다(활성 씬 분포는 `gatherScene` 이 값으로 담는다).
@@ -13,9 +13,9 @@
 #include "Core/Foundation/Constants.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-#include "Editor/Panels/Profiler/Model/ProfilerCaptureModel.h"
-#include "Editor/Panels/Profiler/Model/ProfilerPerformanceModel.h"
-#include "Editor/Panels/Profiler/Model/ProfilerTimelineModel.h"
+#include "Editor/Panels/Profiler/Model/ProfilerCaptureViewModel.h"
+#include "Editor/Panels/Profiler/Model/ProfilerPerformanceViewModel.h"
+#include "Editor/Panels/Profiler/Model/ProfilerTimelineViewModel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerViewModel.h"
 
 namespace sw
@@ -127,14 +127,14 @@ namespace sw::editor
         void drawSceneDistributionSection();
 
     private:
-        ProfilerCaptureModel     _capture;           ///< 구간 탭의 수집 · 정지 · 캡처 파일 · 고른 프레임
-        ProfilerTimelineModel    _timeline;          ///< Timeline · Call Tree 탭의 녹화 사건 · 보이는 범위 · 불러온 트레이스
-        ProfilerPerformanceModel _performance;       ///< Performance 탭의 프레임 시간 · 리소스 카탈로그
-        ProfilerViewModel        _viewModel;         ///< 서비스 · 활성 씬 · Tracy 열기
-        ProfilerSceneViewState   _sceneState;        ///< 활성 씬 분포(섹션을 펼쳤을 때 `gatherScene` 이 채운다)
-        vector<ProfilerScopeRow> _listScratchRow;    ///< 테이블 행(프레임마다 다시 채운다)
-        vector<float32>          _listScratchSeries; ///< 그래프 값(프레임마다 다시 채운다)
-        utf8                     _arrFilter[constant::buffer::kMax128];
-        LeakWindowReport         _leakReport; ///< Memory 탭이 마지막으로 닫은 누수 창의 보고서(`_bValid` 가 false 이면 아직 없다)
+        ProfilerCaptureViewModel     _capture;           ///< 구간 탭의 수집 · 정지 · 캡처 파일 · 고른 프레임
+        ProfilerTimelineViewModel    _timeline;          ///< Timeline · Call Tree 탭의 녹화 사건 · 보이는 범위 · 불러온 트레이스
+        ProfilerPerformanceViewModel _performance;       ///< Performance 탭의 프레임 시간 · 리소스 카탈로그
+        ProfilerViewModel            _viewModel;         ///< 서비스 · 활성 씬 · Tracy 열기
+        ProfilerSceneViewState       _sceneState;        ///< 활성 씬 분포(섹션을 펼쳤을 때 `gatherScene` 이 채운다)
+        vector<ProfilerScopeRow>     _listScratchRow;    ///< 테이블 행(프레임마다 다시 채운다)
+        vector<float32>              _listScratchSeries; ///< 그래프 값(프레임마다 다시 채운다)
+        utf8                         _arrFilter[constant::buffer::kMax128];
+        LeakWindowReport             _leakReport; ///< Memory 탭이 마지막으로 닫은 누수 창의 보고서(`_bValid` 가 false 이면 아직 없다)
     };
 } // namespace sw::editor

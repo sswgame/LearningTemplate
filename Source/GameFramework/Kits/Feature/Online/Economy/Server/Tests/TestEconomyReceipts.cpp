@@ -7,9 +7,9 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/ReceiptBuyerToken.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/CurrencyCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/ReceiptBuyerToken.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Fake/FakeReceiptValidator.h"

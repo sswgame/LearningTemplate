@@ -140,7 +140,7 @@ namespace sw
         /** @brief @p removedID 를 `replaces` 로 이어받은 부품입니다. 없으면 nullptr 입니다. */
         const HousingPartDef* findReplacement( const hashed_string& removedID ) const;
         /** @brief 부품의 스냅 지점과 판을 봅니다. 문제마다 @p outListProblem 에 한 줄씩 더하고 문제가 없으면 true 입니다(카탈로그 읽기와 부지 검증이 쓴다). */
-        bool checkPart( const HousingPartDef& part, vector<string>& outListProblem ) const;
+        bool validatePart( const HousingPartDef& part, vector<string>& outListProblem ) const;
 
         const vector<HousingPartDef>&    getParts() const { return _catalog.getAll(); }
         const HousingPartCatalogRootDef& getRoot() const { return _root; }

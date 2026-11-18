@@ -1,13 +1,13 @@
 /**
  * @file ShortcutsViewModel.h
  * @brief 단축키 창의 ViewModel — 단축키 Model(`EditorShortcutMap`)과 명령 표(`EditorCommandRegistry`)를 찾아 주고, 조합 받기가 부르는 바꾸기를 입력 맵으로 잇습니다. ImGui 를 모릅니다.
- * @details 패널(`ShortcutsPanel`)은 작업 공간 헤더(`EditorContext` · `EditorService`)를 보지 않는다(`docs/agents/EditorUI.md` MVVM 계약). 조합 받기 상태는 `ShortcutCaptureModel` 이고,
+ * @details 패널(`ShortcutsPanel`)은 작업 공간 헤더(`EditorContext` · `EditorService`)를 보지 않는다(`docs/agents/EditorUI.md` MVVM 계약). 조합 받기 상태는 `ShortcutCaptureViewModel` 이고,
  *          이 ViewModel 이 그 `IShortcutBindings` 다 — 단축키는 사용자 설정이라 되돌리기에 남지 않는다(언리얼 Keyboard Shortcuts 도 트랜잭션 밖이다).
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Panels/Settings/Model/ShortcutCaptureModel.h"
+#include "Editor/Panels/Settings/Model/ShortcutCaptureViewModel.h"
 
 namespace sw::editor
 {

@@ -16,7 +16,7 @@ namespace
 {
     struct MaterialPackingTestUtil
     {
-        static MaterialProperty makeProperty( MaterialPropertyType type, string_view value )
+        static MaterialProperty makeProperty( MaterialPropertyKind type, string_view value )
         {
             MaterialProperty prop{};
             prop._name  = "_test";
@@ -75,20 +75,20 @@ namespace
 SW_TEST_CASE( MaterialPackingTest, StringToTypeReadsNamesAndAliases )
 {
     uint32 size{ 99 };
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float4x4, MaterialPacking::stringToType( "Float4x4", size ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Float4x4, MaterialPacking::stringToType( "Float4x4", size ) );
     SW_EXPECT_EQUAL( 64u, size );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float4, MaterialPacking::stringToType( "Vector", size ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Float4, MaterialPacking::stringToType( "Vector", size ) );
     SW_EXPECT_EQUAL( 16u, size );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Bool, MaterialPacking::stringToType( "Toggle", size ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Bool, MaterialPacking::stringToType( "Toggle", size ) );
     SW_EXPECT_EQUAL( 4u, size );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Keyword, MaterialPacking::stringToType( "StaticSwitch", size ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Keyword, MaterialPacking::stringToType( "StaticSwitch", size ) );
     SW_EXPECT_EQUAL( 0u, size );
 
     size = 99;
-    SW_EXPECT_EQUAL( MaterialPropertyType::Unknown, MaterialPacking::stringToType( "float4", size ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Unknown, MaterialPacking::stringToType( "float4", size ) );
     SW_EXPECT_EQUAL( 0u, size );
     size = 99;
-    SW_EXPECT_EQUAL( MaterialPropertyType::Unknown, MaterialPacking::stringToType( "", size ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Unknown, MaterialPacking::stringToType( "", size ) );
     SW_EXPECT_EQUAL( 0u, size );
 }
 
@@ -97,16 +97,16 @@ SW_TEST_CASE( MaterialPackingTest, StringToTypeReadsNamesAndAliases )
  */
 SW_TEST_CASE( MaterialPackingTest, TypeNamesRoundTrip )
 {
-    const uint8 typeCount = static_cast<uint8>( MaterialPropertyType::Unknown );
+    const uint8 typeCount = static_cast<uint8>( MaterialPropertyKind::Unknown );
     for ( uint8 typeIndex = 0; typeIndex < typeCount; ++typeIndex )
     {
-        const MaterialPropertyType type = static_cast<MaterialPropertyType>( typeIndex );
+        const MaterialPropertyKind type = static_cast<MaterialPropertyKind>( typeIndex );
         uint32                     size{ 0 };
         SW_EXPECT_EQUAL( type, MaterialPacking::stringToType( MaterialPacking::typeToString( type ), size ) );
         SW_EXPECT_EQUAL( MaterialPacking::computePackedSizeOf( type ), size );
     }
-    SW_EXPECT_TRUE( string_view( MaterialPacking::typeToString( MaterialPropertyType::Unknown ) ) == "Unknown" );
-    SW_EXPECT_EQUAL( 0u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Unknown ) );
+    SW_EXPECT_TRUE( string_view( MaterialPacking::typeToString( MaterialPropertyKind::Unknown ) ) == "Unknown" );
+    SW_EXPECT_EQUAL( 0u, MaterialPacking::computePackedSizeOf( MaterialPropertyKind::Unknown ) );
 }
 
 /**
@@ -114,22 +114,22 @@ SW_TEST_CASE( MaterialPackingTest, TypeNamesRoundTrip )
  */
 SW_TEST_CASE( MaterialPackingTest, PackedSizeAndTypeClasses )
 {
-    SW_EXPECT_EQUAL( 4u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Float ) );
-    SW_EXPECT_EQUAL( 8u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Uint2 ) );
-    SW_EXPECT_EQUAL( 12u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Int3 ) );
-    SW_EXPECT_EQUAL( 16u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Color ) );
-    SW_EXPECT_EQUAL( 64u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Float4x4 ) );
-    SW_EXPECT_EQUAL( 4u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Texture2DArray ) );
-    SW_EXPECT_EQUAL( 0u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Keyword ) );
+    SW_EXPECT_EQUAL( 4u, MaterialPacking::computePackedSizeOf( MaterialPropertyKind::Float ) );
+    SW_EXPECT_EQUAL( 8u, MaterialPacking::computePackedSizeOf( MaterialPropertyKind::Uint2 ) );
+    SW_EXPECT_EQUAL( 12u, MaterialPacking::computePackedSizeOf( MaterialPropertyKind::Int3 ) );
+    SW_EXPECT_EQUAL( 16u, MaterialPacking::computePackedSizeOf( MaterialPropertyKind::Color ) );
+    SW_EXPECT_EQUAL( 64u, MaterialPacking::computePackedSizeOf( MaterialPropertyKind::Float4x4 ) );
+    SW_EXPECT_EQUAL( 4u, MaterialPacking::computePackedSizeOf( MaterialPropertyKind::Texture2DArray ) );
+    SW_EXPECT_EQUAL( 0u, MaterialPacking::computePackedSizeOf( MaterialPropertyKind::Keyword ) );
 
-    SW_EXPECT_TRUE( MaterialPacking::isTextureType( MaterialPropertyType::Texture2D ) );
-    SW_EXPECT_TRUE( MaterialPacking::isTextureType( MaterialPropertyType::TextureCube ) );
-    SW_EXPECT_TRUE( MaterialPacking::isTextureType( MaterialPropertyType::Texture3D ) );
-    SW_EXPECT_TRUE( MaterialPacking::isTextureType( MaterialPropertyType::Texture2DArray ) );
-    SW_EXPECT_FALSE( MaterialPacking::isTextureType( MaterialPropertyType::Uint ) );
+    SW_EXPECT_TRUE( MaterialPacking::isTextureType( MaterialPropertyKind::Texture2D ) );
+    SW_EXPECT_TRUE( MaterialPacking::isTextureType( MaterialPropertyKind::TextureCube ) );
+    SW_EXPECT_TRUE( MaterialPacking::isTextureType( MaterialPropertyKind::Texture3D ) );
+    SW_EXPECT_TRUE( MaterialPacking::isTextureType( MaterialPropertyKind::Texture2DArray ) );
+    SW_EXPECT_FALSE( MaterialPacking::isTextureType( MaterialPropertyKind::Uint ) );
 
-    SW_EXPECT_TRUE( MaterialPacking::isNonBufferType( MaterialPropertyType::Keyword ) );
-    SW_EXPECT_FALSE( MaterialPacking::isNonBufferType( MaterialPropertyType::Bool ) );
+    SW_EXPECT_TRUE( MaterialPacking::isNonBufferType( MaterialPropertyKind::Keyword ) );
+    SW_EXPECT_FALSE( MaterialPacking::isNonBufferType( MaterialPropertyKind::Bool ) );
 }
 
 /**
@@ -137,13 +137,13 @@ SW_TEST_CASE( MaterialPackingTest, PackedSizeAndTypeClasses )
  */
 SW_TEST_CASE( MaterialPackingTest, DefaultShaderTypes )
 {
-    SW_EXPECT_EQUAL( MaterialPropertyType::Uint, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::Bool ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Uint, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::BitFlag ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Uint, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::TextureCube ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::Range ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float4, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::Color ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Unknown, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::Keyword ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Int3, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::Int3 ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Uint, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyKind::Bool ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Uint, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyKind::BitFlag ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Uint, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyKind::TextureCube ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Float, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyKind::Range ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Float4, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyKind::Color ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Unknown, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyKind::Keyword ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Int3, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyKind::Int3 ) );
 }
 
 /**
@@ -151,18 +151,18 @@ SW_TEST_CASE( MaterialPackingTest, DefaultShaderTypes )
  */
 SW_TEST_CASE( MaterialPackingTest, ShaderTypeFromReflectionName )
 {
-    SW_EXPECT_EQUAL( MaterialPropertyType::Uint2, MaterialPacking::shaderTypeFromReflectionName( "Uint2", 0 ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Int, MaterialPacking::shaderTypeFromReflectionName( "Int", 64 ) ); // 이름이 크기보다 먼저다
-    SW_EXPECT_EQUAL( MaterialPropertyType::Uint, MaterialPacking::shaderTypeFromReflectionName( "Bool", 4 ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Uint2, MaterialPacking::shaderTypeFromReflectionName( "Uint2", 0 ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Int, MaterialPacking::shaderTypeFromReflectionName( "Int", 64 ) ); // 이름이 크기보다 먼저다
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Uint, MaterialPacking::shaderTypeFromReflectionName( "Bool", 4 ) );
 
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float4, MaterialPacking::shaderTypeFromReflectionName( "Color", 16 ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float, MaterialPacking::shaderTypeFromReflectionName( "Texture2D", 4 ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float3, MaterialPacking::shaderTypeFromReflectionName( "Enum", 12 ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float2, MaterialPacking::shaderTypeFromReflectionName( "", 8 ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float4x4, MaterialPacking::shaderTypeFromReflectionName( "", 64 ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Float4, MaterialPacking::shaderTypeFromReflectionName( "Color", 16 ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Float, MaterialPacking::shaderTypeFromReflectionName( "Texture2D", 4 ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Float3, MaterialPacking::shaderTypeFromReflectionName( "Enum", 12 ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Float2, MaterialPacking::shaderTypeFromReflectionName( "", 8 ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Float4x4, MaterialPacking::shaderTypeFromReflectionName( "", 64 ) );
 
-    SW_EXPECT_EQUAL( MaterialPropertyType::Unknown, MaterialPacking::shaderTypeFromReflectionName( "", 5 ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Unknown, MaterialPacking::shaderTypeFromReflectionName( "SomeStruct", 20 ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Unknown, MaterialPacking::shaderTypeFromReflectionName( "", 5 ) );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Unknown, MaterialPacking::shaderTypeFromReflectionName( "SomeStruct", 20 ) );
 }
 
 /**
@@ -294,7 +294,7 @@ SW_TEST_CASE( MaterialPackingTest, ParseBoolTokenRejectsOtherText )
 SW_TEST_CASE( MaterialPackingTest, PackGrowsBufferAndFillsLayout )
 {
     using Util            = MaterialPackingTestUtil;
-    MaterialProperty prop = Util::makeProperty( MaterialPropertyType::Float, "2.5" );
+    MaterialProperty prop = Util::makeProperty( MaterialPropertyKind::Float, "2.5" );
     prop._offset          = 8;
 
     vector<uint8> buffer;
@@ -302,7 +302,7 @@ SW_TEST_CASE( MaterialPackingTest, PackGrowsBufferAndFillsLayout )
     SW_REQUIRE_EQUAL( size_t{ 12 }, buffer.size() );
     SW_EXPECT_NEAR( 2.5f, Util::readFloat( buffer, 8 ), 1e-6f );
     SW_EXPECT_EQUAL( 0u, Util::readUint( buffer, 0 ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float, prop._shaderType );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Float, prop._shaderType );
     SW_EXPECT_EQUAL( 4u, prop._size );
 
     vector<uint8> largeBuffer( 64, 0 );
@@ -316,17 +316,17 @@ SW_TEST_CASE( MaterialPackingTest, PackGrowsBufferAndFillsLayout )
 SW_TEST_CASE( MaterialPackingTest, PackFloatsMatchesPackedText )
 {
     using Util                              = MaterialPackingTestUtil;
-    const MaterialPropertyType arrTypes[]   = { MaterialPropertyType::Float, MaterialPropertyType::Float2, MaterialPropertyType::Float3, MaterialPropertyType::Float4, MaterialPropertyType::Color, MaterialPropertyType::Range };
+    const MaterialPropertyKind arrTypes[]   = { MaterialPropertyKind::Float, MaterialPropertyKind::Float2, MaterialPropertyKind::Float3, MaterialPropertyKind::Float4, MaterialPropertyKind::Color, MaterialPropertyKind::Range };
     const float32              arrValue[4]  = { 0.1f, -1.17549435e-38f, 16777216.0f, 3.14159274f };
     const float32              arrScalar[1] = { 0.30000001f };
-    for ( const MaterialPropertyType type : arrTypes )
+    for ( const MaterialPropertyKind type : arrTypes )
     {
         MaterialProperty prop = Util::makeProperty( type, "" );
         prop._offset          = 8;
         prop._min             = 0.0f;
         prop._max             = 0.25f;
 
-        const bool     bVectorShape = type != MaterialPropertyType::Float && type != MaterialPropertyType::Range;
+        const bool     bVectorShape = type != MaterialPropertyKind::Float && type != MaterialPropertyKind::Range;
         const uint32   count        = bVectorShape ? 4u : 1u;
         const float32* pValue       = bVectorShape ? arrValue : arrScalar;
 
@@ -338,7 +338,7 @@ SW_TEST_CASE( MaterialPackingTest, PackFloatsMatchesPackedText )
     }
 
     // 색에 스칼라 하나를 쓰면 글과 같이 나머지는 0, 알파는 1 이다.
-    MaterialProperty color = Util::makeProperty( MaterialPropertyType::Color, "" );
+    MaterialProperty color = Util::makeProperty( MaterialPropertyKind::Color, "" );
     vector<uint8>    direct( 16, 0xCD );
     vector<uint8>    textBuffer( 16, 0xCD );
     SW_REQUIRE_TRUE( MaterialPacking::packFloatsIntoBuffer( color, arrScalar, 1, direct ) );
@@ -347,13 +347,13 @@ SW_TEST_CASE( MaterialPackingTest, PackFloatsMatchesPackedText )
     SW_EXPECT_NEAR( 1.0f, Util::readFloat( direct, 12 ), 1e-6f );
 
     // 글로 읽어야 뜻이 같은 종류(불리언)와 글이 거절하는 값(무한)은 글 길을 지난다.
-    MaterialProperty boolProp = Util::makeProperty( MaterialPropertyType::Bool, "" );
+    MaterialProperty boolProp = Util::makeProperty( MaterialPropertyKind::Bool, "" );
     const float32    one      = 1.0f;
     vector<uint8>    boolBuffer;
     SW_REQUIRE_TRUE( MaterialPacking::packFloatsIntoBuffer( boolProp, &one, 1, boolBuffer ) );
     SW_EXPECT_EQUAL( 1u, Util::readUint( boolBuffer, 0 ) );
 
-    MaterialProperty floatProp = Util::makeProperty( MaterialPropertyType::Float, "" );
+    MaterialProperty floatProp = Util::makeProperty( MaterialPropertyKind::Float, "" );
     const float32    infinite  = std::numeric_limits<float32>::infinity();
     vector<uint8>    infiniteBuffer;
     SW_EXPECT_LOG( "Material.VectorNumberUnreadable" );
@@ -366,7 +366,7 @@ SW_TEST_CASE( MaterialPackingTest, PackFloatsMatchesPackedText )
 SW_TEST_CASE( MaterialPackingTest, PackNumericSplitsTokensAndZeroFills )
 {
     using Util            = MaterialPackingTestUtil;
-    MaterialProperty prop = Util::makeProperty( MaterialPropertyType::Float3, "1,2\t3" );
+    MaterialProperty prop = Util::makeProperty( MaterialPropertyKind::Float3, "1,2\t3" );
     vector<uint8>    buffer;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( prop, buffer ) );
     SW_REQUIRE_EQUAL( size_t{ 12 }, buffer.size() );
@@ -374,14 +374,14 @@ SW_TEST_CASE( MaterialPackingTest, PackNumericSplitsTokensAndZeroFills )
     SW_EXPECT_NEAR( 2.0f, Util::readFloat( buffer, 4 ), 1e-6f );
     SW_EXPECT_NEAR( 3.0f, Util::readFloat( buffer, 8 ), 1e-6f );
 
-    MaterialProperty shortProp = Util::makeProperty( MaterialPropertyType::Float4, "1 2" );
+    MaterialProperty shortProp = Util::makeProperty( MaterialPropertyKind::Float4, "1 2" );
     vector<uint8>    shortBuffer;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( shortProp, shortBuffer ) );
     SW_EXPECT_NEAR( 2.0f, Util::readFloat( shortBuffer, 4 ), 1e-6f );
     SW_EXPECT_NEAR( 0.0f, Util::readFloat( shortBuffer, 8 ), 1e-6f );
     SW_EXPECT_NEAR( 0.0f, Util::readFloat( shortBuffer, 12 ), 1e-6f ); // 색이 아니면 넷째 칸도 0 이다
 
-    MaterialProperty emptyProp = Util::makeProperty( MaterialPropertyType::Int2, "" );
+    MaterialProperty emptyProp = Util::makeProperty( MaterialPropertyKind::Int2, "" );
     vector<uint8>    emptyBuffer( 8, Util::kUntouchedByte );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( emptyProp, emptyBuffer ) );
     SW_EXPECT_EQUAL( 0, Util::readInt( emptyBuffer, 0 ) );
@@ -394,7 +394,7 @@ SW_TEST_CASE( MaterialPackingTest, PackNumericSplitsTokensAndZeroFills )
 SW_TEST_CASE( MaterialPackingTest, PackMatrixWritesSixteenWords )
 {
     using Util            = MaterialPackingTestUtil;
-    MaterialProperty prop = Util::makeProperty( MaterialPropertyType::Float4x4, "1 0 0 0 0 1 0 0 0 0 1 0 5 6 7 8" );
+    MaterialProperty prop = Util::makeProperty( MaterialPropertyKind::Float4x4, "1 0 0 0 0 1 0 0 0 0 1 0 5 6 7 8" );
     vector<uint8>    buffer;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( prop, buffer ) );
     SW_REQUIRE_EQUAL( size_t{ 64 }, buffer.size() );
@@ -409,19 +409,19 @@ SW_TEST_CASE( MaterialPackingTest, PackMatrixWritesSixteenWords )
 SW_TEST_CASE( MaterialPackingTest, PackColorDefaultsAlphaToOne )
 {
     using Util            = MaterialPackingTestUtil;
-    MaterialProperty prop = Util::makeProperty( MaterialPropertyType::Color, "1 0.5 0.25" );
+    MaterialProperty prop = Util::makeProperty( MaterialPropertyKind::Color, "1 0.5 0.25" );
     vector<uint8>    buffer;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( prop, buffer ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float4, prop._shaderType );
+    SW_EXPECT_EQUAL( MaterialPropertyKind::Float4, prop._shaderType );
     SW_REQUIRE_EQUAL( size_t{ 16 }, buffer.size() );
     SW_EXPECT_NEAR( 0.25f, Util::readFloat( buffer, 8 ), 1e-6f );
     SW_EXPECT_NEAR( 1.0f, Util::readFloat( buffer, 12 ), 1e-6f );
 
-    MaterialProperty explicitProp = Util::makeProperty( MaterialPropertyType::Color, "1 0 0 0.5" );
+    MaterialProperty explicitProp = Util::makeProperty( MaterialPropertyKind::Color, "1 0 0 0.5" );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( explicitProp, buffer ) );
     SW_EXPECT_NEAR( 0.5f, Util::readFloat( buffer, 12 ), 1e-6f );
 
-    MaterialProperty emptyProp = Util::makeProperty( MaterialPropertyType::Color, "" );
+    MaterialProperty emptyProp = Util::makeProperty( MaterialPropertyKind::Color, "" );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( emptyProp, buffer ) );
     SW_EXPECT_NEAR( 0.0f, Util::readFloat( buffer, 0 ), 1e-6f );
     SW_EXPECT_NEAR( 1.0f, Util::readFloat( buffer, 12 ), 1e-6f );
@@ -433,8 +433,8 @@ SW_TEST_CASE( MaterialPackingTest, PackColorDefaultsAlphaToOne )
 SW_TEST_CASE( MaterialPackingTest, PackColorIntoFloat3LeavesNextWord )
 {
     using Util            = MaterialPackingTestUtil;
-    MaterialProperty prop = Util::makeProperty( MaterialPropertyType::Color, "1 0 0" );
-    prop._shaderType      = MaterialPropertyType::Float3;
+    MaterialProperty prop = Util::makeProperty( MaterialPropertyKind::Color, "1 0 0" );
+    prop._shaderType      = MaterialPropertyKind::Float3;
     vector<uint8> buffer( 16, Util::kUntouchedByte );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( prop, buffer ) );
     SW_EXPECT_EQUAL( 12u, prop._size );
@@ -449,13 +449,13 @@ SW_TEST_CASE( MaterialPackingTest, PackNumericFailureLeavesBuffer )
 {
     using Util = MaterialPackingTestUtil;
     SW_EXPECT_LOG( "Material.VectorNumberUnreadable" );
-    MaterialProperty prop = Util::makeProperty( MaterialPropertyType::Float3, "1 x 3" );
+    MaterialProperty prop = Util::makeProperty( MaterialPropertyKind::Float3, "1 x 3" );
     vector<uint8>    buffer( 12, Util::kUntouchedByte );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( prop, buffer ) );
     SW_EXPECT_EQUAL( Util::kUntouchedWord, Util::readUint( buffer, 0 ) );
     SW_EXPECT_EQUAL( Util::kUntouchedWord, Util::readUint( buffer, 8 ) );
 
-    MaterialProperty fractionProp = Util::makeProperty( MaterialPropertyType::Uint, "1.5" );
+    MaterialProperty fractionProp = Util::makeProperty( MaterialPropertyKind::Uint, "1.5" );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( fractionProp, buffer ) );
     SW_EXPECT_EQUAL( Util::kUntouchedWord, Util::readUint( buffer, 0 ) );
 }
@@ -469,19 +469,19 @@ SW_TEST_CASE( MaterialPackingTest, PackIntegerRangeBoundaries )
     SW_EXPECT_LOG( "Material.VectorNumberUnreadable" );
     vector<uint8> buffer( 4, Util::kUntouchedByte );
 
-    MaterialProperty uintMax = Util::makeProperty( MaterialPropertyType::Uint, "4294967295" );
+    MaterialProperty uintMax = Util::makeProperty( MaterialPropertyKind::Uint, "4294967295" );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( uintMax, buffer ) );
     SW_EXPECT_EQUAL( 0xFFFFFFFFu, Util::readUint( buffer, 0 ) );
 
-    MaterialProperty intMin = Util::makeProperty( MaterialPropertyType::Int, "-2147483648" );
+    MaterialProperty intMin = Util::makeProperty( MaterialPropertyKind::Int, "-2147483648" );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( intMin, buffer ) );
     SW_EXPECT_EQUAL( MathUtil::kMinInt32, Util::readInt( buffer, 0 ) );
 
-    MaterialProperty uintOver = Util::makeProperty( MaterialPropertyType::Uint, "4294967296" );
+    MaterialProperty uintOver = Util::makeProperty( MaterialPropertyKind::Uint, "4294967296" );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( uintOver, buffer ) );
-    MaterialProperty uintNegative = Util::makeProperty( MaterialPropertyType::Uint, "-1" );
+    MaterialProperty uintNegative = Util::makeProperty( MaterialPropertyKind::Uint, "-1" );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( uintNegative, buffer ) );
-    MaterialProperty intOver = Util::makeProperty( MaterialPropertyType::Int, "2147483648" );
+    MaterialProperty intOver = Util::makeProperty( MaterialPropertyKind::Int, "2147483648" );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( intOver, buffer ) );
     SW_EXPECT_EQUAL( MathUtil::kMinInt32, Util::readInt( buffer, 0 ) ); // 거절된 값은 앞 값을 건드리지 않는다
 }
@@ -493,19 +493,19 @@ SW_TEST_CASE( MaterialPackingTest, PackRespectsReflectedSlotSize )
 {
     using Util = MaterialPackingTestUtil;
 
-    MaterialProperty tooLarge = Util::makeProperty( MaterialPropertyType::Float4, "1 2 3 4" );
+    MaterialProperty tooLarge = Util::makeProperty( MaterialPropertyKind::Float4, "1 2 3 4" );
     tooLarge._size            = 4;
     vector<uint8> buffer( 16, Util::kUntouchedByte );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( tooLarge, buffer ) );
     SW_EXPECT_EQUAL( Util::kUntouchedWord, Util::readUint( buffer, 0 ) );
 
-    MaterialProperty maskTooLarge = Util::makeProperty( MaterialPropertyType::ChannelMask, "RG" );
-    maskTooLarge._shaderType      = MaterialPropertyType::Float4;
+    MaterialProperty maskTooLarge = Util::makeProperty( MaterialPropertyKind::ChannelMask, "RG" );
+    maskTooLarge._shaderType      = MaterialPropertyKind::Float4;
     maskTooLarge._size            = 4;
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( maskTooLarge, buffer ) );
     SW_EXPECT_EQUAL( Util::kUntouchedWord, Util::readUint( buffer, 0 ) );
 
-    MaterialProperty roomy = Util::makeProperty( MaterialPropertyType::Float, "1" );
+    MaterialProperty roomy = Util::makeProperty( MaterialPropertyKind::Float, "1" );
     roomy._size            = 16;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( roomy, buffer ) );
     SW_EXPECT_NEAR( 1.0f, Util::readFloat( buffer, 0 ), 1e-6f );
@@ -521,25 +521,25 @@ SW_TEST_CASE( MaterialPackingTest, PackBoolFollowsShaderType )
     SW_EXPECT_LOG( "Material.BooleanValueUnreadable" );
     vector<uint8> buffer( 4, Util::kUntouchedByte );
 
-    MaterialProperty uintProp = Util::makeProperty( MaterialPropertyType::Bool, "yes" );
+    MaterialProperty uintProp = Util::makeProperty( MaterialPropertyKind::Bool, "yes" );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( uintProp, buffer ) );
     SW_EXPECT_EQUAL( 1u, Util::readUint( buffer, 0 ) );
 
-    MaterialProperty floatProp = Util::makeProperty( MaterialPropertyType::Bool, "on" );
-    floatProp._shaderType      = MaterialPropertyType::Float;
+    MaterialProperty floatProp = Util::makeProperty( MaterialPropertyKind::Bool, "on" );
+    floatProp._shaderType      = MaterialPropertyKind::Float;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( floatProp, buffer ) );
     SW_EXPECT_NEAR( 1.0f, Util::readFloat( buffer, 0 ), 1e-6f );
 
-    MaterialProperty rangeProp = Util::makeProperty( MaterialPropertyType::Bool, "off" );
-    rangeProp._shaderType      = MaterialPropertyType::Range;
+    MaterialProperty rangeProp = Util::makeProperty( MaterialPropertyKind::Bool, "off" );
+    rangeProp._shaderType      = MaterialPropertyKind::Range;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( rangeProp, buffer ) );
     SW_EXPECT_NEAR( 0.0f, Util::readFloat( buffer, 0 ), 1e-6f );
 
-    MaterialProperty oneProp = Util::makeProperty( MaterialPropertyType::Bool, "1" );
+    MaterialProperty oneProp = Util::makeProperty( MaterialPropertyKind::Bool, "1" );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( oneProp, buffer ) );
-    MaterialProperty badProp = Util::makeProperty( MaterialPropertyType::Bool, "ture" );
+    MaterialProperty badProp = Util::makeProperty( MaterialPropertyKind::Bool, "ture" );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( badProp, buffer ) );
-    MaterialProperty emptyProp = Util::makeProperty( MaterialPropertyType::Bool, "" );
+    MaterialProperty emptyProp = Util::makeProperty( MaterialPropertyKind::Bool, "" );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( emptyProp, buffer ) );
     SW_EXPECT_EQUAL( 1u, Util::readUint( buffer, 0 ) );
 }
@@ -553,7 +553,7 @@ SW_TEST_CASE( MaterialPackingTest, PackRangeClampsAndRejects )
     SW_EXPECT_LOG( "Material.ParameterNumberUnreadable" );
     vector<uint8> buffer( 4, 0 );
 
-    MaterialProperty prop = Util::makeProperty( MaterialPropertyType::Range, "2.5" );
+    MaterialProperty prop = Util::makeProperty( MaterialPropertyKind::Range, "2.5" );
     prop._min             = -1.0f;
     prop._max             = 1.5f;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( prop, buffer ) );
@@ -567,15 +567,15 @@ SW_TEST_CASE( MaterialPackingTest, PackRangeClampsAndRejects )
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( prop, buffer ) );
     SW_EXPECT_NEAR( 0.25f, Util::readFloat( buffer, 0 ), 1e-6f );
 
-    MaterialProperty noRange = Util::makeProperty( MaterialPropertyType::Range, "5" );
+    MaterialProperty noRange = Util::makeProperty( MaterialPropertyKind::Range, "5" );
     noRange._min             = 0.0f;
     noRange._max             = 0.0f;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( noRange, buffer ) );
     SW_EXPECT_NEAR( 5.0f, Util::readFloat( buffer, 0 ), 1e-6f );
 
-    MaterialProperty badProp = Util::makeProperty( MaterialPropertyType::Range, "abc" );
+    MaterialProperty badProp = Util::makeProperty( MaterialPropertyKind::Range, "abc" );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( badProp, buffer ) );
-    MaterialProperty emptyProp = Util::makeProperty( MaterialPropertyType::Range, "" );
+    MaterialProperty emptyProp = Util::makeProperty( MaterialPropertyKind::Range, "" );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( emptyProp, buffer ) );
     SW_EXPECT_NEAR( 5.0f, Util::readFloat( buffer, 0 ), 1e-6f );
 }
@@ -586,7 +586,7 @@ SW_TEST_CASE( MaterialPackingTest, PackRangeClampsAndRejects )
 SW_TEST_CASE( MaterialPackingTest, PackEnumReadsNamesAndNumbers )
 {
     using Util            = MaterialPackingTestUtil;
-    MaterialProperty prop = Util::makeProperty( MaterialPropertyType::Enum, " High " );
+    MaterialProperty prop = Util::makeProperty( MaterialPropertyKind::Enum, " High " );
     Util::addEnumEntry( prop, "Low", 1 );
     Util::addEnumEntry( prop, "High", 2 );
     vector<uint8> buffer( 4, Util::kUntouchedByte );
@@ -601,14 +601,14 @@ SW_TEST_CASE( MaterialPackingTest, PackEnumReadsNamesAndNumbers )
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( prop, buffer ) );
     SW_EXPECT_EQUAL( 0u, Util::readUint( buffer, 0 ) );
 
-    MaterialProperty intProp = Util::makeProperty( MaterialPropertyType::Enum, "-1" );
-    intProp._shaderType      = MaterialPropertyType::Int;
+    MaterialProperty intProp = Util::makeProperty( MaterialPropertyKind::Enum, "-1" );
+    intProp._shaderType      = MaterialPropertyKind::Int;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( intProp, buffer ) );
     SW_EXPECT_EQUAL( -1, Util::readInt( buffer, 0 ) );
 
-    MaterialProperty floatProp = Util::makeProperty( MaterialPropertyType::Enum, "High" );
+    MaterialProperty floatProp = Util::makeProperty( MaterialPropertyKind::Enum, "High" );
     Util::addEnumEntry( floatProp, "High", 2 );
-    floatProp._shaderType = MaterialPropertyType::Float;
+    floatProp._shaderType = MaterialPropertyKind::Float;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( floatProp, buffer ) );
     SW_EXPECT_NEAR( 2.0f, Util::readFloat( buffer, 0 ), 1e-6f );
 }
@@ -619,14 +619,14 @@ SW_TEST_CASE( MaterialPackingTest, PackEnumReadsNamesAndNumbers )
 SW_TEST_CASE( MaterialPackingTest, PackBitFlagCombinesTokens )
 {
     using Util            = MaterialPackingTestUtil;
-    MaterialProperty prop = Util::makeProperty( MaterialPropertyType::BitFlag, "A | B,4" );
+    MaterialProperty prop = Util::makeProperty( MaterialPropertyKind::BitFlag, "A | B,4" );
     Util::addEnumEntry( prop, "A", 1 );
     Util::addEnumEntry( prop, "B", 2 );
     vector<uint8> buffer( 4, 0 );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( prop, buffer ) );
     SW_EXPECT_EQUAL( 7u, Util::readUint( buffer, 0 ) );
 
-    prop._shaderType = MaterialPropertyType::Float;
+    prop._shaderType = MaterialPropertyKind::Float;
     prop._value      = "A|B";
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( prop, buffer ) );
     SW_EXPECT_EQUAL( 3u, Util::readUint( buffer, 0 ) );
@@ -641,16 +641,16 @@ SW_TEST_CASE( MaterialPackingTest, PackEnumRejectsUnknownNames )
     SW_EXPECT_LOG( "Material.UnknownEnumValue" );
     vector<uint8> buffer( 4, Util::kUntouchedByte );
 
-    MaterialProperty enumProp = Util::makeProperty( MaterialPropertyType::Enum, "Nope" );
+    MaterialProperty enumProp = Util::makeProperty( MaterialPropertyKind::Enum, "Nope" );
     Util::addEnumEntry( enumProp, "Low", 1 );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( enumProp, buffer ) );
 
-    MaterialProperty flagProp = Util::makeProperty( MaterialPropertyType::BitFlag, "A|Nope" );
+    MaterialProperty flagProp = Util::makeProperty( MaterialPropertyKind::BitFlag, "A|Nope" );
     Util::addEnumEntry( flagProp, "A", 1 );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( flagProp, buffer ) );
     SW_EXPECT_EQUAL( Util::kUntouchedWord, Util::readUint( buffer, 0 ) );
 
-    MaterialProperty unregistered = Util::makeProperty( MaterialPropertyType::Enum, "5" );
+    MaterialProperty unregistered = Util::makeProperty( MaterialPropertyKind::Enum, "5" );
     unregistered._enumType        = "MaterialPackingTestEnumNeverRegistered";
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( unregistered, buffer ) );
     SW_EXPECT_EQUAL( 5u, Util::readUint( buffer, 0 ) );
@@ -680,13 +680,13 @@ SW_TEST_CASE( MaterialPackingTest, PackChannelMaskReadsLettersAndNumbers )
     vector<uint8> buffer( 4, 0 );
     for ( const Row& row : arrRow )
     {
-        MaterialProperty prop = Util::makeProperty( MaterialPropertyType::ChannelMask, row._pValue );
+        MaterialProperty prop = Util::makeProperty( MaterialPropertyKind::ChannelMask, row._pValue );
         SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( prop, buffer ) );
         SW_EXPECT_EQUAL( row._mask, Util::readUint( buffer, 0 ) );
     }
 
-    MaterialProperty floatProp = Util::makeProperty( MaterialPropertyType::ChannelMask, "RB" );
-    floatProp._shaderType      = MaterialPropertyType::Float4;
+    MaterialProperty floatProp = Util::makeProperty( MaterialPropertyKind::ChannelMask, "RB" );
+    floatProp._shaderType      = MaterialPropertyKind::Float4;
     vector<uint8> floatBuffer;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( floatProp, floatBuffer ) );
     SW_EXPECT_NEAR( 1.0f, Util::readFloat( floatBuffer, 0 ), 1e-6f );
@@ -706,7 +706,7 @@ SW_TEST_CASE( MaterialPackingTest, PackChannelMaskRejectsUnreadableText )
     vector<uint8>     buffer( 4, Util::kUntouchedByte );
     for ( const utf8* pValue : arrBadValue )
     {
-        MaterialProperty prop = Util::makeProperty( MaterialPropertyType::ChannelMask, pValue );
+        MaterialProperty prop = Util::makeProperty( MaterialPropertyKind::ChannelMask, pValue );
         SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( prop, buffer ) );
         SW_EXPECT_EQUAL( Util::kUntouchedWord, Util::readUint( buffer, 0 ) );
     }
@@ -720,24 +720,24 @@ SW_TEST_CASE( MaterialPackingTest, PackTextureIndexPriority )
     using Util = MaterialPackingTestUtil;
     vector<uint8> buffer( 4, 0 );
 
-    MaterialProperty unbound = Util::makeProperty( MaterialPropertyType::Texture2D, "" );
+    MaterialProperty unbound = Util::makeProperty( MaterialPropertyKind::Texture2D, "" );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( unbound, buffer ) );
     SW_EXPECT_EQUAL( kInvalidDescriptorIndex, Util::readUint( buffer, 0 ) );
 
-    MaterialProperty numeric = Util::makeProperty( MaterialPropertyType::TextureCube, "12" );
+    MaterialProperty numeric = Util::makeProperty( MaterialPropertyKind::TextureCube, "12" );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( numeric, buffer ) );
     SW_EXPECT_EQUAL( 12u, Util::readUint( buffer, 0 ) );
 
-    MaterialProperty bound = Util::makeProperty( MaterialPropertyType::Texture3D, "12" );
+    MaterialProperty bound = Util::makeProperty( MaterialPropertyKind::Texture3D, "12" );
     bound._textureIndex    = 7;
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( bound, buffer ) );
     SW_EXPECT_EQUAL( 7u, Util::readUint( buffer, 0 ) );
 
-    MaterialProperty path = Util::makeProperty( MaterialPropertyType::Texture2DArray, "textures/a.png" );
+    MaterialProperty path = Util::makeProperty( MaterialPropertyKind::Texture2DArray, "textures/a.png" );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( path, buffer ) );
     SW_EXPECT_EQUAL( kInvalidDescriptorIndex, Util::readUint( buffer, 0 ) );
 
-    MaterialProperty overflow = Util::makeProperty( MaterialPropertyType::Texture2D, "4294967296" );
+    MaterialProperty overflow = Util::makeProperty( MaterialPropertyKind::Texture2D, "4294967296" );
     SW_REQUIRE_TRUE( MaterialPacking::packPropertyIntoBuffer( overflow, buffer ) );
     SW_EXPECT_EQUAL( kInvalidDescriptorIndex, Util::readUint( buffer, 0 ) );
 }
@@ -748,13 +748,13 @@ SW_TEST_CASE( MaterialPackingTest, PackTextureIndexPriority )
 SW_TEST_CASE( MaterialPackingTest, PackKeywordAndUnknown )
 {
     using Util               = MaterialPackingTestUtil;
-    MaterialProperty keyword = Util::makeProperty( MaterialPropertyType::Keyword, "1" );
+    MaterialProperty keyword = Util::makeProperty( MaterialPropertyKind::Keyword, "1" );
     keyword._size            = 4;
     vector<uint8> buffer;
     SW_EXPECT_TRUE( MaterialPacking::packPropertyIntoBuffer( keyword, buffer ) );
     SW_EXPECT_EQUAL( 0u, keyword._size );
     SW_EXPECT_TRUE( buffer.empty() );
 
-    MaterialProperty unknown = Util::makeProperty( MaterialPropertyType::Unknown, "1" );
+    MaterialProperty unknown = Util::makeProperty( MaterialPropertyKind::Unknown, "1" );
     SW_EXPECT_FALSE( MaterialPacking::packPropertyIntoBuffer( unknown, buffer ) );
 }

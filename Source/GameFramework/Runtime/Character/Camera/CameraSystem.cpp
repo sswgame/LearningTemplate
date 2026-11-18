@@ -21,9 +21,9 @@ namespace sw
         return FrameSystemUtil::find<CameraSystem>( manager );
     }
 
-    CameraSystem& CameraSystem::findOrCreate( GameObjectManager& manager )
+    CameraSystem& CameraSystem::getOrCreate( GameObjectManager& manager )
     {
-        return FrameSystemUtil::findOrCreate<CameraSystem>( manager );
+        return FrameSystemUtil::getOrCreate<CameraSystem>( manager );
     }
 
     void CameraSystem::releaseIfUnused( GameObjectManager& manager )

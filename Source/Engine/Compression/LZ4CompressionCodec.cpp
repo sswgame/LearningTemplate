@@ -12,9 +12,9 @@
 
 namespace sw
 {
-    CompressionCodecType LZ4CompressionCodec::getCodecType() const
+    CompressionCodecKind LZ4CompressionCodec::getCodecType() const
     {
-        return CompressionCodecType::LZ4;
+        return CompressionCodecKind::LZ4;
     }
 
     const utf8* LZ4CompressionCodec::getCodecName() const

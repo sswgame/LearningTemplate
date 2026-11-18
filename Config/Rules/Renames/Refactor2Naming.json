@@ -1,0 +1,1641 @@
+[
+  {
+    "old": "CommandType",
+    "new": "CommandKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "PacketType",
+    "new": "PacketKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "AlignType",
+    "new": "AlignKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "AudioBiquadType",
+    "new": "AudioBiquadKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "AudioContainerType",
+    "new": "AudioContainerKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "BlackboardValueType",
+    "new": "BlackboardValueKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "CompressionCodecType",
+    "new": "CompressionCodecKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "GimmickParamType",
+    "new": "GimmickParamKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "HealthEventType",
+    "new": "HealthEventKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "MaterialGraphValueType",
+    "new": "MaterialGraphValueKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "MaterialPropertyType",
+    "new": "MaterialPropertyKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "NetChannelType",
+    "new": "NetChannelKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "PackCompressionType",
+    "new": "PackCompressionKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "PackEncryptionType",
+    "new": "PackEncryptionKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RHIQueueType",
+    "new": "RHIQueueKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RTSOrderType",
+    "new": "RTSOrderKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RTSResourceType",
+    "new": "RTSResourceKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RawInputEventType",
+    "new": "RawInputEventKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RemoteConfigValueType",
+    "new": "RemoteConfigValueKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RenderPassType",
+    "new": "RenderPassKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "RigJointLimitType",
+    "new": "RigJointLimitKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "SplineType",
+    "new": "SplineKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "TelemetryFieldType",
+    "new": "TelemetryFieldKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "UserSettingType",
+    "new": "UserSettingKind",
+    "why": "값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)"
+  },
+  {
+    "old": "peekPacketType",
+    "new": "peekPacketKind",
+    "why": "열거형 PacketType → PacketKind 를 따른다"
+  },
+  {
+    "old": "RenderPassTypeInfo",
+    "new": "RenderPassKindInfo",
+    "why": "열거형 RenderPassType → RenderPassKind 를 따른다"
+  },
+  {
+    "old": "RenderPassTypeInfoInternal",
+    "new": "RenderPassKindInfoInternal",
+    "why": "열거형 RenderPassType → RenderPassKind 를 따른다"
+  },
+  {
+    "old": "getRenderPassTypeInfo",
+    "new": "getRenderPassKindInfo",
+    "why": "열거형 RenderPassType → RenderPassKind 를 따른다"
+  },
+  {
+    "old": "kRenderPassTypeCount",
+    "new": "kRenderPassKindCount",
+    "why": "열거형 RenderPassType → RenderPassKind 를 따른다"
+  },
+  {
+    "old": "UserSettingTypeTraits",
+    "new": "UserSettingKindTraits",
+    "why": "열거형 UserSettingType → UserSettingKind 를 따른다"
+  },
+  {
+    "old": "checkAllowed",
+    "new": "validateAllowed",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAnchor",
+    "new": "validateAnchor",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAnimal",
+    "new": "validateAnimal",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAssetReferences",
+    "new": "validateAssetReferences",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAssetReferencesWithEditorModule",
+    "new": "validateAssetReferencesWithEditorModule",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAtlasGrid",
+    "new": "validateAtlasGrid",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAttachmentStoreOps",
+    "new": "validateAttachmentStoreOps",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkAttachments",
+    "new": "validateAttachments",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkBindings",
+    "new": "validateBindings",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate",
+    "allowExisting": true
+  },
+  {
+    "old": "checkBodies",
+    "new": "validateBodies",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkBones",
+    "new": "validateBones",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate",
+    "allowExisting": true
+  },
+  {
+    "old": "checkBypassPasses",
+    "new": "validateBypassPasses",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkCanvasAndSky",
+    "new": "validateCanvasAndSky",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkChildRow",
+    "new": "validateChildRow",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkClipNamesMatched",
+    "new": "validateClipNamesMatched",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkCollisionsAfter",
+    "new": "validateCollisionsAfter",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkColorOutputLimit",
+    "new": "validateColorOutputLimit",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkCommand",
+    "new": "validateCommand",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkComputePasses",
+    "new": "validateComputePasses",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkConditionalReflectMacros",
+    "new": "validateConditionalReflectMacros",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkConsistent",
+    "new": "validateConsistent",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDataLayerReferences",
+    "new": "validateDataLayerReferences",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDataLayersDeclared",
+    "new": "validateDataLayersDeclared",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDecalPasses",
+    "new": "validateDecalPasses",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDeltaReadsBack",
+    "new": "validateDeltaReadsBack",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDigest",
+    "new": "validateDigest",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDiskBeforeSave",
+    "new": "validateDiskBeforeSave",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDurationChoice",
+    "new": "validateDurationChoice",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDx12SlotLimit",
+    "new": "validateDx12SlotLimit",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkDx12Space",
+    "new": "validateDx12Space",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkEditorAssetReferences",
+    "new": "validateEditorAssetReferences",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkEntry",
+    "new": "validateEntry",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkExpressions",
+    "new": "validateExpressions",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkFile",
+    "new": "validateFile",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate",
+    "allowExisting": true
+  },
+  {
+    "old": "checkFinishedJob",
+    "new": "validateFinishedJob",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkFolder",
+    "new": "validateFolder",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkFolderMatchesList",
+    "new": "validateFolderMatchesList",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkFootprint",
+    "new": "validateFootprint",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkFrameGraph",
+    "new": "validateFrameGraph",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkGBufferLayout",
+    "new": "validateGBufferLayout",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkGeometryColorOutputs",
+    "new": "validateGeometryColorOutputs",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkGroups",
+    "new": "validateGroups",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkID",
+    "new": "validateID",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkImpacts",
+    "new": "validateImpacts",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkIndex",
+    "new": "validateIndex",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkInputContracts",
+    "new": "validateInputContracts",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkInside",
+    "new": "validateInside",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkKeys",
+    "new": "validateKeys",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkLayer",
+    "new": "validateLayer",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate",
+    "allowExisting": true
+  },
+  {
+    "old": "checkLeafNameCollision",
+    "new": "validateLeafNameCollision",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkLoad",
+    "new": "validateLoad",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkLowercaseResourceName",
+    "new": "validateLowercaseResourceName",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkMarkers",
+    "new": "validateMarkers",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkMaxHP",
+    "new": "validateMaxHP",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkMergePart",
+    "new": "validateMergePart",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkMessageSlot",
+    "new": "validateMessageSlot",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkMinPostQuality",
+    "new": "validateMinPostQuality",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkMod",
+    "new": "validateMod",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkModifiers",
+    "new": "validateModifiers",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkModuleShaderList",
+    "new": "validateModuleShaderList",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkNames",
+    "new": "validateNames",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate",
+    "allowExisting": true
+  },
+  {
+    "old": "checkNode",
+    "new": "validateNode",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkNumericSettings",
+    "new": "validateNumericSettings",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkOmittedPasses",
+    "new": "validateOmittedPasses",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkOutputDivisors",
+    "new": "validateOutputDivisors",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkOverridePath",
+    "new": "validateOverridePath",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkOverrideTargets",
+    "new": "validateOverrideTargets",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPack",
+    "new": "validatePack",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPad",
+    "new": "validatePad",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPart",
+    "new": "validatePart",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPassDeclaration",
+    "new": "validatePassDeclaration",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPassDepth",
+    "new": "validatePassDepth",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPassInputContract",
+    "new": "validatePassInputContract",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPassNamesUnique",
+    "new": "validatePassNamesUnique",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPassRenderState",
+    "new": "validatePassRenderState",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPassTypeAndAttachments",
+    "new": "validatePassTypeAndAttachments",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPostProcessMaterialPasses",
+    "new": "validatePostProcessMaterialPasses",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkProjectiles",
+    "new": "validateProjectiles",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkPropertyRow",
+    "new": "validatePropertyRow",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkRanges",
+    "new": "validateRanges",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkReflectedProperties",
+    "new": "validateReflectedProperties",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkRequest",
+    "new": "validateRequest",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkReservedBindings",
+    "new": "validateReservedBindings",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkSameDivisor",
+    "new": "validateSameDivisor",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkSaveCompatible",
+    "new": "validateSaveCompatible",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkScenarioFolder",
+    "new": "validateScenarioFolder",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkServerConfig",
+    "new": "validateServerConfig",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkSettings",
+    "new": "validateSettings",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkShadingModel",
+    "new": "validateShadingModel",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkSharedAttempt",
+    "new": "validateSharedAttempt",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkSizeInRange",
+    "new": "validateSizeInRange",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkSlotRulesAndCollisions",
+    "new": "validateSlotRulesAndCollisions",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkStageTextureUnitLimit",
+    "new": "validateStageTextureUnitLimit",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkStatePath",
+    "new": "validateStatePath",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkStructuredElementLayouts",
+    "new": "validateStructuredElementLayouts",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkTargetExists",
+    "new": "validateTargetExists",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkTargets",
+    "new": "validateTargets",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkTextureUnits",
+    "new": "validateTextureUnits",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkUnderBase",
+    "new": "validateUnderBase",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkUndoRoundTrip",
+    "new": "validateUndoRoundTrip",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkUnique",
+    "new": "validateUnique",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate",
+    "allowExisting": true
+  },
+  {
+    "old": "checkVelocityOutputs",
+    "new": "validateVelocityOutputs",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkVertexInputs",
+    "new": "validateVertexInputs",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkVertexSlotsBound",
+    "new": "validateVertexSlotsBound",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "checkVulkanSet",
+    "new": "validateVulkanSet",
+    "why": "오류를 남기고 bool · expected · 문제 수 · 결과를 돌려주는 검사 — check* 는 술어가 아니다(NamingCpp), 언리얼 Validate"
+  },
+  {
+    "old": "_pCheckLoad",
+    "new": "_pValidateLoad",
+    "why": "checkLoad → validateLoad 를 따른다"
+  },
+  {
+    "old": "checkClosed",
+    "new": "assertClosed",
+    "why": "단언하는 void 검사는 assert*(NamingCpp)"
+  },
+  {
+    "old": "checkRegistrationOrder",
+    "new": "assertRegistrationOrder",
+    "why": "단언하는 void 검사는 assert*(NamingCpp)"
+  },
+  {
+    "old": "checkRoundTrip",
+    "new": "expectRoundTrip",
+    "why": "테스트 기대값을 적는 도우미 — check* 는 술어가 아니다(NamingCpp), gtest EXPECT",
+    "allowExisting": true
+  },
+  {
+    "old": "checkValue",
+    "new": "expectValue",
+    "why": "테스트 기대값을 적는 도우미 — check* 는 술어가 아니다(NamingCpp), gtest EXPECT"
+  },
+  {
+    "old": "checkSpinLockTryLock",
+    "new": "expectSpinLockTryLock",
+    "why": "테스트 기대값을 적는 도우미 — check* 는 술어가 아니다(NamingCpp), gtest EXPECT"
+  },
+  {
+    "old": "checkMark",
+    "new": "updateMarkState",
+    "why": "검사가 아니라 레이블의 그려짐 · 자리 잡힘 상태를 모은다 — check* 는 술어가 아니다(NamingCpp)"
+  },
+  {
+    "old": "checkSegment",
+    "new": "appendSegmentEvents",
+    "why": "검사가 아니라 구간에서 임계값을 지난 사건을 더한다 — check* 는 술어가 아니다(NamingCpp)"
+  },
+  {
+    "old": "checkPropertyValue",
+    "new": "isPropertyValueAllowed",
+    "why": "static_assert 가 읽는 constexpr bool 술어 — bool 을 돌려주는 check* 는 is*(NamingCpp)"
+  },
+  {
+    "old": "tickModalLoop",
+    "new": "updateModalLoop",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "WindowModalLoopTickDelegate",
+    "new": "WindowModalLoopUpdateDelegate",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "bindModalLoopTickCallback",
+    "new": "bindModalLoopUpdateCallback",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "isInModalLoopTick",
+    "new": "isInModalLoopUpdate",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "_onModalLoopTick",
+    "new": "_onModalLoopUpdate",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "_bInModalLoopTick",
+    "new": "_bInModalLoopUpdate",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "onWindowModalLoopTick",
+    "new": "onWindowModalLoopUpdate",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "_modalLoopTickSubscription",
+    "new": "_modalLoopUpdateSubscription",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)"
+  },
+  {
+    "old": "ModalLoopTickDoesNotReenter",
+    "new": "ModalLoopUpdateDoesNotReenter",
+    "why": "tick 은 틱 시스템 · 행동 트리 노드만 — 모달 루프 안에서 프레임을 돌리는 자리는 update(NamingCpp)",
+    "ban": false
+  },
+  {
+    "old": "tickBoth",
+    "new": "updateBoth",
+    "why": "테스트 픽스처가 서비스 둘을 한 번 갱신한다 — tick 은 틱 시스템만(NamingCpp)"
+  },
+  {
+    "old": "findOrLoad",
+    "new": "acquire",
+    "why": "캐시에서 얻고 없으면 읽어 공유 소유로 돌려주는 것은 acquire( path )(NamingCpp — 다른 캐시와 같은 동사, 언리얼 StreamableManager · Godot ResourceLoader.load)",
+    "allowExisting": true
+  },
+  {
+    "old": "findOrLoadAsset",
+    "new": "acquireAsset",
+    "why": "캐시에서 얻고 없으면 읽어 공유 소유로 돌려주는 것은 acquire( path )(NamingCpp — 다른 캐시와 같은 동사, 언리얼 StreamableManager · Godot ResourceLoader.load)"
+  },
+  {
+    "old": "findOrCreate",
+    "new": "getOrCreate",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)",
+    "allowExisting": true
+  },
+  {
+    "old": "findOrAcquire",
+    "new": "getOrCreateEntry",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)",
+    "allowExisting": true
+  },
+  {
+    "old": "findOrAddEntry",
+    "new": "getOrCreateEntry",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)",
+    "allowExisting": true
+  },
+  {
+    "old": "findOrAddSurfaceZone",
+    "new": "getOrCreateSurfaceZone",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrPrepare",
+    "new": "getOrPrepare",
+    "why": "없으면 준비해(SQL prepare) 돌려준다 — findOr* 는 쓰지 않는다(NamingCpp)"
+  },
+  {
+    "old": "findOrCreateChannelUnlocked",
+    "new": "getOrCreateChannelUnlocked",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateCookieAtlasPSO",
+    "new": "getOrCreateCookieAtlasPSO",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateCursor",
+    "new": "getOrCreateCursor",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateExtensionProgramPSO",
+    "new": "getOrCreateExtensionProgramPSO",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateFont",
+    "new": "getOrCreateFont",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateLayerBakePSO",
+    "new": "getOrCreateLayerBakePSO",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateLevelZeroStage",
+    "new": "getOrCreateLevelZeroStage",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateNamed",
+    "new": "getOrCreateNamed",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreatePlayerController",
+    "new": "getOrCreatePlayerController",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "findOrCreateRuntime",
+    "new": "getOrCreateRuntime",
+    "why": "없으면 만들어 돌려주는 함수는 getOrCreate — findOrAdd · findOrCreate 는 쓰지 않는다(NamingCpp, 언리얼 FindOrAdd 대신 저장소 한 벌)"
+  },
+  {
+    "old": "EditorMenuBarModel",
+    "new": "EditorMenuBarViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "EditorMenuBarModelInternal",
+    "new": "EditorMenuBarViewModelInternal",
+    "why": "EditorMenuBarModel → EditorMenuBarViewModel 를 따른다"
+  },
+  {
+    "old": "EditorPlayToolbarModel",
+    "new": "EditorPlayToolbarViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "AnimationClipPreviewModel",
+    "new": "AnimationClipPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "AnimationGraphPreviewModel",
+    "new": "AnimationGraphPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "SpriteClipModel",
+    "new": "SpriteClipViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "SpriteClipModelTest",
+    "new": "SpriteClipViewModelTest",
+    "why": "SpriteClipModel → SpriteClipViewModel 를 따른다"
+  },
+  {
+    "old": "SpriteClipModelInternal",
+    "new": "SpriteClipViewModelInternal",
+    "why": "SpriteClipModel → SpriteClipViewModel 를 따른다"
+  },
+  {
+    "old": "SpriteClipModelTestUtil",
+    "new": "SpriteClipViewModelTestUtil",
+    "why": "SpriteClipModel → SpriteClipViewModel 를 따른다"
+  },
+  {
+    "old": "SwSpriteClipModelMissing",
+    "new": "SwSpriteClipViewModelMissing",
+    "why": "SpriteClipModel → SpriteClipViewModel 를 따른다"
+  },
+  {
+    "old": "SwSpriteClipModelRoundTrip",
+    "new": "SwSpriteClipViewModelRoundTrip",
+    "why": "SpriteClipModel → SpriteClipViewModel 를 따른다"
+  },
+  {
+    "old": "AudioGraphModel",
+    "new": "AudioGraphViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "AudioGraphModelTest",
+    "new": "AudioGraphViewModelTest",
+    "why": "AudioGraphModel → AudioGraphViewModel 를 따른다"
+  },
+  {
+    "old": "AudioMixerModel",
+    "new": "AudioMixerViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "AudioMixerModelInternal",
+    "new": "AudioMixerViewModelInternal",
+    "why": "AudioMixerModel → AudioMixerViewModel 를 따른다"
+  },
+  {
+    "old": "ContentBrowserModel",
+    "new": "ContentBrowserViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ContentBrowserModelInternal",
+    "new": "ContentBrowserViewModelInternal",
+    "why": "ContentBrowserModel → ContentBrowserViewModel 를 따른다"
+  },
+  {
+    "old": "DataTableModel",
+    "new": "DataTableViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "DataTableModelTest",
+    "new": "DataTableViewModelTest",
+    "why": "DataTableModel → DataTableViewModel 를 따른다"
+  },
+  {
+    "old": "DialogueGraphPreviewModel",
+    "new": "DialogueGraphPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "InputMapModel",
+    "new": "InputMapViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "InputMapModelTest",
+    "new": "InputMapViewModelTest",
+    "why": "InputMapModel → InputMapViewModel 를 따른다"
+  },
+  {
+    "old": "InputMapModelInternal",
+    "new": "InputMapViewModelInternal",
+    "why": "InputMapModel → InputMapViewModel 를 따른다"
+  },
+  {
+    "old": "InputMapModelTestUtil",
+    "new": "InputMapViewModelTestUtil",
+    "why": "InputMapModel → InputMapViewModel 를 따른다"
+  },
+  {
+    "old": "InputMapModelTestRecorder",
+    "new": "InputMapViewModelTestRecorder",
+    "why": "InputMapModel → InputMapViewModel 를 따른다"
+  },
+  {
+    "old": "PropertyGridModel",
+    "new": "PropertyGridViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "PropertyGridModelTest",
+    "new": "PropertyGridViewModelTest",
+    "why": "PropertyGridModel → PropertyGridViewModel 를 따른다"
+  },
+  {
+    "old": "PropertyGridModelInternal",
+    "new": "PropertyGridViewModelInternal",
+    "why": "PropertyGridModel → PropertyGridViewModel 를 따른다"
+  },
+  {
+    "old": "PropertyGridModelTestInternal",
+    "new": "PropertyGridViewModelTestInternal",
+    "why": "PropertyGridModel → PropertyGridViewModel 를 따른다"
+  },
+  {
+    "old": "MaterialModel",
+    "new": "MaterialViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "MaterialModelTest",
+    "new": "MaterialViewModelTest",
+    "why": "MaterialModel → MaterialViewModel 를 따른다"
+  },
+  {
+    "old": "MaterialGraphModel",
+    "new": "MaterialGraphViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "MaterialGraphModelTest",
+    "new": "MaterialGraphViewModelTest",
+    "why": "MaterialGraphModel → MaterialGraphViewModel 를 따른다"
+  },
+  {
+    "old": "MaterialGraphModelTestUtil",
+    "new": "MaterialGraphViewModelTestUtil",
+    "why": "MaterialGraphModel → MaterialGraphViewModel 를 따른다"
+  },
+  {
+    "old": "MeshPreviewModel",
+    "new": "MeshPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "MeshPreviewModelInternal",
+    "new": "MeshPreviewViewModelInternal",
+    "why": "MeshPreviewModel → MeshPreviewViewModel 를 따른다"
+  },
+  {
+    "old": "PackagingModel",
+    "new": "PackagingViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "PackagingModelTest",
+    "new": "PackagingViewModelTest",
+    "why": "PackagingModel → PackagingViewModel 를 따른다"
+  },
+  {
+    "old": "RagdollPreviewModel",
+    "new": "RagdollPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "RagdollPreviewModelInternal",
+    "new": "RagdollPreviewViewModelInternal",
+    "why": "RagdollPreviewModel → RagdollPreviewViewModel 를 따른다"
+  },
+  {
+    "old": "ProfilerCaptureModel",
+    "new": "ProfilerCaptureViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ProfilerCaptureModelTest",
+    "new": "ProfilerCaptureViewModelTest",
+    "why": "ProfilerCaptureModel → ProfilerCaptureViewModel 를 따른다"
+  },
+  {
+    "old": "ProfilerPerformanceModel",
+    "new": "ProfilerPerformanceViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ProfilerPerformanceModelTest",
+    "new": "ProfilerPerformanceViewModelTest",
+    "why": "ProfilerPerformanceModel → ProfilerPerformanceViewModel 를 따른다"
+  },
+  {
+    "old": "ProfilerTimelineModel",
+    "new": "ProfilerTimelineViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ProfilerTimelineModelTest",
+    "new": "ProfilerTimelineViewModelTest",
+    "why": "ProfilerTimelineModel → ProfilerTimelineViewModel 를 따른다"
+  },
+  {
+    "old": "PrefabOverridesModel",
+    "new": "PrefabOverridesViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "PrefabOverridesModelInternal",
+    "new": "PrefabOverridesViewModelInternal",
+    "why": "PrefabOverridesModel → PrefabOverridesViewModel 를 따른다"
+  },
+  {
+    "old": "GlobalVariablesModel",
+    "new": "GlobalVariablesViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "GlobalVariablesModelTest",
+    "new": "GlobalVariablesViewModelTest",
+    "why": "GlobalVariablesModel → GlobalVariablesViewModel 를 따른다"
+  },
+  {
+    "old": "GlobalVariablesModelInternal",
+    "new": "GlobalVariablesViewModelInternal",
+    "why": "GlobalVariablesModel → GlobalVariablesViewModel 를 따른다"
+  },
+  {
+    "old": "GlobalVariablesModelPresetTest",
+    "new": "GlobalVariablesViewModelPresetTest",
+    "why": "GlobalVariablesModel → GlobalVariablesViewModel 를 따른다"
+  },
+  {
+    "old": "ModulesModel",
+    "new": "ModulesViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ModulesModelTest",
+    "new": "ModulesViewModelTest",
+    "why": "ModulesModel → ModulesViewModel 를 따른다"
+  },
+  {
+    "old": "ModulesModelInternal",
+    "new": "ModulesViewModelInternal",
+    "why": "ModulesModel → ModulesViewModel 를 따른다"
+  },
+  {
+    "old": "ModulesModelLoadTest",
+    "new": "ModulesViewModelLoadTest",
+    "why": "ModulesModel → ModulesViewModel 를 따른다"
+  },
+  {
+    "old": "PreferencesModel",
+    "new": "PreferencesViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "PreferencesModelTest",
+    "new": "PreferencesViewModelTest",
+    "why": "PreferencesModel → PreferencesViewModel 를 따른다"
+  },
+  {
+    "old": "ShortcutCaptureModel",
+    "new": "ShortcutCaptureViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ShortcutCaptureModelTest",
+    "new": "ShortcutCaptureViewModelTest",
+    "why": "ShortcutCaptureModel → ShortcutCaptureViewModel 를 따른다"
+  },
+  {
+    "old": "TileMapModel",
+    "new": "TileMapViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "TileMapModelTest",
+    "new": "TileMapViewModelTest",
+    "why": "TileMapModel → TileMapViewModel 를 따른다"
+  },
+  {
+    "old": "TileMapModelInternal",
+    "new": "TileMapViewModelInternal",
+    "why": "TileMapModel → TileMapViewModel 를 따른다"
+  },
+  {
+    "old": "TileMapModelTestUtil",
+    "new": "TileMapViewModelTestUtil",
+    "why": "TileMapModel → TileMapViewModel 를 따른다"
+  },
+  {
+    "old": "UIPreviewModel",
+    "new": "UIPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "VFXPreviewModel",
+    "new": "VFXPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "VFXPreviewModelTest",
+    "new": "VFXPreviewViewModelTest",
+    "why": "VFXPreviewModel → VFXPreviewViewModel 를 따른다"
+  },
+  {
+    "old": "VFXPreviewModelInternal",
+    "new": "VFXPreviewViewModelInternal",
+    "why": "VFXPreviewModel → VFXPreviewViewModel 를 따른다"
+  },
+  {
+    "old": "EditorDebugHUDModel",
+    "new": "EditorDebugHUDViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "EditorDebugHUDModelInternal",
+    "new": "EditorDebugHUDViewModelInternal",
+    "why": "EditorDebugHUDModel → EditorDebugHUDViewModel 를 따른다"
+  },
+  {
+    "old": "CameraPresetModel",
+    "new": "CameraPresetViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "CameraPresetModelInternal",
+    "new": "CameraPresetViewModelInternal",
+    "why": "CameraPresetModel → CameraPresetViewModel 를 따른다"
+  },
+  {
+    "old": "CharacterEditorModel",
+    "new": "CharacterEditorViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "CharacterEditorModelTest",
+    "new": "CharacterEditorViewModelTest",
+    "why": "CharacterEditorModel → CharacterEditorViewModel 를 따른다"
+  },
+  {
+    "old": "CharacterEditorModelInternal",
+    "new": "CharacterEditorViewModelInternal",
+    "why": "CharacterEditorModel → CharacterEditorViewModel 를 따른다"
+  },
+  {
+    "old": "RetargetPreviewModel",
+    "new": "RetargetPreviewViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "RetargetPreviewModelTest",
+    "new": "RetargetPreviewViewModelTest",
+    "why": "RetargetPreviewModel → RetargetPreviewViewModel 를 따른다"
+  },
+  {
+    "old": "RetargetPreviewModelInternal",
+    "new": "RetargetPreviewViewModelInternal",
+    "why": "RetargetPreviewModel → RetargetPreviewViewModel 를 따른다"
+  },
+  {
+    "old": "ScheduleDebugModel",
+    "new": "ScheduleDebugViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ParkLayoutModel",
+    "new": "ParkLayoutViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "ParkLayoutModelTest",
+    "new": "ParkLayoutViewModelTest",
+    "why": "ParkLayoutModel → ParkLayoutViewModel 를 따른다"
+  },
+  {
+    "old": "ParkLayoutModelInternal",
+    "new": "ParkLayoutViewModelInternal",
+    "why": "ParkLayoutModel → ParkLayoutViewModel 를 따른다"
+  },
+  {
+    "old": "ParkLayoutModelTestUtil",
+    "new": "ParkLayoutViewModelTestUtil",
+    "why": "ParkLayoutModel → ParkLayoutViewModel 를 따른다"
+  },
+  {
+    "old": "MeshModifiersPanelModel",
+    "new": "MeshModifiersViewModel",
+    "why": "에디터 창 하나의 상태 · 명령(View 가 값을 읽고 명령을 보내는 유일한 창구)은 …ViewModel 하나로 통일 — MVVM(WPF · 언리얼 UMG ViewModel), EditorUI.md"
+  },
+  {
+    "old": "SequenceModel",
+    "new": "SequenceEditModel",
+    "why": "창이 고치는 문서 사본과 편집 연산은 …EditModel — 창의 ViewModel 과 가른다(EditorUI.md)"
+  },
+  {
+    "old": "SequenceModelTest",
+    "new": "SequenceEditModelTest",
+    "why": "SequenceModel → SequenceEditModel 를 따른다"
+  },
+  {
+    "old": "SequenceModelTestBare",
+    "new": "SequenceEditModelTestBare",
+    "why": "SequenceModel → SequenceEditModel 를 따른다"
+  },
+  {
+    "old": "SequenceModelTestUtil",
+    "new": "SequenceEditModelTestUtil",
+    "why": "SequenceModel → SequenceEditModel 를 따른다"
+  },
+  {
+    "old": "SequenceModelTestHero",
+    "new": "SequenceEditModelTestHero",
+    "why": "SequenceModel → SequenceEditModel 를 따른다"
+  },
+  {
+    "old": "SequenceModelInternal",
+    "new": "SequenceEditModelInternal",
+    "why": "SequenceModel → SequenceEditModel 를 따른다"
+  },
+  {
+    "old": "RetargetProfileModel",
+    "new": "RetargetProfileEditModel",
+    "why": "창이 고치는 문서 사본과 편집 연산은 …EditModel — 창의 ViewModel 과 가른다(EditorUI.md)"
+  },
+  {
+    "old": "RetargetProfileModelTest",
+    "new": "RetargetProfileEditModelTest",
+    "why": "RetargetProfileModel → RetargetProfileEditModel 를 따른다"
+  },
+  {
+    "old": "GimmickGraphModel",
+    "new": "GimmickGraphEditModel",
+    "why": "창이 고치는 문서 사본과 편집 연산은 …EditModel — 창의 ViewModel 과 가른다(EditorUI.md)"
+  },
+  {
+    "old": "GimmickGraphModelTest",
+    "new": "GimmickGraphEditModelTest",
+    "why": "GimmickGraphModel → GimmickGraphEditModel 를 따른다"
+  },
+  {
+    "old": "GimmickGraphModelInternal",
+    "new": "GimmickGraphEditModelInternal",
+    "why": "GimmickGraphModel → GimmickGraphEditModel 를 따른다"
+  },
+  {
+    "old": "HierarchyRowModel",
+    "new": "HierarchyRowTree",
+    "why": "계층 창의 행 트리(루트 순서 · 필터 · 펼침 · 보이는 행) — 창의 상태 · 명령이 아니라 자료 구조라 내용으로 부른다"
+  },
+  {
+    "old": "HierarchyRowModelTest",
+    "new": "HierarchyRowTreeTest",
+    "why": "HierarchyRowModel → HierarchyRowTree 를 따른다"
+  },
+  {
+    "old": "HierarchyRowModelInternal",
+    "new": "HierarchyRowTreeInternal",
+    "why": "HierarchyRowModel → HierarchyRowTree 를 따른다"
+  },
+  {
+    "old": "HierarchyRowModelTestInternal",
+    "new": "HierarchyRowTreeTestInternal",
+    "why": "HierarchyRowModel → HierarchyRowTree 를 따른다"
+  },
+  {
+    "old": "EditorViewportMouseClaim",
+    "new": "EditorViewportMouseCapture",
+    "why": "마우스를 가져가 다른 도구가 못 받게 하는 것은 capture(Win32 SetCapture · 언리얼 CaptureMouse · ImGui WantCaptureMouse)"
+  },
+  {
+    "old": "EditorViewportMouseClaimInternal",
+    "new": "EditorViewportMouseCaptureInternal",
+    "why": "EditorViewportMouseClaim → EditorViewportMouseCapture 를 따른다"
+  },
+  {
+    "old": "PrefabPanel",
+    "new": "PrefabOverridesPanel",
+    "why": "프리팹 창(PrefabEditorPanel)이 아니라 인스턴스 오버라이드 도구다 — 내용으로 부른다(유니티 Prefab Overrides)"
+  },
+  {
+    "old": "PrefabPanelInternal",
+    "new": "PrefabOverridesPanelInternal",
+    "why": "PrefabPanel → PrefabOverridesPanel 를 따른다"
+  },
+  {
+    "old": "isClaimed",
+    "new": "isCaptured",
+    "why": "EditorViewportMouseClaim → EditorViewportMouseCapture 를 따른다"
+  },
+  {
+    "old": "HotReloadProbeComponent",
+    "new": "HotReloadTestComponent",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "HotReloadProbeInternal",
+    "new": "HotReloadTestInternal",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "kProbeVersion",
+    "new": "kTestVersion",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)",
+    "ban": false
+  },
+  {
+    "old": "hotReloadProbeVersion",
+    "new": "hotReloadTestVersion",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "hotReloadProbeKept",
+    "new": "hotReloadTestKept",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "hotReloadProbeAdded",
+    "new": "hotReloadTestAdded",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "NavPathProbeComponent",
+    "new": "NavPathTestComponent",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "NavPathProbeInternal",
+    "new": "NavPathTestInternal",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "emptyNavProbePathLength",
+    "new": "emptyNavTestPathLength",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "emptyNavProbeResultCount",
+    "new": "emptyNavTestResultCount",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "emptyNavProbeCancelLeaks",
+    "new": "emptyNavTestCancelLeaks",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 시나리오가 쓰는 확인용 컴포넌트는 Test(언리얼 ANavigationTestingActor · FunctionalTest)"
+  },
+  {
+    "old": "SceneLoadLeakProbe",
+    "new": "SceneLoadLeakCheck",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 씬 로드를 되풀이해 누수 곡선을 재는 검사(언리얼 MapCheck 와 같은 끝말)"
+  },
+  {
+    "old": "SceneLoadLeakProbeInternal",
+    "new": "SceneLoadLeakCheckInternal",
+    "why": "SceneLoadLeakProbe → SceneLoadLeakCheck 를 따른다"
+  },
+  {
+    "old": "startLoadLeakProbe",
+    "new": "startLoadLeakCheck",
+    "why": "SceneLoadLeakProbe → SceneLoadLeakCheck 를 따른다"
+  },
+  {
+    "old": "isLoadLeakProbeRunning",
+    "new": "isLoadLeakCheckRunning",
+    "why": "SceneLoadLeakProbe → SceneLoadLeakCheck 를 따른다"
+  },
+  {
+    "old": "_leakProbe",
+    "new": "_leakCheck",
+    "why": "SceneLoadLeakProbe → SceneLoadLeakCheck 를 따른다"
+  },
+  {
+    "old": "WebGPUTransferProbe",
+    "new": "WebGPUTransferFence",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 전송 하나의 완료 표지는 fence(RHITransferFenceQueue 의 원소, D3D12 · Vulkan Fence)"
+  },
+  {
+    "old": "TransferProbe",
+    "new": "TransferFence",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 전송 하나의 완료 표지는 fence(RHITransferFenceQueue 의 원소)"
+  },
+  {
+    "old": "MeshModifierSessionProbes",
+    "new": "MeshModifierSessionWatches",
+    "why": "시나리오가 읽는 감시 값 묶음은 Watch — Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp)"
+  },
+  {
+    "old": "PortProbeHandler",
+    "new": "NullStreamHandler",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 아무 일도 하지 않는 처리기는 Null 객체"
+  },
+  {
+    "old": "PureCallProbeBase",
+    "new": "PureVirtualCallerBase",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 순수 가상 호출을 일으키는 크래시 주입 형식"
+  },
+  {
+    "old": "PureCallProbe",
+    "new": "PureVirtualCaller",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 순수 가상 호출을 일으키는 크래시 주입 형식"
+  },
+  {
+    "old": "AccountClientOperation",
+    "new": "AccountMethodName",
+    "why": "AccountMethodName 의 별칭이었다 — 한 형식에 이름 하나",
+    "allowExisting": true
+  },
+  {
+    "old": "ActionCombatRig",
+    "new": "ActionCombatSimulation",
+    "why": "Rig 은 애니메이션 리그만(NamingCpp) — 프레임마다 나아가는 결정적 전투 시뮬레이션(ProjectileSimulation 과 같은 끝말)"
+  },
+  {
+    "old": "ActionCombatRigTest",
+    "new": "ActionCombatSimulationTest",
+    "why": "ActionCombatRig → ActionCombatSimulation 을 따른다"
+  },
+  {
+    "old": "ActionCombatRigTestUtil",
+    "new": "ActionCombatSimulationTestUtil",
+    "why": "ActionCombatRig → ActionCombatSimulation 을 따른다"
+  },
+  {
+    "old": "ContentBrowserProbe",
+    "new": "ContentBrowserTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "FolderTreeProbe",
+    "new": "FolderTreeTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "ActivePackProbe",
+    "new": "ActivePackTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "MapCheckProbe",
+    "new": "MapCheckTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "ToolWindowProbe",
+    "new": "ToolWindowTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "TypingProbe",
+    "new": "TypingTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "HitTestProbe",
+    "new": "HitTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "SwatchProbe",
+    "new": "SwatchTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "ToggleProbe",
+    "new": "ToggleTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "RowProbe",
+    "new": "RowTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "AutoplayProbe",
+    "new": "AutoplayTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "GizmoProbe",
+    "new": "GizmoTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "OverlayProbe",
+    "new": "OverlayTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "EveryPanelProbe",
+    "new": "EveryPanelTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "DockResizeProbe",
+    "new": "DockResizeTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "InspectorProbe",
+    "new": "InspectorTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "HierarchyProbe",
+    "new": "HierarchyTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "OffscreenRowProbe",
+    "new": "OffscreenRowTestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "DPIProbe",
+    "new": "DPITestState",
+    "why": "Probe 는 라이트 · 리플렉션 프로브(와 카메라 충돌 · 운영 상태 프로브)만(NamingCpp) — 자체 테스트 사례의 진행 상태는 getTestState 가 주는 …TestState",
+    "ban": false
+  },
+  {
+    "old": "FakeProbe",
+    "new": "FakeFence",
+    "why": "TransferProbe → TransferFence 를 따른다(테스트 대역)",
+    "ban": false
+  }
+]

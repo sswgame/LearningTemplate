@@ -75,7 +75,7 @@ namespace sw
             }
 
             /** @brief 패드 번호가 슬롯 안인지 봅니다. 밖이면 오류를 남기고 false 입니다(없는 패드에 말없이 묶지 않는다). */
-            [[nodiscard]] static bool checkPad( const XMLNode& element, int32 pad, const ActionContext& context )
+            [[nodiscard]] static bool validatePad( const XMLNode& element, int32 pad, const ActionContext& context )
             {
                 if ( pad < static_cast<int32>( kMaxGamepadSlot ) )
                     return true;
@@ -138,7 +138,7 @@ namespace sw
             static void readBind( const XMLNode& element, const ActionContext& context )
             {
                 InputMapBindParams params;
-                if ( readLeaf( element, params, context ) == false || checkPad( element, params._pad, context ) == false )
+                if ( readLeaf( element, params, context ) == false || validatePad( element, params._pad, context ) == false )
                     return;
                 const uint32        countBefore = context._map.getBindingCount( context._action );
                 const hashed_string layer       = context.resolveLayer( params._layer );
@@ -175,7 +175,7 @@ namespace sw
             static void readAxis1D( const XMLNode& element, const ActionContext& context )
             {
                 InputMapAxis1DParams params;
-                if ( readLeaf( element, params, context ) == false || checkPad( element, params._pad, context ) == false )
+                if ( readLeaf( element, params, context ) == false || validatePad( element, params._pad, context ) == false )
                     return;
                 InputSlot  negative{};
                 InputSlot  positive{};
@@ -221,7 +221,7 @@ namespace sw
                 if ( name == "stick" )
                 {
                     InputMapStickParams params;
-                    if ( readLeaf( element, params, context ) && checkPad( element, params._pad, context ) )
+                    if ( readLeaf( element, params, context ) && validatePad( element, params._pad, context ) )
                         context._map.bindGamepadStick2D( context._action, params._stick, params._deadzone, context.resolveLayer( params._layer ), static_cast<uint8>( params._pad ), params._outerDeadzone,
                                                          params._responseExponent, float2{ params._scaleX, params._scaleY }, params._bScaleByDelta, params._axis );
                     return;

@@ -196,12 +196,12 @@ SW_TEST_CASE( ProfilerTimelineTest, RestartedLongCaptureDropsThePreviousCapture 
 SW_TEST_CASE( ProfilerTimelineTest, NetFlowIDMatchesOnBothEndsAndSeparatesDirections )
 {
     constexpr uint64 kToken = 0x1234567890ABCDEFull;
-    const uint64     sent   = sw::NetFlowLog::makeFlowID( kToken, false, sw::NetChannelType::ReliableOrdered, 7 );
-    SW_EXPECT_EQUAL( sent, sw::NetFlowLog::makeFlowID( kToken, false, sw::NetChannelType::ReliableOrdered, 7 ) );
-    SW_EXPECT_TRUE( sent != sw::NetFlowLog::makeFlowID( kToken, true, sw::NetChannelType::ReliableOrdered, 7 ) );      // 반대 방향의 7 번째
-    SW_EXPECT_TRUE( sent != sw::NetFlowLog::makeFlowID( kToken, false, sw::NetChannelType::ReliableOrdered, 8 ) );     // 다음 메시지
-    SW_EXPECT_TRUE( sent != sw::NetFlowLog::makeFlowID( kToken ^ 1, false, sw::NetChannelType::ReliableOrdered, 7 ) ); // 다른 연결
-    SW_EXPECT_TRUE( sent != sw::NetFlowLog::makeFlowID( kToken, false, sw::NetChannelType::Unreliable, 7 ) );          // 다른 채널의 같은 번호
+    const uint64     sent   = sw::NetFlowLog::makeFlowID( kToken, false, sw::NetChannelKind::ReliableOrdered, 7 );
+    SW_EXPECT_EQUAL( sent, sw::NetFlowLog::makeFlowID( kToken, false, sw::NetChannelKind::ReliableOrdered, 7 ) );
+    SW_EXPECT_TRUE( sent != sw::NetFlowLog::makeFlowID( kToken, true, sw::NetChannelKind::ReliableOrdered, 7 ) );      // 반대 방향의 7 번째
+    SW_EXPECT_TRUE( sent != sw::NetFlowLog::makeFlowID( kToken, false, sw::NetChannelKind::ReliableOrdered, 8 ) );     // 다음 메시지
+    SW_EXPECT_TRUE( sent != sw::NetFlowLog::makeFlowID( kToken ^ 1, false, sw::NetChannelKind::ReliableOrdered, 7 ) ); // 다른 연결
+    SW_EXPECT_TRUE( sent != sw::NetFlowLog::makeFlowID( kToken, false, sw::NetChannelKind::Unreliable, 7 ) );          // 다른 채널의 같은 번호
     SW_EXPECT_EQUAL( 0ull, sent >> 53 );
 }
 

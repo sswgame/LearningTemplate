@@ -26,7 +26,7 @@ namespace
     {
     public:
         int32*               _pDecompressCount{ nullptr };
-        CompressionCodecType getCodecType() const override { return CompressionCodecType::Custom; }
+        CompressionCodecKind getCodecType() const override { return CompressionCodecKind::Custom; }
         const utf8*          getCodecName() const override { return "Counting"; }
         size_t               compressBound( size_t uncompressedSize ) const override { return uncompressedSize; }
         size_t               decompressBound( size_t compressedSize ) const override { return compressedSize; }
@@ -91,7 +91,7 @@ namespace
     NetCompressionConfig makeRLESettings()
     {
         NetCompressionConfig settings;
-        settings._codec = CompressionCodecType::RLE;
+        settings._codec = CompressionCodecKind::RLE;
         return settings;
     }
 } // namespace
@@ -103,7 +103,7 @@ SW_TEST_CASE( NetCompressionTest, EnvelopeRoundTripsAndKeepsRawWhenNotSmaller )
     vector<uint8>            envelopeBytes;
     SW_REQUIRE_TRUE( NetCompressionConfig::compressEnvelope( makeRLESettings(), repeatedBytes.data(), 4000, envelopeBytes, &registry ) );
     SW_EXPECT_TRUE( envelopeBytes.size() < 200 );
-    SW_EXPECT_EQUAL( static_cast<int32>( CompressionCodecType::RLE ), static_cast<int32>( envelopeBytes[0] ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( CompressionCodecKind::RLE ), static_cast<int32>( envelopeBytes[0] ) );
     vector<uint8> restoredBytes;
     SW_REQUIRE_TRUE( NetCompressionConfig::decompressEnvelope( envelopeBytes.data(), static_cast<int32>( envelopeBytes.size() ), 4000, restoredBytes, &registry ) );
     SW_EXPECT_TRUE( restoredBytes == repeatedBytes );

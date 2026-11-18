@@ -378,7 +378,7 @@ namespace sw::editor
 
     void TileMapPanel::drawTileMapFileControls()
     {
-        const string& focused = TileMapModel::getFocusedAssetPath();
+        const string& focused = TileMapViewModel::getFocusedAssetPath();
         if ( focused.empty() == false )
             ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Focused", TextArgumentList().addText( "path", focused ) ).c_str() );
 
@@ -424,7 +424,7 @@ namespace sw::editor
             // 적어 넣은 경로에 파일이 없으면 지금 맵을 그대로 둔다(새 문서로 표시하면 편집 중인 맵이 저장 안 한 채 깨끗해진다).
             // 읽기(`EditorToolAssetCommands::loadTileMap`)와 같은 해석으로 묻는다 — 입력란은 리소스 경로와 디스크 경로를 모두 받는다.
             // 다른 문서는 열기 경로로 넘긴다 — 미저장 확인 · 최근 목록 · 되돌리기의 문서 경로가 이 파일을 가리킨다(곧바로 읽으면 열린 문서는 옛 경로로 남았다).
-            if ( TileMapModel::hasDocumentFile( path.c_str() ) == false )
+            if ( TileMapViewModel::hasDocumentFile( path.c_str() ) == false )
                 SW_LOG_WARNING_ID( "TileMapPanel.NoTileMap", "No tile map at '%#'", path.c_str() );
             else if ( string_view( path.c_str() ) == string_view( getLoadedAssetPath() ) )
                 reloadDocument();
@@ -496,9 +496,9 @@ namespace sw::editor
         ImGui::Separator();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "EdgeWarpPresets" ) );
         const utf8* edges[] = { "N", "E", "S", "W" };
-        for ( int32 edgeIndex = 0; edgeIndex < TileMapModel::kEdgeCount; ++edgeIndex )
+        for ( int32 edgeIndex = 0; edgeIndex < TileMapViewModel::kEdgeCount; ++edgeIndex )
         {
-            TileMapModel::EdgeWarpPreset& preset = _document.editEdgePreset( edgeIndex );
+            TileMapViewModel::EdgeWarpPreset& preset = _document.editEdgePreset( edgeIndex );
             ImGui::PushID( edgeIndex );
             // 한 줄: 가장자리 이름 · 대상 맵(남은 폭) · 칸 X · 칸 Y(단추 없는 숫자 칸) · 적용 — -/+ 단추가 붙은 숫자 칸 둘이 좁은 칸에서 몇 픽셀로 눌렸다.
             const ImGuiStyle& style       = ImGui::GetStyle();

@@ -76,7 +76,7 @@ namespace sw
          * @details 프리팹에서 사라진 컴포넌트를 가리키는 덮어쓴 값은 버리고 엔티티 이름과 함께 경고합니다 — 다음 저장에서 빠집니다(언리얼 · 유니티도 원형에 없는
          *          오버라이드는 버린다). 읽지 못하면 false 입니다.
          *          합치기를 공통 구현(`DataInheritance`)으로 옮기지 않은 까닭: 컴포넌트 목록의 열쇠가 칸 값이 아니라 `이름#n` 이고 원소 이름이 타입이며, 씬 인스턴스는 프리팹에서 사라진 대상을 오류가 아니라 경고로
-         *          넘겨야 한다(프리팹을 고쳤다고 씬이 읽히지 않으면 안 된다). 프리팹 변형은 같은 형식을 쓰되 `checkOverrideTargets` 로 엄격하게 먼저 본다.
+         *          넘겨야 한다(프리팹을 고쳤다고 씬이 읽히지 않으면 안 된다). 프리팹 변형은 같은 형식을 쓰되 `validateOverrideTargets` 로 엄격하게 먼저 본다.
          */
         [[nodiscard]] static bool makeInstanceState( string_view baseStateXML, string_view overrideXML, string_view instanceName, string& outStateXML );
 
@@ -84,7 +84,7 @@ namespace sw
          * @brief @p overrideXML 의 `<Override>` · `<Remove>` · `<Add after>` 가 가리키는 컴포넌트가 @p baseStateXML 에 모두 있는지 봅니다. 프리팹 변형을 읽을 때 부릅니다.
          * @details 씬 인스턴스와 달리 변형은 저작 자산이다 — 없는 열쇠의 삭제 · 교체는 데이터 상속의 규칙대로 오류다. 없으면 이름과 함께 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool checkOverrideTargets( string_view baseStateXML, string_view overrideXML, string_view sourceName );
+        [[nodiscard]] static bool validateOverrideTargets( string_view baseStateXML, string_view overrideXML, string_view sourceName );
 
         /**
          * @brief @p overrideXML 이 컴포넌트 @p componentKey(비면 오브젝트 자기 칸)의 칸 @p fieldName 을 적었으면 true 입니다(더한 컴포넌트의 칸 포함). "이 칸이 어디서 왔나" 를 프리팹 변형 사슬에서 찾을 때 씁니다.

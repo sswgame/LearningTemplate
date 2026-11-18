@@ -45,7 +45,7 @@ namespace
             _pController->possess( *_pRiderPawn );
         }
 
-        void tick() { _manager.update( 1.0f / 60.0f ); }
+        void update() { _manager.update( 1.0f / 60.0f ); }
     };
 } // namespace
 
@@ -194,8 +194,8 @@ SW_TEST_CASE( VehicleSeatTest, RiderSurvivesTheVehicle )
     rig._pVehicleRoot->setLocalPosition( float3{ 2.0f, 0.0f, 0.0f } );
     const GameObjectHandle rider = rig._pRider->getHandle();
     rig._manager.destroyGameObject( rig._pVehicle );
-    rig.tick();
-    rig.tick();
+    rig.update();
+    rig.update();
     SW_REQUIRE_TRUE( rig._manager.resolveGameObject( rider ) == rig._pRider ); // 탑승자는 탈것의 일부가 아니다
     SW_EXPECT_NEAR( 2.0f, rig._pRiderRoot->getWorldPosition()._x, 1e-3f );     // 지금 자리에 남는다
     SW_EXPECT_TRUE( rig._pRiderRoot->getParent() == nullptr );
@@ -221,8 +221,8 @@ SW_TEST_CASE( VehicleSeatTest, SeatFreesWhenTheRiderIsGone )
     pHorseAI->possess( *rig._pVehiclePawn );
     SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
     rig._manager.destroyGameObject( rig._pRider );
-    rig.tick();
-    rig.tick();
+    rig.update();
+    rig.update();
     SW_EXPECT_TRUE( rig._pSeat->isFree() );
     SW_EXPECT_TRUE( rig._pVehiclePawn->getController() == pHorseAI->getHandle() ); // 사라진 탑승자의 조종자가 탈것을 들고 있지 않는다
 
@@ -272,7 +272,7 @@ SW_TEST_CASE( VehicleSeatTest, SeatMeasuresBrakingAndLeansTheRiderForward )
     {
         position += speed * kStep;
         rig._pVehicleRoot->setLocalPosition( float3{ 0.0f, 0.0f, position } );
-        rig.tick();
+        rig.update();
     }
     SW_EXPECT_NEAR( 0.0f, rig._pSeat->getRideAcceleration()._z, 0.5f );
     for ( int32 stepIndex = 0; stepIndex < 24; ++stepIndex ) // −20 m/s² 로 선다
@@ -280,13 +280,13 @@ SW_TEST_CASE( VehicleSeatTest, SeatMeasuresBrakingAndLeansTheRiderForward )
         speed = MathUtil::max( 0.0f, speed - 20.0f * kStep );
         position += speed * kStep;
         rig._pVehicleRoot->setLocalPosition( float3{ 0.0f, 0.0f, position } );
-        rig.tick();
+        rig.update();
     }
     SW_EXPECT_TRUE( rig._pSeat->getRideAcceleration()._z < -15.0f );
     SW_EXPECT_TRUE( rig._pSeat->getRiderLean()._x > 0.2f ); // 앞으로
     SW_EXPECT_NEAR( 0.0f, rig._pSeat->getRiderLean()._y, 1e-3f );
 
     SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
-    rig.tick();
+    rig.update();
     SW_EXPECT_NEAR( 0.0f, rig._pSeat->getRideAcceleration()._z, 1e-6f );
 }

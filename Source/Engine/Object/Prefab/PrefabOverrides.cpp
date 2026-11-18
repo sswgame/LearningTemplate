@@ -516,7 +516,7 @@ namespace sw
         return outStateXML.empty() == false;
     }
 
-    bool PrefabOverrides::checkOverrideTargets( string_view baseStateXML, string_view overrideXML, string_view sourceName )
+    bool PrefabOverrides::validateOverrideTargets( string_view baseStateXML, string_view overrideXML, string_view sourceName )
     {
         if ( StringUtil::trim( overrideXML ).empty() )
             return true;

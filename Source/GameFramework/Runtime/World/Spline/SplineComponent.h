@@ -35,7 +35,7 @@ namespace sw
         void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 조절점, 방식, 닫힘을 한 번에 바꾸고 곡선을 다시 만듭니다. */
-        void setControlPoints( const vector<float3>& listControlPoint, SplineType type, bool bClosed );
+        void setControlPoints( const vector<float3>& listControlPoint, SplineKind type, bool bClosed );
         /** @brief 지금 소유자의 월드 변환으로 월드 곡선을 다시 굳힙니다. */
         void bakeWorldPath();
 
@@ -58,7 +58,7 @@ namespace sw
         PROPERTY( Category = "Spline", DisplayName = "Samples Per Segment", Min = 1, Tooltip = "Arc-length table density" )
         int32 _samplesPerSegment;
         PROPERTY( Category = "Spline", DisplayName = "Type" )
-        SplineType _type;
+        SplineKind _type;
         PROPERTY( Category = "Spline", DisplayName = "Closed", Tooltip = "Loop back from the last point to the first" )
         bool _bClosed;
 

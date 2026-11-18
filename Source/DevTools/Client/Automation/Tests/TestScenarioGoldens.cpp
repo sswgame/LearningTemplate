@@ -33,7 +33,7 @@ namespace
          * @brief 한 폴더의 시나리오마다 `<ExpectImage>` 골든이 검증 체인 백엔드마다 있는지 봅니다. 시나리오가 없는 폴더면 false 입니다.
          * @details 백엔드를 고르는 시나리오(`<SkipUnless>` — 능력이 없는 백엔드는 건너뛴다, `<SwapBackend>` — 단언하는 때의 백엔드가 바뀐다)는 하나 이상이면 된다.
          */
-        static bool checkFolder( string_view folder, const vector<string>& listTag )
+        static bool validateFolder( string_view folder, const vector<string>& listTag )
         {
             vector<AssetID> listScenario;
             if ( AssetIO::collectAssets( AssetID{ folder }, ".scenario.xml", listScenario ) != AssetFolderListing::Listed )
@@ -86,13 +86,13 @@ SW_TEST_CASE( ScenarioGoldensTest, EveryChainBackendHasGoldens )
     const vector<string> listTag = Util::getWindowsChainTags();
     SW_REQUIRE_FALSE( listTag.empty() );
     const string gameFolder = "game/" + StringUtil::toLower( GameSelection::getName().c_str() ) + "/automation";
-    SW_EXPECT_TRUE( Util::checkFolder( "engine/automation", listTag ) );
-    (void)Util::checkFolder( "engine/automation/editor", listTag );
-    (void)Util::checkFolder( "engine/automation/rhiswap", listTag );
-    (void)Util::checkFolder( gameFolder, listTag ); // 시나리오가 없는 게임도 있다
-    (void)Util::checkFolder( gameFolder + "/desktop", listTag );
-    (void)Util::checkFolder( gameFolder + "/sequence", listTag );
-    (void)Util::checkFolder( gameFolder + "/showcase", listTag );
+    SW_EXPECT_TRUE( Util::validateFolder( "engine/automation", listTag ) );
+    (void)Util::validateFolder( "engine/automation/editor", listTag );
+    (void)Util::validateFolder( "engine/automation/rhiswap", listTag );
+    (void)Util::validateFolder( gameFolder, listTag ); // 시나리오가 없는 게임도 있다
+    (void)Util::validateFolder( gameFolder + "/desktop", listTag );
+    (void)Util::validateFolder( gameFolder + "/sequence", listTag );
+    (void)Util::validateFolder( gameFolder + "/showcase", listTag );
 }
 
 // 골든 꼬리는 쿠킹 표의 명령줄 이름이다 — 판정기에 따로 적은 표가 WebGPU 를 빠뜨려 그 백엔드의 골든을 뜰 수 없었다.

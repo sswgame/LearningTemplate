@@ -162,7 +162,7 @@ namespace sw
             const uint32 height = pState->_pTexture->getHeight();
             // 셋업에 없는 포맷은 등록(`CanvasTextureLeases::prepareTargets`)이 거절하고 알렸다 — 다른 포맷의 PSO 로 대신 그리지 않는다.
             RHIPipelineStateHandle pso{ 0 };
-            const bool             bHasPSO              = psoCache.findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat(), pso );
+            const bool             bHasPSO              = psoCache.findOutputPSO( RenderPassKind::Canvas, pState->_pTexture->getFormat(), pso );
             const bool             bInvalidCanvasTarget = bHasPSO == false || pso == 0 || width == 0 || height == 0;
             if ( bInvalidCanvasTarget )
                 continue;

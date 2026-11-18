@@ -437,8 +437,8 @@ namespace sw
                 return read;
             const int32 x = static_cast<int32>( MathUtil::round( args._x * static_cast<float32>( pWindow->getWidth() - 1 ) ) );
             const int32 y = static_cast<int32>( MathUtil::round( args._y * static_cast<float32>( pWindow->getHeight() - 1 ) ) );
-            runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeTouch( RawInputEventType::TouchDown, 0, x, y ) );
-            runner._inputScript.addSpanEnd( step._frameIndex + args._holdFrameCount, RawInputEvent::makeTouch( RawInputEventType::TouchUp, 0, x, y ), step._frameIndex );
+            runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeTouch( RawInputEventKind::TouchDown, 0, x, y ) );
+            runner._inputScript.addSpanEnd( step._frameIndex + args._holdFrameCount, RawInputEvent::makeTouch( RawInputEventKind::TouchUp, 0, x, y ), step._frameIndex );
             return {};
         }
 

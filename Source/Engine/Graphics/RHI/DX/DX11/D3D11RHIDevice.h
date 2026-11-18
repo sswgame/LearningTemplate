@@ -274,7 +274,7 @@ namespace sw
         /**
          * @class UploadStaging
          * @brief 큰 업로드 하나가 쓰는 스테이징 텍스처와, 그것이 업로드 스테이징 예산(`_uploadStagingBudget`)에서 잡은 바이트입니다. 옮길 수만 있습니다.
-         * @details 전송 큐 항목(`TransferProbe`)이 GPU 가 복사를 끝낼 때까지 쥐고, 소멸자가 예산과 GPU 메모리 추적기(Staging)를 돌려준다. 제출 도중의 이른 반환도
+         * @details 전송 큐 항목(`TransferFence`)이 GPU 가 복사를 끝낼 때까지 쥐고, 소멸자가 예산과 GPU 메모리 추적기(Staging)를 돌려준다. 제출 도중의 이른 반환도
          *          같은 소멸자로 돌려주므로 예산이 새는 길이 없다.
          */
         class UploadStaging
@@ -310,7 +310,7 @@ namespace sw
         };
 
         /// @brief 전송 큐 항목 하나입니다. 완료를 알리는 이벤트 쿼리와, 스테이징으로 올린 업로드면 그 스테이징(전송이 끝나 큐에서 빠질 때 놓인다)입니다.
-        struct TransferProbe
+        struct TransferFence
         {
             Microsoft::WRL::ComPtr<ID3D11Query> _query;
             UploadStaging                       _staging;
@@ -636,7 +636,7 @@ namespace sw
         RHITransferSerials _transferSerials;
         /// @brief 제출한 전송마다 이벤트 쿼리 하나(와 있으면 업로드 스테이징)를 제출 순서대로 쌓습니다. 앞에서부터 끝난 것만 워터마크를 올리고 스테이징을 놓습니다.
         ///        쿼리는 `_immediateContext.lock()` 가드 안에서만 만지고 풀(`_listFreeTransferQuery`)로 돌려 씁니다.
-        RHITransferFenceQueue<TransferProbe> _transferQueue;
+        RHITransferFenceQueue<TransferFence> _transferQueue;
         /// @brief 끝난 이벤트 쿼리 풀입니다. `_immediateContext.lock()` 가드로 보호합니다.
         vector<Microsoft::WRL::ComPtr<ID3D11Query>> _listFreeTransferQuery;
         /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).

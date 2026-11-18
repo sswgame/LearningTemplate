@@ -20,7 +20,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 
 namespace sw
 {
@@ -208,7 +208,7 @@ namespace sw
         {
             for ( const RenderGraphPassDesc& pass : listPass )
             {
-                if ( pass._type != RenderPassType::Compute )
+                if ( pass._type != RenderPassKind::Compute )
                     continue;
                 for ( const string& name : pass._listOutput )
                 {
@@ -299,7 +299,7 @@ namespace sw
          */
         static bool hasPixelStage( const RenderGraphPassDesc& pass, const vector<RenderPassAttachment>& listAttachment )
         {
-            const uint32 fallbackCount = getRenderPassTypeInfo( pass._type ).isDepthOnly() ? 0u : 1u;
+            const uint32 fallbackCount = getRenderPassKindInfo( pass._type ).isDepthOnly() ? 0u : 1u;
             return collectColorOutputFormats( pass, listAttachment, nullptr, kMaxColorAttachments, fallbackCount ) > 0;
         }
 

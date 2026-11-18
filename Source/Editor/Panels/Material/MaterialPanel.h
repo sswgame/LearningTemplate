@@ -3,7 +3,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
-#include "Editor/Panels/Material/Model/MaterialModel.h"
+#include "Editor/Panels/Material/Model/MaterialViewModel.h"
 
 namespace sw::editor
 {
@@ -11,7 +11,7 @@ namespace sw::editor
      * @brief 마스터 머티리얼 XML을 편집합니다.
      * @details 미리보기는 둘이다 — 렌더러가 그리는 미리보기 씬의 구(`EditorPreviewPanel`, 메인 씬과 섞이지 않는다)와,
      *          값으로 CPU 에서 셰이딩한 작은 구(`MaterialPreviewInputs` — 렌더 타깃이 없을 때의 폴백이자 감시 값 `Editor.MaterialPreviewRedMinusBlue` 의 출처).
-     *          편집 사본 · 입력란 · 읽기 · 쓰기 · 미리보기 구 걸기는 `MaterialModel`(Model/, ImGui 없음)이 들고, 이 창은 위젯 · CPU 구 그리기와 문서 dirty · 되돌리기 기록만 맡는다.
+     *          편집 사본 · 입력란 · 읽기 · 쓰기 · 미리보기 구 걸기는 `MaterialViewModel`(Model/, ImGui 없음)이 들고, 이 창은 위젯 · CPU 구 그리기와 문서 dirty · 되돌리기 기록만 맡는다.
      */
     class MaterialPanel : public EditorPreviewPanel
     {
@@ -50,7 +50,7 @@ namespace sw::editor
         void drawPropertyList();
 
     private:
-        MaterialModel                          _model;
+        MaterialViewModel                      _model;
         fixed_string<constant::buffer::kMax64> _propertyFilter; ///< 프로퍼티 검색 글(이름 · 표시 이름 부분 일치)
     };
 } // namespace sw::editor

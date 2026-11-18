@@ -51,7 +51,7 @@ namespace
         {
             vector<uint8>  buffer;
             int32          connectionID = -1;
-            NetChannelType channel      = NetChannelType::Unreliable;
+            NetChannelKind channel      = NetChannelKind::Unreliable;
             for ( int32 tick = 0; tick < tickCount; ++tick )
             {
                 server.update( 1.0f / 20.0f );

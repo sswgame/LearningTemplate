@@ -67,22 +67,22 @@ namespace sw
             {
                 switch ( value._type )
                 {
-                    case TelemetryFieldType::Bool:
+                    case TelemetryFieldKind::Bool:
                     {
                         target.setBool( value._bValue == SW_TRUE );
                         break;
                     }
-                    case TelemetryFieldType::Int:
+                    case TelemetryFieldKind::Int:
                     {
                         target.setInt( value._integer );
                         break;
                     }
-                    case TelemetryFieldType::Float:
+                    case TelemetryFieldKind::Float:
                     {
                         target.setFloat( value._number );
                         break;
                     }
-                    case TelemetryFieldType::String:
+                    case TelemetryFieldKind::String:
                     {
                         target.setString( value._text );
                         break;
@@ -94,22 +94,22 @@ namespace sw
             {
                 switch ( value._type )
                 {
-                    case TelemetryFieldType::Bool:
+                    case TelemetryFieldKind::Bool:
                     {
                         text.append( value._bValue == SW_TRUE ? "true" : "false" );
                         break;
                     }
-                    case TelemetryFieldType::Int:
+                    case TelemetryFieldKind::Int:
                     {
                         text.appendFormat( "%#", value._integer );
                         break;
                     }
-                    case TelemetryFieldType::Float:
+                    case TelemetryFieldKind::Float:
                     {
                         text.appendFormat( "%.3f", value._number );
                         break;
                     }
-                    case TelemetryFieldType::String:
+                    case TelemetryFieldKind::String:
                     {
                         text.append( value._text.c_str() );
                         break;
@@ -477,7 +477,7 @@ namespace sw
         for ( const TelemetryValue& value : event.getValues() )
         {
             const TelemetryFieldDef* pField   = pDef->findField( value._name );
-            const bool               bIntOk   = pField != nullptr && pField->_type == TelemetryFieldType::Float && value._type == TelemetryFieldType::Int;
+            const bool               bIntOk   = pField != nullptr && pField->_type == TelemetryFieldKind::Float && value._type == TelemetryFieldKind::Int;
             const bool               bMatches = pField != nullptr && ( pField->_type == value._type || bIntOk );
             if ( bMatches )
                 continue;

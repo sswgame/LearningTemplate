@@ -42,11 +42,11 @@ namespace sw
     };
 
     /**
-     * @enum PackCompressionType
+     * @enum PackCompressionKind
      * @brief 팩 안 파일의 압축 코덱 식별자입니다. 코덱은 팩 단위입니다 — 리더가 헤더의 코덱 하나로 모든 항목을 풉니다.
      */
     ENUM()
-    enum class PackCompressionType : uint8
+    enum class PackCompressionKind : uint8
     {
         None   = 0, ///< 압축하지 않음(그대로 통과)
         RLE    = 1, ///< 빠른 Run-Length Encoding
@@ -84,14 +84,14 @@ namespace sw
     inline constexpr uint8 kPackEntryStorageCount = 2;
 
     // **값은 디스크에 박힌다. 새 코덱은 뒤에 덧붙이기만 한다.** 기존 값을 옮기면 이미 쿠킹된 팩을
-    // 못 읽는다. 스트림 쪽 `CompressionCodecType` 과는 일부러 값이 다르다(독립된 포맷이다).
+    // 못 읽는다. 스트림 쪽 `CompressionCodecKind` 과는 일부러 값이 다르다(독립된 포맷이다).
 
     /**
-     * @enum PackEncryptionType
+     * @enum PackEncryptionKind
      * @brief 팩 암호화 방식 식별자입니다.
      */
     ENUM()
-    enum class PackEncryptionType : uint8
+    enum class PackEncryptionKind : uint8
     {
         None      = 0, ///< 암호화 없음
         SimpleXor = 1, ///< 빠른 롤링 XOR(난독화)
@@ -148,8 +148,8 @@ namespace sw
         uint32 _magic{ 0 };            ///< 'SWPK' 매직 (offset 0)
         uint32 _formatVersion{ 0 };    ///< 포맷 버전 (offset 4)
         uint32 _dlcAppID{ 0 };         ///< DLC 식별자(0: 본편/공용, >0: 유료 DLC AppID) (offset 8)
-        uint8  _compressionType{ 0 };  ///< 팩 전체에 적용된 압축 코덱(`PackCompressionType`) (offset 12)
-        uint8  _encryptionType{ 0 };   ///< 암호화 방식(`PackEncryptionType`) (offset 13)
+        uint8  _compressionType{ 0 };  ///< 팩 전체에 적용된 압축 코덱(`PackCompressionKind`) (offset 12)
+        uint8  _encryptionType{ 0 };   ///< 암호화 방식(`PackEncryptionKind`) (offset 13)
         uint16 _sectorAlignment{ 0 };  ///< 섹터 정렬 경계(`kPackSectorAlignment`) (offset 14)
         uint16 _flags{ 0 };            ///< 팩 플래그 비트마스크(`PackFlag`) (offset 16)
         uint32 _fileCount{ 0 };        ///< 팩에 포함된 파일 총 개수 (offset 18)

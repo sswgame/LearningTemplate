@@ -132,7 +132,7 @@ namespace sw
         {
             const float32 size   = static_cast<float32>( def._footprint ) * _footprintFill / _modelWidth;
             float32       height = 1.0f;
-            if ( pUnit->isResource() && def._resourceType != RTSResourceType::Gas )
+            if ( pUnit->isResource() && def._resourceType != RTSResourceKind::Gas )
                 height = 0.4f + 0.6f * ( def._resourceAmount > 0 ? static_cast<float32>( pUnit->_resourceLeft ) / static_cast<float32>( def._resourceAmount ) : 1.0f );
             else if ( pUnit->isBuilding() )
                 height = 0.2f + 0.8f * MathUtil::clamp( pUnit->_buildProgress, 0.0f, 1.0f );

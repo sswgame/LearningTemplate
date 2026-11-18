@@ -1,5 +1,5 @@
 /**
- * depth_of_field.hlsl — 피사계 심도 패스(RenderPassType::DepthOfField).
+ * depth_of_field.hlsl — 피사계 심도 패스(RenderPassKind::DepthOfField).
  *
  * 입력은 HDR 색(SourceColor)과 장면 깊이(SceneDepth), 출력은 같은 형식의 색이다. 렌즈 값은 PassCB 의 g_CameraLens 이고 엔진이 뷰마다 채운다
  * (FramePassExecutor::applyViewPassConstants — 카메라의 CameraDepthOfFieldValues 에서 얇은 렌즈 식으로 착란원 배율을 구한다).

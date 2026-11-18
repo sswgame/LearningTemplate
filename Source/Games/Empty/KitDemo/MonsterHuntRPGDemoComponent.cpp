@@ -9,8 +9,8 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Rule/MonsterHuntBestiary.h"
-#include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Rule/MonsterHuntContract.h"
+#include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntBestiary.h"
+#include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntContract.h"
 
 namespace sw
 {

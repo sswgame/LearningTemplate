@@ -148,7 +148,7 @@ namespace
         void start( const vector<MatchModeDef>& listMode ) { SW_EXPECT_TRUE( _queue.initialize( makeDependencies(), listMode ) ); }
 
         /** @brief 임대 · 서버 목록 · 매처를 한 번 돌리고, 캐시 답과 버스 메시지를 끝까지 나눠 줍니다. */
-        void tick( int64 nowMs )
+        void update( int64 nowMs )
         {
             _queue.update( UnixMilliseconds{ nowMs } );
             poll( nowMs );
@@ -250,8 +250,8 @@ namespace
             _server.start( listMode );
             _game.start( _server._router, kNowMs );
             _server.poll( kNowMs );
-            _server.tick( kNowMs ); // 첫 읽기를 맡긴다
-            _server.tick( kNowMs ); // 답을 스냅숏에 넣는다
+            _server.update( kNowMs ); // 첫 읽기를 맡긴다
+            _server.update( kNowMs ); // 답을 스냅숏에 넣는다
         }
     };
 
@@ -275,12 +275,12 @@ namespace
         {
         }
 
-        void tickBoth( int64 nowMs )
+        void updateBoth( int64 nowMs )
         {
             for ( int32 round = 0; round < 3; ++round )
             {
-                _serverA.tick( nowMs );
-                _serverB.tick( nowMs );
+                _serverA.update( nowMs );
+                _serverB.update( nowMs );
             }
         }
 
@@ -290,8 +290,8 @@ namespace
             _serverA.start( listMode );
             _serverB.start( listMode );
             _game.start( _serverA._router, kNowMs );
-            _serverA.tick( kNowMs );
-            tickBoth( kNowMs );
+            _serverA.update( kNowMs );
+            updateBoth( kNowMs );
             SW_REQUIRE_TRUE( _serverA._queue.isAuthority( "duel" ) );
             SW_REQUIRE_TRUE( _serverB._queue.isAuthority( "duel" ) == false );
         }
@@ -356,7 +356,7 @@ SW_TEST_CASE( MatchQueueServiceTest, FormedMatchIsPlacedOnAServer )
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
 
-    world._server.tick( kNowMs + 1 );
+    world._server.update( kNowMs + 1 );
     const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listFound.size() );
     const MatchAssignment& first  = listFound[0]._assignment;
@@ -383,14 +383,14 @@ SW_TEST_CASE( MatchQueueServiceTest, UnplacedMatchWaitsThenGivesUp )
     world._server.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
-    world._server.tick( kNowMs );
+    world._server.update( kNowMs );
     SW_EXPECT_TRUE( world._server.takeNotifications().empty() );
     SW_EXPECT_EQUAL( 2, world._server._queue.getLocalTicketCount() );
 
-    world._server.tick( kNowMs + MatchQueueLimit::kNoServerGiveUpMs - 1 );
+    world._server.update( kNowMs + MatchQueueLimit::kNoServerGiveUpMs - 1 );
     SW_EXPECT_TRUE( world._server.takeNotifications().empty() );
 
-    world._server.tick( kNowMs + MatchQueueLimit::kNoServerGiveUpMs );
+    world._server.update( kNowMs + MatchQueueLimit::kNoServerGiveUpMs );
     const vector<MatchQueueNotification> listGaveUp = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listGaveUp.size() );
     SW_EXPECT_TRUE( listGaveUp[0]._assignment._result == MatchQueueResult::NoServer );
@@ -403,7 +403,7 @@ SW_TEST_CASE( MatchQueueServiceTest, TicketTimesOutAtModeDeadline )
     SoloWorld world;
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
-    world._server.tick( kNowMs + kMaxWait + 1 );
+    world._server.update( kNowMs + kMaxWait + 1 );
     const vector<MatchQueueNotification> listTimedOut = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 1 ), listTimedOut.size() );
     SW_EXPECT_TRUE( listTimedOut[0]._assignment._result == MatchQueueResult::Timeout );
@@ -424,19 +424,19 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingComesFromStatSource )
     SW_REQUIRE_TRUE( world._server._queue.initialize( dependencies, vector<MatchModeDef>{ mode } ) );
     world._game.start( world._server._router, kNowMs );
     world._server.poll( kNowMs );
-    world._server.tick( kNowMs );
-    world._server.tick( kNowMs );
+    world._server.update( kNowMs );
+    world._server.update( kNowMs );
 
     stats._mapStat[kAlice] = 3000;
     stats._mapStat[kBob]   = -1; // 한 번도 바뀌지 않았다 — 초기 실력 1500
     stats._mapStat[kCarol] = 3050;
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
-    world._server.tick( kNowMs + 1 );
+    world._server.update( kNowMs + 1 );
     SW_EXPECT_TRUE( world._server.takeNotifications().empty() ); // 3000 과 1500 은 묶이지 않는다
 
     SW_EXPECT_TRUE( world._server.join( kCarol )._result == MatchmakingResult::Ok );
-    world._server.tick( kNowMs + 2 );
+    world._server.update( kNowMs + 2 );
     const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listFound.size() );
     for ( const MatchQueueNotification& notification : listFound )
@@ -460,7 +460,7 @@ SW_TEST_CASE( MatchQueueServiceTest, AuthorityRunsMatchesAcrossServers )
     SW_EXPECT_EQUAL( 2, world._serverA._queue.getQueuedTicketCount( "duel" ) );
     SW_EXPECT_EQUAL( 0, world._serverB._queue.getQueuedTicketCount( "duel" ) );
 
-    world.tickBoth( kNowMs + 1 );
+    world.updateBoth( kNowMs + 1 );
     const vector<MatchQueueNotification> listA = world._serverA.takeNotifications();
     const vector<MatchQueueNotification> listB = world._serverB.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 1 ), listA.size() );
@@ -501,7 +501,7 @@ SW_TEST_CASE( MatchQueueServiceTest, LeaveRacingAFormedMatchYieldsToFound )
     SW_EXPECT_TRUE( world._serverB.join( kBob )._result == MatchmakingResult::Ok );
     world._serverA.poll( kNowMs );
     SW_EXPECT_TRUE( world._serverA.join( kAlice )._result == MatchmakingResult::Ok );
-    world._serverA.tick( kNowMs + 1 ); // 경기가 났다 — 밥의 Found 는 아직 버스 위다
+    world._serverA.update( kNowMs + 1 ); // 경기가 났다 — 밥의 Found 는 아직 버스 위다
     world._serverB._queue.leaveQueue( kBob, 9 );
     world._serverA.poll( kNowMs + 1 ); // 이미 짝지어졌으니 빼지 않는다
     world._serverB.poll( kNowMs + 1 );
@@ -519,9 +519,9 @@ SW_TEST_CASE( MatchQueueServiceTest, LeaveWithoutAuthorityEndsAtTheConfirmDeadli
     SW_EXPECT_TRUE( world._serverB.join( kBob )._result == MatchmakingResult::Ok );
     // 권한 서버 A 를 돌리지 않는다 — 빼 달라는 버스 메시지에 아무도 답하지 않는다
     world._serverB._queue.leaveQueue( kBob, 8 );
-    world._serverB.tick( kNowMs + 3000 );
+    world._serverB.update( kNowMs + 3000 );
     SW_EXPECT_EQUAL( 1, world._serverB._queue.getLocalTicketCount() );
-    world._serverB.tick( kNowMs + 3001 );
+    world._serverB.update( kNowMs + 3001 );
     SW_EXPECT_EQUAL( 0, world._serverB._queue.getLocalTicketCount() );
     SW_EXPECT_TRUE( world._serverB.takeCompletion()._result == MatchmakingResult::Ok );
 }
@@ -537,18 +537,18 @@ SW_TEST_CASE( MatchQueueServiceTest, AuthorityFailsOverAndLostTicketsTimeOut )
 
     world._clock.advanceMilliseconds( MatchQueueLimit::kLeaseTTLMs + 1 );
     const int64 takeoverMs = kNowMs + MatchQueueLimit::kLeaseTTLMs + 1;
-    world._serverB.tick( takeoverMs ); // A 는 돌지 않는다
+    world._serverB.update( takeoverMs ); // A 는 돌지 않는다
     SW_EXPECT_TRUE( world._serverB._queue.isAuthority( "duel" ) );
 
-    world._serverA.tick( takeoverMs ); // 돌아온 A 는 비교 후 쓰기에 진다
+    world._serverA.update( takeoverMs ); // 돌아온 A 는 비교 후 쓰기에 진다
     SW_EXPECT_FALSE( world._serverA._queue.isAuthority( "duel" ) );
     SW_EXPECT_EQUAL( 0, world._serverA._queue.getQueuedTicketCount( "duel" ) );
 
     SW_EXPECT_TRUE( world._serverB.takeNotifications().empty() );
     const int64 deadlineMs = kNowMs + kMaxWait + MatchQueueLimit::kNoServerGiveUpMs + MatchQueueLimit::kResultGraceMs;
-    world._serverB.tick( deadlineMs );
+    world._serverB.update( deadlineMs );
     SW_EXPECT_TRUE( world._serverB.takeNotifications().empty() ); // 시한과 같은 시각은 아직 안 끝났다
-    world._serverB.tick( deadlineMs + 1 );
+    world._serverB.update( deadlineMs + 1 );
     const vector<MatchQueueNotification> listTimedOut = world._serverB.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 1 ), listTimedOut.size() );
     SW_EXPECT_TRUE( listTimedOut[0]._assignment._result == MatchQueueResult::Timeout );
@@ -565,7 +565,7 @@ SW_TEST_CASE( MatchQueueServiceTest, GameServerAcceptsFromMatchRecordWithoutBus 
 
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
-    world._server.tick( kNowMs + 1 );
+    world._server.update( kNowMs + 1 );
     const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listFound.size() );
     SW_EXPECT_TRUE( listFound[0]._assignment._result == MatchQueueResult::Found );
@@ -615,7 +615,7 @@ SW_TEST_CASE( MatchQueueServiceTest, BackfillFillsRunningMatchFirst )
 
     SW_EXPECT_TRUE( world._server._queue.submitBackfill( request ) == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
-    world._server.tick( kNowMs + 1 );
+    world._server.update( kNowMs + 1 );
     const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 1 ), listFound.size() );
     SW_EXPECT_TRUE( listFound[0]._assignment._result == MatchQueueResult::Found );
@@ -638,7 +638,7 @@ SW_TEST_CASE( MatchQueueServiceTest, MatchRecordWriteFailureEndsAsNoServer )
 
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
-    world._server.tick( kNowMs + 1 );
+    world._server.update( kNowMs + 1 );
     const vector<MatchQueueNotification> listResult = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listResult.size() );
     SW_EXPECT_TRUE( listResult[0]._assignment._result == MatchQueueResult::NoServer );
@@ -676,7 +676,7 @@ SW_TEST_CASE( MatchQueueServiceTest, RefusedConnectReadsMatchListAtOnce )
 
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
-    world._server.tick( kNowMs + 1 );
+    world._server.update( kNowMs + 1 );
     SW_REQUIRE_EQUAL( size_t( 2 ), world._server.takeNotifications().size() );
 
     SW_EXPECT_FALSE( agent.isAccepted( kAlice ) ); // 첫 시도는 거절된다
@@ -720,9 +720,9 @@ SW_TEST_CASE( MatchQueueServiceTest, BackfillSenderFillsServerFromDescriptor )
     SW_EXPECT_TRUE( sender.submitBackfill( badShape, UnixMilliseconds{ kNowMs } ).hasError( OnlineError::kInvalidRequest ) );
 
     SW_EXPECT_TRUE( sender.submitBackfill( slots, UnixMilliseconds{ kNowMs } ) == MatchmakingResult::Ok );
-    world.tickBoth( kNowMs );
+    world.updateBoth( kNowMs );
     SW_EXPECT_TRUE( world._serverA.join( kAlice )._result == MatchmakingResult::Ok );
-    world.tickBoth( kNowMs + 1 );
+    world.updateBoth( kNowMs + 1 );
     const vector<MatchQueueNotification> listFound = world._serverA.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 1 ), listFound.size() );
     SW_EXPECT_TRUE( listFound[0]._assignment._result == MatchQueueResult::Found );
@@ -752,8 +752,8 @@ SW_TEST_CASE( MatchQueueServiceTest, LobbyPlacementKeepsTeams )
 
     world._game.start( world._server._router, kNowMs, "eu" ); // 로비는 다른 지역도 받는다
     world._server.poll( kNowMs );
-    world._server.tick( kNowMs + 2001 );
-    world._server.tick( kNowMs + 2001 );
+    world._server.update( kNowMs + 2001 );
+    world._server.update( kNowMs + 2001 );
     world._server._queue.placeLobby( lobby, UnixMilliseconds{ kNowMs + 2001 } );
     world._server.poll( kNowMs + 2001 ); // Found 는 명단 기록이 남은 뒤에 간다
     listResult = world._server.takeNotifications();
@@ -908,8 +908,8 @@ namespace
             MatchQueueDependencies dependenciesB = _pair._serverB.makeDependencies();
             dependenciesB._pPartyLobby           = &_partyB;
             SW_EXPECT_TRUE( _pair._serverB._queue.initialize( dependenciesB, listMode ) );
-            _pair._serverA.tick( kNowMs );
-            _pair.tickBoth( kNowMs );
+            _pair._serverA.update( kNowMs );
+            _pair.updateBoth( kNowMs );
             SW_EXPECT_TRUE( _pair._serverA._queue.isAuthority( "duel" ) );
         }
 
@@ -991,12 +991,12 @@ SW_TEST_CASE( MatchQueueServiceTest, MissingRatingIsLoadedBeforeQueueing )
     queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 8 );
     SW_EXPECT_TRUE( world._server.takeCompletion()._result == MatchmakingResult::AlreadyQueued );
 
-    world._server.tick( kNowMs + 1 );
+    world._server.update( kNowMs + 1 );
     queue.takeCompletions( listCompletion );
     SW_EXPECT_TRUE( listCompletion.empty() ); // 아직 읽지 못했다
 
     stats._mapStat[kAlice] = 1600;
-    world._server.tick( kNowMs + 2 );
+    world._server.update( kNowMs + 2 );
     const MatchQueueCompletion joined = world._server.takeCompletion();
     SW_EXPECT_TRUE( joined._result == MatchmakingResult::Ok );
     SW_EXPECT_EQUAL( uint64( 7 ), joined._requestTag );
@@ -1015,7 +1015,7 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingWaitGivesUpOrIsDropped )
     MatchQueueService& queue = world._server._queue;
 
     queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
-    world._server.tick( kNowMs + MatchQueueLimit::kRatingWaitMs );
+    world._server.update( kNowMs + MatchQueueLimit::kRatingWaitMs );
     SW_EXPECT_TRUE( world._server.takeCompletion()._result == MatchmakingResult::RatingUnavailable );
     SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() );
     SW_EXPECT_EQUAL( 0, stats._mapRetained[kAlice] );
@@ -1026,7 +1026,7 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingWaitGivesUpOrIsDropped )
     SW_EXPECT_TRUE( world._server.takeCompletion()._result == MatchmakingResult::NotQueued );
     SW_EXPECT_EQUAL( 0, stats._mapRetained[kBob] );
     stats._mapStat[kBob] = 1500;
-    world._server.tick( kNowMs + 1 );
+    world._server.update( kNowMs + 1 );
     SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() ); // 떠난 사람의 티켓이 생기지 않는다
 }
 
@@ -1050,7 +1050,7 @@ SW_TEST_CASE( MatchQueueServiceTest, LeftPlayerSeatIsBackfilledOnce )
 
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
-    world._server.tick( kNowMs + 1 );
+    world._server.update( kNowMs + 1 );
     const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listFound.size() );
     const MatchAssignment& aliceFound = listFound[0]._recipientID == kAlice ? listFound[0]._assignment : listFound[1]._assignment;
@@ -1063,7 +1063,7 @@ SW_TEST_CASE( MatchQueueServiceTest, LeftPlayerSeatIsBackfilledOnce )
     SW_EXPECT_TRUE( sender.submitPlayerLeft( kAlice, UnixMilliseconds{ kNowMs + 2 } ) == MatchmakingResult::NotQueued ); // 자리 하나는 한 번만
 
     SW_EXPECT_TRUE( world._server.join( kCarol, kNowMs + 3 )._result == MatchmakingResult::Ok );
-    world._server.tick( kNowMs + 3 );
+    world._server.update( kNowMs + 3 );
     const vector<MatchQueueNotification> listFilled = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 1 ), listFilled.size() );
     SW_EXPECT_EQUAL( kCarol, listFilled[0]._recipientID );

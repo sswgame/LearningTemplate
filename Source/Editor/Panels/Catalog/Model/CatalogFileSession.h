@@ -50,7 +50,7 @@ namespace sw::editor
          * @brief 저장 직전에 부릅니다. 지금 디스크의 글을 넘깁니다.
          * @return 써도 되면 true 입니다. 파일이 연 뒤 밖에서 바뀌었으면 첫 번에는 false 이고 상태 줄이 알립니다. 같은 글로 다시 부르면 true 입니다.
          */
-        [[nodiscard]] bool checkDiskBeforeSave( string_view diskText );
+        [[nodiscard]] bool validateDiskBeforeSave( string_view diskText );
         /** @brief 쓰기에 성공한 뒤 부릅니다. 저장 직전 디스크의 글을 "이전 파일" 로 남깁니다. */
         void onSaved();
         /** @brief 저장 직전 글이 지금 디스크와 달라 되돌릴 것이 있으면 true 입니다. */

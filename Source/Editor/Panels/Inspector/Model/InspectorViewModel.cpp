@@ -65,7 +65,7 @@ namespace sw::editor
 
             static GameObject* findMainObject( uint64 objectID )
             {
-                return objectID != 0 ? PropertyGridModel::findSceneObject( EditorPropertyGridScope::MainScene, objectID ) : nullptr;
+                return objectID != 0 ? PropertyGridViewModel::findSceneObject( EditorPropertyGridScope::MainScene, objectID ) : nullptr;
             }
 
             /** @brief 오브젝트의 컴포넌트 카드를 채웁니다. 스크롤 요청은 그 컴포넌트 카드에 표시한다. */
@@ -362,7 +362,7 @@ namespace sw::editor
         const EditorPropertyGridScope scope = _shownScope;
         InspectorViewModelInternal::requestSceneEdit( [scope, objectID, componentID, bActive]( EditorTransaction& transaction )
         {
-            GameObject* pObj  = PropertyGridModel::findSceneObject( scope, objectID );
+            GameObject* pObj  = PropertyGridViewModel::findSceneObject( scope, objectID );
             Component*  pComp = pObj != nullptr ? pObj->findComponentByID( componentID ) : nullptr;
             if ( pComp != nullptr )
                 InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Toggle Component Active", [pComp, bActive]()
@@ -375,7 +375,7 @@ namespace sw::editor
         const EditorPropertyGridScope scope = _shownScope;
         InspectorViewModelInternal::requestSceneEdit( [scope, objectID, componentID]( EditorTransaction& /*transaction*/ )
         {
-            GameObject* pObj  = PropertyGridModel::findSceneObject( scope, objectID );
+            GameObject* pObj  = PropertyGridViewModel::findSceneObject( scope, objectID );
             Component*  pComp = pObj != nullptr ? pObj->findComponentByID( componentID ) : nullptr;
             if ( pComp != nullptr )
                 EditorSceneObjectCommands::removeComponent( pObj, pComp ); // 메뉴의 Remove Component 와 같은 한 곳
@@ -521,14 +521,14 @@ namespace sw::editor
 
     SceneEditRequestResult InspectorViewModel::addComponent( const hashed_string& typeName )
     {
-        if ( PropertyGridModel::findSceneObject( _shownScope, _shownObjectID ) == nullptr )
+        if ( PropertyGridViewModel::findSceneObject( _shownScope, _shownObjectID ) == nullptr )
             return SceneEditRequestResult::Rejected;
         // 더하기는 게임 스레드가 한다 — 여기서는 요청만 남긴다. 더하지 못한 이유는 그때 명령이 알린다.
         const EditorPropertyGridScope scope    = _shownScope;
         const uint64                  objectID = _shownObjectID;
         InspectorViewModelInternal::requestSceneEdit( [scope, objectID, typeName]( EditorTransaction& transaction )
         {
-            GameObject* pObj = PropertyGridModel::findSceneObject( scope, objectID );
+            GameObject* pObj = PropertyGridViewModel::findSceneObject( scope, objectID );
             if ( pObj != nullptr )
                 (void)EditorSceneCommands::addComponent( transaction, pObj, typeName );
         } );

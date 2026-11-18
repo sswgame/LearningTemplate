@@ -505,7 +505,7 @@ namespace sw
                     SW_LOG_WARNING_ID( "Headless.ContentHashCacheDropped", "Content hash cache dropped - every input is hashed again: %# (%#)", hashLoad.error().message(), hashLoad.error().detail() );
                 [[maybe_unused]] const uint64 hashedBytesBefore = hashCache.getHashedByteCount(); // 로그로만 쓴다(Shipping 은 빠진다)
                 // 입력 맵 묶음은 게임 시작의 검사와 같은 길로 먼저 본다 — 겹친 묶음은 배포본이 뜨지 않으므로 구울 까닭이 없다. 쿠킹 세션 밖이다(출력의 입력이 아니다).
-                if ( InputMapBundle::checkPack( engine::getSubsystem<GameConfig>()._packRoot.get() ) == false )
+                if ( InputMapBundle::validatePack( engine::getSubsystem<GameConfig>()._packRoot.get() ) == false )
                 {
                     SW_LOG_ERROR_ID( "Headless.InputMapBundleRejected", "Cooking stopped: the input map bundle of the active game pack was rejected (listed above)" );
                     inoutState._bFailed = SW_TRUE;

@@ -62,9 +62,9 @@ namespace sw
             (void)params;
             SW_LOG_WARNING_ID( "FileDialog.FileDialogNotSupported", "The file dialog is not supported on this platform." );
 #endif
-            // 저장 자리가 리소스 트리(`Content/`) 아래면 그 아래 이름을 소문자로 접는다 — 리소스 id 는 소문자이고, 쓰기 경로의 이름 규칙(`AssetPaths::checkLowercaseResourceName`)은
+            // 저장 자리가 리소스 트리(`Content/`) 아래면 그 아래 이름을 소문자로 접는다 — 리소스 id 는 소문자이고, 쓰기 경로의 이름 규칙(`AssetPaths::validateLowercaseResourceName`)은
             // 대문자 새 파일을 거절한다. 사람이 대화상자에 `MyLevel` 이라 적어도 저장은 된다(언리얼도 새 애셋 이름을 패키지 규칙으로 맞춘다).
-            if ( bSuccess && params._type == FileDialogParams::Type::Save )
+            if ( bSuccess && params._type == FileDialogParams::Kind::Save )
             {
                 for ( string& path : listResult )
                 {
