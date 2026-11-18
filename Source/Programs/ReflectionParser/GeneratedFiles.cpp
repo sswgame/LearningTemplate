@@ -130,19 +130,6 @@ namespace sw
                 hash = HashUtil::combine( hash, static_cast<uint64>( text.size() ) );
                 return HashUtil::combine( hash, HashUtil::computeStringHash64( text, false ) );
             }
-
-            /**
-             * @brief 파일의 마지막 쓰기 시각입니다. 없으면 0 입니다.
-             * @details `getFileTimestamp` 는 **초 단위**라 생성 직후 같은 초에 고친 편집을 "최신" 으로 봅니다. 여기서는 파일끼리
-             *          선후만 비교하므로 플랫폼 단위 그대로의 `getFileStamp` 시각을 씁니다.
-             */
-            static uint64 getWriteTime( const string_view path )
-            {
-                FileStamp stamp;
-                if ( path.empty() || FileUtil::getFileStamp( path, stamp ) == false )
-                    return 0;
-                return stamp._writeTime;
-            }
         };
     } // namespace
 } // namespace sw
@@ -222,7 +209,11 @@ namespace sw
 
     uint64 GeneratedFileUtil::getWriteTime( string_view path )
     {
-        return GeneratedFilesInternal::getWriteTime( path );
+        // `getFileTimestamp` 는 초 단위라 생성 직후 같은 초에 고친 편집을 "최신" 으로 본다. 파일끼리 선후만 비교하므로 플랫폼 단위 그대로의 `getFileStamp` 시각을 쓴다.
+        FileStamp stamp;
+        if ( path.empty() || FileUtil::getFileStamp( path, stamp ) == false )
+            return 0;
+        return stamp._writeTime;
     }
 
     bool GeneratedFileUtil::readStamp( const string& stampPath, GeneratedStamp& outStamp )
@@ -239,7 +230,7 @@ namespace sw
         const string markerPath = FileUtil::joinPath( outputDir, GeneratedFilesInternal::kRunMarkerName );
         if ( FileUtil::writeTextFile( markerPath, "ReflectionParser run marker - its write time is the start of the last run\n" ) == false )
             return 0;
-        return GeneratedFilesInternal::getWriteTime( markerPath );
+        return GeneratedFileUtil::getWriteTime( markerPath );
     }
 
     uint64 IncrementalCheck::makeArgsHash( const ParserOptions& options )
@@ -283,7 +274,7 @@ namespace sw
 
         for ( const string& toolFile : listToolFile )
         {
-            const uint64 writeTime = GeneratedFilesInternal::getWriteTime( toolFile );
+            const uint64 writeTime = GeneratedFileUtil::getWriteTime( toolFile );
             if ( writeTime > _newestToolWriteTime )
                 _newestToolWriteTime = writeTime;
         }
@@ -294,14 +285,14 @@ namespace sw
 
     bool IncrementalCheck::isUpToDate( const string& inputFile, const GeneratedPaths& paths ) const
     {
-        const uint64 stampTime     = GeneratedFilesInternal::getWriteTime( paths._stampPath );
+        const uint64 stampTime     = GeneratedFileUtil::getWriteTime( paths._stampPath );
         const bool   bStampMissing = stampTime == 0 || FileUtil::exists( paths._cppPath ) == false || FileUtil::exists( paths._headerPath ) == false ||
                                    FileUtil::exists( paths._editorMetadataPath ) == false;
         if ( bStampMissing )
             return false;
 
         // 스탬프 파일의 시각은 **도구**가 더 새로운지만 가린다. 입력은 스탬프에 적힌 "파싱 전에 본 시각" 과 같은지로 본다(아래).
-        const uint64 inputTime = GeneratedFilesInternal::getWriteTime( inputFile );
+        const uint64 inputTime = GeneratedFileUtil::getWriteTime( inputFile );
         if ( inputTime == 0 || stampTime < _newestToolWriteTime )
             return false;
 
@@ -324,7 +315,7 @@ namespace sw
         {
             auto cacheIt = _mapDependencyWriteTime.find( dependency._path );
             if ( cacheIt == _mapDependencyWriteTime.end() )
-                cacheIt = _mapDependencyWriteTime.emplace( dependency._path, GeneratedFilesInternal::getWriteTime( dependency._path ) ).first;
+                cacheIt = _mapDependencyWriteTime.emplace( dependency._path, GeneratedFileUtil::getWriteTime( dependency._path ) ).first;
             if ( dependency._writeTime == 0 || cacheIt->second != dependency._writeTime )
                 return false;
         }

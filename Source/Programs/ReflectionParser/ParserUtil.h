@@ -28,26 +28,6 @@ namespace sw
             return FileUtil::joinPath( outputDir, fileName );
         }
 
-        /**
-         * @brief 소스 헤더를 clang --include 루트 기준 include 문자열로 바꿉니다.
-         */
-        static string makeHeaderIncludePath( const string& sourceFilePath, const vector<string>& listIncludePath )
-        {
-            const string sourceSep = FileUtil::normalizeSeparators( sourceFilePath );
-            for ( const string& includeRoot : listIncludePath )
-            {
-                const string rootSep  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( includeRoot ) );
-                const string rootNorm = FileUtil::makeComparableDiskPath( rootSep ); // 대소문자는 OS 규칙
-                const string srcNorm  = FileUtil::makeComparableDiskPath( sourceSep );
-                if ( rootNorm.empty() || FileUtil::startsWithPathComponent( srcNorm, rootNorm ) == false )
-                    continue;
-                if ( srcNorm.size() == rootNorm.size() )
-                    continue;
-                return FileUtil::suffixAfterPathComponent( sourceSep, rootSep );
-            }
-            return FileUtil::getFileNamePart( sourceFilePath );
-        }
-
         /** @brief `<>` 밖의 `,` 만 분할하고 각 토큰을 trim 합니다. */
         static vector<string> splitCommaRespectingAngles( string_view inner )
         {
