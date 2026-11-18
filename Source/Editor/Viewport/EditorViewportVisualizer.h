@@ -27,6 +27,8 @@ namespace sw
 
 namespace sw::editor
 {
+    struct EditorVisualizerDrawList;
+
     /** @brief 시각화 함수가 그리는 데 필요한 프레임 정보입니다. */
     struct EditorViewportVisualizerArgs
     {
@@ -62,8 +64,10 @@ namespace sw::editor
      */
     struct EditorVisualizerRegistration : EditorExtensionRegistration
     {
-        /** @brief 시각화 하나를 그립니다. */
+        /** @brief 화면에 바로 그리고 마우스로 조작하는 도구(기즈모 · 손잡이 · 붓)입니다. 도형만 내는 시각화는 쓰지 않는다(`_pGather`). */
         using DrawFunc = void ( * )( const EditorViewportVisualizerArgs& args );
+        /** @brief 컴포넌트를 읽어 그릴 도형 값을 모읍니다(Model — ImGui 를 모른다). 그리기는 `EditorViewportVisualizer::drawAll` 이 값만 보고 한다. */
+        using GatherFunc = void ( * )( const EditorViewportVisualizerArgs& args, EditorVisualizerDrawList& outDrawList );
 
         SW_EDITOR_EXTENSION_KIND( "visualizer" );
 
@@ -72,6 +76,7 @@ namespace sw::editor
         const utf8*    _pTooltip;
         uint8          _bDefaultOn : 1;
         DrawFunc       _pDraw;
+        GatherFunc     _pGather{ nullptr };
     };
 } // namespace sw::editor
 
@@ -88,8 +93,11 @@ namespace sw::editor
         static uint32 getCount();
         /** @brief 순서대로 index 번째 시각화를 반환합니다. */
         static const EditorVisualizerRegistration& getAt( uint32 index );
-        /** @brief @p toggles 에서 켜진 시각화를 모두 그립니다. */
-        static void drawAll( const EditorViewportVisualizerArgs& args, const EditorVisualizerToggles& toggles );
+        /**
+         * @brief 모은 도형 값(@p drawList, `EditorVisualizerDrawList::gatherAll`)을 그리고, @p toggles 에서 켜진 도구(`_pDraw`)를 부릅니다.
+         * @details 도형을 그릴 때 화면에 남은 선 · 글자 수를 `args._pStats` 에 적는다(통계는 매 프레임 다시 센다).
+         */
+        static void drawAll( const EditorViewportVisualizerArgs& args, const EditorVisualizerToggles& toggles, const EditorVisualizerDrawList& drawList );
     };
 } // namespace sw::editor
 

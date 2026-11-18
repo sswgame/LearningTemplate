@@ -18,8 +18,8 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorGridLevel.h"
 #include "Editor/Viewport/Model/EditorViewportOverlayLayout.h"
+#include "Editor/Viewport/Model/Visualizers/SelectionBoundsVisualizer.h"
 #include "Editor/Viewport/ViewportToolbarSettings.h"
-#include "Editor/Viewport/Visualizers/SelectionBoundsVisualizer.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 
