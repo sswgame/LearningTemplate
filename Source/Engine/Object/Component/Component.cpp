@@ -437,9 +437,14 @@ namespace sw
         // 같은 값이면 아무것도 하지 않는다 — 메시는 알림마다 렌더 더티를 찍는다(인스펙터는 프레임마다 부를 수 있다).
         if ( _bActive.load( std::memory_order_relaxed ) == bActive )
             return;
-        static const hashed_string s_activeName( "_bActive" );
         _bActive.store( bActive, std::memory_order_relaxed );
-        onPropertyChanged( s_activeName );
+        onPropertyChanged( getActivePropertyName() );
+    }
+
+    const hashed_string& Component::getActivePropertyName()
+    {
+        static const hashed_string s_activeName( "_bActive" );
+        return s_activeName;
     }
 
     void Component::setTickGroup( TickGroup group )

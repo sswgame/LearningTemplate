@@ -200,13 +200,12 @@ namespace sw
     void TileMapRendererComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
-        static const hashed_string s_activeName( "_bActive" );
         static const hashed_string s_tileMapName( "_tileMapPath" );
         static const hashed_string s_materialName( "_materialPath" );
         static const hashed_string s_sortingLayerName( "_sortingLayer" );
         static const hashed_string s_orderName( "_orderInLayer" );
         // 켜고 끄기를 빌더가 다시 보게 — 다른 칸은 다음 rebuild 가 맞춘다.
-        if ( propertyName == s_activeName )
+        if ( propertyName == getActivePropertyName() )
         {
             for ( unique_ptr<SpriteInstanceBatch>& pBatch : _listChunkBatch )
             {
