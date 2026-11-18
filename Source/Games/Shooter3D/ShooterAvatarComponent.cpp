@@ -197,7 +197,8 @@ namespace sw
         }
         if ( found->second < _minLocomotionFootSpeed )
             return 0.0f;
-        return found->second;
+        // 캐시는 레퍼런스 스켈레톤의 발 속도다 — 체형(LegLength)이 다리를 늘이면 같은 클립의 보폭도 그만큼 길다. 지금 포즈의 다리 길이 비를 곱한다(클립을 다시 재지 않는다).
+        return found->second * LocomotionSpeedUtil::computeLegLengthRatio( pUnit->getSkeleton(), pUnit->getModelSpaceTransforms(), _leftFootBone, _rightFootBone );
     }
 
     void ShooterAvatarComponent::applyStrideWarping( float32 strideScale, const float2& localVelocity )

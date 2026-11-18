@@ -104,6 +104,10 @@ namespace sw
         const vector<float3>& getParticles() const { return _listPosition; }
         /** @brief 지난 시뮬레이션의 애니메이션 자세(월드)입니다. 입자와의 차이가 흔들림이다(지글 감시 값 · 진단). */
         const vector<float3>& getAnimatedPositions() const { return _listAnimated; }
+        /** @brief 지난 스텝에서 가장 빨리 움직인 입자의 속도(m/s, 루트 제외)입니다. 시뮬레이션 상태가 없으면 0 입니다. */
+        float32 computeMaxSpeed() const;
+        /** @brief 입자가 애니메이션 자세에서 가장 멀리 벗어난 거리(m)입니다. 시뮬레이션 상태가 없으면 0 입니다. */
+        float32 computeMaxOffset() const;
         /**
          * @brief 루트 다음 입자들에 월드 속도(m/s)를 더합니다(맞음 · 착지 충격). 베를레 입자라 이전 위치를 속도 × @p fixedStep 만큼 뒤로 옮긴다. 시뮬레이션 상태가 없으면 아무것도 하지 않는다.
          * @details 끝으로 갈수록 크게(입자 번호 / (수 − 1)) 준다 — 뿌리는 몸에 붙어 있고 끝이 흔들린다.
@@ -125,6 +129,7 @@ namespace sw
         vector<float32> _listLength;   ///< 부모 입자까지의 길이다(애니메이션 자세에서 측정한다).
         float3          _lastRootPosition;
         float32         _accumulator;
+        float32         _lastStep; ///< 지난 시뮬레이션의 스텝 길이(초) — 입자 속도(`computeMaxSpeed`)를 낸다
         uint32          _lastStepCount;
         uint8           _bInitialized;
     };

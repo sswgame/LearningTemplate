@@ -2,6 +2,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -138,6 +139,26 @@ namespace sw
                 outReply = "placed " + listArgument[0];
                 return true;
             }
+
+            /** @brief 이름 붙은 오브젝트의 주 씬 컴포넌트를 로컬 요 @p 도만큼 한 프레임에 돌립니다(시나리오가 빠른 회전 뒤 스프링 머리카락 · 망토를 본다). */
+            static bool runObjectTurn( const vector<string>& listArgument, string& outReply )
+            {
+                float32 degrees = 0.0f;
+                if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[1], degrees ) == false )
+                    return false;
+                GameObject*     pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+                if ( pScene == nullptr )
+                {
+                    outReply = "no object named '" + listArgument[0] + "' with a scene component in the active scene";
+                    return false;
+                }
+                float3 rotation = pScene->getLocalRotation();
+                rotation._y += degrees * MathUtil::kDegreeToRadian;
+                pScene->setLocalRotation( rotation );
+                outReply = "turned " + listArgument[0];
+                return true;
+            }
         };
     } // namespace
 
@@ -146,4 +167,6 @@ namespace sw
                     &SceneInspectCommandsInternal::runObjectDump );
     SW_DEV_COMMAND( ObjectPlace, "object.place", "object.place <name> <x> <y> <z>", "Teleport a named object of the active scene to a local position and stop its motion (scenarios move the camera to change LOD)",
                     &SceneInspectCommandsInternal::runObjectPlace );
+    SW_DEV_COMMAND( ObjectTurn, "object.turn", "object.turn <name> <yaw degrees>", "Turn a named object of the active scene about its local up axis in one frame (spring hair and cloth checks)",
+                    &SceneInspectCommandsInternal::runObjectTurn );
 } // namespace sw

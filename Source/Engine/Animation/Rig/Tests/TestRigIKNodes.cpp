@@ -542,6 +542,54 @@ SW_TEST_CASE_F( RigIKTest, FootPlacementRaisesByTheHeelLift )
     SW_EXPECT_NEAR( position( kFootL )._y, 0.18f, 2.0e-3f );
 }
 
+// 체형이 다리를 1.2 배로 늘이면(마디 길이) 디딘 발이 땅 아래로 간다 — 골반을 다리 길이 비만큼 올려 발목이 레퍼런스 높이(0.1)에 선다. 발바닥 틈은 0 이다.
+SW_TEST_CASE_F( RigIKTest, FootPlacementLiftsThePelvisForLongerLegs )
+{
+    SW_REQUIRE_TRUE( load( makeFootPlacement( R"(interp_speed="0")" ) ) );
+    const auto stretchLegs = [this]()
+    {
+        _pose.setToReference( _skeleton );
+        setBone( kKneeL, float3{ 0.0f, -0.54f, 0.024f } );
+        setBone( kFootL, float3{ 0.0f, -0.54f, -0.024f } );
+        setBone( kKneeR, float3{ 0.0f, -0.54f, 0.024f } );
+        setBone( kFootR, float3{ 0.0f, -0.54f, -0.024f } );
+    };
+    FakeRigGround ground;
+    stretchLegs();
+    run( &ground );
+    SW_EXPECT_NEAR( position( kPelvis )._y, 1.18f, 2.0e-3f ); // (1.2 - 1) × (엉덩 1.0 - 발목 0.1)
+    SW_EXPECT_NEAR( position( kFootL )._y, 0.1f, 2.0e-3f );
+    SW_EXPECT_NEAR( position( kFootR )._y, 0.1f, 2.0e-3f );
+    stretchLegs();  // 애니메이션이 프레임마다 새 포즈를 낸다
+    run( &ground ); // 출력은 다음 준비가 옮긴다
+    float32 value = 1.0f;
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "leg_lift" ), value ) );
+    SW_EXPECT_NEAR( value, 0.18f, 2.0e-3f );
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "sole_gap" ), value ) );
+    SW_EXPECT_NEAR( value, 0.0f, 2.0e-3f );
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "sole_gap_peak" ), value ) );
+    SW_EXPECT_NEAR( value, 0.0f, 2.0e-3f );
+}
+
+// 발바닥 틈: 땅이 없어 발이 공중(애니메이션 그대로)이면 틈이 땅 높이 0 에서 잰 값이고, 최댓값이 그 절댓값을 지킨다.
+SW_TEST_CASE_F( RigIKTest, FootPlacementReportsTheSoleGap )
+{
+    SW_REQUIRE_TRUE( load( makeFootPlacement( R"(interp_speed="0")" ) ) );
+    FakeRigGround ground;
+    ground._bHasGround = SW_FALSE;
+    for ( uint32 frame = 0; frame < 2; ++frame )
+    {
+        _pose.setToReference( _skeleton );
+        setBone( kPelvis, float3{ 0.0f, 0.95f, 0.0f } ); // 웅크려 두 발목이 0.05 아래
+        run( &ground );
+    }
+    float32 value = 0.0f;
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "sole_gap" ), value ) );
+    SW_EXPECT_NEAR( value, -0.05f, 2.0e-3f );
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "sole_gap_peak" ), value ) );
+    SW_EXPECT_NEAR( value, 0.05f, 2.0e-3f );
+}
+
 // 땅이 없거나 쿼리가 없으면 애니메이션 그대로다.
 SW_TEST_CASE_F( RigIKTest, FootPlacementWithoutGroundLeavesThePose )
 {

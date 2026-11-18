@@ -3,6 +3,7 @@
 #include "Engine/Animation/Skeletal/LocomotionSpeedUtil.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -61,6 +62,38 @@ namespace sw
             previousPosition  = plantPosition;
         }
         return ( plantedSeconds > 0.0f ) ? plantedDistance / plantedSeconds : 0.0f;
+    }
+
+    float32 LocomotionSpeedUtil::computeLegLengthRatio( const Skeleton& skeleton, const vector<float4x4>& listModel, const hashed_string& leftFoot, const hashed_string& rightFoot )
+    {
+        const vector<int32>& listParent = skeleton.getParentIndices();
+        Pose                 reference;
+        vector<float4x4>     listReference;
+        reference.setToReference( skeleton );
+        reference.computeModelSpace( listParent, listReference );
+        const auto legLength = []( const vector<float4x4>& listTransform, uint32 foot, uint32 knee, uint32 hip )
+        {
+            const float3 footPosition = listTransform[foot].getTranslation();
+            const float3 kneePosition = listTransform[knee].getTranslation();
+            return ( kneePosition - listTransform[hip].getTranslation() ).getLength() + ( footPosition - kneePosition ).getLength();
+        };
+        float32             ratioSum  = 0.0f;
+        uint32              legCount  = 0;
+        const hashed_string arrFoot[] = { leftFoot, rightFoot };
+        for ( const hashed_string& footName : arrFoot )
+        {
+            const optional<uint32> foot = skeleton.findBoneIndex( footName );
+            const int32            knee = foot.has_value() ? listParent[*foot] : int32( constant::invalid_index::kInt32 );
+            const int32            hip  = knee != constant::invalid_index::kInt32 ? listParent[static_cast<uint32>( knee )] : int32( constant::invalid_index::kInt32 );
+            if ( hip == constant::invalid_index::kInt32 || *foot >= listModel.size() ) // 루트 가까이의 발(조상 둘이 없다) · 아직 포즈가 없는 유닛
+                continue;
+            const float32 referenceLength = legLength( listReference, *foot, static_cast<uint32>( knee ), static_cast<uint32>( hip ) );
+            if ( referenceLength <= MathUtil::kEpsilon )
+                continue;
+            ratioSum += legLength( listModel, *foot, static_cast<uint32>( knee ), static_cast<uint32>( hip ) ) / referenceLength;
+            ++legCount;
+        }
+        return legCount > 0 ? ratioSum / static_cast<float32>( legCount ) : 1.0f;
     }
 
     float32 LocomotionSpeedUtil::computePlayRate( float32 moveSpeed, float32 clipFootSpeed, float32 minRate, float32 maxRate )

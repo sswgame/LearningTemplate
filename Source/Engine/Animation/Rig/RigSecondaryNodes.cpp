@@ -198,6 +198,7 @@ namespace sw
                 if ( bShared == false && _listTargetCollider.empty() )
                 {
                     _chain.simulate( *context._pPose, _listBone, _settings, _listCollider, context._worldFromModel, context._worldGravity, context._deltaSeconds, *context._pSpace );
+                    recordMotion();
                     return;
                 }
                 _listScratchCollider.assign( _listCollider.begin(), _listCollider.end() );
@@ -217,11 +218,52 @@ namespace sw
                     _listScratchCollider.push_back( collider );
                 }
                 _chain.simulate( *context._pPose, _listBone, _settings, _listScratchCollider, context._worldFromModel, context._worldGravity, context._deltaSeconds, *context._pSpace );
+                recordMotion();
+            }
+
+            void prepare( const RigPrepareContext& context ) override
+            {
+                (void)context;
+                // 출력 사본은 게임 스레드에서만 쓴다 — 지난 평가의 입자 속도 · 흔들림.
+                _outputSpeed  = _speed;
+                _outputOffset = _offset;
             }
 
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.insert( inoutListBone.end(), _listBone.begin(), _listBone.end() ); }
 
-            void reset() override { _chain.reset(); }
+            void reset() override
+            {
+                _chain.reset();
+                _speed  = 0.0f;
+                _offset = 0.0f;
+            }
+
+            /**
+             * @brief 출력: `speed`(지난 평가의 가장 빠른 입자 속도, m/s — 부품 교체 · 순간이동 뒤의 튐), `offset`(입자가 애니메이션 자세에서 가장 멀리 벗어난 거리, m — 사슬이 쉬는지).
+             */
+            [[nodiscard]] bool getOutputValue( const hashed_string& output, float32& outValue ) const override
+            {
+                const string_view name = output.c_str();
+                if ( name == "speed" )
+                {
+                    outValue = _outputSpeed;
+                    return true;
+                }
+                if ( name == "offset" )
+                {
+                    outValue = _outputOffset;
+                    return true;
+                }
+                return false;
+            }
+
+        private:
+            /** @brief 시뮬레이션 뒤 입자 속도 · 흔들림을 적어 둡니다(워커 — 준비 단계가 출력 사본으로 옮긴다). */
+            void recordMotion()
+            {
+                _speed  = _chain.computeMaxSpeed();
+                _offset = _chain.computeMaxOffset();
+            }
 
         private:
             RigSpringChainParams _params{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
@@ -246,6 +288,10 @@ namespace sw
             vector<RigSpringCollider> _listScratchCollider{};
             RigSpringChain            _chain{};
             RigSpringSettings         _settings{};
+            float32                   _speed{ 0.0f };        ///< 지난 평가의 가장 빠른 입자 속도(m/s)
+            float32                   _offset{ 0.0f };       ///< 지난 평가의 가장 큰 흔들림(m)
+            float32                   _outputSpeed{ 0.0f };  ///< 게임 스레드 사본(준비 단계가 옮긴다)
+            float32                   _outputOffset{ 0.0f }; ///< 게임 스레드 사본
         };
 
         /**

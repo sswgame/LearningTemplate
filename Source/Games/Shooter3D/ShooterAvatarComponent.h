@@ -120,7 +120,7 @@ namespace sw
         hashed_string _lookSourceObject;
 
         LocomotionDirectionFilter                    _locomotion;
-        unordered_map<const AnimationClip*, float32> _mapClipFootSpeed; ///< 클립마다 한 번 측정한 발 속도(m/s)
+        unordered_map<const AnimationClip*, float32> _mapClipFootSpeed; ///< 클립마다 한 번 측정한 레퍼런스 스켈레톤의 발 속도(m/s) — 쓸 때 다리 길이 비를 곱한다
 
         float32 _aimWeight;
         float32 _shootWeight;

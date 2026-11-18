@@ -1,12 +1,13 @@
 /**
  * @file AppearanceWatches.cpp
  * @brief 외형의 자동화 감시 값(`Appearance.Preset` · `Appearance.MergedSections` · `Appearance.MergedCharacters` · `Appearance.SlotItem` · `Appearance.SurfaceChannel` ·
- *        꾸미기 시나리오의 `Appearance.Idle` · `AssembleCount` · `PartCount` · `Value` · `SocketOffset` · `SlotPartOffset` · `BakedMeshHits` · `BakedMeshEntries`)입니다.
+ *        꾸미기 시나리오의 `Appearance.Idle` · `AssembleCount` · `PartCount` · `Value` · `SocketOffset` · `SlotPartOffset` · `PartRigOutput` · `BakedMeshHits` · `BakedMeshEntries`)입니다.
  * @details 시나리오만 읽는 감시 값이라 컴포넌트 파일이 아니라 이 파일에 둔다(`VehicleWatches` · `PawnWatches` 와 같은 자리). 컴포넌트의 공개 읽기만 쓴다.
  */
 #include "pch.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -205,6 +206,41 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief 부품(@p query 의 key — `<부품>.<노드>.<출력>`, 예: `Hair.Hair.speed`)이 단 리그 노드의 출력입니다. 스프링 머리카락 · 망토가 교체 뒤 튀는지(`speed`) · 쉬는지(`offset`) 본다.
+             * @details 부품 오브젝트는 캐릭터마다 같은 이름이라 이름으로 찾지 않고 캐릭터의 외형에서 찾는다(`findPartObject`).
+             */
+            [[nodiscard]] static bool readPartRigOutput( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CharacterAppearanceComponent* pAppearance = findWatchTarget( query, outValue );
+                if ( pAppearance == nullptr )
+                    return false;
+                const string_view key  = query._key;
+                const size_t      dot  = key.find( '.' );
+                const size_t      dot2 = dot == string_view::npos ? string_view::npos : key.find( '.', dot + 1 );
+                if ( dot == 0 || dot2 == string_view::npos || dot2 == dot + 1 || dot2 + 1 >= key.size() )
+                {
+                    outValue.setText( "key must be '<part>.<node>.<output>'" );
+                    return false;
+                }
+                const GameObjectManager*     pManager = query._pManager;
+                const GameObject*            pPart    = pManager != nullptr ? pManager->resolveGameObject( pAppearance->findPartObject( hashed_string( key.substr( 0, dot ) ) ) ) : nullptr;
+                const PoseModifierComponent* pRig     = pPart != nullptr ? pPart->getComponent<PoseModifierComponent>() : nullptr;
+                if ( pRig == nullptr )
+                {
+                    outValue.setText( pPart == nullptr ? "no spawned part of that name" : "that part has no rig (PoseModifierComponent)" );
+                    return false;
+                }
+                float32 value = 0.0f;
+                if ( pRig->getNodeOutputValue( hashed_string( key.substr( dot + 1, dot2 - dot - 1 ) ), hashed_string( key.substr( dot2 + 1 ) ), value ) == false )
+                {
+                    outValue.setText( pRig->isRigReady() ? "that rig node output is missing" : "the part rig is not bound yet" );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( value ) );
+                return true;
+            }
+
             /** @brief 소켓(@p query 의 key — `<소켓>.<x|y|z>`, 예: `Helmet.y` · `MainHand.Muzzle.x`)의 월드 자리에서 캐릭터 자리를 뺀 성분입니다(지난 프레임 포즈). 체형이 본을 옮기면 따라 바뀐다. */
             [[nodiscard]] static bool readSocketOffset( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -378,6 +414,8 @@ namespace sw
                                &AppearanceWatchesInternal::readSocketOffset, true, true );
     SW_AUTOMATION_QUERY_WATCH( appearanceSlotPartOffset, "Appearance.SlotPartOffset", "World offset from the character to the first socket part of the slot named by key '<slot>.<x|y|z>'",
                                &AppearanceWatchesInternal::readSlotPartOffset, true, true );
+    SW_AUTOMATION_QUERY_WATCH( appearancePartRigOutput, "Appearance.PartRigOutput", "Rig node output of the spawned part named in key '<part>.<node>.<output>' (spring hair: Hair.Hair.speed)",
+                               &AppearanceWatchesInternal::readPartRigOutput, true, true );
     SW_AUTOMATION_QUERY_WATCH( appearancePartMaterial, "Appearance.PartMaterial", "Material instance parameter of the slot's first socket part, key '<slot>.<parameter>' (as text)",
                                &AppearanceWatchesInternal::readPartMaterial, true, true );
     SW_AUTOMATION_WATCH( appearanceBakedMeshHits, "Appearance.BakedMeshHits", "Baked or merged appearance mesh lookups the cache served (cumulative)",
