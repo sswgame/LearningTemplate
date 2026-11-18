@@ -421,6 +421,8 @@ namespace sw
          *        `interp_speed`(초당 따라잡는 비율), `align_to_normal`, `max_align_degrees` 입니다.
          * @details 게임 스레드 준비 단계에서 발마다(지난 평가의 애니메이션 발 위치) 위에서 아래로 땅 광선을 쏜다. 평가에서는 발마다 땅 높이(유닛 바닥 기준)를
          *          부드럽게 따라가고, 낮은 쪽만큼 골반을 내린 뒤, 2 본 IK 로 발을 땅에 올리고 법선에 맞춰 돌린다. 언리얼의 Foot Placement 와 Leg IK 에 해당한다.
+         *          체형(본 비율)이 다리 길이를 바꾸면 애니메이션의 디딘 발이 그만큼 땅 아래 · 위에 온다 — 다리 길이 비(지금 포즈의 마디 길이 ÷ 레퍼런스)만큼
+         *          골반 → 발목 세로 거리를 늘이고 줄인다(언리얼 IK Retargeter 의 골반 높이 비, 유니티 휴머노이드의 다리 길이 정규화). 비율이 없으면 포즈를 바꾸지 않는다.
          */
         class RigFootPlacementNode final : public RigNode
         {
@@ -452,6 +454,11 @@ namespace sw
                     foot._mid           = listBone[1];
                     foot._end           = listBone[2];
                     foot._animatedModel = listReference[foot._end].getTranslation();
+                    // 디딘 발의 발목 높이와 다리 마디 길이 — 체형 보정과 발바닥 틈(`sole_gap`)의 기준이다.
+                    const float3 rootModel = listReference[foot._root].getTranslation();
+                    const float3 midModel  = listReference[foot._mid].getTranslation();
+                    foot._referenceAnkleY  = foot._animatedModel._y;
+                    foot._referenceLength  = ( midModel - rootModel ).getLength() + ( foot._animatedModel - midModel ).getLength();
                 }
                 return true;
             }
@@ -463,6 +470,9 @@ namespace sw
                 // 출력 사본은 게임 스레드에서만 쓴다 — 지난 평가의 골반 · 발 높이(`getOutputValue`).
                 _outputPelvisOffset = _pelvisOffset;
                 _outputFootLift     = _footLift;
+                _outputLegLift      = _legLift;
+                _outputSoleGap      = _soleGap;
+                _outputSoleGapPeak  = MathUtil::max( _soleGapPeak, _soleGapPeakPrevious );
                 _outputHitCount     = 0;
                 for ( Foot& foot : _listFoot )
                 {
@@ -488,9 +498,22 @@ namespace sw
                 RigPoseBuffer& pose   = *context._pPose;
                 const float32  blend  = ( _params._interpSpeed > 0.0f ) ? MathUtil::saturate( _params._interpSpeed * context._deltaSeconds ) : 1.0f;
                 float32        lowest = 0.0f;
+                // 체형이 바꾼 다리 길이 — 엉덩 관절 → 디딘 발목의 세로 거리를 다리 길이 비만큼 늘인다(두 마디가 같은 비율이면 정확하다).
+                float32 legLiftSum = 0.0f;
                 for ( Foot& foot : _listFoot )
                 {
-                    foot._animatedModel = pose.getModelPosition( foot._end );
+                    const float3  rootModel = pose.getModelPosition( foot._root );
+                    const float3  midModel  = pose.getModelPosition( foot._mid );
+                    const float3  endModel  = pose.getModelPosition( foot._end );
+                    const float32 length    = ( midModel - rootModel ).getLength() + ( endModel - midModel ).getLength();
+                    const float32 ratio     = foot._referenceLength > MathUtil::kEpsilon ? length / foot._referenceLength : 1.0f;
+                    foot._legLift           = ( ratio - 1.0f ) * ( rootModel._y - foot._referenceAnkleY );
+                    legLiftSum += foot._legLift;
+                }
+                _legLift = _listFoot.empty() ? 0.0f : legLiftSum / static_cast<float32>( _listFoot.size() );
+                for ( Foot& foot : _listFoot )
+                {
+                    foot._animatedModel = pose.getModelPosition( foot._end ) + float3{ 0.0f, foot._legLift, 0.0f };
                     const float32 goal  = ( foot._bHit == SW_TRUE ) ? MathUtil::clamp( foot._hitModel._y, -_params._maxPelvisDrop, _params._maxRaise ) : 0.0f;
                     foot._offset        = foot._bInitialized == SW_TRUE ? MathUtil::lerp( foot._offset, goal, blend ) : goal;
                     foot._bInitialized  = SW_TRUE;
@@ -504,7 +527,7 @@ namespace sw
                 // 굽은 장비가 바꿀 때만 바뀌므로 부드럽게 따라가지 않고 바로 건다.
                 const float32 lift = context._pInstance->getBodyInput().getFootLift();
                 _footLift          = lift;
-                pose.setModelPosition( _pelvis, pose.getModelPosition( _pelvis ) + float3{ 0.0f, _pelvisOffset + lift, 0.0f } );
+                pose.setModelPosition( _pelvis, pose.getModelPosition( _pelvis ) + float3{ 0.0f, _pelvisOffset + lift + _legLift, 0.0f } );
 
                 for ( const Foot& foot : _listFoot )
                 {
@@ -522,6 +545,7 @@ namespace sw
                     }
                     pose.setModelRotation( foot._end, aligned );
                 }
+                updateSoleGap( pose, lift, context._deltaSeconds );
             }
 
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override
@@ -537,7 +561,10 @@ namespace sw
 
             void reset() override
             {
-                _bPelvisInitialized = SW_FALSE;
+                _bPelvisInitialized  = SW_FALSE;
+                _soleGapPeak         = 0.0f;
+                _soleGapPeakPrevious = 0.0f;
+                _soleGapPeakSeconds  = 0.0f;
                 for ( Foot& foot : _listFoot )
                 {
                     foot._bInitialized = SW_FALSE;
@@ -546,7 +573,8 @@ namespace sw
 
             /**
              * @brief 출력: `pelvis_offset`(땅 보정으로 골반을 옮긴 높이, 미터 · 음수면 내림 · 굽 제외), `foot_lift`(골반 · 발에 더 올린 굽 높이, 미터),
-             *        `foot_offset_<번호>`(`feet` 순서의 발 높이 보정), `ground_hits`(땅에 닿은 발 수).
+             *        `foot_offset_<번호>`(`feet` 순서의 발 높이 보정), `ground_hits`(땅에 닿은 발 수), `leg_lift`(체형의 다리 길이로 골반을 옮긴 높이),
+             *        `sole_gap`(가장 낮은 발목 - (땅 + 레퍼런스 발목 높이 + 굽), 미터 — 음수면 땅에 묻힘), `sole_gap_peak`(최근 1 ~ 2 초 `sole_gap` 절댓값의 최댓값 — 걷기 한 주기를 덮는다).
              */
             [[nodiscard]] bool getOutputValue( const hashed_string& output, float32& outValue ) const override
             {
@@ -567,6 +595,21 @@ namespace sw
                     outValue = static_cast<float32>( _outputHitCount );
                     return true;
                 }
+                if ( name == "leg_lift" )
+                {
+                    outValue = _outputLegLift;
+                    return true;
+                }
+                if ( name == "sole_gap" )
+                {
+                    outValue = _outputSoleGap;
+                    return true;
+                }
+                if ( name == "sole_gap_peak" )
+                {
+                    outValue = _outputSoleGapPeak;
+                    return true;
+                }
                 if ( name.size() != kFootPrefix.size() + 1 || name.substr( 0, kFootPrefix.size() ) != kFootPrefix )
                     return false;
                 const uint32 footIndex = static_cast<uint32>( name.back() - '0' );
@@ -574,6 +617,30 @@ namespace sw
                     return false;
                 outValue = _listFoot[footIndex]._outputOffset;
                 return true;
+            }
+
+        private:
+            /** @brief IK 뒤 가장 낮은 발목이 땅 + 레퍼런스 발목 높이 + 굽에서 얼마나 벗어났는지 재고, 두 칸(각 `kSoleGapPeakSeconds`)의 절댓값 최댓값을 굴립니다. */
+            void updateSoleGap( RigPoseBuffer& pose, float32 lift, float32 deltaSeconds )
+            {
+                static constexpr float32 kSoleGapPeakSeconds = 1.0f; ///< 걷기 한 주기(약 1 초)를 덮는 칸 길이
+                float32                  lowestGap           = 0.0f;
+                for ( size_t index = 0; index < _listFoot.size(); ++index )
+                {
+                    const Foot&   foot   = _listFoot[index];
+                    const float32 ground = foot._bHit == SW_TRUE ? foot._hitModel._y : 0.0f;
+                    const float32 gap    = pose.getModelPosition( foot._end )._y - ( ground + foot._referenceAnkleY + lift );
+                    lowestGap            = index == 0 ? gap : MathUtil::min( lowestGap, gap );
+                }
+                _soleGap = lowestGap;
+                _soleGapPeakSeconds += deltaSeconds;
+                if ( _soleGapPeakSeconds >= kSoleGapPeakSeconds )
+                {
+                    _soleGapPeakPrevious = _soleGapPeak;
+                    _soleGapPeak         = 0.0f;
+                    _soleGapPeakSeconds  = 0.0f;
+                }
+                _soleGapPeak = MathUtil::max( _soleGapPeak, MathUtil::abs( _soleGap ) );
             }
 
         private:
@@ -587,7 +654,10 @@ namespace sw
                 float3        _hitModel{};
                 float3        _normalModel{ 0.0f, 1.0f, 0.0f };
                 float32       _offset{ 0.0f };
-                float32       _outputOffset{ 0.0f }; ///< 게임 스레드 사본(준비 단계가 `_offset` 에서 옮긴다)
+                float32       _outputOffset{ 0.0f };    ///< 게임 스레드 사본(준비 단계가 `_offset` 에서 옮긴다)
+                float32       _referenceAnkleY{ 0.0f }; ///< 레퍼런스 포즈의 발목 높이(디딘 발이 땅 위에 있는 높이)
+                float32       _referenceLength{ 0.0f }; ///< 레퍼런스 포즈의 두 마디 길이 합(체형 비율 없는 다리)
+                float32       _legLift{ 0.0f };         ///< 이번 평가에서 다리 길이 비가 이 발에 요구한 골반 높이 보정
                 uint32        _root{ 0 };
                 uint32        _mid{ 0 };
                 uint32        _end{ 0 };
@@ -598,10 +668,18 @@ namespace sw
             vector<Foot> _listFoot{};
             float32      _maxAlignAngle{ 0.5f };
             float32      _pelvisOffset{ 0.0f };
-            float32      _outputPelvisOffset{ 0.0f }; ///< 게임 스레드 사본(준비 단계가 `_pelvisOffset` 에서 옮긴다)
-            float32      _footLift{ 0.0f };           ///< 지난 평가가 건 굽 높이(몸 입력의 발 들림)
-            float32      _outputFootLift{ 0.0f };     ///< 게임 스레드 사본(준비 단계가 `_footLift` 에서 옮긴다)
-            uint32       _outputHitCount{ 0 };        ///< 지난 준비 단계에서 땅에 닿은 발 수
+            float32      _outputPelvisOffset{ 0.0f };  ///< 게임 스레드 사본(준비 단계가 `_pelvisOffset` 에서 옮긴다)
+            float32      _footLift{ 0.0f };            ///< 지난 평가가 건 굽 높이(몸 입력의 발 들림)
+            float32      _outputFootLift{ 0.0f };      ///< 게임 스레드 사본(준비 단계가 `_footLift` 에서 옮긴다)
+            float32      _legLift{ 0.0f };             ///< 지난 평가가 체형의 다리 길이로 골반에 더한 높이(발 평균)
+            float32      _outputLegLift{ 0.0f };       ///< 게임 스레드 사본
+            float32      _soleGap{ 0.0f };             ///< 지난 평가의 가장 낮은 발 틈(`updateSoleGap`)
+            float32      _outputSoleGap{ 0.0f };       ///< 게임 스레드 사본
+            float32      _soleGapPeak{ 0.0f };         ///< 지금 칸의 `|_soleGap|` 최댓값
+            float32      _soleGapPeakPrevious{ 0.0f }; ///< 앞 칸의 최댓값
+            float32      _soleGapPeakSeconds{ 0.0f };  ///< 지금 칸이 흐른 시간
+            float32      _outputSoleGapPeak{ 0.0f };   ///< 게임 스레드 사본(두 칸의 최댓값)
+            uint32       _outputHitCount{ 0 };         ///< 지난 준비 단계에서 땅에 닿은 발 수
             uint32       _pelvis{ 0 };
             uint8        _bPelvisInitialized{ SW_FALSE };
         };
