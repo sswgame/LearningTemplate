@@ -189,7 +189,8 @@ namespace sw
         }
         if ( _baseID.empty() == false )
             return ReflectedXMLFile::saveDescAsChild( absPath, *this, AssetID{ _baseID } ); // 부모와 다른 칸만 쓴다. 부모를 읽지 못하면 쓰지 않는다
-        if ( ResourceComposer::saveText( absPath.str(), saveToXMLText() ) == false )
+        const string completeText = XMLSerializer::serialize( this, *StaticType(), SerializeContext::deriveFromDefault( SerializePurpose::Authoring ).setWriteEmptyValues( true ) );
+        if ( ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( saveToXMLText(), completeText ) ) == false ) // 빈 칸(SkipIfEmpty)을 뺐을 수 있다
         {
             SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphCouldNot2", "%#: audio graph could not be written to '%#'", absPath.str(), absPath.str() );
             return false;

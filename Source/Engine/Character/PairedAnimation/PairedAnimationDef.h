@@ -28,6 +28,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Inherit/ResourceFieldWrite.h"
 
 namespace sw
 {
@@ -221,10 +222,11 @@ namespace sw
         /**
          * @brief 내용을 파일 형식(`*.pairedanim.xml`)으로 씁니다. 적지 않아도 되는 값(앵커가 아닌 역할의 `anchor`, 0 인 `start` · `yaw`, 빈 `skeleton`)은 쓰지 않습니다.
          * @details 쓰기는 검사하지 않는다 — 결과를 `loadFromXMLText` 로 다시 읽어야 규칙(앵커 하나, 정렬 속성 등)을 본다. 정렬하지 않는 역할의 오프셋 · 워프 값은 쓰지 않는다.
+         *          @p fieldWrite 가 `WriteAll` 면 뺄 수 있는 값도 모두 쓴다 — 저장 입구에 넘기는 빼지 않은 짝(`ResourceSaveText`)이다.
          */
-        [[nodiscard]] static string makeXMLText( const PairedAnimationContentDef& content );
+        [[nodiscard]] static string makeXMLText( const PairedAnimationContentDef& content, ResourceFieldWrite fieldWrite );
         /** @brief 지금 내용을 파일 형식으로 씁니다(`makeXMLText`). */
-        string saveToXMLText() const { return makeXMLText( _content ); }
+        string saveToXMLText() const { return makeXMLText( _content, ResourceFieldWrite::OmitDefaults ); }
         /** @brief 파일 한 장의 내용입니다. */
         const PairedAnimationContentDef& getContent() const { return _content; }
 

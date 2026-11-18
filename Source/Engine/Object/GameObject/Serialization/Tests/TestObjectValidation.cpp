@@ -27,8 +27,8 @@ SW_TEST_CASE( ObjectValidationTest, LoadSaveAndEditReportToTheIssueLog )
 
     // 저장 — 결과를 남기고 저장은 한다
     sw::vector<sw::ValidationIssue> listIssue;
-    const sw::string                state = sw::ObjectStateSerializer::saveToXMLString( pObject, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
-    SW_EXPECT_FALSE( state.empty() );
+    const sw::expected<sw::string>  state = sw::ObjectStateSerializer::saveToXMLString( pObject, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
+    SW_EXPECT_TRUE( state.has_value() );
     issueLog.collectIssues( listIssue );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listIssue.size() );
     SW_EXPECT_EQUAL( pObject->getObjectID(), listIssue[0]._sourceID );

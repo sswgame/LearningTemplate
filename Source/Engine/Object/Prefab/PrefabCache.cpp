@@ -688,8 +688,15 @@ namespace sw
         for ( const uint64 scratchPartID : listScratchPartID )
         {
             string partPath;
-            if ( scratchRegistry.makePartPath( scratchPartID, pScratchRoot->getObjectID(), partPath ) )
-                mapBaseState[partPath] = ObjectStateSerializer::saveToXMLString( scratch.findGameObjectByID( scratchPartID ), options );
+            if ( scratchRegistry.makePartPath( scratchPartID, pScratchRoot->getObjectID(), partPath ) == false )
+                continue;
+            expected<string> baseState = ObjectStateSerializer::saveToXMLString( scratch.findGameObjectByID( scratchPartID ), options );
+            if ( baseState.has_value() == false )
+            {
+                SW_LOG_WARNING_ID( "PrefabAsset.NestedPartBaseNotSaved", "Nested part '%#' base state could not be saved: %# (%#)", partPath.c_str(), baseState.error().message(), baseState.error().detail() );
+                return false;
+            }
+            mapBaseState[partPath] = std::move( *baseState );
         }
 
         for ( const uint64 partID : listPartID )
@@ -702,8 +709,9 @@ namespace sw
             const auto baseIt = mapBaseState.find( partPath );
             if ( baseIt == mapBaseState.end() )
                 continue; // 프리팹이 더는 스폰하지 않는 부품 — 다음 로드에 다시 생기지 않는다
-            PrefabPartOverride part{ partPath, {} };
-            if ( const expected<void> overrides = PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseIt->second, part._overrideXML );
+            PrefabPartOverride     part{ partPath, {} };
+            const expected<string> partState = ObjectStateSerializer::saveToXMLString( pPart, options );
+            if ( const expected<void> overrides = partState.has_value() ? PrefabOverrides::computeOverrides( *partState, baseIt->second, part._overrideXML ) : expected<void>{ unexpected( partState.error() ) };
                  overrides.has_value() == false )
             {
                 SW_LOG_WARNING_ID( "PrefabAsset.NestedPartOverridesCould", "Nested part '%#' overrides could not be computed: %# (%#)", partPath.c_str(), overrides.error().message(), overrides.error().detail() );

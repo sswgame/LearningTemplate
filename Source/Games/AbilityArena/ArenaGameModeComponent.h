@@ -18,6 +18,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -52,6 +53,7 @@ namespace sw
     {
         GameObjectHandle _object{};
         float3           _position{};
+        int32            _unitID{ constant::invalid_index::kInt32 }; ///< 판 안에서 겹치지 않는 유닛 번호(`ArenaUnit::_unitID`) — 탄의 맞은 대상 번호다. 다른 유닛이 빠져도 밀리지 않는다
         ArenaUnitKind    _kind{ ArenaUnitKind::Grunt };
         uint8            _bAlive{ SW_FALSE };      ///< 쓰러지지 않았다(Dead 태그 없음).
         uint8            _bPlayerTeam{ SW_FALSE }; ///< `Team.Player` 태그.
@@ -158,8 +160,9 @@ namespace sw
         struct ArenaUnit
         {
             GameObjectHandle _object{};
-            GameObjectHandle _controller{};        ///< 적을 조종하는 AI 조종자의 오브젝트(플레이어는 비어 있다. 플레이어 조종자는 다시 스폰한 몸을 다시 조종한다).
-            float32          _deathTimer{ -1.0f }; ///< 0 이상이면 쓰러진 뒤 정리하기까지 남은 시간.
+            GameObjectHandle _controller{};                              ///< 적을 조종하는 AI 조종자의 오브젝트(플레이어는 비어 있다. 플레이어 조종자는 다시 스폰한 몸을 다시 조종한다).
+            float32          _deathTimer{ -1.0f };                       ///< 0 이상이면 쓰러진 뒤 정리하기까지 남은 시간.
+            int32            _unitID{ constant::invalid_index::kInt32 }; ///< 스폰할 때 `_nextUnitID` 에서 받는다
             ArenaUnitKind    _kind{ ArenaUnitKind::Grunt };
         };
 
@@ -289,6 +292,7 @@ namespace sw
         uint32                  _wave;
         uint32                  _killCount;
         uint32                  _playerShotCount;
+        int32                   _nextUnitID;           ///< 다음 유닛 번호 — 정리해도 되돌리지 않는다(정리 전에 쏜 탄이 새 유닛을 이미 맞힌 것으로 보지 않게)
         uint8                   _bUnitsRequested  : 1; ///< 플레이어와 웨이브를 스폰하라고 요청했다(정리하면 다음 틱이 다시 요청한다).
         uint8                   _bPossessionDirty : 1; ///< 플레이어 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
         uint8                   _reserved         : 6;

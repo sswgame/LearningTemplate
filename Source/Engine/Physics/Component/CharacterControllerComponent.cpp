@@ -81,6 +81,8 @@ namespace sw
         , _worldRotation{}
         , _verticalSpeed{ 0.0f }
         , _pendingGroundYaw{ 0.0f }
+        , _requestedHeightReduction{ 0.0f }
+        , _appliedHeightReduction{ 0.0f }
         , _listStepHistory{}
         , _stepHistoryCount{ 0 }
     {
@@ -291,7 +293,9 @@ namespace sw
         const bool bCreate           = _character.isValid() == false;
         const bool bTeleported       = consumeTeleport();
         // 배율은 끝 훅(`endPhysicsFrame`)이 먼저 읽었을 수 있다 — 변경 번호만이 아니라 지은 배율과의 값 비교로도 본다.
-        const bool bUnchanged = bCreate == false && bTransformChanged == false && bTeleported == false && isShapeScaleStale( _worldScale ) == false;
+        const float32 requestedReduction = MathUtil::max( 0.0f, _requestedHeightReduction.load( std::memory_order_relaxed ) );
+        const bool    bResize            = bCreate == false && requestedReduction != _appliedHeightReduction;
+        const bool    bUnchanged         = bCreate == false && bTransformChanged == false && bTeleported == false && bResize == false && isShapeScaleStale( _worldScale ) == false;
         if ( bUnchanged )
             return;
         float3 position{};
@@ -301,7 +305,9 @@ namespace sw
             return;
         }
         // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 캐릭터는 두고 크기만 간다(속 바디의 접촉 · 세로 속도가 이어진다 — 강체 `applyScaledShape` 와 같다, 감사 S-4).
-        if ( bCreate == false && isShapeScaleStale( _worldScale ) )
+        // 줄인 키도 같은 길이다 — 캐릭터를 두고 크기만 바꾼다(언리얼 `SetCapsuleHalfHeight`).
+        _appliedHeightReduction = requestedReduction;
+        if ( bCreate == false && ( isShapeScaleStale( _worldScale ) || bResize ) )
         {
             const PhysicsShapeDesc3D capsule = getScaledCapsule();
             if ( pScene->setCharacterSize( _character, capsule._radius, capsule._halfHeight ) == false )
@@ -483,7 +489,7 @@ namespace sw
         PhysicsShapeDesc3D capsule;
         capsule._type       = PhysicsShapeType3D::Capsule;
         capsule._radius     = _radius;
-        capsule._halfHeight = _halfHeight;
+        capsule._halfHeight = MathUtil::max( 0.0f, _halfHeight - _appliedHeightReduction * 0.5f ); // 발 기준 캡슐이라 반 높이를 줄이면 머리만 내려온다
         return PhysicsComponent::makeScaledShape( capsule, _worldScale );
     }
 

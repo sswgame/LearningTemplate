@@ -13,6 +13,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Inherit/ResourceFieldWrite.h"
 
 namespace sw
 {
@@ -291,6 +292,8 @@ namespace sw
          *          경고를 남긴다. 배열 밖을 읽지 않으면서 왕복도 어긋나지 않는 방법이다.
          */
         SW_API string toXML() const;
+        /** @brief `toXML` 과 같고, @p fieldWrite 가 `WriteAll` 면 기본값과 같은 타일 칸(깃발 · 아틀라스)도 씁니다 — 저장 입구에 넘기는 빼지 않은 짝입니다. */
+        SW_API string toXML( ResourceFieldWrite fieldWrite ) const;
     };
 
 } // namespace sw

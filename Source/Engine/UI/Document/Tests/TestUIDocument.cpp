@@ -223,7 +223,7 @@ SW_TEST_CASE( UIDocumentTest, WriteThenReadIsTheSame )
     unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, ResourceTagSet{}, listBinding ).value_or( nullptr );
     SW_REQUIRE_TRUE( root != nullptr );
 
-    const string text = UIDocumentWriter::write( asset._screenDesc, asset._listStyleSheet, *root, listBinding, asset._listAnimation );
+    const string text = UIDocumentWriter::write( asset._screenDesc, asset._listStyleSheet, *root, listBinding, asset._listAnimation, ResourceFieldWrite::OmitDefaults );
     SW_EXPECT_TRUE( text.find( "{bind:_health}" ) != string::npos );
     SW_EXPECT_TRUE( text.find( "_bShowCursor" ) == string::npos ); // 기본값이다
 
@@ -240,5 +240,5 @@ SW_TEST_CASE( UIDocumentTest, WriteThenReadIsTheSame )
     vector<UIBindingDef> listSecond;
     unique_ptr<Widget>   secondRoot = UIDocumentLoader::instantiate( reread, cache, ResourceTagSet{}, listSecond ).value_or( nullptr );
     SW_REQUIRE_TRUE( secondRoot != nullptr );
-    SW_EXPECT_EQUAL( string( text ), UIDocumentWriter::write( reread._screenDesc, reread._listStyleSheet, *secondRoot, listSecond, reread._listAnimation ) );
+    SW_EXPECT_EQUAL( string( text ), UIDocumentWriter::write( reread._screenDesc, reread._listStyleSheet, *secondRoot, listSecond, reread._listAnimation, ResourceFieldWrite::OmitDefaults ) );
 }

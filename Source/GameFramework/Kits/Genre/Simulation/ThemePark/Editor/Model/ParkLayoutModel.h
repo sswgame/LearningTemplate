@@ -90,7 +90,10 @@ namespace sw::editor
         float3 computeFocusCenter() const;
         /** @brief 에디터 카메라가 담을 반지름입니다. */
         float32 computeFocusRadius() const;
-        /** @brief 바닥 영역이 @p other 와 겹치면 true 입니다. shortcut: 원형 놀이기구도 사각형으로 본다, 모양이 늘면 모양별로 나눈다. */
+        /**
+         * @brief 바닥 영역이 @p other 와 겹치면 true 입니다. 원형 놀이기구도 사각형이다 — 게임이 지을 때 공유 땅에서 얻는 영역이 사각형 셀이라(`ParkRide::_footprintSize`)
+         *        미리보기도 같은 모양으로 재야 "겹침 없음" 이 지을 수 있음과 같다(RCT 의 타일 영역과 같다 — 둥근 회전목마도 정사각 타일을 차지한다).
+         */
         bool overlapsFootprint( const ParkRidePreview& other ) const;
         /** @brief 줄 입구가 자기 바닥 영역 안이면 true 입니다. 코스터는 입구가 아직 없어 false 입니다. */
         bool isEntranceInsideFootprint() const;

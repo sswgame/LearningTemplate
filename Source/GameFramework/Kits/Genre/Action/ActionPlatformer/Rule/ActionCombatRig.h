@@ -70,7 +70,7 @@ namespace sw
     {
     public:
         static constexpr uint32  kStateTag     = FourCCUtil::make( "APCR" );
-        static constexpr uint32  kStateVersion = 2;
+        static constexpr uint32  kStateVersion = 3;            ///< 3: 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
         static constexpr float32 kFrameTime    = 1.0f / 60.0f; ///< 한 프레임의 시간(탄과 총에 쓴다)
 
         ActionCombatRig();

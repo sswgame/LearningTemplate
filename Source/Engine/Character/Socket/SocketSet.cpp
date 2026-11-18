@@ -206,7 +206,7 @@ namespace sw
                 return false;
             }
         }
-        if ( ResourceComposer::saveText( absPath.str(), text ) == false )
+        if ( ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( text, fullText ) ) == false ) // 차이면 펼친 글이 짝이다
         {
             SW_LOG_ERROR_ID( "SocketSet.WriteFailed", "Socket set could not be written: %#", absPath.str() );
             return false;

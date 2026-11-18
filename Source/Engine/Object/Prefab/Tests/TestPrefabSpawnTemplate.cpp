@@ -32,12 +32,14 @@ namespace
                                                "<SceneComponent _componentName=\"Root\" _bActive=\"true\" _localScale=\"2,2,2\" _localPosition=\"1,2,3\" />"
                                                "</_listComponent></GameObject></Prefab>";
 
-        /** @brief 비교용 글입니다 — 같은 저작 문맥으로 씁니다. */
+        /** @brief 비교용 글입니다 — 같은 저작 문맥으로 씁니다. 저장하지 못하면 케이스를 실패로 적고 빈 글입니다(빈 글끼리 같다고 통과하지 않게 실패가 먼저 남는다). */
         static string saveState( const GameObject* pObject )
         {
             ObjectSaveOptions options{ SerializePurpose::Authoring };
             options._bOmitExternalParent = SW_TRUE;
-            return ObjectStateSerializer::saveToXMLString( pObject, options );
+            const expected<string> state = ObjectStateSerializer::saveToXMLString( pObject, options );
+            SW_EXPECT_TRUE( state.has_value() );
+            return state.value_or( string{} );
         }
 
         /** @brief 루트 위치가 @p pPosition 인 프리팹 글입니다. @p nested 를 주면 루트에 붙는 중첩 인스턴스 원소를 더합니다. */

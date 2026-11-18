@@ -18,7 +18,7 @@ namespace sw
         struct MechArenaDemoComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "KDMA" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 탄의 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
 
             static constexpr const utf8* kMechID              = "plain"; ///< 카탈로그의 무기 없는 기체(코스트 300)
             static constexpr float32     kStep                = 0.05f;   ///< 고정 걸음(키트 테스트와 같다)

@@ -347,7 +347,13 @@ namespace sw
                 if ( outNode._prefab.empty() && detachedIt != inputs._mapDetachedPartPrefab.end() )
                     outNode._prefab = detachedIt->second;
 
-                const string state = ObjectStateSerializer::saveToXMLString( pGo, saveOptions );
+                const expected<string> savedState = ObjectStateSerializer::saveToXMLString( pGo, saveOptions );
+                if ( savedState.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "Scene.EntityStateNotSaved", "Scene entity '%#' could not be saved and is left out: %# (%#)", outNode._name, savedState.error().message(), savedState.error().detail() );
+                    return false;
+                }
+                const string& state = *savedState;
                 // 프리팹 인스턴스는 원형과 다른 것만 적는다. 프리팹을 읽지 못했으면 전체 상태를 적는다. 다음 로드가 그 상태로 만든다.
                 const auto           baseIt         = outNode._prefab.empty() ? inputs._mapPrefabBaseState.end() : inputs._mapPrefabBaseState.find( outNode._prefab );
                 const string*        pBaseState     = ( baseIt != inputs._mapPrefabBaseState.end() && baseIt->second.empty() == false ) ? &baseIt->second : nullptr;
@@ -1131,9 +1137,12 @@ namespace sw
             if ( innerAnchorIt != pInner->_mapObjectIDByFileID.end() )
                 innerOptions._omitAttachToObjectID = innerAnchorIt->second;
 
-            string               overrideXML;
-            const expected<void> overrides =
-                PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pMember, options ), ObjectStateSerializer::saveToXMLString( pInnerObject, innerOptions ), overrideXML );
+            string                 overrideXML;
+            const expected<string> memberState = ObjectStateSerializer::saveToXMLString( pMember, options );
+            const expected<string> innerState  = ObjectStateSerializer::saveToXMLString( pInnerObject, innerOptions );
+            const expected<void>   overrides   = memberState.has_value() == false ? expected<void>{ unexpected( memberState.error() ) }
+                                               : innerState.has_value() == false  ? expected<void>{ unexpected( innerState.error() ) }
+                                                                                  : PrefabOverrides::computeOverrides( *memberState, *innerState, overrideXML );
             if ( overrides.has_value() == false )
             {
                 SW_LOG_WARNING_ID( "Scene.InstanceMemberNotDiffed", "Scene instance member '%#' could not be compared with its scene - its changes are not saved: %# (%#)", pMember->getName().c_str(),

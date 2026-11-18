@@ -53,7 +53,7 @@ namespace sw
             }
 
             /** @brief 오브젝트의 상태를 파일 id 로 적은 XML 입니다. 쿠킹 전 · 쿠킹된 뒤의 상태를 비교하는 기준입니다. */
-            static string makeStateText( const Scene& scene, const GameObject* pObject )
+            [[nodiscard]] static expected<string> makeStateText( const Scene& scene, const GameObject* pObject )
             {
                 ObjectSavedIDMap mapSavedID;
                 scene.collectSavedIDMap( mapSavedID );
@@ -567,12 +567,14 @@ namespace sw
                     SW_LOG_WARNING_ID( "SceneCooker.EntityCouldNotCooked", "Entity '%#' could not be cooked to binary state - keeping XML.", entity._name );
                 continue;
             }
-            const auto        sourceIt       = mapSourceByFileID.find( entity._fileID );
-            const auto        verifyIt       = mapVerifyByFileID.find( entity._fileID );
-            const GameObject* pSource        = ( sourceIt != mapSourceByFileID.end() ) ? sourceIt->second : nullptr;
-            const GameObject* pVerify        = ( verifyIt != mapVerifyByFileID.end() ) ? verifyIt->second : nullptr;
-            const bool        bStateMismatch = pSource == nullptr || pVerify == nullptr ||
-                                        SceneCookerInternal::makeStateText( source, pSource ) != SceneCookerInternal::makeStateText( verify, pVerify );
+            const auto        sourceIt = mapSourceByFileID.find( entity._fileID );
+            const auto        verifyIt = mapVerifyByFileID.find( entity._fileID );
+            const GameObject* pSource  = ( sourceIt != mapSourceByFileID.end() ) ? sourceIt->second : nullptr;
+            const GameObject* pVerify  = ( verifyIt != mapVerifyByFileID.end() ) ? verifyIt->second : nullptr;
+            // 어느 쪽이든 글로 쓰지 못하면 같다고 볼 수 없다 — XML 을 둔다.
+            const expected<string> sourceState    = pSource != nullptr ? SceneCookerInternal::makeStateText( source, pSource ) : expected<string>{ unexpected( Error{ ErrorKind::NotFound, "no source entity" } ) };
+            const expected<string> verifyState    = pVerify != nullptr ? SceneCookerInternal::makeStateText( verify, pVerify ) : expected<string>{ unexpected( Error{ ErrorKind::NotFound, "no cooked entity" } ) };
+            const bool             bStateMismatch = sourceState.has_value() == false || verifyState.has_value() == false || *sourceState != *verifyState;
             if ( bStateMismatch )
             {
                 SW_LOG_WARNING_ID( "SceneCooker.EntityChangesWhenCooked", "Entity '%#' changes when its cooked state is read back - keeping XML.", entity._name );

@@ -15,6 +15,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
+#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleNPCComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
@@ -223,6 +224,12 @@ namespace sw
             GameObject*  pVillager = spawnPrefab( manager, _villagerPrefab, name.c_str() );
             if ( pVillager == nullptr )
                 continue;
+            // 일정 NPC 정체는 이름이 아니라 칸으로 잇는다(디버그 HUD · 상호작용 끼어들기가 읽는다).
+            ScheduleNPCComponent* pNPC = pVillager->getComponent<ScheduleNPCComponent>();
+            if ( pNPC == nullptr )
+                pNPC = pVillager->addComponent<ScheduleNPCComponent>();
+            if ( pNPC != nullptr )
+                pNPC->setNPCID( _schedule.getNPCID( npcIndex ) );
             FarmVillagerComponent* pView = pVillager->getComponent<FarmVillagerComponent>();
             if ( pView != nullptr )
                 pView->assignVillager( gameMode, npcIndex );

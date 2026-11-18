@@ -380,8 +380,39 @@ namespace sw
                 return sameNamed <= 1u && bTargetHasSame == false && StringUtil::startsWith( parentName, "_list" ) == false;
             }
 
-            /** @brief 원본 @p source 의 조건을 사본 @p target 에 되돌려 @p out 에 씁니다. */
-            [[nodiscard]] static bool writeRestored( const XMLNode& source, const XMLNode& target, const XMLNode& out, string_view id, const ResourceTagSet& tags, bool bDelta )
+            /**
+             * @brief 사본 자식마다 칸을 빼지 않은 글의 짝을 찾습니다. 뺀 글은 칸 · 원소를 빼기만 하므로 사본 자식은 빼지 않은 자식의 부분 열이다 —
+             *        차례대로 이름이 같고 사본의 칸이 모두 같은 값으로 든 첫 원소가 짝이다. 짝이 없으면 무효 노드입니다(그 아래는 빠진 칸을 "그대로" 로 본다).
+             */
+            static void pairCompleteChildren( const vector<XMLNode>& listTarget, const XMLNode& complete, vector<XMLNode>& outListComplete )
+            {
+                outListComplete.assign( listTarget.size(), XMLNode{} );
+                if ( complete.isValid() == false )
+                    return;
+                XMLNode candidate = complete.findChild();
+                for ( size_t index = 0; index < listTarget.size(); ++index )
+                {
+                    for ( ; candidate.isValid(); candidate = candidate.findNextSibling() )
+                    {
+                        if ( Stage::isElement( candidate ) == false || string_view( candidate.getName() ) != string_view( listTarget[index].getName() ) )
+                            continue;
+                        uint32 attributeCount = 0;
+                        for ( XMLAttribute attribute = listTarget[index].getFirstAttribute(); attribute; attribute = attribute.getNext() )
+                        {
+                            ++attributeCount;
+                        }
+                        if ( countSameAttributes( listTarget[index], candidate ) == attributeCount )
+                            break;
+                    }
+                    if ( candidate.isValid() == false )
+                        return; // 남은 사본 자식은 짝이 없다
+                    outListComplete[index] = candidate;
+                    candidate              = candidate.findNextSibling();
+                }
+            }
+
+            /** @brief 원본 @p source 의 조건을 사본 @p target 에 되돌려 @p out 에 씁니다. @p complete 는 사본의 칸을 빼지 않은 짝입니다(없으면 무효 노드). */
+            [[nodiscard]] static bool writeRestored( const XMLNode& source, const XMLNode& target, const XMLNode& complete, const XMLNode& out, string_view id, const ResourceTagSet& tags, bool bDelta )
             {
                 vector<When> listWhen;
                 if ( readWhenElements( source, id, tags, listWhen ) == false )
@@ -407,7 +438,10 @@ namespace sw
                     {
                         if ( isConditionName( attribute.getName() ) || findWinner( listWhen, attribute.getName() ) != static_cast<uint32>( index ) )
                             continue;
+                        // 사본이 칸을 뺐으면(기본값 · 부모와 같다) 빼지 않은 글의 값이 편집한 값이다 — 기본값으로 되돌린 편집도 조건에 든다.
                         const utf8* pEdited = target.findAttribute( attribute.getName() );
+                        if ( pEdited == nullptr && complete.isValid() )
+                            pEdited = complete.findAttribute( attribute.getName() );
                         if ( pEdited != nullptr )
                             clone.setAttribute( attribute.getName(), pEdited );
                     }
@@ -436,6 +470,8 @@ namespace sw
                 }
                 if ( pairChildren( listTarget, listSource, id ) == false )
                     return false;
+                vector<XMLNode> listComplete;
+                pairCompleteChildren( listTarget, complete, listComplete );
                 const auto writeUnpairedBefore = [&]( size_t endIndex )
                 {
                     for ( size_t index = 0; index < endIndex; ++index )
@@ -463,7 +499,7 @@ namespace sw
                         continue;
                     }
                     writeUnpairedBefore( sourceIndex );
-                    if ( writeRestored( listSource[sourceIndex]._node, child, out.appendChild( child.getName() ), id, tags, bDelta ) == false )
+                    if ( writeRestored( listSource[sourceIndex]._node, child, listComplete[targetIndex], out.appendChild( child.getName() ), id, tags, bDelta ) == false )
                         return false;
                 }
                 writeUnpairedBefore( listSource.size() );
@@ -754,10 +790,12 @@ namespace sw
             if ( ResourceComposerInternal::composeLayers( context, tags, current, bLayered, listLoadTag ) == false )
                 return false;
             bText = bText || bLayered;
-            // 바꿔 끼운 태그로 합친 것은 기록하지 않는다 — 기록 · 접속 대조는 엔진 태그로 읽은 결과다(같은 id 의 엔진 합성을 덮지 않게).
-            // shortcut: 바꿔 끼운 합성은 엔진 태그가 바뀌어도 다시 읽기 목록에 오르지 않는다 - 같은 id 를 엔진 태그로도 읽었으면 그 다시 읽기가 캐시의 변형까지 다시 읽는다(`UITextAssetCache::reload`). 변형만 든 리소스가 생기면 기록에 변형 칸을 둔다.
+            // 바꿔 끼운 태그로 합친 것은 합성 기록에 적지 않는다 — 기록 · 접속 대조는 엔진 태그로 읽은 결과다(같은 id 의 엔진 합성을 덮지 않게).
+            // 다시 읽기 의존은 따로 적는다 — 변형만 읽은 리소스도 엔진 태그가 바뀌면 다시 읽힌다(언리얼 에디터 미리보기 플랫폼 · Godot 기능 태그 덮기와 같은 몫).
             if ( context._pTagOverride == nullptr )
                 engine::getSubsystem<ResourceComposition>().record( context._assetID.view(), listLoadTag, bLayered, bText ? string_view( current ) : text );
+            else
+                engine::getSubsystem<ResourceComposition>().recordVariant( context._assetID.view(), listLoadTag );
         }
         if ( bText )
         {
@@ -803,10 +841,11 @@ namespace sw
         return true;
     }
 
-    bool ResourceComposer::restoreConditions( string_view savedText, string_view sourceText, string_view id, const ResourceTagSet& tags, string& outText )
+    bool ResourceComposer::restoreConditions( const ResourceSaveText& text, string_view sourceText, string_view id, const ResourceTagSet& tags, string& outText )
     {
-        using Internal = ResourceConditionRestoreInternal;
-        outText        = string{ savedText };
+        using Internal              = ResourceConditionRestoreInternal;
+        const string_view savedText = text.getText();
+        outText                     = string{ savedText };
         if ( sourceText.find( DataInheritance::kWhenElement ) == string_view::npos || ResourceConditionStageInternal::isLikelyXML( sourceText ) == false )
             return true;
         XMLDocument sourceDoc;
@@ -818,16 +857,22 @@ namespace sw
             SW_LOG_ERROR_ID( "ResourceCondition.SaveShapeChanged", "'%#' holds resource conditions but the text to save has another root - not saved, the conditions would be lost", id );
             return false;
         }
+        XMLDocument completeDoc;
+        if ( completeDoc.parse( text.getCompleteText(), id ) == false || string_view( completeDoc.getRoot().getName() ) != string_view( savedDoc.getRoot().getName() ) )
+        {
+            SW_LOG_ERROR_ID( "ResourceCondition.CompleteTextMismatch", "'%#': the complete text given with the text to save has another root - not saved", id );
+            return false;
+        }
         XMLDocument   outDoc;
         const bool    bDelta = savedDoc.getRoot().getAttributeText( DataInheritance::kBaseAttribute ).empty() == false;
         const XMLNode root   = outDoc.appendRoot( savedDoc.getRoot().getName() );
-        if ( Internal::writeRestored( sourceDoc.getRoot(), savedDoc.getRoot(), root, id, tags, bDelta ) == false )
+        if ( Internal::writeRestored( sourceDoc.getRoot(), savedDoc.getRoot(), completeDoc.getRoot(), root, id, tags, bDelta ) == false )
             return false;
         outText = outDoc.saveToString();
         return true;
     }
 
-    bool ResourceComposer::saveText( string_view absPath, string_view text, const ResourceTagSet* pTagOverride )
+    bool ResourceComposer::saveText( string_view absPath, const ResourceSaveText& text, const ResourceTagSet* pTagOverride )
     {
         // 덮어쓰기 층을 얹어 읽은 사본을 원본 자리에 쓰면 층 값이 원본에 박힌다 - 고칠 자리는 층 파일이다.
         if ( engine::getSubsystem<ResourceComposition>().getLayers().empty() == false )
@@ -844,7 +889,7 @@ namespace sw
             return false;
         string sourceText;
         if ( FileUtil::isRegularFile( absPath ) == false || FileUtil::readTextFile( absPath, sourceText ) == false )
-            return FileUtil::writeTextFile( absPath, text );
+            return FileUtil::writeTextFile( absPath, text.getText() );
         string               restoredText;
         const ResourceTags&  engineTags = engine::getSubsystem<ResourceTags>();
         const ResourceTagSet tags       = pTagOverride != nullptr ? engineTags.captureWith( *pTagOverride ) : engineTags.capture();
@@ -877,7 +922,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ResourceSave.DeltaNotSaved", "'%#': %# '%#' - not saved", string{ absPath }.c_str(), delta.error().message(), delta.error().detail() );
             return false;
         }
-        if ( saveText( absPath, deltaText ) )
+        if ( saveText( absPath, ResourceSaveText::makeWithComplete( deltaText, fullText ) ) ) // 차이는 부모와 같은 칸을 뺐다 — 펼친 글이 빼지 않은 짝이다
             return true;
         SW_LOG_ERROR_ID( "ResourceSave.WriteFailed", "'%#' could not be written", string{ absPath }.c_str() );
         return false;

@@ -151,7 +151,7 @@ namespace sw
     {
         if ( absPath.str().empty() )
             return false;
-        return ResourceComposer::saveText( absPath.str(), toXML() );
+        return ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }
 
     bool SequenceAsset::loadFromXMLText( string_view xmlView )

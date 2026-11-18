@@ -457,3 +457,38 @@ SW_TEST_CASE( ProjectileTest, StepReturnsOnlyThisStepEvents )
     SW_EXPECT_EQUAL( 1, hitCount );
     SW_EXPECT_TRUE( simulation.step( 0.0f, world ).empty() );
 }
+
+/**
+ * @brief [ProjectileTest] 꿰뚫은 대상은 상한 없이 모두 기억하고 상태 바이트로 오가며, 튕기거나 되받아치면 잊는다
+ * @details 예전에는 고리 8 칸이라 아홉째를 꿰뚫으면 첫째를 잊어 다시 맞힐 수 있었다. 변이: 기억을 고정 칸 고리로 되돌리면 첫 단언이 진다.
+ */
+SW_TEST_CASE( ProjectileTest, PierceMemoryHasNoLimit )
+{
+    ProjectileState bullet       = Util::makeBullet( 10.0f );
+    constexpr int32 kTargetCount = 20;
+    for ( int32 target = 0; target < kTargetCount; ++target )
+    {
+        bullet.rememberHit( target );
+    }
+    bullet.rememberHit( 3 ); // 겹쳐 넣지 않는다
+    for ( int32 target = 0; target < kTargetCount; ++target )
+    {
+        SW_EXPECT_TRUE( bullet.hasHit( target ) );
+    }
+    SW_EXPECT_FALSE( bullet.hasHit( kTargetCount ) );
+    SW_EXPECT_EQUAL( size_t( kTargetCount ), bullet._listHitTarget.size() );
+
+    ProjectileSimulation original;
+    (void)original.spawn( bullet );
+    Archive written;
+    original.writeState( written );
+    ProjectileSimulation restored;
+    Archive              reading( written.getData(), written.getSize() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), restored.getProjectiles().size() );
+    SW_EXPECT_TRUE( restored.getProjectiles()[0].hasHit( 0 ) );
+    SW_EXPECT_TRUE( restored.getProjectiles()[0].hasHit( kTargetCount - 1 ) );
+
+    bullet.deflect( 1, 1.0f, 1.0f );
+    SW_EXPECT_FALSE( bullet.hasHit( 0 ) );
+}

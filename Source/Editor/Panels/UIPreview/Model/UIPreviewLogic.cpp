@@ -591,7 +591,7 @@ namespace sw::editor
         return true;
     }
 
-    expected<string> UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath )
+    expected<string> UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath, ResourceFieldWrite fieldWrite )
     {
         const Widget* pRoot = screen.getTree().getRoot();
         if ( pRoot == nullptr )
@@ -599,7 +599,7 @@ namespace sw::editor
         const expected<shared_ptr<const UIDocumentAsset>> document = documents.findOrLoad( documentPath, screen.getResourceTagOverride() );
         if ( document.has_value() == false )
             return unexpected( Error{ ErrorKind::NotFound, "the document could not be loaded", document.error().message() }.appendDetail( document.error().detail() ) );
-        return UIDocumentWriter::write( screen.getDesc(), ( *document )->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );
+        return UIDocumentWriter::write( screen.getDesc(), ( *document )->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations(), fieldWrite );
     }
 
     UIPreviewAnchorValues UIPreviewLogic::getAnchorPreset( UIPreviewAnchorPreset preset )

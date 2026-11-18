@@ -150,6 +150,26 @@ namespace sw
         _pOwner->samplePlayableIntoPose( playable, time, *_pSkeleton, inoutPose, _pBoneMask );
     }
 
+    SkeletalAnimatorComponent::PoseNodeRootMotionSource::PoseNodeRootMotionSource( const SkeletalAnimatorComponent& owner )
+        : _pOwner{ &owner }
+    {
+    }
+
+    BoneTransform SkeletalAnimatorComponent::PoseNodeRootMotionSource::computeRootMotion( const IAnimationPlayable& playable, const AnimationTimeStep& step ) const
+    {
+        return _pOwner->computePlayableRootMotion( playable, step );
+    }
+
+    SkeletalAnimatorComponent::PoseNodeCurveSink::PoseNodeCurveSink( SkeletalAnimatorComponent& owner )
+        : _pOwner{ &owner }
+    {
+    }
+
+    void SkeletalAnimatorComponent::PoseNodeCurveSink::accumulateCurves( const IAnimationPlayable& playable, float32 time, float32 weight )
+    {
+        _pOwner->accumulatePlayableCurves( playable, time, weight );
+    }
+
     SkeletalBlendSpaceState::SkeletalBlendSpaceState( const hashed_string& stateName, const AnimationGraphBlendSpaceDef& def, vector<const AnimationClip*>&& listClip, int32 maxLODGrade )
         : _stateName{ stateName }
         , _pDef{ &def }
@@ -1450,9 +1470,9 @@ namespace sw
 
     BoneTransform SkeletalAnimatorComponent::computePlayableRootMotion( const IAnimationPlayable& playable, const AnimationTimeStep& step ) const
     {
-        // shortcut: 포즈 노드는 루트 모션을 내지 않는다(몽타주 섹션 · 미러의 이동 뒤집기 없음). 루트 모션 몽타주를 쓰는 게임이 생기면 노드가 걸음 구간을 입력 시각으로 옮겨 내게 한다.
-        if ( playable.findPoseNode() != nullptr )
-            return BoneTransform{};
+        // 포즈 노드는 입력마다 그 입력의 시각 구간으로 옮겨 다시 묻고 자기 규칙으로 합친다(섞기 · 비추기 · 섹션 잇기).
+        if ( const IAnimationPoseNode* pPoseNode = playable.findPoseNode(); pPoseNode != nullptr )
+            return pPoseNode->computeRootMotion( _parameters, step, PoseNodeRootMotionSource( *this ) );
         const SkeletalBlendSpaceState* pState = findBlendSpaceState( &playable );
         if ( pState == nullptr )
             return static_cast<const AnimationClip&>( playable ).computeRootMotionDelta( step );
@@ -1476,9 +1496,13 @@ namespace sw
 
     void SkeletalAnimatorComponent::accumulatePlayableCurves( const IAnimationPlayable& playable, float32 time, float32 weight )
     {
-        // shortcut: 포즈 노드는 커브를 내지 않는다(입력 클립의 커브 · 모프 없음). 커브를 싣는 클립을 노드에 넣는 데이터가 생기면 노드가 입력 시각을 알려 더하게 한다.
-        if ( playable.findPoseNode() != nullptr )
+        // 포즈 노드는 입력마다 그 입력의 시각 · 포즈와 같은 가중치로 커브를 더한다.
+        if ( const IAnimationPoseNode* pPoseNode = playable.findPoseNode(); pPoseNode != nullptr )
+        {
+            PoseNodeCurveSink sink( *this );
+            pPoseNode->accumulateCurves( _parameters, time, weight, sink );
             return;
+        }
         const SkeletalBlendSpaceState* pState = findBlendSpaceState( &playable );
         if ( pState == nullptr )
         {

@@ -34,7 +34,7 @@ namespace sw
         , _buildingColor{ 0.55f, 0.30f, 0.30f, 1.0f }
         , _world{}
         , _tintCache{}
-        , _listUnitView{}
+        , _unitViews{}
         , _worker{}
         , _soldier{}
         , _tickCount{ 0 }
@@ -162,35 +162,36 @@ namespace sw
 
     void FrontierSkirmishGameModeComponent::onViewsDespawned()
     {
-        _listUnitView.clear();
+        _unitViews.clear();
     }
 
     void FrontierSkirmishGameModeComponent::syncUnitViews( GameObjectManager& manager )
     {
-        // shortcut: 살아 있는 유닛 수가 그대로면 모습을 순서대로 옮기고, 바뀌면(병영이 서거나 유닛이 죽으면) 모두 다시 세운다 — 유닛이 많아지면 유닛마다의 모습 컴포넌트로 바꾼다.
-        vector<const RTSUnit*> listUnit;
-        _world.forEachUnit( [&listUnit]( const RTSUnit& unit )
-        { listUnit.push_back( &unit ); } );
-        if ( listUnit.size() != _listUnitView.size() )
+        // 유닛 슬롯마다 모습 하나 — 새로 선 유닛만 스폰하고 죽은 유닛만 지운다(언리얼 Mass Representation 이 엔티티마다 액터를 맞추는 것과 같다).
+        // 예전에는 유닛 수가 바뀌면(병영이 서거나 하나가 죽으면) 모습을 모두 지우고 다시 세웠다.
+        _unitViews.beginCollect();
+        _world.forEachUnit( [this]( const RTSUnit& unit )
+        { _unitViews.show( static_cast<size_t>( unit._id.index() ), unit._id ); } );
+        _unitViews.endCollect();
+        _unitViews.flush( [&manager]( GameObjectHandle& inoutHandle )
+        { destroySpawned( manager, inoutHandle ); },
+                          [this, &manager]( size_t, RTSUnitID )
         {
-            destroySpawned( manager, _listUnitView );
-            for ( size_t unitIndex = 0; unitIndex < listUnit.size(); ++unitIndex )
-            {
-                GameObject* pView = spawnPrefab( manager, _unitPrefab, "FrontierUnit" );
-                _listUnitView.push_back( pView != nullptr ? pView->getHandle() : GameObjectHandle{} );
-            }
-        }
-        for ( size_t index = 0; index < listUnit.size(); ++index )
+            GameObject* const pView = spawnPrefab( manager, _unitPrefab, "FrontierUnit" );
+            return pView != nullptr ? pView->getHandle() : GameObjectHandle{};
+        } );
+        for ( const SimulationViewSync<RTSUnitID>::Slot& slot : _unitViews.getSlots() )
         {
-            const RTSUnit& unit  = *listUnit[index];
-            GameObject*    pView = manager.resolveGameObject( _listUnitView[index] );
-            MeshComponent* pMesh = pView != nullptr ? pView->getComponent<MeshComponent>() : nullptr;
+            const RTSUnit* const pUnit = ( slot._shown == RTSUnitID{} ) ? nullptr : _world.findUnit( slot._shown );
+            GameObject* const    pView = pUnit != nullptr ? manager.resolveGameObject( slot._object ) : nullptr;
+            MeshComponent* const pMesh = pView != nullptr ? pView->getComponent<MeshComponent>() : nullptr;
             if ( pMesh == nullptr )
                 continue;
-            const bool    bBuilding = unit.isBuilding();
-            const float32 size      = bBuilding && unit._pDef != nullptr ? static_cast<float32>( unit._pDef->_footprint ) : 0.6f;
-            const float3  center    = bBuilding ? float3{ static_cast<float32>( unit._cell._x ) + size * 0.5f, 0.4f, static_cast<float32>( unit._cell._y ) + size * 0.5f }
-                                                : float3{ unit._position._x, 0.3f, unit._position._z };
+            const RTSUnit& unit      = *pUnit;
+            const bool     bBuilding = unit.isBuilding();
+            const float32  size      = bBuilding && unit._pDef != nullptr ? static_cast<float32>( unit._pDef->_footprint ) : 0.6f;
+            const float3   center    = bBuilding ? float3{ static_cast<float32>( unit._cell._x ) + size * 0.5f, 0.4f, static_cast<float32>( unit._cell._y ) + size * 0.5f }
+                                                 : float3{ unit._position._x, 0.3f, unit._position._z };
             pMesh->setLocalPosition( center );
             pMesh->setLocalScale( float3{ size * 0.9f, bBuilding ? 0.8f : 0.6f, size * 0.9f } );
             _tintCache.apply( *pMesh, bBuilding ? _buildingColor : _unitColor );

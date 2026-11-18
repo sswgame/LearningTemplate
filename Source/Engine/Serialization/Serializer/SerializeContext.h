@@ -75,6 +75,7 @@ namespace sw
             , _bSkipUnknownProperties{ SW_FALSE }
             , _bSkipUnreadableProperties{ SW_FALSE }
             , _bRestoringValueBeforeRead{ SW_FALSE }
+            , _bWriteEmptyValues{ SW_FALSE }
             , _reservedFlags{ 0 } {}
 
         // ------------------------------------------------------------------------------
@@ -128,6 +129,16 @@ namespace sw
             return *this;
         }
 
+        /**
+         * @brief 쓰기가 생략을 허락한 빈 칸(`PROPERTY( SkipIfEmpty )`)도 씁니다 — 저장 입구에 넘기는 빼지 않은 짝(`ResourceSaveText`)을 만들 때만 켠다.
+         * @details 빈 칸을 빼면 "그대로" 와 "비움" 을 글만으로 가릴 수 없다(조건이 정한 칸을 비운 편집이 조건에 들지 않는다).
+         */
+        SerializeContext& setWriteEmptyValues( bool bWrite )
+        {
+            _bWriteEmptyValues = bWrite ? SW_TRUE : SW_FALSE;
+            return *this;
+        }
+
         // ------------------------------------------------------------------------------
         // 3) 조회: 타입 이름 → 등록된 writer/reader
         // ------------------------------------------------------------------------------
@@ -145,6 +156,8 @@ namespace sw
         bool shouldSkipUnreadableProperties() const { return _bSkipUnreadableProperties == SW_TRUE; }
         /** @brief 읽기 실패 되돌리기 문맥(`setRestoringValueBeforeRead`)이면 true 입니다 — 선언된 범위를 보지 않는다. */
         bool isRestoringValueBeforeRead() const { return _bRestoringValueBeforeRead == SW_TRUE; }
+        /** @brief 생략을 허락한 빈 칸도 쓰는지(`setWriteEmptyValues`) 반환합니다. */
+        bool shouldWriteEmptyValues() const { return _bWriteEmptyValues == SW_TRUE; }
         /**
          * @brief 저장 목적입니다. 만들 때 정하고 바꾸지 않습니다.
          * @details 목적이 쓰지 않는 필드는 읽을 때도 지금 값 그대로다(기본값을 채우지 않는다). 세이브는 옵트인 타입의 나머지 필드를, 저작 읽기는 `RuntimeState` 를 덮지 않는다.
@@ -256,7 +269,8 @@ namespace sw
         uint8                  _bSkipUnknownProperties    : 1;
         uint8                  _bSkipUnreadableProperties : 1;
         uint8                  _bRestoringValueBeforeRead : 1;
-        [[maybe_unused]] uint8 _reservedFlags             : 5;
+        uint8                  _bWriteEmptyValues         : 1;
+        [[maybe_unused]] uint8 _reservedFlags             : 4;
     };
 
 } // namespace sw

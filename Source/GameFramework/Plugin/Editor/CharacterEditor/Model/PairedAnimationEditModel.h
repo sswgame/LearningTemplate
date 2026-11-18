@@ -60,7 +60,7 @@ namespace sw::editor
         /** @brief 파일을 읽습니다. 파일이 없거나 읽지 못하면 false 입니다. */
         [[nodiscard]] bool loadFromFile( string_view absolutePath );
         /** @brief 현재 내용을 파일 형식으로 씁니다. */
-        string saveToXMLText() const { return PairedAnimationDef::makeXMLText( _content ); }
+        string saveToXMLText() const { return PairedAnimationDef::makeXMLText( _content, ResourceFieldWrite::OmitDefaults ); }
         /** @brief 규칙을 본 뒤 파일에 씁니다. 규칙에 어긋나거나 쓰지 못하면 쓰지 않고 이유(`Error`)를 돌려줍니다. 성공하면 "저장된 상태" 로 맞춥니다. */
         [[nodiscard]] expected<void> saveDocument( const AbsolutePath& absPath );
 

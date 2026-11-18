@@ -154,7 +154,7 @@ namespace sw
     {
     public:
         static constexpr uint32 kStateTag     = FourCCUtil::make( "AROM" );
-        static constexpr uint32 kStateVersion = 3; ///< 3: 탄의 정의 이름이 탄 정의 id 다(2 는 비어 있었다)
+        static constexpr uint32 kStateVersion = 4; ///< 4: 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다), 3: 탄의 정의 이름이 탄 정의 id 다(2 는 비어 있었다)
 
         /** @brief 비활성(None)과 게이트 닫힘 상태로 시작합니다. */
         ActionRoom();

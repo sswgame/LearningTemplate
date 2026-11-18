@@ -22,6 +22,17 @@ namespace sw
             static constexpr uint8   kFlagAlive     = 1u;
             static constexpr uint8   kFlagReflected = 2u;
 
+            /** @brief 꿰뚫은 대상 목록에 같은 번호가 두 번 없으면 true 입니다(`rememberHit` 은 겹쳐 넣지 않는다 — 겹치면 깨진 바이트다). */
+            static bool hasNoDuplicate( const vector<int32>& listTarget )
+            {
+                for ( size_t index = 1; index < listTarget.size(); ++index )
+                {
+                    if ( std::find( listTarget.begin(), listTarget.begin() + static_cast<ptrdiff_t>( index ), listTarget[index] ) != listTarget.begin() + static_cast<ptrdiff_t>( index ) )
+                        return false;
+                }
+                return true;
+            }
+
             /** @brief @p value 에서 평면 법선 @p normal(단위 또는 0) 성분을 뺍니다. */
             static float3 constrain( const float3& value, const float3& normal )
             {
@@ -174,40 +185,27 @@ namespace sw
         , _target{ constant::invalid_index::kInt32 }
         , _pierceLeft{ 0 }
         , _bounceLeft{ 0 }
-        , _arrHitTarget{}
-        , _hitCursor{ 0 }
+        , _listHitTarget{}
         , _bAlive{ SW_TRUE }
         , _bReflected{ SW_FALSE }
         , _reserved{ 0 }
     {
-        clearHits();
     }
 
     bool ProjectileState::hasHit( int32 other ) const
     {
-        if ( other == constant::invalid_index::kInt32 )
-            return false;
-        for ( const int32 target : _arrHitTarget )
-        {
-            if ( target == other )
-                return true;
-        }
-        return false;
+        return other != constant::invalid_index::kInt32 && std::find( _listHitTarget.begin(), _listHitTarget.end(), other ) != _listHitTarget.end();
     }
 
     void ProjectileState::rememberHit( int32 other )
     {
-        _arrHitTarget[_hitCursor] = other;
-        _hitCursor                = static_cast<uint8>( ( _hitCursor + 1u ) % _arrHitTarget.size() );
+        if ( other != constant::invalid_index::kInt32 && hasHit( other ) == false )
+            _listHitTarget.push_back( other );
     }
 
     void ProjectileState::clearHits()
     {
-        for ( int32& target : _arrHitTarget )
-        {
-            target = constant::invalid_index::kInt32;
-        }
-        _hitCursor = 0;
+        _listHitTarget.clear();
     }
 
     ProjectileState ProjectileState::launch( const ResolvedShot& shot, const float3& origin, const float3& direction, float32 gravity )
@@ -304,7 +302,7 @@ namespace sw
         }
         io.value( _nextID );
         io.check( _nextID != 0 );
-        // 탄마다 이름(4) + 위치 · 속도(24) + 실수 11 개(44) + id · 반응 번호(8) + 정수 5 개(20) + 맞힌 대상 8 개(32) + 고리 칸(1) + 깃발(1) 바이트
+        // 탄마다 이름(4) + 위치 · 속도(24) + 실수 11 개(44) + id · 반응 번호(8) + 정수 5 개(20) + 맞힌 대상 수(4) + 깃발(1) 바이트(+ 맞힌 대상마다 4)
         io.count( static_cast<uint32>( StateOffsetFromEnd::kNameLength ), projectileCount );
         if ( io.isOk() == false )
             return;
@@ -337,11 +335,11 @@ namespace sw
             io.value( projectile._owner );
             io.value( projectile._team );
             io.value( projectile._target );
-            for ( int32& target : projectile._arrHitTarget )
+            io.list( projectile._listHitTarget, sizeof( int32 ), [&io]( int32& target )
             {
                 io.value( target );
-            }
-            io.value( projectile._hitCursor );
+                io.check( target != constant::invalid_index::kInt32 ); // 겹침은 아래에서 본다
+            } );
             io.value( projectile._pierceLeft );
             io.value( projectile._bounceLeft );
             io.value( flags );
@@ -353,7 +351,7 @@ namespace sw
                                 0.0f <= projectile._radius && 0.0f <= projectile._blastRadius && 0.0f <= projectile._restitution && projectile._restitution <= 1.0f;
             // 쓰는 때(걸음 사이)에는 끝난 탄이 빠져 있다 — 살아 있지 않은 탄은 깨진 바이트다.
             const bool bCounts = 0 < projectile._id && projectile._id < _nextID && 0 <= projectile._pierceLeft && 0 <= projectile._bounceLeft &&
-                                 projectile._hitCursor < projectile._arrHitTarget.size() &&
+                                 Internal::hasNoDuplicate( projectile._listHitTarget ) &&
                                  ( flags & Internal::kFlagAlive ) != 0u && flags <= ( Internal::kFlagAlive | Internal::kFlagReflected );
             if ( io.check( bRange && bCounts ) == false )
                 return;
