@@ -22,23 +22,47 @@ namespace sw::editor
             /** @brief 글자 그림자 색입니다(밝은 배경에서도 읽히게). */
             static constexpr Color kTextShadow{ Color::fromBytes( 0, 0, 0, 200 ) };
 
-            /** @brief 색 역할을 이번 테마의 색으로 풉니다(값에는 테마가 없다). */
+            /** @brief 색 역할을 이번 테마의 색으로 풉니다(값에는 테마가 없다). 역할 색에는 값의 알파를 곱한다. */
             static ImU32 resolveColor( EditorVisualizerColorRole role, const float4& color )
             {
                 switch ( role )
                 {
                     case EditorVisualizerColorRole::ColliderWire:
-                        return EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "ColliderWire" ) );
+                        return withAlpha( SW_THEME_COLOR( "Viewport", "ColliderWire" ), color );
                     case EditorVisualizerColorRole::CameraWire:
-                        return EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "CameraWire" ) );
+                        return withAlpha( SW_THEME_COLOR( "Viewport", "CameraWire" ), color );
                     case EditorVisualizerColorRole::SelectionOutline:
-                        return EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "SelectionOutline" ) );
+                        return withAlpha( SW_THEME_COLOR( "Viewport", "SelectionOutline" ), color );
                     case EditorVisualizerColorRole::Hover:
-                        return EditorColorUtil::toImU32( EditorThemeUtil::getViewportHoverColor() );
+                        return withAlpha( EditorThemeUtil::getViewportHoverColor(), color );
+                    case EditorVisualizerColorRole::AxisX:
+                        return withAlpha( SW_THEME_COLOR( "Viewport", "AxisX" ), color );
+                    case EditorVisualizerColorRole::AxisY:
+                        return withAlpha( SW_THEME_COLOR( "Viewport", "AxisY" ), color );
+                    case EditorVisualizerColorRole::AxisZ:
+                        return withAlpha( SW_THEME_COLOR( "Viewport", "AxisZ" ), color );
                     case EditorVisualizerColorRole::Explicit:
                         break;
                 }
                 return EditorColorUtil::toImU32( Color::fromFloat4( color ) );
+            }
+
+            static ImU32 withAlpha( const Color& theme, const float4& color )
+            {
+                float4 value = theme.toFloat4();
+                value._w *= color._w;
+                return EditorColorUtil::toImU32( Color::fromFloat4( value ) );
+            }
+
+            /** @brief 선분 하나를 근평면에서 잘라 긋습니다. 다 잘렸으면 false 입니다. */
+            static bool drawLine( ImDrawList* pDrawList, const float4x4& viewProj, const float2& canvasPos, const float2& canvasSize, const EditorVisualizerLine& line )
+            {
+                ImVec2 screenFrom;
+                ImVec2 screenTo;
+                if ( EditorViewportProjectionUtil::projectSegment( viewProj, line._from, line._to, canvasPos, canvasSize, screenFrom, screenTo ) == false )
+                    return false;
+                pDrawList->AddLine( screenFrom, screenTo, resolveColor( line._colorRole, line._color ), line._thickness );
+                return true;
             }
 
             /** @brief 그린 선 · 글자 하나를 그 통계 칸에 셉니다. */
@@ -72,12 +96,8 @@ namespace sw::editor
 
                 for ( const EditorVisualizerLine& line : drawList._listLine )
                 {
-                    ImVec2 screenFrom;
-                    ImVec2 screenTo;
-                    if ( EditorViewportProjectionUtil::projectSegment( *args._pViewProj, line._from, line._to, args._canvasPos, args._canvasSize, screenFrom, screenTo ) == false )
-                        continue;
-                    args._pDrawList->AddLine( screenFrom, screenTo, resolveColor( line._colorRole, line._color ), line._thickness );
-                    count( stats, line._statSlot, false );
+                    if ( drawLine( args._pDrawList, *args._pViewProj, args._canvasPos, args._canvasSize, line ) )
+                        count( stats, line._statSlot, false );
                 }
                 for ( const EditorVisualizerText& text : drawList._listText )
                 {
@@ -92,6 +112,17 @@ namespace sw::editor
             }
         };
     } // namespace
+
+    uint32 EditorViewportVisualizer::drawLines( ImDrawList* pDrawList, const float4x4& viewProj, const float2& canvasPos, const float2& canvasSize, const vector<EditorVisualizerLine>& listLine )
+    {
+        uint32 drawnCount = 0;
+        for ( const EditorVisualizerLine& line : listLine )
+        {
+            if ( EditorViewportVisualizerInternal::drawLine( pDrawList, viewProj, canvasPos, canvasSize, line ) )
+                ++drawnCount;
+        }
+        return drawnCount;
+    }
 
     uint32 EditorViewportVisualizer::getCount()
     {

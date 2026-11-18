@@ -24,7 +24,7 @@ namespace sw::editor
     struct EditorViewportVisualizerArgs;
     class EditorVisualizerToggles;
 
-    /** @brief 선 색을 어디서 정하는지입니다. `Explicit` 이 아니면 그리는 쪽이 테마 토큰으로 푼다(값에는 테마가 없다). */
+    /** @brief 선 색을 어디서 정하는지입니다. `Explicit` 이 아니면 그리는 쪽이 테마 토큰으로 풀고 값의 `_color` 알파를 곱한다(값에는 테마가 없다). */
     enum class EditorVisualizerColorRole : uint8
     {
         Explicit,         ///< 값의 `_color` 를 그대로 쓴다
@@ -32,6 +32,9 @@ namespace sw::editor
         CameraWire,       ///< 테마 `Viewport.CameraWire`
         SelectionOutline, ///< 테마 `Viewport.SelectionOutline`
         Hover,            ///< 테마 뷰포트 호버 색
+        AxisX,            ///< 테마 `Viewport.AxisX`
+        AxisY,            ///< 테마 `Viewport.AxisY`
+        AxisZ,            ///< 테마 `Viewport.AxisZ`
     };
 
     /** @brief 그린 선 · 글자를 어느 통계(`EditorVisualizerStats`)에 셀지입니다. 통계는 화면에 실제로 그린 수(근평면에서 다 잘린 것은 빼고)라 그리는 쪽이 센다. */

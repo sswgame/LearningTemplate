@@ -28,6 +28,7 @@ namespace sw
 namespace sw::editor
 {
     struct EditorVisualizerDrawList;
+    struct EditorVisualizerLine;
 
     /** @brief 시각화 함수가 그리는 데 필요한 프레임 정보입니다. */
     struct EditorViewportVisualizerArgs
@@ -98,6 +99,11 @@ namespace sw::editor
          * @details 도형을 그릴 때 화면에 남은 선 · 글자 수를 `args._pStats` 에 적는다(통계는 매 프레임 다시 센다).
          */
         static void drawAll( const EditorViewportVisualizerArgs& args, const EditorVisualizerToggles& toggles, const EditorVisualizerDrawList& drawList );
+        /**
+         * @brief 월드 선분 값들을 캔버스에 긋습니다(근평면에서 잘라 투영, 테마 색 역할을 푼다). 그린 선분 수를 돌려준다(다 잘린 것은 빼고).
+         * @details 미리보기 패널처럼 시각화 등록 밖에서 모은 선(소켓 축 · 관통 점 …)을 같은 규칙으로 그릴 때 쓴다.
+         */
+        static uint32 drawLines( ImDrawList* pDrawList, const float4x4& viewProj, const float2& canvasPos, const float2& canvasSize, const vector<EditorVisualizerLine>& listLine );
     };
 } // namespace sw::editor
 

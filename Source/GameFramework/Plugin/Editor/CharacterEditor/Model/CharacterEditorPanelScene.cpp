@@ -221,6 +221,7 @@ namespace sw::editor
         , _placedGizmoTarget{ CharacterGizmoTarget::None }
         , _bRigPreview{ false }
         , _published{}
+        , _previewState{}
         , _bodyState{}
         , _bodyHighlightDrive{ constant::invalid_index::kUint32 }
         , _bodySelectedSection{}
