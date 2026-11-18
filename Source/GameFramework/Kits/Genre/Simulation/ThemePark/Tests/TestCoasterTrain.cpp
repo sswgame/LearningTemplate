@@ -69,7 +69,7 @@ namespace
             return params;
         }
 
-        static CoasterTrackPiece makePiece( CoasterPieceType type, float32 length, float32 height = 0.0f )
+        static CoasterTrackPiece makePiece( CoasterPieceKind type, float32 length, float32 height = 0.0f )
         {
             CoasterTrackPiece piece;
             piece._type   = type;
@@ -81,7 +81,7 @@ namespace
         static CoasterTrackPiece makeTurnRight( float32 radius, float32 angle )
         {
             CoasterTrackPiece piece;
-            piece._type   = CoasterPieceType::TurnRight;
+            piece._type   = CoasterPieceKind::TurnRight;
             piece._radius = radius;
             piece._angle  = angle;
             return piece;
@@ -122,7 +122,7 @@ namespace
 SW_TEST_CASE( CoasterTrainTest, InitializeRefusesOutOfRangeParams )
 {
     SW_EXPECT_LOG( "CoasterTrain.CoasterPhysicsParamsRefusedFixedStepNeeds" );
-    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceType::Straight, 20.0f ) }, false );
+    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Straight, 20.0f ) }, false );
     CoasterTrain       train;
 
     CoasterPhysicsParams tooCoarse = Util::makeFrictionlessParams();
@@ -148,7 +148,7 @@ SW_TEST_CASE( CoasterTrainTest, InitializeRefusesOutOfRangeParams )
 SW_TEST_CASE( CoasterTrainTest, ZeroGravityIsRefused )
 {
     SW_EXPECT_LOG( "CoasterTrain.CoasterPhysicsParamsRefusedFixedStepNeeds" );
-    const CoasterTrack   track  = Util::makeTrack( { Util::makePiece( CoasterPieceType::Station, 20.0f ) }, false );
+    const CoasterTrack   track  = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Station, 20.0f ) }, false );
     CoasterPhysicsParams params = Util::makeFrictionlessParams();
     params._gravity             = 0.0f;
     CoasterTrain train;
@@ -179,7 +179,7 @@ SW_TEST_CASE( CoasterTrainTest, TrainWithoutTrackDoesNothing )
  */
 SW_TEST_CASE( CoasterTrainTest, FrictionDeceleratesAndStaticFrictionHolds )
 {
-    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceType::Straight, 500.0f ) }, false );
+    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Straight, 500.0f ) }, false );
 
     CoasterPhysicsParams rolling = Util::makeFrictionlessParams();
     rolling._rollingResistance   = 0.1f; // 감속 1 m/s^2
@@ -211,7 +211,7 @@ SW_TEST_CASE( CoasterTrainTest, LiftBoosterAndBrakeSetTheSpeed )
     const CoasterPhysicsParams params = Util::makeFrictionlessParams();
     CoasterTrain               train;
 
-    const CoasterTrack lift = Util::makeTrack( { Util::makePiece( CoasterPieceType::LiftHill, 100.0f, 5.0f ) }, false );
+    const CoasterTrack lift = Util::makeTrack( { Util::makePiece( CoasterPieceKind::LiftHill, 100.0f, 5.0f ) }, false );
     SW_REQUIRE_TRUE( train.initialize( &lift, params ) );
     Util::run( train, 1.0f );
     SW_EXPECT_NEAR( params._liftSpeed, train.getSpeed(), 0.01f );
@@ -219,14 +219,14 @@ SW_TEST_CASE( CoasterTrainTest, LiftBoosterAndBrakeSetTheSpeed )
     Util::run( train, 0.1f );
     SW_EXPECT_NEAR( params._liftSpeed, train.getSpeed(), 0.01f );
 
-    const CoasterTrack booster = Util::makeTrack( { Util::makePiece( CoasterPieceType::Booster, 500.0f ) }, false );
+    const CoasterTrack booster = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Booster, 500.0f ) }, false );
     SW_REQUIRE_TRUE( train.initialize( &booster, params ) );
     Util::run( train, 1.0f );
     SW_EXPECT_NEAR( params._boosterAcceleration, train.getSpeed(), 0.1f );
     Util::run( train, 4.0f );
     SW_EXPECT_NEAR( params._boosterSpeed, train.getSpeed(), 0.01f );
 
-    const CoasterTrack brake = Util::makeTrack( { Util::makePiece( CoasterPieceType::Brakes, 500.0f ) }, false );
+    const CoasterTrack brake = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Brakes, 500.0f ) }, false );
     SW_REQUIRE_TRUE( train.initialize( &brake, params ) );
     train.setSpeed( 20.0f );
     Util::run( train, 0.5f );
@@ -244,7 +244,7 @@ SW_TEST_CASE( CoasterTrainTest, LiftBoosterAndBrakeSetTheSpeed )
 SW_TEST_CASE( CoasterTrainTest, StationConvergesFromBothSides )
 {
     const CoasterPhysicsParams params = Util::makeFrictionlessParams();
-    const CoasterTrack         track  = Util::makeTrack( { Util::makePiece( CoasterPieceType::Station, 500.0f ) }, false );
+    const CoasterTrack         track  = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Station, 500.0f ) }, false );
     CoasterTrain               train;
     SW_REQUIRE_TRUE( train.initialize( &track, params ) );
     Util::run( train, 1.0f );
@@ -262,13 +262,13 @@ SW_TEST_CASE( CoasterTrainTest, StationConvergesFromBothSides )
  */
 SW_TEST_CASE( CoasterTrainTest, SlopeAcceleratesDownhillAndRollsBack )
 {
-    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceType::Straight, 10.0f ), Util::makePiece( CoasterPieceType::Drop, 40.0f, 10.0f ) }, false );
+    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Straight, 10.0f ), Util::makePiece( CoasterPieceKind::Drop, 40.0f, 10.0f ) }, false );
     CoasterTrain       train;
     SW_REQUIRE_TRUE( train.initialize( &track, Util::makeFrictionlessParams(), 30.0f ) ); // 내리막 중간
     Util::run( train, 0.5f );
     SW_EXPECT_TRUE( train.getSpeed() > 0.0f );
 
-    const CoasterTrack climb = Util::makeTrack( { Util::makePiece( CoasterPieceType::Straight, 10.0f ), Util::makePiece( CoasterPieceType::Hill, 40.0f, 20.0f ) }, false );
+    const CoasterTrack climb = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Straight, 10.0f ), Util::makePiece( CoasterPieceKind::Hill, 40.0f, 20.0f ) }, false );
     SW_REQUIRE_TRUE( train.initialize( &climb, Util::makeFrictionlessParams(), 5.0f ) );
     train.setSpeed( 8.0f ); // 3.2 m 밖에 못 오른다. 약 2 초에 꼭대기, 약 5 초에 시작점으로 돌아가 멈추므로 그 사이를 본다
     Util::run( train, 3.0f );
@@ -280,7 +280,7 @@ SW_TEST_CASE( CoasterTrainTest, SlopeAcceleratesDownhillAndRollsBack )
  */
 SW_TEST_CASE( CoasterTrainTest, OpenTrackStopsAtTheEnd )
 {
-    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceType::Straight, 10.0f ) }, false );
+    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Straight, 10.0f ) }, false );
     CoasterTrain       train;
     SW_REQUIRE_TRUE( train.initialize( &track, Util::makeFrictionlessParams(), 5.0f ) );
     train.setSpeed( 20.0f );
@@ -345,7 +345,7 @@ SW_TEST_CASE( CoasterTrainTest, CarFramesFollowBehindTheFrontCar )
  */
 SW_TEST_CASE( CoasterTrainTest, GForceComesFromVelocityChangeAndGravity )
 {
-    const CoasterTrack   straight = Util::makeTrack( { Util::makePiece( CoasterPieceType::Straight, 500.0f ) }, false );
+    const CoasterTrack   straight = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Straight, 500.0f ) }, false );
     CoasterPhysicsParams rolling  = Util::makeFrictionlessParams();
     rolling._rollingResistance    = 0.1f; // 감속 1 m/s^2 = 0.1G
     CoasterTrain train;
@@ -370,7 +370,7 @@ SW_TEST_CASE( CoasterTrainTest, GForceComesFromVelocityChangeAndGravity )
 SW_TEST_CASE( CoasterTrainTest, AnalyzeReportsStallOnUndrivenTrack )
 {
     const CoasterPhysicsParams params = Util::makeDefaultParams();
-    const CoasterTrack         track  = Util::makeTrack( { Util::makePiece( CoasterPieceType::Straight, 50.0f ) }, false );
+    const CoasterTrack         track  = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Straight, 50.0f ) }, false );
     const CoasterRideStats     stats  = CoasterRideStats::analyze( track, params );
     SW_EXPECT_TRUE( stats._bStalled == SW_TRUE );
     SW_EXPECT_TRUE( stats._bCompleted == SW_FALSE );
@@ -384,7 +384,7 @@ SW_TEST_CASE( CoasterTrainTest, AnalyzeReportsStallOnUndrivenTrack )
 SW_TEST_CASE( CoasterTrainTest, AnalyzeCompletesDrivenOpenTrackWithinTime )
 {
     const CoasterPhysicsParams params = Util::makeDefaultParams();
-    const CoasterTrack         track  = Util::makeTrack( { Util::makePiece( CoasterPieceType::Station, 30.0f ) }, false );
+    const CoasterTrack         track  = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Station, 30.0f ) }, false );
     const CoasterRideStats     stats  = CoasterRideStats::analyze( track, params );
     SW_EXPECT_TRUE( stats._bCompleted == SW_TRUE );
     SW_EXPECT_TRUE( stats._bStalled == SW_FALSE );
@@ -407,8 +407,8 @@ SW_TEST_CASE( CoasterTrainTest, AnalyzeCompletesDrivenOpenTrackWithinTime )
 SW_TEST_CASE( CoasterTrainTest, AnalyzeMeasuresClosedCircuit )
 {
     // 스테이션 → 오르막 → 내리막 → 유턴 → 돌아오는 직선 → 유턴이 정확히 시작점으로 닫힌다(연결 곡선이 필요 없다).
-    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceType::Station, 10.0f ), Util::makePiece( CoasterPieceType::LiftHill, 30.0f, 20.0f ), Util::makePiece( CoasterPieceType::Drop, 30.0f, 20.0f ),
-                                                  Util::makeTurnRight( 15.0f, MathUtil::kPi ), Util::makePiece( CoasterPieceType::Straight, 70.0f ), Util::makeTurnRight( 15.0f, MathUtil::kPi ) },
+    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Station, 10.0f ), Util::makePiece( CoasterPieceKind::LiftHill, 30.0f, 20.0f ), Util::makePiece( CoasterPieceKind::Drop, 30.0f, 20.0f ),
+                                                  Util::makeTurnRight( 15.0f, MathUtil::kPi ), Util::makePiece( CoasterPieceKind::Straight, 70.0f ), Util::makeTurnRight( 15.0f, MathUtil::kPi ) },
                                                 true );
     SW_REQUIRE_TRUE( track.isClosed() );
     const CoasterRideStats stats = CoasterRideStats::analyze( track, Util::makeDefaultParams() );
@@ -432,10 +432,10 @@ SW_TEST_CASE( CoasterTrainTest, AnalyzeMeasuresClosedCircuit )
 SW_TEST_CASE( CoasterTrainTest, AnalyzeCountsLoopAsOneInversion )
 {
     CoasterTrackPiece loop;
-    loop._type   = CoasterPieceType::Loop;
+    loop._type   = CoasterPieceKind::Loop;
     loop._radius = 6.0f;
     const CoasterTrack track =
-        Util::makeTrack( { Util::makePiece( CoasterPieceType::Station, 5.0f ), Util::makePiece( CoasterPieceType::LiftHill, 30.0f, 25.0f ), Util::makePiece( CoasterPieceType::Drop, 30.0f, 25.0f ), loop, Util::makePiece( CoasterPieceType::Straight, 20.0f ) }, false );
+        Util::makeTrack( { Util::makePiece( CoasterPieceKind::Station, 5.0f ), Util::makePiece( CoasterPieceKind::LiftHill, 30.0f, 25.0f ), Util::makePiece( CoasterPieceKind::Drop, 30.0f, 25.0f ), loop, Util::makePiece( CoasterPieceKind::Straight, 20.0f ) }, false );
     const CoasterRideStats stats = CoasterRideStats::analyze( track, Util::makeDefaultParams() );
     SW_EXPECT_TRUE( stats._bCompleted == SW_TRUE );
     SW_EXPECT_EQUAL( 1u, stats._inversionCount );
@@ -519,7 +519,7 @@ SW_TEST_CASE( CoasterTrainTest, CatalogWithoutPhysicsIsRefused )
     SW_EXPECT_NEAR( 9.81f, full.getPhysics()._gravity, 1.0e-5f );
     SW_EXPECT_NEAR( 8.0f, full.getPhysics()._ratingWeights._excitementIntensityLimit, 1.0e-5f );
 
-    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceType::Straight, 20.0f ) }, false );
+    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceKind::Straight, 20.0f ) }, false );
     CoasterTrain       train;
     SW_EXPECT_FALSE( train.initialize( &track, CoasterPhysicsParams{}, 0.0f ) );
 }

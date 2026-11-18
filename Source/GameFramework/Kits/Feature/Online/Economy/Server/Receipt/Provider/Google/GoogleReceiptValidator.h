@@ -73,9 +73,9 @@ namespace sw
         string makeVoidedURL( int64 sinceUnixMs, string_view pageToken ) const;
 
     private:
-        [[nodiscard]] expected<void> readPayload( string_view payload, ReceiptAsk& outAsk ) const override;
+        [[nodiscard]] expected<void> readPayload( string_view payload, ReceiptQuery& outQuery ) const override;
         HTTPClientRequest            makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds now ) override;
-        void                         parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderFacts& outFacts ) override;
+        void                         parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderInfo& outInfo ) override;
         void                         parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage ) override;
         void                         onCredentialRejected( const HTTPClientResponse& response ) override;
         AuthState                    prepareAuth( UnixMilliseconds now ) override;

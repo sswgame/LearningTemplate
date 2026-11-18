@@ -113,9 +113,9 @@ namespace sw
         return url;
     }
 
-    expected<void> GoogleReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk ) const
+    expected<void> GoogleReceiptValidator::readPayload( string_view payload, ReceiptQuery& outQuery ) const
     {
-        if ( splitPayload( payload, outAsk._productID, outAsk._askedKey ) == false )
+        if ( splitPayload( payload, outQuery._productID, outQuery._queryKey ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "google receipt must be <product id>|<purchase token>" } );
         return {};
     }
@@ -145,12 +145,12 @@ namespace sw
         {
             case ReceiptCall::Kind::Validate:
             {
-                url = makeProductURL( call._ask._productID, call._ask._askedKey );
+                url = makeProductURL( call._query._productID, call._query._queryKey );
                 break;
             }
             case ReceiptCall::Kind::ConfirmDelivery:
             {
-                url    = makeAcknowledgeURL( call._ask._productID, call._ask._askedKey );
+                url    = makeAcknowledgeURL( call._query._productID, call._query._queryKey );
                 method = HTTPMethod::Post;
                 break;
             }
@@ -163,16 +163,16 @@ namespace sw
         return Internal::makeRequest( url, _settings._requestTimeoutMs, _tokenSource.getToken(), method );
     }
 
-    void GoogleReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& /*call*/, UnixMilliseconds now, ReceiptOrderFacts& outFacts )
+    void GoogleReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& /*call*/, UnixMilliseconds now, ReceiptOrderInfo& outInfo )
     {
-        using Internal          = GoogleReceiptValidatorInternal;
-        outFacts._transactionID = Internal::readText( root, "orderId" );
-        outFacts._productID     = Internal::readText( root, "productId" );                   // 구글 문서: 없을 수 있다. 없으면 주소에 넣은 상품이다
-        outFacts._answeredKey   = Internal::readText( root, "purchaseToken" );               // 구글 문서: 없을 수 있다
-        outFacts._storeBuyerID  = Internal::readText( root, "obfuscatedExternalAccountId" ); // 클라이언트가 구매 때 찍은 값(`ReceiptBuyerToken`)
-        int64 purchaseMs        = 0;
+        using Internal         = GoogleReceiptValidatorInternal;
+        outInfo._transactionID = Internal::readText( root, "orderId" );
+        outInfo._productID     = Internal::readText( root, "productId" );                   // 구글 문서: 없을 수 있다. 없으면 주소에 넣은 상품이다
+        outInfo._answeredKey   = Internal::readText( root, "purchaseToken" );               // 구글 문서: 없을 수 있다
+        outInfo._storeBuyerID  = Internal::readText( root, "obfuscatedExternalAccountId" ); // 클라이언트가 구매 때 찍은 값(`ReceiptBuyerToken`)
+        int64 purchaseMs       = 0;
         if ( StringUtil::parseInt64( Internal::readText( root, "purchaseTimeMillis" ), purchaseMs ) )
-            outFacts._purchaseTimeMs = purchaseMs;
+            outInfo._purchaseTimeMs = purchaseMs;
         int32      purchaseState        = constant::invalid_index::kInt32;
         int32      purchaseType         = constant::invalid_index::kInt32;
         int32      acknowledgementState = 1;
@@ -182,20 +182,20 @@ namespace sw
         const bool bPropertiesOk        = bPurchaseStateOk && bPurchaseTypeOk && bAcknowledgementOk;
         if ( bPropertiesOk == false )
         {
-            outFacts._status      = ReceiptStatus::Invalid; // 구글이 이런 칸을 이렇게 주지 않는다 — 읽을 수 없는 응답이다(오류는 JSON 읽기가 남겼다)
-            outFacts._failureText = "google purchase has fields of the wrong type";
+            outInfo._status      = ReceiptStatus::Invalid; // 구글이 이런 칸을 이렇게 주지 않는다 — 읽을 수 없는 응답이다(오류는 JSON 읽기가 남겼다)
+            outInfo._failureText = "google purchase has fields of the wrong type";
             return;
         }
-        outFacts._status   = mapPurchaseState( purchaseState );
-        outFacts._bSandbox = purchaseType == 0 ? SW_TRUE : SW_FALSE; // 라이선스 테스트 구매
-        if ( outFacts._status != ReceiptStatus::Valid )
+        outInfo._status   = mapPurchaseState( purchaseState );
+        outInfo._bSandbox = purchaseType == 0 ? SW_TRUE : SW_FALSE; // 라이선스 테스트 구매
+        if ( outInfo._status != ReceiptStatus::Valid )
         {
             StringBuilder<constant::buffer::kMax256> failureTextBuilder;
             failureTextBuilder.appendFormat( "google purchase state %#", purchaseState );
-            outFacts._failureText = string( failureTextBuilder.view() );
+            outInfo._failureText = string( failureTextBuilder.view() );
         }
-        outFacts._bNeedsDeliveryConfirm = acknowledgementState == 0 ? SW_TRUE : SW_FALSE;
-        outFacts._deliveryDeadlineMs    = ( outFacts._purchaseTimeMs > 0 ? outFacts._purchaseTimeMs : now.count() ) + GoogleReceiptSettings::kAcknowledgeWindowMs;
+        outInfo._bNeedsDeliveryConfirm = acknowledgementState == 0 ? SW_TRUE : SW_FALSE;
+        outInfo._deliveryDeadlineMs    = ( outInfo._purchaseTimeMs > 0 ? outInfo._purchaseTimeMs : now.count() ) + GoogleReceiptSettings::kAcknowledgeWindowMs;
     }
 
     void GoogleReceiptValidator::parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage )

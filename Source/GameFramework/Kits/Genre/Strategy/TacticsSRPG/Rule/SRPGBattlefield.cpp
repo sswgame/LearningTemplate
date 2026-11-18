@@ -683,10 +683,10 @@ namespace sw
         const SRPGTerrainDef* pTerrain = findTerrainAt( cell );
         if ( pTerrain == nullptr || unit._pDef == nullptr )
             return 0;
-        SRPGMoveType domain       = pTerrain->_domain;
-        const bool   bFlyingAbove = unit._pDef->_moveType == SRPGMoveType::Air && ( domain == SRPGMoveType::Ground || domain == SRPGMoveType::Water );
+        SRPGMoveKind domain       = pTerrain->_domain;
+        const bool   bFlyingAbove = unit._pDef->_moveType == SRPGMoveKind::Air && ( domain == SRPGMoveKind::Ground || domain == SRPGMoveKind::Water );
         if ( bFlyingAbove )
-            domain = SRPGMoveType::Air; // 땅이나 물 위를 나는 유닛은 공중 적성으로 싸운다
+            domain = SRPGMoveKind::Air; // 땅이나 물 위를 나는 유닛은 공중 적성으로 싸운다
         return unit._pDef->_arrAptitude[static_cast<size_t>( domain )];
     }
 

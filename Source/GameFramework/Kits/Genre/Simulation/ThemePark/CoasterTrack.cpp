@@ -33,24 +33,24 @@ namespace sw
             static float3 getForwardOf( float32 heading ) { return float3{ MathUtil::sin( heading ), 0.0f, MathUtil::cos( heading ) }; }
             static float3 getRightOf( float32 heading ) { return float3{ MathUtil::cos( heading ), 0.0f, -MathUtil::sin( heading ) }; }
 
-            static uint8 getFlagsOf( CoasterPieceType type )
+            static uint8 getFlagsOf( CoasterPieceKind type )
             {
                 switch ( type )
                 {
-                    case CoasterPieceType::Station:
+                    case CoasterPieceKind::Station:
                         return CoasterSegmentFlag::kStation;
-                    case CoasterPieceType::LiftHill:
+                    case CoasterPieceKind::LiftHill:
                         return CoasterSegmentFlag::kLift;
-                    case CoasterPieceType::Brakes:
+                    case CoasterPieceKind::Brakes:
                         return CoasterSegmentFlag::kBrake;
-                    case CoasterPieceType::Booster:
+                    case CoasterPieceKind::Booster:
                         return CoasterSegmentFlag::kBooster;
-                    case CoasterPieceType::Straight:
-                    case CoasterPieceType::Drop:
-                    case CoasterPieceType::Hill:
-                    case CoasterPieceType::TurnLeft:
-                    case CoasterPieceType::TurnRight:
-                    case CoasterPieceType::Loop:
+                    case CoasterPieceKind::Straight:
+                    case CoasterPieceKind::Drop:
+                    case CoasterPieceKind::Hill:
+                    case CoasterPieceKind::TurnLeft:
+                    case CoasterPieceKind::TurnRight:
+                    case CoasterPieceKind::Loop:
                         return CoasterSegmentFlag::kNone;
                 }
                 return CoasterSegmentFlag::kNone;
@@ -198,28 +198,28 @@ namespace sw
             _listPoint[0]._flags = CoasterTrackInternal::getFlagsOf( piece._type );
         switch ( piece._type )
         {
-            case CoasterPieceType::TurnLeft:
+            case CoasterPieceKind::TurnLeft:
             {
                 appendTurn( piece, -1.0f );
                 break;
             }
-            case CoasterPieceType::TurnRight:
+            case CoasterPieceKind::TurnRight:
             {
                 appendTurn( piece, 1.0f );
                 break;
             }
-            case CoasterPieceType::Loop:
+            case CoasterPieceKind::Loop:
             {
                 appendLoop( piece );
                 break;
             }
-            case CoasterPieceType::Station:
-            case CoasterPieceType::Straight:
-            case CoasterPieceType::LiftHill:
-            case CoasterPieceType::Drop:
-            case CoasterPieceType::Hill:
-            case CoasterPieceType::Brakes:
-            case CoasterPieceType::Booster:
+            case CoasterPieceKind::Station:
+            case CoasterPieceKind::Straight:
+            case CoasterPieceKind::LiftHill:
+            case CoasterPieceKind::Drop:
+            case CoasterPieceKind::Hill:
+            case CoasterPieceKind::Brakes:
+            case CoasterPieceKind::Booster:
             {
                 appendProfile( piece._length, piece._height, piece._type, CoasterTrackInternal::getFlagsOf( piece._type ) );
                 break;
@@ -282,15 +282,15 @@ namespace sw
         return CoasterTrackInternal::getForwardOf( _heading );
     }
 
-    void CoasterTrackBuilder::appendProfile( float32 length, float32 height, CoasterPieceType type, uint8 flags )
+    void CoasterTrackBuilder::appendProfile( float32 length, float32 height, CoasterPieceKind type, uint8 flags )
     {
         const float32 horizontalLength = MathUtil::max( 0.1f, length );
         float32       rise             = 0.0f;
-        if ( type == CoasterPieceType::LiftHill )
+        if ( type == CoasterPieceKind::LiftHill )
             rise = MathUtil::abs( height );
-        else if ( type == CoasterPieceType::Drop )
+        else if ( type == CoasterPieceKind::Drop )
             rise = -MathUtil::abs( height );
-        const bool bHill = type == CoasterPieceType::Hill;
+        const bool bHill = type == CoasterPieceKind::Hill;
 
         // 경사가 있으면 실제 곡선이 길다. 간격이 넓어지지 않게 높이만큼 점을 더 둔다.
         const float32 estimatedLength = horizontalLength + MathUtil::abs( height ) * 1.6f;

@@ -79,10 +79,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 흡입 한 틱의 결과입니다. */
-    struct GhostSuctionTick
+    /** @brief 흡입을 한 번 갱신한 결과입니다(`updateSuction`). */
+    struct GhostSuctionResult
     {
-        float3  _drag{}; ///< 이번 틱에 플레이어가 끌려간 거리이다(게임이 플레이어를 옮긴다)
+        float3  _drag{}; ///< 이번 갱신에 플레이어가 끌려간 거리이다(게임이 플레이어를 옮긴다)
         float32 _damage{ 0.0f };
         float32 _alignment{ 0.0f }; ///< 당기는 방향과 도망 반대 방향의 내적이다(-1..1)
         uint8   _bAligned{ SW_FALSE };
@@ -128,7 +128,7 @@ namespace sw
         /**
          * @brief 흡입 한 틱을 진행합니다. @p pullDirection 은 플레이어가 당기는 방향(XZ 평면이며 스틱 입력)입니다. 도망 방향의 반대로 당기면 보너스 피해, 서지 게이지, 덜 끌리는 효과가 있습니다.
          */
-        GhostSuctionTick updateSuction( const float3& pullDirection, float32 deltaTime );
+        GhostSuctionResult updateSuction( const float3& pullDirection, float32 deltaTime );
         /** @brief 서지 게이지가 찼으면 한 번에 큰 피해를 줍니다. 흡입 중이 아니거나 덜 찼으면 false 를 반환합니다. */
         bool triggerSurge();
         /** @brief 청소기 강화 단계를 정합니다(없는 단계는 마지막 단계로 자릅니다). */

@@ -36,7 +36,7 @@ namespace sw
 
     /** @brief 이동 타입입니다. 지형의 이동 비용과 적성은 이 순서("지상 공중 우주 수중")로 적습니다. */
     ENUM()
-    enum class SRPGMoveType : uint8
+    enum class SRPGMoveKind : uint8
     {
         Ground = 0,
         Air,
@@ -94,7 +94,7 @@ namespace sw
         PROPERTY( Name = "evasion" )
         int32 _evasionBonus{ 0 }; ///< 받는 쪽의 회피 보정(명중률에서 빼는 %p)
         PROPERTY()
-        SRPGMoveType _domain{ SRPGMoveType::Ground }; ///< 이 셀에 선 유닛이 쓰는 적성이다(공중 유닛은 지상과 수중 위에서 공중 적성을 쓴다)
+        SRPGMoveKind _domain{ SRPGMoveKind::Ground }; ///< 이 셀에 선 유닛이 쓰는 적성이다(공중 유닛은 지상과 수중 위에서 공중 적성을 쓴다)
     };
 } // namespace sw
 
@@ -180,7 +180,7 @@ namespace sw
         SRPGUnitSize _size{ SRPGUnitSize::M };
         int32        _arrAptitude[kSRPGMoveTypeCount]{ 100, 100, 100, 100 }; ///< 지형 적성(%)이다. 0 이면 그 영역에 들어갈 수 없다
         PROPERTY()
-        SRPGMoveType _moveType{ SRPGMoveType::Ground };
+        SRPGMoveKind _moveType{ SRPGMoveKind::Ground };
     };
 } // namespace sw
 

@@ -201,8 +201,8 @@ namespace
             for ( const GhostInstance& ghost : listGhost )
             {
                 SW_EXPECT_TRUE( encounter.startSuction( ghost._id, ghost._position ) );
-                const GhostSuctionTick tick = encounter.updateSuction( float3{}, 5.0f );
-                SW_EXPECT_EQUAL( SW_TRUE, tick._bCaught );
+                const GhostSuctionResult result = encounter.updateSuction( float3{}, 5.0f );
+                SW_EXPECT_EQUAL( SW_TRUE, result._bCaught );
             }
         }
 
@@ -543,7 +543,7 @@ SW_TEST_CASE_F( GhostHuntTest, SuctionTugOfWar )
 {
     const uint32 ghostID = startSucking();
 
-    const GhostSuctionTick aligned = _encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, 0.25f );
+    const GhostSuctionResult aligned = _encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, 0.25f );
     SW_EXPECT_EQUAL( SW_TRUE, aligned._bAligned );
     SW_EXPECT_NEAR( 1.0f, aligned._alignment, kGhostTolerance );
     SW_EXPECT_NEAR( 5.0f, aligned._damage, kGhostTolerance );   // 10 x 0.25 x 2
@@ -551,13 +551,13 @@ SW_TEST_CASE_F( GhostHuntTest, SuctionTugOfWar )
     SW_EXPECT_NEAR( 0.25f, _encounter.getSurgeGauge(), kGhostTolerance );
     SW_EXPECT_NEAR( 35.0f, _encounter.findGhost( ghostID )->_hp, kGhostTolerance );
 
-    const GhostSuctionTick against = _encounter.updateSuction( float3{ 0.0f, 0.0f, 1.0f }, 0.25f );
+    const GhostSuctionResult against = _encounter.updateSuction( float3{ 0.0f, 0.0f, 1.0f }, 0.25f );
     SW_EXPECT_EQUAL( SW_FALSE, against._bAligned );
     SW_EXPECT_NEAR( 2.5f, against._damage, kGhostTolerance );
     SW_EXPECT_NEAR( 0.5f, against._drag._z, kGhostTolerance );
     SW_EXPECT_NEAR( 0.25f, _encounter.getSurgeGauge(), kGhostTolerance );
 
-    const GhostSuctionTick idle = _encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, 0.0f );
+    const GhostSuctionResult idle = _encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, 0.0f );
     SW_EXPECT_NEAR( 0.0f, idle._damage, kGhostTolerance ); // 0 시간은 아무 일도 없다
 }
 

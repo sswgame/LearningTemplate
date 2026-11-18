@@ -174,44 +174,44 @@ namespace sw
                string( textBuilder.view() );
     }
 
-    expected<void> SteamReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk ) const
+    expected<void> SteamReceiptValidator::readPayload( string_view payload, ReceiptQuery& outQuery ) const
     {
         if ( isOrderID( payload ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "steam receipt must be the numeric order id" } );
-        outAsk._transactionID = string( payload );
+        outQuery._transactionID = string( payload );
         return {};
     }
 
     HTTPClientRequest SteamReceiptValidator::makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds /*now*/ )
     {
         HTTPClientRequest request;
-        request._url       = call._kind == ReceiptCall::Kind::RefundPage ? makeReportURL( getRefundWindow().getFromMs() ) : makeQueryURL( call._ask._transactionID );
+        request._url       = call._kind == ReceiptCall::Kind::RefundPage ? makeReportURL( getRefundWindow().getFromMs() ) : makeQueryURL( call._query._transactionID );
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
         return request;
     }
 
-    void SteamReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& /*call*/, UnixMilliseconds /*now*/, ReceiptOrderFacts& outFacts )
+    void SteamReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& /*call*/, UnixMilliseconds /*now*/, ReceiptOrderInfo& outInfo )
     {
         using Internal = SteamReceiptValidatorInternal;
         if ( Internal::readText( root, "response.result" ) != "OK" )
         {
-            outFacts._status      = ReceiptStatus::Invalid;
-            outFacts._failureText = "steam answered " + Internal::readText( root, "response.error.errordesc" );
+            outInfo._status      = ReceiptStatus::Invalid;
+            outInfo._failureText = "steam answered " + Internal::readText( root, "response.error.errordesc" );
             return;
         }
-        const string status     = Internal::readText( root, "response.params.status" );
-        outFacts._status        = mapOrderStatus( status );
-        outFacts._failureText   = outFacts._status == ReceiptStatus::Valid ? string() : "steam order status " + status;
-        outFacts._transactionID = Internal::readText( root, "response.params.orderid" );
-        outFacts._storeBuyerID  = Internal::readText( root, "response.params.steamid" );
-        outFacts._bSandbox      = _settings._bSandbox;
-        const JSONValue items   = root.get( "response" ).get( "params" ).get( "items" );
+        const string status    = Internal::readText( root, "response.params.status" );
+        outInfo._status        = mapOrderStatus( status );
+        outInfo._failureText   = outInfo._status == ReceiptStatus::Valid ? string() : "steam order status " + status;
+        outInfo._transactionID = Internal::readText( root, "response.params.orderid" );
+        outInfo._storeBuyerID  = Internal::readText( root, "response.params.steamid" );
+        outInfo._bSandbox      = _settings._bSandbox;
+        const JSONValue items  = root.get( "response" ).get( "params" ).get( "items" );
         if ( items.isArray() && items.size() > 0 )
-            outFacts._productID = Internal::readText( items.at( 0 ), "itemid" );
+            outInfo._productID = Internal::readText( items.at( 0 ), "itemid" );
         int64 purchaseMs = 0;
         if ( parseTime( Internal::readText( root, "response.params.time" ), purchaseMs ) )
-            outFacts._purchaseTimeMs = purchaseMs;
+            outInfo._purchaseTimeMs = purchaseMs;
     }
 
     void SteamReceiptValidator::parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage )
