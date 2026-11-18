@@ -102,13 +102,7 @@ namespace sw
                         inOld.value( entry._price );
                         outNew.value( entry._itemID );
                         outNew.value( entry._price );
-                        uint32 pieceCount = 0;
-                        inOld.count( Inventory::kUnversionedSlotMinBytes, pieceCount );
-                        outNew.count( Inventory::kSlotStateMinBytes, pieceCount );
-                        for ( uint32 pieceIndex = 0; pieceIndex < pieceCount && inOld.isOk(); ++pieceIndex )
-                        {
-                            Inventory::upgradeSlotFromUnversioned( inOld, outNew );
-                        }
+                        Inventory::upgradeSlotListFromUnversioned( inOld, outNew );
                     }
                 }
                 return inOld.isOk() && outNew.isOk();
