@@ -36,6 +36,8 @@ namespace sw
             static constexpr const utf8* kWithdrawReason     = "guild.withdraw";
             static constexpr const utf8* kRefundReason       = "guild.refund"; ///< 떠나거나 내보내진 멤버에게 그의 몫을 돌려준다
             static constexpr int32       kGrantPageSize      = 128;            ///< 길드의 허용 전체를 훑을 때(떠나는 멤버가 받은 허용 지우기) 한 번에 읽는 수이다
+            /// 신청 표를 끝까지 훑을 때 한 번에 읽는 수이다. 읽은 쪽마다 읽기 집합의 범위 조건이 하나씩 붙으므로(상한 `kMaxConditionCount`) 크게 잡는다 — 죽은 신청은 TTL 쓸기가 지워 쪽 수가 늘지 않는다
+            static constexpr int32 kApplicationPageSize = 256;
 
             /** @brief 허용 부여 · 회수의 멱등 기록 범위(`guild/<계정 16진>`)입니다. 회수가 허용 기록을 지워도 이 기록은 남아 늦게 다시 온 부여를 가린다. */
             static string makeGrantScope( AccountID accountID )
@@ -484,7 +486,7 @@ namespace sw
                 ServiceTransaction transaction;
                 // 끝까지 센다 — 죽은 신청이 앞 쪽을 채우면 한 쪽만 읽은 수는 살아 있는 신청을 덜 세어 상한을 넘긴다
                 const ServiceStoreResult listed =
-                    ServiceRecordReader::visitAll( connection, Internal::getApplicationTable(), prefix, GuildLimit::kMaxApplication, [&]( const ServiceRecord& record )
+                    ServiceRecordReader::visitAll( connection, Internal::getApplicationTable(), prefix, Internal::kApplicationPageSize, [&]( const ServiceRecord& record )
                 {
                     if ( record._key == selfKey )
                         return true; // 다시 낸 신청은 아래 put 이 덮어쓴다
@@ -926,7 +928,7 @@ namespace sw
                     const string prefix = ServiceKeyUtil::makeHex64( guildID ) + "/";
                     // 죽은 신청을 건너뛰며 끝까지 읽는다 — 한 쪽만 읽으면 죽은 신청이 앞을 채워 살아 있는 신청이 빠진다(살아 있는 수는 신청이 상한으로 막는다)
                     const ServiceStoreResult listed =
-                        ServiceRecordReader::visitAll( connection, Internal::getApplicationTable(), prefix, GuildLimit::kMaxApplication, [&]( const ServiceRecord& record )
+                        ServiceRecordReader::visitAll( connection, Internal::getApplicationTable(), prefix, Internal::kApplicationPageSize, [&]( const ServiceRecord& record )
                     {
                         GuildApplication application;
                         int64            expiresMs = 0;

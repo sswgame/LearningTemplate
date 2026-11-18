@@ -640,7 +640,7 @@ SW_TEST_CASE( LeaderboardServiceTest, StatsFeedLinkedBoards )
     SW_EXPECT_TRUE( rig.stat( kInvalidAccountID, "kills", 1, LeaderboardUpdate::Sum )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.stat( 1, "kills", LeaderboardLimit::kMaxAbsScore + 1, LeaderboardUpdate::Sum )._result.hasError( OnlineError::kInvalidRequest ) );
 
-    rig._service.readStats( 1, 77 );
+    rig._service.readStats( 1, "", LeaderboardLimit::kMaxStatCount, 77 );
     const LeaderboardCompletion stats = rig.take( 77 );
     SW_REQUIRE_EQUAL( size_t( 2 ), stats._listStat.size() );
     SW_EXPECT_EQUAL( string( "kills" ), stats._listStat[0]._name );
@@ -711,7 +711,7 @@ SW_TEST_CASE( LeaderboardServiceTest, AchievementUnlocksOnce )
     SW_EXPECT_TRUE( listUnlock.empty() );
     SW_EXPECT_EQUAL( 1, world.countMail() );
 
-    rig._service.readAchievements( 1, 77 );
+    rig._service.readAchievements( 1, "", LeaderboardLimit::kMaxAchievementCount, 77 );
     const LeaderboardCompletion achievements = rig.take( 77 );
     SW_REQUIRE_EQUAL( size_t( 1 ), achievements._listAchievement.size() );
     SW_EXPECT_EQUAL( kNowMs, achievements._listAchievement[0]._unlockedMs );
@@ -995,4 +995,80 @@ SW_TEST_CASE( LeaderboardServiceTest, ProgressReadsStatsPastOnePage )
     const LeaderboardCompletion progress = rig.take( 77 );
     SW_REQUIRE_EQUAL( size_t( 1 ), progress._listProgress.size() );
     SW_EXPECT_EQUAL( int64( 42 ), progress._listProgress[0]._progress );
+}
+
+/**
+ * @brief [LeaderboardServiceTest] 통계 300 개를 쪽 7 로 커서를 따라 읽으면 빠짐 · 겹침 없이 이름 순으로 끝까지 오고, 큰 쪽 크기는 서버 상한(`kMaxStatCount`)으로 잘리며 다음 커서가 잘림을 알린다
+ * @details 옛 구현은 앞 256 개만 조용히 보였다. 1 보다 작은 쪽 크기 · 이름 규칙 밖 커서는 Invalid 다.
+ */
+SW_TEST_CASE( LeaderboardServiceTest, StatsPageWithACursorToTheEnd )
+{
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig        = world._rig;
+    constexpr int32     kStatCount = 300;
+    for ( int32 index = 0; index < kStatCount; ++index )
+    {
+        (void)rig.stat( 1, "s" + to_string( 1000 + index ), index, LeaderboardUpdate::Latest );
+    }
+
+    vector<LeaderboardStat> listAll;
+    string                  cursor;
+    uint64                  tag = 100;
+    for ( int32 pageCount = 0;; ++pageCount )
+    {
+        SW_REQUIRE_TRUE( pageCount <= kStatCount );
+        rig._service.readStats( 1, cursor, 7, tag );
+        LeaderboardCompletion page = rig.take( tag++ );
+        SW_REQUIRE_TRUE( page._result == LeaderboardResult::Ok );
+        SW_REQUIRE_TRUE( page._listStat.size() <= size_t( 7 ) );
+        listAll.insert( listAll.end(), page._listStat.begin(), page._listStat.end() );
+        if ( page._nextCursor.empty() )
+            break;
+        cursor = page._nextCursor;
+    }
+    SW_REQUIRE_EQUAL( size_t( kStatCount ), listAll.size() );
+    for ( int32 index = 0; index < kStatCount; ++index )
+    {
+        SW_EXPECT_EQUAL( "s" + to_string( 1000 + index ), listAll[static_cast<size_t>( index )]._name );
+        SW_EXPECT_EQUAL( int64( index ), listAll[static_cast<size_t>( index )]._value );
+    }
+
+    rig._service.readStats( 1, "", 1000000, tag );
+    const LeaderboardCompletion capped = rig.take( tag++ );
+    SW_EXPECT_EQUAL( size_t( LeaderboardLimit::kMaxStatCount ), capped._listStat.size() );
+    SW_EXPECT_FALSE( capped._nextCursor.empty() );
+
+    rig._service.readStats( 1, "", 0, tag );
+    SW_EXPECT_TRUE( rig.take( tag++ )._result.hasError( OnlineError::kInvalidRequest ) );
+    rig._service.readStats( 1, "Bad Cursor", 5, tag );
+    SW_EXPECT_TRUE( rig.take( tag++ )._result.hasError( OnlineError::kInvalidRequest ) );
+}
+
+/**
+ * @brief [LeaderboardServiceTest] 업적 목록도 커서로 쪽을 넘긴다 — 쪽 1 로 둘을 읽으면 첫 쪽은 다음 커서를 싣고 둘째 쪽에서 끝난다
+ */
+SW_TEST_CASE( LeaderboardServiceTest, AchievementsPageWithACursor )
+{
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
+    rig.addAchievement( "a_first", "kills", 1 );
+    rig.addAchievement( "b_second", "kills", 2 );
+    (void)rig.stat( 1, "kills", 5, LeaderboardUpdate::Latest );
+
+    rig._service.readAchievements( 1, "", 1, 77 );
+    const LeaderboardCompletion first = rig.take( 77 );
+    SW_REQUIRE_EQUAL( size_t( 1 ), first._listAchievement.size() );
+    SW_EXPECT_EQUAL( string( "a_first" ), first._listAchievement[0]._achievementID );
+    SW_REQUIRE_EQUAL( string( "a_first" ), first._nextCursor );
+
+    rig._service.readAchievements( 1, first._nextCursor, 1, 78 );
+    const LeaderboardCompletion second = rig.take( 78 );
+    SW_REQUIRE_EQUAL( size_t( 1 ), second._listAchievement.size() );
+    SW_EXPECT_EQUAL( string( "b_second" ), second._listAchievement[0]._achievementID );
+    SW_EXPECT_FALSE( second._nextCursor.empty() ); // 쪽이 가득 찼다 — 다음 쪽이 비어 끝을 안다
+
+    rig._service.readAchievements( 1, second._nextCursor, 1, 79 );
+    const LeaderboardCompletion last = rig.take( 79 );
+    SW_EXPECT_TRUE( last._listAchievement.empty() );
+    SW_EXPECT_TRUE( last._nextCursor.empty() );
 }

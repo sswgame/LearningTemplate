@@ -398,6 +398,20 @@ namespace sw
             LeaderboardServiceResult _result{ LeaderboardServiceResult::fail( OnlineError::kUnavailable ) };
         };
 
+        /** @brief 통계 한 쪽과 다음 쪽 커서입니다(비면 끝). */
+        struct LeaderboardStatPage
+        {
+            vector<LeaderboardStat> _listStat{};
+            string                  _nextCursor{};
+        };
+
+        /** @brief 업적 한 쪽과 다음 쪽 커서입니다(비면 끝). */
+        struct LeaderboardAchievementPage
+        {
+            vector<AchievementState> _listAchievement{};
+            string                   _nextCursor{};
+        };
+
         /** @brief 저장소 스레드에서 도는 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
         struct LeaderboardStoreRun
         {
@@ -474,24 +488,71 @@ namespace sw
                 return write;
             }
 
-            /** @brief 계정의 통계를 모두 읽습니다. 손상된 통계는 건너뛰지 않고 이 읽기를 실패로 돌려준다. */
-            static LeaderboardRead<vector<LeaderboardStat>> readStats( IServiceStoreConnection& connection, AccountID accountID )
+            /**
+             * @brief 계정 행(`<계정>/<이름>`)을 이름 @p cursor 다음부터 @p maxCount 개 읽어 레코드마다 @p decode 를 부릅니다. 쪽이 가득 차면 @p outNextCursor 가 마지막 이름입니다.
+             * @return 읽지 못했거나 @p decode 가 false 면 false 입니다.
+             */
+            template <typename Decode>
+            static bool readAccountPage( IServiceStoreConnection& connection, const hashed_string& table, AccountID accountID, string_view cursor, int32 maxCount, string& outNextCursor,
+                                         Decode&& decode )
             {
-                LeaderboardRead<vector<LeaderboardStat>> read;
-                vector<ServiceRecord>                    listRecord;
-                const string                             prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
-                if ( ServiceRecordReader::readPage( connection, LeaderboardServiceInternal::getStatTable(), prefix, "", LeaderboardLimit::kMaxStatCount, false, listRecord )._result != ServiceStoreResult::Ok )
-                    return read;
+                vector<ServiceRecord>   listRecord;
+                const string            prefix    = ServiceKeyUtil::makeHex64( accountID ) + "/";
+                const string            cursorKey = cursor.empty() ? string() : prefix + string( cursor );
+                const ServiceRecordPage page      = ServiceRecordReader::readPage( connection, table, prefix, cursorKey, maxCount, false, listRecord );
+                if ( page.isOk() == false )
+                    return false;
                 for ( const ServiceRecord& record : listRecord )
                 {
+                    if ( decode( string_view( record._key ).substr( prefix.size() ), record ) == false )
+                        return false;
+                }
+                outNextCursor = page.hasMore() ? page._nextCursor.substr( prefix.size() ) : string();
+                return true;
+            }
+
+            /** @brief 계정의 통계 한 쪽입니다. 손상된 통계는 건너뛰지 않고 이 읽기를 실패로 돌려준다. */
+            static LeaderboardRead<LeaderboardStatPage> readStats( IServiceStoreConnection& connection, AccountID accountID, const string& cursor, int32 maxCount )
+            {
+                LeaderboardRead<LeaderboardStatPage> read;
+                const bool                           bRead = readAccountPage( connection, LeaderboardServiceInternal::getStatTable(), accountID, cursor, maxCount, read._value._nextCursor,
+                                                                              [&]( string_view name, const ServiceRecord& record )
+                                          {
+                    LeaderboardStat stat;
+                    stat._name = string( name );
+                    if ( LeaderboardServiceInternal::decodeScore( record._bytes, stat._value ) == false )
+                        return false;
+                    read._value._listStat.push_back( std::move( stat ) );
+                    return true;
+                } );
+                if ( bRead == false )
+                {
+                    read._value = LeaderboardStatPage{};
+                    return read;
+                }
+                read._result = LeaderboardResult::Ok;
+                return read;
+            }
+
+            /** @brief 계정의 통계를 모두 읽습니다(매칭이 쓰는 캐시 — 쪽에서 자르면 뒤의 통계가 없는 것으로 보인다). 손상된 통계는 이 읽기를 실패로 돌려준다. */
+            static LeaderboardRead<vector<LeaderboardStat>> readAllStats( IServiceStoreConnection& connection, AccountID accountID )
+            {
+                LeaderboardRead<vector<LeaderboardStat>> read;
+                const string                             prefix  = ServiceKeyUtil::makeHex64( accountID ) + "/";
+                bool                                     bDecode = true;
+                const ServiceStoreResult                 listed  = ServiceRecordReader::visitAll( connection, LeaderboardServiceInternal::getStatTable(), prefix, LeaderboardLimit::kMaxStatCount, [&]( const ServiceRecord& record )
+                                 {
                     LeaderboardStat stat;
                     stat._name = record._key.substr( prefix.size() );
-                    if ( LeaderboardServiceInternal::decodeScore( record._bytes, stat._value ) == false )
-                    {
-                        read._value.clear();
-                        return read;
-                    }
-                    read._value.push_back( std::move( stat ) );
+                    bDecode    = LeaderboardServiceInternal::decodeScore( record._bytes, stat._value );
+                    if ( bDecode )
+                        read._value.push_back( std::move( stat ) );
+                    return bDecode;
+                } );
+                if ( listed != ServiceStoreResult::Ok || bDecode == false )
+                {
+                    read._value.clear();
+                    return read;
                 }
                 read._result = LeaderboardResult::Ok;
                 return read;
@@ -518,21 +579,23 @@ namespace sw
                 return connection.commit( transaction ) == ServiceStoreResult::Ok;
             }
 
-            /** @brief 계정이 달성한 업적을 모두 읽습니다. */
-            static LeaderboardRead<vector<AchievementState>> readAchievements( IServiceStoreConnection& connection, AccountID accountID )
+            /** @brief 계정이 달성한 업적 한 쪽입니다. 읽을 수 없는 기록은 건너뛴다. */
+            static LeaderboardRead<LeaderboardAchievementPage> readAchievements( IServiceStoreConnection& connection, AccountID accountID, const string& cursor, int32 maxCount )
             {
-                LeaderboardRead<vector<AchievementState>> read;
-                vector<ServiceRecord>                     listRecord;
-                const string                              prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
-                if ( ServiceRecordReader::readPage( connection, LeaderboardServiceInternal::getAchievementTable(), prefix, "", LeaderboardLimit::kMaxAchievementCount, false, listRecord )._result !=
-                     ServiceStoreResult::Ok )
-                    return read;
-                for ( const ServiceRecord& record : listRecord )
-                {
+                LeaderboardRead<LeaderboardAchievementPage> read;
+                const bool                                  bRead = readAccountPage( connection, LeaderboardServiceInternal::getAchievementTable(), accountID, cursor, maxCount, read._value._nextCursor,
+                                                                                     [&]( string_view achievementID, const ServiceRecord& record )
+                                                 {
                     AchievementState achievement;
-                    achievement._achievementID = record._key.substr( prefix.size() );
+                    achievement._achievementID = string( achievementID );
                     if ( LeaderboardServiceInternal::decodeScore( record._bytes, achievement._unlockedMs ) )
-                        read._value.push_back( std::move( achievement ) );
+                        read._value._listAchievement.push_back( std::move( achievement ) );
+                    return true;
+                } );
+                if ( bRead == false )
+                {
+                    read._value = LeaderboardAchievementPage{};
+                    return read;
                 }
                 read._result = LeaderboardResult::Ok;
                 return read;
@@ -1393,12 +1456,18 @@ namespace sw
         _completionBuffer.push( std::move( completion ) );
     }
 
-    void LeaderboardService::readStats( AccountID accountID, uint64 requestTag )
+    void LeaderboardService::readStats( AccountID accountID, string_view cursor, int32 maxCount, uint64 requestTag )
     {
-        _store.submit( [accountID]( IServiceStoreConnection& connection )
-        { return LeaderboardStoreRun::readStats( connection, accountID ); },
-                       [this, requestTag]( LeaderboardRead<vector<LeaderboardStat>>& read )
-        { applyStats( requestTag, read._result, std::move( read._value ) ); } );
+        if ( maxCount < 1 || ( cursor.empty() == false && LeaderboardNameRule::isValidID( cursor ) == false ) )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::Stats, LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
+            return;
+        }
+        const int32 pageSize = std::min( maxCount, LeaderboardLimit::kMaxStatCount ); // 클라이언트가 정한 크기를 서버 상한으로 자른다
+        _store.submit( [accountID, cursorText = string( cursor ), pageSize]( IServiceStoreConnection& connection )
+        { return LeaderboardStoreRun::readStats( connection, accountID, cursorText, pageSize ); },
+                       [this, requestTag]( LeaderboardRead<LeaderboardStatPage>& read )
+        { applyStats( requestTag, read._result, std::move( read._value._listStat ), std::move( read._value._nextCursor ) ); } );
     }
 
     void LeaderboardService::retainStats( AccountID accountID )
@@ -1409,7 +1478,7 @@ namespace sw
             return;
         stats._bLoading = SW_TRUE;
         _store.submit( [accountID]( IServiceStoreConnection& connection )
-        { return LeaderboardStoreRun::readStats( connection, accountID ); },
+        { return LeaderboardStoreRun::readAllStats( connection, accountID ); },
                        [this, accountID]( LeaderboardRead<vector<LeaderboardStat>>& read, ServiceStoreCompletion completion )
         { applyStatCache( accountID, read._result == LeaderboardResult::Ok, completion, std::move( read._value ) ); } );
     }
@@ -1452,31 +1521,39 @@ namespace sw
         return AccountStatLookup::Found;
     }
 
-    void LeaderboardService::applyStats( uint64 requestTag, LeaderboardServiceResult result, vector<LeaderboardStat>&& listStat )
+    void LeaderboardService::applyStats( uint64 requestTag, LeaderboardServiceResult result, vector<LeaderboardStat>&& listStat, string&& nextCursor )
     {
         LeaderboardCompletion completion;
         completion._requestTag = requestTag;
         completion._operation  = LeaderboardOperation::Stats;
         completion._result     = result;
         completion._listStat   = std::move( listStat );
+        completion._nextCursor = std::move( nextCursor );
         _completionBuffer.push( std::move( completion ) );
     }
 
-    void LeaderboardService::readAchievements( AccountID accountID, uint64 requestTag )
+    void LeaderboardService::readAchievements( AccountID accountID, string_view cursor, int32 maxCount, uint64 requestTag )
     {
-        _store.submit( [accountID]( IServiceStoreConnection& connection )
-        { return LeaderboardStoreRun::readAchievements( connection, accountID ); },
-                       [this, requestTag]( LeaderboardRead<vector<AchievementState>>& read )
-        { applyAchievements( requestTag, read._result, std::move( read._value ) ); } );
+        if ( maxCount < 1 || ( cursor.empty() == false && LeaderboardNameRule::isValidID( cursor ) == false ) )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::Achievements, LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
+            return;
+        }
+        const int32 pageSize = std::min( maxCount, LeaderboardLimit::kMaxAchievementCount ); // 클라이언트가 정한 크기를 서버 상한으로 자른다
+        _store.submit( [accountID, cursorText = string( cursor ), pageSize]( IServiceStoreConnection& connection )
+        { return LeaderboardStoreRun::readAchievements( connection, accountID, cursorText, pageSize ); },
+                       [this, requestTag]( LeaderboardRead<LeaderboardAchievementPage>& read )
+        { applyAchievements( requestTag, read._result, std::move( read._value._listAchievement ), std::move( read._value._nextCursor ) ); } );
     }
 
-    void LeaderboardService::applyAchievements( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementState>&& listAchievement )
+    void LeaderboardService::applyAchievements( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementState>&& listAchievement, string&& nextCursor )
     {
         LeaderboardCompletion completion;
         completion._requestTag      = requestTag;
         completion._operation       = LeaderboardOperation::Achievements;
         completion._result          = result;
         completion._listAchievement = std::move( listAchievement );
+        completion._nextCursor      = std::move( nextCursor );
         _completionBuffer.push( std::move( completion ) );
     }
 

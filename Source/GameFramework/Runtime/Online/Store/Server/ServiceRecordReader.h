@@ -58,6 +58,8 @@ namespace sw
         /**
          * @brief @p keyPrefix 의 키를 처음부터 끝까지 @p pageSize 씩 넘기며 레코드마다 @p visitor(`bool( const ServiceRecord& )`)를 부릅니다. 상한이 없습니다.
          * @details @p visitor 가 false 면 거기서 멈추고 Ok 다(부른 쪽이 자기 오류를 따로 들고 멈출 때도 쓴다). 읽기가 실패하면 그 결과다.
+         *          읽기 집합 연결에서는 읽은 쪽마다 다음 커밋에 범위 조건이 하나씩 붙는다(`ServiceTransaction::kMaxConditionCount`) — 한 트랜잭션으로 끝낼 일은 쪽을 크게 잡고,
+         *          그보다 큰 표를 지우는 일은 쪽마다 커밋한다(`ServiceStoreUtil::erasePrefix` 모양).
          */
         template <typename Visitor>
         [[nodiscard]] static ServiceStoreResult visitAll( IServiceStoreConnection& connection, const hashed_string& table, string_view keyPrefix, int32 pageSize, Visitor&& visitor )
