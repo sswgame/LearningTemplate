@@ -58,18 +58,25 @@ namespace sw
         _mapPool.clear();
     }
 
-    bool VFXEffectPool::play( const string& effectPath, const float3& position, uint32 poolLimit )
+    bool VFXEffectPool::play( const string& effectPath, const float3& position, uint32 poolLimit ) const
     {
         if ( build::kWithClientCode == false || effectPath.empty() || poolLimit == 0 )
             return false;
+        // 오브젝트를 만들 수 있는 때(틱 밖 · 틱 뒤 게임 스레드)에 돈다 — 서비스는 매니저에서 다시 찾는다(그사이 씬이 비었어도 매니저마다 하나다).
+        _pManager->executeOrDeferPostTickOnScene( [effectPath, position, poolLimit]( GameObjectManager& manager )
+        { manager.getSubsystem<VFXEffectPool>().playNow( effectPath, position, poolLimit ); } );
+        return true;
+    }
+
+    void VFXEffectPool::playNow( const string& effectPath, const float3& position, uint32 poolLimit )
+    {
         EffectPool&   pool    = _mapPool[hashed_string( effectPath )];
         VFXComponent* pEffect = acquireEffect( pool, effectPath, poolLimit );
         if ( pEffect == nullptr )
-            return false;
+            return;
         pEffect->setWorldPosition( position );
         pEffect->play();
         ++pool._playCount;
-        return true;
     }
 
     uint32 VFXEffectPool::getPlayCount( const hashed_string& effectPath ) const

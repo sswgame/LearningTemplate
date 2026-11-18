@@ -6,6 +6,8 @@
  *          (언리얼 `UNiagaraFunctionLibrary::SpawnSystemAtLocation` 의 컴포넌트 풀 · 시스템 에셋의 MaxPoolSize 자리).
  *          효과는 반복하지 않아야 한다 — 반복하는 효과는 끝나지 않아 풀이 놀지 않는다. 풀 오브젝트는 파생(`GameObject::setTransient`)이라 세이브에 들지 않고 씬과 함께 사라진다.
  *          그리는 것이 없는 전용 서버(`build::kWithClientCode` 가 거짓)는 틀지 않는다.
+ *          **오브젝트는 안전 지점에서만 만든다.** `play` 는 매니저의 구조 변경 명령 버퍼(`executeOrDeferPostTickOnScene`)로 넘긴다 — 틱 중(병렬 틱 · 알림 처리)이면
+ *          틱 뒤 게임 스레드로 미루고, 틱 밖이면 바로 튼다(언리얼 Mass 의 Defer() 명령 버퍼 · 유니티 EntityCommandBuffer 자리). 그래서 부르는 쪽이 어느 스레드 · 어느 단계인지 몰라도 된다.
  *          씬 서비스(`ISceneService`)이고 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생긴다(`manager.getSubsystem<sw::VFXEffectPool>()`).
  */
 #pragma once
@@ -48,11 +50,11 @@ namespace sw
         void onSceneCleared() override;
 
         /**
-         * @brief 효과 @p effectPath 를 @p position 에서 처음부터 한 번 틉니다.
+         * @brief 효과 @p effectPath 를 @p position 에서 처음부터 한 번 틉니다. 틱 중이면 틱 뒤 게임 스레드에서 튼다(파일 머리말).
          * @param poolLimit 이 효과를 한꺼번에 틀 수 있는 수(1 이상) — 넘으면 가장 오래 전에 튼 것을 옮겨 다시 튼다
-         * @return 틀었으면 true 입니다(전용 서버 · 빈 경로 · 상한 0 이면 false).
+         * @return 받았으면 true 입니다(전용 서버 · 빈 경로 · 상한 0 이면 false). 튼 수는 실제로 튼 때 오른다(`getPlayCount`).
          */
-        bool play( const string& effectPath, const float3& position, uint32 poolLimit );
+        bool play( const string& effectPath, const float3& position, uint32 poolLimit ) const;
 
         /** @brief 효과 @p effectPath 를 이 씬에서 튼 수입니다(누적). */
         uint32 getPlayCount( const hashed_string& effectPath ) const;
@@ -60,6 +62,9 @@ namespace sw
         uint32 getPoolSize( const hashed_string& effectPath ) const;
 
     private:
+        /** @brief 지금 바로 틉니다 — 구조 변경이 열린 때(틱 밖 · 틱 뒤 게임 스레드)에만 부른다(`play` 의 명령). */
+        void playNow( const string& effectPath, const float3& position, uint32 poolLimit );
+
         /** @brief 효과 하나의 풀입니다. */
         struct EffectPool
         {
