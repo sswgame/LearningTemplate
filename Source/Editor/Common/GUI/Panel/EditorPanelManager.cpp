@@ -253,14 +253,7 @@ namespace sw::editor
             reportPanelTimes();
         updateFocusedCommandStack();
         // 그린 뒤에 본다 — 이번 프레임의 편집 · 상호작용 구간이 끝난 상태로 사본을 모은다(감사 E-1)
-        vector<IEditorPanel*> listInstance;
-        listInstance.reserve( _listPanel.size() );
-        for ( const EditorPanelEntry& entry : _listPanel )
-        {
-            if ( entry._pInstance != nullptr )
-                listInstance.push_back( entry._pInstance.get() );
-        }
-        EditorDocumentAutosaveScheduler::tick( listInstance );
+        EditorDocumentAutosaveScheduler::update( _listPanel );
     }
 
     void EditorPanelManager::updateFocusedCommandStack()
