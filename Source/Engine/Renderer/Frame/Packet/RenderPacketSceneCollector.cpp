@@ -133,20 +133,16 @@ namespace sw
                 if ( pLight == nullptr || pLight->isActive() == false || pLight->getLensFlarePath().empty() )
                     continue;
                 const string& path    = pLight->getLensFlarePath();
-                auto*         pCached = VectorUtil::findIf( _listLensFlareAsset, [&path]( const pair<string, shared_ptr<const LensFlareAsset>>& entry )
+                auto*         pCached = VectorUtil::findIf( _listLensFlareAsset, [&path]( const pair<string, SharedAssetRef<LensFlareAsset>>& entry )
                         { return entry.first == path; } );
                 if ( pCached == nullptr )
                 {
-                    shared_ptr<LensFlareAsset> pAsset = make_shared<LensFlareAsset>();
-                    if ( const expected<void> loaded = pAsset->loadFromAsset( AssetID{ string_view( path ) } ); loaded.has_value() == false )
-                    {
-                        SW_LOG_ERROR_ID( "RenderPacketSceneCollector.LensFlareUnreadable", "Lens flare '%#' could not be loaded (%#) - lights using it draw no flare", path, loaded.error().message() );
-                        pAsset.reset();
-                    }
-                    _listLensFlareAsset.emplace_back( path, std::move( pAsset ) );
+                    _listLensFlareAsset.emplace_back( path, SharedAssetCache<LensFlareAsset>::acquire( path ) );
                     pCached = &_listLensFlareAsset.back();
                 }
-                if ( pCached->second == nullptr )
+                // 렌더 스레드는 이번 프레임의 판을 스냅숏으로 쥔다(다시 읽기가 그리는 도중의 내용을 바꾸지 않는다).
+                shared_ptr<const LensFlareAsset> pAsset = pCached->second.snapshot();
+                if ( pAsset == nullptr )
                     continue;
                 GPULight element{};
                 pLight->writeGPULight( element );
@@ -156,7 +152,7 @@ namespace sw
                 request._direction    = float3{ element._directionType._x, element._directionType._y, element._directionType._z };
                 request._color        = color;
                 request._bDirectional = kind == LightKind::Directional ? SW_TRUE : SW_FALSE;
-                request._pAsset       = pCached->second;
+                request._pAsset       = std::move( pAsset );
                 packet._listLensFlare.push_back( std::move( request ) );
             }
         }

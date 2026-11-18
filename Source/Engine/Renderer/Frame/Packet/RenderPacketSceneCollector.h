@@ -13,6 +13,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
@@ -87,8 +88,9 @@ namespace sw
         /** @brief 주 시점 카메라에 매인 씬 내용입니다 — 안개(카메라가 물속이면 물의 안개)와 투명 정렬 축(render2d.xml). */
         void applyMainCamera( RenderFramePacket& packet, Scene& activeScene, CameraComponent& camera );
         /**
-         * @brief 렌즈 플레어를 단 3D 빛(`LightComponent::getLensFlarePath`)마다 요청을 패킷에 싣습니다. 플레어 파일은 경로마다 한 번 읽어 둔다(`_listLensFlareAsset`).
-         * @details 못 읽은 파일은 오류를 한 번 남기고 그 빛은 플레어가 없다 — 다른 플레어로 대신하지 않는다. shortcut: 파일을 고쳐도 다시 읽지 않는다 — 핫 리로드가 필요해지면 경로의 수정 세대를 열쇠에 더한다.
+         * @brief 렌즈 플레어를 단 3D 빛(`LightComponent::getLensFlarePath`)마다 요청을 패킷에 싣습니다. 플레어 파일은 경로마다 공유 캐시 참조로 쥔다(`_listLensFlareAsset`).
+         * @details 못 읽은 파일은 로더가 오류를 남기고 그 빛은 플레어가 없다 — 다른 플레어로 대신하지 않는다. 파일을 고치면 캐시가 다시 읽고 참조(`SharedAssetRef`)가
+         *          새 판을 보므로 다음 프레임 요청은 새 내용이다(언리얼 · 유니티 에셋 핫 리로드와 같다).
          */
         void collectLensFlares( RenderFramePacket& packet, const Scene& activeScene );
         /** @brief 켜진 데칼(`DecalComponent`)의 그리기 값을 그리는 차례(`_sortOrder`)로 패킷에 싣습니다. */
@@ -132,7 +134,7 @@ namespace sw
         /** @brief 프로브 버퍼 원소 묶음입니다(`collectSceneLights`). 내용이 그대로면 지난 묶음을 다시 주도록 프레임을 넘어 유지합니다. */
         LightProbeElementBuilder _lightProbeElement;
         /** @brief 읽은 렌즈 플레어 파일(경로 → 데이터, 못 읽은 경로는 nullptr)입니다. 프레임을 넘어 유지한다. */
-        vector<pair<string, shared_ptr<const LensFlareAsset>>> _listLensFlareAsset;
+        vector<pair<string, SharedAssetRef<LensFlareAsset>>> _listLensFlareAsset; ///< 경로마다 공유 캐시 참조(다시 읽으면 새 판을 본다)
         /** @brief 디바이스가 GPU 컬링 컴퓨트를 돌릴 수 있어 인스턴스 LOD 를 GPU 가 고를 수 있는지입니다(`initialize` 가 정한다). `fillSceneView` 는 쓰지 않는다. */
         uint8 _bGPUInstanceLODCapable : 1;
     };
