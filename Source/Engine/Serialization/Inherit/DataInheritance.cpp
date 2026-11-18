@@ -9,12 +9,12 @@
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -397,9 +397,15 @@ namespace sw
                     DataInheritance::reportCycle( baseID, sourceName );
                     return false;
                 }
-                if ( inoutChain.size() >= DataInheritance::getMaxDepth() )
+                const optional<uint32> maxDepth = source.findMaxDepth();
+                if ( maxDepth.has_value() == false )
                 {
-                    DataInheritance::reportTooDeep( baseID, sourceName );
+                    DataInheritance::reportNoDepthLimit( sourceName );
+                    return false;
+                }
+                if ( inoutChain.size() >= *maxDepth )
+                {
+                    DataInheritance::reportTooDeep( baseID, sourceName, *maxDepth );
                     return false;
                 }
                 inoutChain.push_back( baseID );
@@ -651,13 +657,19 @@ namespace sw
 
 namespace sw
 {
+    DataInheritanceResourceSource::DataInheritanceResourceSource()
+        : IDataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
+    {
+    }
+
     bool DataInheritanceResourceSource::readText( string_view assetID, string& outText )
     {
         return AssetIO::readTextAsset( AssetID{ assetID }, outText );
     }
 
-    DataInheritanceDiskSource::DataInheritanceDiskSource( string_view contentRoot )
-        : _contentRoot{ contentRoot }
+    DataInheritanceDiskSource::DataInheritanceDiskSource( string_view contentRoot, optional<uint32> maxDepth )
+        : IDataInheritanceSource{ maxDepth }
+        , _contentRoot{ contentRoot }
     {
     }
 
@@ -797,6 +809,12 @@ namespace sw
     {
         outListLayer.clear();
         outListLayer.push_back( DataInheritanceLayer{ string{ sourceName }, string{ text } } );
+        const optional<uint32> maxDepth = source.findMaxDepth();
+        if ( maxDepth.has_value() == false )
+        {
+            reportNoDepthLimit( sourceName );
+            return false;
+        }
         vector<string> listChain;
         while ( true )
         {
@@ -809,9 +827,9 @@ namespace sw
                 reportCycle( baseID, childID );
                 return false;
             }
-            if ( listChain.size() >= getMaxDepth() )
+            if ( listChain.size() >= *maxDepth )
             {
-                reportTooDeep( baseID, childID );
+                reportTooDeep( baseID, childID, *maxDepth );
                 return false;
             }
             listChain.push_back( baseID );
@@ -930,19 +948,19 @@ namespace sw
         return true;
     }
 
-    uint32 DataInheritance::getMaxDepth()
-    {
-        return engine::getSubsystem<EngineConfig>()._dataInheritanceMaxDepth;
-    }
-
     void DataInheritance::reportCycle( string_view baseID, string_view sourceName )
     {
         SW_LOG_ERROR_ID( "DataInheritance.Cycle", "'%#': the base chain loops at '%#' - it is not loaded", sourceName, baseID );
     }
 
-    void DataInheritance::reportTooDeep( string_view baseID, string_view sourceName )
+    void DataInheritance::reportTooDeep( string_view baseID, string_view sourceName, uint32 maxDepth )
     {
-        SW_LOG_ERROR_ID( "DataInheritance.TooDeep", "'%#': the base chain is deeper than %# at '%#' - it is not loaded", sourceName, getMaxDepth(), baseID );
+        SW_LOG_ERROR_ID( "DataInheritance.TooDeep", "'%#': the base chain is deeper than %# at '%#' - it is not loaded", sourceName, maxDepth, baseID );
+    }
+
+    void DataInheritance::reportNoDepthLimit( string_view sourceName )
+    {
+        SW_LOG_ERROR_ID( "DataInheritance.NoDepthLimit", "'%#': the read carries no inheritance depth limit (the engine copy is not set yet) - it is not loaded", sourceName );
     }
 
     void DataInheritance::reportBaseNotFound( string_view baseID, string_view sourceName )

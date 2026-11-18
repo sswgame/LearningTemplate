@@ -138,12 +138,18 @@ namespace sw
          */
         [[nodiscard]] bool findCachedBytecode( const ShaderCompileDesc& desc, vector<uint8>& outBytecode ) const;
         /**
-         * @brief 실시간 컴파일이 실제로 쓰는 요청입니다. 진단 정책(`RenderDiagnosticsPolicy::_bShaderDebugCodegen`)이 켰으면 디버그 코드젠(RenderDoc 에서 한 줄씩), 아니면 요청 그대로(쿠킹과 같은 최적화)입니다.
-         * @details 캐시의 실시간 컴파일과 `ShaderRecompiler` 의 재컴파일이 **이 하나**로 코드젠을 정합니다.
+         * @brief 실시간 컴파일이 실제로 쓰는 요청입니다. @p bDebugCodegen 이 켜졌으면 디버그 코드젠(RenderDoc 에서 한 줄씩), 아니면 요청 그대로(쿠킹과 같은 최적화)입니다.
+         * @details 캐시의 실시간 컴파일과 `ShaderRecompiler` 의 재컴파일이 **이 하나**로 코드젠을 정합니다. 깃발은 둘 다 `isLiveDebugCodegen` 의 값을 넘긴다.
          *          둘이 따로 정하면 DDC 에 두 코드젠이 섞이고, 핫 리로드한 셰이더만 디버그 정보를 잃습니다.
          *          쿠킹된 바이너리는 이 규칙을 타지 않습니다(쿠커는 늘 최적화 코드젠).
          */
-        static ShaderCompileDesc makeLiveCompileDesc( const ShaderCompileDesc& desc );
+        [[nodiscard]] static ShaderCompileDesc makeLiveCompileDesc( const ShaderCompileDesc& desc, bool bDebugCodegen );
+        /**
+         * @brief 실시간 컴파일의 디버그 코드젠 깃발입니다. 진단 정책(`RenderDiagnosticsPolicy::_bShaderDebugCodegen`)을 기동(`initialize`, 기동 스레드)에서 한 번 뜬 값이다.
+         * @details 진단 정책의 채우는 쪽은 개발 변수(`gv_shaderDebugCodegen`)를 읽는다 — 컴파일 워커가 그것을 직접 읽으면 콘솔 쓰기와 겹친다. 기동 때 컴파일한 셰이더도 따라야 해
+         *          명령줄로 주는 값이라 실행 중 바꿀 일이 없다 — 공급자(`LiveShaderBytecodeProvider`)가 만들 때 사본을 든다.
+         */
+        [[nodiscard]] bool isLiveDebugCodegen() const { return _bLiveDebugCodegen != SW_FALSE; }
 
         /**
          * @brief 요청에 싣는 엔진 설정 사본입니다(`initialize` 와 설정 다시 읽기 알림이 뜬다). 엔진 없이 공급자만 건 캐시(`initializeWithProvider` — 테스트)는 비어 있다.
@@ -194,6 +200,7 @@ namespace sw
         atomic<uint64>                                                   _memoryHitCount;              ///< `getMemoryHitCount` — 로드 워커가 함께 센다
         atomic<uint64>                                                   _providerLoadCount;           ///< `getProviderLoadCount` — 로드 워커가 함께 센다
         BusyClock                                                        _compileBusy;                 ///< `getCompileBusyClock` — 로드 워커 · PSO 워커가 함께 센다
+        uint8                                                            _bLiveDebugCodegen;           ///< `isLiveDebugCodegen` — 기동에서만 쓴다(그때는 로드가 없다)
 
         SW_SERVICE_SLOT( ShaderCache, Required );
     };

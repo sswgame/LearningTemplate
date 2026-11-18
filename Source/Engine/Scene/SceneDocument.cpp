@@ -20,6 +20,7 @@
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -421,9 +422,16 @@ namespace sw
 
         // 자기 포함은 사슬로 잡는다. 디스크 입구로 연 맨 위 씬은 경로 모양이 달라 한 겹 더 돈 뒤에 잡힌다.
         inoutListChain.push_back( FileUtil::normalizePath( _sourcePath ).str() );
-        if ( inoutListChain.size() > DataInheritance::getMaxDepth() )
+        // 깊이 상한은 엔진의 사본이다(씬 로드 워커가 `EngineConfig` 를 직접 읽으면 설정 제자리 덮기와 겹친다). 없으면 대신 읽지 않고 진다.
+        const optional<uint32> maxDepth = engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
+        if ( maxDepth.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "SceneDocument.InstanceTooDeep", "Scene instances in %# nest deeper than %# levels - the scene is not loaded", absPath, DataInheritance::getMaxDepth() );
+            DataInheritance::reportNoDepthLimit( absPath );
+            return false;
+        }
+        if ( inoutListChain.size() > *maxDepth )
+        {
+            SW_LOG_ERROR_ID( "SceneDocument.InstanceTooDeep", "Scene instances in %# nest deeper than %# levels - the scene is not loaded", absPath, *maxDepth );
             return false;
         }
 

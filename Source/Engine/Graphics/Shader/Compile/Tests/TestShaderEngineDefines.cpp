@@ -5,6 +5,7 @@
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 // 셰이더가 읽는 렌더 정책 값(RN-16) — 설정 파일(EngineConfig `_render`)이 정본이고, 엔진이 모든 컴파일에 넣는 define 한 경로로만 셰이더에 간다.
@@ -40,6 +41,21 @@ SW_TEST_CASE( ShaderEngineDefinesTest, CompileWithoutEnginePolicyFails )
     const ShaderCompileResult result = ShaderCompiler::compileHLSL( desc );
     SW_EXPECT_FALSE( result._bSuccess );
     SW_EXPECT_TRUE( StringUtil::contains( result._errorMessage, "engine policy" ) );
+}
+
+/**
+ * @brief [ShaderEngineDefinesTest] 실시간 컴파일의 코드젠은 넘겨받은 깃발(기동에서 뜬 진단 정책 사본)이 정한다 — 컴파일 워커가 진단 정책을 직접 읽지 않는다
+ * @details 깃발이 꺼졌으면 요청 그대로(쿠킹과 같은 최적화)이고, 켜졌으면 디버그 코드젠이다. 요청이 이미 디버그면 깃발이 꺼도 그대로다.
+ */
+SW_TEST_CASE( ShaderEngineDefinesTest, LiveCodegenComesFromTheCarriedFlag )
+{
+    ShaderCompileDesc desc{};
+    desc._entryPoint = "PSMain";
+    desc._stage      = ShaderStage::Pixel;
+    SW_EXPECT_EQUAL( static_cast<uint8>( SW_FALSE ), ShaderCache::makeLiveCompileDesc( desc, false )._bDebugCodegen );
+    SW_EXPECT_EQUAL( static_cast<uint8>( SW_TRUE ), ShaderCache::makeLiveCompileDesc( desc, true )._bDebugCodegen );
+    desc._bDebugCodegen = SW_TRUE;
+    SW_EXPECT_EQUAL( static_cast<uint8>( SW_TRUE ), ShaderCache::makeLiveCompileDesc( desc, false )._bDebugCodegen );
 }
 
 /**

@@ -24,12 +24,12 @@
 
 namespace sw
 {
-    ShaderCompileDesc ShaderCache::makeLiveCompileDesc( const ShaderCompileDesc& desc )
+    ShaderCompileDesc ShaderCache::makeLiveCompileDesc( const ShaderCompileDesc& desc, bool bDebugCodegen )
     {
         // 기본(최적화 코드젠)은 쿠킹과 같은 바이트라 그림이 셰이더를 어디서 얻었느냐(캐시 · 컴파일 · 쿠킹본)나 빌드 구성에 달리지 않는다 — 골든 비교가 그것에 기댄다.
-        // 디버그 코드젠은 진단 정책이 켤 때만이다(언리얼 `r.Shaders.Optimize=0` 과 같은 자리).
+        // 디버그 코드젠은 진단 정책이 켤 때만이다(언리얼 `r.Shaders.Optimize=0` 과 같은 자리). 깃발은 부르는 쪽이 사본으로 넘긴다 — 워커가 진단 정책을 직접 읽지 않는다.
         ShaderCompileDesc liveDesc = desc;
-        if ( RenderDiagnostics::get()._bShaderDebugCodegen == SW_TRUE )
+        if ( bDebugCodegen )
             liveDesc._bDebugCodegen = SW_TRUE;
         return liveDesc;
     }
@@ -71,6 +71,7 @@ namespace sw
         , _memoryHitCount{ 0 }
         , _providerLoadCount{ 0 }
         , _compileBusy{}
+        , _bLiveDebugCodegen{ SW_FALSE }
     {
     }
 
@@ -82,8 +83,10 @@ namespace sw
     bool ShaderCache::initialize()
     {
         // 콘텐츠 정책은 기동 때 정해지고(에셋 매니저 - 이 서브시스템이 그 뒤에 선다) 실행 중 바뀌지 않는다 - 공급자를 한 번 고른다.
+        // 디버그 코드젠도 여기(기동 스레드)서 한 번 뜬다 — 컴파일 워커는 공급자가 든 사본만 본다.
+        _bLiveDebugCodegen      = RenderDiagnostics::get()._bShaderDebugCodegen == SW_TRUE ? SW_TRUE : SW_FALSE;
         const bool bInitialized = AssetIO::getContentSource() == ContentSource::Cooked ? initializeWithProvider( make_unique<CookedShaderBytecodeProvider>() )
-                                                                                       : initializeWithProvider( make_unique<LiveShaderBytecodeProvider>() );
+                                                                                       : initializeWithProvider( make_unique<LiveShaderBytecodeProvider>( isLiveDebugCodegen() ) );
         if ( bInitialized == false )
             return false;
         // 셰이더에 들어가는 설정 값은 여기(기동 스레드)와 다시 읽기 알림(게임 스레드)에서만 뜬다 — 컴파일 워커는 요청에 실린 사본만 본다.

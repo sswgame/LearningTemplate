@@ -62,7 +62,7 @@ namespace sw::editor
         scope.emplaceSubsystem<EditorCommandRegistry>();
         // 메인 되돌리기 기록과 복사 버퍼 — 인스턴스가 내려갈 때 호스트의 맡김 칸에 맡기고 새 인스턴스가 되찾는다(리로드 · 백엔드 교체).
         EditorUndoHistory& undoHistory = scope.emplaceSubsystem<EditorUndoHistory>( EditorUndoHistory::readConfiguredLimit( toolDefaults ) );
-        const bool         bStackBound = scope.bind( &undoHistory.getStack() ); // `findSubsystem<CommandStack>()` 이 찾는다
+        const bool         bStackBound = scope.exposeMember( undoHistory, undoHistory.getStack() ); // `findSubsystem<CommandStack>()` 이 찾는다 — 주인과 함께 지워진다
         SW_ASSERT( bStackBound );
         (void)bStackBound;
         scope.emplaceSubsystem<ObjectCopyBuffer>();

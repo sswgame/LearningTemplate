@@ -4,7 +4,7 @@
  * @details 규칙과 새 형식을 올리는 법은 `docs/agents/DataInheritance.md` 입니다.
  *          - 칸(속성)은 자식이 적은 것만 덮고, 스키마가 구조체 칸이라고 한 자식 원소는 안으로 들어가 합치고, 그 밖의 자식 원소는 자식이 적으면 같은 이름의 형제까지 통째로 바뀝니다.
  *          - 열쇠가 있는 목록(`PROPERTY( InheritKey )`)은 원소의 이름으로 합칩니다. 적으면 합치거나 더하고, `_op="Replace"` 는 바꾸고, `_op="Remove"` 는 지우며, `_before` · `_after` 는 자리를 옮깁니다.
- *          - 순환 · 없는 부모 · 없는 열쇠의 삭제와 교체 · 깊이 초과(`EngineConfig::_dataInheritanceMaxDepth`)는 오류입니다.
+ *          - 순환 · 없는 부모 · 없는 열쇠의 삭제와 교체 · 깊이 초과는 오류입니다. 깊이 상한은 부모를 읽는 곳(`IDataInheritanceSource`)이 사본으로 든다 — 펼치기는 설정을 직접 읽지 않는다.
  *          - 읽는 쪽과 쿠커는 `ResourceComposer::compose` 한 길로 이 펼치기에 닿습니다. 이 파일은 합치기 규칙만 가집니다.
  *          - 쿠킹이 펼칩니다(`PackCooker`). 런타임은 펼친 결과만 읽고 에디터 · 개발 실행은 원본을 읽어 합칩니다. 합칠 때 읽는 부모는 `AssetIO` 를 거쳐 쿠킹 작업의 입력이 되므로 부모가 바뀌면 자식의 쿠킹 키도 바뀝니다.
  *
@@ -14,6 +14,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -33,18 +34,32 @@ namespace sw
         virtual ~IDataInheritanceSource() = default;
         /** @brief @p assetID 의 글을 읽습니다. 없으면 false 입니다(`DataInheritance` 가 알립니다). */
         [[nodiscard]] virtual bool readText( string_view assetID, string& outText ) = 0;
+        /** @brief 이 읽기가 실어 온 사슬 깊이 상한입니다. 없으면 펼치기가 오류로 진다(`DataInheritance.NoDepthLimit`). */
+        [[nodiscard]] optional<uint32> findMaxDepth() const { return _maxDepth; }
 
     protected:
-        /** @brief 바탕 형식이라 직접 만들지 않습니다. */
-        IDataInheritanceSource()                                           = default;
+        /**
+         * @brief 바탕 형식이라 직접 만들지 않습니다. 깊이 상한(@p maxDepth)은 만드는 쪽이 사본으로 넘긴다.
+         * @details 설정(`EngineConfig::_dataInheritanceMaxDepth`)은 다시 읽기가 제자리에서 덮고 그 울타리는 렌더 스레드만 기다린다 — 로드 워커가 설정을 직접 읽으면 덮기와 겹친다.
+         *          그래서 값은 게임 스레드가 뜬 사본(`ResourceComposition::findInheritanceMaxDepth`)을 읽기마다 싣는다(언리얼이 로드 요청에 정책 값을 싣는 것과 같다).
+         */
+        explicit IDataInheritanceSource( optional<uint32> maxDepth )
+            : _maxDepth{ maxDepth }
+        {
+        }
         IDataInheritanceSource( const IDataInheritanceSource& )            = default;
         IDataInheritanceSource& operator=( const IDataInheritanceSource& ) = default;
+
+    private:
+        optional<uint32> _maxDepth;
     };
 
     /** @brief 부모를 리소스로 읽습니다(`AssetIO::readTextAsset`). 쿠킹 작업 안이면 그 작업의 입력이 됩니다. */
     class SW_API DataInheritanceResourceSource final : public IDataInheritanceSource
     {
     public:
+        /** @brief 깊이 상한은 만들 때 엔진의 사본(`ResourceComposition::findInheritanceMaxDepth`)을 뜬다 — 읽기 한 번이 한 값을 쓴다. */
+        DataInheritanceResourceSource();
         [[nodiscard]] bool readText( string_view assetID, string& outText ) override;
     };
 
@@ -52,8 +67,8 @@ namespace sw
     class SW_API DataInheritanceDiskSource final : public IDataInheritanceSource
     {
     public:
-        /** @brief @p contentRoot 아래에서 리소스 id 를 찾습니다. */
-        explicit DataInheritanceDiskSource( string_view contentRoot );
+        /** @brief @p contentRoot 아래에서 리소스 id 를 찾습니다. @p maxDepth 는 쿠킹 시작이 뜬 깊이 상한입니다. */
+        DataInheritanceDiskSource( string_view contentRoot, optional<uint32> maxDepth );
         [[nodiscard]] bool readText( string_view assetID, string& outText ) override;
 
     private:
@@ -186,12 +201,12 @@ namespace sw
          */
         [[nodiscard]] static bool collectChildren( string_view contentRoot, string_view baseID, const vector<string>& listExtension, vector<string>& outListChildID );
 
-        /** @brief 사슬 깊이 상한입니다(`EngineConfig::_dataInheritanceMaxDepth`). */
-        [[nodiscard]] static uint32 getMaxDepth();
         /** @brief 사슬이 돌 때 남기는 오류입니다. 합치는 코드가 따로인 프리팹 변형도 같은 오류를 남깁니다. */
         static void reportCycle( string_view baseID, string_view sourceName );
-        /** @brief 사슬이 상한을 넘을 때 남기는 오류입니다. */
-        static void reportTooDeep( string_view baseID, string_view sourceName );
+        /** @brief 사슬이 상한(@p maxDepth)을 넘을 때 남기는 오류입니다. */
+        static void reportTooDeep( string_view baseID, string_view sourceName, uint32 maxDepth );
+        /** @brief 읽기에 깊이 상한이 실려 오지 않았을 때 남기는 오류입니다 — 대신 설정을 읽지 않는다(엔진의 사본이 아직 없다: `ResourceComposition::setInheritanceMaxDepth` 전). */
+        static void reportNoDepthLimit( string_view sourceName );
         /** @brief 부모를 읽지 못할 때 남기는 오류입니다. */
         static void reportBaseNotFound( string_view baseID, string_view sourceName );
     };

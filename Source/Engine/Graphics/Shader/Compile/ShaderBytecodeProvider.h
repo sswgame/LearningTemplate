@@ -58,8 +58,13 @@ namespace sw
     class LiveShaderBytecodeProvider final : public IShaderBytecodeProvider
     {
     public:
+        /** @brief @p bDebugCodegen 은 기동에서 뜬 디버그 코드젠 깃발입니다(`ShaderCache::isLiveDebugCodegen`) — 컴파일 워커가 진단 정책을 직접 읽지 않는다. */
+        explicit LiveShaderBytecodeProvider( bool bDebugCodegen );
         [[nodiscard]] ShaderCompileResult load( const ShaderCompileDesc& desc ) const override;
         [[nodiscard]] uint64              computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override;
         [[nodiscard]] bool                getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const override;
+
+    private:
+        uint8 _bDebugCodegen; ///< 실시간 컴파일의 디버그 코드젠(만들 때 받은 사본)
     };
 } // namespace sw

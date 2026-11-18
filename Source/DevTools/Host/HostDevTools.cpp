@@ -22,7 +22,7 @@ namespace sw
         }
         engine.setStartupExtension( _pDevTools->makeStartupExtension() );
         // 콘텐츠 폴더 감시 — 기능 · 게임의 데이터 다시 읽기가 범위에서 찾는다(배포에는 없다).
-        const bool bFolderWatchBound = host.bind<IContentFolderWatch>( &_pDevTools->getContentFolderWatch() );
+        const bool bFolderWatchBound = host.exposeMember<IContentFolderWatch>( *_pDevTools, _pDevTools->getContentFolderWatch() ); // 주인은 `DevToolsHost` — 함께 지워진다
         SW_ASSERT( bFolderWatchBound );
         (void)bFolderWatchBound;
     }

@@ -5,7 +5,9 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 using namespace sw;
@@ -16,6 +18,12 @@ namespace
     class DataInheritanceTestSource final : public IDataInheritanceSource
     {
     public:
+        /** @brief 깊이 상한 @p maxDepth 를 싣습니다. 기본은 설정(`EngineConfig.json`)과 같은 값입니다. */
+        explicit DataInheritanceTestSource( optional<uint32> maxDepth = 8u )
+            : IDataInheritanceSource{ maxDepth }
+        {
+        }
+
         void add( const utf8* pID, const utf8* pText ) { _mapText[pID] = pText; }
 
         [[nodiscard]] bool readText( string_view assetID, string& outText ) override
@@ -281,11 +289,11 @@ SW_TEST_CASE( DataInheritanceTest, IdentityChangeUnderSameKeyIsACollision )
     SW_EXPECT_EQUAL( string( "A,B,C" ), Util::passOrder( doc ) );
 }
 
-/** @brief [DataInheritanceTest] 사슬이 설정의 상한을 넘으면 오류다 */
-SW_TEST_CASE( DataInheritanceTest, ChainDeeperThanConfigIsAnError )
+/** @brief [DataInheritanceTest] 사슬이 읽기가 실어 온 상한을 넘으면 오류다 */
+SW_TEST_CASE( DataInheritanceTest, ChainDeeperThanCarriedLimitIsAnError )
 {
     DataInheritanceTestSource source;
-    const uint32              maxDepth = DataInheritance::getMaxDepth();
+    const uint32              maxDepth = *source.findMaxDepth();
     for ( uint32 index = 0; index <= maxDepth; ++index )
     {
         StringBuilder<constant::buffer::kMax256> idBuilder;
@@ -302,6 +310,46 @@ SW_TEST_CASE( DataInheritanceTest, ChainDeeperThanConfigIsAnError )
     string flat;
     SW_EXPECT_LOG( "DataInheritance.TooDeep" );
     SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="d0.xml" />)", flat ) );
+}
+
+/** @brief [DataInheritanceTest] 깊이 상한은 읽기가 실어 온 사본을 쓴다 — 설정(8)보다 작은 2 를 실으면 부모 셋은 지고 둘은 된다 */
+SW_TEST_CASE( DataInheritanceTest, CarriedDepthLimitIsUsed )
+{
+    DataInheritanceTestSource source{ 2u };
+    source.add( "d0.xml", R"(<Doc _base="d1.xml" />)" );
+    source.add( "d1.xml", R"(<Doc _base="d2.xml" />)" );
+    source.add( "d2.xml", "<Doc />" );
+    SW_EXPECT_LOG( "DataInheritance.TooDeep" );
+    string flat;
+    SW_EXPECT_TRUE( Util::flatten( source, R"(<Doc _base="d1.xml" />)", flat ) );
+    SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="d0.xml" />)", flat ) );
+    vector<DataInheritanceLayer> listLayer;
+    SW_EXPECT_TRUE( DataInheritance::collectChain( R"(<Doc _base="d1.xml" />)", "child", source, listLayer ) );
+    SW_EXPECT_FALSE( DataInheritance::collectChain( R"(<Doc _base="d0.xml" />)", "child", source, listLayer ) );
+}
+
+/** @brief [DataInheritanceTest] 깊이 상한을 싣지 않은 읽기는 오류다 — 펼치기가 설정을 대신 읽지 않는다 */
+SW_TEST_CASE( DataInheritanceTest, ReadWithoutDepthLimitIsAnError )
+{
+    DataInheritanceTestSource source{ nullopt };
+    source.add( "base.xml", "<Doc />" );
+    SW_EXPECT_LOG( "DataInheritance.NoDepthLimit" );
+    string flat;
+    SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="base.xml" />)", flat ) );
+    vector<DataInheritanceLayer> listLayer;
+    SW_EXPECT_FALSE( DataInheritance::collectChain( R"(<Doc _base="base.xml" />)", "child", source, listLayer ) );
+}
+
+/** @brief [DataInheritanceTest] 엔진의 깊이 사본은 뜨기 전엔 없고, 리소스 읽기는 만들 때 엔진의 사본을 싣는다 */
+SW_TEST_CASE( DataInheritanceTest, ResourceSourceCarriesTheEngineCopy )
+{
+    ResourceComposition composition;
+    SW_EXPECT_FALSE( composition.findInheritanceMaxDepth().has_value() );
+    composition.setInheritanceMaxDepth( 3u );
+    SW_EXPECT_EQUAL( 3u, composition.findInheritanceMaxDepth().value_or( 0u ) );
+    const optional<uint32> engineCopy = engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
+    SW_REQUIRE_TRUE( engineCopy.has_value() ); // 에셋 매니저가 기동에서 떴다
+    SW_EXPECT_EQUAL( *engineCopy, DataInheritanceResourceSource{}.findMaxDepth().value_or( 0u ) );
 }
 
 /** @brief [DataInheritanceTest] 차이를 부모 위에 다시 펼치면 처음 칸이 나온다 — 삭제 · 추가 · 순서 · 빈 칸까지 */

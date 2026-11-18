@@ -23,7 +23,8 @@ namespace
     {
     public:
         explicit AudioParentSource( string_view text )
-            : _text{ text }
+            : IDataInheritanceSource{ 8u } // 설정(`EngineConfig.json`)과 같은 깊이 상한
+            , _text{ text }
         {
         }
         [[nodiscard]] bool readText( string_view /*assetID*/, string& outText ) override

@@ -98,8 +98,7 @@ namespace sw::editor
         _scope.destroyAll();                 // 뷰 렌더 타깃은 EditorRenderViews 의 종료가 놓는다
         _scope.unbind<EditorToolDefaults>(); // 셸이 소유한 값 — 다음 `initialize` 가 다시 건다
         _scope.unbind<EditorIconGlyphTable>();
-        _scope.unbind<const EditorComponentIconTable>();
-        _scope.unbind<CommandStack>(); // `EditorUndoHistory` 가 소유한 스택 — 방금 사라졌다
+        _scope.unbind<const EditorComponentIconTable>(); // 메인 `CommandStack` 칸은 주인(`EditorUndoHistory`)과 함께 `destroyAll` 이 지웠다
     }
 
     void EditorContext::setDockLayout( EditorDockLayout* pDockLayout )

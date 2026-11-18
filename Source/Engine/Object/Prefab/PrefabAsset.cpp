@@ -23,6 +23,7 @@
 #include "Engine/Object/Prefab/PrefabPathStack.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -757,9 +758,16 @@ namespace sw
             DataInheritance::reportCycle( basePath, sourceName );
             return false;
         }
-        if ( stack.size() >= DataInheritance::getMaxDepth() )
+        // 깊이 상한은 엔진의 사본이다(로드 워커가 `EngineConfig` 를 직접 읽으면 설정 제자리 덮기와 겹친다). 없으면 대신 읽지 않고 진다.
+        const optional<uint32> maxDepth = engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
+        if ( maxDepth.has_value() == false )
         {
-            DataInheritance::reportTooDeep( basePath, sourceName );
+            DataInheritance::reportNoDepthLimit( sourceName );
+            return false;
+        }
+        if ( stack.size() >= *maxDepth )
+        {
+            DataInheritance::reportTooDeep( basePath, sourceName, *maxDepth );
             return false;
         }
         const PrefabPathStack::Scope scope{ stack, baseKey };

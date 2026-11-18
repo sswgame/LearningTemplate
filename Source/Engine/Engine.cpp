@@ -130,7 +130,7 @@ namespace sw
 
     CommandLineManager* Engine::getCommandLineManager() const
     {
-        return _pCommandLineSubsystem != nullptr ? _pCommandLineSubsystem->findCommandLine() : nullptr;
+        return _pCommandLineSubsystem != nullptr ? &_pCommandLineSubsystem->getCommandLine() : nullptr;
     }
 
     // 길이를 나누지 않는다: 기동 순서(코어 → 역할 → 서비스 범위 → 기동 단계 구성 → 서비스 표 → 기동 → 관찰자)가 곧 뜻인 기동 열이다. 단계 사이를 지역값
