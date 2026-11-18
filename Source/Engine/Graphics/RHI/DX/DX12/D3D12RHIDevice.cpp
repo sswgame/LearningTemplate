@@ -75,6 +75,7 @@ namespace sw
         , _swapChain{}
         , _bBindlessRootSignature{ SW_FALSE }
         , _bValidationLayer{ SW_FALSE }
+        , _bDRED{ SW_FALSE }
         , _reservedPassFlags{ 0 }
         , _bDeviceRemovedLogged{ SW_FALSE }
         , _arrBreadcrumb{}
@@ -389,14 +390,14 @@ namespace sw
         if ( buffer == nullptr )
             return 0;
         const uint64 bytes = computeAllocationBytes( buffer.Get() );
-    #if defined( SW_DEBUG )
+    #if defined( SW_DO_CHECKS )
         ID3D12Resource* pNamed = buffer.Get();
     #endif
         BufferRecord record{};
         record._resource             = std::move( buffer );
         const RHIBufferHandle handle = _gpuBuffers.insert( std::move( record ) );
         getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bytes );
-    #if defined( SW_DEBUG )
+    #if defined( SW_DO_CHECKS )
         nameResourceForDiagnostics( pNamed, L"Buffer", handle );
     #endif
         return handle;
@@ -471,20 +472,20 @@ namespace sw
         if ( texture == nullptr )
             return 0;
         const uint64 bytes = computeAllocationBytes( texture.Get() );
-    #if defined( SW_DEBUG )
+    #if defined( SW_DO_CHECKS )
         ID3D12Resource* pNamed = texture.Get();
     #endif
         TextureRecord record{};
         record._resource              = std::move( texture );
         const RHITextureHandle handle = _gpuTextures.insert( std::move( record ) );
         getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), kind, bytes );
-    #if defined( SW_DEBUG )
+    #if defined( SW_DO_CHECKS )
         nameResourceForDiagnostics( pNamed, L"Texture", handle );
     #endif
         return handle;
     }
 
-    #if defined( SW_DEBUG )
+    #if defined( SW_DO_CHECKS )
     void D3D12RHIDevice::nameResourceForDiagnostics( ID3D12Resource* pResource, const utf16* pKind, uint64 handle )
     {
         if ( pResource == nullptr || pKind == nullptr )
@@ -516,8 +517,8 @@ namespace sw
 
     void D3D12RHIDevice::flushDebugMessages( [[maybe_unused]] const utf8* pStage )
     {
-        if ( build::kShipping )
-            return; // 배포본 — 디버그 레이어 메시지도 DRED 도 켜지 않았다
+        if ( build::kShipping && _bDRED == SW_FALSE )
+            return; // 배포본 — 디버그 레이어가 없고 DRED 도 켜지 않았다(`-rhi-dred` 면 아래 소실 보고를 한다)
         // 디바이스가 이미 제거된 상태로 한 번 로그를 남겼으면, 프레임마다 똑같은 검증 메시지
         // 수십 줄 + DRED 덤프를 무한 반복하지 않는다. 자동 복구가 없어서 그 이후 매 프레임
         // 여기로 다시 들어오는데, 정보량 없이 로그만 무한히 쌓인다.
@@ -671,9 +672,11 @@ namespace sw
         if ( desc._bGPUBasedValidation )
             SW_LOG_WARNING_ID( "D3D12.GPUBasedValidationWithoutLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but this build has no D3D12 debug layer - ignored" );
     #endif
-        // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 **전에** 켜야 한다. 디버그 레이어가 없는 개발 빌드(Release)에서도 켠다
-        // (`-gv_gpuBreadcrumbs` 가 기본 켬). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`)가 싣고, DRED 는 명령 종류별 진행과 폴트 주소를 싣는다.
-        if ( GPUBreadcrumbs::isEnabled() )
+        // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 **전에** 켜야 한다. 켤지는 EngineConfig `_rhi._dred`(배포가 아닌 구성 기본 켬)와
+        // `-rhi-dred` 가 정한다 — 배포 구성도 인자로 켠다(언리얼 `-gpucrashdebugging`). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`, `-gv_gpuBreadcrumbs`)가 싣고,
+        // DRED 는 명령 종류별 진행과 폴트 주소를 싣는다.
+        _bDRED = desc._bDRED ? SW_TRUE : SW_FALSE;
+        if ( desc._bDRED )
         {
             Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dredSettings;
             if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( dredSettings.GetAddressOf() ) ) ) )

@@ -650,8 +650,11 @@ namespace sw
         [[nodiscard]] bool createMappedReadbackBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
         /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 `kind` 항목에 할당 크기를 올리는 유일한 지점입니다. */
         RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, RHIMemoryKind kind );
-    #if defined( SW_DEBUG )
-        /** @brief 리소스에 `SW <종류> <핸들> (<폭>x<높이> fmt <포맷>)` 이름을 붙입니다. DRED 페이지 폴트 출력이 폴트 주소의 할당을 이 이름으로 보여 줍니다(Debug 전용). */
+    #if defined( SW_DO_CHECKS )
+        /**
+         * @brief 리소스에 `SW <종류> <핸들> (<폭>x<높이> fmt <포맷>)` 이름을 붙입니다. DRED 페이지 폴트 출력이 폴트 주소의 할당을 이 이름으로 보여 줍니다.
+         * @details 배포가 아닌 구성에서 늘 붙인다(언리얼 Development 빌드도 자원 이름을 늘 붙인다) — 생성마다 서식 한 번 · `SetName` 한 번이라 값싸다.
+         */
         static void nameResourceForDiagnostics( ID3D12Resource* pResource, const utf16* pKind, uint64 handle );
     #endif
         /** @brief 자원 하나가 차지하는 실제 할당 크기입니다(`GetResourceAllocationInfo`이며 정렬과 패딩을 포함합니다). */
@@ -892,7 +895,8 @@ namespace sw
 
         uint8                  _bBindlessRootSignature : 1; ///< 루트 시그니처(텍스처 배열 테이블 포함)를 만드는 데 성공했다. 네이티브 bindless 텍스처 샘플링이 가능하다.
         uint8                  _bValidationLayer       : 1; ///< 디버그 레이어를 켰다(`RHISwapChainDesc::_bValidationLayer`, 배포가 아닌 구성). 장치를 만들 때 한 번 정한다
-        [[maybe_unused]] uint8 _reservedPassFlags      : 6;
+        uint8                  _bDRED                  : 1; ///< DRED 를 켰다(`RHISwapChainDesc::_bDRED`). 장치를 만들 때 한 번 정한다 — 배포 구성의 소실 보고가 이것을 본다
+        [[maybe_unused]] uint8 _reservedPassFlags      : 5;
         /// @brief 디바이스 제거(DEVICE_HUNG/REMOVED) 상태를 이미 한 번 로그로 남겼으면 true 입니다. 매
         /// 프레임 flushDebugMessages() 가 똑같은 검증 메시지 수십 줄을 끝없이 반복 출력하는 것을 막습니다.
         /// 렌더 스레드 · 기록 워커(리스트 생성) · PSO 생성이 함께 읽고 쓰므로 atomic 입니다(비트필드면 옆 비트와 한 바이트를 고쳐 쓴다).

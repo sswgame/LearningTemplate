@@ -304,9 +304,11 @@ namespace sw
         uint32 _uploadStagingIdleFrames{ 0 };
         /// @brief 파이프라인 캐시 저장 주기(초)입니다(`EngineConfig::_rhi._pipelineCacheSaveIntervalSeconds`). 캐시를 디스크에 두는 백엔드(Vulkan)는 0 이하면 초기화를 거절한다. 리플렉션하지 않는다.
         float64 _pipelineCacheSaveIntervalSeconds{ 0.0 };
-        /// @brief 그래픽 API 검증 층(D3D 디버그 레이어 · Vulkan 검증 레이어 · GL 디버그 출력 · WebGPU 검증 오류 로그)을 켭니다(`resolveRHIValidationLayer` — EngineConfig `_rhi._validationLayer`, `-rhi-validation`).
+        /// @brief 그래픽 API 검증 층(D3D 디버그 레이어 · Vulkan 검증 레이어)을 켭니다(`resolveRHIDiagnosticSwitch` — EngineConfig `_rhi._validationLayer`, `-rhi-validation`).
         ///        배포가 아닌 구성(`SW_DO_CHECKS`)에서만 백엔드가 듣는다. 리플렉션하지 않는다.
         bool _bValidationLayer{ false };
+        /// @brief D3D12 DRED(자동 브레드크럼 · 페이지 폴트)를 켭니다(`resolveRHIDiagnosticSwitch` — EngineConfig `_rhi._dred`, `-rhi-dred`). 배포 구성에서도 듣는다. 리플렉션하지 않는다.
+        bool _bDRED{ false };
         /// @brief GPU 기반 검증을 켭니다(`EngineConfig::_rhi._bGPUBasedValidation`, 디버그 레이어가 켜진 실행만). 리플렉션하지 않는다.
         bool _bGPUBasedValidation{ false };
         /// @brief Vulkan 동기화 검증을 켭니다(`EngineConfig::_rhi._bSynchronizationValidation`, 검증 레이어가 켜진 실행만). 리플렉션하지 않는다.

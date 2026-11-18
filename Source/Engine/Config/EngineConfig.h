@@ -255,18 +255,19 @@ namespace sw
 namespace sw
 {
     /**
-     * @enum RHIValidationLayerMode
-     * @brief 그래픽 API 검증 층(D3D12 · D3D11 디버그 레이어, Vulkan 검증 레이어, GL 디버그 출력, WebGPU 검증 오류 로그)을 켤지의 기본값입니다. 시작 인자 `-rhi-validation`(`=0`)이 이긴다.
-     * @details 검증 층은 배포가 아닌 구성(`SW_DO_CHECKS`)에 늘 컴파일하고 장치를 만들 때 한 번 정한다 — 언리얼 Development 빌드의 `-d3ddebug` · `-vulkandebug` 와 같다.
-     *          게임은 Release 에서만 지어지므로 게임 결함은 Release 에서 인자로 켜서 본다. 배포 구성에는 검증 층이 없어 이 값을 듣지 않는다.
+     * @enum RHIDiagnosticSwitch
+     * @brief 장치를 만들 때 켜는 GPU 진단(검증 층 · DRED)의 기본값입니다. 진단마다 시작 인자(`-rhi-validation` · `-rhi-dred`, `=0` 은 끔)가 이긴다(`resolveRHIDiagnosticSwitch`).
+     * @details 진단은 장치를 만들기 전에만 걸 수 있어 시작할 때 한 번 정한다 — 실행 중에 바꾸는 개발 변수가 아니다. 언리얼 Development 빌드의 `-d3ddebug` · `-gpucrashdebugging` 과 같다.
+     *          게임은 Release 에서만 지어지므로 게임 결함은 Release 에서 인자로 켜서 본다.
      */
     ENUM()
-    enum class RHIValidationLayerMode : uint8
+    enum class RHIDiagnosticSwitch : uint8
     {
-        None           = 0, ///< 파일에 값이 없다 — 장치 생성이 오류로 멈춘다(짐작하지 않는다)
-        Off            = 1, ///< 끈다
-        On             = 2, ///< 켠다(검증 층이 설치돼 있어야 한다 — 없으면 백엔드마다 오류 · 경고로 알린다)
-        DebugBuildOnly = 3, ///< Debug 구성만 켜고 Release 는 끈다
+        None            = 0, ///< 파일에 값이 없다 — 장치 생성이 오류로 멈춘다(짐작하지 않는다)
+        Off             = 1, ///< 끈다
+        On              = 2, ///< 모든 구성에서 켠다(그 진단이 없는 구성은 듣지 않는다 — 검증 층은 배포 구성에 없다)
+        DebugBuildOnly  = 3, ///< Debug 구성만 켠다
+        NonShippingOnly = 4, ///< 배포가 아닌 구성(Debug · Release)만 켠다
     };
 
     /**
@@ -302,9 +303,19 @@ namespace sw
         PROPERTY( Min = 1, Units = s )
         float64 _pipelineCacheSaveIntervalSeconds{};
 
-        /** @brief 그래픽 API 검증 층을 켤지의 기본값입니다(`RHIValidationLayerMode`). 시작 인자 `-rhi-validation` 이 이긴다 — `resolveRHIValidationLayer`. */
+        /**
+         * @brief 그래픽 API 검증 층(D3D12 · D3D11 디버그 레이어, Vulkan 검증 레이어)을 켤지의 기본값입니다. 시작 인자 `-rhi-validation` 이 이긴다.
+         * @details 검증 층은 배포가 아닌 구성(`SW_DO_CHECKS`)에만 컴파일돼 있다. 배포 구성은 이 값을 듣지 않는다.
+         */
         PROPERTY()
-        RHIValidationLayerMode _validationLayer{ RHIValidationLayerMode::None };
+        RHIDiagnosticSwitch _validationLayer{ RHIDiagnosticSwitch::None };
+
+        /**
+         * @brief D3D12 DRED(Device Removed Extended Data — 자동 브레드크럼 · 페이지 폴트)를 켤지의 기본값입니다. 시작 인자 `-rhi-dred` 가 이긴다.
+         * @details DRED 는 런타임 기능이라 배포 구성에서도 인자로 켤 수 있다(플레이어 기계의 장치 소실을 좇을 때, 언리얼 `-gpucrashdebugging`). 패스 표지(`-gv_gpuBreadcrumbs`)와는 따로다.
+         */
+        PROPERTY()
+        RHIDiagnosticSwitch _dred{ RHIDiagnosticSwitch::None };
 
         /** @brief GPU 기반 검증(D3D12 `SetEnableGPUBasedValidation` · Vulkan `VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT`)을 켭니다. 디버그 레이어가 켜진 실행에서만 듣는다(R-9). */
         PROPERTY()

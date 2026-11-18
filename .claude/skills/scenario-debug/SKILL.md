@@ -38,7 +38,7 @@ Windows: `py -3 Scripts/dev/scenario_bisect.py <체인> <단계> [--preset Ninja
 - **사진:** 임시 사본 시나리오에 `<CaptureEditorUI file="dbg/a.png"/>` 를 넣어 돌린다(`Bin/Saved/Automation/<시나리오>/<pid>/dbg/`). 이름과 `Scratch` 경로를 바꾼 사본을 쓰고 끝나면 지운다. 가장 최근 pid 폴더를 본다(`ls -td`).
 - **값:** 임시 `SW_LOG_WARNING_ID( "DBG.X", … )` 를 넣고 증분 빌드(`cmake --build --preset Ninja-Debug --target App`)로 돌린다. 프레임 번호 · `GetActiveID` · 눌림 상태를 함께 찍는다. 끝나면 되돌린다 — 커밋 전에 `git diff` 에 `DBG` 가 없어야 한다. 편집기 코드는 `ImGui::IsKeyDown` 이 금지라 `GetKeyData( … )->Down` · `GetIO().MouseDown[]` 을 쓴다.
 - 임시 파일은 스크래치패드에 둔다.
-- **검증 층 · 교착:** 게임 결함은 Release 에서 `-rhi-validation`(그래픽 API 검증 층, `=0` 은 끔)과 `-deadlock-detection`(교착 탐지)을 붙여 본다 — 따로 빌드하지 않는다. 단독 재현 명령줄에 그대로 붙인다(`<Launch>` 는 전역 변수만 받는다).
+- **검증 층 · 교착:** 게임 결함은 Release 에서 `-rhi-validation`(그래픽 API 검증 층, `=0` 은 끔)· `-rhi-dred`(DX12 장치 소실의 명령 진행 · 폴트 주소, Release 기본 켬)과 `-deadlock-detection`(교착 탐지)을 붙여 본다 — 따로 빌드하지 않는다. 단독 재현 명령줄에 그대로 붙인다(`<Launch>` 는 전역 변수만 받는다).
 
 ## 4. 고치기
 

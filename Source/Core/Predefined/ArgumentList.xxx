@@ -232,6 +232,10 @@ SW_REGISTER_ARGUMENT( RENDERDOC, false, false, "renderdoc" )
 // 배포가 아닌 구성(Debug · Release)에 컴파일돼 있고 장치를 만들 때 한 번 읽는다. 배포 구성에는 검증 층이 없어 듣지 않는다(언리얼 `-d3ddebug` · `-vulkandebug`)
 SW_REGISTER_ARGUMENT( RHI_VALIDATION, false, false, "rhi-validation" )
 
+// D3D12 DRED(자동 브레드크럼 · 페이지 폴트 — 장치 소실 뒤 명령 진행과 폴트 주소)를 켠다(`-rhi-dred=0` 은 끈다) — EngineConfig `_rhi._dred` 를 이긴다. 장치를 만들 때 한 번 읽는다.
+// 배포 구성에서도 듣는다(언리얼 `-gpucrashdebugging`). 패스 표지(`-gv_gpuBreadcrumbs`)와는 따로다
+SW_REGISTER_ARGUMENT( RHI_DRED, false, false, "rhi-dred" )
+
 // 교착 탐지기를 켜고 `sw::mutex` 잠금 순서를 추적한다(느리다). 코어 범위가 설 때 한 번 읽고 실행 중에 끄지 않는다. 배포 구성에는 없다
 SW_REGISTER_ARGUMENT( DEADLOCK_DETECTION, false, false, "deadlock-detection" )
 
