@@ -167,6 +167,29 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `netsim.addclient` — 돌고 있는 세션에 클라이언트 하나를 늦게 붙입니다(늦은 참가 시나리오). 입력 초점은 그대로 둔다. */
+            static bool runAddClient( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                EditorNetSimSession* pSession = editor::findSubsystem<EditorNetSimSession>();
+                if ( pSession == nullptr || pSession->isRunning() == false )
+                {
+                    outReply = "netsim.addclient: no in-process play session is running";
+                    return true;
+                }
+                const expected<int32> client = pSession->addClient();
+                if ( client.has_value() == false )
+                {
+                    outReply = "netsim.addclient: " + string( client.error().message() ) + " (" + string( client.error().detail() ) + ")";
+                    return true;
+                }
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "netsim.addclient: client world %# joined", *client );
+                outReply = string( replyBuilder.view() );
+                return true;
+            }
+
             [[nodiscard]] static bool readObjectX( const AutomationWatchQuery& query, AutomationWatchValue& outValue ) { return readObjectAxis( query, outValue, true ); }
             [[nodiscard]] static bool readObjectZ( const AutomationWatchQuery& query, AutomationWatchValue& outValue ) { return readObjectAxis( query, outValue, false ); }
         };
@@ -183,6 +206,7 @@ namespace sw::editor
                                &NetSimAutomationInternal::readObjectZ, true, true );
     SW_AUTOMATION_QUERY_WATCH( editorNetSimValue, "Editor.NetSimValue", "Value a game exposes for one world of the one-process play session (target = world number, key = value name)",
                                &NetSimAutomationInternal::readSessionValue, true, true );
+    SW_DEV_COMMAND( NetSimAddClient, "netsim.addclient", "netsim.addclient", "Join one more client world to the running one-process play session (late join)", &NetSimAutomationInternal::runAddClient );
     SW_DEV_COMMAND( NetSimStart, "netsim.start", "netsim.start <clients> <game name>", "Start the one-process play session of a registered game (the In process tab must stay visible for it to run)", &NetSimAutomationInternal::runStart );
     SW_AUTOMATION_WATCH( editorNetSimViewportCount, "Editor.NetSimViewportCount", "Worlds of the one-process play session whose preview viewport the tab has drawn at least once",
                          &NetSimAutomationInternal::readViewportCount );
