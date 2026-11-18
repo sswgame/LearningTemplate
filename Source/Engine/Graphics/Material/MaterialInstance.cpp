@@ -206,7 +206,7 @@ namespace sw
             }
         }
 
-        return doc.saveToFile( absPath.str() );
+        return doc.saveCompleteToFile( absPath.str() );
     }
 
     MaterialRenderBinding MaterialInstance::getRenderBinding()

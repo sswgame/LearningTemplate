@@ -57,7 +57,7 @@ namespace sw::editor
             varNode.appendAttribute( "value", pInfo->getValueAsString() );
         }
 
-        return FileUtil::ensureParentDirectoryExists( filePath ) && doc.saveToFile( filePath );
+        return FileUtil::ensureParentDirectoryExists( filePath ) && doc.saveCompleteToFile( filePath );
     }
 
     bool EditorGlobalVariableCommands::loadPreset( const string& filePath )
