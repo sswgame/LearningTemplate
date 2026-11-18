@@ -9,6 +9,7 @@
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushPayloadUtil.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/URLTextUtil.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 
 namespace sw
@@ -60,16 +61,7 @@ namespace sw
 
     bool FCMPushProvider::isValidTopic( string_view topic )
     {
-        if ( topic.empty() )
-            return false;
-        for ( const utf8 character : topic )
-        {
-            const bool bAlphaNumeric = ( character >= '0' && character <= '9' ) || ( character >= 'a' && character <= 'z' ) || ( character >= 'A' && character <= 'Z' );
-            const bool bMark         = character == '-' || character == '_' || character == '.' || character == '~' || character == '%';
-            if ( bAlphaNumeric == false && bMark == false )
-                return false;
-        }
-        return true;
+        return URLTextUtil::isSafeText( topic, "-_.~%" );
     }
 
     string FCMPushProvider::makeMessageJSON( string_view token, string_view topic, const PushNotificationMessage& message )

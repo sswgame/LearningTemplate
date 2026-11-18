@@ -8,6 +8,7 @@
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/URLTextUtil.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 
 namespace sw
@@ -20,16 +21,7 @@ namespace sw
 
             static bool isFieldText( string_view text )
             {
-                if ( text.empty() || text.size() > kMaxFieldSize )
-                    return false;
-                for ( const utf8 character : text )
-                {
-                    const bool bAlphaNumeric = ( character >= '0' && character <= '9' ) || ( character >= 'a' && character <= 'z' ) || ( character >= 'A' && character <= 'Z' );
-                    const bool bMark         = character == '-' || character == '_' || character == '.';
-                    if ( bAlphaNumeric == false && bMark == false )
-                        return false;
-                }
-                return true;
+                return text.size() <= kMaxFieldSize && URLTextUtil::isSafeText( text, "-_." );
             }
 
             /** @brief 키의 글입니다. 없으면 빈 글입니다. */

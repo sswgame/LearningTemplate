@@ -5,6 +5,7 @@
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/URLTextUtil.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 
 namespace sw
@@ -44,16 +45,7 @@ namespace sw
 
     bool ProfileAPILoginProvider::isQuerySafe( string_view text )
     {
-        if ( text.empty() )
-            return false;
-        for ( const utf8 character : text )
-        {
-            const bool bAlphaNumeric = ( character >= '0' && character <= '9' ) || ( character >= 'a' && character <= 'z' ) || ( character >= 'A' && character <= 'Z' );
-            const bool bMark         = character == '-' || character == '_' || character == '.';
-            if ( bAlphaNumeric == false && bMark == false )
-                return false;
-        }
-        return true;
+        return URLTextUtil::isSafeText( text, "-_." );
     }
 
     string ProfileAPILoginProvider::makeRequestURL( string_view ticket ) const
