@@ -44,7 +44,7 @@ namespace sw::editor
                 const bool  bEnabled  = EditorCommandRegistry::isEnabled( desc, EditorCommandTarget::none() );
 
                 if ( ImGui::MenuItem( menuLabel.c_str(), pShortcut, false, bEnabled ) )
-                    (void)EditorCommandRegistry::executeDesc( desc, EditorCommandTarget::none() ); // 꺼진 항목은 그려질 때 이미 회색이다
+                    (void)EditorCommandRegistry::getInEditorContext().request( desc._id, EditorCommandTarget::none() ); // 꺼진 항목은 그려질 때 이미 회색이다 — 씬 편집은 게임 스레드가 실행한다
 
                 if ( desc._tooltip.empty() == false )
                 {

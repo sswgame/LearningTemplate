@@ -3,6 +3,9 @@
  * @brief 에디터 커맨드의 단일 정의(SSOT)입니다. 메뉴 · 전역 단축키 · 커맨드 팔레트가 같은 정의를 읽습니다.
  */
 #pragma once
+#include "Core/Concurrency/ScopedLock.h"
+#include "Core/Concurrency/ThreadSafety.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -264,6 +267,15 @@ namespace sw::editor
         /** @brief 활성 상태이면 @p target 에 커맨드를 실행하고 true 를 반환합니다. */
         static bool executeDesc( const EditorCommandDesc& desc, const EditorCommandTarget& target );
         /**
+         * @brief UI 쪽 실행 입구(메뉴 · 단축키 · 맥락 메뉴 · 팔레트) — 씬을 바꾸는 명령(거래를 여는 `Scene` · `SceneDuringPlay`)은 게임 스레드에 넘기고, 나머지는 지금 실행합니다.
+         *        활성 상태가 아니면 아무것도 하지 않고 false 입니다.
+         * @details 넘긴 명령은 이 UI 프레임 뒤 게임 단계(`EditorGameStepOrder::kSceneCommands`)가 요청한 순서대로 실행한다 — 그때 활성 조건을 다시 본다(그 사이 꺼졌으면 아무 일도 없다).
+         *          대상은 id 로 된 값이라(`EditorCommandTarget`) 프레임을 넘겨도 된다. 게임 스레드(콘솔 `editor <id>` · 자동화)는 `execute` 로 바로 실행한다.
+         */
+        bool request( string_view commandID, const EditorCommandTarget& target );
+        /** @brief 게임 스레드 쪽 — `request` 가 넘긴 씬 편집 명령을 요청한 순서대로 실행합니다(게임 단계가 부른다). */
+        void runRequestedSceneCommands();
+        /**
          * @brief @p kind 맥락 메뉴에 놓인 커맨드를 `_contextMenuOrder` 순서로 @p outListItem 에 담습니다. 구분선 규칙은 메뉴바와 같습니다.
          * @details 항목은 커맨드 인덱스만 가리킨다 — 라벨 · 켜짐 · 단축키 글자는 커맨드가 정한다(R4). 패널이 메뉴 글자를 적지 않는다.
          */
@@ -294,8 +306,18 @@ namespace sw::editor
         void rebuildMenus();
 
     private:
-        vector<EditorCommandDesc> _listCommand;
-        vector<EditorMenu>        _listMenu;
+        /** @brief `request` 가 게임 스레드에 넘긴 명령 하나입니다. */
+        struct RequestedCommand
+        {
+            string              _commandID;
+            EditorCommandTarget _target;
+        };
+
+        vector<EditorCommandDesc>               _listCommand;
+        vector<EditorMenu>                      _listMenu;
+        mutex                                   _requestMutex;                  ///< 넘긴 명령 목록을 지킨다 — UI 가 넣고 게임 스레드가 꺼낸다
+        vector<RequestedCommand> _listRequested SW_GUARDED_BY( _requestMutex ); ///< `request` 가 넘긴 씬 편집 명령(요청 순서)
+        vector<RequestedCommand>                _listRunning;                   ///< 이번 게임 단계가 실행하는 명령(게임 스레드만 — 프레임마다 재사용)
     };
 } // namespace sw::editor
 

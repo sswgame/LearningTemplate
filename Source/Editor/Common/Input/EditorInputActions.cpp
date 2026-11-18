@@ -150,7 +150,7 @@ namespace sw::editor
         EditorCommandRegistry& registry = editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>();
         for ( const QueuedCommand& queued : listRun )
         {
-            (void)registry.execute( queued._commandID, queued._target ); // 그 사이 꺼졌으면 아무 일도 없다(메뉴의 회색과 같은 조건)
+            (void)registry.request( queued._commandID, queued._target ); // 그 사이 꺼졌으면 아무 일도 없다(메뉴의 회색과 같은 조건). 씬 편집은 게임 스레드가 실행한다
         }
         forwardEditorKeyboard( decideKeyboardOwner() );
         syncFocusedPanelLayer();
@@ -219,7 +219,7 @@ namespace sw::editor
         const vector<string>&  listRun          = listPanelCommand.empty() ? listOtherCommand : listPanelCommand;
         for ( const string& commandID : listRun )
         {
-            (void)writableRegistry.execute( commandID, EditorCommandTarget::none() ); // 꺼진 명령이면 아무 일도 없다(메뉴의 회색과 같은 조건)
+            (void)writableRegistry.request( commandID, EditorCommandTarget::none() ); // 꺼진 명령이면 아무 일도 없다(메뉴의 회색과 같은 조건). 씬 편집은 게임 스레드가 실행한다
         }
     }
 

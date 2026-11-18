@@ -70,6 +70,8 @@ namespace sw::editor
     /** @struct EditorGameStepOrder @brief 셸이 아는 게임 단계의 순서 값입니다. 작을수록 먼저 돕니다. */
     struct EditorGameStepOrder
     {
+        /// UI 가 요청한 씬 편집 명령(`EditorCommandRegistry::request` — 거래를 여는 명령)을 요청한 순서대로 실행한다. 베이크보다 앞이라 같은 프레임의 베이크 시작이 편집 뒤의 씬을 읽는다.
+        static constexpr int32 kSceneCommands = 50;
         /// 여러 프레임에 나눠 도는 베이크(라이트 프로브 · 반사 프로브).
         static constexpr int32 kBake = 100;
         /// 에셋 · 설정 파일 감시와 임포트 결과 반영(캐시 리로드 · 씬 알림 — `AssetHotReload::update`). 다음 UI 프레임이 바뀐 에셋을 그린다.
