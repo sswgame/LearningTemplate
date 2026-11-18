@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
@@ -21,7 +22,6 @@
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
 {
@@ -169,10 +169,11 @@ namespace sw
              *          예전에는 같은 뜻을 `isEffectOff`(꺼짐)와 `shouldRenderPass`(그림)가 반대 극성으로 따로 말했다.
              * @param bMotionStill 기록을 버리는 프레임(컷 — 언리얼도 컷에서 모션 블러를 끈다)이거나, 이번 뷰-투영이 지난번 것과 같고 물체도 움직이지 않았다 — 화면 속도가 모두 0 이다.
              */
-            static bool isPassEnabledInView( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, const FrameViewResources::ViewPassSceneState& sceneState, bool bMotionStill )
+            static bool isPassEnabledInView( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, const RenderFrameSettings& frameSettings, const FrameViewResources::ViewPassSceneState& sceneState,
+                                             bool bMotionStill )
             {
                 const RenderPassTypeInfo& info = getRenderPassTypeInfo( pass._type );
-                if ( info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && ( settings.usesPostProcess() == false || pass._minPostQuality > static_cast<int32>( gv_postQuality ) ) )
+                if ( info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && ( settings.usesPostProcess() == false || pass._minPostQuality > frameSettings._postQuality ) )
                     return false;
                 const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( settings._viewMode );
                 // 값 보기(노멀 · 깊이 · 오버드로)와 와이어프레임은 장면 색을 덮지 않는다(안개와 같은 판정).
@@ -184,7 +185,7 @@ namespace sw
                     case RenderPassType::MotionBlur:
                     case RenderPassType::MotionBlurTileMax:
                     case RenderPassType::MotionBlurNeighborMax:
-                        return static_cast<bool>( gv_motionBlur ) && bMotionStill == false;
+                        return frameSettings._bMotionBlur != SW_FALSE && bMotionStill == false;
                     case RenderPassType::ContactShadow:
                         return sceneState._bContactShadows == SW_TRUE; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다
                     case RenderPassType::Shadow:
@@ -204,26 +205,21 @@ namespace sw
         };
     } // namespace
 
-    FrameViewResources::FrameViewResources( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameAutoExposure& autoExposure, FrameUpscale& upscale )
+    FrameViewResources::FrameViewResources( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const RenderFrameSettings& frameSettings, FrameAutoExposure& autoExposure,
+                                            FrameUpscale& upscale )
         : _pDevice{ pDevice }
         , _pipeline{ pipeline }
+        , _frameSettings{ frameSettings }
         , _autoExposure{ autoExposure }
         , _upscale{ upscale }
         , _listScratchNeededAttachment{}
     {
     }
 
-    uint32 FrameViewResources::getShadowMapResolution()
-    {
-        // 값의 출처는 설정 스키마 하나다. 여기서는 텍스처를 만들 수 있는 범위만 지킨다(1 미만 · 밉 상한을 넘는 한 변은 첨부를 만들지 못한다).
-        constexpr int32 kMaxResolution = static_cast<int32>( 1u << ( constant::render::kMaxTextureMipCount - 1 ) );
-        return static_cast<uint32>( MathUtil::clamp( static_cast<int32>( gv_shadowMapResolution ), 1, kMaxResolution ) );
-    }
-
     bool FrameViewResources::updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height, const RenderGraphAliasPlan& aliasPlan, uint32 aliasGeneration )
     {
         TransientAttachmentPool& pool             = view._transientPool;
-        const uint32             shadowResolution = getShadowMapResolution();
+        const uint32             shadowResolution = _frameSettings._shadowMapResolution; // 게임 스레드가 뜬 사본(텍스처를 만들 수 있는 범위로 잘랐다) — 그림자 행렬의 텍셀 스냅과 같은 값
         const bool               bPoolUnchanged   = width == pool.getWidth() && height == pool.getHeight() && pool.isEmpty() == false && view._shadowMapResolution == shadowResolution &&
                                     view._transientAliasGeneration == aliasGeneration;
         if ( bPoolUnchanged )
@@ -498,7 +494,7 @@ namespace sw
                     ensureMade( output._attachment );
                 }
                 // 비활성인 덧그리는 패스는 출력이 그대로라 입력을 필요로 하지 않는다 — 그것만 읽는 사본이 아래에서 빠진다.
-                if ( Internal::isPassEnabledInView( pass, view._settings, sceneState, bMotionStill ) == false )
+                if ( Internal::isPassEnabledInView( pass, view._settings, _frameSettings, sceneState, bMotionStill ) == false )
                 {
                     view._listPassDisabled[passIndex] = SW_TRUE;
                     continue;
@@ -510,7 +506,7 @@ namespace sw
                 continue;
             }
             const RenderPassTypeInfo& info          = getRenderPassTypeInfo( pass._type );
-            const bool                bOff          = Internal::isPassEnabledInView( pass, view._settings, sceneState, bMotionStill ) == false;
+            const bool                bOff          = Internal::isPassEnabledInView( pass, view._settings, _frameSettings, sceneState, bMotionStill ) == false;
             const bool                bOutputNeeded = VectorUtil::containsIf( pass._listResolvedColorOutput, [&]( const RenderGraphPassDesc::ResolvedAttachment& output )
                            { return Internal::isNeeded( listAttachment, output._attachment, listNeeded ); } );
             const hashed_string*      pSource       = Internal::findSource( pass );

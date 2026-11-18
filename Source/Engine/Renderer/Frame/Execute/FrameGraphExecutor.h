@@ -69,8 +69,8 @@ namespace sw
 
         /** @brief 이번 프레임에 컴퓨트로 드로우 커맨드를 만들 예정인지 반환합니다. 업로드 전에 GPUScene 에 알리는 데 씁니다(컬링 PSO 는 파이프라인이 GPUCull 패스를 선언할 때만 있다). */
         bool usesGPUGeneratedCommands() const;
-        /** @brief `gv_meshMorphDebugMode` 가 모드 열거자인지 봅니다. 에디터 · 콘솔이 숫자로 넣은 범위 밖 값이면 오류를 남기고 false 입니다(`initialize` 가 멈춘다). */
-        [[nodiscard]] static bool isMeshMorphDiagValid();
+        /** @brief @p mode(`-gv_meshMorphDebugMode` 의 사본)가 모드 열거자인지 봅니다. 에디터 · 콘솔이 숫자로 넣은 범위 밖 값이면 오류를 남기고 false 입니다(`initialize` 가 멈춘다). */
+        [[nodiscard]] static bool isMeshMorphDiagValid( MeshMorphDiagMode mode );
         /**
          * @brief 모프 풀을 이번 프레임의 배치 메시에 맞추고 배치에 풀 오프셋을 기록합니다. **업로드 전에** 부릅니다.
          * @details 오프셋은 배치 테이블(g_SwBatches)에 실려 upload() 가 올리므로 테이블은 업로드 시점에 완성되어 있어야 한다. 디스패치는 프레임 그래프의 MeshMorph · MeshSkin 패스다.
@@ -95,7 +95,7 @@ namespace sw
         void dispatchMeshMorph();
         /** @brief 스킨드 메시들의 정점을 GPU 가 본 팔레트로 블렌딩합니다(바인드 포즈에서 모프 풀의 스킨 구간으로). 디스패치 하나가 모든 스킨드 메시를 처리한다. */
         void dispatchMeshSkin();
-        /** @brief 지금 적용되는 모프 진단 모드입니다. 오버라이드가 있으면 그 값을, 없으면 `gv_meshMorphDebugMode` 를 씁니다. */
+        /** @brief 지금 적용되는 모프 진단 모드입니다. 프레임 사본(`RenderFrameSettings::_meshMorphDebugMode`)입니다. */
         MeshMorphDiagMode getEffectiveMeshMorphDiag() const;
         /** @brief 파이프라인이 메시 변형 패스(MeshMorph · MeshSkin)를 하나라도 선언했는지 — 그 PSO 는 선언했을 때만 있다(`FramePSOManager::createPassPSOs`). */
         bool isDeformPassDeclared() const;

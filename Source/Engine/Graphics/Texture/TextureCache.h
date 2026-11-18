@@ -88,6 +88,13 @@ namespace sw
         ~TextureCache() override;
         TextureCache( const TextureCache& )            = delete;
         TextureCache& operator=( const TextureCache& ) = delete;
+        /**
+         * @brief 텍스처 품질(`-gv_textureMipDrop` — 사용자 설정 graphics.textureQuality)과 밉 스트리밍(`-gv_textureStreaming`)의 사본을 지금 변수 값으로 다시 뜹니다. **게임 스레드 전용**(Debug 단언)입니다.
+         * @details 로드 워커 · 렌더 스레드(업로드 펌프 · 스트리밍)는 변수 대신 이 사본을 읽는다. 만들 때 한 번, 그 뒤 게임 스레드가 패킷을 짓기 시작할 때마다 부른다(`RenderPacketBuilder::beginPacket`).
+         */
+        void refreshQualitySettings();
+        /** @brief 텍스처 품질이 버리는 위쪽 밉 수(사본)입니다. 어느 스레드에서든 부른다. */
+        [[nodiscard]] int32 getQualityMipDrop() const;
         /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
         const utf8* getAssetKindName() const override { return kAssetKindName; }
 

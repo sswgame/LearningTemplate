@@ -14,7 +14,6 @@
 #include "Core/Container/frame_vector.h"
 #include "Core/Container/string.h"
 #include "Core/Encoding/FourCCUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
@@ -27,7 +26,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
-#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -70,24 +68,6 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_drawMerge=0` 이면 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶지 않고 배치마다 한 번씩 부릅니다.
-     * @details 묶은 이미지와 묶지 않은 이미지가 같아야 한다. 다르면 배치 테이블(g_SwBatches)이나 드로우 ID 가 틀린 것이다. 기본은 묶는 것이다.
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_drawMerge, true, "씬 배치 멀티 드로우 묶기 (false=배치마다 호출, 진단용)" );
-
-    /**
-     * @brief `-gv_asyncCompute=0` 이면 `_queue="AsyncCompute"` 프레임 패스도 그래픽스 큐에서 돕니다(시작 인자 — 파이프라인을 묶을 때 계획한다).
-     * @details 비동기 큐가 이득인지는 측정으로 정한다(같은 장면에서 켜고 끈 GPU 프레임 시간). 능력이 없는 백엔드는 이 값과 상관없이 그래픽스 큐다.
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_asyncCompute, true, "프레임 패스의 비동기 컴퓨트 큐 (false=모두 그래픽스 큐, 측정용)" );
-
-    /**
-     * @brief `-gv_transientAliasing=0` 이면 뷰 그래프의 트랜지언트 첨부가 텍스처를 나누지 않습니다(시작 인자 — 콜백을 묶을 때 계획한다).
-     * @details 나눈 그림과 나누지 않은 그림이 같아야 한다 — 다르면 계획이 겹치는 수명을 놓쳤다(같은 실행에서 끄고 켠 두 장을 견준다). 메모리는 `RT.Frame.transientAliases` 가 센다.
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_transientAliasing, true, "뷰 그래프 트랜지언트 첨부의 텍스처 나눔 (false=첨부마다 텍스처, 진단용)" );
-
     namespace
     {
         constexpr float4 kDefaultBloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
@@ -207,7 +187,7 @@ namespace sw
 
     bool FramePassExecutor::isDrawMergeEnabled() const
     {
-        return gv_drawMerge;
+        return _state._settings._bDrawMerge != SW_FALSE;
     }
 
     bool FramePassExecutor::submitGraph( IRHIDevice* pDevice )
@@ -347,7 +327,10 @@ namespace sw
                                      pDevice->getCapabilities()._bParallelCommandRecording != SW_FALSE &&
                                      _state._graph.getExecutionOrder().size() > 1;
         if ( bCanRunParallel )
+        {
+            _graphContext._parallelMinWidth = _state._settings._renderGraphParallelMinWidth;
             return _state._graph.executeParallel( _graphContext, _state._pTaskManager, pDevice );
+        }
 
         // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 **같은 것**을 넘긴다.
         if ( _state._mainView._commandList == nullptr )
@@ -426,7 +409,7 @@ namespace sw
         {
             context._passValues.setFloat4( names._arrShadowCascade[cascadeIndex], shadow._arrCascade[cascadeIndex] );
         }
-        context._passValues.setFloat4( names._shadowFilter, ShadowFilter::makeShaderParams( ShadowFilter::getActiveMode(), shadow._directionalPenumbraScale ) );
+        context._passValues.setFloat4( names._shadowFilter, ShadowFilter::makeShaderParams( ShadowFilter::getActiveMode( _state._settings._shadowFilter ), shadow._directionalPenumbraScale ) );
         // 접촉 그림자 채널은 프레임 공통이다(빛 목록이 프레임 공통이다) — 추가 뷰도 같은 값이다. 채널의 값은 목록 번호라 올라간 버퍼의 번호로 옮긴다
         // (상한을 넘은 프레임은 빛을 골라 줄여 번호가 당겨진다 — 빠진 빛의 채널은 빈 채널 -1).
         const float4& sourceLights                                            = _state._frameShadow._contactShadowLights;
@@ -807,7 +790,7 @@ namespace sw
         ++_state._transientAliasGeneration; // 뷰 풀이 다음 셋업에서 새 계획으로 다시 만든다
         _state._transientAliasPlan = RenderGraphAliasPlan{};
         // NaN 감시는 그래프가 끝난 뒤 모든 패스 출력을 다시 읽는다 — 나눠 쓴 텍스처는 앞 첨부의 내용이 이미 덮였다. 감시를 켠 실행은 나누지 않는다.
-        if ( gv_transientAliasing == false || GPUNanCheck::isRequested() )
+        if ( _state._settings._bAliasTransients == SW_FALSE || GPUNanCheck::isRequested() )
             return;
 
         // 실행 순서 번호 → 레벨. 실행 순서는 레벨을 차례로 이은 것이다(`RenderGraph::compile`).
@@ -919,7 +902,7 @@ namespace sw
                                 SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onFrameGraphPassExecute, this ), pass._queue );
         }
         // 비동기 컴퓨트 큐가 없는 백엔드(DX11 · GL · WebGPU · 큐가 하나인 Vulkan 장치)는 AsyncCompute 패스를 그래픽스 큐로 계획한다(능력 표가 정한 길).
-        const bool bAsyncCompute = gv_asyncCompute && _pDevice != nullptr && _pDevice->getCapabilities()._bAsyncCompute != SW_FALSE;
+        const bool bAsyncCompute = _state._settings._bAsyncCompute != SW_FALSE && _pDevice != nullptr && _pDevice->getCapabilities()._bAsyncCompute != SW_FALSE;
         frameGraph.setAsyncComputeSupported( bAsyncCompute );
         // 프레임 패스가 없는 파이프라인(미리보기 · 시험 파이프라인)은 빈 그래프다 — 컬링 · 그리드 등은 PSO 도 없다(`FramePSOManager::getEnginePSO`).
         if ( listFramePass.empty() )

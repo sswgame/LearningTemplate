@@ -16,6 +16,7 @@
 namespace sw
 {
     struct FrameViewTarget;
+    struct RenderFrameSettings;
 
     class FrameAutoExposure;
     class FrameUpscale;
@@ -49,15 +50,10 @@ namespace sw
             uint8 _bTargetsChanged{ SW_FALSE }; ///< 처음 도는 패스의 타깃을 만들었거나 오래 빠진 패스의 타깃을 놓았다
         };
 
-        FrameViewResources( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameAutoExposure& autoExposure, FrameUpscale& upscale );
+        FrameViewResources( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const RenderFrameSettings& frameSettings, FrameAutoExposure& autoExposure, FrameUpscale& upscale );
         FrameViewResources( const FrameViewResources& )            = delete;
         FrameViewResources& operator=( const FrameViewResources& ) = delete;
 
-        /**
-         * @brief 그림자 맵 한 변의 텍셀 수(`gv_shadowMapResolution`)입니다. 텍스처를 만들 수 있는 범위로 자릅니다.
-         * @details 그림자 맵 크기는 화면 크기를 따르지 않는다. 게임 스레드(그림자 행렬의 텍셀 스냅)와 렌더 스레드(첨부 할당)가 같은 값을 쓴다(`FrameRenderer::getShadowMapResolution`).
-         */
-        static uint32 getShadowMapResolution();
         /**
          * @brief 뷰 하나의 트랜지언트를 이 크기로 맞춥니다. 크기 · 그림자 품질이 같으면 그대로 두고, 다시 만들었으면 true 입니다.
          * @details 다시 만들면 TAA · 깊이 히스토리, 가림 타일, 자동 노출 기록도 새로 만든다. 새것이라 시간 누적 기록은 첫 프레임에 버린다(`_bHasHistory` 를 내린다).
@@ -96,6 +92,7 @@ namespace sw
     private:
         IRHIDevice* const&         _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다(생성자 참고)
         const RenderPipelineAsset& _pipeline;
+        const RenderFrameSettings& _frameSettings; ///< 렌더러의 프레임 설정 사본(`FrameRenderState::_settings`) — 후처리 품질 · 모션 블러 · 그림자 맵 크기
         FrameAutoExposure&         _autoExposure;
         FrameUpscale&              _upscale;
         vector<uint8>              _listScratchNeededAttachment; ///< 패스를 고를 때 선언한 첨부 자리마다 "이번 프레임에 읽힌다"(뷰마다 다시 쓴다)

@@ -167,19 +167,19 @@ SW_TEST_CASE( Texture2DStableSRVTest, PromotionKeepsSRV )
     device._pResourceFactory = &factory;
     const DDSImageData image = makeStreamedImage();
     Texture2D          texture;
-    SW_REQUIRE_TRUE( texture.loadFromImage( &device, "textures/streamed.dds", image, TextureResidency::StreamingBase ) );
+    SW_REQUIRE_TRUE( texture.loadFromImage( &device, "textures/streamed.dds", image, TextureResidency::StreamingBase, 0 ) );
     SW_REQUIRE_FALSE( texture.isFullyResident() );
     const RHIDescriptorIndex srv     = texture.getSRV();
     const RHITextureHandle   lowMips = texture.getHandle();
     // 올리기 줄은 바이트를 쥐지 않고 밉 범위를 다시 읽는다(MR-2) — 여기서는 그 범위를 이미지에서 잘라 넘긴다.
     const TextureMipLayout layout   = Texture2D::makeMipLayout( image );
-    const uint32           firstMip = Texture2D::computeUpgradeFirstMip( layout );
+    const uint32           firstMip = Texture2D::computeUpgradeFirstMip( layout, 0 );
     uint64                 offset{ 0 };
     uint64                 size{ 0 };
     layout.getRange( firstMip, static_cast<uint32>( layout._listMip.size() ) - firstMip, offset, size );
     vector<uint8> mipBytes;
     mipBytes.assign( image._bytes.begin() + static_cast<ptrdiff_t>( offset ), image._bytes.begin() + static_cast<ptrdiff_t>( offset + size ) );
-    SW_REQUIRE_TRUE( texture.beginUploadMips( &device, layout, firstMip, mipBytes, true ) == Texture2DUploadStep::Submitted );
+    SW_REQUIRE_TRUE( texture.beginUploadMips( &device, layout, firstMip, mipBytes, 0, true ) == Texture2DUploadStep::Submitted );
     SW_EXPECT_EQUAL( static_cast<size_t>( size ), mipBytes.size() ); // 바이트는 부른 쪽에 돌아온다
     Texture2DRetiredResource retired{};
     SW_REQUIRE_TRUE( texture.finishUpgradeResidency( &device, true, retired ) == Texture2DUploadStatus::Ready );
@@ -278,7 +278,7 @@ SW_TEST_CASE( Texture2DStableSRVTest, DemotionKeepsSRV )
     device._pResourceFactory = &factory;
     const DDSImageData image = makeStreamedImage();
     Texture2D          texture;
-    SW_REQUIRE_TRUE( texture.loadFromImage( &device, "textures/demoted.dds", image, TextureResidency::Full ) );
+    SW_REQUIRE_TRUE( texture.loadFromImage( &device, "textures/demoted.dds", image, TextureResidency::Full, 0 ) );
     SW_REQUIRE_TRUE( texture.isFullyResident() );
     const RHIDescriptorIndex srv      = texture.getSRV();
     const RHITextureHandle   fullMips = texture.getHandle();
@@ -289,7 +289,7 @@ SW_TEST_CASE( Texture2DStableSRVTest, DemotionKeepsSRV )
     layout.getRange( target, 1u, offset, size );
     vector<uint8> mipBytes;
     mipBytes.assign( image._bytes.begin() + static_cast<ptrdiff_t>( offset ), image._bytes.begin() + static_cast<ptrdiff_t>( offset + size ) );
-    SW_REQUIRE_TRUE( texture.beginUploadMips( &device, layout, target, mipBytes, true ) == Texture2DUploadStep::Submitted );
+    SW_REQUIRE_TRUE( texture.beginUploadMips( &device, layout, target, mipBytes, 0, true ) == Texture2DUploadStep::Submitted );
     Texture2DRetiredResource retired{};
     SW_REQUIRE_TRUE( texture.finishUpgradeResidency( &device, true, retired ) == Texture2DUploadStatus::Ready );
 
@@ -327,7 +327,7 @@ SW_TEST_CASE( Texture2DStableSRVTest, FirstLoadReadsTailOnly )
 
     vector<uint8> tailBytes = copyMipRange( tailMip, mipCount - tailMip );
     Texture2D     texture;
-    SW_REQUIRE_TRUE( texture.beginUploadTail( &device, "textures/tail.dds", layout, tailMip, tailBytes, true ) == Texture2DUploadStep::Submitted );
+    SW_REQUIRE_TRUE( texture.beginUploadTail( &device, "textures/tail.dds", layout, tailMip, tailBytes, 0, true ) == Texture2DUploadStep::Submitted );
     SW_REQUIRE_TRUE( texture.finishUpload( &device, true ) == Texture2DUploadStatus::Ready );
     SW_EXPECT_EQUAL( mipCount - tailMip, texture.getMipCount() );
     SW_EXPECT_EQUAL( tailMip, texture.getStreamedMipCount() );
@@ -335,7 +335,7 @@ SW_TEST_CASE( Texture2DStableSRVTest, FirstLoadReadsTailOnly )
     const RHIDescriptorIndex srv = texture.getSRV();
 
     vector<uint8> topBytes = copyMipRange( 0, mipCount );
-    SW_REQUIRE_TRUE( texture.beginUploadMips( &device, layout, 0, topBytes, true ) == Texture2DUploadStep::Submitted );
+    SW_REQUIRE_TRUE( texture.beginUploadMips( &device, layout, 0, topBytes, 0, true ) == Texture2DUploadStep::Submitted );
     Texture2DRetiredResource retired{};
     SW_REQUIRE_TRUE( texture.finishUpgradeResidency( &device, true, retired ) == Texture2DUploadStatus::Ready );
     SW_EXPECT_EQUAL( srv, texture.getSRV() );

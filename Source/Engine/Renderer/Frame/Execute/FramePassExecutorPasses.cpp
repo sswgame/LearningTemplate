@@ -10,7 +10,6 @@
 #include "Core/Container/frame_vector.h"
 #include "Core/Container/string.h"
 #include "Core/Encoding/FourCCUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
@@ -23,7 +22,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
-#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -821,7 +819,7 @@ namespace sw
         float4     volumeParams = _fog.getFrameFog()._volumeParams;
         volumeParams._x         = bVolume ? 1.0f : 0.0f;
         context._passValues.setFloat4( passConstantNames()._fogVolumeParams, volumeParams );
-        context._passValues.setFloat4( passConstantNames()._fogDebugParams, FrameFog::makeDebugParams( bVolume, RenderDiagnostics::get() ) );
+        context._passValues.setFloat4( passConstantNames()._fogDebugParams, FrameFog::makeDebugParams( bVolume, _state._settings._diagnostics ) );
 
         if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), getColorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
             return;

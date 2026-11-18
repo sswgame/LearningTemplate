@@ -73,7 +73,7 @@ namespace sw
     public:
         /**
          * @brief 배치를 만듭니다.
-         * @param atlasResolution 아틀라스 한 변의 텍셀 수(`FrameRenderer::getShadowMapResolution` — 점광 · 스폿 아틀라스도 같은 값이다)
+         * @param atlasResolution 아틀라스 한 변의 텍셀 수(패킷의 설정 사본 `RenderFrameSettings::_shadowMapResolution` — 점광 · 스폿 아틀라스도 같은 값이다)
          * @param cascadeCount    방향광이 원하는 캐스케이드 수(1~4)
          */
         static ShadowAtlasLayout make( uint32 atlasResolution, uint32 cascadeCount );

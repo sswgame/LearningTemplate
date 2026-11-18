@@ -7,13 +7,12 @@
  *          지난 프레임 깊이로 보므로 그 사이에 드러난 물체는 한 프레임 늦게 나오고, 기록을 버리는 프레임(처음 · 컷)은 판정하지 않는다.
  *          주 시점의 타일은 GPU 컬링 말고 게임 스레드도 쓴다 — `requestOcclusionReadback` 이 타일을 `AsyncBufferReadback` 으로 몇 프레임 늦게 되읽어
  *          `OcclusionTileMailbox` 에 올리면 `RenderViewCollector` 가 모니터(보임 오브젝트)의 구를 같은 식으로 판정한다(언리얼 `WasRecentlyRendered`).
- * @note 기본은 끔이다(`gv_occlusionCulling`) — 켜는 것은 Release 측정으로 이득을 보인 뒤 정한다(측정 없이 최적화하지 않는다).
+ * @note 기본은 끔이다(`-gv_occlusionCulling`, 프레임 설정 사본으로 받는다) — 켜는 것은 Release 측정으로 이득을 보인 뒤 정한다(측정 없이 최적화하지 않는다).
  */
 #include "pch.h"
 
 #include "Engine/Renderer/Frame/Execute/OcclusionTiles.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
@@ -25,12 +24,6 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_occlusionCulling=1`: GPU 컬링이 지난 프레임 장면 깊이로 가려진 인스턴스를 거릅니다(가림 타일). 컬링이 없는 백엔드(DX11)는 보지 않습니다.
-     * @details 기본 끔 — 켜기 전에 무거운 장면에서 Release 로 재어 이득을 확인한다. 켜면 드러나는 물체가 한 프레임 늦게 나온다(지난 프레임 깊이로 본다).
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_occlusionCulling, false, "GPU 컬링의 가림 판정 — 지난 프레임 장면 깊이의 타일 최대 깊이 뒤의 인스턴스를 거른다 (컬링이 있는 백엔드)" );
-
     namespace
     {
         struct OcclusionTilesInternal
@@ -67,11 +60,11 @@ namespace sw
         _mailbox.clear();
     }
 
-    void OcclusionTiles::record( IRHICommandList* pCmd, IRHIDevice& device, RHIPipelineStateHandle pso, bool bDepthHistoryReady, FrameViewTarget& target ) const
+    void OcclusionTiles::record( IRHICommandList* pCmd, IRHIDevice& device, RHIPipelineStateHandle pso, bool bEnabled, bool bDepthHistoryReady, FrameViewTarget& target ) const
     {
         using Internal                   = OcclusionTilesInternal;
         target._bOcclusionTilesThisFrame = SW_FALSE;
-        const bool bBuilds               = static_cast<bool>( gv_occlusionCulling ) && pso != 0 && target._occlusionTiles.isValid() && bDepthHistoryReady;
+        const bool bBuilds               = bEnabled && pso != 0 && target._occlusionTiles.isValid() && bDepthHistoryReady;
         if ( bBuilds == false || pCmd == nullptr )
             return;
         const TransientAttachmentPool::Attachment depth = target._transientPool.find( attachmentNames()._sceneDepth );
@@ -99,11 +92,11 @@ namespace sw
         target._bOcclusionTilesThisFrame = SW_TRUE;
     }
 
-    void OcclusionTiles::requestReadback( IRHICommandList* pCmd, IRHIDevice* pDevice, const FrameViewTarget& view )
+    void OcclusionTiles::requestReadback( IRHICommandList* pCmd, IRHIDevice* pDevice, bool bEnabled, const FrameViewTarget& view )
     {
         // 켜져 있지 않으면 고리를 비워 둔다(읽기 버퍼를 만들지 않는다). 켰다 끄면 남은 사본도 치운다.
-        const bool bEnabled = static_cast<bool>( gv_occlusionCulling ) && pDevice != nullptr && pCmd != nullptr;
-        if ( bEnabled == false )
+        const bool bReadable = bEnabled && pDevice != nullptr && pCmd != nullptr;
+        if ( bReadable == false )
         {
             if ( _readback.isInitialized() )
             {

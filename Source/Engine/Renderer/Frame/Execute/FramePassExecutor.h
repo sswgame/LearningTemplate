@@ -433,7 +433,7 @@ namespace sw
          *          (`TextureCache::deferLayerBake`), 결과 타깃이 없으면(요청한 쪽이 놓았다) 버린다.
          */
         void drawTextureLayerBakes();
-        /** @brief 씬 배치를 멀티 드로우로 묶을지 반환합니다. `setDrawMergeEnabled` 로 받은 값을 쓰고, 없으면 전역 `gv_drawMerge` 를 씁니다. */
+        /** @brief 씬 배치를 멀티 드로우로 묶을지 반환합니다. 프레임 사본(`RenderFrameSettings::_bDrawMerge`)입니다. */
         bool isDrawMergeEnabled() const;
 
         // ------------------------------------------------------------------------------

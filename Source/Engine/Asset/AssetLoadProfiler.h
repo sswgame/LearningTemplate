@@ -3,6 +3,7 @@
  * @brief 에셋 로딩 프로파일러 — 에셋 하나를 읽을 때 IO · 해석 · GPU 올리기 시간, 바이트, 동기 · 비동기를 모아 종류별 표와 가장 느린 로드를 냅니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -71,15 +72,18 @@ namespace sw
         static constexpr uint32      kSlowestCount  = 16;
         static constexpr const utf8* kSubsystemName = "AssetLoadProfiler";
 
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         AssetLoadProfiler();
 
+        /** @brief 기록이 켜졌는지입니다(게임 스레드가 뜬 사본 — 어느 스레드에서든 부른다). */
         bool isEnabled() const;
-        /** @brief 기록을 켜거나 끕니다(`gv_assetLoadProfile` 을 바꾼다). */
+        /** @brief 기록을 켜거나 끕니다(`-gv_assetLoadProfile` 을 바꾸고 사본도 다시 뜬다). 게임 스레드 전용입니다. */
         void setEnabled( bool bEnabled );
+        /** @brief 사본을 지금 변수 값으로 다시 뜹니다. **게임 스레드 전용**(Debug 단언) — 기동 때와 프레임마다 엔진이 부른다(`Engine::updateFrameServices`). */
+        void refreshEnabled();
         /** @brief 로드 한 번을 더합니다. 꺼져 있으면 버립니다. */
         void submit( const AssetLoadRecord& record );
         /** @brief 종류별 누적을 총 시간이 긴 것부터 담습니다. */
@@ -104,6 +108,7 @@ namespace sw
         vector<KindEntry> _listKind          SW_GUARDED_BY( _mutex );
         vector<AssetLoadRecord> _listSlowest SW_GUARDED_BY( _mutex ); ///< 느린 것부터(최대 kSlowestCount)
         uint32 _loadCount                    SW_GUARDED_BY( _mutex );
+        atomic<uint8>                        _bEnabled; ///< `-gv_assetLoadProfile` 의 사본(게임 스레드가 뜬다) — 로드 워커 · 렌더 스레드의 `submit` 이 잠금 없이 읽는다
 
         SW_SERVICE_SLOT( AssetLoadProfiler, Optional );
     };

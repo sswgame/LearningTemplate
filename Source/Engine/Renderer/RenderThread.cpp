@@ -99,13 +99,6 @@ namespace sw
         };
     } // namespace
 
-    // 커맨드 리스트를 프레임 끝에 모아 한 번에 제출할지(기본), 잘릴 때마다 바로 제출할지 정한다. 이 파일이 프레임마다 디바이스로 전달한다.
-    // 두 모드 모두 기록 순서가 곧 실행 순서다. 즉시 모드도 [세그먼트][리스트] 순서를 지켜 제출하고
-    // 제출 '시점'만 달라진다. 즉시 모드는 제출 횟수가 늘어 오버헤드가 크지만, GPU 오류(DEVICE_HUNG,
-    // 검증 레이어)가 어느 제출에서 났는지 좁히기 쉬워 디버깅에 쓴다.
-    SW_GLOBAL_VARIABLE( bool, gv_rhiImmediateSubmit, false,
-                        "RHI 커맨드 리스트를 프레임 끝에 모아 제출하지 않고 즉시 제출 (디버깅용, 오버헤드 큼)" );
-
     // 전용 렌더 스레드를 쓸지 정한다(false 면 게임 스레드가 바로 제출한다). 읽는 곳은 이 파일뿐이다(`attach` 와 `submit`).
     // 웹은 끈다 — 브라우저의 WebGPU 장치는 만든 스레드(메인)에서만 쓸 수 있다(JS 객체는 워커를 넘지 못한다, docs/PlatformTargets.md).
 #if defined( SW_PLATFORM_WEB )
@@ -623,12 +616,13 @@ namespace sw
         // 제출 정책은 매 프레임 갱신한다. 런타임에 gv 를 토글해도 다음 프레임부터 바로 적용된다.
         // 즉시 모드는 제출 횟수가 늘어 성능이 크게 떨어지므로, 모르고 그 상태로 측정하는 일이 없도록
         // 바뀐 순간에 한 번 로그를 남긴다.
-        if ( gv_rhiImmediateSubmit != _bLastImmediateSubmit )
+        const bool bImmediateSubmit = packet._settings._bRHIImmediateSubmit != SW_FALSE; // 패킷의 설정 사본(`-gv_rhiImmediateSubmit`) — 렌더 스레드는 변수를 읽지 않는다
+        if ( bImmediateSubmit != _bLastImmediateSubmit )
         {
-            _bLastImmediateSubmit = gv_rhiImmediateSubmit;
+            _bLastImmediateSubmit = bImmediateSubmit;
             SW_LOG_INFO_ID( "RenderThread.RHISubmitMode", "RHI submit mode: %#", _bLastImmediateSubmit ? "immediate (debug)" : "batched at endFrame" );
         }
-        _pDevice->setImmediateSubmit( gv_rhiImmediateSubmit );
+        _pDevice->setImmediateSubmit( bImmediateSubmit );
         {
             // **여기가 GPU 백프레셔다.** 백엔드의 `beginFrame` 은 이번 프레임이 쓸 커맨드
             // 얼로케이터와 프레임 리소스가 풀릴 때까지 펜스를 기다린다.
