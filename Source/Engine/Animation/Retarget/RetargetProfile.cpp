@@ -215,7 +215,7 @@ namespace sw
             const XMLNode targetPose = root.appendChild( "target_pose" );
             for ( const RetargetPoseBone& poseBone : _listTargetPose )
             {
-                XMLFields::writeProperties( targetPose.appendChild( "item" ), RetargetPoseBoneParams{ poseBone._bone, poseBone._rotationDegrees } );
+                XMLFields::writeProperties( targetPose.appendChild( "item" ), poseBone );
             }
         }
         return document.saveToString();
@@ -258,10 +258,9 @@ namespace sw
 
         for ( size_t index = 0; targetPose.isValid() && index < targetPose.size(); ++index )
         {
-            RigXMLReader           entryReader( targetPose.at( index ), sourceLabel );
-            RetargetPoseBoneParams poseParams;
-            bOk = entryReader.readProperties( poseParams );
-            const RetargetPoseBone poseBone{ poseParams._bone, poseParams._rotation };
+            RigXMLReader     entryReader( targetPose.at( index ), sourceLabel );
+            RetargetPoseBone poseBone{};
+            bOk = entryReader.readProperties( poseBone );
             if ( ( entryReader.finish() && bOk ) == false )
                 return false;
             for ( const RetargetPoseBone& existing : _listTargetPose )
