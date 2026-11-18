@@ -347,7 +347,7 @@ namespace sw
             const utf8*        _pUsage{ nullptr };
         };
         /// @brief 컴퓨트 상수 버퍼 수입니다. 고정 뷰마다 컬링과 정렬이 하나씩 있고, 인스턴스 애니메이션, 메시 모프, 메시 스킨이 하나씩 더 있습니다. 추가 뷰의 것은 그 뷰가 가집니다.
-        static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewType::Count ) * 2 + 3;
+        static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewKind::Count ) * 2 + 3;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스(그림자, 프리패스, 불투명, 반투명)에서 그려지는지의 어림값입니다.
         static constexpr uint32 _s_kDrawCbPassEstimate = 4;
         // ------------------------------------------------------------------------------

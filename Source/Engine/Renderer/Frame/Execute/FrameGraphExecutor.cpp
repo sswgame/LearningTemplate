@@ -481,9 +481,9 @@ namespace sw
         // 캐스케이드가 각자 슬롯을 돌고 점광 · 스폿이 모두 자기 슬롯을 가지면 합친 칸(주 시점 그림자 슬롯)은 아무 패스도 읽지 않는다 — 돌리지 않는다.
         const bool bMainShadowSlotUnused =
             _state._cascadeCullCount > 0 && _state._localShadowCullCount == static_cast<uint32>( _state._frameShadow._listLocalCullViewProj.size() );
-        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewKind::Count ); ++viewIndex )
         {
-            if ( bMainShadowSlotUnused && viewIndex == static_cast<uint32>( RenderViewType::Shadow ) )
+            if ( bMainShadowSlotUnused && viewIndex == static_cast<uint32>( RenderViewKind::Shadow ) )
                 continue;
             bAllViewsCulled = enqueueCullView( viewIndex, _state._arrView[viewIndex], nullptr ) && bAllViewsCulled;
         }
@@ -637,7 +637,7 @@ namespace sw
     void FrameGraphExecutor::rememberDepthHistoryViews()
     {
         // 장면 깊이 첨부가 있는 뷰만 — 히스토리가 없으면(2D 파이프라인) 짝을 적을 필요가 없다.
-        const RenderView& mainView = _state.view( RenderViewType::Main );
+        const RenderView& mainView = _state.view( RenderViewKind::Main );
         if ( _state._mainView._depthHistory != 0 )
         {
             _state._mainView._depthHistoryViewProj = mainView._viewProj;
@@ -713,7 +713,7 @@ namespace sw
         cullParams._instanceSlotCount = _state._gpuScene.getInstanceSlotCount();
         // 인스턴스 LOD 선택은 그 뷰를 그리는 카메라로 한다. 추가 뷰는 자기 카메라, 그림자 슬롯과 주 시점은 주 카메라다(그림자는 가장 고운 단계가 아니라 카메라가 보는 단계로 그린다).
         // 절두체 밖의 가림 물체는 화면 크기가 0 이 아니라 거리에서 나온 값을 받는다 — CPU 선택(`LODView::computeScreenSize`)은 그 경우 가장 낮은 단계였다.
-        const RenderView& lodView = ( pExtraView != nullptr ) ? pExtraView->_cullInput : _state._arrView[static_cast<uint32>( RenderViewType::Main )];
+        const RenderView& lodView = ( pExtraView != nullptr ) ? pExtraView->_cullInput : _state._arrView[static_cast<uint32>( RenderViewKind::Main )];
         LODView::computeProjectionTerms( lodView._viewProj, cullParams._arrLODDepthRow, cullParams._arrLODView[3] );
         cullParams._arrLODView[0]    = lodView._position._x;
         cullParams._arrLODView[1]    = lodView._position._y;
@@ -727,7 +727,7 @@ namespace sw
         cullParams._arrLODControl[1]        = bResetState ? 1u : 0u;
         cullParams._arrLODControl[2]        = bHasLODState ? _lodFadeStep : 0u;
         // 가림 판정은 장면을 그리는 뷰의 슬롯만 본다(주 시점 · 추가 뷰). 그림자 슬롯은 빛에서 본 것이라 카메라 깊이로 거르면 그림자가 빠진다.
-        const FrameViewTarget* pOcclusionView = pExtraView != nullptr ? pExtraView : ( cullViewIndex == static_cast<uint32>( RenderViewType::Main ) ? &_state._mainView : nullptr );
+        const FrameViewTarget* pOcclusionView = pExtraView != nullptr ? pExtraView : ( cullViewIndex == static_cast<uint32>( RenderViewKind::Main ) ? &_state._mainView : nullptr );
         if ( pOcclusionView != nullptr )
             OcclusionTiles::fillCullParams( *pOcclusionView, cullParams );
         const bool               bOccludes    = cullParams._arrOcclusionGrid[3] != 0u;

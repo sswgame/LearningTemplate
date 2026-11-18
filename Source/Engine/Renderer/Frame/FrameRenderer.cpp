@@ -338,7 +338,7 @@ namespace sw
         // 빠지기 쉽다. 뷰-투영은 패킷의 주 시점이다(역행렬과 절두체도 함께 갱신된다).
         updatePassConstants( _state._frameContext, packet._viewProj );
         prepareFrameDecals(); // 후처리 텍스처 묶음의 정리(updatePassConstants) 뒤 — 이번 프레임에 묻는 경로가 남는다
-        _state.view( RenderViewType::Main )._position = packet._cameraPos;
+        _state.view( RenderViewKind::Main )._position = packet._cameraPos;
         // 렌즈 플레어 스프라이트는 주 시점(패킷의 뷰-투영 · 화면비)으로 펼쳐 기록 전에 올린다. 추가 뷰는 플레어를 그리지 않는다. 빈 화면(높이 0)은 그릴 것이 없다.
         if ( packet._viewportHeight > 0 )
             _state._lensFlare.prepare( pDevice, _state._listFrameLensFlare, packet._viewProj, static_cast<float32>( packet._viewportWidth ) / static_cast<float32>( packet._viewportHeight ) );
@@ -477,7 +477,7 @@ namespace sw
         if ( producer != LightGridProducer::None )
         {
             _state._mainView._lightGridIndex = static_cast<uint32>( _listScratchGridViewProj.size() );
-            _listScratchGridViewProj.push_back( _state.view( RenderViewType::Main )._viewProj );
+            _listScratchGridViewProj.push_back( _state.view( RenderViewKind::Main )._viewProj );
             for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
             {
                 if ( pView->_bRenderThisFrame == SW_FALSE )
@@ -545,7 +545,7 @@ namespace sw
         // 라이트 버퍼는 뷰가 정해진 뒤에 올린다 — 뷰마다 라이트 그리드가 붙는다(주 시점과 이번 프레임에 그리는 추가 뷰).
         updateLightBuffer( pDevice );
         // 볼륨 안개의 버퍼와 입력은 라이트 그리드(주 시점의 그리드 번호)가 정해진 뒤, 기록 전에 갖춘다.
-        _fog.prepareVolumetricFog( pDevice, _state.view( RenderViewType::Main ), _state._frameLight._dirIntensity, _state._frameLight._colorAmbient, _state._lightBuffer, _state._mainView._lightGridIndex );
+        _fog.prepareVolumetricFog( pDevice, _state.view( RenderViewKind::Main ), _state._frameLight._dirIntensity, _state._frameLight._colorAmbient, _state._lightBuffer, _state._mainView._lightGridIndex );
         // 실시간 라이트 프로브 갱신도 라이트 버퍼(프로브 버퍼의 UAV)가 올라간 뒤, 기록 전에 갖춘다.
         prepareRealtimeProbes( pDevice );
         // 추가 뷰의 투명 순서(스냅샷)를 뷰 자원에 옮긴다. 컬링과 정렬 디스패치, 기록보다 먼저 한다.
@@ -680,7 +680,7 @@ namespace sw
         // 주 시점 뷰-투영은 호출자가 카메라에서 만들어 넘긴다(씬 직접 경로는 씬의 게임 카메라, 패킷 경로는 패킷의 주 시점).
         // 그림자는 `applyFrameShadow` 가 준비한 주 시점의 것이다(그림자 빛이 없으면 그림자 없는 뷰).
         _passExecutor.applyViewShadowConstants( context, _state._mainView._shadow );
-        _state.view( RenderViewType::Shadow ).setViewProjection( _state._mainView._shadow._cullViewProj );
+        _state.view( RenderViewKind::Shadow ).setViewProjection( _state._mainView._shadow._cullViewProj );
 
         _state._mainView.beginViewHistory();
         // 지난 뷰-투영과 견주므로 applyViewProjection(지난 것을 이번 것으로 바꾼다) 앞이다.
@@ -771,7 +771,7 @@ namespace sw
     {
         // 뷰마다 하나씩. 절두체가 다르므로 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
         uint32 rowIndex{ 0 };
-        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewKind::Count ); ++viewIndex )
         {
             outArrRow[rowIndex++] = { &_state._arrView[viewIndex]._cullCb, sizeof( FrameRendererUtil::GPUCullParams ), "cull" };
             outArrRow[rowIndex++] = { &_state._arrView[viewIndex]._sortCb, sizeof( FrameRendererUtil::GPUSortParams ), "instance sort" };

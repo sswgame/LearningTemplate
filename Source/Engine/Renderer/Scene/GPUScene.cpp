@@ -607,7 +607,7 @@ namespace sw
 
     void GPUScene::setCullViewCount( IRHIDevice* pDevice, uint32 count )
     {
-        const size_t wanted = MathUtil::max( count, static_cast<uint32>( RenderViewType::Count ) );
+        const size_t wanted = MathUtil::max( count, static_cast<uint32>( RenderViewKind::Count ) );
         if ( wanted == _listCullView.size() )
             return;
         for ( size_t index = wanted; index < _listCullView.size(); ++index )

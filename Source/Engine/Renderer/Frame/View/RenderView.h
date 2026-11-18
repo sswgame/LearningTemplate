@@ -18,11 +18,11 @@
 namespace sw
 {
     /**
-     * @enum RenderViewType
+     * @enum RenderViewKind
      * @brief 프레임이 그리는 시점입니다. 컬링과 정렬 산출물이 이 단위로 나뉩니다.
      * @details 언리얼이 뷰마다 `FViewInfo` 와 `FInstanceCullingContext` 를 두는 것과 같다.
      */
-    enum class RenderViewType : uint32
+    enum class RenderViewKind : uint32
     {
         Main   = 0, ///< 게임 카메라
         Shadow = 1, ///< 그림자 라이트
@@ -30,7 +30,7 @@ namespace sw
     };
 
     /// @brief 추가 뷰의 첫 컬링 슬롯입니다. 슬롯 0은 주 시점이고 1은 주 시점의 그림자입니다.
-    inline constexpr uint32 kFirstExtraCullView = static_cast<uint32>( RenderViewType::Count );
+    inline constexpr uint32 kFirstExtraCullView = static_cast<uint32>( RenderViewKind::Count );
     /// @brief 추가 뷰 하나가 쓰는 컬링 슬롯 수입니다 — 자기 시점 하나, 자기 그림자 패스 하나(뷰마다 그림자 볼륨이 다르다).
     inline constexpr uint32 kCullSlotsPerExtraView = 2;
     /**

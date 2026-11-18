@@ -271,7 +271,7 @@ namespace sw
          */
         RHIDescriptorIndex getInstanceUAV() const { return _instances._uav; }
         /** @brief 뷰 하나의 컬링 산출물(간접 인자와 가시 목록)을 반환합니다. */
-        const GPUCullViewResources& getCullView( RenderViewType view ) const { return _listCullView[static_cast<uint32>( view )]; }
+        const GPUCullViewResources& getCullView( RenderViewKind view ) const { return _listCullView[static_cast<uint32>( view )]; }
         /** @brief 컬링 슬롯 @p cullViewIndex 의 산출물입니다. 0은 주 시점, 1은 그림자이고, `kFirstExtraCullView` 부터는 추가 뷰입니다. */
         const GPUCullViewResources& getCullView( uint32 cullViewIndex ) const { return _listCullView[cullViewIndex]; }
         uint32                      getCullViewCount() const { return static_cast<uint32>( _listCullView.size() ); }
@@ -316,7 +316,7 @@ namespace sw
          */
         bool areIndirectCountsGPUFilled() const { return _bGPUFillsIndirectCounts != SW_FALSE; }
         /** @brief 메인 뷰의 간접 인자 버퍼를 반환합니다. 뷰를 가리지 않는 검사(upload 의 재업로드 판정과 반환값)에 씁니다. */
-        RHIBufferHandle getIndirectArgsBuffer() const { return _listCullView[static_cast<uint32>( RenderViewType::Main )]._indirectArgs._buffer; }
+        RHIBufferHandle getIndirectArgsBuffer() const { return _listCullView[static_cast<uint32>( RenderViewKind::Main )]._indirectArgs._buffer; }
         /** @brief 간접 커맨드 개수를 반환합니다. */
         uint32 getIndirectCommandCount() const { return _indirectCommandCount; }
         /** @brief 인스턴스 버퍼가 GPU 에 올라갔는지 반환합니다. */
@@ -442,7 +442,7 @@ namespace sw
          *          개수만 줄일 수 있어 **뒤쪽 인스턴스가 통째로 사라진다**(보이는 것을 고를 수 없기 때문이다).
          *          목록은 절두체에 종속이므로 메인 카메라, 그림자 라이트, 추가 뷰가 **각자** 가진다(슬롯 0과 1은 항상 있다).
          */
-        vector<GPUCullViewResources> _listCullView = vector<GPUCullViewResources>( static_cast<size_t>( RenderViewType::Count ) );
+        vector<GPUCullViewResources> _listCullView = vector<GPUCullViewResources>( static_cast<size_t>( RenderViewKind::Count ) );
         RHIStructuredBuffer          _batchInfo;
         /**
          * @brief 씬 메시 정점을 모은 풀입니다(RT 소유) — 정점 형식마다 하나(속성 원소 크기가 다르다). 배치는 자기 형식의 풀 버퍼와 자기 시작 오프셋으로 그립니다.
