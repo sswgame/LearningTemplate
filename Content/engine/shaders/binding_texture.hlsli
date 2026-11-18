@@ -258,7 +258,9 @@ SW_DECLARE_ENGINE_TEXTURE( 16 );
 SW_DECLARE_ENGINE_TEXTURE( 17 );
 SW_DECLARE_ENGINE_TEXTURE( 18 );
 SW_DECLARE_ENGINE_TEXTURE( 19 );
-        #if SW_ENGINE_TEXTURE_COUNT != 20
+SW_DECLARE_ENGINE_TEXTURE( 20 );
+SW_DECLARE_ENGINE_TEXTURE( 21 );
+        #if SW_ENGINE_TEXTURE_COUNT != 22
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
@@ -415,6 +417,12 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
                     break;                                                 \
                 case 19u:                                                  \
                     OP( SW_ENGINE_TEXTURE( 19 ), SW_ENGINE_SAMPLER( 19 ) ) \
+                    break;                                                 \
+                case 20u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 20 ), SW_ENGINE_SAMPLER( 20 ) ) \
+                    break;                                                 \
+                case 21u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 21 ), SW_ENGINE_SAMPLER( 21 ) ) \
                     break;                                                 \
                 default:                                                   \
                     break;                                                 \
