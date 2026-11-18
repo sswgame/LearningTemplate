@@ -158,6 +158,8 @@ namespace sw
 
         /** @brief 시간을 흘립니다. 채널마다 초당 감쇠만큼 영역 값과 마스크를 내립니다(감쇠가 0 인 채널, 즉 찢김은 그대로 둡니다). */
         void update( float32 deltaSeconds );
+        /** @brief 모든 영역 값과 마스크를 0 으로 돌립니다(채널 · 영역 · 부품 수는 그대로). 바뀐 것이 있으면 번호가 올라 머티리얼로 다시 올라간다. 풀 반환이 부릅니다. */
+        void clear();
         /**
          * @brief 물이 씻습니다. 씻김 빠르기(`_washPerSecond`)가 있는 채널만 @p deltaSeconds × @p submersion(0..1, 잠긴 비율)만큼 영역 값과 마스크를 더 내립니다.
          * @details 씻김이 0 인 채널(젖음 · 상처 · 찢김)은 건드리지 않는다 — 물에 들어갔다고 모든 표시를 지우지 않는다. 젖음을 올리는 일은 부르는 쪽(`SurfaceExposureComponent`)이다.

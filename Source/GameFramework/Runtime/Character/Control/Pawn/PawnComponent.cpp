@@ -7,6 +7,7 @@
 #include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Input/Map/CommonInputActions.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -89,6 +90,29 @@ namespace sw
         manager.getComponentRegistry().remove<PawnComponent>( this );
         ControlSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
+    }
+
+    SpawnStateReset PawnComponent::resetToSpawnState()
+    {
+        GameObject*          pOwner      = getOwner();
+        GameObjectManager*   pManager    = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        ControllerComponent* pController = pManager != nullptr ? pManager->resolveComponent( _controller ) : nullptr;
+        if ( pController != nullptr )
+        {
+            pController->unpossess();
+            // 자동 빙의가 이 폰을 위해 세운 조종자는 폰과 함께 간다(`onUnregister` 와 같다) — 다시 켜지면 새로 세운다.
+            if ( pController->isSpawnedForPawn() && pController->getOwner() != nullptr )
+                pManager->destroyGameObject( pController->getOwner() );
+        }
+        _controller = TComponentHandle<ControllerComponent>{};
+        _intent     = ControlIntent{};
+        _yawOffsetUnits.store( 0, std::memory_order_relaxed );
+        _pitchOffsetUnits.store( 0, std::memory_order_relaxed );
+        _requestedYawUnits.store( 0, std::memory_order_relaxed );
+        _requestedPitchUnits.store( 0, std::memory_order_relaxed );
+        _bRotationRequested.store( false, std::memory_order_relaxed );
+        _bAutoPossessDone = SW_FALSE;
+        return SpawnStateReset::Reset;
     }
 
     optional<int32> PawnComponent::findButton( const hashed_string& name ) const

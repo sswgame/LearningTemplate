@@ -857,6 +857,10 @@ namespace sw
 
     bool SkeletalMeshComponent::beginAnimationFrame( float32 deltaSeconds, uint64 frameIndex )
     {
+        // 계층에서 꺼진 오브젝트는 평가하지 않는다(언리얼도 꺼진 액터의 애님을 틱하지 않는다) — 풀에 쉬는 적이 일하는 유닛 · 군중 수에 남지 않게.
+        const GameObject* pOwner = getOwner();
+        if ( pOwner != nullptr && pOwner->isActiveInHierarchy() == false )
+            return false;
         // 스켈레톤을 바꿨으면(다시 받은 스켈레톤 · `setSkeleton`) 본 수가 달라질 수 있다 — 포즈 버퍼를 다시 맞춘다.
         if ( _localPose.getBoneCount() != _skeleton->getBoneCount() )
             resetPoseBuffers();

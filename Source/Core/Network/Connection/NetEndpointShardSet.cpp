@@ -204,11 +204,6 @@ namespace sw
         }
     }
 
-    int32 NetEndpointShardSet::getMaxBytesPerSecond() const
-    {
-        return _listShard.empty() ? 0 : _listShard.front()->getMaxBytesPerSecond();
-    }
-
     bool NetEndpointShardSet::isConnectionSaturated( int32 connectionID ) const
     {
         int32              localConnectionID = constant::invalid_index::kInt32;

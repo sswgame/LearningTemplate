@@ -40,6 +40,21 @@ namespace sw
         _previousButtonDown = 0;
     }
 
+    SpawnStateReset ArenaUnitComponent::resetToSpawnState()
+    {
+        if ( _deathTimer >= 0.0f )
+        {
+            GameObject*    pOwner = getOwner();
+            MeshComponent* pMesh  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+            if ( pMesh != nullptr )
+                pMesh->setLocalScale( _deathScale ); // `updateDeath` 가 납작하게 만든 것이다
+        }
+        _deathTimer         = -1.0f;
+        _deathScale         = float3{ 1.0f, 1.0f, 1.0f };
+        _previousButtonDown = 0;
+        return SpawnStateReset::Reset;
+    }
+
     void ArenaUnitComponent::assignGameMode( GameObjectHandle gameMode, const float3& facing )
     {
         bindGameMode( gameMode );

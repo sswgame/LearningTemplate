@@ -31,9 +31,9 @@
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
-#include "GameFramework/Runtime/World/Lifetime/PrefabPool.h"
 
 #include "Games/AbilityArena/ArenaUnitComponent.h"
 
@@ -188,6 +188,12 @@ namespace sw
         [[nodiscard]] bool spawnUnit( GameObjectManager& manager, const SpawnRequest& request );
         /** @brief 적 @p pawn 을 조종할 AI 조종자를 종류별 프리팹으로 스폰해 조종하게 합니다. 반환값은 스폰한 조종자의 오브젝트입니다(없으면 빈 핸들). */
         GameObjectHandle spawnEnemyController( GameObjectManager& manager, ArenaUnitKind kind, PawnComponent& pawn );
+        /** @brief 종류의 몸 프리팹 경로입니다. */
+        const string& findUnitPrefabPath( ArenaUnitKind kind ) const;
+        /** @brief 적 종류(졸개 · 시전자)의 AI 조종자 프리팹 경로입니다. 플레이어는 이 길을 쓰지 않는다(자동 전투 AI 는 따로 든다). */
+        const string& findEnemyAIPrefabPath( ArenaUnitKind kind ) const;
+        /** @brief 유닛 하나를 걷습니다 — 적은 몸 · AI 조종자를 풀에 돌려주고(`_enemyPool` · `_enemyAIPool`, 0 이면 지운다), 플레이어 몸은 지웁니다. 핸들을 비웁니다. */
+        void retireUnit( GameObjectManager& manager, ArenaUnit& inoutUnit );
         /** @brief 플레이어 폰을 자동 플레이 스위치에 맞는 조종자(자동 전투 AI 또는 플레이어 조종자)가 조종하게 합니다. 틱 밖(플러시)에서 부릅니다. */
         void syncPlayerPossession( GameObjectManager& manager );
         /** @brief 현재 스냅샷의 플레이어 폰을 반환합니다. 없으면 nullptr 입니다. */
@@ -237,6 +243,10 @@ namespace sw
         AssetRef<PrefabAsset> _casterAIPrefab;
         PROPERTY( Category = "Prefabs", DisplayName = "Auto Battle AI Prefab", Tooltip = "AI controller that possesses the player while auto play is on" )
         AssetRef<PrefabAsset> _autoBattleAIPrefab;
+        PROPERTY( Category = "Prefabs", DisplayName = "Enemy Pool", Tooltip = "Pool of the grunt and caster bodies, reused across waves (0 spawns every time)" )
+        PrefabPoolPolicy _enemyPool;
+        PROPERTY( Category = "Prefabs", DisplayName = "Enemy AI Pool", Tooltip = "Pool of the grunt and caster AI controllers (0 spawns every time)" )
+        PrefabPoolPolicy _enemyAIPool;
         PROPERTY( Category = "Arena", DisplayName = "Arena Half Size", Tooltip = "Units are kept inside this square", Min = 1.0, Units = m )
         float32 _arenaHalfSize;
         PROPERTY( Category = "Arena", DisplayName = "Wave Radius", Tooltip = "Radius of the circle the enemies spawn on", Min = 0.0, Units = m )

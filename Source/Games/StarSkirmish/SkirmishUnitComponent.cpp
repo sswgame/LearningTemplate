@@ -66,6 +66,24 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
+    SpawnStateReset SkirmishUnitComponent::resetToSpawnState()
+    {
+        if ( _bPlaced == SW_TRUE )
+        {
+            GameObject*    pOwner = getOwner();
+            MeshComponent* pMesh  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+            if ( pMesh != nullptr )
+                pMesh->setVisible( false ); // 자리를 맞추며 보이게 한 것이다 — 맞추기 전에는 숨어 있다
+        }
+        _lastPosition = float3{ 0.0f, 0.0f, 0.0f };
+        _unitID       = SlotHandle{};
+        _pShownLook   = nullptr;
+        _modelWidth   = 1.0f;
+        _yaw          = MathUtil::kPi;
+        _bPlaced      = SW_FALSE;
+        return SpawnStateReset::Reset;
+    }
+
     void SkirmishUnitComponent::assignUnit( GameObjectHandle gameMode, SlotHandle unitID, float32 modelWidth )
     {
         bindGameMode( gameMode );

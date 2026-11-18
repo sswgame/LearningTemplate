@@ -207,6 +207,7 @@ namespace sw
             vector<uint8>               _lastInput{};
             NetOwnerState               _ownerState{}; ///< 이 클라이언트가 조종하는 엔티티의 상태와 그 입력 틱. 스냅샷마다 싣는다
             float32                     _viewTick{ 0.0f };
+            int32                       _snapshotBudgetBytes{ 0 }; ///< 이번 `sendSnapshots` 의 예산(그 연결의 지금 송신 속도에서). 나눠 실행하기 전에 정하며 워커는 읽기만 한다
             uint32                      _ackedTick{ 0 };
             uint8                       _bHasAck{ SW_FALSE };
             uint8                       _bHasInput{ SW_FALSE };
@@ -245,8 +246,7 @@ namespace sw
         vector<ClientState*>                _listClientScratch;     ///< 위 연결의 상태. 나눠 실행하기 전에 모두 찾아 두어, 실행 중에 목록이 커지지 않게 한다
         size_t                              _worldEntityCount;      ///< 이 틱에 `setEntity` 를 호출한 수. 월드 엔티티 버퍼는 틱을 넘어 재사용하므로 용량을 남겨 둔다
         uint64                              _oversizedEntityCount;
-        int32                               _snapshotBudgetBytes; ///< 이번 `sendSnapshots` 의 예산. 나눠 실행하기 전에 정하며 워커는 읽기만 한다
-        const int32*                        _pRangeConnection;    ///< 나눠 실행하는 본문이 읽는 `_listConnectionScratch.data()`. 워커는 컨테이너를 직접 만지지 않는다
-        ClientState* const*                 _ppRangeClient;       ///< 나눠 실행하는 본문이 읽는 `_listClientScratch.data()`
+        const int32*                        _pRangeConnection; ///< 나눠 실행하는 본문이 읽는 `_listConnectionScratch.data()`. 워커는 컨테이너를 직접 만지지 않는다
+        ClientState* const*                 _ppRangeClient;    ///< 나눠 실행하는 본문이 읽는 `_listClientScratch.data()`
     };
 } // namespace sw

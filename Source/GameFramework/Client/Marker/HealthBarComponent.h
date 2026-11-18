@@ -55,6 +55,12 @@ namespace sw
         /** @brief 소유 오브젝트가 꺼지면 막대를 숨깁니다(꺼진 오브젝트는 틱이 돌지 않습니다). */
         void onOwnerActiveInHierarchyChanged() override;
         /**
+         * @brief 풀 반환: 시작할 때의 보임으로 돌리고, 비율은 다시 켜진 뒤 첫 틱에 같은 오브젝트의 체력 원천에서 흔적 없이 다시 읽습니다(`onBeginPlay` 와 같은 규칙).
+         * @details 되돌리는 순간에는 원천도 아직 되돌리기 전이거나 꺼낸 쪽이 체력을 정하기 전이라, 그 값을 믿지 않고 첫 틱에 읽는다. 원천이 없으면 시작할 때 저장된 칸이다.
+         *          시작 전(갓 스폰)이면 바꿀 것이 없습니다.
+         */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
+        /**
          * @brief 같은 오브젝트의 체력 시스템이 알린 변화를 받습니다. 다시 두기는 흔적 없이(`resetRatio`) 처리하고, 바뀜은 목표만(`setTargetRatio`) 바꿉니다.
          * @details `_bShowWhenHurt` 면 처음 줄 때 보이고, `_bHideWhenDead` 면 쓰러질 때 숨는다.
          *          둘 다 아니면 쓰러짐도 `_bShowWhenHurt` 에 따라 보인다. 한 방에 쓰러진 적이 그 예이다.
@@ -94,6 +100,8 @@ namespace sw
         static unique_ptr<Widget> createBarWidget();
 
     private:
+        /** @brief 시작 비율입니다 — 같은 오브젝트의 체력 원천이 체력을 가지면 그 비율, 아니면 시작할 때 저장된 칸(`_spawnRatio`)입니다. */
+        float32 readStartRatio() const;
         /** @brief 틱 직후(트랜스폼 적용 뒤) 게임 스레드에서 막대 값을 넣게 합니다. 틱 밖이면 바로 넣습니다. */
         void scheduleRefresh();
         /** @brief 막대 둘에 비율과 색을 넣고, 숨김이거나 꺼짐이면 마커를 숨깁니다. */
@@ -122,7 +130,10 @@ namespace sw
         PROPERTY( Category = "Layout", DisplayName = "Show When Hurt", Tooltip = "Show the bar the first time health drops" )
         bool _bShowWhenHurt;
         PROPERTY( Category = "Layout", DisplayName = "Hide When Dead", Tooltip = "Hide the bar when the owner dies" )
-        bool _bHideWhenDead;
-        bool _bWarnedNoWidgetComponent; ///< 같은 오브젝트에 WidgetComponent 가 없다고 한 번 알렸다
+        bool    _bHideWhenDead;
+        bool    _bWarnedNoWidgetComponent; ///< 같은 오브젝트에 WidgetComponent 가 없다고 한 번 알렸다
+        float32 _spawnRatio;               ///< 체력 원천이 없을 때 시작한 비율(저장된 칸)
+        bool    _bSpawnVisible;            ///< 시작할 때의 보임(풀 반환이 되돌린다)
+        bool    _bRatioResyncPending;      ///< 풀 반환 뒤 첫 틱이 비율을 체력 원천에서 다시 읽는다
     };
 } // namespace sw

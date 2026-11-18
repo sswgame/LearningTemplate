@@ -310,11 +310,11 @@ SW_TEST_CASE( NetMessageRouterTest, SendToPeersAndRelayReachEveryOtherPeer )
     LoopbackNetwork network;
     NetEndpoint     server;
     NetEndpoint     arrClient[2];
-    server.initialize( network.createEndpoint( 4000 ), NetEndpointConfig{} );
+    SW_REQUIRE_TRUE( server.initialize( network.createEndpoint( 4000 ), NetEndpointConfig{} ) );
     SW_REQUIRE_TRUE( server.listen() );
     for ( int32 index = 0; index < 2; ++index )
     {
-        arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), NetEndpointConfig{} );
+        SW_REQUIRE_TRUE( arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), NetEndpointConfig{} ) );
         SW_REQUIRE_TRUE( arrClient[index].connect( NetAddress::makeLoopback( 4000 ) ) );
     }
     float64    time   = 0.0;

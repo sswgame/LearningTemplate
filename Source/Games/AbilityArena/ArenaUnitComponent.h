@@ -69,6 +69,8 @@ namespace sw
         /** @brief 폰 버튼 이름의 인덱스를 다시 찾게 합니다(폰 스키마는 시작 전에 정해진다). */
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
+        /** @brief 풀 반환: 쓰러지며 납작하게 만든 메시 크기를 되돌리고 쓰러짐 시계 · 지난 버튼을 비웁니다. 디렉터 · 바라보는 쪽은 `assignGameMode` 가 정합니다. */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
 
         /** @brief 따를 디렉터와 처음 바라볼 쪽을 정합니다(디렉터가 스폰한 뒤 부른다). */
         void          assignGameMode( GameObjectHandle gameMode, const float3& facing );

@@ -2,12 +2,13 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Runtime/World/Lifetime/PrefabPool.h"
+#include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
 
-// PrefabPoolTest — 재사용 · 상한 · 미리 만들기 · 다시 내주기 · 조건 돌려받기 · 모두 지우기. 인스턴스는 프리팹 대신 빈 오브젝트다(nogpu, 에셋 없음).
+// PrefabPoolTest — 재사용 · 상한 · 미리 만들기 · 다시 내주기 · 조건 돌려받기 · 모두 지우기 · 풀 계약(되돌리기). 인스턴스는 프리팹 대신 코드로 만든 오브젝트다(nogpu, 에셋 없음).
 
 using namespace sw;
 
@@ -31,6 +32,23 @@ namespace
         }
     };
     using Util = PrefabPoolTestUtil;
+
+    /** @brief 풀 계약 테스트의 인스턴스입니다 — 컴포넌트 하나를 단 오브젝트입니다. */
+    template <typename TComponent>
+    struct PrefabPoolComponentSpawner
+    {
+        static PrefabPool makePool( uint32 maxIdleCount )
+        {
+            PrefabPool pool{ string{}, maxIdleCount };
+            pool.setSpawner( PrefabPool::SpawnDelegate::create( []( GameObjectManager& manager, const utf8* pName )
+            {
+                GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
+                (void)pObject->addComponent<TComponent>();
+                return pObject;
+            } ) );
+            return pool;
+        }
+    };
 } // namespace
 
 /** @brief [PrefabPoolTest] 돌려받은 인스턴스는 꺼 두었다가 같은 오브젝트로 다시 켜진다 */
@@ -114,4 +132,17 @@ SW_TEST_CASE( PrefabPoolTest, ReleaseBusyIfAndDestroyAll )
     SW_EXPECT_EQUAL( 0u, pool.getBusyCount() );
     SW_EXPECT_TRUE( Util::isGone( manager, firstHandle ) );
     SW_EXPECT_TRUE( Util::isGone( manager, otherHandle ) );
+}
+
+/** @brief [PrefabPoolTest] 되돌리기를 구현하지 않은 컴포넌트가 붙은 프리팹은 처음 만들 때 오류로 풀이 막히고, 다음 꺼내기도 새로 만들지 않는다(매번 스폰으로 물러서지 않는다) */
+SW_TEST_CASE( PrefabPoolTest, ComponentWithoutSpawnStateResetRefusesThePool )
+{
+    SW_EXPECT_LOG( "PrefabPool.ComponentNotPoolable" ); // 계약 위반 오류가 이 테스트가 보려는 동작이다
+    GameObjectManager manager;
+    PrefabPool        pool = PrefabPoolComponentSpawner<SceneComponent>::makePool( 4 ); // 되돌리기를 구현하지 않은 컴포넌트
+    SW_EXPECT_TRUE( pool.acquire( manager, "Bare" ) == nullptr );
+    SW_EXPECT_TRUE( pool.acquire( manager, "Bare" ) == nullptr );
+    SW_EXPECT_EQUAL( 0u, pool.getCreatedCount() );
+    SW_EXPECT_EQUAL( 0u, pool.getBusyCount() );
+    SW_EXPECT_EQUAL( 0u, pool.prewarm( manager, 2, "Bare" ) );
 }

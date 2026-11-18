@@ -68,6 +68,7 @@ namespace sw
         , _attackCooldown{}
         , _netEntityID{ 0 }
         , _phase{ ShooterEnemyPhase::Rising }
+        , _autoPossessBeforeReplica{ PawnAutoPossess::None }
         , _bLaunched{ SW_FALSE }
         , _bHitPending{ SW_FALSE }
         , _bAttackLanded{ SW_FALSE }
@@ -142,7 +143,35 @@ namespace sw
         }
         PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
+        {
+            _autoPossessBeforeReplica = pPawn->getAutoPossess();
             pPawn->setAutoPossess( PawnAutoPossess::None );
+        }
+    }
+
+    SpawnStateReset ShooterEnemyComponent::resetToSpawnState()
+    {
+        if ( _bReplica == SW_TRUE )
+        {
+            GameObject*    pOwner = getOwner();
+            PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+            if ( pPawn != nullptr )
+                pPawn->setAutoPossess( _autoPossessBeforeReplica );
+        }
+        (void)_healthMachine.initialize( HealthSettings{} ); // 기본 설정은 범위 안이다 — 생성자의 가득 찬 상태와 같다
+        _healthMachine.discardEvents();
+        _phaseTime                = 0.0f;
+        _attackCooldown           = Countdown{};
+        _netEntityID              = 0;
+        _phase                    = ShooterEnemyPhase::Rising;
+        _bLaunched                = SW_FALSE;
+        _bHitPending              = SW_FALSE;
+        _bAttackLanded            = SW_FALSE;
+        _bAttackStarting          = SW_FALSE;
+        _bAttackHitEvent          = SW_FALSE;
+        _bHitEventMissingReported = SW_FALSE;
+        _bReplica                 = SW_FALSE;
+        return SpawnStateReset::Reset;
     }
 
     void ShooterEnemyComponent::setReplicatedPose( const float3& position, float32 yaw, ShooterEnemyPhase phase )

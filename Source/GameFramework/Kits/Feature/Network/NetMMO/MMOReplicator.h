@@ -229,6 +229,7 @@ namespace sw
             NetPrioritizer                      _prioritizer{};  ///< 보이는 엔티티마다 쌓인 우선도
             TickRingBuffer<uint8>               _updateResult{}; ///< 판정이 난 갱신 틱. 값이 `SW_TRUE` 면 전달, `SW_FALSE` 면 잃음이다. 항목이 없으면 아직 판정이 없다
             uint32                              _entityID{ 0 };
+            int32                               _updateBudgetBytes{ 0 }; ///< 이번 update 의 갱신 예산(그 연결의 지금 송신 속도에서). 나눠 실행하기 전에 정하며 워커는 읽기만 한다
             uint8                               _bActive{ SW_FALSE };
         };
 
@@ -273,11 +274,10 @@ namespace sw
         uint64                              _sentUpdateCount;
         uint64                              _oversizedEntityCount;
         NetParallelFor                      _parallel;
-        NetParallelScratch<ObserverScratch> _observerScratch;       ///< 스레드마다 하나씩 둔다
-        float32                             _tickDeltaTime;         ///< 이번 update 의 시간. 나눠 실행하는 본문이 읽는다
-        int32                               _tickUpdateBudgetBytes; ///< 이번 update 의 갱신 예산. 설정값과 연결 상한 중 작은 값이며 나눠 실행하는 본문이 읽는다
-        uint32                              _tick;                  ///< `update` 마다 하나씩 올린다. 새로 보임과 갱신 메시지에 실어서 받는 쪽이 오래된 메시지를 버리게 한다
-        Observer*                           _pRangeObserver;        ///< 나눠 실행하는 본문이 쓰는 `_listObserver.data()`. 워커는 컨테이너를 직접 만지지 않는다
+        NetParallelScratch<ObserverScratch> _observerScratch; ///< 스레드마다 하나씩 둔다
+        float32                             _tickDeltaTime;   ///< 이번 update 의 시간. 나눠 실행하는 본문이 읽는다
+        uint32                              _tick;            ///< `update` 마다 하나씩 올린다. 새로 보임과 갱신 메시지에 실어서 받는 쪽이 오래된 메시지를 버리게 한다
+        Observer*                           _pRangeObserver;  ///< 나눠 실행하는 본문이 쓰는 `_listObserver.data()`. 워커는 컨테이너를 직접 만지지 않는다
     };
 } // namespace sw
 

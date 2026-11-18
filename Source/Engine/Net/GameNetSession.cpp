@@ -19,6 +19,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Config/NetSendThrottleSettings.h"
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/EngineFrameHooks.h"
@@ -430,15 +431,19 @@ namespace sw
             shard->_decorator = _transportDecorator( shardIndex, *shard->_transport );
         if ( shard->_decorator != nullptr )
             pHostTransport = shard->_decorator.get();
-        shard->_host.initialize( pHostTransport, params._hostSettings );
+        if ( shard->_host.initialize( pHostTransport, params._hostSettings ) == false )
+            return nullptr; // initialize 가 알렸다
         return shard;
     }
 
-    bool GameNetSession::initialize( const GameNetSessionParams& params )
+    bool GameNetSession::initialize( const GameNetSessionParams& requested )
     {
         shutdown();
-        if ( params._role == GameNetRole::None )
+        if ( requested._role == GameNetRole::None )
             return false;
+        GameNetSessionParams params = requested;
+        if ( NetSendThrottleSettings::loadInto( params._hostSettings ) == false )
+            return false; // 고정 속도로 대신 열지 않는다 — 막힌 회선에서 재전송을 키우는 것이 고정 버킷이다(감사 N-11)
         if ( GameNetSessionInternal::isValidShardLayout( params ) == false )
             return false;
         const bool bHasTicket = params._credentials._tokenSize > 0;

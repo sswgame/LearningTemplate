@@ -74,7 +74,7 @@ namespace sw
         _listMethod.reserve( count );
         for ( size_t descIndex = 0; descIndex < count; ++descIndex )
         {
-            if ( pDesc[descIndex]._pInvoke != nullptr )
+            if ( pDesc[descIndex]._pInvoke != nullptr || pDesc[descIndex]._pConstruct != nullptr )
                 _listMethod.emplace_back( pDesc[descIndex] );
         }
     }
@@ -141,11 +141,8 @@ namespace sw
         , _bStatic{ SW_FALSE }
         , _bPrimitive{ SW_FALSE }
         , _bIsCacheBuilt{ SW_FALSE }
-        , _bIsPODFastPath{ SW_FALSE }
-        , _bHasSaveGameProperty{ SW_FALSE }
-        , _bHasValidator{ SW_FALSE }
-        , _bDerivedFlagsBuilt{ SW_FALSE }
-        , _reservedCacheFlags{ 0 }
+        , _reservedFlags{ 0 }
+        , _derivedFlags{ 0 }
         , _reservedPadding{ 0, 0 }
     {
     }
@@ -167,7 +164,7 @@ namespace sw
     void TypeInfo::clearInheritedProperties()
     {
         _inheritedProperties.withdraw();
-        _bDerivedFlagsBuilt = SW_FALSE;
+        _derivedFlags.store( 0, std::memory_order_release );
     }
 
     void TypeInfo::rebuildDerivedCaches()
@@ -311,29 +308,52 @@ namespace sw
 
     bool TypeInfo::hasSaveGameProperty() const
     {
-        SW_ASSERT( _bDerivedFlagsBuilt == SW_TRUE && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
-        return _bHasSaveGameProperty == SW_TRUE;
+        const uint8 flags = _derivedFlags.load( std::memory_order_acquire );
+        SW_ASSERT( ( flags & kDerivedFlagsBuilt ) != 0 && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
+        return ( flags & kDerivedHasSaveGameProperty ) != 0;
     }
 
     bool TypeInfo::usesPODCopyFastPath() const
     {
-        SW_ASSERT( _bDerivedFlagsBuilt == SW_TRUE && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
-        return _bIsPODFastPath == SW_TRUE;
+        const uint8 flags = _derivedFlags.load( std::memory_order_acquire );
+        SW_ASSERT( ( flags & kDerivedFlagsBuilt ) != 0 && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
+        return ( flags & kDerivedPODFastPath ) != 0;
     }
 
     bool TypeInfo::hasValidator() const
     {
-        SW_ASSERT( _bDerivedFlagsBuilt == SW_TRUE && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
-        return _bHasValidator == SW_TRUE;
+        const uint8 flags = _derivedFlags.load( std::memory_order_acquire );
+        SW_ASSERT( ( flags & kDerivedFlagsBuilt ) != 0 && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
+        return ( flags & kDerivedHasValidator ) != 0;
     }
 
     void TypeInfo::computeDerivedFlags()
     {
-        TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
+        const TypeResolver resolver{ &engine::getSubsystem<TypeRegistry>(), []( const void* pContext, const hashed_string& name )
+        { return static_cast<const TypeRegistry*>( pContext )->findType( name ); } };
+        computeDerivedFlags( resolver );
+    }
 
+    void TypeInfo::computeDerivedFlags( const TypeResolver& resolver )
+    {
         static const hashed_string kArrDynamicTypes[] = {
             hashed_string{ PredefinedNameType::NameType_string },
             hashed_string{ PredefinedNameType::NameType_hashed_string },
+        };
+        // `TypeRegistry::isType` 와 같은 판정이다(별칭 포함) — 잠금 안에서도 부를 수 있게 찾기는 @p resolver 로 한다.
+        const auto canonicalName = []( const TypeInfo* pType, const hashed_string& name )
+        {
+            if ( pType == nullptr )
+                return name;
+            return pType->_name.empty() == false ? pType->_name : pType->_fullyQualifiedName;
+        };
+        const auto isSameType = [&resolver, &canonicalName]( const hashed_string& name, const hashed_string& target )
+        {
+            const TypeInfo* pLhs = resolver.find( name );
+            const TypeInfo* pRhs = resolver.find( target );
+            if ( pLhs != nullptr && pRhs != nullptr )
+                return pLhs->_typeID == pRhs->_typeID;
+            return canonicalName( pLhs, name ) == canonicalName( pRhs, target );
         };
 
         // 부모의 프로퍼티까지 본다. 자기 것만 보면 부모가 문자열이나 컨테이너를 가진 타입도 통째 복사로 간다.
@@ -354,17 +374,16 @@ namespace sw
             }
             for ( const hashed_string& dynamicType : kArrDynamicTypes )
             {
-                if ( registry.isType( prop._typeName, dynamicType ) )
+                if ( isSameType( prop._typeName, dynamicType ) )
                 {
                     bPOD = false;
                     break;
                 }
             }
         }
-        _bIsPODFastPath       = bPOD ? SW_TRUE : SW_FALSE;
-        _bHasSaveGameProperty = bSaveGame ? SW_TRUE : SW_FALSE;
-        _bHasValidator        = ReflectionValidation::computeHasValidator( *this ) ? SW_TRUE : SW_FALSE;
-        _bDerivedFlagsBuilt   = SW_TRUE;
+        const bool   bValidator = ReflectionValidation::computeHasValidator( *this, resolver );
+        const uint32 flags      = kDerivedFlagsBuilt | ( bPOD ? kDerivedPODFastPath : 0u ) | ( bSaveGame ? kDerivedHasSaveGameProperty : 0u ) | ( bValidator ? kDerivedHasValidator : 0u );
+        _derivedFlags.store( static_cast<uint8>( flags ), std::memory_order_release ); // 한 번에 바꾼다 — 읽기는 옛 판정이나 새 판정 하나를 본다
     }
 
     PropertyListView TypeInfo::getPropertiesWithBase() const

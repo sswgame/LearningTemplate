@@ -155,6 +155,21 @@ namespace sw
         vector<unique_ptr<Snapshot>> _listOwned; ///< 지금 판과 옛 판 — 이 칸이 사는 동안 산다
     };
 
+    struct TypeInfo;
+
+    /**
+     * @brief 판정(`TypeInfo::computeDerivedFlags`)이 칸 타입을 이름으로 찾는 길입니다. 살아 있는 타입만 답합니다.
+     * @details 레지스트리는 독점 잠금 안에서 잠그지 않는 조회를 준다(판정을 잠금 안에서 구해 발행 전에 끝낸다 — shared_mutex 는 재귀가 아니다).
+     *          레지스트리 밖 사본은 공개 조회(`TypeRegistry::findType`)를 쓴다.
+     */
+    struct TypeResolver
+    {
+        const void* _pContext;
+        const TypeInfo* ( *_pFind )( const void* pContext, const hashed_string& name );
+
+        const TypeInfo* find( const hashed_string& name ) const { return _pFind( _pContext, name ); }
+    };
+
     /// @brief 등록된 타입의 정보입니다. FQN, 프로퍼티, 메서드, 생성 가능 여부를 담습니다.
     struct SW_API TypeInfo
     {
@@ -235,20 +250,24 @@ namespace sw
         /** @brief `REFLECT( Static )` 타입(함수 라이브러리)입니다. `FunctionMetadata::_bStatic` 과는 다릅니다. */
         uint8 _bStatic : 1;
         /** @brief 내장 스칼라나 문자열 타입입니다(int32, bool, sw::string 등). REFLECT 코드젠이 없습니다. */
-        uint8 _bPrimitive    : 1;
-        uint8 _bIsCacheBuilt : 1; ///< 자기 이름 맵(`_mapNameToProperty` · `_mapNameToMethod`)을 지었다. 아니면 이름 조회는 선형으로 찾는다
+        uint8                  _bPrimitive    : 1;
+        uint8                  _bIsCacheBuilt : 1; ///< 자기 이름 맵(`_mapNameToProperty` · `_mapNameToMethod`)을 지었다. 아니면 이름 조회는 선형으로 찾는다
+        [[maybe_unused]] uint8 _reservedFlags : 4;
         /**
-         * @brief 아래 셋은 판정(POD · 세이브 · 검증)이고 `computeDerivedFlags` 가 한 번에 구한다 — 조회는 읽기만 한다(`mutable` 지연 계산이 없다).
-         * @details 등록은 배치 끝에 바뀐 타입의 상속 목록을 **모두** 다시 지은 뒤 판정을 구한다(`TypeRegistry::rebuildAffected`) — 검증 판정이 칸 타입의
-         *          상속 목록을 재귀로 읽기 때문이다. 레지스트리 밖 사본(테스트)은 `rebuildDerivedCaches` → `computeDerivedFlags` 를 직접 부른다.
-         *          구하지 않은 채 물으면 멈춘다(`_bDerivedFlagsBuilt`). 예전에는 첫 조회가 구해 로드 워커들이 같은 바이트의 비트를 함께 썼다.
+         * @brief 판정(POD · 세이브 · 검증)과 "구했다" 표시의 비트(`kDerived*`)입니다. `computeDerivedFlags` 가 한 번에 구한다 — 조회는 읽기만 한다(`mutable` 지연 계산이 없다).
+         * @details 레지스트리는 등록 · 별칭 · 해제 때 바뀐 타입의 상속 목록을 **모두** 다시 지은 뒤 **같은 독점 잠금 안에서** 판정을 구한다(`TypeRegistry::relinkAffectedLocked`)
+         *          — 발행 전에 끝나 다른 스레드가 "구하지 않은" 타입을 보지 않는다. 검증 판정이 칸 타입의 상속 목록을 재귀로 읽어 모두 지은 뒤다.
+         *          위 비트필드와 따로 원자값인 까닭: 자손을 다시 이을 때 잠금 없이 읽는 스레드(`canConstruct` 등)와 겹쳐 쓴다 — 같은 바이트의 비트필드였을 때는 쓰기의
+         *          읽고-고쳐-쓰기가 그 바이트의 다른 비트(`_bIsCacheBuilt`)를 옛 값으로 되돌릴 수 있었다. 레지스트리 밖 사본(테스트)은 `rebuildDerivedCaches` →
+         *          `computeDerivedFlags` 를 직접 부른다. 구하지 않은 채 물으면 멈춘다.
          */
-        uint8                  _bIsPODFastPath       : 1;
-        uint8                  _bHasSaveGameProperty : 1;
-        uint8                  _bHasValidator        : 1;
-        uint8                  _bDerivedFlagsBuilt   : 1; ///< 위 셋을 구했다. 상속 목록을 비우면 함께 내려간다
-        [[maybe_unused]] uint8 _reservedCacheFlags   : 8;
+        atomic<uint8>          _derivedFlags;
         [[maybe_unused]] uint8 _reservedPadding[2];
+
+        static constexpr uint8 kDerivedPODFastPath         = 1u << 0;
+        static constexpr uint8 kDerivedHasSaveGameProperty = 1u << 1;
+        static constexpr uint8 kDerivedHasValidator        = 1u << 2;
+        static constexpr uint8 kDerivedFlagsBuilt          = 1u << 3; ///< 위 셋을 구했다. 상속 목록을 비우면 함께 내려간다
 
         /** @brief 비어 있는 TypeInfo 를 만듭니다. */
         TypeInfo() noexcept;
@@ -295,9 +314,12 @@ namespace sw
         bool hasValidator() const;
         /**
          * @brief 판정(POD · 세이브 · 검증)을 지금의 상속 목록으로 구합니다. `rebuildDerivedCaches` 뒤에 부르고, 칸 타입의 목록도 지어져 있어야 합니다.
-         * @details 레지스트리가 배치 끝에 바뀐 타입마다 부른다. 레지스트리 밖 사본은 부르는 쪽이 직접 부른다.
+         * @details 레지스트리가 독점 잠금 안에서 바뀐 타입마다 잠그지 않는 조회(@p resolver)로 부른다. 레지스트리 밖 사본은 인자 없는 쪽(공개 조회)을 직접 부른다.
          */
+        void computeDerivedFlags( const TypeResolver& resolver );
         void computeDerivedFlags();
+        /** @brief 판정을 구했는지입니다(`computeDerivedFlags`). 레지스트리에 든 살아 있는 타입은 늘 true 입니다. */
+        bool hasDerivedFlags() const { return ( _derivedFlags.load( std::memory_order_acquire ) & kDerivedFlagsBuilt ) != 0; }
         /** @brief 이 타입이 targetFqn 이거나 그 파생이면 true 입니다. 부모가 등록되지 않았어도 `_parentFQN` 이 같으면 true 입니다. */
         bool isDerivedFrom( const hashed_string& targetFqn ) const;
         /**

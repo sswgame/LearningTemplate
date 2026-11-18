@@ -30,6 +30,15 @@ namespace sw
         setMeshVisible( true ); // 풀에서 다시 꺼낸 모습은 끝날 때 숨긴 그대로다
     }
 
+    SpawnStateReset ArenaProjectileComponent::resetToSpawnState()
+    {
+        if ( _bFinished == SW_TRUE )
+            setMeshVisible( true ); // `finish` 가 숨긴 것이다 — 프리팹의 메시는 보이는 채 스폰한다
+        _projectileID = 0;
+        _bFinished    = SW_FALSE;
+        return SpawnStateReset::Reset;
+    }
+
     void ArenaProjectileComponent::onTick( TickContext& context )
     {
         Component::onTick( context );

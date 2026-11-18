@@ -67,7 +67,6 @@ namespace sw
         /** @brief 샤드 하나(클라이언트)면 그 엔드포인트의 번호, 샤드 여럿(서버)이면 비어 있습니다. */
         [[nodiscard]] optional<int32> getClientIndex() const override;
         void                          collectConnected( vector<int32>& outListConnection ) const override;
-        int32                         getMaxBytesPerSecond() const override;
         bool                          isConnectionSaturated( int32 connectionID ) const override;
         void                          addSentKindStats( NetMessageKindStatsTable& outTable ) const override;
 

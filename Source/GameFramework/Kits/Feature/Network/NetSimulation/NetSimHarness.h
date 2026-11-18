@@ -100,7 +100,7 @@ namespace sw
     /** @brief 하니스 설정입니다. */
     struct NetSimConfig
     {
-        NetEndpointConfig _hostSettings{};             ///< 월드마다 쓰는 호스트 설정. 챌린지 솔트 시드는 `_seed` 로 다시 정한다
+        NetEndpointConfig _hostSettings{};             ///< 월드마다 쓰는 호스트 설정. 챌린지 솔트 시드는 `_seed` 로, 송신 상한 · 속도 조절은 `Config/Engine/NetSendThrottle.json` 으로 다시 정한다(게임과 같은 회선 동작)
         float64           _tickInterval{ 1.0 / 60.0 }; ///< 고정 스텝(초). 오브젝트 틱과 망 시각이 모두 이 간격으로 진행한다
         uint32            _seed{ 1u };                 ///< 망, 연결별 흉내, 챌린지 솔트의 시드
         uint16            _serverPort{ 7000 };         ///< 서버 엔드포인트 포트. 클라이언트는 그다음 번호부터 차례로 받고 다시 쓰지 않는다
@@ -272,9 +272,11 @@ namespace sw
     class SW_KIT_API NetSimWorld
     {
     public:
-        /** @brief @p pBorrowedScene 이 비면 월드가 @p services 로 씬을 만들어 가진다. 있으면 @p pSceneSource 에서 빌린 씬이고 `stop` 이 돌려준다. */
-        NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetEndpointConfig& hostSettings,
-                     INetSimSceneSource* pSceneSource, Scene* pBorrowedScene );
+        /**
+         * @brief @p pBorrowedScene 이 비면 월드가 @p services 로 씬을 만들어 가진다. 있으면 @p pSceneSource 에서 빌린 씬이고 `stop` 이 돌려준다.
+         * @details 호스트는 만든 쪽(하니스)이 `_host.initialize` 로 세운다 — 실패를 생성자가 돌려줄 수 없기 때문이다.
+         */
+        NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, INetSimSceneSource* pSceneSource, Scene* pBorrowedScene );
         ~NetSimWorld();
 
         NetSimWorld( const NetSimWorld& )            = delete;

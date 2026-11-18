@@ -132,10 +132,10 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, DerivedFlagsAreBuiltByRegistrationNotB
 {
     const sw::TypeInfo* pType = sw::PropertyRoleActor::StaticType();
     SW_REQUIRE_NOT_NULL( pType );
-    SW_EXPECT_TRUE( pType->_bDerivedFlagsBuilt == SW_TRUE );
+    SW_EXPECT_TRUE( pType->hasDerivedFlags() );
 
     sw::TypeInfo copy = *pType; // 사본은 파생 캐시를 비운다(대입 연산자)
-    SW_EXPECT_TRUE( copy._bDerivedFlagsBuilt == SW_FALSE );
+    SW_EXPECT_FALSE( copy.hasDerivedFlags() );
     copy.rebuildDerivedCaches();
     copy.computeDerivedFlags();
     SW_EXPECT_EQUAL( pType->hasSaveGameProperty(), copy.hasSaveGameProperty() );

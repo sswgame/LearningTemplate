@@ -78,25 +78,20 @@ namespace sw
                     emit.linef( "%#%# = SW_TRUE;", prefix, member );
             }
 
+            /** @brief 글 칸(`string` · `hashed_string`)은 리터럴 포인터만 넘기고 대입은 Engine 의 비인라인 도우미가 한다 — TU 마다 문자열 대입이 펼쳐지지 않게(`ReflectionMetadataText`). */
             static void emitValue( CodeEmit& emit, const string_view prefix, const string_view member, const string& value )
             {
                 if ( isValueSet( value ) )
-                    emit.linef( "%#%# = \"%#\";", prefix, member, CodeEmit::escapeCppString( value ) );
+                    emit.linef( "::sw::ReflectionMetadataText::assign( %#%#, %# );", prefix, member, CodeEmit::quoted( value ) );
             }
 
-            /** @brief 커스텀 메타는 엔진에서 `_mapCustomMeta` 입니다(DTO 는 적은 순서를 지키는 목록). */
+            /** @brief 커스텀 메타는 엔진에서 `_mapCustomMeta` 입니다(DTO 는 적은 순서를 지키는 목록). 맵 초기화 목록 대신 쌍마다 비인라인 도우미를 부른다. */
             static void emitValue( CodeEmit& emit, const string_view prefix, const string_view, const vector<pair<string, string>>& listPair )
             {
-                if ( isValueSet( listPair ) == false )
-                    return;
-                emit.linef( "%#_mapCustomMeta = {", prefix );
-                emit.push();
                 for ( const auto& [key, val] : listPair )
                 {
-                    emit.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
+                    emit.linef( "::sw::ReflectionMetadataText::addCustomMeta( %#_mapCustomMeta, %#, %# );", prefix, CodeEmit::quoted( key ), CodeEmit::quoted( val ) );
                 }
-                emit.pop();
-                emit.line( "};" );
             }
 
             static void emitValue( CodeEmit& emit, const string_view prefix, const string_view member, const FunctionNetRole role )

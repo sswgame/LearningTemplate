@@ -18,6 +18,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 
 namespace sw
@@ -43,6 +44,7 @@ namespace sw
      *            이때 쌓인 소리(`getSoundQueue`)도 낸다.
      *            뷰 오브젝트가 정리돼 있으면 다음 틱이 스스로 플러시를 예약하고, `onFlush` 가 다시 스폰한다.
      *          - **스폰한 오브젝트**: `spawnPrefab` 이 핸들을 보관하고, `despawnViews` 가 모두 정리한다(상태 저장 전과 플레이 끝). 스스로 사라지는 오브젝트의 핸들은 플러시가 가끔 정리한다.
+     *            풀 정책(`PrefabPoolPolicy`, 데이터)을 받은 스폰은 프리팹 경로마다 풀 하나에서 꺼내고 `releaseSpawned` 로 돌려받는다(Lyra · Boss Room 의 풀).
      *          - **자동 플레이**: PROPERTY `_bAutoPlay` 로 켠다. 개발 구성에서는 게임이 `Dev/` 에서 `SW_GAME_AUTOPLAY` 로 등록한 전역 변수도 켠다(런타임 칸 `IGameAutoplayQuery` 로 읽는다 — 배포본에는 없다).
      *          - **다른 오브젝트 디렉터 뒤에 돌리기**: 키트 디렉터 사이의 순서는 보통 한 오브젝트에 붙인 순서이다(`SessionStateComponent`).
      *            씬을 나눠 디렉터를 다른 오브젝트에 두면 PROPERTY `_tickAfter` 로 그 오브젝트의 첫 디렉터 뒤에 규칙을 돌린다.
@@ -158,6 +160,14 @@ namespace sw
         void scheduleFlush();
         /** @brief 프리팹을 스폰하고 정리할 목록에 넣습니다. 게임 스레드에서 부르며, 프리팹을 읽지 못하면 nullptr 를 반환합니다. */
         GameObject* spawnPrefab( GameObjectManager& manager, string_view prefabPath, const utf8* pName );
+        /**
+         * @brief 풀 정책 @p pool(데이터)대로 프리팹을 꺼냅니다. `_maxIdleCount` 가 0 이면 위 `spawnPrefab` 과 같고, 아니면 그 프리팹 경로의 풀(`PrefabPool`)에서 꺼낸다.
+         * @details 풀에서 꺼낸 인스턴스는 스폰 상태로 되돌려 둔 것이다 — 자리 · 시작 호출은 꺼낸 쪽이 정한다. 돌려줄 때는 `releaseSpawned` 를 부른다.
+         *          풀 계약을 어긴 프리팹(되돌리기를 모르는 컴포넌트)이면 오류를 남기고 nullptr 다. 풀은 `despawnViews` 가 모두 지운다(상태 저장 전 · 플레이 끝).
+         */
+        GameObject* spawnPrefab( GameObjectManager& manager, string_view prefabPath, const utf8* pName, const PrefabPoolPolicy& pool );
+        /** @brief `spawnPrefab( …, pool )` 로 꺼낸 오브젝트를 돌려주고 @p inoutHandle 을 비웁니다. 그 경로의 풀이 없으면(정책 0) 지웁니다. */
+        void releaseSpawned( GameObjectManager& manager, string_view prefabPath, GameObjectHandle& inoutHandle );
         /** @brief 프리팹이 아닌 경로로 만든 오브젝트(코드로 만든 것)를 정리할 목록에 넣습니다. */
         void trackSpawned( const GameObject& object );
         /** @brief 스폰한 오브젝트 하나를 지우고 @p inoutHandle 을 비웁니다. 이미 없으면 핸들만 비웁니다. */
@@ -246,6 +256,7 @@ namespace sw
         GameObjectHandle _tickAfter;
 
         vector<GameObjectHandle> _listSpawned;
+        vector<PrefabPool>       _listPool;             ///< 풀 정책으로 꺼낸 프리팹의 풀(경로마다 하나). 꺼낸 것은 `_listSpawned` 밖이라 `despawnViews` 가 풀째 지운다
         vector<uint8>            _pendingStateBytes;    ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         GameSoundQueue           _soundQueue;           ///< 낼 소리. 오디오는 게임 스레드에서 다루므로 틱 뒤에 낸다
         uint32                   _compactThreshold;     ///< 이 수를 넘으면 사라진 핸들을 덜어 낸다
