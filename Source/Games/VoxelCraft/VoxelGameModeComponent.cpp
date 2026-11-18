@@ -7,6 +7,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -74,6 +75,7 @@ namespace sw
         if ( areViewsSpawned() == false )
             return; // 상태를 저장하기 전에 청크를 정리했습니다. 베이스가 청크를 다시 스폰합니다(블록은 그대로입니다).
         scheduleRebuilds();
+        SW_PROFILE_COUNT( "GT.VoxelWorld.residentChunks", _world.getChunkCountX() * _world.getChunkCountZ() ); // 감사 K-12 전후 비교 — 지금은 월드 전량이 상주한다
         logStatus( deltaTime );
     }
 

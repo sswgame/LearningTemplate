@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Profiling/FrameProfiler.h"
+
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
 
 namespace sw
@@ -159,6 +161,7 @@ namespace sw
 
     void VoxelMesher::fillChunkMesh( const VoxelWorld& world, int32 chunkX, int32 chunkZ, VoxelChunkMesh& outMesh )
     {
+        SW_PROFILE_SCOPE( "GT.VoxelMesher.fillChunkMesh" ); // 감사 K-12 전후 비교 — 청크 하나 메싱 시간
         outMesh.clear();
         const VoxelBlockCatalog* pCatalog = world.getCatalog();
         if ( pCatalog == nullptr || world.findChunk( chunkX, chunkZ ) == nullptr )
@@ -185,5 +188,6 @@ namespace sw
                 }
             }
         }
+        SW_PROFILE_COUNT( "GT.VoxelMesher.vertices", outMesh._listOpaqueVertex.size() + outMesh._listTranslucentVertex.size() );
     }
 } // namespace sw
