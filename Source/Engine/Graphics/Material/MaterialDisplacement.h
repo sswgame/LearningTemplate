@@ -18,6 +18,8 @@ namespace sw
         static constexpr float32 kMaxTessFactor = 64.0f;
         /** @brief 거리 나눗셈의 바닥(m)입니다. 카메라에 붙은 변이 무한 계수를 내지 않게 합니다. */
         static constexpr float32 kMinViewDepth = 0.05f;
+        /** @brief UV 넓이 · 행렬식의 바닥입니다. 이보다 작으면 퇴화로 보고 노멀을 다시 구하지 않습니다. */
+        static constexpr float32 kMinUVArea = 1.0e-12f;
 
         /**
          * @brief 변 하나의 테셀레이션 계수입니다 — 변의 월드 길이를 두 끝점의 평균 뷰 깊이로 나눈 각 크기(rad) × 밀도(rad 당 분할 수)를 [1, 상한] 으로 자릅니다.
@@ -39,6 +41,60 @@ namespace sw
         [[nodiscard]] static float32 computeInsideTessFactor( float32 edge0, float32 edge1, float32 edge2 ) noexcept
         {
             return MathUtil::max( MathUtil::max( edge0, edge1 ), edge2 );
+        }
+
+        /**
+         * @brief 높이 맵을 읽을 밉 단계입니다 — 테셀레이션이 만든 정점 간격(패치의 UV 변 / 안쪽 계수)이 걸치는 텍셀 수의 log2 이고 0 이상입니다.
+         * @details 도메인 스테이지에는 화면 미분이 없어 정점 간격으로 밉을 고른다 — 정점이 담을 수 없는 높이 주파수를 걸러 먼 표면의 읽기가 흩어지지 않고
+         *          거리에 따라 계수가 바뀔 때 윤곽이 끓지 않는다(언리얼 테셀레이션 변위 · HDRP 가 거리로 밉을 고르는 것과 같은 생각).
+         * @param textureSize 높이 맵 크기(텍셀).
+         */
+        [[nodiscard]] static float32 computeHeightMipLevel( const float2& uv0, const float2& uv1, const float2& uv2, float32 insideFactor, const float2& textureSize ) noexcept
+        {
+            const float2  edge0( ( uv1._x - uv0._x ) * textureSize._x, ( uv1._y - uv0._y ) * textureSize._y );
+            const float2  edge1( ( uv2._x - uv1._x ) * textureSize._x, ( uv2._y - uv1._y ) * textureSize._y );
+            const float2  edge2( ( uv0._x - uv2._x ) * textureSize._x, ( uv0._y - uv2._y ) * textureSize._y );
+            const float32 texelSpan = MathUtil::max( MathUtil::max( edge0.getLength(), edge1.getLength() ), edge2.getLength() ) / MathUtil::max( insideFactor, 1.0f );
+            return MathUtil::log2( MathUtil::max( texelSpan, 1.0f ) );
+        }
+
+        /** @brief 패치의 UV 에 대한 위치 미분 — 탄젠트 dP/du · 바이탄젠트 dP/dv(정규화하지 않는다). UV 가 퇴화한 패치(넓이 0)는 둘 다 0 입니다. */
+        struct UVTangentFrame
+        {
+            float3 _tangent;
+            float3 _bitangent;
+        };
+
+        /** @brief 세 꼭짓점의 위치 · UV 에서 dP/du · dP/dv 를 풉니다(고전 탄젠트 식과 같은 2x2 풀이). */
+        [[nodiscard]] static UVTangentFrame computeUVTangentFrame( const float3& position0, const float3& position1, const float3& position2, const float2& uv0,
+                                                                   const float2& uv1, const float2& uv2 ) noexcept
+        {
+            const float3   edge1   = position1 - position0;
+            const float3   edge2   = position2 - position0;
+            const float2   uvEdge1 = uv1 - uv0;
+            const float2   uvEdge2 = uv2 - uv0;
+            const float32  det     = uvEdge1._x * uvEdge2._y - uvEdge2._x * uvEdge1._y;
+            UVTangentFrame frame{ float3::Zero, float3::Zero };
+            if ( MathUtil::abs( det ) < kMinUVArea )
+                return frame;
+            frame._tangent   = ( edge1 * uvEdge2._y - edge2 * uvEdge1._y ) / det;
+            frame._bitangent = ( edge2 * uvEdge1._x - edge1 * uvEdge2._x ) / det;
+            return frame;
+        }
+
+        /**
+         * @brief 변위가 만든 기울기로 다시 구한 노멀입니다 — N' = normalize( N - scale × 표면 기울기(h) ).
+         * @details 표면 기울기 틀(Mikkelsen 2020 "Surface Gradient Based Bump Mapping", HDRP 가 쓰는 식)이다. ∇u = (dP/dv × N) / det, ∇v = (N × dP/du) / det,
+         *          det = N · (dP/du × dP/dv) 라 UV 손잡이(거울 UV)에 상관없이 오르막 반대로 기운다. 퇴화(det ≈ 0)하면 N 그대로다.
+         * @param heightSlopeU 높이 맵(0 ~ 1)의 u 미분. @param heightSlopeV v 미분. @param scale 변위 세기(m, `_displacementScale`).
+         */
+        [[nodiscard]] static float3 computeDisplacementNormal( const float3& normal, const UVTangentFrame& frame, float32 heightSlopeU, float32 heightSlopeV, float32 scale ) noexcept
+        {
+            const float32 det = normal.dot( frame._tangent.cross( frame._bitangent ) );
+            if ( MathUtil::abs( det ) < kMinUVArea )
+                return normal;
+            const float3 surfaceGradient = ( frame._bitangent.cross( normal ) * heightSlopeU + normal.cross( frame._tangent ) * heightSlopeV ) * ( scale / det );
+            return ( normal - surfaceGradient ).normalize();
         }
 
         /** @brief 노멀 방향 변위 길이(m)입니다 — 높이가 기준 높이(`_displacementMidLevel`)이면 0, 위는 바깥, 아래는 안쪽입니다(언리얼 Displacement Center 와 같다). */

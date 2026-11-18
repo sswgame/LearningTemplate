@@ -55,6 +55,22 @@ namespace sw
             return float3{ weightX * inverse, weightY * inverse, weightZ * inverse };
         }
 
+        /**
+         * @brief 축 @p axis(0 x 면 · 1 y 면 · 2 z 면)의 면에 위치를 투영한 UV 입니다 — 셰이더 `SurfaceFunction::computeTriplanarFaceUV` 와 같은 식이다.
+         * @details 여섯 면 모두 바깥에서 볼 때 거울상이 아니다 — u 는 그 면을 보는 화면의 오른쪽(왼손: 위 × 시선, 시선 = -N), v 는 화면 아래(벽 -y, 바닥 · 천장 -z).
+         */
+        static float2 computeTriplanarFaceUV( const float3& position, const float3& normal, uint32 axis )
+        {
+            const float32 signX = normal._x >= 0.0f ? 1.0f : -1.0f;
+            const float32 signY = normal._y >= 0.0f ? 1.0f : -1.0f;
+            const float32 signZ = normal._z >= 0.0f ? 1.0f : -1.0f;
+            if ( axis == 0 )
+                return float2{ position._z * signX, -position._y };
+            if ( axis == 1 )
+                return float2{ position._x * signY, -position._z };
+            return float2{ -position._x * signZ, -position._y };
+        }
+
         /** @brief 타일 좌표 (@p tileX, @p tileY) 와 씨앗 @p seed 의 32 비트 해시입니다(`HashUtil::mix32` 두 번, 씨앗에 소금을 더한다). */
         static constexpr uint32 hashTile( int32 tileX, int32 tileY, uint32 seed )
         {

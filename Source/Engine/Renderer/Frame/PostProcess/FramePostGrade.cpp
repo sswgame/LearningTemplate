@@ -154,7 +154,7 @@ namespace sw
         }
     }
 
-    PostGradeConstants PostGradeConstants::make( const PostProcessValues& values, uint32 lutSize )
+    PostGradeConstants PostGradeConstants::make( const PostProcessValues& values, uint32 lutSize, uint32 blendLUTSize, float32 lutWeight )
     {
         using Internal = FramePostGradeInternal;
         PostGradeConstants constants{};
@@ -192,8 +192,13 @@ namespace sw
         constants._params = float4{ MathUtil::saturate( values._shadowsMax ), MathUtil::saturate( values._highlightsMin ), bGrading ? 1.0f : 0.0f, 0.0f };
 
         // LUT 는 읽힌 것이 있고 세기가 0 보다 클 때만 건다 — 읽는 중이면 이번 프레임은 LUT 없이 그린다(못 읽으면 텍스처 쪽이 오류를 남긴다).
-        const float32 lutIntensity = lutSize > 0 ? MathUtil::saturate( values._colorGradingLUTIntensity ) : 0.0f;
-        constants._lut             = float4{ lutIntensity > 0.0f ? static_cast<float32>( lutSize ) : 0.0f, lutIntensity, 0.0f, 0.0f };
+        // 둘째 LUT 가 있으면 셰이더가 두 LUT 를 무게로 섞고, 없으면 첫 LUT 만 무게만큼(나머지는 항등) 세기를 줄인다.
+        const bool    bBlend       = lutSize > 0 && blendLUTSize > 0;
+        const float32 weight       = MathUtil::saturate( lutWeight );
+        const float32 lutIntensity = lutSize > 0 ? MathUtil::saturate( values._colorGradingLUTIntensity ) * ( bBlend ? 1.0f : weight ) : 0.0f;
+        const bool    bLUT         = lutIntensity > 0.0f;
+        constants._lut             = float4{ bLUT ? static_cast<float32>( lutSize ) : 0.0f, lutIntensity, bLUT && bBlend ? 1.0f - weight : 0.0f,
+                                 bLUT && bBlend ? static_cast<float32>( blendLUTSize ) : 0.0f };
         return constants;
     }
 

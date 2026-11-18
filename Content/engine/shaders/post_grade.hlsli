@@ -82,21 +82,33 @@ static float2 CameraGrade::computeLUTUV( float3 color, float size, float slice )
 
 /**
  * @brief 톤맵한 [0,1] 색을 컬러 그레이딩 LUT(g_ColorGradingLUTIndex)로 바꿔 세기만큼 섞습니다. 파랑은 이웃 두 조각을 읽어 섞는다(조각 사이는 필터가 섞지 않는다).
- * @details LUT 가 없거나(읽는 중 · 경로 없음) 세기 0 이면 g_GradeLUT.x 가 0 이라 읽지 않는다.
+ * @details LUT 가 없거나(읽는 중 · 경로 없음) 세기 0 이면 g_GradeLUT.x 가 0 이라 읽지 않는다. 겹친 볼륨이면 둘째 LUT(g_ColorGradingLUTBlendIndex, 한 변 g_GradeLUT.w)를
+ *          무게 g_GradeLUT.z 로 섞는다 — 언리얼 CombineLUTs 가 무게 붙은 LUT 를 한 장으로 굽는 것과 같은 색이다(LUT 읽기가 선형이다).
  */
 static float3 CameraGrade::applyLUT( float3 color )
 {
     float3 result = color;
     SW_BRANCH if ( g_GradeLUT.x > 0.5f )
     {
-        const float  size    = g_GradeLUT.x;
         const float3 clamped = saturate( color );
+        const float  size    = g_GradeLUT.x;
         const float  blue    = clamped.b * ( size - 1.0f );
         const float  slice0  = floor( blue );
         const float  slice1  = min( slice0 + 1.0f, size - 1.0f );
         const float3 lower   = Bindless::sampleIndex( SW_ENGINE_ROLE( ColorGradingLUT ), CameraGrade::computeLUTUV( clamped, size, slice0 ) ).rgb;
         const float3 upper   = Bindless::sampleIndex( SW_ENGINE_ROLE( ColorGradingLUT ), CameraGrade::computeLUTUV( clamped, size, slice1 ) ).rgb;
-        result               = lerp( color, lerp( lower, upper, blue - slice0 ), g_GradeLUT.y );
+        float3       graded  = lerp( lower, upper, blue - slice0 );
+        SW_BRANCH if ( g_GradeLUT.z > 0.0f )
+        {
+            const float  blendSize   = g_GradeLUT.w;
+            const float  blendBlue   = clamped.b * ( blendSize - 1.0f );
+            const float  blendSlice0 = floor( blendBlue );
+            const float  blendSlice1 = min( blendSlice0 + 1.0f, blendSize - 1.0f );
+            const float3 blendLower  = Bindless::sampleIndex( SW_ENGINE_ROLE( ColorGradingLUTBlend ), CameraGrade::computeLUTUV( clamped, blendSize, blendSlice0 ) ).rgb;
+            const float3 blendUpper  = Bindless::sampleIndex( SW_ENGINE_ROLE( ColorGradingLUTBlend ), CameraGrade::computeLUTUV( clamped, blendSize, blendSlice1 ) ).rgb;
+            graded                   = lerp( graded, lerp( blendLower, blendUpper, blendBlue - blendSlice0 ), g_GradeLUT.z );
+        }
+        result = lerp( color, graded, g_GradeLUT.y );
     }
     return result;
 }

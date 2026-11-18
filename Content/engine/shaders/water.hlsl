@@ -137,7 +137,7 @@ void computeWaterLighting( PixelContext context, float3 normal, float3 toView, o
 void computeWaterLighting( PixelContext context, float3 normal, float3 toView, out float3 outBody, out float outSpecular )
 {
     const float shadow = Shadow::sampleAtWorld( context._worldPosition, normal );
-    outBody            = Lighting::shadeLights( context._user._waterColor.rgb, context._worldPosition, normal, shadow, kBodyRoughness, kSurfaceMetallic );
+    outBody            = Lighting::shadeLights( context._user._waterColor.rgb, context._worldPosition, normal, shadow, kBodyRoughness, kSurfaceMetallic, 1.0f );
 
     // 주광의 반사(블린-퐁) — 물은 매끈하다.
     const float3 toLight = normalize( -g_KeyLightDirIntensity.xyz );

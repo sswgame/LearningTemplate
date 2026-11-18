@@ -202,7 +202,7 @@ struct MaterialTexture
     static float4 sampleIndex( uint index, float2 uv );
     static float4 sampleIndexTexture( uint index, float2 uv ); // 텍스처를 읽는다(보기 모드 Mipmaps 가 아닐 때의 sampleIndex)
     static float4 samplePoint( uint index, float2 uv );
-    static float4 sampleLevelZero( uint index, float2 uv );
+    static float4 sampleLevel( uint index, float2 uv, float level );               // 준 밉 단계로 — 정점 · 도메인 셰이더
     static float4 sampleGrad( uint index, float2 uv, float2 gradX, float2 gradY ); // 준 미분으로 — 아틀라스 타일을 frac 로 되풀이할 때
     static float2 computeSize( uint index );
     static float4 sampleMipColor( uint index, float2 uv );
@@ -325,13 +325,14 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint     g_DecalChannels;      // 1 알베도 · 2 노멀 · 4 머티리얼(C++ DecalChannels)
     uint     g_DecalAlbedoTexture; // MaterialTexture::sampleIndex 의 번호(없으면 kInvalidIndex — 흰색)
     uint     g_DecalNormalTexture;
+    uint     g_LensFlareTexture; // 렌즈 플레어 Image 구간의 텍스처 번호(lens_flare.hlsl — MaterialTexture::sampleIndex 의 뜻, 절차적 구간은 kInvalidIndex)
     // 표면 변형 층의 창(C++ SurfaceDeformBinding::_params) — (창 최소 x, 창 최소 z, 1 / 창 너비, 깊이 범위). z 가 0 이면 층이 없다. 텍스처는 엔진 칸 SurfaceDeform(g_SurfaceDeformIndex)
     float4 g_SurfaceDeformParams;
     // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.
     // 손으로 적지 않는다: 표에 없는 엔진 텍스처 인덱스가 생기면 에뮬 백엔드(DX11 · GL)가 칸을 몰라 자홍을 낸다(뜻은 표의 주석). 걸려 있지 않은 역할은 kInvalidIndex 다.
-    // 아래 20 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
-#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_19 ) || defined( SW_ENGINE_TEXTURE_INDEX_20 ) || SW_ENGINE_TEXTURE_COUNT != 20
-    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 20 fields below"
+    // 아래 22 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
+#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_21 ) || defined( SW_ENGINE_TEXTURE_INDEX_22 ) || SW_ENGINE_TEXTURE_COUNT != 22
+    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 22 fields below"
 #endif
     uint  SW_ENGINE_TEXTURE_INDEX_0;
     uint  SW_ENGINE_TEXTURE_INDEX_1;
@@ -353,6 +354,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  SW_ENGINE_TEXTURE_INDEX_17;
     uint  SW_ENGINE_TEXTURE_INDEX_18;
     uint  SW_ENGINE_TEXTURE_INDEX_19;
+    uint  SW_ENGINE_TEXTURE_INDEX_20;
+    uint  SW_ENGINE_TEXTURE_INDEX_21;
     uint  g_Flags;
     uint  g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
     uint  g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)

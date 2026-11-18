@@ -143,6 +143,53 @@ namespace sw
         return values;
     }
 
+    void PostProcessValues::blendColorGradingLUT( PostProcessValues& inoutValues, const DataPath& target, float32 alpha )
+    {
+        // 읽지 않은 칸(빈 경로)은 항등 LUT 다 — 빈 칸끼리도 같은 LUT 다.
+        const auto isSameLUT = []( const DataPath& lhs, const DataPath& rhs )
+        { return lhs.isSet() == rhs.isSet() && ( lhs.isSet() == false || lhs == string_view( rhs.get() ) ); };
+        constexpr float32 kMinLUTWeight = 1.0e-4f; // 이보다 가벼운 LUT 는 버린다(읽기 둘을 아낀다)
+        const float32     a             = MathUtil::saturate( alpha );
+        const float32     blend         = MathUtil::saturate( inoutValues._colorGradingLUTBlendWeight );
+        const bool        bHasBlend     = blend > 0.0f;
+        // 섞은 뒤의 세 무게 — 첫 LUT · 둘째 LUT · 목표(합 1).
+        float32 firstWeight  = ( 1.0f - blend ) * ( 1.0f - a );
+        float32 secondWeight = blend * ( 1.0f - a );
+        if ( isSameLUT( target, inoutValues._colorGradingLUT ) )
+            firstWeight += a;
+        else if ( bHasBlend && isSameLUT( target, inoutValues._colorGradingLUTBlend ) )
+            secondWeight += a;
+        else if ( bHasBlend == false )
+        {
+            inoutValues._colorGradingLUTBlend = target;
+            secondWeight                      = a;
+        }
+        else if ( a > MathUtil::min( firstWeight, secondWeight ) )
+        {
+            // 셋째 LUT — 가장 가벼운 것을 버린다(목표가 가장 가벼우면 짝 그대로 다시 정규화).
+            if ( firstWeight < secondWeight )
+            {
+                inoutValues._colorGradingLUT = inoutValues._colorGradingLUTBlend;
+                firstWeight                  = secondWeight;
+            }
+            inoutValues._colorGradingLUTBlend = target;
+            secondWeight                      = a;
+        }
+        const float32 total  = firstWeight + secondWeight;
+        float32       weight = total > 0.0f ? secondWeight / total : 0.0f;
+        if ( weight >= 1.0f - kMinLUTWeight )
+        {
+            inoutValues._colorGradingLUT = inoutValues._colorGradingLUTBlend;
+            weight                       = 0.0f;
+        }
+        if ( weight <= kMinLUTWeight )
+        {
+            inoutValues._colorGradingLUTBlend = DataPath{};
+            weight                            = 0.0f;
+        }
+        inoutValues._colorGradingLUTBlendWeight = weight;
+    }
+
     void PostProcessValues::blendOverrides( PostProcessValues& inoutValues, const PostProcessValues& target, const PostProcessOverrides& overrides, float32 weight )
     {
         // 값 칸과 표시 칸은 같은 차례다(단위 테스트 PostProcessVolumeTest.OverrideFlagsPairEveryValue 가 이름으로 대조한다). 칸을 더해도 이 함수는 그대로다.
@@ -171,15 +218,17 @@ namespace sw
                 PostProcessBlendable::blendList( inoutValues._listBlendable, target._listBlendable, alpha, false );
                 continue;
             }
-            // 경로는 섞을 수 없다 — 절반에서 바꾼다(언리얼은 LUT 둘을 무게로 섞은 LUT 를 굽지만, 여기서는 한 장만 건다).
-            // shortcut: 겹친 볼륨의 LUT 사이는 절반에서 넘어간다, 두 LUT 를 섞는 전환이 필요해지면 LUT 를 무게로 굽는 패스를 더한다.
-            DataPath* const pPath = pValue == &inoutValues._colorGradingLUT ? &inoutValues._colorGradingLUT
-                                  : pValue == &inoutValues._bloomDirtMask   ? &inoutValues._bloomDirtMask
-                                                                            : nullptr;
-            if ( pPath != nullptr )
+            // 컬러 그레이딩 LUT 는 두 장을 무게로 섞는다(언리얼 CombineLUTs 와 같은 셈 — blendColorGradingLUT).
+            if ( pValue == &inoutValues._colorGradingLUT )
+            {
+                blendColorGradingLUT( inoutValues, target._colorGradingLUT, alpha );
+                continue;
+            }
+            // 먼지 마스크 경로는 섞을 수 없다 — 절반에서 바꾼다(언리얼도 먼지 텍스처는 섞지 않고 바꾼다).
+            if ( pValue == &inoutValues._bloomDirtMask )
             {
                 if ( alpha >= 0.5f )
-                    *pPath = *static_cast<const DataPath*>( prop.getRawPtr( static_cast<const void*>( &target ) ) );
+                    inoutValues._bloomDirtMask = target._bloomDirtMask;
                 continue;
             }
             // 섞는 함수는 from 을 값으로 읽은 뒤 쓴다 — from 과 결과가 같은 주소여도 된다.

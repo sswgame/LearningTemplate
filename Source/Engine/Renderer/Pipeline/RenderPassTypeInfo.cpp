@@ -300,8 +300,25 @@ namespace sw
                     {
                         // 원본 색 · 장면 깊이 · 화면 속도를 읽는 효과 패스다. 꺼지면(후처리를 끈 뷰 · 품질 · gv_motionBlur · 컷 · 카메라와 물체가 모두 서 있음) 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderMotionBlur;
-                        info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth, Role::Velocity }, {} );
+                        info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth, Role::Velocity, Role::VelocityNeighborMax }, {} );
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
+                        break;
+                    }
+                    case RenderPassType::MotionBlurTileMax:
+                    {
+                        // 화면 속도 · 장면 깊이를 읽어 1/16 첨부에 타일 최대 속도를 쓴다. 출력 형식이 원본과 달라 원본을 가리키는 끄기(kBypassesToSource)는 없다 —
+                        // 모션 블러가 꺼진 뷰에서는 읽는 패스가 모두 빠져 이 패스도 빠진다(applyViewPassSelection).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderMotionBlurTileMax;
+                        info._inputContract  = makeContract( { Role::SceneDepth, Role::Velocity }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
+                        break;
+                    }
+                    case RenderPassType::MotionBlurNeighborMax:
+                    {
+                        // 타일 최대 속도(원본 역할)를 읽어 같은 크기 첨부에 3x3 이웃 최대를 쓴다. 끄기는 TileMax 와 같다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderMotionBlurNeighborMax;
+                        info._inputContract  = makeContract( { Role::SourceColor }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
                         break;
                     }
                     case RenderPassType::ScreenSpaceGI:

@@ -28,13 +28,17 @@ namespace sw
         float4 _arrWhiteBalance[3];                       ///< 화이트 밸런스 3x3 행렬의 행(xyz). 중립이면 단위 행렬
         float4 _arrRange[kRangeCount * kRangeFieldCount]; ///< 범위마다 (채도, 대비, 감마, 게인, 오프셋)의 rgb(w 는 0) — 전역 · 범위 값과 w 를 미리 곱하고 더했다
         float4 _params;                                   ///< x 그림자 끝 휘도, y 밝은 부분 시작 휘도, z 켬 1 · 끔 0(모든 값이 중립이면 0), w 0
-        float4 _lut;                                      ///< x LUT 한 변 N(0 = 없음), y 세기, zw 0
+        float4 _lut;                                      ///< x LUT 한 변 N(0 = 없음), y 세기, z 둘째 LUT 의 무게(0 = 섞지 않음), w 둘째 LUT 의 한 변 N
 
         /**
          * @brief 후처리 값 @p values 의 그레이딩 상수입니다.
          * @param lutSize 읽힌 LUT 의 한 변 N(텍스처 세로 크기). LUT 가 없거나 아직 읽는 중이면 0 — 세기도 0 이 된다
+         * @param blendLUTSize 함께 섞는 둘째 LUT 의 한 변 N(겹친 볼륨 — `PostProcessValues::_colorGradingLUTBlend`). 없으면 0
+         * @param lutWeight 첫 LUT 의 무게(0..1) — 둘째가 있으면 둘째가 1 - 무게로 섞이고, 없으면 나머지는 항등 LUT 라 세기에 곱한다
+         * @details 언리얼 CombineLUTs 가 무게 붙은 LUT 여럿을 한 장으로 굽는 자리다. 여기서는 두 장까지 톤맵 셰이더가 직접 읽어 섞는다 —
+         *          LUT 읽기가 선형이라 섞은 LUT 를 읽는 것과 같은 색이다.
          */
-        static PostGradeConstants make( const PostProcessValues& values, uint32 lutSize );
+        static PostGradeConstants make( const PostProcessValues& values, uint32 lutSize, uint32 blendLUTSize, float32 lutWeight );
         /**
          * @brief 색 온도 @p temperature(K) · 틴트 @p tint 의 장면 빛을 6500 K 흰색으로 돌리는 화이트 밸런스 행렬(선형 Rec.709, 행 셋)입니다.
          * @details 플랑크 궤적 근사(Kim 외 3차식)로 흰 점의 xy 를 구하고, 틴트는 1960 UCS 의 v 를 옮긴다. 두 흰 점 사이를 Bradford 적응으로 옮긴다(언리얼 WhiteBalance 와 같은 길).

@@ -75,3 +75,34 @@ SW_TEST_CASE( MaterialProjectionTest, TileVariationIsDeterministicAndSpread )
     }
     SW_EXPECT_NEAR( 0.5f, brightnessSum / 256.0f, 0.08f );
 }
+
+/**
+ * @brief [MaterialProjectionTest] 3 축 면 UV 는 여섯 면 모두 거울상이 아니다 — 면을 바깥에서 볼 때 화면 오른쪽으로 가면 u 가 늘고, 화면 위로 가면 v 가 준다
+ * @details 왼손 좌표계라 오른쪽 = 화면 위 × 시선(시선 = -N)이다. 화면 위는 벽이 +y, 바닥 · 천장이 +z 다. 변이: 면 부호를 빼면 -x · +z · -y 면 중 하나가 진다.
+ */
+SW_TEST_CASE( MaterialProjectionTest, TriplanarFaceUVIsNeverMirrored )
+{
+    const float3 arrNormal[] = {
+        float3{ 1.0f,  0.0f,  0.0f},
+        float3{-1.0f,  0.0f,  0.0f},
+        float3{ 0.0f,  1.0f,  0.0f},
+        float3{ 0.0f, -1.0f,  0.0f},
+        float3{ 0.0f,  0.0f,  1.0f},
+        float3{ 0.0f,  0.0f, -1.0f}
+    };
+    const uint32 arrAxis[] = { 0, 0, 1, 1, 2, 2 };
+    const float3 origin{ 0.3f, -0.7f, 1.1f };
+    for ( uint32 face = 0; face < 6; ++face )
+    {
+        const float3& normal   = arrNormal[face];
+        const float3  screenUp = arrAxis[face] == 1 ? float3{ 0.0f, 0.0f, 1.0f } : float3{ 0.0f, 1.0f, 0.0f };
+        const float3  right    = screenUp.cross( -normal );
+        const float2  base     = MaterialProjection::computeTriplanarFaceUV( origin, normal, arrAxis[face] );
+        const float2  toRight  = MaterialProjection::computeTriplanarFaceUV( origin + right, normal, arrAxis[face] );
+        const float2  toUp     = MaterialProjection::computeTriplanarFaceUV( origin + screenUp, normal, arrAxis[face] );
+        SW_EXPECT_NEAR( 1.0f, toRight._x - base._x, 1.0e-5f );
+        SW_EXPECT_NEAR( 0.0f, toRight._y - base._y, 1.0e-5f );
+        SW_EXPECT_NEAR( -1.0f, toUp._y - base._y, 1.0e-5f );
+        SW_EXPECT_NEAR( 0.0f, toUp._x - base._x, 1.0e-5f );
+    }
+}

@@ -555,6 +555,8 @@ namespace sw
         hashed_string _sceneDepthCopy{ "SceneDepthCopy" };
         /// 화면 속도(SceneVelocity — 불투명 지오메트리 패스의 출력) — TAA · 모션 블러가 선언한 입력을 역할로 건다(`g_VelocityIndex`).
         hashed_string _velocity{ "Velocity" };
+        /// 모션 블러 이웃 최대 속도(MotionBlurNeighborMax 출력) — 모션 블러가 `g_VelocityNeighborMaxIndex` 로 읽는다.
+        hashed_string _velocityNeighborMax{ "VelocityNeighborMax" };
         /// 화면 왜곡 오프셋(SceneDistortion — 왜곡 누적 패스의 출력) — 왜곡 적용 패스가 선언한 입력을 역할로 건다(`g_DistortionIndex`).
         hashed_string _distortion{ "Distortion" };
         /// 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷) — 조명 · 포워드 불투명 패스가 선언한 입력을 역할로 건다(`g_ContactShadowIndex`).
@@ -565,6 +567,8 @@ namespace sw
         hashed_string _autoExposure{ "AutoExposure" };
         /// 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUT`, `FramePostProcessTextureSet`) — 톤맵하는 패스가 `g_ColorGradingLUTIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
         hashed_string _colorGradingLUT{ "ColorGradingLUT" };
+        /// 겹친 볼륨이 섞는 둘째 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUTBlend`) — 톤맵하는 패스가 `g_ColorGradingLUTBlendIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
+        hashed_string _colorGradingLUTBlend{ "ColorGradingLUTBlend" };
         /// 블룸 먼지 마스크(뷰의 후처리 값 `_bloomDirtMask`) — 블룸을 더하는 패스가 `g_BloomDirtMaskIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
         hashed_string _bloomDirtMask{ "BloomDirtMask" };
         /// 표면 변형 층의 높이 텍스처(패킷의 `SurfaceDeformBinding`) — 씬 지오메트리 패스의 정점 셰이더가 `g_SurfaceDeformIndex` 로 읽는다. 텍스처 캐시가 소유한 CPU 텍스처다.
@@ -629,6 +633,7 @@ namespace sw
         hashed_string _decalChannels{ "g_DecalChannels" };             ///< 데칼이 덮는 칸(DecalChannels 비트)
         hashed_string _decalAlbedoTexture{ "g_DecalAlbedoTexture" };   ///< 데칼 알베도 텍스처 번호(MaterialTexture::sampleIndex 의 뜻)
         hashed_string _decalNormalTexture{ "g_DecalNormalTexture" };   ///< 데칼 노멀 텍스처 번호
+        hashed_string _lensFlareTexture{ "g_LensFlareTexture" };       ///< 렌즈 플레어 Image 구간의 텍스처 번호(MaterialTexture::sampleIndex 의 뜻, 없으면 kInvalidIndex)
         hashed_string _shadowParams{ "g_ShadowParams" };
         /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭, w 거리 끝에서 옅어지기 시작하는 깊이. `ViewShadowData::_cascadeLayout`.
         hashed_string _shadowCascadeLayout{ "g_ShadowCascadeLayout" };

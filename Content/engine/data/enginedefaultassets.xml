@@ -86,6 +86,8 @@
                      _shaderTAA="engine/shaders/taa.hlsl"
                      _shaderSceneDepthCopy="engine/shaders/scene_depth_copy.hlsl"
                      _shaderMotionBlur="engine/shaders/motion_blur.hlsl"
+                     _shaderMotionBlurTileMax="engine/shaders/motion_blur_tile_max.hlsl"
+                     _shaderMotionBlurNeighborMax="engine/shaders/motion_blur_neighbor_max.hlsl"
                      _shaderTonemap="engine/shaders/tonemap.hlsl"
                      _shaderDepthOfField="engine/shaders/depth_of_field.hlsl"
                      _shaderSky="engine/shaders/sky.hlsl"

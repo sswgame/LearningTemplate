@@ -238,10 +238,11 @@ namespace sw
         bool                                 bDepth = false;
         if ( beginInfo._depthTarget != 0 )
         {
-            const WebGPUTextureRecord* pDepth    = _pDevice->findTexture( beginInfo._depthTarget );
+            WebGPUTextureRecord* const pDepth    = _pDevice->findTexture( beginInfo._depthTarget );
             const WGPUTextureView      depthView = pDepth != nullptr ? pDepth->findAttachmentView( beginInfo._depthTargetSlice, beginInfo._depthTargetMip ) : nullptr;
             if ( depthView == nullptr )
                 return RHIRenderPassBeginResult::Failed;
+            ++pDepth->_depthWriteCount; // 셰이더가 읽는 R32 사본을 낡았다고 적는다(encodeDepthSampleCopy 가 다음 읽기 전에 옮긴다)
             bDepth                  = true;
             depth.view              = depthView;
             depth.depthLoadOp       = WebGPURHIUtil::toLoadOp( beginInfo._depthLoadOp );
@@ -410,9 +411,9 @@ namespace sw
         const WebGPUTextureRecord* pTexture = entry._handle != 0 ? _pDevice->findTexture( entry._handle ) : nullptr;
         if ( pTexture == nullptr )
             return _pDevice->_defaultTextureView;
-        // 깊이 텍스처의 샘플 뷰는 R32 사본이다 — 이 프레임에 채우지 않았으면 지난 깊이(또는 0)를 읽는다. 부르는 쪽이 `prepareTextureForShaderRead` 를 빠뜨렸다.
-        if ( pTexture->_depthSampleTexture != nullptr && pTexture->_depthCopySerial != _pDevice->getFrameSerial() )
-            SW_LOG_ERROR_ONCE_ID( "WebGPU.DepthSampledWithoutPrepare", "WebGPU: a depth texture (%#x%#) is sampled without prepareTextureForShaderRead this frame - its R32 copy is stale",
+        // 깊이 텍스처의 샘플 뷰는 R32 사본이다 — 깊이를 쓴 뒤 옮기지 않았으면 낡은 깊이(또는 0)를 읽는다. 부르는 쪽이 `prepareTextureForShaderRead` 를 빠뜨렸다.
+        if ( pTexture->_depthSampleTexture != nullptr && pTexture->_depthCopySourceWriteCount != pTexture->_depthWriteCount )
+            SW_LOG_ERROR_ONCE_ID( "WebGPU.DepthSampledWithoutPrepare", "WebGPU: a depth texture (%#x%#) is sampled without prepareTextureForShaderRead after a depth write - its R32 copy is stale",
                                   pTexture->_desc._width, pTexture->_desc._height );
         return pTexture->_sampleView;
     }
@@ -665,6 +666,9 @@ namespace sw
         const WGPUTexture dstTexture = resolve( dst, dstWidth, dstHeight );
         if ( srcTexture == nullptr || dstTexture == nullptr )
             return;
+        WebGPUTextureRecord* const pDstRecord = dst != 0 ? _pDevice->findTexture( dst ) : nullptr;
+        if ( pDstRecord != nullptr )
+            ++pDstRecord->_depthWriteCount; // 깊이로 복사하면 그 R32 사본이 낡는다
         WGPUTexelCopyTextureInfo source{};
         source.texture = srcTexture;
         WGPUTexelCopyTextureInfo target{};

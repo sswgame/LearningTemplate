@@ -354,7 +354,7 @@ static void PixelContext::addRimLight( float3 normal, inout float3 inoutLit )
 float4 PixelContext::computeSelectedLighting( MaterialSurface surface )
 {
     const float shadow = Shadow::sampleAtWorld( _worldPosition, surface._normal );
-    float3      lit    = Lighting::shadeLights( surface._albedo.rgb, _worldPosition, surface._normal, shadow, surface._roughness, surface._metallic );
+    float3      lit    = Lighting::shadeLights( surface._albedo.rgb, _worldPosition, surface._normal, shadow, surface._roughness, surface._metallic, surface.getOcclusion() );
     PixelContext::addRimLight( surface._normal, lit );
     addEmissive( lit );
     return float4( lit, surface._albedo.a );
@@ -414,6 +414,7 @@ void PSMain( MaterialInterpolants input )
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
     SurfaceShading shading = makeShading( surface );
+    shading._occlusion *= surface.getOcclusion(); // 디퍼드 조명이 화면 공간 가림과 곱해 앰비언트 · 프로브에만 쓴다
     addEmissive( shading._emissive );
     return SurfaceOutput::store( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic, shading );
 }
