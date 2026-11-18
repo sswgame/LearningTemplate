@@ -10,6 +10,7 @@
  *
  * 젖음 · 웅덩이 · 눈의 세기는 머티리얼 파라미터 묶음 `engine/materials/weather.matparams.xml` 의 `Weather`(x 젖음, y 웅덩이, z 눈, w 설선 높이 m)에
  * 머티리얼 칸 `_weather` 를 묶어 받는다 — 날씨가 값을 바꾸면 묶은 모든 머티리얼이 함께 바뀐다(언리얼 MPC 로 날씨를 돌리는 방식).
+ * 비 세기는 같은 묶음의 `Rain`(x 0..1)에 칸 `_rain` 을 묶는다 — 웅덩이 위 빗방울 물결(`applyRainRipples`)이 그 세기에 비례하고 머티리얼 시계(`g_SwMaterialTime`)로 돈다.
  *
  * 클리어 코트 · 비등방 하이라이트는 함수 묶음이 아니라 셰이딩 모델(shading_model.hlsli 의 코트 · 비등방 엽, G버퍼 번호 CLEAR_COAT · ANISOTROPIC)이 낸다 —
  * 거칠기를 끌어당기는 근사로는 두 겹 반사(밑 무늬의 흐린 반사 + 코트의 또렷한 반사)도, 결 방향으로 늘어난 하이라이트도 나오지 않는다. 여기에는 헤어라인 결 무늬만 있다.
@@ -36,6 +37,14 @@ static const float kWetRoughness   = 0.15f;
 // 웅덩이 물막: 거칠기 · 알베도 배율 — 고인 물은 거의 거울이고 밑바닥이 어둡다.
 static const float kPuddleRoughness   = 0.03f;
 static const float kPuddleAlbedoScale = 0.35f;
+// 비 물결(빗방울 링): 칸 크기(m) · 칸마다 링이 퍼지는 횟수(1/초) · 링의 가장 큰 반지름(칸 비율) · 링 파수(라디안/칸) · 노멀 기울기 세기 · 겹 수(어긋난 격자).
+// Lagarde "Water drop 3b" 의 링 텍스처를 절차로 낸 것 — 텍스처 칸을 새로 두지 않는다. 겹마다 격자를 반 칸 어긋내 빈 자리를 메운다.
+static const float kRippleCellSize   = 0.25f;
+static const float kRippleRate       = 1.6f;
+static const float kRippleMaxRadius  = 0.45f;
+static const float kRippleWaveNumber = 40.0f;
+static const float kRippleStrength   = 0.35f;
+static const uint  kRippleLayerCount = 2u;
 // 눈: 색(약간 푸른 흰색) · 거칠기 · 반짝이 칸의 거칠기.
 static const float3 kSnowColor        = float3( 0.86f, 0.90f, 0.96f );
 static const float  kSnowRoughness    = 0.65f;
@@ -119,6 +128,8 @@ struct SurfaceFunction
     static void applyWetness( inout float3 inoutAlbedo, inout float inoutRoughness, float porosity, float wetness );
     static float computePuddleMask( float3 position, float3 normal, float amount, float scale );
     static void applyPuddle( inout float3 inoutAlbedo, inout float inoutRoughness, inout float inoutMetallic, inout float3 inoutNormal, float puddle );
+    static float2 computeRainRippleSlope( float2 place, float time, float rain );
+    static void applyRainRipples( inout float3 inoutNormal, float2 place, float puddle, float time, float rain );
     static float computeSnowMask( float3 position, float3 normal, float amount, float snowLine );
     static void applySnow( inout float3 inoutAlbedo, inout float inoutRoughness, inout float inoutMetallic, inout float3 inoutNormal, float snow );
     static void applySparkle( inout float inoutRoughness, inout float3 inoutNormal, float3 position, float density, float amount );
@@ -538,6 +549,43 @@ static void SurfaceFunction::applyPuddle( inout float3 inoutAlbedo, inout float 
     inoutRoughness = lerp( inoutRoughness, kPuddleRoughness, water );
     inoutMetallic  = lerp( inoutMetallic, 0.0f, water );
     inoutNormal    = normalize( lerp( inoutNormal, float3( 0.0f, 1.0f, 0.0f ), water ) );
+}
+
+/**
+ * @brief 빗방울 링의 수면 기울기(dh/dx, dh/dz) — 칸(kRippleCellSize m)마다 빗방울 하나가 제 위상으로 떨어져 링이 퍼지고 사라진다.
+ * @details 칸에 빗방울이 있을 확률이 비 세기 @p rain 이라 0 이면 기울기가 0 이다(물결이 꺼진다). 링은 한 주기 사인이고 퍼질수록 약해진다.
+ *          @p place 는 월드 xz(m), @p time 은 초다. 반복 횟수가 상수라 모든 백엔드에서 펼쳐진다(동적 반복 없음).
+ */
+static float2 SurfaceFunction::computeRainRippleSlope( float2 place, float time, float rain )
+{
+    float2 slope = float2( 0.0f, 0.0f );
+    [unroll] for ( uint layer = 0u; layer < kRippleLayerCount; ++layer )
+    {
+        const float2 cellPosition = place / kRippleCellSize + float( layer ) * 0.5f;
+        const int2   cell         = int2( floor( cellPosition ) );
+        const uint   hash         = SurfaceFunction::hashCell( int3( cell, int( layer ) ) );
+        const uint   hashCenter   = SurfaceFunction::mixHash( hash );
+        const float2 center       = 0.3f + 0.4f * float2( SurfaceFunction::hashToUnit( hash ), SurfaceFunction::hashToUnit( hashCenter ) );
+        const float  phase        = frac( time * kRippleRate + SurfaceFunction::hashToUnit( SurfaceFunction::mixHash( hashCenter ) ) );
+        const float  drop         = SurfaceFunction::hashToUnit( SurfaceFunction::mixHash( hash ^ kTileHashSalt ) ) < rain ? 1.0f : 0.0f;
+        const float2 toDrop       = frac( cellPosition ) - center;
+        const float  distance     = length( toDrop );
+        const float  ring         = ( distance - phase * kRippleMaxRadius ) * kRippleWaveNumber;
+        const float  band         = saturate( 1.0f - abs( ring ) / kPi ); // 한 주기 밖은 0
+        const float  fade         = ( 1.0f - phase ) * ( 1.0f - phase );
+        slope += toDrop / max( distance, kDerivativeEpsilon ) * ( sin( clamp( ring, -kPi, kPi ) ) * band * fade * drop );
+    }
+    return slope * kRippleStrength;
+}
+
+/** @brief 웅덩이(@p puddle)에 빗방울 링을 얹는다 — 물이 고인 만큼 노멀이 링의 기울기로 기운다. 비가 없거나 웅덩이가 없으면 그대로다. */
+static void SurfaceFunction::applyRainRipples( inout float3 inoutNormal, float2 place, float puddle, float time, float rain )
+{
+    if ( rain > 0.0f && puddle > 0.0f ) // 맑은 날 · 마른 땅은 노멀을 다시 정규화하지 않는다(비 없는 그림이 비트까지 그대로다)
+    {
+        const float2 slope = SurfaceFunction::computeRainRippleSlope( place, time, rain ) * saturate( puddle );
+        inoutNormal        = normalize( inoutNormal + float3( -slope.x, 0.0f, -slope.y ) );
+    }
 }
 
 /** @brief 눈 덮임(0..1) — 위를 보는 정도와 양 @p amount, 설선 @p snowLine(m) 위에서 쌓인다. 가장자리는 노이즈로 깨진다. */

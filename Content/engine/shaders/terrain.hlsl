@@ -11,7 +11,9 @@
  *   3. 높이 섞기 — 디테일 맵의 레이어 채널을 높이로 써서 경계에서 높은 레이어(자갈 · 바위)가 먼저 드러난다(`_terrainParams.z` 깊이, 0 = 끔). 텍스처를 읽어야 해서 그림에만 있다.
  *   4. 색 · 거칠기 · 다공성 · 늘 젖음 · 반짝이를 가중치로 섞고, 큰 무늬로 타일 반복을 깬다.
  *   5. 날씨 — 머티리얼 칸 `_weather`(파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather 에 묶인다: x 젖음, y 웅덩이, z 눈, w 설선 m)와
- *      레이어의 늘 젖음(진흙)으로 젖음 · 웅덩이를 얹고, 위를 보는 면에 눈을 쌓는다. 눈과 반짝이 레이어(눈 · 얼음 · 모래)는 작은 거울 칸이 해를 받아 반짝인다.
+ *      레이어의 늘 젖음(진흙) · 젖은 발자국(표면 변형 층의 젖음 채널)으로 젖음을, 노이즈 웅덩이와 꺼진 자리(발자국 · 바퀴 자국 — 깊이 × 젖음)로 웅덩이를 얹고,
+ *      웅덩이에 빗방울 링(칸 `_rain` — 같은 묶음의 Rain.x 비 세기)을 얹는다. 위를 보는 면에 눈을 쌓는다. 눈과 반짝이 레이어(눈 · 얼음 · 모래)는 작은 거울 칸이 해를 받아 반짝인다.
+ *      땅의 젖음 식(max( 날씨 젖음, 레이어 늘 젖음 ))은 CPU 발걸음(`SurfaceSample::_wetness`)과 같다 — 보이는 젖음과 젖은 발소리가 같은 값이다.
  *
  * 레이어 하나 = 색(layerNColor) × 디테일 맵의 자기 채널(타일링 무늬, 0.5 가 중립). 디테일은 위에서 내려 찍거나(평면), 세 축에서 찍어
  * 노멀로 섞는다(3 축 — 절벽에서 늘어지지 않는다, layerTriplanar · layerTriplanar1 이 레이어마다 고른다). 레이어 4..7 은 레이어 0..3 의 디테일 채널을
@@ -79,6 +81,7 @@ SW_MATERIAL_BEGIN
     float4 _terrainParams;   // x = 스플랫 너비(텍셀), y = 디테일 반복(1/m), z = 높이 섞기 깊이(0 = 끔), w = 0(예비)
     float4 _terrainSurface;  // x = 웅덩이 노이즈 크기(m), y = 반짝이 칸 밀도(칸/m), z = 날씨 눈의 반짝이(칸 비율), w = 0(예비)
     float4 _weather;         // 파라미터 묶음 Weather: x 젖음, y 웅덩이, z 눈, w 설선 높이(m)
+    float4 _rain;            // 파라미터 묶음 Rain: x 비 세기(0..1 — 웅덩이 빗방울 링), yzw 0(예비)
     uint   _splatMap;        // 레이어 0..3 가중치(RGBA)
     uint   _splatMap1;       // 레이어 4..7 가중치(RGBA)
     uint   _detailMap;
@@ -188,13 +191,16 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     const float macro = MaterialTexture::sampleIndex( material._detailMap, position.xz * tiling * 0.071f ).x;
     albedo *= lerp( 0.85f, 1.12f, macro );
 
-    // 5. 날씨 — 젖음(날씨 · 레이어의 늘 젖음) → 웅덩이 → 눈 → 반짝이.
+    // 5. 날씨 — 젖음(날씨 · 레이어의 늘 젖음 · 젖은 발자국) → 웅덩이(노이즈 · 꺼진 자리) → 빗방울 링 → 눈 → 반짝이.
     const float4 weather       = material._weather;
+    const float  groundWet     = max( weather.x, layerWet );
     float3       surfaceNormal = SurfaceDeformLayer::tiltNormal( normal, position.xz );
     float        metallic      = kSurfaceMetallic;
-    SurfaceFunction::applyWetness( albedo, roughness, porosity, max( weather.x, layerWet ) );
-    const float puddle = SurfaceFunction::computePuddleMask( position, normal, max( weather.y, layerWet * kLayerWetnessToPuddle ), material._terrainSurface.x );
+    SurfaceFunction::applyWetness( albedo, roughness, porosity, max( groundWet, SurfaceDeformLayer::sampleWetness( position.xz ) ) );
+    const float puddleNoise = SurfaceFunction::computePuddleMask( position, normal, max( weather.y, layerWet * kLayerWetnessToPuddle ), material._terrainSurface.x );
+    const float puddle      = max( puddleNoise, SurfaceDeformLayer::computePuddleFill( position.xz, groundWet ) );
     SurfaceFunction::applyPuddle( albedo, roughness, metallic, surfaceNormal, puddle );
+    SurfaceFunction::applyRainRipples( surfaceNormal, position.xz, puddle, g_SwMaterialTime, material._rain.x );
     const float snow = SurfaceFunction::computeSnowMask( position, normal, weather.z, weather.w );
     SurfaceFunction::applySnow( albedo, roughness, metallic, surfaceNormal, snow );
     SurfaceFunction::applySparkle( roughness, surfaceNormal, position, material._terrainSurface.y, max( layerSparkle * ( 1.0f - puddle ), snow * material._terrainSurface.z ) );
