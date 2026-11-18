@@ -481,6 +481,8 @@ namespace sw
         const FrameViewTarget& view = *_pActiveView;
         if ( view._pColorGradingLUT != nullptr )
             context._resourceRegistry.registerTexture( attachmentNames()._colorGradingLUT, view._pColorGradingLUT->getHandle(), view._pColorGradingLUT->getSRV() );
+        if ( view._pColorGradingLUTBlend != nullptr )
+            context._resourceRegistry.registerTexture( attachmentNames()._colorGradingLUTBlend, view._pColorGradingLUTBlend->getHandle(), view._pColorGradingLUTBlend->getSRV() );
         if ( view._pBloomDirtMask != nullptr )
             context._resourceRegistry.registerTexture( attachmentNames()._bloomDirtMask, view._pBloomDirtMask->getHandle(), view._pBloomDirtMask->getSRV() );
     }

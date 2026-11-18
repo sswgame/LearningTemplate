@@ -10,7 +10,7 @@ using namespace sw;
 /** @brief [FramePostGradeTest] 기본 후처리 값은 그레이딩을 끈다 — 화이트 밸런스 단위 행렬, 범위 값 중립, LUT 없음 */
 SW_TEST_CASE( FramePostGradeTest, NeutralValuesTurnGradingOff )
 {
-    const PostGradeConstants constants = PostGradeConstants::make( PostProcessValues{}, 16 );
+    const PostGradeConstants constants = PostGradeConstants::make( PostProcessValues{}, 16, 0, 1.0f );
     SW_EXPECT_NEAR( 0.0f, constants._params._z, 0.0f );
     SW_EXPECT_NEAR( 0.0f, constants._lut._x, 0.0f ); // 세기 0 이라 LUT 가 있어도 걸지 않는다
     SW_EXPECT_NEAR( 1.0f, constants._arrWhiteBalance[0]._x, 0.0f );
@@ -59,7 +59,7 @@ SW_TEST_CASE( FramePostGradeTest, GlobalValuesCombineIntoEveryRange )
     values._colorGain                  = float4{ 2.0f, 1.0f, 1.0f, 0.5f };
     values._highlightsGain             = float4{ 1.0f, 3.0f, 1.0f, 1.0f };
     values._colorOffset                = float4{ 0.0f, 0.0f, 0.1f, 0.05f };
-    const PostGradeConstants constants = PostGradeConstants::make( values, 0 );
+    const PostGradeConstants constants = PostGradeConstants::make( values, 0, 0, 1.0f );
     SW_EXPECT_NEAR( 1.0f, constants._params._z, 0.0f );
     constexpr uint32 kGain          = 3;
     constexpr uint32 kOffset        = 4;
@@ -94,6 +94,26 @@ SW_TEST_CASE( FramePostGradeTest, LUTAddressesTexelCentresOfTheBlueSlice )
 
     PostProcessValues values;
     values._colorGradingLUTIntensity = 1.0f;
-    SW_EXPECT_NEAR( 0.0f, PostGradeConstants::make( values, 0 )._lut._x, 0.0f );
-    SW_EXPECT_NEAR( 16.0f, PostGradeConstants::make( values, kSize )._lut._x, 0.0f );
+    SW_EXPECT_NEAR( 0.0f, PostGradeConstants::make( values, 0, 0, 1.0f )._lut._x, 0.0f );
+    SW_EXPECT_NEAR( 16.0f, PostGradeConstants::make( values, kSize, 0, 1.0f )._lut._x, 0.0f );
+}
+
+/** @brief [FramePostGradeTest] 겹친 볼륨의 두 LUT: 둘 다 있으면 둘째 무게 · 크기를 싣고 세기는 그대로, 둘째가 없으면(항등) 첫 LUT 무게만큼 세기를 줄인다 */
+SW_TEST_CASE( FramePostGradeTest, TwoLUTsBlendByWeight )
+{
+    PostProcessValues values;
+    values._colorGradingLUTIntensity = 0.8f;
+    const PostGradeConstants both    = PostGradeConstants::make( values, 16, 32, 0.25f );
+    SW_EXPECT_NEAR( 16.0f, both._lut._x, 0.0f );
+    SW_EXPECT_NEAR( 0.8f, both._lut._y, 1.0e-6f );
+    SW_EXPECT_NEAR( 0.75f, both._lut._z, 1.0e-6f );
+    SW_EXPECT_NEAR( 32.0f, both._lut._w, 0.0f );
+
+    const PostGradeConstants single = PostGradeConstants::make( values, 16, 0, 0.25f );
+    SW_EXPECT_NEAR( 0.2f, single._lut._y, 1.0e-6f );
+    SW_EXPECT_NEAR( 0.0f, single._lut._z, 0.0f );
+    SW_EXPECT_NEAR( 0.0f, single._lut._w, 0.0f );
+
+    // 첫 LUT 무게 0(항등만 남는다)이면 LUT 를 걸지 않는다.
+    SW_EXPECT_NEAR( 0.0f, PostGradeConstants::make( values, 16, 0, 0.0f )._lut._x, 0.0f );
 }

@@ -473,16 +473,31 @@ namespace sw
         const float32 colorVisionMode = bScreenOutput ? static_cast<float32>( _state._canvasFrame._colorVisionMode ) : 0.0f;
         context._passValues.setFloat4( passConstantNames()._cameraFrame, float4{ MathUtil::max( 0.0f, post._letterboxAspectRatio ), viewAspect, colorVisionMode, 0.0f } );
         // 컬러 그레이딩(post_grade.hlsli) — 화이트 밸런스 · 범위 보정 · LUT. LUT 는 세기가 있는 후처리 뷰만 묻는다(안 쓰는 경로를 읽지 않는다). 띠 모양이 아니면 데이터 오류라 걸지 않는다.
-        const bool       bWantsLUT = view._settings.usesPostProcess() && post._colorGradingLUTIntensity > 0.0f;
-        const Texture2D* pLUT      = bWantsLUT ? _state._postProcessTextures.findReady( post._colorGradingLUT, "colour grading LUT" ) : nullptr;
-        if ( pLUT != nullptr && PostGradeConstants::isLUTStrip( pLUT->getWidth(), pLUT->getHeight() ) == false )
+        // 겹친 볼륨의 둘째 LUT(무게 _colorGradingLUTBlendWeight)도 같은 규칙으로 묻는다. 읽히지 않은 쪽은 항등 LUT 로 보고 남은 쪽의 무게만 세기에 곱한다(PostGradeConstants::make).
+        const bool bWantsLUT = view._settings.usesPostProcess() && post._colorGradingLUTIntensity > 0.0f;
+        const auto findLUT   = [this]( const DataPath& path ) -> const Texture2D*
         {
-            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ColorGradingLUTShape", "Colour grading LUT '%#' is %#x%# - it must be an N*N wide, N tall strip (e.g. 256x16); the LUT is left out",
-                                  post._colorGradingLUT.c_str(), pLUT->getWidth(), pLUT->getHeight() );
-            pLUT = nullptr;
+            const Texture2D* pFound = path.isSet() ? _state._postProcessTextures.findReady( path, "colour grading LUT" ) : nullptr;
+            if ( pFound != nullptr && PostGradeConstants::isLUTStrip( pFound->getWidth(), pFound->getHeight() ) == false )
+            {
+                SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ColorGradingLUTShape", "Colour grading LUT '%#' is %#x%# - it must be an N*N wide, N tall strip (e.g. 256x16); the LUT is left out",
+                                      path.c_str(), pFound->getWidth(), pFound->getHeight() );
+                return nullptr;
+            }
+            return pFound;
+        };
+        const Texture2D* pLUT      = bWantsLUT ? findLUT( post._colorGradingLUT ) : nullptr;
+        const Texture2D* pBlendLUT = bWantsLUT && post._colorGradingLUTBlendWeight > 0.0f ? findLUT( post._colorGradingLUTBlend ) : nullptr;
+        float32          lutWeight = 1.0f - MathUtil::saturate( post._colorGradingLUTBlendWeight ); // 첫 LUT 의 무게 — 둘째가 나머지
+        if ( pLUT == nullptr && pBlendLUT != nullptr )
+        {
+            pLUT      = pBlendLUT; // 첫 LUT 가 없으면(항등) 둘째를 첫 칸에 건다
+            pBlendLUT = nullptr;
+            lutWeight = 1.0f - lutWeight;
         }
         view._pColorGradingLUT         = pLUT;
-        const PostGradeConstants grade = PostGradeConstants::make( post, pLUT != nullptr ? pLUT->getHeight() : 0u );
+        view._pColorGradingLUTBlend    = pBlendLUT;
+        const PostGradeConstants grade = PostGradeConstants::make( post, pLUT != nullptr ? pLUT->getHeight() : 0u, pBlendLUT != nullptr ? pBlendLUT->getHeight() : 0u, lutWeight );
         for ( uint32 row = 0; row < 3; ++row )
         {
             context._passValues.setFloat4( passConstantNames()._arrGradeWhiteBalance[row], grade._arrWhiteBalance[row] );

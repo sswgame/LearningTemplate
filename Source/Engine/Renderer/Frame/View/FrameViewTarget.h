@@ -125,6 +125,8 @@ namespace sw
         RHITransferTicket _exposureReadbackTicket{};
         /// @brief 이번 프레임 이 뷰가 읽는 컬러 그레이딩 LUT 입니다(읽힌 것만, 없으면 nullptr). 셋업(`applyViewPassConstants`)이 정하고 패스가 역할 이름으로 건다 — 수명은 `FramePostProcessTextureSet` 가 쥔다.
         const Texture2D* _pColorGradingLUT{ nullptr };
+        /// @brief 이번 프레임 이 뷰가 섞는 둘째 LUT 입니다(두 LUT 가 다 읽혔을 때만, 아니면 nullptr — 섞는 무게는 `g_GradeLUT.z`). LUT 와 같은 규칙이다.
+        const Texture2D* _pColorGradingLUTBlend{ nullptr };
         /// @brief 이번 프레임 이 뷰가 읽는 블룸 먼지 마스크입니다(읽힌 것만, 없으면 nullptr). LUT 와 같은 규칙이다.
         const Texture2D* _pBloomDirtMask{ nullptr };
         /// @brief 이번 프레임 이 뷰가 그릴 후처리 머티리얼입니다(설정 `_listPostProcessMaterial` 차례 — 그 자리의 패스가 없는 것은 빠진다). PostProcessMaterial 패스가 자기 자리의 것을 그린다.

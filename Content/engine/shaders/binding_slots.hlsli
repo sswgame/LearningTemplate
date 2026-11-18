@@ -100,7 +100,8 @@
 #define SW_SLOT_ENGINE_TEX16    48
 #define SW_SLOT_ENGINE_TEX17    49
 #define SW_SLOT_ENGINE_TEX18    50
-#define SW_ENGINE_TEXTURE_COUNT 19
+#define SW_SLOT_ENGINE_TEX19    51
+#define SW_ENGINE_TEXTURE_COUNT 20
 
 // GPUScene 인스턴스 구조버퍼 (per-instance world/material). 네 백엔드 공통.
 #define SW_SLOT_INSTANCE_SRV 4
