@@ -96,7 +96,7 @@ namespace sw
 namespace sw
 {
     MemoryLocalStore::MemoryLocalStore( MemoryLocalDatabase* pDatabase, const LocalSealContext& sealContext )
-        : _listCompletion{}
+        : _completionBuffer{}
         , _sealContext{ sealContext }
         , _pDatabase{ pDatabase }
         , _requestIDAllocator{}
@@ -140,12 +140,8 @@ namespace sw
 
     int32 MemoryLocalStore::pollCompletions( vector<LocalStoreCompletion>& outListCompletion )
     {
-        const int32 completionCount = static_cast<int32>( _listCompletion.size() );
-        for ( LocalStoreCompletion& completion : _listCompletion )
-        {
-            outListCompletion.push_back( std::move( completion ) );
-        }
-        _listCompletion.clear();
+        const int32 completionCount = static_cast<int32>( _completionBuffer.getCount() );
+        _completionBuffer.moveAllTo( outListCompletion );
         return completionCount;
     }
 
@@ -158,9 +154,9 @@ namespace sw
     {
         request._requestID = _requestIDAllocator.allocate();
         if ( _bShutdown == SW_TRUE )
-            _listCompletion.push_back( LocalStoreRequest::makeCompletion( request, LocalStoreResult::IOError ) );
+            _completionBuffer.push( LocalStoreRequest::makeCompletion( request, LocalStoreResult::IOError ) );
         else
-            _listCompletion.push_back( LocalStoreRequest::execute( request, *_pDatabase, _sealContext ) );
+            _completionBuffer.push( LocalStoreRequest::execute( request, *_pDatabase, _sealContext ) );
         return request._requestID;
     }
 } // namespace sw

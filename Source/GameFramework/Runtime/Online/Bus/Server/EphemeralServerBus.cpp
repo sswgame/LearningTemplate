@@ -32,7 +32,7 @@ namespace sw
 {
     EphemeralServerBus::EphemeralServerBus( EphemeralStoreRouter* pRouter, uint64 serverID )
         : _listSubscription{}
-        , _listQueuedMessage{}
+        , _messageBuffer{}
         , _pRouter{ pRouter }
         , _serverID{ serverID }
         , _nextSequence{ 1 }
@@ -112,12 +112,8 @@ namespace sw
 
     int32 EphemeralServerBus::pollMessages( vector<ServerBusMessage>& outListMessage )
     {
-        const int32 addedCount = static_cast<int32>( _listQueuedMessage.size() );
-        for ( ServerBusMessage& message : _listQueuedMessage )
-        {
-            outListMessage.push_back( std::move( message ) );
-        }
-        _listQueuedMessage.clear();
+        const int32 addedCount = static_cast<int32>( _messageBuffer.getCount() );
+        _messageBuffer.moveAllTo( outListMessage );
         return addedCount;
     }
 
@@ -133,7 +129,7 @@ namespace sw
             return;
         }
         vector<uint8> bodyBytes( message._bytes.begin() + static_cast<ptrdiff_t>( EphemeralServerBusInternal::kEnvelopeSize ), message._bytes.end() );
-        _listQueuedMessage.emplace_back( std::move( bodyBytes ), string( message._channel.substr( prefix.size() ) ), LittleEndianUtil::readUint64( message._bytes.data() + 1 ),
-                                         LittleEndianUtil::readUint64( message._bytes.data() + 9 ) );
+        _messageBuffer.push( ServerBusMessage( std::move( bodyBytes ), string( message._channel.substr( prefix.size() ) ), LittleEndianUtil::readUint64( message._bytes.data() + 1 ),
+                                               LittleEndianUtil::readUint64( message._bytes.data() + 9 ) ) );
     }
 } // namespace sw

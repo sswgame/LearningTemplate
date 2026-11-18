@@ -438,7 +438,7 @@ namespace sw
 namespace sw
 {
     MemoryEphemeralStore::MemoryEphemeralStore( MemoryEphemeralDatabase* pDatabase )
-        : _listReply{}
+        : _replyBuffer{}
         , _pDatabase{ pDatabase }
         , _inboxID{ 0 }
         , _inboxSubscription{ pDatabase->registerInbox( _inboxID ) }
@@ -461,18 +461,14 @@ namespace sw
             reply = _pDatabase->execute( request );
         reply._requestID = requestID;
         reply._operation = request._operation;
-        _listReply.push_back( std::move( reply ) );
+        _replyBuffer.push( std::move( reply ) );
         return requestID;
     }
 
     int32 MemoryEphemeralStore::pollReplies( vector<EphemeralReply>& outListReply )
     {
-        const int32 replyCount = static_cast<int32>( _listReply.size() );
-        for ( EphemeralReply& reply : _listReply )
-        {
-            outListReply.push_back( std::move( reply ) );
-        }
-        _listReply.clear();
+        const int32 replyCount = static_cast<int32>( _replyBuffer.getCount() );
+        _replyBuffer.moveAllTo( outListReply );
         return replyCount;
     }
 

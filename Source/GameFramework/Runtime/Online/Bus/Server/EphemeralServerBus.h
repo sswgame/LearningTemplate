@@ -11,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -59,11 +60,11 @@ namespace sw
         void onChannelMessage( const EphemeralMessage& message );
 
     private:
-        vector<TopicSubscription> _listSubscription;
-        vector<ServerBusMessage>  _listQueuedMessage; ///< 라우터가 넣고 `pollMessages` 가 비운다
-        EphemeralStoreRouter*     _pRouter;
-        uint64                    _serverID;
-        uint64                    _nextSequence;
-        uint64                    _droppedCount;
+        vector<TopicSubscription>     _listSubscription;
+        EventBuffer<ServerBusMessage> _messageBuffer; ///< 라우터가 넣고 `pollMessages` 가 가져간다
+        EphemeralStoreRouter*         _pRouter;
+        uint64                        _serverID;
+        uint64                        _nextSequence;
+        uint64                        _droppedCount;
     };
 } // namespace sw
