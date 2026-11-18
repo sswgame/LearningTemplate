@@ -131,8 +131,12 @@ namespace sw::editor
          * @details 재생과 속도는 미리보기 씬의 시간 배율(`ScenePreviewPolicy::_timeScale`)로 건다 — 애니메이션 · 파티클 · 물리가 한 번에 따른다.
          */
         void drawPreviewBar( const float2& origin, const float2& size );
-        /** @brief 멈춤 · 속도 · 한 프레임 요청을 미리보기 씬의 시간 배율로 겁니다. 그리기마다 부릅니다. */
-        void applyPreviewTimeScale();
+        /** @brief 멈춤 · 속도(@p speed — 재생 막대가 고른 칸) · 한 프레임 요청을 미리보기 씬의 시간 배율로 겁니다. 그리기마다 부릅니다. */
+        void applyPreviewTimeScale( float32 speed );
+        /** @brief 미리보기 씬이 아직 없으면 만들고, 창 선택을 그 씬에 묶고, 파생 창이 내용을 채우게 하고, 카메라를 맞춥니다. */
+        void ensurePreviewScene();
+        /** @brief 재생 막대 상태(시간 배율 · 바닥 · 축)를 감시 값이 읽는 자리에 남깁니다(가장 최근에 그린 창의 것). */
+        void publishPreviewBarState( float32 speed ) const;
         /** @brief 맞춤: 파생 창이 준 구로 카메라를 되돌립니다. */
         void framePreviewSubject();
         /** @brief @p bFocused 면 초점 씬과 창 선택을 이 창의 것으로 등록하고, 아니면 이 창이 등록해 둔 초점 씬을 해제합니다. Ctrl+Z 의 스택은 패널 관리자가 건다(`findPanelCommandStack`). */

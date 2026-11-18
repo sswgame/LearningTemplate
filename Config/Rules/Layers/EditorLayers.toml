@@ -59,6 +59,7 @@ views = [
     "Common/GUI/EditorMenuBar.cpp",
     "Common/GUI/EditorPlayToolbar.cpp",
     "Common/GUI/Panel/EditorDocumentPanel.cpp",
+    "Common/GUI/Panel/EditorPreviewPanel.cpp",
     "Common/Input/CommandPalettePopup.cpp",
     "Common/Input/EditorCommandGUI.cpp",
     "Common/Input/QuickLauncherPopup.cpp",
