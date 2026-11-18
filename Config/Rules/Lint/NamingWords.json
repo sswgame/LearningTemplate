@@ -1362,7 +1362,10 @@
     "client-log": "destruction-net run 의 옛 옵션 — 클라이언트 로그는 콘솔 출력 하나다(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
     "game-port": "net-pair run 의 옛 옵션 — 상수 _GAME_PORT(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
     "service-port": "net-pair run 의 옛 옵션 — 상수 _SERVICE_PORT(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
-    "out-dir": "web-package 의 옛 옵션 — 묶음은 build/Web-Shipping/Web/<게임> 하나다(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)"
+    "out-dir": "web-package 의 옛 옵션 — 묶음은 build/Web-Shipping/Web/<게임> 하나다(2026-11-18 아무도 넘기지 않는 스크립트 옵션 정리)",
+    "findOrAddLocked": "getOrCreateLocked — 없으면 만들어 돌려주는 것은 getOrCreate 다(AudioClipCache, 2026-11-19)",
+    "findOrAddLayer": "getOrCreateLayer — 없으면 만들어 돌려주는 것은 getOrCreate 다(SceneSpatialGrid, 2026-11-19)",
+    "findOrCreateBucket": "getOrCreateBucket — 없으면 만들어 돌려주는 것은 getOrCreate 다(AnimationCrowd, 2026-11-19)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",

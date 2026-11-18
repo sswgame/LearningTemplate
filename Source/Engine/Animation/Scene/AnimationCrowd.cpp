@@ -225,7 +225,8 @@ namespace sw
         if ( pCurrent != nullptr && pCurrent->_key.isSameState( key ) )
             return pCurrent;
         key._variation = selectVariation( request, clip->getDuration() );
-        return findOrCreateBucket( key, skeleton, clip, nullptr, sourceMesh );
+        bool bCreated  = false;
+        return getOrCreateBucket( key, skeleton, clip, nullptr, sourceMesh, bCreated );
     }
 
     AnimationCrowdBucket* AnimationCrowd::joinBlendBucket( AnimationCrowdBucket* pCurrent, const AnimationSharedPoseRequest& request, const shared_ptr<const Skeleton>& skeleton,
@@ -263,8 +264,8 @@ namespace sw
         const bool bFromSameState       = pCurrent != nullptr && pCurrent->isBlend() == false && pCurrent->_key.isSameState( fromKey );
         key._variation                  = bFromSameState ? pCurrent->_key._variation : selectVariation( request, clip->getDuration() );
         key._blendStartFrame            = _frameIndex;
-        const bool            bCreated  = _mapBucket.find( key ) == _mapBucket.end();
-        AnimationCrowdBucket* pBucket   = findOrCreateBucket( key, skeleton, clip, nextClip, sourceMesh );
+        bool                  bCreated  = false;
+        AnimationCrowdBucket* pBucket   = getOrCreateBucket( key, skeleton, clip, nextClip, sourceMesh, bCreated );
         if ( bCreated )
         {
             pBucket->_blendStartClock = _clock;
@@ -288,8 +289,8 @@ namespace sw
         AnimationCrowdBucket* pBucket = ( pCurrent != nullptr && pCurrent->_key == key ) ? pCurrent : nullptr;
         if ( pBucket == nullptr )
         {
-            const bool bCreated = _mapBucket.find( key ) == _mapBucket.end();
-            pBucket             = findOrCreateBucket( key, skeleton, leaderBucket._clip, leaderBucket._nextClip, sourceMesh );
+            bool bCreated = false;
+            pBucket       = getOrCreateBucket( key, skeleton, leaderBucket._clip, leaderBucket._nextClip, sourceMesh, bCreated );
             if ( bCreated )
             {
                 pBucket->_blendStartClock = leaderBucket._blendStartClock;
@@ -301,12 +302,13 @@ namespace sw
         return pBucket;
     }
 
-    AnimationCrowdBucket* AnimationCrowd::findOrCreateBucket( const AnimationCrowdBucketKey& key, const shared_ptr<const Skeleton>& skeleton,
-                                                              const shared_ptr<const AnimationClip>& clip, const shared_ptr<const AnimationClip>& nextClip,
-                                                              const shared_ptr<Mesh>& sourceMesh )
+    AnimationCrowdBucket* AnimationCrowd::getOrCreateBucket( const AnimationCrowdBucketKey& key, const shared_ptr<const Skeleton>& skeleton,
+                                                             const shared_ptr<const AnimationClip>& clip, const shared_ptr<const AnimationClip>& nextClip,
+                                                             const shared_ptr<Mesh>& sourceMesh, bool& outbCreated )
     {
         const auto found = _mapBucket.find( key );
-        if ( found != _mapBucket.end() )
+        outbCreated      = found == _mapBucket.end();
+        if ( outbCreated == false )
             return found->second;
         // 묶음은 원본 메시를 그린다 — 결과는 묶음의 스킨 칸 하나라 사본이 필요 없다(AnimationSkinSlot).
         unique_ptr<AnimationCrowdBucket> bucket = sw::make_unique<AnimationCrowdBucket>( key, skeleton, clip, nextClip, sourceMesh );
