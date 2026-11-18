@@ -89,6 +89,10 @@
       <Option name="Bare"/>
       <Option name="Hooded" visual="hood_ranger_male"/>
     </Choice>
+    <!-- 체형(몸 부품 ubc.bodyshape.xml) — 다리는 발 디딤이, 팔은 손 IK 가 바뀐 길이로 푼다 -->
+    <Slider name="ShoulderWidth" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Shoulder.Width"/></Slider>
+    <Slider name="ArmLength" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Arm.Length"/></Slider>
+    <Slider name="LegLength" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Leg.Length"/></Slider>
   </Schema>
   <Schema id="TownsfolkFemale">
     <Choice name="Hair" category="Head" default="Long">
@@ -112,5 +116,9 @@
       <Option name="Bare"/>
       <Option name="Hooded" visual="hood_ranger_female"/>
     </Choice>
+    <!-- 체형(몸 부품 ubc.bodyshape.xml) — 다리는 발 디딤이, 팔은 손 IK 가 바뀐 길이로 푼다 -->
+    <Slider name="ShoulderWidth" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Shoulder.Width"/></Slider>
+    <Slider name="ArmLength" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Arm.Length"/></Slider>
+    <Slider name="LegLength" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Leg.Length"/></Slider>
   </Schema>
 </CustomizationSchemaCatalog>
