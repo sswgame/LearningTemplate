@@ -316,8 +316,8 @@ endfunction()
 # ------------------------------------------------------------------------------
 # sw_remove_stale_binary_outputs — Dev `Bin` 의 옛 산출물을 configure 때 지운다(ninja 는 지어 놓은 파일을 치우지 않는다).
 #   1) `Bin/Modules` 의 모듈 산출물(GF_* · RHI_* · EditorModule · SWGame*) 가운데 이 구성에서 꺼진 모듈의 것 — 켜진 모듈 것은 건드리지 않는다.
-#      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_stage_module_runtime_dlls`)와 남은 섀도 복사본(`<모듈>_temp_p<pid>_…`).
-#      살아 있는 App 이 쓰는 섀도 복사본은 잠겨 있어 지워지지 않는다 — 아래 경고로 남는다.
+#      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_stage_module_runtime_dlls`)와 옛 자리의 섀도 복사본(`<모듈>_temp_…` 파일 · Windows 폴더 —
+#      지금 복사본은 실행 뿌리 아래 `ModuleShadow` 에 둔다, `ShadowCopyName`). 아직 도는 옛 App 이 쓰는 것은 잠겨 있어 지워지지 않는다 — 아래 경고로 남는다.
 #   2) `Bin` 바로 아래의 옛 자리 산출물 — 모듈 DLL · PDB · 매니페스트(지금은 `Bin/Modules`), 테스트 실행 파일(지금은 `TestBin`),
 #      `Bin/Symbols` 에 같은 이름이 생긴 PDB(옛 자리).
 #   실행 중인 App · 테스트가 DLL 을 쥐고 있으면 지우지 못한다 — 경고만 하고 넘어간다(다음 configure 가 다시 지운다).
@@ -329,6 +329,12 @@ function(sw_remove_stale_binary_outputs ACTIVE_MODULES)
 	set(stale "")
 
 	file(GLOB module_folder_files LIST_DIRECTORIES false "${bin_dir}/Modules/*")
+	file(GLOB old_shadow_folders LIST_DIRECTORIES true "${bin_dir}/Modules/*_temp_*")
+	foreach(path IN LISTS old_shadow_folders)
+		if(IS_DIRECTORY "${path}")
+			list(APPEND stale "${path}")
+		endif()
+	endforeach()
 	foreach(path IN LISTS module_folder_files)
 		get_filename_component(stem "${path}" NAME_WE)
 		get_filename_component(suffix "${path}" LAST_EXT)
@@ -360,7 +366,7 @@ function(sw_remove_stale_binary_outputs ACTIVE_MODULES)
 
 	set(removed_count 0)
 	foreach(path IN LISTS stale)
-		execute_process(COMMAND "${CMAKE_COMMAND}" -E rm -f "${path}" RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
+		execute_process(COMMAND "${CMAKE_COMMAND}" -E rm -rf "${path}" RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
 		if(result EQUAL 0 AND NOT EXISTS "${path}")
 			math(EXPR removed_count "${removed_count} + 1")
 		else()

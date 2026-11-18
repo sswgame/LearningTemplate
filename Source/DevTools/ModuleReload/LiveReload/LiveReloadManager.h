@@ -227,10 +227,9 @@ namespace sw
         {
             void*                        _pHandle{ nullptr };
             string                       _tempPath;
-            uint64                       _sourceMtime{ 0 }; ///< 원본의 쓰기 시각(초) — 섀도 이름에만 쓴다
-            FileStamp                    _sourceStamp{};    ///< 원본의 도장(크기 · 100 ns 쓰기 시각) — 커밋하면 "로드한 원본" 이 된다
-            engine::ModuleRegistrarHeads _heads;            ///< 로드한 라이브러리의 정적 등록자 머리(커밋 때 올린다)
-            engine::ModuleRegistrarHeads _previousHeads;    ///< 로드 전 전역 머리(중단하면 되돌린다)
+            FileStamp                    _sourceStamp{}; ///< 원본의 도장(크기 · 100 ns 쓰기 시각) — 커밋하면 "로드한 원본" 이 된다
+            engine::ModuleRegistrarHeads _heads;         ///< 로드한 라이브러리의 정적 등록자 머리(커밋 때 올린다)
+            engine::ModuleRegistrarHeads _previousHeads; ///< 로드 전 전역 머리(중단하면 되돌린다)
         };
 
         /** @brief 연쇄 리로드에서 준비를 마친 모듈 하나(기록과 로드해 둔 새 라이브러리)입니다. */
