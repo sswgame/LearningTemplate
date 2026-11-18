@@ -62,3 +62,34 @@ SW_TEST_CASE( ScreenshotRequestQueueTest, PacketSlotHoldsOne )
     SW_EXPECT_TRUE( queue.isPacketSlotFree() );
     SW_EXPECT_FALSE( queue.takeForPacket( path ) );
 }
+
+/** @brief [ScreenshotRequestQueueTest] 바이트 요청은 이름이 있어야 하고, 결과는 그 이름으로 한 번만 받는다 — 다른 요청이 덮었으면 받지 못한다 */
+SW_TEST_CASE( ScreenshotRequestQueueTest, PNGBytesAreTakenOnceByName )
+{
+    ScreenshotRequestQueue queue;
+    SW_EXPECT_FALSE( queue.putForPNGBytes( "", RHITextureHandle{ 7 }, RHIFormat::R8G8B8A8_UNORM ) );
+    SW_EXPECT_FALSE( queue.hasUnfinishedRequest() );
+
+    SW_REQUIRE_TRUE( queue.putForPNGBytes( "thumb.a", RHITextureHandle{ 7 }, RHIFormat::R8G8B8A8_UNORM ) );
+    ScreenshotRequest request;
+    SW_REQUIRE_TRUE( queue.take( request ) );
+    SW_EXPECT_TRUE( request._output == ScreenshotOutput::PNGBytes );
+    SW_EXPECT_EQUAL( string{ "thumb.a" }, request._path );
+    queue.reportCompletedPNGBytes( true, request._path, vector<uint8>{ 1, 2, 3 } );
+
+    vector<uint8> bytes;
+    SW_EXPECT_FALSE( queue.takeLastPNGBytes( "thumb.b", bytes ) );
+    SW_REQUIRE_TRUE( queue.takeLastPNGBytes( "thumb.a", bytes ) );
+    SW_EXPECT_TRUE( bytes.size() == 3 );
+    SW_EXPECT_FALSE( queue.takeLastPNGBytes( "thumb.a", bytes ) ); // 한 번만
+
+    // 파일 요청이 뒤에 끝나면 앞 바이트 결과는 없다.
+    SW_REQUIRE_TRUE( queue.putForPNGBytes( "thumb.c", RHITextureHandle{ 7 }, RHIFormat::R8G8B8A8_UNORM ) );
+    SW_REQUIRE_TRUE( queue.take( request ) );
+    queue.reportCompletedPNGBytes( true, request._path, vector<uint8>{ 4 } );
+    queue.put( makeShotPath( "d.png" ), RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
+    SW_REQUIRE_TRUE( queue.take( request ) );
+    SW_EXPECT_TRUE( request._output == ScreenshotOutput::File );
+    queue.reportCompleted( true, request._path );
+    SW_EXPECT_FALSE( queue.takeLastPNGBytes( "thumb.c", bytes ) );
+}

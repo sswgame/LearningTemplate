@@ -504,7 +504,7 @@ namespace sw::editor
         if ( pStore == nullptr || isPresetRequestPending() )
             return;
         _thumbnailPresetName = string{ presetName };
-        _thumbnailSlot       = CharacterEditorLocalStore::makeThumbnailSlot( presetName );
+        _thumbnailSlot       = CharacterEditorLocalStore::makeThumbnailSlot( _presetStore, presetName );
         _thumbnailRequest    = pStore->getChannel().submitWrite( _thumbnailSlot, std::move( pngBytes ), LocalStoreWriteOptions{},
                                                                  LocalStoreChannel::CompletionFunction::create<&CharacterEditorModel::onThumbnailWritten>( this ) );
         _status              = "Saving the thumbnail...";

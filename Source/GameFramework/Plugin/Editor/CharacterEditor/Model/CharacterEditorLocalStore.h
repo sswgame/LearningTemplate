@@ -14,6 +14,11 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreChannel.h"
 
+namespace sw
+{
+    class UserAppearancePresetStore;
+} // namespace sw
+
 namespace sw::editor
 {
     /**
@@ -38,12 +43,11 @@ namespace sw::editor
         LocalStoreChannel& getChannel() { return _channel; }
 
         /**
-         * @brief 프리셋 @p presetName 의 썸네일 슬롯 이름입니다(`charactereditor/thumb.<이름>`, 슬롯 규칙 밖 글자는 `_`).
-         * @details shortcut: 대소문자만 다른 이름 · 규칙 밖 글자만 다른 이름은 같은 슬롯을 쓴다, 그런 이름이 실제로 겹치면 프리셋마다 번호를 둔다.
+         * @brief 프리셋 @p presetName 의 썸네일 슬롯 이름입니다 — 프리셋이 이미 든 슬롯이면 그것, 아니면 @p store 의 어느 프리셋도 들지 않은 가장 작은 번호(`charactereditor/thumb.<번호>`).
+         * @details 슬롯 이름은 프리셋 줄(`UserAppearancePresetRecord::_thumbnailSlot`)에 적히므로 이름에서 만들 까닭이 없다 — 번호로 주면 대소문자 · 규칙 밖 글자 · 길이가 달라도 두 프리셋이 한 슬롯을 나누지 않는다
+         *          (언리얼 에셋이 경로가 아니라 발급한 id 로 썸네일을 잇는 것과 같은 선).
          */
-        [[nodiscard]] static string makeThumbnailSlot( string_view presetName );
-        /** @brief 미리보기 캡처가 잠시 쓰는 이미지 파일(절대 경로)입니다 - 슬롯에 옮긴 뒤 지운다. */
-        [[nodiscard]] static string makeCaptureImagePath();
+        [[nodiscard]] static string makeThumbnailSlot( const UserAppearancePresetStore& store, string_view presetName );
 
     private:
         LocalStoreChannel _channel;

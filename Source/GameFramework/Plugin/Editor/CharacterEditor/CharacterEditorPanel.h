@@ -89,7 +89,7 @@ namespace sw::editor
         AppearanceEditModel&        getAppearanceModel() { return _document.getAppearanceModel(); }
         const Published&            getPublished() const { return _published; }
         /** @brief 요청한 썸네일 캡처를 아직 거두지 않았으면 true 입니다 — 자동화의 끝 차단(`CharacterEditorThumbnail`)이 캡처 · 저장 사이 틈을 진행 중인 일로 본다. */
-        [[nodiscard]] bool isThumbnailCapturePending() const { return _thumbnailCapturePath.empty() == false; }
+        [[nodiscard]] bool isThumbnailCapturePending() const { return _thumbnailRequestName.empty() == false; }
 
     private:
         /**
@@ -185,10 +185,7 @@ namespace sw::editor
         void drawCustomizationSliders( const AppearanceSelection& selection );
         /** @brief 미리보기 몸의 지금 모습 캡처를 요청합니다(`pollThumbnailCapture` 가 받아 같은 이름 프리셋의 썸네일 슬롯에 넣는다). 프리셋을 먼저 저장해야 합니다. */
         void saveThumbnail();
-        /**
-         * @brief 요청한 캡처가 끝났으면 그 PNG 를 읽어 문서에 넘기고(`CharacterEditorModel::attachThumbnail`) 임시 파일을 지웁니다.
-         * @details shortcut: 렌더 스레드 스크린샷 창구가 파일로만 내놓아 사용자 데이터 폴더의 임시 파일을 거친다, 창구가 바이트를 내주게 되면 바로 받는다.
-         */
+        /** @brief 요청한 캡처가 끝났으면 그 PNG 바이트(`EditorPreviewViewport::takeImagePNGBytes` — 파일을 거치지 않는다)를 문서에 넘깁니다(`CharacterEditorModel::attachThumbnail`). */
         void pollThumbnailCapture();
         void drawExplanation();
         void drawFitCheck();
@@ -226,7 +223,7 @@ namespace sw::editor
         float3                                  _bodyPickMarker;           ///< 마지막으로 집은 월드 자리
         float32                                 _bodyStepTimer;            ///< 동작 태그 시험의 다음 걸음까지 남은 시간(초)
         string                                  _socketResolveError;       ///< 미리보기가 지난 프레임에 상태 줄에 올린 소켓 풀기 오류(풀리면 지운다)
-        string                                  _thumbnailCapturePath;     ///< 요청한 썸네일 캡처의 임시 파일(비면 요청 없음)
+        string                                  _thumbnailRequestName;     ///< 요청한 썸네일 캡처의 이름(`requestImagePNGBytes`, 비면 요청 없음)
         string                                  _thumbnailCapturePreset;   ///< 그 캡처를 붙일 프리셋 이름
         uint32                                  _thumbnailCaptureSerial;   ///< 요청할 때의 스크린샷 처리 수(`EditorPreviewViewport::getCompletedImageFileSerial`)
     };

@@ -23,6 +23,8 @@
 
 namespace sw
 {
+    enum class ScreenshotOutput : uint8;
+
     class FrameRenderer;
     class OffscreenSceneRenderers;
     class IRHICommandContext;
@@ -149,6 +151,14 @@ namespace sw
         static uint32 getCompletedScreenshotSerial();
         /** @brief 마지막으로 처리한 `requestScreenshot` 이 쓴 파일 경로입니다. 실패했으면 빈 문자열입니다. */
         static string getLastScreenshotPath();
+        /**
+         * @brief 렌더 타깃 @p sourceTexture(포맷 @p sourceFormat)를 다음에 그리는 프레임에 읽어 PNG 바이트로 받습니다 — 파일을 거치지 않는다. 파일 요청과 같은 한 칸이다(앞 요청을 덮어쓴다).
+         * @details 끝은 `getCompletedScreenshotSerial` 이 알리고, 결과는 `takeLastScreenshotPNGBytes( @p requestName, … )` 로 받는다(다른 요청이 덮었으면 받지 못한다).
+         * @return 우편함이 없거나 @p requestName 이 비면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool requestScreenshotPNGBytes( string_view requestName, RHITextureHandle sourceTexture, RHIFormat sourceFormat );
+        /** @brief 마지막으로 처리한 요청이 이름 @p requestName 의 바이트 요청이고 성공했으면 PNG 바이트를 @p outPNGBytes 로 옮기고 true 입니다. */
+        [[nodiscard]] static bool takeLastScreenshotPNGBytes( string_view requestName, vector<uint8>& outPNGBytes );
 
     private:
         /** @brief 렌더 스레드 루프입니다. 패킷을 꺼내 executePacket 합니다. */
@@ -229,6 +239,7 @@ namespace sw
         string                                           _requestedScreenshotPath;            ///< 받은 `requestScreenshot` 요청의 경로(렌더 스레드만 쓴다). 비면 요청이 없다.
         RHITextureHandle                                 _requestedScreenshotTexture;         ///< 0이면 Present 캡처이고, 아니면 그 렌더 타깃이다.
         RHIFormat                                        _requestedScreenshotFormat;          ///< `_requestedScreenshotTexture` 의 포맷
+        ScreenshotOutput                                 _requestedScreenshotOutput;          ///< 파일로 쓸지 PNG 바이트로 우편함에 둘지(`requestScreenshotPNGBytes`)
         uint32                                           _requestedScreenshotWaitFrames;      ///< 쓰기 전에 더 그릴 프레임 수(캡처를 켠 프레임은 비어 있을 수 있다)
         shared_ptr<atomic<uint32>>                       _pRequestedScreenshotWritesInFlight; ///< 워커가 쓰는 중인 실행 중 요청 수(잡이 같이 들어 이 객체보다 오래 살 수 있다). 0 이 아니면 다음 요청을 꺼내지 않는다
         struct PendingRenderTargetRead;

@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 
+#include "Core/Log/Logger.h"
+
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
@@ -14,6 +16,24 @@ namespace sw
         _pendingPath    = filePath.str();
         _pendingTexture = sourceTexture;
         _pendingFormat  = sourceFormat;
+        _pendingOutput  = ScreenshotOutput::File;
+    }
+
+    bool ScreenshotRequestQueue::putForPNGBytes( string_view requestName, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
+    {
+        if ( requestName.empty() )
+        {
+            SW_LOG_ERROR_ID( "ScreenshotRequestQueue.EmptyByteRequestName", "A screenshot byte request needs a name - nothing was requested" );
+            return false;
+        }
+        const ScopedLock<mutex> lock{ _mutex };
+        if ( _pendingPath.empty() )
+            (void)_requestedSerial.fetch_add( 1, std::memory_order_acq_rel ); // 꺼내지 않은 앞 요청을 덮어쓰면 처리도 한 번이다
+        _pendingPath    = string{ requestName };
+        _pendingTexture = sourceTexture;
+        _pendingFormat  = sourceFormat;
+        _pendingOutput  = ScreenshotOutput::PNGBytes;
+        return true;
     }
 
     bool ScreenshotRequestQueue::take( ScreenshotRequest& outRequest )
@@ -25,6 +45,7 @@ namespace sw
         _pendingPath.clear();
         outRequest._texture = _pendingTexture;
         outRequest._format  = _pendingFormat;
+        outRequest._output  = _pendingOutput;
         return true;
     }
 
@@ -33,8 +54,30 @@ namespace sw
         {
             const ScopedLock<mutex> lock{ _mutex };
             _lastPath = bWritten ? writtenPath : string{};
+            _lastPNGBytes.clear();
         }
         _completedSerial.fetch_add( 1, std::memory_order_acq_rel );
+    }
+
+    void ScreenshotRequestQueue::reportCompletedPNGBytes( bool bEncoded, const string& requestName, vector<uint8> pngBytes )
+    {
+        {
+            const ScopedLock<mutex> lock{ _mutex };
+            _lastPath     = bEncoded ? requestName : string{};
+            _lastPNGBytes = bEncoded ? std::move( pngBytes ) : vector<uint8>{};
+        }
+        _completedSerial.fetch_add( 1, std::memory_order_acq_rel );
+    }
+
+    bool ScreenshotRequestQueue::takeLastPNGBytes( string_view requestName, vector<uint8>& outPNGBytes )
+    {
+        const ScopedLock<mutex> lock{ _mutex };
+        const bool              bMine = requestName.empty() == false && string_view{ _lastPath } == requestName && _lastPNGBytes.empty() == false;
+        if ( bMine == false )
+            return false;
+        outPNGBytes = std::move( _lastPNGBytes );
+        _lastPNGBytes.clear();
+        return true;
     }
 
     bool ScreenshotRequestQueue::putForNextPacket( const AbsolutePath& filePath )

@@ -8,6 +8,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
@@ -18,15 +19,23 @@
 
 namespace sw
 {
+    /** @brief 요청한 사진을 어디로 내는지입니다. */
+    enum class ScreenshotOutput : uint8
+    {
+        File,     ///< `_path` 에 이미지 파일(확장자가 `.png` 면 PNG, 아니면 PPM)로 쓴다
+        PNGBytes, ///< PNG 바이트로 우편함에 둔다(`takeLastPNGBytes`) — `_path` 는 요청 이름이다. 파일을 거치지 않는다(언리얼 `ReadPixels` 처럼 픽셀을 메모리로 받는다)
+    };
+
     /**
      * @struct ScreenshotRequest
      * @brief 렌더 스레드가 우편함에서 꺼낸 요청 하나입니다.
      */
     struct ScreenshotRequest
     {
-        string           _path;                                ///< 쓸 파일 경로
+        string           _path;                                ///< 쓸 파일 경로. 바이트 요청이면 요청 이름(결과를 가려 받는 열쇠)
         RHITextureHandle _texture{ 0 };                        ///< 0 이면 화면에 나간 이미지(Present 결과), 아니면 그 렌더 타깃
         RHIFormat        _format{ RHIFormat::R8G8B8A8_UNORM }; ///< `_texture` 의 포맷
+        ScreenshotOutput _output{ ScreenshotOutput::File };
     };
 } // namespace sw
 
@@ -58,10 +67,19 @@ namespace sw
          * @details 경로는 `AbsolutePath` 라 빈 값일 수 없다 — 빈 칸이 "요청 없음" 이라, 빈 경로를 받으면 받은 수만 올라 `hasUnfinishedRequest` 가 영영 참이었다.
          */
         void put( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat );
+        /**
+         * @brief PNG 바이트로 받을 요청을 넣습니다(파일 요청과 같은 한 칸 — 꺼내지 않은 앞 요청은 이 요청으로 바뀐다). 결과는 `takeLastPNGBytes( requestName, … )` 로 받습니다.
+         * @return @p requestName 이 비었으면 오류를 남기고 false 입니다(빈 칸이 "요청 없음" 이다).
+         */
+        [[nodiscard]] bool putForPNGBytes( string_view requestName, RHITextureHandle sourceTexture, RHIFormat sourceFormat );
         /** @brief 넣어 둔 요청을 꺼냅니다(꺼낸 칸은 빈다). 요청이 없으면 false 입니다. */
         [[nodiscard]] bool take( ScreenshotRequest& outRequest );
         /** @brief 요청 하나를 처리했음을 알립니다(성공과 실패 모두). @p bWritten 이 true 면 @p writtenPath 가 마지막 경로가 되고, 아니면 마지막 경로가 비워집니다. */
         void reportCompleted( bool bWritten, const string& writtenPath );
+        /** @brief 바이트 요청 하나를 처리했음을 알립니다. @p bEncoded 이면 @p requestName 이 마지막 경로가 되고 @p pngBytes 를 둔다(앞 결과는 버린다). */
+        void reportCompletedPNGBytes( bool bEncoded, const string& requestName, vector<uint8> pngBytes );
+        /** @brief 마지막으로 처리한 요청이 이름 @p requestName 의 바이트 요청이고 성공했으면 그 PNG 바이트를 @p outPNGBytes 로 옮기고 true 입니다(한 번만 받는다). */
+        [[nodiscard]] bool takeLastPNGBytes( string_view requestName, vector<uint8>& outPNGBytes );
         /** @brief 처리한 요청 수입니다(성공과 실패 모두 셉니다). */
         uint32 getCompletedSerial() const { return _completedSerial.load( std::memory_order_acquire ); }
         /** @brief 받았지만 아직 처리하지 않은 요청(`put` 으로 넣고 `reportCompleted` 전)이나 패킷에 싣지 않은 패킷 사진이 있으면 true 입니다. 덮어쓴 요청은 하나로 센다. */
@@ -93,7 +111,9 @@ namespace sw
         string _pendingPacketPath        SW_GUARDED_BY( _mutex );
         RHITextureHandle _pendingTexture SW_GUARDED_BY( _mutex ){ 0 };
         RHIFormat _pendingFormat         SW_GUARDED_BY( _mutex ){ RHIFormat::R8G8B8A8_UNORM };
-        atomic<uint32>                   _requestedSerial{ 0 }; ///< 받은 요청 수(꺼내기 전에 덮어쓴 요청은 세지 않는다 — 처리 수와 견준다)
+        ScreenshotOutput _pendingOutput  SW_GUARDED_BY( _mutex ){ ScreenshotOutput::File };
+        vector<uint8> _lastPNGBytes      SW_GUARDED_BY( _mutex ); ///< 마지막 바이트 요청의 PNG(`_lastPath` 가 그 요청 이름일 때만 뜻이 있다)
+        atomic<uint32>                   _requestedSerial{ 0 };   ///< 받은 요청 수(꺼내기 전에 덮어쓴 요청은 세지 않는다 — 처리 수와 견준다)
         atomic<uint32>                   _completedSerial{ 0 };
         atomic<uint32>                   _completedPacketSerial{ 0 };
 

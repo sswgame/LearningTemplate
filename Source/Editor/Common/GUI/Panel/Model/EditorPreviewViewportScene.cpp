@@ -221,14 +221,23 @@ namespace sw::editor
         return true;
     }
 
+    bool EditorPreviewViewport::requestImagePNGBytes( string_view requestName )
+    {
+        const uint64 renderTarget = getRenderTarget();
+        const bool   bNotDrawn    = renderTarget == 0 || _submittedFrameCount == 0;
+        if ( bNotDrawn )
+            return false;
+        return RenderThread::requestScreenshotPNGBytes( requestName, renderTarget, RHIFormat::R8G8B8A8_UNORM );
+    }
+
+    bool EditorPreviewViewport::takeImagePNGBytes( string_view requestName, vector<uint8>& outPNGBytes )
+    {
+        return RenderThread::takeLastScreenshotPNGBytes( requestName, outPNGBytes );
+    }
+
     uint32 EditorPreviewViewport::getCompletedImageFileSerial()
     {
         return RenderThread::getCompletedScreenshotSerial();
-    }
-
-    string EditorPreviewViewport::getLastImageFilePath()
-    {
-        return RenderThread::getLastScreenshotPath();
     }
 
     bool EditorPreviewViewport::hasFloor() const
