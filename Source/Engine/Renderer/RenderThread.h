@@ -35,6 +35,10 @@ namespace sw
 
     /** @brief 렌더 스레드에서 실행할 일 하나입니다(`RenderThread::executeAndWait`). 디바이스는 그 스레드가 컨텍스트를 잡은 것입니다. */
     SW_DECLARE_DELEGATE( void, RenderCommandDelegate, IRHIDevice& );
+    /** @brief 렌더 스레드가 프레젠트 직전과 직후에 부릅니다(`RenderThread::setPrepareHook` · `setPresentHook` · `setPostPresentHook`). 에디터 오버레이가 여기에 연결됩니다. */
+    SW_DECLARE_DELEGATE( void, PresentHookDelegate, IRHIDevice&, RenderFramePacket& );
+    /** @brief 렌더 스레드가 프레임의 `beginFrame`(펜스 대기 자리) 바로 앞에서 부릅니다(`RenderThread::setBeginFrameHook`). 장치 손실 흉내 같은 개발 도구가 여기에 연결됩니다. */
+    SW_DECLARE_DELEGATE( void, BeginFrameHookDelegate, IRHIDevice& );
 
     /**
      * @class RenderThread
