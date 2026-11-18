@@ -859,7 +859,7 @@ namespace sw
         _digestComparer.update( MonotonicClock::nowNanoseconds(), graceNanoseconds, listMismatch );
         for ( const ResourceDigestMismatch& mismatch : listMismatch )
         {
-            // 게임플레이 값이 클라이언트마다 다르면 판정이 어긋난다 — 받지 않는다(`docs/ResourceStructure.md` 의 네트워크).
+            // 게임플레이 값이 클라이언트마다 다르면 판정이 어긋난다 — 받지 않는다(`docs/agents/DataInheritance.md` 조건 절의 네트워크).
             SW_LOG_ERROR_ID( "Net.ResourceDigestMismatch", "Net session client %# composed '%#' differently from the server (load-axis conditions or resource layers differ) - disconnecting it",
                              mismatch._peer, mismatch._assetID );
             _peers.disconnect( mismatch._peer );

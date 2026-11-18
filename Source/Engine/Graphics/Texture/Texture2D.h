@@ -254,7 +254,7 @@ namespace sw
         static RHIFormat toRHIFormatFromDXGI( uint32 dxgiFormat );
         /**
          * @brief 세 채널 실수(`R32G32B32_FLOAT`) 이미지를 네 채널(`R32G32B32A32_FLOAT`, 알파 1)로 폅니다. 밉 · 층의 바이트가 이어져 있어 텍셀마다 한 번이면 된다.
-         * @details 세 채널 실수 텍스처는 D3D · 데스크톱 Vulkan 에만 있고 모바일 Vulkan 은 대개, WebGPU 는 늘 없다 — 그런 장치에 올릴 때 쓴다(`docs/PlatformTargets.md`).
+         * @details 세 채널 실수 텍스처는 D3D · 데스크톱 Vulkan 에만 있고 모바일 Vulkan 은 대개, WebGPU 는 늘 없다 — 그런 장치에 올릴 때 쓴다(`docs/agents/Platform.md`).
          *          언리얼도 `PF_R32G32B32F` 를 플랫폼이 못 쓰면 `PF_A32B32G32R32F` 로 올린다(기억).
          * @return 원본이 세 채널 실수가 아니거나 바이트가 텍셀 크기의 배수가 아니면 false 이고 @p outImage 는 건드리지 않습니다.
          */

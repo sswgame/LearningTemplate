@@ -2,7 +2,7 @@
 
 > 질문: 무엇이 남았고 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: 할 일 목록은 이 문서 하나다. **남은 일**만 적고 끝나면 줄을 지운다(끝난 일은 git 기록에). 판단은 [DesignBacklog](DesignBacklog.md), 플랫폼 판정은 [PlatformTargets](PlatformTargets.md), 규칙은 CLAUDE.md · AGENTS.md · `docs/agents/` · 스킬에 있다.
+> 결론: 할 일 목록은 이 문서 하나다. **남은 일**만 적고 끝나면 줄을 지운다(끝난 일은 git 기록에). 판단은 [DesignBacklog](DesignBacklog.md), 플랫폼 판정은 [Platform](agents/Platform.md), 규칙은 CLAUDE.md · AGENTS.md · `docs/agents/` · 스킬에 있다.
 
 절차의 정본은 스킬이다: 묶음 끝 검증 · push `preflight`, Linux `linux-verify`, 시나리오 실패 `scenario-debug`. 시나리오 체계는 `Test/README.md`, 사람이 보는 실행은 `py -3 Scripts/dev/watch_scenarios.py`. 코드 주석의 `감사 <ID>` 가 가리키는 닫힌 항목은 `git log --grep '감사 <ID>'`(앞 커밋 몇은 `<ID>` 만 — `git log --grep '<ID>'`)로 찾는다.
 
@@ -32,7 +32,7 @@
 - **Linux `editor.screenrectview` 골든:** 2026-11-13 · 11-18 두 번 모두 정확히 1.09375 % (허용 1 %) — `all`(체인 넷 동시)에서만 진다. 앞 142 단계를 붙인 이분 탐색(혼자 도는 체인)은 통과. 부하에 따른 정착 차이로 본다 — 다시 지면 `/tmp/lt.chain.editor.out` 과 화소 자리(`scenario_bisect --golden-margins`)로 어느 화소인지 보고 그 사진 앞 대기를 정착 조건으로 바꾼다.
 - 흔들리는 게임 골든: 다시 지면 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다.
 
-## 3. 플랫폼 (판정 · 요구 판은 [PlatformTargets](PlatformTargets.md))
+## 3. 플랫폼 (판정 · 요구 판은 [Platform](agents/Platform.md))
 
 순서: 웹부터(언리얼은 웹을 내렸고 Godot 웹은 GL Compatibility 만이라 WebGPU 길은 참고할 상용 사례가 적다).
 
@@ -56,7 +56,7 @@
   - GPU 업로드 · 텍스처: shooter3d · meadowvillage 첫 진입 × 백엔드 셋 × `-gv_gpuUploadQueue=0/1`, `RT.TextureUpload.*` — pump 가 RT 의 10 % 를 넘거나 waiting 이 계속 0 이 아니면 RHI Thread 형 시제품.
   - 렌더 그래프 폭: `-gv_renderGraphParallelMinWidth=2 · 3 · 4 · 99` × DX12 · Vulkan — 3 · 4 가 흔들림 밖으로 빠르면 기본값을 바꾼다.
   - 그 밖: Tracy `GT.Frame` 자식 합 90 % 이상, 배치 크기 12 · 24 · 48, `load/*` × 워커 1 · 2 · 4 · 8 과 구조 지표, W25 GPU 비교(c05a3ee251 대 지금 — 노이즈 안이면 되돌림), W-S4 `-ftime-trace`, W-R1 RT 프레임 힙 할당, W-R2 PSO 조회, 5-2 `RT.Bind.*`, DX12 기록 경로 락 제거 전후 `bench.json` p50(291d69074e), 골든 여유(`--golden-margins`), 군중 `load/navcrowd`(넘으면 한 종류 군중을 지역으로 쪼갬), 잔상 GPU · CPU 메모리 `game.empty.afterimage`(품질 단계별 상한), 볼륨 안개 해상도별 `RT.Fog.Volume`.
-- **메시 인덱스 전환 뒤(StructureRefactor 10 절):** 모든 골든 대조(정점 순서가 같으면 그림이 같아야 한다 — 차이는 버그)와 농장 · 군중의 캐릭터당 GPU 측정.
+- **메시 인덱스 전환 뒤(DesignBacklog "메시 구조"):** 모든 골든 대조(정점 순서가 같으면 그림이 같아야 한다 — 차이는 버그)와 농장 · 군중의 캐릭터당 GPU 측정.
 - **글리프 아틀라스 압축(감사 RN-14, w-glyph):** Release `App --test --test-filter=GlyphAtlasTest.HangulScrollGlyphsRasterized` 를 측정 장치 커밋(1e4d3dbe8c, 예전 통째 비우기)과 본 변경(fc54031411)에서 한 번씩 — 로그의 `rasterized` · `missing`(파이썬 모형 예상: 30184 · 0 → 약 15300 · 1600, 하한 13760). rasterized 가 흔들림 밖으로 안 줄거나 missing 이 프레임당 10 자를 넘으면 `_glyphRetainFrameCount` 를 1 로 재고, 그래도 지면 본 변경만 되돌린다. 실제 화면은 `-gv_stressTestUiWidgets` 화면의 `Text.GlyphsRasterized` · `Text.GlyphsRelocated`.
 - **N×M 측정 후보**(목록이 작으면 해시가 손해이거나 순서를 지켜야 한다 — 재고 나서): `DataInheritance.cpp` `findEntry`(가장 큰 후보), `ComponentRegistry.cpp:60,75`, `PrefabPool.cpp:80,92`, `ShooterNetPawnComponent.cpp:535,571`(틱마다 적 수²), `MaterialCache.cpp:350`, `DestructionState.cpp:779,855`, `ContentBrowserCollectionStore.cpp:108`, `EditorAssetFileCommands.cpp:154,199,569`, `EditorNodeGraph.cpp:333,543,696`(프레임마다 노드 × 고른 노드), `ModResolver.cpp:161`, `ProjectSettingsDocument.cpp:45,62`, `ComponentStateStore.cpp:82`.
 - **Shooter3D 소총 자세 클립:** 지금은 리그 IK 견착(`ubc_player_body.rig.xml` TwoHandHold). 상용(Lyra · ALS)처럼 쥔 자세 클립 + 왼손 IK 로 — CC0 poly.pizza "SWAT"(Quaternius, `https://static.poly.pizza/713f6535-f4f3-4367-a4c6-ced126ae0936.glb`, `Idle_Gun` · `Gun_Shoot` · `Run_Shoot`)을 `models_raw/quaternius` 에 넣고 UBC 로 리타깃해 상체 층(Aim)으로, IK 견착은 손 자리 보정으로.

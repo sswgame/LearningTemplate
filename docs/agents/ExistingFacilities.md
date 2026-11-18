@@ -83,18 +83,69 @@ Search here before writing a helper for a common job. If the job is missing, sea
 
 A new row names the header and the API.
 
+## 경로 · 리소스 신원 규칙 (R1 ~ R9)
+
+경로 · 신원 · 인자를 형식 없는 `string` 으로 넘기면 받는 쪽이 글자로 다시 추측한다. 아래 규칙과 형식으로 막는다. 코드 주석이 `(R2)` · `(R3 · R8)` 처럼 이 번호를 가리킨다.
+
+| 규칙 | 뜻 | 상용 엔진 |
+|---|---|---|
+| R1 OS 경계 하나 | 파일 · 폴더 · 라이브러리 · 환경 변수 · 실행 파일 경로 같은 OS 호출은 `PlatformFileUtil`(과 그 짝) 한 곳만. Win32 · POSIX 네이티브로 통일하고 `std::filesystem` 은 쓰지 않는다 — 한 층에 오류 모델 · UTF-16 변환이 둘이면 결함이 난다 | 언리얼 `IPlatformFile`, Godot `FileAccess` · `DirAccess` |
+| R2 디스크 I/O 는 절대 경로만 | `FileUtil` · `PlatformFileUtil` 의 I/O 는 절대 경로만 받는다. 상대 · `C:foo` · `\foo` 는 오류. 경로 글 연산(`joinPath` 등)은 대상이 아니다 | |
+| R3 리소스는 리소스 경로만 | `AssetPaths` · `AssetIO` 는 `ResourcePath{도메인(선택), 상대 경로}` 만 받는다. 도메인을 비우면 우선순위로 찾고, 넣으면 그 도메인만. 문자열에서 도메인을 추측하지 않는다 | 언리얼 `/Game/…`, 덮어쓰기는 pak 우선순위 |
+| R4 쓰기는 FileUtil 이 절대 경로로 | `AssetPaths` · `AssetIO` 는 읽기와 경로 풀기만. 있는 파일은 리소스 경로를 디스크 위치로 풀어 쓰고, 새 파일은 도메인 루트 아래에 잇는다 | |
+| R5 상대 → 절대는 경계에서 한 번 | 명령줄 · 설정 · 콘솔 · 시나리오 값은 들어오는 자리에서 기동 때 고정한 루트 기준으로 한 번 바꾼다. 실행 중 작업 폴더는 읽지 않는다 | 언리얼 `FPaths::ProjectSavedDir` |
+| R6 폴백 없음 | 필요한 값이 없으면 오류로 멈춘다. "못 찾으면 받은 글", "실패하면 기본값", "실패하면 다른 구현" 은 없다 | |
+| R7 확인과 실행은 같은 해석 | 있는지 · 쓸 수 있는지를 묻는 쪽과 실제로 읽고 쓰는 쪽이 같은 함수로 푼다 | |
+| R8 같은 일은 하나 | 같은 판정 · 정규화 · 표 · 백오프 · 파서는 하나만 둔다. 답을 아는 쪽이 값을 넘긴다(재추측 금지) | |
+| R9 구성 차이는 크기대로 | 규칙은 [BuildConfigSwitch](BuildConfigSwitch.md) | 언리얼 Runtime · Developer · Editor 모듈과 `#if !UE_BUILD_SHIPPING` |
+
+| 형식 | 자리 | 막는 것 |
+|---|---|---|
+| `AbsolutePath` | `Core/Path/AbsolutePath.h` — `tryMake` · `tryResolve` 로만 만든다(Windows `X:/` · UNC, POSIX `/`) | 느슨한 판정 — `FileUtil::isAbsolutePath` 는 `C:foo` · `\foo` 도 절대로 보므로 디스크 입구는 이 형식(`FileUtil::requireAbsolutePath`)으로 받는다 |
+| `ProcessRoots` | `Core/File/ProcessRoots.h` — 기동 때 한 번(실행 파일 위치 · `-project=`): binary · project · content · saved · logs · crash · userData · packs · DDC. 못 정하면 기동 오류 | 작업 폴더 의존, Saved 기준 여럿, `"Saved"` 리터럴 |
+| `ResourcePath` · `DomainTable` | `Engine/Content/ResourcePath.h` — 만들 때 정규화(소문자 · `/` · `..` 거절), 문자열에서 암시적으로 못 만든다. 도메인 이름표 · 우선순위 · 쿠킹 대상은 표 하나, 한 줄 참조(`common/x`)는 이 표의 최장 일치(`DomainTable::split`)로만 가른다 | 캐시마다 다른 키 정규화, 도메인 판정 · 나열 · 우선순위 표 여러 벌 |
+| 입력 경계 | 명령줄 값 종류 `CommandLineDiskPath`(parse 때 R5 로 절대화, 오류는 모아 기동 실패), `gv_` 보류 값도 같은 변환기, 개발 명령 `readDiskPathArgument` | "실패하면 0 넣고 읽음 표시", 인자 글자 비교 · 추측 |
+
+정해 둔 것:
+
+- `AssetPaths` 의 공개 해석은 `toDiskPath` · `findLooseFile` · `toAssetID` · `collectLooseFolders` 와 설정(`setSearchPriority` · `mountDiskDomain`)뿐이다. 붙인 디스크 도메인(`isMountedDiskDomainID`)은 팩을 보지 않는다.
+- `collectAssets` 는 소스 · 팩 구성 모두 합집합이다(같은 이름은 앞선 도메인 · 높은 팩, 언리얼 `IterateDirectory`). 팩의 도메인은 팩 안(스트링 풀 맨 앞)에 적고 파일 이름으로 추측하지 않는다(언리얼 pak mount point).
+- 개발 명령의 디스크 경로 인자와 문서 · 직렬화기의 `saveToFile` 은 글을 받는다 — 저장으로 갈 때만 `FileUtil::requireAbsolutePath` 로 형식에 올리고 OS 경계가 상대 경로를 거절한다. 시나리오 단계 속성마다 경로 종류를 선언하지 않는다(`{out}` 은 명령 글 안에서도 쓰여 속성 형식으로 막을 수 없다 — 경로를 받는 명령이 검사한다).
+- 씬 데이터의 `string _…Path` 칸은 참조 형식으로 바꾸지 않는다 — 그 값이 디스크 입구로 가는 곳이 없고, 상대 경로가 OS 경계에 닿으면 R2 가 오류로 드러낸다. 새 결함이 이 모양으로 나오면 그때 형식으로.
+- `TextureCache` 렌더 타깃 기본 크기(256)는 폴백이 아니라 자리 표시 값이다 — 카메라가 크기를 알리면 `resizeRenderTarget` 이 다시 만든다.
+- 저장: 런타임 저장소 `GameLocalStore` 는 게임 범위다(봉투 · 백엔드가 GameFramework, 슬롯 폴더가 게임마다 — 언리얼 `ISaveGameSystem` + `AsyncSaveGameToSlot`), 완료 배분은 기반 `LocalStoreChannel`. 에디터 사용자 자료(`CharacterEditorLocalStore`)는 게임 인스턴스 밖의 사용자 자료라 따로다(언리얼 에디터 설정의 `Saved/`). 쓰는 확장이 둘이 되면 공용 에디터 플러그인으로 옮긴다.
+- 합치지 않는 것: 디렉터 컴포넌트의 카탈로그 읽기는 씬마다 다른 데이터라 게임 범위 `loadRequiredCatalog` 로 옮기지 않는다(실패는 ERROR). 파일 글 되돌리기 둘(프리팹 · 리그)은 뒤따르는 일이 달라 합치지 않는다.
+
 ## 리소스 읽기 입구와 에셋 참조
 
-설계는 [ResourceStructure](../ResourceStructure.md) 2 · 4 절, 규칙은 여기가 정본이다.
+리소스는 한 길을 지난다. 새 형식은 종류 정의 한 줄로 합성 · 공유 · 다시 읽기 · 쿠킹 · 참조 색인 · 에디터 선택기를 얻는다. 파일에 적는 법(`_base` · `_when` · 층 · 경로 교체)은 [DataInheritance](DataInheritance.md), 새 형식 순서는 그 문서 "새 형식을 올리는 법" 이다.
+
+```
+리소스 파일
+  └─ 합성 읽기 ResourceComposer: 부모(_base) → 조건(_when) → 덮어쓰기 층 → 펼친 글
+       └─ 종류 정의(AssetTypeDef)의 로더: 글 → const T
+            └─ 공유 캐시 SharedAssetCache<T>: 경로 하나에 객체 하나, 다시 읽기, 로드 상태
+                 └─ AssetRef<T> 가 꺼낸다 → 실행 상태는 쓰는 쪽이 따로 가진다
+```
+
+- **종류 정의:** 등록은 `SW_ASSET_TYPE( id, 정의.withPathRule( … ).withLoader( AssetTypeLoader::of<T>( 메모리 태그 ) ) )` 한 줄이다(문맥이 더 필요한 로더는 `AssetTypeLoader::with<T, 함수>`). `AssetTypeDef` 가 이름 · 접미사 · 판 · 쿠킹 접미사 · 경로 규칙(`/data/items.xml` 처럼 접미사로 가를 수 없는 파일) · 내장 이름 · 로더를 들고, 고치는 함수는 `withPathRule` · `withBuiltinNames` · `withLoader` 뿐이다. 헤더의 `kAssetType` 은 쿠킹이 쓰는 사실만, 로더는 등록 표의 사본에만 있다. 검증 전용 로더는 두지 않는다 — 스키마 테스트도 진짜 로더를 부른다.
+- **공유 캐시 등록:** `SW_SHARED_ASSET_CACHE( id, T, 정의 )`(Engine) · `SW_MODULE_SHARED_ASSET_CACHE( id, T, 내보내기, 정의 )`(모듈 — 모듈 수명으로 등록, `Engine/Module/ModuleSharedAssetCache.h`) 한 줄이 종류 등록 · 캐시 인스턴스화 · 레지스트리 등록을 함께 한다. 캐시 이름도 정의의 이름 하나다. `XMLCatalog` 형식은 모두 캐시를 가진다.
+- **쿠킹 제약:** 팩 쿠킹은 게임 모듈을 올리기 전에 돈다(`HeadlessSubsystem::runCookTask`). 쿠킹이 알아야 하는 합성 규칙은 데이터(`Content/engine/settings/datacataloginheritance.xml`)에 두고, 배포 런타임도 이 표를 읽는다.
+- **창구:** `request( 경로 )` 는 핸들(로드 상태), `acquire( 경로 )` 는 `SharedAssetRef<T>` 를 돌려준다. `XMLCatalog` 에 감싸개를 두지 않는다(내보내는 카탈로그가 베이스 멤버를 모두 인스턴스화해 캐시 없는 카탈로그의 링크가 깨진다). 다시 읽은 횟수는 비공개이고 `AssetReloadWatch<T>` 만 읽는다.
+- **다시 읽기:** 다시 읽으면 늘 새 판이 생긴다. `SharedAssetRef<T>` 로 쥔 쪽은 새 판을 보고, `shared_ptr<const T>`(`.snapshot()`)로 쥔 쪽은 받은 때의 판을 그대로 읽는다 — 진행 중인 세션 · 워커 일감 · 번호를 지어 둔 쪽이 이것이다. 옛 판은 `collectRetiredVersions` 가 프레임 경계에서 놓는다. 지어 둔 것은 `AssetReloadWatch` 로 횟수를 보고 다시 짓는다. 시나리오 `editor/catalogshared`.
+- **사본을 못 만들게 한다:** `loadFromAsset` 은 비공개이고 `AssetTypeLoader` 만 friend 다. 게임 범위 서비스는 `GameInstance::loadRequiredCatalog` 로 받고, 테스트 · 미리 보기는 `loadFromXMLText`. 쿠커가 읽는 형식만 공개 `loadCopyFromAsset` 을 둔다 — 쿠킹 작업(`CookJob`)은 범위 안의 읽기를 입력으로 기록하므로 캐시의 한 벌을 쓰면 입력이 빠진다.
+- **사본이 맞는 것:** 프로세스에 한 벌이고 서비스가 기동 때 자기 상태로 옮기는 엔진 설정(`PhysicsSettings` · `UIScaleSettings` 등, 언리얼 `UDeveloperSettings` 자리), 쓰는 쪽이 고치는 입력(`InputMap` 재바인딩 · 높이장 · `NavMeshAsset` · `TileMapXMLData`), 도구 입력(정점 애니메이션 쿠커 · 머티리얼 그래프 컴파일러 · 에디터 편집 사본).
+- **정의와 실행 상태:** 공유 객체는 `const` 다. 실행 상태가 섞인 카탈로그는 나눈다(`BehaviorTree` · `BehaviorTreeRunner`, `AbilityCatalog` · `AbilityClassRegistry`). `MeshCache` · `TextureCache` · `MaterialCache` · `PrefabCache` 는 GPU 수명 · 쓰는 쪽의 수정이 있어 합치지 않는다(`SharedAssetCache.h` 머리말). `AssetHandle` · 로드 상태 · 종류 정의는 공유한다.
+- 아직 쓰는 게임이 없는 키트 카탈로그(약 20 종)는 라이브러리라 지우지 않고 캐시 등록과 접미사만 둔다.
 
 - **리소스는 id 로 읽는다.** 그래야 조건(`_when`) · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조(리소스 해시)를 받는다. 리플렉션 파일 하나는 `ConfigManager::readComposedXMLDocument`, 루트를 손으로 읽는 형식은 `XMLReadUtil::parseResourceRoot`, 그 밖은 `XMLDocument::loadResource` · `loadResourceAs` · `parseResourceText`(테스트 `ResourceEntranceTest`).
 - 글을 읽은 뒤 id 없이 글 입구(`loadFromAsset` · `loadFromFile`)로 넘기지 않는다 — 린트 `common-shapes` 의 `assetEntrance` 가 막고, 예외는 문맥을 정하는 쪽(문화권 표 · 경로 교체 표)만 `Config/Rules/Lint/CommonShapeExceptions.json` 에 까닭과 함께. 팩 설정(`PackEngineSettings`)은 층 · 조건이 기대는 값을 정하므로 그대로 읽는다. 미리 보기 · 테스트는 `loadFromXMLText`(층을 얹지 않는다).
-- **다른 에셋을 가리키는 칸은 `AssetRef<T>`**(언리얼 `TSoftObjectPtr<T>`). 스스로 읽지 않는다(`acquire()` · `request()`). 접미사가 대상 종류와 다르면 로드 오류다.
+- **다른 에셋을 가리키는 칸은 `AssetRef<T>`**(언리얼 `TSoftObjectPtr<T>`). 스스로 읽지 않는다(`acquire()` · `request()`). 접미사가 대상 종류와 다르면 로드 오류다. 값은 `AssetRefBase`(경로 + `const AssetTypeDef*`)와 `AssetRef<T>` — 대상 종류를 값이 품어 `vector<AssetRef<T>>` · 중첩 구조체 · 덮어쓰기 패치가 같은 검사를 지나고, 의존성 수집 · 미리 읽기(`PreloadSet`) · 쿠킹 입력 · 참조 색인 · 에디터 선택기가 모두 이 칸을 본다.
 - 경로 칸은 리플렉션 선언에서만 온다 — 손으로 쓴 이름 표를 두지 않는다. 생성 목록은 `Config/Dev/AssetReferenceFields.generated.json`(낡음은 `--check-asset-refs`), `Config/Dev/AssetReferenceFields.json` 에는 도메인 · 확장자 · 임포트 폴더 규칙만.
 - `AssetRef<T>` 칸이 만들어지는 곳에서 `T` 는 완전해야 한다(`unique_ptr<T>` 소멸자와 같은 규칙) — 대상 헤더를 못 읽으면 생성자를 .cpp 로 옮긴다.
 - 종류는 접미사 · 경로 규칙(`AssetTypeDef::makeDataFile`) · 내장 이름(`withBuiltinNames`) 셋으로만 가른다. 셋 다 없는 종류는 `AssetRef<T>` 가 컴파일에서 막는다(`AssetTypeDef::canTellPath`). 모르는 내장 이름은 폴백 없이 오류다.
 - 종류가 하나로 정해지지 않는 칸(인턴 열쇠로 쓰는 칸, 종류가 여럿인 칸, 종류 정의가 없는 파일)은 `PROPERTY( AssetPath )` 로 두어 생성 목록에 넣는다.
-- **쿠킹은 닿는 것만 담는다**(`PackReachability`, 언리얼 "참조된 패키지만 쿠킹"): 뿌리(`PackConfig.json` `_cookRules`, 게임 설정 `<RequiredData>`, `SW_ASSET_COOK_ROOT`)에서 참조 칸 · `_base` · 곁 파일(`SW_ASSET_COMPANION`)을 따라간다. 코드가 경로를 조립해 읽는 파일은 뿌리나 곁 파일로 선언한다 — 닿지 않으면 배포에서 빠진다. 닿는 참조가 없는 파일을 가리키면 쿠킹 오류다.
+- **쿠킹은 닿는 것만 담는다**(`PackReachability`, 언리얼 "참조된 패키지만 쿠킹"): 뿌리(`PackConfig.json` `_cookRules`, 게임 설정 `<RequiredData>`, `SW_ASSET_COOK_ROOT`)에서 참조 칸 · `_base` · 곁 파일(`SW_ASSET_COMPANION`)을 따라간다. 코드가 경로를 조립해 읽는 파일은 뿌리나 곁 파일로 선언한다 — 닿지 않으면 배포에서 빠진다. 닿는 참조가 없는 파일을 가리키면 쿠킹 오류다. 계산과 칸 규칙(`AssetReferenceFields`)은 `Engine/Asset/Reference` 에 있다. 큰 카탈로그는 항목 단위로 고르고(`_listEntryCatalog` · `_listEntryIDField`), 스테이징 산출물은 원본이 쓰일 때만 담는다(`PackStagedSelection`).
 
 ## 리플렉션 스키마로 읽지 않고 손으로 두는 것
 
