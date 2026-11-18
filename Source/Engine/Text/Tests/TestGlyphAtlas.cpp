@@ -316,3 +316,45 @@ SW_TEST_CASE( GlyphAtlasTest, CatalogRejectsMissingAtlasLayout )
     catalog._glyphAtlasMaxPageCount = 0;
     SW_EXPECT_FALSE( catalog.validate() );
 }
+
+/**
+ * @brief [GlyphAtlasTest] 한글 채팅 창 장면의 새 래스터화 수(`Text.GlyphsRasterized` 와 같은 값)와 이번 프레임에 못 그린 글자 수를 로그로 남깁니다 — 문턱은 두지 않는다
+ * @details 장면: 서로 다른 한글 음절 3000 자 대화 기록을 600 자 창으로 보여 주며 프레임마다 40 자씩 내리고(먼저 그린다), 그 뒤에 고정 한글 패널 1200 자를 그린다.
+ *          글리프는 실제 크기(48 px + 퍼짐 6 px 양쪽 = 60 px)라 엔진 카탈로그 모양(1024² × 8)에 2048 자만 든다 — 한 프레임의 1800 자는 들고 전체 4200 자는 안 든다.
+ *          하한(`minimum`)은 처음 창 · 패널과 창에 새로 든 글자 수다. 페이지를 프레임 중간에 통째로 비우면 뒤에 그릴 패널 글리프가 섞인 페이지가 비워져
+ *          매 프레임 다시 래스터화된다(감사 RN-14). 재는 법: Release `App --test --test-filter=GlyphAtlasTest.HangulScrollGlyphsRasterized`,
+ *          로그 `GlyphAtlasTest.HangulScrollGlyphsRasterized` 의 `rasterized` 가 `minimum` 에 가까울수록, `missing`(미룬 · 못 그린 글자)이 작을수록 좋다.
+ */
+SW_TEST_CASE( GlyphAtlasTest, HangulScrollGlyphsRasterized, ._tags = "bench" )
+{
+    static constexpr uint32 kTextLength     = 3000;
+    static constexpr uint32 kWindowLength   = 600;
+    static constexpr uint32 kScrollPerFrame = 40;
+    static constexpr uint32 kPanelLength    = 1200;
+    static constexpr uint32 kFrameCount     = 300;
+    static constexpr uint32 kHangulFirst    = 0xAC00; // '가'
+    static constexpr uint32 kGlyphSizePx    = 60;
+
+    sw::test::FakeFontRasterizer rasterizer;
+    rasterizer.setSDFSize( kGlyphSizePx );
+    const sw::FontFaceID face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
+    sw::GlyphCache       cache( rasterizer, sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout );
+
+    uint32 missingCount = 0;
+    for ( uint32 frame = 0; frame < kFrameCount; ++frame )
+    {
+        cache.beginFrame();
+        const uint32 windowStart = ( frame * kScrollPerFrame ) % kTextLength;
+        for ( uint32 index = 0; index < kWindowLength + kPanelLength; ++index )
+        {
+            // 앞은 대화 창(기록 안에서 돈다), 뒤는 기록과 겹치지 않는 고정 패널 글자다.
+            const uint32 glyphIndex = index < kWindowLength ? kHangulFirst + ( windowStart + index ) % kTextLength : kHangulFirst + kTextLength + ( index - kWindowLength );
+            if ( cache.getOrCreateGlyph( face, glyphIndex, cache.getFrameIndex() )._status != sw::GlyphLookupStatus::Ready )
+                ++missingCount;
+        }
+    }
+    const uint32 minimumCount = kWindowLength + kPanelLength + kScrollPerFrame * ( kFrameCount - 1 );
+    SW_EXPECT_TRUE( rasterizer.getRasterizeCount() >= kWindowLength + kPanelLength );
+    SW_LOG_INFO_ID( "GlyphAtlasTest.HangulScrollGlyphsRasterized", "Hangul chat %# frames: rasterized %# (minimum %#), missing %#", kFrameCount, rasterizer.getRasterizeCount(),
+                    minimumCount, missingCount );
+}
