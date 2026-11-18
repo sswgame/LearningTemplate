@@ -259,11 +259,7 @@ namespace sw
 
             static const HousingPlotComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*           pTarget = query.findTargetObject();
-                const HousingPlotComponent* pPlot   = pTarget != nullptr ? pTarget->getComponent<HousingPlotComponent>() : nullptr;
-                if ( pPlot == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "housing plot" ) );
-                return pPlot;
+                return query.findTargetComponent<HousingPlotComponent>( "housing plot", outValue );
             }
 
             /** @brief 감시 값 `Housing.PlacementCount` 입니다. */
@@ -423,9 +419,9 @@ namespace sw
         if ( acquireRequired( _partCatalog.path(), _pCatalog ) == false )
             return false;
         // 네트워크 월드면 같은 씬의 세션이 요청 · 방송을 맡는다 — 없으면 클라이언트 편집이 어디에도 가지 않고 서버 편집이 방송되지 않는다(조용히 혼자 돌지 않는다).
-        const SceneNetLink* pLink = SceneNetLink::findFor( *this );
+        const NetLinkValue* pLink = SceneNetLink::findBoundFor( *this );
         _netRole                  = HousingNetRole::Standalone;
-        if ( pLink != nullptr && pLink->isBound() )
+        if ( pLink != nullptr )
         {
             const GameObjectManager* pManager = getObjectManager();
             if ( pManager == nullptr || pManager->getComponentRegistry().getAll<HousingNetSessionComponent>().empty() )
@@ -434,7 +430,7 @@ namespace sw
                                  _settings._plotID.c_str() );
                 return false;
             }
-            _netRole = pLink->get()._role == NetLinkRole::Server ? HousingNetRole::Server : HousingNetRole::Client;
+            _netRole = pLink->_role == NetLinkRole::Server ? HousingNetRole::Server : HousingNetRole::Client;
         }
         _outgoingEditBuffer.clear();
         _pendingRequestCount = 0;

@@ -31,11 +31,7 @@ namespace sw
             /** @brief 질의 대상의 카메라 매니저입니다. 없으면 까닭을 적고 nullptr 입니다. */
             static const CameraManagerComponent* findTargetManager( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*             pTarget  = query.findTargetObject();
-                const CameraManagerComponent* pManager = pTarget != nullptr ? pTarget->getComponent<CameraManagerComponent>() : nullptr;
-                if ( pManager == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "camera manager" ) );
-                return pManager;
+                return query.findTargetComponent<CameraManagerComponent>( "camera manager", outValue );
             }
 
             /** @brief 감시 값 `CameraManager.Blending` 입니다. 대상 매니저가 블렌드 중이면 1 입니다. */

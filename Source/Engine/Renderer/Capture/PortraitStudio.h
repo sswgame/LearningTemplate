@@ -77,6 +77,18 @@ namespace sw
          */
         [[nodiscard]] bool renderPrefab( const PortraitRequest& request, PortraitCapture& outCapture );
 
+        /**
+         * @brief @p prefabList(쉼표로 여럿)의 프리팹마다 초상화를 그려 @p outputDirectory(비면 `Saved/Portraits`)에 `<이름>.portrait.dds` 와 `.png` 로 씁니다(`--render-portraits`, App 이 부른다). 하나라도 실패하면 false 입니다.
+         * @details 스튜디오 하나를 세워 장마다 `renderPrefab` 으로 그리고 읽으며(@p renderThread 의 명령), 옮기기 · 인코딩 · 쓰기는 워커가 한다. 게임 스레드에서, 모듈(게임 컴포넌트 타입)이 로드된 뒤에 부릅니다.
+         *          @p size 는 16 ~ 4096 으로 제한합니다. @p services 는 스튜디오 씬을 지을 묶음입니다.
+         */
+        [[nodiscard]] static bool renderPrefabList( RenderThread& renderThread, const SceneEngineServices& services, string_view prefabList, string_view outputDirectory,
+                                                    uint32 size );
+
+    private:
+        /** @brief 초상화 파일 이름의 기본 부분입니다. 경로의 마지막 조각에서 첫 점 앞까지입니다(`game/heroes/hero.prefab.xml` → `hero`). */
+        static string_view makeFileStem( string_view prefabPath );
+
     private:
         SceneCapture        _capture;  ///< 그리기 · 읽기(렌더 스레드 명령)
         SceneEngineServices _services; ///< `initialize` 가 받은 묶음(빌림). 스튜디오 씬과 프리팹 · 머티리얼 캐시를 이것으로 찾는다

@@ -1192,18 +1192,9 @@ namespace sw
             /** @brief 감시 값 `Nav.AgentStatus` — 대상의 내비메시 에이전트 이동 상태 글(`Idle` · `Moving` · `Arrived` · `Failed`)입니다. 에이전트가 없으면 값이 없습니다. */
             [[nodiscard]] static bool readAgentStatus( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject* pObject = query.findTargetObject();
-                if ( pObject == nullptr )
-                {
-                    outValue.setText( query.getTargetProblem() );
-                    return false;
-                }
-                const NavMeshAgentComponent* pAgent = pObject->getComponent<NavMeshAgentComponent>();
+                const NavMeshAgentComponent* pAgent = query.findTargetComponent<NavMeshAgentComponent>( "navmesh agent", outValue );
                 if ( pAgent == nullptr )
-                {
-                    outValue.setText( query.describeMissing( "navmesh agent" ) );
                     return false;
-                }
                 switch ( pAgent->getMoveStatus() )
                 {
                     case NavMoveStatus::Idle:

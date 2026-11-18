@@ -334,13 +334,9 @@ namespace sw
             /** @brief 감시 값 `WildWest.OutlawStatus` 입니다. 대상 디렉터가 HUD 에 쓰는 무법자 글입니다. 아무 일도 없으면 빈 글입니다. */
             [[nodiscard]] static bool readOutlawStatus( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*                pTarget   = query.findTargetObject();
-                const WildWestGameModeComponent* pGameMode = pTarget != nullptr ? pTarget->getComponent<WildWestGameModeComponent>() : nullptr;
+                const WildWestGameModeComponent* pGameMode = query.findTargetComponent<WildWestGameModeComponent>( "Wild West Game Mode", outValue );
                 if ( pGameMode == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "Wild West Game Mode" ) );
                     return false;
-                }
                 outValue.setText( string_view{ pGameMode->formatOutlawStatus() } );
                 return true;
             }

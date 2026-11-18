@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/span.h"
 #include "Core/Foundation/Expected.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHIEnums.h"
@@ -94,6 +95,9 @@ namespace sw
         }
     };
     static_assert( isRHIFormatTableInOrder( RHIFormatInfoTable::kArrRow ), "RHIFormatInfoTable::kArrRow needs one row per RHIFormat, in enumerator order" );
+
+    /** @brief 포맷의 이름입니다 — 파이프라인 XML 이 쓰는 이름(리플렉션된 열거자 이름)이고, 모르는 값은 `(unknown)` 입니다. 렌더 타깃 목록 · 진단 표시가 읽습니다. */
+    SW_API const utf8* getRHIFormatName( RHIFormat format );
 
     /** @brief 포맷의 블록 정보를 반환합니다. 네 백엔드가 밉 크기와 행 바이트를 같은 규칙으로 계산하게 하는 유일한 원본입니다. */
     inline constexpr RHIFormatBlockInfo getRHIFormatBlockInfo( RHIFormat format )

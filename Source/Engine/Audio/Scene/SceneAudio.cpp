@@ -67,7 +67,7 @@ namespace sw
                 const AudioEmitterComponent* pEmitter = pTarget != nullptr ? pTarget->getComponent<AudioEmitterComponent>() : nullptr;
                 if ( pEmitter == nullptr || pEmitter->_bHasLastAudioPosition == false )
                 {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "audio emitter updated by the scene audio" ) );
+                    outValue.setText( query.describeMissing( "audio emitter updated by the scene audio" ) );
                     return false;
                 }
                 const float3& listener = query._pManager->getSubsystem<SceneAudio>().getPrimaryListenerPosition();

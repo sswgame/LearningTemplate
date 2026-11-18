@@ -40,6 +40,8 @@ namespace sw
     protected:
         bool onPrepareContent( const ContentPreparationToken& token ) override;
         bool onInitialize() override;
+        /** @brief 클라이언트 부분(벤치)이 자기 장면을 띄웠으면 첫 씬을 열지 않습니다. */
+        void startFirstScene() override;
         void onUpdate( float32 deltaTime ) override;
         /** @brief 상태 스냅샷을 만들기 직전에 부릅니다. 벤치는 절차적으로 생성한 오브젝트라서 정리해 스냅샷에 싣지 않습니다. */
         void onBeforeStateSerialize() override;
@@ -93,20 +95,19 @@ namespace sw
         if ( loadRequiredCatalogSnapshot( _pMonsterCatalog ) == false )
             return false;
         // 지역 효과 시연의 필수 데이터 — 지역 프로필의 할 일이 이 카탈로그의 이펙트를 건다(읽을 때 참조를 본다). 못 읽으면 게임을 띄우지 않는다.
-        if ( bindScopedService( &_abilityClasses ) == false || loadRequiredCatalog( _pAbilityCatalog ) == false )
-            return false;
+        return bindScopedService( &_abilityClasses ) && loadRequiredCatalog( _pAbilityCatalog );
+    }
 
+    void EmptyGame::startFirstScene()
+    {
         if ( IGameClientPartFactory* const pFactory = game::findSubsystem<IGameClientPartFactory>() )
             _clientPart = pFactory->createClientPart();
         const bool bBenchRunning = _clientPart != nullptr && _clientPart->initialize();
 
-        // 벤치가 아니면 처음 씬을 엽니다. 우선순위는 실행 설정의 시작 씬, GameSettings 의 타이틀 씬, 시작 맵 순입니다.
+        // 벤치가 아니면 처음 씬을 엽니다(바탕의 기본 — 실행 설정의 시작 씬, GameSettings 의 타이틀 씬, 시작 맵 순).
         // 에디터 밖에서 실행해도 씬이 없는 채로 뜨지 않게 하고, 배포본이 씬 로드 경로(SCN1, 프리팹 경로 해석)를 실제로 실행하는 곳이기도 합니다.
-        // 에디터가 자기 시작 씬(-gv_editorStartupScene)을 열면 그 요청이 나중에 큐에 들어가므로 이깁니다. SceneManager 는 마지막 요청만 남깁니다.
         if ( bBenchRunning == false )
-            (void)getSubsystem<GameSceneFlow>().requestFirstScene(); // 열 씬이 없으면 빈 씬으로 시작합니다. 요청이 실패하면 함수 안에서 알립니다.
-
-        return true;
+            GameInstance::startFirstScene();
     }
 
     void EmptyGame::onUpdate( float32 deltaTime )

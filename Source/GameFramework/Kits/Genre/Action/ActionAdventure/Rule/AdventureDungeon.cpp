@@ -97,10 +97,7 @@ namespace sw
                 dungeon._listDoor.push_back( door );
             bValid = bDoorValid && bValid;
         }
-        for ( XMLNode node = dungeonNode.findChild( "Treasure" ); node; node = node.findNextSibling( "Treasure" ) )
-        {
-            bValid = GameDataXML::readInto( node, sourceName, dungeon._listTreasure ) && bValid;
-        }
+        bValid = GameDataXML::readChildrenInto( dungeonNode, "Treasure", sourceName, dungeon._listTreasure ) && bValid;
         for ( XMLNode node = dungeonNode.findChild( "Device" ); node; node = node.findNextSibling( "Device" ) )
         {
             AdventureDeviceDef device;

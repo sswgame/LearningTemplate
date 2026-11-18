@@ -164,12 +164,12 @@ namespace sw
         Component::onBeginPlay();
         _role = Role::None;
         // 넷 링크는 이 컴포넌트의 월드(오브젝트 매니저)에 올라 있다 — 전역 세션을 찾지 않는다. 한 프로세스에 월드가 여럿이어도(가상 서버 하니스) 각자 자기 링크를 본다.
-        const SceneNetLink*           pLink      = findLink();
+        const NetLinkValue*           pLink      = SceneNetLink::findBoundFor( *this );
         ShooterBodyMovementComponent* pMovement  = findMovement();
-        const bool                    bNoSession = pLink == nullptr || pLink->isBound() == false || pMovement == nullptr;
+        const bool                    bNoSession = pLink == nullptr || pMovement == nullptr;
         if ( bNoSession )
             return; // 혼자 하는 게임 — 몸 이동은 프레임마다 예전 길로 돈다
-        const NetLinkValue& link = pLink->get();
+        const NetLinkValue& link = *pLink;
 
         PredictionSmootherSettings smoothing;
         smoothing._halfLifeSeconds = _smoothingHalfLife;
@@ -287,10 +287,10 @@ namespace sw
     {
         ++_tick;
         ShooterNetPawnComponentInternal::publishServerTick( getOwner(), static_cast<int64>( _tick ) );
-        const SceneNetLink* pLink = findLink();
-        if ( pLink == nullptr || pLink->isBound() == false )
+        const NetLinkValue* pLink = SceneNetLink::findBoundFor( *this );
+        if ( pLink == nullptr )
             return;
-        INetPeers&                 peers   = *pLink->get()._pPeers;
+        INetPeers&                 peers   = *pLink->_pPeers;
         RemoteControllerComponent* pRemote = findRemoteController();
         _server.beginTick( _tick ); // 입력을 꺼내기 전에 — 보던 틱은 서버의 지금 틱으로 자른다(`getClientViewTick`)
         // 조종 연결 — 처음 붙은 클라이언트가 이 몸을 맡고, 끊기면 다음 클라이언트가 처음부터 맡는다.
@@ -517,11 +517,6 @@ namespace sw
         _pendingTriggerYaw      = 0.0f;
         _pendingTriggerPitch    = 0.0f;
         return intent;
-    }
-
-    const SceneNetLink* ShooterNetPawnComponent::findLink() const
-    {
-        return SceneNetLink::findFor( *this );
     }
 
     const ShooterGameModeComponent* ShooterNetPawnComponent::findGameMode() const

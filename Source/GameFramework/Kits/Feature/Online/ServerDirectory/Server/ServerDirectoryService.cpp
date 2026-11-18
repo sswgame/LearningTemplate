@@ -426,14 +426,9 @@ namespace sw
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
-        pendingJob._table               = Internal::getMaintenanceTable();
-        pendingJob._key                 = window._scope;
-        pendingJob._pGuard              = actor._pGuard;
-        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
-        pendingJob._auditEntry._action  = "sd.maintenance.set";
-        pendingJob._auditEntry._subject = "sd/" + window._scope;
-        pendingJob._auditEntry._memo    = string( memo );
-        pendingJob._auditEntry._timeMs  = nowMs.count();
+        pendingJob._table = Internal::getMaintenanceTable();
+        pendingJob._key   = window._scope;
+        pendingJob.setOperatorAudit( actor, "sd.maintenance.set", "sd/" + window._scope, nowMs, memo );
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
@@ -446,14 +441,9 @@ namespace sw
             return;
         }
         ServiceAuditedWrite pendingJob;
-        pendingJob._table               = Internal::getMaintenanceTable();
-        pendingJob._key                 = string( scope );
-        pendingJob._pGuard              = actor._pGuard;
-        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
-        pendingJob._auditEntry._action  = "sd.maintenance.clear";
-        pendingJob._auditEntry._subject = "sd/" + string( scope );
-        pendingJob._auditEntry._memo    = string( memo );
-        pendingJob._auditEntry._timeMs  = nowMs.count();
+        pendingJob._table = Internal::getMaintenanceTable();
+        pendingJob._key   = string( scope );
+        pendingJob.setOperatorAudit( actor, "sd.maintenance.clear", "sd/" + string( scope ), nowMs, memo );
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
@@ -471,14 +461,10 @@ namespace sw
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
-        pendingJob._table               = Internal::getAnnouncementTable();
-        pendingJob._key                 = ServiceKeyUtil::makeHex64( announcement._announcementID );
-        pendingJob._pGuard              = actor._pGuard;
-        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
-        pendingJob._auditEntry._action  = "sd.notice.post";
-        pendingJob._auditEntry._subject = "sd/notice/" + pendingJob._key;
-        pendingJob._auditEntry._after   = announcement._text;
-        pendingJob._auditEntry._timeMs  = nowMs.count();
+        pendingJob._table = Internal::getAnnouncementTable();
+        pendingJob._key   = ServiceKeyUtil::makeHex64( announcement._announcementID );
+        pendingJob.setOperatorAudit( actor, "sd.notice.post", "sd/notice/" + pendingJob._key, nowMs );
+        pendingJob._auditEntry._after = announcement._text;
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
@@ -505,13 +491,9 @@ namespace sw
     {
         using Internal = ServerDirectoryServiceInternal;
         ServiceAuditedWrite pendingJob;
-        pendingJob._table               = Internal::getAnnouncementTable();
-        pendingJob._key                 = ServiceKeyUtil::makeHex64( announcementID );
-        pendingJob._pGuard              = actor._pGuard;
-        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
-        pendingJob._auditEntry._action  = "sd.notice.remove";
-        pendingJob._auditEntry._subject = "sd/notice/" + pendingJob._key;
-        pendingJob._auditEntry._timeMs  = nowMs.count();
+        pendingJob._table = Internal::getAnnouncementTable();
+        pendingJob._key   = ServiceKeyUtil::makeHex64( announcementID );
+        pendingJob.setOperatorAudit( actor, "sd.notice.remove", "sd/notice/" + pendingJob._key, nowMs );
         submitWrite( std::move( pendingJob ), requestTag );
     }
 

@@ -79,10 +79,7 @@ namespace sw
     {
         BattleRoyaleZoneDef zone;
         bool                bValid = XMLFields::readProperties( node, zone, sourceName );
-        for ( XMLNode phaseNode = node.findChild( "Phase" ); phaseNode; phaseNode = phaseNode.findNextSibling( "Phase" ) )
-        {
-            bValid = GameDataXML::readInto( phaseNode, sourceName, zone._listPhase ) && bValid;
-        }
+        bValid                     = GameDataXML::readChildrenInto( node, "Phase", sourceName, zone._listPhase ) && bValid;
         if ( bValid == false )
             return false;
         _zone = zone;

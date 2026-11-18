@@ -9,6 +9,7 @@
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
+#include "GameFramework/Runtime/Foundation/Framework/Tests/PrefabPoolComponentSpawner.h"
 
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"
 
@@ -18,15 +19,8 @@ using namespace sw;
 SW_TEST_CASE( SkirmishUnitPoolResetTest, ReleasedViewComesBackUnassigned )
 {
     GameObjectManager manager;
-    PrefabPool        pool{ string{}, 4 };
-    pool.setSpawner( PrefabPool::SpawnDelegate::create( []( GameObjectManager& sceneManager, const utf8* pName )
-    {
-        GameObject* pObject = sceneManager.createGameObject( hashed_string( pName ) );
-        (void)pObject->addComponent<MeshComponent>();
-        (void)pObject->addComponent<SkirmishUnitComponent>();
-        return pObject;
-    } ) );
-    GameObject* pObject = pool.acquire( manager, "SkirmishUnit" );
+    PrefabPool        pool    = PrefabPoolComponentSpawner<MeshComponent, SkirmishUnitComponent>::makePool( 4 );
+    GameObject*       pObject = pool.acquire( manager, "SkirmishUnit" );
     SW_REQUIRE_NOT_NULL( pObject ); // 처음 만든 인스턴스로 풀 계약을 확인했다
     SkirmishUnitComponent* pView = pObject->getComponent<SkirmishUnitComponent>();
     SW_REQUIRE_NOT_NULL( pView );

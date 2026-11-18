@@ -565,8 +565,7 @@ namespace sw::editor
                 const uint32  minNodeSide = step.readValidatedProperties<EditorDockLayoutParams>()._minNodeSize; // 0 이면 아래의 기본 최소 변
                 const float32 minSide     = minNodeSide > 0 ? static_cast<float32>( minNodeSide ) : kDefaultMinDockNodeSide;
 
-                const MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
-                const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                const IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow == nullptr || ImGui::GetCurrentContext() == nullptr )
                 {
                     runner.recordFailure( step, "no window or ImGui context" );

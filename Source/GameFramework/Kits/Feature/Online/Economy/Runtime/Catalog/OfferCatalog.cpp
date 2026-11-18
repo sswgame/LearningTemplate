@@ -16,27 +16,12 @@ namespace sw
 {
     namespace
     {
-        struct OfferCatalogInternal
+        /** @brief 자산 id 가 원장 형식이고 양이 1 ~ 원장 다리 하나(`LedgerConstant::kMaxAmount`)이면 true 입니다. */
+        bool isValidOfferLeg( const string& assetID, int64 amount )
         {
-            /** @brief 자산 id 가 원장 형식이고 양이 1 ~ 원장 다리 하나(`LedgerConstant::kMaxAmount`)이면 true 입니다. */
-            static bool isValidLeg( const string& assetID, int64 amount )
-            {
-                const bool bAmountOk = 1 <= amount && amount <= LedgerConstant::kMaxAmount;
-                return bAmountOk && LedgerUtil::isValidAssetID( assetID );
-            }
-
-            /** @brief 원소 @p parent 의 @p pElement 자식을 모두 스키마로 읽어 @p outListDef 뒤에 붙입니다. 하나라도 틀리면 false 입니다. */
-            template <typename TDef>
-            [[nodiscard]] static bool readChildren( const XMLNode& parent, const utf8* pElement, string_view sourceName, vector<TDef>& outListDef )
-            {
-                bool bValid = true;
-                for ( XMLNode node = parent.findChild( pElement ); node; node = node.findNextSibling( pElement ) )
-                {
-                    bValid = GameDataXML::readInto( node, sourceName, outListDef ) && bValid;
-                }
-                return bValid;
-            }
-        };
+            const bool bAmountOk = 1 <= amount && amount <= LedgerConstant::kMaxAmount;
+            return bAmountOk && LedgerUtil::isValidAssetID( assetID );
+        }
     } // namespace
 } // namespace sw
 
@@ -52,12 +37,12 @@ namespace sw
         // 양의 상한(원장 다리 하나)은 float32 로 정확히 적을 수 없어 `PROPERTY( Max )` 대신 여기서 원장 상수로 본다.
         for ( const OfferGrant& grant : def._listGrant )
         {
-            if ( OfferCatalogInternal::isValidLeg( grant._assetID, grant._amount ) == false )
+            if ( isValidOfferLeg( grant._assetID, grant._amount ) == false )
                 return false;
         }
         for ( const OfferPrice& price : def._listPrice )
         {
-            if ( OfferCatalogInternal::isValidLeg( price._currencyID, price._amount ) == false )
+            if ( isValidOfferLeg( price._currencyID, price._amount ) == false )
                 return false;
         }
         _listOffer.push_back( def );
@@ -95,12 +80,11 @@ namespace sw
 
     bool OfferCatalog::loadOffer( const XMLNode& node, string_view sourceName )
     {
-        using Internal = OfferCatalogInternal;
         OfferDef def;
         bool     bValid = XMLFields::readProperties( node, def, sourceName );
-        bValid          = Internal::readChildren( node, "Price", sourceName, def._listPrice ) && bValid;
-        bValid          = Internal::readChildren( node, "Grant", sourceName, def._listGrant ) && bValid;
-        bValid          = Internal::readChildren( node, "Product", sourceName, def._listProduct ) && bValid;
+        bValid          = GameDataXML::readChildrenInto( node, "Price", sourceName, def._listPrice ) && bValid;
+        bValid          = GameDataXML::readChildrenInto( node, "Grant", sourceName, def._listGrant ) && bValid;
+        bValid          = GameDataXML::readChildrenInto( node, "Product", sourceName, def._listProduct ) && bValid;
         if ( bValid == false )
             return false;
         if ( addOffer( def ) == false )

@@ -27,10 +27,11 @@ namespace sw
         return true;
     }
 
-    const SceneNetLink* SceneNetLink::findFor( const Component& component )
+    const NetLinkValue* SceneNetLink::findBoundFor( const Component& component )
     {
         const GameObject*        pOwner   = component.getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        return pManager != nullptr ? &pManager->getSubsystem<SceneNetLink>() : nullptr;
+        const SceneNetLink*      pLink    = pManager != nullptr ? &pManager->getSubsystem<SceneNetLink>() : nullptr;
+        return pLink != nullptr && pLink->isBound() ? &pLink->_value : nullptr;
     }
 } // namespace sw

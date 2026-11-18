@@ -254,13 +254,9 @@ namespace sw
             /** @brief 감시 값 `Grab.Held` 입니다. 대상의 집기 컴포넌트가 든 오브젝트 이름이고, 든 것이 없으면 `none` 입니다. */
             [[nodiscard]] static bool readHeld( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*       pTarget  = query.findTargetObject();
-                const GrabberComponent* pGrabber = pTarget != nullptr ? pTarget->getComponent<GrabberComponent>() : nullptr;
+                const GrabberComponent* pGrabber = query.findTargetComponent<GrabberComponent>( "grabber", outValue );
                 if ( pGrabber == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "grabber" ) );
                     return false;
-                }
                 const GameObject* pHeld = query._pManager != nullptr ? query._pManager->resolveGameObject( pGrabber->getHeld() ) : nullptr;
                 outValue.setText( pHeld != nullptr ? pHeld->getName().c_str() : "none" );
                 return true;

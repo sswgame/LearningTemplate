@@ -12,9 +12,9 @@
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Renderer/Frame/FrameRendererUtil.h"
 
 #include <imgui.h>
 
@@ -97,7 +97,7 @@ namespace sw::editor
         for ( const RenderTargetInfo& info : _viewState._listTarget )
         {
             // 포맷 이름으로도 찾을 수 있어야 한다. "이 파이프라인의 HDR 타깃이 뭐지" 가 실제로 나오는 질문이다.
-            const string_view formatName{ FrameRendererUtil::attachmentFormatName( info._format ) };
+            const string_view formatName{ getRHIFormatName( info._format ) };
             if ( filter.matchesAny( { string_view{ info._name }, formatName } ) == false )
                 continue;
 
@@ -231,7 +231,7 @@ namespace sw::editor
         ImGui::TextUnformatted( pSelected->_name.c_str() );
         ImGui::SameLine();
         ImGui::TextDisabled( "%ux%u  %s", pSelected->_width, pSelected->_height,
-                             FrameRendererUtil::attachmentFormatName( pSelected->_format ) );
+                             getRHIFormatName( pSelected->_format ) );
         // 생산자 · 소비자 · 수명(파이프라인 순서의 패스 번호) — 이 그림을 누가 쓰고 누가 읽는지로 그래픽 문제를 거슬러 찾는다.
         const auto joinPasses = []( const vector<string>& listPass ) -> string
         {

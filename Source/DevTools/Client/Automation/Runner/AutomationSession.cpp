@@ -174,17 +174,16 @@ namespace sw
         if ( _recorder.isRecording() == false )
             return;
         ScenarioRecordSettings settings;
-        settings._name                         = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( _recordPath ) ) ); // a.scenario.xml → a
-        settings._fixedDelta                   = _pRunner != nullptr ? _pRunner->getScenario().getFixedDelta() : settings._fixedDelta;
-        settings._firstFrame                   = 0;
-        settings._bIncludeSynthetic            = true;
-        settings._bStartWhenScenePlaying       = true;
-        const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        settings._clientWidth                  = pWindow != nullptr ? pWindow->getWidth() : 0;
-        settings._clientHeight                 = pWindow != nullptr ? pWindow->getHeight() : 0;
-        Scene*                   pScene        = engine::getSubsystem<SceneManager>().getActiveScene();
-        const GameObjectManager* pManager      = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        settings._name                    = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( _recordPath ) ) ); // a.scenario.xml → a
+        settings._fixedDelta              = _pRunner != nullptr ? _pRunner->getScenario().getFixedDelta() : settings._fixedDelta;
+        settings._firstFrame              = 0;
+        settings._bIncludeSynthetic       = true;
+        settings._bStartWhenScenePlaying  = true;
+        const IWindow* pWindow            = MainWindowSubsystem::findMainWindow();
+        settings._clientWidth             = pWindow != nullptr ? pWindow->getWidth() : 0;
+        settings._clientHeight            = pWindow != nullptr ? pWindow->getHeight() : 0;
+        Scene*                   pScene   = engine::getSubsystem<SceneManager>().getActiveScene();
+        const GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
         for ( const string& spec : _listRecordWatch )
         {
             expected<ScenarioRecordCheckpoint> checkpoint = ScenarioRecorder::readCheckpoint( spec, pManager );
@@ -219,9 +218,9 @@ namespace sw
         const uint32 presentInterval = bPresentSkipped ? 0u : ( bPresents ? 1u : static_cast<uint32>( gv_scenarioPresentInterval ) );
         _pRenderDriver->setPresentInterval( presentInterval );
         // 무인 실행은 창도 띄우지 않는다(App 이 띄우지 않았다 — 언리얼 -RenderOffScreen). 내보내는 단계만 메인 창을 보이고, 다음 단계가 다시 정한다.
-        MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        if ( _bUnattended && pWindowHost != nullptr && pWindowHost->getWindow() != nullptr )
-            pWindowHost->getWindow()->showWindow( bPresentSkipped == false );
+        IWindow* const pWindow = MainWindowSubsystem::findMainWindow();
+        if ( _bUnattended && pWindow != nullptr )
+            pWindow->showWindow( bPresentSkipped == false );
     }
 
     bool AutomationSession::begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing )
@@ -233,10 +232,10 @@ namespace sw
         }
         _reportPath    = string( reportPath );
         _workingFolder = FileUtil::getCurrentPath();
-        if ( const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>(); pWindowHost != nullptr && pWindowHost->getWindow() != nullptr )
+        if ( const IWindow* const pWindow = MainWindowSubsystem::findMainWindow(); pWindow != nullptr )
         {
-            _startWindowWidth  = pWindowHost->getWindow()->getWidth();
-            _startWindowHeight = pWindowHost->getWindow()->getHeight();
+            _startWindowWidth  = pWindow->getWidth();
+            _startWindowHeight = pWindow->getHeight();
         }
         // 재현 명령의 재료 — 이 실행을 같은 게임 · 백엔드 · 에디터 · 시나리오 목록으로 다시 띄우는 데 필요한 것을 지금(엔진이 선 뒤) 모은다.
         _reproduceInput                   = AutomationReproduceInput{};
@@ -382,8 +381,7 @@ namespace sw
 
     void AutomationSession::restoreStartWindowSize()
     {
-        MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>(); // 선택: 창 없는 하니스에는 없다
-        IWindow* const             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        IWindow* const pWindow = MainWindowSubsystem::findMainWindow(); // 선택: 창 없는 하니스에는 없다
         if ( pWindow == nullptr || _startWindowWidth == 0 || ( pWindow->getWidth() == _startWindowWidth && pWindow->getHeight() == _startWindowHeight ) )
             return;
         if ( pWindow->setDisplayMode( WindowDisplayMode::Windowed, _startWindowWidth, _startWindowHeight ) == false )

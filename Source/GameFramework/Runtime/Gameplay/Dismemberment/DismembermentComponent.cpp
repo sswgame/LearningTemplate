@@ -212,11 +212,7 @@ namespace sw
             /** @brief 질의 대상의 절단 컴포넌트입니다. 없으면 까닭을 적고 nullptr 입니다. */
             static const DismembermentComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*             pTarget = query.findTargetObject();
-                const DismembermentComponent* pFound  = pTarget != nullptr ? pTarget->getComponent<DismembermentComponent>() : nullptr;
-                if ( pFound == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "dismemberment" ) );
-                return pFound;
+                return query.findTargetComponent<DismembermentComponent>( "dismemberment", outValue );
             }
 
             /** @brief 감시 값 `Dismemberment.SeveredCount` 입니다. 대상에서 잘린 영역 수입니다. */

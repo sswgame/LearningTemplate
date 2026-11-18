@@ -8,6 +8,7 @@
 
 #include "GameFramework/Client/Marker/HealthBarComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
+#include "GameFramework/Runtime/Foundation/Framework/Tests/PrefabPoolComponentSpawner.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 
@@ -45,14 +46,7 @@ SW_TEST_CASE( HealthBarSpawnStateResetTest, ReacquiredBodyShowsItsCurrentHealth 
 {
     SW_EXPECT_LOG( "HealthBarComponent.HPBarNoWidgetComponent" ); // 마커 없이 계산만 본다
     GameObjectManager manager;
-    PrefabPool        pool{ string{}, 2 };
-    pool.setSpawner( PrefabPool::SpawnDelegate::create( []( GameObjectManager& sceneManager, const utf8* pName )
-    {
-        GameObject* pObject = sceneManager.createGameObject( hashed_string( pName ) );
-        (void)pObject->addComponent<AbilityComponent>();
-        (void)pObject->addComponent<HealthBarComponent>();
-        return pObject;
-    } ) );
+    PrefabPool        pool = PrefabPoolComponentSpawner<AbilityComponent, HealthBarComponent>::makePool( 2 );
     manager.beginPlay();
     GameObject* pObject = pool.acquire( manager, "Grunt" );
     SW_REQUIRE_NOT_NULL( pObject );

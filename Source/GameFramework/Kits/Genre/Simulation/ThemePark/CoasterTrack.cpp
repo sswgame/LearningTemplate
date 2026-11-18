@@ -467,10 +467,7 @@ namespace sw
     {
         CoasterLayoutDef layout;
         bool             bValid = XMLFields::readProperties( node, layout, sourceName );
-        for ( XMLNode pieceNode = node.findChild( "Piece" ); pieceNode; pieceNode = pieceNode.findNextSibling( "Piece" ) )
-        {
-            bValid = GameDataXML::readInto( pieceNode, sourceName, layout._listPiece ) && bValid;
-        }
+        bValid                  = GameDataXML::readChildrenInto( node, "Piece", sourceName, layout._listPiece ) && bValid;
         if ( layout._listPiece.empty() )
         {
             SW_LOG_ERROR_ID( "CoasterTrack.LayoutNoPieces", "%#: layout '%#' has no pieces", sourceName, layout._id.c_str() );

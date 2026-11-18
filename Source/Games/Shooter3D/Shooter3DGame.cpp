@@ -4,7 +4,7 @@
  *
  * @details 실행: `App.exe -game=Shooter3D`(`Ninja-Debug` 빌드). 조작은 `Source/Games/Shooter3D/README.md`. `-gv_shooterAutoPlay=1` 이면 조준 · 사격도 AI 가 한다.
  *          아레나는 씬(`game/shooter3d/maps/arena.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `ShooterGameModeComponent` ·
- *          `ShooterPlayerComponent` 가 섭니다. 이 클래스는 무기 카탈로그를 게임 서비스로 걸고(장비 아이템 · 외형 데이터는 바탕 `GameInstance` 가 gamesettings 로 건다), 첫 씬을 열고, 상태 저장 전에 판의 진행(웨이브 · 처치 수)을 싣고 디렉터가 세운 것을 걷으며, 복원 뒤 진행을 돌려줍니다.
+ *          `ShooterPlayerComponent` 가 섭니다. 이 클래스는 무기 카탈로그를 게임 서비스로 걸고(장비 아이템 · 외형 데이터는 바탕 `GameInstance` 가 gamesettings 로 건다), 상태 저장 전에 판의 진행(웨이브 · 처치 수)을 싣고 디렉터가 세운 것을 걷으며, 복원 뒤 진행을 돌려줍니다.
  */
 #include "pch.h"
 
@@ -100,8 +100,6 @@ namespace sw
         }
         if ( bindScopedService( &_onlineFlow ) == false || bindScopedService( &_autoPlayOptions ) == false )
             return false;
-        // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
-        (void)getSubsystem<GameSceneFlow>().requestFirstScene();
         return true;
     }
 

@@ -312,13 +312,8 @@ namespace sw
             _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
-        pendingJob._key                 = definition._eventID;
-        pendingJob._pGuard              = actor._pGuard;
-        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
-        pendingJob._auditEntry._action  = "liveops.event.put";
-        pendingJob._auditEntry._subject = "liveops/" + definition._eventID;
-        pendingJob._auditEntry._memo    = string( memo );
-        pendingJob._auditEntry._timeMs  = nowMs.count();
+        pendingJob._key = definition._eventID;
+        pendingJob.setOperatorAudit( actor, "liveops.event.put", "liveops/" + definition._eventID, nowMs, memo );
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
@@ -377,13 +372,8 @@ namespace sw
             return;
         }
         ServiceAuditedWrite pendingJob;
-        pendingJob._key                 = string( eventID );
-        pendingJob._pGuard              = actor._pGuard;
-        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
-        pendingJob._auditEntry._action  = "liveops.event.remove";
-        pendingJob._auditEntry._subject = "liveops/" + pendingJob._key;
-        pendingJob._auditEntry._memo    = string( memo );
-        pendingJob._auditEntry._timeMs  = nowMs.count();
+        pendingJob._key = string( eventID );
+        pendingJob.setOperatorAudit( actor, "liveops.event.remove", "liveops/" + pendingJob._key, nowMs, memo );
         submitWrite( std::move( pendingJob ), requestTag );
     }
 

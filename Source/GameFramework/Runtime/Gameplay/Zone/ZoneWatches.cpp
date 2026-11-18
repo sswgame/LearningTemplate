@@ -130,7 +130,7 @@ namespace sw
                 const ZoneVolumeComponent* pVolume = pTarget != nullptr ? pTarget->getComponent<ZoneVolumeComponent>() : nullptr;
                 if ( pVolume == nullptr || pVolume->isReady() == false )
                 {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : ( pVolume == nullptr ? query.describeMissing( "ZoneVolumeComponent" ) : string( "the zone volume's profile did not load" ) ) );
+                    outValue.setText( pVolume == nullptr ? query.describeMissing( "ZoneVolumeComponent" ) : string( "the zone volume's profile did not load" ) );
                     return nullptr;
                 }
                 return pVolume;
@@ -181,13 +181,9 @@ namespace sw
             /** @brief 감시 값 `Zone.SinkVisual` 입니다. 대상의 외형을 내린 깊이(m)입니다. */
             [[nodiscard]] static bool readSinkVisual( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*                  pTarget   = query.findTargetObject();
-                const VisualSinkReactionComponent* pReaction = pTarget != nullptr ? pTarget->getComponent<VisualSinkReactionComponent>() : nullptr;
+                const VisualSinkReactionComponent* pReaction = query.findTargetComponent<VisualSinkReactionComponent>( "VisualSinkReactionComponent", outValue );
                 if ( pReaction == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "VisualSinkReactionComponent" ) );
                     return false;
-                }
                 outValue.setNumber( static_cast<float64>( pReaction->getAppliedDepth() ) );
                 return true;
             }
@@ -195,13 +191,9 @@ namespace sw
             /** @brief 감시 값 `Zone.ScreenWeight` 입니다. 대상의 화면 반응 가중치(0..1)입니다. */
             [[nodiscard]] static bool readScreenWeight( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*              pTarget   = query.findTargetObject();
-                const ScreenReactionComponent* pReaction = pTarget != nullptr ? pTarget->getComponent<ScreenReactionComponent>() : nullptr;
+                const ScreenReactionComponent* pReaction = query.findTargetComponent<ScreenReactionComponent>( "ScreenReactionComponent", outValue );
                 if ( pReaction == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "ScreenReactionComponent" ) );
                     return false;
-                }
                 outValue.setNumber( static_cast<float64>( pReaction->getWeight() ) );
                 return true;
             }
@@ -209,13 +201,9 @@ namespace sw
             /** @brief 감시 값 `Zone.EscapeCount` 입니다. 대상이 뛰어서 스택을 줄인 수입니다. */
             [[nodiscard]] static bool readEscapeCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*                  pTarget   = query.findTargetObject();
-                const JumpEscapeReactionComponent* pReaction = pTarget != nullptr ? pTarget->getComponent<JumpEscapeReactionComponent>() : nullptr;
+                const JumpEscapeReactionComponent* pReaction = query.findTargetComponent<JumpEscapeReactionComponent>( "JumpEscapeReactionComponent", outValue );
                 if ( pReaction == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "JumpEscapeReactionComponent" ) );
                     return false;
-                }
                 outValue.setNumber( static_cast<float64>( pReaction->getEscapeCount() ) );
                 return true;
             }
@@ -223,13 +211,9 @@ namespace sw
             /** @brief 감시 값 `Character.MovementMode` 입니다. 대상 캐릭터가 필드로 고른 이동 방식(`Walking` · `Falling` · `Swimming` · `Floating`)입니다. */
             [[nodiscard]] static bool readMovementMode( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*                   pTarget     = query.findTargetObject();
-                const CharacterControllerComponent* pController = pTarget != nullptr ? pTarget->getComponent<CharacterControllerComponent>() : nullptr;
+                const CharacterControllerComponent* pController = query.findTargetComponent<CharacterControllerComponent>( "CharacterControllerComponent", outValue );
                 if ( pController == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "CharacterControllerComponent" ) );
                     return false;
-                }
                 outValue.setText( getEnumName( pController->getMovementMode() ) );
                 return true;
             }
@@ -242,7 +226,7 @@ namespace sw
                 const RigidBodyComponent*           pBody       = pTarget != nullptr ? pTarget->getComponent<RigidBodyComponent>() : nullptr;
                 if ( pController == nullptr && pBody == nullptr )
                 {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "CharacterControllerComponent or RigidBodyComponent" ) );
+                    outValue.setText( query.describeMissing( "CharacterControllerComponent or RigidBodyComponent" ) );
                     return false;
                 }
                 const PhysicsFieldSample& field = pController != nullptr ? pController->getPhysicsField() : pBody->getPhysicsField();

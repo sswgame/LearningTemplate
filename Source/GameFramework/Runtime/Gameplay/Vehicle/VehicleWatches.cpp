@@ -21,13 +21,9 @@ namespace sw
         /** @brief 감시 값 `Pawn.Seat` 입니다. 폰이 앉은 좌석의 탈것 오브젝트 이름이고, 앉지 않았으면 `none` 입니다. */
         [[nodiscard]] bool readPawnSeat( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const GameObject*    pTarget = query.findTargetObject();
-            const PawnComponent* pPawn   = pTarget != nullptr ? pTarget->getComponent<PawnComponent>() : nullptr;
+            const PawnComponent* pPawn = query.findTargetComponent<PawnComponent>( "pawn", outValue );
             if ( pPawn == nullptr )
-            {
-                outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "pawn" ) );
                 return false;
-            }
             const VehicleSeatComponent* pSeat = VehicleSeatComponent::findSeatOf( *pPawn );
             outValue.setText( pSeat != nullptr ? string_view{ pSeat->getOwner()->getName().c_str() } : string_view{ "none" } );
             return true;
@@ -36,10 +32,7 @@ namespace sw
         /** @brief 질의 대상 탈것의 탈것 이동입니다. 없으면 까닭을 적고 nullptr 입니다. */
         const MountMovementComponent* findTargetMovement( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const MountMovementComponent* pMovement = query.findTargetObject() != nullptr ? query.findTargetObject()->getComponent<MountMovementComponent>() : nullptr;
-            if ( pMovement == nullptr )
-                outValue.setText( query.findTargetObject() == nullptr ? query.getTargetProblem() : query.describeMissing( "Mount Movement" ) );
-            return pMovement;
+            return query.findTargetComponent<MountMovementComponent>( "Mount Movement", outValue );
         }
 
         /** @brief 감시 값 `Mount.Gait` 입니다. 대상 탈것의 걸음새 번호(0 서기 .. 4 질주)입니다. */
@@ -78,20 +71,16 @@ namespace sw
                 outValue.setNumber( static_cast<float64>( pKinematic->getMotor().getForwardSpeed() ) );
                 return true;
             }
-            outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "Wheeled Vehicle or Kinematic Vehicle" ) );
+            outValue.setText( query.describeMissing( "Wheeled Vehicle or Kinematic Vehicle" ) );
             return false;
         }
 
         /** @brief 감시 값 `Vehicle.GroundedWheels` 입니다. 대상 물리 차의 바퀴 가운데 땅에 닿은 수입니다. 차가 아직 서지 않았으면 0 입니다. */
         [[nodiscard]] bool readVehicleGroundedWheels( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const GameObject*              pTarget = query.findTargetObject();
-            const WheeledVehicleComponent* pWheels = pTarget != nullptr ? pTarget->getComponent<WheeledVehicleComponent>() : nullptr;
+            const WheeledVehicleComponent* pWheels = query.findTargetComponent<WheeledVehicleComponent>( "Wheeled Vehicle", outValue );
             if ( pWheels == nullptr )
-            {
-                outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "Wheeled Vehicle" ) );
                 return false;
-            }
             outValue.setNumber( static_cast<float64>( pWheels->getVehicleState()._groundedWheelCount ) );
             return true;
         }
@@ -110,7 +99,7 @@ namespace sw
                 } );
             }
             if ( pSeat == nullptr )
-                outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "occupied Vehicle Seat" ) );
+                outValue.setText( query.describeMissing( "occupied Vehicle Seat" ) );
             return pSeat;
         }
 
@@ -137,13 +126,9 @@ namespace sw
         /** @brief 감시 값 `Vehicle.RailDistance` 입니다. 바디 없는 탈것이 레일 위에서 간 거리(m)입니다. */
         [[nodiscard]] bool readRailDistance( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const GameObject*                pTarget    = query.findTargetObject();
-            const KinematicVehicleComponent* pKinematic = pTarget != nullptr ? pTarget->getComponent<KinematicVehicleComponent>() : nullptr;
+            const KinematicVehicleComponent* pKinematic = query.findTargetComponent<KinematicVehicleComponent>( "Kinematic Vehicle", outValue );
             if ( pKinematic == nullptr )
-            {
-                outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "Kinematic Vehicle" ) );
                 return false;
-            }
             outValue.setNumber( static_cast<float64>( pKinematic->getMotor().getRailDistance() ) );
             return true;
         }

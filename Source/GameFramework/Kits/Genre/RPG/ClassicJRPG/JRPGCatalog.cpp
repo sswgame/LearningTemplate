@@ -103,10 +103,7 @@ namespace sw
         bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrBase ) && bValid;
         bValid              = Internal::readStats( node, Internal::kArrGrowthName, sourceName, def._arrGrowth ) && bValid;
         bValid              = Internal::checkMaxHP( def._arrBase, node, sourceName ) && bValid;
-        for ( XMLNode learn = node.findChild( "Learn" ); learn; learn = learn.findNextSibling( "Learn" ) )
-        {
-            bValid = GameDataXML::readInto( learn, sourceName, def._listLearn ) && bValid;
-        }
+        bValid              = GameDataXML::readChildrenInto( node, "Learn", sourceName, def._listLearn ) && bValid;
         return bValid && GameDataXML::addUnique( def, sourceName, _classCatalog );
     }
 
@@ -127,10 +124,7 @@ namespace sw
     {
         JRPGManualDef def;
         bool          bValid = XMLFields::readProperties( node, def, sourceName );
-        for ( XMLNode stage = node.findChild( "Stage" ); stage; stage = stage.findNextSibling( "Stage" ) )
-        {
-            bValid = GameDataXML::readInto( stage, sourceName, def._listStage ) && bValid;
-        }
+        bValid               = GameDataXML::readChildrenInto( node, "Stage", sourceName, def._listStage ) && bValid;
         return bValid && GameDataXML::addUnique( def, sourceName, _manualCatalog );
     }
 

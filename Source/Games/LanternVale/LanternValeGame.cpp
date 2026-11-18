@@ -20,13 +20,6 @@ namespace sw
     public:
         LanternValeGame()           = default;
         ~LanternValeGame() override = default;
-
-    protected:
-        bool onInitialize() override
-        {
-            (void)getSubsystem<GameSceneFlow>().requestFirstScene(); // 실패는 함수가 알리고, 핫 리로드로 다시 선 인스턴스는 살아 있는 씬을 쓴다
-            return true;
-        }
     };
 } // namespace sw
 

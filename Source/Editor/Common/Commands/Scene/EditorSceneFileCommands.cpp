@@ -85,8 +85,7 @@ namespace sw::editor
                 else if ( action == EditorPendingSceneAction::Quit )
                 {
                     // 선택(②): 창 호스트는 헤드리스 실행에 없다. 닫을 창이 없으면 종료 요청도 할 일이 없다.
-                    MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
-                    IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                    IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                     if ( pWindow != nullptr )
                         pWindow->requestClose();
                 }
@@ -239,8 +238,7 @@ namespace sw::editor
     void EditorSceneFileCommands::requestExit()
     {
         // 선택(②): 창 호스트는 헤드리스 실행에 없다. 닫을 창이 없으면 할 일이 없다.
-        MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow != nullptr )
             (void)pWindow->tryBeginClose(); // 닫기를 거절해도(저장 확인 중) 여기서 할 일이 없다
     }

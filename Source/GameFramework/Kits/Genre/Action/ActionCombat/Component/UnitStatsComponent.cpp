@@ -257,13 +257,9 @@ namespace sw
             /** @brief 감시 값 `UnitStats.HP` 입니다. 대상 유닛의 지금 HP 입니다. */
             [[nodiscard]] static bool readHP( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*         pTarget = query.findTargetObject();
-                const UnitStatsComponent* pStats  = pTarget != nullptr ? pTarget->getComponent<UnitStatsComponent>() : nullptr;
+                const UnitStatsComponent* pStats = query.findTargetComponent<UnitStatsComponent>( "unit stats", outValue );
                 if ( pStats == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "unit stats" ) );
                     return false;
-                }
                 outValue.setNumber( static_cast<float64>( pStats->getHP() ) );
                 return true;
             }

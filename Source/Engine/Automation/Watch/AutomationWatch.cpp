@@ -169,6 +169,8 @@ namespace sw
 
     string AutomationWatchQuery::describeMissing( const utf8* pWhat ) const
     {
+        if ( _pTargetObject == nullptr )
+            return _targetProblem;
         utf8 arrProblem[AutomationWatchInternal::kProblemCapacity]{};
         formatstring( arrProblem, AutomationWatchInternal::kProblemCapacity, "'%#' has no %#", _target, pWhat );
         return string( arrProblem );

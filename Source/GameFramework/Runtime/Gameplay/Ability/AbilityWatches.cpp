@@ -19,11 +19,7 @@ namespace sw
             /** @brief 대상의 어빌리티 컴포넌트입니다. 없으면 까닭을 적고 nullptr 입니다. */
             static const AbilityComponent* findAbility( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*       pTarget  = query.findTargetObject();
-                const AbilityComponent* pAbility = pTarget != nullptr ? pTarget->getComponent<AbilityComponent>() : nullptr;
-                if ( pAbility == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "AbilityComponent" ) );
-                return pAbility;
+                return query.findTargetComponent<AbilityComponent>( "AbilityComponent", outValue );
             }
 
             /** @brief 감시 값 `Ability.Attribute` 입니다. 대상 속성(key)의 current 값입니다. */

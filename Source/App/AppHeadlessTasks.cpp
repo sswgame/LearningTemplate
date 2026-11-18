@@ -10,7 +10,7 @@
 
 #include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Renderer/Capture/PortraitBatchUtil.h"
+#include "Engine/Renderer/Capture/PortraitStudio.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Telemetry/CrashReportService.h"
@@ -151,8 +151,8 @@ namespace sw
                     SW_LOG_ERROR_ID( "App.PortraitBakeNeedsRender", "Portrait bake needs a render thread with a device (--render-portraits)" );
                     return TaskResult::Failed;
                 }
-                const bool bBaked = PortraitBatchUtil::renderPrefabList( *pRenderThread, engine::getSubsystem<SceneManager>().getEngineServices(), portraitList, portraitDir,
-                                                                         static_cast<uint32>( portraitSize > 0 ? portraitSize : 256 ) );
+                const bool bBaked = PortraitStudio::renderPrefabList( *pRenderThread, engine::getSubsystem<SceneManager>().getEngineServices(), portraitList, portraitDir,
+                                                                      static_cast<uint32>( portraitSize > 0 ? portraitSize : 256 ) );
                 return bBaked ? TaskResult::Finished : TaskResult::Failed;
             }
 

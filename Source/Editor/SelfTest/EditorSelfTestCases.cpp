@@ -389,8 +389,7 @@ namespace sw::editor
                     constexpr uint32 kNarrowWidth       = 640; // 에디터 최소 크기보다 작다. 창은 최소 크기에서 멈춰야 한다
                     constexpr uint32 kNarrowHeight      = 360;
 
-                    MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
-                    IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                    IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                     if ( context.expect( pWindow != nullptr, "no active window" ) == false )
                         return EditorSelfTestStep::Done;
 

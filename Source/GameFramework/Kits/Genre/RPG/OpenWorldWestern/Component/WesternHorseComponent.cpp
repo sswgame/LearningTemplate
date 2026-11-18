@@ -185,7 +185,7 @@ namespace sw
             const WesternHorse*          pHorse          = pHorseComponent != nullptr ? pHorseComponent->findHorse() : nullptr;
             if ( pHorse == nullptr )
             {
-                outValue.setText( query.findTargetObject() == nullptr ? query.getTargetProblem() : query.describeMissing( "opened Western Horse" ) );
+                outValue.setText( query.describeMissing( "opened Western Horse" ) );
                 return false;
             }
             outValue.setNumber( static_cast<float64>( pHorse->getStamina().getRatio() ) );

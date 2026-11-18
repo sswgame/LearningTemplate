@@ -182,6 +182,16 @@ namespace sw
 
 namespace sw
 {
+    void ServiceAuditedWrite::setOperatorAudit( const ServiceOperator& actor, string_view action, string_view subject, UnixMilliseconds nowMs, string_view memo )
+    {
+        _pGuard              = actor._pGuard;
+        _auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
+        _auditEntry._action  = string( action );
+        _auditEntry._subject = string( subject );
+        _auditEntry._memo    = string( memo );
+        _auditEntry._timeMs  = nowMs.count();
+    }
+
     ServiceAuditedWriteResult ServiceAuditedWrite::commit( IServiceStoreConnection& connection ) const
     {
         if ( _pGuard == nullptr )

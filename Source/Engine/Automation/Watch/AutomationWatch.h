@@ -10,6 +10,7 @@
 #include "Core/Registry/RegistrationList.h"
 
 #include "Engine/Foundation/SceneIterationKey.h"
+#include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw
 {
@@ -93,8 +94,20 @@ namespace sw
         AutomationTargetLookup getTargetLookup() const { return _targetLookup; }
         /** @brief 대상 오브젝트가 없을 때 그 까닭입니다(`no object named 'X'`, 여럿이라 고를 수 없음 등). 찾았으면 비어 있습니다. */
         const string& getTargetProblem() const { return _targetProblem; }
-        /** @brief 대상은 찾았지만 @p pWhat(예: `transform`)이 없을 때 실패 줄에 실을 까닭입니다(`'X' has no transform`). */
+        /** @brief 대상에서 @p pWhat(예: `transform`)을 못 찾았을 때 실패 줄에 실을 까닭입니다 — 대상 오브젝트가 없으면 `getTargetProblem`, 있으면 `'X' has no transform` 입니다. */
         [[nodiscard]] string describeMissing( const utf8* pWhat ) const;
+        /**
+         * @brief 대상 오브젝트의 첫 @p TComponent(파생 포함)입니다. 대상이 없거나 그 컴포넌트가 없으면 @p outValue 에 까닭(`describeMissing( pWhat )`)을 적고 nullptr 입니다.
+         * @details 감시 값마다 "대상 찾기 → 컴포넌트 찾기 → 없으면 까닭 적기" 를 따로 적어 까닭 글이 자리마다 갈렸다(대상 글 대신 오브젝트 이름을 적은 곳). 한 곳에 둔다.
+         */
+        template <typename TComponent>
+        [[nodiscard]] const TComponent* findTargetComponent( const utf8* pWhat, AutomationWatchValue& outValue ) const
+        {
+            const TComponent* pComponent = _pTargetObject != nullptr ? _pTargetObject->getComponent<TComponent>() : nullptr;
+            if ( pComponent == nullptr )
+                outValue.setText( describeMissing( pWhat ) );
+            return pComponent;
+        }
 
     private:
         AutomationWatchQuery() = default;

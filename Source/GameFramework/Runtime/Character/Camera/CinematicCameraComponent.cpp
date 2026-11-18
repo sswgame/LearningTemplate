@@ -33,13 +33,9 @@ namespace sw
             /** @brief 감시 값 `Cinematic.CutCamera` 입니다. 대상의 시네마틱 컴포넌트가 지금 화면을 덮는다고 아는 컷 카메라의 오브젝트 이름이고, 덮지 않으면 `none` 입니다. */
             [[nodiscard]] static bool readCutCamera( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*               pTarget    = query.findTargetObject();
-                const CinematicCameraComponent* pCinematic = pTarget != nullptr ? pTarget->getComponent<CinematicCameraComponent>() : nullptr;
+                const CinematicCameraComponent* pCinematic = query.findTargetComponent<CinematicCameraComponent>( "cinematic camera", outValue );
                 if ( pCinematic == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "cinematic camera" ) );
                     return false;
-                }
                 const GameObject* pCut = pCinematic->isCinematicActive() ? query._pManager->resolveGameObject( pCinematic->getCurrentCutCamera() ) : nullptr;
                 outValue.setText( pCut != nullptr ? pCut->getName().c_str() : "none" );
                 return true;

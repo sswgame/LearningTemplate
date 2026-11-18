@@ -614,13 +614,9 @@ namespace sw
             /** @brief 감시 값 `Water.RiverPointCount` 입니다. 대상 물의 강 경로 점 수입니다(스플라인 어댑터가 몰면 곡선을 샘플한 수). */
             [[nodiscard]] static bool readRiverPointCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject*         pTarget = query.findTargetObject();
-                const WaterBodyComponent* pWater  = pTarget != nullptr ? pTarget->getComponent<WaterBodyComponent>() : nullptr;
+                const WaterBodyComponent* pWater = query.findTargetComponent<WaterBodyComponent>( "water body", outValue );
                 if ( pWater == nullptr )
-                {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "water body" ) );
                     return false;
-                }
                 outValue.setNumber( static_cast<float64>( pWater->getRiverPoints().size() ) );
                 return true;
             }

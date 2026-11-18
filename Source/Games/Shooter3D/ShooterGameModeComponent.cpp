@@ -169,8 +169,8 @@ namespace sw
     bool ShooterGameModeComponent::startGame()
     {
         collectBoxes();
-        const SceneNetLink* pLink = SceneNetLink::findFor( *this );
-        _bReplica                 = pLink != nullptr && pLink->isBound() && pLink->get()._role == NetLinkRole::Client ? SW_TRUE : SW_FALSE;
+        const NetLinkValue* pLink = SceneNetLink::findBoundFor( *this );
+        _bReplica                 = pLink != nullptr && pLink->_role == NetLinkRole::Client ? SW_TRUE : SW_FALSE;
         if ( _bReplica == SW_FALSE )
             startPacing();
         _killCount = 0;

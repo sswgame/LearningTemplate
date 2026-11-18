@@ -409,9 +409,8 @@ namespace sw
         {
             AutomationRunner& runner = asRunner( context );
             // 창 클라이언트 영역의 비율을 픽셀로 바꾼다(시작할 때의 창 크기). 창이 없으면(헤드리스) 그 위치를 낼 수 없다.
-            const MainWindowSubsystem* pWindowHost         = engine::findSubsystem<MainWindowSubsystem>();
-            const IWindow*             pWindow             = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-            const bool                 bNoWindowForPointer = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
+            const IWindow* pWindow             = MainWindowSubsystem::findMainWindow();
+            const bool     bNoWindowForPointer = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
             if ( bNoWindowForPointer )
                 return unexpected( Error{ ErrorKind::Unsupported, "no window to place the pointer in" } );
             AutomationMousePositionParams args;
@@ -428,9 +427,8 @@ namespace sw
         {
             AutomationRunner& runner = asRunner( context );
             // 창 클라이언트 영역의 비율을 픽셀로 바꾼다(`MousePosition` 과 같은 규칙). 손가락은 마우스와 따로 간다 — 터치 장치의 포인터 0 이다.
-            const MainWindowSubsystem* pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
-            const IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-            const bool                 bNoWindowForTouch = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
+            const IWindow* pWindow           = MainWindowSubsystem::findMainWindow();
+            const bool     bNoWindowForTouch = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
             if ( bNoWindowForTouch )
                 return unexpected( Error{ ErrorKind::Unsupported, "no window to touch" } );
             AutomationTouchParams args;
@@ -587,8 +585,7 @@ namespace sw
                 runner._run._expectedExitCode = step.readValidatedProperties<AutomationExpectExitWithinParams>()._exitCode;
                 return true;
             }
-            MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-            IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+            IWindow* pWindow = MainWindowSubsystem::findMainWindow();
             if ( pWindow == nullptr )
                 runner.recordFailure( step, "there is no window to close" );
             else

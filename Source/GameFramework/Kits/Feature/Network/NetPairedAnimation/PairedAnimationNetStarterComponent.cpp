@@ -26,8 +26,8 @@ namespace sw
         _endedSeconds = 0.0f;
 
         GameObject*         pOwner  = getOwner();
-        const SceneNetLink* pLink   = SceneNetLink::findFor( *this ); // 이 컴포넌트의 월드의 넷 링크(전역 세션을 찾지 않는다)
-        const bool          bClient = pLink != nullptr && pLink->isBound() && pLink->get()._role == NetLinkRole::Client;
+        const NetLinkValue* pLink   = SceneNetLink::findBoundFor( *this ); // 이 컴포넌트의 월드의 넷 링크(전역 세션을 찾지 않는다)
+        const bool          bClient = pLink != nullptr && pLink->_role == NetLinkRole::Client;
         if ( bClient )
         {
             _bStarts = SW_FALSE; // 클라이언트는 서버가 보낸 세션을 받기만 한다

@@ -48,7 +48,6 @@ namespace sw
     class GameObjectManager;
     class PawnComponent;
     class RemoteControllerComponent;
-    class SceneNetLink;
 
     /**
      * @class ShooterNetPawnComponent
@@ -152,8 +151,6 @@ namespace sw
         /** @brief 이 입력 틱에 보낼 의도를 만들고 모은 발동을 비웁니다. 멈춘 몸(입력 초점이 없는 월드)은 시선만 남긴 빈 의도입니다. */
         ControlIntent                  takeNetIntent( const ShooterBodyMovementComponent& movement );
         const vector<ShooterArenaBox>* findArenaBoxes() const;
-        /** @brief 이 컴포넌트의 월드(오브젝트 매니저)의 넷 링크입니다. 오브젝트가 매니저에 없으면 nullptr 입니다. */
-        const SceneNetLink* findLink() const;
 
         PROPERTY( Category = "Network", DisplayName = "Tick Interval", Min = 0.001, Units = s, Tooltip = "Fixed step of the networked movement; server simulation and client prediction use the same step" )
         float32 _tickInterval;

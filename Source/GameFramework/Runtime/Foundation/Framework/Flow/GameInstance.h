@@ -144,7 +144,7 @@ namespace sw
          * @brief 이 인스턴스가 소유한 서브시스템 @p T 입니다(`ScreenTransitionManager` · `LoadingScreenController` · `GameSceneFlow` · `GameLocalStore`). 생성 뒤에는 늘 있다.
          * @details 언리얼 `UGameInstance::GetSubsystem<T>()` 자리다. 게임 범위에 있으므로 키트는 인스턴스 없이 `game::findSubsystem<T>()` 로도 찾는다.
          *          화면 전환은 FadeOut → 실행 → FadeIn 을, 로딩 화면은 씬 로드 동안 gamesettings 의 `_loadingScreen` 문서를, 씬 흐름은 첫 씬 · 타이틀 요청과 로드 알림을 맡는다
-         *          (파생의 `onInitialize` 가 `getSubsystem<GameSceneFlow>().requestFirstScene()` 으로 첫 씬을 연다).
+         *          (파생 초기화 뒤 `startFirstScene` 이 `GameSceneFlow::requestFirstScene` 으로 첫 씬을 연다).
          *          네트워크 세션(`GameNetSession`)은 엔진 수명이라 여기 없다 — 키트와 게임은 `game::findSubsystem<GameNetSession>()` 의 라우터에 처리기를 단다.
          */
         template <class T>
@@ -184,6 +184,13 @@ namespace sw
         }
         /** @brief 팩 설정을 읽은 뒤 부르는 파생 초기화 훅입니다. */
         virtual bool onInitialize() { return true; }
+        /**
+         * @brief 파생 초기화(`onInitialize`)가 통과한 뒤 첫 씬을 엽니다. 기본은 gamesettings 의 첫 씬입니다(`GameSceneFlow::requestFirstScene` — `-gv_firstScene` > 타이틀 씬 > 시작 맵).
+         * @details 언리얼 `UGameInstance::StartGameInstance` 가 설정의 기본 맵을 여는 자리다 — 게임마다 `onInitialize` 끝에 같은 요청을 적지 않는다. 시작 맵은 gamesettings 의 필수 칸이라
+         *          없으면 읽기에서 멈춘다(폴백 없음). 요청 실패는 씬 흐름이 알리고, 살아 있는 월드 위에 다시 선 인스턴스(핫 리로드)는 요청하지 않는다. 에디터가 자기 시작 씬을 열면
+         *          그 요청이 뒤에 와서 이긴다. 첫 씬 대신 자기 장면을 세우는 게임(벤치)만 오버라이드한다.
+         */
+        virtual void startFirstScene();
         /** @brief 파생 종료 훅입니다. */
         virtual void onShutdown() {}
         /** @brief 파생 프레임 훅입니다. */

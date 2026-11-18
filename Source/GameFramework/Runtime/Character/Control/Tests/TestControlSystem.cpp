@@ -18,6 +18,7 @@
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntentHistory.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
+#include "GameFramework/Runtime/Foundation/Framework/Tests/PrefabPoolComponentSpawner.h"
 
 using namespace sw;
 
@@ -460,13 +461,7 @@ SW_TEST_CASE( ControlSystemTest, AutoPossessSpawnsAnAIThatDiesWithThePawn )
 SW_TEST_CASE( ControlSystemTest, PooledPawnDropsItsAIAndIsPossessedAgainWhenReused )
 {
     GameObjectManager manager;
-    PrefabPool        pool{ string{}, 2 };
-    pool.setSpawner( PrefabPool::SpawnDelegate::create( []( GameObjectManager& sceneManager, const utf8* pName )
-    {
-        GameObject* pGuard = sceneManager.createGameObject( hashed_string( pName ) );
-        (void)pGuard->addComponent<PawnComponent>();
-        return pGuard;
-    } ) );
+    PrefabPool        pool = PrefabPoolComponentSpawner<PawnComponent>::makePool( 2 );
     manager.beginPlay();
     GameObject* pObject = pool.acquire( manager, "Guard" );
     SW_REQUIRE_NOT_NULL( pObject );

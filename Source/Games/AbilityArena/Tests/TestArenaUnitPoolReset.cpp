@@ -10,6 +10,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
+#include "GameFramework/Runtime/Foundation/Framework/Tests/PrefabPoolComponentSpawner.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 
@@ -18,48 +19,12 @@
 
 using namespace sw;
 
-namespace
-{
-    struct ArenaUnitPoolResetTestUtil
-    {
-        /** @brief 졸개 몸(메시 · 어빌리티 · 폰 · 아레나 유닛)을 만드는 풀입니다. */
-        static PrefabPool makeBodyPool()
-        {
-            PrefabPool pool{ string{}, 4 };
-            pool.setSpawner( PrefabPool::SpawnDelegate::create( []( GameObjectManager& manager, const utf8* pName )
-            {
-                GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
-                (void)pObject->addComponent<MeshComponent>();
-                (void)pObject->addComponent<AbilityComponent>();
-                (void)pObject->addComponent<PawnComponent>();
-                (void)pObject->addComponent<ArenaUnitComponent>();
-                return pObject;
-            } ) );
-            return pool;
-        }
-
-        /** @brief 졸개 AI 조종자를 만드는 풀입니다. */
-        static PrefabPool makeAIPool()
-        {
-            PrefabPool pool{ string{}, 4 };
-            pool.setSpawner( PrefabPool::SpawnDelegate::create( []( GameObjectManager& manager, const utf8* pName )
-            {
-                GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
-                (void)pObject->addComponent<ArenaEnemyAIComponent>();
-                return pObject;
-            } ) );
-            return pool;
-        }
-    };
-    using Util = ArenaUnitPoolResetTestUtil;
-} // namespace
-
 /** @brief [ArenaUnitPoolResetTest] 쓰러진 졸개를 돌려주고 다시 꺼내면 같은 몸에 쓰러짐 표시 · 어트리뷰트 세트가 없고, AI 조종자는 폰을 놓은 채 다시 나온다 */
 SW_TEST_CASE( ArenaUnitPoolResetTest, FallenGruntAndItsAIComeBackFresh )
 {
     GameObjectManager manager;
-    PrefabPool        bodyPool = Util::makeBodyPool();
-    PrefabPool        aiPool   = Util::makeAIPool();
+    PrefabPool        bodyPool = PrefabPoolComponentSpawner<MeshComponent, AbilityComponent, PawnComponent, ArenaUnitComponent>::makePool( 4 ); // 졸개 몸
+    PrefabPool        aiPool   = PrefabPoolComponentSpawner<ArenaEnemyAIComponent>::makePool( 4 );                                              // 졸개 AI 조종자
     GameObject*       pBody    = bodyPool.acquire( manager, "ArenaGrunt" );
     GameObject*       pAIBody  = aiPool.acquire( manager, "ArenaGruntAI" );
     SW_REQUIRE_TRUE( pBody != nullptr && pAIBody != nullptr ); // 처음 만든 인스턴스로 풀 계약을 확인했다

@@ -17,7 +17,7 @@ namespace sw
     public:
         virtual ~IGameClientPart() = default;
 
-        /** @brief 게임 초기화(`onInitialize`)에서 한 번 부릅니다. 이 부분이 첫 씬 대신 자기 장면을 띄웠으면 true 입니다(게임은 첫 씬을 요청하지 않는다). */
+        /** @brief 게임 초기화 끝(`GameInstance::startFirstScene`)에서 한 번 부릅니다. 이 부분이 첫 씬 대신 자기 장면을 띄웠으면 true 입니다(게임은 첫 씬을 요청하지 않는다). */
         [[nodiscard]] virtual bool initialize() = 0;
         /** @brief 게임 갱신(`onUpdate`)마다 부릅니다. */
         virtual void update( float32 deltaTime ) = 0;
