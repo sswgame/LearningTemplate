@@ -78,10 +78,9 @@ namespace sw::editor
 
         /**
          * @brief 읽은 효과 파일의 내용이 그 뒤에 바뀌었으면(카탈로그 편집기의 저장 · 바깥 편집) true 를 돌려주고 새 내용 해시를 기억합니다. 패널은 true 면 다시 읽고 다시 건다(자동 갱신).
-         * @details 저장 뒤 Reload 를 누르던 왕복을 없앤다(언리얼 Niagara · 유니티 파티클 미리보기는 저장하면 그 자리에서 바뀐다). 파일 감시 사건이 아니라 내용 해시 비교라
-         *          에디터 밖의 저장도 같은 길이다. 도장(크기 · 쓰기 시각)을 비교하면 같은 틱 안에 같은 크기로 다시 쓴 저장을 놓쳤다 — 해시 캐시(`ContentHash::computeFile`)가
-         *          자기 쓰기는 쓰기 관찰자로, 바깥 쓰기는 시간 창으로 가려 도장이 그대로인 동안은 파일을 열지 않는다.
-         *          shortcut: 창이 열린 동안 프레임마다 파일 하나의 stat 이다 — 미리보기 창이 여럿이 되면 감시 사건(`AssetHotReload`)으로 옮긴다.
+         * @details 저장 뒤 Reload 를 누르던 왕복을 없앤다(언리얼 Niagara · 유니티 파티클 미리보기는 저장하면 그 자리에서 바뀐다). 파일 감시(`AssetHotReload` 의 변경 번호 —
+         *          리소스 루트와 작업 도메인 폴더)가 무언가 바뀌었다고 알린 프레임에만 내용 해시를 비교해, 창이 여럿이어도 평소에는 파일을 건드리지 않는다. 에디터 밖의 저장도 같은 길이다.
+         *          도장(크기 · 쓰기 시각)을 비교하면 같은 틱 안에 같은 크기로 다시 쓴 저장을 놓쳤다 — 해시 캐시(`ContentHash::computeFile`)가 도장이 그대로인 동안은 파일을 열지 않는다.
          */
         [[nodiscard]] bool pollFileChanged();
         /** @brief @p diskPath 의 내용 해시가 @p inoutHash 와 다르면 true 이고 @p inoutHash 를 새 해시로 바꿉니다. 파일이 없으면 false 입니다(지운 파일은 다시 읽을 것이 없다). */
@@ -132,6 +131,7 @@ namespace sw::editor
         string                       _targetPrefabPath;    ///< 입력란의 타깃 프리팹 경로(Spawn 을 눌러야 적용한다)
         string                       _activeTargetPath;    ///< Spawn 으로 확정한 타깃 경로(비면 타깃 없음)
         uint64                       _loadedContentHash;   ///< 읽을 때의 내용 해시(0 = 아직 없음)
+        uint64                       _seenContentSerial;   ///< 마지막으로 해시를 비교한 때의 감시 변경 번호(`AssetHotReload::getContentChangeSerial`)
         GameObjectHandle             _target;              ///< 놓은 타깃 몸
         float32                      _orbitAngle;          ///< 타깃이 원을 도는 각(라디안)
         int32                        _soloEmitter;         ///< 격리한 방출기(`kNoSolo` 면 없음)
