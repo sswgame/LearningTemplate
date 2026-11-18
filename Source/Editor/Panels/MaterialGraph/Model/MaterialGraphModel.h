@@ -13,6 +13,7 @@
 #include "DevTools/Material/MaterialGraph.h"
 #include "DevTools/Material/MaterialGraphCompileResult.h"
 
+#include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 #include "Editor/Panels/Material/Model/MaterialModel.h"
 
 namespace sw
@@ -63,16 +64,8 @@ namespace sw::editor
 
         [[nodiscard]] const MaterialGraphDef& getGraph() const { return _graph; }
         MaterialGraphDef&                     editGraph() { return _graph; }
-        /** @brief 캔버스가 주석 상자에 한 일의 종류입니다 — 되돌리기 이름은 모델이 고른다(감사 E-16). */
-        enum class CommentEdit : uint8
-        {
-            Add,
-            Rename,
-            Move,
-            Delete
-        };
         /** @brief 캔버스가 주석 상자를 고쳤습니다 — 종류에 맞는 되돌리기 이름으로 쌓는다. */
-        void markCommentsEdited( CommentEdit edit );
+        void markCommentsEdited( EditorGraphCommentEdit edit );
         /** @brief 이번 그리기에서 고친 일이 있으면 그 이름(모델이 정한다)으로 문서 편집을 알리고 비웁니다(감사 E-16 — View 는 알림 · 이름을 모른다). */
         void publishEdit();
 

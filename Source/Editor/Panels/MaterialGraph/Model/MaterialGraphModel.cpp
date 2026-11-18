@@ -361,7 +361,7 @@ namespace sw::editor
         _pEditRecorder->notifyEdited( label );
     }
 
-    void MaterialGraphModel::markCommentsEdited( CommentEdit edit )
+    void MaterialGraphModel::markCommentsEdited( EditorGraphCommentEdit edit )
     {
         static constexpr const utf8* kArrLabel[] = { "Add Material Graph Comment", "Rename Material Graph Comment", "Move Material Graph Comment", "Delete Material Graph Comment" };
         recordEdit( kArrLabel[static_cast<uint32>( edit )], false );

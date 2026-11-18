@@ -66,6 +66,15 @@ namespace sw::editor
         Count,
     };
 
+    /** @brief 캔버스가 주석 상자에 한 일의 종류입니다 — 그래프 모델이 종류에 맞는 되돌리기 이름을 고른다(감사 E-16). 오디오 · 머티리얼 그래프 모델이 함께 쓴다. */
+    enum class EditorGraphCommentEdit : uint8
+    {
+        Add,
+        Rename,
+        Move,
+        Delete
+    };
+
     /** @brief 캔버스 좌표의 노드 사각형 하나입니다(정렬 · 미니맵 입력). */
     struct EditorGraphNodeRect
     {

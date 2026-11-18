@@ -231,7 +231,7 @@ namespace sw::editor
         _pEditRecorder->notifyEdited( label );
     }
 
-    void AudioGraphModel::markCommentsEdited( CommentEdit edit )
+    void AudioGraphModel::markCommentsEdited( EditorGraphCommentEdit edit )
     {
         static constexpr const utf8* kArrLabel[] = { "Add Audio Graph Comment", "Rename Audio Graph Comment", "Move Audio Graph Comment", "Delete Audio Graph Comment" };
         recordEdit( kArrLabel[static_cast<uint32>( edit )] );

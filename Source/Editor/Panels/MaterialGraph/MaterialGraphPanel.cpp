@@ -181,7 +181,7 @@ namespace sw::editor
     {
         _nodeGraph.collectRemovals( _removal );
         if ( EditorNodeGraph::removeComments( _model.editGraph()._listComment, _removal._listCommentID ) )
-            _model.markCommentsEdited( MaterialGraphModel::CommentEdit::Delete );
+            _model.markCommentsEdited( EditorGraphCommentEdit::Delete );
         for ( const int32 linkID : _removal._listLinkID )
         {
             (void)_model.disconnectInputPin( linkID ); // 같은 프레임에 지운 노드의 링크면 이미 없다
@@ -204,9 +204,9 @@ namespace sw::editor
 
         vector<GraphCommentBox>& listComment = _model.editGraph()._listComment;
         if ( _nodeGraph.drawComments( listComment, _nodeGraph.needsContentFit() ) )
-            _model.markCommentsEdited( MaterialGraphModel::CommentEdit::Rename );
+            _model.markCommentsEdited( EditorGraphCommentEdit::Rename );
         if ( _nodeGraph.addRequestedComment( listComment ) )
-            _model.markCommentsEdited( MaterialGraphModel::CommentEdit::Add );
+            _model.markCommentsEdited( EditorGraphCommentEdit::Add );
 
         const MaterialGraphDef& graph     = _model.getGraph();
         const uint32            nodeCount = static_cast<uint32>( graph._listNode.size() );
@@ -268,7 +268,7 @@ namespace sw::editor
                 _model.recordNodePosition( nodeIndex, float2{ position.x, position.y } );
             }
             if ( _nodeGraph.syncCommentLayout( _model.editGraph()._listComment ) )
-                _model.markCommentsEdited( MaterialGraphModel::CommentEdit::Move );
+                _model.markCommentsEdited( EditorGraphCommentEdit::Move );
         }
 
         int32 selectedNodeID{ 0 };
