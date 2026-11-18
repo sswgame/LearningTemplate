@@ -4,10 +4,14 @@
      inputMap 줄들은 입력 맵 묶음이다 — 기본 맵, 공통 파일들, 맨 끝이 게임 차이다(docs/InputMapBundle.md). -->
 <GameSettings>
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
+  <!-- 덮어쓰기 층 layers/footsteps: 엔진 표면 종류 표의 발걸음 반응에 이 게임의 소리 이벤트(audio/shooter3d.audioevents.xml)를 얹는다. -->
   <Engine _windowTitle="Shooter 3D" _userSettingsSchema="game/shooter3d/data/shooter3d.settings.xml" _telemetrySchema="game/shooter3d/data/shooter3d.telemetry.xml" _bUIPauseMenu="true">
     <_mapUserSettingDefault>
       <entry key="gameplay.fieldOfView">80</entry>
     </_mapUserSettingDefault>
+    <_listResourceLayer>
+      <item>game/shooter3d/layers/footsteps</item>
+    </_listResourceLayer>
   </Engine>
   <startMap>game/shooter3d/maps/arena.scene.xml</startMap>
   <!-- 온라인 세션(OnlineSession) — 연결은 게임이 connect 로 연다. 서버 설정은 Config/Server/Online/Shooter3D.json -->

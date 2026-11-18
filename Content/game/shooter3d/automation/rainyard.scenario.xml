@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="cf1b60df0a7349fabd7b03e0942acd5a"?>
+<!--
+  Shooter3D 빗마당 — 밟은 표면마다 다른 발걸음 반응(SurfaceKindDef 의 _step · _wetStep — 소리 · 튀는 효과 · 발자국 · 발 적시기)과 비 날씨.
+  무대 maps/rainyard.scene.xml: z = -12 줄에 흙(x -4.5) · 돌(x -1.5, 아레나 바닥) · 웅덩이(x 1.5, 얕은 물) · 진흙(x 4.5). Walker 는 제자리 걷기라 object.place 로 옮긴다.
+  ① 흙(마름): Dirt 로 세고 흙먼지(footstep_dust) · 소리 Footstep.Dirt · 발자국(깊이 1.2 cm, 거의 메워지지 않는다). 사진 dirt_footprints 는 흙 패드의 발자국 줄(골든).
+  ② 돌(마름): 효과 없음 · 소리 Footstep.Stone · 발자국 없음.
+  ③ 웅덩이: Water 로 세고 물 튀김(footstep_splash — 효과 풀 VFX.PoolPlayed) · 소리 Footstep.Water, 발이 젖는다.
+  ④ 웅덩이 → 돌: 젖은 발이 마른 돌에 젖은 자국을 남긴다(Surface.WetPrintPlaced · DeformWetTexels — 표면 변형 층의 젖음 채널).
+  ⑤ 진흙: 진흙 튐(footstep_mud) · 소리 Footstep.Mud.
+  ⑥ 비(cheat.weather rain): WeatherMaterialComponent 가 Weather.x = 1 · Rain.x = 1 을 쓰고, 같은 흙이 젖은 반응(진흙 튐 · Footstep.DirtWet)을 낸다.
+  ⑦ 비 물결: 시간을 멈추고(링이 같은 위상) Rain.x 1 과 0 두 장을 찍어 다른지 본다(웅덩이에 링이 켜지고 꺼진다 — ExpectImagesDiffer). 날씨는 그대로라 컴포넌트는 Rain 을 다시 쓰지 않는다.
+  골든은 통합 때 기록한다(-scenario-record-missing-golden).
+  실행: App -scenario=game/shooter3d/automation/rainyard.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.rainyard" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/shooter3d/maps/rainyard.scene.xml"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Material.CollectionValue" target="engine/materials/weather.matparams.xml" key="Weather.x" equals="0" timeoutFrames="60"/>
+
+	<!-- ① 흙(마름) -->
+	<DevCommand line="object.place Walker -4.5 0.05 -12.6"/>
+	<WaitUntil watch="Surface.FootstepCount" key="Dirt" atLeast="4" timeoutSeconds="5"/>
+	<Expect watch="Surface.LastFootstep" is="Dirt"/>
+	<Expect watch="Surface.LastFootstepState" is="dry"/>
+	<Expect watch="Surface.LastFootstepEffect" is="engine/vfx/footstep_dust.vfx.xml"/>
+	<Expect watch="Surface.LastFootstepSound" is="Footstep.Dirt"/>
+	<Expect watch="VFX.PoolPlayed" key="engine/vfx/footstep_dust.vfx.xml" atLeast="1"/>
+	<Expect watch="Surface.FootprintPlaced" atLeast="2"/>
+	<Expect watch="Surface.DeformDeepestNear" key="-4.5 -12.6 0.6" atLeast="0.008"/>
+	<AdvanceSimulation frames="1"/> <!-- 판정과 다음 자리 옮기기를 다른 프레임에 둔다(프레임 경계) -->
+	<DevCommand line="object.place Walker -4.5 0.05 -11.4"/>
+	<WaitUntil watch="Surface.FootstepCount" key="Dirt" atLeast="8" timeoutSeconds="5"/>
+	<AdvanceSimulation frames="1"/>
+	<DevCommand line="object.place Walker -6 0.05 -13"/> <!-- 사진에서 발자국을 가리지 않는 자리(흙 패드 구석) -->
+	<WaitUntil watch="Surface.FootstepCount" key="Dirt" atLeast="10" timeoutSeconds="5"/>
+	<Screenshot file="dirt_footprints.ppm" stability="assets"/>
+
+	<!-- ② 돌(마름) -->
+	<AdvanceSimulation frames="1"/>
+	<DevCommand line="object.place Walker -1.5 0.05 -12"/>
+	<WaitUntil watch="Surface.FootstepCount" key="Stone" atLeast="2" timeoutSeconds="5"/>
+	<Expect watch="Surface.LastFootstep" is="Stone"/>
+	<Expect watch="Surface.LastFootstepEffect" is="none"/>
+	<Expect watch="Surface.LastFootstepSound" is="Footstep.Stone"/>
+	<Expect watch="Surface.WetPrintPlaced" equals="0"/>
+
+	<!-- ③ 웅덩이 -->
+	<AdvanceSimulation frames="1"/>
+	<DevCommand line="object.place Walker 1.5 0.05 -12"/>
+	<WaitUntil watch="Surface.FootstepCount" key="Water" atLeast="2" timeoutSeconds="5"/>
+	<Expect watch="Surface.LastFootstep" is="Water"/>
+	<Expect watch="Surface.LastFootstepEffect" is="engine/vfx/footstep_splash.vfx.xml"/>
+	<Expect watch="Surface.LastFootstepSound" is="Footstep.Water"/>
+	<Expect watch="VFX.PoolPlayed" key="engine/vfx/footstep_splash.vfx.xml" atLeast="2"/>
+	<Expect watch="VFX.PoolSize" key="engine/vfx/footstep_splash.vfx.xml" atMost="16"/>
+
+	<!-- ④ 웅덩이 → 돌: 젖은 발자국 -->
+	<AdvanceSimulation frames="1"/>
+	<DevCommand line="object.place Walker -1.5 0.05 -12.6"/>
+	<WaitUntil watch="Surface.WetPrintPlaced" atLeast="2" timeoutSeconds="5"/>
+	<Expect watch="Surface.LastFootstep" is="Stone"/>
+	<Expect watch="Surface.LastFootstepState" is="dry"/>
+	<Expect watch="Surface.DeformWetTexels" atLeast="1"/>
+
+	<!-- ⑤ 진흙 -->
+	<AdvanceSimulation frames="1"/>
+	<DevCommand line="object.place Walker 4.5 0.05 -12"/>
+	<WaitUntil watch="Surface.FootstepCount" key="Mud" atLeast="2" timeoutSeconds="5"/>
+	<Expect watch="Surface.LastFootstep" is="Mud"/>
+	<Expect watch="Surface.LastFootstepEffect" is="engine/vfx/footstep_mud.vfx.xml"/>
+	<Expect watch="Surface.LastFootstepSound" is="Footstep.Mud"/>
+
+	<!-- ⑥ 비: 같은 흙이 젖은 반응을 낸다. 흙 위로 먼저 옮긴 뒤 비를 내린다(진흙은 젖은 반응이 있어 진흙 위에서 비를 내리면 진흙 걸음이 먼저 wet 이 된다). -->
+	<AdvanceSimulation frames="1"/>
+	<DevCommand line="object.place Walker -4.5 0.05 -12"/>
+	<WaitUntil watch="Surface.FootstepCount" key="Dirt" atLeast="11" timeoutSeconds="5"/>
+	<Expect watch="Surface.LastFootstepState" is="dry"/>
+	<DevCommand line="cheat.weather rain"/>
+	<WaitUntil watch="Material.CollectionValue" target="engine/materials/weather.matparams.xml" key="Weather.x" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="Material.CollectionValue" target="engine/materials/weather.matparams.xml" key="Rain.x" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="Surface.LastFootstepState" is="wet" timeoutSeconds="5"/>
+	<Expect watch="Surface.LastFootstep" is="Dirt"/>
+	<Expect watch="Surface.LastFootstepEffect" is="engine/vfx/footstep_mud.vfx.xml"/>
+	<Expect watch="Surface.LastFootstepSound" is="Footstep.DirtWet"/>
+
+	<!-- ⑦ 비 물결 켜기 · 끄기: 걷는 이를 화면 밖으로 옮기고 시간을 멈춰 두 장이 링만 다르게 한다 -->
+	<AdvanceSimulation frames="1"/>
+	<DevCommand line="object.place Walker 16 0.05 -18"/>
+	<AdvanceSimulation frames="90"/> <!-- 흙 패드의 마지막 진흙 튐(수명 0.5 초)이 다 사라질 시간 — 화면에 남은 입자가 두 사진의 차이에 섞이지 않게(시간이 내용) -->
+	<Variable name="gv_timeScale" value="0"/>
+	<Screenshot file="rain_rings_on.ppm" stability="assets"/>
+	<DevCommand line="matparam engine/materials/weather.matparams.xml Rain 0"/>
+	<WaitUntil watch="Material.CollectionValue" target="engine/materials/weather.matparams.xml" key="Rain.x" equals="0" timeoutFrames="10"/>
+	<Screenshot file="rain_rings_off.ppm" stability="assets"/>
+	<Variable name="gv_timeScale" value="1"/>
+	<ExpectImagesDiffer first="rain_rings_on.ppm" second="rain_rings_off.ppm" region="0,0.5,1,1" minDiffering="0.002"/>
+	<ExpectImage file="dirt_footprints.ppm" golden="dirt_footprints"/>
+	<ExpectImage file="rain_rings_on.ppm" golden="rain_rings_on"/>
+	<Pass/>
+</Scenario>
