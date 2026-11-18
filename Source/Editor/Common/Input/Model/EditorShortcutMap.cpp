@@ -9,6 +9,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
