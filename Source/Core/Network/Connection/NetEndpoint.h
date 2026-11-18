@@ -27,7 +27,7 @@
  *          토큰을 다 쓰면 메시지 없이 헤더(확인과 연결 유지)만 보내므로, 대역폭이 포화돼도 연결은 끊기지 않는다. 헤더만 담은 패킷은 토큰에서 빼지 않는다(제어 몫은 따로다 —
  *          보내기 간격이 그 양을 묶는다). 토큰이 차는 속도는 `NetEndpointConfig::_sendThrottle` 이 있으면 연결마다 RTT · 손실로 조절한다(`NetSendThrottle`, 감사 N-11).
  *          조절 속도는 하한이 있고, 패킷 안에서는 신뢰와 비신뢰를 번갈아 앞세우므로(`NetConnection::writePacket`) 신뢰 메시지가 스로틀에 굶지 않는다.
- *          키트의 틱 예산은 `NetSendBudget::computeTickBudget` 이 이 값에서 할당받는다.
+ *          키트의 틱 예산은 `NetSendBudget::computeTickBudget` 이 연결의 지금 송신 속도(`NetConnectionStats::_sendBytesPerSecond`)에서 할당받는다.
  *
  *          **스레드**: 공개 함수는 모두 잠금 하나로 보호하므로 어느 스레드에서나 부를 수 있다.
  *          게임 스레드가 보내고, 작업 스레드가 꺼내고, 네트워크 스레드가 `update` 한다.
@@ -115,7 +115,8 @@ namespace sw
         /**
          * @brief 송신 속도 조절(AIMD, `NetSendThrottle`)의 계수입니다. 비어 있으면 상한 고정 버킷입니다.
          * @details 게임 세션(`GameNetSession::initialize`)은 `Config/Engine/NetSendThrottle.json` 으로 늘 채운다(없거나 틀리면 세션을 열지 않는다).
-         *          비워 두는 것은 고정 속도를 재는 단위 테스트 · 도구뿐이다. 채우면 `initialize` 가 `NetSendThrottle::validate` 로 검사한다.
+         *          비워 두는 것은 Core 단위 테스트뿐이다 — Core 는 Engine 설정 파일을 읽을 수 없어(층 아래) 테스트가 고정 버킷을 명시적으로 고른다.
+         *          채우면 `initialize` 가 `NetSendThrottle::validate` 로 검사하고, 틀리면 false 다.
          */
         optional<NetSendThrottleConfig> _sendThrottle{};
         NetSecurityConfig               _security{}; ///< 암호화와 토큰 결속 설정(기본값은 꺼짐). 양쪽이 같아야 연결된다.
@@ -251,9 +252,7 @@ namespace sw
         virtual int32 getClientIndex() const                                     = 0;
         virtual int32 getConnectedCount() const                                  = 0;
         virtual void  collectConnected( vector<int32>& outListConnection ) const = 0;
-        /** @brief 연결마다의 보내기 상한(초당 바이트)입니다. 샤드 묶음은 샤드마다 같은 설정을 쓴다. */
-        virtual int32 getMaxBytesPerSecond() const                      = 0;
-        virtual bool  isConnectionSaturated( int32 connectionID ) const = 0;
+        virtual bool  isConnectionSaturated( int32 connectionID ) const          = 0;
         /** @brief 큐에 넣은 메시지의 종류별 셈입니다. @p outTable 에 **더합니다**(샤드 묶음은 샤드마다 더한다) — 새로 셀 때는 빈 표를 넘긴다. */
         virtual void addSentKindStats( NetMessageKindStatsTable& outTable ) const = 0;
     };
@@ -266,7 +265,7 @@ namespace sw
      * @brief 서버는 `listen`, 클라이언트는 `connect` 로 시작한 뒤 `update( 시각 )` 를 부르는 네트워크 엔드포인트입니다.
      * @details `update` 는 매 프레임 직접 부르거나 `NetEndpointThread` 에 맡긴다. 클라이언트에서 서버 연결의 ID는 0이다.
      * @code
-     *     host.initialize( &transport, settings );
+     *     if ( host.initialize( &transport, settings ) == false ) return false;
      *     (void)host.listen();
      *     host.update( nowSeconds );                                    // 또는 netThread.start( &host ) — 그러면 update 를 부르지 않는다
      *     while ( host.receiveMessage( connectionID, channel, buffer ) ) { ... }
@@ -301,8 +300,11 @@ namespace sw
         NetEndpoint( const NetEndpoint& )            = delete;
         NetEndpoint& operator=( const NetEndpoint& ) = delete;
 
-        /** @brief 전송과 설정을 정합니다. `update` 를 도는 스레드가 없을 때 부른다. */
-        void               initialize( INetTransport* pTransport, const NetEndpointConfig& settings ) SW_EXCLUDES_LOCK( _mutex );
+        /**
+         * @brief 전송과 설정을 정합니다. `update` 를 도는 스레드가 없을 때 부른다.
+         * @return 송신 속도 계수(`NetEndpointConfig::_sendThrottle`)가 틀리면 오류 로그와 false 이고 아무것도 바꾸지 않는다(고정 속도로 대신 열지 않는다).
+         */
+        [[nodiscard]] bool initialize( INetTransport* pTransport, const NetEndpointConfig& settings ) SW_EXCLUDES_LOCK( _mutex );
         [[nodiscard]] bool listen() SW_EXCLUDES_LOCK( _mutex );
         [[nodiscard]] bool connect( const NetAddress& serverAddress ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 세션 토큰을 내밀며 연결합니다(토큰 결속 서버용). 토큰과 비밀은 로그인 키트가 TLS 로 받은 값입니다. */
@@ -393,8 +395,6 @@ namespace sw
         uint64 getSlotVisitCount() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 이 엔드포인트의 프로토콜 ID(`NetProtocol::makeProtocolID( 게임 ID, 와이어 버전 )`)입니다. */
         uint32 getProtocolID() const SW_EXCLUDES_LOCK( _mutex );
-        /** @brief 연결마다의 보내기 상한(초당 바이트, `NetEndpointConfig::_maxBytesPerSecond`)입니다. 키트가 틱 예산을 계산할 때 씁니다(`NetSendBudget::computeTickBudget`). */
-        int32 getMaxBytesPerSecond() const SW_EXCLUDES_LOCK( _mutex ) override;
         /**
          * @brief 이 연결이 포화됐는가입니다. 대역폭 토큰을 다 썼거나 앞 패킷이 비신뢰 메시지를 다 싣지 못했으면 true 입니다. 연결돼 있지 않으면 false 입니다.
          * @details 키트는 포화된 연결에 이번 틱의 비신뢰 복제(위치 · 효과)를 건너뛴다. 쌓아 두면 늦은 것이 몰려 나간다. 언리얼 `UNetConnection::IsNetReady` 가 거짓인 자리이다.

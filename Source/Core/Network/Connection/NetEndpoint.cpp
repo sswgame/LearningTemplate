@@ -135,24 +135,23 @@ namespace sw
 
     NetEndpoint::~NetEndpoint() = default;
 
-    void NetEndpoint::initialize( INetTransport* pTransport, const NetEndpointConfig& settings )
+    bool NetEndpoint::initialize( INetTransport* pTransport, const NetEndpointConfig& settings )
     {
+        if ( settings._sendThrottle.has_value() )
+        {
+            const expected<void> valid = NetSendThrottle::validate( *settings._sendThrottle, settings._maxBytesPerSecond );
+            if ( valid.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "NetEndpoint.SendThrottleInvalid", "Send throttle setting %#: %# - the endpoint is not initialized", valid.error().detail(), valid.error().message() );
+                return false;
+            }
+        }
         vector<FinishedConnect> listFinished;
         {
             ScopedLock<mutex> lock{ _mutex };
             finishConnect( NetDisconnectReason::Requested );
             _pTransport = pTransport;
             _settings   = settings;
-            if ( settings._sendThrottle.has_value() )
-            {
-                // 계수는 데이터에서 온다(`GameNetSession` 이 읽고 검사한다). 틀린 계수로 조절하지 않고 오류로 알린 뒤 고정 상한으로 보낸다 — 연결은 계수와 상관없이 산다.
-                const expected<void> valid = NetSendThrottle::validate( *settings._sendThrottle, settings._maxBytesPerSecond );
-                if ( valid.has_value() == false )
-                {
-                    SW_LOG_ERROR_ID( "NetEndpoint.SendThrottleInvalid", "Send throttle setting %#: %#", valid.error().detail(), valid.error().message() );
-                    _settings._sendThrottle = nullopt;
-                }
-            }
             _challenge.initialize( settings._saltSeed );
             resetSlots( 0 );
             _packetWriter.reserve( kNetMaxPacketSize );
@@ -175,6 +174,7 @@ namespace sw
             listFinished.swap( _listFinished );
         }
         deliverFinished( listFinished );
+        return true;
     }
 
     NetEndpoint::PacketType NetEndpoint::peekPacketType( const uint8* pData, int32 size )
@@ -1580,12 +1580,6 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         return _protocolID;
-    }
-
-    int32 NetEndpoint::getMaxBytesPerSecond() const
-    {
-        ScopedLock<mutex> lock{ _mutex };
-        return _settings._maxBytesPerSecond;
     }
 
     bool NetEndpoint::isConnectionSaturated( int32 connectionID ) const

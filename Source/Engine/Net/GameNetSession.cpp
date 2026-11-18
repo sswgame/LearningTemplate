@@ -18,7 +18,6 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetSendThrottleSettings.h"
 #include "Engine/Config/ServerConfig.h"
@@ -55,32 +54,6 @@ namespace sw
              * @details 서버는 샤드 1 개 이상, 클라이언트는 정확히 1 개다. 샤드 여럿은 고정된 첫 포트가 있어야 한다 — 배정이 "첫 포트 + 샤드" 를 알려 주므로
              *          운영체제가 고른 포트(0)로는 계약을 지킬 수 없다. 연이은 포트의 마지막이 UDP 포트 범위를 넘어도 안 된다.
              */
-            /**
-             * @brief 송신 속도 설정(`Config/Engine/NetSendThrottle.json`)을 읽어 @p inoutSettings 의 상한과 AIMD 계수에 넣습니다. 없거나 틀리면 오류 로그와 false 입니다.
-             * @details 고정 속도로 대신 열지 않는다 — 막힌 회선에서 신뢰 채널의 재전송을 키우는 것이 고정 버킷이다(감사 N-11).
-             */
-            static bool applySendThrottle( NetEndpointConfig& inoutSettings )
-            {
-                NetSendThrottleSettings settings;
-                if ( ConfigManager::readConfigFileInto( NetSendThrottleSettings::kConfigFile, settings ) != ConfigReadResult::Loaded )
-                {
-                    SW_LOG_ERROR_ID( "GameNetSession.SendThrottleConfigMissing", "Net session needs %# (missing or unreadable - the log above names the key) - the session stays closed",
-                                     NetSendThrottleSettings::kConfigFile );
-                    return false;
-                }
-                const NetSendThrottleConfig throttle = settings.makeThrottleConfig();
-                const expected<void>        valid    = NetSendThrottle::validate( throttle, settings._maxBytesPerSecond );
-                if ( valid.has_value() == false )
-                {
-                    SW_LOG_ERROR_ID( "GameNetSession.SendThrottleConfigInvalid", "%# %#: %# - the session stays closed", NetSendThrottleSettings::kConfigFile, valid.error().detail(),
-                                     valid.error().message() );
-                    return false;
-                }
-                inoutSettings._maxBytesPerSecond = settings._maxBytesPerSecond;
-                inoutSettings._sendThrottle      = throttle;
-                return true;
-            }
-
             static bool isValidShardLayout( const GameNetSessionParams& params )
             {
                 const bool bServer        = params._role == GameNetRole::Server;
@@ -458,7 +431,8 @@ namespace sw
             shard->_decorator = _transportDecorator( shardIndex, *shard->_transport );
         if ( shard->_decorator != nullptr )
             pHostTransport = shard->_decorator.get();
-        shard->_host.initialize( pHostTransport, params._hostSettings );
+        if ( shard->_host.initialize( pHostTransport, params._hostSettings ) == false )
+            return nullptr; // initialize 가 알렸다
         return shard;
     }
 
@@ -468,8 +442,8 @@ namespace sw
         if ( requested._role == GameNetRole::None )
             return false;
         GameNetSessionParams params = requested;
-        if ( GameNetSessionInternal::applySendThrottle( params._hostSettings ) == false )
-            return false;
+        if ( NetSendThrottleSettings::loadInto( params._hostSettings ) == false )
+            return false; // 고정 속도로 대신 열지 않는다 — 막힌 회선에서 재전송을 키우는 것이 고정 버킷이다(감사 N-11)
         if ( GameNetSessionInternal::isValidShardLayout( params ) == false )
             return false;
         const bool bHasTicket = params._credentials._tokenSize > 0;

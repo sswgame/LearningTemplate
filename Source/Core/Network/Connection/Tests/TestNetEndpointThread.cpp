@@ -397,8 +397,8 @@ SW_TEST_CASE( NetEndpointThreadTest, UDPHostsRunOnThreadsOverLocalhost )
     SW_REQUIRE_TRUE( clientTransport.open( 0, true ) );
     NetEndpoint server;
     NetEndpoint client;
-    server.initialize( &serverTransport, NetEndpointConfig{} );
-    client.initialize( &clientTransport, NetEndpointConfig{} );
+    SW_REQUIRE_TRUE( server.initialize( &serverTransport, NetEndpointConfig{} ) );
+    SW_REQUIRE_TRUE( client.initialize( &clientTransport, NetEndpointConfig{} ) );
     SW_REQUIRE_TRUE( server.listen() );
     NetEndpointThread serverThread;
     NetEndpointThread clientThread;

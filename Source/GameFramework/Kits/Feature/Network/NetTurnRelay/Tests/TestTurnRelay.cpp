@@ -49,7 +49,6 @@ namespace
         int32              getClientIndex() const override { return -1; }
         int32              getConnectedCount() const override { return 0; }
         void               collectConnected( vector<int32>& ) const override {}
-        int32              getMaxBytesPerSecond() const override { return 0; }
         bool               isConnectionSaturated( int32 ) const override { return false; }
         void               addSentKindStats( NetMessageKindStatsTable& ) const override {}
     };

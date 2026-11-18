@@ -72,7 +72,6 @@ namespace sw
         , _parallel{}
         , _observerScratch{}
         , _tickDeltaTime{ 0.0f }
-        , _tickUpdateBudgetBytes{ 0 }
         , _tick{ 0 }
         , _pRangeObserver{ nullptr }
     {
@@ -241,8 +240,17 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return;
-        _tickDeltaTime         = deltaTime;
-        _tickUpdateBudgetBytes = NetSendBudget::computeTickBudget( _settings._updateBudgetBytes, _pHost->getMaxBytesPerSecond(), static_cast<float64>( deltaTime ) );
+        _tickDeltaTime = deltaTime;
+        // 관찰자마다 이번 틱의 예산 — 설정값과 그 연결의 지금 송신 속도(`NetSendThrottle` 이 조절한다)에서 나온 할당량 중 작은 값. 호스트 락은 나눠 돌기 전에 여기서만 잡는다.
+        for ( size_t index = 0; index < _listObserver.size(); ++index )
+        {
+            Observer& observer = _listObserver[index];
+            if ( observer._bActive == SW_FALSE )
+                continue;
+            NetConnectionStats stats;
+            const int32        bytesPerSecond = _pHost->getConnectionStats( static_cast<int32>( index ), stats ) ? static_cast<int32>( stats._sendBytesPerSecond ) : 0;
+            observer._updateBudgetBytes       = NetSendBudget::computeTickBudget( _settings._updateBudgetBytes, bytesPerSecond, static_cast<float64>( deltaTime ) );
+        }
         ++_tick;
         _observerScratch.prepare( _parallel );
         _pRangeObserver = _listObserver.data();
@@ -386,7 +394,7 @@ namespace sw
         prioritizer.collectOrder( listOrder );
         BitWriter& writer = scratch._messageWriter.begin( NetMMOMessage::kUpdate );
         writer.writeVarUint( _tick );
-        NetSendBudget budget( _tickUpdateBudgetBytes );
+        NetSendBudget budget( observer._updateBudgetBytes );
         budget.reserveBits( writer.getBitCount() + 1 ); // 헤더와 끝 표시
         vector<uint32>& listSent = scratch._listSent;
         listSent.clear();

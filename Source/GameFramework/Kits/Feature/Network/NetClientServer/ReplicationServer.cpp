@@ -27,7 +27,6 @@ namespace sw
         , _listClientScratch{}
         , _worldEntityCount{ 0 }
         , _oversizedEntityCount{ 0 }
-        , _snapshotBudgetBytes{ 0 }
         , _pRangeConnection{ nullptr }
         , _ppRangeClient{ nullptr }
     {
@@ -134,8 +133,6 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return;
-        // 이번 틱의 예산은 설정값과 연결 상한에서 나온 할당량 중 작은 값이다. 호스트 락은 여기서 한 번만 잡고, 워커는 이 값만 읽는다.
-        _snapshotBudgetBytes = NetSendBudget::computeTickBudget( _settings._snapshotBudgetBytes, _pHost->getMaxBytesPerSecond(), static_cast<float64>( _settings._tickInterval ) );
         // 클라이언트 상태는 나눠 실행하기 전에 모두 확보한다. `acquireClient` 는 목록을 키울 수 있기 때문이다. 나눠 실행하는 동안에는 아무도 목록을 건드리지 않는다.
         _pHost->collectConnected( _listConnectionScratch );
         _listClientScratch.resize( _listConnectionScratch.size() );
@@ -145,7 +142,13 @@ namespace sw
         }
         for ( size_t index = 0; index < _listConnectionScratch.size(); ++index )
         {
-            _listClientScratch[index] = &_listClient[static_cast<size_t>( _listConnectionScratch[index] )];
+            const int32  connectionID = _listConnectionScratch[index];
+            ClientState& client       = _listClient[static_cast<size_t>( connectionID )];
+            // 이번 틱의 예산은 설정값과 그 연결의 지금 송신 속도(`NetSendThrottle` 이 조절한다)에서 나온 할당량 중 작은 값이다. 호스트 락은 나눠 돌기 전에 여기서만 잡는다.
+            NetConnectionStats stats;
+            const int32        bytesPerSecond = _pHost->getConnectionStats( connectionID, stats ) ? static_cast<int32>( stats._sendBytesPerSecond ) : 0;
+            client._snapshotBudgetBytes       = NetSendBudget::computeTickBudget( _settings._snapshotBudgetBytes, bytesPerSecond, static_cast<float64>( _settings._tickInterval ) );
+            _listClientScratch[index]         = &client;
         }
         _pPolicy->prepareSnapshots( _world._listEntity ); // 연결이 함께 쓰는 정책 표 — 나눠 돌기 전에 게임 스레드에서 한 번
         _snapshotScratch.prepare( _parallel );
@@ -216,12 +219,12 @@ namespace sw
         if ( &slot == pBaseline )
         {
             NetSnapshot written;
-            filtered.writeDelta( writer, pBaseline, _snapshotBudgetBytes, written, &listOrder, &scratch._listCurrent );
+            filtered.writeDelta( writer, pBaseline, client._snapshotBudgetBytes, written, &listOrder, &scratch._listCurrent );
             slot = std::move( written );
         }
         else
         {
-            filtered.writeDelta( writer, pBaseline, _snapshotBudgetBytes, slot, &listOrder, &scratch._listCurrent );
+            filtered.writeDelta( writer, pBaseline, client._snapshotBudgetBytes, slot, &listOrder, &scratch._listCurrent );
         }
         // 받는 쪽이 이미 지금 상태인 엔티티는 확정으로 보고 우선도를 0으로 되돌린다. 이번에 실은 엔티티도 확인을 기다리는 전송으로 두고 0으로 되돌린다.
         // 못 실은 엔티티는 우선도가 쌓인 채로 남아 다음 스냅샷에서 앞선다.

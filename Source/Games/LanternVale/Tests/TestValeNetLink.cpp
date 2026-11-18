@@ -50,7 +50,6 @@ namespace
         int32 getClientIndex() const override { return _inner.getClientIndex(); }
         int32 getConnectedCount() const override { return _inner.getConnectedCount(); }
         void  collectConnected( vector<int32>& outListConnection ) const override { _inner.collectConnected( outListConnection ); }
-        int32 getMaxBytesPerSecond() const override { return _inner.getMaxBytesPerSecond(); }
         bool  isConnectionSaturated( int32 connectionID ) const override { return _inner.isConnectionSaturated( connectionID ); }
         void  addSentKindStats( NetMessageKindStatsTable& outTable ) const override { _inner.addSentKindStats( outTable ); }
 

@@ -6,6 +6,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Config/NetSendThrottleSettings.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
@@ -100,8 +101,8 @@ namespace sw
 
 namespace sw
 {
-    NetSimWorld::NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetEndpointConfig& hostSettings,
-                              INetSimSceneSource* pSceneSource, Scene* pBorrowedScene )
+    NetSimWorld::NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, INetSimSceneSource* pSceneSource,
+                              Scene* pBorrowedScene )
         : _counter{ pTransport }
         , _host{}
         , _router{}
@@ -116,7 +117,6 @@ namespace sw
         , _role{ role }
         , _bInputFocus{ SW_FALSE }
     {
-        _host.initialize( &_counter, hostSettings );
     }
 
     NetSimWorld::~NetSimWorld()
@@ -220,7 +220,9 @@ namespace sw
             SW_LOG_ERROR_ID( "NetSimHarness.NetSimHarnessTickIntervalMust", "NetSimHarness: tick interval must be positive (%#)", settings._tickInterval );
             return false;
         }
-        _settings       = settings;
+        _settings = settings;
+        if ( NetSendThrottleSettings::loadInto( _settings._hostSettings ) == false )
+            return false; // 게임 세션과 같은 송신 속도 조절 — 없으면 하니스를 세우지 않는다(loadInto 가 알렸다)
         _services       = services;
         _pGame          = pGame;
         _time           = 0.0;
@@ -300,7 +302,10 @@ namespace sw
                 return {};
             }
         }
-        return make_unique<NetSimWorld>( _services, role, worldIndex, link._pEmulation.get(), hostSettings, _settings._pSceneSource, pBorrowedScene );
+        unique_ptr<NetSimWorld> pWorld = make_unique<NetSimWorld>( _services, role, worldIndex, link._pEmulation.get(), _settings._pSceneSource, pBorrowedScene );
+        if ( pWorld->_host.initialize( &pWorld->_counter, hostSettings ) == false )
+            return {}; // initialize 가 알렸다 — 빌린 씬은 월드 소멸(`stop`)이 돌려준다
+        return pWorld;
     }
 
     expected<int32> NetSimHarness::addClient( const NetSimLinkConditions& conditions )
