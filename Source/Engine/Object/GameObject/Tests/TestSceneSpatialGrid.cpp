@@ -135,3 +135,27 @@ SW_TEST_CASE( SceneSpatialGridTest, AddAndRemoveAreVisibleImmediately )
     grid.query( kTestLayer, -1.0f, -1.0f, 1.0f, 1.0f, listKey );
     SW_EXPECT_TRUE( listKey.size() == 1 && listKey[0] == pSecond );
 }
+
+/**
+ * @brief [SceneSpatialGridTest] 주인이 계층에서 꺼진 항목은 질의에 들지 않고, 다시 켜면 같은 자리로 돌아온다 — 풀에 든 적이 지역 · 상호작용 판정에 잡히던 결함(K-11)
+ */
+SW_TEST_CASE( SceneSpatialGridTest, InactiveOwnerIsLeftOutOfQueries )
+{
+    GameObjectManager manager;
+    SceneSpatialGrid  grid{ manager };
+    SceneComponent*   pPooled = makePoint( manager, "Pooled", float3{ 0.0f, 0.0f, 0.0f } );
+    (void)grid.add( kTestLayer, *pPooled, *pPooled, 0.5f );
+    grid.addLayerReader( kTestLayer );
+    grid.requireCellSize( kTestLayer, 4.0f );
+    SW_REQUIRE_TRUE( grid.isActive( kTestLayer ) );
+
+    vector<Component*> listKey;
+    grid.query( kTestLayer, -1.0f, -1.0f, 1.0f, 1.0f, listKey );
+    SW_EXPECT_TRUE( contains( listKey, pPooled ) );
+    pPooled->getOwner()->setActive( false );
+    grid.query( kTestLayer, -1.0f, -1.0f, 1.0f, 1.0f, listKey );
+    SW_EXPECT_FALSE( contains( listKey, pPooled ) );
+    pPooled->getOwner()->setActive( true );
+    grid.query( kTestLayer, -1.0f, -1.0f, 1.0f, 1.0f, listKey );
+    SW_EXPECT_TRUE( contains( listKey, pPooled ) );
+}
