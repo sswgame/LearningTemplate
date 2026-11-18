@@ -469,11 +469,7 @@ namespace sw
         bool             bValid = XMLFields::readProperties( node, layout, sourceName );
         for ( XMLNode pieceNode = node.findChild( "Piece" ); pieceNode; pieceNode = pieceNode.findNextSibling( "Piece" ) )
         {
-            CoasterTrackPiece piece;
-            if ( XMLFields::readProperties( pieceNode, piece, sourceName ) )
-                layout._listPiece.push_back( piece );
-            else
-                bValid = false;
+            bValid = GameDataXML::readInto( pieceNode, sourceName, layout._listPiece ) && bValid;
         }
         if ( layout._listPiece.empty() )
         {

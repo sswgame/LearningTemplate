@@ -99,11 +99,7 @@ namespace sw
         }
         for ( XMLNode node = dungeonNode.findChild( "Treasure" ); node; node = node.findNextSibling( "Treasure" ) )
         {
-            AdventureTreasureDef treasure;
-            if ( XMLFields::readProperties( node, treasure, sourceName ) )
-                dungeon._listTreasure.push_back( treasure );
-            else
-                bValid = false;
+            bValid = GameDataXML::readInto( node, sourceName, dungeon._listTreasure ) && bValid;
         }
         for ( XMLNode node = dungeonNode.findChild( "Device" ); node; node = node.findNextSibling( "Device" ) )
         {
