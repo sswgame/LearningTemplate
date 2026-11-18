@@ -24,12 +24,14 @@ namespace sw
         // 이 보고는 그 바이트가 어느 하위 시스템의 것인지 말한다.
         if ( _memoryProfiler == nullptr )
             return;
-#if defined( SW_DEBUG )
-        // 기준선(열린 창)이 없으면 닫지 않고 빈 보고서를 찍어 "창이 없다" 는 오류 줄을 남긴다(CRT 보고와 같다). 보고만 한다 — 종료 경로는 늘린 태그 수로 멈추지 않는다.
-        MemoryLeakWindow&      leakWindow = _memoryProfiler->getLeakWindow();
-        const LeakWindowReport leakReport = leakWindow.isOpen() ? leakWindow.close() : LeakWindowReport{};
-        (void)leakReport.print( "shutdown" );
-#endif
+        // 진단 구성(Debug — `Engine::initialize` 의 kDiagnostics)만 창을 연다. 다른 구성에서 닫으면 "창이 없다" 오류만 남는다.
+        if ( _bDiagnostics )
+        {
+            // 기준선(열린 창)이 없으면 닫지 않고 빈 보고서를 찍어 "창이 없다" 는 오류 줄을 남긴다(CRT 보고와 같다). 보고만 한다 — 종료 경로는 늘린 태그 수로 멈추지 않는다.
+            MemoryLeakWindow&      leakWindow = _memoryProfiler->getLeakWindow();
+            const LeakWindowReport leakReport = leakWindow.isOpen() ? leakWindow.close() : LeakWindowReport{};
+            (void)leakReport.print( "shutdown" );
+        }
         _memoryProfiler->shutdown();
         _memoryProfiler.reset();
     }

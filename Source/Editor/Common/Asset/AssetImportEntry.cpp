@@ -6,6 +6,7 @@
  */
 #include "pch.h"
 
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
@@ -42,10 +43,11 @@ namespace sw::editor
                 {
                     case EditorImportKind::Texture:
                     {
-#if defined( SW_DEBUG )
-                        if ( bCheckOnly == false )
-                            SW_LOG_WARNING_ID( "AssetImportEntry.TextureImportDebugBuild", "Texture import in a Debug build is slow (unoptimized BC7/BC6H compressor, minutes per large texture) - run --import-textures with the Release App" );
-#endif
+                        if constexpr ( build::kDebug )
+                        {
+                            if ( bCheckOnly == false )
+                                SW_LOG_WARNING_ID( "AssetImportEntry.TextureImportDebugBuild", "Texture import in a Debug build is slow (unoptimized BC7/BC6H compressor, minutes per large texture) - run --import-textures with the Release App" );
+                        }
                         const string        configPath = TextureImporter::makeDefaultImportConfigPath();
                         TextureImportConfig config;
                         if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )

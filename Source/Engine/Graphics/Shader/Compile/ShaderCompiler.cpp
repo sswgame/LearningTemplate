@@ -764,9 +764,7 @@ namespace sw
                 }
                 outResult._listIncludedFile = pIncludeRecorder->takeIncludedFiles();
                 outResult._bSuccess         = true;
-    #if defined( SW_DEBUG )
-                SW_LOG_TRACE_ID( "ShaderCompiler.Target", "Target: %#", getDxcTargetRow( desc._targetFormat )._pLogName );
-    #endif
+                SW_LOG_TRACE_ID( "ShaderCompiler.Target", "Target: %#", getDxcTargetRow( desc._targetFormat )._pLogName ); // Trace 를 컴파일하지 않는 구성은 인자를 평가하지 않는다(SW_LOG_DISCARDED)
                 return DxcResult::Compiled;
             }
 

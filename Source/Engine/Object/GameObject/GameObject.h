@@ -314,10 +314,11 @@ namespace sw
         /** @brief 소유 컴포넌트를 모두 해제합니다(직렬화 복원용). 컴포넌트 틱 중이면 `removeComponent` 처럼 틱 뒤로 미룹니다. */
         void clearComponents();
 
-#if defined( SW_DEBUG )
-        /** @brief `getComponent<>` 한 번을 Debug 카운터 `GT.Object.getComponentLookups` 에 셉니다(5-3 측정 기반 — 틱이 프레임마다 찾는 수, 이 헤더가 프로파일러를 끌어오지 않게 .cpp 에 둔다). */
+        /**
+         * @brief `getComponent<>` 한 번을 Debug 카운터 `GT.Object.getComponentLookups` 에 셉니다(5-3 측정 기반 — 틱이 프레임마다 찾는 수, 이 헤더가 프로파일러를 끌어오지 않게 .cpp 에 둔다).
+         * @details 정의는 모든 구성에서 컴파일된다. 부르는 자리(`getComponent`)만 `SW_DEBUG` 다 — 이 헤더는 리플렉션 파서가 구성 매크로 없이 읽어 `build::kDebug`(BuildInfo.h)를 쓸 수 없다.
+         */
         static void countComponentLookup();
-#endif
 
         /**
          * @brief 타입 T 의 첫 컴포넌트를 찾습니다. 파생 타입도 포함합니다.

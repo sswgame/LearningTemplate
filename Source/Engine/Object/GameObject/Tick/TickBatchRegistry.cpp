@@ -6,6 +6,8 @@
 
 #include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 
+#include "Core/Foundation/BuildInfo.h"
+
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Object/Component/Component.h"
@@ -77,11 +79,11 @@ namespace sw
                 pComp->onSubTick( subTickID, context );
             ++tickCount;
         }
-#if defined( SW_DEBUG )
-        SW_PROFILE_COUNT( "GT.Scene.tick.virtualTicks", tickCount );
-#else
+        if constexpr ( build::kDebug )
+        {
+            SW_PROFILE_COUNT( "GT.Scene.tick.virtualTicks", tickCount ); // 카운터는 비용이 커서 Debug 만
+        }
         (void)tickCount;
-#endif
     }
 
     uint32 TickBatchRegistry::getRegisteredCount()

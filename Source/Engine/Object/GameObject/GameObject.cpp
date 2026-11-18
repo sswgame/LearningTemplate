@@ -689,12 +689,10 @@ namespace sw
         } );
     }
 
-#if defined( SW_DEBUG )
     void GameObject::countComponentLookup()
     {
         SW_PROFILE_COUNT( "GT.Object.getComponentLookups", 1 );
     }
-#endif
 
     void GameObject::clearComponents()
     {

@@ -569,16 +569,11 @@ namespace sw
         swapChainDesc._bSynchronizationValidation       = rhiConfig._bSynchronizationValidation;
         {
             // 검증 층 · DRED 는 장치를 만들기 전에만 걸 수 있어 여기서 한 번 정한다(설정 기본값, 시작 인자가 이긴다). 배포 구성은 검증 층을 짓지 않아 늘 끈다.
-#if defined( SW_SHIPPING )
-            constexpr RHIDiagnosticBuild kBuild = RHIDiagnosticBuild::Shipping;
-#elif defined( SW_DEBUG )
-            constexpr RHIDiagnosticBuild kBuild = RHIDiagnosticBuild::Debug;
-#else
-            constexpr RHIDiagnosticBuild kBuild = RHIDiagnosticBuild::Release;
-#endif
-            const CommandLineManager* pCommandLine = engine::areEngineServicesBound() ? &engine::getSubsystem<CommandLineManager>() : nullptr;
-            const expected<bool>      validation   = resolveRHIDiagnosticSwitch( rhiConfig._validationLayer, CommandLineArgument::RHI_VALIDATION, pCommandLine, kBuild );
-            const expected<bool>      dred         = resolveRHIDiagnosticSwitch( rhiConfig._dred, CommandLineArgument::RHI_DRED, pCommandLine, kBuild );
+            constexpr RHIDiagnosticBuild kBuild       = build::kShipping ? RHIDiagnosticBuild::Shipping : build::kDebug ? RHIDiagnosticBuild::Debug
+                                                                                                                        : RHIDiagnosticBuild::Release;
+            const CommandLineManager*    pCommandLine = engine::areEngineServicesBound() ? &engine::getSubsystem<CommandLineManager>() : nullptr;
+            const expected<bool>         validation   = resolveRHIDiagnosticSwitch( rhiConfig._validationLayer, CommandLineArgument::RHI_VALIDATION, pCommandLine, kBuild );
+            const expected<bool>         dred         = resolveRHIDiagnosticSwitch( rhiConfig._dred, CommandLineArgument::RHI_DRED, pCommandLine, kBuild );
             for ( const expected<bool>* pResult : { &validation, &dred } )
             {
                 if ( pResult->has_value() == false )

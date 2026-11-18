@@ -6,6 +6,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
@@ -302,13 +303,13 @@ namespace sw
         return __lsan_do_recoverable_leak_check() != 0 ? 1 : 0;
 
 #else
-    #if defined( SW_DEBUG ) && !defined( SW_SHIPPING )
-        MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — no in-process checker. Windows Debug CRT: rebuild Debug. "
-                                                  "Linux: cmake -DSW_ENABLE_SANITIZER=ON OR valgrind --leak-check=full ./App",
-                                                  pPhase );
-    #else
+        if constexpr ( build::kDebug )
+        {
+            MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — no in-process checker. Windows Debug CRT: rebuild Debug. "
+                                                      "Linux: cmake -DSW_ENABLE_SANITIZER=ON OR valgrind --leak-check=full ./App",
+                                                      pPhase );
+        }
         (void)pPhase;
-    #endif
         return 0;
 #endif
     }

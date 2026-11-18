@@ -16,7 +16,9 @@ SW_TEST_CASE( BuildInfoTest, NamesAgreeWithTheBuildMacros )
     const string_view configName{ build::kConfigName };
 #if defined( SW_DEBUG )
     SW_EXPECT_EQUAL( string_view( "Debug" ), configName );
+    SW_EXPECT_TRUE( build::kDebug );
 #else
+    SW_EXPECT_FALSE( build::kDebug );
     SW_EXPECT_TRUE( configName != "Debug" && configName != "Shipping" );
     SW_EXPECT_FALSE( configName.empty() );
 #endif

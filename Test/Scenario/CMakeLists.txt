@@ -75,9 +75,12 @@ function(sw_add_scenario_chain test_name stage_seconds)
 	endif()
 	math(EXPR wave_count "(${scenario_backend_count} + ${slot_count} - 1) / ${slot_count}")
 	math(EXPR chain_timeout "${stage_seconds} * ${stage_count} * ${wave_count}")
+	# 체인은 구성과 무관하게 bindless 죽은 번호를 검사한다 — 변수 기본값은 Debug 만 켜는데(Release 는 성능 측정 빌드) 묶음 검증은 Debug 를 짓지 않는다(사용자 결정 2026-11-18).
+	# 검사는 드로우마다 읽기 잠금 하나라 판정 그림을 바꾸지 않는다. 부하 시나리오(`sw_add_load_scenario`)는 측정 경로라 켜지 않는다. 자식 App 에는 넘김 인자로 간다.
+	# 언리얼 자동화도 검증을 시작 인자로 켠다(`-d3ddebug`). 변수는 DevTools 의 테스트용 변수(SW_TEST_GLOBAL_VARIABLE)라 배포본에는 이름도 없다(shipping-check).
 	add_test(NAME ${test_name}
 		COMMAND $<TARGET_FILE:App> ${ARG_ARGS} -scenario=${scenario_list} -scenario-keep-going -scenario-backends=all ${list_split_argument} ${list_slot_argument} -unattended
-			-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${test_name}.log ${list_launch_argument}
+			-gv_validateBindlessIndex=DeadIndex -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${test_name}.log ${list_launch_argument}
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(${test_name} PROPERTIES LABELS hostgpu TIMEOUT ${chain_timeout} SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped} PROCESSORS ${slot_count})
 	message(STATUS "[Scenario] ${test_name}: ${stage_count} scenario(s)")
