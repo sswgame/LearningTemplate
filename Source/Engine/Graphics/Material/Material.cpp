@@ -177,20 +177,34 @@ namespace sw
         // DX12 · Vulkan 은 셰이더가 전역 bindless 인덱스로 힙 · 배열을 직접 읽는다. DX11 · GL 은 그게 안 되므로
         // (SM5.0 은 리소스 배열 동적 인덱싱이 없고, GL 은 SPIR-V 라 ARB_bindless_texture 를 못 쓴다) 엔진이
         // 머티리얼 텍스처를 t16..t31 고정 슬롯에 바인딩하고 CB 에는 **서수**를 넣는다.
+        // 서수는 텍스처 프로퍼티의 차례(빈 칸 포함)로 고정한다 — 셰이더 변형이 그 수만큼만 칸을 선언하고(MATERIAL_TEXTURE_COUNT, 웹 단계 텍스처 한도),
+        // 인스턴스가 빈 칸을 덮어써도 같은 서수다(언리얼 머티리얼의 텍스처 매개변수가 컴파일 때 칸을 받는 것과 같다).
         const bool    bNativeBindless = pRHI->supportsNativeBindlessSampling();
         TextureCache& textures        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+        uint32        nextOrdinal     = 0;
+        auto          recordSlot      = [this]( uint32 slot, const string& name, RHIDescriptorIndex srv )
+        {
+            if ( _listMaterialTextureSRV.size() <= slot )
+            {
+                _listMaterialTextureSRV.resize( slot + 1u, kInvalidDescriptorIndex );
+                _listMaterialTextureName.resize( slot + 1u );
+            }
+            _listMaterialTextureSRV[slot]  = srv;
+            _listMaterialTextureName[slot] = hashed_string( name.c_str() );
+        };
         for ( const MaterialProperty& prop : _data._listProperty )
         {
             if ( MaterialPacking::isTextureType( prop._type ) == false )
                 continue;
+            const uint32 ordinal = nextOrdinal++;
             if ( prop._assetPath.empty() )
             {
+                recordSlot( ordinal, prop._name, kInvalidDescriptorIndex ); // 빈 칸도 자리를 가진다 — 인스턴스가 이 서수로 덮어쓴다
                 // 텍스처가 붙지 않은 필드는 머티리얼 데이터에 kInvalidDescriptorIndex 로 실려 셰이더로 간다(`BindlessIndexCheck::TraceAbsent` 면 자리를 남긴다).
                 if ( BindlessIndexValidator::isTracingAbsent() )
                     (void)pRHI->getBindlessIndexReportLog().recordAbsent( hashed_string( _desc._name.c_str() ), hashed_string( prop._name.c_str() ), 0 ); // 자리마다 한 번만 남긴다
                 continue;
             }
-            const uint32 ordinal = static_cast<uint32>( _listMaterialTextureSRV.size() );
             if ( bNativeBindless == false && ordinal >= shaderslot::kMaterialTextureCount )
             {
                 SW_LOG_WARNING_ID( "Material.MaterialBackendBindsMost", "Material '%#': this backend binds at most %# material textures - '%#' stays white.",
@@ -224,11 +238,20 @@ namespace sw
             _listAcquiredTexturePath.push_back( prop._assetPath );
             _listTextureLoad.push_back( std::move( load ) );
             _listBorrowedTexturePath.push_back( std::move( borrowedPath ) );
-            _listMaterialTextureSRV.push_back( srv );
-            _listMaterialTextureName.emplace_back( prop._name.c_str() );
+            recordSlot( ordinal, prop._name, srv );
             setTextureParameter( hashed_string( prop._name.c_str() ), bNativeBindless ? srv : ordinal );
         }
         return true;
+    }
+
+    uint32 Material::getTextureSlotCount() const
+    {
+        uint32 count = 0;
+        for ( const MaterialProperty& prop : _data._listProperty )
+        {
+            count += MaterialPacking::isTextureType( prop._type ) ? 1u : 0u;
+        }
+        return MathUtil::min( count, shaderslot::kMaterialTextureCount );
     }
 
     optional<uint32> Material::findTextureSlot( hashed_string name ) const
@@ -956,6 +979,8 @@ namespace sw
         MaterialPermutation::appendUsageDefines( permutationDesc._usage, outListDefine );
 
         // 칸이 내는 define — 쿠커도 이 목록을 읽는다.
+        // 텍스처 칸 수 — 에뮬 백엔드의 고정 서수 0..N-1 이고, 웹은 셰이더가 이 칸만 선언한다(binding_texture.hlsli SW_MATERIAL_TEXTURE_SLOT_LIMIT).
+        MaterialPermutation::appendUniqueDefine( outListDefine, string( kMaterialTextureCountDefine ) + "=" + to_string( getTextureSlotCount() ) );
         if ( _desc._alphaMode == MaterialAlphaMode::Mask )
             MaterialPermutation::appendUniqueDefine( outListDefine, kMaterialAlphaCutoffDefine );
         if ( _desc._bTwoSidedLighting != SW_FALSE )

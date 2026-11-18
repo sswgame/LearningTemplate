@@ -394,6 +394,15 @@ namespace sw
 #endif
             inline constexpr uint32 kStageTextureBudget = SW_STAGE_TEXTURE_UNIT_LIMIT_WGSL_WebGPU;
             static_assert( kMaterialTextureCount <= kStageTextureBudget, "WebGPU 단계 텍스처 예산이 머티리얼 칸 수보다 작다" );
+            /**
+             * @brief 웹에서 머티리얼 변형 하나가 가질 수 있는 텍스처 칸 수입니다(binding_slots.hlsli SW_MATERIAL_TEXTURE_SLOT_COUNT_WEBGPU — 셰이더가 넘으면 #error).
+             * @details 웹 에뮬 셰이더는 머티리얼 변형이 가진 칸(MATERIAL_TEXTURE_COUNT)만 선언하고, 같은 단계에 패스의 엔진 텍스처(그림자 아틀라스 둘 · 접촉 그림자 ·
+             *          장면 색 · 깊이 사본 · 2D 쿠키 — `kMaterialStageEngineTextureReserve`)가 함께 든다. 둘의 합이 단계 예산 안이어야 쿠킹 계약 검사를 통과한다.
+             */
+            inline constexpr uint32 kMaterialTextureBudget             = SW_MATERIAL_TEXTURE_SLOT_COUNT_WEBGPU;
+            inline constexpr uint32 kMaterialStageEngineTextureReserve = 6;
+            static_assert( kMaterialTextureBudget + kMaterialStageEngineTextureReserve <= kStageTextureBudget && kMaterialTextureBudget <= kMaterialTextureCount,
+                           "웹 머티리얼 칸 예산과 엔진 텍스처 몫의 합이 단계 텍스처 예산을 넘는다" );
         } // namespace wgpu
 
         /// @brief 엔진 예약 CB 이름입니다(리플렉션 매칭 키).

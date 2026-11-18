@@ -262,6 +262,25 @@ SW_DECLARE_ENGINE_TEXTURE( 19 );
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
+        // 머티리얼 텍스처 칸 상한(에뮬) — 아래 실행 중 분기가 이 수보다 앞의 칸만 읽어, 셰이더에는 그 칸만 남는다(리터럴 칸 접기와 같은 까닭).
+        // 웹(WEBGPU)은 단계 텍스처 한도가 16 이라 머티리얼 변형이 실제로 가진 칸만 남긴다(언리얼 머티리얼 셰이더가 머티리얼마다 쓰는 텍스처만 고정 바인딩하는 자리).
+        //   MATERIAL_TEXTURE_COUNT — 머티리얼 변형이면 머티리얼 정의가 낸다(Material::buildShaderDefines, 텍스처 프로퍼티 수 = 고정 서수 0..N-1),
+        //                            머티리얼 칸을 빌려 쓰는 비머티리얼 셰이더(캔버스 · 입자 · 데칼 · 층 굽기 · ImGui)는 파일 머리에 적는다.
+        //   머티리얼 없이 컴파일한 머티리얼 셰이더(엔진 패스 PSO — 머티리얼 없는 배치만 그린다)는 0 칸이다.
+        // 데스크톱 에뮬(DX11 128 · GL 32 단위)은 16 칸 그대로 넉넉하다 — 이 갈래는 웹 깃발에만 둔다.
+        #if defined( WEBGPU )
+            #if defined( MATERIAL_TEXTURE_COUNT )
+                #define SW_MATERIAL_TEXTURE_SLOT_LIMIT MATERIAL_TEXTURE_COUNT
+            #else
+                #define SW_MATERIAL_TEXTURE_SLOT_LIMIT 0
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > SW_MATERIAL_TEXTURE_SLOT_COUNT_WEBGPU
+                #error "MATERIAL_TEXTURE_COUNT exceeds SW_MATERIAL_TEXTURE_SLOT_COUNT_WEBGPU - the web stage texture limit (16) also holds the engine textures of the pass; use fewer material textures"
+            #endif
+        #else
+            #define SW_MATERIAL_TEXTURE_SLOT_LIMIT SW_MATERIAL_TEXTURE_SLOT_COUNT
+        #endif
+
         // 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸) — 번호는 binding_slots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
         // DX11 은 샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯에 짝 샘플러를 두지 않는다 — 정적 세트의 머티리얼 샘플러(SW_MATERIAL_TEXTURE_SAMPLER)로 읽는다.
         // GL 은 결합 샘플러뿐이라 슬롯마다 짝을 두고, 엔진이 그 유닛에 머티리얼 샘플러를 건다(OpenGLRHIDevice 초기화).
@@ -649,71 +668,135 @@ static float4 MaterialTexture::sampleMipColor( uint index, float2 uv )
     switch ( index )
     {
             #if defined( SW_SEPARATE_SAMPLER_EMULATION )
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex0, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex1, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex2, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex3, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex4, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex5, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex6, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex7, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex8, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex9, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex10, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex11, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex12, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex13, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex14, g_SwSampler0, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex15, g_SwSampler0, uv ) );
+                #endif
             #else
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex0, g_SwMaterialTex0Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex1, g_SwMaterialTex1Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex2, g_SwMaterialTex2Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex3, g_SwMaterialTex3Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex4, g_SwMaterialTex4Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex5, g_SwMaterialTex5Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex6, g_SwMaterialTex6Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex7, g_SwMaterialTex7Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex8, g_SwMaterialTex8Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex9, g_SwMaterialTex9Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex10, g_SwMaterialTex10Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex11, g_SwMaterialTex11Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex12, g_SwMaterialTex12Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex13, g_SwMaterialTex13Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex14, g_SwMaterialTex14Sampler, uv ) );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
             return ViewMode::computeMipColor( SW_QUERY_TEXTURE_LOD( g_SwMaterialTex15, g_SwMaterialTex15Sampler, uv ) );
+                #endif
             #endif
         default:
             return float4( 1, 1, 1, 1 );
@@ -749,71 +832,135 @@ static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
     switch ( index )
     {
             #if defined( SW_SEPARATE_SAMPLER_EMULATION )
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
             return g_SwMaterialTex0.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
             return g_SwMaterialTex1.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
             return g_SwMaterialTex2.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
             return g_SwMaterialTex3.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
             return g_SwMaterialTex4.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
             return g_SwMaterialTex5.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
             return g_SwMaterialTex6.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
             return g_SwMaterialTex7.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
             return g_SwMaterialTex8.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
             return g_SwMaterialTex9.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
             return g_SwMaterialTex10.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
             return g_SwMaterialTex11.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
             return g_SwMaterialTex12.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
             return g_SwMaterialTex13.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
             return g_SwMaterialTex14.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
             return g_SwMaterialTex15.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+                #endif
             #else
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
             return g_SwMaterialTex0.SampleBias( g_SwMaterialTex0Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
             return g_SwMaterialTex1.SampleBias( g_SwMaterialTex1Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
             return g_SwMaterialTex2.SampleBias( g_SwMaterialTex2Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
             return g_SwMaterialTex3.SampleBias( g_SwMaterialTex3Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
             return g_SwMaterialTex4.SampleBias( g_SwMaterialTex4Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
             return g_SwMaterialTex5.SampleBias( g_SwMaterialTex5Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
             return g_SwMaterialTex6.SampleBias( g_SwMaterialTex6Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
             return g_SwMaterialTex7.SampleBias( g_SwMaterialTex7Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
             return g_SwMaterialTex8.SampleBias( g_SwMaterialTex8Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
             return g_SwMaterialTex9.SampleBias( g_SwMaterialTex9Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
             return g_SwMaterialTex10.SampleBias( g_SwMaterialTex10Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
             return g_SwMaterialTex11.SampleBias( g_SwMaterialTex11Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
             return g_SwMaterialTex12.SampleBias( g_SwMaterialTex12Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
             return g_SwMaterialTex13.SampleBias( g_SwMaterialTex13Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
             return g_SwMaterialTex14.SampleBias( g_SwMaterialTex14Sampler, uv, g_TextureMipBias.x );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
             return g_SwMaterialTex15.SampleBias( g_SwMaterialTex15Sampler, uv, g_TextureMipBias.x );
+                #endif
             #endif
         default:
             return float4( 1, 1, 1, 1 );
@@ -862,71 +1009,135 @@ static float4 MaterialTexture::sampleLevelZero( uint index, float2 uv )
     switch ( index )
     {
         #if defined( SW_SEPARATE_SAMPLER_EMULATION )
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
             return g_SwMaterialTex0.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
             return g_SwMaterialTex1.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
             return g_SwMaterialTex2.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
             return g_SwMaterialTex3.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
             return g_SwMaterialTex4.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
             return g_SwMaterialTex5.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
             return g_SwMaterialTex6.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
             return g_SwMaterialTex7.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
             return g_SwMaterialTex8.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
             return g_SwMaterialTex9.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
             return g_SwMaterialTex10.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
             return g_SwMaterialTex11.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
             return g_SwMaterialTex12.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
             return g_SwMaterialTex13.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
             return g_SwMaterialTex14.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
             return g_SwMaterialTex15.SampleLevel( g_SwSampler0, uv, 0.0f );
+            #endif
         #else
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
             return g_SwMaterialTex0.SampleLevel( g_SwMaterialTex0Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
             return g_SwMaterialTex1.SampleLevel( g_SwMaterialTex1Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
             return g_SwMaterialTex2.SampleLevel( g_SwMaterialTex2Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
             return g_SwMaterialTex3.SampleLevel( g_SwMaterialTex3Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
             return g_SwMaterialTex4.SampleLevel( g_SwMaterialTex4Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
             return g_SwMaterialTex5.SampleLevel( g_SwMaterialTex5Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
             return g_SwMaterialTex6.SampleLevel( g_SwMaterialTex6Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
             return g_SwMaterialTex7.SampleLevel( g_SwMaterialTex7Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
             return g_SwMaterialTex8.SampleLevel( g_SwMaterialTex8Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
             return g_SwMaterialTex9.SampleLevel( g_SwMaterialTex9Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
             return g_SwMaterialTex10.SampleLevel( g_SwMaterialTex10Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
             return g_SwMaterialTex11.SampleLevel( g_SwMaterialTex11Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
             return g_SwMaterialTex12.SampleLevel( g_SwMaterialTex12Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
             return g_SwMaterialTex13.SampleLevel( g_SwMaterialTex13Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
             return g_SwMaterialTex14.SampleLevel( g_SwMaterialTex14Sampler, uv, 0.0f );
+            #endif
+            #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
             return g_SwMaterialTex15.SampleLevel( g_SwMaterialTex15Sampler, uv, 0.0f );
+            #endif
         #endif
         default:
             return float4( 1, 1, 1, 1 );
@@ -961,71 +1172,135 @@ static float4 MaterialTexture::sampleGrad( uint index, float2 uv, float2 gradX, 
     switch ( index )
     {
             #if defined( SW_SEPARATE_SAMPLER_EMULATION )
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
             return g_SwMaterialTex0.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
             return g_SwMaterialTex1.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
             return g_SwMaterialTex2.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
             return g_SwMaterialTex3.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
             return g_SwMaterialTex4.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
             return g_SwMaterialTex5.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
             return g_SwMaterialTex6.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
             return g_SwMaterialTex7.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
             return g_SwMaterialTex8.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
             return g_SwMaterialTex9.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
             return g_SwMaterialTex10.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
             return g_SwMaterialTex11.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
             return g_SwMaterialTex12.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
             return g_SwMaterialTex13.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
             return g_SwMaterialTex14.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
             return g_SwMaterialTex15.SampleGrad( g_SwSampler0, uv, gradX, gradY );
+                #endif
             #else
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
         case 0u:
             return g_SwMaterialTex0.SampleGrad( g_SwMaterialTex0Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
         case 1u:
             return g_SwMaterialTex1.SampleGrad( g_SwMaterialTex1Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
         case 2u:
             return g_SwMaterialTex2.SampleGrad( g_SwMaterialTex2Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
         case 3u:
             return g_SwMaterialTex3.SampleGrad( g_SwMaterialTex3Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
         case 4u:
             return g_SwMaterialTex4.SampleGrad( g_SwMaterialTex4Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
         case 5u:
             return g_SwMaterialTex5.SampleGrad( g_SwMaterialTex5Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
         case 6u:
             return g_SwMaterialTex6.SampleGrad( g_SwMaterialTex6Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
         case 7u:
             return g_SwMaterialTex7.SampleGrad( g_SwMaterialTex7Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
         case 8u:
             return g_SwMaterialTex8.SampleGrad( g_SwMaterialTex8Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
         case 9u:
             return g_SwMaterialTex9.SampleGrad( g_SwMaterialTex9Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
         case 10u:
             return g_SwMaterialTex10.SampleGrad( g_SwMaterialTex10Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
         case 11u:
             return g_SwMaterialTex11.SampleGrad( g_SwMaterialTex11Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
         case 12u:
             return g_SwMaterialTex12.SampleGrad( g_SwMaterialTex12Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
         case 13u:
             return g_SwMaterialTex13.SampleGrad( g_SwMaterialTex13Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
         case 14u:
             return g_SwMaterialTex14.SampleGrad( g_SwMaterialTex14Sampler, uv, gradX, gradY );
+                #endif
+                #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
         case 15u:
             return g_SwMaterialTex15.SampleGrad( g_SwMaterialTex15Sampler, uv, gradX, gradY );
+                #endif
             #endif
         default:
             return float4( 1, 1, 1, 1 );
@@ -1043,38 +1318,70 @@ static float2 MaterialTexture::computeSize( uint index )
     if ( index != kInvalidIndex )
         g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( index ) )].GetDimensions( width, height );
     #else
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 0
     if ( index == 0u )
         g_SwMaterialTex0.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 1
     if ( index == 1u )
         g_SwMaterialTex1.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 2
     if ( index == 2u )
         g_SwMaterialTex2.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 3
     if ( index == 3u )
         g_SwMaterialTex3.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 4
     if ( index == 4u )
         g_SwMaterialTex4.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 5
     if ( index == 5u )
         g_SwMaterialTex5.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 6
     if ( index == 6u )
         g_SwMaterialTex6.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 7
     if ( index == 7u )
         g_SwMaterialTex7.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 8
     if ( index == 8u )
         g_SwMaterialTex8.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 9
     if ( index == 9u )
         g_SwMaterialTex9.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 10
     if ( index == 10u )
         g_SwMaterialTex10.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 11
     if ( index == 11u )
         g_SwMaterialTex11.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 12
     if ( index == 12u )
         g_SwMaterialTex12.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 13
     if ( index == 13u )
         g_SwMaterialTex13.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 14
     if ( index == 14u )
         g_SwMaterialTex14.GetDimensions( width, height );
+        #endif
+        #if SW_MATERIAL_TEXTURE_SLOT_LIMIT > 15
     if ( index == 15u )
         g_SwMaterialTex15.GetDimensions( width, height );
+        #endif
     #endif
     return float2( max( width, 1u ), max( height, 1u ) );
 }

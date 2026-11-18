@@ -5,6 +5,8 @@
 
 // 이 셰이더는 루트 상수 블록을 직접 선언한다(binding.hlsli 의 그래픽스 블록 g_SwMaterialCount 대신).
 #define SW_OWN_ROOT_CONSTANTS 1
+// 머티리얼 텍스처 칸을 빌려 쓰는 비머티리얼 셰이더 — 칸 0 하나(웹 에뮬이 이 칸만 남긴다, binding_texture.hlsli SW_MATERIAL_TEXTURE_SLOT_LIMIT).
+#define MATERIAL_TEXTURE_COUNT 1
 #include "binding.hlsli"
 
 static const uint kImGuiVertexWords = 5u; // ImDrawVert 하나 = uint 다섯
