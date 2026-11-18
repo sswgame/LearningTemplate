@@ -501,10 +501,10 @@ namespace sw::editor
             const hashed_string typeName = EditorComponentMenu::drawComponentTypeList( _addComponentSearch, pMarkPrefix, ImGui::IsWindowAppearing() );
             if ( typeName.empty() == false )
             {
-                if ( _viewModel.addComponent( typeName ) )
+                if ( _viewModel.addComponent( typeName ) == SceneEditRequestResult::Requested )
                     ImGui::CloseCurrentPopup();
                 else
-                    SW_LOG_WARNING_ID( "InspectorPanel.CouldNotAddComponent", "Could not add the component to '%#'", _state._objectName.c_str() );
+                    SW_LOG_WARNING_ID( "InspectorPanel.CouldNotAddComponent", "Could not add the component: '%#' is no longer in the scene", _state._objectName.c_str() );
             }
             ImGui::EndPopup();
         }

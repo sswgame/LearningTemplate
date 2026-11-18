@@ -35,6 +35,13 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 게임 스레드에 넘기는 씬 편집 요청의 결과입니다 — 실행 결과가 아니다(실행은 게임 단계, 실패는 그때 명령이 알린다). */
+    enum class SceneEditRequestResult : uint8
+    {
+        Requested, ///< 요청을 남겼다
+        Rejected,  ///< 대상이 없어 요청하지 않았다
+    };
+
     /** @brief 인스펙터가 이번 프레임에 그리는 것입니다. */
     enum class InspectorContent : uint8
     {
@@ -188,8 +195,8 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 타입 이름 @p typeName 과 그 기반에 등록된 인스펙터 확장입니다(기반 → 파생 순서). */
         static const vector<IInspectorComponent*>& getInspectorsForType( const hashed_string& typeName );
-        /** @brief 보이는 오브젝트에 종류 @p typeName 의 컴포넌트를 더합니다(되돌리기 한 단계 — `EditorSceneCommands::addComponent`). 오브젝트가 없거나 더하지 못하면 false 입니다. */
-        [[nodiscard]] bool addComponent( const hashed_string& typeName );
+        /** @brief 보이는 오브젝트에 종류 @p typeName 의 컴포넌트를 더하라고 게임 스레드에 요청합니다(되돌리기 한 단계 — `EditorSceneCommands::addComponent`). 보이는 오브젝트가 없으면 `Rejected` 입니다. */
+        [[nodiscard]] SceneEditRequestResult addComponent( const hashed_string& typeName );
 
     private:
         struct MultiEdit;

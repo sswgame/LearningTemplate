@@ -525,11 +525,11 @@ namespace sw::editor
         return editor::getSubsystem<EditorContext>().getSubsystem<InspectorComponentManager>().getInspectorsForType( *pType );
     }
 
-    bool InspectorViewModel::addComponent( const hashed_string& typeName )
+    SceneEditRequestResult InspectorViewModel::addComponent( const hashed_string& typeName )
     {
         if ( PropertyGridModel::findSceneObject( _shownScope, _shownObjectID ) == nullptr )
-            return false;
-        // 더하기는 게임 스레드가 한다 — 여기서는 대상이 있으면 요청을 남기고 true 다. 더하지 못한 이유는 그때 명령이 알린다.
+            return SceneEditRequestResult::Rejected;
+        // 더하기는 게임 스레드가 한다 — 여기서는 요청만 남긴다. 더하지 못한 이유는 그때 명령이 알린다.
         const EditorPropertyGridScope scope    = _shownScope;
         const uint64                  objectID = _shownObjectID;
         InspectorViewModelInternal::requestSceneEdit( [scope, objectID, typeName]( EditorTransaction& transaction )
@@ -538,6 +538,6 @@ namespace sw::editor
             if ( pObj != nullptr )
                 (void)EditorSceneCommands::addComponent( transaction, pObj, typeName );
         } );
-        return true;
+        return SceneEditRequestResult::Requested;
     }
 } // namespace sw::editor
