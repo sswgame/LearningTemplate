@@ -2,6 +2,7 @@
 
 #include "Core/Network/Transport/Web/WebSocketStreamTransport.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Network/Transport/WebSocketProtocol.h"
@@ -284,12 +285,7 @@ namespace sw
 
     optional<uint32> WebSocketStreamTransport::findSlotLocked( int32 socket ) const
     {
-        for ( size_t slotIndex = 0; slotIndex < _listSlot.size(); ++slotIndex )
-        {
-            if ( _listSlot[slotIndex]._socket == socket )
-                return static_cast<uint32>( slotIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&Slot::_socket, uint32>( _listSlot, socket );
     }
 
     optional<uint32> WebSocketStreamTransport::findSlotLocked( StreamConnectionHandle handle ) const

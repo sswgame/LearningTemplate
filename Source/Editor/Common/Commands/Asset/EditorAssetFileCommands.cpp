@@ -143,16 +143,6 @@ namespace sw::editor
                 return string( assetID.substr( 0, secondSlash == string_view::npos ? assetID.size() : secondSlash ) );
             }
 
-            static void appendUnique( vector<string>& inoutList, string_view value )
-            {
-                for ( const string& existing : inoutList )
-                {
-                    if ( existing == value )
-                        return;
-                }
-                inoutList.push_back( string( value ) );
-            }
-
             /** @brief @p id 가 옮기는 원본이면 그 새 id, 아니면 그대로입니다. */
             static string mapMovedID( const EditorAssetMovePlan& plan, string_view id )
             {
@@ -186,7 +176,7 @@ namespace sw::editor
                     for ( const EditorAssetReference& reference : listReference )
                     {
                         if ( reference._bByGUID == false ) // GUID 로 적은 참조는 옮겨도 그대로 맞다 — 고칠 글이 없다
-                            appendUnique( listReferrerID, reference._referrerPath );
+                            VectorUtil::addUnique( listReferrerID, reference._referrerPath );
                     }
                 }
                 for ( const string& referrerID : listReferrerID )
@@ -216,7 +206,7 @@ namespace sw::editor
                     }
                     else
                     {
-                        appendUnique( inoutPlan._listOutsideDomain, getDomainOf( referrerID ) );
+                        VectorUtil::addUnique( inoutPlan._listOutsideDomain, getDomainOf( referrerID ) );
                     }
                     if ( params.rewrite( rewrite._rewrittenText, AssetReferenceFields::getSyntaxOf( referrerID ), listRule ) == 0 )
                     {

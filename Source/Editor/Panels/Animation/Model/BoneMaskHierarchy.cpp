@@ -21,8 +21,8 @@ namespace sw::editor
         {
             if ( skeleton.findBoneIndex( entry._bone ).has_value() )
                 known._listEntry.push_back( entry );
-            else if ( VectorUtil::contains( outListMissingBone, entry._bone ) == false )
-                outListMissingBone.push_back( entry._bone );
+            else
+                VectorUtil::addUnique( outListMissingBone, entry._bone );
         }
         vector<float32> listWeight;
         (void)known.computeBoneWeights( skeleton, listWeight ); // 없는 본을 뺐으므로 실패하지 않는다

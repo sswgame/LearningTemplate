@@ -506,12 +506,7 @@ namespace sw
 
     optional<int32> ItemVisualDef::findDamageStageIndex( const hashed_string& name ) const
     {
-        for ( size_t index = 0; index < _listDamageStage.size(); ++index )
-        {
-            if ( _listDamageStage[index]._name == name )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&AppearanceDamageStageDef::_name, int32>( _listDamageStage, name );
     }
 
     int32 ItemVisualDef::computeDamageStageIndex( float32 damage ) const

@@ -641,8 +641,7 @@ namespace sw
         if ( info._pPassDefine != nullptr )
         {
             const string passDefine{ info._pPassDefine };
-            if ( VectorUtil::contains( selection._listDefine, passDefine ) == false )
-                selection._listDefine.push_back( passDefine );
+            VectorUtil::addUnique( selection._listDefine, passDefine );
         }
         // 씬 메시를 그리는 패스 PSO 는 머티리얼 없는 배치를 그린다 — 머티리얼 칸 0 을 적는다(웹은 칸 수가 없으면 머티리얼 칸 읽기가 정의되지 않는다).
         // 머티리얼 변형은 같은 이름을 머티리얼 칸 수로 바꾼다(MaterialPermutation::mergeDefine).
@@ -661,8 +660,7 @@ namespace sw
     {
         RenderPassShaderSelection selection = selectRenderPassShader( passDesc._type, &passDesc, &passDesc, engineDefaultAssets );
         const string              computeDefine{ kPassComputeImplementationDefine };
-        if ( VectorUtil::contains( selection._listDefine, computeDefine ) == false )
-            selection._listDefine.push_back( computeDefine );
+        VectorUtil::addUnique( selection._listDefine, computeDefine );
         return selection;
     }
 

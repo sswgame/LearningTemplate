@@ -143,8 +143,7 @@ namespace sw
                 SW_LOG_WARNING_ID( "AchievementTracker.SavedAchievementNoDefinition", "Saved achievement '%#' has no definition any more - dropped", achievementID.c_str() );
                 continue;
             }
-            if ( VectorUtil::contains( listUnlocked, achievementID ) == false )
-                listUnlocked.push_back( achievementID );
+            VectorUtil::addUnique( listUnlocked, achievementID );
         }
         io.end();
         if ( io.isOk() )

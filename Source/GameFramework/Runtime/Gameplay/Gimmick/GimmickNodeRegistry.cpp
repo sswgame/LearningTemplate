@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickNodeRegistry.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
@@ -663,32 +664,17 @@ namespace sw
 
     optional<uint32> GimmickNodeKind::findInput( const hashed_string& name ) const
     {
-        for ( size_t index = 0; index < _listInput.size(); ++index )
-        {
-            if ( _listInput[index] == name )
-                return static_cast<uint32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndex<uint32>( _listInput, name );
     }
 
     optional<uint32> GimmickNodeKind::findOutput( const hashed_string& name ) const
     {
-        for ( size_t index = 0; index < _listOutput.size(); ++index )
-        {
-            if ( _listOutput[index] == name )
-                return static_cast<uint32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndex<uint32>( _listOutput, name );
     }
 
     optional<uint32> GimmickNodeKind::findParam( const hashed_string& name ) const
     {
-        for ( size_t index = 0; index < _listParam.size(); ++index )
-        {
-            if ( _listParam[index]._name == name )
-                return static_cast<uint32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&GimmickParamSpec::_name, uint32>( _listParam, name );
     }
 
     SubsystemInitResult GimmickNodeRegistrySubsystem::initializeSubsystem()

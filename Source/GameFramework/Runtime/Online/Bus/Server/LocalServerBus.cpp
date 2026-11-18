@@ -38,8 +38,7 @@ namespace sw
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listTopic = inboxIt->second._listTopic;
-        if ( VectorUtil::contains( listTopic, topic ) == false )
-            listTopic.push_back( string{ topic } );
+        VectorUtil::addUnique( listTopic, topic );
     }
 
     void LocalServerBusHub::unsubscribe( uint64 inboxID, string_view topic )

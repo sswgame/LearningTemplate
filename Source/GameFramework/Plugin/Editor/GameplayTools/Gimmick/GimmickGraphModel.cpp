@@ -2,6 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphModel.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -162,32 +163,17 @@ namespace sw::editor
 
     optional<uint32> GimmickGraphModel::findNodeIndex( int32 graphID ) const
     {
-        for ( size_t index = 0; index < _listNode.size(); ++index )
-        {
-            if ( _listNode[index]._graphID == graphID )
-                return static_cast<uint32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&GimmickGraphNode::_graphID, uint32>( _listNode, graphID );
     }
 
     optional<uint32> GimmickGraphModel::findNodeIndexByID( const hashed_string& id ) const
     {
-        for ( size_t index = 0; index < _listNode.size(); ++index )
-        {
-            if ( _listNode[index]._id == id )
-                return static_cast<uint32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&GimmickGraphNode::_id, uint32>( _listNode, id );
     }
 
     optional<uint32> GimmickGraphModel::findWireIndex( int32 wireGraphID ) const
     {
-        for ( size_t index = 0; index < _listWire.size(); ++index )
-        {
-            if ( _listWire[index]._graphID == wireGraphID )
-                return static_cast<uint32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&GimmickGraphWire::_graphID, uint32>( _listWire, wireGraphID );
     }
 
     const GimmickNodeKind* GimmickGraphModel::findKind( const GimmickGraphNode& node ) const

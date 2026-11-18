@@ -2,6 +2,8 @@
 
 #include "Engine/Physics/Asset/PhysicsRagdoll.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
@@ -62,12 +64,7 @@ namespace sw
 {
     optional<uint32> PhysicsRagdoll::findBodyIndex( PhysicsBodyHandle body ) const
     {
-        for ( size_t bodyIndex = 0; bodyIndex < _listBody.size(); ++bodyIndex )
-        {
-            if ( _listBody[bodyIndex] == body )
-                return static_cast<uint32>( bodyIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndex<uint32>( _listBody, body );
     }
 
     bool PhysicsRagdoll::create( IPhysicsScene3D& scene, const PhysicsAsset& asset, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,

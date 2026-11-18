@@ -349,8 +349,7 @@ namespace sw
         const string key = AssetRedirect::toCacheKey( relativePath );
         {
             UniqueLock<shared_mutex> lock{ _impl->_mutex };
-            if ( VectorUtil::contains( _impl->_listPSOWarmKey, key ) == false )
-                _impl->_listPSOWarmKey.push_back( key );
+            VectorUtil::addUnique( _impl->_listPSOWarmKey, key );
             _impl->_psoWarmCount.store( static_cast<uint32>( _impl->_listPSOWarmKey.size() ), std::memory_order_release );
         }
         // 읽기는 게임 스레드의 초기화(`initializePending`)가 한 번 한다 — 내줄 로드가 없다.

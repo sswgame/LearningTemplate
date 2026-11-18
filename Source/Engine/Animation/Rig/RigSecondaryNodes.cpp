@@ -435,8 +435,7 @@ namespace sw
                 {
                     for ( const CorrectiveBone& corrective : pose._listBone )
                     {
-                        if ( VectorUtil::contains( inoutListBone, corrective._bone ) == false )
-                            inoutListBone.push_back( corrective._bone );
+                        VectorUtil::addUnique( inoutListBone, corrective._bone );
                     }
                 }
             }

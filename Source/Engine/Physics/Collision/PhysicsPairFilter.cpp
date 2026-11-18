@@ -37,11 +37,9 @@ namespace sw
             return;
         }
         vector<uint64>& listA = _mapBodyToDisabled[keyA];
-        if ( VectorUtil::contains( listA, keyB ) == false )
-            listA.push_back( keyB );
+        VectorUtil::addUnique( listA, keyB );
         vector<uint64>& listB = _mapBodyToDisabled[keyB];
-        if ( VectorUtil::contains( listB, keyA ) == false )
-            listB.push_back( keyA );
+        VectorUtil::addUnique( listB, keyA );
     }
 
     bool PhysicsPairFilter::canCollide( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB ) const

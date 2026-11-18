@@ -1413,12 +1413,7 @@ namespace sw
     {
         if ( name.empty() )
             return nullopt;
-        for ( size_t attenuationIndex = 0; attenuationIndex < _listAttenuation.size(); ++attenuationIndex )
-        {
-            if ( _listAttenuation[attenuationIndex]._name == name )
-                return static_cast<uint32>( attenuationIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&AudioAttenuationDef::_name, uint32>( _listAttenuation, name );
     }
 
     optional<uint32> AudioEngine::allocateInstance()

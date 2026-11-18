@@ -143,8 +143,7 @@ namespace sw
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listChannel = inboxIt->second._listChannel;
-        if ( VectorUtil::contains( listChannel, channel ) == false )
-            listChannel.push_back( string{ channel } );
+        VectorUtil::addUnique( listChannel, channel );
     }
 
     void MemoryEphemeralDatabase::unsubscribe( uint64 inboxID, string_view channel )

@@ -131,12 +131,7 @@ namespace sw
 
     optional<uint32> Skeleton::findBoneIndex( const hashed_string& name ) const
     {
-        for ( size_t boneIndex = 0; boneIndex < _listBone.size(); ++boneIndex )
-        {
-            if ( _listBone[boneIndex]._name == name )
-                return static_cast<uint32>( boneIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&SkeletonBone::_name, uint32>( _listBone, name );
     }
 
     void Skeleton::clear()

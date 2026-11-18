@@ -2,6 +2,7 @@
 
 #include "Core/Algorithm/CompareUtil.h"
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -71,6 +72,47 @@ SW_TEST_CASE( VectorUtilTest, FindIndexByAndContainsBy )
     SW_EXPECT_FALSE( sw::VectorUtil::findIndexBy<&KeyedItem::_id>( listItem, 4 ).has_value() );
     SW_EXPECT_TRUE( sw::VectorUtil::containsBy<&KeyedItem::_layer>( listItem, 1 ) );
     SW_EXPECT_FALSE( sw::VectorUtil::containsBy<&KeyedItem::_layer>( listItem, 2 ) );
+}
+
+/**
+ * @brief [VectorUtilTest] findIndex · findIndexBy 는 번호 형식을 템플릿 인자로 받아 그 형식의 optional 로 돌려준다(이름 → uint32 번호 표)
+ */
+SW_TEST_CASE( VectorUtilTest, FindIndexReturnsTheRequestedIndexType )
+{
+    const sw::vector<KeyedItem> listItem{
+        {5, 0, 0},
+        {6, 0, 0}
+    };
+    const sw::optional<uint32> keyed = sw::VectorUtil::findIndexBy<&KeyedItem::_id, uint32>( listItem, 6 );
+    SW_EXPECT_TRUE( keyed.has_value() );
+    SW_EXPECT_EQUAL( uint32{ 1 }, *keyed );
+    SW_EXPECT_FALSE( ( sw::VectorUtil::findIndexBy<&KeyedItem::_id, uint32>( listItem, 4 ).has_value() ) );
+
+    const sw::vector<int32>    listValue{ 3, 4, 5 };
+    const sw::optional<uint32> byValue = sw::VectorUtil::findIndex<uint32>( listValue, 5 );
+    SW_EXPECT_TRUE( byValue.has_value() );
+    SW_EXPECT_EQUAL( uint32{ 2 }, *byValue );
+    SW_EXPECT_FALSE( sw::VectorUtil::findIndex<int32>( listValue, 9 ).has_value() );
+    const sw::optional<size_t> defaultIndex = sw::VectorUtil::findIndex( listValue, 3 ); // 형식을 안 적으면 size_t
+    SW_EXPECT_TRUE( defaultIndex.has_value() );
+    SW_EXPECT_EQUAL( size_t{ 0 }, *defaultIndex );
+}
+
+/**
+ * @brief [VectorUtilTest] addUnique 는 없는 값만 끝에 더하고 더했는지를 돌려준다(vector<string> 에 string_view 도 받는다)
+ */
+SW_TEST_CASE( VectorUtilTest, AddUniqueAppendsOnlyMissingValues )
+{
+    sw::vector<int32> list{ 1, 2 };
+    SW_EXPECT_FALSE( sw::VectorUtil::addUnique( list, 2 ) );
+    SW_EXPECT_TRUE( sw::VectorUtil::addUnique( list, 3 ) );
+    SW_EXPECT_EQUAL( size_t{ 3 }, list.size() );
+    SW_EXPECT_EQUAL( 3, list.back() );
+
+    sw::vector<sw::string> listName{ "a" };
+    SW_EXPECT_FALSE( sw::VectorUtil::addUnique( listName, sw::string_view( "a" ) ) );
+    SW_EXPECT_TRUE( sw::VectorUtil::addUnique( listName, sw::string_view( "b" ) ) );
+    SW_EXPECT_TRUE( listName.back() == "b" );
 }
 
 /**

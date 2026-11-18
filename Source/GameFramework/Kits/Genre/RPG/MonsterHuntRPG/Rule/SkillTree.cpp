@@ -150,12 +150,7 @@ namespace sw
     {
         if ( _pTree == nullptr )
             return nullopt;
-        for ( size_t index = 0; index < _pTree->_listSkill.size(); ++index )
-        {
-            if ( _pTree->_listSkill[index]._id == skillID )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&SkillDef::_id, int32>( _pTree->_listSkill, skillID );
     }
 
     int32 SkillTreeState::getRank( const hashed_string& skillID ) const

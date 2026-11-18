@@ -189,8 +189,7 @@ namespace sw
         vector<RTSUnitID>& listGroup = _arrGroup[group];
         for ( const RTSUnitID unitID : _listSelected )
         {
-            if ( VectorUtil::contains( listGroup, unitID ) == false )
-                listGroup.push_back( unitID );
+            VectorUtil::addUnique( listGroup, unitID );
         }
     }
 

@@ -360,12 +360,7 @@ namespace sw
 
     optional<uint32> AudioMixerDef::findBusIndex( const hashed_string& name ) const
     {
-        for ( size_t busIndex = 0; busIndex < _listBus.size(); ++busIndex )
-        {
-            if ( _listBus[busIndex]._name == name )
-                return static_cast<uint32>( busIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&AudioBusDef::_name, uint32>( _listBus, name );
     }
 
     bool AudioMixerDef::makeProcessingOrder( vector<uint32>& outListBusIndex ) const

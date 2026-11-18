@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/DependencyGraph.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
@@ -449,12 +450,7 @@ namespace sw
 
     optional<int32> GimmickCircuit::findNode( const hashed_string& id ) const
     {
-        for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
-        {
-            if ( _listNode[nodeIndex]._id == id )
-                return static_cast<int32>( nodeIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&NodeRuntime::_id, int32>( _listNode, id );
     }
 
     float32 GimmickCircuit::getActuatorValue( int32 node ) const

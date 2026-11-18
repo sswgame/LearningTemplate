@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorIntensity.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -50,12 +51,7 @@ namespace sw
     {
         if ( _pDef == nullptr )
             return nullopt;
-        for ( size_t index = 0; index < _pDef->_listSignal.size(); ++index )
-        {
-            if ( _pDef->_listSignal[index]._id == signalID )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&AIDirectorSignalDef::_id, int32>( _pDef->_listSignal, signalID );
     }
 
     void AIDirectorIntensityModel::recordCombat()

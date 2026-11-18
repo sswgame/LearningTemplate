@@ -74,8 +74,7 @@ namespace sw
         if ( result == AutomationLogResult::Allowed )
         {
             const string idText{ id };
-            if ( VectorUtil::contains( inoutResult._listAllowedID, idText ) == false )
-                inoutResult._listAllowedID.push_back( idText );
+            VectorUtil::addUnique( inoutResult._listAllowedID, idText );
             return;
         }
         if ( result != AutomationLogResult::MissingID && result != AutomationLogResult::NotAllowed )

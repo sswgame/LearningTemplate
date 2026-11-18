@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
@@ -57,12 +58,7 @@ namespace sw
 
     optional<int32> Equipment::findSlotIndex( const hashed_string& slot ) const
     {
-        for ( size_t index = 0; index < _listSlot.size(); ++index )
-        {
-            if ( _listSlot[index]._name == slot )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&EquipmentSlot::_name, int32>( _listSlot, slot );
     }
 
     bool Equipment::areConditionsMet( const ItemDef& def, const vector<EquipmentSlot>& listSlot, int32 slotIndex ) const

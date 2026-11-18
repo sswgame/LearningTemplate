@@ -724,8 +724,7 @@ namespace sw
                 if ( modulePass._params._depthAttachment.empty() == false )
                 {
                     const hashed_string depthName( modulePass._params._depthAttachment.c_str() );
-                    if ( VectorUtil::contains( listExtensionOutput, depthName ) == false )
-                        listExtensionOutput.push_back( depthName );
+                    VectorUtil::addUnique( listExtensionOutput, depthName );
                 }
                 _mapExtensionPassIndex[modulePass._graphName] = moduleIndex;
                 _state._graph.addPass( modulePass._graphName, std::move( listExtensionInput ), std::move( listExtensionOutput ),

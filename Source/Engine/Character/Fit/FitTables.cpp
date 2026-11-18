@@ -200,12 +200,7 @@ namespace sw
 
     optional<uint32> FitTables::findRegionIndex( const hashed_string& name ) const
     {
-        for ( size_t regionIndex = 0; regionIndex < _listRegion.size(); ++regionIndex )
-        {
-            if ( _listRegion[regionIndex]._name == name )
-                return static_cast<uint32>( regionIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&BodyRegionDef::_name, uint32>( _listRegion, name );
     }
 
     const FitProfileDef* FitTables::findProfile( const hashed_string& name ) const

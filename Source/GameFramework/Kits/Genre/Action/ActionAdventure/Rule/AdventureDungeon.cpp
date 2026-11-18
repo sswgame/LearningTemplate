@@ -60,12 +60,7 @@ namespace sw
 
     optional<int32> AdventureDungeonDef::findDeviceIndex( const hashed_string& id ) const
     {
-        for ( size_t index = 0; index < _listDevice.size(); ++index )
-        {
-            if ( _listDevice[index]._id == id )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&AdventureDeviceDef::_id, int32>( _listDevice, id );
     }
 
     uint32 AdventureDungeonCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )

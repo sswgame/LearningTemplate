@@ -17,13 +17,6 @@ namespace sw::editor
                 return name == DataInheritance::kBaseAttribute || name == DataInheritance::kOpAttribute || name == DataInheritance::kBeforeAttribute || name == DataInheritance::kAfterAttribute;
             }
 
-            static void addUnique( vector<string>& inoutList, string_view name )
-            {
-                const string text{ name };
-                if ( VectorUtil::contains( inoutList, text ) == false )
-                    inoutList.push_back( text );
-            }
-
             static bool isElement( const XMLNode& node ) { return node.isValid() && StringUtil::isNullOrEmpty( node.getName() ) == false; }
 
             /** @brief 원소의 글 값 칸들을 @p inoutListColumn 에 더합니다. */
@@ -34,7 +27,7 @@ namespace sw::editor
                 for ( XMLAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
                     if ( isMetaAttribute( attribute.getName() ) == false )
-                        addUnique( inoutListColumn, attribute.getName() );
+                        VectorUtil::addUnique( inoutListColumn, attribute.getName() );
                 }
             }
 
@@ -45,7 +38,7 @@ namespace sw::editor
                 for ( const CatalogXMLAttribute& attribute : pWritten->_listAttribute )
                 {
                     if ( isMetaAttribute( attribute._name ) == false )
-                        addUnique( inoutListColumn, attribute._name );
+                        VectorUtil::addUnique( inoutListColumn, attribute._name );
                 }
             }
 
@@ -91,7 +84,7 @@ namespace sw::editor
             {
                 for ( const DataInheritanceSchema& field : schema._listField )
                 {
-                    addUnique( outListName, field._name );
+                    VectorUtil::addUnique( outListName, field._name );
                 }
                 for ( const XMLNode* pNode : { &flat, &parent } )
                 {
@@ -100,14 +93,14 @@ namespace sw::editor
                     for ( XMLNode child = pNode->findChild(); child.isValid(); child = child.findNextSibling() )
                     {
                         if ( isElement( child ) )
-                            addUnique( outListName, child.getName() );
+                            VectorUtil::addUnique( outListName, child.getName() );
                     }
                 }
                 if ( ownerIndex.has_value() == false )
                     return;
                 for ( const int32 childIndex : parsed.getElement( *ownerIndex )._listChild )
                 {
-                    addUnique( outListName, parsed.getElement( childIndex )._name );
+                    VectorUtil::addUnique( outListName, parsed.getElement( childIndex )._name );
                 }
             }
 
@@ -116,7 +109,7 @@ namespace sw::editor
                 const utf8* pKey      = field._keyAttribute.c_str();
                 section._kind         = CatalogChildSectionKind::List;
                 section._keyAttribute = field._keyAttribute;
-                addUnique( section._listColumn, field._keyAttribute );
+                VectorUtil::addUnique( section._listColumn, field._keyAttribute );
 
                 struct Row
                 {
@@ -500,8 +493,7 @@ namespace sw::editor
         for ( XMLAttribute attribute = parent.getFirstAttribute(); attribute; attribute = attribute.getNext() )
         {
             const string name{ attribute.getName() };
-            if ( VectorUtil::contains( inoutListColumn, name ) == false )
-                inoutListColumn.push_back( name );
+            VectorUtil::addUnique( inoutListColumn, name );
         }
     }
 } // namespace sw::editor

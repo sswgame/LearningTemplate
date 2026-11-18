@@ -147,22 +147,12 @@ namespace sw
 
     optional<uint32> FacialRig::findExpressionIndex( const hashed_string& name ) const
     {
-        for ( size_t poseIndex = 0; poseIndex < _listExpression.size(); ++poseIndex )
-        {
-            if ( _listExpression[poseIndex]._name == name )
-                return static_cast<uint32>( poseIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&FacialPose::_name, uint32>( _listExpression, name );
     }
 
     optional<uint32> FacialRig::findVisemeIndex( const hashed_string& name ) const
     {
-        for ( size_t poseIndex = 0; poseIndex < _listViseme.size(); ++poseIndex )
-        {
-            if ( _listViseme[poseIndex]._name == name )
-                return static_cast<uint32>( poseIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&FacialPose::_name, uint32>( _listViseme, name );
     }
 } // namespace sw
 

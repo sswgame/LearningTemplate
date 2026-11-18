@@ -29,8 +29,7 @@ namespace sw::editor
             if ( it == mapOldToNew.end() || value.assign( it->second ) == false )
                 return;
             ++changedCount;
-            if ( VectorUtil::contains( outListChanged, value._pTopProperty->_name ) == false )
-                outListChanged.push_back( value._pTopProperty->_name ); // 알림은 맨 위 칸 하나에 한 번
+            VectorUtil::addUnique( outListChanged, value._pTopProperty->_name ); // 알림은 맨 위 칸 하나에 한 번
         } ) );
         return changedCount;
     }

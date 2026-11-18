@@ -182,8 +182,7 @@ namespace sw
                         continue; // 시스템 메시지다
                     transaction.put( ChatServiceInternal::getSenderTable(), ChatServiceInternal::makeSenderKey( message._senderID, message._sentMs, historyKey ), vector<uint8>{} );
                     const string senderIndexKey = ChatServiceInternal::makeSenderIndexKey( message._senderID, message._sentMs );
-                    if ( VectorUtil::contains( listSenderIndexKey, senderIndexKey ) == false )
-                        listSenderIndexKey.push_back( senderIndexKey );
+                    VectorUtil::addUnique( listSenderIndexKey, senderIndexKey );
                 }
                 for ( const string& senderIndexKey : listSenderIndexKey )
                 {

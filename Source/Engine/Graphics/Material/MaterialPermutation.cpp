@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/Graphics/Material/Material.h"
@@ -28,12 +29,7 @@ namespace sw
     {
         if ( define.empty() )
             return;
-        for ( const string& existing : outListDefine )
-        {
-            if ( existing == define )
-                return;
-        }
-        outListDefine.push_back( string( define ) );
+        VectorUtil::addUnique( outListDefine, define );
     }
 
     void MaterialPermutation::mergeDefine( vector<string>& inoutListDefine, string_view define )

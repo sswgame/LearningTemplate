@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioMusic.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Audio/AudioMixerDef.h"
@@ -118,12 +119,7 @@ namespace sw
 
     optional<uint32> AudioMusicDef::findSegmentIndex( const hashed_string& name ) const
     {
-        for ( size_t segmentIndex = 0; segmentIndex < _listSegment.size(); ++segmentIndex )
-        {
-            if ( _listSegment[segmentIndex]._name == name )
-                return static_cast<uint32>( segmentIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&AudioMusicSegmentDef::_name, uint32>( _listSegment, name );
     }
 
     const AudioMusicTransitionDef* AudioMusicDef::findTransition( const hashed_string& from, const hashed_string& to ) const

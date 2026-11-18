@@ -16,8 +16,7 @@ namespace sw
         if ( parent.isAutomatedRun() )
         {
             const string unattended = "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) );
-            if ( VectorUtil::contains( listArgument, unattended ) == false )
-                listArgument.push_back( unattended );
+            VectorUtil::addUnique( listArgument, unattended );
         }
         return ProcessCommand::at( *executable, std::move( listArgument ) );
     }

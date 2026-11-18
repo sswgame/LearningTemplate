@@ -9,6 +9,7 @@
  *          키트 서비스의 서버 쪽은 테스트가 가짜(`IOnlineServerService`)로 올려도 된다 — 키트의 프로토콜 항목만 같으면 클라이언트 창구를 그대로 지난다.
  */
 #pragma once
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetRequest.h"
@@ -255,12 +256,7 @@ namespace sw::test
     private:
         optional<int32> findClient( StreamConnectionHandle handle ) const
         {
-            for ( size_t index = 0; index < _listHandle.size(); ++index )
-            {
-                if ( _listHandle[index] == handle )
-                    return static_cast<int32>( index );
-            }
-            return nullopt;
+            return VectorUtil::findIndex<int32>( _listHandle, handle );
         }
 
     private:

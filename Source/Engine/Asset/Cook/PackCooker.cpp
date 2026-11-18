@@ -963,8 +963,7 @@ namespace sw
             vector<string> listAssigned;
             for ( const auto& [relativePath, chunk] : mapAssignedChunk )
             {
-                if ( VectorUtil::contains( listAssigned, chunk ) == false )
-                    listAssigned.push_back( chunk );
+                VectorUtil::addUnique( listAssigned, chunk );
             }
             VectorUtil::sort( listAssigned );
             for ( const string& chunk : listAssigned )

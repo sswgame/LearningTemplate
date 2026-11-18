@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
 
@@ -233,11 +234,6 @@ namespace sw
 
     optional<uint32> AudioGraphDef::findNodeIndex( const hashed_string& name ) const
     {
-        for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
-        {
-            if ( _listNode[nodeIndex]._name == name )
-                return static_cast<uint32>( nodeIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&AudioGraphNodeDef::_name, uint32>( _listNode, name );
     }
 } // namespace sw

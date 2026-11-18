@@ -712,8 +712,7 @@ namespace sw
                     for ( uint32 element = 0; element < count; ++element )
                     {
                         const uint32 unit = reflected._bindPoint + element;
-                        if ( VectorUtil::contains( listUnit, unit ) == false )
-                            listUnit.push_back( unit );
+                        VectorUtil::addUnique( listUnit, unit );
                     }
                 }
                 if ( listUnit.size() <= *limit )

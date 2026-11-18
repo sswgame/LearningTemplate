@@ -192,8 +192,7 @@ namespace sw::editor
                 listChanged.push_back( index );
                 listAfter.push_back( std::move( afterText ) );
                 afterText = string{};
-                if ( VectorUtil::contains( listPath, span._listPath[index] ) == false )
-                    listPath.push_back( span._listPath[index] );
+                VectorUtil::addUnique( listPath, span._listPath[index] );
             }
             for ( const string& path : listPath )
                 InspectorEditRecorderInternal::recordPath( transaction, span, listChanged, listAfter, path );

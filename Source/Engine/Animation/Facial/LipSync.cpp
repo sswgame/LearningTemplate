@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Facial/LipSync.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
@@ -303,12 +304,7 @@ namespace sw
 
     optional<uint32> LipSyncSettings::findVisemeIndex( const hashed_string& name ) const
     {
-        for ( size_t visemeIndex = 0; visemeIndex < _listViseme.size(); ++visemeIndex )
-        {
-            if ( _listViseme[visemeIndex]._name == name )
-                return static_cast<uint32>( visemeIndex );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&LipSyncViseme::_name, uint32>( _listViseme, name );
     }
 
     void VisemeTrack::sample( float32 time, vector<float32>& outListWeight ) const

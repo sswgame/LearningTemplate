@@ -144,12 +144,7 @@ namespace sw
         if ( _pProfile == nullptr )
             return nullopt;
         const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
-        for ( size_t index = 0; index < listPool.size(); ++index )
-        {
-            if ( listPool[index]._id == poolID )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&AIDirectorPoolDef::_id, int32>( listPool, poolID );
     }
 
     void AIDirector::update( float32 deltaTime )

@@ -73,12 +73,7 @@ namespace sw
 
     optional<int32> SlotCatalog::findSlotIndex( const hashed_string& slot ) const
     {
-        for ( size_t index = 0; index < _listSlot.size(); ++index )
-        {
-            if ( _listSlot[index]._name == slot )
-                return static_cast<int32>( index );
-        }
-        return nullopt;
+        return VectorUtil::findIndexBy<&AppearanceSlotDef::_name, int32>( _listSlot, slot );
     }
 
     const SlotOccupancyDef* SlotCatalog::findOccupancy( const hashed_string& id ) const
