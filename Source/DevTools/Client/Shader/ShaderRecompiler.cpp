@@ -76,7 +76,7 @@ namespace sw
             // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(진단 정책의 디버그 코드젠). 요청 그대로 컴파일하면 리로드한
             // 셰이더만 디버그 정보를 잃는다.
             // 엔진 설정 값은 지금 캐시의 사본으로 싣는다 — 모은 요청에는 그 항목을 넣을 때의 사본이 실려 있다.
-            ShaderCompileDesc liveDesc          = ShaderCache::makeLiveCompileDesc( desc );
+            ShaderCompileDesc liveDesc          = ShaderCache::makeLiveCompileDesc( desc, shaderCache.isLiveDebugCodegen() );
             liveDesc._enginePolicy              = shaderCache.findEnginePolicy();
             const ShaderCompileResult newResult = ShaderCompiler::compileHLSL( liveDesc );
             if ( newResult._bSuccess == false )
