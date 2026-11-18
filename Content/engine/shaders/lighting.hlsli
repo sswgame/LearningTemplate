@@ -59,7 +59,7 @@ struct ReflectionProbe
 struct Lighting
 {
     static float3 computeRimLight( float3 normal );
-    static float3 shadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow, float roughness, float metallic );
+    static float3 shadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow, float roughness, float metallic, float occlusion );
 };
 
 /**
@@ -808,13 +808,15 @@ float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
  * @param normal   월드 노멀 (정규화되어 있어야 한다)
  * @param shadow   `Shadow::sampleAtWorld` 가 준 방향광 값
  * @param roughness · metallic 머티리얼 칸(포워드) 또는 G버퍼 머티리얼 칸(디퍼드)의 값. 기본값을 두지 않는다 — 셰이더마다 자기 값을 넘긴다
+ * @param occlusion 머티리얼 가림 — 앰비언트 · 프로브 빛에만 곱한다(SurfaceBRDF::_occlusion). 가림이 없으면 1
  * @details 셰이딩 모델 셰이더(SW_SHADING_MODEL_LAYERED)에서 불러도 엽이 모두 꺼진 PBR 이다(makePBR).
  */
-static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow, float roughness, float metallic )
+static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow, float roughness, float metallic, float occlusion )
 {
     // 보기 모드 LightingOnly 는 포워드 셰이더의 표면 색을 회색으로 바꾼다(ViewMode::overrideLightingAlbedo — binding.hlsli).
-    albedo                 = ViewMode::overrideLightingAlbedo( albedo );
-    const SurfaceBRDF brdf = SurfaceBRDF::makePBR( albedo, worldPosition, normal, roughness, metallic );
+    albedo           = ViewMode::overrideLightingAlbedo( albedo );
+    SurfaceBRDF brdf = SurfaceBRDF::makePBR( albedo, worldPosition, normal, roughness, metallic );
+    brdf._occlusion  = occlusion;
     return brdf.shadeLights( worldPosition, shadow );
 }
 

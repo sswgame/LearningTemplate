@@ -38,6 +38,8 @@
  * 셰이더 안의 기능 스위치(외부 define 이 아니다 — 쿠킹 퍼뮤테이션 수가 늘지 않는다)
  *   SW_MATERIAL_READ_IN_VERTEX   머티리얼을 정점에서 읽는다
  *   SW_MATERIAL_USES_TANGENT     정점 탄젠트를 월드로 옮겨 `PixelContext._tangent` 로 넘긴다(노멀 맵)
+ *   SW_MATERIAL_OCCLUSION        표면 훅이 머티리얼 가림(AO 맵)을 `MaterialSurface::setOcclusion` 으로 싣는다 — 앰비언트 · 프로브 빛에만 곱한다
+ *                                (언리얼 Ambient Occlusion 핀 · 유니티 Occlusion 맵 · Godot AO 와 같은 자리). 없으면 가림 1
  *   SW_MATERIAL_NONE             머티리얼이 없는 사용자(gbuffer · shadow_depth — 머티리얼 없는 배치의 패스 셰이더). 머티리얼 구조체 · 읽기 · 위치 오프셋 훅이 없고,
  *                                알파 컷오프(MATERIAL_ALPHA_CUTOFF)는 쓸 수 없다. 깊이 패스에서는 이 셰이더가 같은 자리를 못 만드는 배치를 뼈대가 빼 준다
  *                                (깊이 프리패스의 MATERIAL_VERTEX_DEFORM · 그림자의 MATERIAL_SHADOW_CAST_OFF).
@@ -214,6 +216,7 @@ struct MaterialInterpolants
 /**
  * @brief 표면 훅의 결과 — 알베도 · 노멀 · 거칠기 · 금속도(보기 모드 Roughness · Metallic 과 G버퍼 머티리얼 칸이 읽는다).
  * @details 알파 컷오프 머티리얼(MATERIAL_ALPHA_CUTOFF)은 `alphaCutoff` 도 채운다 — 깊이 패스와 본 패스가 같은 값으로 오린다(뼈대가 clip 한다).
+ *          가림 셰이더(SW_MATERIAL_OCCLUSION)는 `occlusion` 도 채운다 — 포워드는 SurfaceBRDF::_occlusion, G버퍼는 머티리얼 칸 a 로 간다.
  */
 struct MaterialSurface
 {
@@ -224,10 +227,34 @@ struct MaterialSurface
 #if defined( MATERIAL_ALPHA_CUTOFF )
     float _alphaCutoff;
 #endif
+#if defined( SW_MATERIAL_OCCLUSION )
+    float _occlusion;
+#endif
 
-    void setAlphaCutoff( float cutoff ); // 알파 컷오프 머티리얼만 컷오프를 싣는다(아니면 아무것도 하지 않는다)
-    void applyAlphaCutoff();             // 알파 컷오프 머티리얼만 오린다(아니면 아무것도 하지 않는다)
+    void setAlphaCutoff( float cutoff );  // 알파 컷오프 머티리얼만 컷오프를 싣는다(아니면 아무것도 하지 않는다)
+    void applyAlphaCutoff();              // 알파 컷오프 머티리얼만 오린다(아니면 아무것도 하지 않는다)
+    void setOcclusion( float occlusion ); // 가림 셰이더만 싣는다(아니면 아무것도 하지 않는다)
+    float getOcclusion();                 // 가림 셰이더가 실은 값, 아니면 1
 };
+
+#if defined( SW_MATERIAL_OCCLUSION )
+void MaterialSurface::setOcclusion( float occlusion )
+{
+    _occlusion = saturate( occlusion );
+}
+float MaterialSurface::getOcclusion()
+{
+    return _occlusion;
+}
+#else
+void MaterialSurface::setOcclusion( float occlusion )
+{
+}
+float MaterialSurface::getOcclusion()
+{
+    return 1.0f;
+}
+#endif
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
 /** @brief 알파 컷오프 머티리얼 — 표면 훅이 컷오프를 싣는다. */

@@ -7,7 +7,7 @@
  *          (언리얼 WorldAlignedTexture 와 같은 생각, 축 하나만 골라 섞지는 않는다).
  *          머티리얼 define: `MATERIAL_ALPHA_CUTOFF`(glTF alphaMode MASK — 잎 · 꽃) · `MATERIAL_TWO_SIDED`(glTF doubleSided — 컬링은 PSO 변형이 끄고 뒷면 노멀은 뼈대가 뒤집는다) ·
  *          `MATERIAL_DISPLACEMENT`(높이 맵 변위 — 헐 · 도메인이 붙은 변형으로 윤곽까지 바뀐다, material_displacement.hlsli).
- *          shortcut: 가림은 알베도에 곱한다 — 직접광도 조금 어두워진다. G버퍼에 가림 칸이 생기면 간접광(앰비언트 · 프로브)에만 곱한다.
+ *          가림(ORM R)은 간접광(앰비언트 · 프로브)에만 든다(SW_MATERIAL_OCCLUSION — 직접광은 그림자가 가린다, 언리얼 · 유니티 · Godot 과 같다).
  */
 #include "lighting.hlsli"
 
@@ -38,6 +38,7 @@ SW_MATERIAL_END
 
 #define SW_MATERIAL_DEFAULT_LIGHTING
 #define SW_MATERIAL_RIM_LIGHT
+#define SW_MATERIAL_OCCLUSION
 #define SW_MATERIAL_DEFAULT_VARYINGS
 #if !defined( SW_PASS_SHADOW ) && !defined( SW_PASS_DEPTH_PREPASS )
     #define SW_MATERIAL_USES_TANGENT
@@ -92,7 +93,7 @@ MaterialSurface computeMaterialSurface( PixelContext context )
 
     MaterialSurface surface;
     surface._albedo = context._color * context._material._color * albedoTexture;
-    surface._albedo.rgb *= occlusion;
+    surface.setOcclusion( occlusion );
 #if defined( SW_MATERIAL_USES_TANGENT )
     surface._normal = applyNormalMap( context._material._normalMap, context._material._normalScale, context._uv, context._normal, context._tangent );
 #else
