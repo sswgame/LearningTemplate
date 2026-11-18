@@ -106,19 +106,27 @@ namespace sw
             if ( pPpArgv[argIndex] == nullptr )
                 continue;
             const string_view line = StringUtil::trim( string_view{ pPpArgv[argIndex] } );
-            string_view       key  = line;
-            string_view       value;
-            const bool        bHasValue = StringUtil::trySplitKeyValue( line, key, value );
-            while ( key.empty() == false && key.front() == '-' )
-            {
-                key.remove_prefix( 1 );
-            }
-            if ( key != spelling )
+            if ( getArgumentName( line ) != spelling )
                 continue;
-            bool bValue = true;
+            string_view key;
+            string_view value;
+            const bool  bHasValue = StringUtil::trySplitKeyValue( line, key, value );
+            bool        bValue    = true;
             return bHasValue == false || ( StringUtil::tryParseBool( value, bValue ) && bValue );
         }
         return false;
+    }
+
+    string_view CommandLineManager::getArgumentName( string_view argumentLine )
+    {
+        string_view name = StringUtil::trim( argumentLine );
+        string_view value;
+        (void)StringUtil::trySplitKeyValue( name, name, value ); // `=` 가 없으면(또는 키가 비면) 줄 전체가 이름이다(`--key`)
+        while ( name.empty() == false && name.front() == '-' )
+        {
+            name.remove_prefix( 1 );
+        }
+        return name;
     }
 
     // ============================================================================
@@ -164,12 +172,8 @@ namespace sw
         string_view valueStr;
         const bool  bHasValue = StringUtil::trySplitKeyValue( line, rawKey, valueStr );
 
-        // 3단계: 앞의 하이픈('-') 제거
-        string_view cleanKey = rawKey;
-        while ( cleanKey.empty() == false && cleanKey.front() == '-' )
-        {
-            cleanKey.remove_prefix( 1 );
-        }
+        // 3단계: 앞의 하이픈('-') 제거 — 이름 규칙은 `getArgumentName` 하나다
+        const string_view cleanKey = getArgumentName( rawKey );
 
         // 4단계: 등록된 인자 목록에서 찾기(하이픈을 제거한 키로 먼저 찾고, 없으면 원래 키로)
         auto iter = _mapArgument.find( cleanKey );

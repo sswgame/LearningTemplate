@@ -97,19 +97,6 @@ namespace sw
                     "gv_rhiBackend",
             };
 
-            /** @brief `-key=value` · `--key` · `key=value` 에서 앞의 `-` 와 `=` 뒤를 뗀 이름입니다. */
-            static string_view getArgumentName( string_view argument )
-            {
-                string_view name = argument;
-                string_view value;
-                (void)StringUtil::trySplitKeyValue( argument, name, value ); // `=` 가 없으면 인자 전체가 이름이다(`--key`)
-                while ( name.empty() == false && name.front() == '-' )
-                {
-                    name.remove_prefix( 1 );
-                }
-                return name;
-            }
-
             static bool isDropped( string_view name )
             {
                 return std::find( std::begin( kArrDroppedName ), std::end( kArrDroppedName ), name ) != std::end( kArrDroppedName );
@@ -129,7 +116,7 @@ namespace sw
             /** @brief 인자 하나에 규칙을 적용합니다. 버리면 false 이고, 비밀 값은 가려서 @p outArgument 에 씁니다. */
             [[nodiscard]] static bool apply( string_view argument, string& outArgument )
             {
-                const string_view name = getArgumentName( argument );
+                const string_view name = CommandLineManager::getArgumentName( argument );
                 if ( isDropped( name ) )
                     return false;
                 const size_t equalPos = argument.find( '=' );
@@ -148,7 +135,7 @@ namespace sw
             {
                 for ( const string& argument : listArgument )
                 {
-                    if ( getArgumentName( argument ) == name )
+                    if ( CommandLineManager::getArgumentName( argument ) == name )
                         return true;
                 }
                 return false;
@@ -197,7 +184,7 @@ namespace sw
         for ( const string& extra : input._listExtraArgument )
         {
             string argument;
-            if ( hasInOriginal( Rules::getArgumentName( extra ) ) == false && Rules::apply( extra, argument ) )
+            if ( hasInOriginal( CommandLineManager::getArgumentName( extra ) ) == false && Rules::apply( extra, argument ) )
                 appendArgument( command, argument );
         }
         return command;

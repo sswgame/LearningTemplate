@@ -1449,7 +1449,8 @@
     "lookupRangeName": "findRangeName — 못 찾을 수 있는 조회는 find(2026-11-19)",
     "AutomationValidatorLookup": "AutomationValidatorResult — findValidator 의 답, 결과 형식 끝말은 Result(2026-11-19)",
     "buildTerrain": "ActionPlatformerDemoComponent::populateTerrain — 이미 있는 상태를 원본(씬의 지형 줄)으로 채우는 것은 populate(2026-11-19)",
-    "readNowSeconds": "MonotonicClock::nowSeconds — 단조 시계의 초 읽기는 시계 형식의 멤버 하나다(자동화 실행기 · 캐릭터 에디터의 사본, 2026-11-19)"
+    "readNowSeconds": "MonotonicClock::nowSeconds — 단조 시계의 초 읽기는 시계 형식의 멤버 하나다(자동화 실행기 · 캐릭터 에디터의 사본, 2026-11-19)",
+    "getArgumentKey": "CommandLineManager::getArgumentName — 인자 이름 규칙은 파서의 것 하나다(AutomationPerBackend 의 사본, 2026-11-19)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",

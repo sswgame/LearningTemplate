@@ -534,3 +534,15 @@ SW_TEST_CASE( CommandLineTest, DeadlockDetectionFlagIsReadBeforeParse )
     utf8* argvNone[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-rhi-validation" ) };
     SW_EXPECT_FALSE( sw::CommandLineManager::isFlagGivenBeforeParse( 2, argvNone, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
 }
+
+/**
+ * @brief 인자 한 줄의 이름은 앞뒤 공백 · `=` 뒤 · 앞의 `-` 를 뗀 것이다 — `parse` 와 원본 인자를 거르는 쪽(자식 인자 · 재현 명령)이 같은 규칙을 쓴다.
+ */
+SW_TEST_CASE( CommandLineTest, ArgumentNameDropsHyphensAndValue )
+{
+    SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( "-scenario=a/b.xml" ) == "scenario" );
+    SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( "--dx12" ) == "dx12" );
+    SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( "gv_x=1=2" ) == "gv_x" );
+    SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( " -W = 800 " ) == "W" );
+    SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( "" ).empty() );
+}

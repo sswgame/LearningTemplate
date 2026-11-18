@@ -103,15 +103,6 @@ namespace sw
                 inoutChild._stallDeadline    = Deadline::afterSeconds( AutomationTimeLimits::kProcessStallSeconds );
             }
 
-            /** @brief 인자 한 줄의 키(앞 하이픈 · `=` 뒤를 뗀 것)입니다. */
-            static string_view getArgumentKey( string_view argument )
-            {
-                string_view key = argument.substr( 0, argument.find( '=' ) );
-                while ( key.empty() == false && key.front() == '-' )
-                    key.remove_prefix( 1 );
-                return key;
-            }
-
             /** @brief 자식 종료 코드의 결과 이름입니다(보고 · 요약 줄). */
             static const utf8* describeExitCode( int32 exitCode )
             {
@@ -374,7 +365,7 @@ namespace sw
         vector<string>                       listArgument;
         for ( const string& argument : listOriginalArgument )
         {
-            const string_view key    = Internal::getArgumentKey( argument );
+            const string_view key    = CommandLineManager::getArgumentName( argument );
             const bool        bOwned = std::any_of( std::begin( kArrOwned ), std::end( kArrOwned ),
                                                     [key]( CommandLineArgument owned )
                    { return key == getCommandLineArgumentSpelling( owned ); } ) ||
@@ -508,7 +499,7 @@ namespace sw
         // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다. 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 스스로 정한다(`IWindow::createMainWindow`).
         const bool bTileWindows = std::none_of( options._listPassThroughArgument.begin(), options._listPassThroughArgument.end(), []( const string& argument )
         {
-            const string_view key = Internal::getArgumentKey( argument );
+            const string_view key = CommandLineManager::getArgumentName( argument );
             return key == getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_X ) || key == getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE );
         } );
         // 나눌 때 배정의 시작점 — 주지 않았으면 UTC 날짜(일)로 정해 날마다 한 칸씩 돌린다. 백엔드와 무관하다고 본 시나리오도 나흘이면 모든 백엔드를 거친다.
