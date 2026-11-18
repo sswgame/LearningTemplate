@@ -96,7 +96,8 @@ namespace sw
 
         /**
          * @brief 채우는 함수로 정책을 새로 떠 원자 사본으로 내보냅니다. 게임 스레드 전용(Debug 단언)입니다.
-         * @details 엔진이 명령줄이 든 뒤(렌더러 · 셰이더 캐시 기동 전) 한 번, 그 뒤 프레임마다 렌더 패킷을 내기 전에 부른다. 등록 · 해제도 한 번 내보낸다.
+         * @details 엔진이 명령줄이 든 뒤(렌더러 · 셰이더 캐시 기동 전) 한 번, 그 뒤 프레임마다 패킷을 짓기 시작할 때(`RenderFrameSettings::capture`) 부른다. 등록 · 해제도 한 번 내보낸다.
+         *          렌더러의 프레임 경로는 패킷에 실린 그 프레임 값(`RenderFrameSettings::_diagnostics`)을 읽고, 이 사본은 패킷 밖 소비자(bindless 검사 · 셰이더 컴파일)가 읽는다.
          */
         static void publish();
 

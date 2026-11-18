@@ -42,15 +42,16 @@ namespace sw
          * @brief 프레임 그래프 리스트에 뷰 @p target 의 가림 타일(깊이 히스토리 → 타일마다 최대 깊이)을 기록합니다. 깊이 히스토리를 옮긴 뒤 · 컬링 앞입니다.
          * @param pso `RenderPassType::OcclusionTiles` 의 PSO 입니다(없으면 0 — 짓지 않는다).
          * @param bDepthHistoryReady 이번 프레임에 지난 깊이를 옮겼는지입니다(실행기의 `canCopyDepthHistory`).
-         * @details `gv_occlusionCulling` 이 꺼졌거나 옮긴 지난 깊이가 없으면 짓지 않는다 — 그 뷰의 컬링은 가림을 보지 않는다.
+         * @param bEnabled 가림 판정을 켰는지입니다(프레임 설정 사본 `RenderFrameSettings::_bOcclusionCulling`).
+         * @details 가림 판정이 꺼졌거나 옮긴 지난 깊이가 없으면 짓지 않는다 — 그 뷰의 컬링은 가림을 보지 않는다.
          */
-        void record( IRHICommandList* pCmd, IRHIDevice& device, RHIPipelineStateHandle pso, bool bDepthHistoryReady, FrameViewTarget& target ) const;
+        void record( IRHICommandList* pCmd, IRHIDevice& device, RHIPipelineStateHandle pso, bool bEnabled, bool bDepthHistoryReady, FrameViewTarget& target ) const;
         /**
          * @brief 주 시점 가림 타일을 되읽는 복사를 프레임 그래프 리스트에 넣고, 이미 도착한 사본이 있으면 우편함에 올립니다(`getSnapshot`).
          * @details `record` 직후에 부른다. 이번 프레임에 타일을 짓지 않았거나 기록을 버리는 프레임이면 우편함을 비운다(그 타일은 지난 장면의 것이라 맞지 않는다).
          *          요청 때의 뷰-투영 · 격자는 메타 고리에 적어 두었다가 사본이 도착하면 붙인다.
          */
-        void requestReadback( IRHICommandList* pCmd, IRHIDevice* pDevice, const FrameViewTarget& view );
+        void requestReadback( IRHICommandList* pCmd, IRHIDevice* pDevice, bool bEnabled, const FrameViewTarget& view );
         /**
          * @brief 뷰 @p view 의 컬링 상수에 가림 판정 값을 채웁니다. 이번 프레임에 타일을 지었고 기록을 버리는 프레임(처음 · 컷)이 아닐 때만 켭니다.
          * @details 지난 프레임 깊이로 이번 경계를 보므로 그 사이에 드러난 물체는 한 프레임 늦게 나온다(언리얼의 지난 프레임 HZB 와 같은 한계). 컷 프레임은 지난 깊이가

@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
+#include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Renderer/Lighting/LensFlareSpriteBuffer.h"
@@ -23,7 +24,9 @@ namespace sw
     struct RenderFramePacket
     {
         GPUSceneSnapshot _gpuScene; ///< GT 가 만든 것 모두. 소유권도 함께 실린다(GPUSceneSnapshot 참고)
-        float4           _clearColor;
+        /** @brief 이 프레임의 렌더 설정 사본입니다 — 게임 스레드가 패킷을 짓기 시작할 때 뜬다(`RenderPacketBuilder::beginPacket`). 렌더 쪽은 전역 변수 대신 이것을 읽는다. 화면 밖 패킷은 주 패킷의 것을 받는다. */
+        RenderFrameSettings _settings;
+        float4              _clearColor;
         /** @brief 주 시점의 눈 위치입니다. `_bHasViewProj` 가 0 이면 값이 없다(0 벡터) — 기본 카메라 위치로 채우지 않는다(그 패킷은 그리지 않는다). */
         float3   _cameraPos;
         float4x4 _viewProj;
@@ -110,6 +113,7 @@ namespace sw
 
         RenderFramePacket()
             : _gpuScene{}
+            , _settings{}
             , _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
             , _cameraPos{}
             , _viewProj{}

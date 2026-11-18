@@ -90,6 +90,17 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct RenderPipelineRequest
+     * @brief 파이프라인 고르기의 변수 몫(`-gv_renderPipeline` · `-gv_deferredShading`)을 게임 스레드가 뜬 사본입니다(`FrameRendererSubsystem`).
+     * @details 고르기는 렌더 스레드에서도 돈다(실행 중 변수 변경 · 화면 밖 렌더러) — 렌더 스레드는 변수 대신 이 사본을 받는다.
+     */
+    struct RenderPipelineRequest
+    {
+        string _commandLinePath{};     ///< `-gv_renderPipeline`(비면 다음 순서)
+        uint8  _bDeferred{ SW_FALSE }; ///< `-gv_deferredShading`
+    };
+
+    /**
      * @struct FrameRendererHost
      * @brief 주 렌더러만 하는 일의 상대입니다 — 호스트(`FrameRendererSubsystem`)가 엔진 서비스로 채워 `FrameRenderer::bindHost` 로 넘긴다.
      * @details 화면 밖 씬 렌더러(`OffscreenSceneRenderers`) · 도구 · 테스트의 렌더러는 비어 있다. 예전에는 렌더러가 스스로 전역에서 찾고 역할 표시(`_bScenePreview`)로
@@ -134,10 +145,11 @@ namespace sw
         /** @brief 대입을 금지합니다. */
         FrameRenderer& operator=( const FrameRenderer& ) = delete;
 
-        /** @brief 디바이스와 파이프라인 XML 로 초기화합니다. */
-        [[nodiscard]] bool initialize( IRHIDevice* pDevice, string_view pipelineXMLPath = {} );
-        /** @brief 디바이스, TaskManager, 파이프라인 XML 로 초기화합니다. */
-        [[nodiscard]] bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
+        /**
+         * @brief 디바이스, TaskManager, 설정 사본, 파이프라인 요청, 파이프라인 XML 로 초기화합니다.
+         * @details @p settings · @p pipelineRequest 는 게임 스레드가 뜬 사본이다(`RenderFrameSettings::capture`) — 렌더러는 전역 변수를 읽지 않는다. 첫 패킷부터는 패킷의 사본을 쓴다.
+         */
+        [[nodiscard]] bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager, const RenderFrameSettings& settings, const RenderPipelineRequest& pipelineRequest,
                                        string_view pipelineXMLPath = {} );
         /** @brief 주 렌더러만 하는 일의 상대를 겁니다(`FrameRendererHost`). `initialize` 앞에 부릅니다(파이프라인 로드가 렌더 타깃을 공개한다). */
         void bindHost( const FrameRendererHost& host ) { _host = host; }
@@ -158,10 +170,10 @@ namespace sw
         /** @brief RenderPipeline XML 로 그래프를 다시 만듭니다(동기 로드). 패스 콜백은 한 번만 바인딩합니다. */
         [[nodiscard]] bool loadPipeline( const AssetID& assetID );
         /**
-         * @brief 파이프라인을 고르는 순서(초기화 인자 > `gv_renderPipeline` > `gv_deferredShading` > 팩 설정 > 기본 포워드)로 다시 골라 불러옵니다.
+         * @brief 파이프라인을 고르는 순서(초기화 인자 > @p request 의 명령줄 경로 > 디퍼드 > 팩 설정 > 기본 포워드)로 다시 골라 불러옵니다. 요청은 다음 화면 밖 렌더러가 이어받는다.
          * @details 초기화가 부르고, 실행 중에는 두 변수가 바뀔 때 렌더 스레드를 재운 뒤 부른다(`FrameRendererSubsystem`) — 언리얼 `r.*` 렌더 설정을 실행 중에 바꾸는 것과 같다.
          */
-        [[nodiscard]] bool selectPipeline();
+        [[nodiscard]] bool selectPipeline( const RenderPipelineRequest& request );
         /**
          * @brief 렌더 스레드 경로입니다. 미리 만들어 둔 packet 의 GPUScene 을 쓰며 Scene 에는 접근하지 않습니다.
          * @details 주 시점이 없는 패킷(`RenderFramePacket::_bHasViewProj` 가 0 — 활성 씬이 없거나 씬에 카메라가 없다)은 그리지 않고 false 입니다.
@@ -248,12 +260,6 @@ namespace sw
          */
         string_view getPresentedAttachmentName() const;
         /**
-         * @brief 그림자 맵 한 변의 텍셀 수(`gv_shadowMapResolution`)입니다. 품질 단계마다의 값은 설정 스키마(`engine.settings.xml` 의 `graphics.shadowQuality`)가 정합니다.
-         * @details 그림자 맵 크기는 화면 크기를 따르지 않는다. 정사각 볼륨을 1280×720 에 담으면 텍셀이 한 축으로 1.8배 늘어나고,
-         *          출력이 작은 에디터 게임 뷰에서는 그림자 맵도 같이 작아지기 때문이다. 게임 스레드(그림자 행렬의 텍셀 스냅)와 렌더 스레드(첨부 할당)가 같은 값을 쓴다.
-         */
-        static uint32 getShadowMapResolution();
-        /**
          * @brief 지금 살아 있는 트랜지언트 목록을 엔진 레지스트리에 공개합니다. 에디터 패널이 이 목록을 읽습니다.
          * @details 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로 그때 한 번만 부르면 된다(풀을 다시 만들 때, 꺼진 효과의 출력이 가리키는 곳이 바뀔 때).
          *          매 프레임 부를 필요는 없다.
@@ -284,7 +290,7 @@ namespace sw
         IRHIDevice* getDevice() const { return _pDevice; }
         /**
          * @brief 주 시점의 가림 타일을 몇 프레임 늦게 되읽은 가장 최근 사본입니다. 어느 스레드에서 불러도 됩니다.
-         * @details `gv_occlusionCulling` 이 꺼졌거나 사본이 아직 없거나 기록을 버린 프레임(처음 · 컷) 뒤면 nullptr — 부르는 쪽은 가림을 보지 않는다.
+         * @details 가림 판정(`RenderFrameSettings::_bOcclusionCulling`)이 꺼졌거나 사본이 아직 없거나 기록을 버린 프레임(처음 · 컷) 뒤면 nullptr — 부르는 쪽은 가림을 보지 않는다.
          *          `RenderViewCollector` 가 모니터의 "지난 프레임에 그려졌나" 판정에 쓴다(`OcclusionTileSnapshot::isSphereOccluded`).
          */
         shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _passExecutor.getOcclusionSnapshot(); }
@@ -367,7 +373,7 @@ namespace sw
          */
         void prepareExtraViews( const vector<RenderViewRequest>& listRequest );
         /**
-         * @brief 주 시점의 캐스케이드별 컬링 슬롯 수를 정하고 상수 버퍼를 맞춥니다(`-gv_shadowCascadeCulling=1` 이고 캐스케이드가 둘 이상일 때만 켭니다).
+         * @brief 주 시점의 캐스케이드별 컬링 슬롯 수를 정하고 상수 버퍼를 맞춥니다(`RenderFrameSettings::_bShadowCascadeCulling` 이고 캐스케이드가 둘 이상일 때만 켭니다).
          * @return 슬롯 수(0 이면 쓰지 않음)
          */
         uint32 prepareCascadeCullInputs();
@@ -484,9 +490,10 @@ namespace sw
          * @brief 뷰(`FrameViewTarget`)의 GPU 자원 수명 — 트랜지언트 풀, TAA · 깊이 히스토리, 가림 타일, 프레임마다의 패스 고르기입니다.
          * @details `_autoExposure` · `_upscale` 을 참조로 쓰므로(뷰의 노출 기록 · 업스케일 중간 RT 를 함께 놓는다) 그 뒤에 선언한다.
          */
-        FrameViewResources _viewResources;
-        string             _pipelinePath;
-        string             _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 변수 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
+        FrameViewResources    _viewResources;
+        string                _pipelinePath;
+        string                _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 요청 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
+        RenderPipelineRequest _pipelineRequest;      ///< 마지막으로 받은 파이프라인 요청(게임 스레드의 사본) — 화면 밖 렌더러가 이어받는다
 
         /// @brief 마지막 프레임의 값입니다(getLastIndirectDrawCallCount).
         uint32           _lastIndirectDrawCallCount;

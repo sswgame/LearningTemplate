@@ -11,7 +11,6 @@
 
 #include "Engine/Renderer/Frame/Execute/FrameGraphExecutor.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -19,7 +18,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
-#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -33,24 +31,6 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_gpuCulling=0` 이면 GPU 컬링 컴퓨트 디스패치를 건너뜁니다(인다이렉트 드로우는 그대로 실행합니다).
-     * @details 간접 인자는 GPUScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
-     *          망치는가" 를 백엔드별로 가를 수 있다. 기본은 켬이다.
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_gpuCulling, true, "GPU 컬링 컴퓨트 디스패치 (false=건너뜀, 진단용)" );
-
-    /**
-     * @brief `-gv_meshMorphDebugMode=<Normal|ForceOn|SkipDispatch>` 는 GPU 메시 모프 경로를 백엔드 능력 테이블과 **상관없이** 돌려 봅니다(`MeshMorphDiagMode`).
-     * @details Normal 은 평소대로(`RHICapabilities::_bGPUMeshMorph` 를 따름), ForceOn 은 능력 테이블을 무시하고 켬,
-     *          SkipDispatch 는 켜되 **컴퓨트 디스패치를 건너뛰고 레스트를 결과 배치로 묶어 결과 버퍼에 올린다**.
-     *
-     *          SkipDispatch 의 정답은 **레스트 포즈와 같은 이미지**다. 컴퓨트가 아예 돌지 않기 때문이다. 그래서
-     *          SkipDispatch 만으로 "컴퓨트가 범인인가" 를 가를 수 있다. 예전의 IndexTag(노멀 칸에 원소 번호)는 결과가 옥타헤드럴로 묶인 뒤
-     *          번호를 실을 칸이 없어 지웠다.
-     */
-    SW_GLOBAL_VARIABLE( MeshMorphDiagMode, gv_meshMorphDebugMode, MeshMorphDiagMode::Normal, "메시 모프 진단 (Normal 평소 / ForceOn 강제 켬 / SkipDispatch 디스패치 생략)" );
-
     FrameGraphExecutor::FrameGraphExecutor( IRHIDevice* const& pDevice, FrameRenderState& state, FramePSOManager& psoManager, FrameFog& fog )
         : _pDevice{ pDevice }
         , _state{ state }
@@ -85,7 +65,7 @@ namespace sw
         _state._gpuMessages.poll();
         // 이번 프레임의 출력 선택(`gpu.inspect` · `gpu.thread`)과 로그 예산 — 프레임의 기록보다 먼저 큐에 들어간다.
         const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
-        _state._gpuMessages.updateControl( pInspector != nullptr ? pInspector->getSelection() : GPUMessageSelection{}, RenderDiagnostics::get()._gpuMessageLogBudget );
+        _state._gpuMessages.updateControl( pInspector != nullptr ? pInspector->getSelection() : GPUMessageSelection{}, _state._settings._diagnostics._gpuMessageLogBudget );
         // 가림 타일 표시는 OcclusionTiles 패스가 다시 켠다. 패스가 없는 파이프라인에서 지난 파이프라인의 표시가 남아 컬링이 낡은 타일을 읽지 않게 비운다.
         _state._mainView._bOcclusionTilesThisFrame = SW_FALSE;
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
@@ -180,7 +160,7 @@ namespace sw
         // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
         // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.
         // 개수를 되돌리는 커널이 없으면 컴퓨트가 센 개수가 프레임마다 쌓인다(N, 2N ...) — 둘이 다 있어야 GPU 가 개수를 맡는다.
-        return gv_gpuCulling && _psoManager.getEnginePSO( RenderPassType::GPUCull ) != 0 && _psoManager.getEnginePSO( RenderPassType::IndirectArgsReset ) != 0;
+        return _state._settings._bGPUCulling != SW_FALSE && _psoManager.getEnginePSO( RenderPassType::GPUCull ) != 0 && _psoManager.getEnginePSO( RenderPassType::IndirectArgsReset ) != 0;
     }
 
     void FrameGraphExecutor::dispatchInstanceAnimation( uint32 instanceCount )
@@ -228,13 +208,13 @@ namespace sw
 
     MeshMorphDiagMode FrameGraphExecutor::getEffectiveMeshMorphDiag() const
     {
-        return gv_meshMorphDebugMode;
+        return _state._settings._meshMorphDebugMode;
     }
 
-    bool FrameGraphExecutor::isMeshMorphDiagValid()
+    bool FrameGraphExecutor::isMeshMorphDiagValid( MeshMorphDiagMode mode )
     {
         // 모든 열거자를 나열한다 — 열거자를 더하면 여기서 컴파일 경고가 난다. 범위 밖 값은 Normal 로 바꾸지 않고 알린다.
-        switch ( gv_meshMorphDebugMode )
+        switch ( mode )
         {
             case MeshMorphDiagMode::Normal:
             case MeshMorphDiagMode::ForceOn:
@@ -243,7 +223,7 @@ namespace sw
                 return true;
             }
         }
-        SW_LOG_ERROR_ID( "FrameGraphExecutor.GvMeshMorphDebugModeNoMode", "gv_meshMorphDebugMode has no mode for the value %# (Normal, ForceOn or SkipDispatch)", static_cast<uint32>( gv_meshMorphDebugMode ) );
+        SW_LOG_ERROR_ID( "FrameGraphExecutor.GvMeshMorphDebugModeNoMode", "gv_meshMorphDebugMode has no mode for the value %# (Normal, ForceOn or SkipDispatch)", static_cast<uint32>( mode ) );
         return false;
     }
 
@@ -600,12 +580,13 @@ namespace sw
             return;
         // 가림 타일은 옮긴 깊이 히스토리에서 짓는다 — 컬링(GPUCull 패스)이 `OcclusionTiles` 를 읽어 이 뒤에 온다. 쉬는 추가 뷰는 컬링하지 않으므로 짓지 않는다.
         const RHIPipelineStateHandle occlusionPSO = _psoManager.getEnginePSO( RenderPassType::OcclusionTiles );
-        _occlusion.record( _pCmd, *_pDevice, occlusionPSO, canCopyDepthHistory( _state._mainView ), _state._mainView );
-        _occlusion.requestReadback( _pCmd, _pDevice, _state._mainView );
+        const bool                   bEnabled     = _state._settings._bOcclusionCulling != SW_FALSE;
+        _occlusion.record( _pCmd, *_pDevice, occlusionPSO, bEnabled, canCopyDepthHistory( _state._mainView ), _state._mainView );
+        _occlusion.requestReadback( _pCmd, _pDevice, bEnabled, _state._mainView );
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE )
-                _occlusion.record( _pCmd, *_pDevice, occlusionPSO, canCopyDepthHistory( *pView ), *pView );
+                _occlusion.record( _pCmd, *_pDevice, occlusionPSO, bEnabled, canCopyDepthHistory( *pView ), *pView );
         }
     }
 

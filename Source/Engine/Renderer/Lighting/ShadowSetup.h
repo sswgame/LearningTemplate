@@ -60,7 +60,7 @@ namespace sw
 
         /**
          * @brief 배치를 만듭니다.
-         * @param atlasResolution 아틀라스 한 변의 텍셀 수(`FrameRenderer::getShadowMapResolution`)
+         * @param atlasResolution 아틀라스 한 변의 텍셀 수(패킷의 설정 사본 `RenderFrameSettings::_shadowMapResolution`)
          * @param cascadeCount    방향광이 원하는 캐스케이드 수(1~4)
          * @param localTileCount  점광과 스폿 그림자가 원하는 슬롯 수(점광 6, 스폿 1의 합). 슬롯이 모자라면 뒤의 빛은 그림자가 없습니다.
          * @param minLocalTileResolution 점광과 스폿 칸 한 변의 하한(`RenderConfig::_shadowLocalMinTileResolution`). 칸 수가 많아도 이보다 작게 나누지 않습니다.

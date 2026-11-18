@@ -190,7 +190,7 @@ namespace sw
 
     void RenderPacketSceneCollector::populateShadows( RenderFramePacket& packet, const RenderPacketKeyLights& lights )
     {
-        FrameShadowData::populateFrame( lights.getShadowCaster(), packet._bHasViewProj == SW_TRUE ? &packet._viewProj : nullptr, FrameRenderer::getShadowMapResolution(),
+        FrameShadowData::populateFrame( lights.getShadowCaster(), packet._bHasViewProj == SW_TRUE ? &packet._viewProj : nullptr, packet._settings._shadowMapResolution,
                                         engine::getSubsystem<EngineConfig>()._render, _listShadowLightIndex, packet._listLight, packet._shadow );
     }
 

@@ -15,10 +15,12 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/View/RenderViewSettings.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
+#include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Renderer/RenderThread.h"
@@ -26,9 +28,40 @@
 
 namespace sw
 {
-    // 실행 중에 바꾸면 파이프라인을 다시 고르는 변수입니다(`FrameRenderer::selectPipeline` 의 입력, 정의는 FrameRenderer.cpp).
-    SW_EXTERN_GLOBAL_VARIABLE( sw::GlobalString, gv_renderPipeline );
-    SW_EXTERN_GLOBAL_VARIABLE( bool, gv_deferredShading );
+    namespace
+    {
+        // 렌더러를 세우고 고르는 변수 — 이 파일(게임 스레드)만 읽고 렌더러에는 사본(`RenderPipelineRequest` · 보기 모드)을 넘긴다. 익명 이름공간이라 렌더 쪽 코드는 이름을 볼 수 없다.
+
+        /**
+         * @brief `-gv_deferredShading=1` 이면 기본 파이프라인을 디퍼드로 고릅니다(기본은 포워드).
+         * @details `initialize` 에 파이프라인 경로를 주지 않을 때 디퍼드를 고르는 방법이다. 디퍼드는 레벨이 나뉘어(레벨 0은 Shadow 와 GBuffer) 병렬 기록이 실제로 도는 유일한 경로이기도 하다.
+         */
+        SW_GLOBAL_VARIABLE( bool, gv_deferredShading, false, "기본 파이프라인을 디퍼드로 (기본 포워드)" );
+        /**
+         * @brief `-gv_renderPipeline=<파이프라인 XML>` 이면 그 파이프라인으로 그립니다(디퍼드 선택 · 팩 설정 · 기본보다 우선합니다).
+         * @details 게임은 데이터로 고른다 — 팩 설정의 `PackEngineSettings::_renderPipeline`(2D 게임은 그림자 맵과 톤맵이 없는
+         *          `engine/pipeline/forward2dpipeline.xml`. 톤맵은 흰색을 0.5 로 누르기 때문이다). 이 스위치는 측정 · 검증용으로 그것을 덮는다.
+         */
+        SW_GLOBAL_VARIABLE( sw::GlobalString, gv_renderPipeline, "", "이 파이프라인 XML 로 그린다 (비우면 gv_deferredShading · 팩 설정 · 기본 포워드)" );
+        /**
+         * @brief `-gv_viewMode=<이름>` 은 주 출력(게임 창)의 보기 모드입니다. 에디터 씬 뷰 툴바와 같은 값을 가리킨다(`RenderViewMode`).
+         * @details 여기 있는 이유는 **검증**이다 — 뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고 모드를 고를 수 있어야 한다.
+         *          명령줄은 열거자 이름만 받는다(숫자는 오류). 렌더러 기동 때 한 번 읽는다.
+         */
+        SW_GLOBAL_VARIABLE( RenderViewMode, gv_viewMode, RenderViewMode::Lit, "주 출력 보기 모드 (Lit / Unlit / Wireframe / Normals / Depth / Overdraw / LightingOnly / Roughness / Metallic / Mipmaps / LightComplexity / ShadedWireframe / LODLevel / LODFadeCode / MarkerSlots / ShadingPath)" );
+
+        struct FrameRendererSubsystemInternal
+        {
+            /** @brief 파이프라인 변수의 지금 값입니다(게임 스레드). 렌더 스레드의 고르기는 이 사본을 받는다. */
+            static RenderPipelineRequest makePipelineRequest()
+            {
+                RenderPipelineRequest request;
+                request._commandLinePath = gv_renderPipeline.get();
+                request._bDeferred       = gv_deferredShading ? SW_TRUE : SW_FALSE;
+                return request;
+            }
+        };
+    } // namespace
 
     FrameRendererSubsystem::FrameRendererSubsystem( unique_ptr<FrameRenderer> frameRenderer, const RHISubsystem& rhiSubsystem )
         : _frameRenderer{ std::move( frameRenderer ) }
@@ -60,11 +93,21 @@ namespace sw
         host._pRenderTargets   = engine::findSubsystem<RenderTargetRegistry>();
         host._pPinnedMaterials = &engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
         _frameRenderer->bindHost( host );
-        if ( _frameRenderer->initialize( &device, &engine::getSubsystem<TaskManager>() ) == false )
+        // 커맨드라인이 주 출력의 보기 모드를 정했으면 여기서 받는다(에디터 씬 뷰는 툴바가 따로 정한다).
+        // 모드가 아닌 값(`Count` 표식, 에디터 · 콘솔이 숫자로 넣은 범위 밖 값)은 Lit 으로 바꾸지 않고 기동을 멈춘다 — 검증 실행이 다른 모드를 찍고 통과하면 안 된다.
+        const RenderViewMode viewMode = gv_viewMode;
+        if ( isRenderViewModeIndex( static_cast<int32>( viewMode ) ) == false )
+        {
+            SW_LOG_ERROR_ID( "FrameRenderer.Initialize", "initialize: -gv_viewMode=%# is not a view mode (0 .. %#)", static_cast<int64>( viewMode ), static_cast<int64>( RenderViewMode::Count ) - 1 );
+            return SubsystemInitResult::Failed;
+        }
+        if ( _frameRenderer->initialize( &device, &engine::getSubsystem<TaskManager>(), RenderFrameSettings::capture(), FrameRendererSubsystemInternal::makePipelineRequest() ) == false )
         {
             SW_LOG_ERROR_ID( "FrameRenderer.FailedInitializeFrameRenderer", "Failed to initialize FrameRenderer!" );
             return SubsystemInitResult::Failed;
         }
+        if ( viewMode != RenderViewMode::Lit )
+            _frameRenderer->setViewMode( viewMode );
         GlobalVariableManager&    globalVariables       = engine::getSubsystem<GlobalVariableManager>();
         GlobalVariableInfo* const arrPipelineVariable[] = { globalVariables.findVariableOf( gv_renderPipeline ), globalVariables.findVariableOf( gv_deferredShading ) };
         for ( GlobalVariableInfo* const pVariable : arrPipelineVariable )
@@ -83,23 +126,24 @@ namespace sw
     {
         // 렌더 쪽 객체(렌더러 · PSO 캐시)는 렌더 스레드가 다음 프레임 기록 전에 고친다 — 렌더 스레드와 GPU 를 세우지 않는다(셰이더 리로드 `LiveShaderSubsystem` 과 같은 길).
         // 옛 패스 자원은 디바이스가 그것을 쓴 프레임의 GPU 완료 뒤로 미뤄 놓는다(백엔드 해제 큐).
-        const string           change         = pVariable->_name + "=" + pVariable->getValueAsString();
-        RenderThreadSubsystem* pRenderThreads = engine::findSubsystem<RenderThreadSubsystem>();
-        RenderThread* const    pRenderThread  = pRenderThreads != nullptr ? pRenderThreads->findRenderThread() : nullptr;
+        const string                change         = pVariable->_name + "=" + pVariable->getValueAsString();
+        const RenderPipelineRequest request        = FrameRendererSubsystemInternal::makePipelineRequest(); // 렌더 스레드는 변수를 읽지 않는다 — 여기(게임 스레드)서 뜬 사본을 넘긴다
+        RenderThreadSubsystem*      pRenderThreads = engine::findSubsystem<RenderThreadSubsystem>();
+        RenderThread* const         pRenderThread  = pRenderThreads != nullptr ? pRenderThreads->findRenderThread() : nullptr;
         if ( pRenderThread == nullptr )
         {
-            applyPipelineChange( change ); // 패킷을 실행하는 쪽이 없다 — 렌더러를 만지는 스레드가 이 스레드 하나다
+            applyPipelineChange( change, request ); // 패킷을 실행하는 쪽이 없다 — 렌더러를 만지는 스레드가 이 스레드 하나다
             return;
         }
-        pRenderThread->enqueueCommand( SW_DELEGATE_LAMBDA( RenderCommandDelegate, [this, change]( IRHIDevice& )
-        { applyPipelineChange( change ); } ) );
+        pRenderThread->enqueueCommand( SW_DELEGATE_LAMBDA( RenderCommandDelegate, [this, change, request]( IRHIDevice& )
+        { applyPipelineChange( change, request ); } ) );
     }
 
-    void FrameRendererSubsystem::applyPipelineChange( const string& change )
+    void FrameRendererSubsystem::applyPipelineChange( const string& change, const RenderPipelineRequest& request )
     {
         // 화면 밖 렌더러는 옛 파이프라인으로 지었고 PSO 캐시를 함께 쓴다 — 내리고 다음 그리기가 새 파이프라인으로 다시 짓는다.
         _offscreenRenderers->shutdown();
-        if ( _frameRenderer->selectPipeline() == false )
+        if ( _frameRenderer->selectPipeline( request ) == false )
             SW_LOG_ERROR_ID( "FrameRenderer.ChangedButPipelineCould", "%# but the pipeline could not be selected - %#", change.c_str(), _frameRenderer->getStatusMessage().c_str() );
         else
             SW_LOG_INFO_ID( "FrameRenderer.ChangedDrawing", "%# - drawing with %#", change.c_str(), _frameRenderer->getPipelinePath().c_str() );

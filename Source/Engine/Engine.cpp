@@ -583,8 +583,6 @@ namespace sw
             // 그리지 않고 진행하는 고정 걸음(`SimulationOnlyFrameQueue` — 시나리오 `<AdvanceSimulation>`)이면 패킷은 짓되 그리지 않는다. 고정 프레임 시간이 없으면 서비스가 거절한다.
             SimulationOnlyFrameQueue* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameQueue>();
             const FrameDrawMode             drawMode        = pSimulationOnly != nullptr ? pSimulationOnly->beginFrame( engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta ) : FrameDrawMode::Draw;
-            // 이번 프레임의 개발 변수(콘솔 · 에디터가 게임 스레드에서 바꾼다)를 렌더 진단 사본으로 — 렌더 스레드 · 기록 워커는 사본만 읽는다(언리얼 콘솔 변수의 렌더 스레드 값).
-            RenderDiagnostics::publish();
             _pRenderDriver->submitFrame( deltaTime, views, sceneViewCameraProvider, drawMode );
         }
     }

@@ -12,6 +12,7 @@
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
+#include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/Scene.h"
 
@@ -95,6 +96,7 @@ namespace sw
                 break;
             }
             _job._packet.resetForFrame();
+            _job._packet._settings = RenderFrameSettings::capture(); // 렌더 스레드는 전역 변수 대신 이 사본을 읽는다
             _scene.fillSceneView( _job._packet, scene, request._view, nullptr );
             _job._packet._sceneKey = _sceneKey;
             _job._bReadNow         = CaptureReadiness::countPendingSceneJobs( scene.getObjectManager() ) == 0;

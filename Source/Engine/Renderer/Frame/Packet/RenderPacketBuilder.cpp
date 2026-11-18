@@ -2,10 +2,14 @@
 
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Scene/Scene.h"
 
@@ -68,6 +72,11 @@ namespace sw
         RenderFramePacket& packet = *_packetScratch;
         packet.resetForFrame();
         packet._bValid = 1;
+        // 렌더 설정 스위치는 여기서 한 번 뜬다(게임 스레드) — 이 패킷을 짓는 쪽(그림자 텍셀 스냅)과 렌더 스레드가 같은 값을 본다.
+        packet._settings = RenderFrameSettings::capture();
+        // 패킷 밖 소비자(텍스처 로드 워커 · 업로드 펌프)의 사본도 같은 자리에서 다시 뜬다.
+        if ( engine::areEngineServicesBound() )
+            engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().refreshQualitySettings();
         return packet;
     }
 
