@@ -98,7 +98,7 @@ namespace sw
         /** @brief 표를 쓰지 않는 처리기(연결 사건만 받는다)의 `getWireVersion` 값입니다. 라우터는 이 처리기의 영역을 상대에게 알리지 않는다. */
         static constexpr uint32 kNoMessageTable = 0;
 
-        /** @brief 맡은 영역의 첫 값입니다(키트는 `NetKitMessageRange::kClientServer` 등). 게임 영역(0x80..)은 16개씩 나눠 여럿이 맡을 수 있습니다. */
+        /** @brief 맡은 영역의 첫 값입니다(키트는 `NetKitMessageRange::kClientServer` 등). 게임 영역(`NetMessageRange::kGame`..)은 16개씩 나눠 여럿이 맡을 수 있습니다. */
         virtual uint8 getMessageRangeBase() const = 0;
         /**
          * @brief 이 처리기가 보내거나 받는 메시지 표의 와이어 판입니다(`NetMessageTable::computeWireVersion`). 표를 쓰지 않으면 `kNoMessageTable` 입니다.
@@ -172,7 +172,7 @@ namespace sw
      *          - 등록과 구독의 해제는 `poll` 를 부르는 스레드에서 한다(구독 목록에 잠금이 없다).
      * @code
      *     _replicationSubscription = router.registerHandler( &replicationServer );
-     *     _gameSubscription        = router.registerHandler( &gameMessages );     // 0x80..0x8F
+     *     _gameSubscription        = router.registerHandler( &gameMessages );     // kGame..kGame + 0x0F
      *     router.poll( host, &listUnhandled );                                    // 매 틱 host.update 뒤
      * @endcode
      */

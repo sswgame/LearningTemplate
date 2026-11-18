@@ -24,8 +24,8 @@ namespace sw
     {
         static constexpr uint8 kSize      = 0x10; ///< 영역 하나의 메시지 수.
         static constexpr uint8 kEngine    = 0x00; ///< 엔진의 게임 세션(`GameNetSession`)이 쓰는 0x00..0x0F. 종류는 Engine 의 `GameNetSessionMessage` 에 있다.
-        static constexpr uint8 kFramework = 0x10; ///< 프레임워크(네트워크 키트)가 쓰는 0x10..0x7F. 키트별 영역은 GameFramework 의 `NetKitMessageRange` 에 있다.
-        static constexpr uint8 kGame      = 0x80; ///< 게임이 쓰는 메시지 0x80..0xFF.
+        static constexpr uint8 kFramework = 0x10; ///< 프레임워크(네트워크 키트)가 쓰는 0x10..0xBF(11 영역). 키트별 영역은 GameFramework 의 `NetKitMessageRange` 에 있다.
+        static constexpr uint8 kGame      = 0xC0; ///< 게임이 쓰는 메시지 0xC0..0xFF(4 영역). 키트 영역이 0x7F 에서 찼다(하우징이 여덟째) — 게임은 영역 하나 · 둘을 쓰고 키트는 계속 늘어 키트 쪽을 넓혔다.
         /**
          * @brief 라우터(`NetMessageRouter`)가 쓰는 종류 하나(엔진 영역의 마지막 0x0F) — 처리기는 맡지 못한다.
          * @details 영역마다 쓰는 메시지 표의 와이어 판(`INetMessageHandler::getWireVersion`)을 상대와 맞춰 보는 알림이다. 몸: 수(varuint) · (영역 8 비트, 판 32 비트) 들.
@@ -46,7 +46,7 @@ namespace sw
      */
     struct NetWireVersion
     {
-        static constexpr uint32 kCore = 10; ///< 10: 라우터가 영역마다 메시지 표의 판을 알리는 종류(`NetMessageRange::kRouterWireVersionKind`)가 생겼다. 9: 엔진 세션 영역에 합성 해시 메시지(`kResourceDigest`, 클라이언트 → 서버)가 생겼다. 8: 엔진 세션 영역에 서버 종료 통지 메시지(`kShutdownNotice`)가 생겼다. 7: 엔진 세션 영역(`NetMessageRange::kEngine`)에 서버 틱 메시지가 생겼다. 6: 데이터 패킷 본문 첫머리에 디버거 대기 1비트(`NetDebugHold`)가 추가됐다.
+        static constexpr uint32 kCore = 11; ///< 11: 게임 영역이 0x80 에서 0xC0 으로 옮겨 키트 영역이 0x10..0xBF 가 됐다. 10: 라우터가 영역마다 메시지 표의 판을 알리는 종류(`NetMessageRange::kRouterWireVersionKind`)가 생겼다. 9: 엔진 세션 영역에 합성 해시 메시지(`kResourceDigest`, 클라이언트 → 서버)가 생겼다. 8: 엔진 세션 영역에 서버 종료 통지 메시지(`kShutdownNotice`)가 생겼다. 7: 엔진 세션 영역(`NetMessageRange::kEngine`)에 서버 틱 메시지가 생겼다. 6: 데이터 패킷 본문 첫머리에 디버거 대기 1비트(`NetDebugHold`)가 추가됐다.
 
         /** @brief 계층별 버전을 값 하나로 섞습니다. FNV-1a 이므로 순서도 결과에 반영됩니다. */
         static constexpr uint32 combine( std::initializer_list<uint32> listVersion )
