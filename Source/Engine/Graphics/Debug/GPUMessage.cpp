@@ -187,20 +187,14 @@ namespace sw
 
     void GPUMessageFormat::unregisterFormat( const GPUMessageFormat* pFormat )
     {
-        GPUMessageInternal::getFormatList().withLock( [&]( RegistrationList<const GPUMessageFormat>& list )
-        {
-            (void)list.remove( pFormat ); // 없는 항목이면 할 일이 없다
-        } );
+        (void)GPUMessageInternal::getFormatList().remove( pFormat ); // 없는 항목이면 할 일이 없다
     }
 
     const GPUMessageFormat* GPUMessageFormat::find( uint32 id )
     {
         utf8 arrName[constant::buffer::kMax16];
         GPUMessageInternal::makeIDName( id, arrName, sizeof( arrName ) );
-        return GPUMessageInternal::getFormatList().withLock( [&]( const RegistrationList<const GPUMessageFormat>& list )
-        {
-            return static_cast<const GPUMessageFormat*>( list.findByName( arrName ) );
-        } );
+        return GPUMessageInternal::getFormatList().findByName( arrName );
     }
 
     uint32 GPUMessageFormat::getRegisteredCount()

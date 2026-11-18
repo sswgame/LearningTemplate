@@ -2,7 +2,6 @@
 
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
 
-#include "Core/Concurrency/mutex.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringUtil.h"
@@ -24,8 +23,8 @@ namespace sw
             static constexpr const utf8* kBareCondition = "zoneValue"; ///< 식의 그냥 이름(`target.FireResist`)을 받는 조건
             static constexpr const utf8* kTargetPrefix  = "target.";   ///< 대상 속성을 읽는 이름의 머리
 
-            /** @brief 등록 목록입니다(함수 정적 — 다른 TU · DLL 의 정적 등록자가 먼저 쓴다). 워커가 읽으므로 고치고 읽을 때 목록의 주인 잠금(`getOwnerMutex`)을 잡는다. */
-            static SW_DEFINE_REGISTRATION_LIST( getRegistrations, const ZoneModuleProcessor, "ZoneModuleRegistry", RegistrationOrder::Insertion, true )
+            /** @brief 등록 목록입니다(함수 정적 — 다른 TU · DLL 의 정적 등록자가 먼저 쓴다). 워커가 읽으므로 자기 잠금을 든 목록이다. */
+            static SW_DEFINE_LOCKED_REGISTRATION_LIST( getRegistrations, const ZoneModuleProcessor, "ZoneModuleRegistry", RegistrationOrder::Insertion, true )
 
                 static const ZoneSample* findSample( const GameplayContext& context )
             {
@@ -222,37 +221,22 @@ namespace sw
 {
     void ZoneModuleRegistry::registerProcessor( const ZoneModuleProcessor* pProcessor )
     {
-        RegistrationList<const ZoneModuleProcessor>& registrations = ZoneModuleInternal::getRegistrations();
-        ScopedLock<mutex>                            lock{ registrations.getOwnerMutex() };
-        (void)registrations.addLogged( pProcessor, "ZoneModule", pProcessor->getKindName() ); // 거절은 공용 오류 로그가 알린다
+        (void)ZoneModuleInternal::getRegistrations().addLogged( pProcessor, "ZoneModule", pProcessor->getKindName() ); // 거절은 공용 오류 로그가 알린다
     }
 
     void ZoneModuleRegistry::unregisterProcessor( const ZoneModuleProcessor* pProcessor )
     {
-        RegistrationList<const ZoneModuleProcessor>& registrations = ZoneModuleInternal::getRegistrations();
-        ScopedLock<mutex>                            lock{ registrations.getOwnerMutex() };
-        (void)registrations.remove( pProcessor ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
+        (void)ZoneModuleInternal::getRegistrations().remove( pProcessor ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
     }
 
     const ZoneModuleProcessor* ZoneModuleRegistry::find( string_view kindName )
     {
-        RegistrationList<const ZoneModuleProcessor>& registrations = ZoneModuleInternal::getRegistrations();
-        ScopedLock<mutex>                            lock{ registrations.getOwnerMutex() };
-        return registrations.findByName( kindName );
+        return ZoneModuleInternal::getRegistrations().findByName( kindName );
     }
 
     string ZoneModuleRegistry::joinNames()
     {
-        RegistrationList<const ZoneModuleProcessor>& registrations = ZoneModuleInternal::getRegistrations();
-        ScopedLock<mutex>                            lock{ registrations.getOwnerMutex() };
-        string                                       joined;
-        for ( uint32 index = 0; index < registrations.getCount(); ++index )
-        {
-            if ( index > 0 )
-                joined += ", ";
-            joined += registrations.getNameAt( index );
-        }
-        return joined;
+        return ZoneModuleInternal::getRegistrations().joinNames();
     }
 
     ZoneModuleRegistrar::ZoneModuleRegistrar( const ZoneModuleProcessor* pProcessor )

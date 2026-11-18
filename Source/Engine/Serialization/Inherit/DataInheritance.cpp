@@ -870,8 +870,7 @@ namespace sw
 
     DataInheritanceSchemaRegistrar::~DataInheritanceSchemaRegistrar()
     {
-        getSchemaRegistrars().withLock( [this]( RegistrationList<const DataInheritanceSchemaRegistrar>& list )
-        { (void)list.remove( this ); } );
+        (void)getSchemaRegistrars().remove( this ); // 올라 있지 않으면 할 일이 없다
     }
 
     DataInheritance::MakeSchemaFunction DataInheritanceSchemaRegistrar::find( string_view rootName )

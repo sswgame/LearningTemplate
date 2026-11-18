@@ -23,8 +23,8 @@ namespace sw
     {
         struct ActionRegistryInternal
         {
-            /** @brief 등록 목록입니다(함수 정적 — 다른 TU · DLL 의 정적 등록자가 먼저 쓴다). 워커가 읽으므로 고치고 읽을 때 목록의 주인 잠금(`getOwnerMutex`)을 잡는다. */
-            static SW_DEFINE_REGISTRATION_LIST( getRegistrations, const ActionEntry, "ActionRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase )
+            /** @brief 등록 목록입니다(함수 정적 — 다른 TU · DLL 의 정적 등록자가 먼저 쓴다). 워커가 읽으므로 자기 잠금을 든 목록이다. */
+            static SW_DEFINE_LOCKED_REGISTRATION_LIST( getRegistrations, const ActionEntry, "ActionRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase )
 
                 /** @brief 글을 이름과 괄호 안으로 나눕니다. 괄호가 틀리면 false 입니다. */
                 [[nodiscard]] static bool splitCall( string_view text, string_view& outName, string_view& outArguments )
@@ -48,16 +48,12 @@ namespace sw
 {
     void ActionRegistry::registerAction( const ActionEntry* pEntry )
     {
-        RegistrationList<const ActionEntry>& registrations = ActionRegistryInternal::getRegistrations();
-        ScopedLock<mutex>                    lock{ registrations.getOwnerMutex() };
-        (void)registrations.addLogged( pEntry, "Game action", pEntry->_pName ); // 거절은 공용 오류 로그가 알린다
+        (void)ActionRegistryInternal::getRegistrations().addLogged( pEntry, "Game action", pEntry->_pName ); // 거절은 공용 오류 로그가 알린다
     }
 
     void ActionRegistry::unregisterAction( const ActionEntry* pEntry )
     {
-        RegistrationList<const ActionEntry>& registrations = ActionRegistryInternal::getRegistrations();
-        ScopedLock<mutex>                    lock{ registrations.getOwnerMutex() };
-        (void)registrations.remove( pEntry ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
+        (void)ActionRegistryInternal::getRegistrations().remove( pEntry ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
     }
 
     uint32 ActionRegistry::getRemovalGeneration()
@@ -67,9 +63,7 @@ namespace sw
 
     bool ActionRegistry::isRegistered( const ActionEntry* pEntry )
     {
-        RegistrationList<const ActionEntry>& registrations = ActionRegistryInternal::getRegistrations();
-        ScopedLock<mutex>                    lock{ registrations.getOwnerMutex() };
-        return registrations.contains( pEntry );
+        return ActionRegistryInternal::getRegistrations().contains( pEntry );
     }
 
     const RegistryEntryOps& ActionRegistry::getEntryOps()
@@ -82,32 +76,17 @@ namespace sw
 
     const ActionEntry* ActionRegistry::find( string_view name )
     {
-        RegistrationList<const ActionEntry>& registrations = ActionRegistryInternal::getRegistrations();
-        ScopedLock<mutex>                    lock{ registrations.getOwnerMutex() };
-        return registrations.findByName( name );
+        return ActionRegistryInternal::getRegistrations().findByName( name );
     }
 
     void ActionRegistry::collectNames( vector<string>& outListName )
     {
-        RegistrationList<const ActionEntry>& registrations = ActionRegistryInternal::getRegistrations();
-        ScopedLock<mutex>                    lock{ registrations.getOwnerMutex() };
-        for ( uint32 index = 0; index < registrations.getCount(); ++index )
-        {
-            outListName.push_back( registrations.getNameAt( index ) );
-        }
+        ActionRegistryInternal::getRegistrations().collectNames( outListName );
     }
 
     string ActionRegistry::joinNames()
     {
-        vector<string> listName;
-        collectNames( listName );
-        string joined;
-        for ( const string& name : listName )
-        {
-            joined += joined.empty() ? "" : ", ";
-            joined += name;
-        }
-        return joined;
+        return ActionRegistryInternal::getRegistrations().joinNames();
     }
 
     ActionRegistrar::ActionRegistrar( const ActionEntry* pEntry )

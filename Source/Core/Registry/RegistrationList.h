@@ -904,6 +904,59 @@ namespace sw
             return function( static_cast<const RegistrationList<T>&>( _list ) );
         }
 
+        // ---- 잠금을 잡고 목록 함수 하나를 부르는 판 ----
+        // 등록 · 해제 · 찾기가 저마다 "잠금 + 목록 호출 하나" 인 표(동작 · 조건 · 존 모듈 · 드라이버)가 람다를 함수마다 적지 않게 한다. 한 잠금 안에서 여러 단계를
+        // 하면 `withLock` 을 쓴다 — `withLock` 의 람다 안에서 이 판을 부르면 같은 잠금을 다시 잡아 멈춘다.
+
+        /** @brief 잠금을 잡고 `RegistrationList::addLogged` 합니다. */
+        RegistrationResult addLogged( T* pItem, const utf8* pWhat, string_view name = {}, int32 order = 0 )
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            return _list.addLogged( pItem, pWhat, name, order );
+        }
+        /** @brief 잠금을 잡고 `RegistrationList::remove` 합니다. */
+        [[nodiscard]] bool remove( const T* pItem )
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            return _list.remove( pItem );
+        }
+        /** @brief 잠금을 잡고 `RegistrationList::contains` 를 봅니다. */
+        bool contains( const T* pItem ) const
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            return _list.contains( pItem );
+        }
+        /** @brief 잠금을 잡고 `RegistrationList::findByName` 합니다. 돌려준 항목의 수명은 등록한 쪽이 지킨다(잠금 밖에서 쓴다). */
+        T* findByName( string_view name ) const
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            return _list.findByName( name );
+        }
+        /** @brief 잠금을 잡고 올라 있는 이름을 순서대로 @p outListName 뒤에 붙입니다(편집기의 고르기 목록). */
+        void collectNames( vector<string>& outListName ) const
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            for ( uint32 index = 0; index < _list.getCount(); ++index )
+            {
+                outListName.push_back( _list.getNameAt( index ) );
+            }
+        }
+        /** @brief 잠금을 잡고 올라 있는 이름을 순서대로 @p separator 로 이은 글입니다(모르는 이름 오류에 보인다). */
+        string joinNames( string_view separator = ", " ) const
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            string            joined;
+            for ( uint32 index = 0; index < _list.getCount(); ++index )
+            {
+                if ( index > 0 )
+                    joined += separator;
+                joined += _list.getNameAt( index );
+            }
+            return joined;
+        }
+        /** @brief `RegistrationList::getRemovalGeneration` 입니다. 잠금 없이 읽는다 — 빠질 때만 오른다. */
+        uint32 getRemovalGeneration() const { return _list.getRemovalGeneration(); }
+
     private:
         mutable mutex       _mutex;
         RegistrationList<T> _list;

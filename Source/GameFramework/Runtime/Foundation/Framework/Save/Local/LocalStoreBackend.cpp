@@ -64,18 +64,12 @@ namespace sw
 
     void LocalStoreBackend::registerBackend( const LocalStoreBackend& backend )
     {
-        getBackends().withLock( [&backend]( RegistrationList<const LocalStoreBackend>& list )
-        {
-            [[maybe_unused]] const RegistrationResult result = list.addLogged( &backend, "Local store backend", backend._pName );
-            SW_ASSERT( result == RegistrationResult::Added );
-        } );
+        [[maybe_unused]] const RegistrationResult result = getBackends().addLogged( &backend, "Local store backend", backend._pName );
+        SW_ASSERT( result == RegistrationResult::Added );
     }
 
     void LocalStoreBackend::unregisterBackend( const LocalStoreBackend& backend )
     {
-        getBackends().withLock( [&backend]( RegistrationList<const LocalStoreBackend>& list )
-        {
-            (void)list.remove( &backend ); // 거절된 등록이면 올라 있지 않다
-        } );
+        (void)getBackends().remove( &backend ); // 거절된 등록이면 올라 있지 않다
     }
 } // namespace sw
