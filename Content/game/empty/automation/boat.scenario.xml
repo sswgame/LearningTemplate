@@ -36,7 +36,7 @@
 	<AdvanceSimulation frames="180"/> <!-- 정속 3 초 동안 곧게 간다(시간이 내용) -->
 	<Expect watch="Boat.ForwardSpeed" target="Rowboat" atLeast="3.5"/>
 	<Expect watch="Boat.ForwardSpeed" target="Rowboat" atMost="6"/>
-	<Expect watch="Object.X" target="Rowboat" near="0" tolerance="1"/>
+	<Expect watch="Object.X" target="Rowboat" near="0" tolerance="2"/> <!-- 약 20 m 가는 동안 파도에 1.59 m 밀린다(실측 2026-11-18, 네 백엔드 같은 값 — 시작 전 게임 시간을 멈춘 뒤) -->
 	<Expect watch="Object.DistanceTo" target="Sailor" key="Rowboat" near="1.06" tolerance="0.3"/>
 
 	<!-- 선회(오른쪽 = +x 쪽) -->

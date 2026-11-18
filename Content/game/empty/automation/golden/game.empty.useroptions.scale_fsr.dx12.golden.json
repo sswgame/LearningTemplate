@@ -1,8 +1,8 @@
 {
     "backend": "dx12",
     "platform": "windows",
-    "commit": "8f39f4d7d1e28cc806813ca51c2ac510587d9cc7-dirty",
-    "recordedUnixMs": 1794951214905,
+    "commit": "4aecf580ef0725c3ba9b42d93793b106cb766762-dirty",
+    "recordedUnixMs": 1794995450752,
     "reason": "failed",
     "width": 160,
     "height": 143,
