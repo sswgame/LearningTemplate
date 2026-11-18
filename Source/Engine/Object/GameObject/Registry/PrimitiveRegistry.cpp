@@ -36,7 +36,37 @@ namespace sw
         pComp->setPrimitiveIndex( slot );
         // 집합 세대만으로 알리면 빌더가 모든 칸을 다시 모은다. 새 칸 하나를 더티로 올려 그 칸만 모으게 한다.
         markSlotDirty( slot );
-        _setGeneration.fetch_add( 1, std::memory_order_relaxed );
+        ++_liveSlotCount;
+        recordMeshSetChange( slot );
+    }
+
+    void PrimitiveRegistry::recordMeshSetChange( uint32 slot )
+    {
+        const uint64 generation = _setGeneration.fetch_add( 1, std::memory_order_relaxed ) + 1u;
+        const size_t ringIndex  = static_cast<size_t>( _meshSetChangeTotal % kMeshSetChangeLogCapacity );
+        if ( _listMeshSetChange.size() < kMeshSetChangeLogCapacity )
+            _listMeshSetChange.push_back( MeshSetChange{ generation, slot } );
+        else
+        {
+            // 가장 오랜 기록을 덮는다 — 그 세대까지는 더 이상 거슬러 갈 수 없다.
+            _meshSetChangeLogStart        = _listMeshSetChange[ringIndex]._generation;
+            _listMeshSetChange[ringIndex] = MeshSetChange{ generation, slot };
+        }
+        ++_meshSetChangeTotal;
+    }
+
+    bool PrimitiveRegistry::collectMeshSetChanges( uint64 sinceGeneration, vector<uint32>& outListSlot ) const
+    {
+        outListSlot.clear();
+        ScopedLock<mutex> lock{ _mutex };
+        if ( sinceGeneration < _meshSetChangeLogStart )
+            return false;
+        for ( const MeshSetChange& change : _listMeshSetChange )
+        {
+            if ( change._generation > sinceGeneration )
+                outListSlot.push_back( change._slot );
+        }
+        return true;
     }
 
     void PrimitiveRegistry::growMeshRegion()
@@ -112,7 +142,8 @@ namespace sw
             markWordBit( _arrDirtyWord.get(), slot );
         }
         pComp->setPrimitiveIndex( ScenePrimitive::kInvalidPrimitiveIndex );
-        _setGeneration.fetch_add( 1, std::memory_order_relaxed );
+        --_liveSlotCount;
+        recordMeshSetChange( slot );
     }
 
     void PrimitiveRegistry::addAssetWaiter( Component* pComponent, AssetWaitFunction pFunction )
@@ -280,6 +311,7 @@ namespace sw
         {
             markSlotDirty( firstSlot + index );
         }
+        _liveSlotCount += count;
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
     }
 
@@ -367,6 +399,7 @@ namespace sw
                 _listInstanceEntry[first + index] = PrimitiveInstanceEntry{};
                 markSlotDirty( meshRegion + first + index );
             }
+            _liveSlotCount -= count;
             freeEntrySpan( first, count );
         }
 

@@ -73,19 +73,44 @@ namespace sw
             }
 
             /**
+             * @brief 프리미티브 집합이 바뀐 뒤의 복셀 격자입니다 — 그 사이 등록 · 해제된 메시 칸만 다시 칠하고(`SceneVoxelizer::updateGrid`), 기록이 모자라면 다시 만듭니다.
+             * @details 가리개가 아니거나 격자 밖인 칸의 변화(움직이는 투사체 스폰 · 소멸, 반투명, 먼 곳)는 격자를 그대로 둔다 — 같은 포인터라 GPU 로 다시 올리지도 않는다.
+             *          칠한 칸이 바뀌면 사본에 칠해 새 포인터로 넣는다(지난 격자는 렌더 스레드가 아직 들 수 있다).
+             */
+            static shared_ptr<const SceneVoxelGrid> refreshVoxelGrid( shared_ptr<const SceneVoxelGrid> pCached, const PrimitiveRegistry& primitives, Material* pSceneDefault,
+                                                                      const LightProbeVolumeComponent& volume, uint64 cacheGeneration, uint64 generation )
+            {
+                vector<uint32> listChangedSlot;
+                if ( primitives.collectMeshSetChanges( cacheGeneration, listChangedSlot ) == false )
+                {
+                    shared_ptr<const SceneVoxelGrid> pRebuilt = make_shared<SceneVoxelGrid>( SceneVoxelizer::makeGrid( primitives, pSceneDefault, volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
+                    volume.setRealtimeVoxelGrid( pRebuilt, generation );
+                    return pRebuilt;
+                }
+                SceneVoxelGrid updated = *pCached;
+                if ( SceneVoxelizer::updateGrid( updated, primitives, pSceneDefault, listChangedSlot ) )
+                    pCached = make_shared<SceneVoxelGrid>( std::move( updated ) );
+                volume.setRealtimeVoxelGrid( pCached, generation );
+                return pCached;
+            }
+
+            /**
              * @brief 실시간 볼륨 하나를 라이트 목록 · 프로브 자리 · 갱신 요청 목록에 넣습니다. 복셀 격자 캐시가 낡았으면(상자 · 칸 크기 · 프리미티브 집합이 바뀜) 여기서 다시 만든다.
              */
             static void appendRealtimeVolume( const Scene& scene, const GameObjectManager& manager, const LightProbeVolumeComponent& volume, vector<GPULight>& inoutList, LightProbeElementBuilder& inoutProbeElement,
                                               vector<RealtimeProbeRequest>& inoutListRequest )
             {
-                const PrimitiveRegistry&         primitives = manager.getPrimitiveRegistry();
-                const uint64                     generation = primitives.getSetGeneration();
-                shared_ptr<const SceneVoxelGrid> pGrid      = volume.findRealtimeVoxelGrid( generation );
+                const PrimitiveRegistry&         primitives      = manager.getPrimitiveRegistry();
+                const uint64                     generation      = primitives.getSetGeneration();
+                uint64                           cacheGeneration = 0;
+                shared_ptr<const SceneVoxelGrid> pGrid           = volume.findRealtimeVoxelGrid( cacheGeneration );
                 if ( pGrid == nullptr )
                 {
                     pGrid = make_shared<SceneVoxelGrid>( SceneVoxelizer::makeGrid( primitives, scene.getMaterial(), volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
                     volume.setRealtimeVoxelGrid( pGrid, generation );
                 }
+                else if ( cacheGeneration != generation )
+                    pGrid = refreshVoxelGrid( std::move( pGrid ), primitives, scene.getMaterial(), volume, cacheGeneration, generation );
                 if ( pGrid->isEmpty() )
                     return; // 상자가 유효하지 않다 — 갱신할 장면이 없다
 

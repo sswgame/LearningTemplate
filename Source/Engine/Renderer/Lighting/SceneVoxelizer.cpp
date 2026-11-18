@@ -62,8 +62,21 @@ namespace sw
                 return float3{ arrColor[0], arrColor[1], arrColor[2] } * strength;
             }
 
-            /** @brief 메시 컴포넌트의 삼각형을 월드로 옮겨 격자에 칠합니다. 발광 머티리얼이면 칸의 발광도 둡니다. */
-            static void voxelizeMesh( const MeshComponent& component, Material* pSceneDefault, SceneVoxelGrid& inoutGrid )
+            /** @brief 칸 하나가 지금 격자에 칠할 가리개면 그 월드 상자를, 아니면(빈 칸 · 가리개 아님 · 격자 밖) 빈 상자를 돌려줍니다. */
+            static AABB findOccluderBox( const ScenePrimitive* pPrimitive, Material* pSceneDefault, const AABB& gridBounds )
+            {
+                // 레지스트리의 실제 타입은 메시 컴포넌트 계열뿐이다(ScenePrimitive.h 의 불변식).
+                const MeshComponent* pMesh = static_cast<const MeshComponent*>( pPrimitive );
+                if ( pMesh == nullptr || isOccluder( *pMesh, pSceneDefault ) == false )
+                    return AABB::empty();
+                AABB worldBox{};
+                if ( pMesh->getWorldBox( worldBox ) == false || worldBox.intersects( gridBounds ) == false )
+                    return AABB::empty();
+                return worldBox;
+            }
+
+            /** @brief 메시 컴포넌트의 삼각형을 월드로 옮겨 격자의 구간 @p clip 에 칠합니다. 발광 머티리얼이면 칸의 발광도 둡니다. */
+            static void voxelizeMesh( const MeshComponent& component, Material* pSceneDefault, const SceneVoxelGrid::CellRange& clip, SceneVoxelGrid& inoutGrid )
             {
                 const Mesh&              mesh     = *component.getRawMesh();
                 const vector<RHIVertex>& vertices = mesh.getCPUView().getVertices();
@@ -89,9 +102,9 @@ namespace sw
                     const float3     worldB = float3::transform( float3{ b._arrPosition[0], b._arrPosition[1], b._arrPosition[2] }, world );
                     const float3     worldC = float3::transform( float3{ c._arrPosition[0], c._arrPosition[1], c._arrPosition[2] }, world );
                     if ( bEmissive )
-                        inoutGrid.voxelizeEmissiveTriangle( worldA, worldB, worldC, emission );
+                        inoutGrid.voxelizeEmissiveTriangle( worldA, worldB, worldC, emission, clip );
                     else
-                        inoutGrid.voxelizeTriangle( worldA, worldB, worldC );
+                        inoutGrid.voxelizeTriangle( worldA, worldB, worldC, clip );
                 }
             }
         };
@@ -103,18 +116,73 @@ namespace sw
         SceneVoxelGrid grid = SceneVoxelGrid::make( bounds, cellSize );
         if ( grid.isEmpty() )
             return grid;
-        const AABB gridBounds = grid.getBounds();
-        for ( const ScenePrimitive* pPrimitive : primitives.getAll() )
+        const AABB                      gridBounds    = grid.getBounds();
+        const SceneVoxelGrid::CellRange fullRange     = grid.getFullRange();
+        const vector<ScenePrimitive*>&  listPrimitive = primitives.getAll();
+        // 칸마다 칠한 상자를 남긴다 — 나중에 그 칸만 다시 칠할 때(`updateGrid`) 사라진 메시가 덮던 곳을 안다.
+        grid._listSourceBox.assign( listPrimitive.size(), AABB::empty() );
+        for ( size_t slot = 0; slot < listPrimitive.size(); ++slot )
         {
-            // 레지스트리의 실제 타입은 메시 컴포넌트 계열뿐이다(ScenePrimitive.h 의 불변식).
-            const MeshComponent* pMesh = static_cast<const MeshComponent*>( pPrimitive );
-            if ( pMesh == nullptr || Internal::isOccluder( *pMesh, pSceneDefault ) == false )
+            const AABB box = Internal::findOccluderBox( listPrimitive[slot], pSceneDefault, gridBounds );
+            if ( box.isValid() == false )
                 continue;
-            AABB worldBox{};
-            if ( pMesh->getWorldBox( worldBox ) == false || worldBox.intersects( gridBounds ) == false )
-                continue;
-            Internal::voxelizeMesh( *pMesh, pSceneDefault, grid );
+            grid._listSourceBox[slot] = box;
+            Internal::voxelizeMesh( *static_cast<const MeshComponent*>( listPrimitive[slot] ), pSceneDefault, fullRange, grid );
         }
         return grid;
+    }
+
+    bool SceneVoxelizer::updateGrid( SceneVoxelGrid& inoutGrid, const PrimitiveRegistry& primitives, Material* pSceneDefault, const vector<uint32>& listChangedSlot )
+    {
+        using Internal = SceneVoxelizerInternal;
+        if ( inoutGrid.isEmpty() )
+            return false;
+        const AABB                     gridBounds    = inoutGrid.getBounds();
+        const vector<ScenePrimitive*>& listPrimitive = primitives.getAll();
+        // 메시 칸 영역이 늘었으면 상자 목록도 늘린다(늘린 칸은 아직 칠하지 않았다).
+        if ( inoutGrid._listSourceBox.size() < listPrimitive.size() )
+            inoutGrid._listSourceBox.resize( listPrimitive.size(), AABB::empty() );
+
+        // 바뀐 칸마다 옛 상자(칠할 때)와 새 상자(지금)를 모은다. 둘 다 비면(가리개가 아니었고 아니다) 격자와 상관없는 변화다.
+        vector<AABB> listDirtyBox;
+        for ( const uint32 slot : listChangedSlot )
+        {
+            if ( slot >= inoutGrid._listSourceBox.size() )
+                continue;
+            const AABB oldBox              = inoutGrid._listSourceBox[slot];
+            const AABB newBox              = Internal::findOccluderBox( slot < listPrimitive.size() ? listPrimitive[slot] : nullptr, pSceneDefault, gridBounds );
+            inoutGrid._listSourceBox[slot] = newBox;
+            if ( oldBox.isValid() )
+                listDirtyBox.push_back( oldBox );
+            if ( newBox.isValid() )
+                listDirtyBox.push_back( newBox );
+        }
+        if ( listDirtyBox.empty() )
+            return false;
+
+        // 구간마다 칸을 끄고, 그 구간에 닿는 가리개(새 칸 포함 — 상자 목록이 이미 지금 값이다)를 구간 안만 다시 칠한다.
+        for ( const AABB& dirtyBox : listDirtyBox )
+        {
+            SceneVoxelGrid::CellRange range{};
+            if ( inoutGrid.findCellRange( dirtyBox, range ) == false )
+                continue;
+            inoutGrid.clearCells( range );
+            // 끈 것은 칸 단위라 상자보다 넓다 — 그 칸들의 상자에 닿는 가리개를 다시 칠해야 가장자리 칸이 비지 않는다.
+            const float32 cellSize = inoutGrid._cellSize;
+            const AABB    rangeBox{
+                inoutGrid._origin + float3{    static_cast<float32>( range._arrFirst[0] ),     static_cast<float32>( range._arrFirst[1] ),     static_cast<float32>( range._arrFirst[2] )}
+                  * cellSize,
+                inoutGrid._origin + float3{static_cast<float32>( range._arrLast[0] + 1u ), static_cast<float32>( range._arrLast[1] + 1u ), static_cast<float32>( range._arrLast[2] + 1u )}
+                  * cellSize
+            };
+            for ( size_t slot = 0; slot < inoutGrid._listSourceBox.size() && slot < listPrimitive.size(); ++slot )
+            {
+                const AABB& sourceBox = inoutGrid._listSourceBox[slot];
+                if ( sourceBox.isValid() == false || sourceBox.intersects( rangeBox ) == false || listPrimitive[slot] == nullptr )
+                    continue;
+                Internal::voxelizeMesh( *static_cast<const MeshComponent*>( listPrimitive[slot] ), pSceneDefault, range, inoutGrid );
+            }
+        }
+        return true;
     }
 } // namespace sw

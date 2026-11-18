@@ -121,6 +121,12 @@ namespace sw
          * @details 늘리기는 두 배씩이라 드물다. 그 밖의 등록 · 해제는 칸을 옮기지 않고 그 칸만 더티로 표시한다.
          */
         uint64 getLayoutGeneration() const { return _layoutGeneration.load( std::memory_order_relaxed ); }
+        /**
+         * @brief 집합 세대 @p sinceGeneration 뒤에 등록 · 해제된 **메시 칸** 번호를 @p outListSlot 에 담습니다(같은 칸이 두 번 올 수 있다). 기록이 그만큼 거슬러 가지 못하면 false 입니다.
+         * @details 집합 전체를 보던 캐시(실시간 프로브의 복셀 격자)가 바뀐 칸만 다시 칠하려고 쓴다. 기록은 고리 `kMeshSetChangeLogCapacity` 개라 오래 안 본 소비자는 false 를 받고 다시 만든다.
+         *          인스턴스 배치 · 정적 여부 바꾸기는 세대만 올리고 기록하지 않는다 — 메시 칸이 아니다(이 기록의 소비자는 메시 칸만 본다).
+         */
+        [[nodiscard]] bool collectMeshSetChanges( uint64 sinceGeneration, vector<uint32>& outListSlot ) const;
         /** @brief 렌더 상태가 바뀐 프리미티브가 하나라도 있으면 true 입니다. */
         bool hasDirty() const;
         /** @brief 더티 표시를 모두 지웁니다. 렌더 스냅샷이 반영을 마친 뒤 부릅니다. */
@@ -156,6 +162,8 @@ namespace sw
         const vector<PrimitiveInstanceEntry>& getInstanceEntries() const { return _listInstanceEntry; }
         /** @brief 프리미티브 번호 공간의 크기입니다(메시 칸 영역 + 인스턴스 항목 목록, 빈 칸 포함). */
         uint32 getSlotCount() const { return static_cast<uint32>( _listPrimitive.size() + _listInstanceEntry.size() ); }
+        /** @brief 살아 있는 칸 수입니다(등록된 메시 + 등록된 배치의 항목 — 빈 칸은 세지 않는다). 디버그 HUD 가 읽습니다. */
+        uint32 getLiveSlotCount() const { return _liveSlotCount; }
         /**
          * @brief 에셋 로드(`AssetHandle`)를 기다리는 컴포넌트를 겁니다(게임 스레드). 이미 걸려 있으면 함수만 바꿉니다.
          * @details 기반에 가상 함수를 더하지 않으려고 함수 포인터로 받는다(파일 머리 `ScenePrimitive.h`). 프리미티브는 `remove` 가 같이 빼고,
@@ -196,6 +204,17 @@ namespace sw
 
         /** @brief 메시 칸 영역의 처음 크기입니다(그 뒤로 두 배씩). 더티 비트 워드 하나(64 칸)와 같다. */
         static constexpr uint32 kInitialMeshSlotCount = 64;
+        /** @brief 메시 칸 등록 · 해제 기록(`collectMeshSetChanges`)의 고리 크기입니다. 한 프레임 스폰 · 소멸 수백 개를 담고 남는다. */
+        static constexpr uint32 kMeshSetChangeLogCapacity = 1024;
+
+        /** @brief 메시 칸 등록 · 해제 기록 하나입니다(그 일로 오른 뒤의 집합 세대와 칸 번호). */
+        struct MeshSetChange
+        {
+            uint64 _generation{ 0 };
+            uint32 _slot{ 0 };
+        };
+        /** @brief 메시 칸 하나의 등록 · 해제를 기록하고 집합 세대를 올립니다(`_mutex` 를 쥔 채). */
+        void recordMeshSetChange( uint32 slot ) SW_REQUIRES_LOCK( _mutex );
 
         /** @brief 비어 있는 인스턴스 항목 구간 하나입니다(`_listFreeEntrySpan`). */
         struct EntrySpan
@@ -263,8 +282,12 @@ namespace sw
          */
         atomic<uint8> _bAnyDirty{ 0 };
         /// @brief add 와 remove(구조 변경)만 보호합니다. 더티 표시는 이 잠금을 쓰지 않습니다.
-        mutable mutex  _mutex;
-        atomic<uint64> _setGeneration{ 1 };
-        atomic<uint64> _layoutGeneration{ 1 }; ///< 칸 번호가 밀린 횟수(`getLayoutGeneration`)
+        mutable mutex                            _mutex;
+        atomic<uint64>                           _setGeneration{ 1 };
+        atomic<uint64>                           _layoutGeneration{ 1 };       ///< 칸 번호가 밀린 횟수(`getLayoutGeneration`)
+        uint32                                   _liveSlotCount{ 0 };          ///< 살아 있는 칸 수(`getLiveSlotCount`). 등록 · 해제가 잠금 안에서 고친다
+        vector<MeshSetChange> _listMeshSetChange SW_GUARDED_BY( _mutex );      ///< 메시 칸 등록 · 해제 고리(`kMeshSetChangeLogCapacity` 개까지 자란 뒤 덮어쓴다)
+        uint64 _meshSetChangeTotal               SW_GUARDED_BY( _mutex ){ 0 }; ///< 지금까지 기록한 수(고리의 다음 자리 = 이 값 % 용량)
+        uint64 _meshSetChangeLogStart            SW_GUARDED_BY( _mutex ){ 0 }; ///< 이 세대 뒤의 메시 칸 변경은 모두 고리에 있다(덮어쓴 기록의 세대)
     };
 } // namespace sw
