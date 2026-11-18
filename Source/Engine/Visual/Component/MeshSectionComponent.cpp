@@ -34,6 +34,12 @@ namespace sw
         return pSource != nullptr ? pSource->getSkinSlot() : constant::invalid_index::kUint32;
     }
 
+    float32 MeshSectionComponent::getBoundsRadius() const
+    {
+        const MeshComponent* pSource = findSourceMeshComponent();
+        return pSource != nullptr ? pSource->getBoundsRadius() : MeshComponent::getBoundsRadius();
+    }
+
     void MeshSectionComponent::followSourceMesh()
     {
         const MeshComponent* pSource = findSourceMeshComponent();
