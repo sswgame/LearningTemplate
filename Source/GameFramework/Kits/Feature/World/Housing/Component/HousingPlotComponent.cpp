@@ -14,12 +14,14 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Kits/Feature/World/Housing/Net/HousingNetSessionComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
@@ -377,8 +379,12 @@ namespace sw
         , _ghostCandidate{}
         , _ghostCheck{}
         , _ghost{}
+        , _listOutgoingEdit{}
         , _viewRevision{ 0 }
+        , _pendingRequestCount{ 0 }
         , _lastResult{ HousingPlaceResult::Ok }
+        , _replicatedOwner{ HousingPlotOwner::None }
+        , _netRole{ HousingNetRole::Standalone }
         , _bGhostShown{ SW_FALSE }
         , _bGhostDirty{ SW_FALSE }
         , _reserved{ 0 }
@@ -402,6 +408,23 @@ namespace sw
         }
         if ( acquireRequired( _partCatalog.path(), _pCatalog ) == false )
             return false;
+        // 네트워크 월드면 같은 씬의 세션이 요청 · 방송을 맡는다 — 없으면 클라이언트 편집이 어디에도 가지 않고 서버 편집이 방송되지 않는다(조용히 혼자 돌지 않는다).
+        const SceneNetLink* pLink = SceneNetLink::findFor( *this );
+        _netRole                  = HousingNetRole::Standalone;
+        if ( pLink != nullptr && pLink->isBound() )
+        {
+            const GameObjectManager* pManager = getObjectManager();
+            if ( pManager == nullptr || pManager->getComponentRegistry().getAll<HousingNetSessionComponent>().empty() )
+            {
+                SW_LOG_ERROR_ID( "HousingPlot.NetSessionMissing", "Housing plot '%#': this world is networked but the scene has no HousingNetSessionComponent - the plot cannot open",
+                                 _settings._plotID.c_str() );
+                return false;
+            }
+            _netRole = pLink->get()._role == NetLinkRole::Server ? HousingNetRole::Server : HousingNetRole::Client;
+        }
+        _listOutgoingEdit.clear();
+        _pendingRequestCount = 0;
+        _replicatedOwner     = HousingPlotOwner::None;
         _layout.initialize( _settings, *_pCatalog );
         _layout.bindWallet( &_wallet );
         // 판 상태(같은 오브젝트의 SessionStateComponent)가 있으면 그 공유 땅에서 부지를 차지한다 — 밭 · 도시 · 전장 키트와 한 맵의 칸을 나눈다.
@@ -476,6 +499,11 @@ namespace sw
 
     bool HousingPlotComponent::loadFromFile( string_view absolutePath )
     {
+        if ( _netRole == HousingNetRole::Client )
+        {
+            SW_LOG_ERROR_ID( "HousingPlot.LoadOnClient", "Housing plot '%#': a network client cannot load a layout - the server owns the plot state", _settings._plotID.c_str() );
+            return false;
+        }
         vector<uint8> bytes;
         if ( FileUtil::readFile( absolutePath, bytes ) == false )
         {
@@ -571,29 +599,125 @@ namespace sw
         return result;
     }
 
+    bool HousingPlotComponent::queueRemoteEdit( const HousingEditRequest& request, HousingPlaceResult& outResult )
+    {
+        if ( _netRole != HousingNetRole::Client )
+            return false;
+        _listOutgoingEdit.push_back( request );
+        ++_pendingRequestCount;
+        _lastResult = HousingPlaceResult::Pending;
+        outResult   = HousingPlaceResult::Pending;
+        return true;
+    }
+
     HousingPlaceResult HousingPlotComponent::place( const HousingCandidate& candidate, uint32& outPlacementID )
     {
+        outPlacementID = 0;
+        HousingEditRequest request;
+        request._op               = HousingEditOp::Place;
+        request._candidate        = candidate;
+        HousingPlaceResult result = HousingPlaceResult::Ok;
+        if ( queueRemoteEdit( request, result ) )
+            return result; // 새 id 는 서버가 정한다 — 방송된 상태로 온다
         return finishEdit( _layout.place( candidate, outPlacementID ) );
     }
 
     HousingPlaceResult HousingPlotComponent::remove( uint32 placementID )
     {
+        HousingEditRequest request;
+        request._op               = HousingEditOp::Remove;
+        request._placementID      = placementID;
+        HousingPlaceResult result = HousingPlaceResult::Ok;
+        if ( queueRemoteEdit( request, result ) )
+            return result;
         return finishEdit( _layout.remove( placementID ) );
     }
 
     HousingPlaceResult HousingPlotComponent::move( uint32 placementID, const HousingTransform& rawTransform, HousingPlacementMode mode )
     {
+        HousingEditRequest request;
+        request._op                   = HousingEditOp::Move;
+        request._placementID          = placementID;
+        request._candidate._transform = rawTransform;
+        request._candidate._mode      = mode;
+        HousingPlaceResult result     = HousingPlaceResult::Ok;
+        if ( queueRemoteEdit( request, result ) )
+            return result;
         return finishEdit( _layout.move( placementID, rawTransform, mode ) );
     }
 
     HousingPlaceResult HousingPlotComponent::undo()
     {
+        HousingEditRequest request;
+        request._op               = HousingEditOp::Undo;
+        HousingPlaceResult result = HousingPlaceResult::Ok;
+        if ( queueRemoteEdit( request, result ) )
+            return result;
         return finishEdit( _layout.undo() );
     }
 
     HousingPlaceResult HousingPlotComponent::redo()
     {
+        HousingEditRequest request;
+        request._op               = HousingEditOp::Redo;
+        HousingPlaceResult result = HousingPlaceResult::Ok;
+        if ( queueRemoteEdit( request, result ) )
+            return result;
         return finishEdit( _layout.redo() );
+    }
+
+    HousingPlaceResult HousingPlotComponent::claim()
+    {
+        HousingEditRequest request;
+        request._op               = HousingEditOp::Claim;
+        HousingPlaceResult result = HousingPlaceResult::Ok;
+        if ( queueRemoteEdit( request, result ) )
+            return result;
+        _lastResult = _netRole == HousingNetRole::Standalone ? HousingPlaceResult::Ok : HousingPlaceResult::NotOwner;
+        return _lastResult;
+    }
+
+    bool HousingPlotComponent::isOwnedLocally() const
+    {
+        switch ( _netRole )
+        {
+            case HousingNetRole::Standalone:
+                return true;
+            case HousingNetRole::Client:
+                return _replicatedOwner == HousingPlotOwner::Self;
+            case HousingNetRole::Server:
+                return false; // 서버 월드에는 플레이어가 없다 — 주인은 연결이다
+        }
+        return false;
+    }
+
+    // ------------------------------------------------------------------------------
+    // 네트워크 세션(틱 뒤 게임 스레드)
+    // ------------------------------------------------------------------------------
+    HousingNetPlotRef HousingPlotComponent::makeNetPlot()
+    {
+        HousingNetPlotRef plot;
+        plot._pLayout = &_layout;
+        plot._pWallet = &_wallet;
+        plot._origin  = getPlotOrigin();
+        return plot;
+    }
+
+    void HousingPlotComponent::takeOutgoingEdits( vector<HousingEditRequest>& outListRequest )
+    {
+        outListRequest.insert( outListRequest.end(), _listOutgoingEdit.begin(), _listOutgoingEdit.end() );
+        _listOutgoingEdit.clear();
+    }
+
+    void HousingPlotComponent::receiveNetReply( HousingPlaceResult result )
+    {
+        _pendingRequestCount = _pendingRequestCount > 0 ? _pendingRequestCount - 1 : 0;
+        (void)finishEdit( result );
+    }
+
+    void HousingPlotComponent::abandonNetRequest()
+    {
+        _pendingRequestCount = _pendingRequestCount > 0 ? _pendingRequestCount - 1 : 0;
     }
 
     // ------------------------------------------------------------------------------

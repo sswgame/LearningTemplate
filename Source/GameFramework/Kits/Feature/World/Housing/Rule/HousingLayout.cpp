@@ -167,6 +167,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 스냅과 검증
     // ------------------------------------------------------------------------------
+    void HousingLayout::clearHistory()
+    {
+        _listEdit.clear();
+        _editCursor = 0;
+    }
+
     HousingPlaceCheck HousingLayout::snap( const HousingPartDef& part, const HousingCandidate& candidate, uint32 ignoreID ) const
     {
         using Internal = HousingLayoutInternal;

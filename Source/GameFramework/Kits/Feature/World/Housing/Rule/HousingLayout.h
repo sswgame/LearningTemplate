@@ -49,7 +49,12 @@ namespace sw
         NotEnoughFunds,
         NoWallet,
         NothingToUndo,
-        NothingToRedo
+        NothingToRedo,
+        UnknownPlot, ///< 네트워크: 서버에 그 id 의 부지가 없다
+        NotOwner,    ///< 네트워크: 요청한 연결이 부지의 주인이 아니다(남의 부지 · 주인 없는 부지) — 차지 요청이면 이미 주인이 있다
+        OutOfReach,  ///< 네트워크: 서버가 아는 요청자 자리에서 부지의 `_maxReach` 보다 멀다
+        RateLimited, ///< 네트워크: 연결의 틱당 요청 상한을 넘었다 — 판정하지 않았다
+        Pending      ///< 네트워크 클라이언트: 요청을 보냈고 서버의 답을 기다린다(아무것도 바뀌지 않았다)
     };
 
     /** @brief 부지 안의 변환입니다. 자리는 부지 원점 기준 XZ(m, 점유 칸의 가운데), 층은 0 부터, 요는 라디안(0 ~ 2π)입니다. */
@@ -114,6 +119,8 @@ namespace sw
         int32 _historyLimit{ 64 }; ///< 되돌릴 수 있는 편집 수
         PROPERTY()
         bool _bFreePlacement{ false }; ///< 자유 배치를 허락한다(부품도 허락해야 한다)
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _maxReach{ 0.0f }; ///< 네트워크: 서버가 아는 요청자 자리에서 편집할 자리까지의 XZ 거리 상한. 0 은 거리 제한이 없는 건축 모드(심즈 · 하우징 화면)다
     };
 } // namespace sw
 
@@ -162,6 +169,8 @@ namespace sw
         HousingPlaceResult move( uint32 placementID, const HousingTransform& rawTransform, HousingPlacementMode mode );
         HousingPlaceResult undo();
         HousingPlaceResult redo();
+        /** @brief 되돌리기 이력을 비웁니다. 부지의 주인이 바뀌면 앞 주인의 편집을 되돌리지 못하게 한다. */
+        void clearHistory();
 
         bool                            canUndo() const { return _editCursor > 0; }
         bool                            canRedo() const { return _editCursor < _listEdit.size(); }

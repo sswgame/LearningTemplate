@@ -64,6 +64,8 @@ namespace sw::editor
         /** @brief 뷰포트를 놓고 하니스를 내립니다(씬은 하니스가 공급자에 돌려준다). 돌고 있지 않으면 아무것도 하지 않습니다. */
         void stop();
         bool isRunning() const { return _pHarness != nullptr; }
+        /** @brief 돌고 있는 세션에 클라이언트 하나를 늦게 붙입니다(시작 설정의 회선 조건). 그 월드 번호이고, 돌지 않거나 `kMaxClients` 에 닿았거나 월드가 서지 못하면 그 이유입니다. */
+        [[nodiscard]] expected<int32> addClient();
 
         /** @brief 프레임 시간 @p frameSeconds 를 모아 고정 스텝을 진행합니다. 진행한 스텝 수를 돌려줍니다. */
         uint32 update( float64 frameSeconds );
@@ -92,5 +94,6 @@ namespace sw::editor
         unique_ptr<NetSimHarness>            _pHarness;
         vector<WorldView>                    _listView;
         NetSimStepPacer                      _stepPacer;
+        NetSimLinkConditions                 _conditions; ///< 시작 설정의 회선 조건 — 늦게 붙는 클라이언트도 같은 회선이다
     };
 } // namespace sw::editor

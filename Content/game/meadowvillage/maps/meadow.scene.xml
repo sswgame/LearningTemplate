@@ -56,6 +56,14 @@
 		<entity id="3" name="VillageState">
 			<GameObject _schemaVersion="0" _name="VillageState" _bActive="true">
 				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="0,0,-7"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
 					<SessionStateComponent _componentName="SessionStateComponent" _bActive="true" />
 					<MeadowFarmGameModeComponent _componentName="MeadowFarmGameModeComponent"
 					                             _bActive="true"
@@ -72,6 +80,32 @@
 							<MeadowTownView _id="sprout" _prefab="game/meadowvillage/prefabs/sprout.prefab.xml" />
 						</_listCreatureView>
 					</MeadowTownGameModeComponent>
+					<HousingPlotComponent _componentName="HousingPlotComponent"
+					                      _bActive="true"
+					                      _bAutoPlay="false"
+					                      _partCatalog="game/meadowvillage/data/housingparts.xml"
+					                      _startingFunds="200"
+					                      _ghostPlaceablePrefab="game/meadowvillage/prefabs/housing/ghost_placeable.prefab.xml"
+					                      _ghostBlockedPrefab="game/meadowvillage/prefabs/housing/ghost_blocked.prefab.xml">
+						<_settings _plotID="meadow_home" _sizeX="6" _sizeZ="6" _levelCount="2" _historyLimit="64" _bFreePlacement="false" _maxReach="0" />
+					</HousingPlotComponent>
+					<MeadowHomeGameModeComponent _componentName="MeadowHomeGameModeComponent"
+					                             _bActive="true"
+					                             _bAutoPlay="false"
+					                             _stepInterval="0.25">
+						<_listStep>
+							<MeadowBuildStep _partID="floor" _position="0.5,0.5" _level="0" _yawDegrees="0" />
+							<MeadowBuildStep _partID="floor" _position="1.5,0.5" _level="0" _yawDegrees="0" />
+							<MeadowBuildStep _partID="floor" _position="2.5,0.5" _level="0" _yawDegrees="0" />
+							<MeadowBuildStep _partID="floor" _position="0.5,1.5" _level="0" _yawDegrees="0" />
+							<MeadowBuildStep _partID="floor" _position="1.5,1.5" _level="0" _yawDegrees="0" />
+							<MeadowBuildStep _partID="floor" _position="2.5,1.5" _level="0" _yawDegrees="0" />
+							<MeadowBuildStep _partID="wall" _position="0.5,1.5" _level="0" _yawDegrees="0" />
+							<MeadowBuildStep _partID="door" _position="1.3,1.6" _level="0" _yawDegrees="0" />
+							<MeadowBuildStep _partID="table" _position="2,0.5" _level="0" _yawDegrees="0" />
+						</_listStep>
+					</MeadowHomeGameModeComponent>
+					<HousingNetSessionComponent _componentName="HousingNetSessionComponent" _bActive="true" _maxRequestsPerTick="8" />
 				</_listComponent>
 			</GameObject>
 		</entity>

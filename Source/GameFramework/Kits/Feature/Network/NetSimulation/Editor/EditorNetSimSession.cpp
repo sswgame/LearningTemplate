@@ -22,6 +22,7 @@ namespace sw::editor
         , _pHarness{}
         , _listView{}
         , _stepPacer{}
+        , _conditions{}
     {
     }
 
@@ -53,6 +54,7 @@ namespace sw::editor
             stop();
             return unexpected( Error{ ErrorKind::ExternalFailure, "the game created nothing", settings._gameName } );
         }
+        _conditions          = settings._conditions;
         NetSimConfig config  = settings._harness;
         config._pSceneSource = _pSceneSource.get();
         _pHarness            = make_unique<NetSimHarness>();
@@ -74,6 +76,22 @@ namespace sw::editor
         }
         SW_LOG_INFO_ID( "NetSim.PlayStarted", "In-process play started: %# with %# client(s)", settings._gameName, settings._clientCount );
         return {};
+    }
+
+    expected<int32> EditorNetSimSession::addClient()
+    {
+        if ( _pHarness == nullptr )
+            return unexpected( Error{ ErrorKind::Unsupported, "no in-process play session is running" } );
+        if ( _pHarness->getClientCount() >= kMaxClients )
+        {
+            StringBuilder<constant::buffer::kMax128> detailBuilder;
+            detailBuilder.appendFormat( "%# clients", kMaxClients );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the session already has the most clients", detailBuilder.view() } );
+        }
+        const expected<int32> client = _pHarness->addClient( _conditions );
+        if ( client.has_value() )
+            SW_LOG_INFO_ID( "NetSim.LateClientJoined", "In-process play: client world %# joined late", *client );
+        return client;
     }
 
     void EditorNetSimSession::stop()

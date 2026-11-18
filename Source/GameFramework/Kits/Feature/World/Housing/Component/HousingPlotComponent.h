@@ -3,7 +3,9 @@
  * @brief 부지 하나를 씬에 둡니다 — 배치 규칙(`HousingLayout`)과 지갑을 들고, 배치마다 부품 프리팹을, 미리보기마다 고스트 상자를 세웁니다.
  * @details 부지 원점은 이 오브젝트의 월드 자리(축 정렬)이고 칸은 +X · +Z 로 뻗는다. 상태(배치 · 지갑)는 `GameModeComponent` 의 상태 바이트로 세이브 · 핫 리로드를 넘고,
  *          세운 프리팹은 상태에서 다시 세우는 뷰라 저장 전에 걷는다(`StatefulComponentRegistrar` — 게임마다 등록하지 않는다).
- *          인게임 건축 모드(입력 · 카메라)는 게임이 이 API(`previewPlacement` · `place` · `undo` …)를 부르는 쪽이다. 에디터 저작은 맵 검사(`REFLECT( Validate )`)로 부지 경계와
+ *          인게임 건축 모드(입력 · 카메라)는 게임이 이 API(`previewPlacement` · `place` · `undo` …)를 부르는 쪽이다.
+ *          네트워크 월드(씬 넷 링크가 올라 있다)에서는 같은 씬의 `HousingNetSessionComponent` 가 필요하다 — 클라이언트의 편집은 요청으로 줄에 쌓이고(`Pending`)
+ *          세션이 서버에 보내 판정을 받으며, 레이아웃 · 지갑은 서버가 방송한 상태로만 바뀐다(`HousingReplication.h`). 서버 월드의 편집은 그대로 적용되고 방송된다. 에디터 저작은 맵 검사(`REFLECT( Validate )`)로 부지 경계와
  *          카탈로그의 스냅 지점을 본다 — 언리얼 Map Check · 유니티 `OnValidate` 자리.
  */
 #pragma once
@@ -19,14 +21,24 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/World/Housing/Net/HousingReplication.h"
 #include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 namespace sw
 {
+    class HousingNetSessionComponent;
     class PrefabAsset;
     class ValidationContext;
+
+    /** @brief 부지가 놓인 월드의 역할입니다. 시작할 때 씬 넷 링크로 정한다. */
+    enum class HousingNetRole : uint8
+    {
+        Standalone = 0, ///< 네트워크 없음 — 편집을 바로 적용한다
+        Server,         ///< 권위 — 편집을 바로 적용하고 세션이 방송한다
+        Client          ///< 편집은 요청이고 상태는 서버가 보낸다
+    };
 
     /**
      * @class HousingPlotComponent
@@ -38,6 +50,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        friend class HousingNetSessionComponent; ///< 세션이 틱 뒤에 요청을 꺼내 보내고 판정 · 주인을 돌려준다
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "HPLT" );
         static constexpr uint32 kStateVersion = 1;
@@ -54,6 +67,13 @@ namespace sw
         HousingPlaceResult move( uint32 placementID, const HousingTransform& rawTransform, HousingPlacementMode mode );
         HousingPlaceResult undo();
         HousingPlaceResult redo();
+        /** @brief 부지를 차지합니다. 네트워크가 없으면 늘 내 것이라 `Ok`, 클라이언트는 서버에 요청하고 `Pending`, 서버 월드는 사람이 없어 `NotOwner` 입니다. */
+        HousingPlaceResult claim();
+        /** @brief 이 월드의 플레이어가 편집할 수 있는 부지면 true 입니다(네트워크 없음, 또는 서버가 내 것이라고 보낸 부지). */
+        bool isOwnedLocally() const;
+        /** @brief 답을 기다리는 요청 수입니다(클라이언트). */
+        uint32         getPendingRequestCount() const { return _pendingRequestCount; }
+        HousingNetRole getNetRole() const { return _netRole; }
         /** @brief 월드 자리를 부지 기준 XZ 로 바꿉니다. */
         float2 computeLocalPosition( const float3& worldPosition ) const;
 
@@ -104,6 +124,17 @@ namespace sw
 
         /** @brief 결과를 남기고 뷰 맞추기를 잡습니다. */
         HousingPlaceResult finishEdit( HousingPlaceResult result );
+        /** @brief 클라이언트면 요청을 줄에 쌓고 `Pending` 을 @p outResult 에 둔 뒤 true 입니다. 클라이언트가 아니면 false(바로 적용한다). */
+        [[nodiscard]] bool queueRemoteEdit( const HousingEditRequest& request, HousingPlaceResult& outResult );
+        // ---- 세션(`HousingNetSessionComponent`)이 틱 뒤 게임 스레드에서 부른다 ----
+        HousingNetPlotRef makeNetPlot();
+        /** @brief 쌓인 요청을 @p outListRequest 로 옮깁니다. */
+        void takeOutgoingEdits( vector<HousingEditRequest>& outListRequest );
+        /** @brief 서버의 판정 하나를 받습니다(마지막 결과 · 고스트를 맞춘다). */
+        void receiveNetReply( HousingPlaceResult result );
+        /** @brief 보내지 못한 요청 하나를 잊습니다(연결이 닫혔다). */
+        void abandonNetRequest();
+        void setReplicatedOwner( HousingPlotOwner owner ) { _replicatedOwner = owner; }
         /** @brief 오브젝트 루트를 부지 변환(자리 · 요)에 둡니다. */
         void   placeObject( GameObject& object, const HousingTransform& transform ) const;
         void   syncPartViews( GameObjectManager& manager );
@@ -133,8 +164,12 @@ namespace sw
         HousingCandidate                   _ghostCandidate;
         HousingPlaceCheck                  _ghostCheck;
         GameObjectHandle                   _ghost;
-        uint32                             _viewRevision; ///< 뷰가 맞춘 레이아웃 판
+        vector<HousingEditRequest>         _listOutgoingEdit;    ///< 클라이언트 — 세션이 다음 틱 뒤에 보낼 요청
+        uint32                             _viewRevision;        ///< 뷰가 맞춘 레이아웃 판
+        uint32                             _pendingRequestCount; ///< 클라이언트 — 보냈거나 쌓였고 아직 답이 없는 요청
         HousingPlaceResult                 _lastResult;
+        HousingPlotOwner                   _replicatedOwner; ///< 클라이언트 — 서버가 마지막으로 보낸 주인
+        HousingNetRole                     _netRole;
         uint8                              _bGhostShown : 1; ///< 미리보기를 켰다
         uint8                              _bGhostDirty : 1; ///< 고스트를 다시 세울 차례다
         uint8                              _reserved    : 6;

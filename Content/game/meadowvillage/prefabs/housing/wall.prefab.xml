@@ -1,0 +1,22 @@
+<?asset guid="f8adfc981c7d4f1685787330ecaaf965"?>
+<Prefab formatVersion="1" name="HousingWall">
+	<GameObject _schemaVersion="0" _name="HousingWall" _bActive="true">
+		<_listComponent>
+			<SceneComponent _localPosition="0,0,0"
+			                _localRotation="0,0,0"
+			                _localScale="1,1,1"
+			                _attachOwner="None"
+			                _attachComponent="None" />
+			<MeshComponent _localPosition="0,1.5,0"
+			               _localRotation="0,0,0"
+			               _localScale="1,2.8,0.2"
+			               _attachOwner="None"
+			               _attachComponent="SceneComponent#0"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/prototypegrid_dark.material"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>
