@@ -47,6 +47,17 @@ namespace sw
         SceneComponent::onEndPlay();
     }
 
+    void AudioEmitterComponent::onOwnerActiveInHierarchyChanged()
+    {
+        SceneComponent::onOwnerActiveInHierarchyChanged();
+        if ( hasBegunPlay() == false || isPendingDestroy() )
+            return;
+        if ( isActive() == false )
+            stopAll( 0.0f );
+        else if ( _bPlayOnBeginPlay && _event.empty() == false )
+            (void)post( _event );
+    }
+
     AudioEngine* AudioEmitterComponent::findAudioEngine() const
     {
         const GameObject* pOwner = getOwner();
