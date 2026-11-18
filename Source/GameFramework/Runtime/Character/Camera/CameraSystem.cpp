@@ -7,6 +7,7 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/FrameSystemUtil.h"
 
 namespace sw
 {
@@ -17,21 +18,12 @@ namespace sw
 
     CameraSystem* CameraSystem::find( const GameObjectManager& manager )
     {
-        // 이 키로는 이 타입만 붙인다(`findOrCreate`).
-        return static_cast<CameraSystem*>( manager.findFrameSystem( hashed_string( kFrameSystemKey ) ) );
+        return FrameSystemUtil::find<CameraSystem>( manager );
     }
 
     CameraSystem& CameraSystem::findOrCreate( GameObjectManager& manager )
     {
-        CameraSystem* pSystem = find( manager );
-        if ( pSystem != nullptr )
-            return *pSystem;
-        unique_ptr<CameraSystem> system = make_unique<CameraSystem>();
-        pSystem                         = system.get();
-        const bool bAdded               = manager.addFrameSystem( hashed_string( kFrameSystemKey ), std::move( system ) );
-        SW_ASSERT( bAdded ); // 같은 키가 없음을 바로 위에서 보았고, 씬 데이터를 건드리지 않는다고 선언해 접근 충돌도 없다
-        (void)bAdded;
-        return *pSystem;
+        return FrameSystemUtil::findOrCreate<CameraSystem>( manager );
     }
 
     void CameraSystem::releaseIfUnused( GameObjectManager& manager )
@@ -39,7 +31,7 @@ namespace sw
         // 모듈을 내리면 컴포넌트가 먼저 지워진다 — 마지막 카메라 컴포넌트가 떠날 때 떼므로 매니저에 이 타입이 남지 않는다(`ISceneFrameSystem` 의 약속).
         const ComponentRegistry& registry = manager.getComponentRegistry();
         if ( registry.getAll<CameraDirectorComponent>().empty() && registry.getAll<CameraManagerComponent>().empty() )
-            manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
+            FrameSystemUtil::remove<CameraSystem>( manager );
     }
 
     void CameraSystem::runMain( GameObjectManager& manager, float32 /*deltaTime*/ )
