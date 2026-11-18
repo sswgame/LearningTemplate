@@ -273,7 +273,13 @@ namespace sw::editor
          *          대상은 id 로 된 값이라(`EditorCommandTarget`) 프레임을 넘겨도 된다. 게임 스레드(콘솔 `editor <id>` · 자동화)는 `execute` 로 바로 실행한다.
          */
         bool request( string_view commandID, const EditorCommandTarget& target );
-        /** @brief 게임 스레드 쪽 — `request` 가 넘긴 씬 편집 명령을 요청한 순서대로 실행합니다(게임 단계가 부른다). */
+        /**
+         * @brief UI 쪽 — 명령 표에 없는 씬 편집(계층 끌어 놓기 · 이름 칸 확정 · 만들기 · 컴포넌트 더하기)을 게임 스레드에 넘깁니다. `request` 의 씬 명령과 같은 줄에 요청 순서대로 선다.
+         * @details @p edit 는 거래 구간(`EditorTransaction`) 하나를 받아 씬을 바꾼다. **값만 붙잡는다** — 오브젝트는 id 로, 이름 · 경로는 문자열 사본으로(포인터 · 참조를 붙잡으면 실행 프레임에 낡는다).
+         *          실행할 때 대상이 사라졌으면 아무것도 하지 않아야 한다. 언리얼 Slate 가 게임 스레드에 넘기는 편집과 같은 자리다.
+         */
+        void requestSceneEdit( const Delegate<void( EditorTransaction& )>& edit );
+        /** @brief 게임 스레드 쪽 — `request` · `requestSceneEdit` 가 넘긴 씬 편집을 요청한 순서대로 실행합니다(게임 단계가 부른다). */
         void runRequestedSceneCommands();
         /**
          * @brief @p kind 맥락 메뉴에 놓인 커맨드를 `_contextMenuOrder` 순서로 @p outListItem 에 담습니다. 구분선 규칙은 메뉴바와 같습니다.
@@ -309,8 +315,9 @@ namespace sw::editor
         /** @brief `request` 가 게임 스레드에 넘긴 명령 하나입니다. */
         struct RequestedCommand
         {
-            string              _commandID;
-            EditorCommandTarget _target;
+            string                               _commandID; ///< 비어 있으면 `_edit` 를 실행한다
+            EditorCommandTarget                  _target;
+            Delegate<void( EditorTransaction& )> _edit; ///< `requestSceneEdit` 의 편집(값만 붙잡는다)
         };
 
         vector<EditorCommandDesc>               _listCommand;
