@@ -417,6 +417,17 @@ namespace sw::editor
         return pParent->removeChild( pParent->getChild( index ) ).release(); // 되돌리기 기록이 미리보기 트리보다 오래 맡는다(편집은 이벤트 전달 밖이다)
     }
 
+    uint64 UIPreviewLogic::measureWidgetBytes( const Widget& widget )
+    {
+        const TypeInfo* pType = widget.getTypeInfo();
+        uint64          bytes = pType != nullptr ? static_cast<uint64>( pType->_size ) : uint64{ sizeof( Widget ) };
+        for ( const unique_ptr<Widget>& pChild : widget.getChildren() )
+        {
+            bytes += measureWidgetBytes( *pChild );
+        }
+        return bytes;
+    }
+
     Widget* UIPreviewLogic::attachWidget( WidgetTree& tree, unique_ptr<Widget> widget, uint32 parentOrdinal, uint32 index )
     {
         PanelWidget* pParent = findPanelByOrdinal( tree, parentOrdinal );

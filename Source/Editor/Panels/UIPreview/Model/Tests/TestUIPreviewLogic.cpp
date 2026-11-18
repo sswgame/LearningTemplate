@@ -166,6 +166,20 @@ SW_TEST_CASE( UIPreviewLogicTest, DetachAndAttachMoveAWidget )
     SW_EXPECT_TRUE( UIPreviewLogic::attachWidget( tree, nullptr, 1, 0 ) == nullptr );
 }
 
+// 지운 트리의 바이트는 아래 위젯까지 모두 센다(되돌리기 바이트 한도가 지운 트리를 쥔 단계를 0 으로 세지 않게).
+SW_TEST_CASE( UIPreviewLogicTest, WidgetBytesCoverTheWholeSubtree )
+{
+    WidgetTree   tree;
+    CanvasPanel& root      = UITestUtil::setRoot<CanvasPanel>( tree );
+    BoxPanel&    box       = UITestUtil::addPanel<BoxPanel>( root );
+    UITestLeaf&  leaf      = UITestUtil::addLeaf( box, float2{} );
+    const uint64 leafBytes = UIPreviewLogic::measureWidgetBytes( leaf );
+    const uint64 boxBytes  = UIPreviewLogic::measureWidgetBytes( box );
+    SW_EXPECT_TRUE( leafBytes >= sizeof( Widget ) );
+    SW_EXPECT_TRUE( boxBytes >= sizeof( BoxPanel ) + leafBytes );
+    SW_EXPECT_TRUE( UIPreviewLogic::measureWidgetBytes( root ) > boxBytes );
+}
+
 // ---------------------------------------------------------------------- 슬롯
 
 SW_TEST_CASE( UIPreviewLogicTest, SlotPropertiesFollowTheParentPanel )

@@ -19,6 +19,9 @@ namespace sw
     {
         struct PortraitBatchUtilInternal
         {
+            /** @brief 읽은 장을 쓰지 않고 들고 있는 바이트의 상한입니다 — 넘으면 그때까지 읽은 장을 쓰고 비운다(큰 장 수백 장이 메모리를 그만큼 올리지 않게). 4096² 장 넷 남짓이다. */
+            static constexpr size_t kMaxHeldCaptureBytes = 256 * constant::memory::kBytesPerMegabyte;
+
             /** @brief 읽은 장을 RGBA8 로 옮겨 DDS · PNG 로 쓰는 병렬 본문입니다. 입력은 const 포인터로만 읽고, 결과는 장마다 제 칸(`_pWritten`)에 쓴다. */
             struct WriteJob
             {
@@ -58,13 +61,33 @@ namespace sw
         const string directory = outputDirectory.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Portraits" ) : string( outputDirectory );
         (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
 
-        // 그리기 · 읽기(GPU)는 이 스레드가 차례로 하고, 옮기기(RGBA8) · 인코딩 · 쓰기(DDS · PNG)는 다 읽은 뒤 장마다 워커가 제 칸에 한다(`WriteJob`).
-        // shortcut: 읽은 장을 모두 들고 있다가 한 번에 쓴다 - 아주 큰 장을 수백 장 찍으면 메모리가 그만큼 오른다. 그런 목록이 생기면 몇 장씩 끊어 쓴다.
+        // 그리기 · 읽기(GPU)는 이 스레드가 차례로 하고, 옮기기(RGBA8) · 인코딩 · 쓰기(DDS · PNG)는 읽은 장이 상한(`kMaxHeldCaptureBytes`)에 닿거나 끝나면 장마다 워커가 제 칸에 한다(`WriteJob`).
         PortraitStudio          portrait;
         bool                    bAllSucceeded = portrait.initialize( renderThread, services );
         vector<PortraitCapture> listCapture;
         vector<string>          listPath;
-        const string_splitter   parts( prefabList, { "," } );
+        size_t                  heldBytes   = 0;
+        const auto              flushWrites = [&]()
+        {
+            vector<string> listBase;
+            listBase.reserve( listPath.size() );
+            for ( const string& path : listPath )
+            {
+                listBase.push_back( directory + "/" + string( makeFileStem( path ) ) + ".portrait" );
+            }
+            vector<uint8>                       listWritten( listCapture.size(), 0 ); // 장마다 제 칸(워커가 쓴다) - 아래 직렬 단계가 정해진 차례로 모은다
+            PortraitBatchUtilInternal::WriteJob job{ listCapture.data(), listBase.data(), listWritten.data() };
+            engine::runParallelByCost( static_cast<uint32>( listCapture.size() ), SW_DELEGATE_METHOD( ParallelBlockDelegate, &PortraitBatchUtilInternal::WriteJob::runRange, &job ) );
+            for ( size_t index = 0; index < listCapture.size(); ++index )
+            {
+                bAllSucceeded = bAllSucceeded && listWritten[index] != 0;
+                SW_LOG_INFO_ID( "PortraitBatchUtil.PortraitDdsPngX", "Portrait '%#' -> %#.dds / .png (%#x%#)", listPath[index].c_str(), listBase[index].c_str(), listCapture[index]._width, listCapture[index]._height );
+            }
+            listCapture.clear();
+            listPath.clear();
+            heldBytes = 0;
+        };
+        const string_splitter parts( prefabList, { "," } );
         for ( const string_view part : parts.getSplitList() )
         {
             const string_view path = StringUtil::trim( part );
@@ -80,25 +103,14 @@ namespace sw
                 bAllSucceeded = false;
                 continue;
             }
+            heldBytes += capture._bytes.size();
             listCapture.push_back( std::move( capture ) );
             listPath.push_back( string( path ) );
+            if ( heldBytes >= PortraitBatchUtilInternal::kMaxHeldCaptureBytes )
+                flushWrites();
         }
         portrait.shutdown();
-
-        vector<string> listBase;
-        listBase.reserve( listPath.size() );
-        for ( const string& path : listPath )
-        {
-            listBase.push_back( directory + "/" + string( makeFileStem( path ) ) + ".portrait" );
-        }
-        vector<uint8>                       listWritten( listCapture.size(), 0 ); // 장마다 제 칸(워커가 쓴다) - 아래 직렬 단계가 정해진 차례로 모은다
-        PortraitBatchUtilInternal::WriteJob job{ listCapture.data(), listBase.data(), listWritten.data() };
-        engine::runParallelByCost( static_cast<uint32>( listCapture.size() ), SW_DELEGATE_METHOD( ParallelBlockDelegate, &PortraitBatchUtilInternal::WriteJob::runRange, &job ) );
-        for ( size_t index = 0; index < listCapture.size(); ++index )
-        {
-            bAllSucceeded = bAllSucceeded && listWritten[index] != 0;
-            SW_LOG_INFO_ID( "PortraitBatchUtil.PortraitDdsPngX", "Portrait '%#' -> %#.dds / .png (%#x%#)", listPath[index].c_str(), listBase[index].c_str(), listCapture[index]._width, listCapture[index]._height );
-        }
+        flushWrites();
         return bAllSucceeded;
     }
 

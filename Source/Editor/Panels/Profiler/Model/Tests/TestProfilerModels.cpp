@@ -598,3 +598,27 @@ SW_TEST_CASE( ProfilerTimelineModelTest, ToggleRecordingStartsCollecting )
         SW_EXPECT_TRUE( capture.isCollecting() );
     }
 }
+
+// 두 그리기 사이에 프레임이 여럿 끝났으면 호출 트리가 그 프레임을 모두 더한다(마지막 하나만 더하면 평균이 그리기 주기에 끌려간다).
+SW_TEST_CASE( ProfilerTimelineModelTest, CallTreeAddsEveryFrameSinceTheLastDraw )
+{
+    ProfilerTimeline      timeline;
+    ProfilerTimelineModel model;
+    timeline.setRecording( true );
+    model.beginCallTreeRecording( timeline );
+    for ( uint64 frame = 1; frame <= 3; ++frame )
+    {
+        timeline.recordFrameBegin( frame * 1000 );
+        timeline.recordEvent( 5, frame * 1000 + 100, frame * 1000 + 200, 0 );
+    }
+    timeline.recordFrameBegin( 4000 );
+    model.updateCallTree( timeline, 0.0 );
+    SW_EXPECT_EQUAL( 3u, model.getCallTree().getFrameCount() );
+
+    model.updateCallTree( timeline, 0.0 ); // 새로 끝난 프레임이 없다
+    SW_EXPECT_EQUAL( 3u, model.getCallTree().getFrameCount() );
+    timeline.recordEvent( 5, 4100, 4200, 0 );
+    timeline.recordFrameBegin( 5000 );
+    model.updateCallTree( timeline, 0.0 );
+    SW_EXPECT_EQUAL( 4u, model.getCallTree().getFrameCount() );
+}

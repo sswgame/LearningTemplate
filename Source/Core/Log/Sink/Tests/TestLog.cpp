@@ -608,32 +608,13 @@ namespace
         return record;
     }
 
-    /**
-     * @brief `FileLogOutput` 의 시간별 파일을 보는 픽스처 — 케이스가 만든 2099 년 파일을 지운다.
-     * @details shortcut: 시간별 파일은 `Saved/Logs` 에만 열린다(장치가 폴더를 받지 않는다) — 케이스 폴더 밖에 잠깐 쓰고 지운다. 다른 장치도 폴더를 받게 되면 `makeScratchPath` 로 옮긴다.
-     */
+    /** @brief `FileLogOutput` 의 시간별 파일을 보는 도우미 — 장치는 케이스 폴더에 연다(`FileLogOutputFolder`), 케이스 폴더는 테스트 틀이 치운다. */
     struct FileLogOutputTest
     {
-
-        sw::vector<sw::string> _listProbePath;
-        FileLogOutputTest()
-            : _listProbePath{}
+        /** @brief 그 시각에 쓰는 파일의 경로(`LOG_<연>-<월>-<일>-<시>_<세션>.txt`)입니다. */
+        static sw::string makeProbeLogPath( const sw::FileLogOutput& output, int32 hour )
         {
-        }
-        ~FileLogOutputTest()
-        {
-            for ( const sw::string& path : _listProbePath )
-                (void)sw::FileUtil::tryRemoveFile( path ); // 열기 전에 끝난 케이스는 만들지 않았다
-        }
-        FileLogOutputTest( const FileLogOutputTest& )            = delete;
-        FileLogOutputTest& operator=( const FileLogOutputTest& ) = delete;
-
-        /** @brief 그 시각에 쓰는 파일의 경로(`LOG_<연>-<월>-<일>-<시>_<세션>.txt`)이고, 소멸자가 지울 목록에 넣는다. */
-        sw::string makeProbeLogPath( const sw::FileLogOutput& output, int32 hour )
-        {
-            sw::string path = sw::FileUtil::joinPath( output.getLogFolderPath(), "LOG_2099-1-2-" + sw::to_string( hour ) + "_" + sw::ProcessSession::getID() + ".txt" );
-            _listProbePath.push_back( path );
-            return path;
+            return sw::FileUtil::joinPath( output.getLogFolderPath(), "LOG_2099-1-2-" + sw::to_string( hour ) + "_" + sw::ProcessSession::getID() + ".txt" );
         }
     };
 } // namespace
@@ -644,7 +625,7 @@ namespace
  */
 SW_TEST_CASE_F( FileLogOutputTest, WritesTheFileOfItsHourAndSession )
 {
-    sw::FileLogOutput output;
+    sw::FileLogOutput output{ sw::FileLogOutputFolder{ sw::test::makeScratchPath( "Logs" ) } };
     output.write( makeProbeRecord( 3, sw::LogLevel::Info, "dropped before open\n" ) );
     SW_REQUIRE_TRUE( output.open() );
 

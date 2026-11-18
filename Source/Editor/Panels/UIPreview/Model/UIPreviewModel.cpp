@@ -611,12 +611,12 @@ namespace sw::editor
         afterStructureEdit( screen, parentOrdinal );
         const uint32                  generation = _generation;
         const shared_ptr<EditSession> pSession   = _pSession;
-        // shortcut: 지운 위젯 트리(pHolder)의 바이트는 세지 않는다(0) — 위젯 하나를 지우는 편집이라 작다. 큰 트리를 지우는 편집이 생기면 트리 크기를 센다.
+        const uint64                  heldBytes  = UIPreviewLogic::measureWidgetBytes( *pHolder->_pWidget ); // 두 단계가 한 트리를 함께 쥐어 되돌리기 쪽에만 적는다
         transaction.push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
         {
             pSession->reattach( generation, parentOrdinal, index, pHolder );
         } ),
-                                                   *_pUndoOwner, 0u ),
+                                                   *_pUndoOwner, heldBytes ),
                           UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
         {
             pSession->detach( generation, parentOrdinal, index, pHolder );

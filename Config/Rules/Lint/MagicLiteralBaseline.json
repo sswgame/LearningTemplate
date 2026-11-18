@@ -1004,7 +1004,7 @@
     "Source/Games/HarvestValley/FarmGameModeComponent.cpp": {"minus-one": 4, "float": 7},
     "Source/Games/HarvestValley/FarmSoilComponent.cpp": {"minus-one": 3},
     "Source/Games/HarvestValley/FarmVillagerComponent.cpp": {"minus-one": 1},
-    "Source/Games/LanternVale/ValeNetLink.cpp": {"minus-one": 2},
+    "Source/Games/LanternVale/Server/ValeServerLink.cpp": {"minus-one": 2},
     "Source/Games/LanternVale/ValeNetLink.h": {"minus-one": 1},
     "Source/Games/LanternVale/ValeWorldComponent.cpp": {"float": 2},
     "Source/Games/MeadowVillage/MeadowVillageData.h": {"float": 2, "integer": 1},

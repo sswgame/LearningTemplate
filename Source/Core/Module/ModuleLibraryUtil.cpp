@@ -249,6 +249,23 @@ namespace sw
 #endif
     }
 
+    bool ModuleLibraryUtil::pinLibraryContaining( const void* pAddress )
+    {
+        if ( pAddress == nullptr )
+            return false;
+#if defined( SW_PLATFORM_WINDOWS )
+        HMODULE hModule = nullptr;
+        return GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN, static_cast<LPCWSTR>( pAddress ), &hModule ) != FALSE;
+#elif defined( SW_PLATFORM_POSIX )
+        Dl_info info{};
+        if ( dladdr( pAddress, &info ) == 0 || info.dli_fname == nullptr )
+            return false;
+        return dlopen( info.dli_fname, RTLD_NOW | RTLD_NOLOAD | RTLD_NODELETE ) != nullptr; // 고정한 참조는 놓지 않는다
+#else
+    #error "Unsupported platform"
+#endif
+    }
+
     void* ModuleLibraryUtil::getDynamicSymbol( void* pHandle, string_view symbolName )
     {
         if ( pHandle == nullptr || symbolName.empty() )

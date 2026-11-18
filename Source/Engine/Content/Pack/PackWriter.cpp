@@ -223,7 +223,8 @@ namespace sw
             return {};
         (void)usedBytes; // 빈 자리 판정은 이번 빌드가 다 쓴 뒤에 한다(`close`)
         // 앞 자리를 덮어쓸 구역을 0 으로 늘린다(성긴 파일의 구멍 — 디스크를 쓰지 않는다). 이 뒤의 쓰기는 앞 자리면 덮고 아니면 끝에 붙는다.
-        // shortcut: 앞 자리를 덮어쓰므로 내용 해시는 닫은 뒤 파일을 조각으로 다시 읽어 센다. 슬롯 배치를 배포 쿠킹에 켜면 덮어쓴 블록의 해시를 자리 순으로 잇는 셈으로 바꾼다.
+        // shortcut: 앞 자리를 덮어쓰므로 내용 해시는 닫은 뒤 파일을 조각으로 다시 읽어 센다 — 내용 해시(FNV-1a)는 바이트를 자리 순으로 섞어 덮어쓴 블록의 해시를 이을 수 없다.
+        //           슬롯 배치를 배포 쿠킹에 켜면 쿠킹 기록의 팩 출력 해시를 블록 해시 목록(언리얼 IoStore 청크 해시 자리)으로 바꾼다.
         const expected<void> extended = _file.appendZeros( payloadEnd );
         if ( extended.has_value() == false )
             return extended;

@@ -11,6 +11,12 @@
 
 namespace sw
 {
+    /** @brief 시간별 파일을 열 폴더입니다(`FileLogOutput` 의 기본 `Saved/Logs` 대신 — 테스트가 케이스 폴더에 연다). 고정 파일 경로와 형식으로 가른다. */
+    struct FileLogOutputFolder
+    {
+        string _path;
+    };
+
     /**
      * @class FileLogOutput
      * @brief 로그 한 줄을 `Saved/Logs/LOG_<날짜>_<세션>.txt` 에 씁니다.
@@ -25,6 +31,8 @@ namespace sw
     public:
         /** @param fixedFilePath 비면 `Saved/Logs/LOG_<날짜>_<세션>.txt`, 아니면 이 파일 하나(상대 경로는 작업 폴더 기준). */
         explicit FileLogOutput( string fixedFilePath = {} );
+        /** @param rollingFolder 시간별 파일(`LOG_<날짜>_<세션>.txt`)을 열 폴더입니다(`Saved/Logs` 대신). */
+        explicit FileLogOutput( FileLogOutputFolder rollingFolder );
         virtual ~FileLogOutput() override;
 
         FileLogOutput( const FileLogOutput& )            = delete;
@@ -50,12 +58,15 @@ namespace sw
         string getCurrentLogFilePath();
 
     private:
+        /** @brief 두 공개 생성자의 본체입니다 — 고정 파일과 시간별 폴더 가운데 많아야 하나가 찬다. */
+        FileLogOutput( string fixedFilePath, FileLogOutputFolder rollingFolder );
         /** @brief `write` · `writeWithoutWaiting` 의 본체입니다. */
         void writeLocked( const LogRecord& record ) SW_REQUIRES_LOCK( _mutex );
 
     private:
-        mutex                      _mutex;         ///< 이 장치 전용. 콘솔 출력과 락을 공유하지 않는다
-        const string               _fixedFilePath; ///< 비면 날짜 · 세션 이름으로 시간마다 바꾼다
+        mutex                      _mutex;             ///< 이 장치 전용. 콘솔 출력과 락을 공유하지 않는다
+        const string               _fixedFilePath;     ///< 비면 날짜 · 세션 이름으로 시간마다 바꾼다
+        const string               _rollingFolderPath; ///< 시간별 파일의 폴더(비면 `Saved/Logs`)
         string                     _logFolderPath;
         string _currentLogFileName SW_GUARDED_BY( _mutex );
         std::FILE* _pFile          SW_GUARDED_BY( _mutex );

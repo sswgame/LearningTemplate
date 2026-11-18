@@ -292,8 +292,7 @@ namespace sw
              * @brief 컴파일이 연 헤더의 절대 경로를 스탬프의 헤더 키로 바꿉니다 — 자기 도메인이면 `shaders/` 기준 상대 경로, 다른 include 루트면 `<도메인>:<상대 경로>` 입니다.
              * @return 어느 루트 아래도 아니거나 경로를 풀지 못하면 빈 글입니다.
              * @details 상대 경로의 대소문자는 그대로 둔다 — 리눅스는 이 키로 파일을 다시 열어야 한다(소스 키는 비교용이라 소문자다).
-             *          shortcut: 헤더는 컴파일러가 먼저 찾은 하나만 적힌다. 소스가 그대로인데 앞 순위 루트에 같은 이름의 헤더가 새로 생겨 가려지는 경우는 이 스탬프로 못 잡는다
-             *          (같은 이름은 `findShadowedInDir` 가 컴파일과 `verifyCookedShaders` 에서 오류로 막는다).
+             *          앞 순위 루트에 같은 이름의 헤더가 새로 생겨 가려지는 경우는 찾아봤지만 없던 앞자리 후보 줄(`makeAbsentHeaderKey` · `kAbsentHash`, 6판)이 잡는다.
              */
             static string makeHeaderKey( const vector<HeaderRoot>& listRoot, string_view absHeader )
             {

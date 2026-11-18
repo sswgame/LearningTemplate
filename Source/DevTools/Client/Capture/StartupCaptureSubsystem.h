@@ -75,7 +75,7 @@ namespace sw
         atomic<uint32> _finishedMask;          ///< 끝을 알린 종류
         atomic<uint32> _failedMask;            ///< 한 장이라도 쓰지 못한 종류
         string         _pendingPath;           ///< 맡기고 결과를 기다리는 장의 경로(비면 맡긴 장이 없다)
-        uint32         _pendingSerial;         ///< 맡기기 직전의 처리 수(`RenderThread::getCompletedScreenshotSerial`) — 바뀌면 그 장의 결과다
+        uint32         _pendingTicket;         ///< 맡긴 장의 표(`RenderThread::requestScreenshot`) — 그 표의 결과만 읽는다
         uint32         _frameCounter;          ///< 첫 장까지 센 프레임(자리 잡음을 기다리면 자리 잡은 프레임부터 센다)
         uint32         _shotCount;             ///< 맡긴 장 수
         int64          _waitStartMicroseconds; ///< 처음 본 단조 시각(0 = 아직) — 자리 잡음 기다림의 시한을 잰다

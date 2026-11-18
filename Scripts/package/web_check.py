@@ -14,7 +14,8 @@
 판정(모두 지나야 통과): `navigator.gpu` 가 있다, 오류 줄(printErr · 창 오류 · 처리 안 된 거부)이 없다, 앱이 확인 시간 안에 끝나거나 멈추지 않았다, 화면 PNG 를 받았다,
 오디오 워클릿이 링에서 샘플을 꺼내기 시작했다(`AUDIO_STARTED_LINE` — 브라우저는 자동 재생 정책을 끄고 띄운다), run 2 가 run 1 의 표지를 읽었다. 로그 · 화면은 `<묶음>/check/` 에 남는다(`run1.log` · `run2.log` · `screen.png`).
 보지 않는 것: 입력 — 합성 이벤트를 넣어도 앱의 반응을 페이지에서 읽을 길이 없다(배포 빌드에는 시나리오 실행기가 없다). 입력 판정은 쿠킹한 웹 시나리오가 생길 때 더한다.
-shortcut: 브라우저는 헤드리스(--headless=new --enable-unsafe-webgpu)로 띄운다, 헤드리스 WebGPU 가 그 기계에서 어댑터를 못 받으면 `--headed` 로 창을 띄운다.
+브라우저는 헤드리스(--headless=new --enable-unsafe-webgpu)로 띄운다. 페이지가 WebGPU 어댑터를 받았는지 알리고(`adapter` 보고), 헤드리스에서 못 받는 기계면
+창을 띄워(headed) 처음부터 다시 돈다 — 손으로 `--headed` 를 고를 일이 없다(`--headed` 는 처음부터 창을 띄운다).
 
 사용법:
     py -3 -m Scripts web-check --game Empty
@@ -70,6 +71,7 @@ REPORTER_SCRIPT = """<script>
     Module.onExit = (code) => post("exit", "exit " + code);
     Module.onAbort = (what) => post("exit", "abort " + what);
     post("gpu", navigator.gpu ? "yes" : "no");
+    (navigator.gpu ? navigator.gpu.requestAdapter() : Promise.resolve(null)).then((adapter) => post("adapter", adapter ? "yes" : "no"), () => post("adapter", "no"));
     setTimeout(async () => {{
         const blob = await new Promise((resolve) => Module.canvas.toBlob(resolve, "image/png"));
         if (blob) await post("screen", blob);
@@ -95,6 +97,7 @@ class RunReport:
 
     list_line: list[str] = field(default_factory=list)
     gpu: str = ""
+    adapter: str = ""
     exit: str = ""
     probe: str = ""
     screen: bytes = b""
@@ -116,6 +119,8 @@ class CheckRequestHandler(IsolatedRequestHandler):
             report.list_line.append(text)
         elif kind == "gpu":
             report.gpu = text
+        elif kind == "adapter":
+            report.adapter = text
         elif kind == "exit":
             report.exit = text
         elif kind == "probe":
@@ -174,6 +179,8 @@ def evaluate_run(name: str, report: RunReport) -> list[str]:
         list_failure.append(f"{name}: the page did not finish the check in time")
     if report.gpu != "yes":
         list_failure.append(f"{name}: navigator.gpu is missing ({report.gpu or 'no report'})")
+    elif report.adapter != "yes":
+        list_failure.append(f"{name}: navigator.gpu.requestAdapter() gave no adapter ({report.adapter or 'no report'})")
     if report.exit:
         list_failure.append(f"{name}: the app ended during the check ({report.exit})")
     if any(line.startswith(AUDIO_STARTED_LINE) for line in report.list_line) is False:
@@ -189,7 +196,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skip-package", action="store_true", help="묶음을 다시 만들지 않는다(<build-dir>/Web/<게임> 을 그대로 쓴다)")
     parser.add_argument("--seconds", type=int, default=DEFAULT_SECONDS, help="실행마다 앱을 돌리는 시간(초) — 그 뒤 화면 · 표지를 본다")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="로컬 서버 포트")
-    parser.add_argument("--headed", action="store_true", help="브라우저 창을 띄운다(헤드리스 WebGPU 가 어댑터를 못 받는 기계)")
+    parser.add_argument("--headed", action="store_true", help="처음부터 브라우저 창을 띄운다(헤드리스가 어댑터를 못 받으면 알아서 창으로 다시 돈다)")
     args = parser.parse_args(argv)
     project_root = get_project_root()
     build_dir = (project_root / args.build_dir).resolve()
@@ -222,9 +229,15 @@ def main(argv: list[str] | None = None) -> int:
         with tempfile.TemporaryDirectory(prefix="swwebcheck-") as profile:
             timeout_seconds = args.seconds + LOAD_ALLOWANCE_SECONDS
             base_url = f"http://localhost:{args.port}/{CHECK_PAGE_NAME}"
-            first = run_browser(browser, Path(profile), f"{base_url}?probe=write", args.headed, timeout_seconds)
+            headed = args.headed
+            first = run_browser(browser, Path(profile), f"{base_url}?probe=write", headed, timeout_seconds)
+            if headed is False and first.gpu == "yes" and first.adapter == "no":
+                print("[web-check] headless WebGPU gave no adapter on this machine - running again with a browser window")
+                headed = True
+                time.sleep(1)  # 앞 브라우저가 프로필 잠금을 놓을 틈
+                first = run_browser(browser, Path(profile), f"{base_url}?probe=write", headed, timeout_seconds)
             time.sleep(1)  # 앞 브라우저가 프로필 잠금을 놓을 틈
-            second = run_browser(browser, Path(profile), f"{base_url}?probe=read", args.headed, timeout_seconds)
+            second = run_browser(browser, Path(profile), f"{base_url}?probe=read", headed, timeout_seconds)
     finally:
         server.shutdown()
         server.server_close()

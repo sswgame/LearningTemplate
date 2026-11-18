@@ -48,6 +48,7 @@ namespace sw::editor
         , _targetPrefabPath{}
         , _activeTargetPath{}
         , _loadedContentHash{ 0 }
+        , _seenContentSerial{ 0 }
         , _target{}
         , _orbitAngle{ 0.0f }
         , _soloEmitter{ kNoSolo }
@@ -168,6 +169,7 @@ namespace sw::editor
                                                                                             : optional<AbsolutePath>{ editor::getSubsystem<AssetPaths>().toDiskPath( assetPath ) };
         _loadedDiskPath                       = diskPath.has_value() ? diskPath->str() : string{};
         _loadedContentHash                    = 0;
+        _seenContentSerial                    = editor::getSubsystem<AssetHotReload>().getContentChangeSerial();
         if ( _loadedDiskPath.empty() == false )
             (void)updateContentHash( _loadedDiskPath, _loadedContentHash );
         // 미리 보기의 표는 씬의 효과와 같은 한 벌을 읽는다(공유 캐시 — 핫 리로드가 떼어 낸 새 객체도 다시 열면 받는다).
@@ -192,7 +194,11 @@ namespace sw::editor
 
     bool VFXPreviewModel::pollFileChanged()
     {
-        return _loadedDiskPath.empty() == false && updateContentHash( _loadedDiskPath, _loadedContentHash );
+        const uint64 serial = editor::getSubsystem<AssetHotReload>().getContentChangeSerial();
+        if ( _loadedDiskPath.empty() || serial == _seenContentSerial )
+            return false; // 감시가 아무 변경도 알리지 않았다
+        _seenContentSerial = serial;
+        return updateContentHash( _loadedDiskPath, _loadedContentHash );
     }
 
     bool VFXPreviewModel::updateContentHash( string_view diskPath, uint64& inoutHash )

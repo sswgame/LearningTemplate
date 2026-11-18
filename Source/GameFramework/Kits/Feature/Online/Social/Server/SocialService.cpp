@@ -705,7 +705,7 @@ namespace sw
         for ( const SocialLink& link : listLink )
         {
             if ( link._state == SocialLinkState::Friend )
-                _mapFriendToWatchers[link._otherID].push_back( accountID ); // 저장소 키가 `<나>/<상대>` 라 한 목록에 같은 상대가 두 번 오지 않는다
+                (void)_mapFriendToWatchers[link._otherID].insert( accountID ); // 저장소 키가 `<나>/<상대>` 라 한 목록에 같은 상대가 두 번 오지 않는다
         }
     }
 
@@ -718,14 +718,10 @@ namespace sw
             const auto watchersIt = _mapFriendToWatchers.find( link._otherID );
             if ( watchersIt == _mapFriendToWatchers.end() ) // addFriendWatcher 가 넣은 것만 뺀다 — 없으면 역색인이 관계 목록과 갈라진 것이다
                 SW_FATAL( "SocialService: friend index has no watchers of account %# while account %# lists it", link._otherID, accountID );
-            // shortcut: 지켜보는 계정 목록을 선형으로 찾는다. 한 서버에 같은 사람을 친구로 둔 계정이 수천을 넘는 일이 측정되면 집합으로 바꾼다
-            vector<AccountID>& listWatcher = watchersIt->second;
-            const auto         watcherIt   = std::find( listWatcher.begin(), listWatcher.end(), accountID );
-            if ( watcherIt == listWatcher.end() )
+            unordered_set<AccountID>& setWatcher = watchersIt->second;
+            if ( setWatcher.erase( accountID ) == 0 )
                 SW_FATAL( "SocialService: friend index lost watcher %# of account %#", accountID, link._otherID );
-            *watcherIt = listWatcher.back();
-            listWatcher.pop_back();
-            if ( listWatcher.empty() )
+            if ( setWatcher.empty() )
                 _mapFriendToWatchers.erase( watchersIt );
         }
     }

@@ -193,6 +193,16 @@ add_test(NAME Scripts.FeatureReferences
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/lint/tests/test_feature_references.py")
 set_tests_properties(Scripts.FeatureReferences PROPERTIES LABELS nogpu TIMEOUT 60)
 
+# clang-tidy 바뀐 파일 모드의 TU 고르기 — 짝 .cpp 가 없는 헤더는 그 헤더를 (헤더를 거쳐서라도) 포함하는 TU 로 돈다.
+add_test(NAME Scripts.ClangTidySelect
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/lint/tests/test_clang_tidy.py")
+set_tests_properties(Scripts.ClangTidySelect PROPERTIES LABELS nogpu TIMEOUT 60)
+
+# 커밋 훅 읽기 한도가 세는 git 블롭 읽기(`cat-file --batch` · `show`) — 인덱스 블롭은 파일을 연 것과 같고, `--batch-check` 는 내용을 읽지 않는다.
+add_test(NAME Scripts.PreCommitBlobReads
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/lint/tests/test_pre_commit_blob_reads.py")
+set_tests_properties(Scripts.PreCommitBlobReads PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 빌드 지문 생성기(ABI 스탬프 · 쿠커 코드 지문)의 파일 지문 캐시 — 캐시가 있든 없든 같은 지문, 바뀐 파일만 다시 읽기, 지운 파일 줄 정리.
 add_test(NAME Scripts.FileDigestCache
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_file_digest_cache.py")
