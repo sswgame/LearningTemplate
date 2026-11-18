@@ -15,6 +15,7 @@
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -29,6 +30,32 @@
 
 namespace sw::editor
 {
+    /**
+     * @class EditorPlayLayoutState
+     * @brief 플레이가 바꾼 배치의 UI 쪽 상태입니다(`EditorPlayCommands::update`). 에디터 서브시스템이라 컨텍스트와 함께 생기고 사라진다.
+     * @details 예전에는 세션 상태(`PlaySessionData`)에 있어 게임 스레드가 도킹 배치를 고쳤다. 배치는 UI 것이라 UI 가 가진다.
+     */
+    class EditorPlayLayoutState final : public EditorSubsystem
+    {
+    public:
+        uint8 _bOptionsApplied   : 1; ///< 이 세션의 플레이 옵션(최대화)을 적용했다
+        uint8 _bMaximizedForPlay : 1; ///< Maximize On Play 가 게임 뷰를 최대화했다. 멈추거나 Eject 하면 배치를 되돌린다
+        uint8 _bSeenEjected      : 1; ///< 지난 UI 프레임에 본 Eject 상태(전이를 찾는다)
+
+        static constexpr const utf8* kSubsystemName  = "EditorPlayLayoutState";
+        static constexpr int32       kSubsystemOrder = 9610; ///< 창 제목 상태(9600) 다음 — 서로 의존하지 않는다
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+
+        EditorPlayLayoutState()
+            : _bOptionsApplied{ SW_FALSE }
+            , _bMaximizedForPlay{ SW_FALSE }
+            , _bSeenEjected{ SW_FALSE }
+        {
+        }
+    };
+
+    SW_EDITOR_SUBSYSTEM( EditorPlayLayoutState, EditorPlayLayoutState::kSubsystemOrder );
+
     namespace
     {
         struct EditorPlayCommandsInternal
@@ -56,30 +83,50 @@ namespace sw::editor
     SW_EDITOR_COMMAND( PlayKeepChanges, "play.keepChanges", &EditorPlayCommandsInternal::runKeepChanges, &EditorPlayCommandsInternal::canKeepChanges, SceneDuringPlay );
     SW_EDITOR_COMMAND( PlayStandalone, "play.standalone", &EditorPlayCommandsInternal::runLaunchStandalone, nullptr, NoScene );
 
-    void EditorPlayCommands::update( EditorPlaySessionWriteKey key )
+    void EditorPlayCommands::update()
     {
-        PlaySessionData* pData         = EditorPlaySession::findData( key );
-        EditorContext&   editorContext = editor::getSubsystem<EditorContext>();
-        if ( pData == nullptr )
+        EditorContext* const         pContext = editor::findSubsystem<EditorContext>();
+        EditorPlayLayoutState* const pLayout  = editor::findSubsystem<EditorPlayLayoutState>(); // 이 파일의 SW_EDITOR_SUBSYSTEM 이 컨텍스트와 함께 만든다
+        if ( pContext == nullptr || pLayout == nullptr )
             return;
-        if ( pData->_state == PlaySessionState::Stopped )
+        EditorPlayLayoutState& layout = *pLayout;
+        IEditorPanelService&   panels = pContext->getSubsystem<IEditorPanelService>();
+        if ( EditorPlaySession::isStopped() )
         {
-            pData->_bOptionsApplied = SW_FALSE;
-            pData->_bEjected        = SW_FALSE;
-            if ( pData->_bMaximizedForPlay == SW_TRUE )
+            layout._bOptionsApplied = SW_FALSE;
+            layout._bSeenEjected    = SW_FALSE;
+            if ( layout._bMaximizedForPlay == SW_TRUE )
             {
-                pData->_bMaximizedForPlay = SW_FALSE;
-                if ( editorContext.getSubsystem<IEditorPanelService>().restoreMaximizedLayout() == false )
+                layout._bMaximizedForPlay = SW_FALSE;
+                if ( panels.restoreMaximizedLayout() == false )
                     SW_LOG_WARNING_ID( "EditorPlay.LayoutBeforeMaximizePlay", "The layout before Maximize On Play is gone - use Panel > Reset Layout" );
             }
             return;
         }
-        if ( pData->_bOptionsApplied == SW_TRUE )
+        if ( layout._bOptionsApplied == SW_FALSE )
+        {
+            layout._bOptionsApplied = SW_TRUE;
+            // Simulate 는 씬 뷰로 지켜보는 세션이라 게임 뷰를 키우지 않는다(유니티 Maximize On Play 도 게임 뷰의 플레이에만).
+            if ( getPreferences<EditorPlayPreferences>()._bMaximizeOnPlay && EditorPlaySession::isSimulating() == false )
+                layout._bMaximizedForPlay = panels.maximizePanel( editorpanel::kGameView ) ? SW_TRUE : SW_FALSE;
+        }
+        // Eject/Possess 전이 — 세션은 게임 스레드가 바꿨고(`EditorUICommandKind::ToggleEject`), 배치 · 포커스는 여기서 맞춘다.
+        const bool bEjected = EditorPlaySession::isEjected();
+        if ( bEjected == ( layout._bSeenEjected == SW_TRUE ) )
             return;
-        pData->_bOptionsApplied = SW_TRUE;
-        // Simulate 는 씬 뷰로 지켜보는 세션이라 게임 뷰를 키우지 않는다(유니티 Maximize On Play 도 게임 뷰의 플레이에만).
-        if ( getPreferences<EditorPlayPreferences>()._bMaximizeOnPlay && pData->_bSimulate == SW_FALSE )
-            pData->_bMaximizedForPlay = editorContext.getSubsystem<IEditorPanelService>().maximizePanel( editorpanel::kGameView ) ? SW_TRUE : SW_FALSE;
+        layout._bSeenEjected = bEjected ? SW_TRUE : SW_FALSE;
+        if ( bEjected )
+        {
+            // 최대화 중이면 씬 뷰가 닫혀 있으니 배치를 먼저 되돌린다.
+            if ( layout._bMaximizedForPlay == SW_TRUE )
+            {
+                layout._bMaximizedForPlay = SW_FALSE;
+                (void)panels.restoreMaximizedLayout(); // 없으면 지금 배치 그대로 씬 뷰를 연다
+            }
+            (void)panels.focusPanel( editorpanel::kSceneView ); // 패널이 없으면 세션만 바뀐다
+            return;
+        }
+        (void)panels.focusPanel( editorpanel::kGameView ); // 패널이 없으면 세션만 바뀐다
     }
 
     void EditorPlayCommands::toggleEject()

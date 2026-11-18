@@ -32,8 +32,8 @@ namespace sw::editor
         Step,   ///< `_stepFrameCount` 프레임 진행한다
         Stop,   ///< 재생을 멈추고 선택을 이름으로 편집 씬의 오브젝트에 다시 잇는다
         /**
-         * F8 Eject/Possess — 조종 중이면 Simulate 로 바꾸고 씬 뷰를 앞으로, Eject 한 세션이면 다시 조종하고 게임 뷰를 앞으로(`EditorPlayCommands::toggleEject` 가 보낸다).
-         * 세션 칸(`_bEjected` · 최대화)과 패널 포커스를 한 명령이 함께 바꾼다 — 따로 보내면 그 사이 프레임이 반쯤 바뀐 상태를 본다.
+         * F8 Eject/Possess — 조종 중이면 Simulate 로, Eject 한 세션이면 다시 조종으로(`EditorPlayCommands::toggleEject` 가 보낸다).
+         * 세션 종류와 `_bEjected` 를 한 명령이 함께 바꾼다 — 따로 보내면 그 사이 틱이 반쯤 바뀐 상태를 본다. 배치 · 패널 포커스는 UI 가 그 전이를 보고 정한다.
          */
         ToggleEject,
         /**

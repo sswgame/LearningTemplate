@@ -380,6 +380,12 @@ namespace sw::editor
         return pData != nullptr && pData->_state != PlaySessionState::Stopped && pData->_bSimulate == SW_TRUE;
     }
 
+    bool EditorPlaySession::isEjected()
+    {
+        const PlaySessionData* pData = findDataInternal();
+        return pData != nullptr && pData->_state != PlaySessionState::Stopped && pData->_bEjected == SW_TRUE;
+    }
+
     bool EditorPlaySession::isPlayerActive()
     {
         const PlaySessionData* pData = findDataInternal();
@@ -586,6 +592,7 @@ namespace sw::editor
         else if ( state == PlaySessionState::Stopped )
         {
             pData->_bStartMovePending = SW_FALSE;
+            pData->_bEjected          = SW_FALSE; // 다음 세션은 조종으로 시작한다
             EditorPlaySessionInternal::setWorldPlaying( false );
             restoreSnapshot( *pData );
             // 스냅샷이 오브젝트를 원래 id 로 되돌린 뒤이므로 맡긴 명령의 대상(id)이 다시 맞는다.

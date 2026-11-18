@@ -9,7 +9,6 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/IEditorPanelService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Localization/LocText.h"
@@ -151,8 +150,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief F8 Eject/Possess — 세션 칸(`_bEjected` · 최대화 배치)과 패널 포커스를 이 한 적용이 함께 바꾼다. 패널 포커스는 다음 UI 프레임에 여는 요청이다(`IEditorPanelService::focusPanel`).
+             * @brief F8 Eject/Possess — 세션 종류(Simulate/Play)와 `_bEjected` 를 이 한 적용이 함께 바꾼다.
              * @details 플레이어 조종 중이면 조종을 놓는다 — 월드는 계속 돌고(Simulate) 에디터 카메라로 둘러본다. Eject 한 세션이면 다시 조종한다(언리얼 F8 Eject/Possess).
+             *          배치(최대화 되돌리기)와 패널 포커스는 UI 가 세션 전이를 보고 정한다(`EditorPlayCommands::update`) — 게임 스레드는 작업 공간을 고치지 않는다.
              */
             static void toggleEject( EditorPlaySessionWriteKey key )
             {
@@ -160,25 +160,16 @@ namespace sw::editor
                 const bool       bNoActivePlaySession = pData == nullptr || pData->_state == PlaySessionState::Stopped;
                 if ( bNoActivePlaySession )
                     return;
-                IEditorPanelService& panels = editor::getSubsystem<EditorContext>().getSubsystem<IEditorPanelService>();
                 if ( EditorPlaySession::isPlayerActive( *pData ) )
                 {
-                    // 최대화 중이면 씬 뷰가 닫혀 있으니 배치를 먼저 되돌린다.
-                    if ( pData->_bMaximizedForPlay == SW_TRUE )
-                    {
-                        pData->_bMaximizedForPlay = SW_FALSE;
-                        (void)panels.restoreMaximizedLayout(); // 없으면 지금 배치 그대로 씬 뷰를 연다
-                    }
                     EditorPlaySession::simulate( key );
                     pData->_bEjected = SW_TRUE;
-                    (void)panels.focusPanel( editorpanel::kSceneView ); // 패널이 없으면 세션만 바뀐다
                     return;
                 }
                 if ( pData->_bEjected == SW_TRUE )
                 {
                     EditorPlaySession::play( key );
                     pData->_bEjected = SW_FALSE;
-                    (void)panels.focusPanel( editorpanel::kGameView ); // 패널이 없으면 세션만 바뀐다
                 }
             }
 

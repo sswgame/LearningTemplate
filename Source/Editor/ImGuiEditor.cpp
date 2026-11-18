@@ -889,6 +889,8 @@ namespace sw::editor
         // 앞 UI 프레임이 다 그려지기를 기다리지 않는다 — 렌더 스레드가 그것을 그리는 동안 이 프레임을 만든다. 기다림은 쓸 칸 받기 · 게시에만 있다(`closeAndPublishFrame`).
         // 그 구간(`GT.Editor.waitDrawSnapshot` · `GT.Editor.publishDrawSnapshot`)이 크면 UI 작업이 아니라 RT, GPU, Present 가 길다는 뜻이다.
         prepareFrameState();
+        // 플레이 배치(Maximize On Play · Eject/Possess 의 패널 포커스) — 게임 스레드가 바꾼 세션 전이를 UI 가 보고 맞춘다. 프레임을 열기 전이라 이번 프레임 배치가 따른다.
+        EditorPlayCommands::update();
         openFrame();
 
         // 프레임 안의 일(단축키 → 에셋 리로드 → 패널 → 자체 테스트 → 창 제목 → 스크린샷)은 등록된 단계가 `_order` 순서로 한다(`EditorFrameStep.h`).
@@ -1064,7 +1066,6 @@ namespace sw::editor
         const EditorPlaySessionWriteKey key{}; // 호스트 훅 — 게임 스레드
         EditorPlaySession::update( key );
         EditorPlaySession::consumePendingStep( key );
-        EditorPlayCommands::update( key ); // Maximize On Play. 시작과 정지가 어디서 왔든 상태 전이를 여기서 확인한다
     }
 
     bool ImGuiEditor::onWindowCloseQuery()
