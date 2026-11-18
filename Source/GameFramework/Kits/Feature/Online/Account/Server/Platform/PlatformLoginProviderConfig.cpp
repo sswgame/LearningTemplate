@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
 
 namespace sw
 {
@@ -23,12 +24,6 @@ namespace sw
                                                           "teamId", "signingKeyId", "tokenUrl", "revokeUrl" };
 
             static bool isKnownKey( string_view key ) { return VectorUtil::contains( kKnownKeys, key ); }
-
-            static string readText( const JSONValue& object, const utf8* pKey, string_view fallback )
-            {
-                const JSONValue value = object.get( pKey );
-                return value.isString() ? value.asString() : string( fallback );
-            }
         };
     } // namespace
 } // namespace sw
@@ -59,8 +54,8 @@ namespace sw
             if ( Internal::isKnownKey( key ) == false )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "unknown login provider setting", key } );
         }
-        outSettings._name = Internal::readText( entry, "name", "" );
-        const string kind = Internal::readText( entry, "kind", "" );
+        outSettings._name = OnlineProviderFile::readText( entry, "name" );
+        const string kind = OnlineProviderFile::readText( entry, "kind" );
         if ( kind == "oidc" )
             outSettings._kind = PlatformLoginProviderKind::Oidc;
         else if ( kind == "profile" )
@@ -75,22 +70,22 @@ namespace sw
             error.appendDetail( " " ).appendDetail( kind );
             return unexpected( error );
         }
-        outSettings._issuer               = Internal::readText( entry, "issuer", "" );
-        outSettings._jwksURL              = Internal::readText( entry, "jwksUrl", "" );
-        outSettings._profileURL           = Internal::readText( entry, "profileUrl", "" );
-        outSettings._subjectPath          = Internal::readText( entry, "subjectPath", ( outSettings._kind == PlatformLoginProviderKind::Oidc || outSettings._kind == PlatformLoginProviderKind::AppleSignIn ) ? "sub" : "id" );
-        outSettings._displayNamePath      = Internal::readText( entry, "displayNamePath", "" );
-        outSettings._ticketParam          = Internal::readText( entry, "ticketParam", "" );
-        outSettings._keyParam             = Internal::readText( entry, "keyParam", "" );
-        outSettings._keySecretEnvironment = Internal::readText( entry, "keySecretEnvironment", "" );
-        outSettings._identityParam        = Internal::readText( entry, "identityParam", "" );
-        outSettings._identity             = Internal::readText( entry, "identity", "" );
-        outSettings._resultPath           = Internal::readText( entry, "resultPath", "" );
-        outSettings._resultValue          = Internal::readText( entry, "resultValue", "" );
-        outSettings._teamID               = Internal::readText( entry, "teamId", "" );
-        outSettings._signingKeyID         = Internal::readText( entry, "signingKeyId", "" );
-        outSettings._tokenURL             = Internal::readText( entry, "tokenUrl", "" );
-        outSettings._revokeURL            = Internal::readText( entry, "revokeUrl", "" );
+        outSettings._issuer               = OnlineProviderFile::readText( entry, "issuer" );
+        outSettings._jwksURL              = OnlineProviderFile::readText( entry, "jwksUrl" );
+        outSettings._profileURL           = OnlineProviderFile::readText( entry, "profileUrl" );
+        outSettings._subjectPath          = OnlineProviderFile::readText( entry, "subjectPath", ( outSettings._kind == PlatformLoginProviderKind::Oidc || outSettings._kind == PlatformLoginProviderKind::AppleSignIn ) ? "sub" : "id" );
+        outSettings._displayNamePath      = OnlineProviderFile::readText( entry, "displayNamePath" );
+        outSettings._ticketParam          = OnlineProviderFile::readText( entry, "ticketParam" );
+        outSettings._keyParam             = OnlineProviderFile::readText( entry, "keyParam" );
+        outSettings._keySecretEnvironment = OnlineProviderFile::readText( entry, "keySecretEnvironment" );
+        outSettings._identityParam        = OnlineProviderFile::readText( entry, "identityParam" );
+        outSettings._identity             = OnlineProviderFile::readText( entry, "identity" );
+        outSettings._resultPath           = OnlineProviderFile::readText( entry, "resultPath" );
+        outSettings._resultValue          = OnlineProviderFile::readText( entry, "resultValue" );
+        outSettings._teamID               = OnlineProviderFile::readText( entry, "teamId" );
+        outSettings._signingKeyID         = OnlineProviderFile::readText( entry, "signingKeyId" );
+        outSettings._tokenURL             = OnlineProviderFile::readText( entry, "tokenUrl" );
+        outSettings._revokeURL            = OnlineProviderFile::readText( entry, "revokeUrl" );
         bool bRequireNonce                = outSettings._bRequireNonce != SW_FALSE; // 없으면 설정의 초기값이다
         if ( entry.readOptionalInto( "requireNonce", bRequireNonce ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the login provider has a requireNonce that is not true or false", outSettings._name } );
