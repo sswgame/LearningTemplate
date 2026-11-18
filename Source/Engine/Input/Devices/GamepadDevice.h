@@ -133,7 +133,7 @@ namespace sw
         /** @brief @p durationSeconds 동안 고정 세기로 진동합니다(고정 효과 `HapticEffectDef::makeConstant` 를 재생한다). 0 이하면 멈춥니다. */
         bool playVibration( float32 leftMotor, float32 rightMotor, float32 durationSeconds );
         /**
-         * @brief 진동 효과(`*.haptic.xml` — `AssetRef<HapticEffectDef>` 가 준다)를 @p scale 배로 처음부터 재생합니다. 앞 재생은 멈춥니다.
+         * @brief 진동 효과(`*.haptic.xml` — `AssetRef<HapticEffectDef>` 가 준다)를 @p scale 배로 처음부터 재생합니다. 재생 중인 다른 효과와 겹쳐 모터마다 최대값으로 낸다(`HapticPlayback`).
          * @return 효과가 없거나 장치가 진동을 거절하면 false 입니다.
          */
         bool playHaptic( shared_ptr<const HapticEffectDef> pEffect, float32 scale = 1.0f );

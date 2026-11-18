@@ -20,7 +20,7 @@ namespace sw
         struct ActionCombatDemoComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "KDAC" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 탄의 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
 
             static constexpr const utf8* kAttackAction = "KitDemo.Attack";
             static constexpr const utf8* kDashAction   = "KitDemo.Dash";

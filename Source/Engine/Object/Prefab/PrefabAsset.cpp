@@ -23,6 +23,7 @@
 #include "Engine/Object/Prefab/PrefabPathStack.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -41,6 +42,7 @@ namespace sw
         struct PrefabAssetInternal
         {
             static constexpr const utf8* kRoot           = "Prefab";
+            static constexpr int32       kRootParent     = -1; ///< 루트에 붙은 노드의 부모 번호(`PrefabInstanceNode::_parentIndex`)
             static constexpr const utf8* kName           = "name";
             static constexpr const utf8* kGameObject     = "GameObject";
             static constexpr const utf8* kNestedInstance = "PrefabInstance";
@@ -495,7 +497,8 @@ namespace sw
                     options._bOmitExternalParent = SW_TRUE; // 부모는 노드의 자리(부모 노드 · attach)가 적는다
                     // 부품 아래 부품(원본이 스폰하는 것)을 고친 것은 노드의 `<Part>` 로 싣는다 — 노드로 담지 않으므로 싣지 않으면 Apply 가 버린다.
                     vector<PrefabPartOverride> listDeepPart;
-                    const expected<void>       overrides = PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseState, node._overrideXML );
+                    const expected<string>     partState = ObjectStateSerializer::saveToXMLString( pPart, options );
+                    const expected<void>       overrides = partState.has_value() ? PrefabOverrides::computeOverrides( *partState, baseState, node._overrideXML ) : expected<void>{ unexpected( partState.error() ) };
                     const bool                 bOverridesMade =
                         overrides.has_value() && pPrefabs->collectPartOverrides( *pPart, *pSource, listDeepPart ) && PrefabOverrides::appendPartOverrides( node._overrideXML, listDeepPart );
                     if ( bOverridesMade == false )
@@ -957,12 +960,27 @@ namespace sw
             const bool                 bProperties = makeVariantFileProperties( overrideXML, listOwnNode );
             if ( bProperties && overrideXML.empty() == false && overrideDoc.parse( overrideXML ) )
                 (void)root.appendClone( overrideDoc.getRoot() );
-            if ( bProperties == false || PrefabAssetInternal::writeNodesToXML( root, listOwnNode, -1 ) == false )
+            if ( bProperties == false || PrefabAssetInternal::writeNodesToXML( root, listOwnNode, PrefabAssetInternal::kRootParent ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.PrefabVariantNotWritten", "Prefab variant '%#' could not be written - '%#' is left as it was", _name, absPath.str() );
                 return false;
             }
-            if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || xmlDoc.saveToFile( absPath.str() ) == false )
+            // 변형은 부모와 같은 칸을 뺐다 — 펼친 한 벌(루트 칸 · 펼친 본문 · 모든 노드)을 빼지 않은 짝으로 함께 넘긴다.
+            XMLDocument   completeDoc;
+            const XMLNode completeRoot = completeDoc.appendRoot( PrefabAssetInternal::kRoot );
+            for ( XMLAttribute attribute = root.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+            {
+                completeRoot.appendAttribute( attribute.getName(), attribute.getValue() );
+            }
+            const string fullBody = ( _stateFormat == PrefabStateFormat::XML ) ? _stateData : convertState( PrefabStateFormat::XML );
+            XMLDocument  fullBodyDoc;
+            if ( fullBody.empty() == false && fullBodyDoc.parse( fullBody ) && fullBodyDoc.getRoot().isValid() )
+                (void)completeRoot.appendClone( fullBodyDoc.getRoot() );
+            const string variantText  = xmlDoc.saveToString();
+            const bool   bCompleteDoc = PrefabAssetInternal::writeNodesToXML( completeRoot, _listNestedInstance, PrefabAssetInternal::kRootParent );
+            const bool   bWritten     = bCompleteDoc && variantText.empty() == false &&
+                                  ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( variantText, completeDoc.saveToString() ) );
+            if ( bWritten == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabXML2", "Failed to write prefab XML: %#", absPath.str() );
                 return false;
@@ -991,14 +1009,32 @@ namespace sw
             SW_LOG_ERROR_ID( "PrefabAsset.PrefabCouldNotConverted", "Prefab '%#' could not be converted to XML - '%#' is left as it was", _name, absPath.str() );
             return false;
         }
-        if ( PrefabAssetInternal::writeNodesToXML( root, _listNestedInstance, -1 ) == false )
+        if ( PrefabAssetInternal::writeNodesToXML( root, _listNestedInstance, PrefabAssetInternal::kRootParent ) == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.PrefabNestedInstancesCannot", "Prefab '%#' has nested instances that cannot be written - '%#' is left as it was", _name, absPath.str() );
             return false;
         }
 
-        // 상위 폴더를 만들지 못하면 쓰지 않는다(폴더 쪽 이유는 ensure 가 남긴다). 실패는 로그로 남긴다(SceneDocument::saveToFile 과 같은 형태).
-        const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && xmlDoc.saveToFile( absPath.str() );
+        // 본문은 형식 기본값과 같은 칸을 뺐다 — 본문만 펼친 글로 바꾼 빼지 않은 짝을 함께 넘긴다(저장 입구가 조건이 정한 칸의 "기본값으로 되돌림" 을 읽는다).
+        XMLDocument   completeDoc;
+        const XMLNode completeRoot = completeDoc.appendRoot( PrefabAssetInternal::kRoot );
+        for ( XMLAttribute attribute = root.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+        {
+            completeRoot.appendAttribute( attribute.getName(), attribute.getValue() );
+        }
+        XMLDocument fullBodyDoc;
+        const bool  bFullBody = xmlBody.empty() == false && fullBodyDoc.parse( fullBody ) && fullBodyDoc.getRoot().isValid();
+        bool        bBodyDone = bFullBody == false;
+        for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
+        {
+            const bool bBody = bBodyDone == false && string_view( child.getName() ) == string_view( fullBodyDoc.getRoot().getName() );
+            (void)completeRoot.appendClone( bBody ? fullBodyDoc.getRoot() : child );
+            bBodyDone = bBodyDone || bBody;
+        }
+        const string text         = xmlDoc.saveToString();
+        const string completeText = completeDoc.saveToString();
+        // 상위 폴더는 저장 입구가 만든다. 실패는 로그로 남긴다(SceneDocument::saveToFile 과 같은 형태).
+        const bool writeOk = text.empty() == false && ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( text, completeText ) );
         if ( writeOk == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabXML", "Failed to write prefab XML: %#", absPath.str() );
@@ -1032,7 +1068,7 @@ namespace sw
             variantRoot.set( DataInheritance::kBaseAttribute ).setString( _basePath );
             if ( overrideXML.empty() == false )
                 variantRoot.set( PrefabAssetInternal::kVariantOverrides ).setString( overrideXML );
-            PrefabAssetInternal::writeNodesToJSON( variantRoot, listOwnNode, -1 );
+            PrefabAssetInternal::writeNodesToJSON( variantRoot, listOwnNode, PrefabAssetInternal::kRootParent );
             const expected<string> variantText = variantDoc.dump( 0 );
             if ( variantText.has_value() == false )
             {
@@ -1135,9 +1171,12 @@ namespace sw
         ObjectSaveOptions options{ SerializePurpose::Authoring };
         options._bOmitExternalParent = SW_TRUE;
         _name                        = pGameObject->getName().c_str();
-        _stateData                   = ObjectStateSerializer::saveToXMLString( pGameObject, options );
-        _stateFormat                 = PrefabStateFormat::XML;
-        _bValid                      = _stateData.empty() == false ? SW_TRUE : SW_FALSE;
+        expected<string> state       = ObjectStateSerializer::saveToXMLString( pGameObject, options );
+        if ( state.has_value() == false )
+            SW_LOG_ERROR_ID( "PrefabAsset.StateNotCaptured", "Prefab '%#' could not capture its object state: %# (%#)", _name, state.error().message(), state.error().detail() );
+        _stateData   = state.has_value() ? std::move( *state ) : string{};
+        _stateFormat = PrefabStateFormat::XML;
+        _bValid      = state.has_value() ? SW_TRUE : SW_FALSE;
 
         PrefabCache* pPrefabs = pNestedPrefabs;
         if ( pPrefabs == nullptr && engine::areEngineServicesBound() )
@@ -1217,7 +1256,14 @@ namespace sw
         GameObject*       pTemp = scratch.createGameObject( hashed_string( _name.c_str() ) );
         if ( applyStateTo( pTemp ) == false )
             return {};
-        return ( targetFormat == PrefabStateFormat::JSON ) ? ObjectStateSerializer::saveToJSONString( pTemp, ObjectSaveOptions{ SerializePurpose::Authoring } ) : ObjectStateSerializer::saveToXMLString( pTemp, ObjectSaveOptions{ SerializePurpose::Authoring } );
+        const ObjectSaveOptions options{ SerializePurpose::Authoring };
+        expected<string>        text = ( targetFormat == PrefabStateFormat::JSON ) ? ObjectStateSerializer::saveToJSONString( pTemp, options ) : ObjectStateSerializer::saveToXMLString( pTemp, options );
+        if ( text.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "PrefabAsset.StateNotConverted", "Prefab '%#' state could not be written in the other format: %# (%#)", _name, text.error().message(), text.error().detail() );
+            return {};
+        }
+        return std::move( *text );
     }
 
     void PrefabAsset::collectReferencedPrefabPaths( vector<string>& outListPath ) const

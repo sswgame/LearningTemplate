@@ -3,7 +3,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
-#include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBackend.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -11,11 +11,11 @@
 
 /**
  * @file TestMemoryBench.cpp
- * @brief `Memory::allocate` · `free` 한 번의 비용(ns)입니다. 시간 문턱은 두지 않고 값을 로그(`MemoryBenchTest.AllocateFreeCost`)로 남긴다.
+ * @brief 힙 백엔드(`MemoryBackend::allocate` · `free`) 한 번의 비용(ns)입니다. 시간 문턱은 두지 않고 값을 로그(`MemoryBenchTest.AllocateFreeCost`)로 남긴다.
  * @details 재는 법: Release `App --test --test-run-disabled --test-filter=MemoryBenchTest.*` 5 번, 줄마다 중앙값.
  *          판정(설계 "출하 할당기와 컨테이너 복잡도" ①): 시나리오의 프레임당 할당 수 × 이 ns 가 프레임의 3 % 이상이거나, 8 스레드 ns 가 1 스레드의 3 배 이상이면서
  *          워커 할당이 프레임당 1000 번 이상이면 ② 로 간다.
- *          shortcut: `MemoryBackend` 가 아직 없어 `Memory` 입구를 부른다 — 배포본이 아닌 구성은 할당 헤더 · 기록기 확인이 붙는다. AC-4 가 `MemoryBackend` 를 들이면 그것을 바로 부른다.
+ *          `Memory` 입구가 아니라 백엔드를 바로 부른다 — 배포본이 아닌 구성의 할당 헤더 · 기록기 확인을 빼고 할당기 자체를 견준다(`SW_MEMORY_BACKEND` 선택의 근거).
  */
 namespace sw
 {
@@ -49,7 +49,7 @@ namespace sw
                 {
                     for ( uint32 op = 0; op < kOpsPerThread; ++op )
                     {
-                        Memory::free( Memory::allocate( size ) );
+                        MemoryBackend::free( MemoryBackend::allocate( size ) );
                     }
                     return;
                 }
@@ -58,25 +58,25 @@ namespace sw
                     listBlock.resize( kOpsPerThread );
                     for ( void*& pBlock : listBlock )
                     {
-                        pBlock = Memory::allocate( size );
+                        pBlock = MemoryBackend::allocate( size );
                     }
                     return;
                 }
                 vector<void*> listLive( kLiveCount );
                 for ( void*& pBlock : listLive )
                 {
-                    pBlock = Memory::allocate( size );
+                    pBlock = MemoryBackend::allocate( size );
                 }
                 uint64 state = seed;
                 for ( uint32 op = 0; op < kOpsPerThread; ++op )
                 {
                     void*& pSlot = listLive[nextRandom( state ) % kLiveCount];
-                    Memory::free( pSlot );
-                    pSlot = Memory::allocate( size );
+                    MemoryBackend::free( pSlot );
+                    pSlot = MemoryBackend::allocate( size );
                 }
                 for ( void* pBlock : listLive )
                 {
-                    Memory::free( pBlock );
+                    MemoryBackend::free( pBlock );
                 }
             }
 
@@ -108,7 +108,7 @@ namespace sw
                         {
                             for ( void* pBlock : listBlock )
                             {
-                                Memory::free( pBlock );
+                                MemoryBackend::free( pBlock );
                             } } );
                     }
                     for ( std::thread& worker : listThread )

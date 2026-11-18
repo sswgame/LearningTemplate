@@ -754,32 +754,44 @@ namespace sw
 
     ServiceStoreResult Ledger::listBalances( IServiceStoreConnection& connection, const LedgerHolder& holder, vector<LedgerBalance>& outListBalance )
     {
-        if ( holder.isValid() == false || holder.isSystem() )
+        string afterAssetID;
+        while ( true )
+        {
+            const size_t             sizeBefore = outListBalance.size();
+            const ServiceStoreResult listed     = listBalancePage( connection, holder, afterAssetID, LedgerInternal::kListPageSize, outListBalance );
+            if ( listed != ServiceStoreResult::Ok )
+                return listed;
+            if ( outListBalance.size() - sizeBefore < static_cast<size_t>( LedgerInternal::kListPageSize ) )
+                return ServiceStoreResult::Ok;
+            afterAssetID = outListBalance.back()._assetID;
+        }
+    }
+
+    ServiceStoreResult Ledger::listBalancePage( IServiceStoreConnection& connection, const LedgerHolder& holder, string_view afterAssetID, int32 maxCount,
+                                                vector<LedgerBalance>& outListBalance )
+    {
+        const bool bInvalidPageQuery = holder.isValid() == false || holder.isSystem() || maxCount <= 0 || ( afterAssetID.empty() == false && LedgerUtil::isValidAssetID( afterAssetID ) == false );
+        if ( bInvalidPageQuery )
             return ServiceStoreResult::Invalid;
         string prefix = holder.makeKey();
         prefix.push_back( '/' );
-        string cursor;
-        while ( true )
+        const string             cursor = afterAssetID.empty() ? string() : prefix + string( afterAssetID );
+        vector<ServiceRecord>    listRecord;
+        const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, getBalanceTable(), prefix, cursor, maxCount, false, listRecord )._result;
+        if ( listed != ServiceStoreResult::Ok )
+            return listed;
+        for ( ServiceRecord& record : listRecord )
         {
-            vector<ServiceRecord>    listRecord;
-            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, getBalanceTable(), prefix, cursor, LedgerInternal::kListPageSize, false, listRecord )._result;
-            if ( listed != ServiceStoreResult::Ok )
-                return listed;
-            for ( ServiceRecord& record : listRecord )
+            LedgerBalance& balance = outListBalance.emplace_back();
+            balance._assetID       = record._key.substr( prefix.size() );
+            balance._version       = record._version;
+            if ( decodeBalanceRecord( record._bytes, balance._amount ) == false )
             {
-                LedgerBalance& balance = outListBalance.emplace_back();
-                balance._assetID       = record._key.substr( prefix.size() );
-                balance._version       = record._version;
-                if ( decodeBalanceRecord( record._bytes, balance._amount ) == false )
-                {
-                    SW_LOG_ERROR_ID( "Ledger.LedgerBalanceUnreadable", "Ledger balance '%#' is unreadable", record._key.c_str() );
-                    return ServiceStoreResult::Unavailable;
-                }
+                SW_LOG_ERROR_ID( "Ledger.LedgerBalanceUnreadable", "Ledger balance '%#' is unreadable", record._key.c_str() );
+                return ServiceStoreResult::Unavailable;
             }
-            if ( static_cast<int32>( listRecord.size() ) < LedgerInternal::kListPageSize )
-                return ServiceStoreResult::Ok;
-            cursor = listRecord.back()._key;
         }
+        return ServiceStoreResult::Ok;
     }
 
     ServiceStoreResult Ledger::readBalance( IServiceStoreConnection& connection, const LedgerHolder& holder, string_view assetID, LedgerBalance& outBalance )

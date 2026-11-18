@@ -2,6 +2,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/map.h"
+#include "Core/Container/set.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/String/StringBuilder.h"
@@ -179,6 +180,14 @@ namespace
                 return false;
             outRow = rowIt->second;
             return true;
+        }
+        /** @brief 더 새 빌드가 올린 마이그레이션 @p version 을 적용 기록에 넣습니다(@p bBreaking 이면 Breaking 표에도) — 옛 빌드가 더 새 DB 에 붙는 길을 본다. */
+        void seedNewerMigration( int32 version, bool bBreaking )
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _mapMigration[version] = "from a newer build";
+            if ( bBreaking )
+                (void)_setBreaking.insert( version );
         }
         vector<string> getUnknownStatements() const
         {
@@ -409,6 +418,7 @@ namespace
                 peer._bInTransaction = SW_TRUE;
                 _mapRowAtBegin       = _mapRow;
                 _mapMigrationAtBegin = _mapMigration;
+                _setBreakingAtBegin  = _setBreaking;
                 tag                  = "BEGIN";
             }
             else if ( script == "COMMIT" )
@@ -422,6 +432,7 @@ namespace
                 {
                     _mapRow       = _mapRowAtBegin;
                     _mapMigration = _mapMigrationAtBegin;
+                    _setBreaking  = _setBreakingAtBegin;
                 }
                 peer._bInTransaction = SW_FALSE;
                 tag                  = "ROLLBACK";
@@ -514,6 +525,10 @@ namespace
                     { "version", PostgresCodec::kInt4Oid},
                     {"checksum", PostgresCodec::kTextOid}
                 };
+            if ( isSelectOf( sql, "version FROM sw_schema_breaking" ) )
+                return {
+                    { "version", PostgresCodec::kInt4Oid }
+                };
             if ( isSelectOf( sql, "rkey, bytes, version" ) )
                 return {
                     {   "rkey",  PostgresCodec::kTextOid},
@@ -575,7 +590,18 @@ namespace
             }
             else if ( StringUtil::startsWith( sql, "INSERT INTO sw_schema_breaking" ) )
             {
-                result._tag = "INSERT 0 1"; // shortcut: 값을 두지 않는다 — 이 서버의 기록은 늘 이 빌드의 목록과 같아 Breaking 표를 읽는 길(더 새 DB)에 들지 않는다. 그 길을 여기서 볼 때 둔다
+                (void)_setBreaking.insert( static_cast<int32>( parseInt( listParam[0] ) ) );
+                result._tag = "INSERT 0 1";
+            }
+            else if ( isSelectOf( sql, "version FROM sw_schema_breaking" ) )
+            {
+                for ( const int32 version : _setBreaking )
+                {
+                    result._listRow.push_back( { encodeInt( version, 4 ) } );
+                }
+                StringBuilder<constant::buffer::kMax256> tagBuilder;
+                tagBuilder.appendFormat( "SELECT %#", result._listRow.size() );
+                result._tag = string( tagBuilder.view() );
             }
             else if ( sql.find( "sw_record" ) != string::npos )
             {
@@ -679,6 +705,8 @@ namespace
         map<string, Row>                        _mapRowAtBegin{};
         map<int32, string>                      _mapMigration{};
         map<int32, string>                      _mapMigrationAtBegin{};
+        set<int32>                              _setBreaking{}; ///< Breaking 으로 적용한 번호(`sw_schema_breaking`)
+        set<int32>                              _setBreakingAtBegin{};
         vector<string>                          _listScript{};
         vector<string>                          _listUnknown{};
         string                                  _password{};
@@ -821,4 +849,29 @@ SW_TEST_CASE( PostgresEndToEndTest, MissingSecretStopsStartup )
     error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( 5432 ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "main" ) != string::npos );
+}
+
+/** @brief [PostgresEndToEndTest] 이 빌드가 모르는 번호가 Breaking 표에 있으면(더 새 빌드가 올린 DB) 옛 빌드는 기동을 거절하고, Backward 뿐이면 붙는다 — Breaking 표를 읽는 길이 끝점까지 닿는다 */
+SW_TEST_CASE( PostgresEndToEndTest, NewerBreakingDatabaseStopsStartup )
+{
+    FakePostgresServer server;
+    server.start( kSecret );
+    const test::ScopedEnvironmentVariable secret{ kSecretEnv, kSecret };
+    {
+        test::OnlineRuntimeFixture rig;
+        const auto                 result = rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
+    {
+        SW_EXPECT_LOG( "SQLMigrationRunner.NewerBackwardSchema" ); // 더 새 빌드의 호환 판은 막지 않고 경고만 남긴다
+        server.seedNewerMigration( 9998, false );
+        test::OnlineRuntimeFixture rig;
+        const auto                 result = rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs );
+        SW_EXPECT_TRUE( result.has_value() );
+    }
+    server.seedNewerMigration( 9999, true );
+    test::OnlineRuntimeFixture rig;
+    const string               error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
+    SW_EXPECT_TRUE( error.find( "newer" ) != string::npos );
+    SW_EXPECT_TRUE( server.getUnknownStatements().empty() );
 }

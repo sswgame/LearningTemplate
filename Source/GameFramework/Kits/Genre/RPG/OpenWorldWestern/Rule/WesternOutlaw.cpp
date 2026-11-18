@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternOutlaw.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -9,6 +10,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
@@ -38,6 +40,7 @@ namespace sw
         , _refs{}
         , _regionID{}
         , _pCatalog{ nullptr }
+        , _pLoot{ nullptr }
         , _lastClockHours{ 0.0 }
         , _regionBaseTemperature{ 0.0f }
         , _centsCarry{ 0 }
@@ -45,7 +48,8 @@ namespace sw
     {
     }
 
-    bool WesternOutlaw::initialize( const WesternCatalog* pCatalog, const SessionStateRefs& refs, const hashed_string& regionID, float32 regionBaseTemperature, const AIPerceptionSettings& sight )
+    bool WesternOutlaw::initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, const SessionStateRefs& refs, const hashed_string& regionID, float32 regionBaseTemperature,
+                                    const AIPerceptionSettings& sight )
     {
         const bool bMissingState = pCatalog == nullptr || refs._pWallet == nullptr || refs._pReputation == nullptr || refs._pClock == nullptr;
         if ( bMissingState )
@@ -66,6 +70,7 @@ namespace sw
         _refs                  = refs;
         _regionID              = regionID;
         _pCatalog              = pCatalog;
+        _pLoot                 = pLoot;
         _regionBaseTemperature = regionBaseTemperature;
         _bClockSeen            = SW_FALSE;
         _centsCarry            = 0;
@@ -195,15 +200,27 @@ namespace sw
     {
         bool          bSkinned = false;
         ItemStackList listItem;
-        // shortcut: 전리품 표를 넘기지 않는다(가죽만 얻는다) — 사체의 고기 · 깃털을 쓰는 게임이 생기면 빌린 가방과 `LootCatalog` 를 잇는다.
+        // 사체의 전리품 테이블(고기 · 깃털)을 굴려 빌린 가방에 넣는다(RDR2 의 손질 → 가방과 같다).
         for ( size_t carcassIndex = _listCarcass.size(); carcassIndex > 0; --carcassIndex )
         {
+            const WesternAnimalDef* const pAnimal = _pCatalog->findAnimal( _listCarcass[carcassIndex - 1]._animalID );
+            if ( pAnimal != nullptr && pAnimal->_lootTable.empty() == false && ( _pLoot == nullptr || _refs._pInventory == nullptr ) )
+            {
+                SW_LOG_ERROR_ONCE_ID( "WesternOutlaw.LootWithoutCatalogOrBag", "[Western] animal '%#' names loot table '%#' but the outlaw has no loot catalog or bag - the loot is not rolled",
+                                      pAnimal->_id.c_str(), pAnimal->_lootTable.c_str() );
+            }
             WesternPelt pelt;
-            if ( WesternCarcass::skin( *_pCatalog, _listCarcass[carcassIndex - 1], nullptr, _random, pelt, listItem ) == false )
+            if ( WesternCarcass::skin( *_pCatalog, _listCarcass[carcassIndex - 1], _refs._pInventory != nullptr ? _pLoot : nullptr, _random, pelt, listItem ) == false )
                 continue;
             _listPelt.push_back( pelt );
             _listCarcass.erase( _listCarcass.begin() + static_cast<ptrdiff_t>( carcassIndex - 1 ) );
             bSkinned = true;
+        }
+        for ( const ItemStack& stack : listItem.getItems() )
+        {
+            const int32 added = _refs._pInventory->addItem( stack._itemID, stack._count );
+            if ( added < stack._count )
+                SW_LOG_WARNING_ID( "WesternOutlaw.BagFull", "[Western] the bag is full - %# of '%#' from skinning left behind", stack._count - added, stack._itemID.c_str() );
         }
         return bSkinned;
     }

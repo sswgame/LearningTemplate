@@ -88,6 +88,7 @@ namespace sw::editor
             platformIO.Platform_CreateWindow       = createWindowThunk;
             platformIO.Platform_DestroyWindow      = destroyWindowThunk;
             platformIO.Platform_ShowWindow         = showWindowThunk;
+            platformIO.Platform_UpdateWindow       = updateWindowThunk;
             platformIO.Platform_SetWindowPos       = setWindowPosThunk;
             platformIO.Platform_GetWindowPos       = getWindowPosThunk;
             platformIO.Platform_SetWindowSize      = setWindowSizeThunk;
@@ -290,9 +291,15 @@ namespace sw::editor
     private:
         struct ViewportData
         {
-            Window _windowHandle{ 0 };
-            bool   _bOwned{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            Window             _windowHandle{ 0 };
+            bool               _bOwned{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            ImGuiViewportFlags _hintFlags{ 0 };     ///< 마지막으로 창 관리자 힌트로 적은 깃발(`kHintFlags` 만)
         };
+
+        /** @brief 32 비트 칸 속성 · 클라이언트 메시지의 형식 값입니다(X 프로토콜 — 원자 · long 배열). */
+        static constexpr int32 kPropertyFormat32 = 32;
+        /** @brief 창 관리자 힌트로 옮기는 뷰포트 깃발입니다. */
+        static constexpr ImGuiViewportFlags kHintFlags = ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoTaskBarIcon | ImGuiViewportFlags_TopMost;
 
         /** @brief 지금 ImGui 컨텍스트에 걸린 이 백엔드입니다(`initialize` 가 `BackendPlatformUserData` 에 건다). 걸려 있지 않으면 nullptr 입니다. */
         static ImGuiX11PlatformBackend* getActive() { return static_cast<ImGuiX11PlatformBackend*>( ImGui::GetIO().BackendPlatformUserData ); }
@@ -311,6 +318,11 @@ namespace sw::editor
         {
             if ( getActive() != nullptr )
                 getActive()->showWindow( pViewport );
+        }
+        static void updateWindowThunk( ImGuiViewport* pViewport )
+        {
+            if ( getActive() != nullptr )
+                getActive()->updateWindow( pViewport );
         }
         static void setWindowPosThunk( ImGuiViewport* pViewport, ImVec2 pos )
         {
@@ -465,43 +477,109 @@ namespace sw::editor
         }
 
         /**
-         * @brief 뷰포트 깃발을 창 관리자 힌트로 적습니다(Win32 의 창 스타일 자리). 매핑하기 전에 적어야 창 관리자가 읽는다.
+         * @brief 뷰포트 깃발을 창 관리자 힌트로 적습니다(Win32 의 창 스타일 자리). 처음 자리 · 부모와 함께 매핑하기 전에 적어야 창 관리자가 읽는다.
          * @details 힌트가 없으면 패널 · 팝업 · 툴팁마다 제목 줄이 붙고, 틀 때문에 ImGui 가 놓은 자리와 어긋나고, 처음 놓을 자리를 창 관리자가 정했다. 창 관리자가 없으면(Xvfb) 읽는 쪽이 없을 뿐 해가 없다.
-         *          shortcut: 만들 때 한 번만 적는다(GLFW 백엔드와 같다). 깃발을 실행 중에 바꾸는 설정(`ConfigViewportsNo*`)을 쓰면 `Platform_UpdateWindow` 로 옮긴다.
+         *          실행 중에 깃발이 바뀌면(도킹 · `ConfigViewportsNo*`) `updateWindow` 가 바뀐 힌트만 다시 적는다(imgui_impl_win32 의 `Platform_UpdateWindow` 와 같은 자리).
          */
-        void applyWindowHints( const ImGuiViewport& viewport, Window window )
+        void applyWindowHints( ImGuiViewport& viewport, ViewportData& data )
         {
-            XSizeHints sizeHints{};
+            const Window window = data._windowHandle;
+            XSizeHints   sizeHints{};
             sizeHints.flags = USPosition;
             sizeHints.x     = static_cast<int32>( viewport.Pos.x );
             sizeHints.y     = static_cast<int32>( viewport.Pos.y );
             XSetWMNormalHints( _pDisplay, window, &sizeHints );
 
-            if ( ( viewport.Flags & ImGuiViewportFlags_NoDecoration ) != 0 )
-            {
-                // `_MOTIF_WM_HINTS` 의 다섯 칸(flags · functions · decorations · input_mode · status) - flags 의 1 번 비트가 "decorations 칸을 봐라" 이고 그 값 0 이 장식 없음이다. EWMH 에는 장식을 끄는 힌트가 없어 GLFW · SDL · Godot 모두 이것을 쓴다.
-                constexpr long kMotifHintsDecorations = 1L << 1;
-                const long     arrMotifHints[5]       = { kMotifHintsDecorations, 0, 0, 0, 0 };
-                const Atom     motifHints             = XInternAtom( _pDisplay, "_MOTIF_WM_HINTS", 0 );
-                XChangeProperty( _pDisplay, window, motifHints, motifHints, 32, PropModeReplace, reinterpret_cast<const uint8*>( arrMotifHints ), 5 );
-            }
-
-            Atom  arrState[3]{};
-            int32 stateCount = 0;
-            if ( ( viewport.Flags & ImGuiViewportFlags_NoTaskBarIcon ) != 0 )
-            {
-                arrState[stateCount++] = XInternAtom( _pDisplay, "_NET_WM_STATE_SKIP_TASKBAR", 0 );
-                arrState[stateCount++] = XInternAtom( _pDisplay, "_NET_WM_STATE_SKIP_PAGER", 0 );
-            }
-            if ( ( viewport.Flags & ImGuiViewportFlags_TopMost ) != 0 )
-                arrState[stateCount++] = XInternAtom( _pDisplay, "_NET_WM_STATE_ABOVE", 0 );
+            applyDecorationHint( viewport.Flags, window );
+            Atom        arrState[3]{};
+            const int32 stateCount = collectWindowStates( viewport.Flags, arrState );
             if ( stateCount > 0 )
-                XChangeProperty( _pDisplay, window, XInternAtom( _pDisplay, "_NET_WM_STATE", 0 ), XA_ATOM, 32, PropModeReplace, reinterpret_cast<const uint8*>( arrState ), stateCount );
+                XChangeProperty( _pDisplay, window, XInternAtom( _pDisplay, "_NET_WM_STATE", 0 ), XA_ATOM, kPropertyFormat32, PropModeReplace, reinterpret_cast<const uint8*>( arrState ), stateCount );
+            data._hintFlags = viewport.Flags & kHintFlags;
 
             // 부모(팝업을 연 창) 위에 머문다 - Win32 의 소유 창 자리다.
             const ViewportData* pParent = viewport.ParentViewport != nullptr ? static_cast<const ViewportData*>( viewport.ParentViewport->PlatformUserData ) : nullptr;
             if ( pParent != nullptr && pParent->_windowHandle != 0 )
                 XSetTransientForHint( _pDisplay, window, pParent->_windowHandle );
+        }
+
+        /** @brief 장식 힌트입니다. `_MOTIF_WM_HINTS` 는 창 관리자가 매핑 뒤에도 다시 읽는다(PropertyNotify). 장식을 되살릴 때는 지운다. */
+        void applyDecorationHint( ImGuiViewportFlags flags, Window window )
+        {
+            const Atom motifHints = XInternAtom( _pDisplay, "_MOTIF_WM_HINTS", 0 );
+            if ( ( flags & ImGuiViewportFlags_NoDecoration ) == 0 )
+            {
+                XDeleteProperty( _pDisplay, window, motifHints );
+                return;
+            }
+            // `_MOTIF_WM_HINTS` 의 다섯 칸(flags · functions · decorations · input_mode · status) - flags 의 1 번 비트가 "decorations 칸을 봐라" 이고 그 값 0 이 장식 없음이다. EWMH 에는 장식을 끄는 힌트가 없어 GLFW · SDL · Godot 모두 이것을 쓴다.
+            constexpr long kMotifHintsDecorations = 1L << 1;
+            const long     arrMotifHints[5]       = { kMotifHintsDecorations, 0, 0, 0, 0 };
+            XChangeProperty( _pDisplay, window, motifHints, motifHints, kPropertyFormat32, PropModeReplace, reinterpret_cast<const uint8*>( arrMotifHints ), 5 );
+        }
+
+        /** @brief 깃발이 켜는 `_NET_WM_STATE` 원자들을 @p arrOutState 에 채우고 수를 돌려줍니다(최대 3). */
+        int32 collectWindowStates( ImGuiViewportFlags flags, Atom ( &arrOutState )[3] ) const
+        {
+            int32 stateCount = 0;
+            if ( ( flags & ImGuiViewportFlags_NoTaskBarIcon ) != 0 )
+            {
+                arrOutState[stateCount++] = XInternAtom( _pDisplay, "_NET_WM_STATE_SKIP_TASKBAR", 0 );
+                arrOutState[stateCount++] = XInternAtom( _pDisplay, "_NET_WM_STATE_SKIP_PAGER", 0 );
+            }
+            if ( ( flags & ImGuiViewportFlags_TopMost ) != 0 )
+                arrOutState[stateCount++] = XInternAtom( _pDisplay, "_NET_WM_STATE_ABOVE", 0 );
+            return stateCount;
+        }
+
+        /** @brief 매핑된 창의 `_NET_WM_STATE` 하나를 켜거나 끕니다 — EWMH 는 매핑 뒤에는 속성이 아니라 루트로 보내는 요청으로 바꾸게 한다. */
+        void sendStateChange( Window window, bool bAdd, const utf8* pFirstAtom, const utf8* pSecondAtom )
+        {
+            constexpr long kStateRemove     = 0;
+            constexpr long kStateAdd        = 1;
+            constexpr long kSourceNormalApp = 1;
+            XEvent         event{};
+            event.xclient.type         = ClientMessage;
+            event.xclient.window       = window;
+            event.xclient.message_type = XInternAtom( _pDisplay, "_NET_WM_STATE", 0 );
+            event.xclient.format       = kPropertyFormat32;
+            event.xclient.data.l[0]    = bAdd ? kStateAdd : kStateRemove;
+            event.xclient.data.l[1]    = static_cast<long>( XInternAtom( _pDisplay, pFirstAtom, 0 ) );
+            event.xclient.data.l[2]    = pSecondAtom != nullptr ? static_cast<long>( XInternAtom( _pDisplay, pSecondAtom, 0 ) ) : 0;
+            event.xclient.data.l[3]    = kSourceNormalApp;
+            XSendEvent( _pDisplay, DefaultRootWindow( _pDisplay ), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event );
+        }
+
+        /** @brief 뷰포트 깃발이 바뀌었으면 바뀐 힌트만 다시 적습니다(ImGui 가 프레임마다 부른다). 메인 창은 이 백엔드가 만든 창이 아니라 건드리지 않는다. */
+        void updateWindow( ImGuiViewport* pViewport )
+        {
+            ViewportData* pData = pViewport != nullptr ? static_cast<ViewportData*>( pViewport->PlatformUserData ) : nullptr;
+            if ( _pDisplay == nullptr || pData == nullptr || pData->_bOwned == false || pData->_windowHandle == 0 )
+                return;
+            const ImGuiViewportFlags flags   = pViewport->Flags & kHintFlags;
+            const ImGuiViewportFlags changed = flags ^ pData->_hintFlags;
+            if ( changed == 0 )
+                return;
+            const Window window = pData->_windowHandle;
+            if ( ( changed & ImGuiViewportFlags_NoDecoration ) != 0 )
+                applyDecorationHint( flags, window );
+            XWindowAttributes attributes{};
+            const bool        bMapped = XGetWindowAttributes( _pDisplay, window, &attributes ) != 0 && attributes.map_state != IsUnmapped;
+            if ( bMapped )
+            {
+                if ( ( changed & ImGuiViewportFlags_NoTaskBarIcon ) != 0 )
+                    sendStateChange( window, ( flags & ImGuiViewportFlags_NoTaskBarIcon ) != 0, "_NET_WM_STATE_SKIP_TASKBAR", "_NET_WM_STATE_SKIP_PAGER" );
+                if ( ( changed & ImGuiViewportFlags_TopMost ) != 0 )
+                    sendStateChange( window, ( flags & ImGuiViewportFlags_TopMost ) != 0, "_NET_WM_STATE_ABOVE", nullptr );
+            }
+            else
+            {
+                Atom        arrState[3]{};
+                const int32 stateCount = collectWindowStates( flags, arrState );
+                XChangeProperty( _pDisplay, window, XInternAtom( _pDisplay, "_NET_WM_STATE", 0 ), XA_ATOM, kPropertyFormat32, PropModeReplace, reinterpret_cast<const uint8*>( arrState ), stateCount );
+            }
+            pData->_hintFlags = flags;
+            XFlush( _pDisplay );
         }
 
         void createWindow( ImGuiViewport* pViewport )
@@ -521,7 +599,7 @@ namespace sw::editor
                 BlackPixel( _pDisplay, DefaultScreen( _pDisplay ) ),
                 WhitePixel( _pDisplay, DefaultScreen( _pDisplay ) ) );
 
-            applyWindowHints( *pViewport, pData->_windowHandle );
+            applyWindowHints( *pViewport, *pData );
             XDefineCursor( _pDisplay, pData->_windowHandle, findOrCreateCursor( _lastCursor ) ); // 지금 커서가 바뀔 때까지 기다리지 않는다
             XSelectInput( _pDisplay, pData->_windowHandle,
                           ExposureMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask | KeyPressMask | KeyReleaseMask );
@@ -573,7 +651,7 @@ namespace sw::editor
                 if ( ( pViewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing ) != 0 )
                 {
                     const long userTime = 0; // 형식 32 는 C `long` 이다
-                    XChangeProperty( _pDisplay, pData->_windowHandle, XInternAtom( _pDisplay, "_NET_WM_USER_TIME", 0 ), XA_CARDINAL, 32, PropModeReplace, reinterpret_cast<const uint8*>( &userTime ), 1 );
+                    XChangeProperty( _pDisplay, pData->_windowHandle, XInternAtom( _pDisplay, "_NET_WM_USER_TIME", 0 ), XA_CARDINAL, kPropertyFormat32, PropModeReplace, reinterpret_cast<const uint8*>( &userTime ), 1 );
                 }
                 XMapRaised( _pDisplay, pData->_windowHandle );
                 XFlush( _pDisplay );

@@ -29,6 +29,8 @@ namespace sw
     class IRHIDevice;
     class Scene;
 
+    enum class ScreenshotTicketState : uint8; // Engine/Graphics/View/ScreenshotRequestQueue.h
+
     /** @brief 렌더 스레드에서 실행할 일 하나입니다(`RenderThread::executeAndWait`). 디바이스는 그 스레드가 컨텍스트를 잡은 것입니다. */
     SW_DECLARE_DELEGATE( void, RenderCommandDelegate, IRHIDevice& );
 
@@ -142,9 +144,12 @@ namespace sw
          * @details @p sourceTexture 가 0이면 화면에 나간 이미지(Present 결과이며, 에디터면 주 출력으로 게임 뷰가 보이면 게임 뷰, 아니면 씬 뷰)를 읽고,
          *          아니면 그 렌더 타깃(포맷 @p sourceFormat)을 읽습니다. 주 출력이 아닌 에디터 씬 뷰가 그 경우입니다.
          *          Present 캡처는 켠 프레임에 아직 비어 있을 수 있어서, 캡처를 켜고 한 프레임을 더 그린 뒤 `endFrame` 다음에 읽습니다.
-         *          요청은 렌더 스레드 하나가 받습니다(엔진 범위의 우편함 서비스 `ScreenshotRequestQueue` — 우편함이 없는 호스트에서는 오류로 알리고 버립니다). 앞 요청이 아직 남아 있으면 덮어씁니다.
+         *          요청은 렌더 스레드 하나가 받은 차례로 처리합니다(엔진 범위의 우편함 서비스 `ScreenshotRequestQueue` — 우편함이 없는 호스트에서는 오류로 알리고 버립니다).
+         * @return 이 요청의 표입니다 — 결과는 `findScreenshotResult` 로 읽는다(다른 쪽의 요청과 섞이지 않는다). 우편함이 없으면 0(`Unknown`)입니다.
          */
-        static void requestScreenshot( const AbsolutePath& filePath, RHITextureHandle sourceTexture = 0, RHIFormat sourceFormat = RHIFormat::R8G8B8A8_UNORM );
+        static uint32 requestScreenshot( const AbsolutePath& filePath, RHITextureHandle sourceTexture = 0, RHIFormat sourceFormat = RHIFormat::R8G8B8A8_UNORM );
+        /** @brief 표 @p ticket 의 요청 상태입니다(`requestScreenshot` 의 반환). 우편함이 없으면 `Unknown` 입니다. */
+        [[nodiscard]] static ScreenshotTicketState findScreenshotResult( uint32 ticket );
         /** @brief `requestScreenshot` 요청을 처리한 수입니다(성공과 실패 모두 셉니다). 값이 바뀌면 `getLastScreenshotPath` 가 그 결과를 가리킵니다. */
         static uint32 getCompletedScreenshotSerial();
         /** @brief 마지막으로 처리한 `requestScreenshot` 이 쓴 파일 경로입니다. 실패했으면 빈 문자열입니다. */
@@ -227,6 +232,7 @@ namespace sw
         array<ScenePendingJob, 1 + kMaxPreviewSceneView> _arrScenePending;                    ///< 지난 프레임에 그린 씬(주 화면 + 미리보기)마다의 값
         uint32                                           _scenePendingCount;                  ///< `_arrScenePending` 에 쓴 칸 수
         string                                           _requestedScreenshotPath;            ///< 받은 `requestScreenshot` 요청의 경로(렌더 스레드만 쓴다). 비면 요청이 없다.
+        uint32                                           _requestedScreenshotTicket;          ///< 받은 요청의 표(끝 알림이 이 표로 결과를 남긴다)
         RHITextureHandle                                 _requestedScreenshotTexture;         ///< 0이면 Present 캡처이고, 아니면 그 렌더 타깃이다.
         RHIFormat                                        _requestedScreenshotFormat;          ///< `_requestedScreenshotTexture` 의 포맷
         uint32                                           _requestedScreenshotWaitFrames;      ///< 쓰기 전에 더 그릴 프레임 수(캡처를 켠 프레임은 비어 있을 수 있다)

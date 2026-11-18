@@ -475,23 +475,26 @@ namespace sw
         OnlineServerKitContext& context = parts._context;
         context._pHost                  = &parts._host;
         context._pStore                 = parts._store.get();
-        context._pCache                 = parts._cache.get();
-        context._pBus                   = parts._busFront.get();
-        context._pScheduler             = &parts._scheduler;
-        context._pRemoteConfig          = &parts._remoteConfig;
-        context._pMetricRegistry        = settings._pMetricRegistry;
-        context._pHealthRegistry        = settings._pHealthRegistry;
-        context._pConfig                = &parts._config;
-        context._serverID               = serverID;
-        context._nowMs                  = nowMs;
-        ServerDescriptor& descriptor    = context._serverDescriptor;
-        descriptor._serverID            = serverID;
-        descriptor._kind                = parts._config._serverKind;
-        descriptor._region              = parts._config._region;
-        descriptor._address             = parts._config._publicAddress;
-        descriptor._port                = settings._gamePort;
-        descriptor._portCount           = settings._gamePortCount;
-        descriptor._capacity            = parts._config._capacity;
+        // 전용 서버의 게임 모듈도 같은 저장소를 쓴다 — 키트 범위에 걸어 호스트 칸(`IServerKitLocator` · `findServerKit<IServiceStore>`)으로 찾게 한다(키트 인터페이스와 같은 길).
+        if ( parts._kitScope.bind<IServiceStore>( parts._store.get() ) == false )
+            return unexpected( Error{ ErrorKind::AlreadyExists, "the service store is already in the kit scope" } );
+        context._pCache              = parts._cache.get();
+        context._pBus                = parts._busFront.get();
+        context._pScheduler          = &parts._scheduler;
+        context._pRemoteConfig       = &parts._remoteConfig;
+        context._pMetricRegistry     = settings._pMetricRegistry;
+        context._pHealthRegistry     = settings._pHealthRegistry;
+        context._pConfig             = &parts._config;
+        context._serverID            = serverID;
+        context._nowMs               = nowMs;
+        ServerDescriptor& descriptor = context._serverDescriptor;
+        descriptor._serverID         = serverID;
+        descriptor._kind             = parts._config._serverKind;
+        descriptor._region           = parts._config._region;
+        descriptor._address          = parts._config._publicAddress;
+        descriptor._port             = settings._gamePort;
+        descriptor._portCount        = settings._gamePortCount;
+        descriptor._capacity         = parts._config._capacity;
         return {};
     }
 

@@ -720,6 +720,12 @@ namespace sw
         {
             bTickJobs = bTickJobs || ( pComp != nullptr && pComp->hasTickJobs() );
         }
+        // 모두 끝낸 뒤에 하나씩 소멸한다 — 형제의 onEndPlay 가 먼저 소멸한 형제를 만지지 않는다(언리얼 AActor::EndPlay 가 컴포넌트를 다 끝낸 뒤 파괴하는 순서).
+        for ( Component* pComp : listOwned )
+        {
+            if ( pComp != nullptr )
+                pComp->dispatchEndPlay();
+        }
         for ( Component* pComp : listOwned )
         {
             if ( pComp != nullptr )

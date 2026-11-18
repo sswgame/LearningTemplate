@@ -63,6 +63,7 @@ namespace sw
                 ScreenshotRequestQueue*    _pMailbox{ nullptr }; ///< 다 쓰면 알린다 - 엔진 종료는 모듈을 내리기 전에 엔진 태스크를 모두 기다린다
                 shared_ptr<atomic<uint32>> _pInFlight;           ///< 실행 중 요청: 쓰는 중인 수(0 이 될 때까지 다음 요청을 꺼내지 않는다)
                 ScreenshotWriteKind        _kind{ ScreenshotWriteKind::Requested };
+                uint32                     _ticket{ 0 }; ///< 실행 중 요청의 표(`ScreenshotRequestQueue::put`)
             };
 
             /** @brief 워커 잡 본문입니다. 풀어 쓰고(실패는 쓰는 쪽이 경로와 함께 Error 로 남긴다) 처리했음을 알린다 - 기다리는 쪽은 처리 수로 끝을 알고, 그때 파일은 다 써졌다. */
@@ -85,7 +86,7 @@ namespace sw
                 else
                     SW_LOG_WARNING_ID( "Screenshot.NotWritten", "Screenshot was not written: %#", write._path.c_str() );
                 if ( write._pMailbox != nullptr )
-                    write._pMailbox->reportCompleted( bWritten, write._path );
+                    write._pMailbox->reportCompleted( write._ticket, bWritten, write._path );
                 --*write._pInFlight;
             }
 
@@ -157,6 +158,7 @@ namespace sw
         , _arrScenePending{}
         , _scenePendingCount{ 0 }
         , _requestedScreenshotPath{}
+        , _requestedScreenshotTicket{ 0 }
         , _requestedScreenshotTexture{ 0 }
         , _requestedScreenshotFormat{ RHIFormat::R8G8B8A8_UNORM }
         , _requestedScreenshotWaitFrames{ 0 }
@@ -825,15 +827,21 @@ namespace sw
         return false;
     }
 
-    void RenderThread::requestScreenshot( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
+    uint32 RenderThread::requestScreenshot( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
         ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         if ( pMailbox == nullptr )
         {
             SW_LOG_ERROR_ID( "RenderThread.ScreenshotNotRequestedHost", "Screenshot '%#' was not requested - this host has no screenshot mailbox (no renderer)", filePath.str() );
-            return;
+            return 0;
         }
-        pMailbox->put( filePath, sourceTexture, sourceFormat );
+        return pMailbox->put( filePath, sourceTexture, sourceFormat );
+    }
+
+    ScreenshotTicketState RenderThread::findScreenshotResult( uint32 ticket )
+    {
+        const ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
+        return pMailbox != nullptr ? pMailbox->findResult( ticket ) : ScreenshotTicketState::Unknown;
     }
 
     uint32 RenderThread::getCompletedScreenshotSerial()
@@ -858,6 +866,7 @@ namespace sw
         if ( pMailbox == nullptr || pMailbox->take( request ) == false )
             return;
         _requestedScreenshotPath.swap( request._path );
+        _requestedScreenshotTicket  = request._ticket;
         _requestedScreenshotTexture = request._texture;
         _requestedScreenshotFormat  = request._format;
         // 렌더 타깃은 이번 프레임에 그려지므로 기다리지 않는다. Present 캡처는 켠 뒤 한 프레임을 더 그린다.
@@ -880,6 +889,7 @@ namespace sw
         pWrite->_path      = std::move( _requestedScreenshotPath );
         pWrite->_pMailbox  = RenderThreadInternal::findMailbox();
         pWrite->_pInFlight = _pRequestedScreenshotWritesInFlight;
+        pWrite->_ticket    = _requestedScreenshotTicket;
         pWrite->_format    = _requestedScreenshotTexture == 0 ? constant::render::kBackBufferFormat : _requestedScreenshotFormat;
         _requestedScreenshotPath.clear();
         const bool bRead            = _requestedScreenshotTexture == 0 ? readPresentedBytes( pWrite->_path, pWrite->_bytes, pWrite->_layout )
@@ -896,7 +906,7 @@ namespace sw
         }
         SW_LOG_WARNING_ID( "Screenshot.NotWritten", "Screenshot was not written: %#", pWrite->_path.c_str() );
         if ( pWrite->_pMailbox != nullptr )
-            pWrite->_pMailbox->reportCompleted( false, pWrite->_path ); // 우편함이 먼저 내려갔으면 알릴 곳이 없다
+            pWrite->_pMailbox->reportCompleted( pWrite->_ticket, false, pWrite->_path ); // 우편함이 먼저 내려갔으면 알릴 곳이 없다
     }
 
     void RenderThread::discardPendingRenderTargetRead()

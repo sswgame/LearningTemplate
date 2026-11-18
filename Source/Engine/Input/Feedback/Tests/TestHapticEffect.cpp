@@ -100,3 +100,35 @@ SW_TEST_CASE( HapticEffectTest, ConstantEffectIsSentOnce )
     SW_EXPECT_LOG( "HapticPlayback.NoEffect" );
     SW_EXPECT_FALSE( playback.start( nullptr, 1.0f, output ) );
 }
+
+SW_TEST_CASE( HapticEffectTest, OverlappingEffectsCombineByMaximumPerMotor )
+{
+    RecordingFeedbackDevice output;
+    HapticPlayback          playback;
+    SW_EXPECT_TRUE( playback.start( HapticEffectDef::makeConstant( 0.3f, 0.9f, 1.0f ), 1.0f, output ) );
+    SW_EXPECT_TRUE( playback.start( HapticEffectDef::makeConstant( 0.8f, 0.2f, 0.2f ), 1.0f, output ) );
+    SW_EXPECT_EQUAL( playback.getActiveCount(), 2u );
+    SW_EXPECT_NEAR( output._low, 0.8f, 1.0e-6f ); // 모터마다 큰 값
+    SW_EXPECT_NEAR( output._high, 0.9f, 1.0e-6f );
+
+    playback.advance( 0.3f, output ); // 짧은 효과만 끝났다 — 긴 효과가 이어지고 출력은 멈추지 않는다
+    SW_EXPECT_EQUAL( playback.getActiveCount(), 1u );
+    SW_EXPECT_NEAR( output._low, 0.3f, 1.0e-6f );
+    SW_EXPECT_NEAR( output._high, 0.9f, 1.0e-6f );
+    SW_EXPECT_EQUAL( output._stopCount, 0u );
+
+    playback.advance( 0.8f, output );
+    SW_EXPECT_FALSE( playback.isPlaying() );
+    SW_EXPECT_EQUAL( output._stopCount, 1u );
+}
+
+SW_TEST_CASE( HapticEffectTest, ActiveEffectsAreCappedByDroppingTheOldest )
+{
+    RecordingFeedbackDevice output;
+    HapticPlayback          playback;
+    for ( uint32 index = 0; index < HapticPlayback::kMaxActiveEffects + 3; ++index )
+    {
+        SW_EXPECT_TRUE( playback.start( HapticEffectDef::makeConstant( 0.1f, 0.1f, 1.0f ), 1.0f, output ) );
+    }
+    SW_EXPECT_EQUAL( playback.getActiveCount(), HapticPlayback::kMaxActiveEffects );
+}

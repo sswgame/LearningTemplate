@@ -76,6 +76,7 @@ namespace sw
         : _pDisplay{ nullptr }
         , _windowHandle{ 0 }
         , _pRenderContext{ nullptr }
+        , _visualID{ 0 }
     {
     }
 
@@ -207,6 +208,7 @@ namespace sw
         _pDisplay       = pDpy;
         _windowHandle   = static_cast<uint64>( win );
         _pRenderContext = context;
+        _visualID       = static_cast<uint64>( windowVisualID );
 
         outHandles._pDeviceContext = _pDisplay;
         outHandles._pRenderContext = _pRenderContext;
@@ -223,6 +225,7 @@ namespace sw
         _pDisplay       = nullptr;
         _windowHandle   = 0;
         _pRenderContext = nullptr;
+        _visualID       = 0;
     }
 
     bool GLXPlatformContext::makeCurrent()
@@ -262,12 +265,21 @@ namespace sw
 
     void* GLXPlatformContext::createWindowSurface( const RHISwapChainDesc& desc )
     {
-        // 한 문맥을 다른 창에 걸려면 같은 디스플레이 연결의 X 창이어야 한다. 표면 값은 창 XID 다(XID 0 은 창이 아니다).
-        // shortcut: 창 비주얼이 문맥의 FBConfig 와 다르면 glXMakeCurrent 가 BadMatch 다 — 리눅스 에디터에서 플로팅 창이 그려지지 않으면 창마다 문맥을 나눈다.
+        // 한 문맥을 다른 창에 걸려면 같은 디스플레이 연결의 X 창이고 주 창과 같은 비주얼이어야 한다(다르면 glXMakeCurrent 가 BadMatch 로 X 오류 처리기까지 간다).
+        // 창들은 모두 루트의 기본 비주얼로 만든다(`X11Window` · `ImGuiX11PlatformBackend` 의 XCreateSimpleWindow) — 여기서 그 약속을 검사해 어긋나면 표면을 만들지 않는다.
+        // 표면 값은 창 XID 다(XID 0 은 창이 아니다).
         const bool bSameDisplay = desc._surfaceKind == NativeSurfaceKind::X11 && desc._pWindowDisplay == _pDisplay && desc._pWindowHandle != nullptr;
         if ( bSameDisplay == false )
         {
             SW_LOG_ERROR_ID( "OpenGL.WindowSurfaceNeedsX11", "A GLX window surface needs an X11 window on the main window's display connection" );
+            return nullptr;
+        }
+        Display* const    pDpy = static_cast<Display*>( _pDisplay );
+        XWindowAttributes windowAttributes{};
+        if ( XGetWindowAttributes( pDpy, static_cast<Window>( reinterpret_cast<uintptr_t>( desc._pWindowHandle ) ), &windowAttributes ) == 0 || windowAttributes.visual == nullptr ||
+             static_cast<uint64>( XVisualIDFromVisual( windowAttributes.visual ) ) != _visualID )
+        {
+            SW_LOG_ERROR_ID( "OpenGL.WindowSurfaceVisualMismatch", "A GLX window surface needs the main window's visual (%#) - create the window with the default visual", _visualID );
             return nullptr;
         }
         return desc._pWindowHandle;

@@ -65,6 +65,7 @@ namespace sw
         , _anchorTime{ 0.0f }
         , _predictedAnchorTime{ 0.0f }
         , _state{ PairedAnimationSessionState::Idle }
+        , _abortReason{ PairedAnimationAbortReason::None }
         , _bClockStarted{ SW_FALSE }
     {
         SW_ASSERT( _def != nullptr );
@@ -512,28 +513,33 @@ namespace sw
         (void)pAnimator->play( roleDef._exitState, true, roleDef._exitBlendSeconds ); // 못 찾은 종료 상태는 `play` 가 오류로 남긴다
     }
 
-    void PairedAnimationSession::end( GameObjectManager& manager, PairedAnimationSessionState state )
+    void PairedAnimationSession::end( GameObjectManager& manager, PairedAnimationSessionState state, PairedAnimationAbortReason abortReason )
     {
         for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
         {
             exitRole( manager, static_cast<uint32>( roleIndex ) );
         }
-        _state = state;
+        _state       = state;
+        _abortReason = state == PairedAnimationSessionState::Aborted ? abortReason : PairedAnimationAbortReason::None;
     }
 
     void PairedAnimationSession::abort( GameObjectManager& manager )
     {
         if ( _state == PairedAnimationSessionState::Playing )
-            end( manager, PairedAnimationSessionState::Aborted );
+            end( manager, PairedAnimationSessionState::Aborted, PairedAnimationAbortReason::Requested );
     }
 
-    bool PairedAnimationSession::loseRole( GameObjectManager& manager, uint32 roleIndex, const utf8* pReason )
+    bool PairedAnimationSession::loseRole( GameObjectManager& manager, uint32 roleIndex, PairedAnimationAbortReason reason, const utf8* pDetail )
     {
         const PairedAnimationRoleDef& roleDef = _def->getRoles()[roleIndex];
         if ( roleDef._bRequired )
         {
-            SW_LOG_WARNING_ID( "PairedAnimation.PairedAnimationAbortsRequired", "Paired animation %# aborts: required role '%#' %#", _sessionID, roleDef._name.c_str(), pReason );
-            end( manager, PairedAnimationSessionState::Aborted );
+            // 꺼진 참가자는 풀 반환 같은 정상 흐름이다 — 경고가 아니라 알림으로 남긴다.
+            if ( reason == PairedAnimationAbortReason::ParticipantDeactivated )
+                SW_LOG_INFO_ID( "PairedAnimation.ParticipantDeactivated", "Paired animation %# ends: required role '%#' %#", _sessionID, roleDef._name.c_str(), pDetail );
+            else
+                SW_LOG_WARNING_ID( "PairedAnimation.PairedAnimationAbortsRequired", "Paired animation %# aborts: required role '%#' %#", _sessionID, roleDef._name.c_str(), pDetail );
+            end( manager, PairedAnimationSessionState::Aborted, reason );
             return true;
         }
         exitRole( manager, roleIndex );
@@ -574,13 +580,17 @@ namespace sw
             RoleState& role = _listRole[roleIndex];
             if ( role._stage != PairedAnimationRoleStage::Waiting && role._stage != PairedAnimationRoleStage::Playing )
                 continue;
-            const SkeletalAnimatorComponent* pAnimator        = resolveAnimator( manager, role );
-            float32                          clipTime         = 0.0f;
-            const bool                       bMissing         = pAnimator == nullptr;
-            const bool                       bClipInterrupted = bMissing == false && role._stage == PairedAnimationRoleStage::Playing && tryGetClipTime( *pAnimator, role, clipTime ) == false;
-            if ( bMissing == false && bClipInterrupted == false )
+            const SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
+            float32                          clipTime  = 0.0f;
+            const bool                       bMissing  = pAnimator == nullptr;
+            // 계층에서 꺼진 참가자는 애니메이션이 돌지 않아(`SkeletalMeshComponent::beginAnimationFrame`) 시계가 멈춘다 — 시각 어긋남(오용)으로 보기 전에 잃은 역할로 본다.
+            const bool bDeactivated     = bMissing == false && pAnimator->isActive() == false;
+            const bool bClipInterrupted = bMissing == false && bDeactivated == false && role._stage == PairedAnimationRoleStage::Playing && tryGetClipTime( *pAnimator, role, clipTime ) == false;
+            if ( bMissing == false && bDeactivated == false && bClipInterrupted == false )
                 continue;
-            if ( loseRole( manager, static_cast<uint32>( roleIndex ), bMissing ? "is gone" : "stopped playing its clip" ) )
+            const PairedAnimationAbortReason reason  = bDeactivated ? PairedAnimationAbortReason::ParticipantDeactivated : PairedAnimationAbortReason::RoleLost;
+            const utf8* const                pDetail = bMissing ? "is gone" : ( bDeactivated ? "was deactivated" : "stopped playing its clip" );
+            if ( loseRole( manager, static_cast<uint32>( roleIndex ), reason, pDetail ) )
                 return true;
         }
         return false;
@@ -600,7 +610,7 @@ namespace sw
             if ( MathUtil::abs( clipTime - expected ) > kTimeToleranceSeconds )
             {
                 SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationAbortsRole", "Paired animation %# aborts: role '%#' time %# differs from the expected %#", _sessionID, _def->getRoles()[roleIndex]._name.c_str(), clipTime, expected );
-                end( manager, PairedAnimationSessionState::Aborted );
+                end( manager, PairedAnimationSessionState::Aborted, PairedAnimationAbortReason::TimeMismatch );
                 return true;
             }
         }
@@ -620,7 +630,7 @@ namespace sw
             {
                 if ( isWithinAlignDistance( manager, index ) == false )
                 {
-                    if ( loseRole( manager, index, "is too far from its alignment target" ) )
+                    if ( loseRole( manager, index, PairedAnimationAbortReason::RoleLost, "is too far from its alignment target" ) )
                         return true;
                     continue;
                 }
@@ -659,13 +669,13 @@ namespace sw
         float32                          anchorTime = 0.0f;
         if ( pAnchor == nullptr || tryGetClipTime( *pAnchor, _listRole[anchorIndex], anchorTime ) == false )
         {
-            (void)loseRole( manager, anchorIndex, "lost its clock" ); // 앵커는 필수라 늘 중단한다
+            (void)loseRole( manager, anchorIndex, PairedAnimationAbortReason::RoleLost, "lost its clock" ); // 앵커는 필수라 늘 중단한다
             return;
         }
         if ( _bClockStarted && MathUtil::abs( anchorTime - _predictedAnchorTime ) > kTimeToleranceSeconds )
         {
             SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationAbortsAnchor", "Paired animation %# aborts: anchor time %# differs from the expected %# (play rate or time changed outside the session)", _sessionID, anchorTime, _predictedAnchorTime );
-            end( manager, PairedAnimationSessionState::Aborted );
+            end( manager, PairedAnimationSessionState::Aborted, PairedAnimationAbortReason::TimeMismatch );
             return;
         }
         _bClockStarted = SW_TRUE;

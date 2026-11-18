@@ -64,10 +64,11 @@ namespace sw
         InputDeviceKind        _deviceKind{ InputDeviceKind::Keyboard };
         uint8                  _deviceIndex{ 0 };
         uint8                  _modifierMask{ 0 }; /**< ModifierKey::Ctrl | Shift | Alt | Super */
-        uint8                  _bRepeat    : 1;
-        uint8                  _bSynthetic : 1; /**< 가상 입력 원천(`IVirtualInputSource`)이 낸 이벤트입니다. `InputManager::beginFrame` 이 켭니다. */
-        uint8                  _bEditorUI  : 1; /**< 에디터 UI(ImGui)가 받은 키를 엔진 입력 맵에 넘긴 이벤트입니다(`EditorInputActions`). 배타 가상 입력이 OS 이벤트를 버려도 이것은 남는다 — 시나리오가 ImGui 에 넣은 키가 같은 길로 닿는다. */
-        [[maybe_unused]] uint8 _reserved   : 5;
+        uint8                  _bRepeat        : 1;
+        uint8                  _bSynthetic     : 1; /**< 가상 입력 원천(`IVirtualInputSource`)이 낸 이벤트입니다. `InputManager::beginFrame` 이 켭니다. */
+        uint8                  _bEditorUI      : 1; /**< 에디터 UI(ImGui)가 받은 키를 엔진 입력 맵에 넘긴 이벤트입니다(`EditorInputActions`). 배타 가상 입력이 OS 이벤트를 버려도 이것은 남는다 — 시나리오가 ImGui 에 넣은 키가 같은 길로 닿는다. */
+        uint8                  _bTextContinued : 1; /**< 조합 글(`TextComposition`)이 칸보다 길어 다음 이벤트로 이어진다 — 받는 쪽은 이어 붙여 마지막 조각에서 한 번 넘긴다. */
+        [[maybe_unused]] uint8 _reserved       : 4;
         /**
          * @brief 프레임 안의 자리입니다. 0 은 이 프레임 창의 시작(지난 `beginFrame`), 1 은 이번 `beginFrame` 입니다(서브틱 입력).
          * @details OS 이벤트는 `beginFrame` 이 `_timeMicroseconds` 로 채운다. 가상 이벤트(리플레이 · 시나리오)는 녹화된 값 그대로이고(파일에 저장된다), 손으로 지은 가상 이벤트는 0(프레임 시작)이다.
@@ -123,6 +124,7 @@ namespace sw
             , _bRepeat{ SW_FALSE }
             , _bSynthetic{ SW_FALSE }
             , _bEditorUI{ SW_FALSE }
+            , _bTextContinued{ SW_FALSE }
             , _reserved{ 0 }
             , _frameFraction{ 0.0f }
             , _timeMicroseconds{ 0 }
@@ -310,11 +312,13 @@ namespace sw
             return event;
         }
 
-        static RawInputEvent makeTextComposition( string_view text )
+        /** @brief 조합 글 조각입니다. 칸보다 긴 조합은 `InputManager::postTextComposition` 이 나눠 앞 조각에 @p bContinued 를 켠다. */
+        static RawInputEvent makeTextComposition( string_view text, bool bContinued )
         {
             RawInputEvent event{};
-            event._type       = RawInputEventType::TextComposition;
-            event._deviceKind = InputDeviceKind::Keyboard;
+            event._type           = RawInputEventType::TextComposition;
+            event._deviceKind     = InputDeviceKind::Keyboard;
+            event._bTextContinued = bContinued ? SW_TRUE : SW_FALSE;
             copyTextPayload( event, text );
             return event;
         }

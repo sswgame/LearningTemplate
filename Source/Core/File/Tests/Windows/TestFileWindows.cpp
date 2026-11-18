@@ -42,3 +42,23 @@ SW_TEST_CASE( FileTest, LongPathBeyondMaxPathIsWrittenAndRead )
     SW_REQUIRE_TRUE( sw::FileUtil::makeRelativePath( shortRoot, filePath, relativePath ) );
     SW_EXPECT_EQUAL( filePath.substr( shortRoot.size() + 1 ), sw::FileUtil::normalizeSeparators( relativePath ) );
 }
+
+/**
+ * @brief [FileTest] 4096 자를 넘는 경로도 절대 · 정규 경로로 풀린다 — 경로를 돌려주는 Win32 호출은 OS 가 알린 크기만큼 버퍼를 키워 받는다.
+ * @details 고정 4096 자 버퍼일 때는 긴 경로 접두로 만들고 쓴 폴더를 `makeAbsolute` · `makeCanonical` 이 실패로 돌렸다.
+ */
+SW_TEST_CASE( FileTest, PathQueriesBeyond4096CharactersSucceed )
+{
+    sw::string dir = sw::test::makeScratchPath( "SwVeryLongPathRoot" );
+    while ( dir.size() < 4300 )
+        dir += "/segment_padding_for_a_path_longer_than_the_old_fixed_buffer";
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( dir ) );
+
+    sw::string absolutePath;
+    SW_REQUIRE_TRUE( sw::FileUtil::makeAbsolutePath( dir, absolutePath ) );
+    SW_EXPECT_EQUAL( dir.size(), absolutePath.size() );
+
+    sw::string canonicalPath;
+    SW_REQUIRE_TRUE( sw::FileUtil::makeCanonicalPath( dir, canonicalPath ) );
+    SW_EXPECT_TRUE( canonicalPath.size() >= 4300 );
+}

@@ -61,7 +61,17 @@ namespace sw
         Idle = 0, ///< 아직 시작하지 않았거나 시작이 거절됐다
         Playing,
         Finished, ///< 앵커 클립이 끝까지 갔다
-        Aborted,  ///< 필수 역할을 잃었거나, 시각이 어긋났거나, 누가 중단했다
+        Aborted,  ///< 필수 역할을 잃었거나, 시각이 어긋났거나, 누가 중단했다 — 까닭은 `PairedAnimationAbortReason`
+    };
+
+    /** @enum PairedAnimationAbortReason @brief 세션이 `Aborted` 로 끝난 까닭입니다. 끝나지 않았거나 끝까지 갔으면 `None` 입니다. */
+    enum class PairedAnimationAbortReason : uint8
+    {
+        None = 0,
+        Requested,              ///< 부른 쪽이 중단했다(`abort`)
+        RoleLost,               ///< 필수 역할의 참가자가 사라졌거나, 세션 클립을 놓았거나, 정렬 목표에서 멀다
+        ParticipantDeactivated, ///< 필수 역할의 참가자가 계층에서 꺼졌다(풀 반환 — 정상 흐름. 언리얼 Contextual Anim 장면이 배우를 잃으면 끝나는 것과 같다)
+        TimeMismatch,           ///< 앵커 · 역할 시각이 세션 밖에서 바뀌었다(재생 속도 · 시각 조작 — 오용)
     };
 } // namespace sw
 
@@ -115,7 +125,9 @@ namespace sw
 
         uint32                      getID() const { return _sessionID; }
         PairedAnimationSessionState getState() const { return _state; }
-        bool                        isPlaying() const { return _state == PairedAnimationSessionState::Playing; }
+        /** @brief `Aborted` 로 끝난 까닭입니다. */
+        PairedAnimationAbortReason getAbortReason() const { return _abortReason; }
+        bool                       isPlaying() const { return _state == PairedAnimationSessionState::Playing; }
         /** @brief 마지막으로 읽은 공유 타임라인 시각(앵커 시각, 초)입니다. */
         float32                   getTime() const { return _anchorTime; }
         const PairedAnimationDef& getDef() const { return *_def; }
@@ -178,10 +190,10 @@ namespace sw
         void closeWarpWindow( GameObjectManager& manager, uint32 roleIndex, bool bCheckReached );
         /** @brief 공유 알림 하나를 그 역할 오브젝트의 알림 표로 보냅니다. */
         void fireNotify( GameObjectManager& manager, uint32 notifyIndex );
-        /** @brief 남은 역할을 모두 내보내고 상태를 정합니다. */
-        void end( GameObjectManager& manager, PairedAnimationSessionState state );
-        /** @brief 역할을 잃었습니다. 필수면 세션을 중단하고 true, 선택이면 그 역할만 빼고 false 입니다. */
-        bool loseRole( GameObjectManager& manager, uint32 roleIndex, const utf8* pReason );
+        /** @brief 남은 역할을 모두 내보내고 상태를 정합니다. `Aborted` 면 @p abortReason 이 그 까닭입니다. */
+        void end( GameObjectManager& manager, PairedAnimationSessionState state, PairedAnimationAbortReason abortReason = PairedAnimationAbortReason::None );
+        /** @brief 역할을 잃었습니다(@p reason 은 까닭, @p pDetail 은 로그 글). 필수면 세션을 중단하고 true, 선택이면 그 역할만 빼고 false 입니다. */
+        bool loseRole( GameObjectManager& manager, uint32 roleIndex, PairedAnimationAbortReason reason, const utf8* pDetail );
 
     private:
         shared_ptr<const PairedAnimationDef> _def;
@@ -191,6 +203,7 @@ namespace sw
         float32                              _anchorTime;
         float32                              _predictedAnchorTime; ///< 지난 갱신이 예측한 이번 앵커 시각
         PairedAnimationSessionState          _state;
+        PairedAnimationAbortReason           _abortReason;
         uint8                                _bClockStarted : 1; ///< 첫 갱신에서 앵커 시각을 받았다(그 뒤로 예측과 대조한다)
     };
 } // namespace sw

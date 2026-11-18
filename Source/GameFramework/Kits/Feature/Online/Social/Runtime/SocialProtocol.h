@@ -217,17 +217,28 @@ namespace sw
         SocialResult _result{ SocialResult::Ok };
     };
 
-    /** @brief 길드 창고의 응답입니다(`GuildStorage` 는 창고 전체, `GuildDeposit` · `GuildWithdraw` 는 옮긴 자산의 창고 잔액 하나). */
+    /** @brief 길드 창고의 응답입니다(`GuildStorage` 는 창고 한 쪽, `GuildDeposit` · `GuildWithdraw` 는 옮긴 자산의 창고 잔액 하나). */
     REFLECT()
     struct GuildStorageReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = GuildLimit::kMaxStorageItem )
-        vector<GuildStorageItem> _listStorage{}; ///< 상한은 `GuildLimit::kMaxStorageItem` 와 같다
+        PROPERTY( MaxCount = GuildLimit::kMaxStoragePage )
+        vector<GuildStorageItem> _listStorage{}; ///< 상한은 `GuildLimit::kMaxStoragePage` 와 같다
+        PROPERTY()
+        GuildStorageCursor _nextCursor{}; ///< 쪽이 가득 찼으면 다음 요청의 `_cursor` 이다. 비면(`isEnd`) 더 없다
         PROPERTY()
         SocialResult _result{ SocialResult::Ok };
+    };
+
+    /** @brief 길드 창고 한 쪽(`GuildStorage`)의 요청입니다. 쪽 크기가 `GuildLimit::kMaxStoragePage` 보다 크면 서버가 그 값으로 자른다. */
+    REFLECT()
+    struct GuildStoragePageRequest
+    {
+        REFLECT_BODY();
         PROPERTY()
-        uint8 _bTruncated{ SW_FALSE }; ///< 창고 품목이 상한보다 많아 뒤를 싣지 못했다 — 화면이 "더 있다" 를 보인다(감사 O-18)
+        GuildStorageCursor _cursor{}; ///< 앞 응답의 `_nextCursor` 이다. 처음에는 빈 커서다
+        PROPERTY( Min = 1 )
+        int32 _maxCount{ GuildLimit::kMaxStoragePage }; ///< 위 끝은 두지 않는다 — 서버가 상한으로 자른다
     };
 
     /** @brief 가입 신청 목록(`GuildApplications`)의 응답입니다. */
@@ -281,7 +292,7 @@ namespace sw
         using GuildGet              = Method<MethodName::GuildGet, OnlineNoBody, GuildInfoReply>;                                                                          ///< 내 길드를 멤버 목록까지 돌려준다
         using GuildDeposit          = Method<MethodName::GuildDeposit, GuildAssetRequest, GuildStorageReply, OnlineMethodFlag::RequiresIdempotencyKey>;                    ///< 내 계정에서 길드 창고로 옮긴다
         using GuildWithdraw         = Method<MethodName::GuildWithdraw, GuildAssetRequest, GuildStorageReply, OnlineMethodFlag::RequiresIdempotencyKey>;                   ///< 길드 창고에서 내 계정으로 옮긴다. 공용 창고는 임원 이상, 맡긴 사람별 몫은 본인이나 허용을 받은 멤버
-        using GuildStorage          = Method<MethodName::GuildStorage, OnlineNoBody, GuildStorageReply>;                                                                   ///< 길드 창고의 잔액 목록을 돌려준다
+        using GuildStorage          = Method<MethodName::GuildStorage, GuildStoragePageRequest, GuildStorageReply>;                                                        ///< 길드 창고의 잔액 목록 한 쪽을 돌려준다
         using GuildSetJoinPolicy    = Method<MethodName::GuildSetJoinPolicy, GuildJoinPolicyRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;         ///< 임원 이상
         using GuildApply            = Method<MethodName::GuildApply, GuildIDRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;                         ///< 공개 길드에 가입 신청을 낸다. 다시 내면 기한이 늘어난다
         using GuildApplications     = Method<MethodName::GuildApplications, OnlineNoBody, GuildApplicationsReply>;                                                         ///< 내 길드의 살아 있는 신청 목록이다. 임원 이상

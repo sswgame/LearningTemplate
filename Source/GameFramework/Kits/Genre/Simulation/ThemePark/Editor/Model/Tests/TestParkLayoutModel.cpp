@@ -282,3 +282,17 @@ SW_TEST_CASE( ParkLayoutModelTest, SegmentsUseTheSelectedColorAndMarkEntrancesAn
     model.appendSegments( colors, listSegment );
     SW_EXPECT_EQUAL( 0.0f, listSegment[0]._color._y );
 }
+
+/** @brief [ParkLayoutModelTest] 바닥 영역 겹침은 게임의 땅 얻기와 같은 사각형이다 — 둥근 놀이기구 둘이 모서리만 닿아도(원으로는 떨어져 있어도) 겹친다 */
+SW_TEST_CASE( ParkLayoutModelTest, FootprintOverlapMatchesTheLandClaimRectangle )
+{
+    ParkRidePreview roundRide;
+    roundRide._position = float3{ 0.0f, 0.0f, 0.0f };
+    roundRide._size     = float3{ 10.0f, 4.0f, 10.0f };
+    ParkRidePreview otherRide;
+    otherRide._position = float3{ 9.0f, 0.0f, 9.0f }; // 가운데 거리 12.7 > 반지름 합 10 — 원이면 떨어져 있다
+    otherRide._size     = float3{ 10.0f, 4.0f, 10.0f };
+    SW_EXPECT_TRUE( roundRide.overlapsFootprint( otherRide ) );
+    otherRide._position = float3{ 10.5f, 0.0f, 0.0f };
+    SW_EXPECT_FALSE( roundRide.overlapsFootprint( otherRide ) );
+}

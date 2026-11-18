@@ -11,6 +11,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
+#include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Renderer/RenderThreadSubsystem.h"
@@ -93,7 +94,7 @@ namespace sw
         , _finishedMask{ 0u }
         , _failedMask{ 0u }
         , _pendingPath{}
-        , _pendingSerial{ 0 }
+        , _pendingTicket{ 0 }
         , _frameCounter{ 0 }
         , _shotCount{ 0 }
         , _waitStartMicroseconds{ 0 }
@@ -192,10 +193,11 @@ namespace sw
 
     bool StartupCaptureSubsystem::collectPendingShot()
     {
-        // shortcut: 실행 중 요청 창구는 하나라 이 실행에서 다른 쪽(개발 명령 screenshot · 에디터 버튼)이 같이 요청하면 결과를 섞어 읽을 수 있다 — 시작 인자 실행은 혼자 찍는다고 본다(자동화 `<Screenshot>` 은 패킷 창구라 섞이지 않는다).
-        if ( RenderThread::getCompletedScreenshotSerial() == _pendingSerial )
+        // 제 표의 결과만 읽는다 — 다른 쪽(개발 명령 screenshot · 에디터 버튼)이 같은 실행에서 요청해도 섞이지 않는다.
+        const ScreenshotTicketState state = RenderThread::findScreenshotResult( _pendingTicket );
+        if ( state == ScreenshotTicketState::Pending )
             return false;
-        if ( RenderThread::getLastScreenshotPath() != _pendingPath )
+        if ( state != ScreenshotTicketState::Written )
         {
             SW_LOG_ERROR_ID( "StartupCapture.ShotNotWritten", "Screenshot was not written: %#", _pendingPath.c_str() ); // 요청한 촬영이 빠졌다 - 실패다
             _bGameViewFailed = SW_TRUE;
@@ -230,9 +232,8 @@ namespace sw
             _bGameViewFailed = SW_TRUE;
             return;
         }
-        _pendingSerial = RenderThread::getCompletedScreenshotSerial();
-        _pendingPath   = absolutePath->str(); // 우편함이 돌려줄 경로(구분자 `/`)와 같은 글로 둔다 — 끝난 뒤 그 둘을 견준다
-        RenderThread::requestScreenshot( *absolutePath, target._texture, target._format );
+        _pendingPath   = absolutePath->str();
+        _pendingTicket = RenderThread::requestScreenshot( *absolutePath, target._texture, target._format );
     }
 
     void StartupCaptureSubsystem::finishGameView()

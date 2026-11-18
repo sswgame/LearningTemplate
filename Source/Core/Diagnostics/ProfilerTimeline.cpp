@@ -299,7 +299,13 @@ namespace sw
         const uint64 lastIndex = frameWritten - 1;
         outEndNanos            = _arrFrameBeginNanos[lastIndex % kFrameCapacity].load( std::memory_order_relaxed );
         outBeginNanos          = _arrFrameBeginNanos[( lastIndex - span ) % kFrameCapacity].load( std::memory_order_relaxed );
+        collectSpan( outBeginNanos, outEndNanos, outListThread );
+        return true;
+    }
 
+    void ProfilerTimeline::collectSpan( uint64 beginNanos, uint64 endNanos, vector<ProfilerTimelineThread>& outListThread ) const
+    {
+        outListThread.clear();
         const uint32 threadCount = MathUtil::min( _threadCount.load( std::memory_order_acquire ), kMaxThread );
         for ( uint32 threadIndex = 0; threadIndex < threadCount; ++threadIndex )
         {
@@ -321,7 +327,7 @@ namespace sw
                 const uint64 slotDepth = pBuffer->_arrSlotDepth[cell].load( std::memory_order_relaxed );
                 event._slot            = static_cast<uint32>( slotDepth & 0xFFFFFFFFull );
                 event._depth           = static_cast<uint16>( slotDepth >> ProfilerTimelineInternal::kDepthShift );
-                const bool bOverlaps   = event._beginNanos < outEndNanos && event._endNanos > outBeginNanos;
+                const bool bOverlaps   = event._beginNanos < endNanos && event._endNanos > beginNanos;
                 if ( bOverlaps == false )
                     continue;
                 thread._listEvent.push_back( event );
@@ -345,7 +351,6 @@ namespace sw
             VectorUtil::stableSort( thread._listEvent, Ascending<&ProfilerTimelineEvent::_beginNanos>{} );
             outListThread.push_back( std::move( thread ) );
         }
-        return true;
     }
 
     void ProfilerTimeline::collectFrameBegins( uint64 beginNanos, uint64 endNanos, vector<uint64>& outListFrameBegin ) const

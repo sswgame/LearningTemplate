@@ -60,9 +60,18 @@ namespace sw
     {
         vector<string> listDirectory;
 #if defined( SW_PLATFORM_WINDOWS )
-        utf16 windowsDirectory[constant::file::kMaxPathSize];
-        if ( GetWindowsDirectoryW( reinterpret_cast<LPWSTR>( windowsDirectory ), constant::file::kMaxPathSize ) != 0 )
-            SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::joinPath( StringUtil::utf16ToUTF8( windowsDirectory ), "Fonts" ) );
+        // 버퍼가 모자라면 0 이 아니라 필요한 크기(끝 0 포함)를 돌려준다 - 그 크기로 다시 받는다(0 아님만 보면 채워지지 않은 버퍼를 읽었다).
+        const UINT required = GetWindowsDirectoryW( nullptr, 0 );
+        if ( required != 0 )
+        {
+            wstring    windowsDirectory( required, L' ' );
+            const UINT written = GetWindowsDirectoryW( windowsDirectory.data(), required );
+            if ( written != 0 && written < required )
+            {
+                windowsDirectory.resize( written );
+                SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::joinPath( StringUtil::utf16ToUTF8( windowsDirectory.c_str() ), "Fonts" ) );
+            }
+        }
         // 관리자 권한 없이 설치한 글꼴(Windows 10 1809+)은 사용자 폴더에 있다.
         string localAppData;
         if ( ProcessEnvironment::tryReadNonEmpty( "LOCALAPPDATA", localAppData ) ) // 빈 값이면 현재 폴더 아래 상대 경로를 뒤지게 되므로 없는 것으로 본다

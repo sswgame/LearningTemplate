@@ -30,11 +30,8 @@ namespace sw
             SW_LOG_ERROR_ID( "AnimationPoseNode.BlendPosesNodeNeedsSamplerParameter", "BlendPosesNode needs a sampler and a parameter set" );
             return false;
         }
-        // 둘째 입력은 첫 입력과 같은 정규화 위치에서 샘플한다 — 길이가 달라도 위상이 맞는다.
-        const float32 lengthA        = _pInputA->getPlayLength();
-        const float32 normalizedTime = lengthA > 0.0f ? time / lengthA : 0.0f;
-        const float32 timeB          = normalizedTime * _pInputB->getPlayLength();
-        const float32 weight         = MathUtil::saturate( params._pParameter->getFloat( _weightParameter ) );
+        const float32 timeB  = mapTimeToInputB( time );
+        const float32 weight = computeWeight( *params._pParameter );
         // 무게가 한쪽에 다 있으면 다른 입력은 샘플하지 않는다(언리얼 TwoWayBlend 의 관련 무게 생략과 같다) — 0 인 입력까지 늘 평가하지 않게.
         if ( weight <= 0.0f )
         {
@@ -51,6 +48,41 @@ namespace sw
         params._pSampler->samplePose( *_pInputB, timeB, _scratchPose );
         Pose::blend( inoutPose, _scratchPose, weight, inoutPose );
         return true;
+    }
+
+    BoneTransform BlendPosesNode::computeRootMotion( const AnimationParameterSet& parameter, const AnimationTimeStep& step, const IAnimationRootMotionSource& source ) const
+    {
+        // 포즈와 같은 가중치 · 같은 위상으로 섞는다 — 둘째 입력의 걸음은 정규화 위치로 옮긴 구간이다(반복 수는 같다).
+        const float32 weight = computeWeight( parameter );
+        if ( weight <= 0.0f )
+            return source.computeRootMotion( *_pInputA, step );
+        AnimationTimeStep stepB = step;
+        stepB._previousTime     = mapTimeToInputB( step._previousTime );
+        stepB._currentTime      = mapTimeToInputB( step._currentTime );
+        if ( weight >= 1.0f )
+            return source.computeRootMotion( *_pInputB, stepB );
+        return BoneTransform::blend( source.computeRootMotion( *_pInputA, step ), source.computeRootMotion( *_pInputB, stepB ), weight );
+    }
+
+    void BlendPosesNode::accumulateCurves( const AnimationParameterSet& parameter, float32 time, float32 weight, IAnimationCurveSink& sink ) const
+    {
+        const float32 blendWeight = computeWeight( parameter );
+        if ( blendWeight < 1.0f )
+            sink.accumulateCurves( *_pInputA, time, weight * ( 1.0f - blendWeight ) );
+        if ( blendWeight > 0.0f )
+            sink.accumulateCurves( *_pInputB, mapTimeToInputB( time ), weight * blendWeight );
+    }
+
+    float32 BlendPosesNode::mapTimeToInputB( float32 time ) const
+    {
+        // 둘째 입력은 첫 입력과 같은 정규화 위치다 — 길이가 달라도 위상이 맞는다.
+        const float32 lengthA = _pInputA->getPlayLength();
+        return lengthA > 0.0f ? time / lengthA * _pInputB->getPlayLength() : 0.0f;
+    }
+
+    float32 BlendPosesNode::computeWeight( const AnimationParameterSet& parameter ) const
+    {
+        return MathUtil::saturate( parameter.getFloat( _weightParameter ) );
     }
 } // namespace sw
 
@@ -108,6 +140,38 @@ namespace sw
         }
         return true;
     }
+
+    BoneTransform MirrorPoseNode::computeRootMotion( const AnimationParameterSet& /*parameter*/, const AnimationTimeStep& step, const IAnimationRootMotionSource& source ) const
+    {
+        // 축 면 비추기: 이동은 축 성분이 뒤집히고, 회전(축 벡터는 유사 벡터)은 축이 아닌 두 성분이 뒤집힌다(S R S).
+        BoneTransform delta = source.computeRootMotion( *_pInput, step );
+        switch ( _axis )
+        {
+            case AnimationMirrorAxis::X:
+                delta._translation._x = -delta._translation._x;
+                delta._rotation._y    = -delta._rotation._y;
+                delta._rotation._z    = -delta._rotation._z;
+                break;
+            case AnimationMirrorAxis::Y:
+                delta._translation._y = -delta._translation._y;
+                delta._rotation._x    = -delta._rotation._x;
+                delta._rotation._z    = -delta._rotation._z;
+                break;
+            case AnimationMirrorAxis::Z:
+                delta._translation._z = -delta._translation._z;
+                delta._rotation._x    = -delta._rotation._x;
+                delta._rotation._y    = -delta._rotation._y;
+                break;
+            case AnimationMirrorAxis::None:
+                break; // 축 없는 Mirror 는 만들 때 거절된다(`isSatisfiedBy`)
+        }
+        return delta;
+    }
+
+    void MirrorPoseNode::accumulateCurves( const AnimationParameterSet& /*parameter*/, float32 time, float32 weight, IAnimationCurveSink& sink ) const
+    {
+        sink.accumulateCurves( *_pInput, time, weight ); // 커브는 좌우가 없다 — 입력 그대로
+    }
 } // namespace sw
 
 namespace sw
@@ -119,6 +183,7 @@ namespace sw
         , _lastTime{ -1.0f }
         , _clipTime{ 0.0f }
         , _currentSection{ 0 }
+        , _listScratchSpan{}
     {
         SW_ASSERT( _listSection.empty() == false );
         // 첫 섹션에서 `next` 만 따라간 길이다. 같은 섹션에 다시 닿으면 반복이라 끝이 없다.
@@ -143,45 +208,75 @@ namespace sw
             SW_LOG_ERROR_ID( "AnimationPoseNode.MontageNeedsSamplerParameter", "MontagePoseNode needs a sampler and a parameter set" );
             return false;
         }
-        // 시각이 뒤로 가면(다시 재생) 첫 섹션부터 그 시각까지 다시 걷는다.
-        if ( _lastTime < 0.0f || time < _lastTime )
-        {
-            _currentSection = 0;
-            _clipTime       = _listSection[0]._startSeconds;
-            advance( time, *params._pParameter );
-        }
-        else
-        {
-            advance( time - _lastTime, *params._pParameter );
-        }
-        _lastTime = time;
+        const Cursor cursor = findCursor( time, *params._pParameter );
+        _currentSection     = cursor._section;
+        _clipTime           = cursor._clipTime;
+        _lastTime           = time;
         params._pSampler->samplePose( *_pInput, _clipTime, inoutPose );
         return true;
     }
 
-    void MontagePoseNode::advance( float32 delta, const AnimationParameterSet& parameter ) const
+    BoneTransform MontagePoseNode::computeRootMotion( const AnimationParameterSet& parameter, const AnimationTimeStep& step, const IAnimationRootMotionSource& source ) const
+    {
+        // 다시 재생한 걸음(시각이 뒤로 갔다)은 처음부터 지금까지다.
+        const float32 previousTime = step._currentTime < step._previousTime ? 0.0f : step._previousTime;
+        _listScratchSpan.clear();
+        (void)advanceCursor( findCursor( previousTime, parameter ), step._currentTime - previousTime, parameter, &_listScratchSpan );
+        // 조각은 차례로 잇는다 — 클립의 반복 경계 잇기(`AnimationClip::computeRootMotionDelta`)와 같은 합(이동은 더하고 회전은 곱한다).
+        BoneTransform total{};
+        for ( const ClipSpan& span : _listScratchSpan )
+        {
+            AnimationTimeStep spanStep;
+            spanStep._previousTime    = span._start;
+            spanStep._currentTime     = span._end;
+            const BoneTransform delta = source.computeRootMotion( *_pInput, spanStep );
+            total._translation        = total._translation + delta._translation;
+            total._rotation           = ( total._rotation * delta._rotation ).normalize();
+        }
+        return total;
+    }
+
+    void MontagePoseNode::accumulateCurves( const AnimationParameterSet& parameter, float32 time, float32 weight, IAnimationCurveSink& sink ) const
+    {
+        sink.accumulateCurves( *_pInput, findCursor( time, parameter )._clipTime, weight );
+    }
+
+    MontagePoseNode::Cursor MontagePoseNode::findCursor( float32 time, const AnimationParameterSet& parameter ) const
+    {
+        // 마지막 평가 뒤의 시각이면 그 자리에서 이어 걷고, 앞이면(다시 재생 · 아직 평가 전) 첫 섹션부터 그 시각까지 다시 걷는다.
+        if ( _lastTime >= 0.0f && time >= _lastTime )
+            return advanceCursor( Cursor{ _currentSection, _clipTime }, time - _lastTime, parameter, nullptr );
+        return advanceCursor( Cursor{ 0, _listSection[0]._startSeconds }, time, parameter, nullptr );
+    }
+
+    MontagePoseNode::Cursor MontagePoseNode::advanceCursor( Cursor cursor, float32 delta, const AnimationParameterSet& parameter, vector<ClipSpan>* pOutListSpan ) const
     {
         float32 remaining = delta;
         while ( remaining > 0.0f )
         {
-            const Section& section = _listSection[_currentSection];
-            const float32  toEnd   = section._endSeconds - _clipTime;
+            const Section& section = _listSection[cursor._section];
+            const float32  toEnd   = section._endSeconds - cursor._clipTime;
             if ( remaining < toEnd )
             {
-                _clipTime += remaining;
-                return;
+                if ( pOutListSpan != nullptr )
+                    pOutListSpan->push_back( ClipSpan{ cursor._clipTime, cursor._clipTime + remaining } );
+                cursor._clipTime += remaining;
+                return cursor;
             }
+            if ( pOutListSpan != nullptr )
+                pOutListSpan->push_back( ClipSpan{ cursor._clipTime, section._endSeconds } );
             remaining -= toEnd;
             const bool   bBranch = section._branch != kNoSection && parameter.isTrue( section._branchParameter );
             const uint32 next    = bBranch ? section._branch : section._next;
             if ( next == kNoSection )
             {
-                _clipTime = section._endSeconds; // 다음 섹션이 없다 — 끝에서 멈춘다
-                return;
+                cursor._clipTime = section._endSeconds; // 다음 섹션이 없다 — 끝에서 멈춘다
+                return cursor;
             }
-            _currentSection = next;
-            _clipTime       = _listSection[next]._startSeconds; // 섹션 길이는 0 보다 크다(생성이 본다) — 고리가 돈다
+            cursor._section  = next;
+            cursor._clipTime = _listSection[next]._startSeconds; // 섹션 길이는 0 보다 크다(생성이 본다) — 고리가 돈다
         }
+        return cursor;
     }
 } // namespace sw
 

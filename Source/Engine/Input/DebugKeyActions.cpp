@@ -209,7 +209,7 @@ namespace sw
             return FileUtil::exists( filePath ) == false || FileUtil::removeFile( filePath );
         if ( FileUtil::ensureParentDirectoryExists( filePath ) == false )
             return false;
-        return doc.saveToFile( filePath );
+        return doc.saveCompleteToFile( filePath );
     }
 
     bool DebugKeyActions::loadUserBindings( InputMap& map, string_view filePath )

@@ -7,6 +7,8 @@
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternOutlaw.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
@@ -31,11 +33,13 @@ namespace
   <Food id="jerky" healthCore="25" staminaCore="25"/>
   <Clothing id="duster" warmth="5"/>
   <Survival comfortMin="-100" comfortMax="100" coreDrain="1.5" temperatureDrain="0" minRegenScale="0.2"/>
-  <Animal id="deer" size="Medium" quality="3" pelt="30" carcass="10" decayHours="48"/>
+  <Animal id="deer" size="Medium" quality="3" pelt="30" carcass="10" decayHours="48" loot="venison"/>
   <HuntWeapon id="rifle" sizes="Medium,Large"/>
   <HitZone id="head" penalty="0"/>
   <PeltGrade scales="0,0.3,0.6,1"/>
 </WesternCatalog>)";
+
+    constexpr const utf8* kOutlawLootXML = R"(<LootCatalog><Table id="venison"><Entry item="meat" min="2"/></Table></LootCatalog>)";
 
     /** @brief 판 상태 대신 자기 객체를 빌려 주는 판입니다. */
     struct OutlawRig
@@ -45,6 +49,8 @@ namespace
         ReputationState _reputation{};
         GameFlags       _flags{};
         WorldClock      _clock{};
+        LootCatalog     _loot{};
+        Inventory       _bag{};
         WesternOutlaw   _outlaw{};
 
         OutlawRig()
@@ -52,7 +58,9 @@ namespace
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kOutlawXML, "WesternOutlawTest" ) );
             _reputation.initialize( &_catalog.getHonorReputation() );
             SW_REQUIRE_TRUE( _clock.initialize( WorldClockSettings{} ) );
-            SW_REQUIRE_TRUE( _outlaw.initialize( &_catalog, makeRefs(), hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
+            SW_REQUIRE_TRUE( _loot.loadFromXMLText( kOutlawLootXML, "WesternOutlawTestLoot" ) );
+            SW_REQUIRE_TRUE( _bag.initialize( nullptr, 4 ) );
+            SW_REQUIRE_TRUE( _outlaw.initialize( &_catalog, &_loot, makeRefs(), hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
         }
 
         SessionStateRefs makeRefs()
@@ -62,6 +70,7 @@ namespace
             refs._pReputation = &_reputation;
             refs._pClock      = &_clock;
             refs._pFlags      = &_flags;
+            refs._pInventory  = &_bag;
             return refs;
         }
 
@@ -229,4 +238,17 @@ SW_TEST_CASE( WesternOutlawTest, StateRoundTrip )
     Archive     broken( arrBroken, sizeof( arrBroken ) );
     SW_EXPECT_FALSE( untouched._outlaw.readState( broken ) );
     SW_EXPECT_EQUAL( 1, untouched._outlaw.getCarcassCount() );
+}
+
+/**
+ * @brief [WesternOutlawTest] 손질은 동물의 전리품 테이블을 굴려 빌린 가방에 넣는다 — 가죽과 함께 고기가 든다
+ * @details 예전에는 전리품 카탈로그를 넘기지 않아 가죽만 얻었다. 변이: `skin` 에 전리품 카탈로그 대신 nullptr 를 넘기면 단언이 진다.
+ */
+SW_TEST_CASE( WesternOutlawTest, SkinningRollsTheLootTableIntoTheBag )
+{
+    OutlawRig rig;
+    SW_REQUIRE_TRUE( rig.doDeed( WesternDeedKind::Hunt, "deer" ) );
+    SW_REQUIRE_TRUE( rig.doDeed( WesternDeedKind::Skin ) );
+    SW_EXPECT_EQUAL( 1, rig._outlaw.getPeltCount() );
+    SW_EXPECT_EQUAL( 2, rig._bag.getItemCount( "meat" ) );
 }

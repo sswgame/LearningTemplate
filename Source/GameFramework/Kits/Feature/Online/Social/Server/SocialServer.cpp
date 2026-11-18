@@ -177,10 +177,11 @@ namespace sw
         submitGuild( call._callID, context, GuildOperation::Withdraw, guildRequest );
     }
 
-    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildStorage> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildStorage> call, const OnlineCallContext& context, const GuildStoragePageRequest& request )
     {
         GuildRequest guildRequest;
-        (void)request;
+        guildRequest._storageCursor   = request._cursor;
+        guildRequest._storageMaxCount = request._maxCount;
         submitGuild( call._callID, context, GuildOperation::ListStorage, guildRequest );
     }
 
@@ -313,8 +314,8 @@ namespace sw
     void SocialServer::fillReply( GuildStorageReply& reply, GuildCompletion& completion )
     {
         reply._listStorage = std::move( completion._listStorage );
+        reply._nextCursor  = std::move( completion._storageNextCursor );
         reply._result      = completion._result._result;
-        reply._bTruncated  = completion._bStorageTruncated;
     }
 
     void SocialServer::fillReply( GuildApplicationsReply& reply, GuildCompletion& completion )

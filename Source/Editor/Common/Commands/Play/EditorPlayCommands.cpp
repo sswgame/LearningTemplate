@@ -147,7 +147,7 @@ namespace sw::editor
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowUnsaved" ), NotificationKind::Warning );
         const ProcessCommand command = makeStandaloneCommand( editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), pScene->getSourcePath(),
                                                               getPreferences<EditorPlayPreferences>()._standaloneArguments );
-        if ( Process::launchDetached( command ) == false )
+        if ( Process::launchDetached( command ).has_value() == false )
         {
             SW_LOG_WARNING_ID( "EditorPlay.FailedLaunchStandaloneGame", "Failed to launch the standalone game: %#", command.toCommandLine() );
             return false;

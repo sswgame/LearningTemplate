@@ -88,7 +88,7 @@ namespace sw
         bool isActive( const SpatialGridLayerDesc& layer ) const;
         /**
          * @brief @p layer 의 평면 사각형 [@p minX, @p maxX] × [@p minY, @p maxY] 에 걸린 항목의 열쇠를 올린 순서로 @p outListKey 에 담습니다(먼저 비운다).
-         * @details `isActive( layer )` 일 때만 부릅니다. 질의마다 자기 버퍼를 쓰므로 동시에 불러도 됩니다.
+         * @details `isActive( layer )` 일 때만 부릅니다. 질의마다 자기 버퍼를 쓰므로 동시에 불러도 됩니다. 꺼진 열쇠(`Component::isActive` — 주인의 계층 활성 포함)는 담지 않습니다.
          */
         void query( const SpatialGridLayerDesc& layer, float32 minX, float32 minY, float32 maxX, float32 maxY, vector<Component*>& outListKey ) const;
         /** @brief 3D 월드 자리를 @p layer 의 평면 좌표로 내립니다. */

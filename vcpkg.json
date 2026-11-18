@@ -55,6 +55,14 @@
       "default-features": false,
       "platform": "windows | linux"
     },
+    {
+      "name": "astc-encoder",
+      "platform": "windows | linux"
+    },
+    {
+      "name": "etcpak",
+      "platform": "windows | linux"
+    },
     "stb",
     "freetype",
     "cgltf",

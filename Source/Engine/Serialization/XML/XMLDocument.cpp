@@ -800,7 +800,7 @@ namespace sw
         return wrapLongElementLines( writer._result );
     }
 
-    bool XMLDocument::saveToFile( string_view absPath ) const
+    bool XMLDocument::saveCompleteToFile( string_view absPath ) const
     {
         if ( absPath.empty() )
             return false;
@@ -811,7 +811,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Xml.EmptyDocument", "XML document is empty - %# was not written", string{ absPath }.c_str() );
             return false;
         }
-        return ResourceComposer::saveText( absPath, text );
+        return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( text ) );
     }
 
     string XMLDocument::unescapeString( string_view text )

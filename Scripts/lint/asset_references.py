@@ -454,7 +454,11 @@ def check_asset_references(project_root: Path, scope: LintScope) -> list[str]:
     assets = AssetSet(path[len(prefix):] for path in list_index if path.startswith(prefix))
     list_referrer = [path for path in list_index if is_referrer(path, config)]
     list_redirect = [path for path in list_index if is_redirect_table(path)]
-    map_redirect = parse_redirects(read_index_blobs(project_root, list_redirect)) if list_redirect else {}
+    # 리다이렉트 표도 사실 색인에 둔다 — 스테이지 파일 하나를 볼 때마다 표 전체를 다시 읽지 않는다(요약 토큰이 `옛 id\t새 id` 쌍이다).
+    redirects = open_facts(project_root, "asset-redirects", [__file__], list_redirect, lambda path, text: sorted(parse_redirects({path: text}).items()),
+                           map_key=map_key, read_texts=lambda list_path: read_index_blobs(project_root, list_path),
+                           contribute=lambda _, list_pair: [f"{old}\t{new}" for old, new in list_pair])
+    map_redirect = dict(token.split("\t", 1) for token in redirects.summary)
     def open_references(**options: Any) -> Facts:
         return open_facts(project_root, "asset-refs", [__file__, str(project_root / CONFIG_PATH), str(project_root / GENERATED_PATH)], list_referrer,
                          lambda path, text: [[reference.line, reference.field, reference.start, reference.end, reference.path] for reference in extract_references(path, text, config)],

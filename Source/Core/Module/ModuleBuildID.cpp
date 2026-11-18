@@ -5,6 +5,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Encoding/HexUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/HexDigitUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/String/StringBuilder.h"
@@ -119,9 +120,21 @@ namespace sw
             return result;
         if ( hModule == nullptr )
             return result;
-        utf16 arrPath[constant::file::kMaxPathSize]{};
-        if ( GetModuleFileNameW( hModule, arrPath, constant::file::kMaxPathSize ) > 0 )
-            result._modulePath = StringUtil::utf16ToUTF8( arrPath );
+        // 버퍼가 모자라면 GetModuleFileNameW 는 잘라서 버퍼 크기를 돌려준다 - 다 담길 때까지 키운다(긴 경로 작업 트리의 모듈 경로가 잘려 다른 파일을 가리켰다).
+        wstring modulePath( constant::file::kMaxPathSize, L' ' );
+        while ( modulePath.size() <= constant::file::kMaxExtendedPathSize )
+        {
+            const DWORD written = GetModuleFileNameW( hModule, modulePath.data(), static_cast<DWORD>( modulePath.size() ) );
+            if ( written == 0 )
+                break;
+            if ( written < modulePath.size() )
+            {
+                modulePath.resize( written );
+                result._modulePath = StringUtil::utf16ToUTF8( modulePath.c_str() );
+                break;
+            }
+            modulePath.resize( modulePath.size() * 2 );
+        }
         const uint8*            pBase = reinterpret_cast<const uint8*>( hModule );
         const IMAGE_DOS_HEADER* pDos  = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBase );
         if ( pDos->e_magic != IMAGE_DOS_SIGNATURE )

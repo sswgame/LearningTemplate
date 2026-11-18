@@ -269,7 +269,10 @@ namespace sw
         outListKey.reserve( listHandle.size() );
         for ( const SlotHandle handle : listHandle )
         {
-            outListKey.push_back( _listEntry[handle.index()]._pKey );
+            // 꺼진 열쇠(컴포넌트나 그 주인이 계층에서 꺼짐 — 풀에 든 적)는 질의에 들지 않는다. 언리얼 · 유니티의 꺼진 액터처럼 판정 · 겹침에서 빠진다 — 항목은 두어 다시 켜면 바로 돌아온다.
+            Component* const pKey = _listEntry[handle.index()]._pKey;
+            if ( pKey->isActive() )
+                outListKey.push_back( pKey );
         }
     }
 

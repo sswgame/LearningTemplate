@@ -73,6 +73,8 @@ namespace sw
                 (void)pPlot->claim();
                 return;
             }
+            if ( pPlot->getLastResult() == HousingPlaceResult::Ok )
+                return; // 서버가 받았다 — 주인 상태는 답과 따로 방송되어 늦게 올 수 있다
             _bGaveUp = SW_TRUE;
             SW_LOG_INFO_ID( "MeadowHome.PlotTaken", "[Meadow] the plot belongs to another player (%#) - this player does not build", getEnumName( pPlot->getLastResult() ) );
             return;

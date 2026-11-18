@@ -113,8 +113,12 @@ namespace sw
             _server.update( _listPlot );
             return;
         }
+        // 붙기 전에 낸 요청(첫 프레임의 차지)은 버리지 않고 부지에 남겨 둔다 — 버리면 답이 없어 남의 부지로 읽힌다(nethousing).
+        const bool bAwaitingServer = _client.isAwaitingServer();
         for ( HousingPlotComponent* pPlot : _listPlotComponent )
         {
+            if ( bAwaitingServer )
+                break;
             _listRequest.clear();
             pPlot->takeOutgoingEdits( _listRequest );
             for ( const HousingEditRequest& request : _listRequest )

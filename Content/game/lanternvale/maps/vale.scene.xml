@@ -51,8 +51,7 @@
 					<!-- 골짜기 규칙 — 짐승 100000 · 100001 은 나는 자리 곁(사거리 3 m 안), 버섯 100002 는 채집 거리 2 m 안, 나머지는 걸어가야 닿는다.
 					     단계표: 레벨 2 는 경험 100(짐승 둘), 3 은 250, 4 는 450, 5 는 700. -->
 					<ValeWorldComponent _componentName="ValeWorldComponent"
-					                    _bActive="true"
-					                    _profileFolder="LanternVale/ServerProfiles">
+					                    _bActive="true">
 						<_rules _attackRange="3"
 						        _attackCooldownSeconds="0.5"
 						        _attackPower="10"

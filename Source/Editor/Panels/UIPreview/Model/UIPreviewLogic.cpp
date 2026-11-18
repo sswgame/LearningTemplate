@@ -417,6 +417,17 @@ namespace sw::editor
         return pParent->removeChild( pParent->getChild( index ) ).release(); // 되돌리기 기록이 미리보기 트리보다 오래 맡는다(편집은 이벤트 전달 밖이다)
     }
 
+    uint64 UIPreviewLogic::measureWidgetBytes( const Widget& widget )
+    {
+        const TypeInfo* pType = widget.getTypeInfo();
+        uint64          bytes = pType != nullptr ? static_cast<uint64>( pType->_size ) : uint64{ sizeof( Widget ) };
+        for ( const unique_ptr<Widget>& pChild : widget.getChildren() )
+        {
+            bytes += measureWidgetBytes( *pChild );
+        }
+        return bytes;
+    }
+
     Widget* UIPreviewLogic::attachWidget( WidgetTree& tree, unique_ptr<Widget> widget, uint32 parentOrdinal, uint32 index )
     {
         PanelWidget* pParent = findPanelByOrdinal( tree, parentOrdinal );
@@ -580,7 +591,7 @@ namespace sw::editor
         return true;
     }
 
-    expected<string> UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath )
+    expected<string> UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath, ResourceFieldWrite fieldWrite )
     {
         const Widget* pRoot = screen.getTree().getRoot();
         if ( pRoot == nullptr )
@@ -588,7 +599,7 @@ namespace sw::editor
         const expected<shared_ptr<const UIDocumentAsset>> document = documents.findOrLoad( documentPath, screen.getResourceTagOverride() );
         if ( document.has_value() == false )
             return unexpected( Error{ ErrorKind::NotFound, "the document could not be loaded", document.error().message() }.appendDetail( document.error().detail() ) );
-        return UIDocumentWriter::write( screen.getDesc(), ( *document )->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );
+        return UIDocumentWriter::write( screen.getDesc(), ( *document )->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations(), fieldWrite );
     }
 
     UIPreviewAnchorValues UIPreviewLogic::getAnchorPreset( UIPreviewAnchorPreset preset )

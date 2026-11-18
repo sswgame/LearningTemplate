@@ -325,6 +325,11 @@ namespace sw
         /** @brief 워커에서 씬을 로드하는 잡 본문입니다. TaskArgs 는 AsyncLoadSlot shared_ptr 와 경로 문자열입니다. */
         static void loadSceneAsyncJob( const TaskArgs& args );
 
+        /**
+         * @brief 청크를 기다리는 씬(`_chunkWaitPath`)을 한 프레임 진행합니다 — 준비되면 로드를 띄우고, 실패하면 약속을 비우고, 다른 씬이 대기열에 들면 그것으로 바꾼다.
+         * @details 언리얼 청크 설치를 기다린 뒤 맵을 여는 흐름 · 유니티 Addressables 의 `LoadSceneAsync` 가 의존 번들을 먼저 받는 것과 같은 자리다.
+         */
+        void updateChunkWait();
         /** @brief 요청한 씬의 프리로드 목록을 열어 파일을 미리 읽기 시작합니다. 목록이 없으면 아무것도 하지 않습니다(`tryGetLoadProgress` 참고). */
         void beginScenePreload( string_view path );
         /** @brief 프리로드 세트를 한 프레임 진행하고, 로드가 끝난 뒤 붙든 프레임이 차면 놓습니다(`updateTransitions` 가 부른다). */
@@ -345,7 +350,8 @@ namespace sw
 
         shared_ptr<AsyncLoadSlot> _asyncLoad;
         string                    _queuedPath;
-        string                    _inFlightPath; ///< 지금 도는 로드의 경로(`dispatchLoad`). 대기열 요청이 다른 경로면 그 로드를 멈춘다
+        string                    _inFlightPath;  ///< 지금 도는 로드의 경로(`dispatchLoad`). 대기열 요청이 다른 경로면 그 로드를 멈춘다
+        string                    _chunkWaitPath; ///< 미룬 청크(`AssetManager::prepareSceneChunks`)가 준비되기를 기다리는 씬 — 비어 있지 않으면 로드를 아직 띄우지 않았다(약속은 `_asyncLoad`)
         /** @brief 대기열에 든 요청의 약속. 대기열은 한 자리이므로 이것도 하나다. */
         TaskPromise<Scene*> _queuedPromise;
         atomic<bool>        _bLoadInFlight;

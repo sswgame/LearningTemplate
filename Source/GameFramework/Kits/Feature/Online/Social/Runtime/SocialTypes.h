@@ -247,6 +247,24 @@ namespace sw
         PROPERTY()
         AccountID _depositorID{ kInvalidAccountID }; ///< 맡긴 사람별 몫의 주인이다. 공용 창고 자산이면 `kInvalidAccountID`
     };
+
+    /**
+     * @struct GuildStorageCursor
+     * @brief 길드 창고 목록의 키셋 커서입니다 — 앞 쪽의 마지막 품목(맡긴 사람, 자산)이며 다음 쪽은 그 뒤부터다. 자산이 비면 처음부터(요청) · 끝(응답)이다.
+     * @details 품목 순서는 공용 창고(`kInvalidAccountID`)가 먼저, 그다음 맡긴 사람 id 순, 그 안은 자산 id 순이다 — 저장소 키 순서와 같아 쪽 사이에 품목이 늘거나 줄어도
+     *          빠짐 · 겹침이 없다(PlayFab `ContinuationToken` · Nakama `cursor` 와 같은 자리).
+     */
+    REFLECT()
+    struct GuildStorageCursor
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
+        string _assetID{};
+        PROPERTY()
+        AccountID _depositorID{ kInvalidAccountID };
+
+        [[nodiscard]] bool isEnd() const { return _assetID.empty(); }
+    };
 } // namespace sw
 
 namespace sw
@@ -267,7 +285,7 @@ namespace sw
 {
     struct GuildLimit
     {
-        static constexpr int32 kMaxStorageItem        = 128; ///< 창고 목록 응답의 자산 수 상한이다(공용 창고와 맡긴 사람별 몫을 합친 수)
+        static constexpr int32 kMaxStoragePage        = 128; ///< 창고 목록 한 쪽의 품목 수 상한이다. 요청의 쪽 크기가 더 크면 서버가 이 값으로 자른다
         static constexpr int32 kMaxMember             = 100;
         static constexpr int32 kMaxNameSize           = 24;                               ///< UTF-8 바이트 수이다
         static constexpr int32 kMaxAnnouncementSize   = 256;                              ///< UTF-8 바이트 수이다

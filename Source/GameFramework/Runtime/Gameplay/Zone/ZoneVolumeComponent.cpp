@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneVolumeComponent.h"
 
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/formatString.h"
 
@@ -93,9 +94,29 @@ namespace sw
 
     float32 ZoneVolumeComponent::getHorizontalReach() const
     {
-        // 상자는 x · z 반 크기, 구 · 원기둥은 반지름 x 다(`sampleAt`). 퍼짐은 수평 둘에 더한다.
-        const float32 halfZ = _shape == ZoneVolumeShape::Box ? _halfExtents._z : _halfExtents._x;
-        return MathUtil::max( _halfExtents._x, halfZ ) + _growth;
+        // 월드 경계 상자의 수평 반 크기 중 큰 쪽이다 — 회전 · 배율이 든다. 오너 트랜스폼이 없으면 로컬 반 크기다.
+        const float3                half   = computeLocalHalfExtents();
+        const GameObject* const     pOwner = getOwner();
+        const SceneComponent* const pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        if ( pScene == nullptr )
+            return MathUtil::max( half._x, half._z );
+        const AABB worldBox = AABB{ -half, half }.transformedBy( pScene->getWorldMatrix() );
+        return MathUtil::max( worldBox._max._x - worldBox._min._x, worldBox._max._z - worldBox._min._z ) * 0.5f;
+    }
+
+    float3 ZoneVolumeComponent::computeLocalHalfExtents() const
+    {
+        // 상자는 반 크기, 구는 반지름 x, 원기둥은 반지름 x · 반 높이 y 다. 퍼짐은 수평으로 — 독가스가 땅을 따라 번진다.
+        switch ( _shape )
+        {
+            case ZoneVolumeShape::Box:
+                return _halfExtents + float3{ _growth, 0.0f, _growth };
+            case ZoneVolumeShape::Sphere:
+                return float3{ _halfExtents._x + _growth, _halfExtents._x, _halfExtents._x + _growth };
+            case ZoneVolumeShape::Cylinder:
+                return float3{ _halfExtents._x + _growth, _halfExtents._y, _halfExtents._x + _growth };
+        }
+        return _halfExtents;
     }
 
     hashed_string ZoneVolumeComponent::getSourceName() const
@@ -158,12 +179,18 @@ namespace sw
         const SceneComponent* const pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr )
             return false;
-        const float3  center     = pScene->getWorldPosition();
+        const float4x4 world = pScene->getWorldMatrix();
+        return sampleInWorld( world, world.invert(), position, bodyHeight, outSample );
+    }
+
+    bool ZoneVolumeComponent::sampleInWorld( const float4x4& world, const float4x4& worldInverse, const float3& position, float32 bodyHeight, ZoneSample& outSample ) const
+    {
+        // 모양은 오너 로컬 공간에서 잰다 — 회전 · 배율이 든다(언리얼 볼륨 브러시 · 유니티 트리거 콜라이더가 트랜스폼을 따르는 것과 같다).
+        const float3  offset     = float3::transform( position, worldInverse );
         const float3  half       = _halfExtents + float3{ _growth, 0.0f, _growth }; // 퍼짐은 수평으로 — 독가스가 땅을 따라 번진다
-        const float3  offset     = position - center;
         const float32 horizontal = MathUtil::sqrt( offset._x * offset._x + offset._z * offset._z );
         float32       depth01    = 0.0f;
-        float32       top        = center._y + half._y;
+        float32       topLocal   = half._y;
         switch ( _shape )
         {
             case ZoneVolumeShape::Box:
@@ -180,8 +207,8 @@ namespace sw
                 const float32 length = offset.getLength();
                 if ( length > radius )
                     return false;
-                depth01 = 1.0f - length / radius;
-                top     = center._y + radius;
+                depth01  = 1.0f - length / radius;
+                topLocal = radius;
                 break;
             }
             case ZoneVolumeShape::Cylinder:
@@ -193,27 +220,28 @@ namespace sw
                 break;
             }
         }
-        const float3 pullCenter     = center + _pullCenterOffset;
+        const float3 pullCenter     = float3::transform( _pullCenterOffset, world );
         const float3 toPull         = pullCenter - position;
+        const float3 top            = float3::transform( float3{ 0.0f, topLocal, 0.0f }, world );
         outSample                   = ZoneSample{};
         outSample._position         = position;
         outSample._center           = pullCenter;
-        outSample._flowDirection    = computeFlowDirection( center, position );
+        outSample._flowDirection    = computeFlowDirection( world, position );
         outSample._zoneDepth01      = MathUtil::saturate( depth01 );
         outSample._distanceToCenter = MathUtil::sqrt( toPull._x * toPull._x + toPull._z * toPull._z );
-        outSample._immersion        = bodyHeight > 0.0f ? MathUtil::saturate( ( top - position._y ) / bodyHeight ) : 0.0f;
+        outSample._immersion        = bodyHeight > 0.0f ? MathUtil::saturate( ( top._y - position._y ) / bodyHeight ) : 0.0f;
         outSample._contactNormalUp  = 1.0f;
         return true;
     }
 
-    float3 ZoneVolumeComponent::computeFlowDirection( const float3& center, const float3& position ) const
+    float3 ZoneVolumeComponent::computeFlowDirection( const float4x4& world, const float3& position ) const
     {
         float3  best{};
         float32 bestDistance = 0.0f;
         for ( size_t index = 1; index < _listFlowPoint.size(); ++index )
         {
-            const float3  from    = center + _listFlowPoint[index - 1];
-            const float3  segment = ( center + _listFlowPoint[index] ) - from;
+            const float3  from    = float3::transform( _listFlowPoint[index - 1], world );
+            const float3  segment = float3::transform( _listFlowPoint[index], world ) - from;
             const float32 length  = segment.getLength();
             if ( length <= 0.0f )
                 continue;
@@ -241,15 +269,19 @@ namespace sw
         // 안에 든 물리 개체를 고른다 — 캐릭터는 발, 움직이는 강체는 중심. 한 오브젝트에 둘이 있으면 캐릭터 쪽 하나다(거르기는 질의가 한다).
         _tracker.beginFrame();
         const SceneComponent* const pScene = pOwner->getPrimarySceneComponent();
+        float4x4                    world{};
+        float4x4                    worldInverse{}; // 후보마다 풀지 않고 프레임에 한 번
         if ( pScene != nullptr )
         {
-            const float3  center = pScene->getWorldPosition();
-            const float32 halfZ  = _shape == ZoneVolumeShape::Box ? _halfExtents._z : _halfExtents._x;
-            const float32 reachX = _halfExtents._x + _growth;
-            const float32 reachZ = halfZ + _growth;
+            // 후보는 회전 · 배율을 든 월드 경계 상자의 수평 사각형으로 받는다.
+            world                  = pScene->getWorldMatrix();
+            worldInverse           = world.invert();
+            const float3  half     = computeLocalHalfExtents();
+            const AABB    worldBox = AABB{ -half, half }.transformedBy( world );
+            const float32 halfZ    = _shape == ZoneVolumeShape::Box ? _halfExtents._z : _halfExtents._x;
             // 셀은 퍼짐을 뺀 반 크기의 두 배다 — 퍼지는 볼륨이 셀을 프레임마다 키워 색인을 다시 짓지 않게(셀은 성능만 바꾼다).
             const float32 cellSize = MathUtil::max( MathUtil::max( _halfExtents._x, halfZ ), ZoneVolumeComponentInternal::kMinCellHalfSize ) * 2.0f;
-            ZoneOccupantIndex::queryCandidates( manager, cellSize, center._x - reachX, center._z - reachZ, center._x + reachX, center._z + reachZ, _listKeyScratch, _listCandidateScratch );
+            ZoneOccupantIndex::queryCandidates( manager, cellSize, worldBox._min._x, worldBox._min._z, worldBox._max._x, worldBox._max._z, _listKeyScratch, _listCandidateScratch );
         }
         else
         {
@@ -261,8 +293,8 @@ namespace sw
                 continue;
             ZoneSample sample;
             const bool bInside = candidate._pController != nullptr
-                                   ? sampleAt( candidate._pController->getWorldPosition(), ZoneVolumeComponentInternal::computeCharacterHeight( *candidate._pController ), sample )
-                                   : sampleAt( candidate._pBody->getWorldPosition(), ZoneVolumeComponentInternal::kRigidBodyHeight, sample );
+                                   ? sampleInWorld( world, worldInverse, candidate._pController->getWorldPosition(), ZoneVolumeComponentInternal::computeCharacterHeight( *candidate._pController ), sample )
+                                   : sampleInWorld( world, worldInverse, candidate._pBody->getWorldPosition(), ZoneVolumeComponentInternal::kRigidBodyHeight, sample );
             if ( bInside )
                 _tracker.touch( *candidate._pObject, sample );
         }

@@ -5,9 +5,9 @@
 #include "Core/Network/Tests/LoopbackCluster.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
-#include "Games/LanternVale/ValeNetLink.h"
+#include "Games/LanternVale/Server/ValeServerLink.h"
 
 // 골짜기 서버 · 클라이언트를 루프백으로 잇는다 — 계정으로 들이기 → 반사 함수 호출로 전투 · 파티 → 서버가 알린 진행 → 검증 실패 끊기 → 저장 후 재접속 · 서버 재시작.
 
@@ -77,6 +77,13 @@ namespace
         return rules;
     }
 
+    /** @brief 진행 저장소를 찾는 곳입니다 — 테스트는 늘 같은 메모리 저장소를 돌려준다(전용 서버는 온라인 조립 저장소를 맡길 때마다 찾는다). */
+    ValeServiceStoreSource makeStoreSource( IServiceStore& store )
+    {
+        return SW_DELEGATE_LAMBDA( ValeServiceStoreSource, [&store]() -> IServiceStore*
+        { return &store; } );
+    }
+
     StreamingCellGridDef makeValeLinkTestGrid()
     {
         StreamingCellGridDef grid;
@@ -89,7 +96,8 @@ namespace
     struct ValeLinkTestRig
     {
         test::LoopbackCluster        _cluster{ 23u };
-        MemoryLocalDatabase          _database;
+        MemoryServiceDatabase        _database;
+        MemoryServiceStore           _store{ &_database }; ///< 서버를 다시 세워도 데이터는 남는다(전용 서버의 온라인 조립 저장소 자리)
         ValeAccountPeers*            _pServerPeers{ nullptr };
         unique_ptr<ValeAccountPeers> _pServerPeersOwner;
         NetMessageRouter             _serverRouter;
@@ -119,7 +127,7 @@ namespace
 
         [[nodiscard]] bool startServer( ValeServerLink& server )
         {
-            return server.initialize( *_pServerPeers, _serverRouter, makeValeLinkTestRules(), makeValeLinkTestGrid(), make_unique<MemoryLocalStore>( &_database, LocalSealContext{} ) );
+            return server.initialize( *_pServerPeers, _serverRouter, makeValeLinkTestRules(), makeValeLinkTestGrid(), makeStoreSource( _store ) );
         }
 
         int32 getConnectionID( int32 clientIndex ) { return _cluster.getClient( clientIndex ).getClientIndex().value(); }
@@ -132,6 +140,7 @@ namespace
             {
                 _cluster.step();
                 (void)_serverRouter.poll( *_pServerPeers );
+                (void)_store.pollCompletions(); // 전용 서버에서는 온라인 조립이 거둔다
                 server.update( 1.0f / 60.0f );
                 for ( int32 index = 0; index < _clientCount; ++index )
                 {
@@ -199,33 +208,112 @@ SW_TEST_CASE( ValeNetLinkTest, OnlyChangedEntitiesArePublished )
     SW_EXPECT_EQUAL( settledCount + 1u, rig._server.getStats()._publishCount );
 }
 
-/** @brief [ValeNetLinkTest] 진행 저장소는 디스크 바이트(읽었거나 맡긴 것)와 같은 진행을 다시 쓰지 않는다 — 자동 저장이 그대로인 진행을 쓰지 않는다(감사 K-13). */
+/** @brief [ValeNetLinkTest] 진행 저장소는 저장소 바이트(읽었거나 쓴 것)와 같은 진행을 다시 쓰지 않는다 — 자동 저장이 그대로인 진행을 쓰지 않는다(감사 K-13). */
 SW_TEST_CASE( ValeNetLinkTest, UnchangedProfileIsNotWrittenAgain )
 {
-    MemoryLocalDatabase database;
-    MemoryLocalStore    store( &database, LocalSealContext{} );
-    ValeProfileStore    profiles;
-    profiles.bindStore( &store );
+    MemoryServiceDatabase   database;
+    MemoryServiceStore      store( &database );
+    ValeProfileStore        profiles;
+    vector<ValeProfileLoad> listLoad;
+    profiles.bindSource( makeStoreSource( store ) );
+    profiles.requestLoad( 7 );
+    (void)store.pollCompletions();
+    profiles.poll( listLoad );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listLoad.size() );
+    SW_REQUIRE_TRUE( listLoad[0]._bOk == SW_TRUE && listLoad[0]._bFound == SW_FALSE ); // 새 계정
     ValeProfile profile;
     profile._coins = 5;
     SW_EXPECT_TRUE( profiles.requestSave( 7, profile ) );
-    SW_EXPECT_FALSE( profiles.requestSave( 7, profile ) );
+    SW_EXPECT_FALSE( profiles.requestSave( 7, profile ) ); // 쓰는 중인 바이트와 같다
     SW_EXPECT_EQUAL( uint64{ 1 }, profiles.getSkippedSaveCount() );
     profile._coins = 6;
-    SW_EXPECT_TRUE( profiles.requestSave( 7, profile ) );
-
-    // 다른 저장소 객체(서버 재시작)는 읽은 바이트를 디스크 값으로 안다 — 읽은 그대로는 쓰지 않는다.
-    vector<ValeProfileLoad> listLoad;
-    profiles.poll( listLoad );
+    SW_EXPECT_TRUE( profiles.requestSave( 7, profile ) ); // 앞 쓰기가 끝나면 그 판으로 맡긴다
+    for ( int32 round = 0; round < 3; ++round )
+    {
+        (void)store.pollCompletions();
+        profiles.poll( listLoad );
+    }
     SW_EXPECT_EQUAL( uint64{ 2 }, profiles.getSavedCount() );
+    SW_EXPECT_EQUAL( 0, profiles.getPendingCount() );
+
+    // 다른 저장소 객체(서버 재시작)는 읽은 바이트를 저장소 값으로 안다 — 읽은 그대로는 쓰지 않는다.
+    listLoad.clear();
     ValeProfileStore restarted;
-    restarted.bindStore( &store );
+    restarted.bindSource( makeStoreSource( store ) );
     restarted.requestLoad( 7 );
+    (void)store.pollCompletions();
     restarted.poll( listLoad );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listLoad.size() );
     SW_REQUIRE_TRUE( listLoad[0]._bFound == SW_TRUE );
+    SW_EXPECT_EQUAL( 6, listLoad[0]._profile._coins );
     SW_EXPECT_FALSE( restarted.requestSave( 7, listLoad[0]._profile ) );
-    SW_EXPECT_TRUE( restarted.requestSave( 8, listLoad[0]._profile ) ); // 다른 계정은 따로 센다
+    SW_EXPECT_LOG( "LanternVale.ProfileSaveUnread" );
+    SW_EXPECT_FALSE( restarted.requestSave( 8, listLoad[0]._profile ) ); // 읽지 않은 계정은 판을 몰라 쓰지 않는다
+}
+
+/** @brief [ValeNetLinkTest] 서버 둘이 한 계정을 쓰면 뒤 서버의 쓰기는 판 조건에 걸려 앞 서버의 진행을 덮지 않는다(저장소 계약 — 서버 여럿이 DB 하나를 나눈다). */
+SW_TEST_CASE( ValeNetLinkTest, SecondServerDoesNotOverwriteNewerProgress )
+{
+    MemoryServiceDatabase   database;
+    MemoryServiceStore      storeA( &database );
+    MemoryServiceStore      storeB( &database );
+    ValeProfileStore        serverA;
+    ValeProfileStore        serverB;
+    vector<ValeProfileLoad> listLoad;
+    serverA.bindSource( makeStoreSource( storeA ) );
+    serverB.bindSource( makeStoreSource( storeB ) );
+    serverA.requestLoad( 7 );
+    serverB.requestLoad( 7 );
+    (void)storeA.pollCompletions();
+    (void)storeB.pollCompletions();
+    serverA.poll( listLoad );
+    serverB.poll( listLoad );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listLoad.size() );
+    ValeProfile profile;
+    profile._coins = 10;
+    SW_REQUIRE_TRUE( serverA.requestSave( 7, profile ) );
+    (void)storeA.pollCompletions();
+    serverA.poll( listLoad );
+    SW_EXPECT_LOG( "LanternVale.ProfileSaveFailed" );
+    profile._coins = 1;
+    SW_REQUIRE_TRUE( serverB.requestSave( 7, profile ) ); // B 는 새 계정(없음)으로 읽었다 — "없어야 한다" 조건이 걸린다
+    (void)storeB.pollCompletions();
+    serverB.poll( listLoad );
+    SW_EXPECT_EQUAL( uint64{ 0 }, serverB.getSavedCount() );
+
+    ValeProfileStore reader;
+    listLoad.clear();
+    reader.bindSource( makeStoreSource( storeA ) );
+    reader.requestLoad( 7 );
+    (void)storeA.pollCompletions();
+    reader.poll( listLoad );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listLoad.size() );
+    SW_EXPECT_EQUAL( 10, listLoad[0]._profile._coins );
+}
+
+/** @brief [ValeNetLinkTest] 세션이 끝난 계정의 기억은 마지막 쓰기가 끝나면 지운다 — 들고 있는 바이트가 접속 중인 계정 수를 따른다 */
+SW_TEST_CASE( ValeNetLinkTest, ReleasedAccountIsForgottenAfterItsLastWrite )
+{
+    MemoryServiceDatabase   database;
+    MemoryServiceStore      store( &database );
+    ValeProfileStore        profiles;
+    vector<ValeProfileLoad> listLoad;
+    profiles.bindSource( makeStoreSource( store ) );
+    profiles.requestLoad( 7 );
+    profiles.requestLoad( 8 );
+    (void)store.pollCompletions();
+    profiles.poll( listLoad );
+    ValeProfile profile;
+    profile._coins = 5;
+    SW_REQUIRE_TRUE( profiles.requestSave( 7, profile ) );
+    profiles.releaseAccount( 7 );
+    SW_EXPECT_EQUAL( size_t{ 2 }, profiles.getKnownAccountCount() ); // 7 의 쓰기가 아직 거두어지지 않았다
+
+    (void)store.pollCompletions();
+    profiles.poll( listLoad );
+    SW_EXPECT_EQUAL( size_t{ 1 }, profiles.getKnownAccountCount() );
+    profiles.releaseAccount( 8 ); // 쓰는 중이 아니면 바로 지운다
+    SW_EXPECT_EQUAL( size_t{ 0 }, profiles.getKnownAccountCount() );
 }
 
 /** @brief [ValeNetLinkTest] 파티 초대 · 수락이 서버에서 서고, 쓰러뜨린 짐승의 경험을 두 클라이언트가 나눠 받는다. */

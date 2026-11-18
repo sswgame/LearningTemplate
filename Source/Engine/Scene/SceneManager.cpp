@@ -57,6 +57,7 @@ namespace sw
         , _asyncLoad{ sw::make_shared<AsyncLoadSlot>() }
         , _queuedPath{}
         , _inFlightPath{}
+        , _chunkWaitPath{}
         , _queuedPromise{}
         , _bLoadInFlight{ false }
         , _loadHandle{}
@@ -119,6 +120,12 @@ namespace sw
         {
             _queuedPath.clear();
             _queuedPromise.setValue( nullptr );
+        }
+        if ( _chunkWaitPath.empty() == false ) // 청크를 기다리던 씬은 로드를 띄우지 않았다 — 그 약속을 여기서 비운다
+        {
+            _chunkWaitPath.clear();
+            _bLoadInFlight.store( false, std::memory_order_release );
+            _asyncLoad->_promise.setValue( nullptr );
         }
         if ( _asyncLoad != nullptr )
             _asyncLoad->_bAccepting.store( false, std::memory_order_release );
@@ -289,6 +296,28 @@ namespace sw
             promise.setValue( nullptr );
             return false;
         }
+        // 씬이 쓰는 미룬 청크(씬 청크 · 공유 청크)가 마운트될 때까지 로드를 띄우지 않는다 — 씬 파일 · 쿠킹본 · 에셋이 그 청크에 있다.
+        if ( _services._pAssetManager != nullptr )
+        {
+            const PackChunkState chunks = _services._pAssetManager->prepareSceneChunks( path );
+            if ( chunks == PackChunkState::Failed )
+            {
+                SW_LOG_ERROR_ID( "SceneManager.SceneChunksFailed", "Scene '%#' cannot be loaded - a pack chunk it needs could not be fetched or mounted", path );
+                _bLoadInFlight.store( false, std::memory_order_release );
+                promise.setValue( nullptr );
+                return false;
+            }
+            if ( chunks == PackChunkState::Pending )
+            {
+                _bLoadInFlight.store( true, std::memory_order_release );
+                _asyncLoad->_bReady.store( false, std::memory_order_release );
+                _asyncLoad->_promise = std::move( promise );
+                _inFlightPath        = path;
+                _chunkWaitPath       = path;
+                SW_LOG_TRACE_ID( "SceneManager.WaitingForChunks", "dispatchLoad: '%#' waits for its pack chunks", path );
+                return true;
+            }
+        }
         _bLoadInFlight.store( true, std::memory_order_release );
         _asyncLoad->_bReady.store( false, std::memory_order_release );
         _asyncLoad->_promise             = std::move( promise );
@@ -445,6 +474,7 @@ namespace sw
             _services._pTaskManager->waitStage( _loadStage, "SceneManager::cancelPendingAsyncLoads" );
 
         _bLoadInFlight.store( false, std::memory_order_release );
+        _chunkWaitPath.clear(); // 기다리던 씬의 약속은 아래에서 비운다
         if ( _queuedPath.empty() == false )
         {
             _queuedPath.clear();
@@ -555,10 +585,47 @@ namespace sw
     /**
      * @brief 백그라운드에서 끝난 비동기 로드 결과를 메인 스레드의 안전한 시점에 활성 씬으로 바꿔 넣습니다.
      */
+    void SceneManager::updateChunkWait()
+    {
+        // 다른 씬이 대기열에 들었으면 기다리던 씬은 버린다(`updateTransitions` 의 대기열 규칙과 같다).
+        if ( _queuedPath.empty() == false && FileUtil::isSameDiskPath( _queuedPath, _chunkWaitPath ) == false )
+        {
+            _chunkWaitPath.clear();
+            _asyncLoad->_promise.setValue( nullptr );
+            const string nextPath = std::move( _queuedPath );
+            _queuedPath.clear();
+            dispatchLoad( nextPath, std::move( _queuedPromise ) );
+            return;
+        }
+        const PackChunkState chunks = _services._pAssetManager->prepareSceneChunks( _chunkWaitPath );
+        if ( chunks == PackChunkState::Pending )
+            return;
+        const string path = std::move( _chunkWaitPath );
+        _chunkWaitPath.clear();
+        if ( chunks == PackChunkState::Failed )
+        {
+            SW_LOG_ERROR_ID( "SceneManager.SceneChunksFailedWhileWaiting", "Scene '%#' cannot be loaded - a pack chunk it needs could not be fetched or mounted", path );
+            _bLoadInFlight.store( false, std::memory_order_release );
+            _asyncLoad->_promise.setValue( nullptr );
+            if ( _queuedPath.empty() == false ) // 같은 경로의 대기열 요청도 같은 청크를 기다린다
+            {
+                _queuedPath.clear();
+                _queuedPromise.setValue( nullptr );
+            }
+            return;
+        }
+        dispatchLoad( path, std::move( _asyncLoad->_promise ) );
+    }
+
     void SceneManager::updateTransitions()
     {
         SW_MEMORY_SCOPE( Scene );
         updateScenePreload();
+        if ( _chunkWaitPath.empty() == false )
+        {
+            updateChunkWait();
+            return;
+        }
         if ( _asyncLoad == nullptr || _asyncLoad->_bReady.load( std::memory_order_acquire ) == false )
             return;
         if ( processPendingSceneRegistration() == false )

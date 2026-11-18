@@ -2,7 +2,6 @@
 
 #include "Games/LanternVale/ValeWorldComponent.h"
 
-#include "Core/File/UserDataPath.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -18,9 +17,6 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreBackend.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -220,7 +216,7 @@ namespace sw
                 BitReader    reader( pEntity->_listState.data(), static_cast<int32>( pEntity->_listState.size() ) );
                 const uint64 typeID = reader.readVarUint();
                 const int32  health = reader.readVarInt32();
-                if ( reader.hasOverflowed() || typeID != ValeServerLink::kCreatureTypeID )
+                if ( reader.hasOverflowed() || typeID != ValeEntityType::kCreature )
                     return false;
                 outValue = static_cast<float64>( health );
                 return true;
@@ -250,8 +246,7 @@ namespace sw
     ValeWorldComponent::ValeWorldComponent()
         : _rules{}
         , _interestGrid{}
-        , _profileFolder{}
-        , _server{}
+        , _pServer{}
         , _client{}
         , _bRulesValid{ SW_FALSE }
         , _bLinkTried{ SW_FALSE }
@@ -263,7 +258,7 @@ namespace sw
 
     int32 ValeWorldComponent::getNetRoleValue() const
     {
-        if ( _server.isActive() )
+        if ( _pServer != nullptr )
             return 1;
         return _client.isActive() ? 2 : 0;
     }
@@ -297,26 +292,22 @@ namespace sw
 
     bool ValeWorldComponent::startServer( INetPeers& peers, NetMessageRouter& router )
     {
-        // 두 프로세스 시나리오는 서버의 사용자 데이터 폴더(SW_USER_DATA_ROOT)를 실행마다 빈 폴더로 옮겨 새 진행으로 시작한다 — 저장소는 배포와 같은 파일 저장소다.
-        const optional<LocalStoreLocation> location = LocalStoreLocation::tryUnderUserData( _profileFolder );
-        if ( location.has_value() == false )
+        // 서버 링크는 서버 전용 코드다 — 클라이언트 구성에는 공장이 없다. 진행 저장소는 전용 서버의 온라인 조립 저장소다(공장이 찾는다).
+        IValeServerFactory* const pFactory = game::findSubsystem<IValeServerFactory>();
+        if ( pFactory == nullptr )
         {
-            SW_LOG_ERROR_ID( "LanternVale.ProfileFolderInvalid", "[LanternVale] Profile Folder '%#' must be a relative path under the user data folder", _profileFolder.c_str() );
+            SW_LOG_ERROR_ID( "LanternVale.ServerCodeMissing", "[LanternVale] this build has no vale server code (client configuration) - the server role cannot start" );
             return false;
         }
-        const LocalStoreConfig            settings{ string( LocalStoreBackend::kFileBackendName ), *location };
-        expected<unique_ptr<ILocalStore>> pStore = LocalStoreBackend::createLocalStore( "LanternVale", settings, LocalSealContext{} );
-        if ( pStore.has_value() == false )
-        {
-            SW_LOG_ERROR_ID( "LanternVale.ProfileStoreFailed", "[LanternVale] the profile store did not open: %# (%#)", pStore.error().message(), pStore.error().detail() );
-            return false;
-        }
-        return _server.initialize( peers, router, _rules, _interestGrid, std::move( *pStore ) );
+        _pServer = pFactory->createServer( peers, router, _rules, _interestGrid );
+        return _pServer != nullptr;
     }
 
     void ValeWorldComponent::onEndPlay()
     {
-        _server.shutdown();
+        if ( _pServer != nullptr )
+            _pServer->shutdown();
+        _pServer.reset();
         _client.shutdown();
         Component::onEndPlay();
     }
@@ -325,7 +316,8 @@ namespace sw
     {
         Component::onTick( context );
         tryStartLink();
-        _server.update( context.getDeltaTime() );
+        if ( _pServer != nullptr )
+            _pServer->update( context.getDeltaTime() );
         _client.update();
     }
 } // namespace sw

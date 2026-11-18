@@ -8,6 +8,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/StringUtil.h"
 
@@ -98,9 +99,14 @@ namespace sw
             return;
         s_pOpenDialog->_delegate = {};
         // 편집기를 내리는 길(종료 · 끄기)이면 사용자가 닫을 때까지 기다릴 수 없다 — 떼어 둔다. 리로드는 `_bDone` 까지 계속 잡힌다.
-        // shortcut: 뗀 스레드는 `_bDone` 을 올린 뒤 몇 명령을 이 DLL 에서 더 돈다. 리로드 준비(복사 · 적재)가 그보다 훨씬 길어 겹치지 않는다 — 겹치면 FreeLibraryAndExitThread 로 바꾼다.
+        // 뗀 스레드는 `_bDone` 을 올린 뒤에도 몇 명령을 이 DLL 에서 더 돈다 — 이 DLL 을 프로세스 끝까지 고정해 언로드가 그 명령을 빈 주소로 만들지 않게 한다
+        // (Windows 의 FreeLibraryAndExitThread 자리 — 리눅스에는 짝이 없어 두 플랫폼 모두 고정으로 같게 둔다). 리로드는 새 사본을 따로 싣는다.
         if ( s_pOpenDialog->_bDone.load( std::memory_order_acquire ) == false && s_pOpenDialog->_thread.joinable() )
+        {
+            if ( ModuleLibraryUtil::pinLibraryContaining( reinterpret_cast<const void*>( &FileDialog::cancelResults ) ) == false )
+                SW_LOG_WARNING_ID( "FileDialog.CouldNotPinModule", "Could not pin the editor module for the detached file dialog thread" );
             s_pOpenDialog->_thread.detach();
+        }
     }
 
     bool FileDialog::isOpen()

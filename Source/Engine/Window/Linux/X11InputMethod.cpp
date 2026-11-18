@@ -4,6 +4,7 @@
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -25,6 +26,32 @@ namespace sw
         struct X11InputMethodInternal
         {
             static X11InputMethod& getSelf( XPointer pClient ) { return *reinterpret_cast<X11InputMethod*>( pClient ); }
+
+            /** @brief 제어 문자 구간(C0 · DEL · C1)의 경계 코드 포인트입니다 - 그 안은 글자가 아니다. */
+            static constexpr uint32 kFirstPrintable       = 0x20u;
+            static constexpr uint32 kDeleteCode           = 0x7Fu;
+            static constexpr uint32 kFirstLatin1Printable = 0xA0u;
+
+            /** @brief xkbcommon 의 `xkb_keysym_to_utf32`(키심 → 코드 포인트, 0 은 글자 없음)입니다. */
+            using KeySymToUTF32Fn = uint32_t ( * )( uint32_t );
+
+            /**
+             * @brief 옛 키심 번호(키릴 0x6xx · 그리스 0x7xx 등)를 코드 포인트로 바꾸는 xkbcommon 함수입니다. 처음 부를 때 시스템 라이브러리에서 찾는다.
+             * @details X 데스크톱은 늘 libxkbcommon 을 싣는다(GTK · Qt · X 서버). 빌드 의존으로 두지 않는 까닭: 기본 Linux 빌드는 Wayland 를 끄고 -dev 패키지를 요구하지 않는다.
+             *          라이브러리는 프로세스 끝까지 둔다(함수 포인터를 들고 있다). 없으면 오류를 한 번 남기고 nullptr 이다 - 그 레이아웃의 글자는 나오지 않는다.
+             */
+            static KeySymToUTF32Fn findKeySymToUTF32()
+            {
+                static const KeySymToUTF32Fn s_pFunction = []() -> KeySymToUTF32Fn
+                {
+                    void* const pLibrary = ModuleLibraryUtil::loadSystemLibrary( "libxkbcommon.so.0" );
+                    void* const pSymbol  = pLibrary != nullptr ? ModuleLibraryUtil::getDynamicSymbol( pLibrary, "xkb_keysym_to_utf32" ) : nullptr;
+                    if ( pSymbol == nullptr )
+                        SW_LOG_ERROR_ID( "X11InputMethod.NoXkbCommon", "libxkbcommon.so.0 (xkb_keysym_to_utf32) is missing - keys of legacy keysym layouts produce no text without an input method" );
+                    return reinterpret_cast<KeySymToUTF32Fn>( pSymbol );
+                }();
+                return s_pFunction;
+            }
 
             static void onInstantiate( Display* /*pDisplay*/, XPointer pClient, XPointer /*pCall*/ ) { getSelf( pClient ).onInputMethodAvailable(); }
 
@@ -264,7 +291,7 @@ namespace sw
 
     void X11InputMethod::emitKeySymText( void* pKeyPressEvent )
     {
-        // shortcut: 옛 키심 번호의 레이아웃(키릴 0x6xx 등)은 입력기 없이는 글자가 나오지 않는다, Xlib 내장 입력기마저 열리지 않는 환경(로캘 자료 없음)에서 쓸 일이 생기면 GLFW 의 키심 표를 들인다.
+        // 입력기가 없는 환경(Xlib 내장 입력기마저 열리지 않는 로캘 자료 없음)의 길이다 - 키심을 직접 코드 포인트로 바꾼다.
         if ( _textSink.isBound() == false )
             return;
         XKeyEvent* const pEvent = static_cast<XKeyEvent*>( pKeyPressEvent );
@@ -280,10 +307,18 @@ namespace sw
         const uint64 sym      = static_cast<uint64>( keySym );
         const bool   bLatin1  = 0xA0 <= sym && sym <= 0xFF;           // Latin-1 키심은 코드 포인트와 번호가 같다
         const bool   bUnicode = ( sym & 0xFF000000u ) == 0x01000000u; // 유니코드 키심(0x01000000 + 코드 포인트)
-        if ( bLatin1 == false && bUnicode == false )
+        uint32       codePoint{ 0 };
+        if ( bLatin1 )
+            codePoint = static_cast<uint32>( sym );
+        else if ( bUnicode )
+            codePoint = static_cast<uint32>( sym & 0x00FFFFFFu );
+        else if ( const X11InputMethodInternal::KeySymToUTF32Fn pKeySymToUTF32 = X11InputMethodInternal::findKeySymToUTF32() )
+            codePoint = pKeySymToUTF32( static_cast<uint32_t>( sym ) ); // 옛 키심(키릴 · 그리스 · 히브리 등) - 표는 xkbcommon 이 든다
+        // 제어 문자(Backspace 등의 키심)는 위 ASCII 길이 이미 다뤘다 - 여기 남은 0 · 제어 코드는 글자가 아니다.
+        if ( codePoint < X11InputMethodInternal::kFirstPrintable || ( X11InputMethodInternal::kDeleteCode <= codePoint && codePoint < X11InputMethodInternal::kFirstLatin1Printable ) )
             return;
         string text;
-        StringUtil::appendUTF8( text, bLatin1 ? static_cast<uint32>( sym ) : static_cast<uint32>( sym & 0x00FFFFFFu ) );
+        StringUtil::appendUTF8( text, codePoint );
         _textSink( WindowTextInputKind::Commit, text );
     }
 

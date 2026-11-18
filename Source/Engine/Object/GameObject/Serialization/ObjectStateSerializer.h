@@ -336,9 +336,9 @@ namespace sw
          *          GameObject 의 부모는 `getParent()` 가 SceneComponent 의 `_pParent` 에서 구하므로
          *          별도 `_parentGO` 필드나 속성을 쓰지 않는다.
          */
-        static string saveToXMLString( const GameObject* pGameObject, const ObjectSaveOptions& options );
-        /** @brief GameObject 상태를 JSON 으로 직렬화합니다. XMLSerializer 와 같은 PROPERTY 그래프를 씁니다. */
-        [[maybe_unused]] static string saveToJSONString( const GameObject* pGameObject, const ObjectSaveOptions& options );
+        [[nodiscard]] static expected<string> saveToXMLString( const GameObject* pGameObject, const ObjectSaveOptions& options );
+        /** @brief GameObject 상태를 JSON 으로 직렬화합니다. XMLSerializer 와 같은 PROPERTY 그래프를 씁니다. 실패는 XML 과 같이 그 까닭입니다. */
+        [[nodiscard]] static expected<string> saveToJSONString( const GameObject* pGameObject, const ObjectSaveOptions& options );
 
         /** @brief GameObject 상태를 바이너리 버퍼로 빠르게 직렬화합니다(핫 리로드와 프리팹용). */
         [[nodiscard]] static bool saveToBinaryBuffer( const GameObject* pGameObject, vector<uint8>& outBuffer, const ObjectSaveOptions& options );
@@ -386,7 +386,7 @@ namespace sw
          * @details 정의는 .cpp 에만 있다(그곳에서만 인스턴스화한다). 헤더가 직렬화기를 알 필요가 없다.
          */
         template <typename TSerializer>
-        static string saveToText( const GameObject* pGameObject, const ObjectSaveOptions& options );
+        [[nodiscard]] static expected<string> saveToText( const GameObject* pGameObject, const ObjectSaveOptions& options );
         /** @brief 리플렉션 문자열 포맷 하나에서 복원합니다. `loadFromXMLString` 과 `loadFromJSONString` 의 본체입니다. */
         template <typename TSerializer>
         [[nodiscard]] static bool loadFromXMLText( GameObject* pGameObject, string_view text, const ObjectLoadContext& context );

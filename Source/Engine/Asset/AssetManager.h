@@ -28,6 +28,7 @@
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/ContentSource.h"
+#include "Engine/Content/Pack/PackChunkLoader.h"
 
 namespace sw
 {
@@ -174,6 +175,12 @@ namespace sw
          */
         [[nodiscard]] bool rebuildAssetRegistry() const;
 
+        /**
+         * @brief 씬 @p sceneID 를 열기 전에 그 씬이 쓰는 미룬 청크(`packchunks.xml`)를 준비합니다(게임 스레드 — 씬 열기가 `Ready` 가 될 때까지 프레임마다 묻는다).
+         * @details 받은 팩의 마운트는 로드 태스크(`launchLoadJob`)로 낸다. 팩을 올리지 않은 실행(소스 · 쿠킹)과 미룬 청크가 없는 씬은 늘 `Ready` 다.
+         */
+        [[nodiscard]] PackChunkState prepareSceneChunks( string_view sceneID );
+
         /** @brief VFS 에 팩을 마운트하는 리소스 팩 매니저를 반환합니다. */
         PackManager&       getPackManager();
         const PackManager& getPackManager() const;
@@ -227,6 +234,7 @@ namespace sw
         TaskStageHandle _loadStage         SW_GUARDED_BY( _loadStageMutex ); ///< 워커 로드 태스크의 단계(처음 낼 때 만들고 다시 쓴다 — `addLoadTask`)
         vector<unique_ptr<AssetCacheBase>> _listOwnedAssetCache;             ///< 기능 폴더가 등록한 소유 캐시(`SW_BUILT_IN_ASSET_CACHE`)다. 매니저마다 하나씩 가진다
         unique_ptr<PackManager>            _pPackManager;
+        unique_ptr<PackChunkLoader>        _pPackChunks;           ///< 기동 팩을 올린 뒤 만든다(`mountStartupPacks`) — 씬 청크를 받고 마운트한다
         vector<AssetCacheBase*>            _listBuiltInAssetCache; ///< 내장 캐시 전부다(`_listOwnedAssetCache` 의 것)를 종류 이름 순으로 올린다
         /**
          * @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 캐시는 위 멤버가, 모듈이 등록한 것은 그 모듈이 소유합니다).

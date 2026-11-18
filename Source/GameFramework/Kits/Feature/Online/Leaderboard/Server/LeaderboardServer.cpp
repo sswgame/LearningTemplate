@@ -49,10 +49,9 @@ namespace sw
         _pService->readAround( request._boardID, context._accountID, request._radius, context._nowMs, call._callID );
     }
 
-    void LeaderboardServer::handleCall( OnlineServerCall<LeaderboardMethod::GetStats> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    void LeaderboardServer::handleCall( OnlineServerCall<LeaderboardMethod::GetStats> call, const OnlineCallContext& context, const LeaderboardListPageRequest& request )
     {
-        (void)request;
-        _pService->readStats( context._accountID, call._callID );
+        _pService->readStats( context._accountID, request._cursor, request._maxCount, call._callID );
     }
 
     void LeaderboardServer::handleCall( OnlineServerCall<LeaderboardMethod::SubmitScore> call, const OnlineCallContext& context, const LeaderboardSubmitRequest& request )
@@ -71,10 +70,9 @@ namespace sw
         _pService->submitScore( request._boardID, context._accountID, identity._displayName, request._score, context._idempotencyKey, context._nowMs, call._callID );
     }
 
-    void LeaderboardServer::handleCall( OnlineServerCall<LeaderboardMethod::GetAchievements> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    void LeaderboardServer::handleCall( OnlineServerCall<LeaderboardMethod::GetAchievements> call, const OnlineCallContext& context, const LeaderboardListPageRequest& request )
     {
-        (void)request;
-        _pService->readAchievements( context._accountID, call._callID );
+        _pService->readAchievements( context._accountID, request._cursor, request._maxCount, call._callID );
     }
 
     void LeaderboardServer::handleCall( OnlineServerCall<LeaderboardMethod::GetSeasonResult> call, const OnlineCallContext& context, const LeaderboardSeasonRequest& request )
@@ -122,7 +120,8 @@ namespace sw
             case LeaderboardOperation::Stats:
             {
                 LeaderboardStatsReply reply;
-                reply._listStat = std::move( completion._listStat );
+                reply._listStat   = std::move( completion._listStat );
+                reply._nextCursor = std::move( completion._nextCursor );
                 (void)finishCall( callID, result, reply );
                 return;
             }
@@ -130,6 +129,7 @@ namespace sw
             {
                 LeaderboardAchievementsReply reply;
                 reply._listAchievement = std::move( completion._listAchievement );
+                reply._nextCursor      = std::move( completion._nextCursor );
                 (void)finishCall( callID, result, reply );
                 return;
             }

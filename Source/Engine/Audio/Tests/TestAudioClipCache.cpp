@@ -73,3 +73,30 @@ SW_TEST_CASE( AudioClipCacheTest, ReplacingClipKeepsByteCountExact )
     cache.clear();
     SW_EXPECT_EQUAL( uint64{ 0 }, cache.getCachedBytes() );
 }
+
+/**
+ * @brief [AudioClipCacheTest] 퇴출은 최근 사용 목록의 앞(가장 오래 안 쓴 것)부터 걷고, 재생 중인 것은 건너뛰어 그다음 것을 뺀다
+ * @details 예전에는 퇴출마다 맵 전체를 훑어 가장 작은 사용 시각을 찾았다. 변이: `markUsedLocked` 를 비우면 넣은 순서대로 c 가 빠져 끝 단언들이 진다.
+ */
+SW_TEST_CASE( AudioClipCacheTest, EvictionWalksRecencyOrderSkippingPlaying )
+{
+    AudioClipCache cache;
+    cache.setBudgetBytes( 1000 );
+    cache.addClip( hashed_string( "a.wav" ), makeClip( 50 ) ); // 200 바이트
+    const shared_ptr<const AudioClipData> pPlayingA = cache.findClip( hashed_string( "a.wav" ) );
+    cache.addClip( hashed_string( "b.wav" ), makeClip( 50 ) );
+    cache.addClip( hashed_string( "c.wav" ), makeClip( 50 ) );
+    cache.addClip( hashed_string( "d.wav" ), makeClip( 50 ) );
+    SW_EXPECT_TRUE( cache.findLoadState( hashed_string( "c.wav" ) ).has_value() ); // 순서: a b d c
+
+    cache.addClip( hashed_string( "e.wav" ), makeClip( 100 ) ); // 1200 > 1000 — a 는 재생 중, 그다음 b 를 뺀다
+    SW_EXPECT_TRUE( cache.findLoadState( hashed_string( "a.wav" ) ).has_value() );
+    SW_EXPECT_FALSE( cache.findLoadState( hashed_string( "b.wav" ) ).has_value() );
+    SW_EXPECT_EQUAL( uint64{ 1000 }, cache.getCachedBytes() );
+
+    // 위에서 a 를 다시 물어 순서가 d c e a 다 — 다음 퇴출은 d 를 뺀다(c 는 d 보다 늦게 물었다).
+    cache.addClip( hashed_string( "f.wav" ), makeClip( 50 ) );
+    SW_EXPECT_FALSE( cache.findLoadState( hashed_string( "d.wav" ) ).has_value() );
+    SW_EXPECT_TRUE( cache.findLoadState( hashed_string( "c.wav" ) ).has_value() );
+    SW_EXPECT_EQUAL( uint64{ 1000 }, cache.getCachedBytes() );
+}

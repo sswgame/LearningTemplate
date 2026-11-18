@@ -230,7 +230,7 @@ namespace sw
 
     public:
         static constexpr uint32 kStateTag       = FourCCUtil::make( "MCHA" );
-        static constexpr uint32 kStateVersion   = 3;
+        static constexpr uint32 kStateVersion   = 4;   ///< 4: 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
         static constexpr uint32 kSlotStride     = 256; ///< 탄의 반응 번호에서 기체 번호와 슬롯을 가르는 폭(한 기체의 슬롯 수 상한)
         static constexpr int32  kUnlimitedGauge = -1;  ///< 비용을 무시하는 팀의 `getTeamGauge`(게이지 상한 없음)
 

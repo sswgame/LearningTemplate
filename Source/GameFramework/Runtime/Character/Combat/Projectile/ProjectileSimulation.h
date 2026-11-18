@@ -9,7 +9,6 @@
  *          결정성: 이 TU 는 `sw_mark_deterministic_sources` 에 있고 삼각함수는 `DeterministicMathUtil` 이다. 중력은 쓰는 쪽이 값(가속의 크기)으로 넘긴다 — 물리 설정을 읽지 않는다.
  */
 #pragma once
-#include "Core/Container/array.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
@@ -55,13 +54,12 @@ namespace sw
         int32         _target;     ///< 유도 대상(−1 = 없음)
         int32         _pierceLeft; ///< 남은 관통 수
         int32         _bounceLeft; ///< 남은 튕김 수
-        /// 꿰뚫은 대상(고리, 비면 −1). 쓰는 쪽의 `sweep` 은 `hasHit` 인 대상을 건너뛴다 — "방금 하나" 만 기억하면 겹친 두 대상을 번갈아 다시 맞힌다(G-10).
-        /// 언리얼 GAS 타깃 데이터의 "이미 맞힌 액터" 목록과 같은 자리. shortcut: 고리라 8 개보다 많이 꿰뚫으면 가장 먼저 맞힌 것을 잊는다 — 그보다 큰 관통 수를 쓰게 되면 늘린다.
-        array<int32, 8> _arrHitTarget;
-        uint8           _hitCursor; ///< 다음에 쓸 `_arrHitTarget` 칸
-        uint8           _bAlive     : 1;
-        uint8           _bReflected : 1; ///< 되받아친 탄이다
-        uint8           _reserved   : 6;
+        /// 꿰뚫은 대상(겹침 없음). 쓰는 쪽의 `sweep` 은 `hasHit` 인 대상을 건너뛴다 — "방금 하나" 만 기억하면 겹친 두 대상을 번갈아 다시 맞힌다(G-10).
+        /// 언리얼 GAS 타깃 데이터의 "이미 맞힌 액터" 목록(`TArray`)과 같은 자리 — 상한이 없어 관통 수가 커도 먼저 맞힌 것을 잊지 않는다. 꿰뚫지 않는 탄은 비어 있어 할당이 없다.
+        vector<int32> _listHitTarget;
+        uint8         _bAlive     : 1;
+        uint8         _bReflected : 1; ///< 되받아친 탄이다
+        uint8         _reserved   : 6;
 
         ProjectileState();
 
@@ -151,21 +149,20 @@ namespace sw
             static constexpr size_t kFlags       = 1;
             static constexpr size_t kBounceLeft  = 5;
             static constexpr size_t kPierceLeft  = 9;
-            static constexpr size_t kHitCursor   = 10;
-            static constexpr size_t kHitTargets  = 42;
-            static constexpr size_t kTarget      = 46;
-            static constexpr size_t kTeam        = 50;
-            static constexpr size_t kOwner       = 54;
-            static constexpr size_t kPayload     = 58;
-            static constexpr size_t kID          = 62;
-            static constexpr size_t kRestitution = 66;
-            static constexpr size_t kRadius      = 74;
-            static constexpr size_t kRange       = 90;
-            static constexpr size_t kLifetime    = 94;
-            static constexpr size_t kDamage      = 106;
-            static constexpr size_t kVelocity    = 118;
-            static constexpr size_t kPosition    = 130;
-            static constexpr size_t kNameLength  = 134; ///< 이름 글자를 뺀 한 줄의 바이트 수이기도 하다
+            static constexpr size_t kHitCount    = 13; ///< 꿰뚫은 대상 수(4). 아래 자리는 꿰뚫은 대상이 없는 탄의 것이다(하나마다 4 바이트 앞으로 밀린다)
+            static constexpr size_t kTarget      = 17;
+            static constexpr size_t kTeam        = 21;
+            static constexpr size_t kOwner       = 25;
+            static constexpr size_t kPayload     = 29;
+            static constexpr size_t kID          = 33;
+            static constexpr size_t kRestitution = 37;
+            static constexpr size_t kRadius      = 45;
+            static constexpr size_t kRange       = 61;
+            static constexpr size_t kLifetime    = 65;
+            static constexpr size_t kDamage      = 77;
+            static constexpr size_t kVelocity    = 89;
+            static constexpr size_t kPosition    = 101;
+            static constexpr size_t kNameLength  = 105; ///< 이름 글자를 뺀 한 줄의 바이트 수이기도 하다(꿰뚫은 대상이 없을 때)
         };
 
         ProjectileSimulation();

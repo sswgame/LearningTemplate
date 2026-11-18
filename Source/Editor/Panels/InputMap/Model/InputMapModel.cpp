@@ -206,16 +206,53 @@ namespace sw::editor
     string InputMapModel::captureText() const
     {
         string text;
-        if ( isBundlePath() || _inputMap.saveToXMLText( text ) == false )
-            return {};
+        if ( isBundlePath() == false )
+            return _inputMap.saveToXMLText( text ) ? text : string{};
+        // 묶음은 파일마다 몫을 이어 쓴다 — 파일마다 "리소스 id \n 바이트 수 \n 글". 저장(`saveBundle`)과 같은 글이라 되돌린 뒤 저장도 같은 파일로 간다.
+        for ( uint32 sourceIndex = 0; sourceIndex < _inputMap.getSourceCount(); ++sourceIndex )
+        {
+            string sourceText;
+            if ( _inputMap.writeSourceText( sourceIndex, sourceText ) == false )
+                return {};
+            text += _inputMap.getSourceAssetPath( sourceIndex );
+            text += '\n';
+            StringUtil::appendNumber( text, static_cast<uint64>( sourceText.size() ) );
+            text += '\n';
+            text += sourceText;
+        }
         return text;
+    }
+
+    bool InputMapModel::parseBundleText( string_view text, vector<InputMapSourceText>& outListSource )
+    {
+        while ( text.empty() == false )
+        {
+            const size_t pathEnd  = text.find( '\n' );
+            const size_t countEnd = pathEnd == string_view::npos ? string_view::npos : text.find( '\n', pathEnd + 1 );
+            uint64       byteCount{ 0 };
+            if ( countEnd == string_view::npos || StringUtil::parseUint64( text.substr( pathEnd + 1, countEnd - pathEnd - 1 ), byteCount ) == false || byteCount > text.size() - countEnd - 1 )
+                return false;
+            InputMapSourceText& source = outListSource.emplace_back();
+            source._assetPath          = text.substr( 0, pathEnd );
+            source._text               = text.substr( countEnd + 1, static_cast<size_t>( byteCount ) );
+            text.remove_prefix( countEnd + 1 + static_cast<size_t>( byteCount ) );
+        }
+        return outListSource.empty() == false;
     }
 
     bool InputMapModel::applyText( string_view text )
     {
+        bool bLoaded = false;
         if ( isBundlePath() )
-            return false;
-        if ( _inputMap.loadFromXMLText( text, _inputMapPath.c_str() ) == false )
+        {
+            vector<InputMapSourceText> listSource;
+            bLoaded = parseBundleText( text, listSource ) && _inputMap.loadBundleTexts( listSource );
+        }
+        else
+        {
+            bLoaded = _inputMap.loadFromXMLText( text, _inputMapPath.c_str() );
+        }
+        if ( bLoaded == false )
         {
             // 스스로 만든 글이라 드물다 — 일부만 읽힌 맵을 두지 않고 파일에서 다시 읽는다(편집은 잃는다, 이유는 읽기가 남겼다).
             (void)reload();

@@ -103,8 +103,9 @@ namespace sw
         _anchorRoleIndex = constant::invalid_index::kUint32;
     }
 
-    string PairedAnimationDef::makeXMLText( const PairedAnimationContentDef& content )
+    string PairedAnimationDef::makeXMLText( const PairedAnimationContentDef& content, ResourceFieldWrite fieldWrite )
     {
+        const bool  bWriteAll = fieldWrite == ResourceFieldWrite::WriteAll;
         XMLDocument document;
         XMLNode     root = document.appendRoot( PairedAnimationDefInternal::kRootName );
         root.appendAttribute( "duration", CharacterDataReader::formatFloat( content._duration ).c_str() );
@@ -112,13 +113,13 @@ namespace sw
         {
             XMLNode node = root.appendChild( "Role" );
             node.appendAttribute( "name", role._name.view() );
-            if ( role._bAnchor )
-                node.appendAttribute( "anchor", "true" );
+            if ( role._bAnchor || bWriteAll )
+                node.appendAttribute( "anchor", role._bAnchor ? "true" : "false" );
             node.appendAttribute( "required", role._bRequired ? "true" : "false" );
             node.appendAttribute( "clip", role._clip.view() );
-            if ( role._startSeconds != 0.0f )
+            if ( role._startSeconds != 0.0f || bWriteAll )
                 node.appendAttribute( "start", CharacterDataReader::formatFloat( role._startSeconds ).c_str() );
-            if ( role._skeletonPath.empty() == false )
+            if ( role._skeletonPath.empty() == false || bWriteAll )
                 node.appendAttribute( "skeleton", role._skeletonPath.c_str() );
             if ( role._bAnchor == false )
                 node.appendAttribute( "align", PairedAnimationDefInternal::formatAlign( role._align ) );
@@ -126,7 +127,7 @@ namespace sw
             if ( bAligned )
             {
                 node.appendAttribute( "offset", CharacterDataReader::formatFloat3( role._offset ).c_str() );
-                if ( role._yawRadians != 0.0f )
+                if ( role._yawRadians != 0.0f || bWriteAll )
                     node.appendAttribute( "yaw", CharacterDataReader::formatFloat( role._yawRadians * MathUtil::kRadianToDegree ).c_str() );
                 node.appendAttribute( "maxAlignDistance", CharacterDataReader::formatFloat( role._maxAlignDistance ).c_str() );
             }

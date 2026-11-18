@@ -590,6 +590,7 @@ namespace sw
         , _writer{}
         , _pHost{ nullptr }
         , _nextRequestID{ 1 }
+        , _bServerReached{ SW_FALSE }
     {
     }
 
@@ -601,8 +602,16 @@ namespace sw
         _listAwaitingSnapshot.clear();
         _listReply.clear();
         _listOwner.clear();
-        _stats         = HousingReplicationStats{};
-        _nextRequestID = 1;
+        _stats          = HousingReplicationStats{};
+        _nextRequestID  = 1;
+        _bServerReached = SW_FALSE;
+    }
+
+    bool HousingReplicationClient::isAwaitingServer()
+    {
+        if ( _pHost != nullptr && _pHost->getConnectedCount() > 0 )
+            _bServerReached = SW_TRUE;
+        return _bServerReached == SW_FALSE;
     }
 
     uint32 HousingReplicationClient::sendEdit( const hashed_string& plotID, const HousingEditRequest& request )
