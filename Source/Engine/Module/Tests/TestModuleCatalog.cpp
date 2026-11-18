@@ -125,6 +125,9 @@ SW_TEST_CASE( ModuleCatalogTest, ParsesAManifest )
     SW_EXPECT_EQUAL( 1, static_cast<int32>( manifest._configurationMask ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, manifest._listDependency.size() );
     SW_EXPECT_TRUE( manifest._listDependency[0]._name == "GameFramework" );
+    const vector<string> listDependencyName = manifest.collectDependencyNames(); // 이름만, 적힌 순서대로
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listDependencyName.size() );
+    SW_EXPECT_TRUE( listDependencyName[0] == "GameFramework" );
 }
 
 SW_TEST_CASE( ModuleCatalogTest, FileNameMustMatchTheModuleName )
