@@ -206,7 +206,7 @@ namespace sw
         void closeInteraction();
 
         /** @brief @p cmd(안쪽 명령까지)의 코드 단계 주인마다 사라짐을 한 번 구독합니다(`push`). */
-        void watchOwners( const Command& cmd );
+        void subscribeOwners( const Command& cmd );
         /** @brief 주인이 사라졌다 — 그 명령을 빼고 구독을 놓습니다. */
         void onOwnerReleased( uint64 ownerID );
 
@@ -239,13 +239,13 @@ namespace sw
         uint32 _interactionDepth; ///< 열린 상호작용 수(`beginInteraction`)
         uint8  _bIsExecuting      : 1;
         uint8  _bHistorySuspended : 1; ///< 보관한 내역이 있다
-        /** @struct OwnerWatch @brief 코드 단계를 받은 주인 하나의 사라짐 구독입니다. */
-        struct OwnerWatch
+        /** @struct OwnerSubscription @brief 코드 단계를 받은 주인 하나의 사라짐 구독입니다. */
+        struct OwnerSubscription
         {
             uint64       _ownerID;
             Subscription _subscription;
         };
-        shared_ptr<CommandStack*> _pAlive;         ///< 생존 표지 — 상호작용 핸들이 쥐고, 스택이 사라지면 nullptr 로 비운다
-        vector<OwnerWatch>        _listOwnerWatch; ///< 맨 끝 — 먼저 사라져 주인 쪽 알림 목록에서 빠진다
+        shared_ptr<CommandStack*> _pAlive;                ///< 생존 표지 — 상호작용 핸들이 쥐고, 스택이 사라지면 nullptr 로 비운다
+        vector<OwnerSubscription> _listOwnerSubscription; ///< 맨 끝 — 먼저 사라져 주인 쪽 알림 목록에서 빠진다
     };
 } // namespace sw

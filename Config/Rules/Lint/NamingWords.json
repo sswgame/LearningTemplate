@@ -96,6 +96,10 @@
     "should"
   ],
   "_bannedNames": {
+    "OwnerWatch": "OwnerSubscription — 주인 사라짐 알림의 구독(Watch 는 자동화 감시 값만)(2026-11-19)",
+    "_listOwnerWatch": "_listOwnerSubscription(2026-11-19)",
+    "watchOwners": "subscribeOwners — 주인 사라짐 알림을 구독한다(Watch 는 자동화 감시 값만)(2026-11-19)",
+    "CommentEdit": "EditorGraphCommentEdit — 그래프 모델 둘이 따로 들던 같은 열거형을 하나로(2026-11-19)",
     "UIPreviewProbe": "UIPreviewWatchValues — 자동화 감시 값이 읽는 값 묶음(Probe 는 라이트 · 리플렉션 프로브만, 앞선 예 ProjectSettingsWatchValues)(2026-11-19)",
     "AudioMixerProbe": "AudioMixerWatchValues — 자동화 감시 값이 읽는 값 묶음(Probe 는 라이트 · 리플렉션 프로브만)(2026-11-19)",
     "getProbedBusVolume": "getWatchedBusVolume — 감시 값 Editor.AudioMixerBusVolume 이 보는 버스의 볼륨(2026-11-19)",
