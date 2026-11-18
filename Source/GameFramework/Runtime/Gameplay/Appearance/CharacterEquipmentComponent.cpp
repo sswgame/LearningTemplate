@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 
+#include "Core/Encoding/Base64Util.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
@@ -348,6 +349,28 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief `equipment.restore <object> <base64>` — 장비 상태 바이트(`serializeState` 가 쓴 것, base64)를 겁니다. 게임 세이브의 그 구간과 같은 길이다.
+             *        옛 판 세이브 표본(손으로 쓴 바이트)을 시나리오에서 불러 판 올림 사슬을 본다. 읽지 못하면 지금 장비를 그대로 두고 알린다.
+             */
+            static bool runRestore( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 2 )
+                    return false;
+                CharacterEquipmentComponent* pEquipment = findEquipment( listArgument[0], outReply );
+                if ( pEquipment == nullptr )
+                    return false;
+                vector<uint8> bytes;
+                if ( Base64Util::decode( listArgument[1], bytes ) == false || bytes.empty() )
+                {
+                    outReply = "the state is not base64 bytes";
+                    return false;
+                }
+                pEquipment->restoreState( std::move( bytes ) );
+                outReply = "restored the equipment state of " + listArgument[0];
+                return true;
+            }
+
             // ---- 감시 값(대상은 장비 컴포넌트를 가진 오브젝트) ----
 
             static const CharacterEquipmentComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
@@ -399,6 +422,8 @@ namespace sw
     SW_DEV_COMMAND( EquipmentEquip, "equipment.equip", "equipment.equip <object> <bagSlot> [slot]", "Wear the item instance of a bag slot (what it displaces goes to the bag)",
                     &CharacterEquipmentCommandsInternal::runEquip );
     SW_DEV_COMMAND( EquipmentUnequip, "equipment.unequip", "equipment.unequip <object> <slot>", "Take off an equipment slot into the bag", &CharacterEquipmentCommandsInternal::runUnequip );
+    SW_DEV_COMMAND( EquipmentRestore, "equipment.restore", "equipment.restore <object> <base64>", "Apply saved equipment state bytes (an older save sample upgrades on read)",
+                    &CharacterEquipmentCommandsInternal::runRestore );
     SW_DEV_COMMAND( EquipmentDye, "equipment.dye", "equipment.dye <object> <slot> <parameter> <number | r g b [a] | option>",
                     "Change one customization value (dye) of the item instance worn in a slot", &CharacterEquipmentCommandsInternal::runDye );
     SW_AUTOMATION_QUERY_WATCH( equipmentWorn, "Equipment.Worn", "Item the character's equipment wears in the slot named by key ('(empty)' when empty)",
