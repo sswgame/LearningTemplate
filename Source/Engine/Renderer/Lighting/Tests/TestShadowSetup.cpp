@@ -7,7 +7,9 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/Lighting/ShadowCache.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
+#include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 
@@ -28,7 +30,7 @@ namespace sw
                 config._psoBuildBudgetMicroseconds = 2000;
                 config._shadowCascadeSplitLambda   = 0.75f;
                 config._shadowLocalDepthBiasTexels = 1.5f;
-                // 칸 하한을 사분면의 반으로 두어 칸 크기를 예전(아틀라스 4분의 1)에 묶는다 — 칸이 모자라는 경우를 본다. 크기가 줄어드는 경우는 따로 본다.
+                // 칸 하한을 아틀라스 4분의 1(칸 16)로 두어 칸이 모자라는 경우를 본다. 크기가 줄어드는 경우는 따로 본다.
                 config._shadowLocalMinTileResolution = kAtlasResolution / 4u;
                 config._shadowLocalCullSlotLimit     = 16;
                 config._taaHistoryWeight             = 0.9f;
@@ -116,6 +118,28 @@ namespace sw
                 return pLight;
             }
 
+            /** @brief 원소 번호마다 그림자 빛(정체 = 1000 + 번호)을 만듭니다 — `collectSceneLights` 가 컴포넌트 id 를 싣는 자리. */
+            static vector<LocalShadowLight> makeShadowLights( std::initializer_list<uint32> listIndex )
+            {
+                vector<LocalShadowLight> listShadowLight;
+                for ( const uint32 lightIndex : listIndex )
+                {
+                    listShadowLight.push_back( LocalShadowLight{ lightIndex, 1000u + lightIndex } );
+                }
+                return listShadowLight;
+            }
+
+            /** @brief 정체 @p key 의 타일을 찾습니다. 없으면 nullptr 입니다. */
+            static const ShadowTileDraw* findTile( const FrameShadowData& frame, uint64 key )
+            {
+                for ( const ShadowTileDraw& tile : frame._listLocalTile )
+                {
+                    if ( tile._key == key )
+                        return &tile;
+                }
+                return nullptr;
+            }
+
             /** @brief 칸 두 개가 겹치는지 반환합니다. */
             static bool overlaps( const ShadowAtlasCell& first, const ShadowAtlasCell& second )
             {
@@ -128,14 +152,13 @@ namespace sw
 } // namespace sw
 
 /**
- * @brief [ShadowSetupTest] 캐스케이드 하나 · 점광 · 스폿 없음이면 아틀라스 전체가 그 캐스케이드다 — 아틀라스가 생기기 전과 같은 그림
+ * @brief [ShadowSetupTest] 캐스케이드 하나면 방향광 아틀라스 전체가 그 캐스케이드다 — 아틀라스가 생기기 전과 같은 그림(점광 · 스폿은 다른 텍스처라 상관없다)
  */
 SW_TEST_CASE( ShadowSetupTest, SingleCascadeUsesTheWholeAtlas )
 {
     using Internal                     = sw::ShadowSetupTestInternal;
-    const sw::ShadowAtlasLayout layout = sw::ShadowAtlasLayout::make( Internal::kAtlasResolution, 1, 0, Internal::kAtlasResolution / 4u );
+    const sw::ShadowAtlasLayout layout = sw::ShadowAtlasLayout::make( Internal::kAtlasResolution, 1 );
     SW_EXPECT_EQUAL( layout.getCascadeCount(), 1u );
-    SW_EXPECT_EQUAL( layout.getLocalCapacity(), 0u );
     SW_EXPECT_NEAR( layout.getCascadeTileScale(), 1.0f, 1e-6f );
     SW_EXPECT_EQUAL( layout.getCascadeTileResolution(), Internal::kAtlasResolution );
     const sw::ShadowAtlasCell cell = layout.getCascadeCell( 0 );
@@ -145,14 +168,13 @@ SW_TEST_CASE( ShadowSetupTest, SingleCascadeUsesTheWholeAtlas )
 }
 
 /**
- * @brief [ShadowSetupTest] 캐스케이드는 사분면을 하나씩, 점광 · 스폿은 남은 사분면을 칸 수에 맞춘 크기로 나눠 쓰고 칸끼리 겹치지 않는다
- * @details 점광 · 스폿 그림자가 있으면 캐스케이드는 셋까지다(사분면 하나를 남긴다 — 감사 RN-4). 칸 일곱은 사분면 하나에 4x4(아틀라스 8분의 1)로 든다.
- *          셰이더는 캐스케이드 c 의 원점을 사분면 c 로 구한다.
+ * @brief [ShadowSetupTest] 캐스케이드는 방향광 아틀라스의 사분면을 하나씩 쓰고, 점광 · 스폿 칸은 점광 · 스폿 아틀라스 안에서 서로 겹치지 않는다
+ * @details 셰이더는 캐스케이드 c 의 원점을 사분면 c 로 구한다. 점광 둘 · 스폿 하나(칸 13)는 하한(아틀라스 4분의 1)에서 칸 16 안에 든다.
  */
-SW_TEST_CASE( ShadowSetupTest, CascadesTakeQuadrantsAndLocalCellsTakeTheRest )
+SW_TEST_CASE( ShadowSetupTest, CascadesTakeQuadrantsAndLocalCellsDoNotOverlap )
 {
     using Internal                       = sw::ShadowSetupTestInternal;
-    const sw::ShadowAtlasLayout cascades = sw::ShadowAtlasLayout::make( Internal::kAtlasResolution, 4, 0, Internal::kAtlasResolution / 4u );
+    const sw::ShadowAtlasLayout cascades = sw::ShadowAtlasLayout::make( Internal::kAtlasResolution, 4 );
     SW_EXPECT_EQUAL( cascades.getCascadeCount(), 4u );
     SW_EXPECT_NEAR( cascades.getCascadeTileScale(), 0.5f, 1e-6f );
     for ( uint32 cascadeIndex = 0; cascadeIndex < 4; ++cascadeIndex )
@@ -163,28 +185,22 @@ SW_TEST_CASE( ShadowSetupTest, CascadesTakeQuadrantsAndLocalCellsTakeTheRest )
         SW_EXPECT_EQUAL( cell._y, ( cascadeIndex >> 1u ) * Internal::kAtlasResolution / 2u );
     }
 
-    const sw::ShadowAtlasLayout mixed = sw::ShadowAtlasLayout::make( Internal::kAtlasResolution, 4, 7, 128u );
-    SW_EXPECT_EQUAL( mixed.getCascadeCount(), 3u );
-    SW_EXPECT_EQUAL( mixed.getCascadeTileResolution(), Internal::kAtlasResolution / 2u );
-    SW_EXPECT_EQUAL( mixed.getLocalCapacity(), 16u );
-    SW_EXPECT_EQUAL( mixed.getLocalTileResolution(), Internal::kAtlasResolution / 8u );
-    sw::vector<sw::ShadowAtlasCell> listCell;
-    for ( uint32 cascadeIndex = 0; cascadeIndex < mixed.getCascadeCount(); ++cascadeIndex )
+    sw::vector<sw::GPULight> listLight;
+    listLight.push_back( Internal::makePointLight( sw::float3{ 0.0f, 3.0f, 0.0f }, 8.0f ) );
+    listLight.push_back( Internal::makeSpotLight( sw::float3{ 5.0f, 4.0f, 0.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) );
+    listLight.push_back( Internal::makePointLight( sw::float3{ -6.0f, 2.0f, 0.0f }, 5.0f ) );
+    sw::FrameShadowData  frame;
+    sw::LocalShadowAtlas atlas;
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), Internal::makeShadowLights( { 0u, 1u, 2u } ), atlas, listLight, frame );
+    SW_REQUIRE_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 13 ) );
+    for ( size_t first = 0; first < frame._listLocalTile.size(); ++first )
     {
-        listCell.push_back( mixed.getCascadeCell( cascadeIndex ) );
-    }
-    for ( uint32 tileIndex = 0; tileIndex < mixed.getLocalCapacity(); ++tileIndex )
-    {
-        const sw::ShadowAtlasCell cell = mixed.getLocalCell( tileIndex );
-        SW_EXPECT_EQUAL( cell._size, Internal::kAtlasResolution / 8u );
+        const sw::ShadowAtlasCell& cell = frame._listLocalTile[first]._cell;
+        SW_EXPECT_EQUAL( cell._size, Internal::kAtlasResolution / 4u );
         SW_EXPECT_TRUE( cell._x + cell._size <= Internal::kAtlasResolution && cell._y + cell._size <= Internal::kAtlasResolution );
-        listCell.push_back( cell );
-    }
-    for ( size_t first = 0; first < listCell.size(); ++first )
-    {
-        for ( size_t second = first + 1; second < listCell.size(); ++second )
+        for ( size_t second = first + 1; second < frame._listLocalTile.size(); ++second )
         {
-            SW_EXPECT_FALSE_MSG( Internal::overlaps( listCell[first], listCell[second] ),
+            SW_EXPECT_FALSE_MSG( Internal::overlaps( cell, frame._listLocalTile[second]._cell ),
                                  ( "칸 " + sw::to_string( static_cast<uint64>( first ) ) + " 과 " + sw::to_string( static_cast<uint64>( second ) ) + " 이 겹친다" ).c_str() );
         }
     }
@@ -192,7 +208,8 @@ SW_TEST_CASE( ShadowSetupTest, CascadesTakeQuadrantsAndLocalCellsTakeTheRest )
 
 /**
  * @brief [ShadowSetupTest] 카메라가 없으면 점광 · 스폿은 앞에서부터 칸을 받고, 칸이 모자란 빛은 그림자 없이 남는다 — 빛 원소의 params.x · w 와 타일 원소 수
- * @details 캐스케이드 하나 + 점광 둘 + 스폿 하나면 칸 열둘 중 점광(6) · 스폿(1)이 먼저 받고 뒤의 점광(6)은 못 받는다. 스폿의 첫 타일 원소는 점광 여섯 면 뒤(12)다.
+ * @details 점광 셋 + 스폿 하나(칸 19)는 하한(아틀라스 4분의 1, 칸 16)까지 줄어도 다 들지 못한다. 앞의 점광(6) · 스폿(1) · 점광(6)이 받고 마지막 점광(6)은 못 받는다.
+ *          스폿의 첫 타일 원소는 점광 여섯 면 뒤(12)다.
  */
 SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsInOrderUntilTheAtlasIsFull )
 {
@@ -202,25 +219,27 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsInOrderUntilTheAtlasIsFull )
     listLight.push_back( Internal::makePointLight( sw::float3{ 0.0f, 3.0f, 0.0f }, 8.0f ) );
     listLight.push_back( Internal::makeSpotLight( sw::float3{ 5.0f, 4.0f, 0.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) );
     listLight.push_back( Internal::makePointLight( sw::float3{ -6.0f, 2.0f, 0.0f }, 5.0f ) );
-    const sw::vector<uint32> listShadowIndex{ 1u, 2u, 3u };
-    SW_EXPECT_LOG( "ShadowSetup.LocalShadowAtlasFull" ); // 뒤의 점광이 칸을 못 받는다
+    listLight.push_back( Internal::makePointLight( sw::float3{ 9.0f, 2.0f, 4.0f }, 5.0f ) );
+    SW_EXPECT_LOG( "ShadowSetup.LocalShadowAtlasFull" ); // 마지막 점광이 칸을 못 받는다
 
-    SW_EXPECT_EQUAL( sw::FrameShadowData::countLocalTiles( listLight, listShadowIndex ), 13u );
-    sw::FrameShadowData frame;
-    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
+    sw::FrameShadowData  frame;
+    sw::LocalShadowAtlas atlas;
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), Internal::makeShadowLights( { 1u, 2u, 3u, 4u } ), atlas, listLight, frame );
     SW_EXPECT_EQUAL( frame._layout.getCascadeCount(), 1u );
-    SW_EXPECT_EQUAL( frame._layout.getLocalCapacity(), 12u );
 
+    const float32 tileElements = static_cast<float32>( sw::shaderslot::kShadowTileElementCount );
     SW_EXPECT_NEAR( listLight[1]._params._x, 1.0f, 1e-6f );
     SW_EXPECT_NEAR( listLight[1]._params._w, 0.0f, 1e-6f );
     SW_EXPECT_NEAR( listLight[2]._params._x, 1.0f, 1e-6f );
-    SW_EXPECT_NEAR( listLight[2]._params._w, static_cast<float32>( sw::shaderslot::kPointShadowFaceCount * sw::shaderslot::kShadowTileElementCount ), 1e-6f );
-    SW_EXPECT_NEAR( listLight[3]._params._x, 0.0f, 1e-6f ); // 칸이 모자라 그림자 없음
+    SW_EXPECT_NEAR( listLight[2]._params._w, static_cast<float32>( sw::shaderslot::kPointShadowFaceCount ) * tileElements, 1e-6f );
+    SW_EXPECT_NEAR( listLight[3]._params._x, 1.0f, 1e-6f );
+    SW_EXPECT_NEAR( listLight[3]._params._w, static_cast<float32>( sw::shaderslot::kPointShadowFaceCount + 1 ) * tileElements, 1e-6f );
+    SW_EXPECT_NEAR( listLight[4]._params._x, 0.0f, 1e-6f ); // 칸이 모자라 그림자 없음
     SW_EXPECT_NEAR( listLight[0]._params._x, 0.0f, 1e-6f );
 
-    SW_EXPECT_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 7 ) );
-    SW_EXPECT_EQUAL( frame._listTileElement.size(), static_cast<size_t>( 7 * sw::shaderslot::kShadowTileElementCount ) );
-    SW_EXPECT_EQUAL( frame._listLocalBound.size(), static_cast<size_t>( 2 ) );
+    SW_EXPECT_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 13 ) );
+    SW_EXPECT_EQUAL( frame._listTileElement.size(), static_cast<size_t>( 13 * sw::shaderslot::kShadowTileElementCount ) );
+    SW_EXPECT_EQUAL( frame._listLocalBound.size(), static_cast<size_t>( 3 ) );
     // 그림자 빛이 없으면 주 시점은 그림자 없는 뷰(makeUnshadowedView)다 — 키 라이트로 볼륨을 지어내지 않는다.
     const sw::ViewShadowData unshadowed = sw::FrameShadowData::makeUnshadowedView( frame._layout );
     SW_EXPECT_TRUE( frame._mainView._bValid == SW_TRUE );
@@ -230,9 +249,9 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsInOrderUntilTheAtlasIsFull )
 }
 
 /**
- * @brief [ShadowSetupTest] 카메라가 있으면 칸은 화면에 크게 보이는 빛부터 받는다 — 목록 앞의 먼 점광보다 뒤의 가까운 점광이 먼저다
- * @details 칸 열둘에 먼 점광(6) · 스폿(1) · 가까운 점광(6). 목록 순서면 가까운 점광이 빠지지만 우선순위(반경 / 카메라 깊이)로는 먼 점광이 빠진다.
- *          카메라 뒤의 빛은 0 이고, 카메라가 빛 구 안이면 값이 깊이 하한으로 막혀 유한하다.
+ * @brief [ShadowSetupTest] 카메라가 있으면 칸은 화면에 크게 보이는 빛부터 받는다 — 목록 앞의 먼 점광보다 뒤의 가까운 빛들이 먼저다
+ * @details 먼 점광(6) · 스폿(1) · 가까운 점광 둘(6 + 6)이면 칸 19 가 하한의 칸 16 에 다 들지 못한다. 목록 순서면 마지막 점광이 빠지지만 우선순위(반경 / 카메라 깊이)로는
+ *          먼 점광이 빠진다. 카메라 뒤의 빛은 0 이고, 카메라가 빛 구 안이면 값이 깊이 하한으로 막혀 유한하다.
  */
 SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsByScreenPriority )
 {
@@ -242,19 +261,22 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsByScreenPriority )
     listLight.push_back( Internal::makePointLight( sw::float3{ 0.0f, 3.0f, 80.0f }, 8.0f ) );
     listLight.push_back( Internal::makeSpotLight( sw::float3{ 2.0f, 4.0f, 12.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) );
     listLight.push_back( Internal::makePointLight( sw::float3{ -1.0f, 2.0f, 6.0f }, 6.0f ) );
-    const sw::vector<uint32> listShadowIndex{ 0u, 1u, 2u };
+    listLight.push_back( Internal::makePointLight( sw::float3{ 1.0f, 2.0f, 8.0f }, 6.0f ) );
     SW_EXPECT_LOG( "ShadowSetup.LocalShadowAtlasFull" ); // 먼 점광이 칸을 못 받는다
 
-    sw::FrameShadowData frame;
-    sw::FrameShadowData::populateFrame( nullptr, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
-    SW_REQUIRE_EQUAL( frame._layout.getLocalCapacity(), 12u );
+    sw::FrameShadowData  frame;
+    sw::LocalShadowAtlas atlas;
+    sw::FrameShadowData::populateFrame( nullptr, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), Internal::makeShadowLights( { 0u, 1u, 2u, 3u } ), atlas, listLight, frame );
     SW_EXPECT_NEAR( listLight[0]._params._x, 0.0f, 1e-6f ); // 먼 점광은 칸이 모자라 그림자 없음
     SW_EXPECT_NEAR( listLight[1]._params._x, 1.0f, 1e-6f );
     SW_EXPECT_NEAR( listLight[2]._params._x, 1.0f, 1e-6f );
-    // 가까운 점광이 가장 먼저 받아 첫 타일 원소(0)를 쓰고, 스폿은 그 여섯 면 뒤다.
+    SW_EXPECT_NEAR( listLight[3]._params._x, 1.0f, 1e-6f );
+    // 가장 가까운 점광(6 m)이 먼저 받아 첫 타일 원소(0)를 쓰고, 스폿(12 m, 반경 10)이 그 여섯 면 뒤, 8 m 점광이 그 뒤다.
+    const float32 tileElements = static_cast<float32>( sw::shaderslot::kShadowTileElementCount );
     SW_EXPECT_NEAR( listLight[2]._params._w, 0.0f, 1e-6f );
-    SW_EXPECT_NEAR( listLight[1]._params._w, static_cast<float32>( sw::shaderslot::kPointShadowFaceCount * sw::shaderslot::kShadowTileElementCount ), 1e-6f );
-    SW_EXPECT_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 7 ) );
+    SW_EXPECT_NEAR( listLight[1]._params._w, static_cast<float32>( sw::shaderslot::kPointShadowFaceCount ) * tileElements, 1e-6f );
+    SW_EXPECT_NEAR( listLight[3]._params._w, static_cast<float32>( sw::shaderslot::kPointShadowFaceCount + 1 ) * tileElements, 1e-6f );
+    SW_EXPECT_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 13 ) );
 
     const sw::GPULight behind = Internal::makePointLight( sw::float3{ 0.0f, 2.0f, -30.0f }, 5.0f );
     SW_EXPECT_NEAR( sw::FrameShadowData::computeLocalShadowPriority( behind, viewProj ), 0.0f, 1e-6f );
@@ -272,9 +294,9 @@ SW_TEST_CASE( ShadowSetupTest, PointFacesProjectIntoTheirOwnCells )
     using Internal = sw::ShadowSetupTestInternal;
     const sw::float3         lightPosition{ 1.0f, 3.0f, -2.0f };
     sw::vector<sw::GPULight> listLight{ Internal::makePointLight( lightPosition, 10.0f ) };
-    const sw::vector<uint32> listShadowIndex{ 0u };
     sw::FrameShadowData      frame;
-    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
+    sw::LocalShadowAtlas     atlas;
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), Internal::makeShadowLights( { 0u } ), atlas, listLight, frame );
     SW_REQUIRE_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( sw::shaderslot::kPointShadowFaceCount ) );
 
     const sw::float3 arrOffset[] = {
@@ -320,9 +342,9 @@ SW_TEST_CASE( ShadowSetupTest, SpotCellCoversTheOuterCone )
     const sw::float3         lightPosition{ 0.0f, 6.0f, 0.0f };
     constexpr float32        kOuterHalf = 0.7f;
     sw::vector<sw::GPULight> listLight{ Internal::makeSpotLight( lightPosition, 12.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, kOuterHalf ) };
-    const sw::vector<uint32> listShadowIndex{ 0u };
     sw::FrameShadowData      frame;
-    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
+    sw::LocalShadowAtlas     atlas;
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), Internal::makeShadowLights( { 0u } ), atlas, listLight, frame );
     SW_REQUIRE_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 1 ) );
     const sw::float4x4  shading = Internal::makeMatrixFromElement( frame._listTileElement[0] );
     const sw::GPULight& info    = frame._listTileElement[1];
@@ -415,12 +437,13 @@ SW_TEST_CASE( ShadowSetupTest, PerspectiveFadeEndsAtLastCascadeAndReachesShader 
     SW_REQUIRE_NOT_NULL( scene.getObjectManager() );
     sw::DirectionalLightComponent* pLight = Internal::addSun( scene, 120.0f, 2 );
     SW_REQUIRE_NOT_NULL( pLight );
-    const sw::float4x4       viewProj = Internal::makePerspectiveViewProj( sw::float3{ 0.0f, 8.0f, 0.0f }, sw::float3{ 0.0f, 6.0f, 40.0f } );
-    sw::vector<sw::GPULight> listLight;
-    const sw::vector<uint32> listShadowIndex;
-    sw::FrameShadowData      frame;
+    const sw::float4x4                     viewProj = Internal::makePerspectiveViewProj( sw::float3{ 0.0f, 8.0f, 0.0f }, sw::float3{ 0.0f, 6.0f, 40.0f } );
+    sw::vector<sw::GPULight>               listLight;
+    const sw::vector<sw::LocalShadowLight> listShadowLight;
+    sw::FrameShadowData                    frame;
+    sw::LocalShadowAtlas                   atlas;
 
-    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowLight, atlas, listLight, frame );
     SW_EXPECT_TRUE( frame._mainView._cascadeLayout._w >= sw::DirectionalShadowCascade::kUnboundedDepth );
 
     pLight->setShadowFadeFraction( 0.25f );
@@ -429,7 +452,7 @@ SW_TEST_CASE( ShadowSetupTest, PerspectiveFadeEndsAtLastCascadeAndReachesShader 
     const float32 shadowEnd = projection._arrCascade[1]._splitDepth;
     SW_EXPECT_NEAR( shadowEnd, 120.0f, 0.5f );
     SW_EXPECT_NEAR( projection._fadeStartDepth, shadowEnd - ( shadowEnd - 0.1f ) * 0.25f, 0.05f );
-    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowLight, atlas, listLight, frame );
     SW_EXPECT_NEAR( frame._mainView._cascadeLayout._w, projection._fadeStartDepth, 1e-3f );
 }
 
@@ -519,9 +542,9 @@ SW_TEST_CASE( ShadowSetupTest, ExtraViewShadowFollowsItsOwnCamera )
     const sw::float4x4 extraViewProj = Internal::makeOrthoRigViewProj( extraFocus, 25.0f, 0.785f );
 
     sw::vector<sw::GPULight> listLight;
-    const sw::vector<uint32> listShadowIndex;
     sw::FrameShadowData      frame;
-    sw::FrameShadowData::populateFrame( pLight, &mainViewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
+    sw::LocalShadowAtlas     atlas;
+    sw::FrameShadowData::populateFrame( pLight, &mainViewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), sw::vector<sw::LocalShadowLight>{}, atlas, listLight, frame );
     SW_REQUIRE_TRUE( frame._mainView._bValid == SW_TRUE );
     const sw::ViewShadowData extra = sw::FrameShadowData::makeViewShadowFor( pLight, extraViewProj, Internal::makeRenderConfig(), frame );
     SW_REQUIRE_TRUE( extra._bValid == SW_TRUE );
@@ -552,9 +575,9 @@ SW_TEST_CASE( ShadowSetupTest, ShadowCullBoxCoversLocalLights )
     const sw::float4x4       mainViewProj = Internal::makeOrthoRigViewProj( sw::float3{ 0.0f, 0.0f, 0.0f }, 25.0f, 0.785f );
     const sw::float3         farPoint{ 300.0f, 2.0f, -250.0f };
     sw::vector<sw::GPULight> listLight{ Internal::makePointLight( farPoint, 6.0f ) };
-    const sw::vector<uint32> listShadowIndex{ 0u };
     sw::FrameShadowData      frame;
-    sw::FrameShadowData::populateFrame( pLight, &mainViewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
+    sw::LocalShadowAtlas     atlas;
+    sw::FrameShadowData::populateFrame( pLight, &mainViewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), Internal::makeShadowLights( { 0u } ), atlas, listLight, frame );
     SW_REQUIRE_TRUE( frame._mainView._bValid == SW_TRUE );
 
     const sw::float3 shadingNdc = Internal::projectToNdc( farPoint, frame._mainView._lightViewProj );
@@ -620,44 +643,62 @@ SW_TEST_CASE( ShadowSetupTest, ContactShadowChannelsGoToLightsWithLengthDirectio
 }
 
 /**
- * @brief [ShadowSetupTest] 점광 · 스폿 칸은 원하는 칸 수에 맞춰 크기가 바뀐다 — 적으면 사분면 하나, 많으면 하한까지 줄고, 하한에 닿으면 용량이 모자란다(감사 RN-4)
- * @details 캐스케이드 둘이면 남은 사분면 둘이다. 스폿 하나는 사분면 크기 칸, 점광 하나(6)는 4분의 1 칸(용량 8), 칸 100 은 하한 128 에서 용량 128 로 든다.
- *          하한을 256 으로 올리면 칸 100 은 용량 32 에 멈춘다. 캐스케이드 수 · 해상도는 칸 수와 상관없이 같다.
+ * @brief [ShadowSetupTest] 점광 · 스폿 칸은 화면 크기로 고른 크기에서 시작해 넘치면 고루 줄고, 하한에 닿으면 뒤의 빛이 칸을 못 받는다(감사 RN-4)
+ * @details 원하는 크기 이상인 가장 작은 (아틀라스 반 ÷ 2ⁿ) — 300 은 하한 128 위의 512, 0 은 하한이다. 스폿 하나는 아틀라스 반, 점광 하나(6)는 4분의 1 로 준다.
+ *          스폿 100 은 하한 128 에서 다 들고, 하한을 256 으로 올리면 64 개만 든다.
  */
-SW_TEST_CASE( ShadowSetupTest, LocalTileSizeFollowsTheRequestedCount )
+SW_TEST_CASE( ShadowSetupTest, LocalTileSizeFollowsScreenSizeAndFitsTheAtlas )
 {
-    using Internal          = sw::ShadowSetupTestInternal;
-    const uint32 resolution = Internal::kAtlasResolution;
+    using Internal                  = sw::ShadowSetupTestInternal;
+    const uint32         resolution = Internal::kAtlasResolution;
+    sw::LocalShadowAtlas atlas;
 
-    const sw::ShadowAtlasLayout single = sw::ShadowAtlasLayout::make( resolution, 2, 1, 128u );
-    SW_EXPECT_EQUAL( single.getCascadeCount(), 2u );
-    SW_EXPECT_EQUAL( single.getLocalTileResolution(), resolution / 2u );
-    SW_EXPECT_EQUAL( single.getLocalCapacity(), 2u );
-    const sw::ShadowAtlasCell singleCell = single.getLocalCell( 0 );
-    SW_EXPECT_EQUAL( singleCell._x, 0u );
-    SW_EXPECT_EQUAL( singleCell._y, resolution / 2u );
+    atlas.build( resolution, 128u, {
+                                       sw::LocalShadowRequest{1u, 1u, resolution},
+                                       sw::LocalShadowRequest{2u, 1u,       300u},
+                                       sw::LocalShadowRequest{3u, 1u,         0u}
+    } );
+    SW_REQUIRE_TRUE( atlas.getFirstCell( 0 ) != sw::LocalShadowAtlas::kNotPlaced && atlas.getFirstCell( 1 ) != sw::LocalShadowAtlas::kNotPlaced && atlas.getFirstCell( 2 ) != sw::LocalShadowAtlas::kNotPlaced );
+    SW_EXPECT_EQUAL( atlas.getCell( atlas.getFirstCell( 0 ) )._size, resolution / 2u );
+    SW_EXPECT_EQUAL( atlas.getCell( atlas.getFirstCell( 1 ) )._size, 512u );
+    SW_EXPECT_EQUAL( atlas.getCell( atlas.getFirstCell( 2 ) )._size, 128u );
 
-    const sw::ShadowAtlasLayout point = sw::ShadowAtlasLayout::make( resolution, 2, 6, 128u );
-    SW_EXPECT_EQUAL( point.getLocalTileResolution(), resolution / 4u );
-    SW_EXPECT_EQUAL( point.getLocalCapacity(), 8u );
+    sw::LocalShadowAtlas pointAtlas;
+    pointAtlas.build( resolution, 128u, {
+                                            sw::LocalShadowRequest{ 7u, sw::shaderslot::kPointShadowFaceCount, resolution }
+    } );
+    SW_REQUIRE_TRUE( pointAtlas.getFirstCell( 0 ) != sw::LocalShadowAtlas::kNotPlaced );
+    for ( uint32 faceIndex = 0; faceIndex < sw::shaderslot::kPointShadowFaceCount; ++faceIndex )
+    {
+        SW_EXPECT_EQUAL( pointAtlas.getCell( pointAtlas.getFirstCell( 0 ) + faceIndex )._size, resolution / 4u );
+    }
 
-    const sw::ShadowAtlasLayout many = sw::ShadowAtlasLayout::make( resolution, 2, 100, 128u );
-    SW_EXPECT_EQUAL( many.getCascadeCount(), 2u );
-    SW_EXPECT_EQUAL( many.getCascadeTileResolution(), resolution / 2u );
-    SW_EXPECT_EQUAL( many.getLocalTileResolution(), 128u );
-    SW_EXPECT_EQUAL( many.getLocalCapacity(), 128u );
-    // 마지막 칸은 아틀라스 오른쪽 아래 구석이다.
-    const sw::ShadowAtlasCell lastCell = many.getLocalCell( many.getLocalCapacity() - 1u );
-    SW_EXPECT_EQUAL( lastCell._x + lastCell._size, resolution );
-    SW_EXPECT_EQUAL( lastCell._y + lastCell._size, resolution );
+    sw::vector<sw::LocalShadowRequest> listMany;
+    for ( uint32 lightIndex = 0; lightIndex < 100; ++lightIndex )
+    {
+        listMany.push_back( sw::LocalShadowRequest{ 100u + lightIndex, 1u, resolution } );
+    }
+    sw::LocalShadowAtlas manyAtlas;
+    manyAtlas.build( resolution, 128u, listMany );
+    for ( uint32 requestIndex = 0; requestIndex < 100; ++requestIndex )
+    {
+        SW_REQUIRE_TRUE( manyAtlas.getFirstCell( requestIndex ) != sw::LocalShadowAtlas::kNotPlaced );
+        SW_EXPECT_EQUAL( manyAtlas.getCell( manyAtlas.getFirstCell( requestIndex ) )._size, 128u );
+    }
 
-    const sw::ShadowAtlasLayout atFloor = sw::ShadowAtlasLayout::make( resolution, 2, 100, 256u );
-    SW_EXPECT_EQUAL( atFloor.getLocalTileResolution(), 256u );
-    SW_EXPECT_EQUAL( atFloor.getLocalCapacity(), 32u );
+    sw::LocalShadowAtlas floorAtlas;
+    floorAtlas.build( resolution, 256u, listMany );
+    uint32 placedCount = 0;
+    for ( uint32 requestIndex = 0; requestIndex < 100; ++requestIndex )
+    {
+        placedCount += floorAtlas.getFirstCell( requestIndex ) != sw::LocalShadowAtlas::kNotPlaced ? 1u : 0u;
+    }
+    SW_EXPECT_EQUAL( placedCount, 64u );
+    SW_EXPECT_EQUAL( floorAtlas.getMinTileResolution(), 256u );
 }
 
 /**
- * @brief [ShadowSetupTest] 스폿 그림자를 더해도 방향광 캐스케이드 수와 칸 해상도가 그대로다(감사 RN-4 — 예전에는 캐스케이드 셋이 둘로 줄었다)
+ * @brief [ShadowSetupTest] 스폿 그림자를 더해도 방향광 캐스케이드 수와 칸 해상도가 그대로다(감사 RN-4 — 예전에는 한 아틀라스를 나눠 캐스케이드가 줄었다)
  */
 SW_TEST_CASE( ShadowSetupTest, AddingSpotShadowKeepsCascades )
 {
@@ -670,21 +711,22 @@ SW_TEST_CASE( ShadowSetupTest, AddingSpotShadowKeepsCascades )
 
     sw::vector<sw::GPULight> listNoLocal;
     sw::FrameShadowData      without;
-    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), sw::vector<uint32>{}, listNoLocal, without );
+    sw::LocalShadowAtlas     atlas;
+    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), sw::vector<sw::LocalShadowLight>{}, atlas, listNoLocal, without );
 
     sw::vector<sw::GPULight> listSpot{ Internal::makeSpotLight( sw::float3{ 2.0f, 4.0f, 12.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) };
     sw::FrameShadowData      with;
-    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), sw::vector<uint32>{ 0u }, listSpot, with );
+    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), Internal::makeShadowLights( { 0u } ), atlas, listSpot, with );
 
     SW_EXPECT_EQUAL( with._layout.getCascadeCount(), without._layout.getCascadeCount() );
     SW_EXPECT_EQUAL( with._mainView._cascadeCount, without._mainView._cascadeCount );
     SW_EXPECT_EQUAL( with._layout.getCascadeTileResolution(), without._layout.getCascadeTileResolution() );
     SW_EXPECT_NEAR( listSpot[0]._params._x, 1.0f, 1e-6f );
     SW_REQUIRE_EQUAL( with._listLocalTile.size(), static_cast<size_t>( 1 ) );
-    // 스폿은 남은 사분면(3) 하나를 통째로 받는다.
+    // 화면에 크게 보이는 스폿은 점광 · 스폿 아틀라스의 가장 큰 칸(반)을 첫 자리에서 받는다.
     SW_EXPECT_EQUAL( with._listLocalTile[0]._cell._size, Internal::kAtlasResolution / 2u );
-    SW_EXPECT_EQUAL( with._listLocalTile[0]._cell._x, Internal::kAtlasResolution / 2u );
-    SW_EXPECT_EQUAL( with._listLocalTile[0]._cell._y, Internal::kAtlasResolution / 2u );
+    SW_EXPECT_EQUAL( with._listLocalTile[0]._cell._x, 0u );
+    SW_EXPECT_EQUAL( with._listLocalTile[0]._cell._y, 0u );
 }
 
 /**
@@ -698,9 +740,9 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsCarryTheirOwnCullFrustum )
     sw::vector<sw::GPULight> listLight;
     listLight.push_back( Internal::makePointLight( pointPosition, 6.0f ) );
     listLight.push_back( Internal::makeSpotLight( sw::float3{ -5.0f, 4.0f, 2.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) );
-    const sw::vector<uint32> listShadowIndex{ 0u, 1u };
-    sw::FrameShadowData      frame;
-    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
+    sw::FrameShadowData  frame;
+    sw::LocalShadowAtlas atlas;
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), Internal::makeShadowLights( { 0u, 1u } ), atlas, listLight, frame );
 
     SW_REQUIRE_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 7 ) );
     SW_REQUIRE_EQUAL( frame._listLocalTileLight.size(), frame._listLocalTile.size() );
@@ -729,4 +771,137 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsCarryTheirOwnCullFrustum )
     const sw::float4x4& spotCull = frame._listLocalCullViewProj[1];
     SW_EXPECT_NEAR( spotCull._11, frame._listLocalTile[6]._viewProj._11, 1e-6f );
     SW_EXPECT_NEAR( spotCull._43, frame._listLocalTile[6]._viewProj._43, 1e-6f );
+}
+
+/**
+ * @brief [ShadowSetupTest] 두 빛의 우선순위가 뒤집혀도 움직이지 않은 빛은 칸이 그대로라 그림자 캐시가 Reuse 다(감사 RN-4 — 예전 캐시 키는 우선순위 정렬 뒤 순번이었다)
+ * @details 스폿 둘(10 m · 30 m)을 카메라가 한쪽 끝에서 보다가 반대쪽 끝으로 옮긴다. 둘 다 가장 큰 칸이라 크기가 그대로이고, 타일 차례는 뒤집히지만
+ *          할당기가 서 있던 칸을 지키고 캐시가 정체(컴포넌트 id)로 짝짓는다. 언리얼 VSM 의 빛별 캐시와 같은 결과다.
+ */
+SW_TEST_CASE( ShadowSetupTest, PriorityFlipKeepsStandingLightReused )
+{
+    using Internal = sw::ShadowSetupTestInternal;
+    using Action   = sw::ShadowCacheTileAction;
+    sw::vector<sw::GPULight> listLight;
+    listLight.push_back( Internal::makeSpotLight( sw::float3{ 0.0f, 3.0f, 10.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) );
+    listLight.push_back( Internal::makeSpotLight( sw::float3{ 0.0f, 3.0f, 30.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) );
+    const sw::vector<sw::LocalShadowLight> listShadowLight = Internal::makeShadowLights( { 0u, 1u } );
+    const sw::float4x4                     nearFirst       = Internal::makePerspectiveViewProj( sw::float3{ 0.0f, 2.0f, 0.0f }, sw::float3{ 0.0f, 2.0f, 10.0f } );
+    const sw::float4x4                     farFirst        = Internal::makePerspectiveViewProj( sw::float3{ 0.0f, 2.0f, 40.0f }, sw::float3{ 0.0f, 2.0f, 30.0f } );
+    const uint64                           keyNear         = sw::LocalShadowAtlas::makeTileKey( listShadowLight[0]._lightID, 0 );
+    const uint64                           keyFar          = sw::LocalShadowAtlas::makeTileKey( listShadowLight[1]._lightID, 0 );
+
+    sw::LocalShadowAtlas     atlas;
+    sw::ShadowCache          cache;
+    sw::FrameShadowData      before;
+    sw::vector<sw::GPULight> listBefore = listLight;
+    sw::FrameShadowData::populateFrame( nullptr, &nearFirst, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowLight, atlas, listBefore, before );
+    SW_REQUIRE_EQUAL( before._listLocalTile.size(), static_cast<size_t>( 2 ) );
+    SW_REQUIRE_TRUE( before._listLocalTile[0]._key == keyNear );                // 가까운 스폿이 먼저다
+    cache.update( before._listLocalTile, Internal::kAtlasResolution, 1, true ); // 처음 본 빛 — 다 그린다
+    cache.update( before._listLocalTile, Internal::kAtlasResolution, 1, true ); // 멈췄다 — 층을 채운다
+    SW_REQUIRE_TRUE( cache.getAction( 0 ) == Action::Rebuild && cache.getAction( 1 ) == Action::Rebuild );
+
+    sw::FrameShadowData      after;
+    sw::vector<sw::GPULight> listAfter = listLight;
+    sw::FrameShadowData::populateFrame( nullptr, &farFirst, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowLight, atlas, listAfter, after );
+    SW_REQUIRE_EQUAL( after._listLocalTile.size(), static_cast<size_t>( 2 ) );
+    SW_REQUIRE_TRUE( after._listLocalTile[0]._key == keyFar ); // 우선순위가 뒤집혔다
+    SW_EXPECT_NEAR( listAfter[1]._params._w, 0.0f, 1e-6f );
+    for ( const uint64 key : { keyNear, keyFar } )
+    {
+        const sw::ShadowTileDraw* pBefore = Internal::findTile( before, key );
+        const sw::ShadowTileDraw* pAfter  = Internal::findTile( after, key );
+        SW_REQUIRE_NOT_NULL( pBefore );
+        SW_REQUIRE_NOT_NULL( pAfter );
+        SW_EXPECT_TRUE( sw::ShadowCache::isSameTile( *pBefore, *pAfter ) );
+    }
+    cache.update( after._listLocalTile, Internal::kAtlasResolution, 1, true );
+    SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::Reuse && cache.getAction( 1 ) == Action::Reuse );
+    SW_EXPECT_FALSE( cache.needsRebuild() );
+}
+
+/**
+ * @brief [ShadowSetupTest] 빛이 사라지면 그 칸이 풀린다 — 다음 프레임에 새 빛이 그 자리를 받고, 남은 빛은 자리를 지켜 Reuse 다
+ */
+SW_TEST_CASE( ShadowSetupTest, VanishedLightReleasesItsCell )
+{
+    using Internal           = sw::ShadowSetupTestInternal;
+    using Action             = sw::ShadowCacheTileAction;
+    const sw::GPULight spotA = Internal::makeSpotLight( sw::float3{ -8.0f, 4.0f, 0.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f );
+    const sw::GPULight spotB = Internal::makeSpotLight( sw::float3{ 0.0f, 4.0f, 0.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f );
+    const sw::GPULight spotC = Internal::makeSpotLight( sw::float3{ 8.0f, 4.0f, 0.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f );
+    const uint64       idA   = 11u;
+    const uint64       idB   = 22u;
+    const uint64       idC   = 33u;
+
+    sw::LocalShadowAtlas     atlas;
+    sw::ShadowCache          cache;
+    sw::FrameShadowData      first;
+    sw::vector<sw::GPULight> listFirst{ spotA, spotB };
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(),
+                                        sw::vector<sw::LocalShadowLight>{
+                                            sw::LocalShadowLight{0u, idA},
+                                            sw::LocalShadowLight{1u, idB}
+    },
+                                        atlas, listFirst, first );
+    SW_REQUIRE_EQUAL( first._listLocalTile.size(), static_cast<size_t>( 2 ) );
+    const sw::ShadowAtlasCell cellA = first._listLocalTile[0]._cell;
+    const sw::ShadowAtlasCell cellB = first._listLocalTile[1]._cell;
+    cache.update( first._listLocalTile, Internal::kAtlasResolution, 1, true );
+    cache.update( first._listLocalTile, Internal::kAtlasResolution, 1, true );
+
+    // A 가 사라지고 C 가 들어온다 — B 는 자리를 지키고 C 는 A 가 놓은 칸을 받는다.
+    sw::FrameShadowData      second;
+    sw::vector<sw::GPULight> listSecond{ spotB, spotC };
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(),
+                                        sw::vector<sw::LocalShadowLight>{
+                                            sw::LocalShadowLight{0u, idB},
+                                            sw::LocalShadowLight{1u, idC}
+    },
+                                        atlas, listSecond, second );
+    SW_REQUIRE_EQUAL( second._listLocalTile.size(), static_cast<size_t>( 2 ) );
+    SW_EXPECT_EQUAL( second._listLocalTile[0]._cell._x, cellB._x );
+    SW_EXPECT_EQUAL( second._listLocalTile[0]._cell._y, cellB._y );
+    SW_EXPECT_EQUAL( second._listLocalTile[1]._cell._x, cellA._x );
+    SW_EXPECT_EQUAL( second._listLocalTile[1]._cell._y, cellA._y );
+    SW_EXPECT_EQUAL( second._listLocalTile[1]._key, sw::LocalShadowAtlas::makeTileKey( idC, 0 ) );
+
+    cache.update( second._listLocalTile, Internal::kAtlasResolution, 1, true );
+    SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::Reuse );   // 남은 빛
+    SW_EXPECT_TRUE( cache.getAction( 1 ) == Action::DrawAll ); // 새 빛 — A 의 캐시를 물려받지 않는다
+}
+
+/**
+ * @brief [ShadowSetupTest] 방향광과 점광 · 스폿은 서로 다른 텍스처를 쓴다 — 캐스케이드 넷이 방향광 아틀라스를 다 써도 스폿은 점광 · 스폿 아틀라스의 같은 좌표 칸을 받는다
+ * @details 두 아틀라스는 역할이 다르고(ShadowMap · LocalShadowMap — 그림자 패스가 깊이 첨부의 역할로 그릴 타일을 고른다) 에뮬 백엔드의 엔진 텍스처 칸도 따로다.
+ */
+SW_TEST_CASE( ShadowSetupTest, DirectionalAndLocalShadowsUseSeparateTextures )
+{
+    using Internal = sw::ShadowSetupTestInternal;
+    sw::Scene scene{ "ShadowSeparateAtlas" };
+    SW_REQUIRE_NOT_NULL( scene.getObjectManager() );
+    sw::DirectionalLightComponent* pLight = Internal::addSun( scene, 120.0f, 4 );
+    SW_REQUIRE_NOT_NULL( pLight );
+    const sw::float4x4       viewProj = Internal::makePerspectiveViewProj( sw::float3{ 0.0f, 8.0f, 0.0f }, sw::float3{ 0.0f, 6.0f, 40.0f } );
+    sw::vector<sw::GPULight> listSpot{ Internal::makeSpotLight( sw::float3{ 2.0f, 4.0f, 12.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) };
+    sw::FrameShadowData      frame;
+    sw::LocalShadowAtlas     atlas;
+    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), Internal::makeShadowLights( { 0u } ), atlas, listSpot, frame );
+
+    // 점광 · 스폿이 있어도 캐스케이드는 넷 다 방향광 아틀라스의 사분면이다.
+    SW_EXPECT_EQUAL( frame._layout.getCascadeCount(), 4u );
+    SW_EXPECT_EQUAL( frame._mainView._cascadeCount, 4u );
+    SW_REQUIRE_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 1 ) );
+    const sw::ShadowAtlasCell cascadeCell = frame._mainView._arrCascadeTile[0]._cell;
+    const sw::ShadowAtlasCell spotCell    = frame._listLocalTile[0]._cell;
+    SW_EXPECT_TRUE( Internal::overlaps( cascadeCell, spotCell ) ); // 좌표는 겹친다 — 다른 텍스처라서 성립한다
+
+    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "ShadowMap", true, "" ) == sw::RenderPassInputRole::ShadowMap );
+    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "LocalShadowMap", true, "" ) == sw::RenderPassInputRole::LocalShadowMap );
+    uint32 directionalOrdinal = 0;
+    uint32 localOrdinal       = 0;
+    SW_REQUIRE_TRUE( sw::shaderslot::emulated::tryFindOrdinal( "ShadowMap", directionalOrdinal ) );
+    SW_REQUIRE_TRUE( sw::shaderslot::emulated::tryFindOrdinal( "LocalShadowMap", localOrdinal ) );
+    SW_EXPECT_TRUE( directionalOrdinal != localOrdinal );
 }

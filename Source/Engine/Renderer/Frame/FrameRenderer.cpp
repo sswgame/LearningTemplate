@@ -3,7 +3,6 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -19,7 +18,6 @@
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
-#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -44,52 +42,24 @@
 #include "Engine/Renderer/Scene/GPUTransparentSorter.h"
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 
 namespace sw
 {
-    /**
-     * @brief `-gv_deferredShading=1` 이면 기본 파이프라인을 디퍼드로 고릅니다(기본은 포워드).
-     * @details `initialize` 에 파이프라인 경로를 주지 않을 때 디퍼드를 고르는 방법이다.
-     *          디퍼드는 레벨이 나뉘어(레벨 0은 Shadow 와 GBuffer) 병렬 기록이 실제로 도는 유일한 경로이기도 하다.
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_deferredShading, false, "기본 파이프라인을 디퍼드로 (기본 포워드)" );
-    SW_GLOBAL_VARIABLE( bool, gv_shadowCache, false, "서 있는 점광 · 스폿 그림자의 정적 메시를 캐시 층에 한 번 그려 다시 쓴다 (정적 메시 MeshComponent::_bStatic 만, 그림은 같다)" );
-    /**
-     * @brief `-gv_renderPipeline=<파이프라인 XML>` 이면 그 파이프라인으로 그립니다(디퍼드 선택 · 팩 설정 · 기본보다 우선합니다).
-     * @details 게임은 데이터로 고른다 — 팩 설정의 `PackEngineSettings::_renderPipeline`(2D 게임은 그림자 맵과 톤맵이 없는
-     *          `engine/pipeline/forward2dpipeline.xml`. 톤맵은 흰색을 0.5 로 누르기 때문이다). 이 스위치는 측정 · 검증용으로 그것을 덮는다.
-     */
-    SW_GLOBAL_VARIABLE( sw::GlobalString, gv_renderPipeline, "", "이 파이프라인 XML 로 그린다 (비우면 gv_deferredShading · 팩 설정 · 기본 포워드)" );
-
-    /**
-     * @brief `-gv_vertexPool=0` 이면 씬 메시 정점을 한 풀 버퍼에 모으지 않고 메시마다 자기 정점 버퍼로 그립니다.
-     * @details 풀을 켠 이미지와 끈 이미지는 같아야 한다. 다르면 간접 인자의 startVertex 나 SV_VertexID 의 API 차이를 잘못 다룬 것이다.
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_vertexPool, true, "씬 메시 정점 풀 (false=메시마다 정점 버퍼, 진단용)" );
-
-    /**
-     * @brief `-gv_viewMode=<이름>` 은 주 출력(게임 창)의 보기 모드입니다(Lit, Unlit, Wireframe, Normals, Depth, Overdraw, LightingOnly, Roughness, Metallic, Mipmaps, LightComplexity, ShadedWireframe, LODLevel, LODFadeCode, MarkerSlots, ShadingPath).
-     * @details 에디터 씬 뷰 툴바와 같은 값을 가리킨다(`RenderViewMode`). 여기 있는 이유는 **검증**이다.
-     *          뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고
-     *          모드를 고를 수 있어야 한다. 없으면 이 기능은 사람 눈으로만 확인되는 기능이 된다.
-     *          명령줄은 열거자 이름만 받는다(숫자는 오류).
-     */
-    SW_GLOBAL_VARIABLE( RenderViewMode, gv_viewMode, RenderViewMode::Lit, "주 출력 보기 모드 (Lit / Unlit / Wireframe / Normals / Depth / Overdraw / LightingOnly / Roughness / Metallic / Mipmaps / LightComplexity / ShadedWireframe / LODLevel / LODFadeCode / MarkerSlots / ShadingPath)" );
-
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }
         , _state{}
         , _pipelineResource{}
-        , _psoManager{ _pDevice, _pipelineResource, _state._gpuScene }
+        , _psoManager{ _pDevice, _pipelineResource, _state._gpuScene, _state._settings }
         , _autoExposure{ _pDevice, _pipelineResource, _psoManager }
-        , _upscale{ _pDevice, _pipelineResource, _psoManager }
+        , _upscale{ _pDevice, _pipelineResource, _state._settings, _psoManager }
         , _fog{ _pDevice, _psoManager }
         , _postProcessMaterials{ _pDevice, _pipelineResource, _psoManager }
         , _extensionHost{ _pDevice, _pipelineResource, _psoManager }
-        , _viewResources{ _pDevice, _pipelineResource, _autoExposure, _upscale }
+        , _viewResources{ _pDevice, _pipelineResource, _state._settings, _autoExposure, _upscale }
         , _pipelinePath{}
+        , _argumentPipelinePath{}
+        , _pipelineRequest{}
         , _lastIndirectDrawCallCount{ 0 }
         , _lastPendingPSOBatchCount{ 0 }
         , _capture{ _pDevice, _state._mainView._transientPool, _pipelineResource }
@@ -116,15 +86,12 @@ namespace sw
         shutdown();
     }
 
-    bool FrameRenderer::initialize( IRHIDevice* pDevice, string_view pipelineXMLPath )
-    {
-        return initialize( pDevice, nullptr, pipelineXMLPath );
-    }
-
-    bool FrameRenderer::initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
+    bool FrameRenderer::initialize( IRHIDevice* pDevice, TaskManager* pTaskManager, const RenderFrameSettings& settings, const RenderPipelineRequest& pipelineRequest,
                                     string_view pipelineXMLPath )
     {
         _pDevice = pDevice;
+        // 첫 패킷 전에 파이프라인을 묶는 일(트랜지언트 나눔 · 비동기 큐 계획)이 읽을 설정 — 게임 스레드가 뜬 사본이다(화면 밖 렌더러는 주 렌더러의 사본).
+        _state._settings = settings;
         // 인스턴스 애니메이션 시계는 여기서 한 번 돌린다(GameTimer 는 만들면 멈춘 상태다).
         _state._deform._animationTimer.resetTimer();
         _state._deform._animationTimer.startTimer();
@@ -143,7 +110,7 @@ namespace sw
         // 패스별 GPU 시간을 보고할 프로파일러다 — 호스트가 건 렌더러 하나만 계측한다(타임스탬프 슬롯 · `GPU.<패스>` 구간이 하나다).
         _state._gpuPassTimeline.bindProfiler( _host._pProfiler );
 
-        if ( FrameGraphExecutor::isMeshMorphDiagValid() == false )
+        if ( FrameGraphExecutor::isMeshMorphDiagValid( _state._settings._meshMorphDebugMode ) == false )
         {
             _status        = FrameRendererStatus::Failed;
             _statusMessage = "-gv_meshMorphDebugMode is not a mesh morph diagnostic mode";
@@ -152,45 +119,29 @@ namespace sw
         }
 
         // 2D 정렬 레이어 표는 엔진 필수 데이터다. 서브시스템 Render2DSettings 가 기동 때 읽고(못 읽으면 기동이 멈춘다) 렌더러 서브시스템이 그 뒤에 선다 -
-        // 주 렌더러와 미리보기 렌더러는 서비스 표의 같은 표를 읽는다.
-
-        // 커맨드라인이 주 출력의 보기 모드를 정했으면 여기서 받는다(에디터 씬 뷰는 툴바가 따로 정한다).
-        // 모드가 아닌 값(`Count` 표식, 에디터 · 콘솔이 숫자로 넣은 범위 밖 값)은 Lit 으로 바꾸지 않고 초기화를 멈춘다 — 검증 실행이 다른 모드를 찍고 통과하면 안 된다.
-        if ( isRenderViewModeIndex( static_cast<int32>( gv_viewMode ) ) == false )
-        {
-            _status = FrameRendererStatus::Failed;
-            StringBuilder<constant::buffer::kMax256> textBuilder;
-            textBuilder.appendFormat( "%#)", static_cast<int64>( RenderViewMode::Count ) - 1 );
-            _statusMessage = "-gv_viewMode=" + to_string( static_cast<int64>( gv_viewMode ) ) + " is not a view mode (0 .. " +
-                             string( textBuilder.view() );
-            SW_LOG_ERROR_ID( "FrameRenderer.Initialize", "initialize: %#", _statusMessage );
-            return false;
-        }
-        if ( gv_viewMode != RenderViewMode::Lit )
-            setViewMode( gv_viewMode );
-
+        // 주 렌더러와 미리보기 렌더러는 서비스 표의 같은 표를 읽는다. 주 출력의 보기 모드(`-gv_viewMode`)는 게임 스레드의 `FrameRendererSubsystem` 이 정한다.
         _argumentPipelinePath = pipelineXMLPath;
-        return selectPipeline();
+        return selectPipeline( pipelineRequest );
     }
 
-    bool FrameRenderer::selectPipeline()
+    bool FrameRenderer::selectPipeline( const RenderPipelineRequest& request )
     {
         // 인자, `-gv_renderPipeline`, `-gv_deferredShading`, 팩 설정(`PackEngineSettings::_renderPipeline`), EngineDefaultAssets 의 포워드 순서로 고른다.
         // 디퍼드 경로(와 그 위의 조명)를 측정하거나 검증하려면 `-gv_deferredShading=1` 을 준다.
         const EngineDefaultAssets& engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         const DataPath&            packPipeline        = engine::getSubsystem<PackEngineSettings>()._renderPipeline;
-        // 렌더 스레드가 부른다 — 콘솔이 값을 바꿔도 이 사본은 이 선택 동안 그대로다(뷰는 이 사본을 가리킨다).
-        const string                      commandLinePipeline = gv_renderPipeline.get();
+        // 변수 값은 게임 스레드가 뜬 사본(@p request)이다 — 렌더 스레드는 변수를 읽지 않는다. 고른 뒤 화면 밖 렌더러가 같은 요청으로 선다.
+        _pipelineRequest = request;
         FrameRendererUtil::PipelineChoice choice{};
         choice._argumentPath               = _argumentPipelinePath;
-        choice._commandLinePath            = commandLinePipeline;
+        choice._commandLinePath            = _pipelineRequest._commandLinePath;
         choice._deferredPath               = engineDefaultAssets._defaultDeferredPipeline.get();
         choice._gamePath                   = packPipeline.isSet() ? string_view( packPipeline.get() ) : string_view{};
         choice._forwardPath                = engineDefaultAssets._defaultForwardPipeline.get();
-        choice._bDeferred                  = gv_deferredShading;
+        choice._bDeferred                  = _pipelineRequest._bDeferred != SW_FALSE;
         const string_view resolvedPipeline = FrameRendererUtil::computePipelinePath( choice );
         if ( _status == FrameRendererStatus::Ready && resolvedPipeline == _pipelinePath )
-            return true; // 고른 결과가 같다(디퍼드를 켰지만 `gv_renderPipeline` 이 이긴다 등)
+            return true; // 고른 결과가 같다(디퍼드를 켰지만 명령줄 파이프라인이 이긴다 등)
 
         if ( loadPipeline( AssetID{ resolvedPipeline } ) == false )
         {
@@ -321,6 +272,8 @@ namespace sw
         const bool bNotExecutable = isReady() == false || pDevice == nullptr || packet._bValid == SW_FALSE;
         if ( bNotExecutable )
             return false;
+        // 이 프레임의 렌더 설정 사본 — 아래의 셋업 · 기록(기록 워커 포함)은 모두 이 값을 본다(게임 스레드가 변수를 바꿔도 이 프레임은 그대로다).
+        _state._settings = packet._settings;
         // 자동 렌더 배율이 GPU 프레임 시간을 원하는지 — 시계는 다음 `readBack` 에서 계측 스위치를 맞춘다.
         _state._gpuFrameClock.setWanted( packet._bWantsGPUFrameTime != SW_FALSE );
 
@@ -411,6 +364,7 @@ namespace sw
         if ( isReady() == false || pDevice == nullptr || packet._bValid == SW_FALSE )
             return;
         SW_PROFILE_SCOPE( "RT.SimulationOnly" );
+        _state._settings = packet._settings;
         updateTextureUploads( pDevice );
         _pDevice = pDevice;
         _state._gpuScene.applyCPUSnapshot( packet._gpuScene );
@@ -432,7 +386,7 @@ namespace sw
         _state._gpuScene.setIndirectCountsFilledByGPU( _passExecutor.getFrameGraphExecutor().usesGPUGeneratedCommands() );
         // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
         _passExecutor.getFrameGraphExecutor().prepareMeshMorphPool();
-        _state._gpuScene.setVertexPoolEnabled( gv_vertexPool );
+        _state._gpuScene.setVertexPoolEnabled( _state._settings._bVertexPool != SW_FALSE );
         _state._gpuScene.upload( pDevice );
     }
 
@@ -477,7 +431,7 @@ namespace sw
         if ( VectorUtil::containsIf( _pipelineResource.getGraphPass(), []( const RenderGraphPassDesc& pass )
         { return pass._type == RenderPassType::Decal; } ) == false )
         {
-            SW_LOG_WARNING_ONCE_ID( "FrameRenderer.DecalsWithoutDecalPass", "The scene has %# decals but pipeline '%#' has no Decal pass - decals need the G-buffer (deferred pipeline) and are not drawn",
+            SW_LOG_WARNING_ONCE_ID( "FrameRenderer.DecalsWithoutDecalPass", "The scene has %# decals but pipeline '%#' has no Decal pass - DBuffer decals need a depth prepass (deferred or forward prepass pipeline) and are not drawn",
                                     static_cast<uint32>( _state._listFrameDecal.size() ), _pipelinePath );
             return;
         }
@@ -541,7 +495,7 @@ namespace sw
 
     LightGridProducer FrameRenderer::selectLightGridProducer()
     {
-        const LightGridProducer requested = RenderDiagnostics::get()._lightGridProducer; // 비교용 생산자(None · CPU)는 개발 도구가 고른다 — 배포는 GPU
+        const LightGridProducer requested = _state._settings._diagnostics._lightGridProducer; // 비교용 생산자(None · CPU)는 개발 도구가 고른다 — 배포는 GPU
         if ( requested == LightGridProducer::None )
             return LightGridProducer::None;
         if ( requested == LightGridProducer::CPU )
@@ -694,16 +648,15 @@ namespace sw
     void FrameRenderer::applyFrameShadow()
     {
         // 게임 스레드가 배치를 만들지 않은 프레임(씬 없음)이거나 그림자 품질이 그 사이 바뀌었으면 아틀라스 레이아웃을 지금 크기로 다시 만든다.
-        const uint32 atlasResolution = getShadowMapResolution();
+        const uint32 atlasResolution = _state._settings._shadowMapResolution;
         if ( _state._frameShadow._layout.getAtlasResolution() != atlasResolution )
-            _state._frameShadow._layout = ShadowAtlasLayout::make( atlasResolution, _state._frameShadow._layout.getCascadeCount(), static_cast<uint32>( _state._frameShadow._listLocalTile.size() ),
-                                                                   engine::getSubsystem<EngineConfig>()._render._shadowLocalMinTileResolution );
+            _state._frameShadow._layout = ShadowAtlasLayout::make( atlasResolution, _state._frameShadow._layout.getCascadeCount() );
         // 게임 스레드가 그림자 배치를 만들지 않은 프레임(씬 없음)은 그림자 없는 뷰다. 빛이 없는데 그림자 볼륨을 지어내지 않는다.
         if ( _state._frameShadow._mainView._bValid == SW_FALSE )
             _state._frameShadow._mainView = FrameShadowData::makeUnshadowedView( _state._frameShadow._layout );
         _state._mainView._shadow = _state._frameShadow._mainView;
         // 그림자 캐시 — 타일마다 다시 그릴지 정한다(프레임에 한 번, 모든 뷰가 같은 타일). 정적 그림자 세대는 이 프레임의 스냅샷 값이다(applyCPUSnapshot 이 먼저 돈다).
-        _state._shadowCache.update( _state._frameShadow._listLocalTile, atlasResolution, _state._gpuScene.getStaticShadowGeneration(), static_cast<bool>( gv_shadowCache ) );
+        _state._shadowCache.update( _state._frameShadow._listLocalTile, atlasResolution, _state._gpuScene.getStaticShadowGeneration(), _state._settings._bShadowCache != SW_FALSE );
     }
 
     FrameViewResources::ViewPassSceneState FrameRenderer::captureViewPassSceneState() const
@@ -711,8 +664,10 @@ namespace sw
         FrameViewResources::ViewPassSceneState sceneState{};
         sceneState._bObjectMotion      = _state._gpuScene.hasObjectMotion() ? SW_TRUE : SW_FALSE;
         sceneState._bContactShadows    = _state._frameShadow.hasContactShadows() ? SW_TRUE : SW_FALSE;
+        sceneState._bLocalShadows      = _state._frameShadow._listLocalTile.empty() ? SW_FALSE : SW_TRUE;
         sceneState._bRefractionBatches = _state._gpuScene.hasRefractionBatches() ? SW_TRUE : SW_FALSE;
         sceneState._bDistortionBatches = _state._gpuScene.hasDistortionBatches() ? SW_TRUE : SW_FALSE;
+        sceneState._bDecals            = _state._listFrameDecalDraw.empty() ? SW_FALSE : SW_TRUE;
         return sceneState;
     }
 
@@ -993,10 +948,13 @@ namespace sw
         _upscale.prepareUpscale( _state._mainView, viewportWidth, viewportHeight );
         _postProcessMaterials.prepareView( _state._mainView );
         _capture.ensurePresent( _state._outputWidth, _state._outputHeight );
-        // 주 출력이 화면일 때만 회전 대기 텍스처가 있다(돌리지 않는 장치는 놓기만 한다). 호스트 타깃(에디터 게임 뷰 · 화면 밖 렌더러)은 화면에 쓰지 않는다.
-        // shortcut: 호스트 타깃과 회전이 함께인 실행(회전한 기기의 에디터)은 렌더 스레드 UI 가 돌리지 않고 스왑체인에 쓴다, 그런 호스트가 생기면 대기 텍스처를 장치 논리 크기로 따로 둔다.
-        const bool bScreenOutput = _state._outputRenderTarget == 0;
-        _screenRotation.prepare( bScreenOutput ? _state._outputWidth : 0u, bScreenOutput ? _state._outputHeight : 0u );
+        // 회전 대기 텍스처는 화면의 논리 크기다(돌리지 않는 장치는 놓기만 한다). 주 출력이 화면이면 출력 크기, 호스트 타깃(회전한 기기의 에디터 게임 뷰)이면
+        // 주 출력은 그 타깃에 가지만 렌더 스레드 UI · 개발 겹치기는 여전히 화면에 쓰므로 스왑체인의 논리 크기로 둔다 — 화면에 쓰는 모든 것이 한 번에 돈다.
+        // 스왑체인이 없는 화면 밖 렌더러는 백버퍼 크기 0 · 회전 없음이라 대기 텍스처가 없다.
+        const bool   bScreenOutput = _state._outputRenderTarget == 0;
+        const uint32 screenWidth   = bScreenOutput ? _state._outputWidth : ( _pDevice != nullptr ? _pDevice->getBackBufferWidth() : 0u );
+        const uint32 screenHeight  = bScreenOutput ? _state._outputHeight : ( _pDevice != nullptr ? _pDevice->getBackBufferHeight() : 0u );
+        _screenRotation.prepare( screenWidth, screenHeight );
     }
 
     void FrameRenderer::releaseTransientResources()
@@ -1034,11 +992,6 @@ namespace sw
             SW_LOG_INFO_ID( "FrameRenderer.XKB", "[RenderTargets]   %#  %#x%#  %# KB", name.c_str(), attachment._width, attachment._height, kilobytes );
         }
 #endif
-    }
-
-    uint32 FrameRenderer::getShadowMapResolution()
-    {
-        return FrameViewResources::getShadowMapResolution();
     }
 
     bool FrameRenderer::tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const
@@ -1146,13 +1099,6 @@ namespace sw
         return string_view{};
     }
 
-    /**
-     * @brief `-gv_shadowCascadeCulling=1`: 주 시점의 방향광 그림자를 캐스케이드마다 따로 컬링합니다(캐스케이드마다 컬링 슬롯 하나) — 같은 바이너리로 전/후를 비교합니다.
-     * @details 0(기본)이면 모든 타일을 덮는 합친 상자 하나로 거른다. 캐스케이드가 둘 이상일 때만 뜻이 있다. 이득은 `perf-compare --cases shadowCascadeCulling` 이 정한다.
-     *          기동 때 정한다(슬롯 수가 바뀌면 컬링 버퍼를 다시 만든다). 그림은 같고 비용만 다른 성능 설정이라 배포본에도 둔다(언리얼 `r.Shadow.*` cvar 와 같은 자리).
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_shadowCascadeCulling, false, "방향광 그림자를 캐스케이드마다 따로 컬링한다(0 이면 모든 타일을 덮는 상자 하나 — 전/후 비교용)" );
-
     void FrameRenderer::prepareExtraViews( const vector<RenderViewRequest>& listRequest )
     {
         if ( _pDevice == nullptr )
@@ -1228,7 +1174,7 @@ namespace sw
         // 캐스케이드 하나뿐이면 합친 칸이 곧 그 캐스케이드라 나눌 이득이 없다. 그림자 없는 뷰(`makeUnshadowedView`)도 캐스케이드 1 이다.
         const ViewShadowData& shadow       = _state._mainView._shadow;
         const bool            bHasCascades = shadow._bValid == SW_TRUE && shadow._cascadeCount >= 2;
-        const bool            bEnabled     = gv_shadowCascadeCulling && _pDevice != nullptr && bHasCascades;
+        const bool            bEnabled     = _state._settings._bShadowCascadeCulling != SW_FALSE && _pDevice != nullptr && bHasCascades;
         if ( bEnabled == false )
             return 0;
         for ( uint32 cascadeIndex = 0; cascadeIndex < shadow._cascadeCount; ++cascadeIndex )
@@ -1380,7 +1326,7 @@ namespace sw
         SW_ASSERT( pOrder == nullptr || bParticleSlotsComplete );
         const bool bUsable = bParticleSlotsComplete && pOrder->_pListRank != nullptr &&
                              pOrder->_listBatchOrder.size() == _state._gpuScene.getTransparentBatches().size() &&
-                             pOrder->_tailBase + pOrder->_pListRank->size() == _state._gpuScene.getInstances().size();
+                             pOrder->_tailBase + pOrder->_pListRank->size() == _state._gpuScene.getInstanceOrderCount();
         // 메시 투명이 없으면 입자 자리만 이 뷰의 것이다(배치 순서가 비어 짝이 될 것이 없다).
         const bool bParticleOrderOnly  = bParticleSlotsComplete && pOrder->_listBatchOrder.empty() && _state._gpuScene.getTransparentBatches().empty();
         const bool bParticleSlotsMatch = bUsable || bParticleOrderOnly;
@@ -1526,6 +1472,8 @@ namespace sw
         // 호스트는 걸지 않는다(주 렌더러의 일). PSO 저장소는 initialize 앞에 둔다 — 같은 파이프라인일 때만 함께 쓴다.
         if ( pipelinePath.empty() )
             _psoManager.shareCache( mainRenderer._psoManager );
-        return initialize( pDevice, mainRenderer._state._pTaskManager, pipelinePath.empty() ? string_view{ mainRenderer._pipelinePath } : pipelinePath );
+        // 설정 · 파이프라인 요청은 주 렌더러가 든 사본이다 — 이 렌더러는 렌더 스레드에서 서므로 변수를 읽지 않는다.
+        return initialize( pDevice, mainRenderer._state._pTaskManager, mainRenderer._state._settings, mainRenderer._pipelineRequest,
+                           pipelinePath.empty() ? string_view{ mainRenderer._pipelinePath } : pipelinePath );
     }
 } // namespace sw

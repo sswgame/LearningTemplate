@@ -6,6 +6,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Renderer/Lighting/LensFlareSpriteBuffer.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 using namespace sw;
 
@@ -119,9 +121,13 @@ SW_TEST_CASE( LensFlareTest, BuildsOneSpritePerElement )
     vector<LensFlareRequest> listRequest;
     listRequest.push_back( LensFlareTestUtil::makePointRequest( float3{ 0.4f, 0.2f, 0.5f } ) );
     listRequest.push_back( LensFlareTestUtil::makePointRequest( float3{ 3.0f, 0.0f, 0.5f } ) ); // 화면 밖
-    vector<LensFlareSprite> listSprite;
-    LensFlareSpriteBuffer::buildSprites( listRequest, float4x4::Identity, 2.0f, listSprite );
+    vector<LensFlareSprite>    listSprite;
+    vector<LensFlareDrawRange> listRange;
+    LensFlareSpriteBuffer::buildSprites( listRequest, float4x4::Identity, 2.0f, listSprite, listRange );
     SW_REQUIRE_EQUAL( size_t( 2 ), listSprite.size() );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listRange.size() ); // 절차적 모양뿐이라 텍스처 없는 구간 하나
+    SW_EXPECT_TRUE( listRange[0]._pTexturePath == nullptr );
+    SW_EXPECT_EQUAL( 2u, listRange[0]._spriteCount );
     const LensFlareSprite& glow  = listSprite[0];
     const LensFlareSprite& ghost = listSprite[1];
     SW_EXPECT_NEAR( 0.4f, glow._centerHalfSize._x, 1e-6f );
@@ -134,4 +140,51 @@ SW_TEST_CASE( LensFlareTest, BuildsOneSpritePerElement )
     SW_EXPECT_NEAR( 0.4f, glow._lightUVKernel._y, 1e-6f ); // v = 0.5 - 0.2 / 2
     SW_EXPECT_NEAR( 0.5f, glow._depthFade._x, 1e-6f );
     SW_EXPECT_NEAR( 1.0f, glow._depthFade._y, 0.0f );
+}
+
+/** @brief [LensFlareTest] Image 원소는 절차적 구간 뒤에 텍스처 경로마다 한 구간으로 묶인다 — 같은 텍스처는 빛이 달라도 한 그리기다 */
+SW_TEST_CASE( LensFlareTest, GroupsImageSpritesByTexture )
+{
+    const auto makeImage = []( const char* pPath )
+    {
+        LensFlareElement element;
+        element._shape        = LensFlareShape::Image;
+        element._axisPosition = 0.5f;
+        element._size         = 0.05f;
+        element._color        = float3{ 1.0f, 1.0f, 1.0f };
+        const bool bParsed    = SerializerUtil::parseTextValue( MutableValueAddress{ &element._texture }, hashed_string( "DataPath" ), pPath,
+                                                                SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        SW_EXPECT_TRUE( bParsed );
+        return element;
+    };
+    shared_ptr<LensFlareAsset> pAsset = make_shared<LensFlareAsset>();
+    pAsset->_listElement.push_back( makeImage( "engine/textures/test/flare_b.dds" ) );
+    pAsset->_listElement.push_back( LensFlareTestUtil::makeAsset( 0.2f )->_listElement[0] ); // 빛무리(절차적)
+    pAsset->_listElement.push_back( makeImage( "engine/textures/test/flare_a.dds" ) );
+    pAsset->_listElement.push_back( makeImage( "engine/textures/test/flare_b.dds" ) );
+    pAsset->_edgeFade        = 0.2f;
+    pAsset->_occlusionRadius = 0.02f;
+
+    vector<LensFlareRequest> listRequest;
+    LensFlareRequest         request = LensFlareTestUtil::makePointRequest( float3{ 0.1f, 0.1f, 0.5f } );
+    request._pAsset                  = pAsset;
+    listRequest.push_back( request );
+    listRequest.push_back( request ); // 둘째 빛도 같은 텍스처를 쓴다
+
+    vector<LensFlareSprite>    listSprite;
+    vector<LensFlareDrawRange> listRange;
+    LensFlareSpriteBuffer::buildSprites( listRequest, float4x4::Identity, 1.0f, listSprite, listRange );
+    SW_REQUIRE_EQUAL( size_t( 8 ), listSprite.size() );
+    SW_REQUIRE_EQUAL( size_t( 3 ), listRange.size() );
+    SW_EXPECT_TRUE( listRange[0]._pTexturePath == nullptr );
+    SW_EXPECT_EQUAL( 0u, listRange[0]._firstSprite );
+    SW_EXPECT_EQUAL( 2u, listRange[0]._spriteCount );
+    SW_REQUIRE_TRUE( listRange[1]._pTexturePath != nullptr );
+    SW_EXPECT_TRUE( *listRange[1]._pTexturePath == string_view( "engine/textures/test/flare_a.dds" ) );
+    SW_EXPECT_EQUAL( 2u, listRange[1]._firstSprite );
+    SW_EXPECT_EQUAL( 2u, listRange[1]._spriteCount );
+    SW_REQUIRE_TRUE( listRange[2]._pTexturePath != nullptr );
+    SW_EXPECT_TRUE( *listRange[2]._pTexturePath == string_view( "engine/textures/test/flare_b.dds" ) );
+    SW_EXPECT_EQUAL( 4u, listRange[2]._firstSprite );
+    SW_EXPECT_EQUAL( 4u, listRange[2]._spriteCount );
 }

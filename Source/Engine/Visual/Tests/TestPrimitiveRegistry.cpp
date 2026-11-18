@@ -3,12 +3,15 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 using namespace sw;
 
-// PrimitiveRegistryTest — 프리미티브 레지스트리의 인스턴스 배치 등록 · 해제.
+// PrimitiveRegistryTest — 프리미티브 레지스트리의 인스턴스 배치 등록 · 해제, 고정 칸 · 프리리스트, 더티 칸만으로 따라간 사본이 전체 다시 읽기와 같은지(GPUScene 부분 수집의 전제).
 
 namespace
 {
@@ -20,7 +23,7 @@ namespace
         /** @brief 이 번호의 배치를 지우는지 정합니다(셋 중 하나와 100 ~ 199 번 연속 구간). */
         static bool isRemoved( uint32 batchIndex ) { return batchIndex % 3u == 0u || ( 100u <= batchIndex && batchIndex < 200u ); }
 
-        /** @brief 남은 배치마다 첫 자리가 유효하고 항목 목록이 그 배치를 가리키는지 확인합니다. */
+        /** @brief 남은 배치마다 첫 자리가 유효하고 항목 목록이 그 배치를 가리키며, 빈 항목이 아닌 것은 모두 남은 배치의 것인지 확인합니다. */
         static bool isConsistent( const PrimitiveRegistry& registry, const vector<unique_ptr<MeshInstanceBatch>>& listBatch )
         {
             const vector<PrimitiveInstanceEntry>& listEntry = registry.getInstanceEntries();
@@ -40,7 +43,10 @@ namespace
                         return false;
                 }
             }
-            return expected == listEntry.size();
+            uint32 liveEntryCount = 0;
+            for ( const PrimitiveInstanceEntry& entry : listEntry )
+                liveEntryCount += entry._pBatch != nullptr ? 1u : 0u;
+            return expected == liveEntryCount;
         }
     };
 } // namespace
@@ -99,13 +105,187 @@ SW_TEST_CASE( PrimitiveRegistryTest, BulkBatchRemovalMatchesOneByOneRemoval )
     }
     SW_EXPECT_TRUE( bSameLayout );
 
-    // 지운 배치는 다시 지워도 아무 일이 없고, 같은 레지스트리에 다시 등록할 수 있다.
+    // 지운 배치는 다시 지워도 아무 일이 없고, 같은 레지스트리에 다시 등록할 수 있다. 다시 등록하면 비워 둔 자리(배치 0 의 옛 자리)를 쓰고 번호 공간은 늘지 않는다.
     const uint32 slotCount = bulkRegistry.getSlotCount();
     bulkRegistry.removeInstanceBatches( listBulkRemoved );
     SW_EXPECT_EQUAL( slotCount, bulkRegistry.getSlotCount() );
     bulkRegistry.addInstanceBatch( listBulkBatch[0].get() );
     SW_EXPECT_TRUE( TestPrimitiveRegistryInternal::isConsistent( bulkRegistry, listBulkBatch ) );
-    SW_EXPECT_EQUAL( slotCount + TestPrimitiveRegistryInternal::getEntryCountOf( 0 ), bulkRegistry.getSlotCount() );
+    SW_EXPECT_EQUAL( slotCount, bulkRegistry.getSlotCount() );
+    SW_EXPECT_EQUAL( 0u, listBulkBatch[0]->getFirstEntrySlot() );
+}
+
+/**
+ * @brief [PrimitiveRegistryTest] 메시 하나를 더하고 지워도 다른 메시의 칸 번호는 그대로이고, 지운 칸은 다음 등록이 다시 쓴다
+ * @details 예전에는 지우기가 끝 칸을 그 자리로 옮기고(swap-and-pop) 집합 세대를 올려 GPUScene 이 모든 칸을 다시 모았다(감사 RN-6). 지금은 칸을 비워 프리리스트에 넣고
+ *          그 칸만 더티로 올린다. 칸 배치 세대(`getLayoutGeneration`)는 영역을 늘릴 때만 오른다.
+ */
+SW_TEST_CASE( PrimitiveRegistryTest, MeshSlotsStayFixedAndFreedSlotIsReused )
+{
+    GameObjectManager      manager;
+    vector<GameObject*>    listObject;
+    vector<MeshComponent*> listMesh;
+    for ( uint32 meshIndex = 0; meshIndex < 4; ++meshIndex )
+    {
+        GameObject* pObject = manager.createGameObject( hashed_string( "SlotMesh" ) );
+        SW_REQUIRE_NOT_NULL( pObject );
+        MeshComponent* pMesh = pObject->addComponent<MeshComponent>();
+        SW_REQUIRE_NOT_NULL( pMesh );
+        listObject.push_back( pObject );
+        listMesh.push_back( pMesh );
+    }
+    manager.mergePendingAdds();
+    PrimitiveRegistry& registry = manager.getPrimitiveRegistry();
+    vector<uint32>     listSlot;
+    for ( const MeshComponent* pMesh : listMesh )
+    {
+        SW_REQUIRE_TRUE( pMesh->getPrimitiveIndex() != ScenePrimitive::kInvalidPrimitiveIndex );
+        listSlot.push_back( pMesh->getPrimitiveIndex() );
+    }
+    const uint64 layoutBefore = registry.getLayoutGeneration();
+    // 칸마다 들어온 차례 — 칸을 다시 쓰면 그 칸만 바뀐다(칸에 묶인 GPU 상태가 지난 물체를 이어받지 않는 근거).
+    const vector<uint32> listSerialBefore = registry.getPrimitiveSerials();
+    vector<uint32>       listStateSlot;
+    vector<uint32>       listTransformSlot;
+    registry.consumeDirty( listStateSlot, listTransformSlot );
+
+    // 둘째를 지운다 — 나머지는 번호가 그대로이고, 지운 칸 하나만 더티다.
+    const uint32 removedSlot = listSlot[1];
+    manager.destroyGameObject( listObject[1] );
+    manager.processDeferredDestruction();
+    SW_EXPECT_TRUE( registry.getAll()[removedSlot] == nullptr );
+    SW_EXPECT_EQUAL( listSlot[0], listMesh[0]->getPrimitiveIndex() );
+    SW_EXPECT_EQUAL( listSlot[2], listMesh[2]->getPrimitiveIndex() );
+    SW_EXPECT_EQUAL( listSlot[3], listMesh[3]->getPrimitiveIndex() );
+    registry.consumeDirty( listStateSlot, listTransformSlot );
+    bool bRemovedSlotDirty = false;
+    bool bOtherSlotDirty   = false;
+    for ( const uint32 slot : listStateSlot )
+    {
+        bRemovedSlotDirty = bRemovedSlotDirty || slot == removedSlot;
+        bOtherSlotDirty   = bOtherSlotDirty || slot == listSlot[0] || slot == listSlot[2] || slot == listSlot[3];
+    }
+    SW_EXPECT_TRUE( bRemovedSlotDirty );
+    SW_EXPECT_FALSE( bOtherSlotDirty ); // 남은 메시는 다시 모을 일이 없다
+
+    // 새 메시는 비운 칸을 다시 쓴다. 칸 배치 세대는 그대로다(전체 수집 없음).
+    GameObject* pAdded = manager.createGameObject( hashed_string( "SlotMeshAdded" ) );
+    SW_REQUIRE_NOT_NULL( pAdded );
+    MeshComponent* pAddedMesh = pAdded->addComponent<MeshComponent>();
+    SW_REQUIRE_NOT_NULL( pAddedMesh );
+    manager.mergePendingAdds();
+    SW_EXPECT_EQUAL( removedSlot, pAddedMesh->getPrimitiveIndex() );
+    SW_EXPECT_EQUAL( listSlot[0], listMesh[0]->getPrimitiveIndex() );
+    SW_EXPECT_EQUAL( listSlot[3], listMesh[3]->getPrimitiveIndex() );
+    SW_EXPECT_EQUAL( layoutBefore, registry.getLayoutGeneration() );
+    SW_EXPECT_TRUE( registry.getPrimitiveSerials()[removedSlot] != listSerialBefore[removedSlot] );
+    SW_EXPECT_EQUAL( listSerialBefore[listSlot[0]], registry.getPrimitiveSerials()[listSlot[0]] );
+    SW_EXPECT_EQUAL( listSerialBefore[listSlot[3]], registry.getPrimitiveSerials()[listSlot[3]] );
+}
+
+/**
+ * @brief [PrimitiveRegistryTest] 지운 배치의 항목 칸을 다른 배치가 받으면 그 칸들의 차례가 바뀌고, 다른 배치의 차례는 그대로다
+ * @details 칸 순 GPUScene 의 칸 상태(인스턴스 LOD 전환)는 차례가 다르면 처음부터 한다(gpu_cull.hlsl) — 같은 칸에 같은 메시가 다시 와도 지난 물체의 전환을 이어받지 않는다.
+ */
+SW_TEST_CASE( PrimitiveRegistryTest, ReusedEntrySlotGetsNewSerial )
+{
+    PrimitiveRegistry                     registry;
+    vector<unique_ptr<MeshInstanceBatch>> listBatch;
+    for ( uint32 batchIndex = 0; batchIndex < 3; ++batchIndex )
+        listBatch.push_back( make_unique<MeshInstanceBatch>( nullptr, nullptr, nullptr, 4u, MeshInstanceWriter::CPU ) );
+    registry.addInstanceBatch( listBatch[0].get() );
+    registry.addInstanceBatch( listBatch[1].get() );
+    const uint32 firstOfRemoved = listBatch[0]->getFirstEntrySlot();
+    const uint32 serialBefore   = registry.getInstanceEntries()[firstOfRemoved]._serial;
+    const uint32 otherSerial    = registry.getInstanceEntries()[listBatch[1]->getFirstEntrySlot()]._serial;
+
+    registry.removeInstanceBatch( listBatch[0].get() );
+    registry.addInstanceBatch( listBatch[2].get() ); // 같은 크기 — 비운 구간을 받는다
+    SW_REQUIRE_EQUAL( firstOfRemoved, listBatch[2]->getFirstEntrySlot() );
+    SW_EXPECT_TRUE( registry.getInstanceEntries()[firstOfRemoved]._serial != serialBefore );
+    SW_EXPECT_EQUAL( otherSerial, registry.getInstanceEntries()[listBatch[1]->getFirstEntrySlot()]._serial );
+}
+
+namespace
+{
+    /** @brief 칸 하나의 내용(어느 배치의 몇 번 항목인지, 빈 칸이면 널)입니다 — GPUScene 후보의 대역이다. */
+    struct SlotContent
+    {
+        const ScenePrimitiveBatch* _pBatch{ nullptr };
+        uint32                     _index{ 0 };
+        bool                       operator==( const SlotContent& other ) const { return _pBatch == other._pBatch && _index == other._index; }
+    };
+
+    /** @brief 레지스트리를 칸마다 처음부터 읽은 표입니다(전체 수집의 대역). */
+    vector<SlotContent> readAllSlots( const PrimitiveRegistry& registry )
+    {
+        const uint32        meshRegion = static_cast<uint32>( registry.getAll().size() );
+        vector<SlotContent> listContent( registry.getSlotCount() );
+        for ( size_t entryIndex = 0; entryIndex < registry.getInstanceEntries().size(); ++entryIndex )
+        {
+            const PrimitiveInstanceEntry& entry  = registry.getInstanceEntries()[entryIndex];
+            listContent[meshRegion + entryIndex] = SlotContent{ entry._pBatch, entry._index };
+        }
+        return listContent;
+    }
+} // namespace
+
+/**
+ * @brief [PrimitiveRegistryTest] 더티 칸만 다시 읽어 따라간 표가 프레임마다 처음부터 읽은 표와 같다 (배치를 더하고 지우기를 섞은 200 프레임)
+ * @details GPUScene 부분 수집의 전제다 — 후보 번호가 칸 번호이고 빌더는 더티 칸만 다시 채우므로, 레지스트리가 바뀐 칸을 빠짐없이 더티로 올리면 두 길의 결과가 같다.
+ *          칸 배치 세대가 오른 프레임(영역 늘리기)만 처음부터 다시 읽는다(빌더의 전체 수집과 같다). 지운 배치의 자리를 다음 배치가 다시 쓰는 것도 본다.
+ */
+SW_TEST_CASE( PrimitiveRegistryTest, DirtySlotTrackingMatchesFullReread )
+{
+    constexpr uint32                      kBatchCount = 64;
+    PrimitiveRegistry                     registry;
+    vector<unique_ptr<MeshInstanceBatch>> listBatch;
+    for ( uint32 batchIndex = 0; batchIndex < kBatchCount; ++batchIndex )
+        listBatch.push_back( make_unique<MeshInstanceBatch>( nullptr, nullptr, nullptr, TestPrimitiveRegistryInternal::getEntryCountOf( batchIndex ), MeshInstanceWriter::CPU ) );
+
+    vector<SlotContent> listTracked;
+    uint64              trackedLayout = 0;
+    vector<uint32>      listStateSlot;
+    vector<uint32>      listTransformSlot;
+    uint32              random      = 12345u;
+    uint32              reuseCount  = 0;
+    bool                bAllMatched = true;
+    for ( uint32 frame = 0; frame < 200; ++frame )
+    {
+        // 프레임마다 배치 몇 개를 넣거나 뺀다(결정적 의사 난수).
+        for ( uint32 step = 0; step < 3; ++step )
+        {
+            random                   = random * 1664525u + 1013904223u;
+            MeshInstanceBatch& batch = *listBatch[( random >> 8 ) % kBatchCount];
+            if ( batch.isRegistered() )
+            {
+                registry.removeInstanceBatch( &batch );
+                continue;
+            }
+            const uint32 slotCountBefore = registry.getSlotCount();
+            registry.addInstanceBatch( &batch );
+            reuseCount += registry.getSlotCount() == slotCountBefore ? 1u : 0u;
+        }
+
+        registry.consumeDirty( listStateSlot, listTransformSlot );
+        const vector<SlotContent> listFull = readAllSlots( registry );
+        if ( registry.getLayoutGeneration() != trackedLayout )
+        {
+            listTracked   = listFull;
+            trackedLayout = registry.getLayoutGeneration();
+            continue;
+        }
+        // 부분 길: 칸은 끝에만 붙는다 — 붙은 칸은 더티로 온다. 더티 칸만 다시 읽는다.
+        listTracked.resize( listFull.size() );
+        for ( const uint32 slot : listStateSlot )
+        {
+            SW_REQUIRE_TRUE( slot < listFull.size() );
+            listTracked[slot] = listFull[slot];
+        }
+        bAllMatched = bAllMatched && listTracked == listFull;
+    }
+    SW_EXPECT_TRUE( bAllMatched );
+    SW_EXPECT_TRUE( reuseCount > 0u ); // 지운 배치의 자리를 다시 쓴 프레임이 있었다
 }
 
 namespace

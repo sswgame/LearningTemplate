@@ -4,6 +4,8 @@
  * @details 런타임(RHI · 셰이더 캐시 · 렌더러)은 `RenderDiagnostics::get` 만 묻고 누가 값을 채우는지 모른다. 개발 도구가 `SW_RENDER_DIAGNOSTICS_PROVIDER` 한 줄로
  *          채우는 함수를 붙이고(실행 인자 · 콘솔 · 에디터 창이 바꾸는 개발 변수를 읽는다), 아무것도 붙지 않으면 기본값(진단 없음, GPU 라이트 그리드)이다.
  *          Shipping 은 `get` 이 상수 기본값이라 진단 분기가 접혀 바이너리에서 빠진다. 진단마다 setter · 변수를 늘리지 않고 이 구조체에 칸을 더한다.
+ *          **스레드:** 채우는 함수(개발 변수를 읽는다)는 게임 스레드만 부른다(`publish`). 렌더 스레드 · 기록 워커 · 셰이더 컴파일은 `publish` 가 내보낸
+ *          원자 사본만 읽는다 — 개발 변수는 콘솔 · 에디터가 게임 스레드에서 잠금 없이 쓰기 때문이다(언리얼 콘솔 변수의 렌더 스레드 사본 `GetValueOnRenderThread` 와 같은 생각).
  *          언리얼은 같은 자리를 `r.ShaderDevelopmentMode` · `r.CheckNaN` · `r.Shaders.Optimize` 같은 개발 콘솔 변수로 두고 Shipping 에서 컴파일 아웃한다 —
  *          여기서는 변수는 개발 도구에 두고 런타임에는 정책 값 하나만 남긴다(Godot 의 RenderingServer 디버그 설정 묶음과 같은 모양).
  */
@@ -71,7 +73,7 @@ namespace sw
         uint8              _fogDebugSlice{ 16 };                           ///< 진단 단면의 거리 조각(0 .. `SW_FOG_VOLUME_DIM_Z` - 1, 큰 번호가 먼 조각 — 범위 밖은 읽는 쪽이 자른다)
     };
 
-    /** @brief 정책을 채우는 함수입니다. 기본값으로 만든 @p inoutPolicy 에서 바꿀 칸만 씁니다. 어느 스레드에서든 불릴 수 있다(렌더 스레드 · 기록 워커 · 셰이더 컴파일). */
+    /** @brief 정책을 채우는 함수입니다. 기본값으로 만든 @p inoutPolicy 에서 바꿀 칸만 씁니다. 게임 스레드에서만 불린다(`RenderDiagnostics::publish` · 등록) — 다른 스레드는 내보낸 사본을 읽는다. */
     using RenderDiagnosticsProvider = void ( * )( RenderDiagnosticsPolicy& inoutPolicy );
 
     /**
@@ -81,16 +83,23 @@ namespace sw
     class SW_API RenderDiagnostics
     {
     public:
-        /** @brief 지금의 진단 정책입니다. 채우는 쪽이 없으면 기본값이고, Shipping 은 늘 기본값(상수)입니다. 값은 부를 때마다 새로 읽는다(실행 중에 바뀐 개발 변수가 바로 든다). */
+        /** @brief 마지막으로 내보낸(`publish`) 진단 정책입니다. 어느 스레드에서든 부른다. 채우는 쪽이 없으면 기본값이고, Shipping 은 늘 기본값(상수)입니다. 실행 중에 바뀐 개발 변수는 다음 `publish`(다음 프레임)부터 든다. */
         [[nodiscard]] static RenderDiagnosticsPolicy get()
         {
             // 전처리기로 접는다 — `BuildInfo.h` 는 CMake 정의를 요구해 리플렉션 파서가 이 헤더를 읽지 못한다(SW_SHIPPING 은 구성 정의 그대로다).
 #if defined( SW_SHIPPING )
             return RenderDiagnosticsPolicy{};
 #else
-            return fetch();
+            return loadPublished();
 #endif
         }
+
+        /**
+         * @brief 채우는 함수로 정책을 새로 떠 원자 사본으로 내보냅니다. 게임 스레드 전용(Debug 단언)입니다.
+         * @details 엔진이 명령줄이 든 뒤(렌더러 · 셰이더 캐시 기동 전) 한 번, 그 뒤 프레임마다 패킷을 짓기 시작할 때(`RenderFrameSettings::capture`) 부른다. 등록 · 해제도 한 번 내보낸다.
+         *          렌더러의 프레임 경로는 패킷에 실린 그 프레임 값(`RenderFrameSettings::_diagnostics`)을 읽고, 이 사본은 패킷 밖 소비자(bindless 검사 · 셰이더 컴파일)가 읽는다.
+         */
+        static void publish();
 
         /** @brief 채우는 함수를 붙입니다. 이미 붙어 있으면 false 이고 오류를 남깁니다. */
         [[nodiscard]] static bool registerProvider( RenderDiagnosticsProvider provider );
@@ -98,7 +107,7 @@ namespace sw
         static void unregisterProvider( RenderDiagnosticsProvider provider );
 
     private:
-        static RenderDiagnosticsPolicy fetch();
+        static RenderDiagnosticsPolicy loadPublished();
     };
 
     /** @brief `SW_RENDER_DIAGNOSTICS_PROVIDER` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar` — 거절된 등록은 떼지 않는다). */

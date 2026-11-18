@@ -16,6 +16,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
@@ -187,6 +188,8 @@ namespace sw
         uint64 _bytesInFlight                           SW_GUARDED_BY( _streamingMutex ) = 0;     ///< `_listReading` 이 쥔(쥘) 바이트 합 — `TextureStreamingBudget::_maxBytesInFlight` 아래로 묶는다
         bool _bStreamingParked                          SW_GUARDED_BY( _streamingMutex ) = false; ///< 지난 `updateStreaming` 이 풀 예산에 막혔다 — 줄은 예산이 날 때까지 쉰다(`countLoadsInFlight` 가 세지 않는다) NOLINT(sw-bool-flag): 잠금이 지키는 칸 하나다
         TextureStreamingRetireList                      _retired;                                 ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
+        atomic<int32>                                   _qualityMipDrop{ 0 };                     ///< 텍스처 품질이 버리는 위쪽 밉 수 — 게임 스레드가 뜬 사본(`refreshQualitySettings`)이라 워커 · 렌더 스레드는 이것만 읽는다
+        atomic<uint8>                                   _bStreamingEnabled{ SW_TRUE };            ///< 비동기 로드를 아래쪽 밉부터 올린다(`-gv_textureStreaming`) — 같은 사본
         vector<string> _listUpgrading                   SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)
         unordered_map<string, float32>                  _mapScreenSize;                           ///< 이번 프레임에 알린 화면 크기(`recordScreenSizes`, `_streamingMutex`) — `updateStreaming` 이 꺼내 항목의 필요한 밉에 적고 줄을 정렬한다
 
@@ -265,7 +268,7 @@ namespace sw
          */
         void queueMipRequest( const string& key, TextureMipLayout layout, string readPath )
         {
-            const uint32 firstMip = Texture2D::computeUpgradeFirstMip( layout );
+            const uint32 firstMip = Texture2D::computeUpgradeFirstMip( layout, _qualityMipDrop.load( std::memory_order_relaxed ) );
             const uint32 mipCount = static_cast<uint32>( layout._listMip.size() ) - firstMip;
             {
                 UniqueLock<shared_mutex> lock{ _mutex };
@@ -387,11 +390,21 @@ namespace sw
 
     } // namespace
 
-    /**
-     * @brief `-gv_textureStreaming=0` — 비동기로 읽는 텍스처를 처음부터 밉 사슬 전부로 업로드합니다(밉 스트리밍을 끈다). 비교 측정 · 진단용입니다.
-     * @details 켜져 있으면 비동기 로드는 아래쪽 밉만 먼저 업로드하고 위쪽 밉은 렌더 스레드가 프레임 예산 안에서 뒤에 업로드한다(`TextureCache::updateStreaming`).
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_textureStreaming, true, "Upload async-loaded textures with their low mips first and stream the top mips in later (false = upload every mip at once)" );
+    namespace
+    {
+        // 텍스처 캐시가 만들 때 한 번 읽는 변수 — 익명 이름공간이라 로드 워커 · 렌더 스레드가 도는 다른 번역 단위는 이름을 볼 수 없다(사본 `Impl::_qualityMipDrop` · `_bStreamingEnabled` 만 읽는다).
+
+        /**
+         * @brief `-gv_textureStreaming=0` — 비동기로 읽는 텍스처를 처음부터 밉 사슬 전부로 업로드합니다(밉 스트리밍을 끈다). 비교 측정 · 진단용입니다.
+         * @details 켜져 있으면 비동기 로드는 아래쪽 밉만 먼저 업로드하고 위쪽 밉은 렌더 스레드가 프레임 예산 안에서 뒤에 업로드한다(`TextureCache::updateStreaming`).
+         */
+        SW_GLOBAL_VARIABLE( bool, gv_textureStreaming, true, "Upload async-loaded textures with their low mips first and stream the top mips in later (false = upload every mip at once)" );
+        /**
+         * @brief 텍스처를 읽을 때 버리는 위쪽 밉 수입니다. 사용자 설정 `graphics.textureQuality` 선택지의 `targetValue` 가 넣는다(`engine.settings.xml`, 다시 시작해야 반영).
+         * @details Graphics 가 UserSettings 보다 아래 층이라 이 변수는 읽는 쪽인 여기에 둔다(설정은 이름으로 넣는다). 언리얼 `r.Streaming.MipBias` 처럼 기동 때 정한다.
+         */
+        SW_GLOBAL_VARIABLE( int32, gv_textureMipDrop, 0, "텍스처를 읽을 때 버리는 위쪽 밉 수 (사용자 설정 graphics.textureQuality 의 targetValue, 다시 시작해야 반영)" );
+    } // namespace
 
     TextureCache::TextureCache()
         : AssetCacheBase{ CacheTracking::counted( kAssetKindName ) }
@@ -399,6 +412,21 @@ namespace sw
         , _renderTargetDeclarationSink{ *this }
         , _cpuTextureSerial{ 0 }
     {
+        refreshQualitySettings(); // 캐시는 엔진 기동(게임 스레드, 명령줄을 적용한 뒤)에 선다 — 사용자 설정은 그 뒤 프레임마다 다시 뜬다
+    }
+
+    void TextureCache::refreshQualitySettings()
+    {
+        // 로드 워커 · 렌더 스레드는 변수를 직접 읽지 않는다 — 게임 스레드가 여기서 뜬 사본만 본다(언리얼 콘솔 변수의 렌더 스레드 사본과 같은 생각).
+        if ( engine::areEngineServicesBound() )
+            engine::getSubsystem<TaskManager>().ensureMainThread();
+        _impl->_qualityMipDrop.store( gv_textureMipDrop, std::memory_order_relaxed );
+        _impl->_bStreamingEnabled.store( gv_textureStreaming ? SW_TRUE : SW_FALSE, std::memory_order_relaxed );
+    }
+
+    int32 TextureCache::getQualityMipDrop() const
+    {
+        return _impl->_qualityMipDrop.load( std::memory_order_relaxed );
     }
 
     TextureCache::~TextureCache() = default;
@@ -536,7 +564,7 @@ namespace sw
             source = TextureLoadOperation::Source::CPUBytes;
         shared_ptr<TextureLoadOperation> pOperation = sw::make_shared<TextureLoadOperation>( key, pDevice, source, pTexture, _impl );
         // 비동기 로드(씬의 머티리얼)는 아래쪽 밉부터 — 위쪽 밉은 렌더 스레드가 뒤에 업로드한다. 동기 로드(도구 · 미리보기)는 받는 자리에서 밉 전부를 쓴다.
-        const bool bStreamed   = start == AssetLoadStart::Async && gv_textureStreaming && _impl->_mapEntry[key]._streamingGroup == TextureStreamingGroup::Streamable;
+        const bool bStreamed   = start == AssetLoadStart::Async && _impl->_bStreamingEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _impl->_mapEntry[key]._streamingGroup == TextureStreamingGroup::Streamable;
         pOperation->_residency = bStreamed ? TextureResidency::StreamingBase : TextureResidency::Full;
         if ( source == TextureLoadOperation::Source::RenderTarget )
         {
@@ -795,7 +823,7 @@ namespace sw
                 continue;
             }
             const bool                bFrameFull = submitCount >= maxCount;
-            const Texture2DUploadStep step       = bFrameFull ? Texture2DUploadStep::Busy : pTexture->beginUploadMips( pDevice, *pLayout, read._request._firstMip, read._pResult->_bytes, false );
+            const Texture2DUploadStep step       = bFrameFull ? Texture2DUploadStep::Busy : pTexture->beginUploadMips( pDevice, *pLayout, read._request._firstMip, read._pResult->_bytes, _impl->_qualityMipDrop.load( std::memory_order_relaxed ), false );
             if ( step == Texture2DUploadStep::Submitted )
             {
                 ++submitCount;
@@ -930,7 +958,8 @@ namespace sw
         vector<const string*>             listKey;
         vector<uint8>                     listDemoted;
         vector<TextureMipRequest>         listRestore; ///< 내렸다가 `NeverStream` 이 된 텍스처의 되올리기
-        uint64                            residentBytes = 0;
+        uint64                            residentBytes  = 0;
+        const int32                       qualityMipDrop = _impl->_qualityMipDrop.load( std::memory_order_relaxed ); // 이 차례 동안 같은 품질로 판정한다
         {
             UniqueLock<shared_mutex> lock{ _impl->_mutex };
             for ( auto& [key, entry] : _impl->_mapEntry )
@@ -944,7 +973,7 @@ namespace sw
                     // 내리기 대상이 아니다. 내린 뒤 밉 전부가 필요한 요청이 왔으면 품질 한도까지 되올린다.
                     if ( entry._bDemoted && entry._bUpgrading == false )
                     {
-                        const uint32 qualityFirstMip = Texture2D::computeUpgradeFirstMip( entry._mipLayout );
+                        const uint32 qualityFirstMip = Texture2D::computeUpgradeFirstMip( entry._mipLayout, qualityMipDrop );
                         listRestore.push_back( TextureMipRequest{ key, qualityFirstMip, static_cast<uint32>( entry._mipLayout._listMip.size() ) - qualityFirstMip } );
                     }
                     continue;
@@ -964,7 +993,7 @@ namespace sw
                 if ( entry._framesSinceChange < UINT32_MAX )
                     ++entry._framesSinceChange;
                 // 품질이 버리는 밉 위로는 올리지 않는다 — 정책도 그 아래만 본다.
-                const uint32              qualityFirstMip = Texture2D::computeUpgradeFirstMip( entry._mipLayout );
+                const uint32              qualityFirstMip = Texture2D::computeUpgradeFirstMip( entry._mipLayout, qualityMipDrop );
                 TextureStreamingCandidate candidate;
                 candidate._mipCount          = mipCount;
                 candidate._residentFirstMip  = mipCount - entry._texture->getMipCount();
@@ -1694,8 +1723,8 @@ namespace sw
                 uploadScope.beginPhase( AssetLoadPhase::Upload );
                 const bool                bTail = _source == Source::File && _pImage == nullptr; // 머리 + 꼬리로 읽은 스트리밍 로드(MR-3)
                 const size_t              bytes = bTail ? _tailBytes.size() : ( _pImage != nullptr ? _pImage->_bytes.size() : 0u );
-                const Texture2DUploadStep step  = bTail                   ? _pTexture->beginUploadTail( pDevice, getPath(), _mipLayout, _tailFirstMip, _tailBytes, bBlocking )
-                                                : _source == Source::File ? _pTexture->beginUploadFromImage( pDevice, getPath(), *_pImage, _residency, bBlocking )
+                const Texture2DUploadStep step  = bTail                   ? _pTexture->beginUploadTail( pDevice, getPath(), _mipLayout, _tailFirstMip, _tailBytes, pCache->_qualityMipDrop.load( std::memory_order_relaxed ), bBlocking )
+                                                : _source == Source::File ? _pTexture->beginUploadFromImage( pDevice, getPath(), *_pImage, _residency, pCache->_qualityMipDrop.load( std::memory_order_relaxed ), bBlocking )
                                                                           : _pTexture->beginUploadFromCPUBytes( pDevice, bBlocking );
                 if ( step == Texture2DUploadStep::Submitted && _source == Source::File )
                     uploadScope.setBytes( bytes );
@@ -1782,7 +1811,7 @@ namespace sw
         Texture2DRetiredResource retired{};
         pTexture->detachRHIKeepingSRV( pDevice, retired );
         _impl->_retired.add( pDevice, retired );
-        const bool bReloaded = pTexture->loadFromAsset( pDevice, AssetID{ key } );
+        const bool bReloaded = pTexture->loadFromAsset( pDevice, AssetID{ key }, _impl->_qualityMipDrop.load( std::memory_order_relaxed ) );
         if ( bReloaded == false )
         {
             SW_LOG_ERROR_ID( "TextureCache.HotReloadFailedTexture", "Hot-Reload failed for Texture %#", key.c_str() );

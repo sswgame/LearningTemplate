@@ -139,7 +139,7 @@ namespace sw
                     }
                     if ( isSupportedResolutionDivisor( attachment._resolutionDivisor ) == false )
                     {
-                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentResolutionDivisorOnlyAccepted", "[%#] attachment '%#': _resolutionDivisor %# - only 1, 2 and 4 are accepted", sourcePath, attachment._name, attachment._resolutionDivisor );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentResolutionDivisorOnlyAccepted", "[%#] attachment '%#': _resolutionDivisor %# - only 1, 2, 4, 8 and 16 are accepted", sourcePath, attachment._name, attachment._resolutionDivisor );
                         ++issueCount;
                     }
                     // 역할 선언은 아는 글이어야 한다. 모르는 글을 조용히 이름 · 포맷 규칙으로 넘기면 선언한 사람이 왜 안 걸리는지 모른다.
@@ -273,7 +273,12 @@ namespace sw
                     const RenderPassTypeInfo& info   = getRenderPassTypeInfo( pass._type );
                     const bool                bDepth = pass._depthAttachment.empty() == false;
                     issueCount += resolvePassRenderState( pass, sourcePath );
-                    if ( info.hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes ) == false && pass._cullMode != CullMode::None )
+                    if ( info.hasFlag( RenderPassTraitFlag::kDrawsBoxVolume ) && pass._cullMode != CullMode::Front )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassBoxVolumeCull", "[%#] pass '%#' draws box volumes - _cullMode must be Front (back faces only), not '%#'", sourcePath, pass._name, getEnumName( pass._cullMode ) );
+                        ++issueCount;
+                    }
+                    if ( info.hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes | RenderPassTraitFlag::kDrawsBoxVolume ) == false && pass._cullMode != CullMode::None )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassFullscreenCull", "[%#] pass '%#' draws a fullscreen triangle - _cullMode must be None, not '%#'", sourcePath, pass._name, getEnumName( pass._cullMode ) );
                         ++issueCount;
@@ -462,6 +467,9 @@ namespace sw
             {
                 pass._resolvedDepthAttachment =
                     pass._depthAttachment.empty() ? hashed_string{} : hashed_string( pass._depthAttachment.c_str() );
+                const RenderPassAttachment* pDepth = pass._depthAttachment.empty() ? nullptr : findAttachment( desc, pass._depthAttachment );
+                pass._resolvedDepthRole            = pass._depthAttachment.empty() ? static_cast<uint8>( RenderPassInputRole::Invalid )
+                                                                                   : static_cast<uint8>( resolveRenderPassInputRole( pass._depthAttachment, true, pDepth != nullptr ? string_view( pDepth->_role ) : string_view{} ) );
                 pass._listResolvedInput.clear();
                 pass._listResolvedOutput.clear();
                 pass._listResolvedColorOutput.clear();
@@ -976,13 +984,13 @@ namespace sw
             }
 
             /**
-             * @brief 3-9) 데칼 패스의 컬러 출력은 G버퍼 알베도 · 노멀 · 머티리얼 셋이고 이 차례다 — 셰이더가 SV_TARGET0..2 에 그 칸의 인코딩으로 쓴다(decal.hlsl).
-             * @details 다른 첨부(장면 색 · 포워드 색)에 쓰면 데칼 색이 그대로 장면에 덮인다 — 포워드 파이프라인에 데칼이 없는 까닭이다(덮을 G버퍼가 없다).
+             * @brief 3-9) 데칼 패스의 컬러 출력은 DBufferA · B · C 셋이고 이 차례다 — 셰이더가 SV_TARGET0..2 에 그 칸의 프리멀티플라이 값으로 쓴다(decal.hlsl).
+             * @details 다른 첨부(G버퍼 · 장면 색)에 쓰면 베이스 패스가 섞을 값이 아니라 데칼 값이 그대로 덮인다. 베이스 패스가 같은 셋을 선택 입력으로 읽는다.
              */
             static uint32 checkDecalPasses( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32                    issueCount{ 0 };
-                const RenderPassInputRole arrExpected[] = { RenderPassInputRole::GBufferAlbedo, RenderPassInputRole::GBufferNormal, RenderPassInputRole::GBufferMaterial };
+                const RenderPassInputRole arrExpected[] = { RenderPassInputRole::DBufferA, RenderPassInputRole::DBufferB, RenderPassInputRole::DBufferC };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
                     if ( pass._type != RenderPassType::Decal )
@@ -994,7 +1002,7 @@ namespace sw
                     }
                     if ( bShape )
                         continue;
-                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDecalOutputs", "[%#] pass '%#' (Decal): outputs must be the G-buffer albedo, normal and material attachments in that order - a decal modifies the G-buffer",
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDecalOutputs", "[%#] pass '%#' (Decal): outputs must be the DBufferA, DBufferB and DBufferC attachments in that order - the base pass blends them into the surface",
                                      sourcePath, pass._name );
                     ++issueCount;
                 }

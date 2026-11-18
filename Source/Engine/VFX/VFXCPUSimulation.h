@@ -56,6 +56,10 @@ namespace sw
      *          접선 성분을 `_friction` 만큼 줄이며, 닿은 점에서 법선 쪽으로 `VFXCollisionDef::kSurfaceSkin` 만큼 띄운다(GPU 깊이 충돌과 같은 값).
      *          CPU 는 물리 레이캐스트 방법만 돈다(`VFXCollisionDef::getSupportedTargets` — 깊이 방법의 방출기는 여기 오지 않는다). 띠(`VFXRenderMode::Ribbon`)는 태어난 순서로
      *          이어야 하므로 `writeParticles` 가 입자 번호 순으로 낸다(풀 안의 자리는 지우기마다 바뀐다).
+     *
+     *          입자마다 인스턴스 칸(`0 ~ _maxParticles - 1`)을 하나 쥔다 — 태어날 때 빈 칸 목록(프리리스트, 스택)에서 꺼내고 죽으면 돌려준다. 풀 안의 자리는
+     *          지우기마다 섞이지만 칸은 수명 내내 그대로라, 메시 방출기의 인스턴스 배치 항목이 입자를 따라간다(언리얼 Niagara GPU 의 free ID 목록,
+     *          유니티 VFX Graph 의 dead list 와 같은 모양). 죽은 칸만 숨기고 산 칸은 제 자리에서 고치므로 빌더는 바뀐 칸만 다시 모은다.
      */
     class SW_API VFXCPUSimulation
     {
@@ -89,6 +93,11 @@ namespace sw
          * @details 순서는 띠(`VFXRenderMode::Ribbon`)면 태어난 순서(오래된 것 먼저)이고, 그 밖은 풀 안의 자리 순서다.
          */
         void writeParticles( vector<GPUParticle>& outListParticle ) const;
+        /**
+         * @brief 살아 있는 입자의 인스턴스 칸을 `writeParticles` 와 같은 순서로 @p outListSlot 에 채웁니다(앞의 내용은 지웁니다). 칸은 `_maxParticles` 보다 작고 서로 다릅니다.
+         * @details 띠 방출기는 순서가 다르므로 부르지 않는다(메시 방출기가 쓴다).
+         */
+        void writeInstanceSlots( vector<uint32>& outListSlot ) const;
 
     private:
         /** @brief 살아 있는 입자 하나의 상태입니다. */
@@ -99,7 +108,11 @@ namespace sw
             float32 _age{ 0.0f };
             float32 _lifetime{ 1.0f };
             uint64  _particleIndex{ 0 }; ///< 만든 순서의 번호(난수 수열의 번호와 같다) — 띠가 이 순서로 잇는다
+            uint32  _instanceSlot{ 0 };  ///< 수명 내내 쥐는 인스턴스 칸(`_listFreeSlot` 에서 꺼냈다)
         };
+
+        /** @brief 빈 칸 목록을 모든 칸으로 채웁니다. 끝에서 꺼내므로 작은 칸부터 나간다(같은 씨앗이면 같은 칸). */
+        void resetFreeSlots();
 
         /** @brief 시계가 정한 이번 단계의 입자를 만듭니다. 풀이 차면 만들지 않고 한 번 경고합니다(번호는 시계가 이미 썼다). */
         void spawnParticles( const VFXSpawnStep& spawn );
@@ -112,6 +125,7 @@ namespace sw
         VFXEmitterClock      _clock;
         uint64               _seed;
         vector<Particle>     _listParticle;
+        vector<uint32>       _listFreeSlot; ///< 빈 인스턴스 칸(스택) — 살아 있는 입자의 칸과 합쳐 `0 ~ _maxParticles - 1` 이다
         VFXEmitterUserValues _userValues;
         uint8                _bWarnedPoolFull : 1;
     };

@@ -55,6 +55,15 @@ namespace sw::editor
         ProjectSettingsJSONSpan _source;          ///< 원문 범위 — 바뀌지 않은 노드는 이 글을 그대로 쓴다
         string                  _textAtOpen;      ///< 열 때의 `_text`(말단이 바뀌었는지 본다)
         vector<uint32>          _listChildAtOpen; ///< 열 때의 `_listChild`(원소를 더하거나 뺐는지 본다)
+
+        /** @brief 편집이 새로 더한 노드입니다 — 원문 범위 · 열 때의 값이 없다. 부분 집합 초기화(빠진 필드 경고)를 쓰지 않게 한 곳에서 만든다. */
+        [[nodiscard]] static ProjectSettingsJSONNode makeAdded( JSONType type, string key )
+        {
+            ProjectSettingsJSONNode node{};
+            node._type = type;
+            node._key  = std::move( key );
+            return node;
+        }
     };
 
     /**

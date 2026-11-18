@@ -23,6 +23,7 @@
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/VertexAnimationCookList.h"
+#include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Config/ConfigManager.h"
@@ -45,6 +46,7 @@
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -164,6 +166,8 @@ namespace sw
             SW_LOW_LEVEL_ERROR( "Engine core scope failed: %s", _coreScope.getCollection().getError().c_str() );
             return false;
         }
+        // 렌더 진단 정책을 명령줄(`-gv_…`, 코어 범위의 명령줄이 막 적용했다)이 든 값으로 내보낸다 — 기동 단계(셰이더 캐시 · 렌더러 초기화)가 이 사본을 읽는다.
+        RenderDiagnostics::publish();
         // 크래시 보고 프로세스(`-crash-reporter=<폴더>`)는 헤드리스다 — 서비스 · 기동 단계를 세우지 않고 App 이 묶음을 보내고 끝낸다.
         // 이 모드에서는 크래시 핸들러(죽으면 보고 프로세스를 또 띄운다) · 리소스 루트를 세우지 않았다.
         if ( pCrashHandler->isCrashReporterRun() )
@@ -436,6 +440,9 @@ namespace sw
 
     void Engine::updateFrameServices()
     {
+        // 다른 스레드가 읽는 개발 변수의 사본을 게임 스레드에서 다시 뜬다(콘솔이 바꾼 값이 이번 프레임의 로드 기록부터 든다).
+        if ( AssetLoadProfiler* const pLoadProfiler = engine::findSubsystem<AssetLoadProfiler>() )
+            pLoadProfiler->refreshEnabled();
         // 글리프 캐시의 프레임 시계 — 래스터화 예산이 프레임마다 되살아나는 유일한 길이다(프로파일러 프레임 수는 꺼지면 늘 0 이다).
         if ( _pFontService != nullptr && _pFontService->isInitialized() )
             _pFontService->getGlyphCache().beginFrame();

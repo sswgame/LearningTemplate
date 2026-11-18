@@ -32,7 +32,7 @@ namespace sw
     class ContentPreparationToken
     {
         friend class GameInstance;
-        friend const ContentPreparationToken& getContentPreparationTokenForTest();
+        friend SW_GF_API const ContentPreparationToken& getContentPreparationTokenForTest(); // 내보낸 선언과 같아야 한다(-Winconsistent-dllimport)
 
     public:
         ContentPreparationToken( const ContentPreparationToken& )            = delete;

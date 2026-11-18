@@ -4,8 +4,10 @@
  * 매개변수 버퍼(StructuredBuffer<uint4> g_VFXParams, t0)에 방출기마다 한 구간이 이어 붙고, 루트 상수 g_VFXParamBase 가 그 첫 행이다. 실수는 비트 그대로 담는다(asfloat).
  * 행 번호는 구간 첫 행 기준이다. 해시 상수(splitmix64)와 충돌의 띄움 거리도 C++ 가 올린다 — 셰이더에 같은 값을 다시 적지 않는다.
  * 행렬은 행벡터 규약의 행 넷(C++ float4x4 의 _11.._14 가 첫 행)이다 — 점은 x·행0 + y·행1 + z·행2 + 행3.
- * 간접 인자 버퍼(g_VFXArgsRW, u2)는 32 비트 단어 SW_VFX_ARGS_WORD_COUNT 개다 — [0..3] RHIDrawIndirectCommand, 그 뒤 살아 있는 수 · 지금 반쪽(다음 디스패치가 읽는다) ·
- * 풀이 차서 버린 입자의 누적 수.
+ * 간접 인자 버퍼(g_VFXArgsRW, u2)는 32 비트 단어다 — [0..3] RHIDrawIndirectCommand, 그 뒤 살아 있는 수 · 지금 반쪽(다음 디스패치가 읽는다) ·
+ * 풀이 차서 버린 입자의 누적 수(고정 SW_VFX_ARGS_WORD_COUNT 단어), 그 뒤 빈 인스턴스 칸 스택(풀 크기), 살아 있는 입자의 인스턴스 칸(풀 크기), 다중 그룹 칸이다.
+ * 인스턴스 칸(`VFXParticleState::_particleIndex.w`, 0 ~ 풀 - 1)은 입자가 수명 내내 쥔다 — 태어날 때 빈 칸 스택 꼭대기에서 꺼내고 죽으면 돌려준다(언리얼 Niagara GPU 의
+ * free ID 목록, 유니티 VFX Graph 의 dead list). 스택 깊이는 늘 풀 - 살아 있는 수라 따로 세지 않고, 꺼내기 · 돌려주기 자리는 압축의 접두사 합으로 정해 원자 연산 없이 결정적이다.
  * 파티클 라이트(VFXLightDef)는 라이트 버퍼(g_VFXLightsRW, u3 — 씬 라이트 목록과 같은 버퍼)의 GPU 구간에 쓴다. 방출기가 받은 슬롯 범위는 SW_VFX_PARAM_ROW_LIGHT 행이 알려 주고,
  * 슬롯 하나가 살아 있는 입자 하나다(앞의 슬롯 수 개 — CPU 방출기와 같은 규칙). 입자가 모자란 슬롯은 반경 0 의 죽은 점광으로 덮어쓴다(그리드에 들지 않는다).
  */
@@ -54,7 +56,7 @@
 // 메시 인스턴스 쓰기(vfx_mesh_instance.hlsl)의 구간 — 같은 매개변수 버퍼의 다른 구간이고, 루트 상수 g_VFXMeshParamBase 가 첫 행이다.
 #define SW_VFX_MESH_ROW_HEADER     0u // (풀 크기, 0, 메시 반지름, 방출기 최대 축 배율) — 뒤 둘은 실수
 #define SW_VFX_MESH_ROW_WORLD      1u // 방출기 행렬 행 넷(1..4)
-#define SW_VFX_MESH_ROW_FIRST_SLOT 5u // 풀 자리마다 인스턴스 칸(행 하나에 넷, SW_VFX_INVALID_SLOT 이면 쓰지 않는다)
+#define SW_VFX_MESH_ROW_FIRST_SLOT 5u // 입자 인스턴스 칸(0 ~ 풀 - 1)마다 GPUScene 칸(행 하나에 넷, SW_VFX_INVALID_SLOT 이면 쓰지 않는다)
 #define SW_VFX_INVALID_SLOT        0xFFFFFFFFu
 
 #define SW_VFX_ARGS_WORD_ALIVE   4u
@@ -63,7 +65,11 @@
 // 다중 그룹 경로(풀이 SW_VFX_MULTI_GROUP_MIN_POOL 이상)의 단계 사이 값 — 같은 단어 뒤로 그룹마다 개수(나중엔 시작 위치)가 이어 붙는다.
 #define SW_VFX_ARGS_WORD_SCRATCH_TOTAL 7u // 단계 하나의 압축 전 입자 수(살아 있던 수 + 새로 만든 수) — 압축 디스패치가 읽는다
 #define SW_VFX_ARGS_WORD_COUNT         8u // 고정 단어 수
-#define SW_VFX_ARGS_WORD_GROUP_FIRST   8u // 그룹 g 의 칸은 이 번호 + g. 다중 그룹 방출기만 그룹 수만큼 버퍼를 늘린다
+#define SW_VFX_ARGS_WORD_DEAD_FIRST    8u // 빈 인스턴스 칸 스택(풀 크기 단어) — [0, 풀 - 살아 있는 수) 가 빈 칸이고 끝이 꼭대기다
+// 살아 있는 입자의 인스턴스 칸(렌더 입력 순서, 풀 크기 단어)의 첫 단어 — 메시 인스턴스 쓰기(vfx_mesh_instance.hlsl)가 읽는다.
+#define SW_VFX_ARGS_WORD_ALIVE_SLOT_FIRST( poolSize ) ( SW_VFX_ARGS_WORD_DEAD_FIRST + ( poolSize ) )
+// 다중 그룹 칸의 첫 단어 — 그룹 g 의 칸은 이 번호 + g. 다중 그룹 방출기만 그룹 수만큼 버퍼를 늘린다.
+#define SW_VFX_ARGS_WORD_GROUP_FIRST( poolSize ) ( SW_VFX_ARGS_WORD_DEAD_FIRST + ( poolSize ) * 2u )
 
 // 다중 그룹 경로: 풀 크기가 이 수 이상이면 단계마다 디스패치 셋(적분 · 접두사 합 · 압축)으로 돈다. 아니면 그룹 하나가 한 디스패치로 모든 단계를 돈다(두 경로는 같은 결과다).
 #define SW_VFX_MULTI_GROUP_MIN_POOL 4096u

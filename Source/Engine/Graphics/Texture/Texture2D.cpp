@@ -2,7 +2,6 @@
 
 #include "Engine/Graphics/Texture/Texture2D.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetLoadProfiler.h"
@@ -17,12 +16,6 @@
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"
-
-/**
- * @brief 텍스처를 읽을 때 버리는 위쪽 밉 수입니다. 사용자 설정 `graphics.textureQuality` 선택지의 `targetValue` 가 넣는다(`engine.settings.xml`, 다시 시작해야 반영).
- * @details Graphics 가 UserSettings 보다 아래 층이라 이 변수는 읽는 쪽인 여기에 둔다(설정은 이름으로 넣는다).
- */
-SW_GLOBAL_VARIABLE( int32, gv_textureMipDrop, 0, "텍스처를 읽을 때 버리는 위쪽 밉 수 (사용자 설정 graphics.textureQuality 의 targetValue, 다시 시작해야 반영)" );
 
 namespace sw
 {
@@ -166,7 +159,7 @@ namespace sw
         return drop;
     }
 
-    bool Texture2D::loadFromAsset( IRHIDevice* pDevice, const AssetID& assetID )
+    bool Texture2D::loadFromAsset( IRHIDevice* pDevice, const AssetID& assetID, int32 qualityMipDrop )
     {
         const string_view relativePath = assetID.view();
         if ( pDevice == nullptr || relativePath.empty() )
@@ -174,7 +167,7 @@ namespace sw
         DDSImageData image;
         if ( readImage( assetID, image ) == false )
             return false;
-        return loadFromImage( pDevice, relativePath, image, TextureResidency::Full );
+        return loadFromImage( pDevice, relativePath, image, TextureResidency::Full, qualityMipDrop );
     }
 
     bool Texture2D::readImage( const AssetID& assetID, DDSImageData& outImage )
@@ -235,12 +228,12 @@ namespace sw
         return layout;
     }
 
-    uint32 Texture2D::computeUpgradeFirstMip( const TextureMipLayout& layout )
+    uint32 Texture2D::computeUpgradeFirstMip( const TextureMipLayout& layout, int32 qualityMipDrop )
     {
         if ( layout._listMip.empty() )
             return 0;
         const TextureMipLayout::MipRange& top = layout._listMip.front();
-        return computeMipDrop( toRHIFormatFromDXGI( layout._dxgiFormat ), top._width, top._height, static_cast<uint32>( layout._listMip.size() ), static_cast<int32>( gv_textureMipDrop ) )._mipCount;
+        return computeMipDrop( toRHIFormatFromDXGI( layout._dxgiFormat ), top._width, top._height, static_cast<uint32>( layout._listMip.size() ), qualityMipDrop )._mipCount;
     }
 
     uint32 Texture2D::computeResidentFirstMip( const TextureMipLayout& layout )
@@ -253,7 +246,7 @@ namespace sw
     }
 
     Texture2DUploadStep Texture2D::beginUploadTail( IRHIDevice* pDevice, string_view relativePath, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& tailBytes,
-                                                    bool bBlocking )
+                                                    int32 qualityMipDrop, bool bBlocking )
     {
         if ( pDevice == nullptr || relativePath.empty() || firstMip >= layout._listMip.size() )
             return Texture2DUploadStep::Failed;
@@ -287,7 +280,7 @@ namespace sw
         if ( step != Texture2DUploadStep::Submitted )
             return step;
         // `_pDevice` 는 제출한 뒤에만 적는다(`beginUploadFromImage` 와 같은 이유). SRV 는 `finishUpload` 가 완료를 본 뒤에 등록한다.
-        const uint32 qualityFirstMip = computeUpgradeFirstMip( layout );
+        const uint32 qualityFirstMip = computeUpgradeFirstMip( layout, qualityMipDrop );
         _handle.store( handle, std::memory_order_release );
         _srv.store( kInvalidDescriptorIndex, std::memory_order_release );
         _uploadTicket     = ticket;
@@ -297,19 +290,21 @@ namespace sw
         _height           = desc._height;
         _mipCount         = desc._mipLevels;
         _streamedMipCount = firstMip > qualityFirstMip ? firstMip - qualityFirstMip : 0u;
+        _qualityMipDrop   = qualityMipDrop;
         _format           = format;
         return Texture2DUploadStep::Submitted;
     }
 
-    bool Texture2D::loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency )
+    bool Texture2D::loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency, int32 qualityMipDrop )
     {
         // 블로킹 헬퍼: 제출 → 대기 → 끝내기. 비동기 로드는 같은 두 단계를 프레임에 나눠 한다(`TextureLoadOperation`).
-        if ( beginUploadFromImage( pDevice, relativePath, image, residency, true ) != Texture2DUploadStep::Submitted )
+        if ( beginUploadFromImage( pDevice, relativePath, image, residency, qualityMipDrop, true ) != Texture2DUploadStep::Submitted )
             return false;
         return finishUpload( pDevice, true ) == Texture2DUploadStatus::Ready;
     }
 
-    Texture2DUploadStep Texture2D::beginUploadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& sourceImage, TextureResidency residency, bool bBlocking )
+    Texture2DUploadStep Texture2D::beginUploadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& sourceImage, TextureResidency residency, int32 qualityMipDrop,
+                                                         bool bBlocking )
     {
         if ( pDevice == nullptr || relativePath.empty() )
             return Texture2DUploadStep::Failed;
@@ -320,10 +315,10 @@ namespace sw
 
         const RHIFormat format = toRHIFormatFromDXGI( image._dxgiFormat );
         SW_ASSERT( format != RHIFormat::Unknown ); // `readImage` 가 거른다
-        // 텍스처 품질(gv_textureMipDrop) — DDS 페이로드는 밉 0 부터 이어지므로 버린 밉의 바이트를 건너뛰고 남은 밉 사슬을 업로드한다.
+        // 텍스처 품질(@p qualityMipDrop — 기동 때 뜬 사본) — DDS 페이로드는 밉 0 부터 이어지므로 버린 밉의 바이트를 건너뛰고 남은 밉 사슬을 업로드한다.
         // 스트리밍 기반(`StreamingBase`)은 같은 규칙으로 버릴 수 있는 만큼 버린다 — 품질이 버리는 밉보다 늘 많거나 같다(같은 식에 더 큰 요청).
         const uint32           fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
-        const Texture2DMipDrop qualityDrop  = computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( gv_textureMipDrop ) );
+        const Texture2DMipDrop qualityDrop  = computeMipDrop( format, image._width, image._height, fileMipCount, qualityMipDrop );
         const Texture2DMipDrop residentDrop =
             residency == TextureResidency::StreamingBase ? computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( fileMipCount ) ) : qualityDrop;
         // 텍스처를 만들고 업로드를 제출한다 — 끝남 확인과 bindless 등록은 `finishUpload` 의 몫이다(전송 계약 1 · 8).
@@ -346,6 +341,7 @@ namespace sw
         _height           = desc._height;
         _mipCount         = desc._mipLevels;
         _streamedMipCount = residentDrop._mipCount - qualityDrop._mipCount;
+        _qualityMipDrop   = qualityMipDrop;
         _format           = format;
         return Texture2DUploadStep::Submitted;
     }
@@ -439,7 +435,7 @@ namespace sw
         return Texture2DUploadStatus::Ready;
     }
 
-    Texture2DUploadStep Texture2D::beginUploadMips( IRHIDevice* pDevice, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& mipBytes, bool bBlocking )
+    Texture2DUploadStep Texture2D::beginUploadMips( IRHIDevice* pDevice, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& mipBytes, int32 qualityMipDrop, bool bBlocking )
     {
         // 다른 디바이스의 텍스처(백엔드 교체 뒤 아직 다시 업로드하지 않은 것)는 그 디바이스로 다시 만들 때 밉 전부가 올라간다(`initRHI`).
         const bool bReplaceable = pDevice != nullptr && _pDevice == pDevice && isRHIValid() && _upgrade._ticket.isValid() == false;
@@ -478,7 +474,7 @@ namespace sw
         upgrade._height   = desc._height;
         upgrade._mipCount = desc._mipLevels;
         // 품질이 버리는 밉보다 위는 늘 없다 — 그보다 아래에서 시작하면(내리기) 그만큼이 다시 올릴 위쪽 밉이다.
-        const uint32 qualityFirstMip = computeUpgradeFirstMip( layout );
+        const uint32 qualityFirstMip = computeUpgradeFirstMip( layout, qualityMipDrop );
         upgrade._streamedMipCount    = firstMip > qualityFirstMip ? firstMip - qualityFirstMip : 0u;
         _upgrade                     = upgrade;
         return Texture2DUploadStep::Submitted;
@@ -638,8 +634,8 @@ namespace sw
         if ( bPrepareFailed )
             return false; // 읽지 못한 까닭은 준비 때 남겼다
         if ( pPrepared != nullptr )
-            return loadFromImage( pDevice, _path, *pPrepared, TextureResidency::Full );
-        return loadFromAsset( pDevice, AssetID{ _path } );
+            return loadFromImage( pDevice, _path, *pPrepared, TextureResidency::Full, _qualityMipDrop );
+        return loadFromAsset( pDevice, AssetID{ _path }, _qualityMipDrop ); // 장치를 다시 세운다 — 처음 올릴 때의 품질 그대로(품질 변수는 읽지 않는다)
     }
 
     void Texture2D::prepareRHI()

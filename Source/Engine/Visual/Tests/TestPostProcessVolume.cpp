@@ -41,6 +41,16 @@ namespace
         return blendable;
     }
 
+    /** @brief 경로 @p pPath 의 LUT 를 가진 후처리 값입니다(경로는 텍스트 처리기로만 들어간다). */
+    PostProcessValues makeLUTValues( const char* pPath )
+    {
+        PostProcessValues values;
+        const bool        bParsed = SerializerUtil::parseTextValue( MutableValueAddress{ &values._colorGradingLUT }, hashed_string( "DataPath" ), pPath,
+                                                                    SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        SW_EXPECT_TRUE( bParsed );
+        return values;
+    }
+
     /** @brief 목록에서 @p pPath 항목의 무게입니다. 없으면 -1 입니다. */
     float32 findWeight( const vector<PostProcessBlendable>& listBlendable, const char* pPath )
     {
@@ -210,4 +220,43 @@ SW_TEST_CASE( PostProcessVolumeTest, BlendMixesEveryFieldAndStepsLetterbox )
     from._letterboxAspectRatio   = 1.85f;
     const PostProcessValues both = PostProcessValues::blend( from, to, 0.5f );
     SW_EXPECT_NEAR( ( 1.85f + 2.39f ) * 0.5f, both._letterboxAspectRatio, 1.0e-5f );
+}
+
+/** @brief [PostProcessVolumeTest] 겹친 볼륨의 LUT 는 절반에서 바뀌지 않고 두 장이 무게로 섞인다 — 같은 LUT 는 무게를 합치고, 셋째가 오면 가장 가벼운 것을 버리고, 다 넘어가면 한 장이 된다 */
+SW_TEST_CASE( PostProcessVolumeTest, ColorGradingLUTsBlendByWeight )
+{
+    const PostProcessValues lutA = makeLUTValues( "engine/textures/test/lut_a.dds" );
+    const PostProcessValues lutB = makeLUTValues( "engine/textures/test/lut_b.dds" );
+    const PostProcessValues lutC = makeLUTValues( "engine/textures/test/lut_c.dds" );
+
+    PostProcessValues values = lutA;
+    PostProcessValues::blendColorGradingLUT( values, lutB._colorGradingLUT, 0.3f );
+    SW_EXPECT_TRUE( values._colorGradingLUT == string_view( "engine/textures/test/lut_a.dds" ) );
+    SW_EXPECT_TRUE( values._colorGradingLUTBlend == string_view( "engine/textures/test/lut_b.dds" ) );
+    SW_EXPECT_NEAR( 0.3f, values._colorGradingLUTBlendWeight, 1.0e-6f );
+
+    // 같은 둘째 LUT 쪽으로 더 — A 0.7 × 0.5 = 0.35, B 0.3 × 0.5 + 0.5 = 0.65.
+    PostProcessValues sameTarget = values;
+    PostProcessValues::blendColorGradingLUT( sameTarget, lutB._colorGradingLUT, 0.5f );
+    SW_EXPECT_NEAR( 0.65f, sameTarget._colorGradingLUTBlendWeight, 1.0e-5f );
+
+    // 셋째 LUT C 를 0.5 로 — A 0.35 · B 0.15 · C 0.5 라 B 를 버리고 C / (A + C) = 0.5 / 0.85.
+    PostProcessValues third = values;
+    PostProcessValues::blendColorGradingLUT( third, lutC._colorGradingLUT, 0.5f );
+    SW_EXPECT_TRUE( third._colorGradingLUT == string_view( "engine/textures/test/lut_a.dds" ) );
+    SW_EXPECT_TRUE( third._colorGradingLUTBlend == string_view( "engine/textures/test/lut_c.dds" ) );
+    SW_EXPECT_NEAR( 0.5f / 0.85f, third._colorGradingLUTBlendWeight, 1.0e-5f );
+
+    // 다 넘어가면 둘째가 첫 칸이 되고 짝이 비워진다.
+    PostProcessValues full = values;
+    PostProcessValues::blendColorGradingLUT( full, lutB._colorGradingLUT, 1.0f );
+    SW_EXPECT_TRUE( full._colorGradingLUT == string_view( "engine/textures/test/lut_b.dds" ) );
+    SW_EXPECT_FALSE( full._colorGradingLUTBlend.isSet() );
+    SW_EXPECT_NEAR( 0.0f, full._colorGradingLUTBlendWeight, 0.0f );
+
+    // 빈 경로(항등 LUT)도 한 장으로 센다 — LUT 없는 볼륨 쪽으로 0.4 면 둘째(항등) 무게 0.4.
+    PostProcessValues toIdentity = lutA;
+    PostProcessValues::blendColorGradingLUT( toIdentity, PostProcessValues{}._colorGradingLUT, 0.4f );
+    SW_EXPECT_FALSE( toIdentity._colorGradingLUTBlend.isSet() );
+    SW_EXPECT_NEAR( 0.4f, toIdentity._colorGradingLUTBlendWeight, 1.0e-6f );
 }

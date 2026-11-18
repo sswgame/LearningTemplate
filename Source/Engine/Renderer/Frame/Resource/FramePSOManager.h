@@ -28,6 +28,7 @@ namespace sw
     struct ShaderCompileDesc;
 
     class GPUScene;
+    struct RenderFrameSettings;
     class IRHIDevice;
     class Material;
     class RenderPipelineAsset;
@@ -48,7 +49,7 @@ namespace sw
          * @brief 렌더러의 디바이스 변수 · 파이프라인 에셋 · GPUScene 을 읽는 관리자를 만듭니다. 셋은 이 관리자보다 오래 산다(렌더러의 멤버).
          * @details 디바이스는 렌더러의 `_pDevice` **변수**를 참조한다(`FrameCapture` 와 같다) — 렌더러가 디바이스를 바꿀 때 따로 알릴 일이 없다.
          */
-        FramePSOManager( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const GPUScene& gpuScene );
+        FramePSOManager( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const GPUScene& gpuScene, const RenderFrameSettings& frameSettings );
         ~FramePSOManager();
         FramePSOManager( const FramePSOManager& )            = delete;
         FramePSOManager& operator=( const FramePSOManager& ) = delete;
@@ -80,6 +81,11 @@ namespace sw
         RHIPipelineStateHandle getEnginePSO( RenderPassType passType ) const;
         /** @brief 파이프라인 컴퓨트 패스(`RenderPassType::Compute`) @p passName 의 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle findPipelineComputePSO( const hashed_string& passName ) const;
+        /**
+         * @brief 디퍼드 조명 타일 종류 @p tileClass 의 PSO(조명 패스 서술 + 그 종류의 엽만 — deferred_lighting.hlsl VSTile)입니다. 없으면 0 입니다.
+         * @details **조회만 한다.** 셋업(`createPassPSOs`)이 분류를 쓸 수 있는 백엔드(네이티브 bindless · 간접 인자)와 조명 패스가 있는 파이프라인에서 만든다.
+         */
+        RHIPipelineStateHandle findDeferredTilePSO( uint32 tileClass ) const;
         /**
          * @brief 주 출력에 그리는 패스(Present, Canvas, RCAS)의 PSO 를 **대상 포맷별로** 찾습니다.
          * @details **조회만 한다.** 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 된다. 셋업에 없는 포맷이면 대신 그리지 않고 멈춘다(`SW_FATAL`) —
@@ -240,6 +246,7 @@ namespace sw
         IRHIDevice* const&         _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다(생성자 참고). nullptr 이면 아무것도 만들지 않는다
         const RenderPipelineAsset& _pipeline;
         const GPUScene&            _gpuScene;
+        const RenderFrameSettings& _frameSettings; ///< 렌더러의 프레임 설정 사본(`FrameRenderState::_settings`) — 빌더 스레드 사용(`_bPSOAsync`)
         /// @brief 이 관리자가 소유하는 저장소입니다(엔진 패스 PSO, 출력 PSO, 머티리얼 변형과 그 바인딩 레이아웃). 빌려 쓰는 관리자는 이것을 비워 둔다.
         RenderPSOCache _cache;
         /// @brief 찾고 넣는 저장소입니다. 주 렌더러는 자기 `_cache`, 미리보기 씬 렌더러는 주 렌더러의 것입니다(`shareCache`).

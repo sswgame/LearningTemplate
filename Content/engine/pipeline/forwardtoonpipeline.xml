@@ -18,6 +18,7 @@
 				<item>SceneColor</item>
 				<item>SceneDepth</item>
 				<item>SceneVelocity</item>
+				<item>VelocityNeighborMax</item>
 			</_listInput>
 		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Present">

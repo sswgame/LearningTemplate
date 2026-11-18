@@ -14,8 +14,8 @@ namespace sw
     }
 
     ShadowCache::ShadowCache()
-        : _listLastTile{}
-        , _listTileValid{}
+        : _mapCached{}
+        , _mapNextCached{}
         , _listAction{}
         , _layerPool{}
         , _staticGeneration{ 0 }
@@ -28,16 +28,27 @@ namespace sw
     {
     }
 
+    const ShadowCache::CachedTile* ShadowCache::findCached( uint64 key ) const
+    {
+        const auto it = _mapCached.find( key );
+        return it != _mapCached.end() ? &it->second : nullptr;
+    }
+
     void ShadowCache::update( const vector<ShadowTileDraw>& listLocalTile, uint32 atlasResolution, uint64 staticGeneration, bool bEnabled )
     {
         const size_t tileCount = listLocalTile.size();
         _listAction.assign( tileCount, ShadowCacheTileAction::DrawAll );
         _bNeedsRebuild = SW_FALSE;
         _bUsesLayer    = SW_FALSE;
+        _mapNextCached.clear();
         if ( bEnabled == false )
         {
-            invalidate();
-            _listLastTile = listLocalTile;
+            // 내용은 기억하되 무효로 — 다시 켠 첫 프레임에 서 있는 빛은 Rebuild 다.
+            for ( const ShadowTileDraw& tile : listLocalTile )
+            {
+                _mapNextCached.insert_or_assign( tile._key, CachedTile{ tile, SW_FALSE } );
+            }
+            std::swap( _mapCached, _mapNextCached );
             return;
         }
 
@@ -45,31 +56,34 @@ namespace sw
         const bool bLayerInvalid = atlasResolution != _atlasResolution || staticGeneration != _staticGeneration;
         _atlasResolution         = atlasResolution;
         _staticGeneration        = staticGeneration;
-        _listTileValid.resize( tileCount, SW_FALSE );
+        // 키는 비트 그대로다 — 빛이 엡실론 아래로 움직여도 다른 그림이다(GPUSceneBuilder 후보 비교와 같은 까닭). 짝은 정체로 찾는다(순번이 아니다).
+        auto isMoved = [this]( const ShadowTileDraw& tile )
+        {
+            const CachedTile* pCached = findCached( tile._key );
+            return pCached == nullptr || isSameTile( tile, pCached->_tile ) == false;
+        };
         bool bAnyInvalid = false;
-        for ( size_t tileIndex = 0; tileIndex < tileCount; ++tileIndex )
+        for ( const ShadowTileDraw& tile : listLocalTile )
         {
-            // 키는 비트 그대로다 — 빛이 엡실론 아래로 움직여도 다른 그림이다(GPUSceneBuilder 후보 비교와 같은 까닭).
-            const bool bMoved = tileIndex >= _listLastTile.size() || isSameTile( listLocalTile[tileIndex], _listLastTile[tileIndex] ) == false;
-            if ( bMoved )
-            {
-                _listTileValid[tileIndex] = SW_FALSE;
+            if ( isMoved( tile ) )
                 continue; // DrawAll — 움직이는 빛은 지금까지처럼 다 그린다
-            }
-            bAnyInvalid = bAnyInvalid || bLayerInvalid || _listTileValid[tileIndex] == SW_FALSE;
+            bAnyInvalid = bAnyInvalid || bLayerInvalid || findCached( tile._key )->_bValid == SW_FALSE;
         }
-        // 층을 통째로 지우고 다시 그리므로 키가 그대로인 타일은 모두 Rebuild 이고 그 뒤로 유효하다.
+        // 층을 통째로 지우고 다시 그리므로 내용이 그대로인 타일은 모두 Rebuild 이고 그 뒤로 유효하다.
         for ( size_t tileIndex = 0; tileIndex < tileCount; ++tileIndex )
         {
-            const bool bMoved = tileIndex >= _listLastTile.size() || isSameTile( listLocalTile[tileIndex], _listLastTile[tileIndex] ) == false;
-            if ( bMoved )
-                continue;
-            _listAction[tileIndex]    = bAnyInvalid ? ShadowCacheTileAction::Rebuild : ShadowCacheTileAction::Reuse;
-            _listTileValid[tileIndex] = SW_TRUE;
-            _bUsesLayer               = SW_TRUE;
-            _bNeedsRebuild            = bAnyInvalid ? SW_TRUE : _bNeedsRebuild;
+            const ShadowTileDraw& tile   = listLocalTile[tileIndex];
+            const bool            bMoved = isMoved( tile );
+            if ( bMoved == false )
+            {
+                _listAction[tileIndex] = bAnyInvalid ? ShadowCacheTileAction::Rebuild : ShadowCacheTileAction::Reuse;
+                _bUsesLayer            = SW_TRUE;
+                _bNeedsRebuild         = bAnyInvalid ? SW_TRUE : _bNeedsRebuild;
+            }
+            _mapNextCached.insert_or_assign( tile._key, CachedTile{ tile, static_cast<uint8>( bMoved ? SW_FALSE : SW_TRUE ) } );
         }
-        _listLastTile = listLocalTile;
+        // 이번 프레임에 없는 정체(사라진 빛)는 잊는다.
+        std::swap( _mapCached, _mapNextCached );
     }
 
     ShadowCacheTileAction ShadowCache::getAction( uint32 tileIndex ) const
@@ -79,7 +93,10 @@ namespace sw
 
     void ShadowCache::invalidate()
     {
-        _listTileValid.clear();
+        for ( auto& entry : _mapCached )
+        {
+            entry.second._bValid = SW_FALSE;
+        }
         _bNeedsRebuild = SW_FALSE;
         _bUsesLayer    = SW_FALSE;
     }

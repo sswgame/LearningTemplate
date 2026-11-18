@@ -11,6 +11,7 @@
 #include "Engine/Renderer/Cook/ShaderCookRequestCollector.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/pair.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
@@ -20,6 +21,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
@@ -197,25 +199,14 @@ namespace sw
                 return FileUtil::normalizePath( relativePath ).str();
             }
 
-            /** @brief 두 define 목록을 합칩니다(중복 제거, 앞쪽 우선). */
+            /** @brief 두 define 목록을 합칩니다 — 같은 이름은 오른쪽 값으로 바꾼다(런타임 PSO 변형과 같은 함수 `MaterialPermutation::mergeDefine`). */
             static vector<string> mergeDefines( const vector<string>& listLeft, const vector<string>& listRight )
             {
                 vector<string> listMerged = listLeft;
                 for ( const string& define : listRight )
                 {
-                    if ( define.empty() )
-                        continue;
-                    bool bFound = false;
-                    for ( const string& existing : listMerged )
-                    {
-                        if ( existing == define )
-                        {
-                            bFound = true;
-                            break;
-                        }
-                    }
-                    if ( bFound == false )
-                        listMerged.push_back( define );
+                    if ( VectorUtil::contains( listMerged, define ) == false )
+                        MaterialPermutation::mergeDefine( listMerged, define );
                 }
                 return listMerged;
             }
@@ -313,6 +304,14 @@ namespace sw
                         }
                         appendPipelinePassStages( outListRequest, pass, pipelineResource, engineDefaultAssets, passShader._shaderPath, passShader._listDefine, pipelineOrigin );
                         appendInternalSlotMeshPasses( pass, engineDefaultAssets, pipelineOrigin, outListMeshPass, outListRequest );
+                        // 디퍼드 조명의 타일 종류 변형 — 런타임(FramePSOManager::createPassPSOs)과 같은 함수로 define 을 정하고 정점 진입점은 타일 사각형(VSTile)이다.
+                        for ( uint32 tileClass = 0; pass._type == RenderPassType::Lighting && tileClass < kDeferredTileClassCount; ++tileClass )
+                        {
+                            const RenderPassShaderSelection tileShader = selectDeferredTileLightingShader( pass, tileClass, engineDefaultAssets );
+                            appendRequestUnique( outListRequest, tileShader._shaderPath, kDeferredTileVertexEntryPoint, ShaderStage::Vertex, tileShader._listDefine, pipelineOrigin );
+                            appendRequestUnique( outListRequest, tileShader._shaderPath, resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ), ShaderStage::Pixel, tileShader._listDefine,
+                                                 pipelineOrigin );
+                        }
                     }
                     // 모듈 확장 패스의 프로그램(ExtensionRenderPass) — 모듈이 런타임에 고르는 셰이더라 파이프라인 XML 이 `_listExtensionShader` 로 선언한다. 진입점 · define 은 기본 한 벌이다.
                     for ( const string& moduleShader : pipelineResource.getDesc()._listExtensionShader )
@@ -407,15 +406,19 @@ namespace sw
             /** @brief 3) 패스가 아닌 엔진 · 테스트 셰이더(VS · PS 짝, 컴퓨트, 기본이 아닌 컴퓨트 진입점)입니다. */
             static void collectEngineShaderRequests( const EngineDefaultAssets& engineDefaultAssets, RequestList& outListRequest )
             {
-                const vector<string> listEngineShader = {
-                    engineDefaultAssets._shaderSprite2D.get(),
-                    engineDefaultAssets._shaderSprite2DLit.get(),
-                    engineDefaultAssets._shaderParticle.get(),
-                    engineDefaultAssets._shaderLayerBake.get() }; // 빠뜨린 칸은 ShaderCookCoverageTest 가 잡는다
-                for ( const string& path : listEngineShader )
+                // 스프라이트는 머티리얼 셰이더라 머티리얼 없이 컴파일하면 칸 0 을 적는다(웹은 칸 수가 없으면 머티리얼 칸 읽기가 정의되지 않는다).
+                // 입자 · 층 굽기는 파일 머리에 칸 수를 적은 비머티리얼 셰이더다.
+                const vector<string>                       listNoMaterialDefine{ MaterialPermutation::makeTextureCountDefine( 0 ) };
+                const vector<pair<string, vector<string>>> listEngineShader = {
+                    {   engineDefaultAssets._shaderSprite2D.get(), listNoMaterialDefine},
+                    {engineDefaultAssets._shaderSprite2DLit.get(), listNoMaterialDefine},
+                    {   engineDefaultAssets._shaderParticle.get(),                   {}},
+                    {  engineDefaultAssets._shaderLayerBake.get(),                   {}}
+                }; // 빠뜨린 칸은 ShaderCookCoverageTest 가 잡는다
+                for ( const pair<string, vector<string>>& entry : listEngineShader )
                 {
-                    appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {}, {} );
-                    appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {}, {} );
+                    appendRequestUnique( outListRequest, entry.first, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, entry.second, {} );
+                    appendRequestUnique( outListRequest, entry.first, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, entry.second, {} );
                 }
 
                 const vector<string> listEngineComputeShader = {

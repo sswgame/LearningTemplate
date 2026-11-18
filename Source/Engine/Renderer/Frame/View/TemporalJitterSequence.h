@@ -30,6 +30,8 @@ namespace sw
          * @brief 다음 표본으로 넘기고, 그 오프셋을 렌더 크기 @p width × @p height 의 NDC 오프셋으로 돌려줍니다. 크기가 0 이면 지터가 없습니다.
          */
         [[nodiscard]] float2 advance( uint32 width, uint32 height );
+        /** @brief 수열을 처음 표본으로 되돌립니다. 기록을 버린 프레임(처음 · 컷)마다 부른다 — 앞 씬이 흘린 프레임 수가 다음 씬의 지터 위상을 정하지 않게(언리얼은 카메라 컷에서 TAA 표본 번호를 0 으로). */
+        void restart() { _sampleIndex = 0; }
         /** @brief 표본 @p sampleIndex(0 부터, `kSampleCount` 로 돈다)의 픽셀 오프셋입니다. 각 성분은 -0.5 .. 0.5 입니다. */
         [[nodiscard]] static float2 getPixelOffset( uint32 sampleIndex );
         /**

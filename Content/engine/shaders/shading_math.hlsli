@@ -45,8 +45,9 @@ namespace sw::shadermath
         static float computeRefractedTangent( float sinIncident, float ior ); ///< 굴절된 빛의 tan θt(공기 → ior). 각막 아래 홍채 시차의 기울기다
         static float computeDistributionGGXTimesPi( float normalDotHalf, float alpha );
         static float computeVisibilitySmithGGX( float normalDotLight, float normalDotView, float alpha );
-        static float computeAlphaTangent( float alpha, float anisotropy );   ///< 비등방 GGX 의 탄젠트 쪽 α(Kulla · 이미지웍스 매핑)
-        static float computeAlphaBitangent( float alpha, float anisotropy ); ///< 비등방 GGX 의 바이탄젠트 쪽 α
+        static float computeAlphaTangent( float alpha, float anisotropy );                 ///< 비등방 GGX 의 탄젠트 쪽 α(Kulla · 이미지웍스 매핑)
+        static float computeAlphaBitangent( float alpha, float anisotropy );               ///< 비등방 GGX 의 바이탄젠트 쪽 α
+        static float computeAnisotropicNormalStretch( float anisotropy, float roughness ); ///< 비등방 반사 프로브의 굽힌 노멀 무게(언리얼 ModifyGGXAnisotropicNormalRoughness)
         static float computeDistributionAnisotropicGGXTimesPi( float normalDotHalf, float tangentDotHalf, float bitangentDotHalf, float alphaTangent, float alphaBitangent );
         static float computeVisibilityAnisotropicGGX( float normalDotLight, float normalDotView, float tangentDotView, float bitangentDotView, float tangentDotLight,
                                                       float bitangentDotLight, float alphaTangent, float alphaBitangent );
@@ -115,6 +116,12 @@ namespace sw::shadermath
     SW_SHADING_MATH_DEFINITION float ShadingMath::computeAlphaBitangent( float alpha, float anisotropy )
     {
         return max( alpha * ( 1.0f - anisotropy ), 1e-3f );
+    }
+
+    /** @brief 굽힌 노멀 무게 — |비등방| × saturate( 5 × 거칠기 ). 매끈하면 늘어날 하이라이트가 없어 0, 거칠기 0.2 부터 비등방 그대로다. */
+    SW_SHADING_MATH_DEFINITION float ShadingMath::computeAnisotropicNormalStretch( float anisotropy, float roughness )
+    {
+        return abs( anisotropy ) * saturate( 5.0f * roughness );
     }
 
     SW_SHADING_MATH_DEFINITION float ShadingMath::computeDistributionAnisotropicGGXTimesPi( float normalDotHalf, float tangentDotHalf, float bitangentDotHalf, float alphaTangent,

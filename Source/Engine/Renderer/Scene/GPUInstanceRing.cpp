@@ -39,6 +39,7 @@ namespace sw
 
         PublishRecord record{};
         record._build = _publishCounter;
+        record._size  = _pWrite->size();
         record._bAll  = bAllDirty ? SW_TRUE : SW_FALSE;
         if ( bAllDirty == false )
             record._listRun = listDirtyRun;
@@ -59,9 +60,11 @@ namespace sw
         vector<GPUInstance>&       job  = acquireWrite();
 
         // 슬롯이 발행된 뒤 무엇이 바뀌었나. 이력에서 (슬롯의 발행 번호, 마지막 발행 번호] 를 모은다.
+        // 길이가 바뀌었어도 이력은 쓸 수 있다 — 사이 발행 내내 있던 앞부분(가장 짧은 길이까지)은 구간만, 그 뒤는 통째로 맞춘다.
         const uint64 slotBuild = ( _writeSlotIndex < _listSlotBuild.size() ) ? _listSlotBuild[_writeSlotIndex] : 0;
-        bool         bWhole    = ( slotBuild == 0 ) || ( job.size() != prev.size() );
+        bool         bWhole    = slotBuild == 0;
         uint64       expected  = slotBuild + 1;
+        size_t       keptSize  = MathUtil::min( job.size(), prev.size() );
         if ( bWhole == false )
         {
             for ( const PublishRecord& record : _listHistory )
@@ -74,6 +77,7 @@ namespace sw
                     bWhole = true;
                     break;
                 }
+                keptSize = MathUtil::min( keptSize, record._size );
                 ++expected;
             }
             if ( expected != _publishCounter + 1 )
@@ -99,6 +103,8 @@ namespace sw
                     Memory::copy( job.data() + start, prev.data() + start, ( end - start ) * sizeof( GPUInstance ) );
             }
         }
+        if ( prev.size() > keptSize )
+            Memory::copy( job.data() + keptSize, prev.data() + keptSize, ( prev.size() - keptSize ) * sizeof( GPUInstance ) );
     }
 
     void GPUInstanceRing::clear()

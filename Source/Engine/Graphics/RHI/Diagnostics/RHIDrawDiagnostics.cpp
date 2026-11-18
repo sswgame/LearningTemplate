@@ -53,6 +53,19 @@ namespace sw
                          getBackendName(), pWhat, CallStackCapture::symbolize( stack ).c_str() );
     }
 
+    void RHIDrawDiagnostics::reportRenderPassInterrupted( const utf8* pOperation ) const
+    {
+        const uint32 count = countReport();
+        if ( count >= kMaxReportedDraw )
+            return;
+        // 부른 자리를 함께 남긴다 — 패스를 먼저 닫거나 입력을 패스 앞으로 옮길 곳이 곧 그 호출자다.
+        CallStack stack{};
+        CallStackCapture::capture( stack, 2 );
+        SW_LOG_ERROR_ID( "RHI.RenderPassInterrupted", "%# render pass interrupted by %#: work that cannot run inside a pass ended the open pass - draws after it in that pass are dropped. "
+                                                      "Call endRenderPass first, or bind inputs before beginRenderPass\n%#",
+                         getBackendName(), pOperation, CallStackCapture::symbolize( stack ).c_str() );
+    }
+
     void RHIDrawDiagnostics::reportConstantBufferRewrite( RHIBufferHandle handle ) const
     {
         const uint32 count = countReport();

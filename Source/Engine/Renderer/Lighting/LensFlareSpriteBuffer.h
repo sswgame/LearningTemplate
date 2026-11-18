@@ -40,6 +40,17 @@ namespace sw
         float4 _depthFade{};      ///< x 빛의 장치 깊이(방향광 1), y 가장자리 감쇠, zw 0
     };
 
+    /**
+     * @brief 같은 텍스처로 그리는 스프라이트 구간입니다 — 절차적 모양은 텍스처 없는 구간 하나, Image 원소는 텍스처마다 구간 하나(텍스처 바꿈 = 그리기 하나).
+     * @details 텍스처 경로는 요청이 쥔 에셋(`LensFlareRequest::_pAsset`)의 칸을 가리킨다 — 요청 목록이 사는 프레임 동안 유효하다.
+     */
+    struct LensFlareDrawRange
+    {
+        uint32          _firstSprite{ 0 };
+        uint32          _spriteCount{ 0 };
+        const DataPath* _pTexturePath{ nullptr }; ///< nullptr 이면 절차적 모양 구간
+    };
+
     /** @brief 이번 프레임 렌즈 플레어 스프라이트의 버퍼 소유자입니다(렌더 스레드). */
     class SW_API LensFlareSpriteBuffer
     {
@@ -64,22 +75,27 @@ namespace sw
         /**
          * @brief 요청들을 스프라이트로 펼칩니다(빛마다 원소 수만큼, 화면 밖 · 카메라 뒤 · 감쇠 0 인 빛은 뺀다).
          * @param aspect 주 시점의 가로 / 세로 — 크기(화면 높이 비율)를 NDC 로 옮긴다
+         * @param outListRange 같은 텍스처의 구간들 — 절차적 모양이 먼저 한 구간, 그 뒤 Image 원소가 텍스처 경로 차례로 묶인다(구간마다 그리기 하나)
          */
-        static void buildSprites( const vector<LensFlareRequest>& listRequest, const float4x4& viewProj, float32 aspect, vector<LensFlareSprite>& outListSprite );
+        static void buildSprites( const vector<LensFlareRequest>& listRequest, const float4x4& viewProj, float32 aspect, vector<LensFlareSprite>& outListSprite,
+                                  vector<LensFlareDrawRange>& outListRange );
 
         /** @brief 기록 전에 부릅니다 — 스프라이트를 펼쳐 올립니다. 버퍼를 못 만들면 오류를 한 번 남기고 이번 프레임은 그리지 않는다. */
         void prepare( IRHIDevice* pDevice, const vector<LensFlareRequest>& listRequest, const float4x4& viewProj, float32 aspect );
         /** @brief 이번 프레임에 그릴 스프라이트 수입니다(0 이면 패스가 그리지 않는다). */
         uint32 getSpriteCount() const { return _spriteCount; }
+        /** @brief 이번 프레임의 그리기 구간입니다(`buildSprites` 의 차례). */
+        const vector<LensFlareDrawRange>& getDrawRanges() const { return _listRange; }
         /** @brief 스프라이트 구조 버퍼입니다(패스 버퍼 슬롯 `shaderslot::kPassBuffer` 로 건다). */
         const RHIStructuredBuffer& getBuffer() const { return _buffer; }
         /** @brief 버퍼를 놓습니다. */
         void release( IRHIDevice* pDevice );
 
     private:
-        RHIStructuredBuffer     _buffer;
-        vector<LensFlareSprite> _listSpriteScratch;
-        uint32                  _spriteCount{ 0 };
-        uint8                   _bReportedFailure{ SW_FALSE };
+        RHIStructuredBuffer        _buffer;
+        vector<LensFlareSprite>    _listSpriteScratch;
+        vector<LensFlareDrawRange> _listRange;
+        uint32                     _spriteCount{ 0 };
+        uint8                      _bReportedFailure{ SW_FALSE };
     };
 } // namespace sw

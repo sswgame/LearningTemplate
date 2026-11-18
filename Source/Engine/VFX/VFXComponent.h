@@ -16,6 +16,7 @@
 #include "Engine/VFX/VFXCPUSimulation.h"
 #include "Engine/VFX/VFXEffectDef.h"
 #include "Engine/VFX/VFXGPUEmitter.h"
+#include "Engine/VFX/VFXMeshSlotVisibility.h"
 #include "Engine/VFX/VFXParticle.h"
 
 #include <variant>
@@ -42,8 +43,10 @@ namespace sw
      *
      *          메시 방출기(`VFXRenderMode::Mesh`)는 풀 크기만큼 항목을 가진 메시 인스턴스 배치(`MeshInstanceBatch`)를 프리미티브 레지스트리에 올리고
      *          틱마다 항목 행렬을 고친다 — 메시 경로(머티리얼 · 그림자 · 컬링 · 투명 정렬)를 그대로 탄다(언리얼 Niagara 메시 렌더러가 메시 드로우를 내는 것과 같다).
-     *          shortcut: 죽은 자리는 크기 0 행렬로 둔다(`setEntryVisible` 을 매 틱 바꾸면 빌더가 그 프레임을 전체 수집으로 돈다). 풀이 크고 대부분 비어 있는
-     *          방출기가 많아지면 항목 수를 살아 있는 수에 맞추는 배치 재구성을 따로 둔다.
+     *          CPU 메시 방출기의 항목은 입자가 수명 내내 쥐는 인스턴스 칸이다(`VFXCPUSimulation` 의 빈 칸 목록 — Niagara 의 free ID, VFX Graph 의 dead list).
+     *          살아 있는 칸만 보이고 죽은 칸은 숨긴다(`VFXMeshSlotVisibility`) — 그리는 수가 살아 있는 수이고, 토글은 그 칸 하나라 빌더가 부분 수집으로 그 칸만 고친다.
+     *          GPU 메시 방출기는 같은 모양을 GPU 가 한다 — 입자가 빈 칸 스택(dead list)에서 칸을 꺼내고 죽으면 돌려주며, 빈 칸은 컬링이 빼는 플래그를 켜(vfx_mesh_instance.hlsl)
+     *          간접 인자의 인스턴스 수가 살아 있는 수다. CPU 는 그 수를 모른다.
      *          충돌은 물리 씬(3D)을 방출기 로컬로 감싼 질의(`IVFXCollisionScene`)로 묻는다. 파티클 라이트는 `appendGPULights` 가 씬 라이트 목록에 붙인다.
      *
      *          효과는 `_effectPath` 를 읽을 때(상태 로드 · 프로퍼티 변경 · `setEffectPath`) 다시 만든다. 읽지 못하면 방출기가 없고 아무것도 그리지 않는다(효과 데이터가 오류를 남긴다).
@@ -144,6 +147,8 @@ namespace sw
             unique_ptr<MeshInstanceBatch>   _batch;
             unique_ptr<EnvironmentMaterial> _material;
             float32                         _meshRadius{ 0.0f }; ///< 메시 원점에서 가장 먼 꼭짓점까지(크기 1 기준) — 항목 바운드에 곱한다
+            VFXMeshSlotVisibility           _visibility;         ///< 살아 있는 입자의 칸만 보이게 둔다(CPU 메시 방출기)
+            vector<uint32>                  _listSlotScratch;    ///< 이번 틱 살아 있는 입자의 칸(`VFXCPUSimulation::writeInstanceSlots`) — 틱마다 다시 쓴다
         };
 
         /** @brief `_effectPath` 를 읽어 방출기마다 시뮬레이션 대상을 정하고 시뮬레이션을 만듭니다. 재생은 멈춥니다. 경로가 비었거나 읽지 못하면 방출기가 없습니다. */
@@ -168,7 +173,10 @@ namespace sw
         static bool updateMeshArrival( Component& component, float32 deltaSeconds );
         /** @brief 메시 방출기의 배치를 레지스트리에서 내리고 머티리얼을 놓습니다. */
         void releaseMeshEmitters();
-        /** @brief 메시 방출기 @p emitterIndex 의 항목을 @p listParticle(비면 모두 크기 0)로 고칩니다. */
+        /**
+         * @brief 메시 방출기 @p emitterIndex 의 항목을 @p pListParticle 로 고칩니다. 입자마다 그 입자의 인스턴스 칸에 쓰고 보이며, 이번에 죽은 칸은 숨깁니다.
+         * @details @p pListParticle 이 nullptr 이면 모두 숨깁니다. 아니면 시뮬레이션의 지금 입자와 같은 배열이어야 합니다(낸 직후 · 배치를 다시 만들 때).
+         */
         void writeMeshEntries( uint32 emitterIndex, const vector<GPUParticle>* pListParticle );
 
         PROPERTY( Category = "VFX", DisplayName = "Effect", Tooltip = "Particle effect (.vfx.xml)" )

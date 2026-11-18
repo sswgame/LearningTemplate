@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/Debug/GPUMessage.h"
 #include "Engine/Graphics/Debug/GPUNanCheck.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
 
 namespace sw
@@ -81,28 +82,30 @@ namespace sw
                     }
                     case RenderPassType::ForwardOpaque:
                     {
-                        // 입력은 그림자 맵과 접촉 그림자(깊이 프리패스 뒤의 ContactShadow 패스)뿐이고 둘 다 선택이다 — 접촉 그림자는 꺼지면 출력이 없다(3-7).
+                        // 입력은 그림자 맵 둘(방향광 · 점광 스폿) · 접촉 그림자(깊이 프리패스 뒤의 ContactShadow 패스) · DBuffer 셋(깊이 프리패스 뒤의 Decal 패스)이고 모두 선택이다
+                        // — 접촉 그림자 · DBuffer 는 꺼지면 출력이 없다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderForwardLit;
-                        info._inputContract  = makeContract( {}, { Role::ShadowMap, Role::ContactShadow } );
+                        info._inputContract  = makeContract( {}, { Role::ShadowMap, Role::LocalShadowMap, Role::ContactShadow, Role::DBufferA, Role::DBufferB, Role::DBufferC } );
                         info._flags          = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kMaterialBlend | Flag::kWritesVelocity | Flag::kHasInputContract | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::GBuffer:
                     {
-                        // define 은 이 PSO 를 물려받는 머티리얼 변형까지 MRT 서명으로 컴파일되게 한다.
+                        // define 은 이 PSO 를 물려받는 머티리얼 변형까지 MRT 서명으로 컴파일되게 한다. 입력은 DBuffer 셋(Decal 패스 — 데칼이 없는 뷰는 출력이 없다)뿐이고 선택이다.
                         info._pDefaultShader          = &EngineDefaultAssets::_shaderGBuffer;
                         info._pPassDefine             = kPassGBufferDefine;
                         info._pExcludedMaterialDefine = kMaterialForwardOnlyDefine;
                         info._pColorFormat            = kArrGBufferColorFormat;
                         info._colorTargetCount        = GBufferLayout::kAttachmentCount;
-                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kWritesVelocity | kSceneColorPassFlags;
+                        info._inputContract           = makeContract( {}, { Role::DBufferA, Role::DBufferB, Role::DBufferC } );
+                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kWritesVelocity | Flag::kHasInputContract | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::Lighting:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDeferredLighting;
                         // AO 는 조명의 입력이다 — 앰비언트 · 프로브 빛에만 곱한다(deferred_lighting.hlsl). 후처리(Bloom · Present)는 AO 를 받지 않는다(최종 색 전체에 곱하면 자체 발광 · 반투명까지 어두워진다).
-                        info._inputContract = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::GBufferCustomData, Role::SceneDepth }, { Role::ShadowMap, Role::ContactShadow, Role::AmbientOcclusion } );
+                        info._inputContract = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::GBufferCustomData, Role::SceneDepth }, { Role::ShadowMap, Role::LocalShadowMap, Role::ContactShadow, Role::AmbientOcclusion } );
                         info._flags         = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
                         break;
                     }
@@ -299,8 +302,25 @@ namespace sw
                     {
                         // 원본 색 · 장면 깊이 · 화면 속도를 읽는 효과 패스다. 꺼지면(후처리를 끈 뷰 · 품질 · gv_motionBlur · 컷 · 카메라와 물체가 모두 서 있음) 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderMotionBlur;
-                        info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth, Role::Velocity }, {} );
+                        info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth, Role::Velocity, Role::VelocityNeighborMax }, {} );
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
+                        break;
+                    }
+                    case RenderPassType::MotionBlurTileMax:
+                    {
+                        // 화면 속도 · 장면 깊이를 읽어 1/16 첨부에 타일 최대 속도를 쓴다. 출력 형식이 원본과 달라 원본을 가리키는 끄기(kBypassesToSource)는 없다 —
+                        // 모션 블러가 꺼진 뷰에서는 읽는 패스(모션 블러 · NeighborMax)가 원본을 가리켜 빠지므로 읽는 쪽이 없는 이 패스도 기록하지 않는다(kCullWhenUnconsumed — 데칼과 같다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderMotionBlurTileMax;
+                        info._inputContract  = makeContract( { Role::SceneDepth, Role::Velocity }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kCullWhenUnconsumed;
+                        break;
+                    }
+                    case RenderPassType::MotionBlurNeighborMax:
+                    {
+                        // 타일 최대 속도(원본 역할)를 읽어 같은 크기 첨부에 3x3 이웃 최대를 쓴다. 끄기는 TileMax 와 같다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderMotionBlurNeighborMax;
+                        info._inputContract  = makeContract( { Role::SourceColor }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kCullWhenUnconsumed;
                         break;
                     }
                     case RenderPassType::ScreenSpaceGI:
@@ -322,10 +342,11 @@ namespace sw
                     }
                     case RenderPassType::Decal:
                     {
-                        // 출력은 G버퍼 셋(알베도 · 노멀 · 머티리얼) — 깊이 붙임 없이 장면 깊이를 입력으로 읽는다(G버퍼 패스가 다 쓴 깊이). 블렌드 · 쓰기 마스크는 XML 이 적는다.
+                        // 출력은 DBuffer 셋(색 · 노멀 · 거칠기 금속도) — 깊이 붙임 없이 장면 깊이를 입력으로 읽는다(깊이 프리패스가 쓴 깊이). 블렌드는 XML 이 적는다(프리멀티플라이).
+                        // 데칼이 없는 뷰는 기록하지 않고 출력이 없다(kCullWhenUnconsumed 고르기 — FrameViewResources 의 isPassEnabledInView).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDecal;
                         info._inputContract  = makeContract( { Role::SceneDepth }, {} );
-                        info._flags          = Flag::kBlend | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        info._flags          = Flag::kBlend | Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kCullWhenUnconsumed | Flag::kDrawsBoxVolume;
                         break;
                     }
                     case RenderPassType::PostProcessMaterial:
@@ -487,6 +508,13 @@ namespace sw
                         info._flags          = Flag::kCompute | Flag::kDiagnostic | Flag::kRequiresNativeBindless;
                         break;
                     }
+                    case RenderPassType::DeferredTileClassify:
+                    {
+                        // G버퍼 알베도를 엔진 텍스처(bindless)로 읽고 간접 인자를 쓴다 — 간접 인자 능력(컬링과 같다)과 네이티브 bindless 가 함께 있어야 한다. 에뮬은 풀스크린 조명이다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderDeferredTileClassify;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kRequiresNativeBindless;
+                        break;
+                    }
                     case RenderPassType::ProbeUpdate:
                     {
                         // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
@@ -616,6 +644,10 @@ namespace sw
             if ( VectorUtil::contains( selection._listDefine, passDefine ) == false )
                 selection._listDefine.push_back( passDefine );
         }
+        // 씬 메시를 그리는 패스 PSO 는 머티리얼 없는 배치를 그린다 — 머티리얼 칸 0 을 적는다(웹은 칸 수가 없으면 머티리얼 칸 읽기가 정의되지 않는다).
+        // 머티리얼 변형은 같은 이름을 머티리얼 칸 수로 바꾼다(MaterialPermutation::mergeDefine).
+        if ( info.hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes ) )
+            selection._listDefine.push_back( MaterialPermutation::makeTextureCountDefine( 0 ) );
         // 화면 속도 — 출력 선언(데이터)이 정한다. 내부 슬롯은 대신 그리는 패스의 선언을 본다(컬러 포맷과 같은 근거).
         if ( passWritesVelocity( type, pTargetDesc ) )
             selection._listDefine.push_back( kPassVelocityDefine );
@@ -631,6 +663,17 @@ namespace sw
         const string              computeDefine{ kPassComputeImplementationDefine };
         if ( VectorUtil::contains( selection._listDefine, computeDefine ) == false )
             selection._listDefine.push_back( computeDefine );
+        return selection;
+    }
+
+    RenderPassShaderSelection selectDeferredTileLightingShader( const RenderGraphPassDesc& lightingDesc, uint32 tileClass, const EngineDefaultAssets& engineDefaultAssets )
+    {
+        constexpr uint32 kDecimalDigitCount = 10;
+        static_assert( kDeferredTileClassCount <= kDecimalDigitCount, "타일 종류 define 은 한 자리 숫자로 적는다" );
+        RenderPassShaderSelection selection = selectRenderPassShader( lightingDesc._type, &lightingDesc, &lightingDesc, engineDefaultAssets );
+        string                    classDefine{ "SW_DEFERRED_TILE_CLASS=" };
+        classDefine.push_back( static_cast<char>( '0' + tileClass ) );
+        selection._listDefine.push_back( std::move( classDefine ) );
         return selection;
     }
 

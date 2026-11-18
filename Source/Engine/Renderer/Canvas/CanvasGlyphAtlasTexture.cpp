@@ -13,6 +13,7 @@ namespace sw
 {
     CanvasGlyphAtlasTexture::CanvasGlyphAtlasTexture()
         : _listPage{}
+        , _listRetired{}
         , _regionScratchBytes{}
         , _appliedSequence{ 0 }
         , _bAwaitingFullUpload{ SW_FALSE }
@@ -56,6 +57,7 @@ namespace sw
         // 페이지 텍스처 — 없으면 만들고(새 디바이스 · 백엔드 교체 뒤에도 거울에서 다시 올린다) 바뀐 구간을 올린다. 프레임 경로라 GPU 완료를 기다리지 않는다:
         // 제출만 하고 완료는 이후 프레임에 폴링한다(`...AndWait` 를 부르면 Debug 단언).
         const RHITransferUtil::ScopedForbidBlockingTransfer forbidBlocking;
+        destroyRetiredTextures( &device );
         for ( AtlasPage& page : _listPage )
         {
             uploadPage( device, page );
@@ -73,6 +75,7 @@ namespace sw
 
     void CanvasGlyphAtlasTexture::release( IRHIDevice* pDevice )
     {
+        destroyRetiredTextures( pDevice );
         for ( AtlasPage& page : _listPage )
         {
             if ( pDevice != nullptr && page._texture != 0 )
@@ -132,13 +135,11 @@ namespace sw
         if ( _listPage.size() <= upload._page )
             _listPage.resize( static_cast<size_t>( upload._page ) + 1 );
         AtlasPage& page = _listPage[upload._page];
-        // shortcut: 아틀라스 모양은 카탈로그를 읽을 때 정해져 실행 중 바뀌지 않는다 — 이미 만든 페이지 텍스처와 한 변이 다르면 버린다. 실행 중 모양 바꾸기를 들일 때 텍스처를 다시 만든다.
-        if ( page._texture != 0 && page._pageSize != pageSize )
-        {
-            SW_LOG_ERROR_ID( "Canvas.GlyphAtlasPageSizeChanged", "Glyph atlas page %# changed size %# -> %# after its texture was created - skipped", upload._page, page._pageSize, pageSize );
-            return;
-        }
-        if ( page._bytes.empty() || upload._bWholePage == SW_TRUE || page._pageSize != pageSize )
+        // 모양(한 변 · 텍셀 형식)이 바뀌면 페이지 텍스처를 물리고 새 모양으로 다시 만든다 — 언리얼 폰트 캐시 · 유니티 TextMeshPro 동적 아틀라스가 커질 때와 같다.
+        const bool bShapeChanged = page._bytes.empty() == false && ( page._pageSize != pageSize || page._bytesPerTexel != upload._bytesPerTexel );
+        if ( bShapeChanged && page._texture != 0 )
+            retirePageTexture( page );
+        if ( page._bytes.empty() || upload._bWholePage == SW_TRUE || bShapeChanged )
         {
             page._bytesPerTexel = upload._bytesPerTexel;
             page._pageSize      = pageSize;
@@ -159,6 +160,32 @@ namespace sw
         {
             page._listDirty.push_back( GlyphAtlasRect{ upload._page, upload._x, upload._y, upload._width, upload._height } );
         }
+    }
+
+    void CanvasGlyphAtlasTexture::retirePageTexture( AtlasPage& page )
+    {
+        _listRetired.push_back( RetiredTexture{ page._texture, page._srv } );
+        page._texture         = 0;
+        page._srv             = kInvalidDescriptorIndex;
+        page._registerTicket  = RHITransferTicket{};
+        page._bFailed         = SW_FALSE;
+        page._bWholePageDirty = SW_TRUE;
+        page._listDirty.clear();
+    }
+
+    void CanvasGlyphAtlasTexture::destroyRetiredTextures( IRHIDevice* pDevice )
+    {
+        if ( pDevice != nullptr )
+        {
+            IRHIResourceFactory& factory = *pDevice->getResourceFactory();
+            for ( const RetiredTexture& retired : _listRetired )
+            {
+                if ( retired._srv != kInvalidDescriptorIndex )
+                    factory.unregisterBindlessTexture( retired._srv );
+                factory.destroyTexture( retired._texture );
+            }
+        }
+        _listRetired.clear(); // 디바이스가 없으면 핸들만 잊는다(release 와 같은 규칙)
     }
 
     void CanvasGlyphAtlasTexture::failPage( AtlasPage& page, string_view reason )

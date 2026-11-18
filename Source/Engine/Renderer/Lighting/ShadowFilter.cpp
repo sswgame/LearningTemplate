@@ -5,13 +5,10 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/UserSettings/UserSettingsVariables.h"
-
 namespace sw
 {
-    ShadowFilterMode ShadowFilter::getActiveMode()
+    ShadowFilterMode ShadowFilter::getActiveMode( int32 value )
     {
-        const int32 value = static_cast<int32>( gv_shadowFilter );
         if ( value < 0 || value >= static_cast<int32>( ShadowFilterMode::Count ) )
         {
             SW_LOG_ERROR_ONCE_ID( "ShadowFilter.InvalidMode", "gv_shadowFilter=%# is not a shadow filter (0 PCF 3x3, 1 PCSS) - drawing PCF 3x3", value );

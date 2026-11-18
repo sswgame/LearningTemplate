@@ -11,6 +11,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
@@ -231,5 +232,73 @@ namespace sw::test
 
     private:
         RHITransferSerials _transferSerials{ 1 }; ///< 손실 표시의 저장소(세대 1 — 레지스트리를 거치지 않는 가짜)
+    };
+} // namespace sw::test
+
+namespace sw::test
+{
+    /**
+     * @brief 기반 `IRHICommandContext` 의 렌더 패스 규칙을 그대로 쓰고 네이티브 동작은 세기만 하는 커맨드 컨텍스트입니다(패스 규칙 · 진단 테스트).
+     * @details 진단은 넘겨받은 디바이스의 `getDrawDiagnostics` 로 나간다 — 실제 백엔드와 같은 길이다.
+     */
+    class FakeRHICommandContext final : public IRHICommandContext
+    {
+    public:
+        uint32 _beginNativeCount{ 0 }; /**< `beginRenderPassNative` 횟수 */
+        uint32 _endNativeCount{ 0 };   /**< `endRenderPassNative` 횟수 — 기반이 열린 패스가 있을 때만 부른다 */
+        uint32 _drawNativeCount{ 0 };  /**< 나간 드로우 수(패스가 없어 버린 드로우는 세지 않는다) */
+
+        /** @brief 진단을 낼 디바이스와 함께 만듭니다. */
+        explicit FakeRHICommandContext( FakeRHIDevice& device )
+            : _pDevice{ &device }
+        {
+        }
+
+        void setViewport( const RHIViewport& ) override {}
+        void setScissorRect( const RHIScissorRect& ) override {}
+        void setPipelineState( RHIPipelineStateHandle ) override {}
+        void setVertexBuffer( uint32, RHIBufferHandle, uint32, uint32 ) override {}
+        void setIndexBuffer( RHIBufferHandle, uint32, uint32 ) override {}
+        void setComputeRootConstants( uint32, uint32, const void*, uint32 ) override {}
+        void setGraphicsRootConstants( uint32, uint32, const void*, uint32 ) override {}
+        void bindComputeUAV( RHIDescriptorIndex, uint32 ) override {}
+        void bindGraphicsUAV( RHIDescriptorIndex, uint32 ) override {}
+        void bindShaderResource( RHIDescriptorIndex, uint32 ) override {}
+        void bindConstantBuffer( RHIDescriptorIndex, uint32 ) override {}
+        void bindStructuredBuffer( RHIDescriptorIndex, uint32 ) override {}
+        void bindComputeConstantBuffer( RHIDescriptorIndex, uint32 ) override {}
+        void bindComputeShaderResource( RHIDescriptorIndex, uint32 ) override {}
+        void beginEventMarker( const utf8* ) override {}
+        void endEventMarker() override {}
+        void writeBreadcrumb( uint32 ) override {}
+
+    protected:
+        IRHIDevice&              getContextDevice() const override { return *_pDevice; }
+        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& ) override
+        {
+            ++_beginNativeCount;
+            return RHIRenderPassBeginResult::Begun;
+        }
+        void endRenderPassNative() override { ++_endNativeCount; }
+        void drawNative( uint32, uint32 ) override { ++_drawNativeCount; }
+        void drawInstancedNative( uint32, uint32, uint32, uint32 ) override { ++_drawNativeCount; }
+        void drawIndexedInstancedNative( uint32, uint32, uint32, int32, uint32 ) override { ++_drawNativeCount; }
+        void drawIndirectNative( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override { ++_drawNativeCount; }
+        void drawIndexedIndirectNative( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override { ++_drawNativeCount; }
+        void setComputePipelineStateNative( RHIPipelineStateHandle ) override {}
+        void dispatchComputeNative( uint32, uint32, uint32 ) override {}
+        void dispatchIndirectNative( RHIBufferHandle, uint32 ) override {}
+        void prepareTextureForShaderReadNative( RHITextureHandle ) override {}
+        void prepareTextureForRenderTargetNative( RHITextureHandle ) override {}
+        void prepareTextureForUnorderedAccessNative( RHITextureHandle ) override {}
+        void blitTextureNative( RHITextureHandle, RHITextureHandle ) override {}
+        void transitionBufferNative( RHIBufferHandle, RHIBufferState ) override {}
+        void copyBufferToReadbackNative( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
+        void copyBufferRegionNative( RHIBufferHandle, uint64, RHIBufferHandle, uint64, uint64 ) override {}
+        void uavBarrierNative( RHIBufferHandle ) override {}
+        void updateConstantBufferNative( RHIBufferHandle, const void*, uint32 ) override {}
+
+    private:
+        FakeRHIDevice* _pDevice; ///< 진단을 든 디바이스
     };
 } // namespace sw::test

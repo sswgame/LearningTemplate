@@ -17,6 +17,11 @@
 		<RenderPassAttachment _name="AOColor" _format="R8G8B8A8_UNORM" _clearColor="1,1,1,1" _loadOp="Clear" />
 		<!-- 접촉 그림자 마스크 — 채널 넷이 접촉 그림자를 켠 빛 넷이다(1 빛 받음 · 0 가림). 켠 빛이 없으면 패스가 돌지 않아 만들지도 않는다. -->
 		<RenderPassAttachment _name="ContactShadowMask" _format="R8G8B8A8_UNORM" _clearColor="1,1,1,1" _loadOp="Clear" />
+		<!-- DBuffer 데칼 셋(decal.hlsl 머리말 — 언리얼 DBufferA · B · C 와 같은 RGBA8) — rgb 덮인 값의 합, a 남은 비율. 클리어 (0, 0, 0, 1)이 "덮지 않음" 이다.
+		     데칼이 없는 뷰는 데칼 패스가 빠져 만들지도 않는다(G버퍼 패스는 걸지 않는다). -->
+		<RenderPassAttachment _name="DBufferA" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="DBufferB" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="DBufferC" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,1" _loadOp="Clear" />
 		<!-- 블룸의 밝은 부분은 반해상도로 구한다(BloomDownsample) — PostBloom 이 업샘플해 더한다. -->
 		<RenderPassAttachment _name="BloomBright"
 		                      _format="R16G16B16A16_FLOAT"
@@ -27,6 +32,9 @@
 		<RenderPassAttachment _name="TAAColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
 		<RenderPassAttachment _name="DepthOfFieldColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
 		<RenderPassAttachment _name="MotionBlurColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
+		<!-- 모션 블러 타일(16² 픽셀) 속도 — 타일 최대(MotionBlurTileMax) · 이웃 최대(MotionBlurNeighborMax). 나눗수는 motion_blur_tile_max.hlsl 의 kMotionBlurTileSize 와 같다. -->
+		<RenderPassAttachment _name="VelocityTileMax" _format="R16G16_FLOAT" _clearColor="0,0,0,0" _loadOp="Clear" _resolutionDivisor="16" />
+		<RenderPassAttachment _name="VelocityNeighborMax" _format="R16G16_FLOAT" _clearColor="0,0,0,0" _loadOp="Clear" _resolutionDivisor="16" />
 		<!-- 외곽선은 톤맵 앞의 HDR 색에 그린다 — 원본(BloomColor)과 같은 형식이어야 꺼진 뷰에서 출력이 원본을 가리킬 수 있다(RGBA8 이면 TAA · 톤맵 앞에서 1 이 넘는 색이 잘렸다). -->
 		<RenderPassAttachment _name="OutlineColor"
 		                      _format="R16G16B16A16_FLOAT"
@@ -52,6 +60,59 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 점광 · 스폿 그림자 — 깊이 첨부가 LocalShadowMap 역할이라 같은 그림자 패스 종류가 점광 · 스폿 타일을 그린다(방향광 캐스케이드는 위의 Shadow). -->
+		<RenderGraphPassDesc _name="LocalShadow"
+		                     _type="Shadow"
+		                     _depthAttachment="LocalShadowMap"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="true">
+			<_listInput />
+			<_listOutput>
+				<item>LocalShadowMap</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<!-- 깊이 프리패스(언리얼 EarlyZ — DBuffer 데칼이 요구한다) — 불투명 깊이를 먼저 써 데칼 패스가 G버퍼 앞에 위치를 복원한다. G버퍼는 같은 위치 함수로 같은 깊이를 내
+		     LessEqual 을 통과하고(forwardprepasspipeline.xml 과 같은 맞물림), 가려진 면의 G버퍼 셰이딩을 건너뛴다. -->
+		<RenderGraphPassDesc _name="DepthPrepass"
+		                     _type="DepthPrepass"
+		                     _depthAttachment="SceneDepth"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="true">
+			<_listInput />
+			<_listOutput>
+				<item>SceneDepth</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<!-- DBuffer 데칼(decal.hlsl) — 깊이 프리패스 뒤 · G버퍼 앞에 데칼 상자의 뒷면(컬 Front)을 그려 DBufferA · B · C 에 프리멀티플라이로 쌓는다
+		     (색 One · InvSrcAlpha, 알파 Zero · InvSrcAlpha — a 가 남은 비율). 데칼이 없는 뷰는 기록하지 않는다. -->
+		<RenderGraphPassDesc _name="Decal"
+		                     _type="Decal"
+		                     _cullMode="Front"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false">
+			<_listInput>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>DBufferA</item>
+				<item>DBufferB</item>
+				<item>DBufferC</item>
+			</_listOutput>
+			<_listBlendTarget>
+				<BlendTargetState _srcColor="One" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="InvSrcAlpha" _alphaOp="Add" _colorWriteMask="RGBA" _bEnableBlend="true" />
+				<BlendTargetState _srcColor="One" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="InvSrcAlpha" _alphaOp="Add" _colorWriteMask="RGBA" _bEnableBlend="true" />
+				<BlendTargetState _srcColor="One" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="InvSrcAlpha" _alphaOp="Add" _colorWriteMask="RGBA" _bEnableBlend="true" />
+			</_listBlendTarget>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="GBuffer"
 		                     _type="GBuffer"
 		                     _depthAttachment="SceneDepth"
@@ -60,7 +121,11 @@
 		                     _cullMode="Back"
 		                     _bEnableDepthTest="true"
 		                     _bEnableDepthWrite="true">
-			<_listInput />
+			<_listInput>
+				<item>DBufferA</item>
+				<item>DBufferB</item>
+				<item>DBufferC</item>
+			</_listInput>
 			<_listOutput>
 				<item>GBufferAlbedo</item>
 				<item>GBufferNormal</item>
@@ -72,28 +137,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 디퍼드 데칼(decal.hlsl) — G버퍼 뒤 · 조명 · SSAO 앞에 알베도 · 노멀 · 머티리얼 칸을 곧은 알파로 덮는다. 쓰기 마스크가 알베도 알파(셰이딩 모델 번호)와
-		     머티리얼 b · a(반사율 · 가림)를 지킨다. 데칼이 없는 프레임은 기록하지 않는다. -->
-		<RenderGraphPassDesc _name="Decal"
-		                     _type="Decal"
-		                     _cullMode="None"
-		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false">
-			<_listInput>
-				<item>SceneDepth</item>
-			</_listInput>
-			<_listOutput>
-				<item>GBufferAlbedo</item>
-				<item>GBufferNormal</item>
-				<item>GBufferMaterial</item>
-			</_listOutput>
-			<_listBlendTarget>
-				<BlendTargetState _srcColor="SrcAlpha" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="One" _alphaOp="Add" _colorWriteMask="RGB" _bEnableBlend="true" />
-				<BlendTargetState _srcColor="SrcAlpha" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="One" _alphaOp="Add" _colorWriteMask="RG" _bEnableBlend="true" />
-				<BlendTargetState _srcColor="SrcAlpha" _dstColor="InvSrcAlpha" _colorOp="Add" _srcAlpha="Zero" _dstAlpha="One" _alphaOp="Add" _colorWriteMask="RG" _bEnableBlend="true" />
-			</_listBlendTarget>
-			<_listPermutation />
-		</RenderGraphPassDesc>
+
 		<!-- 접촉 그림자(contact_shadow.hlsl) — 장면 깊이를 다 쓴 G버퍼 뒤, 조명 앞. 접촉 그림자를 켠 빛(LightShadowSettings::_contactShadowLength)이 없거나 후처리를 끈 뷰는 돌지 않는다. -->
 		<RenderGraphPassDesc _name="ContactShadow"
 		                     _type="ContactShadow"
@@ -144,6 +188,7 @@
 				<item>GBufferCustomData</item>
 				<item>SceneDepth</item>
 				<item>ShadowMap</item>
+				<item>LocalShadowMap</item>
 				<item>ContactShadowMask</item>
 				<item>AOColor</item>
 			</_listInput>
@@ -166,6 +211,7 @@
 				<item>LitColor</item>
 				<item>SceneDepth</item>
 				<item>ShadowMap</item>
+				<item>LocalShadowMap</item>
 			</_listInput>
 			<_listOutput>
 				<item>LitColor</item>
@@ -481,6 +527,38 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 모션 블러 타일 최대 · 이웃 최대 속도(McGuire 2012 — 언리얼 · 유니티 HDRP 와 같은 단계). 모션 블러가 꺼진 뷰에서는 읽는 패스가 빠져 함께 빠진다. -->
+		<RenderGraphPassDesc _name="MotionBlurTileMax"
+		                     _type="MotionBlurTileMax"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false">
+			<_listInput>
+				<item>SceneDepth</item>
+				<item>SceneVelocity</item>
+			</_listInput>
+			<_listOutput>
+				<item>VelocityTileMax</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="MotionBlurNeighborMax"
+		                     _type="MotionBlurNeighborMax"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false">
+			<_listInput>
+				<item>VelocityTileMax</item>
+			</_listInput>
+			<_listOutput>
+				<item>VelocityNeighborMax</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<!-- 모션 블러 — 화면 속도(카메라 + 물체)로 흐린다. 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 DepthOfFieldColor 를 그대로 넘긴다(같은 포맷). -->
 		<RenderGraphPassDesc _name="MotionBlur"
 		                     _type="MotionBlur"
@@ -494,6 +572,7 @@
 				<item>DepthOfFieldColor</item>
 				<item>SceneDepth</item>
 				<item>SceneVelocity</item>
+				<item>VelocityNeighborMax</item>
 			</_listInput>
 			<_listOutput>
 				<item>MotionBlurColor</item>

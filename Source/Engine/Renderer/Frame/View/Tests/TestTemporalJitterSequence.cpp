@@ -94,3 +94,19 @@ SW_TEST_CASE( TemporalJitterSequenceTest, NdcOffsetIsWithinOnePixel )
     const float2 none = jitter.advance( 0u, 0u );
     SW_EXPECT_TRUE( none._x == 0.0f && none._y == 0.0f );
 }
+
+/** @brief [TemporalJitterSequenceTest] 다시 시작하면 앞서 흐른 표본 수와 상관없이 첫 표본부터 같은 순서다 — 앞 씬의 프레임 수가 다음 씬의 그림을 바꾸지 않는다. */
+SW_TEST_CASE( TemporalJitterSequenceTest, RestartBeginsAtFirstSample )
+{
+    TemporalJitterSequence fresh;
+    TemporalJitterSequence used;
+    for ( uint32 frame = 0; frame < 5u; ++frame )
+        (void)used.advance( 640u, 360u );
+    used.restart();
+    for ( uint32 frame = 0; frame < TemporalJitterSequence::kSampleCount; ++frame )
+    {
+        const float2 expected = fresh.advance( 640u, 360u );
+        const float2 actual   = used.advance( 640u, 360u );
+        SW_EXPECT_TRUE( expected._x == actual._x && expected._y == actual._y );
+    }
+}
