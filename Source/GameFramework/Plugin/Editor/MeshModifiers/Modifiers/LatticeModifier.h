@@ -28,6 +28,11 @@ namespace sw::editor
         explicit LatticeModifier( int32 resolution );
         LatticeModifier();
 
+        /**
+         * @brief 차수 @p degree 의 베른슈타인 기저 값 @p degree + 1 개를 @p pOutWeight 에 채웁니다(매개변수 @p t, 드 카스텔조 방식).
+         * @details 버퍼는 `kMaxResolution` 칸이면 모든 해상도에 넉넉하다. XY 만 보는 2 차원 판(`FFD2DModifier`)도 같은 기저를 쓴다.
+         */
+        static void computeBernstein( int32 degree, float32 t, float32* pOutWeight );
         /** @brief 격자 모디파이어(레지스트리 id `lattice` · `ffd2` · `ffd3` · `ffd4`)면 그 포인터, 아니면 nullptr 입니다. RTTI 없이 id 로 가린다. */
         static LatticeModifier* findFrom( MeshModifier& modifier );
 

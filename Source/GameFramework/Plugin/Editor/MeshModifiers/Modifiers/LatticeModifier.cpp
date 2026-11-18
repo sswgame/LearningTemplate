@@ -22,25 +22,6 @@ namespace sw::editor
         {
             static constexpr uint32 kMaxCount = static_cast<uint32>( LatticeModifier::kMaxResolution );
 
-            /** @brief 차수 @p degree 의 베른슈타인 기저 값 @p degree + 1 개를 채웁니다. */
-            static void computeBernstein( int32 degree, float32 t, float32* pOutWeight )
-            {
-                // 드 카스텔조 방식으로 쌓는다(이항 계수를 따로 구하지 않는다)
-                pOutWeight[0]           = 1.0f;
-                const float32 oneMinusT = 1.0f - t;
-                for ( int32 order = 1; order <= degree; ++order )
-                {
-                    float32 carry = 0.0f;
-                    for ( int32 index = 0; index < order; ++index )
-                    {
-                        const float32 value = pOutWeight[index];
-                        pOutWeight[index]   = carry + oneMinusT * value;
-                        carry               = t * value;
-                    }
-                    pOutWeight[order] = carry;
-                }
-            }
-
             static float32 multiplyOrKeep( float32 normalized, float32 lower, float32 size, float32 original )
             {
                 return size > MathUtil::kEpsilon ? lower + normalized * size : original;
@@ -51,6 +32,24 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    void LatticeModifier::computeBernstein( int32 degree, float32 t, float32* pOutWeight )
+    {
+        // 드 카스텔조 방식으로 쌓는다(이항 계수를 따로 구하지 않는다)
+        pOutWeight[0]           = 1.0f;
+        const float32 oneMinusT = 1.0f - t;
+        for ( int32 order = 1; order <= degree; ++order )
+        {
+            float32 carry = 0.0f;
+            for ( int32 index = 0; index < order; ++index )
+            {
+                const float32 value = pOutWeight[index];
+                pOutWeight[index]   = carry + oneMinusT * value;
+                carry               = t * value;
+            }
+            pOutWeight[order] = carry;
+        }
+    }
+
     LatticeModifier::LatticeModifier( int32 resolution )
         : MeshModifier()
         , _box{}
@@ -129,9 +128,9 @@ namespace sw::editor
         float32 arrWeightX[LatticeModifierInternal::kMaxCount];
         float32 arrWeightY[LatticeModifierInternal::kMaxCount];
         float32 arrWeightZ[LatticeModifierInternal::kMaxCount];
-        LatticeModifierInternal::computeBernstein( _countX - 1, normalizedPoint._x, arrWeightX );
-        LatticeModifierInternal::computeBernstein( _countY - 1, normalizedPoint._y, arrWeightY );
-        LatticeModifierInternal::computeBernstein( _countZ - 1, normalizedPoint._z, arrWeightZ );
+        computeBernstein( _countX - 1, normalizedPoint._x, arrWeightX );
+        computeBernstein( _countY - 1, normalizedPoint._y, arrWeightY );
+        computeBernstein( _countZ - 1, normalizedPoint._z, arrWeightZ );
 
         float3 result{ 0.0f, 0.0f, 0.0f };
         for ( int32 indexZ = 0; indexZ < _countZ; ++indexZ )
