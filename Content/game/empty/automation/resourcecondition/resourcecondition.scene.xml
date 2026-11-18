@@ -1,7 +1,7 @@
 <?asset guid="04cc7d81aad95e7138d35f3416cdc082"?>
 <Scene formatVersion="3" name="ResourceCondition">
 	<!-- 리소스 조건 확인(automation/resourcecondition)의 무대 — 상호작용 대상 Probe 가 조건이 든 표(table.interactions.xml)의 Use 를 쥔다. Night 레이어는 처음에 꺼져 있고 엔티티가 없다(태그만 켠다). -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 		<_listDataLayer>
 			<SceneDataLayerDef _name="Night" _bInitiallyActive="false" />

@@ -4,7 +4,7 @@
   부지는 비어 시작한다. 시나리오 automation/housing.scenario.xml 이 개발 명령 housing.* 로 짓고 고스트 · 되돌리기 · 저장 · 재로드를 값으로 본다.
 -->
 <Scene formatVersion="3" name="Housing">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

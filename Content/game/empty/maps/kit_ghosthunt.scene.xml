@@ -1,6 +1,6 @@
 <?asset guid="d9ca1c59b8d2453998d9bb3b598207e4"?>
 <Scene formatVersion="2" name="KitDemoGhostHunt">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

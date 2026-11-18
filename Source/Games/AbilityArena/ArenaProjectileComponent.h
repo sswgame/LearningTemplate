@@ -37,6 +37,8 @@ namespace sw
         void bind( GameObjectHandle gameMode, uint32 projectileID, const float3& position );
         /** @brief 탄이 끝나 숨었습니다 — 디렉터가 풀에 돌려줄 때입니다. */
         bool isFinished() const { return _bFinished == SW_TRUE; }
+        /** @brief 풀 반환: 탄 id 를 비우고, 끝나며 숨긴 메시를 프리팹대로 다시 보이게 둡니다(꺼진 오브젝트라 그려지지 않는다). 디렉터 · 자리는 `bind` 가 정합니다. */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
 
     private:
         void placeMesh( const float3& position ) const;

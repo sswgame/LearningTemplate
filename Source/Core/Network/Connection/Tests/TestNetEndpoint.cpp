@@ -249,12 +249,12 @@ SW_TEST_CASE( NetEndpointTest, HostsRejectFullServersForeignProtocolsAndDetectDi
     NetEndpoint     first;
     NetEndpoint     second;
     NetEndpoint     foreign;
-    server.initialize( network.createEndpoint( 4000 ), settings );
-    first.initialize( network.createEndpoint( 5001 ), settings );
-    second.initialize( network.createEndpoint( 5002 ), settings );
+    SW_REQUIRE_TRUE( server.initialize( network.createEndpoint( 4000 ), settings ) );
+    SW_REQUIRE_TRUE( first.initialize( network.createEndpoint( 5001 ), settings ) );
+    SW_REQUIRE_TRUE( second.initialize( network.createEndpoint( 5002 ), settings ) );
     NetEndpointConfig otherGame = settings;
     otherGame._gameID           = 0xDEADBEEFu;
-    foreign.initialize( network.createEndpoint( 5003 ), otherGame );
+    SW_REQUIRE_TRUE( foreign.initialize( network.createEndpoint( 5003 ), otherGame ) );
     SW_EXPECT_TRUE( network.createEndpoint( 4000 ) == nullptr );
     SW_REQUIRE_TRUE( server.listen() );
     SW_REQUIRE_TRUE( first.connect( NetAddress::makeLoopback( 4000 ) ) );
@@ -328,9 +328,9 @@ SW_TEST_CASE( NetEndpointTest, ClosedSlotIsNotReusedBeforeTheGameThreadSeesTheDi
     NetEndpoint     server;
     NetEndpoint     first;
     NetEndpoint     second;
-    server.initialize( network.createEndpoint( 4100 ), settings );
-    first.initialize( network.createEndpoint( 5101 ), settings );
-    second.initialize( network.createEndpoint( 5102 ), settings );
+    SW_REQUIRE_TRUE( server.initialize( network.createEndpoint( 4100 ), settings ) );
+    SW_REQUIRE_TRUE( first.initialize( network.createEndpoint( 5101 ), settings ) );
+    SW_REQUIRE_TRUE( second.initialize( network.createEndpoint( 5102 ), settings ) );
     SW_REQUIRE_TRUE( server.listen() );
     SW_REQUIRE_TRUE( first.connect( NetAddress::makeLoopback( 4100 ) ) );
     float64    time   = 0.0;
@@ -382,8 +382,8 @@ SW_TEST_CASE( NetEndpointTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
     LoopbackNetwork network;
     NetEndpoint     server;
     NetEndpoint     client;
-    server.initialize( network.createEndpoint( 4000 ), serverSettings );
-    client.initialize( network.createEndpoint( 5000 ), clientSettings );
+    SW_REQUIRE_TRUE( server.initialize( network.createEndpoint( 4000 ), serverSettings ) );
+    SW_REQUIRE_TRUE( client.initialize( network.createEndpoint( 5000 ), clientSettings ) );
     SW_REQUIRE_TRUE( server.listen() );
     SW_REQUIRE_TRUE( client.connect( NetAddress::makeLoopback( 4000 ) ) );
     float64    time          = 0.0;
@@ -457,9 +457,9 @@ SW_TEST_CASE( NetEndpointTest, WireVersionMismatchIsRefusedWithReason )
     NetEndpoint     server;
     NetEndpoint     current;
     NetEndpoint     outdated;
-    server.initialize( network.createEndpoint( 4000 ), serverSettings );
-    current.initialize( network.createEndpoint( 5001 ), serverSettings );
-    outdated.initialize( network.createEndpoint( 5002 ), oldSettings );
+    SW_REQUIRE_TRUE( server.initialize( network.createEndpoint( 4000 ), serverSettings ) );
+    SW_REQUIRE_TRUE( current.initialize( network.createEndpoint( 5001 ), serverSettings ) );
+    SW_REQUIRE_TRUE( outdated.initialize( network.createEndpoint( 5002 ), oldSettings ) );
     SW_EXPECT_TRUE( current.getProtocolID() != outdated.getProtocolID() );
     SW_REQUIRE_TRUE( server.listen() );
     SW_REQUIRE_TRUE( current.connect( NetAddress::makeLoopback( 4000 ) ) );
@@ -500,9 +500,9 @@ SW_TEST_CASE( NetEndpointTest, LostAcceptedStillReportsClientIndex )
     NetEndpoint server;
     NetEndpoint first;
     NetEndpoint second;
-    server.initialize( &serverLink, NetEndpointConfig{} );
-    first.initialize( network.createEndpoint( 5000 ), NetEndpointConfig{} );
-    second.initialize( network.createEndpoint( 5001 ), NetEndpointConfig{} );
+    SW_REQUIRE_TRUE( server.initialize( &serverLink, NetEndpointConfig{} ) );
+    SW_REQUIRE_TRUE( first.initialize( network.createEndpoint( 5000 ), NetEndpointConfig{} ) );
+    SW_REQUIRE_TRUE( second.initialize( network.createEndpoint( 5001 ), NetEndpointConfig{} ) );
     SW_REQUIRE_TRUE( server.listen() );
     float64    time   = 0.0;
     const auto runAll = [&]( float64 seconds )
@@ -557,9 +557,9 @@ SW_TEST_CASE( NetEndpointTest, ExpiredChallengeIsRejected )
     NetEndpoint server;
     NetEndpoint slowClient;
     NetEndpoint fineClient;
-    server.initialize( network.createEndpoint( 4000 ), settings );
-    slowClient.initialize( &slowLink, settings );
-    fineClient.initialize( &fineLink, settings );
+    SW_REQUIRE_TRUE( server.initialize( network.createEndpoint( 4000 ), settings ) );
+    SW_REQUIRE_TRUE( slowClient.initialize( &slowLink, settings ) );
+    SW_REQUIRE_TRUE( fineClient.initialize( &fineLink, settings ) );
     SW_REQUIRE_TRUE( server.listen() );
     SW_REQUIRE_TRUE( slowClient.connect( NetAddress::makeLoopback( 4000 ) ) );
     SW_REQUIRE_TRUE( fineClient.connect( NetAddress::makeLoopback( 4000 ) ) );
@@ -626,12 +626,12 @@ SW_TEST_CASE( NetEndpointTest, UpdateVisitsOnlyDueConnectionsNotEverySlot )
     settings._debugHold      = NetDebugHold::Off;
     LoopbackNetwork network;
     NetEndpoint     server;
-    server.initialize( network.createEndpoint( 4000 ), settings );
+    SW_REQUIRE_TRUE( server.initialize( network.createEndpoint( 4000 ), settings ) );
     SW_REQUIRE_TRUE( server.listen() );
     NetEndpoint arrClient[kClientCount];
     for ( int32 index = 0; index < kClientCount; ++index )
     {
-        arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), settings );
+        SW_REQUIRE_TRUE( arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), settings ) );
         SW_REQUIRE_TRUE( arrClient[index].connect( NetAddress::makeLoopback( 4000 ) ) );
     }
     float64    time      = 0.0;
@@ -678,12 +678,12 @@ SW_TEST_CASE( NetEndpointTest, ServerTellsManyClientsApartByAddress )
     settings._maxConnections = 48;
     LoopbackNetwork network;
     NetEndpoint     server;
-    server.initialize( network.createEndpoint( 4000 ), settings );
+    SW_REQUIRE_TRUE( server.initialize( network.createEndpoint( 4000 ), settings ) );
     SW_REQUIRE_TRUE( server.listen() );
     NetEndpoint arrClient[kClientCount];
     for ( int32 index = 0; index < kClientCount; ++index )
     {
-        arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), settings );
+        SW_REQUIRE_TRUE( arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), settings ) );
         SW_REQUIRE_TRUE( arrClient[index].connect( NetAddress::makeLoopback( 4000 ) ) );
     }
     float64    time   = 0.0;
@@ -884,8 +884,8 @@ SW_TEST_CASE( NetEndpointTest, FullReliableWindowClosesInsteadOfDroppingMessages
     LoopbackNetwork network;
     NetEndpoint     server;
     NetEndpoint     client;
-    server.initialize( network.createEndpoint( 4200 ), settings );
-    client.initialize( network.createEndpoint( 5201 ), settings );
+    SW_REQUIRE_TRUE( server.initialize( network.createEndpoint( 4200 ), settings ) );
+    SW_REQUIRE_TRUE( client.initialize( network.createEndpoint( 5201 ), settings ) );
     SW_REQUIRE_TRUE( server.listen() );
     SW_REQUIRE_TRUE( client.connect( NetAddress::makeLoopback( 4200 ) ) );
     float64 time = 0.0;

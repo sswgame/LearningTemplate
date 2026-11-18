@@ -41,7 +41,29 @@ namespace sw
         , _bShowWhenHurt{ false }
         , _bHideWhenDead{ false }
         , _bWarnedNoWidgetComponent{ false }
+        , _spawnRatio{ 0.0f }
+        , _bSpawnVisible{ false }
+        , _bRatioResyncPending{ false }
     {
+    }
+
+    SpawnStateReset HealthBarComponent::resetToSpawnState()
+    {
+        if ( hasBegunPlay() == false )
+            return SpawnStateReset::Reset;
+        _bVisible            = _bSpawnVisible;
+        _bRatioResyncPending = true;
+        resetRatio( readStartRatio() );
+        return SpawnStateReset::Reset;
+    }
+
+    float32 HealthBarComponent::readStartRatio() const
+    {
+        const GameObject*            pOwner  = getOwner();
+        const HealthSourceComponent* pSource = pOwner != nullptr ? pOwner->getComponent<HealthSourceComponent>() : nullptr;
+        if ( pSource != nullptr && pSource->getHealthReading()._bHasHealth == SW_TRUE )
+            return pSource->getHealthRatio();
+        return _spawnRatio;
     }
 
     void HealthBarComponent::onBeginPlay()
@@ -50,13 +72,12 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
 
         // 같은 오브젝트의 체력 원천이 있으면 그 비율에서 시작한다 — 원천보다 먼저 시작하든, 맞은 뒤에 붙든 같다. 원천이 없으면 저장된 칸이다.
-        GameObject*                  pOwner  = getOwner();
-        const HealthSourceComponent* pSource = ( pOwner != nullptr ) ? pOwner->getComponent<HealthSourceComponent>() : nullptr;
-        if ( pSource != nullptr && pSource->getHealthReading()._bHasHealth == SW_TRUE )
-            _hpRatio = pSource->getHealthRatio();
-        _hpRatio     = MathUtil::saturate( _hpRatio );
-        _remainRatio = _hpRatio;
-        _targetRatio = _hpRatio;
+        GameObject* pOwner = getOwner();
+        _spawnRatio        = MathUtil::saturate( _hpRatio ); // 원천이 없을 때의 시작 비율(저장된 칸)
+        _hpRatio           = MathUtil::saturate( readStartRatio() );
+        _remainRatio       = _hpRatio;
+        _targetRatio       = _hpRatio;
+        _bSpawnVisible     = _bVisible;
 
         // 막대 위젯을 화면 마커에 넣는다(마커가 아직 UI 시스템에 묶이지 않았으면 묶일 때 붙는다). 끝날 때는 마커가 위젯을 지운다 — 다시 시작하면 다시 짓는다.
         WidgetComponent* pWidget            = findWidgetComponent();
@@ -74,6 +95,12 @@ namespace sw
     void HealthBarComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
+        if ( _bRatioResyncPending )
+        {
+            // 풀에서 다시 켜진 첫 틱이다 — 꺼낸 쪽이 정한 지금 체력에서 흔적 없이 시작한다(갓 시작한 바와 같다).
+            _bRatioResyncPending = false;
+            resetRatio( readStartRatio() );
+        }
 
         // 채움: 줄 때는 맞은 순간 줄고, 늘 때는 차오른다. 흔적: 채움보다 길면 채움까지 줄고, 짧아질 일은 없다(채움을 따라간다).
         if ( _targetRatio < _hpRatio )

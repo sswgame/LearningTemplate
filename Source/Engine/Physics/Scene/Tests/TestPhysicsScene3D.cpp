@@ -1,7 +1,8 @@
-// PhysicsScene3DTest — 3D 물리 씬의 용량 설정 · 임시 블록 폴백(감사 S-2), 캐릭터 속 바디 · 캐릭터끼리 막기(S-7), 캐릭터 일괄 이동(S-8). 디바이스 없음(nogpu).
+// PhysicsScene3DTest — 3D 물리 씬의 용량 설정 · 임시 블록 폴백(감사 S-2), 캐릭터 속 바디 · 캐릭터끼리 막기(S-7), 캐릭터 일괄 이동 · 청크 결정성(S-8, PhysicsCharacterTest). 디바이스 없음(nogpu).
 #include "pch.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -64,6 +65,70 @@ namespace
                 count += ( bInvolved && event._phase == phase ) ? 1u : 0u;
             }
             return count;
+        }
+
+        /**
+         * @brief 청크 @p chunkCount 개로 캐릭터 무리를 일괄 이동하며 월드를 스텝하고, 끝 자리(캐릭터마다 · 상자)를 냅니다.
+         * @details 캐릭터 24 명이 둘레에서 가운데의 동적 상자로 걸어 서로 밀고 상자를 민다 — 캐릭터끼리 · 바디 쓰기가 모두 든다.
+         */
+        static bool runCrowd( uint32 chunkCount, vector<float3>& outListPosition, float3& outCratePosition )
+        {
+            constexpr uint32     kCharacterCount     = 24;
+            constexpr float32    kRingRadius         = 4.0f;
+            constexpr float32    kWalkSpeed          = 2.0f;
+            constexpr float32    kFallSpeed          = -2.0f; // 바닥에 붙어 있게 아래로도 민다
+            constexpr uint32     kStepCount          = 180;   // 3 초 — 둘레(4 m)에서 상자까지 걸어 닿고 민다
+            const PhysicsSystem& system              = engine::getSubsystem<PhysicsSystem>();
+            PhysicsSettings      settings            = system.getSettings();
+            settings._characterChunkCount            = chunkCount;
+            const unique_ptr<IPhysicsScene3D> pScene = system.createScene3D( settings );
+            if ( pScene == nullptr )
+                return false;
+            PhysicsBodyDesc3D floor;
+            floor._listShape.push_back( PhysicsShapeDesc3D{} );
+            floor._listShape[0]._type        = PhysicsShapeType3D::Box;
+            floor._listShape[0]._halfExtents = float3{ 20.0f, 0.5f, 20.0f };
+            floor._position                  = float3{ 0.0f, -0.5f, 0.0f };
+            floor._type                      = PhysicsBodyType::Static;
+            PhysicsBodyDesc3D crate          = floor;
+            crate._listShape[0]._halfExtents = float3{ 0.5f, 0.5f, 0.5f };
+            crate._position                  = float3{ 0.5f, 0.5f, 0.0f }; // 가운데에서 비켜 둔다 — 둘레의 미는 힘이 서로 지우지 않게
+            crate._type                      = PhysicsBodyType::Dynamic;
+            crate._mass                      = 20.0f;
+            if ( pScene->createBody( floor ).isValid() == false )
+                return false;
+            const PhysicsBodyHandle crateBody = pScene->createBody( crate );
+            if ( crateBody.isValid() == false )
+                return false;
+            vector<PhysicsCharacterMove3D> listMove;
+            for ( uint32 index = 0; index < kCharacterCount; ++index )
+            {
+                const float32          angle = MathUtil::kTwoPi * static_cast<float32>( index ) / static_cast<float32>( kCharacterCount );
+                const float3           direction{ MathUtil::cos( angle ), 0.0f, MathUtil::sin( angle ) };
+                PhysicsCharacterDesc3D desc;
+                desc._position                         = direction * kRingRadius + float3{ 0.0f, 0.05f, 0.0f };
+                const PhysicsCharacterHandle character = pScene->createCharacter( desc );
+                if ( character.isValid() == false )
+                    return false;
+                listMove.push_back( PhysicsCharacterMove3D{
+                    character, direction * -kWalkSpeed + float3{ 0.0f, kFallSpeed, 0.0f }
+                } );
+            }
+            for ( uint32 step = 0; step < kStepCount; ++step )
+            {
+                pScene->moveCharacters( listMove, kFrame );
+                pScene->step( kFrame );
+            }
+            outListPosition.clear();
+            for ( const PhysicsCharacterMove3D& move : listMove )
+            {
+                PhysicsCharacterState3D state{};
+                if ( pScene->getCharacterState( move._character, state ) == false )
+                    return false;
+                outListPosition.push_back( state._position );
+            }
+            quaternion crateRotation{};
+            return pScene->getBodyTransform( crateBody, outCratePosition, crateRotation );
         }
     };
 } // namespace
@@ -141,10 +206,30 @@ SW_TEST_CASE( PhysicsScene3DTest, LargeActivePileDoesNotAbort )
 }
 
 /**
- * @brief [PhysicsScene3DTest] 일괄 이동(`moveCharacters`)은 칸마다 `moveCharacter` 와 같은 결과다(감사 S-8)
+ * @brief [PhysicsCharacterTest] 일괄 이동(`moveCharacters`)은 칸마다 `moveCharacter` 와 같은 결과이고, 청크 수(1 · 4 · 8)와 관계없이 비트까지 같다(감사 S-8)
+ * @details 청크는 작업 풀이 나눠 돈다. 캐릭터끼리는 단계 앞 사본을 보고 바디에 주는 힘은 단계 끝에 목록 차례로 주므로, 서로 밀고 상자를 미는 무리도
+ *          나누는 방법이 결과를 바꾸지 않는다(예전: 한 스레드로 차례로 돌았다).
  */
-SW_TEST_CASE( PhysicsScene3DTest, MoveCharactersMatchesMoveCharacter )
+SW_TEST_CASE( PhysicsCharacterTest, BatchMoveEqualsOneByOne )
 {
+    vector<float3> listReference;
+    float3         crateReference{};
+    SW_REQUIRE_TRUE( TestPhysicsScene3DInternal::runCrowd( 1, listReference, crateReference ) );
+    SW_EXPECT_TRUE( MathUtil::abs( crateReference._x - 0.5f ) + MathUtil::abs( crateReference._z ) > 0.01f ); // 무리가 상자를 밀었다(바디 쓰기 경로를 탔다)
+    for ( const uint32 chunkCount : { 4u, 8u } )
+    {
+        vector<float3> listPosition;
+        float3         cratePosition{};
+        SW_REQUIRE_TRUE( TestPhysicsScene3DInternal::runCrowd( chunkCount, listPosition, cratePosition ) );
+        SW_REQUIRE_EQUAL( listReference.size(), listPosition.size() );
+        for ( size_t index = 0; index < listPosition.size(); ++index )
+        {
+            SW_EXPECT_TRUE( listPosition[index] == listReference[index] );
+        }
+        SW_EXPECT_TRUE( cratePosition == crateReference );
+    }
+
+    // 서로 닿지 않는 둘은 하나씩 옮긴 것과 같다.
     const PhysicsSystem&              system  = engine::getSubsystem<PhysicsSystem>();
     const unique_ptr<IPhysicsScene3D> pSingle = system.createScene3D();
     const unique_ptr<IPhysicsScene3D> pBatch  = system.createScene3D();

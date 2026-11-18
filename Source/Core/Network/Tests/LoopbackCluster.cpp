@@ -31,7 +31,12 @@ namespace sw::test
         const int32 endpointIndex = getEndpointCount();
         _listEmulation.emplace_back( pTransport, _seed + static_cast<uint32>( endpointIndex ) );
         _listEndpoint.emplace_back();
-        _listEndpoint.back().initialize( &_listEmulation.back(), settings );
+        if ( _listEndpoint.back().initialize( &_listEmulation.back(), settings ) == false )
+        {
+            _listEndpoint.pop_back(); // 틀린 송신 속도 계수 — initialize 가 알렸다
+            _listEmulation.pop_back();
+            return nullopt;
+        }
         return endpointIndex;
     }
 

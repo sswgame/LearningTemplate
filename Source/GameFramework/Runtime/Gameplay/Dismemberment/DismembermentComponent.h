@@ -33,6 +33,7 @@
 namespace sw
 {
     class CharacterSurfaceState;
+    class Mesh;
     class ValidationContext;
 } // namespace sw
 
@@ -57,6 +58,11 @@ namespace sw
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 치명적 맞음(`HitInfo::_bFatal`)이 잘라 낼 수 있는 영역의 뼈에 들면 그 영역을 자릅니다. */
         void onHitReceived( const HitInfo& hit ) override;
+        /**
+         * @brief 풀 반환: 처음 자르기 전의 몸 메시를 유닛에 다시 걸고, 떨어뜨린 조각을 지우고, 잘린 영역 목록을 비웁니다.
+         * @details 뗀 래그돌 바디는 래그돌 되돌리기가, 잘린 영역의 피는 외형 되돌리기(표면 상태)가 되돌린다 — 그 상태의 주인이다.
+         */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
 
         /** @brief 몸 영역 테이블 경로를 바꾸고 다시 읽습니다. */
         void setRegionTablePath( string_view path );
@@ -88,6 +94,8 @@ namespace sw
 
     private:
         void loadRegionTable();
+        /** @brief 떨어뜨린 조각 오브젝트를 모두 지웁니다. */
+        void destroyPieces();
         /** @brief 영역 표의 영역들입니다. 표를 받지 못했으면 빈 목록입니다. */
         const vector<BodyRegionDef>& getRegions() const;
 
@@ -107,6 +115,7 @@ namespace sw
         SharedAssetRef<FitTables> _pRegionTable; ///< 영역 표(공유 캐시의 한 벌). 받지 못했으면 nullptr
         vector<hashed_string>     _listSeveredRegion;
         vector<GameObjectHandle>  _listPiece;
+        shared_ptr<Mesh>          _pIntactMesh; ///< 처음 자르기 전의 몸 메시(자른 적이 없으면 nullptr) — 풀 반환이 다시 건다
         bool                      _bTableLoaded;
     };
 } // namespace sw

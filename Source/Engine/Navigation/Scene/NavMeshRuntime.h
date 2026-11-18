@@ -5,7 +5,10 @@
  *          공개 헤더 `SceneNavigation.h` 는 앞 선언만 쓰므로 이 헤더를 퍼뜨리지 않습니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
@@ -69,6 +72,36 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 스트리밍 씬에서 쿠킹본 타일 하나의 자리 · 구간 · 단계입니다(`SceneNavigation::updateTileStreaming`). 씬 셀과 같은 원점 · 반경으로 올리고 내린다.
+     * @details 읽기는 IO 스레드가 하고 결과(`Read`)는 완료 콜백이 쥔 사본과 나눈다 — 취소하면 이쪽만 놓는다. 요청 핸들은 결과와 따로 든다(완료 콜백이 결과를 쥐어 고리가 되지 않게).
+     */
+    struct NavStreamTile
+    {
+        enum class State : uint8
+        {
+            Unloaded, ///< 내비메시에 없다
+            Loading,  ///< 구간을 읽는 중이다
+            Loaded,   ///< 끼웠다
+            Failed,   ///< 읽기 · 끼우기가 실패했다 — 다시 시도하지 않는다(프레임마다 같은 오류를 내지 않게)
+        };
+        /** @brief 워커가 채우는 읽기 결과입니다. `_bytes` 를 채운 뒤 `_state` 를 release 로 올린다(0 읽는 중 · 1 읽음 · 2 실패). */
+        struct Read
+        {
+            atomic<uint8> _state{ 0 };
+            vector<uint8> _bytes;
+        };
+        int32                _tileX{ 0 };
+        int32                _tileZ{ 0 };
+        NavTileRange         _range{};
+        const vector<uint8>* _pMemoryBytes{ nullptr }; ///< 메모리 쿠킹본(테스트 · 도구 — `SceneNavigation::setCookedAsset`)의 바이트. 있으면 읽지 않고 끼운다
+        uint64               _cookedInputHash{ 0 };    ///< 쿠킹 때 이 타일 영역의 입력 해시(0 이면 모른다)
+        uint64               _geometryHash{ 0 };       ///< 지금 이 타일이 바탕으로 삼은 입력의 영역 해시(`NavMeshGeometry::computeRegionHash`). 셀이 오르내리면 다시 잰다
+        shared_ptr<Read>     _pRead;
+        AsyncReadHandle      _readHandle;
+        State                _state{ State::Unloaded };
+    };
+
     class NavMeshObstacleComponent;
 
     /** @brief 장애물 캐시(`NavObstacleMode::TileCache`)에 넣은 장애물 하나 — 어느 컴포넌트의 것인지와 캐시 번호입니다. */
@@ -93,14 +126,17 @@ namespace sw
         vector<int2>                              _listDirtyTile;
         vector<unique_ptr<NavTileBakeJob>>        _listJob;
         /** @brief 이 줄이 낸 베이크 태스크 전부입니다(일마다 스테이지를 따로 만들지 않는다 — 언리얼 FGraphEventArray 처럼 주인 하나가 묶는다). 게임 스레드만 넣는다. */
-        TaskStageHandle               _bakeStage;
-        vector<NavCacheObstacleEntry> _listCacheObstacle; ///< 장애물 캐시에 든 장애물(캐시 모드에서만 — 다시 베이크 모드는 `_pVolume` 이다)
-        NavQueryFilter                _filter{};
-        NavMeshBakeStats              _bakeStats{};
-        AABB                          _bounds{};
-        float3                        _searchExtent{ 1.0f, 2.0f, 1.0f };
-        float32                       _crowdDeltaTime{ 0.0f }; ///< 워커에 넘긴 군중 진행의 시간(`SceneNavigation::launchCrowdUpdates` 가 넘기기 전에 적는다)
-        uint8                         _bFromCooked : 1;
+        TaskStageHandle                _bakeStage;
+        vector<NavCacheObstacleEntry>  _listCacheObstacle; ///< 장애물 캐시에 든 장애물(캐시 모드에서만 — 다시 베이크 모드는 `_pVolume` 이다)
+        NavQueryFilter                 _filter{};
+        NavMeshBakeStats               _bakeStats{};
+        AABB                           _bounds{};
+        float3                         _searchExtent{ 1.0f, 2.0f, 1.0f };
+        float32                        _crowdDeltaTime{ 0.0f }; ///< 워커에 넘긴 군중 진행의 시간(`SceneNavigation::launchCrowdUpdates` 가 넘기기 전에 적는다)
+        vector<NavStreamTile>          _listStreamTile;         ///< 스트리밍 씬에서 쿠킹본의 타일들(비면 모든 타일이 늘 끼워져 있다)
+        shared_ptr<const NavMeshAsset> _pStreamAsset;           ///< 타일 자리 · 구간을 준 쿠킹본(메모리 쿠킹본이면 타일 바이트도 여기 있다)
+        string                         _streamPath;             ///< 타일을 구간으로 읽는 쿠킹본의 리소스 id
+        uint8                          _bFromCooked : 1;
 
         NavMeshRuntime()
             : _bFromCooked{ SW_FALSE }
@@ -153,6 +189,16 @@ namespace sw
             }
         }
 
+        /** @brief 타일을 원점 둘레로 올리고 내리는 중인데 이 타일이 지금 내려가 있으면 true 입니다 — 다시 베이크 결과를 끼우지 않는다(내린 구역에 타일이 되살아나지 않게). */
+        bool isTileStreamedOut( const int2& tile ) const
+        {
+            for ( const NavStreamTile& streamTile : _listStreamTile )
+            {
+                if ( streamTile._tileX == tile._x && streamTile._tileZ == tile._y )
+                    return streamTile._state != NavStreamTile::State::Loaded;
+            }
+            return false;
+        }
         bool isTileInFlight( const int2& tile ) const
         {
             for ( const unique_ptr<NavTileBakeJob>& pJob : _listJob )

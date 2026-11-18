@@ -217,6 +217,11 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
+        /**
+         * @brief 풀 반환: 게임플레이가 쓴 파라미터(`Dead` · 트리거)와 코드 레이어(맞음 움찔)를 걷고 시작 상태(`_initialState`)부터 다시 재생합니다(지난 포즈에서 섞지 않는다).
+         * @details 시작 전(갓 스폰)이면 파라미터 · 레이어만 비운다 — 시작 상태는 `onBeginPlay` 가 튼다. 클립을 읽는 중이면 읽힌 뒤 시작 상태를 튼다(`_bStartPending`).
+         */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
 
         /**
          * @brief 상태(또는 그래프 밖 클립)를 재생합니다. @p blendSeconds 가 음수면 `_blendSeconds` 입니다. 클립을 찾았으면 true 입니다.

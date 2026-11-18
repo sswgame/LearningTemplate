@@ -1,0 +1,22 @@
+<?asset guid="f5cbb6bbba27405d9d256415bba2e1d7"?>
+<Prefab formatVersion="1" name="HousingFloor">
+	<GameObject _schemaVersion="0" _name="HousingFloor" _bActive="true">
+		<_listComponent>
+			<SceneComponent _localPosition="0,0,0"
+			                _localRotation="0,0,0"
+			                _localScale="1,1,1"
+			                _attachOwner="None"
+			                _attachComponent="None" />
+			<MeshComponent _localPosition="0,0.05,0"
+			               _localRotation="0,0,0"
+			               _localScale="1,0.1,1"
+			               _attachOwner="None"
+			               _attachComponent="SceneComponent#0"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/prototypegrid_light.material"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

@@ -114,8 +114,8 @@ namespace sw
             /**
              * @brief 스레드마다 둔 이름 → 타입 조회 캐시입니다. 타입 표의 **캐시**일 뿐 레지스트리가 아닙니다 — 표의 세대가 바뀌면 통째로 버립니다.
              * @details 씬 · 프리팹 로드는 컴포넌트마다 이름으로 찾는다. 표 조회는 공유 잠금 + 해시 두 번(짧은 이름 → FQN → 줄)이라
-             *          컴포넌트 하나에 10 ns 남짓을 더했다(Release `GameObjectBenchTest.AddComponentByName`). `TypeInfo` 주소는 고정이고
-             *          해제는 세대를 올리므로 포인터를 들고 있어도 된다. 생성 함수(`_addComponent`)는 부를 때마다 다시 읽는다.
+             *          컴포넌트 하나에 10 ns 남짓을 더했다(Release `GameObjectBenchTest.AddComponentByName`). `TypeInfo` 는 레지스트리가 사는 동안
+             *          지워지지 않고 해제 · 재등록은 세대를 올리므로 포인터를 들고 있어도 된다. 생성 함수(`_addComponent`)는 부를 때마다 다시 읽는다.
              */
             struct ComponentTypeCache
             {
@@ -1136,6 +1136,36 @@ namespace sw
         }
         SW_ASSERT( _bBuiltOnWorker == SW_FALSE || TaskManager::isOnPoolWorkerThread() == false ); // `registerComponent` 와 같은 규칙
         comp.dispatchPostLoad();
+    }
+
+    void GameObjectManager::swapDeferredRegistration( vector<ComponentHandle>& inoutRegister, vector<ComponentHandle>& inoutPostLoad )
+    {
+        SW_ASSERT( _deferredRegistrationDepth != 0 );
+        _listDeferredRegister.swap( inoutRegister );
+        _listDeferredPostLoad.swap( inoutPostLoad );
+    }
+
+    void GameObjectManager::appendDeferredRegistration( const vector<ComponentHandle>& listRegister, const vector<ComponentHandle>& listPostLoad )
+    {
+        SW_ASSERT( _deferredRegistrationDepth != 0 );
+        _listDeferredRegister.insert( _listDeferredRegister.end(), listRegister.begin(), listRegister.end() );
+        _listDeferredPostLoad.insert( _listDeferredPostLoad.end(), listPostLoad.begin(), listPostLoad.end() );
+    }
+
+    void GameObjectManager::stageGameObjects( span<const uint64> listObjectID )
+    {
+        _pState->_store.stageGameObjects( listObjectID );
+    }
+
+    void GameObjectManager::releaseStagedGameObjects( span<const uint64> listObjectID )
+    {
+        vector<GameObject*> listUnstaged;
+        _pState->_store.releaseStagedGameObjects( listObjectID, listUnstaged );
+        // 드러난 컴포넌트로 틱 항목을 다시 만든다 — 숨어 있는 동안 만든 항목에는 빠져 있다.
+        for ( GameObject* pObj : listUnstaged )
+        {
+            pObj->markTickOrderDirty();
+        }
     }
 
     void GameObjectManager::endDeferredRegistration()

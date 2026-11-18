@@ -3,10 +3,10 @@
 	물리 설정 표 — 충돌 레이어(순서가 번호 0..31) · 레이어끼리의 충돌 · 물리 재질 · 중력 · 서브스텝(고정 스텝 길이는 EngineConfig._fixedDeltaTime 하나).
 	코드는 이름으로만 고른다(PhysicsSettings::findLayerIndex · findMaterial). 모르는 이름 · 겹친 이름은 읽을 때 오류다.
 	충돌 목록은 대칭으로 읽는다 — 한쪽에만 적어도 둘이 부딪힌다.
-	3D 씬 용량(바디 · 쌍 · 접촉 수, 임시 블록 바이트)은 필수다. 임시 블록이 넘치면 힙으로 이어 가며 경고한다 — 경고가 나면 _tempAllocatorBytes 를 올린다.
+	3D 씬 용량(바디 · 쌍 · 접촉 수, 임시 블록 바이트)은 필수다. 임시 블록이 넘치면 힙으로 이어 가며 경고한다 — 경고가 나면 _tempAllocatorBytes(캐릭터 이동 청크는 _characterChunkTempBytes)를 올린다.
 	재질마다 표면 종류(engine/environment/default.surfacekinds.xml)가 있어야 한다 — 발소리 · 이동 계수 · 발자국이 재질 이름으로 종류를 찾는다.
 -->
-<PhysicsSettings _gravity="0,-9.81,0" _gravity2D="0,-9.81" _subStepCount2D="4" _maxBodyCount="65536" _maxBodyPairCount="65536" _maxContactCount="32768" _tempAllocatorBytes="16777216" _maxDebrisBodyCount="512">
+<PhysicsSettings _gravity="0,-9.81,0" _gravity2D="0,-9.81" _subStepCount2D="4" _maxBodyCount="65536" _maxBodyPairCount="65536" _maxContactCount="32768" _tempAllocatorBytes="16777216" _maxDebrisBodyCount="512" _characterChunkCount="16" _characterChunkTempBytes="262144">
 	<_listLayer>
 		<PhysicsLayerDef _name="Default">
 			<_listCollidesWith>

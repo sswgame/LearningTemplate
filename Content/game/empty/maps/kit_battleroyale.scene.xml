@@ -1,6 +1,6 @@
 <?asset guid="1be67a7294e9477aa1983ea316e54b90"?>
 <Scene formatVersion="2" name="KitDemoBattleRoyale">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

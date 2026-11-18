@@ -310,6 +310,19 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 풀 반환 계약의 답입니다(`Component::resetToSpawnState`). 언리얼 Lyra 의 풀 반환 · 유니티 `IPoolable.OnReturn` 의 자리입니다.
+     * @details 기본은 `Unsupported` 다 — 되돌리기를 구현하지 않은 컴포넌트가 붙은 프리팹은 풀(`PrefabPool`)이 받지 않는다(오류로 멈추고 매번 스폰으로 물러서지 않는다).
+     */
+    enum class SpawnStateReset : uint8
+    {
+        Unsupported = 0, ///< 되돌리기를 모른다 — 이 컴포넌트가 붙은 프리팹은 풀 정책으로 쓸 수 없다
+        Reset,           ///< 스폰 상태로 되돌렸다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class Component
      * @brief GameObject 에 기능과 데이터를 덧붙이는 컴포넌트의 기반 클래스입니다.
      * @details 리플렉션에는 **만들 수 없는 기반**(`Abstract`)으로 등록한다. 팩토리가 없어 이름으로 붙일 수 없다.
@@ -465,6 +478,13 @@ namespace sw
          */
         virtual void foldStateHash( StateHashBuilder& inoutBuilder ) const;
         /**
+         * @brief 풀에 돌려줄 때 실행 중에 바뀐 상태(죽음 · 맞음 · 래그돌 · 절단 · 빙의처럼 사건이 바꾼 것)를 갓 스폰한 상태로 되돌립니다. 게임 스레드 · 틱 밖에서 부릅니다.
+         * @details 기본은 `SpawnStateReset::Unsupported` 다 — 풀(`PrefabPool`)이 처음 만든 인스턴스의 계층 전부에 이 함수를 불러 하나라도 모르면 오류로 그 풀을 막는다.
+         *          그래서 갓 스폰한 상태에서 불러도 아무것도 바뀌지 않아야 한다. 꺼낸 쪽이 매번 다시 정하는 값(배치 · `launch` 같은 시작 호출이 넣는 설정)은 되돌리지 않는다.
+         *          남의 컴포넌트 상태를 바꾼 컴포넌트가 그것을 되돌린다(절단이 바꾼 몸 메시는 절단이, 래그돌이 끈 컨트롤러는 래그돌이). 재정의는 부모 것을 부르지 않는다.
+         */
+        [[nodiscard]] virtual SpawnStateReset resetToSpawnState() { return SpawnStateReset::Unsupported; }
+        /**
          * @brief 리플렉션 값을 직렬화기로 **직접** 쓴 뒤 부릅니다. 프로퍼티마다 `onPropertyChanged` 를 부르고, 그다음 `onPostLoad` 를 부릅니다(언리얼의
          *        `PostEditChangeProperty`, 유니티의 `OnValidate` 에 해당).
          * @details 에디터에서 컴포넌트 값 붙여넣기, 새로 붙여넣기, 프리셋, 오버라이드 되돌리기, 기본값 되돌리기는 `BinarySerializer`,
@@ -598,6 +618,11 @@ namespace sw
 
         /** @brief 삭제 예정인지 확인합니다. */
         bool isPendingDestroy() const { return _bIsPendingDestroy.load( std::memory_order_acquire ); }
+        /**
+         * @brief 여러 프레임에 나눠 짓는 스트리밍 셀에 들어 아직 드러나지 않았으면 true 입니다(`GameObjectStore::stageGameObjects` 만 바꾼다).
+         * @details 틱 항목 · 시작(onBeginPlay) · 타입별 순회가 건너뛴다. 등록(onRegister)은 셀을 지은 쪽이 다 지은 뒤에 부른다 — 언리얼 레벨의 AddToWorld 가 끝나 보이게 되기 전과 같다.
+         */
+        bool isStaged() const { return _bStaged == SW_TRUE; }
         /** @brief 컴포넌트 이름(해시)을 반환합니다. */
         hashed_string getComponentName() const { return _componentName; }
         /** @brief 저장된 고정 지역 id 입니다. 0 이면 아직 굳히지 않았다 — 키 · 세이브가 쓰는 값은 `ComponentStableKey::getLocalID` 다. */
@@ -659,7 +684,8 @@ namespace sw
         uint8        _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직 불리지 않았다. `dispatchBeginPlay` 와 `dispatchEndPlay` 만 바꾼다
         uint8        _bRegistered       : 1; ///< onRegister 가 불렸고 onUnregister 는 아직 불리지 않았다. `dispatchRegister` 와 `dispatchUnregister` 만 바꾼다
         uint8        _bPostLoadPending  : 1; ///< 상태를 읽었고 `onPostLoad` 가 배치 끝에 온다. `markPostLoadPending` 과 `dispatchPostLoad` 만 바꾼다
-        uint8        _reservedFlags     : 3;
+        uint8        _bStaged           : 1; ///< 나눠 짓는 셀에 들어 아직 드러나지 않았다. 저장소 잠금 아래에서 `stageGameObjects` · `releaseStagedGameObjects` 만 바꾼다
+        uint8        _reservedFlags     : 2;
         /**
          * @brief `_pPoolEntry` 의 버킷 안 위치입니다. 버킷에 없으면 `kNotInPoolEntry` 입니다. 제거를 O(1) 로 하려고 둡니다.
          * @details 플래그(4 B) 뒤, `_listSubTick` 앞의 정렬 패딩에 들어간다. 앞쪽으로 옮기면 객체가 커진다. 저장소의 `_mutex` 아래에서만 바뀐다.

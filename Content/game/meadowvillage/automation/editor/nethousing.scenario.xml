@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d1ef2f932703436185b11759bf4527d4"?>
+<!--
+  MeadowVillage 하우징 서버 권위 배치 — 한 프로세스 재생(서버 월드 0 · 클라이언트 월드 1, 뒤에 늦게 붙는 클라이언트 월드 2)에서 값으로 본다. 그림은 판정하지 않는다.
+  ① 차지: 클라이언트 1 의 집 디렉터(자동 플레이)가 부지를 차지해 달라고 요청하고 서버가 주인으로 적는다(Owned).
+  ② 배치: 디렉터의 놓기 아홉은 요청이고, 서버가 자기 레이아웃 · 지갑으로 판정해 적용한 부지 상태가 클라이언트에 방송된다(두 월드의 배치 수 · 잔액이 같다).
+  ③ 늦은 참가: 클라이언트 2 가 붙으면(netsim.addclient) 다음 서버 틱에 같은 부지 상태를 받는다.
+  ④ 남의 부지: 클라이언트 2 의 디렉터가 부지를 차지하려 하면 서버가 NotOwner(HousingPlaceResult 14)로 거절하고 아무것도 바뀌지 않는다.
+  값은 감시 값 Editor.NetSimValue(target = 월드, key = MeadowNetSimGame 의 값 이름)다.
+  실행: App -EnableEditor -scenario=game/meadowvillage/automation/editor/nethousing.scenario.xml -unattended (체인: Scenario.meadowvillage.editor)
+-->
+<Scenario name="game.meadowvillage.nethousing" requiresModule="GF_EditorPlugin_NetSimulation" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_meadowAutoPlay" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus multiplayer"/>
+	<EditorWaitStable/>
+	<EditorClick mark="multiplayer.tab.inprocess" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="multiplayer.tab.inprocess" state="Up"/>
+	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
+	<DevCommand line="netsim.start 1 MeadowVillage: housing"/>
+	<WaitUntil watch="Editor.NetSimRunning" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.NetSimWorldCount" equals="2"/>
+	<!-- ① 클라이언트 1 이 부지를 차지한다 -->
+	<WaitUntil watch="Editor.NetSimValue" target="1" key="Owned" equals="1" timeoutFrames="600"/>
+	<Expect watch="Editor.NetSimValue" target="0" key="Owned" equals="0"/> <!-- 서버 월드에는 플레이어가 없다 -->
+	<!-- ② 서버가 판정한 배치가 두 월드에 같다 -->
+	<WaitUntil watch="Editor.NetSimValue" target="0" key="PlacementCount" equals="9" timeoutFrames="2400"/>
+	<WaitUntil watch="Editor.NetSimValue" target="1" key="PlacementCount" equals="9" timeoutFrames="120"/>
+	<WaitUntil watch="Editor.NetSimValue" target="1" key="PendingRequests" equals="0" timeoutFrames="120"/>
+	<Expect watch="Editor.NetSimValue" target="0" key="Funds" equals="110"/>
+	<Expect watch="Editor.NetSimValue" target="1" key="Funds" equals="110"/>
+	<Expect watch="Editor.NetSimValue" target="1" key="LastResult" equals="0"/>
+	<WaitUntil watch="Editor.NetSimValue" target="1" key="ViewCount" equals="9" timeoutFrames="60"/>
+	<!-- ③ 늦은 참가 -->
+	<DevCommand line="netsim.addclient"/>
+	<WaitUntil watch="Editor.NetSimWorldCount" equals="3" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.NetSimValue" target="2" key="PlacementCount" equals="9" timeoutFrames="600"/>
+	<Expect watch="Editor.NetSimValue" target="2" key="Funds" equals="110"/>
+	<WaitUntil watch="Editor.NetSimValue" target="2" key="ViewCount" equals="9" timeoutFrames="60"/>
+	<!-- ④ 남의 부지의 차지는 거절된다 -->
+	<WaitUntil watch="Editor.NetSimValue" target="2" key="LastResult" equals="14" timeoutFrames="600"/>
+	<Expect watch="Editor.NetSimValue" target="2" key="Owned" equals="0"/>
+	<Expect watch="Editor.NetSimValue" target="1" key="Owned" equals="1"/>
+	<Expect watch="Editor.NetSimValue" target="0" key="PlacementCount" equals="9"/>
+	<!-- 끝: 다음 시나리오에 스위치와 세션을 남기지 않는다 -->
+	<Variable name="gv_meadowAutoPlay" value="0"/>
+	<EditorClick mark="multiplayer.inprocess.stop" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="multiplayer.inprocess.stop" state="Up"/>
+	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
+	<Pass/>
+</Scenario>

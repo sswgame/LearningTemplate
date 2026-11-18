@@ -1,6 +1,6 @@
 <?asset guid="1aced570b7e5434eaff866b0ae5101da"?>
 <Scene formatVersion="2" name="KitDemoPartyArena">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

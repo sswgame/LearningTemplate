@@ -111,6 +111,8 @@ namespace sw
         , _gruntAIPrefab{}
         , _casterAIPrefab{}
         , _autoBattleAIPrefab{}
+        , _enemyPool{}
+        , _enemyAIPool{}
         , _arenaHalfSize{ 14.0f }
         , _waveRadius{ 11.0f }
         , _baseGruntCount{ 2u }
@@ -433,9 +435,10 @@ namespace sw
     bool ArenaGameModeComponent::spawnUnit( GameObjectManager& manager, const SpawnRequest& request )
     {
         const bool          bPlayer             = request._kind == ArenaUnitKind::Player;
-        const string&       prefabPath          = ( bPlayer ? _playerPrefab : ( request._kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab ) ).path();
+        const string&       prefabPath          = findUnitPrefabPath( request._kind );
         const utf8*         pName               = bPlayer ? "ArenaPlayer" : ( request._kind == ArenaUnitKind::Caster ? "ArenaCaster" : "ArenaGrunt" );
-        GameObject*         pObject             = spawnPrefab( manager, prefabPath, pName );
+        GameObject*         pObject             = spawnPrefab( manager, prefabPath, pName, bPlayer ? PrefabPoolPolicy{} : _enemyPool ); // 플레이어 몸은 다시 등장할 때만 스폰한다
+        GameObjectHandle    handle              = pObject != nullptr ? pObject->getHandle() : GameObjectHandle{};
         MeshComponent*      pMesh               = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
         AbilityComponent*   pAbilitySystem      = pObject != nullptr ? pObject->getComponent<AbilityComponent>() : nullptr;
         ArenaUnitComponent* pUnitComponent      = pObject != nullptr ? pObject->getComponent<ArenaUnitComponent>() : nullptr;
@@ -444,8 +447,7 @@ namespace sw
         if ( bMissingPrefabParts )
         {
             SW_LOG_WARNING_ID( "ArenaGameMode.PrefabNeedsMeshAbility", "[Arena] prefab '%#' needs a mesh, an ability system, a pawn and an arena unit", prefabPath.c_str() );
-            if ( pObject != nullptr )
-                manager.destroyGameObject( pObject );
+            releaseSpawned( manager, prefabPath, handle );
             return false;
         }
 
@@ -454,7 +456,7 @@ namespace sw
         if ( pAbilitySystem->grantAbilitySet( setID ) == false )
         {
             SW_LOG_WARNING_ID( "ArenaGameMode.AbilitySetMissingAbilities", "[Arena] ability set '%#' is missing - is abilities.xml loaded?", setID.c_str() );
-            manager.destroyGameObject( pObject );
+            releaseSpawned( manager, prefabPath, handle );
             return false;
         }
         // 웨이브가 오르면 적의 체력과 공격력이 오른다(이펙트의 perLevel 이 붙은 값만 커진다).
@@ -466,7 +468,7 @@ namespace sw
             if ( maxHealth.has_value() == false || attackPower.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "ArenaGameMode.AbilitySetGivesNo", "[Arena] ability set '%#' gives no MaxHealth / AttackPower - the unit is not spawned", setID.c_str() );
-                manager.destroyGameObject( pObject );
+                releaseSpawned( manager, prefabPath, handle );
                 return false;
             }
             (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::maxHealth(), *maxHealth * levelScale );
@@ -491,18 +493,38 @@ namespace sw
 
     GameObjectHandle ArenaGameModeComponent::spawnEnemyController( GameObjectManager& manager, ArenaUnitKind kind, PawnComponent& pawn )
     {
-        const string&          prefabPath = ( kind == ArenaUnitKind::Caster ? _casterAIPrefab : _gruntAIPrefab ).path();
-        GameObject*            pObject    = spawnPrefab( manager, prefabPath, kind == ArenaUnitKind::Caster ? "ArenaCasterAI" : "ArenaGruntAI" );
+        const string&          prefabPath = findEnemyAIPrefabPath( kind );
+        GameObject*            pObject    = spawnPrefab( manager, prefabPath, kind == ArenaUnitKind::Caster ? "ArenaCasterAI" : "ArenaGruntAI", _enemyAIPool );
         AIControllerComponent* pAI        = pObject != nullptr ? pObject->getComponent<AIControllerComponent>() : nullptr;
         if ( pAI == nullptr )
         {
             SW_LOG_WARNING_ID( "ArenaGameMode.AIPrefabNoAI", "[Arena] AI prefab '%#' has no AI controller - the enemy stands still", prefabPath.c_str() );
-            if ( pObject != nullptr )
-                manager.destroyGameObject( pObject );
+            GameObjectHandle handle = pObject != nullptr ? pObject->getHandle() : GameObjectHandle{};
+            releaseSpawned( manager, prefabPath, handle );
             return GameObjectHandle{};
         }
         pAI->possess( pawn );
         return pObject->getHandle();
+    }
+
+    const string& ArenaGameModeComponent::findUnitPrefabPath( ArenaUnitKind kind ) const
+    {
+        if ( kind == ArenaUnitKind::Player )
+            return _playerPrefab.path();
+        return ( kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab ).path();
+    }
+
+    const string& ArenaGameModeComponent::findEnemyAIPrefabPath( ArenaUnitKind kind ) const
+    {
+        return ( kind == ArenaUnitKind::Caster ? _casterAIPrefab : _gruntAIPrefab ).path();
+    }
+
+    void ArenaGameModeComponent::retireUnit( GameObjectManager& manager, ArenaUnit& inoutUnit )
+    {
+        // 조종자를 먼저 돌려준다 — 되돌리기가 몸을 놓은 뒤 몸의 폰이 비어 돌아간다.
+        if ( inoutUnit._kind != ArenaUnitKind::Player )
+            releaseSpawned( manager, findEnemyAIPrefabPath( inoutUnit._kind ), inoutUnit._controller );
+        releaseSpawned( manager, findUnitPrefabPath( inoutUnit._kind ), inoutUnit._object );
     }
 
     void ArenaGameModeComponent::syncPlayerPossession( GameObjectManager& manager )
@@ -648,6 +670,7 @@ namespace sw
             AbilityComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilityComponent>() : nullptr;
             if ( pAbilitySystem == nullptr )
             {
+                retireUnit( *pManager, unit ); // 몸이 사라졌다 — 조종자는 돌려준다
                 _listUnit.erase( _listUnit.begin() + static_cast<ptrdiff_t>( unitIndex - 1 ) );
                 continue;
             }
@@ -671,8 +694,7 @@ namespace sw
                 unit._deathTimer -= deltaTime;
                 if ( unit._deathTimer <= 0.0f )
                 {
-                    destroySpawned( *pManager, unit._controller );
-                    pManager->destroyGameObject( pObject );
+                    retireUnit( *pManager, unit );
                     _listUnit.erase( _listUnit.begin() + static_cast<ptrdiff_t>( unitIndex - 1 ) );
                     continue;
                 }

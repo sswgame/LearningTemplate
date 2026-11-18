@@ -1,6 +1,6 @@
 <?asset guid="c9da0a880ab54945ae691cb82099d2e9"?>
 <Scene formatVersion="2" name="KitDemoAsymmetricHorror">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

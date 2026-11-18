@@ -210,6 +210,51 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @class JoltCharacterSnapshotCollision
+     * @brief 캐릭터끼리 막기를 캐릭터마다 둔 **사본**(속 바디 없는 `CharacterVirtual`)으로 봅니다 — 일괄 이동이 캐릭터를 청크로 나눠 돌게 하는 자리입니다(감사 S-8).
+     * @details Jolt 의 `CharacterVsCharacterCollisionSimple` 은 다른 캐릭터의 자리 · 속도를 살아 있는 객체에서 읽어 한 번에 한 캐릭터만 돌 수 있다(그쪽 주석).
+     *          사본은 씬이 캐릭터의 이동을 확정할 때(`JoltPhysicsScene::commitCharacterMove`)만 옮겨, 이동 중에는 얼어 있다 — 여러 청크가 함께 읽어도 된다.
+     *          일괄 이동은 모든 캐릭터가 단계 앞 사본을 보고(유니티 DOTS Character Controller 가 앞 스텝 충돌 월드를 읽는 것과 같다), 하나씩 옮기면 앞에 옮긴 캐릭터의 새 자리를 본다.
+     *          셈은 Jolt 5.6.0 의 것을 그대로 옮겼다(경계 상자로 거른 뒤 좁은 단계).
+     *          shortcut: 레이어 표를 보지 않고 모든 캐릭터가 서로 막고 쌍을 모두 훑는다, 캐릭터끼리 통과하는 레이어가 생기거나 수천 명이면 레이어 검사 · 격자를 더한다.
+     */
+    class JoltCharacterSnapshotCollision final : public JPH::CharacterVsCharacterCollision
+    {
+    public:
+        /** @brief 캐릭터와 그 사본을 올립니다. 사본의 수명은 부르는 쪽(캐릭터 기록)이 쥔다. */
+        void add( const JPH::CharacterVirtual* pCharacter, const JPH::CharacterVirtual* pMirror );
+        /** @brief 캐릭터를 내립니다. 남은 것의 차례는 그대로다(접촉 수집 차례가 바뀌지 않게). */
+        void remove( const JPH::CharacterVirtual* pCharacter );
+        void clear() { _listEntry.clear(); }
+
+        void CollideCharacter( const JPH::CharacterVirtual* pCharacter, JPH::RMat44Arg centerOfMassTransform, const JPH::CollideShapeSettings& collideShapeSettings,
+                               JPH::RVec3Arg baseOffset, JPH::CollideShapeCollector& ioCollector ) const override;
+        void CastCharacter( const JPH::CharacterVirtual* pCharacter, JPH::RMat44Arg centerOfMassTransform, JPH::Vec3Arg direction, const JPH::ShapeCastSettings& shapeCastSettings,
+                            JPH::RVec3Arg baseOffset, JPH::CastShapeCollector& ioCollector ) const override;
+
+    private:
+        struct Entry
+        {
+            const JPH::CharacterVirtual* _pCharacter{ nullptr }; ///< 살아 있는 캐릭터(자기 자신을 거르는 열쇠)
+            const JPH::CharacterVirtual* _pMirror{ nullptr };    ///< 다른 캐릭터가 보는 사본 — 접촉의 상대 캐릭터로 넘긴다
+        };
+
+        vector<Entry> _listEntry;
+    };
+
+    /**
+     * @class JoltCharacterContactListener
+     * @brief 캐릭터가 이동 중에 바디에 충격량을 주지 않게 합니다 — 미는 힘은 씬이 이동을 확정할 때 목록 차례로 준다(감사 S-8, 유니티 DOTS 의 지연 충격량).
+     * @details Jolt 는 이동 중 닿은 동적 바디에 바로 `AddImpulse` 한다 — 청크 여럿이 같은 바디에 쓰면 더하는 차례가 청크마다 달라 결과가 흔들린다. 상태가 없어 청크가 함께 불러도 된다.
+     */
+    class JoltCharacterContactListener final : public JPH::CharacterContactListener
+    {
+    public:
+        void OnContactAdded( const JPH::CharacterVirtual* pCharacter, const JPH::CharacterContact& contact, JPH::CharacterContactSettings& ioSettings ) override;
+        void OnContactPersisted( const JPH::CharacterVirtual* pCharacter, const JPH::CharacterContact& contact, JPH::CharacterContactSettings& ioSettings ) override;
+    };
+
     class JoltJobSystem;
 
     /** @class JoltPhysicsScene @brief Jolt 로 도는 3D 물리 씬입니다. 파일 머리말 참고. */
@@ -350,9 +395,21 @@ namespace sw
         struct CharacterRecord
         {
             JPH::Ref<JPH::CharacterVirtual> _pCharacter;
+            JPH::Ref<JPH::CharacterVirtual> _pMirror; ///< 다른 캐릭터가 보는 사본(`JoltCharacterSnapshotCollision`) — 이동을 확정할 때만 옮긴다
             PhysicsCharacterDesc3D          _desc{};
             PhysicsCharacterState3D         _state{};
-            PhysicsBodyHandle               _innerBody{}; ///< 속 바디의 엔진 핸들이다(없으면 무효). 사용자 값은 캐릭터의 것이다.
+            PhysicsBodyHandle               _innerBody{};       ///< 속 바디의 엔진 핸들이다(없으면 무효). 사용자 값은 캐릭터의 것이다.
+            float3                          _movedVelocity{};   ///< 이번 이동에 Jolt 에 준 속도(요청 + 바닥) — 미는 충격량을 셈한다
+            float3                          _carriedVelocity{}; ///< 이번 이동에 바닥이 실어 준 속도
+            float32                         _groundYawRate{ 0.0f };
+            uint32                          _moveStamp{ 0 }; ///< 마지막으로 든 일괄 이동의 번호(`_characterMoveStamp`) — 같은 캐릭터를 한 일괄에 두 번 들지 않는다
+        };
+
+        /** @brief 일괄 이동의 한 칸입니다(핸들을 게임 스레드에서 푼 기록). 이동 동안 `_characters` 에 넣고 빼지 않으므로 포인터가 산다. */
+        struct CharacterMoveJob
+        {
+            CharacterRecord* _pRecord{ nullptr };
+            float3           _velocity{};
         };
 
         struct ShapeRecord
@@ -420,8 +477,17 @@ namespace sw
         bool isPairAsleep( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB ) const;
         /** @brief 지금 깨어 있는 강체를 `_listMovedBody` 에 붙입니다(스텝 앞 · 뒤에 한 번씩). */
         void appendActiveBodies();
-        /** @brief 임시 블록의 최고 사용량 · 폴백 수를 카운터로 내고, 처음 넘친 스텝에 한 번 경고합니다(스텝 끝). */
+        /** @brief 임시 블록(씬 · 캐릭터 청크)의 최고 사용량 · 폴백 수를 카운터로 내고, 처음 넘친 스텝에 한 번 경고합니다(스텝 끝). */
         void reportTempAllocator();
+        /**
+         * @brief 캐릭터 하나를 Jolt 로 옮기기만 합니다 — 청크에서 돈다. 이 캐릭터의 기록 · Jolt 객체만 쓰고, 월드 · 사본은 읽기만 한다.
+         * @details 중력은 넘기지 않는다(Jolt 는 그것으로 디딘 바디를 누른다 — 바디 쓰기다). 누르기와 미는 충격량은 `commitCharacterMove` 가 준다.
+         */
+        void runCharacterMove( CharacterRecord& record, const float3& velocity, float32 deltaTime, JPH::TempAllocator& allocator ) const;
+        /** @brief 옮긴 캐릭터를 확정합니다(게임 스레드, 목록 차례): 바디에 미는 · 누르는 충격량, 엔진 상태, 사본 옮기기. */
+        void commitCharacterMove( CharacterRecord& record, float32 deltaTime );
+        /** @brief 일괄 이동의 청크 [chunkStart, chunkEnd) 를 돕니다(`engine::runParallel` 본문). 청크마다 제 임시 블록을 쓴다. */
+        void runCharacterChunks( uint32 chunkStart, uint32 chunkEnd );
 
     private:
         PhysicsSettings                       _settings;
@@ -435,12 +501,17 @@ namespace sw
         vector<JPH::Ref<JoltPhysicsMaterial>> _listJoltMaterial; ///< `_settings._listMaterial` 과 같은 순서다.
         SlotHandleTable<BodyRecord>           _bodies;
         SlotHandleTable<JointRecord>          _joints;
-        /// 캐릭터끼리 막는다(Jolt 샘플과 같은 단순 목록 — 모든 캐릭터 쌍을 본다). `_characters` 보다 먼저 선언해 나중에 사라진다.
-        /// shortcut: 레이어 표를 보지 않고 모든 캐릭터가 서로 막는다, 캐릭터끼리 통과하는 레이어가 생기면 `CharacterVsCharacterCollision` 을 구현해 표를 본다.
-        JPH::CharacterVsCharacterCollisionSimple  _characterVsCharacter;
+        /// 캐릭터끼리 막는다(사본을 본다 — 청크가 함께 읽는다). 아래 둘은 `_characters` 보다 먼저 선언해 나중에 사라진다.
+        JoltCharacterSnapshotCollision            _characterSnapshot;
+        JoltCharacterContactListener              _characterContactListener;
         SlotHandleTable<CharacterRecord>          _characters;
-        JoltVehicleSet                            _vehicles;   ///< 바퀴 차(`_system` 뒤에 선언 — 먼저 사라진다)
-        JoltSoftBodySet                           _softBodies; ///< 소프트 바디(`_system` · `_tempAllocator` 뒤에 선언)
+        vector<unique_ptr<JoltTempAllocator>>     _listCharacterChunkAllocator; ///< 캐릭터 이동 청크마다 하나(`PhysicsSettings::_characterChunkTempBytes`, 처음 쓰는 청크 수까지 늘린다)
+        vector<CharacterMoveJob>                  _listCharacterMoveJob;        ///< 지금 일괄 이동의 칸(`moveCharacters` 동안만 뜻이 있다 — 청크가 읽기만 한다)
+        float32                                   _characterMoveDeltaTime;      ///< 지금 일괄 이동의 스텝 길이(청크가 읽는다)
+        uint32                                    _characterMoveChunkCount;     ///< 지금 일괄 이동의 청크 수(청크가 읽는다)
+        uint32                                    _characterMoveStamp;          ///< 일괄 이동마다 하나 오르는 번호(0 은 쓰지 않는다)
+        JoltVehicleSet                            _vehicles;                    ///< 바퀴 차(`_system` 뒤에 선언 — 먼저 사라진다)
+        JoltSoftBodySet                           _softBodies;                  ///< 소프트 바디(`_system` · `_tempAllocator` 뒤에 선언)
         SlotHandleTable<ShapeRecord>              _shapes;
         vector<BodyIDEntry>                       _listBodyIDEntry;
         PhysicsPairFilter                         _pairFilter;

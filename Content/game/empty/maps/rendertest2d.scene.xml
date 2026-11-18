@@ -2,7 +2,7 @@
 <Scene formatVersion="3" name="RenderTest2D">
 	<!-- 2D 빛 쿠키 시나리오(automation/light2dcookie)의 무대 — 밝은 격자 벽 앞에 같은 빛 둘을 두고 왼쪽 빛에만 창문 쿠키(window_01)를 끼웠다.
 	     시나리오가 두 빛을 순간이동으로 맞바꿔 같은 자리의 쿠키 있음 · 없음을 견준다. 애니메이션이 없어 같은 프레임이 실행마다 같은 그림이다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

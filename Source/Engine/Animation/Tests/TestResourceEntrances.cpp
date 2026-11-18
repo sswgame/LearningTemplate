@@ -89,7 +89,7 @@ namespace
         static string makeScene( const utf8* pName, const string& inner )
         {
             return string( R"(<Scene formatVersion="2" name=")" ) + pName +
-                   R"("><SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0"><_cellGrid _cellSize="0" _loadingRadius="0" /></SceneSettings>)" + inner + "</Scene>";
+                   R"("><SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0"><_cellGrid _cellSize="0" _loadingRadius="0" /></SceneSettings>)" + inner + "</Scene>";
         }
     };
     using Util = XEntranceTestUtil;

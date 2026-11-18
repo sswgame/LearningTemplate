@@ -106,6 +106,11 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         /**
+         * @brief 풀 반환: 어빌리티(취소 뒤) · 걸린 이펙트 · 남은 태그(쓰러짐 표시) · 어트리뷰트 세트를 모두 걷고 시간을 0 으로 돌립니다. 시작한 뒤면 `_abilitySetID` 를 다시 줍니다(갓 시작한 것과 같다).
+         * @details 남이 건 델리게이트(HP 바 · UI 의 어트리뷰트 변화 구독)는 오브젝트와 함께 사는 것이라 그대로 둔다. 코드가 준 세트(`grantAbilitySet`)는 꺼낸 쪽이 다시 준다.
+         */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
+        /**
          * @brief 모듈 @p moduleName 을 내리기 전에 그 모듈 타입(`getTypeInfo` 의 모듈 이름)의 어빌리티 · 어트리뷰트 세트와, 그 모듈의 실행 계산을 쓰는 이펙트를 놓습니다.
          * @details 모듈을 다시 올리면 `_abilitySetID` 가 어빌리티를 다시 준다. 게임이 건 델리게이트는 게임이 든 구독이 게임과 함께 푼다.
          */

@@ -213,6 +213,12 @@ namespace sw
          *          부품은 끝날 때 함께 지워진다(풀을 쓰지 않을 뿐 틀리지는 않는다).
          */
         void destroyOwnerStowingParts();
+        /**
+         * @brief 풀 반환: 소켓 부품을 씬의 부품 풀에 쉬게 하고(물리로 떨어진 무기는 부품 풀이 받지 않아 지운다) 표면 상태(피 · 흙)를 비웁니다.
+         * @details 다시 입히기는 다시 켜진 뒤다 — 꺼낸 쪽이 `setPreset` 을 부르면 그 조립 하나로, 부르지 않으면 다시 켜진 첫 틱이 지금 프리셋으로 입힌다(떨어진 무기도 다시 장착된다).
+         *          갓 스폰한 것(시작 전)은 부품이 없어 바꿀 것이 없다.
+         */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
 
         /**
          * @brief 이름(접두어 포함, 예: `MainHand.Muzzle`, `Eyes`)의 소켓 월드 변환입니다. 지난 프레임의 몸 포즈와 부품 월드로 계산합니다.
@@ -477,13 +483,13 @@ namespace sw
         uint8                                          _bProportionTask      : 1; ///< 본 비율 단계 작업을 몸 유닛에 등록했다(비율이 있을 때만 등록해 군중 공유를 막지 않는다)
         uint8                                          _bMeshMerged          : 1; ///< 몸 유닛이 합친 메시를 그리고 구간 이름을 가졌다 — 합치지 않게 되면 되돌려야 한다
         uint8                                          _bMeshApplyQueued     : 1; ///< 다 읽은 조립의 걸기를 틱 뒤로 미뤄 두었다 — 그동안 원본 내용 id 가 아직 없어 낡음 판정을 하지 않는다
-        [[maybe_unused]] uint8                         _reserved             : 1;
-        vector<TComponentHandle<MeshSectionComponent>> _listBodySection;        ///< 몸 부품의 `<Section>` 중 둘째부터를 그리는 구간 컴포넌트(몸 오브젝트에 붙는다 — `applyBodyPart`)
-        CharacterSurfaceState                          _surface;                ///< 표면 상태(`_surfaceChannelsPath` 가 있을 때만 채널을 가진다)
-        CharacterSurfaceBinding                        _surfaceBinding;         ///< 표면 상태를 부품 머티리얼에 올리고 마스크 텍스처를 쥔다
-        string                                         _loadedSurfaceChannels;  ///< 지금 상태가 읽은 채널 파일 경로(바뀌었는지 가른다)
-        uint64                                         _surfaceAppliedRevision; ///< 머티리얼에 마지막으로 올린 상태 번호(같은 번호는 다시 올리지 않는다)
-        uint32                                         _surfaceRegionCount;     ///< 상태가 가진 영역 수(피팅 표의 영역 수)
-        SkinLayerBakeBinding                           _skinBake;               ///< 피부 층 굽기와 몸 머티리얼 걸기(번짐 텍스처 · 결과 핸들을 쥔다)
+        uint8                                          _bPartsStripped       : 1; ///< 풀 반환이 부품을 걷었다 — 다음 조립까지 다시 켜진 틱이 입힌다
+        vector<TComponentHandle<MeshSectionComponent>> _listBodySection;          ///< 몸 부품의 `<Section>` 중 둘째부터를 그리는 구간 컴포넌트(몸 오브젝트에 붙는다 — `applyBodyPart`)
+        CharacterSurfaceState                          _surface;                  ///< 표면 상태(`_surfaceChannelsPath` 가 있을 때만 채널을 가진다)
+        CharacterSurfaceBinding                        _surfaceBinding;           ///< 표면 상태를 부품 머티리얼에 올리고 마스크 텍스처를 쥔다
+        string                                         _loadedSurfaceChannels;    ///< 지금 상태가 읽은 채널 파일 경로(바뀌었는지 가른다)
+        uint64                                         _surfaceAppliedRevision;   ///< 머티리얼에 마지막으로 올린 상태 번호(같은 번호는 다시 올리지 않는다)
+        uint32                                         _surfaceRegionCount;       ///< 상태가 가진 영역 수(피팅 표의 영역 수)
+        SkinLayerBakeBinding                           _skinBake;                 ///< 피부 층 굽기와 몸 머티리얼 걸기(번짐 텍스처 · 결과 핸들을 쥔다)
     };
 } // namespace sw

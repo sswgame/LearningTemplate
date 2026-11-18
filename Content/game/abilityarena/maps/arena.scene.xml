@@ -1,6 +1,6 @@
 <?asset guid="6193e7bb52974ba02d264bb08f2366e4"?>
 <Scene formatVersion="3" name="AbilityArena">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>
@@ -6386,7 +6386,10 @@
 					                        _arenaHalfSize="14"
 					                        _waveRadius="11"
 					                        _playerRespawnDelay="2.5"
-					                        _bAutoPlay="false" />
+					                        _bAutoPlay="false">
+						<_enemyPool _maxIdleCount="12" />
+						<_enemyAIPool _maxIdleCount="12" />
+					</ArenaGameModeComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -16,7 +16,7 @@
 
 단위 · 시나리오로 확인되는 몫은 2026-11-18 전체 실행(Debug `App --test` 4822 · Release ctest 111 · 서버 단위 4288, Windows)에서 통과해 지웠다. 남은 것은 측정 · 실장치 · 손 확인이다.
 
-- **5-4 리플렉션(감사 A-24 남은 몫):** `.gen.cpp` 합계 1.65 MB(전 7.86 MB, 달성). 생성 TU 비중(옛 출력을 빼고 세게 고친 `build_time_report.py`): Debug 8.6 %(목표 8 % 미만, 거의 닿음), Release 15.8 % → 13.4 %(11-18, `~TypeInfo` 를 TypeInfo.cpp 로 뺀 뒤 생성 TU 합 1126 s → 822 s, 가장 무거운 묶음 14.6 s → 8.7 s). 다음 후보: 메타데이터 람다의 `string` 대입 인라인, `$ctor` 람다의 생성자 인라인 — 하나씩 바꾸고 같은 방법으로 잰다(흔들림 안이면 되돌린다).
+- **5-4 리플렉션(감사 A-24 남은 몫):** `.gen.cpp` 합계 1.65 MB(전 7.86 MB, 달성). 생성 TU 비중(옛 출력을 빼고 세게 고친 `build_time_report.py`): Debug 8.6 %(목표 8 % 미만, 거의 닿음), Release 15.8 % → 13.4 %(11-18, `~TypeInfo` 를 TypeInfo.cpp 로 뺀 뒤 생성 TU 합 1126 s → 822 s, 가장 무거운 묶음 14.6 s → 8.7 s). 다음 후보 둘을 넣었다(메타데이터 글 칸 대입 → `ReflectionMetadataText`, `$ctor` → placement new 한 줄 + `FunctionDesc::invokeConstructor`). 커밋마다 Release 로 지어 `py -3 Scripts/dev/build_time_report.py --preset Ninja-Release --top 20` — 흔들림 안이면 그 커밋만 되돌린다.
 - **RHI 5-2 측정:** `D3D12.ComputeTimestampClock` 어긋남, Vulkan 비동기 컴퓨트 `GPU.<패스>` · Tracy 겹침.
 - **실장치 · 백엔드 동작:** Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯, DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지), Vulkan placed 텍스처(`RT.Frame.transientPlacements`, 검증 레이어 경고 없이 — lavapipe · Android 포함).
 - **손 확인을 시나리오로:** 에디터 설정 표 값을 고친 뒤 Ctrl+Z(형식 페이지 그리드는 아직 단계를 올리지 않는다), 'Game Config - Shooter3D' 를 열어 저장, 옵션 메뉴에서 렌더 품질을 바꿔 그림자 · 텍스처 풀 값이 바뀌는지(바꾸는 순간 `GT` 에 `pollPackets` 대기 한 번).
@@ -24,6 +24,7 @@
 
 ## 2. 알려진 실패 · 흔들림
 
+- **shooter3d crowd `fight` dx11 한 번 25.7 %(2026-11-18, preflight30 — 큰 영역 70 px):** 체인만 다시 돌려 통과. 다시 지면 같은 체인 앞 단계와 `scenario_bisect --golden-margins` 로 화소 자리를 본다(enemydeath dx11 과 같은 백엔드 — dx11 군중 장면의 정착 조건을 의심).
 - **shooter3d enemydeath `death_b` dx11 한 번 1.37%(2026-11-18, ST-3 통합 전체 실행):** 곧바로 두 번 다시 돌려 통과. 다시 지면 같은 체인의 앞 단계와 `scenario_bisect --golden-margins` 로 화소 자리를 본다.
 - **`editor.tilemapdatalayers` 단독 실패:** 이름 칸을 누른 뒤 `<EditorText>` 가 "글 칸이 키보드 초점을 잡지 않았다"(화면에는 칸이 활성). 체인에서는 앞 단계가 가린다 — `EditorSelfTestInput::isKeyboardTargetStable` 가 두 프레임 같은 대상을 못 보는 까닭을 `scenario-debug` "단독으로만 지면" 으로.
 - **Linux:** editor 체인 sequencercuts · sequencerkeys 의 `SequencerUnboundCount`(Linux 에서만, `--gpu software chain editor` 로 가른다), netresourcedigest, 에디터 체인 단계 약 18(WSLg · Xvfb 입력 초점 의심), themepark 체인 멈춤, lavapipe `blendEnable` + `R16G16_SNORM`(코드가 블렌드 비트 없으면 덮어쓰기로 바꿔 옛 증상일 수 있다 — 재현 뒤 지운다). 골든: 에디터 `.linux` 24 장(창 크기가 달라 눈으로), empty 의 boat · decals · distortion(없음) · realtimegi · surfaceshowcase 2 · tessellationstage · geometrystage(Windows 와 57 ~ 100 % 다름 — dzn 차이인지 결함인지). 데스크톱 WebGPU 골든 0(`scenario_bisect.py --golden-coverage`).
@@ -55,6 +56,7 @@
   - 렌더 그래프 폭: `-gv_renderGraphParallelMinWidth=2 · 3 · 4 · 99` × DX12 · Vulkan — 3 · 4 가 흔들림 밖으로 빠르면 기본값을 바꾼다.
   - 그 밖: Tracy `GT.Frame` 자식 합 90 % 이상, 배치 크기 12 · 24 · 48, `load/*` × 워커 1 · 2 · 4 · 8 과 구조 지표, W25 GPU 비교(c05a3ee251 대 지금 — 노이즈 안이면 되돌림), W-S4 `-ftime-trace`, W-R1 RT 프레임 힙 할당, W-R2 PSO 조회, 5-2 `RT.Bind.*`, DX12 기록 경로 락 제거 전후 `bench.json` p50(291d69074e), 골든 여유(`--golden-margins`), 군중 `load/navcrowd`(넘으면 한 종류 군중을 지역으로 쪼갬), 잔상 GPU · CPU 메모리 `game.empty.afterimage`(품질 단계별 상한), 볼륨 안개 해상도별 `RT.Fog.Volume`.
 - **메시 인덱스 전환 뒤(StructureRefactor 10 절):** 모든 골든 대조(정점 순서가 같으면 그림이 같아야 한다 — 차이는 버그)와 농장 · 군중의 캐릭터당 GPU 측정.
+- **글리프 아틀라스 압축(감사 RN-14, w-glyph):** Release `App --test --test-filter=GlyphAtlasTest.HangulScrollGlyphsRasterized` 를 측정 장치 커밋(1e4d3dbe8c, 예전 통째 비우기)과 본 변경(fc54031411)에서 한 번씩 — 로그의 `rasterized` · `missing`(파이썬 모형 예상: 30184 · 0 → 약 15300 · 1600, 하한 13760). rasterized 가 흔들림 밖으로 안 줄거나 missing 이 프레임당 10 자를 넘으면 `_glyphRetainFrameCount` 를 1 로 재고, 그래도 지면 본 변경만 되돌린다. 실제 화면은 `-gv_stressTestUiWidgets` 화면의 `Text.GlyphsRasterized` · `Text.GlyphsRelocated`.
 - **N×M 측정 후보**(목록이 작으면 해시가 손해이거나 순서를 지켜야 한다 — 재고 나서): `DataInheritance.cpp` `findEntry`(가장 큰 후보), `ComponentRegistry.cpp:60,75`, `PrefabPool.cpp:80,92`, `ShooterNetPawnComponent.cpp:535,571`(틱마다 적 수²), `MaterialCache.cpp:350`, `DestructionState.cpp:779,855`, `ContentBrowserCollectionStore.cpp:108`, `EditorAssetFileCommands.cpp:154,199,569`, `EditorNodeGraph.cpp:333,543,696`(프레임마다 노드 × 고른 노드), `ModResolver.cpp:161`, `ProjectSettingsDocument.cpp:45,62`, `ComponentStateStore.cpp:82`.
 - **Shooter3D 소총 자세 클립:** 지금은 리그 IK 견착(`ubc_player_body.rig.xml` TwoHandHold). 상용(Lyra · ALS)처럼 쥔 자세 클립 + 왼손 IK 로 — CC0 poly.pizza "SWAT"(Quaternius, `https://static.poly.pizza/713f6535-f4f3-4367-a4c6-ced126ae0936.glb`, `Idle_Gun` · `Gun_Shoot` · `Run_Shoot`)을 `models_raw/quaternius` 에 넣고 UBC 로 리타깃해 상체 층(Aim)으로, IK 견착은 손 자리 보정으로.
 
@@ -65,15 +67,15 @@
 - **렌더링:** TransientLeasePool 을 뷰 풀에, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, VFX · 프로브 디스패치 전이를 묶음 API 로. 셰이더: 공통 `PixelContext` · 표면 평가와 패스별 출력(포워드 색 / G버퍼 인코딩) 분리, 표면 모델 · 필수 입력 선언과 미지원 조합의 쿠킹 실패 — Lit · Unlit · Emissive · 툰 · 알파 마스크 패스 분류 목록부터(언리얼 셰이딩 모델 대조).
 - **R-15 후속(판단은 "텍스처 스트리밍 밉 범위 대기 줄" 절):** 1 — GI 복셀화를 GPU 원본으로(`SceneVoxelizer.cpp`, 기하 셰이더 없는 3 축 투영 · 프레임 업로드 단계, 스킨 · 모프는 CPU 정점 Keep). 2 — `MeshCPUAccess` 를 `Mesh::create` · `MeshCache::request` 에 기본값 없이, 업로드가 끝난 뒤 CPU 정점을 놓는다(언리얼 `bAllowCPUAccess`, 의존 1).
 - **RHI 5-2(측정 뒤에만):** Vulkan 동적 오프셋 · 푸시 디스크립터, WebGPU 바인드 그룹 캐시 은퇴, RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더, 서브할당은 감사 R-4. L-2 상수 버퍼 기록 값을 레코드로(L-1 의 미러 락 대기가 `RT.Graph.parallelLevel` 합의 2 % 를 넘을 때만, `D3D12RHIDevice` · `RHIConstantBufferMirror`, R6-3 · R6-4 뒤, 테스트 `SecondWriteInAFrameIsReported`).
-- **5-3 병렬 오브젝트**(완전 ECS 는 기각, 이득이 흔들림 안이면 되돌림 — "병렬 오브젝트 남은 몫" 절): PO-1 서비스 구간 `GT.Scene.service.<이름>` · 근접 카운터 `Gimmick.ProximityCandidates`(의존 없음). PO-2 서명 나누기 + 파도(`FrameSystemParallelPlan`, PO-1 값 뒤). PO-3 캐릭터 일괄 이동은 감사 S-8(`PhysicsCharacterTest.BatchMoveEqualsOneByOne`).
-- **5-4 리플렉션:** RF-7 밀집 타입 색인(W-R6)은 5-3 SoA 와 함께, 문턱을 넘을 때만(`ReflectionTypeRegistryTest.TypeIndexIsReusedWithANewGeneration`). 경합 같은 모양 둘: `computeDerivedFlags` 가 지은 비트필드를 읽기와 겹쳐 고칠 수 있는지, 핫 리로드가 `TypeInfo` 를 `operator=` 로 제자리 교체하는 동안 다른 스레드가 읽는지 — 같은 판 교체로 막는다. FUNCTION: 인자 있는 메서드를 타입 위젯 · `ReflectCallResult` 오류 표시로, 그다음 반복 작업용 액션 목록(언리얼 `CallInEditor` 대조).
+- **5-3 병렬 오브젝트**(완전 ECS 는 기각, 이득이 흔들림 안이면 되돌림 — "병렬 오브젝트 남은 몫" 절): PO-1 서비스 구간 `GT.Scene.service.<이름>` · 근접 카운터 `Gimmick.ProximityCandidates`(의존 없음). PO-2 서명 나누기 + 파도(`FrameSystemParallelPlan`, PO-1 값 뒤). PO-3 캐릭터 일괄 이동(청크 병렬 · 결정성 `PhysicsCharacterTest.BatchMoveEqualsOneByOne`) 측정: Release `Bin` 에서 `App -scenario=game/empty/automation/load/charactermove.scenario.xml -unattended -workers=N`(N = 1 · 4 · 8)의 `GT.Physics.moveCharacters`.
+- **5-4 리플렉션:** RF-7 밀집 타입 색인(W-R6)은 5-3 SoA 와 함께, 문턱을 넘을 때만(`ReflectionTypeRegistryTest.TypeIndexIsReusedWithANewGeneration`). FUNCTION: 인자 있는 메서드를 타입 위젯 · `ReflectCallResult` 오류 표시로, 그다음 반복 작업용 액션 목록(언리얼 `CallInEditor` 대조).
 - **개발 변수 스레드 모델:** `gv_` 값(`RenderDiagnostics::get` 등 8 곳)을 렌더 · 워커 스레드가 잠금 없이 읽는다 — 콘솔이 게임 스레드에서 쓰는 동안 찢어진 값을 볼 수 있다. 프레임 시작에 사본을 떠 패킷에 싣는 모양(언리얼 `TAutoConsoleVariable` 의 렌더 스레드 사본 대조)으로 정한다. 함께: `AssetImportEntry.cpp:89` 의 `EngineConfig` 직접 읽기가 쿠킹 워커에서도 도는지 확인.
 - **에디터 UI 스레드 분리(사용자 목표 2026-11-08, 판단은 DesignBacklog "에디터 UI 스레드 분리 검토"):** 1 MVVM(대부분 끝) → 2 입력 큐(진행 중, 브랜치 w-editorthread) → 3 출력 계약(뷰 크기 · Play/Pause/Step 을 명령으로, 한 프레임 지연 계약) → ImGui 프레임을 UI 스레드로(모듈 리로드 · RHI 교체 · 종료 전 drain, 자동화 결정성 테스트). 단계마다 통합 빌드 · 에디터 체인으로 확인한 뒤 다음 단계.
 - **코어 · 온라인 설계 일:** O3-5 실제 해시 부하 구성(`Config/Server/Online/` · `OnlineLoadBot`, 도착률은 감사 O-12).
 - **도구 · 에디터(측정이 문턱을 넘을 때만):** V2 timeline 모으기(의존 없음) → V3 그리지 않는 대기(`engine/automation/waitrenderoff`) → V4 shooter3d 적용, T2 체인 샤드(ctest 벽시계 10 % 이상 안 줄면 되돌림), R3 에셋 색인 디스크 캐시, E2 문턱 넘는 패널, D3 공유 DDC 측정, S2 · S3 원본 떼기(원본 2 GB 문턱).
 - **시나리오 · 테스트 프레임워크 개편(ST-1 ~ ST-6 은 main):** ST-3 이 남긴 것 — 실시간 GI 정착 조건(넣으면 GI 장면 사진 시점이 바뀐다 — 골든과 함께).
 - **데이터 · 카탈로그:** 매직 리터럴 기준선이 큰 파일(데모 UI · 게임 모드 컴포넌트)의 튜닝 값과 게임 모드 상태 `switch` 를 PROPERTY · 규칙 카탈로그로, `sw::expected` Core 밖 이전. `FighterCatalog`(기술 → 프레임) 엄격도와 `ActionPlatformerCatalog` 전이 검사를 참조 표로 옮길지 정하기, 상속 · 다른 팩 참조와 잘못된 참조가 쿠킹 · 시작을 통과하는 회귀 테스트.
-- **키트:** 하우징 서버 권위 배치(요청 → 서버 판정 → 부지 상태 방송 · 늦은 참가, 넷 메시지 영역 · 복제 테스트 · 둘 실행 시나리오 — `Kits/Feature/World/Housing/`). MMO 키트의 부하 목표와 운영 비용.
+- **키트:** MMO 키트의 부하 목표와 운영 비용.
 - **상용 대비:** T3 샤드 시간 균형(외부 CI 러너는 사용자 결정), U1 방아쇠 진동 · Android Vibrator(백엔드가 생길 때).
 
 ### 에셋 정체성(GUID) 2 · 3 단계 — 판단은 [DesignBacklog](DesignBacklog.md) "에셋 정체성" 절
@@ -103,11 +105,11 @@
 - **R-4 [31] 자원마다 전용 할당** — `MaterialRenderProxy.cpp:48` 인스턴스마다 상수 버퍼 · 커밋 자원 · `vkAllocateMemory`. 상용: 언리얼 `FD3D12FastConstantAllocator`, 유니티 SRP Batcher, Godot VMA. 제안 `RHIBufferSlice` + D3D12MA / VMA. 확인: 머티리얼 인스턴스 5000 의 버퍼 바이트 · Vulkan 할당 수.
 - **RN-4 [34] 그림자 아틀라스 사분면 · 타일 번호 캐시** — 방향광 · 로컬 텍스처 분리, 로컬은 화면 크기 할당기, `ShadowCache::update` 키를 빛 정체(컴포넌트 id, 면)로. 상용: URP 분리 아틀라스, 언리얼 VSM. 확인: `ShadowSetupTest` — 우선순위가 뒤집혀도 서 있는 빛은 Reuse.
 - **RN-6 [34] 포함이 하나라도 바뀌면 GPUScene 재수집** — `GPUSceneBuilder.cpp` ~730 `collectAllCandidates`(식생 토글 `FoliageComponent.cpp:763` · 스폰 · 스트리밍). 상용: 언리얼 `FScene` 프리리스트, 유니티 GPU Resident Drawer. 판정(11-17): 고정 칸 + 프리리스트 + 바뀐 칸만 부분 수집. 확인: `load/*` 20 만(먼저 더한다) + 프레임마다 스폰 · 소멸 10, `GT.GPUScene.build.collect`.
-- **A-13 [36] 씬 스트리밍** — 셀 서술 전부 상주 · 동기 짓기 · 내릴 때 상태 버림(`SceneStreamingSubsystem.cpp:61-66 · 186-190 · 222-235`, `Scene.cpp:624-640`). 상용: World Partition 비동기 + AddToWorld 시간 예산. 확인: `load/` 셀 400 × 오브젝트 2000, `GT.Scene.service.SceneStreamingSubsystem` 최대 프레임.
-- **S-8 [37] 캐릭터 이동이 차례로 돈다** — `moveCharacters` 는 섰고 구현이 차례, `ExtendedUpdate` 가 씬 공용 `_tempAllocator` 를 받는다. 상용: 유니티 DOTS Character Controller 잡. 제안 레인별 임시 할당자. 확인: `load/*` 캐릭터 500 PreStep(워커 1 · 4 · 8)을 먼저 잰다(PO-3).
-- **N-11 [43] 송신률 조절 없음** — `NetEndpoint.cpp` 토큰 버킷이 고정. 상용: ENet RTT 스로틀, 유니티 Transport. 확인: `NetEmulation` 손실 20 % 의 `_resentMessageCount` 를 먼저 잰다.
+- **A-13 [36] 씬 스트리밍 — 측정만 남음**: `--cook-all` 뒤 `App -scenario=game/empty/automation/load/streamingcells.scenario.xml -unattended -cooked-content` 로 구간 `GT.Scene.service.SceneStreaming` 최대 프레임(셀 400 × 상자 2000, 짓기 예산 `_addToWorldBudgetMicroseconds` 2000 us). 셀 안 엔티티 단위 나눠 짓기 · 머리만 읽기 · 내비메시 타일 스트리밍까지 들어갔다(씬 쿠킹본 판 9, `.navmesh` 판 2 — 다시 쿠킹).
+- **S-8 [37] 캐릭터 일괄 이동 측정** — `App -scenario=game/empty/automation/load/charactermove.scenario.xml -unattended -workers=N`(N = 1 · 4 · 8, 캐릭터 500)의 `GT.Physics.moveCharacters` 를 잰다(PO-3).
+- **N-11 [43] 송신률 조절** — 코드 끝(`NetSendThrottle` AIMD, 계수 `Config/Engine/NetSendThrottle.json`). 통합 확인: `App --test --test-filter=NetSendThrottleTest.*,NetEndpointTest.*,ConfigFileSchemaTest.*,GameNetSessionFrameHooksTest.*` — 손실 20 % 에서 조절 연결의 `_resentMessageCount` 가 고정 버킷의 3/4 미만이고 속도가 하한(20000)에 머무는지, 손실 0 에서 상한으로 돌아오는지.
 - **A-24 [47]** 리플렉션 묶음 TU 가 헤더 하나에 전체를 다시 파싱 — 1 절 5-4 리플렉션.
-- **K-11 [50] 슈터 적이 매번 스폰** — `spawnPrefab` 이 풀 정책(데이터)을 받는다(아레나 투사체는 `PrefabPool`). 상용: Lyra · Boss Room 풀. 확인: Tracy `GameModeFlush` 를 먼저 잰다(성능 줄 — 문턱을 넘은 것만). 막힌 점(11-18 조사): `PrefabPool` 은 `setActive` 만 바꾸고 원형으로 되돌리지 않는다. 그런데 죽은 적은 `RagdollComponent::detachBoneBodies`(되돌리지 않는다고 적혀 있다) · `DismembermentComponent` 절단 · 애니메이터 `Dead` · 떨어진 소켓 무기 · AI 조종자 빙의가 남아 다시 쓸 수 없다. 선행 조건은 이 컴포넌트들의 "스폰 상태로 되돌리기" API(래그돌은 물리 에셋을 다시 읽기)와 그 단위 테스트다. 외형 부품은 이미 `SocketPartPool` 이 다시 쓰고, 넷 id 는 `launch` 마다 `_nextEnemyNetID++` 로 새로 매기므로 풀링해도 겹치지 않는다.
+- **K-11 [50] 슈터 적 풀링 확인(통합)** — 코드는 섰다(`Component::resetToSpawnState` 풀 계약 · `PrefabPoolPolicy` · 종류마다 `_pool`). 통합 담당이 Tracy `GameModeFlush` 를 풀 전후로 재고, shooter3d 시나리오(`enemydeath` · `dismemberment` · `effectpool` · `autoplay`)를 한 번에 돌린다 — 다시 꺼낸 적이 래그돌 · 절단 · 무기 · 빙의 없이 서는지.
 
 ## 8. 다음 감사 범위
 

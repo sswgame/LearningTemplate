@@ -101,7 +101,7 @@ SW_TEST_CASE( GlyphAtlasTest, UploadsCarryOnlyWrittenRegions )
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listUpload.size() ) );
 }
 
-/** @brief [GlyphAtlasTest] 다 차면 이번 프레임에 안 쓴 가장 오래된 페이지를 비우고 세대가 오르며 전체 업로드가 기록된다 — 모두 이번 프레임이면 비우지 않는다 */
+/** @brief [GlyphAtlasTest] 비울 후보는 이번 프레임에 안 쓴 페이지를 오래된 순으로 준다 — 비우면 세대가 오르고 전체 업로드가 기록되며, 모두 이번 프레임이면 후보가 없다 */
 SW_TEST_CASE( GlyphAtlasTest, FullAtlasEvictsOldestUnusedPage )
 {
     sw::GlyphAtlas atlas{ sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout };
@@ -119,10 +119,15 @@ SW_TEST_CASE( GlyphAtlasTest, FullAtlasEvictsOldestUnusedPage )
     atlas.takeUploads( listUpload );
     listUpload.clear();
 
-    const uint32 generationBefore = atlas.getGeneration();
-    uint32       evictedPage      = 99;
-    SW_REQUIRE_TRUE( atlas.evictLeastRecentlyUsedPage( 9, evictedPage ) );
-    SW_EXPECT_EQUAL( 0u, evictedPage );
+    const uint32       generationBefore = atlas.getGeneration();
+    sw::vector<uint32> listPage;
+    atlas.listEvictablePages( 8, listPage ); // 프레임 8 에 쓴 페이지 7 은 빠진다
+    SW_REQUIRE_EQUAL( sw::test::kTestGlyphAtlasLayout._maxPageCount - 1, static_cast<uint32>( listPage.size() ) );
+    for ( uint32 index = 0; index < static_cast<uint32>( listPage.size() ); ++index )
+    {
+        SW_EXPECT_EQUAL( index, listPage[index] ); // 오래된 순
+    }
+    atlas.clearPage( listPage[0] );
     SW_EXPECT_EQUAL( generationBefore + 1, atlas.getGeneration() );
     atlas.takeUploads( listUpload );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listUpload.size() ) );
@@ -135,7 +140,9 @@ SW_TEST_CASE( GlyphAtlasTest, FullAtlasEvictsOldestUnusedPage )
     {
         atlas.markPageUsed( page, 20 );
     }
-    SW_EXPECT_FALSE( atlas.evictLeastRecentlyUsedPage( 20, evictedPage ) );
+    atlas.markPageUsed( 0, 3 ); // 더 이른 프레임은 사용 표시를 되돌리지 않는다
+    atlas.listEvictablePages( 20, listPage );
+    SW_EXPECT_TRUE( listPage.empty() );
 }
 
 /** @brief [GlyphAtlasTest] 캐시가 페이지를 비우면 그 페이지에 있던 글리프는 다음 조회에서 다시 래스터화된다 — 공백은 사각형 없이 들고, 있는 글리프는 다시 베이크하지 않는다 */
@@ -285,7 +292,7 @@ SW_TEST_CASE( GlyphAtlasTest, MSDFCacheUsesTheMSDFRasterizer )
 /** @brief [GlyphAtlasTest] 페이지 모양은 넘긴 값(카탈로그)을 따른다 — 작은 한 변은 업로드 · UV 기준도 작고, 페이지 수 상한을 넘으면 자리를 못 잡는다 */
 SW_TEST_CASE( GlyphAtlasTest, LayoutComesFromCatalogValues )
 {
-    const sw::GlyphAtlasLayout layout{ 256, 2 };
+    const sw::GlyphAtlasLayout layout{ 256, 2, 4 };
     sw::GlyphAtlas             atlas{ sw::GlyphFieldKind::Sdf, layout };
     SW_EXPECT_EQUAL( 256u, atlas.getPageSize() );
     sw::GlyphAtlasRect rect{};
@@ -315,4 +322,196 @@ SW_TEST_CASE( GlyphAtlasTest, CatalogRejectsMissingAtlasLayout )
     catalog._glyphAtlasPageSize     = 1024;
     catalog._glyphAtlasMaxPageCount = 0;
     SW_EXPECT_FALSE( catalog.validate() );
+    catalog._glyphAtlasMaxPageCount = 8;
+    catalog._glyphRetainFrameCount  = 0;
+    SW_EXPECT_FALSE( catalog.validate() );
+}
+
+namespace
+{
+    /** @brief 한 페이지(64²)에 글리프 16 개(14² + 여백 = 16²)가 꼭 차는 캐시 장치입니다 — 비우기 · 압축 길을 글리프 단위로 본다. 프레임은 캐시 시계(`beginFrame`)로 센다. */
+    struct GlyphRetainFixture
+    {
+        static constexpr uint32               kGlyphSize        = 14;
+        static constexpr uint32               kGlyphsPerPage    = 16;
+        static constexpr uint32               kRetainFrameCount = 2;
+        static constexpr sw::GlyphAtlasLayout kLayout{ 64, 1, kRetainFrameCount };
+
+        sw::test::FakeFontRasterizer _rasterizer;
+        sw::FontFaceID               _face;
+        sw::GlyphCache               _cache;
+
+        GlyphRetainFixture()
+            : _rasterizer{}
+            , _face{ _rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" ) }
+            , _cache{ _rasterizer, sw::GlyphFieldKind::Sdf, kLayout }
+        {
+            _rasterizer.setSDFSize( kGlyphSize );
+        }
+
+        /** @brief 캐시 시계를 @p frame 까지 올립니다(프레임마다 `beginFrame` — 압축은 여기서 돈다). */
+        void advanceTo( uint64 frame )
+        {
+            while ( _cache.getFrameIndex() < frame )
+            {
+                _cache.beginFrame();
+            }
+        }
+
+        /** @brief 지금 프레임에 글리프를 찾습니다. */
+        sw::GlyphLookup find( uint32 glyphIndex ) { return _cache.getOrCreateGlyph( _face, glyphIndex, _cache.getFrameIndex() ); }
+
+        /** @brief 지금 프레임에 찾아 사각형을, 없으면(미룸 · 실패) 빈 사각형을 돌려줍니다. */
+        sw::GlyphAtlasRect findRect( uint32 glyphIndex )
+        {
+            const sw::CachedGlyph* pGlyph = find( glyphIndex )._pGlyph;
+            return pGlyph != nullptr ? pGlyph->_rect : sw::GlyphAtlasRect{};
+        }
+
+        /** @brief 사각형 자리의 아틀라스 바이트가 모두 가짜 래스터 값(128)인지 봅니다(옮긴 바이트가 새 자리에 있는지). */
+        bool hasRasterBytes( const sw::GlyphAtlasRect& rect ) const
+        {
+            const uint8* pPage = _cache.getAtlas().getPageBytes( rect._page );
+            for ( uint32 row = 0; row < rect._height; ++row )
+            {
+                for ( uint32 column = 0; column < rect._width; ++column )
+                {
+                    if ( pPage[( static_cast<size_t>( rect._y ) + row ) * kLayout._pageSize + rect._x + column] != 128 )
+                        return false;
+                }
+            }
+            return true;
+        }
+    };
+} // namespace
+
+/**
+ * @brief [GlyphAtlasTest] 아틀라스가 차면 새 글리프를 미루고 다음 프레임 첫머리에 압축한다 — 오래된 글리프만 버리고 최근 글리프는 바이트를 옮겨 살리며(다시 래스터화하지 않는다),
+ *        옮긴 글리프의 사각형(UV)은 바이트가 있는 새 자리를 가리킨다
+ * @details 앞 8 개는 프레임 1(오래됨), 뒤 8 개는 프레임 5(최근 2 프레임 안)에 쓰고 프레임 5 에 새 글리프를 찾는다. 변이: 페이지를 통째로 비우면 뒤 8 개 조회가 다시 래스터화한다.
+ */
+SW_TEST_CASE( GlyphAtlasTest, GlyphCacheEvictsOnlyStaleGlyphsAndRelocatesRecentOnes )
+{
+    GlyphRetainFixture fixture;
+    const uint32       half = GlyphRetainFixture::kGlyphsPerPage / 2;
+    fixture.advanceTo( 1 );
+    for ( uint32 index = 0; index < half; ++index )
+    {
+        SW_REQUIRE_TRUE( fixture.findRect( 'A' + index )._width > 0 );
+    }
+    fixture.advanceTo( 5 );
+    sw::vector<sw::GlyphAtlasRect> listBefore;
+    for ( uint32 index = half; index < GlyphRetainFixture::kGlyphsPerPage; ++index )
+    {
+        listBefore.push_back( fixture.findRect( 'A' + index ) );
+        SW_REQUIRE_TRUE( listBefore.back()._width > 0 );
+    }
+    SW_EXPECT_TRUE( fixture.find( 'a' )._status == sw::GlyphLookupStatus::Deferred ); // 페이지가 찼다 — 이번 프레임은 아무것도 옮기거나 버리지 않는다
+    SW_EXPECT_EQUAL( GlyphRetainFixture::kGlyphsPerPage, fixture._cache.getGlyphCount() );
+    const uint32 generationBefore = fixture._cache.getAtlas().getGeneration();
+
+    fixture.advanceTo( 6 ); // 프레임 첫머리 압축
+    SW_EXPECT_EQUAL( generationBefore + 1, fixture._cache.getAtlas().getGeneration() );
+    SW_EXPECT_EQUAL( half, fixture._cache.getGlyphCount() ); // 오래된 8 개가 빠졌다
+    const uint32             rasterizedBefore = fixture._rasterizer.getRasterizeCount();
+    const sw::GlyphAtlasRect fresh            = fixture.findRect( 'a' );
+    SW_REQUIRE_TRUE( fresh._width > 0 );
+    SW_EXPECT_EQUAL( rasterizedBefore + 1, fixture._rasterizer.getRasterizeCount() );
+
+    sw::vector<sw::GlyphAtlasRect> listAfter;
+    bool                           bAnyMoved = false;
+    for ( uint32 index = half; index < GlyphRetainFixture::kGlyphsPerPage; ++index )
+    {
+        const sw::GlyphAtlasRect rect = fixture.findRect( 'A' + index );
+        SW_REQUIRE_TRUE( rect._width > 0 );
+        SW_EXPECT_TRUE( fixture.hasRasterBytes( rect ) ); // UV 가 바이트가 있는 자리를 가리킨다
+        SW_EXPECT_FALSE( GlyphAtlasTestUtil::overlaps( rect, fresh ) );
+        for ( const sw::GlyphAtlasRect& other : listAfter )
+        {
+            SW_EXPECT_FALSE( GlyphAtlasTestUtil::overlaps( rect, other ) );
+        }
+        const sw::GlyphAtlasRect& before = listBefore[index - half];
+        bAnyMoved                        = bAnyMoved || before._x != rect._x || before._y != rect._y;
+        listAfter.push_back( rect );
+    }
+    SW_EXPECT_TRUE( bAnyMoved );                                                      // 비운 페이지 앞쪽으로 옮겨졌다
+    SW_EXPECT_EQUAL( rasterizedBefore + 1, fixture._rasterizer.getRasterizeCount() ); // 살린 글리프는 다시 래스터화하지 않는다
+
+    SW_EXPECT_TRUE( fixture.findRect( 'A' )._width > 0 ); // 버린 오래된 글리프는 다시 래스터화된다
+    SW_EXPECT_EQUAL( rasterizedBefore + 2, fixture._rasterizer.getRasterizeCount() );
+}
+
+/**
+ * @brief [GlyphAtlasTest] 이번 프레임 · 최근 프레임에 쓴 글리프는 버리지 않는다 — 그런 글리프로만 차면 새 글리프는 미뤄지고 압축은 한 번 경고만 하며,
+ *        글리프가 모두 최근 창 밖으로 나간 페이지만 프레임 중간에 통째로 비운다
+ */
+SW_TEST_CASE( GlyphAtlasTest, GlyphCacheNeverEvictsGlyphsUsedThisFrame )
+{
+    GlyphRetainFixture fixture;
+    fixture.advanceTo( 1 );
+    for ( uint32 index = 0; index < GlyphRetainFixture::kGlyphsPerPage; ++index )
+    {
+        SW_REQUIRE_TRUE( fixture.findRect( 'A' + index )._width > 0 );
+    }
+    SW_EXPECT_TRUE( fixture.find( 'a' )._status == sw::GlyphLookupStatus::Deferred );
+    SW_EXPECT_TRUE( fixture.find( 'b' )._status == sw::GlyphLookupStatus::Deferred ); // 압축 전까지 래스터화하지 않는다
+    SW_EXPECT_EQUAL( GlyphRetainFixture::kGlyphsPerPage + 1, fixture._rasterizer.getRasterizeCount() );
+    SW_EXPECT_EQUAL( GlyphRetainFixture::kGlyphsPerPage, fixture._cache.getGlyphCount() );
+
+    SW_EXPECT_LOG( "GlyphCache.GlyphAtlasFullGlyphs" ); // 프레임 2 압축 — 모두 최근(1 프레임 전)이라 비울 것이 없다
+    fixture.advanceTo( 2 );
+    SW_EXPECT_EQUAL( GlyphRetainFixture::kGlyphsPerPage, fixture._cache.getGlyphCount() );
+    const uint32 rasterizedBefore = fixture._rasterizer.getRasterizeCount();
+    for ( uint32 index = 0; index < GlyphRetainFixture::kGlyphsPerPage; ++index )
+    {
+        SW_EXPECT_TRUE( fixture.findRect( 'A' + index )._width > 0 ); // 이번 프레임에도 쓴다
+    }
+    SW_EXPECT_EQUAL( rasterizedBefore, fixture._rasterizer.getRasterizeCount() );
+
+    // 프레임 5 — 16 개 모두 프레임 2 뒤로 안 썼다(최근 2 프레임 밖). 그 페이지만 통째로 비우고 새 글리프가 들어간다.
+    fixture.advanceTo( 5 );
+    SW_EXPECT_TRUE( fixture.find( 'a' )._status == sw::GlyphLookupStatus::Ready );
+    SW_EXPECT_EQUAL( 1u, fixture._cache.getGlyphCount() );
+}
+
+/**
+ * @brief [GlyphAtlasTest] 한글 채팅 창 장면의 새 래스터화 수(`Text.GlyphsRasterized` 와 같은 값)와 이번 프레임에 못 그린 글자 수를 로그로 남깁니다 — 문턱은 두지 않는다
+ * @details 장면: 서로 다른 한글 음절 3000 자 대화 기록을 600 자 창으로 보여 주며 프레임마다 40 자씩 내리고(먼저 그린다), 그 뒤에 고정 한글 패널 1200 자를 그린다.
+ *          글리프는 실제 크기(48 px + 퍼짐 6 px 양쪽 = 60 px)라 엔진 카탈로그 모양(1024² × 8)에 2048 자만 든다 — 한 프레임의 1800 자는 들고 전체 4200 자는 안 든다.
+ *          하한(`minimum`)은 처음 창 · 패널과 창에 새로 든 글자 수다. 페이지를 프레임 중간에 통째로 비우면 뒤에 그릴 패널 글리프가 섞인 페이지가 비워져
+ *          매 프레임 다시 래스터화된다(감사 RN-14). 재는 법: Release `App --test --test-filter=GlyphAtlasTest.HangulScrollGlyphsRasterized`,
+ *          로그 `GlyphAtlasTest.HangulScrollGlyphsRasterized` 의 `rasterized` 가 `minimum` 에 가까울수록, `missing`(미룬 · 못 그린 글자)이 작을수록 좋다.
+ */
+SW_TEST_CASE( GlyphAtlasTest, HangulScrollGlyphsRasterized, ._tags = "bench" )
+{
+    static constexpr uint32 kTextLength     = 3000;
+    static constexpr uint32 kWindowLength   = 600;
+    static constexpr uint32 kScrollPerFrame = 40;
+    static constexpr uint32 kPanelLength    = 1200;
+    static constexpr uint32 kFrameCount     = 300;
+    static constexpr uint32 kHangulFirst    = 0xAC00; // '가'
+    static constexpr uint32 kGlyphSizePx    = 60;
+
+    sw::test::FakeFontRasterizer rasterizer;
+    rasterizer.setSDFSize( kGlyphSizePx );
+    const sw::FontFaceID face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
+    sw::GlyphCache       cache( rasterizer, sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout );
+
+    uint32 missingCount = 0;
+    for ( uint32 frame = 0; frame < kFrameCount; ++frame )
+    {
+        cache.beginFrame();
+        const uint32 windowStart = ( frame * kScrollPerFrame ) % kTextLength;
+        for ( uint32 index = 0; index < kWindowLength + kPanelLength; ++index )
+        {
+            // 앞은 대화 창(기록 안에서 돈다), 뒤는 기록과 겹치지 않는 고정 패널 글자다.
+            const uint32 glyphIndex = index < kWindowLength ? kHangulFirst + ( windowStart + index ) % kTextLength : kHangulFirst + kTextLength + ( index - kWindowLength );
+            if ( cache.getOrCreateGlyph( face, glyphIndex, cache.getFrameIndex() )._status != sw::GlyphLookupStatus::Ready )
+                ++missingCount;
+        }
+    }
+    const uint32 minimumCount = kWindowLength + kPanelLength + kScrollPerFrame * ( kFrameCount - 1 );
+    SW_EXPECT_TRUE( rasterizer.getRasterizeCount() >= kWindowLength + kPanelLength );
+    SW_LOG_INFO_ID( "GlyphAtlasTest.HangulScrollGlyphsRasterized", "Hangul chat %# frames: rasterized %# (minimum %#), missing %#", kFrameCount, rasterizer.getRasterizeCount(),
+                    minimumCount, missingCount );
 }

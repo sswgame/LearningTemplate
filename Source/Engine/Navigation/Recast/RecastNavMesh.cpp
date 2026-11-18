@@ -71,8 +71,16 @@ namespace sw
             }
 
             /** @brief 링크 그림의 활 높이(두 끝 거리에 대한 비율)와 마디 수입니다. */
-            static constexpr float32 kLinkArcHeightRatio  = 0.25f;
-            static constexpr uint32  kLinkArcSegmentCount = 8;
+            static constexpr float32 kLinkArcHeightRatio   = 0.25f;
+            static constexpr float32 kBakeBorderExtraCells = 3.0f;    ///< 베이크 테두리 = 몸 반지름(셀 올림) + 이 셀 수
+            static constexpr float32 kUnboundedHeight      = 1.0e30f; ///< 타일 베이크 영역의 높이 끝(XZ 만 본다)
+
+            /** @brief 베이크 테두리(미터)입니다. 이웃 타일의 기하가 이 타일 가장자리의 깎기를 바꾸는 너비다. */
+            static float32 computeBakeBorder( const NavAgentTypeDef& agentType )
+            {
+                return ( MathUtil::ceil( agentType._radius / agentType._cellSize ) + kBakeBorderExtraCells ) * agentType._cellSize;
+            }
+            static constexpr uint32 kLinkArcSegmentCount = 8;
 
             /** @brief 베이크 중간 결과를 보관하고 끝에서 해제합니다(실패로 빠져나가도 해제합니다). */
             struct BuildScratch
@@ -457,6 +465,18 @@ namespace sw
         ++_revision;
     }
 
+    AABB RecastNavMesh::computeTileBakeRegion( const int32 tileX, const int32 tileZ ) const
+    {
+        // 테두리는 `collectTilesOverlapping` 과 같다 — 이웃 기하가 이 타일 가장자리를 바꾼다.
+        const float32 border = RecastNavMeshInternal::computeBakeBorder( _agentType );
+        AABB          region = _grid.computeTileBounds( tileX, tileZ, -RecastNavMeshInternal::kUnboundedHeight, RecastNavMeshInternal::kUnboundedHeight );
+        region._min._x -= border;
+        region._min._z -= border;
+        region._max._x += border;
+        region._max._z += border;
+        return region;
+    }
+
     void RecastNavMesh::collectTilesOverlapping( const AABB& bounds, vector<int2>& outListTile ) const
     {
         outListTile.clear();
@@ -464,7 +484,7 @@ namespace sw
         if ( bNothingToQuery )
             return;
         // 베이크 테두리(몸 반지름 + 3 셀)만큼 넓힌다. 이웃 타일의 기하가 이 타일 가장자리의 깎기를 바꾸기 때문이다.
-        const float32 border = ( MathUtil::ceil( _agentType._radius / _agentType._cellSize ) + 3.0f ) * _agentType._cellSize;
+        const float32 border = RecastNavMeshInternal::computeBakeBorder( _agentType );
         const int32   minX   = static_cast<int32>( MathUtil::floor( ( bounds._min._x - border - _grid._origin._x ) / _grid._tileWorldSize ) );
         const int32   maxX   = static_cast<int32>( MathUtil::floor( ( bounds._max._x + border - _grid._origin._x ) / _grid._tileWorldSize ) );
         const int32   minZ   = static_cast<int32>( MathUtil::floor( ( bounds._min._z - border - _grid._origin._z ) / _grid._tileWorldSize ) );

@@ -56,9 +56,9 @@ SW_TEST_CASE( NetMessageChannelTest, ReplicatedSchemaMismatchIsRefusedAtHandshak
     NetEndpoint     server;
     NetEndpoint     sameClient;
     NetEndpoint     otherClient;
-    server.initialize( network.createEndpoint( 4100 ), serverSettings );
-    sameClient.initialize( network.createEndpoint( 5101 ), sameSettings );
-    otherClient.initialize( network.createEndpoint( 5102 ), otherSettings );
+    SW_REQUIRE_TRUE( server.initialize( network.createEndpoint( 4100 ), serverSettings ) );
+    SW_REQUIRE_TRUE( sameClient.initialize( network.createEndpoint( 5101 ), sameSettings ) );
+    SW_REQUIRE_TRUE( otherClient.initialize( network.createEndpoint( 5102 ), otherSettings ) );
     SW_REQUIRE_TRUE( server.listen() );
     SW_REQUIRE_TRUE( sameClient.connect( NetAddress::makeLoopback( 4100 ) ) );
     SW_REQUIRE_TRUE( otherClient.connect( NetAddress::makeLoopback( 4100 ) ) );

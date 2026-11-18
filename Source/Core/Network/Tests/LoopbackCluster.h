@@ -35,7 +35,10 @@ namespace sw::test
         LoopbackCluster( const LoopbackCluster& )            = delete;
         LoopbackCluster& operator=( const LoopbackCluster& ) = delete;
 
-        /** @brief 루프백 엔드포인트(`127.0.0.1:port`) · 흉내 · `NetEndpoint` 를 하나 더합니다. 번호(더한 순서)이고, 포트가 겹치면 비어 있습니다. */
+        /**
+         * @brief 루프백 엔드포인트(`127.0.0.1:port`) · 흉내 · `NetEndpoint` 를 하나 더합니다. 번호(더한 순서)이고, 포트가 겹치거나 `NetEndpoint::initialize` 가 거절하면 비어 있습니다.
+         * @details @p settings 는 테스트가 그대로 준다 — Core 는 Engine 설정(`Config/Engine/NetSendThrottle.json`)을 읽을 수 없어 `_sendThrottle` 을 비우면 고정 버킷이다.
+         */
         [[nodiscard]] optional<int32> addEndpoint( uint16 port, const NetEndpointConfig& settings );
         /**
          * @brief 엔드포인트 0 이 listen 하고 나머지가 0 에 connect 한 뒤 @p stepCount 번 `step` 합니다.

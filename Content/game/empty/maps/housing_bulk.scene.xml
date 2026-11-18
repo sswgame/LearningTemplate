@@ -4,7 +4,7 @@
   부하 시나리오 automation/load/housingbulk.scenario.xml 이 housing.fill 로 바닥 576 · 탁자 288 을 놓고 프레임 측정 창을 연다.
 -->
 <Scene formatVersion="3" name="HousingBulk">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

@@ -56,9 +56,9 @@ namespace
 
         static void patchUint32( vector<uint8>& inoutBytes, size_t offset, uint32 value ) { Memory::copy( inoutBytes.data() + offset, &value, sizeof( value ) ); }
 
-        // 바이트 자리: 매직(0) · 형식 버전(4) · 백엔드 이름 길이(8) · 이름 · 백엔드 버전 · 항목 수 · 첫 항목.
+        // 바이트 자리: 매직(0) · 형식 버전(4) · 머리 길이(8) · 백엔드 이름 길이(16) · 이름 · 백엔드 버전 · 항목 수 · 첫 항목 … 머리 뒤에 타일 바이트.
         static constexpr size_t kVersionOffset     = 4;
-        static constexpr size_t kBackendNameOffset = 12;
+        static constexpr size_t kBackendNameOffset = 20;
 
         static size_t getBackendNameSize() { return string_view( NavMeshBackend::getBackendName() ).size(); }
         static size_t getBackendVersionOffset() { return kBackendNameOffset + getBackendNameSize(); }
@@ -184,7 +184,7 @@ SW_TEST_CASE( NavMeshAssetTest, HugeCountsAreRejectedBeforeAllocating )
     SW_EXPECT_FALSE( asset.readBytes( listTileCount.data(), listTileCount.size(), "test" ) );
     SW_EXPECT_TRUE( asset.getEntries().empty() );
 
-    // 첫 타일의 바이트 길이 자리: 타일 수 뒤의 x · z 다음이다.
+    // 첫 타일의 내용 구간 시작 자리: 타일 수 뒤의 x · z 다음이다(구간이 빈틈없이 잇지 않으면 깨진 파일이다).
     vector<uint8> listTileLength = listByte;
     Util::patchUint32( listTileLength, Util::getFirstTileCountOffset() + sizeof( uint32 ) * 3u, 0xFFFFFFFFu );
     SW_EXPECT_FALSE( asset.readBytes( listTileLength.data(), listTileLength.size(), "test" ) );
@@ -215,7 +215,7 @@ SW_TEST_CASE( NavMeshAssetTest, TrailingBytesAndNonFiniteBoundsAreRejected )
     SW_EXPECT_TRUE( asset.getEntries().empty() );
 }
 
-/** @brief [NavMeshAssetTest] 남은 바이트로 꼭 맞는 타일 수는 받는다 — 빈 타일(12 바이트)들이 거름의 경계다 */
+/** @brief [NavMeshAssetTest] 남은 바이트로 꼭 맞는 타일 수는 받는다 — 빈 타일의 머리 한 줄(32 바이트)들이 거름의 경계다 */
 SW_TEST_CASE( NavMeshAssetTest, TileCountExactlyFittingTheRestIsAccepted )
 {
     NavMeshAssetEntry entry = Util::makeEntry( hashed_string{ "Walker" }, 1 );

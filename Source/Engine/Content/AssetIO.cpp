@@ -293,6 +293,31 @@ namespace sw
         return handle;
     }
 
+    bool AssetIO::readBinaryAssetRange( const AssetID& id, uint64 offset, uint64 size, vector<uint8>& outBytes )
+    {
+        outBytes.clear();
+        if ( CookJob::findCurrent() != nullptr )
+        {
+            SW_LOG_ERROR_ID( "AssetIO.RangeReadDuringCooking", "'%#' was read by range during cooking - a range cannot be recorded as a cook input; cookers read whole files", id.view() );
+            return false;
+        }
+        const bool bRead = readResourceCommon(
+            id.view(), nullptr,
+            [&outBytes, offset, size]( string_view absPath )
+        {
+            const AsyncFileHandle file = ContentFileSource::getCurrent().open( absPath );
+            if ( file.isValid() == false || offset > file.getSize() || size > file.getSize() - offset )
+                return false;
+            outBytes.resize( static_cast<size_t>( size ) );
+            return size == 0 || file.readAt( offset, outBytes.data(), static_cast<size_t>( size ) );
+        },
+            [&outBytes, offset, size]( const PackManager& packManager, string_view key, string& )
+        { return packManager.readRange( key, offset, size, outBytes ); } );
+        if ( bRead == false )
+            outBytes.clear();
+        return bRead;
+    }
+
     bool AssetIO::hasAsset( const AssetID& id )
     {
         // 찾는 규칙은 읽기(`readResourceCommon`)와 같다 — 경로 교체, OS 경로는 오류, 붙인 디스크 도메인은 디스크만, 나머지는 낱개 파일(허용될 때) · 팩.

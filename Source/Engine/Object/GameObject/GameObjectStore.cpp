@@ -54,6 +54,7 @@ namespace sw
         , _objectSlotTable{}
         , _overflowObjectCount{ 0 }
         , _listPendingAdd{}
+        , _listStagedObject{}
         , _listPendingDestroyObject{}
         , _listPendingDestroyComponent{}
         , _listProcessingDestroyObject{}
@@ -382,13 +383,22 @@ namespace sw
             _listProcessingBeginPlay.swap( _listPendingBeginPlay );
         }
         // 핸들로 다시 찾는다. 대기열에 선 뒤 분리되었거나 오브젝트째 지워졌으면 건너뛴다. 삭제 대기면 dispatchBeginPlay 가 거른다.
+        // 나눠 짓는 셀의 컴포넌트(`isStaged`)는 다 지어 드러날 때까지 줄에 남긴다.
+        vector<ComponentHandle> listStillStaged;
         for ( const ComponentHandle handle : _listProcessingBeginPlay )
         {
             Component* pComp = resolveComponent( handle );
-            if ( pComp != nullptr )
+            if ( pComp != nullptr && pComp->isStaged() )
+                listStillStaged.push_back( handle );
+            else if ( pComp != nullptr )
                 pComp->dispatchBeginPlay();
         }
         _listProcessingBeginPlay.clear();
+        if ( listStillStaged.empty() == false )
+        {
+            ScopedLock<mutex> lock{ _beginPlayMutex };
+            _listPendingBeginPlay.insert( _listPendingBeginPlay.end(), listStillStaged.begin(), listStillStaged.end() );
+        }
     }
 
     Component* GameObjectStore::resolveComponent( ComponentHandle handle ) const
@@ -551,7 +561,9 @@ namespace sw
                     {
                         // 본 목록에 없으면 이번 프레임에 만들어져 아직 병합되지 않은 것이다. 그때만 대기 목록을 훑는다
                         // (항상 훑으면 프레임에 100 개를 만들고 100 개를 지울 때 만 번 비교한다).
-                        (void)VectorUtil::removeSingleSwap( _listPendingAdd, pObj ); // 없으면 이미 빠진 것이다
+                        // 나눠 짓는 셀의 드러나지 않은 오브젝트(`stageGameObjects`)면 그 목록에 있다.
+                        if ( VectorUtil::removeSingleSwap( _listPendingAdd, pObj ) == false )
+                            (void)VectorUtil::removeSingleSwap( _listStagedObject, pObj ); // 없으면 이미 빠진 것이다
                     }
                     const auto nameIt = _mapNameToObject.find( pObj->getName() );
                     if ( nameIt != _mapNameToObject.end() && nameIt->second._pObject == pObj )
@@ -605,9 +617,10 @@ namespace sw
             {
                 UniqueLock<shared_mutex> lock{ _mutex };
 
-                listToDestroy.reserve( _listGameObject.size() + _listPendingAdd.size() );
+                listToDestroy.reserve( _listGameObject.size() + _listPendingAdd.size() + _listStagedObject.size() );
                 listToDestroy.insert( listToDestroy.end(), _listGameObject.begin(), _listGameObject.end() );
                 listToDestroy.insert( listToDestroy.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
+                listToDestroy.insert( listToDestroy.end(), _listStagedObject.begin(), _listStagedObject.end() );
 
                 _listPendingDestroyObject.clear();
                 _listPendingDestroyComponent.clear();
@@ -620,6 +633,7 @@ namespace sw
 
                 _listGameObject.clear();
                 _listPendingAdd.clear();
+                _listStagedObject.clear();
                 _mapNameToObject.clear();
                 _mapNameSuffix.clear();
                 _mapBaseNameToObject.clear();
@@ -652,6 +666,42 @@ namespace sw
                 SW_ASSERT( pEntry->_listComponent.empty() && pEntry->_pType == nullptr );
                 pEntry->_pool.clear();
             }
+        }
+    }
+
+    void GameObjectStore::stageGameObjects( span<const uint64> listObjectID )
+    {
+        UniqueLock<shared_mutex> lock{ _mutex };
+        for ( const uint64 objectID : listObjectID )
+        {
+            GameObject* pObj = findRegisteredUnlocked( objectID );
+            if ( pObj == nullptr || VectorUtil::removeSingleSwap( _listPendingAdd, pObj ) == false )
+                continue;
+            _listStagedObject.push_back( pObj );
+            for ( Component* pComp : pObj->_listComponent )
+            {
+                if ( pComp != nullptr )
+                    pComp->_bStaged = SW_TRUE;
+            }
+        }
+    }
+
+    void GameObjectStore::releaseStagedGameObjects( span<const uint64> listObjectID, vector<GameObject*>& outListObject )
+    {
+        outListObject.clear();
+        UniqueLock<shared_mutex> lock{ _mutex };
+        for ( const uint64 objectID : listObjectID )
+        {
+            GameObject* pObj = findRegisteredUnlocked( objectID );
+            if ( pObj == nullptr || VectorUtil::removeSingleSwap( _listStagedObject, pObj ) == false )
+                continue;
+            _listPendingAdd.push_back( pObj );
+            for ( Component* pComp : pObj->_listComponent )
+            {
+                if ( pComp != nullptr )
+                    pComp->_bStaged = SW_FALSE;
+            }
+            outListObject.push_back( pObj );
         }
     }
 

@@ -127,6 +127,15 @@ namespace sw
             _moveStatus = NavMoveStatus::Moving;
     }
 
+    SpawnStateReset NavMeshAgentComponent::resetToSpawnState()
+    {
+        if ( _bHasDestination == SW_TRUE )
+            stop();
+        _velocity        = float3{ 0.0f, 0.0f, 0.0f };
+        _desiredVelocity = float3{ 0.0f, 0.0f, 0.0f };
+        return SpawnStateReset::Reset;
+    }
+
     void NavMeshAgentComponent::stop()
     {
         _bHasDestination   = SW_FALSE;

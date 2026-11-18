@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    /** @struct MeadowVillageData @brief 하루 2 분(1 초 = 게임 12 분), 계절 넷 × 28 일. 카탈로그는 게임 인스턴스가 게임 범위에 건 것. */
+    /** @struct MeadowVillageData @brief 하루 2 분(1 초 = 게임 12 분), 계절 넷 × 28 일, 공유 땅 40 × 40 칸. 카탈로그는 게임 인스턴스가 게임 범위에 건 것. */
     struct MeadowVillageData
     {
         static constexpr const utf8* kFastForwardAction = CommonInputActions::kFastForward; ///< 누르는 동안 8 배속
@@ -22,6 +22,8 @@ namespace sw
         static constexpr const utf8* kHarvestedFlag     = "farm.harvested";                 ///< 밭이 거둔 수(공유 플래그)
         static constexpr const utf8* kSproutSpecies     = "sprout";
         static constexpr const utf8* kRequestQuest      = "meadow_request";
+        static constexpr int32       kLandSize          = 40;    ///< 공유 땅 한 변의 칸 수(칸 1 m — 밭 · 마을 · 집 부지를 덮는다)
+        static constexpr float32     kLandHalfExtent    = 20.0f; ///< 땅이 월드 원점을 가운데에 두도록 원점을 이만큼 뺀다(m)
 
         static SessionStateSettings makeStateSettings()
         {
@@ -32,6 +34,11 @@ namespace sw
             settings._clock._startHour     = 6.0f;
             settings._pQuestCatalog        = game::findSubsystem<const QuestCatalog>();
             settings._pReputationCatalog   = game::findSubsystem<const ReputationCatalog>(); // 생물 호감도 = 세력 creature.<종>
+            // 공유 땅 — 하우징 부지가 칸을 차지한다(밭 · 마을 자리와 겹치지 않게 씬에서 둔다). 칸 1 m 는 하우징 카탈로그의 칸과 같아야 한다.
+            settings._landWidth    = kLandSize;
+            settings._landHeight   = kLandSize;
+            settings._landCellSize = 1.0f;
+            settings._landOrigin   = float3{ -kLandHalfExtent, 0.0f, -kLandHalfExtent };
             return settings;
         }
     };

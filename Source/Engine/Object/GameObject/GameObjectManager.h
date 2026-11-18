@@ -588,6 +588,21 @@ namespace sw
         void mergePendingAdds();
 
         /**
+         * @brief 아직 병합되지 않은 오브젝트를 드러나지 않게 둡니다(`GameObjectStore::stageGameObjects`). 스트리밍 셀을 여러 프레임에 나눠 지을 때 다 짓기 전의 오브젝트입니다.
+         * @details 병합 · 순회 · 틱 · 시작 · 타입별 순회에 들지 않고 id 로만 찾힌다. 등록(onRegister)은 지은 쪽이 미뤄 들고 있다가 드러낼 때 부른다(`swapDeferredRegistration`).
+         */
+        void stageGameObjects( span<const uint64> listObjectID );
+        /** @brief `stageGameObjects` 로 둔 오브젝트를 대기 목록으로 되돌리고 틱 항목을 다시 만들게 합니다(다음 병합에서 드러난다). */
+        void releaseStagedGameObjects( span<const uint64> listObjectID );
+        /**
+         * @brief 미룬 등록 · 로드 뒤 처리 줄을 @p inoutRegister · @p inoutPostLoad 와 맞바꿉니다. 미루는 중에만 부릅니다.
+         * @details 셀을 나눠 지을 때 그 셀의 줄만 따로 모은다 — 짓는 동안 맞바꿔 넣고 끝에 다시 맞바꿔 빼면, 바깥 미루기가 쥔 줄은 그대로이고 셀의 줄은 셀이 든다.
+         */
+        void swapDeferredRegistration( vector<ComponentHandle>& inoutRegister, vector<ComponentHandle>& inoutPostLoad );
+        /** @brief 따로 모은 줄(`swapDeferredRegistration`)을 미룬 줄 뒤에 붙입니다. 미루는 중에만 부릅니다 — 바깥 짝이 끝날 때 붙은 순서로 부른다. */
+        void appendDeferredRegistration( const vector<ComponentHandle>& listRegister, const vector<ComponentHandle>& listPostLoad );
+
+        /**
          * @brief 모듈이 내려가기 전에, 그 모듈이 정의한 컴포넌트 타입의 **살아 있는 인스턴스**를 모두 지웁니다.
          * @details 팩토리 · 타입 · 전역 변수는 등록 해제되지만 씬은 엔진이 소유해 모듈보다 오래 삽니다. 인스턴스가 남으면
          *          vtable 이 사라진 객체가 씬에 남아 다음 틱 · 소멸에서 없는 코드로 뛰어듭니다. 지연 파괴 목록에 남은 것도

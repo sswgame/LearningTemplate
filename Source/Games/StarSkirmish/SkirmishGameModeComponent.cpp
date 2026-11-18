@@ -240,6 +240,7 @@ namespace sw
         , _commanderTreePath{}
         , _listCliffPrefab{}
         , _unitPrefab{}
+        , _unitPool{}
         , _cameraRig{}
         , _watchFocus{ 32.0f, 0.0f, 30.0f }
         , _watchCameraPreset{}
@@ -516,8 +517,8 @@ namespace sw
             _unitViews.clear();
             collectUnitChanges();
         }
-        _unitViews.flush( [&manager]( GameObjectHandle& inoutHandle )
-        { destroySpawned( manager, inoutHandle ); },
+        _unitViews.flush( [this, &manager]( GameObjectHandle& inoutHandle )
+        { releaseSpawned( manager, _unitPrefab.path(), inoutHandle ); }, // 죽음 · 안개로 빠진 유닛 뷰는 풀에 돌려준다
                           [this, &manager]( size_t, RTSUnitID unitID )
         { return spawnUnit( manager, unitID ); } );
     }
@@ -552,7 +553,7 @@ namespace sw
         const RuleViewDef* pModel = _pUnitModelCatalog->find( pUnit->_pDef->_id );
         if ( pModel == nullptr )
             return GameObjectHandle{};
-        GameObject* pObject = spawnPrefab( manager, _unitPrefab, "SkirmishUnit" );
+        GameObject* pObject = spawnPrefab( manager, _unitPrefab, "SkirmishUnit", _unitPool );
         if ( pObject == nullptr )
             return GameObjectHandle{};
         MeshComponent* pMesh = pObject->getComponent<MeshComponent>();

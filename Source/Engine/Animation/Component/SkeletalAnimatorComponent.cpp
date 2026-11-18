@@ -383,6 +383,29 @@ namespace sw
             startInitialState();
     }
 
+    SpawnStateReset SkeletalAnimatorComponent::resetToSpawnState()
+    {
+        _parameters        = AnimationParameterSet{};
+        _deferredPlayState = hashed_string{};
+        clearLayers(); // 코드 레이어는 실행 중에 단 것이다(래그돌 움찔) — 단 쪽도 자기 번호를 잊는다
+        _currentState.clear();
+        _stateTime = 0.0f;
+        // 지난 삶의 포즈(쓰러진 자세)에서 이어 섞지 않는다 — 다시 켜진 첫 포즈가 시작 상태다.
+        _baseHistory.invalidate();
+        _inertializer.reset();
+        _carryOverElapsed  = 0.0f;
+        _carryOverDuration = 0.0f;
+        if ( hasBegunPlay() == false )
+            return SpawnStateReset::Reset;
+        if ( _bClipsPending == SW_TRUE )
+            _bStartPending = _bPlayOnBegin;
+        else if ( _bPlayOnBegin == SW_TRUE )
+            startInitialState();
+        else
+            stop();
+        return SpawnStateReset::Reset;
+    }
+
     void SkeletalAnimatorComponent::startInitialState()
     {
         // 핫 리로드로 되살아났으면 그 상태 · 시각에서 잇는다. 아니면 처음 상태부터.

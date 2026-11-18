@@ -81,6 +81,8 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
 
+        /** @brief 풀 반환: 목적지를 지우고 멈춥니다(속도 0). 자리는 꺼낸 쪽이 `warp` 로 정합니다. */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
         /** @brief 목적지를 겁니다(다음 내비게이션 갱신에 든다). 이 오브젝트의 틱에서 불러도 됩니다. */
         void setDestination( const float3& destination );
         /** @brief 목적지를 지우고 멈춥니다. */

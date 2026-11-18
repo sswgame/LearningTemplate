@@ -162,6 +162,35 @@ namespace sw
             loadAsset();
     }
 
+    SpawnStateReset RagdollComponent::resetToSpawnState()
+    {
+        if ( _state == RagdollState::Ragdoll )
+            setControllerActive( true ); // `startRagdoll` 이 끈 것이다(기상은 스스로 다시 켠다)
+        const size_t bodyCount = _ragdoll._listBody.size();
+        _state                 = RagdollState::Animated;
+        _listBodyWeight.assign( bodyCount, 0.0f );
+        _listReactionTime.assign( bodyCount, 0.0f );
+        _listBodyDynamic.assign( bodyCount, SW_FALSE );
+        _listBoneWeight.assign( _listBoneWeight.size(), 0.0f );
+        _listPartialMask.clear();
+        _listBlendStartWeight.clear();
+        _listPendingImpulse.clear();
+        _flinchLayer.reset(); // 애니메이터의 코드 레이어는 애니메이터 되돌리기가 걷는다 — 다음 맞음이 다시 단다
+        _partialWeight    = 1.0f;
+        _sleepElapsed     = 0.0f;
+        _blendBackElapsed = 0.0f;
+        _flinchElapsed    = 0.0f;
+        _bHasPhysicsPose  = false;
+        _bAsleep          = false;
+        _bGettingUp       = false;
+        // 떼어 낸 바디(절단)는 되돌릴 길이 없다 — 물리 에셋을 다시 읽고 다음 물리 프레임이 바디를 키네마틱으로 다시 세운다(`beginPhysicsFrame` 의 다시 짓기).
+        if ( _ragdoll.isEmpty() == false )
+            loadAsset();
+        if ( _pUnit != nullptr )
+            _pUnit->markPoseDirty();
+        return SpawnStateReset::Reset;
+    }
+
     void RagdollComponent::setPhysicsAssetPath( string_view path )
     {
         _physicsAssetPath = path;

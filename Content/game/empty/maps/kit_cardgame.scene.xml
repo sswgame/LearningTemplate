@@ -1,6 +1,6 @@
 <?asset guid="d1bf078917bd484d933adc8834a71124"?>
 <Scene formatVersion="2" name="KitDemoCardGame">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

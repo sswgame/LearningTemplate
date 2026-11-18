@@ -15,31 +15,38 @@ namespace sw
         struct ReflectionValidationInternal
         {
             /** @brief 값으로 든 반사 구조체의 타입입니다(내장 타입 · 열거형은 아니다). 없으면 nullptr 입니다. */
-            static const TypeInfo* findNestedType( const hashed_string& typeName )
+            static const TypeInfo* findNestedType( const hashed_string& typeName, const TypeResolver& resolver )
             {
                 if ( typeName.empty() )
                     return nullptr;
-                const TypeInfo* pType = engine::getSubsystem<TypeRegistry>().findType( typeName );
+                const TypeInfo* pType = resolver.find( typeName );
                 if ( pType == nullptr || pType->isPrimitive() )
                     return nullptr;
                 return pType;
             }
 
             /** @brief 시퀀스 원소가 반사 구조체면 그 타입입니다(맵 · 중첩 컨테이너는 내려가지 않는다). */
-            static const TypeInfo* findSequenceElementType( const PropertyInfo& prop )
+            static const TypeInfo* findSequenceElementType( const PropertyInfo& prop, const TypeResolver& resolver )
             {
                 const bool bNestedContainer   = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
                 const bool bNoSequenceElement = prop._bIsContainer == SW_FALSE || prop._containerWrapper == nullptr || prop._containerWrapper->asSequence() == nullptr || bNestedContainer;
                 if ( bNoSequenceElement )
                     return nullptr;
-                return findNestedType( prop._elementTypeName );
+                return findNestedType( prop._elementTypeName, resolver );
+            }
+
+            /** @brief 공개 조회(레지스트리 잠금)로 찾는 길입니다 — 검증 실행(`validateObject`)이 쓴다. */
+            static TypeResolver makeRegistryResolver()
+            {
+                return TypeResolver{ &engine::getSubsystem<TypeRegistry>(), []( const void* pContext, const hashed_string& name )
+                { return static_cast<const TypeRegistry*>( pContext )->findType( name ); } };
             }
 
             /**
              * @brief 검증 함수가 있는지 — 자기 사슬의 타입 · 프로퍼티 검증, 값으로 든 구조체 · 시퀀스 원소 타입의 것까지.
              * @param depth 값 타입이 서로를 담는 사슬(드물다)에서 멈추는 깊이
              */
-            static bool computeHasValidator( const TypeInfo& type, const uint32 depth )
+            static bool computeHasValidator( const TypeInfo& type, const TypeResolver& resolver, const uint32 depth )
             {
                 if ( depth > constant::reflection::kMaxParentChainDepth )
                     return false;
@@ -52,8 +59,8 @@ namespace sw
                 {
                     if ( prop._pValidate != nullptr )
                         return true;
-                    const TypeInfo* pNested          = prop._bIsContainer == SW_TRUE ? findSequenceElementType( prop ) : findNestedType( prop._typeName );
-                    const bool      bNestedValidator = pNested != nullptr && pNested != &type && computeHasValidator( *pNested, depth + 1 );
+                    const TypeInfo* pNested          = prop._bIsContainer == SW_TRUE ? findSequenceElementType( prop, resolver ) : findNestedType( prop._typeName, resolver );
+                    const bool      bNestedValidator = pNested != nullptr && pNested != &type && computeHasValidator( *pNested, resolver, depth + 1 );
                     if ( bNestedValidator )
                         return true;
                 }
@@ -80,7 +87,7 @@ namespace sw
                         if ( _arrProperty[index] == &prop )
                             return _arrType[index];
                     }
-                    const TypeInfo* pType = prop._bIsContainer == SW_TRUE ? findSequenceElementType( prop ) : findNestedType( prop._typeName );
+                    const TypeInfo* pType = prop._bIsContainer == SW_TRUE ? findSequenceElementType( prop, makeRegistryResolver() ) : findNestedType( prop._typeName, makeRegistryResolver() );
                     if ( _count < kCapacity )
                     {
                         _arrProperty[_count] = &prop;
@@ -220,9 +227,9 @@ namespace sw
         return type.hasValidator();
     }
 
-    bool ReflectionValidation::computeHasValidator( const TypeInfo& type )
+    bool ReflectionValidation::computeHasValidator( const TypeInfo& type, const TypeResolver& resolver )
     {
-        return ReflectionValidationInternal::computeHasValidator( type, 0 );
+        return ReflectionValidationInternal::computeHasValidator( type, resolver, 0 );
     }
 
     void ValidationIssueLog::replaceIssues( const uint64 sourceID, const vector<ValidationIssue>& listIssue )

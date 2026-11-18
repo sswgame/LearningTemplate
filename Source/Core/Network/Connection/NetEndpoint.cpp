@@ -135,8 +135,17 @@ namespace sw
 
     NetEndpoint::~NetEndpoint() = default;
 
-    void NetEndpoint::initialize( INetTransport* pTransport, const NetEndpointConfig& settings )
+    bool NetEndpoint::initialize( INetTransport* pTransport, const NetEndpointConfig& settings )
     {
+        if ( settings._sendThrottle.has_value() )
+        {
+            const expected<void> valid = NetSendThrottle::validate( *settings._sendThrottle, settings._maxBytesPerSecond );
+            if ( valid.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "NetEndpoint.SendThrottleInvalid", "Send throttle setting %#: %# - the endpoint is not initialized", valid.error().detail(), valid.error().message() );
+                return false;
+            }
+        }
         vector<FinishedConnect> listFinished;
         {
             ScopedLock<mutex> lock{ _mutex };
@@ -165,6 +174,7 @@ namespace sw
             listFinished.swap( _listFinished );
         }
         deliverFinished( listFinished );
+        return true;
     }
 
     NetEndpoint::PacketType NetEndpoint::peekPacketType( const uint8* pData, int32 size )
@@ -532,7 +542,8 @@ namespace sw
                 slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetEndpointInternal::kHeaderSize - NetPacketSealer::kSecureHeadSize - NetSecurityConstant::kAEADTagSize : 0;
             slot._connection->writePacket( nowSeconds, _plainWriter, maxBytes, _settings._keepAliveInterval, _settings._maxUnreliableAgeSeconds );
             const int32 sentBytes = sendSealed( slot, PacketType::Payload, _plainWriter.getBytes().data(), _plainWriter.getByteCount() );
-            slot._sendCredit -= static_cast<float64>( sentBytes );
+            if ( maxBytes > 0 )
+                slot._sendCredit -= static_cast<float64>( sentBytes ); // 헤더만 담은 패킷(확인 · 연결 유지)은 제어 몫이라 빼지 않는다
             slot._lastSendTime = nowSeconds;
             return;
         }
@@ -546,13 +557,17 @@ namespace sw
         const int32 maxBytes = slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetEndpointInternal::kHeaderSize : 0;
         slot._connection->writePacket( nowSeconds, writer, maxBytes, _settings._keepAliveInterval, _settings._maxUnreliableAgeSeconds );
         sendFramed( slot._address, _protocolID );
-        slot._sendCredit -= static_cast<float64>( writer.getByteCount() + NetEndpointInternal::kHeaderSize );
+        if ( maxBytes > 0 )
+            slot._sendCredit -= static_cast<float64>( writer.getByteCount() + NetEndpointInternal::kHeaderSize ); // 헤더만 담은 패킷(확인 · 연결 유지)은 제어 몫이라 빼지 않는다
         slot._lastSendTime = nowSeconds;
     }
 
     void NetEndpoint::refillSendCredit( float64 nowSeconds, NetEndpointSlot& slot ) const
     {
-        const float64 rate = static_cast<float64>( MathUtil::max( kNetMaxPacketSize, _settings._maxBytesPerSecond ) );
+        const int32 maxRate = MathUtil::max( kNetMaxPacketSize, _settings._maxBytesPerSecond );
+        if ( _settings._sendThrottle.has_value() )
+            slot._sendThrottle.update( nowSeconds, *_settings._sendThrottle, maxRate, slot._connection->getStats() );
+        const float64 rate = slot._sendThrottle.getBytesPerSecond( maxRate ); // 조절하지 않으면 늘 상한이다
         // 쌓아 둘 수 있는 토큰은 보내기 간격 두 번어치(최소 패킷 하나)다. 한가했다고 한꺼번에 몰아 보내 회선을 넘치게 하지 않기 위해서다.
         const float64 capacity = MathUtil::max( static_cast<float64>( kNetMaxPacketSize ), rate * _settings._sendInterval * 2.0 );
         if ( slot._lastCreditTime < 0.0 )
@@ -1567,12 +1582,6 @@ namespace sw
         return _protocolID;
     }
 
-    int32 NetEndpoint::getMaxBytesPerSecond() const
-    {
-        ScopedLock<mutex> lock{ _mutex };
-        return _settings._maxBytesPerSecond;
-    }
-
     bool NetEndpoint::isConnectionSaturated( int32 connectionID ) const
     {
         ScopedLock<mutex>      lock{ _mutex };
@@ -1590,6 +1599,7 @@ namespace sw
             return false;
         outStats                       = pSlot->_connection->getStats();
         outStats._pendingReliableCount = pSlot->_connection->getPendingReliableCount();
+        outStats._sendBytesPerSecond   = static_cast<float32>( pSlot->_sendThrottle.getBytesPerSecond( MathUtil::max( kNetMaxPacketSize, _settings._maxBytesPerSecond ) ) );
         return true;
     }
 

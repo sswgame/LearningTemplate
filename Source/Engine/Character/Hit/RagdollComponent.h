@@ -90,6 +90,11 @@ namespace sw
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 맞았을 때 호출합니다. 치명이면(`HitInfo::_bFatal`) 래그돌로 바꾸고, 아니면 맞은 바디 아래에 반응과 가산 움찔을 적용합니다. */
         void onHitReceived( const HitInfo& hit ) override;
+        /**
+         * @brief 풀 반환: 애니메이션 히트박스(`Animated`)로 돌립니다 — 가중치 · 반응 · 움찔 · 기상 · 쌓인 충격을 비우고, 래그돌이 끈 컨트롤러를 다시 켭니다.
+         * @details 바디가 있으면 물리 에셋을 다시 읽어 다음 물리 프레임이 바디째 다시 세운다 — 절단이 뗀 바디 · 지운 관절(`detachBoneBodies`)이 돌아온다. 바디를 세우기 전(갓 스폰)이면 바꿀 것이 없다.
+         */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
 
         /** @brief 물리 에셋 경로를 바꿉니다(바디를 다시 만듭니다). */
         void          setPhysicsAssetPath( string_view path );
@@ -128,7 +133,7 @@ namespace sw
         void applyHitReaction( uint32 bodyIndex, const float3& impulse, const float3& point );
         /**
          * @brief 이 뼈들의 바디를 래그돌에서 분리합니다. 시뮬레이션에서 빼고, 그 바디에 걸린 관절(부모와 자식 쪽)을 지웁니다.
-         *        잘려 나간 영역에서 보이지 않는 바디가 부딪히거나, 빠진 바디를 잇는 관절이 남지 않게 하려는 것입니다. 되돌리지 않으며, 다시 만들려면 물리 에셋을 다시 읽어야 합니다.
+         *        잘려 나간 영역에서 보이지 않는 바디가 부딪히거나, 빠진 바디를 잇는 관절이 남지 않게 하려는 것입니다. 되돌리기는 풀 반환(`resetToSpawnState`)이 물리 에셋을 다시 읽어 바디째 다시 세운다.
          */
         void detachBoneBodies( const vector<hashed_string>& listBone );
         /** @brief 맞은 에셋 바디 번호입니다 — 히트가 실어 온 번호(`HitInfo::_bodyIndex`)가 먼저, 없으면 바디 핸들로 찾습니다. 이 래그돌의 바디가 아니면 없음입니다. */

@@ -1,7 +1,7 @@
 <?asset guid="a3b2875e33bd3377c3c99200b2597b3b"?>
 <Scene formatVersion="3" name="VfxVariant">
 	<!-- 시나리오 automation/vfxvariant 의 무대 — sparks 변형을 기본값 그대로 재생한다. vfxvariant_tinted 는 컴포넌트가 사용자 파라미터만 덮는다. -->
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

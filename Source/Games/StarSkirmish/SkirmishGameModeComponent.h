@@ -156,6 +156,8 @@ namespace sw
         vector<AssetRef<PrefabAsset>> _listCliffPrefab;
         PROPERTY( Category = "Prefabs" )
         AssetRef<PrefabAsset> _unitPrefab;
+        PROPERTY( Category = "Prefabs", DisplayName = "Unit Pool", Tooltip = "Pool of the unit views that come and go with deaths and the fog (0 spawns every time)" )
+        PrefabPoolPolicy _unitPool;
         PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent the mouse is picked through" )
         GameObjectHandle _cameraRig;
         PROPERTY( Category = "Scene", DisplayName = "Watch Focus", Tooltip = "Camera focus when both players are AI (the whole map); the height is the Watch Camera Preset", Units = m )

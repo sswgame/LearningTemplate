@@ -167,6 +167,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 스냅과 검증
     // ------------------------------------------------------------------------------
+    void HousingLayout::clearHistory()
+    {
+        _listEdit.clear();
+        _editCursor = 0;
+    }
+
     HousingPlaceCheck HousingLayout::snap( const HousingPartDef& part, const HousingCandidate& candidate, uint32 ignoreID ) const
     {
         using Internal = HousingLayoutInternal;
@@ -614,6 +620,85 @@ namespace sw
         return true;
     }
 
+    bool HousingLayout::validatePlacements()
+    {
+        if ( _pCatalog == nullptr )
+            return false; // initialize 전에는 부품을 찾을 수 없다
+        uint32 previousID = 0;
+        for ( HousingPlacement& placement : _listPlacement )
+        {
+            // id 는 오름차순이고 다음 id 보다 작다 — 겹치거나 앞지른 id 는 불러온 뒤 놓은 것과 부딪힌다.
+            if ( ( placement._placementID > previousID && placement._placementID < _nextPlacementID ) == false )
+            {
+                SW_LOG_ERROR_ID( "HousingLayout.SavedPlacementIDInvalid", "Housing plot '%#': saved placement id %# is out of order or not below the next id %#", _settings._plotID.c_str(),
+                                 placement._placementID, _nextPlacementID );
+                return false;
+            }
+            previousID                  = placement._placementID;
+            const HousingPartDef* pPart = _pCatalog->findPart( placement._partID );
+            if ( pPart == nullptr )
+            {
+                // 지운 부품은 이어받은 부품의 지금 판으로 읽는다. 이어받은 것이 없으면 콘텐츠 누락이라 거절한다(조용히 빼면 그 가구가 사라진다).
+                pPart = _pCatalog->findReplacement( placement._partID );
+                if ( pPart == nullptr )
+                {
+                    SW_LOG_ERROR_ID( "HousingLayout.SavedPartUnknown", "Housing plot '%#': saved placement %# uses part '%#', which the catalog neither has nor replaces - the save is refused",
+                                     _settings._plotID.c_str(), placement._placementID, placement._partID.c_str() );
+                    return false;
+                }
+                placement._partID      = pPart->_id;
+                placement._partVersion = pPart->_version;
+                continue;
+            }
+            if ( placement._partVersion < pPart->_minLoadVersion || placement._partVersion > pPart->_version )
+            {
+                SW_LOG_ERROR_ID( "HousingLayout.SavedPartVersionUnsupported", "Housing plot '%#': saved placement %# has part '%#' version %#, but the catalog reads versions %#..%# - the save is refused",
+                                 _settings._plotID.c_str(), placement._placementID, placement._partID.c_str(), placement._partVersion, pPart->_minLoadVersion, pPart->_version );
+                return false;
+            }
+            placement._partVersion = pPart->_version;
+        }
+        return rebuildOccupancy();
+    }
+
+    bool HousingLayout::applyPlacements( uint32 nextPlacementID, vector<HousingPlacement> listPlacement )
+    {
+        vector<HousingPlacement> listPrevious = std::move( _listPlacement );
+        const uint32             previousNext = _nextPlacementID;
+        _listPlacement                        = std::move( listPlacement );
+        _nextPlacementID                      = nextPlacementID;
+        if ( validatePlacements() )
+        {
+            clearHistory();
+            ++_revision;
+            return true;
+        }
+        _listPlacement   = std::move( listPrevious );
+        _nextPlacementID = previousNext;
+        (void)rebuildOccupancy(); // 앞 목록은 이미 검사를 지났다 — 칸만 되돌린다
+        return false;
+    }
+
+    void HousingLayout::collectHistoryTargets( bool bRedo, vector<HousingTransform>& outListTarget ) const
+    {
+        if ( bRedo ? canRedo() == false : canUndo() == false )
+            return;
+        const Edit& edit = _listEdit[bRedo ? _editCursor : _editCursor - 1];
+        switch ( edit._kind )
+        {
+            case EditKind::Place:
+                outListTarget.push_back( edit._after._transform );
+                break;
+            case EditKind::Remove:
+                outListTarget.push_back( edit._before._transform );
+                break;
+            case EditKind::Move:
+                outListTarget.push_back( edit._before._transform );
+                outListTarget.push_back( edit._after._transform );
+                break;
+        }
+    }
+
     void HousingLayout::serializeState( StateIO& io )
     {
         using Internal = HousingLayoutInternal;
@@ -631,48 +716,7 @@ namespace sw
         { io.value( placement ); } );
         if ( io.isWriting() || io.isOk() == false )
             return;
-        if ( _pCatalog == nullptr )
-        {
-            io.fail(); // initialize 전에는 부품을 찾을 수 없다
-            return;
-        }
-        uint32 previousID = 0;
-        for ( HousingPlacement& placement : _listPlacement )
-        {
-            // id 는 오름차순이고 다음 id 보다 작다 — 겹치거나 앞지른 id 는 불러온 뒤 놓은 것과 부딪힌다.
-            if ( io.check( placement._placementID > previousID && placement._placementID < _nextPlacementID ) == false )
-            {
-                SW_LOG_ERROR_ID( "HousingLayout.SavedPlacementIDInvalid", "Housing plot '%#': saved placement id %# is out of order or not below the next id %#", _settings._plotID.c_str(),
-                                 placement._placementID, _nextPlacementID );
-                return;
-            }
-            previousID                  = placement._placementID;
-            const HousingPartDef* pPart = _pCatalog->findPart( placement._partID );
-            if ( pPart == nullptr )
-            {
-                // 지운 부품은 이어받은 부품의 지금 판으로 읽는다. 이어받은 것이 없으면 콘텐츠 누락이라 거절한다(조용히 빼면 그 가구가 사라진다).
-                pPart = _pCatalog->findReplacement( placement._partID );
-                if ( pPart == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "HousingLayout.SavedPartUnknown", "Housing plot '%#': saved placement %# uses part '%#', which the catalog neither has nor replaces - the save is refused",
-                                     _settings._plotID.c_str(), placement._placementID, placement._partID.c_str() );
-                    io.fail();
-                    return;
-                }
-                placement._partID      = pPart->_id;
-                placement._partVersion = pPart->_version;
-                continue;
-            }
-            if ( placement._partVersion < pPart->_minLoadVersion || placement._partVersion > pPart->_version )
-            {
-                SW_LOG_ERROR_ID( "HousingLayout.SavedPartVersionUnsupported", "Housing plot '%#': saved placement %# has part '%#' version %#, but the catalog reads versions %#..%# - the save is refused",
-                                 _settings._plotID.c_str(), placement._placementID, placement._partID.c_str(), placement._partVersion, pPart->_minLoadVersion, pPart->_version );
-                io.fail();
-                return;
-            }
-            placement._partVersion = pPart->_version;
-        }
-        if ( io.check( rebuildOccupancy() ) == false )
+        if ( io.check( validatePlacements() ) == false )
             return;
         _listEdit.clear();
         _editCursor = 0;

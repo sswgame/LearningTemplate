@@ -27,8 +27,8 @@
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
-#include "GameFramework/Runtime/World/Lifetime/PrefabPool.h"
 
 #include "Games/Shooter3D/ShooterBlockerComponent.h"
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
@@ -83,6 +83,8 @@ namespace sw
         AssetRef<PrefabAsset> _prefab{};
         PROPERTY( Required, Tooltip = "Appearance preset of the body (presets.xml)" )
         string _preset{};
+        PROPERTY( Tooltip = "Pool of this kind's prefab (kinds sharing a prefab share its pool; 0 spawns every time)" )
+        PrefabPoolPolicy _pool{};
     };
 
     /**
@@ -240,6 +242,10 @@ namespace sw
         /** @brief 풀에서 효과 하나를 꺼냅니다. 모두 쓰고 있으면 가장 먼저 꺼낸 것을 다시 씁니다. 프리팹을 읽지 못하면 nullptr 을 반환합니다. */
         MeshComponent* acquirePooledMesh( GameObjectManager& manager, PrefabPool& inoutPool, int32 poolSize, const utf8* pName, float32 lifetime );
         void           spawnEnemy( GameObjectManager& manager, const EnemyRequest& request );
+        /** @brief 적 종류입니다(`kEliteKindIndex` 는 정예). */
+        const ShooterEnemyKind& findKind( uint8 kindIndex ) const { return kindIndex == kEliteKindIndex ? _eliteEnemyKind : _listEnemyKind[kindIndex]; }
+        /** @brief 적 하나를 걷습니다 — 종류의 풀 정책이 있으면 풀에 돌려주고(스폰 상태로 되돌린다), 없으면 외형 부품을 쉬게 한 뒤 지웁니다. @p inoutHandle 을 비웁니다. */
+        void retireEnemy( GameObjectManager& manager, uint8 kindIndex, GameObjectHandle& inoutHandle );
         /** @brief 스냅샷의 적 하나를 복제 모습으로 세웁니다(네트 클라이언트, 틱 뒤). */
         void spawnReplicaEnemy( GameObjectManager& manager, const ShooterReplicatedEnemy& replica );
         void updateEnemies();

@@ -49,7 +49,12 @@ namespace sw
         NotEnoughFunds,
         NoWallet,
         NothingToUndo,
-        NothingToRedo
+        NothingToRedo,
+        UnknownPlot, ///< 네트워크: 서버에 그 id 의 부지가 없다
+        NotOwner,    ///< 네트워크: 요청한 연결이 부지의 주인이 아니다(남의 부지 · 주인 없는 부지) — 차지 요청이면 이미 주인이 있다
+        OutOfReach,  ///< 네트워크: 서버가 아는 요청자 자리에서 부지의 `_maxReach` 보다 멀다
+        RateLimited, ///< 네트워크: 연결의 틱당 요청 상한을 넘었다 — 판정하지 않았다
+        Pending      ///< 네트워크 클라이언트: 요청을 보냈고 서버의 답을 기다린다(아무것도 바뀌지 않았다)
     };
 
     /** @brief 부지 안의 변환입니다. 자리는 부지 원점 기준 XZ(m, 점유 칸의 가운데), 층은 0 부터, 요는 라디안(0 ~ 2π)입니다. */
@@ -114,6 +119,8 @@ namespace sw
         int32 _historyLimit{ 64 }; ///< 되돌릴 수 있는 편집 수
         PROPERTY()
         bool _bFreePlacement{ false }; ///< 자유 배치를 허락한다(부품도 허락해야 한다)
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _maxReach{ 0.0f }; ///< 네트워크: 서버가 아는 요청자 자리에서 편집할 자리까지의 XZ 거리 상한. 0 은 거리 제한이 없는 건축 모드(심즈 · 하우징 화면)다
     };
 } // namespace sw
 
@@ -162,6 +169,18 @@ namespace sw
         HousingPlaceResult move( uint32 placementID, const HousingTransform& rawTransform, HousingPlacementMode mode );
         HousingPlaceResult undo();
         HousingPlaceResult redo();
+        /** @brief 되돌리기 이력을 비웁니다. 부지의 주인이 바뀌면 앞 주인의 편집을 되돌리지 못하게 한다. */
+        void clearHistory();
+        /**
+         * @brief 다음 되돌리기(@p bRedo 면 다시 하기)가 건드릴 자리를 @p outListTarget 에 더합니다(놓기 · 치우기는 하나, 옮기기는 떠나는 자리와 닿는 자리 둘).
+         *        서버가 그 편집을 거리로 판정할 때 쓴다. 할 것이 없으면 아무것도 더하지 않는다.
+         */
+        void collectHistoryTargets( bool bRedo, vector<HousingTransform>& outListTarget ) const;
+        /**
+         * @brief 배치 목록을 통째로 바꿉니다(네트워크 클라이언트가 받은 델타를 적용한 목록). 세이브 읽기와 같은 검사(id 순서 · 다음 id · 카탈로그 · 판 · 규칙)를 거치고,
+         *        어기면 까닭을 남기고 지금 배치를 그대로 둔 채 false 입니다. 되면 이력을 비우고 판이 오른다.
+         */
+        [[nodiscard]] bool applyPlacements( uint32 nextPlacementID, vector<HousingPlacement> listPlacement );
 
         bool                            canUndo() const { return _editCursor > 0; }
         bool                            canRedo() const { return _editCursor < _listEdit.size(); }
@@ -223,6 +242,8 @@ namespace sw
         void               recordEdit( const Edit& edit );
         /** @brief 읽은 배치로 칸을 다시 채우며 모두 검증합니다. 어기는 배치가 있으면 까닭을 남기고 false 입니다. */
         [[nodiscard]] bool rebuildOccupancy();
+        /** @brief 읽거나 받은 배치 목록을 봅니다 — id 순서 · 다음 id, 카탈로그(지운 부품은 이어받은 부품으로 바꾼다), 판, 그리고 칸 규칙(`rebuildOccupancy`). */
+        [[nodiscard]] bool validatePlacements();
 
     private:
         HousingPlotSettings       _settings;

@@ -1,0 +1,9 @@
+{
+    "_maxBytesPerSecond": 100000,
+    "_minBytesPerSecond": 16000,
+    "_increaseBytesPerSecond": 4000,
+    "_decreaseFactor": 0.7,
+    "_lossThreshold": 0.05,
+    "_maxQueueDelaySeconds": 0.1,
+    "_adjustIntervalSeconds": 0.25
+}

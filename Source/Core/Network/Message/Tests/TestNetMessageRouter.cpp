@@ -19,6 +19,12 @@ namespace
 {
     struct NetMessageRouterTestInternal
     {
+        /** @brief 게임 영역의 종류들입니다(영역 + n) — 게임 영역의 첫 값이 옮겨도 테스트가 따라간다. */
+        static constexpr uint8 kGameKind0 = NetMessageRange::kGame;
+        static constexpr uint8 kGameKind1 = NetMessageRange::kGame + 1;
+        static constexpr uint8 kGameKind2 = NetMessageRange::kGame + 2;
+        static constexpr uint8 kGameKind3 = NetMessageRange::kGame + 3;
+
         /** @brief 테스트용 처리기 — 맡은 영역에서 @p acceptedKind 만 맡고(가변 정수 하나가 몸) 받은 수를 셉니다. */
         class CountingHandler : public INetMessageHandler
         {
@@ -112,8 +118,8 @@ SW_TEST_CASE( NetMessageRouterTest, MessageRouterDispatchesByRangeAndKeepsUnhand
 
     // 한 영역에 처리기 둘 — 등록 순서대로 묻고 처음 받아들인 쪽에서 멈춘다.
     NetMessageRouterTestInternal::CountingHandler lockstep( NetMessageRange::kFramework + NetMessageRange::kSize, 0x21 );
-    NetMessageRouterTestInternal::CountingHandler gameFirst( NetMessageRange::kGame, 0x81 );
-    NetMessageRouterTestInternal::CountingHandler gameSecond( NetMessageRange::kGame, 0x82 );
+    NetMessageRouterTestInternal::CountingHandler gameFirst( NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind1 );
+    NetMessageRouterTestInternal::CountingHandler gameSecond( NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind2 );
     NetMessageRouter                              router;
     const sw::Subscription                        lockstepSubscription   = router.registerHandler( &lockstep );
     sw::Subscription                              gameFirstSubscription  = router.registerHandler( &gameFirst );
@@ -123,7 +129,7 @@ SW_TEST_CASE( NetMessageRouterTest, MessageRouterDispatchesByRangeAndKeepsUnhand
     SW_REQUIRE_TRUE( gameSecondSubscription.isActive() );
 
     NetMessageWriter messageWriter;
-    const uint8      arrKind[] = { 0x21, 0x81, 0x82, 0x82, 0x83, 0x51, 0x22 };
+    const uint8      arrKind[] = { 0x21, NetMessageRouterTestInternal::kGameKind1, NetMessageRouterTestInternal::kGameKind2, NetMessageRouterTestInternal::kGameKind2, NetMessageRouterTestInternal::kGameKind3, 0x51, 0x22 };
     for ( const uint8 kind : arrKind )
     {
         messageWriter.begin( kind ).writeVarUint( kind );
@@ -136,30 +142,30 @@ SW_TEST_CASE( NetMessageRouterTest, MessageRouterDispatchesByRangeAndKeepsUnhand
     SW_EXPECT_EQUAL( 1, gameFirst.getHandledCount() );
     SW_EXPECT_EQUAL( 2, gameSecond.getHandledCount() );
     SW_EXPECT_EQUAL( 0, gameSecond.getLastConnectionID() );
-    // 거절(0x83 · 0x22)과 처리기 없는 영역(0x51)은 받은 순서대로 남는다.
+    // 거절(게임 영역 + 3 · 0x22)과 처리기 없는 영역(0x51)은 받은 순서대로 남는다.
     SW_REQUIRE_EQUAL( 3, static_cast<int32>( listUnhandled.size() ) );
-    SW_EXPECT_EQUAL( 0x83, static_cast<int32>( listUnhandled[0]._buffer[0] ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( NetMessageRouterTestInternal::kGameKind3 ), static_cast<int32>( listUnhandled[0]._buffer[0] ) );
     SW_EXPECT_EQUAL( 0x51, static_cast<int32>( listUnhandled[1]._buffer[0] ) );
     SW_EXPECT_EQUAL( 0x22, static_cast<int32>( listUnhandled[2]._buffer[0] ) );
     SW_EXPECT_EQUAL( 0, listUnhandled[0]._connectionID );
 
-    // 종류별 셈은 처리기가 없는 메시지까지 센다(`net.stats` 의 비중). 0x82 는 두 번(종류 1 바이트 + varint 2 바이트씩)이라 바이트가 가장 크다.
-    SW_EXPECT_EQUAL( router.getKindStats().get( 0x82 )._messageCount, uint64{ 2 } );
-    SW_EXPECT_EQUAL( router.getKindStats().get( 0x82 )._byteCount, uint64{ 6 } );
+    // 종류별 셈은 처리기가 없는 메시지까지 센다(`net.stats` 의 비중). 게임 영역 + 2 는 두 번(종류 1 바이트 + varint 2 바이트씩)이라 바이트가 가장 크다.
+    SW_EXPECT_EQUAL( router.getKindStats().get( NetMessageRouterTestInternal::kGameKind2 )._messageCount, uint64{ 2 } );
+    SW_EXPECT_EQUAL( router.getKindStats().get( NetMessageRouterTestInternal::kGameKind2 )._byteCount, uint64{ 6 } );
     SW_EXPECT_EQUAL( router.getKindStats().get( 0x51 )._messageCount, uint64{ 1 } );
-    SW_EXPECT_EQUAL( router.getKindStats().get( 0x80 )._messageCount, uint64{ 0 } );
+    SW_EXPECT_EQUAL( router.getKindStats().get( NetMessageRouterTestInternal::kGameKind0 )._messageCount, uint64{ 0 } );
     // 보낸 쪽(클라이언트 호스트)은 큐에 넣은 메시지를 같은 표로 센다 — 받은 쪽 셈과 같아야 한다(신뢰 채널, 잃은 것 없음).
     NetMessageKindStatsTable sentStats;
     pair.getClient( 0 ).addSentKindStats( sentStats );
-    SW_EXPECT_EQUAL( sentStats.get( 0x82 )._messageCount, uint64{ 2 } );
-    SW_EXPECT_EQUAL( sentStats.get( 0x82 )._byteCount, uint64{ 6 } );
+    SW_EXPECT_EQUAL( sentStats.get( NetMessageRouterTestInternal::kGameKind2 )._messageCount, uint64{ 2 } );
+    SW_EXPECT_EQUAL( sentStats.get( NetMessageRouterTestInternal::kGameKind2 )._byteCount, uint64{ 6 } );
     NetStatsReport report;
     report.populateKinds( router.getKindStats(), sentStats );
     SW_REQUIRE_EQUAL( 6, static_cast<int32>( report._listKindEntry.size() ) );
-    SW_EXPECT_EQUAL( 0x82, static_cast<int32>( report._listKindEntry[0]._kind ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( NetMessageRouterTestInternal::kGameKind2 ), static_cast<int32>( report._listKindEntry[0]._kind ) );
     SW_EXPECT_EQUAL( report._listKindEntry[0]._messageCount, uint64{ 2 } );
     SW_REQUIRE_EQUAL( 6, static_cast<int32>( report._listSentKindEntry.size() ) );
-    SW_EXPECT_EQUAL( 0x82, static_cast<int32>( report._listSentKindEntry[0]._kind ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( NetMessageRouterTestInternal::kGameKind2 ), static_cast<int32>( report._listSentKindEntry[0]._kind ) );
     // 보고 줄은 두 방향을 다 실어 되읽힌다.
     NetStatsReport parsed;
     SW_REQUIRE_TRUE( NetStatsReport::tryParseLine( report.makeLine(), parsed ) );
@@ -168,7 +174,7 @@ SW_TEST_CASE( NetMessageRouterTest, MessageRouterDispatchesByRangeAndKeepsUnhand
 
     // 뺀 처리기는 더 묻지 않는다. 빈 메시지는 누구에게도 가지 않는다.
     gameFirstSubscription.reset();
-    messageWriter.begin( 0x81 ).writeVarUint( 1 );
+    messageWriter.begin( NetMessageRouterTestInternal::kGameKind1 ).writeVarUint( 1 );
     SW_EXPECT_TRUE( NetHandleResult::NotMine == router.dispatch( NetMessageContext{}, messageWriter.getBytes().data(), messageWriter.getByteCount() ) );
     SW_EXPECT_TRUE( NetHandleResult::NotMine == router.dispatch( NetMessageContext{}, nullptr, 0 ) );
     SW_EXPECT_EQUAL( 1, gameFirst.getHandledCount() );
@@ -179,9 +185,9 @@ SW_TEST_CASE( NetMessageRouterTest, MessageRouterDispatchesByRangeAndKeepsUnhand
  */
 SW_TEST_CASE( NetMessageRouterTest, MessageRouterRefusesAHandlerThatOverlapsAClaimedKind )
 {
-    NetMessageRouterTestInternal::CountingHandler first{ NetMessageRange::kGame, 0x81 };
-    NetMessageRouterTestInternal::CountingHandler overlapping( NetMessageRange::kGame, 0x81 );
-    NetMessageRouterTestInternal::CountingHandler disjoint( NetMessageRange::kGame, 0x82 );
+    NetMessageRouterTestInternal::CountingHandler first{ NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind1 };
+    NetMessageRouterTestInternal::CountingHandler overlapping( NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind1 );
+    NetMessageRouterTestInternal::CountingHandler disjoint( NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind2 );
     NetMessageRouter                              router;
     SW_EXPECT_LOG( "Net.RouterKindClaimed" ); // 겹치는 처리기 · 같은 처리기를 다시 단 것은 오류와 함께 거절한다
     SW_EXPECT_LOG( "Net.RouterNullHandler" ); // 빈 처리기도
@@ -194,7 +200,7 @@ SW_TEST_CASE( NetMessageRouterTest, MessageRouterRefusesAHandlerThatOverlapsACla
     SW_EXPECT_FALSE( router.registerHandler( &first ).isActive() );
     SW_EXPECT_FALSE( router.registerHandler( nullptr ).isActive() );
 
-    const uint8 arrMessage[] = { 0x81, 0x01 };
+    const uint8 arrMessage[] = { NetMessageRouterTestInternal::kGameKind1, 0x01 };
     SW_EXPECT_TRUE( NetHandleResult::Handled == router.dispatch( NetMessageContext{}, arrMessage, static_cast<int32>( sizeof( arrMessage ) ) ) );
     SW_EXPECT_EQUAL( 1, first.getHandledCount() );
     SW_EXPECT_EQUAL( 0, overlapping.getHandledCount() );
@@ -210,7 +216,7 @@ SW_TEST_CASE( NetMessageRouterTest, MessageRouterRefusesAHandlerThatOverlapsACla
  */
 SW_TEST_CASE( NetMessageRouterTest, MessageRouterDestroyedFirstInvalidatesTheSubscription )
 {
-    NetMessageRouterTestInternal::CountingHandler handler( NetMessageRange::kGame, 0x81 );
+    NetMessageRouterTestInternal::CountingHandler handler( NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind1 );
     sw::Subscription                              subscription;
     {
         NetMessageRouter router;
@@ -232,13 +238,13 @@ SW_TEST_CASE( NetMessageRouterTest, MalformedMessageIsCountedNotForwarded )
     SW_REQUIRE_TRUE( pair.getServer().listen() );
     SW_REQUIRE_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     pair.run( 0.3 );
-    NetMessageRouterTestInternal::CountingHandler handler( NetMessageRange::kGame, 0x81 );
+    NetMessageRouterTestInternal::CountingHandler handler( NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind1 );
     NetMessageRouter                              router;
     const sw::Subscription                        subscription = router.registerHandler( &handler );
     NetMessageWriter                              messageWriter;
-    (void)messageWriter.begin( 0x81 ); // 몸(가변 정수)이 없다
+    (void)messageWriter.begin( NetMessageRouterTestInternal::kGameKind1 ); // 몸(가변 정수)이 없다
     SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
-    messageWriter.begin( 0x81 ).writeVarUint( 5 );
+    messageWriter.begin( NetMessageRouterTestInternal::kGameKind1 ).writeVarUint( 5 );
     SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
     pair.run( 0.2 );
     vector<NetReceivedMessage> listUnhandled;
@@ -292,7 +298,7 @@ SW_TEST_CASE( NetMessageRouterTest, RouterTellsHandlersAboutConnectionsBeforeThe
     const sw::Subscription subscription = router.registerHandler( &tracker );
     pair.run( 0.3 );
     NetMessageWriter messageWriter;
-    messageWriter.begin( 0x80 ).writeVarUint( 1 );
+    messageWriter.begin( NetMessageRouterTestInternal::kGameKind0 ).writeVarUint( 1 );
     SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
     pair.run( 0.2 );
     (void)router.poll( pair.getServer() );
@@ -310,11 +316,11 @@ SW_TEST_CASE( NetMessageRouterTest, SendToPeersAndRelayReachEveryOtherPeer )
     LoopbackNetwork network;
     NetEndpoint     server;
     NetEndpoint     arrClient[2];
-    server.initialize( network.createEndpoint( 4000 ), NetEndpointConfig{} );
+    SW_REQUIRE_TRUE( server.initialize( network.createEndpoint( 4000 ), NetEndpointConfig{} ) );
     SW_REQUIRE_TRUE( server.listen() );
     for ( int32 index = 0; index < 2; ++index )
     {
-        arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), NetEndpointConfig{} );
+        SW_REQUIRE_TRUE( arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), NetEndpointConfig{} ) );
         SW_REQUIRE_TRUE( arrClient[index].connect( NetAddress::makeLoopback( 4000 ) ) );
     }
     float64    time   = 0.0;
@@ -391,9 +397,9 @@ SW_TEST_CASE( NetMessageRouterTest, DifferentMessageTableVersionsDisconnect )
 SW_TEST_CASE( NetMessageRouterTest, OneRangeHasOneTableVersionAndTheRouterKindIsReserved )
 {
     NetMessageRouter                              router;
-    NetMessageRouterTestInternal::CountingHandler first{ NetMessageRange::kGame, 0x81, 7u };
-    NetMessageRouterTestInternal::CountingHandler sameTable{ NetMessageRange::kGame, 0x82, 7u };
-    NetMessageRouterTestInternal::CountingHandler otherTable{ NetMessageRange::kGame, 0x83, 8u };
+    NetMessageRouterTestInternal::CountingHandler first{ NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind1, 7u };
+    NetMessageRouterTestInternal::CountingHandler sameTable{ NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind2, 7u };
+    NetMessageRouterTestInternal::CountingHandler otherTable{ NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind3, 8u };
     NetMessageRouterTestInternal::CountingHandler routerKind{ NetMessageRange::kEngine, NetMessageRange::kRouterWireVersionKind, 9u };
     const sw::Subscription                        firstSubscription = router.registerHandler( &first );
     const sw::Subscription                        sameSubscription  = router.registerHandler( &sameTable );

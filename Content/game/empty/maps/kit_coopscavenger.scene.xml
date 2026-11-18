@@ -1,6 +1,6 @@
 <?asset guid="68a31d67b985434d89a447d19a51b361"?>
 <Scene formatVersion="2" name="KitDemoCoopScavenger">
-	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
 	<entities>

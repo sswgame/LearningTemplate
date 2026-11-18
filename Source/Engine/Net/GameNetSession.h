@@ -269,8 +269,11 @@ namespace sw
          */
         GameConnectSecurity& getConnectSecurity() { return _connectSecurity; }
 
-        /** @brief 소켓을 열고 역할을 시작합니다(서버는 샤드마다 listen, 클라이언트는 connectAsync). 하나라도 실패하면 연 것을 모두 닫고 로그를 남긴 뒤 false 를 반환합니다. */
-        [[nodiscard]] bool initialize( const GameNetSessionParams& params );
+        /**
+         * @brief 소켓을 열고 역할을 시작합니다(서버는 샤드마다 listen, 클라이언트는 connectAsync). 하나라도 실패하면 연 것을 모두 닫고 로그를 남긴 뒤 false 를 반환합니다.
+         * @details 송신 상한과 속도 조절 계수는 @p requested 의 값 대신 `Config/Engine/NetSendThrottle.json` 이 정한다(`NetSendThrottleSettings`). 없거나 틀리면 열지 않는다.
+         */
+        [[nodiscard]] bool initialize( const GameNetSessionParams& requested );
         /** @brief 모든 연결을 끊고 네트워크 스레드와 소켓을 닫습니다. 두 번 불러도 됩니다. */
         void shutdown();
         /** @brief 쌓인 연결 이벤트와 받은 메시지를 처리기에 나눠 주고, 연결과 끊김을 로그에 남깁니다. 게임 스레드에서 프레임마다 부릅니다. */
