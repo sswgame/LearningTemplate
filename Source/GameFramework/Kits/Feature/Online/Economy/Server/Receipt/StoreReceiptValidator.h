@@ -18,6 +18,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
@@ -231,18 +232,18 @@ namespace sw
         void                    finishRefundPage( const ReceiptCall& call, const HTTPClientResponse& response, UnixMilliseconds now );
 
     private:
-        ReceiptBuyerRule                   _buyerRule;
-        ReceiptPollWindow                  _refundWindow;
-        unordered_map<uint64, ReceiptCall> _mapRequestToCall;
-        vector<ReceiptCall>                _listWaiting;
-        vector<ReceiptValidationResult>    _listDone;
-        vector<ReceiptRefundNotification>  _listRefund;
-        vector<ReceiptDeliveryResult>      _listDeliveryDone;
-        unordered_set<string>              _uniqueSetNotifiedRefund;
-        HTTPClient*                        _pHTTPClient;
-        uint8                              _bRefundIncomplete : 1; ///< 지금 조회의 어느 쪽에 읽지 못한 것이 있었다
-        uint8                              _bStopped          : 1; ///< `shutdown` 뒤에는 새 요청을 보내지 않는다
-        uint8                              _bCursorRestored   : 1; ///< 저장소의 기준 시각을 받았다. 그 전에는 조회하지 않는다
-        uint8                              _bCursorMoved      : 1; ///< 끝까지 읽은 조회가 기준을 옮겼고 아직 꺼내 가지 않았다
+        ReceiptBuyerRule                       _buyerRule;
+        ReceiptPollWindow                      _refundWindow;
+        unordered_map<uint64, ReceiptCall>     _mapRequestToCall;
+        vector<ReceiptCall>                    _listWaiting;
+        EventBuffer<ReceiptValidationResult>   _completionBuffer;     ///< 끝난 검증 — `pollCompletions` 가 가져간다
+        EventBuffer<ReceiptRefundNotification> _refundBuffer;         ///< 환불 알림 — `pollRefunds`
+        EventBuffer<ReceiptDeliveryResult>     _deliveryResultBuffer; ///< 지급 알림 결과 — `pollDeliveryResults`
+        unordered_set<string>                  _uniqueSetNotifiedRefund;
+        HTTPClient*                            _pHTTPClient;
+        uint8                                  _bRefundIncomplete : 1; ///< 지금 조회의 어느 쪽에 읽지 못한 것이 있었다
+        uint8                                  _bStopped          : 1; ///< `shutdown` 뒤에는 새 요청을 보내지 않는다
+        uint8                                  _bCursorRestored   : 1; ///< 저장소의 기준 시각을 받았다. 그 전에는 조회하지 않는다
+        uint8                                  _bCursorMoved      : 1; ///< 끝까지 읽은 조회가 기준을 옮겼고 아직 꺼내 가지 않았다
     };
 } // namespace sw

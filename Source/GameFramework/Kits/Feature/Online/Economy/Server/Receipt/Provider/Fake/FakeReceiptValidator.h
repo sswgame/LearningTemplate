@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
@@ -28,11 +29,11 @@ namespace sw
         void pollRefunds( vector<ReceiptRefundNotification>& outListNotification ) override;
         /** @brief 다음 `pollRefunds` 에 환불 알림 하나를 냅니다(테스트와 개발 서버). */
         void  pushRefund( string_view transactionID, int64 refundedMs );
-        int32 getPendingCount() const { return static_cast<int32>( _listPending.size() ); }
+        int32 getPendingCount() const { return static_cast<int32>( _completionBuffer.getCount() ); }
 
     private:
-        ReceiptBuyerRule                  _buyerRule;
-        vector<ReceiptValidationResult>   _listPending;
-        vector<ReceiptRefundNotification> _listRefund;
+        ReceiptBuyerRule                       _buyerRule;
+        EventBuffer<ReceiptValidationResult>   _completionBuffer; ///< 맡길 때 정해진 결과 — `pollCompletions` 가 가져간다
+        EventBuffer<ReceiptRefundNotification> _refundBuffer;     ///< `pushRefund` 가 쌓은 환불 알림 — `pollRefunds`
     };
 } // namespace sw

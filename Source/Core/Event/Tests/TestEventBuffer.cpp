@@ -44,6 +44,21 @@ SW_TEST_CASE( EventBufferTest, SwapsIntoAnEmptyListAndAppendsToAFullOne )
 }
 
 /**
+ * @brief [EventBufferTest] 찬 목록에 붙일 때 알림을 복사하지 않고 옮긴다(이동만 되는 알림도 넘어간다)
+ */
+SW_TEST_CASE( EventBufferTest, AppendsToAFullListByMoving )
+{
+    EventBuffer<unique_ptr<int32>> buffer;
+    vector<unique_ptr<int32>>      listEvent;
+    listEvent.push_back( make_unique<int32>( 1 ) );
+    buffer.push( make_unique<int32>( 2 ) );
+    buffer.moveAllTo( listEvent );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 2 ), listEvent.size() );
+    SW_EXPECT_EQUAL( 2, *listEvent[1] );
+    SW_EXPECT_TRUE( buffer.isEmpty() );
+}
+
+/**
  * @brief [EventBufferTest] 꺼내기 표를 쥔 쪽만 꺼내고, 복사본은 표 없는 새 큐이며, 표를 놓으면 다음 표가 받는다
  */
 SW_TEST_CASE( EventBufferTest, LeaseHolderDrainsAndCopiesCarryNoLease )
