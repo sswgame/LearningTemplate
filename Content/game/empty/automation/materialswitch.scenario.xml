@@ -14,11 +14,11 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="materialswitch_on.ppm"/>
 	<DevCommand line="matswitch game/empty/materials/toonshowcase_toon.material Outline 0"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 다음 단계를 다음 프레임에(프레임 경계 — 그리지 않는 프레임 없음) -->
 	<Expect watch="Assets.Pending" equals="0"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 다음 단계를 다음 프레임에(프레임 경계 — 그리지 않는 프레임 없음) -->
 	<Expect watch="Assets.Pending" equals="0"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 다음 단계를 다음 프레임에(프레임 경계 — 그리지 않는 프레임 없음) -->
 	<Expect watch="Assets.Pending" equals="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->

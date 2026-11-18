@@ -12,7 +12,7 @@
 <Scenario name="game.shooter3d.rawmouselook" requireForeground="true" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="mixed">
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<!-- 1인칭 카메라가 첫 틱에 잠금을 켠다 — 전경이면 바로 잡고 원시 입력을 등록한다 -->
-	<Wait frames="10"/>
+	<WaitUntil watch="Input.MouseLockActive" equals="1" timeoutFrames="30"/>
 	<ExpectCursorClip state="Locked"/>
 	<Store watch="Input.RawMouseEvents" as="rawBefore"/>
 	<Store watch="Scene.CameraYaw" as="yawBefore"/>

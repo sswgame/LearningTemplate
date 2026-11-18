@@ -184,14 +184,12 @@ namespace sw::editor
         static bool hasTargetComponent( const EditorCommandTarget& target );
 
         // ------------------------------------------------------------------------------
-        // 확장 창구 — 포인터를 받는 공용 위젯 · 확장 API 를 위해서만 쓴다
+        // 확장 창구
         // ------------------------------------------------------------------------------
         /** @brief 타입 이름 @p typeName 과 그 기반에 등록된 인스펙터 확장입니다(기반 → 파생 순서). */
         static const vector<IInspectorComponent*>& getInspectorsForType( const hashed_string& typeName );
-        /** @brief 지금 보이는 오브젝트입니다(`EditorComponentMenu::drawAddComponentList` 가 포인터를 받는다). 없으면 nullptr 입니다. */
-        GameObject* findShownObject() const;
-        /** @brief 보이는 오브젝트의 컴포넌트 @p componentID 입니다(`IInspectorComponent` 가 포인터를 받는다). 없으면 nullptr 입니다. */
-        Component* findShownComponent( uint64 componentID ) const;
+        /** @brief 보이는 오브젝트에 종류 @p typeName 의 컴포넌트를 더합니다(되돌리기 한 단계 — `EditorSceneCommands::addComponent`). 오브젝트가 없거나 더하지 못하면 false 입니다. */
+        [[nodiscard]] bool addComponent( const hashed_string& typeName );
 
     private:
         struct MultiEdit;

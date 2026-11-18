@@ -39,6 +39,11 @@ namespace sw
         /** @brief 메인 스레드에서 ImGui 프레임을 갱신하고, 패널을 그리고, 플랫폼 창을 갱신합니다. */
         virtual void updateUI() = 0;
         /**
+         * @brief UI 가 보낸 명령(`EditorUICommandQueue` — 뷰 크기 · 재생)을 넣은 순서대로 적용합니다. 게임 스레드가 씬 틱 · 틱 여부 질의 앞에서 부릅니다.
+         * @details 지금은 UI 프레임이 씬 틱 앞에서 끝나므로 UI 프레임 N 의 명령이 같은 호스트 프레임의 씬 틱에 닿는다(예전 직접 변경과 지연이 같다).
+         */
+        virtual void applyUICommands() = 0;
+        /**
          * @brief 렌더 패스 밖에서 이번 프레임 UI 의 업로드(그리기 목록 버퍼 · 텍스처 연산 · bindless 등록)를 합니다. 렌더 스레드가 백버퍼 패스를 열기 직전에 부릅니다.
          * @details 업로드를 `render`(열린 패스 안)에서 하면 Vulkan 은 패스 안에 복사를 기록할 수 없어 패스를 닫고, 그 뒤의 UI 드로우가 버려졌다(화면에 지우기 색만 남았다).
          */

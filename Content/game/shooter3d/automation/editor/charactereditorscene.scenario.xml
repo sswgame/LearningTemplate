@@ -28,7 +28,7 @@
 	<DevCommand line="panel.focus charactereditor.main"/>
 	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.tab.appearance" state="Down"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="charactereditor.tab.appearance" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.loadData"/>

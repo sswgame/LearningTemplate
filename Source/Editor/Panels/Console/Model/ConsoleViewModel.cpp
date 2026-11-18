@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 namespace sw::editor
@@ -22,7 +23,7 @@ namespace sw::editor
 
     void ConsoleViewModel::pausePlay()
     {
-        EditorPlaySession::pause();
+        EditorUICommandQueue::postToEditor( EditorUICommand::make( EditorUICommandKind::Pause ) ); // 이 UI 프레임 뒤 게임 틱 시작에 적용된다(UI 출력 계약)
     }
 
     bool ConsoleViewModel::showInFileExplorer( string_view absolutePath )

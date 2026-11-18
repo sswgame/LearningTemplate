@@ -100,6 +100,8 @@ namespace sw::editor
         [[nodiscard]] expected<int32> addEntry( AbilityEntryKind kind );
         /** @brief 항목을 복제합니다(`<id>_copy`). 새 항목 번호입니다. */
         int32 duplicateEntry( int32 entry );
+        /** @brief 지금 원문을 런타임 로더(`AbilityCatalog::loadFromXMLText`)로 읽어 봅니다. 읽히면 true 입니다(실패 이유는 로더가 로그에 남긴다). @p assetPath 는 로그 · 상속 해석에 쓴다. */
+        [[nodiscard]] bool validateWithRuntimeLoader( string_view assetPath ) const;
         /** @brief 항목을 지웁니다. 다른 항목이 가리키면(필수 참조) 지우지 않고 false 입니다 — 지우면 그 항목이 로드에서 풀리지 않는다. */
         [[nodiscard]] bool removeEntry( int32 entry );
 

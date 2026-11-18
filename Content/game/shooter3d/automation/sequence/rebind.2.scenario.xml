@@ -12,8 +12,7 @@
 	<Wait frames="12"/>
 	<Tap slot="Key.J" hold="1"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
-	<Wait frames="10"/>
-	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1"/>
+	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1.2"/> <!-- 내려앉았다 -->
 	<!-- 기본 키 Space 는 점프하지 않는다. -->
 	<Wait frames="2"/>
 	<Tap slot="Key.Space" hold="1"/>
@@ -23,8 +22,7 @@
 	<Wait frames="2"/>
 	<Action name="Jump" device="Gamepad"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
-	<Wait frames="10"/>
-	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1"/>
+	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1.2"/> <!-- 내려앉았다 -->
 	<Wait frames="2"/>
 	<DevCommand line="settings.apply controls.jump=Key.Space"/>
 	<Pass/>

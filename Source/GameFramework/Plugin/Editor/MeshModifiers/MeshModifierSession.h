@@ -49,6 +49,18 @@ namespace sw::editor
 
         MeshModifierSession();
 
+        /** @brief 에디터 범위에 걸린 세션입니다. 프레임 앞 sync 전이면 nullptr 입니다. 패널 View 가 작업 공간 헤더(`EditorService.h`) 없이 찾는 창구다(`docs/agents/EditorUI.md` MVVM). */
+        [[nodiscard]] static MeshModifierSession* find();
+        /** @brief 메인 씬에서 선택한 오브젝트를 대상으로 둡니다(`setTarget` — 모델링 도구는 레벨의 오브젝트를 고친다, 언리얼 Modeling Mode 는 레벨 선택). */
+        [[nodiscard]] expected<void> setTargetFromSelection();
+        /**
+         * @brief 참조 매개변수가 고를 수 있는 오브젝트 이름을 @p outListName 에 채웁니다(먼저 비운다). 참조는 이름으로 찾으므로 이름 없는 오브젝트는 뺀다.
+         * @param pRequiredComponentHint 걸러 볼 컴포넌트입니다. 그것을 가진 오브젝트가 하나도 없으면 @p outAnyMatch 가 false 이고 전체를 담는다.
+         */
+        void collectReferenceCandidates( const utf8* pRequiredComponentHint, vector<string>& outListName, bool& outAnyMatch ) const;
+        /** @brief 메인 씬에서 선택한 오브젝트의 이름을 @p outName 에 씁니다. 없거나 @p pRequiredComponentHint 컴포넌트가 없으면 경고를 남기고 false 입니다. */
+        [[nodiscard]] bool tryPickSelectedReference( const utf8* pRequiredComponentHint, string& outName ) const;
+
         /** @brief 대상 메시 컴포넌트에 걸어 둔 미리보기 메시를 원래 메시로 되돌립니다(모듈이 내려가도 씬에 미리보기가 남지 않게). */
         void shutdownSubsystem() override;
 

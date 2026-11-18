@@ -18,6 +18,11 @@
 
 namespace sw::editor
 {
+    ParkLayoutPreview* ParkLayoutPreview::find()
+    {
+        return findSubsystem<ParkLayoutPreview>();
+    }
+
     ParkLayoutPreview::ParkLayoutPreview()
         : _model{}
         , _layoutWatch{}

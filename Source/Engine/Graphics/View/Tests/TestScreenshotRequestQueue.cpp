@@ -35,17 +35,14 @@ SW_TEST_CASE( ScreenshotRequestQueueTest, EachTicketReadsItsOwnResult )
     SW_REQUIRE_TRUE( queue.take( request ) );
     SW_EXPECT_EQUAL( first.str(), request._path ); // 덮어쓰지 않고 받은 차례다
     SW_EXPECT_EQUAL( ticketA, request._ticket );
-    queue.reportCompleted( request._ticket, false, request._path );
+    queue.reportCompleted( request._ticket, false );
     SW_EXPECT_TRUE( queue.findResult( ticketA ) == ScreenshotTicketState::Failed );
     SW_EXPECT_TRUE( queue.findResult( ticketB ) == ScreenshotTicketState::Pending );
-    SW_EXPECT_TRUE( queue.getLastPath().empty() ); // 실패하면 마지막 경로가 빈다
 
     SW_REQUIRE_TRUE( queue.take( request ) );
-    queue.reportCompleted( ticketB, true, request._path );
+    queue.reportCompleted( ticketB, true );
     SW_EXPECT_TRUE( queue.findResult( ticketB ) == ScreenshotTicketState::Written );
     SW_EXPECT_FALSE( queue.hasUnfinishedRequest() );
-    SW_EXPECT_EQUAL( 2u, queue.getCompletedSerial() );
-    SW_EXPECT_EQUAL( second.str(), queue.getLastPath() );
     SW_EXPECT_TRUE( queue.findResult( 0 ) == ScreenshotTicketState::Unknown );
     SW_EXPECT_TRUE( queue.findResult( ticketB + 1 ) == ScreenshotTicketState::Unknown ); // 내준 적 없는 표
 }
@@ -95,10 +92,42 @@ SW_TEST_CASE( ScreenshotRequestQueueTest, EarlierTicketSurvivesLaterResults )
     const uint32           startupTicket = queue.put( makeShotPath( "startup.png" ), RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
     ScreenshotRequest      request;
     SW_REQUIRE_TRUE( queue.take( request ) );
-    queue.reportCompleted( request._ticket, true, request._path );
+    queue.reportCompleted( request._ticket, true );
     SW_REQUIRE_TRUE( queue.take( request ) );
-    queue.reportCompleted( request._ticket, false, request._path ); // 뒤 요청은 실패했다 — 마지막 경로가 빈다
-    SW_EXPECT_TRUE( queue.getLastPath().empty() );
+    queue.reportCompleted( request._ticket, false ); // 뒤 요청은 실패했다
     SW_EXPECT_TRUE( queue.findResult( editorTicket ) == ScreenshotTicketState::Written );
     SW_EXPECT_TRUE( queue.findResult( startupTicket ) == ScreenshotTicketState::Failed );
+}
+
+/** @brief [ScreenshotRequestQueueTest] 바이트 요청은 이름이 있어야 하고, 결과는 제 표로 한 번만 받는다 — 뒤에 끝난 다른 요청(파일 · 바이트)이 앞 표의 결과를 덮지 않는다 */
+SW_TEST_CASE( ScreenshotRequestQueueTest, PNGBytesAreTakenOnceByTicket )
+{
+    ScreenshotRequestQueue queue;
+    SW_EXPECT_EQUAL( 0u, queue.putForPNGBytes( "", RHITextureHandle{ 7 }, RHIFormat::R8G8B8A8_UNORM ) );
+    SW_EXPECT_FALSE( queue.hasUnfinishedRequest() );
+
+    const uint32 ticketA = queue.putForPNGBytes( "thumb.a", RHITextureHandle{ 7 }, RHIFormat::R8G8B8A8_UNORM );
+    const uint32 ticketB = queue.putForPNGBytes( "thumb.b", RHITextureHandle{ 7 }, RHIFormat::R8G8B8A8_UNORM );
+    const uint32 ticketC = queue.put( makeShotPath( "c.png" ), RHITextureHandle{}, RHIFormat::R8G8B8A8_UNORM );
+    SW_REQUIRE_TRUE( ticketA != 0 && ticketB != 0 );
+    ScreenshotRequest request;
+    SW_REQUIRE_TRUE( queue.take( request ) );
+    SW_EXPECT_TRUE( request._output == ScreenshotOutput::PNGBytes );
+    SW_EXPECT_EQUAL( string{ "thumb.a" }, request._path );
+    SW_EXPECT_EQUAL( ticketA, request._ticket );
+    queue.reportCompletedPNGBytes( request._ticket, true, vector<uint8>{ 1, 2, 3 } );
+    SW_REQUIRE_TRUE( queue.take( request ) );
+    queue.reportCompletedPNGBytes( request._ticket, true, vector<uint8>{ 4 } );
+    SW_REQUIRE_TRUE( queue.take( request ) );
+    SW_EXPECT_TRUE( request._output == ScreenshotOutput::File );
+    queue.reportCompleted( request._ticket, true );
+
+    vector<uint8> bytes;
+    SW_EXPECT_FALSE( queue.takePNGBytes( ticketC, bytes ) ); // 파일 요청 표에는 바이트가 없다
+    SW_REQUIRE_TRUE( queue.takePNGBytes( ticketA, bytes ) ); // 뒤 요청이 끝났어도 제 표로 받는다
+    SW_EXPECT_TRUE( bytes.size() == 3 );
+    SW_EXPECT_FALSE( queue.takePNGBytes( ticketA, bytes ) ); // 한 번만
+    SW_REQUIRE_TRUE( queue.takePNGBytes( ticketB, bytes ) );
+    SW_EXPECT_TRUE( bytes.size() == 1 );
+    SW_EXPECT_TRUE( queue.findResult( ticketA ) == ScreenshotTicketState::Written );
 }

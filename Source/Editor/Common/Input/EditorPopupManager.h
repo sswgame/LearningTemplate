@@ -69,6 +69,9 @@ namespace sw::editor
         static constexpr const utf8* kSubsystemName = "EditorPopupManager";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
+        /** @brief 지금 에디터 컨텍스트의 팝업 관리자입니다. 에디터가 서 있을 때만 부른다. 팝업 View 가 작업 공간 헤더(`EditorContext`) 없이 찾는 창구다(`docs/agents/EditorUI.md` MVVM). */
+        [[nodiscard]] static EditorPopupManager& getInEditorContext();
+
         void registerPopup( unique_ptr<IEditorPopup> pPopup );
 
         template <typename TPopup, typename... TArgs>

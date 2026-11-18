@@ -62,16 +62,21 @@ def _list_actual_layers(editor_dir: Path) -> list[str]:
     return list_layer
 
 
-def read_panel_view_ban(data: dict, root: Path, list_actual: list[str]) -> tuple[str, list[str], list[str]]:
-    """`[panelViewBan]` 의 층 · 정규식과 `[panelViewAllowed]` 의 헤더 — CMake 가 Panels View 부분에 껍데기를 놓는다. 표가 낡으면 멈춘다."""
+def read_panel_view_ban(data: dict, root: Path, list_actual: list[str]) -> tuple[list[str], list[str], list[str]]:
+    """`[panelViewBan]` 의 View 경로 · 정규식과 `[panelViewAllowed]` 의 헤더 — CMake 가 티어마다 MVVM View 부분에 껍데기를 놓는다. 표가 낡으면 멈춘다."""
     try:
-        layer: str = data["panelViewBan"]["layer"]
+        list_view: list[str] = data["panelViewBan"]["views"]
         list_pattern: list[str] = data["panelViewBan"]["patterns"]
         map_allowed: dict[str, str] = data["panelViewAllowed"]
     except KeyError as exception:
-        raise GeneratorError(f"{RULE_FILE.name}: [panelViewBan] patterns 와 [panelViewAllowed] 가 있어야 한다 ({exception!r})") from exception
-    if layer not in list_actual:
-        raise GeneratorError(f"[panelViewBan] layer '{layer}' 가 에디터 층이 아니다")
+        raise GeneratorError(f"{RULE_FILE.name}: [panelViewBan] views · patterns 와 [panelViewAllowed] 가 있어야 한다 ({exception!r})") from exception
+    editor_dir = root / DIR_SOURCE_EDITOR
+    for view in list_view:
+        path = editor_dir / view
+        if not path.exists() or any(character in view for character in '\\";$'):
+            raise GeneratorError(f"[panelViewBan] views 의 '{view}' 가 Source/Editor 아래에 없다(층 · 폴더 · 파일 경로) — 표를 고치세요")
+        if not any(view == layer or view.startswith(layer + "/") for layer in list_actual if layer != ROOT_LAYER_NAME):
+            raise GeneratorError(f"[panelViewBan] views 의 '{view}' 가 어느 에디터 층에도 들지 않는다")
     for pattern in list_pattern:
         if any(character in pattern for character in '\\";$'):
             raise GeneratorError(f"[panelViewBan] 의 정규식에 CMake 글자로 옮기지 못하는 문자가 있다: {pattern}")
@@ -81,7 +86,7 @@ def read_panel_view_ban(data: dict, root: Path, list_actual: list[str]) -> tuple
             raise GeneratorError(f"[panelViewAllowed] 의 파일이 없습니다: {header} — 표에서 지우거나 경로를 고치세요")
         if not reason or not any(re.search(pattern, header) for pattern in list_pattern):
             raise GeneratorError(f"[panelViewAllowed] 의 {header}: 까닭이 비었거나 금지 폴더 밖이다(낡은 줄) — 표에서 지우세요")
-    return layer, list_pattern, list(map_allowed)
+    return list_view, list_pattern, list(map_allowed)
 
 
 def generate_editor_layers(output_path: Path) -> None:
@@ -102,7 +107,7 @@ def generate_editor_layers(output_path: Path) -> None:
     for include in data.get("prelude", {}):
         if not include.startswith("Editor/") or not (root / "Source" / include).is_file():
             raise GeneratorError(f"[prelude] 의 파일이 없습니다: {include}")
-    panel_view_layer, list_ban_pattern, list_allowed = read_panel_view_ban(data, root, list_actual)
+    list_view, list_ban_pattern, list_allowed = read_panel_view_ban(data, root, list_actual)
 
     list_tier = sorted(set(map_tier.values()))
     list_line = [HEADER.rstrip("\n"), "", f'set(SW_EDITOR_TIER_LIST "{";".join(str(tier) for tier in list_tier)}")']
@@ -110,7 +115,7 @@ def generate_editor_layers(output_path: Path) -> None:
         list_layer = [layer for layer in list_actual if map_tier[layer] == tier]
         list_line.append(f'set(SW_EDITOR_TIER_{tier}_LAYERS "{";".join(list_layer)}")')
     list_line.append(f'set(SW_EDITOR_PRELUDE_HEADERS "{";".join(data.get("prelude", {}))}")')
-    list_line.append(f'set(SW_EDITOR_PANEL_VIEW_LAYER "{panel_view_layer}")')
+    list_line.append(f'set(SW_EDITOR_MVVM_VIEW_PATHS "{";".join(list_view)}")')
     list_line.append(f'set(SW_EDITOR_PANEL_VIEW_BAN_REGEX "{";".join(list_ban_pattern)}")')
     list_line.append(f'set(SW_EDITOR_PANEL_VIEW_ALLOWED_HEADERS "{";".join(list_allowed)}")')
     list_line.append("")

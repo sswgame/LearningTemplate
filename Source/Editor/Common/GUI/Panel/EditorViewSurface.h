@@ -3,7 +3,7 @@
  * @brief 씬 뷰 · 게임 뷰 패널이 자기 렌더 타깃(이미지)을 다루는 창구입니다 — 그릴 텍스처, 크기 맞추기, 그린 자리 알리기, 게임 뷰 초점, 스크린숏.
  * @details 뷰 렌더 타깃은 작업 공간의 `EditorRenderViews` 가 소유한다. 패널 View 는 작업 공간 · 커맨드 헤더를 보지 않으므로(`docs/agents/EditorUI.md` MVVM 계약) 여기를 지난다 —
  *          이 헤더는 값 헤더(`EditorViewTargetUtil.h`)와 Core 만 include 하고 본문(.cpp)이 작업 공간 · 스크린숏 커맨드를 부른다(언리얼 `SViewport` 가 `FSceneViewport` 를 쥐는 자리).
- *          UI 가 메인 스레드를 떠나면 이 창구가 메인 스레드로 보낼 요청의 경계가 된다.
+ *          크기 맞추기는 명령으로 게임 스레드에 보낸다(`EditorUICommandQueue` — UI 출력 계약). 나머지 쓰기(그린 자리 · 초점)는 UI 프레임 안의 값이라 UI 스레드로 옮길 때 함께 본다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -22,7 +22,7 @@ namespace sw::editor
     {
         /** @brief 뷰 @p kind 가 지금 그릴 텍스처 id 입니다(ImGui 이미지). 타깃이 아직 없으면 nullptr 입니다. */
         static void* getTextureID( EditorViewKind kind );
-        /** @brief 뷰 @p kind 의 렌더 타깃을 @p width x @p height 로 맞춥니다. 1 픽셀 차이는 무시한다(`EditorViewTargetUtil::needsResize`). */
+        /** @brief 뷰 @p kind 의 렌더 타깃을 @p width x @p height 로 맞추라고 보냅니다 — 이 UI 프레임 뒤 게임 틱 시작에 적용된다(`EditorUICommandQueue`). 1 픽셀 차이는 무시한다(`EditorViewTargetUtil::needsResize`). */
         static void fitTargetSize( EditorViewKind kind, uint32 width, uint32 height );
         /** @brief 이번 프레임에 뷰 @p kind 를 그렸고 이미지 왼쪽 위가 주 창 클라이언트 픽셀 @p imageClientPos 에 놓였다고 알립니다(호스트가 포인터를 뷰 픽셀로 옮긴다). */
         static void markDrawn( EditorViewKind kind, const float2& imageClientPos );

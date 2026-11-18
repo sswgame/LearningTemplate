@@ -13,7 +13,6 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Scene/EditorSceneViewUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -34,7 +33,7 @@ namespace sw::editor
             /** @brief 읽힌 공원 배치의 놀이기구 수입니다(감시 값 `Editor.ParkLayoutRideCount`). 배치를 읽지 않았으면 값을 내지 않는다. */
             [[nodiscard]] static bool readRideCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const ParkLayoutPreview* pPreview = findSubsystem<ParkLayoutPreview>();
+                const ParkLayoutPreview* pPreview = ParkLayoutPreview::find();
                 if ( pPreview == nullptr || pPreview->isLoaded() == false )
                     return false;
                 outValue = static_cast<float64>( pPreview->getRides().size() );
@@ -101,7 +100,7 @@ namespace sw::editor
 
     void ParkLayoutPanel::drawContent()
     {
-        ParkLayoutPreview* pPreview = findSubsystem<ParkLayoutPreview>();
+        ParkLayoutPreview* pPreview = ParkLayoutPreview::find();
         if ( pPreview == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         ParkLayoutPreview& preview = *pPreview;

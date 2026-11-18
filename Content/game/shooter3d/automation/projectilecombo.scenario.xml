@@ -20,23 +20,18 @@
 	<!-- 탄도선이 사라지고(0.07 초) 연사 간격이 지난 뒤 탄을 바꾼다 -->
 	<Wait frames="30"/>
 	<DevCommand line="cheat.shooter.projectile incendiary_round"/>
-	<Wait frames="1"/>
-	<Expect watch="Shooter3D.ShotDamage" equals="11"/>
+	<WaitUntil watch="Shooter3D.ShotDamage" equals="11" timeoutFrames="10"/>
 	<Tap slot="Mouse.Left" hold="1"/>
 	<WaitUntil watch="Shooter3D.ShotCount" equals="2" timeoutFrames="10"/>
 	<WaitUntil watch="Shooter3D.TracerWidth" equals="0.08" timeoutFrames="10"/>
 	<!-- 다른 무기는 자기 기본 탄이다(산탄 9). 되돌리면 소총도 기본 탄이다 -->
-	<Wait frames="1"/>
 	<Tap slot="Key.Digit2" hold="2"/>
-	<Wait frames="10"/>
-	<Expect watch="Shooter3D.WeaponIndex" equals="1"/>
+	<WaitUntil watch="Shooter3D.WeaponIndex" equals="1" timeoutFrames="30"/>
 	<Expect watch="Shooter3D.ShotDamage" equals="9"/>
 	<Tap slot="Key.Digit1" hold="2"/>
-	<Wait frames="10"/>
-	<Expect watch="Shooter3D.ShotDamage" equals="11"/>
+	<WaitUntil watch="Shooter3D.ShotDamage" equals="11" timeoutFrames="30"/>
 	<DevCommand line="cheat.shooter.projectile"/>
-	<Wait frames="1"/>
-	<Expect watch="Shooter3D.ShotDamage" equals="14"/>
+	<WaitUntil watch="Shooter3D.ShotDamage" equals="14" timeoutFrames="10"/>
 	<Expect watch="Shooter3D.PlayerAlive" equals="1"/>
 	<Pass/>
 </Scenario>

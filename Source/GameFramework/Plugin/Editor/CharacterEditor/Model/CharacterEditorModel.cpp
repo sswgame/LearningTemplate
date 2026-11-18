@@ -10,11 +10,13 @@
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/SaveReloadGuard.h"
 
 #include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitSolver.h"
+#include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
@@ -50,7 +52,7 @@ namespace sw::editor
         , _bodyShapes{}
         , _bodyProfiles{}
         , _visuals{}
-        , _reloadGuard{}
+        , _pReloadGuard{ make_unique<SaveReloadGuard<SocketSet>>() }
         , _fit{}
         , _pItems{}
         , _database{}
@@ -89,6 +91,8 @@ namespace sw::editor
         _paths._exportID   = CharacterEditorModelInternal::kDefaultExportID;
         _presetStore.setDatabase( &_database );
     }
+
+    CharacterEditorModel::~CharacterEditorModel() = default;
 
     void CharacterEditorModel::ensurePackData()
     {
@@ -137,7 +141,7 @@ namespace sw::editor
         if ( _bKindTableReady )
             return;
         _bKindTableReady = SW_TRUE;
-        _reloadGuard.reset();
+        _pReloadGuard->reset();
         SocketKindTable kinds;
         if ( kinds.loadDefault() == false )
             SW_LOG_WARNING_ID( "CharacterEditorModel.DefaultSocketKindTable", "Default socket kind table could not be loaded - kinds are not validated" );
@@ -168,13 +172,13 @@ namespace sw::editor
         _status.clear();
         _selectedSocket  = hashed_string{};
         _bExternalChange = SW_FALSE;
-        _reloadGuard.reset();
+        _pReloadGuard->reset();
         return true;
     }
 
     void CharacterEditorModel::pollExternalChange( float64 nowSeconds )
     {
-        if ( _reloadGuard.pollExternalChange( nowSeconds ) )
+        if ( _pReloadGuard->pollExternalChange( nowSeconds ) )
             _bExternalChange = SW_TRUE;
         if ( _bExternalChange && _paths._socketPath.empty() )
             _bExternalChange = SW_FALSE; // 열어 둔 소켓 파일이 없으면 반영할 모델이 없다
@@ -247,7 +251,7 @@ namespace sw::editor
             }
             else
             {
-                _reloadGuard.onSaved( nowSeconds ); // 파일 감시가 곧 같은 파일을 다시 읽는다 — 그건 외부 변경이 아니다
+                _pReloadGuard->onSaved( nowSeconds ); // 파일 감시가 곧 같은 파일을 다시 읽는다 — 그건 외부 변경이 아니다
                 SW_LOG_INFO_ID( "CharacterEditorModel.SocketFileSaved", "Socket file saved to %#", writePath->c_str() );
             }
         }
@@ -504,7 +508,7 @@ namespace sw::editor
         if ( pStore == nullptr || isPresetRequestPending() )
             return;
         _thumbnailPresetName = string{ presetName };
-        _thumbnailSlot       = CharacterEditorLocalStore::makeThumbnailSlot( presetName );
+        _thumbnailSlot       = CharacterEditorLocalStore::makeThumbnailSlot( _presetStore, presetName );
         _thumbnailRequest    = pStore->getChannel().submitWrite( _thumbnailSlot, std::move( pngBytes ), LocalStoreWriteOptions{},
                                                                  LocalStoreChannel::CompletionFunction::create<&CharacterEditorModel::onThumbnailWritten>( this ) );
         _status              = "Saving the thumbnail...";

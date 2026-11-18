@@ -6,6 +6,9 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/WallClock.h"
 
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Editor/Model/AdminToolModel.h"
@@ -342,4 +345,19 @@ namespace sw::editor
         }
     }
 
+    AdminToolSession* AdminToolSession::find()
+    {
+        return findSubsystem<AdminToolSession>();
+    }
+
+    namespace
+    {
+        struct AdminToolSessionInternal
+        {
+            /** @brief 확장 서브시스템 등록 순서입니다(패널 `AdminToolPanel` 과 같은 자리). */
+            static constexpr int32 kSubsystemOrder = 9200;
+        };
+    } // namespace
+
+    SW_EDITOR_SUBSYSTEM( AdminToolSession, AdminToolSessionInternal::kSubsystemOrder );
 } // namespace sw::editor

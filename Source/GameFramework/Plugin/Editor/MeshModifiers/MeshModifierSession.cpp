@@ -11,7 +11,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Automation/Scenario/AutomationStageReset.h"
@@ -26,6 +28,7 @@
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierGPUProgram.h"
+#include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierParamEdit.h"
 #include "GameFramework/Runtime/World/Spline/SplineComponent.h"
 #include "GameFramework/Runtime/World/Spline/SplinePath.h"
 
@@ -244,6 +247,62 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    MeshModifierSession* MeshModifierSession::find()
+    {
+        return findSubsystem<MeshModifierSession>();
+    }
+
+    expected<void> MeshModifierSession::setTargetFromSelection()
+    {
+        return setTarget( editor::getMainSceneSelection().getPrimaryObject() );
+    }
+
+    void MeshModifierSession::collectReferenceCandidates( const utf8* pRequiredComponentHint, vector<string>& outListName, bool& outAnyMatch ) const
+    {
+        outListName.clear();
+        outAnyMatch                  = false;
+        GameObjectManager*  pManager = getActiveObjectManager();
+        vector<GameObject*> listObject;
+        if ( pManager != nullptr )
+            pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey(), listObject );
+        for ( const GameObject* pObject : listObject )
+        {
+            if ( pObject != nullptr && MeshModifierParamEdit::matchesComponentHint( *pObject, pRequiredComponentHint ) )
+            {
+                outAnyMatch = true;
+                break;
+            }
+        }
+        for ( const GameObject* pObject : listObject )
+        {
+            if ( pObject == nullptr )
+                continue;
+            if ( outAnyMatch && MeshModifierParamEdit::matchesComponentHint( *pObject, pRequiredComponentHint ) == false )
+                continue;
+            const utf8* pName = pObject->getName().c_str();
+            if ( pName == nullptr || pName[0] == '\0' )
+                continue; // 참조는 이름으로 찾으므로 이름 없는 오브젝트는 고를 수 없다
+            outListName.emplace_back( pName );
+        }
+    }
+
+    bool MeshModifierSession::tryPickSelectedReference( const utf8* pRequiredComponentHint, string& outName ) const
+    {
+        const GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
+        if ( pObject == nullptr )
+        {
+            SW_LOG_WARNING_ID( "MeshModifiersPanel.SelectObjectSceneFirst", "Select an object in the scene first" );
+            return false;
+        }
+        if ( MeshModifierParamEdit::matchesComponentHint( *pObject, pRequiredComponentHint ) == false )
+        {
+            SW_LOG_WARNING_ID( "MeshModifiersPanel.ObjectNoComponent", "Object %# has no %# component", pObject->getName().c_str(), pRequiredComponentHint );
+            return false;
+        }
+        outName = pObject->getName().c_str();
+        return true;
+    }
+
     MeshModifierSession::MeshModifierSession()
         : _stack{}
         , _gpuPreviewMesh{}

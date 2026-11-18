@@ -12,6 +12,7 @@
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
@@ -63,14 +64,36 @@ namespace sw
                 ScreenshotRequestQueue*    _pMailbox{ nullptr }; ///< 다 쓰면 알린다 - 엔진 종료는 모듈을 내리기 전에 엔진 태스크를 모두 기다린다
                 shared_ptr<atomic<uint32>> _pInFlight;           ///< 실행 중 요청: 쓰는 중인 수(0 이 될 때까지 다음 요청을 꺼내지 않는다)
                 ScreenshotWriteKind        _kind{ ScreenshotWriteKind::Requested };
-                uint32                     _ticket{ 0 }; ///< 실행 중 요청의 표(`ScreenshotRequestQueue::put`)
+                uint32                     _ticket{ 0 };                      ///< 실행 중 요청의 표(`ScreenshotRequestQueue::put` · `putForPNGBytes`)
+                ScreenshotOutput           _output{ ScreenshotOutput::File }; ///< 실행 중 요청: PNG 바이트면 `_path` 는 요청 이름이고 파일을 쓰지 않는다
             };
+
+            /** @brief 바이트 요청의 PNG 를 만들어 우편함에 둔다(`requestScreenshotPNGBytes`). 풀지 못하면 실패로 알린다. */
+            static void encodeRequestedPNGBytes( const ScreenshotFileWrite& write )
+            {
+                vector<uint8> rgbaBytes;
+                vector<uint8> pngBytes;
+                const bool    bUnpacked = RenderTargetImageFile::unpackRGBA8( write._bytes, write._layout, write._format, rgbaBytes );
+                if ( bUnpacked )
+                    ImageFileWriter::encodePNGRGBA8( rgbaBytes, write._layout._width, write._layout._height, pngBytes );
+                const bool bEncoded = bUnpacked && pngBytes.empty() == false;
+                if ( bEncoded == false )
+                    SW_LOG_WARNING_ID( "Screenshot.BytesNotEncoded", "Screenshot byte request '%#' was not encoded", write._path.c_str() );
+                if ( write._pMailbox != nullptr )
+                    write._pMailbox->reportCompletedPNGBytes( write._ticket, bEncoded, std::move( pngBytes ) );
+            }
 
             /** @brief 워커 잡 본문입니다. 풀어 쓰고(실패는 쓰는 쪽이 경로와 함께 Error 로 남긴다) 처리했음을 알린다 - 기다리는 쪽은 처리 수로 끝을 알고, 그때 파일은 다 써졌다. */
             static void runScreenshotFileWrite( const TaskArgs& args )
             {
                 const shared_ptr<ScreenshotFileWrite> pWrite = args.get<shared_ptr<ScreenshotFileWrite>>( 0 );
                 const ScreenshotFileWrite&            write  = *pWrite;
+                if ( write._output == ScreenshotOutput::PNGBytes )
+                {
+                    encodeRequestedPNGBytes( write );
+                    --*write._pInFlight;
+                    return;
+                }
                 (void)FileUtil::ensureParentDirectoryExists( write._path ); // 실패하면 아래 쓰기가 경로와 함께 알린다
                 const bool bWritten = RenderTargetImageFile::writeImageFile( write._bytes, write._layout, write._format, write._path );
                 if ( write._kind == ScreenshotWriteKind::Packet )
@@ -86,7 +109,7 @@ namespace sw
                 else
                     SW_LOG_WARNING_ID( "Screenshot.NotWritten", "Screenshot was not written: %#", write._path.c_str() );
                 if ( write._pMailbox != nullptr )
-                    write._pMailbox->reportCompleted( write._ticket, bWritten, write._path );
+                    write._pMailbox->reportCompleted( write._ticket, bWritten );
                 --*write._pInFlight;
             }
 
@@ -168,6 +191,7 @@ namespace sw
         , _requestedScreenshotTicket{ 0 }
         , _requestedScreenshotTexture{ 0 }
         , _requestedScreenshotFormat{ RHIFormat::R8G8B8A8_UNORM }
+        , _requestedScreenshotOutput{ ScreenshotOutput::File }
         , _requestedScreenshotWaitFrames{ 0 }
         , _pRequestedScreenshotWritesInFlight{ make_shared<atomic<uint32>>( 0u ) }
         , _pPendingTargetRead{}
@@ -850,21 +874,26 @@ namespace sw
         return pMailbox != nullptr ? pMailbox->findResult( ticket ) : ScreenshotTicketState::Unknown;
     }
 
-    uint32 RenderThread::getCompletedScreenshotSerial()
+    uint32 RenderThread::requestScreenshotPNGBytes( string_view requestName, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
-        const ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
-        return pMailbox != nullptr ? pMailbox->getCompletedSerial() : 0u; // 우편함이 없으면 처리한 요청이 없다
+        ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
+        if ( pMailbox == nullptr )
+        {
+            SW_LOG_ERROR_ID( "RenderThread.ScreenshotBytesNotRequestedHost", "Screenshot byte request '%#' was not requested - this host has no screenshot mailbox (no renderer)", requestName );
+            return 0;
+        }
+        return pMailbox->putForPNGBytes( requestName, sourceTexture, sourceFormat );
     }
 
-    string RenderThread::getLastScreenshotPath()
+    bool RenderThread::takeScreenshotPNGBytes( uint32 ticket, vector<uint8>& outPNGBytes )
     {
-        const ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
-        return pMailbox != nullptr ? pMailbox->getLastPath() : string{}; // 우편함이 없으면 쓴 사진이 없다
+        ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
+        return pMailbox != nullptr && pMailbox->takePNGBytes( ticket, outPNGBytes ); // 우편함이 없으면 받은 사진이 없다
     }
 
     void RenderThread::takeScreenshotRequest()
     {
-        // 앞 요청을 워커가 쓰는 중이면 꺼내지 않는다 - 처리 수(`getCompletedScreenshotSerial`)가 요청 순서대로 오르게(뒤 장이 먼저 끝나 앞 장의 끝으로 읽히지 않게).
+        // 앞 요청을 워커가 쓰는 중이면 꺼내지 않는다 - 표의 결과가 요청 순서대로 나오게(끝 차단 `hasUnfinishedRequest` 가 받은 수와 처리 수를 견준다).
         if ( _requestedScreenshotPath.empty() == false || _pRequestedScreenshotWritesInFlight->load() > 0 )
             return;
         ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
@@ -875,6 +904,7 @@ namespace sw
         _requestedScreenshotTicket  = request._ticket;
         _requestedScreenshotTexture = request._texture;
         _requestedScreenshotFormat  = request._format;
+        _requestedScreenshotOutput  = request._output;
         // 렌더 타깃은 이번 프레임에 그려지므로 기다리지 않는다. Present 캡처는 켠 뒤 한 프레임을 더 그린다.
         _requestedScreenshotWaitFrames = _requestedScreenshotTexture == 0 ? RenderThreadInternal::kPresentCaptureWaitFrames : 0;
     }
@@ -896,6 +926,7 @@ namespace sw
         pWrite->_pMailbox  = RenderThreadInternal::findMailbox();
         pWrite->_pInFlight = _pRequestedScreenshotWritesInFlight;
         pWrite->_ticket    = _requestedScreenshotTicket;
+        pWrite->_output    = _requestedScreenshotOutput;
         pWrite->_format    = _requestedScreenshotTexture == 0 ? constant::render::kBackBufferFormat : _requestedScreenshotFormat;
         _requestedScreenshotPath.clear();
         const bool bRead            = _requestedScreenshotTexture == 0 ? readPresentedBytes( pWrite->_path, pWrite->_bytes, pWrite->_layout )
@@ -911,8 +942,12 @@ namespace sw
             return;
         }
         SW_LOG_WARNING_ID( "Screenshot.NotWritten", "Screenshot was not written: %#", pWrite->_path.c_str() );
-        if ( pWrite->_pMailbox != nullptr )
-            pWrite->_pMailbox->reportCompleted( pWrite->_ticket, false, pWrite->_path ); // 우편함이 먼저 내려갔으면 알릴 곳이 없다
+        if ( pWrite->_pMailbox == nullptr )
+            return; // 우편함이 먼저 내려갔으면 알릴 곳이 없다
+        if ( pWrite->_output == ScreenshotOutput::PNGBytes )
+            pWrite->_pMailbox->reportCompletedPNGBytes( pWrite->_ticket, false, {} );
+        else
+            pWrite->_pMailbox->reportCompleted( pWrite->_ticket, false );
     }
 
     void RenderThread::discardPendingRenderTargetRead()

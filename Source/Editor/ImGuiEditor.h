@@ -48,6 +48,8 @@ namespace sw::editor
         void shutdown() override;
         /** @brief 메인 스레드에서 ImGui 프레임을 갱신하고, 패널을 그리고, 플랫폼 창을 갱신합니다. */
         void updateUI() override;
+        /** @brief UI 가 보낸 명령을 적용합니다(`EditorUICommandQueue::applyDue`). 호스트가 `updateUI` 뒤, 씬 틱 앞에서 부릅니다. */
+        void applyUICommands() override;
         /** @brief 에디터 UI 의 DrawData 를 GPU 로 그립니다. */
         void render( IRHIDevice* pRHIDevice ) override;
         /** @brief 메인 스왑체인 Present 뒤에 멀티 뷰포트를 그립니다. */
