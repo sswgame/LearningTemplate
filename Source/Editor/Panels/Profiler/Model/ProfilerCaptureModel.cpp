@@ -24,7 +24,7 @@ namespace sw::editor
     {
     }
 
-    void ProfilerCaptureModel::tick( FrameProfiler& profiler )
+    void ProfilerCaptureModel::update( FrameProfiler& profiler )
     {
         // 패널이 열려 있는 동안 엔진 프로파일러를 켜 두고 프레임마다 한 칸씩 담는다. 탭과 무관하게 담으므로 탭을 바꿔도 그래프가 끊기지 않는다.
         if ( _bCollect == SW_TRUE && profiler.isEnabled() == false )

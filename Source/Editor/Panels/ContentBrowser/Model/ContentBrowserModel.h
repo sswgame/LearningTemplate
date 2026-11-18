@@ -133,7 +133,7 @@ namespace sw::editor
          * @brief 루트 · 임포트 · `Content/` 변경 · 참조 역색인 · 폴더 목록을 맞춥니다.
          * @param bSearchActive 검색어가 있으면 하위 폴더의 파일까지 본다(언리얼과 유니티의 프로젝트 검색과 같다).
          */
-        void tick( bool bSearchActive );
+        void update( bool bSearchActive );
 
         // ------------------------------------------------------------------------------
         // 2) 루트와 폴더
@@ -204,7 +204,7 @@ namespace sw::editor
         /** @brief 이름 바꾸기를 시작합니다. 시작했으면 true 이고 @p outStem 에 확장자를 뺀 이름을 씁니다. 폴더는 받지 않습니다. */
         [[nodiscard]] bool beginRename( string_view absolutePath, string& outStem );
         /**
-         * @brief 이름 바꾸기를 @p newName 으로 끝냅니다. 참조 역색인이 마지막 파일 변경을 따라오기 전이면 그때까지 미뤘다가 `tick` 이 실행한다(입력은 그동안 열려 있다).
+         * @brief 이름 바꾸기를 @p newName 으로 끝냅니다. 참조 역색인이 마지막 파일 변경을 따라오기 전이면 그때까지 미뤘다가 `update` 이 실행한다(입력은 그동안 열려 있다).
          * @details 언리얼이 에셋 레지스트리 스캔이 끝날 때까지 이름 바꾸기를 미루는 것과 같다 — 거절하면 늦게 닿은 파일 변경 알림 하나가 사용자의 Enter 를 버린다.
          */
         bool commitRename( string_view newName );
@@ -237,7 +237,7 @@ namespace sw::editor
         /** @brief 기다리던 에셋을 휴지통으로 보냅니다. 성공하면 선택을 비우고 목록을 다시 읽게 합니다. */
         bool confirmDeleteAsset();
         void cancelDeleteAsset() { _fileActions.cancelDelete(); }
-        /** @brief 대화상자로 지금 폴더에 파일을 임포트합니다. 고른 경로는 뒤따르는 `tick` 이 처리하고, 대화상자를 연 동안 폴더를 옮겨도 연 때의 폴더로 들어간다. */
+        /** @brief 대화상자로 지금 폴더에 파일을 임포트합니다. 고른 경로는 뒤따르는 `update` 이 처리하고, 대화상자를 연 동안 폴더를 옮겨도 연 때의 폴더로 들어간다. */
         void importFilesFromDialog();
         /** @brief 임포트할 폴더가 있으면 true 입니다. */
         bool canImport() const { return _selectedFolderAbs.empty() == false; }
@@ -275,7 +275,7 @@ namespace sw::editor
         void selectAfterFileChange( string_view absolutePath );
         /** @brief 옮기기가 고칠 역색인입니다. 마지막 변경을 아직 반영하지 않았으면 nullptr 입니다. */
         EditorAssetIndex* findCurrentReferenceIndex();
-        /** @brief 역색인이 따라왔으면 미뤄 둔 옮기기를 실행합니다(`tick`). */
+        /** @brief 역색인이 따라왔으면 미뤄 둔 옮기기를 실행합니다(`update`). */
         void applyPendingMove();
 
     private:

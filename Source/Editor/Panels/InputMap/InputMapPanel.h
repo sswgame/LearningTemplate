@@ -57,7 +57,7 @@ namespace sw::editor
         ToolAssetLoadResult loadDocument() override;
         /** @brief 탭이 가려져도 녹화 · 재생은 이어진다 — 게임 뷰를 앞에 두고 녹화한다. 그래서 문서는 가려진 프레임에도 돈다. */
         void onPanelCollapsed() override;
-        /** @brief 닫으면 녹화를 끝내고 재생 중인 리플레이를 뗍니다. 닫힌 패널은 `tick` 이 돌지 않아 끝난 재생을 뗄 사람이 없다. */
+        /** @brief 닫으면 녹화를 끝내고 재생 중인 리플레이를 뗍니다. 닫힌 패널은 `update` 이 돌지 않아 끝난 재생을 뗄 사람이 없다. */
         void onPanelClosed() override { _document.releaseInput(); }
 
     private:
@@ -120,8 +120,8 @@ namespace sw::editor
         vector<hashed_string>        _listVisibleAction;                         ///< 필터를 지난 액션. 프레임마다 다시 채우는 재사용 버퍼
         vector<InputMapConflictView> _listActionConflictView;                    ///< 고른 액션의 충돌 줄. 프레임마다 다시 채우는 재사용 버퍼
         string                       _testComboPattern;
-        float32                      _testVibLeft;
-        float32                      _testVibRight;
+        float32                      _testVibrationLeft;
+        float32                      _testVibrationRight;
         float2                       _simStick;
         int32                        _newActionValueType; ///< 콤보 번호 — `InputActionValueType` 과 같은 순서다
         int32                        _newLayerPriority;

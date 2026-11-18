@@ -92,8 +92,8 @@ namespace sw::editor
         , _listVisibleAction{}
         , _listActionConflictView{}
         , _testComboPattern{ "236P" }
-        , _testVibLeft{ 0.5f }
-        , _testVibRight{ 0.5f }
+        , _testVibrationLeft{ 0.5f }
+        , _testVibrationRight{ 0.5f }
         , _simStick{}
         , _newActionValueType{ 0 }
         , _newLayerPriority{ 0 }
@@ -107,7 +107,7 @@ namespace sw::editor
     {
         updateFocusedDocument();
         ensureDocumentLoaded();
-        _document.tick( ImGui::GetIO().DeltaTime );
+        _document.update( ImGui::GetIO().DeltaTime );
 
         // 탭은 셋이다. 편집(Mappings), 들여다보기(Debug), 녹화와 주입(Replay & Inject)이다. 언리얼의 Enhanced Input 은 액션, 매핑, 트리거를 한 화면에서 편집한다.
         if ( ImGui::BeginTabBar( "InputEditorTabs" ) )
@@ -140,7 +140,7 @@ namespace sw::editor
 
     void InputMapPanel::onPanelCollapsed()
     {
-        _document.tick( ImGui::GetIO().DeltaTime );
+        _document.update( ImGui::GetIO().DeltaTime );
     }
 
     void InputMapPanel::drawMappingsTab()
@@ -732,16 +732,16 @@ namespace sw::editor
                 ImGui::TextUnformatted( SW_LOCKEY( "EdText", "HapticVibrationTest" ) );
                 EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "LeftMotor" ) );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                EditorWidgets::sliderFloat( SW_WIDGET_ID( "##LeftMotor" ), &_testVibLeft, 0.0f, 1.0f );
+                EditorWidgets::sliderFloat( SW_WIDGET_ID( "##LeftMotor" ), &_testVibrationLeft, 0.0f, 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "LeftMotorTip" ) );
                 ImGui::SameLine();
                 EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "RightMotor" ) );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                EditorWidgets::sliderFloat( SW_WIDGET_ID( "##RightMotor" ), &_testVibRight, 0.0f, 1.0f );
+                EditorWidgets::sliderFloat( SW_WIDGET_ID( "##RightMotor" ), &_testVibrationRight, 0.0f, 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RightMotorTip" ) );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "TestPulse03s" ) ) );
                 if ( ImGui::Button( SW_LOCKEY( "EdText", "TestPulse03s" ) ) )
-                    InputMapModel::playGamepadVibration( _testVibLeft, _testVibRight, 0.3f );
+                    InputMapModel::playGamepadVibration( _testVibrationLeft, _testVibrationRight, 0.3f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TestPulseTip" ) );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
                 if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )

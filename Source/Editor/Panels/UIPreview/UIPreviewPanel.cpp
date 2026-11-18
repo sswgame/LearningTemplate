@@ -65,165 +65,165 @@ namespace sw::editor
             }
 
             /** @brief 열린 패널의 감시 값 값을 읽습니다. 닫혔거나 문서가 없으면 false 입니다. */
-            [[nodiscard]] static const UIPreviewProbe* findProbe()
+            [[nodiscard]] static const UIPreviewWatchValues* findWatchValues()
             {
-                const UIPreviewPanel* pPanel            = EditorPanelManager::findPanelInEditorContext<UIPreviewPanel>();
-                const bool            bProbeUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->getProbe()._bValid == false;
-                if ( bProbeUnavailable )
+                const UIPreviewPanel* pPanel             = EditorPanelManager::findPanelInEditorContext<UIPreviewPanel>();
+                const bool            bValuesUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->getWatchValues()._bValid == false;
+                if ( bValuesUnavailable )
                     return nullptr;
-                return &pPanel->getProbe();
+                return &pPanel->getWatchValues();
             }
 
             [[nodiscard]] static bool readWidgetCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = static_cast<float64>( pProbe->_widgetCount );
+                outValue = static_cast<float64>( pValues->_widgetCount );
                 return true;
             }
 
             [[nodiscard]] static bool readFirstTextBytes( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = static_cast<float64>( pProbe->_firstTextBytes );
+                outValue = static_cast<float64>( pValues->_firstTextBytes );
                 return true;
             }
 
             [[nodiscard]] static bool readRightToLeft( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = pProbe->_bRightToLeft ? 1.0 : 0.0;
+                outValue = pValues->_bRightToLeft ? 1.0 : 0.0;
                 return true;
             }
 
             [[nodiscard]] static bool readHoveredOrdinal( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = static_cast<float64>( pProbe->_hoveredOrdinal );
+                outValue = static_cast<float64>( pValues->_hoveredOrdinal );
                 return true;
             }
 
             [[nodiscard]] static bool readHoveredFocusable( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = pProbe->_bHoveredFocusable ? 1.0 : 0.0;
+                outValue = pValues->_bHoveredFocusable ? 1.0 : 0.0;
                 return true;
             }
 
             [[nodiscard]] static bool readFocusedOrdinal( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = static_cast<float64>( pProbe->_focusedOrdinal );
+                outValue = static_cast<float64>( pValues->_focusedOrdinal );
                 return true;
             }
 
             [[nodiscard]] static bool readSelectedOpacity( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr || pProbe->_bSelectedValid == false )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr || pValues->_bSelectedValid == false )
                     return false;
-                outValue = static_cast<float64>( pProbe->_selectedOpacity );
+                outValue = static_cast<float64>( pValues->_selectedOpacity );
                 return true;
             }
 
             [[nodiscard]] static bool readDirty( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = pProbe->_bDirty ? 1.0 : 0.0;
+                outValue = pValues->_bDirty ? 1.0 : 0.0;
                 return true;
             }
 
             [[nodiscard]] static bool readAnimationTime( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = static_cast<float64>( pProbe->_animationTime );
+                outValue = static_cast<float64>( pValues->_animationTime );
                 return true;
             }
 
             [[nodiscard]] static bool readAnimationPlaying( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = pProbe->_bAnimationPlaying ? 1.0 : 0.0;
+                outValue = pValues->_bAnimationPlaying ? 1.0 : 0.0;
                 return true;
             }
 
             [[nodiscard]] static bool readTextureReady( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = pProbe->_bTextureReady ? 1.0 : 0.0;
+                outValue = pValues->_bTextureReady ? 1.0 : 0.0;
                 return true;
             }
 
             [[nodiscard]] static bool readReloadedAfterSave( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = pProbe->_bReloadedAfterSave ? 1.0 : 0.0;
+                outValue = pValues->_bReloadedAfterSave ? 1.0 : 0.0;
                 return true;
             }
 
             [[nodiscard]] static bool readSlotEditable( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr || pProbe->_bSelectedValid == false )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr || pValues->_bSelectedValid == false )
                     return false;
-                outValue = pProbe->_bSlotEditable ? 1.0 : 0.0;
+                outValue = pValues->_bSlotEditable ? 1.0 : 0.0;
                 return true;
             }
 
             [[nodiscard]] static bool readSelectedOffsetMinX( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr || pProbe->_bSelectedValid == false )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr || pValues->_bSelectedValid == false )
                     return false;
-                outValue = static_cast<float64>( pProbe->_selectedOffsetMinX );
+                outValue = static_cast<float64>( pValues->_selectedOffsetMinX );
                 return true;
             }
 
             [[nodiscard]] static bool readPaletteCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = static_cast<float64>( pProbe->_paletteCount );
+                outValue = static_cast<float64>( pValues->_paletteCount );
                 return true;
             }
 
             [[nodiscard]] static bool readSlotEditCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = static_cast<float64>( pProbe->_slotEditCount );
+                outValue = static_cast<float64>( pValues->_slotEditCount );
                 return true;
             }
 
             [[nodiscard]] static bool readLanguageIndex( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UIPreviewProbe* pProbe = findProbe();
-                if ( pProbe == nullptr )
+                const UIPreviewWatchValues* pValues = findWatchValues();
+                if ( pValues == nullptr )
                     return false;
-                outValue = static_cast<float64>( pProbe->_languageIndex );
+                outValue = static_cast<float64>( pValues->_languageIndex );
                 return true;
             }
         };
@@ -1083,7 +1083,7 @@ namespace sw::editor
         UISystem* pUI = UIPreviewModel::findUISystem();
         if ( pUI == nullptr || pUI->isInitialized() == false )
         {
-            _model.resetProbe();
+            _model.resetWatchValues();
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorUIPreview", "UINotRunning" ) );
             return;
         }
@@ -1102,7 +1102,7 @@ namespace sw::editor
         ImGui::Separator();
         if ( pScreen == nullptr )
         {
-            _model.resetProbe();
+            _model.resetWatchValues();
             EditorWidgets::drawEmptyHint( _model.getError().empty() ? SW_LOCKEY( "EditorUIPreview", "EnterPathHint" ) : _model.getError().c_str() );
             return;
         }
@@ -1123,6 +1123,6 @@ namespace sw::editor
         ImGui::EndChild();
         ImGui::SameLine();
         drawImage( *pScreen );
-        _model.updateProbe( pScreen, isDocumentDirty(), _pTextureID != nullptr );
+        _model.updateWatchValues( pScreen, isDocumentDirty(), _pTextureID != nullptr );
     }
 } // namespace sw::editor

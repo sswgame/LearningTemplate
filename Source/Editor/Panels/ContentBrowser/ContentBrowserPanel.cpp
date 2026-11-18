@@ -1012,7 +1012,7 @@ namespace sw::editor
             requestAnimationFrame();
 
         // 검색어가 있으면 하위 폴더의 파일까지 본다. 언리얼과 유니티의 프로젝트 검색과 같다.
-        _model.tick( EditorListFilter{ _searchBuffer.c_str() }.isActive() );
+        _model.update( EditorListFilter{ _searchBuffer.c_str() }.isActive() );
         _bContentVisible = SW_TRUE;
 
         drawToolbar();
@@ -1164,13 +1164,13 @@ namespace sw::editor
         EditorChrome::beginSection( sourcesDesc );
 
         EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdWidget", "Favorites" ) );
-        struct FavFolder
+        struct FavoriteFolder
         {
             const utf8* _pLabel;
             const utf8* _pRelPath;
             bool        _bEngine;
         };
-        static const FavFolder kArrFavorites[] = {
+        static const FavoriteFolder kArrFavorites[] = {
             {  "Scenes",    constant::path::kMapsFolder, false},
             { "Prefabs", constant::path::kPrefabsFolder, false},
             {"Textures", constant::path::kTextureFolder, false},
@@ -1179,18 +1179,18 @@ namespace sw::editor
         };
 
         const uint32 favoriteCount = static_cast<uint32>( sizeof( kArrFavorites ) / sizeof( kArrFavorites[0] ) );
-        for ( uint32 favIdx = 0; favIdx < favoriteCount; ++favIdx )
+        for ( uint32 favoriteIndex = 0; favoriteIndex < favoriteCount; ++favoriteIndex )
         {
-            const string fullFavPath = kArrFavorites[favIdx]._bEngine
-                                         ? EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEnginePack, kArrFavorites[favIdx]._pRelPath ) )
-                                         : EditorPaths::findContentFolder( FileUtil::joinPath( ContentBrowserModel::getGamePackRoot(), kArrFavorites[favIdx]._pRelPath ) );
-            const bool   bSelected   = FileUtil::isSameDiskPath( fullFavPath, _model.getSelectedFolderPath() );
+            const string favoritePath = kArrFavorites[favoriteIndex]._bEngine
+                                          ? EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEnginePack, kArrFavorites[favoriteIndex]._pRelPath ) )
+                                          : EditorPaths::findContentFolder( FileUtil::joinPath( ContentBrowserModel::getGamePackRoot(), kArrFavorites[favoriteIndex]._pRelPath ) );
+            const bool   bSelected    = FileUtil::isSameDiskPath( favoritePath, _model.getSelectedFolderPath() );
 
-            if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )
+            if ( ImGui::Selectable( kArrFavorites[favoriteIndex]._pLabel, bSelected ) )
             {
                 vector<ContentBrowserBreadcrumb> listBreadcrumb;
-                ContentBrowserBreadcrumb::makeFavoriteTrail( kArrFavorites[favIdx]._pLabel, fullFavPath, listBreadcrumb );
-                _model.selectFolder( fullFavPath, listBreadcrumb );
+                ContentBrowserBreadcrumb::makeFavoriteTrail( kArrFavorites[favoriteIndex]._pLabel, favoritePath, listBreadcrumb );
+                _model.selectFolder( favoritePath, listBreadcrumb );
             }
         }
 

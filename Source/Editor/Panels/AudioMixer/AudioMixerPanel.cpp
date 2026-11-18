@@ -67,7 +67,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readBusVolume( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( AudioMixerPanel::getProbedBusVolume() );
+                outValue = static_cast<float64>( AudioMixerPanel::getWatchedBusVolume() );
                 return true;
             }
         };
@@ -85,22 +85,22 @@ namespace sw::editor
 
     uint32 AudioMixerPanel::getBusCount()
     {
-        return AudioMixerModel::getProbe()._busCount;
+        return AudioMixerModel::getWatchValues()._busCount;
     }
 
     uint32 AudioMixerPanel::getMutedCount()
     {
-        return AudioMixerModel::getProbe()._mutedCount;
+        return AudioMixerModel::getWatchValues()._mutedCount;
     }
 
     uint32 AudioMixerPanel::getSoloCount()
     {
-        return AudioMixerModel::getProbe()._soloCount;
+        return AudioMixerModel::getWatchValues()._soloCount;
     }
 
-    float32 AudioMixerPanel::getProbedBusVolume()
+    float32 AudioMixerPanel::getWatchedBusVolume()
     {
-        return AudioMixerModel::getProbe()._probedBusVolume;
+        return AudioMixerModel::getWatchValues()._watchedBusVolume;
     }
 
     void AudioMixerPanel::drawPreviewBar( IAudioService& audio )

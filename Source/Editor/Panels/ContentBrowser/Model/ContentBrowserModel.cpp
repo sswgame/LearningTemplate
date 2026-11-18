@@ -170,7 +170,7 @@ namespace sw::editor
     {
     }
 
-    void ContentBrowserModel::tick( bool bSearchActive )
+    void ContentBrowserModel::update( bool bSearchActive )
     {
         if ( bSearchActive != _bListingRecursive )
         {

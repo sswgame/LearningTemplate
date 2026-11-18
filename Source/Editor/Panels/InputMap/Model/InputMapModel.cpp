@@ -83,7 +83,7 @@ namespace sw::editor
     {
     }
 
-    void InputMapModel::tick( float32 deltaTime )
+    void InputMapModel::update( float32 deltaTime )
     {
         InputManager& input = getInputManager();
         if ( _inputMap.getInputManager() != &input )

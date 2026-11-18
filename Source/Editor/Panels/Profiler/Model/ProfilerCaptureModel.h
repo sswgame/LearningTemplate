@@ -32,7 +32,7 @@ namespace sw::editor
         static const FrameProfiler* findProfiler();
 
         /** @brief 패널이 열려 있는 프레임마다 부릅니다. 수집이 켜져 있으면 엔진 프로파일러를 켜고, 멈추지 않았으면 한 칸 담은 뒤 스파이크를 봅니다. */
-        void tick( FrameProfiler& profiler );
+        void update( FrameProfiler& profiler );
 
         /** @brief 엔진 프로파일러 수집을 켜거나 끕니다. */
         void setCollect( FrameProfiler& profiler, bool bCollect );

@@ -269,7 +269,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawContent()
     {
-        _capture.tick( ProfilerViewModel::getFrameProfiler() );
+        _capture.update( ProfilerViewModel::getFrameProfiler() );
 
         if ( ImGui::BeginTabBar( "ProfilerTabs" ) )
         {

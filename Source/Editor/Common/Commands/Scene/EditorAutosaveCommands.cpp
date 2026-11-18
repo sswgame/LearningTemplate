@@ -378,7 +378,7 @@ namespace sw::editor
             }
 
             /** @brief 게임 단계 — 활성 씬 사본 쓰기 · 복원 마무리는 씬을 읽고 바꾸므로 게임 스레드가 한다. */
-            static void runGameStep( EditorContext& /*context*/, EditorPlaySessionWriteKey /*key*/ ) { EditorAutosaveCommands::tick(); }
+            static void runGameStep( EditorContext& /*context*/, EditorPlaySessionWriteKey /*key*/ ) { EditorAutosaveCommands::update(); }
 
             static bool runNow( const vector<string>& listArgument, string& outReply )
             {
@@ -455,7 +455,7 @@ namespace sw::editor
                          &EditorAutosaveCommandsInternal::readRestoredDocumentCount );
     SW_AUTOMATION_WATCH( editorAutosaveRestoredCount, "Editor.AutosaveRestoredCount", "Autosave copies restored this session", &EditorAutosaveCommandsInternal::readRestoredCount );
 
-    void EditorAutosaveCommands::tick()
+    void EditorAutosaveCommands::update()
     {
         EditorAutosaveCommandsInternal::State& state = EditorAutosaveCommandsInternal::getState();
         if ( state._bSessionBegun == false )

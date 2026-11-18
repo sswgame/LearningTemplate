@@ -42,10 +42,10 @@ namespace sw::editor
     class UndoStepOwner;
 
     /**
-     * @struct UIPreviewProbe
+     * @struct UIPreviewWatchValues
      * @brief 패널이 마지막으로 그린 프레임에서 본 값입니다(자동화 감시 값 `Editor.UIPreview*` 가 읽는다). 창이 닫혔거나 문서가 없으면 `_bValid` 가 false 입니다.
      */
-    struct UIPreviewProbe
+    struct UIPreviewWatchValues
     {
         bool    _bValid{ false };             ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool    _bDirty{ SW_FALSE };          ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -235,9 +235,9 @@ namespace sw::editor
 
         // --- 감시 값 ---------------------------------------------------------------
         /** @brief 이번 프레임의 감시 값을 모읍니다. 화면이 없으면 비웁니다. */
-        void                  updateProbe( const UIScreen* pScreen, bool bDirty, bool bTextureReady );
-        void                  resetProbe() { _probe = UIPreviewProbe{}; }
-        const UIPreviewProbe& getProbe() const { return _probe; }
+        void                        updateWatchValues( const UIScreen* pScreen, bool bDirty, bool bTextureReady );
+        void                        resetWatchValues() { _watchValues = UIPreviewWatchValues{}; }
+        const UIPreviewWatchValues& getWatchValues() const { return _watchValues; }
 
     private:
         /** @brief 되돌리기 항목이 모델을 가리키는 길입니다. 모델이 사라지면 끊어, 옛 항목이 사라진 모델에 값을 쓰지 않게 합니다. */
@@ -308,7 +308,7 @@ namespace sw::editor
         UIFocusManager                  _focus;          ///< 입력 흉내의 포커스(탐색 방향)
         unique_ptr<LocalizationManager> _pLocalization;  ///< 이 미리보기의 문화권 관리자 사본(언어를 골랐을 때만)
         shared_ptr<EditSession>         _pSession;       ///< 되돌리기 항목이 모델을 가리키는 길
-        UIPreviewProbe                  _probe;
+        UIPreviewWatchValues            _watchValues;
         UIScreenHandle                  _screen;
         WidgetID                        _selected;
         WidgetID                        _seenRootID;       ///< 마지막으로 본 트리 루트(바뀌면 문서를 다시 읽은 것)

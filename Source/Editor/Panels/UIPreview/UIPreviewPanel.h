@@ -67,7 +67,7 @@ namespace sw::editor
         void shutdown() override;
 
         /** @brief 마지막으로 그린 프레임의 값입니다(자동화 감시 값). */
-        const UIPreviewProbe& getProbe() const { return _model.getProbe(); }
+        const UIPreviewWatchValues& getWatchValues() const { return _model.getWatchValues(); }
 
     protected:
         /** @brief 고친 문서를 `UIDocumentWriter` 로 파일에 씁니다. 입력 흉내나 애니메이션으로 트리 값이 바뀐 상태면 `canSaveDocument` 가 막습니다. */

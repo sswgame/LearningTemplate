@@ -14,7 +14,7 @@
 
 namespace sw::editor
 {
-    /** @brief 프로브 `Editor.AudioMixerBusVolume` 이 볼 버스 이름입니다. 시나리오가 `<Variable>` 로 정합니다. */
+    /** @brief 감시 값 `Editor.AudioMixerBusVolume` 이 볼 버스 이름입니다. 시나리오가 `<Variable>` 로 정합니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_editorWatchBus, "master", "감시 값 Editor.AudioMixerBusVolume 이 볼 믹서 버스 이름 (시나리오용)" );
 
     namespace
@@ -30,7 +30,7 @@ namespace sw::editor
                 return linear > 0.000001f ? 20.0f * ::log10f( linear ) : AudioMixerModel::kMeterFloorDb - 1.0f;
             }
 
-            static AudioMixerProbe& editProbe() { return getEditorState<AudioMixerProbe>(); }
+            static AudioMixerWatchValues& editWatchValues() { return getEditorState<AudioMixerWatchValues>(); }
         };
     } // namespace
 } // namespace sw::editor
@@ -55,19 +55,19 @@ namespace sw::editor
         if ( _listHeldPeak.size() != _listBusStatus.size() )
             _listHeldPeak.assign( _listBusStatus.size(), 0.0f );
 
-        AudioMixerProbe& probe = AudioMixerModelInternal::editProbe();
-        probe._busCount        = static_cast<uint32>( _listBusStatus.size() );
-        probe._mutedCount      = 0;
-        probe._soloCount       = 0;
-        probe._probedBusVolume = -1.0f;
+        AudioMixerWatchValues& values = AudioMixerModelInternal::editWatchValues();
+        values._busCount              = static_cast<uint32>( _listBusStatus.size() );
+        values._mutedCount            = 0;
+        values._soloCount             = 0;
+        values._watchedBusVolume      = -1.0f;
         for ( size_t busIndex = 0; busIndex < _listBusStatus.size(); ++busIndex )
         {
             const AudioBusStatus& status = _listBusStatus[busIndex];
             _listHeldPeak[busIndex]      = MathUtil::max( status._peak, _listHeldPeak[busIndex] * AudioMixerModelInternal::kPeakDecayPerFrame );
-            probe._mutedCount += status._bMuted ? 1u : 0u;
-            probe._soloCount += status._bSolo ? 1u : 0u;
+            values._mutedCount += status._bMuted ? 1u : 0u;
+            values._soloCount += status._bSolo ? 1u : 0u;
             if ( status._name == hashed_string( gv_editorWatchBus.get().c_str() ) )
-                probe._probedBusVolume = status._userVolume;
+                values._watchedBusVolume = status._userVolume;
         }
         return true;
     }
@@ -104,9 +104,9 @@ namespace sw::editor
         (void)engine.postEvent( _listEventName[_selectedEvent], 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
     }
 
-    const AudioMixerProbe& AudioMixerModel::getProbe()
+    const AudioMixerWatchValues& AudioMixerModel::getWatchValues()
     {
-        return AudioMixerModelInternal::editProbe();
+        return AudioMixerModelInternal::editWatchValues();
     }
 
     IAudioService& AudioMixerModel::getAudioService()
