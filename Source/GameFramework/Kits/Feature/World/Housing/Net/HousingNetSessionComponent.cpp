@@ -55,10 +55,10 @@ namespace sw
         Component::onBeginPlay();
         _routerSubscription.reset();
         // 넷 링크는 이 컴포넌트의 월드에 올라 있다 - 전역 세션을 찾지 않는다(`SceneNetLink`). 링크가 비면 혼자 하는 게임이고 부지는 편집을 바로 적용한다.
-        const SceneNetLink* pLink = SceneNetLink::findFor( *this );
-        if ( pLink == nullptr || pLink->isBound() == false )
+        const NetLinkValue* pLink = SceneNetLink::findBoundFor( *this );
+        if ( pLink == nullptr )
             return;
-        const NetLinkValue& link = pLink->get();
+        const NetLinkValue& link = *pLink;
         _bServer                 = link._role == NetLinkRole::Server ? SW_TRUE : SW_FALSE;
         if ( _bServer == SW_TRUE )
         {

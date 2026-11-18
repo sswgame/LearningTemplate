@@ -275,11 +275,11 @@ namespace sw
     void ValeWorldComponent::tryStartLink()
     {
         // 세션은 기동 때(전용 서버) 열리거나 플레이 중에(클라이언트 `net.ticketconnect`) 열린다 — 링크가 걸리는 첫 틱에 한 번 세운다.
-        const SceneNetLink* pLink = SceneNetLink::findFor( *this );
-        if ( _bLinkTried != SW_FALSE || _bRulesValid == SW_FALSE || pLink == nullptr || pLink->isBound() == false )
+        const NetLinkValue* pLink = SceneNetLink::findBoundFor( *this );
+        if ( _bLinkTried != SW_FALSE || _bRulesValid == SW_FALSE || pLink == nullptr )
             return;
         _bLinkTried              = SW_TRUE;
-        const NetLinkValue& link = pLink->get();
+        const NetLinkValue& link = *pLink;
         if ( link._role == NetLinkRole::Server )
         {
             if ( startServer( *link._pPeers, *link._pRouter ) == false )

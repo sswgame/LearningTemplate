@@ -27,13 +27,12 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
 
         // 넷 링크는 이 컴포넌트의 월드(오브젝트 매니저)에 올라 있다 - 전역 세션을 찾지 않는다(`SceneNetLink`). 링크가 비면 혼자 하는 게임이다.
-        GameObject*         pOwner     = getOwner();
-        GameObjectManager*  pManager   = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        const SceneNetLink* pLink      = SceneNetLink::findFor( *this );
-        const bool          bNoSession = pLink == nullptr || pLink->isBound() == false;
-        if ( bNoSession )
+        GameObject*         pOwner   = getOwner();
+        GameObjectManager*  pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const NetLinkValue* pLink    = SceneNetLink::findBoundFor( *this );
+        if ( pLink == nullptr )
             return; // 혼자 하는 게임 - 복제할 상대가 없다
-        const NetLinkValue& link = pLink->get();
+        const NetLinkValue& link = *pLink;
 
         _bServer                     = link._role == NetLinkRole::Server ? SW_TRUE : SW_FALSE;
         INetMessageHandler* pHandler = nullptr;

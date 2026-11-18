@@ -1093,8 +1093,8 @@ namespace sw
 
     bool GameNetSession::setWorldReplicaStats( const Component& component, string_view name, uint64 updateCount, uint64 byteCount )
     {
-        const SceneNetLink* pLink        = SceneNetLink::findFor( component );
-        const bool          bGlobalWorld = pLink != nullptr && pLink->isBound() && pLink->get()._pPeers == &getPeers();
+        const NetLinkValue* pLink        = SceneNetLink::findBoundFor( component );
+        const bool          bGlobalWorld = pLink != nullptr && pLink->_pPeers == &getPeers();
         if ( bGlobalWorld == false )
             return false;
         return setReplicaStats( name, updateCount, byteCount );
