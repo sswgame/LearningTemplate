@@ -101,6 +101,11 @@ namespace sw::editor
         return pManager != nullptr ? pManager->resolveGameObject( _previewBody ) : nullptr;
     }
 
+    void CharacterEditorPanel::postBodyPreview( const BodyCustomizationViewModel::PreviewCommand& command )
+    {
+        BodyCustomizationViewModel::applyPreview( resolvePreviewBody(), command );
+    }
+
     void CharacterEditorPanel::gatherPreview()
     {
         PreviewViewState& state = _previewState;

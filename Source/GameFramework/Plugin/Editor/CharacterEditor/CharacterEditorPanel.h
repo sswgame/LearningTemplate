@@ -142,8 +142,10 @@ namespace sw::editor
         [[nodiscard]] bool playPreviewClip();
         /** @brief 미리보기 몸의 재생을 멈춥니다. */
         void stopPreviewClip();
-        /** @brief 미리보기 몸 오브젝트입니다(없으면 nullptr). View 는 이것을 읽지 않고 ViewModel 명령(`BodyCustomizationViewModel::preview*`)에 그대로 넘긴다. */
+        /** @brief 미리보기 몸 오브젝트입니다(핸들 `_previewBody` 를 푼다, 없으면 nullptr). Model 파일만 쓴다. */
         GameObject* resolvePreviewBody() const;
+        /** @brief 몸 동작 미리보기 명령을 미리보기 몸(핸들 `_previewBody`)에 적용합니다 — View 는 값만 보낸다. */
+        void postBodyPreview( const BodyCustomizationViewModel::PreviewCommand& command );
         /** @brief 몸 오브젝트를 세우고, 외형 선택이나 외형 데이터가 바뀌었으면 다시 입힙니다. */
         void syncPreviewBody();
         /** @brief 소켓 파일의 소켓 축(편집 중 정의를 몸의 지금 포즈에 얹은 자리)을 선 값으로 모읍니다. 고른 소켓은 길고 밝다. 풀지 못하면 상태 줄에 알린다. */

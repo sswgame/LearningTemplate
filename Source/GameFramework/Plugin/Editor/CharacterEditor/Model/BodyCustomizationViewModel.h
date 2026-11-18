@@ -186,6 +186,24 @@ namespace sw::editor
 
         // --- 미리보기(몸만 바꾼다 — 기록하지 않는다) ---
         /** @brief 미리보기 몸의 지글에 위로 맞음 충격을 줍니다. */
+        /** @brief 몸 동작 미리보기 단추의 종류입니다(`BodyPreviewCommand`). */
+        enum class PreviewAction : uint8
+        {
+            Hit,         ///< `previewHit`
+            Fluid,       ///< `previewFluid` — `_name` 이 방아쇠
+            ClearSmears, ///< `clearSmears`
+            ActionTag,   ///< `previewActionTag` — `_name` 이 태그, `_bOn` 이 켬
+            Step,        ///< `previewStep`
+        };
+        /** @brief 몸 동작 미리보기 명령 하나입니다 — 값만 든다(View 가 몸 포인터 없이 보낸다). 받는 쪽이 몸 핸들을 풀어 `apply` 한다. */
+        struct PreviewCommand
+        {
+            PreviewAction _action{ PreviewAction::Hit };
+            hashed_string _name;
+            uint8         _bOn{ SW_FALSE };
+        };
+        /** @brief @p command 를 몸 @p pBody 에 적용합니다(없으면 하지 않는다). */
+        static void applyPreview( GameObject* pBody, const PreviewCommand& command );
         static void previewHit( GameObject* pBody );
         /** @brief 미리보기 몸의 체액 방아쇠를 켭니다(울기 · 침). */
         static void previewFluid( GameObject* pBody, const hashed_string& trigger );

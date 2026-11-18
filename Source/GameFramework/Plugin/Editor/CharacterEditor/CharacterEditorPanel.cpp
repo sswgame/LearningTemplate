@@ -1165,7 +1165,7 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawBodyDynamicsPreview( const BodyCustomizationViewState& state )
     {
-        GameObject* const pBody = resolvePreviewBody(); // 읽지 않고 ViewModel 명령에 넘긴다
+        using PreviewAction = BodyCustomizationViewModel::PreviewAction;
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "BodyDynamics" ) );
         if ( state._bHasBody == SW_FALSE || state._bodyProfile.empty() )
         {
@@ -1174,17 +1174,17 @@ namespace sw::editor
         }
         // 미리보기 단추는 몸만 바꾼다(기록 없음) — 맞음은 지글, 울기 · 침은 체액 방아쇠, 지우기는 화장 번짐.
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "PreviewHit" ) ) )
-            BodyCustomizationViewModel::previewHit( pBody );
+            postBodyPreview( { PreviewAction::Hit, {}, SW_FALSE } );
         EditorSelfTestMarks::record( "charactereditor.body.hit" );
         for ( const hashed_string& trigger : state._listFluidTrigger )
         {
             ImGui::SameLine();
             if ( ImGui::Button( trigger.c_str() ) ) // 단추 이름은 데이터의 방아쇠 이름(Cry · Drool)이다
-                BodyCustomizationViewModel::previewFluid( pBody, trigger );
+                postBodyPreview( { PreviewAction::Fluid, trigger, SW_FALSE } );
         }
         ImGui::SameLine();
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ClearSmears" ) ) )
-            BodyCustomizationViewModel::clearSmears( pBody );
+            postBodyPreview( { PreviewAction::ClearSmears, {}, SW_FALSE } );
         // 동작 태그 시험(달리기 · 공격) — 몸에 태그를 켜 지글 동작 배율을 걸고, 켠 동안 걸음 간격마다 착지 충격을 준다.
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "ActionTagTest" ) );
         bool bAnyActive = false;
@@ -1197,14 +1197,14 @@ namespace sw::editor
             const bool bToggled = ImGui::Checkbox( "##tag", &bActive );
             ImGui::PopID();
             if ( bToggled )
-                BodyCustomizationViewModel::previewActionTag( pBody, action._tag, bActive );
+                postBodyPreview( { PreviewAction::ActionTag, action._tag, bActive ? SW_TRUE : SW_FALSE } );
             bAnyActive = bAnyActive || bActive;
         }
         EditorSelfTestMarks::record( "charactereditor.body.actionTest" );
         _bodyStepTimer -= ImGui::GetIO().DeltaTime;
         if ( bAnyActive && _bodyStepTimer <= 0.0f )
         {
-            BodyCustomizationViewModel::previewStep( pBody );
+            postBodyPreview( { PreviewAction::Step, {}, SW_FALSE } );
             _bodyStepTimer = BodyCustomizationViewModel::kPreviewStepSeconds;
         }
         if ( ImGui::BeginTable( "##BodyDynamicsValues", 2, ImGuiTableFlags_SizingStretchProp ) )
