@@ -14,8 +14,19 @@
 namespace sw
 {
     FileLogOutput::FileLogOutput( string fixedFilePath )
+        : FileLogOutput( std::move( fixedFilePath ), FileLogOutputFolder{} )
+    {
+    }
+
+    FileLogOutput::FileLogOutput( FileLogOutputFolder rollingFolder )
+        : FileLogOutput( string{}, std::move( rollingFolder ) )
+    {
+    }
+
+    FileLogOutput::FileLogOutput( string fixedFilePath, FileLogOutputFolder rollingFolder )
         : _mutex{}
         , _fixedFilePath{ std::move( fixedFilePath ) }
+        , _rollingFolderPath{ std::move( rollingFolder._path ) }
         , _logFolderPath{}
         , _currentLogFileName{}
         , _pFile{ nullptr }
@@ -44,7 +55,7 @@ namespace sw
         string fixedAbsPath; // 열 때 절대 경로로 굳힌다 — 기동 중에 작업 폴더가 바뀌어도 같은 파일이다
         if ( _fixedFilePath.empty() )
         {
-            logFolderPath = FileUtil::joinPath( ProcessRoots::get()._saved.str(), constant::path::kLogsFolder );
+            logFolderPath = _rollingFolderPath.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), constant::path::kLogsFolder ) : _rollingFolderPath;
         }
         else
         {
