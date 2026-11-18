@@ -15,6 +15,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/SimulationViewSync.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 namespace sw
@@ -84,14 +85,14 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Building Color" )
         float4 _buildingColor;
 
-        RTSWorld                 _world;
-        MaterialTintCache        _tintCache;
-        vector<GameObjectHandle> _listUnitView;
-        RTSUnitID                _worker;
-        RTSUnitID                _soldier;
-        int32                    _tickCount;
-        uint8                    _bPatrolToB  : 1; ///< 해병이 지금 B 쪽으로 간다
-        uint8                    _bViewsDirty : 1;
-        uint8                    _reserved    : 6;
+        RTSWorld                      _world;
+        MaterialTintCache             _tintCache;
+        SimulationViewSync<RTSUnitID> _unitViews; ///< 유닛 슬롯 번호 → 보일 유닛(죽으면 없다)
+        RTSUnitID                     _worker;
+        RTSUnitID                     _soldier;
+        int32                         _tickCount;
+        uint8                         _bPatrolToB  : 1; ///< 해병이 지금 B 쪽으로 간다
+        uint8                         _bViewsDirty : 1;
+        uint8                         _reserved    : 6;
     };
 } // namespace sw
