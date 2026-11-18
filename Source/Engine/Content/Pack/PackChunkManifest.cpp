@@ -2,11 +2,14 @@
 
 #include "Engine/Content/Pack/PackChunkManifest.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+
+#include <algorithm>
 
 namespace sw
 {
@@ -71,18 +74,7 @@ namespace sw
             entry._sceneID        = FileUtil::normalizePath( scene.getAttributeText( Internal::kIDAttr ) ).str();
             for ( XMLNode chunk = scene.findChild( Internal::kChunkName ); chunk.isValid(); chunk = chunk.findNextSibling( Internal::kChunkName ) )
             {
-                const string_view name   = chunk.getText();
-                bool              bKnown = false;
-                for ( const PackChunkFiles& files : outManifest._listChunk )
-                {
-                    bKnown = bKnown || files._name == name;
-                }
-                if ( bKnown == false )
-                {
-                    SW_LOG_ERROR_ID( "PackChunkManifest.UnknownChunk", "Pack chunk manifest %#: scene '%#' needs chunk '%#' that the manifest does not list", sourceName, entry._sceneID, name );
-                    return false;
-                }
-                entry._listChunk.emplace_back( name );
+                entry._listChunk.emplace_back( chunk.getText() ); // 다른 도메인의 청크일 수 있다 — 합친 뒤 씬을 열 때 본다(`appendScenePackFiles`)
             }
         }
         return true;
@@ -114,6 +106,56 @@ namespace sw
         return document.saveToString();
     }
 
+    string PackChunkManifest::makeDomainStem( string_view domain )
+    {
+        string stem = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( domain ).str() );
+        std::replace( stem.begin(), stem.end(), '/', '_' );
+        return stem;
+    }
+
+    string PackChunkManifest::makeFileName( string_view domain )
+    {
+        return string( kFilePrefix ) + makeDomainStem( domain ) + string( kFileSuffix );
+    }
+
+    bool PackChunkManifest::isFileName( string_view fileName )
+    {
+        return fileName.size() > kFilePrefix.size() + kFileSuffix.size() && StringUtil::startsWith( fileName, kFilePrefix, true ) && StringUtil::endsWith( fileName, kFileSuffix, true );
+    }
+
+    bool PackChunkManifest::merge( const PackChunkManifest& other, string_view sourceName )
+    {
+        for ( const PackChunkFiles& files : other._listChunk )
+        {
+            for ( const PackChunkFiles& existing : _listChunk )
+            {
+                if ( existing._name == files._name )
+                {
+                    SW_LOG_ERROR_ID( "PackChunkManifest.DuplicateChunk", "Pack chunk manifest %# lists chunk '%#' that another manifest in the folder also lists", sourceName, files._name );
+                    return false;
+                }
+            }
+        }
+        for ( const PackSceneEntry& entry : other._listScene )
+        {
+            for ( const PackSceneEntry& existing : _listScene )
+            {
+                if ( existing._sceneID == entry._sceneID )
+                {
+                    SW_LOG_ERROR_ID( "PackChunkManifest.DuplicateScene", "Pack chunk manifest %# lists scene '%#' that another manifest in the folder also lists", sourceName, entry._sceneID );
+                    return false;
+                }
+            }
+        }
+        _listChunk.insert( _listChunk.end(), other._listChunk.begin(), other._listChunk.end() );
+        _listScene.insert( _listScene.end(), other._listScene.begin(), other._listScene.end() );
+        VectorUtil::sort( _listChunk, []( const PackChunkFiles& left, const PackChunkFiles& right )
+        { return left._name < right._name; } );
+        VectorUtil::sort( _listScene, []( const PackSceneEntry& left, const PackSceneEntry& right )
+        { return left._sceneID < right._sceneID; } );
+        return true;
+    }
+
     bool PackChunkManifest::isDeferredPack( string_view packFileName ) const
     {
         for ( const PackChunkFiles& files : _listChunk )
@@ -127,7 +169,7 @@ namespace sw
         return false;
     }
 
-    void PackChunkManifest::appendScenePackFiles( string_view sceneID, vector<string>& outListPackFileName ) const
+    bool PackChunkManifest::appendScenePackFiles( string_view sceneID, vector<string>& outListPackFileName ) const
     {
         const string normalized = FileUtil::normalizePath( sceneID ).str();
         for ( const PackSceneEntry& entry : _listScene )
@@ -136,13 +178,21 @@ namespace sw
                 continue;
             for ( const string& chunkName : entry._listChunk )
             {
+                const PackChunkFiles* pFiles = nullptr;
                 for ( const PackChunkFiles& files : _listChunk )
                 {
                     if ( files._name == chunkName )
-                        outListPackFileName.insert( outListPackFileName.end(), files._listPackFileName.begin(), files._listPackFileName.end() );
+                        pFiles = &files;
                 }
+                if ( pFiles == nullptr )
+                {
+                    SW_LOG_ERROR_ID( "PackChunkManifest.UnknownChunk", "Scene '%#' needs pack chunk '%#' that no chunk manifest in the pack folder lists - cook its domain again", normalized, chunkName );
+                    return false;
+                }
+                outListPackFileName.insert( outListPackFileName.end(), pFiles->_listPackFileName.begin(), pFiles->_listPackFileName.end() );
             }
-            return;
+            return true;
         }
+        return true;
     }
 } // namespace sw

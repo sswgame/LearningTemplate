@@ -766,13 +766,15 @@ namespace sw
             }
 
             /**
-             * @brief 미루는 청크의 목록(`PackChunkManifest::kFileName`)을 팩 폴더에 씁니다. 쓰기 전에 씬마다 닿는 에셋이 기동 필수거나 그 씬의 청크에 놓였는지 본다 —
+             * @brief 미루는 청크의 목록을 굽은 도메인마다 팩 폴더에 씁니다(`PackCooker::writeChunkManifests`). 쓰기 전에 씬마다 닿는 에셋이 기동 필수거나 그 씬의 청크에 놓였는지 본다 —
              *        빠지면 그 씬을 열 때 에셋을 찾지 못하므로 쿠킹 오류다(`PackSceneChunkPlan::findUncovered`).
+             * @param mapPlacedChunk 담긴 에셋 id → 놓인 청크(기동 필수는 빈 글, 미룬 청크는 `<도메인 줄기>.<청크>`)
              */
-            [[nodiscard]] static bool writeChunkManifest( const string& packOutputDir, const PackSelection& selection, const unordered_set<string>& setStartupChunk,
+            [[nodiscard]] static bool writeChunkManifest( const string& packOutputDir, const vector<string>& listDomain, const PackSelection& selection,
                                                           const unordered_map<string, string>& mapPlacedChunk, unordered_map<string, vector<string>>& mapChunkPack )
             {
-                PackChunkManifest manifest;
+                const unordered_set<string> setStartupChunk{ string{} };
+                PackChunkManifest           manifest;
                 manifest._listScene                    = PackSceneChunkPlan::makeSceneChunks( selection._listSceneReach, mapPlacedChunk, setStartupChunk );
                 const vector<PackChunkIssue> listIssue = PackSceneChunkPlan::findUncovered( selection._listSceneReach, mapPlacedChunk, setStartupChunk, manifest._listScene );
                 for ( const PackChunkIssue& gap : listIssue )
@@ -789,10 +791,7 @@ namespace sw
                 }
                 VectorUtil::sort( manifest._listChunk, []( const PackChunkFiles& left, const PackChunkFiles& right )
                 { return left._name < right._name; } );
-                if ( FileUtil::ensureDirectoryExists( packOutputDir ) && FileUtil::writeTextFile( FileUtil::joinPath( packOutputDir, PackChunkManifest::kFileName ), PackChunkManifest::makeText( manifest ) ) )
-                    return true;
-                SW_LOG_ERROR_ID( "PackCooker.ChunkManifestUnwritable", "Pack cook: the chunk manifest in %# could not be written", packOutputDir );
-                return false;
+                return PackCooker::writeChunkManifests( packOutputDir, listDomain, manifest );
             }
 
             /** @brief 장부를 이름 순으로 씁니다. */
@@ -1142,6 +1141,36 @@ namespace sw
         return false;
     }
 
+    bool PackCooker::writeChunkManifests( const string& packOutputDir, const vector<string>& listDomain, const PackChunkManifest& manifest )
+    {
+        if ( FileUtil::ensureDirectoryExists( packOutputDir ) == false )
+            return false;
+        for ( const string& domain : listDomain )
+        {
+            const string      chunkPrefix = PackChunkManifest::makeDomainStem( domain ) + ".";
+            const string      scenePrefix = FileUtil::normalizePath( domain ).str() + "/";
+            PackChunkManifest domainManifest;
+            for ( const PackChunkFiles& files : manifest._listChunk )
+            {
+                if ( StringUtil::startsWith( files._name, chunkPrefix ) )
+                    domainManifest._listChunk.push_back( files );
+            }
+            for ( const PackSceneEntry& entry : manifest._listScene )
+            {
+                if ( StringUtil::startsWith( entry._sceneID, scenePrefix ) )
+                    domainManifest._listScene.push_back( entry );
+            }
+            // 미룬 청크가 없는 도메인도 쓴다 — 지난 쿠킹의 목록이 남아 이번에 쓰지 않은 팩을 가리키지 않게.
+            const string path = FileUtil::joinPath( packOutputDir, PackChunkManifest::makeFileName( domain ) );
+            if ( FileUtil::writeTextFile( path, PackChunkManifest::makeText( domainManifest ) ) == false )
+            {
+                SW_LOG_ERROR_ID( "PackCooker.ChunkManifestUnwritable", "Pack cook: the chunk manifest %# could not be written", path );
+                return false;
+            }
+        }
+        return true;
+    }
+
     bool PackCooker::cookAllPacks( const PackConfig& engineConfig, const PackCookParams& params, const CookStore& store, uint32& outPackCount )
     {
         outPackCount = 0;
@@ -1205,8 +1234,8 @@ namespace sw
         {
             setStartupChunk.insert( rule._name );
         }
-        unordered_map<string, string>         mapPlacedChunk; // 담긴 에셋 id → 놓인 청크
-        unordered_map<string, vector<string>> mapChunkPack;   // 미루는 청크 → 팩 파일 이름
+        unordered_map<string, string>         mapPlacedChunk; // 담긴 에셋 id → 놓인 청크(기동 필수는 빈 글, 미룬 청크는 `<도메인 줄기>.<청크>`)
+        unordered_map<string, vector<string>> mapChunkPack;   // 미루는 청크(`<도메인 줄기>.<청크>`) → 팩 파일 이름
         for ( const string& domain : listDomain )
         {
             // 나누기는 쿠킹 전에 정한다 — 목록과 디스크 크기만 본다. 목록은 여기서 한 번 고르고 몫마다 나눠 넘긴다. 목록 · 크기 묻기는 리소스 읽기가 아니라
@@ -1254,15 +1283,17 @@ namespace sw
             {
                 for ( const PackPart& part : *split )
                 {
+                    // 미룬 청크는 도메인마다 따로 적는다(`<도메인 줄기>.<청크>`) — 목록 파일이 도메인 단위라 한 게임만 구워도 다른 도메인의 목록이 남는다.
                     if ( part.contains( item._pathHash ) )
-                        mapPlacedChunk.emplace( PackCookerInternal::makeAssetID( domain, item._relativePath ), part._chunk );
+                        mapPlacedChunk.emplace( PackCookerInternal::makeAssetID( domain, item._relativePath ),
+                                                setStartupChunk.contains( part._chunk ) ? string{} : PackChunkManifest::makeDomainStem( domain ) + "." + part._chunk );
                 }
             }
             for ( const PackPart& part : *split )
             {
                 const string packName = makePackFileName( domain, part._chunk, part._number );
                 if ( setStartupChunk.contains( part._chunk ) == false )
-                    mapChunkPack[part._chunk].push_back( packName );
+                    mapChunkPack[PackChunkManifest::makeDomainStem( domain ) + "." + part._chunk].push_back( packName );
                 const string outputPath = FileUtil::joinPath( params._packOutputDir, packName );
                 listWrittenName.push_back( packName );
                 // 기록은 타깃 · 백엔드마다 따로 둔다 — 같은 팩 이름을 다른 설정으로 번갈아 베이크해도 서로의 기록을 덮지 않는다.
@@ -1283,7 +1314,7 @@ namespace sw
             if ( PackCookerInternal::removeStaleSiblingPacks( params._packOutputDir, domain, listWrittenName, setLedger ) == false )
                 ++failedCount;
         }
-        if ( failedCount == 0 && PackCookerInternal::writeChunkManifest( params._packOutputDir, selection, setStartupChunk, mapPlacedChunk, mapChunkPack ) == false )
+        if ( failedCount == 0 && PackCookerInternal::writeChunkManifest( params._packOutputDir, listDomain, selection, mapPlacedChunk, mapChunkPack ) == false )
             ++failedCount;
         if ( PackCookerInternal::writeCookedPackLedger( params._packOutputDir, setLedger ) == false )
         {

@@ -36,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
-from package.pack import CHUNK_MANIFEST_NAME, PackageError, PACK_FOLDER_NAME, select_staged_packs  # noqa: E402
+from package.pack import is_chunk_manifest, PackageError, PACK_FOLDER_NAME, select_staged_packs  # noqa: E402
 
 PRESET_NAME = "Web-Shipping"
 #: 빌드가 내는 두 파일 — pthread 판 Emscripten 은 작업자 JS 를 따로 두지 않고 App.js 가 작업자도 띄운다.
@@ -76,15 +76,16 @@ class WebPackageError(Exception):
     """단계 하나가 실패했다. 메시지가 `[web-package] FAILED` 줄의 이유다."""
 
 
-def read_deferred_pack_names(manifest: Path) -> set[str]:
-    """청크 목록(`PackChunkManifest`)이 적은 팩 이름(소문자)입니다 — 첫 받기에 넣지 않고 씬을 열 때 받는다. 목록이 없으면 빈 집합(모두 기동 필수)."""
-    if manifest.is_file() is False:
-        return set()
-    try:
-        root = ElementTree.parse(manifest).getroot()
-    except ElementTree.ParseError as error:
-        raise WebPackageError(f"{manifest} is not valid XML - {error}") from error
-    return {(pack.text or "").strip().lower() for pack in root.iter("Pack")}
+def read_deferred_pack_names(list_manifest: list[Path]) -> set[str]:
+    """청크 목록들(`PackChunkManifest` — 도메인마다)이 적은 팩 이름(소문자)입니다 — 첫 받기에 넣지 않고 씬을 열 때 받는다. 목록이 없으면 빈 집합(모두 기동 필수)."""
+    set_name: set[str] = set()
+    for manifest in list_manifest:
+        try:
+            root = ElementTree.parse(manifest).getroot()
+        except ElementTree.ParseError as error:
+            raise WebPackageError(f"{manifest} is not valid XML - {error}") from error
+        set_name.update((pack.text or "").strip().lower() for pack in root.iter("Pack"))
+    return set_name
 
 
 def make_web_package(game: str, build_dir: Path, packs_dir: Path, out_dir: Path, project_root: Path) -> Path:
@@ -106,7 +107,7 @@ def make_web_package(game: str, build_dir: Path, packs_dir: Path, out_dir: Path,
     out_dir.mkdir(parents=True)
     # file_packager 는 `원본@가상경로` 로 파일마다 자리를 받는다 — 팩 폴더의 다른 팩(다른 게임 · 지난 쿠킹)은 담지 않는다.
     # 미룬 청크는 낱개 파일로 `Packs/` 에 둔다 — 엔진이 씬을 열 때 페이지 기준 `Packs/<팩>` 을 fetch 해 같은 가상 자리에 쓴다.
-    set_deferred = read_deferred_pack_names(packs_dir / CHUNK_MANIFEST_NAME)
+    set_deferred = read_deferred_pack_names([path for path in list_pack if is_chunk_manifest(path)])
     list_deferred = [pack for pack in list_pack if pack.name.lower() in set_deferred]
     list_preload = [f"{pack.as_posix()}@{VIRTUAL_PACK_FOLDER}/{pack.name}" for pack in list_pack if pack.name.lower() not in set_deferred]
     command = [sys.executable, str(file_packager), str(out_dir / PACK_DATA_NAME), "--preload", *list_preload, f"--js-output={out_dir / PACK_LOADER_NAME}", "--no-node"]

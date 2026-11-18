@@ -4,6 +4,7 @@
 
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Cook/PackCooker.h"
@@ -170,38 +171,99 @@ SW_TEST_CASE( PackSceneChunkPlanTest, SplitFollowsSceneChunksDeterministically )
 }
 
 /**
- * @brief [PackSceneChunkPlanTest] 청크 목록은 쓴 그대로 읽히고, 목록에 든 팩만 미룬 팩이며, 씬이 마운트할 팩을 청크 순서로 준다. 폴더를 벗어나는 팩 이름 · 없는 청크는 읽기 오류다
+ * @brief [PackSceneChunkPlanTest] 청크 목록은 쓴 그대로 읽히고, 목록에 든 팩만 미룬 팩이며, 씬이 마운트할 팩을 청크 순서로 준다. 폴더를 벗어나는 팩 이름은 읽기 오류,
+ *        합친 목록에 없는 청크를 가리키는 씬은 열 때 오류, 같은 청크를 두 목록이 적으면 합치기 오류다
  */
 SW_TEST_CASE( PackSceneChunkPlanTest, ManifestRoundTripsAndNamesScenePacks )
 {
-    PackChunkManifest manifest;
-    manifest._listChunk.push_back( PackChunkFiles{
-        "scene_empty_alpha",
-        { "common.scene_empty_alpha.0.pack", "game_empty.scene_empty_alpha.0.pack" }
-    } );
-    manifest._listChunk.push_back( PackChunkFiles{ "shared", { "common.shared.0.pack" } } );
-    manifest._listScene.push_back( PackSceneEntry{
+    PackChunkManifest gameManifest;
+    gameManifest._listChunk.push_back( PackChunkFiles{ "game_empty.scene_empty_alpha", { "game_empty.scene_empty_alpha.0.pack" } } );
+    gameManifest._listScene.push_back( PackSceneEntry{
         "game/empty/maps/alpha.scene.xml",
-        { "scene_empty_alpha", "shared" }
+        { "common.shared", "game_empty.scene_empty_alpha" }
     } );
+    PackChunkManifest commonManifest;
+    commonManifest._listChunk.push_back( PackChunkFiles{ "common.shared", { "common.shared.0.pack" } } );
 
-    const string      text = PackChunkManifest::makeText( manifest );
+    const string      text = PackChunkManifest::makeText( gameManifest );
     PackChunkManifest read;
-    SW_REQUIRE_TRUE( PackChunkManifest::parse( text, "test", read ) );
+    SW_REQUIRE_TRUE( PackChunkManifest::parse( text, "game", read ) );
     SW_EXPECT_EQUAL( text, PackChunkManifest::makeText( read ) );
+
+    SW_EXPECT_LOG( "PackChunkManifest.UnknownChunk" ); // 공용 목록을 합치기 전에는 `common.shared` 를 모른다
+    vector<string> listPack;
+    SW_EXPECT_FALSE( read.appendScenePackFiles( "game/empty/maps/alpha.scene.xml", listPack ) );
+
+    SW_REQUIRE_TRUE( read.merge( commonManifest, "common" ) );
     SW_EXPECT_TRUE( read.isDeferredPack( "COMMON.SHARED.0.PACK" ) );
     SW_EXPECT_FALSE( read.isDeferredPack( "common.pack" ) );
-
-    vector<string> listPack;
-    read.appendScenePackFiles( "Game/Empty/Maps/Alpha.scene.xml", listPack );
-    SW_EXPECT_TRUE( listPack == ( vector<string>{ "common.scene_empty_alpha.0.pack", "game_empty.scene_empty_alpha.0.pack", "common.shared.0.pack" } ) );
     listPack.clear();
-    read.appendScenePackFiles( "game/empty/maps/editortest.scene.xml", listPack ); // 기동 필수 씬 — 목록에 없다
+    SW_EXPECT_TRUE( read.appendScenePackFiles( "Game/Empty/Maps/Alpha.scene.xml", listPack ) );
+    SW_EXPECT_TRUE( listPack == ( vector<string>{ "common.shared.0.pack", "game_empty.scene_empty_alpha.0.pack" } ) );
+    listPack.clear();
+    SW_EXPECT_TRUE( read.appendScenePackFiles( "game/empty/maps/editortest.scene.xml", listPack ) ); // 기동 필수 씬 — 목록에 없다
     SW_EXPECT_TRUE( listPack.empty() );
 
+    SW_EXPECT_LOG( "PackChunkManifest.DuplicateChunk" );
+    SW_EXPECT_FALSE( read.merge( commonManifest, "common again" ) );
+
+    SW_EXPECT_EQUAL( string( "packchunks.game_empty.xml" ), PackChunkManifest::makeFileName( "game/empty" ) );
+    SW_EXPECT_TRUE( PackChunkManifest::isFileName( "PackChunks.Common.xml" ) );
+    SW_EXPECT_FALSE( PackChunkManifest::isFileName( "packchunks.xml" ) );
+
     SW_EXPECT_LOG( "PackChunkManifest.PackName" );
-    SW_EXPECT_LOG( "PackChunkManifest.UnknownChunk" );
     PackChunkManifest bad;
     SW_EXPECT_FALSE( PackChunkManifest::parse( "<PackChunks><Chunk name=\"x\"><Pack>../escape.pack</Pack></Chunk></PackChunks>", "test", bad ) );
-    SW_EXPECT_FALSE( PackChunkManifest::parse( "<PackChunks><Scene id=\"a.scene.xml\"><Chunk>missing</Chunk></Scene></PackChunks>", "test", bad ) );
+}
+
+/**
+ * @brief [PackSceneChunkPlanTest] 청크 목록은 도메인마다 따로 쓴다 — 게임 A 를 굽고 게임 B 를 구워도 A 의 목록이 남고, 폴더의 목록을 합치면 두 게임의 씬이 모두 있다
+ */
+SW_TEST_CASE( PackSceneChunkPlanTest, CookingAnotherGameKeepsTheChunkManifest )
+{
+    const string root = test::makeScratchPath( "PackChunkManifests" );
+
+    PackChunkManifest cookA;
+    cookA._listChunk.push_back( PackChunkFiles{ "common.shared", { "common.shared.0.pack" } } );
+    cookA._listChunk.push_back( PackChunkFiles{ "game_a.scene_a_one", { "game_a.scene_a_one.0.pack" } } );
+    cookA._listScene.push_back( PackSceneEntry{
+        "game/a/maps/one.scene.xml",
+        { "common.shared", "game_a.scene_a_one" }
+    } );
+    SW_REQUIRE_TRUE( PackCooker::writeChunkManifests( root, { "engine", "common", "game/a" }, cookA ) );
+
+    PackChunkManifest cookB;
+    cookB._listChunk.push_back( PackChunkFiles{ "game_b.scene_b_two", { "game_b.scene_b_two.0.pack" } } );
+    cookB._listScene.push_back( PackSceneEntry{ "game/b/maps/two.scene.xml", { "game_b.scene_b_two" } } );
+    SW_REQUIRE_TRUE( PackCooker::writeChunkManifests( root, { "engine", "common", "game/b" }, cookB ) );
+
+    // A 의 목록은 그대로다. 공용 · 엔진은 마지막 쿠킹(B)의 것이다(팩 파일과 같은 단위).
+    string textA;
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( root, "packchunks.game_a.xml" ), textA ) );
+    PackChunkManifest readA;
+    SW_REQUIRE_TRUE( PackChunkManifest::parse( textA, "a", readA ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, readA._listScene.size() );
+    SW_EXPECT_EQUAL( string( "game/a/maps/one.scene.xml" ), readA._listScene[0]._sceneID );
+
+    PackChunkManifest merged;
+    vector<string>    listFile;
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( root, "", listFile, false ) );
+    uint32 manifestCount = 0;
+    for ( const string& path : listFile )
+    {
+        string_view fileName;
+        FileUtil::getFileNamePart( path, fileName );
+        if ( PackChunkManifest::isFileName( fileName ) == false )
+            continue;
+        ++manifestCount;
+        string            text;
+        PackChunkManifest one;
+        SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) && PackChunkManifest::parse( text, path, one ) && merged.merge( one, path ) );
+    }
+    SW_EXPECT_EQUAL( 4u, manifestCount ); // engine · common · game_a · game_b
+    SW_EXPECT_EQUAL( size_t{ 2 }, merged._listScene.size() );
+    vector<string> listPack;
+    SW_EXPECT_TRUE( merged.appendScenePackFiles( "game/b/maps/two.scene.xml", listPack ) );
+    SW_EXPECT_TRUE( listPack == ( vector<string>{ "game_b.scene_b_two.0.pack" } ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

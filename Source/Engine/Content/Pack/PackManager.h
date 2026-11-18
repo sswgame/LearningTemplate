@@ -171,7 +171,7 @@ namespace sw
          */
         bool scanAndMountPacks( string_view packsDirectory );
         /**
-         * @brief `scanAndMountPacks` 가 읽은 청크 목록(`PackChunkManifest::kFileName`)입니다. 목록 파일이 없는 폴더면 빈 목록이다(미루는 청크가 없다).
+         * @brief `scanAndMountPacks` 가 읽은 청크 목록(도메인마다의 `packchunks.<도메인>.xml` 을 모두 합친 것)입니다. 목록 파일이 없는 폴더면 빈 목록이다(미루는 청크가 없다).
          * @details 목록에 든 팩은 기동 때 마운트하지 않았다 — 씬을 열 때 `PackChunkLoader` 가 마운트한다.
          */
         const PackChunkManifest& getChunkManifest() const { return _chunkManifest; }

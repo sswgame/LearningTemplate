@@ -30,6 +30,7 @@
 
 namespace sw
 {
+    struct PackChunkManifest;
     struct PackConfig;
     struct PackSplitConfig;
 
@@ -112,6 +113,11 @@ namespace sw
         static uint64 estimateEntryPackBytes( string_view relativePath, uint64 sizeBytes );
         /** @brief 항목과 상관없는 팩 하나의 고정 크기 어림입니다 — 헤더와 FAT 앞의 섹터 정렬 빈자리. 한도에서 먼저 뺀다. */
         static uint64 estimateFixedPackBytes();
+        /**
+         * @brief 미룬 청크의 합친 목록 @p manifest 를 도메인마다 나눠 굽은 도메인 @p listDomain 의 파일(`PackChunkManifest::makeFileName`)만 씁니다 — 다른 도메인의 파일은 건드리지 않는다.
+         * @details 청크는 이름의 도메인 줄기(`<줄기>.<청크>`), 씬은 id 의 도메인으로 가른다. 미룬 청크가 없는 도메인도 빈 목록을 쓴다(지난 쿠킹의 목록이 지운 팩을 가리키지 않게).
+         */
+        [[nodiscard]] static bool writeChunkManifests( const string& packOutputDir, const vector<string>& listDomain, const PackChunkManifest& manifest );
         /**
          * @brief 팩 하나의 쿠킹 기록 id(`packs/<타깃>/<스테이징 해시>/<팩 이름>`)입니다.
          * @details 기록 자리(`<프로젝트>/Saved/CookRecord`)는 프리셋이 함께 쓰는데 팩의 입력인 스테이징(`--cooked-dir`)은 프리셋마다 다르다 — 스테이징마다 기록을 따로 둔다.

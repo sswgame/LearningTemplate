@@ -37,7 +37,8 @@ namespace sw
     PackChunkState PackChunkLoader::prepareScene( string_view sceneID, vector<string>& outListToMount )
     {
         vector<string> listPack;
-        _packs.getChunkManifest().appendScenePackFiles( sceneID, listPack );
+        if ( _packs.getChunkManifest().appendScenePackFiles( sceneID, listPack ) == false )
+            return PackChunkState::Failed;
         if ( listPack.empty() )
             return PackChunkState::Ready;
 

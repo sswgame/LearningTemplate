@@ -759,10 +759,13 @@ namespace sw
         {
             string_view fileName;
             FileUtil::getFileNamePart( candidate, fileName );
-            if ( StringUtil::equals( fileName, PackChunkManifest::kFileName, true ) == false )
+            if ( PackChunkManifest::isFileName( fileName ) == false )
                 continue;
-            string text;
-            if ( source.readTextFile( candidate, text ) == false || PackChunkManifest::parse( text, candidate, _chunkManifest ) == false )
+            // 도메인마다 한 파일이다 — 씬이 다른 도메인의 청크를 가리키므로 모두 합친다(같은 청크 · 씬이 두 파일에 있으면 오류).
+            string            text;
+            PackChunkManifest domainManifest;
+            if ( source.readTextFile( candidate, text ) == false || PackChunkManifest::parse( text, candidate, domainManifest ) == false ||
+                 _chunkManifest.merge( domainManifest, candidate ) == false )
             {
                 SW_LOG_ERROR_ID( "PackManager.ChunkManifestUnreadable", "Pack chunk manifest '%#' could not be read - no pack is mounted", candidate );
                 return false;

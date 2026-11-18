@@ -58,8 +58,16 @@ LIST_LIBRARY_SUFFIX: tuple[str, ...] = (HOST.shared_library_suffix,)
 LIST_COOK_ONLY_LIBRARY_STEM: tuple[str, ...] = ("dxcompiler", "dxil", "dxildll")
 #: Bin 에서 베끼는 폴더 · 파일.
 PACK_FOLDER_NAME = "Packs"
-#: 미룬 청크(씬 청크 · 공유 청크)의 목록 — 쿠커가 팩 폴더에 쓴다(`PackChunkManifest::kFileName`). 런타임은 목록에 든 팩을 기동 때 올리지 않고 씬을 열 때 올린다.
-CHUNK_MANIFEST_NAME = "packchunks.xml"
+#: 미룬 청크(씬 청크 · 공유 청크)의 목록 — 쿠커가 팩 도메인마다 팩 폴더에 쓴다(`PackChunkManifest::makeFileName` — `packchunks.<도메인 줄기>.xml`).
+#: 런타임은 폴더의 목록을 모두 합쳐 목록에 든 팩을 기동 때 올리지 않고 씬을 열 때 올린다.
+CHUNK_MANIFEST_PREFIX = "packchunks."
+CHUNK_MANIFEST_SUFFIX = ".xml"
+
+
+def is_chunk_manifest(path: Path) -> bool:
+    """`packchunks.<줄기>.xml` 이면 참입니다(대소문자 무시)."""
+    name = path.name.lower()
+    return name.startswith(CHUNK_MANIFEST_PREFIX) and name.endswith(CHUNK_MANIFEST_SUFFIX) and len(name) > len(CHUNK_MANIFEST_PREFIX) + len(CHUNK_MANIFEST_SUFFIX)
 NOTICE_FILE_NAME = "THIRD_PARTY_NOTICES.txt"
 #: 모드 설치 폴더(실행 파일 옆)와 배포 형태의 파일 — `ModSession` · `ModManifest::kFileName` · `ModPackBuilder::kPackFileName` 과 같은 이름.
 MOD_FOLDER_NAME = "Mods"
@@ -139,7 +147,7 @@ def select_staged_entries(bin_dir: Path, target: str) -> list[Path]:
 
 
 def select_staged_packs(project_root: Path, pack_dir: Path, game: str) -> list[Path]:
-    """패키지에 담는 팩입니다 — 공용 팩과 그 게임의 팩(나눈 형제 팩 포함)만(`list_pack_name_of_game`), 그리고 청크 목록(`CHUNK_MANIFEST_NAME`, 있으면).
+    """패키지에 담는 팩입니다 — 공용 팩과 그 게임의 팩(나눈 형제 팩 포함)만(`list_pack_name_of_game`), 그리고 그 팩 도메인들의 청크 목록(있으면).
 
     Bin/Packs 는 Dev · Shipping 빌드가 모든 게임의 팩을 굽고 지난 쿠킹의 팩도 남는 폴더라 통째로 베끼지 않는다.
     이름은 게임 프리셋에서 고르고, 그 팩이 없으면 실패다(빠진 팩을 둔 패키지는 기동하지 못한다).
@@ -156,10 +164,11 @@ def select_staged_packs(project_root: Path, pack_dir: Path, game: str) -> list[P
     for name in list_name:
         list_pack.append(pack_dir / name)
         list_pack.extend(sorted(path for path in pack_dir.glob(f"{Path(name).stem}.*.pack") if path.is_file()))
-    # 청크 목록은 팩과 같은 폴더에 함께 간다 — 빠지면 런타임이 미룬 청크까지 기동 때 올리고, 씬이 기다릴 청크를 모른다.
-    manifest = pack_dir / CHUNK_MANIFEST_NAME
-    if manifest.is_file():
-        list_pack.append(manifest)
+    # 청크 목록은 팩과 같은 폴더에 함께 간다(도메인마다 하나) — 빠지면 런타임이 미룬 청크까지 기동 때 올리고, 씬이 기다릴 청크를 모른다.
+    for name in list_name:
+        manifest = pack_dir / f"{CHUNK_MANIFEST_PREFIX}{Path(name).stem}{CHUNK_MANIFEST_SUFFIX}"
+        if manifest.is_file():
+            list_pack.append(manifest)
     return list_pack
 
 

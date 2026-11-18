@@ -51,6 +51,7 @@
   - 파서 토큰화: 변경 없음 · 헤더 하나 · 모듈 전체, `ReflectionParser.TokenizeStats` — 10 % 넘으면 토큰 저장소 재사용(fixture 결과 보존).
   - 씬 저장: `game/abilityarena/automation/editor/scenesave`, `Scene.save.*` — write 가 16 ms 넘고 serialize 보다 크면 write 를 워커로.
   - 씬 쿠킹: `--cook-all` DDC 없이 · 있이, `Headless.CookStageTimes` · `SceneCooker.SceneCookTime` — scenes 가 벽시계 절반을 넘고 가장 느린 씬이 합의 1/4 아래면 씬 단위 병렬(캐시 격리 먼저).
+  - 팩 씬 청크 고르기: `--cook-all`(씬 패턴 켬 · `_listScenePattern` 비움), `PackCooker.SceneChunkPlan` 로그와 고르기 단계 벽시계 — 씬마다 다시 훑는 몫이 팩 쿠킹의 1/4 을 넘으면 씬 훑기를 한 번의 훑기에서 뿌리별 닿음으로 모으는 길(`ReachTraversal` 뿌리 표식)로 바꾼다.
   - GPU 업로드 · 텍스처: shooter3d · meadowvillage 첫 진입 × 백엔드 셋 × `-gv_gpuUploadQueue=0/1`, `RT.TextureUpload.*` — pump 가 RT 의 10 % 를 넘거나 waiting 이 계속 0 이 아니면 RHI Thread 형 시제품.
   - 렌더 그래프 폭: `-gv_renderGraphParallelMinWidth=2 · 3 · 4 · 99` × DX12 · Vulkan — 3 · 4 가 흔들림 밖으로 빠르면 기본값을 바꾼다.
   - 그 밖: Tracy `GT.Frame` 자식 합 90 % 이상, 배치 크기 12 · 24 · 48, `load/*` × 워커 1 · 2 · 4 · 8 과 구조 지표, W25 GPU 비교(c05a3ee251 대 지금 — 노이즈 안이면 되돌림), W-S4 `-ftime-trace`, W-R1 RT 프레임 힙 할당, W-R2 PSO 조회, 5-2 `RT.Bind.*`, DX12 기록 경로 락 제거 전후 `bench.json` p50(291d69074e), 골든 여유(`--golden-margins`), 군중 `load/navcrowd`(넘으면 한 종류 군중을 지역으로 쪼갬), 잔상 GPU · CPU 메모리 `game.empty.afterimage`(품질 단계별 상한), 볼륨 안개 해상도별 `RT.Fog.Volume`.
