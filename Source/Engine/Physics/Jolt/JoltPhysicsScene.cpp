@@ -14,6 +14,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 
 #include <Jolt/Jolt.h>
+#include <Jolt/Geometry/RayAABox.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Collision/EstimateCollisionResponse.h>
@@ -1228,7 +1229,7 @@ namespace sw
 
     void JoltCharacterSnapshotCollision::add( const JPH::CharacterVirtual* pCharacter, const JPH::CharacterVirtual* pMirror )
     {
-        _listEntry.push_back( Entry{ pCharacter, pMirror, computeBoundingRadius( *pMirror->GetShape() ) } );
+        _listEntry.push_back( Entry{ pCharacter, pMirror } );
     }
 
     void JoltCharacterSnapshotCollision::remove( const JPH::CharacterVirtual* pCharacter )
@@ -1239,47 +1240,30 @@ namespace sw
             _listEntry.erase( it );
     }
 
-    void JoltCharacterSnapshotCollision::refreshBounds( const JPH::CharacterVirtual* pCharacter )
-    {
-        for ( Entry& entry : _listEntry )
-        {
-            if ( entry._pCharacter == pCharacter )
-                entry._boundingRadius = computeBoundingRadius( *entry._pMirror->GetShape() );
-        }
-    }
-
-    float32 JoltCharacterSnapshotCollision::computeBoundingRadius( const JPH::Shape& shape )
-    {
-        // Jolt 셰이프의 로컬 경계는 질량 중심 기준이다.
-        const JPH::AABox bounds = shape.GetLocalBounds();
-        return bounds.GetCenter().Length() + bounds.GetExtent().Length();
-    }
-
     void JoltCharacterSnapshotCollision::CollideCharacter( const JPH::CharacterVirtual* pCharacter, JPH::RMat44Arg centerOfMassTransform,
                                                            const JPH::CollideShapeSettings& collideShapeSettings, JPH::RVec3Arg baseOffset,
                                                            JPH::CollideShapeCollector& ioCollector ) const
     {
-        // Jolt `CharacterVsCharacterCollisionSimple::CollideCharacter` 와 같은 셈을 사본에 한다.
-        const JPH::Shape* const   pShape     = pCharacter->GetShape();
+        // Jolt 5.6.0 `CharacterVsCharacterCollisionSimple::CollideCharacter` 를 그대로 옮기고, 상대만 사본으로 읽는다.
         const JPH::Mat44          transform1 = centerOfMassTransform.PostTranslated( -baseOffset ).ToMat44();
-        const JPH::RVec3          position1  = centerOfMassTransform.GetTranslation();
-        const float32             radius1    = computeBoundingRadius( *pShape ) + collideShapeSettings.mMaxSeparationDistance + collideShapeSettings.mCollisionTolerance;
+        const JPH::Shape* const   pShape1    = pCharacter->GetShape();
         JPH::CollideShapeSettings settings   = collideShapeSettings;
+        const JPH::AABox          bounds1    = pShape1->GetWorldSpaceBounds( transform1, JPH::Vec3::sOne() );
         for ( const Entry& entry : _listEntry )
         {
             if ( entry._pCharacter == pCharacter || ioCollector.ShouldEarlyOut() )
                 continue;
-            const JPH::RMat44 transform2 = entry._pMirror->GetCenterOfMassTransform();
-            const float32     padding    = entry._pMirror->GetCharacterPadding();
-            const float32     reach      = radius1 + entry._boundingRadius + padding;
-            if ( JPH::Vec3( transform2.GetTranslation() - position1 ).LengthSq() > reach * reach )
-                continue;
+            const JPH::Mat44 transform2 = entry._pMirror->GetCenterOfMassTransform().PostTranslated( -baseOffset ).ToMat44();
             // 상대의 패딩만큼 더 멀리서 잡는다 — 패딩 없는 셰이프와 부딪히고 Jolt 가 `GetContactsAtPosition` 에서 고친다.
-            settings.mMaxSeparationDistance = collideShapeSettings.mMaxSeparationDistance + padding;
+            settings.mMaxSeparationDistance = collideShapeSettings.mMaxSeparationDistance + entry._pMirror->GetCharacterPadding();
+            const JPH::Shape* const pShape2 = entry._pMirror->GetShape();
+            JPH::AABox              bounds2 = pShape2->GetWorldSpaceBounds( transform2, JPH::Vec3::sOne() );
+            bounds2.ExpandBy( JPH::Vec3::sReplicate( settings.mMaxSeparationDistance ) );
+            if ( bounds1.Overlaps( bounds2 ) == false )
+                continue;
             ioCollector.SetUserData( reinterpret_cast<uint64>( entry._pMirror ) );
-            JPH::CollisionDispatch::sCollideShapeVsShape( pShape, entry._pMirror->GetShape(), JPH::Vec3::sOne(), JPH::Vec3::sOne(), transform1,
-                                                          transform2.PostTranslated( -baseOffset ).ToMat44(), JPH::SubShapeIDCreator(), JPH::SubShapeIDCreator(), settings,
-                                                          ioCollector );
+            JPH::CollisionDispatch::sCollideShapeVsShape( pShape1, pShape2, JPH::Vec3::sOne(), JPH::Vec3::sOne(), transform1, transform2, JPH::SubShapeIDCreator(),
+                                                          JPH::SubShapeIDCreator(), settings, ioCollector );
         }
         ioCollector.SetUserData( 0 );
     }
@@ -1287,27 +1271,29 @@ namespace sw
     void JoltCharacterSnapshotCollision::CastCharacter( const JPH::CharacterVirtual* pCharacter, JPH::RMat44Arg centerOfMassTransform, JPH::Vec3Arg direction,
                                                         const JPH::ShapeCastSettings& shapeCastSettings, JPH::RVec3Arg baseOffset, JPH::CastShapeCollector& ioCollector ) const
     {
-        // Jolt `CharacterVsCharacterCollisionSimple::CastCharacter` 와 같은 셈을 사본에 한다.
+        // Jolt 5.6.0 `CharacterVsCharacterCollisionSimple::CastCharacter` 를 그대로 옮기고, 상대만 사본으로 읽는다.
         const JPH::Mat44       transform1 = centerOfMassTransform.PostTranslated( -baseOffset ).ToMat44();
         const JPH::ShapeCast   shapeCast{ pCharacter->GetShape(), JPH::Vec3::sOne(), transform1, direction };
-        const JPH::RVec3       start    = centerOfMassTransform.GetTranslation();
-        const float32          lengthSq = direction.LengthSq();
-        const float32          radius1  = computeBoundingRadius( *pCharacter->GetShape() ) + shapeCastSettings.mCollisionTolerance;
+        const JPH::Vec3        origin       = shapeCast.mShapeWorldBounds.GetCenter();
+        const JPH::Vec3        extents      = shapeCast.mShapeWorldBounds.GetExtent() + JPH::Vec3::sReplicate( shapeCastSettings.mExtraConvexRadius );
+        JPH::ShapeCastSettings castSettings = shapeCastSettings;
         const JPH::ShapeFilter shapeFilter;
         for ( const Entry& entry : _listEntry )
         {
             if ( entry._pCharacter == pCharacter || ioCollector.ShouldEarlyOut() )
                 continue;
-            const JPH::RMat44 transform2 = entry._pMirror->GetCenterOfMassTransform();
-            // 쓸어 가는 선분에서 상대 중심까지의 거리로 거른다.
-            const JPH::Vec3 toOther = JPH::Vec3( transform2.GetTranslation() - start );
-            const float32   along   = lengthSq > 0.0f ? MathUtil::clamp( toOther.Dot( direction ) / lengthSq, 0.0f, 1.0f ) : 0.0f;
-            const float32   reach   = radius1 + entry._boundingRadius + entry._pMirror->GetCharacterPadding();
-            if ( ( toOther - along * direction ).LengthSq() > reach * reach )
+            const JPH::Mat44 transform2 = entry._pMirror->GetCenterOfMassTransform().PostTranslated( -baseOffset ).ToMat44();
+            const float32    padding    = entry._pMirror->GetCharacterPadding();
+            // 상대의 패딩만큼 겉껍질을 두껍게 쓴다 — Jolt 가 `ValidateMovement` 에서 고친다.
+            castSettings.mExtraConvexRadius = shapeCastSettings.mExtraConvexRadius + padding;
+            const JPH::Shape* const pShape2 = entry._pMirror->GetShape();
+            JPH::AABox              bounds2 = pShape2->GetWorldSpaceBounds( transform2, JPH::Vec3::sOne() );
+            bounds2.ExpandBy( extents + JPH::Vec3::sReplicate( padding ) );
+            if ( JPH::RayAABoxHits( origin, direction, bounds2.mMin, bounds2.mMax ) == false )
                 continue;
             ioCollector.SetUserData( reinterpret_cast<uint64>( entry._pMirror ) );
-            JPH::CollisionDispatch::sCastShapeVsShapeWorldSpace( shapeCast, shapeCastSettings, entry._pMirror->GetShape(), JPH::Vec3::sOne(), shapeFilter,
-                                                                 transform2.PostTranslated( -baseOffset ).ToMat44(), JPH::SubShapeIDCreator(), JPH::SubShapeIDCreator(), ioCollector );
+            JPH::CollisionDispatch::sCastShapeVsShapeWorldSpace( shapeCast, castSettings, pShape2, JPH::Vec3::sOne(), shapeFilter, transform2, JPH::SubShapeIDCreator(),
+                                                                 JPH::SubShapeIDCreator(), ioCollector );
         }
         ioCollector.SetUserData( 0 );
     }
@@ -1857,7 +1843,8 @@ namespace sw
         JPH::CharacterVirtual& virtualCharacter = *record._pCharacter;
         if ( deltaTime > 0.0f )
         {
-            // 닿은 동적 바디를 민다 — Jolt `HandleContact` 의 셈(속도 차를 감쇠, 겹침을 덜고, 힘 상한으로 자르고, 아래로는 밀지 않는다)을 이동 뒤 접촉으로 한다.
+            // 닿은 동적 바디를 민다 — Jolt 5.6.0 `CharacterVirtual::HandleContact` 의 셈 그대로(속도 차를 감쇠, 겹침을 덜고, 힘 상한으로 자르고, 아래로는 밀지 않는다).
+            // 원본과 다른 곳 하나: 해석 중 닿는 순간의 속도 대신 이동 뒤 접촉 · 이번 이동에 준 속도로 셈한다 — 청크 사이 바디 쓰기를 끝으로 미뤄 차례를 고정하려는 것이다.
             JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
             const JPH::Vec3     up            = virtualCharacter.GetUp();
             const JPH::Vec3     movedVelocity = JoltUtil::toJolt( record._movedVelocity );
@@ -1870,31 +1857,34 @@ namespace sw
                 const float32 projectedVelocity = ( movedVelocity - contact.mLinearVelocity ).Dot( contact.mContactNormal );
                 const float32 deltaVelocity     = -projectedVelocity * JoltPhysicsSceneInternal::kCharacterPushDamping -
                                               MathUtil::min( contact.mDistance, 0.0f ) * JoltPhysicsSceneInternal::kCharacterPushPenetrationResolution / deltaTime;
-                if ( deltaVelocity <= 0.0f )
+                if ( deltaVelocity < 0.0f )
                     continue; // 떨어지는 중이다
                 JPH::Vec3 worldImpulse = JPH::Vec3::sZero();
                 {
                     const JPH::BodyLockRead lock{ _system.GetBodyLockInterface(), contact.mBodyB };
-                    if ( lock.Succeeded() == false || lock.GetBody().IsDynamic() == false )
+                    // Jolt 는 접촉 때 본 운동 종류를 믿는다 — 여기는 이동 뒤라 그 사이 바뀌었을 수 있어 다시 본다(`GetInverseMass` 는 동적만 된다).
+                    if ( lock.SucceededAndIsInBroadPhase() == false || lock.GetBody().IsDynamic() == false )
                         continue;
                     const JPH::Body& body                 = lock.GetBody();
-                    const JPH::Vec3  arm                  = JPH::Vec3( contact.mPosition - body.GetCenterOfMassPosition() );
-                    const JPH::Vec3  armCrossNormal       = arm.Cross( contact.mContactNormal );
-                    const float32    inverseEffectiveMass = body.GetMotionProperties()->GetInverseMass() + armCrossNormal.Dot( body.GetInverseInertia().Multiply3x3( armCrossNormal ) );
-                    if ( inverseEffectiveMass <= 0.0f )
-                        continue;
-                    worldImpulse = -MathUtil::min( deltaVelocity / inverseEffectiveMass, maxImpulse ) * contact.mContactNormal;
+                    const JPH::Vec3  jacobian             = JPH::Vec3( contact.mPosition - body.GetCenterOfMassPosition() ).Cross( contact.mContactNormal );
+                    const float32    inverseEffectiveMass = body.GetInverseInertia().Multiply3x3( jacobian ).Dot( jacobian ) + body.GetMotionProperties()->GetInverseMass();
+                    worldImpulse                          = -MathUtil::min( deltaVelocity / inverseEffectiveMass, maxImpulse ) * contact.mContactNormal;
                 }
                 const float32 upImpulse = worldImpulse.Dot( up );
                 if ( upImpulse < 0.0f )
                     worldImpulse -= upImpulse * up; // 아래로 미는 몫은 아래 무게가 준다
                 bodyInterface.AddImpulse( contact.mBodyB, worldImpulse, contact.mPosition );
             }
-            // 디딘 동적 바디를 캐릭터 무게로 누른다(Jolt `Update` 가 중력으로 하던 일).
+            // 디딘 바디를 캐릭터 무게로 누른다 — Jolt 5.6.0 `Update` 끝의 셈 그대로(P = M g dt 의 바닥 법선 몫, 동적이 아니면 `AddImpulse` 가 버린다).
             const JPH::BodyID groundBodyID = virtualCharacter.GetGroundBodyID();
-            if ( virtualCharacter.GetGroundState() == JPH::CharacterBase::EGroundState::OnGround && groundBodyID.IsInvalid() == false && virtualCharacter.GetMass() > 0.0f &&
-                 bodyInterface.GetMotionType( groundBodyID ) == JPH::EMotionType::Dynamic )
-                bodyInterface.AddImpulse( groundBodyID, ( virtualCharacter.GetMass() * deltaTime ) * _system.GetGravity(), virtualCharacter.GetGroundPosition() );
+            const JPH::Vec3   gravity      = _system.GetGravity();
+            if ( groundBodyID.IsInvalid() == false && virtualCharacter.GetMass() > 0.0f )
+            {
+                const float32 normalDotGravity = virtualCharacter.GetGroundNormal().Dot( gravity );
+                if ( normalDotGravity < 0.0f )
+                    bodyInterface.AddImpulse( groundBodyID, -( virtualCharacter.GetMass() * normalDotGravity / gravity.Length() * deltaTime ) * gravity,
+                                              virtualCharacter.GetGroundPosition() );
+            }
         }
         PhysicsCharacterState3D& state = record._state;
         state._position                = JoltUtil::toEngine( virtualCharacter.GetPosition() );
@@ -1987,7 +1977,6 @@ namespace sw
                                          bodyFilter, shapeFilter, _tempAllocator );
         (void)pRecord->_pMirror->SetShape( pShape.GetPtr(), FLT_MAX, _system.GetDefaultBroadPhaseLayerFilter( objectLayer ), _system.GetDefaultLayerFilter( objectLayer ),
                                            bodyFilter, shapeFilter, _tempAllocator );
-        _characterSnapshot.refreshBounds( pRecord->_pCharacter.GetPtr() );
         pRecord->_desc._radius     = radius;
         pRecord->_desc._halfHeight = halfHeight;
         // 속 바디는 같은 바디에 셰이프만 간다 — 핸들이 그대로라 접촉 쌍도 이어진다(`setBodyShape` 와 같다).

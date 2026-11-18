@@ -216,7 +216,7 @@ namespace sw
      * @details Jolt 의 `CharacterVsCharacterCollisionSimple` 은 다른 캐릭터의 자리 · 속도를 살아 있는 객체에서 읽어 한 번에 한 캐릭터만 돌 수 있다(그쪽 주석).
      *          사본은 씬이 캐릭터의 이동을 확정할 때(`JoltPhysicsScene::commitCharacterMove`)만 옮겨, 이동 중에는 얼어 있다 — 여러 청크가 함께 읽어도 된다.
      *          일괄 이동은 모든 캐릭터가 단계 앞 사본을 보고(유니티 DOTS Character Controller 가 앞 스텝 충돌 월드를 읽는 것과 같다), 하나씩 옮기면 앞에 옮긴 캐릭터의 새 자리를 본다.
-     *          쌍마다 경계 구 둘이 닿지 않으면 좁은 단계를 건너뛴다(결과는 같다 — 닿을 수 없는 쌍만 거른다).
+     *          셈은 Jolt 5.6.0 의 것을 그대로 옮겼다(경계 상자로 거른 뒤 좁은 단계).
      *          shortcut: 레이어 표를 보지 않고 모든 캐릭터가 서로 막고 쌍을 모두 훑는다, 캐릭터끼리 통과하는 레이어가 생기거나 수천 명이면 레이어 검사 · 격자를 더한다.
      */
     class JoltCharacterSnapshotCollision final : public JPH::CharacterVsCharacterCollision
@@ -226,8 +226,6 @@ namespace sw
         void add( const JPH::CharacterVirtual* pCharacter, const JPH::CharacterVirtual* pMirror );
         /** @brief 캐릭터를 내립니다. 남은 것의 차례는 그대로다(접촉 수집 차례가 바뀌지 않게). */
         void remove( const JPH::CharacterVirtual* pCharacter );
-        /** @brief 사본의 셰이프가 바뀐 뒤 경계 구를 다시 잽니다. */
-        void refreshBounds( const JPH::CharacterVirtual* pCharacter );
         void clear() { _listEntry.clear(); }
 
         void CollideCharacter( const JPH::CharacterVirtual* pCharacter, JPH::RMat44Arg centerOfMassTransform, const JPH::CollideShapeSettings& collideShapeSettings,
@@ -238,13 +236,9 @@ namespace sw
     private:
         struct Entry
         {
-            const JPH::CharacterVirtual* _pCharacter{ nullptr };  ///< 살아 있는 캐릭터(자기 자신을 거르는 열쇠)
-            const JPH::CharacterVirtual* _pMirror{ nullptr };     ///< 다른 캐릭터가 보는 사본 — 접촉의 상대 캐릭터로 넘긴다
-            float32                      _boundingRadius{ 0.0f }; ///< 질량 중심에서 셰이프를 감싸는 구의 반지름
+            const JPH::CharacterVirtual* _pCharacter{ nullptr }; ///< 살아 있는 캐릭터(자기 자신을 거르는 열쇠)
+            const JPH::CharacterVirtual* _pMirror{ nullptr };    ///< 다른 캐릭터가 보는 사본 — 접촉의 상대 캐릭터로 넘긴다
         };
-
-        /** @brief 질량 중심 둘레로 셰이프를 감싸는 구의 반지름입니다(회전과 관계없다). */
-        static float32 computeBoundingRadius( const JPH::Shape& shape );
 
         vector<Entry> _listEntry;
     };
