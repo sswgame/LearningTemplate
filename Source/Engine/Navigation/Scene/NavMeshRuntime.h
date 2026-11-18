@@ -95,6 +95,8 @@ namespace sw
         int32                _tileZ{ 0 };
         NavTileRange         _range{};
         const vector<uint8>* _pMemoryBytes{ nullptr }; ///< 메모리 쿠킹본(테스트 · 도구 — `SceneNavigation::setCookedAsset`)의 바이트. 있으면 읽지 않고 끼운다
+        uint64               _cookedInputHash{ 0 };    ///< 쿠킹 때 이 타일 영역의 입력 해시(0 이면 모른다)
+        uint64               _geometryHash{ 0 };       ///< 지금 이 타일이 바탕으로 삼은 입력의 영역 해시(`NavMeshGeometry::computeRegionHash`). 셀이 오르내리면 다시 잰다
         shared_ptr<Read>     _pRead;
         AsyncReadHandle      _readHandle;
         State                _state{ State::Unloaded };

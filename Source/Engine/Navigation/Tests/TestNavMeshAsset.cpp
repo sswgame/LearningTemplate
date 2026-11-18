@@ -215,7 +215,7 @@ SW_TEST_CASE( NavMeshAssetTest, TrailingBytesAndNonFiniteBoundsAreRejected )
     SW_EXPECT_TRUE( asset.getEntries().empty() );
 }
 
-/** @brief [NavMeshAssetTest] 남은 바이트로 꼭 맞는 타일 수는 받는다 — 빈 타일의 머리 한 줄(24 바이트)들이 거름의 경계다 */
+/** @brief [NavMeshAssetTest] 남은 바이트로 꼭 맞는 타일 수는 받는다 — 빈 타일의 머리 한 줄(32 바이트)들이 거름의 경계다 */
 SW_TEST_CASE( NavMeshAssetTest, TileCountExactlyFittingTheRestIsAccepted )
 {
     NavMeshAssetEntry entry = Util::makeEntry( hashed_string{ "Walker" }, 1 );

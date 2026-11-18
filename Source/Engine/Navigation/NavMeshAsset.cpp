@@ -27,7 +27,7 @@ namespace sw
             /** @brief 씬 저작본(`.scene.xml`)과 쿠킹본(`.scene.bin`) 접미사입니다. 파일이 하나도 없던 맨 `.scene` 은 별칭이라 두지 않습니다. */
             static constexpr string_view kArrSceneSuffix[] = { ".scene.xml", ".scene.bin" };
             /** @brief 머리의 타일 한 줄 바이트 수입니다(x · z · 내용 안 시작 · 길이). 깨진 타일 수를 할당 전에 남은 바이트로 거른다. */
-            static constexpr size_t kMinTileBytes = sizeof( int32 ) * 2 + sizeof( uint64 ) * 2;
+            static constexpr size_t kMinTileBytes = sizeof( int32 ) * 2 + sizeof( uint64 ) * 3;
             /** @brief 고정 머리입니다(매직 · 판 · 머리 길이). 머리만 읽는 로더가 먼저 이만큼 읽는다. */
             static constexpr size_t kFixedHeadBytes = sizeof( uint32 ) * 2 + sizeof( uint64 );
             /** @brief 머리 길이 칸의 자리입니다(쓴 뒤 채운다). */
@@ -104,12 +104,14 @@ namespace sw
             writer.writePod( entry._inputHash );
             writer.writePod( entry._bounds );
             writer.writePod( static_cast<uint32>( entry._listTile.size() ) );
-            for ( const NavTileData& tile : entry._listTile )
+            for ( size_t tileIndex = 0; tileIndex < entry._listTile.size(); ++tileIndex )
             {
+                const NavTileData& tile = entry._listTile[tileIndex];
                 writer.writePod( tile._tileX );
                 writer.writePod( tile._tileZ );
                 writer.writePod( contentOffset );
                 writer.writePod( static_cast<uint64>( tile._bytes.size() ) );
+                writer.writePod( tileIndex < entry._listTileInputHash.size() ? entry._listTileInputHash[tileIndex] : uint64{ 0 } ); // 0 — 모른다
                 contentOffset += tile._bytes.size();
             }
         }
@@ -184,10 +186,12 @@ namespace sw
                 return false;
             entry._agentType = hashed_string( agentType );
             entry._listTileRange.clear();
+            entry._listTileInputHash.clear();
             return reader.readList( entry._listTile, tileCount, NavMeshAssetInternal::kMinTileBytes, [&]( NavTileData& tile ) -> bool
                  {
                 NavTileRange range{};
-                const bool   bTile = reader.readPod( tile._tileX ) && reader.readPod( tile._tileZ ) && reader.readPod( range._offset ) && reader.readPod( range._size );
+                uint64       inputHash = 0;
+                const bool   bTile     = reader.readPod( tile._tileX ) && reader.readPod( tile._tileZ ) && reader.readPod( range._offset ) && reader.readPod( range._size ) && reader.readPod( inputHash );
                 // 타일 바이트는 머리의 순서대로 빈틈없이 놓인다 — 그 밖의 구간(겹침 · 틈 · 내용 밖)은 깨진 파일이다.
                 if ( bTile == false || range._offset != nextContentOffset || range._size > contentSize - nextContentOffset )
                     return false;
@@ -196,6 +200,7 @@ namespace sw
                 nextContentOffset += range._size;
                 range._offset += headSize; // 파일 처음에서 센 자리로 둔다
                 entry._listTileRange.push_back( range );
+                entry._listTileInputHash.push_back( inputHash );
                 return true;
             } );
         } );

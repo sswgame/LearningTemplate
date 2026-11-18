@@ -64,6 +64,8 @@ namespace sw
         virtual const NavAgentTypeDef& getAgentType() const = 0;
         /** @brief XZ 상자에 닿는 타일 위치를 @p outListTile 에 채웁니다(바깥 기하가 그 타일 가장자리를 바꾸므로 베이크 테두리만큼 넓힙니다). */
         virtual void collectTilesOverlapping( const AABB& bounds, vector<int2>& outListTile ) const = 0;
+        /** @brief 타일 하나의 베이크가 읽는 XZ 영역입니다(타일 상자 + 베이크 테두리, Y 는 끝없음). 그 타일의 입력 해시(`NavMeshGeometry::computeRegionHash`)를 이 영역으로 잰다. */
+        virtual AABB computeTileBakeRegion( int32 tileX, int32 tileZ ) const = 0;
 
         /**
          * @brief 타일 하나를 베이크합니다. 입력만 읽고 내비메시를 바꾸지 않으므로 워커 여럿이 같이 돌 수 있습니다.

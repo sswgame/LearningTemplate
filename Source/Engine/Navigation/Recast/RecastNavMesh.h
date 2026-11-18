@@ -40,6 +40,7 @@ namespace sw
         const NavTileGrid&     getTileGrid() const override { return _grid; }
         const NavAgentTypeDef& getAgentType() const override { return _agentType; }
         void                   collectTilesOverlapping( const AABB& bounds, vector<int2>& outListTile ) const override;
+        AABB                   computeTileBakeRegion( int32 tileX, int32 tileZ ) const override;
 
         [[nodiscard]] bool bakeTile( const NavMeshGeometry& geometry, const vector<NavConvexVolume>* pExtraVolume, int32 tileX, int32 tileZ,
                                      NavTileData& outTile ) const override;

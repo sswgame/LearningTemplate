@@ -2,7 +2,7 @@
  * @file NavMeshAsset.h
  * @brief 쿠킹한 내비메시(`.navmesh`)입니다. 씬 하나의 에이전트 종류마다 타일 바이트를 싣습니다. 타일을 한꺼번에 베이크하는 도우미도 있습니다.
  * @details **형식**(리틀 엔디언, 판 2)은 머리와 타일 내용으로 나뉜다. 머리는 매직 `SWNV`, 형식 버전, 머리 길이(이 칸까지 포함한 머리 전체), 백엔드 이름, 백엔드 버전, 항목 수,
- *          항목마다 [종류 이름, 베이크 값 해시, 입력 해시, 경계 상자, 타일 수 → 타일마다 (x, z, 내용 안 시작, 길이)] 다. 머리 뒤에 타일 바이트가 타일 순서로 빈틈없이 잇는다.
+ *          항목마다 [종류 이름, 베이크 값 해시, 입력 해시, 경계 상자, 타일 수 → 타일마다 (x, z, 내용 안 시작, 길이, 타일 입력 해시)] 다. 머리 뒤에 타일 바이트가 타일 순서로 빈틈없이 잇는다.
  *          타일 바이트는 백엔드의 것이고 그대로 `INavMesh::replaceTile` 에 넣는다. 스트리밍 씬은 머리만 읽고(`loadHeadFromAsset`) 타일을 원점 둘레에서 구간으로 올리고 내린다
  *          (Recast/Detour 의 타일 단위 `addTile` · `removeTile`, 언리얼 World Partition 의 내비 데이터 청크 스트리밍).
  *          백엔드 이름이나 버전이 다르면 읽지 않는다(다른 라이브러리로 바꾼 뒤 낡은 쿠킹본을 넣지 않는다). 읽기는 현재 형식만 받는다.
@@ -44,8 +44,9 @@ namespace sw
         uint64               _settingsHash{ 0 }; ///< `NavMeshSettings::computeAgentTypeHash`
         uint64               _inputHash{ 0 };    ///< `NavMeshGeometry::computeHash`
         AABB                 _bounds{};
-        vector<NavTileData>  _listTile;      ///< 타일 자리와 바이트. 머리만 읽은 쿠킹본(`loadHeadFromAsset`)은 바이트가 비어 있다 — `_listTileRange` 로 읽는다
-        vector<NavTileRange> _listTileRange; ///< 쿠킹본에서 읽었으면 타일마다 파일 안 구간(`_listTile` 과 같은 순서). 쓰기는 보지 않는다
+        vector<NavTileData>  _listTile;          ///< 타일 자리와 바이트. 머리만 읽은 쿠킹본(`loadHeadFromAsset`)은 바이트가 비어 있다 — `_listTileRange` 로 읽는다
+        vector<NavTileRange> _listTileRange;     ///< 쿠킹본에서 읽었으면 타일마다 파일 안 구간(`_listTile` 과 같은 순서). 쓰기는 보지 않는다
+        vector<uint64>       _listTileInputHash; ///< 타일마다 그 베이크 영역의 입력 해시(`NavMeshGeometry::computeRegionHash`, `_listTile` 과 같은 순서). 비었거나 0 이면 모른다 — 런타임이 그 타일을 다시 굽는다
     };
 } // namespace sw
 
@@ -77,8 +78,8 @@ namespace sw
         };
         /** @brief 이 에셋 종류입니다(등록은 `NavMeshAsset.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "NavMeshAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
-        /** @brief 형식 버전입니다. 바꾸면 쿠킹본을 다시 만듭니다. 판 2 — 머리(타일 색인 · 구간)와 타일 내용을 나눴다(감사 A-13). */
-        static constexpr uint32 kVersion = 2;
+        /** @brief 형식 버전입니다. 바꾸면 쿠킹본을 다시 만듭니다. 판 2 — 머리(타일 색인 · 구간)와 타일 내용을 나눴다. 판 3 — 타일 줄에 입력 해시를 더했다(감사 A-13). */
+        static constexpr uint32 kVersion = 3;
 
         NavMeshAsset();
 

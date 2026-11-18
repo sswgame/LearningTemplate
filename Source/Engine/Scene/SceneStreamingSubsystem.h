@@ -110,6 +110,10 @@ namespace sw
         span<const float3> getActiveSources() const;
         /** @brief 이 거리 안에 닿는 것을 올립니다(월드 설정의 로딩 반경). `isStreaming` 이 false 이면 쓰지 않습니다. */
         float32 getLoadingRadius() const { return _settings._cellGrid._loadingRadius; }
+        /** @brief 셀이 오르거나(다 지어 드러남) 내려갈 때마다 오르는 번호입니다. 셀 구역의 입력을 따라 다시 재는 쪽(내비메시 타일)이 본다. */
+        uint64 getChangeSerial() const { return _changeSerial; }
+        /** @brief 번호 @p serial 뒤에 오르내린 셀의 좌표를 @p outListCell 에 채웁니다(비우고 채운다, 조각마다 한 번 — 같은 좌표가 겹칠 수 있다). */
+        void collectCellsChangedSince( uint64 serial, vector<StreamingCellCoord>& outListCell ) const;
         /** @brief 모든 원점에서 이 거리보다 멀면 내립니다(로딩 반경 + 여유 — 경계에서 번갈지 않게). */
         float32 getUnloadRadius() const { return _settings._cellGrid._loadingRadius + _settings._unloadMargin; }
 
@@ -141,6 +145,7 @@ namespace sw
             AsyncReadHandle                        _readHandle;         ///< 읽기 요청(취소 · 결정적 실행의 기다림). 결과와 따로 든다 — 요청의 완료 콜백이 결과를 쥐어 결과가 요청을 쥐면 고리가 된다
             vector<uint64>                         _listObjectID;       ///< 지은 오브젝트(엔티티마다 하나, 부품 제외). 내릴 때 자식까지 지운다
             CellState                              _state{ CellState::Unloaded };
+            uint64                                 _changeSerial{ 0 };        ///< 마지막으로 오르거나 내려간 때의 `SceneStreamingSubsystem::_changeSerial`
             bool                                   _bContentHeld{ SW_FALSE }; ///< `_listNode` 를 짓고 나서도 든다(메모리 문서의 셀 · 떠 둔 상태) — 아니면 지은 뒤 버리고 다시 올릴 때 다시 읽는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
@@ -175,6 +180,7 @@ namespace sw
         float3                                _cameraSource;         ///< `setCameraSource`
         uint8                                 _bCameraSourceSet : 1; ///< 카메라 원점을 한 번이라도 받았다
         uint8                                 _bExternalSources : 1; ///< 바깥 원점을 쓴다
+        uint64                                _changeSerial;         ///< 셀이 오르내린 번호(`getChangeSerial`). 월드를 바꿔도 되돌리지 않는다 — 보는 쪽의 마지막 번호가 늘 지금 이하다
         vector<StreamingCellCoord>            _listScratchCell;      ///< 갱신 중 범위 안 셀(프레임마다 다시 쓴다)
         vector<uint32>                        _listScratchLoad;      ///< 갱신 중 범위 안의 올릴 셀 인덱스(가까운 순)
     };

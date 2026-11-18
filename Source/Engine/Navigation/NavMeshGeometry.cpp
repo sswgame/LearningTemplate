@@ -391,6 +391,59 @@ namespace sw
         VectorUtil::sortUnique( outListTriangle );
     }
 
+    uint64 NavMeshGeometry::computeRegionHash( const AABB& region ) const
+    {
+        using Internal              = NavMeshGeometryInternal;
+        const auto overlapsRegionXZ = [&region]( const float3& boxMin, const float3& boxMax )
+        { return boxMin._x <= region._max._x && boxMax._x >= region._min._x && boxMin._z <= region._max._z && boxMax._z >= region._min._z; };
+        uint64         hash = HashUtil::kFNVOffset64;
+        vector<uint32> listTriangle;
+        collectTriangles( float2{ region._min._x, region._min._z }, float2{ region._max._x, region._max._z }, listTriangle );
+        for ( const uint32 triangleIndex : listTriangle )
+        {
+            const float3& point0 = _listVertex[_listIndex[triangleIndex * 3u]];
+            const float3& point1 = _listVertex[_listIndex[triangleIndex * 3u + 1u]];
+            const float3& point2 = _listVertex[_listIndex[triangleIndex * 3u + 2u]];
+            const float3  boxMin{ MathUtil::min( point0._x, MathUtil::min( point1._x, point2._x ) ), 0.0f, MathUtil::min( point0._z, MathUtil::min( point1._z, point2._z ) ) };
+            const float3  boxMax{ MathUtil::max( point0._x, MathUtil::max( point1._x, point2._x ) ), 0.0f, MathUtil::max( point0._z, MathUtil::max( point1._z, point2._z ) ) };
+            if ( overlapsRegionXZ( boxMin, boxMax ) == false )
+                continue;
+            uint64 triangleHash = HashUtil::kFNVOffset64;
+            triangleHash        = Internal::mixBytes( triangleHash, &point0, sizeof( float3 ) );
+            triangleHash        = Internal::mixBytes( triangleHash, &point1, sizeof( float3 ) );
+            triangleHash        = Internal::mixBytes( triangleHash, &point2, sizeof( float3 ) );
+            triangleHash        = Internal::mixBytes( triangleHash, &_listTriangleArea[triangleIndex], sizeof( uint8 ) );
+            hash += triangleHash; // 더하기라 순서와 상관없다
+        }
+        for ( const NavConvexVolume& volume : _listVolume )
+        {
+            const AABB bounds = volume.computeBounds();
+            if ( overlapsRegionXZ( bounds._min, bounds._max ) == false )
+                continue;
+            uint64 volumeHash = HashUtil::kFNVOffset64;
+            volumeHash        = Internal::mixBytes( volumeHash, volume._listPoint.data(), volume._listPoint.size() * sizeof( float3 ) );
+            volumeHash        = Internal::mixBytes( volumeHash, &volume._minY, sizeof( volume._minY ) );
+            volumeHash        = Internal::mixBytes( volumeHash, &volume._maxY, sizeof( volume._maxY ) );
+            volumeHash        = Internal::mixBytes( volumeHash, &volume._area, sizeof( volume._area ) );
+            hash += volumeHash;
+        }
+        for ( const NavOffMeshLink& link : _listLink )
+        {
+            const AABB bounds = link.computeBounds();
+            if ( overlapsRegionXZ( bounds._min, bounds._max ) == false )
+                continue;
+            uint64 linkHash = HashUtil::kFNVOffset64;
+            linkHash        = Internal::mixBytes( linkHash, &link._start, sizeof( link._start ) );
+            linkHash        = Internal::mixBytes( linkHash, &link._end, sizeof( link._end ) );
+            linkHash        = Internal::mixBytes( linkHash, &link._radius, sizeof( link._radius ) );
+            linkHash        = Internal::mixBytes( linkHash, &link._userID, sizeof( link._userID ) );
+            linkHash        = Internal::mixBytes( linkHash, &link._area, sizeof( link._area ) );
+            linkHash        = Internal::mixBytes( linkHash, &link._bBidirectional, sizeof( link._bBidirectional ) );
+            hash += linkHash;
+        }
+        return hash != 0 ? hash : HashUtil::kFNVOffset64;
+    }
+
     uint64 NavMeshGeometry::computeHash() const
     {
         using Internal = NavMeshGeometryInternal;

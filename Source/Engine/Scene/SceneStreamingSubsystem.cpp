@@ -44,6 +44,7 @@ namespace sw
         , _cameraSource{}
         , _bCameraSourceSet{ SW_FALSE }
         , _bExternalSources{ SW_FALSE }
+        , _changeSerial{ 0 }
         , _listScratchCell{}
         , _listScratchLoad{}
     {
@@ -280,6 +281,16 @@ namespace sw
         }
     }
 
+    void SceneStreamingSubsystem::collectCellsChangedSince( const uint64 serial, vector<StreamingCellCoord>& outListCell ) const
+    {
+        outListCell.clear();
+        for ( const CellSlot& slot : _listCell )
+        {
+            if ( slot._changeSerial > serial )
+                outListCell.push_back( slot._cell );
+        }
+    }
+
     uint64 SceneStreamingSubsystem::makeCellKey( const StreamingCellCoord& cell )
     {
         return ( static_cast<uint64>( static_cast<uint32>( cell._x ) ) << 32 ) | static_cast<uint64>( static_cast<uint32>( cell._z ) );
@@ -396,7 +407,8 @@ namespace sw
             slot._state = CellState::Failed;
             return true;
         }
-        slot._state = CellState::Loaded;
+        slot._state        = CellState::Loaded;
+        slot._changeSerial = ++_changeSerial;
         return true;
     }
 
@@ -437,6 +449,7 @@ namespace sw
                 }
                 _pScene->unloadCell( slot._listObjectID );
                 slot._listObjectID.clear();
+                slot._changeSerial = ++_changeSerial;
                 break;
             case CellState::Unloaded:
             case CellState::Failed:

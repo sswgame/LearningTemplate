@@ -37,6 +37,7 @@ namespace sw
     {
         struct SceneNavigationInternal
         {
+            static constexpr float32 kIndexCellPerTile = 0.25f; ///< 기하 색인 셀은 타일보다 잘게 나눈다 — 타일 하나가 몇 셀만 훑게
             template <typename T>
             static void removeFromList( vector<T*>& inoutList, T* pItem )
             {
@@ -387,8 +388,8 @@ namespace sw
 
     bool SceneNavigation::installCooked( NavMeshRuntime& runtime, const NavAgentTypeDef& agentType, uint64 inputHash )
     {
-        // 스트리밍 씬은 셀이 반경 안에서만 오르므로 지금 모은 기하가 씬 전체가 아니다 — 입력 해시를 비교하지 않고(쿠킹본과 씬은 같은 쿠킹에서 나왔다),
-        // 머리만 읽어 타일을 원점 둘레로 올리고 내린다(언리얼 World Partition 의 내비 데이터 청크).
+        // 스트리밍 씬은 셀이 반경 안에서만 오르므로 지금 모은 기하가 씬 전체가 아니다 — 전체 입력 해시 대신 타일마다 그 영역의 입력 해시를 타일을 올릴 때 견준다
+        // (`updateTileStreaming`). 머리만 읽어 타일을 원점 둘레로 올리고 내린다(언리얼 World Partition 의 내비 데이터 청크).
         const bool                     bStreamTiles = _pManager != nullptr && _pManager->getSubsystem<SceneStreamingSubsystem>().isStreaming();
         const string                   cookedPath   = _pCookedAsset != nullptr ? string{ "(given)" } : NavMeshAsset::makeCookedPath( _sourcePath );
         shared_ptr<const NavMeshAsset> pAsset       = _pCookedAsset;
@@ -428,10 +429,11 @@ namespace sw
                 if ( bWalkable == false )
                     continue;
                 NavStreamTile streamTile{};
-                streamTile._tileX        = tile._tileX;
-                streamTile._tileZ        = tile._tileZ;
-                streamTile._range        = range;
-                streamTile._pMemoryBytes = pAsset->hasTileBytes() ? &tile._bytes : nullptr;
+                streamTile._tileX           = tile._tileX;
+                streamTile._tileZ           = tile._tileZ;
+                streamTile._range           = range;
+                streamTile._pMemoryBytes    = pAsset->hasTileBytes() ? &tile._bytes : nullptr;
+                streamTile._cookedInputHash = tileIndex < pEntry->_listTileInputHash.size() ? pEntry->_listTileInputHash[tileIndex] : 0; // 0 — 모른다(그 타일은 다시 굽는다)
                 runtime._listStreamTile.push_back( std::move( streamTile ) );
             }
             runtime._pStreamAsset         = pAsset;
@@ -502,7 +504,7 @@ namespace sw
         if ( _bIgnoreCooked == false && installCooked( *pRuntime, *pType, inputHash ) )
         {
             // 쿠킹본에는 장애물이 없다 — 장애물 자리의 타일만 다시 베이크한다.
-            pGeometry->rebuildSpatialIndex( MathUtil::max( 1.0f, pRuntime->_pNavMesh->getTileGrid()._tileWorldSize * 0.25f ) );
+            pGeometry->rebuildSpatialIndex( MathUtil::max( 1.0f, pRuntime->_pNavMesh->getTileGrid()._tileWorldSize * SceneNavigationInternal::kIndexCellPerTile ) );
             vector<int2> listTile;
             for ( const NavConvexVolume& volume : *pVolume )
             {
@@ -610,6 +612,12 @@ namespace sw
         outEntry._inputHash    = pRuntime->_pGeometry->computeHash();
         outEntry._bounds       = pRuntime->_bounds;
         pNavMesh->collectTiles( outEntry._listTile );
+        // 타일마다 그 베이크 영역의 입력 해시 — 스트리밍 씬이 타일을 올릴 때 런타임 기하와 견주어 다른 타일만 다시 굽는다.
+        outEntry._listTileInputHash.reserve( outEntry._listTile.size() );
+        for ( const NavTileData& tile : outEntry._listTile )
+        {
+            outEntry._listTileInputHash.push_back( pRuntime->_pGeometry->computeRegionHash( pNavMesh->computeTileBakeRegion( tile._tileX, tile._tileZ ) ) );
+        }
         return true;
     }
 
@@ -790,12 +798,91 @@ namespace sw
         const float32            loadRadiusSquared   = streaming.getLoadingRadius() * streaming.getLoadingRadius();
         const float32            unloadRadiusSquared = streaming.getUnloadRadius() * streaming.getUnloadRadius();
         const bool               bFinishEachFrame    = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
+        const float32            cellSize            = streaming.getGrid().getCellSize();
+
+        // 셀이 오르내렸으면 그 구역의 입력이 바뀌었다 — 기하를 다시 모으고 닿은 타일의 입력 해시를 다시 잰다(언리얼 내비 타일 무효화).
+        vector<StreamingCellCoord> listChangedCell;
+        const uint64               changeSerial = streaming.getChangeSerial();
+        if ( changeSerial != _streamingChangeSerial )
+            streaming.collectCellsChangedSince( _streamingChangeSerial, listChangedCell );
+        bool       bChangeConsumed     = true;
+        const auto overlapsChangedCell = [&listChangedCell, cellSize]( const AABB& region )
+        {
+            for ( const StreamingCellCoord& cell : listChangedCell )
+            {
+                const float32 minX = static_cast<float32>( cell._x ) * cellSize;
+                const float32 minZ = static_cast<float32>( cell._z ) * cellSize;
+                if ( minX <= region._max._x && minX + cellSize >= region._min._x && minZ <= region._max._z && minZ + cellSize >= region._min._z )
+                    return true;
+            }
+            return false;
+        };
+
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
         {
             NavMeshRuntime& runtime = *pRuntime;
             if ( runtime._listStreamTile.empty() )
                 continue;
             const NavTileGrid& grid = runtime._pNavMesh->getTileGrid();
+
+            bool bGeometryRefreshed = false;
+            if ( listChangedCell.empty() == false )
+            {
+                shared_ptr<NavMeshGeometry> pGeometry        = make_shared<NavMeshGeometry>();
+                const uint32                pendingMeshCount = NavGeometryCollector::collectGeometry( SceneIterationKey{}, *_pManager, runtime._pSurface, _settings, _listGeometrySource.getItems(),
+                                                                                                      NavMeshArrival::Defer, *pGeometry );
+                if ( pendingMeshCount > 0 )
+                {
+                    bChangeConsumed = false; // 오른 셀의 메시를 아직 읽는 중이다 — 덜 모인 기하로 재지 않고 다음 갱신에 다시 모은다
+                }
+                else
+                {
+                    pGeometry->rebuildSpatialIndex( MathUtil::max( 1.0f, grid._tileWorldSize * SceneNavigationInternal::kIndexCellPerTile ) );
+                    runtime._pGeometry = std::move( pGeometry ); // 다시 베이크는 이 지금 기하를 읽는다(옛 일은 옛 사본을 끝까지 읽는다)
+                    bGeometryRefreshed = true;
+                }
+            }
+
+            // 쿠킹본 타일을 구간으로 읽기 시작한다 — 메모리 쿠킹본이면 그 자리에서 결과를 채운다.
+            const auto startCookedRead = [&runtime]( NavStreamTile& tile ) -> bool
+            {
+                if ( tile._pMemoryBytes != nullptr )
+                {
+                    tile._pRead         = make_shared<NavStreamTile::Read>();
+                    tile._pRead->_bytes = *tile._pMemoryBytes;
+                    tile._pRead->_state.store( 1, std::memory_order_release );
+                    return true;
+                }
+                const shared_ptr<NavStreamTile::Read> pRead = make_shared<NavStreamTile::Read>();
+                tile._readHandle                            = AssetIO::readBinaryAssetRangeAsync( AssetID{ runtime._streamPath }, tile._range._offset, tile._range._size, AsyncIOPriority::Normal,
+                                                                                                  SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [pRead]( bool bSuccess, vector<uint8>& bytes )
+                                           {
+                    if ( bSuccess )
+                        pRead->_bytes.swap( bytes );
+                    pRead->_state.store( static_cast<uint8>( bSuccess ? 1 : 2 ), std::memory_order_release );
+                } ) );
+                if ( tile._readHandle.isValid() == false )
+                {
+                    SW_LOG_ERROR_ID( "SceneNavigation.NavTileReadNotStarted", "Navmesh '%#' could not start reading tile (%#, %#) from '%#' - it stays out", runtime._agentType.c_str(), tile._tileX,
+                                     tile._tileZ, runtime._streamPath.c_str() );
+                    return false;
+                }
+                tile._pRead = pRead;
+                return true;
+            };
+            // 타일의 입력이 쿠킹 때와 같으면 쿠킹본 타일을 읽고, 다르면 그 타일만 지금 기하로 다시 굽는다(이웃 타일은 쿠킹본 그대로).
+            const auto resolveTileInput = [&runtime, &startCookedRead]( NavStreamTile& tile, const AABB& region )
+            {
+                tile._geometryHash = runtime._pGeometry != nullptr ? runtime._pGeometry->computeRegionHash( region ) : 0;
+                if ( tile._cookedInputHash != 0 && tile._geometryHash == tile._cookedInputHash )
+                {
+                    tile._state = startCookedRead( tile ) ? NavStreamTile::State::Loading : NavStreamTile::State::Failed;
+                    return;
+                }
+                tile._state = NavStreamTile::State::Loaded; // 자리는 끼운 것으로 친다 — 다시 베이크 결과를 받는다
+                runtime.addDirtyTile( int2{ tile._tileX, tile._tileZ } );
+            };
+
             for ( NavStreamTile& tile : runtime._listStreamTile )
             {
                 // 타일의 XZ 사각형과 가장 가까운 원점 사이 거리 — 셀과 같은 재기(`StreamingCellGrid::computeCellDistanceSquared`)다.
@@ -810,52 +897,32 @@ namespace sw
                 const int2 tileCoord{ tile._tileX, tile._tileZ };
                 if ( distanceSquared > unloadRadiusSquared )
                 {
-                    if ( tile._state == NavStreamTile::State::Loading )
+                    if ( tile._state == NavStreamTile::State::Loading || tile._state == NavStreamTile::State::Loaded )
                     {
-                        (void)tile._readHandle.cancel(); // 결과는 완료 콜백이 쥔 사본과 함께 사라진다
+                        if ( tile._state == NavStreamTile::State::Loading )
+                            (void)tile._readHandle.cancel(); // 결과는 완료 콜백이 쥔 사본과 함께 사라진다
                         tile._pRead.reset();
                         tile._readHandle = AsyncReadHandle{};
-                        tile._state      = NavStreamTile::State::Unloaded;
-                    }
-                    else if ( tile._state == NavStreamTile::State::Loaded )
-                    {
-                        // 바이트가 빈 타일은 그 자리를 뺀다(`dtNavMesh::removeTile`) — 그 구역의 질의 · 군중은 "경로 없음" 이 된다.
+                        // 바이트가 빈 타일은 그 자리를 뺀다(`dtNavMesh::removeTile`) — 그 구역의 질의 · 군중은 "경로 없음" 이 된다. 끼운 적 없는 자리면 할 일이 없다.
                         NavTileData removal{};
                         removal._tileX = tile._tileX;
                         removal._tileZ = tile._tileZ;
                         (void)runtime._pNavMesh->replaceTile( removal );
-                        tile._state = NavStreamTile::State::Unloaded;
+                        tile._geometryHash = 0;
+                        tile._state        = NavStreamTile::State::Unloaded;
                     }
                     continue;
                 }
+                const AABB region = runtime._pNavMesh->computeTileBakeRegion( tile._tileX, tile._tileZ );
                 if ( tile._state == NavStreamTile::State::Unloaded && distanceSquared <= loadRadiusSquared )
                 {
-                    if ( tile._pMemoryBytes != nullptr )
-                    {
-                        tile._pRead         = make_shared<NavStreamTile::Read>();
-                        tile._pRead->_bytes = *tile._pMemoryBytes;
-                        tile._pRead->_state.store( 1, std::memory_order_release );
-                    }
-                    else
-                    {
-                        const shared_ptr<NavStreamTile::Read> pRead = make_shared<NavStreamTile::Read>();
-                        tile._readHandle                            = AssetIO::readBinaryAssetRangeAsync( AssetID{ runtime._streamPath }, tile._range._offset, tile._range._size, AsyncIOPriority::Normal,
-                                                                                                          SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [pRead]( bool bSuccess, vector<uint8>& bytes )
-                                                   {
-                            if ( bSuccess )
-                                pRead->_bytes.swap( bytes );
-                            pRead->_state.store( static_cast<uint8>( bSuccess ? 1 : 2 ), std::memory_order_release );
-                        } ) );
-                        if ( tile._readHandle.isValid() == false )
-                        {
-                            SW_LOG_ERROR_ID( "SceneNavigation.NavTileReadNotStarted", "Navmesh '%#' could not start reading tile (%#, %#) from '%#' - it stays out", runtime._agentType.c_str(), tile._tileX,
-                                             tile._tileZ, runtime._streamPath.c_str() );
-                            tile._state = NavStreamTile::State::Failed;
-                            continue;
-                        }
-                        tile._pRead = pRead;
-                    }
-                    tile._state = NavStreamTile::State::Loading;
+                    resolveTileInput( tile, region );
+                }
+                else if ( tile._state == NavStreamTile::State::Loaded && bGeometryRefreshed && overlapsChangedCell( region ) )
+                {
+                    // 오르내린 셀이 이 타일 영역에 닿았다 — 입력이 바뀌었으면 다시 정한다(같으면 그대로 둔다).
+                    if ( runtime._pGeometry->computeRegionHash( region ) != tile._geometryHash )
+                        resolveTileInput( tile, region );
                 }
                 if ( tile._state != NavStreamTile::State::Loading )
                     continue;
@@ -892,6 +959,8 @@ namespace sw
                 }
             }
         }
+        if ( bChangeConsumed )
+            _streamingChangeSerial = changeSerial;
     }
 
     void SceneNavigation::flushTileBakes()
