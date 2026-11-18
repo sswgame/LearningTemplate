@@ -254,26 +254,6 @@ namespace sw
         return pEntry != nullptr ? pEntry->_state._currentPhase : ActionPhase::None;
     }
 
-    void InputMap::getDebugActionStates( vector<DebugActionState>& outListState ) const
-    {
-        outListState.clear();
-        outListState.reserve( _mapAction.size() );
-        for ( const auto& [actName, actIndex] : _mapAction )
-        {
-            const ActionEntry& entry = _listActionEntry[actIndex];
-            DebugActionState   state{};
-            state._action       = actName;
-            state._layer        = entry._definition._listBinding.empty() ? _defaultLayerName : entry._definition._listBinding[0]._layer;
-            state._valueType    = entry._definition._valueType;
-            state._phase        = entry._state._currentPhase;
-            state._value        = entry._state._currentValue;
-            state._holdDuration = entry._state._holdDuration;
-            state._bTriggered   = entry._state._bTriggered;
-            state._bDown        = entry._state._bDown;
-            outListState.push_back( state );
-        }
-    }
-
     void InputMap::update( float32 deltaSeconds )
     {
         _totalElapsedTime += deltaSeconds;
