@@ -26,8 +26,12 @@ namespace sw
             static constexpr uint32 kMagic = FourCCUtil::make( "SWNV" );
             /** @brief 씬 저작본(`.scene.xml`)과 쿠킹본(`.scene.bin`) 접미사입니다. 파일이 하나도 없던 맨 `.scene` 은 별칭이라 두지 않습니다. */
             static constexpr string_view kArrSceneSuffix[] = { ".scene.xml", ".scene.bin" };
-            /** @brief 타일 하나의 가장 작은 바이트 수입니다(x · z · 바이트 길이). 깨진 타일 수를 할당 전에 남은 바이트로 거른다. */
-            static constexpr size_t kMinTileBytes = sizeof( int32 ) * 2 + sizeof( uint32 );
+            /** @brief 머리의 타일 한 줄 바이트 수입니다(x · z · 내용 안 시작 · 길이). 깨진 타일 수를 할당 전에 남은 바이트로 거른다. */
+            static constexpr size_t kMinTileBytes = sizeof( int32 ) * 2 + sizeof( uint64 ) * 2;
+            /** @brief 고정 머리입니다(매직 · 판 · 머리 길이). 머리만 읽는 로더가 먼저 이만큼 읽는다. */
+            static constexpr size_t kFixedHeadBytes = sizeof( uint32 ) * 2 + sizeof( uint64 );
+            /** @brief 머리 길이 칸의 자리입니다(쓴 뒤 채운다). */
+            static constexpr size_t kHeadSizeOffset = sizeof( uint32 ) * 2;
             /** @brief 항목 하나의 최소 바이트입니다(종류 이름 길이 · 두 해시 · 경계 · 타일 수). */
             static constexpr size_t kMinEntryBytes = sizeof( uint32 ) + sizeof( uint64 ) * 2 + sizeof( AABB ) + sizeof( uint32 );
             /** @brief 타일 베이크 한 덩어리입니다. 워커는 자기 구간의 슬롯만 씁니다. */
@@ -58,6 +62,7 @@ namespace sw
 {
     NavMeshAsset::NavMeshAsset()
         : _listEntry{}
+        , _bHeadOnly{ SW_FALSE }
     {
     }
 
@@ -78,12 +83,20 @@ namespace sw
     void NavMeshAsset::writeBytes( vector<uint8>& outBytes ) const
     {
         outBytes.clear();
+        // 머리만 읽은 쿠킹본은 타일 바이트가 없다 — 쓰면 모든 타일이 "걸을 곳 없음" 이 된다.
+        if ( _bHeadOnly == SW_TRUE )
+        {
+            SW_LOG_ERROR_ID( "NavMeshAsset.HeadOnlyNotWritten", "A navmesh read head-only (tile bytes left in the cooked file) cannot be written" );
+            return;
+        }
         ByteWriter writer{ outBytes };
         writer.writePod( NavMeshAssetInternal::kMagic );
         writer.writePod( kVersion );
+        writer.writePod( uint64{ 0 } ); // 머리 길이 — 머리를 다 쓴 뒤 채운다
         writer.writeString( NavMeshBackend::getBackendName() );
         writer.writePod( NavMeshBackend::getBackendFormatVersion() );
         writer.writePod( static_cast<uint32>( _listEntry.size() ) );
+        uint64 contentOffset = 0;
         for ( const NavMeshAssetEntry& entry : _listEntry )
         {
             writer.writeString( entry._agentType.view() );
@@ -95,7 +108,18 @@ namespace sw
             {
                 writer.writePod( tile._tileX );
                 writer.writePod( tile._tileZ );
-                writer.writeByteVector( tile._bytes );
+                writer.writePod( contentOffset );
+                writer.writePod( static_cast<uint64>( tile._bytes.size() ) );
+                contentOffset += tile._bytes.size();
+            }
+        }
+        writer.writePodAt( NavMeshAssetInternal::kHeadSizeOffset, static_cast<uint64>( writer.getByteCount() ) );
+        // 머리 뒤에 타일 바이트를 머리의 순서대로 빈틈없이 잇는다.
+        for ( const NavMeshAssetEntry& entry : _listEntry )
+        {
+            for ( const NavTileData& tile : entry._listTile )
+            {
+                writer.writeBytes( tile._bytes.data(), tile._bytes.size() );
             }
         }
     }
@@ -103,14 +127,37 @@ namespace sw
     bool NavMeshAsset::readBytes( const uint8* pData, size_t size, string_view sourceLabel )
     {
         _listEntry.clear();
+        _bHeadOnly = SW_FALSE;
         ByteReader reader{ pData, size };
-        uint32     magic   = 0;
-        uint32     version = 0;
+        uint32     magic    = 0;
+        uint32     version  = 0;
+        uint64     headSize = 0;
+        const bool bFixed   = reader.readPod( magic ) && reader.readPod( version ) && reader.readPod( headSize );
+        if ( bFixed == false || magic != NavMeshAssetInternal::kMagic || version != kVersion )
+        {
+            SW_LOG_ERROR_ID( "NavMeshAsset.NotNavmeshFormat", "'%#' is not a navmesh of format %#", sourceLabel, kVersion );
+            return false;
+        }
+        if ( headSize < NavMeshAssetInternal::kFixedHeadBytes || headSize > size )
+        {
+            SW_LOG_ERROR_ID( "NavMeshAsset.Truncated", "'%#' is truncated, longer than its entries or holds non-finite bounds", sourceLabel );
+            return false;
+        }
+        return readHead( pData, static_cast<size_t>( headSize ), size - headSize, pData + headSize, sourceLabel );
+    }
+
+    bool NavMeshAsset::readHead( const uint8* pHead, size_t headSize, uint64 contentSize, const uint8* pContent, string_view sourceLabel )
+    {
+        _listEntry.clear();
+        ByteReader reader{ pHead, headSize };
+        uint32     magic         = 0;
+        uint32     version       = 0;
+        uint64     headSizeField = 0;
         string     backendName;
         uint32     backendVersion = 0;
         uint32     entryCount     = 0;
-        const bool bHeader        = reader.readPod( magic ) && reader.readPod( version ) && reader.readString( backendName ) && reader.readPod( backendVersion ) &&
-                             reader.readPod( entryCount );
+        const bool bHeader        = reader.readPod( magic ) && reader.readPod( version ) && reader.readPod( headSizeField ) && reader.readString( backendName ) &&
+                             reader.readPod( backendVersion ) && reader.readPod( entryCount );
         const bool bInvalidHeader = bHeader == false || magic != NavMeshAssetInternal::kMagic || version != kVersion;
         if ( bInvalidHeader )
         {
@@ -124,8 +171,9 @@ namespace sw
                              NavMeshBackend::getBackendName(), NavMeshBackend::getBackendFormatVersion() );
             return false;
         }
-        const bool bEntriesRead = reader.readList( _listEntry, entryCount, NavMeshAssetInternal::kMinEntryBytes, [&]( NavMeshAssetEntry& entry ) -> bool
-        {
+        uint64     nextContentOffset = 0;
+        const bool bEntriesRead      = reader.readList( _listEntry, entryCount, NavMeshAssetInternal::kMinEntryBytes, [&]( NavMeshAssetEntry& entry ) -> bool
+             {
             string     agentType;
             uint32     tileCount = 0;
             const bool bHead     = reader.readString( agentType ) && reader.readPod( entry._settingsHash ) && reader.readPod( entry._inputHash ) && reader.readPod( entry._bounds ) && reader.readPod( tileCount );
@@ -135,12 +183,23 @@ namespace sw
             if ( bHead == false || bFiniteBounds == false )
                 return false;
             entry._agentType = hashed_string( agentType );
+            entry._listTileRange.clear();
             return reader.readList( entry._listTile, tileCount, NavMeshAssetInternal::kMinTileBytes, [&]( NavTileData& tile ) -> bool
-            {
-                return reader.readPod( tile._tileX ) && reader.readPod( tile._tileZ ) && reader.readByteVector( tile._bytes );
+                 {
+                NavTileRange range{};
+                const bool   bTile = reader.readPod( tile._tileX ) && reader.readPod( tile._tileZ ) && reader.readPod( range._offset ) && reader.readPod( range._size );
+                // 타일 바이트는 머리의 순서대로 빈틈없이 놓인다 — 그 밖의 구간(겹침 · 틈 · 내용 밖)은 깨진 파일이다.
+                if ( bTile == false || range._offset != nextContentOffset || range._size > contentSize - nextContentOffset )
+                    return false;
+                if ( pContent != nullptr )
+                    tile._bytes.assign( pContent + range._offset, pContent + range._offset + range._size );
+                nextContentOffset += range._size;
+                range._offset += headSize; // 파일 처음에서 센 자리로 둔다
+                entry._listTileRange.push_back( range );
+                return true;
             } );
         } );
-        if ( bEntriesRead == false || reader.isFullyRead() == false )
+        if ( bEntriesRead == false || reader.isFullyRead() == false || nextContentOffset != contentSize || headSizeField != headSize )
         {
             SW_LOG_ERROR_ID( "NavMeshAsset.Truncated", "'%#' is truncated, longer than its entries or holds non-finite bounds", sourceLabel );
             _listEntry.clear();
@@ -156,6 +215,39 @@ namespace sw
         if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
             return false;
         return readBytes( bytes.data(), bytes.size(), assetPath );
+    }
+
+    bool NavMeshAsset::loadHeadFromAsset( const AssetID& assetID )
+    {
+        _listEntry.clear();
+        _bHeadOnly                      = SW_FALSE;
+        const string_view      label    = assetID.view();
+        const optional<uint64> fileSize = AssetIO::findAssetSize( assetID );
+        vector<uint8>          fixedHead;
+        if ( fileSize.has_value() == false || AssetIO::readBinaryAssetRange( assetID, 0, NavMeshAssetInternal::kFixedHeadBytes, fixedHead ) == false )
+        {
+            SW_LOG_ERROR_ID( "NavMeshAsset.NotNavmeshFormat", "'%#' is not a navmesh of format %#", label, kVersion );
+            return false;
+        }
+        ByteReader reader{ fixedHead.data(), fixedHead.size() };
+        uint32     magic    = 0;
+        uint32     version  = 0;
+        uint64     headSize = 0;
+        const bool bFixed   = reader.readPod( magic ) && reader.readPod( version ) && reader.readPod( headSize );
+        if ( bFixed == false || magic != NavMeshAssetInternal::kMagic || version != kVersion )
+        {
+            SW_LOG_ERROR_ID( "NavMeshAsset.NotNavmeshFormat", "'%#' is not a navmesh of format %#", label, kVersion );
+            return false;
+        }
+        vector<uint8> head;
+        const bool    bHeadRead = headSize >= NavMeshAssetInternal::kFixedHeadBytes && headSize <= *fileSize && AssetIO::readBinaryAssetRange( assetID, 0, headSize, head );
+        if ( bHeadRead == false || readHead( head.data(), head.size(), *fileSize - headSize, nullptr, label ) == false )
+        {
+            SW_LOG_ERROR_ID( "NavMeshAsset.Truncated", "'%#' is truncated, longer than its entries or holds non-finite bounds", label );
+            return false;
+        }
+        _bHeadOnly = SW_TRUE;
+        return true;
     }
 
     bool NavMeshAsset::saveToFile( const AbsolutePath& absPath ) const

@@ -290,6 +290,12 @@ namespace sw
         bool installCooked( NavMeshRuntime& runtime, const NavAgentTypeDef& agentType, uint64 inputHash );
         /** @brief 알린 영역을 재베이크 줄로 바꿉니다(`NavTileRebaker::processDirtyAreas` 에 이 씬의 입력을 넘긴다). 갱신은 `Defer`, 그 자리에서 끝내는 `flushTileBakes` 는 `Wait` 다. */
         void processDirtyAreas( NavMeshArrival arrival );
+        /**
+         * @brief 스트리밍 씬의 쿠킹본 타일을 씬 셀과 같은 원점 · 반경(`SceneStreamingSubsystem`)으로 올리고 내립니다 — Recast/Detour 의 타일 단위 `addTile` · `removeTile`(`replaceTile`).
+         * @details 멀어진 타일은 빼고(군중 · 경로 질의는 빠진 타일을 기존 "경로 없음" 으로 받는다), 다가온 타일은 구간을 비동기로 읽어 다음 갱신 이후에 끼운다. 끼운 타일에 장애물이 닿으면 재베이크 줄에 넣는다.
+         *          타일을 바꾸므로 쓰기 증표가 있는 자리에서만 부른다. 결정적 실행은 읽기를 그 자리에서 기다린다.
+         */
+        void updateTileStreaming( const NavMeshWriteAccess& access );
         /** @brief 내비메시를 읽는 워커가 없게 합니다 — 군중 진행을 기다리고 경로 질의를 수확한다(결과가 칸에 든다). 그 증표로 타일을 바꾼다. 게임 스레드에서만 부릅니다. */
         [[nodiscard]] NavMeshWriteAccess completeNavMeshReads();
         /** @brief ④ — 에이전트 요청 · 자리를 군중에 넣습니다(게임 스레드). */

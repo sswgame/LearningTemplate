@@ -106,6 +106,12 @@ namespace sw
         bool isCellLoaded( const StreamingCellCoord& cell ) const;
         /** @brief 받은 격자입니다. `isStreaming` 이 false 이면 쓰지 않습니다. */
         const StreamingCellGrid& getGrid() const { return _grid; }
+        /** @brief 지금 원점 목록입니다(바깥 원점 또는 카메라 원점 하나). 같은 반경으로 따라 올리는 것(내비메시 타일 — `SceneNavigation`)도 이것을 본다. */
+        span<const float3> getActiveSources() const;
+        /** @brief 이 거리 안에 닿는 것을 올립니다(월드 설정의 로딩 반경). `isStreaming` 이 false 이면 쓰지 않습니다. */
+        float32 getLoadingRadius() const { return _settings._cellGrid._loadingRadius; }
+        /** @brief 모든 원점에서 이 거리보다 멀면 내립니다(로딩 반경 + 여유 — 경계에서 번갈지 않게). */
+        float32 getUnloadRadius() const { return _settings._cellGrid._loadingRadius + _settings._unloadMargin; }
 
     private:
         /** @brief 셀 하나의 단계입니다(언리얼 World Partition 셀의 Unloaded → Loading → Loaded → Activated 자리). */
@@ -140,8 +146,6 @@ namespace sw
 
         /** @brief 셀 좌표의 표 키입니다. */
         static uint64 makeCellKey( const StreamingCellCoord& cell );
-        /** @brief 지금 원점 목록입니다(바깥 원점 또는 카메라 원점 하나). */
-        span<const float3> getActiveSources() const;
         /** @brief 원점들 중 가장 가까운 것까지 셀 @p cell 의 거리 제곱입니다. 원점이 없으면 가장 큰 값입니다. */
         float32 computeNearestSourceDistanceSquared( const StreamingCellCoord& cell ) const;
         /** @brief 셀 내용의 비동기 읽기를 겁니다(`Unloaded` → `Loading`). 걸지 못하면 오류를 남기고 `Failed` 입니다. */
