@@ -38,8 +38,14 @@ namespace sw
         static_assert( std::size( AssetLoadProfilerInternal::kArrPhaseName ) == static_cast<size_t>( AssetLoadPhase::Count ) );
     } // namespace
 
-    /** @brief `-gv_assetLoadProfile=0` — 에셋 로드 기록을 끕니다(기본 켬, 로드마다 시계 몇 번이라 싸다). */
-    SW_GLOBAL_VARIABLE( int32, gv_assetLoadProfile, 1, "에셋 로드 시간 · 바이트 기록 (0=끄기)" );
+    namespace
+    {
+        /**
+         * @brief `-gv_assetLoadProfile=0` — 에셋 로드 기록을 끕니다(기본 켬, 로드마다 시계 몇 번이라 싸다).
+         * @details 익명 이름공간이다 — 로드 워커 · 렌더 스레드(업로드 구간)는 이 변수를 보지 못하고 게임 스레드가 뜬 사본(`AssetLoadProfiler::_bEnabled`)만 읽는다.
+         */
+        SW_GLOBAL_VARIABLE( int32, gv_assetLoadProfile, 1, "에셋 로드 시간 · 바이트 기록 (0=끄기)" );
+    } // namespace
 } // namespace sw
 
 namespace sw
@@ -59,17 +65,33 @@ namespace sw
         , _listKind{}
         , _listSlowest{}
         , _loadCount{ 0 }
+        , _bEnabled{ SW_TRUE }
     {
+    }
+
+    SubsystemInitResult AssetLoadProfiler::initializeSubsystem()
+    {
+        refreshEnabled(); // 명령줄(`-gv_assetLoadProfile`)은 코어 범위가 이미 적용했다 — 이 서비스는 그 뒤에 선다
+        return SubsystemInitResult::Succeeded;
     }
 
     bool AssetLoadProfiler::isEnabled() const
     {
-        return gv_assetLoadProfile != 0;
+        return _bEnabled.load( std::memory_order_relaxed ) != SW_FALSE;
     }
 
     void AssetLoadProfiler::setEnabled( bool bEnabled )
     {
         gv_assetLoadProfile = bEnabled ? 1 : 0;
+        refreshEnabled();
+    }
+
+    void AssetLoadProfiler::refreshEnabled()
+    {
+        // 변수는 게임 스레드(콘솔 · 명령줄 · 이 서비스)만 쓰고 읽는다 — 다른 스레드의 `submit` 은 이 사본을 본다.
+        if ( engine::areEngineServicesBound() )
+            engine::getSubsystem<TaskManager>().ensureMainThread();
+        _bEnabled.store( gv_assetLoadProfile != 0 ? SW_TRUE : SW_FALSE, std::memory_order_relaxed );
     }
 
     void AssetLoadProfiler::submit( const AssetLoadRecord& record )

@@ -23,6 +23,7 @@
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/VertexAnimationCookList.h"
+#include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Config/ConfigManager.h"
@@ -439,6 +440,9 @@ namespace sw
 
     void Engine::updateFrameServices()
     {
+        // 다른 스레드가 읽는 개발 변수의 사본을 게임 스레드에서 다시 뜬다(콘솔이 바꾼 값이 이번 프레임의 로드 기록부터 든다).
+        if ( AssetLoadProfiler* const pLoadProfiler = engine::findSubsystem<AssetLoadProfiler>() )
+            pLoadProfiler->refreshEnabled();
         // 글리프 캐시의 프레임 시계 — 래스터화 예산이 프레임마다 되살아나는 유일한 길이다(프로파일러 프레임 수는 꺼지면 늘 0 이다).
         if ( _pFontService != nullptr && _pFontService->isInitialized() )
             _pFontService->getGlyphCache().beginFrame();
