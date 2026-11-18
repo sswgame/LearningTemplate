@@ -216,7 +216,6 @@ SW_TEST_CASE( MetroidvaniaAbilitySetTest, SettingsDoNotDependOnGrantOrder )
 {
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kLoadoutXML, "MetroidvaniaAbilitySetTest" ) );
-    const sw::PlatformerSettings& base = catalog.getBaseMotor();
 
     sw::GameFlags              flagsA;
     sw::MetroidvaniaAbilitySet curseFirst;

@@ -39,6 +39,6 @@ namespace sw
     private:
         float32 _timeScale;
         uint8   _bPaused  : 1;
-        uint8   _reserved : 7;
+        [[maybe_unused]] uint8 _reserved : 7;
     };
 } // namespace sw

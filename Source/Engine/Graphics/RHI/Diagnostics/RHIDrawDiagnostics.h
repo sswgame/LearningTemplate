@@ -43,6 +43,8 @@ namespace sw
         void reportDrawWithoutRenderPass() const;
         /** @brief 렌더 스레드가 렌더 패스를 연 채로 버퍼를 갱신했음을 알립니다(`IRHIDevice::requireNoOpenRenderPassForUpload` — 업로드는 그리기 기록 전에). */
         void reportBufferUpdateInsideRenderPass( const utf8* pWhat ) const;
+        /** @brief 패스 밖의 일(@p pOperation — 전이 · 복사 · 디스패치 · 새 패스 열기)이 열린 렌더 패스를 닫았음을 알립니다(`IRHICommandContext::endRenderPassBefore`). 그 패스의 남은 드로우는 빠진다. */
+        void reportRenderPassInterrupted( const utf8* pOperation ) const;
         /** @brief 기록 경로가 이번 프레임에 이미 쓴 상수 버퍼를 다시 썼음을 알립니다(앞 드로우도 마지막 값을 읽는다 — 드로우마다 다른 값이면 버퍼를 나눈다, `PassConstantRing`). */
         void reportConstantBufferRewrite( RHIBufferHandle handle ) const;
         /** @brief 인덱스 드로우에 인덱스 버퍼를 걸지 않아 그 드로우를 버렸음을 알립니다(네 백엔드가 같다 — 앞 드로우의 인덱스 버퍼로 그리지 않는다). */

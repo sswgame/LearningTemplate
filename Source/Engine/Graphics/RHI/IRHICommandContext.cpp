@@ -15,7 +15,7 @@ namespace sw
 
     void IRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
     {
-        endRenderPass(); // 패스는 겹치지 않는다
+        endRenderPassBefore( "beginRenderPass" ); // 패스는 겹치지 않는다 — 닫지 않고 새로 열면 알린다
         const RHIRenderPassBeginResult result = beginRenderPassNative( beginInfo );
         _bRenderPassOpen                      = result == RHIRenderPassBeginResult::Begun;
         _bRenderPassNoBackBuffer              = result == RHIRenderPassBeginResult::NoBackBuffer;
@@ -34,6 +34,15 @@ namespace sw
             return;
         endRenderPassNative();
         _bRenderPassOpen = SW_FALSE;
+    }
+
+    void IRHICommandContext::endRenderPassBefore( const utf8* pOperation )
+    {
+        if ( _bRenderPassOpen == false )
+            return;
+        // 패스 밖의 일이 열린 패스를 닫으면 그 패스의 남은 드로우가 모두 빠진다(G버퍼가 패스를 연 뒤 입력을 걸어 장면이 사라졌다 — 132dd00f8e). 언리얼 RHI 검증처럼 그 자리에서 알리고 닫기는 그대로 한다.
+        getContextDevice().getDrawDiagnostics().reportRenderPassInterrupted( pOperation );
+        endRenderPass();
     }
 
     bool IRHICommandContext::isDrawAllowed() const
@@ -77,37 +86,37 @@ namespace sw
 
     void IRHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
     {
-        endRenderPass();
+        endRenderPassBefore( "setComputePipelineState" );
         setComputePipelineStateNative( pso );
     }
 
     void IRHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
-        endRenderPass();
+        endRenderPassBefore( "dispatchCompute" );
         dispatchComputeNative( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
     }
 
     void IRHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
-        endRenderPass();
+        endRenderPassBefore( "dispatchIndirect" );
         dispatchIndirectNative( argumentBuffer, argumentBufferOffset );
     }
 
     void IRHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
     {
-        endRenderPass();
+        endRenderPassBefore( "prepareTextureForShaderRead" );
         prepareTextureForShaderReadNative( texture );
     }
 
     void IRHICommandContext::prepareTextureForRenderTarget( RHITextureHandle texture )
     {
-        endRenderPass();
+        endRenderPassBefore( "prepareTextureForRenderTarget" );
         prepareTextureForRenderTargetNative( texture );
     }
 
     void IRHICommandContext::prepareTextureForUnorderedAccess( RHITextureHandle texture )
     {
-        endRenderPass();
+        endRenderPassBefore( "prepareTextureForUnorderedAccess" );
         prepareTextureForUnorderedAccessNative( texture );
     }
 
@@ -115,7 +124,7 @@ namespace sw
     {
         if ( pTransition == nullptr || count == 0 )
             return;
-        endRenderPass();
+        endRenderPassBefore( "transitionTextures" );
         transitionTexturesNative( pTransition, count );
     }
 
@@ -141,13 +150,13 @@ namespace sw
 
     void IRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
-        endRenderPass();
+        endRenderPassBefore( "blitTexture" );
         blitTextureNative( src, dst );
     }
 
     void IRHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
     {
-        endRenderPass();
+        endRenderPassBefore( "transitionBuffer" );
         transitionBufferNative( buffer, newState );
     }
 
@@ -155,7 +164,7 @@ namespace sw
     {
         if ( pTransition == nullptr || count == 0 )
             return;
-        endRenderPass();
+        endRenderPassBefore( "transitionBuffers" );
         transitionBuffersNative( pTransition, count );
     }
 
@@ -169,7 +178,7 @@ namespace sw
 
     void IRHICommandContext::copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
     {
-        endRenderPass();
+        endRenderPassBefore( "copyBufferToReadback" );
         copyBufferToReadbackNative( source, readback, sizeBytes );
     }
 
@@ -178,13 +187,13 @@ namespace sw
         // 빈 복사 · 같은 버퍼(겹칠 수 있다 — DX12 · Vulkan 은 미정의)는 기록하지 않는다. 범위 검사는 백엔드가 버퍼 크기를 아는 곳에서 한다.
         if ( sizeBytes == 0 || destination == 0 || source == 0 || destination == source )
             return;
-        endRenderPass();
+        endRenderPassBefore( "copyBufferRegion" );
         copyBufferRegionNative( destination, destinationOffset, source, sourceOffset, sizeBytes );
     }
 
     void IRHICommandContext::uavBarrier( RHIBufferHandle buffer )
     {
-        endRenderPass();
+        endRenderPassBefore( "uavBarrier" );
         uavBarrierNative( buffer );
     }
 } // namespace sw

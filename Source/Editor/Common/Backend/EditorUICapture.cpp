@@ -297,10 +297,10 @@ namespace sw::editor
         capturePass._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
         pStream->beginRenderPass( capturePass );
         renderer.render( device, drawData, job._listExcludedTexture ); // 개발 겹치기 텍스처(게임 뷰 위 디버그 HUD)는 다시 그리지 않는다
-        pStream->prepareTextureForShaderRead( _texture );
         // 연 패스는 이 함수 안에서 닫는다. OpenGL 은 패스를 닫아야 기본 프레임버퍼가 다시 묶이는데, 닫지 않으면 이 뒤에 패스 없이 직접 그리는 코드(렌더 스레드가 그리는 플로팅 뷰포트 창)가
-        // 캡처 텍스처에 그려 플로팅 창이 캡처에 두 번 나오고 제 창에는 그려지지 않는다. Vulkan · DX12 · DX11 은 이미 닫혔거나 상태만 비우는 호출이다.
+        // 캡처 텍스처에 그려 플로팅 창이 캡처에 두 번 나오고 제 창에는 그려지지 않는다. 읽기 전이는 패스 밖의 일이라 닫은 뒤에 낸다(열린 채로 내면 RHI.RenderPassInterrupted).
         pStream->endRenderPass();
+        pStream->prepareTextureForShaderRead( _texture );
 
         _renderedJob = job;
         _bRendered   = SW_TRUE;

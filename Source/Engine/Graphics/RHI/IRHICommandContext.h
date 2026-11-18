@@ -23,7 +23,8 @@ namespace sw
      * @details 규칙(언리얼 RHI 의 렌더 패스 · Vulkan 과 같은 모양):
      *          - 패스는 겹치지 않는다. `beginRenderPass` 는 열린 패스를 먼저 닫는다.
      *          - **패스 밖의 일**(텍스처 · 버퍼 상태 전이, 블릿, 되읽기 복사, UAV 배리어, 컴퓨트 PSO · 디스패치)은 열린 패스를 먼저 닫는다 — Vulkan · D3D12 네이티브
-     *            패스는 그 안에 배리어 · 복사 · 디스패치를 기록할 수 없다.
+     *            패스는 그 안에 배리어 · 복사 · 디스패치를 기록할 수 없다. 열린 패스를 이렇게 닫으면 그 패스의 남은 드로우가 빠지므로 알린다
+     *            (`RHI.RenderPassInterrupted`, 언리얼 RHI 검증과 같다). 부르는 쪽은 `endRenderPass` 를 먼저 부르거나 입력을 패스 전에 건다.
      *          - **드로우는 열린 패스 안에서만** 나간다. 패스가 없으면 알리고 버린다(`RHI.DrawSkippedNoRenderPass`). 백버퍼가 없던 패스(`RHIRenderPassBeginResult::NoBackBuffer`)만
      *            조용히 버린다.
      *          예전에는 백엔드마다 따로 지켜, Vulkan 만 패스 안의 업로드가 패스를 닫고 그 뒤 드로우를 조용히 버렸고(에디터 UI 가 화면에서 사라졌다) DX11 · DX12 · GL 은
@@ -114,6 +115,8 @@ namespace sw
         virtual void updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
 
     private:
+        /** @brief 패스 밖의 일 @p pOperation 앞에서 열린 패스를 닫습니다. 열려 있었으면 알린다(`RHIDrawDiagnostics::reportRenderPassInterrupted`) — 닫기는 그대로 한다. */
+        void endRenderPassBefore( const utf8* pOperation );
         /** @brief 드로우를 내도 되는지 봅니다. 패스가 없으면 백버퍼가 없던 패스면 조용히, 아니면 알리고 false 입니다. */
         [[nodiscard]] bool isDrawAllowed() const;
 

@@ -310,7 +310,7 @@ namespace sw::editor
         if ( _listNode[arrayNode]._listChild.empty() )
         {
             item = static_cast<uint32>( _listNode.size() );
-            _listNode.push_back( ProjectSettingsJSONNode{ JSONType::String, {}, {}, {} } );
+            _listNode.push_back( ProjectSettingsJSONNode::makeAdded( JSONType::String, string{} ) );
         }
         else
         {
@@ -331,7 +331,7 @@ namespace sw::editor
         }
         recordEdit();
         const uint32 member = static_cast<uint32>( _listNode.size() );
-        _listNode.push_back( ProjectSettingsJSONNode{ JSONType::String, string( key ), {}, {} } );
+        _listNode.push_back( ProjectSettingsJSONNode::makeAdded( JSONType::String, string( key ) ) );
         _listNode[objectNode]._listChild.push_back( member );
         return true;
     }
@@ -355,7 +355,7 @@ namespace sw::editor
     uint32 ProjectSettingsJSONDocument::appendNode( const JSONValue& value, string_view key )
     {
         const uint32 node = static_cast<uint32>( _listNode.size() );
-        _listNode.push_back( ProjectSettingsJSONNode{ value.getType(), string( key ), {}, {} } );
+        _listNode.push_back( ProjectSettingsJSONNode::makeAdded( value.getType(), string( key ) ) );
         switch ( value.getType() )
         {
             case JSONType::Null:
@@ -550,7 +550,7 @@ namespace sw::editor
     {
         const ProjectSettingsJSONNode sample = _listNode[sampleNode]; // 복사 — 아래 push_back 이 배열을 옮긴다
         const uint32                  node   = static_cast<uint32>( _listNode.size() );
-        _listNode.push_back( ProjectSettingsJSONNode{ sample._type, string( key ), {}, {} } );
+        _listNode.push_back( ProjectSettingsJSONNode::makeAdded( sample._type, string( key ) ) );
         switch ( sample._type )
         {
             case JSONType::Number:
