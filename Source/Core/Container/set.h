@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Container/SortedVectorMerge.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -242,16 +243,19 @@ namespace sw
 
         iterator insert( [[maybe_unused]] const_iterator hint, value_type&& value ) { return insert( std::move( value ) ).first; }
 
+        /**
+         * @brief [first, last) 를 넣습니다. 이미 있거나 범위 안에서 겹치면 먼저 온 것(있던 원소, 그다음 입력 순서) 하나만 남습니다.
+         * @details 꼬리에 붙여 안정 정렬하고 겹친 값을 걸러 한 번 병합한다(`internal::mergeAppendedRange`) — O(n log n)(감사 C-9: 원소마다 정렬 위치에 끼우면 O(n²)였다. `map` 과 같은 모양).
+         */
         template <class InputIt>
         void insert( InputIt first, InputIt last )
         {
             SW_SCOPED_RACE_WRITE();
+            const size_t oldSize = _data.size();
             for ( ; first != last; ++first )
-            {
-                auto it = std::lower_bound( _data.begin(), _data.end(), *first, _comp );
-                if ( it == _data.end() || _comp( *first, *it ) )
-                    _data.insert( it, *first );
-            }
+                _data.emplace_back( *first );
+
+            internal::mergeAppendedRange( _data, oldSize, _comp );
         }
 
         void insert( std::initializer_list<value_type> ilist ) { insert( ilist.begin(), ilist.end() ); }
