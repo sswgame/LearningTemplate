@@ -182,6 +182,8 @@ namespace sw
                     case RenderPassType::DepthOfField:
                         return settings._depthOfField.hasDepthOfField() && settings._projectionScaleY > 0.0f; // 핀홀(조리개 0) · 직교는 꺼짐
                     case RenderPassType::MotionBlur:
+                    case RenderPassType::MotionBlurTileMax:
+                    case RenderPassType::MotionBlurNeighborMax:
                         return static_cast<bool>( gv_motionBlur ) && bMotionStill == false;
                     case RenderPassType::ContactShadow:
                         return sceneState._bContactShadows == SW_TRUE; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다

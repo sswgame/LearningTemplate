@@ -386,7 +386,7 @@ namespace sw
             /**
              * @brief 셰이더 단계 하나가 선언해도 되는 샘플 텍스처 수 — 장치가 어댑터에 요구하는 maxSampledTexturesPerShaderStage 의 하한입니다.
              * @details 값은 Config/Engine/CookContract.json 의 WebGPU stage_texture_unit_limit 하나다(WebGPU 명세의 기본 한도 16 — 모든 어댑터가 준다).
-             *          칸 에뮬 전체(머티리얼 16 + 엔진 21)는 이보다 커서 셰이더가 쓰는 칸만 남는 것이 전제다 — 쿠킹의 계약 검사가 넘는 바이너리를
+             *          칸 에뮬 전체(머티리얼 16 + 엔진 22)는 이보다 커서 셰이더가 쓰는 칸만 남는 것이 전제다 — 쿠킹의 계약 검사가 넘는 바이너리를
              *          오류로 멈추고(ShaderBindingValidatorIssue), 장치 생성이 한도가 이보다 작은 어댑터를 거절한다(WebGPURHIDevice). GL 의 kFragmentTextureUnitBudget 과 같은 모양이다.
              */
 #if !defined( SW_STAGE_TEXTURE_UNIT_LIMIT_WGSL_WebGPU )
@@ -464,8 +464,8 @@ namespace sw
         static_assert( kInstanceBuffer == 4, "t0..t3 은 비어 있고 띠는 인스턴스 버퍼 t4 부터다 — 띠를 내리면 DX12 테이블 · Vulkan 범위 · GL SSBO 번호가 함께 움직인다" );
         static_assert( kEngineTexture0 >= kMaterialTexture0 + kMaterialTextureCount && kEngineTexture0 >= vk::kRangeSize,
                        "엔진 텍스처 칸(에뮬)은 t 띠 · 머티리얼 칸 위다 — DX11 SRV 128 칸 안이고, GL 은 유닛을 칸 번호로 옮긴다" );
-        static_assert( SW_SLOT_ENGINE_TEX20 == SW_SLOT_ENGINE_TEX0 + 20 && kEngineTextureCount == 21 && kEngineTexture0 + kEngineTextureCount <= gl::kTextureUnitLimit,
-                       "엔진 텍스처 칸은 연속 21 칸이다. GL 텍스처 유닛은 머티리얼 칸처럼 레지스터 번호 그대로(t32..)라 GL 백엔드가 유닛 64 개 안에서 묶는다 (binding.hlsli 의 선언과 같다)" );
+        static_assert( SW_SLOT_ENGINE_TEX21 == SW_SLOT_ENGINE_TEX0 + 21 && kEngineTextureCount == 22 && kEngineTexture0 + kEngineTextureCount <= gl::kTextureUnitLimit,
+                       "엔진 텍스처 칸은 연속 22 칸이다. GL 텍스처 유닛은 머티리얼 칸처럼 레지스터 번호 그대로(t32..)라 GL 백엔드가 유닛 64 개 안에서 묶는다 (binding.hlsli 의 선언과 같다)" );
         static_assert( kMaterialBuffer == kInstanceBuffer + 1, "머티리얼 데이터 버퍼는 인스턴스 버퍼 바로 다음이어야 한다" );
         static_assert( kMaterialTexture0 == vk::kRangeSize && kSRVSlotCount <= kMaterialTexture0,
                        "머티리얼 텍스처 슬롯(에뮬)은 Vulkan t 밴드 바로 뒤에 둔다 — DX12 테이블 · Vulkan t 밴드 밖이고 SRV 띠가 자라도 겹치지 않는다" );
@@ -534,6 +534,7 @@ namespace sw
                 "SurfaceDeform",        ///< 표면 변형 층의 높이 텍스처(SurfaceDeformSystem, 창은 g_SurfaceDeformParams) — 씬 지오메트리 패스에, 찍은 적이 있는 씬만. 정점 단계가 읽는다
                 "LocalShadowMap",       ///< 점광 · 스폿 그림자 아틀라스(방향광 ShadowMap 과 다른 텍스처 — 감사 RN-4). 그림자 캐시 복원 드로우 동안은 캐시 층
                 "ColorGradingLUTBlend", ///< 겹친 볼륨이 섞는 둘째 컬러 그레이딩 LUT(PostProcessValues::_colorGradingLUTBlend) — 톤맵하는 패스에, 두 LUT 가 다 읽힌 뷰만
+                "VelocityNeighborMax",  ///< 모션 블러 이웃 최대 속도(MotionBlurNeighborMax 출력, 16² 픽셀 타일) — 모션 블러가 선언했을 때만
             };
             static_assert( sizeof( kEngineTextureNames ) / sizeof( kEngineTextureNames[0] ) == kEngineTextureCount, "엔진 텍스처 칸 표와 칸 수(SW_ENGINE_TEXTURE_COUNT)가 다르다" );
 

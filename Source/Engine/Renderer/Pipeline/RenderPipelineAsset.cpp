@@ -139,7 +139,7 @@ namespace sw
                     }
                     if ( isSupportedResolutionDivisor( attachment._resolutionDivisor ) == false )
                     {
-                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentResolutionDivisorOnlyAccepted", "[%#] attachment '%#': _resolutionDivisor %# - only 1, 2 and 4 are accepted", sourcePath, attachment._name, attachment._resolutionDivisor );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentResolutionDivisorOnlyAccepted", "[%#] attachment '%#': _resolutionDivisor %# - only 1, 2, 4, 8 and 16 are accepted", sourcePath, attachment._name, attachment._resolutionDivisor );
                         ++issueCount;
                     }
                     // 역할 선언은 아는 글이어야 한다. 모르는 글을 조용히 이름 · 포맷 규칙으로 넘기면 선언한 사람이 왜 안 걸리는지 모른다.

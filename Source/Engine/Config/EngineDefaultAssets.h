@@ -209,6 +209,10 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderMotionBlur; ///< 카메라 모션 블러(지난 프레임 뷰-투영으로 구한 화면 속도)
         PROPERTY( Required )
+        DataPath _shaderMotionBlurTileMax; ///< 모션 블러 타일 최대 속도(16² 픽셀 타일)
+        PROPERTY( Required )
+        DataPath _shaderMotionBlurNeighborMax; ///< 모션 블러 이웃 최대 속도(타일 3x3)
+        PROPERTY( Required )
         DataPath _shaderTonemap; ///< 톤 매핑
         PROPERTY( Required )
         DataPath _shaderDepthOfField; ///< 피사계 심도 — 장면 깊이에서 착란원을 구해 HDR 색을 흐린다

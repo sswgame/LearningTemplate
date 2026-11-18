@@ -1144,6 +1144,8 @@ namespace sw
                 return names._contactShadow;
             case RenderPassInputRole::GBufferCustomData:
                 return names._gbufferCustomData;
+            case RenderPassInputRole::VelocityNeighborMax:
+                return names._velocityNeighborMax;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;

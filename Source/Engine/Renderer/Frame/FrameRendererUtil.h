@@ -555,6 +555,8 @@ namespace sw
         hashed_string _sceneDepthCopy{ "SceneDepthCopy" };
         /// 화면 속도(SceneVelocity — 불투명 지오메트리 패스의 출력) — TAA · 모션 블러가 선언한 입력을 역할로 건다(`g_VelocityIndex`).
         hashed_string _velocity{ "Velocity" };
+        /// 모션 블러 이웃 최대 속도(MotionBlurNeighborMax 출력) — 모션 블러가 `g_VelocityNeighborMaxIndex` 로 읽는다.
+        hashed_string _velocityNeighborMax{ "VelocityNeighborMax" };
         /// 화면 왜곡 오프셋(SceneDistortion — 왜곡 누적 패스의 출력) — 왜곡 적용 패스가 선언한 입력을 역할로 건다(`g_DistortionIndex`).
         hashed_string _distortion{ "Distortion" };
         /// 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷) — 조명 · 포워드 불투명 패스가 선언한 입력을 역할로 건다(`g_ContactShadowIndex`).

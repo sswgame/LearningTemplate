@@ -342,6 +342,8 @@ namespace sw
                 case RenderPassType::Tonemap:
                 case RenderPassType::DepthOfField:
                 case RenderPassType::MotionBlur:
+                case RenderPassType::MotionBlurTileMax:
+                case RenderPassType::MotionBlurNeighborMax:
                 case RenderPassType::SceneDepthCopy:
                 case RenderPassType::ForwardOpaqueNoDepthWrite:
                 case RenderPassType::GPUCull:
