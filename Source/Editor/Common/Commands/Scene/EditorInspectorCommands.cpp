@@ -101,10 +101,11 @@ namespace sw::editor
                 if ( bNoNewBase )
                     return false;
                 // 덮어쓴 것은 옛 원형과 비교해 뽑는다. 새 원형과 비교하면 프리팹에서 바뀐 칸이 모두 "인스턴스가 덮어쓴 값" 으로 보여 퍼지지 않는다.
-                const string instanceState = ObjectStateSerializer::saveToXMLString( pInstance, ObjectSaveOptions{ SerializePurpose::Authoring } );
-                string       overrideXML;
-                string       newInstanceState;
-                if ( const expected<void> overrides = PrefabOverrides::computeOverrides( instanceState, oldBaseStateXML, overrideXML ); overrides.has_value() == false )
+                const expected<string> instanceState = ObjectStateSerializer::saveToXMLString( pInstance, ObjectSaveOptions{ SerializePurpose::Authoring } );
+                string                 overrideXML;
+                string                 newInstanceState;
+                const expected<void>   overrides = instanceState.has_value() ? PrefabOverrides::computeOverrides( *instanceState, oldBaseStateXML, overrideXML ) : expected<void>{ unexpected( instanceState.error() ) };
+                if ( overrides.has_value() == false )
                 {
                     SW_LOG_WARNING_ID( "EditorInspectorCommands.PrefabInstanceCouldNot", "Prefab instance '%#' could not be refreshed: %# (%#)", pInstance->getName().c_str(), overrides.error().message(),
                                        overrides.error().detail() );

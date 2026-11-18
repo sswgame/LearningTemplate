@@ -30,7 +30,9 @@ SW_TEST_CASE( ObjectStateHierarchyTest, ReloadingTheParentKeepsTheChildLocal )
     SW_REQUIRE_TRUE( pChild->attachToParent( pParent ) );
     SW_REQUIRE_TRUE( pChildScene->getLocalPosition() == float3( 0.0f, 0.0f, 0.0f ) );
 
-    const string before = ObjectStateSerializer::saveToXMLString( pParent, ObjectSaveOptions{ SerializePurpose::Authoring } );
+    const expected<string> beforeState = ObjectStateSerializer::saveToXMLString( pParent, ObjectSaveOptions{ SerializePurpose::Authoring } );
+    SW_REQUIRE_TRUE( beforeState.has_value() );
+    const string before = *beforeState;
     pParentScene->setWorldPosition( float3{ 0.0f, 2.0f, 0.0f } ); // 옮기기 — 자식은 로컬 그대로 따라간다(월드와 로컬이 달라야 월드 유지 분리를 잡는다)
     SW_REQUIRE_TRUE( pChildScene->getLocalPosition() == float3( 0.0f, 0.0f, 0.0f ) );
 

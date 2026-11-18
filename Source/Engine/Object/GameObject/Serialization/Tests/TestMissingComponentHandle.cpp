@@ -59,9 +59,11 @@ SW_TEST_CASE( ObjectStateSerializerTest, HandleToMissingComponentSurvivesSaveRou
     SW_REQUIRE_NOT_NULL( pObject );
 
     ObjectSaveOptions fileOptions{ SerializePurpose::Authoring };
-    fileOptions._bOmitExternalParent = SW_TRUE; // 파일 형태(`{저장 id, 키}`)로 적는다
-    const string saved               = ObjectStateSerializer::saveToXMLString( pObject, fileOptions );
-    const string key                 = "0:" + ComponentStableKey::makeKey( pObject->getComponent<HandleTargetTestComponent>() );
+    fileOptions._bOmitExternalParent  = SW_TRUE; // 파일 형태(`{저장 id, 키}`)로 적는다
+    const expected<string> savedState = ObjectStateSerializer::saveToXMLString( pObject, fileOptions );
+    SW_REQUIRE_TRUE( savedState.has_value() );
+    const string saved = *savedState;
+    const string key   = "0:" + ComponentStableKey::makeKey( pObject->getComponent<HandleTargetTestComponent>() );
     SW_REQUIRE_TRUE( saved.find( key ) != string::npos );
 
     // 대상 타입을 모르는 것으로 만든다(모듈이 안 뜬 것과 같다) — 원소 태그 이름만 바꾸고 핸들 글은 그대로 둔다.
@@ -75,7 +77,9 @@ SW_TEST_CASE( ObjectStateSerializerTest, HandleToMissingComponentSurvivesSaveRou
     SW_EXPECT_TRUE( pHolder->_target.isValid() );                   // 비우지 않았다
     SW_EXPECT_NULL( manager.resolveComponent( pHolder->_target ) ); // 다만 찾으면 아무것도 아니다(다른 타입을 가리키지 않는다)
 
-    const string resaved = ObjectStateSerializer::saveToXMLString( pObject, fileOptions );
+    const expected<string> resavedState = ObjectStateSerializer::saveToXMLString( pObject, fileOptions );
+    SW_REQUIRE_TRUE( resavedState.has_value() );
+    const string resaved = *resavedState;
     SW_EXPECT_TRUE( resaved.find( key ) != string::npos );
     SW_EXPECT_TRUE( resaved.find( "<" + goneName ) != string::npos );
 
@@ -137,8 +141,10 @@ SW_TEST_CASE( ObjectStateSerializerTest, SavedHandleSurvivesSiblingInsertion )
     GameObject*       pObject = createHolderObject( manager );
     SW_REQUIRE_NOT_NULL( pObject );
     ObjectSaveOptions fileOptions{ SerializePurpose::Authoring };
-    fileOptions._bOmitExternalParent = SW_TRUE;
-    const string saved               = ObjectStateSerializer::saveToXMLString( pObject, fileOptions );
+    fileOptions._bOmitExternalParent  = SW_TRUE;
+    const expected<string> savedState = ObjectStateSerializer::saveToXMLString( pObject, fileOptions );
+    SW_REQUIRE_TRUE( savedState.has_value() );
+    const string saved = *savedState;
 
     // 같은 타입의 컴포넌트를 맨 앞에 끼운다(디자이너가 나중에 더했다 — 지역 id 는 아직 없다).
     const string typeName = HandleTargetTestComponent::StaticType()->_name.c_str();

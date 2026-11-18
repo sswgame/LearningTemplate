@@ -581,16 +581,16 @@ namespace sw
 namespace sw
 {
     template <typename TSerializer>
-    string ObjectStateSerializer::saveToText( const GameObject* pGameObject, const ObjectSaveOptions& options )
+    expected<string> ObjectStateSerializer::saveToText( const GameObject* pGameObject, const ObjectSaveOptions& options )
     {
         if ( pGameObject == nullptr )
-            return {};
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no game object to save" } );
 
         pGameObject->prepareSerialize( options );
 
         const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
         if ( pTypeInfo == nullptr )
-            return {};
+            return unexpected( Error{ ErrorKind::Unsupported, "game object has no reflected type", pGameObject->getName().c_str() } );
 
         // 텍스트로 저장하는 경로(씬과 프리팹 저작)는 쓰기 전에 검증한다. 결과만 남기고 저장은 그대로 한다. 바이너리(플레이, 되돌리기 스냅샷)는 검증하지 않는다.
         // 빈 필수 이름 칸도 여기서 경고로 남는다(다음 로드는 그 글을 RequiredMissing 으로 거절한다). 기본값 견본은 검증하지 않는다(`_bSkipValidation`).
@@ -598,21 +598,11 @@ namespace sw
             (void)ObjectValidation::reportGameObject( *pGameObject, true );
 
         const ObjectStateSerializerInternal::GameObjectWriteContext writeContext( pGameObject, options );
-        if constexpr ( std::is_same_v<TSerializer, JSONSerializer> )
-        {
-            // shortcut: 이 함수는 아직 빈 글을 실패로 돌려준다(XML 과 같은 계약) — 텍스트 저장 계약을 expected 로 옮길 때 같이 바꾼다.
-            const expected<string> text = JSONSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, writeContext.getContext() );
-            if ( text.has_value() == false )
-            {
-                SW_LOG_ERROR_ID( "ObjectStateSerializer.JSONNotWritable", "GameObject state could not be written as JSON: %# (%#)", text.error().message(), text.error().detail() );
-                return {};
-            }
-            return *text;
-        }
-        else
-        {
-            return TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, writeContext.getContext() );
-        }
+        // XML · JSON 모두 실패를 까닭으로 돌려준다 — 빈 글을 실패로 읽던 호출처가 없다(로그는 무엇을 저장하던 중인지 아는 호출처가 남긴다).
+        expected<string> text = TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, writeContext.getContext() );
+        if ( text.has_value() == false )
+            text.error().prependDetail( ": " ).prependDetail( pGameObject->getName().c_str() );
+        return text;
     }
 
     template <typename DeserializeStateFunc>
@@ -705,12 +695,12 @@ namespace sw
         } );
     }
 
-    string ObjectStateSerializer::saveToXMLString( const GameObject* pGameObject, const ObjectSaveOptions& options )
+    expected<string> ObjectStateSerializer::saveToXMLString( const GameObject* pGameObject, const ObjectSaveOptions& options )
     {
         return saveToText<XMLSerializer>( pGameObject, options );
     }
 
-    string ObjectStateSerializer::saveToJSONString( const GameObject* pGameObject, const ObjectSaveOptions& options )
+    expected<string> ObjectStateSerializer::saveToJSONString( const GameObject* pGameObject, const ObjectSaveOptions& options )
     {
         return saveToText<JSONSerializer>( pGameObject, options );
     }

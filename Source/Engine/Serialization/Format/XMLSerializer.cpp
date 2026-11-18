@@ -1101,13 +1101,16 @@ namespace sw
         return XMLSerializerInternal::readCurrentElementSoft( backend, pInstance, typeInfo, pOutListOrphan, pOutVersion, context );
     }
 
-    string XMLSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
-                                              const SerializeContext& context )
+    expected<string> XMLSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
+                                                        const SerializeContext& context )
     {
         XMLDocumentBackend backend;
         backend.initializeXMLSerialization( typeInfo._name.c_str() );
         serializeVersionedInto( backend, version, pInstance, typeInfo, context );
-        return backend.endSerialize();
+        string text = backend.endSerialize();
+        if ( text.empty() )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "XML document could not be written", typeInfo._name.c_str() } );
+        return text;
     }
 
     void XMLSerializer::serializeVersionedInto( IXMLBackend& backend, uint32 version, const void* pInstance,

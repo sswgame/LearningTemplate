@@ -495,7 +495,8 @@ namespace sw
                     options._bOmitExternalParent = SW_TRUE; // 부모는 노드의 자리(부모 노드 · attach)가 적는다
                     // 부품 아래 부품(원본이 스폰하는 것)을 고친 것은 노드의 `<Part>` 로 싣는다 — 노드로 담지 않으므로 싣지 않으면 Apply 가 버린다.
                     vector<PrefabPartOverride> listDeepPart;
-                    const expected<void>       overrides = PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseState, node._overrideXML );
+                    const expected<string>     partState = ObjectStateSerializer::saveToXMLString( pPart, options );
+                    const expected<void>       overrides = partState.has_value() ? PrefabOverrides::computeOverrides( *partState, baseState, node._overrideXML ) : expected<void>{ unexpected( partState.error() ) };
                     const bool                 bOverridesMade =
                         overrides.has_value() && pPrefabs->collectPartOverrides( *pPart, *pSource, listDeepPart ) && PrefabOverrides::appendPartOverrides( node._overrideXML, listDeepPart );
                     if ( bOverridesMade == false )
@@ -1135,9 +1136,12 @@ namespace sw
         ObjectSaveOptions options{ SerializePurpose::Authoring };
         options._bOmitExternalParent = SW_TRUE;
         _name                        = pGameObject->getName().c_str();
-        _stateData                   = ObjectStateSerializer::saveToXMLString( pGameObject, options );
-        _stateFormat                 = PrefabStateFormat::XML;
-        _bValid                      = _stateData.empty() == false ? SW_TRUE : SW_FALSE;
+        expected<string> state       = ObjectStateSerializer::saveToXMLString( pGameObject, options );
+        if ( state.has_value() == false )
+            SW_LOG_ERROR_ID( "PrefabAsset.StateNotCaptured", "Prefab '%#' could not capture its object state: %# (%#)", _name, state.error().message(), state.error().detail() );
+        _stateData   = state.has_value() ? std::move( *state ) : string{};
+        _stateFormat = PrefabStateFormat::XML;
+        _bValid      = state.has_value() ? SW_TRUE : SW_FALSE;
 
         PrefabCache* pPrefabs = pNestedPrefabs;
         if ( pPrefabs == nullptr && engine::areEngineServicesBound() )
@@ -1217,7 +1221,14 @@ namespace sw
         GameObject*       pTemp = scratch.createGameObject( hashed_string( _name.c_str() ) );
         if ( applyStateTo( pTemp ) == false )
             return {};
-        return ( targetFormat == PrefabStateFormat::JSON ) ? ObjectStateSerializer::saveToJSONString( pTemp, ObjectSaveOptions{ SerializePurpose::Authoring } ) : ObjectStateSerializer::saveToXMLString( pTemp, ObjectSaveOptions{ SerializePurpose::Authoring } );
+        const ObjectSaveOptions options{ SerializePurpose::Authoring };
+        expected<string>        text = ( targetFormat == PrefabStateFormat::JSON ) ? ObjectStateSerializer::saveToJSONString( pTemp, options ) : ObjectStateSerializer::saveToXMLString( pTemp, options );
+        if ( text.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "PrefabAsset.StateNotConverted", "Prefab '%#' state could not be written in the other format: %# (%#)", _name, text.error().message(), text.error().detail() );
+            return {};
+        }
+        return std::move( *text );
     }
 
     void PrefabAsset::collectReferencedPrefabPaths( vector<string>& outListPath ) const
