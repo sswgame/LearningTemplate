@@ -47,30 +47,32 @@ SW_MATERIAL_END
 
 /**
  * @brief 월드 축 정렬 투영 UV 와 그 탄젠트입니다. 노멀이 가장 큰 축의 면에 투영하고, 벽은 위가 이미지 위다.
- * @details 탄젠트 손잡이는 메시와 같은 규약이다 — cross( N, T ) × w 가 -dP/dv(수면: UV = xz, T = +x, w = +1 — `WaterBodyComponent`).
- *          shortcut: 반대쪽 면(-x · -z)은 이미지가 좌우로 뒤집힌다 — 콘크리트 · 블록 같은 무늬엔 보이지 않는다. 글자 · 방향 있는 무늬를 쓰면 면마다 u 부호를 고른다.
+ * @details 여섯 면 모두 바깥에서 볼 때 이미지가 거울상이 아니다 — u 는 그 면을 보는 화면의 오른쪽(왼손: 오른쪽 = 위 × 시선, 시선 = -N),
+ *          v 는 화면 아래다(벽은 -y, 바닥 · 천장은 -z 를 화면 위로 둔다). 면의 부호마다 u 를 뒤집는다(Ben Golus 의 3 축 노멀 매핑 · Godot 3 축 UV 와 같은 생각).
+ *          탄젠트 손잡이는 메시와 같은 규약이다 — cross( N, T ) × w 가 -dP/dv(수면: UV = xz, T = +x, w = +1 — `WaterBodyComponent`).
  */
 void computeWorldAlignedUV( float3 worldPosition, float3 normal, float tileSize, out float2 outUV, out float4 outTangent )
 {
     const float3 axisWeight = abs( normal );
+    const float3 faceSign   = float3( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f, normal.z >= 0.0f ? 1.0f : -1.0f );
     float3       tangent;
     float3       downV;
     if ( axisWeight.y >= axisWeight.x && axisWeight.y >= axisWeight.z )
     {
-        outUV   = worldPosition.xz;
-        tangent = float3( 1.0f, 0.0f, 0.0f );
-        downV   = float3( 0.0f, 0.0f, 1.0f );
+        outUV   = float2( worldPosition.x * faceSign.y, -worldPosition.z );
+        tangent = float3( faceSign.y, 0.0f, 0.0f );
+        downV   = float3( 0.0f, 0.0f, -1.0f );
     }
     else if ( axisWeight.x >= axisWeight.z )
     {
-        outUV   = float2( worldPosition.z, -worldPosition.y );
-        tangent = float3( 0.0f, 0.0f, 1.0f );
+        outUV   = float2( worldPosition.z * faceSign.x, -worldPosition.y );
+        tangent = float3( 0.0f, 0.0f, faceSign.x );
         downV   = float3( 0.0f, -1.0f, 0.0f );
     }
     else
     {
-        outUV   = float2( worldPosition.x, -worldPosition.y );
-        tangent = float3( 1.0f, 0.0f, 0.0f );
+        outUV   = float2( -worldPosition.x * faceSign.z, -worldPosition.y );
+        tangent = float3( -faceSign.z, 0.0f, 0.0f );
         downV   = float3( 0.0f, -1.0f, 0.0f );
     }
     outUV /= tileSize;
