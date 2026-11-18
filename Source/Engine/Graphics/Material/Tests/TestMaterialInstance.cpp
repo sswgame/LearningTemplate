@@ -20,6 +20,18 @@ namespace
 {
     struct MaterialInstanceTestUtil
     {
+        /** @brief define 목록 @p listDefine 에 @p text 가 있는지 봅니다(글 형식이 달라도 내용으로 견준다 — `sw::string` 과 표준 글의 `==` 는 모호하다). */
+        template <typename DefineList>
+        static bool hasDefine( const DefineList& listDefine, string_view text )
+        {
+            for ( const auto& define : listDefine )
+            {
+                if ( string_view( define.c_str() ) == text )
+                    return true;
+            }
+            return false;
+        }
+
         static constexpr const utf8* kMaterial = R"(<?xml version="1.0" encoding="utf-8"?>
 <MaterialDef formatVersion="0" name="Sample" shaderPath="engine/shaders/pbr_lit.hlsl" alphaMode="Opaque">
 	<_properties>
@@ -110,14 +122,14 @@ SW_TEST_CASE( MaterialInstanceTest, TextureSlotCountReachesShaderDefine )
     SW_REQUIRE_TRUE( textured->loadFromXML( MaterialInstanceTestUtil::kTexturedMaterial ) );
     SW_EXPECT_EQUAL( 3u, textured->getTextureSlotCount() );
     const string expected = string( kMaterialTextureCountDefine ) + "=3";
-    SW_EXPECT_TRUE( VectorUtil::contains( textured->getCachedShaderDefines(), expected ) );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( textured->getCachedShaderDefines(), expected ) );
     shared_ptr<MaterialInstance> instance = MaterialInstance::create( textured.get() );
-    SW_EXPECT_TRUE( VectorUtil::contains( instance->getCachedShaderDefines(), expected ) );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), expected ) );
 
     shared_ptr<Material> plain = Material::create();
     SW_REQUIRE_TRUE( plain->loadFromXML( MaterialInstanceTestUtil::kMaterial ) );
     SW_EXPECT_EQUAL( 0u, plain->getTextureSlotCount() );
-    SW_EXPECT_TRUE( VectorUtil::contains( plain->getCachedShaderDefines(), string( kMaterialTextureCountDefine ) + "=0" ) );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( plain->getCachedShaderDefines(), string( kMaterialTextureCountDefine ) + "=0" ) );
     SW_EXPECT_TRUE( plain->getPermutationHash() != textured->getPermutationHash() );
 
     SW_EXPECT_TRUE( textured->getTextureSlotCount() <= shaderslot::wgpu::kMaterialTextureBudget );
