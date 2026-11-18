@@ -49,8 +49,7 @@ namespace sw
      *          효과는 `_effectPath` 를 읽을 때(상태 로드 · 프로퍼티 변경 · `setEffectPath`) 다시 만든다. 읽지 못하면 방출기가 없고 아무것도 그리지 않는다(효과 데이터가 오류를 남긴다).
      *          방출기 씨앗은 `_seed` 와 방출기 번호로 정해진다(같은 씨앗이면 같은 입자 — `VFXCPUSimulation`). 플레이를 시작하면 `_bPlayOnBegin` 일 때 재생하고,
      *          플레이 밖(에디터 미리보기 창)에서는 부르는 쪽이 `play` 를 부른다.
-     *
-     *          shortcut: 컴포넌트마다 효과 파일을 따로 읽는다(효과 캐시가 없다) — 같은 효과를 자주 스폰하게 되면 `AssetCacheBase` 로 공유한다.
+     *          효과 정의는 공유 에셋 캐시(`SW_SHARED_ASSET_CACHE( VFXEffectDef … )`)의 한 벌을 나눠 쥔다 — 같은 효과를 여럿 스폰해도 파일은 한 번 읽는다(Niagara 시스템 에셋과 같다).
      */
     REFLECT( Category = "Effects", DisplayName = "VFX", Tooltip = "Plays a particle effect (.vfx.xml); billboard and ribbon emitters draw as one transparent batch each, mesh emitters as mesh instances" )
     class SW_API VFXComponent : public SceneComponent
