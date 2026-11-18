@@ -15,23 +15,17 @@
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 
+#include "GameFramework/Plugin/Editor/GameplayTools/AI/Model/BehaviorTreeLiveRunner.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
-#include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"
-#include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -286,7 +280,7 @@ namespace sw::editor
         EditorChrome::beginSection( canvasDesc );
 
         string                    liveRunnerName;
-        const BehaviorTreeRunner* pRunner = findLiveRunner( liveRunnerName );
+        const BehaviorTreeRunner* pRunner = BehaviorTreeLiveRunner::findForFocusedSelection( getLoadedAssetPath(), liveRunnerName );
         if ( liveRunnerName.empty() == false )
             ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "Live", TextArgumentList().addText( "liveRunnerName", liveRunnerName.c_str() ) ).c_str() );
 
@@ -588,45 +582,6 @@ namespace sw::editor
             return;
         float32 nextRow = 0.0f;
         (void)layoutNode( _model.getRootID(), 0, nextRow ); // 반환은 부모 줄 계산용이라 루트에서는 쓸 곳이 없다
-    }
-
-    const BehaviorTreeRunner* BehaviorTreePanel::findLiveRunner( string& outName ) const
-    {
-        outName.clear();
-        const EditorSelection* pSelection = editor::getFocusedSelection();
-        if ( pSelection == nullptr )
-            return nullptr;
-        vector<GameObject*> listSelected;
-        pSelection->getSelectedObjects( listSelected );
-        vector<BehaviorTreeDebugRunner> listDebugRunner;
-        for ( GameObject* pObject : listSelected )
-        {
-            if ( pObject == nullptr )
-                continue;
-            AIControllerComponent*    pController = pObject->getComponent<AIControllerComponent>();
-            const BehaviorTreeRunner* pRunner     = pController != nullptr ? pController->getBehaviorTreeRunner() : nullptr;
-            if ( pRunner != nullptr )
-                return pRunner;
-
-            // 컴포넌트에 안 붙은 실행기(지휘관 AI 등) — 노드 번호는 깊이 우선 번호라 창에 연 파일과 같은 트리 파일을 쥔 실행기만 맞다.
-            listDebugRunner.clear();
-            pObject->forEachComponentOfType<GameModeComponent>(
-                [&listDebugRunner]( GameModeComponent* pGameMode )
-            {
-                const IBehaviorTreeDebugSource* pSource = pGameMode->findBehaviorTreeDebugSource();
-                if ( pSource != nullptr )
-                    pSource->collectBehaviorTreeRunners( listDebugRunner );
-            } );
-            for ( const BehaviorTreeDebugRunner& entry : listDebugRunner )
-            {
-                if ( entry._pRunner != nullptr && entry._treePath == getLoadedAssetPath() )
-                {
-                    outName = entry._name;
-                    return entry._pRunner;
-                }
-            }
-        }
-        return nullptr;
     }
 
     void BehaviorTreePanel::drawSidePanel()

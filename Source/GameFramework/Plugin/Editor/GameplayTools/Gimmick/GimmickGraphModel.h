@@ -14,10 +14,16 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/GraphCommentBox.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitComponent.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitDesc.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickNodeRegistry.h"
+
+namespace sw
+{
+    class GimmickCircuitDef;
+} // namespace sw
 
 namespace sw::editor
 {

@@ -12,14 +12,11 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 
 #include <imgui.h>
 
@@ -34,7 +31,7 @@ namespace sw::editor
 
             [[nodiscard]] static const AbilityCatalogPanel* findPanel()
             {
-                const EditorPanelManager* pManager = editor::findSubsystem<EditorPanelManager>();
+                const EditorPanelManager* pManager = EditorPanelManager::findInEditorContext();
                 return pManager != nullptr ? pManager->findPanel<AbilityCatalogPanel>() : nullptr;
             }
 
@@ -279,8 +276,7 @@ namespace sw::editor
     void AbilityCatalogPanel::validateText()
     {
         // 런타임 로더 그대로 읽어 본다 — 클래스 이름 · 참조 · 칸의 판정은 로더의 것이고 이 창이 따로 적지 않는다(이유는 로그에 남는다).
-        AbilityCatalog catalog;
-        _validation = catalog.loadFromXMLText( _model.getDocument().getText(), getLoadedAssetPath() ) ? ValidationState::Passed : ValidationState::Failed;
+        _validation = _model.validateWithRuntimeLoader( getLoadedAssetPath() ) ? ValidationState::Passed : ValidationState::Failed;
     }
 
     void AbilityCatalogPanel::reportEdit( bool bEdited )
