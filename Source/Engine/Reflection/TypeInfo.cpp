@@ -394,6 +394,16 @@ namespace sw
         return PropertyListView{ snapshot._listProperty.data(), snapshot._listProperty.size() };
     }
 
+    const PropertyInfo* TypeInfo::findPropertyByNameText( string_view nameText ) const
+    {
+        for ( const PropertyInfo& prop : getPropertiesWithBase() )
+        {
+            if ( prop.matchesNameText( nameText ) )
+                return &prop;
+        }
+        return nullptr;
+    }
+
     const TypeInheritedPropertySlot::Snapshot& TypeInfo::loadInheritedProperties() const
     {
         const TypeInheritedPropertySlot::Snapshot* const pSnapshot = _inheritedProperties.load();

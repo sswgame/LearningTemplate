@@ -361,6 +361,8 @@ namespace sw
         bool isLastErrorNotFound() const { return _bLastErrorNotFound; }
         /** @brief 원문 @p text 의 바이트 위치 @p offset 이 몇 번째 줄(1 부터)인지 셉니다. 위치를 모르면(`XMLNode::getSourceOffset` 이 없음) 0 — 오류 글의 "줄 모름" 이다. */
         static uint32 computeLineNumber( string_view text, const optional<size_t>& offset );
+        /** @brief 읽기 오류의 대상 글 `<경로>:<줄>: <까닭>` 입니다. 줄을 모르면(0 — `computeLineNumber`) 경로와 까닭만 적습니다. */
+        static string makeSourceError( string_view path, uint32 line, string_view message );
 
         /** @brief 첫 엘리먼트를 반환합니다. pName 이 있으면 이름으로 찾습니다(철자 그대로 — 대소문자가 다르면 없는 이름). */
         XMLNode getRoot( const utf8* pName = nullptr ) const;

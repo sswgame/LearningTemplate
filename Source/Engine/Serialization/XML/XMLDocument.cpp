@@ -773,6 +773,20 @@ namespace sw
         return line;
     }
 
+    string XMLDocument::makeSourceError( string_view path, uint32 line, string_view message )
+    {
+        string error( path );
+        if ( line > 0 )
+        {
+            StringBuilder<constant::buffer::kMax256> errorPart;
+            errorPart.appendFormat( ":%#", line );
+            error += errorPart.c_str();
+        }
+        error += ": ";
+        error += message;
+        return error;
+    }
+
     XMLNode XMLDocument::getRoot( const utf8* pName ) const
     {
         if ( _impl == nullptr )

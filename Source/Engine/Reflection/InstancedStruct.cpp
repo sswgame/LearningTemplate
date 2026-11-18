@@ -17,19 +17,10 @@ namespace sw
     {
         struct InstancedStructInternal
         {
-            /** @brief 원소가 값 글 하나로 읽히는 시퀀스 칸이면 그 시퀀스입니다(`XMLFields` 의 한 줄 목록과 같은 기준). */
-            [[nodiscard]] static const ISequenceContainerWrapper* findTextList( const PropertyInfo& prop, const SerializeContext& context )
-            {
-                const bool bSequence = prop._bIsContainer == SW_TRUE && prop._containerWrapper != nullptr && ( prop._nestedContainer == nullptr || prop._nestedContainer->_elementNested == nullptr );
-                if ( bSequence == false || SerializerUtil::canCarryValueType( prop._elementTypeName, context ) == false )
-                    return nullptr;
-                return prop._containerWrapper->asSequence();
-            }
-
             /** @brief 칸 하나에 글 하나를 씁니다. 목록 칸이면 뒤에 더합니다. */
             [[nodiscard]] static bool applyToken( const PropertyInfo& prop, void* pInstance, string_view token, const SerializeContext& context )
             {
-                const ISequenceContainerWrapper* const pList = findTextList( prop, context );
+                const ISequenceContainerWrapper* const pList = SerializerUtil::findTextList( prop, context );
                 if ( pList == nullptr )
                     return SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pInstance }, token, context );
                 void* const pContainer = prop.getRawPtr( pInstance );
@@ -134,7 +125,7 @@ namespace sw
                 propIndex = nextPositional;
                 if ( propIndex >= listProperty.size() )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "too many arguments", typeInfo._name.c_str() }.appendDetail( " at '" ).appendDetail( token ).appendDetail( "'" ) );
-                if ( Internal::findTextList( listProperty[propIndex], context ) == nullptr )
+                if ( SerializerUtil::findTextList( listProperty[propIndex], context ) == nullptr )
                     ++nextPositional;
             }
             if ( Internal::applyToken( listProperty[propIndex], pInstance, value, context ) == false )
@@ -167,7 +158,7 @@ namespace sw
         string                  text;
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
-            const ISequenceContainerWrapper* const pList = Internal::findTextList( prop, context );
+            const ISequenceContainerWrapper* const pList = SerializerUtil::findTextList( prop, context );
             if ( pList == nullptr && ( prop._bIsContainer == SW_TRUE || SerializerUtil::canCarryValueType( prop._typeName, context ) == false ) )
                 continue;
             const string value        = pList != nullptr ? Internal::formatList( prop, *pList, pInstance, context ) : SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, context );

@@ -25,17 +25,6 @@ namespace sw
     {
         struct UIDocumentWriterInternal
         {
-            /** @brief @p type(상속 포함)의 프로퍼티 중 이름이 @p pName 인 것입니다(철자 그대로). 없으면 nullptr 입니다. */
-            static const PropertyInfo* findProperty( const TypeInfo& type, const utf8* pName )
-            {
-                for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
-                {
-                    if ( prop.matchesNameText( pName ) )
-                        return &prop;
-                }
-                return nullptr;
-            }
-
             /**
              * @brief 지금 값 요소 @p current 중 기본값 요소 @p defaults 와 다른 것만 @p destination 에 옮겨 적습니다. 무엇이든 적었으면 true 입니다.
              * @details 속성은 하나씩, 구조체 필드 요소는 재귀로 필드마다, 컨테이너 필드 요소는 다르면 통째로 적는다(요소 순서가 의미를 가지기 때문이다).
@@ -54,7 +43,7 @@ namespace sw
                 for ( XMLNode child = current.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     const XMLNode       defaultChild = defaults.isValid() ? defaults.findChild( child.getName() ) : XMLNode{};
-                    const PropertyInfo* pProperty    = findProperty( type, child.getName() );
+                    const PropertyInfo* pProperty    = type.findPropertyByNameText( child.getName() );
                     const bool          bStruct      = pProperty != nullptr && pProperty->_bIsContainer == SW_FALSE;
                     const TypeInfo*     pNestedType  = bStruct ? engine::getSubsystem<TypeRegistry>().findType( pProperty->_typeName ) : nullptr;
                     if ( pNestedType == nullptr )

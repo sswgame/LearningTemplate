@@ -206,6 +206,11 @@ namespace sw
         SW_API static bool canCarryProperty( const PropertyInfo& prop, const SerializeContext& context );
         /** @brief 값 타입 하나를 세 형식이 모두 실어 나를 수 있으면 true 입니다(텍스트 핸들러, enum, 리플렉션 구조체). */
         SW_API static bool canCarryValueType( hashed_string typeName, const SerializeContext& context );
+        /**
+         * @brief 원소가 값 글 하나로 읽히는 시퀀스 칸(이름 · 태그 · 수 · 열거의 목록)이면 그 시퀀스입니다. 아니면 nullptr 입니다.
+         * @details XML 속성의 한 줄 목록(`XMLFields`)과 `InstancedStruct` 의 글 형식이 같은 기준으로 목록 칸을 고릅니다.
+         */
+        [[nodiscard]] SW_API static const ISequenceContainerWrapper* findTextList( const PropertyInfo& prop, const SerializeContext& context );
 
         /**
          * @brief 객체 안 프로퍼티 값을 사람이 읽을 수 있는 텍스트로 씁니다(XML 속성 값과 같은 형태). 비트필드는 `true` 나 `false`, 컨테이너는 `[n]`(원소 수)입니다.

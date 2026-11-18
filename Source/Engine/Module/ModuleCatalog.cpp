@@ -76,7 +76,7 @@ namespace sw
                 for ( const SchemaOrphanValue& orphan : listOrphan )
                 {
                     problem += problem.empty() ? string() : string( "; " );
-                    problem += "unknown key '" + string( orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str() ) + "' or a value that cannot be read (" +
+                    problem += "unknown key '" + string( orphan.getDisplayName() ) + "' or a value that cannot be read (" +
                                orphan._text + ")";
                 }
                 if ( result == SoftReadResult::Rejected )

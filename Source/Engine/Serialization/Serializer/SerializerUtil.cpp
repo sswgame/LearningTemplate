@@ -954,6 +954,14 @@ namespace sw
         return FieldReadResult::ObjectRejected;
     }
 
+    const ISequenceContainerWrapper* SerializerUtil::findTextList( const PropertyInfo& prop, const SerializeContext& context )
+    {
+        const bool bSequence = prop._bIsContainer == SW_TRUE && prop._containerWrapper != nullptr && ( prop._nestedContainer == nullptr || prop._nestedContainer->_elementNested == nullptr );
+        if ( bSequence == false || canCarryValueType( prop._elementTypeName, context ) == false )
+            return nullptr;
+        return prop._containerWrapper->asSequence();
+    }
+
     bool SerializerUtil::canCarryValueType( hashed_string typeName, const SerializeContext& context )
     {
         if ( typeName.empty() )

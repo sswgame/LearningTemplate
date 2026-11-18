@@ -76,7 +76,7 @@ namespace sw
         // 그래도 모은 이름은 알린다 — 범위 밖 값 하나가 모르는 이름 · 읽지 못한 값의 오류를 삼키지 않게(모두 알린다는 계약).
         for ( const SchemaOrphanValue& orphan : listOrphan )
         {
-            const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();
+            const utf8* const pName = orphan.getDisplayName();
             SW_LOG_ERROR_ID( "Serialization.OrphanValue", "%#: '%#' is unknown to %# or its value '%#' cannot be read", sourceName, pName, pTypeInfo->_name.c_str(), orphan._text.c_str() );
         }
         return result == SoftReadResult::Read && listOrphan.empty() && listMissing.empty();
