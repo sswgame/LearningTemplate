@@ -11,8 +11,8 @@
  * 젖음 · 웅덩이 · 눈의 세기는 머티리얼 파라미터 묶음 `engine/materials/weather.matparams.xml` 의 `Weather`(x 젖음, y 웅덩이, z 눈, w 설선 높이 m)에
  * 머티리얼 칸 `_weather` 를 묶어 받는다 — 날씨가 값을 바꾸면 묶은 모든 머티리얼이 함께 바뀐다(언리얼 MPC 로 날씨를 돌리는 방식).
  *
- * W17(셰이딩 모델 · G버퍼 v3) 합치는 자리: 클리어 코트와 이방성은 지금 기본 PBR 위의 근사(`applyClearCoat` · `computeBrushedRoughness`)다.
- * 셰이딩 모델 열거와 CustomData 가 들어오면 이 두 함수의 몸만 "모델 = ClearCoat/Anisotropic, CustomData = (코트, 코트 거칠기, 이방성, 방향)" 으로 바꾼다 — 부르는 쪽은 그대로다.
+ * 클리어 코트 · 비등방 하이라이트는 함수 묶음이 아니라 셰이딩 모델(shading_model.hlsli 의 코트 · 비등방 엽, G버퍼 번호 CLEAR_COAT · ANISOTROPIC)이 낸다 —
+ * 거칠기를 끌어당기는 근사로는 두 겹 반사(밑 무늬의 흐린 반사 + 코트의 또렷한 반사)도, 결 방향으로 늘어난 하이라이트도 나오지 않는다. 여기에는 헤어라인 결 무늬만 있다.
  */
 
 #ifndef SW_ENGINE_MATERIALFUNCTIONS_HLSLI
@@ -50,8 +50,6 @@ static const float3 kDirtColor        = float3( 0.16f, 0.12f, 0.08f );
 static const float  kDirtRoughness    = 0.95f;
 static const float3 kTarnishColor     = float3( 0.18f, 0.13f, 0.09f );
 static const float  kTarnishRoughness = 0.55f;
-// 클리어 코트 근사: 코트가 밑 거칠기를 덮는 비율(나머지는 밑 무늬가 비친다).
-static const float kClearCoatCover = 0.8f;
 // 미분 · 정규화의 0 나누기 방지.
 static const float kDerivativeEpsilon = 1.0e-5f;
 
@@ -125,8 +123,7 @@ struct SurfaceFunction
     static void applySnow( inout float3 inoutAlbedo, inout float inoutRoughness, inout float inoutMetallic, inout float3 inoutNormal, float snow );
     static void applySparkle( inout float inoutRoughness, inout float3 inoutNormal, float3 position, float density, float amount );
 
-    // 코트 · 이방성(W17 합치는 자리 — 파일 머리)
-    static void applyClearCoat( inout float inoutRoughness, float coat, float coatRoughness );
+    // 헤어라인 결(하이라이트는 셰이딩 모델 — 파일 머리)
     static float computeBrushedRoughness( float roughness, float2 uv, float anisotropy, float frequency );
 
     // 장치(기믹)
@@ -581,23 +578,12 @@ static void SurfaceFunction::applySparkle( inout float inoutRoughness, inout flo
 }
 
 // ------------------------------------------------------------------------------
-// 코트 · 이방성 — W17 합치는 자리(파일 머리)
+// 헤어라인 결 — 하이라이트는 셰이딩 모델(파일 머리)
 // ------------------------------------------------------------------------------
 
 /**
- * @brief 클리어 코트(유약 · 니스 · 자동차 칠) — 지금은 기본 PBR 한 겹이라 코트 거칠기 쪽으로 거칠기를 끌어당기는 근사다.
- * @details shortcut: 두 겹 정반사(밑 무늬의 흐릿한 반사 + 코트의 날카로운 반사)가 아니다 — W17 의 ClearCoat 셰이딩 모델이 들어오면 이 몸을 "모델 = ClearCoat,
- *          CustomData.xy = (coat, coatRoughness)" 로 바꾸고 밑 거칠기는 그대로 둔다.
- */
-static void SurfaceFunction::applyClearCoat( inout float inoutRoughness, float coat, float coatRoughness )
-{
-    inoutRoughness = lerp( inoutRoughness, coatRoughness, saturate( coat ) * kClearCoatCover );
-}
-
-/**
- * @brief 헤어라인(브러시드 금속) 거칠기 — 한 방향으로 늘인 고주파 줄을 거칠기에 새긴다.
- * @details shortcut: 이방성 하이라이트(결 방향으로 늘어난 반사)가 아니라 결 무늬만이다 — W17 의 Anisotropic 모델이 들어오면 CustomData.z = anisotropy,
- *          방향은 탄젠트로 넘기고 이 함수는 결 무늬만 남긴다.
+ * @brief 헤어라인(브러시드 금속) 거칠기 — 한 방향으로 늘인 고주파 줄을 거칠기에 새긴다(결 무늬).
+ * @details 결 방향으로 늘어난 반사는 Anisotropic 셰이딩 모델의 비등방 GGX 엽이 낸다 — 이 함수는 결 무늬만이다.
  */
 static float SurfaceFunction::computeBrushedRoughness( float roughness, float2 uv, float anisotropy, float frequency )
 {

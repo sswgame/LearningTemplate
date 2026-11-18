@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="ed525c6cf0b9f24716695ef193b95d47"?>
-<!-- 헤어라인 알루미늄 — 한 방향 결(이방성 하이라이트는 W17 모델 뒤). 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<!-- 헤어라인 알루미늄 — 한 방향 결과 결 방향으로 늘어난 하이라이트. 부모(environmentsurface.material)의 값을 바꾸고 Anisotropic 셰이딩 모델(MATERIAL_LOBE_ANISOTROPY)을 고른 프리셋이다. -->
 <MaterialDef formatVersion="0" name="BrushedMetal" _base="engine/materials/environmentsurface.material">
 	<_properties>
 		<item name="_baseColor" defaultValue="0.75 0.75 0.77 1"/>
@@ -9,4 +9,19 @@
 		<item name="_anisotropy" defaultValue="1"/>
 		<item name="_porosity" defaultValue="0"/>
 	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_LOBE_ANISOTROPY</item>
+		</_alwaysDefines>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_OFF">
+				<_options>
+					<item>FOG_OFF</item>
+					<item>FOG_LINEAR</item>
+					<item>FOG_EXP</item>
+				</_options>
+			</item>
+		</_multiCompiles>
+	</_permutations>
 </MaterialDef>

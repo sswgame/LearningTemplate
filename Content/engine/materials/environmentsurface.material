@@ -4,7 +4,8 @@
      층 순서: 밑 → 무늬 → 잔무늬 · 큰 무늬 → 모서리 마모(밑 층) → 녹 → 변색 → 때 → 헤어라인 · 클리어 코트 → 날씨. 세기 0 이면 그 층이 꺼진다(기본은 모두 끔).
      무늬 종류(_patternShape.x): 0 없음 · 1 벽돌/타일(_patternScale.w = 줄 어긋남) · 2 판자(결 포함) · 3 대리석 결(_patternScale.x = 크기, y = 날카로움) · 4 칸(돌담 · 균열 유약) · 5 줄(밧줄 · 골판지 · 고무 홈, w = 기울기).
      좌표(_patternShape.w): 0 메시 UV · 1 월드 축 투영(벽 · 바닥 — 크기가 m 다). _weather 는 파라미터 묶음 Weather 에 묶여 지형과 함께 젖는다.
-     클리어 코트 · 이방성은 W17 셰이딩 모델이 들어오기 전의 근사다(material_functions.hlsli 머리 주석). 프로퍼티 이름 · 타입은 셰이더의 SW_MATERIAL 구조체와 같다. -->
+     클리어 코트 · 비등방은 셰이딩 모델이다 — 자식이 _permutations 에 MATERIAL_LOBE_COAT 또는 MATERIAL_LOBE_ANISOTROPY 를 단다(environment_surface.hlsl 머리말, 값만 넣고 define 이 없으면 MaterialLibraryTest 가 진다).
+     프로퍼티 이름 · 타입은 셰이더의 SW_MATERIAL 구조체와 같다. -->
 <MaterialDef formatVersion="0" name="EnvironmentSurface" shaderPath="engine/shaders/environment_surface.hlsl" alphaMode="Opaque">
 	<_properties>
 		<item name="_baseColor" type="Color" defaultValue="0.8 0.8 0.8 1" displayName="Base Color" group="Base" bHdr="0" bSrgb="1"/>
