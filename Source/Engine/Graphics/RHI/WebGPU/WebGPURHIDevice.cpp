@@ -1308,7 +1308,7 @@ namespace sw
             return true;
         } );
         // 그 프레임의 지연 해제를 부른다 — 읽기 버퍼를 읽는 콜백(`readReadbackBuffer`)이 여기서 돈다.
-        _releaseQueue.tickCompleted( completed );
+        _releaseQueue.releaseCompleted( completed );
     }
 
     bool WebGPURHIDevice::waitFrameFence( const WebGPUFrameFence& fence ) const

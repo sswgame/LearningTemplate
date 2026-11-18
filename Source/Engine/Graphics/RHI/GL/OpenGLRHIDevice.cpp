@@ -1360,7 +1360,7 @@ namespace sw
         } );
         // 프레임을 돌리는 스레드는 컨텍스트를 쥐고 있으니 여기서 전송 워터마크도 올린다(컨텍스트 없는 스레드의 폴링은 이 값을 본다).
         retireFinishedTransfers();
-        _releaseQueue.tickCompleted( completedSerial );
+        _releaseQueue.releaseCompleted( completedSerial );
     }
 
     void OpenGLRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )

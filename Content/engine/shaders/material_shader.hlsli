@@ -56,10 +56,10 @@
 
 #include "lighting.hlsli"
 
-// 웹은 머티리얼 변형이 가진 텍스처 칸만 선언한다 — 칸 수(MATERIAL_TEXTURE_COUNT)는 머티리얼 정의(Material::buildShaderDefines)나 씬 메시 패스 define(0 — 머티리얼 없는 배치)이 낸다.
+// 웹은 머티리얼 변형이 가진 텍스처 칸만 선언한다 — 칸 수(MATERIAL_TEXTURE_COUNT)는 머티리얼 정의(Material::computeShaderDefines)나 씬 메시 패스 define(0 — 머티리얼 없는 배치)이 낸다.
 // 둘 다 없는 컴파일은 쿠킹 요청의 결함이다 — 기본 칸 수로 대신하지 않는다(binding_texture.hlsli SW_MATERIAL_TEXTURE_SLOT_LIMIT).
 #if defined( WEBGPU ) && !defined( MATERIAL_TEXTURE_COUNT )
-    #error "WebGPU material shader compiled without MATERIAL_TEXTURE_COUNT - the material defines (Material::buildShaderDefines) or the scene-mesh pass define (selectRenderPassShader) must provide it"
+    #error "WebGPU material shader compiled without MATERIAL_TEXTURE_COUNT - the material defines (Material::computeShaderDefines) or the scene-mesh pass define (selectRenderPassShader) must provide it"
 #endif
 
 // ------------------------------------------------------------------------------

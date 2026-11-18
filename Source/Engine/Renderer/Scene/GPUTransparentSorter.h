@@ -138,7 +138,7 @@ namespace sw
          * @brief 채워 둔 추가 뷰 키(꼬리 번호 순)로 그 뷰의 투명 순서를 만듭니다.
          * @details 꼬리 전체를 정렬해 꼬리 번호마다 순번을 매기고, 배치 순서(배치마다 가장 먼저 그릴 인스턴스의 순번 순, 같으면 원래 순서)를 만듭니다.
          *          꼬리 안에 온전히 들지 않는 배치는 순서만 따릅니다. 배치 **안**의 순서는 여기서 정하지 않는다 — 컬링이 돌면 GPU 정렬이 순번으로 되돌리고,
-         *          컬링이 없는 백엔드는 RT 가 `buildViewTailSlots` 로 만든다(같은 일을 두 번 하지 않는다).
+         *          컬링이 없는 백엔드는 RT 가 `computeViewTailSlots` 로 만든다(같은 일을 두 번 하지 않는다).
          *          @p listParticleKey(이 뷰의 시점으로 정렬한 입자 키)는 배치마다 가장 먼저 그릴 인스턴스의 키와 비교해 자리를 받습니다(`placeParticles`).
          */
         GPUViewTransparentOrder computeViewOrder( uint64 viewID, uint32 tailBase, vector_reference<const GPUMeshBatch> listBatch,
@@ -151,7 +151,7 @@ namespace sw
          * @param listRank        꼬리 번호마다 이 뷰의 순번(`GPUViewTransparentOrder::_pListRank`)
          * @param outListTailSlot 꼬리 길이만큼 채운다(앞 내용은 지운다)
          */
-        static void buildViewTailSlots( vector_reference<const uint32> listRank, uint32 tailBase, vector_reference<const GPUMeshBatch> listBatch, vector<uint32>& outListTailSlot );
+        static void computeViewTailSlots( vector_reference<const uint32> listRank, uint32 tailBase, vector_reference<const GPUMeshBatch> listBatch, vector<uint32>& outListTailSlot );
 
     private:
         /**

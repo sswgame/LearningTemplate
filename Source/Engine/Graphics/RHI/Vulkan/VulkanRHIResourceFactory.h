@@ -61,7 +61,7 @@ namespace sw
 
     private:
         /** @brief @p desc 의 이미지 생성 서술을 채웁니다. 형태 · 형식 · 깊이 형식이 맞지 않으면 이유를 남기고 false 입니다(`createTexture2D` 와 할당 크기 묻기가 같은 서술을 쓴다). */
-        [[nodiscard]] bool buildImageCreateInfo( const RHITextureDesc& desc, VkImageCreateInfo& outInfo );
+        [[nodiscard]] bool populateImageCreateInfo( const RHITextureDesc& desc, VkImageCreateInfo& outInfo );
         /**
          * @brief 이미지 · 메모리 · 뷰 · 레코드를 만듭니다. @p pHeap 이 있으면 그 힙 메모리의 @p offsetBytes 에 묶고(placed — 레코드가 힙 참조를 든다), 없으면 자기 메모리를 잡는다.
          * @details `createTexture2D` 와 `createPlacedTexture2D` 가 같은 몸을 쓴다(DX12 `createTextureResource` 와 같다) — 서술 · 뷰 · 레이아웃 규칙이 두 벌로 갈리지 않게.

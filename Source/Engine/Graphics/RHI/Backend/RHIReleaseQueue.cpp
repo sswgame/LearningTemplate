@@ -25,11 +25,11 @@ namespace sw
         _listGPUEntry.push( releaseDelegate, fenceValue );
     }
 
-    void RHIReleaseQueue::tickCompleted( uint64 completedFence )
+    void RHIReleaseQueue::releaseCompleted( uint64 completedFence )
     {
         // 스크래치를 빌려 쓴다. 콜백이 다시 tick 을 부르는 드문 재진입에도 안전하도록 잠깐 꺼내 두고 끝나면 돌려놓는다.
         // 꺼내고 돌려놓는 것도 잠금 안에서 한다. DX12 는 렌더 스레드의 endFrame 과 리소스를 만드는 스레드의
-        // 업로드 펜스 대기(D3D12RHIResourceFactory)가 tickCompleted 를 동시에 부를 수 있다.
+        // 업로드 펜스 대기(D3D12RHIResourceFactory)가 releaseCompleted 를 동시에 부를 수 있다.
         // 잠금 안에서는 할당하지 않는다(`RHIRetireList::extractReadyReserving`).
         vector<RHIResourceReleaseDelegate> listReady;
         {

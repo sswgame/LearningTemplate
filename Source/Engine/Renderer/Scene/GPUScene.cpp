@@ -311,7 +311,7 @@ namespace sw
             {
                 if ( _instances._buffer != bufferBefore )
                     _slotBuffer.markFullUpload();
-                if ( _slotBuffer.buildRuns( kMaxInstanceScatterRunCount, _listScratchSlotRun ) )
+                if ( _slotBuffer.collectRuns( kMaxInstanceScatterRunCount, _listScratchSlotRun ) )
                 {
                     // 바뀐 칸만 흩어 올린다 — 한 번의 호출이다(구간마다 부르면 스테이징 확보 · 제출이 되풀이된다).
                     _listScratchCopyRegion.clear();

@@ -34,7 +34,7 @@ namespace
         /** @brief 바뀐 칸 구간을 모으고 올렸다고 기록합니다. */
         static bool takeRuns( GPUSceneSlotBuffer& buffer, vector<GPUInstanceDirtyRange>& outListRun )
         {
-            const bool bScatter = buffer.buildRuns( 16u, outListRun );
+            const bool bScatter = buffer.collectRuns( 16u, outListRun );
             buffer.clearPending();
             return bScatter;
         }

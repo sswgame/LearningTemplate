@@ -99,7 +99,7 @@ namespace sw
          */
         bool allocateSized( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width, uint32 height, bool bUnorderedAccess = false );
         /**
-         * @brief 이미 만든 첨부 @p owner 의 텍스처를 @p name 이 함께 씁니다(앨리어싱 — 레벨 수명이 겹치지 않고 서술이 같은 첨부, `RenderGraphAliasPlan::build`).
+         * @brief 이미 만든 첨부 @p owner 의 텍스처를 @p name 이 함께 씁니다(앨리어싱 — 레벨 수명이 겹치지 않고 서술이 같은 첨부, `RenderGraphAliasPlan::make`).
          * @details 별칭은 자기 로드 · 저장 · 클리어 값(@p ops)과 자기 클리어 기록(`markCleared` 의 이름 키)을 가진다 — 처음 쓰는 패스가 자기 값으로 지운다. 텍스처 · SRV · RW 는
          *          주인 것이라 별칭을 지워도 놓지 않는다. 주인은 별칭이 있는 동안 쉬어도 놓지 않는다(`releaseIfIdle`).
          * @return 주인이 없으면 false 이고 아무것도 하지 않는다(부르는 쪽이 자기 텍스처로 만든다). 이미 있으면 true 다.

@@ -72,7 +72,7 @@ namespace sw
         _listDirtySlot.push_back( slot );
     }
 
-    bool GPUSceneSlotBuffer::buildRuns( uint32 maxRunCount, vector<GPUInstanceDirtyRange>& outListRun )
+    bool GPUSceneSlotBuffer::collectRuns( uint32 maxRunCount, vector<GPUInstanceDirtyRange>& outListRun )
     {
         outListRun.clear();
         if ( _bFullUploadPending != SW_FALSE )

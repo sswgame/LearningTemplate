@@ -955,7 +955,7 @@ namespace sw
     {
         if ( _bDefinesDirty != SW_FALSE )
         {
-            buildShaderDefines( _desc._permutations, _listCachedDefine );
+            computeShaderDefines( _desc._permutations, _listCachedDefine );
             _previousPermutationHash = _cachedPermutationHash; // 처음 만들 때는 0 이다(직전 변형이 없다)
             _cachedPermutationHash   = computePermutationHash( _listCachedDefine );
             _bDefinesDirty           = SW_FALSE;
@@ -970,7 +970,7 @@ namespace sw
         return renderPropertiesHash != 0 ? HashUtil::combine( defineHash, renderPropertiesHash ) : defineHash;
     }
 
-    void Material::buildShaderDefines( const MaterialPermutationDef& permutationDesc, vector<string>& outListDefine ) const
+    void Material::computeShaderDefines( const MaterialPermutationDef& permutationDesc, vector<string>& outListDefine ) const
     {
         outListDefine.clear();
         for ( const string& defineStr : permutationDesc._listAlwaysDefine )
@@ -1049,7 +1049,7 @@ namespace sw
         {
             for ( size_t bit = 0; bit < listRuntimeSwitch.size(); ++bit )
                 variantDesc._listStaticSwitch[listRuntimeSwitch[bit]]._bEnabled = ( combo & ( 1u << bit ) ) != 0 ? 1 : 0;
-            buildShaderDefines( variantDesc, listDefine );
+            computeShaderDefines( variantDesc, listDefine );
             if ( VectorUtil::contains( outListDefine, listDefine ) )
                 continue;
             outListPermutationHash.push_back( computePermutationHash( listDefine ) );

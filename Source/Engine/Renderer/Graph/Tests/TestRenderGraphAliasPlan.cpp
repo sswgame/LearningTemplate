@@ -1,6 +1,6 @@
 /**
  * @file TestRenderGraphAliasPlan.cpp
- * @brief 트랜지언트 앨리어싱 계획(`RenderGraphAliasPlan::build`) · 대여 풀(`TransientLeasePool`) 테스트 — 레벨 구간 겹침, 서술 키, 대여 · 반납 · 쉰 칸 놓기(nogpu).
+ * @brief 트랜지언트 앨리어싱 계획(`RenderGraphAliasPlan::make`) · 대여 풀(`TransientLeasePool`) 테스트 — 레벨 구간 겹침, 서술 키, 대여 · 반납 · 쉰 칸 놓기(nogpu).
  */
 #include "pch.h"
 
@@ -23,7 +23,7 @@ SW_TEST_CASE( RenderGraphAliasPlanTest, NonOverlappingLevelsShareOneTexture )
         {hashed_string( "Outline" ), 7, 4, 5}, // 4 ~ 5 — Bloom 과 레벨 4 를 함께 써 따로다
         {hashed_string( "Tonemap" ), 7, 6, 6}, // 6 — Lit 칸(마지막 4)이 먼저 비었다
     };
-    const RenderGraphAliasPlan plan = RenderGraphAliasPlan::build( listCandidate );
+    const RenderGraphAliasPlan plan = RenderGraphAliasPlan::make( listCandidate );
     SW_EXPECT_EQUAL( string( "Lit" ), string( plan.findOwner( hashed_string( "Bloom" ) ).c_str() ) );
     SW_EXPECT_TRUE( plan.findOwner( hashed_string( "Outline" ) ).empty() );
     SW_EXPECT_EQUAL( string( "Lit" ), string( plan.findOwner( hashed_string( "Tonemap" ) ).c_str() ) );
@@ -43,7 +43,7 @@ SW_TEST_CASE( RenderGraphAliasPlanTest, PlaceableSlotsCarryTheMergedLifetime )
         {hashed_string( "Compute" ), 9, 1, 2, 0}, // RW — 놓을 수 없다
         {hashed_string( "Tonemap" ), 5, 5, 6, 1},
     };
-    const RenderGraphAliasPlan plan = RenderGraphAliasPlan::build( listCandidate );
+    const RenderGraphAliasPlan plan = RenderGraphAliasPlan::make( listCandidate );
     SW_REQUIRE_EQUAL( size_t( 2 ), plan._listPlaceable.size() );
     for ( const RenderGraphAliasCandidate& placeable : plan._listPlaceable )
     {
@@ -65,7 +65,7 @@ SW_TEST_CASE( RenderGraphAliasPlanTest, DifferentDescriptionsNeverShare )
         {hashed_string( "HalfBright" ), 1, 0, 1},
         { hashed_string( "FullColor" ), 2, 3, 4},
     };
-    const RenderGraphAliasPlan plan = RenderGraphAliasPlan::build( listCandidate );
+    const RenderGraphAliasPlan plan = RenderGraphAliasPlan::make( listCandidate );
     SW_EXPECT_TRUE( plan._mapAliasToOwner.empty() );
     SW_EXPECT_EQUAL( uint32( 2 ), plan._ownerCount );
 }
@@ -81,8 +81,8 @@ SW_TEST_CASE( RenderGraphAliasPlanTest, PlanIsDeterministic )
         {hashed_string( "C" ), 3, 1, 2},
         {hashed_string( "D" ), 3, 3, 3},
     };
-    const RenderGraphAliasPlan first  = RenderGraphAliasPlan::build( listCandidate );
-    const RenderGraphAliasPlan second = RenderGraphAliasPlan::build( listCandidate );
+    const RenderGraphAliasPlan first  = RenderGraphAliasPlan::make( listCandidate );
+    const RenderGraphAliasPlan second = RenderGraphAliasPlan::make( listCandidate );
     SW_REQUIRE_EQUAL( first._mapAliasToOwner.size(), second._mapAliasToOwner.size() );
     for ( const auto& [alias, owner] : first._mapAliasToOwner )
     {
@@ -168,6 +168,6 @@ SW_TEST_CASE( RenderGraphAliasPlanTest, JoinLifetimesSpansWholeBypassChain )
     SW_EXPECT_EQUAL( 4u, listCandidate[4]._firstLevel );
     SW_EXPECT_EQUAL( 4u, listCandidate[4]._lastLevel );
     // 사슬이 레벨 1 ~ 6 을 쥐므로 레벨 4 의 Other 는 A 의 텍스처를 빌리지 못한다.
-    const RenderGraphAliasPlan plan = RenderGraphAliasPlan::build( listCandidate );
+    const RenderGraphAliasPlan plan = RenderGraphAliasPlan::make( listCandidate );
     SW_EXPECT_TRUE( plan.findOwner( hashed_string( "Other" ) ).empty() );
 }

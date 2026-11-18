@@ -1352,9 +1352,9 @@ namespace sw
             return;
         }
         // 컬링이 없는 백엔드는 인스턴스 슬롯 스트림이 곧 그리는 순서다. 앞(불투명)은 항등, 꼬리는 배치 안을 뷰 순서로 다시 놓는다 — 컬링이 돌면 GPU 정렬이 하는 일이라
-        // 여기(컬링 없음)에서만 CPU 로 한다(`GPUTransparentSorter::buildViewTailSlots`).
+        // 여기(컬링 없음)에서만 CPU 로 한다(`GPUTransparentSorter::computeViewTailSlots`).
         // 내용이 지난 프레임과 같으면 버퍼를 그대로 쓴다(뷰 카메라 · 투명 물체가 서 있으면 순서가 같다).
-        GPUTransparentSorter::buildViewTailSlots( vector_reference<const uint32>( *pOrder->_pListRank ), pOrder->_tailBase, _state._gpuScene.getTransparentBatches(), _listScratchTailSlot );
+        GPUTransparentSorter::computeViewTailSlots( vector_reference<const uint32>( *pOrder->_pListRank ), pOrder->_tailBase, _state._gpuScene.getTransparentBatches(), _listScratchTailSlot );
         const uint32 instanceCount = pOrder->_tailBase + tailCount;
         const bool   bSameContent  = view._instanceSlotStream != 0 && view._listInstanceSlot.size() == instanceCount &&
                                   Memory::compare( view._listInstanceSlot.data() + pOrder->_tailBase, _listScratchTailSlot.data(), tailCount * sizeof( uint32 ) ) == 0;

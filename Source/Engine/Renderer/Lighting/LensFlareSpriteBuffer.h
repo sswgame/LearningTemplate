@@ -77,14 +77,14 @@ namespace sw
          * @param aspect 주 시점의 가로 / 세로 — 크기(화면 높이 비율)를 NDC 로 옮긴다
          * @param outListRange 같은 텍스처의 구간들 — 절차적 모양이 먼저 한 구간, 그 뒤 Image 원소가 텍스처 경로 차례로 묶인다(구간마다 그리기 하나)
          */
-        static void buildSprites( const vector<LensFlareRequest>& listRequest, const float4x4& viewProj, float32 aspect, vector<LensFlareSprite>& outListSprite,
-                                  vector<LensFlareDrawRange>& outListRange );
+        static void computeSprites( const vector<LensFlareRequest>& listRequest, const float4x4& viewProj, float32 aspect, vector<LensFlareSprite>& outListSprite,
+                                    vector<LensFlareDrawRange>& outListRange );
 
         /** @brief 기록 전에 부릅니다 — 스프라이트를 펼쳐 올립니다. 버퍼를 못 만들면 오류를 한 번 남기고 이번 프레임은 그리지 않는다. */
         void prepare( IRHIDevice* pDevice, const vector<LensFlareRequest>& listRequest, const float4x4& viewProj, float32 aspect );
         /** @brief 이번 프레임에 그릴 스프라이트 수입니다(0 이면 패스가 그리지 않는다). */
         uint32 getSpriteCount() const { return _spriteCount; }
-        /** @brief 이번 프레임의 그리기 구간입니다(`buildSprites` 의 차례). */
+        /** @brief 이번 프레임의 그리기 구간입니다(`computeSprites` 의 차례). */
         const vector<LensFlareDrawRange>& getDrawRanges() const { return _listRange; }
         /** @brief 스프라이트 구조 버퍼입니다(패스 버퍼 슬롯 `shaderslot::kPassBuffer` 로 건다). */
         const RHIStructuredBuffer& getBuffer() const { return _buffer; }

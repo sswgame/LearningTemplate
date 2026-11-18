@@ -203,7 +203,7 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 
 ## 트랜지언트 앨리어싱
 
-뷰 그래프의 첨부 중 레벨 수명이 겹치지 않고 서술(형식 · 나눗수 · RW 용도 · 클리어 값)이 같은 것은 텍스처 하나를 나눠 쓴다(`RenderGraphAliasPlan::build`, 계획은 `FramePassExecutor::buildTransientAliasPlan`). XML 에 적을 칸은 없다 — 수명은 패스의 입출력 선언이 정한다.
+뷰 그래프의 첨부 중 레벨 수명이 겹치지 않고 서술(형식 · 나눗수 · RW 용도 · 클리어 값)이 같은 것은 텍스처 하나를 나눠 쓴다(`RenderGraphAliasPlan::make`, 계획은 `FramePassExecutor::rebuildTransientAliasPlan`). XML 에 적을 칸은 없다 — 수명은 패스의 입출력 선언이 정한다.
 
 - 나누지 않는 것: 깊이 형식(장면 깊이는 다음 프레임의 깊이 히스토리가 읽는다 · 그림자 맵), `_loadOp="Load"`(프레임을 넘어 잇는다), TAA 출력, 처음 쓸 때 만드는 효과 출력(그 주인 · 별칭은 자기 텍스처다).
 - 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시(`-gv_nanCheck`)를 켠 실행은 나누지 않는다. 비교는 `-gv_transientAliasing=0`.

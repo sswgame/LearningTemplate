@@ -785,11 +785,11 @@ namespace sw
             SW_LOG_ERROR_ID( "FramePassExecutor.CallbackBindCompileFailed", "Callback bind compile failed" );
             return false;
         }
-        buildTransientAliasPlan();
+        rebuildTransientAliasPlan();
         return bindFramePassCallbacks();
     }
 
-    void FramePassExecutor::buildTransientAliasPlan()
+    void FramePassExecutor::rebuildTransientAliasPlan()
     {
         ++_state._transientAliasGeneration; // 뷰 풀이 다음 셋업에서 새 계획으로 다시 만든다
         _state._transientAliasPlan = RenderGraphAliasPlan{};
@@ -872,7 +872,7 @@ namespace sw
             if ( listExcluded[candidateIndex] == 0 )
                 listAliasable.push_back( listCandidate[candidateIndex] );
         }
-        _state._transientAliasPlan = RenderGraphAliasPlan::build( listAliasable );
+        _state._transientAliasPlan = RenderGraphAliasPlan::make( listAliasable );
         SW_PROFILE_COUNT( "RT.Frame.transientAliases", _state._transientAliasPlan._mapAliasToOwner.size() );
     }
 

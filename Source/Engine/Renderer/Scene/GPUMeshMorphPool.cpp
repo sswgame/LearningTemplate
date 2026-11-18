@@ -438,7 +438,7 @@ namespace sw
         // 스킨 구간은 모프 **용량** 뒤에서 시작한다 — 모프 메시가 들고 나도 용량이 그대로면 스킨 인스턴스의 시작이 그대로다.
         _skinVertexBase = _morphAllocator.getCapacity();
 
-        buildSkinInstanceRows( pDevice, listSkinMesh, listSkinSlot, listSkinLOD );
+        rebuildSkinInstanceRows( pDevice, listSkinMesh, listSkinSlot, listSkinLOD );
 
         if ( _vertexCount == 0 )
         {
@@ -452,7 +452,7 @@ namespace sw
         ensureDeformBuffers( pDevice );
     }
 
-    void GPUMeshMorphPool::buildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh, const vector<uint32>& listSkinSlot, const vector<uint32>& listSkinLOD )
+    void GPUMeshMorphPool::rebuildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh, const vector<uint32>& listSkinSlot, const vector<uint32>& listSkinLOD )
     {
         // 스킨 원본(바뀐 때만 올린다)과 인스턴스 — 인스턴스는 칸마다 하나이고 결과 구간 · 원본 구간 · 팔레트 시작을 표에 한 줄씩 갖는다.
         rebuildSkinSources( pDevice, listSkinMesh );

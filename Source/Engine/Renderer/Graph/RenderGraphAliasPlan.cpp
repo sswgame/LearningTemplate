@@ -53,7 +53,7 @@ namespace sw
         }
     }
 
-    RenderGraphAliasPlan RenderGraphAliasPlan::build( const vector<RenderGraphAliasCandidate>& listCandidate )
+    RenderGraphAliasPlan RenderGraphAliasPlan::make( const vector<RenderGraphAliasCandidate>& listCandidate )
     {
         RenderGraphAliasPlan result;
         // 서술 키 · 첫 레벨 · 목록 순으로 본다 — 같은 키 안에서 먼저 시작하는 후보가 칸을 먼저 연다.

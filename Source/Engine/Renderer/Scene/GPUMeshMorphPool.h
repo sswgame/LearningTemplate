@@ -309,7 +309,7 @@ namespace sw
         /** @brief 스킨 원본 구간을 더 큰 새 버퍼로 다시 채웁니다. 살아 있는 원본을 앞에서부터 다시 잇습니다. */
         void repackSkinSources( IRHIDevice* pDevice );
         /** @brief 스킨 원본을 맞추고 스킨 메시마다 인스턴스 행(결과 구간 · 원본 구간 · 팔레트 시작)과 `_listSkinResultOffset` 를 다시 만듭니다. `_vertexCount` 를 정합니다. */
-        void buildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh, const vector<uint32>& listSkinSlot, const vector<uint32>& listSkinLOD );
+        void rebuildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh, const vector<uint32>& listSkinSlot, const vector<uint32>& listSkinLOD );
         /** @brief 결과 버퍼 · 스킨 인스턴스 표 · 팔레트 버퍼의 용량을 맞추고 못 만든 것을 오류로 남깁니다. */
         void ensureDeformBuffers( IRHIDevice* pDevice );
         /** @brief 모프 메시 집합을 맞춥니다. 들어온 메시의 레스트만 올립니다. @return 어느 모프 메시의 구간이라도 바뀌었으면 true 입니다. */

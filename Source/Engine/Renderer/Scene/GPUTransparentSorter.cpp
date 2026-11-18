@@ -89,7 +89,7 @@ namespace sw
             ( *listRank )[_listViewKey[rank]._candidateIndex] = rank;
         }
 
-        // 2) 배치마다 가장 먼저 그릴 인스턴스의 rank. 배치 안의 순서는 GPU 정렬(컬링) 또는 RT 의 buildViewTailSlots(컬링 없음)가 정한다.
+        // 2) 배치마다 가장 먼저 그릴 인스턴스의 rank. 배치 안의 순서는 GPU 정렬(컬링) 또는 RT 의 computeViewTailSlots(컬링 없음)가 정한다.
         vector<uint32>& listBatchFirstRank = _listViewBatchFirstRank;
         listBatchFirstRank.assign( listBatch.size(), MathUtil::kMaxUInt32 );
         for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
@@ -135,7 +135,7 @@ namespace sw
         return order;
     }
 
-    void GPUTransparentSorter::buildViewTailSlots( vector_reference<const uint32> listRank, uint32 tailBase, vector_reference<const GPUMeshBatch> listBatch, vector<uint32>& outListTailSlot )
+    void GPUTransparentSorter::computeViewTailSlots( vector_reference<const uint32> listRank, uint32 tailBase, vector_reference<const GPUMeshBatch> listBatch, vector<uint32>& outListTailSlot )
     {
         const uint32 tailCount = static_cast<uint32>( listRank.size() );
         outListTailSlot.resize( tailCount );

@@ -221,7 +221,7 @@ namespace sw
         /** @brief 모은 매개변수 단어를 버퍼에 올립니다. 버퍼를 잡지 못하면 이번 프레임의 디스패치를 모두 비웁니다. */
         void uploadParamBuffer( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch );
         /** @brief 이번 프레임 디스패치 앞뒤의 버퍼 전이를 단계별 목록으로 짓습니다(`recordDispatches` 가 단계마다 `transitionBuffers` 한 번으로 낸다). */
-        void buildTransitionLists();
+        void rebuildTransitionLists();
         /** @brief 요청의 상태를 찾거나 만들고 버퍼를 갖춥니다. 버퍼를 만들지 못했으면 오류를 남기고 nullptr 입니다. */
         EmitterState* prepareEmitterState( IRHIDevice& device, const VFXGPUEmitterRequest& request );
         /** @brief @p state 의 시뮬레이션 디스패치를 붙입니다(밀린 단계가 없고 이미 돌았으면 매개변수를 버리고 붙이지 않는다). */

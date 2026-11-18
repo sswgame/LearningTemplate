@@ -221,7 +221,7 @@ namespace sw
         releaseStaleEmitters( device );
 
         uploadParamBuffer( device, listBatch );
-        buildTransitionLists(); // 디스패치 목록이 정해진 뒤(올리기 실패가 목록을 비운다)
+        rebuildTransitionLists(); // 디스패치 목록이 정해진 뒤(올리기 실패가 목록을 비운다)
     }
 
     void VFXGPUSimulation::reportMissingSimulationPipeline( bool bAnyGPUBatch )
@@ -396,7 +396,7 @@ namespace sw
         _paramBuffer.upload( &device, _listParamWord.data(), static_cast<uint32>( _listParamWord.size() * sizeof( uint32 ) ) );
     }
 
-    void VFXGPUSimulation::buildTransitionLists()
+    void VFXGPUSimulation::rebuildTransitionLists()
     {
         // 방출기마다 자기 버퍼만 쓰고 다른 방출기의 버퍼를 읽지 않는다 — 디스패치 앞뒤의 전이를 단계마다 한 번에 낸다(`IRHICommandList::transitionBuffers`).
         // 예전에는 방출기마다 다섯 번 따로 냈다(DX12 `ResourceBarrier( 1 )` · Vulkan `vkCmdPipelineBarrier` 가 그 수만큼).
@@ -701,7 +701,7 @@ namespace sw
         const bool bBindDepth = depth._texture != 0 && depth._uav != kInvalidDescriptorIndex;
         if ( bBindDepth )
             cmd.prepareTextureForUnorderedAccess( depth._texture );
-        // 전이 목록은 디스패치 목록과 함께 `prepareFrame` 이 지었다(`buildTransitionLists`).
+        // 전이 목록은 디스패치 목록과 함께 `prepareFrame` 이 지었다(`rebuildTransitionLists`).
         const bool bLightBufferReady = _frameInput._lightUAV != kInvalidDescriptorIndex && _frameInput._lightBuffer != 0;
         cmd.transitionBuffers( _listTransitionBeforeSimulate.data(), static_cast<uint32>( _listTransitionBeforeSimulate.size() ) );
         for ( const Dispatch& dispatch : _listDispatch )

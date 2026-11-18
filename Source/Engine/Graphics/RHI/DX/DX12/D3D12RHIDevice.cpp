@@ -1563,7 +1563,7 @@ namespace sw
         }
         _frameRing.setFenceValue( _frameRing.currentIndex(), fenceToSignal );
         const uint64 completedFence = _fence->GetCompletedValue();
-        _releaseQueue.tickCompleted( completedFence );
+        _releaseQueue.releaseCompleted( completedFence );
         recycleCompletedOnlineBlocks( completedFence );
         // 프레임을 돌리는 동안 폴링하는 쪽이 없어도 끝난 전송의 작업 · 스테이징 구간 · 전송을 기다리던 해제가 돌아오게 한다(기다리지 않는다).
         retireCompletedTransfers();
@@ -2440,7 +2440,7 @@ namespace sw
             { recycleTransferJob( std::move( job ) ); } );
         }
         // 워터마크가 지난 전송을 기다리던 해제를 프레임 해제 큐로 넘긴다(그 프레임 펜스 뒤에 놓인다).
-        _transferReleaseQueue.tickCompleted( _transferSerials.getWatermark() );
+        _transferReleaseQueue.releaseCompleted( _transferSerials.getWatermark() );
         // 할당기가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다(업로드 힙 메모리를 링 하나 크기 넘게 쥐고 있지 않는다).
         destroyIdleSoloBuffer( _uploadRing );
         destroyIdleSoloBuffer( _readbackRing );

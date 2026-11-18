@@ -1138,7 +1138,7 @@ namespace sw
             } );
         }
         // 콜백은 즉시 컨텍스트 잠금 밖에서 부른다 — 비동기 되읽기의 콜백이 같은 잠금을 잡고 Map 한다.
-        _releaseQueue.tickCompleted( completedSerial );
+        _releaseQueue.releaseCompleted( completedSerial );
     }
 
     Microsoft::WRL::ComPtr<ID3D11Query> D3D11RHIDevice::acquireTransferQuery( const D3D11ImmediateContext::ScopedLock& context )

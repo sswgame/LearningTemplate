@@ -127,8 +127,8 @@ namespace sw
         return scale;
     }
 
-    RenderPacketMainView RenderPacketViewSetup::setupMainView( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider,
-                                                               Scene& activeScene, const FrameRenderer* pFrameRenderer )
+    RenderPacketMainView RenderPacketViewSetup::populateMainView( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider,
+                                                                  Scene& activeScene, const FrameRenderer* pFrameRenderer )
     {
         const bool           bSceneMain = views.isSceneViewMain();
         RenderPacketMainView mainView;

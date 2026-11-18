@@ -18,7 +18,7 @@ namespace sw
 {
     /**
      * @class GPUSceneSlotBuffer
-     * @brief 칸 순 인스턴스 배열의 CPU 사본입니다. 스냅샷마다 `apply` 로 맞추고, 바뀐 칸을 `buildRuns` 로 구간에 모아 올린 뒤 `clearPending` 합니다.
+     * @brief 칸 순 인스턴스 배열의 CPU 사본입니다. 스냅샷마다 `apply` 로 맞추고, 바뀐 칸을 `collectRuns` 로 구간에 모아 올린 뒤 `clearPending` 합니다.
      * @details 올리지 못한 바뀐 칸은 다음 `apply` 뒤에도 남는다(올릴 때까지 쌓인다). 버퍼를 새로 만들었으면 `markFullUpload` 로 전체를 올리게 한다.
      */
     class SW_API GPUSceneSlotBuffer
@@ -47,7 +47,7 @@ namespace sw
          * @brief 바뀐 칸을 이어진 구간으로 모아 @p outListRun 에 담습니다(칸 오름차순).
          * @return 전체를 올려야 하거나(`isFullUploadPending`) 구간이 @p maxRunCount 를 넘으면 false — 부르는 쪽이 사본 전체를 올린다.
          */
-        [[nodiscard]] bool buildRuns( uint32 maxRunCount, vector<GPUInstanceDirtyRange>& outListRun );
+        [[nodiscard]] bool collectRuns( uint32 maxRunCount, vector<GPUInstanceDirtyRange>& outListRun );
         /** @brief 올렸다고 기록합니다(바뀐 칸 · 전체 표시를 비운다). */
         void clearPending();
         /** @brief 사본과 기록을 모두 버립니다(씬을 비울 때). 다음 `apply` 뒤 업로드는 전체다. */

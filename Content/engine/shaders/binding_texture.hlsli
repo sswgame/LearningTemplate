@@ -269,7 +269,7 @@ SW_DECLARE_ENGINE_TEXTURE( 24 );
 
         // 머티리얼 텍스처 칸 상한(에뮬) — 아래 실행 중 분기가 이 수보다 앞의 칸만 읽어, 셰이더에는 그 칸만 남는다(리터럴 칸 접기와 같은 까닭).
         // 웹(WEBGPU)은 단계 텍스처 한도가 16 이라 머티리얼 변형이 실제로 가진 칸만 남긴다(언리얼 머티리얼 셰이더가 머티리얼마다 쓰는 텍스처만 고정 바인딩하는 자리).
-        //   MATERIAL_TEXTURE_COUNT — 머티리얼 변형이면 머티리얼 정의가 낸다(Material::buildShaderDefines, 텍스처 프로퍼티 수 = 고정 서수 0..N-1),
+        //   MATERIAL_TEXTURE_COUNT — 머티리얼 변형이면 머티리얼 정의가 낸다(Material::computeShaderDefines, 텍스처 프로퍼티 수 = 고정 서수 0..N-1),
         //                            머티리얼 칸을 빌려 쓰는 비머티리얼 셰이더(캔버스 · 입자 · 데칼 · 층 굽기 · ImGui)는 파일 머리에 적는다.
         //   씬 메시 패스 PSO(머티리얼 없는 배치)는 패스 define 이 0 을 적는다(selectRenderPassShader) — 머티리얼 변형은 같은 이름을 칸 수로 바꾼다.
         //   웹에서 칸 수가 없으면 칸 분기 함수를 정의하지 않는다(아래 SW_MATERIAL_TEXTURE_SLOTS_DECLARED) — 기본 칸 수로 대신 그리지 않는다.

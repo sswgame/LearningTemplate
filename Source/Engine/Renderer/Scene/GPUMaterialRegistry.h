@@ -49,7 +49,7 @@ namespace sw
          */
         void reset( GPUSceneSnapshot& inoutSnapshot );
         /** @brief 머티리얼의 셰이더 타입 그룹 인덱스를 찾거나 만듭니다(배치를 방출할 때 부릅니다). 머티리얼이 없으면 kInvalidMaterialGroup 입니다. */
-        uint32 findOrAddMaterialGroup( const Material* pMaterial, GPUSceneSnapshot& inoutSnapshot );
+        uint32 getOrCreateMaterialGroup( const Material* pMaterial, GPUSceneSnapshot& inoutSnapshot );
         /** @brief 퍼뮤테이션 인덱스를 찾거나 만듭니다(배치를 방출할 때 부릅니다). 머티리얼이 없으면 kInvalidShaderPermutation 입니다. */
         uint32 getShaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance, bool bAppearanceDither, GPUSceneSnapshot& inoutSnapshot );
         /**

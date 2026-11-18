@@ -234,7 +234,7 @@ namespace sw
         [[nodiscard]] bool setStaticSwitch( hashed_string name, bool bEnabled );
         /**
          * @brief 런타임 스위치 조합마다의 define 목록과 그 퍼뮤테이션 해시를 냅니다(지금 상태 포함, 같은 목록은 한 번). 런타임 스위치가 상한을 넘으면 오류를 남기고 지금 상태만 냅니다.
-         * @details 머티리얼을 바꾸지 않는다 — `setStaticSwitch` 뒤 `getCachedShaderDefines` · `getPermutationHash` 가 낼 값과 같다(같은 정의 함수 `buildShaderDefines`).
+         * @details 머티리얼을 바꾸지 않는다 — `setStaticSwitch` 뒤 `getCachedShaderDefines` · `getPermutationHash` 가 낼 값과 같다(같은 정의 함수 `computeShaderDefines`).
          *          쿠커(`ShaderCookRequestCollector`)와 런타임 PSO 미리 만들기(`MaterialCache` → `FramePSOManager::warmPinnedMaterialPSOs`)가 같은 조합을 쓴다.
          */
         void collectRuntimeSwitchVariants( vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const;
@@ -269,7 +269,7 @@ namespace sw
         /** @brief 캐시된 셰이더 define 을 반환합니다. */
         const vector<string>& getCachedShaderDefines() const;
         /** @brief 퍼뮤테이션 정의 @p permutationDesc 로 이 머티리얼의 define 목록(정렬)을 만듭니다. 캐시를 건드리지 않는다(`getCachedShaderDefines` 의 본문). */
-        void buildShaderDefines( const MaterialPermutationDef& permutationDesc, vector<string>& outListDefine ) const;
+        void computeShaderDefines( const MaterialPermutationDef& permutationDesc, vector<string>& outListDefine ) const;
         /** @brief 정렬한 define 목록의 퍼뮤테이션 해시입니다(렌더 칸 해시를 섞는다 — `getPermutationHash` 와 같은 규칙). */
         uint64 computePermutationHash( const vector<string>& listDefine ) const;
         /** @brief 퍼뮤테이션 해시를 반환합니다. define 에 렌더 상태 · 그리기 순서를 섞은 값이라 PSO 변형과 배치가 그것으로 갈린다. */

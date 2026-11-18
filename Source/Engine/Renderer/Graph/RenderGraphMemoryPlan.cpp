@@ -24,7 +24,7 @@ namespace sw
         return left._firstLevel <= right._lastLevel && right._firstLevel <= left._lastLevel;
     }
 
-    RenderGraphMemoryPlan RenderGraphMemoryPlan::build( const vector<RenderGraphMemoryItem>& listItem )
+    RenderGraphMemoryPlan RenderGraphMemoryPlan::make( const vector<RenderGraphMemoryItem>& listItem )
     {
         using Internal = RenderGraphMemoryPlanInternal;
         RenderGraphMemoryPlan plan;
