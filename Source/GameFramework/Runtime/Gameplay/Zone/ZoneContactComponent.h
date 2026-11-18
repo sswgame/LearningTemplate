@@ -43,6 +43,7 @@ namespace sw
         struct SurfaceZone
         {
             hashed_string       _kind{};
+            hashed_string       _sourceName{}; ///< 동작이 보는 건 길 이름 `surface:<종류>` — 지역을 만들 때 한 번 짓는다(프레임마다 글을 이어 이름을 찾지 않는다)
             ZoneCompiledProfile _compiled{};
             ZoneTracker         _tracker{};
             uint8               _bValid{ SW_FALSE }; ///< 프로필을 읽고 컴파일했다(틀렸으면 다시 시도하지 않는다 — 오류는 한 번)
@@ -94,7 +95,8 @@ namespace sw
         PROPERTY( Category = "Contact", DisplayName = "Touch Distance", Min = 0.0, Units = m, Tooltip = "How far past a character's capsule a wall counts as touched (thorns, electric fences)" )
         float32 _touchDistance;
 
-        vector<unique_ptr<SurfaceZone>> _listSurfaceZone; ///< 종류마다(처음 닿을 때 만든다). 기록이 처리기 기억을 가리키므로 자리가 움직이지 않게 힙에 둔다
-        vector<ContactRecord>           _listCollision;   ///< 지난 갱신 뒤 강체 접촉 사건이 적은 것
+        vector<unique_ptr<SurfaceZone>> _listSurfaceZone;    ///< 종류마다(처음 닿을 때 만든다). 기록이 처리기 기억을 가리키므로 자리가 움직이지 않게 힙에 둔다
+        vector<ContactRecord>           _listCollision;      ///< 지난 갱신 뒤 강체 접촉 사건이 적은 것
+        vector<ContactRecord>           _listContactScratch; ///< `updateContacts` 가 이번 프레임에 닿은 표면을 모으는 재사용 버퍼
     };
 } // namespace sw
