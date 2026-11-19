@@ -943,7 +943,7 @@ SW_TEST_CASE_F( JRPGRulesTest, PartyStateRefusals )
     static_assert( std::size( kArrMemberID ) == static_cast<size_t>( sw::JRPGParty::kMaxMembers ) );
     for ( int32 member = 0; member < sw::JRPGParty::kMaxMembers; ++member )
     {
-        SW_REQUIRE_TRUE( full.addMember( kArrMemberID[member], "Hero", "hero" ) == member );
+        SW_REQUIRE_TRUE( full.addMember( sw::hashed_string( kArrMemberID[member] ), "Hero", "hero" ) == member );
     }
     SW_REQUIRE_TRUE( extra.addMember( "mx", "Hero", "hero" ) == 0 );
     sw::Archive fullBytes;
