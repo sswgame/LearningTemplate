@@ -773,7 +773,7 @@
     "Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternHorse.cpp": {"float": 5},
     "Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternLaw.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternSurvival.cpp": {"float": 3},
-    "Source/GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.cpp": {"minus-one": 1, "integer": 6},
+    "Source/GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.cpp": {"integer": 5},
     "Source/GameFramework/Kits/Genre/Simulation/Farming/FarmField.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Genre/Simulation/RestaurantSim/IngredientStock.cpp": {"minus-one": 1, "integer": 1, "hex": 1},
     "Source/GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.cpp": {"minus-one": 2, "float": 6, "integer": 5},
