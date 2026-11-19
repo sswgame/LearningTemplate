@@ -1283,6 +1283,25 @@ public:
 
 **측정.** 재는 법: 머티리얼 인스턴스 5000 씬(`load/materialinstances` — 없으면 만든다)에서 상수 버퍼 바이트 · 백엔드 할당 수(Vulkan `RT.Vulkan.allocationCount`, DX12 커밋 자원 수) · 프레임 시간 p50, 전후. 판정: 할당 수가 1/10 아래로 줄고 프레임 시간이 흔들림 안이면 둔다.
 
+### 렌더링 런타임 디버그(설계 2026-11-20)
+
+**문제.** 렌더 타깃 창(`RenderTargetPanel` — 주 시점 첨부 목록 · 채널 · 깊이 선형화 · 픽셀 값), `GPUPixelInspector`, 프로파일러의 패스 GPU 시간, 보기 모드 16 개, 개발 명령 `gpu.show` · `gpu.timings` · `gpu.inspect` · `render.graph` · `lod.explain` · `renderdoc.*` 가 있다. 빈 것: 그 지점까지 그린 그림을 드로우 하나씩 넘기며 보는 도구가 없고(렌더독을 띄워야 한다), 렌더 그래프는 글(`render.graph`)로만 보이며, 그래프 밖 구조 버퍼(HZB · 가림 타일 — `FrameBufferTable`)와 HDR 출력의 장면 RT · UI RT 는 볼 곳이 없고, 가림 컬링 · 텍스처 스트리밍은 켜고 끄기(`gv_occlusionCulling` · `gv_textureStreaming`)만 있다. 렌더 타깃 창은 밉 0 만 읽고 HDR 값은 0 ~ 1 로 잘라 보인다.
+
+**대조.** 언리얼: Buffer Visualization 보기 모드 · `vis <RT> [mip]`(RDG 자원을 화면에), `ProfileGPU`(패스 트리와 시간), RDG Insights(패스 · 자원 · 수명 · 전이 · 비동기 큐 타임라인), Shader Complexity, 프레임 단위 드로우는 RenderDoc 연동에 맡긴다. 유니티: Frame Debugger(이벤트 목록 = 패스 → 드로우, 고른 이벤트까지만 그려 게임 뷰와 RT 를 그 시점으로, 그 드로우의 셰이더 · 키워드 · 속성 값 · 바인딩), Rendering Debugger 창(디스플레이 통계 · 머티리얼 · 조명 · 렌더 타깃 겹쳐 보기, 런타임 겹치기 화면도 같은 항목). Godot: 뷰포트 Debug Draw 모드(Overdraw · Unshaded · Wireframe · 버퍼 보기), 디버거의 비디오 메모리 패널(텍스처마다 VRAM)과 Monitors(드로우 · 프리미티브 · VRAM). → 셋 모두 (가) 이벤트를 넘기며 "여기까지" 그림, (나) 자원 목록과 그 내용 보기, (다) 그래프 · 수명 그림, (라) 화면 위 통계 줄을 갖는다. 우리는 (나) 의 텍스처 반쪽만 있다.
+
+**결정.**
+1. **차례(영향 큰 순).** ① 렌더 타깃 창 보강(밉 고르기 · HDR 노출 · HDR 장면 RT · UI RT 목록) → ② 프레임 디버거 → ③ 렌더 그래프 그림 → ④ 가림 · 스트리밍 보기와 HUD 렌더 범주 → ⑤ 버퍼 보기. ①②는 "이 픽셀이 왜 이런가" 의 첫 질문이고 ③~⑤는 그 뒤의 "왜 이 패스 · 왜 이 버퍼" 다.
+2. **엔진 쪽 우편함 하나 — `RenderDebugRegistry`.** `RenderTargetRegistry` 와 같은 서비스 서브시스템(UI 가 요청하고 렌더 스레드가 프레임 경계에서 처리해 값으로 공개, 세대 번호로 다시 읽을지 안다): 그래프 스냅숏 요청 · 공개, 프레임 디버거 설정 · 드로우 기록, 버퍼 읽기 요청 · 결과, 프레임 통계(드로우 · 삼각형 상한). 렌더러에는 호스트(`FrameRendererHost`)로만 건다 — 화면 밖 렌더러는 기록하지 않는다. 렌더러의 훅은 셋이다: 패킷 처리 앞뒤(`FrameRenderer::executePacket` — 프레임 시작 · 그래프 스냅숏), 드로우 직전(`FramePassExecutor::drawBatchGroup` — 허용 · 기록), 프레임 그래프 끝(`recordFrameGraph` — 버퍼 되읽기). 모두 `!SW_SHIPPING` 이고 꺼져 있으면 원자 값 하나를 읽는다.
+3. **프레임 디버거 — 유니티 꼴 "여기까지".** 멈춤 지점 = (패스, 그 패스 안 드로우 번호). 그 패스의 뒤 드로우와 실행 순서상 뒤 패스의 씬 드로우를 건너뛴다. 전체 화면 · 컴퓨트 패스는 그대로 돈다 — 조명 · 후처리가 "N 번째까지 그린 G버퍼" 로 계산되어 화면과 렌더 타깃 창이 모두 그 시점을 보인다(유니티는 뒤 이벤트를 모두 멈추지만 우리 디퍼드 경로는 조명이 따로라 이쪽이 더 많이 보인다). 주 시점만 — 렌더 타깃 창이 보는 풀과 같다. 기록은 드로우마다 PSO · 인덱스 수 · 묶음(멀티 드로우) 수 · 삼각형 상한, 그리고 PSO 의 바인딩 레이아웃(리플렉션 이름 · 레지스터 · 구조 보폭 · CB 멤버)이다. 병렬 기록이라 드로우 번호는 패스 안에서만 센다(패스 하나는 한 스레드가 기록한다). 게임 시간은 멈추지 않는다 — 멈춘 그림이 필요하면 에디터 일시정지를 쓴다.
+4. **렌더 그래프 그림 — 실행 결과의 값.** `RenderGraphSnapshot::build( graph )`(순수 함수 — 단위 테스트)가 실행 순서 패스(레벨 · 큐 · 비동기 묶음 · 전이 수 — 같은 추론을 빈 문맥으로 다시 돈다), 자원(종류 · 수명 · 읽는 패스 · 쓰는 패스)을 값으로 낸다. 에디터는 `EditorNodeGraph` 로 레벨 = 열, 패스 = 노드, 생산 → 소비 = 링크로 그리고 노드에 전이 수 · GPU 시간(`GPU.<패스>` 프로파일러 구간)을 겹친다. 뷰 그래프와 프레임 그래프 둘 다.
+5. **가림 · 스트리밍.** 가림 타일은 이미 CPU 사본이 있다(`FrameRenderer::getOcclusionSnapshot` — 몇 프레임 늦은 16 px 밉). 창은 그 격자를 깊이 회색으로 그리고(가린 타일 = 1 미만) 살아 있는 프리미티브 경계 구를 GPU 컬링과 같은 식(`OcclusionTileSnapshot::isSphereOccluded`)에 넣어 가린 수를 센다. 스트리밍은 이미 있는 프로파일러 수(`RT.TextureStreaming.residentBytes` · `poolBytes` · `bytesInFlight` · `RT.TextureUpload.waiting`)를 읽는다 — 새 계측이 없다. 둘 다 HUD 범주(`occlusion` · `streaming`)로도 보인다. 새 보기 모드는 만들지 않는다(셰이더 퍼뮤테이션이 늘고 같은 정보가 창 · HUD 에 있다 — 필요해지면 언리얼 `Visualize Occlusion` 처럼 그때 더한다).
+6. **버퍼 보기.** `FrameBufferTable` 등록은 크기를 함께 적는다(구조 버퍼 판 `registerBuffer( 이름, 칸, const RHIStructuredBuffer&, 접근 )` — 크기를 모르는 핸들은 읽지 않는다). 창이 이름 · 칸을 고르면 프레임 그래프 끝에서 `AsyncBufferReadback` 으로 읽어 공개한다. 풀이는 `BufferViewLayout`(원소 보폭 + 칸 목록 — 셰이더 리플렉션 `ShaderBindingSlot::_listElementMember` 에서 만들거나 float · uint · int 한 종류 보폭) 순수 함수로 표 행을 만든다(단위 테스트).
+7. **HUD.** 이미 있는 `draw` 범주에 삼각형 상한 · 전이 · GPU · VRAM(추적 바이트)을 더하고, `occlusion` · `streaming` · `framedebug` 범주를 `SW_DEBUG_HUD_SECTION` 으로 등록한다. 게임 중에는 개발 명령 `framedebug <패스> <드로우> | off`(유니티 Frame Debugger 의 이벤트 고르기)과 `gpu.show`(언리얼 `vis`)가 같은 일을 한다.
+
+**확인.** 단위: `RenderGraphSnapshot`(패스 수 · 레벨 · 전이 수 · 수명), `BufferViewLayout`(리플렉션 칸 → 행 글, 보폭 밖 자르기), 렌더 타깃 노출 · 밉 크기, 프레임 디버거 허용 규칙(멈춤 패스 앞 · 안 · 뒤), 가림 타일 통계, 그래프 그림 배치(노드 수 = 패스 수, 열 = 레벨). 에디터 시나리오 `editor.renderdebugger`: 창 열기 → 그래프 캡처 노드 수 = 패스 수 → 프레임 디버거 켜고 세 번 넘김(감시 값 멈춤 드로우 번호) → 버퍼 탭 목록 → 보기 모드 전환. 골든 사진은 새로 만들지 않는다(통합이 기록).
+
+**측정.** 꺼진 상태의 비용은 드로우마다 원자 값 하나다 — 통합에서 `bench.json` p50 이 흔들림 안인지 한 번 본다.
+
 ### Android IME 조합(설계 2026-11-20, 감사 P-4)
 
 **문제.** Android 는 미확정(조합 중) 글을 받지 못한다. 앱은 NativeActivity 라 Java `InputConnection` 이 없고, 글은 키 이벤트의 `getUnicodeChar`(`AndroidWindow.cpp`)로만 들어온다 — 한글 · 일본어 · 중국어 입력기는 조합을 `InputConnection` 으로 보내므로 아무것도 오지 않는다. 받는 쪽은 이미 있다: `CallbackInputWindow::queueTextInput( WindowTextInputKind::Composition | Commit, 글 )`(웹이 쓰는 길).
