@@ -64,9 +64,12 @@ namespace sw
      *          돈의 단위는 카탈로그의 통화 하나다. 가죽 값(`WesternCarcass`)은 센트이므로 팔 때 달러로 내리고 남은 센트는 다음 판매로 넘긴다. 명예 단계의 할인 비율은 파는 값에 웃돈으로 얹는다.
      *          레드 데드 리뎀션 2 의 명예 · 현상금 · 코어 흐름을 따랐다(기억에 의존한 비교).
      */
+    REFLECT()
     class SW_KIT_API WesternOutlaw
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WOTL" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -119,15 +122,18 @@ namespace sw
         WesternSurvival        _survival;
         WesternPerceptionSight _sight;
         GameRandom             _random;
+        PROPERTY( RuntimeState )
         vector<WesternCarcass> _listCarcass;
-        vector<WesternPelt>    _listPelt;
-        SessionStateRefs       _refs;
-        hashed_string          _regionID;
-        const WesternCatalog*  _pCatalog;
-        const LootCatalog*     _pLoot;          ///< 빌린 전리품 카탈로그(없으면 nullptr)
-        float64                _lastClockHours; ///< 지난 `update` 의 시계(날 × 24 + 시)
-        float32                _regionBaseTemperature;
-        int32                  _centsCarry;     ///< 팔고 남은 센트(1 달러 아래)
-        uint8                  _bClockSeen : 1; ///< `_lastClockHours` 를 잡았다(불러온 뒤에는 다시 잡는다)
+        PROPERTY( RuntimeState )
+        vector<WesternPelt>   _listPelt;
+        SessionStateRefs      _refs;
+        hashed_string         _regionID;
+        const WesternCatalog* _pCatalog;
+        const LootCatalog*    _pLoot;          ///< 빌린 전리품 카탈로그(없으면 nullptr)
+        float64               _lastClockHours; ///< 지난 `update` 의 시계(날 × 24 + 시)
+        float32               _regionBaseTemperature;
+        PROPERTY( RuntimeState )
+        int32 _centsCarry;     ///< 팔고 남은 센트(1 달러 아래)
+        uint8 _bClockSeen : 1; ///< `_lastClockHours` 를 잡았다(불러온 뒤에는 다시 잡는다)
     };
 } // namespace sw

@@ -56,9 +56,12 @@ namespace sw
      * @brief 위쳐 한 명의 연금술입니다. 물건 하나는 한 번 만들면 인벤토리에 남고(아이템 하나) 사용 횟수만 줄어듭니다. 명상하면 술 하나로 모든 물건이
      *        가득 찹니다. 독성은 묶이지 않은 부분이 초당 일정량 줄고, 변이 혼합물이 가진 부분은 효과가 끝날 때 풀립니다.
      */
+    REFLECT()
     class SW_KIT_API MonsterHuntAlchemy
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WALC" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -95,13 +98,19 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
 
-    private:
+        /** @brief 물건 하나의 남은 사용 횟수입니다(리플렉션 상태 칸의 원소). */
+        REFLECT()
         struct ChargeEntry
         {
+            REFLECT_BODY();
+
+            PROPERTY()
             hashed_string _itemID{};
-            int32         _charges{ 0 };
+            PROPERTY( Min = 0 )
+            int32 _charges{ 0 };
         };
 
+    private:
         const MonsterHuntAlchemyDef* findDef( const hashed_string& itemID ) const;
         ChargeEntry*                 findCharge( const hashed_string& itemID );
         MonsterHuntUseResult         evaluateUse( const hashed_string& itemID, const Inventory& inventory, MonsterHuntAlchemyKind kind ) const;
@@ -109,13 +118,17 @@ namespace sw
         void                         spendCharge( const hashed_string& itemID );
 
     private:
-        Crafter                         _crafter;
+        Crafter _crafter;
+        PROPERTY( RuntimeState )
         vector<ChargeEntry>             _listCharge;
         vector<MonsterHuntActiveEffect> _listEffect;
         const MonsterHuntCatalog*       _pCatalog;
         const RecipeCatalog*            _pRecipeCatalog;
-        hashed_string                   _oilID;
-        float32                         _floatingToxicity; ///< 묶이지 않은 독성(서서히 줄어든다)
-        int32                           _oilHits;
+        PROPERTY( RuntimeState )
+        hashed_string _oilID;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _floatingToxicity; ///< 묶이지 않은 독성(서서히 줄어든다)
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _oilHits;
     };
 } // namespace sw

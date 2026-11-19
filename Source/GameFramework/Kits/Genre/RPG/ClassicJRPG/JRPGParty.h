@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -31,29 +32,48 @@ namespace sw
     class ItemCatalog;
 
     /** @brief 비급 하나의 숙련입니다. */
+    REFLECT()
     struct JRPGManualProgress
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _manualID{};
-        int32         _proficiency{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _proficiency{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 파티 멤버 하나입니다. */
+    /** @brief 파티 멤버 하나입니다. 장비만 리플렉션 밖이다 — 파티 본문이 슬롯 순서대로 아이템 id 를 손으로 싣는다. */
+    REFLECT()
     struct SW_KIT_API JRPGMember
     {
-        hashed_string              _id{};
-        hashed_string              _classID{};
-        string                     _name{};
-        vector<hashed_string>      _listSpell{}; ///< 배운 주문(전직해도 남는다)
+        REFLECT_BODY();
+
+        PROPERTY()
+        hashed_string _id{};
+        PROPERTY()
+        hashed_string _classID{};
+        PROPERTY()
+        string _name{};
+        PROPERTY()
+        vector<hashed_string> _listSpell{}; ///< 배운 주문(전직해도 남는다)
+        PROPERTY()
         vector<JRPGManualProgress> _listManual{};
         Equipment                  _equipment{};
-        LevelProgress              _level{};
-        int32                      _arrStat[kJRPGStatCount]{ 1, 0, 1, 1, 1, 1, 1 };
-        int32                      _hp{ 1 };
-        int32                      _mp{ 0 };
-        int32                      _inner{ 0 }; ///< 내공 게이지(무협 옵션)
+        PROPERTY()
+        LevelProgress _level{};
+        PROPERTY( Min = 0 )
+        int32 _arrStat[kJRPGStatCount]{ 1, 0, 1, 1, 1, 1, 1 };
+        PROPERTY( Min = 0 )
+        int32 _hp{ 1 };
+        PROPERTY( Min = 0 )
+        int32 _mp{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _inner{ 0 }; ///< 내공 게이지(무협 옵션)
 
         bool  isAlive() const { return _hp > 0; }
         int32 getStat( JRPGStat stat ) const { return _arrStat[static_cast<size_t>( stat )]; }
@@ -108,9 +128,12 @@ namespace sw
      * @details 공격력은 힘에 장비 "attack" 을 더한 값이고, 방어력은 체력 / 2 에 장비 "defense" 를 더한 값이다(장비는 기반 `Equipment` 를 쓰며 아이템의 `<Stats attack="12"/>` 로 정한다).
      *          경험치 분배는 DQ 식이다. 살아 있는 멤버 수로 나눈 몫(내림)을 각자 받고, 골드는 지갑에 그대로 들어간다.
      */
+    REFLECT()
     class SW_KIT_API JRPGParty
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag            = FourCCUtil::make( "JPTY" );
         static constexpr uint32 kStateVersion        = 1;
         static constexpr int32  kMaxMembers          = 4;
@@ -170,6 +193,7 @@ namespace sw
         void pushEvent( JRPGPartyEvent::Kind kind, optional<int32> memberIndex, int32 value, const hashed_string& id = hashed_string{} );
 
     private:
+        PROPERTY( RuntimeState )
         vector<JRPGMember>          _listMember;
         EventBuffer<JRPGPartyEvent> _eventBuffer;
         string                      _equipLayout;

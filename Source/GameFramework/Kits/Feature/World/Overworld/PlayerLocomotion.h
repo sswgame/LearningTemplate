@@ -6,6 +6,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -19,6 +20,7 @@ namespace sw
     // 1) LocomotionState. 타일 스텝 이동 FSM 의 상태이다(FacingDir 은 Utility/FacingDir.h)
     // ------------------------------------------------------------------------------
     /** @brief 타일 스텝 이동 상태입니다. */
+    ENUM()
     enum class LocomotionState : uint8
     {
         Idle = 0,
@@ -31,9 +33,12 @@ namespace sw
     //    실제 타일 좌표는 OverworldTileMover 가 가진다
     // ------------------------------------------------------------------------------
     /** @brief 타일 스텝 이동 FSM 입니다. */
+    REFLECT()
     class SW_KIT_API PlayerLocomotion
     {
     public:
+        REFLECT_BODY();
+
         PlayerLocomotion();
 
         /** @brief 이동 상태를 설정합니다. */
@@ -69,8 +74,9 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
+        PROPERTY( RuntimeState )
         LocomotionState _state;
-        FacingDir       _facing;
+        FacingDir       _facing;     ///< 키트들이 나눠 쓰는 열거(리플렉션 등록 없음)라 손 본문이 싣는다
         Countdown       _stateTimer; ///< Walk 와 Interact 의 남은 시간(초)
     };
 

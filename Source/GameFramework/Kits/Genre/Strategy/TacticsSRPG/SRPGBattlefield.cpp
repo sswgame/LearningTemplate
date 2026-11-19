@@ -563,6 +563,7 @@ namespace sw
 
     void SRPGBattlefield::serializeState( StateIO& io )
     {
+        io.reflected( *this ); // 턴 · 차례 유닛 · 국면 팀(열거자 밖은 거절) — 나머지는 리플렉션 밖 값(지형 · 기체 · 파일럿 포인터, 셀, 턴 순서, 난수)이다
         io.expect( _topology._width );
         io.expect( _topology._height );
         if ( io.check( _pCatalog != nullptr ) == false )
@@ -615,10 +616,7 @@ namespace sw
         } );
         io.value( _turnOrder );
         io.value( _random );
-        io.value( _turn );
-        io.value( _activeUnit );
-        io.valueAs<uint8>( _phaseTeam );
-        io.check( 0 <= _turn && -1 <= _activeUnit && _activeUnit < static_cast<int32>( _listUnit.size() ) && static_cast<uint8>( _phaseTeam ) < static_cast<uint8>( kSRPGTeamCount ) );
+        io.check( _activeUnit < static_cast<int32>( _listUnit.size() ) ); // 칸 사이 검사만 손으로
         if ( io.isReading() )
         {
             _eventBuffer.clear();

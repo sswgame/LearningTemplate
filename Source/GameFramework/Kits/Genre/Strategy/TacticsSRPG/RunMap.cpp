@@ -246,34 +246,23 @@ namespace sw
 
     void RunMap::serializeState( StateIO& io )
     {
-        // 노드마다 이름(4) + 층과 열(8) + 이어진 수(4)
-        io.list( _listNode, 16, [&]( RunNode& node )
-        {
-            io.value( node._kind );
-            io.value( node._floor );
-            io.value( node._column );
-            io.list( node._listNext, 4, [&]( int32& next )
-            {
-                io.value( next );
-                io.check( 0 <= next && static_cast<size_t>( next ) < _listNode.size() );
-            } );
-        } );
-        io.list( _listCell );
-        io.value( _floorCount );
-        io.value( _columnCount );
-        io.value( _current );
-        const int32 nodeCount = static_cast<int32>( _listNode.size() );
-        io.check( 0 <= _floorCount && 0 <= _columnCount && static_cast<int64>( _floorCount ) * _columnCount == static_cast<int64>( _listCell.size() ) && kStart <= _current && _current < nodeCount );
-        if ( io.isWriting() )
+        io.reflected( *this ); // 칸마다의 범위는 `PROPERTY( Min )` 이 지킨다
+        if ( io.isWriting() || io.isOk() == false )
             return;
-        // 칸의 번호는 고를 수 있는 노드가 되어 `_current` 로 들어간다. 노드 밖이면 다음 조회가 범위 밖을 읽는다.
+        // 칸 사이 검사만 손으로 — 칸의 번호는 고를 수 있는 노드가 되어 `_current` 로 들어간다. 노드 밖이면 다음 조회가 범위 밖을 읽는다.
+        const int32 nodeCount = static_cast<int32>( _listNode.size() );
+        io.check( static_cast<int64>( _floorCount ) * _columnCount == static_cast<int64>( _listCell.size() ) && _current < nodeCount );
         for ( const int32 cell : _listCell )
         {
-            io.check( constant::invalid_index::kInt32 <= cell && cell < nodeCount );
+            io.check( cell < nodeCount );
         }
         for ( const RunNode& node : _listNode )
         {
-            io.check( 0 <= node._floor && node._floor < _floorCount && 0 <= node._column && node._column < _columnCount );
+            io.check( node._floor < _floorCount && node._column < _columnCount );
+            for ( const int32 next : node._listNext )
+            {
+                io.check( next < nodeCount );
+            }
         }
     }
 

@@ -70,9 +70,9 @@ namespace sw
 
     void PlayerLocomotion::serializeState( StateIO& io )
     {
-        io.enumValue( _state, LocomotionState::Interact );
+        io.reflected( *this ); // 상태(열거자 밖은 거절)
         io.enumValue( _facing, FacingDir::Up );
-        io.value( _stateTimer );
+        io.value( _stateTimer );                                               // 리플렉션 밖 값 — 남은 시간(`Countdown`)은 손 코덱이다
         io.check( _state == LocomotionState::Idle || _stateTimer.isActive() ); // 남은 시간 없는 걸음은 깨어날 길이 없다
     }
 

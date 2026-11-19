@@ -211,13 +211,19 @@ namespace sw
         return slot._layoutHash;
     }
 
+    void StateIO::writeReflectedHeader( const TypeInfo& type, Archive& outArchive )
+    {
+        outArchive << type._metadata->getVersion();
+        outArchive << findReflectedLayoutHash( type );
+    }
+
     void StateIO::reflectedObject( const TypeInfo& type, void* pObject, const uint64 layoutHash )
     {
         const uint32 version = type._metadata->getVersion();
         if ( isWriting() )
         {
             *_pArchive << version;
-            *_pArchive << layoutHash;
+            *_pArchive << layoutHash; // 머리 모양은 writeReflectedHeader 와 같다(해시는 부른 쪽이 캐시에서 넘겼다)
             reflectedProperties( type, pObject, true, 0 );
             return;
         }

@@ -20,6 +20,7 @@ namespace sw
         io.header( kStateTag, kStateVersion ); // 판 1(머리표 없음 · 카탈로그 순서 번호)은 거절한다
         if ( io.isReading() && io.check( _pCatalog != nullptr ) == false )
             return;
+        io.reflected( *this ); // 고른 칸(아래 경계는 `PROPERTY( Min )`). 칸은 블록 번호 ↔ id 를 바꾸는 손 본문이다
         for ( VoxelHotbarSlot& slot : _arrSlot )
         {
             // 번호는 실행 중에만 쓰고 세이브에는 id 를 적는다(`VoxelWorld` 팔레트와 같은 까닭 — 마인크래프트 인벤토리도 아이템 이름을 적는다).
@@ -37,8 +38,7 @@ namespace sw
             }
             io.check( 0 <= slot._count && slot._count <= kMaxStack );
         }
-        io.value( _selectedIndex );
-        io.check( 0 <= _selectedIndex && _selectedIndex < kSlotCount );
+        io.check( _selectedIndex < kSlotCount );
     }
 
     int32 VoxelHotbar::addBlock( VoxelBlockIndex block, int32 count )

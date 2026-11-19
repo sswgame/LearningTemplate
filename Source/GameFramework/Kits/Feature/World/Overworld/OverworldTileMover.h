@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -43,9 +44,12 @@ namespace sw
      * @details 폰 쪽 코드이다. InputMap 이나 InputManager 를 읽지 않고, 그 오브젝트의 폰 의도(`PawnComponent::getIntent`)를 받는다.
      *          플레이어, AI, 기록 재생이 같은 방식으로 걷는다.
      */
+    REFLECT()
     class SW_KIT_API OverworldTileMover
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "OPLC" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -107,18 +111,24 @@ namespace sw
         [[nodiscard]] bool tryStep( int32 deltaX, int32 deltaY );
 
     private:
-        TileMap*                   _pTileMap;
+        TileMap* _pTileMap;
+        PROPERTY( RuntimeState )
         string                     _pendingWarpMap;
         PlayerLocomotion           _loco;
         int2                       _tile;             ///< 현재 타일 좌표
         int2                       _pendingWarpSpawn; ///< 워프 후 배치될 타일 좌표
         OverworldTileMoverSettings _settings;
         StepEncounterCounter       _encounterSteps; ///< 조우 칸 걸음만 센다
-        uint8                      _bMoved            : 1;
-        uint8                      _bWarpPending      : 1;
-        uint8                      _bEncounterPending : 1;
-        uint8                      _bInteractPending  : 1;
-        uint8                      _bInputEnabled     : 1;
-        [[maybe_unused]] uint8     _reserved          : 3;
+        PROPERTY( RuntimeState )
+        uint8 _bMoved : 1;
+        PROPERTY( RuntimeState )
+        uint8 _bWarpPending : 1;
+        PROPERTY( RuntimeState )
+        uint8 _bEncounterPending : 1;
+        PROPERTY( RuntimeState )
+        uint8 _bInteractPending : 1;
+        PROPERTY( RuntimeState )
+        uint8                  _bInputEnabled : 1;
+        [[maybe_unused]] uint8 _reserved      : 3;
     };
 } // namespace sw

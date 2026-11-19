@@ -747,23 +747,8 @@ namespace sw
             // 서식지는 적어도 한 셀을 차지하고 번호는 1 부터이다(`matchesAt`, `_nextHabitatID`). 회전은 해시와 맞춤에 그대로 쓴다.
             io.check( habitat._listTile.empty() == false && 0 < habitat._id && 0 <= habitat._rotation && habitat._rotation < CreatureTownInternal::kRotationCount );
         } );
-        // 생물마다 이름(4) + 능력 수(4) + 서식지, 집, 대화 날, 선물 날, 온 날(20) 이상
-        io.list( _listCreature, 28, [&]( TownCreature& creature )
-        {
-            io.value( creature._speciesID );
-            io.list( creature._listAbilityUse );
-            io.value( creature._habitat );
-            io.value( creature._house );
-            io.value( creature._lastTalkDay );
-            io.value( creature._lastGiftDay );
-            io.value( creature._arrivalDay );
-            // 음수 사용 횟수는 하루 횟수를 늘린다. 없는 날은 -1 이다.
-            for ( const int32 useCount : creature._listAbilityUse )
-            {
-                io.check( 0 <= useCount );
-            }
-            io.check( constant::invalid_index::kInt32 <= creature._habitat && constant::invalid_index::kInt32 <= creature._lastTalkDay && constant::invalid_index::kInt32 <= creature._lastGiftDay && 0 <= creature._arrivalDay );
-        } );
+        // 생물 · 열린 부탁 · 다음 서식지 번호 · 마지막 방문 굴림은 리플렉션 상태 칸이다(칸마다의 범위는 `PROPERTY( Min )`). 서식지 · 집은 셀(int2) · 크기 맞춤이 든 손 본문이다.
+        io.reflected( *this );
         // 집마다 사는 수(4) + 셀(8) + 정원(4) 이상
         io.list( _listHouse, 16, [&]( CreatureHouse& house )
         {
@@ -772,10 +757,6 @@ namespace sw
             io.value( house._capacity );
             io.check( 1 <= house._capacity && _topology.isInside( house._tile._x, house._tile._y ) );
         } );
-        io.list( _listOpenRequest );
-        io.value( _nextHabitatID );
-        io.value( _lastAttractKey );
-        io.check( 0 < _nextHabitatID && -1 <= _lastAttractKey );
         if ( io.isWriting() || io.isOk() == false )
             return;
         io.check( areLinksValid() );

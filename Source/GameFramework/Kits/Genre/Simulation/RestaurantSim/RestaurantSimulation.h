@@ -73,21 +73,32 @@ namespace sw
     };
 
     /** @brief 직원 하나입니다. */
+    REFLECT()
     struct StaffMember
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _name{};
+        PROPERTY()
         LevelProgress _level{};
-        float32       _busyMinutes{ 0.0f }; ///< 지금 일이 끝나기까지 남은 시간(분)
-        int64         _dailyWage{ 0 };
-        int32         _taskCustomer{ constant::invalid_index::kInt32 }; ///< 맡은 손님 id 이다(-1 이면 쉬는 중)
-        StaffRole     _role{ StaffRole::Cook };
-        uint8         _bHired{ SW_TRUE };
+        PROPERTY( Min = 0 )
+        float32 _busyMinutes{ 0.0f }; ///< 지금 일이 끝나기까지 남은 시간(분)
+        PROPERTY( Min = 0 )
+        int64 _dailyWage{ 0 };
+        PROPERTY( Min = -1 )
+        int32 _taskCustomer{ constant::invalid_index::kInt32 }; ///< 맡은 손님 id 이다(-1 이면 쉬는 중)
+        PROPERTY()
+        StaffRole _role{ StaffRole::Cook };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bHired{ SW_TRUE };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 손님의 상태입니다. */
+    ENUM()
     enum class CustomerState : uint8
     {
         Queued = 0,  ///< 문 앞에서 자리를 기다린다(인내가 줄어든다)
@@ -99,35 +110,60 @@ namespace sw
     };
 
     /** @brief 손님 하나입니다. */
+    REFLECT()
     struct RestaurantCustomer
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _typeID{};
+        PROPERTY()
         hashed_string _dishID{};
-        float32       _waited{ 0.0f }; ///< 자리나 요리를 기다린 시간(분)
-        float32       _patience{ 30.0f };
-        float32       _eatRemaining{ 0.0f };
-        int64         _price{ 0 }; ///< 주문할 때의 메뉴 가격
-        int32         _id{ 0 };
-        int32         _seat{ constant::invalid_index::kInt32 };
-        int32         _quality{ 0 }; ///< 받은 요리의 품질이다(0 이면 아직 받지 못함)
+        PROPERTY( Min = 0 )
+        float32 _waited{ 0.0f }; ///< 자리나 요리를 기다린 시간(분)
+        PROPERTY( Min = 0 )
+        float32 _patience{ 30.0f };
+        PROPERTY()
+        float32 _eatRemaining{ 0.0f };
+        PROPERTY( Min = 0 )
+        int64 _price{ 0 }; ///< 주문할 때의 메뉴 가격
+        PROPERTY( Min = 1 )
+        int32 _id{ 0 };
+        PROPERTY( Min = -1 )
+        int32 _seat{ constant::invalid_index::kInt32 }; ///< 자리 수 상한은 설정이라 시뮬레이션 본문이 본다
+        PROPERTY( Min = 0 )
+        int32 _quality{ 0 }; ///< 받은 요리의 품질이다(0 이면 아직 받지 못함)
+        PROPERTY()
         CustomerState _state{ CustomerState::Queued };
-        uint8         _bServing{ SW_FALSE }; ///< 서버가 나르는 중이다
-        uint8         _bCheckingOut{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bServing{ SW_FALSE }; ///< 서버가 나르는 중이다
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bCheckingOut{ SW_FALSE };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 주방 주문 하나입니다. */
+    REFLECT()
     struct KitchenOrder
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _dishID{};
+        PROPERTY()
         hashed_string _station{}; ///< 레시피의 조리 스테이션이다(비어 있으면 아무 데서나 한다)
-        float32       _remaining{ 0.0f };
-        int32         _customerID{ 0 };
-        int32         _cook{ constant::invalid_index::kInt32 }; ///< 맡은 요리사이다(-1 이면 기다리는 중)
-        int32         _quality{ 0 };
-        uint8         _bReady{ SW_FALSE };
+        PROPERTY()
+        float32 _remaining{ 0.0f };
+        PROPERTY()
+        int32 _customerID{ 0 };
+        PROPERTY( Min = -1 )
+        int32 _cook{ constant::invalid_index::kInt32 }; ///< 맡은 요리사이다(-1 이면 기다리는 중)
+        PROPERTY( Min = 0 )
+        int32 _quality{ 0 };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bReady{ SW_FALSE };
     };
 } // namespace sw
 
@@ -145,20 +181,35 @@ namespace sw
 namespace sw
 {
     /** @brief 하루 결산입니다. 이익 = 매출 + 팁 - 재료비 - 급여 - 버린 재료입니다. */
+    REFLECT()
     struct RestaurantDaySummary
     {
-        int64   _revenue{ 0 };
-        int64   _tips{ 0 };
-        int64   _ingredientCost{ 0 }; ///< 오늘 쓴 재료의 원가
-        int64   _wages{ 0 };
-        int64   _spoilageCost{ 0 }; ///< 오늘 아침(지난 `advanceDay`)에 버린 재료
-        int64   _profit{ 0 };
+        REFLECT_BODY();
+
+        PROPERTY()
+        int64 _revenue{ 0 };
+        PROPERTY()
+        int64 _tips{ 0 };
+        PROPERTY()
+        int64 _ingredientCost{ 0 }; ///< 오늘 쓴 재료의 원가
+        PROPERTY()
+        int64 _wages{ 0 };
+        PROPERTY()
+        int64 _spoilageCost{ 0 }; ///< 오늘 아침(지난 `advanceDay`)에 버린 재료
+        PROPERTY()
+        int64 _profit{ 0 };
+        PROPERTY()
         float32 _rating{ 0.0f }; ///< 닫을 때의 별점
-        int32   _arrivals{ 0 };
-        int32   _served{ 0 };
-        int32   _walkouts{ 0 };        ///< 기다리다 떠난 손님 수이다(평판이 줄어든다)
-        int32   _noChoice{ 0 };        ///< 살 만한 요리가 없어 그냥 나간 손님 수
-        int32   _unservedAtClose{ 0 }; ///< 닫을 때 아직 기다리던 손님 수이다(평판은 그대로이다)
+        PROPERTY()
+        int32 _arrivals{ 0 };
+        PROPERTY()
+        int32 _served{ 0 };
+        PROPERTY()
+        int32 _walkouts{ 0 }; ///< 기다리다 떠난 손님 수이다(평판이 줄어든다)
+        PROPERTY()
+        int32 _noChoice{ 0 }; ///< 살 만한 요리가 없어 그냥 나간 손님 수
+        PROPERTY()
+        int32 _unservedAtClose{ 0 }; ///< 닫을 때 아직 기다리던 손님 수이다(평판은 그대로이다)
     };
 } // namespace sw
 
@@ -199,9 +250,12 @@ namespace sw
      *          팁 = 가격 x 성향 팁 비율 x 품질 비율 x (1 - 기다림 비율)이고, 별점 = 1 + 4 x 최근 N 손님 만족도 평균이다(떠난 손님은 0).
      *          카탈로그는 빌려 쓰므로 시뮬레이션보다 오래 살아야 한다.
      */
+    REFLECT()
     class SW_KIT_API RestaurantSimulation
     {
     public:
+        REFLECT_BODY();
+
         static constexpr float32 kStepMinutes  = 1.0f;
         static constexpr uint32  kStateTag     = FourCCUtil::make( "RSIM" );
         static constexpr uint32  kStateVersion = 2; ///< 2: 안쪽 시장(`ShopManager`)이 머리표와 되사기 목록을, 조리(`Crafter`)가 꺼낸 재료 조각을 싣는다
@@ -271,14 +325,19 @@ namespace sw
         float32                           getMinutes() const { return _minutes; }
         bool                              isOpen() const { return _bOpen != SW_FALSE; }
 
-    private:
-        /** @brief 조리 스테이션 종류 하나의 수입니다. */
+        /** @brief 조리 스테이션 종류 하나의 수입니다(리플렉션 상태 칸의 원소). */
+        REFLECT()
         struct StationSlot
         {
+            REFLECT_BODY();
+
+            PROPERTY()
             hashed_string _station{};
-            int32         _count{ 0 };
+            PROPERTY( Min = 0 )
+            int32 _count{ 0 };
         };
 
+    private:
         void stepFixed();
         void finishStaffJob();
         void updatePatience();
@@ -307,11 +366,16 @@ namespace sw
         float32                       computeDishDemand( const DishDef& dish, int64 price ) const;
 
     private:
-        vector<StaffMember>          _listStaff;
-        vector<RestaurantCustomer>   _listCustomer;
-        deque<KitchenOrder>          _listOrder;
-        vector<MenuEntry>            _listMenu;
-        vector<StationSlot>          _listStation;
+        PROPERTY( RuntimeState )
+        vector<StaffMember> _listStaff;
+        PROPERTY( RuntimeState )
+        vector<RestaurantCustomer> _listCustomer;
+        PROPERTY( RuntimeState )
+        deque<KitchenOrder> _listOrder;
+        vector<MenuEntry>   _listMenu; ///< 카탈로그 요리마다 하나 — 저장한 항목을 요리 id 로 짝짓는 손 본문이 싣는다
+        PROPERTY( RuntimeState )
+        vector<StationSlot> _listStation;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
         vector<float32>              _listSatisfaction; ///< 최근 N 손님이며 오래된 것이 앞이다
         EventBuffer<RestaurantEvent> _eventBuffer;
         vector<IngredientSpoilage>   _listSpoilageScratch;
@@ -319,22 +383,28 @@ namespace sw
         Crafter                      _crafter;
         ShopManager                  _market;
         RestaurantSettings           _settings;
-        RestaurantDaySummary         _today;
-        FixedStepTimer               _stepTimer;
-        GameRandom                   _random;
-        hashed_string                _weatherID;
-        const RestaurantCatalog*     _pCatalog;
-        Inventory*                   _pPantry;     ///< 주방 창고(빌림)
-        Wallet*                      _pWallet;     ///< 빌린 지갑
-        ReputationState*             _pReputation; ///< 빌린 평판이다(공유 상태의 주인이 날이 넘어갈 때 갱신한다)
-        const WorldClock*            _pClock;      ///< 빌린 시계이다(날이 시세를 굴리는 시드가 된다). 없으면 날 0 이다
-        const RecipeCatalog*         _pRecipeCatalog;
-        const ShopCatalog*           _pShopCatalog;
-        const ExperienceCurve*       _pStaffCurve;
-        float32                      _minutes; ///< 문을 연 뒤 지난 분
-        RateAccumulator              _arrival; ///< 손님 도착(명)
-        int64                        _pendingSpoilageCost;
-        int32                        _nextCustomerID;
-        uint8                        _bOpen;
+        PROPERTY( RuntimeState )
+        RestaurantDaySummary _today;
+        FixedStepTimer       _stepTimer;
+        GameRandom           _random;
+        PROPERTY( RuntimeState )
+        hashed_string            _weatherID;
+        const RestaurantCatalog* _pCatalog;
+        Inventory*               _pPantry;     ///< 주방 창고(빌림)
+        Wallet*                  _pWallet;     ///< 빌린 지갑
+        ReputationState*         _pReputation; ///< 빌린 평판이다(공유 상태의 주인이 날이 넘어갈 때 갱신한다)
+        const WorldClock*        _pClock;      ///< 빌린 시계이다(날이 시세를 굴리는 시드가 된다). 없으면 날 0 이다
+        const RecipeCatalog*     _pRecipeCatalog;
+        const ShopCatalog*       _pShopCatalog;
+        const ExperienceCurve*   _pStaffCurve;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32         _minutes; ///< 문을 연 뒤 지난 분
+        RateAccumulator _arrival; ///< 손님 도착(명)
+        PROPERTY( RuntimeState, Min = 0 )
+        int64 _pendingSpoilageCost;
+        PROPERTY( RuntimeState, Min = 1 )
+        int32 _nextCustomerID;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bOpen;
     };
 } // namespace sw

@@ -37,28 +37,46 @@ namespace sw
     // 1) 놀이기구
     // ------------------------------------------------------------------------------
     /** @brief 공원에 지은 놀이기구 하나입니다. 운행 상태(줄, 탑승자, 타이머)는 시뮬레이션이 씁니다. */
+    REFLECT()
     struct ParkRide
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _id{};
-        string        _name{};
-        float32       _excitement{ 2.0f }; ///< 0..10 범위이며 손님이 끌리는 정도이다
-        float32       _intensity{ 2.0f };  ///< 0..10 범위이며 손님마다 견디는 범위가 있다
-        float32       _nausea{ 1.0f };     ///< 0..10 범위이며 탄 뒤 멀미가 오른다
-        float32       _cycleTime{ 30.0f }; ///< 한 번 도는 데 걸리는 시간이다(s, 태우고 내리기 포함)
-        float3        _entrance{};         ///< 줄 입구 위치이다(손님이 걸어온다)
-        float3        _footprintCenter{};  ///< 공유 땅에서 얻는 영역의 가운데(XZ)
-        float3        _footprintSize{};    ///< 공유 땅에서 얻는 크기이다(XZ, m). 0 이면 땅을 얻지 않는다. 얻은 셀은 땅이 가지고 있으므로 상태 바이트에 싣지 않는다
-        int32         _capacity{ 8 };      ///< 한 번에 태우는 수
-        int32         _price{ 3 };         ///< 탑승료
-        int32         _runningCostPerMinute{ 5 };
-        uint8         _bOpen{ SW_TRUE };
+        PROPERTY()
+        string _name{};
+        PROPERTY( Min = 0 )
+        float32 _excitement{ 2.0f }; ///< 0..10 범위이며 손님이 끌리는 정도이다
+        PROPERTY( Min = 0 )
+        float32 _intensity{ 2.0f }; ///< 0..10 범위이며 손님마다 견디는 범위가 있다
+        PROPERTY( Min = 0 )
+        float32 _nausea{ 1.0f }; ///< 0..10 범위이며 탄 뒤 멀미가 오른다
+        PROPERTY( Min = 1 )
+        float32 _cycleTime{ 30.0f }; ///< 한 번 도는 데 걸리는 시간이다(s, 태우고 내리기 포함). `buildRide` 가 1 이상으로 맞춘다
+        PROPERTY()
+        float3 _entrance{};        ///< 줄 입구 위치이다(손님이 걸어온다)
+        float3 _footprintCenter{}; ///< 공유 땅에서 얻는 영역의 가운데(XZ)
+        float3 _footprintSize{};   ///< 공유 땅에서 얻는 크기이다(XZ, m). 0 이면 땅을 얻지 않는다. 얻은 셀은 땅이 가지고 있으므로 상태 바이트에 싣지 않는다
+        PROPERTY( Min = 1 )
+        int32 _capacity{ 8 }; ///< 한 번에 태우는 수(0 은 줄이 영영 줄지 않고 예상 대기가 0 나누기가 된다)
+        PROPERTY( Min = 0 )
+        int32 _price{ 3 }; ///< 탑승료
+        PROPERTY( Min = 0 )
+        int32 _runningCostPerMinute{ 5 };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bOpen{ SW_TRUE };
 
         // ---- 운행 상태(시뮬레이션이 쓴다) ----
+        PROPERTY()
         vector<uint32> _listQueue{}; ///< 줄 선 손님 id(앞에서부터)
-        vector<uint32> _listRider{}; ///< 지금 탄 손님 id
-        Countdown      _cycleTimer{};
-        uint32         _totalRiders{ 0 };
-        int32          _totalIncome{ 0 };
+        PROPERTY()
+        vector<uint32> _listRider{};  ///< 지금 탄 손님 id
+        Countdown      _cycleTimer{}; ///< 리플렉션 밖 값 — 남은 시간은 시뮬레이션 본문이 손으로 싣는다
+        PROPERTY()
+        uint32 _totalRiders{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _totalIncome{ 0 };
     };
 } // namespace sw
 
@@ -68,6 +86,7 @@ namespace sw
     // 2) 손님
     // ------------------------------------------------------------------------------
     /** @brief 손님이 하는 일입니다. */
+    ENUM()
     enum class ParkGuestState : uint8
     {
         Walking = 0, ///< 다음 놀이기구(또는 고를 때까지 공원)로 걷는다
@@ -94,25 +113,46 @@ namespace sw
     };
 
     /** @brief 손님 한 명입니다. */
+    REFLECT()
     struct ParkGuest
     {
-        float3           _position{};
-        float3           _walkFrom{};
-        float3           _walkTo{};
-        uint32           _id{ 0 };
-        int32            _cash{ 0 };
-        int32            _targetRideIndex{ constant::invalid_index::kInt32 }; ///< 걷거나 줄 선 놀이기구이다(없으면 -1)
-        uint32           _rideCount{ 0 };
-        float32          _happiness{ 0.7f };    ///< 0..1 범위
-        float32          _nausea{ 0.0f };       ///< 0..1 범위
-        float32          _energy{ 1.0f };       ///< 0..1 범위이며 다 떨어지면 집에 간다
-        float32          _minIntensity{ 1.0f }; ///< 이보다 약하면 시시하다고 느낀다
-        float32          _maxIntensity{ 6.0f }; ///< 이보다 세면 타지 않는다
-        float32          _nauseaTolerance{ 0.6f };
-        float32          _walkTimer{ 0.0f }; ///< 걷기가 끝나기까지 남은 시간
-        float32          _walkDuration{ 1.0f };
-        float32          _queueTime{ 0.0f }; ///< 이번 줄에서 기다린 시간
-        ParkGuestState   _state{ ParkGuestState::Walking };
+        REFLECT_BODY();
+
+        PROPERTY()
+        float3 _position{};
+        PROPERTY()
+        float3 _walkFrom{};
+        PROPERTY()
+        float3 _walkTo{};
+        PROPERTY( Min = 1 )
+        uint32 _id{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _cash{ 0 };
+        PROPERTY( Min = -1 )
+        int32 _targetRideIndex{ constant::invalid_index::kInt32 }; ///< 걷거나 줄 선 놀이기구이다(없으면 -1)
+        PROPERTY()
+        uint32 _rideCount{ 0 };
+        PROPERTY( Min = 0, Max = 1 )
+        float32 _happiness{ 0.7f }; ///< 0..1 범위
+        PROPERTY( Min = 0, Max = 1 )
+        float32 _nausea{ 0.0f }; ///< 0..1 범위
+        PROPERTY( Min = 0, Max = 1 )
+        float32 _energy{ 1.0f }; ///< 0..1 범위이며 다 떨어지면 집에 간다
+        PROPERTY()
+        float32 _minIntensity{ 1.0f }; ///< 이보다 약하면 시시하다고 느낀다
+        PROPERTY( Min = "_minIntensity" )
+        float32 _maxIntensity{ 6.0f }; ///< 이보다 세면 타지 않는다
+        PROPERTY()
+        float32 _nauseaTolerance{ 0.6f };
+        PROPERTY()
+        float32 _walkTimer{ 0.0f }; ///< 걷기가 끝나기까지 남은 시간
+        PROPERTY( Min = 0 )
+        float32 _walkDuration{ 1.0f };
+        PROPERTY( Min = 0 )
+        float32 _queueTime{ 0.0f }; ///< 이번 줄에서 기다린 시간
+        PROPERTY()
+        ParkGuestState _state{ ParkGuestState::Walking };
+        PROPERTY()
         ParkGuestThought _thought{ ParkGuestThought::None };
     };
 } // namespace sw
@@ -251,9 +291,12 @@ namespace sw
      *          - 떠남: 기력, 행복, 돈 중 하나가 바닥이면 정문으로 걸어가 떠난다.
      *          운영비는 열린 놀이기구마다 분당 `_runningCostPerMinute` 씩 나간다.
      */
+    REFLECT()
     class SW_KIT_API ThemeParkSimulation
     {
     public:
+        REFLECT_BODY();
+
         static constexpr int32 kMaxParkRating = 999; ///< 공원 평가의 위 끝(상태 읽기가 검사하는 범위)
 
         ThemeParkSimulation();
@@ -323,18 +366,24 @@ namespace sw
 
     private:
         ThemeParkSettings _settings;
-        vector<ParkRide>  _listRide;
+        PROPERTY( RuntimeState )
+        vector<ParkRide> _listRide;
+        PROPERTY( RuntimeState )
         vector<ParkGuest> _listGuest;
         RateAccumulator   _arrival;     ///< 손님 도착(명)
         RateAccumulator   _runningCost; ///< 운영비(돈)
-        float32           _elapsedTime;
-        FixedStepTimer    _stepTimer;
-        GameRandom        _random;
-        Wallet*           _pWallet; ///< 빌린 지갑(공원 돈)
-        LandRegistry*     _pLand;   ///< 빌린 공유 땅(없으면 단독 동작)
-        int32             _parkRating;
-        uint16            _landOwner;
-        uint32            _nextGuestID;
-        uint32            _totalVisitorCount;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32        _elapsedTime;
+        FixedStepTimer _stepTimer;
+        GameRandom     _random;
+        Wallet*        _pWallet; ///< 빌린 지갑(공원 돈)
+        LandRegistry*  _pLand;   ///< 빌린 공유 땅(없으면 단독 동작)
+        PROPERTY( RuntimeState, Min = 0, Max = ThemeParkSimulation::kMaxParkRating )
+        int32  _parkRating;
+        uint16 _landOwner;
+        PROPERTY( RuntimeState, Min = 1 )
+        uint32 _nextGuestID;
+        PROPERTY( RuntimeState )
+        uint32 _totalVisitorCount;
     };
 } // namespace sw

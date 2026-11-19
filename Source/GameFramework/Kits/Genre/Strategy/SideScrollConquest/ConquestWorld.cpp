@@ -351,13 +351,8 @@ namespace sw
         io.value( _commander._moveAxis );
         io.value( _commander._facing );
         io.flag( _commander._bAlive );
-        io.value( _timer );
-        io.value( _elapsed );
-        io.value( _incomeTimer );
-        io.value( _waveTimer );
-        io.value( _nextUnitID );
-        io.flag( _bVictory );
-        io.flag( _bDefeat );
+        io.value( _timer );    // 리플렉션 밖 값 — 고정 걸음 타이머는 손 코덱이다
+        io.reflected( *this ); // 판 수 칸(경과, 수입 · 웨이브 타이머, 다음 병사 번호, 승패 깃발). 거점 · 건물 · 병사는 정의 포인터를 id 로 싣는 손 본문이다
         if ( io.isReading() && io.isOk() )
         {
             io.check( isStateConsistent() );

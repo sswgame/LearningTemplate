@@ -253,14 +253,8 @@ namespace sw
             return;
         const auto isKnownItem = [&]( const hashed_string& itemID )
         { return io.isWriting() || _pCatalog->findAlchemy( itemID ) != nullptr; };
-        io.value( _crafter );
-        // 충전마다 이름(4) + 횟수(4) 바이트
-        io.list( _listCharge, 8, [&]( ChargeEntry& charge )
-        {
-            io.value( charge._itemID );
-            io.value( charge._charges );
-            io.check( isKnownItem( charge._itemID ) && 0 <= charge._charges );
-        } );
+        io.reflected( *this );
+        io.value( _crafter ); // 리플렉션 밖 값 — 제작기는 제 본문, 효과는 남은 시간(`Countdown`)이 손 코덱이다
         // 효과마다 이름(4) + 남은 시간(4) + 묶인 독성(4) 바이트
         io.list( _listEffect, 12, [&]( MonsterHuntActiveEffect& effect )
         {
@@ -269,11 +263,13 @@ namespace sw
             io.value( effect._lockedToxicity );
             io.check( isKnownItem( effect._itemID ) && 0.0f <= effect._lockedToxicity ); // 음수는 총 독성을 깎고, NaN 은 독성 판정을 모두 통과시킨다
         } );
-        io.value( _oilID );
-        io.value( _floatingToxicity );
-        io.value( _oilHits );
+        // 카탈로그 · 칸 사이 검사만 손으로 — 칸마다의 범위는 `PROPERTY( Min )` 이 지킨다
+        for ( const ChargeEntry& charge : _listCharge )
+        {
+            io.check( isKnownItem( charge._itemID ) );
+        }
         // 적중 횟수가 다하면 오일 이름도 지운다(`consumeOilHit`)
-        io.check( ( _oilID.empty() || isKnownItem( _oilID ) ) && _oilID.empty() == ( _oilHits == 0 ) && 0 <= _oilHits && 0.0f <= _floatingToxicity );
+        io.check( ( _oilID.empty() || isKnownItem( _oilID ) ) && _oilID.empty() == ( _oilHits == 0 ) );
     }
 
 } // namespace sw

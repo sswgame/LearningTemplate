@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -20,12 +21,19 @@ namespace sw
     class ItemStackList;
 
     /** @brief 한 번에 들어온 재료 배치입니다. */
+    REFLECT()
     struct IngredientBatch
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _itemID{};
-        int64         _unitCost{ 0 }; ///< 한 개의 원가이다(결산의 재료비)
-        int32         _count{ 0 };
-        int32         _daysLeft{ 0 }; ///< 0 이하가 되면 버린다(`kNoExpiry` 이면 상하지 않는다)
+        PROPERTY( Min = 0 )
+        int64 _unitCost{ 0 }; ///< 한 개의 원가이다(결산의 재료비)
+        PROPERTY( Min = 0 )
+        int32 _count{ 0 };
+        PROPERTY( Min = IngredientBatch::kNoExpiry )
+        int32 _daysLeft{ 0 }; ///< 0 이하가 되면 버린다(`kNoExpiry` 이면 상하지 않는다)
 
         static constexpr int32 kNoExpiry = -1; ///< 상하지 않는 배치의 `_daysLeft`
     };
@@ -50,9 +58,12 @@ namespace sw
      * @details 배치가 없는 아이템(손으로 인벤토리에 넣은 것)은 원가 0 이고 상하지 않는 것으로 본다. 인벤토리 개수가 배치 합보다 적어지면(밖에서 뺀 경우)
      *          `consume` 이 모자람을 알아채 배치를 맞춘다.
      */
+    REFLECT()
     class SW_KIT_API IngredientStock
     {
     public:
+        REFLECT_BODY();
+
         IngredientStock();
 
         void initialize( Inventory* pInventory );
@@ -84,6 +95,7 @@ namespace sw
         void sortBatches();
 
     private:
+        PROPERTY( RuntimeState )
         vector<IngredientBatch> _listBatch; ///< 남은 날이 적은 것부터 정렬한다(상하지 않는 것은 뒤)
         Inventory*              _pInventory;
     };

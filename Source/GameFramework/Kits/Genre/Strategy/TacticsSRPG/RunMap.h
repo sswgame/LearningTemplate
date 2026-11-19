@@ -75,12 +75,19 @@ namespace sw
 namespace sw
 {
     /** @brief 노드 하나입니다. */
+    REFLECT()
     struct RunNode
     {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0 )
         vector<int32> _listNext{}; ///< 위층에서 이어진 노드 번호
+        PROPERTY()
         hashed_string _kind{};
-        int32         _floor{ 0 };
-        int32         _column{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _floor{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _column{ 0 };
     };
 } // namespace sw
 
@@ -90,9 +97,12 @@ namespace sw
      * @class RunMap
      * @brief 길은 아래층 노드에서 위층의 같은 열이나 옆 열의 노드로 그어지고, 이미 그은 길과 엇갈리면 다른 쪽으로 꺾습니다. 마지막 층은 노드 하나(보스)로 모입니다.
      */
+    REFLECT()
     class SW_KIT_API RunMap
     {
     public:
+        REFLECT_BODY();
+
         static constexpr int32 kStart = -1; ///< 아직 첫 층을 고르지 않았다
 
         /** @brief `<RunMap floors="15" columns="7" paths="6"><Node kind="Battle" weight="5" minFloor="0"/>...<Floor index="0" kind="Battle"/></RunMap>` */
@@ -124,10 +134,15 @@ namespace sw
         hashed_string pickKind( const RunMapSettings& settings, int32 floor, const hashed_string& previousKind, GameRandom& random ) const;
 
     private:
+        PROPERTY( RuntimeState )
         vector<RunNode> _listNode;
-        vector<int32>   _listCell; ///< 층과 열에서 노드 번호로의 대응(없으면 −1)
-        int32           _floorCount{ 0 };
-        int32           _columnCount{ 0 };
-        int32           _current{ kStart };
+        PROPERTY( RuntimeState, Min = -1 )
+        vector<int32> _listCell; ///< 층과 열에서 노드 번호로의 대응(없으면 −1)
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _floorCount{ 0 };
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _columnCount{ 0 };
+        PROPERTY( RuntimeState, Min = RunMap::kStart )
+        int32 _current{ kStart };
     };
 } // namespace sw

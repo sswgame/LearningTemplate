@@ -145,22 +145,17 @@ namespace sw
 
     void OverworldTileMover::serializeState( StateIO& io )
     {
-        io.value( _tile );
+        io.reflected( *this ); // 워프 맵 이름과 깃발 다섯(비트필드)
+        io.value( _tile );     // 리플렉션 밖 값 — 타일 좌표(int2), 이동(제 본문), 조우 셈(값으로 구한 칸)
         io.value( _loco );
-        io.value( _pendingWarpMap );
         io.value( _pendingWarpSpawn );
-        // 조우 셈은 조우 칸 걸음 수만 싣는다(주기 판정은 그것만 본다, 유예 0). 바이트는 예전 `uint32` 칸 그대로다.
+        // 조우 셈은 조우 칸 걸음 수만 싣는다(주기 판정은 그것만 본다, 유예 0).
         uint32 encounterSteps = static_cast<uint32>( _encounterSteps.getTotalSteps() );
         io.value( encounterSteps );
         if ( io.isReading() )
         {
             io.check( encounterSteps <= static_cast<uint32>( StepEncounterCounter::kNoEncounterYet ) && _encounterSteps.restore( StepEncounterCounter::kNoEncounterYet, static_cast<int32>( encounterSteps ) ) );
         }
-        SW_STATE_BITFLAG( io, _bMoved );
-        SW_STATE_BITFLAG( io, _bWarpPending );
-        SW_STATE_BITFLAG( io, _bEncounterPending );
-        SW_STATE_BITFLAG( io, _bInteractPending );
-        SW_STATE_BITFLAG( io, _bInputEnabled );
         io.check( _bWarpPending == SW_FALSE || _pendingWarpMap.empty() == false );
     }
 

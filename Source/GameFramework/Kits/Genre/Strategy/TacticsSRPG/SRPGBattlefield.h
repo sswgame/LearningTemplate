@@ -14,6 +14,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -30,6 +31,7 @@ namespace sw
     class GridReachability;
 
     /** @brief 팀입니다. 다른 팀끼리는 모두 적이며, 제3세력은 양쪽 모두와 싸웁니다. */
+    ENUM()
     enum class SRPGTeam : uint8
     {
         Player = 0,
@@ -118,9 +120,12 @@ namespace sw
      * @brief 엔진 없이 도는 전장 상태입니다. 전투 계산은 `SRPGCombat`, 적 AI 는 `SRPGCommanderAI`, 승패는 `SRPGMissionRule` 이 이 클래스를 사용해 처리합니다.
      * @details 카탈로그는 전장보다 오래 살아야 한다(유닛이 정의 포인터를 보관한다). 결과는 결정적이다. 같은 시드와 같은 명령이면 같은 결과가 나온다.
      */
+    REFLECT()
     class SW_KIT_API SRPGBattlefield
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "SRBF" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -249,8 +254,11 @@ namespace sw
         const SRPGCatalog*            _pCatalog;
         GridTopology                  _topology;
         LandBinding                   _land; ///< 전투 동안 빌린 공유 땅(없으면 단독 동작)
-        int32                         _turn;
-        int32                         _activeUnit;
-        SRPGTeam                      _phaseTeam;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _turn;
+        PROPERTY( RuntimeState, Min = -1 )
+        int32 _activeUnit;
+        PROPERTY( RuntimeState )
+        SRPGTeam _phaseTeam;
     };
 } // namespace sw

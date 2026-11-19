@@ -62,45 +62,26 @@ namespace sw
 
     void MonsterInstance::serializeState( StateIO& io )
     {
-        io.value( _speciesID );
-        io.value( _natureID );
-        io.value( _nickname );
-        for ( MonsterMoveSlot& slot : _arrMove )
+        io.reflected( *this );
+        if ( io.isReading() && io.isOk() )
         {
-            io.value( slot._moveID );
-            io.value( slot._pp );
-            io.value( slot._ppMax );
+            io.check( isStateConsistent() ); // 칸 사이 검사만 손으로 — 칸마다의 범위는 `PROPERTY( Min · Max )` 가 지킨다
         }
-        for ( int32 statIndex = 0; statIndex < kMonsterStatCount; ++statIndex )
-        {
-            io.value( _arrIv[statIndex] );
-            io.value( _arrEv[statIndex] );
-            io.value( _arrStat[statIndex] );
-        }
-        io.value( _exp );
-        io.value( _level );
-        io.value( _hp );
-        io.value( _friendship );
-        io.value( _statusTurns );
-        io.enumValue( _status, MonsterStatus::Freeze );
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        io.check( 1 <= _level && _level <= MonsterCollectorCatalog::kMaxLevel && 0 <= _exp && 0 <= _friendship && _friendship <= MonsterInstance::kMaxFriendship && 0 <= _statusTurns && _statusTurns <= MonsterInstance::kMaxStatusTurns );
+    }
+
+    bool MonsterInstance::isStateConsistent() const
+    {
         for ( const MonsterMoveSlot& slot : _arrMove )
         {
-            io.check( 0 <= slot._pp && slot._pp <= slot._ppMax );
+            if ( slot._pp > slot._ppMax )
+                return false;
         }
         int32 evTotal = 0;
-        for ( int32 statIndex = 0; statIndex < kMonsterStatCount; ++statIndex )
+        for ( const int32 ev : _arrEv )
         {
-            const int32 ev = _arrEv[statIndex];
-            io.check( 0 <= _arrIv[statIndex] && _arrIv[statIndex] <= MonsterInstance::kMaxIv && 0 <= ev && ev <= MonsterInstance::kMaxEvPerStat && _arrStat[statIndex] >= 1 );
             evTotal += ev;
         }
-        if ( io.isOk() )
-        {
-            io.check( evTotal <= MonsterInstance::kMaxEvTotal && 0 <= _hp && _hp <= getMaxHP() );
-        }
+        return evTotal <= kMaxEvTotal && _hp <= getMaxHP();
     }
 
     bool MonsterInstance::isKnownTo( const MonsterCollectorCatalog& catalog ) const
@@ -411,18 +392,19 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        const auto serializeMonster = [&]( MonsterInstance& monster )
+        io.reflected( *this );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        // 개체는 안쪽 구조체 칸이라 개체의 칸 사이 검사와 카탈로그 검사를 여기서 한다. 박스 정원은 설정이다.
+        io.check( _listParty.size() <= static_cast<size_t>( kPartySize ) && _listBox.size() <= static_cast<size_t>( _boxCapacity ) );
+        for ( const MonsterInstance& monster : _listParty )
         {
-            io.value( monster );
-            if ( io.isReading() && io.isOk() )
-            {
-                io.check( monster.isKnownTo( *_pCatalog ) );
-            }
-        };
-        io.list( _listParty, MonsterInstance::kStateMinBytes, serializeMonster );
-        io.check( _listParty.size() <= static_cast<size_t>( kPartySize ) );
-        io.list( _listBox, MonsterInstance::kStateMinBytes, serializeMonster );
-        io.check( _listBox.size() <= static_cast<size_t>( _boxCapacity ) );
+            io.check( monster.isStateConsistent() && monster.isKnownTo( *_pCatalog ) );
+        }
+        for ( const MonsterInstance& monster : _listBox )
+        {
+            io.check( monster.isStateConsistent() && monster.isKnownTo( *_pCatalog ) );
+        }
     }
 
 } // namespace sw

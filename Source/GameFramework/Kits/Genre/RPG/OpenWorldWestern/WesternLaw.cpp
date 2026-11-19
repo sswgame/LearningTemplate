@@ -219,29 +219,8 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        // 기록마다 지역(4) + 안 보인 시간, 현상금, 수배(12) + 보는지(1) 바이트
-        io.list( _listRecord, 17, [&]( RegionRecord& record )
-        {
-            io.value( record._regionID );
-            io.value( record._unseenTime );
-            io.value( record._bounty );
-            io.value( record._wantedLevel );
-            io.flag( record._bSeenByLaw );
-            if ( io.isWriting() )
-                return;
-            const WesternRegionDef* pRegion = _pCatalog->findRegion( record._regionID );
-            if ( io.check( pRegion != nullptr ) == false )
-                return;
-            for ( const RegionRecord& earlier : _listRecord )
-            {
-                if ( &earlier == &record )
-                    break;
-                io.check( earlier._regionID != record._regionID ); // 찾기는 앞의 것만 돌려주어 뒤의 것은 조회되지 않은 채 식는다
-            }
-            // 안 보인 시간이 NaN 이면 식는 비교가 늘 거짓이라 수배가 영영 내려가지 않는다
-            io.check( 0.0f <= record._unseenTime && 0 <= record._bounty && 0 <= record._wantedLevel && record._wantedLevel <= pRegion->_maxWanted );
-        } );
-        // 대기마다 범죄와 지역(8) + 목격자(8) + 사건(4) + 남은 시간(4) + 가렸는지(1) 바이트
+        io.reflected( *this );
+        // 신고 대기는 리플렉션 밖 값(남은 시간 `Countdown`)을 든다. 대기마다 범죄와 지역(8) + 목격자(8) + 사건(4) + 남은 시간(4) + 가렸는지(1) 바이트
         io.list( _listPending, 25, [&]( PendingReport& report )
         {
             io.value( report._crimeID );
@@ -255,11 +234,20 @@ namespace sw
                 io.check( _pCatalog->findCrime( report._crimeID ) != nullptr && _pCatalog->findRegion( report._regionID ) != nullptr );
             }
         } );
-        io.value( _nextIncidentID );
-        io.flag( _bDisguised );
-        io.check( _nextIncidentID != 0 );
-        if ( io.isWriting() )
+        if ( io.isWriting() || io.isOk() == false )
             return;
+        // 카탈로그 · 칸 사이 검사만 손으로 — 칸마다의 범위는 `PROPERTY( Min · Max )` 가 지킨다
+        for ( size_t recordIndex = 0; recordIndex < _listRecord.size(); ++recordIndex )
+        {
+            const RegionRecord&     record  = _listRecord[recordIndex];
+            const WesternRegionDef* pRegion = _pCatalog->findRegion( record._regionID );
+            if ( io.check( pRegion != nullptr && record._wantedLevel <= pRegion->_maxWanted ) == false )
+                return;
+            for ( size_t earlier = 0; earlier < recordIndex; ++earlier )
+            {
+                io.check( _listRecord[earlier]._regionID != record._regionID ); // 찾기는 앞의 것만 돌려주어 뒤의 것은 조회되지 않은 채 식는다
+            }
+        }
         for ( const PendingReport& report : _listPending )
         {
             // 앞으로 붙일 번호와 같은 대기는 새 사건과 한 사건으로 묶여 함께 지워진다

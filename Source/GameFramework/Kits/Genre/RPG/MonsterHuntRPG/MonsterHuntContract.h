@@ -59,9 +59,12 @@ namespace sw
      * @brief 계약 하나의 조사입니다. 단서를 찾으면 일지에 `notify( "Clue", 단서 id )` 를 보내고, 단계를 끝내면 `notify( "Investigate", 단계 id )` 를 보냅니다.
      *        퀘스트 단계의 목표가 그 알림을 세게 하면 계약 퀘스트가 진행됩니다. 일지는 빌려 쓰며 없어도 됩니다.
      */
+    REFLECT()
     class SW_KIT_API MonsterHuntInvestigation
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32      kStateTag       = FourCCUtil::make( "WINV" );
         static constexpr uint32      kStateVersion   = 1;
         static constexpr const utf8* kClueNotifyKind = "Clue";
@@ -95,12 +98,14 @@ namespace sw
         void advanceFinishedSteps();
 
     private:
+        PROPERTY( RuntimeState )
         vector<hashed_string>                      _listFound; ///< 지금 단계에서 찾은 단서
         EventBuffer<MonsterHuntInvestigationEvent> _eventBuffer;
         const MonsterHuntCatalog*                  _pCatalog; ///< 상태 바이트의 계약 id 로 찾는 카탈로그
         const MonsterHuntContractDef*              _pContract;
         QuestLog*                                  _pQuestLog;
-        int32                                      _stepIndex;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _stepIndex;
     };
 } // namespace sw
 
@@ -122,9 +127,12 @@ namespace sw
      *        분노가 (한 번마다 오르는 몫 + 한도를 넘긴 몫 / 처음 보상 × 분노 배율)만큼 오르고, 최대에 닿으면 결렬되어 처음 보상만 줍니다. 그 외에는 제안을 요구 쪽으로
      *        반만큼 올립니다(한도까지).
      */
+    REFLECT()
     class SW_KIT_API MonsterHuntHaggle
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WHAG" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -149,9 +157,13 @@ namespace sw
     private:
         const MonsterHuntCatalog*     _pCatalog; ///< 상태 바이트의 계약 id 로 찾는 카탈로그
         const MonsterHuntContractDef* _pContract;
-        float32                       _anger;
-        int32                         _offer;
-        int32                         _finalReward;
-        uint8                         _bClosed;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _anger;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _offer;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _finalReward;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bClosed;
     };
 } // namespace sw

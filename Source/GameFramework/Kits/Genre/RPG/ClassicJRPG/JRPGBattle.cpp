@@ -675,60 +675,24 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        // 적마다 이름(4) + 잠금 수(4) + HP, 시전, 잠금 전체, 차례(16) 바이트 이상
-        io.list( _listEnemy, 24, [&]( JRPGEnemyState& enemy )
-        {
-            io.value( enemy._enemyID );
-            if ( io.isReading() )
-            {
-                io.check( _pCatalog->findEnemy( enemy._enemyID ) != nullptr );
-            }
-            io.list( enemy._listLock );
-            io.value( enemy._hp );
-            io.value( enemy._castTurnsLeft );
-            io.value( enemy._lockTotal );
-            io.value( enemy._turnsTaken );
-            if ( io.isReading() && io.isOk() )
-            {
-                io.check( isEnemyStateValid( enemy ) );
-            }
-        } );
-        // 명령마다 이름(4) + 대상(4) + 종류(1) + 방어(1) 바이트
-        uint32 commandCount = static_cast<uint32>( _listCommand.size() );
-        io.count( 10, commandCount );
-        if ( io.isOk() == false )
-            return;
-        if ( io.isReading() )
-        {
-            const uint32 memberCount = _pParty != nullptr ? static_cast<uint32>( _pParty->getMemberCount() ) : 0;
-            if ( io.check( commandCount == memberCount ) == false )
-                return;
-            _listCommand.assign( commandCount, JRPGCommand{} );
-            _listDefending.assign( commandCount, SW_FALSE );
-        }
-        for ( uint32 memberIndex = 0; memberIndex < commandCount; ++memberIndex )
-        {
-            JRPGCommand& command = _listCommand[memberIndex];
-            io.value( command._id );
-            io.value( command._target );
-            io.enumValue( command._kind, JRPGCommandKind::Defend );
-            io.flag( _listDefending[memberIndex] );
-            if ( io.isReading() && ( io.isOk() == false || io.check( isCommandStateValid( command ) ) == false ) )
-                return;
-        }
-        io.value( _turnOrder );
+        io.reflected( *this );
+        io.value( _turnOrder ); // 리플렉션 밖 값 — 턴 순서 · 난수는 손 코덱이 있다
         io.value( _random );
-        io.value( _rewardExp );
-        io.value( _rewardGold );
-        io.value( _comboPoints );
-        io.value( _round );
-        io.value( _fleeAttempts );
-        io.enumValue( _result, JRPGBattleResult::Fled );
-        io.check( 0 <= _comboPoints && _comboPoints <= _settings._comboMax && 0 <= _round && 0 <= _fleeAttempts && 0 <= _rewardExp && 0 <= _rewardGold );
-        if ( io.isReading() )
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        // 카탈로그 · 파티 · 칸 사이 검사만 손으로 — 칸마다의 범위는 `PROPERTY( Min · Max )` 가 지킨다
+        const size_t memberCount = _pParty != nullptr ? static_cast<size_t>( _pParty->getMemberCount() ) : 0;
+        if ( io.check( _listCommand.size() == memberCount && _listDefending.size() == memberCount && _comboPoints <= _settings._comboMax ) == false )
+            return;
+        for ( const JRPGEnemyState& enemy : _listEnemy )
         {
-            _eventBuffer.clear();
+            io.check( isEnemyStateValid( enemy ) ); // 모르는 적도 거절한다
         }
+        for ( const JRPGCommand& command : _listCommand )
+        {
+            io.check( isCommandStateValid( command ) );
+        }
+        _eventBuffer.clear();
     }
 
     bool JRPGBattle::isEnemyStateValid( const JRPGEnemyState& enemy ) const

@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -24,11 +25,17 @@ namespace sw
     class GameRandom;
 
     /** @brief 기술 슬롯 하나입니다. */
+    REFLECT()
     struct MonsterMoveSlot
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _moveID{};
-        int32         _pp{ 0 };
-        int32         _ppMax{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _pp{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _ppMax{ 0 };
 
         bool isEmpty() const { return _moveID.empty(); }
     };
@@ -39,24 +46,41 @@ namespace sw
     struct MonsterGrowthEvent;
 
     /** @brief 개체 하나(잡은 몬스터, 야생, 트레이너의 몬스터)입니다. 능력치 `_arrStat` 는 `MonsterInstance::recomputeStats` 가 채웁니다. */
+    REFLECT()
     struct SW_KIT_API MonsterInstance
     {
-        static constexpr int32  kMoveSlotCount = 4;
-        static constexpr uint32 kStateMinBytes = 157; ///< `writeState` 가 쓰는 개체 하나의 최소 바이트 수(이름 3개 12 + 기술 슬롯 48 + 개체값, 노력치, 능력치 72 + 경험치 8 + 정수 4개 16 + 상태 1)
+        REFLECT_BODY();
 
-        hashed_string   _speciesID{};
-        hashed_string   _natureID{};
-        string          _nickname{};
+        static constexpr int32 kMoveSlotCount = 4;
+        /** @brief `writeState` 가 쓰는 개체 하나의 최소 바이트 수입니다(리플렉션 머리 12 + 이름 3개 12 + 고정 배열 넷의 개수 16 + 기술 슬롯 48 + 개체값, 노력치, 능력치 72 + 경험치 8 + 정수 4개 16 + 상태 8). */
+        static constexpr uint32 kStateMinBytes = 192;
+
+        PROPERTY( RuntimeState )
+        hashed_string _speciesID{};
+        PROPERTY( RuntimeState )
+        hashed_string _natureID{};
+        PROPERTY( RuntimeState )
+        string _nickname{};
+        PROPERTY( RuntimeState )
         MonsterMoveSlot _arrMove[kMoveSlotCount]{};
-        int32           _arrIv[kMonsterStatCount]{ 0, 0, 0, 0, 0, 0 };
-        int32           _arrEv[kMonsterStatCount]{ 0, 0, 0, 0, 0, 0 };
-        int32           _arrStat[kMonsterStatCount]{ 1, 1, 1, 1, 1, 1 }; ///< 지금 레벨의 능력치(HP 는 최대 HP)
-        int64           _exp{ 0 };                                       ///< 총 경험치
-        int32           _level{ 1 };
-        int32           _hp{ 1 };
-        int32           _friendship{ 70 };
-        int32           _statusTurns{ 0 }; ///< 수면의 남은 턴, 맹독의 n
-        MonsterStatus   _status{ MonsterStatus::None };
+        PROPERTY( RuntimeState, Min = 0, Max = MonsterInstance::kMaxIv )
+        int32 _arrIv[kMonsterStatCount]{ 0, 0, 0, 0, 0, 0 };
+        PROPERTY( RuntimeState, Min = 0, Max = MonsterInstance::kMaxEvPerStat )
+        int32 _arrEv[kMonsterStatCount]{ 0, 0, 0, 0, 0, 0 };
+        PROPERTY( RuntimeState, Min = 1 )
+        int32 _arrStat[kMonsterStatCount]{ 1, 1, 1, 1, 1, 1 }; ///< 지금 레벨의 능력치(HP 는 최대 HP)
+        PROPERTY( RuntimeState, Min = 0 )
+        int64 _exp{ 0 }; ///< 총 경험치
+        PROPERTY( RuntimeState, Min = 1, Max = MonsterCollectorCatalog::kMaxLevel )
+        int32 _level{ 1 };
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _hp{ 1 };
+        PROPERTY( RuntimeState, Min = 0, Max = MonsterInstance::kMaxFriendship )
+        int32 _friendship{ 70 };
+        PROPERTY( RuntimeState, Min = 0, Max = MonsterInstance::kMaxStatusTurns )
+        int32 _statusTurns{ 0 }; ///< 수면의 남은 턴, 맹독의 n
+        PROPERTY( RuntimeState )
+        MonsterStatus _status{ MonsterStatus::None };
 
         int32 getMaxHP() const { return _arrStat[static_cast<size_t>( MonsterStat::HP )]; }
         int32 getStat( MonsterStat stat ) const { return _arrStat[static_cast<size_t>( stat )]; }
@@ -69,6 +93,8 @@ namespace sw
          *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌거나 값이 범위 밖이면 상태를 바꾸지 않고 false 를 반환합니다(id 가 카탈로그에 있는지는 `isKnownTo` 입니다).
          */
         SW_DECLARE_STATE_IO();
+        /** @brief 칸 사이 규칙(PP ≤ 최대 PP, 노력치 합, HP ≤ 최대 HP)을 지키는지입니다. 칸마다의 범위는 `PROPERTY( Min · Max )` 가 지키고, 이 개체를 안쪽 구조체 칸으로 싣는 쪽(보관함)도 읽은 뒤에 봅니다. */
+        [[nodiscard]] bool isStateConsistent() const;
         /** @brief 종, 성격, 기술이 모두 카탈로그에 있는지입니다. 카탈로그를 가진 쪽이 읽은 뒤에 봅니다. */
         [[nodiscard]] bool isKnownTo( const MonsterCollectorCatalog& catalog ) const;
 
@@ -148,9 +174,12 @@ namespace sw
      * @brief 파티(최대 6마리)와 박스입니다. 잡은 개체는 파티에 자리가 있으면 파티로, 없으면 박스로 갑니다.
      * @details 파티의 마지막 "싸울 수 있는" 개체는 박스에 맡길 수 없다(전투 불능인 개체만 남는 파티를 막기 위해서다). 카탈로그는 빌려 쓴다.
      */
+    REFLECT()
     class SW_KIT_API MonsterStorage
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "MCST" );
         static constexpr uint32 kStateVersion = 1;
         static constexpr int32  kPartySize    = 6;
@@ -178,7 +207,9 @@ namespace sw
         int32                          getBoxCapacity() const { return _boxCapacity; }
 
     private:
-        vector<MonsterInstance>        _listParty;
+        PROPERTY( RuntimeState )
+        vector<MonsterInstance> _listParty;
+        PROPERTY( RuntimeState )
         vector<MonsterInstance>        _listBox;
         const MonsterCollectorCatalog* _pCatalog;
         int32                          _boxCapacity;

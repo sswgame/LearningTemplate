@@ -187,19 +187,15 @@ namespace sw
 
     void SRPGCampaign::serializeState( StateIO& io )
     {
-        io.value( _runMap );
-        // 명단마다 레벨 둘(40) + 이름 둘(8) + 잃음(1)
-        io.list( _listRoster, 49, [&]( SRPGRosterEntry& entry )
+        io.value( _runMap ); // 지도는 제 본문(리플렉션 칸 + 칸 사이 검사)으로 싣는다
+        io.reflected( *this );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        // 레벨은 안쪽 구조체 칸이라 그 형식의 칸 사이 검사(xp ≤ 총 xp)를 여기서 한다
+        for ( const SRPGRosterEntry& entry : _listRoster )
         {
-            io.value( entry._pilotLevel );
-            io.value( entry._unitLevel );
-            io.value( entry._unitID );
-            io.value( entry._pilotID );
-            io.flag( entry._bLost );
-        } );
-        io.value( _seed );
-        io.flag( _bInMission );
-        io.flag( _bFailed );
+            io.check( entry._pilotLevel.getXP() <= entry._pilotLevel.getTotalXP() && entry._unitLevel.getXP() <= entry._unitLevel.getTotalXP() );
+        }
     }
 
 } // namespace sw

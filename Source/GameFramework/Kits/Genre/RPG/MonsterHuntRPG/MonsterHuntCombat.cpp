@@ -139,13 +139,13 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        io.value( _stamina ); // 게이지 설정은 `initialize` 에서 받은 것이므로 값만 읽는다
+        io.reflected( *this );
+        io.value( _stamina ); // 리플렉션 밖 값 — 게이지는 제 본문(남은 과열 시간), 설정은 `initialize` 에서 받은 것이다
         io.value( _random );
-        io.value( _adrenaline );
-        // 상한 밖 · NaN 은 포인트 변환(`static_cast<int32>`)과 피해 배율을 깨뜨린다. NaN 은 비교가 거짓이라 `<` 로는 걸러지지 않는다.
+        // 상한(카탈로그)만 손으로 — 음수는 칸의 Min, NaN · 무한은 실수 읽기가 거절한다. 상한 밖은 포인트 변환(`static_cast<int32>`)과 피해 배율을 깨뜨린다.
         if ( io.isReading() )
         {
-            io.check( 0.0f <= _adrenaline && _adrenaline <= _pCatalog->getCombat()._adrenalineMax );
+            io.check( _adrenaline <= _pCatalog->getCombat()._adrenalineMax );
         }
     }
 

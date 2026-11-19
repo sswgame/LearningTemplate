@@ -62,9 +62,12 @@ namespace sw
      * @brief 위쳐 한 명의 전투 자원입니다. 표식과 몸 동작이 같은 스태미나(기력)를 씁니다. 표식 위력 = 기본 위력 × (1 + 위력 능력치 / 100)
      *        (× 대체 시전 배율)입니다. 아드레날린은 실수로 쌓이고 정수 부분이 포인트이며, 포인트 하나마다 피해 배율이 오릅니다. 시드가 같으면 같은 상태이상이 걸립니다.
      */
+    REFLECT()
     class SW_KIT_API MonsterHuntCombat
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WCMB" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -104,6 +107,7 @@ namespace sw
         ResourceGauge             _stamina;
         GameRandom                _random;
         const MonsterHuntCatalog* _pCatalog;
-        float32                   _adrenaline;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _adrenaline;
     };
 } // namespace sw

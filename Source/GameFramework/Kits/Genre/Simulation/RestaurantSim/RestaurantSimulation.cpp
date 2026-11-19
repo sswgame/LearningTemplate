@@ -328,66 +328,8 @@ namespace sw
 
     void RestaurantSimulation::serializeState( StateIO& io )
     {
-        // 직원마다 이름(4) + 레벨(경험치와 누적 16 + 레벨 4) + 바쁨(4) + 일당(8) + 맡은 손님(4) + 역할과 고용(2)
-        io.list( _listStaff, 42, [&]( StaffMember& staff )
-        {
-            io.value( staff._name );
-            io.value( staff._level );
-            io.value( staff._busyMinutes );
-            io.value( staff._dailyWage );
-            io.value( staff._taskCustomer );
-            io.enumValue( staff._role, StaffRole::Cashier );
-            io.flag( staff._bHired );
-            io.check( 0.0f <= staff._busyMinutes && 0 <= staff._dailyWage && -1 <= staff._taskCustomer );
-        } );
-        // 손님마다 이름 둘(8) + 기다림, 인내, 먹기(12) + 가격(8) + 번호, 자리, 품질(12) + 상태, 서빙, 계산(3)
-        io.list( _listCustomer, 43, [&]( RestaurantCustomer& customer )
-        {
-            io.value( customer._typeID );
-            io.value( customer._dishID );
-            io.value( customer._waited );
-            io.value( customer._patience );
-            io.value( customer._eatRemaining );
-            io.value( customer._price );
-            io.value( customer._id );
-            io.value( customer._seat );
-            io.value( customer._quality );
-            io.enumValue( customer._state, CustomerState::Left );
-            io.flag( customer._bServing );
-            io.flag( customer._bCheckingOut );
-            io.check( 0.0f <= customer._waited && 0.0f <= customer._patience && 0 <= customer._price && 0 < customer._id && 0 <= customer._quality && -1 <= customer._seat && customer._seat < _settings._seatCount );
-            // 앉은 손님만 자리를 가진다(`leaveCustomer`, `settlePayment` 가 비운다).
-            io.check( RestaurantSimulationInternal::isSeated( customer ) == ( customer._seat >= 0 ) );
-        } );
-        uint32 orderCount = static_cast<uint32>( _listOrder.size() );
-        // 주문마다 이름 둘(8) + 남은 시간, 손님, 요리사, 품질(16) + 준비(1)
-        io.count( 25, orderCount );
-        if ( io.isOk() == false )
-            return;
-        if ( io.isReading() )
-        {
-            _listOrder.clear();
-        }
-        const int32 staffCount = static_cast<int32>( _listStaff.size() );
-        for ( uint32 index = 0; index < orderCount; ++index )
-        {
-            KitchenOrder order = io.isWriting() ? _listOrder[index] : KitchenOrder{};
-            io.value( order._dishID );
-            io.value( order._station );
-            io.value( order._remaining );
-            io.value( order._customerID );
-            io.value( order._cook );
-            io.value( order._quality );
-            io.flag( order._bReady );
-            // 기다리는 주문과 조리 중인 주문의 남은 시간은 음수가 아니다. 다 된 주문만 걸음만큼 넘긴 값이 남는다. 다 되면 요리사를 풀어 준다.
-            const bool bProgressValid = order._bReady == SW_FALSE ? 0.0f <= order._remaining : order._cook < 0;
-            if ( io.check( constant::invalid_index::kInt32 <= order._cook && order._cook < staffCount && 0 <= order._quality && bProgressValid ) == false )
-                return;
-            if ( io.isReading() )
-            {
-                _listOrder.push_back( order );
-            }
-        }
+        // 직원 · 손님 · 주문 · 스테이션 · 만족 · 결산 · 날씨 · 시각 · 버린 재료 · 다음 손님 번호 · 영업은 리플렉션 상태 칸이다(칸마다의 범위는 `PROPERTY( Min · Max )`).
+        io.reflected( *this );
         // 메뉴는 카탈로그의 요리마다 하나이다 — 저장한 항목은 요리 id 로 짝짓는다(감사 A-6: 요리를 더하거나 순서를 바꾼 패치 뒤에도 가격 · 켜짐이 남는다).
         // 카탈로그에서 빠진 요리의 항목은 버리고(아이템이 아니라 그 요리의 설정이다), 새 요리는 지금 값 그대로다. 이름(4) + 가격(8) + 켜짐(1)
         vector<MenuEntry>  listSavedMenu;
@@ -417,44 +359,36 @@ namespace sw
                 }
             }
         }
-        // 스테이션마다 이름(4) + 수(4)
-        io.list( _listStation, 8, [&]( StationSlot& slot )
-        {
-            io.value( slot._station );
-            io.value( slot._count );
-            io.check( slot._station.empty() == false && 0 <= slot._count );
-        } );
-        io.list( _listSatisfaction, 4, [&]( float32& satisfaction )
-        {
-            io.value( satisfaction );
-            io.check( 0.0f <= satisfaction && satisfaction <= 1.0f );
-        } );
-        io.value( _stock );
+        io.value( _stock ); // 리플렉션 밖 값 — 재고 · 조리 · 시장은 제 본문, 걸음 타이머 · 난수 · 도착 누적은 손 코덱이다
         io.value( _crafter );
         io.value( _market );
-        io.value( _today._revenue );
-        io.value( _today._tips );
-        io.value( _today._ingredientCost );
-        io.value( _today._wages );
-        io.value( _today._spoilageCost );
-        io.value( _today._profit );
-        io.value( _today._rating );
-        io.value( _today._arrivals );
-        io.value( _today._served );
-        io.value( _today._walkouts );
-        io.value( _today._noChoice );
-        io.value( _today._unservedAtClose );
         io.value( _stepTimer );
         io.value( _random );
-        io.value( _weatherID );
-        io.value( _minutes );
         io.value( _arrival );
-        io.value( _pendingSpoilageCost );
-        io.value( _nextCustomerID );
-        io.flag( _bOpen );
         if ( io.isWriting() || io.isOk() == false )
             return;
-        io.check( 0.0f <= _minutes && 0 <= _pendingSpoilageCost && 0 < _nextCustomerID && RestaurantSimulationInternal::isDaySummaryValid( _today ) && areLinksValid() );
+        // 설정 · 칸 사이 검사만 손으로
+        const int32 staffCount = static_cast<int32>( _listStaff.size() );
+        for ( const StaffMember& staff : _listStaff )
+        {
+            io.check( staff._level.getXP() <= staff._level.getTotalXP() ); // 레벨은 안쪽 구조체 칸이라 그 형식의 칸 사이 검사를 여기서 한다
+        }
+        for ( const RestaurantCustomer& customer : _listCustomer )
+        {
+            // 앉은 손님만 자리를 가진다(`leaveCustomer`, `settlePayment` 가 비운다).
+            io.check( customer._seat < _settings._seatCount && RestaurantSimulationInternal::isSeated( customer ) == ( customer._seat >= 0 ) );
+        }
+        for ( const KitchenOrder& order : _listOrder )
+        {
+            // 기다리는 주문과 조리 중인 주문의 남은 시간은 음수가 아니다. 다 된 주문만 걸음만큼 넘긴 값이 남는다. 다 되면 요리사를 풀어 준다.
+            const bool bProgressValid = order._bReady == SW_FALSE ? 0.0f <= order._remaining : order._cook < 0;
+            io.check( order._cook < staffCount && bProgressValid );
+        }
+        for ( const StationSlot& slot : _listStation )
+        {
+            io.check( slot._station.empty() == false );
+        }
+        io.check( RestaurantSimulationInternal::isDaySummaryValid( _today ) && areLinksValid() );
         _eventBuffer.clear();
         _listSpoilageScratch.clear();
     }

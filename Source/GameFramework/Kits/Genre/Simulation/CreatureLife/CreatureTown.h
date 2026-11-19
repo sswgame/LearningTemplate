@@ -94,15 +94,25 @@ namespace sw
 namespace sw
 {
     /** @brief 마을에 사는 생물 하나입니다. */
+    REFLECT()
     struct TownCreature
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _speciesID{};
-        vector<int32> _listAbilityUse{};                           ///< 종의 `_listAbility` 와 같은 순서이며 오늘 쓴 횟수이다
-        int32         _habitat{ constant::invalid_index::kInt32 }; ///< 머무는 서식지 번호이다(`HabitatInstance::_id` 이며 사라졌으면 -1)
-        int32         _house{ constant::invalid_index::kInt32 };   ///< 사는 집의 index 이다(없으면 -1)
-        int32         _lastTalkDay{ constant::invalid_index::kInt32 };
-        int32         _lastGiftDay{ constant::invalid_index::kInt32 };
-        int32         _arrivalDay{ 0 };
+        PROPERTY( Min = 0 )
+        vector<int32> _listAbilityUse{}; ///< 종의 `_listAbility` 와 같은 순서이며 오늘 쓴 횟수이다(음수는 하루 횟수를 늘린다)
+        PROPERTY( Min = -1 )
+        int32 _habitat{ constant::invalid_index::kInt32 }; ///< 머무는 서식지 번호이다(`HabitatInstance::_id` 이며 사라졌으면 -1)
+        PROPERTY()
+        int32 _house{ constant::invalid_index::kInt32 }; ///< 사는 집의 index 이다(없으면 -1 — 집과의 짝은 마을의 `areLinksValid` 가 본다)
+        PROPERTY( Min = -1 )
+        int32 _lastTalkDay{ constant::invalid_index::kInt32 };
+        PROPERTY( Min = -1 )
+        int32 _lastGiftDay{ constant::invalid_index::kInt32 };
+        PROPERTY( Min = 0 )
+        int32 _arrivalDay{ 0 };
     };
 } // namespace sw
 
@@ -154,9 +164,12 @@ namespace sw
      *          부탁 목표는 `Deliver`(아이템)와 `Habitat`(그 서식지 수)이고, 퀘스트 레벨 조건은 호감도 단계 번호로 판단한다.
      *          카탈로그는 빌려 쓰므로 마을보다 오래 살아야 한다.
      */
+    REFLECT()
     class SW_KIT_API CreatureTown
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CTWN" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -256,10 +269,12 @@ namespace sw
         [[nodiscard]] bool areLinksValid() const;
 
     private:
-        vector<hashed_string>          _listObject; ///< 셀마다의 오브젝트 id 이다(`_topology` 의 타일 번호). 빈 id 는 빈 셀이다
-        vector<HabitatInstance>        _listHabitat;
-        vector<TownCreature>           _listCreature; ///< 온 순서
-        vector<CreatureHouse>          _listHouse;
+        vector<hashed_string>   _listObject; ///< 셀마다의 오브젝트 id 이다(`_topology` 의 타일 번호). 빈 id 는 빈 셀이다
+        vector<HabitatInstance> _listHabitat;
+        PROPERTY( RuntimeState )
+        vector<TownCreature>  _listCreature; ///< 온 순서
+        vector<CreatureHouse> _listHouse;
+        PROPERTY( RuntimeState )
         vector<hashed_string>          _listOpenRequest; ///< 이 마을이 받은 부탁 중 아직 끝나지 않은 것이다(퀘스트 id)
         EventBuffer<CreatureTownEvent> _eventBuffer;
         CreatureTownSettings           _settings;
@@ -269,8 +284,10 @@ namespace sw
         const WorldClock*              _pClock;      ///< 빌린 시계이다(날이며 없으면 0일)
         GridTopology                   _topology;
         LandBinding                    _land; ///< 빌린 공유 땅(없으면 단독 동작)
-        int32                          _nextHabitatID;
-        int32                          _lastAttractKey; ///< 마지막으로 방문을 굴린 날 x 24 + 시
-        int32                          _appealTier;
+        PROPERTY( RuntimeState, Min = 1 )
+        int32 _nextHabitatID;
+        PROPERTY( RuntimeState, Min = -1 )
+        int32 _lastAttractKey; ///< 마지막으로 방문을 굴린 날 x 24 + 시
+        int32 _appealTier;
     };
 } // namespace sw

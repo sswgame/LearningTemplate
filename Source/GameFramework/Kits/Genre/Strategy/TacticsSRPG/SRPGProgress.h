@@ -11,6 +11,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -56,13 +57,21 @@ namespace sw
 namespace sw
 {
     /** @brief 캠페인 명단의 한 줄입니다. 작전이 끝나면 레벨과 개발 결과가 여기로 돌아옵니다. */
+    REFLECT()
     struct SRPGRosterEntry
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         LevelProgress _pilotLevel{};
+        PROPERTY()
         LevelProgress _unitLevel{};
+        PROPERTY()
         hashed_string _unitID{};
+        PROPERTY()
         hashed_string _pilotID{};
-        uint8         _bLost{ SW_FALSE }; ///< 격파되어 이번 판에서 빠졌다(로그라이트)
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bLost{ SW_FALSE }; ///< 격파되어 이번 판에서 빠졌다(로그라이트)
     };
 } // namespace sw
 
@@ -73,9 +82,12 @@ namespace sw
      * @brief 메탈슬러그 택틱스식 로그라이트 캠페인입니다. 기반 `RunMap` 의 작전 지도에서 노드를 고르고, 명단을 전장에 내보내고, 결과를 받아 다음 노드로 갑니다.
      * @details 작전 시드는 판 시드와 노드 번호의 해시이다. 같은 판의 같은 노드이면 같은 전장이 나온다. 패배하면 판이 끝난다.
      */
+    REFLECT()
     class SW_KIT_API SRPGCampaign
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "SRCP" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -110,10 +122,14 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        RunMap                  _runMap;
+        RunMap _runMap;
+        PROPERTY( RuntimeState )
         vector<SRPGRosterEntry> _listRoster;
-        uint32                  _seed;
-        uint8                   _bInMission;
-        uint8                   _bFailed;
+        PROPERTY( RuntimeState )
+        uint32 _seed;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bInMission;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bFailed;
     };
 } // namespace sw

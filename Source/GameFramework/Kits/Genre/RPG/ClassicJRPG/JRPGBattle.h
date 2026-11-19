@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -28,6 +29,7 @@ namespace sw
     class TimingJudge;
 
     /** @brief 멤버 명령 종류입니다. */
+    ENUM()
     enum class JRPGCommandKind : uint8
     {
         None = 0,
@@ -38,10 +40,16 @@ namespace sw
     };
 
     /** @brief 멤버 하나의 이번 라운드 명령입니다. */
+    REFLECT()
     struct JRPGCommand
     {
-        hashed_string   _id{};
-        int32           _target{ 0 };
+        REFLECT_BODY();
+
+        PROPERTY()
+        hashed_string _id{};
+        PROPERTY()
+        int32 _target{ 0 };
+        PROPERTY()
         JRPGCommandKind _kind{ JRPGCommandKind::None };
 
         static JRPGCommand makeAttack( int32 enemyIndex ) { return JRPGCommand{ hashed_string{}, enemyIndex, JRPGCommandKind::Attack }; }
@@ -101,14 +109,23 @@ namespace sw
 namespace sw
 {
     /** @brief 전투 중 적 하나입니다. */
+    REFLECT()
     struct JRPGEnemyState
     {
-        hashed_string         _enemyID{};
+        REFLECT_BODY();
+
+        PROPERTY()
+        hashed_string _enemyID{};
+        PROPERTY()
         vector<hashed_string> _listLock{}; ///< 남은 잠금
-        int32                 _hp{ 1 };
-        int32                 _castTurnsLeft{ 0 }; ///< 0이면 시전 중이 아니다
-        int32                 _lockTotal{ 0 };
-        int32                 _turnsTaken{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _hp{ 1 };
+        PROPERTY( Min = 0 )
+        int32 _castTurnsLeft{ 0 }; ///< 0이면 시전 중이 아니다
+        PROPERTY( Min = 0 )
+        int32 _lockTotal{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _turnsTaken{ 0 };
 
         bool isAlive() const { return _hp > 0; }
         bool isCasting() const { return _castTurnsLeft > 0; }
@@ -118,6 +135,7 @@ namespace sw
 namespace sw
 {
     /** @brief 전투의 끝입니다. */
+    ENUM()
     enum class JRPGBattleResult : uint8
     {
         Ongoing = 0,
@@ -174,9 +192,12 @@ namespace sw
      *          시전하는 적은 `castEvery` 번째 차례마다 시전을 시작하고 `castTurns` 차례 뒤에 터뜨린다. 그 사이 잠금과 같은 유형으로 맞히면 하나씩 깨지고,
      *          모두 깨면 시전이 취소된다. 깬 만큼 위력이 (남은 수 + 1) / (전체 + 1) 로 줄어든다.
      */
+    REFLECT()
     class SW_KIT_API JRPGBattle
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag       = FourCCUtil::make( "JBTL" );
         static constexpr uint32 kStateVersion   = 1;
         static constexpr int32  kEnemyActorBase = 100; ///< TurnOrder 의 적 번호는 이 값에 적 인덱스를 더한 값이다
@@ -199,7 +220,7 @@ namespace sw
         [[nodiscard]] bool tryFlee();
         void               pollEvents( vector<JRPGBattleEvent>& outListEvent );
         /**
-         * @brief 적, 이번 라운드 명령, 방어, 턴 순서, 난수, 보상, 콤보, 라운드, 도망 횟수, 결과를 씁니다. 파티, 카탈로그, 판정, 타이밍 입력, 설정은 싣지 않습니다.
+         * @brief 적, 이번 라운드 명령, 방어, 보상, 콤보, 라운드, 도망 횟수, 결과(리플렉션 상태 칸)와 턴 순서, 난수(손 본문)를 씁니다. 파티, 카탈로그, 판정, 타이밍 입력, 설정은 싣지 않습니다.
          *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 적이거나, 명령 수가 연결한 파티의 멤버 수와 다르거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          *        시작 전 전투는 파티를 연결하지 않아도 됩니다.
          */
@@ -244,8 +265,11 @@ namespace sw
         void            finishIfDecided();
 
     private:
-        vector<JRPGEnemyState>       _listEnemy;
-        vector<JRPGCommand>          _listCommand;   ///< 멤버 인덱스마다의 명령
+        PROPERTY( RuntimeState )
+        vector<JRPGEnemyState> _listEnemy;
+        PROPERTY( RuntimeState )
+        vector<JRPGCommand> _listCommand; ///< 멤버 인덱스마다의 명령
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
         vector<uint8>                _listDefending; ///< 이번 라운드에 방어 중인지(멤버 인덱스마다)
         EventBuffer<JRPGBattleEvent> _eventBuffer;
         TurnOrder                    _turnOrder;
@@ -255,11 +279,17 @@ namespace sw
         const TimingJudge*           _pJudge;
         const IJRPGTimingInput*      _pTimingInput;
         JRPGParty*                   _pParty;
-        int64                        _rewardExp;
-        int64                        _rewardGold;
-        int32                        _comboPoints;
-        int32                        _round;
-        int32                        _fleeAttempts;
-        JRPGBattleResult             _result;
+        PROPERTY( RuntimeState, Min = 0 )
+        int64 _rewardExp;
+        PROPERTY( RuntimeState, Min = 0 )
+        int64 _rewardGold;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _comboPoints;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _round;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _fleeAttempts;
+        PROPERTY( RuntimeState )
+        JRPGBattleResult _result;
     };
 } // namespace sw

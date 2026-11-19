@@ -81,6 +81,8 @@ namespace
                     written << tileIndex;
                 }
             }
+            // 생물 · 열린 부탁 · 다음 서식지 번호 · 마지막 방문 굴림은 리플렉션 상태 칸이다(머리 + 선언 순서)
+            sw::StateIO::writeReflectedHeader<sw::CreatureTown>( written );
             written << static_cast<uint32>( _listCreature.size() );
             for ( const sw::TownCreature& creature : _listCreature )
             {
@@ -96,6 +98,13 @@ namespace
                 written << creature._lastGiftDay;
                 written << creature._arrivalDay;
             }
+            written << static_cast<uint32>( _listOpenRequest.size() );
+            for ( const sw::hashed_string& questID : _listOpenRequest )
+            {
+                sw::StateIO::writeName( written, questID );
+            }
+            written << _nextHabitatID;
+            written << _lastAttractKey;
             written << static_cast<uint32>( _listHouse.size() );
             for ( const sw::CreatureHouse& house : _listHouse )
             {
@@ -107,13 +116,6 @@ namespace
                 sw::StateIO::writeInt2( written, house._tile );
                 written << house._capacity;
             }
-            written << static_cast<uint32>( _listOpenRequest.size() );
-            for ( const sw::hashed_string& questID : _listOpenRequest )
-            {
-                sw::StateIO::writeName( written, questID );
-            }
-            written << _nextHabitatID;
-            written << _lastAttractKey;
             sw::Archive reading( written.getData(), written.getSize() );
             return inoutTown.readState( reading );
         }

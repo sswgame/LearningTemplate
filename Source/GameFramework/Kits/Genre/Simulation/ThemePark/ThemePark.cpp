@@ -641,68 +641,34 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ThemeParkSimulation::serializeState( StateIO& io )
     {
-        io.value( _settings._entryFee );
+        // 놀이기구 · 손님 · 경과 · 평가 · 다음 손님 번호 · 누적 방문은 리플렉션 상태 칸이다(칸마다의 범위는 `PROPERTY( Min · Max )`).
+        io.reflected( *this );
+        io.value( _settings._entryFee ); // 리플렉션 밖 값 — 입장료(설정 칸), 놀이기구의 남은 운행 시간(`Countdown`), 걸음 타이머 · 난수 · 누적의 소수 부분
         io.check( 0 <= _settings._entryFee );
-        io.list( _listRide, ThemeParkInternal::kMinRideStateBytes, [&]( ParkRide& ride )
+        for ( ParkRide& ride : _listRide )
         {
-            io.value( ride._id );
-            io.value( ride._name );
-            io.value( ride._excitement );
-            io.value( ride._intensity );
-            io.value( ride._nausea );
-            io.value( ride._cycleTime );
-            io.value( ride._entrance );
-            io.value( ride._capacity );
-            io.value( ride._price );
-            io.value( ride._runningCostPerMinute );
-            io.flag( ride._bOpen );
-            io.list( ride._listQueue );
-            io.list( ride._listRider );
             io.value( ride._cycleTimer._remaining );
-            io.value( ride._totalRiders );
-            io.value( ride._totalIncome );
-            // `buildRide` 가 정원과 한 바퀴 시간을 1 이상으로 맞춘다. 정원 0 은 줄이 영영 줄지 않고 예상 대기가 0 나누기가 된다. 음수 값은 돈을 거꾸로 옮긴다.
-            io.check( ride._id.empty() == false && 0.0f <= ride._excitement && 0.0f <= ride._intensity && 0.0f <= ride._nausea && 1.0f <= ride._cycleTime && 1 <= ride._capacity &&
-                      static_cast<int32>( ride._listRider.size() ) <= ride._capacity && 0 <= ride._price && 0 <= ride._runningCostPerMinute && 0 <= ride._totalIncome );
-        } );
-        const int32 rideCount = static_cast<int32>( _listRide.size() );
-        io.list( _listGuest, ThemeParkInternal::kMinGuestStateBytes, [&]( ParkGuest& guest )
-        {
-            io.value( guest._position );
-            io.value( guest._walkFrom );
-            io.value( guest._walkTo );
-            io.value( guest._id );
-            io.value( guest._cash );
-            io.value( guest._targetRideIndex );
-            io.value( guest._rideCount );
-            io.value( guest._happiness );
-            io.value( guest._nausea );
-            io.value( guest._energy );
-            io.value( guest._minIntensity );
-            io.value( guest._maxIntensity );
-            io.value( guest._nauseaTolerance );
-            io.value( guest._walkTimer );
-            io.value( guest._walkDuration );
-            io.value( guest._queueTime );
-            io.enumValue( guest._state, ParkGuestState::Left );
-            io.enumValue( guest._thought, ParkGuestThought::NothingToRide );
-            io.check( constant::invalid_index::kInt32 <= guest._targetRideIndex && guest._targetRideIndex < rideCount && 0.0f <= guest._happiness && guest._happiness <= 1.0f && 0.0f <= guest._nausea && guest._nausea <= 1.0f && 0.0f <= guest._energy && guest._energy <= 1.0f &&
-                      0 < guest._id && 0 <= guest._cash && guest._minIntensity <= guest._maxIntensity && 0.0f <= guest._walkDuration && 0.0f <= guest._queueTime );
-        } );
+        }
         io.value( _stepTimer );
         io.value( _random );
         io.value( _arrival._fraction );
         io.value( _runningCost._fraction );
-        io.value( _elapsedTime );
-        io.value( _parkRating );
-        io.value( _nextGuestID );
-        io.value( _totalVisitorCount );
         if ( io.isWriting() || io.isOk() == false )
             return;
+        // 설정 · 칸 사이 검사만 손으로
+        const int32 rideCount = static_cast<int32>( _listRide.size() );
+        for ( const ParkRide& ride : _listRide )
+        {
+            io.check( ride._id.empty() == false && static_cast<int32>( ride._listRider.size() ) <= ride._capacity );
+        }
+        for ( const ParkGuest& guest : _listGuest )
+        {
+            io.check( guest._targetRideIndex < rideCount );
+        }
         const uint32 guestCount = static_cast<uint32>( _listGuest.size() );
         // 운영비는 정수 부분을 걸음마다 빼 가 1 아래이다. 도착 누적은 공원이 차면 1 위로 쌓일 수 있다(`admitGuest` 가 정원에서 멈춘다).
         io.check( 0.0f <= _arrival._fraction && 0.0f <= _runningCost._fraction && _runningCost._fraction < 1.0f );
-        io.check( 0.0f <= _elapsedTime && 0 <= _parkRating && _parkRating <= kMaxParkRating && 0 < _nextGuestID && guestCount <= _totalVisitorCount && static_cast<int64>( guestCount ) <= _settings._maxGuests );
+        io.check( guestCount <= _totalVisitorCount && static_cast<int64>( guestCount ) <= _settings._maxGuests );
         io.check( ThemeParkInternal::areLinksValid( _listRide, _listGuest, _nextGuestID ) );
     }
 

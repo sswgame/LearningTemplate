@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -36,9 +37,12 @@ namespace sw
      *        높으면 스태미나 코어가 벗어난 만큼 더 줄어듭니다. 게이지 회복 속도는 그 코어에 비례합니다. 데드아이는 켜 둔 동안 게이지를 쓰고,
      *        바닥나면 저절로 꺼집니다.
      */
+    REFLECT()
     class SW_KIT_API WesternSurvival
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32  kStateTag     = FourCCUtil::make( "WSRV" );
         static constexpr uint32  kStateVersion = 1;
         static constexpr float32 kCoreMax      = 100.0f;
@@ -92,12 +96,17 @@ namespace sw
     private:
         static constexpr size_t kCoreCount = static_cast<size_t>( WesternCore::Count );
 
+        PROPERTY( RuntimeState )
         vector<hashed_string> _listClothing;
-        vector<uint64>        _listMark;
-        ResourceGauge         _arrGauge[kCoreCount];
+        PROPERTY( RuntimeState )
+        vector<uint64> _listMark;
+        ResourceGauge  _arrGauge[kCoreCount];
+        PROPERTY( RuntimeState, Min = 0, Max = WesternSurvival::kCoreMax )
         float32               _arrCore[kCoreCount];
         const WesternCatalog* _pCatalog;
-        int32                 _deadEyeLevel;
-        uint8                 _bDeadEyeActive;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _deadEyeLevel;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bDeadEyeActive;
     };
 } // namespace sw

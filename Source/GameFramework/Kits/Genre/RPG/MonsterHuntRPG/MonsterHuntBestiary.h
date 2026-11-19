@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -44,9 +45,12 @@ namespace sw
      * @brief 한 위쳐의 도감입니다. 지식은 내려가지 않습니다. 책은 그 괴물의 읽기 단계까지, 처치는 정한 수마다 한 단계씩(처치 상한까지),
      *        조사는 조사 단계까지 올립니다. 약점의 실제 배율은 지식과 상관없이 항상 적용되고, 지식은 **보여 주는 것**만 정합니다.
      */
+    REFLECT()
     class SW_KIT_API MonsterHuntBestiary
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WBST" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -73,19 +77,27 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
 
-    private:
+        /** @brief 괴물 하나의 지식과 처치 수입니다(리플렉션 상태 칸의 원소). */
+        REFLECT()
         struct Entry
         {
+            REFLECT_BODY();
+
+            PROPERTY()
             hashed_string _monsterID{};
-            int32         _knowledge{ 0 };
-            int32         _killCount{ 0 };
+            PROPERTY( Min = 0 )
+            int32 _knowledge{ 0 };
+            PROPERTY( Min = 0 )
+            int32 _killCount{ 0 };
         };
 
+    private:
         Entry*       findEntryMutable( const hashed_string& monsterID );
         const Entry* findEntry( const hashed_string& monsterID ) const;
         bool         raiseKnowledge( const hashed_string& monsterID, int32 level );
 
     private:
+        PROPERTY( RuntimeState )
         vector<Entry>                         _listEntry;
         EventBuffer<MonsterHuntBestiaryEvent> _eventBuffer;
         const MonsterHuntCatalog*             _pCatalog;

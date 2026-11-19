@@ -127,8 +127,8 @@ namespace
                 written << walker._bReturning;
                 written << walker._bAlive;
             }
-            sw::StateIO::writeStepTimer( written, sw::FixedStepTimer{} );
-            sw::StateIO::writeRandom( written, sw::GameRandom( 9u ) );
+            // 도시 수 칸은 리플렉션 상태 칸(머리 + 선언 순서) 뒤에 손 본문(걸음 타이머, 난수)이다
+            sw::StateIO::writeReflectedHeader<sw::CitySimulation>( written );
             written << _time;
             written << _floodFertility;
             written << _wageDebt;
@@ -137,6 +137,8 @@ namespace
             written << _employed;
             written << _bRoadsDirty;
             written << static_cast<uint8>( SW_FALSE );
+            sw::StateIO::writeStepTimer( written, sw::FixedStepTimer{} );
+            sw::StateIO::writeRandom( written, sw::GameRandom( 9u ) );
             sw::Archive reading( written.getData(), written.getSize() );
             return inoutCity.readState( reading );
         }

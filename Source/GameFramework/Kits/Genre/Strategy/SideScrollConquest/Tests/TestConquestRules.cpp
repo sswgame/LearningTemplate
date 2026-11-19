@@ -182,6 +182,7 @@ namespace
             written << _facing;
             written << _commanderAlive;
             sw::StateIO::writeStepTimer( written, timer );
+            sw::StateIO::writeReflectedHeader<sw::ConquestWorld>( written ); // 판 수 칸은 리플렉션 상태 칸이다(머리 + 선언 순서)
             written << _elapsed;
             written << _incomeTimer;
             written << _waveTimer;
