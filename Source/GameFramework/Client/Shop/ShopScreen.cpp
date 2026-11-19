@@ -210,7 +210,6 @@ namespace sw
         if ( dialog != kInvalidUIScreenHandle )
         {
             _bBusy = SW_TRUE;
-            rebuild(); // 줄을 끈다
         }
         return true;
     }
@@ -281,7 +280,6 @@ namespace sw
             return;
         }
         _pProvider->collectOffers( _listOffer );
-        const bool bEnabled = _bBusy == SW_FALSE;
         pOffers->setRowFactory( ListViewWidget::RowFactoryDelegate::create( []()
         {
             unique_ptr<ButtonWidget> button = make_unique<ButtonWidget>();
@@ -289,11 +287,12 @@ namespace sw
             (void)button->addChild( make_unique<TextWidget>() );
             return unique_ptr<Widget>( std::move( button ) );
         } ) );
-        pOffers->setRowBinder( ListViewWidget::RowBinderDelegate::create( [this, bEnabled]( Widget& row, uint32 itemIndex )
+        pOffers->setRowBinder( ListViewWidget::RowBinderDelegate::create( [this]( Widget& row, uint32 itemIndex )
         {
             ButtonWidget&    button = static_cast<ButtonWidget&>( row );
             const ShopOffer& offer  = _listOffer[itemIndex];
-            button.setEnabled( bEnabled && offer._stock != 0 );
+            // 구매 중에도 줄은 켜 둔다 — 고르기는 `_bBusy` 가 버리고, 끄면 확인 창이 닫힐 때 덮였던 줄로 포커스가 돌아오지 못한다(패드 사용자가 자리를 잃는다).
+            button.setEnabled( offer._stock != 0 );
             // 줄 이름은 상품 순번이다(`Offer0` …) — 가상 목록이 줄을 다시 써도 포커스 · 시나리오가 상품으로 가리킨다.
             StringBuilder<constant::buffer::kMax32> nameBuilder;
             nameBuilder.appendFormat( "Offer%#", itemIndex );
