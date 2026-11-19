@@ -179,6 +179,18 @@ namespace sw
         SW_FATAL( "ShaderCooker::getExtensionForFormat: unknown shader target format %#", static_cast<uint32>( format ) );
     }
 
+    ShaderTargetFormat ShaderCooker::getFormatForSubfolder( string_view subfolder )
+    {
+        if ( subfolder.empty() )
+            return ShaderTargetFormat::Count;
+        for ( const ShaderCookerInternal::BackendFolder& row : ShaderCookerInternal::kArrBackendFolder )
+        {
+            if ( row._folder == subfolder )
+                return row._format;
+        }
+        return ShaderTargetFormat::Count;
+    }
+
     bool ShaderCooker::cookShader( const ShaderSourceID& source, string_view outputPath, string_view entryPoint,
                                    ShaderStage stage, ShaderTargetFormat targetFormat, const ShaderEnginePolicy& enginePolicy,
                                    const vector<string>* pListPermutation,

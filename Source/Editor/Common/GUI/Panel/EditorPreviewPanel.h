@@ -122,6 +122,9 @@ namespace sw::editor
          */
         void syncDocumentDirty() override;
 
+        /** @brief 미리보기 재생이 멈췄으면 true 입니다(재생 막대의 멈춤). 시간을 스스로 정하는 창이 따라 멈출 때 읽습니다. */
+        bool isPreviewPaused() const { return _bPreviewPaused; }
+
     private:
         /**
          * @brief 뷰포트 위 재생 막대입니다 — 재생/멈춤 · 한 프레임 · 속도 · 문지르기 · 맞춤 · 바닥 · 축(언리얼 애셋 편집기 뷰포트 툴바 · Persona 재생 막대).

@@ -117,6 +117,10 @@ namespace sw::editor
          * @param fieldOfViewY 세로 시야각(라디안). 0 이하이면 지금 값을 둔다.
          */
         void setFreeCamera( const float3& eye, float32 yaw, float32 pitch, float32 fieldOfViewY );
+        /** @brief 자유 카메라를 끄고 오빗 카메라로 돌아갑니다(대상 · 거리는 마지막 오빗 값이다). */
+        void clearFreeCamera() { _bFreeCamera = SW_FALSE; }
+        /** @brief 자유 카메라(`setFreeCamera`)로 보고 있으면 true 입니다. */
+        bool isFreeCamera() const { return _bFreeCamera; }
         /** @brief 반지름 @p radius 의 구가 화면에 들어오게 거리를 맞추고 대상을 @p center 로 둡니다. */
         void frameSphere( const float3& center, float32 radius );
         /** @brief 이 비율로 본 오빗 카메라의 뷰-투영 행렬과 눈 위치를 계산합니다. */

@@ -126,6 +126,8 @@ namespace sw::editor
         [[nodiscard]] static bool hasNewSections();
         /** @brief @p pCurrent 가 @p pDefault 와 다른 프로퍼티만 담은 JSON 오브젝트 문자열을 만듭니다. 글로 못 쓰면(잘못된 UTF-8) 오류입니다. */
         [[nodiscard]] static expected<string> makeDifferenceJSON( const TypeInfo& type, const void* pCurrent, const void* pDefault );
+        /** @brief JSON 오브젝트 문자열을 인스턴스에 적용합니다. 없는 키는 그대로 둡니다. 모르는 키는 @p outListUnknownKey 에 담습니다. 형식이 틀리면 false 입니다. */
+        [[nodiscard]] static bool applyJSON( const TypeInfo& type, void* pInstance, string_view jsonText, vector<string>& outListUnknownKey );
         /** @brief @p prop 의 값이 기본값과 다르면 true 입니다. 창의 "Modified only" 필터와 수정 표시에 씁니다. */
         static bool isPropertyModified( const PropertyInfo& prop, ObjectAddress current, ObjectAddress defaultInstance );
         /** @brief 섹션 하나를 기본값으로 되돌리고 `_pfnOnChanged` 를 부릅니다. */

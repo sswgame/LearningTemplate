@@ -170,6 +170,11 @@ namespace sw::editor
         return 0 <= sourceIndex && sourceIndex < kSourceCount ? _arrClientProcess[sourceIndex] : -1;
     }
 
+    bool EditorStateHashCompare::hasChannelOrigin( int32 sourceIndex ) const
+    {
+        return 0 <= sourceIndex && sourceIndex < kSourceCount && _arrChannel[sourceIndex]._bValid;
+    }
+
     bool EditorStateHashCompare::compareObjectReports( string_view leftText, string_view rightText )
     {
         vector<SceneObjectHash> listLeft;

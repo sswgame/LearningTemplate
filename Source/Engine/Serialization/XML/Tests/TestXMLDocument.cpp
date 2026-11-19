@@ -74,3 +74,25 @@ SW_TEST_CASE( XMLDocumentTest, DuplicateAttributeIsAParseError )
     SW_EXPECT_FALSE( document.parse( R"(<Root><Child a="1" a="2"/></Root>)", "dup.xml" ) );
     SW_EXPECT_TRUE( document.getLastError().find( "repeats the attribute 'a'" ) != sw::string::npos );
 }
+
+/**
+ * @brief [XMLDocumentTest] 필수 실수 셋 속성은 정확히 세 실수일 때만 읽힌다 — 없거나 모양이 다르면 어느 파일 · 원소 · 속성인지 알리고 false 이며 값은 그대로다
+ */
+SW_TEST_CASE( XMLDocumentTest, RequiredFloat3NeedsTheAttribute )
+{
+    sw::XMLDocument document;
+    SW_REQUIRE_TRUE( document.parse( R"(<Root><Point offset="1 2.5 -3" pair="1 2"/></Root>)" ) );
+    const sw::XMLNode point = document.getRoot( "Root" ).findChild( "Point" );
+
+    sw::float3 value{ 9.0f, 9.0f, 9.0f };
+    SW_REQUIRE_TRUE( sw::XMLReadUtil::readRequiredFloat3( point, "offset", "test.xml", value ) );
+    SW_EXPECT_EQUAL( 1.0f, value._x );
+    SW_EXPECT_EQUAL( 2.5f, value._y );
+    SW_EXPECT_EQUAL( -3.0f, value._z );
+
+    SW_EXPECT_LOG( "GameData.AttributeMissing" );
+    SW_EXPECT_FALSE( sw::XMLReadUtil::readRequiredFloat3( point, "absent", "test.xml", value ) );
+    SW_EXPECT_LOG( "GameData.AttributeShapeMismatch" );
+    SW_EXPECT_FALSE( sw::XMLReadUtil::readRequiredFloat3( point, "pair", "test.xml", value ) );
+    SW_EXPECT_EQUAL( 2.5f, value._y ); // 실패한 읽기는 값을 바꾸지 않는다
+}

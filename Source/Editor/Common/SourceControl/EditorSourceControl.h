@@ -92,6 +92,8 @@ namespace sw::editor
         static string makeRepositoryPath( string_view repositoryRoot, string_view absolutePath );
         /** @brief 공급자를 바꿉니다. 테스트와 공급자 탐지 결과가 씁니다. 잠금 목록은 비웁니다. */
         void setProvider( unique_ptr<ISourceControlProvider> pProvider );
+        /** @brief 잠금 목록을 바꿉니다(갱신 답 `Refresh` 를 거치지 않고 목록을 정한다 — 서버 없이 `findLock` · `describeStatus` 를 확인할 때). */
+        void setLocks( vector<SourceControlLock>&& listLock ) { _listLock = std::move( listLock ); }
 
         // ------------------------------------------------------------------------------
         // 변경 목록 · diff · 이력 · 되돌리기(git 공급자만 — `ISourceControlProvider::canTrackChanges`)

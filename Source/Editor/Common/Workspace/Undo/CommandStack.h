@@ -133,6 +133,8 @@ namespace sw
         void endTransaction();
         /** @brief 트랜잭션을 취소하고 수집된 명령들을 버립니다. */
         void cancelTransaction();
+        /** @brief 트랜잭션 진행 여부를 반환합니다. */
+        bool isInsideTransaction() const { return _transactionDepth != 0; }
         /**
          * @brief 여러 프레임에 걸친 상호작용(기즈모 끌기 · 문서 위젯 끌기 — `DocumentEditSpan`)을 엽니다. 돌려준 핸들이 닫을 때까지 되돌리기 · 다시 하기 · 이동을 거절한다.
          * @details 상호작용은 시작 전 상태를 쥐고 끝에 한 단계를 올린다. 그 사이에 되돌리면 쥔 "전" 이 낡아 끝의 단계가 되돌린 편집을 다시 덮고 다시 하기 기록을 자른다(감사 E-2).

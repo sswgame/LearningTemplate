@@ -51,4 +51,9 @@ namespace sw::editor
     {
         return EditorViewportMouseCaptureInternal::get()._pMouseOwner != nullptr;
     }
+
+    bool EditorViewportMouseCapture::isCapturedBy( const void* pOwner )
+    {
+        return pOwner != nullptr && EditorViewportMouseCaptureInternal::get()._pMouseOwner == pOwner;
+    }
 } // namespace sw::editor

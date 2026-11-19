@@ -466,3 +466,19 @@ SW_TEST_CASE( DataPathTest, RoundTripsAndStaysUnsetWhenAbsent )
     SW_REQUIRE_TRUE( JSONSerializer::deserialize( &absent, getSampleType(), R"({"_count":1})" ) );
     SW_EXPECT_FALSE( absent._path.isSet() );
 }
+
+/**
+ * @brief [SerializerUtilTest] 이름이 같은 칸끼리만 값이 옮겨 간다 — 형식이 달라도 이름 · 글 형식이 같으면 옮기고, 짝이 없는 칸은 양쪽 다 그대로다
+ */
+SW_TEST_CASE( SerializerUtilTest, SameNamedPropertiesMoveBetweenTypes )
+{
+    SerializerSample source;
+    source._count = 42;
+    source._name  = "knight";
+    source._ratio = 0.25f;
+    SerializerSamplePart target;
+    SW_REQUIRE_TRUE( SerializerUtil::copySameNamedProperties( &source, getSampleType(), &target, *SerializerSamplePart::StaticType() ) );
+    SW_EXPECT_EQUAL( 42, target._count );
+    SW_EXPECT_EQUAL( string( "knight" ), target._name );
+    SW_EXPECT_EQUAL( 1.5f, target._extra ); // 짝이 없는 칸은 그대로다
+}

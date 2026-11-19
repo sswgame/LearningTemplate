@@ -173,6 +173,18 @@ namespace sw
         return match.isMatched() ? match._pType->_excludeGroup : string_view{};
     }
 
+    bool AssetTypeRegistry::hasExcludeGroup( string_view group )
+    {
+        const RegistrationList<const AssetTypeDef>& types = AssetTypeRegistryInternal::getTypes();
+        ScopedLock<mutex>                           lock{ types.getOwnerMutex() };
+        for ( const AssetTypeDef* pType : types.getItems() )
+        {
+            if ( group.empty() == false && StringUtil::equals( pType->_excludeGroup, group, true ) )
+                return true;
+        }
+        return false;
+    }
+
     void AssetTypeRegistry::collectProblems( vector<string>& outListProblem )
     {
         using Internal = AssetTypeRegistryInternal;

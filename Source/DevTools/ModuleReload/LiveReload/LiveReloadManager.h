@@ -191,6 +191,8 @@ namespace sw
 
         /** @brief 끝까지 성공한 연쇄 리로드 수입니다(교체 · 콜백 · 바인딩 검사를 모두 마친 것). 실패하거나 적용 전에 거절된 리로드는 세지 않습니다. 자동화가 완료를 기다릴 때 읽습니다. */
         uint32 getCompletedReloadCount() const { return _completedReloadCount; }
+        /** @brief 교체된 뒤 언로드를 미루고 아직 로드해 둔 옛 라이브러리 수입니다(`kMaxDeferredUnloadBatchCount` 배치까지). */
+        uint32 getDeferredUnloadLibraryCount() const { return _deferredUnloadQueue.getLibraryCount(); }
 
     private:
         struct ModuleRecord;

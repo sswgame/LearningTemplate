@@ -41,6 +41,23 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @struct DebugActionState
+     * @brief 디버깅과 온스크린 뷰어에 쓰는 실시간 액션 평가 상태입니다.
+     */
+    struct DebugActionState
+    {
+        hashed_string          _action;
+        hashed_string          _layer;
+        InputActionValueType   _valueType;
+        ActionPhase            _phase;
+        float2                 _value;
+        float32                _holdDuration;
+        uint8                  _bTriggered : 1;
+        uint8                  _bDown      : 1;
+        [[maybe_unused]] uint8 _reserved   : 6;
+    };
+
     /** @brief 묶음 파일 하나의 리소스 id 와 글입니다(`InputMap::writeSourceText` 의 글 — `loadBundleTexts` 가 읽는다). */
     struct InputMapSourceText
     {
@@ -315,6 +332,9 @@ namespace sw
         float32               getHoldThreshold() const { return _triggerRules._holdThreshold; }
         float32               getNavRepeatDelay() const { return _triggerRules._navRepeatDelay; }
         float32               getNavRepeatRate() const { return _triggerRules._navRepeatRate; }
+
+        /** @brief 실시간 액션 평가 상태를 덤프합니다(HUD, 에디터 인스펙터용). */
+        void getDebugActionStates( vector<DebugActionState>& outListState ) const;
 
         // ------------------------------------------------------------------------------
         // 9) 조회와 프레임 상태(통합 쿼리와 O(1) ActionHandle 핫패스)

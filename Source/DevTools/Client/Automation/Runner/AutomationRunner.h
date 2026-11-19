@@ -152,6 +152,11 @@ namespace sw
 
         /** @brief 시나리오 파일(리소스 경로 또는 절대 경로)을 읽습니다. 읽지 못하면 결과가 LoadError 이고 다음 `onFrameEnd` 에서 끝납니다. */
         void startFromPath( const AssetID& assetID, string_view reportPath );
+        /**
+         * @brief XML 글로 시작합니다(테스트). 형식 오류면 false 이고 결과는 LoadError 입니다.
+         * @details 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 false 이고 결과는 Skipped 입니다(`startFromPath` 도 같다).
+         */
+        [[nodiscard]] bool startFromText( string_view xmlText, string_view reportPath = {} );
 
         /**
          * @brief 시작 조건을 보기 전에 @p scenePath 가 활성 씬이기를 기다립니다 — 게임이 기동하며 그 씬을 열고(`gv_firstScene`), 다른 씬이 서면 이것이 엽니다.
@@ -244,6 +249,8 @@ namespace sw
         void finish( const AutomationRunResult& runResult );
 
         bool isActive() const { return _runResult.has_value() == false; }
+        /** @brief 시작 조건을 지나 단계를 돌기 시작했으면 true 입니다. */
+        bool hasStarted() const { return _bStarted == SW_TRUE; }
         /** @brief 마지막으로 시작한 실행 단계의 이름입니다(아직 없으면 빈 글). 창 제목과 단계 로그가 씁니다. */
         const string& getCurrentStepKind() const { return _run._currentStepKind; }
         /** @brief 그 단계가 파일에서 몇 번째인지(0 부터)입니다. */

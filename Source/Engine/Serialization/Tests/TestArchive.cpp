@@ -529,3 +529,37 @@ SW_TEST_CASE( ArchiveTest, FiniteFloatsRoundTrip )
     SW_EXPECT_EQUAL( tiny, std::numeric_limits<float32>::denorm_min() );
     SW_EXPECT_EQUAL( vector._y, -2.0f );
 }
+
+/**
+ * @brief [ArchiveTest] 풀 문자열은 풀 표를 함께 실어야 다른 아카이브가 읽는다 — 표를 먼저 싣고(`saveStringPool`) 번호를 쓰면, 읽는 쪽은 표를 읽은 뒤(`loadStringPool`) 번호로 같은 글을 얻는다
+ * @details 같은 글은 표에 한 번만 든다(번호만 되풀이된다). 표가 잘린 아카이브는 읽기가 false 이고 오류 상태로 남는다.
+ */
+SW_TEST_CASE( ArchiveTest, PooledStringsReadBackThroughASavedPool )
+{
+    sw::Archive writeArch;
+    (void)writeArch.getStringPool().internString( "knight" );
+    (void)writeArch.getStringPool().internString( "rogue" );
+    (void)writeArch.getStringPool().internString( "knight" );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, writeArch.getStringPool().getDynamicCount() );
+    writeArch.saveStringPool();
+    const uint64 poolBytes = writeArch.getSize();
+    writeArch.writePooledString( "knight" );
+    writeArch.writePooledString( "rogue" );
+    writeArch.writePooledString( "knight" );
+
+    sw::Archive readArch( writeArch.getData(), writeArch.getSize() );
+    SW_REQUIRE_TRUE( readArch.loadStringPool() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, readArch.getStringPool().getDynamicCount() );
+    sw::string first;
+    sw::string second;
+    sw::string third;
+    SW_REQUIRE_TRUE( readArch.readPooledString( first ) && readArch.readPooledString( second ) && readArch.readPooledString( third ) );
+    SW_EXPECT_EQUAL( sw::string( "knight" ), first );
+    SW_EXPECT_EQUAL( sw::string( "rogue" ), second );
+    SW_EXPECT_EQUAL( sw::string( "knight" ), third );
+
+    SW_REQUIRE_TRUE( poolBytes > 1 );
+    sw::Archive truncated( writeArch.getData(), poolBytes - 1 );
+    SW_EXPECT_FALSE( truncated.loadStringPool() );
+    SW_EXPECT_TRUE( truncated.isError() );
+}

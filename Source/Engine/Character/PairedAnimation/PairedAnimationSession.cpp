@@ -115,6 +115,13 @@ namespace sw
         return playingCount;
     }
 
+    bool PairedAnimationSession::isRolePlaying( const hashed_string& roleName ) const
+    {
+        // 묻는 함수다 — 없는 역할은 "재생 중 아님" 이 답이다.
+        const optional<uint32> roleIndex = _def->findRoleIndex( roleName );
+        return roleIndex.has_value() && *roleIndex < _listRole.size() && _listRole[*roleIndex]._stage == PairedAnimationRoleStage::Playing;
+    }
+
     bool PairedAnimationSession::tryComputeAlignTarget( GameObjectManager& manager, const PairedAnimationRoleDef& roleDef, float3& outPosition, float32& outYaw ) const
     {
         const SkeletalAnimatorComponent* pAnchor = resolveAnimator( manager, _listRole[_def->getAnchorRoleIndex()] );

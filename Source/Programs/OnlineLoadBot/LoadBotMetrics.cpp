@@ -276,6 +276,11 @@ namespace sw
         return static_cast<int64>( _listSampleByAction[static_cast<size_t>( action )].size() );
     }
 
+    int64 LoadBotMetrics::getErrorCount( LoadBotAction action ) const
+    {
+        return _listErrorCountByAction[static_cast<size_t>( action )];
+    }
+
     int64 LoadBotMetrics::getTotalCompletedCount() const
     {
         int64 count = 0;
@@ -305,6 +310,12 @@ namespace sw
     int64 LoadBotMetrics::getBusyCount() const
     {
         return getErrorKeyCount( LoadBotMetricsInternal::makeBusyErrorKey() );
+    }
+
+    int64 LoadBotMetrics::getPushCount( uint16 pushKind ) const
+    {
+        const auto pushIt = _mapPushKindToCount.find( pushKind );
+        return pushIt != _mapPushKindToCount.end() ? pushIt->second : 0;
     }
 
     int64 LoadBotMetrics::getDistinctMatchCount() const

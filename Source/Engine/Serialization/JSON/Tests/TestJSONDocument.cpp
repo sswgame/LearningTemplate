@@ -141,3 +141,66 @@ SW_TEST_CASE( JSONDocumentTest, StrictReadRejectsDuplicateKeysAndDeepNesting )
         SW_EXPECT_FALSE( document.parse( R"({"a":1,"a":2})", "dup.json" ) );
     }
 }
+
+/**
+ * @brief [JSONDocumentTest] `setNull` 은 있던 값을 null 로 바꾼다 — 형이 바뀌고 이웃 멤버는 그대로다
+ */
+SW_TEST_CASE( JSONDocumentTest, SetNullReplacesTheValue )
+{
+    sw::JSONDocument document;
+    SW_REQUIRE_TRUE( document.parse( R"({"name": "x", "count": 7})" ) );
+    const sw::JSONValue name = document.getRoot().get( "name" );
+    SW_REQUIRE_TRUE( name.isString() );
+    name.setNull();
+    SW_EXPECT_TRUE( document.getRoot().get( "name" ).isNull() );
+    SW_EXPECT_TRUE( document.getRoot().get( "count" ).isNumber() );
+}
+
+/**
+ * @brief [JSONDocumentTest] `extractStringField` 는 최상위 객체의 스칼라 필드만 글로 낸다 — 글은 내용, 수는 적힌 값이고, 객체 · 배열 · 없는 필드 · 객체가 아닌 글은 빈 글이다
+ */
+SW_TEST_CASE( JSONDocumentTest, ExtractStringFieldReadsTopLevelScalars )
+{
+    constexpr const utf8* kText = R"({"name": "knight", "count": 7, "nested": {"name": "inner"}, "list": [1, 2]})";
+    SW_EXPECT_EQUAL( sw::string( "knight" ), sw::JSONDocument::extractStringField( kText, "name" ) );
+    SW_EXPECT_EQUAL( sw::string( "7" ), sw::JSONDocument::extractStringField( kText, "count" ) );
+    SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( kText, "nested" ).empty() );
+    SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( kText, "list" ).empty() );
+    SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( kText, "absent" ).empty() );
+    SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( "[1, 2]", "name" ).empty() ); // 최상위가 객체가 아니다
+}
+
+/**
+ * @brief [JSONDocumentTest] `forEachObjectInArray` 는 이름 붙은 배열의 객체 원소만 원래 순번과 함께 넘긴다 — 객체가 아닌 원소는 건너뛰고, 배열이 없거나 배열이 아니면 부르지 않는다
+ * @details 순번은 건너뛴 원소도 센 배열 안 자리다(id 가 없는 원소에 순번을 기본값으로 쓰는 에셋이 있다).
+ */
+SW_TEST_CASE( JSONDocumentTest, ForEachObjectInArraySkipsNonObjects )
+{
+    sw::JSONDocument document;
+    SW_REQUIRE_TRUE( document.parse( R"({"nodes": [{"id": 1}, 5, "text", {"id": 2}], "scalar": 3})" ) );
+    const sw::JSONValue root = document.getRoot();
+
+    sw::vector<size_t> listIndex;
+    sw::vector<int32>  listID;
+    sw::forEachObjectInArray( root, "nodes", [&]( const sw::JSONValue& element, size_t index )
+    {
+        listIndex.push_back( index );
+        listID.push_back( element.readRequired<int32>( "id" ).value_or( -1 ) );
+    } );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listIndex.size() );
+    SW_EXPECT_EQUAL( size_t{ 0 }, listIndex[0] );
+    SW_EXPECT_EQUAL( size_t{ 3 }, listIndex[1] );
+    SW_EXPECT_EQUAL( 1, listID[0] );
+    SW_EXPECT_EQUAL( 2, listID[1] );
+
+    uint32 callCount = 0;
+    sw::forEachObjectInArray( root, "scalar", [&]( const sw::JSONValue&, size_t )
+    {
+        ++callCount;
+    } );
+    sw::forEachObjectInArray( root, "absent", [&]( const sw::JSONValue&, size_t )
+    {
+        ++callCount;
+    } );
+    SW_EXPECT_EQUAL( 0u, callCount );
+}

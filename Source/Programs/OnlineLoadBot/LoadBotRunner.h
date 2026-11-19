@@ -73,6 +73,8 @@ namespace sw
         int32                        getBotCount() const { return static_cast<int32>( _listBot.size() ); }
         /** @brief 띄운 봇 수입니다(도착률 실행기는 풀이 바닥나면 이보다 많은 도착을 버린다 — `LoadBotMetrics::getDroppedArrivalCount`). */
         int32 getLaunchedCount() const { return _launchedCount; }
+        /** @brief 띄운 봇 가운데 아직 끝나지 않은 봇 수입니다. */
+        int32 getRunningBotCount() const;
         /** @brief 실행 하나를 가르는 값(시작한 벽시계 밀리초)입니다 — 영수증 거래 id 처럼 저장소가 남는 실행 사이에서 겹치면 안 되는 글에 붙인다. */
         int64 getRunID() const { return _runID; }
         /** @brief 시작(첫 틱)부터 지난 밀리초입니다. */

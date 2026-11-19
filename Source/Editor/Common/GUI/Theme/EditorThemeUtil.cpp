@@ -560,6 +560,11 @@ namespace sw::editor
         return bOpened ? SW_EDITOR_ICON( "FolderOpen" ) : SW_EDITOR_ICON( "Folder" );
     }
 
+    const utf8* EditorThemeUtil::getAssetTypeIcon( const EditorAssetType& kind )
+    {
+        return EditorThemeInternal::getIconOf( EditorAssetTypeRegistry::findKindInfo( kind ) );
+    }
+
     Color EditorThemeUtil::getAssetTypeColor( const EditorAssetType& kind )
     {
         return EditorThemeInternal::getColorOf( EditorAssetTypeRegistry::findKindInfo( kind ) );

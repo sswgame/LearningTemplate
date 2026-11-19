@@ -33,3 +33,28 @@ SW_TEST_CASE( CookJobTest, RecordsDiskReadsAsAbsoluteDiskInputs )
         SW_EXPECT_EQUAL( input._contentHash, input.computeCurrentHash() );
     }
 }
+
+/**
+ * @brief [CookJobTest] 같은 입력인지는 종류 · 출처 · 확장자로만 가린다 — 내용 해시가 달라도 같은 입력이고(`==` 는 다르다), `makeSourceKey` 와 같은 동치다
+ */
+SW_TEST_CASE( CookJobTest, SameSourceIgnoresTheContentHash )
+{
+    const CookInput first{ CookInputKind::Listing, "a/folder", ".material", 1 };
+    CookInput       changed = first;
+    changed._contentHash    = 2;
+    SW_EXPECT_TRUE( first.isSameSource( changed ) );
+    SW_EXPECT_FALSE( first == changed );
+    SW_EXPECT_EQUAL( first.makeSourceKey(), changed.makeSourceKey() );
+
+    CookInput otherKind       = first;
+    otherKind._kind           = CookInputKind::DiskFile;
+    CookInput otherSource     = first;
+    otherSource._source       = "b/folder";
+    CookInput otherExtension  = first;
+    otherExtension._extension = ".mesh";
+    for ( const CookInput& other : { otherKind, otherSource, otherExtension } )
+    {
+        SW_EXPECT_FALSE( first.isSameSource( other ) );
+        SW_EXPECT_TRUE( first.makeSourceKey() != other.makeSourceKey() );
+    }
+}

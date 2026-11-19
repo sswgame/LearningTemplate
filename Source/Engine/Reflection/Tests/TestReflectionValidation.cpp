@@ -99,6 +99,23 @@ SW_TEST_CASE( ReflectionValidationTest, FixDefaultsToScopeProperty )
 }
 
 /**
+ * @brief [ReflectionValidationTest] 고침은 경고에도 달린다 — 심각도만 다르고 고침 데이터는 오류의 것과 같은 규칙이다(프로퍼티를 적으면 그 프로퍼티)
+ */
+SW_TEST_CASE( ReflectionValidationTest, WarningCarriesAFixToo )
+{
+    sw::ValidationContext context;
+    context.setSource( 7, "Lamp" );
+    context.setScope( sw::hashed_string( "sw::PointLightComponent" ), sw::hashed_string( "_radius" ) );
+    context.addWarningWithFix( "intensity looks too high", sw::ValidationPropertyEdit{ sw::hashed_string( "_intensity" ), "10", "Set Intensity to 10" } );
+    const sw::vector<sw::ValidationIssue>& listIssue = context.getIssues();
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listIssue.size() );
+    SW_EXPECT_TRUE( listIssue[0]._severity == sw::ValidationSeverity::Warning );
+    SW_EXPECT_TRUE( listIssue[0]._fix.isValid() );
+    SW_EXPECT_TRUE( listIssue[0]._fix._propertyName == sw::hashed_string( "_intensity" ) );
+    SW_EXPECT_EQUAL( sw::string( "10" ), listIssue[0]._fix._valueText );
+}
+
+/**
  * @brief [ReflectionValidationTest] 시퀀스 원소가 많은 값의 검증 비용(ns/원소)을 로그로 남깁니다. 원소마다 프로퍼티 타입을 레지스트리에서 다시 찾는 길이다 — 시간 문턱은 두지 않는다
  * @details 재는 법: Release `App --test --test-filter=ReflectionValidationTest.NestedElementCost` 5 번, 로그 `ReflectionValidationTest.NestedElementCost` 의 중앙값.
  *          판정: 중첩 타입 기억(다음 커밋)과 그 앞의 값 차이가 흔들림보다 크면 둔다. 대형 씬 Map Check 의 `Editor.MapCheck` 시간에서 검증 몫이 작으면 되돌린다.

@@ -131,8 +131,10 @@ SW_TEST_CASE( LoadBotScheduleTest, ArrivalRunnerLaunchesAtTheRate )
     SW_REQUIRE_TRUE( runner.initialize( transport.get(), *scenario, settings ).has_value() );
 
     runner.setManualClock( MonotonicMilliseconds{ 0 } );
+    SW_EXPECT_EQUAL( 0, runner.getRunningBotCount() ); // 아직 아무도 띄우지 않았다
     (void)runner.update();
     SW_EXPECT_EQUAL( 1, runner.getLaunchedCount() ); // 0 에 첫 도착
+    SW_EXPECT_TRUE( runner.getRunningBotCount() <= runner.getLaunchedCount() );
     runner.setManualClock( MonotonicMilliseconds{ 250 } );
     (void)runner.update();
     SW_EXPECT_EQUAL( 3, runner.getLaunchedCount() ); // 0 · 100 · 200

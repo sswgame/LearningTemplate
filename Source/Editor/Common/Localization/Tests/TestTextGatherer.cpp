@@ -138,6 +138,7 @@ SW_TEST_CASE( TextGathererTest, MergeReportsAddedChangedRemovedAndKeepsManualRow
     SW_EXPECT_TRUE( TextGathererTestInternal::contains( report._listAdded, "Welcome, traveler!" ) );
     SW_EXPECT_TRUE( TextGathererTestInternal::contains( report._listChanged, "Menu.Start" ) );
     SW_EXPECT_TRUE( TextGathererTestInternal::contains( report._listRemoved, "Menu.Gone" ) );
+    SW_EXPECT_TRUE( report.hasTextChanges() );
     SW_EXPECT_TRUE( report.hasErrors() ); // settings.unknown
     SW_EXPECT_TRUE( TextGathererTestInternal::hasIssueContaining( report._listIssue, "settings.unknown", true ) );
 
@@ -198,4 +199,16 @@ SW_TEST_CASE( TextGathererTest, KeyOnlyMacrosGatherReferencesAndNeverWriteSource
     SW_EXPECT_EQUAL( sw::string( "Hand written text" ), pEntry->_source ); // 코드가 원문을 덮지 않는다
     SW_REQUIRE_TRUE( pEntry->_listOrigin.empty() == false );
     SW_EXPECT_EQUAL( sw::string( "Source/Test/Probe.cpp" ), pEntry->_listOrigin.front() );
+}
+
+/**
+ * @brief [TextGathererTest] 바뀌지 않은 줄만 센 결과는 표가 바뀐 것이 아니고, 더함 · 바뀜 · 지움이 하나라도 있으면 바뀐 것이다
+ */
+SW_TEST_CASE( TextGathererTest, TextChangesCountAddedChangedOrRemovedRows )
+{
+    sw::TextGatherReport report;
+    report._unchangedCount = 4;
+    SW_EXPECT_FALSE( report.hasTextChanges() );
+    report._listRemoved.push_back( "Menu.Gone" );
+    SW_EXPECT_TRUE( report.hasTextChanges() );
 }

@@ -515,3 +515,30 @@ SW_TEST_CASE( GlyphAtlasTest, HangulScrollGlyphsRasterized, ._tags = "bench" )
     SW_LOG_INFO_ID( "GlyphAtlasTest.HangulScrollGlyphsRasterized", "Hangul chat %# frames: rasterized %# (minimum %#), missing %#", kFrameCount, rasterizer.getRasterizeCount(),
                     minimumCount, missingCount );
 }
+
+/**
+ * @brief [GlyphAtlasTest] 면 하나를 닫으면 그 면의 글리프만 표에서 빠진다 — 다른 면의 글리프는 남고, 닫은 면의 번호로 다시 물으면 새로 래스터화한다
+ * @details 면 번호는 다시 쓰일 수 있다 — 닫은 면의 글리프가 표에 남으면 새 면이 옛 글리프 모양을 받는다.
+ */
+SW_TEST_CASE( GlyphAtlasTest, GlyphCacheRemoveFaceDropsOnlyThatFace )
+{
+    sw::test::FakeFontRasterizer rasterizer;
+    const sw::FontFaceID         closedFace = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "closed" );
+    const sw::FontFaceID         keptFace   = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "kept" );
+    SW_REQUIRE_TRUE( closedFace != keptFace );
+    sw::GlyphCache cache( rasterizer, sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout );
+
+    SW_REQUIRE_NOT_NULL( cache.getOrCreateGlyph( closedFace, 'A', 1 )._pGlyph );
+    SW_REQUIRE_NOT_NULL( cache.getOrCreateGlyph( closedFace, 'B', 1 )._pGlyph );
+    SW_REQUIRE_NOT_NULL( cache.getOrCreateGlyph( keptFace, 'A', 1 )._pGlyph );
+    SW_REQUIRE_EQUAL( 3u, cache.getGlyphCount() );
+
+    cache.removeFace( closedFace );
+    SW_EXPECT_EQUAL( 1u, cache.getGlyphCount() );
+
+    const uint32 rasterizedBefore = rasterizer.getRasterizeCount();
+    SW_EXPECT_NOT_NULL( cache.getOrCreateGlyph( keptFace, 'A', 2 )._pGlyph ); // 남은 면 — 다시 베이크하지 않는다
+    SW_EXPECT_EQUAL( rasterizedBefore, rasterizer.getRasterizeCount() );
+    SW_EXPECT_NOT_NULL( cache.getOrCreateGlyph( closedFace, 'A', 2 )._pGlyph ); // 닫은 면의 번호 — 새로 만든다
+    SW_EXPECT_EQUAL( rasterizedBefore + 1, rasterizer.getRasterizeCount() );
+}

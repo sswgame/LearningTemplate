@@ -175,6 +175,8 @@ SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, EmptyHistoryIsNotTaken )
 SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, ObjectCompareWaitsForBothClients )
 {
     loadBothClients();
+    SW_EXPECT_FALSE( _compare.hasChannelOrigin( 0 ) );                                    // 클라이언트 칸은 디버그 채널에서 읽은 것이 아니다
+    SW_EXPECT_FALSE( _compare.hasChannelOrigin( EditorStateHashCompare::kSourceCount ) ); // 칸 밖
     _model.startObjectCompare( _processes, _compare, kLongTimeout );
     SW_EXPECT_TRUE( _model.isWaitingForObjects() );
     SW_REQUIRE_EQUAL( _processes._listObjectRequestTick.size(), size_t{ 2 } );

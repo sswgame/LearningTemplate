@@ -52,7 +52,9 @@ namespace sw
         {
             return _kind == other._kind && _contentHash == other._contentHash && _source == other._source && _extension == other._extension;
         }
-        /** @brief 같은 입력(종류 · id · 확장자 — 해시는 보지 않는다)을 문자열 하나로 만든 키입니다(탭으로 구분 — id 에는 탭이 없다). 해시 집합의 키로 쓴다. */
+        /** @brief 같은 입력(종류 · id · 확장자)이면 true 입니다(해시는 보지 않는다). */
+        bool isSameSource( const CookInput& other ) const { return _kind == other._kind && _source == other._source && _extension == other._extension; }
+        /** @brief `isSameSource` 와 같은 동치를 문자열 하나로 만든 키입니다(종류 · id · 확장자를 탭으로 구분 — id 에는 탭이 없다). 해시 집합의 키로 쓴다. */
         string makeSourceKey() const
         {
             string key;

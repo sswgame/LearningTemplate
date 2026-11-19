@@ -397,6 +397,37 @@ SW_TEST_CASE( ReflectionTypeInfoTest, PropertyInfoMatchesName )
 }
 
 /**
+ * @brief [ReflectionTypeInfoTest] `forEachMethod` 는 이 타입에 적힌 메서드를 선언 순서로 한 번씩 넘긴다 — 메서드가 없으면 부르지 않는다
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, ForEachMethodVisitsDeclaredOrder )
+{
+    sw::TypeInfo empty;
+    uint32       emptyCount = 0;
+    empty.forEachMethod( [&]( const sw::FunctionInfo& )
+    {
+        ++emptyCount;
+    } );
+    SW_EXPECT_EQUAL( 0u, emptyCount );
+
+    sw::TypeInfo info;
+    for ( const utf8* pName : { "addScore", "resetScore" } )
+    {
+        sw::FunctionInfo method;
+        method._name     = pName;
+        method._hashName = sw::hashed_string( pName );
+        info._listMethod.push_back( method );
+    }
+    sw::vector<sw::hashed_string> listVisited;
+    info.forEachMethod( [&]( const sw::FunctionInfo& method )
+    {
+        listVisited.push_back( method._hashName );
+    } );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listVisited.size() );
+    SW_EXPECT_TRUE( listVisited[0] == sw::hashed_string( "addScore" ) );
+    SW_EXPECT_TRUE( listVisited[1] == sw::hashed_string( "resetScore" ) );
+}
+
+/**
  * @brief [ReflectionTypeInfoTest] 동적 메서드 호출
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, DynamicMethodInvoke )

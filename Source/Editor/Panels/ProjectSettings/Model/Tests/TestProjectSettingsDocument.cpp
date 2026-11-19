@@ -71,7 +71,12 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavingTheBaseDoesNotLeakThePlatformOv
     SW_REQUIRE_TRUE( pConfig != nullptr );
     SW_EXPECT_EQUAL( baseStep, pConfig->_maxFixedStepPerFrame ); // 합친 값이 아니라 바탕 파일 값
 
+    const EngineConfig* const pDefault = static_cast<const EngineConfig*>( document.getDefaultInstance() );
+    SW_REQUIRE_TRUE( pDefault != nullptr );
+    SW_EXPECT_EQUAL( EngineConfig{}._dataInheritanceMaxDepth, pDefault->_dataInheritanceMaxDepth ); // 기본값은 파일 값이 아니라 타입의 초기값
+
     pConfig->_dataInheritanceMaxDepth = editedDepth;
+    SW_EXPECT_EQUAL( EngineConfig{}._dataInheritanceMaxDepth, pDefault->_dataInheritanceMaxDepth ); // 편집이 기본값에 닿지 않는다
     SW_EXPECT_TRUE( document.isModified() );
     SW_REQUIRE_TRUE( document.saveDocument() );
 

@@ -490,7 +490,7 @@ namespace sw
     int32 AutomationPerBackend::run( const AutomationPerBackendOptions& options )
     {
         using Internal            = AutomationPerBackendInternal;
-        const string scenarioStem = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( options._scenarioPath ) ) ); // x.scenario.xml → x
+        const string scenarioStem = getAutomationScenarioStem( options._scenarioPath ); // x.scenario.xml → x(스크립트의 `ScenarioDeclaration.stem` 과 같은 규칙)
         // 실행마다 새 폴더다(`reserveUniquePath`) - 프로세스 id 는 Windows 가 다시 쓴다.
         StringBuilder<constant::buffer::kMax256> textBuilder3;
         textBuilder3.appendFormat( "%#/%#/per-backend-%#", makeAutomationOutputFolderPath(), scenarioStem, Process::getCurrentProcessID() );
