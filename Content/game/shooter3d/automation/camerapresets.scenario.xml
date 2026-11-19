@@ -9,6 +9,8 @@
 -->
 <Scenario name="game.shooter3d.camerapresets" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<!-- 팩 설정의 시야각(80)은 프리셋 시야각을 비율로 넓힌다 — 기준 값(70)으로 두어 감시 값이 프리셋에 적힌 각 그대로다 -->
+	<Variable name="gv_cameraFieldOfView" value="70"/>
 	<DevCommand line="camera.preset firstperson"/>
 	<WaitUntil watch="CameraDirector.BlendWeight" target="ViewCamera" equals="1" timeoutSeconds="2"/>
 	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" equals="firstperson"/>
