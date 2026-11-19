@@ -962,7 +962,7 @@
 					<WesternDeedComponent _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="Crime"
-					                      _id="theft" _reach="2.5" _bOnce="true" />
+					                      _crime="theft" _reach="2.5" _bOnce="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -1022,7 +1022,7 @@
 					<WesternDeedComponent _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="PayBounty"
-					                      _id="" _reach="2.5" />
+					                      _reach="2.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -1053,7 +1053,7 @@
 					<WesternDeedComponent _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="HonorAction"
-					                      _id="help_stranger" _reach="2.5" _bOnce="true" />
+					                      _honorAction="help_stranger" _reach="2.5" _bOnce="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -1084,7 +1084,7 @@
 					<WesternDeedComponent _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="Hunt"
-					                      _id="deer" _weapon="rifle" _zone="head" _hitCount="1" _reach="2.5" _bOnce="true" _bHideWhenUsed="true" />
+					                      _animal="deer" _weapon="rifle" _zone="head" _hitCount="1" _reach="2.5" _bOnce="true" _bHideWhenUsed="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -1115,7 +1115,7 @@
 					<WesternDeedComponent _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="Skin"
-					                      _id="" _reach="2.5" />
+					                      _reach="2.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -1146,7 +1146,7 @@
 					<WesternDeedComponent _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="SellPelts"
-					                      _id="" _reach="2.5" />
+					                      _reach="2.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -1177,7 +1177,7 @@
 					<WesternDeedComponent _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="Eat"
-					                      _id="jerky" _reach="2.5" />
+					                      _food="jerky" _reach="2.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -1208,7 +1208,7 @@
 					<WesternDeedComponent _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="ChangeClothes"
-					                      _id="duster" _reach="2.5" />
+					                      _clothing="duster" _reach="2.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>

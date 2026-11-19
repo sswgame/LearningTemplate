@@ -83,10 +83,10 @@ namespace sw
         {
             const int32 needed  = def._magazineSize - inoutWeapon.getMagazineAmmo() - inoutWeapon.getReserveAmmo();
             const int32 room    = def._maxReserveAmmo - inoutWeapon.getReserveAmmo();
-            const int32 takeNow = MathUtil::min( MathUtil::min( needed, room ), inoutInventory.getItemCount( def._ammoID ) );
+            const int32 takeNow = MathUtil::min( MathUtil::min( needed, room ), inoutInventory.getItemCount( def._ammoID.key() ) );
             if ( takeNow > 0 )
             {
-                if ( inoutInventory.consumeItem( def._ammoID, takeNow ) == false )
+                if ( inoutInventory.consumeItem( def._ammoID.key(), takeNow ) == false )
                     return false;
                 inoutWeapon.addReserveAmmo( takeNow );
             }

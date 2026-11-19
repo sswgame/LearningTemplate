@@ -12,6 +12,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -20,6 +21,7 @@
 namespace sw
 {
     class XMLNode;
+    struct LootTableDef;
 
     /** @brief 자기장 한 단계입니다. 단계가 시작되면 다음 원이 드러나고, 기다린 뒤 줄어듭니다. 시간 단위는 초입니다. */
     REFLECT()
@@ -172,7 +174,7 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Name = "table", Required )
-        hashed_string _tableID{}; ///< `LootCatalog` 의 테이블
+        CatalogKey<LootTableDef> _tableID{}; ///< `LootCatalog` 의 테이블
         PROPERTY( Min = 0.0, Max = 1.0 )
         float32 _chance{ 1.0f };
         PROPERTY( Name = "rolls", Min = 0 )
@@ -193,7 +195,7 @@ namespace sw
         PROPERTY( Name = "times", Min = 0 )
         vector<float32> _listTime{}; ///< 판이 시작된 뒤 상자가 떨어지는 시각(초, 오름차순, 속성 `times`)
         PROPERTY( Name = "table", Required )
-        hashed_string _tableID{};
+        CatalogKey<LootTableDef> _tableID{};
     };
 } // namespace sw
 

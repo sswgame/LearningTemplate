@@ -22,6 +22,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Runtime/Character/AI/Director/AIDirector.h"
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
@@ -35,6 +36,8 @@
 
 namespace sw
 {
+    struct CharacterAppearanceDef;
+
     /**
      * @struct ShooterArenaMath
      * @brief 아레나의 충돌 계산입니다. 씬 없이 쓸 수 있습니다(플레이어, 적, 스폰 위치).
@@ -82,7 +85,7 @@ namespace sw
         PROPERTY( Required, Tooltip = "Enemy prefab (skeletal mesh, animator, appearance, ragdoll hitboxes, ShooterEnemyComponent)" )
         AssetRef<PrefabAsset> _prefab{};
         PROPERTY( Required, Tooltip = "Appearance preset of the body (presets.xml)" )
-        string _preset{};
+        CatalogKey<CharacterAppearanceDef> _preset{};
         PROPERTY( Tooltip = "Pool of this kind's prefab (kinds sharing a prefab share its pool; 0 spawns every time)" )
         PrefabPoolPolicy _pool{};
     };

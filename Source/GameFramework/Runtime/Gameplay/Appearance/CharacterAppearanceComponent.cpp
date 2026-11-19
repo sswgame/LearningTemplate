@@ -125,7 +125,7 @@ namespace sw
              * @details @p inoutListSection 은 이 부품이 전에 만든 구간 컴포넌트다 — 다 지우고 새로 만든다(구간 수 · 이름이 외형마다 다르다). 구간을 적지 않은 부품은 지우기만 한다.
              */
             static void applyPartSections( GameObjectManager& manager, GameObject& owner, MeshComponent& main, const ResolvedPart& part,
-                                           vector<TComponentHandle<MeshSectionComponent>>& inoutListSection, const string& presetID )
+                                           vector<TComponentHandle<MeshSectionComponent>>& inoutListSection, const CatalogKey<CharacterAppearanceDef>& presetID )
             {
                 // 이미 같은 구간 · 머티리얼이면 그대로 둔다 — 조립은 자주(로드를 기다리는 동안 프레임마다) 다시 불리고, 새로 만들면 머티리얼을 매번 다시 잡는다.
                 bool bSame = part._listSection.empty() == false && inoutListSection.size() + 1 == part._listSection.size() && main.getSectionName() == part._listSection.front()._name &&
@@ -165,7 +165,7 @@ namespace sw
 
             /** @brief 합친 부품의 조각마다 몸 오브젝트 @p owner 의 구간 컴포넌트를 맞춥니다 — 모자라면 더하고 남으면 지우고, 이름 · 머티리얼을 조각의 것으로 한다. */
             static void applyMergedSections( GameObjectManager& manager, GameObject& owner, const MeshMergePart& merge, const ResolvedPart& part,
-                                             vector<TComponentHandle<MeshSectionComponent>>& inoutListSection, const string& presetID )
+                                             vector<TComponentHandle<MeshSectionComponent>>& inoutListSection, const CatalogKey<CharacterAppearanceDef>& presetID )
             {
                 vector<MeshMergeSectionPick> listPiece = merge._listSection;
                 if ( listPiece.empty() )
@@ -462,7 +462,7 @@ namespace sw
 
     void CharacterAppearanceComponent::setPreset( const hashed_string& presetID, uint32 seed )
     {
-        _presetID         = string{ presetID.c_str() };
+        _presetID         = CatalogKey<CharacterAppearanceDef>( presetID ); // 코드가 고른 프리셋(게임 모드의 스폰)
         _seed             = static_cast<int32>( seed );
         _bSelectionSet    = SW_FALSE; // 선택 길이 남아 있으면 프리셋 id 를 보지 않아 이 호출이 소리 없이 무시됐다
         _pPreviewDatabase = nullptr;
@@ -950,7 +950,7 @@ namespace sw
     bool CharacterAppearanceComponent::expandSpec( const AppearanceDatabase& database, CharacterAppearanceSpec& outSpec ) const
     {
         const bool              bSelection = _bSelectionSet == SW_TRUE;
-        const hashed_string     presetID   = bSelection ? _selection._basePresetID : hashed_string( _presetID );
+        const hashed_string     presetID   = bSelection ? _selection._basePresetID : _presetID.key();
         const uint32            seed       = bSelection ? _selection._seed : static_cast<uint32>( _seed );
         CharacterAppearanceSpec base;
         if ( database.getPresets().expand( presetID, seed, database.getSlotCatalog(), database.getSets(), database.getSchemas(), base ) == false )
@@ -1040,7 +1040,7 @@ namespace sw
         }
         // 암묵 스켈레톤은 몸을 입기 전이다 — 몸 스켈레톤이 정해진 뒤에만 견준다.
         if ( body.hasDataSkeleton() )
-            (void)_bodyProportion.validateBones( body.getSkeleton(), _presetID ); // 없는 본은 오류로 남았다. 있는 본의 비율은 그대로 건다
+            (void)_bodyProportion.validateBones( body.getSkeleton(), _presetID.key().view() ); // 없는 본은 오류로 남았다. 있는 본의 비율은 그대로 건다
         // 본 비율이 있을 때만 단계 작업을 등록한다 — 포즈를 쓰는 작업이 둘이면 몸의 군중 공유가 꺼지므로, 비율이 없는 몸은 공유를 지킨다.
         const bool bWantsTask = _bodyProportion.getEntries().empty() == false;
         if ( bWantsTask && _bProportionTask == SW_FALSE )
@@ -1533,7 +1533,7 @@ namespace sw
     struct CharacterAppearanceMeshBuild
     {
         // 입력(게임 스레드가 채운다)
-        string                               _presetID{};
+        CatalogKey<CharacterAppearanceDef>   _presetID{};
         ResolvedAppearance                   _resolved{};          ///< 체형 모프를 더한 해석
         vector<AppearanceMeshPart>           _listPart{};          ///< 로드 순서(몸이 먼저). 포인터는 아래 쥔 메시 · 피팅 데이터를 가리킨다
         vector<shared_ptr<Mesh>>             _listSource{};        ///< 로드마다 원본 메시

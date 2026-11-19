@@ -13,6 +13,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -23,6 +24,7 @@ namespace sw
 {
     class GameRandom;
     class XMLNode;
+    struct ProjectileDef;
 
     /** @brief 아이템이 하는 일입니다. XML 에는 열거자 이름 그대로 적습니다(철자 그대로 — `ENUM()` 이름). */
     ENUM()
@@ -49,7 +51,7 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Name = "projectile" )
-        hashed_string _projectileID{}; ///< 날아가거나 놓이는 종류의 탄 정의 id(`ProjectileCatalog`). 탄의 속력 0 은 놓인 채 남고, 수명 0 은 맞을 때까지 남는다
+        CatalogKey<ProjectileDef> _projectileID{}; ///< 날아가거나 놓이는 종류의 탄 정의 id(`ProjectileCatalog`). 탄의 속력 0 은 놓인 채 남고, 수명 0 은 맞을 때까지 남는다
         PROPERTY( Name = "spin", Min = 0.0 )
         float32 _spinTime{ 1.2f }; ///< 맞은 차가 도는 시간이다(조작 불가)
         PROPERTY( Min = 0.0 )
@@ -105,7 +107,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Name = "item", Required )
-        hashed_string _itemID{};
+        CatalogKey<KartItemDef> _itemID{};
         PROPERTY( Min = 0.0 )
         float32 _weight{ 1.0f };
     };

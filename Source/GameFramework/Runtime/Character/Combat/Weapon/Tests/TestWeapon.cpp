@@ -20,7 +20,7 @@ namespace
         {
             WeaponDef weapon;
             weapon._id             = hashed_string( "rifle" );
-            weapon._projectileID   = hashed_string( "round" );
+            weapon._projectileID   = CatalogKey<ProjectileDef>( hashed_string( "round" ) );
             weapon._fireInterval   = 0.1f;
             weapon._reloadTime     = 1.0f;
             weapon._magazineSize   = 5;

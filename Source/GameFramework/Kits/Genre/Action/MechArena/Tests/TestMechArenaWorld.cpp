@@ -974,9 +974,9 @@ SW_TEST_CASE( MechArenaTest, CatalogReadsMechsAndSkills )
     const vector<MechWeaponSlotDef>& listWeapon = pGunner->_listMode[0]._listWeapon;
     SW_REQUIRE_EQUAL( size_t( 3 ), listWeapon.size() );
     SW_EXPECT_TRUE( listWeapon[1]._kind == MechWeaponKind::Special );
-    SW_EXPECT_TRUE( listWeapon[1]._projectileID == hashed_string( "missile" ) );
+    SW_EXPECT_TRUE( listWeapon[1]._projectileID.key() == hashed_string( "missile" ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), listWeapon[2]._listMoveID.size() );
-    SW_EXPECT_TRUE( listWeapon[2]._listMoveID[1] == hashed_string( "slash2" ) );
+    SW_EXPECT_TRUE( listWeapon[2]._listMoveID[1].key() == hashed_string( "slash2" ) );
 
     const MechDef* pFlyer = catalog.findMech( hashed_string( "flyer" ) );
     SW_REQUIRE_NOT_NULL( pFlyer );

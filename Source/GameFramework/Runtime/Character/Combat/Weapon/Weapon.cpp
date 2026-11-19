@@ -110,7 +110,7 @@ namespace sw
         bool bComplete = true;
         for ( const WeaponDef& weapon : getAll() )
         {
-            const ProjectileDef* pProjectile = projectiles.find( weapon._projectileID );
+            const ProjectileDef* pProjectile = projectiles.find( weapon._projectileID.key() );
             if ( pProjectile == nullptr )
             {
                 SW_LOG_ERROR_ID( "Weapon.ProjectileUnknown", "weapon '%#' loads projectile '%#', which is not in the projectile catalog", weapon._id.c_str(), weapon._projectileID.c_str() );

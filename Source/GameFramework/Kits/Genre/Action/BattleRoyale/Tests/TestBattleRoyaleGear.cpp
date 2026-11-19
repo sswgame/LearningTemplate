@@ -83,7 +83,7 @@ namespace
         {
             sw::WeaponDef weapon;
             weapon._id             = sw::hashed_string( "rifle" );
-            weapon._ammoID         = kAmmo;
+            weapon._ammoID         = sw::CatalogKey<sw::ItemDef>( kAmmo );
             weapon._magazineSize   = 10;
             weapon._maxReserveAmmo = maxReserve;
             return weapon;

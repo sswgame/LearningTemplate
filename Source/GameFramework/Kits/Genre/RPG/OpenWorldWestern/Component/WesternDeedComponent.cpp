@@ -41,7 +41,11 @@ namespace sw
 
     WesternDeedComponent::WesternDeedComponent()
         : _kind{ WesternDeedKind::HonorAction }
-        , _id{}
+        , _crime{}
+        , _honorAction{}
+        , _animal{}
+        , _food{}
+        , _clothing{}
         , _weapon{}
         , _zone{}
         , _hitCount{ 1 }
@@ -56,12 +60,34 @@ namespace sw
     {
         WesternDeed deed;
         deed._kind     = _kind;
-        deed._id       = _id;
+        deed._id       = findKindID();
         deed._weapon   = _weapon.key();
         deed._zone     = _zone.key();
         deed._hitCount = _hitCount;
         deed._position = position;
         return deed;
+    }
+
+    hashed_string WesternDeedComponent::findKindID() const
+    {
+        switch ( _kind )
+        {
+            case WesternDeedKind::Crime:
+                return _crime.key();
+            case WesternDeedKind::HonorAction:
+                return _honorAction.key();
+            case WesternDeedKind::Hunt:
+                return _animal.key();
+            case WesternDeedKind::Eat:
+                return _food.key();
+            case WesternDeedKind::ChangeClothes:
+                return _clothing.key();
+            case WesternDeedKind::Skin:
+            case WesternDeedKind::SellPelts:
+            case WesternDeedKind::PayBounty:
+                return hashed_string{};
+        }
+        return hashed_string{}; // 열거자는 위가 전부다(covered-switch) — 닿지 않는다
     }
 
     void WesternDeedComponent::markUsed()

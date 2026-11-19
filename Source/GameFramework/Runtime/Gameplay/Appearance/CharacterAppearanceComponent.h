@@ -27,6 +27,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
@@ -38,6 +39,7 @@
 
 namespace sw
 {
+    struct CharacterAppearanceDef;
     struct CharacterAppearanceMeshBuild;
     struct CharacterAppearanceSpec;
     struct FitResult;
@@ -173,7 +175,7 @@ namespace sw
         /** @brief 프리셋과 시드를 바꾸고 다시 조립합니다. 슬롯 덮어쓰기는 그대로 둡니다. 선택으로 입히던 것(`applySelection` · `previewSelection`)은 풀고 프리셋 길로 돌아갑니다. */
         void setPreset( const hashed_string& presetID, uint32 seed );
         /** @brief 지금 입히려는 프리셋 id 입니다(`setPreset` 이나 프로퍼티가 정한 값 — 조립이 끝났는지와 상관없다). */
-        const string& getPresetID() const { return _presetID; }
+        const hashed_string& getPresetID() const { return _presetID.key(); }
         /** @brief 프리셋의 무작위 선택 시드입니다. */
         int32 getSeed() const { return _seed; }
         /** @brief 슬롯의 아이템을 덮어쓰고 다시 조립합니다. 빈 아이템이면 슬롯을 비웁니다. 같은 값이면 아무것도 하지 않습니다. */
@@ -465,7 +467,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Appearance", DisplayName = "Preset", Tooltip = "CharacterAppearance preset id (data/appearance/presets.xml)" )
-        string _presetID;
+        CatalogKey<CharacterAppearanceDef> _presetID;
         PROPERTY( Category = "Appearance", DisplayName = "Seed", Tooltip = "Seed for the preset's random choices (lists, ranges, colour lists)" )
         int32 _seed;
         PROPERTY( Category = "Appearance", DisplayName = "Surface Channels",

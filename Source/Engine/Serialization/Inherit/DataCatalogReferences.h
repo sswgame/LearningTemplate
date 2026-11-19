@@ -67,7 +67,7 @@ namespace sw
     {
         string _tag;       ///< 항목 종류 이름(이름공간 없는 C++ 형식 이름 — 프로퍼티 메타 `_catalogKeyTag`)
         string _catalog;   ///< 카탈로그 루트 원소 이름
-        string _entry;     ///< 항목 원소 이름(루트의 자식)
+        string _entry;     ///< 항목 원소 경로 — 루트의 자식부터 '/' 로 잇는다(`Honor/Action` · 서식지 키 `Habitat/Key`)
         string _targetKey; ///< 항목의 id 속성(기본 `id`)
     };
 
@@ -77,9 +77,34 @@ namespace sw
      */
     struct DataCatalogKeyField
     {
-        string _owner; ///< 칸을 가진 리플렉션 형식 이름(씬 · 프리팹의 원소 이름 — 컴포넌트 · 구조체)
-        string _field; ///< 칸 이름(속성, 또는 `<item>` 을 품은 자식 원소)
-        string _tag;   ///< 항목 종류 이름(`<CatalogKey tag>`)
+        string _owner;     ///< 칸을 가진 리플렉션 형식 이름(씬 · 프리팹의 원소 이름 — 컴포넌트 · 구조체, 또는 `<Element>` 줄이 카탈로그 원소로 이은 정의 형식)
+        string _field;     ///< 칸 이름(속성, 또는 `<item>` 을 품은 자식 원소)
+        string _tag;       ///< 항목 종류 이름(`<CatalogKey tag>`)
+        string _attribute; ///< 카탈로그 원소에서 이 칸을 적은 속성(`PROPERTY( Name )` 철자). 비면 칸 이름에서 `_` 를 뗀 것(`XMLFields::getAttributeName` 과 같다)
+    };
+
+    /**
+     * @struct DataCatalogKeyStruct
+     * @brief 구조체 칸 한 줄입니다(표의 `<Struct owner field type>`) — 씬 · 프리팹에서 구조체 칸 하나는 형식 이름이 아니라 칸 이름의 원소로 적혀(`<_eliteEnemyKind>`)
+     *        쿠커가 원소 이름으로 주인을 찾을 수 없다. 이 줄이 "`owner` 원소 아래 `field` 원소는 `type` 이다" 를 알린다.
+     */
+    struct DataCatalogKeyStruct
+    {
+        string _owner; ///< 칸을 가진 리플렉션 형식 이름
+        string _field; ///< 구조체 칸 이름(자식 원소 이름)
+        string _type;  ///< 칸의 구조체 형식 이름(그 형식의 `<Field>` · `<Struct>` 줄이 다시 걸린다)
+    };
+
+    /**
+     * @struct DataCatalogKeyElement
+     * @brief 정의 형식 ↔ 카탈로그 원소 연결 한 줄입니다(표의 `<Element type catalog path>`) — 카탈로그 정의(`MechPartDef`)는 카탈로그 글에 형식 이름이 아니라 원소 이름(`<Part>`)으로
+     *        적혀, 정의의 카탈로그 키 칸(무기 → 탄)을 쿠커가 찾으려면 이 연결이 필요하다. 정의의 칸은 속성으로 적히고 목록은 쉼표 목록이다(`XMLFields`).
+     */
+    struct DataCatalogKeyElement
+    {
+        string _type;    ///< 정의 형식 이름(`<Field owner>`)
+        string _catalog; ///< 카탈로그 루트 원소 이름
+        string _path;    ///< 원소 경로 — 루트의 자식부터 '/' 로 잇는다
     };
 
     /**
@@ -123,15 +148,29 @@ namespace sw
         [[nodiscard]] const DataCatalogKeyTarget* findKeyTarget( string_view tag ) const;
         /** @brief 형식 @p owner 의 칸 @p field 줄입니다. 없으면 nullptr 입니다. */
         [[nodiscard]] const DataCatalogKeyField* findKeyField( string_view owner, string_view field ) const;
+        /** @brief 구조체 칸 줄입니다(표 순서). */
+        const vector<DataCatalogKeyStruct>& getStructRows() const { return _listKeyStruct; }
+        /** @brief 정의 형식 ↔ 카탈로그 원소 줄입니다(표 순서). */
+        const vector<DataCatalogKeyElement>& getElementRows() const { return _listKeyElement; }
+        /** @brief 형식 @p owner 의 구조체 칸 @p field 줄입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] const DataCatalogKeyStruct* findKeyStruct( string_view owner, string_view field ) const;
+        /** @brief 정의 형식 @p type 의 첫 원소 줄입니다(한 정의가 여러 자리에 놓이면 줄이 여럿이다). 없으면 nullptr 입니다. */
+        [[nodiscard]] const DataCatalogKeyElement* findKeyElement( string_view type ) const;
+        /** @brief 칸 줄 @p field 가 카탈로그 원소에서 쓰는 속성 이름입니다(`_attribute`, 비면 칸 이름에서 `_` 를 뗀 것). */
+        [[nodiscard]] static string findElementAttribute( const DataCatalogKeyField& field );
+        /** @brief 카탈로그 루트 @p root 에서 항목 종류 @p target 의 항목 id 를 @p inoutListID 뒤에 더합니다(경로 `_entry` 를 따라간다, 빈 id 는 뺀다). 루트 이름이 다르면 아무것도 하지 않는다. */
+        static void collectEntryIDs( const XMLNode& root, const DataCatalogKeyTarget& target, vector<string_view>& inoutListID );
 
     private:
         /** @brief 겹침 규칙 하나를 봅니다. 겹친 값마다 알리고, 겹침이 있으면 false 입니다. */
         [[nodiscard]] static bool validateUnique( const XMLNode& root, const DataCatalogReferenceRule& rule, string_view sourceName );
 
     private:
-        vector<DataCatalogReferenceRule> _listRule;      ///< 표의 줄(루트 · 줄 순서)
-        vector<DataCatalogKeyTarget>     _listKeyTarget; ///< 항목 종류 줄
-        vector<DataCatalogKeyField>      _listKeyField;  ///< 카탈로그 키 칸 줄
+        vector<DataCatalogReferenceRule> _listRule;       ///< 표의 줄(루트 · 줄 순서)
+        vector<DataCatalogKeyTarget>     _listKeyTarget;  ///< 항목 종류 줄
+        vector<DataCatalogKeyField>      _listKeyField;   ///< 카탈로그 키 칸 줄
+        vector<DataCatalogKeyStruct>     _listKeyStruct;  ///< 구조체 칸 줄
+        vector<DataCatalogKeyElement>    _listKeyElement; ///< 정의 형식 ↔ 카탈로그 원소 줄
     };
 
     /**
@@ -167,6 +206,11 @@ namespace sw
 
         /** @brief @p node 와 그 아래 원소를 모두 훑어 칸 주인 원소의 값을 모읍니다. */
         void collectUses( const XMLNode& node, string_view sourceName );
+        /**
+         * @brief 형식 @p typeName 의 원소 @p node 에서 칸 줄의 값을 모읍니다. 구조체 칸 줄(`<Struct>`)이면 그 자식 원소를 그 형식으로 다시 본다.
+         * @param bCatalogElement 카탈로그 정의 원소(`<Element>`)다 — 칸은 속성 이름(`findElementAttribute`)으로 찾고 목록은 쉼표 목록이다.
+         */
+        void collectTypedUses( const XMLNode& node, string_view typeName, bool bCatalogElement, string_view sourceName );
 
     private:
         const DataCatalogReferenceRules&             _rules;

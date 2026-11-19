@@ -28,6 +28,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
@@ -35,6 +36,7 @@
 namespace sw
 {
     class XMLNode;
+    struct ProjectileDef;
 
     /** @brief 몬스터 AI 행동 유형입니다. monsters.xml 의 `archetype` 속성이 열거자 이름 그대로입니다(리플렉션 이름). */
     ENUM()
@@ -62,7 +64,7 @@ namespace sw
         PROPERTY()
         Radians _angle{}; ///< 겨냥 방향에서 돌린 각도(데이터는 도). 0은 겨냥 방향이고, 90° 는 겨냥 방향 (x, y) 를 (−y, x) 로 돌린 쪽이다
         PROPERTY( Name = "projectile", Required )
-        hashed_string _projectileID{}; ///< 탄 정의 id(`ProjectileCatalog`). 액션 룸은 수명이나 사거리가 있는 탄만 받는다(벽이 없는 방에서 영원히 남지 않게)
+        CatalogKey<ProjectileDef> _projectileID{}; ///< 탄 정의 id(`ProjectileCatalog`). 액션 룸은 수명이나 사거리가 있는 탄만 받는다(벽이 없는 방에서 영원히 남지 않게)
     };
 } // namespace sw
 

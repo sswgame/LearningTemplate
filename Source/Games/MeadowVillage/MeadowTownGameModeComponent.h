@@ -12,6 +12,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
@@ -19,19 +20,36 @@
 namespace sw
 {
     class CreatureLifeCatalog;
+    struct CreatureSpeciesDef;
+    struct HabitatCell;
     class SessionStateComponent;
 
     /**
-     * @struct MeadowTownView
-     * @brief 마을 뷰 표 한 줄 — 오브젝트(서식지 키의 `object`) 또는 생물 종 id 와 그 모습 프리팹입니다(디렉터의 PROPERTY — 씬 데이터).
-     *        카탈로그의 오브젝트 · 종마다 한 줄이 있어야 판을 연다(`MeadowTownGameModeComponent::validateViews`).
+     * @struct MeadowTownObjectView
+     * @brief 마을 오브젝트 뷰 표 한 줄 — 서식지 키의 오브젝트(`<Habitat><Key object>`)와 그 모습 프리팹입니다(디렉터의 PROPERTY — 씬 데이터).
+     *        카탈로그의 오브젝트마다 한 줄이 있어야 판을 연다(`MeadowTownGameModeComponent::validateViews`). 생물 종 줄(`MeadowTownCreatureView`)과 형식을 나눈 까닭은
+     *        가리키는 표가 달라서다 — 한 칸이 두 표를 가리키면 쿠커 · 인스펙터가 어느 표인지 모른다(예전 `MeadowTownView::_id`).
      */
     REFLECT()
-    struct MeadowTownView
+    struct MeadowTownObjectView
     {
         REFLECT_BODY();
-        PROPERTY( Tooltip = "Town object id (a habitat key object) or creature species id" )
-        hashed_string _id{};
+        PROPERTY( Tooltip = "Town object (the object of a habitat key in the creature catalog)" )
+        CatalogKey<HabitatCell> _object{};
+        PROPERTY( Tooltip = "Prefab spawned for it; its root scene component is placed on the town grid" )
+        AssetRef<PrefabAsset> _prefab{};
+    };
+
+    /**
+     * @struct MeadowTownCreatureView
+     * @brief 마을 생물 뷰 표 한 줄 — 생물 종(`<Species id>`)과 그 모습 프리팹입니다. 카탈로그의 종마다 한 줄이 있어야 판을 연다.
+     */
+    REFLECT()
+    struct MeadowTownCreatureView
+    {
+        REFLECT_BODY();
+        PROPERTY( Tooltip = "Creature species id in the creature catalog" )
+        CatalogKey<CreatureSpeciesDef> _species{};
         PROPERTY( Tooltip = "Prefab spawned for it; its root scene component is placed on the town grid" )
         AssetRef<PrefabAsset> _prefab{};
     };
@@ -73,13 +91,13 @@ namespace sw
         [[nodiscard]] bool validateViews( const CreatureLifeCatalog& catalog ) const;
         void               spawnTown( GameObjectManager& manager );
         /** @brief @p listView 에서 @p id 의 프리팹을 @p position 에 놓습니다. 표에 없으면 오류(시작 검사가 막으니 오지 않는다). */
-        void spawnView( GameObjectManager& manager, const vector<MeadowTownView>& listView, const hashed_string& id, const float3& position );
+        void spawnView( GameObjectManager& manager, const AssetRef<PrefabAsset>* pPrefab, const hashed_string& id, const float3& position );
 
     private:
         PROPERTY( Category = "Prefabs", DisplayName = "Object Views", Tooltip = "Town object id -> prefab; every habitat key object of the creature catalog needs a row" )
-        vector<MeadowTownView> _listObjectView;
+        vector<MeadowTownObjectView> _listObjectView;
         PROPERTY( Category = "Prefabs", DisplayName = "Creature Views", Tooltip = "Species id -> prefab; every species of the creature catalog needs a row" )
-        vector<MeadowTownView> _listCreatureView;
+        vector<MeadowTownCreatureView> _listCreatureView;
         PROPERTY( Category = "Economy", DisplayName = "Orchard Price", Min = 0 )
         int32 _orchardPrice;
         PROPERTY( Category = "Layout", DisplayName = "Town Offset X", Tooltip = "Town grid starts this far right of the field", Units = m )

@@ -565,7 +565,7 @@ namespace sw
                 {
                     // 주무기는 무기와 그 기본 탄이 둘 다 있고, 무기가 그 탄을 받아야 쏠 수 있다.
                     const WeaponDef*     pWeapon     = _pWeaponCatalog != nullptr ? _pWeaponCatalog->find( slot._weaponID ) : nullptr;
-                    const ProjectileDef* pProjectile = pWeapon != nullptr && _pProjectileCatalog != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID ) : nullptr;
+                    const ProjectileDef* pProjectile = pWeapon != nullptr && _pProjectileCatalog != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID.key() ) : nullptr;
                     bComplete                        = pProjectile != nullptr && pWeapon->canAccept( *pProjectile );
                 }
                 if ( slot._kind == MechWeaponKind::Special )
@@ -623,7 +623,7 @@ namespace sw
             {
                 // 탄과 받음은 `isMechDataComplete` 가 위에서 봤다.
                 const WeaponDef*     pWeapon     = _pWeaponCatalog != nullptr && slot._kind == MechWeaponKind::Shot ? _pWeaponCatalog->find( slot._weaponID ) : nullptr;
-                const ProjectileDef* pProjectile = pWeapon != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID ) : nullptr;
+                const ProjectileDef* pProjectile = pWeapon != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID.key() ) : nullptr;
                 const bool           bEquipped   = pProjectile == nullptr || pilot._listWeaponState[static_cast<size_t>( slotIndex )].equip(
                                                                      *pWeapon, *pProjectile, pWeapon->_maxReserveAmmo, mixMechArenaSeed( _settings._seed, pilotIndex, slotIndex ) );
                 if ( bEquipped == false )

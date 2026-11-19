@@ -20,14 +20,32 @@ namespace sw
 {
     namespace
     {
-        const MeadowTownView* findView( const vector<MeadowTownView>& listView, const hashed_string& id )
+        const MeadowTownObjectView* findView( const vector<MeadowTownObjectView>& listView, const hashed_string& object )
         {
-            for ( const MeadowTownView& view : listView )
+            for ( const MeadowTownObjectView& view : listView )
             {
-                if ( view._id == id )
+                if ( view._object.key() == object )
                     return &view;
             }
             return nullptr;
+        }
+
+        const MeadowTownCreatureView* findView( const vector<MeadowTownCreatureView>& listView, const hashed_string& species )
+        {
+            for ( const MeadowTownCreatureView& view : listView )
+            {
+                if ( view._species.key() == species )
+                    return &view;
+            }
+            return nullptr;
+        }
+
+        /** @brief 줄의 프리팹입니다. 줄이 없으면 nullptr 입니다. */
+        template <typename TView>
+        const AssetRef<PrefabAsset>* findViewPrefab( const vector<TView>& listView, const hashed_string& id )
+        {
+            const TView* pRow = findView( listView, id );
+            return pRow != nullptr ? &pRow->_prefab : nullptr;
         }
     } // namespace
 } // namespace sw
@@ -192,7 +210,7 @@ namespace sw
                 const hashed_string* pObject = _town.findObject( x, y );
                 if ( pObject == nullptr || pObject->empty() )
                     continue;
-                spawnView( manager, _listObjectView, *pObject, float3{ _townOffsetX + static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f } );
+                spawnView( manager, findViewPrefab( _listObjectView, *pObject ), *pObject, float3{ _townOffsetX + static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f } );
             }
         }
         // 생물은 머무는 서식지가 차지한 셀들의 가운데에 선다(서식지가 사라졌으면 마을 모서리).
@@ -211,19 +229,18 @@ namespace sw
                 const float32 count = static_cast<float32>( pHabitat->_listTile.size() );
                 center              = float2{ center._x / count, center._y / count };
             }
-            spawnView( manager, _listCreatureView, creature._speciesID, float3{ _townOffsetX + center._x, 0.0f, center._y } );
+            spawnView( manager, findViewPrefab( _listCreatureView, creature._speciesID ), creature._speciesID, float3{ _townOffsetX + center._x, 0.0f, center._y } );
         }
     }
 
-    void MeadowTownGameModeComponent::spawnView( GameObjectManager& manager, const vector<MeadowTownView>& listView, const hashed_string& id, const float3& position )
+    void MeadowTownGameModeComponent::spawnView( GameObjectManager& manager, const AssetRef<PrefabAsset>* pPrefab, const hashed_string& id, const float3& position )
     {
-        const MeadowTownView* pRow = findView( listView, id );
-        if ( pRow == nullptr )
+        if ( pPrefab == nullptr )
         {
             SW_LOG_ERROR_ID( "MeadowTown.ViewMissing", "[Meadow] '%#' has no town view row - not drawn", id.c_str() );
             return;
         }
-        GameObject*     pView = spawnPrefab( manager, pRow->_prefab, "MeadowTownView" );
+        GameObject*     pView = spawnPrefab( manager, *pPrefab, "MeadowTownView" );
         SceneComponent* pRoot = pView != nullptr ? pView->getComponent<SceneComponent>() : nullptr;
         if ( pRoot == nullptr )
             return;
