@@ -94,7 +94,7 @@ namespace sw
         string                       _fullyQualifiedName;
         string                       _underlyingTypeName; ///< 정규 이름(`uint8`)
         vector<ParsedEnumeratorInfo> _listEnumerator;     ///< 선언 순서, `Count` 포함
-        string                       _countEnumerator;    ///< `ENUM( Count = … )` 의 이름입니다. 없으면 비어 있습니다
+        string                       _countEnumerator;    ///< 개수 표식 이름입니다(`ENUM( Count = … )` 또는 끝 열거자 `Count` — `CursorReader::resolveCountEnumerator`). 없으면 비어 있습니다
         uint8                        _bIsBitFlag : 1;
         [[maybe_unused]] uint8       _reserved   : 7;
 

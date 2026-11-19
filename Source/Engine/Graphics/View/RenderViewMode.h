@@ -19,7 +19,7 @@ namespace sw
      * @note 에디터 전용이 아니다. 헤드리스에서도 `-gv_viewMode=<이름>`(예: `Wireframe`)으로 주 출력의 모드를 골라 스크린샷으로 검증한다. 리플렉션 enum 이라
      *       이름으로 고르고 숫자는 받지 않는다. `Count` 는 개수 표식이라 모드가 아니다(`isRenderViewModeIndex` 가 거른다).
      */
-    ENUM( Count = Count )
+    ENUM()
     enum class RenderViewMode : uint8
     {
         Lit = 0,      ///< 조명과 그림자를 모두 계산한 기본 화면

@@ -73,7 +73,7 @@ namespace sw
     }
 
     /**
-     * @brief 키트의 요청 메서드와 알림 종류의 표입니다. @p TMethodName 과 @p TPushName 은 `ENUM( Count = Count )` 열거형이고, 열거자 순서가 와이어 번호입니다.
+     * @brief 키트의 요청 메서드와 알림 종류의 표입니다. @p TMethodName 과 @p TPushName 은 끝 열거자 `Count` 가 있는 열거형이고, 열거자 순서가 와이어 번호입니다.
      *        메서드는 @p RangeBase + 1 부터, 알림은 @p RangeBase + 0x80 부터 연속입니다. 알림이 없는 키트는 @p TPushName 으로 `OnlineNoPushName` 을 적습니다.
      * @details 키트의 `XxxMethod` 가 이 테이블을 상속해 와이어 상수를 `toMethod` 와 `toPush` 로 만들고, 등록 항목(`OnlineProtocolEntry`)이 이 테이블을 받아
      *          두 열거형의 이름 순서를 온라인 스키마 해시에 섞습니다. 그래서 같은 타입을 받는 두 메서드의 번호를 맞바꾸면(열거자 순서를 바꾸면) 해시가 바뀌어

@@ -29,7 +29,7 @@ namespace sw
 namespace sw
 {
     /** @brief 우편 상태입니다. 저장 값이라 순서를 바꾸면 안 됩니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class ServiceMailState : uint8
     {
         Unread = 0,

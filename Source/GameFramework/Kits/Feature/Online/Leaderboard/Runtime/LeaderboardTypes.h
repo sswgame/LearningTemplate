@@ -22,7 +22,7 @@ namespace sw
      * @brief 순위표 업무 결과입니다. 와이어 값이므로 새 값은 끝에만 추가합니다.
      * @details 공통 범주(로그인 없음 · 범위 밖 요청 · 일시 장애 · 경합 · 버전)는 여기 두지 않고 `OnlineError` 로 온다(`OnlineResult::_errorCode`).
      */
-    ENUM( Count = Count )
+    ENUM()
     enum class LeaderboardResult : uint8
     {
         Ok = 0,
@@ -36,7 +36,7 @@ namespace sw
 namespace sw
 {
     /** @brief 정렬 방향입니다. 와이어 값입니다. 데이터에는 열거자 이름을 적습니다(대소문자 무시). */
-    ENUM( Count = Count )
+    ENUM()
     enum class LeaderboardOrder : uint8
     {
         Descending = 0, ///< 큰 값이 1등이다
@@ -45,7 +45,7 @@ namespace sw
     };
 
     /** @brief 같은 보드에 다시 낼 때의 갱신 방식입니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class LeaderboardUpdate : uint8
     {
         Best = 0, ///< 더 좋을 때만 갱신한다. 정렬 방향을 기준으로 한다
@@ -55,7 +55,7 @@ namespace sw
     };
 
     /** @brief 초기화 주기입니다. 기간 id 가 바뀌면 빈 보드로 시작하며 지난 기간의 점수는 그대로 남습니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class LeaderboardReset : uint8
     {
         None = 0,

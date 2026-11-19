@@ -60,7 +60,7 @@ namespace sw
         void setPendingCallCount( int32 pendingCount );
 
     private:
-        /** @brief `ENUM( Count = Count )` 열거형의 열거자 이름을 순서대로 snake_case 로 바꿉니다. */
+        /** @brief 끝 열거자 `Count` 가 있는 열거형의 열거자 이름을 순서대로 snake_case 로 바꿉니다. */
         template <typename TEnum>
         static vector<string> makeLabelNames()
         {

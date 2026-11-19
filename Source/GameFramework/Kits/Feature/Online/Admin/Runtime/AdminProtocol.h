@@ -28,7 +28,7 @@
 namespace sw
 {
     /** @brief GM 명령 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)이고, 이름의 snake_case 가 지표 라벨입니다. 새 메서드는 `Count` 앞에만 더합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class AdminMethodName : uint8
     {
         LookupAccount,
@@ -55,7 +55,7 @@ namespace sw
 namespace sw
 {
     /** @brief 권한 등급입니다. 큰 등급이 작은 등급을 포함합니다. 저장 값이므로 순서를 바꾸지 않습니다. `Count` 는 누구도 가질 수 없는 등급이며 와이어에 오르지 않습니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class AdminRole : uint8
     {
         None = 0,
@@ -72,7 +72,7 @@ namespace sw
 namespace sw
 {
     /** @brief GM 명령 결과입니다. 와이어 값이므로 새 값은 끝에만 추가합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class AdminResult : uint8
     {
         Ok = 0, ///< 0 이어야 한다 — 멱등 기록이 결과 한 바이트(`Ok`)를 저장소에 남긴다(`AdminStoreLogic::execute`)

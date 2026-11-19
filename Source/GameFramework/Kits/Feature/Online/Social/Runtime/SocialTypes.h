@@ -21,7 +21,7 @@
 namespace sw
 {
     /** @brief 친구 키트의 업무 결과입니다. 응답 본문의 첫 값입니다. 와이어 값이므로 새 값은 끝에만 추가합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class SocialResult : uint8
     {
         Ok = 0,
@@ -56,7 +56,7 @@ namespace sw
 namespace sw
 {
     /** @brief "나에서 상대로" 가는 한 줄의 상태입니다. 와이어와 레코드에 쓰는 값입니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class SocialLinkState : uint8
     {
         None = 0,
@@ -87,7 +87,7 @@ namespace sw
 namespace sw
 {
     /** @brief 접속 상태입니다. 와이어 값입니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class SocialPresenceStatus : uint8
     {
         Offline = 0,
@@ -123,7 +123,7 @@ namespace sw
 namespace sw
 {
     /** @brief 알림 종류입니다. 와이어 값이므로 새 값은 끝에만 추가합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class SocialNotificationKind : uint8
     {
         FriendRequested = 0, ///< 받은 신청이다. 상대는 신청한 사람이다
@@ -173,7 +173,7 @@ namespace sw
 namespace sw
 {
     /** @brief 길드 역할입니다. 와이어와 레코드에 쓰는 값입니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class GuildRole : uint8
     {
         Member = 0,

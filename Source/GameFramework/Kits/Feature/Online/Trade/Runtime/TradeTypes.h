@@ -76,7 +76,7 @@ namespace sw
     };
 
     /** @brief 거래 호출의 결과입니다. 와이어 값입니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class TradeResult : uint8
     {
         Ok = 0,

@@ -123,7 +123,7 @@ namespace sw
         AddSecondary ///< 기존 액션은 그대로 두고 새 액션을 보조 바인딩 슬롯에 추가한다.
     };
 
-    ENUM( Invalid = Count, Count = Count )
+    ENUM( Invalid = Count )
     enum class ActionTrigger : uint8
     {
         Pressed = 0,

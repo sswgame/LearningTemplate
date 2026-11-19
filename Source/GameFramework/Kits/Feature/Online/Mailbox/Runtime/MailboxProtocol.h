@@ -24,7 +24,7 @@
 namespace sw
 {
     /** @brief 우편함 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)이고, 이름의 snake_case 가 지표 라벨입니다. 새 메서드는 `Count` 앞에만 더합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class MailboxMethodName : uint8
     {
         List,
@@ -36,7 +36,7 @@ namespace sw
     };
 
     /** @brief 우편함 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class MailboxPushName : uint8
     {
         NewMail,
@@ -47,7 +47,7 @@ namespace sw
 namespace sw
 {
     /** @brief 우편함 업무 결과입니다. 공통 범주(로그인 · 충돌 · 일시 장애 · 버전)는 `OnlineError` 이고 여기 적지 않습니다. 와이어 값이므로 새 값은 끝에만 추가합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class MailboxResult : uint8
     {
         Ok = 0,

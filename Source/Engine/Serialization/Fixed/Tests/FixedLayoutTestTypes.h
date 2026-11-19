@@ -18,7 +18,7 @@
 namespace sw
 {
     /** @brief `Count` 가 있는 열거형입니다 — 범위는 [Idle, Run] 이다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class FixedLayoutSampleMode : uint8
     {
         Idle,

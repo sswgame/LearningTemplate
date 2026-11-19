@@ -22,7 +22,7 @@
 namespace sw
 {
     /** @brief 채팅 요청의 결과입니다. 응답 본문의 첫 값이며 0은 성공입니다. 와이어 형식이므로 순서를 바꾸지 않고 새 값은 끝에만 추가합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class ChatResult : uint8
     {
         Ok = 0,
@@ -46,7 +46,7 @@ namespace sw
     using ChatServiceResult = OnlineServiceResult<ChatResult>;
 
     /** @brief 채널 종류입니다. 채널 id 의 접두어가 정합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class ChatChannelKind : uint8
     {
         World = 0,

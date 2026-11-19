@@ -14,7 +14,7 @@
 namespace sw::editor
 {
     /** @brief 표본 하나의 필드입니다. 그래프 하나에 해당합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class EditorNetProfilerChannel : uint8
     {
         SentBytesPerSecond = 0,   ///< 최근 1 초 보낸 바이트(연결 대역폭의 합)

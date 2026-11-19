@@ -25,7 +25,7 @@ namespace sw
      * @brief 서버 디렉터리 업무 결과입니다. 배정 응답 본문과 변경 완료에 씁니다.
      * @details 공통 범주(규칙 밖 값 · 일시 장애)와 키트 오류(모르는 종류 `ServerDirectoryError::kUnknownKind`)는 여기 두지 않는다 — 로직은 `ServerDirectoryServiceResult::fail` 로 낸다.
      */
-    ENUM( Count = Count )
+    ENUM()
     enum class ServerDirectoryResult : uint8
     {
         Ok = 0,

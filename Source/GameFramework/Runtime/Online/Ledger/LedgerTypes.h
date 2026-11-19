@@ -100,7 +100,7 @@ namespace sw
 namespace sw
 {
     /** @brief 이동을 요청한 쪽입니다. 감사와 내역 표시에 쓰며, 저장 값이라 순서를 바꾸면 안 됩니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class LedgerActorKind : uint8
     {
         System = 0, ///< 서버 로직(보상, 만료, 예약 작업)

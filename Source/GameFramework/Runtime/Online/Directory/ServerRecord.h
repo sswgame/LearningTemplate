@@ -22,7 +22,7 @@ namespace sw
     class BitWriter;
 
     /** @brief 서버의 열림 상태입니다. 배정은 Open 만 받는다(점검 허용 계정은 Maintenance 도). 서버 목록 응답에 실린다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class ServerState : uint8
     {
         Starting = 0, ///< 기동 중이라 아직 받지 않는다

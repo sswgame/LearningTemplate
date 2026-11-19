@@ -47,7 +47,7 @@ string.Removed = Removed
 string.Meta = Meta, meta, CustomMeta
 # 비트 플래그 연산자(|, &, ^, ~)를 만든다. 직렬화용 EnumInfo::_bIsBitFlag 도 켠다.
 flag.Flags = Flags, BitFlag, FLAG, Bitwise
-# TypeRegistry::enumToString / enumFromString 이 쓰는 Invalid 센티널과 (배타적) Count 센티널
+# TypeRegistry::enumToString / enumFromString 이 쓰는 Invalid 센티널과 (배타적) Count 센티널. 끝 열거자 `Count` 는 적지 않아도 Count 센티널이다(비트 플래그 제외)
 string.Invalid = Invalid, InvalidValue
 string.Count = Count, CountValue
 

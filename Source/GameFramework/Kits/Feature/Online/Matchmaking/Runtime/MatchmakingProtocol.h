@@ -21,7 +21,7 @@
 namespace sw
 {
     /** @brief 매칭 서비스 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)이고, 이름의 snake_case 가 지표 라벨입니다. 새 메서드는 `Count` 앞에만 더합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class MatchmakingMethodName : uint8
     {
         PartyCreate,
@@ -41,7 +41,7 @@ namespace sw
     };
 
     /** @brief 매칭 서비스 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class MatchmakingPushName : uint8
     {
         Party,

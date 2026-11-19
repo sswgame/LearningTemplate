@@ -21,7 +21,7 @@
 namespace sw
 {
     /** @brief 순위표 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 메서드는 `Count` 앞에만 더합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class LeaderboardMethodName : uint8
     {
         GetTop,
@@ -36,7 +36,7 @@ namespace sw
     };
 
     /** @brief 순위표 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class LeaderboardPushName : uint8
     {
         Achievement,

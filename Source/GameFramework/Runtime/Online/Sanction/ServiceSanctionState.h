@@ -12,7 +12,7 @@
 namespace sw
 {
     /** @brief 제재 종류입니다. 저장 값이라 순서를 바꾸지 않는다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class ServiceSanctionKind : uint8
     {
         ChatMute = 0, ///< 채팅 금지
