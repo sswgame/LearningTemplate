@@ -63,9 +63,11 @@ namespace sw
         , _pipelineRequest{}
         , _lastIndirectDrawCallCount{ 0 }
         , _lastPendingPSOBatchCount{ 0 }
+        , _bOffscreenRenderer{ SW_FALSE }
         , _capture{ _pDevice, _state._mainView._transientPool, _pipelineResource }
         , _screenRotation{ _pDevice, _psoManager }
-        , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _autoExposure, _upscale, _fog, _extensionHost, _capture, _screenRotation }
+        , _displayEncode{ _pDevice, _psoManager }
+        , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _autoExposure, _upscale, _fog, _extensionHost, _capture, _screenRotation, _displayEncode }
         , _host{}
         , _statusMessage{}
         , _status{ FrameRendererStatus::Uninitialized }
@@ -969,6 +971,9 @@ namespace sw
         const uint32 screenWidth   = bScreenOutput ? _state._outputWidth : ( _pDevice != nullptr ? _pDevice->getBackBufferWidth() : 0u );
         const uint32 screenHeight  = bScreenOutput ? _state._outputHeight : ( _pDevice != nullptr ? _pDevice->getBackBufferHeight() : 0u );
         _screenRotation.prepare( screenWidth, screenHeight );
+        // HDR 출력의 두 RT 도 화면 크기다(SDR 은 놓기만 한다). 호스트 타깃(에디터 게임 뷰)이면 장면은 그 타깃에 가고 UI RT 에는 렌더 스레드 UI 만 쓴다.
+        const bool bOwnsScreen = _bOffscreenRenderer == SW_FALSE;
+        _displayEncode.prepare( bOwnsScreen ? screenWidth : 0u, bOwnsScreen ? screenHeight : 0u, _state._settings._displayOutput );
     }
 
     void FrameRenderer::releaseTransientResources()
@@ -985,6 +990,7 @@ namespace sw
         // 캡처도 트랜지언트와 크기가 같아야 한다. 같이 버리고 다음 ensureTransientResources 가 새 크기로 만든다. 화면 회전 대기 텍스처도 주 출력 크기다.
         _capture.releasePresent();
         _screenRotation.release();
+        _displayEncode.release();
     }
 
     void FrameRenderer::reportRenderTargetMemory() const
@@ -1484,6 +1490,7 @@ namespace sw
     bool FrameRenderer::initializeOffscreen( IRHIDevice* pDevice, FrameRenderer& mainRenderer, string_view pipelinePath )
     {
         // 호스트는 걸지 않는다(주 렌더러의 일). PSO 저장소는 initialize 앞에 둔다 — 같은 파이프라인일 때만 함께 쓴다.
+        _bOffscreenRenderer = SW_TRUE;
         if ( pipelinePath.empty() )
             _psoManager.shareCache( mainRenderer._psoManager );
         // 설정 · 파이프라인 요청은 주 렌더러가 든 사본이다 — 이 렌더러는 렌더 스레드에서 서므로 변수를 읽지 않는다.

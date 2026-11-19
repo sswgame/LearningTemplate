@@ -721,9 +721,9 @@ namespace sw
         // 위에서 연 백버퍼 패스를 연 쪽이 닫는다(남겨 두면 endFrame 이 닫지만 패스의 끝이 어디인지 여기서 보이게 둔다).
         if ( pFrameStream != nullptr )
             pFrameStream->endRenderPass();
-        // 화면에 쓰는 일이 모두 끝났다 — 회전한 화면이면 대기 텍스처를 스왑체인 이미지로 돌려 옮긴다(돌리지 않으면 아무것도 하지 않는다).
-        if ( pFrameStream != nullptr && screenTarget != 0 )
-            _pFrameRenderer->recordScreenRotation( *pFrameStream );
+        // 화면에 쓰는 일이 모두 끝났다 — 회전한 화면이면 대기 텍스처를 스왑체인 이미지로 돌려 옮기고, HDR 출력이면 UI 를 합성해 인코딩한다(둘 다 아니면 아무것도 하지 않는다).
+        if ( pFrameStream != nullptr && bRendererReady )
+            _pFrameRenderer->recordScreenOutput( *pFrameStream );
 
         {
             // 제출과 Present 다. GPU 가 밀리면 여기서 기다린다.

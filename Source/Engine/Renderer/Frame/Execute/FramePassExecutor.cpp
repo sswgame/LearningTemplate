@@ -58,6 +58,7 @@
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
+#include "Engine/Renderer/Frame/Screen/FrameDisplayEncode.h"
 #include "Engine/Renderer/Frame/Screen/FrameScreenRotation.h"
 #include "Engine/Renderer/Frame/Timeline/GPUTimestampSlotLayout.h"
 #include "Engine/Renderer/Frame/View/ViewTextureMipBiasUtil.h"
@@ -82,7 +83,7 @@ namespace sw
 
     FramePassExecutor::FramePassExecutor( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameRenderState& state, FramePSOManager& psoManager,
                                           FrameAutoExposure& autoExposure, FrameUpscale& upscale, FrameFog& fog, FrameExtensionHost& extensionHost, FrameCapture& capture,
-                                          const FrameScreenRotation& screenRotation )
+                                          const FrameScreenRotation& screenRotation, const FrameDisplayEncode& displayEncode )
         : _pDevice{ pDevice }
         , _pipelineResource{ pipeline }
         , _state{ state }
@@ -93,6 +94,7 @@ namespace sw
         , _extensionHost{ extensionHost }
         , _capture{ capture }
         , _screenRotation{ screenRotation }
+        , _displayEncode{ displayEncode }
         , _frameGraphExecutor{ pDevice, state, psoManager, fog }
         , _mapFramePassNameToIndex{}
         , _frameGraphContext{}
@@ -463,8 +465,10 @@ namespace sw
         const bool    bScreenOutput   = view._pOutputTexture == nullptr;
         const float32 colorVisionMode = bScreenOutput ? static_cast<float32>( _state._canvasFrame._colorVisionMode ) : 0.0f;
         context._passValues.setFloat4( passConstantNames()._cameraFrame, float4{ MathUtil::max( 0.0f, post._letterboxAspectRatio ), viewAspect, colorVisionMode, 0.0f } );
-        // 톤 곡선 어깨 — SDR 은 1(Reinhard 그대로, 골든 불변). HDR 출력에 그리는 뷰만 늘린다(display_encode.hlsli).
-        context._passValues.setFloat4( passConstantNames()._displayOutput, float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
+        // 톤 곡선 어깨 — SDR 은 1(Reinhard 그대로, 골든 불변). HDR 출력의 장면 출력 RT 에 그리는 뷰(화면 출력이고 주 출력이 호스트 RT 가 아닌 뷰)만 늘린다(display_encode.hlsli).
+        const bool    bHDRSceneView = bScreenOutput && _state._outputRenderTarget == 0 && _displayEncode.isActive();
+        const float32 toneShoulder  = bHDRSceneView ? _displayEncode.getToneShoulder() : 1.0f;
+        context._passValues.setFloat4( passConstantNames()._displayOutput, float4{ toneShoulder, 0.0f, 0.0f, 0.0f } );
         // 컬러 그레이딩(post_grade.hlsli) — 화이트 밸런스 · 범위 보정 · LUT. LUT 는 세기가 있는 후처리 뷰만 묻는다(안 쓰는 경로를 읽지 않는다). 띠 모양이 아니면 데이터 오류라 걸지 않는다.
         // 겹친 볼륨의 둘째 LUT(무게 _colorGradingLUTBlendWeight)도 같은 규칙으로 묻는다. 읽히지 않은 쪽은 항등 LUT 로 보고 남은 쪽의 무게만 세기에 곱한다(PostGradeConstants::make).
         const bool bWantsLUT = view._settings.usesPostProcess() && post._colorGradingLUTIntensity > 0.0f;

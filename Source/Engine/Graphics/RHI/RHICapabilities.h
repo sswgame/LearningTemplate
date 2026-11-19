@@ -101,6 +101,9 @@ namespace sw
         /** @brief 모니터가 알린 최대 휘도(nits)입니다. 모르면(SDR 만 내는 백엔드 · 표면 정보 없음) 0 입니다. 옵션 메뉴의 최대 휘도 기본을 고를 때 본다. */
         float32 _displayMaxLuminanceNits{ 0.0f };
 
+        /** @brief SDR 밖 출력(HDR10 · scRGB) 가운데 하나라도 받으면 true 입니다 — HDR 화면 출력의 PSO · RT 를 지을지 가른다. */
+        [[nodiscard]] bool hasHDRDisplayOutput() const { return ( _displayOutputSupport & ~1u ) != 0; }
+
         /** @brief 기본값(컴퓨트만 켠 보수적 기본)으로 만듭니다. */
         RHICapabilities() noexcept = default;
     };

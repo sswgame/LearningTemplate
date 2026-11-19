@@ -38,6 +38,7 @@
 namespace sw
 {
     class FrameCapture;
+    class FrameDisplayEncode;
     class FrameScreenRotation;
     class FrameAutoExposure;
     class FrameFog;
@@ -62,7 +63,7 @@ namespace sw
     public:
         FramePassExecutor( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameRenderState& state, FramePSOManager& psoManager,
                            FrameAutoExposure& autoExposure, FrameUpscale& upscale, FrameFog& fog, FrameExtensionHost& extensionHost, FrameCapture& capture,
-                           const FrameScreenRotation& screenRotation );
+                           const FrameScreenRotation& screenRotation, const FrameDisplayEncode& displayEncode );
         ~FramePassExecutor(); ///< 밖에 둔다 — 내보내는 클래스의 소멸자는 쓰는 곳마다 만들어져 앞선 선언만 본 `unique_ptr<IRHICommandList>` 을 지우지 못한다
         FramePassExecutor( const FramePassExecutor& )            = delete;
         FramePassExecutor& operator=( const FramePassExecutor& ) = delete;
@@ -358,8 +359,11 @@ namespace sw
         /**
          * @brief 지금 뷰의 주 출력 대상을 고릅니다. 렌더 텍스처 뷰는 자기 텍스처를, 주 시점과 화면 사각형 뷰는 주 출력(백버퍼 또는 게임 뷰 RT)을 씁니다.
          *        스크린샷 실행이면 캡처 텍스처를 씁니다. Present 와 Canvas 가 같은 판단을 씁니다.
+         * @param bSceneLayer Present(장면)면 true 다 — HDR 출력이면 화면 대신 장면 출력 RT 에 쓴다(`FrameDisplayEncode`). Canvas 는 false(화면 = HDR 이면 UI RT)다.
          */
-        PresentTarget resolvePresentTarget() const;
+        PresentTarget resolvePresentTarget( bool bSceneLayer ) const;
+        /** @brief 화면에 쓰는 대상입니다 — 0 이면 스왑체인, 회전한 화면이면 회전 대기 텍스처, HDR 출력이면 UI RT 입니다(`FrameRenderer::getScreenTarget` 과 같은 판단). */
+        RHITextureHandle getScreenTarget() const;
         /** @brief 이 패스가 Swapchain 을 쓰는 마지막 패스면 true 입니다. 스크린샷 캡처를 백버퍼로 복사하는 일을 이 패스 끝에서 합니다. */
         bool isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const;
         /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
@@ -526,6 +530,7 @@ namespace sw
         FrameExtensionHost&        _extensionHost;
         FrameCapture&              _capture;
         const FrameScreenRotation& _screenRotation; ///< 화면에 쓰는 대상(0 = 스왑체인, 회전한 화면이면 논리 크기 대기 텍스처)
+        const FrameDisplayEncode&  _displayEncode;  ///< HDR 출력이면 Present 는 장면 출력 RT, 화면에 쓰는 나머지는 UI RT 에 쓴다
         /// @brief 프레임 패스 종류마다의 실행(깊이 히스토리 · 가림 타일 · 입자 · 변형 · 컬링 · 라이트 그리드 · 볼륨 안개 · 프로브 · 마커)입니다. 순서는 프레임 그래프가 정한다.
         FrameGraphExecutor _frameGraphExecutor;
         /// @brief 프레임 그래프 노드 이름 → `_listFramePass` 번호입니다. `bindPassCallbacks` 가 채웁니다.
