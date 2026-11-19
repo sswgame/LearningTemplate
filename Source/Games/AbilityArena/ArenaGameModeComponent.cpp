@@ -197,19 +197,11 @@ namespace sw
         SW_LOG_INFO_ID( "ArenaGameMode.ArenaReadyWASDMove", "[Arena] arena is ready - WASD move, J/Space melee, K/2 fireball, L/3 heal, LeftShift/4 dash" );
     }
 
-    void ArenaGameModeComponent::serializeState( StateIO& io )
+    void ArenaGameModeComponent::serializeGameState( StateIO& io )
     {
-        uint32 wave      = _wave;
-        uint32 killCount = _killCount;
+        // 웨이브 · 처치 수는 상태 칸이다(`GameModeComponent::serializeState` 가 싣는다) — 손 본문은 판 머리만.
         io.header( ArenaGameModeComponentInternal::kStateTag, ArenaGameModeComponentInternal::kStateVersion );
-        io.value( wave );
-        io.value( killCount );
         io.end();
-        if ( io.isReading() && io.isOk() )
-        {
-            _wave      = wave;
-            _killCount = killCount;
-        }
     }
 
     void ArenaGameModeComponent::onStateRestored( bool bRestored )

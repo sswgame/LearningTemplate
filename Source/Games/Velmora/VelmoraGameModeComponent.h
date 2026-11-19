@@ -63,7 +63,7 @@ namespace sw
         VelmoraGameModeComponent();
         virtual ~VelmoraGameModeComponent() override;
 
-        void               serializeState( StateIO& io ) override;
+        void               serializeGameState( StateIO& io ) override;
         [[nodiscard]] bool readCameraFocus( GameObjectHandle& outFocusObject, float3& outFocusPosition ) const override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
@@ -121,11 +121,12 @@ namespace sw
         PROPERTY( Category = "Combat", DisplayName = "Boss Delay", Tooltip = "Seconds between clearing the hall (or entering a boss region) and the boss fight", Min = 0.1, Units = s )
         float32 _bossDelaySeconds;
 
-        VelmoraCampaign     _campaign;
-        ActionRoom          _room;
-        Countdown           _bossDelay;
+        VelmoraCampaign _campaign;
+        ActionRoom      _room;
+        Countdown       _bossDelay;
+        PROPERTY( RuntimeState )
         float2              _playerPosition;
-        FacingDir           _facing;
+        FacingDir           _facing;            ///< 리플렉션 열거가 아니다 — 손 본문이 싣는다
         hashed_string       _currentRegion;     ///< 지금 서 있는 지역(비면 다음 틱이 진입을 처리한다)
         hashed_string       _encounterRegion;   ///< 전투 중인 지역(탐험 중이면 비었다)
         hashed_string       _pendingArea;       ///< 게임 스레드에서 자동 저장에 알릴 지역 이동
@@ -134,7 +135,8 @@ namespace sw
         vector<QuestEvent>  _listQuestEvent;    ///< 프레임마다 비워 다시 쓰는 알림 그릇(할당을 되풀이하지 않는다)
         vector<WalletEvent> _listWalletEvent;
         vector<HealthEvent> _listHealthEvent;
-        int32               _fallCount;
-        VelmoraPhase        _phase;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32        _fallCount;
+        VelmoraPhase _phase;
     };
 } // namespace sw

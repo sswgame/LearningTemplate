@@ -55,7 +55,7 @@ namespace sw
         MeadowTownGameModeComponent();
         virtual ~MeadowTownGameModeComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         const CreatureTown& getTown() const { return _town; }
 

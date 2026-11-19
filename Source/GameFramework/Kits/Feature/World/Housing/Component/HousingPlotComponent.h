@@ -103,7 +103,7 @@ namespace sw
         /** @brief 맵 검사: 카탈로그를 읽을 수 있는지, 부품마다 스냅 지점이 맞고 부지에 들어가는지, 같은 씬의 다른 부지와 겹치지 않는지 봅니다(`REFLECT( Validate )`). */
         void validatePlot( ValidationContext& context ) const;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
     protected:
         [[nodiscard]] bool startGame() override;

@@ -48,7 +48,7 @@ namespace sw
 
     MeadowTownGameModeComponent::~MeadowTownGameModeComponent() = default;
 
-    void MeadowTownGameModeComponent::serializeState( StateIO& io )
+    void MeadowTownGameModeComponent::serializeGameState( StateIO& io )
     {
         SessionStateComponent* pState = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
         if ( io.check( pState != nullptr ) == false )

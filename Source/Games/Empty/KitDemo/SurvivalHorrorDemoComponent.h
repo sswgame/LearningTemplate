@@ -30,7 +30,7 @@ namespace sw
         SurvivalHorrorDemoComponent();
         virtual ~SurvivalHorrorDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getSanity() const { return _sanity; }
@@ -49,7 +49,9 @@ namespace sw
         AssetRef<SurvivalHorrorCatalog> _catalogPath;
 
         SharedAssetRef<SurvivalHorrorCatalog> _pCatalog;
-        int32                                 _sanity; ///< 한 바퀴 뒤 정신력
-        int32                                 _health; ///< 한 바퀴 뒤 체력
+        PROPERTY( RuntimeState )
+        int32 _sanity; ///< 한 바퀴 뒤 정신력
+        PROPERTY( RuntimeState )
+        int32 _health; ///< 한 바퀴 뒤 체력
     };
 } // namespace sw

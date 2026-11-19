@@ -53,7 +53,7 @@ namespace sw
         MeadowHomeGameModeComponent();
         virtual ~MeadowHomeGameModeComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         int32 getNextStep() const { return _nextStep; }
 
@@ -75,7 +75,8 @@ namespace sw
         PROPERTY( Category = "Home", DisplayName = "Step Interval", Min = 0.0, Units = s, Tooltip = "Time between two autoplay build steps" )
         float32 _stepInterval;
 
-        float32                _stepTimer;
+        float32 _stepTimer;
+        PROPERTY( RuntimeState, Min = 0 )
         int32                  _nextStep;
         uint8                  _bClaimSent : 1; ///< 네트워크 클라이언트 — 차지 요청을 보냈다(실행 동안만)
         uint8                  _bGaveUp    : 1; ///< 차지가 거절됐다 — 짓지 않는다

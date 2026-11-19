@@ -30,7 +30,7 @@ namespace sw
         ClassicJRPGDemoComponent();
         virtual ~ClassicJRPGDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getBattleResult() const { return _battleResult; }
@@ -50,8 +50,11 @@ namespace sw
         AssetRef<JRPGCatalog> _catalogPath;
 
         SharedAssetRef<JRPGCatalog> _pCatalog;
-        int32                       _battleResult; ///< `JRPGBattleResult` 값(0 진행, 1 승리, 2 패배, 3 도망)
-        int32                       _heroExp;      ///< 용사가 받은 경험치
-        int32                       _gold;         ///< 지갑의 기본 통화 잔액
+        PROPERTY( RuntimeState )
+        int32 _battleResult; ///< `JRPGBattleResult` 값(0 진행, 1 승리, 2 패배, 3 도망)
+        PROPERTY( RuntimeState )
+        int32 _heroExp; ///< 용사가 받은 경험치
+        PROPERTY( RuntimeState )
+        int32 _gold; ///< 지갑의 기본 통화 잔액
     };
 } // namespace sw

@@ -31,7 +31,7 @@ namespace sw
         RestaurantSimDemoComponent();
         virtual ~RestaurantSimDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getServed() const { return _served; }
@@ -54,8 +54,11 @@ namespace sw
 
         SharedAssetRef<RestaurantCatalog> _pCatalog;
         SharedAssetRef<RecipeCatalog>     _pRecipeCatalog;
-        int32                             _served;  ///< 계산까지 마친 손님 수
-        int32                             _revenue; ///< 매출(팁 제외)
-        int32                             _profit;  ///< 이익 = 매출 + 팁 - 재료비 - 급여 - 버린 재료
+        PROPERTY( RuntimeState )
+        int32 _served; ///< 계산까지 마친 손님 수
+        PROPERTY( RuntimeState )
+        int32 _revenue; ///< 매출(팁 제외)
+        PROPERTY( RuntimeState )
+        int32 _profit; ///< 이익 = 매출 + 팁 - 재료비 - 급여 - 버린 재료
     };
 } // namespace sw

@@ -130,8 +130,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.MonsterCollectorDone", "[KitDemo] monster collector: won %# exp, captured %# after %# shakes", _wonExp, _captured, _captureShakes );
     }
 
-    void MonsterCollectorDemoComponent::serializeState( StateIO& io )
+    void MonsterCollectorDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, MonsterCollectorDemoComponentInternal::kStateTag, MonsterCollectorDemoComponentInternal::kStateVersion, { &_wonExp, &_captured, &_captureShakes } );
+        serializeResults( io, MonsterCollectorDemoComponentInternal::kStateTag, MonsterCollectorDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

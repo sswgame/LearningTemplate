@@ -43,7 +43,7 @@ namespace sw
         FrontierCityGameModeComponent();
         virtual ~FrontierCityGameModeComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         const CitySimulation& getCity() const { return _city; }
 
@@ -98,8 +98,9 @@ namespace sw
         SimulationViewSync<const CityBuildingDef*> _buildingViews; ///< 건물 번호 → 지금 건물 정의(허물렸으면 nullptr)
         SimulationViewSync<uint8>                  _roadViews;     ///< 타일 번호(y × 너비 + x) → 도로(1)
         GameSpeedControl                           _speed;         ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
-        uint8                                      _bLaidOut    : 1;
-        uint8                                      _bViewsDirty : 1;
-        [[maybe_unused]] uint8                     _reserved    : 6;
+        PROPERTY( RuntimeState )
+        uint8                  _bLaidOut    : 1;
+        uint8                  _bViewsDirty : 1;
+        [[maybe_unused]] uint8 _reserved    : 6;
     };
 } // namespace sw

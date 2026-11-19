@@ -30,7 +30,7 @@ namespace sw
         FightingDemoComponent();
         virtual ~FightingDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getMatchWinner() const { return _matchWinner; }
@@ -50,8 +50,11 @@ namespace sw
         AssetRef<FighterCatalog> _catalogPath;
 
         SharedAssetRef<FighterCatalog> _pCatalog;
-        int32                          _matchWinner;  ///< 대전 결과(0, 1, 무승부 2, 끝나지 않으면 -1)
-        int32                          _loserHealth;  ///< 쓰러진 1 번의 체력
-        int32                          _winnerRounds; ///< 0 번의 라운드 승 수
+        PROPERTY( RuntimeState )
+        int32 _matchWinner; ///< 대전 결과(0, 1, 무승부 2, 끝나지 않으면 -1)
+        PROPERTY( RuntimeState )
+        int32 _loserHealth; ///< 쓰러진 1 번의 체력
+        PROPERTY( RuntimeState )
+        int32 _winnerRounds; ///< 0 번의 라운드 승 수
     };
 } // namespace sw

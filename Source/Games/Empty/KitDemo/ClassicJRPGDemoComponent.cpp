@@ -94,8 +94,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.ClassicJRPGDone", "[KitDemo] classic JRPG: result %#, hero exp %#, gold %#", _battleResult, _heroExp, _gold );
     }
 
-    void ClassicJRPGDemoComponent::serializeState( StateIO& io )
+    void ClassicJRPGDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, ClassicJRPGDemoComponentInternal::kStateTag, ClassicJRPGDemoComponentInternal::kStateVersion, { &_battleResult, &_heroExp, &_gold } );
+        serializeResults( io, ClassicJRPGDemoComponentInternal::kStateTag, ClassicJRPGDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

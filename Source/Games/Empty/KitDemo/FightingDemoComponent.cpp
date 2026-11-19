@@ -93,8 +93,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.FightingDone", "[KitDemo] fighting: player %# won the match, loser health %#, %# rounds", _matchWinner, _loserHealth, _winnerRounds );
     }
 
-    void FightingDemoComponent::serializeState( StateIO& io )
+    void FightingDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, FightingDemoComponentInternal::kStateTag, FightingDemoComponentInternal::kStateVersion, { &_matchWinner, &_loserHealth, &_winnerRounds } );
+        serializeResults( io, FightingDemoComponentInternal::kStateTag, FightingDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

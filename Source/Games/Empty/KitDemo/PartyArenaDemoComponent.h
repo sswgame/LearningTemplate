@@ -31,7 +31,7 @@ namespace sw
         PartyArenaDemoComponent();
         virtual ~PartyArenaDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getWinner() const { return _winner; }
@@ -51,8 +51,11 @@ namespace sw
         AssetRef<PartyRoundSeries> _catalogPath;
 
         SharedAssetRef<PartyRoundSeries> _pCatalog;
-        int32                            _winner;       ///< 우승한 사람 번호(-1 없음)
-        int32                            _winnerTotal;  ///< 우승한 사람의 총점
-        int32                            _roundsPlayed; ///< 결과를 넘긴 라운드 수
+        PROPERTY( RuntimeState )
+        int32 _winner; ///< 우승한 사람 번호(-1 없음)
+        PROPERTY( RuntimeState )
+        int32 _winnerTotal; ///< 우승한 사람의 총점
+        PROPERTY( RuntimeState )
+        int32 _roundsPlayed; ///< 결과를 넘긴 라운드 수
     };
 } // namespace sw

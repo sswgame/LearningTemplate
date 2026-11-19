@@ -158,7 +158,7 @@ namespace sw
         return true;
     }
 
-    void FarmVillageGameModeComponent::serializeState( StateIO& io )
+    void FarmVillageGameModeComponent::serializeGameState( StateIO& io )
     {
         using Internal = FarmVillageGameModeComponentInternal;
         // 판이 정확히 같을 때만 읽는다(첫 출시 전이라 옛 판 리더가 없다).

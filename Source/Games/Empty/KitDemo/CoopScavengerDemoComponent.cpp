@@ -125,8 +125,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.CoopScavengerDone", "[KitDemo] coop scavenger: sold %#, credits %#, next quota %#", _soldValue, _credits, _nextQuota );
     }
 
-    void CoopScavengerDemoComponent::serializeState( StateIO& io )
+    void CoopScavengerDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, CoopScavengerDemoComponentInternal::kStateTag, CoopScavengerDemoComponentInternal::kStateVersion, { &_soldValue, &_credits, &_nextQuota } );
+        serializeResults( io, CoopScavengerDemoComponentInternal::kStateTag, CoopScavengerDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

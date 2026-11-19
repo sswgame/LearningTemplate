@@ -30,7 +30,7 @@ namespace sw
         GhostHuntDemoComponent();
         virtual ~GhostHuntDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getStunnedCount() const { return _stunnedCount; }
@@ -50,8 +50,11 @@ namespace sw
         AssetRef<GhostCatalog> _catalogPath;
 
         SharedAssetRef<GhostCatalog> _pCatalog;
-        int32                        _stunnedCount;    ///< 손전등이 기절시킨 유령 수
-        int32                        _caughtCoins;     ///< 잡은 유령이 떨어뜨린 동전
-        int32                        _remainingGhosts; ///< 싸움이 끝난 뒤 잡히지 않은 유령
+        PROPERTY( RuntimeState )
+        int32 _stunnedCount; ///< 손전등이 기절시킨 유령 수
+        PROPERTY( RuntimeState )
+        int32 _caughtCoins; ///< 잡은 유령이 떨어뜨린 동전
+        PROPERTY( RuntimeState )
+        int32 _remainingGhosts; ///< 싸움이 끝난 뒤 잡히지 않은 유령
     };
 } // namespace sw

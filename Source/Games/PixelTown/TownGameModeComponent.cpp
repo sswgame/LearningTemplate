@@ -188,7 +188,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태
     // ------------------------------------------------------------------------------
-    void TownGameModeComponent::serializeState( StateIO& io )
+    void TownGameModeComponent::serializeGameState( StateIO& io )
     {
         io.header( kTownStateTag, kTownStateVersion );
         if ( io.isOk() == false )

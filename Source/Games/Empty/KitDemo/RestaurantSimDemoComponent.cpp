@@ -102,8 +102,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.RestaurantSimDone", "[KitDemo] restaurant: served %#, revenue %#, profit %#", _served, _revenue, _profit );
     }
 
-    void RestaurantSimDemoComponent::serializeState( StateIO& io )
+    void RestaurantSimDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, RestaurantSimDemoComponentInternal::kStateTag, RestaurantSimDemoComponentInternal::kStateVersion, { &_served, &_revenue, &_profit } );
+        serializeResults( io, RestaurantSimDemoComponentInternal::kStateTag, RestaurantSimDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

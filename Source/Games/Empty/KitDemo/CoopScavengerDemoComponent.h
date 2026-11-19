@@ -32,7 +32,7 @@ namespace sw
         CoopScavengerDemoComponent();
         virtual ~CoopScavengerDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getSoldValue() const { return _soldValue; }
@@ -54,8 +54,11 @@ namespace sw
         AssetRef<ScavengerCatalog> _catalogPath;
 
         SharedAssetRef<ScavengerCatalog> _pCatalog;
-        int32                            _soldValue; ///< 회사에서 판 값
-        int32                            _credits;   ///< 할당량 판정 뒤의 크레딧
-        int32                            _nextQuota; ///< 다음 주기의 할당량
+        PROPERTY( RuntimeState )
+        int32 _soldValue; ///< 회사에서 판 값
+        PROPERTY( RuntimeState )
+        int32 _credits; ///< 할당량 판정 뒤의 크레딧
+        PROPERTY( RuntimeState )
+        int32 _nextQuota; ///< 다음 주기의 할당량
     };
 } // namespace sw

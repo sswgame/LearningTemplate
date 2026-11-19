@@ -177,7 +177,7 @@ namespace sw
         return float3{ static_cast<float32>( centerX ) + 0.5f, static_cast<float32>( kVoxelChunkHeight ) - 2.0f, static_cast<float32>( centerZ ) + 0.5f };
     }
 
-    void VoxelGameModeComponent::serializeState( StateIO& io )
+    void VoxelGameModeComponent::serializeGameState( StateIO& io )
     {
         io.header( VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion );
         if ( io.isOk() == false )

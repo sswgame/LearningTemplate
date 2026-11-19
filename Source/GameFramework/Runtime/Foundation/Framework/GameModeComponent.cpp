@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -137,6 +138,34 @@ namespace sw
         updateGame( deltaTime );
         if ( _soundQueue.isEmpty() == false || hasPendingSpawn() )
             scheduleFlush();
+    }
+
+    void GameModeComponent::serializeState( StateIO& io )
+    {
+        const TypeInfo* const pType = findCachedTypeInfo();
+        if ( pType == nullptr )
+            SW_FATAL( "GameModeComponent '%#' has no reflected type - its state fields cannot be carried", getTypeName().c_str() );
+        if ( io.isWriting() )
+        {
+            io.reflectedAs( *pType, *this );
+            serializeGameState( io );
+            return;
+        }
+        Archive backup;
+        {
+            StateIO backupIO( backup );
+            backupIO.reflectedAs( *pType, *this );
+        }
+        io.reflectedAs( *pType, *this );
+        if ( io.isOk() )
+            serializeGameState( io );
+        if ( io.isOk() )
+            return;
+        // 칸이나 손 본문이 거절했다 — 덮은 상태 칸을 읽기 전 값으로 되돌린다(손 본문은 끝까지 맞을 때만 대입하므로 그대로다).
+        backup.setReadModeAndResetPosition( true );
+        StateIO restoreIO( backup );
+        restoreIO.reflectedAs( *pType, *this );
+        SW_ASSERT( restoreIO.isOk() );
     }
 
     void GameModeComponent::restoreState( vector<uint8>&& bytes )

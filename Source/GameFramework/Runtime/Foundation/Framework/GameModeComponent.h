@@ -106,10 +106,14 @@ namespace sw
             return false;
         }
 
-        /** @brief 판의 상태를 씁니다. `ComponentStateStore::capture` 가 부르며, 첫 값은 `StateIO::writeHeader` 가 쓰는 표와 버전입니다. */
+        /** @brief 판의 상태를 씁니다. `ComponentStateStore::capture` 가 부릅니다(`serializeState`). */
         void writeState( Archive& outArchive ) const { StateIO::writeObject( *this, outArchive ); }
-        /** @brief 디렉터의 상태를 놓는 본문 하나입니다(`StateIO`). 첫 값은 `io.header` 의 표준 머리입니다. 읽기는 사본 없이 돌므로(컴포넌트는 복사하지 않는다) 지역 변수에 읽어 끝까지 맞으면 대입합니다. */
-        virtual void serializeState( StateIO& io ) = 0;
+        /**
+         * @brief 디렉터 상태의 입구입니다 — 리플렉션 상태 칸(`PROPERTY( RuntimeState )`, 동적 형식 기준 `StateIO::reflectedAs`)을 먼저 놓고 파생의 `serializeGameState` 를 잇습니다.
+         * @details 상태 칸은 씬 스냅숏도 옮기지만 그 뒤 `onBeginPlay` 의 `startGame` 이 새 판으로 덮으므로, 판을 연 뒤 적용하는 이 바이트가 싣는다(언리얼 `UPROPERTY( SaveGame )` 자리).
+         *          파생은 칸을 다시 적지 않는다 — 한 칸을 두 곳이 알지 않는다. 읽기는 사본 없이 돌아, 칸을 덮기 전에 지금 칸을 따로 써 두고 손 본문이 거절하면 되돌린다.
+         */
+        void serializeState( StateIO& io );
         /**
          * @brief `writeState` 의 바이트로 판을 복원합니다. `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
          * @details 시작 전이면 보관했다가 `onBeginPlay` 가 판을 시작한 뒤 적용한다. 읽지 못하면 `onStateRestored( false )` 가 알리고 새 판으로 간다.
@@ -139,6 +143,11 @@ namespace sw
         }
 
     protected:
+        /**
+         * @brief 리플렉션 밖의 디렉터 상태(키트 시뮬레이션 · 포인터 ↔ id · `Countdown` · 난수)를 놓는 본문 하나입니다(`StateIO`). 첫 값은 `io.header` 의 표준 머리입니다.
+         * @details 상태 칸은 이미 읽혀 있어 칸 사이 검사에 쓸 수 있다. 읽기는 사본 없이 돌므로(컴포넌트는 복사하지 않는다) 지역 변수에 읽어 끝까지 맞으면 대입합니다.
+         */
+        virtual void serializeGameState( StateIO& io ) = 0;
         /** @brief 데이터를 읽고 새 판을 엽니다. 열지 못하면 false 를 반환하며, 무엇이 왜 실패했는지는 경로를 아는 파생 클래스가 알립니다. 실패한 뒤 다시 부를 수 있습니다. */
         [[nodiscard]] virtual bool startGame() = 0;
         /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 입니다. */

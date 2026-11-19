@@ -20,6 +20,7 @@
 namespace sw
 {
     /** @brief 액션 룸 시연의 판 단계입니다(감시 값 `KitDemo.Combat.Phase` 의 수). */
+    ENUM()
     enum class ActionCombatDemoPhase : uint8
     {
         Hall = 0, ///< 홀 전투 중
@@ -45,7 +46,7 @@ namespace sw
         ActionCombatDemoComponent();
         virtual ~ActionCombatDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32   getPhase() const { return static_cast<int32>( _phase ); }
@@ -84,11 +85,14 @@ namespace sw
         PROPERTY( Category = "Room", DisplayName = "Boss Delay", Tooltip = "Seconds between clearing the hall and the boss fight", Min = 0.1, Units = s )
         float32 _bossDelaySeconds;
 
-        ActionRoom            _room;
-        Countdown             _bossDelay;
-        float2                _playerPosition;
-        FacingDir             _facing;
-        int32                 _playerHP;
+        ActionRoom _room;
+        Countdown  _bossDelay;
+        PROPERTY( RuntimeState )
+        float2    _playerPosition;
+        FacingDir _facing; ///< 리플렉션 열거가 아니다 — 손 본문이 싣는다
+        PROPERTY( RuntimeState )
+        int32 _playerHP;
+        PROPERTY( RuntimeState )
         ActionCombatDemoPhase _phase;
     };
 } // namespace sw

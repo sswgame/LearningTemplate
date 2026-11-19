@@ -94,8 +94,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.CardGameDone", "[KitDemo] card game: battle phase %# on turn %#, player HP %#", _phase, _turn, _playerHP );
     }
 
-    void CardGameDemoComponent::serializeState( StateIO& io )
+    void CardGameDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, CardGameDemoComponentInternal::kStateTag, CardGameDemoComponentInternal::kStateVersion, { &_phase, &_turn, &_playerHP } );
+        serializeResults( io, CardGameDemoComponentInternal::kStateTag, CardGameDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

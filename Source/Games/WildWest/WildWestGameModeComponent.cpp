@@ -82,7 +82,7 @@ namespace sw
 
     WildWestGameModeComponent::~WildWestGameModeComponent() = default;
 
-    void WildWestGameModeComponent::serializeState( StateIO& io )
+    void WildWestGameModeComponent::serializeGameState( StateIO& io )
     {
         // 플레이어의 삶만 싣는다 — 지갑 · 평판 · 시계 · 날씨는 판 상태가, 말 상태는 말 컴포넌트가, 자리는 씬 오브젝트가 싣는다.
         io.header( kStateTag, kStateVersion );

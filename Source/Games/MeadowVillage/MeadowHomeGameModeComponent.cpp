@@ -26,15 +26,10 @@ namespace sw
 
     MeadowHomeGameModeComponent::~MeadowHomeGameModeComponent() = default;
 
-    void MeadowHomeGameModeComponent::serializeState( StateIO& io )
+    void MeadowHomeGameModeComponent::serializeGameState( StateIO& io )
     {
         io.header( kStateTag, kStateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 nextStep = _nextStep;
-        io.value( nextStep );
-        if ( io.isReading() && io.check( nextStep >= 0 && nextStep <= static_cast<int32>( _listStep.size() ) ) )
-            _nextStep = nextStep;
+        io.check( _nextStep <= static_cast<int32>( _listStep.size() ) ); // 다음 단계는 상태 칸이다(이미 읽혔다) — 단계표와의 검사만 손으로, 거절하면 기반이 되돌린다
     }
 
     HousingPlotComponent* MeadowHomeGameModeComponent::findPlot() const

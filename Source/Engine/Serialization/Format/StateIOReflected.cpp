@@ -237,6 +237,14 @@ namespace sw
             check( SerializerUtil::isWithinDeclaredRanges( type, ObjectAddress{ pObject } ) );
     }
 
+    void StateIO::reflectedDerived( const TypeInfo& dynamicType, const hashed_string& staticFqn, void* pObject )
+    {
+        if ( dynamicType.isDerivedFrom( staticFqn ) == false )
+            SW_FATAL( "StateIO::reflectedAs: '%#' is not '%#' or derived from it - the fields would be read at another type's offsets", dynamicType._fullyQualifiedName.c_str(),
+                      staticFqn.c_str() );
+        reflectedObject( dynamicType, pObject );
+    }
+
     void StateIO::reflectedProperties( const TypeInfo& type, void* pObject, const bool bStateRoleOnly, const uint32 depth )
     {
         using Internal               = StateIOReflectedInternal;

@@ -52,7 +52,7 @@ namespace sw
         FarmVillageGameModeComponent();
         virtual ~FarmVillageGameModeComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         /** @brief 마을 사람 @p npcIndex 의 일정상 위치(지면)입니다. 뷰가 PostUpdate 에서 읽습니다. 범위 밖이면 원점입니다. */
         float3 getVillagerPosition( int32 npcIndex ) const;

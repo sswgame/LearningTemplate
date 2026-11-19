@@ -83,8 +83,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.SideScrollConquestDone", "[KitDemo] side scroll conquest: victory %#, %# sites held, squad of %#", _victory, _territory, _squadSize );
     }
 
-    void SideScrollConquestDemoComponent::serializeState( StateIO& io )
+    void SideScrollConquestDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, SideScrollConquestDemoComponentInternal::kStateTag, SideScrollConquestDemoComponentInternal::kStateVersion, { &_victory, &_territory, &_squadSize } );
+        serializeResults( io, SideScrollConquestDemoComponentInternal::kStateTag, SideScrollConquestDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

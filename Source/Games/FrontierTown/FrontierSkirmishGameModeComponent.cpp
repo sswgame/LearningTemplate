@@ -46,18 +46,15 @@ namespace sw
 
     FrontierSkirmishGameModeComponent::~FrontierSkirmishGameModeComponent() = default;
 
-    void FrontierSkirmishGameModeComponent::serializeState( StateIO& io )
+    void FrontierSkirmishGameModeComponent::serializeGameState( StateIO& io )
     {
         SessionStateComponent* pState = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
         if ( io.check( pState != nullptr ) == false )
             return;
         io.header( kStateTag, kStateVersion );
-        int32  tickCount    = _tickCount;
-        uint8  bPatrolToB   = _bPatrolToB;
+        // 틱 수 · 순찰 방향은 상태 칸이다(`GameModeComponent::serializeState`). 유닛 id 는 묶은 값으로 손 본문이 싣는다.
         uint64 workerValue  = _worker.packed();
         uint64 soldierValue = _soldier.packed();
-        io.value( tickCount );
-        io.value( bPatrolToB );
         io.value( workerValue );
         io.value( soldierValue );
         if ( io.isOk() == false )
@@ -69,8 +66,6 @@ namespace sw
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _tickCount   = tickCount;
-        _bPatrolToB  = bPatrolToB == SW_FALSE ? SW_FALSE : SW_TRUE;
         _worker      = RTSUnitID::fromPacked( workerValue );
         _soldier     = RTSUnitID::fromPacked( soldierValue );
         _bViewsDirty = SW_TRUE;

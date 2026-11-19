@@ -39,7 +39,7 @@ namespace sw
         ActionPlatformerDemoComponent();
         virtual ~ActionPlatformerDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32   getRunState() const { return static_cast<int32>( _run.getState() ); }
@@ -92,6 +92,7 @@ namespace sw
         ActionTerrainGrid                       _terrain;
         ActionPlatformerBody                    _body;
         ActionStageRun                          _run;
-        uint8                                   _bJumpHeldLastFrame : 1;
+        PROPERTY( RuntimeState )
+        uint8 _bJumpHeldLastFrame : 1;
     };
 } // namespace sw

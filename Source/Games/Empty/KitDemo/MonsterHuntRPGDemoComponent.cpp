@@ -98,8 +98,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.MonsterHuntRPGDone", "[KitDemo] monster hunt: solved %#, reward %#, knowledge %#", _solved, _reward, _knowledge );
     }
 
-    void MonsterHuntRPGDemoComponent::serializeState( StateIO& io )
+    void MonsterHuntRPGDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, MonsterHuntRPGDemoComponentInternal::kStateTag, MonsterHuntRPGDemoComponentInternal::kStateVersion, { &_solved, &_reward, &_knowledge } );
+        serializeResults( io, MonsterHuntRPGDemoComponentInternal::kStateTag, MonsterHuntRPGDemoComponentInternal::kStateVersion );
     }
 } // namespace sw
