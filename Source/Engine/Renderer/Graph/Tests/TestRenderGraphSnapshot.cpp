@@ -43,15 +43,17 @@ SW_TEST_CASE( RenderGraphSnapshotTest, ImportedFirstAccessIsNotATransition )
 {
     RenderGraph         graph;
     const hashed_string tiles( "Tiles" );
-    graph.importResource( tiles, RenderGraphViewableKind::Buffer, RenderGraphAccess::ShaderRead );
-    graph.addPass( hashed_string( "Cull" ), { RenderGraphBufferSRV{ tiles } } );
+    // 들인 자원도 앞서 쓰는 패스 없는 읽기는 이번 프레임의 첫 쓰기를 읽는다(지난 값을 읽는 것은 Persistent 뿐 — collectDependencyEdges) — 그래서 Build 가 먼저 돈다.
+    graph.importResource( tiles, RenderGraphViewableKind::Buffer, RenderGraphAccess::UnorderedAccess );
     graph.addPass( hashed_string( "Build" ), { RenderGraphBufferUAV{ tiles } } );
+    graph.addPass( hashed_string( "Cull" ), { RenderGraphBufferSRV{ tiles } } );
     SW_REQUIRE_TRUE( graph.compile() );
 
     const RenderGraphSnapshot snapshot = RenderGraphSnapshot::build( graph, "frame" );
     SW_REQUIRE_EQUAL( size_t( 2 ), snapshot._listPass.size() );
-    SW_EXPECT_EQUAL( 0u, snapshot._listPass[0]._transitionCount ); // 들인 처음 접근과 같다
-    SW_EXPECT_EQUAL( 1u, snapshot._listPass[1]._transitionCount ); // SRV → UAV
+    SW_EXPECT_EQUAL( string( "Build" ), snapshot._listPass[0]._name );
+    SW_EXPECT_EQUAL( 0u, snapshot._listPass[0]._transitionCount ); // 들인 처음 접근(UAV)과 같다
+    SW_EXPECT_EQUAL( 1u, snapshot._listPass[1]._transitionCount ); // UAV → SRV
     const optional<uint32> tilesIndex = snapshot.findResource( "Tiles" );
     SW_REQUIRE_TRUE( tilesIndex.has_value() );
     SW_EXPECT_TRUE( snapshot._listResource[*tilesIndex]._bImported != SW_FALSE );

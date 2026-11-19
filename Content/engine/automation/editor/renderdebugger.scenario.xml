@@ -62,6 +62,8 @@
 	<EditorClick mark="renderDebugger.tab.occlusion"/>
 	<WaitUntil watch="Editor.RenderDebuggerTab" equals="3" timeoutFrames="60"/>
 	<EditorWaitStable/>
+	<!-- 떠 있는 렌더 디버거 창이 씬 뷰 툴바의 보기 모드 콤보 목록을 덮는다 — 닫고 고른 뒤 다시 열어 탭이 남는지 본다 -->
+	<DevCommand line="panel.close render_debugger"/>
 	<DevCommand line="panel.focus scene_view"/>
 	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode"/>
