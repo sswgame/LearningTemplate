@@ -69,9 +69,8 @@ namespace sw
 
     void RTSCommanderAI::serializeState( StateIO& io )
     {
-        io.value( _thinkTimer ); // 무한대 타이머는 AI 를 영영 세우는데, 아카이브의 실수 읽기가 유한만 받는다
-        io.value( _attackWaveCount );
-        io.check( 0 <= _attackWaveCount );
+        io.reflected( *this );   // 공격 횟수의 범위는 `PROPERTY( Min )` 이 지킨다
+        io.value( _thinkTimer ); // 리플렉션 밖 값 — 무한대 타이머는 AI 를 영영 세우는데, 아카이브의 실수 읽기가 유한만 받는다
     }
 
     RTSUnitID RTSCommanderAI::findDepot() const

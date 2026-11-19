@@ -126,8 +126,9 @@ namespace
         static bool readFixture( RTSCommanderAI& inoutAI, float32 thinkTimer, int32 attackWaveCount )
         {
             Archive written;
-            written << thinkTimer;
+            StateIO::writeReflectedHeader<RTSCommanderAI>( written ); // 리플렉션 상태 칸(공격 횟수) 뒤에 손 본문(생각 타이머)이다
             written << attackWaveCount;
+            written << thinkTimer;
             Archive reading( written.getData(), written.getSize() );
             return inoutAI.readState( reading );
         }
@@ -500,7 +501,8 @@ SW_TEST_CASE( RTSCommanderAITest, ReadStateRefusesCorruptBytes )
     SW_EXPECT_FALSE( RTSCommanderAITestUtil::readFixture( rig._ai, std::numeric_limits<float32>::quiet_NaN(), 5 ) );
 
     Archive written;
-    written << 0.5f; // 횟수가 없다
+    StateIO::writeReflectedHeader<RTSCommanderAI>( written );
+    written << static_cast<int32>( 1 ); // 타이머가 없다(잘린 데이터)
     Archive reading( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( rig._ai.readState( reading ) );
 

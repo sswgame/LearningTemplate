@@ -8,6 +8,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -53,9 +54,12 @@ namespace sw
      * @endcode
      * @details 월드의 알림을 `notify` 로 넘겨야 "공격받고 있다" 를 알 수 있다. 월드와 설정은 AI 보다 오래 살아야 한다.
      */
+    REFLECT()
     class SW_KIT_API RTSCommanderAI
     {
     public:
+        REFLECT_BODY();
+
         RTSCommanderAI();
 
         /**
@@ -104,6 +108,7 @@ namespace sw
         RTSWorld*              _pWorld;
         Countdown              _thinkTimer;
         int32                  _player;
-        int32                  _attackWaveCount;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _attackWaveCount;
     };
 } // namespace sw
