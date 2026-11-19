@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
@@ -95,7 +96,8 @@ namespace sw
         /** @brief 쓰기 1 단계: 저장소를 비우고, 올린 타입의 상태를 모두 실은 뒤 세운 것을 모두 걷습니다. 부르는 쪽은 그 뒤 쓰기 훅을 부르고 `writeEnvelope` 로 잇는다. */
         void beginCapture();
         /**
-         * @brief 쓰기 2 단계: 봉투(머리 · 씬 오브젝트 · @p pStateInstance 의 리플렉션 상태 · 컴포넌트 상태)를 한 번 직렬화해 @p outBytes 에 담고 저장소를 비웁니다.
+         * @brief 쓰기 2 단계: 봉투(머리 · 씬 오브젝트 · @p pStateInstance 의 리플렉션 상태 · 컴포넌트 상태 · 씬 몫)를 한 번 직렬화해 @p outBytes 에 담고 저장소를 비웁니다.
+         * @details 씬 몫은 늘 올라 있는 오브젝트의 파일 id 와 스트리밍 셀 상태다 — 셀에 든 오브젝트는 씬 섹션에서 빼고 셀 상태로 싣는다(`SceneStreamingSubsystem::writeSaveState`).
          * @details 씬이 없는 것은 실패가 아니다(빈 섹션). 리플렉션 상태를 싣지 못하면 저장소를 비우고 false 입니다(이유는 직렬화기가 알린다).
          *          @p pStateType 이나 @p pStateInstance 가 없으면 리플렉션 섹션은 비었다.
          */
@@ -162,18 +164,20 @@ namespace sw
         }
 
         /**
-         * @brief 씬 안의 모든 유효 GameObject 를 바이너리로 직렬화합니다.
+         * @brief 씬 안의 모든 유효 GameObject 를 바이너리로 직렬화합니다. 스트리밍 셀에 든 오브젝트는 뺍니다(셀 상태로 싣는다 — `SceneStreamingSubsystem::isCellObject`).
          * @details 오브젝트마다 상태 앞에 런타임 id(`ObjectIdentity`)를 싣습니다. 같은 프로세스에서 복원하면(핫 리로드)
          *          `GameObjectHandle` · `ComponentHandle` 이 그 너머로도 이어집니다.
+         * @param outListObjectID 실은 오브젝트의 id 를 실은 차례로 채웁니다(씬 몫의 파일 id 표가 쓴다).
          */
-        [[nodiscard]] static bool serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes );
+        [[nodiscard]] static bool serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes, vector<uint64>& outListObjectID );
         /**
          * @brief 바이너리 데이터로부터 씬 GameObject 들을 @p manager 에 만듭니다. @p format 은 id 가 실렸는지, 복원할지를 알려 줍니다.
          * @details @p manager 를 비우지 않는다 — 검증은 분리된 매니저에, 교체는 부르는 쪽이 비운 활성 매니저에 푼다. 하나라도 못 읽으면 false 다.
          * @param outListRemap id 를 복원하지 않을 때(`WithIdentity`) 저장된 컴포넌트 id → 다시 만든 컴포넌트 id 표를 채웁니다(`ComponentStateStore::remapComponentIDs`).
+         * @param outMapObjectID 저장된 오브젝트 id → 다시 만든 오브젝트 id 표를 채웁니다(복원하면 같은 값 — 씬 몫의 파일 id 를 다시 붙인다).
          */
         [[nodiscard]] static bool deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format, GameObjectManager& manager,
-                                                           vector<ComponentStateStore::SavedComponentID>& outListRemap );
+                                                           vector<ComponentStateStore::SavedComponentID>& outListRemap, unordered_map<uint64, uint64>& outMapObjectID );
         /** @brief 올린 타입마다 실어 둔 상태를 돌려줍니다(읽기 훅 앞). */
         void restoreStatefulComponents();
 
