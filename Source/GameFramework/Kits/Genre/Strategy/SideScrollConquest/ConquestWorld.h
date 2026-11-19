@@ -152,9 +152,12 @@ namespace sw
      *          사기: 지휘관이 살아 있고 `_moraleRadius` 안이면 플레이어 병사의 피해가 늘어난다.
      *          성벽이 서 있는 거점의 점령 구역 안 수비대는 `_wallProtection` 만큼 피해를 덜 받는다. 충차는 성문(부서지면 성벽)만 공격하고, 사다리는 싸우지 않는다.
      */
+    REFLECT()
     class SW_KIT_API ConquestWorld
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CNQW" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -257,11 +260,17 @@ namespace sw
         ConquestCommander          _commander;
         FixedStepTimer             _timer;
         const ConquestCatalog*     _pCatalog;
-        float32                    _elapsed;
-        float32                    _incomeTimer;
-        float32                    _waveTimer;
-        int32                      _nextUnitID;
-        uint8                      _bVictory;
-        uint8                      _bDefeat;
+        PROPERTY( RuntimeState )
+        float32 _elapsed;
+        PROPERTY( RuntimeState )
+        float32 _incomeTimer;
+        PROPERTY( RuntimeState )
+        float32 _waveTimer;
+        PROPERTY( RuntimeState )
+        int32 _nextUnitID;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bVictory;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bDefeat;
     };
 } // namespace sw
