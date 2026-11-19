@@ -469,7 +469,7 @@ namespace sw
             if ( _pCatalog->isContextPreset( candidate ) )
                 continue;
             _selectedPreset = candidate;
-            _contextPreset.clear(); // 상황이 같아도 새 선택으로 다시 푼다
+            _contextPreset  = hashed_string{}; // 상황이 같아도 새 선택으로 다시 푼다
             refreshContextPreset();
             return candidate;
         }

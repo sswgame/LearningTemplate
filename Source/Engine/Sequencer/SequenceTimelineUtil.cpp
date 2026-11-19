@@ -192,6 +192,7 @@ namespace sw
     SequenceSpanState::SequenceSpanState( uint32 itemIndex )
         : _clip{}
         , _playingID{ 0 }
+        , _subtitleLineID{ 0 }
         , _itemIndex{ itemIndex }
         , _bInside{ SW_FALSE }
         , _reserved{ 0 }

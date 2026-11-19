@@ -114,14 +114,23 @@ namespace sw
                 const string& key   = context._pItem->_text;
                 const utf8*   pText = LocalizedText::find( key, key.c_str() );
                 // 화자는 바인딩의 표시 이름(현지화 키 또는 글)이다 — 씬 오브젝트 이름은 찾기 · 표시에 쓰지 않는다. 바인딩이 없으면 화자 없는 줄이다.
-                const SequenceBinding* pBinding = context._pAsset != nullptr ? context._pAsset->findBinding( context._pItem->_binding ) : nullptr;
-                const utf8*            pSpeaker = pBinding != nullptr ? LocalizedText::find( pBinding->_name, pBinding->_name.c_str() ) : "";
-                pSubtitles->postSubtitle( pSpeaker, pText, computeSpanSeconds( context ) );
+                const SequenceBinding* pBinding  = context._pAsset != nullptr ? context._pAsset->findBinding( context._pItem->_binding ) : nullptr;
+                const utf8*            pSpeaker  = pBinding != nullptr ? LocalizedText::find( pBinding->_name, pBinding->_name.c_str() ) : "";
+                context._pState->_subtitleLineID = pSubtitles->postSubtitle( pSpeaker, pText, computeSpanSeconds( context ) );
+            }
+
+            static void leaveSubtitle( const SequenceSpanContext& context )
+            {
+                // 구간 끝까지 보였으면 읽기 시간으로 이미 내려갔을 수 있다 — 없는 줄 번호는 받는 쪽이 무시한다. 멈춤 · 되감기 · 건너뛰기에서 줄이 남지 않게 한다.
+                ISubtitleSink* pSubtitles = engine::findSubsystem<ISubtitleSink>();
+                if ( pSubtitles != nullptr && context._pState->_subtitleLineID != 0 )
+                    pSubtitles->removeSubtitle( context._pState->_subtitleLineID );
+                context._pState->_subtitleLineID = 0;
             }
         };
     } // namespace
 
     const SequenceSpanHandler kSequenceAnimationSpanHandler{ &SequenceSpanTracksInternal::enterAnimation, &SequenceSpanTracksInternal::updateAnimation, &SequenceSpanTracksInternal::leaveAnimation };
     const SequenceSpanHandler kSequenceAudioSpanHandler{ &SequenceSpanTracksInternal::enterAudio, nullptr, &SequenceSpanTracksInternal::leaveAudio };
-    const SequenceSpanHandler kSequenceSubtitleSpanHandler{ &SequenceSpanTracksInternal::enterSubtitle, nullptr, nullptr };
+    const SequenceSpanHandler kSequenceSubtitleSpanHandler{ &SequenceSpanTracksInternal::enterSubtitle, nullptr, &SequenceSpanTracksInternal::leaveSubtitle };
 } // namespace sw
