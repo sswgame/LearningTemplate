@@ -151,7 +151,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
     // 히스토리는 지난 프레임의 사각형 배율로 읽는다(sampleAlbedoPrevious). 자른 뒤 RGB 로 되돌려 섞는다. 속도는 출력 픽셀로 잰다.
     const float3 historyYCoCg   = TemporalAA::clipToBox( TemporalAA::toYCoCg( TemporalAA::sampleHistoryCatmullRom( prevUv ) ), boxMin, boxMax );
     const float3 history        = TemporalAA::toRgb( historyYCoCg );
-    const float  velocityPixels = length( ( input._uv - prevUv ) * g_OutputRectSize.xy );
+    const float  velocityPixels = length( ( input._uv - prevUv ) * PassTexture::getPassRectSize().xy );
     // YCoCg 의 Y 가 휘도다. 업스케일이면 이번 표본이 출력 픽셀에서 먼 만큼 기록을 더 믿는다.
     const float blend  = TemporalMath::computeHistoryWeight( currentYCoCg.x, historyYCoCg.x, velocityPixels, kMinHistoryWeight, kMaxHistoryWeight, kVelocityRejectPixels );
     const float scaled = bUpscale ? TemporalMath::computeUpscaledHistoryWeight( blend, coverage ) : blend;

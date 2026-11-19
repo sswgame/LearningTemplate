@@ -369,10 +369,11 @@
 // 9) 패스 플래그 — PassCB 의 `g_Flags` 비트. 뷰마다 다른 값이라(다중 뷰: CCTV 는 후처리를 끈다) 셰이더 퍼뮤테이션이 아니라 상수로 싣는다.
 //    C++(FrameRenderer::updatePassConstants)와 셰이더가 같은 비트를 본다.
 // ------------------------------------------------------------------------------
-#define SW_PASS_FLAG_NATIVE_BINDLESS 1 // 네이티브 bindless(DX12 · Vulkan) — 텍스처 배열을 인덱스로 읽는다
-#define SW_PASS_FLAG_SKIP_POST       2 // 이 뷰는 후처리를 끈다 — post_chain 이 블룸 · 외곽선 · 톤맵을 건너뛰고 원본을 낸다
-#define SW_PASS_FLAG_SKIP_TONEMAP    4 // 이 뷰는 표면 값을 보인다(보기 모드 Normals · Depth · Overdraw) — 톤맵 패스가 색을 바꾸지 않는다
-#define SW_PASS_FLAG_POINT_UPSCALE   8 // 이 뷰는 정수 업스케일(픽셀 퍼펙트)이다 — Present 블릿이 원본을 점 샘플로 읽어 픽셀을 섞지 않는다
+#define SW_PASS_FLAG_NATIVE_BINDLESS 1  // 네이티브 bindless(DX12 · Vulkan) — 텍스처 배열을 인덱스로 읽는다
+#define SW_PASS_FLAG_SKIP_POST       2  // 이 뷰는 후처리를 끈다 — post_chain 이 블룸 · 외곽선 · 톤맵을 건너뛰고 원본을 낸다
+#define SW_PASS_FLAG_SKIP_TONEMAP    4  // 이 뷰는 표면 값을 보인다(보기 모드 Normals · Depth · Overdraw) — 톤맵 패스가 색을 바꾸지 않는다
+#define SW_PASS_FLAG_POINT_UPSCALE   8  // 이 뷰는 정수 업스케일(픽셀 퍼펙트)이다 — Present 블릿이 원본을 점 샘플로 읽어 픽셀을 섞지 않는다
+#define SW_PASS_FLAG_OUTPUT_SPACE    16 // 이 패스는 출력 해상도 공간(시간 업스케일 뒤)에 그린다 — PassTexture::getPassRectSize 가 출력 공간 크기를 고른다(패스마다 C++ 가 타깃의 공간으로 정한다)
 
 // ------------------------------------------------------------------------------
 // 10) 버퍼 배치 · 식 상수 — 슬롯 번호는 아니지만 C++ 와 셰이더가 같아야 하는 수. 정본은 여기 하나다(이 파일이 양쪽에서 include 된다).

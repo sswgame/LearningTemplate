@@ -32,6 +32,15 @@ static uint2 PassTexture::getViewRectSize()
 {
     return uint2( g_ViewRectSize.xy );
 }
+/**
+ * @brief 이 패스가 그리는 해상도 공간의 크기(xy 사각형 픽셀, zw 1 / 풀 픽셀)입니다 — 렌더 공간이면 g_ViewRectSize, 출력 공간(시간 업스케일 뒤)이면 g_OutputRectSize.
+ * @details 공간은 패스 플래그(SW_PASS_FLAG_OUTPUT_SPACE)가 정하고 C++ 가 타깃 첨부의 선언으로 패스마다 켠다 — 셰이더가 공간을 고르지 않아 렌더 · 출력 픽셀을 섞을 수 없다.
+ *          UV → 픽셀 거리(모션 블러 속도 · TAA 속도)는 이 값으로 잰다. 장면 텍스처를 텍셀 번호로 읽는 쪽(깊이 · 속도)은 getViewRectSize(렌더 공간)를 쓴다.
+ */
+static float4 PassTexture::getPassRectSize()
+{
+    return ( ( g_Flags & SW_PASS_FLAG_OUTPUT_SPACE ) != 0u ) ? g_OutputRectSize : g_ViewRectSize;
+}
 
 // ------------------------------------------------------------------------------
 // 10) 샘플러 세트 — 네이티브 bindless 백엔드(DX12 · Vulkan)만 여기서 선언한다. 에뮬 백엔드(DX11 · OpenGL)는 칸 결합 샘플러(GL g_SwEngineTex#Sampler) · DX11 정적 세트라

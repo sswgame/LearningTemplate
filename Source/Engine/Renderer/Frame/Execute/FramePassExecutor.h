@@ -343,6 +343,8 @@ namespace sw
         void beginDepthOnlyPass( FramePassContext& context, const hashed_string& depthName, RHIRenderPassLoadOp depthLoad );
         /** @brief 막 연 렌더 패스의 뷰포트 · 가위를 지금 뷰의 사각형으로 줄입니다. 뷰 크기 첨부가 아니거나 사각형이 풀 전체면 그대로 둡니다. */
         void applyViewRectViewport( FramePassContext& context, uint32 targetWidth, uint32 targetHeight, bool bViewSized, RenderResolutionSpace space ) const;
+        /** @brief 이 패스가 그리는 해상도 공간을 패스 플래그(`shaderslot::kPassFlagOutputSpace`)에 싣습니다 — 셰이더의 `PassTexture::getPassRectSize` 가 그 공간 크기를 고른다. */
+        void applyPassResolutionSpace( FramePassContext& context, RenderResolutionSpace space ) const;
         /** @brief 파이프라인에서 종류 @p type 인 첫 패스가 그리는 해상도 공간(첫 컬러 출력의 선언)입니다. 그 패스가 없으면 렌더 공간입니다. */
         RenderResolutionSpace findPassResolutionSpace( RenderPassKind type ) const;
         /**

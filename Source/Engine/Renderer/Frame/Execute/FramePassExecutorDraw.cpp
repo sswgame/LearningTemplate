@@ -15,6 +15,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/formatString.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -125,6 +126,7 @@ namespace sw
         }
         context._pCmd->beginRenderPass( beginInfo );
         applyViewRectViewport( context, beginInfo._width, beginInfo._height, bViewSized, targetSpace );
+        applyPassResolutionSpace( context, targetSpace );
         return true;
     }
 
@@ -141,6 +143,18 @@ namespace sw
         viewport._height = static_cast<float32>( height );
         context._pCmd->setViewport( viewport );
         context._pCmd->setScissorRect( RHIScissorRect{ 0, 0, width, height } );
+    }
+
+    void FramePassExecutor::applyPassResolutionSpace( FramePassContext& context, RenderResolutionSpace space ) const
+    {
+        // 패스 플래그는 뷰가 씨앗으로 채웠다(applyViewPassConstants) — 이 패스의 해상도 공간 비트만 바꾼다. 셰이더의 픽셀 거리(PassTexture::getPassRectSize)가 이 비트로 공간을 고른다.
+        uint32       flags     = 0u;
+        uint32       valueSize = 0u;
+        const uint8* pFlags    = context._passValues.find( passConstantNames()._flags, valueSize );
+        if ( pFlags != nullptr && valueSize >= sizeof( flags ) )
+            Memory::copy( &flags, pFlags, sizeof( flags ) );
+        flags = space == RenderResolutionSpace::Output ? ( flags | shaderslot::kPassFlagOutputSpace ) : ( flags & ~shaderslot::kPassFlagOutputSpace );
+        context._passValues.setUint( passConstantNames()._flags, flags );
     }
 
     void FramePassExecutor::beginDepthOnlyPass( FramePassContext& context, const hashed_string& depthName, RHIRenderPassLoadOp depthLoad )
@@ -160,6 +174,7 @@ namespace sw
         beginInfo._height                               = depth._texture != 0 ? depth._height : activePool().getHeight();
         context._pCmd->beginRenderPass( beginInfo );
         applyViewRectViewport( context, beginInfo._width, beginInfo._height, depth._texture == 0 || depth._bViewSized != 0, depth._space );
+        applyPassResolutionSpace( context, depth._space );
     }
 
     uint32 FramePassExecutor::computeShadowTileCountPerView() const
