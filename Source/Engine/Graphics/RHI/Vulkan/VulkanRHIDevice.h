@@ -702,7 +702,7 @@ namespace sw
          * @brief 링 상수 버퍼의 `slot` 슬롯에 씁니다. 칸 크기는 레코드(`VulkanBufferRecord::_cbSlotSize`)에서 읽는다 — 링 상수 버퍼가 아니면 아무것도 하지 않는다.
          * @details 만들 때 크기를 넘는 쓰기는 자른다. 자르지 않으면 다음 슬롯(다음 프레임의 값)까지 덮어쓴다.
          */
-        void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size );
+        void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size );
         /** @brief 링이 넘어온 슬롯에 옛 값이 남은 상수 버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferMirror`). 슬롯의 펜스를 지난 뒤 부릅니다. */
         void fillConstantBufferSlot();
         /** @brief 불투명 텍스처 핸들로 VulkanTextureRecord 를 찾습니다. */
@@ -748,10 +748,12 @@ namespace sw
         VulkanDescriptorPoolSet& currentFrameDescriptorPoolSet() { return _arrFrameDescriptorPoolSet[getFrameSlot() % constant::render::kMaxFrameCountInFlight]; }
         /** @brief SRV/CB 번호의 원본 버퍼입니다(없으면 0). 락 없이 고정 읽기 표를 본다(`_arrBufferReadSlot`). */
         RHIBufferHandle bindlessSourceBufferAt( RHIDescriptorIndex index ) const;
+        /** @brief SRV/CB 번호의 원본 버퍼와 구간입니다(구간 등록이 아니면 오프셋 · 크기 0 — 버퍼 전체). 락 없이 고정 읽기 표를 본다(`_arrBufferReadSlice`). */
+        RHIBufferSlice bindlessSourceSliceAt( RHIDescriptorIndex index ) const;
         /** @brief UAV 번호의 원본 버퍼입니다(없거나 RW 텍스처면 0). 락 없이 고정 읽기 표를 본다(`_arrUAVBufferReadSlot`). */
         RHIBufferHandle uavSourceBufferAt( RHIDescriptorIndex index ) const;
         /** @brief 번호 @p index 의 읽기 표 칸에 @p buffer 를 공개합니다(0 이면 비운다). `_bindlessMutex` 를 배타로 쥔 등록 · 해제가 부른다. */
-        void publishBufferReadSlot( RHIDescriptorIndex index, bool bUAV, RHIBufferHandle buffer );
+        void publishBufferReadSlot( RHIDescriptorIndex index, bool bUAV, RHIBufferHandle buffer, uint32 sliceOffset = 0, uint32 sliceSize = 0 );
         /** @brief 지금 열려 있는 프레임 세그먼트 버퍼입니다. 프레임 밖이면 VK_NULL_HANDLE 입니다. */
         VkCommandBuffer currentCommandBuffer() const;
         /** @brief 리스트 전용 (풀, 버퍼) 쌍을 빌립니다. 풀이 비어 있으면 새로 만듭니다. */
@@ -1119,6 +1121,7 @@ namespace sw
          */
         FixedCountArray<atomic<uint64>, kBindlessBufferCapacity> _arrBufferReadSlot;
         FixedCountArray<atomic<uint64>, kBindlessBufferCapacity> _arrUAVBufferReadSlot;
+        FixedCountArray<atomic<uint64>, kBindlessBufferCapacity> _arrBufferReadSlice; ///< SRV/CB 번호의 페이지 구간(오프셋 << 32 | 크기, 0 이면 버퍼 전체 — 감사 R-4). 버퍼 칸보다 먼저 쓴다
 
         RHIHandleTable<VulkanTextureRecord> _gpuTextures;
         /// @brief 트랜지언트 힙 핸들 표입니다. 생성 · 파괴는 셋업 스레드다(DX12 와 같다). 종료가 텍스처 표보다 먼저 비워 마지막 참조가 장치가 살아 있을 때 놓이게 한다.

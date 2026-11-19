@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -23,6 +24,7 @@ namespace sw
      *          문제가 없습니다). 언리얼의 멀티 프레임 유니폼 버퍼는 갱신마다 새 슬롯을 받아 "읽는 쪽은 늘 마지막 값"을 보장하는데,
      *          여기서는 같은 보장을 다른 방식으로 줍니다. 마지막 값을 보관하고 있다가 링이 그 슬롯으로 돌아왔을 때(그 슬롯의 GPU 사용이 끝난 뒤) 복사해 채웁니다.
      *          모든 슬롯이 채워진 버퍼는 목록에서 빠지므로 프레임당 비용은 최근에 바뀐 버퍼 수에 비례합니다.
+     *          열쇠는 (버퍼, 오프셋)이다 — 상수 버퍼 페이지(`createConstantBufferPage`)는 구간마다 따로 쓰고 채운다(감사 R-4). 버퍼 하나를 통째로 쓰면 오프셋 0 이다.
      *
      *          스레드 안전합니다. 쓰기(게임 스레드, 렌더 스레드)와 채우기(렌더 스레드의 프레임 시작)가 같은 락을 지나고, 슬롯에 쓰는 콜백도 그 락
      *          안에서 불립니다. 그래서 같은 버퍼의 두 쓰기가 겹치지 않습니다(Vulkan 은 같은 메모리를 두 스레드가 동시에 매핑할 수 없습니다).
@@ -31,11 +33,11 @@ namespace sw
     {
     public:
         /**
-         * @brief `slot` 슬롯에 값을 쓰고, 그 값을 기억해 나머지 슬롯을 채울 차례로 표시합니다.
-         * @param writeSlot `void( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )` 형태이며 슬롯 하나에 씁니다. 락 안에서 불립니다.
+         * @brief `slot` 슬롯의 @p offset 에 값을 쓰고, 그 값을 기억해 나머지 슬롯을 채울 차례로 표시합니다.
+         * @param writeSlot `void( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )` 형태이며 슬롯 하나에 씁니다. 락 안에서 불립니다.
          */
         template <typename WriteSlotFunction>
-        void write( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size, WriteSlotFunction&& writeSlot )
+        void write( RHIBufferHandle buffer, uint32 offset, uint32 slot, const void* pData, uint32 size, WriteSlotFunction&& writeSlot )
         {
             UniqueLock<mutex> lock{ _mutex, std::defer_lock };
             {
@@ -43,8 +45,8 @@ namespace sw
                 SW_PROFILE_SCOPE( "RT.Bind.mirrorLockWait" );
                 lock.lock();
             }
-            writeSlot( buffer, slot, pData, size );
-            rememberWrite( buffer, slot, pData, size );
+            writeSlot( buffer, slot, offset, pData, size );
+            rememberWrite( Key{ buffer, offset }, slot, pData, size );
         }
 
         /**
@@ -59,30 +61,40 @@ namespace sw
                 return;
             const uint32 slotBit = getSlotBitOf( slot );
             _listFilledScratch.clear();
-            for ( auto& [buffer, pending] : _mapPendingWrite )
+            for ( auto& [key, pending] : _mapPendingWrite )
             {
                 if ( ( pending._staleSlotMask & slotBit ) == 0 )
                     continue;
-                writeSlot( buffer, slot, pending._bytes.data(), static_cast<uint32>( pending._bytes.size() ) );
+                writeSlot( key._buffer, slot, key._offset, pending._bytes.data(), static_cast<uint32>( pending._bytes.size() ) );
                 pending._staleSlotMask &= ~slotBit;
                 if ( pending._staleSlotMask == 0 )
-                    _listFilledScratch.push_back( buffer );
+                    _listFilledScratch.push_back( key );
             }
             // 지우기는 순회가 끝난 뒤에 한다. 이 맵의 erase 는 마지막 원소를 빈 위치로 옮기므로 순회 도중에 지우면 원소를 건너뛴다.
-            for ( const RHIBufferHandle buffer : _listFilledScratch )
+            for ( const Key& key : _listFilledScratch )
             {
-                _mapPendingWrite.erase( buffer );
+                _mapPendingWrite.erase( key );
             }
         }
 
-        /** @brief 버퍼를 잊습니다(`destroyBuffer`). */
+        /** @brief 버퍼를 잊습니다(`destroyBuffer` — 페이지면 모든 구간). */
         void remove( RHIBufferHandle buffer );
         /** @brief 모두 잊습니다(장치 종료). */
         void clear();
-        /** @brief 아직 채울 슬롯이 남은 버퍼 수를 반환합니다. */
+        /** @brief 아직 채울 슬롯이 남은 (버퍼, 오프셋) 수를 반환합니다. */
         uint32 getPendingBufferCount() const;
 
     private:
+        /** @brief 쓰는 자리입니다 — 버퍼와 그 안의 오프셋(페이지 구간). */
+        struct Key
+        {
+            RHIBufferHandle _buffer{ 0 };
+            uint32          _offset{ 0 };
+
+            bool   operator==( const Key& other ) const { return _buffer == other._buffer && _offset == other._offset; }
+            uint64 computeHash() const { return HashUtil::combine( _buffer, _offset ); }
+        };
+
         /**
          * @struct PendingWrite
          * @brief 마지막으로 쓴 값과, 아직 그 값을 받지 못한 슬롯들입니다.
@@ -96,11 +108,11 @@ namespace sw
         /** @brief 슬롯 번호의 비트를 반환합니다. */
         static uint32 getSlotBitOf( uint32 slot ) { return 1u << ( slot % constant::render::kMaxFrameCountInFlight ); }
         /** @brief 쓴 값을 기억하고 나머지 슬롯을 옛 값으로 표시합니다. 락 안에서 부릅니다. */
-        void rememberWrite( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size ) SW_REQUIRES_LOCK( _mutex );
+        void rememberWrite( const Key& key, uint32 slot, const void* pData, uint32 size ) SW_REQUIRES_LOCK( _mutex );
 
     private:
-        unordered_map<RHIBufferHandle, PendingWrite> _mapPendingWrite SW_GUARDED_BY( _mutex );
-        vector<RHIBufferHandle> _listFilledScratch                    SW_GUARDED_BY( _mutex ); ///< fillSlot 이 다 채운 버퍼를 모으는 임시 목록(프레임마다 다시 쓴다)
-        mutable mutex                                                 _mutex;
+        unordered_map<Key, PendingWrite> _mapPendingWrite SW_GUARDED_BY( _mutex );
+        vector<Key> _listFilledScratch                    SW_GUARDED_BY( _mutex ); ///< fillSlot 이 다 채운 자리를 모으는 임시 목록(프레임마다 다시 쓴다)
+        mutable mutex                                     _mutex;
     };
 } // namespace sw

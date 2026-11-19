@@ -16,6 +16,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
+#include "Engine/Graphics/RHI/ConstantBufferPagePool.h"
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
@@ -27,6 +28,7 @@
 #include "Engine/Graphics/RHI/RHIDiagnosticSwitch.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Window/IRenderSurface.h"
 
@@ -475,6 +477,7 @@ namespace sw
         , _parallelBarrierReportCount{ 0 }
         , _initResult{ RHIInitResult::NotStarted }
         , _memoryTracker{ make_unique<RHIMemoryTracker>() }
+        , _pConstantBufferPagePool{ make_unique<ConstantBufferPagePool>() }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
         , _pBindlessReservationQueue{ make_unique<RHIBindlessReservationQueue>() }
         , _pBindlessIndexReportLog{ make_unique<BindlessIndexReportLog>() }
@@ -697,6 +700,14 @@ namespace sw
         resizeInternal( width, height );
     }
 
+    void IRHIDevice::reportResourceCounts() const
+    {
+        // 할당 수 지표(감사 R-4 측정 — 머티리얼 인스턴스 5000 씬의 전후 비교). 카운터는 프레임 합이라 프레임에 한 번 내면 그 프레임의 값이다.
+        const RHIMemoryKindStats buffers = _memoryTracker->getStats( RHIMemoryKind::Buffer );
+        SW_PROFILE_COUNT( "RT.RHI.liveBuffers", buffers._liveCount + buffers._unknownSizeCount ); // DX12 는 버퍼마다 커밋 자원 하나다
+        SW_PROFILE_COUNT( "RT.RHI.constantBufferPages", _pConstantBufferPagePool->getOpenPageCount() );
+    }
+
     void IRHIDevice::shutdown()
     {
         // 순서가 계약이다(헤더 참고). 백엔드는 이 순서를 다시 적지 않고 단계 훅만 채운다.
@@ -706,6 +717,7 @@ namespace sw
                            getPendingReleaseCount(), getBackendName() );
         // 1 은 **자원을 내리기 전에** 알린다 — 언리얼 FRenderResource::ReleaseRHI 자리. 든 쪽이 해제 큐에 넘긴 자원은 2 가 GPU 를 기다린 뒤 비운다.
         RHIRenderResource::releaseAllForDevice( this );
+        _pConstantBufferPagePool->releaseAllPages( *this ); // 구간을 든 쪽이 모두 놓은 뒤 — 남은 페이지는 없어야 하지만 새지 않게 돌려준다
         flushDeferredHandleReleases();
         waitIdleInternal();
         SW_LOG_ASSERT( getPendingReleaseCount() == 0, "%# kept %# GPU releases after waiting for the GPU", getBackendName(), getPendingReleaseCount() );

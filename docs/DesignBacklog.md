@@ -1280,6 +1280,7 @@ public:
 2. **(가) 다음 — 백엔드 메모리.** Vulkan VMA · DX12 D3D12MA(둘 다 MIT, GPUOpen)로 자원 메모리를 덩이에서 나눈다(배치 텍스처 `RT.Frame.transientPlacements` 의 힙도 같은 할당기로). **새 의존성이라 라이선스 확인은 사용자 결정 줄**(NEXT "사용자에게 받을 것") — 확인 전에는 (나) 만으로 할당 수가 등급 수 × 페이지 수로 준다.
 3. **차례.** ① `RHIBufferSlice` · 페이지 할당기(CPU 쪽 빈 칸 목록은 백엔드 없이 단위 테스트 — 등급 고르기 · 해제 뒤 재사용 · 페이지 비면 반납) ② 백엔드 넷의 구간 디스크립터 ③ `MaterialRenderProxy` 가 구간을 쓴다(레이아웃이 커지면 등급을 옮긴다 — 지금의 "커지면 다시 만든다" 자리) ④ VMA · D3D12MA(확인 뒤).
 4. **확인.** 단위: 할당기. 시나리오: 머티리얼 골든 그대로(네 백엔드), Vulkan 검증 층 경고 없음. 측정 아래.
+5. **② · ③ 구현에서 정한 것(2026-11-20).** 페이지는 `createConstantBufferPage` 로 만든다 — DX11 은 동적 버퍼의 WRITE_DISCARD 가 페이지 전체를 버려 기본 용도 버퍼 + `UpdateSubresource1` · `*SetConstantBuffers1`(D3D11.1 능력 없으면 오류)이고, 넷은 `createConstantBuffer` 와 같다. 페이지 RHI 버퍼 · 구간 디스크립터는 디바이스가 하나씩 갖는 `ConstantBufferPagePool`(`IRHIDevice::getConstantBufferPagePool`)이 들고, 등급 밖(4096 B 초과)은 그 풀이 전용 버퍼 하나를 준다. 프레임 칸 채우기(`RHIConstantBufferMirror`)의 열쇠는 (버퍼, 오프셋)이다. 지표는 `RT.RHI.liveBuffers`(DX12 커밋 버퍼 수) · `RT.RHI.constantBufferPages` · `RT.Vulkan.allocationCount`.
 
 **측정.** 재는 법: 머티리얼 인스턴스 5000 씬(`load/materialinstances` — 없으면 만든다)에서 상수 버퍼 바이트 · 백엔드 할당 수(Vulkan `RT.Vulkan.allocationCount`, DX12 커밋 자원 수) · 프레임 시간 p50, 전후. 판정: 할당 수가 1/10 아래로 줄고 프레임 시간이 흔들림 안이면 둔다.
 

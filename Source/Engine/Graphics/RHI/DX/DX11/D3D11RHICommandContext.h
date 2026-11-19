@@ -101,6 +101,26 @@ namespace sw
          *          스테이지에 바인딩하는가뿐입니다(VS+PS / CS). 상한 검사와 WRITE_DISCARD 재명명 규칙이 두 벌이면 한쪽만 고쳐집니다.
          */
         void writeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues, bool bCompute );
+        /**
+         * @brief 번호 @p index 의 상수 버퍼를 @p slot 에 겁니다(그래픽스면 VS · PS · CS · HS · DS, 컴퓨트면 CS). 페이지 구간이면 `*SetConstantBuffers1` 오프셋으로 겁니다(감사 R-4).
+         */
+        void bindConstantBufferAt( RHIDescriptorIndex index, uint32 slot, bool bCompute );
+        /**
+         * @brief 스테이지 @p stage(`D3D11ConstantBufferBindings` 순서)의 @p slot 에 상수 버퍼를 겁니다. @p firstConstant 가 `kWholeBuffer` 면 버퍼 전체, 아니면 구간입니다.
+         * @details 그림자와 같으면 건너뛴다. 같은 버퍼를 오프셋만 바꿔 걸 때, 드라이버가 커맨드 리스트를 지원하지 않는 지연 컨텍스트에서만 빈 칸을 먼저 건다
+         *          (`VSSetConstantBuffers1` 비고 — 런타임 에뮬레이션이 같은 버퍼 호출을 중복으로 버린다).
+         */
+        void setConstantBuffer( uint32 stage, uint32 slot, ID3D11Buffer* pCb, UINT firstConstant, UINT constantCount );
+        /** @brief D3D11.1 컨텍스트를 받고, 빈 칸을 먼저 걸어야 하는 지연 컨텍스트인지 정합니다(생성자 둘이 함께 쓴다). */
+        void initializeConstantBufferBinding();
+
+        /// @brief `D3D11ConstantBufferBindings` 의 스테이지 칸 순서입니다.
+        static constexpr uint32 kVSStage = 0;
+        static constexpr uint32 kPSStage = 1;
+        static constexpr uint32 kCSStage = 2;
+        static constexpr uint32 kHSStage = 3;
+        static constexpr uint32 kDSStage = 4;
+        static_assert( kDSStage + 1 == D3D11ConstantBufferBindings::kStageCount, "스테이지 칸 수가 그림자 표와 맞아야 한다" );
 
     private:
         D3D11RHIDevice*      _pDevice;
@@ -109,7 +129,10 @@ namespace sw
         D3D11RecordingState* _pState;
         /** @brief _pContext 가 사는 동안 바뀌지 않아 첫 QueryInterface 결과를 다시 씁니다(마커마다 QI 하지 않습니다). */
         Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> _annotation;
-        uint8                                             _bAnnotationQueried : 1;
+        uint8                                             _bAnnotationQueried      : 1;
+        uint8                                             _bNullBeforeOffsetRebind : 1; ///< 커맨드 리스트를 런타임이 흉내 내는 지연 컨텍스트다(같은 버퍼 · 다른 오프셋이면 빈 칸을 먼저 건다)
+        /** @brief 상수 버퍼 구간 바인딩용 D3D11.1 컨텍스트입니다. 장치가 D3D11.1 구간 능력을 요구하므로 만들 때 한 번 받는다. */
+        Microsoft::WRL::ComPtr<ID3D11DeviceContext1> _context1;
     };
 } // namespace sw
 #endif

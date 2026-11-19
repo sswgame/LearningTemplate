@@ -55,10 +55,22 @@ namespace sw
          *          복사하므로, 넘기면 프레임 슬롯 밖(또는 버퍼 밖)까지 쓴다. GL 만 `glBufferSubData`
          *          가 `GL_INVALID_VALUE` 로 막아 준다. 즉 **한 백엔드에서만 조용히 안전하다.**
          *          버퍼가 작아졌다면 갱신하지 말고 **다시 만들어야 한다**
-         *          (`MaterialRenderProxy::sync` 는 셰이더를 다시 컴파일해 레이아웃이 커지는 경우를
-         *          그렇게 처리한다).
+         *          (머티리얼은 페이지 구간이라 `ConstantBufferPagePool::fit` 이 레이아웃이 커지면 큰 등급으로
+         *          옮긴다).
          */
         virtual void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
+
+        /**
+         * @brief 구간(`RHIBufferSlice`)으로 나눠 쓰는 상수 버퍼 페이지를 만듭니다(감사 R-4).
+         * @details 프레임 칸 복제는 `createConstantBuffer` 와 같고, 구간마다 따로 갱신 · 등록한다. 넷(DX12 · Vulkan · GL · WebGPU)은 `createConstantBuffer` 와 같은 버퍼이고,
+         *          DX11 은 구간 갱신(`UpdateSubresource1`)이 되는 기본 용도 버퍼다(동적 버퍼의 WRITE_DISCARD 는 페이지 전체를 버린다).
+         */
+        [[nodiscard]] virtual RHIBufferHandle createConstantBufferPage( uint32 size ) = 0;
+        /**
+         * @brief 페이지 구간 @p slice 의 이번 프레임 칸에 씁니다. 나머지 칸은 링이 그 칸으로 돌아올 때 같은 오프셋에 채웁니다(`RHIConstantBufferMirror`).
+         * @param size `slice._size` 이하여야 합니다 — 부르는 쪽(`ConstantBufferPagePool::update`)이 지킨다.
+         */
+        virtual void updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size ) = 0;
 
         /** @brief 구조화(Structured) 버퍼나 스토리지(Storage) 버퍼를 만듭니다. */
         [[nodiscard]] virtual RHIBufferHandle createStructuredBuffer( uint32 elementSize, uint32 elementCount ) = 0;
@@ -355,6 +367,12 @@ namespace sw
 
         /** @brief Bindless 테이블에 버퍼를 등록하고 인덱스를 발급합니다. */
         virtual RHIDescriptorIndex registerBindlessBufferSRV( RHIBufferHandle buffer ) = 0;
+        /**
+         * @brief 상수 버퍼 페이지의 구간 하나를 상수 버퍼로 등록합니다(감사 R-4). 셰이더는 버퍼 하나를 등록한 것과 같은 상수 버퍼를 읽는다.
+         * @details DX12 루트 CBV 주소 + 오프셋, Vulkan 디스크립터 offset · range, GL `glBindBufferRange`, WebGPU 바인딩 오프셋, DX11 `*SetConstantBuffers1`.
+         *          해제는 `unregisterBindlessResource` 이고, 페이지를 부수면 그 구간 번호가 모두 함께 놓인다.
+         */
+        virtual RHIDescriptorIndex registerBindlessBufferSRV( const RHIBufferSlice& slice ) = 0;
 
         /**
          * @brief registerBindlessBufferSRV 가 발급한 **버퍼** 인덱스를 해제합니다.

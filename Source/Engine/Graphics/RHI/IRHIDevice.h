@@ -36,6 +36,7 @@ namespace sw
     class RHIMemoryTracker;
     class RHITransferSerials;
     class BindlessIndexReportLog;
+    class ConstantBufferPagePool;
     enum class ShaderTargetFormat : uint8;
 
     /** @brief `IRHIDevice::releaseHandle` 이 해제하는 핸들의 종류입니다. 종류마다 해제에 쓰는 팩터리 함수가 다릅니다. */
@@ -339,6 +340,7 @@ namespace sw
             assumeRenderThreadRole(); // 프레임 진행 상태는 렌더 스레드의 것이다 — 다른 스레드의 그리기는 `RenderThread::executeAndWait` 로 넘긴다
             _constantBufferWriteLog.beginFrame();
             activateReservedBindlessTextures(); // 예약한 번호를 그려지기 전에 살린다(R-6)
+            reportResourceCounts();
             beginFrameInternal();
         }
         /**
@@ -638,6 +640,11 @@ namespace sw
         /** @brief 읽기 전용 추적기입니다. */
         const RHIMemoryTracker& getMemoryTracker() const { return *_memoryTracker; }
         /**
+         * @brief 작은 상수 버퍼(머티리얼 인스턴스)를 모으는 이 디바이스의 페이지 풀입니다(감사 R-4 — `MaterialRenderProxy` 가 쓴다).
+         * @details 디바이스와 수명이 같다. `shutdown` 은 자원을 가진 쪽에 알린 뒤(구간이 모두 돌아온 뒤) 남은 페이지를 돌려준다.
+         */
+        ConstantBufferPagePool& getConstantBufferPagePool() { return *_pConstantBufferPagePool; }
+        /**
          * @brief 드라이버에게 GPU 메모리 사용량과 예산을 물어 추적기에 기록합니다(`RHIMemoryTracker::getDriverBudget`). 백엔드가 물을 수 없으면 모든 항목이 "모름" 입니다.
          * @details **프레임을 기록하는 스레드(렌더 스레드)에서 불러야 한다.** GL 은 컨텍스트를 가진 채 묻는데, 다른 스레드에서 부르면 렌더 스레드가 그 프레임의
          *          컨텍스트를 놓을 때까지 기다린다. 엔진은 Present 뒤 몇 프레임마다 부르고(`RenderThread`), 읽는 쪽(프로파일 보고, 에디터 패널)은
@@ -720,6 +727,8 @@ namespace sw
     private:
         /** @brief 미룬 핸들 중 기다리던 프레임이 끝난 것만 해제합니다(`notifyRenderFrameRetired`). */
         void releaseRetiredHandles();
+        /** @brief 할당 수 지표(`RT.RHI.liveBuffers` · `RT.RHI.constantBufferPages`)를 냅니다. `beginFrame` 이 프레임에 한 번 부른다. */
+        void reportResourceCounts() const;
 
     protected:
         IRenderSurface* _pSurface;
@@ -755,6 +764,8 @@ namespace sw
         RHIInitResult _initResult;
         /// @brief GPU 자원 추적기입니다(getMemoryTracker 참고). 기반 클래스 멤버이므로 해제 큐를 비우는 백엔드 소멸자보다 오래 삽니다.
         unique_ptr<RHIMemoryTracker> _memoryTracker;
+        /// @brief 작은 상수 버퍼 페이지 풀입니다(getConstantBufferPagePool 참고).
+        unique_ptr<ConstantBufferPagePool> _pConstantBufferPagePool;
         /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 넘긴 · 끝낸 프레임 수입니다(releaseHandle 참고).
         unique_ptr<RHIDeferredHandleQueue> _pDeferredHandleQueue;
         /// @brief 예약했고 아직 살리지 않은 텍스처 번호입니다(`reserveBindlessTexture` · `activateReservedBindlessTextures`).

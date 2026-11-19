@@ -216,6 +216,25 @@ namespace sw
         glBindBuffer( GL_UNIFORM_BUFFER, 0 );
     }
 
+    RHIBufferHandle OpenGLRHIResourceFactory::createConstantBufferPage( uint32 size )
+    {
+        // UBO 하나를 구간이 나눠 쓴다(감사 R-4). 프레임 칸 복제는 드라이버의 이름 바꾸기가 맡는다(`createConstantBuffer` 와 같다).
+        return createConstantBuffer( size );
+    }
+
+    void OpenGLRHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    {
+        if ( slice._buffer == 0 || pData == nullptr )
+            return;
+        const GLuint ubo = _pDevice->resolveGlBuffer( slice._buffer );
+        if ( ubo == 0 )
+            return;
+        ScopedOpenGLContext contextScope( _pDevice );
+        glBindBuffer( GL_UNIFORM_BUFFER, ubo );
+        glBufferSubData( GL_UNIFORM_BUFFER, static_cast<GLintptr>( slice._offset ), static_cast<GLsizeiptr>( MathUtil::min( size, slice._size ) ), pData );
+        glBindBuffer( GL_UNIFORM_BUFFER, 0 );
+    }
+
     RHIBufferHandle OpenGLRHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
     {
         const bool bInvalidStructuredBufferRequest = _pDevice->_bInitialized == SW_FALSE || elementSize == 0 || elementCount == 0;
@@ -383,9 +402,10 @@ namespace sw
         ScopedOpenGLContext contextScope( _pDevice );
         _pDevice->_recordingState._geometry.remove( buffer );
 
-        uint32 glName{ 0 };
-        if ( _pDevice->_gpuBuffers.take( buffer, glName ) == false )
+        OpenGLRHIDevice::OpenGLBufferRecord taken{};
+        if ( _pDevice->_gpuBuffers.take( buffer, taken ) == false )
             return;
+        const uint32 glName = taken._glName;
 
         {
             // 이 버퍼의 번호를 모두 놓는다(다섯 백엔드 같은 계약 — `IRHIResourceFactory::registerBindlessTexture`). 예전에는 값만 지우고 번호를 돌려받지 않아 칸이 샜다.
@@ -932,6 +952,29 @@ namespace sw
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return _pDevice->_bufferRegistry.allocate( OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
+    }
+
+    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
+        if ( slice._buffer == 0 || slice._size == 0 )
+            return kInvalidDescriptorIndex;
+        // glBindBufferRange 의 오프셋은 GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT(초기화가 256 의 약수임을 확인했다)의 배수여야 하고, 구간은 버퍼 안이어야 한다.
+        const uint32 bufferBytes = _pDevice->resolveGlBufferSize( slice._buffer );
+        const bool   bBadSlice   = bufferBytes == 0 || _pDevice->_uniformBufferOffsetAlignment == 0 || slice._offset % _pDevice->_uniformBufferOffsetAlignment != 0 ||
+                               static_cast<uint64>( slice._offset ) + slice._size > bufferBytes;
+        if ( bBadSlice )
+        {
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.BadConstantBufferSlice", "registerBindlessBufferSRV: slice (offset %#, size %#) is not an aligned slice inside the buffer (%# bytes, alignment %#)",
+                             slice._offset, slice._size, bufferBytes, _pDevice->_uniformBufferOffsetAlignment );
+            return kInvalidDescriptorIndex;
+        }
+        OpenGLRHIDevice::BindlessResourceRecord record{};
+        record._buffer      = slice._buffer;
+        record._sliceOffset = slice._offset;
+        record._sliceSize   = slice._size;
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_bufferRegistry.allocate( record );
     }
 
     void OpenGLRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
