@@ -66,7 +66,7 @@ namespace sw
         const hashed_string& getPlaceButton() const { return _placeButton; }
         /** @brief 바라보는 블록입니다. 없으면 false 입니다. */
         [[nodiscard]] bool findTarget( VoxelCoord& outBlock ) const;
-        /** @brief 몸의 위치, 핫바, 부순 블록 수와 놓은 블록 수를 기록합니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 몸의 위치와 핫바를 기록합니다. `ComponentStateStore::capture` 가 부릅니다. 부순 · 놓은 블록 수는 상태 칸이라 씬 스냅숏이 옮긴다(`onBeginPlay` 가 덮지 않는다). */
         SW_DECLARE_STATE_IO_IN_PLACE();
         /** @brief `writeState` 가 기록한 바이트로 복원합니다. 플레이 시작 전이면 보관했다가 `onBeginPlay` 끝에 적용합니다. 읽지 못하면 처음 위치에서 시작합니다. */
         void    restoreState( vector<uint8>&& bytes );
@@ -139,17 +139,19 @@ namespace sw
         PROPERTY( Category = "Blocks", DisplayName = "Start Blocks", Tooltip = "Blocks in the first hotbar (64 each)" )
         vector<CatalogKey<VoxelBlockDef>> _listStartBlock;
 
-        VoxelBody              _body;
-        VoxelHotbar            _hotbar;
-        VoxelRayHit            _target;
-        vector<BlockEdit>      _listPendingEdit;
-        GameSoundQueue         _soundQueue;        ///< 재생할 소리입니다. 오디오는 게임 스레드에서 틱이 끝난 뒤 재생합니다.
-        vector<uint8>          _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트입니다(`restoreState`).
-        IntentSlots            _intentSlots;
-        float3                 _startPosition; ///< 몸을 처음 놓은 위치
-        float32                _breakProgress;
-        Countdown              _placeCooldown; ///< 버튼을 누르고 있을 때의 놓기 간격입니다(늦은 만큼 이어서 셉니다).
-        uint32                 _brokenCount;
+        VoxelBody         _body;
+        VoxelHotbar       _hotbar;
+        VoxelRayHit       _target;
+        vector<BlockEdit> _listPendingEdit;
+        GameSoundQueue    _soundQueue;        ///< 재생할 소리입니다. 오디오는 게임 스레드에서 틱이 끝난 뒤 재생합니다.
+        vector<uint8>     _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트입니다(`restoreState`).
+        IntentSlots       _intentSlots;
+        float3            _startPosition; ///< 몸을 처음 놓은 위치
+        float32           _breakProgress;
+        Countdown         _placeCooldown; ///< 버튼을 누르고 있을 때의 놓기 간격입니다(늦은 만큼 이어서 셉니다).
+        PROPERTY( RuntimeState )
+        uint32 _brokenCount;
+        PROPERTY( RuntimeState )
         uint32                 _placedCount;
         uint8                  _bHasTarget      : 1;
         uint8                  _bBodyPlaced     : 1; ///< 월드가 생성된 뒤 첫 땅에 몸을 놓았는지입니다.

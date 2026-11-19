@@ -29,7 +29,7 @@ namespace sw
         struct VoxelPlayerComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "PLYR" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 부순 · 놓은 블록 수가 상태 칸으로 나갔다(옛 판은 거절한다 — 출시 전)
 
             // 사운드 이벤트 이름입니다. 클립, 범위, 동시 재생 상한은 voxelcraft.audioevents.xml 이 정합니다.
             static constexpr const utf8* kEventLand  = "Land";
@@ -224,20 +224,14 @@ namespace sw
         io.header( VoxelPlayerComponentInternal::kStateTag, VoxelPlayerComponentInternal::kStateVersion );
         float3      position    = _body.getPosition();
         VoxelHotbar hotbar      = _hotbar;
-        uint32      brokenCount = _brokenCount;
-        uint32      placedCount = _placedCount;
         uint8       bBodyPlaced = static_cast<uint8>( _bBodyPlaced );
         io.value( position );
         io.value( hotbar );
-        io.value( brokenCount );
-        io.value( placedCount );
         io.value( bBodyPlaced );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _hotbar      = hotbar;
-        _brokenCount = brokenCount;
-        _placedCount = placedCount;
+        _hotbar = hotbar;
         if ( bBodyPlaced != SW_FALSE )
         {
             // 몸을 놓기 전에 기록한 상태라면 처음 위치(다음 틱)에서 시작합니다.
