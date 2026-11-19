@@ -60,10 +60,14 @@ namespace sw
      *          과열형에서는 쓰면 열이 오르고, 최대를 넘는 `trySpend` 는 실패한다. 열이 최대에 닿으면 과열이며 `_overheatRecoverLevel` 까지 식을 때까지 잠긴다.
      *          쓰면 회복 지연이 처음부터 다시 센다. 바닥에 닿은 채 계속 쓰려 해도(`drain` 이 false 여도) 지연은 다시 센다.
      *          같은 프레임에 쓰고 `update` 하면 지연이 0 일 때만 그 프레임에 찬다.
+     *          상태는 리플렉션 상태 칸(`StateIO::reflected`)과 손 본문의 남은 시간(`Countdown` — 리플렉션 형식이 아니다)이다.
      */
+    REFLECT()
     class SW_GF_API ResourceGauge
     {
     public:
+        REFLECT_BODY();
+
         /** @brief 기본 설정(`ResourceGaugeSettings{}`, 범위 안)으로 가득 찬 상태입니다. 다른 설정은 `initialize` 로 줍니다. */
         ResourceGauge();
 
@@ -131,11 +135,16 @@ namespace sw
 
     private:
         ResourceGaugeSettings _settings;
-        float32               _value;
-        float32               _maxBonus;
-        float32               _regenScale;
-        float32               _timeSinceUse; ///< 마지막으로 쓴 뒤 지난 시간
-        Countdown             _overheatPenalty;
-        uint8                 _bLocked; ///< 탈진 · 과열 잠금
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _value;
+        PROPERTY( RuntimeState )
+        float32 _maxBonus;
+        PROPERTY( RuntimeState )
+        float32 _regenScale;
+        PROPERTY( RuntimeState )
+        float32   _timeSinceUse; ///< 마지막으로 쓴 뒤 지난 시간
+        Countdown _overheatPenalty;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bLocked; ///< 탈진 · 과열 잠금
     };
 } // namespace sw
