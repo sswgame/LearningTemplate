@@ -180,6 +180,13 @@ namespace sw
             return false;
         }
         // 나가는 반경보다 작으면 보이는 엔티티가 서버에 오르지 않은 셀에 있을 수 있다 — `initialize` 의 격자 규칙을 관찰자마다 지킨다.
+        // 상한을 넘으면 서버가 올리는 셀이 끝없이 커진다 — 상한이 없으면(0) 바꾸지 못한다(기본값으로 메우지 않는다).
+        if ( ( loadingRadius <= _settings._maxStreamingRadius ) == false )
+        {
+            SW_LOG_ERROR_ID( "MMOReplicator.ObserverStreamingTooLarge", "MMOReplicator: refused streaming radius %# for connection %# - above the configured maximum %# (_maxStreamingRadius, 0 = not configured)",
+                             loadingRadius, connectionID, _settings._maxStreamingRadius );
+            return false;
+        }
         if ( MathUtil::isFinite( loadingRadius ) == false || loadingRadius < _settings._leaveRadius )
         {
             SW_LOG_ERROR_ID( "MMOReplicator.ObserverStreamingRadius", "MMOReplicator: refused streaming radius %# for connection %# - it must be finite and at least the leave radius %#",
@@ -575,10 +582,11 @@ namespace sw
     {
         (void)connectionID;
         _mapEntity.clear();
-        _mapHeld.clear();
+        _mapBoundObject.clear();
+        _heldCount = 0;
     }
 
-    bool MMOClientView::setWorld( const INetClientWorld* pWorld, const MMOClientViewConfig& settings )
+    bool MMOClientView::setWorld( const INetClientWorld& world, const MMOClientViewConfig& settings )
     {
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
@@ -587,82 +595,101 @@ namespace sw
             return false;
         }
         _settings = settings;
-        _pWorld   = pWorld;
-        if ( _pWorld == nullptr )
-        {
-            // 뗀 월드의 셀은 기다릴 수 없다 — 시한이 지난 것처럼 정리한다(엔티티 id 순).
-            _listScratchHeld.clear();
-            for ( const auto& held : _mapHeld )
-            {
-                _listScratchHeld.push_back( held.first );
-            }
-            VectorUtil::sort( _listScratchHeld );
-            for ( const uint32 entityID : _listScratchHeld )
-            {
-                expire( std::move( _mapHeld[entityID]._entry ) );
-            }
-            _mapHeld.clear();
-        }
+        _pWorld   = &world;
         return true;
+    }
+
+    void MMOClientView::detachWorld()
+    {
+        _pWorld = nullptr;
+        // 기다릴 셀이 없다 — 동적 엔티티는 월드 없는 보기처럼 곧바로 보인다. 정적 엔티티는 묶을 곳이 생기거나 사라짐이 올 때까지 보류한다.
+        collectHeldIDs();
+        for ( const uint32 entityID : _listScratchHeld )
+        {
+            ClientEntity& entry = _mapEntity.find( entityID )->second;
+            if ( entry._entity._staticID == 0 )
+                makeVisible( entityID, entry, 0 );
+        }
     }
 
     void MMOClientView::update( float32 deltaSeconds )
     {
-        if ( _pWorld == nullptr || _mapHeld.empty() )
+        if ( _pWorld == nullptr || _heldCount == 0 )
             return;
-        // 놓는 순서가 해시 순서에 달리지 않게 엔티티 id 순으로 훑는다.
-        _listScratchHeld.clear();
-        for ( const auto& held : _mapHeld )
-        {
-            _listScratchHeld.push_back( held.first );
-        }
-        VectorUtil::sort( _listScratchHeld );
+        collectHeldIDs();
         for ( const uint32 entityID : _listScratchHeld )
         {
-            const auto  heldIter = _mapHeld.find( entityID );
-            HeldEntity& held     = heldIter->second;
-            held._heldSeconds += deltaSeconds;
+            const auto    entityIter   = _mapEntity.find( entityID );
+            ClientEntity& entry        = entityIter->second;
+            const float32 previousHeld = entry._heldSeconds;
+            entry._heldSeconds += deltaSeconds;
             uint64 staticObjectID = 0;
-            if ( tryResolve( held._entry._entity, staticObjectID ) )
-                release( std::move( held._entry ), staticObjectID );
-            else if ( held._heldSeconds >= _settings._cellHoldTimeoutSeconds )
-                expire( std::move( held._entry ) );
-            else
+            if ( tryResolve( entityID, entry._entity, staticObjectID ) )
+            {
+                makeVisible( entityID, entry, staticObjectID );
                 continue;
-            _mapHeld.erase( heldIter );
+            }
+            const bool bCrossedTimeout = previousHeld < _settings._cellHoldTimeoutSeconds && entry._heldSeconds >= _settings._cellHoldTimeoutSeconds;
+            if ( bCrossedTimeout == false )
+                continue;
+            if ( entry._entity._staticID != 0 && _pWorld->findStaticObject( entry._entity._staticID ) != 0 )
+            {
+                // 서로 다른 엔티티가 한 셀 오브젝트를 가리킨다 — 서버 데이터 결함이다. 두 번째 묶기는 받지 않고 앞 엔티티가 풀릴 때까지 보류한다(한 오브젝트에 두 주인 없음).
+                SW_LOG_ERROR_ID( "MMOClientView.StaticObjectAlreadyBound", "MMOClientView: entity %# (static id %#) refused - its cell object is already bound to another entity", entityID,
+                                 entry._entity._staticID );
+                continue;
+            }
+            if ( entry._entity._staticID != 0 )
+            {
+                // 묶을 셀 오브젝트가 없다 — 스폰하면 셀이 오를 때 둘이 된다(언리얼도 풀지 못한 정적 NetGUID 는 스폰하지 않는다). 사라짐이 올 때까지 보류한다.
+                SW_LOG_WARNING_ID( "MMOClientView.StaticEntityUnresolved", "MMOClientView: entity %# (static id %#) has no loaded cell object after %# s - still held", entityID,
+                                   entry._entity._staticID, _settings._cellHoldTimeoutSeconds );
+                continue;
+            }
+            // 셀이 끝내 오르지 않는다 — 서버의 나가는 반경이 이 클라이언트의 로딩 반경보다 큰 설정 결함일 수 있다. 영원히 숨기지 않고 보인다.
+            SW_LOG_WARNING_ID( "MMOClientView.CellHoldTimedOut", "MMOClientView: entity %# waited %# s for its cell at (%#, %#) - shown without it", entityID,
+                               _settings._cellHoldTimeoutSeconds, entry._entity._position._x, entry._entity._position._z );
+            makeVisible( entityID, entry, 0 );
         }
     }
 
-    bool MMOClientView::tryResolve( const MMOEntity& entity, uint64& outStaticObjectID ) const
+    void MMOClientView::collectHeldIDs()
+    {
+        // 놓는 순서가 해시 순서에 달리지 않게 엔티티 id 순으로 훑는다.
+        _listScratchHeld.clear();
+        for ( const auto& entity : _mapEntity )
+        {
+            if ( entity.second._state == ClientEntityState::Held )
+                _listScratchHeld.push_back( entity.first );
+        }
+        VectorUtil::sort( _listScratchHeld );
+    }
+
+    bool MMOClientView::tryResolve( uint32 entityID, const MMOEntity& entity, uint64& outStaticObjectID ) const
     {
         outStaticObjectID = 0;
+        if ( _pWorld == nullptr )
+            return entity._staticID == 0; // 월드 없는 보기: 동적은 곧바로, 정적은 묶을 곳이 없다
         if ( entity._staticID == 0 )
             return _pWorld->isPositionStreamed( entity._position );
-        outStaticObjectID = _pWorld->findStaticObject( entity._staticID );
-        return outStaticObjectID != 0;
+        const uint64 staticObjectID = _pWorld->findStaticObject( entity._staticID );
+        if ( staticObjectID == 0 )
+            return false;
+        const auto boundIter = _mapBoundObject.find( staticObjectID );
+        if ( boundIter != _mapBoundObject.end() && boundIter->second != entityID )
+            return false; // 다른 엔티티가 이미 묶었다 — 두 번째 묶기는 받지 않는다
+        outStaticObjectID = staticObjectID;
+        return true;
     }
 
-    void MMOClientView::release( ClientEntity&& entry, uint64 staticObjectID )
+    void MMOClientView::makeVisible( uint32 entityID, ClientEntity& entry, uint64 staticObjectID )
     {
-        const uint32 entityID = entry._entity._entityID;
+        if ( staticObjectID != 0 )
+            _mapBoundObject[staticObjectID] = entityID; // `tryResolve` 가 다른 주인이 없음을 봤다
+        entry._state          = ClientEntityState::Visible;
         entry._staticObjectID = staticObjectID;
-        _mapEntity[entityID]  = std::move( entry );
+        _heldCount -= 1;
         _eventBuffer.push( MMOClientEvent{ entityID, staticObjectID != 0 ? MMOClientEvent::Kind::Bound : MMOClientEvent::Kind::Entered, staticObjectID } );
-    }
-
-    void MMOClientView::expire( ClientEntity&& entry )
-    {
-        if ( entry._entity._staticID != 0 )
-        {
-            // 묶을 셀 오브젝트가 없다 — 스폰하면 셀이 오를 때 둘이 된다(언리얼도 풀지 못한 정적 NetGUID 는 스폰하지 않는다).
-            SW_LOG_WARNING_ID( "MMOClientView.StaticEntityUnresolved", "MMOClientView: entity %# (static id %#) has no loaded cell object after %# s - dropped", entry._entity._entityID,
-                               entry._entity._staticID, _settings._cellHoldTimeoutSeconds );
-            return;
-        }
-        // 셀이 끝내 오르지 않는다 — 서버의 나가는 반경이 이 클라이언트의 로딩 반경보다 큰 설정 결함일 수 있다. 영원히 숨기지 않고 보인다.
-        SW_LOG_WARNING_ID( "MMOClientView.CellHoldTimedOut", "MMOClientView: entity %# waited %# s for its cell at (%#, %#) - shown without it", entry._entity._entityID,
-                           _settings._cellHoldTimeoutSeconds, entry._entity._position._x, entry._entity._position._z );
-        release( std::move( entry ), 0 );
     }
 
     NetHandleResult MMOClientView::receive( NetMMOMessage::Enter, const NetMessageContext& context, BitReader& body )
@@ -682,31 +709,35 @@ namespace sw
             return NetHandleResult::Malformed;
         for ( MMOEntity& entity : listEntered )
         {
-            ClientEntity entry;
-            entry._tick   = tick;
-            entry._entity = std::move( entity );
-            if ( _pWorld == nullptr )
+            const uint32 entityID   = entity._entityID;
+            const auto   entityIter = _mapEntity.find( entityID );
+            if ( entityIter != _mapEntity.end() )
             {
-                if ( entry._entity._staticID != 0 )
+                // 이미 아는 엔티티의 새로 보임(순서가 뒤바뀐 재전송 등)은 상태만 새로 한다 — 한 id 는 보류 · 보임 중 하나이고 Entered · Bound 는 한 번이다.
+                ClientEntity& known = entityIter->second;
+                if ( tick < known._tick )
                 {
-                    SW_LOG_ERROR_ID( "MMOClientView.StaticEntityWithoutWorld", "MMOClientView: entity %# is placed in a cell (static id %#) but no client world is set - dropped", entry._entity._entityID,
-                                     entry._entity._staticID );
+                    ++_staleUpdateCount;
                     continue;
                 }
-                release( std::move( entry ), 0 );
+                known._tick              = tick;
+                known._entity._position  = entity._position;
+                known._entity._listState = std::move( entity._listState );
+                if ( known._state == ClientEntityState::Visible )
+                    _eventBuffer.push( MMOClientEvent{ entityID, MMOClientEvent::Kind::Updated, known._staticObjectID } );
                 continue;
             }
+            if ( _pWorld == nullptr && entity._staticID != 0 )
+                SW_LOG_ERROR_ID( "MMOClientView.StaticEntityWithoutWorld", "MMOClientView: entity %# is placed in a cell (static id %#) but no client world is set - held until a world or its leave",
+                                 entityID, entity._staticID );
+            ClientEntity& entry = _mapEntity[entityID];
+            entry._entity       = std::move( entity );
+            entry._tick         = tick;
+            entry._state        = ClientEntityState::Held;
+            _heldCount += 1;
             uint64 staticObjectID = 0;
-            if ( tryResolve( entry._entity, staticObjectID ) )
-            {
-                _mapHeld.erase( entry._entity._entityID );
-                release( std::move( entry ), staticObjectID );
-                continue;
-            }
-            const uint32 entityID = entry._entity._entityID;
-            HeldEntity   held;
-            held._entry        = std::move( entry );
-            _mapHeld[entityID] = std::move( held ); // 셀이 오르면 `update` 가 놓는다
+            if ( tryResolve( entityID, entry._entity, staticObjectID ) )
+                makeVisible( entityID, entry, staticObjectID ); // 셀이 이미 올라 있으면 기다리지 않는다. 아니면 `update` 가 놓는다
         }
         return NetHandleResult::Handled;
     }
@@ -727,14 +758,22 @@ namespace sw
             return NetHandleResult::Malformed;
         for ( const uint32 entityID : listLeft )
         {
-            if ( _mapHeld.erase( entityID ) > 0 )
-                continue; // 아직 놓지 않았다 — 알릴 것이 없다
             const auto entityIter = _mapEntity.find( entityID );
             if ( entityIter == _mapEntity.end() )
                 continue;
-            const uint64 staticObjectID = entityIter->second._staticObjectID;
+            const ClientEntity& entry = entityIter->second;
+            if ( entry._state == ClientEntityState::Held )
+            {
+                _heldCount -= 1; // 아직 놓지 않았다 — 알릴 것이 없다
+            }
+            else
+            {
+                const uint64 staticObjectID = entry._staticObjectID;
+                if ( staticObjectID != 0 )
+                    _mapBoundObject.erase( staticObjectID );
+                _eventBuffer.push( MMOClientEvent{ entityID, staticObjectID != 0 ? MMOClientEvent::Kind::Unbound : MMOClientEvent::Kind::Left, staticObjectID } );
+            }
             _mapEntity.erase( entityIter );
-            _eventBuffer.push( MMOClientEvent{ entityID, staticObjectID != 0 ? MMOClientEvent::Kind::Unbound : MMOClientEvent::Kind::Left, staticObjectID } );
         }
         return NetHandleResult::Handled;
     }
@@ -759,11 +798,9 @@ namespace sw
         for ( MMOEntity& update : listUpdate )
         {
             const auto entityIter = _mapEntity.find( update._entityID );
-            const bool bHeld      = entityIter == _mapEntity.end();
-            const auto heldIter   = bHeld ? _mapHeld.find( update._entityID ) : _mapHeld.end();
-            if ( bHeld && heldIter == _mapHeld.end() )
+            if ( entityIter == _mapEntity.end() )
                 continue; // 새로 보임보다 먼저 왔거나 이미 보이지 않게 된 엔티티이므로 버린다
-            ClientEntity& entry = bHeld ? heldIter->second._entry : entityIter->second;
+            ClientEntity& entry = entityIter->second;
             if ( tick < entry._tick )
             {
                 ++_staleUpdateCount; // 순서가 뒤바뀐 오래된 갱신이다. 더 새로운 상태를 덮어쓰지 않게 버린다
@@ -772,9 +809,8 @@ namespace sw
             entry._tick              = tick;
             entry._entity._position  = update._position;
             entry._entity._listState = std::move( update._listState );
-            if ( bHeld )
-                continue; // 보류 중 — 놓을 때 마지막 상태로 알린다
-            _eventBuffer.push( MMOClientEvent{ update._entityID, MMOClientEvent::Kind::Updated, entry._staticObjectID } );
+            if ( entry._state == ClientEntityState::Visible ) // 보류 중이면 놓을 때 마지막 상태로 알린다
+                _eventBuffer.push( MMOClientEvent{ update._entityID, MMOClientEvent::Kind::Updated, entry._staticObjectID } );
         }
         return NetHandleResult::Handled;
     }
@@ -787,6 +823,6 @@ namespace sw
     const MMOEntity* MMOClientView::findEntity( uint32 entityID ) const
     {
         const auto entityIter = _mapEntity.find( entityID );
-        return entityIter != _mapEntity.end() ? &entityIter->second._entity : nullptr;
+        return entityIter != _mapEntity.end() && entityIter->second._state == ClientEntityState::Visible ? &entityIter->second._entity : nullptr;
     }
 } // namespace sw

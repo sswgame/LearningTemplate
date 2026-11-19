@@ -147,7 +147,9 @@ namespace sw
         PROPERTY( Min = 1, Max = NetConnection::kMaxSingleMessageSize )
         int32 _updateBudgetBytes{ 600 }; ///< 관찰자 한 명당 틱마다 보내는 갱신 메시지 바이트(1 ~ `NetConnection::kMaxSingleMessageSize`). 종류 바이트와 틱을 포함한다. 연결 상한이 더 작으면 그 값을 쓴다
         PROPERTY( Min = 1 )
-        int32 _maxEnterPerTick{ 32 }; ///< 한 틱에 새로 보이게 하는 엔티티 수의 상한. 텔레포트 직후에 몰리지 않게 하며, 신뢰 메시지 하나에 묶고 64 KB를 넘는 나머지는 다음 틱에 보낸다
+        int32 _maxEnterPerTick{ 32 };
+        PROPERTY( Min = 0, Units = m )
+        float32 _maxStreamingRadius{ 0.0f }; ///< `setObserverStreaming` 이 받는 반경의 상한. 0(기본값)이면 관찰자 반경을 바꾸지 못한다 — 쓰는 게임이 Config 데이터로 준다(관찰자 소스 반경은 서버가 올리는 셀 수를 정한다) ///< 한 틱에 새로 보이게 하는 엔티티 수의 상한. 텔레포트 직후에 몰리지 않게 하며, 신뢰 메시지 하나에 묶고 64 KB를 넘는 나머지는 다음 틱에 보낸다
     };
 } // namespace sw
 
@@ -193,7 +195,8 @@ namespace sw
         void setObserver( int32 connectionID, uint32 entityID );
         /**
          * @brief 관찰자의 스트리밍 소스 반경 · 우선순위를 정합니다(언리얼 World Partition 의 플레이어 스트리밍 소스). 서버가 올리는 셀은 관찰자 반경의 합집합입니다.
-         * @return 관찰자가 없거나, 반경이 유한하지 않거나 나가는 반경보다 작으면(보이는 엔티티가 오르지 않은 셀에 있을 수 있다) 오류를 남기고 false 이며 지난 값을 둡니다.
+         * @return 관찰자가 없거나, 반경이 나가는 반경보다 작거나(보이는 엔티티가 오르지 않은 셀에 있을 수 있다) 설정의 상한(`MMOReplicatorConfig::_maxStreamingRadius`, 0 이면 주지 않은 것)보다 크거나
+         *         유한하지 않으면 오류를 남기고 false 이며 지난 값을 둡니다.
          */
         [[nodiscard]] bool setObserverStreaming( int32 connectionID, float32 loadingRadius, StreamingSourcePriority priority );
         /** @brief 관찰자를 지웁니다. 연결이 닫히면 라우터를 통해 자동으로 지워지므로, 연결은 두고 관심만 끊을 때 직접 호출합니다. */
@@ -379,7 +382,7 @@ namespace sw
     {
         REFLECT_BODY();
         PROPERTY( Min = 0.001, Units = s )
-        float32 _cellHoldTimeoutSeconds{ 0.0f }; ///< 셀이 오르기를 기다리며 엔티티를 보류하는 최대 시간. 넘으면 경고하고 동적 엔티티는 보이고 정적 엔티티는 버린다
+        float32 _cellHoldTimeoutSeconds{ 0.0f }; ///< 셀이 오르기를 기다리며 엔티티를 보류하는 최대 시간. 넘으면 경고하고 동적 엔티티는 보이고 정적 엔티티는 사라짐이 올 때까지 계속 보류한다
     };
 } // namespace sw
 
@@ -399,47 +402,59 @@ namespace sw
 
         /**
          * @brief 클라이언트 월드를 겁니다. 건 뒤로 새로 보인 엔티티는 제 셀이 다 오르고(동적) 셀 오브젝트가 드러날 때까지(정적) 보류합니다(언리얼은 레벨 가시성으로 서버가 미루는 자리).
-         * @details 월드가 없으면(스트리밍하지 않는 게임) 곧바로 놓고, 정적 엔티티는 묶을 곳이 없어 오류로 버린다. @p pWorld 가 nullptr 이면 월드를 떼고 보류한 엔티티를 시한이 지난 것처럼 정리한다.
+         * @details 월드가 없으면(스트리밍하지 않는 게임) 동적 엔티티는 곧바로 보이고, 정적 엔티티는 묶을 곳이 생기거나 사라짐이 올 때까지 보류한다(오류 로그).
+         *          씬을 바꾸면 새 월드를 다시 건다 — @p world 는 다시 걸거나 `detachWorld` 할 때까지 살아 있어야 한다.
          * @return 설정이 범위 밖이면 오류를 남기고 false 이며 지난 월드를 둔다.
          */
-        [[nodiscard]] bool setWorld( const INetClientWorld* pWorld, const MMOClientViewConfig& settings );
-        /** @brief 보류한 엔티티 가운데 셀이 오른 것을 놓고(엔티티 id 순), 보류 시간이 넘은 것은 경고한 뒤 정리합니다. 월드를 건 게임이 프레임마다 부릅니다. */
+        [[nodiscard]] bool setWorld( const INetClientWorld& world, const MMOClientViewConfig& settings );
+        /** @brief 월드를 뗍니다. 보류한 동적 엔티티는 기다릴 셀이 없어 곧바로 보이고, 정적 엔티티는 계속 보류합니다. */
+        void detachWorld();
+        /**
+         * @brief 보류한 엔티티 가운데 셀이 오른 것을 놓습니다(엔티티 id 순). 월드를 건 게임이 프레임마다 부릅니다.
+         * @details 보류 시간(`MMOClientViewConfig::_cellHoldTimeoutSeconds`)을 넘긴 동적 엔티티는 경고한 뒤 보이고, 정적 엔티티는 경고만 하고 사라짐이 올 때까지 보류한다(중복 스폰보다 안 보임).
+         */
         void update( float32 deltaSeconds );
         /** @brief 셀을 기다리며 보류 중인 엔티티 수입니다. */
-        int32 getHeldEntityCount() const { return static_cast<int32>( _mapHeld.size() ); }
+        int32 getHeldEntityCount() const { return _heldCount; }
 
+        /** @brief 보이는 엔티티를 찾습니다. 보류 중이면 nullptr 입니다. */
         const MMOEntity* findEntity( uint32 entityID ) const;
-        int32            getEntityCount() const { return static_cast<int32>( _mapEntity.size() ); }
+        /** @brief 보이는 엔티티 수입니다(보류 제외). */
+        int32 getEntityCount() const { return static_cast<int32>( _mapEntity.size() ) - _heldCount; }
         /** @brief 순서가 뒤바뀌어 마지막으로 적용한 틱보다 오래돼서 버린 갱신 수입니다. */
         uint64 getStaleUpdateCount() const { return _staleUpdateCount; }
 
     private:
+        /** @brief 클라이언트 엔티티의 단계 — 한 id 는 둘 중 하나다(한 표에 들어 두 단계에 동시에 있을 수 없다). */
+        enum class ClientEntityState : uint8
+        {
+            Held,   ///< 셀 · 셀 오브젝트를 기다린다. 사건을 내지 않았다
+            Visible ///< `Entered` · `Bound` 를 냈다
+        };
+
         struct ClientEntity
         {
-            MMOEntity _entity{};
-            uint64    _staticObjectID{ 0 }; ///< 묶인 셀 오브젝트(정적 엔티티)
-            uint32    _tick{ 0 };           ///< 마지막으로 적용한 서버 틱
+            MMOEntity         _entity{};
+            uint64            _staticObjectID{ 0 }; ///< 묶인 셀 오브젝트(정적 엔티티, `Visible` 일 때)
+            uint32            _tick{ 0 };           ///< 마지막으로 적용한 서버 틱
+            float32           _heldSeconds{ 0.0f }; ///< 보류한 시간(`Held` 일 때 쌓인다)
+            ClientEntityState _state{ ClientEntityState::Held };
         };
 
-        struct HeldEntity
-        {
-            ClientEntity _entry{};
-            float32      _heldSeconds{ 0.0f };
-        };
-
-        /** @brief 엔티티가 놓일 수 있으면 true 이고 정적 엔티티면 묶을 오브젝트를 @p outStaticObjectID 에 줍니다. 월드가 있어야 합니다. */
-        bool tryResolve( const MMOEntity& entity, uint64& outStaticObjectID ) const;
-        /** @brief 엔티티를 보이는 목록에 넣고 `Entered` · `Bound` 를 알립니다. */
-        void release( ClientEntity&& entry, uint64 staticObjectID );
-        /** @brief 보류 시간이 넘었거나 월드를 뗀 엔티티를 정리합니다 — 경고하고 동적은 놓고 정적은 버립니다. */
-        void expire( ClientEntity&& entry );
+        /** @brief 엔티티가 보일 수 있으면 true 이고 정적 엔티티면 묶을 오브젝트를 @p outStaticObjectID 에 줍니다. 다른 엔티티가 이미 묶은 오브젝트는 묶지 않습니다. */
+        bool tryResolve( uint32 entityID, const MMOEntity& entity, uint64& outStaticObjectID ) const;
+        /** @brief 보류한 엔티티를 보이게 하고 `Entered` · `Bound` 를 알립니다. */
+        void makeVisible( uint32 entityID, ClientEntity& entry, uint64 staticObjectID );
+        /** @brief 보류한 엔티티 id 를 오름차순으로 `_listScratchHeld` 에 모읍니다. */
+        void collectHeldIDs();
 
     private:
-        unordered_map<uint32, ClientEntity> _mapEntity{};
-        unordered_map<uint32, HeldEntity>   _mapHeld{};         ///< 셀을 기다리는 엔티티. 갱신은 틱 규칙대로 받아 두고, 사라짐이면 사건 없이 버린다
+        unordered_map<uint32, ClientEntity> _mapEntity{};       ///< 보류 · 보이는 엔티티를 함께 든다(단계는 `ClientEntity::_state`)
+        unordered_map<uint64, uint32>       _mapBoundObject{};  ///< 묶인 셀 오브젝트 → 엔티티 id. 한 오브젝트에 두 번째 묶기를 막는다
         vector<uint32>                      _listScratchHeld{}; ///< `update` 가 보류 id 를 순서대로 훑을 때 쓴다
         MMOClientViewConfig                 _settings{};
         const INetClientWorld*              _pWorld{ nullptr };
+        int32                               _heldCount{ 0 }; ///< `_mapEntity` 가운데 `Held` 수
         EventBuffer<MMOClientEvent>         _eventBuffer{};
         uint64                              _staleUpdateCount{ 0 };
     };

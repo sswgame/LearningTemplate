@@ -140,7 +140,7 @@ SW_TEST_CASE( NetMMOStreamingTest, ClientHoldsEnterUntilCellStreamed )
 {
     Internal::FakeClientWorld world;
     MMOClientView             view;
-    SW_REQUIRE_TRUE( view.setWorld( &world, Internal::makeViewConfig() ) );
+    SW_REQUIRE_TRUE( view.setWorld( world, Internal::makeViewConfig() ) );
 
     SW_EXPECT_TRUE( NetHandleResult::Handled == view.handleMessage( 0, Internal::writeEnter( 7, 42, 0, float3{ 1.0f, 0.0f, 1.0f } ) ) );
     SW_EXPECT_EQUAL( 0, view.getEntityCount() );
@@ -178,29 +178,33 @@ SW_TEST_CASE( NetMMOStreamingTest, ClientHoldsEnterUntilCellStreamed )
     SW_EXPECT_EQUAL( 0, view.getHeldEntityCount() );
 }
 
-/** @brief [NetMMOStreamingTest] 셀이 끝내 오르지 않으면 시한 뒤 경고하고 동적 엔티티는 보이고 정적 엔티티는 버린다 — 시한 전에는 그대로 보류한다 */
+/** @brief [NetMMOStreamingTest] 셀이 끝내 오르지 않으면 시한 뒤 경고하고 동적 엔티티는 보이고 정적 엔티티는 사라짐이 올 때까지 계속 보류한다(경고는 한 번) — 시한 전에는 그대로 보류한다 */
 SW_TEST_CASE( NetMMOStreamingTest, ClientHoldTimesOutWithWarning )
 {
     SW_EXPECT_LOG( "MMOClientView.CellHoldTimedOut" );
     SW_EXPECT_LOG( "MMOClientView.StaticEntityUnresolved" );
     Internal::FakeClientWorld world;
     MMOClientView             view;
-    SW_REQUIRE_TRUE( view.setWorld( &world, Internal::makeViewConfig() ) );
+    SW_REQUIRE_TRUE( view.setWorld( world, Internal::makeViewConfig() ) );
     (void)view.handleMessage( 0, Internal::writeEnter( 1, 50, 0, float3{} ) );
     (void)view.handleMessage( 0, Internal::writeEnter( 1, 51, 9, float3{} ) );
     view.update( Internal::kTimeoutSeconds * 0.5f );
     SW_EXPECT_EQUAL( 2, view.getHeldEntityCount() );
     view.update( Internal::kTimeoutSeconds * 0.5f );
-    SW_EXPECT_EQUAL( 0, view.getHeldEntityCount() );
+    view.update( Internal::kTimeoutSeconds ); // 시한을 이미 넘겼다 — 경고를 되풀이하지 않는다
+    SW_EXPECT_EQUAL( 1, view.getHeldEntityCount() );
     SW_EXPECT_TRUE( view.findEntity( 50 ) != nullptr );
     SW_EXPECT_TRUE( view.findEntity( 51 ) == nullptr );
     vector<MMOClientEvent> listEvent;
     view.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 1, Internal::countEvents( listEvent, MMOClientEvent::Kind::Entered, 50 ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( listEvent.size() ) ); // 정적 엔티티는 스폰하지도 묶지도 않는다
+    (void)view.handleMessage( 0, Internal::writeLeave( 51 ) );
+    SW_EXPECT_EQUAL( 0, view.getHeldEntityCount() );
+    SW_EXPECT_EQUAL( 1, view.getEntityCount() );
 }
 
-/** @brief [NetMMOStreamingTest] 정적 엔티티는 셀 오브젝트가 드러날 때 Bound 로 묶이고 사라지면 Unbound 다 — Entered 가 없어 게임이 스폰할 길이 없다. 월드 없이 오면 오류로 버린다 */
+/** @brief [NetMMOStreamingTest] 정적 엔티티는 셀 오브젝트가 드러날 때 Bound 로 묶이고 사라지면 Unbound 다 — Entered 가 없어 게임이 스폰할 길이 없다. 월드 없이 오면 오류를 남기고 보류한다 */
 SW_TEST_CASE( NetMMOStreamingTest, StaticEntityBindsToCellObjectWithoutSpawn )
 {
     SW_EXPECT_LOG( "MMOClientView.StaticEntityWithoutWorld" );
@@ -209,7 +213,7 @@ SW_TEST_CASE( NetMMOStreamingTest, StaticEntityBindsToCellObjectWithoutSpawn )
     Internal::FakeClientWorld world;
     world._bStreamed = SW_TRUE; // 바닥은 올랐지만 셀 오브젝트는 아직 드러나지 않았다
     MMOClientView view;
-    SW_REQUIRE_TRUE( view.setWorld( &world, Internal::makeViewConfig() ) );
+    SW_REQUIRE_TRUE( view.setWorld( world, Internal::makeViewConfig() ) );
     (void)view.handleMessage( 0, Internal::writeEnter( 1, 60, kFileID, float3{} ) );
     SW_EXPECT_EQUAL( 1, view.getHeldEntityCount() );
     world._mapStaticObject[kFileID] = kObjectID;
@@ -228,28 +232,89 @@ SW_TEST_CASE( NetMMOStreamingTest, StaticEntityBindsToCellObjectWithoutSpawn )
     MMOClientView noWorld;
     SW_EXPECT_TRUE( NetHandleResult::Handled == noWorld.handleMessage( 0, Internal::writeEnter( 1, 61, kFileID, float3{} ) ) );
     SW_EXPECT_EQUAL( 0, noWorld.getEntityCount() );
+    SW_EXPECT_EQUAL( 1, noWorld.getHeldEntityCount() );
 }
 
-/** @brief [NetMMOStreamingTest] 보류 시한이 없는 설정(기본값 0)은 거절된다 — 기본값으로 메우지 않는다. 월드를 떼면 보류한 동적 엔티티는 경고와 함께 보인다 */
-SW_TEST_CASE( NetMMOStreamingTest, WorldRequiresTimeoutAndDetachFlushesHeld )
+/** @brief [NetMMOStreamingTest] 보류 시한이 없는 설정(기본값 0)은 거절된다 — 기본값으로 메우지 않는다. 월드를 떼면 보류한 동적 엔티티는 보이고 정적 엔티티는 계속 보류한다 */
+SW_TEST_CASE( NetMMOStreamingTest, WorldRequiresTimeoutAndDetachReleasesDynamic )
 {
     SW_EXPECT_LOG( "MMOClientView.RefusedWorldSettings" );
-    SW_EXPECT_LOG( "MMOClientView.CellHoldTimedOut" );
     Internal::FakeClientWorld world;
     MMOClientView             view;
-    SW_EXPECT_FALSE( view.setWorld( &world, MMOClientViewConfig{} ) );
-    SW_REQUIRE_TRUE( view.setWorld( &world, Internal::makeViewConfig() ) );
+    SW_EXPECT_FALSE( view.setWorld( world, MMOClientViewConfig{} ) );
+    SW_REQUIRE_TRUE( view.setWorld( world, Internal::makeViewConfig() ) );
     (void)view.handleMessage( 0, Internal::writeEnter( 1, 70, 0, float3{} ) );
+    (void)view.handleMessage( 0, Internal::writeEnter( 1, 71, 9, float3{} ) );
+    SW_EXPECT_EQUAL( 2, view.getHeldEntityCount() );
+    view.detachWorld();
     SW_EXPECT_EQUAL( 1, view.getHeldEntityCount() );
-    SW_REQUIRE_TRUE( view.setWorld( nullptr, Internal::makeViewConfig() ) );
-    SW_EXPECT_EQUAL( 0, view.getHeldEntityCount() );
     SW_EXPECT_TRUE( view.findEntity( 70 ) != nullptr );
+    SW_EXPECT_TRUE( view.findEntity( 71 ) == nullptr );
+}
+
+/**
+ * @brief [NetMMOStreamingTest] 한 id 는 보류 · 보임 중 하나다 — 보이는 엔티티의 새로 보임이 셀이 안 오른 자리로 다시 와도 보류로 갈라지지 않고(상태만 새로),
+ *        사라짐 한 번이 그 엔티티를 지우며 Entered · Left 는 한 번씩이다
+ */
+SW_TEST_CASE( NetMMOStreamingTest, ReenterOfVisibleEntityNeverSplitsOrDoublesEvents )
+{
+    Internal::FakeClientWorld world;
+    MMOClientView             view;
+    SW_REQUIRE_TRUE( view.setWorld( world, Internal::makeViewConfig() ) );
+    (void)view.handleMessage( 0, Internal::writeEnter( 1, 80, 0, float3{} ) );
+    world._bStreamed = SW_TRUE;
+    view.update( Internal::kTickSeconds );
+    SW_REQUIRE_TRUE( view.findEntity( 80 ) != nullptr );
+
+    world._bStreamed = SW_FALSE; // 다시 온 새로 보임의 자리 셀은 오르지 않았다
+    (void)view.handleMessage( 0, Internal::writeEnter( 2, 80, 0, float3{ 4.0f, 0.0f, 0.0f } ) );
+    SW_EXPECT_EQUAL( 0, view.getHeldEntityCount() );
+    SW_EXPECT_EQUAL( 1, view.getEntityCount() );
+    SW_EXPECT_EQUAL( 4.0f, view.findEntity( 80 )->_position._x );
+    (void)view.handleMessage( 0, Internal::writeLeave( 80 ) );
+    world._bStreamed = SW_TRUE;
+    view.update( Internal::kTickSeconds ); // 남은 보류가 없어 다시 보이지 않는다
+    SW_EXPECT_EQUAL( 0, view.getEntityCount() );
+    SW_EXPECT_EQUAL( 0, view.getHeldEntityCount() );
+
+    vector<MMOClientEvent> listEvent;
+    view.pollEvents( listEvent );
+    SW_EXPECT_EQUAL( 1, Internal::countEvents( listEvent, MMOClientEvent::Kind::Entered, 80 ) );
+    SW_EXPECT_EQUAL( 1, Internal::countEvents( listEvent, MMOClientEvent::Kind::Left, 80 ) );
+}
+
+/** @brief [NetMMOStreamingTest] 두 엔티티가 한 셀 오브젝트를 가리키면 둘째 묶기는 받지 않고(시한에 오류) 앞 엔티티가 풀린 뒤에야 묶는다 */
+SW_TEST_CASE( NetMMOStreamingTest, SecondBindToSameCellObjectIsRefused )
+{
+    SW_EXPECT_LOG( "MMOClientView.StaticObjectAlreadyBound" );
+    constexpr uint64          kFileID   = 77;
+    constexpr uint64          kObjectID = 5000;
+    Internal::FakeClientWorld world;
+    world._mapStaticObject[kFileID] = kObjectID;
+    MMOClientView view;
+    SW_REQUIRE_TRUE( view.setWorld( world, Internal::makeViewConfig() ) );
+    (void)view.handleMessage( 0, Internal::writeEnter( 1, 90, kFileID, float3{} ) );
+    (void)view.handleMessage( 0, Internal::writeEnter( 1, 91, kFileID, float3{} ) );
+    SW_EXPECT_TRUE( view.findEntity( 90 ) != nullptr );
+    SW_EXPECT_EQUAL( 1, view.getHeldEntityCount() );
+    view.update( Internal::kTimeoutSeconds );
+    SW_EXPECT_TRUE( view.findEntity( 91 ) == nullptr );
+
+    (void)view.handleMessage( 0, Internal::writeLeave( 90 ) );
+    view.update( Internal::kTickSeconds );
+    SW_EXPECT_TRUE( view.findEntity( 91 ) != nullptr );
+    vector<MMOClientEvent> listEvent;
+    view.pollEvents( listEvent );
+    SW_EXPECT_EQUAL( 1, Internal::countEvents( listEvent, MMOClientEvent::Kind::Bound, 90 ) );
+    SW_EXPECT_EQUAL( 1, Internal::countEvents( listEvent, MMOClientEvent::Kind::Unbound, 90 ) );
+    SW_EXPECT_EQUAL( 1, Internal::countEvents( listEvent, MMOClientEvent::Kind::Bound, 91 ) );
 }
 
 /** @brief [NetMMOStreamingTest] 관찰자 소스: 기본 반경은 격자 로딩 반경, 나가는 반경보다 작거나 유한하지 않은 반경 · 없는 관찰자는 거절된다 */
 SW_TEST_CASE( NetMMOStreamingTest, ObserverStreamingSourceIsValidated )
 {
     SW_EXPECT_LOG( "MMOReplicator.ObserverStreamingRadius" );
+    SW_EXPECT_LOG( "MMOReplicator.ObserverStreamingTooLarge" );
     SW_EXPECT_LOG( "MMOReplicator.ObserverStreamingUnknown" );
     NetEndpointConfig settings;
     settings._sendInterval   = 1.0 / 20.0;
@@ -260,6 +325,7 @@ SW_TEST_CASE( NetMMOStreamingTest, ObserverStreamingSourceIsValidated )
     MMOReplicatorConfig mmoSettings;
     mmoSettings._enterRadius = 15.0f;
     mmoSettings._leaveRadius = 20.0f;
+    // `_maxStreamingRadius` 는 아래에서 준다 — 주기 전(0)에는 어떤 반경도 받지 않는다.
     StreamingCellGridDef cellGridDef;
     cellGridDef._cellSize      = 20.0f;
     cellGridDef._loadingRadius = 25.0f;
@@ -277,9 +343,19 @@ SW_TEST_CASE( NetMMOStreamingTest, ObserverStreamingSourceIsValidated )
     server.setObserver( 0, 1 );
     server.setObserver( 1, 2 );
 
+    SW_EXPECT_FALSE( server.setObserverStreaming( 1, 200.0f, StreamingSourcePriority::High ) ); // 상한을 주지 않았다
+    mmoSettings._maxStreamingRadius = 300.0f;
+    SW_REQUIRE_TRUE( server.initialize( &cluster.getServer(), mmoSettings, cellGrid ) );
+    server.setEntity( avatar );
+    avatar._entityID = 1;
+    avatar._position = float3{ 5.0f, 0.0f, 10.0f };
+    server.setEntity( avatar );
+    server.setObserver( 0, 1 );
+    server.setObserver( 1, 2 );
     SW_EXPECT_TRUE( server.setObserverStreaming( 1, 200.0f, StreamingSourcePriority::High ) );
+    SW_EXPECT_FALSE( server.setObserverStreaming( 0, 301.0f, StreamingSourcePriority::Highest ) );                                   // 상한 300 을 넘는다
     SW_EXPECT_FALSE( server.setObserverStreaming( 0, 19.0f, StreamingSourcePriority::Highest ) );                                    // 나가는 반경 20 보다 작다
-    SW_EXPECT_FALSE( server.setObserverStreaming( 0, std::numeric_limits<float32>::infinity(), StreamingSourcePriority::Highest ) ); // 모든 셀을 덮는다
+    SW_EXPECT_FALSE( server.setObserverStreaming( 0, std::numeric_limits<float32>::infinity(), StreamingSourcePriority::Highest ) ); // 유한하지 않다(상한에 걸린다)
     SW_EXPECT_FALSE( server.setObserverStreaming( 5, 30.0f, StreamingSourcePriority::Highest ) );                                    // 관찰자가 없다
 
     vector<StreamingSource> listSource;
@@ -477,8 +553,8 @@ SW_TEST_CASE( NetMMOStreamingTest, TwoClientsAcrossCellsReplicateOnlyRelevantWit
     SW_REQUIRE_TRUE( rig.initialize() );
     const MMOSceneClientWorld worldA( rig._clientSceneA );
     const MMOSceneClientWorld worldB( rig._clientSceneB );
-    SW_REQUIRE_TRUE( rig._arrView[0].setWorld( &worldA, NetMMOStreamingTestInternal::makeViewConfig() ) );
-    SW_REQUIRE_TRUE( rig._arrView[1].setWorld( &worldB, NetMMOStreamingTestInternal::makeViewConfig() ) );
+    SW_REQUIRE_TRUE( rig._arrView[0].setWorld( worldA, NetMMOStreamingTestInternal::makeViewConfig() ) );
+    SW_REQUIRE_TRUE( rig._arrView[1].setWorld( worldB, NetMMOStreamingTestInternal::makeViewConfig() ) );
 
     // 1) A 는 셀 0(x 5), B 는 셀 7(x 150). B 의 클라이언트 씬은 아직 스트리밍하지 않는다(셀이 늦게 오른다).
     rig._arrClientStreams[1] = false;
