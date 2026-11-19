@@ -1,11 +1,7 @@
 			registry.registerEnum( info );
 $AliasRegs
 		}
-
-		Registrar()
-		{
-			static ::sw::EnumRegistrar reg{ &RegisterEnum };
-		}
+$Tables
 	};
-	static Registrar<$FQN> s_${ID}_registrar{};
+	static ::sw::EnumRegistrar s_${ID}_registrar{ &Registrar<$FQN>::registerEnum };
 

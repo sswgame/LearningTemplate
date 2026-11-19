@@ -2,16 +2,8 @@
 	template <>
 	struct Registrar<$FQN>
 	{
-		static void RegisterEnum(::sw::TypeRegistry& registry)
+		using E = ::$FQN;
+
+		static void registerEnum( ::sw::TypeRegistry& registry )
 		{
-			::sw::EnumInfo info;
-			info._name               = ::sw::hashed_string( "$Name" );
-			info._fullyQualifiedName = ::sw::hashed_string( "$FQN" );
-			info._moduleName         = ::sw::hashed_string( "$ModuleName" );
-			info._size               = static_cast<uint8>( sizeof( ::$FQN ) );
-			info._bIsSigned          = std::is_signed_v<std::underlying_type_t<::$FQN>> ? SW_TRUE : SW_FALSE;
-			info._bIsBitFlag         = $IsBitFlag;
-			info._bHasInvalid        = $HasInvalid;
-			info._invalidValue       = $InvalidValue;
-			info._bHasCount          = $HasCount;
-			info._countValue         = $CountValue;
+			::sw::EnumInfo info = ::sw::EnumInfo::create<E>( { "$Name", "$FQN", "$ModuleName", $EntryTable, $RedirectTable, $InvalidName, $CountName, $IsBitFlag } );

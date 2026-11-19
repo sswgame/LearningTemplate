@@ -332,6 +332,11 @@ namespace sw
                 markHeaderError( outHeader );
                 return;
             }
+            // 끝 열거자 `Count` 는 손으로 적지 않아도 개수 표식이다(magic_enum · 언리얼 `MAX` 관례, Core `EnumArray` 도 같은 열거자를 개수로 읽는다).
+            // 비트 플래그의 `Count` 는 개수가 아니라 표식으로 보지 않는다.
+            const bool bTrailingCount = enumInfo._listEnumerator.empty() == false && enumInfo._listEnumerator.back()._name == annotation::kCountEnumerator;
+            if ( enumInfo._countEnumerator.empty() && enumInfo._bIsBitFlag == SW_FALSE && bTrailingCount )
+                enumInfo._countEnumerator = annotation::kCountEnumerator;
             if ( enumInfo._countEnumerator.empty() == false && enumInfo._invalidEnumerator.empty() )
                 enumInfo._invalidEnumerator = enumInfo._countEnumerator;
             if ( DeclarationValidator::validateEnumeratorRedirects( enumInfo ) == false )

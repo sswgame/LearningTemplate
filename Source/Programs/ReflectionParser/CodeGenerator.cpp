@@ -269,37 +269,6 @@ namespace sw
                 }
                 return string( buf.view() );
             }
-
-            /**
-             * @brief 표식(`Invalid`, `Count`)을 뺀 열거자의 값이 `0..N-1` 로 빈틈없고 겹치지 않으면, 값 순서로 늘어놓은 열거자를 @p outListDense 에 담습니다.
-             * @details 그 밖(비트 플래그, 음수, 빈틈, 같은 값의 별명)은 비워 둡니다. 그러면 이름 배열을 만들지 않고 런타임은 이름 맵을 씁니다.
-             *          여기 값은 libclang 이 읽은 값이라, 배열을 쓰는 쪽이 열거자마다 `static_assert` 로 컴파일러의 값과 대조합니다.
-             */
-            static void collectDenseEnumerator( const ParsedEnumInfo& enumInfo, const ParsedEnumeratorInfo* pInvalid, const ParsedEnumeratorInfo* pCount,
-                                                vector<const ParsedEnumeratorInfo*>& outListDense )
-            {
-                outListDense.clear();
-                if ( enumInfo._bIsBitFlag == SW_TRUE )
-                    return;
-                for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
-                {
-                    if ( &en != pInvalid && &en != pCount )
-                        outListDense.push_back( &en );
-                }
-                const int64                         count = static_cast<int64>( outListDense.size() );
-                vector<const ParsedEnumeratorInfo*> listByValue( outListDense.size(), nullptr );
-                for ( const ParsedEnumeratorInfo* pEn : outListDense )
-                {
-                    const bool bInRange = 0 <= pEn->_value && pEn->_value < count;
-                    if ( bInRange == false || listByValue[static_cast<size_t>( pEn->_value )] != nullptr )
-                    {
-                        outListDense.clear();
-                        return;
-                    }
-                    listByValue[static_cast<size_t>( pEn->_value )] = pEn;
-                }
-                outListDense = std::move( listByValue );
-            }
         };
 
         /**
@@ -1010,23 +979,59 @@ namespace sw
         const ParsedEnumeratorInfo* invalidEn = findEnumerator( enumInfo, enumInfo._invalidEnumerator );
         const ParsedEnumeratorInfo* countEn   = findEnumerator( enumInfo, enumInfo._countEnumerator );
 
+        // 열거형마다 맵 초기화를 펼치지 않고 항목 표(이름 · 값 배열) 하나만 낸다. 이름 표 · 값 표 · 인덱스 목록은 런타임이 이 표에서 짓는다(`EnumInfo::createFromDesc`).
         // 값은 숫자로 박지 않고 **컴파일러가 계산하게** 한다. libclang 의 값은 부호 있는 64 비트라 `uint8` 의 0x80 이 -128 로 적혔고,
         // 런타임은 그것을 128 로 읽어 이름을 잃었다(`EnumInfo::readValueFromMemory`). 열거자 자체를 넓히면 밑바탕 타입의 부호를 따른다.
-        const auto valueExpr = [&enumInfo]( const ParsedEnumeratorInfo& enumerator )
+        // 인덱스 목록도 그 값으로 지으므로 libclang 의 값과 대조하는 `static_assert` 가 필요 없다.
+        CodeEmitBuffer tableBuffer;
+        CodeEmit       tableEmit( tableBuffer );
+        tableEmit.push( 2 );
+        const auto emitTable = [&tableEmit]( const utf8* pTableName, const auto& emitRows )
         {
-            return "static_cast<int64>( ::" + enumInfo._fullyQualifiedName + "::" + enumerator._name + " )";
+            tableEmit.linef( "static constexpr ::sw::NamedValue<int64> %#[] = {", pTableName );
+            tableEmit.push();
+            emitRows();
+            tableEmit.pop();
+            tableEmit.line( "};" );
         };
+        if ( enumInfo._listEnumerator.empty() == false )
+        {
+            emitTable( "kArrEntry", [&]()
+            {
+                for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
+                {
+                    tableEmit.linef( "{ %#, static_cast<int64>( E::%# ) },", CodeEmit::quoted( en._name ), en._name );
+                }
+            } );
+        }
+
+        // 옛 열거자 이름(이름 변경 · 지운 열거자의 대체)은 지금 이름과 따로 둔다. 읽기는 지금 이름에 없을 때만 이 표를 본다. 대상은 `AstVisitor` 가 이미 확인했다.
+        const bool bHasRedirect = enumInfo._listValueAlias.empty() == false || enumInfo._listRemovedEnumerator.empty() == false;
+        if ( bHasRedirect )
+        {
+            emitTable( "kArrRedirect", [&]()
+            {
+                for ( const vector<pair<string, string>>* pListRedirect : { &enumInfo._listValueAlias, &enumInfo._listRemovedEnumerator } )
+                {
+                    for ( const auto& [oldName, targetName] : *pListRedirect )
+                    {
+                        const ParsedEnumeratorInfo* pTarget = findEnumerator( enumInfo, targetName );
+                        tableEmit.linef( "{ %#, static_cast<int64>( E::%# ) },", CodeEmit::quoted( oldName ), pTarget->_name );
+                    }
+                }
+            } );
+        }
 
         appendTemplate( outBuffer, EmitTemplate::EnumRegistrarBegin, {
-                                                                         {          templatekey::kID,                                                  registrarName},
-                                                                         {         templatekey::kFqn,                                   enumInfo._fullyQualifiedName},
-                                                                         {        templatekey::kName,                                                 enumInfo._name},
-                                                                         {  templatekey::kModuleName,                                                    _moduleName},
-                                                                         {   templatekey::kIsBitFlag,                        enumInfo._bIsBitFlag ? "true" : "false"},
-                                                                         {  templatekey::kHasInvalid,                        invalidEn != nullptr ? "true" : "false"},
-                                                                         {templatekey::kInvalidValue, invalidEn != nullptr ? valueExpr( *invalidEn ) : string( "0" )},
-                                                                         {    templatekey::kHasCount,                          countEn != nullptr ? "true" : "false"},
-                                                                         {  templatekey::kCountValue,     countEn != nullptr ? valueExpr( *countEn ) : string( "0" )},
+                                                                         {           templatekey::kID,                                                                     registrarName},
+                                                                         {          templatekey::kFqn,                                                      enumInfo._fullyQualifiedName},
+                                                                         {         templatekey::kName,                                                                    enumInfo._name},
+                                                                         {   templatekey::kModuleName,                                                                       _moduleName},
+                                                                         {    templatekey::kIsBitFlag,                                           enumInfo._bIsBitFlag ? "true" : "false"},
+                                                                         {  templatekey::kInvalidName, invalidEn != nullptr ? CodeEmit::quoted( invalidEn->_name ) : string( "nullptr" )},
+                                                                         {    templatekey::kCountName,     countEn != nullptr ? CodeEmit::quoted( countEn->_name ) : string( "nullptr" )},
+                                                                         {   templatekey::kEntryTable,                             enumInfo._listEnumerator.empty() ? "{}" : "kArrEntry"},
+                                                                         {templatekey::kRedirectTable,                                              bHasRedirect ? "kArrRedirect" : "{}"},
         } );
 
         CodeEmit emit( outBuffer );
@@ -1035,77 +1040,13 @@ namespace sw
         // 열거형의 커스텀 메타는 에디터 메타데이터다 — 개발 전용 단위가 낸다(`makeEditorMetadataText`).
         AnnotationFields::emitRuntimeMetadata( emit, enumInfo, "info." );
 
-        if ( enumInfo._listEnumerator.empty() == false )
-        {
-            emit.line( "info._mapNameToValue =" );
-            emit.line( "{" );
-            emit.push();
-            for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
-            {
-                emit.linef( "{ %#, %# },", CodeEmit::hs( en._name ), valueExpr( en ) );
-            }
-            emit.pop();
-            emit.line( "};" );
-
-            emit.line( "info._mapValueToName =" );
-            emit.line( "{" );
-            emit.push();
-            for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
-            {
-                emit.linef( "{ %#, %# },", valueExpr( en ), CodeEmit::hs( en._name ) );
-            }
-            emit.pop();
-            emit.line( "};" );
-        }
-
-        // 값이 곧 인덱스인 이름 목록이다. `getEnumName` 이 해시 맵 대신 인덱스로 찾는다. 순서는 libclang 의 값이므로 컴파일러의 값과 열거자마다 대조한다
-        // (생성기는 SW_DEBUG 없이 헤더를 읽으므로, 빌드 설정에 따라 열거자가 달라지면 여기서 컴파일이 멈춘다).
-        // 목록은 `EnumInfo` 가 값으로 가진다. 모듈의 정적 배열을 가리키면 핫 리로드 해제 뒤 다른 스레드의 이름 조회가 해제된 저장소를 읽는다.
-        vector<const ParsedEnumeratorInfo*> listDense;
-        CodeGeneratorInternal::collectDenseEnumerator( enumInfo, invalidEn, countEn, listDense );
-        if ( listDense.empty() == false )
-        {
-            emit.line( "info._listDenseName =" );
-            emit.line( "{" );
-            emit.push();
-            for ( const ParsedEnumeratorInfo* pEn : listDense )
-            {
-                emit.linef( "%#,", CodeEmit::hs( pEn->_name ) );
-            }
-            emit.pop();
-            emit.line( "};" );
-            for ( size_t index = 0; index < listDense.size(); ++index )
-            {
-                emit.linef( "static_assert( %# == %#, \"enumerator value differs from the one the reflection parser read\" );", valueExpr( *listDense[index] ),
-                            static_cast<uint32>( index ) );
-            }
-        }
-
-        // 옛 열거자 이름(이름 변경 · 지운 열거자의 대체)은 지금 이름과 따로 둔다. 읽기는 지금 이름에 없을 때만 이 표를 본다. 대상은 `AstVisitor` 가 이미 확인했다.
-        const bool bHasRedirect = enumInfo._listValueAlias.empty() == false || enumInfo._listRemovedEnumerator.empty() == false;
-        if ( bHasRedirect )
-        {
-            emit.line( "info._mapRedirectNameToValue =" );
-            emit.line( "{" );
-            emit.push();
-            for ( const vector<pair<string, string>>* pListRedirect : { &enumInfo._listValueAlias, &enumInfo._listRemovedEnumerator } )
-            {
-                for ( const auto& [oldName, targetName] : *pListRedirect )
-                {
-                    const ParsedEnumeratorInfo* pTarget = findEnumerator( enumInfo, targetName );
-                    emit.linef( "{ %#, %# },", CodeEmit::hs( oldName ), valueExpr( *pTarget ) );
-                }
-            }
-            emit.pop();
-            emit.line( "};" );
-        }
-
         appendTemplate( outBuffer, EmitTemplate::EnumRegistrarEnd,
                         {
                             { templatekey::kID, registrarName },
                             { templatekey::kFqn, enumInfo._fullyQualifiedName },
                             { templatekey::kAliasRegs,
-                             CodeGeneratorInternal::emitAliasRegisterLines( enumInfo._listAlias, enumInfo._fullyQualifiedName, true ) }
+                             CodeGeneratorInternal::emitAliasRegisterLines( enumInfo._listAlias, enumInfo._fullyQualifiedName, true ) },
+                            { templatekey::kTables, tableBuffer.view() },
         } );
     }
 

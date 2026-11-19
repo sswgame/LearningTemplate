@@ -3,11 +3,39 @@
  * @brief 열거형 하나의 리플렉션 정보입니다.
  */
 #pragma once
+#include "Core/Container/span.h"
+#include "Core/String/EnumNameTable.h"
+
 #include "Engine/Reflection/ReflectionMetadataBox.h"
 
 namespace sw
 {
     struct EnumEditorMetadata;
+
+    /**
+     * @struct EnumInfoDesc
+     * @brief 생성기가 열거형마다 내는 등록 설명자입니다 — 항목 표(이름 · 값 배열) 하나와 표식 이름만 담고, 이름 표 · 값 표 · 인덱스 목록은 `EnumInfo::create` 가 짓는다.
+     * @details 열거형마다 같은 맵 초기화 코드를 펼치지 않는다(magic_enum 이 이름 · 값 배열 하나에서 모든 조회를 푸는 것과 같은 모양). 값은 생성 코드에서
+     *          `static_cast<int64>( E::X )` 라 컴파일러가 계산한다 — libclang 의 값을 숫자로 박지 않는다.
+     */
+    struct EnumInfoDesc
+    {
+        const utf8*                   _pName;
+        const utf8*                   _pFullyQualifiedName;
+        const utf8*                   _pModuleName;
+        span<const NamedValue<int64>> _listEntry;    ///< 선언 순서의 열거자 전부(표식 열거자 포함)
+        span<const NamedValue<int64>> _listRedirect; ///< 옛 열거자 이름 → 지금 값(`ValueAlias` · `Removed`)
+        const utf8*                   _pInvalidName; ///< `Invalid` 표식 열거자 이름. 없으면 nullptr
+        const utf8*                   _pCountName;   ///< `Count` 표식 열거자 이름(끝 열거자 `Count` 는 생성기가 자동으로 넣는다). 없으면 nullptr
+        bool                          _bIsBitFlag;   // NOLINT(sw-bool-flag): 생성 코드가 집합체 초기화로 한 번 채우는 일회용 설명자다(기본값 없는 비트필드는 순서 초기화를 깨뜨린다)
+    };
+
+    /** @brief 열거자 하나(이름 · 값)입니다. `EnumInfo::_listEnumerator` 의 원소입니다. */
+    struct EnumeratorInfo
+    {
+        hashed_string _name;
+        int64         _value{ 0 };
+    };
 
     /// @brief 등록된 enum 의 정보입니다. 이름과 값의 대응, Flags 여부, Invalid 와 Count 센티널을 담습니다.
     struct SW_API EnumInfo
@@ -32,7 +60,12 @@ namespace sw
          *          `EnumInfo` 가 값으로 가진다. 모듈의 정적 배열을 가리키면 핫 리로드 해제와 겹친 렌더 · 오디오 · 로거 스레드의 `getEnumName` 이
          *          해제된 저장소를 읽는다. intern 된 이름은 모듈보다 오래 살므로 묘비에도 그대로 둔다(`_mapValueToName` 과 같은 규칙).
          */
-        vector<hashed_string>  _listDenseName;
+        vector<hashed_string> _listDenseName;
+        /**
+         * @brief 선언 순서의 열거자 목록입니다. `Count` 표식 열거자는 빠진다(에디터 선택지 · 반복은 이 목록을 돈다). 생성기가 채운 등록(`create`)에만 있습니다.
+         * @details 이름 표(`_mapNameToValue`)에는 표식 열거자도 남는다 — 필드에 든 표식 값을 이름으로 쓰고 읽는 왕복(`tryParseText`)이 그 이름을 본다.
+         */
+        vector<EnumeratorInfo> _listEnumerator;
         int64                  _invalidValue{ 0 };
         int64                  _countValue{ 0 };
         uint8                  _size{ sizeof( int32 ) };
@@ -44,6 +77,21 @@ namespace sw
 
         /** @brief 비어 있는 이름-값 맵으로 만듭니다. */
         EnumInfo() noexcept;
+
+        /** @brief 생성 코드의 항목 표(@p desc)에서 열거형 정보를 짓습니다. 크기와 부호는 열거형 @p E 에서 읽습니다. */
+        template <typename E>
+        [[nodiscard]] static EnumInfo create( const EnumInfoDesc& desc )
+        {
+            static_assert( std::is_enum_v<E>, "EnumInfo::create needs an enum type" );
+            return createFromDesc( desc, static_cast<uint8>( sizeof( E ) ), std::is_signed_v<std::underlying_type_t<E>> );
+        }
+
+        /**
+         * @brief 항목 표에서 이름 표 · 값 표 · 리다이렉트 표 · 열거자 목록 · 인덱스 목록을 짓습니다.
+         * @details 같은 값의 이름이 여럿이면 값 → 이름은 먼저 적은 열거자다. 표식(`Invalid` · `Count`)을 뺀 열거자 값이 `0..N-1` 로 빈틈없고 겹치지 않으면
+         *          값이 곧 인덱스인 이름 목록(`_listDenseName`)을 채운다(비트 플래그 제외). 표식 이름이 표에 없으면 멈춘다 — 생성기가 이미 확인한다.
+         */
+        [[nodiscard]] static EnumInfo createFromDesc( const EnumInfoDesc& desc, uint8 size, bool bSigned );
 
         /** @brief 커스텀 메타데이터를 조회합니다. 에디터 메타데이터가 붙지 않았으면(배포) nullptr 입니다. */
         const string* findCustomMeta( const hashed_string& key ) const noexcept;
@@ -168,8 +216,10 @@ namespace sw
 
         /**
          * @brief 비트플래그 값에서 켜진 열거자의 이름을 모으고, 이름이 덮지 못한 비트를 반환합니다.
-         * @details 0 이 아닌 열거자 중 비트가 모두 켜진 것을 이름으로 모은다(`_mapValueToName` 만 쓰고, ValueAlias 는 겹쳐 적지 않는다).
-         *          텍스트(`toStringFlags`)와 바이너리(`SerializerUtil` 의 열거자 식별 인코딩)가 **같은 이름**을 적도록 이 규칙을 한 곳에 둔다.
+         * @details **단일 비트 열거자의 이름만** 쓴다 — 조합 열거자(`All = A | B`)는 `A | B` 로 풀어 적는다(magic_enum 플래그 글과 같은 규칙). 조합 이름을 겹쳐 적으면
+         *          같은 값이 `A | B | All` 처럼 길어지고, 조합을 바꾸면 옛 글의 뜻이 바뀐다. 단일 비트 이름이 없는 비트만 그 비트를 덮는 조합 이름으로 적는다(값을 잃지 않는다).
+         *          `_mapValueToName` 만 쓰고 ValueAlias 는 겹쳐 적지 않는다. 텍스트(`toStringFlags`)와 바이너리(`SerializerUtil` 의 열거자 식별 인코딩)가
+         *          **같은 이름**을 적도록 이 규칙을 한 곳에 둔다. 읽기(`tryParseFlags`)는 `A | B` 의 토큰마다 이름을 받는다 — 조합 이름(`All`)도 받는다(손으로 쓴 데이터).
          */
         int64 collectFlagNames( int64 value, vector<hashed_string>& outListName ) const
         {
@@ -177,7 +227,18 @@ namespace sw
             int64 coveredBits{ 0 };
             for ( const auto& [bitValue, name] : _mapValueToName )
             {
-                if ( bitValue != 0 && ( value & bitValue ) == bitValue )
+                if ( isSingleBit( bitValue ) && ( value & bitValue ) == bitValue )
+                {
+                    outListName.push_back( name );
+                    coveredBits |= bitValue;
+                }
+            }
+            for ( const auto& [bitValue, name] : _mapValueToName )
+            {
+                const int64 uncoveredBits = value & ~coveredBits;
+                if ( uncoveredBits == 0 )
+                    break;
+                if ( bitValue != 0 && isSingleBit( bitValue ) == false && ( value & bitValue ) == bitValue && ( bitValue & uncoveredBits ) != 0 )
                 {
                     outListName.push_back( name );
                     coveredBits |= bitValue;
@@ -300,6 +361,13 @@ namespace sw
         }
 
     private:
+        /** @brief 비트가 정확히 하나 켜진 값인지 봅니다. */
+        static constexpr bool isSingleBit( int64 value ) noexcept
+        {
+            const uint64 bits = static_cast<uint64>( value );
+            return bits != 0 && ( bits & ( bits - 1 ) ) == 0;
+        }
+
         /** @brief 이름 → 값 표 하나에서 이름 해시로 찾습니다. */
         [[nodiscard]] static bool findInMapByNameHash( const unordered_map<hashed_string, int64>& mapNameToValue, uint32 nameHash, int64& outValue )
         {

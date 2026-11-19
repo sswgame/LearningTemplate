@@ -98,7 +98,7 @@ namespace sw::editor
             {
                 const int32     currentVal = info.getValueAsInt();
                 const EnumInfo* pEnumInfo  = GlobalVariablesViewModel::findEnumInfo( info._enumType );
-                if ( pEnumInfo == nullptr || pEnumInfo->_mapValueToName.empty() )
+                if ( pEnumInfo == nullptr || pEnumInfo->_listEnumerator.empty() )
                     return drawInt32Widget( info );
 
                 bool        bChanged{ false };
@@ -106,10 +106,10 @@ namespace sw::editor
                 const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
                 if ( EditorWidgets::beginCombo( "##val", pPreview ) )
                 {
-                    for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
+                    for ( const EnumeratorInfo& enumerator : pEnumInfo->_listEnumerator ) // 선언 순서, `Count` 표식 제외
                     {
-                        const int32 val32     = static_cast<int32>( val );
-                        const utf8* name      = nameHashed.toString().data();
+                        const int32 val32     = static_cast<int32>( enumerator._value );
+                        const utf8* name      = enumerator._name.toString().data();
                         const bool  bSelected = ( val32 == currentVal );
                         if ( ImGui::Selectable( name, bSelected ) )
                         {

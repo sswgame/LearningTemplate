@@ -89,6 +89,29 @@ namespace sw
         One  = 1,
         Two  = 2,
     };
+
+    /** @brief 끝 열거자 `Count` 가 `ENUM( Count = … )` 없이 개수 표식이 되는지 본다 — 열거자 목록 · 인덱스 목록에서 빠진다(`ReflectionEnumInfoTest`). */
+    ENUM()
+    enum class TestTrailingCountEnum : uint8
+    {
+        Alpha,
+        Beta,
+        Gamma,
+        Count
+    };
+
+    /** @brief 조합 열거자가 있는 비트플래그입니다 — 글은 단일 비트 이름만 쓰고, 단일 비트 이름이 없는 비트만 조합 이름으로 적는다(`ReflectionEnumBitFlagTest`). */
+    ENUM( Flags )
+    enum class TestCompositeFlag : uint8
+    {
+        None  = 0,
+        Red   = 0x01,
+        Green = 0x02,
+        Blue  = 0x04,
+        Cyan  = 0x06,
+        All   = 0x07,
+        Pair  = 0x30,
+    };
 } // namespace sw
 
 namespace sw

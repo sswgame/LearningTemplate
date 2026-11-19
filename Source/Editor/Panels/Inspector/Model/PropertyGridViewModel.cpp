@@ -197,17 +197,9 @@ namespace sw::editor
                     outText           = pName != nullptr ? pName : "<Unknown>";
                     return;
                 }
-                for ( const auto& [flag, nameHashed] : enumInfo._mapValueToName )
-                {
-                    if ( flag != 0 && ( value & flag ) == flag )
-                    {
-                        if ( outText.empty() == false )
-                            outText += " | ";
-                        outText += nameHashed.toString();
-                    }
-                }
-                if ( outText.empty() )
-                    outText = ( value == 0 ) ? "None" : "<Unknown>";
+                // 저장 글과 같은 규칙(단일 비트 이름만, `EnumInfo::collectFlagNames`)으로 잇는다 — 조합 열거자를 겹쳐 보이지 않는다.
+                const string_view flagsText = enumInfo.toStringFlags( value );
+                outText                     = flagsText.empty() ? string_view( "<Unknown>" ) : flagsText;
             }
 
             /** @brief 그릴 위젯이 없는 타입의 글입니다. */
@@ -579,9 +571,10 @@ namespace sw::editor
             row._kind      = pEnumInfo->_bIsBitFlag ? PropertyRowKind::BitFlagEnum : PropertyRowKind::Enum;
             row._enumValue = pEnumInfo->readValueFromMemory( pEnumMemory );
             Internal::formatEnumPreview( registry, *pEnumInfo, prop, row._enumValue, row._valueText );
-            for ( const auto& [value, nameHashed] : pEnumInfo->_mapValueToName )
+            // 선언 순서로 보이고 `Count` 표식은 선택지가 아니다(`EnumInfo::_listEnumerator`).
+            for ( const EnumeratorInfo& enumerator : pEnumInfo->_listEnumerator )
             {
-                row._listChoice.push_back( PropertyEnumChoice{ nameHashed, value } );
+                row._listChoice.push_back( PropertyEnumChoice{ enumerator._name, enumerator._value } );
             }
             return;
         }

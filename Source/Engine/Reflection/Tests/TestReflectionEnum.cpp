@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -534,4 +535,93 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumNameCacheFollowsRegistryGeneration )
 
     registry.unregisterTypesByModule( "TestEnumNameCache" );
     SW_EXPECT_NULL( cache.find( fqn ) );
+}
+
+/**
+ * @brief [ReflectionEnumInfoTest] 항목 표에서 이름 표 · 값 표 · 리다이렉트 · 표식 · 열거자 목록 · 인덱스 목록을 짓는다
+ * @details 생성기는 열거형마다 항목 표(`EnumInfoDesc`) 하나만 낸다. 같은 값의 별명은 값 → 이름에서 먼저 적은 열거자가 이기고, `Count` 표식은 열거자 목록에서 빠지지만 이름 표에는 남는다.
+ */
+SW_TEST_CASE( ReflectionEnumInfoTest, CreateFromEntryTable )
+{
+    static constexpr sw::NamedValue<int64> kArrEntry[] = {
+        {"Unknown", 0},
+        {  "First", 1},
+        { "Second", 2},
+        {"Primary", 1},
+        {  "Count", 3},
+    };
+    static constexpr sw::NamedValue<int64> kArrRedirect[] = {
+        { "OldFirst", 1 },
+    };
+    const sw::EnumInfo info = sw::EnumInfo::createFromDesc( { "TableEnum", "swtest::TableEnum", "TestTableEnum", kArrEntry, kArrRedirect, "Unknown", "Count", false }, 1, false );
+
+    SW_EXPECT_TRUE( info._fullyQualifiedName == sw::hashed_string( "swtest::TableEnum" ) );
+    SW_EXPECT_EQUAL( uint32( 1 ), static_cast<uint32>( info._size ) );
+    SW_EXPECT_TRUE( info._bIsSigned == SW_FALSE );
+    SW_EXPECT_TRUE( info._bHasInvalid != SW_FALSE && info._invalidValue == 0 );
+    SW_EXPECT_TRUE( info._bHasCount != SW_FALSE && info._countValue == 3 );
+    SW_EXPECT_TRUE( info.getNameByValue( 1 ) == sw::hashed_string( "First" ) ); // 먼저 적은 열거자
+
+    int64 value{ -1 };
+    SW_EXPECT_TRUE( info.tryParseText( "Primary", value ) && value == 1 );
+    SW_EXPECT_TRUE( info.tryParseText( "OldFirst", value ) && value == 1 );
+    SW_EXPECT_TRUE( info.tryParseText( "Count", value ) && value == 3 ); // 표식 이름도 왕복한다
+
+    SW_EXPECT_EQUAL( size_t( 4 ), info._listEnumerator.size() ); // Count 만 빠진다
+    SW_EXPECT_TRUE( info._listEnumerator.front()._name == sw::hashed_string( "Unknown" ) );
+    SW_EXPECT_TRUE( info._listEnumerator.back()._name == sw::hashed_string( "Primary" ) );
+    SW_EXPECT_TRUE( info._listDenseName.empty() ); // 표식을 빼면 1, 2, 1 — 겹쳐서 인덱스 목록이 없다
+
+    static constexpr sw::NamedValue<int64> kArrDenseEntry[] = {
+        {"Zero", 0},
+        { "One", 1},
+        { "Max", 2},
+    };
+    const sw::EnumInfo dense = sw::EnumInfo::createFromDesc( { "DenseEnum", "swtest::DenseEnum", "TestTableEnum", kArrDenseEntry, {}, nullptr, "Max", false }, 4, true );
+    SW_EXPECT_EQUAL( size_t( 2 ), dense._listDenseName.size() );
+    SW_EXPECT_TRUE( dense.valueToCString( 1 ) == dense.toString( 1 ).data() );
+    SW_EXPECT_TRUE( dense.valueToCString( 2 ) == nullptr );
+}
+
+/**
+ * @brief [ReflectionEnumInfoTest] 끝 열거자 `Count` 는 `ENUM( Count = … )` 없이 개수 표식이다
+ */
+SW_TEST_CASE( ReflectionEnumInfoTest, TrailingCountIsTheCountSentinel )
+{
+    const sw::EnumInfo* pInfo = findEnum( "sw::TestTrailingCountEnum" );
+    SW_REQUIRE_NOT_NULL( pInfo );
+    SW_EXPECT_TRUE( pInfo->_bHasCount != SW_FALSE );
+    SW_EXPECT_EQUAL( static_cast<int64>( sw::TestTrailingCountEnum::Count ), pInfo->_countValue );
+    SW_EXPECT_EQUAL( size_t( 3 ), pInfo->_listEnumerator.size() );
+    SW_EXPECT_TRUE( pInfo->_listEnumerator[2]._name == sw::hashed_string( "Gamma" ) );
+    SW_EXPECT_EQUAL( size_t( 3 ), pInfo->_listDenseName.size() );
+    SW_EXPECT_TRUE( pInfo->valueToCString( static_cast<int64>( sw::TestTrailingCountEnum::Count ) ) == nullptr );
+    SW_EXPECT_EQUAL( sw::kEnumCount<sw::TestTrailingCountEnum>, pInfo->_listEnumerator.size() ); // Core EnumArray 와 같은 개수
+}
+
+/**
+ * @brief [ReflectionEnumBitFlagTest] 플래그 글은 단일 비트 이름만 쓴다 — 조합 열거자는 풀어 적고, 단일 비트 이름이 없는 비트만 조합 이름으로 적는다
+ */
+SW_TEST_CASE( ReflectionEnumBitFlagTest, FlagTextUsesSingleBitNames )
+{
+    const sw::EnumInfo* pInfo = findEnum( "sw::TestCompositeFlag" );
+    SW_REQUIRE_NOT_NULL( pInfo );
+
+    const sw::string allText{ pInfo->toStringFlags( 0x07 ) };
+    for ( const utf8* pName : { "Red", "Green", "Blue" } )
+    {
+        SW_EXPECT_TRUE_MSG( allText.find( pName ) != sw::string::npos, pName );
+    }
+    SW_EXPECT_TRUE( allText.find( "All" ) == sw::string::npos );
+    SW_EXPECT_TRUE( allText.find( "Cyan" ) == sw::string::npos );
+    SW_EXPECT_EQUAL( sw::string( "Pair" ), sw::string( pInfo->toStringFlags( 0x30 ) ) );
+
+    sw::vector<sw::hashed_string> listName;
+    SW_EXPECT_EQUAL( int64( 0 ), pInfo->collectFlagNames( 0x37, listName ) ); // 값을 잃지 않는다
+    SW_EXPECT_EQUAL( size_t( 4 ), listName.size() );
+
+    int64 value{ 0 };
+    SW_EXPECT_TRUE( pInfo->tryParseText( allText, value ) && value == 0x07 ); // 쓴 글을 그대로 읽는다
+    SW_EXPECT_TRUE( pInfo->tryParseText( "All", value ) && value == 0x07 );   // 손으로 쓴 조합 이름도 받는다
+    SW_EXPECT_TRUE( pInfo->tryParseText( "Cyan | Red", value ) && value == 0x07 );
 }
