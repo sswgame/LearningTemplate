@@ -77,17 +77,17 @@ namespace sw
 
     bool UISubtitleService::configure( const SubtitleConfig& config )
     {
-        bool bValid = config._maxVisibleLineCount > 0 && config._minDisplaySeconds > 0.0f && config._readingSecondsPerCharacter > 0.0f && config._listSizeScale.empty() == false;
-        for ( const float32 scale : config._listSizeScale )
+        bool bValid = config._maxVisibleLineCount > 0 && config._minDisplaySeconds > 0.0f && config._readingSecondsPerCharacter > 0.0f;
+        for ( const float32 scale : config._arrSizeScale )
         {
             bValid = bValid && scale > 0.0f;
         }
         if ( bValid == false )
         {
             SW_LOG_ERROR_ID( "UISubtitle.InvalidConfig",
-                             "EngineConfig _subtitles: _maxVisibleLineCount, _minDisplaySeconds, _readingSecondsPerCharacter must be > 0 and _listSizeScale must list positive scales "
-                             "(lines %#, min %# s, per character %# s, %# scales)",
-                             config._maxVisibleLineCount, config._minDisplaySeconds, config._readingSecondsPerCharacter, static_cast<uint32>( config._listSizeScale.size() ) );
+                             "EngineConfig _subtitles: _maxVisibleLineCount, _minDisplaySeconds, _readingSecondsPerCharacter and every _arrSizeScale must be > 0 "
+                             "(lines %#, min %# s, per character %# s, scales %# %# %#)",
+                             config._maxVisibleLineCount, config._minDisplaySeconds, config._readingSecondsPerCharacter, config._arrSizeScale[0], config._arrSizeScale[1], config._arrSizeScale[2] );
             return false;
         }
         _config = config;
@@ -124,18 +124,18 @@ namespace sw
             (void)post( pSpeaker, LocalizedText::find( cue._textKey.c_str(), cue._textKey.c_str() ) );
             // 신호는 보이스를 얻은 클립만 낸다 — 다음 `refreshVoiceState` 까지는 나는 중으로 둔다.
             _listQueued.back()._voicePlayingID = cue._playingID;
-            _listQueued.back()._bVoicePlaying  = true;
+            _listQueued.back()._bVoicePlaying  = cue._playingID != 0;
         }
     }
 
-    void UISubtitleService::refreshVoiceState( const AudioEngine& audio )
+    void UISubtitleService::refreshVoiceState( const AudioEngine* pAudio )
     {
         for ( vector<UISubtitleLine>* pList : { &_listActive, &_listQueued } )
         {
             for ( UISubtitleLine& line : *pList )
             {
-                if ( line._voicePlayingID != 0 )
-                    line._bVoicePlaying = audio.isPlaying( line._voicePlayingID );
+                // 오디오가 내려갔으면(장치 · 서비스 없음) 아무 음성도 나지 않는다 — 줄이 영원히 남지 않게 시간만 따른다.
+                line._bVoicePlaying = line._voicePlayingID != 0 && pAudio != nullptr && pAudio->isPlaying( line._voicePlayingID );
             }
         }
     }
@@ -200,9 +200,8 @@ namespace sw
 
     float32 UISubtitleService::computeSizeScale( int32 sizeSetting ) const
     {
-        SW_ASSERT( _config._listSizeScale.empty() == false ); // `configure` 가 지킨다
-        const int32 last = static_cast<int32>( _config._listSizeScale.size() ) - 1;
-        return _config._listSizeScale[static_cast<size_t>( MathUtil::clamp( sizeSetting, 0, last ) )];
+        constexpr int32 kLast = static_cast<int32>( SubtitleConfig::kSizeSettingCount ) - 1;
+        return _config._arrSizeScale[static_cast<size_t>( MathUtil::clamp( sizeSetting, 0, kLast ) )];
     }
 
     UISubtitleLayoutReport UISubtitleService::makeLayoutReport() const

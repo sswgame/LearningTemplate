@@ -33,7 +33,7 @@
         "_maxVisibleLineCount": 2,
         "_minDisplaySeconds": 2.0,
         "_readingSecondsPerCharacter": 0.06,
-        "_listSizeScale": [ 0.85, 1.0, 1.3 ]
+        "_arrSizeScale": [ 0.85, 1.0, 1.3 ]
     },
     "_characterMeshCache": {
         "_budgetMegabytes": 128

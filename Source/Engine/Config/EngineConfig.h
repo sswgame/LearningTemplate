@@ -146,9 +146,12 @@ namespace sw
         PROPERTY( Min = 0.001, Units = s )
         float32 _readingSecondsPerCharacter{};
 
-        /** @brief 크기 설정(`gv_subtitleSize` — 작게 · 보통 · 크게 순)마다 문서 글 크기에 곱하는 배율입니다. 범위 밖 설정은 가까운 끝 값이다. */
-        PROPERTY()
-        vector<float32> _listSizeScale{};
+        /** @brief 크기 설정 칸 수입니다 — 사용자 설정 `accessibility.subtitleSize` 의 선택지(작게 · 보통 · 크게)와 같다. */
+        static constexpr uint32 kSizeSettingCount = 3;
+
+        /** @brief 크기 설정(`gv_subtitleSize` — 작게 · 보통 · 크게 순)마다 문서 글 크기에 곱하는 배율입니다. 칸 수는 형식이 정한다(선택지 셋). 범위 밖 설정은 가까운 끝 값이다. */
+        PROPERTY( Min = 0.01 )
+        float32 _arrSizeScale[kSizeSettingCount]{};
     };
 } // namespace sw
 

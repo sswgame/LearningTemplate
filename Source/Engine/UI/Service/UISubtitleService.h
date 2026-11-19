@@ -58,7 +58,7 @@ namespace sw
      *          보이는 시간은 준 길이, 0 이면 읽기 시간 — max( 최소 표시 시간, 글자 수 × 글자당 시간 ) — 이다. 음성이 낸 줄은 그 음성이 끝날 때까지도 남는다
      *          (언리얼 Dialogue Wave 자막이 소리 길이를 따르는 것과 같다 — 짧은 음성도 읽을 시간은 준다).
      *          사용자 설정은 매 프레임 읽는다. `gv_subtitles` 를 끄면 화면은 닫지만 줄은 계속 받고 시간도 흐른다(켜면 지금 줄부터 보인다).
-     *          `gv_subtitleSize` 는 문서에 적힌 글 크기에 설정의 `_listSizeScale` 배율을 곱하고, `gv_subtitleBackgroundOpacity` 는 줄 바탕의 알파다.
+     *          `gv_subtitleSize` 는 문서에 적힌 글 크기에 설정의 `_arrSizeScale` 배율을 곱하고, `gv_subtitleBackgroundOpacity` 는 줄 바탕의 알파다.
      *          텍스트는 이미 현지화한 것을 받는다(대화 러너와 음성 이벤트가 해석한다). 길이가 늘어나는 언어(의사 문화권 qps-ploc)는 문서의 최대 폭에서 접힌다.
      *          게임 스레드에서만 쓴다.
      */
@@ -81,7 +81,7 @@ namespace sw
 
         /**
          * @brief 표시 규칙을 정합니다. 기동(`initializeSubsystem`)이 엔진 설정으로 부르고, 테스트는 값을 직접 넣습니다.
-         * @return 줄 수 · 최소 표시 시간 · 글자당 시간이 0 이하이거나 크기 배율이 비었거나 0 이하이면 오류를 남기고 false 이며, 규칙은 그대로입니다.
+         * @return 줄 수 · 최소 표시 시간 · 글자당 시간 · 크기 배율 가운데 0 이하가 있으면 오류를 남기고 false 이며, 규칙은 그대로입니다.
          */
         [[nodiscard]] bool    configure( const SubtitleConfig& config );
         const SubtitleConfig& getConfig() const { return _config; }
@@ -101,8 +101,8 @@ namespace sw
          * @details 엔진 프레임이 UI 갱신 직전에 부른다. 자막 데이터의 기준은 이벤트 라이브러리(`AudioClipEntry::_subtitleKey`, `AudioEventDef::_subtitleSpeakerKey`)다.
          */
         void postAudioCues( const vector<AudioSubtitleCue>& listCue );
-        /** @brief 음성이 낸 줄마다 그 음성이 아직 나는지 @p audio 에 물어 둡니다. 엔진 프레임이 `postAudioCues` 다음에 부릅니다. */
-        void refreshVoiceState( const AudioEngine& audio );
+        /** @brief 음성이 낸 줄마다 그 음성이 아직 나는지 @p pAudio 에 물어 둡니다. 오디오가 없으면(nullptr) 모두 끝난 것으로 봅니다. 엔진 프레임이 프레임마다 부릅니다. */
+        void refreshVoiceState( const AudioEngine* pAudio );
         /** @brief 줄을 모두 지우고 화면을 닫습니다(종료 `shutdownSubsystem` 과 장면 전환 때 부릅니다). */
         void clear();
         /** @brief 시간을 흘리고(꺼져 있어도) 대기열을 당긴 뒤, 설정을 따라 화면을 열고 닫고 줄 위젯을 맞춥니다. UI 갱신의 화면 틱 앞 칸이 부릅니다. */

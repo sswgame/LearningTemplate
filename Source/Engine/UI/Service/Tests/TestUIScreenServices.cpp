@@ -22,7 +22,9 @@ namespace
         config._maxVisibleLineCount        = 2;
         config._minDisplaySeconds          = 2.0f;
         config._readingSecondsPerCharacter = 0.06f;
-        config._listSizeScale              = { 0.85f, 1.0f, 1.3f };
+        config._arrSizeScale[0]            = 0.85f;
+        config._arrSizeScale[1]            = 1.0f;
+        config._arrSizeScale[2]            = 1.3f;
         return config;
     }
 
@@ -139,8 +141,8 @@ SW_TEST_CASE( UIScreenServicesTest, SubtitleConfigMustBeComplete )
     SW_EXPECT_LOG( "UISubtitle.InvalidConfig" );
     UISubtitleService service;
     SW_EXPECT_FALSE( service.configure( SubtitleConfig{} ) );
-    SubtitleConfig noScale = makeSubtitleTestConfig();
-    noScale._listSizeScale.clear();
+    SubtitleConfig noScale   = makeSubtitleTestConfig();
+    noScale._arrSizeScale[2] = 0.0f;
     SW_EXPECT_FALSE( service.configure( noScale ) );
     SW_EXPECT_TRUE( service.configure( makeSubtitleTestConfig() ) );
     SW_EXPECT_EQUAL( uint32( 2 ), service.getConfig()._maxVisibleLineCount );
