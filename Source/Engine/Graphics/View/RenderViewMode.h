@@ -3,6 +3,7 @@
  * @brief 뷰의 보기 모드(`RenderViewMode`)와 그 표입니다 — 값과 이름 · define 뿐이라 RHI · 머티리얼 형식을 읽지 않는 에디터 확장 플러그인 · 툴바도 읽습니다.
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -85,7 +86,7 @@ namespace sw
     };
 
     /** @brief 보기 모드 테이블입니다. 쿠커, PSO 변형, 툴바, 로그가 모두 이것을 읽습니다. 항목 순서가 열거값입니다. */
-    inline constexpr RenderViewModeInfo kArrRenderViewModeInfo[] = {
+    inline constexpr auto kArrRenderViewModeInfo = makeEnumTable<RenderViewMode, RenderViewModeInfo>( {
         {            "Lit",                         nullptr, false, false, false, false},
         {          "Unlit",           "SW_VIEWMODE_UNLIT=1", false, false, false, false},
         {      "Wireframe",                         nullptr,  true, false, false, false},
@@ -102,9 +103,7 @@ namespace sw
         {    "LODFadeCode",         "SW_VIEWMODE_LODFADE=1", false, false,  true, false},
         {    "MarkerSlots",                         nullptr, false, false, false, false},
         {    "ShadingPath",     "SW_VIEWMODE_SHADINGPATH=1", false, false,  true, false},
-    };
-    static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),
-                   "보기 모드 표와 열거형의 개수가 다릅니다" );
+    } ); // 보기 모드를 늘리고 줄을 잊으면 makeEnumTable 이 컴파일을 멈춘다
 
     /**
      * @brief 배치 PSO 를 고르는 데 쓰는 보기 모드입니다. 셰이더 define 도 채우기 · 블렌드 변경도 없는 모드(`MarkerSlots`)는 Lit 과 같은 PSO 이므로 Lit 으로 접습니다.
@@ -124,9 +123,8 @@ namespace sw
      */
     inline const RenderViewModeInfo& getRenderViewModeInfo( RenderViewMode viewMode )
     {
-        const uint8 index = static_cast<uint8>( viewMode );
-        SW_ASSERT( index < static_cast<uint8>( RenderViewMode::Count ) );
-        return kArrRenderViewModeInfo[index];
+        SW_ASSERT( viewMode < RenderViewMode::Count );
+        return kArrRenderViewModeInfo[viewMode];
     }
 
     inline RenderViewMode getRenderViewModePipelineMode( RenderViewMode viewMode )

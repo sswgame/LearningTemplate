@@ -2,6 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogEditModel.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/String/formatString.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
@@ -13,11 +14,10 @@ namespace sw::editor
         struct AbilityCatalogEditModelInternal
         {
             /** @brief 종류마다 원소 이름 · 이름 칸입니다(`AbilityCatalog::loadRoot` 가 읽는 이름). */
-            static constexpr const utf8* kArrElementName[]   = { "AbilityEffect", "Ability", "AbilitySet", "AbilityPresentation" };
-            static constexpr const utf8* kArrNameAttribute[] = { "id", "id", "id", "tag" };
-            static_assert( SW_COUNT_OF( kArrElementName ) == static_cast<size_t>( AbilityEntryKind::Count ), "one element name per entry kind" );
+            static constexpr auto kArrElementName   = makeEnumTable<AbilityEntryKind, const utf8*>( "AbilityEffect", "Ability", "AbilitySet", "AbilityPresentation" );
+            static constexpr auto kArrNameAttribute = makeEnumTable<AbilityEntryKind, const utf8*>( "id", "id", "id", "tag" );
 
-            static const utf8* getNameAttribute( AbilityEntryKind kind ) { return kArrNameAttribute[static_cast<size_t>( kind )]; }
+            static const utf8* getNameAttribute( AbilityEntryKind kind ) { return kArrNameAttribute[kind]; }
 
             /** @brief 원소의 속성 값입니다. 없으면 nullptr 입니다. */
             static const string* findAttribute( const CatalogXMLElement& element, string_view name )
@@ -67,7 +67,7 @@ namespace sw::editor
 
     const utf8* AbilityCatalogEditModel::getElementName( AbilityEntryKind kind )
     {
-        return kind == AbilityEntryKind::Count ? "" : AbilityCatalogEditModelInternal::kArrElementName[static_cast<size_t>( kind )];
+        return kind == AbilityEntryKind::Count ? "" : AbilityCatalogEditModelInternal::kArrElementName[kind];
     }
 
     void AbilityCatalogEditModel::rebuild()
@@ -88,12 +88,11 @@ namespace sw::editor
         for ( const int32 element : parsed.getRowIndices() )
         {
             const CatalogXMLElement& row = parsed.getElement( element );
-            for ( uint32 kindIndex = 0; kindIndex < static_cast<uint32>( AbilityEntryKind::Count ); ++kindIndex )
+            for ( const AbilityEntryKind kind : EnumRange<AbilityEntryKind>{} )
             {
-                if ( row._name != AbilityCatalogEditModelInternal::kArrElementName[kindIndex] )
+                if ( row._name != AbilityCatalogEditModelInternal::kArrElementName[kind] )
                     continue;
-                const AbilityEntryKind kind  = static_cast<AbilityEntryKind>( kindIndex );
-                const string*          pName = AbilityCatalogEditModelInternal::findAttribute( row, AbilityCatalogEditModelInternal::getNameAttribute( kind ) );
+                const string* pName = AbilityCatalogEditModelInternal::findAttribute( row, AbilityCatalogEditModelInternal::getNameAttribute( kind ) );
                 _listEntry.push_back( AbilityCatalogEntry{ pName != nullptr ? *pName : string{}, element, kind } );
             }
         }

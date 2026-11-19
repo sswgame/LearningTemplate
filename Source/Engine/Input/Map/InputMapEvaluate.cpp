@@ -776,7 +776,7 @@ namespace sw
             {
                 // 이 저장소는 모든 switch 에 `default:` 를 요구한다(-Wswitch-default). 그래서 컴파일러는
                 // 이 switch 에서 빠진 종류를 알려 주지 못한다. 컴파일 시점에 잡히는 것은 테이블에서 빠진 줄뿐이다
-                // (`kArrBindingKindInfo` 의 static_assert). 여기까지 왔다면 종류를 추가하고
+                // (`kArrBindingKindInfo` 의 makeEnumTable). 여기까지 왔다면 종류를 추가하고
                 // 이 switch 를 빠뜨린 것이고, 그 액션은 영원히 발동하지 않는다.
                 // 매 프레임 도는 경로라 로그는 남기지 않고, 개발 빌드에서 단언으로 멈춘다.
                 SW_ASSERT( false );

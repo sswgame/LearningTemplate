@@ -20,9 +20,9 @@ namespace sw
         /** @brief 특성 테이블이 타입 값 순서대로인지 확인합니다. `findNodeInfo` 가 값으로 바로 찾습니다. */
         constexpr bool isInfoTableOrdered()
         {
-            for ( size_t index = 0; index < SW_COUNT_OF( kArrDialogueNodeInfo ); ++index )
+            for ( const DialogueAssetNodeKind kind : EnumRange<DialogueAssetNodeKind>{} )
             {
-                if ( kArrDialogueNodeInfo[index]._type != static_cast<DialogueAssetNodeKind>( index ) )
+                if ( kArrDialogueNodeInfo[kind]._type != kind )
                     return false;
             }
             return true;
@@ -391,10 +391,7 @@ namespace sw
 
     const DialogueNodeInfo* DialogueGraphAsset::findNodeInfo( DialogueAssetNodeKind type )
     {
-        const size_t index = static_cast<size_t>( type );
-        if ( index >= SW_COUNT_OF( kArrDialogueNodeInfo ) )
-            return nullptr;
-        return &kArrDialogueNodeInfo[index];
+        return type < DialogueAssetNodeKind::Count ? &kArrDialogueNodeInfo[type] : nullptr;
     }
 
     string DialogueGraphAsset::resolveLocalizedText( string_view textOrKey )

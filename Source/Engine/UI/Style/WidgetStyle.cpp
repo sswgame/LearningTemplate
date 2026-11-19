@@ -2,6 +2,7 @@
 
 #include "Engine/UI/Style/WidgetStyle.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -43,7 +44,7 @@ namespace sw
     }
 
             /** @brief 필드마다 한 줄입니다. `UIStyleField` 순서(`WidgetStyle` PROPERTY 선언 순서)이며 아래 static_assert 가 줄마다 번호를 대어 봅니다. */
-            static constexpr FieldRow kArrRow[] = {
+            static constexpr auto kArrRow = makeEnumTable<UIStyleField, FieldRow>( {
                 SW_UI_STYLE_FIELD_ROW( BackgroundColor, 0 ),
                 SW_UI_STYLE_FIELD_ROW( CornerRadius, 0 ),
                 SW_UI_STYLE_FIELD_ROW( BorderWidth, 0 ),
@@ -60,9 +61,8 @@ namespace sw
                 SW_UI_STYLE_FIELD_ROW( FocusRingColor, 0 ),
                 SW_UI_STYLE_FIELD_ROW( Opacity, Table::kAffectsSubtree ),
                 SW_UI_STYLE_FIELD_ROW( Transition, 0 ),
-            };
+            } ); // UIStyleField 와 줄 수가 다르면 makeEnumTable 이 컴파일을 멈춘다
 #undef SW_UI_STYLE_FIELD_ROW
-            static_assert( SW_COUNT_OF( kArrRow ) == static_cast<size_t>( UIStyleField::Count ), "UIStyleField and the descriptor table differ" );
 
             /** @brief 수치가 아닌 줄 수입니다. `isSameValue` 가 따로 견주는 필드(Font · Transition)와 같은 수여야 합니다(아래 static_assert). */
             static constexpr uint32 countNonNumericRows()
@@ -78,15 +78,15 @@ namespace sw
             /** @brief 줄마다 자리 번호가 그 줄의 필드 번호와 같으면 true 입니다(줄 순서가 어긋나면 컴파일이 멈춘다). */
             static constexpr bool isRowOrderMatching()
             {
-                for ( uint32 index = 0; index < SW_COUNT_OF( kArrRow ); ++index )
+                for ( const UIStyleField field : EnumRange<UIStyleField>{} )
                 {
-                    if ( static_cast<uint32>( kArrRow[index]._field ) != index )
+                    if ( kArrRow[field]._field != field )
                         return false;
                 }
                 return true;
             }
 
-            static const FieldRow& getRow( UIStyleField field ) { return kArrRow[static_cast<uint32>( field )]; }
+            static const FieldRow& getRow( UIStyleField field ) { return kArrRow[field]; }
 
             static bool isSameFont( const FontSpec& lhs, const FontSpec& rhs ) { return lhs._family == rhs._family && lhs._weight == rhs._weight && lhs._slant == rhs._slant; }
 
@@ -113,8 +113,7 @@ namespace sw
             }
         };
         // 클래스 본문 안에서는 멤버 constexpr 함수를 상수식에 못 쓰므로 정의가 끝난 뒤에 확인한다.
-        static_assert( WidgetStyleInternal::kArrRow[static_cast<size_t>( UIStyleField::Font )]._componentCount == 0 &&
-                           WidgetStyleInternal::kArrRow[static_cast<size_t>( UIStyleField::Transition )]._componentCount == 0 && WidgetStyleInternal::countNonNumericRows() == 2,
+        static_assert( WidgetStyleInternal::kArrRow[UIStyleField::Font]._componentCount == 0 && WidgetStyleInternal::kArrRow[UIStyleField::Transition]._componentCount == 0 && WidgetStyleInternal::countNonNumericRows() == 2,
                        "Font and Transition must be the only non-numeric style fields; a new one needs its own comparison in isSameValue" );
         static_assert( WidgetStyleInternal::isRowOrderMatching(), "descriptor rows must follow the UIStyleField order" );
     } // namespace
@@ -124,14 +123,12 @@ namespace sw
 {
     uint32 UIStyleFieldTable::getFlags( UIStyleField field )
     {
-        const uint32 index = static_cast<uint32>( field );
-        return index < static_cast<uint32>( UIStyleField::Count ) ? WidgetStyleInternal::kArrRow[index]._flags : 0u;
+        return field < UIStyleField::Count ? WidgetStyleInternal::kArrRow[field]._flags : 0u;
     }
 
     uint32 UIStyleFieldTable::getComponentCount( UIStyleField field )
     {
-        const uint32 index = static_cast<uint32>( field );
-        return index < static_cast<uint32>( UIStyleField::Count ) ? WidgetStyleInternal::kArrRow[index]._componentCount : 0u;
+        return field < UIStyleField::Count ? WidgetStyleInternal::kArrRow[field]._componentCount : 0u;
     }
 
     void UIStyleFieldTable::readComponents( const WidgetStyle& style, UIStyleField field, float32 ( &outArr )[4] )

@@ -2,14 +2,14 @@
 
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
 
+#include "Core/Container/EnumArray.h"
+
 namespace sw
 {
     const utf8* toString( AdminRole role )
     {
-        static constexpr const utf8* kArrName[] = { "none", "viewer", "support", "operator", "super" };
-        static_assert( SW_COUNT_OF( kArrName ) == static_cast<size_t>( AdminRole::Count ), "AdminRole names must match the enum" );
-        const size_t index = static_cast<size_t>( role );
-        return index < SW_COUNT_OF( kArrName ) ? kArrName[index] : "unknown";
+        static constexpr auto kArrName = makeEnumTable<AdminRole, const utf8*>( "none", "viewer", "support", "operator", "super" );
+        return role < AdminRole::Count ? kArrName[role] : "unknown";
     }
 
     AdminRole AdminProtocol::getRequiredRole( uint16 method, ServiceSanctionKind sanctionKind )

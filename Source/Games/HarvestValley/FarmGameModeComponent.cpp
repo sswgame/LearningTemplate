@@ -2,6 +2,7 @@
 
 #include "Games/HarvestValley/FarmGameModeComponent.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -54,9 +55,8 @@ namespace sw
             static bool isRaining( const SessionStateComponent& state ) { return state.getWeather().computeValue( hashed_string( kWetnessValue ) ) >= kRainingWetness; }
 
             /** @brief 폰 버튼 이름입니다. `FarmButton` 순서이며 입력 맵 묶음의 액션 이름과 같습니다. */
-            static constexpr const utf8* kArrButtonName[] = { "Farm.Tool1", "Farm.Tool2", "Farm.Tool3", "Farm.Tool4", "Farm.SeedPrev", "Farm.SeedNext",
-                                                              "Farm.Use", "Farm.Ship", "Farm.Buy", "Farm.Sleep", CommonInputActions::kStatus };
-            static_assert( sizeof( kArrButtonName ) / sizeof( kArrButtonName[0] ) == static_cast<size_t>( FarmButton::Count ), "one name per farm button" );
+            static constexpr auto kArrButtonName = makeEnumTable<FarmButton, const utf8*>( "Farm.Tool1", "Farm.Tool2", "Farm.Tool3", "Farm.Tool4", "Farm.SeedPrev", "Farm.SeedNext",
+                                                                                           "Farm.Use", "Farm.Ship", "Farm.Buy", "Farm.Sleep", CommonInputActions::kStatus );
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 harvestvalley.audioevents.xml 이 정한다.
             static constexpr const utf8* kEventSelect  = "ToolSelect";
@@ -424,8 +424,7 @@ namespace sw
 
     const utf8* FarmGameModeComponent::getButtonName( FarmButton button )
     {
-        const size_t index = static_cast<size_t>( button );
-        return index < static_cast<size_t>( FarmButton::Count ) ? FarmGameModeComponentInternal::kArrButtonName[index] : "";
+        return button < FarmButton::Count ? FarmGameModeComponentInternal::kArrButtonName[button] : "";
     }
 
     void FarmGameModeComponent::syncFarmerPossession( GameObjectManager& manager )
@@ -544,13 +543,13 @@ namespace sw
         movePlayer( float3{ move._x, 0.0f, move._z }, deltaTime );
 
         // 버튼은 도구를 먼저 바꾸고 쓴다(같은 틱에 둘 다 누를 수 있다).
-        optional<int32> arrButtonIndex[kButtonCount];
-        for ( int32 button = 0; button < kButtonCount; ++button )
+        EnumArray<FarmButton, optional<int32>> arrButtonIndex;
+        for ( const FarmButton button : EnumRange<FarmButton>{} )
         {
             arrButtonIndex[button] = pawn.findButton( hashed_string( Internal::kArrButtonName[button] ) );
         }
         const auto wasTriggered = [&intent, &arrButtonIndex]( FarmButton button )
-        { return intent.wasTriggered( arrButtonIndex[static_cast<int32>( button )] ); };
+        { return intent.wasTriggered( arrButtonIndex[button] ); };
 
         constexpr FarmButton kArrToolButton[] = { FarmButton::Tool1, FarmButton::Tool2, FarmButton::Tool3, FarmButton::Tool4 };
         constexpr FarmTool   kArrTool[]       = { FarmTool::Hoe, FarmTool::WateringCan, FarmTool::Seeds, FarmTool::Hand };
