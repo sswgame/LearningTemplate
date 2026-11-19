@@ -257,3 +257,36 @@ SW_TEST_CASE( ShadingMathTest, ProbeBackfaceWeightFollowsCosine )
         previous = weight;
     }
 }
+
+/**
+ * @brief [ShadingMathTest] 바로 옆 발광 표면 · 바닥을 본 프로브는 그 쪽 바닥 점에서 가려지지 않고, 한 칸보다 두꺼운 벽 너머 점은 여전히 가려진다
+ * @details 회귀(realtimegi_extras): 복셀 광선은 칸의 들어가는 면에서 멈춰 바닥이 칸 크기만큼 들떠 보였고, 발광 큐브 · 바닥 칸 안에 박힌 프로브(거리 0)는
+ *          모든 방향에서 가려져 발광 빛이 바닥에 닿지 않았다. 모먼트 거리는 칸 하나 너머까지 늘리고, 칸 안에서 떠난 광선은 적지 않는다(모름 — 가리지 않는다).
+ */
+SW_TEST_CASE( ShadingMathTest, ProbeNextToEmissiveSurfaceStaysVisibleToNearbyFloor )
+{
+    using Util                   = ProbeVisibilityTestUtil;
+    constexpr float32 kCellSize  = 0.5f;   // 실시간 볼륨의 복셀 칸(realtimegi_extras 의 _voxelSize)
+    constexpr float32 kMaxMoment = 1.732f; // 간격 1 m 셀의 대각선
+
+    // 1 m 위 프로브가 아래를 쏘면 들뜬 바닥 칸의 윗면(0.5 m)에서 멈춘다. 바이어스로 띄운 바닥 점은 0.9 m 밖이다.
+    const float32 floorMean = ShadingMath::computeProbeMomentDistance( 0.5f, kCellSize, kMaxMoment );
+    const float32 floorSeen = ShadingMath::computeProbeVisibilityWeight( 1.0f, 0.9f, floorMean, floorMean * floorMean + 0.001f, Util::kBackfaceFloor, Util::kChebyshevExponent );
+    SW_EXPECT_NEAR( 1.0f, floorSeen, 1.0e-6f );
+
+    // 발광 큐브 안에 박힌 프로브 — 광선이 거리 0 에서 닿는다. 적지 않으므로 모먼트가 0(모름)으로 남아 바닥 점에서 가려지지 않는다.
+    SW_EXPECT_NEAR( 0.0f, ShadingMath::computeProbeMomentDistance( 0.0f, kCellSize, kMaxMoment ), 0.0f );
+    SW_EXPECT_NEAR( 1.0f, ShadingMath::computeProbeChebyshevWeight( 0.6f, 0.0f, 0.0f, Util::kChebyshevExponent ), 0.0f );
+
+    // 0.3 m 앞 발광 면을 본 방향(면은 칸 안에 있다)의 그 면 바로 앞 바닥 점(0.6 m)도 보인다.
+    const float32 emitterMean = ShadingMath::computeProbeMomentDistance( 0.3f, kCellSize, kMaxMoment );
+    SW_EXPECT_NEAR( 1.0f, ShadingMath::computeProbeChebyshevWeight( 0.6f, emitterMean, emitterMean * emitterMean + 0.001f, Util::kChebyshevExponent ), 1.0e-6f );
+
+    // 빛샘 막기는 그대로다 — 0.5 m 앞 벽(한 칸 너머 1.0 m 까지 표면)의 너머 2 m 점은 0 에 가깝다.
+    const float32 wallMean = ShadingMath::computeProbeMomentDistance( 0.5f, kCellSize, kMaxMoment );
+    const float32 behind   = ShadingMath::computeProbeVisibilityWeight( 1.0f, 2.0f, wallMean, wallMean * wallMean + 0.01f, Util::kBackfaceFloor, Util::kChebyshevExponent );
+    SW_EXPECT_TRUE( behind < 1.0e-3f );
+
+    // 거리는 셀 대각선을 넘지 않는다(닿지 않은 광선과 같은 상한).
+    SW_EXPECT_NEAR( kMaxMoment, ShadingMath::computeProbeMomentDistance( 1.6f, kCellSize, kMaxMoment ), 0.0f );
+}
