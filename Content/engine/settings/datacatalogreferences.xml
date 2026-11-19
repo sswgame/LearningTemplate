@@ -168,4 +168,13 @@
 	<Field owner="JumpEscapeReactionComponent" field="_effect" tag="AbilityEffectDef"/>
 	<CatalogKey tag="WeatherDef" catalog="WeatherCatalog" entry="Weather"/>
 	<Field owner="WeatherDirectorComponent" field="_startWeather" tag="WeatherDef"/>
+	<CatalogKey tag="VoxelBlockDef" catalog="VoxelBlockCatalog" entry="Block"/>
+	<Field owner="VoxelGameModeComponent" field="_waterBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelGameModeComponent" field="_stoneBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelGameModeComponent" field="_grassBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelGameModeComponent" field="_snowBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelGameModeComponent" field="_coalOreBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelGameModeComponent" field="_ironOreBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelPlayerComponent" field="_waterBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelPlayerComponent" field="_listStartBlock" tag="VoxelBlockDef"/>
 </DataCatalogReferenceTable>
