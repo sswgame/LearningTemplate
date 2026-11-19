@@ -1055,11 +1055,8 @@ namespace sw
     {
         if ( io.check( _pMechCatalog != nullptr && _pMoveCatalog != nullptr ) == false )
             return;
-        io.list( _listTeamName );
-        io.flag( _bStarted );
-        io.flag( _bEndReported );
-        io.value( _tick );
-        io.value( _timer );
+        io.reflected( *this ); // 팀 이름 · 걸음 수 · 시작 · 끝 알림
+        io.value( _timer );    // 리플렉션 밖 값 — 고정 걸음 타이머는 설정된 걸음으로 읽는다
         if ( io.isOk() == false )
             return;
         if ( io.isReading() )

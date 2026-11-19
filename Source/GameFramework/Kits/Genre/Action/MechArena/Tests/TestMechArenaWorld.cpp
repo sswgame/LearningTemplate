@@ -4,6 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateIOTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaSnapshot.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaWorld.h"
@@ -184,16 +185,10 @@ namespace
             return listByte;
         }
 
-        /** @brief 0 번 조종사 머리가 상태 바이트에서 시작하는 자리입니다. 앞의 구간을 같은 함수로 다시 써서 잽니다. */
+        /** @brief 0 번 조종사 머리가 상태 바이트에서 시작하는 자리입니다. 앞의 구간을 같은 함수로 다시 써서 잽니다(리플렉션 본문은 머리 + 칸 길이). */
         size_t computePilotHead() const
         {
             Archive prefix;
-            prefix << static_cast<uint32>( 2 );
-            StateIO::writeName( prefix, hashed_string( "A" ) );
-            StateIO::writeName( prefix, hashed_string( "B" ) );
-            prefix << static_cast<uint8>( SW_TRUE );
-            prefix << static_cast<uint8>( SW_FALSE );
-            prefix << _world.getTick();
             prefix << 0.0f; // 고정 걸음 타이머
             _world.getMatch().writeState( prefix );
             prefix << static_cast<uint32>( _world.getPilotCount() );
@@ -209,7 +204,7 @@ namespace
                 StateIO::writeName( prefix, pSkill->_id );
             }
             prefix << first._spawnPosition;
-            return static_cast<size_t>( prefix.getSize() );
+            return StateIOTestUtil::computeReflectedBytes( _world ) + static_cast<size_t>( prefix.getSize() );
         }
 
         /** @brief 0 번 조종사의 록온 대상이 상태 바이트에서 시작하는 자리입니다. 스킬 없는 조종사만 됩니다. */
@@ -220,7 +215,8 @@ namespace
             first._healthMachine.writeState( healthMachine );
             Archive boost;
             first._boost.writeState( boost );
-            return computePilotHead() + kMechFieldParticipant + 4 + 4 * first._listParticipant.size() + kMechPositionsSize + kMechTimersSize + 2 * kMechInputSize +
+            // 록온(`LockOnSelector`)은 리플렉션 형식이라 대상 칸이 그 머리 뒤에 온다
+            return StateIO::kReflectedHeaderBytes + computePilotHead() + kMechFieldParticipant + 4 + 4 * first._listParticipant.size() + kMechPositionsSize + kMechTimersSize + 2 * kMechInputSize +
                    static_cast<size_t>( healthMachine.getSize() ) + static_cast<size_t>( boost.getSize() );
         }
 
