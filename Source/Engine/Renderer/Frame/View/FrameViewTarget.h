@@ -15,6 +15,7 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/Frame/PostProcess/PostProcessChainTexture.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
+#include "Engine/Renderer/Frame/View/HZBPyramid.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Frame/View/TemporalJitterSequence.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
@@ -73,8 +74,17 @@ namespace sw
         float3             _depthHistoryEye{};                ///< 그 프레임의 눈 위치
         uint8              _bLastFrameDepthValid{ SW_FALSE }; ///< 장면 깊이 첨부에 이 뷰가 그린 깊이가 남아 있다(풀을 새로 만들면 내린다)
         /**
-         * @brief 가림 타일 — 깊이 히스토리를 `FrameRendererUtil::kOcclusionTileSize` px 타일마다 최대 깊이 하나로 줄인 구조 버퍼(float, SRV + UAV)입니다. 컬링의 가림 판정(t2)이 읽는다.
-         * @details 깊이 히스토리와 수명이 같다(`ensureOcclusionTiles`). `_bOcclusionTilesThisFrame` 은 이번 프레임에 타일을 지었는지다(`recordOcclusionTiles`).
+         * @brief HZB 피라미드 — 깊이 사본에서 지은 최소 · 최대 깊이 밉 사슬의 구조 버퍼(float2, SRV + UAV, 배치는 `HZBLayout`)입니다. 컬링의 가림 판정(t2)과 화면 공간 반사(t11)가 읽는다.
+         * @details 깊이 히스토리와 수명이 같고 풀(텍스처) 크기의 배치로 만든다(`FrameViewResources::ensureHZB`). 한 프레임에 여러 번 덮어 짓는다(`HZBOcclusion` 머리말) —
+         *          `_hzbLayout` · `_hzbViewProj` 는 지금 버퍼의 것(지은 깊이 사각형 · 그 깊이를 그린 뷰-투영)이고, `_bHZBValid` 는 이번 프레임에 지어 읽을 수 있는지다.
+         */
+        RHIStructuredBuffer _hzb;
+        HZBLayout           _hzbLayout{};
+        float4x4            _hzbViewProj{};
+        uint8               _bHZBValid{ SW_FALSE };
+        /**
+         * @brief 가림 타일 — HZB 의 16 px 밉(`HZBLayout::kTileMip`)의 최대 깊이를 타일 격자(`FrameRendererUtil::kOcclusionTileSize` px, 텍스처 크기 기준)로 옮긴 구조 버퍼(float, SRV + UAV)입니다.
+         * @details 주 시점의 것을 게임 스레드가 몇 프레임 늦게 되읽는다(`HZBOcclusion::requestReadback`). HZB 와 수명이 같다. `_bOcclusionTilesThisFrame` 은 이번 프레임 처음 짓기에서 타일을 썼는지다.
          */
         RHIStructuredBuffer _occlusionTiles;
         uint32              _occlusionColumns{ 0 };

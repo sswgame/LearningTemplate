@@ -3,7 +3,7 @@
  * @brief 렌더 그래프 패스 실행기의 그래프 짓기와 제출입니다 — 수명, 커맨드 리스트 준비 · 제출, 뷰별 그래프(주 시점 · 추가 뷰), 뷰 패스 상수, 첨부 조회,
  *        콜백 묶기 · 트랜지언트 앨리어싱 계획, 그래프 콜백, 그래프 뒤 NaN 감시.
  * @details 한 클래스를 세 TU 로 나눈다 — 패스 종류마다의 기록은 `FramePassExecutorPasses.cpp`, 렌더 패스 열기와 씬 드로우는 `FramePassExecutorDraw.cpp`
- *          (언리얼 `DeferredShadingRenderer.cpp` 와 패스별 `*Rendering.cpp` 나눔과 같다). 프레임 패스의 실행은 `FrameGraphExecutor`, 가림 판정은 `OcclusionTiles` 가 맡는다.
+ *          (언리얼 `DeferredShadingRenderer.cpp` 와 패스별 `*Rendering.cpp` 나눔과 같다). 프레임 패스의 실행은 `FrameGraphExecutor`, HZB 짓기 · 가림 판정은 `HZBOcclusion` 이 맡는다.
  */
 #include "pch.h"
 

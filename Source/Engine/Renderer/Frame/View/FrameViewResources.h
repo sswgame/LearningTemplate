@@ -87,8 +87,8 @@ namespace sw
          * @details 언리얼 RDG 트랜지언트 할당기와 같은 자리 — 서술이 다른 첨부도 수명이 겹치지 않으면 같은 바이트를 쓴다. 겹친 바이트가 없으면 힙을 만들지 않는다.
          */
         void placeTransients( TransientAttachmentPool& pool, const RenderGraphAliasPlan& aliasPlan );
-        /** @brief 뷰의 가림 타일 버퍼를 깊이 히스토리 크기에 맞춰 만들어 둡니다. 깊이 히스토리가 없으면 만들지 않습니다. */
-        void ensureOcclusionTiles( FrameViewTarget& view );
+        /** @brief 뷰의 HZB 피라미드 버퍼와 가림 타일 버퍼를 깊이 히스토리 크기에 맞춰 만들어 둡니다(`HZBLayout`). 깊이 히스토리가 없으면 만들지 않습니다. */
+        void ensureHZB( FrameViewTarget& view );
         /** @brief 뷰의 디퍼드 조명 타일 목록 · 간접 인자를 G버퍼 알베도 크기의 타일 수로 만들어 둡니다. 타일 분류를 쓸 수 없는 백엔드 · 파이프라인이면 만들지 않습니다. */
         void ensureDeferredTiles( FrameViewTarget& view );
 

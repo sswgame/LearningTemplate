@@ -18,6 +18,7 @@
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
+#include "Engine/Renderer/Frame/View/HZBPyramid.h"
 #include "Engine/Renderer/Frame/View/RenderStability.h"
 #include "Engine/Renderer/Graph/RenderGraphMemoryPlan.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
@@ -266,7 +267,7 @@ namespace sw
         // 그래서 코드가 이름으로 포맷 · 클리어 색을 짐작해 첨부를 더 만드는 길이 없다(Swapchain 은 첨부가 아니라 백버퍼다).
         ensureTAAHistory( view );
         ensureDepthHistory( view );
-        ensureOcclusionTiles( view );
+        ensureHZB( view );
         ensureDeferredTiles( view );
         _autoExposure.ensureAutoExposureHistory( view );
         // 새 풀의 장면 깊이에는 아직 아무것도 없다 — 이 뷰를 한 번 그릴 때까지 깊이 충돌은 보지 않는다. 시간 누적 기록(TAA · 지난 뷰-투영 · 노출)도 새것이라 첫 프레임은 버린다.
@@ -386,22 +387,26 @@ namespace sw
             view._taaHistorySRV = _pDevice->getResourceFactory()->registerBindlessTexture( view._taaHistory );
     }
 
-    void FrameViewResources::ensureOcclusionTiles( FrameViewTarget& view )
+    void FrameViewResources::ensureHZB( FrameViewTarget& view )
     {
-        const bool bNotNeeded = _pDevice == nullptr || view._depthHistory == 0 || view._occlusionTiles.isValid();
+        const bool bNotNeeded = _pDevice == nullptr || view._depthHistory == 0 || ( view._hzb.isValid() && view._occlusionTiles.isValid() );
         if ( bNotNeeded )
             return;
         const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
         if ( depth._texture == 0 )
             return;
-        view._occlusionColumns = FrameRendererUtil::divideRoundUp( depth._width, FrameRendererUtil::kOcclusionTileSize );
-        view._occlusionRows    = FrameRendererUtil::divideRoundUp( depth._height, FrameRendererUtil::kOcclusionTileSize );
-        const bool bCreated    = view._occlusionTiles.ensureCapacity( _pDevice, sizeof( float32 ), view._occlusionColumns * view._occlusionRows,
-                                                                      RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess, true, true,
-                                                                      nullptr );
+        // 피라미드는 풀(텍스처) 크기의 배치로 만든다 — 자동 렌더 배율의 사각형은 그보다 작아 늘 들어간다(`HZBOcclusion::record` 가 확인한다).
+        constexpr RHIBufferUsage kUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
+        const HZBLayout          layout = HZBLayout::make( depth._width, depth._height );
+        view._occlusionColumns          = FrameRendererUtil::divideRoundUp( depth._width, FrameRendererUtil::kOcclusionTileSize );
+        view._occlusionRows             = FrameRendererUtil::divideRoundUp( depth._height, FrameRendererUtil::kOcclusionTileSize );
+        const bool bCreated             = view._hzb.ensureCapacity( _pDevice, static_cast<uint32>( 2 * sizeof( float32 ) ), layout._texelCount, kUsage, true, true, nullptr ) &&
+                              view._occlusionTiles.ensureCapacity( _pDevice, sizeof( float32 ), view._occlusionColumns * view._occlusionRows, kUsage, true, true, nullptr );
         if ( bCreated == false )
         {
-            SW_LOG_ERROR_ID( "FrameViewResources.FailedCreateOcclusionTiles", "Failed to create the occlusion tiles (%#x%# floats) - this view culls without occlusion", view._occlusionColumns, view._occlusionRows );
+            SW_LOG_ERROR_ID( "FrameViewResources.FailedCreateHZB", "Failed to create the HZB (%# texels for %#x%#) and occlusion tiles - this view culls without occlusion and draws no screen space reflection",
+                             layout._texelCount, depth._width, depth._height );
+            view._hzb.release( _pDevice );
             view._occlusionTiles.release( _pDevice );
         }
     }
@@ -448,8 +453,10 @@ namespace sw
         view._postProcessChainBeforeTonemap.release( _pDevice );
         view._postProcessChainAfterTonemap.release( _pDevice );
         view._bOcclusionTilesThisFrame = SW_FALSE;
+        view._bHZBValid                = SW_FALSE;
         if ( _pDevice == nullptr )
         {
+            view._hzb                  = RHIStructuredBuffer{};
             view._occlusionTiles       = RHIStructuredBuffer{};
             view._deferredTileList     = RHIStructuredBuffer{};
             view._deferredTileArgs     = RHIStructuredBuffer{};
@@ -463,7 +470,8 @@ namespace sw
             return;
         }
 
-        // 가림 타일은 깊이 히스토리 크기를, 디퍼드 조명 타일은 G버퍼 크기를 따른다.
+        // HZB · 가림 타일은 깊이 히스토리 크기를, 디퍼드 조명 타일은 G버퍼 크기를 따른다.
+        view._hzb.release( _pDevice );
         view._occlusionTiles.release( _pDevice );
         view._deferredTileList.release( _pDevice );
         view._deferredTileArgs.release( _pDevice );

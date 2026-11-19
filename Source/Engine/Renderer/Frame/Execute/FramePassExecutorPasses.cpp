@@ -237,6 +237,8 @@ namespace sw
                     beginDepthOnlyPass( context, passDepth, getColorLoadFor( passDepth ) );
                     drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassKind::DepthPrepass ), input._bTransparentBatch );
                     context._pCmd->endRenderPass();
+                    // 2 단계 가림의 뒤 단계 — 방금 그린 깊이로 HZB 를 다시 짓고 앞 단계에서 가려졌던 것만 다시 컬링해 이 뒤 불투명 패스가 함께 그린다(주 시점, 앞 단계가 적었을 때만).
+                    _frameGraphExecutor.recordLateOcclusion( *context._pCmd, *_pActiveView );
                     _bHasExecutedDepthPrepass.store( 1 );
                     break;
                 }
@@ -361,7 +363,7 @@ namespace sw
                 case RenderPassKind::AutoExposure:
                 case RenderPassKind::UpscaleEasu:
                 case RenderPassKind::UpscaleRcas:
-                case RenderPassKind::OcclusionTiles:
+                case RenderPassKind::HZBBuild:
                 case RenderPassKind::VolumetricFog:
                 case RenderPassKind::CanvasMarker:
                 case RenderPassKind::ShadowCacheRestore:
@@ -947,14 +949,27 @@ namespace sw
 
         FramePassContext&    context = input._context;
         const hashed_string& target  = input._declaredColor[0]._attachment;
+        // hi-z trace 가 읽는 HZB 를 이번 장면 깊이(불투명을 다 그린 것)로 짓는다 — 렌더 패스를 열기 전이다. 못 지으면 그리지 않는다(선형 탐색으로 대신하지 않는다).
+        FrameViewTarget& view = *_pActiveView;
+        if ( _frameGraphExecutor.recordSceneDepthHZB( *context._pCmd, view ) == false )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.SSRWithoutHZB", "Screen space reflection is on but this view has no HZB (depth history, HZBBuild PSO or buffer missing) - reflections are not drawn" );
+            return;
+        }
+        context._passValues.setFloat4( passConstantNames()._ssrHZBParams, float4{ static_cast<float32>( view._hzbLayout._depthWidth ), static_cast<float32>( view._hzbLayout._depthHeight ),
+                                                                                  static_cast<float32>( view._hzbLayout._mipCount ), 0.0f } );
         registerDeclaredInputs( context, input._passDesc );
         if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), getColorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
             return;
+        // drawFullscreen 과 같은 순서다. HZB 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다(안개의 볼륨 버퍼와 같다).
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
         context._pCmd->setPipelineState( pso );
         if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) )
+        {
+            context._pCmd->bindStructuredBuffer( view._hzb._srv, shaderslot::kPassBuffer );
             context._pCmd->draw( 3, 0 );
+        }
         context._pCmd->endRenderPass();
     }
 

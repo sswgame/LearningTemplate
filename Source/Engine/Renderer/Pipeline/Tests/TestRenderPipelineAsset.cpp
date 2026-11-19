@@ -751,8 +751,8 @@ namespace
 
         static constexpr const utf8* kResources = "<RenderGraphResourceDesc _name=\"InstanceBuffer\" _kind=\"External\"/>"
                                                   "<RenderGraphResourceDesc _name=\"CullResults\" _kind=\"External\"/>"
-                                                  "<RenderGraphResourceDesc _name=\"OcclusionTiles\" _kind=\"Persistent\"/>";
-        static constexpr const utf8* kCullPass  = "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listInput><item>InstanceBuffer</item><item>OcclusionTiles</item></_listInput>"
+                                                  "<RenderGraphResourceDesc _name=\"HZB\" _kind=\"Persistent\"/>";
+        static constexpr const utf8* kCullPass  = "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listInput><item>InstanceBuffer</item><item>HZB</item></_listInput>"
                                                   "<_listOutput><item>CullResults</item></_listOutput></RenderGraphPassDesc>";
     };
 } // namespace
@@ -837,7 +837,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesDeclareFramePasses )
     {
         RenderPipelineAsset asset;
         SW_REQUIRE_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( pPath ) } ), pPath );
-        for ( const RenderPassKind type : { RenderPassKind::DepthHistory, RenderPassKind::OcclusionTiles, RenderPassKind::VFXSimulation, RenderPassKind::InstanceAnimation, RenderPassKind::MeshMorph,
+        for ( const RenderPassKind type : { RenderPassKind::DepthHistory, RenderPassKind::HZBBuild, RenderPassKind::VFXSimulation, RenderPassKind::InstanceAnimation, RenderPassKind::MeshMorph,
                                             RenderPassKind::MeshSkin, RenderPassKind::GPUCull, RenderPassKind::LightGrid, RenderPassKind::VolumetricFog, RenderPassKind::ProbeUpdate,
                                             RenderPassKind::CanvasMarker } )
         {

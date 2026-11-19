@@ -141,8 +141,9 @@ namespace sw
 
         /**
          * @brief 컬링 디스패치 상수(gpu_cull.hlsl `CullParams`, b0)입니다. 상수 버퍼 크기와 올리는 값이 이 정의 하나를 씁니다.
-         * @details 뒤 셋은 가림 판정이다(`FramePassExecutor::recordOcclusionTiles`) — 지난 프레임 장면 깊이를 그린 뷰-투영(행 벡터 규약, 셰이더가 `-Zpr` 로 그대로 읽는다),
-         *          타일 격자(열 · 행 · 타일 한 변 px · 켬), 깊이 크기(px). 켬이 0 이면 셰이더가 나머지를 읽지 않는다(그림자 슬롯 · 기록을 버린 프레임 · `gv_occlusionCulling` 끔).
+         * @details HZB 셋은 가림 판정이다(`HZBOcclusion::fillCullParams`) — 피라미드의 깊이를 그린 뷰-투영(행 벡터 규약, 셰이더가 `-Zpr` 로 그대로 읽는다),
+         *          제어(지은 깊이 사각형 폭 · 높이 px, 밉 수, 판정 발자국), 값(깊이 치우침). 발자국이 0 이면 셰이더가 나머지를 읽지 않는다(그림자 슬롯 · 피라미드가 없는 프레임 · `gv_occlusionCulling` 끔).
+         *          끝의 단계는 2 단계 가림이다(gpu_cull.hlsl 머리말 — 0 한 단계, 1 앞, 2 뒤).
          */
         struct GPUCullParams
         {
@@ -151,17 +152,23 @@ namespace sw
             uint32  _batchCount{ 0 };
             uint32  _visibleSlotCount{ 0 };  ///< 가시 목록의 칸 수(가시 구간의 합). 셰이더 g_VisibleSlotCount
             uint32  _instanceSlotCount{ 0 }; ///< 칸 순 인스턴스 버퍼의 원소 수(GPUScene 칸 수). 셰이더 g_InstanceSlotCount — 차례 → 칸 목록이 가리킨 칸의 범위다
-            float32 _arrOcclusionViewProj[16]{};
-            uint32  _arrOcclusionGrid[4]{};
-            float32 _arrOcclusionDepthSize[4]{};
+            float32 _arrHZBViewProj[16]{};
+            uint32  _arrHZBControl[4]{}; ///< xy 지은 깊이 사각형(px), z 밉 수, w 판정 발자국(0 = 판정 끔). 셰이더 g_HZBControl
+            float32 _arrHZBParams[4]{};  ///< x 깊이 치우침(NDC). 셰이더 g_HZBParams
             /// @brief 인스턴스 LOD 선택의 화면 크기 식 항입니다(`LODView::computeProjectionTerms`). xyz 클립 w 를 만드는 열, w 가 m44.
             float32 _arrLODDepthRow[4]{};
             /// @brief xyz 눈 위치(눈이 경계 구 안이면 크기 1), w 투영 y 배율.
             float32 _arrLODView[4]{};
             /// @brief x 인스턴스 LOD 선택 켬 1 · 끔 0(끄면 늘 단계 0). 나머지는 예약.
             uint32 _arrLODControl[4]{};
+            /// @brief x 컬링 단계(`kCullPhaseSingle` · `kCullPhaseEarly` · `kCullPhaseLate`). 셰이더 g_CullPhase
+            uint32 _arrCullPhase[4]{};
         };
-        /// @brief 가림 타일 한 변(px)입니다. 타일마다 지난 장면 깊이의 최대를 하나 둔다(occlusion_tiles.hlsl 이 루트 상수로 받는다).
+        /// @brief 컬링 단계(gpu_cull.hlsl g_CullPhase.x) — 한 단계, 2 단계 가림의 앞(가려진 차례를 적는다) · 뒤(적힌 차례만 다시 판정한다).
+        static constexpr uint32 kCullPhaseSingle = 0;
+        static constexpr uint32 kCullPhaseEarly  = 1;
+        static constexpr uint32 kCullPhaseLate   = 2;
+        /// @brief 가림 타일 한 변(px)입니다. 타일마다 지난 장면 깊이의 최대를 하나 둔다 — HZB 의 16 px 밉(`HZBLayout::kTileMip`, hzb_build.hlsl)이 쓴다.
         static constexpr uint32 kOcclusionTileSize = 16;
         /** @brief @p value 를 @p divisor 칸으로 나눈 칸 수(올림)입니다. 가림 타일 격자와 그 디스패치 그룹 수가 쓴다. */
         static constexpr uint32 divideRoundUp( uint32 value, uint32 divisor ) { return ( value + divisor - 1u ) / divisor; }
@@ -471,6 +478,8 @@ namespace sw
         hashed_string _flareTint{ "g_FlareTint" };
         /// @brief 화면 공간 반사(세기 · 최대 거리 · 두께 · 최대 거칠기)입니다. screen_space_reflection.hlsl.
         hashed_string _ssrParams{ "g_SSRParams" };
+        /// @brief 화면 공간 반사의 HZB(xy 지은 깊이 사각형 px, z 밉 수)입니다. screen_space_reflection.hlsl 의 hi-z trace.
+        hashed_string _ssrHZBParams{ "g_SSRHZBParams" };
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };
         hashed_string _sourceTexel{ "g_SourceTexel" };
