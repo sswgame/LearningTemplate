@@ -17,7 +17,7 @@ namespace sw
     {
         struct DevConsoleInternal
         {
-            static constexpr const utf8* kArrBuiltin[] = { "get", "help", "set" };
+            static constexpr const utf8* kArrBuiltin[] = { "clear", "get", "help", "set" };
 
             /** @brief 낱말 하나를 이어 붙입니다(공백이 있으면 큰따옴표로 감쌉니다). */
             static void appendToken( string& inoutText, string_view token )
@@ -98,7 +98,7 @@ namespace sw
 
             static void appendHelp( string_view prefix, string& outReply )
             {
-                outReply = "get <variable> | set <variable> <value> | <variable> [value] | help [prefix]";
+                outReply = "clear | get <variable> | set <variable> <value> | <variable> [value] | help [prefix]";
                 vector<string> listName;
                 engine::getSubsystem<DevCommandRegistry>().collectNames( prefix, listName );
                 for ( const string& name : listName )
@@ -137,6 +137,9 @@ namespace sw
             return DevConsoleResult::Empty;
 
         const string& head = listToken[0];
+        // 출력 줄은 `submit` 이 비운다 — 줄을 들지 않는 길(시나리오 `<DevCommand>` · 원격 채널)에서는 비울 것이 없어 답 없이 성공이다.
+        if ( StringUtil::equals( head, "clear", true ) )
+            return DevConsoleResult::Ok;
         if ( StringUtil::equals( head, "help", true ) )
         {
             DevConsoleInternal::appendHelp( listToken.size() > 1 ? string_view( listToken[1] ) : string_view{}, outReply );
@@ -196,6 +199,13 @@ namespace sw
         if ( _listHistory.size() > kMaxHistoryCount )
             _listHistory.erase( _listHistory.begin() );
         resetHistoryCursor();
+
+        // 내장 명령 clear(Quake · Source 콘솔과 같은 이름) — 친 줄과 답을 남기면 비운 화면에 다시 줄이 생기므로 여기서 끝낸다.
+        if ( StringUtil::equals( trimmed, "clear", true ) )
+        {
+            clearOutput();
+            return DevConsoleResult::Ok;
+        }
 
         appendOutput( string( "> " ) + string( trimmed ), false );
         string                 reply;

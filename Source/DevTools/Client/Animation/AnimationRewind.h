@@ -93,7 +93,8 @@ namespace sw
         void setEnabled( bool bEnabled );
         bool isEnabled() const { return _bEnabled == SW_TRUE; }
         /** @brief 남길 시간(초)입니다. 줄이면 오래된 것부터 버립니다. */
-        void setWindowSeconds( float32 seconds );
+        void    setWindowSeconds( float32 seconds );
+        float32 getWindowSeconds() const { return _windowSeconds; }
 
         /**
          * @brief 프로세스 전체의 기록 요청입니다(`-gv_animationRewind` · `-gv_animationRewindSeconds` — 콘솔 `anim.rewind` · 에디터 패널이 바꾼다).

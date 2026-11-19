@@ -294,10 +294,30 @@ namespace sw
         return false;
     }
 
+    bool AutomationRunner::startFromText( string_view xmlText, string_view reportPath )
+    {
+        markWallStart();
+        _reportWriter.setReportPath( reportPath );
+        if ( const expected<void> parsed = _scenario.parse( xmlText, "<text>" ); parsed.has_value() == false )
+        {
+            finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, string( parsed.error().message().data(), parsed.error().message().size() ) + ": " + string( parsed.error().detail().data(), parsed.error().detail().size() ), {} ) );
+            return false;
+        }
+        _outputDirectory  = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
+        _wallLimitSeconds = computeWallLimitSeconds();
+        const bool bReady = skipIfThisBuildCannotRun() == false && prepareScratchFolders();
+        if ( bReady )
+        {
+            _evaluator.startLogCapture(); // 시작을 기다리는 동안(시작 씬 로드)의 줄도 이 시나리오의 것이다
+            startHangWatchdog();
+        }
+        return bReady;
+    }
+
     bool AutomationRunner::prepareScratchFolders()
     {
         // 사본 id 는 시나리오가 적은 그대로다 — 작업 도메인이 이 프로세스의 실행 뿌리 아래라(`AssetPaths::getScratchFolderPath`) 나란히 도는 App 과 겹치지 않는다.
-        _scenario.bindOutputDirectory( _outputDirectory ); // `{out}` — 산출물 폴더도 프로세스마다다(시작 길 `startFromPath` 가 여기를 지난다)
+        _scenario.bindOutputDirectory( _outputDirectory ); // `{out}` — 산출물 폴더도 프로세스마다다(두 시작 길 모두 여기를 지난다)
         for ( const AutomationScratchFolder& folder : _scenario.getTestOptions()._listScratchFolder )
         {
             const expected<void> prepared = AutomationScratchWorkspace::prepare( folder );

@@ -835,6 +835,12 @@ namespace sw
         return _window != kInvalidUIScreenHandle;
     }
 
+    void DebugHUD::closeWindow()
+    {
+        if ( _pUI != nullptr && _window != kInvalidUIScreenHandle )
+            _pUI->closeScreen( _window );
+    }
+
     bool DebugHUD::isWindowOpen() const
     {
         return _pUI != nullptr && _window != kInvalidUIScreenHandle && _pUI->findScreen( _window ) != nullptr;
