@@ -1580,15 +1580,17 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
   - 메시지 방향 강제 — 라우터가 역할별 마스크로 반대 방향 종류를 `Malformed`(XMachina, S).
   - 게임 넷 메시지 본문을 REFLECT 고정 배치로, 본문 판은 스키마 해시(GameServer PacketGenerator, M — NetMessageDef 37 곳).
   - 열거형: 등록기를 항목 표 하나로(생성 바이트 약 0.7 MB↓), 플래그 글은 단일 비트 이름만, 끝 열거자 `Count` 자동 센티널, Core `EnumArray<E,T>` · `makeEnumTable`(개수 모자람을 컴파일 오류로), 열거자 단위 데이터 철자(magic_enum, S~M).
-  - 렌더 그래프 접근 종류를 핸들 형식에 — 손 전이 81 곳 제거(Adria, L, HZB 뒤).
+  - 렌더 그래프 접근 종류를 핸들 형식에 — 손 전이 81 곳 제거(Adria, L, HZB 뒤 — 설계는 아래 "렌더 그래프 접근 핸들" 단락, 코드는 다음 갈래).
   - 컴포넌트 → 카탈로그 id 를 `CatalogKey<Tag>` 형식으로, 쿠킹이 대조(ezEngine, M).
   - 타입별 판 + 패치 `REFLECT( Version = N )` — 그릇마다가 아니라 타입 한 곳(ezEngine GraphPatch, M).
 - 화질
   - 스카이 라이트 · 반사 프로브 거르기를 filtered importance sampling(원본 밉을 pdf 로 고름), HDRI 반사를 SH9 대신 거른 텍스처로(VQEngine, S → GPU 찍기 M).
   - TAA: YCoCg 분산 클리핑 · Catmull-Rom 히스토리 · 적응 블렌드 → 그 위에 TAAU(Adria, S → M).
   - 프로브 GI 빛샘: 거리 모먼트 + 체비쇼프 가시성 · 뒷면 가중(Adria DDGI, M — GI 골든 전부).
-  - 2 단계 HZB 가림(지난 HZB → 새 HZB 로 다시 시험) — SSR 계층 탐색 · 큰 물체 컬링도 같은 피라미드(Adria · VQEngine, L).
+  - 2 단계 HZB 가림(지난 HZB → 새 HZB 로 다시 시험) — SSR 계층 탐색 · 큰 물체 컬링도 같은 피라미드(Adria · VQEngine, L). **했다(2026-11-19)** — 피라미드는 뷰마다 구조 버퍼 하나(float2 최소 · 최대, `HZBLayout` · hzb.hlsli — 에뮬 백엔드 컴퓨트가 밉마다 UAV 를 못 걸어 텍스처 밉 사슬 대신), 프레임 처음(지난 깊이 — 앞 단계) · 깊이 프리패스 뒤(뒤 단계) · SSR 앞(hi-z trace)에 다시 짓는다. 뒤 단계는 Adria 처럼 따로 간접 인자 · 그리기를 두지 않고 앞 단계가 적은 차례 표시(u3)만 다시 판정해 **같은 간접 인자에 더한다** — 패스마다 그리기를 둘로 나누지 않는 대신 뒤 단계 인스턴스가 그 프레임 깊이 프리패스에 없다(DBuffer 데칼이 드러나는 첫 프레임 한 번 모른다). 켜고 끄기 · 문턱은 `Config/Engine/OcclusionCulling.json`, 간접 멀티 드로우가 없는 WebGPU 는 끈다. 투명 정렬 배치는 앞 단계만 본다(정렬 뒤에 붙지 않게).
   - 자동 노출 히스토그램 + 백분위 컷(Adria, S~M), HDR 디스플레이 출력 `DisplayOutputDesc` 한 값에서 스왑체인 포맷 · 톤맵 변형(VQEngine, M~L), 볼류메트릭 구름 · 비 가림 맵(Adria).
 - 작업 시스템(측정 먼저 — 합류 대기 구간 · park 수 계기부터): 묶음 제출 `submitBatch`, `runParallel` 우선순위 레인, guided 청크, 후속 하나 이어 실행, 넘침 보조 큐, 단계 그래프 위상 순서 재사용(Taskflow).
 - 도구: 엔진 안 MCP 서버(루프백, 자동화 단계 하나 = 도구 하나, 스키마는 TParams 리플렉션 — security-and-hardening 먼저), 선언형 조작기 · 시각화 속성(PROPERTY Shape), Fileserve(장치가 PC 콘텐츠를 TCP 로 — 개발 전용)(ezEngine).
 - 측정 뒤에만: DX12 PipelineLibrary(차가운 시작 PSO 합), 깊이 전용 배치 키(그림자 드로우 수), 서버 MMO 관찰자 거리 기반 틱 주기 · 컴포넌트 TickInterval 버킷(XMachina · ezEngine), 서버 쿠킹의 축약 애니메이션 클립, 온라인 프로토콜 퍼저 타깃 ⑦(퍼징 1 단계 뒤).
+
+**렌더 그래프 접근 핸들(설계 2026-11-19, 코드는 다음 갈래).** 지금 그래프 자원은 이름(`hashed_string`)이고 접근은 읽기 · 쓰기 둘뿐이라, 레벨 프롤로그가 첨부 텍스처만 이름으로 전이하고 버퍼 · UAV · 간접 인자 · 같은 버퍼의 연속 컴퓨트 쓰기는 패스 몸통이 손으로 낸다(렌더러 `transitionBuffer` · `prepareTexture*` · `uavBarrier` 약 100 곳 — 이번 HZB 가 6 곳을 더했다). 빠뜨리면 DX12 · Vulkan 에서만 지난 내용을 읽는다. 모양: Adria `RGTextureReadOnlyId` · `RGBufferReadWriteId`, 언리얼 RDG `FRDGTextureSRVRef` · `FRDGBufferUAVRef` 처럼 **접근 종류가 형식인 핸들**(`RGTextureSRV` · `RGTextureUAV` · `RGRenderTarget` · `RGDepthTarget<읽기 | 쓰기>` · `RGBufferSRV` · `RGBufferUAV` · `RGIndirectArgs` · `RGCopySource` · `RGCopyDest`)을 패스 선언이 받고, 패스 몸통은 그 핸들로만 디스크립터를 얻는다(`RGPassContext::getUAV( RGBufferUAV )` — 선언하지 않은 자원을 묶을 길이 없다). 그래프가 접근에서 RHI 상태를 정해(SRV → 셰이더 읽기, 비동기 큐는 큐가 받는 상태로 접는다, UAV → UAV, 간접 인자 → IndirectArgument) 레벨 프롤로그에서 텍스처와 버퍼를 한 묶음으로 낸다. 그래프 밖에서 사는 버퍼(GPUScene 컬링 인자 · HZB · 라이트 그리드 · 입자)는 프레임마다 `importBuffer( 이름, RHIStructuredBuffer&, 처음 상태 )` 로 들이고 끝 상태를 내보낸다(언리얼 RegisterExternalBuffer). 한 패스 안의 연속 디스패치(HZB 밉 사슬 · 컬링 → 정렬)는 `RGPassContext::uavBarrier( RGBufferUAV )` 하나로 남긴다 — SRV 핸들로는 부를 수 없다. 이전 차례(deprecation-and-migration): ① 핸들 · 버퍼 들이기를 이름 옆에 더하고 그래프 단위 테스트(UAV 쓰기 뒤 읽기에 전이 하나, 같은 레벨 읽기 여럿에 전이 0, 비동기 큐 상태)를 먼저, ② 프레임 패스(FrameGraphExecutor 27 · VFX 13 · HZB 6 곳)를 옮기고, ③ 뷰 패스, ④ 패스 몸통이 받는 명령 리스트 면에서 `transitionBuffer` · `prepareTexture*` 를 빼 그래프 실행기만 부르게 한다(형식으로 막아 손 전이가 돌아오지 못하게 — 린트가 아니다). 크기 L, 측정은 전이 수 · 프레임 GPU 시간 그대로(늘면 고친다).
