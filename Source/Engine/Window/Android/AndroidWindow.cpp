@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Input/Map/InputKeyTable.h"
+#include "Engine/Window/Android/AndroidInputView.h"
 #include "Engine/Window/WindowPlatform.h"
 
 #include <android/configuration.h>
@@ -146,6 +147,7 @@ namespace sw
         : CallbackInputWindow{}
         , _arrGamepadDeviceID{}
         , _gamepadScanCountdown{ 0 }
+        , _pInputView{}
     {
         for ( int32& deviceId : _arrGamepadDeviceID )
         {
@@ -225,6 +227,13 @@ namespace sw
         pApp->userData                   = this;
         pApp->onAppCmd                   = &AndroidWindow::onAppCommand;
         pApp->onInputEvent               = &AndroidWindow::onInputEvent;
+        _pInputView                      = make_unique<AndroidInputView>();
+        if ( _pInputView->attach( pApp, &AndroidWindow::onInputViewReady ) == false )
+        {
+            _pInputView.reset();
+            destroy();
+            return false; // 입력기 조합 없이 띄우지 않는다 — 이유는 attach 가 남겼다
+        }
         syncSurfaceMetrics();
         applyTextInputWanted( isTextInputWanted() );
         applyPlatformFocus( true );
@@ -233,6 +242,7 @@ namespace sw
 
     void AndroidWindow::destroy()
     {
+        _pInputView.reset(); // Java 뷰를 떼고 파이프를 닫는다 — 아래에서 콜백을 풀기 전에
         android_app* const pApp = AndroidWindowInternal::s_pApp;
         if ( pApp != nullptr && AndroidWindowInternal::s_pWindow == this )
         {
@@ -357,14 +367,48 @@ namespace sw
 
     void AndroidWindow::applyTextInputWanted( bool bWanted )
     {
-        android_app* const pApp = AndroidWindowInternal::s_pApp;
-        if ( pApp == nullptr || pApp->activity == nullptr )
+        if ( _pInputView != nullptr )
+            _pInputView->setSoftInputVisible( bWanted ); // 창이 서기 전의 요청은 initializeWindow 가 다시 낸다
+    }
+
+    void AndroidWindow::pollInputView()
+    {
+        if ( _pInputView == nullptr )
             return;
-        // 플래그 0 은 명시적 요청이다 — IMPLICIT 은 글 칸이 아닌 뷰(NativeActivity)에서 입력기가 무시한다(InputMethodManager.showSoftInput 문서).
-        if ( bWanted )
-            ANativeActivity_showSoftInput( pApp->activity, 0 );
-        else
-            ANativeActivity_hideSoftInput( pApp->activity, 0 );
+        vector<AndroidTextAction> listAction;
+        _pInputView->takePendingActions( listAction );
+        for ( const AndroidTextAction& action : listAction )
+        {
+            switch ( action._kind )
+            {
+                case AndroidTextActionKind::Composition:
+                    queueTextInput( WindowTextInputKind::Composition, action._text );
+                    break;
+                case AndroidTextActionKind::Commit:
+                    queueTextInput( WindowTextInputKind::Commit, action._text );
+                    break;
+                case AndroidTextActionKind::BackspaceKey:
+                case AndroidTextActionKind::DeleteKey:
+                {
+                    // 입력기의 지우기는 키 누름 · 뗌 한 쌍이다 — 하드웨어 키(AKEYCODE_DEL · FORWARD_DEL)와 같은 길로 간다.
+                    PlatformInputEvent input{};
+                    input._keyCode = action._kind == AndroidTextActionKind::BackspaceKey ? AndroidInputConnectionState::kBackspaceKeyCode : AndroidInputConnectionState::kForwardDeleteKeyCode;
+                    input._kind    = PlatformInputKind::KeyDown;
+                    queueInput( input );
+                    input._kind = PlatformInputKind::KeyUp;
+                    queueInput( input );
+                    break;
+                }
+            }
+        }
+    }
+
+    void AndroidWindow::onInputViewReady( android_app* pApp, android_poll_source* pSource )
+    {
+        (void)pSource;
+        AndroidWindow* const pWindow = static_cast<AndroidWindow*>( pApp->userData );
+        if ( pWindow != nullptr )
+            pWindow->pollInputView();
     }
 
     void AndroidWindow::queueKeyText( AInputEvent* pEvent )
