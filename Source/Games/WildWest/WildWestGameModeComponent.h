@@ -14,6 +14,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternGameModeComponent.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
@@ -92,7 +93,7 @@ namespace sw
         PROPERTY( Category = "Data", DisplayName = "Weather Data", Tooltip = "Weather catalog; the weather's temperature value moves the air temperature" )
         AssetRef<WeatherCatalog> _weatherDataPath;
         PROPERTY( Category = "Outlaw", DisplayName = "Region", Tooltip = "<Region id> in the western catalog this map belongs to" )
-        hashed_string _regionID;
+        CatalogKey<WesternRegionDef> _regionID;
         PROPERTY( Category = "Outlaw", DisplayName = "Base Temperature", Tooltip = "Air temperature of the region before the weather" )
         float32 _regionBaseTemperature;
         PROPERTY( Category = "Outlaw", DisplayName = "Seconds Per Day", Min = 1.0, Tooltip = "Real seconds of one game day", Units = s )

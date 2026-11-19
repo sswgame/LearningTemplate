@@ -57,8 +57,8 @@ namespace sw
         WesternDeed deed;
         deed._kind     = _kind;
         deed._id       = _id;
-        deed._weapon   = _weapon;
-        deed._zone     = _zone;
+        deed._weapon   = _weapon.key();
+        deed._zone     = _zone.key();
         deed._hitCount = _hitCount;
         deed._position = position;
         return deed;

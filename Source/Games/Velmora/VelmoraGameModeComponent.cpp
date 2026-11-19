@@ -149,7 +149,7 @@ namespace sw
         settings._pQuestCatalog = pQuests;
         if ( SessionStateComponent::openOnOwner( *this, settings ) == nullptr )
             return false;
-        if ( _campaign.initialize( _vitalsSettings, _startRegion ) == false )
+        if ( _campaign.initialize( _vitalsSettings, _startRegion.key() ) == false )
             return false;
         _room.clear();
         _bossDelay.clear();
@@ -306,7 +306,7 @@ namespace sw
         if ( pRespawn == nullptr ) // 일어설 지역이 표에서 빠진 판(확장 팩을 끈 판)은 시작 지역에서 일어선다
         {
             pRespawn = regions.find( _startRegion );
-            _campaign.setRespawnRegion( _startRegion );
+            _campaign.setRespawnRegion( _startRegion.key() );
         }
         if ( pRespawn != nullptr )
             _playerPosition = pRespawn->_respawn;
@@ -322,7 +322,7 @@ namespace sw
         {
             SW_LOG_WARNING_ID( "Velmora.RespawnRegionGone", "Velmora: the loaded game rises in region '%#', which is not in the region catalog (expansion off?) - rising in '%#' instead",
                                _campaign.getRespawnRegion().c_str(), _startRegion.c_str() );
-            _campaign.setRespawnRegion( _startRegion );
+            _campaign.setRespawnRegion( _startRegion.key() );
         }
         if ( regions.findAt( _playerPosition ) != nullptr )
             return;
