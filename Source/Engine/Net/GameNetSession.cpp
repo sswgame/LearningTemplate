@@ -756,7 +756,7 @@ namespace sw
         GameServerTickBody body;
         body._tick = tick;
         if ( _tickWriter.writeMessage<GameNetSessionMessage::Table, GameNetSessionMessage::ServerTick>( body ) )
-            (void)_tickWriter.broadcast( _peers, GameNetSessionMessage::ServerTick::kChannel ); // 잃어도 다음 틱이 더 새 번호를 싣는다
+            (void)_tickWriter.broadcastMessage( _peers ); // 잃어도 다음 틱이 더 새 번호를 싣는다
     }
 
     void GameNetSession::sendShutdownNotice( const GameShutdownNotice& notification )
@@ -764,8 +764,8 @@ namespace sw
         if ( _role != GameNetRole::Server )
             return;
         if ( _tickWriter.writeMessage<GameNetSessionMessage::Table, GameNetSessionMessage::ShutdownNotice>( notification ) == false )
-            return;                                                                                               // 등록 열거자 밖 사유다 — 오류 로그가 남았다
-        const int32 sentCount = _tickWriter.broadcast( _peers, GameNetSessionMessage::ShutdownNotice::kChannel ); // 끊기 전에 사유가 닿아야 한다
+            return;                                                     // 등록 열거자 밖 사유다 — 오류 로그가 남았다
+        const int32 sentCount = _tickWriter.broadcastMessage( _peers ); // 끊기 전에 사유가 닿아야 한다
         SW_LOG_INFO_ID( "GameNetSession.NetSessionNotifiedClients", "Net session told %# clients the server is shutting down (reason %#, grace %# s)", sentCount, static_cast<uint32>( notification._reason ), notification._graceSeconds );
     }
 
@@ -893,7 +893,7 @@ namespace sw
             body._assetID = entry._assetID;
             body._hash    = entry._hash;
             if ( _tickWriter.writeMessage<GameNetSessionMessage::Table, GameNetSessionMessage::ResourceDigest>( body ) &&
-                 _tickWriter.send( _peers, connectionID, GameNetSessionMessage::ResourceDigest::kChannel ) )
+                 _tickWriter.sendMessage( _peers, connectionID ) )
                 ++sentCount;
         }
         SW_LOG_INFO_ID( "GameNetSession.DigestSent", "Net session sent %# resource composition digest(s) to the server", sentCount );

@@ -86,12 +86,6 @@ namespace sw
             {
                 return lhs._partID == rhs._partID && lhs._partVersion == rhs._partVersion && lhs._transform == rhs._transform;
             }
-
-            [[nodiscard]] static HousingPlotOwner readOwner( BitReader& body )
-            {
-                const uint32 owner = body.readBits( kOwnerBits );
-                return owner < static_cast<uint32>( HousingPlotOwner::Count ) ? static_cast<HousingPlotOwner>( owner ) : HousingPlotOwner::Count;
-            }
         };
     } // namespace
 } // namespace sw
@@ -174,10 +168,8 @@ namespace sw
         edit._connectionID = context._connectionID;
         edit._requestID    = body.readVarUint32();
         edit._plotHash     = body.readVarUint();
-        const uint32 op    = body.readBits( Internal::kOpBits );
-        if ( body.hasOverflowed() || op >= static_cast<uint32>( HousingEditOp::Count ) )
+        if ( body.readEnum( Internal::kOpBits, edit._op ) == false )
             return NetHandleResult::Malformed;
-        edit._op = static_cast<HousingEditOp>( op );
         switch ( edit._op )
         {
             case HousingEditOp::Place:
@@ -201,8 +193,8 @@ namespace sw
             case HousingEditOp::Count:
                 break;
         }
-        if ( body.hasOverflowed() )
-            return NetHandleResult::Malformed;
+        if ( body.readEnd() == false )
+            return NetHandleResult::Malformed; // 잘림 · 종류에 맞지 않는 꼬리(남는 바이트)
         ++_stats._editCount;
         if ( acceptRequest( context._connectionID ) == false )
         {
@@ -436,7 +428,7 @@ namespace sw
                 if ( _writer.writeMessage<NetHousingMessage::Table, NetHousingMessage::PlotSnapshot>( body ) == false )
                     break; // 상태가 비었거나 주인 값이 틀렸다 — 오류 로그가 남았다
                 // 창이 차면 닫지 않고 다음 틱에 잇는다(조각 여럿을 한 틱에 밀어 넣으면 신뢰 창을 넘는다).
-                if ( _pHost->trySendMessage( transfer._connectionID, NetChannelKind::ReliableOrdered, _writer.getBytes().data(), _writer.getByteCount() ) == false )
+                if ( _writer.trySendMessage( *_pHost, transfer._connectionID ) == false )
                     break;
                 ++_stats._snapshotChunkCount;
                 transfer._offset += chunkSize;
@@ -568,7 +560,7 @@ namespace sw
         body._plotHash    = plotHash;
         body._result      = result;
         body._placementID = placementID;
-        const bool bSent  = _writer.writeMessage<NetHousingMessage::Table, NetHousingMessage::Reply>( body ) && _writer.send( *_pHost, connectionID, NetHousingMessage::Reply::kChannel );
+        const bool bSent  = _writer.writeMessage<NetHousingMessage::Table, NetHousingMessage::Reply>( body ) && _writer.sendMessage( *_pHost, connectionID );
         if ( bSent == false )
             ++_stats._sendFailedCount;
     }
@@ -711,19 +703,20 @@ namespace sw
         using Internal = HousingReplicationInternal;
         (void)context;
         PendingOp op;
-        op._kind                  = OpKind::Delta;
-        op._plotHash              = body.readVarUint();
-        op._owner                 = Internal::readOwner( body );
-        op._funds                 = body.readVarInt();
-        op._nextPlacementID       = body.readVarUint32();
-        const uint32 removedCount = body.readVarUint32();
-        if ( body.hasOverflowed() || op._owner == HousingPlotOwner::Count || removedCount > Internal::kMaxDeltaEntries )
+        op._kind     = OpKind::Delta;
+        op._plotHash = body.readVarUint();
+        if ( body.readEnum( Internal::kOwnerBits, op._owner ) == false )
+            return NetHandleResult::Malformed;
+        op._funds           = body.readVarInt();
+        op._nextPlacementID = body.readVarUint32();
+        uint32 removedCount = 0;
+        if ( body.readCount( Internal::kMaxDeltaEntries, removedCount ) == false )
             return NetHandleResult::Malformed;
         op._listRemovedID.reserve( removedCount );
         for ( uint32 index = 0; index < removedCount && body.hasOverflowed() == false; ++index )
             op._listRemovedID.push_back( body.readVarUint32() );
-        const uint32 upsertCount = body.readVarUint32();
-        if ( body.hasOverflowed() || upsertCount > Internal::kMaxDeltaEntries )
+        uint32 upsertCount = 0;
+        if ( body.readCount( Internal::kMaxDeltaEntries, upsertCount ) == false )
             return NetHandleResult::Malformed;
         op._listUpsert.reserve( upsertCount );
         for ( uint32 index = 0; index < upsertCount; ++index )
@@ -736,7 +729,7 @@ namespace sw
                 return NetHandleResult::Malformed;
             op._listUpsert.push_back( placement );
         }
-        if ( body.hasOverflowed() )
+        if ( body.readEnd() == false )
             return NetHandleResult::Malformed;
         _listOp.push_back( std::move( op ) );
         return NetHandleResult::Handled;
@@ -777,7 +770,7 @@ namespace sw
         _listAwaitingSnapshot.push_back( plotHash );
         HousingSnapshotRequestBody body;
         body._plotHash   = plotHash;
-        const bool bSent = _writer.writeMessage<NetHousingMessage::Table, NetHousingMessage::SnapshotRequest>( body ) && _writer.send( *_pHost, 0, NetHousingMessage::SnapshotRequest::kChannel );
+        const bool bSent = _writer.writeMessage<NetHousingMessage::Table, NetHousingMessage::SnapshotRequest>( body ) && _writer.sendMessage( *_pHost, 0 );
         if ( bSent )
             ++_stats._snapshotRequestCount;
         else

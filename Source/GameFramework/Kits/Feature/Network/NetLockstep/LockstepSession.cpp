@@ -117,7 +117,7 @@ namespace sw
         body._tick   = tick;
         body._input  = listInput;
         if ( _pHost != nullptr && _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( body ) )
-            (void)_messageWriter.sendToPeers( *_pHost, NetLockstepMessage::Input::kChannel );
+            (void)_messageWriter.sendMessageToPeers( *_pHost );
         return true;
     }
 
@@ -200,7 +200,7 @@ namespace sw
         body._tick     = tick;
         body._checksum = checksum;
         if ( _pHost != nullptr && _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Checksum>( body ) )
-            (void)_messageWriter.sendToPeers( *_pHost, NetLockstepMessage::Checksum::kChannel );
+            (void)_messageWriter.sendMessageToPeers( *_pHost );
     }
 
     void LockstepSession::applyLeave( int32 player, uint32 tick )
@@ -231,7 +231,7 @@ namespace sw
         body._player = player;
         body._tick   = tick;
         if ( _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Leave>( body ) )
-            (void)_messageWriter.broadcast( *_pHost, NetLockstepMessage::Leave::kChannel );
+            (void)_messageWriter.broadcastMessage( *_pHost );
     }
 
     NetHandleResult LockstepSession::receive( NetLockstepMessage::Leave, const NetMessageContext& context, const LockstepLeaveBody& body )

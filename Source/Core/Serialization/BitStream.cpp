@@ -471,6 +471,31 @@ namespace sw
         return readBlobSize( maxSize, size ) && skipBytes( size );
     }
 
+    bool BitReader::readCount( uint32 maxCount, uint32& outCount )
+    {
+        const uint64 count = readVarUint();
+        if ( hasOverflowed() )
+            return false;
+        if ( count > static_cast<uint64>( maxCount ) )
+        {
+            _bOverflow = SW_TRUE;
+            return false;
+        }
+        outCount = static_cast<uint32>( count );
+        return true;
+    }
+
+    bool BitReader::readEnd()
+    {
+        if ( hasOverflowed() )
+            return false;
+        const int32 bitsRemaining = getBitsRemaining();
+        const bool  bTrailing     = bitsRemaining >= 8 || ( bitsRemaining > 0 && readBits( bitsRemaining ) != 0 );
+        if ( bTrailing )
+            _bOverflow = SW_TRUE;
+        return hasOverflowed() == false;
+    }
+
     void BitReader::alignToByte()
     {
         const int32 remainder = _bitPosition & 7;

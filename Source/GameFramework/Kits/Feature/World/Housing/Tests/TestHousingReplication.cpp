@@ -599,3 +599,42 @@ SW_TEST_CASE( HousingReplicationTest, BodyMessagesRejectUnknownValuesAndTruncati
     const vector<uint8> listTruncated( writer.getBytes().begin(), writer.getBytes().end() - 1 );
     SW_EXPECT_TRUE( client.handleMessage( 0, listTruncated.data(), static_cast<int32>( listTruncated.size() ), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
 }
+
+/**
+ * @brief [HousingReplicationTest] 손 본문 — 종류에 맞지 않는 편집 꼬리(남는 바이트) · 등록 밖 주인 · 상한 넘는 델타 개수 · 델타 뒤 남는 바이트는 깨진 메시지다
+ */
+SW_TEST_CASE( HousingReplicationTest, HandBodiesRejectTrailingTailsAndUnknownOwners )
+{
+    {
+        HousingNetRig    rig( 100 );
+        NetMessageWriter writer;
+        BitWriter&       claim = writer.begin( NetHousingMessage::kEdit );
+        claim.writeVarUint( 1 );
+        claim.writeVarUint( static_cast<uint64>( hashed_string( "home" ).getHash() ) );
+        claim.writeBits( static_cast<uint32>( HousingEditOp::Claim ), 3 );
+        claim.writeVarUint( 99 ); // 차지에는 꼬리가 없다
+        SW_EXPECT_TRUE( rig._server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+        SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._editCount );
+    }
+
+    HousingReplicationClient client;
+    NetMessageWriter         writer;
+    const auto               writeDeltaHead = [&writer]( uint32 owner, uint64 removedCount ) -> BitWriter&
+    {
+        BitWriter& delta = writer.begin( NetHousingMessage::kPlotDelta );
+        delta.writeVarUint( 7 );     // 부지
+        delta.writeBits( owner, 2 ); // 주인
+        delta.writeVarInt( 0 );      // 잔액
+        delta.writeVarUint( 1 );     // 다음 배치 id
+        delta.writeVarUint( removedCount );
+        return delta;
+    };
+    (void)writeDeltaHead( static_cast<uint32>( HousingPlotOwner::Count ), 0 ).writeVarUint( 0 );
+    SW_EXPECT_TRUE( client.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+    (void)writeDeltaHead( static_cast<uint32>( HousingPlotOwner::Self ), uint64{ 1 } << 30 );
+    SW_EXPECT_TRUE( client.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+    BitWriter& trailing = writeDeltaHead( static_cast<uint32>( HousingPlotOwner::Self ), 0 );
+    trailing.writeVarUint( 0 );     // 새로 · 바뀐 배치 수
+    trailing.writeBits( 0xFFu, 8 ); // 남는 바이트
+    SW_EXPECT_TRUE( client.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+}

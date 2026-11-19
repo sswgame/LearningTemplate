@@ -216,7 +216,7 @@ namespace sw
             PairedAnimationSessionEndBody body;
             body._sessionID = sessionID;
             if ( _writer.writeMessage<NetPairedAnimationMessage::Table, NetPairedAnimationMessage::SessionEnd>( body ) )
-                (void)_writer.broadcast( *_pHost, NetPairedAnimationMessage::SessionEnd::kChannel ); // 연결이 없으면 보낼 곳이 없다 — 늦게 들어온 쪽은 재생 중인 세션만 받는다
+                (void)_writer.broadcastMessage( *_pHost ); // 연결이 없으면 보낼 곳이 없다 — 늦게 들어온 쪽은 재생 중인 세션만 받는다
             ++_stats._endSentCount;
             SW_LOG_INFO_ID( "PairedAnimationReplication.ServerEnd", "%#", formatEventLine( "server", "end", sessionID, 0.0f ).c_str() );
             _listAnnouncedID.erase( _listAnnouncedID.begin() + static_cast<ptrdiff_t>( index - 1 ) );
@@ -430,7 +430,7 @@ namespace sw
         if ( _pManager == nullptr )
             return NetHandleResult::Handled; // 시작하지 않은 클라이언트 — 받을 씬이 없다
         PairedAnimationNetState state{};
-        if ( PairedAnimationNetState::read( body, state ) == false )
+        if ( PairedAnimationNetState::read( body, state ) == false || body.readEnd() == false )
             return NetHandleResult::Malformed;
         (void)applyState( state ); // 거절은 applyState 가 오류로 남기고 셌다
         return NetHandleResult::Handled;

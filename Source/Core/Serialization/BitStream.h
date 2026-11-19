@@ -183,6 +183,31 @@ namespace sw
         /** @brief `readBlob` 과 같은 검사로 길이 + 바이트를 읽지 않고 넘깁니다(필요 없는 페이로드 — 받을 버퍼를 잡지 않는다). */
         [[nodiscard]] bool skipBlob( int32 maxSize );
         void               alignToByte();
+        /**
+         * @brief 열거형 @p E 를 @p bitCount 비트로 읽습니다. `E::Count` 이상이면 false 이고 `hasOverflowed` 를 세웁니다(등록 밖 값은 깨진 데이터다).
+         * @details 손으로 쓰는 넷 본문이 `static_cast<E>( readBits( n ) )` 로 범위 밖 열거자를 들이던 자리입니다. @p outValue 는 성공했을 때만 바뀝니다.
+         */
+        template <typename E>
+        [[nodiscard]] bool readEnum( int32 bitCount, E& outValue )
+        {
+            const uint32 raw = readBits( bitCount );
+            if ( hasOverflowed() )
+                return false;
+            if ( raw >= static_cast<uint32>( E::Count ) )
+            {
+                _bOverflow = SW_TRUE;
+                return false;
+            }
+            outValue = static_cast<E>( raw );
+            return true;
+        }
+        /** @brief `writeVarUint` 로 쓴 개수를 읽습니다. @p maxCount 를 넘으면 false 이고 `hasOverflowed` 를 세웁니다(받은 수를 믿고 잡지 않는다). */
+        [[nodiscard]] bool readCount( uint32 maxCount, uint32& outCount );
+        /**
+         * @brief 본문을 다 읽었는지 봅니다. 넘쳤거나, 8 비트 이상 남았거나, 마지막 채움 비트가 0 이 아니면 false 이고 `hasOverflowed` 를 세웁니다.
+         * @details 고정 배치형 본문의 남는 비트 규칙(`FixedReadResult::TrailingData`)과 같다 — 손 본문도 끝에서 부른다.
+         */
+        [[nodiscard]] bool readEnd();
 
         bool  hasOverflowed() const { return _bOverflow != SW_FALSE; }
         int32 getBitsRemaining() const { return _bitCapacity - _bitPosition; }

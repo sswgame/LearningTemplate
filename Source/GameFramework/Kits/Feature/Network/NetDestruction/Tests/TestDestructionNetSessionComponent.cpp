@@ -111,3 +111,34 @@ SW_TEST_CASE( DestructionReplicationTest, BodyMessagesRejectTruncatedAndTrailing
     SW_REQUIRE_TRUE( ( writer.writeMessage<NetDestructionMessage::Table, NetDestructionMessage::SnapshotRequest>( request ) ) );
     SW_EXPECT_TRUE( NetHandleResult::NotMine == client.handleMessage( 0, writer.getBytes() ) );
 }
+
+/**
+ * @brief [DestructionReplicationTest] 손 본문 자세 — 남는 바이트 · 예산 넘는 개수 · 잘린 자세는 깨진 메시지다(하나도 적용하지 않는다)
+ */
+SW_TEST_CASE( DestructionReplicationTest, PoseMessagesRejectTrailingBytesAndHugeCounts )
+{
+    DestructionReplicationClient client;
+    BitWriter                    writer;
+    writer.writeBits( NetDestructionMessage::kPose, 8 );
+    writer.writeBool( true );  // 멈춤 — 정확한 자세
+    writer.writeVarUint( 42 ); // 오브젝트(등록 없음 — 소비하고 버린다)
+    writer.writeVarUint( 3 );  // 틱
+    writer.writeVarUint( 1 );  // 개수
+    writer.writeVarUint( 5 );  // 덩어리
+    for ( int32 index = 0; index < 7; ++index )
+        writer.writeFloat( index == 6 ? 1.0f : 0.0f ); // 위치 · 회전(w = 1)
+    SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, writer.getBytes() ) );
+    vector<uint8> listTrailing = writer.getBytes();
+    listTrailing.push_back( 0xFF );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, listTrailing ) );
+    const vector<uint8> listTruncated( writer.getBytes().begin(), writer.getBytes().end() - 2 );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, listTruncated ) );
+
+    writer.clear();
+    writer.writeBits( NetDestructionMessage::kPose, 8 );
+    writer.writeBool( false );
+    writer.writeVarUint( 42 );
+    writer.writeVarUint( 3 );
+    writer.writeVarUint( 1u << 20 ); // 예산(900 바이트)에 들 수 없는 수
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, writer.getBytes() ) );
+}

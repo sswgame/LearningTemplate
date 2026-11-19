@@ -9,6 +9,8 @@ namespace sw
 {
     NetMessageWriter::NetMessageWriter()
         : _writer{}
+        , _messageChannel{ NetChannelKind::ReliableOrdered }
+        , _state{ State::Raw }
     {
         _writer.reserve( NetConnection::kMaxSingleMessageSize );
     }
@@ -17,24 +19,77 @@ namespace sw
     {
         _writer.clear();
         _writer.writeBits( kind, 8 );
+        _state = State::Raw;
         return _writer;
+    }
+
+    bool NetMessageWriter::allowsCallerChannel() const
+    {
+        if ( _state == State::Raw )
+            return true;
+        // 서술자가 있는 메시지를 다른 채널로 보내려 했다(또는 쓰다 만 바이트) — 호출부 결함이다.
+        SW_LOG_ERROR_ID( "Net.MessageChannelChosenByCaller", "NetMessageWriter: message kind 0x%02x has a descriptor channel - send it with sendMessage, not with a caller-chosen channel",
+                         _writer.getByteCount() > 0 ? static_cast<int32>( _writer.getBytes()[0] ) : constant::invalid_index::kInt32 );
+        return false;
+    }
+
+    bool NetMessageWriter::allowsDescriptorChannel() const
+    {
+        if ( _state == State::Typed )
+            return true;
+        SW_LOG_ERROR_ID( "Net.MessageNotTyped", "NetMessageWriter: message kind 0x%02x was not written by writeMessage (hand body or failed write) - it is not sent",
+                         _writer.getByteCount() > 0 ? static_cast<int32>( _writer.getBytes()[0] ) : constant::invalid_index::kInt32 );
+        return false;
     }
 
     bool NetMessageWriter::send( INetPeers& peers, int32 connectionID, NetChannelKind channel ) const
     {
-        return peers.sendMessage( connectionID, channel, _writer.getBytes().data(), _writer.getByteCount() );
+        return allowsCallerChannel() && peers.sendMessage( connectionID, channel, _writer.getBytes().data(), _writer.getByteCount() );
     }
 
     int32 NetMessageWriter::broadcast( INetPeers& peers, NetChannelKind channel, int32 exceptID ) const
     {
-        return peers.broadcast( channel, _writer.getBytes().data(), _writer.getByteCount(), exceptID );
+        return allowsCallerChannel() ? peers.broadcast( channel, _writer.getBytes().data(), _writer.getByteCount(), exceptID ) : 0;
     }
 
     int32 NetMessageWriter::sendToPeers( INetPeers& peers, NetChannelKind channel ) const
     {
+        if ( allowsCallerChannel() == false )
+            return 0;
         if ( peers.isServer() )
-            return broadcast( peers, channel );
-        return send( peers, 0, channel ) ? 1 : 0;
+            return peers.broadcast( channel, _writer.getBytes().data(), _writer.getByteCount(), constant::invalid_index::kInt32 );
+        return peers.sendMessage( 0, channel, _writer.getBytes().data(), _writer.getByteCount() ) ? 1 : 0;
+    }
+
+    bool NetMessageWriter::sendMessage( INetPeers& peers, int32 connectionID ) const
+    {
+        return allowsDescriptorChannel() && peers.sendMessage( connectionID, _messageChannel, _writer.getBytes().data(), _writer.getByteCount() );
+    }
+
+    bool NetMessageWriter::trySendMessage( INetPeers& peers, int32 connectionID ) const
+    {
+        return allowsDescriptorChannel() && peers.trySendMessage( connectionID, _messageChannel, _writer.getBytes().data(), _writer.getByteCount() );
+    }
+
+    int32 NetMessageWriter::broadcastMessage( INetPeers& peers, int32 exceptID ) const
+    {
+        return allowsDescriptorChannel() ? peers.broadcast( _messageChannel, _writer.getBytes().data(), _writer.getByteCount(), exceptID ) : 0;
+    }
+
+    int32 NetMessageWriter::sendMessageToPeers( INetPeers& peers ) const
+    {
+        if ( allowsDescriptorChannel() == false )
+            return 0;
+        if ( peers.isServer() )
+            return peers.broadcast( _messageChannel, _writer.getBytes().data(), _writer.getByteCount(), constant::invalid_index::kInt32 );
+        return peers.sendMessage( 0, _messageChannel, _writer.getBytes().data(), _writer.getByteCount() ) ? 1 : 0;
+    }
+
+    optional<NetChannelKind> NetMessageWriter::getMessageChannel() const
+    {
+        if ( _state == State::Typed )
+            return _messageChannel;
+        return nullopt;
     }
 
     bool INetMessageHandler::isMessageKindHandled( uint8 kind ) const

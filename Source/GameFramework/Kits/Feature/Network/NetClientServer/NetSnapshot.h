@@ -37,8 +37,8 @@ namespace sw
     struct NetClientServerMessage
     {
         using Snapshot    = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced>;
-        using SnapshotAck = NetMessageBodyDef<1, NetMessageDirection::ToServer, NetChannelKind::Unreliable, NetSnapshotAckBody>;
-        using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::UnreliableSequenced, 6>; ///< 판 6: 의도 끝에 발동 순간 시선 필드(선택)가 붙는다(5: 입력 항목마다의 보던 틱 스탬프, 4: 소유자 상태 필드)
+        using SnapshotAck = NetMessageBodyDef<1, NetMessageDirection::ToServer, NetChannelKind::UnreliableSequenced, NetSnapshotAckBody>; ///< 옛 확인은 새 확인이 덮는다
+        using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::UnreliableSequenced, 6>;                      ///< 판 6: 의도 끝에 발동 순간 시선 필드(선택)가 붙는다(5: 입력 항목마다의 보던 틱 스탬프, 4: 소유자 상태 필드)
         using Table       = NetMessageTable<NetKitMessageRange::kClientServer, Snapshot, SnapshotAck, Input>;
 
         static constexpr uint8 kSnapshot    = Table::getKindOf<Snapshot>();

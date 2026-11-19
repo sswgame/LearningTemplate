@@ -343,3 +343,31 @@ SW_TEST_CASE( RemoteCallTest, RejectedBodyRefusesOldLayoutAndTruncation )
     SW_REQUIRE_EQUAL( size_t{ 1 }, listNotification.size() );
     SW_EXPECT_TRUE( listNotification[0]._error == RemoteCallError::RateLimited );
 }
+
+/**
+ * @brief [RemoteCallTest] 손 본문 호출 — 인자 뒤 남는 바이트 · 상한 넘는 인자 수 · 잘린 호출은 깨진 메시지이고 몸을 부르지 않는다
+ */
+SW_TEST_CASE( RemoteCallTest, CallBodyRejectsTrailingBytesAndHugeArgumentCounts )
+{
+    RemoteCallTestRig rig;
+    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    NetMessageWriter messageWriter;
+    BitWriter&       writer = messageWriter.begin( NetRemoteCallMessage::kCall );
+    writer.writeVarUint( 1 );
+    writer.writeVarUint( kAvatarID );
+    writer.writeUint32( 0 );
+    writer.writeVarUint( 0 );
+    writer.writeBits( 0xFFu, 8 ); // 남는 바이트
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == rig._server.handleMessage( rig._connectionID, messageWriter.getBytes() ) );
+
+    BitWriter& hugeCount = messageWriter.begin( NetRemoteCallMessage::kCall );
+    hugeCount.writeVarUint( 2 );
+    hugeCount.writeVarUint( kAvatarID );
+    hugeCount.writeUint32( 0 );
+    hugeCount.writeVarUint( static_cast<uint64>( NetRemoteCallMessage::kMaxArgumentCount ) + 1 );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == rig._server.handleMessage( rig._connectionID, messageWriter.getBytes() ) );
+
+    const uint8 arrTruncated[] = { NetRemoteCallMessage::kCall, 3 };
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == rig._server.handleMessage( rig._connectionID, arrTruncated, 2 ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._invokedCount );
+}

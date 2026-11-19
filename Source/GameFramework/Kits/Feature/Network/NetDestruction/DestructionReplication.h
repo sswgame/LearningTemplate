@@ -212,9 +212,14 @@ namespace sw
          * @brief 자세 목록 하나를 메시지 예산(`kPoseMessageBudget`)에서 끊어 보냅니다.
          * @details 멈춘 자세(@p bRest)는 비트 그대로, 움직이는 자세는 양자화해서 쓴다. 하나라도 양자화하지 못한 메시지는 보내지 않는다.
          */
-        void  sendPoseList( const Entry& entry, const vector<const FractureGroupPose*>& listPose, bool bRest, bool bReliable, uint32 serverTick );
-        void  sendHash( const Entry& entry, const FractureComponentBase& component );
+        void sendPoseList( const Entry& entry, const vector<const FractureGroupPose*>& listPose, bool bRest, bool bReliable, uint32 serverTick );
+        void sendHash( const Entry& entry, const FractureComponentBase& component );
+        /** @brief 손으로 쓴 본문(이벤트 · 자세)을 @p channel 로 모두에게 보내고 셉니다. */
         int32 broadcast( NetChannelKind channel );
+        /** @brief 본문 형식이 있는 메시지를 서술자의 채널로 모두에게 보내고 셉니다. */
+        int32 broadcastMessage();
+        /** @brief 보낸 수 @p sentCount 를 통계에 더합니다. 신뢰 창이 찬 연결은 거절로 센다. */
+        int32 countBroadcast( int32 connectedCount, int32 sentCount );
 
     private:
         vector<Entry>                _listEntry;
@@ -311,12 +316,13 @@ namespace sw
         /** @brief 번호가 앞선 이벤트를 쌓아 둡니다. 같은 번호는 한 번만 보관합니다. */
         static void bufferEvent( Entry& entry, const BufferedEvent& received );
         static void applyToComponent( FractureComponentBase& component, const BufferedEvent& buffered );
-        /** @brief 스냅숏 하나를 적용합니다. 깨졌으면 false 입니다. */
+        /** @brief 스냅숏 하나를 적용합니다. */
         void handleSnapshot( Entry& entry, const DestructionSnapshotBody& body );
-        void handlePose( BitReader& reader, bool bRest );
-        void compareHashes( Entry& entry, FractureComponentBase& component );
-        void driveChunks( Entry& entry, FractureComponentBase& component );
-        void requestSnapshot( Entry& entry );
+        /** @brief 자세 메시지 본문을 끝까지 읽고 남는 비트가 없을 때만 적용합니다. 깨졌으면 아무것도 적용하지 않고 false 입니다. */
+        [[nodiscard]] bool handlePose( BitReader& reader, bool bRest );
+        void               compareHashes( Entry& entry, FractureComponentBase& component );
+        void               driveChunks( Entry& entry, FractureComponentBase& component );
+        void               requestSnapshot( Entry& entry );
 
     private:
         vector<Entry>                _listEntry;

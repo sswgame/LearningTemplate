@@ -364,3 +364,59 @@ SW_TEST_CASE( BitStreamTest, BitStreamKeepsWireLayoutAndRoundTripsRandomProperti
         SW_EXPECT_TRUE( reader.getBitsRemaining() < 8 );
     }
 }
+
+namespace
+{
+    /** @brief `readEnum` 테스트용 열거형 — 등록 열거자는 셋이다. */
+    enum class BitStreamTestKind : uint8
+    {
+        First = 0,
+        Second,
+        Third,
+        Count
+    };
+} // namespace
+
+/**
+ * @brief [BitStreamTest] 손 본문 읽기 도우미 — 등록 밖 열거자 · 상한 넘는 개수 · 남는 비트는 false 이고 넘침으로 표시한다
+ */
+SW_TEST_CASE( BitStreamTest, HandBodyReadHelpersRejectOutOfRangeAndTrailingBits )
+{
+    BitWriter writer;
+    writer.writeBits( 2, 2 ); // Third
+    writer.writeBits( 3, 2 ); // Count — 등록 밖
+    BitReader         enumReader( writer.getBytes().data(), writer.getByteCount() );
+    BitStreamTestKind kind = BitStreamTestKind::First;
+    SW_EXPECT_TRUE( enumReader.readEnum( 2, kind ) );
+    SW_EXPECT_TRUE( kind == BitStreamTestKind::Third );
+    SW_EXPECT_FALSE( enumReader.readEnum( 2, kind ) );
+    SW_EXPECT_TRUE( kind == BitStreamTestKind::Third ); // 실패하면 바꾸지 않는다
+    SW_EXPECT_TRUE( enumReader.hasOverflowed() );
+
+    writer.clear();
+    writer.writeVarUint( 8 );
+    writer.writeVarUint( 9 );
+    BitReader countReader( writer.getBytes().data(), writer.getByteCount() );
+    uint32    count = 0;
+    SW_EXPECT_TRUE( countReader.readCount( 8, count ) );
+    SW_EXPECT_EQUAL( 8u, count );
+    SW_EXPECT_FALSE( countReader.readCount( 8, count ) );
+    SW_EXPECT_TRUE( countReader.hasOverflowed() );
+
+    // 다 읽었으면 참, 한 바이트가 남거나 채움 비트가 0 이 아니면 거짓이다.
+    writer.clear();
+    writer.writeVarUint( 5 );
+    BitReader exactReader( writer.getBytes().data(), writer.getByteCount() );
+    (void)exactReader.readVarUint();
+    SW_EXPECT_TRUE( exactReader.readEnd() );
+    writer.writeBits( 0xFFu, 8 );
+    BitReader trailingReader( writer.getBytes().data(), writer.getByteCount() );
+    (void)trailingReader.readVarUint();
+    SW_EXPECT_FALSE( trailingReader.readEnd() );
+    SW_EXPECT_TRUE( trailingReader.hasOverflowed() );
+    writer.clear();
+    writer.writeBits( 0x7u, 3 );
+    BitReader paddingReader( writer.getBytes().data(), writer.getByteCount() );
+    (void)paddingReader.readBits( 1 );
+    SW_EXPECT_FALSE( paddingReader.readEnd() ); // 남은 2 비트가 0 이 아니다
+}

@@ -113,11 +113,11 @@ namespace sw
             /** @brief 호출 메시지를 읽습니다. 상한을 넘거나 깨졌으면 false 입니다. */
             [[nodiscard]] static bool readCall( BitReader& body, ReadCall& outCall, vector<string>& outListText )
             {
-                outCall._sequence          = body.readVarUint32();
-                outCall._targetID          = body.readVarUint32();
-                outCall._functionID        = body.readUint32();
-                const uint64 argumentCount = body.readVarUint();
-                if ( body.hasOverflowed() || argumentCount > static_cast<uint64>( NetRemoteCallMessage::kMaxArgumentCount ) )
+                outCall._sequence    = body.readVarUint32();
+                outCall._targetID    = body.readVarUint32();
+                outCall._functionID  = body.readUint32();
+                uint32 argumentCount = 0;
+                if ( body.readCount( static_cast<uint32>( NetRemoteCallMessage::kMaxArgumentCount ), argumentCount ) == false )
                     return false;
                 outListText.resize( static_cast<size_t>( argumentCount ) );
                 for ( string& text : outListText )
@@ -125,7 +125,7 @@ namespace sw
                     if ( readText( body, NetRemoteCallMessage::kMaxArgumentBytes, text ) == false )
                         return false;
                 }
-                return body.hasOverflowed() == false;
+                return body.readEnd(); // 인자 뒤 남는 바이트도 깨진 호출이다
             }
         };
     } // namespace
@@ -468,7 +468,7 @@ namespace sw
         body._sequence = sequence;
         body._error    = error;
         if ( _messageWriter.writeMessage<NetRemoteCallMessage::Table, NetRemoteCallMessage::Rejected>( body ) )
-            (void)_messageWriter.send( *_pPeers, connectionID, NetRemoteCallMessage::Rejected::kChannel ); // 끊긴 연결이면 보낼 곳이 없다
+            (void)_messageWriter.sendMessage( *_pPeers, connectionID ); // 끊긴 연결이면 보낼 곳이 없다
     }
 
     void RemoteCallServer::disconnectViolator( int32 connectionID, uint32 functionID, const utf8* pWhy )

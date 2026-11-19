@@ -583,3 +583,19 @@ SW_TEST_CASE( TurnRelayWireTest, BodyRevisionFollowsTheBodySchema )
     TurnRelayServer server;
     SW_EXPECT_EQUAL( server.getWireVersion(), NetTurnRelayMessage::Table::computeWireVersion() );
 }
+
+// 서술자가 있는 메시지는 서술자의 채널로만 나간다 — 호출부가 채널을 고르는 함수로 보내려 하면 오류와 함께 보내지 않는다.
+SW_TEST_CASE( TurnRelayWireTest, TypedMessagesCannotTakeACallerChosenChannel )
+{
+    FakeTurnPeers    peers;
+    TurnJoinBody     join;
+    NetMessageWriter writer;
+    join._roomID = 7;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Join>( join ) ) );
+    SW_EXPECT_TRUE( writer.getMessageChannel().has_value() && *writer.getMessageChannel() == NetTurnRelayMessage::Join::kChannel );
+    SW_EXPECT_LOG( "Net.MessageChannelChosenByCaller" );
+    SW_EXPECT_FALSE( writer.send( peers, 0, NetChannelKind::Unreliable ) );
+    SW_EXPECT_TRUE( peers._listSent.empty() );
+    SW_EXPECT_TRUE( writer.sendMessage( peers, 0 ) );
+    SW_EXPECT_EQUAL( peers._listSent.size(), size_t{ 1 } );
+}

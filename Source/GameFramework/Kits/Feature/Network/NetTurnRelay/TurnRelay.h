@@ -325,8 +325,9 @@ namespace sw
         /** @brief 신뢰 창이 차서 큐에 쌓인 알림입니다. 연결마다 들어온 순서대로 보관합니다. */
         struct PendingMessage
         {
-            vector<uint8> _buffer{};
-            int32         _connectionID{ constant::invalid_index::kInt32 };
+            vector<uint8>  _buffer{};
+            int32          _connectionID{ constant::invalid_index::kInt32 };
+            NetChannelKind _channel{ NetChannelKind::ReliableOrdered }; ///< 쓴 메시지 서술자의 채널(`NetMessageWriter::getMessageChannel`) — 줄에서 꺼낼 때 다시 고르지 않는다
         };
 
         TurnRoom* findRoomMutable( uint32 roomID );

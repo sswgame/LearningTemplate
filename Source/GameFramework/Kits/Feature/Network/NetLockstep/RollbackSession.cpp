@@ -290,8 +290,8 @@ namespace sw
             return NetHandleResult::Malformed;
         // 입력 묶음이 손상됐으면 하나도 넣지 않는다. 창 밖이거나 이미 받은 프레임은 버퍼가 버린다.
         NetInputReceiveBuffer& buffer = _listReceive[static_cast<size_t>( player )];
-        if ( body.hasOverflowed() || buffer.read( body, &_listNewFrameScratch ) == false )
-            return NetHandleResult::Malformed;
+        if ( body.hasOverflowed() || buffer.read( body, &_listNewFrameScratch ) == false || body.readEnd() == false )
+            return NetHandleResult::Malformed; // 남는 바이트는 깨진 메시지로 센다(이미 읽은 입력은 형식이 맞아 버퍼에 남는다)
         PeerState& peer = _listPeer[static_cast<size_t>( player )];
         // 확인은 늘어나기만 한다. 비신뢰 채널이라 늦게 도착한 오래된 메시지가 있을 수 있다. 내가 아직 만들지 않은 프레임은 확인할 수 없다.
         peer._ackedLocalFrame = MathUtil::max( peer._ackedLocalFrame, MathUtil::min( ackedLocalFrame, getConfirmedInputFrame( _localPlayer ) ) );

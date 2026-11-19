@@ -159,6 +159,8 @@ namespace sw
      * @brief 표 메시지 하나를 처리기의 `receive` 오버로드로 넘깁니다. 표 처리기(`NetTableHandler`)와 역할마다 마스크를 고르는 처리기(엔진 세션)가 함께 쓴다.
      * @details 본문 형식이 있는 메시지(`NetMessageHasBody`)는 본문을 다 읽은 뒤에만 넘긴다 — 처리기가 넘침 · 범위 검사를 빠뜨릴 자리가 없다.
      *          잘림 · 남는 비트 · 범위 밖 값 · 등록 밖 열거자는 처리기를 부르지 않고 Malformed 다.
+     *          손 본문은 처리기가 Handled 를 돌려도 읽기가 넘쳤으면 Malformed 로 바꾼다 — `BitReader` 는 잘림 · 범위 밖 값(`readInt` · `readEnum` · `readCount`) ·
+     *          유한하지 않은 실수 · 남는 비트(`readEnd`)를 넘침으로 표시하므로, 처리기가 마지막 넘침 검사를 빠뜨려도 깨진 메시지가 처리된 것으로 세지지 않는다.
      */
     struct NetMessageDelivery
     {
@@ -174,7 +176,8 @@ namespace sw
             }
             else
             {
-                return handler.receive( TMessage{}, context, body );
+                const NetHandleResult result = handler.receive( TMessage{}, context, body );
+                return result == NetHandleResult::Handled && body.hasOverflowed() ? NetHandleResult::Malformed : result;
             }
         }
     };

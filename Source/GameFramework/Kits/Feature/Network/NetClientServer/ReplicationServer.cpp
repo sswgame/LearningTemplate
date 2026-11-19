@@ -288,7 +288,7 @@ namespace sw
     {
         // 이미 꺼낸 틱과 이미 가진 틱은 버퍼에 넣지 않고 넘긴다. 길이나 개수가 상한을 넘거나 모자라면 하나도 넣지 않고 손상된 메시지로 본다.
         // 보던 틱은 항목마다의 스탬프로 온다 — 꺼낼 때(`popInput`) 그 입력의 값으로 정한다.
-        return client._input.read( reader );
+        return client._input.read( reader ) && reader.readEnd(); // 남는 바이트는 깨진 메시지로 센다(이미 읽은 입력은 형식이 맞아 버퍼에 남는다)
     }
 
     optional<uint32> ReplicationServer::findOldestInputTick( int32 connectionID ) const

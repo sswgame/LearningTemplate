@@ -515,3 +515,60 @@ SW_TEST_CASE( NetMessageRouterTest, WrongDirectionMessageIsMalformedAndDisconnec
     SW_EXPECT_EQUAL( uint64{ 1 }, serverRouter.getMalformedCount() );
     SW_EXPECT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) != NetConnectionState::Connected );
 }
+
+namespace
+{
+    /** @brief 손 본문 메시지 하나를 받는 처리기 — 넘침을 보지 않고 Handled 를 돌려준다(빠뜨린 검사의 흉내). */
+    struct NoOverflowCheckHandler
+    {
+        using Message = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
+
+        NetHandleResult receive( Message, const NetMessageContext& context, BitReader& body )
+        {
+            (void)context;
+            (void)body.readVarUint();
+            return NetHandleResult::Handled;
+        }
+    };
+} // namespace
+
+/**
+ * @brief [NetMessageRouterTest] 손 본문 처리기가 넘침 검사를 빠뜨려도 표 받기가 깨진 메시지로 바꾼다
+ */
+SW_TEST_CASE( NetMessageRouterTest, DeliveryTurnsAnOverflowedHandBodyIntoMalformed )
+{
+    NoOverflowCheckHandler handler;
+    const uint8            arrBody[] = { 0x05 };
+    BitReader              whole( arrBody, 1 );
+    BitReader              empty( arrBody, 0 );
+    NetMessageContext      context;
+    SW_EXPECT_TRUE( NetHandleResult::Handled == NetMessageDelivery::deliver<NoOverflowCheckHandler::Message>( handler, context, whole ) );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == NetMessageDelivery::deliver<NoOverflowCheckHandler::Message>( handler, context, empty ) );
+}
+
+/**
+ * @brief [NetMessageRouterTest] 손 본문을 서술자 채널 함수로, 서술자가 있는 메시지를 호출부 채널 함수로 보내려 하면 오류와 함께 보내지 않는다
+ * @details 서술자가 있는 메시지의 채널은 서술자 하나에서만 나온다 — 스냅샷 확인이 서술자(비신뢰)와 다른 채널(순서 있는 비신뢰)로 나가던 자리.
+ */
+SW_TEST_CASE( NetMessageRouterTest, WriterSendsTypedMessagesOnlyOnTheirDescriptorChannel )
+{
+    test::LoopbackCluster pair( 80u );
+    NetTestUtil::addServerAndClient( pair, NetEndpointConfig{} );
+    SW_REQUIRE_TRUE( pair.getServer().listen() );
+    SW_REQUIRE_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
+    pair.run( 0.3 );
+    SW_REQUIRE_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
+
+    NetMessageWriter writer;
+    writer.begin( NetMessageRouterTestInternal::kGameKind0 ).writeVarUint( 1 );
+    SW_EXPECT_FALSE( writer.getMessageChannel().has_value() );
+    SW_EXPECT_LOG( "Net.MessageNotTyped" );
+    SW_EXPECT_FALSE( writer.sendMessage( pair.getClient( 0 ), 0 ) );
+    SW_EXPECT_TRUE( writer.send( pair.getClient( 0 ), 0, NetChannelKind::Unreliable ) ); // 손 본문은 호출부가 고른다
+    pair.run( 0.2 );
+    int32          connectionID = -1;
+    NetChannelKind channel      = NetChannelKind::ReliableOrdered;
+    vector<uint8>  buffer;
+    SW_REQUIRE_TRUE( pair.getServer().receiveMessage( connectionID, channel, buffer ) );
+    SW_EXPECT_TRUE( channel == NetChannelKind::Unreliable );
+}

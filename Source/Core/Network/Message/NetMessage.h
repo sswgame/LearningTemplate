@@ -15,6 +15,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetEndpoint.h"
@@ -26,11 +27,16 @@ namespace sw
     /**
      * @class NetMessageWriter
      * @brief 종류 바이트를 쓰고 본문은 돌려준 `BitWriter` 에 이어 쓴 뒤 보냅니다. 버퍼를 다시 쓰므로 메시지마다 할당하지 않습니다.
+     * @details 채널은 한 곳에서만 정한다.
+     *          - 본문 형식이 있는 메시지(`writeMessage`)는 서술자의 채널(`kChannel`)로만 나간다 — `sendMessage` · `broadcastMessage` · `sendMessageToPeers` · `trySendMessage` 는
+     *            채널을 받지 않는다. 채널을 받는 `send` · `broadcast` · `sendToPeers` 로 보내려 하면 오류 로그와 함께 보내지 않는다(서술자와 다른 채널로 나가던 스냅샷 확인 자리).
+     *          - 손으로 쓰는 본문(`begin`)은 보내는 쪽이 상태에 따라 채널을 고른다(원격 호출의 신뢰 여부, 롤백 입력) — 채널을 받는 쪽으로만 나간다.
      * @code
      *     if ( _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( body ) ) // 본문 형식이 있는 메시지(`NetMessageBodyDef`)
-     *         (void)_messageWriter.send( *_pHost, connectionID, NetLockstepMessage::Input::kChannel );
+     *         (void)_messageWriter.sendMessage( *_pHost, connectionID );                              // 서술자의 채널
      *     BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kRollbackInput );               // 손으로 쓰는 본문
      *     writer.writeVarUint( frame );
+     *     (void)_messageWriter.sendToPeers( *_pHost, NetChannelKind::Unreliable );
      * @endcode
      */
     class SW_API NetMessageWriter
@@ -47,19 +53,47 @@ namespace sw
         template <typename TTable, typename TMessage>
         [[nodiscard]] bool writeMessage( const typename TMessage::Body& body )
         {
-            return TMessage::writeBody( body, begin( TTable::template getKindOf<TMessage>() ) );
+            const bool bWritten = TMessage::writeBody( body, begin( TTable::template getKindOf<TMessage>() ) );
+            _messageChannel     = TMessage::kChannel;
+            _state              = bWritten ? State::Typed : State::Failed;
+            return bWritten;
         }
+        /** @brief 손으로 쓴 본문(`begin`)을 @p channel 로 보냅니다. `writeMessage` 로 쓴 메시지는 받지 않습니다(`sendMessage`). */
         [[nodiscard]] bool send( INetPeers& peers, int32 connectionID, NetChannelKind channel ) const;
-        /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
+        /** @brief 손으로 쓴 본문을 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
         int32 broadcast( INetPeers& peers, NetChannelKind channel, int32 exceptID = constant::invalid_index::kInt32 ) const;
-        /** @brief 상대 모두에게 보냅니다. 서버는 연결된 모두에게, 클라이언트는 서버(연결 0)에게 보냅니다. 반환값은 보낸 수이며, 락스텝이나 롤백처럼 모두가 같은 메시지를 나눌 때 씁니다. */
+        /** @brief 손으로 쓴 본문을 상대 모두에게 보냅니다. 서버는 연결된 모두에게, 클라이언트는 서버(연결 0)에게 보냅니다. 반환값은 보낸 수입니다. */
         int32 sendToPeers( INetPeers& peers, NetChannelKind channel ) const;
+        /** @brief `writeMessage` 로 쓴 메시지를 서술자의 채널로 보냅니다. 쓰지 못했거나 손으로 쓴 본문이면 오류 로그와 false 입니다. */
+        [[nodiscard]] bool sendMessage( INetPeers& peers, int32 connectionID ) const;
+        /** @brief `sendMessage` 와 같되 신뢰 창이 차면 기다리지 않고 false 입니다(`INetPeers::trySendMessage`). */
+        [[nodiscard]] bool trySendMessage( INetPeers& peers, int32 connectionID ) const;
+        /** @brief `writeMessage` 로 쓴 메시지를 서술자의 채널로 연결된 모두에게 보냅니다. 반환값은 보낸 수입니다. */
+        int32 broadcastMessage( INetPeers& peers, int32 exceptID = constant::invalid_index::kInt32 ) const;
+        /** @brief `writeMessage` 로 쓴 메시지를 서술자의 채널로 상대 모두에게 보냅니다. 반환값은 보낸 수입니다. */
+        int32 sendMessageToPeers( INetPeers& peers ) const;
+        /** @brief `writeMessage` 로 쓴 메시지의 채널입니다(줄에 세웠다가 나중에 보내는 쪽이 바이트와 함께 든다). 손으로 쓴 본문이면 nullopt 입니다. */
+        optional<NetChannelKind> getMessageChannel() const;
 
         const vector<uint8>& getBytes() const { return _writer.getBytes(); }
         int32                getByteCount() const { return _writer.getByteCount(); }
 
     private:
-        BitWriter _writer;
+        /** @brief 지금 버퍼의 메시지가 어느 길로 쓰였는지입니다 — 보내는 함수가 채널을 고를 수 있는지를 정한다. */
+        enum class State : uint8
+        {
+            Raw = 0, ///< `begin` — 손으로 쓰는 본문. 채널을 받는 함수로만 보낸다
+            Typed,   ///< `writeMessage` 성공 — 서술자의 채널로만 보낸다
+            Failed   ///< `writeMessage` 실패 — 쓰다 만 바이트라 보내지 않는다
+        };
+
+        [[nodiscard]] bool allowsCallerChannel() const;
+        [[nodiscard]] bool allowsDescriptorChannel() const;
+
+    private:
+        BitWriter      _writer;
+        NetChannelKind _messageChannel;
+        State          _state;
     };
 } // namespace sw
 

@@ -151,8 +151,11 @@ namespace sw
 
     void TurnRelayServer::sendOrQueue( int32 connectionID )
     {
-        const int32 pendingCount = countPending( connectionID );
-        if ( pendingCount == 0 && _messageWriter.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered ) )
+        const int32                    pendingCount = countPending( connectionID );
+        const optional<NetChannelKind> channel      = _messageWriter.getMessageChannel();
+        if ( channel.has_value() == false )
+            return; // 서술자가 있는 메시지만 줄에 선다 — 쓰지 못한 메시지는 오류 로그가 남았다
+        if ( pendingCount == 0 && _messageWriter.sendMessage( *_pHost, connectionID ) )
             return;
         if ( _pHost->getConnectionState( connectionID ) != NetConnectionState::Connected )
             return; // 닫힌 연결이다. 돌아오면 토큰으로 다시 받는다
@@ -162,7 +165,7 @@ namespace sw
             _pHost->disconnect( connectionID );
             return;
         }
-        _listPending.push_back( PendingMessage{ _messageWriter.getBytes(), connectionID } );
+        _listPending.push_back( PendingMessage{ _messageWriter.getBytes(), connectionID, *channel } );
     }
 
     void TurnRelayServer::flushPending()
@@ -178,7 +181,7 @@ namespace sw
             {
                 bBlocked = bBlocked || blocked == pending._connectionID;
             }
-            if ( bBlocked == false && _pHost->trySendMessage( pending._connectionID, NetChannelKind::ReliableOrdered, pending._buffer ) )
+            if ( bBlocked == false && _pHost->trySendMessage( pending._connectionID, pending._channel, pending._buffer ) )
                 continue;
             if ( bBlocked == false )
                 _listBlockedScratch.push_back( pending._connectionID );
@@ -204,7 +207,7 @@ namespace sw
             body._action = action._buffer;
             if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Applied>( body ) == false )
                 return; // 받아들일 때 상한을 봤다 — 여기 오면 결함이고 오류 로그가 남았다
-            if ( _messageWriter.send( *_pHost, seat._connectionID, NetTurnRelayMessage::Applied::kChannel ) == false )
+            if ( _messageWriter.sendMessage( *_pHost, seat._connectionID ) == false )
                 return; // 창이 찼으므로 `update` 가 이어서 보낸다
             ++seat._sentActionCount;
         }
@@ -479,7 +482,7 @@ namespace sw
         body._token            = _token;
         body._knownActionCount = static_cast<uint32>( _listAction.size() );
         if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Join>( body ) )
-            (void)_messageWriter.send( *_pHost, 0, NetTurnRelayMessage::Join::kChannel ); // 못 보내면 다시 join 한다
+            (void)_messageWriter.sendMessage( *_pHost, 0 ); // 못 보내면 다시 join 한다
     }
 
     int32 TurnRelayClient::submitAction( const vector<uint8>& buffer )
@@ -495,7 +498,7 @@ namespace sw
         body._submitID = submitID;
         body._action   = buffer;
         if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Action>( body ) )
-            (void)_messageWriter.send( *_pHost, 0, NetTurnRelayMessage::Action::kChannel ); // 못 보낸 행동은 거절 알림도 오지 않는다 — 예전과 같다
+            (void)_messageWriter.sendMessage( *_pHost, 0 ); // 못 보낸 행동은 거절 알림도 오지 않는다 — 예전과 같다
         return submitID;
     }
 

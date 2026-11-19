@@ -497,3 +497,31 @@ SW_TEST_CASE( NetLockstepTest, PendingChecksumsExpireOneTickAtATime )
     }
     SW_EXPECT_EQUAL( 0, session.getQueuedTickCount() );
 }
+
+/**
+ * @brief [NetLockstepTest] 손 본문 롤백 입력 — 입력 묶음 뒤 남는 바이트 · 잘린 묶음은 깨진 메시지다
+ */
+SW_TEST_CASE( NetLockstepTest, RollbackInputRejectsTrailingBytesAndTruncation )
+{
+    NetLockstepTestInternal::InputRecordingGame game;
+    RollbackSession                             session;
+    SW_REQUIRE_TRUE( session.initialize( nullptr, &game, 2, 0, RollbackConfig{} ) );
+    NetMessageWriter writer;
+    BitWriter&       body = writer.begin( NetLockstepMessage::kRollbackInput );
+    body.writeVarUint( 1 ); // 플레이어
+    body.writeVarUint( 0 ); // 프레임
+    for ( int32 player = 0; player < 2; ++player )
+    {
+        body.writeVarUint( 0 );
+        body.writeVarInt( 0 );
+    }
+    body.writeVarUint( 0 ); // 첫 프레임
+    body.writeVarUint( 1 ); // 입력 수
+    body.writeBits( 0x11, 8 );
+    const vector<uint8> listExact = writer.getBytes();
+    body.writeBits( 0xFFu, 8 ); // 남는 바이트
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == session.handleMessage( 0, writer.getBytes() ) );
+    const vector<uint8> listTruncated( listExact.begin(), listExact.end() - 1 );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == session.handleMessage( 0, listTruncated ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == session.handleMessage( 0, listExact ) );
+}
