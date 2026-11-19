@@ -2,7 +2,7 @@
 <?asset guid="3a73da4cbbb4ed8b6d5cf321294aebb2"?>
 <!--
   런타임 인벤토리 화면(InventoryScreen) — 무대 maps/inventorydemo 의 Player(장비 컴포넌트: 가방 4 칸 · 무게 3), 바닥의 포션 더미 · 투구 · 장화 · 망토.
-  ⑴ 줍기 → 칸 증가, ⑵ 패드만으로 동작 메뉴(X) → 나누기(수량 대화 상자 — 오른쪽으로 2) → 칸 둘, ⑶ 집기(A) · 옆 칸에 놓기(A) → 겹치기,
+  ⑴ 줍기 → 칸 증가, ⑵ 패드만으로 동작 메뉴(X) → 나누기(수량 대화 상자 — 오른쪽으로 2) → 칸 둘, ⑶ 집기(A) · 옆 칸에 놓기(A) → 겹치기, 버리기(수량 2) → 월드 아이템 → 줍기,
   ⑷ 패드만으로 투구 장착(메뉴 → Equip) → 장비 칸 · 능력치(armor 3) · 외형(Head) 바뀜, ⑸ 칸 가득 → 줍기 거절(바닥에 남는다),
   ⑹ 세이브 · 정렬로 배치를 바꿈 · 불러오기 → 같은 배치 · 같은 장비 · 같은 돈. 감시 값 중심 — 마우스 끌어 놓기는 같은 명령(Move)이라 이 판정이 덮는다.
   실행: ctest -R Scenario.empty (체인)
@@ -56,6 +56,28 @@
 	<WaitUntil watch="Equipment.BagUsedSlots" target="Player" equals="1" timeoutFrames="10"/>
 	<Expect watch="Equipment.BagCount" target="Player" key="1" equals="3"/>
 	<Expect watch="Inventory.HeldSlot" equals="-1"/>
+
+	<!-- ⑶-2 버리기(메뉴 → Drop → 수량 2) → 월드 아이템이 생기고, 주우면 다시 겹친다 -->
+	<Tap slot="Gamepad.X" hold="1"/>
+	<WaitUntil watch="Inventory.MenuSlot" equals="1" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadRight" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="ActEquip" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadRight" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="ActSplit" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadRight" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="ActDrop" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/quantity.ui.xml" timeoutFrames="20"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Amount" timeoutFrames="10"/> <!-- 처음 값은 절반(2) -->
+	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Accept" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="Object.Exists" target="WorldItem" equals="1" timeoutFrames="30"/>
+	<Expect watch="Equipment.BagCount" target="Player" key="1" equals="1"/>
+	<DevCommand line="item.pickup Player WorldItem"/>
+	<Expect watch="Equipment.BagCount" target="Player" key="1" equals="3"/>
+	<Expect watch="Object.Exists" target="WorldItem" equals="0"/>
+	<ExpectLog id="WorldItem.PickedUp" count="2"/>
 	<Tap slot="Gamepad.B" hold="1"/>
 	<WaitUntil watch="UI.ActiveScreen" is="none" timeoutFrames="30"/>
 
