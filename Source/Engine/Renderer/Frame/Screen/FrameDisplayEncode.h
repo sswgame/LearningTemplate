@@ -34,14 +34,15 @@ namespace sw
         /**
          * @brief 셋업(프레임마다)에서 두 RT 를 맞춥니다. 주 스왑체인이 SDR 이거나 화면이 없으면(@p width · @p height 가 0) 놓습니다.
          * @param output 이번 프레임의 출력 장치 값(패킷이 실은 — 능력에 맞춘 값)입니다. 종이 흰색 · 최대 휘도를 쓴다. HDR 인지는 장치의 색 공간이 정한다.
-         * @details 만들지 못하면 멈춘다 — RT 없이 HDR 백버퍼에 SDR 신호를 그대로 쓰면 그림이 깨진다. 새로 만든 프레임은 아직 쓰지 않는다(`isActive` 거짓 — UI RT 를 한 번 비운 뒤부터).
+         * @details 만들지 못하면 멈춘다 — RT 없이 HDR 백버퍼에 SDR 신호를 그대로 쓰면 그림이 깨진다. 새로 만든 프레임부터 쓴다 — 스왑체인에 SDR PSO(에디터 UI)로 그리는 프레임이 없게 한다
+         *          (막 만든 UI RT 의 첫 내용은 정해지지 않았다 — HDR 을 켠 그 한 프레임만이고, 끝의 비우기부터 투명하다).
          */
         void prepare( uint32 width, uint32 height, const DisplayOutputDesc& output );
         /** @brief 두 RT 를 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
         void release();
 
-        /** @brief HDR 출력 중이고 두 RT 가 쓸 준비가 됐으면 true 입니다. 거짓이면 화면 쓰기는 지금처럼 스왑체인(또는 회전 대기 텍스처)으로 간다. */
-        bool isActive() const { return _bReady != SW_FALSE; }
+        /** @brief HDR 출력 중(두 RT 가 있다)이면 true 입니다. 거짓이면 화면 쓰기는 지금처럼 스왑체인(또는 회전 대기 텍스처)으로 간다. */
+        bool isActive() const { return _uiTexture != 0; }
         /** @brief Present 가 쓸 장면 출력 RT 입니다(R16G16B16A16F, [0,1] 출력 신호). HDR 출력이 아니면 0 입니다. */
         RHITextureHandle getSceneTarget() const { return isActive() ? _sceneTexture : RHITextureHandle{ 0 }; }
         /** @brief 화면에 쓰는 나머지(Canvas · 캡처 → 화면 · 개발 겹치기 · 렌더 스레드 UI)가 쓸 SDR UI RT 입니다(RGBA8, 미리 곱한 알파). HDR 출력이 아니면 0 입니다. */
@@ -54,7 +55,7 @@ namespace sw
 
         /**
          * @brief 프레임 끝(마지막 화면 쓰기 뒤 · 표시 앞)에 UI 를 장면 출력 RT 위에 합성하고 백버퍼로 인코딩한 뒤, UI RT 를 비웁니다(다음 프레임의 쓰기가 Load 로 연다). RT 가 없으면 아무것도 하지 않습니다.
-         * @details 막 만든 RT 는 합성 · 인코딩 없이 비우기만 하고 다음 프레임부터 `isActive` 다. 끝나면 두 RT 를 렌더 타깃 상태로 둔다 — 다음 프레임의 첫 쓰기(Present · Canvas)가 그 상태를 믿는다.
+         * @details 끝나면 두 RT 를 렌더 타깃 상태로 둔다 — 다음 프레임의 첫 쓰기(Present · Canvas)가 그 상태를 믿는다.
          */
         void recordToSwapchain( IRHICommandList& cmd );
 
@@ -75,6 +76,5 @@ namespace sw
         uint32                 _height;
         RHIColorSpace          _colorSpace; ///< 만들 때의 백버퍼 색 공간 — 인코딩 패스를 고른다
         DisplayOutputDesc      _output;     ///< 이번 프레임의 종이 흰색 · 최대 휘도
-        uint8                  _bReady;     ///< UI RT 를 한 번 비워 두 RT 를 쓸 수 있다(`recordToSwapchain` 이 세운다)
     };
 } // namespace sw

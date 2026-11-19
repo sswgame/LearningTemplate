@@ -48,7 +48,6 @@ namespace sw
         , _height{ 0 }
         , _colorSpace{ RHIColorSpace::SRGBNonLinear }
         , _output{}
-        , _bReady{ SW_FALSE }
     {
     }
 
@@ -69,7 +68,6 @@ namespace sw
         }
         _width  = 0;
         _height = 0;
-        _bReady = SW_FALSE;
     }
 
     void FrameDisplayEncode::prepare( uint32 width, uint32 height, const DisplayOutputDesc& output )
@@ -126,45 +124,42 @@ namespace sw
     {
         if ( _uiTexture == 0 )
             return;
-        if ( _bReady != SW_FALSE )
-        {
-            // 1) UI 합성 — UI 신호(1 = 종이 흰색)를 장면 신호(1 = 최대 휘도)로 옮겨 장면 출력 RT 위에 미리 곱한 알파로 섞는다.
-            const RHIPipelineStateHandle composePSO = _psoManager.getEnginePSO( RenderPassKind::DisplayCompositeUI );
-            const RenderPassKind         encodeKind = _colorSpace == RHIColorSpace::HDR10ST2084 ? RenderPassKind::DisplayEncodeHDR10 : RenderPassKind::DisplayEncodeScRGB;
-            const RHIPipelineStateHandle encodePSO  = _psoManager.getEnginePSO( encodeKind );
-            // 백버퍼가 HDR 이면 셋업이 이 PSO 를 만들었다(모니터 능력이 HDR 일 때 — `FramePSOManager::createPassPSOs`). 없으면 HDR 백버퍼에 낼 길이 없다.
-            if ( composePSO == 0 || encodePSO == 0 )
-                SW_FATAL( "HDR display output has no %# PSO - the HDR back buffer cannot be presented", composePSO == 0 ? RenderPassKind::DisplayCompositeUI : encodeKind );
-            const float32 paperWhiteRatio = _output._paperWhiteNits / MathUtil::max( _output._maxLuminanceNits, 1.0f );
-            const float32 uiScale         = MathUtil::pow( MathUtil::min( paperWhiteRatio, 1.0f ), FrameDisplayEncodeInternal::kInverseSignalGamma );
+        // 1) UI 합성 — UI 신호(1 = 종이 흰색)를 장면 신호(1 = 최대 휘도)로 옮겨 장면 출력 RT 위에 미리 곱한 알파로 섞는다.
+        const RHIPipelineStateHandle composePSO = _psoManager.getEnginePSO( RenderPassKind::DisplayCompositeUI );
+        const RenderPassKind         encodeKind = _colorSpace == RHIColorSpace::HDR10ST2084 ? RenderPassKind::DisplayEncodeHDR10 : RenderPassKind::DisplayEncodeScRGB;
+        const RHIPipelineStateHandle encodePSO  = _psoManager.getEnginePSO( encodeKind );
+        // 백버퍼가 HDR 이면 셋업이 이 PSO 를 만들었다(모니터 능력이 HDR 일 때 — `FramePSOManager::createPassPSOs`). 없으면 HDR 백버퍼에 낼 길이 없다.
+        if ( composePSO == 0 || encodePSO == 0 )
+            SW_FATAL( "HDR display output has no %# PSO - the HDR back buffer cannot be presented", composePSO == 0 ? RenderPassKind::DisplayCompositeUI : encodeKind );
+        const float32 paperWhiteRatio = _output._paperWhiteNits / MathUtil::max( _output._maxLuminanceNits, 1.0f );
+        const float32 uiScale         = MathUtil::pow( MathUtil::min( paperWhiteRatio, 1.0f ), FrameDisplayEncodeInternal::kInverseSignalGamma );
 
-            cmd.prepareTextureForShaderRead( _uiTexture );
-            RHIRenderPassBeginInfo composeInfo{};
-            composeInfo._bBindColor        = SW_TRUE;
-            composeInfo._colorTargetCount  = 1;
-            composeInfo._arrColorTarget[0] = _sceneTexture;
-            composeInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
-            composeInfo._width             = _width;
-            composeInfo._height            = _height;
-            cmd.beginRenderPass( composeInfo );
-            drawFullscreen( cmd, composePSO, _uiSRV, uiScale );
-            cmd.endRenderPass();
+        cmd.prepareTextureForShaderRead( _uiTexture );
+        RHIRenderPassBeginInfo composeInfo{};
+        composeInfo._bBindColor        = SW_TRUE;
+        composeInfo._colorTargetCount  = 1;
+        composeInfo._arrColorTarget[0] = _sceneTexture;
+        composeInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
+        composeInfo._width             = _width;
+        composeInfo._height            = _height;
+        cmd.beginRenderPass( composeInfo );
+        drawFullscreen( cmd, composePSO, _uiSRV, uiScale );
+        cmd.endRenderPass();
 
-            // 2) 인코딩 — 장면 출력 RT 를 nits 로 풀어 백버퍼 값(HDR10 PQ · scRGB 선형)으로 쓴다.
-            cmd.prepareTextureForShaderRead( _sceneTexture );
-            RHIRenderPassBeginInfo encodeInfo{};
-            encodeInfo._bBindColor        = SW_TRUE;
-            encodeInfo._colorTargetCount  = 1;
-            encodeInfo._arrColorTarget[0] = 0;                          // 스왑체인 이미지
-            encodeInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear; // 이 프레임에 아무도 쓰지 않은 스왑체인 이미지(Vulkan 레이아웃 UNDEFINED)는 Load 로 열 수 없다
-            encodeInfo._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
-            encodeInfo._width             = _width;
-            encodeInfo._height            = _height;
-            cmd.beginRenderPass( encodeInfo );
-            drawFullscreen( cmd, encodePSO, _sceneSRV, _output._maxLuminanceNits );
-            cmd.endRenderPass();
-            cmd.prepareTextureForRenderTarget( _sceneTexture );
-        }
+        // 2) 인코딩 — 장면 출력 RT 를 nits 로 풀어 백버퍼 값(HDR10 PQ · scRGB 선형)으로 쓴다.
+        cmd.prepareTextureForShaderRead( _sceneTexture );
+        RHIRenderPassBeginInfo encodeInfo{};
+        encodeInfo._bBindColor        = SW_TRUE;
+        encodeInfo._colorTargetCount  = 1;
+        encodeInfo._arrColorTarget[0] = 0;                          // 스왑체인 이미지
+        encodeInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear; // 이 프레임에 아무도 쓰지 않은 스왑체인 이미지(Vulkan 레이아웃 UNDEFINED)는 Load 로 열 수 없다
+        encodeInfo._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
+        encodeInfo._width             = _width;
+        encodeInfo._height            = _height;
+        cmd.beginRenderPass( encodeInfo );
+        drawFullscreen( cmd, encodePSO, _sceneSRV, _output._maxLuminanceNits );
+        cmd.endRenderPass();
+        cmd.prepareTextureForRenderTarget( _sceneTexture );
         // 3) UI RT 를 비운다 — 다음 프레임의 화면 쓰기(Canvas · 렌더 스레드 UI)는 Load 로 열고, 아무도 쓰지 않은 프레임은 투명한 UI 를 합성한다.
         cmd.prepareTextureForRenderTarget( _uiTexture );
         RHIRenderPassBeginInfo clearInfo{};
@@ -177,7 +172,6 @@ namespace sw
         clearInfo._height            = _height;
         cmd.beginRenderPass( clearInfo );
         cmd.endRenderPass();
-        _bReady = SW_TRUE;
     }
 
     void FrameDisplayEncode::drawFullscreen( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIDescriptorIndex srv, float32 scale ) const

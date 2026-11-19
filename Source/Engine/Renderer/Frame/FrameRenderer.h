@@ -248,7 +248,7 @@ namespace sw
         }
         /**
          * @brief 화면 대상을 스왑체인 이미지로 옮깁니다(프레임의 마지막 화면 쓰기 뒤 · 표시 앞) — 회전 대기 텍스처는 돌려 그리고, HDR 출력은 UI 를 합성해 인코딩한다.
-         * @details 둘 다 아닌 장치(데스크톱 SDR)는 아무것도 하지 않는다. HDR 의 UI RT 비우기도 여기서 한다 — 화면 대상이 0 인 프레임(막 HDR 을 켠 프레임)에도 부른다.
+         * @details 둘 다 아닌 장치(데스크톱 SDR)는 아무것도 하지 않는다. HDR 의 UI RT 비우기(다음 프레임의 화면 쓰기가 Load 로 연다)도 여기서 한다.
          */
         void recordScreenOutput( IRHICommandList& cmd )
         {
