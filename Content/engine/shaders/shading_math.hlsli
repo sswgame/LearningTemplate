@@ -70,6 +70,7 @@ namespace sw::shadermath
         static float computeProbeBackfaceWeight( float normalDotToProbe, float backfaceFloor );                                                                                  ///< 표면 뒤 프로브 줄이기 — 노멀 쪽이면 1, 반대면 floor(코사인 감쇠)
         static float computeProbeChebyshevWeight( float distance, float meanDistance, float meanSquaredDistance, float exponent );                                               ///< 거리 모먼트의 체비쇼프 상한^지수(모름이면 1)
         static float computeProbeVisibilityWeight( float normalDotToProbe, float distance, float meanDistance, float meanSquaredDistance, float backfaceFloor, float exponent ); ///< 둘의 곱(0 이 되지 않는다)
+        static float computeProbeMomentDistance( float hitDistance, float cellSize, float maxDistance );                                                                         ///< 닿은 광선 하나가 모먼트에 적을 거리(0 이면 적지 않는다 — 프로브가 칸 안)
     };
 
     // 프로브 가중의 하한 — 여덟 모두가 가려져도 합이 0 이 되지 않게 한다(DDGI 와 같다. 그때는 가려진 프로브끼리의 평균이다).
@@ -294,6 +295,17 @@ namespace sw::shadermath
         const float backface  = ShadingMath::computeProbeBackfaceWeight( normalDotToProbe, backfaceFloor );
         const float chebyshev = ShadingMath::computeProbeChebyshevWeight( distance, meanDistance, meanSquaredDistance, exponent );
         return max( backface * chebyshev, kProbeWeightFloor );
+    }
+
+    SW_SHADING_MATH_DEFINITION float ShadingMath::computeProbeMomentDistance( float hitDistance, float cellSize, float maxDistance )
+    {
+        // 거리 0 은 광선이 처음부터 켜진 칸 안(또는 그 면 위)에서 떠났다는 뜻이다 — 프로브가 바닥 · 발광 물체 같은 복셀에 박혀 있다. 그 방향은 모르는 것으로 둔다
+        // (적으면 박힌 프로브가 모든 표면에서 가려져, 박힌 칸의 빛 — 발광 큐브 안 프로브가 나르던 발광 — 이 사라진다).
+        if ( hitDistance <= 0.0f )
+            return 0.0f;
+        // 복셀 광선은 칸의 들어가는 면에서 멈추고 실제 표면은 그 칸 안 어딘가다 — 한 칸 너머까지를 표면으로 친다. 그러지 않으면 칸 크기만큼 들뜬 바닥이
+        // 바로 위 바닥 점을 "벽 너머" 로 가린다(칸 0.5 m, 바이어스 0.1 m). 한 칸보다 두꺼운 벽 뒤는 그대로 가려진다.
+        return min( hitDistance + cellSize, maxDistance );
     }
 
 #if defined( __cplusplus )

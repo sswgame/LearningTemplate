@@ -1,6 +1,7 @@
 #include "common.hlsli"
 #include "light_data.hlsli"
 #include "octahedral.hlsli"
+#include "shading_math.hlsli"
 
 /**
  * probe_update.hlsl — 실시간 라이트 프로브 갱신 컴퓨트(RenderPassKind::ProbeUpdate, RealtimeGlobalIllumination.md R6). 유니티 APV 의 갱신, 언리얼 Lumen 의 프로브 갱신 자리다.
@@ -15,7 +16,7 @@
  * 방향은 프로브 · 프레임마다 회전한 피보나치 구라서 갱신마다 달라 기록과 섞이며 잡음이 평균된다.
  * 닿은 칸이 발광 칸(SceneVoxelGrid::_listEmission, RGB9E5)이면 그 빛 × 볼륨의 발광 배율을 더한다(배율 0 이면 읽지 않는다 — 이전 그림).
  * 하늘로 나간 광선의 몫(하늘 보임)을 기록의 남는 칸(원시 계수 뒤 28 번째)에 함께 섞고 프로브 원소 6 의 w 에 싣는다 — 소비 셰이더가 볼륨의 하늘 가림 세기로 반사 앰비언트를 가린다.
- * 빛샘 막기(DDGI 의 거리 모먼트): 광선마다 닿은 거리(닿지 않거나 멀면 셀 대각선)의 (d, d²) 를 그 방향의 옥타헤드럴 텍셀(binding_slots.hlsli 8 절 SW_PROBE_VISIBILITY_*)에
+ * 빛샘 막기(DDGI 의 거리 모먼트): 광선마다 닿은 거리(칸 하나 너머까지, 닿지 않거나 멀면 셀 대각선. 칸 안에서 떠난 광선은 적지 않는다)의 (d, d²) 를 그 방향의 옥타헤드럴 텍셀(binding_slots.hlsli 8 절 SW_PROBE_VISIBILITY_*)에
  * 기록과 같은 비율로 섞는다. 기록은 프로브마다 SH9 일곱 뒤에 모먼트 묶음이 붙고, 프레임마다 모먼트 묶음을 프로브 버퍼의 볼륨 모먼트 자리(kVolVisibility)로 옮긴다.
  * 소비 셰이더(lighting.hlsli LightData::sampleProbeVolume)가 체비쇼프 가시성으로 벽 너머 프로브를 줄인다. 거리²가 0 인 텍셀은 아직 모르는 것이다.
  *
@@ -49,10 +50,9 @@ static const uint kMomentFloat4Count  = SW_PROBE_VISIBILITY_FLOAT4_COUNT;
 static const uint kHistoryFloat4Count = kProbeFloat4Count + kMomentFloat4Count; // 프로브 하나의 기록 — SH9 원시 계수 일곱 뒤에 모먼트(C++ RealtimeProbeHistoryAllocator::kFloat4PerProbe)
 static const uint kMaxDirectLights    = 8u;                                     // 닿은 면을 비추는 라이트의 상한(앞에서부터)
 // 원주율은 common.hlsli 의 kPi 를 쓴다.
-static const float kSurfaceOffset     = 0.05f; // 닿은 칸 안쪽으로 파고들지 않게 면에서 띄우는 칸 크기 비율
-static const float kParallelEpsilon   = 1.0e-8f;
-static const float kFarDistance       = 1.0e30f;
-static const float kMinMomentDistance = 1.0e-4f; // 프로브가 칸 안에 박혀 거리 0 에 닿아도 모먼트를 "모름"(거리² 0)으로 두지 않는다 — 박힌 프로브는 모든 방향에서 가려진다
+static const float kSurfaceOffset   = 0.05f; // 닿은 칸 안쪽으로 파고들지 않게 면에서 띄우는 칸 크기 비율
+static const float kParallelEpsilon = 1.0e-8f;
+static const float kFarDistance     = 1.0e30f;
 
 // SH9 기저 상수(SphericalHarmonics.cpp 의 Band0/1/2 — 1/(2√π), √3/(2√π), √15/(2√π), √5/(4√π), √15/(4√π)).
 static const float kBand0  = 0.2820947918f;
@@ -434,7 +434,10 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
             float      hitDistance;
             float3     hitNormal;
             const bool bHit = traceVoxelRay( grid, position, direction, kFarDistance, hitDistance, hitNormal );
-            accumulateMoment( momentAt, direction, bHit ? clamp( hitDistance, kMinMomentDistance, momentMaxDistance ) : momentMaxDistance, blend );
+            // 닿은 거리는 칸 하나 너머까지 늘리고, 칸 안에서 떠난 광선(거리 0)은 적지 않는다 — ShadingMath::computeProbeMomentDistance.
+            const float momentDistance = bHit ? ShadingMath::computeProbeMomentDistance( hitDistance, grid._cellSize, momentMaxDistance ) : momentMaxDistance;
+            if ( momentDistance > 0.0f )
+                accumulateMoment( momentAt, direction, momentDistance, blend );
             if ( bHit )
             {
                 const float3 surface = position + direction * hitDistance + hitNormal * ( grid._cellSize * kSurfaceOffset );
