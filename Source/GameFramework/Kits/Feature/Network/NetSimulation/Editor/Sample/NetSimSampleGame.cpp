@@ -13,11 +13,13 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Net/NetMessageBody.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
+#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Sample/NetSimSampleMessages.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
@@ -26,21 +28,18 @@ namespace sw
     {
         struct NetSimSampleGameInternal
         {
-            static constexpr int32   kAxisMax        = 1;    ///< 이동 입력 한 축의 정수 범위(−1..1)
-            static constexpr float32 kSlotSpacing    = 2.0f; ///< 시작 위치 사이의 간격(미터)
-            static constexpr float32 kAvatarHalfSize = 0.5f; ///< 아바타 상자 한 변의 절반 — 아레나 벽에 닿는 거리를 정한다
+            static constexpr int32   kAxisMax        = NetSimSampleLimit::kAxisMax; ///< 이동 입력 한 축의 정수 범위(−1..1) — 본문 형식의 범위와 같다
+            static constexpr float32 kSlotSpacing    = 2.0f;                        ///< 시작 위치 사이의 간격(미터)
+            static constexpr float32 kAvatarHalfSize = 0.5f;                        ///< 아바타 상자 한 변의 절반 — 아레나 벽에 닿는 거리를 정한다
             static constexpr int32   kPaletteCount   = 4;
             static constexpr float32 kFloorMargin    = 2.0f;   ///< 뷰포트가 깔아 주는 바닥이 아레나 벽 밖으로 더 나가는 폭(미터)
             static constexpr float32 kSmoothing      = 0.5f;   ///< 클라이언트가 받은 위치로 틱마다 다가가는 비율
             static constexpr float32 kSnapDistance   = 0.001f; ///< 이 거리 안이면 받은 위치로 붙는다(멈춘 뒤 서버와 같은 값이 되게)
-            /** @brief 클라이언트 → 서버: 이동 입력(`writeVarUint` 클라이언트 틱, 정수 축 둘). 순서가 뒤바뀐 낡은 입력은 서버가 버린다. */
-            using InputMessage = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelKind::Unreliable>;
-            /** @brief 서버 → 클라이언트: 아바타 목록(`writeVarUint` 서버 틱 · 개수, 아바타마다 엔티티 id · x · z). 낡은 것은 클라이언트가 버린다. */
-            using StateMessage = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::Unreliable>;
+            /** @brief 클라이언트 → 서버: 이동 입력(`NetSimSampleInputBody`). */
+            using InputMessage = NetMessageBodyDef<0, NetMessageDirection::ToServer, NetChannelKind::Unreliable, NetSimSampleInputBody>;
+            /** @brief 서버 → 클라이언트: 아바타 목록(`NetSimSampleStateBody`). */
+            using StateMessage = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::Unreliable, NetSimSampleStateBody>;
             using MessageTable = NetMessageTable<NetMessageRange::kGame, InputMessage, StateMessage>;
-
-            static constexpr uint8 kInputKind = MessageTable::getKindOf<InputMessage>();
-            static constexpr uint8 kStateKind = MessageTable::getKindOf<StateMessage>();
 
             /** @brief 아바타 외곽선 색입니다. 엔티티 id 로 고른다. */
             static float3 pickColor( uint32 entityID )
@@ -120,16 +119,18 @@ namespace sw
             uint16                  getMessageKindMask() const { return NetSimSampleGameInternal::MessageTable::makeMask<NetSimSampleGameInternal::InputMessage>(); }
             NetMessageDirectionMask getMessageDirectionMask() const { return NetSimSampleGameInternal::MessageTable::makeDirectionMask<NetSimSampleGameInternal::InputMessage>(); }
 
+            /** @brief 맡은 종류가 입력 하나뿐이다 — 표 받기(`NetMessageDelivery`)가 본문을 다 읽은 뒤 `receive` 로 넘긴다. */
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body )
             {
-                const uint32 clientTick = body.readVarUint32();
-                int32        x          = 0;
-                int32        y          = 0;
-                const bool   bRead      = body.readInt( -NetSimSampleGameInternal::kAxisMax, NetSimSampleGameInternal::kAxisMax, x ) &&
-                                   body.readInt( -NetSimSampleGameInternal::kAxisMax, NetSimSampleGameInternal::kAxisMax, y ) && body.hasOverflowed() == false;
-                if ( bRead == false )
-                    return NetHandleResult::Malformed;
-                PendingMove& pending = acquirePendingMove( context._connectionID );
+                return NetMessageDelivery::deliver<NetSimSampleGameInternal::InputMessage>( *this, context, body );
+            }
+
+            NetHandleResult receive( NetSimSampleGameInternal::InputMessage, const NetMessageContext& context, const NetSimSampleInputBody& body )
+            {
+                const uint32 clientTick = body._clientTick;
+                const int32  x          = body._moveX;
+                const int32  y          = body._moveY;
+                PendingMove& pending    = acquirePendingMove( context._connectionID );
                 // 비신뢰 채널이라 순서가 뒤바뀔 수 있다 — 더 낡은 틱의 입력은 버린다.
                 if ( pending._bHasInput && clientTick <= pending._clientTick )
                     return NetHandleResult::Handled;
@@ -164,16 +165,19 @@ namespace sw
             void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
             {
                 (void)deltaTime; // 이동은 onTickBegin 에서 끝났다
-                BitWriter& writer = _stateWriter.begin( NetSimSampleGameInternal::kStateKind );
-                writer.writeVarUint( world.getLocalTick() );
-                writer.writeVarUint( _listAvatar.size() );
+                NetSimSampleStateBody body;
+                body._serverTick = world.getLocalTick();
+                body._listAvatar.reserve( _listAvatar.size() );
                 for ( const Avatar& avatar : _listAvatar )
                 {
-                    writer.writeVarUint( avatar._entityID );
-                    writer.writeFloat( avatar._x );
-                    writer.writeFloat( avatar._z );
+                    NetSimSampleAvatarState state;
+                    state._entityID = avatar._entityID;
+                    state._x        = avatar._x;
+                    state._z        = avatar._z;
+                    body._listAvatar.push_back( state );
                 }
-                (void)_stateWriter.broadcast( world.getPeers(), NetChannelKind::Unreliable ); // 보낸 수는 쓰지 않는다 — 못 보낸 틱은 다음 틱이 덮는다
+                if ( _stateWriter.writeMessage<NetSimSampleGameInternal::MessageTable, NetSimSampleGameInternal::StateMessage>( body ) )
+                    (void)_stateWriter.broadcastMessage( world.getPeers() ); // 보낸 수는 쓰지 않는다 — 못 보낸 틱은 다음 틱이 덮는다
             }
 
         private:
@@ -300,22 +304,26 @@ namespace sw
             uint16                  getMessageKindMask() const { return NetSimSampleGameInternal::MessageTable::makeMask<NetSimSampleGameInternal::StateMessage>(); }
             NetMessageDirectionMask getMessageDirectionMask() const { return NetSimSampleGameInternal::MessageTable::makeDirectionMask<NetSimSampleGameInternal::StateMessage>(); }
 
+            /** @brief 맡은 종류가 상태 하나뿐이다 — 표 받기(`NetMessageDelivery`)가 본문을 다 읽은 뒤 `receive` 로 넘긴다. */
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body )
             {
+                return NetMessageDelivery::deliver<NetSimSampleGameInternal::StateMessage>( *this, context, body );
+            }
+
+            NetHandleResult receive( NetSimSampleGameInternal::StateMessage, const NetMessageContext& context, const NetSimSampleStateBody& body )
+            {
                 (void)context; // 서버(연결 0)가 보낸 것뿐이다
-                const uint32   serverTick = body.readVarUint32();
-                const uint64   count      = body.readVarUint();
+                const uint32   serverTick = body._serverTick;
                 vector<Target> listParsed;
-                for ( uint64 index = 0; index < count && body.hasOverflowed() == false; ++index )
+                listParsed.reserve( body._listAvatar.size() );
+                for ( const NetSimSampleAvatarState& state : body._listAvatar )
                 {
                     Target target;
-                    target._entityID = body.readVarUint32();
-                    if ( ( body.readFiniteFloat( target._x ) && body.readFiniteFloat( target._z ) ) == false )
-                        return NetHandleResult::Malformed;
+                    target._entityID = state._entityID;
+                    target._x        = state._x;
+                    target._z        = state._z;
                     listParsed.push_back( target );
                 }
-                if ( body.hasOverflowed() )
-                    return NetHandleResult::Malformed;
                 // 비신뢰 채널이라 순서가 뒤바뀔 수 있다 — 더 낡은 틱의 목록은 버린다.
                 if ( _bHasState && serverTick <= _lastStateTick )
                     return NetHandleResult::Handled;
@@ -373,14 +381,14 @@ namespace sw
             {
                 const NetSimSampleMoveSource pfnSource = _settings._pfnMoveSource != nullptr ? _settings._pfnMoveSource : &NetSimSampleGame::readKeyboardMove;
                 const float2                 move      = world.hasInputFocus() ? pfnSource( world ) : float2{ 0.0f, 0.0f };
-                BitWriter&                   writer    = _inputWriter.begin( NetSimSampleGameInternal::kInputKind );
-                writer.writeVarUint( _nextInputTick );
-                const bool bWritten = writer.writeInt( NetSimSampleGameInternal::quantizeAxis( move._x ), -NetSimSampleGameInternal::kAxisMax, NetSimSampleGameInternal::kAxisMax ) &&
-                                      writer.writeInt( NetSimSampleGameInternal::quantizeAxis( move._y ), -NetSimSampleGameInternal::kAxisMax, NetSimSampleGameInternal::kAxisMax );
-                if ( bWritten == false )
+                NetSimSampleInputBody        body;
+                body._clientTick = _nextInputTick;
+                body._moveX      = NetSimSampleGameInternal::quantizeAxis( move._x );
+                body._moveY      = NetSimSampleGameInternal::quantizeAxis( move._y );
+                if ( _inputWriter.writeMessage<NetSimSampleGameInternal::MessageTable, NetSimSampleGameInternal::InputMessage>( body ) == false )
                     return; // 축은 범위로 잘랐으므로 닿지 않는다
                 ++_nextInputTick;
-                (void)_inputWriter.sendToPeers( world.getPeers(), NetChannelKind::Unreliable ); // 못 보낸 입력은 다음 틱의 입력이 덮는다
+                (void)_inputWriter.sendMessageToPeers( world.getPeers() ); // 못 보낸 입력은 다음 틱의 입력이 덮는다
             }
 
             /** @brief 받은 목록의 아바타를 만들고 옮기며, 목록에서 빠진 아바타는 지웁니다. */
