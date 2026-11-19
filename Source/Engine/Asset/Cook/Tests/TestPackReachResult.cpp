@@ -360,6 +360,31 @@ SW_TEST_CASE( PackReachabilityTest, AutomationRulesNeedTheAutomationRuntime )
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/maps/test.scene.xml" ) ) );
 }
 
+/** @brief [PackReachabilityTest] 항상 담기 묶음의 제외 패턴에 맞는 파일은 뿌리가 아니다 — 에디터 시나리오가 쿠킹 도메인 밖 에디터 원본을 가리켜도 쿠킹이 멈추지 않는다 */
+SW_TEST_CASE( PackReachabilityTest, AlwaysCookExcludePatternSkipsEditorScenarios )
+{
+    AssetReferenceFields params;
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    Util::addText( files, source, "game/x/automation/a.scenario.xml", "<Scenario/>" );
+    Util::addText( files, source, "game/x/automation/editor/b.scenario.xml", R"(<Scenario><Scratch from="editor/textures_raw" as="scratch/b"/></Scenario>)" );
+
+    PackCookRules rules = Util::makeRules();
+    rules._listAlwaysCook.clear();
+    PackAlwaysCookRule& scenarios = rules._listAlwaysCook.emplace_back();
+    scenarios._name               = "Scenarios";
+    scenarios._listPattern.push_back( "game/*/automation/**" );
+    scenarios._listExcludePattern.push_back( "game/*/automation/editor/**" );
+    scenarios._bAutomationOnly = SW_TRUE;
+
+    PackReachResult result;
+    files._automation = PackAutomationContent::Included;
+    SW_REQUIRE_TRUE( PackReachResult::collect( params, rules, files, source, result ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/automation/a.scenario.xml" ) ) );
+    SW_EXPECT_FALSE( result._setIncluded.contains( string( "game/x/automation/editor/b.scenario.xml" ) ) );
+}
+
 /** @brief [PackReachabilityTest] 필수 데이터로 닿은 카탈로그는 불린 항목(씬의 프리셋 → 외형 → `_base` 부모)의 에셋만 담고, 안 불린 항목의 에셋은 뺀다. 파일 자체는 담긴다 */
 SW_TEST_CASE( PackReachabilityTest, EntryCatalogFollowsNamedEntriesOnly )
 {

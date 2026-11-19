@@ -431,9 +431,10 @@ namespace sw
                             continue; // 자동화 없는 배포 - 시나리오는 읽히지 않는다
                         if ( rule._scope.isApplicableTo( assetID ) == false )
                             continue; // 이 팩에는 닿지 않는 규칙이다(다른 게임의 규칙 · 이 게임이 덮은 엔진 규칙)
-                        const bool bMatches = std::any_of( rule._listPattern.begin(), rule._listPattern.end(), [&assetID]( const string& pattern )
-                        { return StringUtil::matchesPathPattern( pattern, assetID ); } );
-                        if ( bMatches )
+                        const auto matches = [&assetID]( const string& pattern )
+                        { return StringUtil::matchesPathPattern( pattern, assetID ); };
+                        if ( std::any_of( rule._listPattern.begin(), rule._listPattern.end(), matches ) &&
+                             std::none_of( rule._listExcludePattern.begin(), rule._listExcludePattern.end(), matches ) )
                             return true;
                     }
                     return false;

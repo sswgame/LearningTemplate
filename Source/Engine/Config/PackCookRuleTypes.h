@@ -66,6 +66,9 @@ namespace sw
         PROPERTY( Required )
         bool _bAutomationOnly{ SW_FALSE }; ///< 참이면 자동화 실행기가 있는 구성(개발 구성 클라이언트)만 담는다 — 시나리오는 실행기가 없으면 읽히지 않는다
 
+        PROPERTY()
+        vector<string> _listExcludePattern; ///< `_listPattern` 에 맞아도 뺄 리소스 id 패턴 — 쿠킹본을 읽는 구성에 없는 실행기의 것(에디터 시나리오는 에디터가 없는 쿠킹 구성에서 돌지 않고 에디터 원본을 가리킨다)
+
         PackRuleScope _scope{}; ///< 합친 뒤 이 규칙이 닿는 팩(설정 파일의 칸이 아니다 — `mergeGameRules` 가 채운다)
     };
 
