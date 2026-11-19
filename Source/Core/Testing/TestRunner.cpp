@@ -223,11 +223,14 @@ namespace sw::test
                        character == '.' || character == '*' || character == '?' || character == '/';
             }
 
-            /** @brief 케이스 동안 남은 로그를 봅니다. Warning · Error 는 선언한 id 면 세고, 아니면 실패로 적는다. */
+            /**
+             * @brief 케이스 동안 남은 로그를 봅니다. 선언한 id 는 수준과 상관없이 세고(설계가 정보 로그로 정한 사실도 기대할 수 있게),
+             *        선언하지 않은 Warning · Error 는 실패로 적는다.
+             */
             static void onLogWritten( const LogEntry& entry )
             {
                 const bool bProblem = entry._level == LogLevel::Warning || entry._level == LogLevel::Error;
-                if ( bProblem == false )
+                if ( bProblem == false && entry._pID == nullptr )
                     return;
                 CaseState& state = getState();
                 string     failure;
@@ -256,6 +259,8 @@ namespace sw::test
                             ++state._declaredErrorLineCount;
                         return;
                     }
+                    if ( bProblem == false )
+                        return;
                     failure = string( entry._file ) + "(" + to_string( entry._line ) + "): error: unexpected " + ( entry._level == LogLevel::Error ? "Error" : "Warning" ) +
                               " log" + ( entry._pID != nullptr ? string( " [id:" ) + entry._pID + "]" : string( " (no id - give it one to declare it with SW_EXPECT_LOG)" ) ) + ": " +
                               entry._message;

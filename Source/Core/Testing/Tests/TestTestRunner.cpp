@@ -48,6 +48,16 @@ SW_TEST_CASE( TestRunnerTest, DeclaredLogIsNotAFailure )
     SW_LOG_WARNING_ID( "Test.DeclaredWarning", "a warning this case declares on purpose" );
 }
 
+/**
+ * @brief [TestRunnerTest] 선언한 id 는 정보 로그여도 센다 — 설계가 정보 로그로 정한 사실(능력 밖 요청을 받지 않는 등)도 기대할 수 있다.
+ *        결함이면 선언한 정보 로그를 영원히 못 보아 "never appeared" 로 진다(2026-11-20 `DisplayOutputTest`)
+ */
+SW_TEST_CASE( TestRunnerTest, DeclaredInfoLogIsCounted )
+{
+    SW_EXPECT_LOG( "Test.DeclaredInfo" );
+    SW_LOG_INFO_ID( "Test.DeclaredInfo", "an info line this case declares on purpose" );
+}
+
 SW_TEST_CASE( TestRunnerTest, FilterMatchesTags )
 {
     SW_EXPECT_TRUE( TestRunner::matchesFilter( "[slow]", "A.b", "gpu slow" ) );
