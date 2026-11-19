@@ -1,6 +1,6 @@
 /**
  * @file PhysicsWatches.cpp
- * @brief 물리의 자동화 감시 값입니다 — `Physics.AwakeBodies`(씬의 깨어 있는 동적 바디 수) · `Object.Speed`(대상 오브젝트의 속력).
+ * @brief 물리의 자동화 감시 값입니다 — `Physics.AwakeBodies`(씬의 깨어 있는 동적 바디 수) · `Object.Speed`(대상 오브젝트의 속력) · `Physics.OverlapCount`(대상이 낀 겹침 쌍 수).
  * @details 시나리오가 "물리가 잠들 때까지" · "멈출 때까지" 를 조건으로 기다리게 한다 — 고정 프레임 대기(N 프레임이면 섰겠지)를 대신한다. 감시 값 레지스트리가 아래층이라
  *          물리가 자기 감시 값을 등록한다(애니메이션 `AnimationWatches` 와 같은 자리). 언리얼 자동화의 "wait for physics sleep" · 유니티 `Rigidbody.IsSleeping` 과 같은 판정이다.
  */
@@ -13,6 +13,7 @@
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 
 namespace sw
 {
@@ -63,10 +64,26 @@ namespace sw
                 outValue.setText( query.describeMissing( "rigid body or character controller" ) );
                 return false;
             }
+
+            /**
+             * @brief 질의 감시 값 `Physics.OverlapCount` 입니다. 대상 오브젝트가 낀 겹침(트리거 · 센서) 오브젝트 쌍 수입니다 — 트리거 계약의 진입 · 이탈과 같은 장부(`PhysicsOverlapTracker`).
+             * @details 트리거에 대면 안에 든 대상 수, 대상에 대면 들어 있는 트리거 수다(트리거 여부가 다른 쌍은 따로 센다). 시나리오가 "안에서 생기면 1, 지우면 0" 을 기다린다.
+             */
+            [[nodiscard]] static bool readOverlapCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject* pTarget = query.findTargetObject( outValue );
+                if ( pTarget == nullptr || pTarget->getManager() == nullptr )
+                    return false;
+                const ScenePhysics& physics = pTarget->getManager()->getSubsystem<ScenePhysics>();
+                outValue.setNumber( static_cast<float64>( physics.getOverlapTracker().getOverlapCount( pTarget->getObjectID() ) ) );
+                return true;
+            }
         };
     } // namespace
 
     SW_AUTOMATION_SCENE_WATCH( physicsAwakeBodies, "Physics.AwakeBodies", "Dynamic rigid bodies (3D and 2D) of the scene that are not asleep - 0 once everything has come to rest",
                                &PhysicsWatchesInternal::readAwakeBodies );
     SW_AUTOMATION_QUERY_WATCH( objectSpeed, "Object.Speed", "Speed of the target's rigid body or character controller (m/s)", &PhysicsWatchesInternal::readObjectSpeed, true, false );
+    SW_AUTOMATION_QUERY_WATCH( physicsOverlapCount, "Physics.OverlapCount", "Overlap (trigger or sensor) object pairs the target is in - inside a trigger counts 1, the trigger counts its occupants",
+                               &PhysicsWatchesInternal::readOverlapCount, true, false );
 } // namespace sw

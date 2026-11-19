@@ -92,6 +92,9 @@ namespace sw
         , _listDispatchEvent3D{}
         , _listDispatchEvent2D{}
         , _listDispatchSwept{}
+        , _overlapTracker{}
+        , _listOverlapTransition{}
+        , _listOverlapStay{}
         , _mapStayListener{}
         , _listDeliverTarget{}
         , _listStayTarget{}
@@ -139,6 +142,7 @@ namespace sw
         _listFrameEvent3D.clear();
         _listFrameEvent2D.clear();
         _listSweptOverlap2D.clear();
+        _overlapTracker.clear(); // 씬과 함께 모든 겹침이 사라진다 — 이탈 없이 잊는다(받을 오브젝트도 함께 내려간다)
         _listMovedCollider2D.clear();
         _listPoseWrite.clear();
         _listCharacterMove3D.clear();
@@ -738,8 +742,9 @@ namespace sw
 
     void ScenePhysics::dispatchEvents( GameObjectManager& manager )
     {
-        const bool bNoEvent = _listFrameEvent3D.empty() && _listFrameEvent2D.empty() && _listSweptOverlap2D.empty();
-        if ( bNoEvent )
+        const bool bNoEvent  = _listFrameEvent3D.empty() && _listFrameEvent2D.empty() && _listSweptOverlap2D.empty();
+        const bool bWantStay = _mapStayListener.empty() == false; // 겹침 유지는 이벤트가 없는 프레임에도 안에 있는 쌍마다 난다
+        if ( bNoEvent && bWantStay == false )
             return;
         // 처리가 바디를 만들거나 지워도(다음 프레임의 이벤트가 된다) 이 프레임의 목록은 그대로 돈다 — 베껴 둔다.
         // 멤버에 베껴 용량을 재사용한다(접촉이 있는 프레임마다 지난다). 이 함수는 `step` 끝에서만 불려 다시 들어오지 않는다.
@@ -758,26 +763,32 @@ namespace sw
                 PhysicsContactLogEntry{ _stepCount, objectA, objectB, point, normal, impulse, phase, static_cast<uint8>( bOverlap ? SW_TRUE : SW_FALSE ), static_cast<uint8>( bIs2D ? SW_TRUE : SW_FALSE ) };
             ++_contactLogCount;
         };
+        // 겹침은 바디 쌍으로 나누지 않는다 — 추적기가 오브젝트 쌍으로 세어 아래에서 한 번에 낸다(트리거 계약: 몸이 여럿이어도 한 번, 이탈 먼저).
+        const auto recordOverlap = [this]( uint64 objectA, uint64 objectB, PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bTriggerA, bool bTriggerB, bool bIs2D,
+                                           float32 hitFraction, PhysicsContactPhase phase )
+        { _overlapTracker.record( PhysicsOverlapEvent{ objectA, objectB, bodyA, bodyB, hitFraction, phase, bTriggerA, bTriggerB, bIs2D } ); };
         for ( const PhysicsContactEvent3D& event : listEvent3D )
         {
             recordLog( event._userDataA, event._userDataB, event._point, event._normal, event._impulse, event._phase, event.isOverlap(), false );
             const bool bTriggerA = event._bTriggerA == SW_TRUE;
             const bool bTriggerB = event._bTriggerB == SW_TRUE;
+            if ( event.isOverlap() )
+            {
+                recordOverlap( event._userDataA, event._userDataB, event._bodyA, event._bodyB, bTriggerA, bTriggerB, false, 1.0f, event._phase );
+                continue;
+            }
             deliverEvent( manager, event._userDataA, event._userDataB, event._bodyA, event._bodyB, event._point, event._normal, event._impulse, event._phase,
-                          bTriggerA, bTriggerB, event.isOverlap(), false, 1.0f );
+                          bTriggerA, bTriggerB, false, false, 1.0f );
             deliverEvent( manager, event._userDataB, event._userDataA, event._bodyB, event._bodyA, event._point, -event._normal, event._impulse, event._phase,
-                          bTriggerB, bTriggerA, event.isOverlap(), false, 1.0f );
+                          bTriggerB, bTriggerA, false, false, 1.0f );
         }
-        // 쓸고 지나간 겹침이 먼저다 — 이번 프레임 길 위에서 닿았으므로 지금 자리의 겹침(센서 시작)보다 이르다. 지나쳤으므로 시작과 끝을 함께 낸다.
-        // 이 목록은 콜라이더 쪽에서만 낸다(상대는 쓸리지 않았다) — 양쪽에 나눠 준다.
+        // 쓸고 지나간 겹침이 먼저다 — 이번 프레임 길 위에서 닿았으므로 지금 자리의 겹침(센서 시작)보다 이르다. 지나쳤으므로 시작과 끝을 함께 센다
+        // (그 사이 센서가 같은 쌍의 시작을 내면 쌍은 안에 남아 진입만 난다).
         for ( const SweptOverlap2D& swept : listSwept )
         {
             for ( const PhysicsContactPhase phase : { PhysicsContactPhase::Begin, PhysicsContactPhase::End } )
             {
-                deliverEvent( manager, swept._selfUserData, swept._otherUserData, swept._selfBody, swept._otherBody, float3{}, float3{}, 0.0f, phase,
-                              swept._bSelfTrigger, swept._bOtherTrigger, true, true, swept._hitFraction );
-                deliverEvent( manager, swept._otherUserData, swept._selfUserData, swept._otherBody, swept._selfBody, float3{}, float3{}, 0.0f, phase,
-                              swept._bOtherTrigger, swept._bSelfTrigger, true, true, swept._hitFraction );
+                recordOverlap( swept._selfUserData, swept._otherUserData, swept._selfBody, swept._otherBody, swept._bSelfTrigger, swept._bOtherTrigger, true, swept._hitFraction, phase );
             }
         }
         for ( const PhysicsContactEvent2D& event : listEvent2D )
@@ -787,10 +798,35 @@ namespace sw
             recordLog( event._userDataA, event._userDataB, point, normal, event._impulse, event._phase, event.isOverlap(), true );
             const bool bTriggerA = event._bTriggerA == SW_TRUE;
             const bool bTriggerB = event._bTriggerB == SW_TRUE;
-            deliverEvent( manager, event._userDataA, event._userDataB, event._bodyA, event._bodyB, point, normal, event._impulse, event._phase, bTriggerA, bTriggerB,
-                          event.isOverlap(), true, 1.0f );
-            deliverEvent( manager, event._userDataB, event._userDataA, event._bodyB, event._bodyA, point, -normal, event._impulse, event._phase, bTriggerB, bTriggerA,
-                          event.isOverlap(), true, 1.0f );
+            if ( event.isOverlap() )
+            {
+                recordOverlap( event._userDataA, event._userDataB, event._bodyA, event._bodyB, bTriggerA, bTriggerB, true, 1.0f, event._phase );
+                continue;
+            }
+            deliverEvent( manager, event._userDataA, event._userDataB, event._bodyA, event._bodyB, point, normal, event._impulse, event._phase, bTriggerA, bTriggerB, false,
+                          true, 1.0f );
+            deliverEvent( manager, event._userDataB, event._userDataA, event._bodyB, event._bodyA, point, -normal, event._impulse, event._phase, bTriggerB, bTriggerA, false,
+                          true, 1.0f );
+        }
+
+        // 겹침 진입 · 이탈(이탈 먼저) → 유지. 처리가 오브젝트를 지우거나 만들어도 결과 목록은 멤버 사본이라 흔들리지 않는다(새 겹침은 다음 프레임 알림이 된다).
+        _overlapTracker.finishFrame( _listOverlapTransition, _listOverlapStay, bWantStay );
+        const auto deliverOverlap = [this, &manager]( const PhysicsOverlapEvent& event )
+        {
+            const float3 zero{};
+            deliverEvent( manager, event._objectA, event._objectB, event._bodyA, event._bodyB, zero, zero, 0.0f, event._phase, event._bTriggerA, event._bTriggerB, true,
+                          event._bIs2D, event._hitFraction );
+            if ( event._objectA != event._objectB ) // 자기 몸과 자기 트리거의 겹침은 한 번만 받는다
+                deliverEvent( manager, event._objectB, event._objectA, event._bodyB, event._bodyA, zero, zero, 0.0f, event._phase, event._bTriggerB, event._bTriggerA,
+                              true, event._bIs2D, event._hitFraction );
+        };
+        for ( const PhysicsOverlapEvent& event : _listOverlapTransition )
+        {
+            deliverOverlap( event );
+        }
+        for ( const PhysicsOverlapEvent& event : _listOverlapStay )
+        {
+            deliverOverlap( event );
         }
     }
 

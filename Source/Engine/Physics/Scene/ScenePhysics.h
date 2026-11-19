@@ -11,7 +11,7 @@
  *          자세를 읽는다(`getMovedBodies` · `bindBodyOwner` — 백엔드 일괄 읽기 `readBodyStates` 를 워커 구간으로 나눠 부른다) → `postPhysicsStep`,
  *          이벤트를 모은다) → `endPhysicsFrame( alpha )`(보간한 자세 — 루트 바디는 `queuePoseWrite` 로 모아 `applyTransformBatch` 한 번에 쓴다).
  *          모은 이벤트는 이 단계에서 나눠 주지 않는다 — `FlushPostPhysics` 단계의 `ScenePhysicsEvents` 가 트랜스폼을 펼친 뒤 두 오브젝트의 켜진 컴포넌트에
- *          나눠 준다(막는 접촉은 `onCollision*`, 트리거나 겹침 전용 바디가 낀 겹침은 `onOverlap*` — `PhysicsContactEvent::isOverlap`; 언리얼 Chaos 의
+ *          나눠 준다(막는 접촉은 바디 쌍마다 `onCollision*`, 트리거나 겹침 전용 바디가 낀 겹침은 `PhysicsOverlapTracker` 가 오브젝트 쌍으로 모은 진입 · 이탈만 `onOverlap*` — 이탈 먼저; 언리얼 Chaos 의
  *          지연 충돌 알림 `DispatchPendingCollisionNotifies` · 유니티 `OnCollision*` 이 시뮬레이션 뒤 한 자리에서 도는 것과 같다). 이벤트의 사용자 값은 오브젝트 id 입니다 — 컴포넌트가 아닌 코드(래그돌 빌더)가
  *          만든 바디도 사용자 값에 오브젝트 id 를 실으면 그 오브젝트가 이벤트를 받습니다.
  */
@@ -29,6 +29,7 @@
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/DebrisBudget.h"
 #include "Engine/Physics/Scene/PhysicsHookRegistry.h"
+#include "Engine/Physics/Scene/PhysicsOverlapTracker.h"
 
 namespace sw
 {
@@ -179,6 +180,8 @@ namespace sw
         const vector<PhysicsContactEvent3D>& getFrameEvents3D() const { return _listFrameEvent3D; }
         /** @brief 마지막 프레임이 낸 2D 접촉 이벤트입니다. */
         const vector<PhysicsContactEvent2D>& getFrameEvents2D() const { return _listFrameEvent2D; }
+        /** @brief 겹침 추적기입니다 — 오브젝트 쌍의 진입 · 이탈 계약(`PhysicsOverlapTracker`). 감시 값 · 테스트가 읽는다. */
+        const PhysicsOverlapTracker& getOverlapTracker() const { return _overlapTracker; }
         /** @brief 접촉 기록의 칸 수입니다(고정 용량). */
         static constexpr uint32 kContactLogCapacity = 32;
         /**
@@ -356,6 +359,9 @@ namespace sw
         vector<PhysicsContactEvent3D>                                     _listDispatchEvent3D;                ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
         vector<PhysicsContactEvent2D>                                     _listDispatchEvent2D;                ///< 위와 같다
         vector<SweptOverlap2D>                                            _listDispatchSwept;                  ///< 위와 같다
+        PhysicsOverlapTracker                                             _overlapTracker;                     ///< 바디 쌍 겹침 → 오브젝트 쌍 진입 · 이탈 · 유지(겹침을 나누는 유일한 길)
+        vector<PhysicsOverlapEvent>                                       _listOverlapTransition;              ///< 이번 프레임 진입 · 이탈(`dispatchEvents` 재사용)
+        vector<PhysicsOverlapEvent>                                       _listOverlapStay;                    ///< 이번 프레임 겹침 유지(올린 듣는 쪽이 있을 때만, 재사용)
         unordered_map<uint64, vector<ContactStayListenerEntry>>           _mapStayListener;                    ///< 오브젝트 id → 유지 듣는 쪽(`registerContactStayListener`)
         vector<Component*>                                                _listDeliverTarget;                  ///< `deliverEvent` 가 도는 컴포넌트 사본(재사용 — 처리가 붙이고 뗀다)
         vector<ContactStayListenerEntry>                                  _listStayTarget;                     ///< 유지를 나눠 주는 동안의 듣는 쪽 사본(재사용)
