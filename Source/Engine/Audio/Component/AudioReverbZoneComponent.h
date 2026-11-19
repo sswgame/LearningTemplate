@@ -51,9 +51,9 @@ namespace sw
     private:
         PROPERTY( Category = "Reverb", DisplayName = "Snapshot", Tooltip = "Mix snapshot applied inside (Cave, Hall, Underwater ...)" )
         hashed_string _snapshot;
-        PROPERTY( Category = "Reverb", DisplayName = "Half Extents", Tooltip = "Box half size", Units = m )
+        PROPERTY( Category = "Reverb", DisplayName = "Half Extents", Tooltip = "Box half size", Units = m, EditCondition = "_shape == Box", Meta = "Shape=Box, ShapeAxes=World" )
         float3 _halfExtents;
-        PROPERTY( Category = "Reverb", DisplayName = "Radius", Min = 0.0, Tooltip = "Sphere radius", Units = m )
+        PROPERTY( Category = "Reverb", DisplayName = "Radius", Min = 0.0, Tooltip = "Sphere radius", Units = m, EditCondition = "_shape == Sphere", Meta = "Shape=Sphere, ShapeAxes=World" )
         float32 _radius;
         PROPERTY( Category = "Reverb", DisplayName = "Fade Distance", Min = 0.0, Tooltip = "Blend from 0 at the boundary to 1 this far inside", Units = m )
         float32 _fadeDistance;
