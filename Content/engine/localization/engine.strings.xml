@@ -2618,6 +2618,31 @@
 				<item>engine/settings/engine.settings.xml</item>
 			</origins>
 		</entry>
+		<entry key="settings.display.hdr" source="HDR" context="Options menu label" maxLength="32">
+			<origins>
+				<item>engine/settings/engine.settings.xml</item>
+			</origins>
+		</entry>
+		<entry key="settings.display.hdr.hdr10" source="HDR10" context="Options menu label" maxLength="32">
+			<origins>
+				<item>engine/settings/engine.settings.xml</item>
+			</origins>
+		</entry>
+		<entry key="settings.display.hdr.scrgb" source="scRGB" context="Options menu label" maxLength="32">
+			<origins>
+				<item>engine/settings/engine.settings.xml</item>
+			</origins>
+		</entry>
+		<entry key="settings.display.hdrMaxLuminance" source="HDR Peak Brightness" context="Options menu label" maxLength="32">
+			<origins>
+				<item>engine/settings/engine.settings.xml</item>
+			</origins>
+		</entry>
+		<entry key="settings.display.hdrPaperWhite" source="HDR Paper White" context="Options menu label" maxLength="32">
+			<origins>
+				<item>engine/settings/engine.settings.xml</item>
+			</origins>
+		</entry>
 		<entry key="settings.display.resolution" source="Resolution" context="Options menu label" maxLength="32">
 			<origins>
 				<item>engine/settings/engine.settings.xml</item>
