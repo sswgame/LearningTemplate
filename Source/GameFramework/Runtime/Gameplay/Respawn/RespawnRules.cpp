@@ -5,6 +5,7 @@
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
@@ -15,6 +16,9 @@ namespace sw
     {
         struct RespawnRulesInternal
         {
+            /** @brief `<Respawn>` 이 받는 자식 원소입니다 — 틀린 이름(`<Polcy>`)이 말없이 빠져 정책 하나가 사라지지 않게 한다. */
+            static constexpr const utf8* kArrChildName[] = { "Policy" };
+
             static void appendError( string& inoutText, string_view error )
             {
                 if ( inoutText.empty() == false )
@@ -68,6 +72,7 @@ namespace sw
     {
         RespawnRules rules;
         bool         bValid = XMLFields::readProperties( node, rules, sourceName );
+        bValid              = XMLNameCheck::reportUnknownChildren( node, RespawnRulesInternal::kArrChildName, sourceName ) && bValid;
         bValid              = GameDataXML::readChildrenInto( node, "Policy", sourceName, rules._listPolicy ) && bValid;
         if ( bValid == false )
             return false;

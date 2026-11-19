@@ -165,11 +165,12 @@ SW_TEST_CASE( RespawnRulesTest, ReadsAttributesAndPolicies )
 }
 
 /**
- * @brief [RespawnRulesTest] 정책 없음 · 같은 정책 두 번 · 통화 없는 비용 · 모두 요청 전용 · 범위 밖 값은 읽기와 흐름 시작을 거절한다(대신 정한 정책으로 돌지 않는다)
+ * @brief [RespawnRulesTest] 정책 없음 · 모르는 자식 원소 · 같은 정책 두 번 · 통화 없는 비용 · 모두 요청 전용 · 범위 밖 값은 읽기와 흐름 시작을 거절한다(대신 정한 정책으로 돌지 않는다)
  */
 SW_TEST_CASE( RespawnRulesTest, InvalidRulesAreRejected )
 {
     SW_EXPECT_LOG( "RespawnRules.Invalid" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "RespawnFlow.RefusedRules" );
     SW_EXPECT_LOG( "RespawnFlow.RefusedRules" );
     SW_EXPECT_LOG( "RespawnFlow.RefusedRules" );
@@ -180,6 +181,10 @@ SW_TEST_CASE( RespawnRulesTest, InvalidRulesAreRejected )
     SW_REQUIRE_TRUE( document.parse( R"(<Respawn delay="1"/>)" ) );
     sw::RespawnRules fromXML;
     SW_EXPECT_FALSE( sw::RespawnRules::readXML( document.getRoot(), "noPolicy", fromXML ) );
+    // 틀린 자식 이름은 말없이 빠지지 않는다(정책 하나가 사라진 채 읽히지 않는다).
+    sw::XMLDocument typo;
+    SW_REQUIRE_TRUE( typo.parse( R"(<Respawn><Polcy kind="InPlace"/><Policy kind="LastCheckpoint"/></Respawn>)" ) );
+    SW_EXPECT_FALSE( sw::RespawnRules::readXML( typo.getRoot(), "typo", fromXML ) );
 
     sw::RespawnFlow  flow;
     sw::RespawnRules empty;

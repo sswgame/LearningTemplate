@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="21fb73da8f7ef2799860863c50eee37b"?>
 <!--
-  장르 키트 시연 — 액션 플랫포머 스테이지 하나(maps/kitdemo_actionplatformer). 체크포인트 · 비밀의 자리는 씬이 이 id 순서대로 놓는다.
+  장르 키트 시연 — 액션 플랫포머 스테이지(maps/kitdemo_actionplatformer · maps/kitdemo_respawn). 체크포인트 · 비밀의 자리는 씬이 이 id 순서대로 놓는다.
   기준 시간 30 초 안에 깨고 맞지 않고 비밀을 주우면 100 점(S).
 -->
 <ActionPlatformer>
@@ -12,5 +12,19 @@
 		<Grade id="A" min="70"/>
 		<Grade id="B" min="0"/>
 	</Grading>
-	<Stage id="demo-1" name="Demo Run" parTime="30" lives="3" hitTolerance="5" checkpoints="cp1" secrets="gem1"/>
+	<!-- 떨어지면 지난 체크포인트, 없으면 시작 지점에서 바로 선다(공통 부활 흐름 RespawnFlow) -->
+	<Stage id="demo-1" name="Demo Run" parTime="30" lives="3" hitTolerance="5" checkpoints="cp1" secrets="gem1">
+		<Respawn>
+			<Policy kind="LastCheckpoint"/>
+			<Policy kind="NearestSpawnPoint"/>
+		</Respawn>
+	</Stage>
+	<!-- 부활 시연(maps/kitdemo_respawn): 0.5 초 뒤 제자리(두 번까지 — 낭떠러지면 5 m 안 가장 가까운 설 자리), 그다음은 지난 체크포인트, 없으면 시작 지점 -->
+	<Stage id="respawn-1" name="Respawn Run" parTime="60" lives="9" hitTolerance="9" checkpoints="rcp1">
+		<Respawn delay="0.5">
+			<Policy kind="InPlace" maxUses="2" safeRadius="5"/>
+			<Policy kind="LastCheckpoint"/>
+			<Policy kind="NearestSpawnPoint"/>
+		</Respawn>
+	</Stage>
 </ActionPlatformer>
