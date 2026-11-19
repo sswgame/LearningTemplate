@@ -1,14 +1,14 @@
 {
     "backend": "dx12",
     "platform": "windows",
-    "commit": "9317dfcd7772b506903850f2510c0cb2a4ac3932-dirty",
-    "recordedUnixMs": 1795004694234,
+    "commit": "d8b8b769666984178579d018d300b2f402eb8878-dirty",
+    "recordedUnixMs": 1795081143336,
     "reason": "failed",
     "width": 160,
     "height": 90,
     "previousDifference": {
-        "differingFraction": 0.06416666666666666,
-        "meanDistance": 0.005209876543209877,
+        "differingFraction": 0.010347222222222223,
+        "meanDistance": 0.0009462599854756717,
         "largestDeepRegionPixels": 0
     },
     "limits": {
