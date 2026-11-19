@@ -7,7 +7,7 @@
  *            공통 범주(`OnlineError`)는 로그인 없음, 범위 밖 요청, 일시 장애, 버전이다.
  *          - 메시지 형식(`ChatMessage`) 하나를 알림, 서버 간 버스, 기록 레코드가 함께 쓴다. 알림은 B 이고,
  *            버스(배포 중 빌드가 섞인다)와 기록 레코드(저장소에 남아 다른 빌드가 읽는다)는 자기 기술형(A, `BinarySerializer`)이다.
- *            버스의 의미 버전은 `ChatMessage::kBusVersion`, 기록 레코드의 버전은 `kChatRecordVersion` 으로 따로다(버스는 이관을 보지 않는다).
+ *            버스의 의미 버전은 `ChatMessage::kBusVersion`, 기록 레코드의 판은 `ChatMessage` 타입의 `REFLECT( Version )`(`ServiceRecordUtil::getVersion`)으로 따로다(버스는 이관을 보지 않는다).
  */
 #pragma once
 #include "Core/Container/string.h"

@@ -7,22 +7,14 @@
 
 namespace sw
 {
-    namespace
-    {
-        constexpr uint32 kChatRecordVersion = 1; ///< 기록 레코드(A)의 버전이다. 필드를 빼거나 뜻을 바꿀 때 올리고 데이터를 다시 쓴다
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     bool ChatProtocol::encodeRecord( const ChatMessage& message, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kChatRecordVersion, message, outBytes );
+        return ServiceRecordUtil::encode( message, outBytes );
     }
 
     bool ChatProtocol::decodeRecord( const string_view key, const vector<uint8>& bytes, ChatMessage& outMessage )
     {
-        return ServiceRecordUtil::readDurable( key, bytes, kChatRecordVersion, outMessage );
+        return ServiceRecordUtil::readDurable( key, bytes, outMessage );
     }
 
     string ChatProtocol::makeChannelTopic( string_view channelID )

@@ -95,13 +95,12 @@ namespace sw
     /** @brief 신고의 상한 값들입니다. `PROPERTY( MaxCount )` 가 이 이름을 씁니다. */
     struct ServiceReportConstant
     {
-        static constexpr int32  kMaxLineCount     = 20;
-        static constexpr int32  kMaxLineTextSize  = 512; ///< 문맥 줄의 글. 채팅 메시지(`ChatLimit::kMaxTextSize`)의 상한과 같다
-        static constexpr int32  kMaxCategorySize  = 32;
-        static constexpr int32  kMaxContextSize   = 48;
-        static constexpr int32  kMaxReasonSize    = 64;
-        static constexpr int32  kMaxMemoSize      = 1024;
-        static constexpr int32  kMaxReportKeySize = 96;
-        static constexpr uint32 kRecordVersion    = 1;
+        static constexpr int32 kMaxLineCount     = 20;
+        static constexpr int32 kMaxLineTextSize  = 512; ///< 문맥 줄의 글. 채팅 메시지(`ChatLimit::kMaxTextSize`)의 상한과 같다
+        static constexpr int32 kMaxCategorySize  = 32;
+        static constexpr int32 kMaxContextSize   = 48;
+        static constexpr int32 kMaxReasonSize    = 64;
+        static constexpr int32 kMaxMemoSize      = 1024;
+        static constexpr int32 kMaxReportKeySize = 96;
     };
 } // namespace sw

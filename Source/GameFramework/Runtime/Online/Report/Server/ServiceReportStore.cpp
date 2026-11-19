@@ -108,7 +108,7 @@ namespace sw
         inoutReport._resolvedMs     = 0;
         inoutReport._resolutionMemo = string{};
         vector<uint8> bytes;
-        if ( ServiceRecordUtil::encode( ServiceReportConstant::kRecordVersion, inoutReport, bytes ) == false )
+        if ( ServiceRecordUtil::encode( inoutReport, bytes ) == false )
             return false;
         inoutTransaction.put( getTable(), inoutReport._reportKey, std::move( bytes ), ServiceRecord::kAbsentVersion );
         return true;
@@ -126,7 +126,7 @@ namespace sw
         for ( const ServiceRecord& record : listRecord )
         {
             ServiceReport& report = outListReport.emplace_back();
-            if ( ServiceRecordUtil::readDurable( record._key, record._bytes, ServiceReportConstant::kRecordVersion, report ) == false )
+            if ( ServiceRecordUtil::readDurable( record._key, record._bytes, report ) == false )
                 return ServiceStoreResult::Invalid;
         }
         if ( listRecord.empty() == false && static_cast<int32>( listRecord.size() ) == maxCount )
@@ -146,7 +146,7 @@ namespace sw
         if ( readResult != ServiceStoreResult::Ok )
             return readResult;
         ServiceReport report;
-        if ( ServiceRecordUtil::readDurable( reportKey, record._bytes, ServiceReportConstant::kRecordVersion, report ) == false )
+        if ( ServiceRecordUtil::readDurable( reportKey, record._bytes, report ) == false )
             return ServiceStoreResult::Invalid;
         report._reportKey      = closedKey;
         report._status         = status;
@@ -154,7 +154,7 @@ namespace sw
         report._resolvedMs     = nowMs;
         report._resolutionMemo = string( memo );
         vector<uint8> bytes;
-        if ( ServiceRecordUtil::encode( ServiceReportConstant::kRecordVersion, report, bytes ) == false )
+        if ( ServiceRecordUtil::encode( report, bytes ) == false )
             return ServiceStoreResult::Invalid;
         inoutTransaction.erase( getTable(), reportKey, record._version ); // 그사이 다른 GM 이 처리했으면 Conflict
         ServiceRecord closedRecord;
