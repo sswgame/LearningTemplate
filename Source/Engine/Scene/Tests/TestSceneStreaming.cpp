@@ -18,6 +18,7 @@
 #include "Engine/Object/Component/Tests/StateHashTestComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/Service/NetObjectTable.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
@@ -418,13 +419,20 @@ SW_TEST_CASE( SceneStreamingTest, RuntimeSpawnJoinsTheCellOfItsPosition )
     pSpawnedRoot->setLocalPosition( float3{ 15.0f, 0.0f, 5.0f } );
     pResidentRoot->setLocalPosition( float3{ 15.0f, 0.0f, 5.0f } );
     pResident->setAlwaysLoaded( true );
+    GameObject* pReplicated = objects.createGameObject( hashed_string( "Replicated" ) );
+    SW_REQUIRE_NOT_NULL( pReplicated );
+    SceneComponent* pReplicatedRoot = pReplicated->addComponent<SceneComponent>();
+    SW_REQUIRE_NOT_NULL( pReplicatedRoot );
+    pReplicatedRoot->setLocalPosition( float3{ 15.0f, 0.0f, 5.0f } );
     objects.mergePendingAdds();
-    SW_EXPECT_FALSE( streaming.isCellObject( pSpawned->getObjectID() ) ); // 반경 안에서는 셀 밖이다
+    SW_REQUIRE_TRUE( objects.getSubsystem<NetObjectTable>().registerSpawned( *pReplicated ) != 0 ); // 서버가 복제하는 스폰
+    SW_EXPECT_FALSE( streaming.isCellObject( pSpawned->getObjectID() ) );                           // 반경 안에서는 셀 밖이다
 
     Util::setSource( streaming, float3{ 500.0f, 0.0f, 500.0f } );
     streaming.update( 0.0f );
-    SW_EXPECT_EQUAL( 0u, Util::countNamed( objects, "Spawned" ) );  // (1,0) 에 들어 함께 내렸다
-    SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Resident" ) ); // 늘 올라 있음 표시는 셀에 들지 않는다
+    SW_EXPECT_EQUAL( 0u, Util::countNamed( objects, "Spawned" ) );    // (1,0) 에 들어 함께 내렸다
+    SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Resident" ) );   // 늘 올라 있음 표시는 셀에 들지 않는다
+    SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Replicated" ) ); // 복제 스폰은 셀에 들지 않는다 — 번호가 클라이언트와 이어져 있다
 
     Util::setSource( streaming, float3{ 15.0f, 0.0f, 5.0f } );
     streaming.update( 0.0f );

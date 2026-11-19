@@ -14,6 +14,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/Service/NetObjectTable.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -475,8 +476,11 @@ namespace sw
             StreamingCellCoord _cell{};
         };
         // 순회 안에서는 오브젝트를 지울 수 없다 — 바꿀 것을 모은 뒤 옮긴다.
+        // 원점이 하나도 없으면(관찰자 없는 서버) 스폰을 셀에 넣지 않는다 — "반경 밖" 이 월드 전체가 되어 모든 스폰이 내려간다. 원점이 덮지 않는 셀에서만 내린다.
+        const bool            bStreamSpawns = getActiveSources().empty() == false;
+        const NetObjectTable& netObjects    = _pScene->getObjectManager()->getSubsystem<NetObjectTable>();
         vector<MoveCandidate> listMove;
-        _pScene->getObjectManager()->forEachGameObject( SceneIterationKey{}, [this, &listMove]( const GameObject* pObject )
+        _pScene->getObjectManager()->forEachGameObject( SceneIterationKey{}, [this, &listMove, bStreamSpawns, &netObjects]( const GameObject* pObject )
         {
             if ( pObject->getParent() != nullptr || pObject->isTransient() || pObject->isPendingDestroy() )
                 return; // 자식은 루트와 함께 간다 · 파생 오브젝트는 세운 쪽이 다시 세운다
@@ -491,9 +495,12 @@ namespace sw
                     listMove.push_back( MoveCandidate{ objectID, ownerIt->second, cell } );
                 return;
             }
-            // 셀에 들지 않은 루트 — 늘 올라 있는 것 · 레이어 묶음은 그대로, 런타임 스폰은 반경 밖이면 그 자리 셀에 든다.
-            const bool bResident = pObject->isAlwaysLoaded() || _pScene->findEntityDataLayers( objectID ) != nullptr;
-            if ( bResident == false && isWithinUnloadRadius( cell ) == false )
+            // 셀에 들지 않은 루트 — 늘 올라 있는 것 · 레이어 묶음 · 네트워크로 복제하는 스폰(생성 번호, `NetObjectTable::registerSpawned`)은 그대로,
+            // 그 밖의 런타임 스폰은 반경 밖이면 그 자리 셀에 든다. 복제 스폰은 서버가 매긴 번호 · 엔티티 id 가 클라이언트와 이어져 있어 셀과 함께 지우면 복제가 끊긴다 —
+            // 보일지 말지는 복제기의 관심 영역(관찰자 반경)이 정한다(언리얼도 복제 액터의 존재는 서버가, 클라이언트 관련성은 Replication Graph 가 정한다).
+            const bool bReplicated = ( netObjects.findID( *pObject ) & NetObjectTable::kSpawnedBit ) != 0;
+            const bool bResident   = pObject->isAlwaysLoaded() || _pScene->findEntityDataLayers( objectID ) != nullptr || bReplicated;
+            if ( bStreamSpawns && bResident == false && isWithinUnloadRadius( cell ) == false )
                 listMove.push_back( MoveCandidate{ objectID, kNoSlot, cell } );
         } );
         for ( const MoveCandidate& candidate : listMove )
