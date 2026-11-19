@@ -37,16 +37,8 @@ namespace sw
             /** @brief @p parent 아래의 `<Weapon>` 을 모두 읽습니다. 하나라도 오류면 false 이고, 오류인 무기는 넣지 않습니다. */
             [[nodiscard]] static bool readWeapons( const XMLNode& parent, string_view sourceName, MechModeDef& outMode )
             {
-                bool bValid = true;
-                for ( XMLNode node = parent.findChild( "Weapon" ); node; node = node.findNextSibling( "Weapon" ) )
-                {
-                    MechWeaponSlotDef slot;
-                    if ( readWeapon( node, sourceName, slot ) )
-                        outMode._listWeapon.push_back( slot );
-                    else
-                        bValid = false;
-                }
-                return bValid;
+                return GameDataXML::readChildrenInto( parent, "Weapon", outMode._listWeapon, [&]( const XMLNode& node, MechWeaponSlotDef& outSlot )
+                { return readWeapon( node, sourceName, outSlot ); } );
             }
 
             /** @brief `<Mode>` 없이 무기를 바로 단 기체의 형태 "default" 를 읽습니다. 속도는 `<Mech speed>` 이고 적지 않으면 형태의 초기값입니다. */
@@ -157,9 +149,8 @@ namespace sw
     {
         using Internal = MechCatalogInternal;
         MechDef def;
-        bool    bValid   = XMLFields::readProperties( node, def, sourceName, { "speed" } );
-        XMLNode modeNode = node.findChild( "Mode" );
-        if ( modeNode )
+        bool    bValid = XMLFields::readProperties( node, def, sourceName, { "speed" } );
+        if ( node.findChild( "Mode" ) )
         {
             if ( node.findAttribute( "speed" ) != nullptr )
             {
@@ -171,15 +162,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "MechCatalog.MechWeaponOutsideMode", "%#: <Mech id=\"%#\"> has a <Weapon> outside its <Mode> - it would be dropped", sourceName, def._id.c_str() );
                 bValid = false;
             }
-            for ( ; modeNode; modeNode = modeNode.findNextSibling( "Mode" ) )
+            bValid = GameDataXML::readChildrenInto( node, "Mode", def._listMode, [&]( const XMLNode& modeNode, MechModeDef& outMode )
             {
-                MechModeDef mode;
-                const bool  bModeProperties = XMLFields::readProperties( modeNode, mode, sourceName );
-                if ( Internal::readWeapons( modeNode, sourceName, mode ) && bModeProperties )
-                    def._listMode.push_back( mode );
-                else
-                    bValid = false;
-            }
+                const bool bModeProperties = XMLFields::readProperties( modeNode, outMode, sourceName );
+                return Internal::readWeapons( modeNode, sourceName, outMode ) && bModeProperties;
+            } ) && bValid;
         }
         else
         {

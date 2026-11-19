@@ -14,6 +14,7 @@
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
@@ -125,14 +126,10 @@ namespace sw
         const XMLNode statNode = node.findChild( "Stats" );
         if ( statNode )
             def._stats.addAttributes( statNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
-        for ( XMLNode requiresNode = node.findChild( "Requires" ); requiresNode; requiresNode = requiresNode.findNextSibling( "Requires" ) )
+        bValid = GameDataXML::readChildrenInto( node, "Requires", def._listEquipCondition, [&]( const XMLNode& requiresNode, EquipmentCondition& outCondition )
         {
-            EquipmentCondition condition;
-            if ( ItemCatalogInternal::readRequires( requiresNode, condition, sourceName, pID ) )
-                def._listEquipCondition.push_back( condition );
-            else
-                bValid = false;
-        }
+            return ItemCatalogInternal::readRequires( requiresNode, outCondition, sourceName, pID );
+        } ) && bValid;
         if ( bValid == false )
         {
             SW_LOG_ERROR_ID( "ItemCatalog.ItemInvalidFieldsSkipped", "%#: item '%#' has invalid fields - skipped", sourceName, pID );

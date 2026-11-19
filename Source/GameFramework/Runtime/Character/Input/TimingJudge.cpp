@@ -9,6 +9,8 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+
 #include <algorithm>
 
 namespace sw
@@ -26,16 +28,14 @@ namespace sw
     {
         // 적지 않은 칸은 TimingWindow 의 초기값이다. `width` 는 앞뒤 폭을 함께 정하고, `early` · `late` 가 각자 덮는다.
         // 깨진 값 · 음수 폭은 오류이고 창 표를 바꾸지 않는다(자르지 않는다).
-        bool                 bValid = true;
-        vector<TimingWindow> listWindow;
-        for ( XMLNode child = node.findChild( "Window" ); child; child = child.findNextSibling( "Window" ) )
+        const auto readWindow = [&]( const XMLNode& child, TimingWindow& outWindow )
         {
-            TimingWindow window;
-            bValid            = XMLReadUtil::readOptionalNumber( child, "width", sourceName, 0.0f, MathUtil::kMaxFloat, window._earlyWidth ) && bValid;
-            window._lateWidth = window._earlyWidth;
-            bValid            = XMLFields::readProperties( child, window, sourceName, { "width" }, pfnHandRead ) && bValid;
-            listWindow.push_back( window );
-        }
+            const bool bWidth    = XMLReadUtil::readOptionalNumber( child, "width", sourceName, 0.0f, MathUtil::kMaxFloat, outWindow._earlyWidth );
+            outWindow._lateWidth = outWindow._earlyWidth;
+            return XMLFields::readProperties( child, outWindow, sourceName, { "width" }, pfnHandRead ) && bWidth;
+        };
+        vector<TimingWindow> listWindow;
+        const bool           bValid = GameDataXML::readChildrenInto( node, "Window", listWindow, readWindow );
         if ( bValid )
             setWindows( listWindow );
         return bValid;

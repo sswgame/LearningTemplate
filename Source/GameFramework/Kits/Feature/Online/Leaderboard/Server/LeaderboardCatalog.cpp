@@ -39,14 +39,7 @@ namespace sw
         {
             LeaderboardSeason season;
             bValid = XMLFields::readProperties( seasonNode, season, sourceName ) && bValid;
-            for ( XMLNode rewardNode = seasonNode.findChild( "Reward" ); rewardNode; rewardNode = rewardNode.findNextSibling( "Reward" ) )
-            {
-                LeaderboardRewardTier tier;
-                if ( XMLFields::readProperties( rewardNode, tier, sourceName ) )
-                    season._listRewardTier.push_back( std::move( tier ) );
-                else
-                    bValid = false;
-            }
+            bValid = GameDataXML::readChildrenInto( seasonNode, "Reward", sourceName, season._listRewardTier ) && bValid;
             outBoard._listSeason.push_back( std::move( season ) );
         }
         return bValid;

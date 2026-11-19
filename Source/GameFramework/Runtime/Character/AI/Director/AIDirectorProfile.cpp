@@ -135,22 +135,18 @@ namespace sw
         static constexpr const utf8* kArrIntensityChild[] = { "Signal" };
         bool                         bValid               = Internal::validateChildren( node, kArrIntensityChild, sourceName );
         bValid                                            = XMLFields::readProperties( node, _intensity, sourceName ) && bValid;
-        for ( XMLNode child = node.findChild( "Signal" ); child; child = child.findNextSibling( "Signal" ) )
+        const auto readSignal                             = [&]( const XMLNode& child, AIDirectorSignalDef& outSignal )
         {
-            AIDirectorSignalDef signal;
-            if ( XMLFields::readProperties( child, signal, sourceName ) == false ) // 종류는 ENUM() 이름(필수)
+            if ( XMLFields::readProperties( child, outSignal, sourceName ) == false ) // 종류는 ENUM() 이름(필수)
+                return false;
+            if ( findSignalIndex( outSignal._id ).has_value() )
             {
-                bValid = false;
-                continue;
+                SW_LOG_ERROR_ID( "AIDirectorProfile.SignalDeclaredTwice", "%#: signal '%#' is declared twice", sourceName, outSignal._id.c_str() );
+                return false;
             }
-            if ( findSignalIndex( signal._id ).has_value() )
-            {
-                SW_LOG_ERROR_ID( "AIDirectorProfile.SignalDeclaredTwice", "%#: signal '%#' is declared twice", sourceName, signal._id.c_str() );
-                bValid = false;
-                continue;
-            }
-            _intensity._listSignal.push_back( signal );
-        }
+            return true;
+        };
+        bValid = GameDataXML::readChildrenInto( node, "Signal", _intensity._listSignal, readSignal ) && bValid;
         return bValid;
     }
 
@@ -163,14 +159,7 @@ namespace sw
         if ( XMLFields::readProperties( node, phase, sourceName ) == false )
             return false;
         bValid = GameDataXML::readFloatCurve( node, "Curve", 0.0f, phase._spawnCurve, sourceName ) && bValid; // 키가 없으면 곡선이 대체값을 쓴다
-        for ( XMLNode child = node.findChild( "Exit" ); child; child = child.findNextSibling( "Exit" ) )
-        {
-            AIDirectorExitDef exit;
-            if ( XMLFields::readProperties( child, exit, sourceName ) )
-                phase._listExit.push_back( exit );
-            else
-                bValid = false;
-        }
+        bValid = GameDataXML::readChildrenInto( node, "Exit", sourceName, phase._listExit ) && bValid;
         if ( findPhaseIndex( phase._id ).has_value() )
         {
             SW_LOG_ERROR_ID( "AIDirectorProfile.PhaseDeclaredTwice", "%#: phase '%#' is declared twice", sourceName, phase._id.c_str() );

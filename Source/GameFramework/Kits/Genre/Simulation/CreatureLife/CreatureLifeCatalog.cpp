@@ -215,25 +215,21 @@ namespace sw
     bool CreatureLifeCatalog::loadAbility( const XMLNode& node, string_view sourceName )
     {
         CreatureAbilityDef ability;
-        bool               bValid = XMLFields::readProperties( node, ability, sourceName );
-        for ( XMLNode ruleNode = node.findChild( "Rule" ); ruleNode; ruleNode = ruleNode.findNextSibling( "Rule" ) )
+        bool               bValid   = XMLFields::readProperties( node, ability, sourceName );
+        const auto         readRule = [&]( const XMLNode& ruleNode, CreatureTileRule& outRule )
         {
-            CreatureTileRule rule;
-            if ( XMLFields::readProperties( ruleNode, rule, sourceName ) == false )
-            {
-                bValid = false;
-                continue;
-            }
-            rule._from = CreatureLifeCatalogInternal::parseObject( rule._from.view() );
-            rule._to   = CreatureLifeCatalogInternal::parseObject( rule._to.view() );
-            if ( rule._from == rule._to )
+            if ( XMLFields::readProperties( ruleNode, outRule, sourceName ) == false )
+                return false;
+            outRule._from = CreatureLifeCatalogInternal::parseObject( outRule._from.view() );
+            outRule._to   = CreatureLifeCatalogInternal::parseObject( outRule._to.view() );
+            if ( outRule._from == outRule._to )
             {
                 SW_LOG_ERROR_ID( "CreatureLifeCatalog.AbilityRuleChangesNothing", "%#: ability '%#' has a rule that changes nothing", sourceName, ability._id.c_str() );
-                bValid = false;
-                continue;
+                return false;
             }
-            ability._listRule.push_back( rule );
-        }
+            return true;
+        };
+        bValid = GameDataXML::readChildrenInto( node, "Rule", ability._listRule, readRule ) && bValid;
         if ( ability._listRule.empty() )
         {
             SW_LOG_ERROR_ID( "CreatureLifeCatalog.AbilityNoRuleSkipped", "%#: ability '%#' has no <Rule> - skipped", sourceName, ability._id.c_str() );

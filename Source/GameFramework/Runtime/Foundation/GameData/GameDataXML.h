@@ -120,6 +120,27 @@ namespace sw
             }
             return bValid;
         }
+        /**
+         * @brief `readChildrenInto` 에 원소 읽기를 맡기는 버전입니다 — 스키마 읽기 뒤에 검사가 붙거나 손으로 읽는 원소가 씁니다.
+         * @details @p readElement 는 `bool( const XMLNode&, TDef& )` 이고 오류는 거기서 남긴다. false 면 그 원소를 붙이지 않고 끝까지 읽는다(스키마 버전과 같은 약속).
+         * @code
+         *     bValid = GameDataXML::readChildrenInto( node, "Weakness", monster._listWeakness, [&]( const XMLNode& child, MonsterHuntWeakness& outWeakness ) { ... } ) && bValid;
+         * @endcode
+         */
+        template <typename TDef, typename TReadElement>
+        [[nodiscard]] static bool readChildrenInto( const XMLNode& parent, const utf8* pElement, vector<TDef>& outList, TReadElement&& readElement )
+        {
+            bool bValid = true;
+            for ( XMLNode node = parent.findChild( pElement ); node; node = node.findNextSibling( pElement ) )
+            {
+                TDef def;
+                if ( readElement( node, def ) )
+                    outList.push_back( std::move( def ) );
+                else
+                    bValid = false;
+            }
+            return bValid;
+        }
         /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 @p outSetting 을 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
         template <typename TDef>
         [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting, std::initializer_list<string_view> listHandRead = {} )

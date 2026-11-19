@@ -14,6 +14,7 @@
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
@@ -94,12 +95,7 @@ namespace sw
         if ( weapon._name.empty() )
             weapon._name = pID;
         bValid = weapon.compileAccepts( sourceName ) && bValid;
-        for ( XMLNode modifierNode = node.findChild( "Modifier" ); modifierNode; modifierNode = modifierNode.findNextSibling( "Modifier" ) )
-        {
-            ShotModifierDef modifier;
-            bValid = XMLFields::readProperties( modifierNode, modifier, sourceName ) && bValid;
-            weapon._listModifier.push_back( modifier );
-        }
+        bValid = GameDataXML::readChildrenInto( node, "Modifier", sourceName, weapon._listModifier ) && bValid;
         if ( bValid == false )
         {
             SW_LOG_ERROR_ID( "Weapon.WeaponInvalidFieldsSkipped", "%#: weapon '%#' has invalid fields - skipped", sourceName, pID );

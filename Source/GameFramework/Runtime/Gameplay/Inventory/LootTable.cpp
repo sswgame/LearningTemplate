@@ -79,22 +79,14 @@ namespace sw
             return false;
         }
         LootTableDef table;
-        table._id         = hashed_string( pID );
-        table._minRolls   = row._rolls;
-        table._maxRolls   = bHasRollsMax ? row._rollsMax : row._rolls;
-        table._noneWeight = row._none;
-        for ( XMLNode child = node.findChild( "Entry" ); child; child = child.findNextSibling( "Entry" ) )
-        {
-            LootEntry entry;
-            if ( readLootEntry( child, sourceName, entry ) )
-                table._listEntry.push_back( entry );
-        }
-        for ( XMLNode child = node.findChild( "Always" ); child; child = child.findNextSibling( "Always" ) )
-        {
-            LootEntry entry;
-            if ( readLootEntry( child, sourceName, entry ) )
-                table._listAlways.push_back( entry );
-        }
+        table._id            = hashed_string( pID );
+        table._minRolls      = row._rolls;
+        table._maxRolls      = bHasRollsMax ? row._rollsMax : row._rolls;
+        table._noneWeight    = row._none;
+        const auto readEntry = [&]( const XMLNode& child, LootEntry& outEntry )
+        { return readLootEntry( child, sourceName, outEntry ); };
+        (void)GameDataXML::readChildrenInto( node, "Entry", table._listEntry, readEntry );   // 틀린 줄은 읽기가 오류를 남기고 그 줄만 빠진다(테이블은 선다)
+        (void)GameDataXML::readChildrenInto( node, "Always", table._listAlways, readEntry ); // 위와 같다
         add( table );
         return true;
     }

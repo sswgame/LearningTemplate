@@ -96,23 +96,18 @@ namespace sw
         bool                  bValid = XMLFields::readProperties( node, monster, sourceName );
         if ( monster._listElement.empty() && monster._category.empty() == false )
             monster._listElement.push_back( monster._category ); // 방어 속성을 적지 않으면 분류 하나다(`_listElement` 의 정의)
-        for ( XMLNode child = node.findChild( "Weakness" ); child; child = child.findNextSibling( "Weakness" ) )
+        bValid = GameDataXML::readChildrenInto( node, "Weakness", monster._listWeakness, [&]( const XMLNode& child, MonsterHuntWeakness& outWeakness )
         {
-            MonsterHuntWeakness weakness;
-            if ( XMLFields::readProperties( child, weakness, sourceName ) == false )
-            {
-                bValid = false;
-                continue;
-            }
-            if ( weakness._knowledge > monster._maxKnowledge )
+            if ( XMLFields::readProperties( child, outWeakness, sourceName ) == false )
+                return false;
+            if ( outWeakness._knowledge > monster._maxKnowledge )
             {
                 SW_LOG_ERROR_ID( "MonsterHuntCatalog.MonsterWeaknessNeedsKnowledge", "%#: monster '%#' weakness '%#' needs knowledge %# above maxKnowledge %#", sourceName, monster._id.c_str(),
-                                 weakness._id.c_str(), weakness._knowledge, monster._maxKnowledge );
-                bValid = false;
-                continue;
+                                 outWeakness._id.c_str(), outWeakness._knowledge, monster._maxKnowledge );
+                return false;
             }
-            monster._listWeakness.push_back( weakness );
-        }
+            return true;
+        } ) && bValid;
         if ( bValid )
             (void)_monsterCatalog.add( monster );
         return bValid;

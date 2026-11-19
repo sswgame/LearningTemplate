@@ -116,16 +116,7 @@ namespace sw
     {
         HousingPartDef part;
         bool           bValid = XMLFields::readProperties( node, part, sourceName );
-        for ( XMLNode socketNode = node.findChild( "Socket" ); socketNode; socketNode = socketNode.findNextSibling( "Socket" ) )
-        {
-            HousingSocketDef socket;
-            if ( XMLFields::readProperties( socketNode, socket, sourceName ) == false )
-            {
-                bValid = false;
-                continue;
-            }
-            part._listSocket.push_back( socket );
-        }
+        bValid                = GameDataXML::readChildrenInto( node, "Socket", sourceName, part._listSocket ) && bValid;
         return bValid && addPart( part );
     }
 } // namespace sw

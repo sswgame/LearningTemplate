@@ -141,19 +141,18 @@ namespace sw
     bool JRPGCatalog::loadArea( const XMLNode& node, string_view sourceName )
     {
         JRPGAreaDef def;
-        bool        bValid = XMLFields::readProperties( node, def, sourceName );
-        for ( XMLNode groupNode = node.findChild( "Group" ); groupNode; groupNode = groupNode.findNextSibling( "Group" ) )
+        bool        bValid    = XMLFields::readProperties( node, def, sourceName );
+        const auto  readGroup = [&]( const XMLNode& groupNode, JRPGEncounterGroup& outGroup )
         {
-            JRPGEncounterGroup group;
-            bValid = XMLFields::readProperties( groupNode, group, sourceName ) && bValid;
-            if ( group._listEnemyID.empty() )
+            const bool bGroupRead = XMLFields::readProperties( groupNode, outGroup, sourceName );
+            if ( outGroup._listEnemyID.empty() )
             {
                 SW_LOG_ERROR_ID( "JRPGCatalog.AreaGroupWithoutEnemies", "%#: area '%#' has a <Group> without enemies", sourceName, def._id.c_str() );
-                bValid = false;
-                continue;
+                return false;
             }
-            def._listGroup.push_back( group );
-        }
+            return bGroupRead;
+        };
+        bValid = GameDataXML::readChildrenInto( node, "Group", def._listGroup, readGroup ) && bValid;
         return bValid && GameDataXML::addUnique( def, sourceName, _areaCatalog );
     }
 } // namespace sw
