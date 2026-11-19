@@ -152,9 +152,12 @@ namespace sw
      *          해가 바뀌면 범람이 범람원의 비옥함을 정한다.
      *          카탈로그는 빌려 쓴다. 시뮬레이션보다 오래 살아야 하고 바뀌지 않아야 한다.
      */
+    REFLECT()
     class SW_KIT_API CitySimulation
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CITY" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -267,15 +270,23 @@ namespace sw
         CitySettings              _settings;
         FixedStepTimer            _stepTimer;
         GameRandom                _random;
-        float32                   _time;
-        float32                   _floodFertility;
-        float32                   _wageDebt;
-        GridTopology              _topology;
-        LandBinding               _land; ///< 빌린 공유 땅(없으면 단독 동작)
-        int32                     _monthIncome;
-        int32                     _workforce;
-        int32                     _employed;
-        uint8                     _bRoadsDirty;
-        uint8                     _bDesirabilityDirty;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _time;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        float32 _floodFertility;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32      _wageDebt;
+        GridTopology _topology;
+        LandBinding  _land; ///< 빌린 공유 땅(없으면 단독 동작)
+        PROPERTY( RuntimeState )
+        int32 _monthIncome;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _workforce;
+        PROPERTY( RuntimeState, Min = 0, Max = "_workforce" )
+        int32 _employed; ///< 일할 수 있는 사람에서 나눠 준다(`assignLabor`)
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bRoadsDirty;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bDesirabilityDirty;
     };
 } // namespace sw

@@ -1172,18 +1172,10 @@ namespace sw
                 io.check( CitySimulationInternal::isWalkerValid( walker, _listBuilding, _topology ) );
             }
         } );
-        io.value( _stepTimer );
+        io.reflected( *this );  // 도시 수 칸 — 칸마다의 범위는 `PROPERTY( Min · Max )` 가 지킨다. 타일 · 건물 · 일꾼은 크기 맞춤 · 정의 포인터 · 셀(int2)이 든 손 본문이다.
+        io.value( _stepTimer ); // 리플렉션 밖 값 — 고정 걸음 타이머 · 난수는 손 코덱이다
         io.value( _random );
-        io.value( _time );
-        io.value( _floodFertility );
-        io.value( _wageDebt );
-        io.value( _monthIncome );
-        io.value( _workforce );
-        io.value( _employed );
-        io.flag( _bRoadsDirty );
-        io.flag( _bDesirabilityDirty );
-        // 임금 빚은 정수 부분을 달마다 내어 1 아래이다. 일하는 사람은 일할 수 있는 사람에서 나눠 준다(`assignLabor`).
-        io.check( 0.0f <= _wageDebt && _wageDebt < 1.0f && 0 <= _workforce && 0 <= _employed && _employed <= _workforce && 0.0f <= _time && 0.0f <= _floodFertility && _floodFertility <= 1.0f );
+        io.check( _wageDebt < 1.0f ); // 임금 빚은 정수 부분을 달마다 내어 1 아래이다(열린 상한이라 칸의 Max 로 적지 않는다)
         if ( io.isReading() )
         {
             _eventBuffer.clear();
