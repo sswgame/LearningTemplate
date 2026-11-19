@@ -68,9 +68,9 @@ namespace sw
     private:
         PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Units = m )
         float32 _radius;
-        PROPERTY( Category = "Cone", DisplayName = "Inner Cone Angle", Min = 0.0, Tooltip = "Half angle with no falloff", Units = rad )
+        PROPERTY( Category = "Cone", DisplayName = "Inner Cone Angle", Min = 0.0, Tooltip = "Half angle with no falloff", Units = rad, Meta = "Shape=Cone, ShapeRange=_radius" )
         float32 _innerConeAngle;
-        PROPERTY( Category = "Cone", DisplayName = "Outer Cone Angle", Min = 0.0, Tooltip = "Half angle where the light reaches zero", Units = rad )
+        PROPERTY( Category = "Cone", DisplayName = "Outer Cone Angle", Min = 0.0, Tooltip = "Half angle where the light reaches zero", Units = rad, Meta = "Shape=Cone, ShapeRange=_radius" )
         float32 _outerConeAngle;
         PROPERTY( Category = "Shadow", DisplayName = "Shadow Shape", Tooltip = "Light source size for soft shadows and contact shadow length" )
         LightShadowSettings _shadowSettings;

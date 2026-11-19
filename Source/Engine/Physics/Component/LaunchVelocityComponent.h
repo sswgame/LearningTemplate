@@ -42,7 +42,7 @@ namespace sw
 
         PROPERTY( Category = "Launch", DisplayName = "Speed", Tooltip = "Initial speed along the direction", Min = 0.0, Units = "m/s" )
         float32 _speed;
-        PROPERTY( Category = "Launch", DisplayName = "Local Direction", Tooltip = "Launch direction in the object's local space (normalized when launching)" )
+        PROPERTY( Category = "Launch", DisplayName = "Local Direction", Tooltip = "Launch direction in the object's local space (normalized when launching)", Meta = "Shape=Arrow" )
         float3 _localDirection;
         PROPERTY( Category = "Launch", DisplayName = "Align Gain", Tooltip = "After launch, steers the body's local direction toward its velocity (angular velocity = axis x gain; arrows point along their flight). 0 leaves the rotation to the physics", Min = 0.0, Meta = "Units=1/s" )
         float32                _alignGain;
