@@ -336,6 +336,9 @@ namespace sw
                 continue;
             if ( info.hasFlag( RenderPassTraitFlag::kRequiresNativeBindless ) && _pDevice->supportsNativeBindlessSampling() == false )
                 continue;
+            // HDR 화면 출력 패스는 모니터가 HDR 을 받을 때만 만든다(능력 표가 정한 길 — HDR 이 없는 기계는 PSO 도 패스도 없다). 실행 중 HDR 을 켜도 셋업의 이 PSO 를 쓴다.
+            if ( isDisplayOutputPassType( passType ) && ( caps._displayOutputSupport & static_cast<uint8>( ~makeColorSpaceBit( RHIColorSpace::SRGBNonLinear ) ) ) == 0 )
+                continue;
             // 출력 패스는 엔진 PSO 가 없다 — 대상 포맷마다 아래 collectOutputPSOJobs 가 만든다.
             if ( info.hasFlag( RenderPassTraitFlag::kOutputPass ) )
                 continue;

@@ -373,6 +373,9 @@ namespace sw
                 case RenderPassKind::ProbeUpdate:
                 case RenderPassKind::DeferredTileClassify:
                 case RenderPassKind::AutoExposureHistogram:
+                case RenderPassKind::DisplayEncodeHDR10:
+                case RenderPassKind::DisplayEncodeScRGB:
+                case RenderPassKind::DisplayCompositeUI:
                 {
                     SW_LOG_WARNING_ID( "FramePassExecutor.UnknownPassType", "Unknown pass type '%#' in '%#'", passType, passName );
                     break;

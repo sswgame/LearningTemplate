@@ -261,6 +261,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_BloomParams;
     float4 g_CameraGrade; // 카메라별 색 보정 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기(PostProcessValues, post_grade.hlsli)
     float4 g_CameraFrame; // 카메라별 화면 틀 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(color_vision.hlsli, 렌더 텍스처 뷰는 0)
+    // 화면 출력(display_encode.hlsli, C++ FrameDisplayEncode) — x 톤 곡선 어깨(SDR 1, HDR 출력에 그리는 뷰는 (최대 휘도 / 종이 흰색)^(1/2.2)), yzw 0. 톤맵하는 패스만 읽는다
+    float4 g_DisplayOutput;
     // 컬러 그레이딩(post_grade.hlsli, C++ PostGradeConstants) — 화이트 밸런스 3x3 행(xyz), 범위(그림자 · 중간 · 밝은 부분)마다 채도 · 대비 · 감마 · 게인 · 오프셋 rgb(전역을 미리 합쳤다),
     // (그림자 끝 휘도, 밝은 부분 시작 휘도, 켬 1 · 끔 0, 0), (LUT 한 변 N — 0 이면 없음, LUT 세기, 0, 0). 톤맵하는 패스만 읽는다
     float4 g_GradeWhiteBalance0;

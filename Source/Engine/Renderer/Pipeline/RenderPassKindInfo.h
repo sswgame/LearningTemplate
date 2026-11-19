@@ -79,6 +79,20 @@ namespace sw
     inline constexpr const utf8* kPassIndirectArgsResetDefine = "SW_CULL_RESET_ARGS=1";
     /// @brief 자동 노출 셰이더(auto_exposure.hlsl)를 히스토그램 컴퓨트 커널로 만든다(`RenderPassKind::AutoExposureHistogram`). 없으면 같은 파일이 1x1 풀스크린이다.
     inline constexpr const utf8* kPassAutoExposureHistogramDefine = "SW_PASS_AUTO_EXPOSURE_HISTOGRAM=1";
+    /// @brief 화면 출력 인코딩의 퍼뮤테이션입니다(display_encode.hlsli — 1 HDR10 PQ, 2 scRGB 선형. 0 SDR 은 인코딩 패스가 없다).
+    inline constexpr const utf8* kPassDisplayOutputHDR10Define = "SW_DISPLAY_OUTPUT=1";
+    inline constexpr const utf8* kPassDisplayOutputScRGBDefine = "SW_DISPLAY_OUTPUT=2";
+    /// @brief display_encode.hlsl 을 UI 합성 패스로 만든다(`RenderPassKind::DisplayCompositeUI`). 없으면 같은 파일이 인코딩이다.
+    inline constexpr const utf8* kPassDisplayUICompositeDefine = "SW_DISPLAY_UI_COMPOSITE=1";
+
+    /**
+     * @brief HDR 화면 출력의 패스 종류(인코딩 둘 · UI 합성)면 true 입니다. 모니터가 HDR 을 받을 때(`RHICapabilities::_displayOutputSupport` 에 SDR 밖 비트가 있을 때)만 PSO 를 만든다
+     *        (`FramePSOManager::createPassPSOs`) — HDR 이 없는 기계 · SDR 만 내는 백엔드는 PSO 도 패스도 없다.
+     */
+    constexpr bool isDisplayOutputPassType( RenderPassKind type )
+    {
+        return type == RenderPassKind::DisplayEncodeHDR10 || type == RenderPassKind::DisplayEncodeScRGB || type == RenderPassKind::DisplayCompositeUI;
+    }
 
     /**
      * @brief 메시 외곽선 패스가 그리는 배치의 머티리얼 define 입니다. 퍼뮤테이션에 이것이 없는 배치는 그 패스에서 빠집니다.
@@ -135,7 +149,7 @@ namespace sw
     inline constexpr const utf8* kGPUMessagesDefine = "SW_GPU_MESSAGES_ENABLED";
 
     /** @brief `RenderPassKind` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
-    inline constexpr uint32 kRenderPassKindCount = static_cast<uint32>( RenderPassKind::AutoExposureHistogram ) + 1;
+    inline constexpr uint32 kRenderPassKindCount = static_cast<uint32>( RenderPassKind::DisplayCompositeUI ) + 1;
 
     /** @brief 디퍼드 조명 타일 분류의 종류 수 · 타일 한 변(px)입니다 — 셰이더와 같은 표(deferred_tile_class.hlsli)의 값입니다. */
     inline constexpr uint32 kDeferredTileClassCount = SW_DEFERRED_TILE_CLASS_COUNT;

@@ -25,6 +25,9 @@ namespace sw
 
         /// FSR 1 중간 RT 의 고정 포맷입니다(EASU 출력 — 톤맵한 [0,1] 색이라 AMD 권고대로 32 bpp).
         constexpr RHIFormat kArrUpscaleIntermediateFormat[] = { RHIFormat::R8G8B8A8_UNORM };
+        /// HDR 화면 출력의 고정 포맷 — HDR10 백버퍼, scRGB 백버퍼 · 장면 출력 RT(`FrameDisplayEncode`)는 R16G16B16A16 실수다.
+        constexpr RHIFormat kArrDisplayHDR10Format[] = { RHIFormat::R10G10B10A2_UNORM };
+        constexpr RHIFormat kArrDisplaySceneFormat[] = { RHIFormat::R16G16B16A16_FLOAT };
 
         using Role = RenderPassInputRole;
         using Flag = RenderPassTraitFlag;
@@ -536,6 +539,27 @@ namespace sw
                         info._pDefaultShader   = &EngineDefaultAssets::_shaderScreenRotation;
                         info._colorTargetCount = 1;
                         info._flags            = Flag::kOutputPass | Flag::kSurfaceRotation;
+                        break;
+                    }
+                    case RenderPassKind::DisplayEncodeHDR10:
+                    case RenderPassKind::DisplayEncodeScRGB:
+                    {
+                        // 백버퍼 포맷 하나에 그리는 고정 포맷 패스다(엔진 PSO) — 백버퍼 포맷이 색 공간에서 정해지므로 출력 패스처럼 포맷마다 만들 까닭이 없다. 원본은 C++ 가 루트 상수 · 엔진 슬롯으로 건다.
+                        const bool bHDR10      = type == RenderPassKind::DisplayEncodeHDR10;
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderDisplayEncode;
+                        info._pPassDefine      = bHDR10 ? kPassDisplayOutputHDR10Define : kPassDisplayOutputScRGBDefine;
+                        info._pColorFormat     = bHDR10 ? kArrDisplayHDR10Format : kArrDisplaySceneFormat;
+                        info._colorTargetCount = 1;
+                        break;
+                    }
+                    case RenderPassKind::DisplayCompositeUI:
+                    {
+                        // 장면 출력 RT(R16G16B16A16 실수)에 미리 곱한 알파로 섞는 고정 포맷 패스다. 원본(UI RT)은 C++ 가 루트 상수 · 엔진 슬롯으로 건다.
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderDisplayEncode;
+                        info._pPassDefine      = kPassDisplayUICompositeDefine;
+                        info._pColorFormat     = kArrDisplaySceneFormat;
+                        info._colorTargetCount = 1;
+                        info._flags            = Flag::kPremultipliedAlpha;
                         break;
                     }
                 }
