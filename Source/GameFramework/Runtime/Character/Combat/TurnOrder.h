@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -21,11 +22,30 @@ namespace sw
 {
     class Archive;
 
-    /** @brief 턴 순서 방식입니다. */
+    /** @brief 턴 순서 방식입니다. 리플렉션 열거(상태 칸이 값으로 싣는다)입니다. */
+    ENUM()
     enum class TurnOrderMode : uint8
     {
         Rounds = 0, ///< 한 라운드에 모두 한 번씩 행동한다
         Timeline    ///< 빠른 쪽이 여러 번 행동한다. 행동할 때마다 다음 차례까지의 시간이 다시 찬다
+    };
+
+    /** @brief `TurnOrder` 의 행위자 하나입니다. 리플렉션 구조체 — `TurnOrder` 의 상태 칸(`vector`)이 원소로 싣는다. */
+    REFLECT()
+    struct TurnOrderCombatant
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.01 ) // `TurnOrder::kMinSpeed` — 타임라인제가 속도로 나눈다
+        float32 _speed{ 1.0f };
+        PROPERTY( Min = 0 )
+        float32 _gauge{ 0.0f }; ///< 타임라인제에서 다음 차례까지 남은 양
+        PROPERTY()
+        int32 _actorID; ///< 더할 때 채운다(`add`)
+        PROPERTY()
+        int32 _priority{ 0 };
+        PROPERTY()
+        uint32 _tieBreak{ 0 };
     };
 
     /**
@@ -33,9 +53,12 @@ namespace sw
      * @brief 게임이 정한 번호(`actorID`)로 행위자를 넣고 차례를 꺼냅니다.
      * @details 행위자가 쓰러지면 `removeActor`, 속도가 바뀌면 `setSpeed` 를 부릅니다. 타임라인제에서는 남은 양을 새 속도의 비율로 옮깁니다.
      */
+    REFLECT()
     class SW_GF_API TurnOrder
     {
     public:
+        REFLECT_BODY();
+
         static constexpr float32 kTimelineThreshold = 100.0f; ///< 타임라인제에서 게이지가 이만큼 차면 차례가 온다
         static constexpr float32 kMinSpeed          = 0.01f;  ///< 속도의 하한이다(타임라인제가 속도로 나눈다)
 
@@ -65,30 +88,27 @@ namespace sw
         [[nodiscard]] bool hasActor( int32 actorID ) const;
 
         /**
-         * @brief 행위자 목록, 라운드 대기열, 난수, 라운드 번호, 모드를 씁니다. 행위자마다 속도, 게이지, id, 우선도, 동률 깨기 값을 씁니다.
+         * @brief 행위자 목록, 라운드 대기열, 라운드 번호, 모드(리플렉션 상태 칸)와 난수(손 본문)를 씁니다. 행위자마다 속도, 게이지, id, 우선도, 동률 깨기 값을 씁니다.
          *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 데이터가 깨졌거나 번호가 겹치거나 대기열에 없는 행위자가 있으면 false 를 돌려주고 상태는 그대로 둡니다.
          */
         SW_DECLARE_STATE_IO();
 
     private:
-        struct Combatant
-        {
-            float32 _speed{ 1.0f };
-            float32 _gauge{ 0.0f }; ///< 타임라인제에서 다음 차례까지 남은 양
-            int32   _actorID;       ///< 더할 때 채운다(`add`)
-            int32   _priority{ 0 };
-            uint32  _tieBreak{ 0 };
-        };
+        using Combatant = TurnOrderCombatant;
 
         Combatant*   findCombatant( int32 actorID );
         void         makeRoundQueue( vector<int32>& outListQueue, const vector<Combatant>& listActor, GameRandom& random ) const;
         static int32 popTimeline( vector<Combatant>& listActor );
 
     private:
+        PROPERTY( RuntimeState )
         vector<Combatant> _listCombatant;
-        vector<int32>     _listRoundQueue; ///< 라운드제에서 이번 라운드에 남은 차례(앞부터)
-        GameRandom        _random;
-        int32             _round;
-        TurnOrderMode     _mode;
+        PROPERTY( RuntimeState )
+        vector<int32> _listRoundQueue; ///< 라운드제에서 이번 라운드에 남은 차례(앞부터)
+        GameRandom    _random;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _round;
+        PROPERTY( RuntimeState )
+        TurnOrderMode _mode;
     };
 } // namespace sw

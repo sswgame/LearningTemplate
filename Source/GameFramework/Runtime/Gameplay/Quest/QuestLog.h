@@ -50,16 +50,26 @@ namespace sw
         LevelTooLow
     };
 
-    /** @brief 진행 중이거나 끝난 퀘스트 하나입니다. */
+    /** @brief 진행 중이거나 끝난 퀘스트 하나입니다. 리플렉션 구조체 — 일지의 상태 칸(`vector`)이 원소로 싣는다. */
+    REFLECT()
     struct QuestProgress
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _questID{};
+        PROPERTY()
         hashed_string _stageID{};
+        PROPERTY()
         vector<int32> _listCount{}; ///< 지금 단계의 목표별 개수
-        float32       _stageTime{ 0.0f };
-        int32         _completedCount{ 0 };
-        QuestStatus   _status{ QuestStatus::NotStarted };
-        uint8         _bAwaitingChoice{ SW_FALSE };
+        PROPERTY( Min = 0 )
+        float32 _stageTime{ 0.0f };
+        PROPERTY( Min = 0 )
+        int32 _completedCount{ 0 };
+        PROPERTY()
+        QuestStatus _status{ QuestStatus::NotStarted };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bAwaitingChoice{ SW_FALSE };
     };
 } // namespace sw
 
@@ -96,12 +106,15 @@ namespace sw
      * @details 단계에 들어서면 그 단계의 보상이 알림으로 나간다. 경험치와 아이템을 실제로 주는 것은 게임이다. 목표가 없고 다음 단계가 있는 단계는 바로 넘어간다(대사만 있는 단계).
      *          선택지가 있는 단계는 목표를 다 한 뒤 `choose` 를 기다린다. 카탈로그는 소유하지 않고 참조만 한다.
      */
+    REFLECT()
     class SW_GF_API QuestLog
     {
     public:
+        REFLECT_BODY();
+
         static constexpr int32  kMaxChainedStages = 32; ///< 한 번에 넘어가는 단계 수의 상한. 서로를 가리키는 단계에서 멈추게 한다
         static constexpr uint32 kStateTag         = FourCCUtil::make( "QLOG" );
-        static constexpr uint32 kStateVersion     = 1;
+        static constexpr uint32 kStateVersion     = 2; ///< 2: 리플렉션 상태 칸(판 1 은 머리를 붙이고 상태를 int64 로 다시 써 올린다)
 
         QuestLog();
 
@@ -143,7 +156,7 @@ namespace sw
          */
         void writeDebugLines( DebugHUDSectionWriter& writer, int32 playerLevel, uint32 maxLines ) const;
         /**
-         * @brief 퀘스트마다 진행 상황(단계, 목표 개수, 단계 시간, 완료 횟수, 상태, 선택 대기)을 씁니다.
+         * @brief 퀘스트마다 진행 상황(단계, 목표 개수, 단계 시간, 완료 횟수, 상태, 선택 대기)을 씁니다(리플렉션 상태 칸).
          *        `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
          *        저장 뒤 데이터가 바뀌어도 일지는 열린다: 목표 수와 개수를 지금 단계에 맞추고, 지워진 단계의 진행 중 퀘스트는 실패로 둔다(다시 받을 수 있다).
          *        카탈로그(`initialize`)에 없는 퀘스트는 경고를 남기고 버린다. 데이터에서 지운 퀘스트 하나가 일지 전체를 막지 않게 하기 위해서이다.
@@ -161,6 +174,7 @@ namespace sw
         void  pushEvent( QuestEvent::Kind kind, const QuestProgress& progress, optional<int32> objective = nullopt, int32 value = 0, const QuestReward* pReward = nullptr );
 
     private:
+        PROPERTY( RuntimeState )
         vector<QuestProgress>   _listProgress;
         EventBuffer<QuestEvent> _eventBuffer;
         const QuestCatalog*     _pCatalog;

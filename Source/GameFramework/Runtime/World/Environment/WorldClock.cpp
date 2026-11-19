@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/ReflectedStateUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
@@ -43,13 +44,14 @@ namespace sw
     } // namespace
 
     SW_STATE_FORMAT_UPGRADE( worldClock1To2, "CLOK", 1, 2, &WorldClockInternal::upgradeStateFrom1 );
+    SW_STATE_FORMAT_UPGRADE( worldClock2To3, "CLOK", 2, 3, &ReflectedStateUpgrade::prependHead<WorldClock> ); // 판 2 손 본문은 칸 순서 · 폭이 같다
 
     WorldClock::WorldClock()
         : _settings{}
         , _eventBuffer{}
+        , _day{ 0 }
         , _secondOfDay{ 0.0 }
         , _timeScale{ 1.0f }
-        , _day{ 0 }
         , _bPaused{ SW_FALSE }
     {
     }
@@ -234,12 +236,8 @@ namespace sw
     void WorldClock::serializeState( StateIO& io )
     {
         io.header( kStateTag, kStateVersion, kStateHeaderlessVersion ); // 판 1(float32 시각 · 머리표 없음)도 머리가 알아보고 올린다(WorldClockInternal::upgradeStateFrom1)
-        io.value( _day );
-        io.value( _secondOfDay );
-        io.value( _timeScale );
-        io.flag( _bPaused );
-        // NaN 은 비교가 모두 거짓이라 여기서 걸린다.
-        io.check( 0 <= _day && 0.0 <= _secondOfDay && _secondOfDay < _settings._secondsPerDay && 0.0f <= _timeScale );
+        io.reflected( *this );                                          // 하한 · 깃발은 칸의 `PROPERTY( Min · Max )` 가 지킨다
+        io.check( _secondOfDay < _settings._secondsPerDay );            // 칸 사이 검사 — 하루 길이는 설정이다
         if ( io.isReading() )
         {
             _eventBuffer.clear();

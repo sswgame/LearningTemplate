@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateIOTestUtil.h"
 
 #include "GameFramework/Runtime/Gameplay/Match/MatchState.h"
 
@@ -11,40 +11,31 @@
 
 namespace
 {
-    /** @brief 팀 하나, 피해 기록 하나인 참가자 하나의 상태 바이트를 씁니다. */
+    /** @brief 팀 하나, 피해 기록 하나(자기 자신)인 참가자 하나의 `writeState` 바이트에서 팀 · 공격자 번호를 덮어써 읽습니다. */
     struct MatchStateReadTestUtil
     {
+        // 리플렉션 본문 끝에서 센 칸 폭 — 참가자의 팀 뒤: 처치 · 죽음 · 도움 · 부활 비용(int32 넷) + 깃발 둘, 점수판 끝: 경과 · 단계 시간 · 승리 팀(4 바이트 셋) + 단계(열거 int64).
+        static constexpr size_t kAfterTeamBytes      = sizeof( int32 ) * 4 + sizeof( uint8 ) * 2;
+        static constexpr size_t kMatchTailBytes      = sizeof( float32 ) * 2 + sizeof( int32 ) + sizeof( int64 );
+        static constexpr size_t kTeamToAttackerBytes = sizeof( int32 ) + sizeof( float32 ) * 2; ///< 공격자 뒤 시각, 준 피해
+
         static bool readFixture( int32 team, int32 attacker )
         {
-            sw::Archive written;
-            written << static_cast<uint32>( 1 );
-            sw::StateIO::writeName( written, sw::hashed_string( "A" ) );
-            written << static_cast<int32>( 0 ); // 점수
-            written << static_cast<int32>( 0 ); // 게이지
-            written << static_cast<int32>( 0 ); // 순위
-            written << static_cast<uint8>( SW_TRUE );
-            written << static_cast<uint8>( SW_FALSE );
-            written << static_cast<uint32>( 1 );
-            sw::StateIO::writeName( written, sw::hashed_string( "role" ) );
-            written << static_cast<uint32>( 1 );
-            written << attacker;
-            written << 0.0f;
-            sw::StateIO::writeCountdown( written, sw::Countdown{} );
-            written << 0.0f; // 준 피해
-            written << team;
-            for ( int32 stat = 0; stat < 4; ++stat )
-            {
-                written << static_cast<int32>( 0 ); // 처치, 죽음, 도움, 부활 비용
-            }
-            written << static_cast<uint8>( SW_TRUE );
-            written << static_cast<uint8>( SW_FALSE );
-            written << 0.0f;
-            written << 0.0f;
-            written << static_cast<int32>( -1 );
-            written << static_cast<uint8>( sw::MatchPhase::InProgress );
+            sw::MatchState written;
+            written.initialize( sw::MatchSettings{} );
+            written.addTeam( sw::hashed_string( "A" ) );
+            const bool bAdded = written.addParticipant( 0, sw::hashed_string( "role" ) ).has_value();
+            written.reportDamage( 0, 0, 1.0f );
+
+            sw::vector<uint8> listBytes  = sw::StateIOTestUtil::computeStateBytes( written );
+            const size_t      teamAt     = sw::StateIOTestUtil::computeReflectedBytes( written ) - kMatchTailBytes - kAfterTeamBytes - sizeof( int32 );
+            const size_t      attackerAt = teamAt - kTeamToAttackerBytes;
+            // 바탕을 만들지 못하면 거짓 — 고치지 않은 값의 읽기(`readFixture( 0, 0 )`)가 참이어야 하므로 거기서 드러난다
+            if ( bAdded == false || sw::StateIOTestUtil::overwrite( listBytes, teamAt, team ) == false || sw::StateIOTestUtil::overwrite( listBytes, attackerAt, attacker ) == false )
+                return false;
 
             sw::MatchState state;
-            sw::Archive    reading( written.getData(), written.getSize() );
+            sw::Archive    reading( listBytes.data(), listBytes.size() );
             return state.readState( reading );
         }
     };
@@ -55,7 +46,7 @@ namespace
  */
 SW_TEST_CASE( MatchStateTest, ReadRefusesUnknownTeamAndAttacker )
 {
-    SW_EXPECT_TRUE( MatchStateReadTestUtil::readFixture( 0, 0 ) );
+    SW_EXPECT_TRUE( MatchStateReadTestUtil::readFixture( 0, 0 ) ); // 고치지 않은 값과 같다 — 아래 거절이 칸 값 때문임을 보인다
     SW_EXPECT_FALSE( MatchStateReadTestUtil::readFixture( -1, 0 ) );
     SW_EXPECT_FALSE( MatchStateReadTestUtil::readFixture( 1, 0 ) );
     SW_EXPECT_FALSE( MatchStateReadTestUtil::readFixture( 0, -1 ) );

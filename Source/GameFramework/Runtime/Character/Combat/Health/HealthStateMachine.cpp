@@ -372,25 +372,15 @@ namespace sw
             restored._bDamageImmune = _bDamageImmune; // 개발 스위치는 상태가 아니다
             *this                   = std::move( restored );
         }
-        io.value( _health );
-        io.value( _shield );
-        io.value( _downedHealth );
-        io.value( _poise );
-        io.value( _timeSinceDamage );
-        io.value( _timeSincePoiseDamage );
+        io.reflected( *this ); // 칸마다의 범위 · 열거자는 `PROPERTY( Min · Max )` 와 열거 리플렉션이 지킨다
+        // 리플렉션 밖 값 — `Countdown` 은 늦음까지 싣는 손 코덱이 있고, `optional` 은 없음 표지로 적는다
         io.value( _poiseBreak );
         io.value( _invulnerable );
-        io.value( _reviveElapsed );
-        io.value( _reviveSpeedScale );
-        io.value( _reviverID );
         int32 lastInstigatorID = _lastInstigatorID.value_or( kNoInstigator );
         io.value( lastInstigatorID );
         if ( io.isReading() )
             _lastInstigatorID = lastInstigatorID == kNoInstigator ? nullopt : optional<int32>( lastInstigatorID );
-        io.value( _downCount );
-        io.enumValue( _state, LifeState::Dead );
-        io.flag( _bReviving );
-        io.check( 0.0f <= _health && _health <= _settings._maxHealth && 0.0f <= _shield && _shield <= _settings._maxShield && 0.0f <= _downedHealth && _downedHealth <= _settings._downedHealth && 0 <= _downCount );
+        io.check( _health <= _settings._maxHealth && _shield <= _settings._maxShield && _downedHealth <= _settings._downedHealth ); // 칸 사이 검사 — 상한은 설정이다
     }
 
 } // namespace sw

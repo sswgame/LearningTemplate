@@ -33,10 +33,15 @@ namespace sw
     class XMLNode;
 
     /** @brief 지갑의 통화 하나입니다. */
+    REFLECT()
     struct WalletBalance
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _currency{};
-        int64         _amount{ 0 };
+        PROPERTY()
+        int64 _amount{ 0 };
     };
 } // namespace sw
 
@@ -58,11 +63,14 @@ namespace sw
      * @brief 통화 여러 개(이름 → int64)를 담습니다. 통화 이름은 데이터이므로 장르마다 정합니다("Gold", "Credits", "Souls", "Tickets").
      * @details 잔액이 음수(빚)가 되는 것은 `charge` 로만 가능하다. 쓰기는 `trySpend` 로 하고, 잔액이 모자라거나 빚이 있으면 아무것도 바꾸지 않는다. 통화 순서는 처음 만난 순서이다. 화면과 세이브가 같은 순서를 쓰도록 결정적으로 정한 것이다.
      */
+    REFLECT()
     class SW_GF_API Wallet
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WALT" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; ///< 2: 리플렉션 상태 칸(판 1 손 본문은 머리를 붙여 올린다 — `ReflectedStateUpgrade::prependHead`)
 
         /** @brief 통화를 적지 않으면 쓰는 기본 통화 "Gold" 입니다. */
         static hashed_string getDefaultCurrency();
@@ -79,7 +87,7 @@ namespace sw
         /** @brief 쌓인 변화를 넘겨 주고 비웁니다. */
         void pollEvents( vector<WalletEvent>& outListEvent );
         /**
-         * @brief 통화마다 이름과 잔액을 처음 만난 순서로 씁니다.
+         * @brief 통화마다 이름과 잔액을 처음 만난 순서로 씁니다(리플렉션 상태 칸).
          *        `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 통화 이름이 비어 있으면 false 를 반환하고 상태는 바뀌지 않습니다. 음수 잔액(빚)도 그대로 복원합니다.
          */
         SW_DECLARE_STATE_IO();
@@ -93,6 +101,7 @@ namespace sw
         WalletBalance& getOrCreateBalance( const hashed_string& currency );
 
     private:
+        PROPERTY( RuntimeState )
         vector<WalletBalance>    _listBalance{};
         EventBuffer<WalletEvent> _eventBuffer{};
         uint32                   _revision{ 0 };

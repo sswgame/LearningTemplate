@@ -13,6 +13,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -38,40 +39,70 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 팀 하나입니다. */
+    /** @brief 팀 하나입니다. 리플렉션 구조체 — 점수판의 상태 칸(`vector`)이 원소로 싣는다. */
+    REFLECT()
     struct MatchTeam
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _name{};
-        int32         _score{ 0 };
-        int32         _costPool{ 0 };  ///< 부활 비용을 내는 전력 게이지. 0 으로 시작하면 무제한이다
-        int32         _placement{ 0 }; ///< 탈락이나 종료 때 정한 순위(1 이면 우승, 0 이면 아직 없음)
-        uint8         _bIgnoreCost{ SW_TRUE };
-        uint8         _bEliminated{ SW_FALSE };
+        PROPERTY()
+        int32 _score{ 0 };
+        PROPERTY()
+        int32 _costPool{ 0 }; ///< 부활 비용을 내는 전력 게이지. 0 으로 시작하면 무제한이다
+        PROPERTY()
+        int32 _placement{ 0 }; ///< 탈락이나 종료 때 정한 순위(1 이면 우승, 0 이면 아직 없음)
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bIgnoreCost{ SW_TRUE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bEliminated{ SW_FALSE };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 참가자 하나입니다. */
+    /** @brief 참가자가 받은 피해 하나(도움 판정용)입니다. 리플렉션 구조체 — `MatchParticipant::_listDamage` 의 원소입니다. */
+    REFLECT()
+    struct MatchDamageRecord
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _attacker{ constant::invalid_index::kInt32 };
+        PROPERTY()
+        float32 _time{ 0.0f };
+    };
+
+    /** @brief 참가자 하나입니다. 리플렉션 구조체 — 점수판의 상태 칸(`vector`)이 원소로 싣고, 부활 타이머(`Countdown`)는 점수판의 손 본문이 싣는다. */
+    REFLECT()
     struct MatchParticipant
     {
-        struct DamageRecord
-        {
-            int32   _attacker{ constant::invalid_index::kInt32 };
-            float32 _time{ 0.0f };
-        };
+        REFLECT_BODY();
 
-        hashed_string        _role{}; ///< "Killer", "Survivor", "Striker" 등. 게임이 정한다
+        using DamageRecord = MatchDamageRecord;
+
+        PROPERTY()
+        hashed_string _role{}; ///< "Killer", "Survivor", "Striker" 등. 게임이 정한다
+        PROPERTY()
         vector<DamageRecord> _listDamage{};
         Countdown            _respawnTimer{};
-        float32              _damageDealt{ 0.0f };
-        int32                _team{ constant::invalid_index::kInt32 };
-        int32                _kills{ 0 };
-        int32                _deaths{ 0 };
-        int32                _assists{ 0 };
-        int32                _respawnCost{ 0 }; ///< 죽으면 팀 게이지에서 빠지는 값(기체 코스트)
-        uint8                _bAlive{ SW_TRUE };
-        uint8                _bEliminated{ SW_FALSE }; ///< 더 이상 부활하지 않는다
+        PROPERTY()
+        float32 _damageDealt{ 0.0f };
+        PROPERTY()
+        int32 _team{ constant::invalid_index::kInt32 };
+        PROPERTY()
+        int32 _kills{ 0 };
+        PROPERTY()
+        int32 _deaths{ 0 };
+        PROPERTY()
+        int32 _assists{ 0 };
+        PROPERTY()
+        int32 _respawnCost{ 0 }; ///< 죽으면 팀 게이지에서 빠지는 값(기체 코스트)
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bAlive{ SW_TRUE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bEliminated{ SW_FALSE }; ///< 더 이상 부활하지 않는다
     };
 } // namespace sw
 
@@ -107,9 +138,12 @@ namespace sw
      * @details 부활 비용은 죽은 참가자의 팀 게이지에서 빠지고, 게이지가 0 이하가 되면 그 팀은 진 것으로 본다(SD 건담 캡슐파이터의 전력 게이지,
      *          G 제네레이션의 코스트제). 배틀로얄은 `_bRespawn = false` 와 `_bLastTeamStandingWins` 로 설정하고, 팀이 탈락할 때마다 남은 팀 수 + 1 을 순위로 받는다.
      */
+    REFLECT()
     class SW_GF_API MatchState
     {
     public:
+        REFLECT_BODY();
+
         MatchState();
 
         void initialize( const MatchSettings& settings );
@@ -146,7 +180,7 @@ namespace sw
         [[nodiscard]] const vector<MatchEvent>& takeEvents() { return _eventBuffer.takeAll(); }
 
         /**
-         * @brief 팀, 참가자, 경과 시간, 단계 시간, 승리 팀, 단계를 씁니다. 설정은 `initialize` 가 받은 것이므로 저장하지 않고, 알림은 읽을 때 비웁니다.
+         * @brief 팀, 참가자, 경과 시간, 단계 시간, 승리 팀, 단계(리플렉션 상태 칸)와 참가자마다 부활 타이머(손 본문)를 씁니다. 설정은 `initialize` 가 받은 것이므로 저장하지 않고, 알림은 읽을 때 비웁니다.
          *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
          */
         SW_DECLARE_STATE_IO();
@@ -161,13 +195,19 @@ namespace sw
         void pushEvent( MatchEvent::Kind kind, optional<int32> participant, optional<int32> other, optional<int32> team, int32 value );
 
     private:
-        vector<MatchTeam>        _listTeam;
+        PROPERTY( RuntimeState )
+        vector<MatchTeam> _listTeam;
+        PROPERTY( RuntimeState )
         vector<MatchParticipant> _listParticipant;
         EventBuffer<MatchEvent>  _eventBuffer;
         MatchSettings            _settings;
-        float32                  _elapsed;
-        float32                  _phaseTime;
-        int32                    _winningTeam;
-        MatchPhase               _phase;
+        PROPERTY( RuntimeState )
+        float32 _elapsed;
+        PROPERTY( RuntimeState )
+        float32 _phaseTime;
+        PROPERTY( RuntimeState, Min = -1 ) // `constant::invalid_index::kInt32` 이면 승리 팀이 없다
+        int32 _winningTeam;
+        PROPERTY( RuntimeState )
+        MatchPhase _phase;
     };
 } // namespace sw

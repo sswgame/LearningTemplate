@@ -330,48 +330,29 @@ namespace sw
 
     void MatchState::serializeState( StateIO& io )
     {
-        // 팀마다 이름(4) + 정수 세 개(12) + 플래그 두 개(2)
-        io.list( _listTeam, 18, [&]( MatchTeam& team )
+        io.reflected( *this ); // 깃발 · 단계 열거자 · 승리 팀 하한은 칸이 지킨다
+        // 리플렉션 밖 값 — 부활 타이머(`Countdown`)는 늦음까지 싣는 손 코덱이 있다. 참가자 수는 위 칸이 정했다
+        for ( MatchParticipant& participant : _listParticipant )
         {
-            io.value( team._name );
-            io.value( team._score );
-            io.value( team._costPool );
-            io.value( team._placement );
-            io.flag( team._bIgnoreCost );
-            io.flag( team._bEliminated );
-        } );
-        // 참가자마다 이름(4) + 피해 수(4) + 타이머(4) + 피해량(4) + 정수 여섯 개(24) + 플래그 두 개(2)
-        io.list( _listParticipant, 42, [&]( MatchParticipant& participant )
-        {
-            io.value( participant._role );
-            io.list( participant._listDamage, 8, [&]( MatchParticipant::DamageRecord& record )
-            {
-                io.value( record._attacker );
-                io.value( record._time );
-                // `reportKill` 이 이 번호로 참가자 목록을 그대로 찾는다. 범위 밖 번호는 목록 밖을 읽는다.
-                io.check( 0 <= record._attacker && record._attacker < static_cast<int32>( _listParticipant.size() ) );
-            } );
             io.value( participant._respawnTimer );
-            io.value( participant._damageDealt );
-            io.value( participant._team );
-            io.value( participant._kills );
-            io.value( participant._deaths );
-            io.value( participant._assists );
-            io.value( participant._respawnCost );
-            io.flag( participant._bAlive );
-            io.flag( participant._bEliminated );
-            // 팀 없는 참가자는 `addParticipant` 가 만들지 않는다. −1 을 받으면 `reportKill` 이 팀 목록 밖을 읽는다.
-            io.check( 0 <= participant._team && participant._team < static_cast<int32>( _listTeam.size() ) );
-        } );
-        io.value( _elapsed );
-        io.value( _phaseTime );
-        io.value( _winningTeam );
-        io.enumValue( _phase, MatchPhase::Ended );
-        io.check( constant::invalid_index::kInt32 <= _winningTeam && _winningTeam < static_cast<int32>( _listTeam.size() ) );
-        if ( io.isReading() )
-        {
-            _eventBuffer.clear();
         }
+        if ( io.isReading() == false )
+            return;
+        // 칸 사이 검사 — 번호는 목록 안이다
+        const int32 participantCount = static_cast<int32>( _listParticipant.size() );
+        const int32 teamCount        = static_cast<int32>( _listTeam.size() );
+        for ( const MatchParticipant& participant : _listParticipant )
+        {
+            // 팀 없는 참가자는 `addParticipant` 가 만들지 않는다. −1 을 받으면 `reportKill` 이 팀 목록 밖을 읽는다.
+            io.check( 0 <= participant._team && participant._team < teamCount );
+            for ( const MatchParticipant::DamageRecord& record : participant._listDamage )
+            {
+                // `reportKill` 이 이 번호로 참가자 목록을 그대로 찾는다. 범위 밖 번호는 목록 밖을 읽는다.
+                io.check( 0 <= record._attacker && record._attacker < participantCount );
+            }
+        }
+        io.check( _winningTeam < teamCount );
+        _eventBuffer.clear();
     }
 
 } // namespace sw

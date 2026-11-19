@@ -170,9 +170,12 @@ namespace sw
      * @class PlatformerMotor2D
      * @brief 고정 틱(권장 1/60)으로 부릅니다. 겹침은 축마다 따로 해소해(X 다음 Y) 모서리에 걸리지 않게 하고, 한 틱 이동이 타일 반보다 크면 나눠 움직입니다.
      */
+    REFLECT()
     class SW_GF_API PlatformerMotor2D
     {
     public:
+        REFLECT_BODY();
+
         PlatformerMotor2D();
 
         void setSettings( const PlatformerSettings& settings );
@@ -199,7 +202,7 @@ namespace sw
         const PlatformerSettings& getSettings() const { return _settings; }
 
         /**
-         * @brief 위치, 속도, 타이머, 남은 점프, 대시, 벽, 방향, 바닥, 사다리 오르기, 상승을 씁니다. 설정과 이번 스텝의 사건 비트는 싣지 않습니다.
+         * @brief 위치, 속도, 타이머, 남은 점프, 대시, 벽, 방향, 바닥, 사다리 오르기, 상승을 씁니다(리플렉션 상태 칸 + 손 본문의 `Countdown` 타이머). 설정과 이번 스텝의 사건 비트는 싣지 않습니다.
          *        `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다.
          */
         SW_DECLARE_STATE_IO();
@@ -223,21 +226,30 @@ namespace sw
 
     private:
         PlatformerSettings _settings;
-        float2             _position;
-        float2             _velocity;
-        Countdown          _coyote;
-        Countdown          _jumpBuffer;
-        Countdown          _wallLock;
-        Countdown          _dash;
-        Countdown          _dashCooldown;
-        Countdown          _dropThrough;
-        int32              _extraJumpsLeft;
-        int32              _airDashesLeft;
-        int32              _wallSide;
-        int32              _facing;
-        uint32             _events;
-        uint8              _bGrounded;
-        uint8              _bClimbing;
-        uint8              _bRising; ///< 점프로 오르는 중(짧은 점프 판정)
+        PROPERTY( RuntimeState )
+        float2 _position;
+        PROPERTY( RuntimeState )
+        float2    _velocity;
+        Countdown _coyote;
+        Countdown _jumpBuffer;
+        Countdown _wallLock;
+        Countdown _dash;
+        Countdown _dashCooldown;
+        Countdown _dropThrough;
+        PROPERTY( RuntimeState )
+        int32 _extraJumpsLeft;
+        PROPERTY( RuntimeState )
+        int32 _airDashesLeft;
+        PROPERTY( RuntimeState )
+        int32 _wallSide;
+        PROPERTY( RuntimeState )
+        int32  _facing;
+        uint32 _events;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bGrounded;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bClimbing;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bRising; ///< 점프로 오르는 중(짧은 점프 판정)
     };
 } // namespace sw

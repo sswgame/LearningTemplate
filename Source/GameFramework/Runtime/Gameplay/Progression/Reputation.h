@@ -117,14 +117,32 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct ReputationEntry
+     * @brief `ReputationState` 의 세력 하나의 값입니다. 리플렉션 구조체 — 상태 칸(`vector`)이 원소로 싣는다.
+     */
+    REFLECT()
+    struct ReputationEntry
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        hashed_string _factionID{};
+        PROPERTY()
+        int32 _value{ 0 };
+    };
+
+    /**
      * @class ReputationState
      * @brief 한 플레이어의 세력별 값입니다. 카탈로그에 없는 id 도 받으며, 이때 범위는 0..1000 이고 단계는 없습니다. 이름 없는 NPC 의 호감도에 씁니다.
      */
+    REFLECT()
     class SW_GF_API ReputationState
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "REPU" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; ///< 2: 리플렉션 상태 칸(판 1 손 본문은 머리를 붙여 올린다 — `ReflectedStateUpgrade::prependHead`)
 
         ReputationState();
 
@@ -144,17 +162,13 @@ namespace sw
         int32 getTierIndex( const hashed_string& factionID ) const;
         void  pollEvents( vector<ReputationEvent>& outListEvent );
         /**
-         * @brief 세력마다 id 와 값을 처음 만난 순서로 씁니다.
+         * @brief 세력마다 id 와 값을 처음 만난 순서로 씁니다(리플렉션 상태 칸).
          *        `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 세력 id 가 비어 있으면 false 를 반환하고 상태는 바뀌지 않습니다.
          */
         SW_DECLARE_STATE_IO();
 
     private:
-        struct Entry
-        {
-            hashed_string _factionID{};
-            int32         _value{ 0 };
-        };
+        using Entry = ReputationEntry;
 
         Entry& acquireEntry( const hashed_string& factionID );
         int32  applyDelta( const hashed_string& factionID, int32 delta );
@@ -162,6 +176,7 @@ namespace sw
         static int32 computeTierIndex( const FactionDef* pFaction, int32 value );
 
     private:
+        PROPERTY( RuntimeState )
         vector<Entry>                _listEntry;
         EventBuffer<ReputationEvent> _eventBuffer;
         const ReputationCatalog*     _pCatalog;

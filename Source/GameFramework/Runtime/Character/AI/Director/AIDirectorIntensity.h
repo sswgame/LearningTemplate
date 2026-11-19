@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -54,9 +55,12 @@ namespace sw
      *          스트레스는 Impulse(한 번)와 Rate(초마다)로 쌓이고, 마지막 싸움 신호 뒤 `decayDelay` 초가 지나면 `decayPerSecond` 로 식는다.
      *          정의는 빌려 쓴다.
      */
+    REFLECT()
     class SW_GF_API AIDirectorIntensityModel final : public IAIDirectorIntensityModel
     {
     public:
+        REFLECT_BODY();
+
         AIDirectorIntensityModel();
 
         /** @brief 정의(빌려 씀)를 정하고 처음으로 돌립니다. */
@@ -74,7 +78,7 @@ namespace sw
         float32 getSignal( const hashed_string& signalID ) const override;
         float32 getStress() const { return _stress; }
         /**
-         * @brief 스트레스, 싸움 뒤 시간, 신호 값을 씁니다.
+         * @brief 스트레스, 싸움 뒤 시간, 신호 값을 씁니다(리플렉션 상태 칸 — 하한은 칸의 `PROPERTY( Min )`, 상한과 신호 수는 정의라 손으로 본다).
          *        `writeState` 의 바이트로 상태를 바꿉니다. 신호 수가 정의와 다르면 false 를 반환하고 상태는 그대로입니다.
          */
         SW_DECLARE_STATE_IO();
@@ -85,9 +89,12 @@ namespace sw
         float32                       computeLevelFloor() const;
 
     private:
+        PROPERTY( RuntimeState )
         vector<float32>               _listSignalValue; ///< 신호마다(Impulse 는 마지막에 넣은 양)
         const AIDirectorIntensityDef* _pDef;
-        float32                       _stress;
-        float32                       _calmSeconds;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _stress;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _calmSeconds;
     };
 } // namespace sw

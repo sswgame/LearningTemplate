@@ -111,9 +111,44 @@ namespace sw
      *          **결정성**: 시드와 dt, 신호, 문맥이 같으면 같은 단계와 같은 고르기를 같은 때에 낸다(`computeStateHash`).
      *          스폰 감독의 시드는 감독 시드에서 나온다. 조건의 확률 절은 (시드, 항목, 고른 횟수)의 해시로 굴린다.
      */
+    /** @brief 감독 풀의 항목 하나의 런타임 상태입니다. 리플렉션 구조체 — 감독의 상태 칸이 풀 안의 원소로 싣는다. */
+    REFLECT()
+    struct AIDirectorEncounterState
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        float32 _lastTime{ -1.0f }; ///< 음수면 아직 고른 적 없음
+        PROPERTY( Min = 0 )
+        int32 _count{ 0 };
+    };
+
+    /** @brief 감독 풀 하나의 런타임 상태입니다. 리플렉션 구조체 — 감독의 상태 칸(`vector`)이 원소로 싣는다. */
+    REFLECT()
+    struct AIDirectorPoolState
+    {
+        REFLECT_BODY();
+
+        static constexpr int32 kNoPending = -1; ///< 저장 상태의 "고른 것 없음"(한 정수 칸에 싣는다)
+
+        PROPERTY()
+        vector<AIDirectorEncounterState> _listEncounter{};
+        PROPERTY( Min = 0 )
+        float32 _timer{ 0.0f };
+        PROPERTY( Min = 0 )
+        float32 _budget{ 0.0f };
+        PROPERTY()
+        float32 _lastPickTime{ -1.0f };
+        PROPERTY( Min = -1 )
+        int32 _pendingIndex{ kNoPending }; ///< 예산 풀이 미리 골라 둔 항목
+    };
+
+    REFLECT()
     class SW_GF_API AIDirector
     {
     public:
+        REFLECT_BODY();
+
         static constexpr int32  kMaxTransitionsPerUpdate = 4;   ///< 한 프레임에 넘길 단계 수 상한. 머무는 시간이 0 인 단계끼리 끝없이 돌지 않게 한다
         static constexpr int32  kMaxPicksPerUpdate       = 8;   ///< 풀 하나가 한 프레임에 고르는 수 상한. dt 가 길 때 한꺼번에 쏟아지지 않게 한다
         static constexpr uint32 kMaxTraceEvent           = 256; ///< 추적이 보관하는 최근 사건 수
@@ -160,8 +195,8 @@ namespace sw
         /** @brief 결정성 확인용 상태 해시입니다. 시간, 단계, 긴장도, 난수, 풀, 항목, 스폰 상태를 담습니다. */
         uint64 computeStateHash() const;
         /**
-         * @brief 감독 상태를 씁니다. 태그는 'AIDR', 버전은 1 입니다.
-         *        시간, 단계, 순환, 긴장도, 고른 횟수, 난수, 프로필 구조, 풀, 항목, 기본 긴장도 모델, 스폰 감독을 싣는다.
+         * @brief 감독 상태를 씁니다. 태그는 'AIDR', 버전은 2 입니다(판 2 부터 리플렉션 상태 칸 — 판 1 바이트는 올리지 않고 거절한다).
+         *        시간, 단계, 순환, 긴장도, 고른 횟수, 풀, 항목(리플렉션 상태 칸)과 난수, 프로필 구조, 기본 긴장도 모델, 스폰 감독(손 본문)을 싣는다.
          *        핫 리로드와 세이브가 웨이브를 이어 가는 데 쓴다.
          *        게임 긴장도 모델(`setIntensityModel`)과 추적과 쌓인 이벤트는 싣지 않는다.
          *        `writeState` 의 바이트로 이어 갑니다. 먼저 같은 프로필과 테이블로 `initialize` 한 감독에 부릅니다.
@@ -177,23 +212,8 @@ namespace sw
         [[nodiscard]] bool rebindProfile( const AIDirectorProfile* pProfile );
 
     private:
-        /** @brief 항목 하나의 런타임 상태입니다. */
-        struct EncounterState
-        {
-            float32 _lastTime{ -1.0f }; ///< 음수면 아직 고른 적 없음
-            int32   _count{ 0 };
-        };
-
-        /** @brief 풀 하나의 런타임 상태입니다. */
-        struct PoolState
-        {
-            vector<EncounterState> _listEncounter{};
-            float32                _timer{ 0.0f };
-            float32                _budget{ 0.0f };
-            float32                _lastPickTime{ -1.0f };
-            static constexpr int32 kNoPending = -1;             ///< 저장 상태의 "고른 것 없음"(`serializeState` 가 한 정수 칸에 싣는다)
-            int32                  _pendingIndex{ kNoPending }; ///< 예산 풀이 미리 골라 둔 항목
-        };
+        using EncounterState = AIDirectorEncounterState;
+        using PoolState      = AIDirectorPoolState;
 
         IAIDirectorIntensityModel& getModel();
         bool                       isPoolActive( const AIDirectorPoolDef& pool ) const;
@@ -211,9 +231,10 @@ namespace sw
         uint32          computeChanceKey( int32 poolIndex, int32 encounterIndex ) const;
 
     private:
-        AIDirectorContext                           _context;
-        AIDirectorIntensityModel                    _builtinModel;
-        SpawnDirector                               _spawnDirector;
+        AIDirectorContext        _context;
+        AIDirectorIntensityModel _builtinModel;
+        SpawnDirector            _spawnDirector;
+        PROPERTY( RuntimeState )
         vector<PoolState>                           _listPoolState;
         EventBuffer<AIDirectorEvent>                _eventBuffer;
         RingBuffer<AIDirectorEvent, kMaxTraceEvent> _listTrace; ///< 최근 사건. 가득 차면 가장 오래된 것을 덮는다
@@ -222,12 +243,18 @@ namespace sw
         const SpawnTable*                           _pSpawnTable;
         IAIDirectorIntensityModel*                  _pCustomModel;
         GameRandom                                  _random;
-        float32                                     _time;
-        float32                                     _phaseTime;
-        float32                                     _intensity;
-        uint32                                      _seed;
-        uint32                                      _pickSerial; ///< 고른 횟수. 확률 절의 해시 키로 쓴다
-        int32                                       _phaseIndex;
-        int32                                       _cycle;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _time;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _phaseTime;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _intensity;
+        uint32  _seed;
+        PROPERTY( RuntimeState )
+        uint32 _pickSerial; ///< 고른 횟수. 확률 절의 해시 키로 쓴다
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _phaseIndex;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _cycle;
     };
 } // namespace sw

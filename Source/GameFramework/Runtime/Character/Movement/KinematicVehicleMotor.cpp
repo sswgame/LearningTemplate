@@ -496,18 +496,9 @@ namespace sw
 
     void KinematicVehicleMotor::serializeState( StateIO& io )
     {
-        io.value( _timer );
-        io.value( _position );
-        io.value( _velocity );
-        io.value( _yaw );
-        io.value( _driftCharge );
+        io.reflected( *this ); // 칸마다의 범위는 `PROPERTY( Min · Max )` 가 지킨다
+        io.value( _timer );    // 리플렉션 밖 값 — `FixedStepTimer` · `Countdown` 은 손 코덱이 있다
         io.value( _boost );
-        io.value( _nitroGauge );
-        io.value( _railDistance );
-        io.value( _nitroCount );
-        io.value( _driftDirection );
-        io.flag( _bAirborne );
-        io.check( 0 <= _nitroCount && -1 <= _driftDirection && _driftDirection <= 1 && 0.0f <= _railDistance );
         if ( io.isReading() )
         {
             _eventBuffer.clear();

@@ -167,32 +167,16 @@ namespace sw
 
     void TurnOrder::serializeState( StateIO& io )
     {
-        // 배우마다 속도 · 게이지 · id · 우선 · 동률깨기(20)
-        io.list( _listCombatant, 20, [&]( Combatant& actor )
+        io.reflected( *this ); // 속도 · 게이지 · 라운드의 범위와 모드 열거자는 칸이 지킨다
+        io.value( _random );   // 리플렉션 밖 값 — `GameRandom` 은 손 코덱이 있다
+        if ( io.isReading() == false )
+            return;
+        // 칸 사이 검사 — 번호는 겹치지 않고 대기열은 있는 행위자만 가리킨다
+        io.check( VectorUtil::findDuplicateBy<&Combatant::_actorID>( _listCombatant ) == nullptr );
+        for ( const int32 actorID : _listRoundQueue )
         {
-            io.value( actor._speed );
-            io.value( actor._gauge );
-            io.value( actor._actorID );
-            io.value( actor._priority );
-            io.value( actor._tieBreak );
-            io.check( kMinSpeed <= actor._speed && 0.0f <= actor._gauge );
-        } );
-        if ( io.isReading() )
-        {
-            io.check( VectorUtil::findDuplicateBy<&Combatant::_actorID>( _listCombatant ) == nullptr );
+            io.check( hasActor( actorID ) );
         }
-        io.list( _listRoundQueue, 4, [&]( int32& actorID )
-        {
-            io.value( actorID );
-            if ( io.isReading() )
-            {
-                io.check( hasActor( actorID ) );
-            }
-        } );
-        io.value( _random );
-        io.value( _round );
-        io.enumValue( _mode, TurnOrderMode::Timeline );
-        io.check( 0 <= _round );
     }
 
 } // namespace sw

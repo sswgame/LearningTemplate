@@ -239,16 +239,14 @@ namespace sw
 
     void WeaponState::serializeState( StateIO& io )
     {
+        io.reflected( *this ); // 탄 수의 범위는 칸의 `PROPERTY( Min )` 이 지킨다
         io.expect( _def._id );
         // 장전한 탄은 쓰는 쪽이 `loadProjectile` 로 먼저 맞춘다 — 다른 탄의 상태는 받지 않는다(탄 값이 들어맞지 않는다).
         io.expect( _shot._projectileID );
         io.value( _random );
         io.value( _cooldown );
         io.value( _reload );
-        io.value( _currentSpread );
-        io.value( _magazineAmmo );
-        io.value( _reserveAmmo );
-        io.check( 0 <= _magazineAmmo && 0 <= _reserveAmmo );
+        io.value( _currentSpread ); // 리플렉션 밖 값 — `GameRandom` · `Countdown` · `Radians` 는 손 코덱이 있다
     }
 
 } // namespace sw

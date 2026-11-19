@@ -248,34 +248,19 @@ namespace sw
 
     void SpawnDirector::serializeState( StateIO& io )
     {
+        // 항목 수는 표(`initialize`)가 정한다 — 읽은 항목별 수 목록이 지금 수와 다르면 거절한다
         const int32 entryCount = static_cast<int32>( _listAliveCount.size() );
-        // 살아 있는 것마다 id(4) + 항목(4)
-        io.list( _listAlive, 8, [&]( SpawnAlive& alive )
-        {
-            io.value( alive._spawnID );
-            io.value( alive._entryIndex );
-            io.check( 0 <= alive._entryIndex && alive._entryIndex < entryCount );
-        } );
-        io.expect( static_cast<uint32>( _listAliveCount.size() ) );
-        if ( io.isOk() == false )
+        io.reflected( *this );
+        io.value( _random ); // 리플렉션 밖 값 — `GameRandom` 은 손 코덱이 있다
+        if ( io.isReading() == false )
             return;
-        for ( int32& aliveCount : _listAliveCount )
+        // 칸 사이 검사 — 항목 번호는 표 안이다
+        io.check( static_cast<int32>( _listAliveCount.size() ) == entryCount && _pendingIndex < entryCount );
+        for ( const SpawnAlive& alive : _listAlive )
         {
-            io.value( aliveCount );
+            io.check( 0 <= alive._entryIndex && alive._entryIndex < entryCount );
         }
-        io.list( _listAllowedTag );
-        io.value( _random );
-        io.value( _budget );
-        io.value( _budgetScale );
-        io.value( _time );
-        io.value( _pendingIndex );
-        io.value( _nextSpawnID );
-        io.flag( _bRefundOnDespawn );
-        io.check( -1 <= _pendingIndex && _pendingIndex < entryCount );
-        if ( io.isReading() )
-        {
-            _eventBuffer.clear();
-        }
+        _eventBuffer.clear();
     }
 
 } // namespace sw

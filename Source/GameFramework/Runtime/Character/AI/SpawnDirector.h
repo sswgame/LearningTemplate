@@ -155,9 +155,24 @@ namespace sw
      *          고를 수 있는 것은 최소 시각이 지났고, 동시 상한 아래이고, 태그 거르기를 지나는 것이다. 골라 둔 것이 그 조건에서 빠지면 다시 고른다.
      *          씨앗이 같고 같은 순서로 부르면 같은 것을 같은 때에 낸다. 테이블은 빌려 쓴다.
      */
+    /** @brief `SpawnDirector` 의 살아 있는 개체 하나입니다. 리플렉션 구조체 — 감독의 상태 칸(`vector`)이 원소로 싣는다. */
+    REFLECT()
+    struct SpawnAlive
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        uint32 _spawnID{ 0 };
+        PROPERTY()
+        int32 _entryIndex; ///< 낳을 때 채운다(상태 읽기는 범위를 검사한다)
+    };
+
+    REFLECT()
     class SW_GF_API SpawnDirector
     {
     public:
+        REFLECT_BODY();
+
         static constexpr int32 kMaxSpawnsPerUpdate = 16; ///< 한 번에 내는 수 상한(긴 dt · 큰 시작 예산에서 한 프레임에 몰리지 않게)
 
         SpawnDirector();
@@ -194,34 +209,36 @@ namespace sw
         /** @brief 살아 있는 개체의 스폰 id 를 낸 순서로 @p outListSpawnID 에 채웁니다. */
         void collectAliveSpawnIDs( vector<uint32>& outListSpawnID ) const;
         /**
-         * @brief 살아 있는 것, 항목별 수, 허용 태그, 난수, 예산, 시간, 골라 둔 것, 다음 id, 환불을 씁니다. 표는 `initialize` 의 것이라 싣지 않으며, 읽을 때 항목 수가 지금 표와 다르면 거절합니다. 알림은 읽을 때 비웁니다.
+         * @brief 살아 있는 것, 항목별 수, 허용 태그, 예산, 시간, 골라 둔 것, 다음 id, 환불(리플렉션 상태 칸)과 난수(손 본문)를 씁니다. 표는 `initialize` 의 것이라 싣지 않으며, 읽을 때 항목 수가 지금 표와 다르면 거절합니다. 알림은 읽을 때 비웁니다.
          *        `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 테이블의 항목 수와 맞지 않거나 끝까지 읽지 못하면 false 를 반환하고 상태는 그대로입니다.
          */
         SW_DECLARE_STATE_IO();
 
     private:
-        /** @brief 살아 있는 개체 하나입니다. */
-        struct SpawnAlive
-        {
-            uint32 _spawnID{ 0 };
-            int32  _entryIndex; ///< 낳을 때 채운다(상태 읽기는 범위를 검사한다)
-        };
-
         bool isEligible( int32 entryIndex ) const;
         void pickPending();
 
     private:
-        vector<SpawnAlive>      _listAlive;
-        vector<int32>           _listAliveCount; ///< 항목마다
+        PROPERTY( RuntimeState )
+        vector<SpawnAlive> _listAlive;
+        PROPERTY( RuntimeState )
+        vector<int32> _listAliveCount; ///< 항목마다
+        PROPERTY( RuntimeState )
         vector<hashed_string>   _listAllowedTag;
         EventBuffer<SpawnEvent> _eventBuffer;
         const SpawnTable*       _pTable;
         GameRandom              _random;
-        float32                 _budget;
-        float32                 _budgetScale;
-        float32                 _time;
-        int32                   _pendingIndex; ///< -1 이면 골라 둔 것이 없다
-        uint32                  _nextSpawnID;
-        uint8                   _bRefundOnDespawn;
+        PROPERTY( RuntimeState )
+        float32 _budget;
+        PROPERTY( RuntimeState )
+        float32 _budgetScale;
+        PROPERTY( RuntimeState )
+        float32 _time;
+        PROPERTY( RuntimeState, Min = -1 )
+        int32 _pendingIndex; ///< -1 이면 골라 둔 것이 없다
+        PROPERTY( RuntimeState )
+        uint32 _nextSpawnID;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bRefundOnDespawn;
     };
 } // namespace sw

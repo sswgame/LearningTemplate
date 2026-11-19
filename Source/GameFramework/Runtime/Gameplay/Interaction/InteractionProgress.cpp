@@ -229,19 +229,10 @@ namespace sw
 
     void InteractionProgress::serializeState( StateIO& io )
     {
-        io.list( _listParticipant );
-        io.check( _listParticipant.size() <= static_cast<size_t>( _config._maxParticipants ) );
-        io.value( _random );
-        io.value( _seed );
-        io.value( _skillCheckActor );
-        io.value( _progress );
-        io.value( _time );
+        io.reflected( *this ); // 진행량 0..1 과 깃발은 칸의 `PROPERTY( Min · Max )` 가 지킨다
+        io.value( _random );   // 리플렉션 밖 값 — `GameRandom` · `Countdown` 은 손 코덱이 있다
         io.value( _skillCheckCountdown );
-        io.value( _skillCheckTarget );
-        io.flag( _bCompleted );
-        io.flag( _bSkillCheckPending );
-        io.flag( _bRegressing );
-        io.check( 0.0f <= _progress && _progress <= 1.0f );
+        io.check( _listParticipant.size() <= static_cast<size_t>( _config._maxParticipants ) ); // 칸 사이 검사 — 상한은 규칙이다
         if ( io.isReading() )
         {
             _eventBuffer.clear();

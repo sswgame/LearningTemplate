@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -47,9 +48,12 @@ namespace sw
      * @class LockOnSelector
      * @brief 대상 하나를 쥡니다. 매 틱 `update` 로 유지 여부를 보고, `pickBest` · `cycle` 로 고릅니다. 좌표는 +Y 위입니다.
      */
+    REFLECT()
     class SW_GF_API LockOnSelector
     {
     public:
+        REFLECT_BODY();
+
         void setSettings( const LockOnSettings& settings ) { _settings = settings; }
 
         /** @brief 가장 좋은 후보를 잡습니다. 없으면 0 이고 풀립니다. */
@@ -64,17 +68,19 @@ namespace sw
         bool   hasTarget() const { return _target != 0; }
 
         /**
-         * @brief 표적 · 숨은 시간을 씁니다. 설정은 싣지 않습니다.
+         * @brief 표적 · 숨은 시간을 씁니다(리플렉션 상태 칸 — 범위는 칸의 `PROPERTY( Min )`). 설정은 싣지 않습니다.
          *        `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다.
          */
-        SW_DECLARE_STATE_IO();
+        SW_DECLARE_REFLECTED_STATE_IO()
 
     private:
         /** @brief 앞 방향 기준 가로 각(도, 오른쪽 +)입니다. */
         static float32 computeYawOffset( const float3& eye, const float3& forward, const float3& position );
 
         LockOnSettings _settings{};
-        uint64         _target{ 0 };
-        float32        _hiddenTime{ 0.0f };
+        PROPERTY( RuntimeState )
+        uint64 _target{ 0 };
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _hiddenTime{ 0.0f };
     };
 } // namespace sw

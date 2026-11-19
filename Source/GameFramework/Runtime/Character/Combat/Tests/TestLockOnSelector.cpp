@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/Tests/StateIOTestUtil.h"
 
 #include "GameFramework/Runtime/Character/Combat/LockOnSelector.h"
 
@@ -123,10 +124,9 @@ SW_TEST_CASE( LockOnSelectorTest, StateRoundTrips )
     SW_EXPECT_EQUAL( uint64( 1 ), restored.getTarget() );
     SW_EXPECT_FALSE( restored.update( kEye, { makeCandidate( 1, 0.0f, 5.0f, 0.0f, SW_FALSE ) }, 0.2f ) ); // 숨은 시간을 이어 간다
 
-    Archive broken;
-    broken << uint64( 9 );
-    broken << -1.0f;
-    Archive brokenReading( broken.getData(), broken.getSize() );
+    vector<uint8> listBroken = StateIOTestUtil::computeStateBytes( selector ); // 마지막 칸(숨은 시간)을 음수로 덮는다
+    SW_REQUIRE_TRUE( StateIOTestUtil::overwrite( listBroken, listBroken.size() - sizeof( float32 ), -1.0f ) );
+    Archive brokenReading( listBroken.data(), listBroken.size() );
     SW_EXPECT_FALSE( selector.readState( brokenReading ) );
     SW_EXPECT_EQUAL( uint64( 1 ), selector.getTarget() );
 }

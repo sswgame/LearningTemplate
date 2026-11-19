@@ -85,11 +85,14 @@ namespace sw
      * @class WorldClock
      * @brief 오픈월드, 농장, 생활 장르의 시계입니다. 시간은 `update` 로만 흐르며, 한 번에 많이 흘러도 넘은 시와 날의 경계를 모두 알립니다. 잠과 빨리 감기가 그 경우입니다.
      */
+    REFLECT()
     class SW_GF_API WorldClock
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag               = FourCCUtil::make( "CLOK" );
-        static constexpr uint32 kStateVersion           = 2; ///< 2: 하루 안 시각이 float64 다
+        static constexpr uint32 kStateVersion           = 3; ///< 2: 하루 안 시각이 float64 다. 3: 리플렉션 상태 칸(판 2 는 머리를 붙여 올린다 — `ReflectedStateUpgrade::prependHead`)
         static constexpr uint32 kStateHeaderlessVersion = 1; ///< 판 1 까지는 머리표가 없었다 — 머리가 없는 바이트는 판 1 로 읽어 올린다(`StateIO::header`)
 
         WorldClock();
@@ -126,7 +129,7 @@ namespace sw
         bool                      isPaused() const { return _bPaused != SW_FALSE; }
         void                      pollEvents( vector<WorldClockEvent>& outListEvent );
         /**
-         * @brief 날, 하루 안의 초, 배율, 멈춤을 씁니다. 설정(하루 길이와 계절)은 `initialize` 의 것이라 싣지 않습니다.
+         * @brief 날, 하루 안의 초, 배율, 멈춤을 씁니다(리플렉션 상태 칸 — 판 2 손 본문과 같은 순서 · 폭이라 칸 선언 순서를 바꾸지 않는다). 설정(하루 길이와 계절)은 `initialize` 의 것이라 싣지 않습니다.
          *        `writeState` 의 바이트로 상태를 바꿉니다. 알림은 없습니다. 날이 음수이거나 시각이 지금 설정의 하루 밖이면 false 를 반환하고 상태는 그대로입니다.
          */
         SW_DECLARE_STATE_IO();
@@ -141,9 +144,13 @@ namespace sw
     private:
         WorldClockSettings           _settings;
         EventBuffer<WorldClockEvent> _eventBuffer;
-        float64                      _secondOfDay; ///< 0.._secondsPerDay. float64 다 — 작은 걸음(1 분 · 프레임)을 하루 내내 더해도 자정에 닿는다(float32 는 하루 5000 초에서 0.1 초 남짓 모자라 날이 넘어가지 않았다, 언리얼 FTimespan 의 정수 틱 자리)
-        float32                      _timeScale;
-        int32                        _day;
-        uint8                        _bPaused;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _day;
+        PROPERTY( RuntimeState, Min = 0 )
+        float64 _secondOfDay; ///< 0.._secondsPerDay. float64 다 — 작은 걸음(1 분 · 프레임)을 하루 내내 더해도 자정에 닿는다(float32 는 하루 5000 초에서 0.1 초 남짓 모자라 날이 넘어가지 않았다, 언리얼 FTimespan 의 정수 틱 자리)
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _timeScale;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bPaused;
     };
 } // namespace sw
