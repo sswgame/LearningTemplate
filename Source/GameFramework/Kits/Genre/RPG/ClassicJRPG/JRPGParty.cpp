@@ -279,20 +279,12 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        // 멤버마다 id, 직업, 이름(12) + 주문, 비급, 슬롯 수(12) + 레벨(20) + 능력치(28) + HP, MP, 내공(12) 바이트 이상
-        io.list( _listMember, 84, [&]( JRPGMember& member )
+        io.reflected( *this );
+        if ( io.isOk() == false )
+            return;
+        // 장비는 리플렉션 밖 값이다 — 멤버마다 슬롯 순서대로 아이템 id 만 쓴다(빈 슬롯은 빈 이름). 슬롯 구성은 `initialize` 에서 받은 것이다.
+        for ( JRPGMember& member : _listMember )
         {
-            io.value( member._id );
-            io.value( member._classID );
-            io.value( member._name );
-            io.list( member._listSpell );
-            // 비급마다 이름(4) + 숙련(4) 바이트
-            io.list( member._listManual, 8, [&]( JRPGManualProgress& progress )
-            {
-                io.value( progress._manualID );
-                io.value( progress._proficiency );
-            } );
-            // 장비는 슬롯 순서대로 아이템 id 만 쓴다(빈 슬롯은 빈 이름). 슬롯 구성은 `initialize` 에서 받은 것이다.
             if ( io.isReading() )
             {
                 member._equipment.initialize( _pItemCatalog, _equipLayout );
@@ -317,19 +309,12 @@ namespace sw
                         return;
                 }
             }
-            io.value( member._level );
-            for ( int32& stat : member._arrStat )
-            {
-                io.value( stat );
-            }
-            io.value( member._hp );
-            io.value( member._mp );
-            io.value( member._inner );
+            // 카탈로그 · 칸 사이 검사만 손으로 — 칸마다의 범위는 `PROPERTY( Min )` 이 지킨다(레벨 칸은 안쪽 구조체라 그 형식의 손 검사를 여기서 한다)
             if ( io.isReading() && io.isOk() )
             {
-                io.check( member.isStateValid( *_pCatalog ) );
+                io.check( member.isStateValid( *_pCatalog ) && member._level.getXP() <= member._level.getTotalXP() );
             }
-        } );
+        }
         if ( io.isWriting() || io.isOk() == false )
             return;
         io.check( _listMember.size() <= static_cast<size_t>( kMaxMembers ) && VectorUtil::findDuplicateBy<&JRPGMember::_id>( _listMember ) == nullptr );

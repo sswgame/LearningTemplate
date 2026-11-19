@@ -16,6 +16,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 #include <algorithm>
+#include <iterator>
 
 // 클래식 JRPG 키트의 규칙: 전투(피해 공식 · 명령 거절 · 타이밍 · 합동기 · 시전 잠금 · 도망 · 승패 · 내공), 파티(성장 · 전직 · 여관 · 교회 · 장비 · 비급), 걸음 조우, 카탈로그 오류, 상태 바이트의 범위 검사.
 // 난수가 끼는 수치는 공식의 범위로 본다(물리 피해 ×0.875..1.125, 주문 ×0.9..1.1). 키트 GF_ClassicJRPG(nogpu).
@@ -932,17 +933,61 @@ SW_TEST_CASE_F( JRPGRulesTest, PartyStateRefusals )
         hero._level.setLevel( longer, 50 ); // 이 카탈로그의 최고는 30
     } ) );
 
-    // 정원을 넘는 멤버 수, 장비 슬롯 구성이 다른 상태.
-    sw::Archive oversized;
-    oversized << static_cast<uint32>( sw::JRPGParty::kMaxMembers + 1 );
-    for ( int32 pad = 0; pad < 128; ++pad )
+    // 정원을 넘는 멤버 수: 정원이 찬 파티가 쓴 바이트에 다른 파티의 멤버 하나(겹치지 않는 id)를 끼운다 — 멤버 칸 · 장비 칸은 저마다 맞아 정원만 넘는다.
+    // 바이트는 머리 · 멤버 수 · 멤버 칸들(리플렉션) 뒤에 멤버마다 장비(슬롯 수 + 빈 이름들)다.
+    sw::JRPGParty full;
+    sw::JRPGParty extra;
+    initializeParty( full );
+    initializeParty( extra );
+    constexpr const utf8* kArrMemberID[] = { "m0", "m1", "m2", "m3" };
+    static_assert( std::size( kArrMemberID ) == static_cast<size_t>( sw::JRPGParty::kMaxMembers ) );
+    for ( int32 member = 0; member < sw::JRPGParty::kMaxMembers; ++member )
     {
-        oversized << static_cast<uint32>( 0 );
+        SW_REQUIRE_TRUE( full.addMember( kArrMemberID[member], "Hero", "hero" ) == member );
     }
+    SW_REQUIRE_TRUE( extra.addMember( "mx", "Hero", "hero" ) == 0 );
+    sw::Archive fullBytes;
+    sw::Archive extraBytes;
+    sw::Archive header;
+    full.writeState( fullBytes );
+    extra.writeState( extraBytes );
+    sw::StateIO::writeReflectedHeader<sw::JRPGParty>( header );
+    const size_t equipmentBytes  = sizeof( uint32 ) * ( 1 + extra.getMember( 0 )._equipment.getSlots().size() );
+    const size_t membersBegin    = static_cast<size_t>( header.getSize() ) + sizeof( uint32 );
+    const size_t fullMembersEnd  = static_cast<size_t>( fullBytes.getSize() ) - equipmentBytes * sw::JRPGParty::kMaxMembers;
+    const size_t extraMembersEnd = static_cast<size_t>( extraBytes.getSize() ) - equipmentBytes;
+    sw::Archive  oversized;
+    oversized.writeBytes( header.getData(), header.getSize() );
+    oversized << static_cast<uint32>( sw::JRPGParty::kMaxMembers + 1 );
+    oversized.writeBytes( fullBytes.getData() + membersBegin, fullMembersEnd - membersBegin );
+    oversized.writeBytes( extraBytes.getData() + membersBegin, extraMembersEnd - membersBegin );
+    oversized.writeBytes( fullBytes.getData() + fullMembersEnd, fullBytes.getSize() - fullMembersEnd );
+    oversized.writeBytes( extraBytes.getData() + extraMembersEnd, equipmentBytes );
     sw::Archive   readingOversized( oversized.getData(), oversized.getSize() );
     sw::JRPGParty target;
     initializeParty( target );
     SW_EXPECT_FALSE( target.readState( readingOversized ) );
+    // 같은 끼우기로 정원 안(멤버 하나 + 하나)이면 읽힌다 — 위 거절이 꾸민 바이트의 모양 탓이 아님을 본다.
+    sw::JRPGParty single;
+    initializeParty( single );
+    SW_REQUIRE_TRUE( single.addMember( "m0", "Hero", "hero" ) == 0 );
+    sw::Archive singleBytes;
+    single.writeState( singleBytes );
+    const size_t singleMembersEnd = static_cast<size_t>( singleBytes.getSize() ) - equipmentBytes;
+    sw::Archive  pair;
+    pair.writeBytes( header.getData(), header.getSize() );
+    pair << static_cast<uint32>( 2 );
+    pair.writeBytes( singleBytes.getData() + membersBegin, singleMembersEnd - membersBegin );
+    pair.writeBytes( extraBytes.getData() + membersBegin, extraMembersEnd - membersBegin );
+    pair.writeBytes( singleBytes.getData() + singleMembersEnd, equipmentBytes );
+    pair.writeBytes( extraBytes.getData() + extraMembersEnd, equipmentBytes );
+    sw::Archive   readingPair( pair.getData(), pair.getSize() );
+    sw::JRPGParty pairTarget;
+    initializeParty( pairTarget );
+    SW_EXPECT_TRUE( pairTarget.readState( readingPair ) );
+    SW_EXPECT_EQUAL( 2, pairTarget.getMemberCount() );
+
+    // 장비 슬롯 구성이 다른 상태.
 
     SW_REQUIRE_TRUE( _party.addMember( "hero", "Hero", "hero" ) == 0 );
     sw::Archive written;
