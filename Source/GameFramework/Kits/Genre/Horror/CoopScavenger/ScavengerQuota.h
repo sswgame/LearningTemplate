@@ -54,7 +54,7 @@ namespace sw
          * @brief 할당량, 채운 양, 남은 날, 주기, 게임 오버를 씁니다(리플렉션 상태 칸 — 범위는 칸의 `PROPERTY( Min · Max )`). 설정은 `initialize` 에서 받으므로 저장하지 않습니다.
          *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
          */
-        SW_DECLARE_STATE_IO();
+        SW_DECLARE_REFLECTED_STATE_IO()
 
         int32 getQuota() const { return _quota; }
         int32 getFulfilled() const { return _fulfilled; }

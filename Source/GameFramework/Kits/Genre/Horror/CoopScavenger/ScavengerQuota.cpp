@@ -69,9 +69,4 @@ namespace sw
         return static_cast<int32>( increase + 0.5f );
     }
 
-    void ScavengerQuota::serializeState( StateIO& io )
-    {
-        io.reflected( *this ); // 칸마다의 범위는 `PROPERTY( Min · Max )` 가 지킨다
-    }
-
 } // namespace sw
