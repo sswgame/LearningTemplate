@@ -6,7 +6,6 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
-#include "Engine/Serialization/Format/Tests/StateIOTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorCatalog.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorEncounter.h"
@@ -425,6 +424,7 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesUnknownElement )
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesOutOfRangeItem )
 {
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SurvivalHorrorCatalog catalog;
     SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><Item id="a" w="9"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
 }
@@ -1290,7 +1290,6 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterStateRoundTrip )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterReadRefusesCraftedBytes )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SurvivalHorrorEncounter encounter;
     SW_REQUIRE_TRUE( encounter.initialize( _monster, { makeInvestigator( 1 ) }, 7u ) );
     const SurvivalHorrorInvestigator good  = makeInvestigator( 1 );
@@ -1357,13 +1356,14 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnOrderReadRefusesCraftedBytes )
         float32 _gauge{ 0.0f };
         int32   _actorID{ 1 };
     };
-    // 리플렉션 머리(타입 판 + 칸 배치 해시)는 진짜 `writeState` 바이트에서 가져온다 — 칸 배치가 바뀌면 아래 "형식은 맞다" 가 진다(거짓 통과 없음).
-    vector<uint8> listHead = StateIOTestUtil::computeStateBytes( TurnOrder{} );
-    listHead.resize( sizeof( uint32 ) + sizeof( uint64 ) );
-    const auto read = [&listHead]( const vector<FixtureActor>& listActor, const vector<int32>& listQueue, int32 round )
+    const auto read = []( const vector<FixtureActor>& listActor, const vector<int32>& listQueue, int32 round )
     {
         Archive written;
-        written.writeBytes( listHead.data(), listHead.size() );
+        // 리플렉션 머리는 정상 `writeState` 바이트에서 가져온다 — 손으로 짜면 머리가 달라 다른 이유로 거절되어 거짓 통과한다.
+        const TurnOrder blank;
+        Archive         blankBytes;
+        blank.writeState( blankBytes );
+        written.writeBytes( blankBytes.getData(), StateIO::kReflectedHeaderBytes );
         written << static_cast<uint32>( listActor.size() );
         for ( const FixtureActor& actor : listActor )
         {
@@ -1379,9 +1379,9 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnOrderReadRefusesCraftedBytes )
             written << actorID;
         }
         written << round;
-        written << static_cast<int64>( TurnOrderMode::Rounds ); // 리플렉션 열거는 int64 다
+        written << static_cast<int64>( TurnOrderMode::Rounds ); // 리플렉션 열거는 int64 로 놓인다
         const GameRandom random;
-        StateIO::writeRandom( written, random ); // 손 본문 — 리플렉션 칸 뒤
+        StateIO::writeRandom( written, random );
         Archive   reading( written.getData(), written.getSize() );
         TurnOrder order;
         return order.readState( reading );

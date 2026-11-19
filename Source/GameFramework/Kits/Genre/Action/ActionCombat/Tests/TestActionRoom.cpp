@@ -645,7 +645,8 @@ SW_TEST_CASE( ActionRoomTest, ReadRejectsUnknownMonster )
     source.writeState( written );
 
     sw::vector<uint8> listByte( written.getData(), written.getData() + static_cast<size_t>( written.getSize() ) );
-    listByte[22] = static_cast<uint8>( 'x' ); // 이름 "grunt" 의 첫 글자(머리 14 + 종 수 4 + 길이 4)
+    // 이름 "grunt" 의 첫 글자: 리플렉션 머리 뒤 종류(int64) 클리어(1), 손 본문의 쿨다운 셋(12) 종 수(4) 이름 길이(4) 다음
+    listByte[sw::StateIO::kReflectedHeaderBytes + sizeof( int64 ) + 1 + 12 + 4 + 4] = static_cast<uint8>( 'x' );
     sw::ActionRoom target;
     sw::Archive    reading( listByte.data(), listByte.size() );
     SW_EXPECT_FALSE( target.readState( reading ) );

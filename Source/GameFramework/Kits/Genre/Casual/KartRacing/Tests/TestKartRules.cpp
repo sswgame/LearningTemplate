@@ -528,6 +528,7 @@ SW_TEST_CASE( KartItemsTest, ReportsBrokenTables )
     SW_EXPECT_LOG( "KartItems.RankTableNeedsEntryChildren" );
     SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     constexpr const utf8* kBrokenXML = R"(<KartItemCatalog>
   <RankTable from="1" to="1"><Entry item="banana"/></RankTable>
   <Item id="banana" kind="Banana" projectile="banana"/>
@@ -1438,7 +1439,6 @@ SW_TEST_CASE_F( KartRaceTest, ReadStateRefusesCheckpointOutsideTrack )
  */
 SW_TEST_CASE_F( KartRaceTest, ReadStateRefusesBrokenTimes )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     open( KartTestUtil::makeRingDef( 3, {} ), 1 );
     stepTimes( 5 );
     sw::Archive written;
