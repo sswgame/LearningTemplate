@@ -58,28 +58,38 @@ namespace sw
     };
 
     /** @brief 부지 안의 변환입니다. 자리는 부지 원점 기준 XZ(m, 점유 칸의 가운데), 층은 0 부터, 요는 라디안(0 ~ 2π)입니다. */
+    REFLECT()
     struct HousingTransform
     {
-        float2  _position{ 0.0f, 0.0f };
-        int32   _level{ 0 };
-        float32 _yaw{ 0.0f };
+        REFLECT_BODY();
+
+        PROPERTY()
+        float2 _position{ 0.0f, 0.0f };
+        PROPERTY( Min = 0 )
+        int32 _level{ 0 };
+        PROPERTY( Min = 0 )
+        float32 _yaw{ 0.0f }; ///< 위 끝(2π)은 열린 경계라 레이아웃 본문이 본다
 
         bool operator==( const HousingTransform& other ) const
         {
             return _position._x == other._position._x && _position._y == other._position._y && _level == other._level && _yaw == other._yaw;
         }
-        void serializeState( StateIO& io );
     };
 
     /** @brief 놓인 부품 하나입니다. `_placementID` 는 부지 안에서 다시 쓰지 않는 안정 id 입니다(0 은 없음). */
+    REFLECT()
     struct HousingPlacement
     {
-        uint32           _placementID{ 0 };
-        hashed_string    _partID{};
-        int32            _partVersion{ 0 };
-        HousingTransform _transform{};
+        REFLECT_BODY();
 
-        void serializeState( StateIO& io );
+        PROPERTY( Min = 1 )
+        uint32 _placementID{ 0 };
+        PROPERTY()
+        hashed_string _partID{};
+        PROPERTY()
+        int32 _partVersion{ 0 };
+        PROPERTY()
+        HousingTransform _transform{};
     };
 
     /** @brief 놓으려는 것입니다. 변환은 조준 · 지면 투영의 날 값이고 스냅은 레이아웃이 합니다. */
@@ -136,9 +146,12 @@ namespace sw
      *          되돌리기는 편집의 역(놓기 ↔ 치우기, 옮기기 ↔ 옛 자리)이고 값도 그대로 되돌린다(놓기의 역은 낸 값 전부를 돌려준다). 지갑이 모자라면 거절하고 이력은 그대로다.
      *          스레드: 게임 스레드에서만 쓴다.
      */
+    REFLECT()
     class SW_KIT_API HousingLayout
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "HOUS" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -249,12 +262,14 @@ namespace sw
         HousingPlotSettings       _settings;
         const HousingPartCatalog* _pCatalog;
         Wallet*                   _pWallet;
-        LandBinding               _land;          ///< 빌린 공유 땅(없으면 단독 부지) — 상태에 싣지 않는다(땅은 판 상태가 싣는다)
-        vector<HousingPlacement>  _listPlacement; ///< id 오름차순
-        vector<uint32>            _listCellOwner; ///< [층(바닥 · 구조물 · 가구)][층수][z][x] 의 배치 id(0 은 빈 칸)
-        vector<Edit>              _listEdit;
-        uint32                    _editCursor; ///< [0, 이것) 은 되돌릴 수 있고 [이것, 끝) 은 다시 할 수 있다
-        uint32                    _nextPlacementID;
-        uint32                    _revision;
+        LandBinding               _land; ///< 빌린 공유 땅(없으면 단독 부지) — 상태에 싣지 않는다(땅은 판 상태가 싣는다)
+        PROPERTY( RuntimeState )
+        vector<HousingPlacement> _listPlacement; ///< id 오름차순
+        vector<uint32>           _listCellOwner; ///< [층(바닥 · 구조물 · 가구)][층수][z][x] 의 배치 id(0 은 빈 칸)
+        vector<Edit>             _listEdit;
+        uint32                   _editCursor; ///< [0, 이것) 은 되돌릴 수 있고 [이것, 끝) 은 다시 할 수 있다
+        PROPERTY( RuntimeState, Min = 1 )
+        uint32 _nextPlacementID;
+        uint32 _revision;
     };
 } // namespace sw

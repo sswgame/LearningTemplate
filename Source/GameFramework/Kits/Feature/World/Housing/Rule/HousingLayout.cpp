@@ -18,10 +18,9 @@ namespace sw
     {
         struct HousingLayoutInternal
         {
-            static constexpr int32   kLayerCount   = 3;       ///< `HousingPartLayer` 의 수
-            static constexpr float32 kCellEpsilon  = 1.0e-3f; ///< 칸 경계에 닿은 상자는 그 칸을 덮지 않는다(칸 단위)
-            static constexpr float32 kRayEpsilon   = 1.0e-6f;
-            static constexpr uint32  kPlacementMin = 4 + 4 + 4 + 4 * 4; ///< 저장된 배치 하나의 최소 바이트(id · 빈 이름 길이 · 판 · 변환)
+            static constexpr int32   kLayerCount  = 3;       ///< `HousingPartLayer` 의 수
+            static constexpr float32 kCellEpsilon = 1.0e-3f; ///< 칸 경계에 닿은 상자는 그 칸을 덮지 않는다(칸 단위)
+            static constexpr float32 kRayEpsilon  = 1.0e-6f;
 
             /** @brief 요를 [0, 2π) 로 접습니다. 같은 각이 같은 바이트로 저장되게 한다. */
             static float32 wrapYaw( float32 yaw )
@@ -65,26 +64,6 @@ namespace sw
             }
         };
     } // namespace
-} // namespace sw
-
-namespace sw
-{
-    void HousingTransform::serializeState( StateIO& io )
-    {
-        io.value( _position ); // 실수의 NaN · 무한은 아카이브 읽기가 거절한다
-        io.value( _level );
-        io.value( _yaw );
-        io.check( _level >= 0 && _yaw >= 0.0f && _yaw < MathUtil::kTwoPi );
-    }
-
-    void HousingPlacement::serializeState( StateIO& io )
-    {
-        io.value( _placementID );
-        io.value( _partID );
-        io.value( _partVersion );
-        io.value( _transform );
-        io.check( _placementID != 0 && _partID.empty() == false );
-    }
 } // namespace sw
 
 namespace sw
@@ -701,7 +680,6 @@ namespace sw
 
     void HousingLayout::serializeState( StateIO& io )
     {
-        using Internal = HousingLayoutInternal;
         io.header( kStateTag, kStateVersion );
         hashed_string plotID = _settings._plotID;
         io.value( plotID );
@@ -711,11 +689,13 @@ namespace sw
             io.fail();
             return;
         }
-        io.value( _nextPlacementID );
-        io.list( _listPlacement, Internal::kPlacementMin, [&io]( HousingPlacement& placement )
-        { io.value( placement ); } );
+        io.reflected( *this ); // 배치(안쪽 구조체 칸 — id ≥ 1, 층 · 요 ≥ 0)와 다음 배치 id 는 리플렉션 상태 칸이다. 실수의 NaN · 무한은 읽기가 거절한다
         if ( io.isWriting() || io.isOk() == false )
             return;
+        for ( const HousingPlacement& placement : _listPlacement )
+        {
+            io.check( placement._partID.empty() == false && placement._transform._yaw < MathUtil::kTwoPi ); // 열린 위 끝 · 빈 이름만 손으로
+        }
         if ( io.check( validatePlacements() ) == false )
             return;
         _listEdit.clear();
