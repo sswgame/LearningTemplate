@@ -121,9 +121,12 @@ namespace sw
      *          사건의 목격자가 모두 사라지면 그 범죄는 없던 일이 된다. 수배 단계는 법에 보이지 않는 동안(`setSeenByLaw( false )`) 지역의 식는 시간마다
      *          하나씩 내려가고, 변장하면 그만큼 빨리 식는다.
      */
+    REFLECT()
     class SW_KIT_API WesternLawState
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WLAW" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -162,16 +165,25 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
 
-    private:
+        /** @brief 지역 하나의 현상금 · 수배 기록입니다(리플렉션 상태 칸의 원소 — 수배 상한은 카탈로그라 손 본문이 본다). */
+        REFLECT()
         struct RegionRecord
         {
+            REFLECT_BODY();
+
+            PROPERTY()
             hashed_string _regionID{};
-            float32       _unseenTime{ 0.0f };
-            int32         _bounty{ 0 };
-            int32         _wantedLevel{ 0 };
-            uint8         _bSeenByLaw{ SW_FALSE };
+            PROPERTY( Min = 0 )
+            float32 _unseenTime{ 0.0f };
+            PROPERTY( Min = 0 )
+            int32 _bounty{ 0 };
+            PROPERTY( Min = 0 )
+            int32 _wantedLevel{ 0 };
+            PROPERTY( Min = 0, Max = 1 )
+            uint8 _bSeenByLaw{ SW_FALSE };
         };
 
+    private:
         struct PendingReport
         {
             hashed_string _crimeID{};
@@ -191,11 +203,14 @@ namespace sw
                                        const hashed_string& crimeID = hashed_string{}, uint64 witnessID = 0 );
 
     private:
+        PROPERTY( RuntimeState )
         vector<RegionRecord>         _listRecord;
         vector<PendingReport>        _listPending;
         EventBuffer<WesternLawEvent> _eventBuffer;
         const WesternCatalog*        _pCatalog;
-        uint32                       _nextIncidentID;
-        uint8                        _bDisguised;
+        PROPERTY( RuntimeState, Min = 1 )
+        uint32 _nextIncidentID;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bDisguised;
     };
 } // namespace sw

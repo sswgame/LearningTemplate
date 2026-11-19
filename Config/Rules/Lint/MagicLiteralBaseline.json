@@ -771,7 +771,7 @@
     "Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCarcass.cpp": {"float": 2},
     "Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.cpp": {"float": 2},
     "Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternHorse.cpp": {"float": 5},
-    "Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternLaw.cpp": {"integer": 2},
+    "Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternLaw.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternSurvival.cpp": {"float": 3},
     "Source/GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.cpp": {"minus-one": 1, "integer": 6},
     "Source/GameFramework/Kits/Genre/Simulation/Farming/FarmField.cpp": {"integer": 1},

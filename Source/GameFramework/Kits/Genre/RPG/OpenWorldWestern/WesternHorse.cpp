@@ -203,29 +203,20 @@ namespace sw
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
         hashed_string horseID = _pDef != nullptr ? _pDef->_id : hashed_string{};
-        io.value( horseID );
+        io.value( horseID ); // 리플렉션 밖 값 — 품종 포인터는 id 로 싣는다
         if ( io.isOk() == false )
             return;
         // 품종이 다르면 그 품종으로 열어 게이지 설정을 맞춘다(값은 아래에서 덮어쓴다).
         if ( io.isReading() && ( _pDef == nullptr || _pDef->_id != horseID ) && io.check( initialize( _pCatalog, horseID, 1 ) ) == false )
             return;
-        io.list( _listAbility );
-        io.value( _health );
+        io.reflected( *this );
+        io.value( _health ); // 리플렉션 밖 값 — 게이지는 제 본문(남은 과열 시간), 난수는 손 코덱이다
         io.value( _stamina );
         io.value( _random );
-        io.value( _healthCore );
-        io.value( _staminaCore );
-        io.value( _bond );
-        io.value( _bondXPCarry );
-        io.value( _fear );
-        io.value( _hoursSinceBrush );
-        io.flag( _bRidden );
-        io.flag( _bGalloping );
         if ( io.isWriting() || io.isOk() == false )
             return;
-        // 비교는 NaN 에서 거짓이라 범위를 쓴 쪽이 NaN 도 거른다. 코어가 NaN 이면 회복 배율과 코어 감소가 영영 NaN 으로 남는다.
-        io.check( 0.0f <= _healthCore && _healthCore <= kCoreMax && 0.0f <= _staminaCore && _staminaCore <= kCoreMax );
-        io.check( 0.0f <= _fear && 0.0f <= _hoursSinceBrush && 0.0f <= _bondXPCarry && _bondXPCarry < 1.0f && _bond.getLevel() <= MathUtil::max( 1, _pCatalog->getBondCurve().getMaxLevel() ) );
+        // 카탈로그 · 칸 사이 검사만 손으로 — 칸마다의 범위(코어, 공포, 솔질, 깃발)는 `PROPERTY( Min · Max )` 가 지킨다. 유대는 안쪽 구조체 칸이라 그 형식의 칸 사이 검사를 여기서 한다.
+        io.check( _bondXPCarry < 1.0f && _bond.getXP() <= _bond.getTotalXP() && _bond.getLevel() <= MathUtil::max( 1, _pCatalog->getBondCurve().getMaxLevel() ) );
         io.check( areAbilitiesUnlocked() );
         _eventBuffer.clear();
     }

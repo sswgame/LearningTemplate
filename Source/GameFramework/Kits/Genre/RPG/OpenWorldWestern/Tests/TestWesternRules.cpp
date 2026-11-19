@@ -128,6 +128,7 @@ namespace
         bool readFixtureRecords( float32 unseenTime, int32 bounty, int32 wantedLevel, bool bTwice )
         {
             sw::Archive written;
+            sw::StateIO::writeReflectedHeader<sw::WesternLawState>( written ); // 리플렉션 상태 칸(기록, 다음 사건, 변장) 뒤에 손 본문(신고 대기)이다
             written << static_cast<uint32>( bTwice ? 2 : 1 );
             for ( int32 record = 0; record < ( bTwice ? 2 : 1 ); ++record )
             {
@@ -137,9 +138,9 @@ namespace
                 written << wantedLevel;
                 written << static_cast<uint8>( SW_FALSE );
             }
-            written << static_cast<uint32>( 0 );
             written << static_cast<uint32>( 5 );
             written << static_cast<uint8>( SW_FALSE );
+            written << static_cast<uint32>( 0 );
             sw::Archive reading( written.getData(), written.getSize() );
             return _law.readState( reading );
         }
@@ -147,15 +148,16 @@ namespace
         bool readFixturePending( uint32 incidentID, uint32 nextIncidentID )
         {
             sw::Archive written;
+            sw::StateIO::writeReflectedHeader<sw::WesternLawState>( written );
             written << static_cast<uint32>( 0 );
+            written << nextIncidentID;
+            written << static_cast<uint8>( SW_FALSE );
             written << static_cast<uint32>( 1 );
             sw::StateIO::writeName( written, "theft" );
             sw::StateIO::writeName( written, _region );
             written << static_cast<uint64>( 77 );
             written << incidentID;
             sw::StateIO::writeCountdown( written, sw::Countdown( 3.0f ) );
-            written << static_cast<uint8>( SW_FALSE );
-            written << nextIncidentID;
             written << static_cast<uint8>( SW_FALSE );
             sw::Archive reading( written.getData(), written.getSize() );
             return _law.readState( reading );
@@ -185,25 +187,29 @@ namespace
             sw::GameRandom random;
             random.setSeed( 7 );
             sw::Archive written;
+            // 품종 id(손) 뒤에 리플렉션 상태 칸(능력, 코어 둘, 유대 — 안쪽 구조체라 머리 없이 칸만, 나머지 수), 그 뒤에 손 본문(게이지 둘, 난수)이다
             sw::StateIO::writeName( written, horseID );
+            sw::StateIO::writeReflectedHeader<sw::WesternHorse>( written );
             written << static_cast<uint32>( listAbility.size() );
             for ( const sw::hashed_string& ability : listAbility )
             {
                 sw::StateIO::writeName( written, ability );
             }
-            _horse.getHealth().writeState( written );
-            _horse.getStamina().writeState( written );
-            sw::StateIO::writeRandom( written, random );
             written << healthCore;
             written << staminaCore;
             sw::LevelProgress bond;
             bond.setLevel( _catalog.getBondCurve(), bondLevel );
-            bond.writeState( written );
+            written << bond.getXP();
+            written << bond.getTotalXP();
+            written << bond.getLevel();
             written << 0.0f;
             written << 0.0f;
             written << hoursSinceBrush;
             written << static_cast<uint8>( SW_FALSE );
             written << static_cast<uint8>( SW_FALSE );
+            _horse.getHealth().writeState( written );
+            _horse.getStamina().writeState( written );
+            sw::StateIO::writeRandom( written, random );
             sw::Archive reading( written.getData(), written.getSize() );
             return _horse.readState( reading );
         }
@@ -218,20 +224,23 @@ namespace
         bool readFixture( float32 healthCore, uint8 bDeadEyeActive, const sw::vector<uint64>& listMark = {}, int32 deadEyeLevel = 2 )
         {
             sw::Archive written;
+            // 리플렉션 상태 칸(옷, 표시, 코어 고정 배열 — 개수가 앞에 붙는다, 단계, 켜짐) 뒤에 손 본문(게이지 셋)이다
+            sw::StateIO::writeReflectedHeader<sw::WesternSurvival>( written );
             written << static_cast<uint32>( 0 );
             written << static_cast<uint32>( listMark.size() );
             for ( const uint64 targetID : listMark )
             {
                 written << targetID;
             }
-            _survival.getGauge( sw::WesternCore::Health ).writeState( written );
+            written << static_cast<uint32>( sw::WesternCore::Count );
             written << healthCore;
-            _survival.getGauge( sw::WesternCore::Stamina ).writeState( written );
             written << 100.0f;
-            _survival.getGauge( sw::WesternCore::DeadEye ).writeState( written );
             written << 100.0f;
             written << deadEyeLevel;
             written << bDeadEyeActive;
+            _survival.getGauge( sw::WesternCore::Health ).writeState( written );
+            _survival.getGauge( sw::WesternCore::Stamina ).writeState( written );
+            _survival.getGauge( sw::WesternCore::DeadEye ).writeState( written );
             sw::Archive reading( written.getData(), written.getSize() );
             return _survival.readState( reading );
         }

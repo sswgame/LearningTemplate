@@ -301,29 +301,19 @@ namespace sw
                 return;
             _bClockSeen = SW_FALSE;
         }
-        io.value( _law );
+        io.value( _law ); // 법 · 생존은 제 본문(리플렉션 칸 + 손 값)으로 싣는다
         io.value( _survival );
-        const auto validateAnimal = [&]( const hashed_string& animalID )
+        io.reflected( *this );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        for ( const WesternCarcass& carcass : _listCarcass )
         {
-            if ( io.isReading() )
-            {
-                io.check( _pCatalog->findAnimal( animalID ) != nullptr );
-            }
-        };
-        io.list( _listCarcass, 1, [&]( WesternCarcass& carcass )
+            io.check( _pCatalog->findAnimal( carcass._animalID ) != nullptr ); // 카탈로그 검사만 손으로
+        }
+        for ( const WesternPelt& pelt : _listPelt )
         {
-            io.value( carcass._animalID );
-            validateAnimal( carcass._animalID );
-            io.value( carcass._ageHours );
-            io.value( carcass._stars );
-        } );
-        io.list( _listPelt, 1, [&]( WesternPelt& pelt )
-        {
-            io.value( pelt._animalID );
-            validateAnimal( pelt._animalID );
-            io.value( pelt._stars );
-        } );
-        io.value( _centsCarry );
+            io.check( _pCatalog->findAnimal( pelt._animalID ) != nullptr );
+        }
     }
 
 } // namespace sw

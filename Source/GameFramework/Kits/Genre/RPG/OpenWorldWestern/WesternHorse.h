@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -56,9 +57,12 @@ namespace sw
      * @brief 코어는 0..100 입니다. 게이지 회복 속도는 코어에 비례합니다(코어가 0이면 생존 설정의 `_minRegenScale` 배). 코어는 게임 시간으로 줄고
      *        먹이로 찹니다. 겁은 쌓였다가 식고, 임계값(1)을 넘으면 시드 난수로 뒷발 서기와 낙마를 정합니다. 용기와 유대가 높을수록 덜 쌓이고 덜 떨어뜨립니다.
      */
+    REFLECT()
     class SW_KIT_API WesternHorse
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32  kStateTag      = FourCCUtil::make( "WHRS" );
         static constexpr uint32  kStateVersion  = 1;
         static constexpr float32 kCoreMax       = 100.0f;
@@ -115,19 +119,28 @@ namespace sw
 
     private:
         EventBuffer<WesternHorseEvent> _eventBuffer;
-        vector<hashed_string>          _listAbility; ///< 지금 단계까지 열린 능력
-        ResourceGauge                  _health;
-        ResourceGauge                  _stamina;
-        GameRandom                     _random;
-        const WesternCatalog*          _pCatalog;
-        const WesternHorseDef*         _pDef;
-        float32                        _healthCore;
-        float32                        _staminaCore;
-        LevelProgress                  _bond;        ///< 유대 단계다. 레벨 L 은 카탈로그 단계의 L − 1 번째다(`WesternCatalog::getBondCurve`)
-        float32                        _bondXPCarry; ///< 아직 1이 안 된 유대 경험치(타기는 초당 소수로 쌓인다)
-        float32                        _fear;
-        float32                        _hoursSinceBrush;
-        uint8                          _bRidden;
-        uint8                          _bGalloping; ///< 이번 `update` 앞에 질주했다(코어가 더 줄어든다)
+        PROPERTY( RuntimeState )
+        vector<hashed_string>  _listAbility; ///< 지금 단계까지 열린 능력
+        ResourceGauge          _health;
+        ResourceGauge          _stamina;
+        GameRandom             _random;
+        const WesternCatalog*  _pCatalog;
+        const WesternHorseDef* _pDef;
+        PROPERTY( RuntimeState, Min = 0, Max = WesternHorse::kCoreMax )
+        float32 _healthCore;
+        PROPERTY( RuntimeState, Min = 0, Max = WesternHorse::kCoreMax )
+        float32 _staminaCore;
+        PROPERTY( RuntimeState )
+        LevelProgress _bond; ///< 유대 단계다. 레벨 L 은 카탈로그 단계의 L − 1 번째다(`WesternCatalog::getBondCurve`)
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _bondXPCarry; ///< 아직 1이 안 된 유대 경험치(타기는 초당 소수로 쌓인다)
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _fear;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _hoursSinceBrush;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bRidden;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bGalloping; ///< 이번 `update` 앞에 질주했다(코어가 더 줄어든다)
     };
 } // namespace sw

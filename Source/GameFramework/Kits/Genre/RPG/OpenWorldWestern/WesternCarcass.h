@@ -7,6 +7,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -31,12 +33,18 @@ namespace sw
     struct WesternPelt;
 
     /** @brief 땅(또는 말 등)에 있는 사체 하나입니다. */
+    REFLECT()
     struct SW_KIT_API WesternCarcass
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _animalID{};
-        float32       _ageHours{ 0.0f };
-        int32         _stars{ 0 }; ///< 잡았을 때의 등급(0이면 못 쓰는 가죽)
-        uint8         _bSkinned{ SW_FALSE };
+        PROPERTY()
+        float32 _ageHours{ 0.0f };
+        PROPERTY()
+        int32 _stars{ 0 }; ///< 잡았을 때의 등급(0이면 못 쓰는 가죽)
+        uint8 _bSkinned{ SW_FALSE };
 
         // 상태가 없는 계산입니다. 등급 = 원래 품질 − (크기에 맞지 않는 무기면 1) − 부위 벌점 − (더 맞힌 발 × 벌점)이며, 0..품질 범위로 자릅니다.
         /** @brief 잡은 순간의 가죽 등급(0..3)을 반환합니다. 모르는 동물이면 0 을 반환하고, 모르는 무기와 부위는 벌점이 없는 것으로 봅니다. */
@@ -63,9 +71,14 @@ namespace sw
 namespace sw
 {
     /** @brief 벗긴 가죽 하나입니다(썩지 않습니다). */
+    REFLECT()
     struct WesternPelt
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _animalID{};
-        int32         _stars{ 0 };
+        PROPERTY()
+        int32 _stars{ 0 };
     };
 } // namespace sw

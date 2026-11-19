@@ -208,21 +208,15 @@ namespace sw
 
     void WesternSurvival::serializeState( StateIO& io )
     {
-        io.list( _listClothing );
-        io.list( _listMark );
-        for ( size_t coreIndex = 0; coreIndex < kCoreCount; ++coreIndex )
+        io.reflected( *this );
+        for ( ResourceGauge& gauge : _arrGauge )
         {
-            io.value( _arrGauge[coreIndex] );
-            io.value( _arrCore[coreIndex] );
-            if ( io.check( 0.0f <= _arrCore[coreIndex] && _arrCore[coreIndex] <= kCoreMax ) == false )
-                return;
+            io.value( gauge ); // 리플렉션 밖 값 — 게이지는 제 본문(남은 과열 시간)이 있다
         }
-        io.value( _deadEyeLevel );
-        io.flag( _bDeadEyeActive );
         if ( io.isOk() )
         {
-            // 표시는 켜 둔 동안 단계의 개수까지만 찍는다(`markTarget`). 단계를 읽은 뒤라야 상한을 안다.
-            io.check( 0 <= _deadEyeLevel && ( _bDeadEyeActive != SW_FALSE ? static_cast<int32>( _listMark.size() ) <= getMarkLimit() : _listMark.empty() ) );
+            // 표시는 켜 둔 동안 단계의 개수까지만 찍는다(`markTarget`). 단계를 읽은 뒤라야 상한을 안다(칸 사이 검사 — 칸마다의 범위는 `PROPERTY( Min · Max )`).
+            io.check( _bDeadEyeActive != SW_FALSE ? static_cast<int32>( _listMark.size() ) <= getMarkLimit() : _listMark.empty() );
         }
     }
 
