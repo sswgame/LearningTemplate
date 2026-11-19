@@ -63,8 +63,5 @@
 	<LoadScene path="game/shooter3d/maps/arena.scene.xml" timeoutFrames="900"/>
 	<Expect watch="CameraDirector.SelectedPreset" target="ViewCamera" equals="thirdperson"/>
 	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" equals="thirdperson"/>
-	<!-- 사용자 설정은 단계 사이 되돌림에 들지 않는다 — 뒤 단계가 장면의 시작 시점에서 시작하도록 되돌린다 -->
-	<DevCommand line="settings.apply gameplay.cameraPreset=firstperson"/>
-	<ExpectVariable name="gv_cameraPreset" value="firstperson"/>
 	<Pass/>
 </Scenario>

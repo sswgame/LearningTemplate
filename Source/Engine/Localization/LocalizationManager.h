@@ -171,7 +171,7 @@ namespace sw
         /** @brief 폴백 언어 코드를 값으로 반환합니다. */
         string getFallbackLanguage() const;
         /**
-         * @brief 게임 기본 언어 — `initialize` 가 고른 언어(명령줄 `-language`, 게임 기본, 폴백 순)입니다. 아직 고르지 않았으면 빈 글입니다.
+         * @brief 게임 기본 언어 — `initialize` 가 고른 언어(명령줄 `-language`, 게임 기본, 폴백 순), 그 전에는 처음 정한 언어입니다. 아직 정하지 않았으면 빈 글입니다.
          * @details 사용자 설정 `language.text` 의 빈 값("게임 기본")이 이 언어로 돌아간다. 다른 언어를 골랐다가 빈 값을 고르면 원래 언어로 돌아와야 한다.
          */
         string getStartupLanguage() const;

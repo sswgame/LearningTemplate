@@ -14,6 +14,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
+#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
@@ -102,6 +103,16 @@ namespace sw
                 return true;
             }
         };
+
+        /** @brief 자동화 단계 되돌리기 — 앞 단계가 바꾼 사용자 설정을 세션 시작 때 값으로 되돌린다(`UserSettingsManager::restoreStageBaseline`). */
+        struct UserSettingsStageResetInternal
+        {
+            static void restoreBaseline()
+            {
+                if ( UserSettingsManager* pSettings = engine::findSubsystem<UserSettingsManager>() )
+                    (void)pSettings->restoreStageBaseline();
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -118,6 +129,8 @@ namespace sw
         , _confirmSecondsLeft{ 0.0f }
         , _bUserFileLoaded{ SW_FALSE }
         , _bStartupApplied{ SW_FALSE }
+        , _listStartupSchemaField{}
+        , _listStageBaseline{}
     {
     }
 
@@ -760,6 +773,44 @@ namespace sw
         broadcast( {}, UserSettingEventKind::ConfirmTimedOut );
     }
 
+    void UserSettingsManager::captureStageBaseline()
+    {
+        _listStageBaseline.clear();
+        _listStageBaseline.reserve( _listState.size() );
+        for ( const SettingState& state : _listState )
+        {
+            _listStageBaseline.push_back( state._committedValue );
+        }
+    }
+
+    uint32 UserSettingsManager::restoreStageBaseline()
+    {
+        const vector<UserSettingDef>& listSetting = _schema.getSettings();
+        // 기준 뒤에 스키마가 늘었으면(게임 모듈이 더 읽었다) 그 설정은 기준이 없어 그대로 둔다.
+        const uint32 count   = static_cast<uint32>( _listState.size() < _listStageBaseline.size() ? _listState.size() : _listStageBaseline.size() );
+        _confirmSecondsLeft  = 0.0f;
+        uint32 restoredCount = 0;
+        for ( uint32 settingIndex = 0; settingIndex < count; ++settingIndex )
+        {
+            SettingState& state    = _listState[settingIndex];
+            const string& baseline = _listStageBaseline[settingIndex];
+            const bool    bChanged = state._committedValue != baseline || state._bPending || state._bRollback; // 보류한 `Immediate` 값은 이미 대상에 들어가 있다
+            state._pendingValue.clear();
+            state._rollbackValue.clear();
+            state._bPending  = false;
+            state._bRollback = false;
+            if ( bChanged == false )
+                continue;
+            state._committedValue     = baseline;
+            const UserSettingDef& def = listSetting[settingIndex];
+            if ( def._applyTiming != UserSettingApplyTiming::NeedsRestart )
+                (void)applyToTarget( settingIndex, baseline, def._targetKind == UserSettingTargetKind::GlobalVariable ); // 대상이 없는 설정은 건너뛴다
+            broadcast( def._id, UserSettingEventKind::Applied );
+            ++restoredCount;
+        }
+        return restoredCount;
+    }
+
     bool UserSettingsManager::isRestartRequired() const
     {
         const vector<UserSettingDef>& listSetting = _schema.getSettings();
@@ -1201,6 +1252,9 @@ namespace sw
         if ( loadUserFile( getUserFilePath() ) == false && bAutomatedRun == false )
             (void)applyAutoDetectedPreset( HardwareDetectionResult::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
         reapplyAll();
+        // 무인 실행(시나리오 체인)은 이 값이 단계마다의 시작 값이다 — 앞 단계가 바꾼 설정은 단계 되돌리기가 여기로 되돌린다.
+        if ( bAutomatedRun )
+            captureStageBaseline();
         return SubsystemInitResult::Succeeded;
     }
 
@@ -1214,6 +1268,7 @@ namespace sw
     SW_DEV_COMMAND( SettingsApply, "settings.apply", "settings.apply <id>=<value> ...", "Apply user settings the way the options menu does (pending, apply, confirm countdown)",
                     &UserSettingsDevCommandsInternal::runApply );
     SW_DEV_COMMAND( SettingsConfirm, "settings.confirm", "settings.confirm", "Keep the display change that awaits confirmation", &UserSettingsDevCommandsInternal::runConfirm );
+    SW_AUTOMATION_STAGE_RESET( userSettingsBaseline, "user settings (language, key bindings, quality bundles, ...)", &UserSettingsStageResetInternal::restoreBaseline );
 } // namespace sw
 
 namespace sw

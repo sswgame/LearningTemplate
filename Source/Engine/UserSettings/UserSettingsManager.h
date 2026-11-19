@@ -301,6 +301,20 @@ namespace sw
         /** @brief 다음 실행에 닿을 값(`NeedsRestart`)이 확정돼 있으면 true 입니다. */
         bool isRestartRequired() const;
 
+        /**
+         * @brief 자동화 단계 경계의 기준으로 지금 확정 값을 기억합니다. 무인 실행의 기동이 적용(`reapplyAll`)을 마친 뒤 한 번 부릅니다.
+         * @details 시나리오 체인은 단계마다 새 프로세스처럼 시작해야 한다. 세션은 전역 변수만 되돌리므로(`AutomationSession::startStage`) 핸들러 대상(언어 · 키 바인딩 · 화질 묶음)과
+         *          확정 값 자체는 이 기준이 되돌린다 — 예전에는 시나리오마다 끝에서 손으로 되돌렸고, 지면 다음 단계로 샜다.
+         */
+        void captureStageBaseline();
+        /**
+         * @brief 기준과 다른 확정 값(보류 · 확인 대기 포함)을 기준으로 되돌려 대상에 다시 넣습니다. 파일에는 쓰지 않습니다. 기준이 없으면 아무 일도 하지 않습니다.
+         * @details 자동화 단계 되돌리기(`SW_AUTOMATION_STAGE_RESET`)가 다음 단계 앞에서 부른다. 전역 변수 대상은 기동 적용처럼 넣는다 — 명령줄로 준 변수(`<Launch>`)를 덮지 않는다.
+         *          다음 실행에 닿는 설정(`NeedsRestart`)은 확정 값만 되돌린다.
+         * @return 되돌린 설정 수입니다.
+         */
+        uint32 restoreStageBaseline();
+
         // ------------------------------------------------------------------------------
         // 6) 키 바인딩과 글리프
         // ------------------------------------------------------------------------------
@@ -381,6 +395,7 @@ namespace sw
         uint8                                   _bUserFileLoaded : 1;
         uint8                                   _bStartupApplied : 1;    ///< 첫 `reapplyAll`(기동 적용)이 지났는지 나타냅니다. 그 뒤로 `NeedsRestart` 값은 바뀌지 않습니다.
         vector<DataPath EngineDefaultAssets::*> _listStartupSchemaField; ///< `addStartupSchema` 가 더한 스키마 칸(기동이 사용자 파일보다 먼저 읽는다)
+        vector<string>                          _listStageBaseline;      ///< 자동화 단계 경계의 기준 확정 값(설정 순번 순, `captureStageBaseline`). 비면 기준이 없다
 
     private:
         /** @brief 키 바인딩 대상 맵 등록의 구독입니다. 풀리면 `releaseKeyBindingInputMap` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
