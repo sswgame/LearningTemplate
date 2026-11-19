@@ -102,6 +102,8 @@ namespace sw
         SW_BUILTIN_LAYOUT_CHECK_##Layout static_assert( ReflectBuiltinTraitTable::get( ReflectBuiltinIndex::k##Canon ).hasRole( ReflectBuiltinRole::Interp ) == false || \
                                                             isInterpLayout( ReflectBuiltinTraitTable::get( ReflectBuiltinIndex::k##Canon )._layout ),                    \
                                                         "ReflectBuiltins.xxx: Interp needs a num, f32 or angle layout" );                                                \
+        static_assert( ReflectBuiltinTraitTable::isStateCarried( ReflectBuiltinIndex::k##Canon ),                                                                        \
+                       "ReflectBuiltins.xxx: a State row needs a num, f32 or i32 layout or a hand handler (ReflectBuiltinTraitTable::hasStateHandHandler)" );            \
     };
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"

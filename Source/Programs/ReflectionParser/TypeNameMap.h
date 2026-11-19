@@ -28,7 +28,8 @@ namespace sw
         uint8                  _bPacked  : 1; ///< 글 처리기가 `packed` 다
         uint8                  _bInterp  : 1; ///< Roles 에 Interp — `PROPERTY( Interp )` 를 받는다
         uint8                  _bState   : 1; ///< Roles 에 State — `PROPERTY( RuntimeState )` 칸이 될 수 있다
-        [[maybe_unused]] uint8 _reserved : 5;
+        uint8                  _bLocal   : 1; ///< Roles 에 Local — 프로세스 안에서만 뜻이 있는 값이라 `PROPERTY( SaveGame )` 을 받지 않는다
+        [[maybe_unused]] uint8 _reserved : 4;
 
         BuiltinTypeTraits()
             : _listMember{}
@@ -36,6 +37,7 @@ namespace sw
             , _bPacked{ SW_FALSE }
             , _bInterp{ SW_FALSE }
             , _bState{ SW_FALSE }
+            , _bLocal{ SW_FALSE }
             , _reserved{ 0 }
         {
         }

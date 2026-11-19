@@ -149,6 +149,12 @@ namespace sw
          */
         const ISequenceContainerWrapper* findStateSequence() const;
 
+        /**
+         * @brief 값(컨테이너면 원소)이 이 프로세스에서만 뜻이 있는 내장 형식(`ReflectBuiltins.xxx` 의 Local 역할 — 핸들)이면 true 입니다.
+         * @details 세이브(`SerializePurpose::SaveGame`)는 이 칸을 쓰지 않는다(`SerializerUtil::shouldSerializeProperty`) — 생성 순서 id 는 다른 실행에서 다른 오브젝트다.
+         */
+        bool isProcessLocal() const;
+
         /** @brief 비트필드에서 그 비트 하나만 1 로 세우는 함수입니다. 생성 코드가 만듭니다. 인자는 0 으로 채운, 그 타입 크기의 메모리입니다. */
         using SetBitFunction = void ( * )( void* pInstance );
 

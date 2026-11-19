@@ -342,6 +342,21 @@ namespace sw
         return false;
     }
 
+    bool DeclarationValidator::isSaveGameAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, const string_view owner )
+    {
+        if ( prop._bSaveGame == SW_FALSE )
+            return true;
+        const string&            leafType = prop._bIsContainer == SW_TRUE ? prop._elementTypeName : prop._typeName;
+        const BuiltinTypeTraits* pTraits  = typeNameMap.findTraits( leafType );
+        if ( pTraits == nullptr || pTraits->_bLocal == SW_FALSE )
+            return true;
+        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYSaveGameLocal",
+                         "ERROR: PROPERTY( SaveGame ) on '%#' (%#) - '%#' has the Local role in ReflectBuiltins.xxx (a process-local id), so another run would read it as another object; "
+                         "save a stable id (asset GUID, name, catalog key) instead.",
+                         owner, prop._typeName, leafType );
+        return false;
+    }
+
     bool DeclarationValidator::isRuntimeStateAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, const ContainerTypeMap& containerTypeMap,
                                                       const string_view owner )
     {

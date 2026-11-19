@@ -16,6 +16,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 // ReflectionPropertyRoleTest — 역할 플래그. 네트워크(Replicated · RepNotify) · 세이브(SaveGame) · 시퀀서(Interp)가 읽는 프로퍼티 메타.
 
@@ -365,4 +366,48 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, StateSequenceIsTheOrderedFlatSequence 
     SW_EXPECT_TRUE( scalarProp.findStateSequence() == nullptr );
     SW_EXPECT_TRUE( sw::ContainerWrapperOf<ArrayWrapperT>::kInstance.isFixedSize() );
     SW_EXPECT_FALSE( sw::ContainerWrapperOf<SetWrapperT>::kInstance.allowsInPlaceElementWrite() );
+}
+
+/**
+ * @brief [ReflectionPropertyRoleTest] State 줄은 모두 실릴 길이 있다 — 손 처리기 목록(`hasStateHandHandler`)의 줄은 State 이고 Layout 이 none 이며, 각(angle)은 State 가 아니다
+ * @details 손 처리기 목록은 하나다. 상태 직렬화 · 상태 해시 · 테스트 값 바꾸기가 같은 목록을 보고, `ReflectedValue.cpp` 가 줄마다 `isStateCarried` 를 컴파일 때 본다.
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, StateRowsHaveOneHandHandlerList )
+{
+    for ( size_t index = 0; index < static_cast<size_t>( sw::ReflectBuiltinIndex::kCount ); ++index )
+    {
+        const sw::ReflectBuiltinIndex  builtinIndex = static_cast<sw::ReflectBuiltinIndex>( index );
+        const sw::ReflectBuiltinTraits traits       = sw::ReflectBuiltinTraitTable::get( builtinIndex );
+        const sw::hashed_string&       typeName     = sw::ReflectedValueUtil::getBuiltinTypeName( builtinIndex );
+        SW_EXPECT_TRUE_MSG( sw::ReflectBuiltinTraitTable::isStateCarried( builtinIndex ), typeName.c_str() );
+        if ( sw::ReflectBuiltinTraitTable::hasStateHandHandler( builtinIndex ) )
+            SW_EXPECT_TRUE_MSG( traits.hasRole( sw::ReflectBuiltinRole::State ) && traits._layout == sw::ReflectBuiltinLayout::None, typeName.c_str() );
+        if ( traits._layout == sw::ReflectBuiltinLayout::Angle )
+            SW_EXPECT_FALSE_MSG( traits.hasRole( sw::ReflectBuiltinRole::State ), typeName.c_str() );
+    }
+}
+
+/**
+ * @brief [ReflectionPropertyRoleTest] 프로세스 안 id(Local 역할 — 핸들)는 세이브가 쓰지 않는다 — 스냅샷(같은 실행)은 쓴다. 컨테이너는 원소 형식으로 본다
+ * @details 생성 순서 objectID 는 다른 실행에서 다른 오브젝트다. State 역할(롤백 · 리플레이)의 범위는 같은 프로세스다.
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, ProcessLocalHandlesAreNotSaved )
+{
+    const sw::PropertyInfo handleProp( sw::hashed_string( "_target" ), sw::hashed_string( "GameObjectHandle" ), 0 );
+    const sw::PropertyInfo handleListProp( sw::hashed_string( "_listTarget" ), sw::hashed_string( "vector" ), 0, true, sw::ContainerKind::Sequence,
+                                           sw::hashed_string( "ComponentHandle" ) );
+    const sw::PropertyInfo numberProp( sw::hashed_string( "_gold" ), sw::hashed_string( "int32" ), 0 );
+    SW_EXPECT_TRUE( handleProp.isProcessLocal() );
+    SW_EXPECT_TRUE( handleListProp.isProcessLocal() );
+    SW_EXPECT_FALSE( numberProp.isProcessLocal() );
+    SW_EXPECT_TRUE( sw::ReflectBuiltinTraitTable::get( sw::ReflectBuiltinIndex::kGameObjectHandle ).hasRole( sw::ReflectBuiltinRole::State ) );
+
+    const sw::TypeInfo* pOwner = sw::AssetPathActor::StaticType(); // SaveGame 칸이 없는 타입 — 세이브가 모든 칸을 쓴다
+    SW_REQUIRE_NOT_NULL( pOwner );
+    const sw::SerializeContext saveContext     = makeSaveContext();
+    const sw::SerializeContext snapshotContext = sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::Snapshot );
+    SW_EXPECT_FALSE( sw::SerializerUtil::shouldSerializeProperty( *pOwner, handleProp, saveContext ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::shouldSerializeProperty( *pOwner, handleListProp, saveContext ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::shouldSerializeProperty( *pOwner, numberProp, saveContext ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::shouldSerializeProperty( *pOwner, handleProp, snapshotContext ) );
 }

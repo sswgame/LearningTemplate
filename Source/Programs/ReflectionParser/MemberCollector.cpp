@@ -274,7 +274,8 @@ namespace sw
             return;
         }
         if ( DeclarationValidator::isInterpAllowed( prop, session._typeNameMap, owner ) == false ||
-             DeclarationValidator::isRuntimeStateAllowed( prop, session._typeNameMap, session._containerTypeMap, owner ) == false || DeclarationValidator::applyDisplayMeta( prop, fieldType, owner ) == false )
+             DeclarationValidator::isRuntimeStateAllowed( prop, session._typeNameMap, session._containerTypeMap, owner ) == false ||
+             DeclarationValidator::isSaveGameAllowed( prop, session._typeNameMap, owner ) == false || DeclarationValidator::applyDisplayMeta( prop, fieldType, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;
@@ -327,7 +328,8 @@ namespace sw
             return;
         }
         if ( DeclarationValidator::isInterpAllowed( prop, session._typeNameMap, owner ) == false ||
-             DeclarationValidator::isRuntimeStateAllowed( prop, session._typeNameMap, session._containerTypeMap, owner ) == false || DeclarationValidator::applyDisplayMeta( prop, valueType, owner ) == false )
+             DeclarationValidator::isRuntimeStateAllowed( prop, session._typeNameMap, session._containerTypeMap, owner ) == false ||
+             DeclarationValidator::isSaveGameAllowed( prop, session._typeNameMap, owner ) == false || DeclarationValidator::applyDisplayMeta( prop, valueType, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;

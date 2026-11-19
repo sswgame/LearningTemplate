@@ -3,7 +3,6 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
-#include "Core/Math/Radians.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -40,7 +39,6 @@ namespace sw
                 Number,   ///< num Layout — `kArrValueNumber` 의 그 타입 칸
                 Float32s, ///< f32 Layout — float32 를 성분 수만큼
                 Int32s,   ///< i32 Layout — int32 를 성분 수만큼
-                Angle,    ///< angle Layout — `StateIO::value( Radians& )`
                 String,
                 Name,
                 ObjectHandle, ///< GameObjectHandle — objectID(uint64). 다시 만든 오브젝트는 같은 objectID 를 받는다(`GameObjectHandle`)
@@ -73,25 +71,9 @@ namespace sw
                 return traits.hasRole( ReflectBuiltinRole::State ) && traits._layout == ReflectBuiltinLayout::Number;
             }
 
-            /** @brief State 역할인 내장 타입 줄이 Layout 또는 손 처리기로 실리는지입니다. 줄을 더하고 State 를 달았는데 실을 길이 없으면 컴파일이 멈춘다. */
-            static constexpr bool isCarriedBuiltin( const ReflectBuiltinIndex builtinIndex )
-            {
-                const ReflectBuiltinTraits traits = ReflectBuiltinTraitTable::get( builtinIndex );
-                if ( traits.hasRole( ReflectBuiltinRole::State ) == false || traits._layout != ReflectBuiltinLayout::None )
-                    return true;
-                return builtinIndex == ReflectBuiltinIndex::kbool || builtinIndex == ReflectBuiltinIndex::kstring || builtinIndex == ReflectBuiltinIndex::khashed_string ||
-                       builtinIndex == ReflectBuiltinIndex::kGameObjectHandle;
-            }
-
             /** @brief num 줄마다 칸 함수입니다. 순서는 `ReflectBuiltinIndex` 입니다. */
             static ValueNumberFn findValueNumber( const ReflectBuiltinIndex builtinIndex )
             {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, ... ) \
-    static_assert( isCarriedBuiltin( ReflectBuiltinIndex::k##Canon ), "ReflectBuiltins.xxx: State on a none layout needs a hand handler in StateIO::reflected (" #Canon ")" );
-#define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
-#undef SW_REFLECT_BUILTIN_TYPE
-#undef SW_REFLECT_BUILTIN_CONTAINER
                 static constexpr ValueNumberFn kArrValueNumber[] = {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickValueNumber<ReflectBuiltinCppTypeT<CppType>, isStateNumber( ReflectBuiltinIndex::k##Canon )>(),
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
@@ -115,12 +97,12 @@ namespace sw
                         return LeafKind::Float32s;
                     case ReflectBuiltinLayout::Int32:
                         return LeafKind::Int32s;
-                    case ReflectBuiltinLayout::Angle:
-                        return LeafKind::Angle;
+                    case ReflectBuiltinLayout::Angle: // State 가 아니다(`ReflectBuiltinTraitTable::isStateCarried`)
+                        return LeafKind::Unsupported;
                     case ReflectBuiltinLayout::None:
                         break;
                 }
-                switch ( builtinIndex ) // 손 처리기 — 목록은 `isCarriedBuiltin` 과 같다
+                switch ( builtinIndex ) // 손 처리기 — 목록은 `ReflectBuiltinTraitTable::hasStateHandHandler` 하나다
                 {
                     case ReflectBuiltinIndex::kbool:
                         return LeafKind::Bool;
@@ -372,9 +354,6 @@ namespace sw
                     return;
                 case LeafKind::Int32s:
                     Internal::valueComponents<int32>( *this, leafType, pValue );
-                    return;
-                case LeafKind::Angle:
-                    value( *static_cast<Radians*>( pValue ) );
                     return;
                 case LeafKind::String:
                     value( *static_cast<string*>( pValue ) );

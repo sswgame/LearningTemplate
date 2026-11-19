@@ -193,6 +193,8 @@ namespace sw
                         outTraits._bInterp = SW_TRUE;
                     else if ( name == builtinmacro::kRoleState && outTraits._bState == SW_FALSE )
                         outTraits._bState = SW_TRUE;
+                    else if ( name == builtinmacro::kRoleLocal && outTraits._bLocal == SW_FALSE )
+                        outTraits._bLocal = SW_TRUE;
                     else
                         return false;
                 }
@@ -216,7 +218,7 @@ namespace sw
                 }
                 if ( parseRoles( listArgument[kRolesColumn], outTraits ) == false )
                 {
-                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.BadRoles", "%#: '%#' has roles '%#' - use None, or Interp and State joined by |", absPath, canonical,
+                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.BadRoles", "%#: '%#' has roles '%#' - use None, or Interp, State and Local joined by |", absPath, canonical,
                                      listArgument[kRolesColumn] );
                     return false;
                 }

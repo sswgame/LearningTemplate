@@ -3,7 +3,6 @@
 #include "Engine/Object/Component/Component.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Math/Radians.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -59,24 +58,8 @@ namespace sw
                 return traits.hasRole( ReflectBuiltinRole::State ) && traits._layout == ReflectBuiltinLayout::Number;
             }
 
-            /** @brief State 역할인 줄이 Layout 또는 아래 손 처리기로 접히는지입니다. State 를 달고 접을 길이 없으면 컴파일이 멈춘다(`StateIO::reflected` 와 같은 목록). */
-            static constexpr bool isFoldedBuiltin( const ReflectBuiltinIndex builtinIndex )
-            {
-                const ReflectBuiltinTraits traits = ReflectBuiltinTraitTable::get( builtinIndex );
-                if ( traits.hasRole( ReflectBuiltinRole::State ) == false || traits._layout != ReflectBuiltinLayout::None )
-                    return true;
-                return builtinIndex == ReflectBuiltinIndex::kbool || builtinIndex == ReflectBuiltinIndex::kstring || builtinIndex == ReflectBuiltinIndex::khashed_string ||
-                       builtinIndex == ReflectBuiltinIndex::kGameObjectHandle;
-            }
-
             static FoldNumberFn findFoldNumber( const ReflectBuiltinIndex builtinIndex )
             {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, ... ) \
-    static_assert( isFoldedBuiltin( ReflectBuiltinIndex::k##Canon ), "ReflectBuiltins.xxx: State on a none layout needs a hand handler in Component::foldStateHash (" #Canon ")" );
-#define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
-#undef SW_REFLECT_BUILTIN_TYPE
-#undef SW_REFLECT_BUILTIN_CONTAINER
                 static constexpr FoldNumberFn kArrFoldNumber[] = {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickFoldNumber<ReflectBuiltinCppTypeT<CppType>, isStateNumber( ReflectBuiltinIndex::k##Canon )>(),
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
@@ -127,13 +110,12 @@ namespace sw
                         case ReflectBuiltinLayout::Int32:
                             foldComponents( inoutBuilder, traits._layout, ReflectedValueUtil::getBuiltinComponentCount( builtinIndex ), pValue );
                             return true;
-                        case ReflectBuiltinLayout::Angle:
-                            inoutBuilder.addFloat( static_cast<const Radians*>( pValue )->radians() );
-                            return true;
+                        case ReflectBuiltinLayout::Angle: // State 가 아니다(`ReflectBuiltinTraitTable::isStateCarried`)
+                            return false;
                         case ReflectBuiltinLayout::None:
                             break;
                     }
-                    switch ( builtinIndex ) // 손 처리기 — 목록은 `isFoldedBuiltin` 과 같다
+                    switch ( builtinIndex ) // 손 처리기 — 목록은 `ReflectBuiltinTraitTable::hasStateHandHandler` 하나다
                     {
                         case ReflectBuiltinIndex::kbool:
                             inoutBuilder.addUint8( *static_cast<const bool*>( pValue ) ? 1 : 0 );

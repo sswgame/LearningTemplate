@@ -3,7 +3,6 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/BitUtil.h"
-#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -150,13 +149,12 @@ namespace
                 case ReflectBuiltinLayout::Int32:
                     *static_cast<int32*>( pValue ) += 1; // 첫 성분
                     return true;
-                case ReflectBuiltinLayout::Angle:
-                    *static_cast<Radians*>( pValue ) = Radians::fromRadians( static_cast<Radians*>( pValue )->radians() + 1.0f );
-                    return true;
+                case ReflectBuiltinLayout::Angle: // State 가 아니다
+                    return false;
                 case ReflectBuiltinLayout::None:
                     break;
             }
-            switch ( builtinIndex ) // Layout 이 none 인 State 형식 — 상태 해시의 손 처리기와 같은 목록
+            switch ( builtinIndex ) // 손 처리기 — 목록은 `ReflectBuiltinTraitTable::hasStateHandHandler` 하나다
             {
                 case ReflectBuiltinIndex::kbool:
                     *static_cast<bool*>( pValue ) = *static_cast<bool*>( pValue ) == false;

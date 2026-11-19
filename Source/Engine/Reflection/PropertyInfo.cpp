@@ -14,6 +14,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionContainers.h"
@@ -112,6 +113,12 @@ namespace sw
         flat._keyTypeName     = _keyTypeName;
         flat._wrapper         = _containerWrapper;
         return flat;
+    }
+
+    bool PropertyInfo::isProcessLocal() const
+    {
+        const hashed_string& leafType = _bIsContainer == SW_TRUE ? _elementTypeName : _typeName;
+        return ReflectBuiltinTraitTable::get( ReflectedValueUtil::findBuiltinIndex( leafType ) ).hasRole( ReflectBuiltinRole::Local );
     }
 
     const ISequenceContainerWrapper* PropertyInfo::findStateSequence() const
