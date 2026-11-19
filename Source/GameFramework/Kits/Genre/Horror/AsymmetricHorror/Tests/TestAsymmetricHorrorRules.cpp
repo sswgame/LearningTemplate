@@ -74,8 +74,8 @@ namespace
     /** @brief 정상 상태 바이트입니다. 칸 하나를 바꿔 읽어 봅니다. */
     struct AsymmetricFixtureBytes
     {
-        // 살인마 칸의 뒤에서부터의 자리이다(점수가 비어 있을 때, 칸 전체 69 바이트).
-        static constexpr size_t kKillerBytes = 69;
+        // 살인마 칸의 뒤에서부터의 자리이다(점수가 비어 있을 때, 칸 전체 81 바이트 — 점수 `StatBlock` 은 리플렉션 머리 12 바이트 + 개수 4 바이트로 맨 앞이다).
+        static constexpr size_t kKillerBytes = 81;
         vector<uint8>           _listByte{};
         size_t                  _stageBase{ 0 }; ///< 판 다음의 완료 수 자리이다
 
