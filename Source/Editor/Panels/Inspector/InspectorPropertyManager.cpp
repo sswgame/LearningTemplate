@@ -37,7 +37,9 @@
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/Serializer/AssetRefBase.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include <imgui.h>
@@ -751,6 +753,54 @@ namespace sw::editor
             string _buffer;
         };
 
+        /**
+         * @brief `CatalogKey<Tag>` 칸입니다 — 참조 표가 정한 카탈로그의 항목 id 를 콤보에서 고르거나 글로 칩니다(언리얼 `FDataTableRowHandle` 의 행 고르기).
+         * @details 항목은 콤보를 연 프레임에 한 번 모은다(리소스를 읽는다 — 열려 있는 동안 다시 읽지 않는다). 위젯 하나가 그 종류의 행을 모두 그리므로 연 행을 기억한다.
+         *          값은 모델에 글로 넣어(`setPropertyText`) 되돌리기에 남는다. 목록에 없는 id 도 칠 수 있다 — 대조는 쿠커와 쓰는 쪽의 형식 있는 조회가 한다.
+         */
+        class CatalogKeyProperty : public BuiltinPropertyBase
+        {
+        public:
+            bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
+            {
+                if ( row._bReadOnly != SW_FALSE )
+                {
+                    drawReadOnlyText( row, row._valueText.c_str() );
+                    return true;
+                }
+                const string undoLabel = InspectorPropertyLayout::makeUndoLabel( row._label.c_str() );
+                const bool   bOpen     = EditorWidgets::beginCombo( _pLabel, row._valueText.empty() ? "(none)" : row._valueText.c_str() );
+                if ( bOpen == false && _openRowID == row._rowID )
+                    _openRowID = constant::invalid_index::kUint32;
+                if ( bOpen )
+                {
+                    if ( _openRowID != row._rowID )
+                    {
+                        _openRowID = row._rowID;
+                        _bListed   = model.collectCatalogKeyEntries( row._rowID, _listID );
+                    }
+                    if ( ImGui::Selectable( "(none)", row._valueText.empty() ) && row._valueText.empty() == false )
+                        model.setPropertyText( row._rowID, string{}, undoLabel.c_str() );
+                    if ( _bListed == false )
+                        ImGui::TextDisabled( "(no catalog row for this key in %s)", DataCatalogReferenceRules::kTableAssetID );
+                    for ( const string& id : _listID )
+                    {
+                        if ( ImGui::Selectable( id.c_str(), id == row._valueText ) && id != row._valueText )
+                            model.setPropertyText( row._rowID, id, undoLabel.c_str() );
+                        EditorSelfTestMarks::recordFormat( "inspector.catalogkey.choice.%#", id );
+                    }
+                    ImGui::EndCombo();
+                }
+                showTooltipIfHovered( row );
+                return true;
+            }
+
+        private:
+            vector<string> _listID{};                                      ///< 연 콤보의 항목 id(이름순)
+            uint32         _openRowID{ constant::invalid_index::kUint32 }; ///< 콤보가 열린 행 — 바뀌면 다시 모은다
+            bool           _bListed{ false };                              ///< 표에 그 종류의 줄이 있었다 NOLINT(sw-bool-flag): 그리기 상태 하나다
+        };
+
         class Float3Property : public BuiltinPropertyBase
         {
         public:
@@ -925,6 +975,7 @@ namespace sw::editor
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
         registerType( AssetRefBase::kTypeName, make_unique<AssetRefProperty>() );
+        registerType( CatalogKeyBase::kTypeName, make_unique<CatalogKeyProperty>() );
     }
 
     bool InspectorPropertyManager::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const PropertyGridViewModel& model,

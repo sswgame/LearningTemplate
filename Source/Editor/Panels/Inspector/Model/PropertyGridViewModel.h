@@ -219,6 +219,11 @@ namespace sw::editor
         /** @brief 에셋 경로 행 @p rowID 의 선택 팝업이 고를 수 있는 리소스를 모읍니다(그 칸이 받는 종류만 — 팝업을 열 때 한 번, 파일 목록을 프레임마다 훑지 않는다). */
         void collectAssetEntries( uint32 rowID, vector<EditorAssetIndexEntry>& outListEntry ) const;
         /**
+         * @brief 카탈로그 키 행 @p rowID(`CatalogKey<Tag>`)의 콤보가 고를 수 있는 항목 id 를 이름순으로 모읍니다 — 참조 표(`<CatalogKey tag>`)가 정한 카탈로그 루트의 리소스를 읽는다.
+         * @details 콤보를 연 프레임에 한 번 부른다(리소스를 읽는다). 표에 그 종류의 줄이 없으면 비우고 false 입니다(쿠커도 그 칸을 볼 수 없다).
+         */
+        bool collectCatalogKeyEntries( uint32 rowID, vector<string>& outListID ) const;
+        /**
          * @brief 대상 타입 @p targetTypeName 의 핸들 @p handle 을 편집 대상의 씬에서 풀어 미리보기 글과 상태를 채웁니다(타입 핸들 선택기).
          * @return 대상 타입이 레지스트리에 없거나 편집 대상의 씬이 없으면 false 이고 @p outPreview 가 오류 글입니다(활성 씬으로 넓히지 않는다).
          */

@@ -6,6 +6,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -27,6 +28,8 @@
 #include "Editor/Panels/Inspector/Model/PropertyEditConditionExpr.h"
 #include "Editor/Panels/Inspector/Model/PropertyEditStep.h"
 
+#include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -42,8 +45,12 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/Serializer/AssetRefBase.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+
+#include <algorithm>
 
 namespace sw::editor
 {
@@ -1287,6 +1294,42 @@ namespace sw::editor
         const string_view   fileFilter{ prop._metadata->getEditor()._fileFilter };
         VectorUtil::removeIf( outListEntry, [pRef, fileFilter]( const EditorAssetIndexEntry& entry )
         { return ( pRef != nullptr ? AssetRefBase::isPathOfTarget( entry._path, pRef->getTargetType() ) : InspectorPropertyLayout::matchesFileFilter( fileFilter, entry._path ) ) == false; } );
+    }
+
+    bool PropertyGridViewModel::collectCatalogKeyEntries( uint32 rowID, vector<string>& outListID ) const
+    {
+        outListID.clear();
+        const RowBinding* pBinding = findValueBinding( rowID );
+        if ( pBinding == nullptr )
+            return false;
+        // 어느 카탈로그인지는 쿠커와 같은 표가 정한다(언리얼 `FDataTableRowHandle` 의 행 고르기가 표를 묻는 자리) — 코드가 따로 경로를 적지 않는다.
+        DataCatalogReferenceRules rules;
+        if ( rules.loadFromAsset() == false )
+            return false;
+        const DataCatalogKeyTarget* pTarget = rules.findKeyTarget( pBinding->_pProp->_metadata->_catalogKeyTag );
+        if ( pTarget == nullptr )
+            return false;
+        vector<EditorAssetIndexEntry> listEntry;
+        EditorAssetCatalog::collectEntriesOnUIThread( EditorPaths::getAssetPaths(), listEntry );
+        const string opening = "<" + pTarget->_catalog;
+        for ( const EditorAssetIndexEntry& entry : listEntry )
+        {
+            string text;
+            if ( StringUtil::endsWith( entry._path, ".xml", true ) == false || AssetIO::readTextAsset( AssetID{ entry._path }, text ) == false || text.find( opening ) == string::npos )
+                continue;
+            XMLDocument doc;
+            if ( doc.parseData( text, entry._path ) == false || pTarget->_catalog != doc.getRoot().getName() )
+                continue;
+            for ( XMLNode item = doc.getRoot().findChild( pTarget->_entry.c_str() ); item.isValid(); item = item.findNextSibling( pTarget->_entry.c_str() ) )
+            {
+                const string_view id = item.getAttributeText( pTarget->_targetKey.c_str() );
+                if ( id.empty() == false )
+                    outListID.emplace_back( id );
+            }
+        }
+        std::sort( outListID.begin(), outListID.end() );
+        outListID.erase( std::unique( outListID.begin(), outListID.end() ), outListID.end() );
+        return true;
     }
 
     bool PropertyGridViewModel::describeComponentHandle( const hashed_string& targetTypeName, const ComponentHandle& handle, string& outPreview, InspectorHandleState& outState ) const
