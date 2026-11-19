@@ -780,11 +780,36 @@ namespace sw
         // 워커가 깨어나기를 기다리지 않는다. 이 스레드가 첫 청크부터 가져간다. 남은 티켓은 이 스레드가 닿을 수 있는 큐(자기
         // 데크 · 전역)에만 있으므로, 조인을 기다리며 다른 일을 돕다 보면 스스로 가져가게 된다.
         runGroupChunks( &group );
-        // Low 줄(백그라운드 I/O)은 돕지 않는다 — 합류는 Normal 의 자기 티켓과 남이 도는 청크만 기다린다. Low 하나를 집으면 그 태스크만큼 합류가 늦어진다.
-        waitForJoin( group._join, false );
+        // 제 청크를 다 돌고도 남의 청크가 남았을 때만 합류 대기다 — 그때만 시계를 읽고 구간을 연다(곧 스핀 · 잠들 자리라 비용이 묻힌다).
+        if ( group._join.getPending() > 0 )
+        {
+#if !defined( SW_SHIPPING )
+            const TaskProfileHook* pHook = s_profileHookSlot.get();
+            const TaskProfileZone  zone  = pHook != nullptr ? pHook->_pBeginZone( "runParallel", TaskProfileZoneKind::WaitJoin ) : TaskProfileZone{};
+#endif
+            const int64 waitStart = MonotonicClock::nowNanoseconds();
+            // Low 줄(백그라운드 I/O)은 돕지 않는다 — 합류는 Normal 의 자기 티켓과 남이 도는 청크만 기다린다. Low 하나를 집으면 그 태스크만큼 합류가 늦어진다.
+            waitForJoin( group._join, false );
+            _joinWaitNanos.fetch_add( static_cast<uint64>( MonotonicClock::nowNanoseconds() - waitStart ), std::memory_order_relaxed );
+            _joinWaitCount.fetch_add( 1, std::memory_order_relaxed );
+#if !defined( SW_SHIPPING )
+            if ( zone._pContext != nullptr )
+                pHook->_pEndZone( zone );
+#endif
+        }
 
         if ( _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
             _completionBroadcast.notifyAll();
+    }
+
+    TaskManager::WaitStats TaskManager::takeWaitStats()
+    {
+        WaitStats stats;
+        stats._joinWaitCount = _joinWaitCount.exchange( 0, std::memory_order_relaxed );
+        stats._joinWaitNanos = _joinWaitNanos.exchange( 0, std::memory_order_relaxed );
+        stats._joinParkCount = _joinParkCount.exchange( 0, std::memory_order_relaxed );
+        stats._idleParkCount = _idleParkCount.exchange( 0, std::memory_order_relaxed );
+        return stats;
     }
 
     void TaskManager::pushGroupTickets( ParallelGroup* pGroup, uint32 ticketCount )
@@ -1123,6 +1148,7 @@ namespace sw
             }
         }
 
+        _joinParkCount.fetch_add( 1, std::memory_order_relaxed );
         Futex::wait( word, observed );
 
         if ( idleBit != 0 )
@@ -1508,6 +1534,7 @@ namespace sw
                 _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
                 break;
             }
+            _idleParkCount.fetch_add( 1, std::memory_order_relaxed );
             Futex::wait( slot._park._word, observedParkWord );
             // 깨운 쪽이 비트를 내렸다. 이유 없이 깨어났다면 비트가 아직 켜져 있으니 여기서 내린다. 다시 잠들지는 다음 회차가 정한다.
             _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );

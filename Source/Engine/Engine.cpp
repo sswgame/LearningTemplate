@@ -18,6 +18,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
+#include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
@@ -589,6 +590,14 @@ namespace sw
 
     void Engine::endFrame()
     {
+        {
+            // 작업 시스템 대기 계기 — 이 프레임의 합류 대기 · 잠들기 몫(측정 먼저: 묶음 제출 · 우선순위 레인을 정하기 전의 근거). 카운터 창을 닫기 전에 더한다.
+            const TaskManager::WaitStats taskWait = engine::getSubsystem<TaskManager>().takeWaitStats();
+            SW_PROFILE_COUNT( "Task.Join.waits", taskWait._joinWaitCount );
+            SW_PROFILE_COUNT( "Task.Join.waitMicros", taskWait._joinWaitNanos / static_cast<uint64>( constant::time::kNanosecondsPerMicrosecond ) );
+            SW_PROFILE_COUNT( "Task.Join.parks", taskWait._joinParkCount );
+            SW_PROFILE_COUNT( "Task.Idle.parks", taskWait._idleParkCount );
+        }
         engine::getSubsystem<FrameProfiler>().endFrame();
         // 외부 프로파일러(Tracy)의 주 프레임 경계 — 게임 스레드 프레임이다.
         IProfilerBackend* pProfilerBackend = ProfilerBackend::getActiveBackend();

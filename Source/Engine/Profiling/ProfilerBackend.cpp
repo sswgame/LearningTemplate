@@ -119,12 +119,13 @@ namespace sw
                     return entry._pSite;
 
                 fixed_string<constant::buffer::kMax64> zoneName;
-                if ( kind == TaskProfileZoneKind::WaitStage )
+                if ( kind != TaskProfileZoneKind::Execute )
                     zoneName.append( "Wait " );
                 zoneName.append( pName );
+                const utf8* const arrFunction[] = { "TaskManager::executeTask", "TaskManager::waitStage", "TaskManager::runParallelRange" }; // 열거자 순서
+                static_assert( sizeof( arrFunction ) / sizeof( arrFunction[0] ) == static_cast<size_t>( TaskProfileZoneKind::WaitJoin ) + 1, "종류마다 함수 이름 하나" );
                 entry._key   = key;
-                entry._pSite = ProfilerBackend::registerZoneSite( zoneName.c_str(), kind == TaskProfileZoneKind::Execute ? "TaskManager::executeTask" : "TaskManager::waitStage",
-                                                                  "Source/Core/Task/TaskManager.cpp", static_cast<uint32>( kind ) );
+                entry._pSite = ProfilerBackend::registerZoneSite( zoneName.c_str(), arrFunction[static_cast<uint32>( kind )], "Source/Core/Task/TaskManager.cpp", static_cast<uint32>( kind ) );
                 return entry._pSite;
             }
 
