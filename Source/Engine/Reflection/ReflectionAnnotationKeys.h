@@ -55,6 +55,8 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey CustomMeta{};
         /** @brief string.Validate — `Validate = "…"`. 타입 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 로드 · 저장 · 인스펙터 편집 뒤에 불린다(ReflectionValidation) */
         static constexpr AnnotationKey Validate{};
+        /** @brief count.Version — `Version = 2`. 타입의 저장 판. 옛 판은 `SW_TYPE_VERSION_PATCH` 사슬이 올린다. */
+        static constexpr AnnotationKey Version{};
     };
 
     inline constexpr const utf8* kArrReflectKey[] = {
@@ -73,6 +75,7 @@ namespace sw::reflect::attr
         "meta",
         "CustomMeta",
         "Validate",
+        "Version",
         nullptr,
     };
 } // namespace sw::reflect::attr

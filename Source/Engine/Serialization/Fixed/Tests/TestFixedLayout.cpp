@@ -265,3 +265,43 @@ SW_TEST_CASE( FixedLayoutTest, EnumArrayMatchesFixedArrayBytes )
     SW_EXPECT_EQUAL( 300000, read._arrValue[FixedLayoutSampleMode::Run] );
     SW_EXPECT_TRUE( FixedLayout::equals( byMode, read ) );
 }
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 테스트용 옛 스키마 해시입니다(어느 빌드의 해시도 아닌 값). */
+        constexpr uint64 kFixedSampleStatOldHash = 0x5EED5EED5EED5EEDull;
+
+        /** @brief 옛 배치: 체력을 16 비트 그대로 실었다. */
+        FixedReadResult readFixedSampleStatOld( BitReader& reader, void* pObject )
+        {
+            static_cast<FixedLayoutSampleStat*>( pObject )->_health = static_cast<int32>( FixedCodecUtil::readRawBits( reader, 16 ) );
+            return FixedReadResult::Ok;
+        }
+    } // namespace
+
+    SW_FIXED_LAYOUT_CONVERSION( fixedSampleStatOld, "sw::FixedLayoutSampleStat", kFixedSampleStatOldHash, &readFixedSampleStatOld );
+} // namespace sw
+
+/**
+ * @brief [FixedLayoutTest] 다른 스키마 해시의 바이트는 (타입, 해시)에 등록한 변환으로 읽고, 변환이 없는 해시는 `SchemaMismatch` 로 거절하며 대상은 그대로다(감사 11)
+ */
+SW_TEST_CASE( FixedLayoutTest, OtherSchemaHashReadsThroughRegisteredConversion )
+{
+    const auto readWithHash = []( uint64 schemaHash, FixedLayoutSampleStat& inoutStat )
+    {
+        BitWriter writer;
+        FixedCodecUtil::writeRawBits( writer, schemaHash, 64 );
+        FixedCodecUtil::writeRawBits( writer, 250, 16 );
+        const vector<uint8> bytes = writer.getBytes();
+        return FixedLayout::read( bytes.data(), static_cast<int32>( bytes.size() ), inoutStat );
+    };
+    FixedLayoutSampleStat stat;
+    SW_EXPECT_TRUE( readWithHash( kFixedSampleStatOldHash, stat ) == FixedReadResult::Ok );
+    SW_EXPECT_EQUAL( 250, stat._health );
+
+    stat._health = 40;
+    SW_EXPECT_TRUE( readWithHash( 0xBADull, stat ) == FixedReadResult::SchemaMismatch );
+    SW_EXPECT_EQUAL( 40, stat._health );
+}

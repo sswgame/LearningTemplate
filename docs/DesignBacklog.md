@@ -1114,6 +1114,8 @@ struct ReflectVisit
 };
 ```
 
+**W-R4 뒤 — 상태 직렬화 · 타입 판(구조 감사 1 · 11, 결정).** `serializeState` 의 기본 본문은 `StateIO::reflected`(상태 역할 칸을 `ReflectVisit` 와 같은 순서로, 머리는 타입 판 + 칸 배치 해시)이고 손 본문은 리플렉션 밖 값만 더한다. 판은 그릇이 아니라 타입의 `REFLECT( Version = N )` 한 곳, 옛 판은 `SW_TYPE_VERSION_PATCH` 사슬(ezEngine GraphPatch 의 타입 판 + 패치, 그래프 대신 바이트 본문)이 상태 바이트 · 서비스 레코드에서 같이 올린다. 기각 — 생성기가 타입마다 `io.value` 줄을 내기: 리플렉션 밖 칸 형식(Countdown · 포인터 ↔ id)을 생성기가 알아야 하고 실행 걷기로 충분한 비핫 경로다. 다시 볼 조건: 롤백 프레임 경로가 `reflected` 를 쓰게 되면 타입별 칸 계획 캐시(배치 해시 포함)를 둔다. 남은 손 본문은 158 곳(테스트 형식 빼고 — 옮긴 넷: LevelProgress · StatBlock · ResourceGauge · ScavengerQuota)이고, 칸마다 검사 · 포인터 ↔ id · 리플렉션이 아닌 칸 형식이 섞여 키트별로 옮긴다.
+
 **측정 · 판정.** 동등성은 값이 아니라 가르는 힘으로 본다: `StateHashTest.EveryStateFieldChangesTheHash` 가 상태 칸을 가진 모든 컴포넌트 타입의 모든 칸을 리플렉션으로 하나씩 바꿔 해시가 달라지는지 본다(새 칸이 빠질 수 없다). 손 구현과는 `TestSceneStateHash` 의 같은 씬 N 프레임에서 "두 실행이 같다 ⇔ 두 해시가 같다" 를 견준다. 비용: 오브젝트 8000 씬의 상태 해시 ns, 씬 로드의 인스턴스화 구간 · `Scene.save.serialize` — 소비자별 커밋 앞뒤 차이가 3 % 를 넘으면 그 소비자의 커밋만 되돌린다.
 
 **W-R6 밀집 타입 색인 — 측정 뒤, 지금은 소비자가 없다.** NEXT 는 "5-3 SoA 와 함께" 라 했지만 SoA(`ComponentDataStore<TPage>`)는 페이지 형식이 템플릿 인자라 `TypeInfo` 로 찾지 않는다. 타입으로 찾는 표는 `TickRegistry::_mapTypeDispatch`(`unordered_map<const TypeInfo*, …>`) · `GameObjectStore::_mapComponentPool`(FQN 키 + 뮤텍스) · `ComponentDefaults::_mapResolved` 셋이다. 대조: 유니티 `TypeManager.GetTypeIndex<T>()`, 언리얼 Mass `TStructTypeBitSet` 의 구조체 번호, Godot `ClassDB` 는 `StringName` 해시 표다. 설계는 `TypeInfo::_typeIndex`(등록 때 받는 밀집 번호, 내려간 타입의 번호는 `_contentGeneration` 을 올리고 다시 쓴다)와 그 번호로 찾는 배열 `TypeIndexedArray<T>` 이다. **문턱:** `load/characters` · `load/housingbulk` 에서 위 세 표의 조회 합이 게임 스레드 프레임의 1 % 이상(또는 0.1 ms 이상)일 때만 한다. 아니면 값을 적고 닫는다.

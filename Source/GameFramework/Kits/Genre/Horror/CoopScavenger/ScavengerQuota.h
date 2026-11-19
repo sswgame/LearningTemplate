@@ -7,6 +7,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -30,9 +31,12 @@ namespace sw
      * @brief 리썰 컴퍼니의 할당량입니다. 다음 할당량은 지금 값 + 기본 x (1 + 주기^2 / 가파름) x (1 + 무작위 x (r - 0.5))를 반올림한 값입니다
      *        (주기는 채운 할당량 수이며 갈수록 가파르게 오릅니다). 남은 날이 0 인 날이 마감 날이고, 그날이 끝날 때(`endDay`) 판정합니다.
      */
+    REFLECT()
     class SW_KIT_API ScavengerQuota
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "SCQT" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -47,10 +51,10 @@ namespace sw
         int32 computeIncrease( int32 cycleIndex, float32 randomValue ) const;
 
         /**
-         * @brief 할당량, 채운 양, 남은 날, 주기, 게임 오버를 씁니다. 설정은 `initialize` 에서 받으므로 저장하지 않습니다.
+         * @brief 할당량, 채운 양, 남은 날, 주기, 게임 오버를 씁니다(리플렉션 상태 칸 — 범위는 칸의 `PROPERTY( Min · Max )`). 설정은 `initialize` 에서 받으므로 저장하지 않습니다.
          *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
          */
-        SW_DECLARE_STATE_IO();
+        SW_DECLARE_REFLECTED_STATE_IO()
 
         int32 getQuota() const { return _quota; }
         int32 getFulfilled() const { return _fulfilled; }
@@ -61,10 +65,15 @@ namespace sw
 
     private:
         ScavengerQuotaDef _settings;
-        int32             _quota;
-        int32             _fulfilled;
-        int32             _daysLeft;
-        int32             _cycle;
-        uint8             _bGameOver;
+        PROPERTY( RuntimeState, Min = 1 )
+        int32 _quota;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _fulfilled;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _daysLeft;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _cycle;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bGameOver;
     };
 } // namespace sw

@@ -92,7 +92,7 @@ namespace sw
         if ( existingRead != ServiceStoreResult::NotFound )
             return LedgerResult::Unavailable;
         vector<uint8> bytes;
-        if ( ServiceRecordUtil::encode( kRecordVersion, state, bytes ) == false )
+        if ( ServiceRecordUtil::encode( state, bytes ) == false )
             return LedgerResult::Invalid;
         const LedgerTransferRequest request = LedgerItemInstanceInternal::makeTransfer( LedgerHolder::makeMint(), ownerHolder, state._assetID, journalKey, reason, nowMs );
         LedgerTransferResult        result;
@@ -129,7 +129,7 @@ namespace sw
         const ServiceStoreResult read = connection.readRecord( getStateTable(), assetID, record );
         if ( read != ServiceStoreResult::Ok )
             return read;
-        if ( ServiceRecordUtil::readDurable( assetID, record._bytes, kRecordVersion, outState ) == false || isValidState( outState ) == false )
+        if ( ServiceRecordUtil::readDurable( assetID, record._bytes, outState ) == false || isValidState( outState ) == false )
             return ServiceStoreResult::Invalid;
         outVersion = record._version;
         return ServiceStoreResult::Ok;
@@ -140,7 +140,7 @@ namespace sw
         if ( isValidState( state ) == false || version == ServiceRecord::kAbsentVersion )
             return false;
         vector<uint8> bytes;
-        if ( ServiceRecordUtil::encode( kRecordVersion, state, bytes ) == false )
+        if ( ServiceRecordUtil::encode( state, bytes ) == false )
             return false;
         inoutTransaction.put( getStateTable(), state._assetID, std::move( bytes ), version );
         return true;

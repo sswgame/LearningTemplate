@@ -6,32 +6,24 @@
 
 namespace sw
 {
-    namespace
-    {
-        constexpr uint32 kServerDirectoryRecordVersion = 1; ///< 저장소 레코드(A)의 버전이다. 필드를 빼거나 뜻을 바꿀 때 올리고 데이터를 다시 쓴다
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     bool ServerDirectoryProtocol::encodeMaintenance( const MaintenanceWindow& window, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kServerDirectoryRecordVersion, window, outBytes );
+        return ServiceRecordUtil::encode( window, outBytes );
     }
 
     bool ServerDirectoryProtocol::decodeMaintenance( const string_view key, const vector<uint8>& bytes, MaintenanceWindow& outWindow )
     {
-        return ServiceRecordUtil::readDurable( key, bytes, kServerDirectoryRecordVersion, outWindow );
+        return ServiceRecordUtil::readDurable( key, bytes, outWindow );
     }
 
     bool ServerDirectoryProtocol::encodeAnnouncement( const ServiceAnnouncement& announcement, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kServerDirectoryRecordVersion, announcement, outBytes );
+        return ServiceRecordUtil::encode( announcement, outBytes );
     }
 
     bool ServerDirectoryProtocol::decodeAnnouncement( const string_view key, const vector<uint8>& bytes, ServiceAnnouncement& outAnnouncement )
     {
-        return ServiceRecordUtil::readDurable( key, bytes, kServerDirectoryRecordVersion, outAnnouncement );
+        return ServiceRecordUtil::readDurable( key, bytes, outAnnouncement );
     }
 } // namespace sw
 

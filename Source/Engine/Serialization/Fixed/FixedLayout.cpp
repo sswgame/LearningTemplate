@@ -927,18 +927,58 @@ namespace sw
         return FixedFieldCodec::writeObject( codec, writer, pObject );
     }
 
-    FixedReadResult FixedLayout::readWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject )
+    FixedReadResult FixedLayout::readWithCodec( const FixedCodec& codec, const hashed_string& typeFqn, BitReader& reader, void* pObject )
     {
         const uint64 schemaHash = FixedCodecUtil::readRawBits( reader, 64 );
         if ( reader.hasOverflowed() )
             return FixedReadResult::Truncated;
         if ( schemaHash != getSchemaHash( codec ) )
         {
-            // 변환 레지스트리를 볼 자리입니다. 키는 (기록된 해시, 대상 타입)이고 값은 옛 바이트를 새 객체로 바꾸는 함수입니다(Source/Engine/Serialization/Fixed/README.md 3.14).
-            // 변환할 옛 B 데이터가 없어 레지스트리가 아직 없으므로 거절합니다.
-            return FixedReadResult::SchemaMismatch;
+            // 변환 표: 키는 (대상 타입, 기록된 해시), 값은 옛 비트를 지금 객체로 읽는 함수다. 없으면 거절한다 — 옛 비트를 지금 배치로 읽는 폴백은 없다.
+            const FixedLayoutConversion* pConversion = FixedLayoutConversion::find( typeFqn, schemaHash );
+            if ( pConversion == nullptr )
+                return FixedReadResult::SchemaMismatch;
+            const FixedReadResult result = pConversion->_pFunction( reader, pObject );
+            if ( result == FixedReadResult::Ok && reader.hasOverflowed() )
+                return FixedReadResult::Truncated;
+            return result;
         }
         return readBodyWithCodec( codec, reader, pObject );
+    }
+
+    namespace
+    {
+        /** @brief 등록된 고정 배치형 변환(등록 순서)입니다. Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다(`FormatUpgradeStep` 과 같다). */
+        SW_DEFINE_REGISTRATION_LIST( getFixedLayoutConversions, const FixedLayoutConversion, "FixedLayoutConversions", RegistrationOrder::Insertion, true )
+    } // namespace
+
+    bool FixedLayoutConversion::registerConversion( const FixedLayoutConversion* pConversion )
+    {
+        if ( pConversion == nullptr || StringUtil::isNullOrEmpty( pConversion->_pTypeFqn ) || pConversion->_pFunction == nullptr )
+            return false;
+        if ( find( hashed_string( pConversion->_pTypeFqn ), pConversion->_fromSchemaHash ) != nullptr )
+            return false;
+        string name = pConversion->_pTypeFqn;
+        name += ':';
+        name += sw::to_string( pConversion->_fromSchemaHash );
+        return getFixedLayoutConversions().addLogged( pConversion, "Fixed layout conversion", name ) == RegistrationResult::Added;
+    }
+
+    void FixedLayoutConversion::unregisterConversion( const FixedLayoutConversion* pConversion )
+    {
+        (void)getFixedLayoutConversions().remove( pConversion ); // 등록되어 있지 않은(거절된) 항목을 빼는 것은 할 일이 없다
+    }
+
+    const FixedLayoutConversion* FixedLayoutConversion::find( const hashed_string& typeFqn, const uint64 fromSchemaHash )
+    {
+        const RegistrationList<const FixedLayoutConversion>& list = getFixedLayoutConversions();
+        for ( uint32 index = 0; index < list.getCount(); ++index )
+        {
+            const FixedLayoutConversion* pConversion = list.getAt( index );
+            if ( pConversion->_fromSchemaHash == fromSchemaHash && string_view{ pConversion->_pTypeFqn } == string_view{ typeFqn.c_str() } )
+                return pConversion;
+        }
+        return nullptr;
     }
 
     bool FixedLayout::writeBodyWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer )

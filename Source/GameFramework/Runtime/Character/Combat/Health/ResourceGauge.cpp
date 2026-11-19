@@ -218,13 +218,9 @@ namespace sw
 
     void ResourceGauge::serializeState( StateIO& io )
     {
-        io.value( _value );
-        io.value( _maxBonus );
-        io.value( _regenScale );
-        io.value( _timeSinceUse );
-        io.value( _overheatPenalty );
-        io.flag( _bLocked );
-        io.check( 0.0f <= _value && _value <= getMax() );
+        io.reflected( *this );
+        io.value( _overheatPenalty );   // 리플렉션 밖 값 — `Countdown` 은 늦음까지 싣는 손 코덱이 있다
+        io.check( _value <= getMax() ); // 칸 사이 검사 — 최대는 설정 + 보너스다
     }
 
 } // namespace sw

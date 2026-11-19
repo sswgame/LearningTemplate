@@ -428,10 +428,12 @@ namespace sw
         vector<string>               _listRemovedType;  ///< `REFLECT( RemovedType = "sw::OldThing" )` — 지운 타입 이름(바이너리 태그의 타입 해시 공간에 남는다)
         string                       _validate;         ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`
         string                       _tickMode;         ///< `REFLECT( TickMode = Batch|Task|Main )` 의 글. 비면 Batch(`DeclarationValidator::validateTickMode` 가 철자를 본다)
+        string                       _versionName;      ///< `REFLECT( Version = kName )` 의 상수 이름. 숫자로 적었으면 비고 `_version` 이 찬다(생성 코드가 이름을 그대로 쓴다)
         vector<pair<string, string>> _listCustomMeta;
         vector<ParsedPropertyInfo>   _listProperty;
         vector<ParsedFunctionInfo>   _listMethod;
         vector<ParsedEventInfo>      _listEvent;
+        uint32                       _version;   ///< `REFLECT( Version = N )` — 타입의 저장 판. 0 이면 적지 않았다(엔진은 1 로 본다, `TypeMetadata::getVersion`)
         uint32                       _baseCount; ///< 기반 클래스 수입니다. 둘 이상이면 `collectBase` 가 생성 오류로 멈추므로 코드젠에는 0 이나 1 만 옵니다
         uint8                        _bAbstract         : 1;
         uint8                        _bStatic           : 1;
@@ -462,10 +464,12 @@ namespace sw
             , _listRemovedType{}
             , _validate{}
             , _tickMode{}
+            , _versionName{}
             , _listCustomMeta{}
             , _listProperty{}
             , _listMethod{}
             , _listEvent{}
+            , _version{ 0 }
             , _baseCount{ 0 }
             , _bAbstract{ SW_FALSE }
             , _bStatic{ SW_FALSE }

@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include <type_traits>
@@ -22,6 +23,7 @@ namespace sw
     struct int2;
     struct Radians;
     struct RateAccumulator;
+    struct TypeInfo;
 
     class StateIO;
 
@@ -50,8 +52,11 @@ namespace sw
     /**
      * @class StateIO
      * @brief 형식마다 `void serializeState( StateIO& io )` 하나로 쓰기와 읽기를 함께 적게 하는 아카이브 앞문입니다. 쓰기 · 읽기 칸 순서가 어긋날 수 없습니다.
-     * @details 언리얼 `Serialize( FArchive& )` 의 양방향 `Ar << x` 자리다(기억에 의존). 유니티 `[SerializeField]` · Godot 저장 깃발처럼 리플렉션으로 가지 않는 까닭은
-     *          이 상태가 포인터 ↔ id 변환과 범위 검사를 많이 하고 상당수가 리플렉션 형식이 아니기 때문이다.
+     * @details 언리얼 `Serialize( FArchive& )` 의 양방향 `Ar << x` 자리다(기억에 의존).
+     *          칸은 리플렉션으로 선언하는 것이 기본이다: `REFLECT()` 형식의 `PROPERTY( RuntimeState )` 칸을 `reflected` 가 선언 순서로 싣고(유니티 `[SerializeField]` ·
+     *          언리얼 `UPROPERTY( SaveGame )` 자리), 판은 타입의 `REFLECT( Version = N )` 과 칸 배치 해시가 정한다. 손으로 칸마다 `value` 를 부르면 멤버를 더하고 빠뜨린 칸이
+     *          핫 리로드 · 롤백 뒤 조용히 기본값이 되고, 순서를 바꾸고 판을 안 올리면 옛 바이트를 틀리게 읽었다. 손 본문은 리플렉션 밖 값(포인터 ↔ id, 리플렉션이 아닌 형식,
+     *          칸 사이의 검사)만 `reflected` 뒤에 더한다.
      *
      *          규칙은 다음과 같다.
      *          - 실패는 아카이브의 끈적한 오류 하나다(`check` 가 거기에 남긴다). `serializeState` 는 값을 돌려주지 않으므로 실패한 읽기를 성공으로 돌려줄 길이 없다.
@@ -122,6 +127,24 @@ namespace sw
         void value( FixedStepTimer& inoutTimer );
         /** @brief 아직 정수가 되지 않은 누적 양입니다. 0..1 밖을 거절합니다. */
         void value( RateAccumulator& inoutAccumulator );
+
+        /**
+         * @brief @p inoutObject 의 리플렉션 상태 칸(`PROPERTY( RuntimeState )`, 기반부터 선언 순서)을 씁니다 · 읽습니다. `serializeState` 의 기본 본문입니다.
+         * @details 머리는 타입의 판(`REFLECT( Version = N )`, 없으면 1)과 칸 배치 해시(`computeReflectedLayoutHash`)다. 읽을 때
+         *          - 판이 옛것이면 그 타입의 패치 사슬(`SW_TYPE_VERSION_PATCH`)로 머리 뒤 바이트를 올리고 이어 읽는다(`header` 와 같은 길 — 올린 바이트에서 바깥 칸도 읽힌다).
+         *          - 판이 같은데 배치 해시가 다르면 칸을 바꾸고 판을 올리지 않은 것이다 — 틀리게 읽지 않고 타입 이름과 함께 거절한다.
+         *          - 새 판(내리기)이거나 단계가 빠졌으면 거절한다.
+         *          칸 형식: 수 · bool · 열거(이름이 아닌 값, 열거자 밖은 거절) · `string` · `hashed_string` · float2/3/4 · quaternion · 반사 구조체(그 구조체의 Transient 가 아닌 칸 전부를
+         *          머리 없이 안에 — 구조체 배치는 바깥 타입의 해시에 든다) · 이것들의 시퀀스. 그 밖의 형식은 프로세스를 멈춘다(칸을 리플렉션 밖으로 빼고 손 본문에서 `value` 로 싣는다).
+         *          읽은 뒤 `PROPERTY( Min · Max )` 를 지키지 않으면 거절한다. 컴포넌트에는 쓰지 않는다 — 컴포넌트의 상태 칸은 씬 스냅숏이 이미 옮긴다.
+         */
+        template <typename T>
+        void reflected( T& inoutObject )
+        {
+            reflectedObject( requireReflectedType( typeFqn<T>() ), &inoutObject );
+        }
+        /** @brief `reflected` 가 싣는 칸 배치(이름 · 형식 · 순서, 구조체 칸은 안쪽까지)의 해시입니다. `FixedLayout::computeSchemaHash` 와 같은 FNV-1a 64 입니다. */
+        [[nodiscard]] static uint64 computeReflectedLayoutHash( const TypeInfo& type );
 
         /** @brief 형식 안의 형식이지만 읽기가 그 형식만 사본에 받아 끝까지 맞으면 옮깁니다. 바깥이 사본 없는 판(`SW_DECLARE_STATE_IO_IN_PLACE`)일 때 씁니다. */
         template <typename T>
@@ -389,6 +412,13 @@ namespace sw
         [[nodiscard]] static bool readRateAccumulator( Archive& archive, RateAccumulator& outAccumulator );
 
     private:
+        /** @brief 이름이 @p fqn 인 등록된 타입입니다. 없으면(리플렉션 생성이 빠짐) 프로세스를 멈춥니다 — 대체 형식으로 읽지 않는다. */
+        static const TypeInfo& requireReflectedType( const hashed_string& fqn );
+        /** @brief `reflected` 의 본문입니다(머리 + 칸). */
+        void reflectedObject( const TypeInfo& type, void* pObject );
+        /** @brief 칸만(머리 없이) 씁니다 · 읽습니다. @p bStateRoleOnly 면 `RuntimeState` 칸만(최상위), 아니면 Transient 가 아닌 칸 전부(안쪽 구조체)입니다. */
+        void reflectedProperties( const TypeInfo& type, void* pObject, bool bStateRoleOnly, uint32 depth );
+
         /** @brief 난수 상태입니다. 0 은 있을 수 없는 상태라 거절합니다. */
         void valueRandom( DeterministicRandom32& inoutRandom );
 
@@ -435,6 +465,17 @@ namespace sw
         return ::sw::StateIO::readInPlace( *this, archive ); \
     }                                                        \
     void serializeState( ::sw::StateIO& io )
+
+/**
+ * @def SW_DECLARE_REFLECTED_STATE_IO
+ * @brief `SW_DECLARE_STATE_IO` 에 본문까지 둡니다 — `serializeState` 가 리플렉션 상태 칸(`PROPERTY( RuntimeState )`)만 싣습니다(`StateIO::reflected`).
+ *        리플렉션 밖 값이나 칸 사이 검사를 더할 형식은 `SW_DECLARE_STATE_IO` 를 두고 본문 첫 줄에 `io.reflected( *this );` 를 부른다.
+ */
+#define SW_DECLARE_REFLECTED_STATE_IO() \
+    SW_DECLARE_STATE_IO()               \
+    {                                   \
+        io.reflected( *this );          \
+    }
 
 /** @brief 비트필드 깃발 하나입니다(`uint8 _bX : 1` 은 참조로 받을 수 없다). 0 · 1 밖을 거절합니다. */
 #define SW_STATE_BITFLAG( io, field )                      \

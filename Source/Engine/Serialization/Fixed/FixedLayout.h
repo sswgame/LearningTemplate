@@ -11,6 +11,7 @@
  *          해시는 생성기가 만든 정규 문자열(필드 이름, 순서, 타입, 범위 키, 열거자)과 `kVersion` 에서 나옵니다.
  *          그래서 필드 순서만 바꿔도 다른 빌드가 쓴 바이트는 `SchemaMismatch` 로 거절됩니다. **필드 순서가 와이어 형식입니다.**
  *          롤백과 스냅샷처럼 같은 빌드끼리만 오가는 데이터에 씁니다. 세이브와 에셋은 자기 기술형(`BinarySerializer`)에 둡니다.
+ *          다른 해시의 바이트를 읽어야 하는 타입(남겨 둔 B 바이트)은 (타입, 기록된 해시)마다 변환 함수를 등록한다(`SW_FIXED_LAYOUT_CONVERSION`) — 없으면 거절이다.
  *
  *          읽기는 원자적입니다. 대상을 복사한 임시 객체에 읽고, 끝까지 성공했을 때만 옮깁니다. 실패하면 대상은 그대로입니다.
  *          코덱에 없는 필드(Transient, 포인터)는 복사본에서 이어집니다.
@@ -20,6 +21,7 @@
  */
 #pragma once
 #include "Core/Foundation/Expected.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/EngineMinimal.h"
@@ -285,6 +287,37 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 옛 스키마 해시로 쓴 필드 비트(머리 뒤)를 읽어 지금 타입 객체 @p pObject 에 채웁니다. 실패면 그 결과이고, 대상은 임시 사본이라 실패해도 남지 않는다. */
+    using FixedLayoutConversionFunction = FixedReadResult ( * )( BitReader& reader, void* pObject );
+
+    /**
+     * @struct FixedLayoutConversion
+     * @brief 고정 배치형 바이트의 변환 하나 — (타입 FQN, 기록된 스키마 해시)의 바이트를 지금 타입으로 읽는 함수입니다(등록 항목).
+     * @details 스키마 해시가 다르면 `FixedLayout::read` 가 이 표를 보고, 없으면 `SchemaMismatch` 로 거절한다. 같은 (타입, 해시) 두 번 등록은 거절한다.
+     *          B 는 같은 빌드끼리의 바이트라 보통 변환이 없다 — 판 사슬(`SW_TYPE_VERSION_PATCH`)이 아니라 해시 하나에서 지금으로 바로 가는 까닭이다
+     *          (언리얼 `FRepLayout` 은 같은 빌드만 받고, 옛 데이터는 자기 기술형이 맡는다).
+     */
+    struct SW_API FixedLayoutConversion
+    {
+        const utf8*                   _pTypeFqn;       ///< `TypeInfo::_fullyQualifiedName` 과 같은 글
+        uint64                        _fromSchemaHash; ///< 바이트 머리에 적힌 옛 스키마 해시
+        FixedLayoutConversionFunction _pFunction;
+
+        [[nodiscard]] static bool registerConversion( const FixedLayoutConversion* pConversion );
+        static void               unregisterConversion( const FixedLayoutConversion* pConversion );
+        /** @brief (타입, 해시)의 변환입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] static const FixedLayoutConversion* find( const hashed_string& typeFqn, uint64 fromSchemaHash );
+    };
+
+    /** @brief `SW_FIXED_LAYOUT_CONVERSION` 이 두는 정적 등록자입니다. */
+    SW_DEFINE_STATIC_REGISTRAR( FixedLayoutConversionRegistrar, const FixedLayoutConversion*, &FixedLayoutConversion::registerConversion, &FixedLayoutConversion::unregisterConversion );
+} // namespace sw
+
+/** @brief 타입 @p typeFqn(글)의 옛 스키마 해시 @p fromSchemaHash 바이트를 읽는 변환 @p pFunction(`FixedLayoutConversionFunction`)을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). */
+#define SW_FIXED_LAYOUT_CONVERSION( id, typeFqn, fromSchemaHash, pFunction ) SW_STATIC_REGISTRATION( fixedLayoutConversion, ::sw::FixedLayoutConversion, ::sw::FixedLayoutConversionRegistrar, id, typeFqn, fromSchemaHash, pFunction )
+
+namespace sw
+{
     /**
      * @brief 고정 배치형 직렬화의 진입점입니다. 롤백, 넷 채널, 온라인 메서드 같은 등록 API 가 이것을 부릅니다.
      * @details 타입은 컴파일러 시그니처의 FQN(`typeFqn<T>`)과 함수 지역 캐시로 한 번 찾습니다.
@@ -321,7 +354,7 @@ namespace sw
         {
             const FixedCodec&     codec     = requireCodec<T>();
             T                     temporary = inoutObject; // 코덱에 없는 필드는 이 복사본에서 이어집니다
-            const FixedReadResult result    = readWithCodec( codec, reader, &temporary );
+            const FixedReadResult result    = readWithCodec( codec, typeFqn<T>(), reader, &temporary );
             if ( result == FixedReadResult::Ok )
                 inoutObject = std::move( temporary );
             return result;
@@ -378,9 +411,10 @@ namespace sw
         }
 
         /** @brief 코덱이 없다는 오류를 남기고 프로세스를 멈춥니다. 모든 구성에서 돌아오지 않습니다. */
-        [[noreturn]] static void             stopForMissingCodec( const hashed_string& fqn, string_view reason, string_view detail = {} );
-        [[nodiscard]] static bool            writeWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer );
-        [[nodiscard]] static FixedReadResult readWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject );
+        [[noreturn]] static void  stopForMissingCodec( const hashed_string& fqn, string_view reason, string_view detail = {} );
+        [[nodiscard]] static bool writeWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer );
+        /** @brief 머리의 스키마 해시가 다르면 (@p typeFqn, 그 해시)의 변환(`SW_FIXED_LAYOUT_CONVERSION`)으로 읽고, 없으면 `SchemaMismatch` 입니다. */
+        [[nodiscard]] static FixedReadResult readWithCodec( const FixedCodec& codec, const hashed_string& typeFqn, BitReader& reader, void* pObject );
         [[nodiscard]] static bool            equalsWithCodec( const FixedCodec& codec, const void* pA, const void* pB );
 
         // 스키마 해시 머리 없이 필드만 쓰고 읽는다. 같은 스키마임을 핸드셰이크가 확인한 채널(`NetMessageChannel`) 안에서만 뜻이 있으므로 그 클래스만 부른다 —

@@ -47,9 +47,8 @@ namespace sw
     /** @brief 인스턴스 아이템의 자산 id 규칙과 상태 레코드 함수입니다. 저장소 함수는 저장소 스레드에서 부릅니다. */
     struct SW_GF_API LedgerItemInstance
     {
-        static constexpr uint32 kRecordVersion   = 1;
-        static constexpr int32  kMaxDefIDSize    = 24; ///< `item.` + 정의 + `-` + 16진 16자가 자산 id 상한(48) 안에 들어간다
-        static constexpr int32  kMaxEnhanceLevel = 100;
+        static constexpr int32 kMaxDefIDSize    = 24; ///< `item.` + 정의 + `-` + 16진 16자가 자산 id 상한(48) 안에 들어간다
+        static constexpr int32 kMaxEnhanceLevel = 100;
 
         static const hashed_string& getStateTable(); ///< "item_state"
 

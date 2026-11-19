@@ -885,6 +885,11 @@ namespace sw
         emit.flagIf( typeInfo._bOverridesTick, "info._metadata.edit()._bOverridesTick" );
         emit.flagIf( typeInfo._bOverridesSubTick, "info._metadata.edit()._bOverridesSubTick" );
         emit.flagIf( typeInfo._bOverridesSerializeState, "info._metadata.edit()._bOverridesSerializeState" );
+        // 타입의 저장 판(`REFLECT( Version = … )`) — 상수 이름이면 그 이름을 그대로 쓴다(값은 컴파일러가 푼다)
+        if ( typeInfo._versionName.empty() == false )
+            emit.linef( "info._metadata.edit()._version = static_cast<::uint32>( %# );", typeInfo._versionName );
+        else if ( typeInfo._version != 0 )
+            emit.linef( "info._metadata.edit()._version = %#u;", typeInfo._version );
 
         if ( typeInfo._listProperty.empty() == false )
         {
