@@ -7,6 +7,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/PropertyRoleUtil.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
@@ -272,4 +273,57 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, EveryRegisteredRolePropertyIsUsable )
         }
     } );
     SW_EXPECT_TRUE_MSG( failures.empty(), failures.c_str() );
+}
+
+/**
+ * @brief [ReflectionPropertyRoleTest] 내장 표(`ReflectBuiltins.xxx`)의 Interp 역할 줄마다 그 타입의 칸이 섞이고, Interp 가 아닌 줄은 섞이지 않는다
+ * @details 시퀀서 · 파서 · UI 애니메이션이 같은 칸을 읽는다 — 손 목록이 셋이던 때는 하나만 늘고 둘이 남았다.
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, InterpRoleRowsAreInterpolatable )
+{
+    for ( size_t index = 0; index < static_cast<size_t>( sw::ReflectBuiltinIndex::kCount ); ++index )
+    {
+        const sw::ReflectBuiltinIndex  builtinIndex = static_cast<sw::ReflectBuiltinIndex>( index );
+        const sw::ReflectBuiltinTraits traits       = sw::ReflectBuiltinTraitTable::get( builtinIndex );
+        const sw::hashed_string&       typeName     = sw::ReflectedValueUtil::getBuiltinTypeName( builtinIndex );
+        const sw::PropertyInfo         prop( sw::hashed_string( "_value" ), typeName, 0 );
+        SW_EXPECT_TRUE_MSG( sw::PropertyRoleUtil::isInterpolatable( prop ) == traits.hasRole( sw::ReflectBuiltinRole::Interp ), typeName.c_str() );
+    }
+}
+
+/**
+ * @brief [ReflectionPropertyRoleTest] 내장 표의 Layout 이 성분 수와 크기를 정한다 — f32 · i32 는 멤버 수 × 4 바이트가 등록된 크기이고, num · angle 은 성분 하나, none 은 0 이다
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, BuiltinLayoutGivesComponentCountAndSize )
+{
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    for ( size_t index = 0; index < static_cast<size_t>( sw::ReflectBuiltinIndex::kCount ); ++index )
+    {
+        const sw::ReflectBuiltinIndex  builtinIndex = static_cast<sw::ReflectBuiltinIndex>( index );
+        const sw::ReflectBuiltinTraits traits       = sw::ReflectBuiltinTraitTable::get( builtinIndex );
+        const sw::hashed_string&       typeName     = sw::ReflectedValueUtil::getBuiltinTypeName( builtinIndex );
+        const sw::uint8                count        = sw::ReflectedValueUtil::getBuiltinComponentCount( builtinIndex );
+        switch ( traits._layout )
+        {
+            case sw::ReflectBuiltinLayout::Float32:
+            case sw::ReflectBuiltinLayout::Int32:
+            {
+                const sw::TypeInfo* pType = registry.findType( typeName );
+                SW_REQUIRE_TRUE_MSG( pType != nullptr, typeName.c_str() );
+                SW_EXPECT_TRUE_MSG( count > 0 && pType->_size == static_cast<size_t>( count ) * sizeof( sw::float32 ), typeName.c_str() );
+                break;
+            }
+            case sw::ReflectBuiltinLayout::Number:
+            case sw::ReflectBuiltinLayout::Angle:
+                SW_EXPECT_TRUE_MSG( count == 1, typeName.c_str() );
+                break;
+            case sw::ReflectBuiltinLayout::None:
+                SW_EXPECT_TRUE_MSG( count == 0, typeName.c_str() );
+                break;
+        }
+    }
+    SW_EXPECT_EQUAL( static_cast<sw::uint8>( 2 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kint2 ) );
+    SW_EXPECT_TRUE( sw::ReflectBuiltinTraitTable::get( sw::ReflectBuiltinIndex::kint2 )._layout == sw::ReflectBuiltinLayout::Int32 );
+    SW_EXPECT_EQUAL( static_cast<sw::uint8>( 16 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kfloat4x4 ) );
+    SW_EXPECT_EQUAL( static_cast<sw::uint8>( 0 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kNone ) );
 }

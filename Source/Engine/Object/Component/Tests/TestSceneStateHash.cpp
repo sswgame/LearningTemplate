@@ -149,6 +149,12 @@ namespace
             *static_cast<string*>( pValue ) += "x";
             return true;
         }
+        if ( name == "hashed_string" )
+        {
+            hashed_string& label = *static_cast<hashed_string*>( pValue );
+            label                = hashed_string( ( string( label.c_str() ) + "x" ).c_str() );
+            return true;
+        }
         if ( const EnumInfo* pEnum = registry.findEnum( typeName ) )
         {
             pEnum->writeValueToMemory( pValue, pEnum->readValueFromMemory( pValue ) + 1 );
@@ -228,4 +234,26 @@ SW_TEST_CASE( StateHashTest, EveryStateFieldChangesTheHash )
     const uint64 before = foldComponentState( *pProbe );
     pProbe->_tuning += 1.0f;
     SW_EXPECT_EQUAL( foldComponentState( *pProbe ), before );
+}
+
+/**
+ * @brief [StateHashTest] 내장 표의 Layout 으로 접는 칸(int2 성분)과 손 처리기 칸(hashed_string · GameObjectHandle)이 FATAL 없이 접히고, 값이 같으면 같은 해시다
+ * @details hashed_string 상태 칸은 전에는 해시가 접지 못해 FATAL 이었다(상태 직렬화는 실었다) — 두 쪽이 같은 State 역할을 읽는다.
+ */
+SW_TEST_CASE( StateHashTest, LayoutAndHandHandlerPropertiesFold )
+{
+    GameObjectManager       manager;
+    GameObject*             pObject = manager.createGameObject( hashed_string( "StateHashProbe" ) );
+    StateHashTestComponent* pProbe  = static_cast<StateHashTestComponent*>( manager.addComponentByName( pObject, hashed_string( "sw::StateHashTestComponent" ) ) );
+    SW_REQUIRE_NOT_NULL( pProbe );
+    pProbe->_cell      = int2{ 3, -4 };
+    pProbe->_label     = hashed_string( "Gate" );
+    pProbe->_target    = GameObjectHandle::make( 9 );
+    const uint64 first = foldComponentState( *pProbe );
+    SW_EXPECT_EQUAL( foldComponentState( *pProbe ), first );
+
+    pProbe->_cell = int2{ -4, 3 }; // 성분 순서가 해시에 든다
+    SW_EXPECT_TRUE( foldComponentState( *pProbe ) != first );
+    pProbe->_cell = int2{ 3, -4 };
+    SW_EXPECT_EQUAL( foldComponentState( *pProbe ), first );
 }
