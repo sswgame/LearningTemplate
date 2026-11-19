@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmChart.h"
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmPlaySession.h"
@@ -42,15 +43,11 @@ namespace
         bool readInto( sw::RhythmPlaySession& inoutSession ) const
         {
             sw::Archive written;
-            written << static_cast<uint32>( _noteCount );
-            written << static_cast<uint32>( 2 );
-            written << _cursor0;
-            written << _holdingNote0;
-            written << _cursor1;
-            written << _holdingNote1;
-            written << static_cast<uint32>( 1 );
-            written << _gradeCount;
-            written << static_cast<uint32>( 1 );
+            // 리플렉션 머리는 정상 `writeState` 바이트에서 가져온다 — 손으로 짜면 머리가 달라 다른 이유로 거절되어 거짓 통과한다.
+            sw::Archive sessionBytes;
+            inoutSession.writeState( sessionBytes );
+            written.writeBytes( sessionBytes.getData(), sw::StateIO::kReflectedHeaderBytes );
+            written << static_cast<uint32>( 1 ); // 입력 기록 하나
             written << 2.0f;
             written << _recordLane;
             written << static_cast<uint8>( SW_TRUE );
@@ -62,7 +59,15 @@ namespace
             written << _maxCombo;
             written << _missCount;
             written << _judgedCount;
-            written << _state;
+            written << static_cast<int64>( _state ); // 리플렉션 열거는 int64 로 놓인다
+            written << static_cast<uint32>( _noteCount );
+            written << static_cast<uint32>( 2 );
+            written << _cursor0;
+            written << _holdingNote0;
+            written << _cursor1;
+            written << _holdingNote1;
+            written << static_cast<uint32>( 1 );
+            written << _gradeCount;
             sw::Archive reading( written.getData(), written.getSize() );
             return inoutSession.readState( reading );
         }

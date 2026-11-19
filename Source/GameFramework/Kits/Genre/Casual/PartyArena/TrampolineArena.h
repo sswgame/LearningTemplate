@@ -193,9 +193,12 @@ namespace sw
      * @class TrampolineArena
      * @brief 한 라운드의 아레나입니다. 점수, 부활 대기, 시간 제한은 안의 `MatchState`(사람마다 팀 하나)가 가지고 있습니다.
      */
+    REFLECT()
     class SW_KIT_API TrampolineArena
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "PTRA" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -267,6 +270,7 @@ namespace sw
         PartyItemSpawner             _itemSpawner;
         MatchState                   _match;
         FixedStepTimer               _timer;
-        float32                      _time;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _time;
     };
 } // namespace sw

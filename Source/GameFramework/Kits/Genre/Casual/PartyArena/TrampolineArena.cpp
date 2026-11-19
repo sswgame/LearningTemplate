@@ -293,6 +293,7 @@ namespace sw
 
     void TrampolineArena::serializeState( StateIO& io )
     {
+        io.reflected( *this ); // 경기 시각 — 바닥 · NaN 은 칸이 거절한다
         io.expect( static_cast<uint32>( _listPlayer.size() ) );
         if ( io.isOk() == false )
             return;
@@ -304,8 +305,7 @@ namespace sw
         io.value( _itemSpawner );
         io.value( _match );
         io.value( _timer );
-        io.value( _time );
-        if ( io.check( 0.0f <= _time ) == false || io.isWriting() )
+        if ( io.isOk() == false || io.isWriting() )
             return;
         // 사람마다 팀과 참가자가 하나다. `reportKill` 과 점수가 사람 번호를 그대로 쓴다.
         if ( io.check( _match.getTeamCount() == peopleCount && _match.getParticipantCount() == peopleCount ) == false )

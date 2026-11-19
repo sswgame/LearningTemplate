@@ -6,6 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartAI.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartGhost.h"
@@ -1443,27 +1444,27 @@ SW_TEST_CASE_F( KartRaceTest, ReadStateRefusesBrokenTimes )
     sw::Archive written;
     _race.writeState( written );
     const sw::vector<uint8> bytes( written.getData(), written.getData() + written.getSize() );
-    // 꼬리: 경기 시간(4) 카운트다운(4) 최고 기록(4) 첫 결승(4) 들어온 수(4) 단계(1)
-    constexpr size_t kRaceTimeFromEnd    = 21;
-    constexpr size_t kBestLapFromEnd     = 13;
-    constexpr size_t kFirstFinishFromEnd = 9;
+    // 리플렉션 머리 뒤: 경기 시간(4) 최고 기록(4) 첫 결승(4) 들어온 수(4)
+    const size_t raceTimeAt    = sw::StateIO::kReflectedHeaderBytes;
+    const size_t bestLapAt     = raceTimeAt + 4;
+    const size_t firstFinishAt = bestLapAt + 4;
 
-    const auto readPatched = [this, &bytes]( size_t fromEnd, float32 value )
+    const auto readPatched = [this, &bytes]( size_t offset, float32 value )
     {
         sw::vector<uint8> patched = bytes;
-        std::memcpy( patched.data() + patched.size() - fromEnd, &value, sizeof( value ) );
+        std::memcpy( patched.data() + offset, &value, sizeof( value ) );
         sw::Archive reading( patched.data(), patched.size() );
         return _race.readState( reading );
     };
     const float32 raceTime = _race.getRaceTime();
     const float32 nan      = std::numeric_limits<float32>::quiet_NaN();
-    SW_EXPECT_TRUE( readPatched( kRaceTimeFromEnd, raceTime ) ); // 같은 값이면 읽힌다
+    SW_EXPECT_TRUE( readPatched( raceTimeAt, raceTime ) ); // 같은 값이면 읽힌다
     SW_EXPECT_NEAR( raceTime, _race.getRaceTime(), kKartTolerance );
 
-    SW_EXPECT_FALSE( readPatched( kRaceTimeFromEnd, nan ) );
-    SW_EXPECT_FALSE( readPatched( kRaceTimeFromEnd, -1.0f ) );
-    SW_EXPECT_FALSE( readPatched( kBestLapFromEnd, nan ) );
-    SW_EXPECT_FALSE( readPatched( kBestLapFromEnd, -1.0f ) );
-    SW_EXPECT_FALSE( readPatched( kFirstFinishFromEnd, nan ) );
+    SW_EXPECT_FALSE( readPatched( raceTimeAt, nan ) );
+    SW_EXPECT_FALSE( readPatched( raceTimeAt, -1.0f ) );
+    SW_EXPECT_FALSE( readPatched( bestLapAt, nan ) );
+    SW_EXPECT_FALSE( readPatched( bestLapAt, -1.0f ) );
+    SW_EXPECT_FALSE( readPatched( firstFinishAt, nan ) );
     SW_EXPECT_NEAR( raceTime, _race.getRaceTime(), kKartTolerance );
 }
