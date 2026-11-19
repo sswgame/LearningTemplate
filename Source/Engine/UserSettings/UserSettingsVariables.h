@@ -16,9 +16,10 @@ SW_EXTERN_GLOBAL_VARIABLE( float32, gv_renderScale ); ///< 3D 렌더 해상도 �
 // 텍스처 품질 `gv_textureMipDrop`(TextureCache.cpp — 사본 `TextureCache::getQualityMipDrop`), 이펙트 품질 `gv_effectsSpawnScale`(VFXComponent.cpp). 단계마다의 값은 스키마 선택지의 `targetValue` 다.
 
 // 게임플레이와 카메라
-SW_EXTERN_GLOBAL_VARIABLE( float32, gv_cameraFieldOfView ); ///< 1 인칭과 3 인칭 카메라 시야각(도)입니다. 카메라가 읽습니다.
-SW_EXTERN_GLOBAL_VARIABLE( float32, gv_cameraShakeScale );  ///< 카메라 흔들림 배율(0 이면 끔). 카메라 흔들림이 곱한다.
-SW_EXTERN_GLOBAL_VARIABLE( bool, gv_cameraHeadBob );        ///< 걷기 머리 흔들림입니다.
+SW_EXTERN_GLOBAL_VARIABLE( float32, gv_cameraFieldOfView );     ///< 1 인칭과 3 인칭 카메라 시야각(도)입니다. 카메라가 읽습니다.
+SW_EXTERN_GLOBAL_VARIABLE( float32, gv_cameraShakeScale );      ///< 카메라 흔들림 배율(0 이면 끔). 카메라 흔들림이 곱한다.
+SW_EXTERN_GLOBAL_VARIABLE( bool, gv_cameraHeadBob );            ///< 걷기 머리 흔들림입니다.
+SW_EXTERN_GLOBAL_VARIABLE( sw::GlobalString, gv_cameraPreset ); ///< 플레이어가 순환 키로 고른 카메라 프리셋 id 입니다(순환 액션이 있는 카메라 디렉터가 시작할 때 읽고 순환할 때 쓴다). 비면 장면의 시작 프리셋입니다.
 
 // 접근성, UI, 자막
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_colorVisionMode );             ///< 색각 보정입니다(0 끔, 1 적색약, 2 녹색약, 3 청색약). 캔버스(UI)가 겁니다. 렌더러는 화면 출력 뷰의 `g_CameraFrame.z` 에 방식을 싣고, 톤맵 쪽 셰이더(`post_grade.hlsli`)는 쿠킹과 함께 들어온다(UserSettingsConsumers U3).

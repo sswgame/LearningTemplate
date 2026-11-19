@@ -78,6 +78,7 @@
 		<entry source="CPU only (Recompute Normals)" text="CPU 전용(법선 다시 계산)" />
 		<entry source="CPU only:" text="CPU 전용:" />
 		<entry source="Camera Shake" text="카메라 흔들림" />
+		<entry source="Camera View" text="카메라 시점" />
 		<entry source="Cancel" text="취소" />
 		<entry source="Capacity" text="정원" />
 		<entry source="Center" text="중심" />

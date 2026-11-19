@@ -77,6 +77,7 @@ namespace sw
         : _mutex{}
         , _currentLanguage{}
         , _fallbackLanguage{ CultureTable::normalizeCode( constant::locale::kDefaultLanguage ) }
+        , _startupLanguage{}
         , _cultureTable{}
         , _currentCulture{}
         , _listProject{}
@@ -578,6 +579,7 @@ namespace sw
         }
         if ( preferredLanguage.empty() == false )
         {
+            setStartupLanguage( preferredLanguage );
             setCurrentLanguage( preferredLanguage );
             SW_LOG_INFO_ID( "LocalizationManager.LocalizationSetupCompleteActive", "Localization setup complete. Active language: '%#', Fallback: '%#'.", preferredLanguage.c_str(), getFallbackLanguage().c_str() );
         }
@@ -899,6 +901,19 @@ namespace sw
     {
         ScopedSharedLock<shared_mutex> lock{ _mutex };
         return _fallbackLanguage;
+    }
+
+    void LocalizationManager::setStartupLanguage( string_view languageCode )
+    {
+        string                   code = normalizeLanguageCode( languageCode );
+        UniqueLock<shared_mutex> lock{ _mutex };
+        _startupLanguage = std::move( code );
+    }
+
+    string LocalizationManager::getStartupLanguage() const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
+        return _startupLanguage;
     }
 
     bool LocalizationManager::hasLanguage( string_view languageCode ) const

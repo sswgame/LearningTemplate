@@ -15,6 +15,31 @@
 				<item>game/empty/data/cinematic.seq.xml</item>
 			</origins>
 		</entry>
+		<entry key="Subtitle.Guide" source="Guide" context="AudioEventDef._subtitleSpeakerKey">
+			<origins>
+				<item>game/empty/audio/empty.audioevents.xml</item>
+			</origins>
+		</entry>
+		<entry key="Subtitle.GuideLine" source="The gate opens at dawn." context="AudioClipEntry._subtitleKey">
+			<origins>
+				<item>game/empty/audio/empty.audioevents.xml</item>
+			</origins>
+		</entry>
+		<entry key="Subtitle.LongLine" source="Hold the bridge until the second bell, then fall back through the orchard and meet the scouts at the old mill gate." context="AudioClipEntry._subtitleKey">
+			<origins>
+				<item>game/empty/audio/empty.audioevents.xml</item>
+			</origins>
+		</entry>
+		<entry key="Subtitle.Scout" source="Scout" context="AudioEventDef._subtitleSpeakerKey">
+			<origins>
+				<item>game/empty/audio/empty.audioevents.xml</item>
+			</origins>
+		</entry>
+		<entry key="Subtitle.ScoutLine" source="Keep your torch low." context="AudioClipEntry._subtitleKey">
+			<origins>
+				<item>game/empty/audio/empty.audioevents.xml</item>
+			</origins>
+		</entry>
 		<entry key="The warrior wakes." source="The warrior wakes." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/empty/data/cinematic.seq.xml</item>

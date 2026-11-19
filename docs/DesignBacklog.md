@@ -1335,6 +1335,26 @@ public:
 
 **측정.** 없다(정확성).
 
+### 게임 중 카메라 프리셋 전환(설계 2026-11-20)
+
+**문제.** 프리셋 정의 · 블렌드 표 · 블렌드 스택(블렌드 중 다시 켜기) · 순환 키는 있었지만, 조준 · 탈것 · 실내 같은 상황에 따라 프리셋을 바꾸는 규칙이 없어 게임 코드가 `activatePreset` 을 직접 불러야 했고, 순환으로 고른 시점은 다시 기동하면 사라졌다. 게임 중 전환을 값으로 확인하는 시나리오도 없었다.
+
+**대조.** 언리얼 Lyra 는 `ULyraCameraModeStack` 에 능력이 카메라 모드를 밀어 넣고(조준) 위 층이 블렌드 가중치로 섞이며, `APlayerCameraManager::SetViewTargetWithBlend` 가 뷰 타깃 사이를 섞는다. Cinemachine 은 가상 카메라 우선순위 · Custom Blends 표 · State-Driven Camera(상태 → 가상 카메라)다. 우리 것: 정의 · 적용 · 블렌드 표(Custom Blends 순서) · 중첩 블렌드 스택 · 입력 순환은 있었다. 빠진 것은 상태 기반 전환과 선택 저장.
+
+**결정.** 카탈로그 `<Context name priority action><Map from to/></Context>` — 켜진 문맥 중 지금 **선택 프리셋**의 줄이 있는 가장 높은 우선순위가 보일 프리셋이다(같으면 먼저 적은 것). 문맥은 게임 코드가 `CameraDirectorComponent::setContext` 로, 또는 데이터 `action` 을 누르는 동안 켠다. 보일 프리셋이 바뀔 때만 켜서 코드가 직접 켠 프리셋(킬캠 · `camera.preset`)과 다투지 않고, 덮어쓴 시점(탑승) · 포토 모드 동안은 풀지 않는다. 블렌드는 기존 블렌드 표를 그대로 쓴다. 순환은 문맥 프리셋을 건너뛰고, 고른 시점은 사용자 설정 `gameplay.cameraPreset`(`gv_cameraPreset`)에 쓴다 — 순환 액션이 있는 디렉터(플레이어 시점)만 다음 시작에 그 시점에서 시작한다(세이브가 아니라 사용자 설정: 어느 세이브를 불러도 사람이 고른 시점). 탈것은 지금처럼 `setViewOverride`(좌석이 시점을 준다)로 두고, 탈것마다 프리셋을 고르는 게임은 문맥 `Vehicle` 을 쓴다. 컷씬 카메라 블렌드(시퀀서)는 손대지 않았다.
+
+**확인.** 단위 `CameraContextTest`(우선순위 · 선택 프리셋 줄 · `*` · 없는 프리셋 오류). 시나리오 `game.shooter3d.camerapresets`: 순환 블렌드 중간 프레임의 시야각 · 대상 거리가 두 값 사이, 끝에서 thirdperson 값, Aim 문맥 블렌드, 돌아가는 도중 다시 조준(튀지 않음), 장면을 다시 열면 고른 시점 유지 — 감시 값 `CameraDirector.*`.
+
+### 자막(설계 2026-11-20)
+
+**문제.** 자막 서비스(`UISubtitleService`)와 음성 이벤트의 자막 키는 있었지만 동시 줄 수 · 최소 표시 시간 · 읽기 속도 · 크기 배율이 코드 상수였고, 음성이 낸 줄은 음성 길이와 상관없이 내려갔으며, `ISubtitleSink` 는 올리기만 있어 시퀀서 자막 구간을 나가거나 대화를 건너뛸 때 줄을 내릴 수 없었다. 언어 설정의 빈 값("게임 기본")은 핸들러가 건너뛰어 돌아오지 않았다. 게임에서 확인하는 시나리오가 없었다.
+
+**대조.** 언리얼 `FSubtitleManager`(`USubtitleManager`)는 활성 사운드가 시작할 때 큐를 넣고 소리 길이만큼 보이며 `KillSubtitles` 로 내린다. Dialogue Wave 가 화자 · 자막을 갖는다. 유니티 · Godot 은 내장 자막이 없어 게임이 UI 로 만든다(타임라인 신호 · 오디오 길이). Xbox Accessibility Guidelines 104: 자막 켜기, 크기 고르기, 배경 불투명도, 화자 이름 표시, 한 번에 2 ~ 3 줄, 읽을 시간 보장, 화면 아래 가운데.
+
+**결정.** 표시 규칙은 `EngineConfig::_subtitles`(`SubtitleConfig` — `_maxVisibleLineCount` 2 · `_minDisplaySeconds` 2 · `_readingSecondsPerCharacter` 0.06 · `_arrSizeScale[3]` 0.85 · 1 · 1.3), 없거나 0 이면 기동 오류. 자막 문서에 그 줄 수만큼 `Line<n>` 이 없으면 오류. 보이는 시간은 max( 읽기 시간, 음성 길이 ) — 음성이 낸 줄은 그 음성이 나는 동안 남는다(`refreshVoiceState`). `ISubtitleSink` 는 `postSubtitle` 이 줄 번호를 돌려주고 `removeSubtitle` · `clearSubtitles` 를 갖는다 — 시퀀서 자막 트랙(다른 갈래)이 구간을 나갈 때 쓴다. 사용자 설정은 기존 `accessibility.subtitles` · `subtitleSize` · `subtitleBackground` 그대로(옵션 메뉴에 이미 있다). 화자 색은 스타일 변수(`subtitles.uistyle.xml` 의 `speaker`)로 둔다. 긴 언어는 문서의 최대 폭(1000)에서 접힌다. 언어 빈 값은 기동 때 고른 언어로 돌아간다(`LocalizationManager::getStartupLanguage`).
+
+**확인.** 단위 `UIScreenServicesTest`(설정 검사 · 줄 번호로 내리기 · 차례). 시나리오 `game.empty.subtitles`: 개발 명령 `audio.post` 로 대사를 내면 뜨고 화자가 맞고, 둘이 쌓이고, 크기 설정이 글 크기에 곱해지고, 읽기 시간 뒤 내려가고, 끄면 화면이 열리지 않고, qps-ploc 에서 접히고 넘치지 않는다(감시 값 `UI.Subtitle*`, 사진 한 장 — 골든은 통합이 첫 실행에서 기록).
+
 ### 공유 DDC(설계 2026-11-17, NEXT 5 에셋 GUID 3 단계)
 
 **문제.** `DerivedDataCache`(`Engine/Asset/Cook/CookRecord.h:59`)는 로컬 폴더 하나(`Saved/DDC/<키 앞 두 글자>/<키>`)이고 키는 `uint64`(FNV-1a)다. 쿠킹(씬 · 팩 · 내비)만 쓴다. 임포트(텍스처 · 모델 · 하이트필드)는 폴더별 `import.stamp` 로 판정해 무시되는 산출물 폴더에 바로 쓴다 — 새 체크아웃 · 워크트리마다 전부 다시 임포트한다(`Import.*` 시한 3600 초).

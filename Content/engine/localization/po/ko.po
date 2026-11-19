@@ -2727,6 +2727,13 @@ msgstr "창"
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
+msgctxt "settings.gameplay.cameraPreset"
+msgid "Camera View"
+msgstr "카메라 시점"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
 msgctxt "settings.gameplay.cameraShake"
 msgid "Camera Shake"
 msgstr "카메라 흔들림"

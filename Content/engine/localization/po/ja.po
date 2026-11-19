@@ -2727,6 +2727,13 @@ msgstr "ウィンドウ"
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
+msgctxt "settings.gameplay.cameraPreset"
+msgid "Camera View"
+msgstr "カメラ視点"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
 msgctxt "settings.gameplay.cameraShake"
 msgid "Camera Shake"
 msgstr "カメラの揺れ"

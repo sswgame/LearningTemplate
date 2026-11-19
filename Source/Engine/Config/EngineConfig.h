@@ -124,6 +124,40 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct SubtitleConfig
+     * @brief 자막 서비스(`UISubtitleService::configure`)의 표시 규칙입니다 — 동시에 보이는 줄 수, 최소 표시 시간, 읽기 속도, 크기 설정 배율.
+     * @details Xbox Accessibility Guidelines(XAG 104)의 자막 항목 — 한 번에 많은 줄을 쌓지 않고, 읽을 시간을 주고, 크기를 고르게 한다 — 을 데이터로 둔다.
+     *          언리얼 `USubtitleManager` 는 같은 값을 코드 상수로 두지만, 여기서는 정책 값이라 설정 파일이 정하고 없으면 자막 서비스 기동이 오류로 멈춘다.
+     */
+    REFLECT()
+    struct SW_API SubtitleConfig
+    {
+        REFLECT_BODY();
+
+        /** @brief 동시에 보이는 자막 줄 수입니다. 넘치는 줄은 대기열에서 자리를 기다린다. 자막 화면 문서에 `Line<n>` 자리가 그만큼 있어야 한다. */
+        PROPERTY( Min = 1, Max = 8 )
+        uint32 _maxVisibleLineCount{};
+
+        /** @brief 한 줄이 보이는 최소 시간(초)입니다. 짧은 대사 · 빨리 끝난 음성도 이만큼은 읽게 둔다. */
+        PROPERTY( Min = 0.1, Units = s )
+        float32 _minDisplaySeconds{};
+
+        /** @brief 글자(코드 포인트) 하나의 읽기 시간(초)입니다. 읽기 시간은 max( 최소 표시 시간, 글자 수 × 이 값 ) 이다. */
+        PROPERTY( Min = 0.001, Units = s )
+        float32 _readingSecondsPerCharacter{};
+
+        /** @brief 크기 설정 칸 수입니다 — 사용자 설정 `accessibility.subtitleSize` 의 선택지(작게 · 보통 · 크게)와 같다. */
+        static constexpr uint32 kSizeSettingCount = 3;
+
+        /** @brief 크기 설정(`gv_subtitleSize` — 작게 · 보통 · 크게 순)마다 문서 글 크기에 곱하는 배율입니다. 칸 수는 형식이 정한다(선택지 셋). 범위 밖 설정은 가까운 끝 값이다. */
+        PROPERTY( Min = 0.01 )
+        float32 _arrSizeScale[kSizeSettingCount]{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct CharacterMeshCacheConfig
      * @brief 캐릭터 외형이 구운 · 합친 메시 캐시(`AppearanceBakedMeshCache`)의 설정입니다. 넘으면 그리는 쪽이 없는 차림을 가장 오래 안 쓴 것부터 뺀다.
      * @details `EngineConfig` 는 호스트 전용 서비스라 게임 모듈(GameFramework)이 못 본다 — 이 조각만 게임에 보이는 서비스로 따로 건다(`ConfigManager`, 자리는 `EngineConfig::_characterMeshCache`).
@@ -625,6 +659,9 @@ namespace sw
 
         PROPERTY()
         AudioConfig _audio{}; ///< 오디오 출력 장치 다시 열기 간격 · 클립 캐시 예산
+
+        PROPERTY()
+        SubtitleConfig _subtitles{}; ///< 자막 표시 규칙(줄 수 · 최소 표시 시간 · 읽기 속도 · 크기 배율)
 
         PROPERTY()
         CharacterMeshCacheConfig _characterMeshCache{}; ///< 캐릭터 외형이 구운 · 합친 메시 캐시의 예산(게임 모듈이 보는 조각)
