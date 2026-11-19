@@ -15,11 +15,14 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
+#include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Component/BoxCollider2DComponent.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
+#include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -131,12 +134,27 @@ namespace sw
         const bool                     bStreaming = streaming.isStreaming();
         if ( bStreaming == false && _bStreamingHolds == false )
             return;
+        // 바닥 셀이 내려간 후보만 광선을 쏜다 — 받쳐 줄 충돌(늘 올라 있는 지형 · 정적 바디)이 몸 아래 가까이 있으면 쥐지 않는다(순간이동으로 남겨진 캐릭터가 땅 위에서 서지 않게).
+        // 설정이나 3D 씬이 없으면 받쳐 줄 것을 알 수 없다 — 쥔다(떨어지는 것보다 안전하다).
+        const PhysicsSettings* const      pSettings = findSettings();
+        const IPhysicsQueryScene3D* const pQuery    = findScene3D();
         // shortcut: 바디 · 캐릭터 단계를 프레임마다 모두 본다(셀 표 찾기 하나씩) — 수만 개가 되면 씬 공간 색인(`PhysicsComponent::getBodySpatialLayer`)으로 내려간 셀의 칸만 본다.
         for ( const PhysicsComponentPhase phase : { PhysicsComponentPhase::Body, PhysicsComponentPhase::Character } )
         {
             for ( PhysicsComponent* pComponent : _arrListComponent[static_cast<uint32>( phase )] )
             {
-                pComponent->_bStreamingHeld = bStreaming && pComponent->needsStreamingFloor() && streaming.isFloorMissing( pComponent->getWorldPosition() );
+                const float3 position   = pComponent->getWorldPosition();
+                const bool   bCandidate = bStreaming && pComponent->needsStreamingFloor() && streaming.isFloorMissing( position );
+                bool         bSupported = false;
+                if ( bCandidate && pSettings != nullptr && pQuery != nullptr )
+                {
+                    PhysicsQueryFilter filter{};
+                    filter._ignoreUserData = pComponent->getOwner() != nullptr ? pComponent->getOwner()->getObjectID() : 0; // 제 몸(바디 · 히트 박스)은 바닥이 아니다
+                    filter._layerMask      = pSettings->makeGroundQueryLayerMask();
+                    PhysicsCastHit3D hit{};
+                    bSupported = pQuery->raycast( position, float3{ 0.0f, -1.0f, 0.0f }, pSettings->_streamingFloorProbeDistance, filter, hit );
+                }
+                pComponent->_bStreamingHeld = bCandidate && bSupported == false;
             }
         }
         _bStreamingHolds = bStreaming ? SW_TRUE : SW_FALSE;

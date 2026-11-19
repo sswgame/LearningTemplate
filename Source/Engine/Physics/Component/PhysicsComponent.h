@@ -100,7 +100,7 @@ namespace sw
         /** @brief 이 컴포넌트의 단계입니다. */
         PhysicsComponentPhase getPhysicsPhase() const { return _phase; }
         /**
-         * @brief 이 물체 밑의 스트리밍 셀이 올라 있지 않아(바닥이 없어) 시뮬레이션에서 뺐으면 true 입니다. 저장하지 않는 실행 상태입니다.
+         * @brief 이 물체 밑의 스트리밍 셀이 올라 있지 않고 몸 아래 받쳐 줄 충돌도 없어 시뮬레이션에서 뺐으면 true 입니다. 저장하지 않는 실행 상태입니다.
          * @details 쥐고 푸는 것은 물리 서비스 한 곳이다(`ScenePhysics` 가 프레임마다 `SceneStreamingSubsystem::isFloorMissing` 을 묻는다). 쥔 동안은 시뮬레이션 밖이라(`isSimulated`)
          *          다음 물리 프레임에 바디를 놓고, 풀면 지금 트랜스폼에서 다시 만든다 — 운동은 0 에서 다시 시작한다.
          */

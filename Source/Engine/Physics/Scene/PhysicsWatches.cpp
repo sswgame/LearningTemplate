@@ -48,6 +48,21 @@ namespace sw
                 return true;
             }
 
+            /** @brief 질의 감시 값 `Object.StreamingHeld` 입니다. 대상의 강체 · 캐릭터 컨트롤러 가운데 하나라도 바닥 셀이 없어 쥐였으면 1, 아니면(물리 컴포넌트가 없어도) 0 입니다. */
+            [[nodiscard]] static bool readObjectStreamingHeld( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject* pTarget = query.findTargetObject( outValue );
+                if ( pTarget == nullptr )
+                    return false;
+                bool bHeld = false;
+                pTarget->forEachComponentOfType<RigidBodyComponent>( [&bHeld]( const RigidBodyComponent* pBody )
+                { bHeld = bHeld || pBody->isStreamingHeld(); } );
+                pTarget->forEachComponentOfType<CharacterControllerComponent>( [&bHeld]( const CharacterControllerComponent* pCharacter )
+                { bHeld = bHeld || pCharacter->isStreamingHeld(); } );
+                outValue.setNumber( bHeld ? 1.0 : 0.0 );
+                return true;
+            }
+
             /** @brief 질의 감시 값 `Object.Speed` 입니다. 대상의 강체(3D · 2D) 선속도나 캐릭터 컨트롤러 속도의 크기(m/s)입니다. 둘 다 없으면 값이 없습니다. */
             [[nodiscard]] static bool readObjectSpeed( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -85,5 +100,8 @@ namespace sw
     SW_AUTOMATION_SCENE_WATCH( physicsStreamingHeldBodies, "Physics.StreamingHeldBodies",
                                "Dynamic rigid bodies and character controllers held out of the simulation because the streaming cell under them is not loaded",
                                &PhysicsWatchesInternal::readStreamingHeldBodies );
+    SW_AUTOMATION_QUERY_WATCH( objectStreamingHeld, "Object.StreamingHeld",
+                               "1 when the target's rigid body or character controller is held out of the simulation because the streaming cell under it is not loaded and nothing supports it",
+                               &PhysicsWatchesInternal::readObjectStreamingHeld, true, false );
     SW_AUTOMATION_QUERY_WATCH( objectSpeed, "Object.Speed", "Speed of the target's rigid body or character controller (m/s)", &PhysicsWatchesInternal::readObjectSpeed, true, false );
 } // namespace sw
