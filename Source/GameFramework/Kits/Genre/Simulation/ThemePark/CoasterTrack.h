@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -74,10 +75,10 @@ namespace sw
         float32 _height{ 0.0f }; ///< 높이 변화(m)이다. LiftHill 은 +, Drop 은 양수로 적으면 내려가고, Hill 은 꼭대기 높이, Turn 은 헬릭스이며 부호를 그대로 따른다
         PROPERTY( Min = 1.0 )
         float32 _radius{ 10.0f }; ///< 반지름(m)이다. Turn 이 쓰며, Loop 는 높이의 절반이다
-        PROPERTY( Min = 0.0175, Max = 6.2832, Units = "rad" )
-        float32 _angle{ MathUtil::kHalfPi }; ///< 회전각(라디안, 기본 90°)이다. Turn 이 쓴다
+        PROPERTY( Min = 1.0, Max = 360.0 )
+        Radians _angle{ Radians::fromDegrees( 90.0f ) }; ///< 회전각이다(데이터 · 범위는 도). Turn 이 쓴다
         PROPERTY()
-        float32 _bank{ 0.0f }; ///< 뱅크(도)이다. 회전 안쪽으로 기울며 Turn 이 쓴다
+        Radians _bank{}; ///< 뱅크이다(데이터는 도). 회전 안쪽으로 기울며 Turn 이 쓴다
         PROPERTY( Min = 0.0 )
         float32 _width{ 3.0f }; ///< 옆 비킴(m)이다. Loop 가 쓴다
     };

@@ -883,7 +883,7 @@ SW_TEST_CASE( FightingTest, CatalogReadsPropertiesAndCollectsStances )
     SW_REQUIRE_TRUE( moves.loadFromXMLText( kFightingMoveXML, "FightingTest" ) );
     FighterCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<FighterCatalog buttons="LP,RP">
-  <Fighter id="kaz" name="Kaz" health="120" walkSpeed="0.05" hurtRadius="0.4" pushRadius="0.2" standHeight="2" crouchHeight="1" sidestepAngle="0.5" sidestepFrames="8" sidestep="u" sidestepDown="d,n" jump="u/f" jumpFrames="20" jumpHeight="2" jumpDistance="1">
+  <Fighter id="kaz" name="Kaz" health="120" walkSpeed="0.05" hurtRadius="0.4" pushRadius="0.2" standHeight="2" crouchHeight="1" sidestepAngle="28.64789" sidestepFrames="8" sidestep="u" sidestepDown="d,n" jump="u/f" jumpFrames="20" jumpHeight="2" jumpDistance="1">
     <Move id="one" frames="jab" command="LP" priority="3" maxGap="5" from="Standing,Crouching" pushback="0.5" tracking="true"/>
     <Move id="grab" command="RP" breakButtons="LP+RP"/>
     <Move id="pose" frames="jab" command="LP" stance="crane" enterStance="tiger"/>

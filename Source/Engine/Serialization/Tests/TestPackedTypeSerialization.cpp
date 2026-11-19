@@ -496,3 +496,40 @@ SW_TEST_CASE( PackedValueSerializationTest, WriteNumberRoundsAndRejectsWhatTheTy
     SW_EXPECT_FALSE( ReflectedValueUtil::writeNumber( getIndexOf( "bool" ), &flag, 1.0 ) );
     SW_EXPECT_FALSE( flag );
 }
+
+/**
+ * @brief [PackedValueSerializationTest] 각(`Radians`)은 메모리 · 이진이 라디안이고 글 · 숫자(범위 경계 · 시퀀서 쓰기)는 도다
+ * @details 데이터 작성자가 보는 단위는 하나다 — XML 의 `2.5` 는 2.5 도이고, 다시 쓰면 `2.5` 다. `Min = 0, Max = 90` 같은 경계도 도로 견준다.
+ */
+SW_TEST_CASE( PackedValueSerializationTest, RadiansIsDegreesOutsideAndRadiansInside )
+{
+    const SerializeContext context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
+    using Test                     = PackedSerializationTestInternal;
+
+    Test::expectBinaryRoundTrip( context, "Radians", Radians::fromRadians( 0.123456789f ) );
+
+    const SerializeContext::TextReadFn*  pReader = context.findTextReader( hashed_string( "Radians" ) );
+    const SerializeContext::TextWriteFn* pWriter = context.findTextWriter( hashed_string( "Radians" ) );
+    SW_REQUIRE_NOT_NULL( pReader );
+    SW_REQUIRE_NOT_NULL( pWriter );
+    Radians angle{};
+    SW_EXPECT_TRUE( ( *pReader )( &angle, "2.5" ) );
+    SW_EXPECT_TRUE( angle == Radians::fromDegrees( 2.5f ) );
+    SW_EXPECT_EQUAL( string( "2.5" ), ( *pWriter )( &angle ) );
+    SW_EXPECT_TRUE( ( *pReader )( &angle, "180" ) );
+    SW_EXPECT_NEAR( MathUtil::kPi, angle.radians(), 1e-6f );
+    SW_EXPECT_EQUAL( string( "180" ), ( *pWriter )( &angle ) );
+    Test::expectTextRejected( context, "Radians", Radians::fromDegrees( 10.0f ), "1e9" );
+    Test::expectTextRejected( context, "Radians", Radians::fromDegrees( 10.0f ), "ten" );
+
+    const ReflectBuiltinIndex index = ReflectedValueUtil::findBuiltinIndex( hashed_string( "Radians" ) );
+    SW_REQUIRE_TRUE( index != ReflectBuiltinIndex::kNone );
+    SW_EXPECT_TRUE( ReflectedValueUtil::getBuiltinClass( index ) == ReflectBuiltinClass::Number );
+    const Radians right = Radians::fromDegrees( 90.0f );
+    float64       number{ 0.0 };
+    SW_EXPECT_TRUE( ReflectedValueUtil::readNumber( index, &right, number ) );
+    SW_EXPECT_EQUAL( 90.0, number );
+    Radians written{};
+    SW_EXPECT_TRUE( ReflectedValueUtil::writeNumber( index, &written, 45.0 ) );
+    SW_EXPECT_TRUE( written == Radians::fromDegrees( 45.0f ) );
+}

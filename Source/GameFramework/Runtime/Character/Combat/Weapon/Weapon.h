@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/Ray.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
@@ -60,15 +61,15 @@ namespace sw
         PROPERTY( Min = 0.0, Units = s )
         float32 _reloadTime;
         PROPERTY( Min = 0.0 )
-        float32 _minSpread; ///< 가만히 쏠 때의 원뿔 반각(도)
+        Radians _minSpread; ///< 가만히 쏠 때의 원뿔 반각. 데이터 · 범위는 도다(`Radians`)
         PROPERTY( Min = "_minSpread" )
-        float32 _maxSpread;
+        Radians _maxSpread;
         PROPERTY( Min = 0.0 )
-        float32 _spreadPerShot;
+        Radians _spreadPerShot;
         PROPERTY( Min = 0.0 )
-        float32 _spreadRecovery; ///< 초당 줄어드는 퍼짐(도)
+        Radians _spreadRecovery; ///< 초당 줄어드는 퍼짐(각속도 — 데이터는 도/초)
         PROPERTY()
-        float32 _recoilPitch; ///< 한 발의 반동(도, 위로)
+        Radians _recoilPitch; ///< 한 발의 반동(위로)
         PROPERTY( Min = 1 )
         int32 _magazineSize;
         PROPERTY( Min = 0 )
@@ -168,7 +169,7 @@ namespace sw
     struct WeaponShot
     {
         vector<Ray> _listRay{};
-        float32     _spreadAtFire{ 0.0f }; ///< 이번 발사의 퍼짐(도)
+        Radians     _spreadAtFire{}; ///< 이번 발사의 퍼짐(원뿔 반각)
     };
 } // namespace sw
 
@@ -215,7 +216,7 @@ namespace sw
         const ResolvedShot& getShot() const { return _shot; }
         int32               getMagazineAmmo() const { return _magazineAmmo; }
         int32               getReserveAmmo() const { return _reserveAmmo; }
-        float32             getCurrentSpread() const { return _currentSpread; }
+        Radians             getCurrentSpread() const { return _currentSpread; }
         bool                isReloading() const { return _reload.isActive(); }
         /** @brief 연사 쿨다운이 남았으면 true 입니다(다음 발까지 기다린다). */
         bool    isCoolingDown() const { return _cooldown.isActive(); }
@@ -233,7 +234,7 @@ namespace sw
         GameRandom   _random;
         Countdown    _cooldown; ///< 다음 발까지 남은 시간. 발사는 `restart` 로 시작해 늦음을 다음 간격에서 뺀다
         Countdown    _reload;
-        float32      _currentSpread;
+        Radians      _currentSpread;
         int32        _magazineAmmo;
         int32        _reserveAmmo;
     };

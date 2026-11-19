@@ -311,7 +311,7 @@ namespace sw
             {
 
                 bool bOk               = reader.readProperties( _params ); // 1..180 도는 PROPERTY 가 본다
-                _radius                = _params._radiusDegrees * MathUtil::kDegreeToRadian;
+                _radius                = _params._radius.radians();
                 const RigXMLList poses = reader.readArray( "poses", true );
                 for ( size_t index = 0; bOk && poses.isValid() && index < poses.size(); ++index )
                 {

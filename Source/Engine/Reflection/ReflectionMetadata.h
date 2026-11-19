@@ -9,6 +9,8 @@
  *          가리킨다 — 그래서 이 구조체들의 배치는 구성(개발 · 배포)마다 같다(언리얼 `WITH_METADATA` 는 같은 칸을 `#if` 로 가른다).
  */
 #pragma once
+#include "Core/Math/PackedValueTraits.h"
+
 #include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
@@ -185,6 +187,19 @@ namespace sw
          *          필드 경계가 있으면 @p pOwner 가 있어야 한다.
          */
         PropertyAllowedRange computeAllowedRange( const void* pOwner ) const noexcept;
+
+        /**
+         * @brief 필드 경계(`_pReadMinRange` · `_pReadMaxRange`)가 경계 필드의 값 @p value 를 범위 숫자로 읽습니다. 생성 코드가 부릅니다.
+         * @details 경계와 견주는 값은 `ReflectedValueUtil::readNumber` 의 숫자이므로 같은 규칙으로 읽는다 — 압축 타입 · 각(`Radians`)은 성분 실수(각은 도)다.
+         */
+        template <typename T>
+        [[nodiscard]] static float64 toRangeNumber( const T value ) noexcept
+        {
+            if constexpr ( kIsPackedValue<T> )
+                return static_cast<float64>( PackedValueTraits<T>::toFloats( value )._arrValue[0] );
+            else
+                return static_cast<float64>( value );
+        }
 
         /** @brief 에디터 메타데이터입니다. 붙지 않았으면 기본값(`PropertyEditorMetadata::getDefault`)입니다. */
         const PropertyEditorMetadata& getEditor() const noexcept;

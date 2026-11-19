@@ -275,7 +275,7 @@ namespace sw::editor
             if ( bAligned )
             {
                 float3  offset     = role._offset;
-                float32 yawDegrees = role._yawRadians * MathUtil::kRadianToDegree;
+                float32 yawDegrees = role._yaw.degrees();
                 EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "OffsetM" ) );
                 EditorChrome::setNextItemWidthColumns( 32.0f );
                 const bool bOffsetChanged = EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Offsetm" ), offset.data(), 0.01f, -10.0f, 10.0f, "%.3f" );
@@ -286,7 +286,7 @@ namespace sw::editor
                 const bool bYawChanged = EditorWidgets::dragFloat( SW_WIDGET_ID( "##Yawdeg" ), &yawDegrees, 0.5f, -180.0f, 180.0f, "%.1f" );
                 const bool bYawDone    = ImGui::IsItemDeactivatedAfterEdit();
                 if ( bOffsetChanged || bYawChanged )
-                    reportEdit( _model.setRoleOffset( roleIndex, offset, yawDegrees, true ) );
+                    reportEdit( _model.setRoleOffset( roleIndex, offset, Radians::fromDegrees( yawDegrees ), true ) );
                 if ( bOffsetDone || bYawDone )
                     _model.endContinuousEdit();
                 EditorSelfTestMarks::record( ( string( "pairedanim.role." ) + role._name.c_str() + ".offset" ).c_str() );

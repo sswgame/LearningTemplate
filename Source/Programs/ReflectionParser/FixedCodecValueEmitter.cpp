@@ -435,6 +435,19 @@ namespace sw
                 state.reportError( prop, "Min/Max list has " + FixedCodecEmitState::formatInteger( static_cast<int64>( site._listMin.size() ) ) + "/" + FixedCodecEmitState::formatInteger( static_cast<int64>( site._listMax.size() ) ) + " terms but the value has " + FixedCodecEmitState::formatInteger( static_cast<int64>( elementCount ) ) + " elements" );
                 return;
             }
+            // 각의 숫자 경계는 도로 적혀 있고 메모리는 라디안이다 — 데이터 글 `180` 이 담기는 것과 같은 식으로 바꿔야 경계 값이 경계 안에 든다.
+            // 필드 이름 경계는 같은 라디안 칸을 읽으므로 그대로다.
+            if ( leaf._typeName == fixedlayout::kAngleTypeName )
+            {
+                for ( vector<FixedCodecBound>* pListBound : { &site._listMin, &site._listMax } )
+                {
+                    for ( FixedCodecBound& bound : *pListBound )
+                    {
+                        if ( bound._bPresent == SW_TRUE && bound._bLiteral == SW_TRUE )
+                            bound._text = "::sw::Radians::fromDegrees( static_cast<float32>( " + bound._text + " ) ).radians()";
+                    }
+                }
+            }
         }
 
         // 압축 타입(half · unorm · snorm · OctahedralNormal · RGB10A2)은 인코딩 표에 없다. 포인터처럼 적격이 아닌 것과 달리 저장용으로 만든 타입이라

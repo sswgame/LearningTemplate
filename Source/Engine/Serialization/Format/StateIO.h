@@ -20,6 +20,7 @@ namespace sw
     struct Countdown;
     struct FixedStepTimer;
     struct int2;
+    struct Radians;
     struct RateAccumulator;
 
     class StateIO;
@@ -113,6 +114,8 @@ namespace sw
         /** @brief 글자입니다. 길이가 붙은 글자로 놓입니다. */
         void value( string& inoutText );
         void value( int2& inoutValue );
+        /** @brief 각입니다. 라디안 float32 로 놓습니다(실수 칸과 같은 유한 검사). */
+        void value( Radians& inoutValue );
         /** @brief 남은 시간을 그대로 놓습니다. 음수 늦음까지 있어야 복원한 뒤 같은 발생 시각이 나옵니다. NaN 은 거절합니다. */
         void value( Countdown& inoutCountdown );
         /** @brief 고정 걸음 타이머의 남은 시간만 놓습니다. 걸음과 상한은 설정이 정하므로 @p inoutTimer 는 설정된 타이머여야 합니다. 음수와 한 프레임 상한을 넘는 값을 거절합니다. */

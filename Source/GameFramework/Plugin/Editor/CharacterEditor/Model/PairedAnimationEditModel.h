@@ -80,8 +80,8 @@ namespace sw::editor
         /** @brief 역할이 공유 타임라인에 들어오는 시각입니다. 앵커는 0 이어야 하므로 고칠 수 없습니다. */
         [[nodiscard]] expected<void> setRoleStart( uint32 roleIndex, float32 seconds, bool bContinuous );
         [[nodiscard]] expected<void> setRoleBlend( uint32 roleIndex, float32 enterSeconds, float32 exitSeconds, bool bContinuous );
-        /** @brief 정렬(`snap` · `warp`) 역할의 앵커 기준 자리(m)와 요(도)입니다. 정렬하지 않는 역할은 실패합니다. */
-        [[nodiscard]] expected<void> setRoleOffset( uint32 roleIndex, const float3& offset, float32 yawDegrees, bool bContinuous );
+        /** @brief 정렬(`snap` · `warp`) 역할의 앵커 기준 자리(m)와 요입니다. 요는 [-π, π] 로 감는다. 정렬하지 않는 역할은 실패합니다. */
+        [[nodiscard]] expected<void> setRoleOffset( uint32 roleIndex, const float3& offset, Radians yaw, bool bContinuous );
         /**
          * @brief 미리보기에서 옮긴 역할 루트(@p rolePosition · @p roleYaw 라디안)를 앵커 루트(@p anchorPosition · @p anchorYaw) 기준 오프셋 · 요로 바꿔 넣습니다(오프셋 기즈모).
          * @details `computeRoleTarget` 의 역이다 — 넣은 뒤 같은 앵커로 목표를 구하면 그 자리가 나온다.

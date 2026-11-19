@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -70,7 +71,7 @@ namespace sw
         float32 _fixedStep{ constant::time::kDefaultFixedStepSeconds }; ///< 스텝 길이(초)다. 프레임 시간과 무관하게 같은 결과가 나온다.
         float32 _teleportDistance{ 1.0f };                              ///< 한 프레임에 루트가 이만큼 넘게 움직이면 순간이동으로 보고 다시 시작한다.
         uint32  _maxSubStep{ 4 };                                       ///< 프레임당 스텝 상한(넘는 시간은 버린다)
-        float32 _maxSwingDegrees{ 0.0f };                               ///< 애니메이션 방향에서 벌어질 수 있는 최대 각(도)이다. 0 이면 제한 없음 — 지글(가슴 · 배)이 몸을 뚫지 않게 자른다.
+        Radians _maxSwing{};                                            ///< 애니메이션 방향에서 벌어질 수 있는 최대 각이다. 0 이면 제한 없음 — 지글(가슴 · 배)이 몸을 뚫지 않게 자른다.
         uint8   _bUseGravityOverride{ SW_FALSE };                       ///< 월드 중력 대신 `_gravityOverride` 를 쓴다(언리얼 AnimDynamics 의 GravityOverride).
         /**
          * @brief 입자마다의 물성입니다(리그 데이터의 "joints"). 비면 모든 입자가 위 사슬 값이고, 있으면 길이가 본 수 − 1 이며 [k] 가 입자 k + 1 이다.

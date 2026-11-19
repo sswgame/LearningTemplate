@@ -120,6 +120,12 @@ namespace sw
                 return result;
             }
         }
+        // 각은 메모리가 라디안 float32 하나다 — 압축 타입 표시보다 먼저 float32 칸으로 분류한다(경계 변환은 `FixedCodecValueEmitter::emitProperty`).
+        if ( result->_typeName == fixedlayout::kAngleTypeName )
+        {
+            result->_kind = FixedValueKind::Float32;
+            return result;
+        }
         // 압축 타입은 인코딩 표 밖이다. 적격이 아닌 것으로 조용히 넘기지 않도록 표시를 달아 코덱 생성기가 오류로 멈추게 한다.
         if ( session._typeNameMap.isPacked( result->_typeName ) )
         {

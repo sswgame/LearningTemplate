@@ -121,7 +121,7 @@ namespace sw::editor
         return {};
     }
 
-    expected<void> PairedAnimationEditModel::setRoleOffset( uint32 roleIndex, const float3& offset, float32 yawDegrees, bool bContinuous )
+    expected<void> PairedAnimationEditModel::setRoleOffset( uint32 roleIndex, const float3& offset, const Radians yaw, bool bContinuous )
     {
         if ( expected<void> check = validateRoleIndex( roleIndex ); check.has_value() == false )
             return check;
@@ -129,12 +129,12 @@ namespace sw::editor
         const bool              bAligned = role._bAnchor == false && role._align != PairedAnimationAlign::None;
         if ( bAligned == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "Role does not align (align is none or it is the anchor)", role._name.view() } );
-        const bool bFinite = MathUtil::isFinite( offset._x ) && MathUtil::isFinite( offset._y ) && MathUtil::isFinite( offset._z ) && MathUtil::isFinite( yawDegrees );
+        const bool bFinite = MathUtil::isFinite( offset._x ) && MathUtil::isFinite( offset._y ) && MathUtil::isFinite( offset._z ) && MathUtil::isFinite( yaw.radians() );
         if ( bFinite == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "Offset and yaw must be finite" } );
         recordUndo( bContinuous ? PairedAnimationEditModelInternal::makeCoalesceKey( "offset", roleIndex ) : string{} );
-        role._offset     = offset;
-        role._yawRadians = MathUtil::wrapAngle( yawDegrees * MathUtil::kDegreeToRadian );
+        role._offset = offset;
+        role._yaw    = Radians::fromRadians( MathUtil::wrapAngle( yaw.radians() ) );
         return {};
     }
 
@@ -144,8 +144,8 @@ namespace sw::editor
         // `PairedAnimationDef::computeAlignTarget` 의 역 — 앵커 요를 되돌려 앵커 기준 자리로 만든다.
         const quaternion unrotate = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, -anchorYaw );
         const float3     offset   = float3::transform( rolePosition - anchorPosition, unrotate );
-        const float32    yaw      = MathUtil::wrapAngle( roleYaw - anchorYaw );
-        return setRoleOffset( roleIndex, offset, yaw * MathUtil::kRadianToDegree, bContinuous );
+        const Radians    yaw      = Radians::fromRadians( roleYaw - anchorYaw );
+        return setRoleOffset( roleIndex, offset, yaw, bContinuous );
     }
 
     expected<void> PairedAnimationEditModel::setRoleWarpEnd( uint32 roleIndex, float32 seconds, bool bContinuous )

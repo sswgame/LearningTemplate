@@ -8,6 +8,8 @@
  *            (`fromFloats( toFloats( v ) )` 가 비트까지 같습니다. 예외 둘: `snorm` 의 정수 최솟값은 `-최대` 로, `half` NaN 은 페이로드 위쪽 10 비트만 남는 NaN 으로 갑니다).
  *            그래서 글 왕복이 자릿수를 잃지 않습니다. `OctahedralNormal` 의 성분은 방향 xyz 가 아니라 저장된 좌표 (u, v) 입니다 — 방향으로 풀고 다시 담으면
  *            양자화 한 칸 안에서 비트가 흔들릴 수 있어(`OctahedralNormal.h`) 글 왕복이 같은 비트를 지키지 못합니다.
+ *            `Radians` 의 성분은 라디안이 아니라 **도**입니다(데이터 · 인스펙터의 단위). 도 `float32` 로 반올림하므로 왕복이 라디안 한 ulp 안에서 흔들릴 수 있고,
+ *            `toFloats` 는 같은 라디안으로 돌아오는 도 중 가장 짧은 십진수를 고른다(손으로 쓴 `2.5` 가 다시 저장해도 `2.5` 다).
  *          - **범위**: `kRangeMin` · `kRangeMax` 는 `fromFloats` 가 조용히 자르거나 무한대로 보내지 않는 성분 범위입니다. 읽는 쪽이 범위 밖 입력을 거절할 때 씁니다
  *            (정수 필드가 범위를 넘는 글을 거절하는 것과 같은 규칙). NaN 은 범위 밖입니다.
  *          - 압축 타입이 아닌 `T` 의 `PackedValueTraits<T>` 는 비어 있어 `kIsPackedValue<T>` 가 false 입니다.
@@ -19,6 +21,7 @@
 #include "Core/Math/NormalizedInt.h"
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Math/RGB10A2.h"
+#include "Core/Math/Radians.h"
 
 namespace sw
 {
@@ -246,6 +249,48 @@ namespace sw
         {
             return RGB10A2::fromFloat4( float4{ floats._arrValue[0], floats._arrValue[1], floats._arrValue[2], floats._arrValue[3] } );
         }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 라디안 각의 바깥 표현은 도 하나입니다(`Radians.h`). 범위는 데이터 오타(라디안을 도 칸에 적음 등)가 아니라 float32 를 지키는 넉넉한 경계입니다.
+     * @details `toFloats` 는 1 자리부터 `kMaxDecimalDigits` 자리까지 늘려 가며 같은 라디안으로 돌아오는 첫 십진수를 고른다 — 단순히 float32 로 자르면 `2.5` 도가 `2.4999998` 로 저장됐다.
+     */
+    template <>
+    struct PackedValueTraits<Radians>
+    {
+        static constexpr uint32  kComponentCount = 1;
+        static constexpr float32 kRangeMin       = -1.0e6f;
+        static constexpr float32 kRangeMax       = 1.0e6f;
+        static constexpr float32 kDragSpeed      = 0.5f;
+        /** @brief 도 성분을 고를 때 늘려 보는 유효 숫자의 끝입니다 — float32 를 정확히 나타내는 십진 자릿수(`FLT_DECIMAL_DIG`)다. */
+        static constexpr int32   kMaxDecimalDigits = 9;
+        static constexpr float64 kDecimalBase      = 10.0;
+
+        [[nodiscard]] static PackedFloats toFloats( const Radians& value ) noexcept
+        {
+            const float64 degrees = static_cast<float64>( value.radians() ) * Radians::kDegreesPerRadian;
+            PackedFloats  result{};
+            result._arrValue[0]     = static_cast<float32>( degrees );
+            const bool bSearchShort = std::isfinite( degrees ) && degrees != 0.0;
+            if ( bSearchShort == false )
+                return result;
+            const float64 magnitude = std::floor( std::log10( std::fabs( degrees ) ) );
+            for ( int32 digits = 1; digits <= kMaxDecimalDigits; ++digits )
+            {
+                const float64 scale     = std::pow( kDecimalBase, static_cast<float64>( digits - 1 ) - magnitude );
+                const float32 candidate = static_cast<float32>( std::round( degrees * scale ) / scale );
+                if ( Radians::fromDegrees( candidate ) == value )
+                {
+                    result._arrValue[0] = candidate;
+                    break;
+                }
+            }
+            return result;
+        }
+        [[nodiscard]] static constexpr Radians fromFloats( const PackedFloats& floats ) noexcept { return Radians::fromDegrees( floats._arrValue[0] ); }
     };
 } // namespace sw
 

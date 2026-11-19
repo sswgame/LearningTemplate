@@ -7,6 +7,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -21,7 +22,7 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 손전등 수치입니다. 각은 원뿔의 절반(라디안)입니다. */
+    /** @brief 손전등 수치입니다. 각은 원뿔의 절반입니다(데이터 · 범위는 도). */
     REFLECT()
     struct GhostFlashlightDef
     {
@@ -29,12 +30,12 @@ namespace sw
 
         PROPERTY( Min = 0.1 )
         float32 _range{ 8.0f };
-        PROPERTY( Name = "angle", Min = 0.0175, Max = 1.553, Units = "rad" )
-        float32 _halfAngle{ 0.4363323f }; ///< 원뿔의 절반 각(라디안, 25°)
+        PROPERTY( Name = "angle", Min = 1.0, Max = 89.0 )
+        Radians _halfAngle{ Radians::fromDegrees( 25.0f ) }; ///< 원뿔의 절반 각
         PROPERTY( Min = 0.1 )
         float32 _strobeRange{ 10.0f };
-        PROPERTY( Name = "strobeAngle", Min = 0.0175, Max = 1.553, Units = "rad" )
-        float32 _strobeHalfAngle{ 0.6981317f }; ///< 스트로브 원뿔의 절반 각(라디안, 40°)
+        PROPERTY( Name = "strobeAngle", Min = 1.0, Max = 89.0 )
+        Radians _strobeHalfAngle{ Radians::fromDegrees( 40.0f ) }; ///< 스트로브 원뿔의 절반 각
         PROPERTY( Name = "strobeCharge", Min = 0.0 )
         float32 _strobeChargeTime{ 1.0f }; ///< 이만큼 모아야 스트로브가 터진다(덜 모으면 헛번쩍한다)
     };

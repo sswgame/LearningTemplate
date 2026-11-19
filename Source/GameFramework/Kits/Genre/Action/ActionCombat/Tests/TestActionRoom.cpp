@@ -27,7 +27,7 @@ namespace
   <Monster id="grunt" name="Grunt"><Stats hp="50" maxHP="50" atk="7" def="4" speed="0" radius="0.5"/></Monster>
   <Monster id="walker" name="Walker"><Stats hp="50" maxHP="50" atk="7" speed="2" radius="0.5"/></Monster>
   <Monster id="gunner" name="Gunner"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="1" firstDelay="0.5"/><Shot projectile="bolt"/></Monster>
-  <Monster id="sideGunner" name="SideGunner"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="4" firstDelay="0.25"/><Shot angle="1.5707963" projectile="bolt_long"/></Monster>
+  <Monster id="sideGunner" name="SideGunner"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="4" firstDelay="0.25"/><Shot angle="90" projectile="bolt_long"/></Monster>
   <Monster id="slowGunner" name="SlowGunner"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="4" firstDelay="0.25"/><Shot projectile="drift"/></Monster>
   <Monster id="forever" name="Forever"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="1"/><Shot projectile="endless"/></Monster>
   <Monster id="ghostShot" name="GhostShot"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="1"/><Shot projectile="ghost"/></Monster>
@@ -660,7 +660,7 @@ SW_TEST_CASE( MonsterCatalogTest, ReadsAllSections )
     <Stats hp="220" maxHP="300" atk="12" def="16" speed="0.9" radius="0.7"/>
     <AI coolTime="1.5" firstDelay="1.25"/>
     <Shot angle="0" projectile="orb"/>
-    <Shot angle="1.5" projectile="orb_slow"/>
+    <Shot angle="85.94367" projectile="orb_slow"/>
     <Prefab path="prefabs/boss"/>
     <Drop exp="10" souls="3"/>
   </Monster>
@@ -673,7 +673,7 @@ SW_TEST_CASE( MonsterCatalogTest, ReadsAllSections )
     SW_EXPECT_EQUAL( 300, pBoss->_stats._maxHP );
     SW_EXPECT_NEAR( 1.25f, pBoss->_ai._firstAttackDelay, kRoomTolerance );
     SW_REQUIRE_EQUAL( size_t( 2 ), pBoss->_listShot.size() );
-    SW_EXPECT_NEAR( 1.5f, pBoss->_listShot[1]._angle, kRoomTolerance );
+    SW_EXPECT_NEAR( 1.5f, pBoss->_listShot[1]._angle.radians(), kRoomTolerance );
     SW_EXPECT_TRUE( pBoss->_listShot[1]._projectileID == sw::hashed_string( "orb_slow" ) );
     SW_EXPECT_EQUAL( sw::string( "prefabs/boss" ), pBoss->_prefabPath );
     SW_EXPECT_EQUAL( 3, pBoss->getDrop( sw::hashed_string( "souls" ) ) );

@@ -63,11 +63,11 @@ namespace sw
     {
         const float32     looseness = ( 1.0f - MathUtil::saturate( group._stiffness ) ) * MathUtil::clamp( motionScale, 0.0f, RigBodyInput::kMaxMotionScale );
         RigSpringSettings settings;
-        settings._stiffness       = MathUtil::saturate( 1.0f - looseness );
-        settings._damping         = group._damping;
-        settings._gravityScale    = group._gravityScale * MathUtil::min( motionScale, 1.0f ); // 배율 0 이면 처짐도 없다(애니메이션 그대로)
-        settings._particleRadius  = group._particleRadius;
-        settings._maxSwingDegrees = group._maxSwingDegrees;
+        settings._stiffness      = MathUtil::saturate( 1.0f - looseness );
+        settings._damping        = group._damping;
+        settings._gravityScale   = group._gravityScale * MathUtil::min( motionScale, 1.0f ); // 배율 0 이면 처짐도 없다(애니메이션 그대로)
+        settings._particleRadius = group._particleRadius;
+        settings._maxSwing       = group._maxSwing;
         return settings;
     }
 

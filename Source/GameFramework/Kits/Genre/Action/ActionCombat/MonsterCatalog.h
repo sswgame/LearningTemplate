@@ -21,6 +21,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -50,7 +51,7 @@ namespace sw
 {
     /**
      * @brief 몬스터가 한 번 쏠 때 나가는 탄 하나입니다. 한 번에 여러 발을 쏘려면 `MonsterDef::_listShot` 에 여러 개를 적습니다(겨냥한 한 발과 옆으로 한 발 같은 패턴).
-     * @details monsters.xml 의 `<Shot angle="1.5708" projectile="boss_orb"/>` 한 줄에 해당한다. 쏘는 법(각도)만 여기 두고, 탄속 · 수명 · 반지름 · 피해는 탄 정의
+     * @details monsters.xml 의 `<Shot angle="90" projectile="boss_orb"/>` 한 줄에 해당한다. 쏘는 법(각도)만 여기 두고, 탄속 · 수명 · 반지름 · 피해는 탄 정의
      *          (`ProjectileCatalog`, 게임 서비스)다 — 같은 탄을 여러 종이 나눠 쓰고 탄 하나의 변형은 탄 항목 `_base` 로 차이만 적는다(무기와 탄을 나눈 것과 같은 까닭).
      */
     REFLECT()
@@ -58,8 +59,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Units = "rad" )
-        float32 _angle{ 0.0f }; ///< 겨냥 방향에서 돌린 각도(라디안). 0은 겨냥 방향이고, π/2 는 겨냥 방향 (x, y) 를 (−y, x) 로 돌린 쪽이다
+        PROPERTY()
+        Radians _angle{}; ///< 겨냥 방향에서 돌린 각도(데이터는 도). 0은 겨냥 방향이고, 90° 는 겨냥 방향 (x, y) 를 (−y, x) 로 돌린 쪽이다
         PROPERTY( Name = "projectile", Required )
         hashed_string _projectileID{}; ///< 탄 정의 id(`ProjectileCatalog`). 액션 룸은 수명이나 사거리가 있는 탄만 받는다(벽이 없는 방에서 영원히 남지 않게)
     };

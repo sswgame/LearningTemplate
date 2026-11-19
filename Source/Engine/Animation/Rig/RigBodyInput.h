@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
@@ -34,8 +35,8 @@ namespace sw
         float32 _damping{ 0.15f };
         PROPERTY( Tooltip = "Multiplier on world gravity (sag)" )
         float32 _gravityScale{ 0.3f };
-        PROPERTY( Min = 0.0, Max = 90.0, Units = deg, Tooltip = "Largest swing away from the animated direction; 0 = unlimited" )
-        float32 _maxSwingDegrees{ 20.0f };
+        PROPERTY( Name = "maxSwingDegrees", Min = 0.0, Max = 90.0, Tooltip = "Largest swing away from the animated direction; 0 = unlimited" )
+        Radians _maxSwing{ Radians::fromDegrees( 20.0f ) };
         PROPERTY( Min = 0.0, Tooltip = "Multiplier on hit / landing impulses" )
         float32 _impulseScale{ 1.0f };
         PROPERTY( Min = 0.0, Units = m, Tooltip = "Particle radius against the colliders" )

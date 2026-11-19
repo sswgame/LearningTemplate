@@ -39,11 +39,11 @@ namespace sw
         , _name{}
         , _fireInterval{ 0.1f }
         , _reloadTime{ 1.8f }
-        , _minSpread{ 0.5f }
-        , _maxSpread{ 4.0f }
-        , _spreadPerShot{ 0.6f }
-        , _spreadRecovery{ 6.0f }
-        , _recoilPitch{ 0.6f }
+        , _minSpread{ Radians::fromDegrees( 0.5f ) }
+        , _maxSpread{ Radians::fromDegrees( 4.0f ) }
+        , _spreadPerShot{ Radians::fromDegrees( 0.6f ) }
+        , _spreadRecovery{ Radians::fromDegrees( 6.0f ) }
+        , _recoilPitch{ Radians::fromDegrees( 0.6f ) }
         , _magazineSize{ 30 }
         , _maxReserveAmmo{ 180 }
         , _pelletCount{ 1 }
@@ -136,7 +136,7 @@ namespace sw
         , _random{ 1u }
         , _cooldown{}
         , _reload{}
-        , _currentSpread{ 0.0f }
+        , _currentSpread{}
         , _magazineAmmo{ 0 }
         , _reserveAmmo{ 0 }
     {
@@ -210,7 +210,7 @@ namespace sw
         --_magazineAmmo;
         // 늦은 몫을 다음 간격에서 뺀다(연사가 fps 에 매이지 않는다). 몫은 한 간격까지만 — 한 번 당기면 한 발이다.
         _cooldown.restart( _def._fireInterval );
-        const float32 coneHalfAngle = _currentSpread * MathUtil::kDegreeToRadian;
+        const float32 coneHalfAngle = _currentSpread.radians();
         for ( int32 pelletIndex = 0; pelletIndex < _def._pelletCount; ++pelletIndex )
         {
             Ray ray;

@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
@@ -28,8 +29,8 @@ namespace sw
         float2 _position{ 0.0f, 0.0f };
         PROPERTY( Min = 0 )
         int32 _level{ 0 };
-        PROPERTY( Units = deg )
-        float32 _yawDegrees{ 0.0f };
+        PROPERTY()
+        Radians _yaw{};
     };
 
     /**

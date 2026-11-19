@@ -359,7 +359,7 @@ namespace sw
         // 상대를 축으로 돈다. 상대의 직선 기술은 시작 방향에 묶여 있어서 옆으로 벌어진 각도만큼 빗나간다.
         FighterRuntime&       fighter = _arrFighter[player];
         const FighterRuntime& other   = _arrFighter[1 - player];
-        const float32         step    = fighter._pDef->_sidestepAngle / static_cast<float32>( fighter._pDef->_sidestepFrames );
+        const float32         step    = fighter._pDef->_sidestepAngle.radians() / static_cast<float32>( fighter._pDef->_sidestepFrames );
         const float32         angle   = step * static_cast<float32>( fighter._sidestepSign );
         const float32         relX    = fighter._x - other._x;
         const float32         relZ    = fighter._z - other._z;

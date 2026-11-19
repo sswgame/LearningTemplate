@@ -742,7 +742,7 @@ namespace sw
             _listPendingShot.push_back( pending );
         }
         // 반동은 위로 튀고 옆으로 살짝 흔든다.
-        const float32 kick = weapon.getDef()._recoilPitch * MathUtil::kDegreeToRadian;
+        const float32 kick = weapon.getDef()._recoilPitch.radians();
         camera.addRecoil( kick, kick * 0.25f * ( ( _shotCount % 2u ) == 0u ? 1.0f : -1.0f ) );
     }
 

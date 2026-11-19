@@ -608,7 +608,7 @@ namespace sw
         LockOnSettings lockOn;
         lockOn._maxDistance   = pMech->_lockOnRange;
         lockOn._breakDistance = pMech->_lockOnRange * 1.2f;
-        lockOn._maxAngle      = MathUtil::toDegree( pMech->_lockOnAngle ); // 기반 LockOnSelector 는 도 단위다
+        lockOn._maxAngle      = pMech->_lockOnAngle.degrees(); // 기반 LockOnSelector 는 도 단위다
         pilot._lockOn.setSettings( lockOn );
         pilot._lockOn.release();
 
