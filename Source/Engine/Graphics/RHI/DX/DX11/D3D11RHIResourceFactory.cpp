@@ -106,16 +106,19 @@ namespace sw
         const uint32     tailBytes      = writeBytes - bodyBytes;
         uint8            arrTail[kConstantBytes]{};
         Memory::copy( arrTail, static_cast<const uint8*>( pData ) + bodyBytes, tailBytes );
-        const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
+        // 상수 버퍼의 부분 갱신은 CopyFlags 가 NO_OVERWRITE · DISCARD 여야 한다(디버그 층 — 0 이면 드라이버가 상자를 버린다). DISCARD 는 리소스 내용 전체를 버릴 수 있어 다른 구간이 깨진다 —
+        // 구간은 서로 겹치지 않고 그 구간만 쓰므로 "다른 내용을 덮지 않는다" 인 NO_OVERWRITE 다.
+        constexpr UINT                          kPartialUpdateFlags = D3D11_COPY_NO_OVERWRITE;
+        const D3D11ImmediateContext::ScopedLock context             = _pDevice->_immediateContext.lock();
         if ( bodyBytes != 0 )
         {
             const D3D11_BOX box{ slice._offset, 0, 0, slice._offset + bodyBytes, 1, 1 };
-            _pDevice->_immediateContext1->UpdateSubresource1( pResource, 0, &box, pData, 0, 0, 0 );
+            _pDevice->_immediateContext1->UpdateSubresource1( pResource, 0, &box, pData, 0, 0, kPartialUpdateFlags );
         }
         if ( tailBytes != 0 && bodyBytes + kConstantBytes <= slice._size )
         {
             const D3D11_BOX box{ slice._offset + bodyBytes, 0, 0, slice._offset + bodyBytes + kConstantBytes, 1, 1 };
-            _pDevice->_immediateContext1->UpdateSubresource1( pResource, 0, &box, arrTail, 0, 0, 0 );
+            _pDevice->_immediateContext1->UpdateSubresource1( pResource, 0, &box, arrTail, 0, 0, kPartialUpdateFlags );
         }
     }
 
