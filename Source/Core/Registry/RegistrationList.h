@@ -241,7 +241,6 @@ namespace sw
             , _generation{ 0 }
             , _removalGeneration{ 0 }
             , _bRequireName{ bRequireName }
-            , _ownerMutex{}
             , _subscriptions{ onRelease }
         {
         }
@@ -504,11 +503,6 @@ namespace sw
          *          무효로 만들지 않아 세지 않는다. 배포 빌드는 정적 등록만 하고 빼지 않아 늘 0 이다.
          */
         uint32 getRemovalGeneration() const { return _removalGeneration.load( std::memory_order_acquire ); }
-        /**
-         * @brief 여러 스레드가 만지는 주인이 목록을 고치고 읽을 때 잡는 잠금입니다. 목록은 이 잠금을 스스로 잡지 않는다(잎 잠금 규칙은 주인이 정한다).
-         * @details 함수 정적 목록(`SW_DEFINE_REGISTRATION_LIST`)의 주인은 잠금을 둘 다른 칸이 없다 — 따로 함수 정적 잠금을 두지 않게 목록이 같이 든다.
-         */
-        mutex& getOwnerMutex() const { return _ownerMutex; }
 
     private:
         [[nodiscard]] optional<size_t> findIndex( const T* pItem ) const
@@ -608,7 +602,6 @@ namespace sw
         uint32            _generation;        ///< `getGeneration`
         atomic<uint32>    _removalGeneration; ///< `getRemovalGeneration`
         uint8             _bRequireName : 1;  ///< 이름 없는 등록을 거절하는지
-        mutable mutex     _ownerMutex;        ///< `getOwnerMutex`
         /** @brief `addSubscribed` 가 낸 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<T> _subscriptions;
     };
