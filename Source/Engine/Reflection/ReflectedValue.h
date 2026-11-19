@@ -181,6 +181,8 @@ namespace sw
          * @details 멤버 수가 타입 크기와 맞는지는 `ReflectedValue.cpp` 가 컴파일 때 본다.
          */
         static uint8 getBuiltinComponentCount( ReflectBuiltinIndex builtinIndex );
+        /** @brief 내장 타입 자리가 정수형(`std::is_integral`, bool 포함)이면 true 입니다. num 칸을 실수와 정수로 가르는 곳(UI 애니메이션)이 씁니다. 표 밖이면 false 입니다. */
+        static bool isBuiltinInteger( ReflectBuiltinIndex builtinIndex );
         /** @brief 내장 타입 자리의 정규 이름(`int32` · `string` · `float3` …)입니다. */
         static const hashed_string& getBuiltinTypeName( ReflectBuiltinIndex builtinIndex );
         /**

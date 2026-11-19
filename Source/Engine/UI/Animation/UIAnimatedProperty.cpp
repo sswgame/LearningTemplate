@@ -23,7 +23,7 @@ namespace sw
 
             /**
              * @brief 성분으로 섞는 필드의 성분 수입니다. 아니면 0 입니다(글로 바꿔 끝에 갈아 끼운다).
-             * @details `ReflectBuiltins.xxx` 의 Interp 역할과 Layout 이 정한다 — num · angle 은 1, f32 는 멤버 수(4 이하). 쿼터니언은 성분 직선 보간이 회전 보간이 아니라 뺀다
+             * @details `ReflectBuiltins.xxx` 의 Interp 역할과 Layout 이 정한다 — 실수 num · angle 은 1, f32 는 멤버 수(4 이하), 정수 num 은 0. 쿼터니언은 성분 직선 보간이 회전 보간이 아니라 뺀다
              *          (시퀀서는 slerp 로 섞는다, `PropertyRoleUtil`).
              */
             static uint8 findComponentCount( const ReflectBuiltinIndex builtinIndex )
@@ -34,6 +34,9 @@ namespace sw
                 switch ( traits._layout )
                 {
                     case ReflectBuiltinLayout::Number:
+                        // 정수 칸은 성분으로 섞지 않고 끝에서 바꾼다(Discrete) — 반올림한 중간값은 UI 에 뜻이 없고, int64 · uint64 는 float32 성분을 거치면 2^24 넘는 값이 깨진다.
+                        // 시퀀서 값 트랙(`PropertyRoleUtil`)은 그 타입 그대로 섞는다.
+                        return ReflectedValueUtil::isBuiltinInteger( builtinIndex ) ? 0 : 1;
                     case ReflectBuiltinLayout::Angle:
                         return 1;
                     case ReflectBuiltinLayout::Float32:
@@ -79,7 +82,7 @@ namespace sw
                 }
             }
 
-            /** @brief 성분을 내장 타입 값 @p pValue 에 씁니다. 바뀌었으면 true 입니다. 정수는 가장 가까운 정수로 담는다(`ReflectedValueUtil::writeNumber`). */
+            /** @brief 성분을 내장 타입 값 @p pValue 에 씁니다. 바뀌었으면 true 입니다(num 은 실수 칸만 온다 — `findComponentCount`). */
             [[nodiscard]] static bool writeComponents( const ReflectBuiltinIndex builtinIndex, void* pValue, const float32 ( &arrComponent )[kMaxComponentCount] )
             {
                 float32 arrCurrent[kMaxComponentCount]{ 0.0f, 0.0f, 0.0f, 0.0f };

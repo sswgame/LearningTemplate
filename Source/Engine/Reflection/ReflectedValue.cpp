@@ -525,6 +525,7 @@ namespace sw
                 WriteNumberFn       _pWriteNumber;
                 ReflectBuiltinClass _class;
                 uint8               _componentCount; ///< `ReflectedValueUtil::getBuiltinComponentCount`
+                uint8               _bInteger : 1;   ///< `ReflectedValueUtil::isBuiltinInteger`
             };
 
             static constexpr BuiltinRow kArrBuiltinRow[] = {
@@ -532,7 +533,7 @@ namespace sw
     { &ReflectSourceValue::readBuiltin<ReflectBuiltinCppTypeT<CppType>>, &ReflectSourceValue::convertToBuiltin<ReflectBuiltinCppTypeT<CppType>>, \
       &formatBuiltin<ReflectBuiltinCppTypeT<CppType>>, &readNumberAs<ReflectBuiltinCppTypeT<CppType>>,                                           \
       &readIntegerAs<ReflectBuiltinCppTypeT<CppType>>, &writeNumberAs<ReflectBuiltinCppTypeT<CppType>>,                                          \
-      getReflectBuiltinClass<ReflectBuiltinCppTypeT<CppType>>(), static_cast<uint8>( SW_BUILTIN_LAYOUT_COUNT_##Layout ) },
+      getReflectBuiltinClass<ReflectBuiltinCppTypeT<CppType>>(), static_cast<uint8>( SW_BUILTIN_LAYOUT_COUNT_##Layout ), static_cast<uint8>( std::is_integral_v<ReflectBuiltinCppTypeT<CppType>> ? SW_TRUE : SW_FALSE ) },
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
@@ -605,6 +606,12 @@ namespace sw
     {
         const ReflectValueInternal::BuiltinRow* pRow = ReflectValueInternal::findRow( builtinIndex );
         return pRow != nullptr ? pRow->_componentCount : 0;
+    }
+
+    bool ReflectedValueUtil::isBuiltinInteger( const ReflectBuiltinIndex builtinIndex )
+    {
+        const ReflectValueInternal::BuiltinRow* pRow = ReflectValueInternal::findRow( builtinIndex );
+        return pRow != nullptr && pRow->_bInteger == SW_TRUE;
     }
 
     ReflectBuiltinClass ReflectedValueUtil::getBuiltinClass( const hashed_string& typeName )

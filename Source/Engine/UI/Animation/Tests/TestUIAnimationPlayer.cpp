@@ -3,6 +3,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Reflection/Tests/ReflectionTestTypes.h"
+#include "Engine/UI/Animation/UIAnimatedProperty.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -339,4 +341,31 @@ SW_TEST_CASE( UIAnimationPlayerTest, RadiansTrackBlendsDegreeKeys )
     SW_EXPECT_NEAR( Radians::fromDegrees( 45.0f ).radians(), rig._pLeaf->getRenderTransform()._angle.radians(), kTolerance );
     rig.player().update( 1.0f );
     SW_EXPECT_NEAR( Radians::fromDegrees( 90.0f ).radians(), rig._pLeaf->getRenderTransform()._angle.radians(), kTolerance );
+}
+
+/**
+ * @brief [UIAnimationPlayerTest] 정수 칸은 UI 애니메이션에서 성분으로 섞지 않고 끝에서 바뀐다(Discrete) — 실수 칸 · 벡터는 성분으로 섞는다
+ * @details 정수도 시퀀서에서는 섞이는(Interp) 타입이지만, UI 성분은 float32 라 int64 · uint64 의 큰 값이 깨지고 반올림한 중간값은 뜻이 없다.
+ */
+SW_TEST_CASE( UIAnimationPlayerTest, IntegerPropertiesStayDiscrete )
+{
+    const TypeInfo* pType = PropertyRoleActor::StaticType();
+    SW_REQUIRE_NOT_NULL( pType );
+    UIAnimatedProperty health;
+    SW_REQUIRE_TRUE( UIAnimatedProperty::resolve( *pType, "_health", health ).has_value() );
+    SW_EXPECT_TRUE( health._kind == UIAnimatedValueKind::Discrete );
+    SW_EXPECT_EQUAL( static_cast<uint8>( 0 ), health._componentCount );
+
+    UIAnimatedProperty opacity;
+    SW_REQUIRE_TRUE( UIAnimatedProperty::resolve( *pType, "_opacity", opacity ).has_value() );
+    SW_EXPECT_TRUE( opacity._kind == UIAnimatedValueKind::Float );
+    SW_EXPECT_EQUAL( static_cast<uint8>( 1 ), opacity._componentCount );
+
+    UIAnimatedProperty offset;
+    SW_REQUIRE_TRUE( UIAnimatedProperty::resolve( *pType, "_offset", offset ).has_value() );
+    SW_EXPECT_EQUAL( static_cast<uint8>( 3 ), offset._componentCount );
+
+    UIAnimatedProperty rotation; // 회전은 slerp 라 성분 직선 보간으로 받지 않는다
+    SW_REQUIRE_TRUE( UIAnimatedProperty::resolve( *pType, "_rotation", rotation ).has_value() );
+    SW_EXPECT_TRUE( rotation._kind == UIAnimatedValueKind::Discrete );
 }
