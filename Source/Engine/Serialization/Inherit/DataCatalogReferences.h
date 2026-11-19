@@ -78,7 +78,7 @@ namespace sw
     struct DataCatalogKeyField
     {
         string _owner;     ///< 칸을 가진 리플렉션 형식 이름(씬 · 프리팹의 원소 이름 — 컴포넌트 · 구조체, 또는 `<Element>` 줄이 카탈로그 원소로 이은 정의 형식)
-        string _field;     ///< 칸 이름(속성, 또는 `<item>` 을 품은 자식 원소)
+        string _field;     ///< 리플렉션 칸 이름(`PropertyInfo::_name` — `PROPERTY( Name )` 으로 바꿨으면 그 이름이지 멤버 이름이 아니다). 씬의 속성, 또는 `<item>` 을 품은 자식 원소
         string _tag;       ///< 항목 종류 이름(`<CatalogKey tag>`)
         string _attribute; ///< 카탈로그 원소에서 이 칸을 적은 속성(`PROPERTY( Name )` 철자). 비면 칸 이름에서 `_` 를 뗀 것(`XMLFields::getAttributeName` 과 같다)
     };
