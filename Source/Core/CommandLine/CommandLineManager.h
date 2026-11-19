@@ -227,6 +227,12 @@ namespace sw
          *          Engine 변수를 놓친다 — "명령줄 값이 저장된 값을 이긴다" 같은 판단은 이 함수로 한다.
          */
         bool isGlobalVariableProvided( string_view name ) const;
+        /**
+         * @brief 자동화 단계의 `<Launch>` 변수 이름을 그 단계의 명령줄로 둡니다 — `isGlobalVariableProvided` 가 참이 되어, 게임을 다시 세울 때의 사용자 설정 적용이 그 값을 덮지 않는다.
+         * @details 체인의 둘째 단계부터는 `<Launch>` 를 실행 중에 걸므로 명령줄 표에 없다. 표시하지 않으면 설정에 묶인 변수(`gv_displayOutput` — display.hdr)가 재시작에서 설정 기본값으로 돌아간다
+         *          (언리얼 콘솔 변수의 SetByCommandline 이 SetByGameSetting 을 이기는 것과 같은 순서). 단계마다 통째로 바꾼다 — 빈 목록이면 지운다.
+         */
+        void setStageGlobalVariables( vector<string> listName ) { _listStageGlobal = std::move( listName ); }
 
         /** @brief 보류 중인 `gv_` 키 이름을 모두 반환합니다(오타 진단용). */
         vector<string> collectPendingGlobalNames() const;
@@ -277,6 +283,8 @@ namespace sw
         vector<string> _listOriginalArgument;
         /** @brief `parse` 가 거절한 인자의 이유입니다(`getParseErrors`). `initialize` 가 비웁니다. */
         vector<string> _listParseError;
+        /** @brief 지금 자동화 단계의 `<Launch>` 변수 이름입니다(`setStageGlobalVariables`). */
+        vector<string> _listStageGlobal;
 
         SW_SERVICE_SLOT( CommandLineManager, Required );
     };

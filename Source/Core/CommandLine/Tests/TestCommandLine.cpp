@@ -546,3 +546,19 @@ SW_TEST_CASE( CommandLineTest, ArgumentNameDropsHyphensAndValue )
     SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( " -W = 800 " ) == "W" );
     SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( "" ).empty() );
 }
+
+/**
+ * @brief 자동화 단계의 `<Launch>` 변수는 그 단계 동안 명령줄로 준 것과 같다 — 재시작의 사용자 설정 적용이 덮지 않는다. 다음 단계의 목록이 바꾼다.
+ */
+SW_TEST_CASE( CommandLineTest, StageGlobalVariablesCountAsProvided )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+    SW_EXPECT_FALSE( cmdManager.isGlobalVariableProvided( "gv_displayOutput" ) );
+
+    cmdManager.setStageGlobalVariables( { "gv_displayOutput" } );
+    SW_EXPECT_TRUE( cmdManager.isGlobalVariableProvided( "gv_displayOutput" ) );
+
+    cmdManager.setStageGlobalVariables( {} );
+    SW_EXPECT_FALSE( cmdManager.isGlobalVariableProvided( "gv_displayOutput" ) );
+}
