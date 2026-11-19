@@ -266,7 +266,7 @@ MMO(검은사막류 — 지속 월드 · 경제 · 길드 경쟁)와 싱글 캠�
 3. **옮김.** `ActionStageRun` · `MetroidvaniaDeathRestState` 는 체크포인트를 `CheckpointState` 로(앞으로만 · 다시 쓰기는 데이터), `ConquestWorld` 지휘관은 `RespawnFlow`(`TeamBase`, 대기 = `commanderRespawn`)로 옮긴다. `MechArenaWorld` 는 결정성 키트라 비트 동일을 지키려 옮기지 않고, `TrampolineArena` 는 대기 · 비용이 이미 공통 `MatchState` 이고 자리가 판 고정이라 옮길 몫이 무적 타이머 하나라 두며, 카트 관문은 부활이 아니다. 아레나형 게임은 `MatchState` 가 "언제 · 돈" 을, `RespawnFlow` 가 "어디" 를 맡는다(흐름 대기 0).
 4. **차례.** ① 키트 + 단위 · 서버 단위 테스트 ② 장르 키트 옮김(바뀐 상태 바이트는 해당 테스트의 손 바이트를 같이 고침) ③ Empty 플랫포머 시연이 흐름을 쓰고 시나리오.
 
-**확인.** 단위: 정책 고르기 · 제자리 안전 지점 · 체크포인트 저장 왕복 · 대기 · 무적 · 벌칙. 서버 단위: 서버 결정 · 잘못된 요청 거절. 옮긴 키트 테스트 그대로(바이트 모양이 바뀐 손 바이트만 고침). 시나리오 `game.empty.kitdemo_respawn`: 체크포인트 → 사망 → 그 체크포인트, 제자리, 낭떠러지 제자리 → 안전 지점, 세이브 · 로드 뒤 체크포인트 유지.
+**확인.** 단위: `CheckpointStateTest` · `RespawnRulesTest` · `RespawnFlowTest`(정책 고르기 · 제자리 안전 지점 · 체크포인트 저장 왕복 · 대기 · 자리 준비 · 무적 · 벌칙 · 동료 부활), 칸 지형 설 자리 `ActionPlatformerRespawnWorldTest`. 서버: `RespawnServerAuthorityTest`(서버 결정 · 잘못된 요청 거절), 루프백 서버 · 클라이언트 짝 `RespawnRemoteCallTest`(선을 지난 요청 → 서버 판정 → 회신, 꼴 틀린 호출 · 함수 상한). 옮긴 키트 테스트 그대로(바이트 모양이 바뀐 손 바이트 도우미만 고침). 시나리오 `game.empty.kitdemo_respawn`: 제자리, 낭떠러지 제자리 → 안전 지점, 체크포인트 → 사망 → 그 체크포인트, 세이브 · 로드 뒤 체크포인트 유지. 두 프로세스 시나리오는 아바타가 죽는 게임(LanternVale 에 아바타 사망 규칙)이 생길 때 그 게임의 `netpair/` 에 더한다.
 
 ## 통합 담당 판단(2026-11-08)
 
