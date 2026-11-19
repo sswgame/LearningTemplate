@@ -23,12 +23,10 @@ namespace sw
         {
             static constexpr int32  kOpBits           = 3;
             static constexpr int32  kOwnerBits        = 2;
-            static constexpr int32  kResultBits       = 8;
             static constexpr uint32 kMaxDeltaEntries  = NetHousingMessage::kMaxDeltaBytes; ///< 델타의 id · 배치 수 상한(하나가 적어도 1 바이트다)
             static constexpr int32  kChunkHeaderBytes = 64;                                ///< 조각 메시지의 머리(종류 · 해시 · 주인 · 잔액 · 크기 · 자리 · 길이)의 넉넉한 상한
             static_assert( static_cast<uint32>( HousingEditOp::Count ) <= ( 1u << kOpBits ), "edit ops must fit their bits" );
             static_assert( static_cast<uint32>( HousingPlotOwner::Count ) <= ( 1u << kOwnerBits ), "the owner must fit its bits" );
-            static_assert( static_cast<uint32>( HousingPlaceResult::Pending ) < ( 1u << kResultBits ), "results must fit their bits" );
             static_assert( NetHousingMessage::kSnapshotChunkBytes + kChunkHeaderBytes <= NetConnection::kMaxReliableMessageSize, "a snapshot chunk must fit one reliable message" );
 
             static uint64 computeIDHash( const hashed_string& id ) { return static_cast<uint64>( id.getHash() ); }
@@ -215,13 +213,11 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    NetHandleResult HousingReplicationServer::receive( NetHousingMessage::SnapshotRequest, const NetMessageContext& context, BitReader& body )
+    NetHandleResult HousingReplicationServer::receive( NetHousingMessage::SnapshotRequest, const NetMessageContext& context, const HousingSnapshotRequestBody& body )
     {
-        const uint64 plotHash = body.readVarUint();
-        if ( body.hasOverflowed() )
-            return NetHandleResult::Malformed;
-        const bool bQueued = VectorUtil::containsIf( _listSnapshotRequest, [&context, plotHash]( const SnapshotRequestEntry& entry )
-        { return entry._connectionID == context._connectionID && entry._plotHash == plotHash; } );
+        const uint64 plotHash = body._plotHash;
+        const bool   bQueued  = VectorUtil::containsIf( _listSnapshotRequest, [&context, plotHash]( const SnapshotRequestEntry& entry )
+           { return entry._connectionID == context._connectionID && entry._plotHash == plotHash; } );
         if ( bQueued == false && acceptRequest( context._connectionID ) )
             _listSnapshotRequest.push_back( SnapshotRequestEntry{ plotHash, context._connectionID } );
         return NetHandleResult::Handled; // 넘친 다시 맞추기 요청은 버린다 — 클라이언트는 델타를 버리며 기다리다 다시 요청하지 않으므로 다음 틱의 같은 요청이 온다
@@ -424,20 +420,21 @@ namespace sw
 
     void HousingReplicationServer::sendTransfers()
     {
-        using Internal = HousingReplicationInternal;
         for ( Transfer& transfer : _listTransfer )
         {
             const int32 totalSize = static_cast<int32>( transfer._bytes.size() );
             do
             {
-                const int32 chunkSize = MathUtil::min( NetHousingMessage::kSnapshotChunkBytes, totalSize - transfer._offset );
-                BitWriter&  writer    = _writer.begin( NetHousingMessage::kPlotSnapshot );
-                writer.writeVarUint( transfer._plotHash );
-                writer.writeBits( static_cast<uint32>( transfer._owner ), Internal::kOwnerBits );
-                writer.writeVarInt( transfer._funds );
-                writer.writeVarUint( static_cast<uint64>( totalSize ) );
-                writer.writeVarUint( static_cast<uint64>( transfer._offset ) );
-                writer.writeBlob( transfer._bytes.data() + transfer._offset, chunkSize );
+                const int32             chunkSize = MathUtil::min( NetHousingMessage::kSnapshotChunkBytes, totalSize - transfer._offset );
+                HousingPlotSnapshotBody body;
+                body._plotHash  = transfer._plotHash;
+                body._owner     = transfer._owner;
+                body._funds     = transfer._funds;
+                body._totalSize = totalSize;
+                body._offset    = transfer._offset;
+                body._chunk.assign( transfer._bytes.begin() + transfer._offset, transfer._bytes.begin() + transfer._offset + chunkSize );
+                if ( _writer.writeMessage<NetHousingMessage::Table, NetHousingMessage::PlotSnapshot>( body ) == false )
+                    break; // 상태가 비었거나 주인 값이 틀렸다 — 오류 로그가 남았다
                 // 창이 차면 닫지 않고 다음 틱에 잇는다(조각 여럿을 한 틱에 밀어 넣으면 신뢰 창을 넘는다).
                 if ( _pHost->trySendMessage( transfer._connectionID, NetChannelKind::ReliableOrdered, _writer.getBytes().data(), _writer.getByteCount() ) == false )
                     break;
@@ -564,15 +561,15 @@ namespace sw
 
     void HousingReplicationServer::reply( int32 connectionID, uint32 requestID, uint64 plotHash, HousingPlaceResult result, uint32 placementID )
     {
-        using Internal = HousingReplicationInternal;
         if ( result != HousingPlaceResult::Ok )
             ++_stats._rejectedCount;
-        BitWriter& writer = _writer.begin( NetHousingMessage::kReply );
-        writer.writeVarUint( requestID );
-        writer.writeVarUint( plotHash );
-        writer.writeBits( static_cast<uint32>( result ), Internal::kResultBits );
-        writer.writeVarUint( placementID );
-        if ( _writer.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered ) == false )
+        HousingReplyBody body;
+        body._requestID   = requestID;
+        body._plotHash    = plotHash;
+        body._result      = result;
+        body._placementID = placementID;
+        const bool bSent  = _writer.writeMessage<NetHousingMessage::Table, NetHousingMessage::Reply>( body ) && _writer.send( *_pHost, connectionID, NetHousingMessage::Reply::kChannel );
+        if ( bSent == false )
             ++_stats._sendFailedCount;
     }
 } // namespace sw
@@ -653,36 +650,30 @@ namespace sw
         return requestID;
     }
 
-    NetHandleResult HousingReplicationClient::receive( NetHousingMessage::Reply, const NetMessageContext& context, BitReader& body )
+    NetHandleResult HousingReplicationClient::receive( NetHousingMessage::Reply, const NetMessageContext& context, const HousingReplyBody& body )
     {
-        using Internal = HousingReplicationInternal;
         (void)context;
         ReceivedReply received;
-        received._requestID   = body.readVarUint32();
-        received._plotHash    = body.readVarUint();
-        const uint32 result   = body.readBits( Internal::kResultBits );
-        received._placementID = body.readVarUint32();
-        if ( body.hasOverflowed() || result > static_cast<uint32>( HousingPlaceResult::Pending ) )
-            return NetHandleResult::Malformed;
-        received._result = static_cast<HousingPlaceResult>( result );
+        received._requestID   = body._requestID;
+        received._plotHash    = body._plotHash;
+        received._result      = body._result; // 등록 열거자 밖 값은 본문 읽기가 거절했다
+        received._placementID = body._placementID;
         _listReply.push_back( received );
         return NetHandleResult::Handled;
     }
 
-    NetHandleResult HousingReplicationClient::receive( NetHousingMessage::PlotSnapshot, const NetMessageContext& context, BitReader& body )
+    NetHandleResult HousingReplicationClient::receive( NetHousingMessage::PlotSnapshot, const NetMessageContext& context, const HousingPlotSnapshotBody& body )
     {
-        using Internal = HousingReplicationInternal;
         (void)context;
-        const uint64           plotHash  = body.readVarUint();
-        const HousingPlotOwner owner     = Internal::readOwner( body );
-        const int64            funds     = body.readVarInt();
-        const int32            totalSize = body.readVarUint31();
-        const int32            offset    = body.readVarUint31();
-        vector<uint8>          chunk;
-        const bool             bChunk    = body.readBlob( chunk, NetHousingMessage::kSnapshotChunkBytes );
+        const uint64           plotHash  = body._plotHash;
+        const HousingPlotOwner owner     = body._owner;
+        const int64            funds     = body._funds;
+        const int32            totalSize = body._totalSize;
+        const int32            offset    = body._offset;
+        const vector<uint8>&   chunk     = body._chunk;
         const int32            chunkSize = static_cast<int32>( chunk.size() );
-        const bool             bShape    = bChunk && body.hasOverflowed() == false && owner != HousingPlotOwner::Count && totalSize > 0 && totalSize <= NetHousingMessage::kMaxSnapshotBytes &&
-                            chunkSize > 0 && offset + chunkSize <= totalSize;
+        // 열거자 · 음수 · 조각 길이는 본문 읽기가 봤다. 전체 크기 상한과 조각이 전체 안인지는 값 사이의 관계라 여기서 본다.
+        const bool bShape = totalSize <= NetHousingMessage::kMaxSnapshotBytes && chunkSize > 0 && static_cast<int64>( offset ) + chunkSize <= totalSize;
         if ( bShape == false )
             return NetHandleResult::Malformed;
         Assembly* pAssembly = VectorUtil::findIf( _listAssembly, [plotHash]( const Assembly& assembly )
@@ -784,9 +775,10 @@ namespace sw
         if ( _pHost == nullptr || VectorUtil::contains( _listAwaitingSnapshot, plotHash ) )
             return;
         _listAwaitingSnapshot.push_back( plotHash );
-        BitWriter& writer = _writer.begin( NetHousingMessage::kSnapshotRequest );
-        writer.writeVarUint( plotHash );
-        if ( _writer.send( *_pHost, 0, NetChannelKind::ReliableOrdered ) )
+        HousingSnapshotRequestBody body;
+        body._plotHash   = plotHash;
+        const bool bSent = _writer.writeMessage<NetHousingMessage::Table, NetHousingMessage::SnapshotRequest>( body ) && _writer.send( *_pHost, 0, NetHousingMessage::SnapshotRequest::kChannel );
+        if ( bSent )
             ++_stats._snapshotRequestCount;
         else
             ++_stats._sendFailedCount;

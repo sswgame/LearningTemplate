@@ -568,3 +568,34 @@ SW_TEST_CASE( HousingReplicationTest, LargePlotTravelsInChunksThenAsDeltas )
     }
     SW_EXPECT_EQUAL( rig._pServerPlot->getFunds(), late._pPlot->getFunds() );
 }
+
+/**
+ * @brief [HousingReplicationTest] 고정 배치형 본문 — 판정의 등록 밖 결과 · 잘린 상태 조각 · 전체 밖 조각은 깨진 메시지이고 쌓이지 않는다
+ */
+SW_TEST_CASE( HousingReplicationTest, BodyMessagesRejectUnknownValuesAndTruncation )
+{
+    HousingReplicationClient client;
+    NetMessageWriter         writer;
+
+    // 판정 — 결과 열거자 자리에 등록 밖 값을 꾸민다(요청 번호 · 부지 해시 뒤 8 비트 0xFF).
+    BitWriter& badReply = writer.begin( NetHousingMessage::kReply );
+    badReply.writeVarUint( 1 );
+    badReply.writeVarUint( 7 );
+    badReply.writeBits( 0xFFu, 8 );
+    badReply.writeVarUint( 0 );
+    SW_EXPECT_TRUE( client.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+
+    HousingPlotSnapshotBody chunk;
+    chunk._plotHash  = 7;
+    chunk._owner     = HousingPlotOwner::Self;
+    chunk._totalSize = 4;
+    chunk._offset    = 2;
+    chunk._chunk     = vector<uint8>{ 1, 2, 3 }; // 2 + 3 > 4 — 전체 밖이다
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetHousingMessage::Table, NetHousingMessage::PlotSnapshot>( chunk ) ) );
+    SW_EXPECT_TRUE( client.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+
+    chunk._offset = 0;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetHousingMessage::Table, NetHousingMessage::PlotSnapshot>( chunk ) ) );
+    const vector<uint8> listTruncated( writer.getBytes().begin(), writer.getBytes().end() - 1 );
+    SW_EXPECT_TRUE( client.handleMessage( 0, listTruncated.data(), static_cast<int32>( listTruncated.size() ), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+}

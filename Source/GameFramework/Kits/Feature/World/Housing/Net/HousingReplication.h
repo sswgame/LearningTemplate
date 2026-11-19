@@ -33,6 +33,9 @@
 #include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/NetTypes.h"
 
+#include "Engine/Net/NetMessageBody.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
 #include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
@@ -42,25 +45,81 @@ namespace sw
     class INetPeers;
     class Wallet;
 
+    /** @brief 받는 연결에서 본 부지의 주인입니다. 값은 와이어 형식(상태 · 델타의 2 비트, 상태 조각 본문의 열거자 범위)이다. */
+    ENUM( Count = Count )
+    enum class HousingPlotOwner : uint8
+    {
+        None = 0,
+        Self,
+        Other,
+        Count
+    };
+
+    /** @brief 하우징 선 형식의 상한입니다. 본문 형식(`PROPERTY( MaxCount )`)과 메시지 표가 함께 쓴다. */
+    struct HousingNetLimit
+    {
+        static constexpr int32 kSnapshotChunkBytes = 16 * 1024; ///< `NetHousingMessage::kSnapshotChunkBytes`
+    };
+
+    /** @brief 편집 판정(서버 → 요청한 클라이언트) 본문입니다. 필드 순서가 와이어 형식이다. */
+    REFLECT()
+    struct HousingReplyBody
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint32 _requestID{ 0 };
+        PROPERTY()
+        uint64 _plotHash{ 0 };
+        PROPERTY()
+        HousingPlaceResult _result{ HousingPlaceResult::Ok };
+        PROPERTY()
+        uint32 _placementID{ 0 }; ///< 새 배치 id. 놓기가 아니면 0
+    };
+
+    /** @brief 부지 상태 조각(서버 → 클라이언트) 본문입니다. 시작 자리 0 은 새 전송이다(받던 조각은 버린다). */
+    REFLECT()
+    struct HousingPlotSnapshotBody
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint64 _plotHash{ 0 };
+        PROPERTY()
+        HousingPlotOwner _owner{ HousingPlotOwner::None };
+        PROPERTY()
+        int64 _funds{ 0 };
+        PROPERTY( Min = 1 )
+        int32 _totalSize{ 1 }; ///< 부지 상태 전체 바이트(상한 `NetHousingMessage::kMaxSnapshotBytes` 는 받는 쪽이 본다)
+        PROPERTY( Min = 0 )
+        int32 _offset{ 0 };
+        PROPERTY( MaxCount = HousingNetLimit::kSnapshotChunkBytes, Min = 0, Max = 255 )
+        vector<uint8> _chunk{};
+    };
+
+    /** @brief 부지 상태를 처음부터 다시 달라는 요청(클라이언트 → 서버) 본문입니다. 델타를 적용하지 못했을 때 보낸다. */
+    REFLECT()
+    struct HousingSnapshotRequestBody
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint64 _plotHash{ 0 };
+    };
+
     /** @brief 하우징 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetHousingMessage
     {
         /** @brief 클라이언트 → 서버. 편집 요청 — 요청 번호(varuint) · 부지 id 해시(varuint) · 종류(3 비트) · 종류마다의 날 값. */
         using Edit = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>;
-        /** @brief 서버 → 요청한 클라이언트. 판정 — 요청 번호 · 부지 id 해시 · 결과(8 비트 `HousingPlaceResult`) · 새 배치 id(varuint, 놓기가 아니면 0). */
-        using Reply = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
-        /**
-         * @brief 서버 → 클라이언트. 부지 상태 조각 — 부지 id 해시 · 주인(2 비트 `HousingPlotOwner`) · 잔액(varint) · 전체 크기(varuint) · 시작 자리(varuint) · 조각(blob).
-         *        판 2: 부지 전체를 메시지 하나로 보내던 것(64 KB 상한)을 조각으로 나눴다. 시작 자리 0 은 새 전송이다(받던 조각은 버린다).
-         */
-        using PlotSnapshot = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>;
+        /** @brief 서버 → 요청한 클라이언트. 판정(`HousingReplyBody`). */
+        using Reply = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, HousingReplyBody>;
+        /** @brief 서버 → 클라이언트. 부지 상태 조각(`HousingPlotSnapshotBody`) — 부지 전체를 메시지 하나(64 KB 상한)가 아니라 조각으로 나눠 보낸다. */
+        using PlotSnapshot = NetMessageBodyDef<2, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, HousingPlotSnapshotBody>;
         /**
          * @brief 서버 → 클라이언트. 부지 델타 — 부지 id 해시 · 주인(2 비트) · 잔액(varint) · 다음 배치 id(varuint) · 사라진 id 수와 id 들(varuint) ·
          *        새로 · 바뀐 배치 수와 배치 들(id · 부품 id 해시 · 부품 판 · x · z · 층 · 요).
          */
         using PlotDelta = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
-        /** @brief 클라이언트 → 서버. 부지 상태를 처음부터 다시 달라는 요청 — 부지 id 해시(varuint). 델타를 적용하지 못했을 때 보낸다. */
-        using SnapshotRequest = NetMessageDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>;
+        /** @brief 클라이언트 → 서버. 부지 상태를 처음부터 다시 달라는 요청(`HousingSnapshotRequestBody`). */
+        using SnapshotRequest = NetMessageBodyDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, HousingSnapshotRequestBody>;
         using Table           = NetMessageTable<NetKitMessageRange::kHousing, Edit, Reply, PlotSnapshot, PlotDelta, SnapshotRequest>;
 
         static constexpr uint8 kEdit            = Table::getKindOf<Edit>();
@@ -69,11 +128,11 @@ namespace sw
         static constexpr uint8 kPlotDelta       = Table::getKindOf<PlotDelta>();
         static constexpr uint8 kSnapshotRequest = Table::getKindOf<SnapshotRequest>();
 
-        static constexpr float32 kMaxRawPosition     = 1.0e5f;          ///< 날 자리 |x| · |z| 의 상한(m). 넘으면 깨진 메시지다
-        static constexpr float32 kMaxRawYaw          = 1.0e3f;          ///< 날 요 |yaw| 의 상한(라디안). 넘으면 깨진 메시지다
-        static constexpr int32   kSnapshotChunkBytes = 16 * 1024;       ///< 상태 조각 하나의 바이트(신뢰 메시지 64 KB 안 — 창을 조금씩 채운다)
-        static constexpr int32   kMaxDeltaBytes      = 16 * 1024;       ///< 델타 메시지가 이보다 크면 조각 전송으로 보낸다
-        static constexpr int32   kMaxSnapshotBytes   = 4 * 1024 * 1024; ///< 부지 상태 하나의 상한(64 x 64 칸 · 8 층을 꽉 채워도 들어간다). 넘는 전체 크기는 깨진 메시지다
+        static constexpr float32 kMaxRawPosition     = 1.0e5f;                               ///< 날 자리 |x| · |z| 의 상한(m). 넘으면 깨진 메시지다
+        static constexpr float32 kMaxRawYaw          = 1.0e3f;                               ///< 날 요 |yaw| 의 상한(라디안). 넘으면 깨진 메시지다
+        static constexpr int32   kSnapshotChunkBytes = HousingNetLimit::kSnapshotChunkBytes; ///< 상태 조각 하나의 바이트(신뢰 메시지 64 KB 안 — 창을 조금씩 채운다)
+        static constexpr int32   kMaxDeltaBytes      = 16 * 1024;                            ///< 델타 메시지가 이보다 크면 조각 전송으로 보낸다
+        static constexpr int32   kMaxSnapshotBytes   = 4 * 1024 * 1024;                      ///< 부지 상태 하나의 상한(64 x 64 칸 · 8 층을 꽉 채워도 들어간다). 넘는 전체 크기는 깨진 메시지다
     };
 
     /** @brief 편집 요청의 종류입니다. 값은 와이어 형식(`Edit` 의 3 비트)이라 바꾸면 `Edit` 의 본문 판을 올린다. */
@@ -85,15 +144,6 @@ namespace sw
         Move,
         Undo,
         Redo,
-        Count
-    };
-
-    /** @brief 받는 연결에서 본 부지의 주인입니다. 값은 와이어 형식(상태 · 델타의 2 비트)이다. */
-    enum class HousingPlotOwner : uint8
-    {
-        None = 0,
-        Self,
-        Other,
         Count
     };
 
@@ -194,7 +244,7 @@ namespace sw
         void update( const vector<HousingNetPlotRef>& listPlot );
 
         NetHandleResult receive( NetHousingMessage::Edit, const NetMessageContext& context, BitReader& body );
-        NetHandleResult receive( NetHousingMessage::SnapshotRequest, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetHousingMessage::SnapshotRequest, const NetMessageContext& context, const HousingSnapshotRequestBody& body );
         void            onConnectionOpened( int32 connectionID ) override;
         void            onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
@@ -319,8 +369,8 @@ namespace sw
         /** @brief 마지막으로 받은 부지의 주인입니다(받은 적이 없으면 `None`). */
         HousingPlotOwner findOwner( const hashed_string& plotID ) const;
 
-        NetHandleResult receive( NetHousingMessage::Reply, const NetMessageContext& context, BitReader& body );
-        NetHandleResult receive( NetHousingMessage::PlotSnapshot, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetHousingMessage::Reply, const NetMessageContext& context, const HousingReplyBody& body );
+        NetHandleResult receive( NetHousingMessage::PlotSnapshot, const NetMessageContext& context, const HousingPlotSnapshotBody& body );
         NetHandleResult receive( NetHousingMessage::PlotDelta, const NetMessageContext& context, BitReader& body );
 
         const HousingReplicationStats& getStats() const { return _stats; }
