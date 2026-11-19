@@ -210,8 +210,9 @@ job_server_tools() {
 
   # 도구 테스트: 실행 인자 GUI(VS Code 확장 Tools/launch-args — 확장이라 JS 다)가 Source 의 매크로 · 인자 표를 읽는다. 엔진 쪽 이름 · 형식이 바뀌면 깨지는데
   # 어디서도 돌지 않아 오래 깨져 있었다(2026-11-08). 확장 도구가 VS Code 안의 Node 로 돌린다(따로 깐 node 가 필요 없다).
+  # 주석 접기 확장(Tools/comment-fold)도 같은 도구로 함께 돈다.
   echo "== extension tests $(date +%T)"
-  run build/verify.extensions.log py -3 Tools/Scripts/ExtensionTool.py test Tools/launch-args
+  run build/verify.extensions.log py -3 Tools/Scripts/ExtensionTool.py test Tools/launch-args Tools/comment-fold
   RC=$?
   [ $DRY -eq 1 ] || grep -E "^(\[unit\]|ℹ (pass|fail))" build/verify.extensions.log
   [ $RC -eq 0 ] || { echo "extension tests exit=$RC"; return 1; }
