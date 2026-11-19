@@ -52,7 +52,8 @@ namespace
         bool readInto( sw::ThemeParkSimulation& inoutPark ) const
         {
             sw::Archive written;
-            written << _entryFee;
+            // 리플렉션 상태 칸(머리 + 선언 순서 — 열거는 int64, 남은 운행 시간은 칸이 아니다) 뒤에 손 본문(입장료, 운행 시간, 걸음 타이머, 난수, 누적)이다
+            sw::StateIO::writeReflectedHeader<sw::ThemeParkSimulation>( written );
             written << static_cast<uint32>( _listRide.size() );
             for ( const sw::ParkRide& ride : _listRide )
             {
@@ -69,7 +70,6 @@ namespace
                 written << ride._bOpen;
                 sw::StateIO::writeIDList( written, ride._listQueue );
                 sw::StateIO::writeIDList( written, ride._listRider );
-                written << ride._cycleTimer._remaining;
                 written << ride._totalRiders;
                 written << ride._totalIncome;
             }
@@ -92,17 +92,22 @@ namespace
                 written << guest._walkTimer;
                 written << guest._walkDuration;
                 written << guest._queueTime;
-                written << static_cast<uint8>( guest._state );
-                written << static_cast<uint8>( guest._thought );
+                written << static_cast<int64>( guest._state );
+                written << static_cast<int64>( guest._thought );
+            }
+            written << _elapsedTime;
+            written << _parkRating;
+            written << _nextGuestID;
+            written << _totalVisitorCount;
+            written << _entryFee;
+            for ( const sw::ParkRide& ride : _listRide )
+            {
+                written << ride._cycleTimer._remaining;
             }
             sw::StateIO::writeStepTimer( written, sw::FixedStepTimer{} );
             sw::StateIO::writeRandom( written, sw::GameRandom( 9u ) );
             written << _arrival;
             written << _runningCost;
-            written << _elapsedTime;
-            written << _parkRating;
-            written << _nextGuestID;
-            written << _totalVisitorCount;
             sw::Archive reading( written.getData(), written.getSize() );
             return inoutPark.readState( reading );
         }
