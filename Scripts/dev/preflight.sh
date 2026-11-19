@@ -12,8 +12,11 @@
 #   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오만 Release 로 먼저(test_history.py changed — DesignBacklog D4). 돈 적 없는 테스트 · 기준 파일의 실패를
 #               전체 실행 중간이 아니라 빌드 직후에 갈래 이름과 함께 낸다. 없는 골든 · 스냅숏만 쓰고(MissingBaseline) 쓴 것이 있으면 멈춘다 — 보고 커밋한 뒤 --from changed.
 #               지면 cpu · gpu-release 를 시작하지 않는다. 끝 줄 CHANGED_OK=<sha> · CHANGED_FAILED.
-#   cpu         ASan ctest -L nogpu(단위 · 셰이더 다시 굽기 · 파서 …) ‖ 서버(Release) 단위 → launch-args → shipping-check --skip-build(기동만). 시간을 판정하지 않는 CPU 일만 겹친다.
-#   gpu-release Release ctest 전체 — 시나리오 그림 · 골든 · 기록 대조의 정본(모든 게임 · 네 백엔드).
+#   cpu         ASan ctest -L nogpu(단위 · 셰이더 다시 굽기 · 파서 …) ‖ 서버(Release) 단위 → launch-args → shipping-check --skip-build(기동만) ‖ shader warm. 시간을 판정하지 않는 CPU 일만 겹친다.
+#               shader warm: 지난 Release 체인이 남긴 셰이더 요청 기록(build/Ninja-Release/Testing/ShaderRequests/*.shaderrequests — 체인 자식마다 하나)만 Release App 으로
+#               컴파일해 그 빌드 폴더의 셰이더 DDC 를 네 백엔드 모두 채운다(`App --cook-shaders -shader-request-dir=`). 셰이더 · 공용 hlsli 를 고친 묶음도 GPU 단계가 캐시 미스 컴파일을
+#               떠안지 않는다(2026-11-19: dx11 empty 체인 19 분 중 FXC 559 개 — 캐시가 차면 74 초). 기록이 없으면(첫 실행) 할 일이 없다고 찍고 끝난다. 전체 굽기는 5 만 개를 넘어 넣지 않는다.
+#   gpu-release Release ctest 전체 — 시나리오 그림 · 골든 · 기록 대조의 정본(모든 게임 · 네 백엔드). 체인이 다음 묶음의 shader warm 이 읽을 요청 기록을 남긴다.
 #   (없앤 gpu-debug: Debug 로 같은 체인을 한 번 더 돌던 단계 14.6 분 — 단언 · 검사가 SW_DO_CHECKS 로 Release 에도 들어 Release 체인이 지난다. Core/Foundation/Macros.h 4-1)
 # 예전(2026-11-13 측정 53 분)은 단계가 모두 차례였고, 같은 체인을 두 구성에서 네 백엔드로 다 돌았고, 셰이더 다시 굽기가 두 구성에서 혼자(RUN_SERIAL) 돌았고, Debug 단위를 ctest 밖에서 한 번 더 돌았다.
 cd "$(dirname "$0")/../.." || exit 2
@@ -227,6 +230,21 @@ job_server_tools() {
   return $RC
 }
 
+# 지난 Release 체인의 셰이더 요청만 컴파일해 셰이더 DDC 를 데운다(언리얼 Shader Pipeline Cache 의 미리 컴파일 자리) — 기록은 Test/Scenario/CMakeLists.txt 의 `-shader-request-log`.
+job_shader_warm() {
+  local DIR=build/Ninja-Release/Testing/ShaderRequests
+  echo "== shader warm $(date +%T)"
+  if [ $DRY -eq 0 ] && ! compgen -G "$DIR/*.shaderrequests" > /dev/null; then
+    echo "shader warm: $DIR 에 요청 기록이 없다(첫 실행) - 할 일이 없다"
+    return 0
+  fi
+  run build/Ninja-Release/Testing/Logs/verify.shaderwarm.log build/Ninja-Release/Bin/App.exe --cook-shaders -shader-request-dir=$DIR -unattended -log-file=build/Ninja-Release/Testing/Logs/ShaderWarm.log
+  local RC=$?
+  [ $DRY -eq 1 ] || grep -a -E "ShaderRequestLog\.(Warmed|NothingToWarm|ReadFailed)" build/Ninja-Release/Testing/Logs/ShaderWarm.log | tr -d '\r'
+  echo "shader warm exit=$RC"
+  return $RC
+}
+
 mkdir -p build
 if [ $STAGE -le 1 ]; then
   start_job "lint --all" job_lint
@@ -255,6 +273,7 @@ fi
 if [ $STAGE -le 3 ]; then
   start_job "ASan nogpu" job_sanitizer_cpu
   start_job "server · tools · shipping" job_server_tools
+  start_job "shader warm" job_shader_warm
   wait_jobs
 fi
 

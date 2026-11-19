@@ -44,6 +44,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderRequestLog.h"
 #include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Localization/LocalizationCooker.h"
 #include "Engine/Module/ModuleLoadStageSubsystem.h"
@@ -372,6 +373,13 @@ namespace sw
                 inoutState.enterHeadless();
                 string cookedDir;
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
+                // `-shader-request-dir` 는 모든 퍼뮤테이션 대신 지난 실행의 요청 기록만 컴파일해 셰이더 DDC 를 채운다 — 쿠킹본(스테이징 · 매니페스트 · 스탬프)은 쓰지 않는다.
+                string requestDir;
+                if ( commandLine.getArgument( CommandLineArgument::SHADER_REQUEST_DIR, requestDir ) )
+                {
+                    inoutState._bFailed = ShaderRequestLog::warmFromFolder( requestDir ) == false;
+                    return true;
+                }
                 SW_LOG_INFO_ID( "Headless.StartingHeadlessCookShaders", "Starting Headless (CookShaders) -> '%#'...", cookedDir );
                 // 명령줄 백엔드(`-vulkan` …)를 주면 그 형식만, 주지 않으면 네 형식을 모두 굽는다(`ShaderTargetFormat::Count`).
                 ShaderTargetFormat shaderTarget = ShaderTargetFormat::Count;

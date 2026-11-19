@@ -449,7 +449,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return print_advance_steps(paths)
     build_preset_or_exit(options.preset)
     dropped = ('unattended',) if options.show else ()
-    base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report', *dropped)
+    # 셰이더 요청 기록은 체인 전체의 것이라 단계 몇 개로 덮지 않는다(preflight shader warm 이 그 몫만 데우게 된다).
+    base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report', 'shader-request-log', *dropped)
     run_log = log_dir / 'Culprit.log'
     run_counter = [0]
 

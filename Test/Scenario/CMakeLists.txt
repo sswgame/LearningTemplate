@@ -81,9 +81,12 @@ function(sw_add_scenario_chain test_name stage_seconds)
 	# 같은 까닭으로 그래픽 API 검증 층(`-rhi-validation` — D3D12 · D3D11 디버그 레이어, Vulkan Khronos 검증 레이어, GL 디버그 출력)과 교착 탐지(`-deadlock-detection` — `sw::mutex`
 	# 잠금 순서 추적)를 켠다. 설정 기본값(`_rhi._validationLayer` = DebugBuildOnly)은 사람이 Release 로 재는 실행을 위해 그대로 두고, 자동화만 인자로 켠다(언리얼 Development 에서 Gauntlet 이
 	# `-d3ddebug` · `-vulkandebug` 를 주는 것과 같은 자리). 검증 층 오류는 로그 오류라 판정의 로그 게이트에서 진다. 배포 구성에는 검증 층 · 교착 탐지가 컴파일되지 않는다.
+	# 셰이더 요청 기록(`-shader-request-log` — 자식마다 `<체인>.<백엔드>.shaderrequests`): 다음 묶음 검증의 cpu 단계가 이 폴더의 요청만 컴파일해 셰이더 DDC 를 데운다
+	# (Scripts/dev/preflight.sh 의 shader warm — 언리얼 Shader Pipeline Cache 기록 · 유니티 ShaderVariantCollection). 셰이더를 고친 묶음도 시간을 재는 이 체인이 컴파일을 떠안지 않는다.
 	add_test(NAME ${test_name}
 		COMMAND $<TARGET_FILE:App> ${ARG_ARGS} -scenario=${scenario_list} -scenario-keep-going -scenario-backends=all ${list_split_argument} ${list_slot_argument} -unattended
-			-gv_validateBindlessIndex=DeadIndex -rhi-validation -deadlock-detection -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${test_name}.log ${list_launch_argument}
+			-gv_validateBindlessIndex=DeadIndex -rhi-validation -deadlock-detection -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${test_name}.log
+			-shader-request-log=${CMAKE_BINARY_DIR}/Testing/ShaderRequests/${test_name}.shaderrequests ${list_launch_argument}
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(${test_name} PROPERTIES LABELS hostgpu TIMEOUT ${chain_timeout} SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped} PROCESSORS ${slot_count})
 	message(STATUS "[Scenario] ${test_name}: ${stage_count} scenario(s)")

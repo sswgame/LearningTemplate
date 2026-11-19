@@ -17,6 +17,7 @@
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Compile/ShaderRequestLog.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
 namespace sw
@@ -188,6 +189,8 @@ namespace sw
         void waitForLoadsInFlight();
         /** @brief 설정 다시 읽기 알림입니다(게임 스레드). 엔진 설정이면 요청에 실을 사본을 다시 뜬다. */
         void onConfigReloaded( const hashed_string& configTypeName );
+        /** @brief 요청 기록(`-shader-request-log`)을 켰고 모은 요청이 있으면 그 파일에 씁니다(종료 — 진행 중인 로드를 기다린 뒤). */
+        void writeRequestLog();
 
     private:
         unique_ptr<IShaderBytecodeProvider>                              _pProvider;           ///< 기동 때(`initialize`) 콘텐츠 정책으로 고른 바이트코드 공급자. 로드 워커는 읽기만 한다
@@ -196,6 +199,8 @@ namespace sw
         unordered_map<string, weak_ptr<ShaderLoadOperation>> _mapLoading SW_GUARDED_BY( _mutexCache ); ///< 읽거나 컴파일 중인 로드(같은 요청은 같은 로드 작업). `_mutexCache` 로 지킨다
         mutable mutex                                                    _mutexCache;
         optional<ShaderEnginePolicy> _enginePolicy                       SW_GUARDED_BY( _mutexCache ); ///< 요청에 싣는 엔진 설정 사본(`findEnginePolicy`) — 워커가 설정을 직접 읽지 않게 요청을 받는 자리에서 싣는다
+        ShaderRequestLog _requestLog                                     SW_GUARDED_BY( _mutexCache ); ///< 이 실행이 공급자까지 간 요청(백엔드 교체로 메모리 캐시를 비워도 남는다) — `_requestLogPath` 가 있을 때만 모은다
+        string                                                           _requestLogPath;              ///< `-shader-request-log` 의 파일. 비면 기록하지 않는다. 기동(`initialize`)에서만 쓰고 로드 워커는 읽기만 한다
         Subscription                                                     _configReloadedSubscription;  ///< 설정 다시 읽기 알림 구독(`onConfigReloaded`)
         atomic<uint64>                                                   _memoryHitCount;              ///< `getMemoryHitCount` — 로드 워커가 함께 센다
         atomic<uint64>                                                   _providerLoadCount;           ///< `getProviderLoadCount` — 로드 워커가 함께 센다
