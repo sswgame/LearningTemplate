@@ -4,6 +4,7 @@
 
 #include "Core/Network/Transport/NativeSocketAddress.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <WinSock2.h>
@@ -38,6 +39,21 @@ namespace sw
             using SocketLength                           = socklen_t;
             static constexpr NativeSocket kNativeInvalid = -1;
             static bool                   isWouldBlock() { return errno == EAGAIN || errno == EWOULDBLOCK; }
+
+            /** @brief `poll` 을 신호(EINTR)에 끊기면 남은 시한으로 다시 부릅니다. @p timeoutMilli 가 음수면 시한 없음이다. */
+            static int32 pollUntilDeadline( pollfd* pEntries, nfds_t count, int32 timeoutMilli )
+            {
+                const Deadline deadline = Deadline::afterMilliseconds( timeoutMilli );
+                int32          wait     = timeoutMilli;
+                for ( ;; )
+                {
+                    const int32 result = poll( pEntries, count, wait );
+                    if ( result >= 0 || errno != EINTR )
+                        return result;
+                    if ( timeoutMilli >= 0 )
+                        wait = PlatformSocketUtil::toWaitMilliseconds( deadline.getRemainingMilliseconds() );
+                }
+            }
 #else
     #error "Unsupported platform"
 #endif
@@ -259,7 +275,7 @@ namespace sw
         pollfd pollEntry{};
         pollEntry.fd     = PlatformSocketUtilInternal::toNative( socketHandle );
         pollEntry.events = POLLIN;
-        return poll( &pollEntry, 1, timeoutMilli ) > 0 && ( pollEntry.revents & ( POLLIN | POLLERR | POLLHUP ) ) != 0;
+        return PlatformSocketUtilInternal::pollUntilDeadline( &pollEntry, 1, timeoutMilli ) > 0 && ( pollEntry.revents & ( POLLIN | POLLERR | POLLHUP ) ) != 0;
 #else
     #error "Unsupported platform"
 #endif
@@ -295,7 +311,7 @@ namespace sw
             arrEntry[index].fd     = PlatformSocketUtilInternal::toNative( pSocketHandles[index] );
             arrEntry[index].events = POLLIN;
         }
-        if ( poll( arrEntry, static_cast<nfds_t>( count ), timeoutMilli ) <= 0 )
+        if ( PlatformSocketUtilInternal::pollUntilDeadline( arrEntry, static_cast<nfds_t>( count ), timeoutMilli ) <= 0 )
             return false;
         for ( int32 index = 0; index < count; ++index )
         {
@@ -312,20 +328,28 @@ namespace sw
     {
         if ( initialize() == false )
             return kInvalidSocket;
-        const PlatformSocketUtilInternal::NativeSocket native = socket( NativeSocketAddress::toNativeFamily( to._family ), SOCK_STREAM, IPPROTO_TCP );
+#if defined( SW_PLATFORM_WINDOWS )
+        constexpr int32 kStreamType = SOCK_STREAM;
+#elif defined( SW_PLATFORM_POSIX )
+        constexpr int32 kStreamType = SOCK_STREAM | SOCK_CLOEXEC; // 자식 프로세스(exec)에 소켓을 물려주지 않는다
+#else
+    #error "Unsupported platform"
+#endif
+        const PlatformSocketUtilInternal::NativeSocket native = socket( NativeSocketAddress::toNativeFamily( to._family ), kStreamType, IPPROTO_TCP );
         if ( native == PlatformSocketUtilInternal::kNativeInvalid )
             return kInvalidSocket;
         const uint64 handle = static_cast<uint64>( native );
 #if defined( SW_PLATFORM_WINDOWS )
         u_long     nonBlocking = 1;
-        const bool bOk         = ioctlsocket( native, static_cast<int32>( FIONBIO ), &nonBlocking ) == 0;
-        const auto isPending   = []()
+        const bool bOk         = ioctlsocket( native, static_cast<int32>( FIONBIO ), &nonBlocking ) == 0 &&
+                         SetHandleInformation( reinterpret_cast<HANDLE>( native ), HANDLE_FLAG_INHERIT, 0 ) != 0; // 자식 프로세스에 물려주지 않는다
+        const auto isPending = []()
         { return WSAGetLastError() == WSAEWOULDBLOCK; };
 #elif defined( SW_PLATFORM_POSIX )
         const int32 flags     = fcntl( native, F_GETFL, 0 );
         const bool  bOk       = flags >= 0 && fcntl( native, F_SETFL, flags | O_NONBLOCK ) == 0;
         const auto  isPending = []()
-        { return errno == EINPROGRESS; };
+        { return errno == EINPROGRESS || errno == EINTR; }; // 신호에 끊긴 connect 도 뒤에서 이어진다 — 쓰기 가능을 기다린다
 #else
     #error "Unsupported platform"
 #endif
@@ -388,10 +412,16 @@ namespace sw
         pollfd pollEntry{};
         pollEntry.fd     = PlatformSocketUtilInternal::toNative( socketHandle );
         pollEntry.events = POLLOUT;
-        return poll( &pollEntry, 1, timeoutMilli ) > 0 && ( pollEntry.revents & ( POLLOUT | POLLERR | POLLHUP ) ) != 0;
+        return PlatformSocketUtilInternal::pollUntilDeadline( &pollEntry, 1, timeoutMilli ) > 0 && ( pollEntry.revents & ( POLLOUT | POLLERR | POLLHUP ) ) != 0;
 #else
     #error "Unsupported platform"
 #endif
+    }
+
+    int32 PlatformSocketUtil::toWaitMilliseconds( int64 milliseconds )
+    {
+        constexpr int64 kMaxWait = std::numeric_limits<int32>::max();
+        return static_cast<int32>( milliseconds <= 0 ? 0 : ( milliseconds > kMaxWait ? kMaxWait : milliseconds ) );
     }
 
     bool PlatformSocketUtil::resolveAddress( string_view hostAndPort, uint16 defaultPort, NetAddress& outAddress )

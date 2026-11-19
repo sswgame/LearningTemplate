@@ -71,12 +71,8 @@ namespace sw
                 return text;
             }
 
-            /** @brief 남은 시한(ms)입니다. 지났으면 0 이다. */
-            static int32 remainingMilliseconds( int64 deadlineNanoseconds )
-            {
-                const int64 remaining = ( deadlineNanoseconds - MonotonicClock::nowNanoseconds() ) / constant::time::kNanosecondsPerMillisecond;
-                return remaining > 0 ? static_cast<int32>( remaining ) : 0;
-            }
+            /** @brief 남은 시한을 기다림 함수가 받는 ms 로 자릅니다(지났으면 0). */
+            static int32 remainingMilliseconds( const Deadline& deadline ) { return PlatformSocketUtil::toWaitMilliseconds( deadline.getRemainingMilliseconds() ); }
 
             /**
              * @brief chunked 본문(@p bytes — 머리말 뒤)을 풉니다. 머리 줄 · 트레일러는 @p maxLineBytes, 본문 합은 @p maxBodyBytes 까지다.
@@ -301,8 +297,8 @@ namespace sw
         string target;
         if ( splitURL( request._url, hostAndPort, target ) == false )
             return Internal::fail( "malformed URL (http:// only, printable ASCII, no userinfo or fragment)" );
-        const int64 deadline = MonotonicClock::nowNanoseconds() + int64{ _settings._requestTimeoutMs } * constant::time::kNanosecondsPerMillisecond;
-        NetAddress  address{};
+        const Deadline deadline = Deadline::afterMilliseconds( _settings._requestTimeoutMs );
+        NetAddress     address{};
         if ( PlatformSocketUtil::resolveAddress( hostAndPort, Internal::kDefaultPort, address ) == false )
             return Internal::fail( "could not resolve the host" );
         const uint64 socketHandle = PlatformSocketUtil::connectTCPSocket( address, Internal::remainingMilliseconds( deadline ) );

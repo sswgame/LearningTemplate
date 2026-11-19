@@ -97,5 +97,10 @@ namespace sw
         static SocketReceiveResult receiveStream( uint64 socketHandle, uint8* pBuffer, int32 bufferSize, int32& outSize );
         /** @brief 보낼 자리가 생기거나 @p timeoutMilli 가 지날 때까지 잠듭니다. 보낼 수 있으면(오류 · 끊김 포함 — 다음 호출이 알린다) true 입니다. */
         static bool waitWritable( uint64 socketHandle, int32 timeoutMilli );
+        /**
+         * @brief 남은 시한(ms, `Deadline::getRemainingMilliseconds`)을 기다림 함수가 받는 값으로 자릅니다 — 0 아래는 0, int32 위는 int32 최대.
+         * @details 그냥 int32 로 바꾸면 2^31 ms 위가 음수가 되고 `poll` 의 음수는 시한 없음이라 영원히 기다린다.
+         */
+        [[nodiscard]] static int32 toWaitMilliseconds( int64 milliseconds );
     };
 } // namespace sw

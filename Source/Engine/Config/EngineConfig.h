@@ -158,8 +158,8 @@ namespace sw
         uint32 _maxResponseHeaderBytes{}; ///< 상태 줄 + 헤더(빈 줄까지)의 바이트 상한 — chunked 의 구간 머리 · 트레일러에도 같은 상한
         PROPERTY( Min = 1 )
         uint32 _maxResponseBodyBytes{}; ///< 본문 바이트 상한(Content-Length · chunked 합 · 닫힘까지 모두)
-        PROPERTY( Min = 1, Units = ms )
-        uint32 _requestTimeoutMs{}; ///< 잇기부터 응답 끝까지의 시한(요청 하나)
+        PROPERTY( Min = 1, Max = 600000, Units = ms )
+        uint32 _requestTimeoutMs{}; ///< 잇기부터 응답 끝까지의 시한(요청 하나, 10 분까지 — 기다림 함수의 int32 ms 안)
     };
 } // namespace sw
 
