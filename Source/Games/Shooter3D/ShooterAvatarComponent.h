@@ -36,8 +36,11 @@ namespace sw
      *          [`_minPlayRate`, `_maxPlayRate`] 로 자른 값을 애니메이터 재생 속도로 씁니다. 범위를 넘는 몫은 같은 오브젝트의 `PoseModifierComponent` 리그
      *          (`rigs/player_body.rig.xml`)의 보폭 워핑 노드(`_strideNode`)에 `stride_scale` · 모델 공간 이동 방향으로 넣습니다. 노드가 없으면 오류입니다.
      *          왼손을 총에 붙이는 손 IK · 맞은 부위 · 래그돌은 PoseModifier · 물리 쪽이 들어오면 그 자리(무기 소켓 `MainHand.SupportHand`)를 씁니다.
+     *          **Main 모드(게임 스레드에서 차례로)로 돈다.** 플레이어(남의 오브젝트)의 상태를 그 프레임 값 그대로 많이 읽는데, 플레이어 오브젝트도 이 그룹에
+     *          틱 항목이 있어 병렬 틱의 남 읽기 검사(`GameObject::assertParallelTickRead`)에 걸린다. Main 모드는 그룹의 병렬 일이 모두 끝난 뒤라 같은 순간
+     *          쓰는 워커가 없다 — 사본으로 바꾸면 몸이 한 프레임 늦게 따라간다. 플레이어마다 하나라 게임 스레드 비용은 작다(언리얼 게임 스레드 틱과 같은 자리).
      */
-    REFLECT( Category = "Shooter3D", DisplayName = "Shooter Avatar", Tooltip = "Visible player body: follows the player and drives the animator from its movement and firing" )
+    REFLECT( TickMode = Main, Category = "Shooter3D", DisplayName = "Shooter Avatar", Tooltip = "Visible player body: follows the player and drives the animator from its movement and firing" )
     class ShooterAvatarComponent : public Component
     {
     public:
