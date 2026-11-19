@@ -401,9 +401,10 @@ namespace sw
         ScopedOpenGLContext contextScope( _pDevice );
         _pDevice->_recordingState._geometry.remove( buffer );
 
-        uint32 glName{ 0 };
-        if ( _pDevice->_gpuBuffers.take( buffer, glName ) == false )
+        OpenGLRHIDevice::OpenGLBufferRecord taken{};
+        if ( _pDevice->_gpuBuffers.take( buffer, taken ) == false )
             return;
+        const uint32 glName = taken._glName;
 
         {
             // 이 버퍼의 번호를 모두 놓는다(다섯 백엔드 같은 계약 — `IRHIResourceFactory::registerBindlessTexture`). 예전에는 값만 지우고 번호를 돌려받지 않아 칸이 샜다.
@@ -954,18 +955,17 @@ namespace sw
 
     RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
     {
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
         if ( slice._buffer == 0 || slice._size == 0 )
             return kInvalidDescriptorIndex;
-        ScopedOpenGLContext contextScope( _pDevice );
-        if ( _pDevice->resolveGlBuffer( slice._buffer ) == 0 )
-            return kInvalidDescriptorIndex;
-        // glBindBufferRange 의 오프셋은 GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT 의 배수여야 한다(데스크톱 · 모바일 흔히 16 ~ 256). 구간은 256 B 배수라 그 안이면 맞는다.
-        GLint offsetAlignment{ 0 };
-        glGetIntegerv( GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &offsetAlignment );
-        if ( offsetAlignment <= 0 || slice._offset % static_cast<uint32>( offsetAlignment ) != 0 )
+        // glBindBufferRange 의 오프셋은 GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT(초기화가 256 의 약수임을 확인했다)의 배수여야 하고, 구간은 버퍼 안이어야 한다.
+        const uint32 bufferBytes = _pDevice->resolveGlBufferSize( slice._buffer );
+        const bool   bBadSlice   = bufferBytes == 0 || _pDevice->_uniformBufferOffsetAlignment == 0 || slice._offset % _pDevice->_uniformBufferOffsetAlignment != 0 ||
+                               static_cast<uint64>( slice._offset ) + slice._size > bufferBytes;
+        if ( bBadSlice )
         {
-            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.BadConstantBufferSlice", "registerBindlessBufferSRV: slice offset %# is not a multiple of GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT (%#)",
-                             slice._offset, offsetAlignment );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.BadConstantBufferSlice", "registerBindlessBufferSRV: slice (offset %#, size %#) is not an aligned slice inside the buffer (%# bytes, alignment %#)",
+                             slice._offset, slice._size, bufferBytes, _pDevice->_uniformBufferOffsetAlignment );
             return kInvalidDescriptorIndex;
         }
         OpenGLRHIDevice::BindlessResourceRecord record{};

@@ -353,12 +353,19 @@ namespace sw
         if ( pRecord == nullptr || pData == nullptr || size == 0 )
             return;
         _pDevice->requireNoOpenRenderPassForUpload( "WebGPU.updateConstantBuffer(slice)" );
-        // 큐 쓰기 크기는 4 의 배수다 — 구간 안에서 0 으로 채운 사본을 올린다(구간 오프셋은 256 배수라 4 배수다).
-        const uint32  writeBytes  = MathUtil::min( size, slice._size );
-        const uint64  alignedSize = MathUtil::min( MathUtil::align( static_cast<uint64>( writeBytes ), WebGPURHIResourceFactoryInternal::kCopyAlignment ), static_cast<uint64>( slice._size ) );
-        vector<uint8> padded( static_cast<size_t>( alignedSize ), 0 );
-        Memory::copy( padded.data(), pData, MathUtil::min<size_t>( writeBytes, padded.size() ) );
-        wgpuQueueWriteBuffer( _pDevice->_queue, pRecord->_buffer, slice._offset, padded.data(), padded.size() );
+        // 큐 쓰기 크기는 4 의 배수다 — 4 B 배수 앞부분은 원본에서 바로 쓰고, 남는 꼬리(머티리얼 바이트는 256 B 정렬이라 보통 없다)만 스택의 0 채운 4 B 로 쓴다(구간 오프셋은 256 배수).
+        constexpr uint32 kCopyBytes = static_cast<uint32>( WebGPURHIResourceFactoryInternal::kCopyAlignment );
+        const uint32     writeBytes = MathUtil::min( size, slice._size );
+        const uint32     bodyBytes  = writeBytes - writeBytes % kCopyBytes;
+        const uint32     tailBytes  = writeBytes - bodyBytes;
+        if ( bodyBytes != 0 )
+            wgpuQueueWriteBuffer( _pDevice->_queue, pRecord->_buffer, slice._offset, pData, bodyBytes );
+        if ( tailBytes != 0 && bodyBytes + kCopyBytes <= slice._size )
+        {
+            uint8 arrTail[kCopyBytes]{};
+            Memory::copy( arrTail, static_cast<const uint8*>( pData ) + bodyBytes, tailBytes );
+            wgpuQueueWriteBuffer( _pDevice->_queue, pRecord->_buffer, static_cast<uint64>( slice._offset ) + bodyBytes, arrTail, kCopyBytes );
+        }
     }
 
     RHIBufferHandle WebGPURHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )

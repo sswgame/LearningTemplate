@@ -205,6 +205,7 @@ namespace sw
         }
         const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
         visitor( context.get() );
+        _nativeContextSerial.fetch_add( 1u ); // 바깥 코드가 상수 버퍼 슬롯을 바꿨을 수 있다 — 렌더 스레드의 그림자가 다음 바인딩에서 버린다
     }
 
     bool D3D11RHIDevice::ensureRootConstantCb( D3D11RecordingState& state )
@@ -630,8 +631,15 @@ namespace sw
             D3D11_FEATURE_DATA_D3D11_OPTIONS options{};
             if ( SUCCEEDED( _device->CheckFeatureSupport( D3D11_FEATURE_D3D11_OPTIONS, &options, sizeof( options ) ) ) )
                 _bConstantBufferSlices = options.ConstantBufferOffsetting != FALSE && options.ConstantBufferPartialUpdate != FALSE ? SW_TRUE : SW_FALSE;
+            // 필수 능력이다 — 없으면 머티리얼마다 매 프레임 구간을 못 받아 오류가 쌓이므로 장치를 세우지 않는다(폴백 없음).
             if ( _bConstantBufferSlices == SW_FALSE )
-                SW_LOG_ERROR_ID( "D3D11.NoConstantBufferSlices", "D3D11.1 ConstantBufferOffsetting / ConstantBufferPartialUpdate are not supported - material constant buffer pages are not created" );
+            {
+                SW_LOG_ERROR_ID( "D3D11.NoConstantBufferSlices", "D3D11.1 ConstantBufferOffsetting / ConstantBufferPartialUpdate are not supported - the DX11 backend does not start" );
+                return false;
+            }
+            const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
+            if ( isHrSuccess( context->QueryInterface( IID_PPV_ARGS( _immediateContext1.GetAddressOf() ) ), "QueryInterface (immediate ID3D11DeviceContext1)" ) == false )
+                return false;
         }
 
         _swapChain.acquireNextImage( _device.Get() );
@@ -713,6 +721,7 @@ namespace sw
         _transferQueue.retireAll( []( TransferFence& probe )
         { probe._query.Reset(); } );
         _listFreeTransferQuery.clear();
+        _immediateContext1.Reset();
         _immediateContext.shutdown();
         _memoryAdapter.Reset();
         _device.Reset();
@@ -745,6 +754,7 @@ namespace sw
         {
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             context->ClearState();
+            _recordingState._constantBuffers.invalidate();
         }
         _windowSwapChains.remove( static_cast<D3D11RHISwapChain&>( swapChain ) );
     }
@@ -779,6 +789,7 @@ namespace sw
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             context->ClearState();
             context->Flush();
+            _recordingState._constantBuffers.invalidate();
         }
         if ( swapChain.resize( width, height ) == false )
             return;
@@ -1270,6 +1281,7 @@ namespace sw
         // 그대로 끼워진다. DX12/Vulkan 이 세그먼트를 잘라 얻는 순서 보장을 공짜로 갖는다.
         const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
         context->ExecuteCommandList( pList, FALSE );
+        _recordingState._constantBuffers.invalidate(); // RestoreContextState FALSE 가 즉시 컨텍스트 상태를 지웠다
 
         // 남은 차이는 제출 시점뿐이다. Immediate Context 는 커맨드를 모아뒀다가 드라이버가 정한
         // 때(보통 Present)에 GPU 로 보내므로, 오류가 나면 어느 리스트 때문인지 알 수 없다.

@@ -93,22 +93,30 @@ namespace sw
 
     void D3D11RHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
     {
-        const bool bInvalidSliceUpdate = slice._buffer == 0 || pData == nullptr || size == 0 || _pDevice->_immediateContext.isValid() == false;
+        const bool bInvalidSliceUpdate = slice._buffer == 0 || pData == nullptr || size == 0 || _pDevice->_immediateContext1 == nullptr;
         if ( bInvalidSliceUpdate )
             return;
         ID3D11Buffer* pResource = _pDevice->resolveBuffer( slice._buffer );
         if ( pResource == nullptr )
             return;
-        // 부분 갱신 상자는 16 B 상수 단위다 — 구간(256 B 배수) 안에서 16 B 로 올린 사본을 쓴다.
-        const uint32  writeBytes   = MathUtil::min( size, slice._size );
-        const uint32  alignedBytes = MathUtil::min( MathUtil::align( writeBytes, D3D11RHIDevice::kShaderConstantBytes ), slice._size );
-        vector<uint8> padded( alignedBytes, 0 );
-        Memory::copy( padded.data(), pData, writeBytes );
-        const D3D11_BOX                              box{ slice._offset, 0, 0, slice._offset + alignedBytes, 1, 1 };
-        const D3D11ImmediateContext::ScopedLock      context = _pDevice->_immediateContext.lock();
-        Microsoft::WRL::ComPtr<ID3D11DeviceContext1> context1;
-        if ( isHrSuccess( context->QueryInterface( IID_PPV_ARGS( context1.GetAddressOf() ) ), "QueryInterface (ID3D11DeviceContext1)" ) )
-            context1->UpdateSubresource1( pResource, 0, &box, padded.data(), 0, 0, 0 );
+        // 부분 갱신 상자는 16 B 상수 단위다 — 16 B 배수 앞부분은 원본에서 바로 쓰고, 남는 꼬리(머티리얼 바이트는 256 B 정렬이라 보통 없다)만 스택의 0 채운 상수 하나로 쓴다.
+        constexpr uint32 kConstantBytes = D3D11RHIDevice::kShaderConstantBytes;
+        const uint32     writeBytes     = MathUtil::min( size, slice._size );
+        const uint32     bodyBytes      = writeBytes - writeBytes % kConstantBytes;
+        const uint32     tailBytes      = writeBytes - bodyBytes;
+        uint8            arrTail[kConstantBytes]{};
+        Memory::copy( arrTail, static_cast<const uint8*>( pData ) + bodyBytes, tailBytes );
+        const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
+        if ( bodyBytes != 0 )
+        {
+            const D3D11_BOX box{ slice._offset, 0, 0, slice._offset + bodyBytes, 1, 1 };
+            _pDevice->_immediateContext1->UpdateSubresource1( pResource, 0, &box, pData, 0, 0, 0 );
+        }
+        if ( tailBytes != 0 && bodyBytes + kConstantBytes <= slice._size )
+        {
+            const D3D11_BOX box{ slice._offset + bodyBytes, 0, 0, slice._offset + bodyBytes + kConstantBytes, 1, 1 };
+            _pDevice->_immediateContext1->UpdateSubresource1( pResource, 0, &box, arrTail, 0, 0, 0 );
+        }
     }
 
     RHIBufferHandle D3D11RHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )

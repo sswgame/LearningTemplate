@@ -56,6 +56,31 @@ namespace sw
      *       없는 상태 머신이라 실제 상태가 하나뿐이다. 기준은 "리스트마다 하나" 가 아니라
      *       **"기록 스트림마다 하나"** 다.
      */
+    /**
+     * @struct D3D11ConstantBufferBindings
+     * @brief 스테이지 · 슬롯마다 지금 건 상수 버퍼와 첫 상수입니다(감사 R-4 — 페이지 구간 바인딩의 그림자).
+     * @details 같은 (버퍼, 첫 상수)면 다시 걸지 않고, 같은 버퍼를 오프셋만 바꿔 걸 때만 빈 칸을 먼저 건다(`D3D11RHICommandContext::setConstantBuffer`).
+     *          버퍼가 건 동안은 컨텍스트가 참조를 쥐어 주소가 다른 버퍼에 다시 쓰이지 않으므로 주소 비교로 충분하다.
+     *          컨텍스트 상태가 지워지는 자리(`ClearState` · `ExecuteCommandList( FALSE )` · `FinishCommandList( FALSE )`)에서 `invalidate` 한다 — 빈 칸(nullptr)은 "모름" 이라 늘 건다.
+     */
+    struct D3D11ConstantBufferBindings
+    {
+        static constexpr uint32 kStageCount  = 5;   ///< VS · PS · CS · HS · DS
+        static constexpr UINT   kWholeBuffer = ~0u; ///< 첫 상수 칸의 "버퍼 전체(`*SetConstantBuffers`)" 값
+
+        ID3D11Buffer* _arrBuffer[kStageCount][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
+        UINT          _arrFirstConstant[kStageCount][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
+        uint32        _nativeContextSerialSeen{ 0 }; ///< 즉시 컨텍스트 그림자가 마지막으로 본 `D3D11RHIDevice::_nativeContextSerial`(바깥 코드가 컨텍스트를 만지면 그림자를 버린다)
+
+        /** @brief 모든 칸을 "모름" 으로 둡니다. */
+        void invalidate()
+        {
+            const uint32 seen        = _nativeContextSerialSeen;
+            *this                    = D3D11ConstantBufferBindings{};
+            _nativeContextSerialSeen = seen;
+        }
+    };
+
     struct D3D11RecordingState
     {
         /**
@@ -86,6 +111,8 @@ namespace sw
          *          `ConditionalClearShaderResource` 에 해당한다).
          */
         RHITextureHandle _arrPixelSRVTexture[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
+        /// @brief 스테이지 · 슬롯마다 건 상수 버퍼의 그림자입니다(`D3D11ConstantBufferBindings`).
+        D3D11ConstantBufferBindings _constantBuffers;
     };
 } // namespace sw
 
@@ -592,6 +619,10 @@ namespace sw
         uint8         _bTimestampFrameOpen;
         /// @brief 드라이버가 커맨드 리스트를 네이티브로 지원하면 SW_TRUE 입니다. 병렬 기록 능력을 판단하는 근거입니다.
         uint8 _bDriverCommandLists;
+        /// @brief 바깥 코드(`withNativeContext` — 에디터 등)가 즉시 컨텍스트를 받은 횟수입니다. 즉시 컨텍스트의 상수 버퍼 그림자가 이 값이 바뀌면 버린다(어느 스레드든 부른다).
+        mutable atomic<uint32> _nativeContextSerial{ 0 };
+        /// @brief 즉시 컨텍스트의 D3D11.1 인터페이스입니다(구간 부분 갱신 `UpdateSubresource1`). 초기화가 한 번 받고, 쓰는 쪽은 `_immediateContext.lock()` 을 쥔다.
+        Microsoft::WRL::ComPtr<ID3D11DeviceContext1> _immediateContext1;
         /// @brief 셰이더 상수 하나(float4)의 바이트입니다. `*SetConstantBuffers1` 의 첫 상수 · 상수 수와 부분 갱신 상자의 단위다.
         static constexpr uint32 kShaderConstantBytes = 4u * sizeof( float );
         /// @brief D3D11.1 상수 버퍼 구간(`*SetConstantBuffers1` 오프셋 · `UpdateSubresource1` 부분 갱신)을 드라이버가 받으면 SW_TRUE 입니다. 아니면 페이지를 만들지 않는다(감사 R-4).
