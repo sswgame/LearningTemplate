@@ -19,6 +19,7 @@
 		</entry>
 		<entry key="Close" source="Close" context="TextWidget._text">
 			<origins>
+				<item>common/ui/shop/shop.ui.xml</item>
 				<item>engine/ui/debughud.ui.xml</item>
 				<item>engine/ui/options.ui.xml</item>
 			</origins>
@@ -2337,6 +2338,81 @@
 		<entry key="Sections" source="Sections" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/debughud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Shop" source="Shop" context="TextWidget._text">
+			<origins>
+				<item>common/ui/shop/shop.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Shop.Bought" source="Bought.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.Busy" source="A purchase is still in progress.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.ConfirmAccept" source="Buy">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.ConfirmCancel" source="Cancel">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.ConfirmMessage" source="Buy {item} for {price} {currency}?">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.ConfirmTitle" source="Confirm Purchase">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.LimitReached" source="You cannot buy this any more.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.NoRoom" source="Your bag is full.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.NotEnoughMoney" source="Not enough money.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.OutOfStock" source="Sold out.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.Purchasing" source="Purchasing...">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.Rejected" source="This cannot be bought now.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.ServerError" source="Could not reach the store. The wallet shows what the server holds.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.Unverified" source="The purchase reply did not match; your wallet was refreshed.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
 			</origins>
 		</entry>
 		<entry key="Show HUD (Ctrl+F3)" source="Show HUD (Ctrl+F3)" context="TextWidget._text">

@@ -60,6 +60,7 @@
         "ScrollPanel",
         "ServerPickerScreen",
         "SettingsConfirmViewModel",
+        "ShopScreen",
         "SliderWidget",
         "StressTestCombatComponent",
         "StressTestMoverComponent",
