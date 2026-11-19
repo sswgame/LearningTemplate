@@ -110,9 +110,9 @@ SW_TEST_CASE( TemporalMathTest, HistogramPerBinTerms )
 {
     SW_EXPECT_NEAR( 10.0f, TemporalMath::computeHistogramLowCount( 100.0f, 10.0f ), 1.0e-5f );
     SW_EXPECT_NEAR( 90.0f, TemporalMath::computeHistogramHighCount( 100.0f, 10.0f, 90.0f ), 1.0e-5f );
-    SW_EXPECT_NEAR( 60.0f, TemporalMath::computeHistogramHighCount( 100.0f, 60.0f, 10.0f ), 1.0e-5f );  // 뒤집힌 컷은 점
-    SW_EXPECT_NEAR( 100.0f, TemporalMath::computeHistogramHighCount( 100.0f, 0.0f, 150.0f ), 1.0e-5f ); // 100 % 를 넘지 않는다
-    SW_EXPECT_NEAR( 3.0f, TemporalMath::computeHistogramKeptCount( 8.0f, 12.0f, 10.0f, 13.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR( 60.0f, TemporalMath::computeHistogramHighCount( 100.0f, 60.0f, 10.0f ), 1.0e-5f );     // 뒤집힌 컷은 점
+    SW_EXPECT_NEAR( 100.0f, TemporalMath::computeHistogramHighCount( 100.0f, 0.0f, 150.0f ), 1.0e-5f );    // 100 % 를 넘지 않는다
+    SW_EXPECT_NEAR( 2.0f, TemporalMath::computeHistogramKeptCount( 8.0f, 12.0f, 10.0f, 13.0f ), 1.0e-6f ); // 칸 [8, 12) 중 컷 [10, 13) 안은 [10, 12) — 걸친 2 만 센다
     SW_EXPECT_NEAR( 0.0f, TemporalMath::computeHistogramKeptCount( 0.0f, 5.0f, 10.0f, 13.0f ), 1.0e-6f );
     SW_EXPECT_NEAR( 0.5f, TemporalMath::computeHistogramBinCenterLog( 0.0f, 0.0f, 4.0f, 4.0f ), 1.0e-6f );
     SW_EXPECT_NEAR( 3.5f, TemporalMath::computeHistogramBinCenterLog( 3.0f, 0.0f, 4.0f, 4.0f ), 1.0e-6f );
