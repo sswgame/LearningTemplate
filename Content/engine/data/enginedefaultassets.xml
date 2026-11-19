@@ -76,7 +76,7 @@
                      _shaderAutoExposure="engine/shaders/auto_exposure.hlsl"
                      _shaderUpscale="engine/shaders/fsr1.hlsl"
                      _shaderScreenRotation="engine/shaders/screen_rotation.hlsl"
-                     _shaderOcclusionTiles="engine/shaders/occlusion_tiles.hlsl"
+                     _shaderHZBBuild="engine/shaders/hzb_build.hlsl"
                      _shaderDeferredTileClassify="engine/shaders/deferred_tile_classify.hlsl"
                      _shaderSSAO="engine/shaders/ssao.hlsl"
                      _shaderContactShadow="engine/shaders/contact_shadow.hlsl"

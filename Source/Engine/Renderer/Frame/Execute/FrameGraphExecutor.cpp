@@ -1,6 +1,6 @@
 /**
  * @file FrameGraphExecutor.cpp
- * @brief 프레임 패스 종류마다의 실행입니다 — 깊이 히스토리 · 가림 타일 · GPU 입자 · 인스턴스 애니메이션 · 메시 모프 · 메시 스킨 · GPU 컬링(+ 정렬) · 라이트 그리드 ·
+ * @brief 프레임 패스 종류마다의 실행입니다 — 깊이 히스토리 · HZB · GPU 입자 · 인스턴스 애니메이션 · 메시 모프 · 메시 스킨 · GPU 컬링(+ 정렬 · 2 단계 가림) · 라이트 그리드 ·
  *        볼륨 안개 · 실시간 프로브 · 화면 마커 투영.
  * @details 순서는 여기에 없다. 파이프라인 XML 의 `_listFramePass` 가 자원(`_listResource`)의 읽기 · 쓰기로 선언하고 프레임 그래프가 정한다
  *          (애니메이션 · 모프 · 스킨이 컬링보다 앞 — 컬링이 이번 프레임 바운드로 판정한다 — 은 `InstanceBuffer` · `DeformVertices` 의 쓰기 · 읽기다).
@@ -15,6 +15,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
@@ -50,12 +51,23 @@ namespace sw
         if ( _transparentRankPlaceholder.ensureCapacity( _pDevice, sizeof( uint32 ), 1, RHIBufferUsage::ShaderResource, true, false, &kZeroRank ) == false )
             SW_LOG_ERROR_ID( "FrameGraphExecutor.FailedCreateTransparentRank", "Failed to create the transparent rank placeholder - extra views draw transparency in the main view order" );
         _occlusion.ensurePlaceholder( _pDevice );
+        // 가림 판정 설정은 필수다 — 없거나 틀리면 기본값으로 대신하지 않고 멈춘다(설정 칸이 문턱의 정본이다).
+        if ( ConfigManager::readConfigFileInto( OcclusionCullingConfig::kConfigFile, _occlusionConfig ) != ConfigReadResult::Loaded )
+            SW_FATAL( "%# is missing or unreadable - the occlusion culling settings have no default (the log above names the key)", OcclusionCullingConfig::kConfigFile );
+        const string reason = _occlusionConfig.validate();
+        if ( reason.empty() == false )
+            SW_FATAL( "%# is invalid: %#", OcclusionCullingConfig::kConfigFile, reason );
+        if ( _lateCullCb.isValid() == false && _lateCullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) ) == false )
+            SW_LOG_ERROR_ID( "FrameGraphExecutor.FailedCreateLateCullCb", "Failed to create the late occlusion cull constant buffer - two-phase occlusion runs only its first phase" );
     }
 
     void FrameGraphExecutor::releaseResources()
     {
         _transparentRankPlaceholder.release( _pDevice );
         _occlusion.release( _pDevice );
+        _lateCullCb.release( _pDevice );
+        _occludedOrders.release( _pDevice );
+        _bLatePhasePending = 0;
         _state._gpuMessages.shutdown();
         _state._vfxMeshReadback.release( _pDevice );
     }
@@ -68,11 +80,15 @@ namespace sw
         // 이번 프레임의 출력 선택(`gpu.inspect` · `gpu.thread`)과 로그 예산 — 프레임의 기록보다 먼저 큐에 들어간다.
         const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
         _state._gpuMessages.updateControl( pInspector != nullptr ? pInspector->getSelection() : GPUMessageSelection{}, _state._settings._diagnostics._gpuMessageLogBudget );
-        // 가림 타일 표시는 OcclusionTiles 패스가 다시 켠다. 패스가 없는 파이프라인에서 지난 파이프라인의 표시가 남아 컬링이 낡은 타일을 읽지 않게 비운다.
+        // HZB · 가림 타일 표시는 짓는 쪽(HZBBuild 패스 · 프리패스 뒤 · 반사 앞)이 다시 켠다. 패스가 없는 파이프라인에서 지난 프레임의 표시가 남아 컬링이 낡은 피라미드를 읽지 않게 비운다.
+        _bLatePhasePending                         = 0;
+        _bLatePhaseRan                             = 0;
         _state._mainView._bOcclusionTilesThisFrame = SW_FALSE;
+        _state._mainView._bHZBValid                = SW_FALSE;
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             pView->_bOcclusionTilesThisFrame = SW_FALSE;
+            pView->_bHZBValid                = SW_FALSE;
         }
     }
 
@@ -86,9 +102,9 @@ namespace sw
                 recordDepthHistories();
                 break;
             }
-            case RenderPassKind::OcclusionTiles:
+            case RenderPassKind::HZBBuild:
             {
-                recordOcclusionTiles();
+                recordFrameHZBs();
                 break;
             }
             case RenderPassKind::VFXSimulation:
@@ -516,6 +532,12 @@ namespace sw
             bAllViewsCulled = enqueueCullView( _state._localShadowCullSlotBase + lightIndex, _state._listLocalShadowCullInput[lightIndex], nullptr ) && bAllViewsCulled;
         }
 
+        // 2 단계 가림의 차례 표시 — 주 시점 앞 단계가 쓰고 프리패스 뒤 뒤 단계가 읽는다. 차례 수만큼(만들지 못하면 한 단계로 돈다 — dispatchCullView 가 본다).
+        _lateInstanceCount = instanceCount;
+        if ( isTwoPhaseOcclusionEnabled() &&
+             _occludedOrders.ensureCapacity( _pDevice, sizeof( uint32 ), MathUtil::max( instanceCount, 1u ), RHIBufferUsage::Structured | RHIBufferUsage::UnorderedAccess, false, true, nullptr ) )
+            _bufferTransitions.add( _occludedOrders._buffer, RHIBufferState::UnorderedAccess );
+
         // 2) 모든 슬롯의 버퍼를 UAV 로 — 한 번에 낸다. 간접 인자는 직전 프레임에 IndirectArgument 로, 가시 목록은 ShaderResource 로 두고 끝냈다.
         //    슬롯마다 버퍼가 따로라 앞 슬롯의 디스패치와 뒤 슬롯의 전이 사이에 지켜야 할 순서가 없다.
         for ( const CullJob& job : _listCullJob )
@@ -573,6 +595,12 @@ namespace sw
         return view._transientPool.find( attachmentNames()._sceneDepth )._texture != 0;
     }
 
+    bool FrameGraphExecutor::canCopySceneDepth( const FrameViewTarget& view ) const
+    {
+        const bool bHasTarget = view._depthHistory != 0 && view._depthHistoryUAV != kInvalidDescriptorIndex && _psoManager.getEnginePSO( RenderPassKind::DepthHistory ) != 0;
+        return bHasTarget && view._transientPool.find( attachmentNames()._sceneDepth )._texture != 0;
+    }
+
     void FrameGraphExecutor::recordDepthHistories()
     {
         if ( _pCmd == nullptr || _pDevice == nullptr )
@@ -585,19 +613,30 @@ namespace sw
         }
     }
 
-    void FrameGraphExecutor::recordOcclusionTiles()
+    void FrameGraphExecutor::recordFrameHZBs()
     {
         if ( _pCmd == nullptr || _pDevice == nullptr )
             return;
-        // 가림 타일은 옮긴 깊이 히스토리에서 짓는다 — 컬링(GPUCull 패스)이 `OcclusionTiles` 를 읽어 이 뒤에 온다. 쉬는 추가 뷰는 컬링하지 않으므로 짓지 않는다.
-        const RHIPipelineStateHandle occlusionPSO = _psoManager.getEnginePSO( RenderPassKind::OcclusionTiles );
-        const bool                   bEnabled     = _state._settings._bOcclusionCulling != SW_FALSE;
-        _occlusion.record( _pCmd, *_pDevice, occlusionPSO, bEnabled, canCopyDepthHistory( _state._mainView ), _state._mainView );
+        // HZB 는 옮긴 깊이 히스토리(지난 장면 깊이)에서 짓는다 — 컬링(GPUCull 패스)이 `HZB` 를 읽어 이 뒤에 온다. 컬링이 없는 백엔드(DX11)는 읽을 쪽이 없다.
+        const RHIPipelineStateHandle pso      = _psoManager.getEnginePSO( RenderPassKind::HZBBuild );
+        const bool                   bEnabled = _state._settings._bOcclusionCulling != SW_FALSE && _pDevice->getCapabilities()._bGPUCulling != SW_FALSE;
+        // 지난 프레임 사각형만 읽는다(자동 렌더 배율 — 사각형 밖은 옛 깊이다). 기록을 버리는 프레임은 지난 깊이가 다른 장면이라 짓지 않는다.
+        const auto recordView = [this, pso, bEnabled]( FrameViewTarget& view, bool bWriteTiles )
+        {
+            const bool bBuilds = bEnabled && view._bHistoryReset == SW_FALSE && canCopyDepthHistory( view );
+            if ( bBuilds == false )
+                return false;
+            const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
+            return _occlusion.record( *_pCmd, *_pDevice, pso, view.scaleToPreviousRect( depth._width, true ), view.scaleToPreviousRect( depth._height, false ), view._depthHistoryViewProj,
+                                      bWriteTiles, view );
+        };
+        // 주 시점만 가림 타일(16 px 밉)도 쓴다 — 게임 스레드의 가림 질의가 되읽는다.
+        _state._mainView._bOcclusionTilesThisFrame = recordView( _state._mainView, true ) ? SW_TRUE : SW_FALSE;
         _occlusion.requestReadback( _pCmd, _pDevice, bEnabled, _state._mainView );
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE )
-                _occlusion.record( _pCmd, *_pDevice, occlusionPSO, bEnabled, canCopyDepthHistory( *pView ), *pView );
+                std::ignore = recordView( *pView, false );
         }
     }
 
@@ -605,6 +644,11 @@ namespace sw
     {
         if ( canCopyDepthHistory( target ) == false )
             return;
+        copySceneDepth( target );
+    }
+
+    void FrameGraphExecutor::copySceneDepth( FrameViewTarget& target )
+    {
         const TransientAttachmentPool::Attachment depth = target._transientPool.find( attachmentNames()._sceneDepth );
         _pCmd->prepareTextureForShaderRead( depth._texture );
         _pCmd->prepareTextureForRenderTarget( target._depthHistory );
@@ -631,7 +675,7 @@ namespace sw
         _pCmd->setGraphicsRootConstants( 0, 1, &sourceIndex );
         _pCmd->draw( 3, 0 );
         _pCmd->endRenderPass();
-        // 읽는 쪽(가림 타일 · GPU 입자)의 상태로 넘겨 둔다 — 함수 머리말 참고.
+        // 읽는 쪽(HZB 짓기 · GPU 입자)의 상태로 넘겨 둔다 — `recordDepthHistory` 머리말 참고.
         _pCmd->prepareTextureForUnorderedAccess( target._depthHistory );
     }
 
@@ -704,35 +748,25 @@ namespace sw
     {
         const GPUCullViewResources& view = _state._gpuScene.getCullView( cullViewIndex );
 
+        // 컷 · 처음 그리는 프레임은 전환 상태를 비워 단계를 바로 맞춘다(`FrameViewTarget::beginViewHistory` 가 컬링 전에 정했다). 비우기 신호는 한 번만 꺼낸다 — 뒤 단계가 같은 값을 받는다.
+        const FrameViewTarget&           lodTarget   = ( pExtraView != nullptr ) ? *pExtraView : _state._mainView;
+        const bool                       bResetState = _state._gpuScene.takeLODStateReset( cullViewIndex ) || lodTarget._bHistoryReset == SW_TRUE;
         FrameRendererUtil::GPUCullParams cullParams{};
-        // 절두체는 **뷰가 이미 가지고 있다.** setViewProjection 이 행렬과 함께 갱신한다.
-        // 여기서 다시 뽑으면 행렬만 바뀌고 평면이 바뀌지 않는 상태가 생길 수 있다.
-        Memory::copy( cullParams._arrPlane, renderView._frustum._arrPlane, sizeof( cullParams._arrPlane ) );
-        cullParams._instanceCount     = instanceCount;
-        cullParams._batchCount        = _state._gpuScene.getIndirectCommandCount();
-        cullParams._visibleSlotCount  = _state._gpuScene.getVisibleSlotCount();
-        cullParams._instanceSlotCount = _state._gpuScene.getInstanceSlotCount();
-        // 인스턴스 LOD 선택은 그 뷰를 그리는 카메라로 한다. 추가 뷰는 자기 카메라, 그림자 슬롯과 주 시점은 주 카메라다(그림자는 가장 고운 단계가 아니라 카메라가 보는 단계로 그린다).
-        // 절두체 밖의 가림 물체는 화면 크기가 0 이 아니라 거리에서 나온 값을 받는다 — CPU 선택(`LODView::computeScreenSize`)은 그 경우 가장 낮은 단계였다.
-        const RenderView& lodView = ( pExtraView != nullptr ) ? pExtraView->_cullInput : _state._arrView[static_cast<uint32>( RenderViewKind::Main )];
-        LODView::computeProjectionTerms( lodView._viewProj, cullParams._arrLODDepthRow, cullParams._arrLODView[3] );
-        cullParams._arrLODView[0]    = lodView._position._x;
-        cullParams._arrLODView[1]    = lodView._position._y;
-        cullParams._arrLODView[2]    = lodView._position._z;
-        cullParams._arrLODControl[0] = 1u;
-        // 전환 상태 버퍼가 있는 뷰만 크로스페이드한다(없으면 진행량 0 — 단계를 바로 바꾸고 버퍼를 읽지 않는다). 컷 · 처음 그리는 프레임은 상태를 비워 단계를 바로 맞춘다.
-        const bool             bHasLODState = _state._gpuScene.hasLODState( cullViewIndex );
-        const FrameViewTarget& lodTarget    = ( pExtraView != nullptr ) ? *pExtraView : _state._mainView;
-        const bool             bViewCut     = lodTarget._bHistoryReset == SW_TRUE; // 처음 그림 · 컷 · 건너뛴 프레임 — `FrameViewTarget::beginViewHistory` 가 컬링 전에 정했다
-        const bool             bResetState  = _state._gpuScene.takeLODStateReset( cullViewIndex ) || bViewCut;
-        cullParams._arrLODControl[1]        = bResetState ? 1u : 0u;
-        cullParams._arrLODControl[2]        = bHasLODState ? _lodFadeStep : 0u;
-        // 가림 판정은 장면을 그리는 뷰의 슬롯만 본다(주 시점 · 추가 뷰). 그림자 슬롯은 빛에서 본 것이라 카메라 깊이로 거르면 그림자가 빠진다.
-        const FrameViewTarget* pOcclusionView = pExtraView != nullptr ? pExtraView : ( cullViewIndex == static_cast<uint32>( RenderViewKind::Main ) ? &_state._mainView : nullptr );
-        if ( pOcclusionView != nullptr )
-            OcclusionTiles::fillCullParams( *pOcclusionView, cullParams );
-        const bool               bOccludes    = cullParams._arrOcclusionGrid[3] != 0u;
-        const RHIDescriptorIndex occlusionSRV = bOccludes ? pOcclusionView->_occlusionTiles._srv : _occlusion.getPlaceholderSRV();
+        fillCullParams( cullViewIndex, renderView, instanceCount, pExtraView, bResetState, cullParams );
+        const bool bHasLODState = _state._gpuScene.hasLODState( cullViewIndex );
+        // 가림 판정은 장면을 그리는 뷰의 슬롯만 본다(fillCullParams). 주 시점은 2 단계 가림이면 앞 단계로 돌아 빠진 차례를 적는다 — 지난 HZB 가 있어야 적을 것이 있다.
+        const FrameViewTarget*   pOcclusionView = pExtraView != nullptr ? pExtraView : ( cullViewIndex == static_cast<uint32>( RenderViewKind::Main ) ? &_state._mainView : nullptr );
+        const bool               bOccludes      = cullParams._arrHZBControl[3] != 0u;
+        const RHIDescriptorIndex occlusionSRV   = bOccludes ? pOcclusionView->_hzb._srv : _occlusion.getPlaceholderSRV();
+        const bool               bMainView      = pExtraView == nullptr && cullViewIndex == static_cast<uint32>( RenderViewKind::Main );
+        const bool               bOrdersReady   = _occludedOrders._uav != kInvalidDescriptorIndex && _occludedOrders._capacityElements >= instanceCount;
+        const bool               bEarly         = bMainView && bOccludes && isTwoPhaseOcclusionEnabled() && bOrdersReady && _lateCullCb.isValid();
+        cullParams._arrCullPhase[0]             = bEarly ? FrameRendererUtil::kCullPhaseEarly : FrameRendererUtil::kCullPhaseSingle;
+        if ( bMainView )
+        {
+            _bLatePhasePending = bEarly ? 1u : 0u;
+            _bLateLODReset     = bResetState ? 1u : 0u;
+        }
         // 상수 버퍼는 **뷰마다 자기 것**이다. 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치가 읽을 내용을 덮어쓴다.
         renderView._cullCb.update( *_pCmd, &cullParams, sizeof( cullParams ) );
 
@@ -747,8 +781,8 @@ namespace sw
         _pCmd->uavBarrier( view._indirectArgs._buffer ); // 되돌린 개수 위에서 컬링이 InterlockedAdd 로 센다
         // PSO 와 바인딩은 **뷰마다** 다시 설정한다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
         _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::GPUCull ) );
-        // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_OcclusionTiles(t2) / g_InstanceOrder(t3) / g_IndirectArgs(u0) / g_VisibleInstanceIDs(u1).
-        // gpu_cull.hlsl 레지스터와 1:1 로 대응한다. 인스턴스(칸 순) · 배치 구간 · 차례 → 칸 목록은 뷰가 공유한다(절두체와 가림 타일만 다르다).
+        // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_HZB(t2) / g_InstanceOrder(t3) / g_IndirectArgs(u0) / g_VisibleInstanceIDs(u1) / g_LODState(u2) / g_OccludedOrders(u3).
+        // gpu_cull.hlsl 레지스터와 1:1 로 대응한다. 인스턴스(칸 순) · 배치 구간 · 차례 → 칸 목록은 뷰가 공유한다(절두체와 HZB 만 다르다).
         _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
         _pCmd->bindComputeShaderResource( _state._gpuScene.getInstanceSRV(), 0 );
         _pCmd->bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
@@ -766,6 +800,8 @@ namespace sw
         {
             _pCmd->bindComputeUAV( view._visibleInstances._uav, 2 );
         }
+        // 차례 표시(u3)는 앞 단계만 쓴다. 한 단계는 자리만 채운다 — 셰이더가 단계 0 이면 건드리지 않는다(같은 uint 버퍼라 형식이 맞다).
+        _pCmd->bindComputeUAV( bEarly ? _occludedOrders._uav : view._visibleInstances._uav, 3 );
         _state._gpuMessages.bindCompute( *_pCmd ); // gpu_cull.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
         // **그리는 차례마다** 스레드 하나를 쓴다(차례의 칸은 t3 에서 읽는다). 그래야 보이는 것을 골라 압축할 수 있다.
         _pCmd->dispatchThreads( cullParams._instanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
@@ -810,6 +846,133 @@ namespace sw
             // 배치마다 워크그룹 하나를 쓴다. 그 배치의 목록을 그룹 공유 메모리 안에서 정렬한다.
             _pCmd->dispatchCompute( cullParams._batchCount, 1, 1 );
         }
+    }
+
+    void FrameGraphExecutor::fillCullParams( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView, bool bResetLODState,
+                                             FrameRendererUtil::GPUCullParams& outParams ) const
+    {
+        // 절두체는 **뷰가 이미 가지고 있다.** setViewProjection 이 행렬과 함께 갱신한다.
+        // 여기서 다시 뽑으면 행렬만 바뀌고 평면이 바뀌지 않는 상태가 생길 수 있다.
+        Memory::copy( outParams._arrPlane, renderView._frustum._arrPlane, sizeof( outParams._arrPlane ) );
+        outParams._instanceCount     = instanceCount;
+        outParams._batchCount        = _state._gpuScene.getIndirectCommandCount();
+        outParams._visibleSlotCount  = _state._gpuScene.getVisibleSlotCount();
+        outParams._instanceSlotCount = _state._gpuScene.getInstanceSlotCount();
+        // 인스턴스 LOD 선택은 그 뷰를 그리는 카메라로 한다. 추가 뷰는 자기 카메라, 그림자 슬롯과 주 시점은 주 카메라다(그림자는 가장 고운 단계가 아니라 카메라가 보는 단계로 그린다).
+        // 절두체 밖의 가림 물체는 화면 크기가 0 이 아니라 거리에서 나온 값을 받는다 — CPU 선택(`LODView::computeScreenSize`)은 그 경우 가장 낮은 단계였다.
+        const RenderView& lodView = ( pExtraView != nullptr ) ? pExtraView->_cullInput : _state._arrView[static_cast<uint32>( RenderViewKind::Main )];
+        LODView::computeProjectionTerms( lodView._viewProj, outParams._arrLODDepthRow, outParams._arrLODView[3] );
+        outParams._arrLODView[0]    = lodView._position._x;
+        outParams._arrLODView[1]    = lodView._position._y;
+        outParams._arrLODView[2]    = lodView._position._z;
+        outParams._arrLODControl[0] = 1u;
+        // 전환 상태 버퍼가 있는 뷰만 크로스페이드한다(없으면 진행량 0 — 단계를 바로 바꾸고 버퍼를 읽지 않는다).
+        outParams._arrLODControl[1] = bResetLODState ? 1u : 0u;
+        outParams._arrLODControl[2] = _state._gpuScene.hasLODState( cullViewIndex ) ? _lodFadeStep : 0u;
+        // 가림 판정은 장면을 그리는 뷰의 슬롯만 본다(주 시점 · 추가 뷰). 그림자 슬롯은 빛에서 본 것이라 카메라 깊이로 거르면 그림자가 빠진다.
+        const FrameViewTarget* pOcclusionView = pExtraView != nullptr ? pExtraView : ( cullViewIndex == static_cast<uint32>( RenderViewKind::Main ) ? &_state._mainView : nullptr );
+        if ( pOcclusionView != nullptr )
+            HZBOcclusion::fillCullParams( *pOcclusionView, _occlusionConfig, outParams );
+    }
+
+    const float4x4& FrameGraphExecutor::findViewProj( const FrameViewTarget& view ) const
+    {
+        return &view == &_state._mainView ? _state.view( RenderViewKind::Main )._viewProj : view._cullInput._viewProj;
+    }
+
+    bool FrameGraphExecutor::isTwoPhaseOcclusionEnabled() const
+    {
+        // 간접 멀티 드로우가 없는 백엔드(WebGPU)는 끈다 — 배치마다 따로 내는 간접 드로우에 뒤 단계의 컬링 · 피라미드 재짓기를 더하면 웹의 한 스레드 기록이 이득보다 비싸다(웹 깃발).
+        // DX11 은 컬링 자체가 없다(`_bGPUCulling`).
+        if ( _pDevice == nullptr || _state._settings._bOcclusionCulling == SW_FALSE || _occlusionConfig._bTwoPhase == false )
+            return false;
+        const RHICapabilities& caps = _pDevice->getCapabilities();
+        return caps._bGPUCulling != SW_FALSE && caps._bMultiDrawIndirect != SW_FALSE;
+    }
+
+    bool FrameGraphExecutor::recordCurrentDepthHZB( FrameViewTarget& view )
+    {
+        if ( _pCmd == nullptr || _pDevice == nullptr || canCopySceneDepth( view ) == false )
+        {
+            view._bHZBValid = SW_FALSE;
+            return false;
+        }
+        // 깊이 히스토리 텍스처를 사본 자리로 다시 쓴다 — 지난 깊이는 프레임 처음 프레임 패스(입자 충돌 · 지난 HZB)가 다 읽었고, 다음 프레임 처음에 다시 채운다.
+        copySceneDepth( view );
+        // 이번 프레임 사각형만 읽는다(자동 렌더 배율 — 사각형 밖은 옛 깊이다).
+        const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
+        return _occlusion.record( *_pCmd, *_pDevice, _psoManager.getEnginePSO( RenderPassKind::HZBBuild ), view.scaleToRect( depth._width, true, true ), view.scaleToRect( depth._height, true, false ),
+                                  findViewProj( view ), false, view );
+    }
+
+    bool FrameGraphExecutor::recordSceneDepthHZB( IRHICommandList& cmd, FrameViewTarget& view )
+    {
+        _pCmd             = &cmd;
+        const bool bBuilt = recordCurrentDepthHZB( view );
+        _pCmd             = nullptr;
+        return bBuilt;
+    }
+
+    void FrameGraphExecutor::recordLateOcclusion( IRHICommandList& cmd, FrameViewTarget& view )
+    {
+        // 앞 단계는 주 시점 슬롯만 차례를 적는다. 그 뷰의 깊이 프리패스가 끝난 자리에서 한 번만 돈다.
+        if ( _bLatePhasePending == 0 || &view != &_state._mainView || _pDevice == nullptr )
+            return;
+        _bLatePhasePending = 0;
+        _pCmd              = &cmd;
+
+        // 1) 이번 프레임 깊이(앞 단계가 그린 것)로 HZB 를 다시 짓는다. 못 지으면 판정 없이(발자국 0) 돌아 적힌 차례를 모두 그린다 — 빠뜨리는 것보다 더 그리는 쪽이다.
+        std::ignore = recordCurrentDepthHZB( view );
+        // 복사가 장면 깊이를 셰이더 읽기로 옮겼다 — 그래프는 프리패스의 쓰기 상태로 알고 있어 다음 쓰는 패스(포워드 불투명 · G버퍼)에 전이를 내지 않을 수 있다. 깊이 대상 상태로 되돌린다.
+        const RHITextureHandle sceneDepth = view._transientPool.find( attachmentNames()._sceneDepth )._texture;
+        if ( sceneDepth != 0 )
+            cmd.prepareTextureForRenderTarget( sceneDepth );
+        constexpr uint32             cullViewIndex = static_cast<uint32>( RenderViewKind::Main );
+        const RenderView&            renderView    = _state._arrView[cullViewIndex];
+        const RHIPipelineStateHandle cullPSO       = _psoManager.getEnginePSO( RenderPassKind::GPUCull );
+        const bool                   bReady        = cullPSO != 0 && isCullViewReady( cullViewIndex, renderView ) && _occludedOrders._uav != kInvalidDescriptorIndex && _lateCullCb.isValid();
+        if ( bReady == false )
+        {
+            _pCmd = nullptr;
+            return;
+        }
+
+        // 2) 적힌 차례만 다시 판정한다. 개수는 되돌리지 않는다 — 앞 단계 개수 위에 InterlockedAdd 로 더해 같은 간접 인자가 둘을 함께 그린다. 정렬은 다시 돌지 않는다(투명은 더하지 않는다).
+        const GPUCullViewResources&      cullView = _state._gpuScene.getCullView( cullViewIndex );
+        const bool                       bLOD     = _state._gpuScene.hasLODState( cullViewIndex );
+        FrameRendererUtil::GPUCullParams params{};
+        fillCullParams( cullViewIndex, renderView, _lateInstanceCount, nullptr, _bLateLODReset != 0, params );
+        params._arrCullPhase[0]         = FrameRendererUtil::kCullPhaseLate;
+        const RHIDescriptorIndex hzbSRV = params._arrHZBControl[3] != 0u ? view._hzb._srv : _occlusion.getPlaceholderSRV();
+        _lateCullCb.update( cmd, &params, sizeof( params ) );
+
+        _bufferTransitions.add( cullView._indirectArgs._buffer, RHIBufferState::UnorderedAccess );
+        _bufferTransitions.add( cullView._visibleInstances._buffer, RHIBufferState::UnorderedAccess );
+        if ( bLOD )
+            _bufferTransitions.add( cullView._lodState._buffer, RHIBufferState::UnorderedAccess );
+        _bufferTransitions.add( _occludedOrders._buffer, RHIBufferState::UnorderedAccess );
+        _bufferTransitions.flush( cmd );
+        // 바인딩은 앞 단계와 같은 자리다(dispatchCullView 의 표).
+        cmd.setComputePipelineState( cullPSO );
+        cmd.bindComputeConstantBuffer( _lateCullCb._index, 0 );
+        cmd.bindComputeShaderResource( _state._gpuScene.getInstanceSRV(), 0 );
+        cmd.bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
+        if ( hzbSRV != kInvalidDescriptorIndex )
+            cmd.bindComputeShaderResource( hzbSRV, 2 );
+        cmd.bindComputeShaderResource( _state._gpuScene.getInstanceOrderBuffer()._srv, 3 );
+        cmd.bindComputeUAV( cullView._indirectArgs._uav, 0 );
+        cmd.bindComputeUAV( cullView._visibleInstances._uav, 1 );
+        cmd.bindComputeUAV( bLOD ? cullView._lodState._uav : cullView._visibleInstances._uav, 2 );
+        cmd.bindComputeUAV( _occludedOrders._uav, 3 );
+        _state._gpuMessages.bindCompute( cmd );
+        cmd.dispatchThreads( _lateInstanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
+        _bLatePhaseRan = 1;
+
+        // 3) 그리는 쪽이 읽는 상태로 — 뒤 패스(G버퍼 · 포워드 불투명)가 더한 개수로 그린다.
+        _bufferTransitions.add( cullView._indirectArgs._buffer, RHIBufferState::IndirectArgument );
+        _bufferTransitions.add( cullView._visibleInstances._buffer, RHIBufferState::ShaderResource );
+        _bufferTransitions.flush( cmd );
+        _pCmd = nullptr;
     }
 
     void FrameGraphExecutor::dispatchRealtimeProbes()

@@ -614,13 +614,13 @@ namespace sw
             uint32      _bufferCount;
         };
         inline constexpr ComputeUAVUsage kArrComputeUAVUsage[] = {
-            {          "gpu_cull", 3},
+            {          "gpu_cull", 4},
             {"instance_animation", 1},
             {     "instance_sort", 2},
             {        "light_grid", 1},
             {        "mesh_morph", 1},
             {         "mesh_skin", 1},
-            {   "occlusion_tiles", 1},
+            {         "hzb_build", 2},
             {      "probe_update", 2},
             {     "canvas_marker", 1},
             { "vfx_mesh_instance", 1},

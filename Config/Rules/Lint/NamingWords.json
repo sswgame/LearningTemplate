@@ -97,6 +97,11 @@
     "should"
   ],
   "_bannedNames": {
+    "OcclusionTiles": "HZBOcclusion(클래스) · RenderPassKind::HZBBuild(패스 종류) — 타일 한 단이 HZB 피라미드(최소 · 최대 깊이 밉 사슬)가 됐다(2026-11-19)",
+    "OcclusionTilesInternal": "HZBOcclusionInternal(2026-11-19)",
+    "recordOcclusionTiles": "recordFrameHZBs — 프레임 처음 지난 깊이로 HZB 를 짓는다(2026-11-19)",
+    "ensureOcclusionTiles": "ensureHZB — HZB 피라미드와 되읽기 타일 버퍼를 함께 만든다(2026-11-19)",
+    "_shaderOcclusionTiles": "_shaderHZBBuild(hzb_build.hlsl)(2026-11-19)",
     "OwnerWatch": "OwnerSubscription — 주인 사라짐 알림의 구독(Watch 는 자동화 감시 값만)(2026-11-19)",
     "_listOwnerWatch": "_listOwnerSubscription(2026-11-19)",
     "watchOwners": "subscribeOwners — 주인 사라짐 알림을 구독한다(Watch 는 자동화 감시 값만)(2026-11-19)",
@@ -4647,6 +4652,7 @@
       "hyphen",
       "hysteresis",
       "hz",
+      "hzb",
       "iai",
       "ib",
       "ibo",
@@ -6438,6 +6444,7 @@
       "put",
       "pvec",
       "px",
+      "pyramid",
       "python",
       "qcf",
       "qpc",

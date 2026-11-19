@@ -79,6 +79,8 @@ namespace sw
         , _publishedViewPoolWidth{ 0 }
         , _publishedViewTransientRebuildCount{ 0 }
         , _publishedOcclusionTilesBuilt{ 0 }
+        , _publishedOcclusionTwoPhase{ 0 }
+        , _publishedOcclusionLatePhase{ 0 }
     {
     }
 
@@ -592,6 +594,8 @@ namespace sw
         const bool bOk             = _passExecutor.submitGraph( pDevice );
         _lastIndirectDrawCallCount = _passExecutor.getIndirectDrawCallCount();
         _publishedOcclusionTilesBuilt.store( _state._mainView._bOcclusionTilesThisFrame == SW_TRUE ? 1u : 0u );
+        _publishedOcclusionTwoPhase.store( _passExecutor.getFrameGraphExecutor().isTwoPhaseOcclusionEnabled() ? 1u : 0u );
+        _publishedOcclusionLatePhase.store( _passExecutor.getFrameGraphExecutor().hasLatePhaseRun() ? 1u : 0u );
         _lastPendingPSOBatchCount = _passExecutor.getPendingPSOBatchCount();
         // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
         // 시계가 스위치를 맞추고 끝난 프레임을 읽는다(자동 렌더 배율 표본). 읽은 프레임 한 벌을 프로파일러도 받는다.

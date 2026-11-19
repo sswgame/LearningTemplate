@@ -301,6 +301,10 @@ namespace sw
         uint32 getPublishedViewTransientRebuildCount() const { return _publishedViewTransientRebuildCount.load(); }
         /** @brief 마지막 프레임에 주 시점의 가림 타일을 지었으면 1 입니다(감시 값 `Render.OcclusionTilesBuilt`). */
         uint32 getPublishedOcclusionTilesBuilt() const { return _publishedOcclusionTilesBuilt.load(); }
+        /** @brief 마지막 프레임에 2 단계 가림을 쓸 수 있었으면 1 입니다(가림 판정 켬 · 설정 · 백엔드 능력 — 감시 값 `Render.OcclusionTwoPhase`). */
+        uint32 getPublishedOcclusionTwoPhase() const { return _publishedOcclusionTwoPhase.load(); }
+        /** @brief 마지막 프레임에 2 단계 가림의 뒤 단계 컬링을 기록했으면 1 입니다(감시 값 `Render.OcclusionLatePhase`). */
+        uint32 getPublishedOcclusionLatePhase() const { return _publishedOcclusionLatePhase.load(); }
         /** @brief GPU 메시 입자의 되읽기입니다(감시 값 `VFX.GPUMesh*`). 게임 스레드는 원자값만 읽습니다(`hasValue` · `getEmitterCount` · `readCounts`). */
         const VFXGPUMeshReadback& getVFXGPUMeshReadback() const { return _state._vfxMeshReadback; }
         /** @brief GPU 프레임 시계입니다. 게임 스레드는 `getState` · `getLatest` 만 읽습니다(원자값, 락 없음). 원하는지는 패킷이 렌더 스레드로 나릅니다. */
@@ -537,6 +541,8 @@ namespace sw
         atomic<uint32> _publishedViewPoolWidth;
         atomic<uint32> _publishedViewTransientRebuildCount;
         atomic<uint8>  _publishedOcclusionTilesBuilt;
+        atomic<uint8>  _publishedOcclusionTwoPhase;
+        atomic<uint8>  _publishedOcclusionLatePhase;
 
         SW_SERVICE_SLOT( FrameRenderer, Optional );
     };

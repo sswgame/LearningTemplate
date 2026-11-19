@@ -1,6 +1,6 @@
 /**
  * @file FramePassExecutor.h
- * @brief 한 프레임의 기록과 제출입니다 — 프레임 그래프(변형 · 컬링 · 라이트 그리드 · 깊이 히스토리 · 가림 타일), 그래프 패스 콜백과 패스별 실행, 드로우, 뷰별 커맨드 리스트 제출.
+ * @brief 한 프레임의 기록과 제출입니다 — 프레임 그래프(변형 · 컬링 · 라이트 그리드 · 깊이 히스토리 · HZB), 그래프 패스 콜백과 패스별 실행, 드로우, 뷰별 커맨드 리스트 제출.
  * @details 렌더러(`FrameRenderer`)가 셋업(스냅샷 받기 · 업로드 · 뷰 준비 · PSO 준비)을 끝낸 뒤 `submitGraph` 를 부르면 여기서 기록이 시작된다.
  *          프레임 데이터(`FrameRenderState`)는 렌더러가 소유하고 이 객체는 참조로 읽는다. 언리얼 `FSceneRenderer::Render` 가 뷰마다 RDG 패스(람다)를 더하고
  *          실행하는 자리와 같다 — 패스는 패스 컨텍스트(`FramePassContext`)와 지금 그리는 뷰(`FrameViewTarget`)만 본다.

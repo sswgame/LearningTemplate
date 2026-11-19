@@ -171,7 +171,7 @@ namespace sw
          */
         Compute,
 
-        // --- 아래는 뷰 패스(`_listPass`)로 쓸 수 없다. 프레임 패스(`isFramePassType` — 깊이 히스토리 · 가림 타일 · 입자 · 애니메이션 · 모프 · 스킨 · 컬링 · 라이트 그리드 ·
+        // --- 아래는 뷰 패스(`_listPass`)로 쓸 수 없다. 프레임 패스(`isFramePassType` — 깊이 히스토리 · HZB · 입자 · 애니메이션 · 모프 · 스킨 · 컬링 · 라이트 그리드 ·
         //     볼륨 안개 · 프로브 · 마커)는 `_listFramePass` 에 선언하고, 나머지는 엔진 내부 PSO 슬롯이라 XML 에 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
         GPUCull,
@@ -203,10 +203,11 @@ namespace sw
         /// @brief FSR 1 의 RCAS(fsr1.hlsl 의 `SW_PASS_FSR_RCAS`) — 중간 RT 를 선명하게 해 Present 대상에 그립니다. 대상 포맷마다 PSO 가 다른 출력 패스다(Present 와 같다).
         UpscaleRcas,
         /**
-         * @brief 가림 타일 컴퓨트(occlusion_tiles.hlsl)입니다. 뷰의 깊이 히스토리(지난 프레임 장면 깊이)를 16 px 타일마다 최대 깊이 하나로 줄여 구조 버퍼에 씁니다.
-         *        컬링(gpu_cull.hlsl)이 경계 구를 그 프레임의 뷰-투영으로 옮겨 덮는 타일보다 멀면 가려졌다고 본다(`FramePassExecutor::recordOcclusionTiles`).
+         * @brief HZB 짓기 컴퓨트(hzb_build.hlsl)입니다. 뷰의 깊이 히스토리(지난 프레임 장면 깊이)를 최소 · 최대 깊이 밉 사슬(`HZBLayout`)로 줄여 구조 버퍼에 씁니다(밉마다 디스패치 하나).
+         *        컬링(gpu_cull.hlsl)이 경계 상자를 그 프레임의 뷰-투영으로 옮겨 사각형에 맞는 밉의 최대 깊이보다 멀면 가려졌다고 본다(`FrameGraphExecutor::recordFrameHZBs`).
+         *        같은 셰이더 · PSO 를 깊이 프리패스 뒤(2 단계 가림)와 화면 공간 반사 앞(hi-z trace)이 이번 프레임 깊이로 다시 쓴다 — 프레임 패스는 이 자리 하나만 선언한다.
          */
-        OcclusionTiles,
+        HZBBuild,
         /**
          * @brief 볼륨 안개 컴퓨트(volumetric_fog.hlsl)입니다. 뷰의 froxel 격자(화면 칸 × 깊이 조각)마다 안개 밀도와 라이트 산란(방향광 + 라이트 그리드의 점광 · 스폿)을 구하고
          *        깊이 방향으로 누적해 (산란 rgb, 투과율)을 구조 버퍼에 쓴다. 안개 패스(`Fog`)가 그 버퍼를 읽는다(`FramePostProcess::dispatchVolumetricFog`).
@@ -288,7 +289,7 @@ namespace sw
         switch ( type )
         {
             case RenderPassKind::DepthHistory:
-            case RenderPassKind::OcclusionTiles:
+            case RenderPassKind::HZBBuild:
             case RenderPassKind::VFXSimulation:
             case RenderPassKind::InstanceAnimation:
             case RenderPassKind::MeshMorph:

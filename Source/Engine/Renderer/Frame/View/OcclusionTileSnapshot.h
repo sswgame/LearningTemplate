@@ -4,7 +4,7 @@
  * @details 카메라의 "보이는가"(`RenderViewCollector`)가 가려짐까지 보게 하는 길이다. GPU 컬링은 가림 타일(`OcclusionTiles`)로 가려진 인스턴스를 거르는데,
  *          게임 스레드는 그 결과를 모른다. 렌더러가 타일을 몇 프레임 늦게 되읽어(`AsyncBufferReadback`) 여기 `OcclusionTileMailbox` 에 올리고,
  *          수집기가 모니터(보임 오브젝트)의 경계 구를 `OcclusionTileSnapshot::isSphereOccluded` 로 같은 식에 넣는다 — 언리얼 `WasRecentlyRendered` 의 역할이다.
- *          판정 식은 gpu_cull.hlsl 의 `isOccluded` 와 같다(바꾸면 두 곳을 함께 고친다).
+ *          상자 → 화면 사각형은 GPU 컬링과 같은 `HZBScreenRect::projectBox` 이고, 타일은 HZB 피라미드의 16 px 밉(`HZBLayout::kTileMip`)의 최대 깊이다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -40,10 +40,8 @@ namespace sw
         }
 
         // 사본으로 구가 가려졌는지 묻습니다.
-        /// 판정하는 타일 줄의 한 축 상한입니다 — 화면에서 이보다 넓게 덮는 물체는 판정하지 않는다(gpu_cull.hlsl `kMaxOcclusionTestTiles`).
+        /// 판정하는 타일 줄의 한 축 상한입니다 — 화면에서 이보다 넓게 덮는 물체는 판정하지 않는다(CPU 사본은 밉 하나뿐이다 — GPU 컬링은 HZB 피라미드의 굵은 밉으로 판정한다).
         static constexpr uint32 kMaxTestTiles = 8;
-        /// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(gpu_cull.hlsl `kMinOcclusionClipW`).
-        static constexpr float32 kMinClipW = 1.0e-4f;
 
         /**
          * @brief 월드 구가 사본의 깊이 뒤에 완전히 가려졌으면 true 입니다. 모를 때(경계 상자 모서리가 카메라 뒤 · 화면 밖, 타일을 넓게 덮음, 사본이 쓸 수 없음)는 false(보인다)입니다.

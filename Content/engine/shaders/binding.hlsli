@@ -290,7 +290,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_FlareTint;
     // 화면 공간 반사(screen_space_reflection.hlsl, C++ PostProcessValues) — (세기, 최대 거리 m, 두께 m, 최대 거칠기). ScreenSpaceReflection 패스만 읽는다
     float4 g_SSRParams;
-    float4 g_CameraLens; // 카메라별 피사계 심도 — x 초점 거리(m), y 착란원 반지름 배율(px, 반지름 = y · |1 - x / 깊이|), z 반지름 상한(px), w 켬 1 · 끔 0(depth_of_field.hlsl)
+    float4 g_SSRHZBParams; // 화면 공간 반사의 HZB(hzb.hlsli) — xy 지은 깊이 사각형 px, z 밉 수, w 0. ScreenSpaceReflection 패스만 읽는다(C++ FramePassExecutor::executeScreenSpaceReflectionPass)
+    float4 g_CameraLens;   // 카메라별 피사계 심도 — x 초점 거리(m), y 착란원 반지름 배율(px, 반지름 = y · |1 - x / 깊이|), z 반지름 상한(px), w 켬 1 · 끔 0(depth_of_field.hlsl)
     float4 g_OutlineColor;
     float4 g_OutlineParams;
     float4 g_SourceTexel; // xy = 1 / 원본(SourceColor 역할 입력) 크기, zw = 그 크기. 원본이 없는 패스는 프레임 크기 — 반해상도 첨부를 읽는 패스가 비켜 읽는 거리

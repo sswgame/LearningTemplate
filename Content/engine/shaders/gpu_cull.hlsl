@@ -18,16 +18,23 @@
  * 개수는 디스패치 전에 0 이어야 한다 — 같은 파일의 되돌리기 커널(`SW_CULL_RESET_ARGS`, C++ RenderPassKind::IndirectArgsReset)이 컬링 바로 앞에서
  * 배치마다 0(압축을 포기한 배치는 CPU 개수)을 쓴다. CPU 는 배치 표가 바뀔 때만 인자 전체를 올린다.
  *
- * 바인딩 계약(binding_slots.hlsli): CB b0, 인스턴스 읽기 t0, 배치 구간 읽기 t1, 가림 타일 읽기 t2, 차례 → 칸 읽기 t3, 간접 인자 쓰기 u0,
- * 가시 ID 쓰기 u1.
+ * 바인딩 계약(binding_slots.hlsli): CB b0, 인스턴스 읽기 t0, 배치 구간 읽기 t1, HZB 피라미드 읽기 t2, 차례 → 칸 읽기 t3, 간접 인자 쓰기 u0,
+ * 가시 ID 쓰기 u1, LOD 전환 상태 u2, 가려진 차례 표시 u3(2 단계 가림).
  *
  * 인스턴스 버퍼는 **칸 순**이다(원소 번호 = GPUScene 칸, 구멍은 배치 번호가 무효 — C++ GPUSceneSlotBuffer). 스레드 하나가 **그리는 차례** 하나를 맡아
  * t3(g_InstanceOrder)에서 그 차례의 칸을 읽는다. 가시 목록에는 칸을 적는다 — 정점 셰이더는 그 칸으로 인스턴스를 읽는다. 투명 정렬 배치(sortMode 2)만
  * 차례를 적고 instance_sort.hlsl 이 정렬한 뒤 칸으로 바꾼다(정렬 기준이 차례다).
  *
- * 가림 판정(g_OcclusionGrid.w = 1, C++ FramePassExecutor::fillOcclusionParams): 절두체를 통과한 인스턴스의 경계 구를 감싼 상자를 지난 프레임 장면 깊이를 그린
- * 뷰-투영(g_OcclusionViewProj)으로 옮겨 화면 사각형과 가장 가까운 깊이를 구하고, 사각형이 덮는 가림 타일(occlusion_tiles.hlsl — 타일마다 최대 깊이)보다 모두
- * 멀면 그리지 않는다. 모서리 하나라도 카메라 뒤 · 가까운 평면 앞이면, 사각형이 화면 밖이면, 타일 kMaxOcclusionTestTiles 줄을 넘게 덮으면(큰 물체) 판정하지 않는다(보인다).
+ * 가림 판정(g_HZBControl.w = 판정 발자국 > 0, C++ HZBOcclusion::fillCullParams): 절두체를 통과한 인스턴스의 경계 상자를 HZB 의 깊이를 그린 뷰-투영(g_HZBViewProj)으로
+ * 옮겨 화면 사각형과 가장 가까운 깊이를 구하고, 사각형이 한 축 발자국 텍셀 안에 드는 가장 고운 밉(hzb.hlsli HZB::selectMip)에서 덮는 텍셀의 최대 깊이보다 멀면
+ * 그리지 않는다 — 큰 물체는 굵은 밉에서 판정한다(언리얼 HZB 가림과 같다). 모서리 하나라도 카메라 뒤 · 가까운 평면 앞이면, 사각형이 화면 밖이면 판정하지 않는다(보인다).
+ * 상자 → 사각형 · 밉 고르기는 C++ HZBScreenRect::projectBox · HZBLayout::selectMip 과 같은 식이다(단위 테스트 HZBPyramidTest).
+ *
+ * 2 단계 가림(g_CullPhase.x, C++ FrameGraphExecutor::recordLateOcclusion — Adria · VQEngine · Niagara 의 two-phase occlusion):
+ *   1 앞 단계 — 프레임 그래프에서 지난 프레임 HZB 로 판정하고, 가려져 빠진 불투명(sortMode 0) 차례를 u3 에 적는다(나머지 차례는 0).
+ *   2 뒤 단계 — 깊이 프리패스 뒤 그 깊이로 다시 지은 HZB 로 적힌 차례만 다시 판정해 이제 보이는 것을 같은 간접 인자에 더한다(개수를 되돌리지 않는다 — 앞 단계 개수 위에 센다).
+ *   투명 정렬 배치(sortMode 2)는 앞 단계 판정만 본다 — 뒤 단계가 더하면 정렬(instance_sort.hlsl)이 끝난 목록 뒤에 붙어 블렌드 순서가 틀린다.
+ *   0 은 한 단계(2 단계를 끈 설정 · 그림자 · 추가 뷰)다.
  */
 
 // 인스턴스 원소(InstanceData)는 그래픽스와 같은 정의 하나를 쓴다(베낀 구조체는 계약 검사가 보지 않는다).
@@ -35,6 +42,9 @@
 
 // 간접 인자 원소(SceneDrawArgs)도 같은 정의 하나다 — C++ RHIDrawIndexedIndirectCommand 와 바이트 배치가 같다.
 #include "scene_draw_args.hlsli"
+
+// HZB 피라미드 배치 식(밉 크기 · 시작 원소 · 밉 고르기)은 짓는 쪽과 같은 정의 하나다.
+#include "hzb.hlsli"
 
 /**
  * 배치의 인스턴스 구간. 간접 인자의 startInstanceLocation 는 **0 이어야 해서**(Vulkan 의 InstanceIndex 가
@@ -48,26 +58,29 @@ SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
     float4   g_FrustumPlanes[6];
     uint     g_InstanceCount;
     uint     g_BatchCount;
-    uint     g_VisibleSlotCount;   // 가시 목록의 칸 수(가시 구간의 합) — 쓰기 범위
-    uint     g_InstanceSlotCount;  // 칸 순 인스턴스 버퍼의 원소 수(GPUScene 칸 수) — 차례가 가리킨 칸의 범위
-    float4x4 g_OcclusionViewProj;  // 가림 타일의 깊이를 그린 프레임의 뷰-투영(행 벡터 규약 — Transform::computeClipPosition 과 같다)
-    uint4    g_OcclusionGrid;      // x 열, y 행, z 타일 한 변(px), w 가림 판정 켬 1 · 끔 0
-    float4   g_OcclusionDepthSize; // xy 깊이 히스토리 크기(px)
-    float4   g_LODDepthRow;        // 인스턴스 LOD 선택의 화면 크기 식 항 — xyz 클립 w 를 만드는 열(뷰-투영의 m14 m24 m34), w = m44
-    float4   g_LODView;            // xyz 눈 위치, w 투영 y 배율(LODViewUtil::computeProjectionTerms)
-    uint4    g_LODControl;         // x 인스턴스 LOD 선택 켬 1 · 끔 0(끄면 늘 단계 0), y 전환 상태 비우기 1, z 이번 프레임의 전환 진행량(0 ~ 255, 0 이면 전환 없이 바로 바꾸고 상태 버퍼를 읽지 않는다)
+    uint     g_VisibleSlotCount;  // 가시 목록의 칸 수(가시 구간의 합) — 쓰기 범위
+    uint     g_InstanceSlotCount; // 칸 순 인스턴스 버퍼의 원소 수(GPUScene 칸 수) — 차례가 가리킨 칸의 범위
+    float4x4 g_HZBViewProj;       // HZB 의 깊이를 그린 뷰-투영(행 벡터 규약 — Transform::computeClipPosition 과 같다)
+    uint4    g_HZBControl;        // xy HZB 를 지은 깊이 사각형(px), z 밉 수, w 판정 발자국(한 축 텍셀 수 — 0 이면 가림 판정 끔)
+    float4   g_HZBParams;         // x 깊이 치우침(NDC — 가장 가까운 깊이가 최대 깊이 + 이 값보다 멀어야 가렸다)
+    float4   g_LODDepthRow;       // 인스턴스 LOD 선택의 화면 크기 식 항 — xyz 클립 w 를 만드는 열(뷰-투영의 m14 m24 m34), w = m44
+    float4   g_LODView;           // xyz 눈 위치, w 투영 y 배율(LODViewUtil::computeProjectionTerms)
+    uint4    g_LODControl;        // x 인스턴스 LOD 선택 켬 1 · 끔 0(끄면 늘 단계 0), y 전환 상태 비우기 1, z 이번 프레임의 전환 진행량(0 ~ 255, 0 이면 전환 없이 바로 바꾸고 상태 버퍼를 읽지 않는다)
+    uint4    g_CullPhase;         // x 0 한 단계 · 1 앞 단계(가려진 차례를 u3 에 적는다) · 2 뒤 단계(적힌 차례만 다시 판정한다). 머리말 참고
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_Instances, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( BatchData, g_BatchInfo, 1 );
-SW_DECLARE_STRUCTURED_BUFFER( float, g_OcclusionTiles, 2 );
+SW_DECLARE_STRUCTURED_BUFFER( float2, g_HZB, 2 );         // HZB 피라미드(x 최소 · y 최대 깊이 — 판정은 최대만 읽는다)
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_InstanceOrder, 3 ); // 그리는 차례 → GPUScene 칸(C++ GPUSceneSnapshot::_pListInstanceSlot)
 SW_DECLARE_RW_STRUCTURED_BUFFER( SceneDrawArgs, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_LODState, 2 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_OccludedOrders, 3 ); // 차례마다 앞 단계에서 가려져 빠졌으면 1(2 단계 가림의 앞 · 뒤 단계만 읽고 쓴다)
 
-/// 가림 판정이 읽는 타일의 한 축 상한 — 화면에서 이보다 넓게 덮는 물체는 판정하지 않는다(스레드 하나가 최대 8 x 8 = 64 번 읽는다).
-static const uint kMaxOcclusionTestTiles = 8u;
+/// 컬링 단계(g_CullPhase.x) — 머리말 참고. 한 단계(0)는 표시 버퍼를 건드리지 않는다.
+static const uint kCullPhaseEarly = 1u;
+static const uint kCullPhaseLate  = 2u;
 /// 이보다 작은 클립 w 는 카메라 뒤로 본다(화면 크기를 눈까지의 거리로 잰다 — 눈이 경계 구 안이면 1 이다).
 static const float kMinOcclusionClipW = 1.0e-4f;
 /// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(화면 크기를 1 로 본다 — CPU 의 `LODViewUtil::computeScreenSize` 의 `kEpsilon`).
@@ -148,10 +161,11 @@ uint selectLODLevel( uint headBatch, uint levelCount, float screenSize )
     return level;
 }
 
-/** @brief 월드 상자(중심 @p center, 반 크기 @p extent — 구면 반지름을 세 축에 넣는다)가 지난 장면 깊이 뒤에 숨었으면 true 입니다. */
+/** @brief 월드 상자(중심 @p center, 반 크기 @p extent — 구면 반지름을 세 축에 넣는다)가 HZB 깊이 뒤에 숨었으면 true 입니다. 머리말의 가림 판정 참고. */
 bool isOccluded( float3 center, float3 extent )
 {
-    if ( g_OcclusionGrid.w == 0u )
+    const uint footprint = g_HZBControl.w;
+    if ( footprint == 0u )
         return false;
     float2 minUv    = float2( 1.0f, 1.0f );
     float2 maxUv    = float2( 0.0f, 0.0f );
@@ -159,7 +173,7 @@ bool isOccluded( float3 center, float3 extent )
     SW_UNROLL for ( uint corner = 0u; corner < 8u; ++corner )
     {
         const float3 offset = float3( ( corner & 1u ) != 0u ? extent.x : -extent.x, ( corner & 2u ) != 0u ? extent.y : -extent.y, ( corner & 4u ) != 0u ? extent.z : -extent.z );
-        const float4 clip   = mul( float4( center + offset, 1.0f ), g_OcclusionViewProj );
+        const float4 clip   = mul( float4( center + offset, 1.0f ), g_HZBViewProj );
         if ( clip.w <= kMinOcclusionClipW )
             return false;
         const float3 ndc = clip.xyz / clip.w;
@@ -168,25 +182,32 @@ bool isOccluded( float3 center, float3 extent )
         maxUv            = max( maxUv, uv );
         minDepth         = min( minDepth, ndc.z );
     }
-    // 가까운 평면을 걸치거나 지난 화면 밖이면 지난 깊이가 그 자리를 모른다.
-    const bool bOutsideHistory = minDepth <= 0.0f || maxUv.x <= 0.0f || maxUv.y <= 0.0f || minUv.x >= 1.0f || minUv.y >= 1.0f;
-    if ( bOutsideHistory )
+    // 가까운 평면을 걸치거나 HZB 화면 밖이면 그 깊이가 자리를 모른다.
+    const bool bOutsideHZB = minDepth <= 0.0f || maxUv.x <= 0.0f || maxUv.y <= 0.0f || minUv.x >= 1.0f || minUv.y >= 1.0f;
+    if ( bOutsideHZB )
         return false;
-    const float2 depthSize = g_OcclusionDepthSize.xy;
-    const uint2  lastTile  = g_OcclusionGrid.xy - 1u;
-    const uint2  firstTile = min( uint2( saturate( minUv ) * depthSize ) / g_OcclusionGrid.z, lastTile );
-    const uint2  endTile   = min( uint2( saturate( maxUv ) * depthSize ) / g_OcclusionGrid.z, lastTile );
-    if ( endTile.x - firstTile.x >= kMaxOcclusionTestTiles || endTile.y - firstTile.y >= kMaxOcclusionTestTiles )
+    // 사각형이 한 축 발자국 텍셀 안에 드는 가장 고운 밉에서 덮는 텍셀의 최대 깊이를 모은다(발자국 상한이 넷이라 최대 4 x 4 번 읽는다).
+    const uint2 depthSize  = g_HZBControl.xy;
+    const uint  mipCount   = g_HZBControl.z;
+    const uint2 firstPixel = HZB::toPixel( minUv, depthSize );
+    const uint2 lastPixel  = HZB::toPixel( maxUv, depthSize );
+    const uint  mip        = HZB::selectMip( firstPixel, lastPixel, footprint, mipCount );
+    if ( mip >= mipCount )
         return false;
-    float maxTileDepth = 0.0f;
-    for ( uint tileY = firstTile.y; tileY <= endTile.y; ++tileY )
+    const uint  shift      = mip + 1u;
+    const uint2 size       = HZB::computeMipSize( depthSize, mip );
+    const uint  offset     = HZB::computeMipOffset( depthSize, mip );
+    const uint2 firstTexel = min( firstPixel >> shift, size - uint2( 1u, 1u ) );
+    const uint2 lastTexel  = min( lastPixel >> shift, size - uint2( 1u, 1u ) );
+    float       maxDepth   = 0.0f;
+    for ( uint texelY = firstTexel.y; texelY <= lastTexel.y; ++texelY )
     {
-        for ( uint tileX = firstTile.x; tileX <= endTile.x; ++tileX )
+        for ( uint texelX = firstTexel.x; texelX <= lastTexel.x; ++texelX )
         {
-            maxTileDepth = max( maxTileDepth, g_OcclusionTiles[tileY * g_OcclusionGrid.x + tileX] );
+            maxDepth = max( maxDepth, g_HZB[offset + texelY * size.x + texelX].y );
         }
     }
-    return minDepth > maxTileDepth;
+    return minDepth > maxDepth + g_HZBParams.x;
 }
 
 /**
@@ -308,6 +329,13 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     const uint orderIndex = dispatchThreadID.x;
     if ( orderIndex >= g_InstanceCount )
         return;
+    // 2 단계 가림: 앞 단계는 표시를 먼저 지운다(아래 어느 길로 돌아가도 0 이다). 뒤 단계는 앞 단계가 가려졌다고 적은 차례만 본다 — 그 차례는 불투명이라
+    // 아래 압축 포기 · 투명 길에 닿지 않고, LOD 전환도 앞 단계에서 진행하지 않았다(가림 판정이 LOD 앞이다).
+    const uint phase = g_CullPhase.x;
+    if ( phase == kCullPhaseEarly )
+        g_OccludedOrders[orderIndex] = 0u;
+    if ( phase == kCullPhaseLate && g_OccludedOrders[orderIndex] == 0u )
+        return;
     const uint instanceId = g_InstanceOrder[orderIndex];
     if ( instanceId >= g_InstanceSlotCount )
         return;
@@ -349,9 +377,13 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     if ( bHasBox && isBoxVisible( boxCenter, boxExtent ) == false )
         return;
 
-    // 지난 프레임 장면 깊이 뒤에 숨은 인스턴스는 그리지 않는다(위 압축 포기 배치는 개수가 CPU 값이라 거르지 않는다).
+    // HZB 깊이 뒤에 숨은 인스턴스는 그리지 않는다(위 압축 포기 배치는 개수가 CPU 값이라 거르지 않는다). 앞 단계는 빠진 불투명 차례를 뒤 단계에 넘긴다.
     if ( bHasBox ? isOccluded( boxCenter, boxExtent ) : isOccluded( instance._boundsCenter, instance._boundsRadius.xxx ) )
+    {
+        if ( phase == kCullPhaseEarly && headInfo._sortMode == 0u )
+            g_OccludedOrders[orderIndex] = 1u;
         return;
+    }
 
     // LOD 그룹이 아니면 머리 배치에 한 번 쓴다.
     if ( g_LODControl.x == 0u || headInfo._lodLevelCount <= 1u )

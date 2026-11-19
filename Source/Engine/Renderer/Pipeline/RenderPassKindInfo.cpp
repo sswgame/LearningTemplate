@@ -464,11 +464,11 @@ namespace sw
                         info._flags            = Flag::kOutputPass;
                         break;
                     }
-                    case RenderPassKind::OcclusionTiles:
+                    case RenderPassKind::HZBBuild:
                     {
-                        // 컬링이 읽는 타일이라 컬링과 같은 조건이다(간접 인자 능력 — DX11 은 컬링이 없다). 깊이 히스토리는 RW 텍스처로 읽는다.
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderOcclusionTiles;
-                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        // 구조 버퍼 UAV 와 RW 텍스처 읽기만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 화면 공간 반사의 hi-z trace 에 짓는다. 컬링용 짓기는 실행기가 컬링 능력으로 가린다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderHZBBuild;
+                        info._flags          = Flag::kCompute;
                         break;
                     }
                     case RenderPassKind::VolumetricFog:
