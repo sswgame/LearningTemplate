@@ -79,7 +79,7 @@ namespace sw
             _filterSampleCount  = config._filterSampleCount;
             _framesSinceCapture = 0;
             _bCaptured          = SW_TRUE;
-            ++_revision;
+            ++_data._revision;
         }
         return &_data;
     }

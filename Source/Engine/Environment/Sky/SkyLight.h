@@ -32,6 +32,8 @@ namespace sw
     {
         ReflectionProbeAsset _reflection; ///< 거칠기 단계마다 거른 하늘(단계 0 은 거르지 않은 하늘). 하늘은 무한히 멀어 찍은 위치는 쓰지 않는다(0)
         SH9Color             _ambient;    ///< 하늘의 SH9(복사휘도) — 셰이더는 조도 / π 로 접은 원소(`SH9Color::makeGPUElement`)를 읽는다
+        /// @brief 캐시가 거를 때마다 올리는 번호입니다(`make` 는 건드리지 않는다). 프로브 버퍼가 다시 올릴지 정하는 열쇠다(`LightProbeElementBuilder::appendSkyLight`).
+        uint32 _revision{ 0 };
 
         /**
          * @brief @p sky 를 @p config 의 크기 · 단계 수 · 표본 수로 걸러 @p outData 를 만듭니다.
@@ -55,15 +57,14 @@ namespace sw
          * @return 이번 프레임에 쓸 스카이 라이트. 하늘이 없거나 거르지 못했으면(설정이 범위 밖 — 오류를 한 번 남긴다) nullptr 입니다.
          */
         [[nodiscard]] const SkyLightData* update( const SkyGradient* pSky, const SkyLightConfig& config );
-        /** @brief 거른 횟수입니다. 내용이 바뀔 때마다 오른다 — 프로브 버퍼가 다시 올릴지 정하는 열쇠다(`LightProbeElementBuilder::appendSkyLight`). */
-        uint32 getRevision() const { return _revision; }
+        /** @brief 거른 횟수입니다(`SkyLightData::_revision`). 내용이 바뀔 때마다 오른다. */
+        uint32 getRevision() const { return _data._revision; }
 
     private:
         SkyLightData _data;                    ///< 지금 쓰는 스카이 라이트(`_bCaptured` 일 때만 뜻이 있다)
         SkyGradient  _source;                  ///< `_data` 를 만든 하늘
         uint32       _filterSampleCount{ 0 };  ///< `_data` 를 만든 표본 수(크기 · 단계 수는 `_data._reflection` 이 든다)
         uint32       _framesSinceCapture{ 0 }; ///< 마지막으로 거른 뒤 지난 `update` 수
-        uint32       _revision{ 0 };           ///< 거른 횟수
         uint8        _bCaptured{ SW_FALSE };   ///< `_data` 가 있다
     };
 } // namespace sw

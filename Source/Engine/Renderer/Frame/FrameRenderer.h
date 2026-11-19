@@ -399,7 +399,7 @@ namespace sw
         [[nodiscard]] FrameViewResources::ViewPassSceneState captureViewPassSceneState() const;
 
         /** @brief 이번 프레임의 하늘(`_state._frameSky` · `_state._bHasFrameSky`)을 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
-        void applyFrameSky( bool bHasSky, const SkyGradient& sky );
+        void applyFrameSky( bool bHasSky, const SkyGradient& sky, const float4& skyLight );
         /**
          * @brief 실시간 라이트 프로브 갱신의 버퍼와 입력을 갖춥니다(`_state._listFrameRealtimeProbe`). **기록 전에** 부릅니다 - 라이트 버퍼가 올라간 뒤(프로브 버퍼의 UAV가 정해진 뒤)다.
          * @details 못 켜는 이유(컴퓨트 PSO · 프로브 버퍼 UAV · 버퍼 할당)는 갱신기가 한 번만 오류로 남기고, 실시간 볼륨은 검게 남는다(베이크로 대신하지 않는다).

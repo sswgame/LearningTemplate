@@ -316,7 +316,7 @@ namespace sw
             _state._frameLight = FrameLightState{};
         }
         // 하늘도 패킷으로만 온다.
-        applyFrameSky( packet._bHasSky != SW_FALSE, packet._sky );
+        applyFrameSky( packet._bHasSky != SW_FALSE, packet._sky, packet._skyLight );
         _fog.applyFrameFog( packet._bHasFog != SW_FALSE, packet._fog );
         // 표면 변형 층도 패킷으로만 온다(텍스처 핸들 + 창). 맞바꾸기라 지난 프레임의 핸들이 패킷으로 돌아가 다음 리셋이 놓는다.
         std::swap( _state._surfaceDeform, packet._surfaceDeform );
@@ -610,7 +610,7 @@ namespace sw
         constexpr float4 kDefaultOutlineColor{ 0.08f, 0.05f, 0.12f, 0.85f };
     } // namespace
 
-    void FrameRenderer::applyFrameSky( bool bHasSky, const SkyGradient& sky )
+    void FrameRenderer::applyFrameSky( bool bHasSky, const SkyGradient& sky, const float4& skyLight )
     {
         // 셰이더 상수 배치는 SkyGradient 머리 주석이 기준이다(sky.hlsl 의 evaluateSky 가 같은 순서로 읽는다).
         _state._bHasFrameSky   = bHasSky ? SW_TRUE : SW_FALSE;
@@ -628,6 +628,8 @@ namespace sw
             _state._frameSky = FrameSkyState{};
             return;
         }
+        // 스카이 라이트의 자리는 같은 패킷의 프로브 원소 묶음(`populate` 가 받는 `_pLightProbe`)을 가리킨다 — 하늘이 없는 프레임은 위에서 0 으로 돌아갔다.
+        _state._frameSky._skyLight        = skyLight;
         _state._frameSky._zenithExponent  = float4{ sky._zenithColor._x, sky._zenithColor._y, sky._zenithColor._z, sky._horizonExponent };
         _state._frameSky._horizon         = float4{ sky._horizonColor._x, sky._horizonColor._y, sky._horizonColor._z, sky._hdriRotation };
         _state._frameSky._groundIntensity = float4{ sky._groundColor._x, sky._groundColor._y, sky._groundColor._z, sky._intensity };
@@ -705,6 +707,7 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._skyCloudShape, _state._frameSky._cloudShape );
         context._passValues.setFloat4( passConstantNames()._skyCloudWind, _state._frameSky._cloudWind );
         context._passValues.setFloat4( passConstantNames()._skyCloudColor, _state._frameSky._cloudColor );
+        context._passValues.setFloat4( passConstantNames()._skyLight, _state._frameSky._skyLight );
         context._passValues.setFloat4( passConstantNames()._fogColorDensity, _fog.getFrameFog()._colorDensity );
         context._passValues.setFloat4( passConstantNames()._fogHeightParams, _fog.getFrameFog()._heightParams );
         context._passValues.setFloat4( passConstantNames()._fogInscatter, _fog.getFrameFog()._inscatter );

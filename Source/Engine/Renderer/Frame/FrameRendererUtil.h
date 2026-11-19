@@ -413,6 +413,8 @@ namespace sw
         hashed_string _skyCloudShape{ "g_SkyCloudShape" };
         hashed_string _skyCloudWind{ "g_SkyCloudWind" };
         hashed_string _skyCloudColor{ "g_SkyCloudColor" };
+        /// @brief 스카이 라이트의 프로브 버퍼 자리입니다(lighting.hlsli `SkyLight`). 배치는 `LightProbeElementBuilder::getSkyLight`.
+        hashed_string _skyLight{ "g_SkyLight" };
         /// @brief 높이 · 거리 지수 안개입니다(안개 패스). 배치는 `FogSettings` 머리 주석 — 색 · 밀도 / 높이 감쇠 · 기준 높이 · 시작 거리 · 최대 불투명도 / 방향광 산란 / 볼륨 안개.
         hashed_string _fogColorDensity{ "g_FogColorDensity" };
         hashed_string _fogHeightParams{ "g_FogHeightParams" };

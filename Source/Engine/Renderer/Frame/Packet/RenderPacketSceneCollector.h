@@ -14,6 +14,7 @@
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Environment/Sky/SkyLight.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
@@ -133,6 +134,8 @@ namespace sw
         LocalShadowAtlas _localShadowAtlas;
         /** @brief 프로브 버퍼 원소 묶음입니다(`collectSceneLights`). 내용이 그대로면 지난 묶음을 다시 주도록 프레임을 넘어 유지합니다. */
         LightProbeElementBuilder _lightProbeElement;
+        /** @brief 이 수집기가 보는 씬의 스카이 라이트입니다. 하늘이 바뀔 때만 다시 거르도록 프레임을 넘어 유지합니다(`collectLights`). */
+        SkyLightCache _skyLight;
         /** @brief 읽은 렌즈 플레어 파일(경로 → 데이터, 못 읽은 경로는 nullptr)입니다. 프레임을 넘어 유지한다. */
         vector<pair<string, SharedAssetRef<LensFlareAsset>>> _listLensFlareAsset; ///< 경로마다 공유 캐시 참조(다시 읽으면 새 판을 본다)
         /** @brief 디바이스가 GPU 컬링 컴퓨트를 돌릴 수 있어 인스턴스 LOD 를 GPU 가 고를 수 있는지입니다(`initialize` 가 정한다). `fillSceneView` 는 쓰지 않는다. */

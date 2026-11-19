@@ -60,6 +60,11 @@ namespace sw
         vector<DecalDrawData> _listDecal;
         /** @brief 씬의 하늘(`SkyComponent`)입니다. `_bHasSky` 가 0 이면 값이 없고 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색). */
         SkyGradient _sky;
+        /**
+         * @brief 씬의 스카이 라이트가 프로브 버퍼(`_pLightProbe`)에서 차지한 자리입니다(`LightProbeElementBuilder::getSkyLight` → PassCB `g_SkyLight`).
+         *        하늘이 없거나 거르지 못했으면 모두 0 이다 — 그 장면의 환경광은 앰비언트 색이다.
+         */
+        float4 _skyLight;
         /** @brief 씬의 안개(`FogComponent`, 카메라가 물속이면 물속 안개로 덮은 값)입니다. `_bHasFog` 가 0 이면 값이 없고 안개 패스가 그리지 않는다. */
         FogSettings _fog;
         /** @brief 씬의 표면 변형 층(`SurfaceDeformSystem`)입니다. 핸들이 비면 층이 없고 셰이더는 정점을 옮기지 않는다(`g_SurfaceDeformParams.z` 가 0). */
@@ -126,6 +131,7 @@ namespace sw
             , _listLensFlare{}
             , _listDecal{}
             , _sky{}
+            , _skyLight{}
             , _fog{}
             , _surfaceDeform{}
             , _listView{}
@@ -186,6 +192,7 @@ namespace sw
             _listLensFlare.clear();
             _listDecal.clear();
             _sky           = SkyGradient{};
+            _skyLight      = float4{};
             _fog           = FogSettings{};
             _surfaceDeform = SurfaceDeformBinding{};
             _listView.clear();

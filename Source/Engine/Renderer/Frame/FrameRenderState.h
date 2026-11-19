@@ -72,6 +72,7 @@ namespace sw
         float4 _cloudShape{};         ///< x 덮는 비율, y 층 고도(km), z 노이즈 배율(1/km), w 최대 불투명도
         float4 _cloudWind{};          ///< xy 바람 방향 단위 벡터(xz 평면), z 바람 속도(km/s), w 경계 부드러움
         float4 _cloudColor{};         ///< rgb 구름 색, w 구름을 그리면 1
+        float4 _skyLight{};           ///< 스카이 라이트의 프로브 버퍼 자리 — x 옥타헤드럴 한 변, y 거칠기 단계 수(0 이면 없음), z 첫 원소 번호(`LightProbeElementBuilder::getSkyLight`)
     };
 
     /**
