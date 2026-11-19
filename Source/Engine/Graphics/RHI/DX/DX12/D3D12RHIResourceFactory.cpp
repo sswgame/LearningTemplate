@@ -1293,6 +1293,7 @@ namespace sw
         const bool bSliceMisaligned  = slice._offset % D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT != 0 || slice._size == 0;
         if ( bSliceOutsidePage || bSliceMisaligned )
         {
+            lock.unlock(); // 잠금은 잎 잠금이다 — 로그는 놓은 뒤에 남긴다
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.BadConstantBufferSlice", "registerBindlessBufferSRV: slice (offset %#, size %#) is not a 256-aligned slice of a constant buffer page",
                              slice._offset, slice._size );
             return kInvalidDescriptorIndex;
