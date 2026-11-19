@@ -32,11 +32,49 @@ namespace sw
     template <typename E>
     inline constexpr size_t kEnumCount = EnumCount<E>::kValue;
 
+    /**
+     * @class EnumRange
+     * @brief 열거자를 `0` 부터 끝 표식 앞까지 차례로 도는 범위입니다(언리얼 `TEnumRange`, magic_enum `enum_values`). `for ( const E key : EnumRange<E>{} )`.
+     * @details 정수 첨자를 돌며 `static_cast<E>( index )` 를 적지 않는다. 열거자는 `0..kEnumCount<E>-1` 로 빈틈없어야 한다(`EnumArray` 와 같은 전제).
+     */
+    template <typename E>
+    class EnumRange
+    {
+        static_assert( std::is_enum_v<E>, "EnumRange needs an enum type" );
+
+    public:
+        class Iterator
+        {
+        public:
+            constexpr explicit Iterator( size_t index ) noexcept
+                : _index{ index }
+            {
+            }
+
+            [[nodiscard]] constexpr E operator*() const noexcept { return static_cast<E>( _index ); }
+            constexpr Iterator&       operator++() noexcept
+            {
+                ++_index;
+                return *this;
+            }
+            [[nodiscard]] constexpr bool operator!=( const Iterator& other ) const noexcept { return _index != other._index; }
+
+        private:
+            size_t _index;
+        };
+
+        [[nodiscard]] constexpr Iterator begin() const noexcept { return Iterator{ 0 }; }
+        [[nodiscard]] constexpr Iterator end() const noexcept { return Iterator{ kEnumCount<E> }; }
+    };
+
     template <typename E, typename T>
     class EnumArray;
 
     template <typename E, typename T, typename... Args>
     constexpr EnumArray<E, T> makeEnumTable( Args&&... args );
+
+    template <typename E, typename T, size_t N>
+    constexpr EnumArray<E, T> makeEnumTable( const T ( &arrValue )[N] );
 
     /**
      * @class EnumArray
@@ -90,8 +128,16 @@ namespace sw
         {
         }
 
+        template <size_t... Index>
+        constexpr EnumArray( FillTag, const T* pValue, std::index_sequence<Index...> )
+            : _arrValue{ pValue[Index]... }
+        {
+        }
+
         template <typename E2, typename T2, typename... Args>
         friend constexpr EnumArray<E2, T2> makeEnumTable( Args&&... args );
+        template <typename E2, typename T2, size_t N>
+        friend constexpr EnumArray<E2, T2> makeEnumTable( const T2 ( &arrValue )[N] );
 
     private:
         T _arrValue[kSize]{};
@@ -107,5 +153,17 @@ namespace sw
     {
         static_assert( sizeof...( Args ) == kEnumCount<E>, "makeEnumTable needs exactly one entry per enumerator" );
         return EnumArray<E, T>( typename EnumArray<E, T>::FillTag{}, std::forward<Args>( args )... );
+    }
+
+    /**
+     * @brief 중괄호 목록 하나로 표를 만듭니다 — 줄이 구조체라 원소마다 형식을 적지 않을 때 쓴다. 줄 수가 열거자 수와 다르면 컴파일 오류다.
+     * @details `static constexpr auto kArrRow = makeEnumTable<SceneDataKind, KindRow>( { { "Transform", … }, { "Bounds", … } } );`
+     *          배열 길이(@p N)를 목록에서 읽으므로 모자란 목록이 남은 칸을 0 으로 채우지 못한다.
+     */
+    template <typename E, typename T, size_t N>
+    constexpr EnumArray<E, T> makeEnumTable( const T ( &arrValue )[N] )
+    {
+        static_assert( N == kEnumCount<E>, "makeEnumTable needs exactly one entry per enumerator" );
+        return EnumArray<E, T>( typename EnumArray<E, T>::FillTag{}, arrValue, std::make_index_sequence<N>{} );
     }
 } // namespace sw

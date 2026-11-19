@@ -2,6 +2,7 @@
 
 #include "Editor/Viewport/TerrainBrushTool.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Ray.h"
 
@@ -80,11 +81,10 @@ namespace sw::editor
                 ImGui::SetNextWindowPos( ImVec2{ args._canvasPos._x + 12.0f, args._canvasPos._y + 48.0f }, ImGuiCond_FirstUseEver );
                 if ( ImGui::Begin( "Terrain Brush###TerrainBrushTool", nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
                 {
-                    static const utf8* const s_arrModeName[] = { "Raise", "Lower", "Flatten", "Paint Layer", "Smooth", "Cut Hole", "Fill Hole" };
-                    static_assert( static_cast<size_t>( IM_ARRAYSIZE( s_arrModeName ) ) == static_cast<size_t>( TerrainBrushMode::Count ), "Terrain brush mode names follow TerrainBrushMode" );
-                    int32 mode = static_cast<int32>( settings._mode );
+                    static constexpr auto kArrModeName = makeEnumTable<TerrainBrushMode, const utf8*>( "Raise", "Lower", "Flatten", "Paint Layer", "Smooth", "Cut Hole", "Fill Hole" );
+                    int32                 mode         = static_cast<int32>( settings._mode );
                     EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Mode" ) );
-                    if ( EditorWidgets::combo( SW_WIDGET_ID( "##Mode" ), &mode, s_arrModeName, IM_ARRAYSIZE( s_arrModeName ) ) )
+                    if ( EditorWidgets::combo( SW_WIDGET_ID( "##Mode" ), &mode, kArrModeName.data(), static_cast<int32>( kArrModeName.size() ) ) )
                         settings._mode = static_cast<TerrainBrushMode>( mode );
                     EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Radius" ) );
                     EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Radius" ), &settings._radius, 0.5f, 64.0f, "%.1f m" );

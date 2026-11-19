@@ -30,6 +30,18 @@ namespace
 {
     constexpr auto kArrColorName = sw::makeEnumTable<EnumArrayColor, const utf8*>( "Red", "Green", "Blue" );
 
+    struct EnumArrayColorRow
+    {
+        const utf8* _pName;
+        uint32      _rgb;
+    };
+    constexpr auto kArrColorRow = sw::makeEnumTable<EnumArrayColor, EnumArrayColorRow>( {
+        {  "Red", 0xFF0000u},
+        {"Green", 0x00FF00u},
+        { "Blue", 0x0000FFu},
+    } );
+    static_assert( kArrColorRow[EnumArrayColor::Green]._rgb == 0x00FF00u, "중괄호 목록 표도 열거자로 읽는다" );
+
     static_assert( sw::kEnumCount<EnumArrayColor> == 3, "끝 열거자 Count 가 열거자 수다" );
     static_assert( sw::kEnumCount<EnumArrayNoCount> == 2, "Count 가 없으면 특수화가 준다" );
     static_assert( sw::EnumArray<EnumArrayColor, int32>::size() == 3 );
@@ -63,6 +75,22 @@ SW_TEST_CASE( EnumArrayTest, IndexesByEnumerator )
     arrNoCount[EnumArrayNoCount::Second] = 1.5f;
     SW_EXPECT_EQUAL( size_t( 2 ), arrNoCount.size() );
     SW_EXPECT_EQUAL( 1.5f, arrNoCount[EnumArrayNoCount::Second] );
+}
+
+/**
+ * @brief [EnumArrayTest] EnumRange 는 열거자를 0 부터 Count 앞까지 차례로 돈다
+ */
+SW_TEST_CASE( EnumArrayTest, EnumRangeVisitsEveryEnumerator )
+{
+    sw::EnumArray<EnumArrayColor, int32> arrOrder;
+    int32                                order{ 0 };
+    for ( const EnumArrayColor color : sw::EnumRange<EnumArrayColor>{} )
+    {
+        arrOrder[color] = ++order;
+    }
+    SW_EXPECT_EQUAL( 3, order );
+    SW_EXPECT_EQUAL( 1, arrOrder[EnumArrayColor::Red] );
+    SW_EXPECT_EQUAL( 3, arrOrder[EnumArrayColor::Blue] );
 }
 
 /**

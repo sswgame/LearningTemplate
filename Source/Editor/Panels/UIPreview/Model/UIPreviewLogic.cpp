@@ -3,6 +3,7 @@
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/EnumArray.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Name/hashed_string.h"
@@ -52,7 +53,7 @@ namespace sw::editor
                 float32     _maxX;
                 float32     _maxY;
             };
-            static constexpr AnchorPresetRow kArrAnchorPreset[] = {
+            static constexpr auto kArrAnchorPreset = makeEnumTable<UIPreviewAnchorPreset, AnchorPresetRow>( {
                 {          "topleft", 0.0f, 0.0f, 0.0f, 0.0f},
                 {        "topcenter", 0.5f, 0.0f, 0.5f, 0.0f},
                 {         "topright", 1.0f, 0.0f, 1.0f, 0.0f},
@@ -65,14 +66,12 @@ namespace sw::editor
                 {"stretchhorizontal", 0.0f, 0.5f, 1.0f, 0.5f},
                 {  "stretchvertical", 0.5f, 0.0f, 0.5f, 1.0f},
                 {       "stretchall", 0.0f, 0.0f, 1.0f, 1.0f},
-            };
-            static_assert( sizeof( kArrAnchorPreset ) / sizeof( kArrAnchorPreset[0] ) == static_cast<size_t>( UIPreviewAnchorPreset::Count ), "anchor preset table size" );
+            } );
 
             /** @brief 프리셋 @p preset 의 테이블 줄입니다. 범위 밖이면 첫 줄(좌상)입니다. */
             static const AnchorPresetRow& findAnchorPresetRow( UIPreviewAnchorPreset preset )
             {
-                const uint32 index = static_cast<uint32>( preset );
-                return kArrAnchorPreset[index < static_cast<uint32>( UIPreviewAnchorPreset::Count ) ? index : 0];
+                return kArrAnchorPreset[preset < UIPreviewAnchorPreset::Count ? preset : static_cast<UIPreviewAnchorPreset>( 0 )];
             }
         };
     } // namespace
