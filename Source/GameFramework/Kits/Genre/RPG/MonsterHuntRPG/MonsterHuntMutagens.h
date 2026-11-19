@@ -36,9 +36,12 @@ namespace sw
      * @brief 그룹 배치는 카탈로그의 `<SlotGroup>` 순서입니다. 스킬을 배웠는지(랭크)는 게임이 `SkillTreeState` 로 확인하고 끼웁니다. 이 클래스는 슬롯과 색만 봅니다.
      *        레벨이 내려가 그룹이 닫혀도 끼운 것은 남지만 능력치에는 들어가지 않습니다.
      */
+    REFLECT()
     class SW_KIT_API MonsterHuntMutagens
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WMUT" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -66,18 +69,26 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
 
-    private:
+        /** @brief 그룹 하나에 끼운 스킬(슬롯 순서, 빈 슬롯은 빈 이름)과 변이원입니다(리플렉션 상태 칸의 원소). */
+        REFLECT()
         struct Group
         {
+            REFLECT_BODY();
+
+            PROPERTY()
             vector<hashed_string> _listSkill{};
-            hashed_string         _mutagenID{};
+            PROPERTY()
+            hashed_string _mutagenID{};
         };
 
+    private:
         bool isValidSlot( int32 group, int32 slot ) const;
 
     private:
+        PROPERTY( RuntimeState )
         vector<Group>             _listGroup;
         const MonsterHuntCatalog* _pCatalog;
-        int32                     _characterLevel;
+        PROPERTY( RuntimeState )
+        int32 _characterLevel;
     };
 } // namespace sw

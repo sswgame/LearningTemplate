@@ -144,56 +144,43 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        io.value( _characterLevel );
-        // 그룹 수 · 그룹마다 칸 수는 카탈로그(설정)가 정한다 — 저장한 수로 읽어 같은 자리에 맞춘다(감사 A-6). 줄어 밖에 남은 칸의 장착은 풀린다 —
+        // 그룹 수 · 그룹마다 칸 수는 카탈로그(설정)가 정한다 — 저장한 그룹을 읽은 뒤 지금 구성의 같은 자리에 맞춘다(감사 A-6). 줄어 밖에 남은 칸의 장착은 풀린다 —
         // 장착은 가진 스킬 · 변이를 가리키는 선택일 뿐이라 풀어도 잃는 것이 없다(가진 것은 이 상태 밖에 있다). 늘어난 칸은 비어 있다.
-        uint32 groupCount = static_cast<uint32>( _listGroup.size() );
-        io.count( sizeof( uint32 ) * 2, groupCount ); // 그룹마다 칸 수(4) + 변이 이름(4) 이상
-        if ( io.isOk() == false )
+        const vector<Group> listLayout = io.isReading() ? _listGroup : vector<Group>{};
+        io.reflected( *this );
+        if ( io.isWriting() || io.isOk() == false )
             return;
-        vector<Group> listFitted = _listGroup;
-        if ( io.isReading() )
-        {
-            for ( Group& group : listFitted )
-            {
-                group = Group{ vector<hashed_string>( group._listSkill.size() ), hashed_string{} };
-            }
-        }
         vector<hashed_string> listSeenSkill;
-        for ( uint32 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
+        for ( const Group& saved : _listGroup )
         {
-            Group  saved     = io.isWriting() ? _listGroup[groupIndex] : Group{};
-            uint32 slotCount = static_cast<uint32>( saved._listSkill.size() );
-            io.count( sizeof( uint32 ), slotCount );
-            if ( io.isOk() == false )
-                return;
-            if ( io.isReading() )
-                saved._listSkill.resize( slotCount );
-            for ( hashed_string& skillID : saved._listSkill )
+            for ( const hashed_string& skillID : saved._listSkill )
             {
-                io.value( skillID );
-                if ( io.isWriting() || skillID.empty() )
+                if ( skillID.empty() )
                     continue;
                 if ( io.check( VectorUtil::contains( listSeenSkill, skillID ) == false ) == false ) // `equipSkill` 의 `AlreadyEquipped` 와 같은 약속 — 겹치면 색 맞춤을 두 번 센다
                     return;
                 listSeenSkill.push_back( skillID );
             }
-            io.value( saved._mutagenID );
-            if ( io.isWriting() )
-                continue;
             if ( io.check( saved._mutagenID.empty() || _pCatalog->findMutagen( saved._mutagenID ) != nullptr ) == false )
                 return;
-            if ( groupIndex >= listFitted.size() )
-                continue; // 줄어든 그룹 — 장착이 풀린다
-            Group& target = listFitted[groupIndex];
-            for ( size_t slot = 0; slot < saved._listSkill.size() && slot < target._listSkill.size(); ++slot )
-            {
-                target._listSkill[slot] = saved._listSkill[slot];
-            }
-            target._mutagenID = saved._mutagenID;
         }
-        if ( io.isReading() )
-            _listGroup = std::move( listFitted );
+        vector<Group> listFitted;
+        listFitted.reserve( listLayout.size() );
+        for ( size_t groupIndex = 0; groupIndex < listLayout.size(); ++groupIndex )
+        {
+            Group fitted{ vector<hashed_string>( listLayout[groupIndex]._listSkill.size() ), hashed_string{} };
+            if ( groupIndex < _listGroup.size() )
+            {
+                const Group& saved = _listGroup[groupIndex];
+                for ( size_t slot = 0; slot < saved._listSkill.size() && slot < fitted._listSkill.size(); ++slot )
+                {
+                    fitted._listSkill[slot] = saved._listSkill[slot];
+                }
+                fitted._mutagenID = saved._mutagenID;
+            }
+            listFitted.push_back( std::move( fitted ) );
+        }
+        _listGroup = std::move( listFitted );
     }
 
 } // namespace sw

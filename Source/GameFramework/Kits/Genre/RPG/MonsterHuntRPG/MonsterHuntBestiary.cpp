@@ -146,21 +146,14 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        // 괴물마다 이름(4) + 지식과 처치 수(8) 바이트
-        io.list( _listEntry, 12, [&]( Entry& entry )
+        io.reflected( *this );
+        if ( io.isWriting() )
+            return;
+        for ( const Entry& entry : _listEntry )
         {
-            io.value( entry._monsterID );
-            io.value( entry._knowledge );
-            io.value( entry._killCount );
-            if ( io.isReading() )
-            {
-                io.check( _pCatalog->findMonster( entry._monsterID ) != nullptr && 0 <= entry._knowledge && 0 <= entry._killCount );
-            }
-        } );
-        if ( io.isReading() )
-        {
-            _eventBuffer.clear();
+            io.check( _pCatalog->findMonster( entry._monsterID ) != nullptr ); // 카탈로그 검사만 손으로 — 수의 범위는 `PROPERTY( Min )` 이 지킨다
         }
+        _eventBuffer.clear();
     }
 
 } // namespace sw

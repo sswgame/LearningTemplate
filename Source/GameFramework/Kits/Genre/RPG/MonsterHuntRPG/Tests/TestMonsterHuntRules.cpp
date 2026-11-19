@@ -128,17 +128,19 @@ namespace
         bool readFixture( int32 charges, float32 lockedToxicity, const sw::hashed_string& oilID, int32 oilHits )
         {
             sw::Archive written;
-            _alchemy.getCrafter().writeState( written );
+            // 리플렉션 상태 칸(충전, 오일, 묶이지 않은 독성, 오일 적중) 뒤에 손 본문(제작기, 효과)이다
+            sw::StateIO::writeReflectedHeader<sw::MonsterHuntAlchemy>( written );
             written << static_cast<uint32>( 1 );
             sw::StateIO::writeName( written, "swallow" );
             written << charges;
+            sw::StateIO::writeName( written, oilID );
+            written << 0.0f;
+            written << oilHits;
+            _alchemy.getCrafter().writeState( written );
             written << static_cast<uint32>( 1 );
             sw::StateIO::writeName( written, "decoct" );
             sw::StateIO::writeCountdown( written, sw::Countdown( 5.0f ) );
             written << lockedToxicity;
-            sw::StateIO::writeName( written, oilID );
-            written << 0.0f;
-            written << oilHits;
             sw::Archive reading( written.getData(), written.getSize() );
             return _alchemy.readState( reading );
         }
@@ -169,9 +171,10 @@ namespace
             sw::GameRandom random;
             random.setSeed( 7 );
             sw::Archive written;
+            sw::StateIO::writeReflectedHeader<sw::MonsterHuntCombat>( written );
+            written << adrenaline;
             _combat.getStamina().writeState( written );
             sw::StateIO::writeRandom( written, random );
-            written << adrenaline;
             sw::Archive reading( written.getData(), written.getSize() );
             return _combat.readState( reading );
         }
@@ -194,13 +197,14 @@ namespace
         static bool readFixtureInvestigation( sw::MonsterHuntInvestigation& investigation, const sw::hashed_string& contractID, int32 stepIndex, const sw::vector<sw::hashed_string>& listFound )
         {
             sw::Archive written;
-            sw::StateIO::writeName( written, contractID );
-            written << stepIndex;
+            sw::StateIO::writeReflectedHeader<sw::MonsterHuntInvestigation>( written );
             written << static_cast<uint32>( listFound.size() );
             for ( const sw::hashed_string& clueID : listFound )
             {
                 sw::StateIO::writeName( written, clueID );
             }
+            written << stepIndex;
+            sw::StateIO::writeName( written, contractID );
             sw::Archive reading( written.getData(), written.getSize() );
             return investigation.readState( reading );
         }
@@ -208,11 +212,12 @@ namespace
         static bool readFixtureHaggle( sw::MonsterHuntHaggle& haggle, const sw::hashed_string& contractID, float32 anger, int32 offer, int32 finalReward, uint8 bClosed )
         {
             sw::Archive written;
-            sw::StateIO::writeName( written, contractID );
+            sw::StateIO::writeReflectedHeader<sw::MonsterHuntHaggle>( written );
             written << anger;
             written << offer;
             written << finalReward;
             written << bClosed;
+            sw::StateIO::writeName( written, contractID );
             sw::Archive reading( written.getData(), written.getSize() );
             return haggle.readState( reading );
         }
@@ -233,7 +238,7 @@ namespace
         bool readFixture( int32 level, const sw::hashed_string& slot00, const sw::hashed_string& slot01, const sw::hashed_string& slot10, const sw::hashed_string& mutagen0 )
         {
             sw::Archive written;
-            written << level;
+            sw::StateIO::writeReflectedHeader<sw::MonsterHuntMutagens>( written );
             written << static_cast<uint32>( 2 );
             written << static_cast<uint32>( 2 );
             sw::StateIO::writeName( written, slot00 );
@@ -242,6 +247,7 @@ namespace
             written << static_cast<uint32>( 1 );
             sw::StateIO::writeName( written, slot10 );
             sw::StateIO::writeName( written, sw::hashed_string{} );
+            written << level;
             sw::Archive reading( written.getData(), written.getSize() );
             return _mutagens.readState( reading );
         }
@@ -554,6 +560,7 @@ SW_TEST_CASE( MonsterHuntBestiaryTest, StateRoundTripsAndRefusesBadEntries )
     const auto readFixture = [&restored]( const sw::hashed_string& monsterID, int32 knowledge, int32 kills )
     {
         sw::Archive fixture;
+        sw::StateIO::writeReflectedHeader<sw::MonsterHuntBestiary>( fixture );
         fixture << static_cast<uint32>( 1 );
         sw::StateIO::writeName( fixture, monsterID );
         fixture << knowledge;
@@ -565,6 +572,8 @@ SW_TEST_CASE( MonsterHuntBestiaryTest, StateRoundTripsAndRefusesBadEntries )
     SW_EXPECT_FALSE( readFixture( "ghoul", -1, 1 ) );
     SW_EXPECT_FALSE( readFixture( "ghoul", 1, -1 ) );
     SW_EXPECT_EQUAL( 1, restored.getKnowledge( "ghoul" ) );
+    SW_EXPECT_TRUE( readFixture( "ghoul", 1, 2 ) ); // 같은 꾸밈의 맞는 값은 읽힌다 — 위 거절이 바이트 모양 탓이 아니다
+    SW_EXPECT_EQUAL( 2, restored.getKillCount( "ghoul" ) );
 }
 
 /**

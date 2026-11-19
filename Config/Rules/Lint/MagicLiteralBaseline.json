@@ -767,7 +767,6 @@
     "Source/GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterCollectorCatalog.h": {"integer": 6},
     "Source/GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterInstance.cpp": {"integer": 4},
     "Source/GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntAlchemy.cpp": {"float": 2, "integer": 1},
-    "Source/GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntBestiary.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntCombat.cpp": {"float": 2},
     "Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCarcass.cpp": {"float": 2},
     "Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.cpp": {"float": 2},

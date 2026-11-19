@@ -234,41 +234,35 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
+        io.reflected( *this );
         hashed_string contractID = _pContract != nullptr ? _pContract->_id : hashed_string{};
-        io.value( contractID );
-        io.value( _stepIndex );
-        const MonsterHuntContractStepDef* pStep = nullptr;
-        if ( io.isReading() )
+        io.value( contractID ); // 리플렉션 밖 값 — 계약 포인터는 id 로 싣는다
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _pContract = _pCatalog->findContract( contractID );
+        if ( io.check( _pContract != nullptr && _stepIndex <= static_cast<int32>( _pContract->_listStep.size() ) ) == false )
+            return;
+        const MonsterHuntContractStepDef* pStep = _stepIndex < static_cast<int32>( _pContract->_listStep.size() ) ? &_pContract->_listStep[static_cast<size_t>( _stepIndex )] : nullptr;
+        // 찾은 단서는 지금 단계의 것이고 겹치지 않으며 하나는 남아 있어야 한다. 다 찾은 단계에 멈춘 상태는 넘어갈 길이 없어 조사가 영영 끝나지 않는다.
+        for ( const hashed_string& clueID : _listFound )
         {
-            _pContract = _pCatalog->findContract( contractID );
-            if ( io.check( _pContract != nullptr && 0 <= _stepIndex && _stepIndex <= static_cast<int32>( _pContract->_listStep.size() ) ) == false )
-                return;
-            pStep = _stepIndex < static_cast<int32>( _pContract->_listStep.size() ) ? &_pContract->_listStep[static_cast<size_t>( _stepIndex )] : nullptr;
+            io.check( pStep != nullptr && VectorUtil::containsBy<&MonsterHuntClueDef::_id>( pStep->_listClue, clueID ) );
         }
-        io.nameList( _listFound, [&]( const hashed_string& clueID )
-        { return pStep != nullptr && VectorUtil::containsBy<&MonsterHuntClueDef::_id>( pStep->_listClue, clueID ); } );
-        if ( io.isReading() )
-        {
-            // 찾은 단서는 지금 단계의 것이고 하나는 남아 있어야 한다. 다 찾은 단계에 멈춘 상태는 넘어갈 길이 없어 조사가 영영 끝나지 않는다.
-            io.check( pStep != nullptr ? _listFound.size() < pStep->_listClue.size() : _listFound.empty() );
-            _eventBuffer.clear();
-        }
+        io.check( VectorUtil::findDuplicate( _listFound ) == nullptr && ( pStep != nullptr ? _listFound.size() < pStep->_listClue.size() : _listFound.empty() ) );
+        _eventBuffer.clear();
     }
 
     void MonsterHuntHaggle::serializeState( StateIO& io )
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
+        io.reflected( *this ); // 수의 범위는 `PROPERTY( Min · Max )` 가 지킨다
         hashed_string contractID = _pContract != nullptr ? _pContract->_id : hashed_string{};
-        io.value( contractID );
-        io.value( _anger );
-        io.value( _offer );
-        io.value( _finalReward );
-        io.flag( _bClosed );
+        io.value( contractID ); // 리플렉션 밖 값 — 계약 포인터는 id 로 싣는다
         if ( io.isReading() )
         {
             _pContract = _pCatalog->findContract( contractID );
-            io.check( _pContract != nullptr && 0.0f <= _anger && 0 <= _offer && 0 <= _finalReward );
+            io.check( _pContract != nullptr );
         }
     }
 
