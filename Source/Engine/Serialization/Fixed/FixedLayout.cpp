@@ -956,8 +956,7 @@ namespace sw
     {
         if ( pConversion == nullptr || StringUtil::isNullOrEmpty( pConversion->_pTypeFqn ) || pConversion->_pFunction == nullptr )
             return false;
-        if ( find( hashed_string( pConversion->_pTypeFqn ), pConversion->_fromSchemaHash ) != nullptr )
-            return false;
+        // 같은 (타입, 해시) 두 번 등록은 이름 목록이 이름 중복으로 거절한다 — 여기서 `find` 로 미리 보지 않는다(등록은 정적 초기화라 이름 풀 앞이다, hashed_string 금지)
         string name = pConversion->_pTypeFqn;
         name += ':';
         name += sw::to_string( pConversion->_fromSchemaHash );
