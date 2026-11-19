@@ -459,7 +459,7 @@ SW_TEST_CASE( RHIAvailabilityTest, OtherBackendFitsThePlatform )
  */
 SW_TEST_CASE( RHIDeviceTest, UITargetFormatStaysSDRUnderHDR )
 {
-    FakeRHIDevice device;
+    test::FakeRHIDevice device;
     device._sdrBackBufferFormatForTest = RHIFormat::B8G8R8A8_UNORM;
     device._displayOutputSupport       = static_cast<uint8>( makeColorSpaceBit( RHIColorSpace::SRGBNonLinear ) | makeColorSpaceBit( RHIColorSpace::HDR10ST2084 ) );
     SW_EXPECT_TRUE( device.getUITargetFormat() == RHIFormat::B8G8R8A8_UNORM );
