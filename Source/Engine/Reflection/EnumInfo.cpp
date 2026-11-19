@@ -135,4 +135,9 @@ namespace sw
     {
         return _pEditor != nullptr ? _pEditor->findCustomMeta( key ) : nullptr;
     }
+
+    const EnumeratorEditorMetadata& EnumInfo::findEnumeratorEditorMetadata( const hashed_string& name ) const noexcept
+    {
+        return _pEditor != nullptr ? _pEditor->findEnumerator( name ) : EnumeratorEditorMetadata::getDefault();
+    }
 } // namespace sw

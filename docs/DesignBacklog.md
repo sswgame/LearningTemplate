@@ -1580,6 +1580,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
   - 메시지 방향 강제 — 라우터가 역할별 마스크로 반대 방향 종류를 `Malformed`(XMachina, S).
   - 게임 넷 메시지 본문을 REFLECT 고정 배치로, 본문 판은 스키마 해시(GameServer PacketGenerator, M — NetMessageDef 37 곳).
   - 열거형: 등록기를 항목 표 하나로(생성 바이트 약 0.7 MB↓), 플래그 글은 단일 비트 이름만, 끝 열거자 `Count` 자동 센티널, Core `EnumArray<E,T>` · `makeEnumTable`(개수 모자람을 컴파일 오류로), 열거자 단위 데이터 철자(magic_enum, S~M).
+    - 했다(w-enum): 등록기는 `NamedValue<int64>` 항목 표 + `EnumInfo::create<E>( EnumInfoDesc )` 한 줄(맵 · 인덱스 목록은 런타임이 짓고, 값은 컴파일러 식이라 대조 assert 없음). 표식 열거자는 이름 표에 남겨 왕복을 지키고 `_listEnumerator`(선언 순서, Count 제외)만 반복에서 뺀다. 플래그 글은 단일 비트 이름만 쓰되 단일 비트 이름이 없는 비트만 조합 이름으로 적어 값을 잃지 않고, 읽기는 조합 이름(`_channels="All"` 같은 손 데이터)도 받는다. 끝 `Count` 규칙은 `CursorReader::resolveCountEnumerator` 하나를 등록기 · 고정 배치 코덱이 함께 쓴다. 열거자 메타는 `ENUMERATOR( DisplayName · Tooltip · Hidden · Meta )`(언리얼 UMETA 자리, 개발 전용 메타 단위로).
   - 렌더 그래프 접근 종류를 핸들 형식에 — 손 전이 81 곳 제거(Adria, L, HZB 뒤).
   - 컴포넌트 → 카탈로그 id 를 `CatalogKey<Tag>` 형식으로, 쿠킹이 대조(ezEngine, M).
   - 타입별 판 + 패치 `REFLECT( Version = N )` — 그릇마다가 아니라 타입 한 곳(ezEngine GraphPatch, M).

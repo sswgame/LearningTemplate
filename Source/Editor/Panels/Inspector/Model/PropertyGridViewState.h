@@ -47,7 +47,9 @@ namespace sw::editor
     /** @brief 열거형 선택지 하나입니다. */
     struct PropertyEnumChoice
     {
-        hashed_string _name{};
+        hashed_string _name{};    ///< 열거자 이름(자체 테스트 표식 · 저장 글)
+        string        _label{};   ///< 보이는 글 — `ENUMERATOR( DisplayName = … )` 이 있으면 그것, 없으면 열거자 이름
+        string        _tooltip{}; ///< `ENUMERATOR( Tooltip = … )`
         int64         _value{ 0 };
     };
 

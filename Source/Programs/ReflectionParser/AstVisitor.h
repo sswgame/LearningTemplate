@@ -50,6 +50,10 @@ namespace sw
         void markHeaderError( ParsedHeader& header );
         void onStructDeclaration( CXCursor cursor, ParsedHeader& outHeader );
         void onEnumDeclaration( CXCursor cursor, ParsedHeader& outHeader );
+        /** @brief 열거자마다 이름 뒤의 `ENUMERATOR( … )` 를 읽어 @p inoutEnum 의 열거자에 넣습니다. 모르는 키가 있으면 false 입니다(알림은 이미 했다). */
+        [[nodiscard]] bool applyEnumeratorAnnotation( CXCursor enumCursor, ParsedEnumInfo& inoutEnum ) const;
+        /** @brief 열거형의 열거자 커서를 선언 순서로 모읍니다(`CursorReader::collectEnumerators` 와 같은 순서). */
+        static CXChildVisitResult collectEnumeratorCursor( CXCursor cursor, CXCursor parent, CXClientData clientData );
 
     private:
         static constexpr int32 kNoTarget = constant::invalid_index::kInt32;

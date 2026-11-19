@@ -101,9 +101,35 @@ namespace sw
         return s_default;
     }
 
+    EnumeratorEditorMetadata::EnumeratorEditorMetadata() noexcept
+        : _displayName{}
+        , _tooltip{}
+        , _mapCustomMeta{}
+        , _bHidden{ SW_FALSE }
+        , _reservedFlags{ 0 }
+    {
+    }
+
+    const string* EnumeratorEditorMetadata::findCustomMeta( const hashed_string& key ) const noexcept
+    {
+        return ReflectionEditorMetadataInternal::findInMap( _mapCustomMeta, key );
+    }
+
+    const EnumeratorEditorMetadata& EnumeratorEditorMetadata::getDefault() noexcept
+    {
+        static const EnumeratorEditorMetadata s_default{};
+        return s_default;
+    }
+
     const string* EnumEditorMetadata::findCustomMeta( const hashed_string& key ) const noexcept
     {
         return ReflectionEditorMetadataInternal::findInMap( _mapCustomMeta, key );
+    }
+
+    const EnumeratorEditorMetadata& EnumEditorMetadata::findEnumerator( const hashed_string& name ) const noexcept
+    {
+        const auto iter = _mapEnumerator.find( name );
+        return iter != _mapEnumerator.end() ? iter->second : EnumeratorEditorMetadata::getDefault();
     }
 
     bool TypeEditorMetadataSource::add( const TypeEditorMetadataSource* pSource )

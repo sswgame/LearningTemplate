@@ -6,7 +6,7 @@
  *          REGISTER_ANNOTATION_FIELD( Scope, ID, Member, Emit )         값을 멤버에 그대로 넣는다
  *          REGISTER_ANNOTATION_FIELD_FN( Scope, ID, Member, Fn, Emit )  값을 `Fn( 대상, 값 )` 이 넣는다
  *
- *          Scope  : Reflect | Enum | Property | Function   (PredefinedReflectAnnotation.xxx 의 ID)
+ *          Scope  : Reflect | Enum | Enumerator | Property | Function   (PredefinedReflectAnnotation.xxx 의 ID)
  *          ID     : AnnotationMeta.txt 의 정규 필드명(`flag.ReadOnly` 의 ReadOnly). 철자(별칭)는 거기서 늘립니다.
  *          Member : 값이 들어가는 ParsedReflection.h 의 멤버입니다. **멤버 타입이 곧 값의 종류입니다.**
  *                     uint8 비트필드   → bool    (단독 토큰 `X` 와 `X = true/false`)
@@ -53,6 +53,12 @@ REGISTER_ANNOTATION_FIELD( Enum, Flags, _bIsBitFlag, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Enum, Alias, _listAlias, appendAlias, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Enum, ValueAlias, _listValueAlias, appendValueAlias, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Enum, Removed, _listRemovedEnumerator, appendRemovedEnumerator, Manual )
+
+// ── ENUMERATOR (열거자 하나 — 언리얼 UMETA) ──────────────────────
+REGISTER_ANNOTATION_FIELD( Enumerator, DisplayName, _displayName, Display )
+REGISTER_ANNOTATION_FIELD( Enumerator, Tooltip, _tooltip, Display )
+REGISTER_ANNOTATION_FIELD( Enumerator, Hidden, _bHidden, Display )
+REGISTER_ANNOTATION_FIELD_FN( Enumerator, Meta, _listCustomMeta, appendCustomMeta, Display )
 
 // ── PROPERTY ─────────────────────────────────────────────────────
 REGISTER_ANNOTATION_FIELD( Property, Category, _category, Display )

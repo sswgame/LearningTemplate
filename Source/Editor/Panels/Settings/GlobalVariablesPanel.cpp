@@ -22,6 +22,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 
 #include <imgui.h>
 
@@ -108,8 +109,11 @@ namespace sw::editor
                 {
                     for ( const EnumeratorInfo& enumerator : pEnumInfo->_listEnumerator ) // 선언 순서, `Count` 표식 제외
                     {
+                        const EnumeratorEditorMetadata& display = pEnumInfo->findEnumeratorEditorMetadata( enumerator._name );
+                        if ( display._bHidden != SW_FALSE )
+                            continue;
                         const int32 val32     = static_cast<int32>( enumerator._value );
-                        const utf8* name      = enumerator._name.toString().data();
+                        const utf8* name      = display._displayName.empty() ? enumerator._name.toString().data() : display._displayName.c_str();
                         const bool  bSelected = ( val32 == currentVal );
                         if ( ImGui::Selectable( name, bSelected ) )
                         {

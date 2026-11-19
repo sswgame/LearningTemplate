@@ -401,10 +401,11 @@ namespace sw
         // 만든다. 표가 구조체 밖에 있는 까닭: 정적 constexpr 멤버의 초기화식에서는 같은 구조체의 constexpr 함수
         // (`getValueKind`)를 아직 부를 수 없다(구조체가 완성되기 전이다).
         // ------------------------------------------------------------------------------
-#define SW_ANNOTATION_TARGET_Reflect  ParsedTypeInfo
-#define SW_ANNOTATION_TARGET_Enum     ParsedEnumInfo
-#define SW_ANNOTATION_TARGET_Property ParsedPropertyInfo
-#define SW_ANNOTATION_TARGET_Function ParsedFunctionInfo
+#define SW_ANNOTATION_TARGET_Reflect    ParsedTypeInfo
+#define SW_ANNOTATION_TARGET_Enum       ParsedEnumInfo
+#define SW_ANNOTATION_TARGET_Property   ParsedPropertyInfo
+#define SW_ANNOTATION_TARGET_Function   ParsedFunctionInfo
+#define SW_ANNOTATION_TARGET_Enumerator ParsedEnumeratorInfo
 
 #define SW_ANNOTATION_OUTPUT_Editor( TParsed, Member )                                             \
     []( const TParsed& parsed ) { return AnnotationFieldsInternal::isValueSet( parsed.Member ); }, \
@@ -425,6 +426,7 @@ namespace sw
     SW_ANNOTATION_IN_##Scope( SW_ANNOTATION_ROW( SW_ANNOTATION_TARGET_##Scope, ID, Member, AnnotationFieldsInternal::Fn( target, value ), Emit ) )
 
         // ── REFLECT ──
+#define SW_ANNOTATION_IN_Enumerator( Row )
 #define SW_ANNOTATION_IN_Reflect( Row ) Row
 #define SW_ANNOTATION_IN_Enum( Row )
 #define SW_ANNOTATION_IN_Property( Row )
@@ -459,11 +461,21 @@ namespace sw
         constexpr AnnotationField<ParsedFunctionInfo> kArrFunctionField[] = {
 #include "PredefinedAnnotationField.xxx"
         };
+#undef SW_ANNOTATION_IN_Function
+#undef SW_ANNOTATION_IN_Enumerator
+
+        // ── ENUMERATOR ──
+#define SW_ANNOTATION_IN_Function( Row )
+#define SW_ANNOTATION_IN_Enumerator( Row ) Row
+        constexpr AnnotationField<ParsedEnumeratorInfo> kArrEnumeratorField[] = {
+#include "PredefinedAnnotationField.xxx"
+        };
 
 #undef SW_ANNOTATION_IN_Reflect
 #undef SW_ANNOTATION_IN_Enum
 #undef SW_ANNOTATION_IN_Property
 #undef SW_ANNOTATION_IN_Function
+#undef SW_ANNOTATION_IN_Enumerator
 #undef REGISTER_ANNOTATION_FIELD
 #undef REGISTER_ANNOTATION_FIELD_FN
 #undef SW_ANNOTATION_ROW
@@ -475,6 +487,7 @@ namespace sw
 #undef SW_ANNOTATION_TARGET_Enum
 #undef SW_ANNOTATION_TARGET_Property
 #undef SW_ANNOTATION_TARGET_Function
+#undef SW_ANNOTATION_TARGET_Enumerator
 
         constexpr AnnotationScope<ParsedTypeInfo> kReflectScope{
             &annotation::kReflect, kArrReflectField, static_cast<uint32>( std::size( kArrReflectField ) ) };
@@ -484,6 +497,8 @@ namespace sw
             &annotation::kProperty, kArrPropertyField, static_cast<uint32>( std::size( kArrPropertyField ) ) };
         constexpr AnnotationScope<ParsedFunctionInfo> kFunctionScope{
             &annotation::kFunction, kArrFunctionField, static_cast<uint32>( std::size( kArrFunctionField ) ) };
+        constexpr AnnotationScope<ParsedEnumeratorInfo> kEnumeratorScope{
+            &annotation::kEnumerator, kArrEnumeratorField, static_cast<uint32>( std::size( kArrEnumeratorField ) ) };
     } // namespace
 } // namespace sw
 
@@ -511,6 +526,12 @@ namespace sw
     const AnnotationScope<ParsedFunctionInfo>& getAnnotationScope<ParsedFunctionInfo>()
     {
         return kFunctionScope;
+    }
+
+    template <>
+    const AnnotationScope<ParsedEnumeratorInfo>& getAnnotationScope<ParsedEnumeratorInfo>()
+    {
+        return kEnumeratorScope;
     }
 
     template <typename TParsed>
@@ -552,10 +573,12 @@ namespace sw
     template bool AnnotationFields::hasEditorMetadata<ParsedEnumInfo>( const ParsedEnumInfo& );
     template bool AnnotationFields::hasEditorMetadata<ParsedPropertyInfo>( const ParsedPropertyInfo& );
     template bool AnnotationFields::hasEditorMetadata<ParsedFunctionInfo>( const ParsedFunctionInfo& );
+    template bool AnnotationFields::hasEditorMetadata<ParsedEnumeratorInfo>( const ParsedEnumeratorInfo& );
     template void AnnotationFields::emitEditorMetadata<ParsedTypeInfo>( CodeEmit&, const ParsedTypeInfo&, string_view );
     template void AnnotationFields::emitEditorMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
     template void AnnotationFields::emitEditorMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
     template void AnnotationFields::emitEditorMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
+    template void AnnotationFields::emitEditorMetadata<ParsedEnumeratorInfo>( CodeEmit&, const ParsedEnumeratorInfo&, string_view );
 
     bool AnnotationFields::canAcceptOnEvent( const string_view propertyFieldID )
     {
@@ -600,9 +623,13 @@ namespace sw
             {
                 bValid = AnnotationFieldsInternal::isBindingValid<ParsedFunctionInfo>( entry ) && bValid;
             }
+            else if ( AnnotationFieldsInternal::isInScope<ParsedEnumeratorInfo>( entry ) )
+            {
+                bValid = AnnotationFieldsInternal::isBindingValid<ParsedEnumeratorInfo>( entry ) && bValid;
+            }
             else
             {
-                SW_LOG_ERROR_ID( "AnnotationFields.AnnotationMetaTxtSectionNot", "AnnotationMeta.txt section [%#] is not an annotation scope (REFLECT / ENUM / PROPERTY / FUNCTION).",
+                SW_LOG_ERROR_ID( "AnnotationFields.AnnotationMetaTxtSectionNot", "AnnotationMeta.txt section [%#] is not an annotation scope (REFLECT / ENUM / ENUMERATOR / PROPERTY / FUNCTION).",
                                  entry._scope );
                 bValid = false;
             }
@@ -612,6 +639,7 @@ namespace sw
         bValid = AnnotationFieldsInternal::isEveryFieldBound<ParsedEnumInfo>( meta ) && bValid;
         bValid = AnnotationFieldsInternal::isEveryFieldBound<ParsedPropertyInfo>( meta ) && bValid;
         bValid = AnnotationFieldsInternal::isEveryFieldBound<ParsedFunctionInfo>( meta ) && bValid;
+        bValid = AnnotationFieldsInternal::isEveryFieldBound<ParsedEnumeratorInfo>( meta ) && bValid;
         return bValid;
     }
 } // namespace sw

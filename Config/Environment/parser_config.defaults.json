@@ -9,6 +9,7 @@
             "-DPROPERTY(...)=__attribute__((annotate(\"PROPERTY;\" #__VA_ARGS__)))",
             "-DFUNCTION(...)=__attribute__((annotate(\"FUNCTION;\" #__VA_ARGS__)))",
             "-DENUM(...)=__attribute__((annotate(\"ENUM;\" #__VA_ARGS__)))",
+            "-DENUMERATOR(...)=__attribute__((annotate(\"ENUMERATOR;\" #__VA_ARGS__)))",
             "-x",
             "c++",
             "-w"

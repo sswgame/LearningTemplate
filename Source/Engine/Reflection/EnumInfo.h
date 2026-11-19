@@ -11,6 +11,7 @@
 namespace sw
 {
     struct EnumEditorMetadata;
+    struct EnumeratorEditorMetadata;
 
     /**
      * @struct EnumInfoDesc
@@ -95,6 +96,8 @@ namespace sw
 
         /** @brief 커스텀 메타데이터를 조회합니다. 에디터 메타데이터가 붙지 않았으면(배포) nullptr 입니다. */
         const string* findCustomMeta( const hashed_string& key ) const noexcept;
+        /** @brief 열거자 @p name 의 표시 메타(`ENUMERATOR( … )`)입니다. 적지 않았거나 에디터 메타데이터가 없으면(배포) 기본값입니다. */
+        const EnumeratorEditorMetadata& findEnumeratorEditorMetadata( const hashed_string& name ) const noexcept;
 
         /**
          * @brief 메모리 포인터에서 실제 enum 크기만큼 안전하게 읽어 int64 로 반환합니다.

@@ -1078,13 +1078,28 @@ namespace sw
         }
         for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
         {
-            if ( AnnotationFields::hasEditorMetadata( enumInfo ) == false )
+            const auto hasEnumeratorMetadata = []( const ParsedEnumeratorInfo& enumerator )
+            { return AnnotationFields::hasEditorMetadata( enumerator ); };
+            const bool bAnyEnumeratorMetadata = VectorUtil::containsIf( enumInfo._listEnumerator, hasEnumeratorMetadata );
+            if ( AnnotationFields::hasEditorMetadata( enumInfo ) == false && bAnyEnumeratorMetadata == false )
                 continue;
             const string id = sanitizeIdentifier( enumInfo._fullyQualifiedName );
             emit.linef( "static void fillEnum_%#( ::sw::EnumEditorMetadata& meta )", id );
             emit.line( "{" );
             emit.push();
             AnnotationFields::emitEditorMetadata( emit, enumInfo, "meta." );
+            // 열거자마다의 표시 메타(`ENUMERATOR( … )`)는 열거자 이름으로 단다 — 적은 열거자만.
+            for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
+            {
+                if ( hasEnumeratorMetadata( enumerator ) == false )
+                    continue;
+                emit.line( "{" );
+                emit.push();
+                emit.linef( "::sw::EnumeratorEditorMetadata& entry = meta.addEnumerator( %# );", CodeEmit::hs( enumerator._name ) );
+                AnnotationFields::emitEditorMetadata( emit, enumerator, "entry." );
+                emit.pop();
+                emit.line( "}" );
+            }
             emit.pop();
             emit.line( "}" );
             emit.linef( "static const ::sw::EnumEditorMetadataSource    s_%#_editorMetadata{ %#, &fillEnum_%# };", id, CodeEmit::quoted( enumInfo._fullyQualifiedName ), id );

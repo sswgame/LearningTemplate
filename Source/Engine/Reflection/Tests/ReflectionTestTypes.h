@@ -504,8 +504,9 @@ namespace sw
     ENUM( Meta = "Doc=EnumForTesting, Version=2" )
     enum class TestMetaEnum : uint32
     {
-        First  = 0,
-        Second = 1,
+        First ENUMERATOR( DisplayName = "First Choice", Tooltip = "The first one", Meta = "Icon=One" ) = 0,
+        Second                                                                                         = 1,
+        Legacy ENUMERATOR( Hidden )                                                                    = 2,
     };
 } // namespace sw
 

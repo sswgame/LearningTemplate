@@ -45,11 +45,27 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 열거형 안의 개별 enumerator */
+    /** @brief 열거형 안의 개별 enumerator 입니다. 표시 메타는 열거자 뒤의 `ENUMERATOR( … )`(언리얼 `UMETA`)에서 읽습니다. */
     struct ParsedEnumeratorInfo
     {
-        string _name;
-        int64  _value{ 0 };
+        string                       _name;
+        int64                        _value;
+        string                       _displayName;
+        string                       _tooltip;
+        vector<pair<string, string>> _listCustomMeta;
+        uint8                        _bHidden  : 1; ///< 에디터 선택지에서 숨긴다(`ENUMERATOR( Hidden )`)
+        [[maybe_unused]] uint8       _reserved : 7;
+
+        ParsedEnumeratorInfo() noexcept
+            : _name{}
+            , _value{ 0 }
+            , _displayName{}
+            , _tooltip{}
+            , _listCustomMeta{}
+            , _bHidden{ SW_FALSE }
+            , _reserved{ 0 }
+        {
+        }
     };
 } // namespace sw
 
