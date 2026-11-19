@@ -118,7 +118,12 @@ namespace sw
         }
 
     private:
+        /** @brief 원소 나열로 채우는 생성자 표식입니다. */
         struct FillTag
+        {
+        };
+        /** @brief 배열 하나를 베껴 채우는 생성자 표식입니다(나열 생성자와 겹치지 않게 따로 둔다). */
+        struct CopyTag
         {
         };
 
@@ -129,7 +134,7 @@ namespace sw
         }
 
         template <size_t... Index>
-        constexpr EnumArray( FillTag, const T* pValue, std::index_sequence<Index...> )
+        constexpr EnumArray( CopyTag, const T* pValue, std::index_sequence<Index...> )
             : _arrValue{ pValue[Index]... }
         {
         }
@@ -164,6 +169,6 @@ namespace sw
     constexpr EnumArray<E, T> makeEnumTable( const T ( &arrValue )[N] )
     {
         static_assert( N == kEnumCount<E>, "makeEnumTable needs exactly one entry per enumerator" );
-        return EnumArray<E, T>( typename EnumArray<E, T>::FillTag{}, arrValue, std::make_index_sequence<N>{} );
+        return EnumArray<E, T>( typename EnumArray<E, T>::CopyTag{}, arrValue, std::make_index_sequence<N>{} );
     }
 } // namespace sw
