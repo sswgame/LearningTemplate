@@ -1074,9 +1074,11 @@ namespace sw
     IRHISwapChain* D3D12RHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )
     {
         // 메인 창과 같은 버퍼 수 · 포맷이어야 같은 PSO · 프레임 링 규칙을 쓴다. 팩터리는 메인 창과 같은 호출로 만든다(스왑체인은 큐에 붙어 어댑터가 정해진다).
+        // 다른 창(에디터 도구 창)은 주 창이 HDR 이어도 SDR 이다 — 그 창의 UI PSO 는 SDR 포맷 하나다.
         RHISwapChainDesc windowDesc = desc;
         windowDesc._bufferCount     = _swapChain.getBufferCount();
-        windowDesc._format          = _swapChain.getFormat();
+        windowDesc._sdrFormat       = _swapChain.getSDRFormat();
+        windowDesc._colorSpace      = RHIColorSpace::SRGBNonLinear;
         Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
         if ( isHrSuccess( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ), "CreateDXGIFactory1 (window)" ) == false )
             return nullptr;
@@ -1125,7 +1127,26 @@ namespace sw
         // 이 스레드가 렌더 스레드 역할을 빌려 만진다. 프레임 펜스 대기(`waitForPreviousFrame`)는 메인 창의 백 버퍼를 다시 고르므로 다른 창을 바꿀 때도 메인 창의 역할을 빌린다.
         ScopedThreadRoleBorrow mainBorrow{ _swapChain.getRenderThreadRole() };
         ScopedThreadRoleBorrow borrow{ swapChain.getRenderThreadRole() };
+        releaseSwapChainBuffersForRebuild( swapChain );
+        if ( swapChain.resize( width, height ) == false )
+            return;
+        recreateSwapChainBuffers( swapChain );
+    }
 
+    bool D3D12RHIDevice::setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
+    {
+        if ( _swapChain.isValid() == false )
+            return false;
+        // 크기 바꿈과 같은 길 — 포맷만 바꿔 `ResizeBuffers` 한다. 실패해도 버퍼는 다시 만든다(옛 포맷 그대로 — `setColorSpace` 가 되돌렸다).
+        ScopedThreadRoleBorrow borrow{ _swapChain.getRenderThreadRole() };
+        releaseSwapChainBuffersForRebuild( _swapChain );
+        const bool bChanged = _swapChain.setColorSpace( colorSpace, metadata );
+        recreateSwapChainBuffers( _swapChain );
+        return bChanged;
+    }
+
+    void D3D12RHIDevice::releaseSwapChainBuffersForRebuild( D3D12RHISwapChain& swapChain )
+    {
         if ( _frameStreamState._bRecording != SW_FALSE && _commandList != nullptr )
         {
             {
@@ -1143,8 +1164,10 @@ namespace sw
 
         waitForPreviousFrame();
         swapChain.releaseBackBuffers();
-        if ( swapChain.resize( width, height ) == false )
-            return;
+    }
+
+    void D3D12RHIDevice::recreateSwapChainBuffers( D3D12RHISwapChain& swapChain )
+    {
         ID3D12DescriptorHeap* const pRTVHeap = &swapChain == &_swapChain ? _rtvHeap.Get() : swapChain.getOwnedRTVHeap();
         swapChain.createBackBuffers( _device.Get(), pRTVHeap, _rtvDescriptorSize );
         swapChain.acquireNextImage();

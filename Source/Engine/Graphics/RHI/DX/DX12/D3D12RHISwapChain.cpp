@@ -22,7 +22,9 @@ namespace sw
         , _height{ 0 }
         , _bufferCount{ 2 }
         , _backBufferIndex{ 0 }
-        , _format{ constant::render::kBackBufferFormat }
+        , _sdrFormat{ constant::render::kBackBufferFormat }
+        , _colorSpace{ RHIColorSpace::SRGBNonLinear }
+        , _displayOutputSupport{}
         , _swapChainFlags{ 0 }
         , _bAllowTearing{ SW_FALSE }
         , _stateMutex{}
@@ -43,7 +45,8 @@ namespace sw
         _width       = desc._width;
         _height      = desc._height;
         _bufferCount = desc._bufferCount;
-        _format      = desc._format;
+        _sdrFormat   = desc._sdrFormat;
+        _colorSpace  = desc._colorSpace;
         _state       = D3D12_RESOURCE_STATE_PRESENT;
 
         // 창이 없으면 네이티브 스왑체인도 없다. 크기만 기억해 두면 오프스크린 경로는 그대로 동작한다.
@@ -64,7 +67,7 @@ namespace sw
         scDesc.BufferCount      = _bufferCount;
         scDesc.Width            = _width;
         scDesc.Height           = _height;
-        scDesc.Format           = toDXGIFormat( desc._format );
+        scDesc.Format           = toDXGIFormat( desc.getFormat() );
         scDesc.BufferUsage      = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         scDesc.SwapEffect       = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         scDesc.SampleDesc.Count = 1;
@@ -80,6 +83,10 @@ namespace sw
             return false;
         }
         swapChain1.As( &_swapChain );
+        _displayOutputSupport = queryDXGIDisplayOutputSupport( _swapChain.Get() );
+        // SDR 은 DXGI 의 기본 색 공간이라 알릴 것이 없다. HDR 로 만드는 창은 만들 때 알린다(마스터링 값은 기본 — 주 창은 `setColorSpace` 가 실제 값으로 다시 알린다).
+        if ( _colorSpace != RHIColorSpace::SRGBNonLinear && applyDXGIColorSpace( _swapChain.Get(), _colorSpace, RHIDisplayMetadata{} ) == false )
+            return false;
         acquireNextImage();
         return true;
     }
@@ -158,9 +165,34 @@ namespace sw
             SW_LOG_ERROR_ID( "D3D12.ResizeBuffersFailedHrX", "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
             return false;
         }
+        _displayOutputSupport = queryDXGIDisplayOutputSupport( _swapChain.Get() ); // 창을 다른 모니터로 끌어 크기가 바뀌었을 수 있다
         // 새 백버퍼는 PRESENT(COMMON) 상태로 생긴다 — 추적 상태도 그 값으로 맞춘다. present 하지 않고 끝난 프레임(무인 시나리오 · bPresent=false)의 RENDER_TARGET 을
         // 들고 가면 다음 프레임이 배리어 없이 Clear 해 디버그 레이어가 막았다(id 538).
         markPresented();
+        return true;
+    }
+
+    bool D3D12RHISwapChain::setColorSpace( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
+    {
+        if ( _swapChain == nullptr )
+            return false;
+        // 포맷은 색 공간에서 정한다 — 버퍼 수 · 크기 · 플래그는 그대로 두고 포맷만 바꿔 다시 만든다(언리얼 `FD3D12Viewport::Resize` 의 픽셀 포맷 바꿈과 같은 길).
+        const RHIFormat format   = getSwapChainFormat( colorSpace, _sdrFormat );
+        const HRESULT   resizeHr = _swapChain->ResizeBuffers( _bufferCount, _width, _height, toDXGIFormat( format ), _swapChainFlags );
+        if ( FAILED( resizeHr ) )
+        {
+            SW_LOG_ERROR_ID( "D3D12.ColorSpaceResizeBuffersFailed", "ResizeBuffers to %# failed hr=0x%#", getRHIFormatName( format ), static_cast<uint32>( resizeHr ) );
+            return false;
+        }
+        markPresented();
+        if ( applyDXGIColorSpace( _swapChain.Get(), colorSpace, metadata ) == false )
+        {
+            // 버퍼 포맷과 기록한 색 공간이 어긋나지 않게 옛 포맷으로 되돌린다(되돌리기도 실패하면 버퍼가 비어 다음 크기 바꿈이 다시 만든다).
+            (void)isHrSuccess( _swapChain->ResizeBuffers( _bufferCount, _width, _height, toDXGIFormat( getFormat() ), _swapChainFlags ), "ResizeBuffers (color space revert)" );
+            return false;
+        }
+        _colorSpace           = colorSpace;
+        _displayOutputSupport = queryDXGIDisplayOutputSupport( _swapChain.Get() );
         return true;
     }
 

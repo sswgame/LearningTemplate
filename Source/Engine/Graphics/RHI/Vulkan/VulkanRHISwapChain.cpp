@@ -5,6 +5,7 @@
 #include "Core/Log/LogOnce.h"
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
+#include "Engine/Reflection/EnumName.h"
 
 #if defined( SW_PLATFORM_ANDROID )
     #include <android/native_window.h>
@@ -162,6 +163,7 @@ namespace sw
         , _bRequestedVSync{ SW_TRUE }
         , _bSurfaceEmpty{ SW_FALSE }
         , _bImageHeld{ SW_FALSE }
+        , _bColorSpaceExtension{ SW_FALSE }
     {
     }
 
@@ -284,6 +286,25 @@ namespace sw
         if ( bFormatsRead == false || listFormat.empty() )
             return false;
 
+        // 출력 능력 — HDR 색 공간은 엔진 포맷과 짝인 표면 포맷이 있을 때만 받는다(HDR10 = A2B10G10R10 + ST2084, scRGB = R16G16B16A16_SFLOAT + 확장 선형 sRGB).
+        // `VK_EXT_swapchain_colorspace` 를 켜지 않은 인스턴스는 그 색 공간을 쓸 수 없어 SDR 만이다. 언리얼 `FVulkanSwapChain` 의 HDR 표면 포맷 고르기와 같은 짝이다.
+        _displayOutputSupport = makeColorSpaceBit( RHIColorSpace::SRGBNonLinear );
+        for ( const VkSurfaceFormatKHR& availableFormat : listFormat )
+        {
+            if ( _bColorSpaceExtension == SW_FALSE )
+                break;
+            if ( availableFormat.colorSpace == VK_COLOR_SPACE_HDR10_ST2084_EXT && availableFormat.format == VK_FORMAT_A2B10G10R10_UNORM_PACK32 )
+                _displayOutputSupport = static_cast<uint8>( _displayOutputSupport | makeColorSpaceBit( RHIColorSpace::HDR10ST2084 ) );
+            if ( availableFormat.colorSpace == VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT && availableFormat.format == VK_FORMAT_R16G16B16A16_SFLOAT )
+                _displayOutputSupport = static_cast<uint8>( _displayOutputSupport | makeColorSpaceBit( RHIColorSpace::ExtendedSRGBLinear ) );
+        }
+        if ( _requestedColorSpace != RHIColorSpace::SRGBNonLinear && ( _displayOutputSupport & makeColorSpaceBit( _requestedColorSpace ) ) == 0 )
+        {
+            // 능력은 장치가 색 공간을 고를 때 이미 맞췄다 — 그 뒤 창이 HDR 이 아닌 모니터로 옮겨 표면이 바뀐 것이다(능력 표가 정한 길: SDR 로 만들고 렌더러는 채택값을 본다).
+            SW_LOG_INFO_ID( "Vulkan.SwapChainColorSpaceGone", "The surface no longer offers color space %# - the swap chain is created as SDR", getEnumName( _requestedColorSpace ) );
+        }
+        const RHIColorSpace colorSpace = ( _displayOutputSupport & makeColorSpaceBit( _requestedColorSpace ) ) != 0 ? _requestedColorSpace : RHIColorSpace::SRGBNonLinear;
+
         // 백버퍼 포맷은 요청값(constant::render::kBackBufferFormat)이지 보장이 아니다. 서피스가 B8G8R8A8 만 줄 수 있다.
         // 언리얼 FVulkanSwapChain 과 같은 규칙이다: 요청 → 대체 → 첫 번째 순으로 고르고, 채택한 값을 반환한다
         // (getActualBackBufferFormat → IRHIDevice::getBackBufferFormat). 백버퍼에 그리는 PSO 는 그 값으로
@@ -301,7 +322,19 @@ namespace sw
             listCandidate.push_back( *mapped );
             listCandidateSurface.push_back( availableFormat );
         }
-        const optional<RHIFormat> picked = pickRHISwapChainFormat( _requestedFormat, span<const RHIFormat>{ listCandidate } );
+        // HDR 색 공간은 위에서 짝을 확인한 포맷 하나다(대체 포맷이 없다 — 포맷은 색 공간에서 정한다).
+        if ( colorSpace != RHIColorSpace::SRGBNonLinear )
+        {
+            listCandidate.clear();
+            listCandidateSurface.clear();
+            VkSurfaceFormatKHR hdrFormat{};
+            hdrFormat.format     = VulkanRHIUtil::toVulkanTextureFormat( getSwapChainFormat( colorSpace, _requestedFormat ) );
+            hdrFormat.colorSpace = colorSpace == RHIColorSpace::HDR10ST2084 ? VK_COLOR_SPACE_HDR10_ST2084_EXT : VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT;
+            listCandidate.push_back( getSwapChainFormat( colorSpace, _requestedFormat ) );
+            listCandidateSurface.push_back( hdrFormat );
+        }
+        const RHIFormat           requestedRHIFormat = getSwapChainFormat( colorSpace, _requestedFormat );
+        const optional<RHIFormat> picked             = pickRHISwapChainFormat( requestedRHIFormat, span<const RHIFormat>{ listCandidate } );
         if ( picked.has_value() == false )
         {
             SW_LOG_ERROR_ID( "Vulkan.SwapChainNoMappedFormat", "The surface offers no sRGB-nonlinear format the RHI can map (%# formats) - swap chain creation fails.", static_cast<uint32>( listFormat.size() ) );
@@ -316,7 +349,7 @@ namespace sw
                 break;
             }
         }
-        const VkFormat requestedFormat = VulkanRHIUtil::toVulkanTextureFormat( _requestedFormat );
+        const VkFormat requestedFormat = VulkanRHIUtil::toVulkanTextureFormat( requestedRHIFormat );
         if ( surfaceFormat.format != requestedFormat )
         {
             SW_LOG_INFO_ID( "Vulkan.SwapChainFormatDiffers", "The swap chain adopted a different format than requested (requested VkFormat %#, adopted %#) - back buffer PSOs are built with getBackBufferFormat().",
@@ -465,6 +498,7 @@ namespace sw
 
         _imageFormat            = static_cast<uint32>( surfaceFormat.format );
         _actualBackBufferFormat = *picked;
+        _colorSpace             = colorSpace;
         _extentWidth            = imageExtent.width;
         _extentHeight           = imageExtent.height;
         _logicalWidth           = extent.width;

@@ -177,6 +177,11 @@ namespace sw
 
         /** @brief 백버퍼(스왑체인)를 새 크기로 다시 만듭니다. `resize` 가 크기를 기록한 뒤 부릅니다. */
         virtual void resizeInternal( uint32 width, uint32 height ) = 0;
+        /**
+         * @brief `setBackBufferColorSpace` 의 백엔드 훅입니다. GPU 는 이미 비었고 렌더 스레드 역할을 빌렸다. 능력 검사도 끝났다.
+         * @details 기본은 SDR 만 내는 백엔드(GL · WebGPU)의 길이다 — 능력이 SDR 비트뿐이라 여기 오는 요청은 늘 `SRGBNonLinear` 이고 할 일이 없다.
+         */
+        [[nodiscard]] virtual bool setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata );
 
         /**
          * @brief `setVSync` 가 값을 기록한 뒤 부릅니다. 동기화를 프레젠트 인자로 고르는 백엔드(DXGI, GL)는 할 일이 없습니다.
@@ -351,6 +356,14 @@ namespace sw
          *          그래서 Graphics 는 Window 를 include 하지 않는다.
          */
         void resize( uint32 width, uint32 height );
+        /**
+         * @brief 주 스왑체인의 색 공간을 바꿉니다 — 백버퍼 포맷이 함께 바뀐다(`getSwapChainFormat`). 렌더 스레드를 세운 뒤 부른다(창 크기 바뀜과 같은 길 — 이 함수가 GPU 를 비운다).
+         * @details 능력(`RHICapabilities::_displayOutputSupport`)에 없는 색 공간이면 오류를 남기고 false 이며 색 공간은 그대로다 — 부르는 쪽이 `DisplayOutputDesc::resolve` 로 먼저 맞춘다.
+         *          HDR10 이면 @p metadata 를 스왑체인에 알린다(DXGI `SetHDRMetaData` · Vulkan `vkSetHdrMetadataEXT`). 언리얼 `RHIHDRChangeColorSpace` 자리다.
+         */
+        [[nodiscard]] bool setBackBufferColorSpace( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata );
+        /** @brief 주 스왑체인이 지금 내는 색 공간입니다. 백버퍼 포맷(`getBackBufferFormat`)과 짝이다. SDR 만 내는 백엔드는 늘 `SRGBNonLinear` 입니다. */
+        virtual RHIColorSpace getBackBufferColorSpace() const { return RHIColorSpace::SRGBNonLinear; }
         /** @brief 백버퍼 너비입니다(논리 크기 — 회전한 서피스면 실제 이미지와 맞바뀐다, `getSurfaceRotation`). initialize 때는 표면 크기이고, 그 뒤에는 마지막 `resize` 값입니다. */
         uint32 getBackBufferWidth() const { return _backBufferWidth; }
         /** @brief 백버퍼 높이입니다. initialize 때는 표면 크기이고, 그 뒤에는 마지막 `resize` 값입니다. */

@@ -123,7 +123,8 @@ namespace sw
         void detachCommandRecordingInternal() override;
 
         /** @brief 스왑체인 백버퍼를 새 크기로 다시 만듭니다. */
-        void resizeInternal( uint32 width, uint32 height ) override;
+        void               resizeInternal( uint32 width, uint32 height ) override;
+        [[nodiscard]] bool setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata ) override;
 
         [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
         void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;
@@ -192,7 +193,8 @@ namespace sw
          */
         void bindStaticSamplers( ID3D11DeviceContext* pContext ) const;
         /** @brief 스왑체인이 만든 백버퍼 포맷입니다. 백버퍼 PSO 의 렌더 타깃 포맷이 여기서 나옵니다. */
-        RHIFormat getBackBufferFormat() const override { return _backBufferFormat; }
+        RHIFormat     getBackBufferFormat() const override { return _swapChain.isValid() ? _swapChain.getFormat() : _backBufferFormat; }
+        RHIColorSpace getBackBufferColorSpace() const override { return _swapChain.getColorSpace(); }
 
         /** @brief VS 가 GPUScene 인스턴스 버퍼를 구조 버퍼 SRV(g_SwInstances, t4)로 읽을 수 있어 true 입니다. */
         bool supportsInstancedSceneDraw() const override { return true; }
@@ -211,6 +213,8 @@ namespace sw
         {
             RHICapabilities caps            = RHIAvailability::query( RHIBackend::DirectX11 );
             caps._bParallelCommandRecording = _bDriverCommandLists != SW_FALSE ? 1u : 0u;
+            caps._displayOutputSupport      = _swapChain.getDisplayOutputSupport()._mask;
+            caps._displayMaxLuminanceNits   = _swapChain.getDisplayOutputSupport()._maxLuminanceNits;
             return caps;
         }
 
@@ -549,6 +553,8 @@ namespace sw
         D3D11RHISwapChain& useSwapChain( IRHISwapChain* pSwapChain );
         /** @brief 백버퍼를 가리키는 참조(RTV · 컨텍스트 바인딩 · 기록이 끝난 커맨드 리스트)를 모두 놓고 크기를 바꿉니다. */
         void resizeSwapChainBuffers( D3D11RHISwapChain& swapChain, uint32 width, uint32 height );
+        /** @brief 백버퍼를 가리키는 참조(RTV · 컨텍스트 바인딩 · 기록이 끝난 커맨드 리스트)를 모두 놓습니다 — `ResizeBuffers` 앞(크기 · 색 공간 바꿈 공통). */
+        void releaseSwapChainReferences( D3D11RHISwapChain& swapChain );
 
     private:
         Microsoft::WRL::ComPtr<ID3D11Device>  _device;
@@ -557,7 +563,7 @@ namespace sw
         /// @details 기록 중의 상수 버퍼 갱신은 `IRHICommandList::updateConstantBuffer` 로 리스트의 Deferred Context 에 간다. 드로우마다 불리는 그 경로가
         ///          즉시 컨텍스트로 오면 병렬 기록의 워커들이 한 버퍼를 덮어써서 패스 CB 가 옆 패스 값으로 바뀐다.
         D3D11ImmediateContext _immediateContext;
-        RHIFormat             _backBufferFormat; ///< 스왑체인 백버퍼 포맷(DXGI 는 요청값 그대로)
+        RHIFormat             _backBufferFormat; ///< 요청한 SDR 백버퍼 포맷(DXGI 는 요청값 그대로) — 스왑체인이 없는 실행이 보고한다. 있으면 스왑체인의 색 공간이 정한다
         /// @brief 메인 창의 백버퍼입니다. 백버퍼 RTV, 크기, Present 가 모두 여기 모여 있습니다.
         D3D11RHISwapChain _swapChain;
         /// @brief 다른 창(`createSwapChain`)과 이 프레임에 그린 창입니다(`endFrame` 이 표시한 뒤 비운다).
