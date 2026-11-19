@@ -34,14 +34,25 @@ namespace sw
     template <uint8 Offset, NetMessageDirection Direction, NetChannelKind Channel, uint32 BodyRevision = 1>
     struct NetMessageDef
     {
-        static constexpr uint8               kOffset       = Offset;
-        static constexpr NetMessageDirection kDirection    = Direction;
-        static constexpr NetChannelKind      kChannel      = Channel;
-        static constexpr uint32              kBodyRevision = BodyRevision;
+        static constexpr uint8               kOffset        = Offset;
+        static constexpr NetMessageDirection kDirection     = Direction;
+        static constexpr NetChannelKind      kChannel       = Channel;
+        static constexpr uint32              kBodyRevision  = BodyRevision;
+        static constexpr NetChannelPolicy    kChannelPolicy = NetChannelPolicy::Descriptor;
         static_assert( Offset < NetMessageRange::kSize, "a message must fit inside its range" );
 
         /** @brief 와이어 버전에 섞는 본문 판입니다(`NetMessageTable::computeWireVersion`). */
         static constexpr uint32 getBodyRevision() { return BodyRevision; }
+    };
+
+    /**
+     * @brief 보내는 쪽이 상태에 따라 채널을 고르는 손 본문 메시지의 서술자입니다(원격 호출의 신뢰 여부, 멈춘 덩어리 자세). @p DefaultChannel 은 평소 채널이다.
+     * @details 고르는 자리는 `NetMessageWriter::beginMessage( channel )` 하나다 — 이 서술자가 아니면 채널을 고르는 시작이 컴파일되지 않는다.
+     */
+    template <uint8 Offset, NetMessageDirection Direction, NetChannelKind DefaultChannel, uint32 BodyRevision = 1>
+    struct NetMessageSenderChannelDef : NetMessageDef<Offset, Direction, DefaultChannel, BodyRevision>
+    {
+        static constexpr NetChannelPolicy kChannelPolicy = NetChannelPolicy::SenderChooses;
     };
 
     /** @brief 메시지 서술자 @p TMessage 가 본문 형식(`Body`)을 가지면 true 입니다 — 표가 본문을 읽어 처리기에 넘긴다. */

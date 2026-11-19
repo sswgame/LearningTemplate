@@ -23,6 +23,14 @@ namespace sw
         return _writer;
     }
 
+    BitWriter& NetMessageWriter::beginDescribed( uint8 kind, NetChannelKind channel )
+    {
+        BitWriter& writer = begin( kind );
+        _messageChannel   = channel;
+        _state            = State::Typed;
+        return writer;
+    }
+
     bool NetMessageWriter::allowsCallerChannel() const
     {
         if ( _state == State::Raw )
@@ -83,6 +91,26 @@ namespace sw
         if ( peers.isServer() )
             return peers.broadcast( _messageChannel, _writer.getBytes().data(), _writer.getByteCount(), constant::invalid_index::kInt32 );
         return peers.sendMessage( 0, _messageChannel, _writer.getBytes().data(), _writer.getByteCount() ) ? 1 : 0;
+    }
+
+    bool NetMessageWriter::sendNotifiedMessage( INetPeers& peers, int32 connectionID, uint32 tag ) const
+    {
+        if ( allowsDescriptorChannel() == false )
+            return false;
+        if ( _messageChannel != NetChannelKind::Unreliable )
+        {
+            SW_LOG_ERROR_ID( "Net.MessageNotifiedNeedsUnreliable", "NetMessageWriter: message kind 0x%02x is not an unreliable message - delivery notices only ride unreliable messages",
+                             static_cast<int32>( _writer.getBytes()[0] ) );
+            return false;
+        }
+        return peers.sendNotifiedMessage( connectionID, _writer.getBytes().data(), _writer.getByteCount(), tag );
+    }
+
+    optional<NetQueuedMessage> NetMessageWriter::makeQueuedMessage() const
+    {
+        if ( allowsDescriptorChannel() == false )
+            return nullopt;
+        return NetQueuedMessage{ _writer.getBytes(), _messageChannel };
     }
 
     optional<NetChannelKind> NetMessageWriter::getMessageChannel() const

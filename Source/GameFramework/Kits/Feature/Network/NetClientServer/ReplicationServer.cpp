@@ -213,7 +213,7 @@ namespace sw
             if ( pCandidate != nullptr && bRecent )
                 pBaseline = pCandidate;
         }
-        BitWriter& writer = scratch._messageWriter.begin( NetClientServerMessage::kSnapshot );
+        BitWriter& writer = scratch._messageWriter.beginMessage<NetClientServerMessage::Table, NetClientServerMessage::Snapshot>();
         // 보낸 복원 스냅샷은 그 틱의 슬롯에 바로 쓴다. 같은 틱을 두 번 보내서 기준 슬롯과 겹치면 사본을 거친다. 슬롯의 이전 버퍼는 남는다.
         NetSnapshot& slot = client._listSent.acquire( world._tick );
         if ( &slot == pBaseline )
@@ -236,7 +236,7 @@ namespace sw
             else if ( scratch._listCurrent[index] == NetSnapshot::kEntityWritten )
                 prioritizer.markSentUnconfirmed( entityID, world._tick );
         }
-        (void)scratch._messageWriter.send( *_pHost, connectionID, NetChannelKind::UnreliableSequenced ); // 여러 스레드가 동시에 호출해도 NetEndpoint 가 보호한다
+        (void)scratch._messageWriter.sendMessage( *_pHost, connectionID ); // 여러 스레드가 동시에 호출해도 NetEndpoint 가 보호한다
     }
 
     void ReplicationServer::resolveUnconfirmedSends( ClientState& client, const NetSnapshot& filtered ) const
@@ -288,7 +288,7 @@ namespace sw
     {
         // 이미 꺼낸 틱과 이미 가진 틱은 버퍼에 넣지 않고 넘긴다. 길이나 개수가 상한을 넘거나 모자라면 하나도 넣지 않고 손상된 메시지로 본다.
         // 보던 틱은 항목마다의 스탬프로 온다 — 꺼낼 때(`popInput`) 그 입력의 값으로 정한다.
-        return client._input.read( reader ) && reader.readEnd(); // 남는 바이트는 깨진 메시지로 센다(이미 읽은 입력은 형식이 맞아 버퍼에 남는다)
+        return client._input.read( reader ); // 번들은 메시지 끝이다 — 남는 바이트가 있으면 하나도 넣지 않는다
     }
 
     optional<uint32> ReplicationServer::findOldestInputTick( int32 connectionID ) const

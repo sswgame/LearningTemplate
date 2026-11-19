@@ -340,7 +340,7 @@ namespace sw
         vector<uint32>& listEnter = scratch._listEnter;
         listEnter.clear();
         {
-            BitWriter& writer = scratch._messageWriter.begin( NetMMOMessage::kEnter );
+            BitWriter& writer = scratch._messageWriter.beginMessage<NetMMOMessage::Table, NetMMOMessage::Enter>();
             writer.writeVarUint( _tick );
             NetSendBudget budget( NetConnection::kMaxReliableMessageSize, NetConnection::kMaxReliableMessageSize );
             budget.reserveBits( writer.getBitCount() + 1 ); // 헤더와 끝 표시
@@ -358,7 +358,7 @@ namespace sw
                 listEnter.push_back( ranked.second );
             }
             writer.writeBool( false );
-            if ( listEnter.empty() == false && _pHost->trySendMessage( connectionID, NetChannelKind::ReliableOrdered, writer.getBytes() ) )
+            if ( listEnter.empty() == false && scratch._messageWriter.trySendMessage( *_pHost, connectionID ) )
             {
                 for ( const uint32 entityID : listEnter )
                 {
@@ -392,7 +392,7 @@ namespace sw
         }
         vector<uint32>& listOrder = scratch._listOrder;
         prioritizer.collectOrder( listOrder );
-        BitWriter& writer = scratch._messageWriter.begin( NetMMOMessage::kUpdate );
+        BitWriter& writer = scratch._messageWriter.beginMessage<NetMMOMessage::Table, NetMMOMessage::Update>();
         writer.writeVarUint( _tick );
         NetSendBudget budget( observer._updateBudgetBytes );
         budget.reserveBits( writer.getBitCount() + 1 ); // 헤더와 끝 표시
@@ -412,8 +412,7 @@ namespace sw
         writer.writeBool( false );
         if ( listSent.empty() )
             return;
-        const vector<uint8>& bytes = writer.getBytes();
-        if ( _pHost->sendNotifiedMessage( connectionID, bytes.data(), static_cast<int32>( bytes.size() ), _tick ) == false )
+        if ( scratch._messageWriter.sendNotifiedMessage( *_pHost, connectionID, _tick ) == false )
             return; // 연결이 없다 — 보낸 것으로 적지 않으므로 우선도가 남는다
         for ( const uint32 entityID : listSent )
         {
@@ -456,7 +455,7 @@ namespace sw
         size_t                sentCount = 0;
         while ( sentCount < listLeave.size() )
         {
-            BitWriter&    writer = scratch._messageWriter.begin( NetMMOMessage::kLeave );
+            BitWriter&    writer = scratch._messageWriter.beginMessage<NetMMOMessage::Table, NetMMOMessage::Leave>();
             NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
             budget.reserveBits( writer.getBitCount() + BitMath::computeVarUintBits( listLeave.size() - sentCount ) );
             size_t count = 0;
@@ -469,7 +468,7 @@ namespace sw
             {
                 writer.writeVarUint( listLeave[sentCount + index] );
             }
-            if ( _pHost->trySendMessage( connectionID, NetChannelKind::ReliableOrdered, writer.getBytes() ) == false )
+            if ( scratch._messageWriter.trySendMessage( *_pHost, connectionID ) == false )
                 break; // 신뢰 창이 찼다. 남은 엔티티는 보이는 채로 두고 다음 틱에 보낸다
             for ( size_t index = 0; index < count; ++index )
             {

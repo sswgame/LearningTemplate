@@ -98,7 +98,7 @@ namespace sw
     {
         using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableUnordered, 2>;                         ///< 판 2: 오브젝트 번호가 64 비트(`NetObjectID`). 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
         using Snapshot        = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionSnapshotBody>; ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지, 조각이 아니라 메시지 하나)
-        using Pose            = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 2>;                                ///< 판 2: 번호 64 비트. 덩어리 자세. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다
+        using Pose            = NetMessageSenderChannelDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 2>;                   ///< 판 2: 번호 64 비트. 덩어리 자세. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다(`beginMessage( channel )`)
         using Hash            = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionHashBody>;
         using SnapshotRequest = NetMessageBodyDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, DestructionSnapshotRequestBody>;
         using Table           = NetMessageTable<NetKitMessageRange::kDestruction, Event, Snapshot, Pose, Hash, SnapshotRequest>;
@@ -214,9 +214,7 @@ namespace sw
          */
         void sendPoseList( const Entry& entry, const vector<const FractureGroupPose*>& listPose, bool bRest, bool bReliable, uint32 serverTick );
         void sendHash( const Entry& entry, const FractureComponentBase& component );
-        /** @brief 손으로 쓴 본문(이벤트 · 자세)을 @p channel 로 모두에게 보내고 셉니다. */
-        int32 broadcast( NetChannelKind channel );
-        /** @brief 본문 형식이 있는 메시지를 서술자의 채널로 모두에게 보내고 셉니다. */
+        /** @brief 쓴 메시지를 서술자에 묶인 채널(시작에서 정했다)로 모두에게 보내고 셉니다. */
         int32 broadcastMessage();
         /** @brief 보낸 수 @p sentCount 를 통계에 더합니다. 신뢰 창이 찬 연결은 거절로 센다. */
         int32 countBroadcast( int32 connectedCount, int32 sentCount );

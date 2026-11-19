@@ -65,9 +65,10 @@ namespace sw
     {
         using Body = TBody;
 
-        static constexpr uint8               kOffset    = Offset;
-        static constexpr NetMessageDirection kDirection = Direction;
-        static constexpr NetChannelKind      kChannel   = Channel;
+        static constexpr uint8               kOffset        = Offset;
+        static constexpr NetMessageDirection kDirection     = Direction;
+        static constexpr NetChannelKind      kChannel       = Channel;
+        static constexpr NetChannelPolicy    kChannelPolicy = NetChannelPolicy::Descriptor;
         static_assert( Offset < NetMessageRange::kSize, "a message must fit inside its range" );
 
         /** @brief 본문 판 — 본문 형식의 스키마 해시입니다. 필드 · 범위 · 순서를 바꾸면 저절로 바뀐다. */

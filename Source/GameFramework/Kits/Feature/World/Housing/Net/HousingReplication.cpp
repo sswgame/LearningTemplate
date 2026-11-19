@@ -349,7 +349,7 @@ namespace sw
                     startTransfer( plot, entry._plotHash, connectionID, readBytes() ); // 보내던 상태는 낡았다 — 새 상태로 처음부터
                     continue;
                 }
-                BitWriter& writer = _writer.begin( NetHousingMessage::kPlotDelta );
+                BitWriter& writer = _writer.beginMessage<NetHousingMessage::Table, NetHousingMessage::PlotDelta>();
                 writer.writeVarUint( entry._plotHash );
                 writer.writeBits( static_cast<uint32>( Internal::computeOwner( owner, findCallerOwner( connectionID ) ) ), Internal::kOwnerBits );
                 writer.writeVarInt( funds );
@@ -370,7 +370,7 @@ namespace sw
                     startTransfer( plot, entry._plotHash, connectionID, readBytes() ); // 바뀐 것이 많다 — 조각 전송이 창을 나눠 쓴다
                     continue;
                 }
-                if ( _writer.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered ) )
+                if ( _writer.sendMessage( *_pHost, connectionID ) )
                     ++_stats._deltaSentCount;
                 else
                     ++_stats._sendFailedCount;
@@ -608,7 +608,7 @@ namespace sw
         if ( _pHost == nullptr || request._op >= HousingEditOp::Count )
             return 0;
         const uint32 requestID = _nextRequestID;
-        BitWriter&   writer    = _writer.begin( NetHousingMessage::kEdit );
+        BitWriter&   writer    = _writer.beginMessage<NetHousingMessage::Table, NetHousingMessage::Edit>();
         writer.writeVarUint( requestID );
         writer.writeVarUint( Internal::computeIDHash( plotID ) );
         writer.writeBits( static_cast<uint32>( request._op ), Internal::kOpBits );
@@ -633,7 +633,7 @@ namespace sw
             case HousingEditOp::Count:
                 break;
         }
-        if ( _writer.send( *_pHost, 0, NetChannelKind::ReliableOrdered ) == false )
+        if ( _writer.sendMessage( *_pHost, 0 ) == false )
         {
             ++_stats._sendFailedCount;
             return 0;

@@ -208,12 +208,12 @@ namespace sw
         (void)_inputWindow.push( tick, listInput.data(), static_cast<int32>( listInput.size() ), viewTickStamp );
         if ( _pHost == nullptr )
             return true;
-        BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kInput );
+        BitWriter& writer = _messageWriter.beginMessage<NetClientServerMessage::Table, NetClientServerMessage::Input>();
         // 서버가 확인한 다음 틱부터 메시지 상한 안에서 오래된 입력부터 싣는다. 못 실은 새 입력은 확인이 올라간 뒤 다음 메시지가 싣는다.
         NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
         budget.reserveBits( writer.getBitCount() );
         (void)_inputWindow.write( writer, budget ); // 실은 수는 쓰지 않는다. 못 실은 입력은 다음 메시지가 싣는다
-        (void)_pHost->sendMessage( 0, NetChannelKind::Unreliable, writer.getBytes() );
+        (void)_messageWriter.sendMessage( *_pHost, 0 );
         return true;
     }
 

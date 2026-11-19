@@ -151,9 +151,8 @@ namespace sw
 
     void TurnRelayServer::sendOrQueue( int32 connectionID )
     {
-        const int32                    pendingCount = countPending( connectionID );
-        const optional<NetChannelKind> channel      = _messageWriter.getMessageChannel();
-        if ( channel.has_value() == false )
+        const int32 pendingCount = countPending( connectionID );
+        if ( _messageWriter.getMessageChannel().has_value() == false )
             return; // 서술자가 있는 메시지만 줄에 선다 — 쓰지 못한 메시지는 오류 로그가 남았다
         if ( pendingCount == 0 && _messageWriter.sendMessage( *_pHost, connectionID ) )
             return;
@@ -165,7 +164,9 @@ namespace sw
             _pHost->disconnect( connectionID );
             return;
         }
-        _listPending.push_back( PendingMessage{ _messageWriter.getBytes(), connectionID, *channel } );
+        optional<NetQueuedMessage> queued = _messageWriter.makeQueuedMessage();
+        if ( queued.has_value() )
+            _listPending.push_back( PendingMessage{ std::move( *queued ), connectionID } );
     }
 
     void TurnRelayServer::flushPending()
@@ -181,7 +182,7 @@ namespace sw
             {
                 bBlocked = bBlocked || blocked == pending._connectionID;
             }
-            if ( bBlocked == false && _pHost->trySendMessage( pending._connectionID, pending._channel, pending._buffer ) )
+            if ( bBlocked == false && _pHost->trySendMessage( pending._connectionID, pending._message._channel, pending._message._bytes ) )
                 continue;
             if ( bBlocked == false )
                 _listBlockedScratch.push_back( pending._connectionID );

@@ -572,3 +572,43 @@ SW_TEST_CASE( NetMessageRouterTest, WriterSendsTypedMessagesOnlyOnTheirDescripto
     SW_REQUIRE_TRUE( pair.getServer().receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_TRUE( channel == NetChannelKind::Unreliable );
 }
+
+/**
+ * @brief [NetMessageRouterTest] 손으로 쓰는 표 메시지도 서술자 채널로 나간다 — 보내는 쪽이 고르는 서술자만 시작에서 채널을 고르고, 호출부 채널 함수는 거절한다
+ */
+SW_TEST_CASE( NetMessageRouterTest, HandWrittenTableMessagesTakeTheirChannelFromTheDescriptor )
+{
+    using Fixed         = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
+    using SenderChannel = NetMessageSenderChannelDef<1, NetMessageDirection::Both, NetChannelKind::Unreliable>;
+    using Table         = NetMessageTable<NetMessageRange::kGame, Fixed, SenderChannel>;
+
+    test::LoopbackCluster pair( 81u );
+    NetTestUtil::addServerAndClient( pair, NetEndpointConfig{} );
+    SW_REQUIRE_TRUE( pair.getServer().listen() );
+    SW_REQUIRE_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
+    pair.run( 0.3 );
+    SW_REQUIRE_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
+
+    NetMessageWriter writer;
+    writer.beginMessage<Table, Fixed>().writeVarUint( 1 );
+    SW_EXPECT_LOG( "Net.MessageChannelChosenByCaller" );
+    SW_EXPECT_FALSE( writer.send( pair.getClient( 0 ), 0, NetChannelKind::Unreliable ) ); // 서술자와 다른 채널을 고를 수 없다
+    SW_EXPECT_TRUE( writer.sendMessage( pair.getClient( 0 ), 0 ) );
+    writer.beginMessage<Table, SenderChannel>( NetChannelKind::ReliableUnordered ).writeVarUint( 2 );
+    SW_EXPECT_TRUE( writer.sendMessage( pair.getClient( 0 ), 0 ) );
+    pair.run( 0.2 );
+
+    int32          connectionID = -1;
+    NetChannelKind channel      = NetChannelKind::Unreliable;
+    vector<uint8>  buffer;
+    int32          receivedCount = 0;
+    while ( pair.getServer().receiveMessage( connectionID, channel, buffer ) )
+    {
+        ++receivedCount;
+        if ( buffer[0] == Table::getKindOf<Fixed>() )
+            SW_EXPECT_TRUE( channel == NetChannelKind::ReliableOrdered );
+        else
+            SW_EXPECT_TRUE( channel == NetChannelKind::ReliableUnordered );
+    }
+    SW_EXPECT_EQUAL( 2, receivedCount );
+}

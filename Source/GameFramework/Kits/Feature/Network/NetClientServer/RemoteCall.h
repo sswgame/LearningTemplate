@@ -80,7 +80,7 @@ namespace sw
          * @brief 호출 하나 — 순번(varuint) · 대상 id(varuint) · 함수 번호(32 비트, 이름 해시) · 인자 수(varuint) · 인자 글(blob 들). 클라이언트 → 서버는 `Server` 함수, 서버 → 클라이언트는 `Client` · `Multicast` 함수다.
          *        판 2: 함수 이름 글 대신 함수 번호를 싣는다.
          */
-        using Call = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, 2>;
+        using Call = NetMessageSenderChannelDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, 2>; ///< 채널은 함수의 `Reliable` 이 고른다(`beginMessage( channel )`)
         /** @brief 서버 → 클라이언트. 받지 못한 호출(`RemoteCallRejectedBody`). */
         using Rejected = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, RemoteCallRejectedBody>;
         using Table    = NetMessageTable<NetKitMessageRange::kRemoteCall, Call, Rejected>;

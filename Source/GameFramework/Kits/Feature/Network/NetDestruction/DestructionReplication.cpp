@@ -217,12 +217,6 @@ namespace sw
         _listRequest.push_back( Request{ connectionID, netID } );
     }
 
-    int32 DestructionReplicationServer::broadcast( NetChannelKind channel )
-    {
-        const int32 connectedCount = _pHost->getConnectedCount();
-        return countBroadcast( connectedCount, _writer.broadcast( *_pHost, channel ) );
-    }
-
     int32 DestructionReplicationServer::broadcastMessage()
     {
         const int32 connectedCount = _pHost->getConnectedCount();
@@ -285,7 +279,7 @@ namespace sw
         const vector<optional<FractureGroupPose>>& listGroupPose = component.getEventGroupPoses();
         for ( uint32 index = entry._sentEventCount; index < static_cast<uint32>( listEvent.size() ); ++index )
         {
-            BitWriter& writer = _writer.begin( NetDestructionMessage::kEvent );
+            BitWriter& writer = _writer.beginMessage<NetDestructionMessage::Table, NetDestructionMessage::Event>();
             writer.writeVarUint( entry._netID );
             writer.writeVarUint( serverTick );
             writer.writeVarUint( index );
@@ -295,7 +289,7 @@ namespace sw
             writer.writeBool( bHasPose );
             if ( bHasPose )
                 DestructionReplicationInternal::writeExactPose( writer, listGroupPose[index]->_position, listGroupPose[index]->_rotation );
-            (void)broadcast( NetChannelKind::ReliableUnordered ); // 받는 쪽이 번호로 순서를 맞춘다. 앞 이벤트를 잃어도 뒤 이벤트가 기다리지 않는다
+            (void)broadcastMessage(); // 서술자 채널(신뢰 순서 없음) — 받는 쪽이 번호로 순서를 맞춘다. 앞 이벤트를 잃어도 뒤 이벤트가 기다리지 않는다
             ++_stats._eventMessageCount;
         }
         entry._sentEventCount = static_cast<uint32>( listEvent.size() );
@@ -409,7 +403,7 @@ namespace sw
         size_t start   = 0;
         while ( start < listPose.size() )
         {
-            BitWriter& writer = _writer.begin( NetDestructionMessage::kPose );
+            BitWriter& writer = _writer.beginMessage<NetDestructionMessage::Table, NetDestructionMessage::Pose>( bReliable ? NetChannelKind::ReliableOrdered : NetChannelKind::Unreliable );
             writer.writeBool( bRest );
             writer.writeVarUint( entry._netID );
             writer.writeVarUint( serverTick );
@@ -433,7 +427,7 @@ namespace sw
             // 움직이는 자세는 위에서 범위로 걸렀다. 그래도 하나라도 쓰지 못했으면 메시지가 어긋났으므로 보내지 않는다.
             if ( bPosesWritten == false )
                 continue;
-            (void)broadcast( bReliable ? NetChannelKind::ReliableOrdered : NetChannelKind::Unreliable );
+            (void)broadcastMessage(); // 채널은 시작에서 골랐다
             ++_stats._poseMessageCount;
             _stats._restPoseCount += bReliable ? count : 0u;
         }

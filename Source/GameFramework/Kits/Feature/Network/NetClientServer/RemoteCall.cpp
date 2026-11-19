@@ -88,7 +88,8 @@ namespace sw
             [[nodiscard]] static bool writeCall( NetMessageWriter& messageWriter, uint32 sequence, uint32 targetID, const FunctionInfo& function, const vector<string>& listText,
                                                  NetChannelKind& outChannel )
             {
-                BitWriter& writer = messageWriter.begin( NetRemoteCallMessage::kCall );
+                outChannel        = function._metadata->_bReliable != SW_FALSE ? NetChannelKind::ReliableOrdered : NetChannelKind::Unreliable;
+                BitWriter& writer = messageWriter.beginMessage<NetRemoteCallMessage::Table, NetRemoteCallMessage::Call>( outChannel );
                 writer.writeVarUint( sequence );
                 writer.writeVarUint( targetID );
                 writer.writeUint32( RemoteCallTargets::getFunctionID( function ) );
@@ -97,7 +98,6 @@ namespace sw
                 {
                     writeText( writer, text );
                 }
-                outChannel           = function._metadata->_bReliable != SW_FALSE ? NetChannelKind::ReliableOrdered : NetChannelKind::Unreliable;
                 const int32 maxBytes = outChannel == NetChannelKind::ReliableOrdered ? NetConnection::kMaxReliableMessageSize : NetConnection::kMaxSingleMessageSize;
                 return messageWriter.getByteCount() <= maxBytes;
             }
@@ -357,7 +357,7 @@ namespace sw
                              _messageWriter.getByteCount(), NetConnection::kMaxSingleMessageSize );
             return false;
         }
-        return _messageWriter.send( *_pPeers, pTarget->_ownerConnectionID, channel );
+        return _messageWriter.sendMessage( *_pPeers, pTarget->_ownerConnectionID ); // 채널은 `writeCall` 이 시작에서 골랐다
     }
 
     NetHandleResult RemoteCallServer::receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body )
@@ -530,7 +530,7 @@ namespace sw
                              NetConnection::kMaxSingleMessageSize );
             return 0;
         }
-        return _messageWriter.sendToPeers( *_pPeers, channel ) > 0 ? sequence : 0;
+        return _messageWriter.sendMessageToPeers( *_pPeers ) > 0 ? sequence : 0; // 채널은 `writeCall` 이 시작에서 골랐다
     }
 
     NetHandleResult RemoteCallClient::receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body )

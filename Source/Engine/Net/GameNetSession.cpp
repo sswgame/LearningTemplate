@@ -151,8 +151,12 @@ namespace sw
                     return true;
                 }
                 messageCount = MathUtil::min( messageCount, kMaxTrafficMessageCount );
-                vector<uint8> payloadBytes( static_cast<size_t>( MathUtil::min( messageBytes, NetConnection::kMaxSingleMessageSize ) ), uint8{ 0 } );
-                payloadBytes[0] = GameNetSessionMessage::kTraffic;
+                // 종류 바이트 뒤를 0 으로 채운 덩어리다. 채널은 서술자(`GameNetSessionMessage::Traffic`)에서 온다.
+                NetMessageWriter trafficWriter;
+                BitWriter&       payload    = trafficWriter.beginMessage<GameNetSessionMessage::Table, GameNetSessionMessage::Traffic>();
+                const int32      totalBytes = MathUtil::min( messageBytes, NetConnection::kMaxSingleMessageSize );
+                for ( int32 byteIndex = 1; byteIndex < totalBytes; ++byteIndex )
+                    payload.writeBits( 0u, 8 );
                 vector<int32> listConnection;
                 pSession->getPeers().collectConnected( listConnection );
                 int32 sentCount = 0;
@@ -160,7 +164,7 @@ namespace sw
                 {
                     for ( int32 index = 0; index < messageCount; ++index )
                     {
-                        const bool bSent = pSession->getPeers().trySendMessage( connectionID, NetChannelKind::ReliableOrdered, payloadBytes.data(), static_cast<int32>( payloadBytes.size() ) );
+                        const bool bSent = trafficWriter.trySendMessage( pSession->getPeers(), connectionID );
                         sentCount += bSent ? 1 : 0;
                     }
                 }

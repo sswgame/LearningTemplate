@@ -196,7 +196,7 @@ namespace sw
 
     bool PairedAnimationReplicationServer::writeStateMessage( const PairedAnimationNetState& state )
     {
-        BitWriter& writer = _writer.begin( NetPairedAnimationMessage::kSessionState );
+        BitWriter& writer = _writer.beginMessage<NetPairedAnimationMessage::Table, NetPairedAnimationMessage::SessionState>();
         if ( state.write( writer ) )
             return true;
         SW_LOG_ERROR_ID( "PairedAnimationReplication.PairedAnimationSessionNot4", "Paired animation session %# is not replicated: path '%#' or %# roles exceed the message limits", state._snapshot._sessionID, state._assetPath.c_str(),
@@ -247,7 +247,7 @@ namespace sw
                 ++_stats._unreplicableCount;
                 continue;
             }
-            (void)_writer.broadcast( *_pHost, NetChannelKind::ReliableOrdered ); // 연결이 없어도 기록한다 — 나중에 들어온 쪽은 늦은 참가로 받는다
+            (void)_writer.broadcastMessage( *_pHost ); // 연결이 없어도 기록한다 — 나중에 들어온 쪽은 늦은 참가로 받는다
             ++_stats._stateSentCount;
             SW_LOG_INFO_ID( "PairedAnimationReplication.ServerStart", "%#", formatEventLine( "server", "start", session.getID(), state._snapshot._anchorTime ).c_str() );
             _listAnnouncedID.push_back( session.getID() );
@@ -268,7 +268,7 @@ namespace sw
                 continue; // 처음에 복제한 세션이라 여기서 실패하지 않는다 — 실패하면 오류는 남겼다
             for ( const int32 connectionID : _listJoiningConnection )
             {
-                if ( _writer.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered ) )
+                if ( _writer.sendMessage( *_pHost, connectionID ) )
                 {
                     ++_stats._stateSentCount;
                     SW_LOG_INFO_ID( "PairedAnimationReplication.ServerJoin", "%#", formatEventLine( "server", "join", sessionID, state._snapshot._anchorTime ).c_str() );
