@@ -559,36 +559,11 @@ namespace sw
         if ( isEnabledAt( settingIndex ) == false )
             return UserSettingSetResult::Disabled;
 
-        const UserSettingDef&        def = _schema.getSettings()[settingIndex];
-        string                       normalized;
-        const UserSettingValueResult normalizeResult = UserSettingsSchema::normalizeValue( def, value, normalized );
-        if ( normalizeResult == UserSettingValueResult::Rejected )
-            return UserSettingSetResult::Rejected;
-
-        // 공급자 열거형은 지금 공급자가 주는 선택지와 대조한다(공급자가 아직 비었으면, 곧 언어 팩을 읽기 전이면 형식만 본다).
-        const bool bCheckProviderOption = def._type == UserSettingKind::Enum && def._optionProvider.empty() == false && normalized.empty() == false;
-        if ( bCheckProviderOption )
-        {
-            vector<UserSettingOption> listOption;
-            collectOptionsOf( def, listOption );
-            bool bFound = listOption.empty();
-            for ( const UserSettingOption& option : listOption )
-            {
-                if ( StringUtil::equals( option._value, normalized ) )
-                {
-                    normalized = option._value;
-                    bFound     = true;
-                }
-            }
-            if ( bFound == false )
-                return UserSettingSetResult::Rejected;
-        }
-        if ( def._type == UserSettingKind::KeyBinding )
-        {
-            UserSettingBindingConflict conflict;
-            if ( findBindingConflict( settingID, normalized, conflict ) )
-                return UserSettingSetResult::Conflict;
-        }
+        string                     normalized;
+        const UserSettingSetResult checked = normalizeForSetting( settingIndex, value, normalized );
+        if ( checked == UserSettingSetResult::Rejected || checked == UserSettingSetResult::Conflict )
+            return checked;
+        const UserSettingValueResult normalizeResult = checked == UserSettingSetResult::Clamped ? UserSettingValueResult::Clamped : UserSettingValueResult::Accepted;
 
         const UserSettingSetResult result = setPendingAt( settingIndex, normalized, normalizeResult );
         if ( result == UserSettingSetResult::Unchanged )
@@ -601,6 +576,77 @@ namespace sw
         else if ( pGroup != nullptr )
             refreshScalabilityGroup( *pGroup, false );
         return result;
+    }
+
+    UserSettingSetResult UserSettingsManager::normalizeForSetting( uint32 settingIndex, string_view value, string& outNormalized ) const
+    {
+        const UserSettingDef&        def             = _schema.getSettings()[settingIndex];
+        const UserSettingValueResult normalizeResult = UserSettingsSchema::normalizeValue( def, value, outNormalized );
+        if ( normalizeResult == UserSettingValueResult::Rejected )
+            return UserSettingSetResult::Rejected;
+
+        // 공급자 열거형은 지금 공급자가 주는 선택지와 대조한다(공급자가 아직 비었으면, 곧 언어 팩을 읽기 전이면 형식만 본다).
+        const bool bCheckProviderOption = def._type == UserSettingKind::Enum && def._optionProvider.empty() == false && outNormalized.empty() == false;
+        if ( bCheckProviderOption )
+        {
+            vector<UserSettingOption> listOption;
+            collectOptionsOf( def, listOption );
+            bool bFound = listOption.empty();
+            for ( const UserSettingOption& option : listOption )
+            {
+                if ( StringUtil::equals( option._value, outNormalized ) )
+                {
+                    outNormalized = option._value;
+                    bFound        = true;
+                }
+            }
+            if ( bFound == false )
+                return UserSettingSetResult::Rejected;
+        }
+        if ( def._type == UserSettingKind::KeyBinding )
+        {
+            UserSettingBindingConflict conflict;
+            if ( findBindingConflict( def._id, outNormalized, conflict ) )
+                return UserSettingSetResult::Conflict;
+        }
+        return normalizeResult == UserSettingValueResult::Clamped ? UserSettingSetResult::Clamped : UserSettingSetResult::Accepted;
+    }
+
+    UserSettingSetResult UserSettingsManager::applyValue( const hashed_string& settingID, string_view value )
+    {
+        const optional<uint32> settingFound = findIndex( settingID );
+        if ( settingFound.has_value() == false )
+            return UserSettingSetResult::Unknown;
+        const uint32 settingIndex = *settingFound;
+        if ( isEnabledAt( settingIndex ) == false )
+            return UserSettingSetResult::Disabled;
+        if ( _schema.findScalabilityGroupOf( settingID ) != nullptr )
+        {
+            SW_LOG_ERROR_ID( "UserSettings.ApplyValueInBundle", "User setting '%#' is in a quality bundle - applyValue does not take it (use setPendingValue + applyPending)", settingID.c_str() );
+            return UserSettingSetResult::Rejected;
+        }
+        string                     normalized;
+        const UserSettingSetResult checked = normalizeForSetting( settingIndex, value, normalized );
+        if ( checked == UserSettingSetResult::Rejected || checked == UserSettingSetResult::Conflict )
+            return checked;
+
+        const UserSettingDef& def        = _schema.getSettings()[settingIndex];
+        SettingState&         state      = _listState[settingIndex];
+        const bool            bPreviewed = state._bPending && def._applyTiming == UserSettingApplyTiming::Immediate && state._pendingValue != state._committedValue;
+        state._pendingValue.clear(); // 이 설정의 보류만 버린다 — 다른 설정의 보류 · 확인 대기는 메뉴의 것이다
+        state._bPending = false;
+        if ( state._committedValue == normalized )
+        {
+            if ( bPreviewed )
+                (void)applyToTarget( settingIndex, state._committedValue, false ); // 미리 본 다른 값을 확정 값으로 되돌린다
+            return UserSettingSetResult::Unchanged;
+        }
+        state._committedValue = normalized;
+        if ( def._applyTiming != UserSettingApplyTiming::NeedsRestart && applyToTarget( settingIndex, normalized, false ) == false )
+            SW_LOG_WARNING_ID( "UserSettings.TargetRejected", "User setting '%#' = '%#' was rejected by its target '%#'", def._id.c_str(), normalized.c_str(), def._targetName.c_str() );
+        broadcast( def._id, UserSettingEventKind::Applied );
+        (void)saveIfPathSet(); // 경로가 없으면 저장하지 않는 실행이며, 쓰기 실패는 saveUserFile 이 경고로 남긴다
+        return checked;
     }
 
     UserSettingSetResult UserSettingsManager::setPendingBoolValue( const hashed_string& settingID, bool bValue )
@@ -775,36 +821,39 @@ namespace sw
 
     void UserSettingsManager::captureStageBaseline()
     {
+        const vector<UserSettingDef>& listSetting = _schema.getSettings();
         _listStageBaseline.clear();
         _listStageBaseline.reserve( _listState.size() );
-        for ( const SettingState& state : _listState )
+        for ( uint32 settingIndex = 0; settingIndex < static_cast<uint32>( _listState.size() ); ++settingIndex )
         {
-            _listStageBaseline.push_back( state._committedValue );
+            _listStageBaseline.push_back( StageBaselineValue{ listSetting[settingIndex]._id, _listState[settingIndex]._committedValue } );
         }
     }
 
     uint32 UserSettingsManager::restoreStageBaseline()
     {
         const vector<UserSettingDef>& listSetting = _schema.getSettings();
-        // 기준 뒤에 스키마가 늘었으면(게임 모듈이 더 읽었다) 그 설정은 기준이 없어 그대로 둔다.
-        const uint32 count   = static_cast<uint32>( _listState.size() < _listStageBaseline.size() ? _listState.size() : _listStageBaseline.size() );
-        _confirmSecondsLeft  = 0.0f;
-        uint32 restoredCount = 0;
-        for ( uint32 settingIndex = 0; settingIndex < count; ++settingIndex )
+        _confirmSecondsLeft                       = 0.0f;
+        uint32 restoredCount                      = 0;
+        // 기준은 설정 id 로 찾는다. 기준 뒤에 더해진 설정(게임 모듈이 더 읽었다)은 기준이 없어 그대로 둔다.
+        for ( const StageBaselineValue& baseline : _listStageBaseline )
         {
-            SettingState& state    = _listState[settingIndex];
-            const string& baseline = _listStageBaseline[settingIndex];
-            const bool    bChanged = state._committedValue != baseline || state._bPending || state._bRollback; // 보류한 `Immediate` 값은 이미 대상에 들어가 있다
+            const optional<uint32> settingFound = findIndex( baseline._settingID );
+            if ( settingFound.has_value() == false )
+                continue;
+            const uint32  settingIndex = *settingFound;
+            SettingState& state        = _listState[settingIndex];
+            const bool    bChanged     = state._committedValue != baseline._value || state._bPending || state._bRollback; // 보류한 `Immediate` 값은 이미 대상에 들어가 있다
             state._pendingValue.clear();
             state._rollbackValue.clear();
             state._bPending  = false;
             state._bRollback = false;
             if ( bChanged == false )
                 continue;
-            state._committedValue     = baseline;
+            state._committedValue     = baseline._value;
             const UserSettingDef& def = listSetting[settingIndex];
             if ( def._applyTiming != UserSettingApplyTiming::NeedsRestart )
-                (void)applyToTarget( settingIndex, baseline, def._targetKind == UserSettingTargetKind::GlobalVariable ); // 대상이 없는 설정은 건너뛴다
+                (void)applyToTarget( settingIndex, baseline._value, def._targetKind == UserSettingTargetKind::GlobalVariable ); // 대상이 없는 설정은 건너뛴다
             broadcast( def._id, UserSettingEventKind::Applied );
             ++restoredCount;
         }

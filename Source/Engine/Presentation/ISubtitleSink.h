@@ -23,9 +23,9 @@ namespace sw
 
         /**
          * @brief @p speaker 의 줄 @p text 를 자막으로 올립니다. 보이는 시간은 @p durationSeconds 이고 0 이하면 읽기 시간입니다(대화 진행은 읽기 시간, 시퀀서 자막은 구간 길이).
-         * @return 줄 번호(1 부터)입니다. 일찍 내릴 때 `removeSubtitle` 에 넘깁니다.
+         * @return 줄 번호(1 부터)입니다. 들고 있다가 다음 줄 · 끝 · 건너뛰기에서 `removeSubtitle` 에 넘깁니다(버리면 앞 줄이 읽기 시간만큼 남는다).
          */
-        virtual uint32 postSubtitle( string_view speaker, string_view text, float32 durationSeconds ) = 0;
+        [[nodiscard]] virtual uint32 postSubtitle( string_view speaker, string_view text, float32 durationSeconds ) = 0;
         /** @brief 줄 @p lineID 를 지금 내립니다(보이는 중이든 기다리는 중이든). 이미 내려간 번호면 아무 일도 하지 않습니다. */
         virtual void removeSubtitle( uint32 lineID ) = 0;
         /** @brief 모든 줄을 내립니다(장면 전환 · 컷씬 건너뛰기). */

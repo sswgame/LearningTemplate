@@ -88,8 +88,8 @@ SW_TEST_CASE( UserSettingsStageBaselineTest, EmptyLanguageReturnsToStartupLangua
     const hashed_string key( "GREETING" );
     localization.setString( "en", key, "Hello" );
     localization.setString( "fr", key, "Bonjour" );
+    localization.setStartupLanguage( "en" ); // 기동(`initialize`)이 고른 게임 기본 언어 자리
     SW_REQUIRE_TRUE( localization.setCurrentLanguage( "en" ) );
-    SW_EXPECT_TRUE( localization.getStartupLanguage() == "en" );
 
     UserSettingsManager manager;
     UserSettingsTargets targets;
@@ -101,10 +101,30 @@ SW_TEST_CASE( UserSettingsStageBaselineTest, EmptyLanguageReturnsToStartupLangua
     SW_EXPECT_TRUE( manager.setPendingValue( settingID, "fr" ) == UserSettingSetResult::Accepted );
     (void)manager.applyPending();
     SW_EXPECT_TRUE( localization.getCurrentLanguage() == "fr" );
-    SW_EXPECT_TRUE( localization.getStartupLanguage() == "en" ); // 고른 언어는 기본을 바꾸지 않는다
+    SW_EXPECT_TRUE( localization.getStartupLanguage() == "en" ); // 사용자가 고른 언어는 기본을 바꾸지 않는다
 
     SW_EXPECT_TRUE( manager.setPendingValue( settingID, "" ) == UserSettingSetResult::Accepted );
     (void)manager.applyPending();
     SW_EXPECT_TRUE( localization.getCurrentLanguage() == "en" );
     manager.shutdown();
+}
+
+/** @brief [UserSettingsApplyValueTest] 설정 하나만 확정한다 — 다른 설정의 보류 값은 그대로 보류다(시점 순환 키가 메뉴의 보류를 확정하지 않는다) */
+SW_TEST_CASE( UserSettingsApplyValueTest, AppliesOnlyThatSetting )
+{
+    UserSettingsManager      manager;
+    UserSettingsHandlerProbe probe;
+    const Subscription       registration = manager.getRegistry().registerHandler( hashed_string( "test.sink" ),
+                                                                                   SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsHandlerProbe::apply, &probe ) );
+    SW_REQUIRE_TRUE( manager.loadSchemaFromXMLText( kStageSchemaXML, "test" ) );
+    SW_EXPECT_TRUE( manager.setPendingValue( hashed_string( "test.plain" ), "false" ) == UserSettingSetResult::Accepted );
+
+    SW_EXPECT_TRUE( manager.applyValue( hashed_string( "test.handled" ), "chosen" ) == UserSettingSetResult::Accepted );
+    SW_EXPECT_TRUE( probe._lastValue == "chosen" );
+    SW_EXPECT_TRUE( manager.getAppliedValue( hashed_string( "test.handled" ) ) == "chosen" );
+    SW_EXPECT_TRUE( manager.isPending( hashed_string( "test.plain" ) ) ); // 남의 보류는 그대로
+    SW_EXPECT_TRUE( manager.getAppliedValue( hashed_string( "test.plain" ) ) == "true" );
+
+    SW_EXPECT_TRUE( manager.applyValue( hashed_string( "test.handled" ), "chosen" ) == UserSettingSetResult::Unchanged );
+    SW_EXPECT_TRUE( manager.applyValue( hashed_string( "test.missing" ), "x" ) == UserSettingSetResult::Unknown );
 }

@@ -39,7 +39,7 @@ namespace sw
          * @details 언리얼 `UGameUserSettings` · 유니티 PlayerPrefs 에 시점 선택을 두는 것과 같은 자리다. 세이브 게임이 아니라 사용자 설정이다 — 어느 세이브를 불러도 시점은 사람이 고른 것이다.
          */
         static hashed_string readChosenPreset();
-        /** @brief 고른 프리셋을 사용자 설정에 적용하고 파일에 씁니다(`UserSettingsManager::applyPending`). 사용자 설정이 없는 실행(서버 · 하네스)이면 아무것도 하지 않습니다. */
+        /** @brief 고른 프리셋을 사용자 설정에 확정하고 파일에 씁니다(`UserSettingsManager::applyValue` — 이 설정 하나만). 사용자 설정이 없는 실행(서버 · 하네스)이면 아무것도 하지 않습니다. */
         static void saveChosenPreset( const hashed_string& id );
 
         /** @brief @p mode 가 1인칭 · 3인칭이고 원근이면 포즈의 시야각을 `_fieldOfViewScale` 로 넓히거나 좁힌 포즈를, 아니면 그대로 돌려줍니다. */

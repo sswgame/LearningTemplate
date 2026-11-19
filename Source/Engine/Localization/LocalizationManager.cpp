@@ -579,10 +579,7 @@ namespace sw
         }
         if ( preferredLanguage.empty() == false )
         {
-            {
-                UniqueLock<shared_mutex> lock{ _mutex };
-                _startupLanguage = normalizeLanguageCode( preferredLanguage );
-            }
+            setStartupLanguage( preferredLanguage );
             setCurrentLanguage( preferredLanguage );
             SW_LOG_INFO_ID( "LocalizationManager.LocalizationSetupCompleteActive", "Localization setup complete. Active language: '%#', Fallback: '%#'.", preferredLanguage.c_str(), getFallbackLanguage().c_str() );
         }
@@ -866,8 +863,6 @@ namespace sw
         string       oldLanguage;
         {
             UniqueLock<shared_mutex> lock{ _mutex };
-            if ( _startupLanguage.empty() )
-                _startupLanguage = code; // 처음 정한 언어가 게임 기본이다(`initialize` 는 고른 언어로 다시 적는다)
             if ( _currentLanguage == code )
                 return true;
             oldLanguage      = _currentLanguage;
@@ -906,6 +901,13 @@ namespace sw
     {
         ScopedSharedLock<shared_mutex> lock{ _mutex };
         return _fallbackLanguage;
+    }
+
+    void LocalizationManager::setStartupLanguage( string_view languageCode )
+    {
+        string                   code = normalizeLanguageCode( languageCode );
+        UniqueLock<shared_mutex> lock{ _mutex };
+        _startupLanguage = std::move( code );
     }
 
     string LocalizationManager::getStartupLanguage() const
