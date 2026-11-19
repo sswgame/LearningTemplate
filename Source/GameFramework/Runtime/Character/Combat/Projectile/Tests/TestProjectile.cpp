@@ -91,7 +91,7 @@ namespace
         {
             WeaponDef rifle;
             rifle._id           = hashed_string( "rifle" );
-            rifle._projectileID = hashed_string( "rifle_round" );
+            rifle._projectileID = CatalogKey<ProjectileDef>( hashed_string( "rifle_round" ) );
             rifle._accepts      = pAccepts;
             return rifle;
         }

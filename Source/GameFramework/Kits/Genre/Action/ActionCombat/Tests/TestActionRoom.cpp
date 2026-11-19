@@ -674,7 +674,7 @@ SW_TEST_CASE( MonsterCatalogTest, ReadsAllSections )
     SW_EXPECT_NEAR( 1.25f, pBoss->_ai._firstAttackDelay, kRoomTolerance );
     SW_REQUIRE_EQUAL( size_t( 2 ), pBoss->_listShot.size() );
     SW_EXPECT_NEAR( 1.5f, pBoss->_listShot[1]._angle.radians(), kRoomTolerance );
-    SW_EXPECT_TRUE( pBoss->_listShot[1]._projectileID == sw::hashed_string( "orb_slow" ) );
+    SW_EXPECT_TRUE( pBoss->_listShot[1]._projectileID.key() == sw::hashed_string( "orb_slow" ) );
     SW_EXPECT_EQUAL( sw::string( "prefabs/boss" ), pBoss->_prefabPath );
     SW_EXPECT_EQUAL( 3, pBoss->getDrop( sw::hashed_string( "souls" ) ) );
     SW_EXPECT_EQUAL( 0, pBoss->getDrop( sw::hashed_string( "gold" ) ) );

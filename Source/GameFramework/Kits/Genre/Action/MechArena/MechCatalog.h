@@ -26,6 +26,9 @@
 namespace sw
 {
     class XMLNode;
+    struct MoveFrameData;
+    struct ProjectileDef;
+    struct WeaponDef;
 
     /** @brief 기체의 거리 분류입니다(캡슐파이터의 근거리, 중거리, 원거리). 분류마다 보정(`MechCatalog::getClassModifier`)이 붙습니다. */
     ENUM()
@@ -70,11 +73,11 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Name = "weapon" )
-        hashed_string _weaponID{}; ///< Shot 일 때 `WeaponCatalog` 의 id
+        CatalogKey<WeaponDef> _weaponID{}; ///< Shot 일 때 `WeaponCatalog` 의 id
         PROPERTY( Name = "projectile" )
-        hashed_string _projectileID{}; ///< Special 일 때 `ProjectileCatalog` 의 id(탄속 0 이면 사거리 안을 바로 맞히는 광선)
+        CatalogKey<ProjectileDef> _projectileID{}; ///< Special 일 때 `ProjectileCatalog` 의 id(탄속 0 이면 사거리 안을 바로 맞히는 광선)
         PROPERTY( Name = "moves" )
-        vector<hashed_string> _listMoveID{}; ///< Melee 일 때 콤보 단마다의 `MoveCatalog` id(개수가 콤보 단수다, 속성 `moves`)
+        vector<CatalogKey<MoveFrameData>> _listMoveID{}; ///< Melee 일 때 콤보 단마다의 `MoveCatalog` id(개수가 콤보 단수다, 속성 `moves`)
         PROPERTY( Name = "down", Min = 0.0 )
         float32 _downValue{ 10.0f }; ///< 한 번 맞힐 때 쌓는 다운치
         PROPERTY( Min = 0.0 )

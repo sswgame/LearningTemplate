@@ -604,7 +604,7 @@ namespace sw
     hashed_string ShooterPlayerComponent::getWeaponItem( int32 weaponIndex ) const
     {
         const bool bInRange = 0 <= weaponIndex && weaponIndex < kWeaponCount;
-        return bInRange ? _arrWeapon[weaponIndex].getDef()._itemID : hashed_string{};
+        return bInRange ? _arrWeapon[weaponIndex].getDef()._itemID.key() : hashed_string{};
     }
 
     // ------------------------------------------------------------------------------
@@ -644,7 +644,7 @@ namespace sw
                 continue;
             }
             // 기본 탄과 받음은 게임이 기동할 때 봤다(`WeaponCatalog::validateProjectiles`). 여기서 틀리면 그 슬롯이 서지 않는다.
-            const ProjectileDef* pProjectile = pProjectiles->find( pDef->_projectileID );
+            const ProjectileDef* pProjectile = pProjectiles->find( pDef->_projectileID.key() );
             const bool           bEquipped   = pProjectile != nullptr &&
                                    _arrWeapon[weaponIndex].equip( *pDef, *pProjectile, pDef->_maxReserveAmmo / 2, 0x51ed270bu + static_cast<uint32>( weaponIndex ) );
             bArmed = bArmed && bEquipped;
@@ -656,7 +656,7 @@ namespace sw
     {
         const ProjectileCatalog* pProjectiles = game::findSubsystem<const ProjectileCatalog>();
         WeaponState&             weapon       = _arrWeapon[_weaponIndex];
-        const hashed_string&     wanted       = projectileID.empty() ? weapon.getDef()._projectileID : projectileID;
+        const hashed_string&     wanted       = projectileID.empty() ? weapon.getDef()._projectileID.key() : projectileID;
         const ProjectileDef*     pProjectile  = pProjectiles != nullptr ? pProjectiles->find( wanted ) : nullptr;
         if ( pProjectile == nullptr )
         {

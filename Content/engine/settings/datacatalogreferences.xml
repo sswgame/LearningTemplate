@@ -198,4 +198,30 @@
 	<CatalogKey tag="CreatureSpeciesDef" catalog="CreatureLifeCatalog" entry="Species"/>
 	<Field owner="MeadowTownObjectView" field="_object" tag="HabitatCell"/>
 	<Field owner="MeadowTownCreatureView" field="_species" tag="CreatureSpeciesDef"/>
+	<!-- 카탈로그 정의 사이의 키 칸(무기 → 탄 · 아이템, 메크 무기 → 무기 · 탄 · 기술 등). 정의는 형식 이름이 아니라 원소 이름으로 적혀 <Element> 가 정의 형식과 원소 경로를 잇는다.
+	     속성 이름은 칸 이름에서 _ 를 뗀 것이고 PROPERTY( Name ) 으로 바꾼 칸은 attribute 에 적는다. -->
+	<CatalogKey tag="ItemDef" catalog="ItemCatalog" entry="Item"/>
+	<CatalogKey tag="ProjectileDef" catalog="ProjectileCatalog" entry="Projectile"/>
+	<CatalogKey tag="MoveFrameData" catalog="MoveCatalog" entry="Move"/>
+	<CatalogKey tag="KartItemDef" catalog="KartItemCatalog" entry="Item"/>
+	<CatalogKey tag="LootTableDef" catalog="LootCatalog" entry="Table"/>
+	<Element type="WeaponDef" catalog="WeaponCatalog" path="Weapon"/>
+	<Field owner="WeaponDef" field="_ammoID" tag="ItemDef" attribute="ammo"/>
+	<Field owner="WeaponDef" field="_itemID" tag="ItemDef" attribute="item"/>
+	<Field owner="WeaponDef" field="_projectileID" tag="ProjectileDef" attribute="projectile"/>
+	<Element type="MechWeaponSlotDef" catalog="MechCatalog" path="Mech/Weapon"/>
+	<Element type="MechWeaponSlotDef" catalog="MechCatalog" path="Mech/Mode/Weapon"/>
+	<Field owner="MechWeaponSlotDef" field="_weaponID" tag="WeaponDef" attribute="weapon"/>
+	<Field owner="MechWeaponSlotDef" field="_projectileID" tag="ProjectileDef" attribute="projectile"/>
+	<Field owner="MechWeaponSlotDef" field="_listMoveID" tag="MoveFrameData" attribute="moves"/>
+	<Element type="MonsterShotDef" catalog="MonsterCatalog" path="Monster/Shot"/>
+	<Field owner="MonsterShotDef" field="_projectileID" tag="ProjectileDef" attribute="projectile"/>
+	<Element type="KartItemDef" catalog="KartItemCatalog" path="Item"/>
+	<Field owner="KartItemDef" field="_projectileID" tag="ProjectileDef" attribute="projectile"/>
+	<Element type="KartRankEntryDef" catalog="KartItemCatalog" path="RankTable/Entry"/>
+	<Field owner="KartRankEntryDef" field="_itemID" tag="KartItemDef" attribute="item"/>
+	<Element type="BattleRoyaleLootSpotDef" catalog="BattleRoyaleCatalog" path="LootSpot"/>
+	<Field owner="BattleRoyaleLootSpotDef" field="_tableID" tag="LootTableDef" attribute="table"/>
+	<Element type="BattleRoyaleSupplyDropDef" catalog="BattleRoyaleCatalog" path="SupplyDrop"/>
+	<Field owner="BattleRoyaleSupplyDropDef" field="_tableID" tag="LootTableDef" attribute="table"/>
 </DataCatalogReferenceTable>

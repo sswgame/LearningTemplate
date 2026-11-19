@@ -154,7 +154,7 @@ namespace sw
         const vector<DataCatalogKeyElement>& getElementRows() const { return _listKeyElement; }
         /** @brief 형식 @p owner 의 구조체 칸 @p field 줄입니다. 없으면 nullptr 입니다. */
         [[nodiscard]] const DataCatalogKeyStruct* findKeyStruct( string_view owner, string_view field ) const;
-        /** @brief 정의 형식 @p type 의 원소 줄입니다. 없으면 nullptr 입니다. */
+        /** @brief 정의 형식 @p type 의 첫 원소 줄입니다(한 정의가 여러 자리에 놓이면 줄이 여럿이다). 없으면 nullptr 입니다. */
         [[nodiscard]] const DataCatalogKeyElement* findKeyElement( string_view type ) const;
         /** @brief 칸 줄 @p field 가 카탈로그 원소에서 쓰는 속성 이름입니다(`_attribute`, 비면 칸 이름에서 `_` 를 뗀 것). */
         [[nodiscard]] static string findElementAttribute( const DataCatalogKeyField& field );

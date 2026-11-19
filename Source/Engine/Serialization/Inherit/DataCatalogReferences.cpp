@@ -301,9 +301,11 @@ namespace sw
                     continue;
                 }
                 DataCatalogKeyElement row{ string( catalog.getAttributeText( "type" ) ), string( catalog.getAttributeText( "catalog" ) ), string( catalog.getAttributeText( "path" ) ) };
-                if ( findKeyElement( row._type ) != nullptr )
+                const bool            bRepeated = VectorUtil::containsIf( _listKeyElement, [&row]( const DataCatalogKeyElement& other )
+                           { return other._type == row._type && other._catalog == row._catalog && other._path == row._path; } ); // 한 정의가 여러 자리에 놓이면 줄도 여럿이다(메크 무기)
+                if ( bRepeated )
                 {
-                    SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: <%# type=\"%#\"> is written twice", sourceName, Internal::kKeyTypeElement, row._type );
+                    SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: <%# type=\"%#\" path=\"%#\"> is written twice", sourceName, Internal::kKeyTypeElement, row._type, row._path );
                     bValid = false;
                     continue;
                 }

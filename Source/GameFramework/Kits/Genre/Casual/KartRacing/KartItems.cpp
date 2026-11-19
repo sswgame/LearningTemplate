@@ -150,7 +150,7 @@ namespace sw
                 continue;
             }
             LootEntry loot;
-            loot._itemID = entry._itemID;
+            loot._itemID = entry._itemID.key();
             loot._weight = entry._weight;
             listEntry.push_back( loot );
         }

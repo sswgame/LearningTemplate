@@ -30,6 +30,7 @@
 namespace sw
 {
     class Archive;
+    struct ItemDef;
     class XMLNode;
 
     /**
@@ -47,11 +48,11 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id;
         PROPERTY( Name = "ammo" )
-        hashed_string _ammoID; ///< 예비탄으로 쓰는 아이템 id. 인벤토리와 연결하는 게임이 읽는다. 비면 무기 자체 예비탄을 쓴다. 세이브의 탄 id 는 이 칸을 그대로 잇는다
+        CatalogKey<ItemDef> _ammoID; ///< 예비탄으로 쓰는 아이템 id. 인벤토리와 연결하는 게임이 읽는다. 비면 무기 자체 예비탄을 쓴다. 세이브의 탄 id 는 이 칸을 그대로 잇는다
         PROPERTY( Name = "item" )
-        hashed_string _itemID; ///< 이 무기를 나타내는 장비 아이템 id. 표시 이름과 외형은 그 아이템이 정한다(이름을 무기 표에 또 적지 않는다). 아이템 표를 쓰지 않는 게임은 비운다
+        CatalogKey<ItemDef> _itemID; ///< 이 무기를 나타내는 장비 아이템 id. 표시 이름과 외형은 그 아이템이 정한다(이름을 무기 표에 또 적지 않는다). 아이템 표를 쓰지 않는 게임은 비운다
         PROPERTY( Name = "projectile", Required )
-        hashed_string _projectileID; ///< 기본으로 장전하는 탄(`ProjectileCatalog` 의 id)
+        CatalogKey<ProjectileDef> _projectileID; ///< 기본으로 장전하는 탄(`ProjectileCatalog` 의 id)
         PROPERTY()
         string _accepts; ///< 받는 탄의 태그 조건식(`Ammo.Rifle || Ammo.Pistol`). 그냥 이름은 태그다. 비면 모든 탄을 받는다
         PROPERTY()
@@ -129,10 +130,10 @@ namespace sw
             outListUnknown.clear();
             for ( const WeaponDef& weapon : getAll() )
             {
-                if ( weapon._itemID.empty() == false && items.find( weapon._itemID ) == nullptr )
-                    outListUnknown.push_back( WeaponItemReference{ weapon._id, weapon._itemID, "item" } );
-                if ( weapon._ammoID.empty() == false && items.find( weapon._ammoID ) == nullptr )
-                    outListUnknown.push_back( WeaponItemReference{ weapon._id, weapon._ammoID, "ammo" } );
+                if ( weapon._itemID.empty() == false && items.find( weapon._itemID.key() ) == nullptr )
+                    outListUnknown.push_back( WeaponItemReference{ weapon._id, weapon._itemID.key(), "item" } );
+                if ( weapon._ammoID.empty() == false && items.find( weapon._ammoID.key() ) == nullptr )
+                    outListUnknown.push_back( WeaponItemReference{ weapon._id, weapon._ammoID.key(), "ammo" } );
             }
             return outListUnknown.empty();
         }

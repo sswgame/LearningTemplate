@@ -28,7 +28,7 @@ namespace sw
             if ( random.nextChance( pDef->_chance ) == false )
                 continue;
             const int32 rollCount = random.nextInt( pDef->_minRolls, pDef->_maxRolls );
-            (void)rollTableAt( lootCatalog, pDef->_tableID, spot._position, static_cast<int32>( spotIndex ), rollCount, random, outListItem );
+            (void)rollTableAt( lootCatalog, pDef->_tableID.key(), spot._position, static_cast<int32>( spotIndex ), rollCount, random, outListItem );
         }
         return static_cast<int32>( outListItem.size() );
     }

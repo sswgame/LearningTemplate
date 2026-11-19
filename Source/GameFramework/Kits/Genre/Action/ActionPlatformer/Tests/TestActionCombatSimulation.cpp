@@ -56,7 +56,7 @@ namespace
         {
             sw::WeaponDef weapon;
             weapon._id             = sw::hashed_string( "gun" );
-            weapon._projectileID   = sw::hashed_string( "pellet" );
+            weapon._projectileID   = sw::CatalogKey<sw::ProjectileDef>( sw::hashed_string( "pellet" ) );
             weapon._minSpread      = sw::Radians{};
             weapon._maxSpread      = sw::Radians{};
             weapon._spreadPerShot  = sw::Radians{};
