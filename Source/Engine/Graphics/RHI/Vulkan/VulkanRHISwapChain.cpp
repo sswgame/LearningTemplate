@@ -167,6 +167,27 @@ namespace sw
     {
     }
 
+    namespace
+    {
+        struct VulkanRHISwapChainColorSpace
+        {
+            /** @brief 색 공간의 Vulkan 표면 색 공간입니다. */
+            static VkColorSpaceKHR toVulkan( RHIColorSpace colorSpace )
+            {
+                switch ( colorSpace )
+                {
+                    case RHIColorSpace::SRGBNonLinear:
+                        return VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+                    case RHIColorSpace::HDR10ST2084:
+                        return VK_COLOR_SPACE_HDR10_ST2084_EXT;
+                    case RHIColorSpace::ExtendedSRGBLinear:
+                        return VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT;
+                }
+                return VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+            }
+        };
+    } // namespace
+
     bool VulkanRHISwapChain::hasSurfaceChanged( VkPhysicalDevice physicalDevice ) const
     {
         VkSurfaceCapabilitiesKHR capabilities{};
@@ -329,7 +350,7 @@ namespace sw
             listCandidateSurface.clear();
             VkSurfaceFormatKHR hdrFormat{};
             hdrFormat.format     = VulkanRHIUtil::toVulkanTextureFormat( getSwapChainFormat( colorSpace, _requestedFormat ) );
-            hdrFormat.colorSpace = colorSpace == RHIColorSpace::HDR10ST2084 ? VK_COLOR_SPACE_HDR10_ST2084_EXT : VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT;
+            hdrFormat.colorSpace = VulkanRHISwapChainColorSpace::toVulkan( colorSpace );
             listCandidate.push_back( getSwapChainFormat( colorSpace, _requestedFormat ) );
             listCandidateSurface.push_back( hdrFormat );
         }

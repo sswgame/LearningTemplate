@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/RHIEnums.h"
 
 namespace sw
 {
@@ -97,12 +98,12 @@ namespace sw
          *          Vulkan 은 `VK_EXT_swapchain_colorspace` 의 표면 포맷 목록이다. GL · WebGPU · Android 는 SDR 만이다(능력 표가 정한 길 — 실패의 대체가 아니다).
          *          언리얼 `GRHISupportsHDROutput` · 유니티 `HDROutputSettings.available` 자리다. 렌더러는 `DisplayOutputDesc::resolve` 로 요청을 이 비트에 맞춘다.
          */
-        uint8 _displayOutputSupport{ 1u }; // SDR 비트만
+        uint8 _displayOutputSupport{ makeColorSpaceBit( RHIColorSpace::SRGBNonLinear ) };
         /** @brief 모니터가 알린 최대 휘도(nits)입니다. 모르면(SDR 만 내는 백엔드 · 표면 정보 없음) 0 입니다. 옵션 메뉴의 최대 휘도 기본을 고를 때 본다. */
         float32 _displayMaxLuminanceNits{ 0.0f };
 
         /** @brief SDR 밖 출력(HDR10 · scRGB) 가운데 하나라도 받으면 true 입니다 — HDR 화면 출력의 PSO · RT 를 지을지 가른다. */
-        [[nodiscard]] bool hasHDRDisplayOutput() const { return ( _displayOutputSupport & ~1u ) != 0; }
+        [[nodiscard]] bool hasHDRDisplayOutput() const { return ( _displayOutputSupport & ~static_cast<uint32>( makeColorSpaceBit( RHIColorSpace::SRGBNonLinear ) ) ) != 0; }
 
         /** @brief 기본값(컴퓨트만 켠 보수적 기본)으로 만듭니다. */
         RHICapabilities() noexcept = default;

@@ -182,6 +182,11 @@ namespace sw
          * @details 기본은 SDR 만 내는 백엔드(GL · WebGPU)의 길이다 — 능력이 SDR 비트뿐이라 여기 오는 요청은 늘 `SRGBNonLinear` 이고 할 일이 없다.
          */
         [[nodiscard]] virtual bool setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata );
+        /**
+         * @brief 색 공간은 그대로 두고 HDR10 마스터링 값만 다시 알리는 백엔드 훅입니다(옵션 메뉴의 휘도 슬라이더 — 스왑체인을 다시 만들지 않는다). 렌더 스레드 역할을 빌렸다.
+         * @details 기본은 알릴 것이 없는 백엔드(SDR 만)의 길이다.
+         */
+        [[nodiscard]] virtual bool setDisplayMetadataInternal( const RHIDisplayMetadata& /*metadata*/ ) { return true; }
 
         /**
          * @brief `setVSync` 가 값을 기록한 뒤 부릅니다. 동기화를 프레젠트 인자로 고르는 백엔드(DXGI, GL)는 할 일이 없습니다.
@@ -364,6 +369,12 @@ namespace sw
         [[nodiscard]] bool setBackBufferColorSpace( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata );
         /** @brief 주 스왑체인이 지금 내는 색 공간입니다. 백버퍼 포맷(`getBackBufferFormat`)과 짝이다. SDR 만 내는 백엔드는 늘 `SRGBNonLinear` 입니다. */
         virtual RHIColorSpace getBackBufferColorSpace() const { return RHIColorSpace::SRGBNonLinear; }
+        /**
+         * @brief 화면 UI(에디터 UI · Canvas · 개발 겹치기 · 렌더 스레드 UI)가 그리는 대상의 포맷입니다 — 그 PSO 와 대상 텍스처(HDR UI RT · 회전 대기 텍스처 · UI 캡처)는 이 값 하나로 만든다.
+         * @details SDR 이면 백버퍼가 실제로 채택한 포맷(EngineConfig `_rhi._backBufferFormat` 이 BGRA8 이거나 Vulkan 표면이 다른 포맷만 주면 그 값)이고, HDR 이면 HDR 로 바꾸기 직전의
+         *          SDR 백버퍼 포맷이다(UI 는 HDR 에서도 SDR RT 에 그리고 끝에 합성한다 — `FrameDisplayEncode`). 백버퍼 포맷을 UI 포맷으로 가정할 자리를 남기지 않으려고 가상이 아니다.
+         */
+        RHIFormat getUITargetFormat() const { return getBackBufferColorSpace() == RHIColorSpace::SRGBNonLinear ? getBackBufferFormat() : _sdrBackBufferFormat; }
         /** @brief 백버퍼 너비입니다(논리 크기 — 회전한 서피스면 실제 이미지와 맞바뀐다, `getSurfaceRotation`). initialize 때는 표면 크기이고, 그 뒤에는 마지막 `resize` 값입니다. */
         uint32 getBackBufferWidth() const { return _backBufferWidth; }
         /** @brief 백버퍼 높이입니다. initialize 때는 표면 크기이고, 그 뒤에는 마지막 `resize` 값입니다. */
@@ -715,6 +726,8 @@ namespace sw
         /// @brief 렌더 스레드 역할입니다(잠금이 아니라 분석용 능력). 프레임 진행 상태(백엔드의 프레임 링 · 스왑체인 깃발 · 진행 중 커맨드 버퍼)는 이 역할 아래에 있고,
         ///        그 상태를 만지는 함수는 렌더 스레드에서 돌거나 렌더 스레드를 세운 뒤(`RenderThread::waitIdle` · 초기화 · 종료) 불린다고 진입에서 `assumeHeld` 로 적는다.
         ThreadRole _renderThread;
+        /// @brief SDR 이던 마지막 백버퍼 포맷입니다 — HDR 인 동안의 `getUITargetFormat` 이다(`initialize` 와 `setBackBufferColorSpace` 가 SDR 을 떠나기 전에 적는다).
+        RHIFormat _sdrBackBufferFormat{ constant::render::kBackBufferFormat };
         /// @brief 타임스탬프 계측 능력입니다(findTimestampProvider 참고). 능력을 가진 백엔드가 생성자에서 자기를 적습니다.
         IRHITimestampProvider* _pTimestampProvider;
         /// @brief 컨텍스트 스레드 바인딩 능력입니다(findContextThreadBinding 참고). 능력을 가진 백엔드가 생성자에서 자기를 적습니다.

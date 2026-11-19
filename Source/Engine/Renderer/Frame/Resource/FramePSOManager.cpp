@@ -122,8 +122,17 @@ namespace sw
             state                    = RenderState{};
             state._bEnableDepthTest  = info.hasFlag( RenderPassTraitFlag::kDepthTest ) ? SW_TRUE : SW_FALSE;
             state._bEnableDepthWrite = ( info.hasFlag( RenderPassTraitFlag::kDepthTest ) && info.hasFlag( RenderPassTraitFlag::kDepthWrite ) ) ? SW_TRUE : SW_FALSE;
-            if ( info.hasFlag( RenderPassTraitFlag::kBlend ) )
-                state.setAllBlendTargets( info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) ? BlendTargetState::makePremultipliedAlpha() : BlendTargetState::makeStraightAlpha() );
+            switch ( info._blend )
+            {
+                case RenderPassBlend::None:
+                    break;
+                case RenderPassBlend::Straight:
+                    state.setAllBlendTargets( BlendTargetState::makeStraightAlpha() );
+                    break;
+                case RenderPassBlend::Premultiplied:
+                    state.setAllBlendTargets( BlendTargetState::makePremultipliedAlpha() );
+                    break;
+            }
             // 풀스크린 삼각형의 와인딩에는 앞뒤 의미가 없다. 컬링하면 화면이 빈다.
             if ( getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false )
                 state._cullMode = CullMode::None;
@@ -680,11 +689,12 @@ namespace sw
         // 출력 패스는 표의 kOutputPass 가 정한다.
         // 화면 회전 출력(kSurfaceRotation)은 스왑체인 이미지에만 그려 백버퍼 포맷 하나이고, 서피스를 돌릴 수 있는 장치에서만 만든다(데스크톱은 없다).
         // HDR 을 받는 모니터면 장면 출력 RT(`FrameDisplayEncode` — Present · RCAS 가 그린다)의 포맷도 더한다. 실행 중 HDR 을 켜도 셋업의 이 PSO 를 쓴다. 받지 않으면 Unknown(건너뛴다).
-        const RHICapabilities caps                = _pDevice->getCapabilities();
-        const bool            bDisplayHDR         = caps.hasHDRDisplayOutput();
-        const RHIFormat       arrTargetFormat[]   = { _pDevice->getBackBufferFormat(), constant::render::kOffscreenColorFormat, constant::render::kBackBufferFormat,
+        const RHICapabilities caps        = _pDevice->getCapabilities();
+        const bool            bDisplayHDR = caps.hasHDRDisplayOutput();
+        // 첫 칸은 화면 UI 대상 포맷(SDR 이면 백버퍼 포맷)이다 — HDR 이면 백버퍼(R10G10B10A2 · R16F)에 그리는 출력 패스는 인코딩 하나뿐이라 그 포맷의 변형을 만들지 않는다.
+        const RHIFormat arrTargetFormat[]   = { _pDevice->getUITargetFormat(), constant::render::kOffscreenColorFormat, constant::render::kBackBufferFormat,
                                               bDisplayHDR ? RHIFormat::R16G16B16A16_FLOAT : RHIFormat::Unknown };
-        const bool            bSurfacePreRotation = caps._bSurfacePreRotation != SW_FALSE;
+        const bool      bSurfacePreRotation = caps._bSurfacePreRotation != SW_FALSE;
         for ( uint32 typeIndex = 0; typeIndex < kRenderPassKindCount; ++typeIndex )
         {
             const RenderPassKind      passType = static_cast<RenderPassKind>( typeIndex );
@@ -694,10 +704,12 @@ namespace sw
             const bool bSurfaceRotation = info.hasFlag( RenderPassTraitFlag::kSurfaceRotation );
             if ( bSurfaceRotation && bSurfacePreRotation == false )
                 continue;
-            const uint32 formatCount = bSurfaceRotation ? 1u : static_cast<uint32>( SW_COUNT_OF( arrTargetFormat ) );
+            // 화면 회전 출력은 스왑체인 이미지(백버퍼 포맷) 하나에만 그린다.
+            const RHIFormat arrRotationFormat[] = { _pDevice->getBackBufferFormat() };
+            const uint32    formatCount         = bSurfaceRotation ? 1u : static_cast<uint32>( SW_COUNT_OF( arrTargetFormat ) );
             for ( uint32 formatIndex = 0; formatIndex < formatCount; ++formatIndex )
             {
-                const RHIFormat        format = arrTargetFormat[formatIndex];
+                const RHIFormat        format = bSurfaceRotation ? arrRotationFormat[formatIndex] : arrTargetFormat[formatIndex];
                 RHIPipelineStateHandle existing{ 0 };
                 if ( format == RHIFormat::Unknown || _pCache->findOutputPSO( passType, format, existing ) )
                     continue;

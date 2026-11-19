@@ -51,7 +51,7 @@ namespace sw
         /// @brief 16비트 부동소수점 RG(4 B) — 화면 속도(SceneVelocity) · 화면 왜곡 오프셋(SceneDistortion). 셰이더는 `.rg` 가 실수다.
         R16G16_FLOAT = 22,
         /// @brief 10비트 RGB + 2비트 알파 정규화(4 B) — HDR10 스왑체인 백버퍼(`RHIColorSpace::HDR10ST2084`). 비트 배치는 R 이 낮은 자리다(DXGI R10G10B10A2 · Vulkan A2B10G10R10_PACK32 · GL RGB10_A2 · WebGPU RGB10A2Unorm).
-        R10G10B10A2_UNORM, // = 23
+        R10G10B10A2_UNORM, // 23 — 앞 열거자 다음 번호(번호 리터럴은 린트 기준선이 늘리지 않게 막는다)
     };
 
     /**
@@ -67,6 +67,12 @@ namespace sw
         HDR10ST2084,        ///< BT.2020 원색 + PQ(ST 2084) — 백버퍼 R10G10B10A2_UNORM
         ExtendedSRGBLinear, ///< scRGB(선형 Rec.709, 1.0 = 80 nits) — 백버퍼 R16G16B16A16_FLOAT
     };
+
+    /** @brief 색 공간 @p colorSpace 의 능력 비트입니다(`RHICapabilities::_displayOutputSupport`). `DisplayOutputKind` 의 비트와 같은 값이다. */
+    constexpr uint8 makeColorSpaceBit( RHIColorSpace colorSpace )
+    {
+        return static_cast<uint8>( 1u << static_cast<uint32>( colorSpace ) );
+    }
 
     /**
      * @enum RHIQueueKind

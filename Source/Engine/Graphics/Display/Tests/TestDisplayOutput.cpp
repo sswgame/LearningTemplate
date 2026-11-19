@@ -68,3 +68,24 @@ SW_TEST_CASE( DisplayOutputTest, HDRMetadataFollowsOutputLuminance )
     SW_EXPECT_EQUAL( 1400.0f, metadata._maxLuminanceNits );
     SW_EXPECT_EQUAL( 240.0f, metadata._maxFrameAverageNits );
 }
+
+/**
+ * @brief [DisplayOutputTest] 종이 흰색은 최대 휘도를 넘지 않고, 장치의 색 공간에서 출력 종류를 거꾸로 정한다. 결함이면 종이 흰색이 최대 휘도보다 밝아 장면이 SDR 보다 어둡게 눌리고,
+ *        스왑체인 바꾸기가 실패했는데 렌더러가 HDR 로 그린다
+ */
+SW_TEST_CASE( DisplayOutputTest, PaperWhiteNeverExceedsPeakAndKindFollowsColorSpace )
+{
+    DisplayOutputDesc requested;
+    requested._kind                  = DisplayOutputKind::HDR10;
+    requested._paperWhiteNits        = 400.0f;
+    requested._maxLuminanceNits      = 300.0f;
+    const DisplayOutputDesc resolved = DisplayOutputDesc::resolve( requested, makeDisplayOutputBit( DisplayOutputKind::HDR10 ) );
+    SW_EXPECT_EQUAL( 300.0f, resolved._paperWhiteNits );
+
+    for ( const DisplayOutputKind kind : { DisplayOutputKind::SDR, DisplayOutputKind::HDR10, DisplayOutputKind::ScRGB } )
+    {
+        DisplayOutputDesc desc;
+        desc._kind = kind;
+        SW_EXPECT_TRUE( DisplayOutputDesc::getKind( desc.getColorSpace() ) == kind );
+    }
+}

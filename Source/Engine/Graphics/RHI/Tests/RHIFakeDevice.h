@@ -116,19 +116,22 @@ namespace sw::test
     class FakeRHIDevice final : public IRHIDevice
     {
     public:
-        uint32                             _maxCreatable{ 0xFFFFFFFFu }; /**< 이만큼 만든 뒤로는 만들지 못한다 */
-        uint32                             _createdCount{ 0 };           /**< 지금까지 만든 리스트 수 */
-        vector<FakeRHICommandList*>        _listExecuted;                /**< 제출된 순서 그대로의 리스트 */
-        vector<const utf8*>                _listShutdownStep;            /**< 불린 종료 단계 훅 이름(부른 순서) — 테스트 자원의 `releaseRHI` 도 여기 적는다 */
-        void*                              _pNativeDevice{ nullptr };    /**< `getNativeDevice` 가 돌려줄 값 */
-        mutable uint32                     _nativeHandleQueryCount{ 0 }; /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
-        vector<RHIResourceReleaseDelegate> _listGPURelease;              /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */
-        uint32                             _pendingReleaseCount{ 0 };    /**< `getPendingReleaseCount` 가 답할 값 — 종료 단언 테스트가 정한다 */
-        vector<RHIDescriptorIndex>         _listLiveTextureIndex;        /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
-        vector<RHIDescriptorIndex>         _listLiveBufferIndex;         /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
-        vector<RHIFormat>                  _listUnsupportedFormat;       /**< `supportsTextureFormat` 이 거짓으로 답할 형식(나머지는 참) */
-        uint8                              _bAsyncCompute{ SW_FALSE };   /**< 능력 `_bAsyncCompute` 로 답할 값 */
-        IRHIResourceFactory*               _pResourceFactory{ nullptr }; /**< `getResourceFactory` 가 돌려줄 팩토리 — 자원을 만드는 테스트가 꽂는다(없으면 nullptr) */
+        uint32                             _maxCreatable{ 0xFFFFFFFFu };                                               /**< 이만큼 만든 뒤로는 만들지 못한다 */
+        uint32                             _createdCount{ 0 };                                                         /**< 지금까지 만든 리스트 수 */
+        vector<FakeRHICommandList*>        _listExecuted;                                                              /**< 제출된 순서 그대로의 리스트 */
+        vector<const utf8*>                _listShutdownStep;                                                          /**< 불린 종료 단계 훅 이름(부른 순서) — 테스트 자원의 `releaseRHI` 도 여기 적는다 */
+        void*                              _pNativeDevice{ nullptr };                                                  /**< `getNativeDevice` 가 돌려줄 값 */
+        mutable uint32                     _nativeHandleQueryCount{ 0 };                                               /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
+        vector<RHIResourceReleaseDelegate> _listGPURelease;                                                            /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */
+        uint32                             _pendingReleaseCount{ 0 };                                                  /**< `getPendingReleaseCount` 가 답할 값 — 종료 단언 테스트가 정한다 */
+        vector<RHIDescriptorIndex>         _listLiveTextureIndex;                                                      /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
+        vector<RHIDescriptorIndex>         _listLiveBufferIndex;                                                       /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
+        vector<RHIFormat>                  _listUnsupportedFormat;                                                     /**< `supportsTextureFormat` 이 거짓으로 답할 형식(나머지는 참) */
+        uint8                              _bAsyncCompute{ SW_FALSE };                                                 /**< 능력 `_bAsyncCompute` 로 답할 값 */
+        RHIFormat                          _sdrBackBufferFormatForTest{ constant::render::kBackBufferFormat };         /**< SDR 백버퍼 포맷(BGRA8 설정을 흉내 낸다) */
+        RHIColorSpace                      _colorSpace{ RHIColorSpace::SRGBNonLinear };                                /**< 지금 색 공간 — `setBackBufferColorSpaceInternal` 이 바꾼다 */
+        uint8                              _displayOutputSupport{ makeColorSpaceBit( RHIColorSpace::SRGBNonLinear ) }; /**< 능력 `_displayOutputSupport` 로 답할 값 */
+        IRHIResourceFactory*               _pResourceFactory{ nullptr };                                               /**< `getResourceFactory` 가 돌려줄 팩토리 — 자원을 만드는 테스트가 꽂는다(없으면 nullptr) */
         /** @brief 큐 사건 하나입니다 — 'G'(그래픽스 리스트 제출) · 'F'(값 번째 비동기 제출 = 포크) · 'J'(그 값의 조인). */
         struct QueueEvent
         {
@@ -153,6 +156,13 @@ namespace sw::test
         const utf8*          getBackendName() const override { return "Fake"; }
         IRHIResourceFactory* getResourceFactory() override { return _pResourceFactory; }
         bool                 supportsInstancedSceneDraw() const override { return false; }
+        RHIFormat            getBackBufferFormat() const override { return getSwapChainFormat( _colorSpace, _sdrBackBufferFormatForTest ); }
+        RHIColorSpace        getBackBufferColorSpace() const override { return _colorSpace; }
+        [[nodiscard]] bool   setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& ) override
+        {
+            _colorSpace = colorSpace;
+            return true;
+        }
 
         RHICapabilities getCapabilities() const override
         {
@@ -160,6 +170,7 @@ namespace sw::test
             caps._bParallelCommandRecording = SW_TRUE;
             caps._bWireframeFill            = SW_TRUE; // 그리지 않으므로 모든 보기 모드를 받는다
             caps._bAsyncCompute             = _bAsyncCompute;
+            caps._displayOutputSupport      = _displayOutputSupport;
             return caps;
         }
 

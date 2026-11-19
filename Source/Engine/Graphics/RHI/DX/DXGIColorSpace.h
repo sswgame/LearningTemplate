@@ -9,7 +9,10 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/DX/DXGIFormat.h"
+#include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Reflection/EnumName.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -86,31 +89,81 @@ namespace sw
             SW_LOG_ERROR_ID( "DXGI.SetColorSpaceFailed", "IDXGISwapChain3::SetColorSpace1 failed (HRESULT 0x%#)", static_cast<uint32>( colorSpaceHr ) );
             return false;
         }
+        // 메타데이터가 실패하면 색 공간을 SDR(G22)로 되돌린다 — 알린 색 공간과 메타데이터가 어긋난 채(G2084 + 메타데이터 없음) 남지 않게. 부르는 쪽이 포맷 · 옛 색 공간을 되돌린다.
+        HRESULT metadataHr = S_OK;
         if ( colorSpace != RHIColorSpace::HDR10ST2084 )
-            return SUCCEEDED( swapChain4->SetHDRMetaData( DXGI_HDR_METADATA_TYPE_NONE, 0, nullptr ) );
-
-        constexpr float32       kPrimaryScale   = 50000.0f;
-        constexpr float32       kLuminanceScale = 10000.0f;
-        DXGI_HDR_METADATA_HDR10 hdr10{};
-        hdr10.RedPrimary[0]             = static_cast<UINT16>( RHIDisplayMetadata::kRedPrimaryX * kPrimaryScale );
-        hdr10.RedPrimary[1]             = static_cast<UINT16>( RHIDisplayMetadata::kRedPrimaryY * kPrimaryScale );
-        hdr10.GreenPrimary[0]           = static_cast<UINT16>( RHIDisplayMetadata::kGreenPrimaryX * kPrimaryScale );
-        hdr10.GreenPrimary[1]           = static_cast<UINT16>( RHIDisplayMetadata::kGreenPrimaryY * kPrimaryScale );
-        hdr10.BluePrimary[0]            = static_cast<UINT16>( RHIDisplayMetadata::kBluePrimaryX * kPrimaryScale );
-        hdr10.BluePrimary[1]            = static_cast<UINT16>( RHIDisplayMetadata::kBluePrimaryY * kPrimaryScale );
-        hdr10.WhitePoint[0]             = static_cast<UINT16>( RHIDisplayMetadata::kWhitePointX * kPrimaryScale );
-        hdr10.WhitePoint[1]             = static_cast<UINT16>( RHIDisplayMetadata::kWhitePointY * kPrimaryScale );
-        hdr10.MaxMasteringLuminance     = static_cast<UINT>( metadata._maxLuminanceNits * kLuminanceScale );
-        hdr10.MinMasteringLuminance     = static_cast<UINT>( metadata._minLuminanceNits * kLuminanceScale );
-        hdr10.MaxContentLightLevel      = static_cast<UINT16>( metadata._maxLuminanceNits );
-        hdr10.MaxFrameAverageLightLevel = static_cast<UINT16>( metadata._maxFrameAverageNits );
-        const HRESULT metadataHr        = swapChain4->SetHDRMetaData( DXGI_HDR_METADATA_TYPE_HDR10, sizeof( hdr10 ), &hdr10 );
+            metadataHr = swapChain4->SetHDRMetaData( DXGI_HDR_METADATA_TYPE_NONE, 0, nullptr );
+        else
+        {
+            constexpr float32       kPrimaryScale   = 50000.0f;
+            constexpr float32       kLuminanceScale = 10000.0f;
+            DXGI_HDR_METADATA_HDR10 hdr10{};
+            hdr10.RedPrimary[0]             = static_cast<UINT16>( RHIDisplayMetadata::kRedPrimaryX * kPrimaryScale );
+            hdr10.RedPrimary[1]             = static_cast<UINT16>( RHIDisplayMetadata::kRedPrimaryY * kPrimaryScale );
+            hdr10.GreenPrimary[0]           = static_cast<UINT16>( RHIDisplayMetadata::kGreenPrimaryX * kPrimaryScale );
+            hdr10.GreenPrimary[1]           = static_cast<UINT16>( RHIDisplayMetadata::kGreenPrimaryY * kPrimaryScale );
+            hdr10.BluePrimary[0]            = static_cast<UINT16>( RHIDisplayMetadata::kBluePrimaryX * kPrimaryScale );
+            hdr10.BluePrimary[1]            = static_cast<UINT16>( RHIDisplayMetadata::kBluePrimaryY * kPrimaryScale );
+            hdr10.WhitePoint[0]             = static_cast<UINT16>( RHIDisplayMetadata::kWhitePointX * kPrimaryScale );
+            hdr10.WhitePoint[1]             = static_cast<UINT16>( RHIDisplayMetadata::kWhitePointY * kPrimaryScale );
+            hdr10.MaxMasteringLuminance     = static_cast<UINT>( metadata._maxLuminanceNits * kLuminanceScale );
+            hdr10.MinMasteringLuminance     = static_cast<UINT>( metadata._minLuminanceNits * kLuminanceScale );
+            hdr10.MaxContentLightLevel      = static_cast<UINT16>( metadata._maxLuminanceNits );
+            hdr10.MaxFrameAverageLightLevel = static_cast<UINT16>( metadata._maxFrameAverageNits );
+            metadataHr                      = swapChain4->SetHDRMetaData( DXGI_HDR_METADATA_TYPE_HDR10, sizeof( hdr10 ), &hdr10 );
+        }
         if ( FAILED( metadataHr ) )
         {
-            SW_LOG_ERROR_ID( "DXGI.SetHDRMetaDataFailed", "IDXGISwapChain4::SetHDRMetaData failed (HRESULT 0x%#)", static_cast<uint32>( metadataHr ) );
+            SW_LOG_ERROR_ID( "DXGI.SetHDRMetaDataFailed", "IDXGISwapChain4::SetHDRMetaData for %# failed (HRESULT 0x%#) - the color space goes back to SDR", getEnumName( colorSpace ),
+                             static_cast<uint32>( metadataHr ) );
+            (void)swapChain4->SetColorSpace1( toDXGIColorSpace( RHIColorSpace::SRGBNonLinear ) );
             return false;
         }
         return true;
+    }
+
+    /** @brief `ResizeBuffers` 에 다시 넘길 스왑체인 서술입니다(DX11 은 버퍼 수 0 = 그대로, 플래그는 생성 때와 같아야 한다). */
+    struct DXGISwapChainBuffers
+    {
+        IDXGISwapChain* _pSwapChain{ nullptr };
+        uint32          _bufferCount{ 0 };
+        uint32          _width{ 0 };
+        uint32          _height{ 0 };
+        uint32          _flags{ 0 };
+        RHIFormat       _sdrFormat{ constant::render::kBackBufferFormat };
+    };
+
+    /**
+     * @brief 버퍼를 놓은 스왑체인(`ResizeBuffers` 뒤)에 색 공간 @p colorSpace 와 마스터링 값 @p metadata 를 다시 알리고 지금 색 공간을 돌려줍니다.
+     * @details `ResizeBuffers` 가 HDR 메타데이터를 잃을 수 있어 크기 바꿈마다 다시 알린다. 알리지 못하면 SDR 포맷으로 다시 만들고 SDR 이다 — 포맷과 알린 색 공간이 어긋난 채 남지 않는다.
+     */
+    [[nodiscard]] inline RHIColorSpace reapplyDXGIColorSpace( const DXGISwapChainBuffers& buffers, RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
+    {
+        if ( colorSpace == RHIColorSpace::SRGBNonLinear || applyDXGIColorSpace( buffers._pSwapChain, colorSpace, metadata ) )
+            return colorSpace;
+        (void)isHrSuccess( buffers._pSwapChain->ResizeBuffers( buffers._bufferCount, buffers._width, buffers._height, toDXGIFormat( buffers._sdrFormat ), buffers._flags ), "ResizeBuffers (fall back to SDR)" );
+        return RHIColorSpace::SRGBNonLinear;
+    }
+
+    /**
+     * @brief 버퍼를 놓은 스왑체인의 색 공간을 @p from 에서 @p to 로 바꿉니다 — 그 색 공간의 포맷으로 `ResizeBuffers` 한 뒤 알린다. 지금 색 공간을 돌려줍니다(성공이면 @p to).
+     * @details 알리지 못하면 옛 포맷 · 옛 색 공간(@p fromMetadata)으로 되돌리고, 그것도 못 하면 SDR 이다. `ResizeBuffers` 가 실패하면 버퍼가 그대로라 @p from 이다.
+     */
+    [[nodiscard]] inline RHIColorSpace changeDXGIColorSpace( const DXGISwapChainBuffers& buffers, RHIColorSpace from, const RHIDisplayMetadata& fromMetadata, RHIColorSpace to,
+                                                             const RHIDisplayMetadata& toMetadata )
+    {
+        const RHIFormat format   = getSwapChainFormat( to, buffers._sdrFormat );
+        const HRESULT   resizeHr = buffers._pSwapChain->ResizeBuffers( buffers._bufferCount, buffers._width, buffers._height, toDXGIFormat( format ), buffers._flags );
+        if ( FAILED( resizeHr ) )
+        {
+            SW_LOG_ERROR_ID( "DXGI.ColorSpaceResizeBuffersFailed", "ResizeBuffers to %# failed (HRESULT 0x%#)", getRHIFormatName( format ), static_cast<uint32>( resizeHr ) );
+            return from;
+        }
+        if ( applyDXGIColorSpace( buffers._pSwapChain, to, toMetadata ) )
+            return to;
+        (void)isHrSuccess( buffers._pSwapChain->ResizeBuffers( buffers._bufferCount, buffers._width, buffers._height, toDXGIFormat( getSwapChainFormat( from, buffers._sdrFormat ) ), buffers._flags ),
+                           "ResizeBuffers (color space revert)" );
+        return reapplyDXGIColorSpace( buffers, from, fromMetadata );
     }
 } // namespace sw
 #endif

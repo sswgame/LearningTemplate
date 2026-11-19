@@ -163,9 +163,9 @@ namespace sw
      */
     struct RenderPassTraitFlag
     {
-        static constexpr uint32 kDepthTest             = SW_BIT( 0 );  ///< PSO 기본값으로 깊이 테스트를 쓴다(XML 로 끌 수는 있어도 켤 수는 없다).
-        static constexpr uint32 kDepthWrite            = SW_BIT( 1 );  ///< PSO 기본값으로 깊이 쓰기를 한다.
-        static constexpr uint32 kBlend                 = SW_BIT( 2 );  ///< PSO 기본값으로 블렌드를 쓴다(패스 서술이 있으면 그 값이 우선한다).
+        static constexpr uint32 kDepthTest  = SW_BIT( 0 ); ///< PSO 기본값으로 깊이 테스트를 쓴다(XML 로 끌 수는 있어도 켤 수는 없다).
+        static constexpr uint32 kDepthWrite = SW_BIT( 1 ); ///< PSO 기본값으로 깊이 쓰기를 한다.
+        // 비트 2 · 13 은 비워 둔다 — 블렌드는 깃발이 아니라 `RenderPassKindInfo::_blend` 칸 하나다(프리멀티플라이인데 블렌드가 꺼진 줄을 적을 수 없다).
         static constexpr uint32 kDepthOnly             = SW_BIT( 3 );  ///< 깊이만 쓴다. 출력 선언이 없을 때 컬러 RT 수가 0이 되는 근거다.
         static constexpr uint32 kDrawsSceneMeshes      = SW_BIT( 4 );  ///< 씬 메시(GPUScene 배치)를 그린다. 머티리얼 변형 PSO 를 만들 대상이다.
         static constexpr uint32 kDrawsTransparentBatch = SW_BIT( 5 );  ///< 씬 메시 중 반투명 배치 목록을 그린다(아니면 불투명 목록을 그린다).
@@ -176,7 +176,6 @@ namespace sw
         static constexpr uint32 kRequiresGPUCulling    = SW_BIT( 10 ); ///< 컴퓨트 PSO 를 `_bGPUCulling` 일 때만 만든다(아니면 `_bCompute`).
         static constexpr uint32 kHasInputContract      = SW_BIT( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다.
         static constexpr uint32 kCullFront             = SW_BIT( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다.
-        static constexpr uint32 kPremultipliedAlpha    = SW_BIT( 13 ); ///< XML 이 없는 내부 슬롯의 블렌드가 프리멀티플라이다. 파이프라인 패스는 XML 의 `_blendPreset` 이 정한다.
         /**
          * @brief 후처리를 끈 뷰(CCTV, 표면 값 보기)와 품질(`_minPostQuality`)로 꺼지는 효과 패스다(SSAO, 블룸, 외곽선, 피사계 심도, 모션 블러)와 TAA 다. TAA 말고는 `kGenericFullscreen` 에만 붙는다.
          * @details 꺼진 패스는 기록하지 않는다 — 어떻게 빠지는지는 `kBypassesToSource`(출력이 원본을 가리킨다) 또는 `kOmittedWhenOff`(출력이 없다) 가 정하고, 둘 중 하나가 꼭 붙는다.
@@ -274,6 +273,18 @@ namespace sw
 namespace sw
 {
     /**
+     * @enum RenderPassBlend
+     * @brief 패스 종류의 PSO 기본 블렌드입니다 — 끔 · 곧은 알파 · 미리 곱한 알파 중 하나다. 파이프라인 패스는 XML 의 `_blendPreset` 이 우선한다.
+     * @details 예전에는 깃발 둘(`kBlend` · `kPremultipliedAlpha`)이라 "미리 곱한 알파인데 블렌드 꺼짐" 을 적을 수 있었고, 그렇게 적은 HDR UI 합성이 장면을 덮어썼다.
+     */
+    enum class RenderPassBlend : uint8
+    {
+        None,          ///< 블렌드 없음(덮어쓴다)
+        Straight,      ///< 곧은 알파(src × a + dst × (1 - a))
+        Premultiplied, ///< 미리 곱한 알파(src + dst × (1 - a))
+    };
+
+    /**
      * @struct RenderPassKindInfo
      * @brief 패스 종류 하나의 사실입니다. `getRenderPassKindInfo` 가 enum 값으로 찾습니다.
      */
@@ -292,6 +303,8 @@ namespace sw
         const utf8* _pExcludedMaterialDefine{ nullptr };
         /** @brief 고정 컬러 포맷(`_colorTargetCount` 개)입니다. nullptr 이면 패스가 선언한 출력의 포맷을 씁니다. */
         const RHIFormat* _pColorFormat{ nullptr };
+        /** @brief PSO 기본 블렌드입니다(패스 서술이 있으면 그 값이 우선한다). */
+        RenderPassBlend _blend{ RenderPassBlend::None };
         /** @brief 이 패스 타입이 읽는 입력의 역할입니다. `kHasInputContract` 일 때만 의미가 있습니다. */
         RenderPassInputSignature _inputContract{};
         /**

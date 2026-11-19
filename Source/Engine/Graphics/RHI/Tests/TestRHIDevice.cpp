@@ -452,3 +452,22 @@ SW_TEST_CASE( RHIAvailabilityTest, OtherBackendFitsThePlatform )
     #error "Unsupported platform"
 #endif
 }
+
+/**
+ * @brief [RHIDeviceTest] UI 대상 포맷은 SDR 백버퍼 포맷이다 — BGRA8 백버퍼에서 HDR10 으로 바꿔도 BGRA8 이고(백버퍼는 R10G10B10A2), SDR 로 돌아와도 같다.
+ *        결함이면 에디터 UI · Canvas PSO 가 HDR 백버퍼 포맷이나 RGBA8 로 만들어져 UI RT 와 렌더 타깃 포맷이 어긋난다
+ */
+SW_TEST_CASE( RHIDeviceTest, UITargetFormatStaysSDRUnderHDR )
+{
+    FakeRHIDevice device;
+    device._sdrBackBufferFormatForTest = RHIFormat::B8G8R8A8_UNORM;
+    device._displayOutputSupport       = static_cast<uint8>( makeColorSpaceBit( RHIColorSpace::SRGBNonLinear ) | makeColorSpaceBit( RHIColorSpace::HDR10ST2084 ) );
+    SW_EXPECT_TRUE( device.getUITargetFormat() == RHIFormat::B8G8R8A8_UNORM );
+
+    SW_REQUIRE_TRUE( device.setBackBufferColorSpace( RHIColorSpace::HDR10ST2084, RHIDisplayMetadata{} ) );
+    SW_EXPECT_TRUE( device.getBackBufferFormat() == RHIFormat::R10G10B10A2_UNORM );
+    SW_EXPECT_TRUE( device.getUITargetFormat() == RHIFormat::B8G8R8A8_UNORM );
+
+    SW_REQUIRE_TRUE( device.setBackBufferColorSpace( RHIColorSpace::SRGBNonLinear, RHIDisplayMetadata{} ) );
+    SW_EXPECT_TRUE( device.getUITargetFormat() == RHIFormat::B8G8R8A8_UNORM );
+}

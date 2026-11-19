@@ -94,8 +94,8 @@ namespace sw
         _width  = width;
         _height = height;
         createTarget( FrameDisplayEncodeInternal::kSceneFormat, "DisplaySceneTarget", _sceneTexture, _sceneSRV );
-        // UI 는 SDR 화면과 같은 포맷이다 — 화면에 쓰는 PSO(Canvas · 개발 겹치기 · 렌더 스레드 UI)가 모두 이 포맷으로 만들어져 있다.
-        createTarget( constant::render::kBackBufferFormat, "DisplayUITarget", _uiTexture, _uiSRV );
+        // UI 는 SDR 화면과 같은 포맷이다(BGRA8 백버퍼면 BGRA8) — 화면에 쓰는 PSO(Canvas · 개발 겹치기 · 렌더 스레드 UI)가 모두 이 포맷으로 만들어져 있다.
+        createTarget( _pDevice->getUITargetFormat(), "DisplayUITarget", _uiTexture, _uiSRV );
     }
 
     void FrameDisplayEncode::createTarget( RHIFormat format, const utf8* pDebugName, RHITextureHandle& outTexture, RHIDescriptorIndex& outSRV ) const

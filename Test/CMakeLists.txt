@@ -238,6 +238,11 @@ add_test(NAME Scripts.FeatureReferences
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/lint/tests/test_feature_references.py")
 set_tests_properties(Scripts.FeatureReferences PROPERTIES LABELS nogpu TIMEOUT 60)
 
+# 커밋 메시지 양식(commit-msg 훅) — 첫 줄 요약 + 본문 원인 → 조치 → 결과 세 단락, 병합 · 되돌리기는 예외.
+add_test(NAME Scripts.CommitMessage
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/lint/tests/test_commit_message.py")
+set_tests_properties(Scripts.CommitMessage PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # clang-tidy 바뀐 파일 모드의 TU 고르기 — 짝 .cpp 가 없는 헤더는 그 헤더를 (헤더를 거쳐서라도) 포함하는 TU 로 돈다.
 add_test(NAME Scripts.ClangTidySelect
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/lint/tests/test_clang_tidy.py")

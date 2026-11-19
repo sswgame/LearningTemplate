@@ -332,7 +332,7 @@ namespace sw
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassRenderStateInvalid", "[%#] pass '%#': %#", sourcePath, pass._name, pStateReason );
                         ++issueCount;
                     }
-                    if ( pass._resolvedRenderState.isAnyBlendEnabled() == false && info.hasFlag( RenderPassTraitFlag::kBlend ) )
+                    if ( pass._resolvedRenderState.isAnyBlendEnabled() == false && info._blend != RenderPassBlend::None )
                         SW_LOG_WARNING_ID( "RenderPipelineAsset.PassBlendOff", "[%#] pass '%#': blending is off on a %# pass - its colors overwrite the scene", sourcePath, pass._name, getEnumName( pass._type ) );
                 }
                 return issueCount;

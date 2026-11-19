@@ -57,6 +57,8 @@ namespace sw
          * @warning `resize` 와 같다 — RTV 를 놓고 컨텍스트 상태를 비운 뒤 부릅니다. 실패하면 옛 포맷 · 색 공간 그대로입니다.
          */
         [[nodiscard]] bool setColorSpace( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata );
+        /** @brief 색 공간은 그대로 두고 HDR10 마스터링 값만 다시 알립니다. HDR10 이 아니면 값만 기억합니다. 실패하면 옛 값을 다시 알리고 false 입니다. */
+        [[nodiscard]] bool setDisplayMetadata( const RHIDisplayMetadata& metadata );
 
         /** @brief 이번 프레임이 그릴 백버퍼의 RTV 를 새로 잡습니다. */
         void acquireNextImage( ID3D11Device* pDevice );
@@ -77,6 +79,8 @@ namespace sw
         RHIFormat getFormat() const { return getSwapChainFormat( _colorSpace, _sdrFormat ); }
         /** @brief 지금 화면에 내는 색 공간입니다. */
         RHIColorSpace getColorSpace() const { return _colorSpace; }
+        /** @brief `ResizeBuffers` 에 다시 넘길 서술입니다(버퍼 수 0 = 그대로). */
+        DXGISwapChainBuffers makeBuffers() const { return DXGISwapChainBuffers{ _swapChain.Get(), 0u, _width, _height, _swapChainFlags, _sdrFormat }; }
         /** @brief 창이 놓인 모니터가 받는 출력입니다(넘겨받을 때 · 크기 · 색 공간을 바꿀 때 묻는다). */
         const DXGIDisplayOutputSupport& getDisplayOutputSupport() const { return _displayOutputSupport; }
 
@@ -104,6 +108,8 @@ namespace sw
         RHIColorSpace _colorSpace{ RHIColorSpace::SRGBNonLinear };
         /// @brief 창이 놓인 모니터가 받는 출력입니다.
         DXGIDisplayOutputSupport _displayOutputSupport{};
+        /// @brief 마지막으로 알린 HDR10 마스터링 값입니다 — `ResizeBuffers` 뒤에 다시 알린다.
+        RHIDisplayMetadata _displayMetadata{};
     };
 } // namespace sw
 #endif

@@ -303,6 +303,7 @@ namespace sw
         void                         markTimestampWritten( uint32 slotIndex ) { _timestampRing.markWritten( slotIndex ); }
         void                         resizeInternal( uint32 width, uint32 height ) override;
         [[nodiscard]] bool           setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata ) override;
+        [[nodiscard]] bool           setDisplayMetadataInternal( const RHIDisplayMetadata& metadata ) override { return _swapChain.setDisplayMetadata( metadata ); }
         [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
         void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;
         void                         destroySwapChainInternal( IRHISwapChain& swapChain ) override;
