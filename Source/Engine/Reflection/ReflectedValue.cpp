@@ -58,7 +58,9 @@
 
 // Layout 칸마다 — 구조체 `BuiltinLayoutCheck_<정규 이름>` 안에서 펼친다(`T` 가 그 타입이다).
 #define SW_BUILTIN_LAYOUT_CHECK_none
-#define SW_BUILTIN_LAYOUT_CHECK_num        static_assert( std::is_arithmetic_v<T>, "ReflectBuiltins.xxx Layout: num must be an arithmetic scalar" );
+#define SW_BUILTIN_LAYOUT_CHECK_num                                                                                                               \
+    static_assert( std::is_arithmetic_v<T> && std::is_same_v<T, bool> == false, "ReflectBuiltins.xxx Layout: num must be an arithmetic scalar" ); \
+    static_assert( getReflectBuiltinClass<T>() == ReflectBuiltinClass::Number, "ReflectBuiltins.xxx Layout: num must be the Number class (UI binding · readNumber)" );
 #define SW_BUILTIN_LAYOUT_CHECK_f32( ... ) SW_BUILTIN_MEMBERS_CHECK( float32, __VA_ARGS__ )
 #define SW_BUILTIN_LAYOUT_CHECK_i32( ... ) SW_BUILTIN_MEMBERS_CHECK( int32, __VA_ARGS__ )
 #define SW_BUILTIN_LAYOUT_CHECK_angle      static_assert( std::is_same_v<T, Radians> && sizeof( T ) == sizeof( float32 ), "ReflectBuiltins.xxx Layout: angle is Radians (one float32)" );
