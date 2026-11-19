@@ -28,6 +28,7 @@
         #include "Engine/Config/PlatformConfigOverride.h"
         #include "Engine/Net/Dev/PlainHTTPClient.h"
         #include "Engine/Net/FileServe/FileServeContentSource.h"
+        #include "Engine/Serialization/JSON/JSONDocument.h"
     #endif
 
     #include <android_native_app_glue.h>
@@ -60,15 +61,24 @@ namespace
         if ( sw::CommandLineManager::findValueBeforeParse( static_cast<int32>( listArgumentPointer.size() - 1 ), listArgumentPointer.data(), sw::CommandLineArgument::FILESERVE,
                                                            baseURL ) == false )
             return mount;
-        sw::string hostAndPort;
-        sw::string target;
-        if ( sw::PlainHTTPClient::splitURL( baseURL, hostAndPort, target ) == false || target != "/" )
-            SW_FATAL( "AndroidMain: -fileserve='%#' is not http://<host>:<port> (no path, printable ASCII)", baseURL );
-        sw::string       engineJSON;
-        sw::EngineConfig engineConfig;
-        if ( sw::PlatformConfigOverride::composeBakedEngineConfig( engineJSON ) == false || sw::ConfigManager::readConfigJSON( engineConfig, engineJSON, "EngineConfig.json (baked)" ) == false )
+        if ( sw::PlainHTTPClient::isServerRootURL( baseURL ) == false )
+            SW_FATAL( "AndroidMain: -fileserve='%#' is not http://<host>:<port> (no path, query or trailing slash, printable ASCII)", baseURL );
+        // 엔진 설정 전체가 아니라 `_fileServe` 하위만 읽는다 — 다른 칸의 오류가 이 개발 전송을 막지 않고, 읽기 비용이 작다.
+        sw::string          engineJSON;
+        sw::JSONDocument    document;
+        sw::FileServeConfig settings;
+        bool                bRead = false;
+        if ( sw::PlatformConfigOverride::composeBakedEngineConfig( engineJSON ) && document.parse( engineJSON, "EngineConfig.json (baked)" ) )
+        {
+            const sw::JSONValue section = document.getRoot().get( "_fileServe" );
+            if ( section.isObject() )
+            {
+                const auto sectionJSON = section.dump();
+                bRead                  = sectionJSON.has_value() && sw::ConfigManager::readConfigJSON( &settings, *sw::FileServeConfig::StaticType(), *sectionJSON, "EngineConfig.json _fileServe (baked)" );
+            }
+        }
+        if ( bRead == false )
             SW_FATAL( "AndroidMain: -fileserve needs the baked EngineConfig _fileServe limits (the log above names the key)" );
-        const sw::FileServeConfig& settings = engineConfig._fileServe;
         if ( settings._maxResponseBodyBytes < sw::FileServeContentSource::kChunkBytes )
             SW_FATAL( "AndroidMain: EngineConfig _fileServe._maxResponseBodyBytes %# is below the Fileserve chunk (%# bytes)", settings._maxResponseBodyBytes,
                       sw::FileServeContentSource::kChunkBytes );

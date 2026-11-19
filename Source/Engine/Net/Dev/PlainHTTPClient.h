@@ -45,6 +45,8 @@ namespace sw
          * @return `http://` 가 아니거나, 출력 가능한 ASCII(0x21 ~ 0x7E) 밖 글자 · 사용자 정보(`@`) · 조각(`#`)이 있거나 호스트가 비면 false 입니다 — 요청 줄에 CR · LF · 공백이 들어가지 않는다.
          */
         [[nodiscard]] static bool splitURL( string_view url, string& outHostAndPort, string& outTarget );
+        /** @brief 서버 뿌리 주소(`http://<호스트>[:<포트>]` — 경로 · 질의 · 끝 `/` 없음)이면 true 입니다. 끝점 경로(`/stat` …)를 이 뒤에 붙인다(`-fileserve`). */
+        [[nodiscard]] static bool isServerRootURL( string_view url );
 
         /**
          * @brief 지금까지 받은 바이트 @p bytes 로 응답 하나를 풉니다(받을 때마다 처음부터 다시 부른다 — 상태를 들지 않는다).

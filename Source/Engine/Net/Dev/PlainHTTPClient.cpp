@@ -164,6 +164,13 @@ namespace sw
         return true;
     }
 
+    bool PlainHTTPClient::isServerRootURL( string_view url )
+    {
+        string hostAndPort;
+        string target;
+        return splitURL( url, hostAndPort, target ) && target == "/" && url.back() != '/' && url.find( '?' ) == string_view::npos;
+    }
+
     HTTPResponseParseStatus PlainHTTPClient::parseResponse( string_view bytes, bool bStreamEnded, uint32 maxHeaderBytes, uint32 maxBodyBytes, HTTPResponse& outResponse )
     {
         using Internal      = PlainHTTPClientInternal;

@@ -170,6 +170,16 @@ SW_TEST_CASE( PlainHTTPClientTest, SplitsOnlyPlainHTTPURLs )
     }
 }
 
+SW_TEST_CASE( PlainHTTPClientTest, ServerRootURLHasNoPathQueryOrTrailingSlash )
+{
+    SW_REQUIRE_TRUE( PlainHTTPClient::isServerRootURL( "http://127.0.0.1:1112" ) );
+    SW_REQUIRE_TRUE( PlainHTTPClient::isServerRootURL( "http://pc.local" ) );
+    SW_REQUIRE_FALSE( PlainHTTPClient::isServerRootURL( "http://127.0.0.1:1112/" ) ); // 끝점을 붙이면 `//stat` 이 된다
+    SW_REQUIRE_FALSE( PlainHTTPClient::isServerRootURL( "http://127.0.0.1:1112/packs" ) );
+    SW_REQUIRE_FALSE( PlainHTTPClient::isServerRootURL( "http://127.0.0.1:1112?x=1" ) );
+    SW_REQUIRE_FALSE( PlainHTTPClient::isServerRootURL( "https://127.0.0.1:1112" ) );
+}
+
 SW_TEST_CASE( PlainHTTPClientTest, SendRefusesWithoutNetworkForNonGETOrBadURL )
 {
     FileServeConfig settings;
