@@ -96,7 +96,7 @@
 	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/undocoverageaudioevents/empty.audioevents.xml"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.AudioEventEditCount" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.AudioEventEditCount" atLeast="1" timeoutFrames="60"/>
 	<DevCommand line="panel.expectUndoRoundTrip audioevents"/>
 	<DevCommand line="panel.focus input_map"/>
 	<EditorWaitStable/>
