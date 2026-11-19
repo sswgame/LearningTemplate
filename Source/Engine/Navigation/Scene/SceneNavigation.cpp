@@ -6,12 +6,16 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDSectionFormat.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -25,11 +29,13 @@
 #include "Engine/Navigation/Scene/NavAgentCrowdSync.h"
 #include "Engine/Navigation/Scene/NavGeometryCollector.h"
 #include "Engine/Navigation/Scene/NavMeshRuntime.h"
+#include "Engine/Navigation/Scene/NavStreamRoute.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
 
 namespace sw
@@ -46,7 +52,7 @@ namespace sw
     // 그 일이 만지는 씬 데이터는 내비게이션(군중 · 에이전트 이동 상태)뿐이다. 오브젝트 자리 · 컨트롤러 속도는 ⑥ 이 게임 스레드에서 쓴다.
     SW_SCENE_SERVICE_WITH_FRAME_JOB( SceneNavigation, Navigation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Navigation, SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ), FlushPostAnimation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
-    SW_GLOBAL_VARIABLE( int32, gv_navDebugDraw, 0, "내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔)" );
+    SW_GLOBAL_VARIABLE( int32, gv_navDebugDraw, 0, "내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로, 32 대략 그래프 · 셀별 내비 청크(타일) 로드 상태 · 먼 경로 (63 = 모두, 0 = 끔)" );
 
     void SceneNavigation::drawDebug( DebugDrawQueue& queue )
     {
@@ -421,6 +427,12 @@ namespace sw
                 streamTile._cookedInputHash = tileIndex < pEntry->_listTileInputHash.size() ? pEntry->_listTileInputHash[tileIndex] : 0; // 0 — 모른다(그 타일은 다시 굽는다)
                 runtime._listStreamTile.push_back( std::move( streamTile ) );
             }
+            // (Z, X) 순 — 타일 자리 찾기(`NavMeshRuntime::findStreamTile`)가 이분 찾기다. 장애물 캐시의 묶음 순서는 쿠킹본이 약속하지 않는다.
+            VectorUtil::sort( runtime._listStreamTile, []( const NavStreamTile& lhs, const NavStreamTile& rhs )
+            {
+                return lhs._tileZ != rhs._tileZ ? lhs._tileZ < rhs._tileZ : lhs._tileX < rhs._tileX;
+            } );
+            runtime._clusterGraph         = pEntry->_clusterGraph;
             runtime._pStreamAsset         = pAsset;
             runtime._streamPath           = cookedPath;
             runtime._bounds               = pEntry->_bounds;
@@ -603,6 +615,8 @@ namespace sw
         {
             outEntry._listTileInputHash.push_back( pRuntime->_pGeometry->computeRegionHash( pNavMesh->computeTileBakeRegion( tile._tileX, tile._tileZ ) ) );
         }
+        // 모든 타일이 끼워진 지금의 대략 그래프 — 스트리밍 씬이 오르지 않은 구역을 지나는 먼 경로를 이것으로 정한다(`NavStreamRoute`).
+        pNavMesh->collectClusterGraph( outEntry._clusterGraph );
         return true;
     }
 
@@ -651,6 +665,64 @@ namespace sw
             return NavPathStatus::Failed;
         }
         return pRuntime->_pNavMesh->findPath( start, end, pRuntime->_searchExtent, filter, outPath );
+    }
+
+    NavPathStatus SceneNavigation::findStreamingPath( const hashed_string& agentType, const float3& start, const float3& end, NavPath& outPath, vector<float3>& outListCoarsePoint ) const
+    {
+        outListCoarsePoint.clear();
+        const NavMeshRuntime* pRuntime = findRuntime( agentType );
+        if ( pRuntime == nullptr )
+        {
+            outPath = NavPath{};
+            return NavPathStatus::Failed;
+        }
+        NavRoutePlan route;
+        if ( NavStreamRoute::plan( *pRuntime, start, end, route ) == false || route.isLoadedToGoal() )
+            return pRuntime->_pNavMesh->findPath( start, end, pRuntime->_searchExtent, pRuntime->_filter, outPath );
+        if ( route._bStartLoaded == false )
+        {
+            // 시작 타일이 내려가 있다 — 세밀 경로 없이 대략 점만 낸다(가상 이동의 길).
+            outPath = NavPath{};
+            outPath._listPoint.push_back( start );
+            outPath._status = NavPathStatus::Partial;
+            NavStreamRoute::collectCoarsePoints( *pRuntime, route, 1, end, outListCoarsePoint );
+            return outPath._status;
+        }
+        const float3 target = NavStreamRoute::computeFrontierTarget( *pRuntime, route, end );
+        if ( pRuntime->_pNavMesh->findPath( start, target, pRuntime->_searchExtent, pRuntime->_filter, outPath ) == NavPathStatus::Failed )
+            return NavPathStatus::Failed;
+        outPath._status = NavPathStatus::Partial;
+        NavStreamRoute::collectCoarsePoints( *pRuntime, route, route._frontier + 1, end, outListCoarsePoint );
+        return outPath._status;
+    }
+
+    void SceneNavigation::collectStreamStats( vector<NavStreamStats>& outListStats ) const
+    {
+        outListStats.clear();
+        for ( size_t runtimeIndex = 0; runtimeIndex < _listRuntime.size(); ++runtimeIndex )
+        {
+            const NavMeshRuntime& runtime = *_listRuntime[runtimeIndex];
+            NavStreamStats        stats{};
+            stats._agentType        = runtime._agentType;
+            stats._clusterCount     = static_cast<uint32>( runtime._clusterGraph.getClusterList().size() );
+            stats._clusterEdgeCount = static_cast<uint32>( runtime._clusterGraph.getEdges().size() );
+            stats._streamTileCount  = static_cast<uint32>( runtime._listStreamTile.size() );
+            stats._replanCount      = runtime._routeReplanCount;
+            for ( const NavStreamTile& tile : runtime._listStreamTile )
+            {
+                stats._loadedTileCount += tile._state == NavStreamTile::State::Loaded ? 1u : 0u;
+                stats._loadingTileCount += tile._state == NavStreamTile::State::Loading ? 1u : 0u;
+                stats._failedTileCount += tile._state == NavStreamTile::State::Failed ? 1u : 0u;
+            }
+            for ( const NavMeshAgentComponent* pAgent : _listAgent )
+            {
+                if ( pAgent->_crowdIndex != runtimeIndex )
+                    continue;
+                stats._coarseRouteAgentCount += pAgent->isFollowingCoarseRoute() ? 1u : 0u;
+                stats._virtualAgentCount += pAgent->isInVirtualMove() ? 1u : 0u;
+            }
+            outListStats.push_back( stats );
+        }
     }
 
     NavPathTicket SceneNavigation::requestPath( const hashed_string& agentType, const float3& start, const float3& end )
@@ -1070,7 +1142,7 @@ namespace sw
 
     void SceneNavigation::drawDebug( IPhysicsDebugRenderer& renderer, uint32 flags ) const
     {
-        NavDebugView::drawLines( renderer, flags, _listRuntime, _listObstacle );
+        NavDebugView::drawLines( renderer, flags, _listRuntime, _listObstacle, _listAgent );
     }
 
     void SceneNavigation::updateDebugView( uint32 flags )
@@ -1222,6 +1294,30 @@ namespace sw
                 return true;
             }
 
+            /** @brief 마련한 종류 모두의 스트리밍 길찾기 상태에서 @p member 를 더합니다. */
+            template <typename TValue>
+            [[nodiscard]] static bool sumStreamStats( const GameObjectManager* pManager, TValue NavStreamStats::* member, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                vector<NavStreamStats> listStats;
+                pManager->getSubsystem<SceneNavigation>().collectStreamStats( listStats );
+                float64 sum = 0.0;
+                for ( const NavStreamStats& stats : listStats )
+                {
+                    sum += static_cast<float64>( stats.*member );
+                }
+                outValue = sum;
+                return true;
+            }
+
+            /** @brief 감시 값 `Nav.RouteReplanCount` — 먼 경로(중간 목표 · 가상 이동)를 새로 정한 수(누적, 모든 종류)입니다. */
+            [[nodiscard]] static bool readRouteReplanCount( const GameObjectManager* pManager, float64& outValue ) { return sumStreamStats( pManager, &NavStreamStats::_replanCount, outValue ); }
+            /** @brief 감시 값 `Nav.StreamLoadedTiles` — 끼운 스트리밍 타일(내비 데이터 청크) 수입니다. */
+            [[nodiscard]] static bool readStreamLoadedTiles( const GameObjectManager* pManager, float64& outValue ) { return sumStreamStats( pManager, &NavStreamStats::_loadedTileCount, outValue ); }
+            /** @brief 감시 값 `Nav.VirtualAgents` — 내려간 타일 위를 가상 이동하는 에이전트 수입니다. */
+            [[nodiscard]] static bool readVirtualAgents( const GameObjectManager* pManager, float64& outValue ) { return sumStreamStats( pManager, &NavStreamStats::_virtualAgentCount, outValue ); }
+
             /** @brief 감시 값 `Nav.PathLinkCount` 입니다. 그 경로가 건너는 오프 메시 링크 수입니다. */
             [[nodiscard]] static bool readPathLinkCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -1242,6 +1338,98 @@ namespace sw
                                &SceneNavigationWatchesInternal::readAreaCost, false, true );
     SW_AUTOMATION_QUERY_WATCH( navPathLength, "Nav.PathLength", "Length (m) of the complete navmesh path from the target to the object named by key; absent without one",
                                &SceneNavigationWatchesInternal::readPathLength, true, true );
+    SW_AUTOMATION_WATCH( navRouteReplanCount, "Nav.RouteReplanCount", "Long routes over streamed-out tiles planned so far (intermediate targets and virtual moves, all agent types)",
+                         &SceneNavigationWatchesInternal::readRouteReplanCount );
+    SW_AUTOMATION_WATCH( navStreamLoadedTiles, "Nav.StreamLoadedTiles", "Cooked navmesh tiles (navigation data chunks) streamed in around the streaming sources", &SceneNavigationWatchesInternal::readStreamLoadedTiles );
+    SW_AUTOMATION_WATCH( navVirtualAgents, "Nav.VirtualAgents", "Navmesh agents moving virtually over streamed-out tiles along the coarse cluster graph", &SceneNavigationWatchesInternal::readVirtualAgents );
     SW_AUTOMATION_QUERY_WATCH( navPathLinkCount, "Nav.PathLinkCount", "Off-mesh links the navmesh path from the target to the object named by key crosses",
                                &SceneNavigationWatchesInternal::readPathLinkCount, true, true );
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct SceneNavigationDebugInternal
+        {
+            /** @brief HUD 섹션 순서 — NPC 섹션(230) 바로 아래다(대상 NPC 의 판단 다음에 그 길찾기를 읽는다). */
+            static constexpr int32 kStreamSectionOrder = 231;
+
+            /** @brief 디버그 HUD `navstream` — 종류마다 타일(내비 데이터 청크) 로드 상태 · 대략 그래프 · 먼 경로 수, 대상 에이전트의 먼 경로 상태입니다. */
+            static void writeStreamSection( DebugHUDSectionWriter& writer )
+            {
+                GameObjectManager* pManager = engine::findActiveObjectManager();
+                if ( pManager == nullptr )
+                {
+                    writer.addLine( "navigation", "no active scene" );
+                    return;
+                }
+                const SceneNavigation& navigation = pManager->getSubsystem<SceneNavigation>();
+                vector<NavStreamStats> listStats;
+                navigation.collectStreamStats( listStats );
+                if ( listStats.empty() )
+                    writer.addLine( "navmesh", "none prepared" );
+                for ( const NavStreamStats& stats : listStats )
+                {
+                    const string name = stats._agentType.empty() ? string( "default" ) : string( stats._agentType.c_str() );
+                    writer.addLineFormat( name + " tiles", "%# / %# loaded, %# loading", stats._loadedTileCount, stats._streamTileCount, stats._loadingTileCount );
+                    if ( stats._failedTileCount > 0 )
+                        writer.addLine( name + " failed tiles", to_string( static_cast<uint64>( stats._failedTileCount ) ), DebugHUDLineStyle::Warning );
+                    writer.addLineFormat( name + " clusters", "%# nodes, %# edges", stats._clusterCount, stats._clusterEdgeCount );
+                    writer.addLineFormat( name + " routes", "%# coarse, %# virtual, %# replans", stats._coarseRouteAgentCount, stats._virtualAgentCount, stats._replanCount );
+                }
+                const DebugHUDRegistry*      pRegistry = engine::findSubsystem<DebugHUDRegistry>();
+                const GameObjectHandle       target    = pRegistry != nullptr ? pRegistry->getTarget() : GameObjectHandle{};
+                const GameObject*            pTarget   = target.isValid() ? pManager->findGameObjectByID( target.objectID() ) : nullptr;
+                const NavMeshAgentComponent* pAgent    = pTarget != nullptr ? pTarget->getComponent<NavMeshAgentComponent>() : nullptr;
+                if ( pAgent == nullptr )
+                    return;
+                const utf8* pMode = pAgent->isInVirtualMove() ? "virtual (coarse graph)" : ( pAgent->isFollowingCoarseRoute() ? "intermediate target" : "fine path" );
+                writer.addLine( "agent", string( pTarget->getName().c_str() ) );
+                writer.addLine( "agent route", pMode );
+                writer.addLineFormat( "agent replans", "%# (%# coarse points)", pAgent->getRouteReplanCount(), static_cast<uint32>( pAgent->getCoarseRoutePoints().size() ) );
+            }
+
+            /** @brief 개발 명령 `nav.moveto <agent> <target>` · `nav.moveto <agent> <x> <y> <z>` — 이름 붙은 오브젝트의 내비메시 에이전트에 목적지를 겁니다(시나리오가 NPC 를 먼 셀로 보낸다). */
+            static bool runMoveTo( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 2 && listArgument.size() != 4 )
+                    return false;
+                GameObject*            pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                NavMeshAgentComponent* pAgent  = pObject != nullptr ? pObject->getComponent<NavMeshAgentComponent>() : nullptr;
+                if ( pAgent == nullptr )
+                {
+                    outReply = "no object named '" + listArgument[0] + "' with a navmesh agent in the active scene";
+                    return false;
+                }
+                float3 destination{};
+                if ( listArgument.size() == 4 )
+                {
+                    const bool bParsed = StringUtil::parseFloat( listArgument[1], destination._x ) && StringUtil::parseFloat( listArgument[2], destination._y ) &&
+                                         StringUtil::parseFloat( listArgument[3], destination._z );
+                    if ( bParsed == false )
+                        return false;
+                }
+                else
+                {
+                    const GameObject*     pGoal  = engine::findActiveObject( hashed_string( listArgument[1] ) );
+                    const SceneComponent* pScene = pGoal != nullptr ? pGoal->getPrimarySceneComponent() : nullptr;
+                    if ( pScene == nullptr )
+                    {
+                        outReply = "no object named '" + listArgument[1] + "' with a scene component in the active scene";
+                        return false;
+                    }
+                    destination = pScene->getWorldPosition();
+                }
+                pAgent->setDestination( destination );
+                outReply = "moving " + listArgument[0];
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEBUG_HUD_SECTION( navstream, "navstream", "Navigation streaming (tiles, coarse graph, routes)", SceneNavigationDebugInternal::kStreamSectionOrder, DebugHUDSectionFlag::kNone,
+                          &SceneNavigationDebugInternal::writeStreamSection );
+    SW_DEV_COMMAND( NavMoveTo, "nav.moveto", "nav.moveto <agent> <target object> | nav.moveto <agent> <x> <y> <z>",
+                    "Send a named navmesh agent of the active scene to an object or a world position (long routes over streamed-out cells)", &SceneNavigationDebugInternal::runMoveTo );
 } // namespace sw

@@ -1315,5 +1315,116 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 길찾기 무대(automation/navstream) — 시작 카메라 뒤(z -28 ~ -52, 화면 밖)의 띠만 굽는다(표면 상자). 셀(16 m)을 여럿 가로지른다.
+		     Drifter 는 먼 FarPost(x 50 — 쿠킹본에서는 카메라 둘레 32 m 밖의 내려간 셀)로 가고, Climber 는 셀 경계(x 0)를 넘는 JumpLink 로 단(PlatformGoal) 위에 오르며,
+		     Herd 셋은 셀 경계 x -16 을 넘는다. 모두 늘 올라 있는 NPC 다(셀 소속이 아니다 — 내려간 셀 위에서는 대략 그래프로 가상 이동한다). 몸 메시가 없어 사진에 들지 않는다. -->
+		<entity id="117" name="NavigationSurface">
+			<GameObject _schemaVersion="0" _name="NavigationSurface" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _localPosition="10,0,-40" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshSurfaceComponent _geometrySource="Both" _boundsHalfExtents="45,4,12">
+						<_listAgentType />
+						<_listExcludeTag />
+					</NavMeshSurfaceComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="118" name="NavPlatform">
+			<GameObject _schemaVersion="0" _name="NavPlatform" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="3,1,-42" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,1,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="119" name="JumpLink">
+			<GameObject _schemaVersion="0" _name="JumpLink" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-1.5,0,-42" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshLinkComponent _startOffset="0,0,0" _endOffset="3,2,0" _width="1" _areaName="" _linkType="Jump" _bBidirectional="true" _bLinkEnabled="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="120" name="PlatformGoal">
+			<GameObject _schemaVersion="0" _name="PlatformGoal" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _localPosition="3.5,2,-42" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="121" name="Climber">
+			<GameObject _schemaVersion="0" _name="Climber" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-6,0,-42" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _agentType="" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="122" name="Drifter">
+			<GameObject _schemaVersion="0" _name="Drifter" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-30,0,-46" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _agentType="" _maxSpeed="6" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="123" name="FarPost">
+			<GameObject _schemaVersion="0" _name="FarPost" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _localPosition="50,0,-46" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="124" name="Herd_1">
+			<GameObject _schemaVersion="0" _name="Herd_1" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-22,0,-34" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _agentType="" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="125" name="Herd_2">
+			<GameObject _schemaVersion="0" _name="Herd_2" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-22,0,-32" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _agentType="" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="126" name="Herd_3">
+			<GameObject _schemaVersion="0" _name="Herd_3" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-22,0,-30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _agentType="" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="127" name="HerdGoal_1">
+			<GameObject _schemaVersion="0" _name="HerdGoal_1" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-10,0,-34" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="128" name="HerdGoal_2">
+			<GameObject _schemaVersion="0" _name="HerdGoal_2" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-10,0,-32" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="129" name="HerdGoal_3">
+			<GameObject _schemaVersion="0" _name="HerdGoal_3" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-10,0,-30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>
