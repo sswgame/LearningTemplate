@@ -552,3 +552,145 @@ SW_TEST_CASE( RenderGraphTest, ExportToDotListsEveryResourceEdge )
     RenderGraph empty;
     SW_EXPECT_EQUAL( string( "digraph RenderGraph {\n}\n" ), empty.exportToDot() );
 }
+
+namespace
+{
+    /** @brief 레벨 콜백이 받은 배리어를 모두 모으게 합니다. */
+    void collectIssuedBarriers( RenderGraph& graph, vector<RenderGraphBarrier>& outListBarrier )
+    {
+        graph.setLevelPrologue( RenderGraphLevelPrologueFn( [&outListBarrier]( const RenderGraphLevelContext& levelContext )
+        {
+            if ( levelContext._pListBarrier == nullptr )
+                return;
+            for ( const RenderGraphBarrier& barrier : *levelContext._pListBarrier )
+            {
+                outListBarrier.push_back( barrier );
+            }
+        } ) );
+    }
+
+    /** @brief @p resource 의 배리어만 고릅니다. */
+    vector<RenderGraphBarrier> findBarriersFor( const vector<RenderGraphBarrier>& listBarrier, hashed_string resource )
+    {
+        vector<RenderGraphBarrier> listFound;
+        for ( const RenderGraphBarrier& barrier : listBarrier )
+        {
+            if ( barrier._resource == resource )
+                listFound.push_back( barrier );
+        }
+        return listFound;
+    }
+} // namespace
+
+/**
+ * @brief [RenderGraphTest] 접근 핸들 — UAV 로 쓴 버퍼를 다음 레벨 둘이 SRV 로 읽으면 전이는 UAV 하나 · SRV 하나뿐이고(같은 레벨 읽기 여럿은 한 번), 간접 인자는 따로 옮긴다.
+ *        결함이면 버퍼 전이를 패스 몸통이 손으로 내야 하고(빠뜨리면 DX12 · Vulkan 에서만 지난 내용을 읽는다), 같은 레벨 읽기마다 전이가 겹친다
+ */
+SW_TEST_CASE( RenderGraphTest, AccessHandlesInferBufferTransitions )
+{
+    RenderGraph         graph;
+    const hashed_string culled( "CulledInstances" );
+    const hashed_string args( "DrawArgs" );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Cull" ), { RenderGraphBufferUAV{ culled }, RenderGraphBufferUAV{ args } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "ShadeA" ), { RenderGraphBufferSRV{ culled }, RenderGraphIndirectArgs{ args } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "ShadeB" ), { RenderGraphBufferSRV{ culled }, RenderGraphRenderTarget{ hashed_string( "Color" ) } } ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, graph.getExecutionLevels().size() ); // Cull, 그리고 ShadeA · ShadeB 가 한 레벨
+
+    vector<RenderGraphBarrier> listBarrier;
+    collectIssuedBarriers( graph, listBarrier );
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.execute( context ) );
+
+    const vector<RenderGraphBarrier> listCulled = findBarriersFor( listBarrier, culled );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listCulled.size() );
+    SW_EXPECT_TRUE( listCulled[0]._access == RenderGraphAccess::UnorderedAccess );
+    SW_EXPECT_TRUE( listCulled[0]._viewable == RenderGraphViewableKind::Buffer );
+    SW_EXPECT_TRUE( listCulled[1]._access == RenderGraphAccess::ShaderRead );
+    SW_EXPECT_TRUE( listCulled[1]._before == RenderGraphResourceState::Write );
+    const vector<RenderGraphBarrier> listArgs = findBarriersFor( listBarrier, args );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listArgs.size() );
+    SW_EXPECT_TRUE( listArgs[1]._access == RenderGraphAccess::IndirectArgs );
+    SW_EXPECT_TRUE( context.findAccess( culled ) == RenderGraphAccess::ShaderRead );
+}
+
+/**
+ * @brief [RenderGraphTest] UAV 를 레벨을 건너 잇따라 쓰면 상태는 그대로 UAV 이고 UAV 배리어 하나가 든다 — HZB 밉 사슬 · 컬링 → 정렬 자리.
+ *        결함이면 둘째 디스패치가 첫째의 쓰기를 기다리지 않는다
+ */
+SW_TEST_CASE( RenderGraphTest, ChainedUnorderedAccessGetsUAVBarrier )
+{
+    RenderGraph         graph;
+    const hashed_string keys( "SortKeys" );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Build" ), { RenderGraphBufferUAV{ keys } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Sort" ), { RenderGraphBufferUAV{ keys } } ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+
+    vector<RenderGraphBarrier> listBarrier;
+    collectIssuedBarriers( graph, listBarrier );
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.execute( context ) );
+    const vector<RenderGraphBarrier> listKeys = findBarriersFor( listBarrier, keys );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listKeys.size() );
+    SW_EXPECT_EQUAL( uint8{ 0 }, listKeys[0]._bUAVBarrier ); // 처음 보는 자원 — 전이
+    SW_EXPECT_EQUAL( uint8{ 1 }, listKeys[1]._bUAVBarrier );
+    SW_EXPECT_TRUE( listKeys[1]._access == RenderGraphAccess::UnorderedAccess );
+}
+
+/**
+ * @brief [RenderGraphTest] 들인 자원(`importResource`)은 처음 접근에서 시작한다 — 같은 접근으로 읽으면 전이가 없고, 끝 접근을 내보낸다(언리얼 RegisterExternalBuffer · 추출).
+ *        결함이면 그래프 밖 버퍼가 프레임마다 첫 사용에서 쓸데없는 전이를 받거나, 다음 사용자가 끝 상태를 모른다
+ */
+SW_TEST_CASE( RenderGraphTest, ImportedResourceStartsInItsInitialAccess )
+{
+    RenderGraph         graph;
+    const hashed_string grid( "LightGrid" );
+    graph.importResource( grid, RenderGraphViewableKind::Buffer, RenderGraphAccess::ShaderRead );
+    SW_EXPECT_TRUE( graph.getResourceKind( grid ) == RenderGraphResourceKind::External );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Lighting" ), { RenderGraphBufferSRV{ grid }, RenderGraphRenderTarget{ hashed_string( "Color" ) } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Rebuild" ), { RenderGraphBufferUAV{ grid } } ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+
+    vector<RenderGraphBarrier> listBarrier;
+    collectIssuedBarriers( graph, listBarrier );
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.execute( context ) );
+    const vector<RenderGraphBarrier> listGrid = findBarriersFor( listBarrier, grid );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listGrid.size() ); // 읽기는 이미 그 상태 — 다시 쓰는 UAV 하나만
+    SW_EXPECT_TRUE( listGrid[0]._access == RenderGraphAccess::UnorderedAccess );
+    SW_EXPECT_TRUE( context.findAccess( grid ) == RenderGraphAccess::UnorderedAccess );
+
+    // 다음 프레임도 들인 접근에서 다시 시작한다.
+    listBarrier.clear();
+    SW_REQUIRE_TRUE( graph.execute( context ) );
+    SW_EXPECT_EQUAL( size_t{ 1 }, findBarriersFor( listBarrier, grid ).size() );
+}
+
+/**
+ * @brief [RenderGraphTest] 비동기 컴퓨트 — 전이는 요구한 패스의 큐로 나가고(지원하지 않는 그래프는 그래픽스), 첨부 접근을 적은 비동기 패스는 거절한다.
+ *        결함이면 컴퓨트 큐에 렌더 타깃 상태를 요구해 DX12 · Vulkan 검증 층이 오류를 내거나, 받는 쪽이 어느 큐의 상태로 옮길지 모른다
+ */
+SW_TEST_CASE( RenderGraphTest, AsyncComputeAccessesFoldToTheQueue )
+{
+    const hashed_string particles( "Particles" );
+    for ( const bool bSupported : { true, false } )
+    {
+        RenderGraph graph;
+        graph.setAsyncComputeSupported( bSupported );
+        SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Simulate" ), { RenderGraphBufferUAV{ particles } }, {}, RHIQueueKind::AsyncCompute ) );
+        SW_REQUIRE_TRUE( graph.compile() );
+        vector<RenderGraphBarrier> listBarrier;
+        collectIssuedBarriers( graph, listBarrier );
+        RenderGraphExecutionContext context;
+        SW_REQUIRE_TRUE( graph.execute( context ) );
+        SW_REQUIRE_EQUAL( size_t{ 1 }, listBarrier.size() );
+        SW_EXPECT_TRUE( listBarrier[0]._queue == ( bSupported ? RHIQueueKind::AsyncCompute : RHIQueueKind::Graphics ) );
+    }
+
+    RenderGraph graph;
+    SW_EXPECT_LOG( "Renderer.GraphAsyncAttachment" );
+    SW_EXPECT_FALSE( graph.addPass( hashed_string( "Bad" ), { RenderGraphRenderTarget{ hashed_string( "Color" ) } }, {}, RHIQueueKind::AsyncCompute ) );
+    SW_EXPECT_LOG( "Renderer.GraphDuplicateAccess" );
+    SW_EXPECT_FALSE( graph.addPass( hashed_string( "Twice" ), { RenderGraphBufferSRV{ particles }, RenderGraphBufferUAV{ particles } } ) );
+    SW_EXPECT_EQUAL( 0u, graph.getNodeCount() );
+}

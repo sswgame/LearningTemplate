@@ -29,6 +29,7 @@ namespace sw
             passContext._passName     = node._name;
             passContext._pListInputs  = &node._listInput;
             passContext._pListOutputs = &node._listOutput;
+            passContext._pListAccess  = &node._listAccess;
             passContext._pCmdList     = pCmdList;
             node._execute( passContext );
         }
@@ -282,14 +283,80 @@ namespace sw
             }
         }
 
+        // 이름 판: 입력은 셰이더 읽기, 출력은 렌더 타깃 텍스처다(레벨 콜백이 늘 그렇게 옮겨 왔다). 같은 이름을 두 번 적은 옛 선언도 받는다.
         RenderGraphNode node;
-        node._name       = passName;
+        node._name = passName;
+        node._listAccess.reserve( listInput.size() + listOutput.size() );
+        for ( const hashed_string& input : listInput )
+        {
+            node._listAccess.push_back( RenderGraphResourceAccess{ input, RenderGraphAccess::ShaderRead, RenderGraphViewableKind::Texture } );
+        }
+        for ( const hashed_string& output : listOutput )
+        {
+            node._listAccess.push_back( RenderGraphResourceAccess{ output, RenderGraphAccess::RenderTarget, RenderGraphViewableKind::Texture } );
+        }
         node._listInput  = std::move( listInput );
         node._listOutput = std::move( listOutput );
         node._execute    = std::move( execute );
         node._queue      = queue;
         _listNode.push_back( std::move( node ) );
         return true;
+    }
+
+    bool RenderGraph::addPass( hashed_string passName, vector<RenderGraphResourceAccess> listAccess, RenderGraphPassExecuteFn execute, RHIQueueKind queue )
+    {
+        for ( size_t index = 0; index < listAccess.size(); ++index )
+        {
+            const RenderGraphResourceAccess& access = listAccess[index];
+            if ( queue == RHIQueueKind::AsyncCompute && isRenderGraphGraphicsOnlyAccess( access._access ) )
+            {
+                SW_LOG_ERROR_ID( "Renderer.GraphAsyncAttachment", "Render graph pass '%#' runs on the async compute queue but declares '%#' as an attachment - the pass is ignored",
+                                 passName.c_str(), access._resource.c_str() );
+                return false;
+            }
+            for ( size_t other = 0; other < index; ++other )
+            {
+                if ( listAccess[other]._resource == access._resource )
+                {
+                    // 한 패스가 한 자원을 두 접근으로 적으면 어느 상태로 둘지 정할 수 없다 — 읽고 쓰는 자원은 UAV 하나다.
+                    SW_LOG_ERROR_ID( "Renderer.GraphDuplicateAccess", "Render graph pass '%#' declares '%#' twice - the pass is ignored", passName.c_str(), access._resource.c_str() );
+                    return false;
+                }
+            }
+        }
+        vector<hashed_string> listInput;
+        vector<hashed_string> listOutput;
+        for ( const RenderGraphResourceAccess& access : listAccess )
+        {
+            ( isRenderGraphWriteAccess( access._access ) ? listOutput : listInput ).push_back( access._resource );
+        }
+        if ( addPass( passName, std::move( listInput ), std::move( listOutput ), std::move( execute ), queue ) == false )
+            return false;
+        _listNode.back()._listAccess = std::move( listAccess );
+        return true;
+    }
+
+    void RenderGraph::importResource( hashed_string name, RenderGraphViewableKind type, RenderGraphAccess initialAccess )
+    {
+        declareResource( name, RenderGraphResourceKind::External );
+        for ( RenderGraphResourceAccess& imported : _listImportedResource )
+        {
+            if ( imported._resource == name )
+            {
+                imported = RenderGraphResourceAccess{ name, initialAccess, type };
+                return;
+            }
+        }
+        _listImportedResource.push_back( RenderGraphResourceAccess{ name, initialAccess, type } );
+    }
+
+    void RenderGraph::beginExecution( RenderGraphExecutionContext& context ) const
+    {
+        context.reset();
+        for ( const RenderGraphResourceAccess& imported : _listImportedResource )
+        {
+            context.seedAccess( imported._resource, imported._access );
+        }
     }
 
     /**
@@ -411,7 +478,7 @@ namespace sw
 
     bool RenderGraph::executeOnQueues( RenderGraphExecutionContext& context, IRHIDevice& device, IRHICommandList& graphicsList, IRHICommandList* pAsyncList )
     {
-        context.reset();
+        beginExecution( context );
         if ( _listCompiledExecutionOrder.empty() && compile() == false )
             return false;
         if ( _asyncBatchCount > 0 && pAsyncList == nullptr )
@@ -480,7 +547,7 @@ namespace sw
      */
     bool RenderGraph::execute( RenderGraphExecutionContext& context, IRHICommandList* pCmdList )
     {
-        context.reset();
+        beginExecution( context );
 
         if ( _listCompiledExecutionOrder.empty() )
         {
@@ -512,6 +579,7 @@ namespace sw
                 passContext._passName     = node._name;
                 passContext._pListInputs  = &node._listInput;
                 passContext._pListOutputs = &node._listOutput;
+                passContext._pListAccess  = &node._listAccess;
                 node._execute( passContext );
             }
         }
@@ -531,7 +599,7 @@ namespace sw
         if ( bSequentialExecution )
             return execute( context );
 
-        context.reset();
+        beginExecution( context );
         if ( prepareParallelCommandLists( pDevice ) == false )
             return false;
 
@@ -828,39 +896,47 @@ namespace sw
 
     void RenderGraph::appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node )
     {
-        for ( const hashed_string& input : node._listInput )
+        // 비동기 컴퓨트를 받지 않는 그래프는 그 패스를 그래픽스로 계획한다(`computeQueuePlan`) — 전이도 그 큐의 것이다.
+        const RHIQueueKind queue = _bAsyncComputeSupported ? node._queue : RHIQueueKind::Graphics;
+        for ( const RenderGraphResourceAccess& access : node._listAccess )
         {
-            requestBarrier( context, input, RenderGraphResourceState::Read );
-        }
-        for ( const hashed_string& output : node._listOutput )
-        {
-            requestBarrier( context, output, RenderGraphResourceState::Write );
+            requestBarrier( context, access, queue );
         }
     }
 
-    void RenderGraph::requestBarrier( RenderGraphExecutionContext& context, hashed_string resource, RenderGraphResourceState desired )
+    void RenderGraph::requestBarrier( RenderGraphExecutionContext& context, const RenderGraphResourceAccess& access, RHIQueueKind queue )
     {
         // 같은 자원을 여러 패스가 요구하면 **한 번만** 낸다(SceneDepth 처럼 여러 패스가 읽는 자원이 레벨마다 읽기 전이를
         // 여러 번 받지 않게 한다).
-        const RenderGraphResourceState before = context.transitionTo( resource, desired );
-        if ( before == desired )
+        const RenderGraphExecutionContext::TrackedAccess before    = context.transitionTo( access._resource, access._access );
+        const bool                                       bKnown    = before._state != RenderGraphResourceState::Undefined;
+        const bool                                       bUAVChain = bKnown && before._access == RenderGraphAccess::UnorderedAccess && access._access == RenderGraphAccess::UnorderedAccess;
+        if ( bKnown && before._access == access._access && bUAVChain == false )
             return; // 이미 그 상태다. 낼 배리어가 없다.
 
-        const auto it = _mapLevelBarrierIndex.find( resource );
+        const RenderGraphResourceState after = isRenderGraphWriteAccess( access._access ) ? RenderGraphResourceState::Write : RenderGraphResourceState::Read;
+        const auto                     it    = _mapLevelBarrierIndex.find( access._resource );
         if ( it != _mapLevelBarrierIndex.end() )
         {
             // 같은 레벨에서 읽기와 쓰기를 함께 요구하는 일은 compile() 이 갈라 놓아 생기지 않는다.
             // 그래도 들어오면 더 강한 쪽(쓰기)을 남긴다.
-            if ( desired == RenderGraphResourceState::Write )
-                _listLevelBarrier[it->second]._after = desired;
+            if ( after == RenderGraphResourceState::Write )
+            {
+                _listLevelBarrier[it->second]._after  = after;
+                _listLevelBarrier[it->second]._access = access._access;
+            }
             return;
         }
 
         RenderGraphBarrier barrier{};
-        barrier._resource = resource;
-        barrier._before   = before;
-        barrier._after    = desired;
-        _mapLevelBarrierIndex.emplace( resource, _listLevelBarrier.size() );
+        barrier._resource    = access._resource;
+        barrier._before      = before._state;
+        barrier._after       = after;
+        barrier._access      = access._access;
+        barrier._viewable    = access._viewable;
+        barrier._queue       = queue;
+        barrier._bUAVBarrier = bUAVChain ? 1 : 0;
+        _mapLevelBarrierIndex.emplace( access._resource, _listLevelBarrier.size() );
         _listLevelBarrier.push_back( barrier );
     }
 
@@ -963,6 +1039,7 @@ namespace sw
      */
     void RenderGraph::clear()
     {
+        _listImportedResource.clear();
         releaseCommandLists();
         _listNode.clear();
         _listCompiledExecutionOrder.clear();

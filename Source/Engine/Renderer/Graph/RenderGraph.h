@@ -47,6 +47,80 @@ namespace sw
     };
 
     /**
+     * @enum RenderGraphAccess
+     * @brief 패스가 자원을 쓰는 방식입니다 — 그래프가 이것에서 RHI 상태를 정한다(SRV → 셰이더 읽기, UAV → UAV, 간접 인자 → IndirectArgument …).
+     * @details 언리얼 RDG 의 `ERHIAccess`(SRVCompute · UAVCompute · RTV · DSVRead · DSVWrite · IndirectArgs · CopySrc · CopyDest), Adria `RGResourceAccess` 자리다.
+     *          쓰기 접근(`isRenderGraphWriteAccess`)은 컴파일의 출력이고 나머지는 입력이다.
+     */
+    enum class RenderGraphAccess : uint8
+    {
+        ShaderRead,      ///< 셰이더 읽기(SRV)
+        UnorderedAccess, ///< 셰이더 읽고 쓰기(UAV) — 같은 상태가 이어져도 레벨 사이에는 UAV 배리어가 든다
+        RenderTarget,    ///< 색 첨부 쓰기
+        DepthRead,       ///< 깊이 첨부 읽기 전용(깊이 판정만)
+        DepthWrite,      ///< 깊이 첨부 쓰기
+        IndirectArgs,    ///< 간접 그리기 · 디스패치 인자
+        CopySource,      ///< 복사 원본
+        CopyDest,        ///< 복사 대상
+    };
+
+    /** @brief @p access 가 내용을 바꾸면 true 입니다(UAV · 렌더 타깃 · 깊이 쓰기 · 복사 대상). */
+    constexpr bool isRenderGraphWriteAccess( RenderGraphAccess access )
+    {
+        return access == RenderGraphAccess::UnorderedAccess || access == RenderGraphAccess::RenderTarget || access == RenderGraphAccess::DepthWrite ||
+               access == RenderGraphAccess::CopyDest;
+    }
+
+    /** @brief @p access 를 그래픽스 큐만 받으면 true 입니다(첨부) — 비동기 컴퓨트 패스는 선언할 수 없다. */
+    constexpr bool isRenderGraphGraphicsOnlyAccess( RenderGraphAccess access )
+    {
+        return access == RenderGraphAccess::RenderTarget || access == RenderGraphAccess::DepthRead || access == RenderGraphAccess::DepthWrite;
+    }
+
+    /** @brief 그래프 자원의 종류입니다. 받는 쪽(레벨 콜백)이 이름을 텍스처 표와 버퍼 표 중 어디서 찾을지 정한다. */
+    enum class RenderGraphViewableKind : uint8
+    {
+        Texture,
+        Buffer,
+    };
+
+    /** @struct RenderGraphResourceAccess @brief 패스 하나가 자원 하나를 쓰는 방식입니다(이름 · 접근 · 종류). 접근 핸들(`RenderGraphHandle`)이 이것으로 바뀐다. */
+    struct RenderGraphResourceAccess
+    {
+        hashed_string           _resource;
+        RenderGraphAccess       _access{ RenderGraphAccess::ShaderRead };
+        RenderGraphViewableKind _viewable{ RenderGraphViewableKind::Texture };
+    };
+
+    /**
+     * @struct RenderGraphHandle
+     * @brief 접근 종류가 형식인 자원 핸들입니다 — 패스 선언(`RenderGraph::addPass`)이 받는다.
+     * @details 언리얼 RDG `FRDGTextureSRVRef` · `FRDGBufferUAVRef`, Adria `RGTextureReadOnlyId` · `RGBufferReadWriteId` 자리다. 접근이 형식이라
+     *          SRV 로 받은 자원을 UAV 로 쓰는 코드는 형식이 맞지 않는다(다음 단계: 패스 몸통이 핸들로만 디스크립터를 얻는다).
+     */
+    template <RenderGraphViewableKind kViewable, RenderGraphAccess kAccess>
+    struct RenderGraphHandle
+    {
+        hashed_string _name;
+
+        /** @brief 패스 선언의 접근 한 줄입니다. */
+        operator RenderGraphResourceAccess() const { return RenderGraphResourceAccess{ _name, kAccess, kViewable }; } // NOLINT(google-explicit-constructor): 선언 목록 `{ srv, uav }` 가 핸들을 그대로 받는다
+    };
+
+    using RenderGraphTextureSRV        = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::ShaderRead>;
+    using RenderGraphTextureUAV        = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::UnorderedAccess>;
+    using RenderGraphRenderTarget      = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::RenderTarget>;
+    using RenderGraphDepthRead         = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::DepthRead>;
+    using RenderGraphDepthWrite        = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::DepthWrite>;
+    using RenderGraphTextureCopySource = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::CopySource>;
+    using RenderGraphTextureCopyDest   = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::CopyDest>;
+    using RenderGraphBufferSRV         = RenderGraphHandle<RenderGraphViewableKind::Buffer, RenderGraphAccess::ShaderRead>;
+    using RenderGraphBufferUAV         = RenderGraphHandle<RenderGraphViewableKind::Buffer, RenderGraphAccess::UnorderedAccess>;
+    using RenderGraphIndirectArgs      = RenderGraphHandle<RenderGraphViewableKind::Buffer, RenderGraphAccess::IndirectArgs>;
+    using RenderGraphBufferCopySource  = RenderGraphHandle<RenderGraphViewableKind::Buffer, RenderGraphAccess::CopySource>;
+    using RenderGraphBufferCopyDest    = RenderGraphHandle<RenderGraphViewableKind::Buffer, RenderGraphAccess::CopyDest>;
+
+    /**
      * @struct RenderGraphBarrier
      * @brief 그래프가 **추론한** 상태 전이 하나입니다. "이 자원을 이 상태로 바꿔야 한다" 는 뜻입니다.
      * @details 그래프는 자기가 가진 상태와 비교해서 **실제로 바뀌는 것만** 낸다. 같은 자원을 여러 패스가 읽어도,
@@ -59,6 +133,10 @@ namespace sw
         hashed_string            _resource;
         RenderGraphResourceState _before{ RenderGraphResourceState::Undefined };
         RenderGraphResourceState _after{ RenderGraphResourceState::Undefined };
+        RenderGraphAccess        _access{ RenderGraphAccess::ShaderRead }; ///< 바뀐 뒤의 접근 — 받는 쪽이 RHI 상태로 옮긴다
+        RenderGraphViewableKind  _viewable{ RenderGraphViewableKind::Texture };
+        RHIQueueKind             _queue{ RHIQueueKind::Graphics }; ///< 이 전이를 요구한 패스의 큐(비동기 컴퓨트를 지원하지 않으면 그래픽스)
+        uint8                    _bUAVBarrier{ 0 };                ///< 상태는 그대로 UAV 이고 앞 레벨의 UAV 쓰기를 기다린다(UAV → UAV)
     };
 } // namespace sw
 
@@ -70,10 +148,11 @@ namespace sw
      */
     struct RenderGraphPassContext
     {
-        hashed_string                _passName; ///< 실행 중인 패스 이름
-        const vector<hashed_string>* _pListInputs{ nullptr };
-        const vector<hashed_string>* _pListOutputs{ nullptr };
-        IRHICommandList*             _pCmdList{ nullptr }; ///< (선택) 병렬 기록 때 활성 패스의 커맨드 리스트
+        hashed_string                            _passName; ///< 실행 중인 패스 이름
+        const vector<hashed_string>*             _pListInputs{ nullptr };
+        const vector<hashed_string>*             _pListOutputs{ nullptr };
+        const vector<RenderGraphResourceAccess>* _pListAccess{ nullptr }; ///< 이 패스가 선언한 접근 전부(이름으로 선언한 패스는 입력 = 셰이더 읽기, 출력 = 렌더 타깃)
+        IRHICommandList*                         _pCmdList{ nullptr };    ///< (선택) 병렬 기록 때 활성 패스의 커맨드 리스트
     };
 } // namespace sw
 
@@ -107,9 +186,16 @@ namespace sw
      */
     struct RenderGraphExecutionContext
     {
-        vector<pair<hashed_string, RenderGraphResourceState>> _listResourceState;
-        unordered_map<hashed_string, size_t>                  _mapResourceToIndex;
-        uint32                                                _lastTransitionCount{ 0 };
+        /** @brief 자원 하나의 추적 상태입니다. `_state` 가 Undefined 면 이번 프레임에 아직 보지 않았다. */
+        struct TrackedAccess
+        {
+            RenderGraphResourceState _state{ RenderGraphResourceState::Undefined };
+            RenderGraphAccess        _access{ RenderGraphAccess::ShaderRead };
+        };
+
+        vector<pair<hashed_string, TrackedAccess>> _listResourceState;
+        unordered_map<hashed_string, size_t>       _mapResourceToIndex;
+        uint32                                     _lastTransitionCount{ 0 };
         /** @brief 패스가 이보다 적은 레벨은 병렬로 기록하지 않고 이어 기록합니다(2 미만은 2). 부르는 쪽이 프레임 설정 사본(`RenderFrameSettings::_renderGraphParallelMinWidth`)으로 채운다. */
         uint32 _parallelMinWidth{ 2 };
 
@@ -130,30 +216,55 @@ namespace sw
         }
 
         /**
-         * @brief 리소스 상태를 전이하고 **이전 상태**를 반환합니다(O(1) 해시 맵).
-         * @details 반환값이 desired 와 같으면 이미 그 상태라 배리어를 낼 필요가 없다. 처음 보는 자원은
-         *          Undefined 였던 것으로 본다. 그 첫 전이는 실제로 필요하다.
+         * @brief 자원을 접근 @p desired 로 옮기고 **이전 추적 상태**를 반환합니다(O(1) 해시 맵).
+         * @details 반환값의 접근이 desired 와 같으면 이미 그 상태라 전이가 필요 없다(UAV → UAV 는 부르는 쪽이 UAV 배리어로 본다). 처음 보는 자원은
+         *          `_state` Undefined 로 돌려준다 — 그 첫 전이는 실제로 필요하다.
          */
-        RenderGraphResourceState transitionTo( hashed_string resource, RenderGraphResourceState desired )
+        TrackedAccess transitionTo( hashed_string resource, RenderGraphAccess desired )
         {
-            auto it = _mapResourceToIndex.find( resource );
+            const RenderGraphResourceState desiredState = isRenderGraphWriteAccess( desired ) ? RenderGraphResourceState::Write : RenderGraphResourceState::Read;
+            auto                           it           = _mapResourceToIndex.find( resource );
             if ( it != _mapResourceToIndex.end() )
             {
-                auto&                          entry  = _listResourceState[it->second];
-                const RenderGraphResourceState before = entry.second;
-                if ( before != desired )
+                TrackedAccess&      entry  = _listResourceState[it->second].second;
+                const TrackedAccess before = entry;
+                if ( before._state == RenderGraphResourceState::Undefined || before._access != desired )
                 {
-                    entry.second = desired;
+                    entry = TrackedAccess{ desiredState, desired };
                     ++_lastTransitionCount;
                 }
                 return before;
             }
 
-            const size_t index = _listResourceState.size();
-            _listResourceState.push_back( { resource, desired } );
-            _mapResourceToIndex[resource] = index;
+            _mapResourceToIndex[resource] = _listResourceState.size();
+            _listResourceState.push_back( {
+                resource, TrackedAccess{ desiredState, desired }
+            } );
             ++_lastTransitionCount;
-            return RenderGraphResourceState::Undefined;
+            return TrackedAccess{};
+        }
+
+        /** @brief 그래프 밖에서 온 자원의 처음 접근을 적습니다(`RenderGraph::importResource` — 실행이 프레임 시작에 부른다). 전이로 세지 않습니다. */
+        void seedAccess( hashed_string resource, RenderGraphAccess access )
+        {
+            const TrackedAccess tracked{ isRenderGraphWriteAccess( access ) ? RenderGraphResourceState::Write : RenderGraphResourceState::Read, access };
+            auto                it = _mapResourceToIndex.find( resource );
+            if ( it != _mapResourceToIndex.end() )
+            {
+                _listResourceState[it->second].second = tracked;
+                return;
+            }
+            _mapResourceToIndex[resource] = _listResourceState.size();
+            _listResourceState.push_back( { resource, tracked } );
+        }
+
+        /** @brief 실행이 끝난 뒤 자원의 마지막 접근입니다(들인 자원의 끝 상태를 내보낼 때 — 언리얼 `QueueBufferExtraction` 의 끝 접근). 이번 프레임에 보지 않았으면 없음입니다. */
+        optional<RenderGraphAccess> findAccess( hashed_string resource ) const
+        {
+            const auto it = _mapResourceToIndex.find( resource );
+            if ( it == _mapResourceToIndex.end() || _listResourceState[it->second].second._state == RenderGraphResourceState::Undefined )
+                return nullopt;
+            return _listResourceState[it->second].second._access;
         }
     };
 } // namespace sw
@@ -166,11 +277,12 @@ namespace sw
      */
     struct RenderGraphNode
     {
-        hashed_string            _name;                            ///< 렌더 패스의 고유 이름(해시)
-        vector<hashed_string>    _listInput;                       ///< 입력으로 읽는 자원 해시 목록
-        vector<hashed_string>    _listOutput;                      ///< 출력으로 만드는 자원 해시 목록
-        RenderGraphPassExecuteFn _execute;                         ///< 컴파일된 순서대로 부르는 패스 콜백(선택)
-        RHIQueueKind             _queue{ RHIQueueKind::Graphics }; ///< 선언한 큐입니다. 비동기 컴퓨트를 지원하지 않는 그래프에서는 그래픽스로 계획한다(`setAsyncComputeSupported`)
+        hashed_string                     _name;                            ///< 렌더 패스의 고유 이름(해시)
+        vector<hashed_string>             _listInput;                       ///< 입력으로 읽는 자원 해시 목록(쓰기가 아닌 접근)
+        vector<hashed_string>             _listOutput;                      ///< 출력으로 만드는 자원 해시 목록(쓰기 접근)
+        vector<RenderGraphResourceAccess> _listAccess;                      ///< 선언한 접근 전부 — 전이는 이것에서 추론한다
+        RenderGraphPassExecuteFn          _execute;                         ///< 컴파일된 순서대로 부르는 패스 콜백(선택)
+        RHIQueueKind                      _queue{ RHIQueueKind::Graphics }; ///< 선언한 큐입니다. 비동기 컴퓨트를 지원하지 않는 그래프에서는 그래픽스로 계획한다(`setAsyncComputeSupported`)
     };
 
     /**
@@ -247,6 +359,19 @@ namespace sw
          */
         bool addPass( hashed_string passName, vector<hashed_string> listInput = {}, vector<hashed_string> listOutput = {},
                       RenderGraphPassExecuteFn execute = {}, RHIQueueKind queue = RHIQueueKind::Graphics );
+        /**
+         * @brief 접근 핸들로 패스를 선언합니다(`{ RenderGraphTextureSRV{ a }, RenderGraphBufferUAV{ b } }`). 쓰기 접근은 출력, 나머지는 입력이다.
+         * @details 그래프가 접근에서 전이를 정한다 — 버퍼 · UAV · 간접 인자도 레벨 앞에서 한 묶음으로 나간다(패스 몸통이 손으로 내지 않는다).
+         *          비동기 컴퓨트 패스가 첨부 접근(렌더 타깃 · 깊이)을 선언하면 거절한다(그 큐가 받지 않는 상태). 같은 자원을 두 번 적어도 거절한다.
+         */
+        bool addPass( hashed_string passName, vector<RenderGraphResourceAccess> listAccess, RenderGraphPassExecuteFn execute = {},
+                      RHIQueueKind queue = RHIQueueKind::Graphics );
+        /**
+         * @brief 그래프 밖에서 사는 자원(GPUScene 컬링 인자 · HZB · 라이트 그리드 · 입자)을 처음 접근 @p initialAccess 로 들입니다 — 언리얼 `RegisterExternalBuffer` 자리.
+         * @details 실행이 프레임 시작에 그 접근을 추적 상태로 심는다 — 첫 사용이 같은 접근이면 전이가 없다. 끝 접근은 `RenderGraphExecutionContext::findAccess` 로 내보낸다.
+         *          수명 종류는 External 로 선언된다.
+         */
+        void importResource( hashed_string name, RenderGraphViewableKind type, RenderGraphAccess initialAccess );
 
         /**
          * @brief 이 그래프를 돌릴 디바이스가 비동기 컴퓨트 큐를 갖는지 알립니다(능력 `RHICapabilities::_bAsyncCompute`). 컴파일 전에 부릅니다. 기본은 거짓입니다.
@@ -362,8 +487,10 @@ namespace sw
          *          택한다(더 강한 상태다). 이미 그 상태인 자원은 아예 넣지 않는다.
          */
         void appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node );
-        /** @brief 자원 하나를 @p desired 상태로 요구합니다. 같은 자원을 여러 패스가 요구해도 레벨의 배리어는 한 번만 냅니다(읽기와 쓰기가 겹치면 쓰기를 남깁니다). */
-        void requestBarrier( RenderGraphExecutionContext& context, hashed_string resource, RenderGraphResourceState desired );
+        /** @brief 자원 하나를 접근 @p access 로 요구합니다. 같은 자원을 여러 패스가 요구해도 레벨의 배리어는 한 번만 냅니다(읽기와 쓰기가 겹치면 쓰기를 남깁니다). */
+        void requestBarrier( RenderGraphExecutionContext& context, const RenderGraphResourceAccess& access, RHIQueueKind queue );
+        /** @brief 실행 시작에 문맥을 비우고 들인 자원의 처음 접근을 심습니다. */
+        void beginExecution( RenderGraphExecutionContext& context ) const;
         /** @brief 패스 @p passIndex 가 자원을 읽거나 썼음을 수명 표에 적습니다. 처음 보는 자원이면 항목을 만듭니다. */
         void touchResourceLifetime( hashed_string resource, size_t passIndex, bool bWritten );
         /** @brief 추려 낸 배리어를 레벨 콜백에 넘깁니다. 콜백이 없거나 낼 것이 없으면 아무 일도 하지 않습니다. */
@@ -400,6 +527,8 @@ namespace sw
         unordered_map<hashed_string, size_t> _mapResourceLifetimeIndex;
         /// @brief `declareResource` 가 적은 수명 종류입니다. 없는 이름은 Transient 입니다.
         unordered_map<hashed_string, RenderGraphResourceKind> _mapResourceKind;
+        /// @brief `importResource` 가 들인 자원과 처음 접근입니다(등록 순서).
+        vector<RenderGraphResourceAccess> _listImportedResource;
         /// @brief compile() 이 계산한 큐 계획(실행 순서 번호)과 끝의 조인, 묶음 수입니다.
         vector<RenderGraphQueueStep> _listQueueStep;
         vector<uint32>               _listFinalJoinBatch;

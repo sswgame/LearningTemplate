@@ -1009,7 +1009,19 @@ namespace sw
         listTransition.reserve( levelContext._pListBarrier->size() );
         for ( const RenderGraphBarrier& barrier : *levelContext._pListBarrier )
         {
-            if ( barrier._after == RenderGraphResourceState::Write )
+            // shortcut: 버퍼 접근 · 텍스처 복사 접근은 아직 받지 않는다(이 실행기의 패스는 이름 선언 — 입력 셰이더 읽기, 출력 렌더 타깃뿐이다). 패스를 접근 핸들로 옮길 때(렌더 그래프 접근 핸들 ②) 버퍼 표와 함께 받는다.
+            if ( barrier._viewable != RenderGraphViewableKind::Texture )
+                continue;
+            if ( barrier._access == RenderGraphAccess::UnorderedAccess )
+            {
+                const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource );
+                if ( texture != 0 )
+                    listTransition.push_back( RHITextureTransition{ texture, RHITextureState::UnorderedAccess } );
+                continue;
+            }
+            const bool bAttachmentWrite = barrier._access == RenderGraphAccess::RenderTarget || barrier._access == RenderGraphAccess::DepthWrite;
+            const bool bShaderRead      = barrier._access == RenderGraphAccess::ShaderRead || barrier._access == RenderGraphAccess::DepthRead;
+            if ( bAttachmentWrite )
             {
                 // 스왑체인은 전용 경로가 있다(핸들 0). 이름으로는 트랜지언트에서 찾을 수 없다.
                 if ( barrier._resource == attachmentNames()._swapchain )
@@ -1026,7 +1038,7 @@ namespace sw
                     levelContext._pCmdList->beginTextureAlias( texture );
                 listTransition.push_back( RHITextureTransition{ texture, RHITextureState::RenderTarget } );
             }
-            else if ( barrier._after == RenderGraphResourceState::Read )
+            else if ( bShaderRead )
             {
                 const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource );
                 if ( texture != 0 )
