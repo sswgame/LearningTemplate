@@ -14,6 +14,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Respawn/CheckpointState.h"
 
 #include <cstring>
 #include <limits>
@@ -90,6 +91,25 @@ namespace
 
     struct MetroidvaniaDeathRestTestUtil
     {
+        /**
+         * @brief 쉰 지점 기록(`CheckpointState`, 안쪽 반사 구조체 — 머리 없이 칸만)을 씁니다. 빈 이름이면 쉰 적이 없고, 아니면 그 지점 하나입니다.
+         * @details 바이트 모양은 정상 `writeState` 에서 머리만 떼어 가져온다. 되살아날 지점이 이름 하나였을 때의 손 바이트 자리다.
+         */
+        static void writeCheckpointBytes( sw::Archive& outArchive, const sw::hashed_string& respawnSite )
+        {
+            sw::CheckpointState checkpoints;
+            if ( respawnSite.empty() == false )
+            {
+                sw::CheckpointDef def;
+                def._id        = respawnSite;
+                def._bReusable = true;
+                (void)checkpoints.activate( def, sw::float3{}, 0.0f );
+            }
+            sw::Archive written;
+            checkpoints.writeState( written );
+            outArchive.writeBytes( written.getData() + sw::StateIO::kReflectedHeaderBytes, written.getSize() - sw::StateIO::kReflectedHeaderBytes );
+        }
+
         /** @brief `MetroidvaniaDeathRestState::writeState` 와 같은 모양의 바이트입니다. 리플렉션 머리는 정상 `writeState` 바이트에서 가져온다 — 손으로 짜면 다른 이유로 거절되어 거짓 통과한다. */
         static void writeStateBytes( sw::Archive& outArchive, const sw::vector<sw::hashed_string>& listSpawn, float32 corpseX, const sw::hashed_string& respawnSite, int32 flaskCharges, int32 flaskMaxCharges )
         {
@@ -107,7 +127,7 @@ namespace
             outArchive << sw::float2{ corpseX, 0.0f };
             outArchive << static_cast<int32>( 0 );
             outArchive << static_cast<uint8>( SW_FALSE );
-            sw::StateIO::writeName( outArchive, respawnSite );
+            writeCheckpointBytes( outArchive, respawnSite );
             outArchive << static_cast<int32>( 0 );
             outArchive << flaskCharges;
             outArchive << flaskMaxCharges;
