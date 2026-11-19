@@ -298,11 +298,11 @@ namespace sw::editor
             _model.commitKeyEdit();
         if ( drawEditedDragFloat( "y", &pKey->_position._y, 0.1f, nullptr ) )
             _model.commitKeyEdit();
-        // 키는 라디안으로 담고(엔진의 각도 단위) 편집은 도로 한다.
-        float32 angleDeg = MathUtil::toDegree( pKey->_angle );
+        // 키는 각 형식(`Radians`)으로 담고 편집은 도로 한다.
+        float32 angleDeg = pKey->_angle.degrees();
         EditorWidgets::drawPropertyRowLabel( "angleDeg" );
         if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##angleDeg" ), &angleDeg, 0.5f ) )
-            pKey->_angle = MathUtil::toRadian( angleDeg );
+            pKey->_angle = Radians::fromDegrees( angleDeg );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             _model.commitKeyEdit();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "KeyAngleTip" ) );

@@ -34,7 +34,7 @@ namespace
             SpriteClipKey key;
             key._time     = time;
             key._position = float2{ x, 0.0f };
-            key._angle    = angle;
+            key._angle    = Radians::fromRadians( angle );
             return key;
         }
     };
@@ -184,7 +184,7 @@ SW_TEST_CASE( SpriteClipAssetTest, SamplesTransformKeys )
     SW_EXPECT_NEAR( 10.0f, key._position._x, 1.0e-4f );
     SW_REQUIRE_TRUE( clip.sampleTransformKey( 1.5f, key ) );
     SW_EXPECT_NEAR( 15.0f, key._position._x, 1.0e-4f );
-    SW_EXPECT_NEAR( 1.5f, key._angle, 1.0e-4f );
+    SW_EXPECT_NEAR( 1.5f, key._angle.radians(), 1.0e-4f );
     SW_EXPECT_NEAR( 1.5f, key._time, 1.0e-4f );
     SW_REQUIRE_TRUE( clip.sampleTransformKey( 9.0f, key ) );
     SW_EXPECT_NEAR( 20.0f, key._position._x, 1.0e-4f );

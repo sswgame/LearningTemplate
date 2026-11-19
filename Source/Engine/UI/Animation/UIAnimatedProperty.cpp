@@ -3,6 +3,7 @@
 #include "Engine/UI/Animation/UIAnimatedProperty.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectedValue.h"
@@ -20,7 +21,7 @@ namespace sw
             /** @brief 실수 필드의 성분 수입니다. 실수 필드가 아니면 0 입니다. */
             static uint8 findComponentCount( ReflectBuiltinIndex builtinIndex )
             {
-                if ( builtinIndex == ReflectBuiltinIndex::kfloat32 || builtinIndex == ReflectBuiltinIndex::kfloat64 )
+                if ( builtinIndex == ReflectBuiltinIndex::kfloat32 || builtinIndex == ReflectBuiltinIndex::kfloat64 || builtinIndex == ReflectBuiltinIndex::kRadians )
                     return 1;
                 if ( builtinIndex == ReflectBuiltinIndex::kfloat2 )
                     return 2;
@@ -41,6 +42,10 @@ namespace sw
                 else if ( builtinIndex == ReflectBuiltinIndex::kfloat64 )
                 {
                     outArrComponent[0] = static_cast<float32>( *static_cast<const float64*>( pValue ) );
+                }
+                else if ( builtinIndex == ReflectBuiltinIndex::kRadians )
+                {
+                    outArrComponent[0] = static_cast<const Radians*>( pValue )->radians(); // 성분은 라디안으로 섞는다(키 글은 도로 읽힌다)
                 }
                 else if ( builtinIndex == ReflectBuiltinIndex::kfloat2 )
                 {
@@ -82,6 +87,8 @@ namespace sw
                     *static_cast<float32*>( pValue ) = arrComponent[0];
                 else if ( builtinIndex == ReflectBuiltinIndex::kfloat64 )
                     *static_cast<float64*>( pValue ) = static_cast<float64>( arrComponent[0] );
+                else if ( builtinIndex == ReflectBuiltinIndex::kRadians )
+                    *static_cast<Radians*>( pValue ) = Radians::fromRadians( arrComponent[0] );
                 else if ( builtinIndex == ReflectBuiltinIndex::kfloat2 )
                     *static_cast<float2*>( pValue ) = float2{ arrComponent[0], arrComponent[1] };
                 else if ( builtinIndex == ReflectBuiltinIndex::kfloat3 )

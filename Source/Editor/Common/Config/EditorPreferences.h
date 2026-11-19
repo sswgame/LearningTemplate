@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -44,8 +45,8 @@ namespace sw::editor
         PROPERTY( Min = 0.01, Tooltip = "Translate snap step (m)" )
         float32 _gridSnapValue{ 1.0f };
 
-        PROPERTY( Min = 0.0174533, Max = 1.5707964, Units = rad, Tooltip = "Rotate snap step" )
-        float32 _rotationSnapValue{ MathUtil::toRadian( 15.0f ) };
+        PROPERTY( Min = 1.0, Max = 90.0, Tooltip = "Rotate snap step" )
+        Radians _rotationSnapValue{ Radians::fromDegrees( 15.0f ) };
 
         PROPERTY( Min = 0.01, Tooltip = "Scale snap step" )
         float32 _scaleSnapValue{ 0.1f };
@@ -65,8 +66,8 @@ namespace sw::editor
         float32 _placementMaxDistance{ 500.0f };
 
         // 하우징 · 건설 게임처럼 놓기 전에 돌린다(언리얼 · 유니티는 놓은 뒤 기즈모) — 기본은 직각 걸음이라 벽 · 상자를 격자에 맞춰 놓는다.
-        PROPERTY( Min = 0.0174533, Max = 3.1415927, Units = rad, Tooltip = "Rotation step of the rotate keys while an asset is dragged over the scene view (before it is placed)" )
-        float32 _placementRotateStep{ MathUtil::kHalfPi };
+        PROPERTY( Min = 1.0, Max = 180.0, Tooltip = "Rotation step of the rotate keys while an asset is dragged over the scene view (before it is placed)" )
+        Radians _placementRotateStep{ Radians::fromRadians( MathUtil::kHalfPi ) };
     };
 } // namespace sw::editor
 
