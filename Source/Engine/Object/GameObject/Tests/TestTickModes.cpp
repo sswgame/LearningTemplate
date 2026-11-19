@@ -3,10 +3,11 @@
 // 갈리는지 본다(NEXT 5-3 1 · 1b · 1c).
 #include "pch.h"
 
+#include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Foundation/StateHashBuilder.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
 #include "Engine/Object/GameObject/Tests/TickModeTestComponents.h"
@@ -427,3 +428,47 @@ SW_TEST_CASE( TickModesTest, OrderOnlyPrerequisitesBecomeTaskEdges )
     }
     SW_EXPECT_EQUAL( TickChainRig::kLinkCount - 2, maxLevel ); // 고리 1..7 이 레벨 0..6
 }
+
+#if defined( SW_DO_CHECKS )
+/**
+ * @brief [TickModesTest] 병렬 틱 안에서 같은 그룹에서 틱하는 남의 오브젝트 컴포넌트를 찾으면 단언한다 — 자기 오브젝트 · 다른 그룹 · Main 모드 · 남 읽기 길(`readOther`)은 허용한다
+ * @details 표지(`TickThreadState`)를 손으로 세워 디스패치 없이 본다. 남의 컴포넌트는 다른 워커가 같은 순간 틱하며 쓸 수 있다(유니티 잡 안전 시스템 · 언리얼 Mass 접근 검증).
+ */
+SW_TEST_CASE( TickModesTest, OtherObjectLookupInSameParallelGroupAsserts )
+{
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID );
+    const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
+    GameObjectManager         manager{ services };
+    GameObject*               pReader = manager.createGameObject( hashed_string( "Reader" ) );
+    GameObject*               pTarget = manager.createGameObject( hashed_string( "Target" ) );
+    (void)pReader->addComponent<SceneComponent>();
+    const SceneComponent* pTargetRoot = pTarget->addComponent<SceneComponent>();
+    (void)pTarget->addComponent<TickModeMainTestComponent>(); // 기본 그룹(DuringPhysics)에서 틱한다
+    manager.beginPlay();
+    manager.update( 1.0f / 60.0f ); // 틱 항목을 짓는다
+    SW_REQUIRE_TRUE( pTargetRoot != nullptr );
+    const ComponentHandle targetRootHandle = pTargetRoot->getHandle();
+
+    TickThreadState&      threadState = StructuralChangeBuffer::getThreadState();
+    const TickThreadState saved       = threadState;
+    threadState._pTickingObject       = pReader;
+    {
+        test::ScopedAssertCapture assertCapture;
+        const GameObjectManager&  readManager = manager;
+        threadState._parallelTickGroup        = static_cast<uint8>( TickGroup::DuringPhysics );
+        SW_EXPECT_TRUE( pTarget->getComponent<SceneComponent>() == pTargetRoot );          // 단언 1
+        SW_EXPECT_TRUE( readManager.resolveComponent( targetRootHandle ) == pTargetRoot ); // 단언 2
+        SW_EXPECT_TRUE( pTarget->getTickSafeComponent<SceneComponent>() == pTargetRoot );
+        SW_EXPECT_TRUE( pReader->getComponent<SceneComponent>() != nullptr );
+        const TickContext context{ *pReader, 0.0f };
+        SW_EXPECT_TRUE( context.readOther<SceneComponent>( pTarget->getHandle() ) == pTargetRoot );
+        threadState._parallelTickGroup = static_cast<uint8>( TickGroup::PostUpdate ); // 대상은 이 그룹에서 틱하지 않는다 — 그룹 사이는 장벽
+        SW_EXPECT_TRUE( pTarget->getComponent<SceneComponent>() == pTargetRoot );
+        threadState._parallelTickGroup = TickThreadState::kNoParallelTick; // Main 모드 · 틱 밖
+        SW_EXPECT_TRUE( pTarget->getComponent<SceneComponent>() == pTargetRoot );
+        if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 2u, assertCapture.getCount() );
+    }
+    threadState = saved;
+}
+#endif

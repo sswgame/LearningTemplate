@@ -21,6 +21,7 @@
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 
 namespace sw
@@ -50,6 +51,9 @@ namespace sw
     class SW_API RealtimeProbeHistoryAllocator
     {
     public:
+        /// @brief 프로브 하나의 기록 float4 수 — 원시 SH9 계수 일곱 뒤에 가시성 모먼트 묶음(probe_update.hlsl kHistoryFloat4Count).
+        static constexpr uint32 kFloat4PerProbe = SH9Color::kGPUFloat4Count + shaderslot::kProbeVisibilityFloat4Count;
+
         /**
          * @brief 이번 프레임 요청들의 구간을 정합니다.
          * @return 용량이 늘어 기록 버퍼를 다시 만들어야 하면 true 입니다(그때는 모든 볼륨이 새로 시작한다 — `isFresh` 가 모두 true).
@@ -95,7 +99,7 @@ namespace sw
     public:
         static constexpr uint32 kThreadGroupSize = 64;          ///< probe_update.hlsl SW_NUMTHREADS 와 같다
         static constexpr uint32 kHeaderRowCount  = 8;           ///< 머리 행 1 + 하늘 SH 행 7 (probe_update.hlsl kRowFirstVolume)
-        static constexpr uint32 kVolumeRowCount  = 7;           ///< 볼륨마다 행 수 (probe_update.hlsl kVolumeRowCount)
+        static constexpr uint32 kVolumeRowCount  = 8;           ///< 볼륨마다 행 수 (probe_update.hlsl kVolumeRowCount)
         static constexpr uint32 kSkySampleCount  = 64;          ///< 하늘 SH 투영의 방향 수
         static constexpr uint32 kSkyRowCount     = 7;           ///< 하늘 SH 원시 계수 27 개가 float4 일곱(28 칸)에 들어간다
         static constexpr uint32 kNoEmission      = 0xFFFFFFFFu; ///< 발광 칸이 없는 볼륨의 발광 단어 번호(probe_update.hlsl kNoEmission)
@@ -133,7 +137,7 @@ namespace sw
 
     private:
         RHIStructuredBuffer                      _voxelBuffer;                 ///< 볼륨들의 점유 복셀 단어(uint, 컴퓨트 t2)
-        RHIStructuredBuffer                      _historyBuffer;               ///< 프로브마다 원시 SH9 계수 float4 일곱(컴퓨트 u0, 프레임을 넘어 남는다)
+        RHIStructuredBuffer                      _historyBuffer;               ///< 프로브마다 원시 SH9 계수 float4 일곱과 가시성 모먼트(`RealtimeProbeHistoryAllocator::kFloat4PerProbe`, 컴퓨트 u0, 프레임을 넘어 남는다)
         RHIStructuredBuffer                      _paramBuffer;                 ///< 입력 행(컴퓨트 t1)
         vector<float4>                           _listRowScratch;              ///< 입력 행 업로드 임시 버퍼
         vector<shared_ptr<const SceneVoxelGrid>> _listHeldGrid;                ///< 지금 복셀 버퍼에 올라간 격자들(포인터 비교가 믿을 수 있도록 붙들고 있는다)

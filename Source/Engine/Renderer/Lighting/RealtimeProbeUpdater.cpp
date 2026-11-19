@@ -41,7 +41,7 @@ namespace sw
             const uint64 volumeID = it->first;
             const uint32 count    = it->second._count;
             const bool   bStays   = VectorUtil::containsIf( listRequest, [volumeID, count]( const RealtimeProbeRequest& request )
-                { return request._volumeID == volumeID && request._probeCount * SH9Color::kGPUFloat4Count == count; } );
+                { return request._volumeID == volumeID && request._probeCount * kFloat4PerProbe == count; } );
             if ( bStays )
             {
                 ++it;
@@ -59,7 +59,7 @@ namespace sw
         for ( size_t requestIndex = 0; requestIndex < requestCount; ++requestIndex )
         {
             const RealtimeProbeRequest& request = listRequest[requestIndex];
-            const uint32                count   = request._probeCount * SH9Color::kGPUFloat4Count;
+            const uint32                count   = request._probeCount * kFloat4PerProbe;
             auto                        it      = _mapSlot.find( request._volumeID );
             if ( it == _mapSlot.end() )
             {
@@ -183,6 +183,8 @@ namespace sw
             rows.push_back( Internal::packBits( grid._dimX, grid._dimY, grid._dimZ, layout._listVoxelWordOffset[index] ) );
             rows.push_back( Internal::packBits( layout._listHistoryOffset[index], layout._listFirstThread[index], request._probeCount, request._rayCount ) );
             rows.push_back( Internal::packBits( MathUtil::max( request._updatePeriod, 1u ), warmup, layout._listEmissionWordOffset[index], BitUtil::floatToBits( request._emissiveIntensity ) ) );
+            // 프로브 버퍼 안의 가시성 모먼트 첫 float4(원소의 extra.x — `LightProbeElementBuilder::appendRealtimeVolume`).
+            rows.push_back( Internal::packBits( Internal::toCount( element._extra._x ), 0u, 0u, 0u ) );
         }
         return rows;
     }
@@ -258,7 +260,7 @@ namespace sw
             {
                 if ( _historyAllocator.isFresh( requestIndex ) == false )
                     continue;
-                const uint32         elementCount = listRequest[requestIndex]._probeCount * SH9Color::kGPUFloat4Count;
+                const uint32         elementCount = listRequest[requestIndex]._probeCount * RealtimeProbeHistoryAllocator::kFloat4PerProbe;
                 const vector<float4> zeros( elementCount, float4{} );
                 _historyBuffer.upload( pDevice, zeros.data(), elementCount * float4Stride, layout._listHistoryOffset[requestIndex] * float4Stride );
                 _framesSinceInputChange = 0;

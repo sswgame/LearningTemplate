@@ -61,6 +61,12 @@
             "_levelCount": 6,
             "_filterSampleCount": 32,
             "_captureIntervalFrames": 30
+        },
+        "_probeVisibility": {
+            "_normalBias": 0.1,
+            "_viewBias": 0.1,
+            "_backfaceFloor": 0.2,
+            "_chebyshevExponent": 3.0
         }
     },
     "_bBackgroundGamepadInput": false,

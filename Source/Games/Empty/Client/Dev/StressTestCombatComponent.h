@@ -50,6 +50,10 @@ namespace sw
         void followHandSocket( GameObjectManager& manager, GameObject& enemy, GameObject& sword ) const;
         /** @brief 정면에서 적의 뼈 높이로 무기를 한 발 쏩니다. @p bFatal 이 true 이면 치명적인 피격으로 알립니다. */
         void shootAt( GameObjectManager& manager, GameObject& enemy, const utf8* pBone, bool bFatal );
+        /** @brief 적의 마지막 알림 처리 기록에서 발소리를 세고 남깁니다. 틱 뒤(게임 스레드)에 부른다 — 기록은 적의 것이다. */
+        void logFootstep( const GameObject& enemy );
+        /** @brief 초가 바뀌면 발소리 수 · 래그돌 상태 · 칼 자리를 한 줄 남깁니다. 틱 뒤(게임 스레드)에 부른다. */
+        void logEverySecond( const GameObject& enemy, const GameObject& sword );
 
         GameObjectHandle _enemy;
         GameObjectHandle _sword;

@@ -121,6 +121,7 @@
 | 렌더 패스 기록(`RenderGraph::executeParallel`) | 레벨 폭 계측은 들었다 — 폭 문턱 판정은 S8. 배리어 · 레벨 제출 순서는 그래프 소유 |
 | AI 이동 사슬 | 비동기 경로 요청 줄 · 군중 프레임 일은 섰다. 한 종류 군중은 `load/navcrowd` 가 문턱을 넘을 때만 지역으로 쪼갠다 |
 | 에디터 UI | MVVM 까지(스레드 분리는 하지 않음 — 아래 "에디터 UI 스레드 분리 검토") |
+| 병렬 틱의 남 읽기(구조 감사 2) | const 매니저는 쓰기만 막는다. 틱 디스패치가 스레드 표지에 병렬 그룹을 걸고, 같은 그룹에서 틱하는 남의 오브젝트 컴포넌트를 `getComponent` · `resolveComponent` 로 찾으면 검사 구성에서 단언(`GameObject::assertParallelTickRead`, 배포 0 비용). 남 읽기는 틱 중에 바뀌지 않는 형식(`Component::kTickReadSafe` — 트랜스폼 · 디렉터)만 받는 `TickContext::readOther` 하나 — 유니티 잡 안전 시스템 `[ReadOnly]`, 언리얼 Mass 읽기 요구 선언 · 틱 그룹 장벽과 같다. 같은 그룹의 선행 조건(스테이지)으로 순서를 잡은 읽기는 그룹 단위 판정이라 걸린다 — 시나리오에서 걸리면 `readOther` · 틱 뒤 작업 · 그룹 옮기기로 고친다 |
 | 유지(이미 병렬) | 컴포넌트 틱 fork-join, 변환 계층, 애니메이션 비용 기반, 프레임 시스템 병렬(runOnAnyThread), GPU 업로드 · 식생, 셰이더 쿠킹, PackWriter 항목 압축. 틱 비용 기반 분배는 8 게임 중 1 만 이득이라 기본 정책을 바꾸지 않는다 |
 
 **씬 서비스 · 자체 스레드 · 폴링 판정(2026-11-08):** `MeshLODSystem` · `TextureStreamingSystem` · `SceneAudio` 는 `runParallelByCost`(공유 쓰기는 게임 스레드가 목록 순서로, 오디오 가림 레이캐스트는 물리 한 스레드 계약이라 직렬 16 개 상한). 식생 레이어는 병렬 for. `SceneVFXProvider` · `NetObjectTable` · `SceneNetLink` 는 그대로. 프레임 · 틱 맞춤, GPU 펜스, 소켓 · 망, 프로세스 대기, 감시 · 크래시, 재시도 백오프, 종료 한 번의 완료 거두기의 잠자기는 시간을 재야 하는 자리라 그대로 둔다. `RenderGraph` 레벨 스테이지 · `AudioClip` 디코드 · 스크린샷 쓰기 · `AsyncFileIO` 는 이미 연쇄다.
@@ -1041,7 +1042,7 @@ class GameThreadKey
 
 **측정.** 서비스 갱신마다 구간 `GT.Scene.service.<이름>` 을 넣고(`getSubsystemName`), Release 로 `load/characters` · `load/housingbulk` · `load/townsfolk` · Shooter3D `benchmark` 를 3 번씩. **문턱:** 한 단계의 직렬 서비스 합이 어느 시나리오든 0.3 ms 이상이고 서로 겹치지 않는 서비스 둘 이상이 각각 0.1 ms 이상이면 그 둘부터 옮긴다. 아니면 값을 S8 에 적고 닫는다(서명 나누기도 하지 않는다 — 옮길 서비스가 없으면 형식만 늘어난다). 옮긴 뒤에는 `GT.Scene.tick.FlushEnd` 가 흔들림 밖으로 줄어야 하고 상태 해시(`TestSceneStateHash`)가 같아야 한다.
 
-**(나) 캐릭터 컨트롤러 3D · 2D 입력은 `ComponentDataStore` 페이지다** — `PhysicsCommandPage<CharacterCommand3D/2D>`(`Engine/Physics/Scene/PhysicsPoseStore.h:181`)로 옮겼다. 남은 병목은 감사 S-8 이다 — `CharacterControllerComponent.cpp:310-377` 이 스텝마다 게임 스레드에서 한 명씩 움직이고 Jolt `ExtendedUpdate` 가 씬 공용 임시 할당자를 쓴다. 설계: 물리 씬에 `moveCharacters( span<const CharacterMoveRequest>, span<CharacterMoveResult> )` 일괄 입구를 두고 백엔드가 레인마다 임시 할당자(S-2)를 들고 병렬 for 로 돈다(유니티 DOTS Character Controller 잡 자리). 감사 37 번 묶음(S-2 · S-7 · S-8)에서 같이 한다. **측정 · 문턱:** `load/characters`(500 명)의 물리 PreStep 을 워커 1 · 4 · 8 로 — 한 워커에서 1 ms 이상일 때만 하고, 4 워커에서 2.5 배 이상 빨라지지 않으면 되돌린다.
+**(나) 캐릭터 컨트롤러 3D · 2D 입력은 `ComponentDataStore` 페이지다** — `PhysicsCommandPage<CharacterCommand3D/2D>`(`Engine/Physics/Scene/PhysicsPoseStore.h:181`)로 옮겼다. 남은 병목은 감사 S-8 이다 — `CharacterControllerComponent.cpp:310-377` 이 스텝마다 게임 스레드에서 한 명씩 움직이고 Jolt `ExtendedUpdate` 가 씬 공용 임시 할당자를 쓴다. 설계: 물리 씬에 `moveCharacters( span<const CharacterMoveRequest>, span<CharacterMoveResult> )` 일괄 입구를 두고 백엔드가 레인마다 임시 할당자(S-2)를 들고 병렬 for 로 돈다(유니티 DOTS Character Controller 잡 자리). 감사 37 번 묶음(S-2 · S-7 · S-8)에서 같이 한다. **측정 · 문턱:** `load/characters`(500 명)의 물리 PreStep 을 워커 1 · 4 · 8 로 — 한 워커에서 1 ms 이상일 때만 하고, 4 워커에서 2.5 배 이상 빨라지지 않으면 되돌린다. **결과(2026-11-19 Release, `load/charactermove` 500 명 `GT.Physics.moveCharacters` 평균):** 워커 1 · 4 · 8 = 23.8 · 11.2 · 8.3 ms — 4 워커 2.12 배로 문턱 미달, 8 워커 2.85 배. 되돌리면 한 명씩 경로(워커 수와 무관하게 1 워커 값 이상)로 돌아가 2 배 이득을 잃으므로 유지한다. 4 워커에서 남는 약 5 ms 직렬 몫(일괄 앞뒤의 요청 모으기 · 결과 반영 · Jolt 공용 상태)이 다음 측정 대상이다.
 
 **(다) 근접 기믹 · 감지 · 넷 관심 격자를 `SceneSpatialGrid` 로 — 셋 다 옮기지 않는다.**
 
@@ -1587,6 +1588,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
   - 스카이 라이트 · 반사 프로브 거르기를 filtered importance sampling(원본 밉을 pdf 로 고름), HDRI 반사를 SH9 대신 거른 텍스처로(VQEngine, S → GPU 찍기 M).
   - TAA: YCoCg 분산 클리핑 · Catmull-Rom 히스토리 · 적응 블렌드 → 그 위에 TAAU(Adria, S → M). 앞 셋은 옮겼다(taa.hlsl · `TAAUtil`, 계수는 EngineConfig `_render._taa*`). TAAU 는 남았다 — 첨부 풀이 크기 하나(`TransientAttachmentPool`)라 TAA 뒤 패스(피사계 심도 · 모션 블러가 렌더 해상도 깊이 · 속도를 읽는다)를 출력 해상도로 돌릴 자리가 없다. 언리얼의 1 차 · 2 차 화면 배율처럼 풀을 "TAA 앞(렌더) · 뒤(출력)" 두 크기로 가르는 일이 먼저다(L).
   - 프로브 GI 빛샘: 거리 모먼트 + 체비쇼프 가시성 · 뒷면 가중(Adria DDGI, M — GI 골든 전부).
+    - 판단(2026-11-19, 했다): 모먼트는 텍스처 슬롯 대신 프로브 버퍼(t13) 안 SH9 뒤 옥타헤드럴 8×8 묶음(float4 하나에 텍셀 둘)으로 — 반사 프로브와 같은 이유(네 백엔드 같은 길, 바인딩 수 그대로). 광선마다 가장 가까운 텍셀에 기록 비율로 섞고(DDGI 의 텍셀마다 코사인 가중 적분은 스레드 하나 = 프로브 하나라 비싸 뺐다), 읽을 때 쌍선형. 가중 식은 shading_math.hlsli 하나를 C++ 테스트와 셰이더가 함께 읽고, 계수는 EngineConfig `_render._probeVisibility` → 쿠킹 define. 베이크 볼륨은 모먼트가 없어 뒷면 가중 · 바이어스만 받는다. 프로브 재배치(DDGI relocation)는 칸 안에 박힌 프로브를 모먼트로 가리는 것으로 대신한다.
   - 2 단계 HZB 가림(지난 HZB → 새 HZB 로 다시 시험) — SSR 계층 탐색 · 큰 물체 컬링도 같은 피라미드(Adria · VQEngine, L).
   - 자동 노출 히스토그램 + 백분위 컷(Adria, S~M — 옮겼다: 네이티브 bindless 는 컴퓨트 한 그룹 `AutoExposureHistogram`, 에뮬 백엔드는 같은 식의 1x1 풀스크린, 컷은 EngineConfig `_render._autoExposure*`), HDR 디스플레이 출력 `DisplayOutputDesc` 한 값에서 스왑체인 포맷 · 톤맵 변형(VQEngine, M~L), 볼류메트릭 구름 · 비 가림 맵(Adria).
 - 작업 시스템(측정 먼저 — 합류 대기 구간 · park 수 계기부터): 묶음 제출 `submitBatch`, `runParallel` 우선순위 레인, guided 청크, 후속 하나 이어 실행, 넘침 보조 큐, 단계 그래프 위상 순서 재사용(Taskflow).

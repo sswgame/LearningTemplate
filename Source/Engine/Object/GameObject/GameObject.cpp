@@ -248,6 +248,25 @@ namespace sw
         return _pOwnerManager;
     }
 
+    void GameObject::assertParallelTickRead() const
+    {
+        // 표지는 틱 디스패치가 건다(`TickThreadState`). Main 모드(게임 스레드에서 차례로)는 같은 순간 쓰는 워커가 없어 걸지 않는다.
+        const TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
+        const uint8            group       = threadState._parallelTickGroup;
+        const bool             bOtherRead  = group != TickThreadState::kNoParallelTick && threadState._pTickingObject != nullptr && threadState._pTickingObject != this;
+        if ( bOtherRead == false )
+            return;
+        // 그룹 사이는 장벽이다 — 이 오브젝트가 지금 그룹에서 틱하지 않으면 같은 순간 쓰는 워커가 없다(항목 목록은 틱 전에만 다시 짓는다).
+        bool bTicksInGroup = false;
+        for ( const TickItem& item : _listTickItem )
+        {
+            bTicksInGroup = bTicksInGroup || item._group == group;
+        }
+        SW_LOG_ASSERT( bTicksInGroup == false,
+                       "'%#' looks up a component of '%#', which ticks in the same parallel tick group - read tick-safe types through TickContext::readOther, others in a post-tick task",
+                       threadState._pTickingObject->getName().c_str(), getName().c_str() );
+    }
+
     bool GameObject::attachToParent( GameObject* pParent, AttachRule rule )
     {
         if ( pParent == nullptr )
@@ -515,7 +534,8 @@ namespace sw
 
     bool GameObject::hasTag( TagID tag, bool bExactMatch ) const
     {
-        const TagComponent* pTagComp = getComponent<TagComponent>();
+        // 태그 쓰기는 틱 중이면 틱 뒤로 미뤄지므로(`addTag`) 병렬 틱의 남 읽기도 된다 — 병렬 틱 검사 없는 찾기다.
+        const TagComponent* pTagComp = findComponentOfType<TagComponent>();
         if ( pTagComp == nullptr )
             return false;
         return pTagComp->hasTag( tag, bExactMatch );
@@ -523,7 +543,8 @@ namespace sw
 
     bool GameObject::matchesTagQuery( const TagQuery& query ) const
     {
-        const TagComponent* pTagComp = getComponent<TagComponent>();
+        // 태그 쓰기는 틱 중이면 틱 뒤로 미뤄지므로(`addTag`) 병렬 틱의 남 읽기도 된다 — 병렬 틱 검사 없는 찾기다.
+        const TagComponent* pTagComp = findComponentOfType<TagComponent>();
         if ( pTagComp == nullptr )
             return query.matches( s_emptyTags );
         return pTagComp->matchesQuery( query );
@@ -531,7 +552,8 @@ namespace sw
 
     const TagContainer& GameObject::getTags() const
     {
-        const TagComponent* pTagComp = getComponent<TagComponent>();
+        // 태그 쓰기는 틱 중이면 틱 뒤로 미뤄지므로(`addTag`) 병렬 틱의 남 읽기도 된다 — 병렬 틱 검사 없는 찾기다.
+        const TagComponent* pTagComp = findComponentOfType<TagComponent>();
         if ( pTagComp == nullptr )
             return s_emptyTags;
         return pTagComp->getTags();
@@ -550,6 +572,9 @@ namespace sw
 
     Component* GameObject::findComponentByTypeName( hashed_string typeName ) const
     {
+#if defined( SW_DO_CHECKS )
+        assertParallelTickRead();
+#endif
         if ( typeName.empty() )
             return nullptr;
         for ( Component* pComp : _listComponent )

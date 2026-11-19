@@ -74,6 +74,12 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        /**
+         * @brief 트랜스폼은 병렬 틱 중 남이 읽어도 됩니다 — 틱 중 쓰기는 대기 칸 · 쓰기 큐로 가 단계 경계에서야 보이므로 읽는 쪽은 지난 적용 값을 본다(`writeTickTransform`).
+         * @details 파생 형식이 틱 중 바꾸는 다른 상태를 남에게 내면 false 로 덮는다.
+         */
+        static constexpr bool kTickReadSafe = true;
+
         /** @brief 항등 로컬 트랜스폼과 빈 계층으로 만듭니다. */
         SceneComponent();
         /** @brief 트랜스폼 계층에서 자신을 분리합니다. */

@@ -229,6 +229,38 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct ProbeVisibilityConfig
+     * @brief 프로브 GI 의 빛샘 막기 계수입니다 — 소비 셰이더(lighting.hlsli `LightData::sampleProbeVolume`)가 이웃 프로브 여덟의 가중에 쓴다. 쿠킹 define `SW_PROBE_*` 로 간다.
+     * @details DDGI(RTXGI · Adria) 모양이다: 표면 위치를 노멀 · 시선 쪽으로 띄우고(자기 그림자 바이어스), 표면 뒤에 있는 프로브를 코사인으로 줄이고(뒷면 가중),
+     *          실시간 볼륨은 프로브마다의 거리 모먼트로 체비쇼프 가시성을 곱한다(벽 너머 프로브가 0 에 가깝다). 언리얼 Lumen 은 스크린 프로브 · 표면 캐시라 이 자리가 없고,
+     *          유니티 APV 의 Virtual Offset · 누수 감소(Leak Reduction) · Godot SDFGI 의 프로브 가림이 같은 자리다. C++ 가중 식은 `ProbeVisibility` 다(테스트가 본다).
+     */
+    REFLECT()
+    struct SW_API ProbeVisibilityConfig
+    {
+        REFLECT_BODY();
+
+        /** @brief 표면을 노멀 쪽으로 띄우는 거리 — 볼륨의 가장 짧은 프로브 간격에 대한 비율입니다(`SW_PROBE_NORMAL_BIAS`). */
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _normalBias{};
+
+        /** @brief 표면을 카메라 쪽으로 띄우는 거리 — 볼륨의 가장 짧은 프로브 간격에 대한 비율입니다(`SW_PROBE_VIEW_BIAS`). */
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _viewBias{};
+
+        /** @brief 표면 뒤 프로브의 가중 하한(0 ~ 1)입니다 — 프로브 쪽이 노멀과 반대면 이 값, 노멀 쪽이면 1 이다(`SW_PROBE_BACKFACE_FLOOR`). 0 이면 뒤 프로브만 있는 곳이 검어진다. */
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _backfaceFloor{};
+
+        /** @brief 체비쇼프 가시성의 지수입니다 — 클수록 벽 너머 프로브를 세게 자른다(DDGI 의 세제곱이 3, `SW_PROBE_CHEBYSHEV_EXPONENT`). */
+        PROPERTY( Min = 1.0, Max = 8.0 )
+        float32 _chebyshevExponent{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct RenderConfig
      * @brief 렌더러 정책 값입니다(감사 RN-16 — C++ 상수에 흩어졌던 렌더 정책을 이 한 자리로 옮긴다. 언리얼 `r.*` 콘솔 변수의 바탕 층 · 유니티 SRP 에셋 자리).
      * @details 셰이더가 읽는 값은 쿠킹 define 한 경로로만 간다(`ShaderCompiler::appendEngineDefines` — 도구 지문에 섞여 값이 바뀌면 셰이더 캐시가 함께 낡는다).
@@ -321,6 +353,10 @@ namespace sw
         /** @brief 스카이 라이트 설정입니다(거르기 크기 · 단계 수 · 표본 수 · 다시 거르는 간격 — `SkyLightConfig`). */
         PROPERTY()
         SkyLightConfig _skyLight{};
+
+        /** @brief 프로브 GI 의 빛샘 막기 계수입니다(바이어스 · 뒷면 가중 · 체비쇼프 지수 — `ProbeVisibilityConfig`). */
+        PROPERTY()
+        ProbeVisibilityConfig _probeVisibility{};
     };
 } // namespace sw
 

@@ -7,11 +7,16 @@
  *          **쓰기 가능한 매니저 길:** `GameObject::getManager` 는 읽기 전용(const)을 돌려주고, 쓰기 가능한 매니저는 이름이 다른 `GameObject::getMutableManager`
  *          로만 얻는다 — 틱 본문의 습관 길(`getOwner()->getManager()`)로는 매니저를 바꾸는 호출이 컴파일되지 않는다. 틱 뒤 작업은 쓰기 가능한 매니저를 인자로 받는다.
  *          const 매니저의 찾기 · 순회(`resolveGameObject` · `resolveComponent` · `findGameObjectBy…` · `forEach…`)는 const 포인터만 낸다(`GameObjectManager::findGameObjectByName`).
+ *          **남 읽기의 길:** const 는 쓰기만 막고 읽기는 연다 — 남의 컴포넌트는 다른 워커가 같은 순간 틱하며 쓰고 있을 수 있다. 그래서 병렬 틱 안에서
+ *          남의 오브젝트 컴포넌트를 찾으면(`getComponent` · `resolveComponent`) 검사 구성에서 멈추고(`GameObject::assertParallelTickRead`), 남 읽기는
+ *          틱 중에 바뀌지 않는 형식(`Component::kTickReadSafe` — 트랜스폼 · 디렉터)만 받는 `readOther` 하나로 좁힌다. 그 밖의 남 상태는 틱 뒤 작업에서 읽는다.
+ *          유니티 잡 안전 시스템(`[ReadOnly]` 선언 · 경합 검출), 언리얼 Mass 처리기의 읽기 · 쓰기 요구 선언과 같은 자리다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 
 namespace sw
@@ -30,6 +35,13 @@ namespace sw
 
         /** @brief 틱하는 오브젝트입니다 — 이 컨텍스트가 쓰기를 여는 유일한 오브젝트입니다. */
         GameObject& getSelf() const { return *_pSelf; }
+
+        /**
+         * @brief 남의 오브젝트 @p object 의 첫 @p T 를 읽기 전용으로 찾습니다 — 병렬 틱 안의 남 읽기 길입니다(몸체는 `GameObjectManager.inl`).
+         * @details @p T 는 틱 중에 바뀌지 않는 형식(`T::kTickReadSafe`)이어야 컴파일된다(`GameObject::getTickSafeComponent`). 오브젝트가 없거나 그 형식이 없으면 nullptr 입니다.
+         */
+        template <typename T>
+        const T* readOther( GameObjectHandle object ) const;
 
         /**
          * @brief 컴포넌트 @p self 에 대한 일을 틱 뒤로 미룹니다(`GameObjectManager::deferPostTickOnComponent` 와 같은 길 — 몸체는 `GameObjectManager.inl`).

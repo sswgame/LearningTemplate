@@ -201,3 +201,59 @@ SW_TEST_CASE( ShadingMathTest, PupilShapesAndDilation )
     SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shadermath::kPupilShapeCephalopod, 0.3f, valleyY, 0.2f, 0.6f, 0.5f ) < 0.0f );
     SW_EXPECT_TRUE( ShadingMath::computePupilDistance( shadermath::kPupilShapeCephalopod, 0.3f, 0.6f, 0.2f, 0.6f, 0.5f ) > 0.0f );
 }
+
+namespace
+{
+    /** @brief 프로브 가시성 테스트의 계수 — Config/Engine/EngineConfig.json `_render._probeVisibility` 와 같은 값이다(셰이더는 쿠킹 define 으로 받는다). */
+    struct ProbeVisibilityTestUtil
+    {
+        static constexpr float32 kBackfaceFloor     = 0.2f;
+        static constexpr float32 kChebyshevExponent = 3.0f;
+    };
+} // namespace
+
+/**
+ * @brief [ShadingMathTest] 벽 너머 프로브(프로브가 그 방향에서 0.5 m 앞의 벽을 보았는데 표면은 2 m 밖)의 가중은 0 에 가깝고, 벽 없이 보이는 프로브는 1 이다
+ * @details 프로브와 표면 사이 벽은 앞뒤가 모두 프로브를 향할 수 있어 뒷면 가중만으로는 못 막는다 — 체비쇼프 가시성이 막는다(DDGI).
+ */
+SW_TEST_CASE( ShadingMathTest, ProbeBehindWallWeighsNearZeroVisibleProbeNearOne )
+{
+    using Util                    = ProbeVisibilityTestUtil;
+    const float32 wallMean        = 0.5f;
+    const float32 wallMeanSquared = wallMean * wallMean + 0.01f; // 분산 0.01 — 벽면의 거리 흔들림
+    const float32 behindWall      = ShadingMath::computeProbeVisibilityWeight( 1.0f, 2.0f, wallMean, wallMeanSquared, Util::kBackfaceFloor, Util::kChebyshevExponent );
+    SW_EXPECT_TRUE( behindWall < 1.0e-4f );
+    SW_EXPECT_TRUE( behindWall > 0.0f ); // 합이 0 이 되지 않는 하한
+
+    // 그 방향의 표면이 3 m 밖이라 2 m 의 표면은 보인다.
+    const float32 visible = ShadingMath::computeProbeVisibilityWeight( 1.0f, 2.0f, 3.0f, 9.1f, Util::kBackfaceFloor, Util::kChebyshevExponent );
+    SW_EXPECT_NEAR( 1.0f, visible, 1.0e-6f );
+
+    // 벽 바로 뒤에서 멀어질수록 줄어든다(같은 모먼트).
+    const float32 nearWall = ShadingMath::computeProbeChebyshevWeight( 0.55f, wallMean, wallMeanSquared, Util::kChebyshevExponent );
+    const float32 farWall  = ShadingMath::computeProbeChebyshevWeight( 1.0f, wallMean, wallMeanSquared, Util::kChebyshevExponent );
+    SW_EXPECT_TRUE( nearWall > farWall );
+    SW_EXPECT_TRUE( nearWall < 1.0f );
+}
+
+/** @brief [ShadingMathTest] 모먼트가 없으면(베이크 볼륨 · 광선이 아직 닿지 않은 방향) 체비쇼프는 가리지 않는다 */
+SW_TEST_CASE( ShadingMathTest, ProbeWithoutMomentsIsNotOccluded )
+{
+    SW_EXPECT_NEAR( 1.0f, ShadingMath::computeProbeChebyshevWeight( 5.0f, 0.0f, 0.0f, ProbeVisibilityTestUtil::kChebyshevExponent ), 0.0f );
+    SW_EXPECT_NEAR( 1.0f, ShadingMath::computeProbeVisibilityWeight( 1.0f, 5.0f, 0.0f, 0.0f, ProbeVisibilityTestUtil::kBackfaceFloor, ProbeVisibilityTestUtil::kChebyshevExponent ), 0.0f );
+}
+
+/** @brief [ShadingMathTest] 뒷면 가중은 프로브가 노멀 쪽이면 1, 정반대면 하한이고 그 사이에서 커지기만 한다 */
+SW_TEST_CASE( ShadingMathTest, ProbeBackfaceWeightFollowsCosine )
+{
+    const float32 floorValue = ProbeVisibilityTestUtil::kBackfaceFloor;
+    SW_EXPECT_NEAR( 1.0f, ShadingMath::computeProbeBackfaceWeight( 1.0f, floorValue ), 1.0e-6f );
+    SW_EXPECT_NEAR( floorValue, ShadingMath::computeProbeBackfaceWeight( -1.0f, floorValue ), 1.0e-6f );
+    float32 previous = 0.0f;
+    for ( int32 step = 0; step <= 8; ++step )
+    {
+        const float32 weight = ShadingMath::computeProbeBackfaceWeight( -1.0f + 0.25f * static_cast<float32>( step ), floorValue );
+        SW_EXPECT_TRUE( weight >= previous );
+        previous = weight;
+    }
+}

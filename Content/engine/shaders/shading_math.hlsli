@@ -66,7 +66,14 @@ namespace sw::shadermath
         static float computePupilRadius( float minRadius, float maxRadius, float dilation );                                  ///< 확장 0..1 → 동공 반지름(홍채 반지름 비)
         static float computeDilationFromLuminance( float luminance, float darkLuminance, float brightLuminance );             ///< 장면 밝기 → 확장(어두우면 1)
         static float computePupilDistance( float shape, float x, float y, float minRadius, float maxRadius, float dilation ); ///< 홍채 좌표(홍채 반지름 1)에서 동공 경계까지의 부호 거리(안이 음수)
+        // --- 프로브 GI 가시성(DDGI 모양 — lighting.hlsli LightData::sampleProbeVolume 이 이웃 프로브 여덟에 곱한다) ---
+        static float computeProbeBackfaceWeight( float normalDotToProbe, float backfaceFloor );                                                                                  ///< 표면 뒤 프로브 줄이기 — 노멀 쪽이면 1, 반대면 floor(코사인 감쇠)
+        static float computeProbeChebyshevWeight( float distance, float meanDistance, float meanSquaredDistance, float exponent );                                               ///< 거리 모먼트의 체비쇼프 상한^지수(모름이면 1)
+        static float computeProbeVisibilityWeight( float normalDotToProbe, float distance, float meanDistance, float meanSquaredDistance, float backfaceFloor, float exponent ); ///< 둘의 곱(0 이 되지 않는다)
     };
+
+    // 프로브 가중의 하한 — 여덟 모두가 가려져도 합이 0 이 되지 않게 한다(DDGI 와 같다. 그때는 가려진 프로브끼리의 평균이다).
+    static const float kProbeWeightFloor = 1e-6f;
 
     SW_SHADING_MATH_DEFINITION float ShadingMath::computeSchlickWeight( float cosine )
     {
@@ -260,6 +267,33 @@ namespace sw::shadermath
             signedDistance         = max( band, abs( x ) - halfWidth );
         }
         return signedDistance;
+    }
+
+    SW_SHADING_MATH_DEFINITION float ShadingMath::computeProbeBackfaceWeight( float normalDotToProbe, float backfaceFloor )
+    {
+        // DDGI 의 감싼 코사인((cos + 1) / 2)² 을 [floor, 1] 로 펼친다 — 표면 뒤 프로브가 빛을 아주 잃지는 않는다(프로브가 모두 뒤에 있는 얇은 면).
+        const float wrapped = ( clamp( normalDotToProbe, -1.0f, 1.0f ) + 1.0f ) * 0.5f;
+        return lerp( saturate( backfaceFloor ), 1.0f, wrapped * wrapped );
+    }
+
+    SW_SHADING_MATH_DEFINITION float ShadingMath::computeProbeChebyshevWeight( float distance, float meanDistance, float meanSquaredDistance, float exponent )
+    {
+        // 거리²의 평균이 0 이면 그 방향으로 아직 광선이 닿지 않았다(베이크 볼륨 · 갓 생긴 기록) — 모르므로 가리지 않는다.
+        if ( meanSquaredDistance <= 0.0f || distance <= meanDistance )
+            return 1.0f;
+        // 단측 체비쇼프 상한 P(d ≥ t) ≤ σ² / (σ² + (t − μ)²) — 프로브가 그 방향에서 본 표면보다 멀면(벽 너머) 0 에 가깝다.
+        const float variance   = abs( meanSquaredDistance - meanDistance * meanDistance );
+        const float excess     = distance - meanDistance;
+        const float visibility = variance / max( variance + excess * excess, kShadingMathEpsilon );
+        return pow( max( visibility, 0.0f ), exponent );
+    }
+
+    SW_SHADING_MATH_DEFINITION float ShadingMath::computeProbeVisibilityWeight( float normalDotToProbe, float distance, float meanDistance, float meanSquaredDistance, float backfaceFloor,
+                                                                                float exponent )
+    {
+        const float backface  = ShadingMath::computeProbeBackfaceWeight( normalDotToProbe, backfaceFloor );
+        const float chebyshev = ShadingMath::computeProbeChebyshevWeight( distance, meanDistance, meanSquaredDistance, exponent );
+        return max( backface * chebyshev, kProbeWeightFloor );
     }
 
 #if defined( __cplusplus )

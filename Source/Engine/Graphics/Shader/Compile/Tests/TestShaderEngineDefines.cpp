@@ -61,6 +61,36 @@ SW_TEST_CASE( ShaderEngineDefinesTest, RenderPolicyDefinesComeFromEngineConfig )
     }
 }
 
+/** @brief [ShaderEngineDefinesTest] 프로브 GI 빛샘 막기 계수(lighting.hlsli 가 기본값 없이 요구한다)가 설정에서 뜬 사본 그대로 하나씩 든다 */
+SW_TEST_CASE( ShaderEngineDefinesTest, ProbeVisibilityComesFromEngineConfig )
+{
+    const ProbeVisibilityConfig& config = engine::getSubsystem<EngineConfig>()._render._probeVisibility;
+    vector<ShaderMacroDefine>    listDefine;
+    ShaderCompiler::appendEngineDefines( listDefine, ShaderEnginePolicy::capture() );
+    const struct
+    {
+        const utf8* _pName;
+        float32     _value;
+    } arrExpected[] = {
+        {       "SW_PROBE_NORMAL_BIAS",        config._normalBias},
+        {         "SW_PROBE_VIEW_BIAS",          config._viewBias},
+        {    "SW_PROBE_BACKFACE_FLOOR",     config._backfaceFloor},
+        {"SW_PROBE_CHEBYSHEV_EXPONENT", config._chebyshevExponent},
+    };
+    for ( const auto& expected : arrExpected )
+    {
+        uint32 foundCount = 0;
+        for ( const ShaderMacroDefine& define : listDefine )
+        {
+            if ( define._name != expected._pName )
+                continue;
+            ++foundCount;
+            SW_EXPECT_EQUAL( to_string( expected._value ), define._value );
+        }
+        SW_EXPECT_EQUAL( 1u, foundCount );
+    }
+}
+
 /**
  * @brief [ShaderEngineDefinesTest] 엔진 설정 사본을 싣지 않은 요청은 컴파일하지 않고 진다 — 컴파일 워커가 설정을 직접 읽어 채우지 않는다
  * @details 설정 다시 읽기는 제자리 덮기이고 그 울타리는 렌더 스레드만 기다린다. 요청을 만드는 쪽(`ShaderCache` · 쿠킹 시작)이 사본을 싣는다.
