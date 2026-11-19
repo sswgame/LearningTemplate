@@ -53,7 +53,7 @@ namespace sw::editor
 
     void EditorRenderViews::markViewDrawn( EditorViewKind kind, const float2& imageClientPos )
     {
-        EditorUIFrameOutput::ViewMark& mark = _uiFrame._arrView[static_cast<uint32>( kind )];
+        EditorUIFrameOutput::ViewMark& mark = _uiFrame._arrView[kind];
         mark._windowX                       = static_cast<int32>( MathUtil::round( imageClientPos._x ) );
         mark._windowY                       = static_cast<int32>( MathUtil::round( imageClientPos._y ) );
         mark._bDrawn                        = SW_TRUE;
@@ -74,12 +74,12 @@ namespace sw::editor
 
     void EditorRenderViews::destroyViewTarget( EditorViewKind kind )
     {
-        destroyTarget( _arrViewTarget[static_cast<uint32>( kind )] );
+        destroyTarget( _arrViewTarget[kind] );
     }
 
     void EditorRenderViews::ensureViewTargetSize( EditorViewKind kind, uint32 width, uint32 height )
     {
-        ensureTargetSize( _arrViewTarget[static_cast<uint32>( kind )], width, height );
+        ensureTargetSize( _arrViewTarget[kind], width, height );
     }
 
     const EditorPreviewTargetState* EditorRenderViews::findUIPreviewTargetState( uint32 id ) const
@@ -90,10 +90,10 @@ namespace sw::editor
     void EditorRenderViews::applyReadyAndPublishTargets()
     {
         EditorTargetSnapshot states;
-        for ( uint32 kindIndex = 0; kindIndex < static_cast<uint32>( EditorViewKind::Count ); ++kindIndex )
+        for ( const EditorViewKind kind : EnumRange<EditorViewKind>{} )
         {
-            applyIfReady( _arrViewTarget[kindIndex] );
-            states._arrView[kindIndex] = EditorViewTargetState::capture( _arrViewTarget[kindIndex] );
+            applyIfReady( _arrViewTarget[kind] );
+            states._arrView[kind] = EditorViewTargetState::capture( _arrViewTarget[kind] );
         }
         states._listPreview.reserve( _listPreviewTarget.size() );
         for ( EditorPreviewViewTarget& preview : _listPreviewTarget )

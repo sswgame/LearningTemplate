@@ -10,6 +10,7 @@
 #include "Core/Concurrency/ThreadSafety.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -97,8 +98,8 @@ namespace sw::editor
     /** @brief 게임 스레드가 넘기는 뷰 · 미리보기 타깃 값 묶음입니다(게임 → UI). */
     struct EditorTargetSnapshot
     {
-        EditorViewTargetState            _arrView[static_cast<uint32>( EditorViewKind::Count )]{};
-        vector<EditorPreviewTargetState> _listPreview{};
+        EnumArray<EditorViewKind, EditorViewTargetState> _arrView{};
+        vector<EditorPreviewTargetState>                 _listPreview{};
     };
 } // namespace sw::editor
 
@@ -141,18 +142,18 @@ namespace sw::editor
             uint32   _sceneKey{ 0 }; ///< 그릴 미리보기 씬(`SceneManager::getPreviewSceneKey`)
         };
 
-        ViewMark       _arrView[static_cast<uint32>( EditorViewKind::Count )]{};
-        PreviewRequest _arrPreview[kMaxEditorPreviewView]{};
-        uint32         _previewCount{ 0 };
-        uint32         _redrawReasons{ 0 };                   ///< UI 쪽 다시 그릴 까닭(`EditorRedrawReason` 비트 — 입력 · 잡은 항목 · 연속 프레임 요청). 게임 쪽 까닭은 읽는 쪽이 더한다
-        uint8          _bGameViewFocused{ SW_FALSE };         ///< 게임 뷰 창이 포커스를 가졌다
-        uint8          _bGameViewHovered{ SW_FALSE };         ///< 게임 뷰 창 위에 마우스가 있다
-        uint8          _bGameInputSurfaceFocused{ SW_FALSE }; ///< 게임 입력을 받는 다른 면(한 프로세스 재생의 월드 뷰포트)이 포커스를 가졌다
-        uint8          _bAnimationRequested{ SW_FALSE };      ///< 패널이 연속 프레임을 청했다(`requestAnimationFrame`)
-        uint8          _bEditorOwnsKeyboard{ SW_FALSE };      ///< 에디터 창이 키보드를 가졌다 — 게임 스레드가 엔진 키보드 포커스를 `Tool` 로 둔다(`EditorInputActions::applyKeyboardOwner`)
+        EnumArray<EditorViewKind, ViewMark> _arrView{};
+        PreviewRequest                      _arrPreview[kMaxEditorPreviewView]{};
+        uint32                              _previewCount{ 0 };
+        uint32                              _redrawReasons{ 0 };                   ///< UI 쪽 다시 그릴 까닭(`EditorRedrawReason` 비트 — 입력 · 잡은 항목 · 연속 프레임 요청). 게임 쪽 까닭은 읽는 쪽이 더한다
+        uint8                               _bGameViewFocused{ SW_FALSE };         ///< 게임 뷰 창이 포커스를 가졌다
+        uint8                               _bGameViewHovered{ SW_FALSE };         ///< 게임 뷰 창 위에 마우스가 있다
+        uint8                               _bGameInputSurfaceFocused{ SW_FALSE }; ///< 게임 입력을 받는 다른 면(한 프로세스 재생의 월드 뷰포트)이 포커스를 가졌다
+        uint8                               _bAnimationRequested{ SW_FALSE };      ///< 패널이 연속 프레임을 청했다(`requestAnimationFrame`)
+        uint8                               _bEditorOwnsKeyboard{ SW_FALSE };      ///< 에디터 창이 키보드를 가졌다 — 게임 스레드가 엔진 키보드 포커스를 `Tool` 로 둔다(`EditorInputActions::applyKeyboardOwner`)
 
         /** @brief 그 뷰를 그렸으면 true 입니다. */
-        bool wasViewDrawn( EditorViewKind kind ) const { return _arrView[static_cast<uint32>( kind )]._bDrawn == SW_TRUE; }
+        bool wasViewDrawn( EditorViewKind kind ) const { return _arrView[kind]._bDrawn == SW_TRUE; }
         /** @brief 호스트에 그 뷰의 렌더 타깃을 알릴지입니다(`EditorViewTargetUtil::shouldRequestSceneView` · `shouldRequestGameView`). */
         bool isViewRequested( EditorViewKind kind ) const
         {
@@ -226,7 +227,7 @@ namespace sw::editor
         // ---- 렌더 타깃(게임 스레드가 소유한다) — UI 는 `getUITargetState` · `findUIPreviewTargetState` 의 값만 읽고, 바꾸려면 명령을 보낸다.
 
         /** @brief 게임 스레드 쪽 — 뷰 RT 하나입니다. */
-        const EditorViewTarget& getViewTarget( EditorViewKind kind ) const { return _arrViewTarget[static_cast<uint32>( kind )]; }
+        const EditorViewTarget& getViewTarget( EditorViewKind kind ) const { return _arrViewTarget[kind]; }
         /** @brief 게임 스레드 쪽 — 뷰 렌더 타깃을 그 크기로 (다시) 만듭니다. 같은 크기이면 아무 일도 하지 않습니다(`EditorUICommandKind::FitViewTarget` 의 적용). */
         void ensureViewTargetSize( EditorViewKind kind, uint32 width, uint32 height );
         /** @brief 뷰 렌더 타깃 하나를 해제합니다. 그 렌더 타깃을 그렸을 프레임의 GPU 작업이 끝난 뒤에 파괴됩니다. */
@@ -246,7 +247,7 @@ namespace sw::editor
         /** @brief UI 프레임 시작(UI 쪽) — 그린 뷰 표시를 지우고, 게임 스레드가 마지막으로 넘긴 타깃 값을 이번 UI 프레임의 값으로 받습니다. */
         void clearViewDrawnMarks();
         /** @brief UI 쪽 — 이번 UI 프레임이 읽는 뷰 타깃 값입니다(프레임 시작에 받은 사본). */
-        const EditorViewTargetState& getUITargetState( EditorViewKind kind ) const { return _uiTargets._arrView[static_cast<uint32>( kind )]; }
+        const EditorViewTargetState& getUITargetState( EditorViewKind kind ) const { return _uiTargets._arrView[kind]; }
         /** @brief UI 쪽 — 이번 UI 프레임이 읽는 미리보기 타깃 값입니다. 게임 스레드가 아직 만들지 않았거나 놓았으면 nullptr 입니다. */
         const EditorPreviewTargetState* findUIPreviewTargetState( uint32 id ) const;
 
@@ -299,19 +300,19 @@ namespace sw::editor
         EditorPreviewViewTarget* findPreviewTargetMutable( uint32 id );
 
     private:
-        uint32                                 _nextTargetSerial{ 1 }; ///< 렌더 텍스처 경로의 번호(타깃 · 크기마다 새 경로)
-        IRHIDevice*                            _pRHIDevice{ nullptr }; ///< 렌더 텍스처를 요청할 디바이스(셸이 알린다)
-        ImGuiRenderer*                         _pRenderer{ nullptr };  ///< 렌더 타깃을 ImGui 텍스처로 등록하는 백엔드(셸이 알린다)
-        EditorViewTarget                       _arrViewTarget[static_cast<uint32>( EditorViewKind::Count )]{};
-        vector<EditorPreviewViewTarget>        _listPreviewTarget{};                    ///< 툴 창의 미리보기 타깃(게임 스레드 — 첫 `ensurePreviewTargetSize` 가 만든다)
-        atomic<uint32>                         _nextPreviewTargetID{ 1 };               ///< 다음 미리보기 타깃 id(`allocatePreviewTarget` — UI 가 받는다)
-        mutable mutex                          _targetStatesMutex{};                    ///< 넘긴 타깃 값 묶음을 지킨다 — 게임 스레드가 넘기고 UI 스레드가 받는다
-        EditorTargetSnapshot _publishedTargets SW_GUARDED_BY( _targetStatesMutex ){};   ///< 게임 스레드가 마지막으로 넘긴 타깃 값(`applyReadyAndPublishTargets`)
-        EditorTargetSnapshot                   _uiTargets{};                            ///< 이번 UI 프레임이 읽는 타깃 값(UI 스레드만 — `clearViewDrawnMarks` 가 받는다)
-        EditorUIFrameOutput                    _uiFrame{};                              ///< 이번 UI 프레임이 쓰는 값 묶음(UI 스레드만)
-        mutable mutex                          _publishedMutex{};                       ///< 넘긴 묶음을 지킨다 — UI 스레드가 넘기고 게임 스레드가 읽는다
-        EditorUIFrameOutput _publishedFrame    SW_GUARDED_BY( _publishedMutex ){};      ///< 마지막으로 넘긴 UI 프레임 값 묶음(`publishUIFrame`)
-        uint8                                  _bGameInputFocusedLastFrame{ SW_FALSE }; ///< 지난 프레임에 게임 뷰 · 게임 입력 면이 포커스였다(UI 쪽)
-        uint8                                  _bPreviewOverflowLogged{ SW_FALSE };     ///< 미리보기 뷰가 한 프레임 상한을 넘었다고 이미 남겼다
+        uint32                                      _nextTargetSerial{ 1 }; ///< 렌더 텍스처 경로의 번호(타깃 · 크기마다 새 경로)
+        IRHIDevice*                                 _pRHIDevice{ nullptr }; ///< 렌더 텍스처를 요청할 디바이스(셸이 알린다)
+        ImGuiRenderer*                              _pRenderer{ nullptr };  ///< 렌더 타깃을 ImGui 텍스처로 등록하는 백엔드(셸이 알린다)
+        EnumArray<EditorViewKind, EditorViewTarget> _arrViewTarget{};
+        vector<EditorPreviewViewTarget>             _listPreviewTarget{};                    ///< 툴 창의 미리보기 타깃(게임 스레드 — 첫 `ensurePreviewTargetSize` 가 만든다)
+        atomic<uint32>                              _nextPreviewTargetID{ 1 };               ///< 다음 미리보기 타깃 id(`allocatePreviewTarget` — UI 가 받는다)
+        mutable mutex                               _targetStatesMutex{};                    ///< 넘긴 타깃 값 묶음을 지킨다 — 게임 스레드가 넘기고 UI 스레드가 받는다
+        EditorTargetSnapshot _publishedTargets      SW_GUARDED_BY( _targetStatesMutex ){};   ///< 게임 스레드가 마지막으로 넘긴 타깃 값(`applyReadyAndPublishTargets`)
+        EditorTargetSnapshot                        _uiTargets{};                            ///< 이번 UI 프레임이 읽는 타깃 값(UI 스레드만 — `clearViewDrawnMarks` 가 받는다)
+        EditorUIFrameOutput                         _uiFrame{};                              ///< 이번 UI 프레임이 쓰는 값 묶음(UI 스레드만)
+        mutable mutex                               _publishedMutex{};                       ///< 넘긴 묶음을 지킨다 — UI 스레드가 넘기고 게임 스레드가 읽는다
+        EditorUIFrameOutput _publishedFrame         SW_GUARDED_BY( _publishedMutex ){};      ///< 마지막으로 넘긴 UI 프레임 값 묶음(`publishUIFrame`)
+        uint8                                       _bGameInputFocusedLastFrame{ SW_FALSE }; ///< 지난 프레임에 게임 뷰 · 게임 입력 면이 포커스였다(UI 쪽)
+        uint8                                       _bPreviewOverflowLogged{ SW_FALSE };     ///< 미리보기 뷰가 한 프레임 상한을 넘었다고 이미 남겼다
     };
 } // namespace sw::editor

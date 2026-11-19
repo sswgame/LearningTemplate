@@ -224,7 +224,7 @@ namespace sw::editor
                 if ( frame.isViewRequested( kind ) == false )
                     return;
                 const EditorViewTarget&              view = views.getViewTarget( kind );
-                const EditorUIFrameOutput::ViewMark& mark = frame._arrView[static_cast<uint32>( kind )];
+                const EditorUIFrameOutput::ViewMark& mark = frame._arrView[kind];
                 pOutTarget->_renderTarget                 = view._renderTarget;
                 pOutTarget->_width                        = view._width;
                 pOutTarget->_height                       = view._height;

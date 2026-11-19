@@ -219,7 +219,7 @@ namespace sw::editor
                 else
                     drawRenderDocButton();
                 ImGui::EndGroup();
-                getState()._arrSectionWidth[static_cast<size_t>( section )] = ImGui::GetItemRectSize().x;
+                getState()._arrSectionWidth[section] = ImGui::GetItemRectSize().x;
             }
 
             /**
@@ -243,8 +243,8 @@ namespace sw::editor
                 {
                     // 넘치면 "»" 단추 자리를 남기고 든 데까지만 줄에 둔다.
                     firstOverflow = 0;
-                    while ( firstOverflow < kSectionCount && endX + separatorWidth + getState()._arrSectionWidth[firstOverflow] + overflowWidth <= rightX )
-                        endX += separatorWidth + getState()._arrSectionWidth[firstOverflow++];
+                    while ( firstOverflow < kSectionCount && endX + separatorWidth + getState()._arrSectionWidth[static_cast<Section>( firstOverflow )] + overflowWidth <= rightX )
+                        endX += separatorWidth + getState()._arrSectionWidth[static_cast<Section>( firstOverflow++ )];
                 }
                 for ( size_t i = 0; i < firstOverflow; ++i )
                 {

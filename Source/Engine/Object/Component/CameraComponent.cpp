@@ -72,7 +72,7 @@ namespace sw
 
     bool CameraComponent::consumeCut( CameraCutReader reader )
     {
-        uint32& seen = _arrCutSeenStamp[static_cast<uint32>( reader )];
+        uint32& seen = _arrCutSeenStamp[reader];
         if ( _cutStamp == seen )
             return false;
         seen = _cutStamp; // 낡은 컷도 본 것으로 적어 둔다(다음 `markCut` 까지 다시 묻지 않게)

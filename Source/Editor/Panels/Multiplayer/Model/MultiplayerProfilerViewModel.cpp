@@ -103,12 +103,11 @@ namespace sw::editor
             return;
         const EditorNetProfilerTrack&  track   = *pTrack;
         const EditorNetProfilerSample* pLatest = track._series.findLatest();
-        for ( int32 channelIndex = 0; channelIndex < static_cast<int32>( EditorNetProfilerChannel::Count ); ++channelIndex )
+        for ( const EditorNetProfilerChannel channel : EnumRange<EditorNetProfilerChannel>{} )
         {
-            const EditorNetProfilerChannel channel = static_cast<EditorNetProfilerChannel>( channelIndex );
-            MultiplayerProfilerGraph&      graph   = outState._arrGraph[static_cast<size_t>( channelIndex )];
+            MultiplayerProfilerGraph& graph = outState._arrGraph[channel];
             track._series.copyChannel( channel, graph._listValue );
-            graph._latest = pLatest != nullptr ? pLatest->_arrValue[static_cast<size_t>( channelIndex )] : 0.0f;
+            graph._latest = pLatest != nullptr ? pLatest->_arrValue[channel] : 0.0f;
             graph._peak   = track._series.computePeak( channel );
         }
         _listKindEntryScratch.clear();

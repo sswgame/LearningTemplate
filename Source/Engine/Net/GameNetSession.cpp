@@ -690,12 +690,14 @@ namespace sw
             _pMetricRegistry->registerCounter( "net_authentication_failures_total", "Game UDP packets dropped because decryption, the session proof or the key confirmation failed", listShardLabel );
         metrics._pReplayRejectedCounter = _pMetricRegistry->registerCounter( "net_replay_rejected_packets_total", "Game UDP packets dropped by the replay window", listShardLabel );
         // 사유는 열거에서 만든다(None 은 끊김 사유가 아니다) — 사유를 더하면 손대지 않아도 시리즈가 는다.
-        for ( size_t reasonIndex = static_cast<size_t>( NetDisconnectReason::None ) + 1; reasonIndex < static_cast<size_t>( NetDisconnectReason::Count ); ++reasonIndex )
+        for ( const NetDisconnectReason reason : EnumRange<NetDisconnectReason>{} )
         {
+            if ( reason == NetDisconnectReason::None )
+                continue;
             const vector<MetricLabel> listLabel{
-                listShardLabel.front(), MetricLabel{ "reason", toString( static_cast<NetDisconnectReason>( reasonIndex ) ) }
+                listShardLabel.front(), MetricLabel{ "reason", toString( reason ) }
             };
-            metrics._arrDisconnectCounter[reasonIndex] = _pMetricRegistry->registerCounter( "net_disconnects_total", "Game UDP connections closed, by reason", listLabel );
+            metrics._arrDisconnectCounter[reason] = _pMetricRegistry->registerCounter( "net_disconnects_total", "Game UDP connections closed, by reason", listLabel );
         }
         return metrics;
     }
@@ -706,11 +708,10 @@ namespace sw
             return;
         for ( const NetEndpointEvent& event : _listEventScratch )
         {
-            const size_t          reasonIndex = static_cast<size_t>( event._reason );
-            const optional<int32> shardIndex  = _peers.findShardIndex( event._connectionID );
-            if ( event._kind != NetEndpointEvent::Kind::Disconnected || shardIndex.has_value() == false || reasonIndex >= static_cast<size_t>( NetDisconnectReason::Count ) )
+            const optional<int32> shardIndex = _peers.findShardIndex( event._connectionID );
+            if ( event._kind != NetEndpointEvent::Kind::Disconnected || shardIndex.has_value() == false || event._reason >= NetDisconnectReason::Count )
                 continue;
-            MetricCounter* pCounter = _listShard[static_cast<size_t>( *shardIndex )]->_metrics._arrDisconnectCounter[reasonIndex];
+            MetricCounter* pCounter = _listShard[static_cast<size_t>( *shardIndex )]->_metrics._arrDisconnectCounter[event._reason];
             if ( pCounter != nullptr )
                 pCounter->add();
         }

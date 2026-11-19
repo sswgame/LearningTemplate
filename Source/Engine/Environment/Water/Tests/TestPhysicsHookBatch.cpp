@@ -91,12 +91,12 @@ SW_TEST_CASE( PhysicsHookRegistryTest, GeneratedEntriesMatchOverrides )
     SW_REQUIRE_NOT_NULL( pRegistry );
     const PhysicsHookRegistry::Entry* pBody = pRegistry->findEntry( RigidBodyComponent::StaticType() );
     SW_REQUIRE_NOT_NULL( pBody );
-    SW_EXPECT_TRUE( pBody->_arrFunction[static_cast<size_t>( PhysicsHookSlot::PreStep )] != nullptr );
-    SW_EXPECT_TRUE( pBody->_arrFunction[static_cast<size_t>( PhysicsHookSlot::PostStep )] == nullptr );
+    SW_EXPECT_TRUE( pBody->_arrFunction[PhysicsHookSlot::PreStep] != nullptr );
+    SW_EXPECT_TRUE( pBody->_arrFunction[PhysicsHookSlot::PostStep] == nullptr );
     const PhysicsHookRegistry::Entry* pFloat = pRegistry->findEntry( BuoyancyComponent::StaticType() );
     SW_REQUIRE_NOT_NULL( pFloat );
-    SW_EXPECT_TRUE( pFloat->_arrFunction[static_cast<size_t>( PhysicsHookSlot::BeginFrame )] == nullptr );
-    SW_EXPECT_TRUE( pFloat->_arrFunction[static_cast<size_t>( PhysicsHookSlot::PreStep )] != nullptr );
+    SW_EXPECT_TRUE( pFloat->_arrFunction[PhysicsHookSlot::BeginFrame] == nullptr );
+    SW_EXPECT_TRUE( pFloat->_arrFunction[PhysicsHookSlot::PreStep] != nullptr );
 }
 
 /**

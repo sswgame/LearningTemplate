@@ -130,15 +130,14 @@ namespace sw::editor
     void MultiplayerProfilerTab::drawGraphs()
     {
         const float32 height = ImGui::GetTextLineHeight() * MultiplayerProfilerTabInternal::kGraphHeightInLines;
-        for ( int32 channelIndex = 0; channelIndex < static_cast<int32>( EditorNetProfilerChannel::Count ); ++channelIndex )
+        for ( const EditorNetProfilerChannel channel : EnumRange<EditorNetProfilerChannel>{} )
         {
-            const EditorNetProfilerChannel         channel = static_cast<EditorNetProfilerChannel>( channelIndex );
-            const MultiplayerProfilerGraph&        graph   = _viewState._arrGraph[static_cast<size_t>( channelIndex )];
+            const MultiplayerProfilerGraph&        graph = _viewState._arrGraph[channel];
             fixed_string<constant::buffer::kMax64> overlay;
             formatstring( overlay.data(), overlay.capacity(), "%# %# (peak %#)", Fmt( graph._latest, Format().precision( 1 ) ), MultiplayerProfilerTabInternal::getGraphUnit( channel ),
                           Fmt( graph._peak, Format().precision( 1 ) ) );
             ImGui::TextUnformatted( MultiplayerProfilerTabInternal::getGraphTitle( channel ) );
-            ImGui::PushID( channelIndex );
+            ImGui::PushID( static_cast<int32>( channel ) );
             ImGui::PlotLines( "##Graph", graph._listValue.data(), static_cast<int32>( graph._listValue.size() ), 0, overlay.c_str(), 0.0f, graph._peak > 0.0f ? graph._peak : 1.0f,
                               ImVec2( -1.0f, height ) );
             ImGui::PopID();

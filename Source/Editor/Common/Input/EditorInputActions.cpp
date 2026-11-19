@@ -178,21 +178,21 @@ namespace sw::editor
             event._bEditorUI = SW_TRUE; // 배타 가상 입력(시나리오)이 OS 이벤트를 버려도 이 키는 남는다
             if ( input.postRawEvent( event ) == false )
                 continue; // 큐가 차면 이 사건만 잃는다
-            const size_t keyIndex = static_cast<size_t>( event._payload._keyData._key );
+            const Key key = event._payload._keyData._key;
             if ( event._type == RawInputEventKind::KeyDown )
-                _arrForwardedKey[keyIndex] = true;
+                _arrForwardedKey[key] = true;
             else if ( event._type == RawInputEventKind::KeyUp )
-                _arrForwardedKey[keyIndex] = false;
+                _arrForwardedKey[key] = false;
         }
     }
 
     void EditorInputActions::releaseForwardedKeys( InputManager& input )
     {
-        for ( size_t keyIndex = 0; keyIndex < std::size( _arrForwardedKey ); ++keyIndex )
+        for ( const Key key : EnumRange<Key>{} )
         {
             // 큐가 차서 못 넣은 뗌은 다음 프레임에 다시 시도한다.
-            if ( _arrForwardedKey[keyIndex] && input.postRawEvent( makeForwardedKeyUp( static_cast<Key>( keyIndex ) ) ) )
-                _arrForwardedKey[keyIndex] = false;
+            if ( _arrForwardedKey[key] && input.postRawEvent( makeForwardedKeyUp( key ) ) )
+                _arrForwardedKey[key] = false;
         }
     }
 

@@ -339,8 +339,8 @@ namespace sw
         FixedStepTimer                  _stepTimer;
         vector<PhysicsComponent*>       _arrListComponent[3]; ///< 단계(`PhysicsComponentPhase`)마다 하나. 컴포넌트가 자기 자리(`_physicsIndex`)를 든다
         /// @brief 훅(`PhysicsHookSlot`)마다, 단계마다 그 훅을 부를 컴포넌트와 그 구간입니다(`refreshFrameHookLists`).
-        vector<PhysicsComponent*>                                         _arrListFrameHook[static_cast<size_t>( PhysicsHookSlot::Count )][3];
-        vector<FrameHookRun>                                              _arrListFrameHookRun[static_cast<size_t>( PhysicsHookSlot::Count )][3];
+        EnumArray<PhysicsHookSlot, vector<PhysicsComponent*>[3]>          _arrListFrameHook;
+        EnumArray<PhysicsHookSlot, vector<FrameHookRun>[3]>               _arrListFrameHookRun;
         unordered_map<const TypeInfo*, const PhysicsHookRegistry::Entry*> _mapHookEntry;       ///< 타입 → 등록 줄 기억(`findHookEntry`, 없음도 기억한다)
         PhysicsHookRegistry*                                              _pHookRegistry;      ///< 매니저의 서비스 묶음에서 받은 훅 표(빌림, 없으면 모두 가상 호출)
         uint32                                                            _hookGeneration;     ///< 마지막으로 본 `PhysicsHookRegistry::getGeneration` — 바뀌면 구간을 다시 짓는다

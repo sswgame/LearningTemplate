@@ -18,6 +18,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/EnumArray.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -73,8 +74,8 @@ namespace sw
          */
         struct Entry
         {
-            StaticTypeFunction       _pStaticType;
-            PhysicsHookBatchFunction _arrFunction[static_cast<size_t>( PhysicsHookSlot::Count )]; ///< 재정의하지 않은 훅은 nullptr
+            StaticTypeFunction                                   _pStaticType;
+            EnumArray<PhysicsHookSlot, PhysicsHookBatchFunction> _arrFunction; ///< 재정의하지 않은 훅은 nullptr
         };
 
         // ISubsystem — 세울 것이 없다(줄은 모듈을 올리는 길이 붙인다).
@@ -148,11 +149,11 @@ namespace sw
         /** @brief 등록 줄입니다. 재정의하지 않은 훅의 칸은 nullptr 입니다. */
         static PhysicsHookRegistry::Entry makeEntry()
         {
-            return PhysicsHookRegistry::Entry{
-                &TComponent::StaticType,
-                { kOverridesBeginFrame ? &beginFrame : nullptr, kOverridesPreStep ? &preStep : nullptr,
-                                        kOverridesPostStep ? &postStep : nullptr, kOverridesEndFrame ? &endFrame : nullptr }
-            };
+            // 훅 칸을 더하고 여기를 잊으면 makeEnumTable 이 컴파일을 멈춘다(중괄호 목록은 남은 칸을 nullptr 로 채웠다).
+            return PhysicsHookRegistry::Entry{ &TComponent::StaticType,
+                                               makeEnumTable<PhysicsHookSlot, PhysicsHookBatchFunction>(
+                                                   kOverridesBeginFrame ? &beginFrame : nullptr, kOverridesPreStep ? &preStep : nullptr,
+                                                   kOverridesPostStep ? &postStep : nullptr, kOverridesEndFrame ? &endFrame : nullptr ) };
         }
     };
 } // namespace sw

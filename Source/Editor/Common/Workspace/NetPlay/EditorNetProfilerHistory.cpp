@@ -15,8 +15,6 @@ namespace sw::editor
     {
         struct EditorNetProfilerHistoryInternal
         {
-            static size_t toSlot( EditorNetProfilerChannel channel ) { return static_cast<size_t>( channel ); }
-
             static bool isLargerShare( const EditorNetKindShare& left, const EditorNetKindShare& right )
             {
                 if ( left._byteCount != right._byteCount )
@@ -66,20 +64,18 @@ namespace sw::editor
     {
         outListValue.clear();
         outListValue.reserve( static_cast<size_t>( _count ) );
-        const size_t slot = EditorNetProfilerHistoryInternal::toSlot( channel );
         for ( int32 index = 0; index < _count; ++index )
         {
-            outListValue.push_back( getSample( index )._arrValue[slot] );
+            outListValue.push_back( getSample( index )._arrValue[channel] );
         }
     }
 
     float32 EditorNetProfilerSeries::computePeak( EditorNetProfilerChannel channel ) const
     {
-        const size_t slot = EditorNetProfilerHistoryInternal::toSlot( channel );
-        float32      peak = 0.0f;
+        float32 peak = 0.0f;
         for ( int32 index = 0; index < _count; ++index )
         {
-            peak = MathUtil::max( peak, getSample( index )._arrValue[slot] );
+            peak = MathUtil::max( peak, getSample( index )._arrValue[channel] );
         }
         return peak;
     }
@@ -98,19 +94,19 @@ namespace sw::editor
     {
         using Internal = EditorNetProfilerHistoryInternal;
         EditorNetProfilerSample sample;
-        sample._timeSeconds                                                                    = timeSeconds;
-        sample._arrValue[Internal::toSlot( EditorNetProfilerChannel::SentBytesPerSecond )]     = report._sentBytesPerSecond;
-        sample._arrValue[Internal::toSlot( EditorNetProfilerChannel::ReceivedBytesPerSecond )] = report._receivedBytesPerSecond;
-        sample._arrValue[Internal::toSlot( EditorNetProfilerChannel::RttMilliseconds )]        = report._rttMilliseconds;
-        sample._arrValue[Internal::toSlot( EditorNetProfilerChannel::LossPercent )]            = report._lossPercent;
+        sample._timeSeconds                                                = timeSeconds;
+        sample._arrValue[EditorNetProfilerChannel::SentBytesPerSecond]     = report._sentBytesPerSecond;
+        sample._arrValue[EditorNetProfilerChannel::ReceivedBytesPerSecond] = report._receivedBytesPerSecond;
+        sample._arrValue[EditorNetProfilerChannel::RttMilliseconds]        = report._rttMilliseconds;
+        sample._arrValue[EditorNetProfilerChannel::LossPercent]            = report._lossPercent;
         if ( pPrevious == nullptr )
             return sample;
         const float64 elapsedSeconds = timeSeconds - previousTimeSeconds;
-        sample._arrValue[Internal::toSlot( EditorNetProfilerChannel::SentPacketsPerSecond )] =
+        sample._arrValue[EditorNetProfilerChannel::SentPacketsPerSecond] =
             computeRate( pPrevious->_sentPacketCount, report._sentPacketCount, elapsedSeconds );
-        sample._arrValue[Internal::toSlot( EditorNetProfilerChannel::ReceivedPacketsPerSecond )] =
+        sample._arrValue[EditorNetProfilerChannel::ReceivedPacketsPerSecond] =
             computeRate( pPrevious->_receivedPacketCount, report._receivedPacketCount, elapsedSeconds );
-        sample._arrValue[Internal::toSlot( EditorNetProfilerChannel::ResentMessagesPerSecond )] =
+        sample._arrValue[EditorNetProfilerChannel::ResentMessagesPerSecond] =
             computeRate( pPrevious->_resentMessageCount, report._resentMessageCount, elapsedSeconds );
         return sample;
     }

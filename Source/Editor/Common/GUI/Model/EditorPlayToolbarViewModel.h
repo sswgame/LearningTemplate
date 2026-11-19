@@ -5,6 +5,7 @@
  *          툴바가 프레임 사이에 기억하는 보기 값(Step N 칸 · 확인 모달 · 넘침 폭)은 `EditorPlayToolbarUIState` 로 이 모델이 든다(에디터 범위 상태 저장소의 한 칸).
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -30,12 +31,12 @@ namespace sw::editor
     /** @brief 툴바가 프레임 사이에 기억하는 보기 값입니다(기록하지 않는다). */
     struct EditorPlayToolbarUIState
     {
-        int32                 _stepFrameCount{ 10 }; ///< "Step N" 이 진행할 프레임 수
-        EditorPlaySessionKind _pendingSession{ EditorPlaySessionKind::Play };
-        uint8                 _bConfirmUnsavedPlay{ SW_FALSE };                                           ///< 다음 그리기에서 미저장 확인 모달을 연다
-        uint8                 _bStartAtCamera{ SW_FALSE };                                                ///< Play 를 에디터 카메라 위치에서 시작한다
-        uint8                 _bAutoplayOffered{ SW_FALSE };                                              ///< 마지막 프레임에 자동 플레이 단추를 내놓았다(줄에 그렸거나 ">>" 펼침 안에 있다)
-        float32               _arrSectionWidth[static_cast<size_t>( EditorPlayToolbarSection::Count )]{}; ///< 묶음마다 마지막으로 그린 폭(넘침 판정)
+        int32                                        _stepFrameCount{ 10 }; ///< "Step N" 이 진행할 프레임 수
+        EditorPlaySessionKind                        _pendingSession{ EditorPlaySessionKind::Play };
+        uint8                                        _bConfirmUnsavedPlay{ SW_FALSE }; ///< 다음 그리기에서 미저장 확인 모달을 연다
+        uint8                                        _bStartAtCamera{ SW_FALSE };      ///< Play 를 에디터 카메라 위치에서 시작한다
+        uint8                                        _bAutoplayOffered{ SW_FALSE };    ///< 마지막 프레임에 자동 플레이 단추를 내놓았다(줄에 그렸거나 ">>" 펼침 안에 있다)
+        EnumArray<EditorPlayToolbarSection, float32> _arrSectionWidth{};               ///< 묶음마다 마지막으로 그린 폭(넘침 판정)
     };
 
     /** @brief 툴바가 한 프레임 그릴 값입니다(`EditorPlayToolbarViewModel::gather`). */

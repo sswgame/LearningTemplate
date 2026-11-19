@@ -31,7 +31,6 @@ namespace sw
         struct ScenePhysicsInternal
         {
             static constexpr uint32 kPhaseCount = static_cast<uint32>( PhysicsComponentPhase::Count );
-            static constexpr uint32 kHookCount  = static_cast<uint32>( PhysicsHookSlot::Count );
 
             /** @brief @p owner 의 바디 칸에 그 강체 칸 번호를 적습니다(바디가 없으면 아무것도 하지 않는다). */
             template <typename TOwner>
@@ -439,13 +438,13 @@ namespace sw
         if ( _bFrameHookListStale == SW_FALSE )
             return;
         _bFrameHookListStale = SW_FALSE;
-        for ( uint32 hookIndex = 0; hookIndex < ScenePhysicsInternal::kHookCount; ++hookIndex )
+        for ( const PhysicsHookSlot slot : EnumRange<PhysicsHookSlot>{} )
         {
-            const PhysicsHookBatchFunction pVirtualHook = getVirtualHook( static_cast<PhysicsHookSlot>( hookIndex ) );
+            const PhysicsHookBatchFunction pVirtualHook = getVirtualHook( slot );
             for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
             {
-                vector<PhysicsComponent*>& listHook = _arrListFrameHook[hookIndex][phase];
-                vector<FrameHookRun>&      listRun  = _arrListFrameHookRun[hookIndex][phase];
+                vector<PhysicsComponent*>& listHook = _arrListFrameHook[slot][phase];
+                vector<FrameHookRun>&      listRun  = _arrListFrameHookRun[slot][phase];
                 listHook.clear();
                 listRun.clear();
                 const TypeInfo* pRunType = nullptr;
@@ -453,7 +452,7 @@ namespace sw
                 {
                     const TypeInfo*                   pType     = pComponent->findCachedTypeInfo();
                     const PhysicsHookRegistry::Entry* pEntry    = _bHookBatchEnabled ? findHookEntry( pType ) : nullptr;
-                    const PhysicsHookBatchFunction    pFunction = pEntry != nullptr ? pEntry->_arrFunction[hookIndex] : pVirtualHook;
+                    const PhysicsHookBatchFunction    pFunction = pEntry != nullptr ? pEntry->_arrFunction[slot] : pVirtualHook;
                     if ( pFunction == nullptr )
                         continue; // 그 타입은 이 훅을 재정의하지 않았다(`PhysicsHooksOf`)
                     // 단계 목록에서 이어진 같은 타입만 한 구간이다(차례를 지킨다). 가상 호출 구간은 타입이 섞여도 된다.
@@ -472,9 +471,8 @@ namespace sw
 
     void ScenePhysics::runFrameHook( PhysicsHookSlot slot, uint32 phase, const PhysicsHookArgs& args )
     {
-        const uint32                     hookIndex = static_cast<uint32>( slot );
-        const vector<PhysicsComponent*>& listHook  = _arrListFrameHook[hookIndex][phase];
-        for ( const FrameHookRun& run : _arrListFrameHookRun[hookIndex][phase] )
+        const vector<PhysicsComponent*>& listHook = _arrListFrameHook[slot][phase];
+        for ( const FrameHookRun& run : _arrListFrameHookRun[slot][phase] )
         {
             run._pFunction( *this, listHook.data() + run._start, run._count, args );
         }

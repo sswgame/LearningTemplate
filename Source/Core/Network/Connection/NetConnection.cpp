@@ -300,11 +300,11 @@ namespace sw
     bool NetConnection::receiveMessage( NetChannelKind channel, vector<uint8>& outBuffer )
     {
         const int32 channelIndex       = static_cast<int32>( channel );
-        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelKind::Count ) || _arrIncoming[channelIndex]._listMessage.empty();
+        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelKind::Count ) || _arrIncoming[channel]._listMessage.empty();
         if ( bNoIncomingMessage )
             return false;
         // 바꿔 넣어 부른 쪽 버퍼의 옛 용량을 다시 쓴다 — 받는 쪽이 같은 버퍼로 계속 꺼내면 메시지마다 할당하지 않는다.
-        IncomingQueue& queue = _arrIncoming[channelIndex];
+        IncomingQueue& queue = _arrIncoming[channel];
         outBuffer.swap( queue._listMessage.front() );
         queue._byteCount -= static_cast<int32>( outBuffer.size() ) + kIncomingMessageOverheadBytes;
         recycleBuffer( queue._listMessage.front() );
@@ -320,10 +320,10 @@ namespace sw
     bool NetConnection::receiveMessageAppend( NetChannelKind channel, vector<uint8>& inoutBytes )
     {
         const int32 channelIndex       = static_cast<int32>( channel );
-        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelKind::Count ) || _arrIncoming[channelIndex]._listMessage.empty();
+        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelKind::Count ) || _arrIncoming[channel]._listMessage.empty();
         if ( bNoIncomingMessage )
             return false;
-        IncomingQueue& queue   = _arrIncoming[channelIndex];
+        IncomingQueue& queue   = _arrIncoming[channel];
         vector<uint8>& message = queue._listMessage.front();
         inoutBytes.insert( inoutBytes.end(), message.begin(), message.end() );
         if ( channel == NetChannelKind::ReliableOrdered )
@@ -345,7 +345,7 @@ namespace sw
 
     void NetConnection::pushIncoming( NetChannelKind channel, vector<uint8>& buffer )
     {
-        IncomingQueue& queue = _arrIncoming[static_cast<int32>( channel )];
+        IncomingQueue& queue = _arrIncoming[channel];
         const int32    bytes = static_cast<int32>( buffer.size() ) + kIncomingMessageOverheadBytes;
         if ( queue._byteCount + bytes > kMaxPendingReceiveBytes )
         {

@@ -72,7 +72,7 @@ namespace sw::editor
 
     void EditorSelectionSync::publish( EditorSelectionContext context, string_view assetPath, uint64 objectID )
     {
-        EditorSelectionSyncEntry& entry = _arrEntry[static_cast<size_t>( context )];
+        EditorSelectionSyncEntry& entry = _arrEntry[context];
         if ( entry._sequence != 0 && string_view{ entry._assetPath } == assetPath && entry._objectID == objectID )
             return;
         entry._assetPath = string{ assetPath };
@@ -83,7 +83,7 @@ namespace sw::editor
 
     const EditorSelectionSyncEntry& EditorSelectionSync::getEntry( EditorSelectionContext context ) const
     {
-        return _arrEntry[static_cast<size_t>( context )];
+        return _arrEntry[context];
     }
 
     const EditorSelectionSyncEntry* EditorSelectionSync::findLatest( uint8 acceptedMask ) const
