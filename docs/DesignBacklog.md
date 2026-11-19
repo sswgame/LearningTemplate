@@ -1152,6 +1152,29 @@ struct SW_API ReplicatedLayout
 
 근본 원인은 "리플렉션 칸을 도는 일을 소비자마다 다시 썼다" 이다. 같은 모양 후보는 `ObjectStateSerializer` 의 상태 쓰기 · 읽기 짝과 `ComponentDefaults` 의 기본값 비교다 — RF-4 가 같이 옮긴다.
 
+### 트리거 Enter · Stay · Exit 계약(설계 2026-11-20)
+
+**문제.** 겹침 영역이 여러 벌이고 경계 상황의 약속이 적혀 있지 않았다. 전수:
+1. **물리 트리거 · 센서**(Jolt `mIsSensor` · Box2D 센서 · 2D 연속 콜라이더의 쓸기): 백엔드 알림 → `PhysicsContactTracker`(셰이프 쌍 수 → 바디 쌍 시작 · 유지 · 끝) → `ScenePhysics` 가 `FlushPostPhysics` 단계에 게임 스레드에서 `Component::onOverlapBegin/End` 로 나눈다. 받는 쪽: `GimmickSensorComponent`(인원 · 무게), `ActivatorVolumeComponent`(→ `TutorialHint` · `AutosaveTrigger` · `SequenceTrigger`), `ScareTrigger` · `LaunchPad` · `BoostPad` · `ItemBox`. 유지는 opt-in(`registerContactStayListener`).
+2. **지역 볼륨 · 표면**(`ZoneVolumeComponent` · `ZoneContactComponent`): 매 프레임 겹침 질의(공간 격자 후보 → 모양 안 점 검사) → `ZoneTracker`(이번 프레임 집합과 지난 집합의 차) → 진입 · 체류 · 이탈. `ZoneSystem` 이 틱 뒤 게임 스레드에서.
+3. **거리 판정**: `ActivatorVolumeComponent` 의 `_radius`(물리 몸 없는 활성자), 들어오는 순간만.
+4. 이벤트가 아닌 가중 볼륨(`PostProcessVolume` · `AudioReverbZone` · `BuoyancyVolume`)과 복제 관심 격자(`NetInterestGrid`)는 Enter/Exit 계약 밖이다.
+전용 서버(`Ninja-Release-Server`)는 `Engine`(물리 포함) · `GameFramework`(Zone · Gimmick, `Client/` 아님)를 링크하므로 둘 다 서버에서 돈다. 권한 게이트는 없다 — 시뮬레이션하는 월드마다 같은 계약으로 낸다.
+
+결함: (a) 이벤트가 **바디 쌍** 단위라 몸이 여럿인 오브젝트(래그돌 뼈 · 탈것 · 캐릭터 안쪽 바디)는 시작을 여러 번 받고, 센서는 첫 끝에서 아직 안에 있는 대상을 뺐다(`GimmickSensor`), 발판은 여러 번 쐈다. (b) 같은 프레임의 끝과 시작이 쌍 순서로 섞였다. (c) 꺼진 지역 볼륨은 시스템이 건너뛰기만 해 안의 대상이 나가지 않았고, 꺼진(비활성) 대상도 후보에 남아 계속 "안" 이었다(유니티 함정과 같은 꼴). (d) 거리 판정은 활성자가 사라지면 "안" 표시가 남았다.
+
+**대조.** 언리얼: 컴포넌트 쌍마다 `BeginOverlap` 한 번, 생성 · 등록 시 `UpdateOverlaps` 로 이미 겹친 것에 시작, 파괴 · 콜리전 끔 · 등록 해제에 `EndOverlap`, 갱신은 끝을 먼저 낸다. 유니티: 다음 물리 단계에서 `OnTriggerEnter`, 비활성 · 파괴에 `OnTriggerExit` 가 오지 않는 것이 알려진 함정. Godot: `body_entered/exited`, `monitoring` 을 끄면 나간다. → 언리얼 꼴(생성 시 시작, 사라짐 · 꺼짐에 끝, 끝 먼저)을 따르되, 받는 훅이 오브젝트 전체(`Component::onOverlap*` 은 오브젝트의 켜진 컴포넌트 모두)라 단위는 **오브젝트 쌍**이다.
+
+**결정.**
+1. 물리 겹침은 `PhysicsOverlapTracker`(Engine/Physics/Scene) 하나가 낸다 — 열쇠는 (두 오브젝트 id, 각 쪽 트리거 여부, 2D/3D). 바디 쌍 시작 · 끝을 세어 0→1 에 시작, 1→0 에 끝. 트리거 여부를 열쇠에 두는 까닭: 상대의 감지 범위(트리거)와 몸을 받는 쪽이 가린다(`OverlapInfo::_bOtherTrigger`) — 하나로 합치면 범위가 먼저 들어온 뒤 몸이 들어와도 시작이 안 온다. `ScenePhysics` 의 겹침 나눔은 이 추적기의 결과만 쓴다(바디 쌍 이벤트를 직접 나누지 않는다 — 형식으로 한 길).
+2. 프레임 단위로 정리한다: 프레임 시작과 끝의 수로 **끝 먼저 → 시작 → 같은 프레임에 들고 난 것(시작 + 끝)**. 프레임 안에서 나갔다 다시 든 것(끝 0 거침)은 아무것도 내지 않는다(트리거 켜고 끄기 · 바디 다시 짓기가 헛 이탈 · 진입을 내지 않게).
+3. 유지(Stay)는 오브젝트 쌍마다 물리 프레임 한 번, 진입 프레임 포함, 올린 듣는 쪽만(`_pOnOverlapStay`). 막는 접촉의 유지는 지금처럼 바디 쌍 · 스텝마다.
+4. 경계 상황: 트리거 안에서 생성 → 다음 물리 스텝에 시작 한 번(백엔드가 겹친 채 추가된 바디의 접촉을 알린다). 파괴 · 비활성(바디를 놓는다 — `isSimulated`) · 로그아웃(폰 파괴) → 끝 한 번(`removeBodies`). 로그인(폰 생성) → 서버에서 시작 한 번 — 클라이언트는 이벤트를 복제받지 않고 자기 월드가 같은 계약으로 낸다(지금 넷 구조 그대로). 트리거 생성 · 파괴 · 켜고 끄기 · 모양 · 크기 · 이동 → 같은 규칙(바디 추가 · 제거 · 셰이프 교체). 순간 이동은 지나친 길에 이벤트를 내지 않는다(언리얼 `Teleport` · 유니티와 같다 — 2D 연속 콜라이더만 쓸기로 시작 + 끝). 트리거끼리는 `_bOtherTrigger` 가 참인 겹침으로 온다. 처리 안의 파괴 · 생성은 다음 프레임 이벤트가 되고 이번 목록은 사본을 돈다.
+5. 지역(`ZoneTracker`)은 이미 오브젝트 단위 · 이탈 먼저다. 두 벌을 한 추적기로 합치지 않는다 — 입력이 다르다(사건 수 세기 대 프레임 집합 차이) · 지역은 대상마다 모듈 기억을 든다. 계약만 같게 맞춘다: 꺼진 볼륨 · 표면은 안의 대상을 모두 내보내고(다음 갱신에서 다시 진입), 꺼지거나 파괴 대기인 물리 개체는 후보가 아니다(나간다).
+6. 스트리밍 셀이 내려가면 그 오브젝트는 파괴 길을 지나므로 파괴 규칙대로 남은 트리거에 끝이 간다(트리거가 내려가면 안의 대상에 끝). 스트리밍 코드는 바꾸지 않는다.
+
+**확인.** 단위 `PhysicsOverlapTrackerTest.*`(물리 없음 — 여러 바디 한 번, 끝 먼저, 들고 남, 다시 짓기, 트리거 열쇠 분리, 유지), `TriggerOverlapContractTest.*`(Jolt · Box2D 씬 — 안에서 생성 · 파괴 · 비활성 · 트리거 끄고 켜기 · 순간 이동 · 몸 둘), `ZoneTest.*`(꺼진 볼륨 이탈 · 비활성 후보 제외 · 안에서 생성 첫 프레임 진입) — 서버 단위(`Server --test`)에도 같은 케이스가 돈다. 시나리오 `triggercontract`(감시 값 `Physics.OverlapCount`).
+
 ## 도구 · 에디터 · 콘텐츠 파이프라인 설계(2026-11-17)
 
 미뤄 둔 항목을 작업자에게 바로 나눠 줄 수 있게 정했다. 절마다 문제(코드 자리) → 상용 대조 → 결정 · 기각 → 초안 → 이전 순서 → 측정이다(일과 사용자 결정 대기는 [NEXT](NEXT.md)). 새 린트 규칙은 없다 — 막을 것은 형식 · API · 로드 오류로 막는다.
