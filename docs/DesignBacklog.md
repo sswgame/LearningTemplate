@@ -1728,3 +1728,23 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 **3. 에디터 · 키트.** 빈 곳(영향 순): VFX 편집기(미리보기만), 폴리지 칠하기, 스플라인 점 손잡이, 물리 에셋 시각 편집, 패키징 플랫폼 선택, 로컬라이제이션 패널. 키트: "꽂으면 도는" 컴포넌트 층(데모 래퍼를 키트 `Component/` 로 — Lyra Game Feature 자리), 테마파크 배치 패널을 표본으로 카탈로그 편집 · 미리보기 일반화 + Map Check 키트 검증 등록점, 새 게임 · 장르 키트 생성기, 키트 README. 서버만 있고 쓰는 게임이 없는 키트(Social · Trade · LiveOps · ServerDirectory · NetTurnRelay)는 지우지 않고 붙인다. 정리 검토: GF 본체 `Gimmick/Genre/*` 를 키트로, 호러 4 종 공통(은신 · 소음 · 조명) 합치기.
 
 **4. 성능(측정 뒤 — S8 줄과 같은 규칙).** 동기 대기(히치)가 처리량보다 먼저: 프레임 단계 안 동기 로드 경고 · 렌더 스레드 디스크 IO 단언을 구조로 먼저 넣고, VAT 굽기 · Vulkan 파이프라인 캐시 저장 · 파괴 셰이프 · 프레임 경로 동기 에셋 로드 5 곳을 비동기로. 문자열: 텍스처 스트리밍의 머티리얼 경로 복사 · 글꼴 체인 키 · 프리팹 스폰 경로 정규화 · 캐릭터마다 이름 intern — 유틸에 버퍼 받는 판, 핫 경로 API 는 `string_view` · `hashed_string` 만. 리플렉션 로드 경로 칸 형식 해석을 `PropertyInfo` 캐시로. 컨테이너: Swiss table 꼴 색인 · 정수 해시 곱셈 · `m[sv]` 임시 문자열. 숫자 확인: NEXT "생성 코드 1.65 MB" 대 지금 빌드 트리 9.33 MB — 측정 범위부터 맞춘다.
+
+### 멀티플레이 스트리밍 소스 · 관련성(설계 2026-11-20)
+
+> 질문: 스트리밍 월드에서 서버는 어느 셀을 올리고, 관련성은 셀과 어떻게 맞물리며, 클라이언트는 아직 오르지 않은 셀의 복제 엔티티를 어떻게 다루는가?
+> 결론: 서버 셀 = 관찰자 소스(위치 · 반경 · 우선순위) 반경의 합집합, 관련성 격자 = 스트리밍 격자. 클라이언트는 셀이 다 오를 때까지 복제 엔티티를 보류하고, 셀에 놓인 엔티티는 쿠킹 파일 id 로 맞춰 스폰하지 않는다. 클라이언트가 셀 상태를 서버에 알리지 않는다.
+
+**대조.**
+- 언리얼 Replication Graph: Spatial2D 노드(격자 칸마다 액터 목록 — 연결은 둘레 칸만 모은다) · AlwaysRelevant 노드(전역 목록) · 연결별 노드(AlwaysRelevant_ForConnection — 자기 폰 · 파티). 우리: 칸 = `NetInterestGrid`(칸 = `StreamingCellGrid` 셀), 전역 = `_setAlwaysRelevant`, 연결별 = `IInterestPolicy::isAlwaysRelevant( connection, … )` — 이미 있다.
+- 언리얼 World Partition 서버 스트리밍: 플레이어 컨트롤러마다 스트리밍 소스(`FWorldPartitionStreamingSource` — 위치 · 모양 반경 · `EStreamingSourcePriority` 0 이 가장 먼저), 서버는 모든 소스의 합집합을 올린다. 우리: `StreamingSource{ 위치, 로딩 반경, 우선순위 }`, 우선순위 값은 언리얼과 같다(Highest 0 · High 64 · Normal 128 · Low 192 · Lowest 255). 읽기 차례는 덮는 소스 중 가장 급한 우선순위 → 가까운 거리, 내리기는 모든 소스에서 (그 소스 반경 + 여유) 밖.
+- 정적 액터 NetGUID: 맵에서 읽은 액터(bNetStartup)는 경로 이름으로 서버 · 클라이언트가 같은 객체를 가리킨다 — 클라이언트는 새로 스폰하지 않고 이미 읽은 액터에 묶고, 관련성으로 채널이 닫혀도 지우지 않는다. 못 풀면 스폰하지 않고 경고한다. 우리: `MMOEntity::_staticID` = 쿠킹된 씬의 엔티티 파일 id(같은 쿠킹본이라 양쪽이 같다).
+- 레벨을 아직 안 올린 클라이언트: 언리얼은 클라이언트가 `ServerUpdateLevelVisibility` 로 보이는 레벨을 알리고, 서버는 그 레벨의 액터 복제를 미룬다(액터가 레벨 객체에 속해 레벨 없이 스폰할 수 없기 때문).
+
+**결정.**
+1. 소스(`Engine/Scene/StreamingCellGrid.h` 의 `StreamingSource` · `StreamingSourcePriority`): `SceneStreamingSubsystem::setExternalSources( span<const StreamingSource> )` 는 반경이 유한한 0 이상이 아니면 오류로 거절한다. 위치만 받는 옛 입구는 격자 로딩 반경 · Normal 로 남는다(카메라 원점도). `getActiveSources` 가 소스를 돌려주고 내비 타일 스트리밍도 소스 반경을 쓴다 — 셀과 타일이 다른 반경으로 오르지 않게.
+2. 서버 관찰자: `MMOReplicator::setObserver` 의 소스 반경은 격자 로딩 반경, 우선순위 Normal. `setObserverStreaming( 연결, 반경, 우선순위 )` 로 바꾸되 반경 < 나가는 반경이면 거절한다 — 보이는 엔티티가 서버에 오르지 않은 셀에 있을 수 없다(`initialize` 의 같은 규칙을 관찰자마다). 서버의 오른 셀 = 관찰자 반경의 합집합.
+3. 클라이언트 보류(`MMOClientView` + `IMMOClientWorld`, 씬 구현 `MMOSceneClientWorld`): 새로 보임의 자리 셀이 다 오르지 않았거나(`SceneStreamingSubsystem::isCellStreamingCompleted` — 그 좌표에서 켜진 레이어 조각이 모두 Loaded · Failed, 조각 없는 셀은 끝난 것) 정적 엔티티의 셀 오브젝트가 아직 없으면 보류한다. 보류 중 갱신은 틱 규칙대로 들고, 사라짐이면 사건 없이 버린다. `update( 초 )` 가 다 오른 것을 놓고, 제한 시간(`MMOClientViewConfig::_cellHoldTimeoutSeconds` — 기본값 없음, 0 이면 `setWorld` 가 거절)이 지나면 경고한 뒤 동적은 놓고(영원히 숨기지 않는다 — 서버 나가는 반경이 클라이언트 로딩 반경보다 큰 설정 결함의 신호) 정적은 버린다(중복 스폰보다 안 보임이 낫다, 언리얼과 같다). 월드를 주지 않은 보기(LanternVale — 스트리밍 씬이 아니다)는 지금처럼 곧바로 놓는다.
+4. 정적 엔티티 사건은 `Bound` · `Unbound`(셀 오브젝트 id 를 싣는다)로 `Entered` · `Left` 와 종류부터 다르다 — 게임이 `Entered` 에만 스폰하면 정적 엔티티를 스폰할 길이 없다(형식으로 막음). 월드 없이 정적 id 가 오면 오류로 버린다.
+5. 클라이언트 → 서버 셀 상태 보고는 두지 않는다. 우리 엔티티는 셀 오브젝트에 속하지 않아 셀 없이도 상태를 들 수 있고(보류), 보고를 두면 서버가 믿을 수 없는 입력(가짜 "안 올랐음" 으로 복제를 피하기 · 셀 목록 폭주)을 검증해야 하는 공격면만 생긴다. 대가: 보류 중에도 갱신 대역폭이 든다 — 보류는 텔레포트 직후 몇 틱이다.
+
+**남은 위험.** 우선순위는 읽기 차례만 정한다(언리얼처럼 소스마다 목표 상태 Loaded · Activated 를 두지 않는다). 부모(붙은 오브젝트)를 기다리는 보류는 없다 — MMO 엔티티에 부모 칸이 없다. 두 프로세스 짝 시나리오는 스트리밍 씬을 쓰는 게임이 생길 때(LanternVale 은 격자만) — 그때까지 같은 경로를 루프백 끝단 두 클라이언트 · 서버 · 클라이언트 씬 셋으로 단위 테스트가 돈다(`NetMMOStreamingTest`).
