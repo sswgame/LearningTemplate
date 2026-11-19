@@ -635,8 +635,8 @@ namespace sw
         bool bArmed = true;
         for ( int32 weaponIndex = 0; weaponIndex < kWeaponCount; ++weaponIndex )
         {
-            const string&    weaponID = _listWeaponID[static_cast<size_t>( weaponIndex )];
-            const WeaponDef* pDef     = pCatalog->find( hashed_string( weaponID ) );
+            const CatalogKey<WeaponDef>& weaponID = _listWeaponID[static_cast<size_t>( weaponIndex )];
+            const WeaponDef*             pDef     = pCatalog->find( weaponID.key() );
             if ( pDef == nullptr )
             {
                 SW_LOG_ERROR_ID( "ShooterPlayer.WeaponSlotNamesWhich", "[Shooter] weapon slot %# names '%#', which is not in the weapon catalog", weaponIndex + 1, weaponID.c_str() );

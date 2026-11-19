@@ -125,4 +125,6 @@
 	<Field owner="TacticsSRPGDemoComponent" field="_listPlayerUnit" tag="SRPGUnitDef"/>
 	<Field owner="TacticsSRPGDemoComponent" field="_listEnemyUnit" tag="SRPGUnitDef"/>
 	<Field owner="TacticsSRPGDemoComponent" field="_pilot" tag="SRPGPilotDef"/>
+	<CatalogKey tag="WeaponDef" catalog="WeaponCatalog" entry="Weapon"/>
+	<Field owner="ShooterPlayerComponent" field="_listWeaponID" tag="WeaponDef"/>
 </DataCatalogReferenceTable>
