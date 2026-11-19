@@ -11,9 +11,10 @@
 -->
 <RenderPassDesc _name="FrameComputePass">
 	<_listResource>
-		<!-- 뷰마다 지난 프레임의 장면 깊이 — 뷰 그래프가 쓰고 프레임 사이에 남은 첨부다(이번 프레임 뷰 그래프 전에 읽는다). -->
-		<RenderGraphResourceDesc _name="PreviousSceneDepth" _kind="External" />
-		<RenderGraphResourceDesc _name="DepthHistory" _kind="Persistent" />
+		<!-- 뷰마다 지난 프레임의 장면 깊이 — 뷰 그래프가 쓰고 프레임 사이에 남은 첨부다(이번 프레임 뷰 그래프 전에 읽는다).
+		     `_viewable` 기본은 버퍼다 — 입력은 SRV, 출력은 UAV(텍스처 출력은 렌더 타깃). 규칙 밖 접근은 패스의 `_listIndirectArgs` · `_listCopySource` · `_listCopyDest`. -->
+		<RenderGraphResourceDesc _name="PreviousSceneDepth" _kind="External" _viewable="Texture" />
+		<RenderGraphResourceDesc _name="DepthHistory" _kind="Persistent" _viewable="Texture" />
 		<RenderGraphResourceDesc _name="HZB" _kind="Persistent" />
 		<RenderGraphResourceDesc _name="ParticleState" _kind="Persistent" />
 		<RenderGraphResourceDesc _name="InstanceBuffer" _kind="External" />

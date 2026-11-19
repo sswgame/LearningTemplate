@@ -78,7 +78,8 @@ namespace sw
         return access == RenderGraphAccess::RenderTarget || access == RenderGraphAccess::DepthRead || access == RenderGraphAccess::DepthWrite;
     }
 
-    /** @brief 그래프 자원의 종류입니다. 받는 쪽(레벨 콜백)이 이름을 텍스처 표와 버퍼 표 중 어디서 찾을지 정한다. */
+    /** @brief 그래프 자원의 종류입니다. 받는 쪽(레벨 콜백)이 이름을 텍스처 표와 버퍼 표 중 어디서 찾을지 정한다. 파이프라인 XML 의 `_listResource` 가 `_viewable` 로 적는다. */
+    ENUM()
     enum class RenderGraphViewableKind : uint8
     {
         Texture,
@@ -370,7 +371,7 @@ namespace sw
         /**
          * @brief 그래프 밖에서 사는 자원(GPUScene 컬링 인자 · HZB · 라이트 그리드 · 입자)을 처음 접근 @p initialAccess 로 들입니다 — 언리얼 `RegisterExternalBuffer` 자리.
          * @details 실행이 프레임 시작에 그 접근을 추적 상태로 심는다 — 첫 사용이 같은 접근이면 전이가 없다. 끝 접근은 `RenderGraphExecutionContext::findAccess` 로 내보낸다.
-         *          수명 종류는 External 로 선언된다.
+         *          수명 종류는 선언하지 않았으면 External 로 선언된다(Persistent 로 선언한 자원은 그대로).
          */
         void importResource( hashed_string name, RenderGraphViewableKind type, RenderGraphAccess initialAccess );
 

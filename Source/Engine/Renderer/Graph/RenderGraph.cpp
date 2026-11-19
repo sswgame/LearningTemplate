@@ -338,7 +338,9 @@ namespace sw
 
     void RenderGraph::importResource( hashed_string name, RenderGraphViewableKind type, RenderGraphAccess initialAccess )
     {
-        declareResource( name, RenderGraphResourceKind::External );
+        // 파이프라인이 Persistent 로 선언한 자원(HZB · 입자 상태)은 그 종류를 지킨다 — 들이기는 처음 접근만 정한다.
+        if ( getResourceKind( name ) == RenderGraphResourceKind::Transient )
+            declareResource( name, RenderGraphResourceKind::External );
         for ( RenderGraphResourceAccess& imported : _listImportedResource )
         {
             if ( imported._resource == name )
