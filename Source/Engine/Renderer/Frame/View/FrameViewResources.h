@@ -56,10 +56,15 @@ namespace sw
         FrameViewResources& operator=( const FrameViewResources& ) = delete;
 
         /**
-         * @brief 뷰 하나의 트랜지언트를 이 크기로 맞춥니다. 크기 · 그림자 품질이 같으면 그대로 두고, 다시 만들었으면 true 입니다.
+         * @brief 뷰 하나의 트랜지언트를 이 크기(출력 공간 — 렌더 공간은 시간 업스케일 배율로 줄인다)로 맞춥니다. 크기 · 그림자 품질이 같으면 그대로 두고, 다시 만들었으면 true 입니다.
          * @details 다시 만들면 TAA · 깊이 히스토리, 가림 타일, 자동 노출 기록도 새로 만든다. 새것이라 시간 누적 기록은 첫 프레임에 버린다(`_bHasHistory` 를 내린다).
          */
         [[nodiscard]] bool updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height, const RenderGraphAliasPlan& aliasPlan, uint32 aliasGeneration );
+        /**
+         * @brief 시간 업스케일의 렌더 해상도 배율입니다(EngineConfig `_render._temporalUpscaleRenderScale`). 출력 공간 첨부를 선언하지 않은 파이프라인은 늘 1 입니다.
+         * @details 값이 없거나 범위 밖이면 멈춘다(폴백 없음). @p width · @p height(출력 공간)에 곱해 렌더 공간 크기가 된다(`TransientAttachmentPool::computeRenderExtent`).
+         */
+        [[nodiscard]] float32 getTemporalUpscaleRenderScale() const;
         /** @brief 뷰 하나의 트랜지언트 · 히스토리 · 가림 타일 · 후처리 기록을 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseViewTransients( FrameViewTarget& view );
         /**

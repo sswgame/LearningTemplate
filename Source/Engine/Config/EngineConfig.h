@@ -313,6 +313,50 @@ namespace sw
         float32 _taaHistoryWeight{};
 
         /**
+         * @brief TAA 기록 비율의 하한 — 빠르게 움직이거나 기록을 믿기 어려운 픽셀의 누적 정도(taa.hlsl `SW_TAA_MIN_HISTORY_WEIGHT`). `_taaHistoryWeight` 이하여야 한다.
+         * @details 블렌드는 기록 신뢰도(클리핑 전후 휘도 차) · 화면 속도로 이 값과 `_taaHistoryWeight` 사이를 고른다(`TemporalMath::computeHistoryWeight` — temporal_math.hlsli, Adria · Playdead TAA 의 feedback min · max).
+         */
+        PROPERTY( Min = 0.0, Max = 0.99 )
+        float32 _taaMinHistoryWeight{};
+
+        /// @brief 시간 업스케일 렌더 배율의 하한입니다(언리얼 `r.ScreenPercentage` 의 TSR 권장 하한 50 % 아래까지 둔다 — 그 아래는 표본이 모자라 흐리다).
+        static constexpr float32 kMinTemporalUpscaleRenderScale = 0.25f;
+        /**
+         * @brief 시간 업스케일(TAAU)의 렌더 해상도 배율 — 장면을 출력 해상도 × 이 값으로 그리고 TAA 가 출력 해상도로 키운다(언리얼 1 차 화면 배율 `r.ScreenPercentage` 와 TAAU).
+         * @details 1 이면 두 해상도 공간이 같아 업스케일 없이 지금과 같은 경로다. 출력 공간 첨부(`RenderPassAttachment::_resolutionSpace`)를 선언한 파이프라인(디퍼드)에만 든다.
+         *          값이 없거나 범위 밖이면 멈춘다(`FrameViewResources::getTemporalUpscaleRenderScale`). 품질 단계(RenderQuality.json)가 낮을수록 작게 둔다(언리얼 확장성 단계와 같은 자리).
+         */
+        PROPERTY( Min = 0.25, Max = 1.0 )
+        float32 _temporalUpscaleRenderScale{};
+
+        /** @brief TAA 분산 클리핑 폭 γ — YCoCg 이웃 평균 ± γσ 상자로 기록을 자른다(taa.hlsl `SW_TAA_VARIANCE_CLIP_GAMMA`, Salvi 2016 은 1 · 언리얼은 1 근처). 작을수록 고스팅이 줄고 깜빡임이 는다. */
+        PROPERTY( Min = 0.1, Max = 4.0 )
+        float32 _taaVarianceClipGamma{};
+
+        /** @brief 이 화면 속도(px/프레임) 이상이면 TAA 기록 비율이 하한까지 내려간다(taa.hlsl `SW_TAA_VELOCITY_REJECT_PIXELS`). 0 보다 커야 한다. */
+        PROPERTY( Min = 0.01 )
+        float32 _taaVelocityRejectPixels{};
+
+        /**
+         * @brief 자동 노출 히스토그램에서 버리는 어두운 쪽 몫(%, auto_exposure.hlsl `SW_AUTO_EXPOSURE_LOW_PERCENT`). 남은 구간의 평균 로그 휘도로 노출을 정한다.
+         * @details 언리얼 Auto Exposure Histogram 의 Low Percent · High Percent 자리다 — 화면 대부분이 하늘이거나 검은 띠가 있는 장면에서 평균이 끝으로 끌리지 않는다.
+         */
+        PROPERTY( Min = 0.0, Max = 100.0 )
+        float32 _autoExposureLowPercent{};
+
+        /** @brief 자동 노출 히스토그램에서 남기는 위 끝(%, `SW_AUTO_EXPOSURE_HIGH_PERCENT`) — 이보다 밝은 몫(하이라이트 · 광원)은 버린다. `_autoExposureLowPercent` 보다 커야 한다. */
+        PROPERTY( Min = 0.0, Max = 100.0 )
+        float32 _autoExposureHighPercent{};
+
+        /** @brief 자동 노출 히스토그램이 덮는 log2 휘도의 아래 끝(`SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN`, 언리얼 Histogram Log Min). 이보다 어두운 텍셀은 첫 칸에 든다. */
+        PROPERTY()
+        float32 _autoExposureHistogramLogMin{};
+
+        /** @brief 자동 노출 히스토그램이 덮는 log2 휘도의 위 끝(`SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX`). 아래 끝보다 커야 한다. 이보다 밝은 텍셀은 끝 칸에 든다. */
+        PROPERTY()
+        float32 _autoExposureHistogramLogMax{};
+
+        /**
          * @brief 한 프레임에 자리를 받는 추가 뷰(캡처 카메라 · 화면 사각형 · 에디터 씬 뷰)의 수입니다. 넘치면 스케줄러가 보이는 뷰 · 늦은 뷰 먼저 준다(`RenderViewScheduler`).
          * @details 뷰마다 컬링 슬롯 둘 · 상수 버퍼 · 트랜지언트 풀이 하나씩 든다. 상한은 `kExtraRenderViewCapacity`(RenderView.h)와 같다 — 범위 밖이면 첫 프레임이 멈춘다(`RenderViewCollector::getMaxExtraViewCount`).
          */

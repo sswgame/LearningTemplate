@@ -195,11 +195,18 @@ namespace sw
      */
     struct ShaderEnginePolicy
     {
-        float32 _taaHistoryWeight;       ///< `SW_TAA_HISTORY_WEIGHT` — `EngineConfig::_render._taaHistoryWeight`
-        float32 _probeNormalBias;        ///< `SW_PROBE_NORMAL_BIAS` — `EngineConfig::_render._probeVisibility._normalBias`
-        float32 _probeViewBias;          ///< `SW_PROBE_VIEW_BIAS` — `_probeVisibility._viewBias`
-        float32 _probeBackfaceFloor;     ///< `SW_PROBE_BACKFACE_FLOOR` — `_probeVisibility._backfaceFloor`
-        float32 _probeChebyshevExponent; ///< `SW_PROBE_CHEBYSHEV_EXPONENT` — `_probeVisibility._chebyshevExponent`
+        float32 _taaHistoryWeight;            ///< `SW_TAA_HISTORY_WEIGHT` — `EngineConfig::_render._taaHistoryWeight`
+        float32 _probeNormalBias;             ///< `SW_PROBE_NORMAL_BIAS` — `EngineConfig::_render._probeVisibility._normalBias`
+        float32 _probeViewBias;               ///< `SW_PROBE_VIEW_BIAS` — `_probeVisibility._viewBias`
+        float32 _probeBackfaceFloor;          ///< `SW_PROBE_BACKFACE_FLOOR` — `_probeVisibility._backfaceFloor`
+        float32 _probeChebyshevExponent;      ///< `SW_PROBE_CHEBYSHEV_EXPONENT` — `_probeVisibility._chebyshevExponent`
+        float32 _taaMinHistoryWeight;         ///< `SW_TAA_MIN_HISTORY_WEIGHT` — `_render._taaMinHistoryWeight`
+        float32 _taaVarianceClipGamma;        ///< `SW_TAA_VARIANCE_CLIP_GAMMA` — `_render._taaVarianceClipGamma`
+        float32 _taaVelocityRejectPixels;     ///< `SW_TAA_VELOCITY_REJECT_PIXELS` — `_render._taaVelocityRejectPixels`
+        float32 _autoExposureLowPercent;      ///< `SW_AUTO_EXPOSURE_LOW_PERCENT` — `_render._autoExposureLowPercent`
+        float32 _autoExposureHighPercent;     ///< `SW_AUTO_EXPOSURE_HIGH_PERCENT` — `_render._autoExposureHighPercent`
+        float32 _autoExposureHistogramLogMin; ///< `SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN` — `_render._autoExposureHistogramLogMin`
+        float32 _autoExposureHistogramLogMax; ///< `SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX` — `_render._autoExposureHistogramLogMax`
 
         /** @brief 엔진 설정에서 사본을 뜹니다. 설정 덮기와 겹치지 않는 스레드(게임 스레드 · 렌더 스레드)에서만 부른다. */
         [[nodiscard]] static ShaderEnginePolicy capture();
@@ -275,7 +282,7 @@ namespace sw
         static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc );
 
         /**
-         * @brief 엔진이 모든 컴파일에 넣는 define(엔진 텍스처 칸 표 `SW_EMU_SLOT_<이름>=<칸>` · `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index`, 렌더 정책 `SW_TAA_HISTORY_WEIGHT` · `SW_PROBE_*`)을 @p inoutList 뒤에 더합니다.
+         * @brief 엔진이 모든 컴파일에 넣는 define(엔진 텍스처 칸 표 `SW_EMU_SLOT_<이름>=<칸>` · `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index`, 렌더 정책 `SW_TAA_*` · `SW_PROBE_*` · `SW_AUTO_EXPOSURE_*`)을 @p inoutList 뒤에 더합니다.
          * @details 렌더 정책 값은 `EngineConfig::_render`(Config/Engine/EngineConfig.json)가 정본이다 — 셰이더가 읽는 정책 값은 이 한 경로로만 간다(셰이더에 기본값이 없다).
          *          값은 요청이 실어 온 사본 @p enginePolicy 다 — 컴파일 워커에서 불리므로 설정을 직접 읽지 않는다.
          * @details 요청에 없고 엔진 바이너리가 정하는 컴파일 입력이라 도구 지문(`ShaderCookStamp::getToolchainFingerprint`)이 이 목록을 섞는다 —

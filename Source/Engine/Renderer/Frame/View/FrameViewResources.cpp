@@ -9,6 +9,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Config/EngineConfig.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -227,13 +229,17 @@ namespace sw
     {
         TransientAttachmentPool& pool             = view._transientPool;
         const uint32             shadowResolution = _frameSettings._shadowMapResolution; // 게임 스레드가 뜬 사본(텍스처를 만들 수 있는 범위로 잘랐다) — 그림자 행렬의 텍셀 스냅과 같은 값
-        const bool               bPoolUnchanged   = width == pool.getWidth() && height == pool.getHeight() && pool.isEmpty() == false && view._shadowMapResolution == shadowResolution &&
-                                    view._transientAliasGeneration == aliasGeneration;
+        // 받은 크기는 출력 공간(TAA 뒤)이다. 시간 업스케일이 켜지면 장면(렌더 공간)은 배율만큼 작게 그리고 TAA 가 키운다(언리얼 1 차 화면 배율).
+        const float32 renderScale    = getTemporalUpscaleRenderScale();
+        const uint32  renderWidth    = TransientAttachmentPool::computeRenderExtent( width, renderScale );
+        const uint32  renderHeight   = TransientAttachmentPool::computeRenderExtent( height, renderScale );
+        const bool    bPoolUnchanged = renderWidth == pool.getWidth() && renderHeight == pool.getHeight() && width == pool.getOutputWidth() && height == pool.getOutputHeight() &&
+                                    pool.isEmpty() == false && view._shadowMapResolution == shadowResolution && view._transientAliasGeneration == aliasGeneration;
         if ( bPoolUnchanged )
             return false;
 
         releaseViewTransients( view );
-        pool.setSize( width, height );
+        pool.setSize( renderWidth, renderHeight, width, height );
         view._shadowMapResolution      = shadowResolution;
         view._transientAliasGeneration = aliasGeneration;
         placeTransients( pool, aliasPlan );
@@ -260,7 +266,8 @@ namespace sw
             if ( bShadowAtlas )
                 (void)pool.allocateSized( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), shadowResolution, shadowResolution );
             else
-                pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
+                pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), attachment._resolutionSpace, attachment._resolutionDivisor,
+                               FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
         }
 
         // 패스가 쓰는 첨부는 모두 위에서 만들었다 — 파이프라인 로드가 선언하지 않은 입출력을 거절한다(`RenderPipelineAsset::validate`).
@@ -274,6 +281,21 @@ namespace sw
         view._bLastFrameDepthValid = SW_FALSE;
         view._bHasHistory          = SW_FALSE;
         return true;
+    }
+
+    float32 FrameViewResources::getTemporalUpscaleRenderScale() const
+    {
+        // 출력 공간 첨부가 없는 파이프라인(TAA 없는 포워드 · 2D)은 두 공간이 늘 같다 — 키울 패스가 없다.
+        bool bHasOutputSpace = false;
+        for ( const RenderPassAttachment& attachment : _pipeline.getDesc()._listAttachment )
+            bHasOutputSpace = bHasOutputSpace || attachment._resolutionSpace == RenderResolutionSpace::Output;
+        if ( bHasOutputSpace == false )
+            return 1.0f;
+        // 폴백 없음 — 설정에 값이 없거나(0) 범위 밖이면 멈춘다(PROPERTY 범위와 같은 값).
+        const float32 renderScale = engine::getSubsystem<EngineConfig>()._render._temporalUpscaleRenderScale;
+        if ( renderScale < RenderConfig::kMinTemporalUpscaleRenderScale || renderScale > 1.0f )
+            SW_FATAL( "EngineConfig _render._temporalUpscaleRenderScale %# is missing or out of range (%#..1)", renderScale, RenderConfig::kMinTemporalUpscaleRenderScale );
+        return renderScale;
     }
 
     void FrameViewResources::placeTransients( TransientAttachmentPool& pool, const RenderGraphAliasPlan& aliasPlan )
@@ -297,8 +319,9 @@ namespace sw
             }
             if ( pAttachment == nullptr || FrameRendererUtil::isDepthFormat( pAttachment->_format ) )
                 continue;
-            const RHITextureDesc           desc = TransientAttachmentPool::makeTextureDesc( pAttachment->_format, false, pAttachment->getOps(), TransientAttachmentPool::computeScaledExtent( pool.getWidth(), pAttachment->_resolutionDivisor ),
-                                                                                            TransientAttachmentPool::computeScaledExtent( pool.getHeight(), pAttachment->_resolutionDivisor ), false );
+            const RHITextureDesc desc = TransientAttachmentPool::makeTextureDesc(
+                pAttachment->_format, false, pAttachment->getOps(), TransientAttachmentPool::computeScaledExtent( pool.getExtent( pAttachment->_resolutionSpace, true ), pAttachment->_resolutionDivisor ),
+                TransientAttachmentPool::computeScaledExtent( pool.getExtent( pAttachment->_resolutionSpace, false ), pAttachment->_resolutionDivisor ), false );
             const RHITextureAllocationInfo info = factory.getTextureAllocationInfo( desc );
             if ( info._sizeBytes == 0 )
                 continue;
@@ -312,7 +335,8 @@ namespace sw
         for ( size_t index = 0; index < listItem.size(); ++index )
         {
             const RenderPassAttachment& attachment = *listAttachment[index];
-            (void)pool.allocatePlaced( _pDevice, listItem[index]._name, attachment._format, attachment.getOps(), attachment._resolutionDivisor, plan._heapBytes, plan._listOffset[index] );
+            (void)pool.allocatePlaced( _pDevice, listItem[index]._name, attachment._format, attachment.getOps(), attachment._resolutionSpace, attachment._resolutionDivisor, plan._heapBytes,
+                                       plan._listOffset[index] );
         }
         SW_PROFILE_COUNT( "RT.Frame.transientHeapBytes", plan._heapBytes );
     }
@@ -375,8 +399,9 @@ namespace sw
         }
 
         RHITextureDesc historyDesc{};
-        historyDesc._width             = pool.getWidth() != 0 ? pool.getWidth() : FrameRendererUtil::kDefaultTransientSize;
-        historyDesc._height            = pool.getHeight() != 0 ? pool.getHeight() : FrameRendererUtil::kDefaultTransientSize;
+        // 기록은 TAA 출력의 크기다 — 시간 업스케일이 켜지면 출력 공간(렌더보다 크다)이다.
+        historyDesc._width             = taaTarget._width;
+        historyDesc._height            = taaTarget._height;
         historyDesc._format            = taaTarget._format;
         historyDesc._bIsRenderTarget   = SW_TRUE;
         historyDesc._bIsShaderResource = SW_TRUE;
@@ -535,7 +560,8 @@ namespace sw
                 if ( string_view( attachment._name ) != name.view() )
                     continue;
                 const RHIFormat format = attachment._format;
-                pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, FrameRendererUtil::isDepthFormat( format ), attachment.getOps(), attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
+                pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, FrameRendererUtil::isDepthFormat( format ), attachment.getOps(), attachment._resolutionSpace,
+                               attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
                 bAllocated = true;
             }
         };

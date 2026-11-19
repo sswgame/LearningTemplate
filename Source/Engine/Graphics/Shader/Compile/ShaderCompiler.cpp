@@ -780,7 +780,9 @@ namespace sw
     {
         const RenderConfig&          render     = engine::getSubsystem<EngineConfig>()._render;
         const ProbeVisibilityConfig& visibility = render._probeVisibility;
-        return ShaderEnginePolicy{ render._taaHistoryWeight, visibility._normalBias, visibility._viewBias, visibility._backfaceFloor, visibility._chebyshevExponent };
+        return ShaderEnginePolicy{ render._taaHistoryWeight, visibility._normalBias, visibility._viewBias, visibility._backfaceFloor,
+                                   visibility._chebyshevExponent, render._taaMinHistoryWeight, render._taaVarianceClipGamma, render._taaVelocityRejectPixels,
+                                   render._autoExposureLowPercent, render._autoExposureHighPercent, render._autoExposureHistogramLogMin, render._autoExposureHistogramLogMax };
     }
 
     void ShaderCompiler::appendEngineDefines( vector<ShaderMacroDefine>& inoutList, const ShaderEnginePolicy& enginePolicy )
@@ -805,11 +807,18 @@ namespace sw
             float32     _value;
         };
         const PolicyDefine arrPolicyDefine[] = {
-            {      "SW_TAA_HISTORY_WEIGHT",       enginePolicy._taaHistoryWeight},
-            {       "SW_PROBE_NORMAL_BIAS",        enginePolicy._probeNormalBias},
-            {         "SW_PROBE_VIEW_BIAS",          enginePolicy._probeViewBias},
-            {    "SW_PROBE_BACKFACE_FLOOR",     enginePolicy._probeBackfaceFloor},
-            {"SW_PROBE_CHEBYSHEV_EXPONENT", enginePolicy._probeChebyshevExponent},
+            {             "SW_TAA_HISTORY_WEIGHT",            enginePolicy._taaHistoryWeight},
+            {              "SW_PROBE_NORMAL_BIAS",             enginePolicy._probeNormalBias},
+            {                "SW_PROBE_VIEW_BIAS",               enginePolicy._probeViewBias},
+            {           "SW_PROBE_BACKFACE_FLOOR",          enginePolicy._probeBackfaceFloor},
+            {       "SW_PROBE_CHEBYSHEV_EXPONENT",      enginePolicy._probeChebyshevExponent},
+            {         "SW_TAA_MIN_HISTORY_WEIGHT",         enginePolicy._taaMinHistoryWeight},
+            {        "SW_TAA_VARIANCE_CLIP_GAMMA",        enginePolicy._taaVarianceClipGamma},
+            {     "SW_TAA_VELOCITY_REJECT_PIXELS",     enginePolicy._taaVelocityRejectPixels},
+            {      "SW_AUTO_EXPOSURE_LOW_PERCENT",      enginePolicy._autoExposureLowPercent},
+            {     "SW_AUTO_EXPOSURE_HIGH_PERCENT",     enginePolicy._autoExposureHighPercent},
+            {"SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN", enginePolicy._autoExposureHistogramLogMin},
+            {"SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX", enginePolicy._autoExposureHistogramLogMax},
         };
         for ( const PolicyDefine& policyDefine : arrPolicyDefine )
         {

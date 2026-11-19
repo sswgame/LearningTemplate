@@ -29,10 +29,11 @@ namespace sw
     {
     }
 
-    float2 TemporalJitterSequence::advance( uint32 width, uint32 height )
+    float2 TemporalJitterSequence::advance( uint32 width, uint32 height, uint32 phaseCount )
     {
-        const float2 pixelOffset = getPixelOffset( _sampleIndex );
-        _sampleIndex             = ( _sampleIndex + 1u ) % kSampleCount;
+        const uint32 cycle       = phaseCount > 0u ? phaseCount : kSampleCount;
+        const float2 pixelOffset = getPixelOffset( _sampleIndex % cycle );
+        _sampleIndex             = ( _sampleIndex + 1u ) % cycle;
         if ( width == 0u || height == 0u )
             return float2{};
         // 픽셀 하나는 NDC 로 2 / 크기다.
@@ -42,8 +43,18 @@ namespace sw
     float2 TemporalJitterSequence::getPixelOffset( uint32 sampleIndex )
     {
         // 수열 번호는 1 부터다(0 번은 두 밑 모두 0 이라 한 자리에 몰린다 — 언리얼 TAA 와 같다).
-        const uint32 haltonIndex = ( sampleIndex % kSampleCount ) + 1u;
+        const uint32 haltonIndex = sampleIndex + 1u;
         return float2{ computeHaltonValue( haltonIndex, 2u ) - 0.5f, computeHaltonValue( haltonIndex, 3u ) - 0.5f };
+    }
+
+    uint32 TemporalJitterSequence::computePhaseCount( float32 renderScale )
+    {
+        if ( renderScale >= 1.0f || renderScale <= 0.0f )
+            return kSampleCount;
+        const float32 phases      = static_cast<float32>( kSampleCount ) / ( renderScale * renderScale );
+        const uint32  wholePhases = static_cast<uint32>( phases );
+        const uint32  count       = static_cast<float32>( wholePhases ) < phases ? wholePhases + 1u : wholePhases;
+        return count < kSampleCount ? kSampleCount : ( count > kMaxSampleCount ? kMaxSampleCount : count );
     }
 
     float4x4 TemporalJitterSequence::applyToViewProjection( const float4x4& viewProj, const float2& ndcOffset )

@@ -23,11 +23,11 @@ namespace
 SW_TEST_CASE( FrameViewResourcesTest, AutoScaleStepAllocatesNothing )
 {
     FrameViewTarget view;
-    view._transientPool.setSize( 1280, 720 );
+    view._transientPool.setSize( 1280, 720, 1280, 720 );
     view.updateViewRect( 1.0f );
     SW_EXPECT_EQUAL( view._rect._width, 1280u );
     SW_EXPECT_EQUAL( view._rect._height, 720u );
-    SW_EXPECT_EQUAL( view.scaleToRect( 1280, true, true ), 1280u ); // 사각형 = 풀이면 뷰포트를 바꾸지 않는다
+    SW_EXPECT_EQUAL( view.scaleToRect( 1280, true, RenderResolutionSpace::Render, true ), 1280u ); // 사각형 = 풀이면 뷰포트를 바꾸지 않는다
 
     view.updateViewRect( 0.7f );
     SW_EXPECT_EQUAL( view._transientPool.getWidth(), 1280u );
@@ -35,9 +35,9 @@ SW_TEST_CASE( FrameViewResourcesTest, AutoScaleStepAllocatesNothing )
     SW_EXPECT_TRUE( view._transientPool.isEmpty() ); // 단계가 첨부를 만들지 않았다
     SW_EXPECT_EQUAL( view._rect._width, 896u );
     SW_EXPECT_EQUAL( view._rect._height, 504u );
-    SW_EXPECT_EQUAL( view.scaleToRect( 1280, true, true ), 896u );
-    SW_EXPECT_EQUAL( view.scaleToRect( 640, true, true ), 448u );    // 반해상도
-    SW_EXPECT_EQUAL( view.scaleToRect( 2048, false, true ), 2048u ); // 그림자 맵
+    SW_EXPECT_EQUAL( view.scaleToRect( 1280, true, RenderResolutionSpace::Render, true ), 896u );
+    SW_EXPECT_EQUAL( view.scaleToRect( 640, true, RenderResolutionSpace::Render, true ), 448u );    // 반해상도
+    SW_EXPECT_EQUAL( view.scaleToRect( 2048, false, RenderResolutionSpace::Render, true ), 2048u ); // 그림자 맵
     view.updateViewRect( 0.0f );
     SW_EXPECT_EQUAL( view._rect._width, static_cast<uint32>( 1280.0f * FrameViewTarget::kMinRectScale + 0.5f ) ); // 하한
 }
@@ -46,7 +46,7 @@ SW_TEST_CASE( FrameViewResourcesTest, AutoScaleStepAllocatesNothing )
 SW_TEST_CASE( FrameViewResourcesTest, HistorySurvivesAutoScaleStep )
 {
     FrameViewTarget view;
-    view._transientPool.setSize( 1000, 500 );
+    view._transientPool.setSize( 1000, 500, 1000, 500 );
     view.updateViewRect( 1.0f );
     view.beginViewHistory();
     view.beginViewHistory();
@@ -68,7 +68,7 @@ SW_TEST_CASE( FrameViewResourcesTest, HistorySurvivesAutoScaleStep )
 SW_TEST_CASE( FrameViewResourcesTest, DepthHistoryReadsPreviousRect )
 {
     FrameViewTarget view;
-    view._transientPool.setSize( 1280, 720 );
+    view._transientPool.setSize( 1280, 720, 1280, 720 );
     view.updateViewRect( 1.0f );
     view.updateViewRect( 0.5f ); // 단계 프레임 — 히스토리는 배율 1 로 그린 지난 프레임이다
     SW_EXPECT_EQUAL( view.scaleToPreviousRect( 1280, true ), 1280u );
@@ -83,7 +83,7 @@ SW_TEST_CASE( FrameViewResourcesTest, DepthHistoryReadsPreviousRect )
 SW_TEST_CASE( FrameViewResourcesTest, PreviousRectIsRecordedNotRecomputed )
 {
     FrameViewTarget view;
-    view._transientPool.setSize( 999, 555 );
+    view._transientPool.setSize( 999, 555, 999, 555 );
     view.updateViewRect( 0.37f );
     const RenderViewRect drawn = view._rect;
     view.updateViewRect( 0.9f );

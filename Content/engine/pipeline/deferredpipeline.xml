@@ -29,9 +29,11 @@
 		                      _loadOp="Clear"
 		                      _resolutionDivisor="2" />
 		<RenderPassAttachment _name="BloomColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
-		<RenderPassAttachment _name="TAAColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
-		<RenderPassAttachment _name="DepthOfFieldColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
-		<RenderPassAttachment _name="MotionBlurColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
+		<!-- 해상도 공간 — TAA 출력과 그 뒤 후처리 색은 출력 해상도(_resolutionSpace="Output")다. 시간 업스케일(EngineConfig _render._temporalUpscaleRenderScale < 1)이 켜지면 장면은 렌더 해상도로
+		     그리고 TAA 가 출력 해상도로 키운다(언리얼 1 차 · 2 차 화면 배율). 모션 블러 타일은 속도에서 나와 렌더 공간에 둔다. 배율 1 이면 두 공간이 같은 크기다. -->
+		<RenderPassAttachment _name="TAAColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" _resolutionSpace="Output" />
+		<RenderPassAttachment _name="DepthOfFieldColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" _resolutionSpace="Output" />
+		<RenderPassAttachment _name="MotionBlurColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" _resolutionSpace="Output" />
 		<!-- 모션 블러 타일(16² 픽셀) 속도 — 타일 최대(MotionBlurTileMax) · 이웃 최대(MotionBlurNeighborMax). 나눗수는 motion_blur_tile_max.hlsl 의 kMotionBlurTileSize 와 같다. -->
 		<RenderPassAttachment _name="VelocityTileMax" _format="R16G16_FLOAT" _clearColor="0,0,0,0" _loadOp="Clear" _resolutionDivisor="16" />
 		<RenderPassAttachment _name="VelocityNeighborMax" _format="R16G16_FLOAT" _clearColor="0,0,0,0" _loadOp="Clear" _resolutionDivisor="16" />
@@ -40,10 +42,10 @@
 		                      _format="R16G16B16A16_FLOAT"
 		                      _clearColor="0.12,0.15,0.18,1"
 		                      _loadOp="Clear" />
-		<RenderPassAttachment _name="TonemapColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="TonemapColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" _resolutionSpace="Output" />
 		<!-- 후처리 머티리얼(블렌더블) 출력 — 톤맵 앞은 원본(MotionBlurColor)과, 톤맵 뒤는 원본(TonemapColor)과 같은 형식이어야 그릴 머티리얼이 없는 뷰에서 출력이 원본을 가리킨다(검증 3-6). -->
-		<RenderPassAttachment _name="PostMaterialHDRColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
-		<RenderPassAttachment _name="PostMaterialLDRColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="PostMaterialHDRColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" _resolutionSpace="Output" />
+		<RenderPassAttachment _name="PostMaterialLDRColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" _resolutionSpace="Output" />
 	</_listAttachment>
 	<_listPass>
 		<RenderGraphPassDesc _name="Shadow"

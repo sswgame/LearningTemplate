@@ -12,20 +12,53 @@
 
 using namespace sw;
 
-/** @brief [ShaderEngineDefinesTest] 엔진 define 에 TAA 기록 비율이 설정에서 뜬 사본 그대로 한 번 든다(셰이더는 기본값 없이 이 define 을 요구한다) */
-SW_TEST_CASE( ShaderEngineDefinesTest, TAAHistoryWeightComesFromEngineConfig )
+namespace
+{
+    struct ShaderEngineDefinesTestUtil
+    {
+        /** @brief @p listDefine 에서 이름이 @p pName 인 define 의 수를 세고, 하나라도 있으면 마지막 값을 @p outValue 에 둡니다. */
+        static uint32 countDefine( const vector<ShaderMacroDefine>& listDefine, const utf8* pName, string& outValue )
+        {
+            uint32 foundCount = 0;
+            for ( const ShaderMacroDefine& define : listDefine )
+            {
+                if ( define._name != pName )
+                    continue;
+                ++foundCount;
+                outValue = define._value;
+            }
+            return foundCount;
+        }
+    };
+} // namespace
+
+/** @brief [ShaderEngineDefinesTest] 엔진 define 에 렌더 정책 값(TAA · 자동 노출)이 설정에서 뜬 사본 그대로 한 번씩 든다(셰이더는 기본값 없이 이 define 을 요구한다) */
+SW_TEST_CASE( ShaderEngineDefinesTest, RenderPolicyDefinesComeFromEngineConfig )
 {
     vector<ShaderMacroDefine> listDefine;
     ShaderCompiler::appendEngineDefines( listDefine, ShaderEnginePolicy::capture() );
-    uint32 foundCount = 0;
-    for ( const ShaderMacroDefine& define : listDefine )
+    const RenderConfig& render = engine::getSubsystem<EngineConfig>()._render;
+    struct Expected
     {
-        if ( define._name != "SW_TAA_HISTORY_WEIGHT" )
-            continue;
-        ++foundCount;
-        SW_EXPECT_EQUAL( to_string( engine::getSubsystem<EngineConfig>()._render._taaHistoryWeight ), define._value );
+        const utf8* _pName;
+        float32     _value;
+    };
+    const Expected arrExpected[] = {
+        {             "SW_TAA_HISTORY_WEIGHT",            render._taaHistoryWeight},
+        {         "SW_TAA_MIN_HISTORY_WEIGHT",         render._taaMinHistoryWeight},
+        {        "SW_TAA_VARIANCE_CLIP_GAMMA",        render._taaVarianceClipGamma},
+        {     "SW_TAA_VELOCITY_REJECT_PIXELS",     render._taaVelocityRejectPixels},
+        {      "SW_AUTO_EXPOSURE_LOW_PERCENT",      render._autoExposureLowPercent},
+        {     "SW_AUTO_EXPOSURE_HIGH_PERCENT",     render._autoExposureHighPercent},
+        {"SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN", render._autoExposureHistogramLogMin},
+        {"SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX", render._autoExposureHistogramLogMax},
+    };
+    for ( const Expected& expected : arrExpected )
+    {
+        string value;
+        SW_EXPECT_EQUAL( 1u, ShaderEngineDefinesTestUtil::countDefine( listDefine, expected._pName, value ) );
+        SW_EXPECT_EQUAL( to_string( expected._value ), value );
     }
-    SW_EXPECT_EQUAL( 1u, foundCount );
 }
 
 /** @brief [ShaderEngineDefinesTest] 프로브 GI 빛샘 막기 계수(lighting.hlsli 가 기본값 없이 요구한다)가 설정에서 뜬 사본 그대로 하나씩 든다 */

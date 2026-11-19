@@ -48,7 +48,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const float3 source        = PassTexture::sampleSource( input._uv ).rgb;
     const float  depth         = PassTexture::sampleDepthPoint( input._uv ).r;
     const float2 neighborMax   = Bindless::sampleIndexWith( SW_ENGINE_ROLE( VelocityNeighborMax ), SW_SAMPLER_POINT_CLAMP, PassTexture::toViewRectUV( input._uv ) ).rg;
-    const float2 pixelScale    = g_ViewRectSize.xy; // UV → 픽셀
+    const float2 pixelScale    = PassTexture::getPassRectSize().xy; // UV → 이 패스(출력 공간일 수 있다)의 픽셀
     const float  centerSpeed   = length( samplePixelVelocity( input._uv, depth ) * pixelScale );
     const float  centerDepth   = computeViewDepth( input._uv, depth );
     const float  neighborSpeed = length( neighborMax );

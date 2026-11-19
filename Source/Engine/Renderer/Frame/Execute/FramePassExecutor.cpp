@@ -441,6 +441,12 @@ namespace sw
             FrameRendererUtil::makeViewRectConstants( view._rect._width, view._rect._height, pool.getWidth(), pool.getHeight(), view._previousRectScale );
         context._passValues.setFloat4( passConstantNames()._viewRectScale, viewRect._scale );
         context._passValues.setFloat4( passConstantNames()._viewRectSize, viewRect._size );
+        // 출력 해상도 공간(TAA 뒤) — 사각형 배율은 렌더 공간과 같고 크기만 다르다(`FrameViewTarget::updateViewRect`). 업스케일하지 않으면 위 값과 같다.
+        const FrameRendererUtil::ViewRectConstants outputRect =
+            FrameRendererUtil::makeViewRectConstants( view._outputRect._width, view._outputRect._height, pool.getOutputWidth(), pool.getOutputHeight(), view._previousRectScale );
+        context._passValues.setFloat4( passConstantNames()._outputRectSize, outputRect._size );
+        const float32 renderToOutput = pool.getOutputWidth() > 0 ? static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getOutputWidth() ) : 1.0f;
+        context._passValues.setFloat4( passConstantNames()._temporalUpscale, float4{ pool.hasTemporalUpscale() ? 1.0f : 0.0f, renderToOutput, 0.0f, 0.0f } );
         // 카메라별 후처리 값(PostProcessValues)도 뷰마다다. 중립 값(노출 0, 배율 1, 비네트 · 레터박스 0)이면 셰이더 결과가 전역 값과 같다.
         const PostProcessValues& post = view._settings._postProcess;
         float4                   bloomParams{ kDefaultBloomParams };
@@ -518,7 +524,9 @@ namespace sw
         if ( bDepthOfField )
         {
             const float32 sensorHeightMeters = lens._sensorHeight / kMillimetersPerMeter;
-            cocScale                         = 0.5f * static_cast<float32>( pool.getHeight() ) * sensorHeightMeters * scaleY * scaleY / ( 4.0f * lens._aperture * lens._focusDistance );
+            // 반지름은 피사계 심도 패스가 그리는 해상도 공간의 px 다(디퍼드는 TAA 뒤라 출력 공간 — 시간 업스케일이면 렌더보다 크다).
+            const uint32 passHeight = pool.getExtent( findPassResolutionSpace( RenderPassKind::DepthOfField ), false );
+            cocScale                = 0.5f * static_cast<float32>( passHeight ) * sensorHeightMeters * scaleY * scaleY / ( 4.0f * lens._aperture * lens._focusDistance );
         }
         context._passValues.setFloat4( passConstantNames()._cameraLens,
                                        float4{ lens._focusDistance, cocScale, kMaxDepthOfFieldRadiusPixels, bDepthOfField ? 1.0f : 0.0f } );
@@ -533,6 +541,21 @@ namespace sw
         context._passValues.setUint( passConstantNames()._flags, flags );
     }
 
+    RenderResolutionSpace FramePassExecutor::findPassResolutionSpace( RenderPassKind type ) const
+    {
+        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
+        {
+            if ( pass._type != type || pass._listResolvedColorOutput.empty() )
+                continue;
+            for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
+            {
+                if ( string_view( attachment._name ) == pass._listResolvedColorOutput[0]._attachment.view() )
+                    return attachment._resolutionSpace;
+            }
+        }
+        return RenderResolutionSpace::Render;
+    }
+
     void FramePassExecutor::applyViewProjection( FramePassContext& context, FrameViewTarget& view, const float4x4& viewProj )
     {
         // TAA 가 도는 뷰만 서브픽셀 지터를 래스터 행렬에 싣는다(언리얼 TAA · 유니티 URP/HDRP · Godot 의 Halton 지터). 지터 든 행렬은 이 함수 안에만 있다 —
@@ -542,8 +565,10 @@ namespace sw
         const bool bJitter = view._bTAAHistoryWritten == SW_TRUE && view._bTAAHistoryReset == SW_FALSE;
         if ( bJitter == false )
             view._temporalJitter.restart(); // 기록이 새로 시작하면 지터도 첫 표본부터 — 그 전에 흐른 프레임 수(앞 씬 · 대기)가 그림을 바꾸지 않는다
-        const float2   ndcJitter = bJitter ? view._temporalJitter.advance( pool.getWidth(), pool.getHeight() ) : float2{};
-        const float4x4 raster    = TemporalJitterSequence::applyToViewProjection( viewProj, ndcJitter );
+        // 지터는 렌더 공간 픽셀이다. 시간 업스케일이면 출력 픽셀마다 표본이 모이게 바퀴를 늘린다(`TemporalJitterSequence::computePhaseCount`).
+        const float32  renderScale = pool.getOutputWidth() > 0 ? static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getOutputWidth() ) : 1.0f;
+        const float2   ndcJitter   = bJitter ? view._temporalJitter.advance( pool.getWidth(), pool.getHeight(), TemporalJitterSequence::computePhaseCount( renderScale ) ) : float2{};
+        const float4x4 raster      = TemporalJitterSequence::applyToViewProjection( viewProj, ndcJitter );
         context._passValues.setMatrix( passConstantNames()._viewProj, raster );
         // 역행렬은 **여기서만** 만든다. 디퍼드 조명이 깊이에서 월드 위치를 복원하는 데 쓰는데,
         // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고, 그 증상은 "빛이 한 프레임 늦게 따라온다"이다. 깊이는 지터 든 행렬로 그렸으므로 역행렬도 그것이다.
@@ -820,8 +845,9 @@ namespace sw
                 continue;
             // 서술 키 — 같은 텍스처로 넘길 수 있는 조건(형식 · 나눗수 · RW 용도 · 클리어 값, D3D12 의 최적 클리어 값이 서술에 든다).
             // 칸마다 32 비트로 옮겨 해시한다(구조체째 해시하면 정렬 채움 바이트가 섞인다).
-            uint32 arrDescWord[7]{ static_cast<uint32>( attachment._format ), attachment._resolutionDivisor,
-                                   FrameRendererUtil::isComputeOutputOrInput( listPass, attachment._name ) ? 1u : 0u, 0u, 0u, 0u, 0u };
+            // 공간이 다르면 크기가 다를 수 있다(시간 업스케일) — 나눗수 칸에 공간을 함께 싣는다.
+            const uint32 sizeWord = attachment._resolutionDivisor | ( static_cast<uint32>( attachment._resolutionSpace ) << 16u );
+            uint32       arrDescWord[7]{ static_cast<uint32>( attachment._format ), sizeWord, FrameRendererUtil::isComputeOutputOrInput( listPass, attachment._name ) ? 1u : 0u, 0u, 0u, 0u, 0u };
             Memory::copy( &arrDescWord[3], &attachment._clearColor._x, sizeof( float32 ) );
             Memory::copy( &arrDescWord[4], &attachment._clearColor._y, sizeof( float32 ) );
             Memory::copy( &arrDescWord[5], &attachment._clearColor._z, sizeof( float32 ) );

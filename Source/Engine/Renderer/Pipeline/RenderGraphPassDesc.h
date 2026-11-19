@@ -252,6 +252,12 @@ namespace sw
          *        컴파일한 변형으로 타일 사각형을 간접 그리기 한다(`FramePassExecutor::executeTiledLighting`). 컴퓨트가 G버퍼를 샘플해야 해 네이티브 bindless 에서만 돈다.
          */
         DeferredTileClassify,
+        /**
+         * @brief 자동 노출의 휘도 히스토그램 컴퓨트(auto_exposure.hlsl 의 `SW_PASS_AUTO_EXPOSURE_HISTOGRAM`)입니다. 한 그룹이 HDR 원본 표본을 그룹 공유 히스토그램(64 칸)에 모으고
+         *        백분위 컷 평균으로 목표 EV 를 정해 지난 EV 에서 다가간 값을 뷰의 노출 기록 칸에 RW 로 쓴다(언리얼 Histogram + Eye Adaptation, Adria). `AutoExposure` 풀스크린을 대신하는
+         *        자리라 같은 때(톤맵하는 패스 앞)에 기록한다(`FrameAutoExposure::recordAutoExposure`). 원본을 샘플해야 해 네이티브 bindless 에서만 돈다 — 에뮬은 풀스크린이 같은 식이다.
+         */
+        AutoExposureHistogram,
     };
 
     /**
@@ -268,6 +274,20 @@ namespace sw
     };
 
     /**
+     * @enum RenderResolutionSpace
+     * @brief 첨부가 사는 해상도 공간입니다 — 시간 업스케일(TAAU) 앞의 렌더 해상도와 뒤의 출력 해상도(언리얼 1 차 · 2 차 화면 배율, `ScreenPercentage` 앞 · 뒤).
+     * @details 파이프라인 XML 이 첨부마다 선언한다(`RenderPassAttachment::_resolutionSpace`). 렌더 공간은 장면(G버퍼 · 깊이 · 속도 · 조명), 출력 공간은 TAA 가 키운 색과 그 뒤 후처리다.
+     *          시간 업스케일을 쓰지 않으면(`RenderConfig::_temporalUpscaleRenderScale` 1 · TAA 없는 파이프라인) 두 공간이 같은 크기라 지금까지와 같은 그림이다.
+     *          출력 공간 패스가 렌더 공간 첨부(깊이 · 속도)를 읽는 것은 UV 로 읽어 된다 — 두 공간의 사각형 비율이 같다(`FrameViewTarget::updateViewRect`).
+     */
+    ENUM()
+    enum class RenderResolutionSpace : uint8
+    {
+        Render, ///< 렌더 해상도(장면 패스 · TAA 의 입력) — 기본
+        Output, ///< 출력 해상도(TAA 출력과 그 뒤 후처리 · 톤맵)
+    };
+
+    /**
      * @brief 파이프라인 출력에 쓰는 예약어입니다. 디바이스가 주는 백버퍼를 가리킵니다.
      * @details `_attachments` 에 선언되지 않는 유일한 출력이라 검증에서 예외로 다룬다.
      */
@@ -277,6 +297,15 @@ namespace sw
     constexpr bool isViewPassType( RenderPassKind type )
     {
         return type != RenderPassKind::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassKind::Compute );
+    }
+
+    /**
+     * @brief 렌더 해상도 색을 출력 해상도로 넘기는(시간 업스케일) 패스 종류인지 반환합니다 — TAA 하나다(언리얼 TAAU · TSR 자리).
+     * @details 해상도 공간 검증(`RenderPipelineAsset::validate`)과 업스케일 상수(`FramePassExecutor::executeTAAPass`)가 같은 질문을 이 함수로 한다.
+     */
+    constexpr bool isTemporalUpscalePass( RenderPassKind type )
+    {
+        return type == RenderPassKind::TAA;
     }
 
     /**
@@ -364,6 +393,14 @@ namespace sw
          */
         PROPERTY()
         uint32 _resolutionDivisor{ 1 };
+
+        /**
+         * @brief 이 첨부가 사는 해상도 공간입니다(기본 렌더). TAA 출력과 그 뒤 후처리 색은 `Output` 으로 적는다 — 시간 업스케일이 켜지면 출력 해상도로 만들어진다.
+         * @details 검증(`RenderPipelineAsset::validate`): 한 패스의 출력은 같은 공간이고, 원본(SourceColor)을 읽는 패스는 원본과 같은 공간에 쓴다 — 렌더 → 출력으로 넘기는 것은
+         *          TAA(`isTemporalUpscalePass`)만이다. 나눗수는 그 공간의 크기를 나눈다.
+         */
+        PROPERTY()
+        RenderResolutionSpace _resolutionSpace{ RenderResolutionSpace::Render };
     };
 } // namespace sw
 

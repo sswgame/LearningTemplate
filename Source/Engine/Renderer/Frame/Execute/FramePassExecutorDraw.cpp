@@ -15,6 +15,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/formatString.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -92,7 +93,8 @@ namespace sw
         beginInfo._width                                = activePool().getWidth();
         beginInfo._height                               = activePool().getHeight();
         beginInfo._colorTargetCount                     = colorCount > kMaxColorAttachments ? kMaxColorAttachments : colorCount;
-        bool bViewSized                                 = false;
+        bool                  bViewSized                = false;
+        RenderResolutionSpace targetSpace               = RenderResolutionSpace::Render;
         for ( uint32 colorTargetIndex = 0; colorTargetIndex < beginInfo._colorTargetCount; ++colorTargetIndex )
         {
             const TransientAttachmentPool::Attachment target = findTransientAttachment( pColorNames[colorTargetIndex] );
@@ -113,22 +115,27 @@ namespace sw
                 return false;
             }
             if ( colorTargetIndex == 0 )
-                bViewSized = target._bViewSized != 0;
+            {
+                bViewSized  = target._bViewSized != 0;
+                targetSpace = target._space;
+            }
             beginInfo._arrLoadOp[colorTargetIndex]  = pColorLoad != nullptr ? pColorLoad[colorTargetIndex] : RHIRenderPassLoadOp::Clear;
             beginInfo._arrStoreOp[colorTargetIndex] = target._ops._storeOp;
             if ( pTargetClearColor != nullptr )
                 beginInfo._arrClearColor[colorTargetIndex] = pTargetClearColor[colorTargetIndex];
         }
         context._pCmd->beginRenderPass( beginInfo );
-        applyViewRectViewport( context, beginInfo._width, beginInfo._height, bViewSized );
+        applyViewRectViewport( context, beginInfo._width, beginInfo._height, bViewSized, targetSpace );
+        applyPassResolutionSpace( context, targetSpace );
         return true;
     }
 
-    void FramePassExecutor::applyViewRectViewport( FramePassContext& context, uint32 targetWidth, uint32 targetHeight, bool bViewSized ) const
+    void FramePassExecutor::applyViewRectViewport( FramePassContext& context, uint32 targetWidth, uint32 targetHeight, bool bViewSized, RenderResolutionSpace space ) const
     {
         // 렌더 패스는 타깃 전체를 뷰포트 · 가위로 연다. 뷰 크기 첨부는 사각형 안만 그린다(자동 렌더 배율 — 풀은 그대로). 사각형이 풀 전체면 바꾸지 않는다.
-        const uint32 width  = _pActiveView->scaleToRect( targetWidth, bViewSized, true );
-        const uint32 height = _pActiveView->scaleToRect( targetHeight, bViewSized, false );
+        // 사각형은 타깃의 해상도 공간 것이다(시간 업스케일 뒤 패스는 출력 공간 사각형).
+        const uint32 width  = _pActiveView->scaleToRect( targetWidth, bViewSized, space, true );
+        const uint32 height = _pActiveView->scaleToRect( targetHeight, bViewSized, space, false );
         if ( width == targetWidth && height == targetHeight )
             return;
         RHIViewport viewport{};
@@ -136,6 +143,18 @@ namespace sw
         viewport._height = static_cast<float32>( height );
         context._pCmd->setViewport( viewport );
         context._pCmd->setScissorRect( RHIScissorRect{ 0, 0, width, height } );
+    }
+
+    void FramePassExecutor::applyPassResolutionSpace( FramePassContext& context, RenderResolutionSpace space ) const
+    {
+        // 패스 플래그는 뷰가 씨앗으로 채웠다(applyViewPassConstants) — 이 패스의 해상도 공간 비트만 바꾼다. 셰이더의 픽셀 거리(PassTexture::getPassRectSize)가 이 비트로 공간을 고른다.
+        uint32       flags     = 0u;
+        uint32       valueSize = 0u;
+        const uint8* pFlags    = context._passValues.find( passConstantNames()._flags, valueSize );
+        if ( pFlags != nullptr && valueSize >= sizeof( flags ) )
+            Memory::copy( &flags, pFlags, sizeof( flags ) );
+        flags = space == RenderResolutionSpace::Output ? ( flags | shaderslot::kPassFlagOutputSpace ) : ( flags & ~shaderslot::kPassFlagOutputSpace );
+        context._passValues.setUint( passConstantNames()._flags, flags );
     }
 
     void FramePassExecutor::beginDepthOnlyPass( FramePassContext& context, const hashed_string& depthName, RHIRenderPassLoadOp depthLoad )
@@ -154,7 +173,8 @@ namespace sw
         beginInfo._width                                = depth._texture != 0 ? depth._width : activePool().getWidth();
         beginInfo._height                               = depth._texture != 0 ? depth._height : activePool().getHeight();
         context._pCmd->beginRenderPass( beginInfo );
-        applyViewRectViewport( context, beginInfo._width, beginInfo._height, depth._texture == 0 || depth._bViewSized != 0 );
+        applyViewRectViewport( context, beginInfo._width, beginInfo._height, depth._texture == 0 || depth._bViewSized != 0, depth._space );
+        applyPassResolutionSpace( context, depth._space );
     }
 
     uint32 FramePassExecutor::computeShadowTileCountPerView() const

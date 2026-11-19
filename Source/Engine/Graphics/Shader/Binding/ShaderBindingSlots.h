@@ -162,6 +162,7 @@ namespace sw
         inline constexpr uint32 kPassFlagSkipPost       = SW_PASS_FLAG_SKIP_POST;
         inline constexpr uint32 kPassFlagSkipTonemap    = SW_PASS_FLAG_SKIP_TONEMAP;
         inline constexpr uint32 kPassFlagPointUpscale   = SW_PASS_FLAG_POINT_UPSCALE;
+        inline constexpr uint32 kPassFlagOutputSpace    = SW_PASS_FLAG_OUTPUT_SPACE; ///< 패스가 출력 해상도 공간에 그린다(`FramePassExecutor::beginColorPassMrt` 가 타깃마다 정한다)
         /// @brief 2D 그림자 가림막 토막 원소의 종류입니다. 빛 종류가 아니라서(레지스트리 슬롯이 없다) `kLightTypeCount` 밖에 있습니다.
         inline constexpr uint32 kLightTypeShadow2D = SW_LIGHT_TYPE_SHADOW2D;
         /// @brief 라이트 프로브 볼륨 원소의 종류입니다. 빛 종류가 아니라서 `kLightTypeCount` 밖이고, 라이트 그리드는 경계 구로 클러스터에 넣습니다.
