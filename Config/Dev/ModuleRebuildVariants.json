@@ -1,0 +1,12 @@
+{
+    "_variants": {
+        "probe-next": {
+            "_header": "sw/dev/HotReloadProbeVariant.h",
+            "_text": "#pragma once\n#define SW_HOTRELOAD_PROBE_STEP 1\n"
+        },
+        "probe-broken": {
+            "_header": "sw/dev/HotReloadProbeVariant.h",
+            "_text": "#pragma once\n#error \"probe-broken: deliberate compile error from the RebuildModule scenario step\"\n"
+        }
+    }
+}

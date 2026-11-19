@@ -66,11 +66,15 @@ namespace sw
          */
         void triggerReloadAll();
 
+        /** @brief 끝난 재컴파일 묶음(`update` 가 대기 목록을 비운 번) 수입니다. 시나리오가 단축키 뒤 묶음이 끝났는지 본다(`Shader.RecompilePassCount`). */
+        uint32 getCompletedPassCount() const { return _completedPassCount.load( std::memory_order_acquire ); }
+
     private:
         mutable shared_mutex                         _mutex;
         vector<ShaderCompileDesc> _listPendingReload SW_GUARDED_BY( _mutex );
         DelegateSlot<ShaderRecompiledDelegate>       _onAnyRecompiled;
         string                                       _label;
         atomic<bool>                                 _bInitialized{ SW_FALSE }; ///< 시작 · 종료가 쓰고 update 가 잠금 없이 읽는다 — 원자값
+        atomic<uint32>                               _completedPassCount{ 0 };  ///< 게임 스레드의 `update` 가 올리고 감시 값이 읽는다
     };
 } // namespace sw

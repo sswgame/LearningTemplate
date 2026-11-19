@@ -5,9 +5,12 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/AssetReload/ReloadTracker.h"
+#include "DevTools/Client/Shader/LiveShaderSubsystem.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
@@ -16,6 +19,40 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct ShaderRecompilerInternal
+        {
+            static const ShaderRecompiler* findRecompiler()
+            {
+                const LiveShaderSubsystem* const pLiveShader = engine::findSubsystem<LiveShaderSubsystem>();
+                return pLiveShader != nullptr ? pLiveShader->findShaderRecompiler() : nullptr;
+            }
+
+            /** @brief 감시 값 `Shader.LiveRecompile` — 이 실행에 셰이더 재컴파일기(Ctrl+F8)가 섰으면 1 입니다(Debug 클라이언트만 세운다 — `LiveShaderSubsystem`). 셰이더 리로드 시나리오의 `<SkipUnless>` 가 본다. */
+            [[nodiscard]] static bool readLiveCompiler( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = findRecompiler() != nullptr ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief 감시 값 `Shader.RecompilePassCount` — 끝난 재컴파일 묶음 수입니다. 단축키를 누르기 전 값을 `Store` 하고 달라질 때까지 기다리면 그 묶음이 끝났다. */
+            [[nodiscard]] static bool readCompilePassCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ShaderRecompiler* const pRecompiler = findRecompiler();
+                if ( pRecompiler == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pRecompiler->getCompletedPassCount() );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_WATCH( shaderLiveRecompile, "Shader.LiveRecompile", "1 when this run has the live shader recompiler (Ctrl+F8 - Debug clients only), else 0",
+                         &ShaderRecompilerInternal::readLiveCompiler );
+    SW_AUTOMATION_WATCH( shaderRecompilePassCount, "Shader.RecompilePassCount", "Shader recompile passes (Ctrl+F8) that finished in this run",
+                         &ShaderRecompilerInternal::readCompilePassCount );
+
     ShaderRecompiler::ShaderRecompiler() = default;
 
     ShaderRecompiler::~ShaderRecompiler()
@@ -63,7 +100,8 @@ namespace sw
             _listPendingReload.clear();
         }
 
-        ShaderCache&         shaderCache = engine::getSubsystem<ShaderCache>();
+        const float64        startSeconds = MonotonicClock::nowSeconds();
+        ShaderCache&         shaderCache  = engine::getSubsystem<ShaderCache>();
         vector<string>       listChangedPath;
         uint32               changed  = 0;
         uint32               failed   = 0;
@@ -94,7 +132,12 @@ namespace sw
             vector<uint8> previousBytecode;
             const bool    bBytesChanged = shaderCache.findCachedBytecode( desc, previousBytecode ) == false || previousBytecode != newResult._bytecode;
             if ( bBytesChanged == false )
+            {
+                // 같은 바이트는 갱신으로 세지 않지만, 앞 묶음에서 깨졌던 파일을 되돌린 것이면 낡음을 푼다(되돌린 원본은 캐시 바이트와 같다).
+                if ( pTracker != nullptr && pTracker->isStale( ReloadSource::Shader, desc._source.str() ) )
+                    pTracker->record( ReloadSource::Shader, desc._source.str(), ReloadResult::Reloaded );
                 continue;
+            }
 
             ++changed;
             if ( pTracker != nullptr )
@@ -115,6 +158,9 @@ namespace sw
         if ( listChangedPath.empty() == false && _onAnyRecompiled.isBound() )
             _onAnyRecompiled.get()( listChangedPath );
 
+        if ( pTracker != nullptr )
+            pTracker->recordElapsed( ReloadSource::Shader, ( MonotonicClock::nowSeconds() - startSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
+        _completedPassCount.fetch_add( 1, std::memory_order_release );
         SW_LOG_INFO_ID( "ShaderRecompiler.ShaderReloadCheckedUpdated", "Shader reload: %# checked, %# updated, %# failed.",
                         static_cast<uint32>( listToCompile.size() ), changed, failed );
     }

@@ -261,6 +261,30 @@ namespace sw
         AutomationActionDevice _device{ AutomationActionDevice::Any };
     };
 
+    /** @brief `RebuildModule` 의 인자입니다 — 다시 지을 모듈 타깃(실린 모듈 이름)과 판(`Config/Dev/ModuleRebuildVariants.json` 의 이름 — 비우면 지금 소스 그대로 다시 짓는다). */
+    REFLECT()
+    struct SW_API AutomationRebuildModuleParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY()
+        string _variant{};
+    };
+
+    /** @brief `OverwriteConfig` 의 인자입니다 — `Config/` 아래 파일(상대 경로)과 그 자리에 쓸 글의 리소스(비우면 지금 글을 그대로 다시 쓴다 — 바꾸지 않은 저장). */
+    REFLECT()
+    struct SW_API AutomationOverwriteConfigParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _file{};
+        PROPERTY( AssetPath )
+        string _from{};
+    };
+
     /** @brief 인자가 없는 단계의 스키마입니다 — 적힌 속성은 모두 오타입니다. */
     REFLECT()
     struct SW_API AutomationNoParams

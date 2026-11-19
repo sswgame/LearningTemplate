@@ -226,6 +226,8 @@ namespace sw
         }
         void                        storeText( string_view name, string text ) override;
         [[nodiscard]] const string* findStoredText( string_view name ) const override;
+        void                        restoreFileAtEnd( string absolutePath, string originalText ) override;
+        [[nodiscard]] bool          restoreFilesNow() override;
         /** @brief 이 시나리오의 산출물 폴더(`Saved/Automation/<이름>/`)입니다. */
         const string& getOutputDirectory() const override { return _outputDirectory; }
         /** @brief 상대 경로면 산출물 폴더 아래로 둡니다(단계 처리기가 파일을 쓸 때). */
@@ -405,5 +407,7 @@ namespace sw
         /// 대기 정책(`Config/Dev/ScenarioRun.json` — 정지 시한 · 정착 조건의 문턱). 렌더 정착 · 활동 수가 있는 벽시계 감시 값을 처음 기다릴 때 읽는다(`loadRunPolicy`) — 둘을 기다리지 않는 재생(데모)은 그 파일이 없어도 돈다
         optional<AutomationRunPolicy> _runPolicy{};
         AutomationTextStore           _storedText{}; ///< 이 실행 안에서 이름 붙여 기억한 글(`storeText`)
+        /// 단계가 덮어쓰기 전에 맡긴 (절대 경로, 원본 글) — 끝(`endRun` · 소멸자)이나 `<RestoreOverwrites/>` 가 되돌린다(`restoreFileAtEnd`)
+        vector<std::pair<string, string>> _listFileRestore{};
     };
 } // namespace sw

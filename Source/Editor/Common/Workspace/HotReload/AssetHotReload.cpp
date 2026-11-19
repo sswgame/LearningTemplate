@@ -702,7 +702,9 @@ namespace sw::editor
     {
         const string_view  relativePath = assetID.view();
         const utf8*        pReason      = "";
+        const float64      startSeconds = MonotonicClock::nowSeconds();
         const ReloadResult result       = reloadCacheEntries( route, assetID, pReason );
+        const float64      elapsedMs    = ( MonotonicClock::nowSeconds() - startSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond );
         if ( result == ReloadResult::Reloaded )
         {
             Scene*             pScene   = getActiveScene();
@@ -712,7 +714,11 @@ namespace sw::editor
         }
         // 결과를 적는 한 곳 — 실패(캐시가 파일을 읽지 못해 이전 판으로 돈다)도 여기서 적는다. NotTracked 는 집계가 버린다.
         if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )
+        {
             pTracker->record( ReloadSource::Asset, relativePath, result, pReason );
+            if ( result != ReloadResult::NotTracked )
+                pTracker->recordElapsed( ReloadSource::Asset, elapsedMs ); // 캐시 다시 읽기만 — 사용자 알림(onPropertyChanged)은 뺀다
+        }
         return result;
     }
 
