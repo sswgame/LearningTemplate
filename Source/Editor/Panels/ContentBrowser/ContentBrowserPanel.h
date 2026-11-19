@@ -49,6 +49,8 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 폴더로 이동합니다. 그 폴더가 속한 콘텐츠 루트에서 브레드크럼 경로도 함께 만듭니다. */
         void openFolder( string_view absolutePath ) { _model.openFolder( absolutePath ); }
+        /** @brief 리소스 id @p assetID 의 폴더로 가서 그 애셋을 고르고 작업 공간 포커스(인스펙터)를 옮깁니다(`ContentBrowserViewModel::revealAsset`). 디스크에 없는 애셋이면 false 입니다. */
+        [[nodiscard]] bool revealAsset( string_view assetID ) { return _model.revealAsset( assetID ); }
         /** @brief 현재 폴더 목록의 항목 수를 반환합니다. 필터를 적용하기 전의 수입니다. */
         uint32 getEntryCount() const { return static_cast<uint32>( _model.getEntries().size() ); }
         /** @brief 폴더 목록을 다시 읽도록 예약했거나 읽는 중이면 true 입니다. */

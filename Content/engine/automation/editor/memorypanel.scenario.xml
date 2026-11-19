@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="828ea48d6f314934b93d07beffa1c848"?>
+<!--
+  에디터 시나리오 — Memory 창: 창을 열고 스냅숏을 두 번 찍은 뒤 앞 스냅숏과 비교하고(비교 표), 에셋 시트를 이름으로 거르고, 비교 표 하나와 스냅숏 전체를 CSV 로 내보낸다.
+  내보내기는 에디터 백그라운드 잡이라 정지 대기가 쓰기 끝을 기다린다. 쓴 파일은 memory.exportinfo 가 다시 읽어 BOM · 머리말 · 행 수(태그 19 줄)를 본다.
+  개발 명령의 길(memory.snapshot · memory.export)은 engine/automation/memoryexport 가 본다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/memorypanel.scenario.xml -unattended
+-->
+<Scenario name="editor.memorypanel" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1600" height="900"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus memory"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.MemorySnapshotCount" equals="0"/>
+	<!-- 스냅숏 두 번 -->
+	<EditorClick mark="memory.capture"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.MemorySnapshotCount" equals="1"/>
+	<Expect watch="Editor.MemoryTableRows" equals="19"/>
+	<EditorClick mark="memory.capture"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.MemorySnapshotCount" equals="2"/>
+	<!-- 앞 스냅숏과 비교 — 태그 표는 키(태그)가 같아 줄 수가 그대로다 -->
+	<EditorClick mark="memory.comparePrevious"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.MemoryCompareMode" equals="1"/>
+	<Expect watch="Editor.MemoryTableRows" equals="19"/>
+	<!-- 비교 표를 CSV 로 -->
+	<EditorClick mark="memory.exportTable"/>
+	<EditorWaitStable/>
+	<ExpectLog id="MemoryPanel.Exported" contains="1 file(s)" count="1"/>
+	<ExpectLog id="MemoryExport.SheetWritten" contains="Tags-Compare.csv rows=19" count="1"/>
+	<!-- 에셋 시트 — 이름 거르기가 줄을 줄인다(없는 이름이면 0 줄) -->
+	<EditorClick mark="memory.tab.Assets"/>
+	<EditorWaitStable/>
+	<EditorClick mark="memory.nameFilter"/>
+	<EditorText value="no-such-asset-name"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.MemoryTableRows" equals="0"/>
+	<!-- 스냅숏 전체를 시트별 CSV 로 — Summary + 시트 여섯 -->
+	<EditorClick mark="memory.exportSnapshot"/>
+	<EditorWaitStable/>
+	<ExpectLog id="MemoryPanel.Exported" contains="7 file(s)" count="1"/>
+	<DevCommand line="memory.exportinfo Tags"/>
+	<ExpectLog id="DevCommand.Reply" contains="memory.exportinfo: Tags bom=yes header=Tag,Live (bytes),Live (MB),Peak (bytes),Peak (MB),Budget (bytes),Budget (MB),LiveCount,TotalCount rows=19" count="1"/>
+	<DevCommand line="memory.exportinfo Summary"/>
+	<ExpectLog id="DevCommand.Reply" contains="memory.exportinfo: Summary bom=yes header=Field,Value rows=13" count="1"/>
+	<ExpectLog id="MemoryPanel.ExportFailed" count="0"/>
+	<DevCommand line="panel.close memory"/>
+	<EditorWaitStable/>
+	<Pass/>
+</Scenario>
