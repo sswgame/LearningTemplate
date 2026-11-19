@@ -144,4 +144,6 @@
 	<Field owner="SkirmishGameModeComponent" field="_watchCameraPreset" tag="CameraPresetDef"/>
 	<CatalogKey tag="CropDef" catalog="CropCatalog" entry="Crop"/>
 	<Field owner="FarmCropModel" field="_cropID" tag="CropDef"/>
+	<CatalogKey tag="HousingPartDef" catalog="HousingPartCatalog" entry="Part"/>
+	<Field owner="MeadowBuildStep" field="_partID" tag="HousingPartDef"/>
 </DataCatalogReferenceTable>
