@@ -877,6 +877,11 @@ namespace sw
         return _psoManager.getEnginePSO( passType );
     }
 
+    bool FrameRenderer::findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const
+    {
+        return _psoManager.findDesc( pso, outDesc );
+    }
+
     void FrameRenderer::onShaderRecompiled( const vector<string>& listShaderPath )
     {
         if ( listShaderPath.empty() || _pDevice == nullptr )

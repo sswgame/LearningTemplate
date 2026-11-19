@@ -531,3 +531,24 @@ SW_TEST_CASE( RenderGraphTest, ExecuteOnQueuesPlacesForksAndJoins )
     SW_EXPECT_EQUAL( uint32( 2 ), static_cast<test::FakeRHICommandList*>( pAsync.get() )->_beginCount );
     SW_EXPECT_EQUAL( uint32( 2 ), static_cast<test::FakeRHICommandList*>( pAsync.get() )->_endCount );
 }
+
+/**
+ * @brief [RenderGraphTest] DOT 내보내기는 패스가 읽는 자원 → 패스, 패스 → 쓰는 자원의 간선을 모두 적는다 — Graphviz 가 그대로 그리는 글이다
+ * @details 컴파일 전에도 지금 넣은 패스 구성을 낸다(패스가 왜 그 순서인지 볼 때 쓴다 — 언리얼 RDG 그래프 덤프와 같은 자리).
+ */
+SW_TEST_CASE( RenderGraphTest, ExportToDotListsEveryResourceEdge )
+{
+    RenderGraph graph;
+    graph.addPass( hashed_string( "Shadow" ), {}, { hashed_string( "ShadowMap" ) } );
+    graph.addPass( hashed_string( "Lighting" ), { hashed_string( "ShadowMap" ) }, { hashed_string( "SceneColor" ) } );
+
+    const string dot = graph.exportToDot();
+    SW_EXPECT_TRUE( dot.find( "digraph RenderGraph {" ) == 0 );
+    SW_EXPECT_TRUE( dot.find( "\"Shadow\" -> \"ShadowMap\";" ) != string::npos );
+    SW_EXPECT_TRUE( dot.find( "\"ShadowMap\" -> \"Lighting\";" ) != string::npos );
+    SW_EXPECT_TRUE( dot.find( "\"Lighting\" -> \"SceneColor\";" ) != string::npos );
+    SW_EXPECT_TRUE( dot.find( "\"SceneColor\" -> " ) == string::npos ); // 아무도 읽지 않는 자원에서 나가는 간선은 없다
+
+    RenderGraph empty;
+    SW_EXPECT_EQUAL( string( "digraph RenderGraph {\n}\n" ), empty.exportToDot() );
+}

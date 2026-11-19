@@ -802,6 +802,30 @@ namespace sw
         return result;
     }
 
+    /**
+     * @brief 그래프 의존 관계를 Graphviz DOT 다이어그램 서식으로 내보냅니다.
+     */
+    string RenderGraph::exportToDot() const
+    {
+        string result = "digraph RenderGraph {\n";
+        result.reserve( _listNode.size() * 128 );
+        for ( const RenderGraphNode& node : _listNode )
+        {
+            string passName = node._name.c_str();
+
+            for ( const hashed_string& input : node._listInput )
+            {
+                result += "    \"" + string( input.c_str() ) + "\" -> \"" + passName + "\";\n";
+            }
+            for ( const hashed_string& output : node._listOutput )
+            {
+                result += "    \"" + passName + "\" -> \"" + string( output.c_str() ) + "\";\n";
+            }
+        }
+        result += "}\n";
+        return result;
+    }
+
     void RenderGraph::appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node )
     {
         for ( const hashed_string& input : node._listInput )

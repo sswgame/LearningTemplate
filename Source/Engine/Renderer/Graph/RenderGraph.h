@@ -345,6 +345,9 @@ namespace sw
          */
         string describeCompiledOrder() const;
 
+        /** @brief 디버깅을 위해 지금 그래프 구성을 Graphviz DOT 다이어그램 텍스트로 내보냅니다. */
+        string exportToDot() const;
+
         /** @brief 모든 패스와 컴파일 상태를 초기화합니다. */
         void clear();
 

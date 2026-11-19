@@ -41,3 +41,17 @@ SW_TEST_CASE( ShaderBinaryLocationTest, DomainFolderMatchesTheSourceRule )
     const ShaderBinaryLocation domain = ShaderBinaryLocation::makeForDomain( "game/shooter3d", ShaderTargetFormat::DXIL_D3D12 );
     SW_EXPECT_EQUAL( domain._binDirectory, makeDX12BinDirectory( "game/shooter3d/shaders/x.hlsl" ) );
 }
+
+/**
+ * @brief [ShaderBinaryLocationTest] 셰이더 폴더 이름은 그 형식으로 되돌아간다 — 쿠킹 표의 모든 형식이 왕복하고, 표에 없는 이름 · 빈 이름은 Count 다
+ */
+SW_TEST_CASE( ShaderBinaryLocationTest, SubfolderNameMapsBackToItsFormat )
+{
+    for ( uint32 formatIndex = 0; formatIndex < static_cast<uint32>( ShaderTargetFormat::Count ); ++formatIndex )
+    {
+        const ShaderTargetFormat format = static_cast<ShaderTargetFormat>( formatIndex );
+        SW_EXPECT_TRUE( ShaderCooker::getFormatForSubfolder( ShaderCooker::getSubfolderForFormat( format ) ) == format );
+    }
+    SW_EXPECT_TRUE( ShaderCooker::getFormatForSubfolder( "not-a-backend" ) == ShaderTargetFormat::Count );
+    SW_EXPECT_TRUE( ShaderCooker::getFormatForSubfolder( "" ) == ShaderTargetFormat::Count );
+}
