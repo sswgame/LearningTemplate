@@ -11,7 +11,11 @@
  *          - `PROPERTY( …, Meta = "Shape=Capsule, ShapeRange=_halfHeight, ShapeOrigin=Base" ) float32 _radius;`(축 로컬 +Y, `Base` 면 바닥이 원점)
  *          - `ShapeScale=Physics` · `ShapeScale=Physics2D` 는 값을 쓰는 쪽이 월드 배율을 먹이는 규칙(`PhysicsComponent::makeScaledShape`)으로 그리고, 손잡이는 배율을 나눠 되쓴다.
  *            적지 않으면 배율을 보지 않는다(점광 반경 · 오디오 존 · 부력 상자처럼 쓰는 쪽이 값을 미터 그대로 쓴다).
- *          - `ShapeAxes=World` 는 회전을 보지 않는다(축 정렬 부피 — 오디오 존). 프로퍼티의 `EditCondition` 이 거짓이면 그 모양을 그리지 않는다(모양 열거로 갈리는 부피).
+ *          - `ShapeAxes=World` 는 회전을 보지 않는다(축 정렬 부피 — 오디오 존). `ShapeAxes=Yaw` 는 요만 따른다(세운 부피 — 내비 장애물: Detour 상자는 요만 돈다).
+ *            프로퍼티의 `EditCondition` 이 거짓이면 그 모양을 그리지 않는다(모양 열거로 갈리는 부피).
+ *          - `PROPERTY( …, Meta = "Shape=Box|Cylinder, ShapeSelector=_shape, ShapeCenter=_center" ) float3 _halfExtents;` — 값 하나를 여러 모양이 함께 쓰면
+ *            열거 프로퍼티(`ShapeSelector=`)의 열거자 이름이 그릴 모양을 고른다(열거자 이름 = 모양 이름, 둘의 집합이 같아야 한다). `ShapeCenter=` 는
+ *            틀 원점에서 옮기는 float3 오프셋 프로퍼티다(컴포넌트의 월드 행렬로 옮긴다 — 쓰는 쪽 `float3::transform( _center, world )` 와 같다).
  *          틀은 컴포넌트(씬 컴포넌트가 아니면 오브젝트의 주 씬 컴포넌트)의 월드 위치 · 회전이다. 콜라이더 손잡이(`EditorColliderHandleEdit`)와 같은 모양이고,
  *          쓰기는 인스펙터와 같은 편집 요청 길을 지나 허용 범위(`Min` · `Max`)와 알림(`onPropertyChanged`)이 같다. ImGui 를 모릅니다.
  *          층: 편집 요청이 인스펙터 Model(Panels 층)에 있어 이 기능도 Panels 층(씬 뷰 패널 곁)에 둔다 — 시각화 등록은 층을 가리지 않는다.
@@ -33,6 +37,7 @@
 namespace sw
 {
     struct ObjectSnapshot;
+    struct EnumInfo;
     struct PropertyInfo;
     struct TypeInfo;
 
@@ -53,23 +58,35 @@ namespace sw::editor
         Physics2D, ///< 2D 물리(`makeScaledShape` 2D): 상자 X · Y, 원 · 구 max(X, Y), 캡슐 반지름 X · 반 높이 Y
     };
 
+    /** @brief 모양 틀의 축 규칙입니다(`ShapeAxes=`). */
+    enum class PropertyShapeAxes : uint8
+    {
+        Local, ///< 컴포넌트의 회전을 따른다(기본)
+        World, ///< 월드 축 — 회전을 보지 않는다(축 정렬 부피)
+        Yaw,   ///< 요만 따른다 — 로컬 X 를 수평면에 눕힌 방향과 월드 위(+Y)
+    };
+
     /**
      * @struct PropertyShapeDecl
      * @brief 프로퍼티 하나의 모양 선언입니다(`Shape=` 메타를 읽은 것). 프로퍼티 포인터는 그 프레임에만 쓴다 — 핫 리로드가 타입을 다시 올리면 낡는다.
      */
     struct SW_EDITOR_API PropertyShapeDecl
     {
-        const PropertyInfo*    _pProperty{ nullptr };      ///< 값 프로퍼티(반지름 · 반 크기 · 반각 · 방향)
-        const PropertyInfo*    _pRangeProperty{ nullptr }; ///< 둘째 값 프로퍼티(`ShapeRange=` — 원뿔 길이 · 캡슐 반 높이). 다른 모양은 nullptr
-        PropertyShapeKind      _kind{ PropertyShapeKind::Sphere };
-        uint8                  _bWorldAxes{ 0 };  ///< `ShapeAxes=World` — 틀이 원점만 따르고 축은 월드 축이다
+        const PropertyInfo*    _pProperty{ nullptr };              ///< 값 프로퍼티(반지름 · 반 크기 · 반각 · 방향)
+        const PropertyInfo*    _pRangeProperty{ nullptr };         ///< 둘째 값 프로퍼티(`ShapeRange=` — 원뿔 길이 · 캡슐 반 높이). 다른 모양은 nullptr
+        const PropertyInfo*    _pCenterProperty{ nullptr };        ///< 원점 오프셋 float3 프로퍼티(`ShapeCenter=`). 없으면 nullptr
+        const PropertyInfo*    _pSelectorProperty{ nullptr };      ///< 모양을 고르는 열거 프로퍼티(`ShapeSelector=`). 없으면 `_kind` 하나다
+        const EnumInfo*        _pSelectorEnum{ nullptr };          ///< `_pSelectorProperty` 의 열거 정보
+        PropertyShapeKind      _kind{ PropertyShapeKind::Sphere }; ///< 고르는 열거가 없을 때의 모양
+        PropertyShapeAxes      _axes{ PropertyShapeAxes::Local };
         uint8                  _bBaseOrigin{ 0 }; ///< `ShapeOrigin=Base` — 캡슐 바닥이 원점이다
         PropertyShapeScaleRule _scaleRule{ PropertyShapeScaleRule::None };
 
         /**
          * @brief 타입 @p type(상속 포함)의 모양 선언을 @p outListDecl 뒤에 붙입니다(비우지 않는다).
          * @return 선언이 틀리면(모르는 모양 · 값 형식이 맞지 않음 · 원뿔 · 캡슐에 `ShapeRange` 가 없거나 float32 가 아님 · 다른 모양의 `ShapeRange` ·
-         *         모르는 `ShapeAxes` · `ShapeOrigin` · `ShapeScale` 값 · 캡슐 밖의 `ShapeOrigin` · 원뿔 · 화살표의 `ShapeScale`) 그 오류입니다 — 앞에서 읽은 선언은 남는다.
+         *         모르는 `ShapeAxes` · `ShapeOrigin` · `ShapeScale` 값 · 캡슐 밖의 `ShapeOrigin` · 원뿔 · 화살표의 `ShapeScale` · float3 가 아닌 `ShapeCenter` ·
+         *         `|` 로 여럿 적은 모양에 `ShapeSelector` 가 없거나 열거자 이름의 집합이 다름 · 고르는 열거와 함께 쓴 `ShapeRange` · `ShapeOrigin`) 그 오류입니다 — 앞에서 읽은 선언은 남는다.
          *         폴백으로 그리지 않는다: 틀린 선언은 그 타입의 모양 전부를 막고 오류를 남긴다.
          */
         static expected<void> collect( const TypeInfo& type, vector<PropertyShapeDecl>& outListDecl );
@@ -78,6 +95,8 @@ namespace sw::editor
          * @details 저장 → 월드 배율은 `_scaleRule` 이 틀의 배율(`PropertyShapeFrame::_scale`)에서 정한다.
          */
         PropertyShapeValue makeValue( const void* pInstance, const PropertyShapeFrame& frame ) const;
+        /** @brief 인스턴스 @p pInstance 가 지금 그리는 모양입니다 — 고르는 열거가 없으면 `_kind`, 있으면 그 값의 열거자 이름. 열거자 밖 값이면 없음입니다(그리지 않는다). */
+        optional<PropertyShapeKind> findSelectedKind( const void* pInstance ) const;
     };
 
     /** @brief 손잡이 도구가 이번 프레임에 그릴 값입니다(`PropertyShapeHandleEdit::gather`). */

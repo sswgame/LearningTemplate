@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Radians.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
@@ -25,6 +26,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
+#include "Engine/Reflection/EnumInfo.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -56,7 +58,59 @@ namespace sw::editor
                     return PropertyShapeKind::Circle;
                 if ( text == "Capsule" )
                     return PropertyShapeKind::Capsule;
+                if ( text == "Cylinder" )
+                    return PropertyShapeKind::Cylinder;
                 return nullopt;
+            }
+
+            /** @brief 메타 `Shape=` 에서 여러 모양을 가르는 글자입니다(`Box|Cylinder`). */
+            static constexpr string_view kKindSeparator = "|";
+
+            /** @brief 메타 `ShapeAxes=` 의 글을 축 규칙으로 바꿉니다. 모르는 글은 없음입니다. */
+            static optional<PropertyShapeAxes> findAxes( const string& text )
+            {
+                if ( text == "Local" )
+                    return PropertyShapeAxes::Local;
+                if ( text == "World" )
+                    return PropertyShapeAxes::World;
+                if ( text == "Yaw" )
+                    return PropertyShapeAxes::Yaw;
+                return nullopt;
+            }
+
+            /** @brief 열거 @p info 의 열거자 이름(표식 `Count` 제외) 집합이 모양 목록 @p listKind 와 같으면 true 입니다 — 고를 수 없는 모양 · 그릴 수 없는 열거자를 막는다. */
+            static bool isSameKindSet( const EnumInfo& info, const vector<PropertyShapeKind>& listKind )
+            {
+                size_t matched = 0;
+                for ( const EnumeratorInfo& enumerator : info._listEnumerator )
+                {
+                    const optional<PropertyShapeKind> kind = findKind( string( enumerator._name.c_str() ) );
+                    if ( kind.has_value() == false || VectorUtil::contains( listKind, *kind ) == false )
+                        return false;
+                    ++matched;
+                }
+                return matched == listKind.size();
+            }
+
+            /**
+             * @brief 축 규칙 @p axes 로 틀 @p inoutFrame 의 축을 바꿉니다(원점 · 배율은 그대로).
+             * @details 요: 로컬 X 를 수평면에 눕힌 방향이 X, 월드 위가 Y, Z 는 X 를 요 회전으로 돌린 짝이다 — Detour 상자의 요(`NavMeshObstacleComponent::computeBoxYaw`)와 같은 축이다.
+             */
+            static void applyAxes( PropertyShapeAxes axes, PropertyShapeFrame& inoutFrame )
+            {
+                if ( axes == PropertyShapeAxes::Local )
+                    return;
+                if ( axes == PropertyShapeAxes::World )
+                {
+                    inoutFrame._axisX = float3::UnitX;
+                    inoutFrame._axisY = float3::UnitY;
+                    inoutFrame._axisZ = float3::UnitZ;
+                    return;
+                }
+                const float3 flatX = float3{ inoutFrame._axisX._x, 0.0f, inoutFrame._axisX._z }.normalizeOr( float3::UnitX, MathUtil::kEpsilon );
+                inoutFrame._axisX  = flatX;
+                inoutFrame._axisY  = float3::UnitY;
+                inoutFrame._axisZ  = float3{ -flatX._z, 0.0f, flatX._x };
             }
 
             /** @brief 메타 `ShapeScale=` 의 글을 규칙으로 바꿉니다. 모르는 글은 없음입니다. */
@@ -95,6 +149,9 @@ namespace sw::editor
                         inoutValue._numberScale = bPhysics2D ? scale._x : MathUtil::max( scale._x, scale._z );
                         inoutValue._rangeScale  = scale._y;
                         break;
+                    case PropertyShapeKind::Cylinder: // 반지름(x)은 캡슐처럼 max(X, Z), 반 높이(y)는 Y — 내비 장애물의 원기둥 식과 같다
+                        inoutValue._vectorScale = float3{ bPhysics2D ? scale._x : MathUtil::max( scale._x, scale._z ), scale._y, 1.0f };
+                        break;
                     case PropertyShapeKind::Cone:
                     case PropertyShapeKind::Arrow:
                         break;
@@ -108,7 +165,7 @@ namespace sw::editor
                 return s_radians;
             }
 
-            /** @brief 모양 @p kind 가 받는 값 형식이면 true 입니다(상자 · 화살표는 float3, 원뿔은 Radians, 나머지는 float32). */
+            /** @brief 모양 @p kind 가 받는 값 형식이면 true 입니다(상자 · 화살표 · 원기둥은 float3, 원뿔은 Radians, 나머지는 float32). */
             static bool isValueTypeAccepted( PropertyShapeKind kind, const PropertyInfo& prop )
             {
                 static const hashed_string s_float32( "float32" );
@@ -117,8 +174,7 @@ namespace sw::editor
                     return false;
                 if ( kind == PropertyShapeKind::Cone )
                     return prop._typeName == getAngleTypeName();
-                const bool bVector = kind == PropertyShapeKind::Box || kind == PropertyShapeKind::Arrow;
-                return prop._typeName == ( bVector ? s_float3 : s_float32 );
+                return prop._typeName == ( isVectorShapeKind( kind ) ? s_float3 : s_float32 );
             }
 
             /** @brief 컴포넌트의 모양 틀입니다 — 씬 컴포넌트면 그것, 아니면 오브젝트의 주 씬 컴포넌트의 월드 위치 · 회전(배율 없이). 없으면 없음입니다. */
@@ -162,6 +218,9 @@ namespace sw::editor
                         // 조건이 거짓인 프로퍼티(모양 열거가 다른 쪽을 고른 부피)는 인스펙터가 막는 것처럼 그리지도 끌지도 않는다.
                         if ( PropertyEditConditionExpr::getEditState( *decl._pProperty, ObjectAddress{ pComponent } ) != PropertyEditState::Enabled )
                             continue;
+                        if ( decl.findSelectedKind( pComponent ).has_value() == false )
+                            continue; // 고르는 열거가 열거자 밖 값이다
+
                         visit( *pComponent, decl, decl.makeValue( pComponent, *frame ) );
                     }
                 } );
@@ -178,7 +237,7 @@ namespace sw::editor
                 bool                      bFound = false;
                 forEachShape( *pObject, PropertyShapeHandleSession::get(), listDecl, [&]( const Component& /*component*/, const PropertyShapeDecl& /*decl*/, const PropertyShapeValue& value )
                 {
-                    const bool bNumber = value._kind != PropertyShapeKind::Box && value._kind != PropertyShapeKind::Arrow;
+                    const bool bNumber = isVectorShapeKind( value._kind ) == false;
                     if ( bFound || bNumber == false )
                         return;
                     outValue = static_cast<float64>( value._number );
@@ -209,48 +268,80 @@ namespace sw::editor
         static const hashed_string s_axesKey( "ShapeAxes" );
         static const hashed_string s_originKey( "ShapeOrigin" );
         static const hashed_string s_scaleKey( "ShapeScale" );
+        static const hashed_string s_centerKey( "ShapeCenter" );
+        static const hashed_string s_selectorKey( "ShapeSelector" );
+        static const hashed_string s_float3( "float3" );
         for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
         {
             const string* pShape = prop.findCustomMeta( s_shapeKey );
             if ( pShape == nullptr )
                 continue;
-            const optional<PropertyShapeKind> kind = Internal::findKind( *pShape );
-            if ( kind.has_value() == false )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "unknown Shape (Sphere, Box, Cone, Arrow, Circle, Capsule)", prop._name.view() } );
-            if ( Internal::isValueTypeAccepted( *kind, prop ) == false )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "Shape value type mismatch (Box/Arrow: float3, Cone: Radians, the others: float32)", prop._name.view() } );
+            // `Box|Cylinder` — 여럿이면 고르는 열거가 정한다.
+            vector<PropertyShapeKind> listKind;
+            for ( const string_view part : StringUtil::split( *pShape, Internal::kKindSeparator ) )
+            {
+                const optional<PropertyShapeKind> kind = Internal::findKind( string( StringUtil::trim( part ) ) );
+                if ( kind.has_value() == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown Shape (Sphere, Box, Cone, Arrow, Circle, Capsule, Cylinder)", prop._name.view() } );
+                if ( Internal::isValueTypeAccepted( *kind, prop ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "Shape value type mismatch (Box/Arrow/Cylinder: float3, Cone: Radians, the others: float32)", prop._name.view() } );
+                listKind.push_back( *kind );
+            }
             PropertyShapeDecl decl{};
-            decl._pProperty      = &prop;
-            decl._kind           = *kind;
-            const bool    bRange = *kind == PropertyShapeKind::Cone || *kind == PropertyShapeKind::Capsule;
-            const string* pRange = prop.findCustomMeta( s_rangeKey );
-            if ( bRange )
+            decl._pProperty = &prop;
+            decl._kind      = listKind.front();
+            if ( const string* pSelector = prop.findCustomMeta( s_selectorKey ); pSelector != nullptr )
+            {
+                const PropertyInfo* pSelectorProp = type.findPropertyInHierarchy( hashed_string{ pSelector->c_str() } );
+                const EnumInfo*     pEnum         = pSelectorProp != nullptr ? editor::getSubsystem<TypeRegistry>().findEnum( pSelectorProp->_typeName ) : nullptr;
+                if ( pEnum == nullptr || Internal::isSameKindSet( *pEnum, listKind ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeSelector needs an enum property whose enumerator names are exactly the listed shapes", prop._name.view() } );
+                decl._pSelectorProperty = pSelectorProp;
+                decl._pSelectorEnum     = pEnum;
+            }
+            else if ( listKind.size() > 1 )
+            {
+                return unexpected( Error{ ErrorKind::InvalidArgument, "Shape=A|B needs ShapeSelector=<enum property>", prop._name.view() } );
+            }
+            const bool    bSelected = decl._pSelectorProperty != nullptr;
+            const bool    bRange    = decl._kind == PropertyShapeKind::Cone || decl._kind == PropertyShapeKind::Capsule;
+            const string* pRange    = prop.findCustomMeta( s_rangeKey );
+            if ( bRange && bSelected == false )
             {
                 const PropertyInfo* pRangeProp = pRange != nullptr ? type.findPropertyInHierarchy( hashed_string{ pRange->c_str() } ) : nullptr;
                 if ( pRangeProp == nullptr || Internal::isValueTypeAccepted( PropertyShapeKind::Sphere, *pRangeProp ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "Shape=Cone/Capsule needs ShapeRange=<float32 property of the same type>", prop._name.view() } );
                 decl._pRangeProperty = pRangeProp;
             }
-            else if ( pRange != nullptr )
+            else if ( pRange != nullptr || ( bRange && bSelected ) )
             {
-                return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeRange is only for Shape=Cone/Capsule", prop._name.view() } );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeRange is only for a single Shape=Cone/Capsule", prop._name.view() } );
             }
             if ( const string* pAxes = prop.findCustomMeta( s_axesKey ); pAxes != nullptr )
             {
-                if ( *pAxes != "World" && *pAxes != "Local" )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeAxes is World or Local", prop._name.view() } );
-                decl._bWorldAxes = *pAxes == "World" ? 1 : 0;
+                const optional<PropertyShapeAxes> axes = Internal::findAxes( *pAxes );
+                if ( axes.has_value() == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeAxes is Local, World or Yaw", prop._name.view() } );
+                decl._axes = *axes;
             }
             if ( const string* pOrigin = prop.findCustomMeta( s_originKey ); pOrigin != nullptr )
             {
-                if ( *kind != PropertyShapeKind::Capsule || ( *pOrigin != "Base" && *pOrigin != "Center" ) )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeOrigin is Base or Center, only for Shape=Capsule", prop._name.view() } );
+                if ( decl._kind != PropertyShapeKind::Capsule || bSelected || ( *pOrigin != "Base" && *pOrigin != "Center" ) )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeOrigin is Base or Center, only for a single Shape=Capsule", prop._name.view() } );
                 decl._bBaseOrigin = *pOrigin == "Base" ? 1 : 0;
+            }
+            if ( const string* pCenter = prop.findCustomMeta( s_centerKey ); pCenter != nullptr )
+            {
+                const PropertyInfo* pCenterProp = type.findPropertyInHierarchy( hashed_string{ pCenter->c_str() } );
+                if ( pCenterProp == nullptr || pCenterProp->_typeName != s_float3 || pCenterProp->_bIsContainer == SW_TRUE )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeCenter needs a float3 property of the same type", prop._name.view() } );
+                decl._pCenterProperty = pCenterProp;
             }
             if ( const string* pScale = prop.findCustomMeta( s_scaleKey ); pScale != nullptr )
             {
                 const optional<PropertyShapeScaleRule> rule      = Internal::findScaleRule( *pScale );
-                const bool                             bScalable = *kind != PropertyShapeKind::Cone && *kind != PropertyShapeKind::Arrow; // 반각 · 방향은 배율과 상관없다
+                const bool                             bScalable = VectorUtil::containsIf( listKind, []( PropertyShapeKind kind ) // 반각 · 방향은 배율과 상관없다
+                                            { return kind == PropertyShapeKind::Cone || kind == PropertyShapeKind::Arrow; } ) == false;
                 if ( rule.has_value() == false || bScalable == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeScale is None, Physics or Physics2D, not for Shape=Cone/Arrow", prop._name.view() } );
                 decl._scaleRule = *rule;
@@ -260,24 +351,37 @@ namespace sw::editor
         return {};
     }
 
+    optional<PropertyShapeKind> PropertyShapeDecl::findSelectedKind( const void* pInstance ) const
+    {
+        if ( _pSelectorProperty == nullptr )
+            return _kind;
+        const void* pValue = _pSelectorProperty->getRawPtr( pInstance );
+        if ( pValue == nullptr )
+            return nullopt;
+        const hashed_string name = _pSelectorEnum->getNameByValue( _pSelectorEnum->readValueFromMemory( pValue ) );
+        return PropertyShapeEditInternal::findKind( string( name.c_str() ) );
+    }
+
     PropertyShapeValue PropertyShapeDecl::makeValue( const void* pInstance, const PropertyShapeFrame& frame ) const
     {
         PropertyShapeValue value{};
         value._frame       = frame;
-        value._kind        = _kind;
+        value._kind        = findSelectedKind( pInstance ).value_or( _kind ); // 열거자 밖 값은 부르는 쪽(`forEachShape`)이 미리 거른다
         value._bBaseOrigin = _bBaseOrigin;
-        if ( _bWorldAxes != 0 )
+        if ( _pCenterProperty != nullptr )
         {
-            value._frame._axisX = float3::UnitX;
-            value._frame._axisY = float3::UnitY;
-            value._frame._axisZ = float3::UnitZ;
+            // 쓰는 쪽은 `float3::transform( _center, world )` 다 — 축(회전) × 배율 크기가 행렬의 행이라 같은 점이다.
+            const float3* pCenter = _pCenterProperty->getValuePtr<float3>( pInstance );
+            if ( pCenter != nullptr )
+                value._frame._origin = frame._origin + frame.toWorldVector( float3::multiply( *pCenter, frame._scale ) );
         }
-        if ( _kind == PropertyShapeKind::Box || _kind == PropertyShapeKind::Arrow )
+        PropertyShapeEditInternal::applyAxes( _axes, value._frame );
+        if ( isVectorShapeKind( value._kind ) )
         {
             const float3* pVector = _pProperty->getValuePtr<float3>( pInstance );
             value._vector         = pVector != nullptr ? *pVector : float3{};
         }
-        else if ( _kind == PropertyShapeKind::Cone )
+        else if ( value._kind == PropertyShapeKind::Cone )
         {
             const Radians* pAngle = _pProperty->getValuePtr<Radians>( pInstance );
             value._number         = pAngle != nullptr ? pAngle->radians() : 0.0f;

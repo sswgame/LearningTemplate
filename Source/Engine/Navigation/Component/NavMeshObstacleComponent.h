@@ -71,7 +71,8 @@ namespace sw
 
         PROPERTY( Category = "Obstacle", Tooltip = "Footprint shape" )
         NavObstacleShape _shape;
-        PROPERTY( Category = "Obstacle", DisplayName = "Half Extents", Tooltip = "Box half size; cylinder uses x as radius and y as half height", Units = m )
+        PROPERTY( Category = "Obstacle", DisplayName = "Half Extents", Tooltip = "Box half size; cylinder uses x as radius and y as half height", Units = m,
+                  Meta = "Shape=Box|Cylinder, ShapeSelector=_shape, ShapeCenter=_center, ShapeAxes=Yaw, ShapeScale=Physics" )
         float3 _halfExtents;
         PROPERTY( Category = "Obstacle", Tooltip = "Offset from the object origin", Units = m )
         float3 _center;

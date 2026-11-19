@@ -129,6 +129,7 @@ namespace sw::editor
             case PropertyShapeHandleKind::Radius:
             case PropertyShapeHandleKind::BoxExtent:
             case PropertyShapeHandleKind::ArrowTip:
+            case PropertyShapeHandleKind::CylinderRadius:
                 break;
         }
         return MathUtil::max( distance, PropertyShapeValue::kMinExtent ) / _numberScale;
@@ -137,6 +138,11 @@ namespace sw::editor
     float3 PropertyShapeHandle::computeDraggedVector( const Ray& ray ) const
     {
         float3 result = _vector;
+        if ( _kind == PropertyShapeHandleKind::CylinderRadius )
+        {
+            result._x = MathUtil::max( Ray::computeClosestAxisParameter( ray, _center, _direction ), PropertyShapeValue::kMinExtent ) / _vectorScale._x;
+            return result;
+        }
         if ( _kind == PropertyShapeHandleKind::BoxExtent )
         {
             result.data()[_axis] = MathUtil::max( Ray::computeClosestAxisParameter( ray, _center, _direction ), PropertyShapeValue::kMinExtent ) / _vectorScale.data()[_axis];
@@ -234,6 +240,20 @@ namespace sw::editor
                 }
                 break;
             }
+            case PropertyShapeKind::Cylinder:
+            {
+                const float3 top    = origin + axisY * extent._y;
+                const float3 bottom = origin - axisY * extent._y;
+                Internal::addCircle( top, axisZ, axisX, extent._x, prototype, outDrawList );
+                Internal::addCircle( bottom, axisZ, axisX, extent._x, prototype, outDrawList );
+                for ( const uint32 axis : { 0u, 2u } )
+                {
+                    const float3& side = _frame.getAxis( axis );
+                    Internal::addSegment( bottom + side * extent._x, top + side * extent._x, prototype, outDrawList );
+                    Internal::addSegment( bottom - side * extent._x, top - side * extent._x, prototype, outDrawList );
+                }
+                break;
+            }
             case PropertyShapeKind::Arrow:
             {
                 const float3 direction = computeArrowDirection();
@@ -318,6 +338,11 @@ namespace sw::editor
                 }
                 break;
             }
+            case PropertyShapeKind::Cylinder:
+                Internal::addAxisPair( *this, componentID, property, PropertyShapeHandleKind::CylinderRadius, 0, origin, extent._x, outListHandle );
+                Internal::addAxisPair( *this, componentID, property, PropertyShapeHandleKind::CylinderRadius, 2, origin, extent._x, outListHandle );
+                Internal::addAxisPair( *this, componentID, property, PropertyShapeHandleKind::BoxExtent, 1, origin, extent._y, outListHandle ); // 반 높이 — float3 의 y
+                break;
             case PropertyShapeKind::Arrow:
                 outListHandle.push_back( Internal::makeHandle( *this, componentID, property, PropertyShapeHandleKind::ArrowTip, 2, 1.0f, origin, computeArrowDirection(), kArrowLength ) );
                 break;

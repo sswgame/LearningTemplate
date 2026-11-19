@@ -10,6 +10,7 @@
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
 #include "Engine/Audio/Component/AudioReverbZoneComponent.h"
+#include "Engine/Navigation/Component/NavMeshObstacleComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
@@ -184,6 +185,7 @@ SW_TEST_CASE( PropertyShapeTest, LineCountsPerShape )
     SW_EXPECT_EQUAL( size_t{ 5 }, countLines( PropertyShapeKind::Arrow ) );
     SW_EXPECT_EQUAL( circle, countLines( PropertyShapeKind::Circle ) );
     SW_EXPECT_EQUAL( circle * 2 + 4 + circle * 2, countLines( PropertyShapeKind::Capsule ) ); // 끝 원 둘 · 옆선 넷 · 반원 넷(반원 하나가 원의 절반)
+    SW_EXPECT_EQUAL( circle * 2 + 4, countLines( PropertyShapeKind::Cylinder ) );             // 위 · 아래 원 둘 · 옆선 넷
 }
 
 /**
@@ -335,7 +337,7 @@ SW_TEST_CASE( PropertyShapeTest, DeclarationOptionsAreRead )
     SW_REQUIRE_EQUAL( size_t{ 2 }, listDecl.size() ); // 상자 · 구 — 어느 쪽을 그릴지는 EditCondition(_shape)이 고른다
     for ( const sw::editor::PropertyShapeDecl& decl : listDecl )
     {
-        SW_EXPECT_EQUAL( uint8{ 1 }, decl._bWorldAxes );
+        SW_EXPECT_TRUE( decl._axes == sw::editor::PropertyShapeAxes::World );
     }
 }
 
@@ -414,4 +416,80 @@ SW_TEST_CASE( PropertyShapeTest, CharacterCapsuleUsesThePhysicsScaleRule )
     const PropertyShapeValue value = listDecl[0].makeValue( &component, frame );
     SW_EXPECT_NEAR( 4.0f, value._numberScale, PropertyShapeTestInternal::kTolerance );
     SW_EXPECT_NEAR( 3.0f, value._rangeScale, PropertyShapeTestInternal::kTolerance );
+}
+
+/**
+ * @brief [PropertyShapeTest] 원기둥은 옆(±X · ±Z) 반지름 손잡이 넷과 위아래(±Y) 반 높이 손잡이 둘을 두고, 옆에서 끌면 float3 의 x 만, 위에서 끌면 y 만 바뀐다. 결함이면 Z 쪽 손잡이가 z 를 쓴다
+ */
+SW_TEST_CASE( PropertyShapeTest, CylinderHandlesWriteRadiusToXAndHalfHeightToY )
+{
+    using Internal           = PropertyShapeTestInternal;
+    PropertyShapeValue value = Internal::makeValue( PropertyShapeKind::Cylinder );
+    value._vector            = sw::float3{ 0.5f, 1.5f, 9.0f };
+    sw::vector<PropertyShapeHandle> listHandle;
+    value.collectHandles( 7, sw::hashed_string( "_halfExtents" ), sw::hashed_string{}, listHandle );
+    SW_REQUIRE_EQUAL( size_t{ 6 }, listHandle.size() );
+
+    const PropertyShapeHandle* pPlusZ = Internal::findHandle( listHandle, PropertyShapeHandleKind::CylinderRadius, 2, 1.0f );
+    SW_REQUIRE_NOT_NULL( pPlusZ );
+    SW_EXPECT_NEAR( 3.5f, pPlusZ->_position._z, Internal::kTolerance ); // 원점 z 3 + 반지름 0.5
+    // 옆(+X)에서 축 +Z 를 따라 z 5 자리를 본다 — 반지름 2, 반 높이 · z 는 그대로.
+    const sw::float3 radiusDragged = pPlusZ->computeDraggedVector( Internal::makeRay( sw::float3{ 10.0f, 2.0f, 5.0f }, sw::float3{ 1.0f, 2.0f, 5.0f } ) );
+    SW_EXPECT_NEAR( 2.0f, radiusDragged._x, Internal::kTolerance );
+    SW_EXPECT_NEAR( 1.5f, radiusDragged._y, Internal::kTolerance );
+    SW_EXPECT_NEAR( 9.0f, radiusDragged._z, Internal::kTolerance );
+
+    const PropertyShapeHandle* pTop = Internal::findHandle( listHandle, PropertyShapeHandleKind::BoxExtent, 1, 1.0f );
+    SW_REQUIRE_NOT_NULL( pTop );
+    SW_EXPECT_NEAR( 3.5f, pTop->_position._y, Internal::kTolerance ); // 원점 y 2 + 반 높이 1.5
+    const sw::float3 heightDragged = pTop->computeDraggedVector( Internal::makeRay( sw::float3{ 1.0f, 5.0f, 10.0f }, sw::float3{ 1.0f, 5.0f, 3.0f } ) );
+    SW_EXPECT_NEAR( 0.5f, heightDragged._x, Internal::kTolerance );
+    SW_EXPECT_NEAR( 3.0f, heightDragged._y, Internal::kTolerance );
+}
+
+/**
+ * @brief [PropertyShapeTest] 내비 장애물 — 반 크기 하나를 `_shape` 열거가 상자 · 원기둥으로 고르고, 원점은 `_center` 를 월드 행렬로 옮긴 자리, 틀은 요만 돈다.
+ *        결함이면 원기둥 장애물이 상자로 그려지거나, 오프셋 없이 발밑에 그려지거나, 기운 오브젝트에서 Detour 와 다른 축으로 그려진다
+ */
+SW_TEST_CASE( PropertyShapeTest, NavObstacleShapeFollowsSelectorCenterAndYaw )
+{
+    using Internal            = PropertyShapeTestInternal;
+    const sw::TypeInfo* pType = sw::findStaticType<sw::NavMeshObstacleComponent>();
+    SW_REQUIRE_NOT_NULL( pType );
+    sw::vector<sw::editor::PropertyShapeDecl> listDecl;
+    SW_REQUIRE_TRUE( sw::editor::PropertyShapeDecl::collect( *pType, listDecl ).has_value() );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listDecl.size() );
+    const sw::editor::PropertyShapeDecl& decl = listDecl[0];
+    SW_EXPECT_TRUE( decl._axes == sw::editor::PropertyShapeAxes::Yaw );
+    SW_REQUIRE_NOT_NULL( decl._pSelectorProperty );
+    SW_REQUIRE_NOT_NULL( decl._pCenterProperty );
+
+    sw::NavMeshObstacleComponent component;
+    component.setHalfExtents( sw::float3{ 1.0f, 2.0f, 3.0f } );
+    component.setCenter( sw::float3{ 0.0f, 1.0f, 0.0f } );
+    // 요 90°(+X → -Z) 에 앞으로 기운(롤) 틀 — 축은 회전 행렬의 행이다. 배율 2.
+    sw::editor::PropertyShapeFrame frame{};
+    frame._origin = sw::float3{ 10.0f, 0.0f, 0.0f };
+    frame._axisX  = sw::float3{ 0.0f, 0.0f, -1.0f };
+    frame._axisY  = sw::float3{ 0.6f, 0.8f, 0.0f };
+    frame._axisZ  = sw::float3{ 0.8f, -0.6f, 0.0f };
+    frame._scale  = sw::float3{ 2.0f, 2.0f, 2.0f };
+
+    component.setShape( sw::NavObstacleShape::Box );
+    const PropertyShapeValue box = decl.makeValue( &component, frame );
+    SW_EXPECT_TRUE( box._kind == PropertyShapeKind::Box );
+    // 원점: 원래 축 Y(기운) × 오프셋 1 × 배율 2 — `float3::transform( _center, world )` 와 같은 점.
+    SW_EXPECT_NEAR( 11.2f, box._frame._origin._x, Internal::kTolerance );
+    SW_EXPECT_NEAR( 1.6f, box._frame._origin._y, Internal::kTolerance );
+    // 요 틀: X 는 수평으로 눕힌 원래 X, Y 는 월드 위.
+    SW_EXPECT_NEAR( -1.0f, box._frame._axisX._z, Internal::kTolerance );
+    SW_EXPECT_NEAR( 1.0f, box._frame._axisY._y, Internal::kTolerance );
+    SW_EXPECT_NEAR( 1.0f, box._frame._axisZ._x, Internal::kTolerance );
+    SW_EXPECT_NEAR( 2.0f, box._vectorScale._z, Internal::kTolerance );
+
+    component.setShape( sw::NavObstacleShape::Cylinder );
+    const PropertyShapeValue cylinder = decl.makeValue( &component, frame );
+    SW_EXPECT_TRUE( cylinder._kind == PropertyShapeKind::Cylinder );
+    SW_EXPECT_NEAR( 2.0f, cylinder.getWorldVector()._x, Internal::kTolerance ); // 반지름 1 × max(X, Z) 배율 2
+    SW_EXPECT_NEAR( 4.0f, cylinder.getWorldVector()._y, Internal::kTolerance ); // 반 높이 2 × Y 배율 2
 }
