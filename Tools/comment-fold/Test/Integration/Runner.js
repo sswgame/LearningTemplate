@@ -62,7 +62,7 @@ async function openSampleEditor() {
     return vscode.window.showTextDocument(document);
 }
 
-async function run() {
+async function runChecks() {
     const extension = vscode.extensions.getExtension(kExtensionId);
     assert.ok(extension, `${kExtensionId} is loaded`);
 
@@ -105,8 +105,18 @@ async function run() {
     assert.ok(keyMatch, `the default key is listed: ${ownLine}`);
     const listKeyLine = listDefaultLine.filter((line) => line.includes(`"key": ${keyMatch[1]}`) || line.includes(`"key":${keyMatch[1]}`));
     assert.ok(listKeyLine.every((line) => line.includes('commentFold.toggle')), `the default key is not taken by another command:\n${listKeyLine.join('\n')}`);
+}
 
-    fs.writeFileSync(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'integration-result.txt'), 'PASS\n');
+/** @brief 결과(PASS, 또는 FAIL 과 오류)를 작업 폴더의 integration-result.txt 에 남깁니다 — 확장 호스트의 오류는 부른 쪽 콘솔에 나오지 않아 도구가 이 파일을 출력한다. */
+async function run() {
+    const resultPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'integration-result.txt');
+    try {
+        await runChecks();
+    } catch (error) {
+        fs.writeFileSync(resultPath, `FAIL\n${error && error.stack ? error.stack : error}\n`);
+        throw error;
+    }
+    fs.writeFileSync(resultPath, 'PASS\n');
 }
 
 module.exports = {

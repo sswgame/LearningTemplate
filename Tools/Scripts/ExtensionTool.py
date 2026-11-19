@@ -163,8 +163,12 @@ def runIntegrationTestInternal(codePath: Path, extensionRoot: Path) -> int:
         except subprocess.TimeoutExpired:
             print(f"[integration] timed out after {_kIntegrationTimeoutSeconds} s", file=sys.stderr)
             return 1
-        bPassed = (workspacePath / "integration-result.txt").is_file()
-        print(f"[integration] exit code {returnCode}, result file {'present' if bPassed else 'missing'}", flush=True)
+        resultPath = workspacePath / "integration-result.txt"
+        resultText = resultPath.read_text(encoding="utf-8") if resultPath.is_file() else ""
+        bPassed = resultText.startswith("PASS")
+        print(f"[integration] exit code {returnCode}, result {'PASS' if bPassed else ('missing' if resultText == '' else 'FAIL')}", flush=True)
+        if bPassed is False and resultText != "":
+            print(resultText, file=sys.stderr, flush=True)
         return 0 if returnCode == 0 and bPassed else 1
 
 

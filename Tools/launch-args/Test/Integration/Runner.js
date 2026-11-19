@@ -37,7 +37,7 @@ function readSettingsText() {
 }
 
 /** @brief 통합 테스트 본체입니다. */
-async function run() {
+async function runChecks() {
     const extension = vscode.extensions.getExtension(kExtensionId);
     assert.ok(extension !== undefined, `${kExtensionId} is not loaded`);
     const api = await extension.activate();
@@ -121,8 +121,18 @@ async function run() {
     const fromCmakeTools = await originalResolve(undefined, { type: 'lldb', name: 'Debug app', args: ['--x'], environment: [{ name: 'FOG_LOG', value: '2' }] });
     assert.deepEqual(fromCmakeTools.env, { FOG_LOG: '2' }, 'a CMake Tools environment array becomes CodeLLDB env');
     assert.deepEqual(fromCmakeTools.args, ['--x']);
+}
 
-    fs.writeFileSync(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'integration-result.txt'), 'PASS\n');
+/** @brief 결과(PASS, 또는 FAIL 과 오류)를 작업 폴더의 integration-result.txt 에 남깁니다 — 확장 호스트의 오류는 부른 쪽 콘솔에 나오지 않아 도구가 이 파일을 출력한다. */
+async function run() {
+    const resultPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'integration-result.txt');
+    try {
+        await runChecks();
+    } catch (error) {
+        fs.writeFileSync(resultPath, `FAIL\n${error && error.stack ? error.stack : error}\n`);
+        throw error;
+    }
+    fs.writeFileSync(resultPath, 'PASS\n');
 }
 
 module.exports = {
