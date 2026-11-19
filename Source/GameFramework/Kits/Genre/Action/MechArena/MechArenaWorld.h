@@ -224,11 +224,14 @@ namespace sw
      *     (void)writer.broadcast( peers, NetChannelKind::UnreliableSequenced );
      * @endcode
      */
+    REFLECT()
     class SW_KIT_API MechArenaWorld
     {
         friend class MechArenaProjectileQuery;
 
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag       = FourCCUtil::make( "MCHA" );
         static constexpr uint32 kStateVersion   = 4;   ///< 4: 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
         static constexpr uint32 kSlotStride     = 256; ///< 탄의 반응 번호에서 기체 번호와 슬롯을 가르는 폭(한 기체의 슬롯 수 상한)
@@ -336,9 +339,10 @@ namespace sw
         void pushEvent( MechArenaEvent::Kind kind, optional<int32> pilot, optional<int32> other, float32 value, const hashed_string& id );
 
     private:
-        MechArenaSettings           _settings;
-        vector<MechPilot>           _listPilot;
-        ProjectileSimulation        _projectiles;
+        MechArenaSettings    _settings;
+        vector<MechPilot>    _listPilot;
+        ProjectileSimulation _projectiles;
+        PROPERTY( RuntimeState )
         vector<hashed_string>       _listTeamName;
         EventBuffer<MechArenaEvent> _eventBuffer;
         vector<LockOnCandidate>     _listCandidateScratch;
@@ -348,8 +352,11 @@ namespace sw
         const WeaponCatalog*        _pWeaponCatalog;
         const ProjectileCatalog*    _pProjectileCatalog;
         const MoveCatalog*          _pMoveCatalog;
-        uint32                      _tick;
-        uint8                       _bStarted;
-        uint8                       _bEndReported;
+        PROPERTY( RuntimeState )
+        uint32 _tick;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bStarted;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bEndReported;
     };
 } // namespace sw

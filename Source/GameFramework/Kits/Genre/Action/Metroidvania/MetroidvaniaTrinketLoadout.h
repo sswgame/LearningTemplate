@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -37,9 +38,12 @@ namespace sw
      * @class MetroidvaniaTrinketLoadout
      * @brief 캐릭터 하나의 부적입니다. 넘겨 끼기는 규칙 `_bAllowOvercharm` 이 켜져 있고, 끼기 전에 쓴 슬롯이 전체보다 적을 때만 됩니다.
      */
+    REFLECT()
     class SW_KIT_API MetroidvaniaTrinketLoadout
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "MCHM" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -76,8 +80,11 @@ namespace sw
 
     private:
         const MetroidvaniaCatalog* _pCatalog;
-        vector<hashed_string>      _listOwned;
-        vector<hashed_string>      _listEquipped; ///< 낀 순서
-        int32                      _notchCount;
+        PROPERTY( RuntimeState )
+        vector<hashed_string> _listOwned;
+        PROPERTY( RuntimeState )
+        vector<hashed_string> _listEquipped; ///< 낀 순서
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _notchCount;
     };
 } // namespace sw

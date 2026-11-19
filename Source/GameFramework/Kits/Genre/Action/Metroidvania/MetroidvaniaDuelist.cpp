@@ -151,14 +151,11 @@ namespace sw
 
     void MetroidvaniaDuelist::serializeState( StateIO& io )
     {
-        io.value( _healthMachine );
+        io.reflected( *this );      // 시각 · 패리 누른 시각 · 받는 피해 배율 · 막기 — 시각 바닥은 칸의 `PROPERTY( Min )`
+        io.value( _healthMachine ); // 리플렉션 밖 값 — 자기 `serializeState` 가 있는 형식과 `Countdown`
         io.value( _stamina );
-        io.value( _time );
-        io.value( _parryPressTime );
         io.value( _riposteWindow );
-        io.value( _damageTakenScale );
-        io.flag( _bGuarding );
-        io.check( 0.0f <= _time && 0.0f < _damageTakenScale );
+        io.check( 0.0f < _damageTakenScale ); // 0 을 뺀 바닥이라 Min(포함)으로는 못 적는다
     }
 
 } // namespace sw

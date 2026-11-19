@@ -428,13 +428,11 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        io.value( _matchState );
+        io.reflected( *this );   // 판 시각 · 다음 보급 상자 — 바닥은 칸의 `PROPERTY( Min )`
+        io.value( _matchState ); // 리플렉션 밖 값 — 자기 `serializeState` 가 있는 형식, 난수, 고정 걸음 타이머
         io.value( _zone );
         io.value( _random );
         io.value( _stepTimer );
-        io.value( _time );
-        io.value( _nextSupplyDrop );
-        io.check( 0.0f <= _time && 0 <= _nextSupplyDrop );
         uint32 playerCount = static_cast<uint32>( _listPlayer.size() );
         // 사람마다 팀(4) + 부활 수(4) + 진행(4) + 위치(8) + 정수 4개(16) 바이트 이상
         io.count( 36, playerCount );

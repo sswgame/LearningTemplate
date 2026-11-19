@@ -70,8 +70,13 @@ namespace
 
     struct MetroidvaniaMapTestUtil
     {
+        /** @brief `MetroidvaniaMapState::writeState` 와 같은 모양의 바이트입니다. 리플렉션 머리는 정상 `writeState` 바이트에서 가져온다 — 손으로 짜면 다른 이유로 거절되어 거짓 통과한다. */
         static void writeListBytes( sw::Archive& outArchive, const sw::vector<sw::hashed_string>& listRegion, const sw::vector<sw::hashed_string>& listSite, const sw::vector<sw::hashed_string>& listPickup )
         {
+            sw::MetroidvaniaMapState blank;
+            sw::Archive              blankBytes;
+            blank.writeState( blankBytes );
+            outArchive.writeBytes( blankBytes.getData(), sw::StateIO::kReflectedHeaderBytes );
             for ( const sw::vector<sw::hashed_string>* pList : { &listRegion, &listSite, &listPickup } )
             {
                 outArchive << static_cast<uint32>( pList->size() );
@@ -317,6 +322,13 @@ SW_TEST_CASE( MetroidvaniaMapStateTest, StateRoundTripAndRejection )
     expectRejected( { kDeep }, { kBenchSite, kBenchSite }, {} );
     expectRejected( { kDeep }, {}, { ghost } );
     expectRejected( { kDeep }, {}, { kMask, kMask } );
+    // 대조: 같은 도우미로 짠 맞는 목록은 읽힌다(위 거절이 바이트 모양 탓이 아님을 본다).
+    MapBench control;
+    SW_REQUIRE_TRUE( control.setUp() );
+    sw::Archive controlBytes;
+    MetroidvaniaMapTestUtil::writeListBytes( controlBytes, { kDeep }, { kBenchSite }, { kMask } );
+    sw::Archive controlReading( controlBytes.getData(), controlBytes.getSize() );
+    SW_EXPECT_TRUE( control._map.readState( controlReading ) );
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( restored._map.readState( truncated ) );
     SW_EXPECT_FALSE( restored._graph.isDiscovered( kPitArea ) );

@@ -90,8 +90,13 @@ namespace
 
     struct MetroidvaniaDeathRestTestUtil
     {
+        /** @brief `MetroidvaniaDeathRestState::writeState` 와 같은 모양의 바이트입니다. 리플렉션 머리는 정상 `writeState` 바이트에서 가져온다 — 손으로 짜면 다른 이유로 거절되어 거짓 통과한다. */
         static void writeStateBytes( sw::Archive& outArchive, const sw::vector<sw::hashed_string>& listSpawn, float32 corpseX, const sw::hashed_string& respawnSite, int32 flaskCharges, int32 flaskMaxCharges )
         {
+            sw::MetroidvaniaDeathRestState blank;
+            sw::Archive                    blankBytes;
+            blank.writeState( blankBytes );
+            outArchive.writeBytes( blankBytes.getData(), sw::StateIO::kReflectedHeaderBytes );
             outArchive << static_cast<uint32>( listSpawn.size() );
             for ( const sw::hashed_string& spawn : listSpawn )
             {
@@ -587,28 +592,29 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, StateRoundTripAndRejection )
     sw::Archive written;
     original.writeState( written );
 
-    // 뒤에서: 시각(4) 패리 시각(4) 반격 창(4) 배율(4) 막기(1).
-    const size_t            size = static_cast<size_t>( written.getSize() );
+    // 리플렉션 머리 뒤 시각(4) 패리 시각(4) 배율(4) 막기(1), 손 본문의 체력 · 지구력 다음 맨 끝이 반격 창(4)이다.
+    const size_t            size   = static_cast<size_t>( written.getSize() );
+    const size_t            timeAt = sw::StateIO::kReflectedHeaderBytes;
     sw::MetroidvaniaDuelist target;
     SW_REQUIRE_TRUE( target.initialize( &catalog ) );
-    const auto expectRejected = [&]( size_t offsetFromEnd, auto value )
+    const auto expectRejected = [&]( size_t offset, auto value )
     {
         sw::vector<uint8> listByte( written.getData(), written.getData() + size );
-        std::memcpy( listByte.data() + size - offsetFromEnd, &value, sizeof( value ) );
+        std::memcpy( listByte.data() + offset, &value, sizeof( value ) );
         sw::Archive reading( listByte.data(), listByte.size() );
         SW_EXPECT_FALSE( target.readState( reading ) );
         SW_EXPECT_NEAR( 100.0f, target.getStamina().getValue(), kDuelTolerance );
     };
     const float32 nan      = std::numeric_limits<float32>::quiet_NaN();
     const float32 infinity = std::numeric_limits<float32>::infinity();
-    expectRejected( 17, -1.0f );
-    expectRejected( 17, nan );
-    expectRejected( 13, nan );
-    expectRejected( 9, nan );
-    expectRejected( 5, 0.0f );
-    expectRejected( 5, -1.0f );
-    expectRejected( 5, infinity );
-    expectRejected( 1, static_cast<uint8>( 2 ) );
+    expectRejected( timeAt, -1.0f );
+    expectRejected( timeAt, nan );
+    expectRejected( timeAt + 4, nan );
+    expectRejected( size - 4, nan ); // 반격 창
+    expectRejected( timeAt + 8, 0.0f );
+    expectRejected( timeAt + 8, -1.0f );
+    expectRejected( timeAt + 8, infinity );
+    expectRejected( timeAt + 12, static_cast<uint8>( 2 ) );
 
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( target.readState( truncated ) );

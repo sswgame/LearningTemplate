@@ -125,12 +125,18 @@ namespace sw
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
         // 가진 것, 낀 것 순서로 놓는다. 둘 다 카탈로그의 부적이고 겹치지 않으며, 낀 것은 가진 것이어야 한다
-        io.nameList( _listOwned, [this]( const hashed_string& charmID )
-        { return _pCatalog->findCharm( charmID ) != nullptr && VectorUtil::contains( _listOwned, charmID ) == false; } );
-        io.nameList( _listEquipped, [this]( const hashed_string& charmID )
-        { return _pCatalog->findCharm( charmID ) != nullptr && VectorUtil::contains( _listEquipped, charmID ) == false && VectorUtil::contains( _listOwned, charmID ); } );
-        io.value( _notchCount );
-        io.check( 0 <= _notchCount );
+        io.reflected( *this ); // 가진 것 · 낀 것 · 홈 수 — 홈 수 바닥은 칸의 `PROPERTY( Min )`
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        for ( const hashed_string& charmID : _listOwned )
+        {
+            io.check( _pCatalog->findCharm( charmID ) != nullptr );
+        }
+        for ( const hashed_string& charmID : _listEquipped )
+        {
+            io.check( VectorUtil::contains( _listOwned, charmID ) ); // 가진 것이면 카탈로그의 것이다
+        }
+        io.check( VectorUtil::findDuplicate( _listOwned ) == nullptr && VectorUtil::findDuplicate( _listEquipped ) == nullptr );
     }
 
 } // namespace sw

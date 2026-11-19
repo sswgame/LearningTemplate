@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -38,9 +39,12 @@ namespace sw
      * @class MetroidvaniaMapState
      * @brief 지도와 수집 상태입니다. 방 그래프(`AreaGraph`)는 빌려 씁니다. 방문과 발견은 그래프가, 산 지도, 연 정거장, 주운 것은 이 클래스가 가집니다.
      */
+    REFLECT()
     class SW_KIT_API MetroidvaniaMapState
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "MMAP" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -93,8 +97,11 @@ namespace sw
     private:
         const MetroidvaniaCatalog* _pCatalog;
         AreaGraph*                 _pGraph;
-        vector<hashed_string>      _listRegionMap; ///< 산 지역 지도
-        vector<hashed_string>      _listSite;      ///< 연 지점
-        vector<hashed_string>      _listPickup;    ///< 주운 것
+        PROPERTY( RuntimeState )
+        vector<hashed_string> _listRegionMap; ///< 산 지역 지도
+        PROPERTY( RuntimeState )
+        vector<hashed_string> _listSite; ///< 연 지점
+        PROPERTY( RuntimeState )
+        vector<hashed_string> _listPickup; ///< 주운 것
     };
 } // namespace sw

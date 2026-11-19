@@ -14,6 +14,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -57,22 +58,34 @@ namespace sw
 namespace sw
 {
     /** @brief 떨어뜨린 시체(그림자, 혈흔)입니다. */
+    REFLECT()
     struct MetroidvaniaCorpse
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _area{};
-        float2        _position{};
-        int32         _currency{ 0 };
-        uint8         _bActive{ SW_FALSE };
+        PROPERTY()
+        float2 _position{};
+        PROPERTY( Min = 0 )
+        int32 _currency{ 0 };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bActive{ SW_FALSE };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 처치 기록 하나입니다. 놓인 위치 id 단위로 기록하므로 같은 종류도 위치마다 따로 기록합니다. */
+    REFLECT()
     struct MetroidvaniaKillRecord
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _spawnID{};
-        uint8         _bBoss{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bBoss{ SW_FALSE };
     };
 } // namespace sw
 
@@ -82,9 +95,12 @@ namespace sw
      * @class MetroidvaniaDeathRestState
      * @brief 통화, 시체, 물약, 처치 기록, 되살아날 위치를 관리합니다. 체력은 기반 `HealthStateMachine` 를 빌려 받습니다.
      */
+    REFLECT()
     class SW_KIT_API MetroidvaniaDeathRestState
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "MSOL" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -149,15 +165,22 @@ namespace sw
         hashed_string getCurrencyName() const;
 
     private:
-        const MetroidvaniaCatalog*              _pCatalog;
+        const MetroidvaniaCatalog* _pCatalog;
+        PROPERTY( RuntimeState )
         vector<MetroidvaniaKillRecord>          _listKill;
         EventBuffer<MetroidvaniaDeathRestEvent> _eventBuffer;
-        MetroidvaniaCorpse                      _corpse;
-        hashed_string                           _respawnSite;
-        Wallet*                                 _pWallet;      ///< 빌려 온 지갑
-        int32                                   _lostCurrency; ///< 영영 잃은 통화의 합(통계)
-        int32                                   _flaskCharges;
-        int32                                   _flaskMaxCharges;
-        int32                                   _flaskPotencyLevel;
+        PROPERTY( RuntimeState )
+        MetroidvaniaCorpse _corpse;
+        PROPERTY( RuntimeState )
+        hashed_string _respawnSite;
+        Wallet*       _pWallet; ///< 빌려 온 지갑
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _lostCurrency; ///< 영영 잃은 통화의 합(통계)
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _flaskCharges;
+        PROPERTY( RuntimeState )
+        int32 _flaskMaxCharges;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _flaskPotencyLevel;
     };
 } // namespace sw

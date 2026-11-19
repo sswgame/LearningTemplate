@@ -200,12 +200,7 @@ namespace sw
 
     void MetroidvaniaDeathRestState::serializeState( StateIO& io )
     {
-        // 처치마다 위치 id(4) + 보스(1) 바이트 이상
-        io.list( _listKill, 5, [&]( MetroidvaniaKillRecord& kill )
-        {
-            io.value( kill._spawnID );
-            io.flag( kill._bBoss );
-        } );
+        io.reflected( *this ); // 처치 기록 · 시체 · 되살아날 곳 · 잃은 통화 · 물약 — 칸마다의 바닥은 `PROPERTY( Min · Max )`
         if ( io.isOk() == false )
             return;
         // 같은 위치를 두 번 쓰러뜨릴 수는 없다.
@@ -216,21 +211,12 @@ namespace sw
                 io.check( _listKill[previous]._spawnID != _listKill[index]._spawnID );
             }
         }
-        io.value( _corpse._area );
-        io.value( _corpse._position );
-        io.value( _corpse._currency );
-        io.flag( _corpse._bActive );
-        io.value( _respawnSite );
-        io.value( _lostCurrency );
-        io.value( _flaskCharges );
-        io.value( _flaskMaxCharges );
-        io.value( _flaskPotencyLevel );
         if ( io.isReading() )
         {
             // 되살아날 곳은 쉬는 지점이어야 한다. 시체 위치가 NaN 이면 거리 비교가 거짓이라 어디서든 되찾는다.
             const MetroidvaniaSiteDef* pSite = _respawnSite.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findSite( _respawnSite );
             io.check( _respawnSite.empty() || ( pSite != nullptr && pSite->_bRest ) );
-            io.check( 0 <= _corpse._currency && 0 <= _lostCurrency && 0 <= _flaskCharges && _flaskCharges <= _flaskMaxCharges && 0 <= _flaskPotencyLevel );
+            io.check( _flaskCharges <= _flaskMaxCharges ); // 칸 사이 검사
             _eventBuffer.clear();
         }
     }

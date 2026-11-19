@@ -204,17 +204,27 @@ namespace sw
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
         // 산 지도, 연 지점, 주운 것 순서로 놓는다. 모두 카탈로그에 있고 겹치지 않아야 한다. 읽은 뒤 유도 상태는 `restoreSaveState` 가 다시 만든다.
-        vector<hashed_string> listRegionMap = _listRegionMap;
-        vector<hashed_string> listSite      = _listSite;
-        vector<hashed_string> listPickup    = _listPickup;
-        io.nameList( listRegionMap, [&]( const hashed_string& id )
-        { return _pCatalog->findRegionMap( id ) != nullptr && VectorUtil::contains( listRegionMap, id ) == false; } );
-        io.nameList( listSite, [&]( const hashed_string& id )
-        { return _pCatalog->findSite( id ) != nullptr && VectorUtil::contains( listSite, id ) == false; } );
-        io.nameList( listPickup, [&]( const hashed_string& id )
-        { return _pCatalog->findPickup( id ) != nullptr && VectorUtil::contains( listPickup, id ) == false; } );
-        if ( io.isReading() && io.isOk() )
+        io.reflected( *this );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        for ( const hashed_string& id : _listRegionMap )
         {
+            io.check( _pCatalog->findRegionMap( id ) != nullptr );
+        }
+        for ( const hashed_string& id : _listSite )
+        {
+            io.check( _pCatalog->findSite( id ) != nullptr );
+        }
+        for ( const hashed_string& id : _listPickup )
+        {
+            io.check( _pCatalog->findPickup( id ) != nullptr );
+        }
+        if ( io.check( VectorUtil::findDuplicate( _listRegionMap ) == nullptr && VectorUtil::findDuplicate( _listSite ) == nullptr && VectorUtil::findDuplicate( _listPickup ) == nullptr ) )
+        {
+            // `restoreSaveState` 는 목록을 비우고 다시 채운다 — 읽은 목록의 사본을 넘긴다
+            const vector<hashed_string> listRegionMap = _listRegionMap;
+            const vector<hashed_string> listSite      = _listSite;
+            const vector<hashed_string> listPickup    = _listPickup;
             restoreSaveState( listRegionMap, listSite, listPickup );
         }
     }

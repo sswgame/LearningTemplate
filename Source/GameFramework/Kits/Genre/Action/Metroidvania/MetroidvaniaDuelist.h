@@ -13,6 +13,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -50,9 +51,12 @@ namespace sw
      * @class MetroidvaniaDuelist
      * @brief 한 전투원의 체력, 스태미나, 패리, 막기입니다. 적 하나도 같은 것을 씁니다(보스의 강인도가 붕괴하면 반격할 수 있습니다).
      */
+    REFLECT()
     class SW_KIT_API MetroidvaniaDuelist
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "MDUE" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -104,10 +108,14 @@ namespace sw
         const MetroidvaniaCatalog* _pCatalog;
         HealthStateMachine         _healthMachine;
         ResourceGauge              _stamina;
-        float32                    _time;
-        float32                    _parryPressTime; ///< 마지막으로 패리를 누른 시각(쓰고 나면 아주 먼 과거로 돌린다)
-        Countdown                  _riposteWindow;
-        float32                    _damageTakenScale;
-        uint8                      _bGuarding;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _time;
+        PROPERTY( RuntimeState )
+        float32   _parryPressTime; ///< 마지막으로 패리를 누른 시각(쓰고 나면 아주 먼 과거로 돌린다)
+        Countdown _riposteWindow;
+        PROPERTY( RuntimeState )
+        float32 _damageTakenScale;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bGuarding;
     };
 } // namespace sw
