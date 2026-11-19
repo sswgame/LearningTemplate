@@ -69,6 +69,12 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        /**
+         * @brief 병렬 틱 중 남(회로)이 읽어도 됩니다 — 겹침 목록은 게임 스레드의 겹침 훅만 바꾸고, 충격 · 신호는 원자 값입니다.
+         * @details 단 `computeOccupantWeight` 는 겹친 오브젝트(남)의 컴포넌트를 읽으므로 틱 밖에서만 부른다 — 회로는 틱 뒤에 받은 사본을 쓴다.
+         */
+        static constexpr bool kTickReadSafe = true;
+
         GimmickSensorComponent();
         virtual ~GimmickSensorComponent() override = default;
 

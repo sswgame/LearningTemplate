@@ -235,6 +235,13 @@ namespace sw
          *          대상은 const 로 받는다 — 틱에서 읽기 매니저로 찾은 대상을 그대로 넘기고, 쓰기는 쓸 수 있는 때(`canMutateNow`)나 틱 뒤에만 한다.
          */
         ActiveEffectHandle applyGameplayEffectSpecToTarget( const AbilityEffectSpec& spec, const AbilityComponent* pTarget );
+        /**
+         * @brief 스펙을 오브젝트 @p target 의 어빌리티 시스템에 겁니다 — 대상의 컴포넌트를 틱 안에서 찾지 않는 길입니다.
+         * @details 병렬 틱 안에서 남의 컴포넌트를 찾으면 검사 구성에서 멈춘다(`GameObject::assertParallelTickRead`). 그래서 대상은 핸들로 받고, 찾기와 적용은
+         *          틱 밖이면 바로, 틱 중이면 틱 직후 게임 스레드에서 한다(`executeOrDeferPostTickOnScene`). 핸들은 돌려주지 않는다(미룬 적용과 같은 계약).
+         *          대상이 사라졌거나 어빌리티 시스템이 없으면 걸지 않는다(언리얼 GAS 도 조용히 넘긴다).
+         */
+        void applyGameplayEffectSpecToTarget( const AbilityEffectSpec& spec, GameObjectHandle target );
         /** @brief 카탈로그의 이펙트 id 로 스펙을 만들어 자기에게 겁니다. 시작 이펙트와 디버그에 씁니다. */
         ActiveEffectHandle applyGameplayEffectToSelf( const hashed_string& effectID, int32 level = 1 );
         /**

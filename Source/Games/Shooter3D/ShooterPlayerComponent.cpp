@@ -15,7 +15,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Physics/PhysicsSettings.h"
@@ -322,6 +322,7 @@ namespace sw
         , _downTimer{ 0.0f }
         , _bodyEyeHeight{ 0.0f }
         , _bodyLegLift{ 0.0f }
+        , _bodyMuzzle{ 0.0f, 0.0f, 0.0f }
         , _lookYaw{ 0.0f }
         , _lastTracerWidth{ 0.0f }
         , _lastTracerStartAhead{ 0.0f }
@@ -341,6 +342,7 @@ namespace sw
         , _bBodyRequested{ SW_FALSE }
         , _bServerHealth{ SW_FALSE }
         , _bMeleeActive{ SW_FALSE }
+        , _bBodyMuzzleFound{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -409,10 +411,11 @@ namespace sw
                 pAppearance->despawnParts();
             pManager->destroyGameObject( pBody );
         }
-        _body           = GameObjectHandle{};
-        _bodyEyeHeight  = 0.0f;
-        _bodyLegLift    = 0.0f;
-        _bBodyRequested = SW_TRUE;
+        _body             = GameObjectHandle{};
+        _bodyEyeHeight    = 0.0f;
+        _bodyLegLift      = 0.0f;
+        _bBodyMuzzleFound = SW_FALSE;
+        _bBodyRequested   = SW_TRUE;
     }
 
     void ShooterPlayerComponent::onTick( TickContext& context )
@@ -434,18 +437,9 @@ namespace sw
             _bFirstPerson   = bFirstPerson ? SW_TRUE : SW_FALSE;
             _bViewModeDirty = SW_TRUE;
         }
-        // 눈높이는 몸의 Eyes 소켓(바인드 포즈)이 정하고, 체형의 다리 길이가 몸을 올린 만큼 따라 오른다. 몸이 조립되기 전에는 속성 값을 쓴다.
-        {
-            const GameObject* pBody = findBodyObject();
-            if ( _bodyEyeHeight <= 0.0f )
-            {
-                const CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
-                float4x4                            eyes;
-                if ( pAppearance != nullptr && pAppearance->findBindSocketTransform( hashed_string( ShooterPlayerComponentInternal::kEyesSocket ), eyes ) )
-                    _bodyEyeHeight = MathUtil::max( 0.5f, eyes.getTranslation()._y );
-            }
-            _bodyLegLift = ShooterPlayerComponentInternal::readBodyLegLift( pBody );
-        }
+        // 몸(같은 그룹에서 틱하는 남의 오브젝트)의 값은 틱 뒤에 사본으로 받는다 — 이 틱은 지난 프레임의 사본을 쓴다(`refreshBodySnapshot`).
+        context.deferPostTickOnComponent( *this, []( ShooterPlayerComponent& player )
+        { player.refreshBodySnapshot(); } );
 
         for ( WeaponState& weapon : _arrWeapon )
         {
@@ -949,19 +943,16 @@ namespace sw
     bool ShooterPlayerComponent::findMuzzlePosition( float3& outMuzzle )
     {
         using Internal = ShooterPlayerComponentInternal;
-        float4x4 muzzle;
         if ( _bFirstPerson == SW_FALSE )
         {
-            // 몸이 든 무기는 외형의 소켓 이름 공간(슬롯 이름과 무기 소켓)으로 찾는다.
-            const GameObject*                   pBody       = findBodyObject();
-            const CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
-            if ( pAppearance == nullptr || pAppearance->findSocketWorldTransform( hashed_string( Internal::kBodyMuzzleSocket ), muzzle ) == false )
+            // 몸이 든 무기는 외형의 소켓 이름 공간(슬롯 이름과 무기 소켓)으로 찾는다 — 몸은 남의 오브젝트라 틱 뒤에 받은 사본이다(`refreshBodySnapshot`).
+            if ( _bBodyMuzzleFound == SW_FALSE )
             {
                 SW_LOG_ERROR_ID( "ShooterPlayer.BodyMuzzleMissing", "[Shooter] the body has no '%#' socket for weapon '%#' - no tracer or muzzle flash", Internal::kBodyMuzzleSocket,
                                  getWeaponItem( _weaponIndex ).c_str() );
                 return false;
             }
-            outMuzzle = muzzle.getTranslation();
+            outMuzzle = _bodyMuzzle;
             return true;
         }
         // 1인칭에서는 손에 든 총(카메라 자식)과 그 무기의 총구 소켓을 쓴다. 무기 외형(itemvisuals.xml)의 소켓 에셋이 Muzzle 을 가져야 한다.
@@ -979,6 +970,25 @@ namespace sw
         }
         outMuzzle = ( pMuzzle->makeLocalTransform() * pViewWeapon->getWorldMatrix() ).getTranslation();
         return true;
+    }
+
+    void ShooterPlayerComponent::refreshBodySnapshot()
+    {
+        using Internal          = ShooterPlayerComponentInternal;
+        const GameObject* pBody = findBodyObject();
+        // 눈높이는 몸의 Eyes 소켓(바인드 포즈)이 정하고, 체형의 다리 길이가 몸을 올린 만큼 따라 오른다. 몸이 조립되기 전에는 속성 값을 쓴다.
+        const CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
+        if ( _bodyEyeHeight <= 0.0f )
+        {
+            float4x4 eyes;
+            if ( pAppearance != nullptr && pAppearance->findBindSocketTransform( hashed_string( Internal::kEyesSocket ), eyes ) )
+                _bodyEyeHeight = MathUtil::max( 0.5f, eyes.getTranslation()._y );
+        }
+        _bodyLegLift = Internal::readBodyLegLift( pBody );
+        float4x4 muzzle;
+        _bBodyMuzzleFound = pAppearance != nullptr && pAppearance->findSocketWorldTransform( hashed_string( Internal::kBodyMuzzleSocket ), muzzle ) ? SW_TRUE : SW_FALSE;
+        if ( _bBodyMuzzleFound == SW_TRUE )
+            _bodyMuzzle = muzzle.getTranslation();
     }
 
     void ShooterPlayerComponent::switchWeapon( int32 weaponIndex )

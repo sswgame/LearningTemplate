@@ -214,7 +214,12 @@ namespace sw
          * @return 소켓 · 외형 데이터가 없으면 무엇이 빠졌는지 오류를 남기고 false 입니다 — 다른 자리로 대신하지 않는다(탄도선 · 섬광을 내지 않는다).
          */
         [[nodiscard]] bool findMuzzlePosition( float3& outMuzzle );
-        void               switchWeapon( int32 weaponIndex );
+        /**
+         * @brief 몸(남의 오브젝트)에서 읽는 값 — 눈높이 · 다리 올림 · 3인칭 총구 — 을 사본으로 받습니다. 틱 뒤(게임 스레드)에 매 프레임 부른다.
+         * @details 몸의 리그 · 포즈 · 외형은 같은 틱 그룹에서 몸의 틱이 쓰므로 플레이어 틱(워커)에서 읽지 않는다 — 틱은 지난 프레임의 사본을 쓴다.
+         */
+        void refreshBodySnapshot();
+        void switchWeapon( int32 weaponIndex );
         /** @brief 시점 카메라(대상이 이 오브젝트인 게임 카메라 디렉터)의 프리셋이 1인칭인지 확인합니다. */
         bool queryFirstPerson() const;
         /** @brief 같은 오브젝트의 HUD 뷰모델에 조준선과 맞음 표시의 가시성, 체력, 탄약, 무기 이름을 넣습니다(틱이 끝난 뒤 게임 스레드에서). HUD 가 없으면 아무것도 하지 않습니다. */
@@ -286,6 +291,7 @@ namespace sw
         float32                         _downTimer;     ///< 쓰러진 뒤 지난 시간(쓰러졌을 때만).
         float32                         _bodyEyeHeight; ///< 몸 소켓 Eyes 의 높이(0은 아직 모른다는 뜻).
         float32                         _bodyLegLift;   ///< 체형의 다리 길이가 몸을 올린 높이(몸 리그 `rest_leg_lift`) — 눈높이가 몸을 따른다
+        float3                          _bodyMuzzle;    ///< 몸 외형의 총구 소켓 월드 위치(지난 틱 뒤 사본, `_bBodyMuzzleFound` 일 때만 뜻이 있다)
         float32                         _lookYaw;
         float32                         _lastTracerWidth;      ///< 마지막 탄도선 두께(감시 값 `Shooter3D.TracerWidth`)
         float32                         _lastTracerStartAhead; ///< 마지막 탄도선 시작점의 눈 앞 거리(감시 값 `Shooter3D.TracerStartAhead`)
@@ -305,6 +311,7 @@ namespace sw
         uint8                           _bBodyRequested      : 1; ///< 틱이 끝난 뒤 몸을 스폰한다.
         uint8                           _bServerHealth       : 1; ///< 네트 클라이언트 — 체력은 서버의 값이다
         uint8                           _bMeleeActive        : 1; ///< 근접 창이 열려 있다
-        [[maybe_unused]] uint8          _reserved            : 6;
+        uint8                           _bBodyMuzzleFound    : 1; ///< 지난 틱 뒤에 몸 외형의 총구 소켓을 찾았다(`refreshBodySnapshot`)
+        [[maybe_unused]] uint8          _reserved            : 5;
     };
 } // namespace sw

@@ -152,7 +152,12 @@ namespace sw
 
         void bindNodes();
         /** @brief 센서 노드에 대상 센서 값을 넣습니다 — 읽기만 한다. 충격(피해 · 사용)은 @p bFirstStep 에서만 읽고 `_listSensorRead` 에 적는다. */
-        void    pullSensors( const GameObjectManager& manager, bool bFirstStep );
+        void pullSensors( const GameObjectManager& manager, bool bFirstStep );
+        /**
+         * @brief 압력판 노드의 겹친 무게를 사본(`_listPlateWeight`)으로 받습니다. 틱 밖 · 틱 뒤(게임 스레드)에서 부른다.
+         * @details 무게는 겹친 오브젝트(같은 그룹에서 틱할 수 있는 남)의 컴포넌트를 읽는다 — 틱의 스텝은 지난 틱 뒤의 사본을 쓴다.
+         */
+        void    refreshPlateWeights( const GameObjectManager& manager );
         float32 readSensorImpulse( const GimmickSensorComponent& sensor, Binding binding, bool bFirstStep );
         /** @brief 지금 스텝에 켜진 펄스 작동기를 `_listPendingPulse` 에 붙입니다. */
         void recordPulse();
@@ -200,6 +205,7 @@ namespace sw
         vector<hashed_string> _listPulsePort;    ///< 노드마다 펄스 작동기의 출력 이름(피해 틱 · 스폰 · 재생). 상태 작동기 · 센서는 비어 있다
         vector<int32>         _listPendingPulse; ///< 이번 틱 스텝들이 켠 펄스 노드((스텝, 노드) 순서). 틱 뒤 `applyPendingActuators` 가 돌리고 비운다
         vector<SensorRead>    _listSensorRead;   ///< 이번 틱에 읽은 충격 센서 몫. 틱 뒤에 그만큼 비운다
+        vector<float32>       _listPlateWeight;  ///< 노드마다 압력판의 겹친 무게 사본(`refreshPlateWeights`, 틱 밖 · 틱 뒤에 받는다). 압력판이 아니면 0
         vector<string>        _listError;
         GimmickCircuitState   _checkpoint; ///< 비어 있으면 잡은 체크포인트가 없다
     };

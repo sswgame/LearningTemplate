@@ -171,6 +171,8 @@ namespace sw
         ActiveEffectHandle applyEffectSpecToOwner( const AbilityEffectSpec& spec );
         /** @brief 대상에게 스펙을 겁니다. 틱 중이면 틱 직후로 미룹니다(`AbilityComponent::applyGameplayEffectSpecToTarget` 과 같음). */
         ActiveEffectHandle applyEffectSpecToTarget( const AbilityEffectSpec& spec, const AbilityComponent* pTarget );
+        /** @brief 오브젝트 @p target 에 스펙을 겁니다 — 대상 컴포넌트를 틱 안에서 찾지 않는다(`AbilityComponent::applyGameplayEffectSpecToTarget( spec, GameObjectHandle )`). */
+        void applyEffectSpecToTarget( const AbilityEffectSpec& spec, GameObjectHandle target );
 
         // --------------------------------------------------------------------------
         // 작업. 어빌리티가 실행되는 동안만 살아 있고, 끝나면 모두 정리된다
