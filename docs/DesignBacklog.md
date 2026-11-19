@@ -1294,6 +1294,30 @@ public:
 
 **측정.** 없다(정확성).
 
+### 시퀀서 재생 · 컷씬 · 카메라(설계 2026-11-20)
+
+**문제.** 재생기(`SequencePlayer`)는 정방향 1 배속 · 반복 켜기/끄기(`bool`)뿐이다. 시간은 `float32` 초를 더해 쌓아(누적 오차로 긴 시퀀스 · 반복에서 프레임이 어긋날 수 있다) 프레임으로 잘랐고, 역재생 · 재생 속도 · 왕복 · 재생 범위 · 끝으로 건너뛰기 · 끝 알림이 없다. 컷씬 중 플레이어 입력 · HUD 를 그대로 두고, 건너뛰기 입력이 없다. 컷과 컷 사이는 프리셋 블렌드로만 섞인다.
+
+**대조(외부 API 는 context7 도구가 이 세션에 없어 기억으로 적었다 — UE 5.x `ULevelSequencePlayer` / `UMovieSceneSequencePlayer`, Unity 2022+ `PlayableDirector`).**
+- 언리얼: `SetPlayRate`(음수 = 역방향), `PlayReverse`, `PlayLooping(Count)`, `FMovieSceneSequencePlaybackSettings`(`LoopCount` · `bPingPongPlayback` · `bDisableMovementInput` · `bDisableLookAtInput` · `bHidePlayer` · `bHideHud` · `bPauseAtEnd`), `SetFrameRange`(재생 범위), `JumpToMarkedFrame` · `GoToEndAndStop`(점프 — 지난 이벤트를 쏘지 않고 끝 상태를 적용, `OnFinished`), 시간은 `FFrameTime`(정수 프레임 + 서브프레임, 틱 해상도 24000). 이벤트 트랙은 방향마다 쏠지(`bFireEventsWhenForwards` · `bFireEventsWhenBackwards`, 기본 둘 다 참), 한 갱신에 여러 바퀴를 넘으면 지난 바퀴 끝 구간과 새 바퀴 앞 구간만 평가(통째로 지난 바퀴는 평가하지 않는다). Camera Cut 섹션은 `bCanBlend` + 섹션 Ease In 으로 컷 사이 블렌드, 시퀀스 Blend In/Out 은 게임 카메라와. CineCamera 는 Focal Length 키, Rig Rail · Crane 은 별도 액터.
+- 유니티: `PlayableDirector.time`(double 초) · `extrapolationMode`/`wrapMode`(None · Hold · Loop — 왕복 없음) · `playableGraph.GetRootPlayable(0).SetSpeed`(속도, 음수 비공식) · `stopped` 이벤트. Signal 은 정방향만(역재생 미지원), Cinemachine Track 클립 겹침이 블렌드. 입력 막기 · HUD 는 게임 코드 몫.
+
+**결정.**
+1. **시간은 정수 틱.** `int64` 위치, 프레임당 `kSequenceTicksPerFrame = 960`(2 · 3 · 4 · 5 · 6 · 8 로 나뉨). 갱신마다 `dt × fps × |속도| × 960` 을 반올림해 더한다 — 위치가 정수라 반복 · 긴 재생에서 프레임이 어긋나지 않는다(언리얼 `FFrameTime` 과 같은 생각, 해상도만 작다).
+2. **속도 · 방향.** `setPlayRate(rate)` — 부호가 방향, 0 · 유한하지 않은 값은 오류 로그 + 거절(`[[nodiscard]] bool`). `playReverse()` = 속도를 음수로 두고 범위 끝에서 시작. 컴포넌트 PROPERTY `_playRate`(데이터가 0 이면 시작에서 오류로 틀지 않는다).
+3. **반복 방식** `SequenceLoopMode { None, Loop, PingPong }` 이 `bool` 반복을 대신한다(씬 데이터 `_bLoop` → `_loopMode` 이전). 왕복은 방향 표지를 뒤집는다(속도 값은 그대로 — 언리얼 `bPingPongPlayback` 과 같다).
+4. **재생 범위** `setPlaybackRange(start, end)` — 에셋 `[_frameMin, _frameMax]` 안, `start < end` 가 아니면 오류 + 거절. 에셋을 바꾸면 전체 범위로 돌아간다(언리얼 `SetFrameRange`).
+5. **끝으로 건너뛰기** `skipToEnd()` — 진행 방향의 끝 프레임으로 **점프**(지난 이벤트를 쏘지 않는다 — 언리얼 `GoToEndAndStop` 과 같다), 그 프레임 상태를 적용하고 정상 끝(`Finished`)으로 끝낸다. 덮던 컷이 있으면 시네마틱 끝(Blend Out)이 나가 게임 카메라로 돌아온다.
+6. **끝 알림** `registerFinished` — 정상 끝 · 건너뛰기에서 한 번(멈춤 `stop` 은 아니다 — 언리얼 `OnFinished` · `OnStop` 나눔).
+7. **발화 규칙(이벤트 · 카메라 신호).** 갱신 하나는 구간(`SequencePlaybackSegment { from, to }`) 많아야 둘이다. 정방향 구간은 `from < 시작 <= to`, 역방향은 `to <= 시작 < from` 인 항목을 쏜다 — 역재생도 쏜다(언리얼 기본). 반복 되감기: (이전, 끝] + (시작 − 1, 지금] (역방향은 대칭). 왕복 꺾임: (이전, 끝] + (끝, 지금] 역방향 — 꺾이는 끝 프레임은 한 번. 한 갱신에 여러 바퀴를 넘으면 첫 바퀴 끝 구간과 마지막 바퀴 앞 구간만(언리얼과 같다). 점프(`seekToFrame` · `playFromFrame` · `skipToEnd`)는 쏘지 않는다. 같은 문턱을 한 번 지나면 한 번 — 단위 테스트가 정방향 · 역방향 · 큰 dt · 반복 경계 · 왕복 꺾임을 센다.
+8. **구간(애니메이션 · 소리 · 자막 · 스폰)은 상태다.** 지금 프레임이 구간 안이면 들어가 있고 밖이면 나가 있다 — 들어가기 · 나가기는 바뀔 때 한 번. 한 갱신에 통째로 지나친 구간은 들어가지 않는다(언리얼 섹션 평가와 같다 — 이벤트는 "지난 것", 구간은 "지금 있는 것"). 자막 길이는 구간 길이 ÷ |속도|.
+9. **카메라.** 트랜스폼 키 트랙(위치 · 회전) · 렌즈 키 트랙(화각 · 초점 · 조리개)은 이미 컷 카메라를 몬다(`LensTrackKeysTheCameraAndRestores`). 빈 것: 컷 사이 블렌드 — 카메라 컷 항목 `_cutBlendSeconds`(앞 컷 화면에서 이 컷으로 섞는 시간, 0 은 끊음 — 언리얼 Camera Cut Ease In, Cinemachine 클립 겹침). 컷 카메라에 디렉터가 없으면 끊는다(지금 규칙). 시퀀스 Blend In/Out 은 그대로. 감시 값 `Camera.FieldOfView` 를 더한다.
+10. **컷씬 옵션(플레이어 컴포넌트 PROPERTY).** `_bDisablePlayerInput`(언리얼 `bDisableMovementInput` + `bDisableLookAtInput`) — 입력 관리자의 셈하는 막기 요청(`InputManager::addPlayerInputBlockRequest`), 플레이어 컨트롤러는 막힌 동안 의도 0 · 시선 없음. `_bHideHud`(`bHideHud`) — 레이어 숨김 창구(`IUILayerVisibility`)의 HUD 요청. `_bSkippable` — 엔진 컷씬 입력 맵(`EngineDefaultAssets::_cutsceneInputMap` = `engine/input/cutscene.input.xml`, 액션 `Cutscene.Skip`)을 재생 동안 읽어 누르면 `skipToEnd`. 포토 모드 입력 맵과 같은 꼴(게임마다 맵에 액션을 더하지 않는다, 키는 데이터). 맵이 없거나 액션이 없으면 오류 로그 + 건너뛰기 없음(폴백 없음). 셋 다 재생 시작에 걸고 끝내기(`endPlayback`)가 같은 수로 푼다.
+11. **자막 지우기는 창구가 모자란다.** `ISubtitleSink` 는 `postSubtitle` 뿐이라 역재생 · 건너뛰기 · 멈춤에서 남은 줄을 지울 수 없다 — 줄 id 를 돌려주는 `post` 와 `clearSubtitle(id)` 가 필요하다(표시 장치 `UISubtitleService` 는 다른 갈래 몫이라 이번에 고치지 않았다).
+12. **이번에 하지 않음.** CineCamera Rig Rail · Crane(레일 위 위치 0..1 키 트랙 + 크레인 팔 길이 · 각 키 트랙 — 리그 컴포넌트가 카메라를 자식으로 몬다), 표식 프레임(`JumpToMarkedFrame` — 에셋에 표식 표가 먼저), 반복 횟수(`LoopCount`).
+
+**확인.** 단위: `TestSequencePlayback`(틱 · 속도 · 범위 · 왕복 · 건너뛰기 · 발화 수). 시나리오: `game.empty.cinematicplayback`(역재생 컷 순서 · 속도 2 배 · 0.5 배 끝 프레임 · 왕복 · 범위 · 건너뛰기 뒤 게임 카메라), `game.empty.cinematiccamera`(키 사이 위치 · 화각 보간), `game.wildwest.arrivalskip`(입력 막힘 · HUD 숨김 · 건너뛰기 · 조작 복귀), `editor.sequencerplayback`(재생 · 일시정지 · 역재생 · 스크럽).
+
 ### 공유 DDC(설계 2026-11-17, NEXT 5 에셋 GUID 3 단계)
 
 **문제.** `DerivedDataCache`(`Engine/Asset/Cook/CookRecord.h:59`)는 로컬 폴더 하나(`Saved/DDC/<키 앞 두 글자>/<키>`)이고 키는 `uint64`(FNV-1a)다. 쿠킹(씬 · 팩 · 내비)만 쓴다. 임포트(텍스처 · 모델 · 하이트필드)는 폴더별 `import.stamp` 로 판정해 무시되는 산출물 폴더에 바로 쓴다 — 새 체크아웃 · 워크트리마다 전부 다시 임포트한다(`Import.*` 시한 3600 초).
