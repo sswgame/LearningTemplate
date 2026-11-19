@@ -329,10 +329,15 @@ namespace sw
                 FixedCodecNode node( "::sw::FixedFieldDesc::makeMath( " + site._offsetExpr, FixedCodecNode::ChildArgs::Group );
                 for ( size_t memberIndex = 0; memberIndex < listMember.size(); ++memberIndex )
                 {
-                    FixedCodecSite child = makeElementSite( site );
-                    child._offsetExpr    = "offsetof( ::sw::" + type._typeName + ", " + listMember[memberIndex] + " )";
-                    node._listChild.push_back( makeFloat( child, FixedValueKind::Float32, FixedCodecBoundResolver::pickBound( site._listMin, memberIndex ),
-                                                          FixedCodecBoundResolver::pickBound( site._listMax, memberIndex ) ) );
+                    FixedCodecSite child            = makeElementSite( site );
+                    child._offsetExpr               = "offsetof( ::sw::" + type._typeName + ", " + listMember[memberIndex] + " )";
+                    child._typeExpr                 = "decltype( ::sw::" + type._typeName + "::" + listMember[memberIndex] + " )";
+                    const FixedCodecBound& minBound = FixedCodecBoundResolver::pickBound( site._listMin, memberIndex );
+                    const FixedCodecBound& maxBound = FixedCodecBoundResolver::pickBound( site._listMax, memberIndex );
+                    if ( pMath->_element == FixedMathElement::Int32 )
+                        node._listChild.push_back( makeInteger( child, minBound, maxBound ) );
+                    else
+                        node._listChild.push_back( makeFloat( child, FixedValueKind::Float32, minBound, maxBound ) );
                 }
                 outListNode.push_back( std::move( node ) );
                 break;
@@ -395,6 +400,7 @@ namespace sw
         const bool              bHasRange    = prop._minRangeExpr._text.empty() == false || prop._maxRangeExpr._text.empty() == false;
         const FixedMathTypeDef* pMath        = leafKind == FixedValueKind::Math ? findMathType( leaf._typeName ) : nullptr;
         const size_t            elementCount = pMath != nullptr ? splitMembers( pMath->_pMemberList ).size() : 1;
+        const bool              bIntegerMath = pMath != nullptr && pMath->_element == FixedMathElement::Int32;
 
         // 1) 키 검사. 생성 오류입니다
         const bool bRangeOnNonNumeric = bHasRange && bNumeric == false && leafKind != FixedValueKind::Ineligible;
@@ -402,7 +408,7 @@ namespace sw
             state.reportError( prop, "Min/Max apply to integer, floating-point and math fields only" );
         if ( prop._bHasStep == SW_TRUE )
         {
-            const bool bFloat32 = leafKind == FixedValueKind::Float32 || leafKind == FixedValueKind::Math;
+            const bool bFloat32 = leafKind == FixedValueKind::Float32 || ( leafKind == FixedValueKind::Math && bIntegerMath == false );
             if ( bFloat32 == false )
                 state.reportError( prop, "Step applies to float32 fields (and float32 math types) only" );
             else if ( ( prop._step > 0.0f ) == false )
@@ -424,7 +430,7 @@ namespace sw
         site._listMax.emplace_back();
         if ( bNumeric )
         {
-            const bool bInteger = leafKind == FixedValueKind::Integer;
+            const bool bInteger = leafKind == FixedValueKind::Integer || bIntegerMath;
             if ( FixedCodecBoundResolver::resolveBounds( state, prop, prop._minRangeExpr._text, bInteger, site._listMin ) == false ||
                  FixedCodecBoundResolver::resolveBounds( state, prop, prop._maxRangeExpr._text, bInteger, site._listMax ) == false )
                 return;

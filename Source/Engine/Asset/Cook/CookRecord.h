@@ -86,7 +86,7 @@ namespace sw
     {
         string                              _rootPath;
         DerivedDataAccess                   _access{ DerivedDataAccess::ReadOnly };
-        optional<DerivedDataEvictionPolicy> _evictionPolicy; ///< 없으면 이 프로세스가 지우지 않는다(읽기 전용 층 · 테스트 층)
+        optional<DerivedDataEvictionPolicy> _evictionPolicy{}; ///< 없으면 이 프로세스가 지우지 않는다(읽기 전용 층 · 테스트 층)
     };
 
     /**

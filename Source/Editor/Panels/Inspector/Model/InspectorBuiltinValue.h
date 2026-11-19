@@ -108,6 +108,7 @@ namespace sw::editor
     template <> struct InspectorWidgetFor<RGB10A2>          : InspectorWidgetKind<InspectorValueWidget::Packed> {};
     template <> struct InspectorWidgetFor<OctahedralNormal> : InspectorWidgetKind<InspectorValueWidget::Direction> {};
     template <> struct InspectorWidgetFor<Radians>          : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<int2>             : InspectorWidgetKind<InspectorValueWidget::Packed> {};
     // clang-format on
 } // namespace sw::editor
 

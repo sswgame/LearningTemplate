@@ -92,7 +92,6 @@ namespace sw::editor
 
     EditorNetProfilerSample EditorNetProfilerSample::makeSample( const NetStatsReport* pPrevious, float64 previousTimeSeconds, const NetStatsReport& report, float64 timeSeconds )
     {
-        using Internal = EditorNetProfilerHistoryInternal;
         EditorNetProfilerSample sample;
         sample._timeSeconds                                                = timeSeconds;
         sample._arrValue[EditorNetProfilerChannel::SentBytesPerSecond]     = report._sentBytesPerSecond;

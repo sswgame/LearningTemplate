@@ -630,6 +630,62 @@ namespace sw
             return basic_string( Base::substr( pos, count ) );
         }
     };
+
+    // 이어 붙이기는 이 형식을 돌려준다(`substr` 과 같은 까닭) — 없으면 `std::operator+` 가 골라져 `std::basic_string` 이 나오고,
+    // 그 결과를 `sw::basic_string` 과 `==` 로 견주면 이 형식의 비교와 std 의 비교가 비겨 컴파일이 멈춘다. 왼쪽이 rvalue 면 그 버퍼를 이어 쓴다.
+    template <typename CharT, typename Traits, typename Allocator>
+    basic_string<CharT, Traits, Allocator> operator+( const basic_string<CharT, Traits, Allocator>& lhs, const basic_string<CharT, Traits, Allocator>& rhs )
+    {
+        basic_string<CharT, Traits, Allocator> result( lhs );
+        result.append( rhs );
+        return result;
+    }
+    template <typename CharT, typename Traits, typename Allocator>
+    basic_string<CharT, Traits, Allocator> operator+( basic_string<CharT, Traits, Allocator>&& lhs, const basic_string<CharT, Traits, Allocator>& rhs )
+    {
+        lhs.append( rhs );
+        return std::move( lhs );
+    }
+    template <typename CharT, typename Traits, typename Allocator>
+    basic_string<CharT, Traits, Allocator> operator+( const basic_string<CharT, Traits, Allocator>& lhs, const CharT* pRhs )
+    {
+        basic_string<CharT, Traits, Allocator> result( lhs );
+        result.append( pRhs );
+        return result;
+    }
+    template <typename CharT, typename Traits, typename Allocator>
+    basic_string<CharT, Traits, Allocator> operator+( basic_string<CharT, Traits, Allocator>&& lhs, const CharT* pRhs )
+    {
+        lhs.append( pRhs );
+        return std::move( lhs );
+    }
+    template <typename CharT, typename Traits, typename Allocator>
+    basic_string<CharT, Traits, Allocator> operator+( const basic_string<CharT, Traits, Allocator>& lhs, const CharT ch )
+    {
+        basic_string<CharT, Traits, Allocator> result( lhs );
+        result += ch;
+        return result;
+    }
+    template <typename CharT, typename Traits, typename Allocator>
+    basic_string<CharT, Traits, Allocator> operator+( basic_string<CharT, Traits, Allocator>&& lhs, const CharT ch )
+    {
+        lhs += ch;
+        return std::move( lhs );
+    }
+    template <typename CharT, typename Traits, typename Allocator>
+    basic_string<CharT, Traits, Allocator> operator+( const CharT* pLhs, const basic_string<CharT, Traits, Allocator>& rhs )
+    {
+        basic_string<CharT, Traits, Allocator> result( pLhs );
+        result.append( rhs );
+        return result;
+    }
+    template <typename CharT, typename Traits, typename Allocator>
+    basic_string<CharT, Traits, Allocator> operator+( const CharT ch, const basic_string<CharT, Traits, Allocator>& rhs )
+    {
+        basic_string<CharT, Traits, Allocator> result( 1, ch );
+        result.append( rhs );
+        return result;
+    }
 } // namespace sw
 
 namespace sw

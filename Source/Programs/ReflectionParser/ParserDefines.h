@@ -84,26 +84,36 @@ namespace sw
                                                               "uint64", "float32", "float64", "float2", "float3", "float4", "quaternion", "Radians" };
     } // namespace annotation
 
-    /** @brief 고정 배치형 코덱이 원소마다 실수 규칙으로 쓰는 수학 타입 한 줄입니다. 정규 이름과 float32 멤버(선언 순서, 쉼표로 나눔)를 담습니다. */
+    /** @brief 고정 배치형 수학 타입의 성분 형식입니다 — 성분마다 그 형식의 코덱 칸(실수 · 정수 규칙)을 씁니다. */
+    enum class FixedMathElement : uint8
+    {
+        Float32,
+        Int32,
+    };
+
+    /** @brief 고정 배치형 코덱이 원소마다 성분 형식 규칙으로 쓰는 수학 타입 한 줄입니다. 정규 이름, 같은 형식의 멤버(선언 순서, 쉼표로 나눔), 성분 형식을 담습니다. */
     struct FixedMathTypeDef
     {
-        const utf8* _pName;
-        const utf8* _pMemberList;
+        const utf8*      _pName;
+        const utf8*      _pMemberList;
+        FixedMathElement _element;
     };
 
     namespace fixedlayout
     {
         /**
-         * @brief 원소가 모두 float32 인 내장 수학 타입입니다(`ReflectBuiltins.xxx` 의 이름). 멤버 이름은 `Core/Math` 의 선언과 같아야 하고,
+         * @brief 원소가 모두 같은 형식(float32 · int32)인 내장 수학 타입입니다(`ReflectBuiltins.xxx` 의 이름). 멤버 이름은 `Core/Math` 의 선언과 같아야 하고,
          *        생성 코드가 그 이름으로 멤버를 읽으므로 어긋나면 컴파일이 멈춥니다.
          * @details 핸들(`ComponentHandle` 등)처럼 모양이 같아도 뜻이 다른 타입이 섞이지 않도록 구조에서 추측하지 않고 목록으로 둡니다.
+         *          `int2` 는 리플렉션 표에서 `packed` 줄이지만 메모리는 int32 둘이라 여기서 먼저 잡혀 정수 칸 둘로 실린다(언리얼 `FIntPoint` 복제와 같은 꼴).
          */
         inline constexpr FixedMathTypeDef kArrMathType[] = {
-            {    "float2",                                                           "_x,_y"},
-            {    "float3",                                                        "_x,_y,_z"},
-            {    "float4",                                                     "_x,_y,_z,_w"},
-            {"quaternion",                                                     "_x,_y,_z,_w"},
-            {  "float4x4", "_11,_12,_13,_14,_21,_22,_23,_24,_31,_32,_33,_34,_41,_42,_43,_44"},
+            {    "float2",                                                           "_x,_y", FixedMathElement::Float32},
+            {    "float3",                                                        "_x,_y,_z", FixedMathElement::Float32},
+            {    "float4",                                                     "_x,_y,_z,_w", FixedMathElement::Float32},
+            {"quaternion",                                                     "_x,_y,_z,_w", FixedMathElement::Float32},
+            {  "float4x4", "_11,_12,_13,_14,_21,_22,_23,_24,_31,_32,_33,_34,_41,_42,_43,_44", FixedMathElement::Float32},
+            {      "int2",                                                           "_x,_y",   FixedMathElement::Int32},
         };
         /**
          * @brief 각 형식(`Core/Math/Radians.h`)의 정규 이름입니다. 리플렉션 표에서는 성분을 도로 내는 `packed` 줄이지만 메모리는 라디안 float32 하나라
