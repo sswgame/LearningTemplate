@@ -92,7 +92,7 @@ namespace sw
             /** @brief 읽은 장을 쓰지 않고 들고 있는 바이트의 상한입니다 — 넘으면 그때까지 읽은 장을 쓰고 비운다(큰 장 수백 장이 메모리를 그만큼 올리지 않게). 4096² 장 넷 남짓이다. */
             static constexpr size_t kMaxHeldCaptureBytes = 256 * constant::memory::kBytesPerMegabyte;
 
-            /** @brief 읽은 장을 RGBA8 로 옮겨 DDS · PNG 로 쓰는 병렬 본문입니다. 입력은 const 포인터로만 읽고, 결과는 장마다 제 칸(`_pWritten`)에 쓴다. */
+            /** @brief 읽은 장을 RGBA8 로 옮겨 DDS · PNG 로 쓰는 병렬 본문입니다. 입력은 const 포인터로만 읽고, 결과는 장마다 `runParallelInto` 가 건넨 제 칸에 쓴다. */
             struct WriteJob
             {
                 const PortraitCapture* _pCapture{ nullptr };
