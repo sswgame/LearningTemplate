@@ -96,9 +96,12 @@ namespace sw
      * @class GhostEncounter
      * @brief 한 방의 유령들과 손전등, 청소기를 관리합니다. 흡입은 한 번에 한 유령에게만 합니다.
      */
+    REFLECT()
     class SW_KIT_API GhostEncounter
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "GHEN" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -166,10 +169,15 @@ namespace sw
         GameRandom              _random;
         vector<GhostInstance>   _listGhost;
         EventBuffer<GhostEvent> _eventBuffer;
-        float32                 _strobeCharge;
-        float32                 _surgeGauge; ///< 0..1
-        uint32                  _suctionTarget;
-        uint32                  _nextGhostID;
-        int32                   _vacuumStage;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _strobeCharge;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        float32 _surgeGauge; ///< 0..1
+        PROPERTY( RuntimeState )
+        uint32 _suctionTarget;
+        PROPERTY( RuntimeState )
+        uint32 _nextGhostID;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _vacuumStage;
     };
 } // namespace sw

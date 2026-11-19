@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -24,21 +25,32 @@ namespace sw
     class Archive;
 
     /** @brief 전투에 나선 조사자 한 명입니다. */
+    REFLECT()
     struct SurvivalHorrorInvestigator
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         float32 _speed{ 1.0f };
-        int32   _actorID{ 0 }; ///< 게임이 정한 번호이다(0 이상)
-        int32   _health{ 5 };
-        int32   _sanity{ 5 };
-        int32   _will{ 2 };     ///< 공포 판정 주사위 수
-        int32   _strength{ 2 }; ///< 전투 판정 주사위 수
-        uint8   _bDefeated{ SW_FALSE };
+        PROPERTY( Min = 0 )
+        int32 _actorID{ 0 }; ///< 게임이 정한 번호이다(0 이상)
+        PROPERTY()
+        int32 _health{ 5 };
+        PROPERTY()
+        int32 _sanity{ 5 };
+        PROPERTY()
+        int32 _will{ 2 }; ///< 공포 판정 주사위 수
+        PROPERTY()
+        int32 _strength{ 2 }; ///< 전투 판정 주사위 수
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bDefeated{ SW_FALSE };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 전투 상태입니다. */
+    ENUM()
     enum class SurvivalHorrorEncounterState : uint8
     {
         Ongoing = 0,
@@ -64,9 +76,12 @@ namespace sw
      * @class SurvivalHorrorEncounter
      * @brief 한 번의 초자연 전투를 진행합니다. 끝날 때까지 `playNextTurn` 을 호출합니다.
      */
+    REFLECT()
     class SW_KIT_API SurvivalHorrorEncounter
     {
     public:
+        REFLECT_BODY();
+
         static constexpr int32  kMonsterActorID = 1000000; ///< 괴물의 차례 번호이다(조사자 번호와 겹치지 않게 큰 값을 쓴다)
         static constexpr uint32 kStateTag       = FourCCUtil::make( "HENC" );
         static constexpr uint32 kStateVersion   = 1;
@@ -101,13 +116,17 @@ namespace sw
         [[nodiscard]] bool isStateConsistent() const;
 
     private:
+        PROPERTY( RuntimeState )
         vector<SurvivalHorrorInvestigator> _listInvestigator;
         SurvivalHorrorMonsterDef           _monster;
         TurnOrder                          _turnOrder;
         GameRandom                         _random;
-        int32                              _monsterToughness;
-        int32                              _successFace;
-        int32                              _turnCount;
-        SurvivalHorrorEncounterState       _state;
+        PROPERTY( RuntimeState )
+        int32 _monsterToughness;
+        int32 _successFace;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _turnCount;
+        PROPERTY( RuntimeState )
+        SurvivalHorrorEncounterState _state;
     };
 } // namespace sw

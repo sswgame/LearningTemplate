@@ -90,8 +90,7 @@ namespace sw
 
     void ScavengerCarry::serializeState( StateIO& io )
     {
-        io.list( _listScrap, ScavengerFacility::kMinScrapBytes, [&]( ScavengerScrap& scrap )
-        { ScavengerFacility::serializeScrap( io, scrap ); } );
+        io.reflected( *this ); // 고철마다의 범위는 `ScavengerScrap` 칸의 `PROPERTY( Min · Max )`
         io.check( static_cast<int32>( _listScrap.size() ) <= _settings._slotCount );
     }
 

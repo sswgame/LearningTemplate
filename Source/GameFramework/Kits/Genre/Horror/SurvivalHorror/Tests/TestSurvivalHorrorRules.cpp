@@ -92,14 +92,9 @@ namespace
         [[nodiscard]] bool read( SurvivalHorrorSession& inoutSession ) const
         {
             Archive written;
-            inoutSession.getSanity().writeState( written );
-            inoutSession.getBattery().writeState( written );
-            writeNames( written, _listMonster );
-            writeNames( written, _listDocument );
-            writeNames( written, _listClue );
-            writeNames( written, _listSolved );
-            writeCounts( written, _listDial );
-            writeCounts( written, _listSequence );
+            Archive sessionBytes; // 리플렉션 머리는 정상 바이트에서 가져온다 — 손으로 짜면 다른 이유로 거절되어 거짓 통과한다
+            inoutSession.writeState( sessionBytes );
+            written.writeBytes( sessionBytes.getData(), StateIO::kReflectedHeaderBytes );
             written << static_cast<uint32>( _listLink.size() );
             for ( const SurvivalHorrorClueLink& link : _listLink )
             {
@@ -112,6 +107,14 @@ namespace
             written << _wrongCount;
             written << _flashlight;
             written << static_cast<uint8>( SW_FALSE );
+            inoutSession.getSanity().writeState( written );
+            inoutSession.getBattery().writeState( written );
+            writeNames( written, _listMonster );
+            writeNames( written, _listDocument );
+            writeNames( written, _listClue );
+            writeNames( written, _listSolved );
+            writeCounts( written, _listDial );
+            writeCounts( written, _listSequence );
             Archive reading( written.getData(), written.getSize() );
             return inoutSession.readState( reading );
         }
@@ -204,7 +207,9 @@ namespace
         static bool readFixture( SurvivalHorrorEncounter& inoutEncounter, const hashed_string& monsterID, const SurvivalHorrorInvestigator& investigator, const TurnOrder& order, int32 toughness, SurvivalHorrorEncounterState state )
         {
             Archive written;
-            StateIO::writeName( written, monsterID );
+            Archive encounterBytes; // 리플렉션 머리는 정상 바이트에서 가져온다 — 손으로 짜면 다른 이유로 거절되어 거짓 통과한다
+            inoutEncounter.writeState( encounterBytes );
+            written.writeBytes( encounterBytes.getData(), StateIO::kReflectedHeaderBytes );
             written << static_cast<uint32>( 1 );
             written << investigator._speed;
             written << investigator._actorID;
@@ -213,12 +218,13 @@ namespace
             written << investigator._will;
             written << investigator._strength;
             written << investigator._bDefeated;
+            written << toughness;
+            written << static_cast<int32>( 0 );
+            written << static_cast<int64>( state ); // 리플렉션 열거는 int64 로 놓인다
+            StateIO::writeName( written, monsterID );
             order.writeState( written );
             const GameRandom random;
             StateIO::writeRandom( written, random );
-            written << toughness;
-            written << static_cast<int32>( 0 );
-            written << static_cast<uint8>( state );
             Archive reading( written.getData(), written.getSize() );
             return inoutEncounter.readState( reading );
         }

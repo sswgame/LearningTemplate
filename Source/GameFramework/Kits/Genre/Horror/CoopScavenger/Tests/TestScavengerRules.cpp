@@ -54,6 +54,42 @@ namespace
 
     constexpr float32 kScavengerTolerance = 1.0e-3f;
 
+    /** @brief 손으로 짠 상태 바이트의 조각입니다. 정상 경로로 만들 수 없는 판을 읽기에 넣을 때 씁니다. */
+    struct ScavengerStateBytes
+    {
+        /** @brief @p TState 의 정상 `writeState` 바이트에서 리플렉션 머리를 가져와 씁니다 — 손으로 짜면 머리가 달라 다른 이유로 거절되어 거짓 통과한다. */
+        template <typename TState>
+        static void writeHeader( sw::Archive& outArchive )
+        {
+            writeHeader( outArchive, TState{} );
+        }
+        /** @brief 초기화된 @p state 의 바이트에서 머리를 가져옵니다(빈 객체를 쓸 수 없는 형식). */
+        template <typename TState>
+        static void writeHeader( sw::Archive& outArchive, const TState& state )
+        {
+            sw::Archive stateBytes;
+            state.writeState( stateBytes );
+            outArchive.writeBytes( stateBytes.getData(), sw::StateIO::kReflectedHeaderBytes );
+        }
+
+        /** @brief 고철 목록입니다(리플렉션 칸 `ScavengerScrap` 의 선언 순서: 이름 둘, 무게, 번호, 가치, 시신, 날, 양손). */
+        static void writeScraps( sw::Archive& outArchive, const sw::vector<sw::ScavengerScrap>& listScrap )
+        {
+            outArchive << static_cast<uint32>( listScrap.size() );
+            for ( const sw::ScavengerScrap& scrap : listScrap )
+            {
+                sw::StateIO::writeName( outArchive, scrap._scrapID );
+                sw::StateIO::writeName( outArchive, scrap._areaID );
+                outArchive << scrap._weight;
+                outArchive << scrap._uid;
+                outArchive << scrap._value;
+                outArchive << scrap._bodyOf;
+                outArchive << scrap._day;
+                outArchive << scrap._bTwoHanded;
+            }
+        }
+    };
+
     /** @brief 카탈로그를 읽어 둔 판입니다. */
     struct ScavengerFacilityTest
     {
@@ -66,15 +102,11 @@ namespace
         bool readFixture( sw::ScavengerFacility& facility, uint32 seed, const sw::ScavengerScrap& scrap, int32 nextUid )
         {
             sw::Archive written;
+            ScavengerStateBytes::writeHeader<sw::ScavengerFacility>( written );
+            ScavengerStateBytes::writeScraps( written, { scrap } );
+            written << static_cast<uint32>( 0 ); // 잠금 해제 목록
             sw::StateIO::writeName( written, "rust" );
             written << seed;
-            written << static_cast<uint32>( 1 );
-            {
-                sw::ScavengerScrap scrapCopy = scrap;
-                sw::StateIO        io( written );
-                sw::ScavengerFacility::serializeScrap( io, scrapCopy );
-            }
-            written << static_cast<uint32>( 0 );
             written << nextUid;
             written << static_cast<int32>( 3 );
             written << static_cast<int32>( 0 );
@@ -185,6 +217,12 @@ namespace
             shop.initialize( nullptr, nullptr );
 
             sw::Archive written;
+            ScavengerStateBytes::writeHeader( written, _expedition );
+            ScavengerStateBytes::writeScraps( written, {} ); // 우주선 고철
+            written << static_cast<uint32>( 11 );            // 시드
+            written << hoursOnMoon;
+            written << static_cast<int64>( sw::ScavengerPhase::InOrbit ); // 리플렉션 열거는 int64 로 놓인다
+            written << static_cast<uint8>( SW_FALSE );                    // 해 질 녘 알림
             written << static_cast<uint32>( 2 );
             for ( int32 player = 0; player < 2; ++player )
             {
@@ -193,12 +231,7 @@ namespace
                 sw::StateIO::writeName( written, "ship" );
                 written << static_cast<uint8>( SW_FALSE );
             }
-            written << static_cast<uint32>( 0 );
             sw::StateIO::writeName( written, "rust" );
-            written << static_cast<uint8>( sw::ScavengerPhase::InOrbit );
-            written << static_cast<uint8>( SW_FALSE );
-            written << static_cast<uint32>( 11 );
-            written << hoursOnMoon;
             sw::StateIO::writeRandom( written, random );
             _expedition.getQuota().writeState( written );
             _expedition.getFacility().writeState( written );
@@ -326,6 +359,7 @@ SW_TEST_CASE( ScavengerQuotaTest, ReadStateChecksRange )
     const auto readFixture = [&restored]( int32 quotaValue, int32 fulfilled, int32 daysLeft, int32 cycle, uint8 bGameOver )
     {
         sw::Archive fixture;
+        ScavengerStateBytes::writeHeader<sw::ScavengerQuota>( fixture );
         fixture << quotaValue;
         fixture << fulfilled;
         fixture << daysLeft;
@@ -334,13 +368,14 @@ SW_TEST_CASE( ScavengerQuotaTest, ReadStateChecksRange )
         sw::Archive readingFixture( fixture.getData(), fixture.getSize() );
         return restored.readState( readingFixture );
     };
+    SW_EXPECT_TRUE( readFixture( 10, 0, 0, 0, 0 ) ); // 대조: 같은 도우미로 짠 맞는 바이트는 읽힌다
     SW_EXPECT_FALSE( readFixture( -1, 0, 0, 0, 0 ) );
     SW_EXPECT_FALSE( readFixture( 0, 0, 0, 0, 0 ) );
     SW_EXPECT_FALSE( readFixture( 10, -1, 0, 0, 0 ) );
     SW_EXPECT_FALSE( readFixture( 10, 0, -1, 0, 0 ) );
     SW_EXPECT_FALSE( readFixture( 10, 0, 0, -1, 0 ) );
     SW_EXPECT_FALSE( readFixture( 10, 0, 0, 0, 2 ) );
-    SW_EXPECT_EQUAL( 100, restored.getQuota() );
+    SW_EXPECT_EQUAL( 10, restored.getQuota() );
 }
 
 /**
@@ -407,15 +442,8 @@ SW_TEST_CASE( ScavengerCarryTest, SpeedAndState )
     const auto readFixture = [&restored]( const sw::vector<sw::ScavengerScrap>& listScrap )
     {
         sw::Archive fixture;
-        fixture << static_cast<uint32>( listScrap.size() );
-        for ( const sw::ScavengerScrap& scrap : listScrap )
-        {
-            {
-                sw::ScavengerScrap scrapCopy = scrap;
-                sw::StateIO        io( fixture );
-                sw::ScavengerFacility::serializeScrap( io, scrapCopy );
-            }
-        }
+        ScavengerStateBytes::writeHeader<sw::ScavengerCarry>( fixture );
+        ScavengerStateBytes::writeScraps( fixture, listScrap );
         sw::Archive readingFixture( fixture.getData(), fixture.getSize() );
         return restored.readState( readingFixture );
     };

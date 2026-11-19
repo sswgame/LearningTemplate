@@ -88,9 +88,12 @@ namespace sw
      *          밝은 곳에서는 지연 뒤 천천히 찬다. 비율이 임계값 아래면 환각이고(게임은 가짜 괴물과 소리를 낸다), 조준 흔들림 배율은 1 + (1 - 비율) x 최대값이다.
      *          손전등은 켜 있는 동안 배터리를 쓰고, 다 되면 꺼진다. 그 뒤의 어둠은 다시 정신력을 깎는다.
      */
+    REFLECT()
     class SW_KIT_API SurvivalHorrorSession
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "HSES" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -198,18 +201,25 @@ namespace sw
         unordered_set<hashed_string>        _uniqueSolvedPuzzle;
         unordered_map<hashed_string, int32> _mapDialAttempt;      ///< 다이얼 자물쇠별 틀린 횟수
         unordered_map<hashed_string, int32> _mapSequenceProgress; ///< 순서 퍼즐별로 맞힌 걸음 수
-        vector<SurvivalHorrorClueLink>      _listClueLink;
-        EventBuffer<SurvivalHorrorEvent>    _eventBuffer;
-        hashed_string                       _currentArea;
-        const SurvivalHorrorCatalog*        _pCatalog;
-        GridInventory*                      _pInventory; ///< 격자 가방(빌림)
-        Inventory*                          _pItemBox;   ///< 아이템 상자(빌림, 세계 보관함)
-        GameFlags*                          _pFlags;     ///< 빌린 플래그
-        AreaGraph*                          _pAreaGraph;
-        float32                             _health;
-        int32                               _saveCount;
-        int32                               _wrongDeductionCount;
-        uint8                               _bFlashlightOn;
-        uint8                               _bHallucinating;
+        PROPERTY( RuntimeState )
+        vector<SurvivalHorrorClueLink>   _listClueLink;
+        EventBuffer<SurvivalHorrorEvent> _eventBuffer;
+        PROPERTY( RuntimeState )
+        hashed_string                _currentArea;
+        const SurvivalHorrorCatalog* _pCatalog;
+        GridInventory*               _pInventory; ///< 격자 가방(빌림)
+        Inventory*                   _pItemBox;   ///< 아이템 상자(빌림, 세계 보관함)
+        GameFlags*                   _pFlags;     ///< 빌린 플래그
+        AreaGraph*                   _pAreaGraph;
+        PROPERTY( RuntimeState )
+        float32 _health;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _saveCount;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _wrongDeductionCount;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bFlashlightOn;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bHallucinating;
     };
 } // namespace sw

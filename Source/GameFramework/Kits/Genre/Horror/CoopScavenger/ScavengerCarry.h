@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -32,9 +33,12 @@ namespace sw
      * @class ScavengerCarry
      * @brief 한 사람이 든 것을 관리합니다. 이동 속도 배율은 max(최소, 1 - 무게 x 무게당 감소)입니다.
      */
+    REFLECT()
     class SW_KIT_API ScavengerCarry
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "SCCA" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -64,6 +68,7 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
+        PROPERTY( RuntimeState )
         vector<ScavengerScrap> _listScrap;
         ScavengerCarryDef      _settings;
     };
