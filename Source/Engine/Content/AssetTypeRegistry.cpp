@@ -175,14 +175,21 @@ namespace sw
 
     bool AssetTypeRegistry::hasExcludeGroup( string_view group )
     {
-        const RegistrationList<const AssetTypeDef>& types = AssetTypeRegistryInternal::getTypes();
-        ScopedLock<mutex>                           lock{ types.getOwnerMutex() };
-        for ( const AssetTypeDef* pType : types.getItems() )
+        if ( group.empty() )
+            return false;
+        bool bFound = false;
+        AssetTypeRegistryInternal::getTypes().withLock( [&]( const AssetTypeRegistryInternal::TypeList& types )
         {
-            if ( group.empty() == false && StringUtil::equals( pType->_excludeGroup, group, true ) )
-                return true;
-        }
-        return false;
+            for ( const AssetTypeDef* pType : types.getItems() )
+            {
+                if ( StringUtil::equals( pType->_excludeGroup, group, true ) )
+                {
+                    bFound = true;
+                    return;
+                }
+            }
+        } );
+        return bFound;
     }
 
     void AssetTypeRegistry::collectProblems( vector<string>& outListProblem )
