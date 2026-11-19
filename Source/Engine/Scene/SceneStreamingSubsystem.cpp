@@ -94,9 +94,10 @@ namespace sw
             listSlotIndex.push_back( static_cast<uint32>( _listCell.size() ) );
             _listCell.push_back( std::move( slot ) );
         }
-        _settings    = settings;
-        _contentPath = contentPath;
-        _pScene      = &scene;
+        _settings                    = settings;
+        _contentPath                 = contentPath;
+        _pScene                      = &scene;
+        _cameraSource._loadingRadius = settings._cellGrid._loadingRadius;
         SW_LOG_INFO_ID( "SceneStreaming.SceneStreamsCellsCell", "Scene '%#' streams %# cells (cell %# m, radius %# m)", scene.getName(), static_cast<uint32>( _listCell.size() ),
                         _settings._cellGrid._cellSize, _settings._cellGrid._loadingRadius );
         return true;
@@ -135,14 +136,35 @@ namespace sw
 
     void SceneStreamingSubsystem::setCameraSource( const float3& position )
     {
-        _cameraSource     = position;
-        _bCameraSourceSet = SW_TRUE;
+        _cameraSource._position      = position;
+        _cameraSource._loadingRadius = _settings._cellGrid._loadingRadius;
+        _bCameraSourceSet            = SW_TRUE;
     }
 
     void SceneStreamingSubsystem::setExternalSources( span<const float3> listSource )
     {
+        _listExternalSource.clear();
+        for ( const float3& position : listSource )
+        {
+            _listExternalSource.push_back( StreamingSource{ position, _settings._cellGrid._loadingRadius, StreamingSourcePriority::Normal } );
+        }
+        _bExternalSources = SW_TRUE;
+    }
+
+    bool SceneStreamingSubsystem::setExternalSources( span<const StreamingSource> listSource )
+    {
+        for ( const StreamingSource& source : listSource )
+        {
+            // NaN · 무한 반경은 모든 셀을 덮거나 아무 셀도 덮지 않는다 — 맞춰 넣지 않고 거절한다.
+            if ( MathUtil::isFinite( source._loadingRadius ) == false || source._loadingRadius < 0.0f )
+            {
+                SW_LOG_ERROR_ID( "SceneStreaming.SourceRadiusInvalid", "Scene streaming: refused sources - a source radius must be finite and not negative (got %#)", source._loadingRadius );
+                return false;
+            }
+        }
         _listExternalSource.assign( listSource.begin(), listSource.end() );
         _bExternalSources = SW_TRUE;
+        return true;
     }
 
     void SceneStreamingSubsystem::clearExternalSources()
@@ -185,6 +207,20 @@ namespace sw
         return false;
     }
 
+    bool SceneStreamingSubsystem::isCellStreamingCompleted( const StreamingCellCoord& cell ) const
+    {
+        const auto indexIt = _pScene != nullptr ? _mapCellIndex.find( makeCellKey( cell ) ) : _mapCellIndex.end();
+        if ( indexIt == _mapCellIndex.end() )
+            return true; // 스트리밍하지 않거나 엔티티가 없는 셀이다 — 기다릴 것이 없다
+        for ( const uint32 slotIndex : indexIt->second )
+        {
+            const CellSlot& slot = _listCell[slotIndex];
+            if ( slot._state != CellState::Loaded && slot._state != CellState::Failed && areSlotLayersActive( slot ) )
+                return false;
+        }
+        return true;
+    }
+
     void SceneStreamingSubsystem::update( float32 deltaTime )
     {
         (void)deltaTime;
@@ -192,21 +228,19 @@ namespace sw
             return;
         const bool bFinishEachFrame = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
 
-        // 1. 모든 원점에서 로딩 반경 + 여유보다 멀거나 레이어가 꺼진 셀을 되돌린다(읽기 취소 · 상태를 떠 두고 내리기).
-        const float32 unloadRadius        = _settings._cellGrid._loadingRadius + _settings._unloadMargin;
-        const float32 unloadRadiusSquared = unloadRadius * unloadRadius;
+        // 1. 모든 원점에서 (그 원점 반경 + 여유)보다 멀거나 레이어가 꺼진 셀을 되돌린다(읽기 취소 · 상태를 떠 두고 내리기).
         for ( CellSlot& slot : _listCell )
         {
             const bool bActive = slot._state != CellState::Unloaded && slot._state != CellState::Failed;
-            if ( bActive && ( computeNearestSourceDistanceSquared( slot._cell ) > unloadRadiusSquared || areSlotLayersActive( slot ) == false ) )
+            if ( bActive && ( isCellWithinSources( slot._cell, _settings._unloadMargin ) == false || areSlotLayersActive( slot ) == false ) )
                 unloadCell( slot, true );
         }
 
-        // 2. 원점마다 로딩 반경 안의 셀(합집합) 중 아직 지어지지 않은 것을 모은다.
+        // 2. 원점마다 그 반경 안의 셀(합집합) 중 아직 지어지지 않은 것을 모은다.
         _listScratchLoad.clear();
-        for ( const float3& source : getActiveSources() )
+        for ( const StreamingSource& source : getActiveSources() )
         {
-            _grid.computeCellsInRange( source, _listScratchCell );
+            _grid.computeCellsInRadius( source._position, source._loadingRadius, _listScratchCell );
             for ( const StreamingCellCoord& cell : _listScratchCell )
             {
                 const auto indexIt = _mapCellIndex.find( makeCellKey( cell ) );
@@ -223,9 +257,13 @@ namespace sw
             }
         }
         VectorUtil::sortUnique( _listScratchLoad ); // 모양이 `contains` + `push_back` 이면 셀 수의 제곱이 든다
-        // 가까운 셀부터. 같은 거리는 셀 순서(z, x, 레이어 조각)로 — 결정적이다.
+        // 덮는 원점의 우선순위가 급한 셀부터, 같으면 가까운 셀부터. 같은 거리는 셀 순서(z, x, 레이어 조각)로 — 결정적이다.
         VectorUtil::sort( _listScratchLoad, [this]( uint32 lhs, uint32 rhs )
         {
+            const StreamingSourcePriority lhsPriority = computeCellPriority( _listCell[lhs]._cell );
+            const StreamingSourcePriority rhsPriority = computeCellPriority( _listCell[rhs]._cell );
+            if ( lhsPriority != rhsPriority )
+                return lhsPriority < rhsPriority;
             const float32 lhsDistance = computeNearestSourceDistanceSquared( _listCell[lhs]._cell );
             const float32 rhsDistance = computeNearestSourceDistanceSquared( _listCell[rhs]._cell );
             return lhsDistance != rhsDistance ? lhsDistance < rhsDistance : lhs < rhs;
@@ -296,23 +334,46 @@ namespace sw
         return ( static_cast<uint64>( static_cast<uint32>( cell._x ) ) << 32 ) | static_cast<uint64>( static_cast<uint32>( cell._z ) );
     }
 
-    span<const float3> SceneStreamingSubsystem::getActiveSources() const
+    span<const StreamingSource> SceneStreamingSubsystem::getActiveSources() const
     {
         if ( _bExternalSources )
-            return span<const float3>( _listExternalSource.data(), _listExternalSource.size() );
+            return span<const StreamingSource>( _listExternalSource.data(), _listExternalSource.size() );
         if ( _bCameraSourceSet )
-            return span<const float3>( &_cameraSource, 1 );
+            return span<const StreamingSource>( &_cameraSource, 1 );
         return {};
     }
 
     float32 SceneStreamingSubsystem::computeNearestSourceDistanceSquared( const StreamingCellCoord& cell ) const
     {
         float32 nearest = MathUtil::kMaxFloat;
-        for ( const float3& source : getActiveSources() )
+        for ( const StreamingSource& source : getActiveSources() )
         {
-            nearest = MathUtil::min( nearest, _grid.computeCellDistanceSquared( cell, source ) );
+            nearest = MathUtil::min( nearest, _grid.computeCellDistanceSquared( cell, source._position ) );
         }
         return nearest;
+    }
+
+    StreamingSourcePriority SceneStreamingSubsystem::computeCellPriority( const StreamingCellCoord& cell ) const
+    {
+        StreamingSourcePriority priority = StreamingSourcePriority::Lowest;
+        for ( const StreamingSource& source : getActiveSources() )
+        {
+            const bool bCovers = _grid.computeCellDistanceSquared( cell, source._position ) <= source._loadingRadius * source._loadingRadius;
+            if ( bCovers && source._priority < priority )
+                priority = source._priority;
+        }
+        return priority;
+    }
+
+    bool SceneStreamingSubsystem::isCellWithinSources( const StreamingCellCoord& cell, const float32 margin ) const
+    {
+        for ( const StreamingSource& source : getActiveSources() )
+        {
+            const float32 radius = source._loadingRadius + margin;
+            if ( _grid.computeCellDistanceSquared( cell, source._position ) <= radius * radius )
+                return true;
+        }
+        return false;
     }
 
     bool SceneStreamingSubsystem::areSlotLayersActive( const CellSlot& slot ) const

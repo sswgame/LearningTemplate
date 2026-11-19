@@ -45,12 +45,17 @@ namespace sw
 
     void StreamingCellGrid::computeCellsInRange( const float3& origin, vector<StreamingCellCoord>& outListCell ) const
     {
+        computeCellsInRadius( origin, _def._loadingRadius, outListCell );
+    }
+
+    void StreamingCellGrid::computeCellsInRadius( const float3& origin, const float32 radius, vector<StreamingCellCoord>& outListCell ) const
+    {
         outListCell.clear();
-        const float3             minCorner{ origin._x - _def._loadingRadius, origin._y, origin._z - _def._loadingRadius };
-        const float3             maxCorner{ origin._x + _def._loadingRadius, origin._y, origin._z + _def._loadingRadius };
+        const float3             minCorner{ origin._x - radius, origin._y, origin._z - radius };
+        const float3             maxCorner{ origin._x + radius, origin._y, origin._z + radius };
         const StreamingCellCoord minCell       = computeCell( minCorner );
         const StreamingCellCoord maxCell       = computeCell( maxCorner );
-        const float32            radiusSquared = _def._loadingRadius * _def._loadingRadius;
+        const float32            radiusSquared = radius * radius;
         for ( int32 z = minCell._z; z <= maxCell._z; ++z )
         {
             for ( int32 x = minCell._x; x <= maxCell._x; ++x )

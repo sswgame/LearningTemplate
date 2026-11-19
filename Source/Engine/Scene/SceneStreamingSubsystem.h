@@ -25,6 +25,8 @@
  * 클라이언트는 활성 게임 카메라 자리다(`Scene::update` 가 프레임마다 `setCameraSource` 로 넣는다). 서버처럼 원점이 여럿이면(접속자마다) 게임 코드가
  * `setExternalSources` 로 프레임마다 넣는다 — 한 번 넣으면 카메라 자리는 쓰지 않는다(`clearExternalSources` 로 되돌린다). 원점이 없으면 아무 셀도 원하지 않는다.
  * MMO 서버는 복제기가 관찰자 자리를 넣는다(`MMOReplicator::feedStreamingSources`). 복제기의 관심 영역 격자도 이 격자(`getGrid`)다.
+ * 원점마다 반경 · 우선순위가 있다(`StreamingSource`, 언리얼 World Partition 스트리밍 소스). 올리는 셀은 원점 반경의 합집합이고, 읽기 차례는 셀을 덮는 원점 중
+ * 가장 급한 우선순위 → 가까운 거리, 내리기는 모든 원점에서 (그 원점 반경 + 여유) 밖이다. 카메라 원점과 위치만 받는 입구는 월드 설정의 로딩 반경 · `Normal` 이다.
  *
  * [셀 내용]
  * 쿠킹본에서 읽은 셀은 색인(좌표 · 레이어 · 내용 구간)만 들고(`SceneDocument::StreamingCell::hasFileContent`), 지은 뒤에는 읽은 엔티티를 버린다 — 다시 올리면 다시 읽는다.
@@ -87,8 +89,13 @@ namespace sw
 
         /** @brief 이번 프레임의 카메라 원점입니다. 바깥 원점(`setExternalSources`)을 쓰는 동안에는 무시합니다. */
         void setCameraSource( const float3& position );
-        /** @brief 원점 목록을 바깥(게임 · 서버)이 정합니다. 부른 뒤로는 카메라 원점을 쓰지 않습니다. 빈 목록이면 아무 셀도 원하지 않습니다. */
+        /** @brief 원점 목록을 바깥(게임 · 서버)이 정합니다. 부른 뒤로는 카메라 원점을 쓰지 않습니다. 빈 목록이면 아무 셀도 원하지 않습니다. 반경은 부를 때의 로딩 반경, 우선순위는 `Normal` 입니다. */
         void setExternalSources( span<const float3> listSource );
+        /**
+         * @brief 반경 · 우선순위가 원점마다 다른 원점 목록을 바깥이 정합니다(서버 — 접속자마다). 올리는 셀은 원점 반경의 합집합입니다.
+         * @return 반경이 유한한 0 이상이 아닌 원점이 있으면 오류를 남기고 false 이며 지난 원점을 그대로 둡니다(값을 맞춰 넣지 않는다).
+         */
+        [[nodiscard]] bool setExternalSources( span<const StreamingSource> listSource );
         /** @brief 바깥 원점을 버리고 카메라 원점으로 돌아갑니다. */
         void clearExternalSources();
         /** @brief 바깥 원점을 쓰는 중이면 true 입니다. */
@@ -104,10 +111,15 @@ namespace sw
         uint32 getLoadingCellCount() const;
         /** @brief 셀 @p cell 이 올라 있으면 true 입니다. 받지 않은 셀이면 false 입니다. */
         bool isCellLoaded( const StreamingCellCoord& cell ) const;
+        /**
+         * @brief 셀 @p cell 의 스트리밍이 끝났으면 true 입니다 — 그 좌표의 조각 가운데 레이어가 켜진 것이 모두 올랐거나 실패했습니다(언리얼 `IsStreamingCompleted` 자리).
+         * @details 엔티티가 없는 셀(조각 없음)과 스트리밍하지 않는 씬은 기다릴 것이 없어 true 다. 클라이언트 복제가 그 자리의 바닥이 오를 때까지 엔티티를 보류할 때 본다(`MMOSceneClientWorld`).
+         */
+        bool isCellStreamingCompleted( const StreamingCellCoord& cell ) const;
         /** @brief 받은 격자입니다. `isStreaming` 이 false 이면 쓰지 않습니다. */
         const StreamingCellGrid& getGrid() const { return _grid; }
         /** @brief 지금 원점 목록입니다(바깥 원점 또는 카메라 원점 하나). 같은 반경으로 따라 올리는 것(내비메시 타일 — `SceneNavigation`)도 이것을 본다. */
-        span<const float3> getActiveSources() const;
+        span<const StreamingSource> getActiveSources() const;
         /** @brief 이 거리 안에 닿는 것을 올립니다(월드 설정의 로딩 반경). `isStreaming` 이 false 이면 쓰지 않습니다. */
         float32 getLoadingRadius() const { return _settings._cellGrid._loadingRadius; }
         /** @brief 셀이 오르거나(다 지어 드러남) 내려갈 때마다 오르는 번호입니다. 셀 구역의 입력을 따라 다시 재는 쪽(내비메시 타일)이 본다. */
@@ -116,6 +128,8 @@ namespace sw
         void collectCellsChangedSince( uint64 serial, vector<StreamingCellCoord>& outListCell ) const;
         /** @brief 모든 원점에서 이 거리보다 멀면 내립니다(로딩 반경 + 여유 — 경계에서 번갈지 않게). */
         float32 getUnloadRadius() const { return _settings._cellGrid._loadingRadius + _settings._unloadMargin; }
+        /** @brief 원점마다 (그 원점 반경 + 이 여유)보다 멀면 내립니다(`StreamingSource::_loadingRadius` 가 원점마다 다를 때). */
+        float32 getUnloadMargin() const { return _settings._unloadMargin; }
 
     private:
         /** @brief 셀 하나의 단계입니다(언리얼 World Partition 셀의 Unloaded → Loading → Loaded → Activated 자리). */
@@ -153,6 +167,10 @@ namespace sw
         static uint64 makeCellKey( const StreamingCellCoord& cell );
         /** @brief 원점들 중 가장 가까운 것까지 셀 @p cell 의 거리 제곱입니다. 원점이 없으면 가장 큰 값입니다. */
         float32 computeNearestSourceDistanceSquared( const StreamingCellCoord& cell ) const;
+        /** @brief 셀 @p cell 을 반경으로 덮는 원점 가운데 가장 급한 우선순위입니다. 덮는 원점이 없으면 `Lowest` 입니다. */
+        StreamingSourcePriority computeCellPriority( const StreamingCellCoord& cell ) const;
+        /** @brief 어느 원점이든 (그 원점 반경 + @p margin) 안에 셀 @p cell 이 닿으면 true 입니다. */
+        bool isCellWithinSources( const StreamingCellCoord& cell, float32 margin ) const;
         /** @brief 셀 내용의 비동기 읽기를 겁니다(`Unloaded` → `Loading`). 걸지 못하면 오류를 남기고 `Failed` 입니다. */
         void requestCellContent( CellSlot& slot );
         /** @brief 읽기가 끝났으면 거둡니다(`Loading` → `Ready` · `Failed`). 끝나지 않았으면 그대로입니다. */
@@ -176,8 +194,8 @@ namespace sw
         StreamingCellGrid                     _grid;
         vector<CellSlot>                      _listCell;
         unordered_map<uint64, vector<uint32>> _mapCellIndex;         ///< `makeCellKey` → 그 좌표의 조각들(`_listCell` 인덱스, 문서 순서)
-        vector<float3>                        _listExternalSource;   ///< `setExternalSources`
-        float3                                _cameraSource;         ///< `setCameraSource`
+        vector<StreamingSource>               _listExternalSource;   ///< `setExternalSources`
+        StreamingSource                       _cameraSource;         ///< `setCameraSource`. 반경은 월드 설정의 로딩 반경
         uint8                                 _bCameraSourceSet : 1; ///< 카메라 원점을 한 번이라도 받았다
         uint8                                 _bExternalSources : 1; ///< 바깥 원점을 쓴다
         uint64                                _changeSerial;         ///< 셀이 오르내린 번호(`getChangeSerial`). 월드를 바꿔도 되돌리지 않는다 — 보는 쪽의 마지막 번호가 늘 지금 이하다

@@ -1736,7 +1736,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 
 **대조.**
 - 언리얼 Replication Graph: Spatial2D 노드(격자 칸마다 액터 목록 — 연결은 둘레 칸만 모은다) · AlwaysRelevant 노드(전역 목록) · 연결별 노드(AlwaysRelevant_ForConnection — 자기 폰 · 파티). 우리: 칸 = `NetInterestGrid`(칸 = `StreamingCellGrid` 셀), 전역 = `_setAlwaysRelevant`, 연결별 = `IInterestPolicy::isAlwaysRelevant( connection, … )` — 이미 있다.
-- 언리얼 World Partition 서버 스트리밍: 플레이어 컨트롤러마다 스트리밍 소스(`FWorldPartitionStreamingSource` — 위치 · 모양 반경 · `EStreamingSourcePriority` 0 이 가장 먼저), 서버는 모든 소스의 합집합을 올린다. 우리: `StreamingSource{ 위치, 로딩 반경, 우선순위 }`, 우선순위 값은 언리얼과 같다(Highest 0 · High 64 · Normal 128 · Low 192 · Lowest 255). 읽기 차례는 덮는 소스 중 가장 급한 우선순위 → 가까운 거리, 내리기는 모든 소스에서 (그 소스 반경 + 여유) 밖.
+- 언리얼 World Partition 서버 스트리밍: 플레이어 컨트롤러마다 스트리밍 소스(`FWorldPartitionStreamingSource` — 위치 · 모양 반경 · `EStreamingSourcePriority` 0 이 가장 먼저), 서버는 모든 소스의 합집합을 올린다. 우리: `StreamingSource{ 위치, 로딩 반경, 우선순위 }`, 우선순위는 언리얼과 같은 다섯 단계 · 같은 차례(Highest · High · Normal · Low · Lowest). 읽기 차례는 덮는 소스 중 가장 급한 우선순위 → 가까운 거리, 내리기는 모든 소스에서 (그 소스 반경 + 여유) 밖.
 - 정적 액터 NetGUID: 맵에서 읽은 액터(bNetStartup)는 경로 이름으로 서버 · 클라이언트가 같은 객체를 가리킨다 — 클라이언트는 새로 스폰하지 않고 이미 읽은 액터에 묶고, 관련성으로 채널이 닫혀도 지우지 않는다. 못 풀면 스폰하지 않고 경고한다. 우리: `MMOEntity::_staticID` = 쿠킹된 씬의 엔티티 파일 id(같은 쿠킹본이라 양쪽이 같다).
 - 레벨을 아직 안 올린 클라이언트: 언리얼은 클라이언트가 `ServerUpdateLevelVisibility` 로 보이는 레벨을 알리고, 서버는 그 레벨의 액터 복제를 미룬다(액터가 레벨 객체에 속해 레벨 없이 스폰할 수 없기 때문).
 
