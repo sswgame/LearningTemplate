@@ -901,7 +901,7 @@ namespace sw
         copySceneDepth( view );
         // 이번 프레임 사각형만 읽는다(자동 렌더 배율 — 사각형 밖은 옛 깊이다).
         const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
-        return _occlusion.record( *_pCmd, *_pDevice, _psoManager.getEnginePSO( RenderPassKind::HZBBuild ), view.scaleToRect( depth._width, true, true ), view.scaleToRect( depth._height, true, false ),
+        return _occlusion.record( *_pCmd, *_pDevice, _psoManager.getEnginePSO( RenderPassKind::HZBBuild ), view.scaleToRect( depth, true ), view.scaleToRect( depth, false ),
                                   findViewProj( view ), false, view );
     }
 
