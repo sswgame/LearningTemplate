@@ -81,12 +81,9 @@ namespace sw
          */
         [[nodiscard]] bool readObjectProperty( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const GameObject* pTarget = query.findTargetObject();
+            const GameObject* pTarget = query.findTargetObject( outValue );
             if ( pTarget == nullptr )
-            {
-                outValue.setText( query.getTargetProblem() );
                 return false;
-            }
             const size_t dot = query._key.find( '.' );
             if ( dot == string_view::npos )
             {
