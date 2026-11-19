@@ -183,26 +183,14 @@ namespace sw
     void StressTestCombatComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        const GameObject* pEnemy = context.getManager().resolveGameObject( _enemy );
-        const GameObject* pSword = context.getManager().resolveGameObject( _sword );
-        if ( pEnemy == nullptr || pSword == nullptr )
+        const GameObjectManager& sceneManager = context.getManager();
+        if ( sceneManager.resolveGameObject( _enemy ) == nullptr || sceneManager.resolveGameObject( _sword ) == nullptr )
             return;
         _elapsed += context.getDeltaTime();
         ++_frame;
 
-        const AnimationNotifyComponent* pNotify = pEnemy->getComponent<AnimationNotifyComponent>();
-        static const hashed_string      s_footstep( "Footstep" );
-        for ( size_t actionIndex = 0; pNotify != nullptr && actionIndex < pNotify->getActions().size(); ++actionIndex )
-        {
-            const AnimationNotifyAction& action = pNotify->getActions()[actionIndex];
-            if ( action._handler == s_footstep )
-            {
-                ++_footstepCount;
-                SW_LOG_INFO_ID( "StressTestCombat.TFootstepSurface", "[StressTestCombat] t=%# footstep '%#' surface '%#'", _elapsed, action._notify.c_str(), action._detail.c_str() );
-            }
-        }
-
-        // 물리, 질의, 스폰은 게임 스레드에서 해야 하므로 틱이 끝난 뒤로 미룹니다. 이 틱은 워커 스레드에서 실행될 수 있습니다.
+        // 적 · 칼의 컴포넌트(알림 기록 · 래그돌)는 다른 워커가 같은 순간 틱하며 쓸 수 있어 틱 안에서 읽지 않는다 — 읽기 · 물리 · 질의 · 스폰 모두
+        // 틱이 끝난 뒤(게임 스레드)로 미룹니다. 이 틱은 워커 스레드에서 실행될 수 있습니다.
         context.deferPostTickOnComponent( *this, []( StressTestCombatComponent& combat, GameObjectManager& manager )
         {
             StressTestCombatComponent* pCombat      = &combat;
@@ -211,6 +199,8 @@ namespace sw
             GameObject*                pSwordObject = pManager->resolveGameObject( pCombat->_sword );
             if ( pEnemyObject == nullptr || pSwordObject == nullptr )
                 return;
+            pCombat->logFootstep( *pEnemyObject );
+            pCombat->logEverySecond( *pEnemyObject, *pSwordObject );
             pCombat->followHandSocket( *pManager, *pEnemyObject, *pSwordObject );
             if ( pCombat->_stage == 0 && pCombat->_frame >= 60 )
             {
@@ -239,16 +229,33 @@ namespace sw
                 pCombat->_stage = 4;
             }
         } );
+    }
 
-        const uint32 second = static_cast<uint32>( _elapsed );
-        if ( second != _loggedSecond )
+    void StressTestCombatComponent::logFootstep( const GameObject& enemy )
+    {
+        const AnimationNotifyComponent* pNotify = enemy.getComponent<AnimationNotifyComponent>();
+        static const hashed_string      s_footstep( "Footstep" );
+        for ( size_t actionIndex = 0; pNotify != nullptr && actionIndex < pNotify->getActions().size(); ++actionIndex )
         {
-            _loggedSecond = second;
-            // `[[maybe_unused]]` 를 붙인 이유: 아래 SW_LOG_INFO 에서만 쓰이는데, 그 매크로는 Shipping 빌드에서 사라집니다.
-            [[maybe_unused]] const RagdollComponent* pRagdoll = pEnemy->getComponent<RagdollComponent>();
-            [[maybe_unused]] const float3            sword    = pSword->getPrimarySceneComponent() != nullptr ? pSword->getPrimarySceneComponent()->getWorldPosition() : float3{};
-            SW_LOG_INFO_ID( "StressTestCombat.TFootstepsRagdollState", "[StressTestCombat] t=%# footsteps %# ragdoll state %# sword (%#, %#, %#)", second, _footstepCount,
-                            pRagdoll != nullptr ? static_cast<uint32>( pRagdoll->getState() ) : 0u, sword._x, sword._y, sword._z );
+            const AnimationNotifyAction& action = pNotify->getActions()[actionIndex];
+            if ( action._handler == s_footstep )
+            {
+                ++_footstepCount;
+                SW_LOG_INFO_ID( "StressTestCombat.TFootstepSurface", "[StressTestCombat] t=%# footstep '%#' surface '%#'", _elapsed, action._notify.c_str(), action._detail.c_str() );
+            }
         }
+    }
+
+    void StressTestCombatComponent::logEverySecond( const GameObject& enemy, const GameObject& sword )
+    {
+        const uint32 second = static_cast<uint32>( _elapsed );
+        if ( second == _loggedSecond )
+            return;
+        _loggedSecond = second;
+        // `[[maybe_unused]]` 를 붙인 이유: 아래 SW_LOG_INFO 에서만 쓰이는데, 그 매크로는 Shipping 빌드에서 사라집니다.
+        [[maybe_unused]] const RagdollComponent* pRagdoll = enemy.getComponent<RagdollComponent>();
+        [[maybe_unused]] const float3            swordAt  = sword.getPrimarySceneComponent() != nullptr ? sword.getPrimarySceneComponent()->getWorldPosition() : float3{};
+        SW_LOG_INFO_ID( "StressTestCombat.TFootstepsRagdollState", "[StressTestCombat] t=%# footsteps %# ragdoll state %# sword (%#, %#, %#)", second, _footstepCount,
+                        pRagdoll != nullptr ? static_cast<uint32>( pRagdoll->getState() ) : 0u, swordAt._x, swordAt._y, swordAt._z );
     }
 } // namespace sw

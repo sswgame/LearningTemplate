@@ -340,6 +340,12 @@ namespace sw
 
         /** @brief 버킷 위치(`_poolEntrySlot`)의 "버킷에 없음" 값입니다. */
         static constexpr uint32 kNotInPoolEntry = 0xFFFFFFFFu;
+        /**
+         * @brief 병렬 틱 중 남의 오브젝트가 읽어도 되는 형식이면 true 입니다 — 틱 중에 바뀌지 않는(틱 뒤에만 쓰는) 상태만 내는 파생 형식이 덮습니다.
+         * @details 남 읽기의 길(`GameObject::getTickSafeComponent` · `TickContext::readOther`)이 컴파일 시간에 본다. 유니티 잡의 `[ReadOnly]` 접근 선언,
+         *          언리얼 Mass 처리기의 읽기 요구 선언과 같은 자리다. 기본은 false — 남의 컴포넌트를 `getComponent` 로 찾으면 병렬 틱 검사가 멈춘다.
+         */
+        static constexpr bool kTickReadSafe = false;
 
         /** @brief 기본 컴포넌트를 만듭니다. */
         Component();

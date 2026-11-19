@@ -105,6 +105,13 @@ namespace sw
         _pSceneManager->deferPostTickOnComponent( self, func );
     }
 
+    template <typename T>
+    const T* TickContext::readOther( GameObjectHandle object ) const
+    {
+        const GameObject* pObject = getManager().resolveGameObject( object );
+        return pObject != nullptr ? pObject->getTickSafeComponent<T>() : nullptr;
+    }
+
     template <typename TComponent, typename TFunc>
     GameObjectManager::PostTickDelegate GameObjectManager::makeComponentPostTickTask( const TComponent& self, TFunc func ) const
     {

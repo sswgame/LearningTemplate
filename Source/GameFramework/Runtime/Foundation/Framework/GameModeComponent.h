@@ -61,7 +61,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kRuleSubTick = 0x52554C45u; ///< 규칙을 도는 서브틱 id(`_tickAfter` 를 걸었을 때만)
+        /** @brief 디렉터의 판 상태는 병렬 틱 중 남이 읽어도 됩니다 — 규칙은 틱 뒤 게임 스레드에서만 돈다(`deferRules`). 틱이 쓰는 것은 자기 시간 누적뿐이다. */
+        static constexpr bool   kTickReadSafe = true;
+        static constexpr uint32 kRuleSubTick  = 0x52554C45u; ///< 규칙을 도는 서브틱 id(`_tickAfter` 를 걸었을 때만)
 
         GameModeComponent();
         virtual ~GameModeComponent() override;
@@ -132,7 +134,8 @@ namespace sw
         {
             // 오브젝트 타입도 매니저에서 얻어 의존 이름으로 둔다. 이 헤더에서 GameObject 는 앞 선언뿐이다.
             const auto* pObject = manager.resolveGameObject( gameMode );
-            return pObject != nullptr ? pObject->template getComponent<TDirector>() : nullptr;
+            // 디렉터는 틱 뒤에만 쓰는 형식이라 병렬 틱 안에서도 남 읽기의 길로 찾는다(`kTickReadSafe`).
+            return pObject != nullptr ? pObject->template getTickSafeComponent<TDirector>() : nullptr;
         }
 
     protected:

@@ -477,12 +477,22 @@ namespace sw
 
     Component* GameObjectManager::resolveComponent( ComponentHandle handle )
     {
-        return _pState->_store.resolveComponent( handle );
+        Component* pComponent = _pState->_store.resolveComponent( handle );
+#if defined( SW_DO_CHECKS )
+        if ( pComponent != nullptr && pComponent->getOwner() != nullptr )
+            pComponent->getOwner()->assertParallelTickRead(); // 병렬 틱의 남 찾기는 멈춘다 — 남 읽기는 `TickContext::readOther`
+#endif
+        return pComponent;
     }
 
     const Component* GameObjectManager::resolveComponent( ComponentHandle handle ) const
     {
-        return _pState->_store.resolveComponent( handle );
+        const Component* pComponent = _pState->_store.resolveComponent( handle );
+#if defined( SW_DO_CHECKS )
+        if ( pComponent != nullptr && pComponent->getOwner() != nullptr )
+            pComponent->getOwner()->assertParallelTickRead();
+#endif
+        return pComponent;
     }
 
     GameObject* GameObjectManager::resolveGameObject( GameObjectHandle handle )
