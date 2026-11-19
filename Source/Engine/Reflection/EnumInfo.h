@@ -168,6 +168,24 @@ namespace sw
             return true;
         }
 
+        /**
+         * @brief @p value 가 선언된 열거자인지(비트 플래그면 선언된 비트들의 조합인지) 판단합니다. 표식(`Invalid` · `Count`)은 거절합니다.
+         * @details 남이 보낸 바이트를 읽는 쪽(`StateIO::reflected`)이 쓴다 — `isValidValue` 는 표식만 보므로 열거자 밖 값(`Boss` 다음의 9)이 그대로 들어왔다.
+         */
+        bool isDeclaredValue( int64 value ) const noexcept
+        {
+            if ( isValidValue( value ) == false )
+                return false;
+            if ( _bIsBitFlag == SW_FALSE )
+                return _mapValueToName.find( value ) != _mapValueToName.end();
+            int64 declaredBits = 0;
+            for ( const auto& [bitValue, name] : _mapValueToName )
+            {
+                declaredBits |= bitValue;
+            }
+            return ( value & ~declaredBits ) == 0;
+        }
+
         /** @brief 값의 이름입니다(해시 · 맵 키용, 언리얼 `UEnum::GetNameByValue`). 열거자 `None` 은 빈 이름이다 — 글로 쓸 때는 `toString` 을 쓴다. */
         hashed_string getNameByValue( int64 val ) const
         {

@@ -308,7 +308,7 @@ SW_TEST_CASE( AdventureVitalsTest, ReadRejectsValuesAboveTheirMax )
     sw::Archive staminaBytes;
     source.getStamina().writeState( staminaBytes );
     const size_t header      = sw::StateIO::kReflectedHeaderBytes;
-    const size_t healthAt    = header + 9;
+    const size_t healthAt    = header + 9 + header; // 체력(`HealthStateMachine`)도 리플렉션 머리 뒤 첫 칸이 체력 값이다
     const size_t magicSize   = static_cast<size_t>( magicBytes.getSize() );
     const size_t staminaSize = static_cast<size_t>( staminaBytes.getSize() );
     SW_REQUIRE_TRUE( size > healthAt + magicSize + staminaSize );

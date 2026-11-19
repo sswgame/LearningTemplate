@@ -171,7 +171,7 @@ namespace sw
             {
                 int64 stored = info.readValueFromMemory( pValue );
                 io.value( stored );
-                if ( io.isReading() && io.check( info.isValidValue( stored ) ) )
+                if ( io.isReading() && io.check( info.isDeclaredValue( stored ) ) ) // 열거자 밖 값은 거절한다(표식만 보는 isValidValue 로는 지나갔다)
                     info.writeValueToMemory( pValue, stored );
             }
         };

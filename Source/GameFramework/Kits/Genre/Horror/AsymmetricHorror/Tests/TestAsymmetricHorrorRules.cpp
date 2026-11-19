@@ -337,6 +337,7 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesUnknownElement )
 SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesOutOfRangeSetting )
 {
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     AsymmetricHorrorRulesCatalog catalog;
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<AsymmetricHorrorRules><Killer id="a"/><Hook stages="0"/></AsymmetricHorrorRules>)", "AsymmetricHorrorRulesTest" ) );
     SW_EXPECT_EQUAL( AsymmetricHorrorHookDef{}._stages, catalog.getRules()._hook._stages );
@@ -1326,7 +1327,6 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesWrongHost )
  */
 SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesCraftedBytes )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_REQUIRE_TRUE( _match.addSurvivor( AsymmetricHorrorTestUtil::at( 90.0f, 0.0f ) ) == 0 );
     SW_REQUIRE_TRUE( _match.addSurvivor( AsymmetricHorrorTestUtil::at( 90.0f, 0.0f ) ) == 1 );
     SW_REQUIRE_TRUE( _match.addHook( float3{} ) == 0 );

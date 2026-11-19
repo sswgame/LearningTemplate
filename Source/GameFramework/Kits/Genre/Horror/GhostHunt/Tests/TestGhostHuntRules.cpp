@@ -327,6 +327,7 @@ SW_TEST_CASE( GhostHuntTest, CatalogRefusesRoomWithoutLightFlag )
 SW_TEST_CASE( GhostHuntTest, CatalogRefusesOutOfRangeGhost )
 {
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     GhostCatalog catalog;
     SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<GhostHunt><Ghost id="a" hp="0"/></GhostHunt>)", "GhostHuntTest" ) );
     SW_EXPECT_TRUE( catalog.findGhost( "a" ) == nullptr );
@@ -684,7 +685,6 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterStateRoundTrip )
  */
 SW_TEST_CASE_F( GhostHuntTest, EncounterReadRefusesCraftedBytes )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     GhostFixtureEncounter good;
     SW_REQUIRE_TRUE( good.read( _encounter ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 1, _encounter.countRemaining() );

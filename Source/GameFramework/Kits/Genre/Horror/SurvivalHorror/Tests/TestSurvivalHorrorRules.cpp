@@ -424,6 +424,7 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesUnknownElement )
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesOutOfRangeItem )
 {
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SurvivalHorrorCatalog catalog;
     SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><Item id="a" w="9"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
 }
@@ -1289,7 +1290,6 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterStateRoundTrip )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterReadRefusesCraftedBytes )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SurvivalHorrorEncounter encounter;
     SW_REQUIRE_TRUE( encounter.initialize( _monster, { makeInvestigator( 1 ) }, 7u ) );
     const SurvivalHorrorInvestigator good  = makeInvestigator( 1 );
@@ -1359,6 +1359,11 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnOrderReadRefusesCraftedBytes )
     const auto read = []( const vector<FixtureActor>& listActor, const vector<int32>& listQueue, int32 round )
     {
         Archive written;
+        // 리플렉션 머리는 정상 `writeState` 바이트에서 가져온다 — 손으로 짜면 머리가 달라 다른 이유로 거절되어 거짓 통과한다.
+        const TurnOrder blank;
+        Archive         blankBytes;
+        blank.writeState( blankBytes );
+        written.writeBytes( blankBytes.getData(), StateIO::kReflectedHeaderBytes );
         written << static_cast<uint32>( listActor.size() );
         for ( const FixtureActor& actor : listActor )
         {
@@ -1373,10 +1378,10 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnOrderReadRefusesCraftedBytes )
         {
             written << actorID;
         }
+        written << round;
+        written << static_cast<int64>( TurnOrderMode::Rounds ); // 리플렉션 열거는 int64 로 놓인다
         const GameRandom random;
         StateIO::writeRandom( written, random );
-        written << round;
-        written << static_cast<uint8>( TurnOrderMode::Rounds );
         Archive   reading( written.getData(), written.getSize() );
         TurnOrder order;
         return order.readState( reading );
