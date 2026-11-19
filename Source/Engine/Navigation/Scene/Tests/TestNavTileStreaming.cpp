@@ -101,7 +101,8 @@ namespace
             NavMeshSettings settings;
             settings._listAgentType.push_back( agentType );
             settings._listArea.push_back( area );
-            settings._defaultAgentType = agentType._name;
+            settings._defaultAgentType         = agentType._name;
+            settings._maxPathRequestsPerUpdate = 8; // 정책 값(기본 0 은 "넘기지 않음") — 비동기 요청이 워커로 간다
             return settings;
         }
 
