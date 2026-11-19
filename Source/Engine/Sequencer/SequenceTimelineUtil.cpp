@@ -346,11 +346,8 @@ namespace sw
         inoutListSpawned.clear();
     }
 
-    void SequenceTimelineUtil::applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, int32 previousFrame,
-                                           vector<const SequenceTrackItem*>* pOutListCrossedEvent )
+    void SequenceTimelineUtil::applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame )
     {
-        if ( pOutListCrossedEvent != nullptr )
-            pOutListCrossedEvent->clear();
         if ( pManager == nullptr )
             return;
 
@@ -408,41 +405,28 @@ namespace sw
                 }
             }
         }
-
-        if ( previousFrame == kNoPreviousFrame )
-            return;
-        appendCrossedEvents( asset, previousFrame, frame, pOutListCrossedEvent );
     }
 
-    void SequenceTimelineUtil::appendCrossedEvents( const SequenceAsset& asset, int32 previousFrame, int32 frame,
-                                                    vector<const SequenceTrackItem*>* pOutListCrossedEvent )
+    void SequenceTimelineUtil::appendCrossedEvents( const SequenceAsset& asset, const PlaybackSegment<int32>& segment, vector<const SequenceTrackItem*>* pOutListCrossedEvent )
     {
         for ( const SequenceTrackItem& item : asset._listItem )
         {
-            if ( SequenceTimelineUtilInternal::shouldFireOnCross( item ) == false )
-                continue;
-            // 지나갔는가: 이전 프레임에는 아직 닿지 않았고 이번 프레임에는 닿았다.
-            if ( previousFrame >= item._start || item._start > frame )
+            if ( SequenceTimelineUtilInternal::shouldFireOnCross( item ) == false || segment.hasCrossed( item._start ) == false )
                 continue;
             if ( pOutListCrossedEvent != nullptr )
                 pOutListCrossedEvent->push_back( &item );
-            SW_LOG_INFO_ID( "SequenceTimeline.SequenceEvent", "Sequence event %# on binding %#", item._name.c_str(), item._binding );
+            SW_LOG_INFO_ID( "SequenceTimeline.SequenceEvent", "Sequence event %# on binding %#%#", item._name.c_str(), item._binding, segment.isForward() ? "" : " (backwards)" );
         }
     }
 
     void SequenceTimelineUtil::applyPlayback( GameObjectManager* pManager, const SequenceAsset& asset, const SequencePlaybackStep& step, const SequenceBindingView& bindings,
                                               vector<const SequenceTrackItem*>* pOutListCrossedEvent )
     {
-        const int32 frameBeforeWrap = step._frameBeforeWrap;
-
-        // 되감기 전 끝 구간을 먼저 모은다. `applyFrame` 이 출력을 비우므로 따로 모아 앞에 붙인다.
-        vector<const SequenceTrackItem*> listTailEvent;
-        if ( frameBeforeWrap != SequencePlayer::kNoLoopWrap )
-            appendCrossedEvents( asset, frameBeforeWrap, asset._frameMax, &listTailEvent );
-
-        applyFrame( pManager, asset, bindings, step._frame, step._previousFrame, pOutListCrossedEvent );
-        if ( pOutListCrossedEvent != nullptr && listTailEvent.empty() == false )
-            pOutListCrossedEvent->insert( pOutListCrossedEvent->begin(), listTailEvent.begin(), listTailEvent.end() );
+        if ( pOutListCrossedEvent != nullptr )
+            pOutListCrossedEvent->clear();
+        applyFrame( pManager, asset, bindings, step._frame );
+        for ( uint32 segmentIndex = 0; segmentIndex < step._segmentCount; ++segmentIndex )
+            appendCrossedEvents( asset, step._arrSegment[segmentIndex], pOutListCrossedEvent );
     }
 
     GameObject* SequenceTimelineUtil::findTarget( GameObjectManager* pManager, const SequenceBindingView& bindings, uint32 bindingID )
@@ -615,7 +599,7 @@ namespace sw
     }
 
     void SequenceTimelineUtil::applySpans( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, float32 framesPerSecond,
-                                           vector<SequenceSpanState>& inoutListSpan, vector<const SequenceTrackItem*>* pOutListEntered )
+                                           float32 playRate, vector<SequenceSpanState>& inoutListSpan, vector<const SequenceTrackItem*>* pOutListEntered )
     {
         for ( uint32 itemIndex = 0; itemIndex < static_cast<uint32>( asset._listItem.size() ); ++itemIndex )
         {
@@ -645,6 +629,7 @@ namespace sw
             context._pTarget         = pTarget;
             context._pState          = pState;
             context._framesPerSecond = framesPerSecond;
+            context._playRate        = playRate;
             context._frame           = frame;
             if ( bInside && bWas == false )
             {
@@ -740,35 +725,35 @@ namespace sw
         }
     }
 
-    void SequenceTimelineUtil::collectCameraSignals( const SequenceAsset& asset, int32 previousFrame, int32 frame, vector<SequenceCameraSignal>& outListSignal )
-    {
-        const SequenceTrackItem* pPreviousCut = previousFrame == kNoPreviousFrame ? nullptr : asset.findCameraCut( previousFrame );
-        appendCameraSignals( asset, previousFrame, frame, pPreviousCut, outListSignal );
-    }
-
     void SequenceTimelineUtil::collectPlaybackCameraSignals( const SequenceAsset& asset, const SequencePlaybackStep& step, vector<SequenceCameraSignal>& outListSignal )
     {
-        const int32 frameBeforeWrap = step._frameBeforeWrap;
-        if ( frameBeforeWrap == SequencePlaybackStep::kNoLoopWrap )
+        const SequenceTrackItem* pPreviousCut = step._kind == SequencePlaybackStepKind::Start ? nullptr : asset.findCameraCut( step._previousFrame );
+        for ( uint32 segmentIndex = 0; segmentIndex < step._segmentCount; ++segmentIndex )
         {
-            collectCameraSignals( asset, step._previousFrame, step._frame, outListSignal );
-            return;
+            // 구간이 둘이면 첫 구간 끝(되감거나 꺾인 끝)의 컷을 지나 이어진다.
+            const SequencePlaybackSegment& segment = step._arrSegment[segmentIndex];
+            const bool                     bLast   = segmentIndex + 1 == step._segmentCount;
+            const SequenceTrackItem*       pCut    = asset.findCameraCut( bLast ? step._frame : segment._to );
+            appendCutSignals( asset, pCut, pPreviousCut, segment.isForward() || segment._from == segment._to, outListSignal );
+            appendCrossingSignals( asset, segment, outListSignal );
+            pPreviousCut = pCut;
         }
-        // 되감았다 — 끝 구간을 먼저 보고, 처음 구간은 끝을 덮던 컷에서 이어진 것으로 본다(같은 컷이 끝과 처음을 덮으면 시네마틱이 끊기지 않는다).
-        appendCameraSignals( asset, frameBeforeWrap, asset._frameMax, asset.findCameraCut( frameBeforeWrap ), outListSignal );
-        appendCameraSignals( asset, step._previousFrame, step._frame, asset.findCameraCut( asset._frameMax ), outListSignal );
+        if ( step._segmentCount == 0 )
+            appendCutSignals( asset, asset.findCameraCut( step._frame ), pPreviousCut, true, outListSignal );
     }
 
-    void SequenceTimelineUtil::appendCameraSignals( const SequenceAsset& asset, int32 previousFrame, int32 frame, const SequenceTrackItem* pPreviousCut,
-                                                    vector<SequenceCameraSignal>& outListSignal )
+    void SequenceTimelineUtil::appendCutSignals( const SequenceAsset& asset, const SequenceTrackItem* pCut, const SequenceTrackItem* pPreviousCut, bool bForward,
+                                                 vector<SequenceCameraSignal>& outListSignal )
     {
-        // 컷이 바뀌었는가 — 덮는 컷의 시작이 이번 구간에 있거나, 이전에 덮던 컷과 다르다.
-        const SequenceTrackItem* pCut = asset.findCameraCut( frame );
+        // 컷이 바뀌었는가 — 덮는 컷이 이전에 덮던 컷과 다르다.
         if ( pCut != nullptr && pCut != pPreviousCut )
         {
             SequenceCameraSignal signal;
             signal._item = *pCut;
-            signal._kind = SequenceCameraSignalKind::CutBegin;
+            // 앞 컷에서 섞어 들어온다 — 정방향이면 구간 머리(Ease In), 역방향이면 꼬리(Ease Out)로 들어온다. 첫 컷은 시네마틱 시작이 게임 화면에서 섞는다.
+            signal._blendFrames = pPreviousCut != nullptr ? ( bForward ? pCut->_easeInFrames : pCut->_easeOutFrames ) : 0;
+            signal._blendCurve  = bForward ? pCut->_easeInCurve : pCut->_easeOutCurve;
+            signal._kind        = SequenceCameraSignalKind::CutBegin;
             outListSignal.push_back( signal );
         }
         if ( pCut != nullptr && pPreviousCut == nullptr )
@@ -787,33 +772,32 @@ namespace sw
             signal._kind         = SequenceCameraSignalKind::CinematicEnd;
             outListSignal.push_back( signal );
         }
+    }
 
-        const bool bHasPrevious = previousFrame != kNoPreviousFrame;
+    void SequenceTimelineUtil::appendCrossingSignals( const SequenceAsset& asset, const PlaybackSegment<int32>& segment, vector<SequenceCameraSignal>& outListSignal )
+    {
         for ( const SequenceTrackItem& item : asset._listItem )
         {
             const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
             if ( pInfo == nullptr )
                 continue;
-            // 대기 뷰 — 컷 시작 프리롤 프레임 전을 이번 구간에 지났고 컷은 아직 시작하지 않았다.
+            // 대기 뷰 — 정방향 구간에서 컷 시작 프리롤 프레임 전을 지났고 컷은 아직 시작하지 않았다.
             const int32 prerollFrames = pInfo->_bCutsCamera ? asset.getPrerollFrames( item ) : 0;
-            if ( prerollFrames > 0 && frame < item._start )
+            if ( prerollFrames > 0 && segment.isForward() && segment._to < item._start )
             {
-                const int32 prewarmFrame = item._start - prerollFrames;
-                const bool  bCrossed     = bHasPrevious ? ( previousFrame < prewarmFrame && prewarmFrame <= frame ) : prewarmFrame <= frame;
-                if ( bCrossed )
+                if ( segment.hasCrossed( item._start - prerollFrames ) )
                 {
                     SequenceCameraSignal signal;
                     signal._item        = item;
-                    signal._framesUntil = item._start - frame;
+                    signal._framesUntil = item._start - segment._to;
                     signal._kind        = SequenceCameraSignalKind::CutPrewarm;
                     outListSignal.push_back( signal );
                 }
             }
-            // 흔들림 — 시작 프레임을 이번 구간에 지났다.
+            // 흔들림 — 시작 문턱을 이번 구간에 지났다(어느 방향이든).
             if ( pInfo->_bShakesCamera )
             {
-                const bool bStarted = bHasPrevious ? ( previousFrame < item._start && item._start <= frame ) : item._start == frame;
-                if ( bStarted )
+                if ( segment.hasCrossed( item._start ) )
                 {
                     SequenceCameraSignal signal;
                     signal._item = item;

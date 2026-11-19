@@ -636,6 +636,7 @@
 		<entry source="Duration {duration} s  Tracks {trackCount}  Curves {curvesCount}  Default loop {loopingByDefault}  Root motion {rootMotionTrack}  Notifies {findNotifyTrack}"
 		       text="길이 {duration}초  트랙 {trackCount}  커브 {curvesCount}  기본 반복 {loopingByDefault}  루트 모션 {rootMotionTrack}  알림 {findNotifyTrack}" />
 		<entry source="Earlier" text="앞으로" />
+		<entry source="Easing" text="이징" />
 		<entry source="Edge Warp Presets" text="가장자리 이동 프리셋" />
 		<entry source="Edit" text="편집" />
 		<entry source="Edit a key's time, value and interpolation in place. Values above 1 are clamped in the color preview."
@@ -1549,6 +1550,7 @@
 		<entry source="Play Clip" text="클립 재생" />
 		<entry source="Play Mode" text="플레이 모드" />
 		<entry source="Play Preview" text="미리보기 재생" />
+		<entry source="Play Reverse" text="거꾸로 재생" />
 		<entry source="Play in New Window" text="새 창에서 플레이" />
 		<entry source="Play mode is running (scene edits are restricted)"
 		       text="플레이 모드 실행 중 (씬 편집 제한)" />
@@ -1563,6 +1565,8 @@
 		       text="에디터 오디오 장치로 그래프를 재생합니다" />
 		<entry source="Play the selected animation, or every frame when none is selected."
 		       text="고른 애니메이션을 재생합니다. 고른 것이 없으면 모든 프레임을 재생합니다." />
+		<entry source="Play the sequence backwards in the viewport from the current frame, looping at the start."
+		       text="현재 프레임에서 시퀀스를 뷰포트에 거꾸로 재생합니다. 처음에 닿으면 끝에서 다시 돕니다." />
 		<entry source="Play the sequence in the viewport from the current frame, looping at the end."
 		       text="현재 프레임부터 뷰포트에서 시퀀스를 재생하고, 끝에 닿으면 처음부터 반복합니다." />
 		<entry source="Playback Controls (Total Frames: {frameCount}, Duration: {totalDuration} s):"
@@ -2369,6 +2373,8 @@
 		<entry source="The active scene does not stream. Turn on streaming in its World Settings to split it into cells."
 		       text="활성 씬은 스트리밍하지 않습니다. 셀로 나누려면 월드 설정에서 스트리밍을 켭니다." />
 		<entry source="The audio service is not running" text="오디오 서비스가 실행 중이 아닙니다" />
+		<entry source="The blend curve an Eased key follows to the next key (the same curves as camera and UI blends)."
+		       text="Eased 키가 다음 키까지 따르는 블렌드 곡선입니다(카메라 · UI 블렌드와 같은 곡선)." />
 		<entry source="The bug report could not be saved (see the log)"
 		       text="버그 리포트를 저장하지 못했습니다(로그를 확인하십시오)" />
 		<entry source="The build failed. See the console window for the detailed errors."

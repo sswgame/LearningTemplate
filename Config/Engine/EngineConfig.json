@@ -103,5 +103,8 @@
         "_bGPUBasedValidation": false,
         "_bSynchronizationValidation": false
     },
-    "_shaderTimeRolloverSeconds": 3600.0
+    "_shaderTimeRolloverSeconds": 3600.0,
+    "_sequencer": {
+        "_fastForwardRate": 4.0
+    }
 }

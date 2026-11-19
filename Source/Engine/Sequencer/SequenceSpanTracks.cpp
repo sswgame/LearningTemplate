@@ -61,7 +61,9 @@ namespace sw
                     return;
                 const float32 fps  = context._framesPerSecond > 0.0f ? context._framesPerSecond : 30.0f;
                 const float32 time = static_cast<float32>( context._frame - context._pItem->_start ) / fps;
-                pAnimator->setSequencerOverride( context._pState->_clip, time, MathUtil::saturate( context._pItem->_amplitude ) );
+                // 섞임(Ease In · Out)이 세기를 구간 머리 · 꼬리에서 올리고 내린다 — 프레임의 값이라 역재생도 같다.
+                const float32 easeWeight = context._pItem->computeEaseWeight( static_cast<float32>( context._frame ) );
+                pAnimator->setSequencerOverride( context._pState->_clip, time, MathUtil::saturate( context._pItem->_amplitude ) * easeWeight );
             }
 
             static void leaveAnimation( const SequenceSpanContext& context )
@@ -114,9 +116,10 @@ namespace sw
                 const string& key   = context._pItem->_text;
                 const utf8*   pText = LocalizedText::find( key, key.c_str() );
                 // 화자는 바인딩의 표시 이름(현지화 키 또는 글)이다 — 씬 오브젝트 이름은 찾기 · 표시에 쓰지 않는다. 바인딩이 없으면 화자 없는 줄이다.
-                const SequenceBinding* pBinding  = context._pAsset != nullptr ? context._pAsset->findBinding( context._pItem->_binding ) : nullptr;
-                const utf8*            pSpeaker  = pBinding != nullptr ? LocalizedText::find( pBinding->_name, pBinding->_name.c_str() ) : "";
-                context._pState->_subtitleLineID = pSubtitles->postSubtitle( pSpeaker, pText, computeSpanSeconds( context ) );
+                const SequenceBinding* pBinding = context._pAsset != nullptr ? context._pAsset->findBinding( context._pItem->_binding ) : nullptr;
+                const utf8*            pSpeaker = pBinding != nullptr ? LocalizedText::find( pBinding->_name, pBinding->_name.c_str() ) : "";
+                // 보이는 시간은 벽시계다 — 2 배속이면 구간이 반 시간에 지나간다(속도 0 은 플레이어가 거절한다).
+                context._pState->_subtitleLineID = pSubtitles->postSubtitle( pSpeaker, pText, computeSpanSeconds( context ) / MathUtil::abs( context._playRate ) );
             }
 
             static void leaveSubtitle( const SequenceSpanContext& context )

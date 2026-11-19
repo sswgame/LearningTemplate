@@ -4,14 +4,23 @@
 
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/ScenarioPlayback.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
+#include "Engine/Config/EngineConfig.h"
+#include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Config/GameTimeScale.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/InputMap.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Presentation/IUILayerVisibility.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequenceTimelineUtil.h"
@@ -22,6 +31,11 @@ namespace sw
     {
         struct SequencePlayerComponentInternal
         {
+            /** @brief 컷씬 입력 맵(`EngineDefaultAssets::_cutsceneInputMap`)의 레이어 · 액션 이름입니다. 맵 파일과 이 표가 계약이다(포토 모드 맵과 같은 꼴). */
+            static constexpr const utf8* kCutsceneLayer     = "Cutscene";
+            static constexpr const utf8* kSkipAction        = "Cutscene.Skip";
+            static constexpr const utf8* kFastForwardAction = "Cutscene.FastForward";
+
             static const SequencePlayerComponent* findTargetPlayer( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 return query.findTargetComponent<SequencePlayerComponent>( "sequence player", outValue );
@@ -56,6 +70,36 @@ namespace sw
                 return false;
             }
 
+            /** @brief 감시 값 `Sequence.PlayRate` 입니다 — 지금 걸린 재생 속도(빨리감기 배율 포함, 음수 = 역방향 속도 값)입니다. */
+            [[nodiscard]] static bool readPlayRate( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const SequencePlayerComponent* pPlayer = findTargetPlayer( query, outValue );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue.setNumber( static_cast<float64>( pPlayer->getEffectivePlayRate() ) );
+                return true;
+            }
+
+            /** @brief 감시 값 `Sequence.Reversed` 입니다 — 지금 거꾸로 진행하면 1(속도 부호와 왕복이 뒤집은 방향)입니다. */
+            [[nodiscard]] static bool readReversed( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const SequencePlayerComponent* pPlayer = findTargetPlayer( query, outValue );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue.setNumber( pPlayer->isReversed() ? 1.0 : 0.0 );
+                return true;
+            }
+
+            /** @brief 감시 값 `Sequence.InputBlocked` 입니다 — 대상 플레이어가 컷씬 레이어로 플레이어 입력(이동 · 시선 · 게임 동작)을 막고 있으면 1 입니다. */
+            [[nodiscard]] static bool readInputBlocked( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const SequencePlayerComponent* pPlayer = findTargetPlayer( query, outValue );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue.setNumber( pPlayer->isBlockingPlayerInput() ? 1.0 : 0.0 );
+                return true;
+            }
+
             /** @brief 감시 값 `Sequence.BoundObject` 입니다 — 바인딩 id key 가 묶인 오브젝트의 이름이고, 묶이지 않았으면 `none` 입니다. */
             [[nodiscard]] static bool readBoundObject( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -78,6 +122,12 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( sequenceFrame, "Sequence.Frame", "Current frame of the target's sequence player", &SequencePlayerComponentInternal::readFrame, true, false );
     SW_AUTOMATION_QUERY_WATCH( sequenceHistory, "Sequence.History", "Lines of one kind (key: Started, Finished, Stopped, Event, CameraSignal, UnboundBinding, Span) in the target's recent sequence history",
                                &SequencePlayerComponentInternal::readHistory, true, true );
+    SW_AUTOMATION_QUERY_WATCH( sequencePlayRate, "Sequence.PlayRate", "Play rate applied to the target's sequence player now (fast forward included; negative plays backwards)",
+                               &SequencePlayerComponentInternal::readPlayRate, true, false );
+    SW_AUTOMATION_QUERY_WATCH( sequenceReversed, "Sequence.Reversed", "1 while the target's sequence plays backwards (negative rate or a ping-pong turn)", &SequencePlayerComponentInternal::readReversed,
+                               true, false );
+    SW_AUTOMATION_QUERY_WATCH( sequenceInputBlocked, "Sequence.InputBlocked", "1 while the target's sequence player blocks player movement, look and game actions with the Cutscene input layer",
+                               &SequencePlayerComponentInternal::readInputBlocked, true, false );
     SW_AUTOMATION_QUERY_WATCH( sequenceBoundObject, "Sequence.BoundObject", "Name of the object the target's sequence player binds to binding id key; none when unbound",
                                &SequencePlayerComponentInternal::readBoundObject, true, true );
 } // namespace sw
@@ -88,8 +138,19 @@ namespace sw
         : _sequencePath{}
         , _listBinding{}
         , _framesPerSecond{ 30.0f }
-        , _bLoop{ SW_FALSE }
+        , _playRate{ 1.0f }
+        , _loopMode{ SequenceLoopMode::None }
+        , _playerMovement{ SequencePlayerMovement::Free }
+        , _confineTarget{}
+        , _confineCenter{}
+        , _confineRadius{ 0.0f }
         , _bAutoPlay{ SW_TRUE }
+        , _bHideHUD{ SW_FALSE }
+        , _bSkippable{ SW_FALSE }
+        , _bAllowFastForward{ SW_FALSE }
+        , _bInputLayerPushed{ SW_FALSE }
+        , _bHUDHidden{ SW_FALSE }
+        , _bFastForwardHeld{ SW_FALSE }
         , _reserved{ 0 }
         , _player{}
         , _pendingStep{}
@@ -97,6 +158,7 @@ namespace sw
         , _history{}
         , _sequenceEventMulticast{}
         , _cameraSignalMulticast{}
+        , _finishedMulticast{}
     {
         setCanEverTick( true );
     }
@@ -105,8 +167,6 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
-        _player.setFramesPerSecond( _framesPerSecond );
-        _player.setLoop( _bLoop == SW_TRUE );
         loadSequenceFromPath();
         if ( _bAutoPlay == SW_TRUE )
             play();
@@ -153,11 +213,20 @@ namespace sw
         Component::onTick( context );
         if ( _player.isPlaying() == false )
             return;
+        // 건너뛰기는 남의 오브젝트에 끝 상태를 쓰므로 틱 뒤에 한다. 빨리감기 배율은 이번 갱신 전에 건다.
+        if ( readCutsceneInput() )
+        {
+            _pendingStep = SequencePlaybackStep::makeEmpty( _player.getCurrentFrame() );
+            context.deferPostTickOnComponent( *this, []( SequencePlayerComponent& self )
+            { (void)self.skipToEnd(); } );
+            return;
+        }
         _pendingStep = _player.update( context.getDeltaTime() );
         // 묶인 오브젝트(남의 오브젝트)에 값 · 스폰 · 구간을 적용하는 것은 틱 뒤(같은 프레임)에 한다 — 틱은 시간만 민다.
         context.deferPostTickOnComponent( *this, []( SequencePlayerComponent& self )
         {
             self.applyTimeline( self._pendingStep );
+            self.applyConfine();
             // 루프가 아니면 끝 프레임을 적용한 갱신에서 플레이어가 멈춘다 — 그때 끝낸다.
             if ( self._player.isPlaying() == false )
                 self.endPlayback( SequenceHistoryKind::Finished );
@@ -170,8 +239,12 @@ namespace sw
         endPlayback( SequenceHistoryKind::Stopped );
         if ( validateBindings() == false )
             return;
+        // 속도 0 은 데이터 결함이다 — 오류를 남기고 틀지 않는다(1 배속으로 돌아가는 길은 없다).
+        if ( _player.setPlayRate( _playRate ) == false || validateConfine() == false )
+            return;
         _player.setFramesPerSecond( _framesPerSecond );
-        _player.setLoop( _bLoop == SW_TRUE );
+        _player.setLoopMode( _loopMode );
+        acquireCutsceneOptions();
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && _player.getAsset()._whenFinished == SequenceFinishPolicy::RestoreState )
         {
@@ -186,6 +259,165 @@ namespace sw
     void SequencePlayerComponent::stop()
     {
         endPlayback( SequenceHistoryKind::Stopped );
+    }
+
+    void SequencePlayerComponent::playReverse()
+    {
+        _playRate = -MathUtil::abs( _playRate );
+        play();
+    }
+
+    bool SequencePlayerComponent::skipToEnd()
+    {
+        if ( _player.isPlaying() == false )
+            return false;
+        // 끝 프레임으로 점프해 그 상태를 적용하고(이벤트는 쏘지 않는다) 정상 끝을 지난다 — 덮던 컷이 있으면 끝내기가 시네마틱 끝을 낸다.
+        applyTimeline( _player.skipToEnd() );
+        endPlayback( SequenceHistoryKind::Finished );
+        return true;
+    }
+
+    bool SequencePlayerComponent::setPlayRate( float32 playRate )
+    {
+        // 빨리감기 중이면 배율을 곱한 값을 건다 — 놓으면 이 값으로 돌아온다.
+        const float32 scale = _bFastForwardHeld == SW_TRUE ? _player.getPlayRate() / _playRate : 1.0f;
+        if ( _player.setPlayRate( playRate * scale ) == false )
+            return false;
+        _playRate = playRate;
+        return true;
+    }
+
+    bool SequencePlayerComponent::validateConfine() const
+    {
+        if ( _playerMovement != SequencePlayerMovement::Confined )
+            return true;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const bool               bTarget  = pManager != nullptr && pManager->resolveGameObject( _confineTarget ) != nullptr;
+        const bool               bCenter  = pManager != nullptr && pManager->resolveGameObject( _confineCenter ) != nullptr;
+        if ( bTarget && bCenter && _confineRadius > 0.0f )
+            return true;
+        const utf8* pMissing = bTarget == false ? "a live _confineTarget" : ( bCenter == false ? "a live _confineCenter" : "a _confineRadius above 0" );
+        SW_LOG_ERROR_ID( "SequencePlayer.ConfineIncomplete", "Sequence '%#' on '%#' confines the player but lacks %# - the sequence does not play", _sequencePath.c_str(),
+                         pOwner != nullptr ? pOwner->getName().c_str() : "?", pMissing );
+        return false;
+    }
+
+    InputMap* SequencePlayerComponent::findPlayerInputMap()
+    {
+        InputManager* pInput = engine::findSubsystem<InputManager>();
+        return pInput != nullptr ? &pInput->getInputMap() : nullptr;
+    }
+
+    void SequencePlayerComponent::acquireCutsceneOptions()
+    {
+        // HUD 는 이 컴포넌트가 모른다 — 숨기는 일은 레이어 숨김 창구(구현은 UI 시스템)가 한다. 창구가 없으면(전용 서버) 가릴 화면도 없다.
+        IUILayerVisibility* pLayerVisibility = engine::findSubsystem<IUILayerVisibility>();
+        if ( _bHideHUD == SW_TRUE && pLayerVisibility != nullptr )
+        {
+            pLayerVisibility->addLayerHideRequest( UILayerMask::HUD );
+            _bHUDHidden = SW_TRUE;
+        }
+        const bool bNeedsInput = _playerMovement == SequencePlayerMovement::Blocked || _bSkippable == SW_TRUE || _bAllowFastForward == SW_TRUE;
+        InputMap*  pInputMap   = bNeedsInput ? findPlayerInputMap() : nullptr;
+        if ( pInputMap == nullptr )
+            return; // 쓸 입력이 없거나 입력이 없는 구성이다(전용 서버 · 하네스)
+        // 컷씬 레이어는 엔진 맵이다(포토 모드 맵과 같은 꼴 — 게임마다 액션을 더하지 않는다). 처음 쓸 때 플레이어 맵에 더한다.
+        const hashed_string layerName( SequencePlayerComponentInternal::kCutsceneLayer );
+        if ( pInputMap->hasLayer( layerName ) == false )
+        {
+            const EngineDefaultAssets* pDefaults = engine::findSubsystem<EngineDefaultAssets>();
+            const bool                 bAppended = pDefaults != nullptr && pInputMap->appendFromAsset( AssetID{ pDefaults->_cutsceneInputMap.get() } );
+            if ( bAppended == false )
+            {
+                SW_LOG_ERROR_ID( "SequencePlayer.CutsceneInputMap", "Cutscene input map could not be added to the player's map - '%#' plays without blocking, skip or fast forward",
+                                 _sequencePath.c_str() );
+                return;
+            }
+        }
+        // 막기는 레이어로 가른다 — Blocked 면 아래 레이어(이동 · 시선 · 게임 동작)를 막고, 컷씬 레이어의 건너뛰기 · 빨리감기는 남는다. 일시정지 · 메뉴는 UI 맵이라 막히지 않는다.
+        pInputMap->pushLayer( layerName, _playerMovement == SequencePlayerMovement::Blocked );
+        _bInputLayerPushed = SW_TRUE;
+    }
+
+    void SequencePlayerComponent::releaseCutsceneOptions()
+    {
+        if ( _bHUDHidden == SW_TRUE )
+        {
+            IUILayerVisibility* pLayerVisibility = engine::findSubsystem<IUILayerVisibility>();
+            if ( pLayerVisibility != nullptr )
+                pLayerVisibility->removeLayerHideRequest( UILayerMask::HUD );
+            _bHUDHidden = SW_FALSE;
+        }
+        if ( _bInputLayerPushed == SW_TRUE )
+        {
+            InputMap* pInputMap = findPlayerInputMap();
+            if ( pInputMap != nullptr )
+                pInputMap->popLayer( hashed_string( SequencePlayerComponentInternal::kCutsceneLayer ) );
+            _bInputLayerPushed = SW_FALSE;
+        }
+        if ( _bFastForwardHeld == SW_TRUE )
+        {
+            (void)_player.setPlayRate( _playRate );
+            _bFastForwardHeld = SW_FALSE;
+        }
+    }
+
+    bool SequencePlayerComponent::readCutsceneInput()
+    {
+        if ( _bInputLayerPushed == SW_FALSE )
+            return false;
+        // 게임이 멈춘 동안(일시정지 메뉴 — 게임 시간과 같은 원천)은 컷씬 입력도 쉰다. 재생도 멈춘 시간으로 서 있다가 재개하면 그 자리부터 이어 간다.
+        const GameTimeScale* pTimeScale = engine::findSubsystem<GameTimeScale>();
+        const InputMap*      pInputMap  = findPlayerInputMap();
+        if ( pInputMap == nullptr || ( pTimeScale != nullptr && pTimeScale->get() <= 0.0f ) )
+            return false;
+        if ( _bSkippable == SW_TRUE && pInputMap->wasActionTriggered( hashed_string( SequencePlayerComponentInternal::kSkipAction ) ) )
+            return true;
+        const bool bHeld = _bAllowFastForward == SW_TRUE && pInputMap->isActionDown( hashed_string( SequencePlayerComponentInternal::kFastForwardAction ) );
+        if ( bHeld == ( _bFastForwardHeld == SW_TRUE ) )
+            return false;
+        const EngineConfig* pConfig = engine::findSubsystem<EngineConfig>();
+        if ( bHeld && pConfig == nullptr )
+        {
+            SW_LOG_ERROR_ID( "SequencePlayer.FastForwardNoConfig", "Fast forward needs EngineConfig _sequencer._fastForwardRate - '%#' keeps its rate", _sequencePath.c_str() );
+            return false;
+        }
+        // 배율을 곱한 속도를 걸고, 놓으면 컴포넌트의 속도로 돌아온다(방향 · 왕복 표지는 플레이어가 그대로 든다).
+        const float32 rate = bHeld ? _playRate * pConfig->_sequencer._fastForwardRate : _playRate;
+        if ( _player.setPlayRate( rate ) )
+            _bFastForwardHeld = bHeld ? SW_TRUE : SW_FALSE;
+        return false;
+    }
+
+    void SequencePlayerComponent::applyConfine()
+    {
+        if ( _playerMovement != SequencePlayerMovement::Confined || _player.isPlaying() == false )
+            return;
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        GameObject*        pTarget  = pManager != nullptr ? pManager->resolveGameObject( _confineTarget ) : nullptr;
+        const GameObject*  pCenter  = pManager != nullptr ? pManager->resolveGameObject( _confineCenter ) : nullptr;
+        SceneComponent*    pScene   = pTarget != nullptr ? pTarget->getPrimarySceneComponent() : nullptr;
+        if ( pScene == nullptr || pCenter == nullptr || pCenter->getPrimarySceneComponent() == nullptr )
+            return;
+        // shortcut: 바닥 평면의 원 하나로 잰다 — 볼륨 겹침 계약(트리거 갈래 w-trigger)이 서면 그 모양 포함 검사로 옮긴다.
+        const float3  center   = pCenter->getPrimarySceneComponent()->getWorldPosition();
+        const float3  position = pScene->getWorldPosition();
+        const float32 dx       = position._x - center._x;
+        const float32 dz       = position._z - center._z;
+        const float32 distance = MathUtil::sqrt( dx * dx + dz * dz );
+        if ( distance <= _confineRadius )
+            return;
+        // 경계에서 멈춘다 — 이어진 움직임으로 옮겨(`setWorldPosition`, 순간이동이 아니다) 물리 · 이동 기록이 따라온다.
+        const float32 scale = _confineRadius / distance;
+        pScene->setWorldPosition( float3{ center._x + dx * scale, position._y, center._z + dz * scale } );
+    }
+
+    void SequencePlayerComponent::setLoopMode( SequenceLoopMode loopMode )
+    {
+        _loopMode = loopMode;
+        _player.setLoopMode( loopMode );
     }
 
     bool SequencePlayerComponent::validateBindings()
@@ -207,7 +439,8 @@ namespace sw
     void SequencePlayerComponent::endPlayback( SequenceHistoryKind kind )
     {
         const bool bWasPlaying = _player.isPlaying() || kind == SequenceHistoryKind::Finished;
-        const bool bHoldsState = _state._listSpawned.empty() == false || _state._listSpan.empty() == false || _state._bRestoreCaptured == SW_TRUE;
+        const bool bHoldsState = _state._listSpawned.empty() == false || _state._listSpan.empty() == false || _state._bRestoreCaptured == SW_TRUE || _bInputLayerPushed == SW_TRUE ||
+                                 _bHUDHidden == SW_TRUE;
         if ( bWasPlaying == false && bHoldsState == false )
             return;
         GameObject*               pOwner   = getOwner();
@@ -228,7 +461,10 @@ namespace sw
             listSignal.push_back( signal );
         }
         broadcastCameraSignals( listSignal ); // 컷 카메라가 아직 살아 있을 때 알린다(듣는 쪽이 그 화면에서 섞는다)
-        _player.stop();
+        releaseCutsceneOptions();
+        // 정상 끝(끝 프레임 · 건너뛰기)은 위치를 끝에 둔다(언리얼 OnFinished · GoToEndAndStop) — 멈춤(Stop)만 처음으로 되감는다.
+        if ( kind != SequenceHistoryKind::Finished )
+            _player.stop();
         SequenceTimelineUtil::releaseSpans( pManager, asset, view, _framesPerSecond, _state._listSpan );
         SequenceTimelineUtil::releaseSpawns( pManager, _state._listSpawned );
         // 카메라 컷은 컷 구간이 끝나야 해제되므로, 구간 안에서 끝나면 여기서 해제한다(게임 카메라가 원래 규칙으로 돌아간다).
@@ -237,8 +473,11 @@ namespace sw
             SequenceTimelineUtil::applyRestoreState( pManager, asset, view, _state._listRestore );
         _state._listRestore.clear();
         _state._bRestoreCaptured = SW_FALSE;
-        if ( bWasPlaying )
-            _history.record( kind, frame, kSequenceNoBinding, _sequencePath.path() );
+        if ( bWasPlaying == false )
+            return;
+        _history.record( kind, frame, kSequenceNoBinding, _sequencePath.path() );
+        if ( kind == SequenceHistoryKind::Finished )
+            _finishedMulticast.broadcast(); // 마지막 — 듣는 쪽이 다른 시퀀스를 틀어도 이 끝내기는 이미 마쳤다
     }
 
     void SequencePlayerComponent::pause()
@@ -302,6 +541,11 @@ namespace sw
         return _cameraSignalMulticast.add( delegate );
     }
 
+    Subscription SequencePlayerComponent::registerFinished( const OnSequenceFinishedDelegate& delegate )
+    {
+        return _finishedMulticast.add( delegate );
+    }
+
     void SequencePlayerComponent::broadcastCameraSignals( vector<SequenceCameraSignal>& inoutListSignal )
     {
         if ( inoutListSignal.empty() )
@@ -313,7 +557,10 @@ namespace sw
         {
             signal._secondsUntil    = static_cast<float32>( signal._framesUntil ) * secondsPerFrame;
             signal._durationSeconds = static_cast<float32>( signal._item._end - signal._item._start ) * secondsPerFrame;
-            signal._target          = view.findHandle( signal._item._binding );
+            // 컷 사이 섞임은 벽시계 초다 — 2 배속이면 반 시간에 섞는다.
+            if ( signal._kind == SequenceCameraSignalKind::CutBegin )
+                signal._blendSeconds = static_cast<float32>( signal._blendFrames ) * secondsPerFrame / MathUtil::abs( _player.getPlayRate() );
+            signal._target = view.findHandle( signal._item._binding );
             _history.record( SequenceHistoryKind::CameraSignal, frame, signal._item._binding, signal._item._name, static_cast<uint8>( signal._kind ) );
         }
         for ( const SequenceCameraSignal& signal : inoutListSignal )
@@ -331,13 +578,13 @@ namespace sw
         if ( pManager == nullptr )
             return;
 
-        // 루프를 되감은 갱신이면 끝 구간 이벤트까지 본다(`applyPlayback`).
+        // 지난 구간마다(반복 되감기 · 왕복 꺾임이면 둘) 문턱을 넘은 이벤트를 본다(`applyPlayback`).
         const SequenceBindingView        view = makeBindingView();
         vector<const SequenceTrackItem*> listCrossed;
         SequenceTimelineUtil::applyPlayback( pManager, _player.getAsset(), step, view, &listCrossed );
         SequenceTimelineUtil::applySpawns( pManager, _player.getAsset(), _player.getCurrentFrame(), _state._listSpawned );
         vector<const SequenceTrackItem*> listEnteredSpan;
-        SequenceTimelineUtil::applySpans( pManager, _player.getAsset(), view, _player.getCurrentFrame(), _framesPerSecond, _state._listSpan, &listEnteredSpan );
+        SequenceTimelineUtil::applySpans( pManager, _player.getAsset(), view, _player.getCurrentFrame(), _framesPerSecond, _player.getPlayRate(), _state._listSpan, &listEnteredSpan );
         for ( const SequenceTrackItem* pItem : listEnteredSpan )
             _history.record( SequenceHistoryKind::Span, _player.getCurrentFrame(), pItem->_binding, pItem->_name );
 

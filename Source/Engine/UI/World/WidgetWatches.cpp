@@ -180,8 +180,20 @@ namespace sw
             outValue.setNumber( pSubtitles->makeLayoutReport()._bOverflow ? 1.0 : 0.0 );
             return true;
         }
+
+        /** @brief 감시 값 `UI.HUDHidden` 입니다 — 레이어 숨김 요청이 HUD 레이어에 걸려 있으면 1 입니다(컷씬 `_bHideHUD` · 포토 모드). */
+        [[nodiscard]] bool readHUDHidden( const GameObjectManager* pManager, float64& outValue )
+        {
+            (void)pManager;
+            const UISystem* pUI = engine::findSubsystem<UISystem>();
+            if ( pUI == nullptr )
+                return false;
+            outValue = UILayerUtil::contains( pUI->getPaintState().getHiddenLayers(), UILayer::HUD ) ? 1.0 : 0.0;
+            return true;
+        }
     } // namespace
 
+    SW_AUTOMATION_WATCH( uiHUDHidden, "UI.HUDHidden", "1 while a layer hide request covers the HUD layer (cutscene Hide HUD, photo mode)", &readHUDHidden );
     SW_AUTOMATION_WATCH( uiSafeInsetTop, "UI.SafeInsetTop", "Top safe-area inset of the UI viewport in UI units (notch or status bar, or the debug safe zone)", &readSafeInsetTop );
     SW_AUTOMATION_WATCH( uiSafeInsetBottom, "UI.SafeInsetBottom", "Bottom safe-area inset of the UI viewport in UI units (gesture bar or the debug safe zone)", &readSafeInsetBottom );
     SW_AUTOMATION_WATCH( uiViewportWidth, "UI.ViewportWidth", "UI viewport width in UI units (follows resize and rotation)", &readViewportWidth );

@@ -175,11 +175,12 @@ namespace sw
         GameObject* pTarget = findSignalTarget( signal );
         if ( pTarget == nullptr )
             return;
-        const GameObject*        pOwner          = getOwner();
-        const GameObjectManager* pManager        = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameObject*        pPrevious       = pManager != nullptr ? pManager->resolveGameObject( _currentCutCamera ) : nullptr;
-        const CameraComponent*   pPreviousCamera = pPrevious != nullptr ? pPrevious->getComponent<CameraComponent>() : nullptr;
-        CameraDirectorComponent* pDirector       = findDirector( pTarget );
+        const GameObject*        pOwner           = getOwner();
+        const GameObjectManager* pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject*        pPrevious        = pManager != nullptr ? pManager->resolveGameObject( _currentCutCamera ) : nullptr;
+        const CameraComponent*   pPreviousCamera  = pPrevious != nullptr ? pPrevious->getComponent<CameraComponent>() : nullptr;
+        CameraDirectorComponent* pDirector        = findDirector( pTarget );
+        const bool               bFromOtherCamera = pPreviousCamera != nullptr && pPrevious != pTarget;
         if ( pDirector != nullptr && signal._item._preset.empty() == false )
         {
             const hashed_string presetID( string_view{ signal._item._preset.c_str(), signal._item._preset.size() } );
@@ -187,10 +188,17 @@ namespace sw
             if ( bActivated == false )
                 SW_LOG_WARNING_ID( "CinematicCamera.SequenceCutAsksCamera", "Sequence cut '%#' asks for camera preset '%#' that '%#' does not have", signal._item._name.c_str(), signal._item._preset.c_str(),
                                    pTarget->getName().c_str() );
-            // 다른 카메라에서 넘어오면 그 화면에서 이 프리셋의 블렌드로 섞는다. 같은 카메라면 디렉터가 이미 지금 화면에서 섞는다.
-            const bool bFromOtherCamera = bActivated && pPreviousCamera != nullptr && pPrevious != pTarget;
-            if ( bFromOtherCamera )
+            // 다른 카메라에서 넘어오면 그 화면에서 이 프리셋의 블렌드로 섞는다. 같은 카메라면 디렉터가 이미 지금 화면에서 섞는다. 컷이 블렌드 시간을 정했으면 그쪽이 이긴다(아래).
+            if ( bActivated && bFromOtherCamera && signal._blendSeconds <= 0.0f )
                 pDirector->blendFromPose( CameraPose::makePoseFromCamera( *pPreviousCamera ), pDirector->getCatalog().getBlend( hashed_string{}, presetID ) );
+        }
+        // 컷 항목의 섞임(`SequenceTrackItem::_easeInFrames` · 곡선) — 앞 컷 화면에서 섞어 들어온다(언리얼 Camera Cut 섹션의 Ease In). 디렉터가 없는 컷 카메라는 섞을 수 없어 끊는다.
+        if ( pDirector != nullptr && bFromOtherCamera && signal._blendSeconds > 0.0f )
+        {
+            BlendCurveDef blend{};
+            blend._curve    = signal._blendCurve;
+            blend._duration = signal._blendSeconds;
+            pDirector->blendFromPose( CameraPose::makePoseFromCamera( *pPreviousCamera ), blend );
         }
         _currentCutCamera = pTarget->getHandle();
 

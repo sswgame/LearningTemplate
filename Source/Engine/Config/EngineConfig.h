@@ -119,6 +119,22 @@ namespace sw
         PROPERTY( Min = 1, Meta = "Units=MB" )
         uint32 _clipCacheMegabytes{};
     };
+
+    /**
+     * @struct SequencerConfig
+     * @brief 시퀀스 재생(컷씬)의 정책 값입니다(`SequencePlayerComponent`).
+     * @details 빨리감기 동안 이벤트는 모두 쏘고(정수 틱이라 문턱을 건너뛰지 않는다), 자막은 벽시계 길이(구간 ÷ 속도)로 올리고, 소리 구간은 음 높이를 그대로 둔 채
+     *          구간이 끝나면 멈춘다(늘이기 · 피치 이동 없음 — 언리얼 시퀀서도 재생 속도에 소리를 늘이지 않는다).
+     */
+    REFLECT()
+    struct SW_API SequencerConfig
+    {
+        REFLECT_BODY();
+
+        /** @brief 빨리감기 입력(`Cutscene.FastForward`)을 누르는 동안 재생 속도에 곱하는 배율입니다. */
+        PROPERTY( Min = 1.0 )
+        float32 _fastForwardRate{};
+    };
 } // namespace sw
 
 namespace sw
@@ -662,6 +678,9 @@ namespace sw
 
         PROPERTY()
         SubtitleConfig _subtitles{}; ///< 자막 표시 규칙(줄 수 · 최소 표시 시간 · 읽기 속도 · 크기 배율)
+
+        PROPERTY()
+        SequencerConfig _sequencer{}; ///< 시퀀스 재생(컷씬) 정책 값 — 빨리감기 배율
 
         PROPERTY()
         CharacterMeshCacheConfig _characterMeshCache{}; ///< 캐릭터 외형이 구운 · 합친 메시 캐시의 예산(게임 모듈이 보는 조각)
