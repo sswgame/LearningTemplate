@@ -196,10 +196,10 @@ namespace sw
         }
     }
 
-    NetHandleResult DestructionReplicationServer::receive( NetDestructionMessage::SnapshotRequest, const NetMessageContext& context, BitReader& body )
+    NetHandleResult DestructionReplicationServer::receive( NetDestructionMessage::SnapshotRequest, const NetMessageContext& context, const DestructionSnapshotRequestBody& body )
     {
-        const NetObjectID netID = body.readVarUint();
-        if ( body.hasOverflowed() || context._connectionID < 0 )
+        const NetObjectID netID = body._netID;
+        if ( context._connectionID < 0 )
             return NetHandleResult::Malformed;
         if ( findEntry( netID ) != nullptr )
             queueRequest( context._connectionID, netID );
@@ -297,21 +297,22 @@ namespace sw
         const uint32 eventCount = component.getState().getEventCount();
         if ( component.isStateReady() == false || eventCount == 0 )
             return true; // 처음 상태 그대로이므로 이벤트는 0번부터 보낸다
-        vector<uint8> bytes;
-        component.makeNetworkSnapshot( bytes );
-        BitWriter& writer = _writer.begin( NetDestructionMessage::kSnapshot );
-        writer.writeVarUint( entry._netID );
-        writer.writeVarUint( eventCount );
-        writer.writeBlob( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( _writer.getByteCount() > NetConnection::kMaxReliableMessageSize )
+        DestructionSnapshotBody body;
+        body._netID      = entry._netID;
+        body._eventCount = eventCount;
+        component.makeNetworkSnapshot( body._bytes );
+        // 상한은 본문 형식(`MaxCount`)이 아니라 머리까지 든 메시지 크기로 본다 — 바이트가 상한 근처면 머리가 넘긴다. 넘는 바이트는 쓰지 않는다(쓰기 실패 오류 대신 아래 오류 하나).
+        const bool bFits = body._bytes.size() <= static_cast<size_t>( NetConnection::kMaxReliableMessageSize ) &&
+                           _writer.writeMessage<NetDestructionMessage::Table, NetDestructionMessage::Snapshot>( body ) && _writer.getByteCount() <= NetConnection::kMaxReliableMessageSize;
+        if ( bFits == false )
         {
             // 다시 만들어도 같은 결과이므로 큐에 되돌려 놓지 않는다. 이 오브젝트는 늦은 참가와 복구를 받지 못하며, 해시 비교가 계속 어긋남을 알린다.
             SW_LOG_ERROR_ID( "DestructionReplication.DestructionReplicationSnapshotObjectBytes", "DestructionReplication: the snapshot of object %# is %# bytes, over the reliable message limit %# - it cannot be sent",
-                             entry._netID, _writer.getByteCount(), NetConnection::kMaxReliableMessageSize );
+                             entry._netID, body._bytes.size(), NetConnection::kMaxReliableMessageSize );
             ++_stats._sendRejectedCount;
             return true;
         }
-        if ( _writer.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered ) == false )
+        if ( _writer.send( *_pHost, connectionID, NetDestructionMessage::Snapshot::kChannel ) == false )
         {
             ++_stats._sendRejectedCount;
             return false;
@@ -435,13 +436,13 @@ namespace sw
         // 쌓였지만 아직 적용하지 않은 피해가 있어도 된다. (이벤트 수, 해시)는 그 순간의 상태 그대로이고, 쌓인 피해는 뒤 번호로 보낸다.
         if ( component.isStateReady() == false || eventCount == 0 )
             return;
-        BitWriter& writer = _writer.begin( NetDestructionMessage::kHash );
-        writer.writeVarUint( entry._netID );
-        writer.writeVarUint( eventCount );
-        const uint64 hash = component.getState().computeStateHash();
-        writer.writeUint32( static_cast<uint32>( hash & 0xFFFFFFFFull ) );
-        writer.writeUint32( static_cast<uint32>( hash >> 32 ) );
-        (void)broadcast( NetChannelKind::ReliableOrdered );
+        DestructionHashBody body;
+        body._netID      = entry._netID;
+        body._eventCount = eventCount;
+        body._hash       = component.getState().computeStateHash();
+        if ( _writer.writeMessage<NetDestructionMessage::Table, NetDestructionMessage::Hash>( body ) == false )
+            return;
+        (void)broadcast( NetDestructionMessage::Hash::kChannel );
         ++_stats._hashMessageCount;
     }
 } // namespace sw
@@ -557,33 +558,28 @@ namespace sw
         return reader.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
     }
 
-    NetHandleResult DestructionReplicationClient::receive( NetDestructionMessage::Snapshot, const NetMessageContext& context, BitReader& body )
+    NetHandleResult DestructionReplicationClient::receive( NetDestructionMessage::Snapshot, const NetMessageContext& context, const DestructionSnapshotBody& body )
     {
         (void)context;
-        NetHandleResult early  = NetHandleResult::Handled;
-        Entry*          pEntry = readEntry( body, early );
-        if ( pEntry == nullptr )
-            return early;
-        if ( handleSnapshot( *pEntry, body ) == false )
-            return NetHandleResult::Malformed;
-        return body.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
+        if ( body._bytes.empty() )
+            return NetHandleResult::Malformed; // 서버는 이벤트가 없으면 스냅숏을 보내지 않는다
+        Entry* pEntry = findEntry( body._netID );
+        if ( pEntry != nullptr ) // 이 클라이언트에 없는 오브젝트이면 메시지를 소비하고 버린다
+            handleSnapshot( *pEntry, body );
+        return NetHandleResult::Handled;
     }
 
-    NetHandleResult DestructionReplicationClient::receive( NetDestructionMessage::Hash, const NetMessageContext& context, BitReader& body )
+    NetHandleResult DestructionReplicationClient::receive( NetDestructionMessage::Hash, const NetMessageContext& context, const DestructionHashBody& body )
     {
         (void)context;
-        NetHandleResult early  = NetHandleResult::Handled;
-        Entry*          pEntry = readEntry( body, early );
+        Entry* pEntry = findEntry( body._netID );
         if ( pEntry == nullptr )
-            return early;
+            return NetHandleResult::Handled;
         HashCheck check;
-        check._eventCount = body.readVarUint32();
-        const uint64 low  = body.readUint32();
-        const uint64 high = body.readUint32();
-        check._hash       = low | ( high << 32 );
-        if ( body.hasOverflowed() == false )
-            pEntry->_listHashCheck.push_back( check );
-        return body.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
+        check._eventCount = body._eventCount;
+        check._hash       = body._hash;
+        pEntry->_listHashCheck.push_back( check );
+        return NetHandleResult::Handled;
     }
 
     void DestructionReplicationClient::handleEvent( Entry& entry, const BufferedEvent& received )
@@ -650,16 +646,13 @@ namespace sw
             component.applyDamage( buffered._event );
     }
 
-    bool DestructionReplicationClient::handleSnapshot( Entry& entry, BitReader& reader )
+    void DestructionReplicationClient::handleSnapshot( Entry& entry, const DestructionSnapshotBody& body )
     {
-        const uint32  eventCount = reader.readVarUint32();
-        vector<uint8> bytes;
-        if ( reader.readBlob( bytes, NetConnection::kMaxReliableMessageSize ) == false || bytes.empty() )
-            return false;
+        const uint32 eventCount = body._eventCount;
 
         FractureComponentBase* pComponent = resolve( entry );
         if ( pComponent != nullptr )
-            pComponent->applyNetworkSnapshot( bytes.data(), bytes.size() );
+            pComponent->applyNetworkSnapshot( body._bytes.data(), body._bytes.size() );
         ++_stats._snapshotAppliedCount;
         entry._bAwaitingSnapshot = SW_FALSE;
         entry._nextEventIndex    = eventCount;
@@ -675,7 +668,6 @@ namespace sw
             if ( buffered._index >= entry._nextEventIndex )
                 handleEvent( entry, buffered );
         }
-        return true;
     }
 
     void DestructionReplicationClient::handlePose( BitReader& reader, bool bRest )
@@ -783,9 +775,10 @@ namespace sw
         entry._listHashCheck.clear();
         if ( _pHost == nullptr )
             return;
-        BitWriter& writer = _writer.begin( NetDestructionMessage::kSnapshotRequest );
-        writer.writeVarUint( entry._netID );
-        if ( _writer.send( *_pHost, 0, NetChannelKind::ReliableOrdered ) )
+        DestructionSnapshotRequestBody body;
+        body._netID = entry._netID;
+        if ( _writer.writeMessage<NetDestructionMessage::Table, NetDestructionMessage::SnapshotRequest>( body ) &&
+             _writer.send( *_pHost, 0, NetDestructionMessage::SnapshotRequest::kChannel ) )
             _stats._sentBytes += static_cast<uint64>( _writer.getByteCount() );
     }
 
