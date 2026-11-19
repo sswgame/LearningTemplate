@@ -1,5 +1,6 @@
 {
     "low": {
+        "_temporalUpscaleRenderScale": 0.5,
         "_shadowLocalMinTileResolution": 64,
         "_shadowLocalCullSlotLimit": 4,
         "_maxExtraViewCount": 4,
@@ -9,6 +10,7 @@
         }
     },
     "medium": {
+        "_temporalUpscaleRenderScale": 0.75,
         "_shadowLocalCullSlotLimit": 8,
         "_maxExtraViewCount": 6,
         "_textureStreaming": {

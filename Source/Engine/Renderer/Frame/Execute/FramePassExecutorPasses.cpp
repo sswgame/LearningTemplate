@@ -457,8 +457,8 @@ namespace sw
             return false;
         const TransientAttachmentPool::Attachment albedo = activePool().find( pAlbedoInput->_attachment );
         RootConstants                             constants{};
-        constants._width     = view.scaleToRect( albedo._width, albedo._bViewSized != 0, true );
-        constants._height    = view.scaleToRect( albedo._height, albedo._bViewSized != 0, false );
+        constants._width     = view.scaleToRect( albedo, true );
+        constants._height    = view.scaleToRect( albedo, false );
         constants._capacity  = view._deferredTileCapacity;
         const uint32 columns = FrameRendererUtil::divideRoundUp( constants._width, kDeferredTileSize );
         const uint32 rows    = FrameRendererUtil::divideRoundUp( constants._height, kDeferredTileSize );
@@ -539,8 +539,8 @@ namespace sw
         // 크기는 뷰 사각형이 덮는 텍셀이다(자동 렌더 배율 — 풀은 그대로). 원본 텍셀도 사각형 기준이라 셰이더의 픽셀 → UV · 클램프가 사각형 안에 머문다.
         RootConstants constants{};
         constants._outputIndex = static_cast<uint32>( output._uav );
-        constants._width       = _pActiveView->scaleToRect( output._width, output._bViewSized != 0, true );
-        constants._height      = _pActiveView->scaleToRect( output._height, output._bViewSized != 0, false );
+        constants._width       = _pActiveView->scaleToRect( output, true );
+        constants._height      = _pActiveView->scaleToRect( output, false );
         // 입력은 역할로 고른다(로드가 계약을 검사했다). 원본 · 깊이는 SRV 로 읽는다 — 깊이 형식은 RW 로 묶을 수 없다.
         frame_vector<RHITextureHandle> listInputTexture{ FrameAllocator<RHITextureHandle>{ _frameArena } };
         for ( const RenderGraphPassDesc::ResolvedAttachment& resolved : passDesc._listResolvedInput )
@@ -552,8 +552,8 @@ namespace sw
             if ( role == RenderPassInputRole::SourceColor )
             {
                 constants._sourceIndex       = static_cast<uint32>( source._srv );
-                constants._arrSourceTexel[0] = 1.0f / static_cast<float32>( MathUtil::max( _pActiveView->scaleToRect( source._width, source._bViewSized != 0, true ), 1u ) );
-                constants._arrSourceTexel[1] = 1.0f / static_cast<float32>( MathUtil::max( _pActiveView->scaleToRect( source._height, source._bViewSized != 0, false ), 1u ) );
+                constants._arrSourceTexel[0] = 1.0f / static_cast<float32>( MathUtil::max( _pActiveView->scaleToRect( source, true ), 1u ) );
+                constants._arrSourceTexel[1] = 1.0f / static_cast<float32>( MathUtil::max( _pActiveView->scaleToRect( source, false ), 1u ) );
             }
             else if ( role == RenderPassInputRole::SceneDepth )
             {
@@ -618,8 +618,8 @@ namespace sw
         const bool    bNative = _pDevice->supportsNativeBindlessSampling();
         RootConstants constants{};
         constants._outputIndex = bNative ? static_cast<uint32>( output._uav ) : 0u;
-        constants._width       = _pActiveView->scaleToRect( output._width, output._bViewSized != 0, true ); // 사각형 밖은 디스패치하지 않는다
-        constants._height      = _pActiveView->scaleToRect( output._height, output._bViewSized != 0, false );
+        constants._width       = _pActiveView->scaleToRect( output, true ); // 사각형 밖은 디스패치하지 않는다
+        constants._height      = _pActiveView->scaleToRect( output, false );
         context._pCmd->prepareTextureForUnorderedAccess( output._texture );
         context._pCmd->bindComputeUAV( output._uav, shaderslot::kComputeTextureUAV0 );
         frame_vector<RHITextureHandle> listInputTexture{ FrameAllocator<RHITextureHandle>{ _frameArena } };
@@ -1212,13 +1212,14 @@ namespace sw
                 viewport._height = rect._w * static_cast<float32>( outputHeight );
                 if ( upscaleZoom > 0 )
                 {
+                    // Present 원본은 출력 공간이다(시간 업스케일이 없으면 렌더 공간과 같은 크기).
                     const TransientAttachmentPool& pool = activePool();
                     viewport._x                         = static_cast<float32>( FrameRendererUtil::computeUpscaleOffset(
-                        static_cast<uint32>( viewport._x ), static_cast<uint32>( viewport._width ), pool.getWidth(), upscaleZoom ) );
+                        static_cast<uint32>( viewport._x ), static_cast<uint32>( viewport._width ), pool.getOutputWidth(), upscaleZoom ) );
                     viewport._y                         = static_cast<float32>( FrameRendererUtil::computeUpscaleOffset(
-                        static_cast<uint32>( viewport._y ), static_cast<uint32>( viewport._height ), pool.getHeight(), upscaleZoom ) );
-                    viewport._width                     = static_cast<float32>( pool.getWidth() * upscaleZoom );
-                    viewport._height                    = static_cast<float32>( pool.getHeight() * upscaleZoom );
+                        static_cast<uint32>( viewport._y ), static_cast<uint32>( viewport._height ), pool.getOutputHeight(), upscaleZoom ) );
+                    viewport._width                     = static_cast<float32>( pool.getOutputWidth() * upscaleZoom );
+                    viewport._height                    = static_cast<float32>( pool.getOutputHeight() * upscaleZoom );
                 }
                 context._pCmd->setViewport( viewport );
             }

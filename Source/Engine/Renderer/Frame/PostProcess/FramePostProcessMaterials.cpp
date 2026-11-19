@@ -63,9 +63,10 @@ namespace sw
         for ( const PostProcessMaterialDraw& draw : view._settings._listPostProcessMaterial )
         {
             // 그 자리를 맡는 패스의 출력 형식이 PSO 의 타깃 형식이다(자리마다 패스는 하나 — 검증 3-8). 패스가 없는 파이프라인(포워드)은 그 블렌더블을 그리지 않는다.
-            const RHIFormat outputFormat = findOutputFormat( draw._location );
-            if ( outputFormat == RHIFormat::Unknown )
+            const RenderPassAttachment* pOutput = findOutputAttachment( draw._location );
+            if ( pOutput == nullptr )
                 continue;
+            const RHIFormat      outputFormat = pOutput->_format;
             ExtensionProgramDesc program;
             program._shaderPath                               = draw._shaderPath;
             program._bBlend                                   = true; // 프리멀티플라이 — 셰이더가 (색 × 무게, 무게)를 낸다
@@ -110,8 +111,10 @@ namespace sw
             return;
         }
         // 사본은 그 자리 패스의 출력 형식 · 뷰 풀 크기다(블릿은 형식 · 크기가 같아야 한다).
-        const RHIFormat format = findOutputFormat( location );
-        if ( format == RHIFormat::Unknown || chain.ensure( *_pDevice, format, view._transientPool.getWidth(), view._transientPool.getHeight() ) == false )
+        // 크기는 그 출력의 해상도 공간 크기다(톤맵 앞 · 뒤 후처리는 시간 업스케일 뒤의 출력 공간).
+        const RenderPassAttachment* pOutput = findOutputAttachment( location );
+        if ( pOutput == nullptr ||
+             chain.ensure( *_pDevice, pOutput->_format, view._transientPool.getExtent( pOutput->_resolutionSpace, true ), view._transientPool.getExtent( pOutput->_resolutionSpace, false ) ) == false )
             return; // 만들지 못했다(오류를 남겼다) — 그 자리는 모두 원본을 읽는다
         for ( size_t index = 0; index < listDraw.size(); ++index )
         {
@@ -120,7 +123,7 @@ namespace sw
         }
     }
 
-    RHIFormat FramePostProcessMaterials::findOutputFormat( PostProcessBlendableLocation location ) const
+    const RenderPassAttachment* FramePostProcessMaterials::findOutputAttachment( PostProcessBlendableLocation location ) const
     {
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
         {
@@ -129,10 +132,10 @@ namespace sw
             for ( const RenderPassAttachment& attachment : _pipeline.getDesc()._listAttachment )
             {
                 if ( string_view( attachment._name ) == pass._listResolvedColorOutput[0]._attachment.view() )
-                    return attachment._format;
+                    return &attachment;
             }
         }
-        return RHIFormat::Unknown;
+        return nullptr;
     }
 
     void FramePostProcessMaterials::pruneUnused()

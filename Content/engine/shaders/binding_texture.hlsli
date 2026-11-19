@@ -1439,10 +1439,13 @@ static float4 PassTexture::sampleShadow( float2 uv )
 {
     return Bindless::sampleIndex( SW_ENGINE_ROLE( ShadowMap ), uv );
 }
-/** @brief 지난 프레임 첨부(TAA 히스토리)를 알베도 역할로 읽는다 — 지난 프레임의 사각형 배율이라 배율 단계가 바뀐 프레임에도 히스토리를 버리지 않는다. */
+/**
+ * @brief 지난 프레임 첨부(TAA 히스토리)를 알베도 역할로 읽는다 — 지난 프레임의 사각형 배율이라 배율 단계가 바뀐 프레임에도 히스토리를 버리지 않는다.
+ * @details 히스토리는 TAA 출력의 사본이라 출력 해상도 공간이다 — 가장자리 반 텍셀 상한은 출력 풀 텍셀(g_OutputRectSize.zw)로 잰다. 업스케일하지 않으면 렌더 풀 텍셀과 같다.
+ */
 static float4 PassTexture::sampleAlbedoPrevious( float2 uv )
 {
-    return Bindless::sampleIndex( SW_ENGINE_ROLE( GBufferAlbedo ), PassTexture::toPreviousViewRectUV( uv ) );
+    return Bindless::sampleIndex( SW_ENGINE_ROLE( GBufferAlbedo ), PassTexture::scaleToViewRect( uv, g_ViewRectScale.zw, g_OutputRectSize.zw ) );
 }
 static float4 PassTexture::sampleAlbedo( float2 uv )
 {

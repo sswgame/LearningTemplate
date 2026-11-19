@@ -183,8 +183,10 @@ namespace sw
         uint8 _bUpscaleThisFrame{ SW_FALSE };      ///< 이번 프레임에 Present 가 FSR 1(EASU + RCAS)로 키운다(`prepareUpscale`)
         /// @brief 사각형 배율의 하한입니다(풀 배율 `_resolutionScale` 의 하한과 같다).
         static constexpr float32 kMinRectScale = 0.1f;
-        /// @brief 이번 프레임 그리는 사각형입니다(`updateViewRect`). 풀이 없으면 0 이다.
+        /// @brief 이번 프레임 그리는 사각형입니다(`updateViewRect`) — 렌더 공간(장면 패스). 풀이 없으면 0 이다.
         RenderViewRect _rect{};
+        /// @brief 출력 공간(TAA 뒤 후처리 · Present 원본)에서 이번 프레임 그리는 사각형입니다. 렌더 사각형과 같은 배율이라 두 공간의 UV 변환이 같다. 시간 업스케일이 없으면 `_rect` 와 같다.
+        RenderViewRect _outputRect{};
         /// @brief 지난 프레임의 사각형 / 풀 배율입니다 — TAA 히스토리처럼 지난 프레임 첨부를 읽는 셰이더가 쓴다.
         float2 _previousRectScale{ 1.0f, 1.0f };
         /// @brief 지난 프레임에 실제로 그린 사각형(픽셀)입니다 — 깊이 히스토리를 읽는 쪽이 그대로 쓴다(`scaleToPreviousRect`).
@@ -214,15 +216,20 @@ namespace sw
          */
         void updateViewRect( float32 rectScale )
         {
-            _previousRect         = _rect;
-            _previousRectScale    = computeRectScale();
-            const float32 scale   = rectScale < kMinRectScale ? kMinRectScale : ( rectScale > 1.0f ? 1.0f : rectScale );
-            const uint32  poolW   = _transientPool.getWidth();
-            const uint32  poolH   = _transientPool.getHeight();
-            const uint32  scaledW = static_cast<uint32>( static_cast<float32>( poolW ) * scale + 0.5f );
-            const uint32  scaledH = static_cast<uint32>( static_cast<float32>( poolH ) * scale + 0.5f );
-            _rect._width          = poolW == 0 ? 0u : ( scaledW < 1u ? 1u : ( scaledW > poolW ? poolW : scaledW ) );
-            _rect._height         = poolH == 0 ? 0u : ( scaledH < 1u ? 1u : ( scaledH > poolH ? poolH : scaledH ) );
+            _previousRect       = _rect;
+            _previousRectScale  = computeRectScale();
+            const float32 scale = rectScale < kMinRectScale ? kMinRectScale : ( rectScale > 1.0f ? 1.0f : rectScale );
+            _rect._width        = scaleExtentToRect( _transientPool.getWidth(), scale );
+            _rect._height       = scaleExtentToRect( _transientPool.getHeight(), scale );
+            // 출력 공간도 같은 배율로 줄인다 — 자동 렌더 배율이 두 공간에 같은 비율로 들어 렌더 공간 첨부(깊이 · 속도)를 출력 공간 패스가 같은 UV 로 읽는다.
+            _outputRect._width  = scaleExtentToRect( _transientPool.getOutputWidth(), scale );
+            _outputRect._height = scaleExtentToRect( _transientPool.getOutputHeight(), scale );
+        }
+        /** @brief 풀 한 축 @p poolExtent 를 사각형 배율 @p scale 로 줄인 픽셀 수입니다(반올림, 1 이상 풀 이하). 풀이 없으면 0 입니다. */
+        static uint32 scaleExtentToRect( uint32 poolExtent, float32 scale )
+        {
+            const uint32 scaled = static_cast<uint32>( static_cast<float32>( poolExtent ) * scale + 0.5f );
+            return poolExtent == 0 ? 0u : ( scaled < 1u ? 1u : ( scaled > poolExtent ? poolExtent : scaled ) );
         }
         /** @brief 이번 사각형 / 풀 배율입니다. 풀이나 사각형이 없으면 1 입니다. */
         float2 computeRectScale() const
@@ -247,14 +254,20 @@ namespace sw
             const uint32 previous = bHorizontal ? _previousRect._width : _previousRect._height;
             return previous == 0 || previous > attachmentExtent ? attachmentExtent : previous;
         }
-        uint32 scaleToRect( uint32 attachmentExtent, bool bViewSized, bool bHorizontal ) const
+        uint32 scaleToRect( uint32 attachmentExtent, bool bViewSized, RenderResolutionSpace space, bool bHorizontal ) const
         {
-            const uint32 pool = bHorizontal ? _transientPool.getWidth() : _transientPool.getHeight();
-            const uint32 rect = bHorizontal ? _rect._width : _rect._height;
+            const RenderViewRect& spaceRect = space == RenderResolutionSpace::Output ? _outputRect : _rect;
+            const uint32          pool      = _transientPool.getExtent( space, bHorizontal );
+            const uint32          rect      = bHorizontal ? spaceRect._width : spaceRect._height;
             if ( bViewSized == false || pool == 0 || rect == 0 || rect >= pool )
                 return attachmentExtent;
             const uint64 scaled = ( static_cast<uint64>( attachmentExtent ) * rect + pool - 1u ) / pool;
             return scaled < 1u ? 1u : static_cast<uint32>( scaled );
+        }
+        /** @brief 첨부 @p attachment 한 축에서 사각형이 덮는 픽셀 수입니다 — 첨부의 크기 · 크기 따름 · 공간으로 위 함수를 부른다. */
+        uint32 scaleToRect( const TransientAttachmentPool::Attachment& attachment, bool bHorizontal ) const
+        {
+            return scaleToRect( bHorizontal ? attachment._width : attachment._height, attachment._bViewSized != 0, attachment._space, bHorizontal );
         }
     };
 } // namespace sw

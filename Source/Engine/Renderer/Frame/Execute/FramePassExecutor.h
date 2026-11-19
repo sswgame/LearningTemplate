@@ -342,7 +342,9 @@ namespace sw
         /** @brief 깊이 전용 패스를 시작합니다. */
         void beginDepthOnlyPass( FramePassContext& context, const hashed_string& depthName, RHIRenderPassLoadOp depthLoad );
         /** @brief 막 연 렌더 패스의 뷰포트 · 가위를 지금 뷰의 사각형으로 줄입니다. 뷰 크기 첨부가 아니거나 사각형이 풀 전체면 그대로 둡니다. */
-        void applyViewRectViewport( FramePassContext& context, uint32 targetWidth, uint32 targetHeight, bool bViewSized ) const;
+        void applyViewRectViewport( FramePassContext& context, uint32 targetWidth, uint32 targetHeight, bool bViewSized, RenderResolutionSpace space ) const;
+        /** @brief 파이프라인에서 종류 @p type 인 첫 패스가 그리는 해상도 공간(첫 컬러 출력의 선언)입니다. 그 패스가 없으면 렌더 공간입니다. */
+        RenderResolutionSpace findPassResolutionSpace( RenderPassKind type ) const;
         /**
          * @brief 트랜지언트 텍스처를 리소스 레지스트리에 canonicalName 으로 등록합니다(bindless SRV 자동 매칭).
          * @param canonicalName **미리 intern 해 둔** 이름입니다. 문자열을 받으면 패스마다 다시 intern 하게 되므로

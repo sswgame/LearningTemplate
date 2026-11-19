@@ -307,10 +307,20 @@ namespace sw
 
         /**
          * @brief TAA 기록 비율의 하한 — 빠르게 움직이거나 기록을 믿기 어려운 픽셀의 누적 정도(taa.hlsl `SW_TAA_MIN_HISTORY_WEIGHT`). `_taaHistoryWeight` 이하여야 한다.
-         * @details 블렌드는 기록 신뢰도(클리핑 전후 휘도 차) · 화면 속도로 이 값과 `_taaHistoryWeight` 사이를 고른다(`TAAUtil::computeHistoryWeight`, Adria · Playdead TAA 의 feedback min · max).
+         * @details 블렌드는 기록 신뢰도(클리핑 전후 휘도 차) · 화면 속도로 이 값과 `_taaHistoryWeight` 사이를 고른다(`TemporalMath::computeHistoryWeight` — temporal_math.hlsli, Adria · Playdead TAA 의 feedback min · max).
          */
         PROPERTY( Min = 0.0, Max = 0.99 )
         float32 _taaMinHistoryWeight{};
+
+        /// @brief 시간 업스케일 렌더 배율의 하한입니다(언리얼 `r.ScreenPercentage` 의 TSR 권장 하한 50 % 아래까지 둔다 — 그 아래는 표본이 모자라 흐리다).
+        static constexpr float32 kMinTemporalUpscaleRenderScale = 0.25f;
+        /**
+         * @brief 시간 업스케일(TAAU)의 렌더 해상도 배율 — 장면을 출력 해상도 × 이 값으로 그리고 TAA 가 출력 해상도로 키운다(언리얼 1 차 화면 배율 `r.ScreenPercentage` 와 TAAU).
+         * @details 1 이면 두 해상도 공간이 같아 업스케일 없이 지금과 같은 경로다. 출력 공간 첨부(`RenderPassAttachment::_resolutionSpace`)를 선언한 파이프라인(디퍼드)에만 든다.
+         *          값이 없거나 범위 밖이면 멈춘다(`FrameViewResources::getTemporalUpscaleRenderScale`). 품질 단계(RenderQuality.json)가 낮을수록 작게 둔다(언리얼 확장성 단계와 같은 자리).
+         */
+        PROPERTY( Min = 0.25, Max = 1.0 )
+        float32 _temporalUpscaleRenderScale{};
 
         /** @brief TAA 분산 클리핑 폭 γ — YCoCg 이웃 평균 ± γσ 상자로 기록을 자른다(taa.hlsl `SW_TAA_VARIANCE_CLIP_GAMMA`, Salvi 2016 은 1 · 언리얼은 1 근처). 작을수록 고스팅이 줄고 깜빡임이 는다. */
         PROPERTY( Min = 0.1, Max = 4.0 )

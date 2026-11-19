@@ -697,6 +697,56 @@ namespace sw
             }
 
             /**
+             * @brief 3-0b) 해상도 공간(렌더 · 출력 — `RenderPassAttachment::_resolutionSpace`). 한 패스의 출력은 한 공간이고, 원본(SourceColor)을 읽는 패스는 원본과 같은 공간에 쓴다.
+             * @details 렌더 공간 색을 출력 공간으로 넘기는 것은 시간 업스케일(TAA — `isTemporalUpscalePass`)만이다(언리얼 TAAU · TSR 이 1 차 · 2 차 화면 배율의 경계인 것과 같다).
+             *          그 밖의 패스가 공간을 넘기면 UV 로 늘린 그림이 TAAU 의 몫을 대신해 조용히 흐려진다. 깊이 · 속도 같은 원본 아닌 입력은 공간이 달라도 된다(UV 로 읽는다).
+             */
+            static uint32 validateResolutionSpaces( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    const RenderPassAttachment* pFirst            = nullptr;
+                    auto                        validateSameSpace = [&]( string_view attachmentName )
+                    {
+                        const RenderPassAttachment* pAttachment = findAttachment( desc, attachmentName );
+                        if ( pAttachment == nullptr )
+                            return;
+                        if ( pFirst == nullptr )
+                        {
+                            pFirst = pAttachment;
+                            return;
+                        }
+                        if ( pAttachment->_resolutionSpace == pFirst->_resolutionSpace )
+                            return;
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassOutputsResolutionSpace", "[%#] pass '%#': outputs '%#' (%#) and '%#' (%#) are in different resolution spaces - all outputs of one pass share one space",
+                                         sourcePath, pass._name, pFirst->_name, getEnumName( pFirst->_resolutionSpace ), pAttachment->_name, getEnumName( pAttachment->_resolutionSpace ) );
+                        ++issueCount;
+                    };
+                    for ( const string& outputName : pass._listOutput )
+                    {
+                        validateSameSpace( outputName );
+                    }
+                    if ( pass._depthAttachment.empty() == false )
+                        validateSameSpace( pass._depthAttachment );
+                    if ( pFirst == nullptr || isTemporalUpscalePass( pass._type ) )
+                        continue;
+                    for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+                    {
+                        if ( static_cast<RenderPassInputRole>( input._role ) != RenderPassInputRole::SourceColor )
+                            continue;
+                        const RenderPassAttachment* pSource = findAttachment( desc, input._attachment.view() );
+                        if ( pSource == nullptr || pSource->_resolutionSpace == pFirst->_resolutionSpace )
+                            continue;
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassSourceResolutionSpace", "[%#] pass '%#' (%#): source '%#' is in the %# space but the output '%#' is in the %# space - only the TAA pass moves colour from the render to the output space",
+                                         sourcePath, pass._name, getEnumName( pass._type ), pSource->_name, getEnumName( pSource->_resolutionSpace ), pFirst->_name, getEnumName( pFirst->_resolutionSpace ) );
+                        ++issueCount;
+                    }
+                }
+                return issueCount;
+            }
+
+            /**
              * @brief 3-1 · 3-2) 컬러를 그리는 패스(kDrawsDeclaredColor)는 선언한 컬러 출력에 그리고, G버퍼는 알베도 · 노멀 · 머티리얼을 한 MRT 패스로 쓴다.
              * @details 컬러 출력이 없으면 그릴 곳이 없다(없는 첨부의 핸들 0 은 백버퍼라, 그대로 두면 화면에 그린다). G버퍼의 컬러 수가 표의 값과 다르면
              *          PSO 와 렌더 패스가 어긋나거나, 노멀이 없어 Lighting · SSAO 가 읽을 것이 없다.
@@ -1126,6 +1176,7 @@ namespace sw
         issueCount += Internal::validateModuleShaderList( _desc, sourcePath );
         issueCount += Internal::validateColorOutputLimit( _desc, sourcePath );
         issueCount += Internal::validateOutputDivisors( _desc, sourcePath );
+        issueCount += Internal::validateResolutionSpaces( _desc, sourcePath );
         issueCount += Internal::validateGeometryColorOutputs( _desc, sourcePath );
         issueCount += Internal::validateVelocityOutputs( _desc, sourcePath );
         issueCount += Internal::validateInputContracts( _desc, sourcePath );

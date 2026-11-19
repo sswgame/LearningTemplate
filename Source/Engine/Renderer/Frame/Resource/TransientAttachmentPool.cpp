@@ -17,6 +17,8 @@ namespace sw
         , _listClearedThisFrame{}
         , _width{ 0 }
         , _height{ 0 }
+        , _outputWidth{ 0 }
+        , _outputHeight{ 0 }
         , _heap{ 0 }
     {
     }
@@ -38,8 +40,8 @@ namespace sw
         return desc;
     }
 
-    bool TransientAttachmentPool::allocatePlaced( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, const RHIAttachmentOps& ops, uint32 resolutionDivisor, uint64 heapBytes,
-                                                  uint64 offsetBytes )
+    bool TransientAttachmentPool::allocatePlaced( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, const RHIAttachmentOps& ops, RenderResolutionSpace space,
+                                                  uint32 resolutionDivisor, uint64 heapBytes, uint64 offsetBytes )
     {
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr || _mapAttachment.find( name ) != _mapAttachment.end() )
             return false;
@@ -48,7 +50,8 @@ namespace sw
             _heap = factory.createTransientHeap( heapBytes );
         if ( _heap == 0 )
             return false;
-        const RHITextureDesc   desc   = makeTextureDesc( format, false, ops, computeScaledExtent( _width, resolutionDivisor ), computeScaledExtent( _height, resolutionDivisor ), false );
+        const RHITextureDesc   desc   = makeTextureDesc( format, false, ops, computeScaledExtent( getExtent( space, true ), resolutionDivisor ),
+                                                         computeScaledExtent( getExtent( space, false ), resolutionDivisor ), false );
         const RHITextureHandle handle = factory.createPlacedTexture2D( desc, _heap, offsetBytes );
         if ( handle == 0 )
             return false;
@@ -57,24 +60,30 @@ namespace sw
         Attachment               attachment{ handle, srv, kInvalidDescriptorIndex, desc._width, desc._height, format, ops };
         attachment._bPlaced    = 1;
         attachment._bViewSized = 1;
+        attachment._space      = space;
         _mapAttachment.emplace( name, attachment );
         SW_PROFILE_COUNT( "RT.Frame.transientPlacements", 1 ); // 힙에 겹쳐 놓은 첨부 — 서술이 다른 첨부와 바이트를 나눈다
         return true;
     }
 
-    void TransientAttachmentPool::setSize( uint32 width, uint32 height )
+    void TransientAttachmentPool::setSize( uint32 renderWidth, uint32 renderHeight, uint32 outputWidth, uint32 outputHeight )
     {
-        _width  = width;
-        _height = height;
+        _width        = renderWidth;
+        _height       = renderHeight;
+        _outputWidth  = outputWidth;
+        _outputHeight = outputHeight;
     }
 
-    bool TransientAttachmentPool::allocate( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops,
+    bool TransientAttachmentPool::allocate( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, RenderResolutionSpace space,
                                             uint32 resolutionDivisor, bool bUnorderedAccess )
     {
-        if ( allocateSized( pDevice, name, format, bDepth, ops, computeScaledExtent( _width, resolutionDivisor ), computeScaledExtent( _height, resolutionDivisor ), bUnorderedAccess ) ==
-             false )
+        const bool bAllocated = allocateSized( pDevice, name, format, bDepth, ops, computeScaledExtent( getExtent( space, true ), resolutionDivisor ),
+                                               computeScaledExtent( getExtent( space, false ), resolutionDivisor ), bUnorderedAccess );
+        if ( bAllocated == false )
             return false;
-        _mapAttachment.find( name )->second._bViewSized = 1;
+        Attachment& attachment = _mapAttachment.find( name )->second;
+        attachment._bViewSized = 1;
+        attachment._space      = space;
         return true;
     }
 
@@ -230,9 +239,11 @@ namespace sw
     {
         _mapAttachment.clear();
         _mapForward.clear();
-        _width  = 0;
-        _height = 0;
-        _heap   = 0;
+        _width        = 0;
+        _height       = 0;
+        _outputWidth  = 0;
+        _outputHeight = 0;
+        _heap         = 0;
     }
 
     bool TransientAttachmentPool::markCleared( const hashed_string& key )

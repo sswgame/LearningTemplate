@@ -21,18 +21,26 @@ namespace sw
     class SW_API TemporalJitterSequence
     {
     public:
-        /** @brief 한 바퀴의 표본 수입니다(언리얼 `r.TemporalAASamples` 기본 8 과 같다). */
+        /** @brief 업스케일 없는 한 바퀴의 표본 수입니다(언리얼 `r.TemporalAASamples` 기본 8 과 같다). */
         static constexpr uint32 kSampleCount = 8;
+        /** @brief 시간 업스케일에서 한 바퀴 표본 수의 상한입니다 — 배율이 작을수록 출력 픽셀마다 덮을 렌더 표본 자리가 많아진다(언리얼 TAAU 의 8 × (출력 / 렌더)², 상한 64). */
+        static constexpr uint32 kMaxSampleCount = 64;
 
         TemporalJitterSequence();
 
         /**
          * @brief 다음 표본으로 넘기고, 그 오프셋을 렌더 크기 @p width × @p height 의 NDC 오프셋으로 돌려줍니다. 크기가 0 이면 지터가 없습니다.
+         * @param phaseCount 한 바퀴의 표본 수(`computePhaseCount`). 0 이면 `kSampleCount` 로 본다.
          */
-        [[nodiscard]] float2 advance( uint32 width, uint32 height );
+        [[nodiscard]] float2 advance( uint32 width, uint32 height, uint32 phaseCount );
+        /**
+         * @brief 렌더 / 출력 배율 @p renderScale 의 한 바퀴 표본 수입니다 — 8 / 배율²(올림)을 `kSampleCount` .. `kMaxSampleCount` 로 자른다. 배율 1(업스케일 없음)이면 8 이다.
+         * @details 출력 픽셀 하나가 렌더 픽셀 1 / 배율² 개를 덮는다 — 같은 바퀴 안에서 출력 픽셀마다 표본이 8 개쯤 떨어지게 늘린다(언리얼 TAAU · FSR 2 의 위상 수).
+         */
+        [[nodiscard]] static uint32 computePhaseCount( float32 renderScale );
         /** @brief 수열을 처음 표본으로 되돌립니다. 기록을 버린 프레임(처음 · 컷)마다 부른다 — 앞 씬이 흘린 프레임 수가 다음 씬의 지터 위상을 정하지 않게(언리얼은 카메라 컷에서 TAA 표본 번호를 0 으로). */
         void restart() { _sampleIndex = 0; }
-        /** @brief 표본 @p sampleIndex(0 부터, `kSampleCount` 로 돈다)의 픽셀 오프셋입니다. 각 성분은 -0.5 .. 0.5 입니다. */
+        /** @brief 표본 @p sampleIndex(0 부터 — 바퀴는 부르는 쪽이 돈다)의 픽셀 오프셋입니다. 각 성분은 -0.5 .. 0.5 입니다(Halton(2, 3) 의 sampleIndex + 1 번째). */
         [[nodiscard]] static float2 getPixelOffset( uint32 sampleIndex );
         /**
          * @brief 뷰-투영 @p viewProj 에 NDC 오프셋 @p ndcOffset 을 싣습니다(클립 xy 에 오프셋 × 클립 w 를 더한다 — 원근 · 직교 모두 화면에서 같은 거리만큼 옮겨진다).

@@ -25,6 +25,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/PostProcess/TemporalMath.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/RenderStability.h"
@@ -37,8 +38,6 @@ namespace sw
     {
         struct FrameAutoExposureInternal
         {
-            /// 백분율(0..100)을 몫(0..1)으로 바꾸는 배율입니다 — 설정의 백분위 컷은 언리얼 Low · High Percent 처럼 % 로 적는다.
-            static constexpr float32 kPercentToFraction = 0.01f;
             /// 측정 셰이더의 루트 상수입니다 — auto_exposure.hlsl 의 `SwRootConstants` 와 같은 순서 · 크기다.
             struct RootConstants
             {
@@ -73,36 +72,33 @@ namespace sw
     {
         if ( binCount == 0 )
             return 0;
-        constexpr float32 kMinLuminance = 1.0e-6f; // 검은 텍셀의 log2 가 -무한이 되지 않게 자른다(첫 칸에 든다)
-        const float32     range         = MathUtil::max( logMax - logMin, MathUtil::kEpsilon );
-        const float32     position      = ( MathUtil::log2( MathUtil::max( luminance, kMinLuminance ) ) - logMin ) / range * static_cast<float32>( binCount );
-        return static_cast<uint32>( MathUtil::clamp( MathUtil::floor( position ), 0.0f, static_cast<float32>( binCount - 1u ) ) );
+        return static_cast<uint32>( shadermath::TemporalMath::computeHistogramBin( luminance, logMin, logMax, static_cast<float32>( binCount ) ) );
     }
 
     float32 FrameAutoExposure::computeHistogramPercentileMeanLog( vector_reference<const uint32> listBinCount, float32 logMin, float32 logMax, float32 lowPercent, float32 highPercent )
     {
-        const uint32  binCount = static_cast<uint32>( listBinCount.size() );
-        const float32 binWidth = binCount > 0 ? ( logMax - logMin ) / static_cast<float32>( binCount ) : 0.0f;
+        // 칸마다의 식은 셰이더와 같은 파일(temporal_math.hlsli)이고, 고리는 auto_exposure.hlsl 의 `SW_AUTO_EXPOSURE_PERCENTILE_MEAN_LOG` 와 같은 모양이다.
+        using shadermath::TemporalMath;
+        const float32 binCount = static_cast<float32>( listBinCount.size() );
         float32       total    = 0.0f;
         for ( const uint32 count : listBinCount )
             total += static_cast<float32>( count );
         if ( total <= 0.0f )
             return 0.5f * ( logMin + logMax );
-        const float32 lowFraction  = MathUtil::saturate( lowPercent * FrameAutoExposureInternal::kPercentToFraction );
-        const float32 lowCount     = total * lowFraction;
-        const float32 highCount    = total * MathUtil::max( lowFraction, MathUtil::saturate( highPercent * FrameAutoExposureInternal::kPercentToFraction ) );
+        const float32 lowCount     = TemporalMath::computeHistogramLowCount( total, lowPercent );
+        const float32 highCount    = TemporalMath::computeHistogramHighCount( total, lowPercent, highPercent );
         float32       sumLog       = 0.0f;
         float32       sumWeight    = 0.0f;
         float32       cumulative   = 0.0f;
         float32       lowBinCenter = 0.5f * ( logMin + logMax ); // 남는 몫이 없을 때 — 아래 경계가 든 칸의 가운데
         bool          bLowBinFound = false;
-        for ( uint32 bin = 0; bin < binCount; ++bin )
+        for ( size_t bin = 0; bin < listBinCount.size(); ++bin )
         {
             const float32 count  = static_cast<float32>( listBinCount[bin] );
             const float32 start  = cumulative;
             const float32 end    = cumulative + count;
-            const float32 center = logMin + ( static_cast<float32>( bin ) + 0.5f ) * binWidth;
-            const float32 kept   = MathUtil::max( 0.0f, MathUtil::min( end, highCount ) - MathUtil::max( start, lowCount ) );
+            const float32 center = TemporalMath::computeHistogramBinCenterLog( static_cast<float32>( bin ), logMin, logMax, binCount );
+            const float32 kept   = TemporalMath::computeHistogramKeptCount( start, end, lowCount, highCount );
             sumLog += kept * center;
             sumWeight += kept;
             if ( bLowBinFound == false && count > 0.0f && end >= lowCount )
@@ -276,8 +272,8 @@ namespace sw
         constants._maxEv        = view._autoExposureParams._y;
         constants._rateUp       = view._autoExposureParams._z;
         constants._rateDown     = view._autoExposureParams._w;
-        constants._sourceWidth  = view.scaleToRect( source._width, source._bViewSized != 0, true );
-        constants._sourceHeight = view.scaleToRect( source._height, source._bViewSized != 0, false );
+        constants._sourceWidth  = view.scaleToRect( source, true );
+        constants._sourceHeight = view.scaleToRect( source, false );
         cmd.prepareTextureForShaderRead( source._texture );
         cmd.prepareTextureForShaderRead( view._arrAutoExposure[readSlot] );
 

@@ -15,6 +15,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 
 namespace sw
 {
@@ -34,17 +35,18 @@ namespace sw
          */
         struct Attachment
         {
-            RHITextureHandle   _texture{ 0 };
-            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
-            RHIDescriptorIndex _uav{ kInvalidDescriptorIndex }; ///< RW 텍스처 번호입니다. 컴퓨트 패스가 쓰는 첨부만 있습니다
-            uint32             _width{ 0 };                     ///< 이 첨부의 실제 크기(풀 크기를 나눗수로 나눈 값, 올림)
-            uint32             _height{ 0 };
-            RHIFormat          _format{ RHIFormat::Unknown }; ///< 만들 때의 포맷(파이프라인 XML 의 선언)
-            RHIAttachmentOps   _ops{};                        ///< 초기값 · 로드 · 저장 동작 — 파이프라인 XML 의 선언
-            uint32             _idleFrames{ 0 };              ///< 쓰는 패스가 이어서 돌지 않은 프레임 수(`releaseIfIdle`)
-            hashed_string      _aliasOwner{};                 ///< 텍스처를 빌린 별칭이면 주인 첨부 이름(`allocateAlias`). 비면 자기 텍스처다
-            uint8              _bPlaced{ 0 };                 ///< 텍스처가 풀의 힙에 겹쳐 놓였다(`allocatePlaced`) — 쓰기 전이 앞에 앨리어싱 배리어가 든다
-            uint8              _bViewSized{ 0 };              ///< 풀 크기(나눗수)를 따르는 첨부다 — 뷰 사각형 안에 그린다. 그림자 맵처럼 크기를 따로 준 첨부(`allocateSized`)는 0
+            RHITextureHandle      _texture{ 0 };
+            RHIDescriptorIndex    _srv{ kInvalidDescriptorIndex };
+            RHIDescriptorIndex    _uav{ kInvalidDescriptorIndex }; ///< RW 텍스처 번호입니다. 컴퓨트 패스가 쓰는 첨부만 있습니다
+            uint32                _width{ 0 };                     ///< 이 첨부의 실제 크기(풀 크기를 나눗수로 나눈 값, 올림)
+            uint32                _height{ 0 };
+            RHIFormat             _format{ RHIFormat::Unknown };           ///< 만들 때의 포맷(파이프라인 XML 의 선언)
+            RHIAttachmentOps      _ops{};                                  ///< 초기값 · 로드 · 저장 동작 — 파이프라인 XML 의 선언
+            uint32                _idleFrames{ 0 };                        ///< 쓰는 패스가 이어서 돌지 않은 프레임 수(`releaseIfIdle`)
+            hashed_string         _aliasOwner{};                           ///< 텍스처를 빌린 별칭이면 주인 첨부 이름(`allocateAlias`). 비면 자기 텍스처다
+            uint8                 _bPlaced{ 0 };                           ///< 텍스처가 풀의 힙에 겹쳐 놓였다(`allocatePlaced`) — 쓰기 전이 앞에 앨리어싱 배리어가 든다
+            uint8                 _bViewSized{ 0 };                        ///< 풀 크기(나눗수)를 따르는 첨부다 — 뷰 사각형 안에 그린다. 그림자 맵처럼 크기를 따로 준 첨부(`allocateSized`)는 0
+            RenderResolutionSpace _space{ RenderResolutionSpace::Render }; ///< 크기를 따르는 공간(렌더 · 출력 — 파이프라인 XML 의 선언). 크기를 따로 준 첨부는 렌더
         };
 
         /**
@@ -72,6 +74,19 @@ namespace sw
             return scaled > 0u ? scaled : 1u;
         }
 
+        /**
+         * @brief 출력 공간 한 축 @p outputExtent 를 시간 업스케일 렌더 배율 @p renderScale 로 줄인 렌더 공간 크기입니다(반올림, 최소 1, 출력보다 크지 않다).
+         * @details 배율 1 이상이면 그대로다 — 두 공간이 같아 업스케일이 없다. 출력이 0 이면 0 이다(풀이 아직 없다).
+         */
+        static uint32 computeRenderExtent( uint32 outputExtent, float32 renderScale )
+        {
+            if ( outputExtent == 0u || renderScale >= 1.0f )
+                return outputExtent;
+            const float32 scaled  = static_cast<float32>( outputExtent ) * ( renderScale > 0.0f ? renderScale : 0.0f ) + 0.5f;
+            const uint32  rounded = static_cast<uint32>( scaled );
+            return rounded < 1u ? 1u : ( rounded > outputExtent ? outputExtent : rounded );
+        }
+
         TransientAttachmentPool();
         ~TransientAttachmentPool() = default;
 
@@ -81,18 +96,35 @@ namespace sw
         /** @brief 첨부 하나의 텍스처 서술입니다(`allocateSized` · `allocatePlaced` · 힙 계획의 크기 묻기가 같은 서술을 쓴다). */
         static RHITextureDesc makeTextureDesc( RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width, uint32 height, bool bUnorderedAccess );
 
-        /** @brief 앞으로 만들 첨부의 크기입니다. 이미 있는 첨부는 바꾸지 않습니다. 크기를 바꾸려면 먼저 놓습니다. */
-        void   setSize( uint32 width, uint32 height );
+        /**
+         * @brief 앞으로 만들 첨부의 크기입니다 — 렌더 공간(장면)과 출력 공간(TAA 뒤)의 두 크기(언리얼 1 차 · 2 차 화면 배율). 이미 있는 첨부는 바꾸지 않습니다. 크기를 바꾸려면 먼저 놓습니다.
+         * @details 시간 업스케일을 쓰지 않으면 둘이 같다. 렌더 크기는 출력 크기보다 크지 않다(부르는 쪽 `FrameViewResources::updateViewTransients` 가 배율로 줄인다).
+         */
+        void setSize( uint32 renderWidth, uint32 renderHeight, uint32 outputWidth, uint32 outputHeight );
+        /** @brief 렌더 공간(장면 패스)의 크기입니다. 지터 · 밉 바이어스 · 뷰 사각형이 이 크기로 잰다. */
         uint32 getWidth() const { return _width; }
         uint32 getHeight() const { return _height; }
+        /** @brief 출력 공간(TAA 뒤 후처리 · Present 원본)의 크기입니다. 시간 업스케일을 쓰지 않으면 렌더 크기와 같다. */
+        uint32 getOutputWidth() const { return _outputWidth; }
+        uint32 getOutputHeight() const { return _outputHeight; }
+        /** @brief 공간 @p space 의 한 축 크기입니다. */
+        uint32 getExtent( RenderResolutionSpace space, bool bHorizontal ) const
+        {
+            if ( space == RenderResolutionSpace::Output )
+                return bHorizontal ? _outputWidth : _outputHeight;
+            return bHorizontal ? _width : _height;
+        }
+        /** @brief 두 공간의 크기가 다른지(시간 업스케일이 켜졌는지)입니다. */
+        bool hasTemporalUpscale() const { return _outputWidth != _width || _outputHeight != _height; }
         /** @brief 첨부가 하나도 없으면 true 입니다. */
         bool isEmpty() const { return _mapAttachment.empty(); }
 
         /**
-         * @brief 이름으로 첨부를 만듭니다. 크기는 현재 크기를 `resolutionDivisor` 로 나눈 값(올림)입니다.
+         * @brief 이름으로 첨부를 만듭니다. 크기는 공간 @p space 의 크기를 `resolutionDivisor` 로 나눈 값(올림)입니다.
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
          */
-        bool allocate( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 resolutionDivisor, bool bUnorderedAccess = false );
+        bool allocate( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, RenderResolutionSpace space, uint32 resolutionDivisor,
+                       bool bUnorderedAccess = false );
         /**
          * @brief 프레임 크기와 상관없는 크기(width × height)로 첨부를 만듭니다. 그림자 맵처럼 화면이 아니라 빛의 볼륨을 담는 타깃용입니다.
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
@@ -109,7 +141,8 @@ namespace sw
          * @brief 풀의 힙(@p heapBytes — 처음 부를 때 만든다)의 @p offsetBytes 에 첨부를 놓습니다(서술이 다른 첨부와 바이트를 나눈다 — `RenderGraphMemoryPlan`). 능력 `_bPlacedTextures` 가 있는 백엔드만 부른다.
          * @return 힙이나 텍스처를 만들지 못하면 false 이고 아무것도 남기지 않는다(부르는 쪽이 `allocate` 로 자기 텍스처를 만든다 — 힙은 메모리 절약이지 그림이 다르지 않다).
          */
-        bool allocatePlaced( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, const RHIAttachmentOps& ops, uint32 resolutionDivisor, uint64 heapBytes, uint64 offsetBytes );
+        bool allocatePlaced( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, const RHIAttachmentOps& ops, RenderResolutionSpace space, uint32 resolutionDivisor, uint64 heapBytes,
+                             uint64 offsetBytes );
         /** @brief 그 이름으로 만든 첨부가 힙에 겹쳐 놓였으면 true 입니다(별칭은 주인을 따른다). */
         bool isPlaced( const hashed_string& name ) const
         {
@@ -175,8 +208,10 @@ namespace sw
         mutable mutex                               _clearedMutex;
         /// @brief 이번 프레임에 이미 클리어한 첨부들입니다. 병렬 패스가 동시에 갱신하므로 _clearedMutex 로 보호합니다.
         vector<hashed_string> _listClearedThisFrame SW_GUARDED_BY( _clearedMutex );
-        uint32                                      _width;
+        uint32                                      _width; ///< 렌더 공간
         uint32                                      _height;
+        uint32                                      _outputWidth; ///< 출력 공간
+        uint32                                      _outputHeight;
         /// @brief 서술이 다른 첨부를 겹쳐 놓는 힙입니다(`allocatePlaced`). 없으면 0 — 놓인 텍스처가 각자 힙을 붙들어 `release` 가 핸들을 먼저 놓아도 된다.
         RHITransientHeapHandle _heap;
     };

@@ -11,6 +11,7 @@
 #define SW_OWN_ROOT_CONSTANTS 1
 #include "binding.hlsli"
 #include "fullscreen.hlsli"
+#include "temporal_math.hlsli"
 
 // 백분위 · 히스토그램 범위는 Config/Engine/EngineConfig.json `_render._autoExposure*` 가 정본이고 엔진이 모든 컴파일에 define 으로 넣는다(ShaderCompiler::appendEngineDefines).
 #if !defined( SW_AUTO_EXPOSURE_LOW_PERCENT ) || !defined( SW_AUTO_EXPOSURE_HIGH_PERCENT ) || !defined( SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN ) || !defined( SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX )
@@ -31,10 +32,8 @@ SW_ROOT_CONSTANTS_BEGIN
 };
 SW_ROOT_CONSTANTS_END
 
-static const uint  kHistogramBinCount = 64u;     // C++ FrameAutoExposure::kHistogramBinCount 와 같다
-static const float kMiddleGrey        = 0.18f;   // EV 0 의 평균 휘도
-static const float kMinLuminance      = 1.0e-6f; // 검은 텍셀의 log2 가 -무한이 되지 않게 자르는 휘도(첫 칸에 든다) — C++ computeHistogramBin 과 같다
-static const float kLogRangeEpsilon   = 1.0e-6f; // 범위가 점일 때 나누기를 막는 값(C++ MathUtil::kEpsilon)
+static const uint  kHistogramBinCount = 64u;   // C++ FrameAutoExposure::kHistogramBinCount 와 같다
+static const float kMiddleGrey        = 0.18f; // EV 0 의 평균 휘도
 
 // 원본을 읽을 수 있는 변형 — 에뮬 백엔드의 컴퓨트 변형은 엔진 텍스처가 선언되지 않아(binding_texture.hlsli) 쿠커가 컴파일만 하는 빈 진입점이다.
 #if defined( SW_NATIVE_BINDLESS ) || !defined( SW_STAGE_COMPUTE )
@@ -68,18 +67,15 @@ static float AutoExposure::loadHistory()
     return Bindless::loadEngineTexel( SW_ROOT( g_AutoExposureHistory ), SW_EMU_SLOT_AutoExposure, int2( 0, 0 ) ).r;
 }
 
-/** @brief 휘도가 드는 칸 — log2 휘도의 [LOG_MIN, LOG_MAX] 를 고르게 나눈다. 범위 밖은 끝 칸이다(C++ FrameAutoExposure::computeHistogramBin 과 같은 식). */
+/** @brief 휘도가 드는 칸 — log2 휘도의 [LOG_MIN, LOG_MAX] 를 고르게 나눈다. 범위 밖은 끝 칸이다(temporal_math.hlsli — C++ 단위 테스트가 같은 식을 잰다). */
 static uint AutoExposure::computeBin( float luminance )
 {
-    const float range    = max( SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX - SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN, kLogRangeEpsilon );
-    const float position = ( log2( max( luminance, kMinLuminance ) ) - SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN ) / range * float( kHistogramBinCount );
-    return uint( clamp( floor( position ), 0.0f, float( kHistogramBinCount - 1u ) ) );
+    return uint( TemporalMath::computeHistogramBin( luminance, SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN, SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX, float( kHistogramBinCount ) ) );
 }
 
 static float AutoExposure::computeBinCenterLog( uint bin )
 {
-    const float binWidth = ( SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX - SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN ) / float( kHistogramBinCount );
-    return SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN + ( float( bin ) + 0.5f ) * binWidth;
+    return TemporalMath::computeHistogramBinCenterLog( float( bin ), SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN, SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX, float( kHistogramBinCount ) );
 }
 
 /** @brief 백분위 컷 평균 log2 휘도에서 (적응한 EV, 목표 EV)입니다. 목표는 카메라 범위로 자르고, 밝아질 때 · 어두워질 때 다른 비율로 지난 EV 에서 다가간다. */
@@ -93,36 +89,35 @@ static float2 AutoExposure::computeAdaptedEv( float meanLog )
     return float2( adaptedEv, targetEv );
 }
 
-    // 백분위 컷 평균(C++ FrameAutoExposure::computeHistogramPercentileMeanLog 와 같은 식) — 표본을 어두운 순으로 놓고 아래 LOW % 와 위 (100 − HIGH) % 를 버린 나머지의 칸 가운데 평균.
+    // 백분위 컷 평균(칸마다의 식은 temporal_math.hlsli, 고리는 C++ FrameAutoExposure::computeHistogramPercentileMeanLog 와 같은 모양) — 표본을 어두운 순으로 놓고 아래 LOW % 와 위 (100 − HIGH) % 를 버린 나머지의 칸 가운데 평균.
     // 칸이 컷 경계에 걸리면 걸친 몫만 센다. 남는 몫이 없으면 아래 경계가 든 칸의 가운데다. 히스토그램 그릇(그룹 공유 · 지역 배열)이 달라 매크로로 둔다 — HLSL 은 배열을 참조로 넘기지 못한다.
-    #define SW_AUTO_EXPOSURE_PERCENTILE_MEAN_LOG( arrBin, outMeanLog )                                                     \
-        {                                                                                                                  \
-            float total = 0.0f;                                                                                            \
-            for ( uint sumBin = 0u; sumBin < kHistogramBinCount; ++sumBin )                                                \
-                total += float( arrBin[sumBin] );                                                                          \
-            const float lowFraction  = saturate( SW_AUTO_EXPOSURE_LOW_PERCENT * 0.01f );                                   \
-            const float lowCount     = total * lowFraction;                                                                \
-            const float highCount    = total * max( lowFraction, saturate( SW_AUTO_EXPOSURE_HIGH_PERCENT * 0.01f ) );      \
-            float       sumLog       = 0.0f;                                                                               \
-            float       sumWeight    = 0.0f;                                                                               \
-            float       cumulative   = 0.0f;                                                                               \
-            float       lowBinCenter = 0.5f * ( SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN + SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX ); \
-            bool        bLowBinFound = false;                                                                              \
-            for ( uint bin = 0u; bin < kHistogramBinCount; ++bin )                                                         \
-            {                                                                                                              \
-                const float count  = float( arrBin[bin] );                                                                 \
-                const float start  = cumulative;                                                                           \
-                const float end    = cumulative + count;                                                                   \
-                const float center = AutoExposure::computeBinCenterLog( bin );                                             \
-                const float kept   = max( 0.0f, min( end, highCount ) - max( start, lowCount ) );                          \
-                sumLog += kept * center;                                                                                   \
-                sumWeight += kept;                                                                                         \
-                const bool bLowBin = bLowBinFound == false && count > 0.0f && end >= lowCount;                             \
-                lowBinCenter       = bLowBin ? center : lowBinCenter;                                                      \
-                bLowBinFound       = bLowBinFound || bLowBin;                                                              \
-                cumulative         = end;                                                                                  \
-            }                                                                                                              \
-            outMeanLog = sumWeight > 0.0f ? sumLog / sumWeight : lowBinCenter;                                             \
+    #define SW_AUTO_EXPOSURE_PERCENTILE_MEAN_LOG( arrBin, outMeanLog )                                                                                \
+        {                                                                                                                                             \
+            float total = 0.0f;                                                                                                                       \
+            for ( uint sumBin = 0u; sumBin < kHistogramBinCount; ++sumBin )                                                                           \
+                total += float( arrBin[sumBin] );                                                                                                     \
+            const float lowCount     = TemporalMath::computeHistogramLowCount( total, SW_AUTO_EXPOSURE_LOW_PERCENT );                                 \
+            const float highCount    = TemporalMath::computeHistogramHighCount( total, SW_AUTO_EXPOSURE_LOW_PERCENT, SW_AUTO_EXPOSURE_HIGH_PERCENT ); \
+            float       sumLog       = 0.0f;                                                                                                          \
+            float       sumWeight    = 0.0f;                                                                                                          \
+            float       cumulative   = 0.0f;                                                                                                          \
+            float       lowBinCenter = 0.5f * ( SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN + SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX );                            \
+            bool        bLowBinFound = false;                                                                                                         \
+            for ( uint bin = 0u; bin < kHistogramBinCount; ++bin )                                                                                    \
+            {                                                                                                                                         \
+                const float count  = float( arrBin[bin] );                                                                                            \
+                const float start  = cumulative;                                                                                                      \
+                const float end    = cumulative + count;                                                                                              \
+                const float center = AutoExposure::computeBinCenterLog( bin );                                                                        \
+                const float kept   = TemporalMath::computeHistogramKeptCount( start, end, lowCount, highCount );                                      \
+                sumLog += kept * center;                                                                                                              \
+                sumWeight += kept;                                                                                                                    \
+                const bool bLowBin = bLowBinFound == false && count > 0.0f && end >= lowCount;                                                        \
+                lowBinCenter       = bLowBin ? center : lowBinCenter;                                                                                 \
+                bLowBinFound       = bLowBinFound || bLowBin;                                                                                         \
+                cumulative         = end;                                                                                                             \
+            }                                                                                                                                         \
+            outMeanLog = sumWeight > 0.0f ? sumLog / sumWeight : lowBinCenter;                                                                        \
         }
 #endif // SW_AUTO_EXPOSURE_READS_SOURCE
 

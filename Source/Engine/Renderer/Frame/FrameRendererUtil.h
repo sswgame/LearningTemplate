@@ -478,6 +478,10 @@ namespace sw
         hashed_string _viewRectScale{ "g_ViewRectScale" };
         /// @brief 뷰 사각형 크기(xy 픽셀)와 풀 텍셀(zw = 1 / 풀 픽셀)입니다.
         hashed_string _viewRectSize{ "g_ViewRectSize" };
+        /// @brief 출력 해상도 공간의 사각형 크기(xy 픽셀)와 출력 풀 텍셀(zw)입니다 — 시간 업스케일 뒤 공간. 업스케일하지 않으면 `_viewRectSize` 와 같다.
+        hashed_string _outputRectSize{ "g_OutputRectSize" };
+        /// @brief 시간 업스케일(x 켬 1 · 끔 0, y 렌더 / 출력 배율)입니다. taa.hlsl.
+        hashed_string _temporalUpscale{ "g_TemporalUpscale" };
         hashed_string _flags{ "g_Flags" };
         /// @brief 인스턴스 버퍼 원소 수입니다. 셰이더 InstanceData::load 가 범위를 제한합니다.
         hashed_string _swInstanceCount{ "g_SwInstanceCount" };

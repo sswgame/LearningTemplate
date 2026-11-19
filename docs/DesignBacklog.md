@@ -1586,7 +1586,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
   - 타입별 판 + 패치 `REFLECT( Version = N )` — 그릇마다가 아니라 타입 한 곳(ezEngine GraphPatch, M).
 - 화질
   - 스카이 라이트 · 반사 프로브 거르기를 filtered importance sampling(원본 밉을 pdf 로 고름), HDRI 반사를 SH9 대신 거른 텍스처로(VQEngine, S → GPU 찍기 M).
-  - TAA: YCoCg 분산 클리핑 · Catmull-Rom 히스토리 · 적응 블렌드 → 그 위에 TAAU(Adria, S → M). 앞 셋은 옮겼다(taa.hlsl · `TAAUtil`, 계수는 EngineConfig `_render._taa*`). TAAU 는 남았다 — 첨부 풀이 크기 하나(`TransientAttachmentPool`)라 TAA 뒤 패스(피사계 심도 · 모션 블러가 렌더 해상도 깊이 · 속도를 읽는다)를 출력 해상도로 돌릴 자리가 없다. 언리얼의 1 차 · 2 차 화면 배율처럼 풀을 "TAA 앞(렌더) · 뒤(출력)" 두 크기로 가르는 일이 먼저다(L).
+  - TAA: YCoCg 분산 클리핑 · Catmull-Rom 히스토리 · 적응 블렌드 → 그 위에 TAAU(Adria, S → M) — 옮겼다. 식은 셰이더 · C++ 가 같은 파일(temporal_math.hlsli · `TemporalMath.h`)을 읽는다. TAAU 는 첨부마다 해상도 공간(`RenderPassAttachment::_resolutionSpace` 렌더 · 출력, 언리얼 1 차 · 2 차 화면 배율)을 선언하고 풀이 두 크기를 갖는다 — 원본을 렌더 → 출력으로 넘기는 것은 TAA 만(검증), 두 공간의 사각형 배율은 같아 깊이 · 속도를 UV 로 읽는다. 켜는 값은 EngineConfig `_render._temporalUpscaleRenderScale`(기본 1, 품질 low 0.5 · medium 0.75), 지터 바퀴는 8 / 배율².
   - 프로브 GI 빛샘: 거리 모먼트 + 체비쇼프 가시성 · 뒷면 가중(Adria DDGI, M — GI 골든 전부).
     - 판단(2026-11-19, 했다): 모먼트는 텍스처 슬롯 대신 프로브 버퍼(t13) 안 SH9 뒤 옥타헤드럴 8×8 묶음(float4 하나에 텍셀 둘)으로 — 반사 프로브와 같은 이유(네 백엔드 같은 길, 바인딩 수 그대로). 광선마다 가장 가까운 텍셀에 기록 비율로 섞고(DDGI 의 텍셀마다 코사인 가중 적분은 스레드 하나 = 프로브 하나라 비싸 뺐다), 읽을 때 쌍선형. 가중 식은 shading_math.hlsli 하나를 C++ 테스트와 셰이더가 함께 읽고, 계수는 EngineConfig `_render._probeVisibility` → 쿠킹 define. 베이크 볼륨은 모먼트가 없어 뒷면 가중 · 바이어스만 받는다. 프로브 재배치(DDGI relocation)는 칸 안에 박힌 프로브를 모먼트로 가리는 것으로 대신한다.
   - 2 단계 HZB 가림(지난 HZB → 새 HZB 로 다시 시험) — SSR 계층 탐색 · 큰 물체 컬링도 같은 피라미드(Adria · VQEngine, L).

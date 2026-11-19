@@ -64,7 +64,7 @@ SW_TEST_CASE( TemporalJitterSequenceTest, VelocityExcludesJitter )
     TemporalJitterSequence jitter;
     for ( uint32 frame = 0; frame < TemporalJitterSequence::kSampleCount; ++frame )
     {
-        const float2   ndcOffset = jitter.advance( 1280u, 720u );
+        const float2   ndcOffset = jitter.advance( 1280u, 720u, TemporalJitterSequence::kSampleCount );
         const float4x4 raster    = TemporalJitterSequence::applyToViewProjection( viewProj, ndcOffset );
         SW_EXPECT_TRUE( ndcOffset._x != 0.0f || ndcOffset._y != 0.0f );
         for ( const float3& point : arrPoint )
@@ -87,11 +87,11 @@ SW_TEST_CASE( TemporalJitterSequenceTest, NdcOffsetIsWithinOnePixel )
     TemporalJitterSequence jitter;
     for ( uint32 frame = 0; frame < TemporalJitterSequence::kSampleCount; ++frame )
     {
-        const float2 ndcOffset = jitter.advance( 640u, 360u );
+        const float2 ndcOffset = jitter.advance( 640u, 360u, TemporalJitterSequence::kSampleCount );
         SW_EXPECT_TRUE( MathUtil::abs( ndcOffset._x ) <= 1.0f / 640.0f );
         SW_EXPECT_TRUE( MathUtil::abs( ndcOffset._y ) <= 1.0f / 360.0f );
     }
-    const float2 none = jitter.advance( 0u, 0u );
+    const float2 none = jitter.advance( 0u, 0u, TemporalJitterSequence::kSampleCount );
     SW_EXPECT_TRUE( none._x == 0.0f && none._y == 0.0f );
 }
 
@@ -101,12 +101,34 @@ SW_TEST_CASE( TemporalJitterSequenceTest, RestartBeginsAtFirstSample )
     TemporalJitterSequence fresh;
     TemporalJitterSequence used;
     for ( uint32 frame = 0; frame < 5u; ++frame )
-        (void)used.advance( 640u, 360u );
+        (void)used.advance( 640u, 360u, TemporalJitterSequence::kSampleCount );
     used.restart();
     for ( uint32 frame = 0; frame < TemporalJitterSequence::kSampleCount; ++frame )
     {
-        const float2 expected = fresh.advance( 640u, 360u );
-        const float2 actual   = used.advance( 640u, 360u );
+        const float2 expected = fresh.advance( 640u, 360u, TemporalJitterSequence::kSampleCount );
+        const float2 actual   = used.advance( 640u, 360u, TemporalJitterSequence::kSampleCount );
         SW_EXPECT_TRUE( expected._x == actual._x && expected._y == actual._y );
     }
+}
+
+/** @brief [TemporalJitterSequenceTest] 시간 업스케일의 바퀴 표본 수는 8 / 배율²(올림)이고 8 .. 64 로 잘린다 — 배율 1 이면 업스케일 없는 8 이다 */
+SW_TEST_CASE( TemporalJitterSequenceTest, PhaseCountGrowsWithUpscaleRatio )
+{
+    SW_EXPECT_EQUAL( TemporalJitterSequence::kSampleCount, TemporalJitterSequence::computePhaseCount( 1.0f ) );
+    SW_EXPECT_EQUAL( 32u, TemporalJitterSequence::computePhaseCount( 0.5f ) );
+    SW_EXPECT_EQUAL( 15u, TemporalJitterSequence::computePhaseCount( 0.75f ) ); // 8 / 0.5625 = 14.2
+    SW_EXPECT_EQUAL( TemporalJitterSequence::kMaxSampleCount, TemporalJitterSequence::computePhaseCount( 0.25f ) );
+    SW_EXPECT_EQUAL( TemporalJitterSequence::kSampleCount, TemporalJitterSequence::computePhaseCount( 0.0f ) );
+}
+
+/** @brief [TemporalJitterSequenceTest] 바퀴가 길면 그 수만큼 다른 자리를 돈 뒤 처음으로 돌아온다 */
+SW_TEST_CASE( TemporalJitterSequenceTest, LongerCycleWrapsAtPhaseCount )
+{
+    TemporalJitterSequence jitter;
+    const float2           first = jitter.advance( 640u, 360u, 32u );
+    for ( uint32 frame = 1; frame < 32u; ++frame )
+        (void)jitter.advance( 640u, 360u, 32u );
+    const float2 wrapped = jitter.advance( 640u, 360u, 32u );
+    SW_EXPECT_NEAR( first._x, wrapped._x, 1.0e-7f );
+    SW_EXPECT_NEAR( first._y, wrapped._y, 1.0e-7f );
 }

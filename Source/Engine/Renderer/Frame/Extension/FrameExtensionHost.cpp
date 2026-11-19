@@ -351,7 +351,8 @@ namespace sw
             RHIAttachmentOps ops{};
             ops._clearColor = texture._clearColor;
             ops._clearDepth = texture._clearColor._x;
-            (void)view._transientPool.allocate( _pDevice, name, texture._format, FrameRendererUtil::isDepthFormat( texture._format ), ops, texture._resolutionDivisor );
+            (void)view._transientPool.allocate( _pDevice, name, texture._format, FrameRendererUtil::isDepthFormat( texture._format ), ops, RenderResolutionSpace::Render,
+                                                texture._resolutionDivisor ); // 확장 패스의 첨부는 장면(렌더 공간) 몫이다
         }
     }
 

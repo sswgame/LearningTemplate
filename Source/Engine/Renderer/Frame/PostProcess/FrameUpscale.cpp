@@ -77,7 +77,7 @@ namespace sw
         view._bUpscaleThisFrame                         = SW_FALSE;
         const TransientAttachmentPool& pool             = view._transientPool;
         const bool                     bSpatial         = _frameSettings._upscaler == Internal::kUpscalerSpatial;
-        const bool                     bSmaller         = view._rect._width < viewportWidth || view._rect._height < viewportHeight; // 그리는 사각형이 화면보다 작다(풀 배율 · 자동 렌더 배율)
+        const bool                     bSmaller         = view._outputRect._width < viewportWidth || view._outputRect._height < viewportHeight; // Present 원본(출력 공간)의 사각형이 화면보다 작다(풀 배율 · 자동 렌더 배율)
         const bool                     bCandidate       = _pDevice != nullptr && bSpatial && bSmaller && view._settings._upscaleZoom == 0 && pool.isEmpty() == false;
         const RenderGraphPassDesc*     pTonemap         = FrameAutoExposure::findTonemapPass( _pipeline );
         const bool                     bPostChain       = pTonemap != nullptr && pTonemap->_type == RenderPassKind::Present;
@@ -148,8 +148,8 @@ namespace sw
         const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameUpscaleInternal::RootConstants constants{};
         constants._source             = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
-        constants._inputWidth         = static_cast<float32>( view.scaleToRect( source._width, source._bViewSized != 0, true ) );
-        constants._inputHeight        = static_cast<float32>( view.scaleToRect( source._height, source._bViewSized != 0, false ) );
+        constants._inputWidth         = static_cast<float32>( view.scaleToRect( source, true ) );
+        constants._inputHeight        = static_cast<float32>( view.scaleToRect( source, false ) );
         constants._inputTextureWidth  = static_cast<float32>( source._width );
         constants._inputTextureHeight = static_cast<float32>( source._height );
         constants._outputWidth        = static_cast<float32>( view._upscaleWidth );

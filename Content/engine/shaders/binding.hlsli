@@ -298,6 +298,11 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     // g_ViewRectScale: xy 이번 사각형 / 풀 배율, zw 지난 프레임의 그 배율(TAA 히스토리). g_ViewRectSize: xy 사각형 픽셀, zw 1 / 풀 픽셀. UV 변환은 PassTexture 한 곳이다(11-3 절).
     float4 g_ViewRectScale;
     float4 g_ViewRectSize;
+    // 출력 해상도 공간(시간 업스케일 뒤 — C++ TransientAttachmentPool::getOutputWidth)의 사각형: xy 사각형 픽셀, zw 1 / 출력 풀 픽셀. 사각형 배율은 렌더 공간과 같다(g_ViewRectScale).
+    // 업스케일하지 않으면 g_ViewRectSize 와 같다. TAA 기록(출력 공간)을 읽는 자리 · 출력 픽셀 단위를 쓰는 자리가 읽는다.
+    float4 g_OutputRectSize;
+    // 시간 업스케일(TAAU — taa.hlsl): x 업스케일하면 1 · 아니면 0, y 렌더 / 출력 배율(가로), zw 0. 0 이면 TAA 가 업스케일 없는 경로와 같은 값을 낸다.
+    float4 g_TemporalUpscale;
     // 하늘 그러데이션(스카이 패스 sky.hlsl, C++ SkyGradient) — 천정(rgb, w 지평선 지수) · 지평선(rgb) · 땅(rgb, w 세기). 씬에 하늘이 없으면 스카이 패스가 돌지 않는다
     float4 g_SkyZenith;
     float4 g_SkyHorizon;
