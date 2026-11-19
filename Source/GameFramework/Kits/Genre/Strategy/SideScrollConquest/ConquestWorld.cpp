@@ -104,6 +104,13 @@ namespace sw
         _commander._health         = rules._commanderHealth;
         const optional<int32> home = findHomeSiteIndex();
         _commander._x              = home.has_value() ? _listSite[static_cast<size_t>( *home )]._pDef->_x : 0.0f;
+        // 지휘관은 본진(플레이어의 가장 왼쪽 거점)에서만 일어난다 — 본진이 없으면 생길 때까지 기다린다(팀 거점 정책이 자리를 못 내면 다음 걸음에 다시 본다).
+        RespawnRules respawnRules;
+        respawnRules._delay = rules._commanderRespawnTime;
+        RespawnPolicyEntry teamBase;
+        teamBase._kind = RespawnPolicyKind::TeamBase;
+        respawnRules._listPolicy.push_back( teamBase );
+        (void)_commander._respawn.initialize( respawnRules ); // 대기의 바닥은 카탈로그 칸(`commanderRespawn` 의 Min 0)이 이미 봤다
     }
 
     void ConquestWorld::update( float32 deltaTime )
@@ -347,7 +354,7 @@ namespace sw
         io.value( _commander._x );
         io.value( _commander._health );
         io.value( _commander._attackCooldown );
-        io.value( _commander._respawnTimer );
+        io.value( _commander._respawn );
         io.value( _commander._moveAxis );
         io.value( _commander._facing );
         io.flag( _commander._bAlive );
@@ -370,8 +377,9 @@ namespace sw
         }
         // 지휘관: 쓰러지면 체력이 0 이고, 입력과 바라보는 쪽은 setCommanderMove 가 정한 범위다.
         const bool bCommanderHealthValid = _commander._bAlive == SW_TRUE ? ( 0.0f < _commander._health && _commander._health <= rules._commanderHealth ) : _commander._health == 0.0f;
-        const bool bCommanderInputValid  = -1.0f <= _commander._moveAxis && _commander._moveAxis <= 1.0f && ( _commander._facing == 1.0f || _commander._facing == -1.0f );
-        const bool bTimersValid          = _elapsed >= 0.0f && _incomeTimer >= 0.0f && _waveTimer >= 0.0f;
+        const bool bCommanderInputValid  = -1.0f <= _commander._moveAxis && _commander._moveAxis <= 1.0f && ( _commander._facing == 1.0f || _commander._facing == -1.0f ) &&
+                                          ( _commander._bAlive == SW_TRUE ) != _commander._respawn.isDead();
+        const bool bTimersValid = _elapsed >= 0.0f && _incomeTimer >= 0.0f && _waveTimer >= 0.0f;
         if ( bCommanderHealthValid == false || bCommanderInputValid == false || bTimersValid == false || ( _bVictory == SW_TRUE && _bDefeat == SW_TRUE ) )
             return false;
 
@@ -522,13 +530,27 @@ namespace sw
         const ConquestRules& rules = _pCatalog->getRules();
         if ( _commander._bAlive == SW_FALSE )
         {
-            _commander._respawnTimer.update( deltaTime );
-            const optional<int32> home = findHomeSiteIndex();
-            if ( _commander._respawnTimer.isActive() || home.has_value() == false )
+            // 본진은 걸음마다 다시 본다(빼앗기거나 새로 얻는다) — 흐름의 팀 거점 정책이 이 한 지점을 고른다.
+            const optional<int32>     home = findHomeSiteIndex();
+            vector<RespawnSpawnPoint> listHome;
+            if ( home.has_value() )
+            {
+                const ConquestSiteDef& homeDef = *_listSite[static_cast<size_t>( *home )]._pDef;
+                RespawnSpawnPoint      homePoint;
+                homePoint._id       = homeDef._id;
+                homePoint._position = float3{ homeDef._x, 0.0f, 0.0f };
+                homePoint._team     = static_cast<int32>( ConquestTeam::Player );
+                listHome.push_back( homePoint );
+            }
+            RespawnContext context;
+            context._pSpawnPoints                = &listHome;
+            context._team                        = static_cast<int32>( ConquestTeam::Player );
+            const optional<RespawnSpawn> respawn = _commander._respawn.update( deltaTime, context );
+            if ( respawn.has_value() == false )
                 return;
             _commander._bAlive = SW_TRUE;
             _commander._health = rules._commanderHealth;
-            _commander._x      = _listSite[static_cast<size_t>( *home )]._pDef->_x;
+            _commander._x      = respawn->_position._x;
             _commander._attackCooldown.clear();
             pushEvent( ConquestEvent::Kind::CommanderRespawned, hashed_string(), 0, ConquestTeam::Player );
             return;
@@ -970,7 +992,7 @@ namespace sw
             if ( bDepleted && _commander._bAlive == SW_TRUE )
             {
                 _commander._bAlive = SW_FALSE;
-                _commander._respawnTimer.start( rules._commanderRespawnTime );
+                (void)_commander._respawn.notifyDied( float3{ _commander._x, 0.0f, 0.0f }, 0.0f );
                 pushEvent( ConquestEvent::Kind::CommanderDied, hashed_string(), 0, ConquestTeam::Player );
             }
             return;

@@ -25,6 +25,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
+#include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
 
 namespace sw
 {
@@ -101,16 +102,16 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 지휘관(플레이어)입니다. */
+    /** @brief 지휘관(플레이어)입니다. 부활은 공통 `RespawnFlow`(팀 거점 = 본진, 대기 = `commanderRespawn`)가 정합니다. */
     struct ConquestCommander
     {
-        float32   _x{ 0.0f };
-        float32   _health{ 0.0f };
-        Countdown _attackCooldown{};
-        Countdown _respawnTimer{};
-        float32   _moveAxis{ 0.0f };
-        float32   _facing{ 1.0f }; ///< +1 이면 오른쪽을 본다
-        uint8     _bAlive{ SW_TRUE };
+        float32     _x{ 0.0f };
+        float32     _health{ 0.0f };
+        Countdown   _attackCooldown{};
+        RespawnFlow _respawn{};
+        float32     _moveAxis{ 0.0f };
+        float32     _facing{ 1.0f }; ///< +1 이면 오른쪽을 본다
+        uint8       _bAlive{ SW_TRUE };
     };
 } // namespace sw
 

@@ -20,11 +20,12 @@ namespace sw
         , _listSecretPending{}
         , _elapsed{ 0.0f }
         , _lives{ 0 }
-        , _checkpointIndex{ constant::invalid_index::kInt32 }
+        , _checkpoints{}
         , _hitCount{ 0 }
         , _deathCount{ 0 }
         , _state{ ActionStageState::NotStarted }
     {
+        _checkpoints.setForwardOnly( true ); // 지난 체크포인트로 되돌아가지 않는다(건너뛴 것은 인정한다)
     }
 
     bool ActionStageRun::start( const ActionPlatformerCatalog* pCatalog, const hashed_string& stageID )
@@ -44,12 +45,12 @@ namespace sw
             return;
         _listSecretCommitted.clear();
         _listSecretPending.clear();
-        _elapsed         = 0.0f;
-        _lives           = _pStage->_lives;
-        _checkpointIndex = constant::invalid_index::kInt32;
-        _hitCount        = 0;
-        _deathCount      = 0;
-        _state           = ActionStageState::Playing;
+        _elapsed = 0.0f;
+        _lives   = _pStage->_lives;
+        _checkpoints.reset();
+        _hitCount   = 0;
+        _deathCount = 0;
+        _state      = ActionStageState::Playing;
     }
 
     void ActionStageRun::update( float32 deltaTime )
@@ -58,7 +59,7 @@ namespace sw
             _elapsed += deltaTime;
     }
 
-    bool ActionStageRun::reachCheckpoint( const hashed_string& checkpointID )
+    bool ActionStageRun::reachCheckpoint( const hashed_string& checkpointID, const float3& position )
     {
         if ( _state != ActionStageState::Playing )
             return false;
@@ -66,14 +67,22 @@ namespace sw
         {
             if ( _pStage->_listCheckpoint[index] != checkpointID )
                 continue;
-            // 앞쪽 체크포인트로 되돌아가지 않는다. 이미 지난 체크포인트를 다시 밟아도 시작점은 그대로다.
-            if ( static_cast<int32>( index ) <= _checkpointIndex )
+            // 앞쪽 체크포인트로 되돌아가지 않는다. 이미 지난 체크포인트를 다시 밟아도 시작점은 그대로다(공통 상태의 앞으로만 규칙).
+            CheckpointDef def;
+            def._id    = checkpointID;
+            def._order = static_cast<int32>( index );
+            if ( _checkpoints.activate( def, position, 0.0f ) != CheckpointActivation::Activated )
                 return false;
-            _checkpointIndex = static_cast<int32>( index );
             commitSecrets();
             return true;
         }
         return false;
+    }
+
+    int32 ActionStageRun::getCheckpointIndex() const
+    {
+        const CheckpointRecord* pCurrent = _checkpoints.getCurrent();
+        return pCurrent != nullptr ? pCurrent->_order : constant::invalid_index::kInt32;
     }
 
     bool ActionStageRun::collectSecret( const hashed_string& secretID )
@@ -104,7 +113,8 @@ namespace sw
             _state = ActionStageState::GameOver;
             return hashed_string{};
         }
-        return _checkpointIndex >= 0 ? _pStage->_listCheckpoint[static_cast<size_t>( _checkpointIndex )] : hashed_string{};
+        const CheckpointRecord* pCurrent = _checkpoints.getCurrent();
+        return pCurrent != nullptr ? pCurrent->_id : hashed_string{};
     }
 
     bool ActionStageRun::clearStage()
@@ -165,12 +175,18 @@ namespace sw
 
     void ActionStageRun::serializeState( StateIO& io )
     {
-        io.reflected( *this ); // 상태 · 경과 · 목숨 · 체크포인트 · 맞은 수 · 죽은 수 — 바닥은 칸의 `PROPERTY( Min )`
+        io.reflected( *this ); // 상태 · 경과 · 목숨 · 체크포인트 기록 · 맞은 수 · 죽은 수 — 바닥은 칸의 `PROPERTY( Min )`
         io.reference( _pStage, [this]( const hashed_string& id )
         { return _pCatalog != nullptr ? _pCatalog->findStage( id ) : nullptr; } );
-        const int32 checkpointCount = _pStage != nullptr ? static_cast<int32>( _pStage->_listCheckpoint.size() ) : 0;
         // 시작한 판은 스테이지가 있어야 한다. 없으면 다음 `reachCheckpoint` · `collectSecret` · `die` 가 빈 정의를 읽는다.
-        if ( io.check( _checkpointIndex < checkpointCount && ( _state == ActionStageState::NotStarted || _pStage != nullptr ) ) == false )
+        // 체크포인트 기록은 앞으로만 규칙을 지키고, 기록마다 순번이 스테이지 목록 안이며 그 자리의 이름이어야 한다(안쪽 반사 구조체는 범위만 검사된다).
+        bool bCheckpointsValid = _checkpoints.isConsistent();
+        for ( const CheckpointRecord& record : _checkpoints.getActivated() )
+        {
+            const bool bInStage = _pStage != nullptr && record._order >= 0 && record._order < static_cast<int32>( _pStage->_listCheckpoint.size() );
+            bCheckpointsValid   = bCheckpointsValid && bInStage && _pStage->_listCheckpoint[static_cast<size_t>( record._order )] == record._id;
+        }
+        if ( io.check( bCheckpointsValid && ( _state == ActionStageState::NotStarted || _pStage != nullptr ) ) == false )
             return;
         // 확정한 비밀, 지닌 비밀 순서로 읽는다. 비밀은 이 스테이지의 것이고 두 목록을 통틀어 한 번만 있어야 한다(겹치면 수집 점수가 1 을 넘는다).
         if ( io.isReading() )
