@@ -62,6 +62,7 @@ namespace sw
             SceneTransformHierarchy* _pHierarchy{ nullptr };
             uint32                   _dispatchOrdinal{ 0 };
             float32                  _deltaTime{ 0.0f };
+            uint8                    _group{ 0 }; ///< 이 태스크의 틱 그룹(`TickThreadState::_parallelTickGroup`)
 
             void run();
         };
@@ -73,6 +74,7 @@ namespace sw
             SceneTransformHierarchy* _pHierarchy{ nullptr };
             uint32                   _dispatchOrdinal{ 0 };
             float32                  _deltaTime{ 0.0f };
+            uint8                    _group{ 0 }; ///< 이 태스크의 틱 그룹(`TickThreadState::_parallelTickGroup`)
 
             void run();
         };
@@ -95,7 +97,7 @@ namespace sw
          * @brief 일괄 목록들(파도 하나 또는 선행 조건 스테이지 하나)을 한 번의 포크-조인으로 돕니다. 목록을 이어 붙인 번호 공간을 나누고, 겹친 목록마다 그 함수를 한 번 부릅니다.
          * @return 돈 원소 수입니다(0 이면 디스패치하지 않았다).
          */
-        uint32 dispatchBatchLists( const vector<TickBatchList>& listBatch, float32 deltaTime );
+        uint32 dispatchBatchLists( const vector<TickBatchList>& listBatch, uint32 group, float32 deltaTime );
         /**
          * @brief 순서만 간선이 있는 스테이지를 항목마다 태스크로 돕니다 — 간선은 `runAfter`, 끝은 자기 태스크 스테이지만 기다린다. 작업 풀이 없으면 위상 순으로 차례로 돈다.
          * @details 디스패치 순번을 항목의 위상 순으로 하나씩 매긴다 — 남의 오브젝트 쓰기 · 미룬 일이 (순번, 쓴 오브젝트, 넣은 순서) 로 합쳐지므로 선행 항목의 쓰기가 늘 먼저다.

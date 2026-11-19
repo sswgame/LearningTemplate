@@ -321,11 +321,44 @@ namespace sw
         static void countComponentLookup();
 
         /**
+         * @brief 병렬 틱 안에서 남의 오브젝트(이 스레드가 틱하는 오브젝트가 아닌 이 오브젝트)의 컴포넌트를 찾으면 단언으로 멈춥니다.
+         * @details 찾기(`getComponent` · `findComponentByTypeName` · `GameObjectManager::resolveComponent`)가 검사 구성(SW_DO_CHECKS)에서만 부른다 — 배포본은 0 비용이다.
+         *          그 컴포넌트는 다른 워커가 같은 순간 틱하며 쓰고 있을 수 있다. 남 읽기는 틱 중에 바뀌지 않는 형식(`Component::kTickReadSafe`)만 받는
+         *          `getTickSafeComponent` · `TickContext::readOther` 로 하고, 그 밖은 틱 뒤 작업(`TickContext::deferPostTickOnComponent`)에서 읽는다.
+         *          유니티 잡 안전 시스템 · 언리얼 Mass 의 접근 요구 검증처럼 형식(const)이 막지 못하는 읽기를 실행에서 잡는다. Main 모드(게임 스레드에서 차례로)는 남 읽기를 허용한다.
+         */
+        void assertParallelTickRead() const;
+
+        /**
          * @brief 타입 T 의 첫 컴포넌트를 찾습니다. 파생 타입도 포함합니다.
+         * @details 병렬 틱 안에서 남의 오브젝트에 부르면 검사 구성에서 멈춘다(`assertParallelTickRead`) — 남 읽기는 `getTickSafeComponent` 다.
          * @return 없거나 삭제 예정이면 nullptr 입니다.
          */
         template <typename T>
         T* getComponent() const
+        {
+#if defined( SW_DO_CHECKS )
+            assertParallelTickRead();
+#endif
+            return findComponentOfType<T>();
+        }
+
+        /**
+         * @brief 틱 중에 바뀌지 않는 형식(`T::kTickReadSafe`) T 의 첫 컴포넌트를 찾습니다 — 병렬 틱 안의 남 읽기 길입니다(틱 본문은 `TickContext::readOther`).
+         * @details 형식이 안전함을 컴파일 시간에 보므로 병렬 틱 검사를 하지 않는다. 결과는 const 다 — 남의 컴포넌트에 쓰는 것은 틱 뒤 작업이다.
+         * @return 없거나 삭제 예정이면 nullptr 입니다.
+         */
+        template <typename T>
+        const T* getTickSafeComponent() const
+        {
+            static_assert( T::kTickReadSafe, "T is written during ticks - read it in a post-tick task, or publish a tick-safe type (Component::kTickReadSafe)" );
+            return findComponentOfType<T>();
+        }
+
+    private:
+        /** @brief `getComponent` · `getTickSafeComponent` 의 공통 찾기입니다(병렬 틱 검사 없음). */
+        template <typename T>
+        T* findComponentOfType() const
         {
             static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
             static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>,
@@ -347,6 +380,7 @@ namespace sw
             return nullptr;
         }
 
+    public:
         /**
          * @brief TypeInfo 이름 또는 컴포넌트 이름으로 첫 컴포넌트를 찾습니다.
          * @return 없거나 삭제 예정이면 nullptr 입니다.

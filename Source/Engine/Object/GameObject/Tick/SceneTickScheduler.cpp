@@ -93,12 +93,13 @@ namespace sw
                 TickThreadState& _threadState;
                 TickThreadState  _saved;
 
-                TickThreadScope( SceneTransformHierarchy& hierarchy, uint32 dispatchOrdinal )
+                TickThreadScope( SceneTransformHierarchy& hierarchy, uint32 dispatchOrdinal, uint8 parallelTickGroup )
                     : _threadState{ StructuralChangeBuffer::getThreadState() }
                     , _saved{ _threadState }
                 {
-                    _threadState._pPendingSlotList = hierarchy.findPendingSlotList();
-                    _threadState._dispatchOrdinal  = dispatchOrdinal;
+                    _threadState._pPendingSlotList  = hierarchy.findPendingSlotList();
+                    _threadState._dispatchOrdinal   = dispatchOrdinal;
+                    _threadState._parallelTickGroup = parallelTickGroup;
                 }
                 ~TickThreadScope() { _threadState = _saved; }
 
@@ -115,12 +116,13 @@ namespace sw
                 SceneTransformHierarchy* _pHierarchy{ nullptr };
                 uint32                   _dispatchOrdinal{ 0 };
                 float32                  _deltaTime{ 0.0f };
+                uint8                    _parallelTickGroup{ TickThreadState::kNoParallelTick }; ///< 병렬이면 그 그룹, Main 모드는 없음 값(`TickThreadState::_parallelTickGroup`)
 
                 void tickRange( uint32 start, uint32 end )
                 {
                     // 청크 하나의 CPU 시간이다. 모든 스레드의 합이라 `GT.Scene.tick.components`(벽시계)와 비교하면 병렬 효율이 보인다.
                     SW_PROFILE_SCOPE( "GT.Scene.tick.objectRange" );
-                    const TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal };
+                    const TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal, _parallelTickGroup };
                     uint32                itemCount = 0;
                     for ( uint32 index = start; index < end; ++index )
                     {
@@ -148,11 +150,12 @@ namespace sw
                 uint32                   _batchListCount{ 0 };
                 uint32                   _dispatchOrdinal{ 0 };
                 float32                  _deltaTime{ 0.0f };
+                uint8                    _group{ 0 }; ///< 이 파도 · 스테이지의 틱 그룹(`TickThreadState::_parallelTickGroup`)
 
                 void tickRange( uint32 start, uint32 end )
                 {
                     SW_PROFILE_SCOPE( "GT.Scene.tick.waveRange" );
-                    const TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal };
+                    const TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal, _group };
                     // start 를 담은 목록: 시작 번호가 start 보다 큰 첫 목록의 바로 앞(빈 목록은 시작 번호가 같아 건너뛰어진다).
                     uint32 listIndex = static_cast<uint32>( std::upper_bound( _pBatchStart, _pBatchStart + _batchListCount, start ) - _pBatchStart ) - 1u;
                     for ( uint32 cursor = start; cursor < end && listIndex < _batchListCount; ++listIndex )
@@ -175,14 +178,14 @@ namespace sw
     void SceneTickScheduler::EntryTask::run()
     {
         SW_PROFILE_SCOPE( "GT.Scene.tick.taskEntry" );
-        const SceneTickSchedulerInternal::TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal };
+        const SceneTickSchedulerInternal::TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal, _group };
         SceneTickSchedulerInternal::tickEntry( scope._threadState, _deltaTime, *_pEntry );
     }
 
     void SceneTickScheduler::StageItemTask::run()
     {
         SW_PROFILE_SCOPE( "GT.Scene.tick.stageTask" );
-        const SceneTickSchedulerInternal::TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal };
+        const SceneTickSchedulerInternal::TickThreadScope scope{ *_pHierarchy, _dispatchOrdinal, _group };
         const TickBatchList&                              batchList = *_pBatchList;
         if ( batchList._listElement.empty() == false )
             batchList._pFunction( scope._threadState, batchList._listElement.data(), static_cast<uint32>( batchList._listElement.size() ), batchList._subTickID, _deltaTime );
@@ -271,7 +274,7 @@ namespace sw
                 if ( stage._listEdge.empty() == false )
                     dispatchStageGraph( stage, deltaTime );
                 else
-                    (void)dispatchBatchLists( stage._listBatch, deltaTime );
+                    (void)dispatchBatchLists( stage._listBatch, stage._group, deltaTime );
             }
         }
     }
@@ -290,10 +293,11 @@ namespace sw
                 return;
             SW_PROFILE_COUNT( "GT.Scene.tick.objectEntries", taskCount );
             SceneTickSchedulerInternal::EntryTick job{};
-            job._pEntry          = listTask.data();
-            job._pHierarchy      = _pHierarchy;
-            job._dispatchOrdinal = ++_dispatchOrdinal;
-            job._deltaTime       = deltaTime;
+            job._pEntry            = listTask.data();
+            job._pHierarchy        = _pHierarchy;
+            job._dispatchOrdinal   = ++_dispatchOrdinal;
+            job._deltaTime         = deltaTime;
+            job._parallelTickGroup = static_cast<uint8>( group );
             SceneTickSchedulerInternal::dispatch( taskCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::EntryTick::tickRange, &job ) );
             return;
         }
@@ -315,6 +319,7 @@ namespace sw
                 task._pHierarchy      = _pHierarchy;
                 task._dispatchOrdinal = taskOrdinal;
                 task._deltaTime       = deltaTime;
+                task._group           = static_cast<uint8>( group );
                 TaskHandle handle     = taskManager.emplaceTask( "GT.Scene.tick.task", SW_DELEGATE_METHOD( TaskDelegate, &EntryTask::run, &task ) );
                 taskStage.addTask( handle );
                 handle.submit();
@@ -325,7 +330,7 @@ namespace sw
         uint32 elementCount = 0;
         for ( const TickWave& wave : listWave )
         {
-            const uint32 waveCount = dispatchBatchLists( wave._listBatch, deltaTime );
+            const uint32 waveCount = dispatchBatchLists( wave._listBatch, group, deltaTime );
             if ( waveCount == 0 )
                 continue;
             elementCount += waveCount;
@@ -340,10 +345,11 @@ namespace sw
         else if ( taskCount > 0 )
         {
             SceneTickSchedulerInternal::EntryTick job{};
-            job._pEntry          = listTask.data();
-            job._pHierarchy      = _pHierarchy;
-            job._dispatchOrdinal = taskOrdinal;
-            job._deltaTime       = deltaTime;
+            job._pEntry            = listTask.data();
+            job._pHierarchy        = _pHierarchy;
+            job._dispatchOrdinal   = taskOrdinal;
+            job._deltaTime         = deltaTime;
+            job._parallelTickGroup = static_cast<uint8>( group ); // 작업 풀이 없어 차례로 돌 뿐 Task 모드의 약속(병렬)은 같다
             job.tickRange( 0, taskCount );
         }
         SW_PROFILE_COUNT( "GT.Scene.tick.taskEntries", taskCount );
@@ -356,13 +362,13 @@ namespace sw
             SceneTickSchedulerInternal::EntryTick job{};
             job._pEntry          = listMain.data();
             job._pHierarchy      = _pHierarchy;
-            job._dispatchOrdinal = ++_dispatchOrdinal;
+            job._dispatchOrdinal = ++_dispatchOrdinal; // 병렬 그룹을 걸지 않는다 — Main 모드는 게임 스레드에서 차례로 돌아 남 읽기를 허용한다
             job._deltaTime       = deltaTime;
             job.tickRange( 0, mainCount );
         }
     }
 
-    uint32 SceneTickScheduler::dispatchBatchLists( const vector<TickBatchList>& listBatch, float32 deltaTime )
+    uint32 SceneTickScheduler::dispatchBatchLists( const vector<TickBatchList>& listBatch, uint32 group, float32 deltaTime )
     {
         uint32 totalCount = 0;
         _listBatchStart.clear();
@@ -381,6 +387,7 @@ namespace sw
         job._batchListCount  = static_cast<uint32>( listBatch.size() );
         job._dispatchOrdinal = ++_dispatchOrdinal;
         job._deltaTime       = deltaTime;
+        job._group           = static_cast<uint8>( group );
         SceneTickSchedulerInternal::dispatch( totalCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::BatchListTick::tickRange, &job ) );
         return totalCount;
     }
@@ -444,6 +451,7 @@ namespace sw
             task._pHierarchy      = _pHierarchy;
             task._dispatchOrdinal = firstOrdinal + rank;
             task._deltaTime       = deltaTime;
+            task._group           = stage._group;
         }
 
         // 작업 풀이 없으면(엔진 없는 테스트) 위상 순으로 이 스레드가 돈다.

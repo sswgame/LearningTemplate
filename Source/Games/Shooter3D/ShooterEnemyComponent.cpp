@@ -11,7 +11,7 @@
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
@@ -280,8 +280,9 @@ namespace sw
             updateReplica( MathUtil::min( context.getDeltaTime(), 0.1f ) );
             return;
         }
-        GameObject*                     pOwner    = getOwner();
-        const ShooterGameModeComponent* pGameMode = GameModeComponent::resolve<ShooterGameModeComponent>( context.getManager(), _gameMode );
+        GameObject* pOwner = getOwner();
+        // 디렉터는 틱 뒤에만 쓰는 형식이다(`kTickReadSafe`) — 판 상태(플레이어 자리 · 상자)를 남 읽기 길로 읽는다.
+        const ShooterGameModeComponent* pGameMode = context.readOther<ShooterGameModeComponent>( _gameMode );
         if ( pGameMode == nullptr )
             return;
         const float32 step = MathUtil::min( context.getDeltaTime(), 0.1f );

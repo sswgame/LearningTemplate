@@ -105,6 +105,14 @@ namespace sw
          * @details 세터가 칸 번호를 올릴 때마다 스레드 슬롯을 다시 묻지 않게 한다. nullptr 이면(슬롯을 못 받았거나 틱 청크 밖) 세터는 쓰기 큐로 간다.
          */
         vector<uint32>* _pPendingSlotList{ nullptr };
+        /** @brief `_parallelTickGroup` 의 "병렬 틱 밖" 값입니다. */
+        static constexpr uint8 kNoParallelTick = 0xFFu;
+        /**
+         * @brief 지금 도는 병렬 디스패치(Task · Batch 파도 · 스테이지)의 틱 그룹(`TickGroup`)입니다. Main 모드(게임 스레드에서 차례로) · 틱 밖이면 `kNoParallelTick` 입니다.
+         * @details 남의 오브젝트 컴포넌트 찾기 검사(`GameObject::assertParallelTickRead`)가 본다 — 그 오브젝트가 이 그룹에서 틱하면 같은 순간 쓰는 워커가 있을 수 있다.
+         *          그룹 사이는 장벽이라(언리얼 틱 그룹과 같다) 다른 그룹에서만 틱하는 오브젝트는 읽어도 된다. Main 모드는 같은 순간 쓰는 워커가 없다.
+         */
+        uint8 _parallelTickGroup{ kNoParallelTick };
     };
 } // namespace sw
 
