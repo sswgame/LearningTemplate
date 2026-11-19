@@ -179,4 +179,23 @@
 	<Field owner="VoxelPlayerComponent" field="_listStartBlock" tag="VoxelBlockDef"/>
 	<CatalogKey tag="CharacterAppearanceDef" catalog="CharacterAppearanceCatalog" entry="CharacterAppearance"/>
 	<Field owner="FarmVillageGameModeComponent" field="_listVillagerPreset" tag="CharacterAppearanceDef"/>
+	<Field owner="CharacterAppearanceComponent" field="_presetID" tag="CharacterAppearanceDef"/>
+	<Field owner="ShooterEnemyKind" field="_preset" tag="CharacterAppearanceDef"/>
+	<!-- 구조체 칸 하나는 칸 이름의 원소로 적힌다(<_eliteEnemyKind>) — 그 원소의 형식을 알린다. 목록 원소(<ShooterEnemyKind>)는 형식 이름으로 적혀 줄이 필요 없다. -->
+	<Struct owner="ShooterGameModeComponent" field="_eliteEnemyKind" type="ShooterEnemyKind"/>
+	<CatalogKey tag="WesternCrimeDef" catalog="WesternCatalog" entry="Crime"/>
+	<CatalogKey tag="WesternHonorActionDef" catalog="WesternCatalog" entry="Honor/Action"/>
+	<CatalogKey tag="WesternAnimalDef" catalog="WesternCatalog" entry="Animal"/>
+	<CatalogKey tag="WesternFoodDef" catalog="WesternCatalog" entry="Food"/>
+	<CatalogKey tag="WesternClothingDef" catalog="WesternCatalog" entry="Clothing"/>
+	<Field owner="WesternDeedComponent" field="_crime" tag="WesternCrimeDef"/>
+	<Field owner="WesternDeedComponent" field="_honorAction" tag="WesternHonorActionDef"/>
+	<Field owner="WesternDeedComponent" field="_animal" tag="WesternAnimalDef"/>
+	<Field owner="WesternDeedComponent" field="_food" tag="WesternFoodDef"/>
+	<Field owner="WesternDeedComponent" field="_clothing" tag="WesternClothingDef"/>
+	<!-- 서식지 키의 오브젝트는 항목 id 가 아니라 <Habitat><Key object> 값이다. -->
+	<CatalogKey tag="HabitatCell" catalog="CreatureLifeCatalog" entry="Habitat/Key" targetKey="object"/>
+	<CatalogKey tag="CreatureSpeciesDef" catalog="CreatureLifeCatalog" entry="Species"/>
+	<Field owner="MeadowTownObjectView" field="_object" tag="HabitatCell"/>
+	<Field owner="MeadowTownCreatureView" field="_species" tag="CreatureSpeciesDef"/>
 </DataCatalogReferenceTable>

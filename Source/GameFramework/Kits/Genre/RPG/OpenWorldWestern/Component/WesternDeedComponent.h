@@ -17,8 +17,13 @@
 
 namespace sw
 {
-    struct WesternHuntWeaponDef;
+    struct WesternAnimalDef;
+    struct WesternClothingDef;
+    struct WesternCrimeDef;
+    struct WesternFoodDef;
     struct WesternHitZoneDef;
+    struct WesternHonorActionDef;
+    struct WesternHuntWeaponDef;
     class GameObject;
     class GameObjectManager;
 
@@ -51,11 +56,12 @@ namespace sw
 {
     /**
      * @class WesternDeedComponent
-     * @brief 플레이어가 곁에서 할 수 있는 일 하나입니다. 무엇을 하는지는 데이터(`_kind` · `_id`)이고, 규칙은 `WesternOutlaw` 가 돌립니다. 언리얼 Smart Object 처럼 "세상 쪽에 놓인 행동" 의 자리입니다(기억에 의존한 비교).
+     * @brief 플레이어가 곁에서 할 수 있는 일 하나입니다. 무엇을 하는지는 데이터(`_kind` 와 그 종류의 칸 — 범죄 · 행동 · 사냥감 · 음식 · 옷)이고, 규칙은 `WesternOutlaw` 가 돌립니다. 언리얼 Smart Object 처럼 "세상 쪽에 놓인 행동" 의 자리입니다(기억에 의존한 비교).
      * @details `useNearest` 가 거리(`_reach`)로 고른다(`InteractionView` — 상호작용과 같은 계산). `_bOnce` 면 한 번 쓴 뒤 다시 고르지 않고, `_bHideWhenUsed` 면 오브젝트를 끈다(잡은 사슴).
-     *          사용 횟수는 씬 상태에 실린다.
+     *          사용 횟수는 씬 상태에 실린다. 가리키는 항목은 종류마다 다른 카탈로그라 칸을 종류마다 둔다(`CatalogKey` — 한 칸이 종류에 따라 다른 표를 가리키면 쿠커 · 인스펙터가
+     *          어느 표인지 모른다). 예전 한 칸 `_id` 는 지웠다.
      */
-    REFLECT( Category = "Western", DisplayName = "Western Deed", Tooltip = "A spot where the player can do something: a crime, a hunt, a sale, a meal" )
+    REFLECT( RemovedField = "_id", Category = "Western", DisplayName = "Western Deed", Tooltip = "A spot where the player can do something: a crime, a hunt, a sale, a meal" )
     class SW_KIT_API WesternDeedComponent : public Component
     {
     public:
@@ -76,14 +82,24 @@ namespace sw
     private:
         /** @brief 오브젝트 자리에서 일어난 행동으로 만듭니다. */
         WesternDeed makeDeed( const float3& position ) const;
+        /** @brief 종류가 가리키는 항목 id 입니다(그 종류의 칸). 항목이 없는 종류(가죽 벗기기 · 팔기 · 현상금)는 빈 이름입니다. */
+        hashed_string findKindID() const;
         /** @brief 썼음을 적고, 정한 대로 오브젝트를 끕니다. */
         void markUsed();
 
     private:
         PROPERTY( Category = "Deed", DisplayName = "Kind", Tooltip = "What the player does here" )
         WesternDeedKind _kind;
-        PROPERTY( Category = "Deed", DisplayName = "Id", Tooltip = "Crime, honor action, animal, food or clothing id in the western catalog (by kind)" )
-        hashed_string _id;
+        PROPERTY( Category = "Deed", DisplayName = "Crime", Tooltip = "Crime: <Crime id> in the western catalog", EditCondition = "_kind == Crime", EditConditionHides )
+        CatalogKey<WesternCrimeDef> _crime;
+        PROPERTY( Category = "Deed", DisplayName = "Honor Action", Tooltip = "Honor action: <Honor><Action id> in the western catalog", EditCondition = "_kind == HonorAction", EditConditionHides )
+        CatalogKey<WesternHonorActionDef> _honorAction;
+        PROPERTY( Category = "Hunt", DisplayName = "Animal", Tooltip = "Hunt: <Animal id> in the western catalog", EditCondition = "_kind == Hunt", EditConditionHides )
+        CatalogKey<WesternAnimalDef> _animal;
+        PROPERTY( Category = "Deed", DisplayName = "Food", Tooltip = "Eat: <Food id> in the western catalog", EditCondition = "_kind == Eat", EditConditionHides )
+        CatalogKey<WesternFoodDef> _food;
+        PROPERTY( Category = "Deed", DisplayName = "Clothing", Tooltip = "Change clothes: <Clothing id> in the western catalog", EditCondition = "_kind == ChangeClothes", EditConditionHides )
+        CatalogKey<WesternClothingDef> _clothing;
         PROPERTY( Category = "Hunt", DisplayName = "Weapon", Tooltip = "Hunt: <HuntWeapon id> of the killing shot" )
         CatalogKey<WesternHuntWeaponDef> _weapon;
         PROPERTY( Category = "Hunt", DisplayName = "Hit Zone", Tooltip = "Hunt: <HitZone id> of the killing shot" )

@@ -398,12 +398,12 @@ namespace sw
             SW_LOG_ERROR_ID( "ShooterGameMode.EnemyGrowthRefused", "[Shooter] enemy growth rules are missing or out of range - no enemies will come: %#", growthError.c_str() );
             return;
         }
-        bool bPresetsKnown = pAppearance->getPresets().findPreset( hashed_string( _eliteEnemyKind._preset ) ) != nullptr;
+        bool bPresetsKnown = pAppearance->getPresets().findPreset( _eliteEnemyKind._preset.key() ) != nullptr;
         if ( bPresetsKnown == false )
             SW_LOG_ERROR_ID( "ShooterGameMode.ElitePresetNotAppearance", "[Shooter] elite preset '%#' is not in the appearance presets", _eliteEnemyKind._preset.c_str() );
         for ( const ShooterEnemyKind& kind : _listEnemyKind )
         {
-            if ( pAppearance->getPresets().findPreset( hashed_string( kind._preset ) ) != nullptr )
+            if ( pAppearance->getPresets().findPreset( kind._preset.key() ) != nullptr )
                 continue;
             SW_LOG_ERROR_ID( "ShooterGameMode.EnemyPresetNotAppearance", "[Shooter] enemy preset '%#' is not in the appearance presets", kind._preset.c_str() );
             bPresetsKnown = false;
@@ -625,7 +625,7 @@ namespace sw
             return;
         }
         if ( pAppearance != nullptr )
-            pAppearance->setPreset( hashed_string( kind._preset ), seed );
+            pAppearance->setPreset( kind._preset.key(), seed );
         // 스폰 위치를 차례로 돈다. 한 바퀴를 돌 때마다 옆으로 1.2m 비켜서 같은 위치에 겹쳐 스폰하지 않게 한다.
         float3 position{ 0.0f, 0.0f, 0.0f };
         if ( _listSpawnPoint.empty() == false )
@@ -695,7 +695,7 @@ namespace sw
             return;
         }
         if ( pAppearance != nullptr )
-            pAppearance->setPreset( hashed_string( kind._preset ), replica._appearanceSeed );
+            pAppearance->setPreset( kind._preset.key(), replica._appearanceSeed );
         pEnemy->launchReplica( getOwner()->getHandle(), replica._position, replica._yaw );
         pEnemy->setNetEntityID( replica._netEntityID );
         EnemyRecord record;
