@@ -209,7 +209,7 @@ namespace sw
             }
 
             /** @brief @p count 항목을 @p blockSize 씩 자른 블록 수입니다. */
-            static uint32 computeBlockCount( uint32 count, uint32 blockSize ) { return ( count + blockSize - 1 ) / blockSize; }
+            static uint32 computeBlockCount( uint32 count, uint32 blockSize ) { return count / blockSize + ( count % blockSize != 0 ? 1u : 0u ); } // 올림 — `count + blockSize - 1` 은 큰 수에서 넘친다
 
             /** @brief 부분값을 **블록 순서로** 합칩니다. 첫 블록부터 왼쪽으로 접는다 — 부동소수 합도 실행마다 같은 비트다. */
             template <typename Combine>
