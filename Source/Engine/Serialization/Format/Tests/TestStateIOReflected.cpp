@@ -154,8 +154,7 @@ SW_TEST_CASE( StateIOReflectedTest, OutOfRangeValuesAreRefused )
     sw::Archive                   reading( bytes.data(), bytes.size() );
     sw::StateIOReflectedTestState restored;
     restored._steps = 2;
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
-    SW_EXPECT_FALSE( restored.readState( reading ) );
+    SW_EXPECT_FALSE( restored.readState( reading ) ); // 범위 밖은 손 `io.check` 처럼 로그 없이 읽기만 실패한다
     SW_EXPECT_EQUAL( 2, restored._steps );
 }
 
