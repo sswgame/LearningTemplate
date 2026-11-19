@@ -316,3 +316,30 @@ SW_TEST_CASE( RemoteCallTest, RateOnANonServerFunctionIsRefused )
     SW_EXPECT_LOG( "RemoteCall.RateOnNonServerFunction" );
     SW_EXPECT_FALSE( client.registerTarget( 1, *RemoteCallTestClientRate::StaticType(), &target ) );
 }
+
+/**
+ * @brief [RemoteCallTest] 거절 본문은 고정 배치형이다 — 옛 형식(까닭 1 바이트) · 잘린 본문은 깨진 메시지이고 알림이 쌓이지 않는다. 온전한 거절은 쌓인다
+ */
+SW_TEST_CASE( RemoteCallTest, RejectedBodyRefusesOldLayoutAndTruncation )
+{
+    RemoteCallClient client;
+    NetMessageWriter writer;
+    BitWriter&       oldLayout = writer.begin( NetRemoteCallMessage::kRejected );
+    oldLayout.writeVarUint( 3 );
+    oldLayout.writeBits( 0xFFu, 8 ); // 까닭은 열거자 범위 비트(4 개 — 2 비트)다. 남는 6 비트가 0 이 아니다
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, writer.getBytes() ) );
+    const uint8 arrTruncated[] = { NetRemoteCallMessage::kRejected };
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, arrTruncated, 1 ) );
+    vector<RemoteCallRejectNotification> listNotification;
+    client.pollRejections( listNotification );
+    SW_EXPECT_TRUE( listNotification.empty() );
+
+    RemoteCallRejectedBody rejected;
+    rejected._sequence = 3;
+    rejected._error    = RemoteCallError::RateLimited;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetRemoteCallMessage::Table, NetRemoteCallMessage::Rejected>( rejected ) ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, writer.getBytes() ) );
+    client.pollRejections( listNotification );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listNotification.size() );
+    SW_EXPECT_TRUE( listNotification[0]._error == RemoteCallError::RateLimited );
+}

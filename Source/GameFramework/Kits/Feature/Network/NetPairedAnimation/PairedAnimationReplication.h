@@ -30,6 +30,8 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationSnapshot.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/NetObjectID.h"
+#include "Engine/Net/NetMessageBody.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
@@ -41,11 +43,23 @@ namespace sw
     class PairedAnimationSystem;
     class SkeletalAnimatorComponent;
 
-    /** @brief 페어드 애니메이션 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
+    /** @brief 세션 끝(서버 → 클라이언트) 본문입니다. */
+    REFLECT()
+    struct PairedAnimationSessionEndBody
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint32 _sessionID{ 0 };
+    };
+
+    /**
+     * @brief 페어드 애니메이션 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
+     * @details 세션 상태는 롤백 소유 상태에도 실리는 공개 형식(`PairedAnimationNetState::write`)이라 손 본문이다. 세션 끝은 고정 배치형(`NetMessageBodyDef`)이다.
+     */
     struct NetPairedAnimationMessage
     {
-        using SessionState = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>; ///< 세션 상태(시작 · 늦은 참가). 판 2: 참가 오브젝트 번호 64 비트(`NetObjectID`)
-        using SessionEnd   = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;    ///< 세션 끝(id) — 상태 메시지 뒤에 닿아야 한다
+        using SessionState = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>;                                 ///< 세션 상태(시작 · 늦은 참가). 판 2: 참가 오브젝트 번호 64 비트(`NetObjectID`)
+        using SessionEnd   = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, PairedAnimationSessionEndBody>; ///< 세션 끝 — 상태 메시지 뒤에 닿아야 한다
         using Table        = NetMessageTable<NetKitMessageRange::kPairedAnimation, SessionState, SessionEnd>;
 
         static constexpr uint8 kSessionState = Table::getKindOf<SessionState>();
@@ -189,7 +203,7 @@ namespace sw
 
         // 표의 메시지
         NetHandleResult receive( NetPairedAnimationMessage::SessionState, const NetMessageContext& context, BitReader& body );
-        NetHandleResult receive( NetPairedAnimationMessage::SessionEnd, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetPairedAnimationMessage::SessionEnd, const NetMessageContext& context, const PairedAnimationSessionEndBody& body );
 
         const PairedAnimationReplicationStats& getStats() const { return _stats; }
 

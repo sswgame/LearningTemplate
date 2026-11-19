@@ -262,14 +262,12 @@ namespace sw
         }
     }
 
-    NetHandleResult ReplicationServer::receive( NetClientServerMessage::SnapshotAck, const NetMessageContext& context, BitReader& body )
+    NetHandleResult ReplicationServer::receive( NetClientServerMessage::SnapshotAck, const NetMessageContext& context, const NetSnapshotAckBody& body )
     {
         if ( context._connectionID < 0 )
             return NetHandleResult::Malformed;
         ClientState& client = acquireClient( context._connectionID );
-        const uint32 tick   = body.readVarUint32();
-        if ( body.hasOverflowed() )
-            return NetHandleResult::Malformed;
+        const uint32 tick   = body._tick;
         if ( ( client._bHasAck == SW_FALSE || tick > client._ackedTick ) && tick <= _world._tick )
         {
             client._ackedTick = tick;

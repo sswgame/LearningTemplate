@@ -464,10 +464,11 @@ namespace sw
         ++_stats._rejectedCount;
         if ( _pPeers == nullptr )
             return;
-        BitWriter& writer = _messageWriter.begin( NetRemoteCallMessage::kRejected );
-        writer.writeVarUint( sequence );
-        writer.writeBits( static_cast<uint32>( error ), 8 );
-        (void)_messageWriter.send( *_pPeers, connectionID, NetChannelKind::ReliableOrdered ); // 끊긴 연결이면 보낼 곳이 없다
+        RemoteCallRejectedBody body;
+        body._sequence = sequence;
+        body._error    = error;
+        if ( _messageWriter.writeMessage<NetRemoteCallMessage::Table, NetRemoteCallMessage::Rejected>( body ) )
+            (void)_messageWriter.send( *_pPeers, connectionID, NetRemoteCallMessage::Rejected::kChannel ); // 끊긴 연결이면 보낼 곳이 없다
     }
 
     void RemoteCallServer::disconnectViolator( int32 connectionID, uint32 functionID, const utf8* pWhy )
@@ -552,15 +553,12 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    NetHandleResult RemoteCallClient::receive( NetRemoteCallMessage::Rejected, const NetMessageContext& context, BitReader& body )
+    NetHandleResult RemoteCallClient::receive( NetRemoteCallMessage::Rejected, const NetMessageContext& context, const RemoteCallRejectedBody& body )
     {
         (void)context;
         RemoteCallRejectNotification notification;
-        notification._sequence = body.readVarUint32();
-        const uint32 errorByte = body.readBits( 8 );
-        if ( body.hasOverflowed() || errorByte > static_cast<uint32>( RemoteCallError::RateLimited ) )
-            return NetHandleResult::Malformed;
-        notification._error = static_cast<RemoteCallError>( errorByte );
+        notification._sequence = body._sequence;
+        notification._error    = body._error; // 등록 열거자 밖 까닭은 본문 읽기가 거절했다
         _rejections.push( notification );
         return NetHandleResult::Handled;
     }

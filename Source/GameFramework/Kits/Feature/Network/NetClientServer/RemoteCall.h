@@ -33,7 +33,9 @@
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Message/NetMessageTable.h"
 
+#include "Engine/Net/NetMessageBody.h"
 #include "Engine/Reflection/ReflectedValue.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionMetadataBox.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -47,7 +49,31 @@ namespace sw
     struct FunctionInfo;
     struct TypeInfo;
 
-    /** @brief 반사 함수 호출의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
+    /** @brief 받지 못한 호출의 까닭입니다. 선 형식(`RemoteCallRejectedBody`)이라 열거자를 더하면 본문 판(스키마 해시)이 저절로 바뀐다. */
+    ENUM()
+    enum class RemoteCallError : uint8
+    {
+        UnknownTarget = 0, ///< 그 id 의 대상이 없다(이미 사라졌다)
+        UnknownFunction,   ///< 대상 타입에 그 이름의 함수가 없다
+        ArgumentMismatch,  ///< 인자를 그 타입으로 읽지 못했거나 수가 맞지 않는다
+        RateLimited        ///< 이 연결의 호출률 상한(`RemoteCallServerConfig`)을 넘었다 — 몸을 부르지 않았다
+    };
+
+    /** @brief 받지 못한 호출(서버 → 클라이언트) 본문입니다. */
+    REFLECT()
+    struct RemoteCallRejectedBody
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint32 _sequence{ 0 }; ///< `callServer` 가 돌려준 순번
+        PROPERTY()
+        RemoteCallError _error{ RemoteCallError::UnknownTarget };
+    };
+
+    /**
+     * @brief 반사 함수 호출의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
+     * @details 호출 본문은 함수마다 인자 형식이 달라(반사 인자 글) 손 본문이다. 거절은 고정 배치형(`NetMessageBodyDef`)이다.
+     */
     struct NetRemoteCallMessage
     {
         /**
@@ -55,8 +81,8 @@ namespace sw
          *        판 2: 함수 이름 글 대신 함수 번호를 싣는다.
          */
         using Call = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, 2>;
-        /** @brief 서버 → 클라이언트. 받지 못한 호출 — 순번(varuint) · 까닭(1 바이트 `RemoteCallError`). 판 2: 까닭에 `RateLimited` 가 더해졌다 */
-        using Rejected = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>;
+        /** @brief 서버 → 클라이언트. 받지 못한 호출(`RemoteCallRejectedBody`). */
+        using Rejected = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, RemoteCallRejectedBody>;
         using Table    = NetMessageTable<NetKitMessageRange::kRemoteCall, Call, Rejected>;
 
         static constexpr uint8 kCall     = Table::getKindOf<Call>();
@@ -65,18 +91,6 @@ namespace sw
         static constexpr int32 kMaxArgumentBytes = 256; ///< 인자 글 하나의 상한
         static constexpr int32 kMaxArgumentCount = 8;   ///< 인자 수의 상한
         static_assert( 32 + kMaxArgumentCount * ( kMaxArgumentBytes + 4 ) <= NetConnection::kMaxReliableMessageSize, "a call must fit one reliable message" );
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 받지 못한 호출의 까닭입니다. 값은 와이어 형식(`Rejected` 의 1 바이트)이라 바꾸면 `Rejected` 의 본문 판을 올린다. */
-    enum class RemoteCallError : uint8
-    {
-        UnknownTarget = 0, ///< 그 id 의 대상이 없다(이미 사라졌다)
-        UnknownFunction,   ///< 대상 타입에 그 이름의 함수가 없다
-        ArgumentMismatch,  ///< 인자를 그 타입으로 읽지 못했거나 수가 맞지 않는다
-        RateLimited        ///< 이 연결의 호출률 상한(`RemoteCallServerConfig`)을 넘었다 — 몸을 부르지 않았다
     };
 } // namespace sw
 
@@ -245,7 +259,7 @@ namespace sw
         [[nodiscard]] uint32 callServer( uint32 targetID, const TypeInfo& type, string_view functionName, const vector<ReflectedValue>& listArg );
 
         NetHandleResult receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body );
-        NetHandleResult receive( NetRemoteCallMessage::Rejected, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetRemoteCallMessage::Rejected, const NetMessageContext& context, const RemoteCallRejectedBody& body );
 
         /** @brief 쌓인 거절 알림을 @p outListNotification 뒤에 옮깁니다. */
         void   pollRejections( vector<RemoteCallRejectNotification>& outListNotification );

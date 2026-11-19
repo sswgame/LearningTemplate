@@ -213,9 +213,10 @@ namespace sw
             const bool                    bEnded    = pSession == nullptr || pSession->isPlaying() == false;
             if ( bEnded == false )
                 continue;
-            BitWriter& writer = _writer.begin( NetPairedAnimationMessage::kSessionEnd );
-            writer.writeVarUint( sessionID );
-            (void)_writer.broadcast( *_pHost, NetChannelKind::ReliableOrdered ); // 연결이 없으면 보낼 곳이 없다 — 늦게 들어온 쪽은 재생 중인 세션만 받는다
+            PairedAnimationSessionEndBody body;
+            body._sessionID = sessionID;
+            if ( _writer.writeMessage<NetPairedAnimationMessage::Table, NetPairedAnimationMessage::SessionEnd>( body ) )
+                (void)_writer.broadcast( *_pHost, NetPairedAnimationMessage::SessionEnd::kChannel ); // 연결이 없으면 보낼 곳이 없다 — 늦게 들어온 쪽은 재생 중인 세션만 받는다
             ++_stats._endSentCount;
             SW_LOG_INFO_ID( "PairedAnimationReplication.ServerEnd", "%#", formatEventLine( "server", "end", sessionID, 0.0f ).c_str() );
             _listAnnouncedID.erase( _listAnnouncedID.begin() + static_cast<ptrdiff_t>( index - 1 ) );
@@ -404,14 +405,12 @@ namespace sw
         return result;
     }
 
-    NetHandleResult PairedAnimationReplicationClient::receive( NetPairedAnimationMessage::SessionEnd, const NetMessageContext& context, BitReader& body )
+    NetHandleResult PairedAnimationReplicationClient::receive( NetPairedAnimationMessage::SessionEnd, const NetMessageContext& context, const PairedAnimationSessionEndBody& body )
     {
         (void)context;
         if ( _pManager == nullptr )
             return NetHandleResult::Handled; // 시작하지 않은 클라이언트 — 받을 씬이 없다
-        const uint32 sessionID = body.readVarUint32();
-        if ( body.hasOverflowed() )
-            return NetHandleResult::Malformed;
+        const uint32 sessionID = body._sessionID;
         dropPending( sessionID ); // 준비를 기다리던 상태가 끝난 세션이면 복원할 것이 없다
         PairedAnimationSystem*        pSystem  = PairedAnimationSystem::find( *_pManager );
         const PairedAnimationSession* pSession = pSystem != nullptr ? pSystem->findSession( sessionID ) : nullptr;
