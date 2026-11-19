@@ -607,7 +607,8 @@ namespace sw::editor
                 row._kind         = PropertyRowKind::Map;
                 row._elementCount = static_cast<uint32>( pMap->getSize( pContainer ) );
                 formatstring( header.data(), header.capacity(), "[%# -> %#] (%# entries)", prop._keyTypeName.c_str(), prop._elementTypeName.c_str(), row._elementCount );
-                row._bCanAddRemove = bReadOnly ? SW_FALSE : SW_TRUE;
+                // 열거자마다 한 칸인 맵(`EnumArray`)은 항목을 더하거나 지울 수 없다 — 값만 고친다.
+                row._bCanAddRemove = ( bReadOnly == false && pMap->isFixedSize() == false ) ? SW_TRUE : SW_FALSE;
             }
             else
             {

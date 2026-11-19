@@ -3,6 +3,8 @@
  * @brief 리플렉션 컨테이너 래퍼(시퀀스와 맵)입니다.
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
+
 #include "Engine/EngineMinimal.h"
 
 namespace sw
@@ -134,6 +136,8 @@ namespace sw
         virtual bool eraseAt( void* pContainer, size_t ordinal ) const = 0;
         /** @brief 키-값을 삽입합니다. */
         virtual void insertKeyValue( void* pContainer, const void* pKey, const void* pVal ) const = 0;
+        /** @brief 키 집합이 타입으로 정해진 맵(`EnumArray` — 열거자마다 한 칸)이면 true 입니다. 인스펙터가 항목 추가 · 지우기를 그리지 않습니다. */
+        virtual bool isFixedSize() const { return false; }
 
         /** @brief 키 타입의 바이트 크기입니다. */
         virtual size_t getKeySize() const = 0;
@@ -566,6 +570,72 @@ namespace sw
         void defaultConstructValue( void* pPtr ) const override { sw_placement_new( pPtr ) ValueType{}; }
         void destroyKey( void* pPtr ) const override { static_cast<KeyType*>( pPtr )->~KeyType(); }
         /** @brief 값을 파괴합니다. */
+        void               destroyValue( void* pPtr ) const override { static_cast<ValueType*>( pPtr )->~ValueType(); }
+        [[nodiscard]] bool copyValue( void* pDst, const void* pSrc ) const override
+        {
+            *static_cast<ValueType*>( pDst ) = *static_cast<const ValueType*>( pSrc );
+            return true;
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief `EnumArray<E, T>` 를 열거자 → 값 맵으로 보는 래퍼입니다. 키는 열거자마다 하나로 고정이라 늘거나 줄지 않습니다.
+     * @details 텍스트는 맵과 같은 모양(`<entry key="Ban">…</entry>`)으로 열거자 이름이 키다 — 열거자 순서가 바뀌어도 값이 제 칸을 찾는다
+     *          (고정 배열 꼴로 쓰면 순번이 곧 의미라 열거자를 끼워 넣으면 저장 값이 한 칸씩 밀린다). 읽기는 먼저 모든 칸을 기본값으로 되돌리고(`clear`)
+     *          파일에 적힌 칸만 채운다. 언리얼은 `TEnumArray` 를 리플렉션하지 않고 C 배열 + `UENUM` 크기로 쓰는데, 그 꼴은 위의 밀림을 막지 못한다.
+     */
+    template <typename TContainer>
+    struct EnumArrayWrapper : IMapContainerWrapper
+    {
+        using KeyType   = typename TContainer::key_type;
+        using ValueType = typename TContainer::mapped_type;
+
+        size_t getSize( const void* ) const override { return TContainer::kSize; }
+        bool   isFixedSize() const override { return true; }
+        /** @brief 칸을 모두 기본값으로 되돌립니다(칸 수는 그대로다). */
+        void clear( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->fill( ValueType{} ); }
+        void constructEmpty( void* pContainer ) const override { sw_placement_new( pContainer ) TContainer{}; }
+        void destroyContainer( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->~TContainer(); }
+
+        void forEach( const void* pContainer, const MapForEachDelegate& callback ) const override
+        {
+            const TContainer& container = *static_cast<const TContainer*>( pContainer );
+            for ( const KeyType key : EnumRange<KeyType>{} )
+            {
+                callback( &key, &container[key] );
+            }
+        }
+
+        void forEachMutable( void* pContainer, const MapForEachMutableDelegate& callback ) const override
+        {
+            TContainer& container = *static_cast<TContainer*>( pContainer );
+            for ( const KeyType key : EnumRange<KeyType>{} )
+            {
+                callback( &key, &container[key] );
+            }
+        }
+
+        /** @brief 칸은 지울 수 없습니다(열거자마다 하나로 고정). */
+        bool eraseAt( void*, size_t ) const override { return false; }
+
+        /** @brief 열거자 칸에 값을 씁니다. 표식(`Count`) 이상 · 음수 같은 범위 밖 키는 버립니다(파일의 모르는 값이 남의 메모리를 쓰지 않게). */
+        void insertKeyValue( void* pContainer, const void* pKey, const void* pVal ) const override
+        {
+            const KeyType key   = *static_cast<const KeyType*>( pKey );
+            const auto    index = static_cast<std::make_unsigned_t<std::underlying_type_t<KeyType>>>( key );
+            if ( static_cast<size_t>( index ) >= TContainer::kSize )
+                return;
+            ( *static_cast<TContainer*>( pContainer ) )[key] = *static_cast<const ValueType*>( pVal );
+        }
+
+        size_t             getKeySize() const override { return sizeof( KeyType ); }
+        size_t             getValueSize() const override { return sizeof( ValueType ); }
+        void               defaultConstructKey( void* pPtr ) const override { sw_placement_new( pPtr ) KeyType{}; }
+        void               defaultConstructValue( void* pPtr ) const override { sw_placement_new( pPtr ) ValueType{}; }
+        void               destroyKey( void* ) const override {}
         void               destroyValue( void* pPtr ) const override { static_cast<ValueType*>( pPtr )->~ValueType(); }
         [[nodiscard]] bool copyValue( void* pDst, const void* pSrc ) const override
         {

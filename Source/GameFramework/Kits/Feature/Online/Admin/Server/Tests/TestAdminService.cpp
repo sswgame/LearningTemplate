@@ -366,7 +366,7 @@ SW_TEST_CASE( AdminServiceTest, BanRevokesEvenWithPastTime )
 
     const AdminTestReply reply = rig.call( kSuper, AdminMethod::SetSanction::kID, makeSanction( ServiceSanctionKind::Ban, 1 ) );
     SW_EXPECT_TRUE( reply._serviceResult == AdminResult::Ok );
-    SW_EXPECT_EQUAL( ServiceSanctionState::kPermanentMs, reply._sanction._arrUntilMs[static_cast<int32>( ServiceSanctionKind::Ban )] );
+    SW_EXPECT_EQUAL( ServiceSanctionState::kPermanentMs, reply._sanction._arrUntilMs[ServiceSanctionKind::Ban] );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._sessions._listRevoked.size() );
 }
 

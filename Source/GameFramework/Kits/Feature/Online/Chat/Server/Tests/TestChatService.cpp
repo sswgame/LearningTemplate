@@ -248,7 +248,7 @@ namespace
         {
             ServiceSanctionState state;
             SW_EXPECT_TRUE( ServiceSanction::readState( database, accountID, state ) == ServiceStoreResult::Ok );
-            state._arrUntilMs[static_cast<int32>( ServiceSanctionKind::ChatMute )] = untilMs;
+            state._arrUntilMs[ServiceSanctionKind::ChatMute] = untilMs;
             ServiceTransaction transaction;
             ServiceSanction::stageWrite( transaction, accountID, state );
             SW_EXPECT_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );

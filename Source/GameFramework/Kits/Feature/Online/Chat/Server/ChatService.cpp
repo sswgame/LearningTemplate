@@ -154,7 +154,7 @@ namespace sw
                 if ( result != ServiceStoreResult::Ok )
                     return read;
                 if ( ServiceSanction::isActive( state, ServiceSanctionKind::ChatMute, nowMs.count() ) )
-                    read._muteUntilMs = state._arrUntilMs[static_cast<int32>( ServiceSanctionKind::ChatMute )];
+                    read._muteUntilMs = state._arrUntilMs[ServiceSanctionKind::ChatMute];
                 read._bReadOk = SW_TRUE;
                 return read;
             }

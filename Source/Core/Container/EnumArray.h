@@ -88,6 +88,8 @@ namespace sw
 
     public:
         using value_type     = T;
+        using key_type       = E; ///< 리플렉션은 열거자 → 값 맵으로 본다(`EnumArrayWrapper`)
+        using mapped_type    = T;
         using iterator       = T*;
         using const_iterator = const T*;
 

@@ -241,3 +241,27 @@ SW_TEST_CASE( FixedLayoutTest, EnumBitsUseTheWholeUnderlyingWidth )
     BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
     SW_EXPECT_TRUE( FixedCodecUtil::readEnumBits<FixedLayoutSampleFlags>( reader ) == flags );
 }
+
+/** @brief [FixedLayoutTest] `EnumArray<E, int32>` 칸은 원소 수가 같은 `array<int32, N>` 과 같은 바이트를 쓰고, 읽으면 열거자 칸마다 같은 값이다 */
+SW_TEST_CASE( FixedLayoutTest, EnumArrayMatchesFixedArrayBytes )
+{
+    FixedLayoutPlainArraySample plain;
+    plain._arrValue = { -7, 0, 300000 };
+    FixedLayoutEnumArraySample byMode;
+    byMode._arrValue[FixedLayoutSampleMode::Idle]   = -7;
+    byMode._arrValue[FixedLayoutSampleMode::Crouch] = 0;
+    byMode._arrValue[FixedLayoutSampleMode::Run]    = 300000;
+
+    BitWriter plainWriter;
+    BitWriter enumWriter;
+    SW_REQUIRE_TRUE( FixedLayout::write( plain, plainWriter ) );
+    SW_REQUIRE_TRUE( FixedLayout::write( byMode, enumWriter ) );
+    SW_EXPECT_TRUE( plainWriter.getBytes() == enumWriter.getBytes() );
+
+    const vector<uint8>        bytes = enumWriter.getBytes();
+    FixedLayoutEnumArraySample read;
+    SW_REQUIRE_TRUE( FixedLayout::read( bytes.data(), static_cast<int32>( bytes.size() ), read ) == FixedReadResult::Ok );
+    SW_EXPECT_EQUAL( -7, read._arrValue[FixedLayoutSampleMode::Idle] );
+    SW_EXPECT_EQUAL( 300000, read._arrValue[FixedLayoutSampleMode::Run] );
+    SW_EXPECT_TRUE( FixedLayout::equals( byMode, read ) );
+}

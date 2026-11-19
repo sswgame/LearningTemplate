@@ -201,12 +201,12 @@ SW_TEST_CASE( FakeAdminProviderTest, SanctionRules )
     provider.setActingRole( AdminRole::Super );
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::Ban, kNowMs + 5 ) ) == AdminResult::Ok );
     const FakeAdminAccount* pAccount = provider.findAccount( FakeAdminProvider::kSeedPlayerID );
-    SW_EXPECT_EQUAL( ServiceSanctionState::kPermanentMs, pAccount->_sanction._arrUntilMs[static_cast<int32>( ServiceSanctionKind::Ban )] ); // 영구 정지는 길이를 보지 않는다
+    SW_EXPECT_EQUAL( ServiceSanctionState::kPermanentMs, pAccount->_sanction._arrUntilMs[ServiceSanctionKind::Ban] ); // 영구 정지는 길이를 보지 않는다
 
     AdminRequest lift = FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::Ban, 0 );
     lift._reasonCode  = "";
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, lift ) == AdminResult::Ok );
-    SW_EXPECT_EQUAL( int64( 0 ), pAccount->_sanction._arrUntilMs[static_cast<int32>( ServiceSanctionKind::Ban )] );
+    SW_EXPECT_EQUAL( int64( 0 ), pAccount->_sanction._arrUntilMs[ServiceSanctionKind::Ban] );
     SW_EXPECT_EQUAL( string( "gm.notice" ), pAccount->_sanction._reasonCode ); // 결함: 사유 없는 해제가 앞의 사유를 지웠다(서버는 남긴다)
 
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::Suspend, -1 ) ).hasError( OnlineError::kInvalidRequest ) );

@@ -5,6 +5,7 @@
  *          (컴포넌트는 "Add Component" 메뉴에 오르고, 이 층(1)은 컴포넌트 모델(5)을 include 하지 못한다).
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/array.h"
 #include "Core/Container/map.h"
 #include "Core/Container/set.h"
@@ -1024,5 +1025,21 @@ namespace sw
 
         PROPERTY()
         int32 _after{ 0 }; ///< 배열 뒤의 칸 — 배열을 읽다 스트림이 어긋나면 여기가 틀린다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 열거자로 색인하는 배열 프로퍼티 샘플입니다(`ReflectionContainersTest.EnumArrayRoundTripsAsEnumeratorMap`). 텍스트 키는 열거자 이름이다. */
+    REFLECT()
+    struct EnumArrayActor
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        EnumArray<TestTrailingCountEnum, int32> _arrScore{};
+
+        PROPERTY()
+        int32 _after{ 0 }; ///< 맵 뒤의 칸 — 칸을 읽다 스트림이 어긋나면 여기가 틀린다
     };
 } // namespace sw

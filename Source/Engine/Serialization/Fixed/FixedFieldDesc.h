@@ -10,6 +10,7 @@
  *            해석기가 범위 깊이마다 객체 주소를 쥐고 내려가 읽는다. 앞선 필드만 범위가 될 수 있어(생성기 검사) 읽기에서도 이미 읽은 값이다.
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 
@@ -144,7 +145,17 @@ namespace sw
         static constexpr FixedSequenceOps kInstance{ &size, &resize, &data, &getWritableData, sizeof( FixedElementType<C> ) };
     };
 
-    /** @brief 고정 길이 배열(`T[N]` · `array<T, N>`)의 함수 묶음입니다. 길이는 타입이 정합니다. */
+    /** @brief @p C 가 `EnumArray<E, T>` 인지입니다. 길이를 `std::tuple_size` 대신 `kSize` 로 읽습니다. */
+    template <typename C>
+    struct IsEnumArray : std::false_type
+    {
+    };
+    template <typename E, typename T>
+    struct IsEnumArray<EnumArray<E, T>> : std::true_type
+    {
+    };
+
+    /** @brief 고정 길이 배열(`T[N]` · `array<T, N>` · `EnumArray<E, T>`)의 함수 묶음입니다. 길이는 타입이 정합니다. */
     template <typename C>
     struct FixedArrayOpsOf
     {
@@ -152,6 +163,8 @@ namespace sw
         {
             if constexpr ( std::is_array_v<C> )
                 return std::extent_v<C>;
+            else if constexpr ( IsEnumArray<C>::value )
+                return C::kSize; // 열거자 수(`EnumArray`)
             else
                 return std::tuple_size<C>::value;
         }

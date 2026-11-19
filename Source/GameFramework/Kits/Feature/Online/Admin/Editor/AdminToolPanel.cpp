@@ -190,7 +190,7 @@ namespace sw::editor
 
         for ( int32 kindIndex = 0; kindIndex < static_cast<int32>( ServiceSanctionKind::Count ); ++kindIndex )
         {
-            const string state = AdminToolUtil::formatSanction( lookup._sanction._arrUntilMs[kindIndex], WallClock::nowUnixMilliseconds().count() );
+            const string state = AdminToolUtil::formatSanction( lookup._sanction._arrUntilMs[static_cast<ServiceSanctionKind>( kindIndex )], WallClock::nowUnixMilliseconds().count() );
             ImGui::Text( "%s: %s", getEnumName( static_cast<ServiceSanctionKind>( kindIndex ) ), state.c_str() );
             if ( kindIndex + 1 < static_cast<int32>( ServiceSanctionKind::Count ) )
                 ImGui::SameLine();
