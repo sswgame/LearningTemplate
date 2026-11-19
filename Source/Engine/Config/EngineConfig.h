@@ -218,6 +218,13 @@ namespace sw
         uint32 _filterSampleCount{};
 
         /**
+         * @brief 거르기 원본의 밉 수 상한입니다(밉 0 포함 — `OctahedralRadianceMap::buildMips`). 표본마다 pdf 로 이 사슬의 밉을 골라 적은 표본으로 잡음 없이 거른다(filtered importance sampling).
+         * @details 1 이면 밉 0 만 읽는 보통 중요도 표본이다. 원본 한 변이 홀수 · 1 이 되면 거기서 멈춘다 — 언리얼 · 유니티는 큐브맵 밉 전부를 쓴다.
+         */
+        PROPERTY( Min = 1, Max = 11 )
+        uint32 _filterMipCount{};
+
+        /**
          * @brief 같은 하늘의 값이 바뀔 때(시간대 · 날씨) 다시 거르기까지의 최소 프레임 수입니다. 처음 보는 하늘은 기다리지 않고 그 프레임에 거른다.
          * @details 언리얼 Real Time Capture 가 캡처를 여러 프레임에 나눠 주기를 두는 자리다 — 해가 프레임마다 조금씩 움직여도 이 간격에 한 번만 거른다.
          */
@@ -323,6 +330,13 @@ namespace sw
         /** @brief 프로브 GI 의 빛샘 막기 계수입니다(바이어스 · 뒷면 가중 · 체비쇼프 지수 — `ProbeVisibilityConfig`). */
         PROPERTY()
         ProbeVisibilityConfig _probeVisibility{};
+
+        /**
+         * @brief 반사 프로브 베이크가 거르는 원본(단계 0)의 밉 수 상한입니다(`ReflectionProbeAsset::makeFromFaces`, `SkyLightConfig::_filterMipCount` 와 같은 뜻).
+         * @details 표본 수는 프로브마다의 칸(`ReflectionProbeComponent` Samples Per Texel)이다. 베이크는 에디터에서 한 번이라 스카이 라이트와 따로 둔다(언리얼도 캡처 설정이 따로다).
+         */
+        PROPERTY( Min = 1, Max = 11 )
+        uint32 _reflectionProbeFilterMipCount{};
     };
 } // namespace sw
 

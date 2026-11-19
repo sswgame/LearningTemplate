@@ -53,6 +53,7 @@
             "_resolution": 32,
             "_levelCount": 6,
             "_filterSampleCount": 32,
+            "_filterMipCount": 6,
             "_captureIntervalFrames": 30
         },
         "_probeVisibility": {
@@ -60,7 +61,8 @@
             "_viewBias": 0.1,
             "_backfaceFloor": 0.2,
             "_chebyshevExponent": 3.0
-        }
+        },
+        "_reflectionProbeFilterMipCount": 8
     },
     "_bBackgroundGamepadInput": false,
     "_deviceLostPolicy": "Quit",

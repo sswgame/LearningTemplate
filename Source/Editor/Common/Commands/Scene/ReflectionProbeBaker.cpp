@@ -9,6 +9,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -126,7 +127,7 @@ namespace sw
                 }
             }
         }
-        return ReflectionProbeAsset::makeFromFaces( capture._capturePosition, arrFace, capture._resolution, Internal::kLevelCount, capture._sampleCount, outData );
+        return ReflectionProbeAsset::makeFromFaces( capture._capturePosition, arrFace, capture._resolution, Internal::kLevelCount, capture._sampleCount, capture._mipCount, outData );
     }
 
     expected<void> ReflectionProbeBaker::captureProbe( Scene& scene, const ReflectionProbeComponent& probe, ReflectionProbeCapture& outCapture )
@@ -157,6 +158,7 @@ namespace sw
         outCapture._capturePosition = capturePosition;
         outCapture._resolution      = probe.getResolution();
         outCapture._sampleCount     = probe.getBakeSampleCount();
+        outCapture._mipCount        = editor::getSubsystem<EngineConfig>()._render._reflectionProbeFilterMipCount;
         expected<void> captured{};
         for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeAsset::kFaceCount && captured.has_value(); ++faceIndex )
         {

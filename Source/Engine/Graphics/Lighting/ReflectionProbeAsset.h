@@ -27,6 +27,59 @@ namespace sw
 {
     struct ReflectionProbeFace;
 
+    /**
+     * @struct OctahedralRadianceMap
+     * @brief GGX 거르기의 원본입니다 — 옥타헤드럴 빛 한 장(밉 0)과 그것을 2×2 로 줄여 간 밉 사슬입니다(`.radiancemap` 은 밉 0 만 든다).
+     * @details filtered importance sampling(Colbert-Krivanek, GPU Gems 3 20 장 · Karis 2013)의 원본 밉 사슬이다 — 표본마다 pdf 가 덮는 입체각에 맞는 밉을 읽어
+     *          적은 표본으로도 잡음 없이 거른다(`ReflectionProbeAsset::filterRoughnessLevels`). 언리얼 · 유니티의 큐브맵 밉 사슬 자리이고, 큐브 대신 옥타헤드럴인 까닭은
+     *          `ReflectionProbeAsset` 과 같다. 옥타헤드럴 텍셀 (x, y) 의 자식은 한 단계 위 밉의 (2x .. 2x+1, 2y .. 2y+1) 이라 상자 평균이 같은 방향 묶음이다.
+     *
+     *          파일(리틀 엔디언): 매직 `SWRM`, 버전, 한 변 텍셀 수 uint32, 텍셀마다 float32 RGB(행 → 열). HDRI 하늘의 원본이고 `Scripts/dev/make_sky_hdri_prefabs.py` 가 쓴다.
+     */
+    struct SW_API OctahedralRadianceMap
+    {
+        static constexpr uint32      kMagic     = FourCCUtil::make( "SWRM" );
+        static constexpr uint32      kVersion   = 1;
+        static constexpr string_view kExtension = ".radiancemap";
+        /// @brief 밉 0 한 변 텍셀 수의 범위 — 깨진 머리말이 큰 할당을 일으키지 않게 막는다.
+        static constexpr uint32 kMinResolution = 4;
+        static constexpr uint32 kMaxResolution = 1024;
+
+        /** @brief 밉 하나입니다. */
+        struct Mip
+        {
+            uint32         _resolution{ 0 }; ///< 한 변 텍셀 수
+            vector<float3> _listTexel;       ///< 선형 RGB 빛, 행 → 열
+        };
+        vector<Mip> _listMip; ///< 밉 0 이 원본, 뒤로 갈수록 한 변이 반
+
+        /** @brief 비웁니다. */
+        void clear() { _listMip.clear(); }
+        /** @brief 밉 수입니다(비었으면 0). */
+        uint32 getMipCount() const { return static_cast<uint32>( _listMip.size() ); }
+        /** @brief 밉 0 의 한 변 텍셀 수입니다(비었으면 0). */
+        uint32 getResolution() const { return _listMip.empty() ? 0u : _listMip[0]._resolution; }
+
+        /** @brief 밉 0 을 @p listTexel(한 변 @p resolution, 행 → 열)로 정하고 밉 사슬을 비웁니다. 크기가 범위 밖이거나 텍셀 수가 틀리면 그 까닭이고 비운다. */
+        [[nodiscard]] expected<void> assignBase( uint32 resolution, vector<float3>&& listTexel );
+        /**
+         * @brief 밉 0 을 2×2 상자 평균으로 줄여 밉을 @p mipCount 개까지 만듭니다(밉 0 포함). 한 변이 홀수이거나 1 이면 거기서 멈춘다 — 텍스처 밉 수가 크기로 막히는 것과 같다.
+         * @return 밉 0 이 없거나 @p mipCount 가 0 이면 그 까닭입니다.
+         */
+        [[nodiscard]] expected<void> buildMips( uint32 mipCount );
+        /** @brief 방향 @p direction(길이 1)을 밉 @p lod(소수 — 두 밉 사이를 섞는다, 범위 밖은 자른다)로 쌍선형 샘플합니다. 비었으면 0 입니다. */
+        float3 sample( const float3& direction, float32 lod ) const;
+        /** @brief 한 변 @p resolution 의 텍셀 (@p x, @p y) 중심이 가리키는 방향(길이 1)입니다. */
+        static float3 computeTexelDirection( uint32 resolution, uint32 x, uint32 y );
+
+        /** @brief 밉 0 을 바이트로 만듭니다(리틀 엔디언). */
+        void makeBytes( vector<uint8>& outBytes ) const;
+        /** @brief 바이트를 밉 0 으로 읽습니다(밉 사슬은 `buildMips`). 매직, 버전, 길이, 범위가 틀리면 그 까닭이고 비운다. */
+        [[nodiscard]] expected<void> readFromBytes( const uint8* pData, size_t size );
+        /** @brief 리소스 경로에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
+        [[nodiscard]] expected<void> loadFromAsset( const AssetID& assetID );
+    };
+
     /** @brief `.reflprobe` 하나의 내용입니다. 파일 머리말을 참고하세요. */
     struct SW_API ReflectionProbeAsset
     {
@@ -61,17 +114,25 @@ namespace sw
         /**
          * @brief 한 변 @p resolution · 단계 @p levelCount 의 텍셀을 0 으로 잡습니다. 범위 밖이면 그 까닭이고 내용을 비웁니다.
          * @details 단계 0 을 채우는 쪽이 둘이다 — 찍은 면(`makeFromFaces`)과 식으로 세는 하늘(`SkyLightData::make`). 둘 다 이것으로 잡고 `computeTexelDirection` 으로 단계 0 을 채운 뒤
-         *          `filterRoughnessLevels` 로 거른다.
+         *          `filterRoughnessLevels` 로 거른다(하늘은 원본 `OctahedralRadianceMap` 을 따로 만들어 넘긴다 — HDRI 원본이 이 데이터보다 크다).
          */
         [[nodiscard]] expected<void> allocate( const float3& capturePosition, uint32 resolution, uint32 levelCount );
         /** @brief 텍셀 (@p x, @p y) 의 중심이 가리키는 방향(길이 1)입니다 — 단계마다 같다. */
         float3 computeTexelDirection( uint32 x, uint32 y ) const;
         /**
-         * @brief 채워 둔 단계 0 을 GGX 중요도 표본 @p sampleCount 개로 걸러 단계 1 부터를 만듭니다(언리얼 · 카리스 2013 의 "N = V = R" 근사).
-         * @details 텍셀 행마다 독립이라 작업 풀로 나눈다(`engine::runParallel` — 서비스가 없는 테스트 · 도구는 부른 스레드가 돈다).
-         * @return 크기가 범위 밖이거나 텍셀 수가 맞지 않거나 표본이 0 이면 그 까닭입니다.
+         * @brief 원본 @p source 를 걸러 모든 단계를 채웁니다 — 반사 프로브 베이크와 스카이 라이트가 함께 쓰는 거르기 하나입니다.
+         * @details 단계 0 은 텍셀 중심 방향의 원본(원본이 이 데이터보다 크면 크기가 맞는 밉)이다. 단계 1 부터는 GGX 중요도 표본 @p sampleCount 개의 filtered importance
+         *          sampling 이다(언리얼 · 카리스 2013 의 "N = V = R" 근사, 밉 고르기는 Colbert-Krivanek): 표본마다 pdf 가 덮는 입체각 1 / (표본 수 × pdf) 와 원본 텍셀의
+         *          입체각 4π / 한 변² 의 비로 밉을 고른다. 원본 밉이 하나면 밉 0 만 읽는 보통 중요도 표본이다(기준 적분 — 표본을 늘리면 수렴한다).
+         *          텍셀 행마다 독립이라 작업 풀로 나눈다(`engine::runParallel` — 서비스가 없는 테스트 · 도구는 부른 스레드가 돈다).
+         * @return 크기가 범위 밖이거나 텍셀 수가 맞지 않거나 원본이 비었거나 표본이 0 이면 그 까닭입니다.
          */
-        [[nodiscard]] expected<void> filterRoughnessLevels( uint32 sampleCount );
+        [[nodiscard]] expected<void> filterRoughnessLevels( const OctahedralRadianceMap& source, uint32 sampleCount );
+        /**
+         * @brief 채워 둔 단계 0 을 원본으로 삼아(밉 @p mipCount 개까지 — `OctahedralRadianceMap::buildMips`) 단계 1 부터를 거릅니다.
+         * @return 위의 거르기가 거절하는 입력이거나 @p mipCount 가 0 이면 그 까닭입니다.
+         */
+        [[nodiscard]] expected<void> filterRoughnessLevels( uint32 sampleCount, uint32 mipCount );
 
         /** @brief 바이트로 만듭니다(리틀 엔디언). */
         void makeBytes( vector<uint8>& outBytes ) const;
@@ -97,12 +158,12 @@ namespace sw
         static constexpr uint32 kFaceCount = 6;
 
         /**
-         * @brief 면 여섯을 접어 단계 0 을 만들고, 단계 1 부터는 GGX 중요도 표본 @p sampleCount 개로 거릅니다(`filterRoughnessLevels`).
+         * @brief 면 여섯을 접어 단계 0 을 만들고, 단계 1 부터는 단계 0 의 밉 @p mipCount 개를 원본으로 GGX 표본 @p sampleCount 개로 거릅니다(`filterRoughnessLevels`).
          * @param capturePosition 찍은 위치(면 카메라의 위치와 같다)
          * @return 면이 비었거나 크기가 다르거나 범위 밖이면 그 까닭입니다.
          */
         [[nodiscard]] static expected<void> makeFromFaces( const float3& capturePosition, const ReflectionProbeFace* pArrFace, uint32 resolution, uint32 levelCount,
-                                                           uint32 sampleCount, ReflectionProbeAsset& outData );
+                                                           uint32 sampleCount, uint32 mipCount, ReflectionProbeAsset& outData );
     };
 } // namespace sw
 

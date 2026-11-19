@@ -39,6 +39,7 @@ namespace sw
         float3                     _capturePosition{};
         uint32                     _resolution{ 0 };  ///< 옥타헤드럴 한 변(프로브의 칸)
         uint32                     _sampleCount{ 0 }; ///< 거르기 표본 수(프로브의 칸)
+        uint32                     _mipCount{ 0 };    ///< 거르기 원본의 밉 수 상한(`RenderConfig::_reflectionProbeFilterMipCount` — 찍을 때 정해 워커에 넘긴다)
     };
 
     /**

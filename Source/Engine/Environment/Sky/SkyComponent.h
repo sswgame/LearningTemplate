@@ -49,6 +49,7 @@ namespace sw
         void        setIntensity( float32 intensity ) { _intensity = intensity; }
         void        setMode( SkyMode mode ) { _mode = mode; }
         void        setHdriTexture( string_view path ) { _hdriTexture = path; }
+        void        setHdriRadianceMap( string_view path ) { _hdriRadianceMap = string( path ); }
         void        setHdriAmbient( const SH9Color& ambient ) { _listHdriAmbient.assign( ambient._arrCoefficient, ambient._arrCoefficient + SH9Color::kCoefficientCount ); }
 
         /** @brief @p manager 의 첫 활성 하늘입니다. 없으면 @p outGradient 를 비우고(세기 0) false 입니다. 읽기만 합니다. */
@@ -71,6 +72,8 @@ namespace sw
         AssetRef<Texture2D> _hdriTexture;
         PROPERTY( Category = "HDRI", DisplayName = "Rotation", Units = rad, EditCondition = "_mode == Hdri", Tooltip = "Turns the sky around the vertical axis" )
         float32 _hdriRotation;
+        PROPERTY( AssetPath, Category = "HDRI", DisplayName = "Radiance Map", EditCondition = "_mode == Hdri", Tooltip = "Octahedral .radiancemap of the source image the sky light filters for reflections (roughness to level); written by Scripts/dev/make_sky_hdri_prefabs.py" )
+        string _hdriRadianceMap;
         PROPERTY( Category = "HDRI", DisplayName = "Ambient SH", EditCondition = "_mode == Hdri", Tooltip = "27 SH9 coefficients of the source image (basis * 3 + channel) lighting the probes; written by Scripts/dev/make_sky_hdri_prefabs.py" )
         vector<float32> _listHdriAmbient;
         PROPERTY( Category = "Atmosphere", DisplayName = "Rayleigh Scale", Min = 0.0, EditCondition = "_mode == Atmosphere", Tooltip = "Multiplies the Rayleigh scattering (blue sky); 0 removes it" )

@@ -164,6 +164,13 @@ namespace sw
         _sunColor       = color;
     }
 
+    float3 SkyGradient::computeHdriLookupDirection( const float3& unit ) const
+    {
+        const float32 cosine = MathUtil::cos( _hdriRotation );
+        const float32 sine   = MathUtil::sin( _hdriRotation );
+        return float3{ unit._x * cosine - unit._z * sine, unit._y, unit._x * sine + unit._z * cosine };
+    }
+
     float3 SkyGradient::evaluateRadiance( const float3& direction ) const
     {
         const float32 length = MathUtil::sqrt( direction.dot( direction ) );
@@ -177,12 +184,8 @@ namespace sw
         }
         if ( _mode == SkyMode::Hdri )
         {
-            // sky.hlsl 의 evaluateHdri 와 같은 회전이다 — 하늘을 Y 축으로 _hdriRotation 만큼 돌린 것은 방향을 반대로 돌려 읽는 것이다.
-            const float3  unit     = length > 0.0f ? direction * ( 1.0f / length ) : float3{ 1.0f, 0.0f, 0.0f };
-            const float32 cosine   = MathUtil::cos( _hdriRotation );
-            const float32 sine     = MathUtil::sin( _hdriRotation );
-            const float3  rotated  = float3{ unit._x * cosine - unit._z * sine, unit._y, unit._x * sine + unit._z * cosine };
-            const float3  radiance = _hdriAmbient.evaluateRadiance( rotated );
+            const float3 unit     = length > 0.0f ? direction * ( 1.0f / length ) : float3{ 1.0f, 0.0f, 0.0f };
+            const float3 radiance = _hdriAmbient.evaluateRadiance( computeHdriLookupDirection( unit ) );
             return float3{ MathUtil::max( radiance._x, 0.0f ), MathUtil::max( radiance._y, 0.0f ), MathUtil::max( radiance._z, 0.0f ) } * _intensity;
         }
         // sky.hlsl 의 evaluateSky 와 같은 식이다. 길이가 0 인 방향은 y 가 0(지평선)이다.
@@ -203,7 +206,7 @@ namespace sw
                                  mine._sunIntensity == theirs._sunIntensity && mine._planetRadiusKm == theirs._planetRadiusKm && mine._atmosphereHeightKm == theirs._atmosphereHeightKm &&
                                  mine._observerAltitudeKm == theirs._observerAltitudeKm && mine._sunDiscAngle == theirs._sunDiscAngle;
         const bool bSun  = _toSunDirection == other._toSunDirection && _sunColor == other._sunColor;
-        bool       bHdri = _hdriTexture == other._hdriTexture && _hdriRotation == other._hdriRotation;
+        bool       bHdri = _hdriTexture == other._hdriTexture && _hdriRotation == other._hdriRotation && _hdriRadianceMap == other._hdriRadianceMap;
         for ( uint32 index = 0; index < SH9Color::kCoefficientCount; ++index )
         {
             bHdri = bHdri && _hdriAmbient._arrCoefficient[index] == other._hdriAmbient._arrCoefficient[index];

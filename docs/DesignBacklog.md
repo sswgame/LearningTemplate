@@ -1589,6 +1589,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
   - 타입별 판 + 패치 `REFLECT( Version = N )` — 그릇마다가 아니라 타입 한 곳(ezEngine GraphPatch, M).
 - 화질
   - 스카이 라이트 · 반사 프로브 거르기를 filtered importance sampling(원본 밉을 pdf 로 고름), HDRI 반사를 SH9 대신 거른 텍스처로(VQEngine, S → GPU 찍기 M).
+    - 됨(2026-11-19): 두 곳이 `ReflectionProbeAsset::filterRoughnessLevels( OctahedralRadianceMap, 표본 수 )` 하나를 쓴다 — 원본은 옥타헤드럴 상자 밉 사슬(밉 수는 Config `_skyLight._filterMipCount` · `_reflectionProbeFilterMipCount`). 밉 치우침은 GPU Gems 의 +1 대신 −1(쌍선형이 텍셀 둘을 덮는다 — 기준 적분과 견준 numpy 원형: +1 은 거친 단계 평균 오차 10 ~ 35 %, −1 은 1 ~ 5 %). HDRI 는 GPU 찍기 대신 스크립트가 원본을 128² `.radiancemap` 으로 접고(CPU 는 BC6H 를 읽지 않는다) 스카이 라이트가 회전 · 세기를 곱해 거른다 — 확산은 같은 원본의 SH9 투영. GPU 찍기(구름 · 해 원반 포함)는 하늘이 프레임마다 바뀌는 장면이 생길 때(M).
   - TAA: YCoCg 분산 클리핑 · Catmull-Rom 히스토리 · 적응 블렌드 → 그 위에 TAAU(Adria, S → M).
   - 프로브 GI 빛샘: 거리 모먼트 + 체비쇼프 가시성 · 뒷면 가중(Adria DDGI, M — GI 골든 전부).
     - 판단(2026-11-19, 했다): 모먼트는 텍스처 슬롯 대신 프로브 버퍼(t13) 안 SH9 뒤 옥타헤드럴 8×8 묶음(float4 하나에 텍셀 둘)으로 — 반사 프로브와 같은 이유(네 백엔드 같은 길, 바인딩 수 그대로). 광선마다 가장 가까운 텍셀에 기록 비율로 섞고(DDGI 의 텍셀마다 코사인 가중 적분은 스레드 하나 = 프로브 하나라 비싸 뺐다), 읽을 때 쌍선형. 가중 식은 shading_math.hlsli 하나를 C++ 테스트와 셰이더가 함께 읽고, 계수는 EngineConfig `_render._probeVisibility` → 쿠킹 define. 베이크 볼륨은 모먼트가 없어 뒷면 가중 · 바이어스만 받는다. 프로브 재배치(DDGI relocation)는 칸 안에 박힌 프로브를 모먼트로 가리는 것으로 대신한다.

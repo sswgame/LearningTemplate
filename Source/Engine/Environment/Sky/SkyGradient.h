@@ -100,6 +100,7 @@ namespace sw
      *          `Atmosphere` 모드: 산란(`SkyAtmosphere`) × 해 색 × `_atmosphere._sunIntensity` × 세기. 해는 `setSun` 으로 받는다 — 해(방향광)가 없으면 해 색이 0 이라 하늘은 0(땅도 0)이다(폴백 없음).
      *          셰이더는 해 방향 · 색을 키 라이트 상수(`g_KeyLightDirIntensity` · `g_KeyLightColor`)에서 읽는다 — 같은 값이다. 같은 식을 간접 조명 베이크가 프로브마다 SH 로 투영한다.
      *          `Hdri` 모드: 셰이더는 텍스처를 읽고, 이 식은 원본을 투영한 SH9 계수(`_hdriAmbient`)를 평가해 간접 조명에 저주파 빛을 준다(언리얼 Sky Light 의 저차 SH 와 같은 자리). 음수 링잉은 0 으로 자른다.
+     *          스카이 라이트의 반사는 이 식이 아니라 옥타헤드럴 원본(`_hdriRadianceMap`)을 거칠기 단계마다 거른 것이다(`SkyLightData::make`).
      */
     struct SW_API SkyGradient
     {
@@ -116,6 +117,7 @@ namespace sw
         hashed_string _hdriTexture{};                      ///< HDRI 모드의 등장방형 텍스처 경로
         float32       _hdriRotation{ 0.0f };               ///< HDRI 모드에서 하늘을 Y 축으로 돌리는 각(라디안)
         SH9Color      _hdriAmbient{};                      ///< HDRI 모드의 저주파 빛(원본의 SH9 투영, `Scripts/dev/make_sky_hdri_prefabs.py`). CPU 는 텍스처를 읽지 않는다
+        hashed_string _hdriRadianceMap{};                  ///< HDRI 모드의 옥타헤드럴 원본(`.radiancemap` — `OctahedralRadianceMap`). 스카이 라이트가 읽어 반사를 거른다(같은 스크립트가 쓴다)
         uint64        _sourceID{ 0 };                      ///< 이 값을 낸 `SkyComponent` 의 번호(컴포넌트가 아니면 0). 스카이 라이트가 "다른 하늘" 과 "같은 하늘의 값이 바뀜" 을 가린다
 
         /**
@@ -123,6 +125,8 @@ namespace sw
          */
         void setSun( const float3& lightTravelDirection, const float3& color );
 
+        /** @brief HDRI 를 읽을 방향입니다 — 하늘을 Y 축으로 `_hdriRotation` 만큼 돌린 것은 방향 @p unit(길이 1)을 반대로 돌려 읽는 것이다(sky.hlsl evaluateHdri 와 같은 회전). */
+        [[nodiscard]] float3 computeHdriLookupDirection( const float3& unit ) const;
         /** @brief 방향 @p direction(길이는 상관없다, 0 벡터는 지평선)에서 오는 하늘빛입니다. 구름과 해 원반은 넣지 않는다. */
         float3 evaluateRadiance( const float3& direction ) const;
         /**

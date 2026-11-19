@@ -32,9 +32,10 @@ namespace
             config._resolution            = kResolution;
             config._levelCount            = kLevelCount;
             config._filterSampleCount     = 4;
+            config._filterMipCount        = 3;
             config._captureIntervalFrames = 1;
             SkyLightData data;
-            SW_EXPECT_TRUE( SkyLightData::make( sky, config, data ) );
+            SW_EXPECT_TRUE( SkyLightData::make( sky, nullptr, config, data ) );
             data._revision = revision;
             return data;
         }
