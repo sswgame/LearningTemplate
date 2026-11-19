@@ -38,6 +38,7 @@
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
+#include "Editor/Common/Input/EditorFileDrop.h"
 #include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
@@ -451,10 +452,14 @@ namespace sw::editor
         {
             // 창의 닫기 확인 칸은 주인이 하나다 — 이 단계가 구독을 쥐고, 내려갈 때 이 에디터가 건 것만 놓는다(창이 먼저 사라졌으면 구독은 이미 무효다).
             _closeQuery = _editor._pWindow->bindCloseQueryHandler( SW_DELEGATE_METHOD( WindowCloseQueryDelegate, &ImGuiEditor::onWindowCloseQuery, &_editor ) );
+            // OS 파일 끌어 놓기도 창의 칸 하나다 — 같은 수명(에디터 컨텍스트 뒤 · 앞)으로 쥔다. 받는 창(콘텐츠 브라우저)은 `EditorFileDrop` 에서 꺼낸다.
+            _fileDrop = _editor._pWindow->bindFileDropHandler( SW_DELEGATE_LAMBDA( WindowFileDropDelegate, []( const WindowFileDropEvent& event )
+            { EditorFileDrop::post( event ); } ) );
             return _editor.initializeWindowCloseQuery();
         }
         void shutdownSubsystem() override
         {
+            _fileDrop.reset();
             _closeQuery.reset();
             _editor.shutdownWindowCloseQuery();
         }
@@ -470,6 +475,7 @@ namespace sw::editor
     private:
         ImGuiEditor& _editor;
         Subscription _closeQuery; ///< 창의 닫기 확인 칸 구독
+        Subscription _fileDrop;   ///< 창의 OS 파일 끌어 놓기 칸 구독
     };
 } // namespace sw::editor
 

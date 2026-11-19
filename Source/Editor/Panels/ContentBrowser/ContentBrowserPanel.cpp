@@ -15,6 +15,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorFileDrop.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -43,10 +44,12 @@ namespace sw::editor
         {
             static constexpr Color kThumbnailBg{ Color::fromBytes( 22, 24, 30, 255 ) };
             static constexpr Color kThumbnailBorder{ Color::fromBytes( 50, 55, 65, 200 ) };
-            static constexpr Color kFolderCardBorder{ Color::fromBytes( 40, 48, 62, 160 ) };
-            static constexpr Color kFolderPocketBorder{ Color::fromBytes( 15, 25, 45, 120 ) };
-            static constexpr Color kLockBadgeLocked{ Color::fromBytes( 255, 160, 40, 255 ) };
-            static constexpr Color kLockBadgeReadOnly{ Color::fromBytes( 170, 170, 170, 255 ) };
+            /** @brief OS 파일 놓기 미리보기 테두리 두께(96 DPI 픽셀) — 계층의 놓을 위치 표시와 같다. */
+            static constexpr float32 kDropOutlineThickness = 2.0f;
+            static constexpr Color   kFolderCardBorder{ Color::fromBytes( 40, 48, 62, 160 ) };
+            static constexpr Color   kFolderPocketBorder{ Color::fromBytes( 15, 25, 45, 120 ) };
+            static constexpr Color   kLockBadgeLocked{ Color::fromBytes( 255, 160, 40, 255 ) };
+            static constexpr Color   kLockBadgeReadOnly{ Color::fromBytes( 170, 170, 170, 255 ) };
 
             /** @brief 타일 이름의 줄 수입니다. 넘치면 마지막 줄을 말줄임표로 줄입니다(`EditorWidgets::drawClampedLabel`). */
             static constexpr uint32 kTileLabelLineCount = 2;
@@ -526,6 +529,9 @@ namespace sw::editor
         , _activeCollectionName{}
         , _collectionNameBuffer{}
         , _syncedAssetID{}
+        , _listFolderDropRect{}
+        , _assetViewMin{}
+        , _assetViewMax{}
     {
     }
 
@@ -1044,7 +1050,9 @@ namespace sw::editor
 
         drawSourcesSection();
         ImGui::SameLine();
+        _listFolderDropRect.clear();
         drawAssetView();
+        handleOSFileDrop();
         drawDeleteConfirmModal();
         drawMoveConfirmModal();
         drawCollectionNamePopups();
@@ -1289,6 +1297,11 @@ namespace sw::editor
         assetsDesc._kind  = editor::EditorSectionKind::Child;
         assetsDesc._flags = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::FillRemaining;
         EditorChrome::beginSection( assetsDesc );
+        // OS 파일 놓기를 받는 영역 — 시나리오가 놓을 자리(`contentBrowser.assetView`)도 이것이다.
+        const ImVec2 viewMin = ImGui::GetWindowPos();
+        _assetViewMin        = float2{ viewMin.x, viewMin.y };
+        _assetViewMax        = float2{ viewMin.x + ImGui::GetWindowSize().x, viewMin.y + ImGui::GetWindowSize().y };
+        EditorSelfTestMarks::recordRect( "contentBrowser.assetView", _assetViewMin, _assetViewMax );
 
         // 펼친 컬렉션이 있으면 폴더 대신 그 에셋 줄을 보인다
         const ContentBrowserCollection* pActiveCollection = _activeCollectionName.empty() ? nullptr : _collections.findCollection( _activeCollectionName, _bActiveCollectionShared == SW_TRUE );
@@ -1325,6 +1338,62 @@ namespace sw::editor
             ImGui::SameLine();
             ImGui::TextDisabled( "|  %s", _model.getSelectedAssetPath().c_str() );
         }
+    }
+
+    void ContentBrowserPanel::recordFolderDropRect( const AssetEntry& entry )
+    {
+        const ImVec2 itemMin = ImGui::GetItemRectMin();
+        const ImVec2 itemMax = ImGui::GetItemRectMax();
+        _listFolderDropRect.push_back( ContentBrowserFolderDropRect{
+            float2{itemMin.x, itemMin.y},
+            float2{itemMax.x, itemMax.y},
+            entry._absolutePath
+        } );
+    }
+
+    void ContentBrowserPanel::handleOSFileDrop()
+    {
+        const auto isInside = []( const float2& point, const float2& minPos, const float2& maxPos )
+        {
+            return point._x >= minPos._x && point._y >= minPos._y && point._x < maxPos._x && point._y < maxPos._y;
+        };
+        const auto findFolder = [this, &isInside]( const float2& point ) -> const string&
+        {
+            for ( const ContentBrowserFolderDropRect& rect : _listFolderDropRect )
+            {
+                if ( isInside( point, rect._min, rect._max ) )
+                    return rect._folderAbs;
+            }
+            return _model.getSelectedFolderPath();
+        };
+
+        // 끄는 동안(능력 Hover 인 창): 에셋 영역 위면 놓을 자리를 보인다 — 폴더 위면 그 폴더, 아니면 영역 전체를 강조한다(데이터 · 선택 색 — R11, taste app-screens).
+        float2 hoverPosition{};
+        if ( EditorFileDrop::findHover( hoverPosition ) && isInside( hoverPosition, _assetViewMin, _assetViewMax ) && _model.canImport() )
+        {
+            ImDrawList*   pDrawList = ImGui::GetForegroundDrawList();
+            const ImU32   color     = EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Accent" ) );
+            const float32 thickness = ContentBrowserPanelInternal::kDropOutlineThickness;
+            float2        minPos    = _assetViewMin;
+            float2        maxPos    = _assetViewMax;
+            for ( const ContentBrowserFolderDropRect& rect : _listFolderDropRect )
+            {
+                if ( isInside( hoverPosition, rect._min, rect._max ) )
+                {
+                    minPos = rect._min;
+                    maxPos = rect._max;
+                }
+            }
+            pDrawList->AddRect( ImVec2{ minPos._x, minPos._y }, ImVec2{ maxPos._x, maxPos._y }, color, 0.0f, 0, thickness );
+            requestAnimationFrame(); // 끄는 동안 강조가 포인터를 따라간다
+        }
+
+        float2 dropPosition{};
+        if ( EditorFileDrop::peekDrop( dropPosition ) == false || isInside( dropPosition, _assetViewMin, _assetViewMax ) == false )
+            return;
+        vector<string> listPath;
+        (void)EditorFileDrop::takeDrop( listPath, dropPosition );                // 위에서 놓인 것을 확인했다
+        (void)_model.importDroppedFiles( listPath, findFolder( dropPosition ) ); // 받은 수 · 거른 사유는 모델이 로그로 남긴다
     }
 
     void ContentBrowserPanel::drawBreadcrumbs()
@@ -1423,7 +1492,10 @@ namespace sw::editor
                     // 폴더도 끌기 원본이다(폴더째 옮기기 — 언리얼 콘텐츠 브라우저와 같다). 폴더는 놓을 자리이기도 하다
                     EditorWidgets::drawAssetDragSource( entry._relativePath.c_str(), true );
                     if ( entry._bIsDirectory )
+                    {
+                        recordFolderDropRect( entry );
                         acceptAssetDrop( entry._absolutePath );
+                    }
 
                     ImDrawList*       pDrawList = ImGui::GetWindowDrawList();
                     constexpr float32 inset     = 6.0f;
@@ -1495,7 +1567,10 @@ namespace sw::editor
                     // 폴더도 끌기 원본이다(타일 보기와 같다)
                     EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );
                     if ( entry._bIsDirectory )
+                    {
+                        recordFolderDropRect( entry );
                         acceptAssetDrop( entry._absolutePath );
+                    }
                     if ( _model.isRenaming( entry ) )
                     {
                         ImGui::SameLine();

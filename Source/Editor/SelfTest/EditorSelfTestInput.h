@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -107,6 +108,11 @@ namespace sw::editor
         static void typeText( string_view utf8Text );
         /** @brief 세로 휠을 @p notches 눈금 돌립니다(양수면 위로). 커서 아래 창이 받는다. */
         static void scrollMouseWheel( float32 notches );
+        /**
+         * @brief OS 파일 끌어 놓기를 흉내 냅니다 — 화면 좌표 @p screenPosition 위로 들어와(Enter · Over) @p listPath 를 놓습니다(Drop).
+         * @details 창 처리기와 같은 입구(`EditorFileDrop::postAtScreenPosition`)라 받는 창의 길이 OS 놓기와 같다. 한 번에 넣는다 — 받는 창은 다음 그리기에서 꺼낸다.
+         */
+        static void dropFiles( const vector<string>& listPath, const float2& screenPosition );
         /**
          * @brief 이 뒤에 넣는 이벤트는 다음 ImGui 프레임에 들어갑니다.
          * @details 플랫폼 백엔드가 프레임마다 실제 커서를 넣으므로 누름과 뗌을 한 프레임에 몰면 뗄 때 커서가 위젯 밖에 있다. 그래서 뗌 앞에서 끊고 커서를 다시 옮긴다.

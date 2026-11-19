@@ -6,6 +6,8 @@
     "_undoMaxCommandCount": 128,
     "_undoBufferMegabytes": 32,
     "_documentAutosaveSeconds": 60,
+    "_fileDropMaxMegabytes": 512,
+    "_fileDropMaxCount": 256,
     "_listBaseFont": [
         "segoeui.ttf",
         "NotoSans-Regular.ttf",

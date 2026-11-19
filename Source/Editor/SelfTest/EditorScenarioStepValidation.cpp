@@ -145,6 +145,7 @@ namespace sw::editor
     SW_AUTOMATION_STEP_VALIDATOR( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepValidation::validateDrag );
     SW_AUTOMATION_STEP_VALIDATOR( editorHover, EditorScenarioStepValidation::kHoverKind, &EditorScenarioStepValidation::validateHover );
     SW_AUTOMATION_STEP_SCHEMA( editorText, EditorScenarioStepValidation::kTextKind, EditorTextParams );
+    SW_AUTOMATION_STEP_SCHEMA( editorDropFiles, EditorScenarioStepValidation::kDropFilesKind, EditorDropFilesParams );
     SW_AUTOMATION_STEP_VALIDATOR( editorKey, EditorScenarioStepValidation::kKeyKind, &EditorScenarioStepValidation::validateKey );
     SW_AUTOMATION_STEP_SCHEMA( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, EditorExpectObjectParams );
     SW_AUTOMATION_STEP_SCHEMA( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, EditorDockLayoutParams );

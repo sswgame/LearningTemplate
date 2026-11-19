@@ -1542,7 +1542,7 @@ public:
 - 항목 단축키: 계층은 F2 · Ctrl+D · Del · Ctrl+C/V 가 이미 있고, 콘텐츠 브라우저에 Ctrl+C = Copy Relative Path(언리얼 콘텐츠 브라우저의 Ctrl+C 가 에셋 참조 글을 복사하는 것)를 더한다. 노드 그래프는 `EditorGraphEditCommand` 가 같은 키를 맡는다.
 - 오브젝트 → 칸: 계층 행을 `SceneObjectReference` · 타입 핸들 칸에 놓으면 그 오브젝트(핸들은 그 오브젝트의 첫 대상 타입 컴포넌트)가 들어간다.
 
-**남은 몫.** OS 파일 → 콘텐츠 브라우저 임포트는 엔진 플랫폼 층(Win32 `WM_DROPFILES` · X11 XDND · Wayland `wl_data_device`)에 원시 입력 사건 종류를 더해야 한다 — 에디터만으로 닫히지 않는다. 에셋 → 노드 그래프(텍스처 → 샘플 노드)는 그래프가 "에셋 종류 → 노드 종류" 표를 등록하는 자리로(`EditorNodeGraph` 의 `drawAddNodePopup` 옆), 시퀀서 · 카메라 프리셋 · 충돌 프리셋 패널은 그 갈래가 위 공통 층을 붙인다.
+**닫은 것(2 차).** OS 파일 → 콘텐츠 브라우저: 창 사건 `WindowFileDropEvent`(원시 입력 큐가 아니다 — 길이가 정해지지 않은 경로이고 리플레이 대상이 아니다)와 능력 표 `WindowFileDropSupport`(Win32 `WM_DROPFILES` 놓기만 — OLE `IDropTarget` 은 STA 가 필요한데 메인 스레드가 오디오 때문에 MTA, X11 XDND · Wayland `wl_data_device` 는 끄는 동안도, 웹 · Android 는 받지 않음) → `EditorFileDrop` → `ContentBrowserFileDropPlan`(경로를 믿지 않는다) → 기존 임포트 길. 에셋 → 노드 그래프: `EditorGraphAssetNodeRule` 표와 `EditorNodeGraph::acceptAssetDrop`, 머티리얼 그래프에 텍스처 → TextureSample 첫 등록. 카탈로그 칸 휠클릭 = 상속값으로(`CatalogDocument::canRevertToInherited` — 데이터 테이블은 상속 칸이 없다). 에셋 페이로드 id 는 리소스 id 한 형식(`EditorWidgets::registerAssetPayload`). 시퀀서 · 카메라 프리셋 · 충돌 프리셋 패널은 그 갈래가 공통 층을 붙인다.
 
 ## 시나리오 · 테스트 프레임워크 개편 판단(2026-11-17)
 

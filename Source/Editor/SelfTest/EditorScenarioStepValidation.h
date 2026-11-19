@@ -63,6 +63,18 @@ namespace sw::editor
         int32 _count{ 1 }; ///< 누름 수 — 2 면 더블클릭(Playwright clickCount). 더블클릭은 이것으로 적는다(클릭 두 단계를 잇달아 두면 벽시계 간격에 달린다)
     };
 
+    /** @brief `EditorDropFiles` 의 인자입니다 — OS 파일 끌어 놓기 흉내(`EditorSelfTestInput::dropFiles`). */
+    REFLECT()
+    struct SW_EDITOR_API EditorDropFilesParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _mark{}; ///< 놓을 자리(레이블 가운데)
+        PROPERTY( Required )
+        string _files{}; ///< `;` 로 나눈 원본 파일 — 리소스 id(`engine/automation/…`) 또는 절대 경로(`asset.import` 와 같은 읽기). 없는 파일도 그대로 놓는다(받는 쪽이 거른다)
+    };
+
     /** @brief `EditorDrag` 의 인자입니다. 끝은 `toMark` 또는 이동량(`dx` · `dy`) 하나로 적습니다. */
     REFLECT()
     struct SW_EDITOR_API EditorDragParams
@@ -196,6 +208,7 @@ namespace sw::editor
         static constexpr const utf8* kCaptureKind      = "CaptureEditorUI";
         static constexpr const utf8* kSelfTestKind     = "EditorSelfTest";
         static constexpr const utf8* kWaitStableKind   = "EditorWaitStable";
+        static constexpr const utf8* kDropFilesKind    = "EditorDropFiles";
         /**
          * @brief UI 캡처 한 번이 시나리오 벽시계 상한에 더하는 초입니다. 캡처는 에디터가 가라앉기(애셋 · 배경 작업 — 바깥 일)를 벽시계로 기다린다.
          * @details 캡처 수에 상한이 따라가지 않으면 패널마다 찍는 감사(uiaudit, 40 장 넘게)가 부하 걸린 기계에서 기본 150 초를 넘겨 졌다
