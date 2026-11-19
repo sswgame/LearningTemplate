@@ -259,6 +259,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Collision Responses" source="Collision Responses" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Command Palette" source="Command Palette" context="EditorPanelText._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
@@ -4475,6 +4480,7 @@
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/Physics/CollisionResponsePanel.cpp</item>
 				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
 				<item>Source/Editor/Panels/TileSet/TileSetPanel.cpp</item>
@@ -4522,6 +4528,7 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+				<item>Source/Editor/Panels/Physics/CollisionResponsePanel.cpp</item>
 				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
 				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
@@ -5888,6 +5895,42 @@
 		<entry key="EditorCatalog.UseInherited" source="Use inherited">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCollision.Block" source="Block">
+			<origins>
+				<item>Source/Editor/Panels/Physics/CollisionResponsePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCollision.Ignore" source="Ignore">
+			<origins>
+				<item>Source/Editor/Panels/Physics/CollisionResponsePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCollision.Overlap" source="Overlap">
+			<origins>
+				<item>Source/Editor/Panels/Physics/CollisionResponsePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCollision.PairsTitle" source="Resulting response between profiles">
+			<origins>
+				<item>Source/Editor/Panels/Physics/CollisionResponsePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCollision.Profile" source="Profile">
+			<origins>
+				<item>Source/Editor/Panels/Physics/CollisionResponsePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCollision.ResponsesTip"
+		       source="Click a cell to cycle Block, Overlap and Ignore. Two bodies use the weaker of the responses they give each other. Dim cells use the channel default.">
+			<origins>
+				<item>Source/Editor/Panels/Physics/CollisionResponsePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCollision.ResponsesTitle" source="Responses by profile and channel">
+			<origins>
+				<item>Source/Editor/Panels/Physics/CollisionResponsePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.AllLevelsHidden" source="All log levels are hidden. Re-enable one in the toolbar.">

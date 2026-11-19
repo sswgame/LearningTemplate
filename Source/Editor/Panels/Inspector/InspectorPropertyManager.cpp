@@ -23,6 +23,7 @@
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
+#include "Editor/Panels/Inspector/Model/InspectorNameSource.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
@@ -269,6 +270,32 @@ namespace sw::editor
                 return "%.2f";
             else
                 return ImGui::DataTypeGetInfo( getNumberDataType<T>() )->PrintFmt;
+        }
+
+        /**
+         * @brief 이름 칸을 출처(`Meta = "NameSource=…"`)의 이름 목록에서 고르는 콤보로 그립니다. 고쳤으면 true 입니다.
+         * @details 지금 값이 목록에 없으면(지운 프로필 · 오타) 맨 끝 항목으로 남겨 보인다 — 조용히 첫 이름으로 바꾸지 않는다(검증이 오류를 낸다).
+         *          모르는 출처면 @p outbUnknownSource 를 세우고 그리지 않는다(부르는 쪽이 글 칸을 그린다).
+         */
+        bool drawNameChoice( EditorWidgetID id, const hashed_string& source, hashed_string& value, bool& outbUnknownSource )
+        {
+            vector<hashed_string> listName; // 이 칸이 보일 때만 모은다(프로필 · 채널은 수십 개 이하)
+            outbUnknownSource = InspectorNameSource::collectNames( source, listName ) == false;
+            if ( outbUnknownSource )
+                return false;
+            const auto found = std::find( listName.begin(), listName.end(), value );
+            if ( found == listName.end() && value.empty() == false )
+                listName.push_back( value );
+            const bool  bListed = value.empty() == false;
+            const int32 current = bListed ? static_cast<int32>( std::find( listName.begin(), listName.end(), value ) - listName.begin() ) : static_cast<int32>( listName.size() );
+            const auto  getItem = []( void* pUserData, int32 index ) -> const utf8*
+            { return ( *static_cast<const vector<hashed_string>*>( pUserData ) )[static_cast<size_t>( index )].c_str(); };
+            int32 chosen = current;
+            if ( EditorWidgets::combo( id, &chosen, getItem, &listName, static_cast<int32>( listName.size() ) ) == false || chosen == current ||
+                 static_cast<size_t>( chosen ) >= listName.size() )
+                return false;
+            value = listName[static_cast<size_t>( chosen )];
+            return true;
         }
 
         /** @brief Enter 로 확정하는 입력란입니다. 키 입력마다 인턴하지 않으려는 용도입니다. 확정했으면 true 입니다. */
@@ -708,7 +735,13 @@ namespace sw::editor
                     bApplied = applyAssetFieldAction( action, row, model, droppedPath );
                 }
                 else
-                    bChanged = drawNameInput( kValueWidgetID, edited );
+                {
+                    bool bUnknownSource = row._nameSource.empty();
+                    if ( bUnknownSource == false )
+                        bChanged = drawNameChoice( kValueWidgetID, row._nameSource, edited, bUnknownSource );
+                    if ( bUnknownSource )
+                        bChanged = drawNameInput( kValueWidgetID, edited );
+                }
                 showTooltipIfHovered( row );
                 // 되돌리기는 프로퍼티 값 글(이름 글)로 남는다 — 인턴된 문자열은 해제되지 않으므로 되돌린 이름도 언제나 다시 인턴된다.
                 if ( bChanged && bApplied == false )

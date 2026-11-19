@@ -1165,6 +1165,45 @@ struct SW_API ReplicatedLayout
 **컨테이너(이어서).** CONTAINER 줄에 Roles(`State` · `Fixed`) 칸을 더했다. 래퍼가 `kInPlaceElementWrite` · `kFixedSize` 를 형식의 정적 값으로 들고 `ContainerWrapperOf<W>::matchesTable` 이 표와 대조한다 — 생성 코드가 컨테이너 칸마다 `static_assert` 를 낸다(언리얼 `FArrayProperty` · `FSetProperty` 가 형식에서 정해지는 것과 같은 자리). 집합 · 맵은 State 가 아니라 RuntimeState 로 쓸 수 없다(집합 읽기가 정렬 키를 제자리에서 고치고, unordered_set 해시는 실행마다 차례가 달랐다). 런타임 판정은 `PropertyInfo::findStateSequence` 하나다. xxx 의 "숫자 줄이 이어져 있다" 차례 규칙은 지웠다 — num 줄이 Number 갈래인지 컴파일이 본다.
 
 **확인.** 파서 픽스처 `RuntimeStateUnsupportedType`, 도구 입력 `ReflectionParser.ToolInputs.broken-builtins-{interp,widget,layout}`, 단위 `ReflectionPropertyRoleTest.InterpRoleRowsAreInterpolatable` · `BuiltinLayoutGivesComponentCountAndSize`, `StateIOReflectedTest.BuiltinLayoutPropertiesRoundTrip` · `Int2BytesMatchTheHandWriter`, `StateHashTest.LayoutAndHandHandlerPropertiesFold` · `EveryStateRowCanBeChanged`, `ReflectionPropertyRoleTest.StateSequenceIsTheOrderedFlatSequence`, `UIBindingValueKindTest.EveryRowKindComesFromItsOwnClass`, `UIAnimationPlayerTest.IntegerPropertiesStayDiscrete`, `ReflectionPropertyRoleTest.StateRowsHaveOneHandHandlerList` · `ProcessLocalHandlesAreNotSaved`, 픽스처 `SaveGameOnLocalHandle`, 도구 입력 `broken-builtins-container`.
+### 트리거 Enter · Stay · Exit 계약(설계 2026-11-20)
+
+**문제.** 겹침 영역이 여러 벌이고 경계 상황의 약속이 적혀 있지 않았다. 전수:
+1. **물리 트리거 · 센서**(Jolt `mIsSensor` · Box2D 센서 · 2D 연속 콜라이더의 쓸기): 백엔드 알림 → `PhysicsContactTracker`(셰이프 쌍 수 → 바디 쌍 시작 · 유지 · 끝) → `ScenePhysics` 가 `FlushPostPhysics` 단계에 게임 스레드에서 `Component::onOverlapBegin/End` 로 나눈다. 받는 쪽: `GimmickSensorComponent`(인원 · 무게), `ActivatorVolumeComponent`(→ `TutorialHint` · `AutosaveTrigger` · `SequenceTrigger`), `ScareTrigger` · `LaunchPad` · `BoostPad` · `ItemBox`. 유지는 opt-in(`registerContactStayListener`).
+2. **지역 볼륨 · 표면**(`ZoneVolumeComponent` · `ZoneContactComponent`): 매 프레임 겹침 질의(공간 격자 후보 → 모양 안 점 검사) → `ZoneTracker`(이번 프레임 집합과 지난 집합의 차) → 진입 · 체류 · 이탈. `ZoneSystem` 이 틱 뒤 게임 스레드에서.
+3. **거리 판정**: `ActivatorVolumeComponent` 의 `_radius`(물리 몸 없는 활성자), 들어오는 순간만.
+4. 이벤트가 아닌 가중 볼륨(`PostProcessVolume` · `AudioReverbZone` · `BuoyancyVolume`)과 복제 관심 격자(`NetInterestGrid`)는 Enter/Exit 계약 밖이다.
+전용 서버(`Ninja-Release-Server`)는 `Engine`(물리 포함) · `GameFramework`(Zone · Gimmick, `Client/` 아님)를 링크하므로 둘 다 서버에서 돈다. 권한 게이트는 없다 — 시뮬레이션하는 월드마다 같은 계약으로 낸다.
+
+결함: (a) 이벤트가 **바디 쌍** 단위라 몸이 여럿인 오브젝트(래그돌 뼈 · 탈것 · 캐릭터 안쪽 바디)는 시작을 여러 번 받고, 센서는 첫 끝에서 아직 안에 있는 대상을 뺐다(`GimmickSensor`), 발판은 여러 번 쐈다. (b) 같은 프레임의 끝과 시작이 쌍 순서로 섞였다. (c) 꺼진 지역 볼륨 · 표면은 시스템이 건너뛰기만 해 안의 대상이 다시 켤 때까지 나가지 않았다(유니티 함정과 같은 꼴). 파괴 대기인 대상은 실제로 지워질 때까지 후보로 남았다(꺼진 대상은 격자 질의가 이미 뺀다). (d) 거리 판정은 활성자가 사라지면 "안" 표시가 남았다.
+
+**대조.** 언리얼: 컴포넌트 쌍마다 `BeginOverlap` 한 번, 생성 · 등록 시 `UpdateOverlaps` 로 이미 겹친 것에 시작, 파괴 · 콜리전 끔 · 등록 해제에 `EndOverlap`, 갱신은 끝을 먼저 낸다. 유니티: 다음 물리 단계에서 `OnTriggerEnter`, 비활성 · 파괴에 `OnTriggerExit` 가 오지 않는 것이 알려진 함정. Godot: `body_entered/exited`, `monitoring` 을 끄면 나간다. → 언리얼 꼴(생성 시 시작, 사라짐 · 꺼짐에 끝, 끝 먼저)을 따르되, 받는 훅이 오브젝트 전체(`Component::onOverlap*` 은 오브젝트의 켜진 컴포넌트 모두)라 단위는 **오브젝트 쌍**이다.
+
+**결정.**
+1. 물리 겹침은 `PhysicsOverlapTracker`(Engine/Physics/Scene) 하나가 낸다 — 열쇠는 (두 오브젝트 id, 각 쪽 트리거 여부, 2D/3D). 바디 쌍 시작 · 끝을 세어 0→1 에 시작, 1→0 에 끝. 트리거 여부를 열쇠에 두는 까닭: 상대의 감지 범위(트리거)와 몸을 받는 쪽이 가린다(`OverlapInfo::_bOtherTrigger`) — 하나로 합치면 범위가 먼저 들어온 뒤 몸이 들어와도 시작이 안 온다. `ScenePhysics` 의 겹침 나눔은 이 추적기의 결과만 쓴다(바디 쌍 이벤트를 직접 나누지 않는다 — 형식으로 한 길).
+2. 프레임 단위로 정리한다: 프레임 시작과 끝의 수로 **끝 먼저 → 시작 → 같은 프레임에 들고 난 것(시작 + 끝)**. 프레임 안에서 나갔다 다시 든 것(끝 0 거침)은 아무것도 내지 않는다(트리거 켜고 끄기 · 바디 다시 짓기가 헛 이탈 · 진입을 내지 않게).
+3. 유지(Stay)는 오브젝트 쌍마다 물리 프레임 한 번, 진입 프레임 포함, 올린 듣는 쪽만(`_pOnOverlapStay`). 막는 접촉의 유지는 지금처럼 바디 쌍 · 스텝마다.
+4. 경계 상황: 트리거 안에서 생성 → 다음 물리 스텝에 시작 한 번(백엔드가 겹친 채 추가된 바디의 접촉을 알린다). 파괴 · 비활성(바디를 놓는다 — `isSimulated`) · 로그아웃(폰 파괴) → 끝 한 번(`removeBodies`). 로그인(폰 생성) → 서버에서 시작 한 번 — 클라이언트는 이벤트를 복제받지 않고 자기 월드가 같은 계약으로 낸다(지금 넷 구조 그대로). 트리거 생성 · 파괴 · 켜고 끄기 · 모양 · 크기 · 이동 → 같은 규칙(바디 추가 · 제거 · 셰이프 교체). 순간 이동은 지나친 길에 이벤트를 내지 않는다(언리얼 `Teleport` · 유니티와 같다 — 2D 연속 콜라이더만 쓸기로 시작 + 끝). 트리거끼리는 `_bOtherTrigger` 가 참인 겹침으로 온다. 처리 안의 파괴 · 생성은 다음 프레임 이벤트가 되고 이번 목록은 사본을 돈다.
+5. 지역(`ZoneTracker`)은 이미 오브젝트 단위 · 이탈 먼저다. 두 벌을 한 추적기로 합치지 않는다 — 입력이 다르다(사건 수 세기 대 프레임 집합 차이) · 지역은 대상마다 모듈 기억을 든다. 계약만 같게 맞춘다: 꺼진 볼륨 · 표면은 안의 대상을 모두 내보내고(다시 켜면 다음 갱신에서 진입), 꺼지거나 파괴 대기인 물리 개체는 후보가 아니다(나간다).
+6. 스트리밍 셀이 내려가면 그 오브젝트는 파괴 길을 지나므로 파괴 규칙대로 남은 트리거에 끝이 간다(트리거가 내려가면 안의 대상에 끝). 스트리밍 코드는 바꾸지 않는다.
+7. 막는 접촉(`onCollisionBegin/End` · 접촉 유지)은 바디 쌍 단위로 둔다 — 겹침은 "안에 있다" 는 상태라 오브젝트 쌍으로 세지만, 접촉은 부딪힌 바디마다의 충격이다(파괴 조각마다 피해 `FractureComponentBase` · 같은 오브젝트 조각끼리의 밀어냄 거름이 `_selfBody` 를 본다). 언리얼 `OnComponentHit`(컴포넌트마다) · 유니티 `OnCollisionEnter`(콜라이더 쌍)와 같다. 접촉을 세는 소비자는 종류로 모은다(`ZoneContactComponent` 는 표면 종류마다 최대 충격 하나 — 몸이 여럿이어도 한 기록). 테스트 `TriggerOverlapContractTest.CollisionStaysPerBodyPair3D`.
+
+**확인.** 단위 `PhysicsOverlapTrackerTest.*`(물리 없음 — 여러 바디 한 번, 끝 먼저, 들고 남, 다시 짓기, 트리거 열쇠 분리, 유지), `TriggerOverlapContractTest.*`(Jolt · Box2D 씬 — 안에서 생성 · 파괴 · 비활성 · 트리거 끄고 켜기 · 순간 이동 · 몸 둘), `ZoneTest.*`(꺼진 볼륨 이탈 · 안에서 생성 첫 프레임 진입 · 파괴 이탈 기록) — 서버 단위(`Server --test`)에도 같은 케이스가 돈다. 시나리오 `triggercontract`(감시 값 `Physics.OverlapCount`).
+
+### 충돌 채널 · 응답 · 프리셋(설계 2026-11-20)
+
+**문제.** 충돌 거름이 이름 붙은 레이어(`physicssettings.xml` 의 `PhysicsLayerDef` 7 개)와 32 × 32 "부딪힘 / 안 부딪힘" 대칭 행렬 하나였다 — 응답이 둘뿐(막지 않고 겹침만 내는 쌍을 적을 수 없다), 질의 채널이 없어(카메라 · 시야 질의가 레이어 이름 목록을 저마다 들었다) 프리셋(오브젝트 종류 + 응답 묶음)이 없었다. 2D 콜라이더(`BoxCollider2DComponent`)만 레이어를 이름이 아닌 번호(`_colliderType`)로 들었다.
+
+**대조.** 언리얼: 채널(Object Channel · Trace Channel, 합쳐 32) · 응답 셋(`ECollisionResponse` Ignore · Overlap · Block) · 두 물체 응답 중 약한 쪽 · 프로필(Collision Preset — 오브젝트 종류 + 채널별 응답 + Query/Physics 켜기) · `LineTraceByChannel`. 유니티: 레이어 32 + 충돌 행렬(켜기/끄기) + 트리거 · `LayerMask` 질의. Godot: `collision_layer` / `collision_mask` 비트. → 언리얼 꼴로 간다. Jolt 의 `ObjectLayer` 는 "바디가 걸러지는 칸" 이라 칸을 **프로필 번호**로 쓰면 백엔드 구조(레이어 쌍 거름 · Box2D category/mask)를 그대로 둔 채 프로필 쌍 응답 표를 내릴 수 있다.
+
+**결정.**
+1. 데이터(`PhysicsSettings`): `_listChannel`(`CollisionChannelDef` — 이름 · 종류 Object/Trace · 기본 응답, 32 이하)과 `_listProfile`(`CollisionProfileDef` — 이름 · 오브젝트 채널 · 채널별 응답 목록 · `_bQueryEnabled` · `_bPhysicsEnabled`, 32 이하, 차례가 바디의 레이어 번호). 프로필이 적지 않은 채널은 그 채널의 기본 응답. 이름이 없거나 겹치거나, 프로필의 오브젝트 채널이 오브젝트 채널이 아니거나, 응답이 모르는 채널이면 읽기 오류. 정책 값은 이 설정 에셋(XML, 카탈로그 편집기가 반사 그리드로 고친다)에 둔다 — Config JSON 이 아니라 이미 있는 물리 설정 자리.
+2. 응답 표(`CollisionLayers` — 프로필 쌍 32 × 32, 세 값): 두 프로필의 응답은 서로의 오브젝트 채널에 준 응답 중 약한 쪽(무시 < 겹침 < 막음), 물리가 꺼진 프로필은 모두 무시. 백엔드는 무시가 아닌 쌍만 짝짓는다. 겹침 쌍: Jolt 는 그 쌍의 접촉을 센서로 돌리고(`ContactSettings::mIsSensor`) 이벤트를 겹침으로 알린다 → 트리거 계약 추적기(`PhysicsOverlapTracker`)가 진입 · 이탈을 낸다. Box2D 는 막는 셰이프끼리 겹침이면 사용자 거름(`b2World_SetCustomFilterCallback`)이 접촉을 뺀다 — Box2D 는 막는 셰이프끼리 겹침 이벤트를 못 내므로(센서만) 2D 에서 겹침 이벤트는 한쪽이 트리거일 때만이다(유니티 2D 와 같다). 마스크에서 겹침 쌍을 빼지 않는다 — 트리거가 그 상대를 봐야 한다.
+3. 트리거 표시(`_bTrigger`)는 남긴다 — 바디 단위 "센서로 만든다" 이고, 응답은 쌍 단위 "막을지" 다. 트리거 프로필은 상대에 겹침을 준다(데이터).
+4. 질의: `PhysicsSettings::makeTraceLayerMask( 채널 )`(그 채널을 막는, 질의 켜진 프로필), `ScenePhysics::makeTraceFilter( 채널 )` → `PhysicsQueryFilter`. 모르는 채널 · 오브젝트 채널이면 오류 + nullopt(모두 맞는 필터로 대신하지 않는다). Jolt · Box2D 질의는 이미 레이어 마스크로 거르므로 그대로 내려간다. 전용 서버도 같은 설정 · 같은 코드다.
+5. 이전: 프로필 이름 · 차례를 옛 레이어(Default · Static · Character · Ragdoll · Debris · Trigger · Projectile)와 같게 두고, 응답을 옛 행렬 그대로 적었다(테스트가 옛 표와 견준다) — 이름으로 적은 씬 · 프리팹(`_layer`)은 그대로 같은 동작이다. 일부러 바꾼 칸은 둘이다: Projectile 은 Pawn 에 막히고 Trigger 와 겹친다(옛 표는 무시 — Projectile 프로필을 쓰는 콘텐츠가 없다). 오브젝트 채널은 WorldStatic · WorldDynamic · Pawn · Ragdoll · Debris · Trigger · Projectile, 트레이스 채널은 Visibility(기본 막음) · Camera(기본 무시, 세상만 막음). 2D 콜라이더의 번호 칸 `_colliderType` 은 이름 칸 `_layer` 로 바꾸고 콘텐츠 20 파일을 옮겼다(모두 0 → Default). 인스펙터 표시 이름은 "Collision Profile".
+6. 에디터: 응답 격자는 "Collision Responses" 창(`CollisionResponsePanel` — 프로필 × 채널 칸을 눌러 막음 → 겹침 → 무시, 아래에 프로필 쌍 결과 표, 문서 원문 단계로 되돌리기, 주석 · 자산 줄을 지키는 원문 편집 `CatalogXMLText`, 기본과 같은 값은 줄을 빼 적힌 줄은 늘 기본과 다른 값). 채널 · 프로필 더하기 · 지우기는 카탈로그 편집기다. 이름 칸은 `PROPERTY( Meta = "NameSource=CollisionProfile" )` · `"NameSource=CollisionChannel"` 메타로 인스펙터가 고르기 목록을 그린다(`InspectorNameSource` — 언리얼 `GetOptions` 자리, 목록에 없는 지금 값은 끝 항목으로 남겨 보인다).
+
+**확인.** 단위 `CollisionProfileTest.*`(응답 표 대칭 · 약한 쪽, 프로필 해석 · 트레이스 마스크, 나쁜 데이터 오류, 배포 설정이 옛 표와 같음, Jolt · Box2D 막음 · 겹침 · 무시, 트레이스 채널 광선 거르기) — 서버 단위에도 돈다. 시나리오 `game/empty/automation/collisionprofiles`(투사체가 트리거는 겹치며 지나가고 Pawn 에 막힌다, 감시 값 `Physics.TraceDistance` 로 Camera 채널이 Pawn 을 무시하고 Visibility 는 맞는다).
 
 ## 도구 · 에디터 · 콘텐츠 파이프라인 설계(2026-11-17)
 

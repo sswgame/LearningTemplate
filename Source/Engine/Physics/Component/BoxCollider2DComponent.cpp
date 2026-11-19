@@ -13,6 +13,7 @@
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Collision/SweepHit.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
 namespace sw
@@ -63,7 +64,7 @@ namespace sw
         : PhysicsComponent{ PhysicsComponentPhase::Body }
         , _offsetPos{ 0.0f, 0.0f }
         , _offsetScale{ 0.0f, 0.0f }
-        , _colliderType{ 0 }
+        , _layer{}
         , _bContinuous{ false }
         , _bTrigger{ false }
         , _body{}
@@ -73,6 +74,7 @@ namespace sw
         , _frameFromCenter{}
         , _bodyOffsetPos{}
         , _bodyOffsetScale{}
+        , _bodyLayerName{}
         , _bodyLayer{ 0 }
         , _bBodyTrigger{ false }
         , _bSweepOriginValid{ false }
@@ -165,8 +167,9 @@ namespace sw
         float2 aMin{}, aMax{}, bMin{}, bMax{};
         getBounds( aMin, aMax );
         pOther->getBounds( bMin, bMax );
-        return queryOverlaps( BoxCollider2DComponentInternal::makeColliderAABB( aMin, aMax ), static_cast<uint8>( _colliderType ),
-                              BoxCollider2DComponentInternal::makeColliderAABB( bMin, bMax ), static_cast<uint8>( pOther->_colliderType ), layers );
+        const uint8 layerA = pPhysics != nullptr ? pPhysics->resolveLayer( _layer ) : uint8{ 0 };
+        const uint8 layerB = pPhysics != nullptr ? pPhysics->resolveLayer( pOther->_layer ) : uint8{ 0 };
+        return queryOverlaps( BoxCollider2DComponentInternal::makeColliderAABB( aMin, aMax ), layerA, BoxCollider2DComponentInternal::makeColliderAABB( bMin, bMax ), layerB, layers );
     }
 
     bool BoxCollider2DComponent::containsPoint( const float2& point ) const
@@ -197,14 +200,15 @@ namespace sw
         desc._userData      = getOwner()->getObjectID();
         desc._gravityFactor = 0.0f;
         desc._type          = PhysicsBodyType::Kinematic;
-        desc._layer         = static_cast<uint8>( _colliderType );
+        desc._layer         = physics.resolveLayer( _layer );
         desc._bTrigger      = _bTrigger;
         desc._bOverlapOnly  = true;  // 막는 콜라이더도 센서다 — 키네마틱끼리는 접촉이 없어서 센서여야 겹침이 난다
         desc._bAllowSleep   = false; // 잠든 키네마틱은 옮겨도 깨어날 일이 없다 — 센서 판정에서 빠지지 않게 깨워 둔다
         _body               = pScene->createBody( desc );
         _bodyCenter         = center;
         _bodyHalfExtent     = halfExtents;
-        _bodyLayer          = _colliderType;
+        _bodyLayerName      = _layer;
+        _bodyLayer          = desc._layer;
         _bBodyTrigger       = _bTrigger;
     }
 
@@ -228,7 +232,7 @@ namespace sw
         // 바디는 이 컴포넌트만 지운다(씬을 내릴 때는 `ScenePhysics::onSceneCleared` 가 먼저 놓게 한다) — 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다.
         SW_ASSERT( _body.isValid() == false || pScene->isBodyValid( _body ) );
         const bool bSameInput = _body.isValid() && bTransformChanged == false && bTeleported == false && bRebuild == false && _bodyOffsetPos == _offsetPos &&
-                                _bodyOffsetScale == _offsetScale && _bodyLayer == _colliderType && _bBodyTrigger == _bTrigger;
+                                _bodyOffsetScale == _offsetScale && _bodyLayerName == _layer && _bBodyTrigger == _bTrigger;
         if ( bSameInput )
         {
             _frameFromCenter   = _bodyCenter;
@@ -252,7 +256,7 @@ namespace sw
         _frameFromCenter = ( _bSweepOriginValid && bTeleported == false ) ? _sweepOrigin : center;
         // 레이어 · 트리거가 바뀌면 다시 만든다 — 세터는 표시를 남기지 않으므로 매 프레임 바디를 만든 값과 비교한다. 크기(상자 값 · 트랜스폼 배율)만 바뀌면
         // 바디는 두고 셰이프만 간다 — 다시 만들면 겹쳐 있던 쌍마다 끝 → 시작이 난다(감사 S-4, 강체 `applyScaledShape` 와 같다).
-        const bool bKindChanged = _body.isValid() && ( _bodyLayer != _colliderType || _bBodyTrigger != _bTrigger );
+        const bool bKindChanged = _body.isValid() && ( _bodyLayerName != _layer || _bBodyTrigger != _bTrigger );
         const bool bSizeChanged = _body.isValid() && _bodyHalfExtent != halfExtents;
         if ( bRebuild || bKindChanged )
         {
@@ -314,7 +318,7 @@ namespace sw
         const CollisionLayers& layers = pScene->getLayerCollision();
         PhysicsQueryFilter     filter;
         filter._ignoreBody       = _body;
-        filter._layerMask        = layers.getLayerMask( static_cast<uint8>( _bodyLayer ) );
+        filter._layerMask        = layers.getLayerMask( _bodyLayer );
         filter._bIncludeTriggers = SW_TRUE;
 
         vector<SweptOverlap2D> listSwept;
@@ -345,7 +349,7 @@ namespace sw
         const AABB toBox   = Internal::makeSweepBox( _bodyCenter, _bodyHalfExtent );
         for ( const BoxCollider2DComponent* pOther : listMoved )
         {
-            const bool bSkipOther = pOther == this || layers.shouldCollide( static_cast<uint8>( _bodyLayer ), static_cast<uint8>( pOther->_bodyLayer ) ) == false;
+            const bool bSkipOther = pOther == this || layers.shouldCollide( _bodyLayer, pOther->_bodyLayer ) == false;
             if ( bSkipOther )
                 continue;
             const float2 relative = delta - ( pOther->_bodyCenter - pOther->_frameFromCenter );
@@ -378,5 +382,13 @@ namespace sw
         if ( pScene != nullptr )
             pScene->destroyBody( _body );
         _body = PhysicsBodyHandle{};
+    }
+} // namespace sw
+
+namespace sw
+{
+    void BoxCollider2DComponent::validateLayer( ValidationContext& context ) const
+    {
+        PhysicsNameValidation::validateLayer( context, "_layer", _layer );
     }
 } // namespace sw

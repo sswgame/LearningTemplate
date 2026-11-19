@@ -13,6 +13,34 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct ZoneSystemInternal
+        {
+            /**
+             * @brief 꺼진(비활성) 지역 컴포넌트 @p T 가 든 대상을 모두 내보냅니다(`releaseOccupants`). 켜진 것만 도는 길은 꺼진 볼륨을 건너뛰기만 해 안의 대상이
+             *        다시 켤 때까지 "안" 으로 남았다 — 언리얼 콜리전 끔 → EndOverlap · Godot `monitoring` 끔과 같게 나간다. 다시 켜지면 다음 갱신에서 진입한다.
+             */
+            template <typename T>
+            static void releaseInactive( GameObjectManager& manager, vector<ComponentHandle>& inoutScratch )
+            {
+                inoutScratch.clear();
+                const ComponentRegistry::View<T> view = manager.getComponentRegistry().getAll<T>();
+                for ( size_t index = 0; index < view.size(); ++index )
+                {
+                    inoutScratch.push_back( view.getHandle( index ) );
+                }
+                for ( const ComponentHandle handle : inoutScratch )
+                {
+                    Component* pComponent = manager.resolveComponent( handle );
+                    if ( pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isActive() )
+                        continue;
+                    static_cast<T*>( pComponent )->releaseOccupants( manager ); // 레지스트리는 정확히 T 로 오른 것만 담는다
+                }
+            }
+        };
+    } // namespace
+
     ZoneSystem::ZoneSystem()
         : _listHandleScratch{}
     {
@@ -60,6 +88,8 @@ namespace sw
     {
         if ( deltaTime > 0.0f )
         {
+            ZoneSystemInternal::releaseInactive<ZoneVolumeComponent>( manager, _listHandleScratch );
+            ZoneSystemInternal::releaseInactive<ZoneContactComponent>( manager, _listHandleScratch );
             manager.forEachActiveRegistered<ZoneVolumeComponent>( _listHandleScratch, [&manager, deltaTime]( ZoneVolumeComponent& volume )
             { volume.updateZone( manager, deltaTime ); } );
             manager.forEachActiveRegistered<ZoneContactComponent>( _listHandleScratch, [&manager, deltaTime]( ZoneContactComponent& contact )

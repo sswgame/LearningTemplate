@@ -1838,6 +1838,8 @@
 		       sourceHash="5b15694f18c528ae" />
 		<entry key="EditorCatalog.Scanning" text="리소스를 훑는 중..." sourceHash="4841a1ca2af64c10" />
 		<entry key="EditorCatalog.UseInherited" text="물려받기" sourceHash="ec2c159686f468e6" />
+		<entry key="EditorCollision.Overlap" text="오버레이" sourceHash="7ed143cddb1bffa8" review="true" />
+		<entry key="EditorCollision.Profile" text="프로파일러" sourceHash="b061ff5a347a296e" review="true" />
 		<entry key="EditorConsole.AllLevelsHidden"
 		       text="모든 로그 수준이 숨겨져 있습니다. 툴바에서 하나를 다시 켜세요."
 		       sourceHash="370f9580d5db61a5" />
