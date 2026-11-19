@@ -26,10 +26,14 @@ namespace sw
     /**
      * @class IAIDirectorIntensityModel
      * @brief 감독이 읽는 긴장도 모델입니다. 감독은 `update` 를 프레임마다 한 번 부르고 값을 읽기만 하며, 신호는 게임이 모델에 직접 넣습니다.
+     * @details 리플렉션에 추상 기반으로 등록한다 — 리플렉션 파생(`AIDirectorIntensityModel`)의 부모 사슬이 끊기지 않게(`castTo` · 상속 병합).
      */
-    class IAIDirectorIntensityModel
+    REFLECT( Abstract )
+    class SW_GF_API IAIDirectorIntensityModel
     {
     public:
+        REFLECT_BODY();
+
         IAIDirectorIntensityModel()                                              = default;
         IAIDirectorIntensityModel( const IAIDirectorIntensityModel& )            = default;
         IAIDirectorIntensityModel& operator=( const IAIDirectorIntensityModel& ) = default;
