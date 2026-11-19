@@ -1308,8 +1308,8 @@ namespace sw
                                   bOnScreen && bBackBuffer && target._width > 0 && target._height > 0;
         if ( bDrawOverlay == false )
             return;
-        // 화면 대상의 실제 포맷이다 — 스왑체인이면 백버퍼 포맷, 회전 대기 텍스처 · HDR UI RT 면 그 텍스처의 포맷(둘 다 셋업이 캔버스 PSO 를 만든 포맷)이다.
-        const RHIFormat              format = screen == 0 ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( screen );
+        // 화면 대상(스왑체인 · 회전 대기 텍스처 · HDR UI RT)은 모두 UI 대상 포맷이다 — 셋업이 그 포맷의 캔버스 PSO 를 만든다.
+        const RHIFormat              format = _pDevice->getUITargetFormat();
         const RHIPipelineStateHandle pso    = _psoManager.findOutputPSO( RenderPassKind::Canvas, format ); // 셋업에 없으면 멈춘다
         RHIRenderPassBeginInfo       beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;

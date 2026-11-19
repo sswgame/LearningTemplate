@@ -325,7 +325,7 @@ namespace sw::editor
         {
             write._layout._pData     = nullptr; // `_bytes` 를 옮기면 가리킬 곳이 바뀔 수 있다 - 워커는 `_bytes` 로 읽는다
             write._job               = result._job;
-            write._format            = device.getBackBufferFormat();
+            write._format            = device.getUITargetFormat();
             write._pMagentaFraction  = AutomationDeferredValue::create();
             result._pMagentaFraction = write._pMagentaFraction;
             result._bCaptured        = SW_TRUE;
@@ -367,7 +367,7 @@ namespace sw::editor
         RHITextureDesc desc{};
         desc._width             = clampedWidth;
         desc._height            = clampedHeight;
-        desc._format            = device.getBackBufferFormat();
+        desc._format            = device.getUITargetFormat(); // 에디터 UI PSO 와 같은 포맷이어야 그 PSO 로 그린다
         desc._bIsRenderTarget   = SW_TRUE;
         desc._bIsShaderResource = SW_TRUE;
         _texture                = pFactory->createTexture2D( desc );
