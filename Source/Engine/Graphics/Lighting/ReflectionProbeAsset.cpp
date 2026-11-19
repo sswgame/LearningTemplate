@@ -7,6 +7,7 @@
 #include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/EngineParallel.h"
 
 namespace sw
 {
@@ -124,6 +125,28 @@ namespace sw
                 }
                 return weight > 0.0f ? sum / weight : data.sampleLevel( 0, normal );
             }
+
+            /** @brief 거르기의 병렬 일 하나입니다 — 항목 하나가 단계 1 부터의 텍셀 행 하나다(행마다 쓰는 텍셀이 겹치지 않고 단계 0 은 읽기만 한다). */
+            struct FilterJob
+            {
+                ReflectionProbeAsset* _pData{ nullptr };
+                uint32                _sampleCount{ 0 };
+
+                void run( uint32 start, uint32 end )
+                {
+                    const uint32 resolution = _pData->_resolution;
+                    for ( uint32 rowIndex = start; rowIndex < end; ++rowIndex )
+                    {
+                        const uint32  level     = 1u + rowIndex / resolution;
+                        const uint32  y         = rowIndex % resolution;
+                        const float32 roughness = _pData->computeLevelRoughness( level );
+                        for ( uint32 x = 0; x < resolution; ++x )
+                        {
+                            _pData->_listTexel[_pData->computeTexelIndex( level, x, y )] = prefilterTexel( *_pData, _pData->computeTexelDirection( x, y ), roughness, _sampleCount );
+                        }
+                    }
+                }
+            };
         };
     } // namespace
 } // namespace sw
@@ -150,6 +173,39 @@ namespace sw
         _resolution      = 0;
         _levelCount      = 0;
         _listTexel.clear();
+    }
+
+    expected<void> ReflectionProbeAsset::allocate( const float3& capturePosition, uint32 resolution, uint32 levelCount )
+    {
+        clear();
+        if ( expected<void> size = ReflectionProbeAssetInternal::validateSizeInRange( resolution, levelCount ); size.has_value() == false )
+            return size;
+        _capturePosition = capturePosition;
+        _resolution      = resolution;
+        _levelCount      = levelCount;
+        _listTexel.assign( static_cast<size_t>( resolution ) * resolution * levelCount, float3{} );
+        return {};
+    }
+
+    float3 ReflectionProbeAsset::computeTexelDirection( uint32 x, uint32 y ) const
+    {
+        const float32 texelSize = 1.0f / static_cast<float32>( _resolution );
+        return decodeOctahedral( float2{ ( static_cast<float32>( x ) + 0.5f ) * texelSize, ( static_cast<float32>( y ) + 0.5f ) * texelSize } );
+    }
+
+    expected<void> ReflectionProbeAsset::filterRoughnessLevels( uint32 sampleCount )
+    {
+        using Internal = ReflectionProbeAssetInternal;
+        if ( sampleCount == 0 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe filter needs at least one sample" } );
+        if ( expected<void> valid = validate(); valid.has_value() == false )
+            return valid;
+        Internal::FilterJob job{};
+        job._pData       = this;
+        job._sampleCount = sampleCount;
+        // 행 하나가 텍셀 `_resolution` 개 × 표본 `sampleCount` 개라 디스패치 비용보다 크다 — 행이 둘이면 나눈다.
+        engine::runParallel( ( _levelCount - 1u ) * _resolution, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Internal::FilterJob::run, &job ) );
+        return {};
     }
 
     float3 ReflectionProbeAsset::sampleLevel( uint32 level, const float3& direction ) const
@@ -286,36 +342,18 @@ namespace sw
             if ( bFaceFits == false )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a captured face is empty or its pixels do not match its size" } );
         }
-        if ( expected<void> size = Internal::validateSizeInRange( resolution, levelCount ); size.has_value() == false )
-            return size;
-        outData._capturePosition = capturePosition;
-        outData._resolution      = resolution;
-        outData._levelCount      = levelCount;
-        outData._listTexel.assign( static_cast<size_t>( resolution ) * resolution * levelCount, float3{} );
+        if ( expected<void> allocated = outData.allocate( capturePosition, resolution, levelCount ); allocated.has_value() == false )
+            return allocated;
 
         // 단계 0 — 텍셀 중심의 방향으로 면을 읽는다.
-        const float32 texelSize = 1.0f / static_cast<float32>( resolution );
         for ( uint32 y = 0; y < resolution; ++y )
         {
             for ( uint32 x = 0; x < resolution; ++x )
             {
-                const float3 direction                                   = ReflectionProbeAsset::decodeOctahedral( float2{ ( static_cast<float32>( x ) + 0.5f ) * texelSize, ( static_cast<float32>( y ) + 0.5f ) * texelSize } );
-                outData._listTexel[outData.computeTexelIndex( 0, x, y )] = Internal::sampleFaces( pArrFace, capturePosition, direction );
+                outData._listTexel[outData.computeTexelIndex( 0, x, y )] = Internal::sampleFaces( pArrFace, capturePosition, outData.computeTexelDirection( x, y ) );
             }
         }
         // 단계 1 부터 — 단계 0 을 그 단계의 거칠기로 거른다.
-        for ( uint32 level = 1; level < levelCount; ++level )
-        {
-            const float32 roughness = outData.computeLevelRoughness( level );
-            for ( uint32 y = 0; y < resolution; ++y )
-            {
-                for ( uint32 x = 0; x < resolution; ++x )
-                {
-                    const float3 normal                                          = ReflectionProbeAsset::decodeOctahedral( float2{ ( static_cast<float32>( x ) + 0.5f ) * texelSize, ( static_cast<float32>( y ) + 0.5f ) * texelSize } );
-                    outData._listTexel[outData.computeTexelIndex( level, x, y )] = Internal::prefilterTexel( outData, normal, roughness, sampleCount );
-                }
-            }
-        }
-        return {};
+        return outData.filterRoughnessLevels( sampleCount );
     }
 } // namespace sw

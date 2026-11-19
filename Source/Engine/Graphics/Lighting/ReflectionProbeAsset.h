@@ -58,6 +58,21 @@ namespace sw
         /** @brief 단계 @p level 을 방향 @p direction(길이 1)으로 쌍선형 샘플합니다. 사각형 가장자리는 자른다(접힌 이웃을 읽지 않는다 — 셰이더와 같다). */
         float3 sampleLevel( uint32 level, const float3& direction ) const;
 
+        /**
+         * @brief 한 변 @p resolution · 단계 @p levelCount 의 텍셀을 0 으로 잡습니다. 범위 밖이면 그 까닭이고 내용을 비웁니다.
+         * @details 단계 0 을 채우는 쪽이 둘이다 — 찍은 면(`makeFromFaces`)과 식으로 세는 하늘(`SkyLightData::make`). 둘 다 이것으로 잡고 `computeTexelDirection` 으로 단계 0 을 채운 뒤
+         *          `filterRoughnessLevels` 로 거른다.
+         */
+        [[nodiscard]] expected<void> allocate( const float3& capturePosition, uint32 resolution, uint32 levelCount );
+        /** @brief 텍셀 (@p x, @p y) 의 중심이 가리키는 방향(길이 1)입니다 — 단계마다 같다. */
+        float3 computeTexelDirection( uint32 x, uint32 y ) const;
+        /**
+         * @brief 채워 둔 단계 0 을 GGX 중요도 표본 @p sampleCount 개로 걸러 단계 1 부터를 만듭니다(언리얼 · 카리스 2013 의 "N = V = R" 근사).
+         * @details 텍셀 행마다 독립이라 작업 풀로 나눈다(`engine::runParallel` — 서비스가 없는 테스트 · 도구는 부른 스레드가 돈다).
+         * @return 크기가 범위 밖이거나 텍셀 수가 맞지 않거나 표본이 0 이면 그 까닭입니다.
+         */
+        [[nodiscard]] expected<void> filterRoughnessLevels( uint32 sampleCount );
+
         /** @brief 바이트로 만듭니다(리틀 엔디언). */
         void makeBytes( vector<uint8>& outBytes ) const;
         /** @brief 바이트를 읽습니다. 매직, 버전, 길이, 범위가 틀리면 그 까닭이고 내용을 비웁니다. */
@@ -82,7 +97,7 @@ namespace sw
         static constexpr uint32 kFaceCount = 6;
 
         /**
-         * @brief 면 여섯을 접어 단계 0 을 만들고, 단계 1 부터는 GGX 중요도 표본 @p sampleCount 개로 거릅니다(언리얼 · 카리스 2013 의 "N = V = R" 근사).
+         * @brief 면 여섯을 접어 단계 0 을 만들고, 단계 1 부터는 GGX 중요도 표본 @p sampleCount 개로 거릅니다(`filterRoughnessLevels`).
          * @param capturePosition 찍은 위치(면 카메라의 위치와 같다)
          * @return 면이 비었거나 크기가 다르거나 범위 밖이면 그 까닭입니다.
          */

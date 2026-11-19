@@ -367,6 +367,40 @@ SW_TEST_CASE( ReflectionProbeAssetTest, FilterKeepsAUniformEnvironment )
     SW_EXPECT_EQUAL( 0u, wrongTexelCount );
 }
 
+/** @brief [ReflectionProbeAssetTest] 면 없이 단계 0 을 직접 채운 데이터도 같은 거르기를 탄다(스카이 라이트의 길) — 위가 밝은 둘레는 거친 단계에서도 위가 아래보다 밝고, 틀린 입력은 거절한다 */
+SW_TEST_CASE( ReflectionProbeAssetTest, FilterRoughnessLevelsFromAFilledBaseLevel )
+{
+    ReflectionProbeAsset data = Util::makeAsset();
+    SW_EXPECT_FALSE( data.allocate( float3{}, ReflectionProbeAsset::kMaxResolution + 1u, 3 ) );
+    SW_EXPECT_TRUE( data._listTexel.empty() );
+    SW_EXPECT_FALSE( data.filterRoughnessLevels( 8 ) ); // 빈 데이터
+
+    SW_REQUIRE_TRUE( data.allocate( float3{}, 8, 3 ) );
+    for ( uint32 y = 0; y < data._resolution; ++y )
+    {
+        for ( uint32 x = 0; x < data._resolution; ++x )
+        {
+            // 텍셀 방향은 길이 1 이고 그 방향을 다시 접으면 같은 텍셀의 중심이다.
+            const float3 direction = data.computeTexelDirection( x, y );
+            SW_EXPECT_NEAR( 1.0f, direction.getLength(), 1.0e-4f );
+            const float2 uv = ReflectionProbeAsset::encodeOctahedral( direction );
+            SW_EXPECT_NEAR( ( static_cast<float32>( x ) + 0.5f ) / 8.0f, uv._x, 1.0e-4f );
+            SW_EXPECT_NEAR( ( static_cast<float32>( y ) + 0.5f ) / 8.0f, uv._y, 1.0e-4f );
+            data._listTexel[data.computeTexelIndex( 0, x, y )] = direction._y >= 0.0f ? float3{ 1.0f, 1.0f, 1.0f } : float3{};
+        }
+    }
+    SW_EXPECT_FALSE( data.filterRoughnessLevels( 0 ) );
+    SW_REQUIRE_TRUE( data.filterRoughnessLevels( 32 ) );
+    const float3 up{ 0.0f, 1.0f, 0.0f };
+    const float3 down{ 0.0f, -1.0f, 0.0f };
+    SW_EXPECT_TRUE( data.sampleLevel( 2, up )._x > 0.6f );
+    SW_EXPECT_TRUE( data.sampleLevel( 2, down )._x < 0.4f );
+    // 가장 거친 단계는 반구를 넓게 섞는다 — 지평선은 위와 아래의 사이다.
+    const float32 horizon = data.sampleLevel( 2, float3{ 1.0f, 0.0f, 0.0f } )._x;
+    SW_EXPECT_TRUE( horizon > data.sampleLevel( 2, down )._x );
+    SW_EXPECT_TRUE( horizon < data.sampleLevel( 2, up )._x );
+}
+
 /** @brief [ReflectionProbeAssetTest] 단계 0 의 각 방향은 그쪽을 보는 면의 빛이다 */
 SW_TEST_CASE( ReflectionProbeAssetTest, FilterFoldsEachDirectionFromItsFace )
 {
