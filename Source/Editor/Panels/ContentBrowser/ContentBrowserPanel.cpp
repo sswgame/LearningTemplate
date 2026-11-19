@@ -178,7 +178,7 @@ namespace sw::editor
 
             // ------------------------------------------------------------------------------
             // 에셋 명령 — 맥락 메뉴 · 단축키(`editor.input.xml` 의 `Editor.Panel.content_browser`)가 같은 명령을 부른다.
-            // 대상 id 는 절대 경로를 페이로드 이름 표(`EditorInputGUI::registerPayloadName`)에 올린 값이다. 대상이 없으면(단축키) 이 창의 선택이다.
+            // 대상 id 는 리소스 id 를 올린 에셋 페이로드 id 다(`EditorWidgets::registerAssetPayload` — 끌기와 같은 한 형식). 대상이 없으면(단축키) 이 창의 선택이다.
             // ------------------------------------------------------------------------------
             static ContentBrowserPanel* findWritablePanel()
             {
@@ -192,13 +192,22 @@ namespace sw::editor
                 const uint64 targetID = target._hoveredID != 0 ? target._hoveredID : ( target._listSelectedID.empty() ? 0 : target._listSelectedID.front() );
                 if ( targetID != 0 )
                 {
-                    (void)EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, targetID, path ); // 모르는 id 면 빈 경로 — 명령이 꺼진다
-                    return path;
+                    return findAssetDiskPath( targetID ); // 모르는 id · 디스크에 없는 에셋이면 빈 경로 — 명령이 꺼진다
                 }
                 const ContentBrowserPanel* pPanel = findPanel();
                 if ( pPanel != nullptr )
                     path = pPanel->getSelectedAssetPath();
                 return path;
+            }
+
+            /** @brief 에셋 페이로드 id 의 디스크 자리(절대 경로)입니다. 모르는 id 이거나 디스크에 없으면 빈 문자열입니다. */
+            static string findAssetDiskPath( uint64 assetID )
+            {
+                string resourceID;
+                if ( EditorWidgets::findAssetPayload( assetID, resourceID ) == false )
+                    return string{};
+                const optional<AbsolutePath> diskPath = EditorPaths::getAssetPaths().findLooseFile( resourceID );
+                return diskPath.has_value() ? string( diskPath->str() ) : string{};
             }
 
             static bool hasTarget( const EditorCommandTarget& target ) { return findTargetPath( target ).empty() == false; }
@@ -315,8 +324,8 @@ namespace sw::editor
             static void selectOnlyAsset( uint64 assetID )
             {
                 ContentBrowserPanel* pPanel = findWritablePanel();
-                string               path;
-                if ( pPanel != nullptr && EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, assetID, path ) )
+                const string         path   = findAssetDiskPath( assetID );
+                if ( pPanel != nullptr && path.empty() == false )
                     pPanel->selectAssetPath( path );
             }
         };
@@ -481,13 +490,13 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawAssetContextMenu( const AssetEntry& entry )
     {
-        // 항목은 `asset.*` 명령이다(이 파일의 등록 줄). 대상 id 는 절대 경로를 페이로드 이름 표에 올린 값이다.
+        // 항목은 `asset.*` 명령이다(이 파일의 등록 줄). 대상 id 는 리소스 id 의 에셋 페이로드 id 다(끌기와 같은 한 형식).
         EditorContextMenuSubject subject{};
         subject._pPopupID  = "AssetCtx";
         subject._kind      = EditorCommandTargetKind::Asset;
-        subject._hoveredID = EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, entry._absolutePath );
+        subject._hoveredID = EditorWidgets::registerAssetPayload( entry._relativePath );
         if ( _model.getSelectedAssetPath().empty() == false )
-            subject._listSelectedID.push_back( EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, _model.getSelectedAssetPath() ) );
+            subject._listSelectedID.push_back( EditorWidgets::registerAssetPayload( EditorPaths::getAssetPaths().toAssetID( _model.getSelectedAssetPath() ) ) );
         subject._selectOnly = &ContentBrowserPanelInternal::selectOnlyAsset;
         (void)EditorInputGUI::drawContextMenu( subject ); // 열렸는지는 쓰지 않는다
     }

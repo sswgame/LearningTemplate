@@ -32,6 +32,8 @@ namespace sw::editor
         struct HierarchyPanelInternal
         {
             static constexpr Color kPrefabInstanceText{ 0.45f, 0.70f, 1.0f, 1.0f };
+            /** @brief 행 · 빈 곳에 놓으면 스폰하는 에셋의 확장자입니다(`EditorAssetCommands::spawnPrefab` 이 프리팹만 읽는다 — `PrefabAsset` 의 쿠킹 원본 접미사). */
+            static constexpr const utf8* kPrefabAssetExtension = ".prefab.xml";
 
             // 이 창만의 액션(행 목록을 아는 것). 키는 `editor.input.xml` 의 `Editor.Panel.hierarchy` 레이어가 정한다.
             static constexpr string_view kActionSelectAll      = "hierarchy.selectAll";
@@ -90,8 +92,9 @@ namespace sw::editor
                         viewModel.dropObject( payload._id, entry._id, zone );
                 }
 
+                // 프리팹만 스폰한다 — 다른 에셋은 놓을 자리를 열지 않는다(R11, 확장자 거르개는 놓기 전에 본다).
                 string droppedAssetPath;
-                if ( EditorWidgets::acceptAssetDrop( droppedAssetPath ) )
+                if ( EditorWidgets::acceptAssetDrop( droppedAssetPath, HierarchyPanelInternal::kPrefabAssetExtension ) )
                     viewModel.spawnPrefab( droppedAssetPath.c_str(), entry._id );
             }
 
@@ -496,7 +499,7 @@ namespace sw::editor
         if ( EditorInputGUI::acceptDrop( EditorPayloadKindSet{ EditorPayloadKind::GameObject }, objectPayload ) )
             viewModel.detachToRoot( objectPayload._id );
         string droppedAssetPath;
-        if ( EditorWidgets::acceptAssetDrop( droppedAssetPath ) )
+        if ( EditorWidgets::acceptAssetDrop( droppedAssetPath, HierarchyPanelInternal::kPrefabAssetExtension ) )
             viewModel.spawnPrefab( droppedAssetPath.c_str(), 0 );
 
         handleHierarchyShortcuts();

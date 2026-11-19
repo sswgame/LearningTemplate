@@ -308,7 +308,16 @@ namespace sw::editor
         static void popInspectorStyle();
 
         /**
-         * @brief 현재 아이템을 애셋 끌기 원본으로 만듭니다. 페이로드는 `{Asset, 경로의 id}` 이고 경로는 id 표에 둔다(`EditorInputGUI::registerPayloadName`).
+         * @brief 에셋 페이로드 id 를 만듭니다. 에셋 id 의 이름은 **리소스 id(상대 경로)** 한 형식이다 — 끌기 · 콘텐츠 브라우저 명령 · 인스펙터 에셋 칸 메뉴가 모두 이것을 쓴다.
+         * @details 예전에는 끌기가 상대 경로, 콘텐츠 브라우저 명령이 절대 경로를 올려 같은 에셋이 두 id 였다(한쪽에서 만든 id 를 다른 쪽이 풀면 다른 글이 나왔다).
+         *          디스크 경로(절대)는 받지 않는다 — 넘기면 멈춘다. 디스크 자리가 필요한 쪽은 `findAssetPayload` 로 받은 리소스 id 를 `AssetPaths::findLooseFile` 로 푼다.
+         */
+        static uint64 registerAssetPayload( string_view resourceID );
+        /** @brief `registerAssetPayload` 가 만든 id 의 리소스 id 입니다. 모르는 id 면 false 입니다. */
+        [[nodiscard]] static bool findAssetPayload( uint64 id, string& outResourceID );
+
+        /**
+         * @brief 현재 아이템을 애셋 끌기 원본으로 만듭니다. 페이로드는 `{Asset, 리소스 id 의 id}` 다(`registerAssetPayload`).
          */
         static void drawAssetDragSource( const utf8* pRelativePath, bool bAllowNullID = false );
 

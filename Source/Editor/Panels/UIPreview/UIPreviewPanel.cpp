@@ -55,7 +55,15 @@ namespace sw::editor
             static Color getLayoutColor() { return SW_THEME_COLOR( "Signal", "Info" ).withAlpha( 0.45f ); }
             static Color getSafeZoneColor() { return SW_THEME_COLOR( "Signal", "Error" ).withAlpha( 0.8f ); }
 
-            /** @brief 직전 항목에 팔레트 위젯 타입({WidgetType, 이름 id})이 놓였으면 그 타입 이름을 @p outTypeName 에 담고 true 입니다. */
+            /** @brief 팔레트 위젯 타입 끌기가 진행 중이면 그 타입 이름을 @p outTypeName 에 담고 true 입니다(놓을 자리를 열지 않는다 — R11 의 거르기 입구). */
+            static bool peekPaletteType( string& outTypeName )
+            {
+                EditorDragPayload payload{};
+                return EditorInputGUI::peekPayload( EditorPayloadKindSet{ EditorPayloadKind::WidgetType }, payload ) &&
+                       EditorInputGUI::findPayloadName( EditorPayloadKind::WidgetType, payload._id, outTypeName );
+            }
+
+            /** @brief 직전 항목에 팔레트 위젯 타입({WidgetType, 이름 id})이 놓였으면 그 타입 이름을 @p outTypeName 에 담고 true 입니다. `peekPaletteType` 으로 거른 뒤에 부른다. */
             static bool acceptPaletteType( string& outTypeName )
             {
                 EditorDragPayload payload{};
@@ -558,9 +566,12 @@ namespace sw::editor
 
     void UIPreviewPanel::acceptPaletteDrop( UIScreen& screen, Widget* pTarget )
     {
+        // 붙지 않을 자리는 놓을 자리를 열지 않는다(R11) — 놓은 뒤 경고로 버리지 않는다.
         string typeName;
+        if ( UIPreviewPanelInternal::peekPaletteType( typeName ) == false || _model.canAddWidget( screen.getTree(), hashed_string( typeName.c_str() ), pTarget ) == false )
+            return;
         if ( UIPreviewPanelInternal::acceptPaletteType( typeName ) )
-            (void)_model.addWidget( screen, hashed_string( typeName.c_str() ), pTarget ); // 못 붙이면 addWidget 이 경고로 알린다
+            (void)_model.addWidget( screen, hashed_string( typeName.c_str() ), pTarget ); // 위에서 거른 자리다
     }
 
     void UIPreviewPanel::drawPalette( UIScreen& screen )
@@ -1020,14 +1031,17 @@ namespace sw::editor
         ImGui::Image( reinterpret_cast<ImTextureID>( _pTextureID ), ImVec2{ drawSize._x, drawSize._y } );
         const bool bImageHovered = ImGui::IsItemHovered();
         EditorSelfTestMarks::record( "uipreview.image" );
-        string droppedType;
-        if ( bInteract == false && Internal::acceptPaletteType( droppedType ) )
+        string draggedType;
+        if ( bInteract == false && Internal::peekPaletteType( draggedType ) )
         {
-            // 팔레트 항목을 이미지 위에 놓는다 — 놓은 점 아래 위젯이 받는 쪽을 정한다(패널이면 그 안, 아니면 그 뒤).
-            const float2   mouse  = EditorInputGUI::readPointer()._position;
-            const float2   point  = UIPreviewLogic::mapImageToUI( float2{ mouse._x - origin._x, mouse._y - origin._y }, drawSize, viewport );
-            const WidgetID target = UIPreviewLogic::findWidgetAt( screen.getTree(), point );
-            (void)_model.addWidget( screen, hashed_string( droppedType.c_str() ), screen.getTree().findWidgetByID( target ) ); // 못 붙이면 addWidget 이 경고로 알린다
+            // 팔레트 항목을 이미지 위에 놓는다 — 놓은 점 아래 위젯이 받는 쪽을 정한다(패널이면 그 안, 아니면 그 뒤). 붙지 않을 자리면 놓을 자리를 열지 않는다(R11).
+            const float2        mouse    = EditorInputGUI::readPointer()._position;
+            const float2        point    = UIPreviewLogic::mapImageToUI( float2{ mouse._x - origin._x, mouse._y - origin._y }, drawSize, viewport );
+            Widget* const       pTarget  = screen.getTree().findWidgetByID( UIPreviewLogic::findWidgetAt( screen.getTree(), point ) );
+            const hashed_string typeName = hashed_string( draggedType.c_str() );
+            string              droppedType;
+            if ( _model.canAddWidget( screen.getTree(), typeName, pTarget ) && Internal::acceptPaletteType( droppedType ) )
+                (void)_model.addWidget( screen, typeName, pTarget ); // 위에서 거른 자리다
         }
         // 이미지 클릭으로 고르기는 손잡이를 그린 뒤에 정한다 — 손잡이는 이미지 위에 겹쳐 있어, 여기서 바로 고르면 손잡이를 누른 클릭이 그 아래 위젯(자식)을
         // 골라 손잡이가 사라지고 끌기가 시작되지 않는다.

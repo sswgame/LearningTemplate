@@ -8,7 +8,6 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorCompactControls.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -22,6 +21,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/Reflection.h"
@@ -504,19 +504,17 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawAssetRowMenuItems( const PropertyValueRow& row )
     {
-        // 에셋 칸은 콘텐츠 브라우저의 에셋 명령을 빌린다(R13 — 언리얼 Details 의 Browse to Asset · 참조 찾기). 대상 id 는 콘텐츠 브라우저와 같이 절대 경로의 페이로드 id 다.
+        // 에셋 칸은 콘텐츠 브라우저의 에셋 명령을 빌린다(R13 — 언리얼 Details 의 Browse to Asset · 참조 찾기). 대상 id 는 끌기 · 콘텐츠 브라우저와 같은 리소스 id 의 에셋 페이로드 id 다.
         const bool bAssetRow = row._bAssetPath != SW_FALSE || row._typeName == hashed_string( AssetRefBase::kTypeName );
         if ( bAssetRow == false )
             return;
-        const string           assetPath = row._kind == PropertyRowKind::Text ? row._valueText : _model.formatPropertyText( row._rowID );
-        optional<AbsolutePath> fileAbs;
-        if ( assetPath.empty() == false )
-            fileAbs = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( assetPath ).str() );
+        const string        assetPath = row._kind == PropertyRowKind::Text ? row._valueText : _model.formatPropertyText( row._rowID );
         EditorCommandTarget target{};
         target._kind = EditorCommandTargetKind::Asset;
-        if ( fileAbs.has_value() )
+        if ( assetPath.empty() == false && FileUtil::isAbsolutePath( assetPath ) == false )
         {
-            target._hoveredID = EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, fileAbs->str() );
+            // 디스크에 없는 에셋이면 명령의 켜짐 판정(`hasFileTarget`)이 끈다.
+            target._hoveredID = EditorWidgets::registerAssetPayload( AssetPaths::normalizeAssetID( assetPath ) );
             target._listSelectedID.push_back( target._hoveredID );
         }
         ImGui::Separator();

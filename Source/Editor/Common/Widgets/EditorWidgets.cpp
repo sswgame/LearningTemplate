@@ -873,15 +873,27 @@ namespace sw::editor
         if ( StringUtil::isNullOrEmpty( pRelativePath ) )
             return;
         // 경로 문자열을 싣지 않는다 — 끌기는 `{Asset, id}` 한 형식이고 경로는 id 표가 든다(받는 쪽이 이름을 비교하지 않는다).
-        const EditorDragPayload payload{ EditorPayloadKind::Asset, EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, pRelativePath ) };
+        const EditorDragPayload payload{ EditorPayloadKind::Asset, registerAssetPayload( pRelativePath ) };
         (void)EditorInputGUI::beginDragSource( payload, pRelativePath, bAllowNullID ); // 끌기가 시작됐는지는 쓰지 않는다
+    }
+
+    uint64 EditorWidgets::registerAssetPayload( string_view resourceID )
+    {
+        // 한 에셋은 한 id — 디스크 경로를 올리면 같은 에셋이 다른 id 가 된다.
+        SW_ASSERT( FileUtil::isAbsolutePath( resourceID ) == false );
+        return EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, resourceID );
+    }
+
+    bool EditorWidgets::findAssetPayload( uint64 id, string& outResourceID )
+    {
+        return EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, id, outResourceID );
     }
 
     bool EditorWidgets::acceptAssetDrop( string& outPath )
     {
         EditorDragPayload payload{};
         return EditorInputGUI::acceptDrop( EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload ) &&
-               EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, payload._id, outPath );
+               findAssetPayload( payload._id, outPath );
     }
 
     bool EditorWidgets::acceptAssetDrop( string& outPath, const utf8* pExpectedExt )
@@ -897,7 +909,7 @@ namespace sw::editor
     {
         EditorDragPayload payload{};
         return EditorInputGUI::peekPayload( EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload ) &&
-               EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, payload._id, outPath );
+               findAssetPayload( payload._id, outPath );
     }
 
     bool EditorWidgets::acceptObjectDrop( uint64& outObjectID )
@@ -929,7 +941,7 @@ namespace sw::editor
     {
         EditorDragPayload payload{};
         return EditorInputGUI::previewDropInRect( minPos, maxPos, pTargetID, EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload, outbDelivered ) &&
-               EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, payload._id, outPath );
+               findAssetPayload( payload._id, outPath );
     }
 
     bool EditorWidgets::updateListSelection( int32& selectedIndex, int32 itemCount, bool bRepeat )
