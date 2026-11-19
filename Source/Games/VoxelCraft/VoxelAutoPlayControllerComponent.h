@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -41,8 +42,8 @@ namespace sw
         float32 _turnRightRate;
         PROPERTY( Category = "Auto Play", DisplayName = "Turn Left Rate", Tooltip = "Yaw speed in the second half of the cycle", Units = "rad/s" )
         float32 _turnLeftRate;
-        PROPERTY( Category = "Auto Play", DisplayName = "Look Down Pitch", Tooltip = "Pitch held while walking (negative looks down)", Units = rad )
-        float32 _lookDownPitch;
+        PROPERTY( Category = "Auto Play", DisplayName = "Look Down Pitch", Tooltip = "Pitch held while walking (negative looks down)" )
+        Radians _lookDownPitch;
         PROPERTY( Category = "Auto Play", DisplayName = "Break Start", Tooltip = "Time in the cycle at which Break is held", Min = 0.0, Units = s )
         float32 _breakStart;
         PROPERTY( Category = "Auto Play", DisplayName = "Break End", Tooltip = "Time in the cycle at which Break is released", Min = 0.0, Units = s )

@@ -43,7 +43,7 @@
 					<TurretComponent _range="40"
 					                 _viewAngle="0"
 					                 _turnSpeed="3.1415927"
-					                 _aimTolerance="0.08726646"
+					                 _aimTolerance="5"
 					                 _fireInterval="0.5"
 					                 _damage="10"
 					                 _projectileSpeed="25"

@@ -51,7 +51,7 @@ namespace sw
     ShooterAutoAimControllerComponent::ShooterAutoAimControllerComponent()
         : _engageDistance{ 7.0f }
         , _closeRangeDistance{ 8.0f }
-        , _aimTolerance{ 3.0f * MathUtil::kDegreeToRadian }
+        , _aimTolerance{ Radians::fromDegrees( 3.0f ) }
         , _chestHeight{ 0.55f }
         , _circleTangent{ 0.08f }
         , _circleInward{ 0.04f }
@@ -113,7 +113,7 @@ namespace sw
         blackboard.setBool( "TargetVisible", bVisible );
         blackboard.setFloat( "TargetDistance", bestDistance );
         blackboard.setFloat( "AimError", MathUtil::abs( MathUtil::wrapAngle( targetYaw - getControlYaw() ) ) );
-        blackboard.setFloat( "AimTolerance", _aimTolerance );
+        blackboard.setFloat( "AimTolerance", _aimTolerance.radians() );
         blackboard.setFloat( "EngageDistance", _engageDistance );
         blackboard.setFloat( "CloseRangeDistance", _closeRangeDistance );
         blackboard.setFloat( "MeleeReach", pPlayer->getMeleeReach() );

@@ -110,12 +110,12 @@ namespace sw
         , _secondsPerMonth{ 20.0f }
         , _riverCenterX{ 9.0f }
         , _riverMeander{ 2.0f }
-        , _riverMeanderRate{ 0.22f }
+        , _riverMeanderRate{ Radians::fromRadians( 0.22f ) }
         , _riverHalfWidth{ 1.5f }
         , _eastFloodWidth{ 8.0f }
         , _westFloodWidth{ 3.0f }
         , _desertDuneHeight{ 1.5f }
-        , _desertDuneRate{ 0.3f }
+        , _desertDuneRate{ Radians::fromRadians( 0.3f ) }
         , _desertStartX{ 40 }
         , _rockRidgeX{ 45 }
         , _roadX{ 17 }
@@ -338,12 +338,12 @@ namespace sw
         NileCityLayout layout;
         layout._riverCenterX      = _riverCenterX;
         layout._riverMeander      = _riverMeander;
-        layout._riverMeanderRate  = _riverMeanderRate;
+        layout._riverMeanderRate  = _riverMeanderRate.radians();
         layout._riverHalfWidth    = _riverHalfWidth;
         layout._eastFloodWidth    = _eastFloodWidth;
         layout._westFloodWidth    = _westFloodWidth;
         layout._desertDuneHeight  = _desertDuneHeight;
-        layout._desertDuneRate    = _desertDuneRate;
+        layout._desertDuneRate    = _desertDuneRate.radians();
         layout._desertStartX      = _desertStartX;
         layout._rockRidgeX        = _rockRidgeX;
         layout._roadX             = _roadX;

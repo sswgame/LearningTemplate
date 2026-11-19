@@ -246,7 +246,7 @@ namespace sw
         candidate._position             = pScene->getWorldPosition();
         candidate._objectID             = pObject->getObjectID();
         candidate._maxDistance          = pDef->_maxDistance;
-        candidate._maxAngle             = pDef->_maxAngle;
+        candidate._maxAngle             = pDef->_maxAngle.radians();
         candidate._priority             = interactable.getPriority();
         candidate._bRequiresLineOfSight = pDef->_bLineOfSight;
         float32 distance{ 0.0f };

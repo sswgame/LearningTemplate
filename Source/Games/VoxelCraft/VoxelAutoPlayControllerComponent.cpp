@@ -19,7 +19,7 @@ namespace sw
         : _cycleSeconds{ 12.0f }
         , _turnRightRate{ 0.25f }
         , _turnLeftRate{ -0.15f }
-        , _lookDownPitch{ -0.35f }
+        , _lookDownPitch{ Radians::fromRadians( -0.35f ) }
         , _breakStart{ 3.0f }
         , _breakEnd{ 6.5f }
         , _placeAt{ 9.0f }
@@ -50,7 +50,7 @@ namespace sw
 
         // 바라보기: 요(yaw)는 천천히 돌고 피치는 아래를 조금 봅니다. 그 방향의 점을 초점으로 두면 베이스 클래스가 조종 회전을 돌립니다.
         const float32 yaw   = getControlYaw() + deltaTime * ( cycle < _cycleSeconds * 0.5f ? _turnRightRate : _turnLeftRate );
-        const float32 pitch = _lookDownPitch;
+        const float32 pitch = _lookDownPitch.radians();
         const float3  flat  = float3{ MathUtil::sin( yaw ), 0.0f, MathUtil::cos( yaw ) };
         const float3  look  = float3{ flat._x * MathUtil::cos( pitch ), MathUtil::sin( pitch ), flat._z * MathUtil::cos( pitch ) };
         const float3  eye   = pPlayer->getBody().getEyePosition();

@@ -1219,7 +1219,7 @@ namespace sw
             StressTestMoverComponent* pMover = pObject->addComponent<StressTestMoverComponent>();
             if ( pMover == nullptr )
                 break;
-            pMover->setTarget( pMesh, position, static_cast<float32>( index ) * _settings._wavePhaseStep,
+            pMover->setTarget( pMesh, position, static_cast<float32>( index ) * _settings._wavePhaseStep.radians(),
                                moverIndex == 0 && gv_stressTestAnimate != 0 && ( index % 100u ) < movePercent );
         }
         return pMesh;
@@ -1370,8 +1370,8 @@ namespace sw
                 pSpot->setColor( color );
                 pSpot->setIntensity( _settings._spotLightIntensity );
                 pSpot->setRadius( radius );
-                pSpot->setOuterConeAngle( _settings._spotOuterConeAngle );
-                pSpot->setInnerConeAngle( _settings._spotInnerConeAngle );
+                pSpot->setOuterConeAngle( _settings._spotOuterConeAngle.radians() );
+                pSpot->setInnerConeAngle( _settings._spotInnerConeAngle.radians() );
                 pSpot->setLocalPosition( position );
                 pSpot->setLocalLightDirection( float3::Down );
                 _listBenchExtra.push_back( pSpot->getHandle() );
@@ -1648,7 +1648,7 @@ namespace sw
             {
                 if ( ( index % 100u ) >= movePercent )
                     continue;
-                const float32 phase = static_cast<float32>( index ) * _settings._wavePhaseStep;
+                const float32 phase = static_cast<float32>( index ) * _settings._wavePhaseStep.radians();
                 const float32 wave  = MathUtil::sin( _benchElapsed + phase );
                 const float3  position{ origin + static_cast<float32>( index % side ) * _settings._cubeSpacing,
                                        wave * _settings._waveHeight,
@@ -1671,7 +1671,7 @@ namespace sw
                 continue;
             // 인덱스마다 위상을 어긋나게 해서 전부 같은 값이 되지 않도록 합니다. 전부 같으면
             // 배치 키는 물론 트랜스폼까지 동일해져서 실제와 다른(너무 좋은) 결과가 나옵니다.
-            const float32 phase = static_cast<float32>( index ) * _settings._wavePhaseStep;
+            const float32 phase = static_cast<float32>( index ) * _settings._wavePhaseStep.radians();
             const float32 wave  = MathUtil::sin( _benchElapsed + phase );
 
             // 격자 위치는 생성할 때와 같은 식으로 계산합니다. 핸들로 대상을 찾아 읽지 않습니다(그 읽기가 배치 쓰기 비용의 3분의 1 정도입니다).
@@ -1852,7 +1852,7 @@ namespace sw
     void StressTestScene::spawnRigSlope( Scene* pScene, GameObjectManager& objects, float32 halfWidth )
     {
         // 기울어진 바닥입니다. 물리용 정적 상자(발 디딤의 광선이 맞는 대상)와, 같은 위치와 크기의 큐브(화면에 보이는 것)로 이루어집니다.
-        const float3  slopeRotation{ 0.0f, 0.0f, _settings._rigSlopeAngle };
+        const float3  slopeRotation{ 0.0f, 0.0f, _settings._rigSlopeAngle.radians() };
         const float3& slopeCenter = _settings._rigSlopeCenter;
         GameObject*   pSlope      = objects.createGameObject( "RigSlope" );
         if ( pSlope == nullptr )
@@ -1967,7 +1967,7 @@ namespace sw
         pBody->setSkeletonPath( _settings._knightSkeleton );
         // 기사는 +Z 방향을 봅니다. 카메라(-Z 쪽)를 보도록 돌립니다. 기사는 X 축을 따라 한 줄로 서고, 바닥이 기울어 있어서 사람마다 땅 높이가 다릅니다.
         const float32 x = origin + static_cast<float32>( index ) * _settings._rigSpacing;
-        pBody->setLocalPosition( float3{ x, MathUtil::tan( _settings._rigSlopeAngle ) * x, 0.0f } );
+        pBody->setLocalPosition( float3{ x, MathUtil::tan( _settings._rigSlopeAngle.radians() ) * x, 0.0f } );
         pBody->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
         pAnimator->setAnimationSetPath( _settings._knightClips.c_str() );
         pAnimator->setInitialState( _settings._rigAimState.c_str() );
@@ -2069,7 +2069,7 @@ namespace sw
             pBall->setLocalPosition( float3{ _settings._rigLookSwing * MathUtil::sin( time * _settings._rigLookSwingRate ),
                                              _settings._rigLookHeight + _settings._rigLookBob * MathUtil::sin( time * _settings._rigLookBobRate ), _settings._rigLookDepth } );
         // 몸을 좌우로 틀어 망토가 관성으로 흔들리게 한다(스프링 본은 월드 공간 입자라 몸이 돌면 뒤처진다).
-        const float32 yaw = MathUtil::kPi + ( ( gv_stressTestAnimate != 0 ) ? _settings._rigSwayAngle * MathUtil::sin( time * _settings._rigSwayRate ) : 0.0f );
+        const float32 yaw = MathUtil::kPi + ( ( gv_stressTestAnimate != 0 ) ? _settings._rigSwayAngle.radians() * MathUtil::sin( time * _settings._rigSwayRate ) : 0.0f );
         for ( const TComponentHandle<SkeletalMeshComponent> handle : _listRigBody )
         {
             if ( SkeletalMeshComponent* pBody = pObjects->resolveComponent( handle ) )

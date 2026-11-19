@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Animation/Facial/FacialRig.h"
@@ -131,8 +132,8 @@ namespace sw
         float32 _cameraRefreshDelay{};
         PROPERTY( Category = "Cubes", Tooltip = "Height of the up and down wave", Min = 0.0, Units = m )
         float32 _waveHeight{};
-        PROPERTY( Category = "Cubes", Tooltip = "Wave phase added per cube index", Units = rad )
-        float32 _wavePhaseStep{};
+        PROPERTY( Category = "Cubes", Tooltip = "Wave phase added per cube index" )
+        Radians _wavePhaseStep{};
         PROPERTY( Category = "Cubes", Tooltip = "Cube scale at the middle of the wave", Min = 0.0 )
         float32 _waveScaleMin{};
         PROPERTY( Category = "Cubes", Tooltip = "Cube scale added at the top and bottom of the wave", Min = 0.0 )
@@ -161,10 +162,10 @@ namespace sw
         float32 _pointLightIntensity{};
         PROPERTY( Category = "Lights", Min = 0.0 )
         float32 _spotLightIntensity{};
-        PROPERTY( Category = "Lights", Min = 0.0, Units = rad )
-        float32 _spotOuterConeAngle{};
-        PROPERTY( Category = "Lights", Min = 0.0, Units = rad )
-        float32 _spotInnerConeAngle{};
+        PROPERTY( Category = "Lights", Min = 0.0 )
+        Radians _spotOuterConeAngle{};
+        PROPERTY( Category = "Lights", Min = 0.0 )
+        Radians _spotInnerConeAngle{};
 
         // ---- 바닥 · 캡처 카메라 ----
         PROPERTY( Category = "Ground", Tooltip = "Ground side length as a multiple of the scene half extent", Min = 0.0 )
@@ -229,8 +230,8 @@ namespace sw
         // ---- 리그 ----
         PROPERTY( Category = "Rig", Tooltip = "Distance between rig knights", Min = 0.0, Units = m )
         float32 _rigSpacing{};
-        PROPERTY( Category = "Rig", Tooltip = "Slope tilt around Z (+X is higher), so the two feet stand at different heights", Units = rad )
-        float32 _rigSlopeAngle{};
+        PROPERTY( Category = "Rig", Tooltip = "Slope tilt around Z (+X is higher), so the two feet stand at different heights" )
+        Radians _rigSlopeAngle{};
         PROPERTY( Category = "Rig", Tooltip = "Smallest half width of the slope", Min = 0.0, Units = m )
         float32 _rigSlopeMinHalfWidth{};
         PROPERTY( Category = "Rig", Tooltip = "Slope added past the outer knights", Min = 0.0, Units = m )
@@ -259,8 +260,8 @@ namespace sw
         float32 _rigLookDepth{};
         PROPERTY( Category = "Rig", Tooltip = "Time the frozen picture (-gv_stressTestAnimate=0) shows", Min = 0.0, Units = s )
         float32 _rigStillTime{};
-        PROPERTY( Category = "Rig", Tooltip = "How far the knights turn left and right so the cape swings", Min = 0.0, Units = rad )
-        float32 _rigSwayAngle{};
+        PROPERTY( Category = "Rig", Tooltip = "How far the knights turn left and right so the cape swings", Min = 0.0 )
+        Radians _rigSwayAngle{};
         PROPERTY( Category = "Rig", Units = "rad/s" )
         float32 _rigSwayRate{};
         PROPERTY( Category = "Rig", Tooltip = "Smallest half extent the rig key light covers", Min = 0.0, Units = m )

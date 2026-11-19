@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -56,8 +57,8 @@ namespace sw
         float32 _engageDistance;
         PROPERTY( Category = "Auto Play", DisplayName = "Close Range Distance", Tooltip = "Inside this distance the shotgun, outside it the rifle", Min = 0.0, Units = m )
         float32 _closeRangeDistance;
-        PROPERTY( Category = "Auto Play", DisplayName = "Aim Tolerance", Tooltip = "Fires when the aim is off by less than this (blackboard AimTolerance)", Min = 0.0, Units = rad )
-        float32 _aimTolerance;
+        PROPERTY( Category = "Auto Play", DisplayName = "Aim Tolerance", Tooltip = "Fires when the aim is off by less than this (blackboard AimTolerance, radians)", Min = 0.0 )
+        Radians _aimTolerance;
         PROPERTY( Category = "Auto Play", DisplayName = "Chest Height", Tooltip = "Fraction of the enemy's height aimed at", Min = 0.0, Max = 1.0, Units = ratio )
         float32 _chestHeight;
         PROPERTY( Category = "Auto Play", DisplayName = "Circle Tangent", Tooltip = "Sideways part of the circling move, multiplied by the position", Min = 0.0 )
