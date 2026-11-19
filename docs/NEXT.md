@@ -8,7 +8,7 @@
 
 ## 0. 다음 순서
 
-1. **이번 묶음(2026-11-19, 작업자 13):** w-par(병렬 출력 칸 · 작업 계기) · w-tickread(틱 중 남 읽기 검출) · w-schemaver(상태 직렬화 생성 · 타입 판 패치 · 저장 이관) · w-enum · w-angle(`Radians`) · w-net(메시지 방향 · 본문 스키마) · w-catalogkey · w-skyfis · w-post(TAA · 자동 노출) · w-ddgi · w-hzb · w-mcp · w-manip. 둘 · 셋씩 병합 → 합칠 때마다 Release · Shipping · Release-ASan · Shipping-Server 증분 빌드 + 그 갈래 테스트 · 시나리오(dx12, 그림이 바뀌면 네 백엔드 골든) → `preflight --no-linux` → push → 워크트리 지움. 다음 묶음: 헤더 팬인 다이어트(감사 8 — 다른 갈래와 헤더가 겹쳐 혼자 마지막), 렌더 그래프 접근 종류 핸들(HZB 뒤), HDR 디스플레이 출력, Fileserve, 5 절 남은 설계 일. Linux 는 사용자가 시킬 때.
+1. **이번 묶음(2026-11-19, 작업자 12 — 엔진 안 MCP 서버 갈래는 사용자 결정으로 뺐다):** w-par(병렬 출력 칸 · 작업 계기) · w-tickread(틱 중 남 읽기 검출) · w-schemaver(상태 직렬화 생성 · 타입 판 패치 · 저장 이관) · w-enum · w-angle(`Radians`) · w-net(메시지 방향 · 본문 스키마) · w-catalogkey · w-skyfis · w-post(TAA · 자동 노출) · w-ddgi · w-hzb · w-manip. 둘 · 셋씩 병합 → 합칠 때마다 Release · Shipping · Release-ASan · Shipping-Server 증분 빌드 + 그 갈래 테스트 · 시나리오(dx12, 그림이 바뀌면 네 백엔드 골든) → `preflight --no-linux` → push → 워크트리 지움. 다음 묶음: 헤더 팬인 다이어트(감사 8 — 다른 갈래와 헤더가 겹쳐 혼자 마지막), 렌더 그래프 접근 종류 핸들(HZB 뒤), HDR 디스플레이 출력, Fileserve, 5 절 남은 설계 일. Linux 는 사용자가 시킬 때.
    - 작업자 몫: `GameObjectManager.inl` 머리말의 "포함을 잊으면 링크에서 멈춘다" 를 맞춘다 — clang 은 `-Werror=undefined-func-template`(`sw_require_template_definitions`)로 컴파일에서 멈추고 MSVC 만 링크에서 멈춘다. 그 뒤 에셋 GUID 2 · 3 단계(5 절).
 2. **감사 열린 항목(7 절):** 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고친다. 작업자에게는 NEXT 를 고치지 말게 하고 통합 커밋이 줄을 지운다 — 커밋 메시지는 `감사 <ID>` 꼴(옛 백로그 번호와 겹친다).
 
