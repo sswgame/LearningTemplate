@@ -1696,3 +1696,35 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 - 측정 뒤에만: DX12 PipelineLibrary(차가운 시작 PSO 합), 깊이 전용 배치 키(그림자 드로우 수), 서버 MMO 관찰자 거리 기반 틱 주기 · 컴포넌트 TickInterval 버킷(XMachina · ezEngine), 서버 쿠킹의 축약 애니메이션 클립, 온라인 프로토콜 퍼저 타깃 ⑦(퍼징 1 단계 뒤).
 
 **렌더 그래프 접근 핸들(설계 2026-11-19, 코드는 다음 갈래).** 지금 그래프 자원은 이름(`hashed_string`)이고 접근은 읽기 · 쓰기 둘뿐이라, 레벨 프롤로그가 첨부 텍스처만 이름으로 전이하고 버퍼 · UAV · 간접 인자 · 같은 버퍼의 연속 컴퓨트 쓰기는 패스 몸통이 손으로 낸다(렌더러 `transitionBuffer` · `prepareTexture*` · `uavBarrier` 약 100 곳 — 이번 HZB 가 6 곳을 더했다). 빠뜨리면 DX12 · Vulkan 에서만 지난 내용을 읽는다. 모양: Adria `RGTextureReadOnlyId` · `RGBufferReadWriteId`, 언리얼 RDG `FRDGTextureSRVRef` · `FRDGBufferUAVRef` 처럼 **접근 종류가 형식인 핸들**(`RGTextureSRV` · `RGTextureUAV` · `RGRenderTarget` · `RGDepthTarget<읽기 | 쓰기>` · `RGBufferSRV` · `RGBufferUAV` · `RGIndirectArgs` · `RGCopySource` · `RGCopyDest`)을 패스 선언이 받고, 패스 몸통은 그 핸들로만 디스크립터를 얻는다(`RGPassContext::getUAV( RGBufferUAV )` — 선언하지 않은 자원을 묶을 길이 없다). 그래프가 접근에서 RHI 상태를 정해(SRV → 셰이더 읽기, 비동기 큐는 큐가 받는 상태로 접는다, UAV → UAV, 간접 인자 → IndirectArgument) 레벨 프롤로그에서 텍스처와 버퍼를 한 묶음으로 낸다. 그래프 밖에서 사는 버퍼(GPUScene 컬링 인자 · HZB · 라이트 그리드 · 입자)는 프레임마다 `importBuffer( 이름, RHIStructuredBuffer&, 처음 상태 )` 로 들이고 끝 상태를 내보낸다(언리얼 RegisterExternalBuffer). 한 패스 안의 연속 디스패치(HZB 밉 사슬 · 컬링 → 정렬)는 `RGPassContext::uavBarrier( RGBufferUAV )` 하나로 남긴다 — SRV 핸들로는 부를 수 없다. 이전 차례(deprecation-and-migration): ① 핸들 · 버퍼 들이기를 이름 옆에 더하고 그래프 단위 테스트(UAV 쓰기 뒤 읽기에 전이 하나, 같은 레벨 읽기 여럿에 전이 0, 비동기 큐 상태)를 먼저, ② 프레임 패스(FrameGraphExecutor 27 · VFX 13 · HZB 6 곳)를 옮기고, ③ 뷰 패스, ④ 패스 몸통이 받는 명령 리스트 면에서 `transitionBuffer` · `prepareTexture*` 를 빼 그래프 실행기만 부르게 한다(형식으로 막아 손 전이가 돌아오지 못하게 — 린트가 아니다). 크기 L, 측정은 전이 수 · 프레임 GPU 시간 그대로(늘면 고친다).
+
+## 엔진 전수 조사 판단(2026-11-20)
+
+> 질문: 에디터 · 키트 · 성능 · 구조 전수 조사(13 갈래)에서 무엇을 어떤 차례로 고치는가?
+> 결론: 결함에 가까운 것을 먼저, 구조 장치(형식으로 막기)를 다음, 측정이 문턱을 넘는 성능 후보는 그 뒤. 진행 중인 갈래(렌더 그래프 접근 핸들 · 자원 구간 할당 · HDR · Android · 리플렉션 내장 형식 표 · 시퀀서 · 카메라 프리셋 · 자막 · 런타임 UI · 상점) 위에 얹는다. 사용자 결정: 편의 매크로(`BLOCK` · `SW_DELEGATE_*` · `SW_DECLARE_DELEGATE`)는 남긴다 · 컨테이너 std 상속은 불필요하면 자체 구현 · 부르는 곳 없는 공개 API 는 지우지 않고 적용(중복 · 잔재 · 아무도 안 읽는 진단만 지움).
+
+**1. 결함에 가까운 것(측정 없이 고친다).**
+- `FileUtil::trimTrailingSlashes`(공개)와 내부 `trimTrailingSeparators` 의 규칙이 다르다(`C:/` → `C:`) — 쓰는 곳 68. 내부 규칙 하나로.
+- 렌더러 지연 재사용을 프레임 수로 짐작하는 4 곳(`kMaxFrameCountInFlight` · `kRetireLag`) — `IRHIDevice` 계약은 펜스. 정확 크기 재생성(개수가 늘면 매 프레임) · 라이트 버퍼 두 번 올리기.
+- 다시 읽기 함수가 `void` 라 실패도 `Reloaded` 로 기록(`AssetCacheReloadFunction`) → `ReloadResult`.
+- 라이브 셰이더: 일부 실패면 `clearCache` 로 캐시 · PSO 전부 버림(이전 판 유지 없음), 셰이더 하나에 패스 자원 전부 동기 재생성, DDC 키의 define 이 받은 순서(헛 미스 · 두 벌), 도구 지문에 WGSL 꾸러미 · Tint · FXC 판 빠짐, `compileHLSL` 이 DDC 히트 전에 매번 가림 검사로 폴더를 재귀로 훑음.
+- 목록 구분자가 자리마다 다름(`",; "` · `",;| "` · `" ,\t\n\r"`) — `XMLReadUtil::kListSeparators` 하나로.
+- 머티리얼: 인스턴스 `enableKeyword` · `setMultiCompile` 이 아무 이름이나 받고 쿠커는 `.material` 만 훑어(`ShaderCookRequestCollector.cpp:441`) 인스턴스가 켠 조합을 굽지 않는다 — 배포에서 대체 해시로 그린다. 인스턴스의 Bool · 키워드 값 덮어쓰기가 define 을 바꾸지 않는다(`refreshCachedDefines`). `_base` 부모를 고쳐도 자식이 옛 값을 쥐는지(확인 필요). → 정적 변경은 부모가 선언한 런타임 스위치 색인으로만(`StaticSwitchParam` 형식), 값 API 는 정적 종류 거절.
+- JNI 수정 UTF-8 은 `w-android` 가 고침. 실행 인자 `-fileserve` 의 `ArgumentList.xxx` 안 `#if` 는 임시 — 아래 3 의 칸으로 바꾼다.
+
+**2. 구조 장치(형식으로 막기).**
+- 등록: 손 `*Registrar` 약 20 · 기능 헤더마다 배포 이중 정의(`SW_AUTOMATION_*` 7 번 재정의)를 `SW_STATIC_REGISTRATION` 틀 하나 + 배포 정책 인자(`Dev` · `Automation` · `Always`)로. Action · Condition 레지스트리 → `NamedEntryRegistry<T>`.
+- 리플렉션: 내장 형식 한 곳 정본(`w-reflbuiltin`). 다음 — `tryParseEnum<E>` · 배포에도 남는 열거자 데이터 철자(`ENUMERATOR(Text=)`) · 반사 동등 비교 · 해시 · 기본값 · 기반 형식으로 하위 형식 생성 · `FUNCTION(Exec)` 콘솔. `StateIO::value(T&)` 를 반사 구조체에 닫아 칸 나열 손 코드(103 파일 · 723 줄)를 `io.reflected` 로. `.cpp` 안 `REFLECT`(최초 커밋부터 헤더만 입력)는 손 코드 이득은 작고 헤더로 새는 반사 스키마(약 227)를 줄이는 값 — Qt moc 꼴(`#include "Foo.gen.inl"`)로, 익명 이름공간 FQN 충돌 키를 먼저 정한다.
+- 매크로: 쓰는 곳 0 · `SW_CONCAT` 사본 정리, 에셋 캐시 6 · 엔진 서비스 6 매크로를 하나씩으로. `SourceLocation`(`Core/Foundation/SourceLocation.h`, `__builtin_FILE/LINE/FUNCTION`) — Error · Warning 로그 · `SW_FATAL` 은 함수로(`%#` 컴파일 검사 길 먼저), Info 로그 · 단언 · 테스트 검사 · 프로파일은 매크로 몸만 얇게. `-fmacro-prefix-map` 추가.
+- 실행 인자: `ArgumentList.xxx` 에 "쓰는 구성" 칸(`All` · `Dev` · `Test` · `Server`) — 배포는 철자를 등록하지 않아 알 수 없는 인자 오류, 열거값은 남김. `shipping-check` 에 개발 인자 철자 검사.
+- Dev → DevTools: 빈 `Core/Diagnostics/Dev` · 낡은 `FolderLayout.md` 줄 정리, 게임 `Dev/*Autoplay.cpp` 10 개를 `SW_GAME_AUTOPLAY` 배포 무효로 접기, 엔진 개발 명령은 DevTools 로 · GF 치트는 `GameFrameworkDev` 로. 쿠킹 코드(`runCookTask` · `PackCooker` · `SceneCooker` · `ShaderCookDriver`)도 배포에 남음 → `DevTools/Cook`.
+- 파일: 자기 `.cpp` 만 포함하는 60 줄 미만 헤더 65 개 접기, 한 곳만 쓰는 도우미 헤더 36 개 합치기(`header-fanin` 합이 늘면 안 함). 헤더끼리 합치기는 하지 않는다(늘 함께 포함되는 쌍은 1 쌍뿐). 테스트 위치는 그대로(같은 대상 안 컴파일 — 내부 접근 · 층 규칙 · 모듈별 등록, 크로미움 곁 배치와 같은 판단).
+- 렌더러 규격(접근 핸들 · R-4 뒤): 그래프 일시 버퍼(`graph.createBuffer`) → 뷰 히스토리, `RHITextureSlot`(텍스처 손 생성 · 뷰 등록 8 곳 — HDR 뒤), 컴퓨트 패스 도우미(디스패치 21 · 그룹 크기는 셰이더 `[numthreads]` 리플렉션), 풀 버퍼(펜스 재사용), 되읽기 단일 면. RHI 자원 생성은 패스키로 막는다.
+- 쿠킹: 셰이더 컴파일을 `CookJob` 으로 감싸 증분 판정 세 벌(`.cookrec` · `cook.stamp`+`.deps` · 메모리 지문)을 하나로, 셰이더 DDC 를 `_derivedData` 층으로(구성마다 따로인 것 · 공유층 · 정리 밖). `DerivedDataCache` 생성자 비공개 + `open(bucket)`.
+- 파일 감시: OS 감시자 생성은 `FileWatchService` 만(열쇠 형식) — 루트마다 하나 공유, 프레임 안 경로별 합치기, 안정화 창. 다시 읽기 알림 · 텍스처 다시 읽기를 프레임 단위 일괄로.
+- 머티리얼: 파라미터 핸들(`MaterialParameterHandle{index, offset, kind, layoutGen}` — 지금 매번 `findProperty` 선형 · 사본마다 부모 바이트 전체 복사 · 전체 업로드) → 바뀐 칸만 덧칠 · 범위 업로드. 전역 값(식생이 층마다 매 틱 바람 · 시간 · 카메라를 `setVector` → 매 프레임 사본 재생성)과 `MaterialParameterCollection`(머티리얼마다 글로 다시 패킹)을 전역 CB 로(`MaterialGlobals` 형식). 인스턴스 모델 셋(`MaterialInstanceDef` 에셋 Content 0 개 · `_base` 자식 · 실행 중)을 MIC=`_base` · MID=`create` 둘로. `_permutations` 를 이름 단위 합치기. 형식 표(`MaterialPropertyKind` 25 · 패킹 분기 132)를 리플렉션 내장 형식 특성에 잇기. 색 하나 바꾸려 만든 인스턴스는 `InstanceCustomData` 로.
+- 컨테이너: `string` 자체 구현(부모 형식 누출 함정), `list` 는 LRU 전용 형식으로 바꾸고 지움. 레이스 가드는 먼저 인라인 + 스레드 id 캐시(탐지 범위 그대로), 별도 깃발로 떼기는 측정 뒤(뗄 때 그 깃발 체인 하나를 preflight 에).
+- 디버그 허브: `DebugHUDRegistry`(글줄 HUD 범주 · 선택 대상)를 범주 단위로 넓혀 그리기 · 감시 값 묶음 · `VisualLogger`(생산자 0 — 비어 있음) 기록 · 에디터 패널을 함께. `gv_*DebugDraw` 깃발을 범주 켜짐으로, 에디터 패널이 `getTarget` 공유, 사람용 감시 값 표. 먼저 붙일 것: 내비 · AI, 물리, 렌더링, 네트워크, UI · 입력. 진단 getter 118 개는 살림(실패 · 적체 · 큐 크기 → 범주 줄)과 지움(테스트용 중복 · 에디터 내부 캐시 · 일회성 깃발)으로 가르되 감시 값 · 로그 참조를 다시 센다(표본 7 중 2 가 쓰이고 있었다).
+
+**3. 에디터 · 키트.** 빈 곳(영향 순): VFX 편집기(미리보기만), 폴리지 칠하기, 스플라인 점 손잡이, 물리 에셋 시각 편집, 패키징 플랫폼 선택, 로컬라이제이션 패널. 키트: "꽂으면 도는" 컴포넌트 층(데모 래퍼를 키트 `Component/` 로 — Lyra Game Feature 자리), 테마파크 배치 패널을 표본으로 카탈로그 편집 · 미리보기 일반화 + Map Check 키트 검증 등록점, 새 게임 · 장르 키트 생성기, 키트 README. 서버만 있고 쓰는 게임이 없는 키트(Social · Trade · LiveOps · ServerDirectory · NetTurnRelay)는 지우지 않고 붙인다. 정리 검토: GF 본체 `Gimmick/Genre/*` 를 키트로, 호러 4 종 공통(은신 · 소음 · 조명) 합치기.
+
+**4. 성능(측정 뒤 — S8 줄과 같은 규칙).** 동기 대기(히치)가 처리량보다 먼저: 프레임 단계 안 동기 로드 경고 · 렌더 스레드 디스크 IO 단언을 구조로 먼저 넣고, VAT 굽기 · Vulkan 파이프라인 캐시 저장 · 파괴 셰이프 · 프레임 경로 동기 에셋 로드 5 곳을 비동기로. 문자열: 텍스처 스트리밍의 머티리얼 경로 복사 · 글꼴 체인 키 · 프리팹 스폰 경로 정규화 · 캐릭터마다 이름 intern — 유틸에 버퍼 받는 판, 핫 경로 API 는 `string_view` · `hashed_string` 만. 리플렉션 로드 경로 칸 형식 해석을 `PropertyInfo` 캐시로. 컨테이너: Swiss table 꼴 색인 · 정수 해시 곱셈 · `m[sv]` 임시 문자열. 숫자 확인: NEXT "생성 코드 1.65 MB" 대 지금 빌드 트리 9.33 MB — 측정 범위부터 맞춘다.
