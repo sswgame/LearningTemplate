@@ -82,36 +82,32 @@ namespace sw::editor
                 HRESULT               _result{ S_OK };
             };
 
-            Band*                       _pBand{ nullptr };
             DXGI_FORMAT                 _format{ DXGI_FORMAT_UNKNOWN };
             DirectX::TEX_COMPRESS_FLAGS _flags{ DirectX::TEX_COMPRESS_DEFAULT };
 
-            void run( uint32 start, uint32 end )
+            /** @brief 띠 하나를 압축해 결과 이미지의 제 블록 행에 놓고, 결과 코드를 그 띠 칸에 씁니다(`runParallelInto` 본문 — 띠끼리 블록 행이 겹치지 않는다). */
+            void operator()( uint32, Band& band ) const
             {
-                for ( uint32 bandIndex = start; bandIndex < end; ++bandIndex )
+                const DirectX::Image& source = *band._pSource;
+                DirectX::Image        slice  = source;
+                slice.height                 = band._rowCount;
+                slice.slicePitch             = source.rowPitch * band._rowCount;
+                slice.pixels                 = source.pixels + source.rowPitch * band._firstRow;
+
+                DirectX::ScratchImage compressed;
+                band._result = DirectX::Compress( slice, _format, _flags, DirectX::TEX_THRESHOLD_DEFAULT, compressed );
+                if ( FAILED( band._result ) )
+                    return;
+
+                // 폭이 같으므로 블록 행의 바이트 수(rowPitch)가 같다. 띠의 블록 행을 결과의 해당 위치(firstRow / 4)에 그대로 놓는다.
+                const DirectX::Image& packed = *compressed.GetImage( 0, 0, 0 );
+                if ( packed.rowPitch != band._pDest->rowPitch )
                 {
-                    Band&                 band   = _pBand[bandIndex];
-                    const DirectX::Image& source = *band._pSource;
-                    DirectX::Image        slice  = source;
-                    slice.height                 = band._rowCount;
-                    slice.slicePitch             = source.rowPitch * band._rowCount;
-                    slice.pixels                 = source.pixels + source.rowPitch * band._firstRow;
-
-                    DirectX::ScratchImage compressed;
-                    band._result = DirectX::Compress( slice, _format, _flags, DirectX::TEX_THRESHOLD_DEFAULT, compressed );
-                    if ( FAILED( band._result ) )
-                        continue;
-
-                    // 폭이 같으므로 블록 행의 바이트 수(rowPitch)가 같다. 띠의 블록 행을 결과의 해당 위치(firstRow / 4)에 그대로 놓는다.
-                    const DirectX::Image& packed = *compressed.GetImage( 0, 0, 0 );
-                    if ( packed.rowPitch != band._pDest->rowPitch )
-                    {
-                        band._result = E_UNEXPECTED;
-                        continue;
-                    }
-                    const size_t blockRowCount = ( static_cast<size_t>( band._rowCount ) + 3 ) / 4;
-                    std::memcpy( band._pDest->pixels + band._pDest->rowPitch * ( band._firstRow / 4 ), packed.pixels, packed.rowPitch * blockRowCount );
+                    band._result = E_UNEXPECTED;
+                    return;
                 }
+                const size_t blockRowCount = ( static_cast<size_t>( band._rowCount ) + 3 ) / 4;
+                std::memcpy( band._pDest->pixels + band._pDest->rowPitch * ( band._firstRow / 4 ), packed.pixels, packed.rowPitch * blockRowCount );
             }
 
             /**
@@ -154,16 +150,19 @@ namespace sw::editor
 
                 const Stopwatch stopwatch;
                 BandCompressJob job;
-                job._pBand  = listBand.data();
                 job._format = format;
                 job._flags  = flags;
                 // 작업 시스템이 없으면(테스트 하니스, 서비스 연결 전) 현재 스레드가 띠를 차례로 압축한다. 결과 바이트는 같다.
-                const uint32                bandCount = static_cast<uint32>( listBand.size() );
-                const ParallelBlockDelegate body      = SW_DELEGATE_METHOD( ParallelBlockDelegate, &BandCompressJob::run, &job );
+                const uint32 bandCount = static_cast<uint32>( listBand.size() );
                 if ( pTaskManager != nullptr )
-                    pTaskManager->runParallel( bandCount, 2, body );
+                {
+                    pTaskManager->runParallelInto<Band>( listBand, 2, job );
+                }
                 else
-                    job.run( 0, bandCount );
+                {
+                    for ( uint32 bandIndex = 0; bandIndex < bandCount; ++bandIndex )
+                        job( bandIndex, listBand[bandIndex] );
+                }
                 SW_LOG_INFO_ID( "TextureImporter.CompressedXMipsFormat", "Compressed %#x%# (%# mips, format %#) in %# bands on %# workers: %# ms", static_cast<uint32>( metadata.width ), static_cast<uint32>( metadata.height ),
                                 static_cast<uint32>( metadata.mipLevels ), static_cast<uint32>( format ), bandCount,
                                 pTaskManager != nullptr ? pTaskManager->getWorkerCount() : 0u,

@@ -565,40 +565,24 @@ namespace sw
     {
         // 레이어 계산(후보 뽑기 · 정리)은 읽기 전용 입력(규칙 · 영역 · 높이맵 · 제외 영역)과 그 레이어의 후보 목록만 쓴다 - 레이어끼리 독립이라 워커에 나눈다.
         // 적용(셀 · 배치 · 레지스트리)은 부르는 쪽이 게임 스레드에서 차례로 한다. 레이어 다섯이면 한 번 짓기가 0.8 초 → 가장 큰 레이어 하나의 시간이 된다.
-        struct LayerJob
-        {
-            const FoliageComponent*     _pSelf{ nullptr }; ///< const - 워커는 멤버를 읽기만 한다(경합 감지기는 비-const 접근을 쓰기로 센다)
-            const TerrainComponent*     _pTerrain{ nullptr };
-            const PlacementRegion*      _pDirtyArea{ nullptr };
-            vector<PlacementInstance>*  _pOut{ nullptr };
-            vector<PlacementCandidate>* _pCandidates{ nullptr }; ///< 이 레이어의 후보 목록 - 바깥 목록은 부르는 스레드에서 미리 집는다(워커가 바깥 목록에 쓰기 접근을 하지 않게)
-            uint32                      _layerIndex{ 0 };
-            void                        run() const { _pSelf->computeLayerInstances( _layerIndex, _pTerrain, _pDirtyArea, _pCandidates, *_pOut ); }
-            /** @brief 레이어 구간 하나를 돕니다(`runParallelByCost` 의 본문). */
-            static void runRange( const LayerJob* arrJob, uint32 start, uint32 end )
-            {
-                for ( uint32 layerIndex = start; layerIndex < end; ++layerIndex )
-                    arrJob[layerIndex].run();
-            }
-        };
         const uint32 layerCount = static_cast<uint32>( _listLayer.size() );
         outListLayerInstance.clear();
         outListLayerInstance.resize( layerCount );
-        vector<LayerJob> listJob( layerCount );
-        for ( uint32 layerIndex = 0; layerIndex < layerCount; ++layerIndex )
-            listJob[layerIndex] = LayerJob{ this, pTerrain, pDirtyArea, &outListLayerInstance[layerIndex], pTerrain != nullptr ? &_listLayerCandidate[layerIndex] : nullptr, layerIndex };
         // 평면 경로(지형 없음)는 레이어마다 오너 트랜스폼 · 씬을 읽어(늦게 갱신하는 캐시일 수 있다) 차례로 돈다 - 가볍다.
         if ( pTerrain == nullptr )
         {
-            LayerJob::runRange( listJob.data(), 0, layerCount );
+            for ( uint32 layerIndex = 0; layerIndex < layerCount; ++layerIndex )
+                computeLayerInstances( layerIndex, nullptr, pDirtyArea, nullptr, outListLayerInstance[layerIndex] );
             return;
         }
         // 포크-조인이다 — 스테이지를 만들고 레이어마다 태스크를 내어 기다리는 대신 병렬 for 하나로 낸다(부르는 스레드도 함께 돈다, 언리얼 ParallelFor).
         // 레이어 안의 후보 판정도 병렬 for 라 겹쳐 돈다(`PlacementRule::sampleCandidates`). 작업 시스템이 없으면(테스트) 이 스레드에서 차례로 돈다.
-        const LayerJob* const arrJob     = listJob.data();
-        auto                  layerRange = [arrJob]( uint32 start, uint32 end )
-        { LayerJob::runRange( arrJob, start, end ); };
-        engine::runParallelByCost( layerCount, SW_DELEGATE_LAMBDA( ParallelBlockDelegate, layerRange ) );
+        // 결과 칸은 `runParallelInto` 가 레이어마다 건넨다. 이 레이어의 후보 목록은 부르는 스레드에서 집은 포인터로 받는다(워커가 바깥 목록에 쓰기 접근을 하지 않게),
+        // 오너는 const 로 받는다(워커는 멤버를 읽기만 한다 — 경합 감지기는 비-const 접근을 쓰기로 센다).
+        const FoliageComponent* const     pSelf        = this;
+        vector<PlacementCandidate>* const arrCandidate = _listLayerCandidate.data();
+        engine::runParallelIntoByCost<vector<PlacementInstance>>( outListLayerInstance, [pSelf, pTerrain, pDirtyArea, arrCandidate]( uint32 layerIndex, vector<PlacementInstance>& outListInstance )
+        { pSelf->computeLayerInstances( layerIndex, pTerrain, pDirtyArea, &arrCandidate[layerIndex], outListInstance ); } );
     }
 
     void FoliageComponent::computeLayerInstances( uint32 layerIndex, const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea,

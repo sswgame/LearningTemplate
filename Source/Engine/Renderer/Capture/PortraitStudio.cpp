@@ -97,28 +97,25 @@ namespace sw
             {
                 const PortraitCapture* _pCapture{ nullptr };
                 const string*          _pBase{ nullptr }; ///< 확장자 앞까지의 쓸 경로
-                uint8*                 _pWritten{ nullptr };
 
-                void runRange( uint32 start, uint32 end )
+                /** @brief 장 @p index 를 DDS · PNG 로 쓰고, 둘 다 썼으면 제 칸 @p outWritten 에 1 을 씁니다(`runParallelInto` 본문). */
+                void operator()( uint32 index, uint8& outWritten ) const
                 {
-                    for ( uint32 index = start; index < end; ++index )
+                    const PortraitCapture& capture = _pCapture[index];
+                    // 행 간격을 풀어 빈틈없는 RGBA8(알파 255)로 — 스크린샷 · 에디터 UI 캡처와 같은 풀기다
+                    RHITextureMipSpan layout{};
+                    layout._width    = capture._width;
+                    layout._height   = capture._height;
+                    layout._rowBytes = capture._rowBytes;
+                    vector<uint8> rgbaBytes;
+                    if ( RenderTargetImageFile::unpackRGBA8( capture._bytes, layout, constant::render::kOffscreenColorFormat, rgbaBytes ) == false )
                     {
-                        const PortraitCapture& capture = _pCapture[index];
-                        // 행 간격을 풀어 빈틈없는 RGBA8(알파 255)로 — 스크린샷 · 에디터 UI 캡처와 같은 풀기다
-                        RHITextureMipSpan layout{};
-                        layout._width    = capture._width;
-                        layout._height   = capture._height;
-                        layout._rowBytes = capture._rowBytes;
-                        vector<uint8> rgbaBytes;
-                        if ( RenderTargetImageFile::unpackRGBA8( capture._bytes, layout, constant::render::kOffscreenColorFormat, rgbaBytes ) == false )
-                        {
-                            _pWritten[index] = 0;
-                            continue;
-                        }
-                        const bool bDDS  = ImageFileWriter::writeDDSRGBA8( _pBase[index] + ".dds", rgbaBytes, capture._width, capture._height );
-                        const bool bPNG  = ImageFileWriter::writePNGRGBA8( _pBase[index] + ".png", rgbaBytes, capture._width, capture._height );
-                        _pWritten[index] = bDDS && bPNG ? 1 : 0;
+                        outWritten = 0;
+                        return;
                     }
+                    const bool bDDS = ImageFileWriter::writeDDSRGBA8( _pBase[index] + ".dds", rgbaBytes, capture._width, capture._height );
+                    const bool bPNG = ImageFileWriter::writePNGRGBA8( _pBase[index] + ".png", rgbaBytes, capture._width, capture._height );
+                    outWritten      = bDDS && bPNG ? 1 : 0;
                 }
             };
         };
@@ -267,9 +264,9 @@ namespace sw
             {
                 listBase.push_back( directory + "/" + string( makeFileStem( path ) ) + ".portrait" );
             }
-            vector<uint8>                    listWritten( listCapture.size(), 0 ); // 장마다 제 칸(워커가 쓴다) - 아래 직렬 단계가 정해진 차례로 모은다
-            PortraitStudioInternal::WriteJob job{ listCapture.data(), listBase.data(), listWritten.data() };
-            engine::runParallelByCost( static_cast<uint32>( listCapture.size() ), SW_DELEGATE_METHOD( ParallelBlockDelegate, &PortraitStudioInternal::WriteJob::runRange, &job ) );
+            vector<uint8>                          listWritten( listCapture.size(), 0 ); // 장마다 제 칸(워커가 쓴다) - 아래 직렬 단계가 정해진 차례로 모은다
+            const PortraitStudioInternal::WriteJob job{ listCapture.data(), listBase.data() };
+            engine::runParallelIntoByCost<uint8>( listWritten, job );
             for ( size_t index = 0; index < listCapture.size(); ++index )
             {
                 bAllSucceeded = bAllSucceeded && listWritten[index] != 0;

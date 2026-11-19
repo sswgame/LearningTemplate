@@ -126,26 +126,25 @@ namespace sw
                 return weight > 0.0f ? sum / weight : data.sampleLevel( 0, normal );
             }
 
-            /** @brief 거르기의 병렬 일 하나입니다 — 항목 하나가 단계 1 부터의 텍셀 행 하나다(행마다 쓰는 텍셀이 겹치지 않고 단계 0 은 읽기만 한다). */
+            /**
+             * @brief 거르기의 병렬 본문입니다 — 항목 하나가 단계 1 부터의 텍셀 하나이고 제 칸(`runParallelInto` 가 건넨다)에만 쓴다. 단계 0 은 읽기만 한다.
+             * @details 출력 칸을 인자로 받으므로 텍셀 벡터를 본문이 잡지 않는다(벡터의 쓰기 검사를 작업자마다 열면 다른 칸이어도 경합으로 잡힌다).
+             */
             struct FilterJob
             {
                 const ReflectionProbeAsset* _pData{ nullptr };
-                float3*                     _pTexel{ nullptr }; ///< 쓸 텍셀 — 분배 전에 한 번 받는다(행마다 겹치지 않는 칸에 쓴다, 벡터의 쓰기 검사를 작업자마다 열면 경합으로 잡힌다)
                 uint32                      _sampleCount{ 0 };
 
-                void run( uint32 start, uint32 end )
+                /** @brief 단계 1 첫 텍셀부터 센 번호 @p texelIndex 의 텍셀을 걸러 @p outTexel 에 씁니다. */
+                void operator()( uint32 texelIndex, float3& outTexel ) const
                 {
-                    const uint32 resolution = _pData->_resolution;
-                    for ( uint32 rowIndex = start; rowIndex < end; ++rowIndex )
-                    {
-                        const uint32  level     = 1u + rowIndex / resolution;
-                        const uint32  y         = rowIndex % resolution;
-                        const float32 roughness = _pData->computeLevelRoughness( level );
-                        for ( uint32 x = 0; x < resolution; ++x )
-                        {
-                            _pTexel[_pData->computeTexelIndex( level, x, y )] = prefilterTexel( *_pData, _pData->computeTexelDirection( x, y ), roughness, _sampleCount );
-                        }
-                    }
+                    const uint32 resolution   = _pData->_resolution;
+                    const uint32 levelTexels  = resolution * resolution;
+                    const uint32 level        = 1u + texelIndex / levelTexels;
+                    const uint32 texelInLevel = texelIndex % levelTexels;
+                    const uint32 x            = texelInLevel % resolution;
+                    const uint32 y            = texelInLevel / resolution;
+                    outTexel                  = prefilterTexel( *_pData, _pData->computeTexelDirection( x, y ), _pData->computeLevelRoughness( level ), _sampleCount );
                 }
             };
         };
@@ -203,10 +202,10 @@ namespace sw
             return valid;
         Internal::FilterJob job{};
         job._pData       = this;
-        job._pTexel      = _listTexel.data();
         job._sampleCount = sampleCount;
-        // 행 하나가 텍셀 `_resolution` 개 × 표본 `sampleCount` 개라 디스패치 비용보다 크다 — 행이 둘이면 나눈다.
-        engine::runParallel( ( _levelCount - 1u ) * _resolution, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Internal::FilterJob::run, &job ) );
+        // 출력은 단계 1 부터의 텍셀이다(단계 0 은 거르기의 입력). 행 하나가 텍셀 `_resolution` 개 × 표본 `sampleCount` 개라 디스패치 비용보다 크다 — 행이 둘이면 나눈다.
+        const vector_reference<float3> listFiltered = vector_reference<float3>( _listTexel ).subspan( computeTexelIndex( 1u, 0, 0 ) );
+        engine::runParallelInto<float3>( listFiltered, 2u * _resolution, job );
         return {};
     }
 
