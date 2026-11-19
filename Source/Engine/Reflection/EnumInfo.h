@@ -172,7 +172,7 @@ namespace sw
          * @brief @p value 가 선언된 열거자인지(비트 플래그면 선언된 비트들의 조합인지) 판단합니다. 표식(`Invalid` · `Count`)은 거절합니다.
          * @details 남이 보낸 바이트를 읽는 쪽(`StateIO::reflected`)이 쓴다 — `isValidValue` 는 표식만 보므로 열거자 밖 값(`Boss` 다음의 9)이 그대로 들어왔다.
          */
-        bool isDeclaredValue( int64 value ) const noexcept
+        [[nodiscard]] bool isDeclaredValue( int64 value ) const noexcept
         {
             if ( isValidValue( value ) == false )
                 return false;
