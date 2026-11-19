@@ -78,7 +78,7 @@ SW_TEST_CASE( StateIOReflectedTest, EveryStateFieldRoundTripsAndOthersStay )
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( size_t{ 0 }, reading.getRemainingBytes() );
     SW_EXPECT_EQUAL( 7, restored._steps );
-    SW_EXPECT_NEAR( 5.0f, restored._target.y, 1.0e-6f );
+    SW_EXPECT_NEAR( 5.0f, restored._target._y, 1.0e-6f );
     SW_EXPECT_TRUE( restored._note == "running" );
     SW_EXPECT_TRUE( restored._label == sw::hashed_string( "Gate" ) );
     SW_EXPECT_TRUE( restored._phase == sw::StateIOReflectedTestPhase::Done );

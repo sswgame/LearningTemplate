@@ -10,6 +10,7 @@
 namespace sw
 {
     struct ParsedEnumInfo;
+    struct ParsedEnumeratorInfo;
     struct ParsedFunctionInfo;
     struct ParsedPropertyInfo;
     struct ParsedTypeInfo;

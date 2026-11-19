@@ -3,9 +3,11 @@
 #include "Core/Container/string.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/EnumInfo.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"

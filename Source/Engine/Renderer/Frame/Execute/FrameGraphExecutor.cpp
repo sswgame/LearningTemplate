@@ -860,7 +860,7 @@ namespace sw
         outParams._instanceSlotCount = _state._gpuScene.getInstanceSlotCount();
         // 인스턴스 LOD 선택은 그 뷰를 그리는 카메라로 한다. 추가 뷰는 자기 카메라, 그림자 슬롯과 주 시점은 주 카메라다(그림자는 가장 고운 단계가 아니라 카메라가 보는 단계로 그린다).
         // 절두체 밖의 가림 물체는 화면 크기가 0 이 아니라 거리에서 나온 값을 받는다 — CPU 선택(`LODView::computeScreenSize`)은 그 경우 가장 낮은 단계였다.
-        const RenderView& lodView = ( pExtraView != nullptr ) ? pExtraView->_cullInput : _state._arrView[static_cast<uint32>( RenderViewKind::Main )];
+        const RenderView& lodView = ( pExtraView != nullptr ) ? pExtraView->_cullInput : _state._arrView[RenderViewKind::Main];
         LODView::computeProjectionTerms( lodView._viewProj, outParams._arrLODDepthRow, outParams._arrLODView[3] );
         outParams._arrLODView[0]    = lodView._position._x;
         outParams._arrLODView[1]    = lodView._position._y;
@@ -928,7 +928,7 @@ namespace sw
         if ( sceneDepth != 0 )
             cmd.prepareTextureForRenderTarget( sceneDepth );
         constexpr uint32             cullViewIndex = static_cast<uint32>( RenderViewKind::Main );
-        const RenderView&            renderView    = _state._arrView[cullViewIndex];
+        const RenderView&            renderView    = _state._arrView[static_cast<RenderViewKind>( cullViewIndex )];
         const RHIPipelineStateHandle cullPSO       = _psoManager.getEnginePSO( RenderPassKind::GPUCull );
         const bool                   bReady        = cullPSO != 0 && isCullViewReady( cullViewIndex, renderView ) && _occludedOrders._uav != kInvalidDescriptorIndex && _lateCullCb.isValid();
         if ( bReady == false )

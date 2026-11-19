@@ -19,7 +19,7 @@ namespace sw
     /** @brief 락스텝 선 형식의 상한입니다. 본문 형식(`PROPERTY( MaxCount )`)과 메시지 표가 함께 쓴다. */
     struct LockstepLimit
     {
-        static constexpr int32 kMaxInputBytes = LockstepLimit::kMaxInputBytes; ///< `NetLockstepMessage::kMaxInputBytes`
+        static constexpr int32 kMaxInputBytes = 1000; ///< 틱 하나의 입력 상한. 종류, 플레이어, 틱, 길이와 함께 메시지 하나(1024 B)에 들어간다. 넘는 입력은 예약하지 않는다
     };
 
     /** @brief 틱 하나의 입력(양쪽 — 서버가 받아 다른 클라이언트에 그대로 나눈다) 본문입니다. 필드 순서가 와이어 형식이다. */
@@ -75,6 +75,6 @@ namespace sw
         static constexpr uint8 kChecksum      = Table::getKindOf<Checksum>();
         static constexpr uint8 kRollbackInput = Table::getKindOf<RollbackInput>();
         static constexpr uint8 kLeave         = Table::getKindOf<Leave>();
-        static constexpr int32 kMaxInputBytes = 1000; ///< 틱 하나의 입력 상한. 종류, 플레이어, 틱, 길이와 함께 메시지 하나(1024 B)에 들어간다. 넘는 입력은 예약하지 않는다
+        static constexpr int32 kMaxInputBytes = LockstepLimit::kMaxInputBytes; ///< 값은 `LockstepLimit` 한 곳(본문 형식의 MaxCount 와 같은 값)
     };
 } // namespace sw
