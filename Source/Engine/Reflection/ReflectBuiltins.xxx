@@ -17,9 +17,7 @@
  *     f32 · i32 는 같은 형식(float32 · int32) 멤버를 선언 순서대로 적습니다 — 고정 배치형 코덱 · 상태 직렬화 · 해시가 성분마다 싣습니다.
  *       멤버 이름 · 형식 · 오프셋 · 크기는 Engine 컴파일이(`ReflectedValue.cpp`), i32 와 `PackedValueTraits` 의 정수 성분 표시가 맞는지도 거기서 봅니다.
  *     angle 은 라디안 float32 하나(`Radians`)이고, none 은 성분 규칙이 없는 타입(핸들 · 글 · 압축 타입)입니다.
- *   Roles: Interp(값 트랙 · UI 애니메이션이 섞는다, num · f32 · angle 에만) · State(`PROPERTY( RuntimeState )` 칸이 될 수 있다) ·
- *     Local(값이 이 프로세스에서만 뜻이 있다 — 생성 순서 id 인 핸들)을 | 로 잇고, 없으면 None.
- *     State 의 범위는 같은 프로세스의 롤백 · 리플레이 · 스냅샷이다. Local 칸은 세이브(`SerializePurpose::SaveGame`)가 쓰지 않고, `PROPERTY( SaveGame )` 은 생성 오류다.
+ *   Roles: Interp(값 트랙 · UI 애니메이션이 섞는다, num · f32 · angle 에만) · State(`PROPERTY( RuntimeState )` 칸이 될 수 있다)를 | 로 잇고, 없으면 None.
  *     State 인데 Layout 이 none 이면 상태 직렬화 · 해시에 손 처리기(bool · string · hashed_string · GameObjectHandle)가 있어야 합니다(없으면 컴파일이 멈춥니다).
  *   별칭이 없으면 마지막에 _ 를 둡니다(빈 __VA_ARGS__ 경고 방지. 로더가 무시합니다).
  *   줄 하나가 정본입니다 — 위 칸에서 파서(고정 배치형 코덱 · Interp · RuntimeState 검사), 에디터 위젯, 보간, 상태 직렬화 · 해시가 만들어집니다.
@@ -51,9 +49,9 @@ SW_REFLECT_BUILTIN_TYPE( float3, sw::float3, none, sw, Vector3, f32(_x,_y,_z), I
 SW_REFLECT_BUILTIN_TYPE( float4, sw::float4, none, sw, Vector4, f32(_x,_y,_z,_w), Interp|State, _ )
 SW_REFLECT_BUILTIN_TYPE( float4x4, sw::float4x4, none, sw, Matrix, f32(_11,_12,_13,_14,_21,_22,_23,_24,_31,_32,_33,_34,_41,_42,_43,_44), None, _ )
 SW_REFLECT_BUILTIN_TYPE( quaternion, sw::quaternion, none, sw, Rotation, f32(_x,_y,_z,_w), Interp|State, _ )
-SW_REFLECT_BUILTIN_TYPE( SlotHandle, sw::SlotHandle, none, sw, Handle, none, Local, _ )
-SW_REFLECT_BUILTIN_TYPE( ComponentHandle, sw::ComponentHandle, none, sw, Handle, none, Local, sw::ComponentHandle )
-SW_REFLECT_BUILTIN_TYPE( GameObjectHandle, sw::GameObjectHandle, none, sw, Handle, none, State|Local, sw::GameObjectHandle )
+SW_REFLECT_BUILTIN_TYPE( SlotHandle, sw::SlotHandle, none, sw, Handle, none, None, _ )
+SW_REFLECT_BUILTIN_TYPE( ComponentHandle, sw::ComponentHandle, none, sw, Handle, none, None, sw::ComponentHandle )
+SW_REFLECT_BUILTIN_TYPE( GameObjectHandle, sw::GameObjectHandle, none, sw, Handle, none, State, sw::GameObjectHandle )
 SW_REFLECT_BUILTIN_TYPE( atomic_bool, sw::atomic<bool>, none, sw, Checkbox, none, None, atomic<bool>, sw::atomic<bool> )
 SW_REFLECT_BUILTIN_TYPE( TagID, sw::TagID, none, sw, Tag, none, None, _ )
 

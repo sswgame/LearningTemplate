@@ -2,12 +2,14 @@
 // 정수 틱 재생(속도 · 역방향 · 반복 · 왕복 · 범위 · 건너뛰기)과 발화 규칙(문턱을 지날 때마다 한 번).
 #include "pch.h"
 
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Presentation/ISoundPlayer.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
@@ -591,10 +593,12 @@ SW_TEST_CASE( SequencePlaybackTest, ReverseCameraCutsComeInReverseOrder )
 /** @brief [SequencePlaybackTest] 구간은 상태다 — 한 갱신에 통째로 지나친 구간은 들어가지 않고, 역방향으로 들어가면 한 번 들어가 한 번 나간다 */
 SW_TEST_CASE( SequencePlaybackTest, SpansFollowTheCurrentFrame )
 {
-    // 소리 이벤트 "Beat" 는 등록되지 않았다 — 구간이 들어갈 때 오디오 엔진이 모르는 이벤트 오류를 한 번 낸다(이 케이스는 구간 상태만 본다).
-    SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" );
     GameObjectManager manager;
-    SequenceAsset     asset;
+    // 소리 이벤트 "Beat" 는 등록되지 않았다 — 소리 재생기가 있는 구성(오디오 엔진)이면 구간이 들어갈 때 모르는 이벤트 오류를 한 번 낸다. 이 케이스는 구간 상태만 본다.
+    // 구간 처리기와 같은 길(장면의 엔진 서비스)로 찾는다 — 오디오가 없는 구성(ASan nogpu)은 소리를 내지 않아 로그도 없다.
+    if ( locateSubsystem<ISoundPlayer>( manager.getSceneEngineServices()._pEngineSubsystems ) != nullptr )
+        SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" );
+    SequenceAsset asset;
     asset._frameMax = 10;
     SequenceTrackItem audio{};
     audio._kind  = SequenceItemKind::Audio;

@@ -88,7 +88,6 @@ namespace sw
         static constexpr uint8 None   = 0;
         static constexpr uint8 Interp = 1u << 0; ///< 값 트랙 · UI 애니메이션이 섞는다(언리얼 `UPROPERTY( Interp )`)
         static constexpr uint8 State  = 1u << 1; ///< `PROPERTY( RuntimeState )` 칸이 될 수 있다 — 상태 직렬화 · 상태 해시가 싣는다(범위는 같은 프로세스의 롤백 · 리플레이 · 스냅샷)
-        static constexpr uint8 Local  = 1u << 2; ///< 값이 이 프로세스에서만 뜻이 있다(생성 순서 id) — 세이브(`SerializePurpose::SaveGame`)는 쓰지 않고, `PROPERTY( SaveGame )` 은 생성 오류다
     };
 
     /** @brief 내장 타입 한 줄의 모양 · 역할입니다. */

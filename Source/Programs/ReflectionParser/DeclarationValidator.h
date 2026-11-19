@@ -62,8 +62,6 @@ namespace sw
          * @brief `RuntimeState` 칸의 형식이 상태 직렬화 · 상태 해시가 실을 수 있는 것인지 봅니다 — 내장 타입도 컨테이너도 `ReflectBuiltins.xxx` 의 State 역할이 있어야 합니다.
          * @details 실행 중에야 FATAL 로 드러나던 것(`StateIO::reflected` · `Component::foldStateHash`)을 생성 단계에서 멈춘다. 열거 · 반사 구조체는 여기서 통과한다.
          */
-        /** @brief `SaveGame` 칸이 프로세스 안에서만 뜻이 있는 값(표의 Local 역할 — 핸들)이면 그 헤더를 멈춥니다. 다른 실행이 읽으면 엉뚱한 오브젝트를 가리킨다. */
-        static bool isSaveGameAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, string_view owner );
 
         static bool isRuntimeStateAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, const ContainerTypeMap& containerTypeMap, string_view owner );
 

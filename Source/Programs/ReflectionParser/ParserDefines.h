@@ -191,7 +191,6 @@ namespace sw
         inline constexpr const utf8* kRoleNone      = "None";
         inline constexpr const utf8* kRoleInterp    = "Interp";
         inline constexpr const utf8* kRoleState     = "State";
-        inline constexpr const utf8* kRoleLocal     = "Local"; ///< TYPE 줄만 — 값이 이 프로세스에서만 뜻이 있다
         inline constexpr const utf8* kRoleFixed     = "Fixed"; ///< CONTAINER 줄만 — 크기가 고정이다
         inline constexpr utf8        kRoleSeparator = '|';
     } // namespace builtinmacro

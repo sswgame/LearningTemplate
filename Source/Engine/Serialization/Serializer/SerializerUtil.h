@@ -326,8 +326,8 @@ namespace sw
         /**
          * @brief 이 문맥의 저장 목적에서 이 타입의 프로퍼티를 쓰고 읽는지 판정합니다. 세 형식(XML · JSON · 바이너리)과 diff 가 모두 이 함수를 지납니다.
          * @details 표는 `SerializePurpose` 설명에 있다. `Transient` 는 어느 목적도 쓰지 않고, `RuntimeState` 는 저작(Authoring)만 쓰지 않으며,
-         *          세이브(SaveGame)는 `SaveGame` 필드가 하나라도 있는 타입(옵트인)이면 그 필드만 쓰고, 프로세스 안 id(Local 역할 — 핸들)는 쓰지 않는다.
-         *          읽을 때 이 함수가 false 인 필드는 지금 값 그대로 둔다.
+         *          세이브(SaveGame)는 `SaveGame` 필드가 하나라도 있는 타입(옵트인)이면 그 필드만 쓴다. 읽을 때 이 함수가 false 인 필드는 지금 값 그대로 둔다.
+         *          핸들은 대상의 고정 지역 id · 키 해시로 적혀(감사 A-2) 다른 실행의 세이브에서도 같은 대상을 찾는다 — 세이브에서 빼지 않는다.
          * @param owner 프로퍼티를 가진 타입(상속 목록을 순회하는 그 타입). 옵트인 판정은 상속분까지 봅니다(`TypeInfo::hasSaveGameProperty`).
          */
         static bool shouldSerializeProperty( const TypeInfo& owner, const PropertyInfo& prop, const SerializeContext& context )
@@ -341,8 +341,7 @@ namespace sw
                 case SerializePurpose::Snapshot:
                     return true;
                 case SerializePurpose::SaveGame:
-                    // 프로세스 안 id(핸들 — 표의 Local 역할)는 다른 실행에서 다른 오브젝트라 세이브에 싣지 않는다. 읽을 때도 지금 값 그대로다.
-                    return ( prop._metadata->_bSaveGame == SW_TRUE || owner.hasSaveGameProperty() == false ) && prop.isProcessLocal() == false;
+                    return prop._metadata->_bSaveGame == SW_TRUE || owner.hasSaveGameProperty() == false;
             }
             return false;
         }
