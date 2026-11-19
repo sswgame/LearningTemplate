@@ -251,6 +251,60 @@ namespace sw
         }
 
         /**
+         * @struct ParallelRangeIntoJob
+         * @brief `runParallelRangeInto` 의 본문 어댑터입니다. 구간 [start, end) 마다 출력 span 들을 그 구간으로 잘라 `body( start, end, span<T0>, span<T1>, … )` 에 건넵니다.
+         * @details 빈 출력은 "그 스트림이 없다" 는 뜻이라 빈 채로 건넵니다(법선 · UV 처럼 고를 수 있는 SoA 스트림).
+         */
+        template <typename Body, typename... Ts>
+        struct ParallelRangeIntoJob
+        {
+            std::tuple<span<Ts>...> _outputs;          ///< 항목 수와 같은 길이이거나 빈 출력들(호출 스레드가 만들었다)
+            const Body*             _pBody{ nullptr }; ///< 구간 하나를 처리하는 본문 — `( uint32 start, uint32 end, span<Ts>... )`
+
+            /** @brief 출력마다 [start, end) 를 잘라 본문을 부릅니다. */
+            void runRange( uint32 start, uint32 end ) const
+            {
+                std::apply( [this, start, end]( const span<Ts>&... outputs )
+                { ( *_pBody )( start, end, sliceOutput( outputs, start, end )... ); }, _outputs );
+            }
+
+            /** @brief @p output 의 [start, end) 입니다. 빈 출력은 빈 채로 둡니다. */
+            template <typename T>
+            static span<T> sliceOutput( const span<T>& output, uint32 start, uint32 end )
+            {
+                return output.empty() ? output : output.subspan( start, end - start );
+            }
+
+            /** @brief 출력이 모두 @p count 길이이거나 비었는지입니다. 길이가 다른 출력을 자르면 남의 칸을 쓴다 — 부르는 쪽 잘못이라 단언으로 멈춘다. */
+            static bool hasItemCount( uint32 count, const span<Ts>&... outputs ) { return ( ( outputs.empty() || outputs.size() == count ) && ... ); }
+        };
+
+        /**
+         * @brief 출력 칸이 여럿인 포크-조인 병렬 for 입니다 — 본문은 `body( start, end, span<T0> out0, span<T1> out1, … )` 이고 각 출력의 [start, end) **조각만** 받습니다.
+         * @details 항목 하나가 칸 여럿을 쓰거나(후보 + 표시), 구간째 일괄 처리하는 백엔드 호출(바디 상태 묶음 읽기)이나 SoA 스트림(위치 · 법선)처럼 구간이 일의 모양인 곳에 씁니다.
+         *          출력 시작 포인터를 호출부마다 손으로 받던 모양을 형식으로 막는다 — 본문은 제 구간 밖의 칸을 볼 수 없다. 출력은 길이가 @p count 이거나 비어야 하고(빈 것은
+         *          "없는 스트림"), 원소 타입은 span 으로 넘겨 정해진다(`vector_reference<float3>( list )`). 읽기 입력은 지금처럼 const 포인터로 잡습니다. 나누기 규칙은 `runParallel`.
+         */
+        template <typename Body, typename... Ts>
+        void runParallelRangeInto( uint32 count, uint32 serialThreshold, const Body& body, span<Ts>... outputs )
+        {
+            using Job = ParallelRangeIntoJob<Body, Ts...>;
+            SW_ASSERT( Job::hasItemCount( count, outputs... ) );
+            const Job job{ std::tuple<span<Ts>...>{ outputs... }, &body };
+            runParallel( count, serialThreshold, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Job::runRange, &job ) );
+        }
+
+        /** @brief `runParallelRangeInto` 와 같되 나눌지를 측정한 비용으로 정합니다(`runParallelByCost`). */
+        template <typename Body, typename... Ts>
+        void runParallelRangeIntoByCost( uint32 count, const Body& body, span<Ts>... outputs )
+        {
+            using Job = ParallelRangeIntoJob<Body, Ts...>;
+            SW_ASSERT( Job::hasItemCount( count, outputs... ) );
+            const Job job{ std::tuple<span<Ts>...>{ outputs... }, &body };
+            runParallelByCost( count, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Job::runRange, &job ) );
+        }
+
+        /**
          * @brief 결정적 병렬 리듀스입니다(Taskflow `reduce` · `transform_reduce`). [0, count) 를 @p blockSize 씩 블록으로 자르고, 블록마다 @p identity 에서 시작해
          *        `body( index, T& partial )` 로 항목을 번호 순서로 접은 뒤, 부분값을 블록 순서로 `combine( T, T )` 해 돌려줍니다.
          * @details 블록 경계가 항목 수와 블록 크기로만 정해지므로 워커 수 · 스케줄과 무관하게 결과가 같다(부동소수 합도 같은 비트 — 원자 더하기나 스레드별 칸은

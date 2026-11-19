@@ -76,7 +76,30 @@ namespace sw
         }
 
         /**
-         * @brief 결정적 병렬 리듀스입니다 — 블록마다 `body( index, T& partial )` 로 번호 순서로 접고, 부분값을 블록 순서로 `combine` 합니다(`TaskManager::runParallelReduce`).
+         * @brief 출력 칸이 여럿인 병렬 for 입니다 — 본문은 `body( start, end, span<T0>, span<T1>, … )` 이고 각 출력의 [start, end) 조각만 받습니다(`TaskManager::runParallelRangeInto`).
+         * @details 항목 하나가 칸 여럿을 쓰거나 구간째 일괄 처리하는 곳에 씁니다. 출력은 길이가 @p count 이거나 비어야 합니다(빈 것은 없는 스트림). 서비스가 연결되지 않은 곳에서는 현재 스레드가 한 번에 돕니다.
+         */
+        template <typename Body, typename... Ts>
+        void runParallelRangeInto( uint32 count, uint32 serialThreshold, const Body& body, span<Ts>... outputs )
+        {
+            using Job = TaskManager::ParallelRangeIntoJob<Body, Ts...>;
+            SW_ASSERT( Job::hasItemCount( count, outputs... ) );
+            const Job job{ std::tuple<span<Ts>...>{ outputs... }, &body };
+            runParallel( count, serialThreshold, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Job::runRange, &job ) );
+        }
+
+        /** @brief `runParallelRangeInto` 와 같되 나눌지를 측정한 비용으로 정합니다(`runParallelByCost`). */
+        template <typename Body, typename... Ts>
+        void runParallelRangeIntoByCost( uint32 count, const Body& body, span<Ts>... outputs )
+        {
+            using Job = TaskManager::ParallelRangeIntoJob<Body, Ts...>;
+            SW_ASSERT( Job::hasItemCount( count, outputs... ) );
+            const Job job{ std::tuple<span<Ts>...>{ outputs... }, &body };
+            runParallelByCost( count, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Job::runRange, &job ) );
+        }
+
+        /**
+         * @brief 결정적 병렬 리듀스입니다 —블록마다 `body( index, T& partial )` 로 번호 순서로 접고, 부분값을 블록 순서로 `combine` 합니다(`TaskManager::runParallelReduce`).
          * @details 워커 수 · 스케줄 · 서비스 유무와 무관하게 같은 비트입니다. 원자 더하기나 스크래치 슬롯별 합처럼 도착 순서에 달린 합 대신 이쪽을 쓰십시오.
          */
         template <typename T, typename Body, typename Combine>

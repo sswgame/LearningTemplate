@@ -1863,3 +1863,49 @@ SW_TEST_CASE( TaskManagerTest, JoinWaitIsCountedAndTakeResetsTheStats )
     SW_EXPECT_EQUAL( uint64{ 0 }, manager.takeWaitStats()._joinWaitCount );
     manager.shutdown();
 }
+
+/**
+ * @brief `runParallelRangeInto` 는 구간마다 출력 여럿의 같은 구간 조각을 건넨다 — 모든 칸이 한 번씩 자기 번호로 채워지고, 빈 출력은 빈 조각으로 온다(고정 임계 · 비용 측정 둘 다)
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelRangeIntoHandsEachRangeItsOwnSlices )
+{
+    sw::TaskManager manager;
+    SW_REQUIRE_TRUE( manager.initialize( kWorkerCount ) );
+    constexpr uint32  kCount = 5000;
+    sw::atomic<int32> nonEmptyAbsentCount{ 0 };
+    sw::atomic<int32> wrongSliceCount{ 0 };
+    auto              fill = [&nonEmptyAbsentCount, &wrongSliceCount]( uint32 start, uint32 end, sw::span<uint32> outIndex, sw::span<float32> outHalf, sw::span<uint8> outAbsent )
+    {
+        if ( outAbsent.empty() == false )
+            nonEmptyAbsentCount.fetch_add( 1, std::memory_order_relaxed );
+        if ( outIndex.size() != end - start || outHalf.size() != end - start )
+        {
+            wrongSliceCount.fetch_add( 1, std::memory_order_relaxed );
+            return;
+        }
+        for ( uint32 index = start; index < end; ++index )
+        {
+            outIndex[index - start] += index + 1u;
+            outHalf[index - start] += static_cast<float32>( index ) * 0.5f;
+        }
+    };
+    for ( uint32 round = 0; round < 2; ++round )
+    {
+        sw::vector<uint32>  listIndex( kCount, 0u );
+        sw::vector<float32> listHalf( kCount, 0.0f );
+        if ( round == 0 )
+            manager.runParallelRangeInto( kCount, 1, fill, sw::span<uint32>( listIndex ), sw::span<float32>( listHalf ), sw::span<uint8>{} );
+        else
+            manager.runParallelRangeIntoByCost( kCount, fill, sw::span<uint32>( listIndex ), sw::span<float32>( listHalf ), sw::span<uint8>{} );
+        uint32 wrongCount = 0;
+        for ( uint32 index = 0; index < kCount; ++index )
+        {
+            if ( listIndex[index] != index + 1u || listHalf[index] != static_cast<float32>( index ) * 0.5f )
+                ++wrongCount;
+        }
+        SW_EXPECT_EQUAL( 0u, wrongCount );
+    }
+    SW_EXPECT_EQUAL( 0, nonEmptyAbsentCount.load() );
+    SW_EXPECT_EQUAL( 0, wrongSliceCount.load() );
+    manager.shutdown();
+}

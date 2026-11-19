@@ -27,6 +27,19 @@ namespace sw::editor
                     body( 0, count );
             }
 
+            /** @brief 정점 [0, count) 를 구간으로 나눠 돌리고 출력 스트림의 제 구간 조각만 건넵니다(`TaskManager::runParallelRangeInto`). 관리자가 없으면 현재 스레드가 한 번에 돕니다. */
+            template <typename Body, typename... Ts>
+            static void runRanges( TaskManager* pTaskManager, uint32 count, uint32 serialThreshold, const Body& body, span<Ts>... outputs )
+            {
+                if ( pTaskManager != nullptr )
+                {
+                    pTaskManager->runParallelRangeInto( count, serialThreshold, body, outputs... );
+                    return;
+                }
+                if ( count > 0 )
+                    body( 0, count, outputs... );
+            }
+
             static float3 rotateX( const float3& value, float32 radian )
             {
                 const float32 cosValue = MathUtil::cos( radian );
@@ -55,70 +68,62 @@ namespace sw::editor
                                  translation._x, translation._y, translation._z, 1.0f };
             }
 
-            /** @brief 위치(와 법선)를 행렬로 옮기는 병렬 일입니다. 덩어리 번호 구간을 받습니다. */
+            /** @brief 위치(와 법선)를 행렬로 옮기는 병렬 일입니다. 정점 구간과 그 구간의 위치 · 법선 조각을 받습니다(법선이 없으면 빈 조각). */
             struct TransformJob
             {
-                float3*  _pPosition{ nullptr };
-                float3*  _pNormal{ nullptr }; ///< 없으면 nullptr
                 float4x4 _pointMatrix{};
                 float4x4 _normalMatrix{};
-                size_t   _vertexCount{ 0 };
 
-                void run( uint32 startChunk, uint32 endChunk )
+                void operator()( uint32 start, uint32 end, span<float3> inoutListPosition, span<float3> inoutListNormal ) const
                 {
-                    const size_t first = static_cast<size_t>( startChunk ) * MeshModifierUtil::kChunkVertexCount;
-                    const size_t last  = MathUtil::min( static_cast<size_t>( endChunk ) * MeshModifierUtil::kChunkVertexCount, _vertexCount );
-                    for ( size_t index = first; index < last; ++index )
+                    for ( uint32 local = 0; local < end - start; ++local )
                     {
-                        _pPosition[index] = float3::transform( _pPosition[index], _pointMatrix );
-                        if ( _pNormal != nullptr )
-                            _pNormal[index] = ( float3::transformVector( _pNormal[index], _normalMatrix ) ).normalizeOr( float3::UnitY, MathUtil::kEpsilon );
+                        inoutListPosition[local] = float3::transform( inoutListPosition[local], _pointMatrix );
+                        if ( inoutListNormal.empty() == false )
+                            inoutListNormal[local] = ( float3::transformVector( inoutListNormal[local], _normalMatrix ) ).normalizeOr( float3::UnitY, MathUtil::kEpsilon );
                     }
                 }
             };
 
             /**
              * @brief 정점마다 `deformPoint` 를 걸고 가중치로 섞고 법선을 야코비안으로 옮기는 병렬 일입니다. 정점끼리 서로 읽지 않으므로 제자리에서 쓴다.
-             * @details 덩어리마다 다른 워커가 돈다 — 정점 배열은 일을 만들 때 받은 생 포인터로만 읽고 쓴다. `vector` 의 비const 인덱싱은 Debug 레이스
-             *          검출기가 쓰기로 세어 두 워커가 같은 배열을 동시에 만지는 순간 멈춘다(`MeshModifierParallelTest`).
+             * @details 구간마다 다른 워커가 돈다 — 쓰는 위치 · 법선은 `runParallelRangeInto` 가 건넨 제 구간 조각으로만, 읽기 전용 채널은 일을 만들 때 받은 const 포인터로만
+             *          만진다. `vector` 의 비const 인덱싱은 Debug 레이스 검출기가 쓰기로 세어 두 워커가 같은 배열을 동시에 만지는 순간 멈춘다(`MeshModifierParallelTest`).
              */
             struct DeformJob
             {
                 const MeshModifier*        _pModifier{ nullptr };
                 const MeshModifierContext* _pContext{ nullptr };
-                float3*                    _pPosition{ nullptr };
-                float3*                    _pNormal{ nullptr };           ///< 법선 채널이 없으면 nullptr
                 const float2*              _pUV{ nullptr };               ///< 없으면 nullptr
                 const float4*              _pColor{ nullptr };            ///< 없으면 nullptr
                 const float32*             _pWeight{ nullptr };           ///< 없으면 nullptr(모두 1)
                 const float3*              _pOriginalPosition{ nullptr }; ///< `needsOriginalPosition` 일 때만
-                size_t                     _vertexCount{ 0 };
                 float32                    _step{ 0.0f };
 
-                void run( uint32 startChunk, uint32 endChunk )
+                /** @brief 정점 [start, end) 를 변형합니다. 조각의 0 번이 정점 @p start 다(법선 조각이 비면 법선 채널이 없다). */
+                void operator()( uint32 start, uint32 end, span<float3> inoutListPosition, span<float3> inoutListNormal ) const
                 {
-                    const size_t first = static_cast<size_t>( startChunk ) * MeshModifierUtil::kChunkVertexCount;
-                    const size_t last  = MathUtil::min( static_cast<size_t>( endChunk ) * MeshModifierUtil::kChunkVertexCount, _vertexCount );
-                    for ( size_t index = first; index < last; ++index )
+                    for ( uint32 index = start; index < end; ++index )
                     {
+                        const uint32  local  = index - start;
                         const float32 weight = _pWeight != nullptr ? MathUtil::saturate( _pWeight[index] ) : 1.0f;
                         if ( weight <= 0.0f )
                             continue;
                         MeshModifierPoint point{};
-                        point._position    = _pPosition[index];
-                        point._normal      = _pNormal != nullptr ? _pNormal[index] : float3::UnitY;
+                        point._position    = inoutListPosition[local];
+                        point._normal      = inoutListNormal.empty() == false ? inoutListNormal[local] : float3::UnitY;
                         point._uv          = _pUV != nullptr ? _pUV[index] : float2{ 0.0f, 0.0f };
                         point._color       = _pColor != nullptr ? _pColor[index] : float4{ 1.0f, 1.0f, 1.0f, 1.0f };
-                        point._vertexIndex = static_cast<uint32>( index );
+                        point._vertexIndex = index;
                         if ( _pOriginalPosition != nullptr )
                         {
                             point._originalPosition     = _pOriginalPosition[index];
                             point._bHasOriginalPosition = true;
                         }
 
-                        const float3 moved = blend( point._position, _pModifier->deformPoint( point, *_pContext ), weight );
-                        _pPosition[index]  = moved;
-                        if ( _pNormal == nullptr )
+                        const float3 moved       = blend( point._position, _pModifier->deformPoint( point, *_pContext ), weight );
+                        inoutListPosition[local] = moved;
+                        if ( inoutListNormal.empty() )
                             continue;
 
                         // 법선에 수직인 접선 둘을 조금 밀어 변형된 접선을 얻고, 그 외적이 새 법선이다(t1 × t2 = n 이 되게 고른다)
@@ -131,7 +136,7 @@ namespace sw::editor
                         const float3 edge1         = blend( shifted._position, _pModifier->deformPoint( shifted, *_pContext ), weight ) - moved;
                         shifted._position          = point._position + tangent2 * _step;
                         const float3 edge2         = blend( shifted._position, _pModifier->deformPoint( shifted, *_pContext ), weight ) - moved;
-                        _pNormal[index]            = ( edge1.cross( edge2 ) ).normalizeOr( normal, MathUtil::kEpsilon );
+                        inoutListNormal[local]     = ( edge1.cross( edge2 ) ).normalizeOr( normal, MathUtil::kEpsilon );
                     }
                 }
 
@@ -143,13 +148,10 @@ namespace sw::editor
 
             static void transformMesh( TaskManager* pTaskManager, MeshModifierMesh& inoutMesh, const float4x4& pointMatrix, const float4x4& normalMatrix )
             {
-                TransformJob job{};
-                job._pPosition    = inoutMesh._listPosition.data();
-                job._pNormal      = inoutMesh.hasNormal() ? inoutMesh._listNormal.data() : nullptr;
-                job._pointMatrix  = pointMatrix;
-                job._normalMatrix = normalMatrix;
-                job._vertexCount  = inoutMesh.getVertexCount();
-                runBlocks( pTaskManager, MeshModifierUtil::computeChunkCount( job._vertexCount ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &TransformJob::run, &job ) );
+                const TransformJob job{ pointMatrix, normalMatrix };
+                // 덩어리(`kChunkVertexCount`) 하나보다 작은 메시는 나누지 않는다.
+                runRanges( pTaskManager, static_cast<uint32>( inoutMesh.getVertexCount() ), MeshModifierUtil::kChunkVertexCount, job, span<float3>( inoutMesh._listPosition ),
+                           inoutMesh.hasNormal() ? span<float3>( inoutMesh._listNormal ) : span<float3>{} );
             }
 
             static bool isScalarKind( MeshModifierParamKind kind )
@@ -326,16 +328,14 @@ namespace sw::editor
         MeshModifierInternal::DeformJob job{};
         job._pModifier         = this;
         job._pContext          = &context;
-        job._pPosition         = inoutMesh._listPosition.data();
-        job._pNormal           = inoutMesh.hasNormal() ? inoutMesh._listNormal.data() : nullptr;
         job._pUV               = inoutMesh.hasUV() ? inoutMesh._listUV.data() : nullptr;
         job._pColor            = inoutMesh.hasColor() ? inoutMesh._listColor.data() : nullptr;
         job._pWeight           = inoutMesh.hasWeight() ? inoutMesh._listWeight.data() : nullptr;
         job._pOriginalPosition = context._pListOriginalPosition != nullptr ? context._pListOriginalPosition->data() : nullptr;
-        job._vertexCount       = inoutMesh.getVertexCount();
         job._step              = MeshModifierUtil::computeJacobianStep( context._bounds );
-        MeshModifierInternal::runBlocks( context.getTaskManager(), MeshModifierUtil::computeChunkCount( inoutMesh.getVertexCount() ), 2,
-                                         SW_DELEGATE_METHOD( ParallelBlockDelegate, &MeshModifierInternal::DeformJob::run, &job ) );
+        // 덩어리(`kChunkVertexCount`) 하나보다 작은 메시는 나누지 않는다. 위치 · 법선은 출력 조각으로, 나머지 채널은 읽기 전용 포인터로 건넨다.
+        MeshModifierInternal::runRanges( context.getTaskManager(), static_cast<uint32>( inoutMesh.getVertexCount() ), MeshModifierUtil::kChunkVertexCount, job,
+                                         span<float3>( inoutMesh._listPosition ), inoutMesh.hasNormal() ? span<float3>( inoutMesh._listNormal ) : span<float3>{} );
     }
 
     void MeshModifier::fitToBounds( const MeshModifierBounds& localBounds )

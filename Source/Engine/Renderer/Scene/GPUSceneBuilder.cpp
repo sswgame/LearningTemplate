@@ -1233,8 +1233,8 @@ namespace sw
         if ( bPrevAligned == false )
             _listPrimitiveToCandidate.assign( primitiveCount, kInvalidCandidateIndex );
 
-        // 워커는 컨테이너를 만지지 않는다. 포인터만 넘긴다(컨테이너 레이스 탐지기가 워커의 인덱싱을 잡는다).
-        // 지난 후보 배열은 **읽기만** 한다. const 로 꺼낸 포인터다.
+        // 워커는 컨테이너를 만지지 않는다(컨테이너 레이스 탐지기가 워커의 인덱싱을 잡는다). 출력(후보 · 표시)은 `runParallelRangeInto` 가 건넨 제 구간 조각에만 쓰고,
+        // 입력과 지난 후보 배열은 **읽기만** 한다. const 로 꺼낸 포인터다.
         struct CollectJob
         {
             GPUSceneBuilder*              _pBuilder{ nullptr };
@@ -1242,18 +1242,17 @@ namespace sw
             ScenePrimitive* const*        _ppPrimitive{ nullptr };
             const PrimitiveInstanceEntry* _pEntry{ nullptr };
             uint32                        _meshCount{ 0 };
-            DrawCandidate*                _pCandidate{ nullptr };
-            uint8*                        _pFlag{ nullptr };
             const uint32*                 _pPrevMap{ nullptr };
             const DrawCandidate*          _pPrevCandidate{ nullptr };
             uint32                        _prevCount{ 0 };
             bool                          _bPermutationSame{ false };
 
-            void fillRange( uint32 start, uint32 end )
+            /** @brief 칸 [start, end) 의 후보를 채우고 표시를 만듭니다. 출력 조각의 0 번이 칸 @p start 다. */
+            void operator()( uint32 start, uint32 end, span<DrawCandidate> outListCandidate, span<uint8> outListFlag ) const
             {
                 for ( uint32 index = start; index < end; ++index )
                 {
-                    DrawCandidate&            candidate = _pCandidate[index];
+                    DrawCandidate&            candidate = outListCandidate[index - start];
                     uint8                     flag      = 0u;
                     const CandidateFillResult fill      = ( index < _meshCount ) ? _pBuilder->fillCandidateFromPrimitive( _ppPrimitive[index], _pScene, candidate )
                                                                                  : _pBuilder->fillCandidateFromInstanceEntry( _pEntry[index - _meshCount], _pScene, candidate );
@@ -1261,7 +1260,7 @@ namespace sw
                         flag = compareWithPrevious( index, candidate );
                     else if ( fill == CandidateFillResult::MaterialPending )
                         flag = kCollectMaterialPending;
-                    _pFlag[index] = flag;
+                    outListFlag[index - start] = flag;
                 }
             }
 
@@ -1295,14 +1294,14 @@ namespace sw
         job._ppPrimitive      = input._pListPrimitive->data();
         job._pEntry           = input._pListInstanceEntry->data();
         job._meshCount        = input._meshCount;
-        job._pCandidate       = _listScratchCandidate.data();
-        job._pFlag            = _listCollectFlag.data();
         job._pPrevMap         = bPrevAligned ? std::as_const( _listPrimitiveToCandidate ).data() : nullptr;
         job._pPrevCandidate   = std::as_const( _listBuiltCandidate ).data();
         job._prevCount        = static_cast<uint32>( _listBuiltCandidate.size() );
         job._bPermutationSame = input._bPermutationSame;
 
-        engine::runParallel( primitiveCount, kParallelCollectPrimitiveCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &CollectJob::fillRange, &job ) );
+        // 후보 배열은 칸 수보다 클 수 있다(제자리에 덮어쓰며 줄이지 않는다) — 앞 `primitiveCount` 칸만 출력이다.
+        engine::runParallelRangeInto( primitiveCount, kParallelCollectPrimitiveCount, job, span<DrawCandidate>( _listScratchCandidate ).subspan( 0, primitiveCount ),
+                                      span<uint8>( _listCollectFlag ) );
         return compactCollectedCandidates( input, primitiveCount, bPrevAligned );
     }
 
