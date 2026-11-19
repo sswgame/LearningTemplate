@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="baa94815a69548a394fab534ab4aaf6e"?>
+<!--
+  Cutscene InputMap (EngineDefaultAssets::_cutsceneInputMap) - SequencePlayerComponent appends it to the player's map the first time a cutscene needs it,
+  then pushes the Cutscene layer for the playback (blockLower when the cutscene blocks player movement, so move, look and game actions stop; pause and menus live in the UI map).
+  The action names are a contract with SequencePlayerComponent (Cutscene.Skip / Cutscene.FastForward). Keys are data; every game gets the same cutscene controls.
+-->
+<InputMap>
+	<layers>
+		<layer name="Cutscene" enabled="0" blockLower="0"/>
+	</layers>
+	<!-- Jump to the end of the cutscene (UE GoToEndAndStop). -->
+	<action name="Cutscene.Skip" layer="Cutscene" trigger="Pressed">
+		<bind source="Key" code="Backspace"/>
+		<bind source="Gamepad" code="Back"/>
+	</action>
+	<!-- Held: play faster (EngineConfig _sequencer._fastForwardRate); released: back to the cutscene's rate. -->
+	<action name="Cutscene.FastForward" layer="Cutscene" trigger="Down">
+		<bind source="Key" code="Period"/>
+		<bind source="Gamepad" code="RightThumb"/>
+	</action>
+</InputMap>

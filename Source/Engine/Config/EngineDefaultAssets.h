@@ -46,6 +46,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _photoModeInputMap; ///< 포토 모드 자유 카메라의 행동 맵 — 이동 · 오르내림 · 둘러보기 · 기울이기 · 줌 · 노출(`CameraDirectorComponent`, 포토 모드 동안만 읽는다)
         PROPERTY( Required )
+        DataPath _cutsceneInputMap; ///< 컷씬 레이어(`Cutscene`)의 행동 맵 — 건너뛰기 · 빨리감기(`SequencePlayerComponent` 가 처음 쓸 때 플레이어 맵에 더한다)
+        PROPERTY( Required )
         DataPath _userSettingsSchema; ///< 플레이어 옵션 메뉴의 엔진 설정 스키마(`UserSettingsManager`)
         PROPERTY( Required )
         DataPath _telemetrySchema; ///< 엔진 텔레메트리 사건 스키마(`TelemetryService`)

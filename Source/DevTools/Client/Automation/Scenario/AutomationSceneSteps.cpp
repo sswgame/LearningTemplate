@@ -4,11 +4,14 @@
  * @details - `<LoadScene path="game/x/maps/a.scene.xml" timeoutFrames="600"/>`: 씬 로드를 요청하고 그 씬이 활성이 될 때까지 시나리오 시계를 붙잡는다(못 열면 실패).
  *          - `<ExpectActiveScene path="game/x/maps/a.scene.xml"/>`: 활성 씬이 그 리소스에서 왔는지 본다(세이브 불러오기가 찍은 씬으로 옮겼는지 — 감사 G-7).
  *          - `<PlaySequence object="Intro"/>`: 활성 씬의 그 이름 오브젝트에 붙은 시퀀스(`SequencePlayerComponent`)를 처음부터 재생한다.
+ *            재생 칸 `rate`(음수 = 끝에서 거꾸로) · `loop`(None · Loop · PingPong) · `movement`(Free · Blocked · Confined) · `rangeStart` · `rangeEnd` 는 그 재생에 건다(비우면 씬 값).
  *          - `<WaitSequence object="Intro" timeoutFrames="1800"/>`: 그 시퀀스가 끝날 때까지 붙잡는다(언리얼 Sequencer 의 Play → Wait 같은 쌍).
+ *          - `<SkipSequence object="Intro"/>`: 재생 중인 그 시퀀스를 끝으로 건너뛴다(언리얼 `GoToEndAndStop` — 끝 상태 적용, 정상 끝). 재생 중이 아니면 실패다.
  *          시퀀스 안에서 게임 행동을 끼우는 쪽(시퀀서 이벤트 트랙이 시나리오를 부르는 것)은 `ScenarioPlayback::play` 를 부른다.
  */
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -19,6 +22,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
@@ -90,6 +94,21 @@ namespace sw
                 return pObject != nullptr ? pObject->getComponent<SequencePlayerComponent>() : nullptr;
             }
 
+            /** @brief 열거 이름 @p name 을 값으로 바꿉니다(값 0 .. @p count - 1 을 이름과 견준다). 모르는 이름이면 false 입니다. */
+            template <typename E>
+            [[nodiscard]] static bool parseEnumName( string_view name, int32 count, E& outValue )
+            {
+                for ( int32 value = 0; value < count; ++value )
+                {
+                    if ( name == string_view{ getEnumName( static_cast<E>( value ) ) } )
+                    {
+                        outValue = static_cast<E>( value );
+                        return true;
+                    }
+                }
+                return false;
+            }
+
             static bool runPlaySequence( AutomationStepContext& context, const AutomationStep& step )
             {
                 SequencePlayerComponent* pSequence = findSequence( context, step );
@@ -98,7 +117,53 @@ namespace sw
                     context.recordFailure( step, "no object with that name and a SequencePlayerComponent in the active scene" );
                     return true;
                 }
-                pSequence->play();
+                const AutomationSequenceStepParams params = step.readValidatedProperties<AutomationSequenceStepParams>();
+                if ( params._loop.empty() == false )
+                {
+                    SequenceLoopMode loopMode = SequenceLoopMode::None;
+                    if ( parseEnumName( params._loop, 3, loopMode ) == false )
+                    {
+                        context.recordFailure( step, "loop must be None, Loop or PingPong" );
+                        return true;
+                    }
+                    pSequence->setLoopMode( loopMode );
+                }
+                if ( params._movement.empty() == false )
+                {
+                    SequencePlayerMovement movement = SequencePlayerMovement::Free;
+                    if ( parseEnumName( params._movement, 3, movement ) == false )
+                    {
+                        context.recordFailure( step, "movement must be Free, Blocked or Confined" );
+                        return true;
+                    }
+                    pSequence->setPlayerMovement( movement );
+                }
+                if ( params._rate != 0.0f && pSequence->setPlayRate( MathUtil::abs( params._rate ) ) == false )
+                {
+                    context.recordFailure( step, "the sequence player rejected the rate" );
+                    return true;
+                }
+                // 범위는 틀기 전에 건다 — 틀기가 범위의 처음(역방향이면 끝)에서 시작한다.
+                const bool bRange = params._rangeStart != 0 || params._rangeEnd != 0;
+                if ( bRange && pSequence->setPlaybackRange( params._rangeStart, params._rangeEnd ) == false )
+                {
+                    context.recordFailure( step, "the sequence player rejected the playback range" );
+                    return true;
+                }
+                if ( params._rate < 0.0f )
+                    pSequence->playReverse();
+                else
+                    pSequence->play();
+                return true;
+            }
+
+            static bool runSkipSequence( AutomationStepContext& context, const AutomationStep& step )
+            {
+                SequencePlayerComponent* pSequence = findSequence( context, step );
+                if ( pSequence == nullptr )
+                    context.recordFailure( step, "no object with that name and a SequencePlayerComponent in the active scene" );
+                else if ( pSequence->skipToEnd() == false )
+                    context.recordFailure( step, "the sequence was not playing" );
                 return true;
             }
 
@@ -120,5 +185,6 @@ namespace sw
     SW_AUTOMATION_STEP( sceneLoadScene, "LoadScene", &AutomationSceneStepsInternal::runNothing, &AutomationStep::validateProperties<AutomationLoadSceneParams>, AutomationStepOptions{}.withHold( &AutomationSceneStepsInternal::holdLoadScene ) );
     SW_AUTOMATION_STEP( sceneExpectActiveScene, "ExpectActiveScene", &AutomationSceneStepsInternal::runExpectActiveScene, &AutomationStep::validateProperties<AutomationExpectActiveSceneParams>, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( scenePlaySequence, "PlaySequence", &AutomationSceneStepsInternal::runPlaySequence, &AutomationStep::validateProperties<AutomationSequenceStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( sceneSkipSequence, "SkipSequence", &AutomationSceneStepsInternal::runSkipSequence, &AutomationStep::validateProperties<AutomationSequenceStepParams>, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( sceneWaitSequence, "WaitSequence", &AutomationSceneStepsInternal::runNothing, &AutomationStep::validateProperties<AutomationSequenceStepParams>, AutomationStepOptions{}.withHold( &AutomationSceneStepsInternal::holdWaitSequence ) );
 } // namespace sw

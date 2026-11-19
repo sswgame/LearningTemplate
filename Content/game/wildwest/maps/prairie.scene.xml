@@ -1233,7 +1233,8 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<!-- 마을 도착 컷 — 기수가 마을 앞(X 40)에 닿으면 TownArrival 이 ArrivalDirector 의 시퀀스(data/arrival.seq.xml)를 한 번 튼다. 컷 카메라 둘은 Custom 역할이라 직접 뽑히지 않고,
+		<!-- 마을 도착 컷 — 기수가 마을 앞(X 40)에 닿으면 TownArrival 이 ArrivalDirector 의 시퀀스(data/arrival.seq.xml)를 한 번 튼다. 컷씬 동안 플레이어 입력을 막고(Blocked) HUD 를 숨기며,
+		     건너뛰기(Cutscene.Skip) · 빨리감기(Cutscene.FastForward)를 받는다. 범위 제한(Confined)으로 틀면 기수를 TownArrival 둘레 3 m 안에 둔다(automation/arrivalskip). 컷 카메라 둘은 Custom 역할이라 직접 뽑히지 않고,
 		     시퀀스가 끝나면 화면이 GameCamera(디렉터의 내려다보는 직교 시점)로 돌아온다. 시나리오 automation/arrivalcut 이 본다. -->
 		<entity id="110" name="ArrivalCutA">
 			<GameObject _schemaVersion="0" _name="ArrivalCutA" _bActive="true" _bAlwaysLoaded="true">
@@ -1285,7 +1286,14 @@
 					                         _sequencePath="game/wildwest/data/arrival.seq.xml"
 					                         _framesPerSecond="30"
 					                         _loopMode="None"
-					                         _bAutoPlay="false">
+					                         _playerMovement="Blocked"
+					                         _confineTarget="4"
+					                         _confineCenter="113"
+					                         _confineRadius="3"
+					                         _bAutoPlay="false"
+					                         _bHideHUD="true"
+					                         _bSkippable="true"
+					                         _bAllowFastForward="true">
 						<_listBinding>
 							<SequenceBindingSlot _binding="1" _object="110" />
 							<SequenceBindingSlot _binding="2" _object="111" />

@@ -1,7 +1,9 @@
 <?asset guid="189bde9ad80a13304074f20ba179d003"?>
 <!-- 시네마틱 시나리오(automation/cinematic)의 컷 둘 — 프레임 30 에 CutA, 60 에 CutB(같은 프레임에 Actor 가 전사 외형으로), 86 에 끝나 게임 카메라로 0.5 초 섞어 나온다. 프리롤 10 프레임이 대기 뷰를 낸다(30 fps).
      대상은 바인딩 id 다 — 어느 오브젝트인지는 씬의 Director(SequencePlayerComponent._listBinding)가 정한다. 끝나면 대상 상태를 되돌린다(외형은 이벤트라 되돌리지 않는다).
-     구간 항목: 30 에 화면 소리(Cue), 72 부터(CutB 사진 뒤) Actor 가 셋의 클립 1H_Melee_Attack_Chop 을 섞고(Chop), 같은 때 자막 한 줄(Line)이 바인딩 표시 이름 Actor 를 화자로 뜬다. -->
+     구간 항목: 30 에 화면 소리(Cue), 72 부터(CutB 사진 뒤) Actor 가 셋의 클립 1H_Melee_Attack_Chop 을 섞고(Chop), 같은 때 자막 한 줄(Line)이 바인딩 표시 이름 Actor 를 화자로 뜬다.
+     키 트랙: CutA 가 30 → 50 동안 X -3 → -1 로 미끄러지고(Dolly) 세로 화각이 0.7 → 0.3 rad 로 좁아진다(Zoom) — 둘 다 Eased(SmoothStep) 키라 35 프레임 값은 직선(-2.5 · 0.6)이 아니라
+     이징 값(-2.6875 · 0.6375)이다(automation/cinematiccamera). -->
 <SequenceAsset _frameMin="0"
                _frameMax="100"
                _note="cinematic scenario: two camera cuts with preroll and a blend back to the game camera"
@@ -23,5 +25,38 @@
 		<SequenceTrackItem _name="Chop" _binding="3" _start="72" _end="86" _amplitude="1" _kind="Animation" _clip="1H_Melee_Attack_Chop" />
 		<SequenceTrackItem _name="Line" _binding="3" _start="72" _end="86" _kind="Subtitle" _text="The warrior wakes." />
 	</_listItem>
-	<_listTrack />
+	<_listTrack>
+		<SequenceKeyTrack _name="CutA Dolly" _propertyPath="" _binding="1" _kind="Transform">
+			<_listChannel>
+				<FloatCurve>
+					<_listKey>
+						<FloatCurveKey _time="30" _value="-3" _arriveTangent="0" _leaveTangent="0" _interpolation="Eased" _bAutoTangent="true" _easing="SmoothStep" />
+						<FloatCurveKey _time="50" _value="-1" _arriveTangent="0" _leaveTangent="0" _interpolation="Linear" _bAutoTangent="true" _easing="Linear" />
+					</_listKey>
+				</FloatCurve>
+				<FloatCurve><_listKey /></FloatCurve>
+				<FloatCurve><_listKey /></FloatCurve>
+				<FloatCurve><_listKey /></FloatCurve>
+				<FloatCurve><_listKey /></FloatCurve>
+				<FloatCurve><_listKey /></FloatCurve>
+				<FloatCurve><_listKey /></FloatCurve>
+				<FloatCurve><_listKey /></FloatCurve>
+				<FloatCurve><_listKey /></FloatCurve>
+			</_listChannel>
+		</SequenceKeyTrack>
+		<SequenceKeyTrack _name="CutA Zoom" _propertyPath="" _binding="1" _kind="CameraLens">
+			<_listChannel>
+				<FloatCurve>
+					<_listKey>
+						<FloatCurveKey _time="30" _value="0.7" _arriveTangent="0" _leaveTangent="0" _interpolation="Eased" _bAutoTangent="true" _easing="SmoothStep" />
+						<FloatCurveKey _time="50" _value="0.3" _arriveTangent="0" _leaveTangent="0" _interpolation="Linear" _bAutoTangent="true" _easing="Linear" />
+					</_listKey>
+				</FloatCurve>
+				<FloatCurve><_listKey /></FloatCurve>
+				<FloatCurve><_listKey /></FloatCurve>
+				<FloatCurve><_listKey /></FloatCurve>
+				<FloatCurve><_listKey /></FloatCurve>
+			</_listChannel>
+		</SequenceKeyTrack>
+	</_listTrack>
 </SequenceAsset>

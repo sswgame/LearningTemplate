@@ -148,7 +148,11 @@ namespace sw
         string _key{}; ///< 기억할 이름(한 시나리오 안에서)
     };
 
-    /** @brief `PlaySequence` · `WaitSequence` 의 인자입니다. */
+    /**
+     * @brief `PlaySequence` · `WaitSequence` · `SkipSequence` 의 인자입니다.
+     * @details 재생 칸(`PlaySequence` 만 본다)은 컴포넌트의 공개 설정을 그대로 거는 것이다 — 비우면 씬에 적힌 값으로 튼다. 열거 값은 이름이다(시퀀서 층이 이 층 위라 형식을 쓰지 않는다).
+     *          범위는 둘 다 0 이면 시퀀스 전체다(재생기는 시작 < 끝이 아닌 범위를 거절하므로 0..0 은 범위가 아니다).
+     */
     REFLECT()
     struct SW_API AutomationSequenceStepParams
     {
@@ -158,6 +162,16 @@ namespace sw
         string _object{};
         PROPERTY( Min = 1 )
         uint32 _timeoutFrames{ 3600 };
+        PROPERTY( Tooltip = "PlaySequence: play rate (negative plays backwards from the end; 0 keeps the scene's rate)" )
+        float32 _rate{ 0.0f };
+        PROPERTY( Tooltip = "PlaySequence: loop mode name (None, Loop, PingPong); empty keeps the scene's mode" )
+        string _loop{};
+        PROPERTY( Tooltip = "PlaySequence: player movement name (Free, Blocked, Confined); empty keeps the scene's policy" )
+        string _movement{};
+        PROPERTY( Tooltip = "PlaySequence: first frame of the playback range (with rangeEnd; both 0 play the whole sequence)" )
+        int32 _rangeStart{ 0 };
+        PROPERTY( Tooltip = "PlaySequence: last frame of the playback range" )
+        int32 _rangeEnd{ 0 };
     };
 
     /** @brief `DevCommand` 의 인자입니다. */

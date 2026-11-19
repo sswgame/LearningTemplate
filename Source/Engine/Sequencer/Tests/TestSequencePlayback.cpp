@@ -706,3 +706,34 @@ SW_TEST_CASE( SequencePlaybackTest, EasedKeysGiveTheSameValueInReverse )
     SW_REQUIRE_EQUAL( 4, pPlayer->getCurrentFrame() );
     SW_EXPECT_NEAR( forwardX, Util::readX( *pHero ), 1e-6f );
 }
+
+/** @brief [SequencePlaybackTest] 범위 제한 컷씬: 대상이 중심 둘레 반지름 밖으로 나가면 틱 뒤에 경계로 되돌린다. 칸이 비었으면 오류를 남기고 틀지 않는다 */
+SW_TEST_CASE( SequencePlaybackTest, ConfinedCutsceneKeepsTheTargetInsideTheRadius )
+{
+    SW_EXPECT_LOG( "SequencePlayer.ConfineIncomplete" );
+    using Util = SequencePlaybackTestUtil;
+    GameObjectManager        manager;
+    GameObject*              pHero   = nullptr;
+    SequencePlayerComponent* pPlayer = Util::makeScene( manager, pHero );
+    SW_REQUIRE_NOT_NULL( pPlayer );
+    GameObject* pCenter = manager.createGameObject( hashed_string( "Center" ) );
+    (void)pCenter->addComponent<SceneComponent>();
+    SequenceAsset asset;
+    asset._frameMax     = 300;
+    asset._whenFinished = SequenceFinishPolicy::KeepState;
+    pPlayer->setSequence( asset );
+    pPlayer->setPlayerMovement( SequencePlayerMovement::Confined );
+
+    pPlayer->play(); // 대상 · 중심 · 반지름이 없다
+    SW_EXPECT_FALSE( pPlayer->isPlaying() );
+
+    pPlayer->setConfine( pHero->getHandle(), pCenter->getHandle(), 2.0f );
+    pPlayer->play();
+    SW_REQUIRE_TRUE( pPlayer->isPlaying() );
+    pHero->getPrimarySceneComponent()->setLocalPosition( float3{ 5.0f, 0.0f, 0.0f } );
+    Util::update( manager, *pPlayer, 1.0f / 30.0f );
+    SW_EXPECT_NEAR( 2.0f, Util::readX( *pHero ), 1e-4f );
+    pHero->getPrimarySceneComponent()->setLocalPosition( float3{ 1.0f, 0.0f, 0.0f } );
+    Util::update( manager, *pPlayer, 1.0f / 30.0f );
+    SW_EXPECT_NEAR( 1.0f, Util::readX( *pHero ), 1e-4f ); // 안이면 그대로
+}
