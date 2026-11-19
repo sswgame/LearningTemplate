@@ -3,6 +3,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/EnumInfo.h"
@@ -41,6 +42,7 @@ namespace sw
                 Float32,
                 Float64,
                 FloatVector, ///< float2 · float3 · float4 · quaternion — float32 를 `_size / 4` 개
+                Int2,        ///< 정수 좌표 — `StateIO::value( int2& )`
                 String,
                 Name,
                 Enum,
@@ -70,6 +72,7 @@ namespace sw
                     {       "float3", LeafKind::FloatVector},
                     {       "float4", LeafKind::FloatVector},
                     {   "quaternion", LeafKind::FloatVector},
+                    {         "int2",        LeafKind::Int2},
                     {       "string",      LeafKind::String},
                     {"hashed_string",        LeafKind::Name},
                 };
@@ -101,7 +104,7 @@ namespace sw
 
             [[noreturn]] static void stopForUnsupportedField( const TypeInfo& owner, const PropertyInfo& prop )
             {
-                SW_FATAL( "state field '%#::%#' (%#) cannot be carried by StateIO::reflected - use a number, bool, enum, string, hashed_string, float vector, reflected struct "
+                SW_FATAL( "state field '%#::%#' (%#) cannot be carried by StateIO::reflected - use a number, bool, enum, string, hashed_string, float vector, int2, reflected struct "
                           "or a sequence of those, or take the field out of RuntimeState and carry it with io.value in serializeState",
                           owner._fullyQualifiedName.c_str(), prop._name.c_str(), prop._typeName.c_str() );
             }
@@ -322,6 +325,9 @@ namespace sw
                     return;
                 case LeafKind::Float64:
                     value( *static_cast<float64*>( pValue ) );
+                    return;
+                case LeafKind::Int2:
+                    value( *static_cast<int2*>( pValue ) );
                     return;
                 case LeafKind::FloatVector:
                     Internal::valueFloatVector( *this, registry, leafType, pValue );

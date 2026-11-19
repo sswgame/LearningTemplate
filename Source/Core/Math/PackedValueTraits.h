@@ -22,6 +22,7 @@
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Math/RGB10A2.h"
 #include "Core/Math/Radians.h"
+#include "Core/Math/VectorMath.h"
 
 namespace sw
 {
@@ -292,6 +293,44 @@ namespace sw
         }
         [[nodiscard]] static constexpr Radians fromFloats( const PackedFloats& floats ) noexcept { return Radians::fromDegrees( floats._arrValue[0] ); }
     };
+
+    /**
+     * @brief 정수 좌표 `int2` 의 성분은 정수 둘입니다(언리얼 `FIntPoint` 의 X · Y). 범위는 float32 가 정수를 정확히 나타내는 ±(2^24 - 1) 라 왕복이 비트까지 같고,
+     *        `kIntegerComponents` 가 소수 성분(`2.5`)을 범위 밖처럼 거절하게 한다(`isPackedFloatsInRange`) — 말없이 반올림하지 않는다.
+     */
+    template <>
+    struct PackedValueTraits<int2>
+    {
+        static constexpr uint32  kComponentCount    = 2;
+        static constexpr float32 kRangeMin          = -16777215.0f; // 2^24 - 1 — 글의 16777217 은 float32 로 읽으면 2^24 가 되므로 2^24 부터 거절해야 잡힌다
+        static constexpr float32 kRangeMax          = 16777215.0f;
+        static constexpr float32 kDragSpeed         = 1.0f;
+        static constexpr bool    kIntegerComponents = true;
+
+        [[nodiscard]] static constexpr PackedFloats toFloats( const int2& value ) noexcept
+        {
+            PackedFloats result{};
+            result._arrValue[0] = static_cast<float32>( value._x );
+            result._arrValue[1] = static_cast<float32>( value._y );
+            return result;
+        }
+        [[nodiscard]] static constexpr int2 fromFloats( const PackedFloats& floats ) noexcept
+        {
+            return int2{ static_cast<int32>( floats._arrValue[0] ), static_cast<int32>( floats._arrValue[1] ) };
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
+    template <typename T, typename = void>
+    struct HasIntegerPackedComponents : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasIntegerPackedComponents<T, std::void_t<decltype( PackedValueTraits<T>::kIntegerComponents )>> : std::bool_constant<PackedValueTraits<T>::kIntegerComponents>
+    {
+    };
 } // namespace sw
 
 namespace sw
@@ -310,6 +349,11 @@ namespace sw
             const float32 value = floats._arrValue[index];
             if ( ( Traits::kRangeMin <= value && value <= Traits::kRangeMax ) == false )
                 return false;
+            if constexpr ( HasIntegerPackedComponents<T>::value )
+            {
+                if ( static_cast<float32>( static_cast<int32>( value ) ) != value )
+                    return false;
+            }
         }
         return true;
     }

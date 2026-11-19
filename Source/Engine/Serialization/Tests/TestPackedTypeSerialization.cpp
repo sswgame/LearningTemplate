@@ -387,7 +387,7 @@ SW_TEST_CASE( PackedValueSerializationTest, BuiltinClassFollowsTheTable )
         SW_EXPECT_TRUE_MSG( getClassOf( pName ) == ReflectBuiltinClass::Number, pName );
     }
     for ( const utf8* pName : { "half2", "half3", "half4", "unorm8x4", "snorm8x4", "unorm16x2", "snorm16x2", "snorm16x4", "OctahedralNormal", "RGB10A2", "float2", "float3",
-                                "float4", "float4x4", "quaternion", "TagID", "ComponentHandle", "atomic_bool" } )
+                                "float4", "float4x4", "quaternion", "int2", "TagID", "ComponentHandle", "atomic_bool" } )
     {
         SW_EXPECT_TRUE_MSG( getClassOf( pName ) == ReflectBuiltinClass::Other, pName );
     }
@@ -533,4 +533,30 @@ SW_TEST_CASE( PackedValueSerializationTest, RadiansIsDegreesOutsideAndRadiansIns
     Radians written{};
     SW_EXPECT_TRUE( ReflectedValueUtil::writeNumber( index, &written, 45.0 ) );
     SW_EXPECT_TRUE( written == Radians::fromDegrees( 45.0f ) );
+}
+
+/**
+ * @brief [PackedValueSerializationTest] 정수 좌표(`int2`)는 정수 둘로 왕복하고, 소수 · float32 가 정확히 못 담는 크기(±(2^24 - 1) 밖)는 거절한다
+ * @details 성분 규칙이 float32 를 지나므로 범위 밖을 받으면 다른 정수로 말없이 바뀐다 — 셀 좌표가 옆 칸으로 옮겨진다.
+ */
+SW_TEST_CASE( PackedValueSerializationTest, Int2KeepsExactIntegersAndRejectsFractions )
+{
+    const SerializeContext context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
+    using Test                     = PackedSerializationTestInternal;
+
+    Test::expectBinaryRoundTrip( context, "int2", int2{ -16777215, 16777215 } );
+    Test::expectTextRoundTrip( context, "int2", int2{ 3, -7 } );
+    const SerializeContext::TextReadFn*  pReader = context.findTextReader( hashed_string( "int2" ) );
+    const SerializeContext::TextWriteFn* pWriter = context.findTextWriter( hashed_string( "int2" ) );
+    SW_REQUIRE_NOT_NULL( pReader );
+    SW_REQUIRE_NOT_NULL( pWriter );
+    int2 cell{};
+    SW_EXPECT_TRUE( ( *pReader )( &cell, "12,-5" ) );
+    SW_EXPECT_EQUAL( 12, cell._x );
+    SW_EXPECT_EQUAL( -5, cell._y );
+    SW_EXPECT_EQUAL( string( "12,-5" ), ( *pWriter )( &cell ) );
+    SW_EXPECT_LOG( "Serialization.PackedValueOutOfRange" ); // 소수와 범위 밖은 이유를 남기고 거절한다
+    Test::expectTextRejected( context, "int2", int2{ 1, 2 }, "2.5,1" );
+    Test::expectTextRejected( context, "int2", int2{ 1, 2 }, "16777216,0" );
+    Test::expectTextRejected( context, "int2", int2{ 1, 2 }, "1" );
 }

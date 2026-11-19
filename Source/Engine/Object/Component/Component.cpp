@@ -3,6 +3,7 @@
 #include "Engine/Object/Component/Component.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -54,6 +55,13 @@ namespace sw
                         inoutBuilder.addFloat( pFloat[index] );
                     }
                     return count != 0;
+                }
+                if ( name == "int2" )
+                {
+                    const int2& cell = *static_cast<const int2*>( pValue );
+                    inoutBuilder.addBytes( &cell._x, sizeof( cell._x ) );
+                    inoutBuilder.addBytes( &cell._y, sizeof( cell._y ) );
+                    return true;
                 }
                 if ( name == "GameObjectHandle" )
                 {

@@ -134,7 +134,7 @@ namespace sw
          *          - 판이 옛것이면 그 타입의 패치 사슬(`SW_TYPE_VERSION_PATCH`)로 머리 뒤 바이트를 올리고 이어 읽는다(`header` 와 같은 길 — 올린 바이트에서 바깥 칸도 읽힌다).
          *          - 판이 같은데 배치 해시가 다르면 칸을 바꾸고 판을 올리지 않은 것이다 — 틀리게 읽지 않고 타입 이름과 함께 거절한다.
          *          - 새 판(내리기)이거나 단계가 빠졌으면 거절한다.
-         *          칸 형식: 수 · bool · 열거(이름이 아닌 값, 열거자 밖은 거절) · `string` · `hashed_string` · float2/3/4 · quaternion · 반사 구조체(그 구조체의 Transient 가 아닌 칸 전부를
+         *          칸 형식: 수 · bool · 열거(이름이 아닌 값, 열거자 밖은 거절) · `string` · `hashed_string` · float2/3/4 · quaternion · int2 · 반사 구조체(그 구조체의 Transient 가 아닌 칸 전부를
          *          머리 없이 안에 — 구조체 배치는 바깥 타입의 해시에 든다) · 이것들의 시퀀스. 그 밖의 형식은 프로세스를 멈춘다(칸을 리플렉션 밖으로 빼고 손 본문에서 `value` 로 싣는다).
          *          읽은 뒤 `PROPERTY( Min · Max )` 를 지키지 않으면 거절한다. 컴포넌트에는 쓰지 않는다 — 컴포넌트는 기반으로 받아 동적 형식이 따로라 `reflectedAs` 를
          *          기반의 상태 입구 한 곳(`GameModeComponent::serializeState`)이 부른다.

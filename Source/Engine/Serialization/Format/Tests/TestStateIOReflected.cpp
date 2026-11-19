@@ -60,6 +60,7 @@ SW_TEST_CASE( StateIOReflectedTest, EveryStateFieldRoundTripsAndOthersStay )
     sw::StateIOReflectedTestState state;
     state._steps        = 7;
     state._target       = sw::float3{ 4.0f, 5.0f, 6.0f };
+    state._cell         = sw::int2{ -3, 12 };
     state._note         = "running";
     state._label        = sw::hashed_string( "Gate" );
     state._phase        = sw::StateIOReflectedTestPhase::Done;
@@ -79,6 +80,8 @@ SW_TEST_CASE( StateIOReflectedTest, EveryStateFieldRoundTripsAndOthersStay )
     SW_EXPECT_EQUAL( size_t{ 0 }, reading.getRemainingBytes() );
     SW_EXPECT_EQUAL( 7, restored._steps );
     SW_EXPECT_NEAR( 5.0f, restored._target._y, 1.0e-6f );
+    SW_EXPECT_EQUAL( -3, restored._cell._x );
+    SW_EXPECT_EQUAL( 12, restored._cell._y );
     SW_EXPECT_TRUE( restored._note == "running" );
     SW_EXPECT_TRUE( restored._label == sw::hashed_string( "Gate" ) );
     SW_EXPECT_TRUE( restored._phase == sw::StateIOReflectedTestPhase::Done );

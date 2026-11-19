@@ -102,12 +102,12 @@ namespace sw
         uint32 _seed;
         PROPERTY( Category = "Units", DisplayName = "Player Units", Tooltip = "Unit ids (catalog) of the player team, one per cell" )
         vector<CatalogKey<SRPGUnitDef>> _listPlayerUnit;
-        PROPERTY( Category = "Units", DisplayName = "Player Cells", Tooltip = "Cells (whole numbers) of the player units" )
-        vector<float2> _listPlayerCell;
+        PROPERTY( Category = "Units", DisplayName = "Player Cells", Tooltip = "Cells of the player units" )
+        vector<int2> _listPlayerCell;
         PROPERTY( Category = "Units", DisplayName = "Enemy Units", Tooltip = "Unit ids (catalog) of the enemy team, one per cell" )
         vector<CatalogKey<SRPGUnitDef>> _listEnemyUnit;
-        PROPERTY( Category = "Units", DisplayName = "Enemy Cells", Tooltip = "Cells (whole numbers) of the enemy units" )
-        vector<float2> _listEnemyCell;
+        PROPERTY( Category = "Units", DisplayName = "Enemy Cells", Tooltip = "Cells of the enemy units" )
+        vector<int2> _listEnemyCell;
         PROPERTY( Category = "Units", DisplayName = "Pilot", Tooltip = "Pilot id (catalog) every unit flies with" )
         CatalogKey<SRPGPilotDef> _pilot;
 
@@ -116,8 +116,9 @@ namespace sw
         SRPGCommanderAI             _ai;
         ConsumerLease               _eventLease;
         vector<SRPGEvent>           _listEvent;
-        int2                        _cursor;   ///< 리플렉션 상태 칸이 `int2` 를 싣지 않아 손 본문이 싣는다
         int2                        _lastStep; ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 칸을 옮긴다
+        PROPERTY( RuntimeState )
+        int2 _cursor;
         PROPERTY( RuntimeState, Min = -1 )
         int32 _selectedUnit;
         PROPERTY( RuntimeState )

@@ -24,16 +24,13 @@ namespace sw
         struct TacticsSRPGDemoComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "KDTS" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; // 2: 커서가 리플렉션 상태 칸으로 옮겨 손 본문에서 빠졌다
 
             static constexpr const utf8* kConfirmAction = "KitDemo.Confirm";
             static constexpr const utf8* kEndTurnAction = "KitDemo.EndTurn";
 
             /** @brief 축이 이보다 기울어야 커서를 한 칸 옮긴다(스틱 떨림을 칸 이동으로 읽지 않게). */
             static constexpr float32 kCursorThreshold = 0.5f;
-
-            /** @brief 씬의 칸 자리(정수로 적은 float2)를 칸으로 바꿉니다. */
-            static int2 toCell( const float2& value ) { return int2{ static_cast<int32>( value._x ), static_cast<int32>( value._y ) }; }
 
             /** @brief 축 값의 방향(-1 · 0 · 1)입니다. */
             static int32 computeStep( float32 axis )
@@ -73,8 +70,8 @@ namespace sw
         , _ai{}
         , _eventLease{}
         , _listEvent{}
-        , _cursor{}
         , _lastStep{}
+        , _cursor{}
         , _selectedUnit{ -1 }
         , _result{ TacticsDemoResult::Ongoing }
         , _growthLog{}
@@ -99,7 +96,7 @@ namespace sw
             const bool            bPlayer   = index < _listPlayerUnit.size();
             const size_t          slot      = bPlayer ? index : index - _listPlayerUnit.size();
             const hashed_string&  unitID    = bPlayer ? _listPlayerUnit[slot].key() : _listEnemyUnit[slot].key();
-            const int2            cell      = TacticsSRPGDemoComponentInternal::toCell( bPlayer ? _listPlayerCell[slot] : _listEnemyCell[slot] );
+            const int2            cell      = bPlayer ? _listPlayerCell[slot] : _listEnemyCell[slot];
             const expected<int32> unitIndex = outField.addUnit( unitID, _pilot.key(), bPlayer ? SRPGTeam::Player : SRPGTeam::Enemy, cell );
             if ( unitIndex.has_value() == false )
             {
@@ -120,7 +117,7 @@ namespace sw
         _field.beginBattle();
         if ( _eventLease.isHeld() == false && _field.claimEvents( _eventLease ) == false )
             return false; // 이 디렉터의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
-        _cursor       = TacticsSRPGDemoComponentInternal::toCell( _listPlayerCell.front() );
+        _cursor       = _listPlayerCell.front();
         _lastStep     = int2{};
         _selectedUnit = -1;
         _result       = TacticsDemoResult::Ongoing;
@@ -315,14 +312,11 @@ namespace sw
             }
             restoredField.initialize( *_pCatalog, _width, _height, _defaultTerrain.key(), _seed );
         }
-        io.value( io.isWriting() ? _field : restoredField );
-        int2 cursor = _cursor; // 고른 유닛 · 결과는 상태 칸이다(`GameModeComponent::serializeState`)
-        io.value( cursor );
+        io.value( io.isWriting() ? _field : restoredField ); // 커서 · 고른 유닛 · 결과는 상태 칸이다(`GameModeComponent::serializeState`)
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
         _field    = std::move( restoredField );
-        _cursor   = cursor;
         _lastStep = int2{};
     }
 

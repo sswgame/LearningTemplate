@@ -46,6 +46,8 @@ namespace sw
 
         PROPERTY( RuntimeState )
         float3 _target{ 1.0f, 2.0f, 3.0f };
+        PROPERTY( RuntimeState )
+        int2 _cell{ 1, 1 };
 
         PROPERTY( RuntimeState )
         string _note = "idle";
