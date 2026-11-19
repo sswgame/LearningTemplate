@@ -2082,6 +2082,7 @@
 		<entry source="Shaded Wireframe" text="셰이드 와이어프레임" />
 		<entry source="Shader" text="셰이더" />
 		<entry source="Shading Path" text="셰이딩 경로" />
+		<entry source="Shapes" text="모양" />
 		<entry source="Shared entries are written to Config/Editor/ContentCollections.txt and committed with the project; the others stay on this machine"
 		       text="공유 항목은 Config/Editor/ContentCollections.txt 에 써서 프로젝트와 함께 커밋합니다. 나머지는 이 컴퓨터에만 남습니다" />
 		<entry source="Shared with the project" text="프로젝트와 공유" />
@@ -2159,6 +2160,8 @@
 		       text="게임 코드가 DebugDrawQueue 에 넣은 선 · 구 · 상자 · 화살표 · 글자를 표시합니다" />
 		<entry source="Shows the polygon edges of the baked navmesh (bake with Build > Bake Navigation)"
 		       text="베이크한 내비메시의 폴리곤 테두리를 표시합니다(빌드 > 내비게이션 굽기로 굽는다)" />
+		<entry source="Shows the shapes that component properties declare (light radius and cone, volumes, directions) on the selected objects, with handles that edit the values"
+		       text="선택한 오브젝트의 컴포넌트 프로퍼티가 선언한 모양(빛 반경 · 원뿔, 볼륨, 방향)을 표시하고 손잡이로 값을 고칩니다" />
 		<entry source="Shut down every process cleanly and, if tracing is on, merge the traces into one file."
 		       text="모든 프로세스를 정상 종료시키고, 트레이스를 켰으면 한 파일로 합칩니다" />
 		<entry source="Sim Stick X" text="시험 스틱 X" />
