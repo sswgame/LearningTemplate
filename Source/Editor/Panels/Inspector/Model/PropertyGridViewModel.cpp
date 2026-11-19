@@ -1318,11 +1318,11 @@ namespace sw::editor
             XMLDocument doc;
             if ( doc.parseData( text, entry._path ) == false || pTarget->_catalog != doc.getRoot().getName() )
                 continue;
-            for ( XMLNode item = doc.getRoot().findChild( pTarget->_entry.c_str() ); item.isValid(); item = item.findNextSibling( pTarget->_entry.c_str() ) )
+            vector<string_view> listID; // 항목 경로(`Honor/Action`)는 쿠커와 같은 함수가 따라간다
+            DataCatalogReferenceRules::collectEntryIDs( doc.getRoot(), *pTarget, listID );
+            for ( const string_view id : listID )
             {
-                const string_view id = item.getAttributeText( pTarget->_targetKey.c_str() );
-                if ( id.empty() == false )
-                    outListID.emplace_back( id );
+                outListID.emplace_back( id );
             }
         }
         std::sort( outListID.begin(), outListID.end() );

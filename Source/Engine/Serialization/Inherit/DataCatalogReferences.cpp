@@ -25,6 +25,8 @@ namespace sw
             static constexpr const utf8* kUniqueElement    = "Unique";     ///< 표: 한 파일 안에서 겹치면 안 되는 값 한 줄
             static constexpr const utf8* kKeyTargetElement = "CatalogKey"; ///< 표: 항목 종류 한 줄(`CatalogKey<Tag>` 의 Tag → 카탈로그 루트 · 원소)
             static constexpr const utf8* kKeyFieldElement  = "Field";      ///< 표: 카탈로그 키 칸 한 줄(씬 · 프리팹 원소의 칸)
+            static constexpr const utf8* kKeyStructElement = "Struct";     ///< 표: 구조체 칸 한 줄(칸 이름으로 적힌 자식 원소의 형식)
+            static constexpr const utf8* kKeyTypeElement   = "Element";    ///< 표: 정의 형식 ↔ 카탈로그 원소 한 줄
             static constexpr const utf8* kListItemElement  = "item";       ///< 리플렉션 XML 이 목록 원소를 적는 원소 이름(`<_listX><item>…</item></_listX>`)
             static constexpr const utf8* kDefaultTargetKey = "id";         ///< 가리키는 원소의 id 속성(적지 않으면)
             static constexpr const utf8* kListSeparators   = ",; \t\r\n";  ///< 목록 값의 구분자 — 카탈로그 읽기(`XMLFields` · `forEachNamedNumber`)가 받는 것과 같다
@@ -198,6 +200,8 @@ namespace sw
         : _listRule{}
         , _listKeyTarget{}
         , _listKeyField{}
+        , _listKeyStruct{}
+        , _listKeyElement{}
     {
     }
 
@@ -218,6 +222,8 @@ namespace sw
         _listRule.clear();
         _listKeyTarget.clear();
         _listKeyField.clear();
+        _listKeyStruct.clear();
+        _listKeyElement.clear();
         XMLDocument doc;
         if ( doc.parse( tableText, sourceName ) == false || doc.getRoot().isValid() == false )
         {
@@ -227,6 +233,9 @@ namespace sw
         const vector<string_view> listKeyTargetRequired{ "tag", "catalog", "entry" };
         const vector<string_view> listKeyTargetOptional{ "targetKey" };
         const vector<string_view> listKeyFieldRequired{ "owner", "field", "tag" };
+        const vector<string_view> listKeyFieldOptional{ "attribute" };
+        const vector<string_view> listKeyStructRequired{ "owner", "field", "type" };
+        const vector<string_view> listKeyTypeRequired{ "type", "catalog", "path" };
         bool                      bValid = true;
         for ( XMLNode catalog = doc.getRoot().findChild(); catalog.isValid(); catalog = catalog.findNextSibling() )
         {
@@ -251,12 +260,13 @@ namespace sw
             }
             if ( StringUtil::equals( catalog.getName(), Internal::kKeyFieldElement ) )
             {
-                if ( Internal::validateKeyRowAttributes( catalog, listKeyFieldRequired, {}, sourceName ) == false )
+                if ( Internal::validateKeyRowAttributes( catalog, listKeyFieldRequired, listKeyFieldOptional, sourceName ) == false )
                 {
                     bValid = false;
                     continue;
                 }
-                DataCatalogKeyField field{ string( catalog.getAttributeText( "owner" ) ), string( catalog.getAttributeText( "field" ) ), string( catalog.getAttributeText( "tag" ) ) };
+                DataCatalogKeyField field{ string( catalog.getAttributeText( "owner" ) ), string( catalog.getAttributeText( "field" ) ), string( catalog.getAttributeText( "tag" ) ),
+                                           string( catalog.getAttributeText( "attribute" ) ) };
                 if ( findKeyField( field._owner, field._field ) != nullptr )
                 {
                     SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: <%# owner=\"%#\" field=\"%#\"> is written twice", sourceName, Internal::kKeyFieldElement, field._owner, field._field );
@@ -266,11 +276,45 @@ namespace sw
                 _listKeyField.push_back( std::move( field ) );
                 continue;
             }
+            if ( StringUtil::equals( catalog.getName(), Internal::kKeyStructElement ) )
+            {
+                if ( Internal::validateKeyRowAttributes( catalog, listKeyStructRequired, {}, sourceName ) == false )
+                {
+                    bValid = false;
+                    continue;
+                }
+                DataCatalogKeyStruct row{ string( catalog.getAttributeText( "owner" ) ), string( catalog.getAttributeText( "field" ) ), string( catalog.getAttributeText( "type" ) ) };
+                if ( findKeyStruct( row._owner, row._field ) != nullptr )
+                {
+                    SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: <%# owner=\"%#\" field=\"%#\"> is written twice", sourceName, Internal::kKeyStructElement, row._owner, row._field );
+                    bValid = false;
+                    continue;
+                }
+                _listKeyStruct.push_back( std::move( row ) );
+                continue;
+            }
+            if ( StringUtil::equals( catalog.getName(), Internal::kKeyTypeElement ) )
+            {
+                if ( Internal::validateKeyRowAttributes( catalog, listKeyTypeRequired, {}, sourceName ) == false )
+                {
+                    bValid = false;
+                    continue;
+                }
+                DataCatalogKeyElement row{ string( catalog.getAttributeText( "type" ) ), string( catalog.getAttributeText( "catalog" ) ), string( catalog.getAttributeText( "path" ) ) };
+                if ( findKeyElement( row._type ) != nullptr )
+                {
+                    SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: <%# type=\"%#\"> is written twice", sourceName, Internal::kKeyTypeElement, row._type );
+                    bValid = false;
+                    continue;
+                }
+                _listKeyElement.push_back( std::move( row ) );
+                continue;
+            }
             const string_view rootName = catalog.getAttributeText( "root" );
             if ( StringUtil::equals( catalog.getName(), Internal::kCatalogElement ) == false || rootName.empty() )
             {
-                SW_LOG_ERROR_ID( "DataCatalogReferences.TableInvalid2", "%#: <%#> is not a <%# root=\"...\">, <%#> or <%#> row", sourceName, catalog.getName(), Internal::kCatalogElement,
-                                 Internal::kKeyTargetElement, Internal::kKeyFieldElement );
+                SW_LOG_ERROR_ID( "DataCatalogReferences.TableInvalid2", "%#: <%#> is not a <%# root=\"...\">, <%#>, <%#>, <%#> or <%#> row", sourceName, catalog.getName(),
+                                 Internal::kCatalogElement, Internal::kKeyTargetElement, Internal::kKeyFieldElement, Internal::kKeyStructElement, Internal::kKeyTypeElement );
                 bValid = false;
                 continue;
             }
@@ -305,8 +349,49 @@ namespace sw
             _listRule.clear(); // 깨진 표로 반만 검사하지 않는다
             _listKeyTarget.clear();
             _listKeyField.clear();
+            _listKeyStruct.clear();
+            _listKeyElement.clear();
         }
         return bValid;
+    }
+
+    const DataCatalogKeyStruct* DataCatalogReferenceRules::findKeyStruct( string_view owner, string_view field ) const
+    {
+        return VectorUtil::findIf( _listKeyStruct, [owner, field]( const DataCatalogKeyStruct& row )
+        { return row._owner == owner && row._field == field; } );
+    }
+
+    const DataCatalogKeyElement* DataCatalogReferenceRules::findKeyElement( string_view type ) const
+    {
+        return VectorUtil::findIf( _listKeyElement, [type]( const DataCatalogKeyElement& row )
+        { return row._type == type; } );
+    }
+
+    string DataCatalogReferenceRules::findElementAttribute( const DataCatalogKeyField& field )
+    {
+        if ( field._attribute.empty() == false )
+            return field._attribute;
+        // `XMLFields::getAttributeName` 과 같은 규칙(키 칸은 불리언이 아니라 `_` 만 뗀다) — 쿠커는 리플렉션을 못 보므로 철자를 여기 둔다. 어긋나면 FieldTableMatchesReflection 이 진다.
+        return StringUtil::startsWith( field._field, "_" ) ? field._field.substr( 1 ) : field._field;
+    }
+
+    void DataCatalogReferenceRules::collectEntryIDs( const XMLNode& root, const DataCatalogKeyTarget& target, vector<string_view>& inoutListID )
+    {
+        if ( target._catalog != string_view( root.getName() ) )
+            return;
+        vector<string> listPath;
+        for ( const string_view part : StringUtil::split( target._entry, "/", { ._bTrim = true, ._bDropEmpty = true } ) )
+        {
+            listPath.emplace_back( part );
+        }
+        if ( listPath.empty() )
+            return;
+        DataCatalogReferencesInternal::visitOwners( root, listPath, 0, [&]( const XMLNode& entry )
+        {
+            const string_view id = entry.getAttributeText( target._targetKey.c_str() );
+            if ( id.empty() == false )
+                inoutListID.push_back( id );
+        } );
     }
 
     const DataCatalogKeyTarget* DataCatalogReferenceRules::findKeyTarget( string_view tag ) const
@@ -460,41 +545,93 @@ namespace sw
             if ( DataCatalogReferencesInternal::isElementMentioned( text, field._owner ) )
                 return true;
         }
+        for ( const DataCatalogKeyStruct& row : _rules.getStructRows() )
+        {
+            if ( DataCatalogReferencesInternal::isElementMentioned( text, row._owner ) )
+                return true;
+        }
+        for ( const DataCatalogKeyElement& row : _rules.getElementRows() )
+        {
+            if ( DataCatalogReferencesInternal::isElementMentioned( text, row._catalog ) )
+                return true;
+        }
         return false;
     }
 
     void DataCatalogKeyCheck::addDocument( const XMLNode& root, string_view sourceName )
     {
-        const string_view rootName = root.getName();
+        const string_view   rootName = root.getName();
+        vector<string_view> listID;
         for ( const DataCatalogKeyTarget& target : _rules.getKeyTargets() )
         {
             if ( target._catalog != rootName )
                 continue;
+            listID.clear();
+            DataCatalogReferenceRules::collectEntryIDs( root, target, listID );
             unordered_set<string>& setID = _mapTagID[target._tag];
-            for ( XMLNode entry = root.findChild( target._entry.c_str() ); entry.isValid(); entry = entry.findNextSibling( target._entry.c_str() ) )
+            for ( const string_view id : listID )
             {
-                const string_view id = entry.getAttributeText( target._targetKey.c_str() );
-                if ( id.empty() == false )
-                    setID.insert( string( id ) );
+                setID.insert( string( id ) );
             }
+        }
+        // 카탈로그 정의의 키 칸(무기 → 탄)은 정의 원소(`<Element>`)에서 속성으로 찾는다.
+        for ( const DataCatalogKeyElement& element : _rules.getElementRows() )
+        {
+            if ( element._catalog != rootName )
+                continue;
+            vector<string> listPath;
+            for ( const string_view part : StringUtil::split( element._path, "/", { ._bTrim = true, ._bDropEmpty = true } ) )
+            {
+                listPath.emplace_back( part );
+            }
+            if ( listPath.empty() == false )
+                DataCatalogReferencesInternal::visitOwners( root, listPath, 0, [&]( const XMLNode& node )
+                { collectTypedUses( node, element._type, true, sourceName ); } );
         }
         collectUses( root, sourceName );
     }
 
     void DataCatalogKeyCheck::collectUses( const XMLNode& node, string_view sourceName )
     {
-        const string_view nodeName = node.getName();
-        for ( const DataCatalogKeyField& field : _rules.getFieldRows() )
-        {
-            if ( field._owner != nodeName )
-                continue;
-            DataCatalogReferencesInternal::visitFieldValues( node, field._field, [&]( string_view id )
-            { _listUse.push_back( KeyUse{ field._tag, string( id ), string( sourceName ), field._owner, field._field } ); } );
-        }
+        collectTypedUses( node, node.getName(), false, sourceName );
         for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             if ( child.isElement() )
                 collectUses( child, sourceName );
+        }
+    }
+
+    void DataCatalogKeyCheck::collectTypedUses( const XMLNode& node, string_view typeName, bool bCatalogElement, string_view sourceName )
+    {
+        using Internal = DataCatalogReferencesInternal;
+        for ( const DataCatalogKeyField& field : _rules.getFieldRows() )
+        {
+            if ( field._owner != typeName )
+                continue;
+            const auto addUse = [&]( string_view id )
+            {
+                if ( Internal::isEmptyKeyText( id ) == false )
+                    _listUse.push_back( KeyUse{ field._tag, string( id ), string( sourceName ), field._owner, field._field } );
+            };
+            if ( bCatalogElement )
+            {
+                const string attribute = DataCatalogReferenceRules::findElementAttribute( field );
+                Internal::visitIDs( node.getAttributeText( attribute.c_str() ), false, addUse ); // `XMLFields` 목록은 쉼표 목록이다
+            }
+            else
+                Internal::visitFieldValues( node, field._field, addUse );
+        }
+        // 구조체 칸 하나는 칸 이름의 원소로 적힌다 — 그 원소를 칸 형식으로 다시 본다(일반 순회는 원소 이름이 칸 이름이라 주인을 못 찾는다).
+        if ( bCatalogElement )
+            return;
+        for ( const DataCatalogKeyStruct& row : _rules.getStructRows() )
+        {
+            if ( row._owner != typeName )
+                continue;
+            for ( XMLNode child = node.findChild( row._field.c_str() ); child.isValid(); child = child.findNextSibling( row._field.c_str() ) )
+            {
+                collectTypedUses( child, row._type, false, sourceName );
+            }
         }
     }
 

@@ -2,6 +2,7 @@
 // 카탈로그 키 칸(`<CatalogKey>` · `<Field>`)의 상속 · 다른 팩 · 깨진 값과 리플렉션 대조.
 #include "pch.h"
 
+#include "Core/Container/unordered_set.h"
 #include "Core/Log/Logger.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -16,6 +17,7 @@
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 #include <algorithm>
 
@@ -252,39 +254,186 @@ SW_TEST_CASE( DataCatalogReferencesTest, BrokenKeyValuesFail )
 }
 
 /**
- * @brief [DataCatalogReferencesTest] 표의 칸 줄은 이 실행 파일에 올라온 리플렉션의 `CatalogKey<Tag>` 칸과 같다 — 칸마다 줄이 있고 종류 이름이 같으며, 줄마다 칸이 있다
+ * @brief [DataCatalogReferencesTest] 구조체 칸 하나(`<Struct>`)는 칸 이름의 원소로 적혀도 그 형식의 키 칸으로 본다 — 예전에는 원소 이름이 형식 이름이 아니라 놓쳤다
+ */
+SW_TEST_CASE( DataCatalogReferencesTest, StructRowFindsSingleStructField )
+{
+    DataCatalogReferenceRules rules;
+    SW_REQUIRE_TRUE( rules.loadFromXMLText( R"(<DataCatalogReferenceTable>
+  <CatalogKey tag="ItemDef" catalog="ItemCatalog" entry="Item"/>
+  <Field owner="LootDrop" field="_item" tag="ItemDef"/>
+  <Struct owner="LootComponent" field="_drop" type="LootDrop"/>
+  <Struct owner="LootDrop" field="_bonus" type="LootDrop"/>
+</DataCatalogReferenceTable>)",
+                                            "table" ) );
+    SW_REQUIRE_TRUE( rules.findKeyStruct( "LootComponent", "_drop" ) != nullptr );
+    DataCatalogKeyCheck check( rules );
+    SW_EXPECT_TRUE( check.isMentioned( "<LootComponent/>" ) );
+    addDataText( check, R"(<ItemCatalog><Item id="coin"/></ItemCatalog>)", "game/test/data/items.xml" );
+    addDataText( check, R"(<Scene><LootComponent><_drop _item="coin"><_bonus _item="gem"/></_drop></LootComponent></Scene>)", "game/test/maps/loot.scene.xml" );
+    SW_EXPECT_LOG( "DataCatalogKey.UnknownEntry" );
+    SW_EXPECT_FALSE( check.validate() ); // 구조체 안 구조체(`_bonus`)의 gem 하나만 없다
+}
+
+/**
+ * @brief [DataCatalogReferencesTest] 카탈로그 정의의 키 칸은 `<Element>` 줄이 이은 원소에서 속성(목록은 쉼표 목록)으로 찾고, 항목 경로(`Honor/Action`)도 따라간다
+ * @details 무기 → 탄처럼 카탈로그 사이의 참조다. 속성 이름은 칸 이름에서 `_` 를 뗀 것이고, `PROPERTY( Name )` 으로 바꾼 칸은 줄의 `attribute` 가 적는다.
+ */
+SW_TEST_CASE( DataCatalogReferencesTest, ElementRowFindsCatalogDefinitionKeys )
+{
+    DataCatalogReferenceRules rules;
+    SW_REQUIRE_TRUE( rules.loadFromXMLText( R"(<DataCatalogReferenceTable>
+  <CatalogKey tag="ItemDef" catalog="ItemCatalog" entry="Item"/>
+  <CatalogKey tag="ActionDef" catalog="Western" entry="Honor/Action"/>
+  <Element type="TurretDef" catalog="Turrets" path="Turret"/>
+  <Field owner="TurretDef" field="_lootID" tag="ItemDef" attribute="loot"/>
+  <Field owner="TurretDef" field="_listSpare" tag="ItemDef"/>
+  <Field owner="TurretDef" field="_action" tag="ActionDef"/>
+</DataCatalogReferenceTable>)",
+                                            "table" ) );
+    SW_EXPECT_EQUAL( string( "loot" ), DataCatalogReferenceRules::findElementAttribute( *rules.findKeyField( "TurretDef", "_lootID" ) ) );
+    SW_EXPECT_EQUAL( string( "listSpare" ), DataCatalogReferenceRules::findElementAttribute( *rules.findKeyField( "TurretDef", "_listSpare" ) ) );
+    DataCatalogKeyCheck check( rules );
+    addDataText( check, R"(<Turrets><Turret id="t" loot="coin" listSpare="coin, gone" action="help"/></Turrets>)", "game/test/data/turrets.xml" );
+    addDataText( check, R"(<ItemCatalog><Item id="coin"/></ItemCatalog>)", "game/test/data/items.xml" );
+    addDataText( check, R"(<Western><Honor><Action id="help"/></Honor></Western>)", "game/test/data/western.xml" );
+    SW_EXPECT_LOG( "DataCatalogKey.UnknownEntry" );
+    SW_EXPECT_FALSE( check.validate() ); // gone 하나만 없다
+}
+
+/**
+ * @brief [DataCatalogReferencesTest] 표의 칸 · 구조체 · 원소 줄은 이 실행 파일에 올라온 리플렉션과 같다
  * @details 게이트를 두는 까닭: 쿠커는 게임 모듈의 리플렉션을 보지 못해 표를 읽는다. 칸을 더하고 줄을 빠뜨리면 쿠킹이 그 칸을 보지 않는다. 올라오지 않은 모듈의 줄은 보지 않는다.
+ *          - `CatalogKey<Tag>` 칸마다 `<Field>` 줄이 있고 종류 이름이 같다. 줄마다 그 칸이 있다.
+ *          - 키를 든 구조체가 칸 하나로 들면(원소 이름이 칸 이름) `<Struct owner field type>` 줄이 있다.
+ *          - 칸 줄의 주인은 쿠커가 원소 이름으로 찾을 수 있다 — 컴포넌트, 목록 원소 구조체, `<Struct>` 형식, 또는 `<Element>` 줄이 이은 카탈로그 정의다.
+ *          - 카탈로그 정의의 칸 줄 속성 이름은 `XMLFields::getAttributeName` 과 같다.
+ *          타입 표는 잠근 채 다시 물을 수 없어(공유 잠금은 재귀가 아니다) 먼저 칸을 모으고 잠금 밖에서 본다.
  */
 SW_TEST_CASE( DataCatalogReferencesTest, FieldTableMatchesReflection )
 {
+    struct PropertyRecord
+    {
+        string _owner;
+        string _field;
+        string _typeName;
+        string _elementTypeName;
+        string _tag;
+        string _attribute;
+        bool   _bContainer{ false };      // NOLINT(sw-bool-flag): 테스트 안의 집합체다
+        bool   _bComponentOwner{ false }; // NOLINT(sw-bool-flag): 테스트 안의 집합체다
+    };
     DataCatalogReferenceRules rules;
     SW_REQUIRE_TRUE( rules.loadFromAsset() );
-    const hashed_string typeName( CatalogKeyBase::kTypeName );
-    vector<string>      listProblem;
-    TypeRegistry&       registry = engine::getSubsystem<TypeRegistry>();
+    const hashed_string               keyTypeName( CatalogKeyBase::kTypeName );
+    vector<PropertyRecord>            listRecord;
+    vector<std::pair<string, string>> listParent; // (형식, 부모 형식 이름 — 이름공간 뺌)
+    TypeRegistry&                     registry = engine::getSubsystem<TypeRegistry>();
     registry.forEachType( [&]( const TypeInfo& type )
     {
+        const string_view parent   = type._parentFQN.view();
+        const size_t      colon    = parent.rfind( ':' );
+        const string_view leafName = colon == string_view::npos ? parent : parent.substr( colon + 1 );
+        if ( leafName.empty() == false )
+            listParent.emplace_back( string( type._name.view() ), string( leafName ) );
         for ( const PropertyInfo& prop : type._listProperty )
         {
-            if ( prop._typeName != typeName && prop._elementTypeName != typeName )
-                continue;
-            const string               fieldName = string( type._name.view() ) + "::" + string( prop._name.view() );
-            const DataCatalogKeyField* pRow      = rules.findKeyField( type._name.view(), prop._name.view() );
-            if ( pRow == nullptr )
-                listProblem.push_back( fieldName + " has no <Field> row" );
-            else if ( pRow->_tag != prop._metadata->_catalogKeyTag )
-                listProblem.push_back( fieldName + " is CatalogKey<" + prop._metadata->_catalogKeyTag + "> but its row says " + pRow->_tag );
+            PropertyRecord record;
+            record._owner           = string( type._name.view() );
+            record._field           = string( prop._name.view() );
+            record._typeName        = string( prop._typeName.view() );
+            record._elementTypeName = string( prop._elementTypeName.view() );
+            record._tag             = prop._metadata->_catalogKeyTag;
+            record._attribute       = XMLFields::getAttributeName( prop );
+            record._bContainer      = prop._bIsContainer != SW_FALSE;
+            record._bComponentOwner = type._addComponent != nullptr;
+            listRecord.push_back( std::move( record ) );
         }
     } );
+    const auto isKey = [&keyTypeName]( const PropertyRecord& record )
+    { return record._typeName == keyTypeName.view() || record._elementTypeName == keyTypeName.view(); };
+    const auto findRecord = [&listRecord]( string_view owner, string_view field ) -> const PropertyRecord*
+    {
+        const auto iter = std::find_if( listRecord.begin(), listRecord.end(), [owner, field]( const PropertyRecord& record )
+        { return record._owner == owner && record._field == field; } );
+        return iter != listRecord.end() ? &*iter : nullptr;
+    };
+    const auto isLoadedType = [&listRecord]( string_view owner )
+    {
+        return std::any_of( listRecord.begin(), listRecord.end(), [owner]( const PropertyRecord& record )
+        { return record._owner == owner; } );
+    };
+    // 키를 든 형식: 키 칸이 있거나 `<Struct>` 줄의 주인이다(구조체 안의 구조체).
+    unordered_set<string> setKeyHolder;
+    unordered_set<string> setComponent;
+    unordered_set<string> setSequenceElement;
+    for ( const PropertyRecord& record : listRecord )
+    {
+        if ( isKey( record ) )
+            setKeyHolder.insert( record._owner );
+        if ( record._bComponentOwner )
+            setComponent.insert( record._owner );
+        if ( record._bContainer && record._elementTypeName.empty() == false )
+            setSequenceElement.insert( record._elementTypeName );
+    }
+    for ( const DataCatalogKeyStruct& row : rules.getStructRows() )
+    {
+        setKeyHolder.insert( row._owner );
+    }
+
+    vector<string> listProblem;
+    for ( const PropertyRecord& record : listRecord )
+    {
+        const string fieldName = record._owner + "::" + record._field;
+        if ( isKey( record ) )
+        {
+            const DataCatalogKeyField* pRow = rules.findKeyField( record._owner, record._field );
+            if ( pRow == nullptr )
+                listProblem.push_back( fieldName + " has no <Field> row" );
+            else if ( pRow->_tag != record._tag )
+                listProblem.push_back( fieldName + " is CatalogKey<" + record._tag + "> but its row says " + pRow->_tag );
+            continue;
+        }
+        if ( record._bContainer == false && setKeyHolder.contains( record._typeName ) )
+        {
+            const DataCatalogKeyStruct* pRow = rules.findKeyStruct( record._owner, record._field );
+            if ( pRow == nullptr )
+                listProblem.push_back( fieldName + " holds the key struct " + record._typeName + " but has no <Struct> row" );
+            else if ( pRow->_type != record._typeName )
+                listProblem.push_back( fieldName + " is " + record._typeName + " but its <Struct> row says " + pRow->_type );
+        }
+    }
     for ( const DataCatalogKeyField& row : rules.getFieldRows() )
     {
-        const TypeInfo* pType = registry.findType( hashed_string( row._owner.c_str() ) );
-        if ( pType == nullptr )
+        if ( isLoadedType( row._owner ) == false )
             continue; // 이 실행 파일에 올라오지 않은 모듈
-        const bool bHasField = std::any_of( pType->_listProperty.begin(), pType->_listProperty.end(), [&row, &typeName]( const PropertyInfo& prop )
-        { return prop._name.view() == row._field && ( prop._typeName == typeName || prop._elementTypeName == typeName ); } );
-        if ( bHasField == false )
+        const PropertyRecord* pRecord = findRecord( row._owner, row._field );
+        if ( pRecord == nullptr || isKey( *pRecord ) == false )
+        {
             listProblem.push_back( row._owner + "::" + row._field + " row names no CatalogKey field" );
+            continue;
+        }
+        const bool                   bStructType = std::any_of( rules.getStructRows().begin(), rules.getStructRows().end(), [&row]( const DataCatalogKeyStruct& structRow )
+                          { return structRow._type == row._owner; } );
+        const DataCatalogKeyElement* pElement    = rules.findKeyElement( row._owner );
+        if ( setComponent.contains( row._owner ) == false && setSequenceElement.contains( row._owner ) == false && bStructType == false && pElement == nullptr )
+            listProblem.push_back( row._owner + " (field " + row._field + ") is not a component, a list element, a <Struct> type or an <Element> type - the cook cannot find it" );
+        if ( pElement != nullptr && DataCatalogReferenceRules::findElementAttribute( row ) != pRecord->_attribute )
+            listProblem.push_back( row._owner + "::" + row._field + " is written as '" + pRecord->_attribute + "' in the catalog but the row reads '" + DataCatalogReferenceRules::findElementAttribute( row ) + "'" );
+    }
+    // 쿠커는 원소 이름(가장 아래 형식)으로 찾고 상속을 따라가지 않는다 — 키 칸을 든 형식을 물려받은 형식이 생기면 여기서 멈춘다.
+    for ( const auto& [typeName, parentName] : listParent )
+    {
+        if ( setKeyHolder.contains( parentName ) && setKeyHolder.contains( typeName ) == false )
+            listProblem.push_back( typeName + " derives from the key holder " + parentName + " - the cook finds key fields by the element (leaf type) name and does not follow inheritance; keep key fields on the leaf type" );
+    }
+    for ( const DataCatalogKeyStruct& row : rules.getStructRows() )
+    {
+        if ( isLoadedType( row._owner ) == false )
+            continue;
+        const PropertyRecord* pRecord = findRecord( row._owner, row._field );
+        if ( pRecord == nullptr || pRecord->_bContainer || pRecord->_typeName != row._type )
+            listProblem.push_back( row._owner + "::" + row._field + " <Struct> row names no " + row._type + " field" );
     }
     for ( const string& problem : listProblem )
     {
