@@ -2,7 +2,7 @@
 <?asset guid="e21593da447abe404e63a82400463bba"?>
 <!--
   에디터 시나리오 — 프로퍼티 칸 복사 · 붙여넣기(EditorUI R13). GameCamera 의 _priority 를 4 로 바꾸고 이름 칸 우클릭 행 메뉴의 Copy Value 로 복사한 뒤,
-  TestGameCamera 를 골라 행 메뉴의 Paste Value 로 붙이면 4 가 되고 되돌리기 한 단계가 쌓인다. Undo 로 0 으로 돌아온 뒤 칸 위에서 Ctrl+V(입력 맵 Editor.Panel.inspector)로
+  TestGameCamera 를 골라 행 메뉴의 Paste Value 로 붙이면 4 가 되고 되돌리기 한 단계가 쌓인다. Undo 로 0 으로 돌아온 뒤 칸 위에서 Ctrl+V(입력 맵 Editor.Global 의 property.pasteValue — 그리드 창이 포커스일 때만)로
   붙여도 같다. 붙여넣기는 클립보드 글이 그 칸 타입으로 읽힐 때만 켜진다(단위 테스트 PropertyGridViewModelTest.PasteTextIsCheckedAgainstTheFieldType).
   실행: App -EnableEditor -scenario=engine/automation/editor/propertycopypaste.scenario.xml -unattended
 -->

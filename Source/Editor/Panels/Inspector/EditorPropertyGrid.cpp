@@ -556,8 +556,9 @@ namespace sw::editor
             _pendingEdit      = PendingRowEdit::ResetToDefault;
             _pendingEditRowID = row._rowID;
         }
-        // 칸 위의 Ctrl+C · Ctrl+V 는 행 메뉴의 Copy · Paste 다(R13 — 언리얼 Details 의 행 위 복사 · 붙여넣기). 키는 입력 맵이 판정하고 범위는 인스펙터 레이어다.
-        if ( bHovered == false )
+        // 칸 위의 Ctrl+C · Ctrl+V 는 행 메뉴의 Copy · Paste 다(R13 — 언리얼 Details 의 행 위 복사 · 붙여넣기). 키는 입력 맵(전역 액션)이 판정하고,
+        // 그리드 창이 포커스일 때만 읽는다 — 다른 패널이 포커스면 그 패널의 Ctrl+C · Ctrl+V(계층 복사 · 콘솔 복사)만 돈다.
+        if ( bHovered == false || ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) == false )
             return;
         if ( EditorInputGUI::wasActionTriggered( kActionCopyValue ) )
             copyRowValue( row );
