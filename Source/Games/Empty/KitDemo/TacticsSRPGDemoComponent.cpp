@@ -93,14 +93,14 @@ namespace sw
                              _listPlayerUnit.size(), _listPlayerCell.size(), _listEnemyUnit.size(), _listEnemyCell.size() );
             return false;
         }
-        outField.initialize( *_pCatalog, _width, _height, _defaultTerrain, _seed ); // 규칙은 카탈로그의 `<Rules>` 다
+        outField.initialize( *_pCatalog, _width, _height, _defaultTerrain.key(), _seed ); // 규칙은 카탈로그의 `<Rules>` 다
         for ( size_t index = 0; index < _listPlayerUnit.size() + _listEnemyUnit.size(); ++index )
         {
             const bool            bPlayer   = index < _listPlayerUnit.size();
             const size_t          slot      = bPlayer ? index : index - _listPlayerUnit.size();
-            const hashed_string&  unitID    = bPlayer ? _listPlayerUnit[slot] : _listEnemyUnit[slot];
+            const hashed_string&  unitID    = bPlayer ? _listPlayerUnit[slot].key() : _listEnemyUnit[slot].key();
             const int2            cell      = TacticsSRPGDemoComponentInternal::toCell( bPlayer ? _listPlayerCell[slot] : _listEnemyCell[slot] );
-            const expected<int32> unitIndex = outField.addUnit( unitID, _pilot, bPlayer ? SRPGTeam::Player : SRPGTeam::Enemy, cell );
+            const expected<int32> unitIndex = outField.addUnit( unitID, _pilot.key(), bPlayer ? SRPGTeam::Player : SRPGTeam::Enemy, cell );
             if ( unitIndex.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "KitDemo.TacticsUnitNotPlaced", "Tactics demo: unit '%#' with pilot '%#' cannot stand at (%#, %#) - unknown id, outside the field, taken or impassable; the battle does not open",
@@ -313,7 +313,7 @@ namespace sw
                 io.fail();
                 return;
             }
-            restoredField.initialize( *_pCatalog, _width, _height, _defaultTerrain, _seed );
+            restoredField.initialize( *_pCatalog, _width, _height, _defaultTerrain.key(), _seed );
         }
         io.value( io.isWriting() ? _field : restoredField );
         int2              cursor       = _cursor;

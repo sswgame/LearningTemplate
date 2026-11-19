@@ -105,7 +105,7 @@ namespace sw
     {
         if ( acquireRequired( _catalogPath, _pCatalog ) == false )
             return false;
-        if ( _run.start( _pCatalog.get(), _stageID ) == false )
+        if ( _run.start( _pCatalog.get(), _stageID.key() ) == false )
         {
             SW_LOG_ERROR_ID( "KitDemo.PlatformerUnknownStage", "Action platformer demo: stage '%#' is not in the catalog - the stage does not open", _stageID.c_str() );
             return false;
