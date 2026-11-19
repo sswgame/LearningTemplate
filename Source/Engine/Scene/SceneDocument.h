@@ -203,6 +203,13 @@ namespace sw
         [[nodiscard]] SW_API static bool readStreamingCellContent( const uint8* pData, uint64 size, vector<SceneObjectNode>& outListNode, string_view sourcePath );
         /** @brief 엔티티 목록을 셀 내용 형식으로 씁니다(`readStreamingCellContent` 의 짝 — 비우고 채운다). 읽을 목적(`_statePurpose`)은 쓰지 않습니다. */
         SW_API static void writeStreamingCellContent( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );
+        /**
+         * @brief 세이브에 싣는 엔티티 목록을 씁니다(비우고 채운다) — 셀 내용 형식에 엔티티마다 읽을 목적(`_statePurpose`)을 더한다. 떠 둔 상태(스냅숏)와 문서 내용(저작)이 섞여도 제 목적으로 읽힌다.
+         * @details 스트리밍 셀(`SceneStreamingSubsystem::writeSaveState`)과 데이터 레이어 묶음(`SceneDataLayerSubsystem::writeSaveState`)이 같은 형식을 쓴다.
+         */
+        SW_API static void writeSavedNodes( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );
+        /** @brief `writeSavedNodes` 의 짝입니다. 잘렸거나 목적 수 · 값이 틀리면 오류를 남기고 false 입니다(@p sourcePath 는 로그용). */
+        [[nodiscard]] SW_API static bool readSavedNodes( const uint8* pData, uint64 size, vector<SceneObjectNode>& outListNode, string_view sourcePath );
         /** @brief 엔티티 목록에서 인스턴스 멤버(넓은 평평한 id)를 뺀 가장 큰 파일 id 입니다(없으면 0). 셀 머리 값(`_maxCellFileID`)과 씬의 다음 파일 id 가 같은 규칙으로 센다. */
         [[nodiscard]] SW_API static uint64 computeMaxFileID( const vector<SceneObjectNode>& listNode );
         /** @brief 셀까지 메모리에 든 엔티티 수입니다(색인만 읽은 셀의 엔티티는 세지 않는다). */

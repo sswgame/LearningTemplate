@@ -823,6 +823,42 @@ namespace sw
         outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
     }
 
+    void SceneDocument::writeSavedNodes( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes )
+    {
+        Archive arch;
+        SceneDocumentInternal::writeEntities( arch, listNode );
+        for ( const SceneObjectNode& node : listNode )
+        {
+            arch << static_cast<uint8>( node._statePurpose );
+        }
+        outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
+    }
+
+    bool SceneDocument::readSavedNodes( const uint8* pData, uint64 size, vector<SceneObjectNode>& outListNode, string_view sourcePath )
+    {
+        outListNode.clear();
+        Archive arch( pData, size );
+        if ( pData == nullptr || SceneDocumentInternal::readEntities( arch, outListNode, sourcePath ) == false )
+        {
+            outListNode.clear();
+            return false;
+        }
+        for ( SceneObjectNode& node : outListNode )
+        {
+            uint8 purpose{ 0 };
+            arch >> purpose;
+            if ( arch.isError() || purpose > static_cast<uint8>( SerializePurpose::SaveGame ) )
+            {
+                SW_LOG_ERROR_ID( "SceneDocument.SavedNodePurposeInvalid", "Saved entity '%#' has no readable state purpose (%#) in %# - it is not used", node._name, static_cast<uint32>( purpose ),
+                                 sourcePath );
+                outListNode.clear();
+                return false;
+            }
+            node._statePurpose = static_cast<SerializePurpose>( purpose );
+        }
+        return true;
+    }
+
     uint64 SceneDocument::computeMaxFileID( const vector<SceneObjectNode>& listNode )
     {
         uint64 maxFileID = 0;

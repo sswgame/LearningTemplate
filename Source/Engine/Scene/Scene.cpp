@@ -1299,7 +1299,10 @@ namespace sw
         releaseDefaultMaterial();
         // 셀을 버린다 — 내린 씬에 다음 갱신이 셀을 다시 짓지 않게.
         if ( _objectManager != nullptr )
+        {
             _objectManager->getSubsystem<SceneStreamingSubsystem>().endWorld();
+            _objectManager->getSubsystem<SceneDataLayerSubsystem>().endScene(); // 매니저 비우기(`onSceneCleared`)는 복원이라 묶음을 지킨다 — 내리는 길은 여기서 버린다
+        }
         _mapPrefabSource.clear();
         _mapSceneInstancePath.clear();
         _mapInstanceMember.clear();

@@ -11,6 +11,7 @@
 #include "Engine/Reflection/ReflectedInstance.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -30,7 +31,7 @@ namespace sw
             /**
              * @brief 스냅샷 봉투의 버전입니다. 읽을 때도 이 버전만 받습니다.
              * @details 봉투 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실린다.
-             *          섹션은 씬 오브젝트, 파생의 리플렉션 상태, 컴포넌트 상태(`ComponentStateStore`), 씬 몫(늘 올라 있는 오브젝트의 파일 id · 스트리밍 셀 상태) 넷이다.
+             *          섹션은 씬 오브젝트, 파생의 리플렉션 상태, 컴포넌트 상태(`ComponentStateStore`), 씬 몫(늘 올라 있는 오브젝트의 파일 id · 스트리밍 셀 상태 · 데이터 레이어 상태) 넷이다.
              *          토큰이 지금 프로세스와 같으면(핫 리로드) id 를 복원하고, 다르면(다른 실행의 세이브 파일) id 를 읽고 버린다.
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
              *          머리의 씬 정체는 찍을 때 활성 씬의 리소스 id(`Scene::getSourcePath`)다 — 읽을 때 지금 활성 씬과 다르면 섞지 않고 거절한다.
@@ -114,6 +115,7 @@ namespace sw
         {
             vector<Scene::SavedFileID>         _listFileID; ///< 찍은 오브젝트 id → 파일 id(`_objectID` 는 찍은 실행의 id)
             SceneStreamingSubsystem::SaveState _streaming;
+            SceneDataLayerSubsystem::SaveState _dataLayers;
         };
 
         struct ScenePartInternal
@@ -140,6 +142,9 @@ namespace sw
                 vector<uint8> bytesStreaming;
                 pScene->getObjectManager()->getSubsystem<SceneStreamingSubsystem>().writeSaveState( bytesStreaming );
                 arch.writeSection( bytesStreaming.data(), static_cast<uint32>( bytesStreaming.size() ) );
+                vector<uint8> bytesDataLayers;
+                pScene->getObjectManager()->getSubsystem<SceneDataLayerSubsystem>().writeSaveState( bytesDataLayers );
+                arch.writeSection( bytesDataLayers.data(), static_cast<uint32>( bytesDataLayers.size() ) );
                 outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
             }
 
@@ -156,9 +161,11 @@ namespace sw
                     arch >> entry._objectID >> entry._fileID;
                 }
                 vector<uint8> bytesStreaming;
-                if ( arch.readSection( bytesStreaming ) == false || arch.isError() )
+                vector<uint8> bytesDataLayers;
+                if ( arch.readSection( bytesStreaming ) == false || arch.readSection( bytesDataLayers ) == false || arch.isError() )
                     return false;
-                return SceneStreamingSubsystem::readSaveState( bytesStreaming.data(), bytesStreaming.size(), outPart._streaming );
+                return SceneStreamingSubsystem::readSaveState( bytesStreaming.data(), bytesStreaming.size(), outPart._streaming ) &&
+                       SceneDataLayerSubsystem::readSaveState( bytesDataLayers.data(), bytesDataLayers.size(), outPart._dataLayers );
             }
 
             /** @brief 교체한 활성 씬에 씬 몫을 얹습니다 — 다시 만든 오브젝트에 파일 id 를 다시 붙이고(@p mapObjectID 찍은 id → 이번 id) 스트리밍 셀에 세이브의 상태를 얹는다. */
@@ -173,6 +180,8 @@ namespace sw
                         listFileID.push_back( Scene::SavedFileID{ liveIt->second, entry._fileID } );
                 }
                 scene.rebindRestoredFileIDs( listFileID );
+                // 켜진 레이어가 먼저다 — 스트리밍 셀 조각도 레이어로 오른다.
+                scene.getObjectManager()->getSubsystem<SceneDataLayerSubsystem>().applySaveState( std::move( part._dataLayers ) );
                 scene.getObjectManager()->getSubsystem<SceneStreamingSubsystem>().applySaveState( std::move( part._streaming ) );
             }
         };
@@ -449,12 +458,14 @@ namespace sw
             return false;
 
         // 살아 있는 것만 담는다. `forEachGameObject` 가 파괴 대기 오브젝트를 이미 건너뛴다. 실행 중에 세운 파생 오브젝트(`isTransient`)는 세운 쪽이 다시 세운다.
-        // 스트리밍 셀에 든 오브젝트는 셀 상태로 따로 싣는다(씬 몫) — 여기에 실으면 복원 뒤 셀이 다시 지을 때 겹친다.
-        const SceneStreamingSubsystem& streaming = pObjectManager->getSubsystem<SceneStreamingSubsystem>();
+        // 스트리밍 셀 · 데이터 레이어 묶음에 든 오브젝트는 그 상태로 따로 싣는다(씬 몫) — 여기에 실으면 복원 뒤 셀 · 묶음이 다시 지을 때 겹친다.
+        const SceneStreamingSubsystem& streaming  = pObjectManager->getSubsystem<SceneStreamingSubsystem>();
+        const SceneDataLayerSubsystem& dataLayers = pObjectManager->getSubsystem<SceneDataLayerSubsystem>();
         vector<GameObject*>            listValidObject;
-        pObjectManager->forEachGameObject( SceneIterationKey{}, [&listValidObject, &streaming]( GameObject* pObj )
+        pObjectManager->forEachGameObject( SceneIterationKey{}, [&listValidObject, &streaming, &dataLayers]( GameObject* pObj )
         {
-            if ( pObj->isTransient() == false && streaming.isCellObject( pObj->getObjectID() ) == false )
+            const bool bPartOwned = streaming.isCellObject( pObj->getObjectID() ) || dataLayers.isGroupObject( pObj->getObjectID() );
+            if ( pObj->isTransient() == false && bPartOwned == false )
                 listValidObject.push_back( pObj );
         } );
 

@@ -97,7 +97,8 @@ namespace sw
         void beginCapture();
         /**
          * @brief 쓰기 2 단계: 봉투(머리 · 씬 오브젝트 · @p pStateInstance 의 리플렉션 상태 · 컴포넌트 상태 · 씬 몫)를 한 번 직렬화해 @p outBytes 에 담고 저장소를 비웁니다.
-         * @details 씬 몫은 늘 올라 있는 오브젝트의 파일 id 와 스트리밍 셀 상태다 — 셀에 든 오브젝트는 씬 섹션에서 빼고 셀 상태로 싣는다(`SceneStreamingSubsystem::writeSaveState`).
+         * @details 씬 몫은 늘 올라 있는 오브젝트의 파일 id · 스트리밍 셀 상태 · 데이터 레이어 상태다 — 셀 · 레이어 묶음에 든 오브젝트는 씬 섹션에서 빼고 그 상태로 싣는다
+         *          (`SceneStreamingSubsystem::writeSaveState` · `SceneDataLayerSubsystem::writeSaveState`).
          * @details 씬이 없는 것은 실패가 아니다(빈 섹션). 리플렉션 상태를 싣지 못하면 저장소를 비우고 false 입니다(이유는 직렬화기가 알린다).
          *          @p pStateType 이나 @p pStateInstance 가 없으면 리플렉션 섹션은 비었다.
          */
@@ -164,7 +165,7 @@ namespace sw
         }
 
         /**
-         * @brief 씬 안의 모든 유효 GameObject 를 바이너리로 직렬화합니다. 스트리밍 셀에 든 오브젝트는 뺍니다(셀 상태로 싣는다 — `SceneStreamingSubsystem::isCellObject`).
+         * @brief 씬 안의 모든 유효 GameObject 를 바이너리로 직렬화합니다. 스트리밍 셀 · 데이터 레이어 묶음에 든 오브젝트는 뺍니다(그 상태로 싣는다 — `isCellObject` · `isGroupObject`).
          * @details 오브젝트마다 상태 앞에 런타임 id(`ObjectIdentity`)를 싣습니다. 같은 프로세스에서 복원하면(핫 리로드)
          *          `GameObjectHandle` · `ComponentHandle` 이 그 너머로도 이어집니다.
          * @param outListObjectID 실은 오브젝트의 id 를 실은 차례로 채웁니다(씬 몫의 파일 id 표가 쓴다).

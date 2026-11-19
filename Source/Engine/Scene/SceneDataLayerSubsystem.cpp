@@ -6,8 +6,10 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 
 namespace sw
@@ -20,6 +22,7 @@ namespace sw
         , _settings{}
         , _listGroup{}
         , _uniqueActiveLayer{}
+        , _mapObjectGroup{}
         , _bDirty{ SW_FALSE }
     {
     }
@@ -30,6 +33,7 @@ namespace sw
         _settings = settings;
         _listGroup.clear();
         _uniqueActiveLayer.clear();
+        _mapObjectGroup.clear();
         for ( const SceneDataLayerDef& layer : settings._listDataLayer )
         {
             if ( bActivateAll || layer._bInitiallyActive )
@@ -77,13 +81,30 @@ namespace sw
         applyGroups();
     }
 
-    void SceneDataLayerSubsystem::onSceneCleared()
+    void SceneDataLayerSubsystem::endScene()
     {
+        if ( _pScene == nullptr )
+            return;
         _listGroup.clear();
         _uniqueActiveLayer.clear();
+        _mapObjectGroup.clear();
         _pScene = nullptr;
         _bDirty = SW_FALSE;
         publishLayerTags();
+    }
+
+    void SceneDataLayerSubsystem::onSceneCleared()
+    {
+        // 매니저가 오브젝트를 비웠다(세이브 복원) — 묶음 · 켜진 레이어 · 떠 둔 상태는 지키고 지은 표시만 지운다. 다음 갱신이 켜진 묶음을 다시 짓는다(스트리밍 셀과 같다).
+        // 씬을 받지 않은 매니저(소멸 · 미리보기)는 지킬 것이 없다.
+        for ( Group& group : _listGroup )
+        {
+            group._listObjectID.clear();
+            group._bBuilt  = SW_FALSE;
+            group._bFailed = SW_FALSE;
+        }
+        _mapObjectGroup.clear();
+        _bDirty = _pScene != nullptr ? SW_TRUE : SW_FALSE;
     }
 
     bool SceneDataLayerSubsystem::setLayerActive( string_view name, const bool bActive )
@@ -146,7 +167,156 @@ namespace sw
         {
             _uniqueActiveLayer.insert( layer );
         }
+        rebuildObjectGroupMap();
         _bDirty = SW_FALSE;
+        publishLayerTags();
+    }
+
+    void SceneDataLayerSubsystem::rebuildObjectGroupMap()
+    {
+        _mapObjectGroup.clear();
+        for ( uint32 groupIndex = 0; groupIndex < static_cast<uint32>( _listGroup.size() ); ++groupIndex )
+        {
+            for ( const uint64 objectID : _listGroup[groupIndex]._listObjectID )
+            {
+                _mapObjectGroup[objectID] = groupIndex;
+            }
+        }
+    }
+
+    bool SceneDataLayerSubsystem::isGroupObject( const uint64 objectID ) const
+    {
+        if ( _pScene == nullptr || _mapObjectGroup.empty() )
+            return false;
+        // 묶음 엔티티에 붙은 자식(중첩 프리팹 부품)은 묶음이 다시 지을 때 함께 선다.
+        for ( const GameObject* pObject = _pScene->getObjectManager()->findGameObjectByID( objectID ); pObject != nullptr; pObject = pObject->getParent() )
+        {
+            if ( _mapObjectGroup.find( pObject->getObjectID() ) != _mapObjectGroup.end() )
+                return true;
+        }
+        return false;
+    }
+
+    void SceneDataLayerSubsystem::writeSaveState( vector<uint8>& outBytes ) const
+    {
+        Archive        arch;
+        vector<string> listActive;
+        if ( _pScene != nullptr )
+            collectActiveLayers( listActive );
+        arch << static_cast<uint32>( listActive.size() );
+        for ( const string& layer : listActive )
+        {
+            arch << string_view( layer );
+        }
+        const uint32 groupCount = _pScene != nullptr ? static_cast<uint32>( _listGroup.size() ) : 0u;
+        arch << groupCount;
+        for ( uint32 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
+        {
+            const Group& group = _listGroup[groupIndex];
+            arch << static_cast<uint32>( group._listLayer.size() );
+            for ( const string& layer : group._listLayer )
+            {
+                arch << string_view( layer );
+            }
+            // 지은 묶음은 지금 떠서 싣는다(그동안 바뀌었을 수 있다). 내려간 묶음은 떠 둔 상태가 있으면 그것을, 없으면 문서 그대로라 싣지 않는다.
+            vector<SceneDocument::SceneObjectNode> listCaptured;
+            if ( group._bBuilt )
+                _pScene->captureCellNodes( group._listObjectID, listCaptured );
+            const bool    bHeld = group._bBuilt || group._bStateHeld;
+            vector<uint8> bytes;
+            SceneDocument::writeSavedNodes( group._bBuilt ? listCaptured : ( bHeld ? group._listHeldNode : vector<SceneDocument::SceneObjectNode>{} ), bytes );
+            arch << static_cast<uint8>( bHeld ? 1u : 0u );
+            arch.writeSection( bytes.data(), static_cast<uint32>( bytes.size() ) );
+        }
+        outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
+    }
+
+    bool SceneDataLayerSubsystem::readSaveState( const uint8* pData, const size_t size, SaveState& outState )
+    {
+        outState = SaveState{};
+        if ( pData == nullptr )
+            return false;
+        Archive arch( pData, size );
+        uint32  activeCount{ 0 };
+        if ( arch.readCount( sizeof( uint32 ), activeCount ) == false )
+            return false;
+        outState._listActiveLayer.resize( activeCount );
+        for ( string& layer : outState._listActiveLayer )
+        {
+            arch >> layer;
+        }
+        uint32 groupCount{ 0 };
+        if ( arch.readCount( sizeof( uint32 ) * 2 + sizeof( uint8 ), groupCount ) == false )
+            return false;
+        outState._listGroup.resize( groupCount );
+        for ( SavedGroup& group : outState._listGroup )
+        {
+            uint32 layerCount{ 0 };
+            if ( arch.readCount( sizeof( uint32 ), layerCount ) == false )
+                return false;
+            group._listLayer.resize( layerCount );
+            for ( string& layer : group._listLayer )
+            {
+                arch >> layer;
+            }
+            uint8 held{ 0 };
+            arch >> held;
+            group._bStateHeld = held != 0;
+            vector<uint8> bytes;
+            if ( arch.readSection( bytes ) == false || arch.isError() ||
+                 SceneDocument::readSavedNodes( bytes.data(), bytes.size(), group._listHeldNode, "save game (data layers)" ) == false )
+            {
+                SW_LOG_ERROR_ID( "SceneDataLayers.SaveGroupsCorrupted", "Save game data layer groups could not be read - the save is not used" );
+                outState = SaveState{};
+                return false;
+            }
+        }
+        return arch.isError() == false;
+    }
+
+    void SceneDataLayerSubsystem::applySaveState( SaveState state )
+    {
+        if ( _pScene == nullptr )
+        {
+            if ( state._listActiveLayer.empty() == false || state._listGroup.empty() == false )
+                SW_LOG_ERROR_ID( "SceneDataLayers.SaveWithoutLayers", "The save carries data layer state but the active scene has no data layers - it is not restored" );
+            return;
+        }
+        _uniqueActiveLayer.clear();
+        for ( const string& layer : state._listActiveLayer )
+        {
+            if ( _settings.findDataLayer( layer ) == nullptr )
+            {
+                SW_LOG_ERROR_ID( "SceneDataLayers.SaveLayerNotDeclared", "The save turns on data layer '%#' that this scene does not declare - it stays off", layer );
+                continue;
+            }
+            _uniqueActiveLayer.insert( layer );
+        }
+        for ( SavedGroup& saved : state._listGroup )
+        {
+            Group* pGroup = nullptr;
+            for ( Group& group : _listGroup )
+            {
+                pGroup = pGroup == nullptr && group._listLayer == saved._listLayer ? &group : pGroup;
+            }
+            if ( pGroup == nullptr )
+            {
+                SW_LOG_ERROR_ID( "SceneDataLayers.SaveGroupUnknown", "The save carries a data layer group ('%#' first) this scene does not have - its entities are not restored",
+                                 saved._listLayer.empty() ? string{} : saved._listLayer[0] );
+                continue;
+            }
+            if ( pGroup->_bBuilt )
+            {
+                _pScene->unloadCell( pGroup->_listObjectID ); // 복원은 비운 매니저 위다 — 남은 오브젝트가 있으면 세이브의 상태로 갈아 끼운다
+                pGroup->_listObjectID.clear();
+                pGroup->_bBuilt = SW_FALSE;
+            }
+            pGroup->_listHeldNode = std::move( saved._listHeldNode );
+            pGroup->_bStateHeld   = saved._bStateHeld;
+            pGroup->_bFailed      = SW_FALSE;
+        }
+        rebuildObjectGroupMap();
+        _bDirty = SW_TRUE;
         publishLayerTags();
     }
 
@@ -157,6 +327,13 @@ namespace sw
             Group& group = _listGroup[index - 1];
             if ( group._bBuilt == SW_FALSE || areLayersActive( group._listLayer ) )
                 continue;
+            // 다시 켤 때 이 상태로 짓는다 — 내리기 전에 뜬다(런타임 칸까지, 스트리밍 셀과 같다). 문서(`_listNode`)는 저장이 다시 쓰도록 그대로 둔다.
+            _pScene->captureCellNodes( group._listObjectID, group._listHeldNode );
+            group._bStateHeld = SW_TRUE;
+            for ( const uint64 objectID : group._listObjectID )
+            {
+                _mapObjectGroup.erase( objectID );
+            }
             _pScene->unloadCell( group._listObjectID );
             group._listObjectID.clear();
             group._bBuilt = SW_FALSE;
@@ -167,9 +344,13 @@ namespace sw
             if ( bStable )
                 continue;
             group._listObjectID.clear();
-            if ( _pScene->instantiateLayerNodes( group._listNode, group._listObjectID ) )
+            if ( _pScene->instantiateLayerNodes( group._bStateHeld ? group._listHeldNode : group._listNode, group._listObjectID ) )
             {
                 group._bBuilt = SW_TRUE;
+                for ( const uint64 objectID : group._listObjectID )
+                {
+                    _mapObjectGroup[objectID] = static_cast<uint32>( &group - _listGroup.data() );
+                }
                 continue;
             }
             SW_LOG_ERROR_ID( "SceneDataLayers.GroupNotBuilt", "Scene '%#' could not load the entities of a data layer group ('%#' first) - they stay unloaded", _pScene->getName(), group._listLayer[0] );

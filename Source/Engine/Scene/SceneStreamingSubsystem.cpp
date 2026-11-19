@@ -44,47 +44,19 @@ namespace sw
             static constexpr uint32      kMinBytesPerCell = sizeof( int32 ) * 2 + sizeof( uint32 ) + sizeof( uint8 ) + sizeof( uint32 ) * 4;
             static constexpr const utf8* kSaveSource      = "save game (streaming cells)";
 
-            /** @brief 엔티티 목록과 엔티티마다의 읽을 목적을 섹션 둘로 씁니다. */
+            /** @brief 세이브 엔티티 목록(`SceneDocument::writeSavedNodes`)을 섹션 하나로 씁니다. */
             static void writeNodes( Archive& arch, const vector<SceneDocument::SceneObjectNode>& listNode )
             {
                 vector<uint8> bytes;
-                SceneDocument::writeStreamingCellContent( listNode, bytes );
+                SceneDocument::writeSavedNodes( listNode, bytes );
                 arch.writeSection( bytes.data(), static_cast<uint32>( bytes.size() ) );
-                vector<uint8> listPurpose;
-                listPurpose.reserve( listNode.size() );
-                for ( const SceneDocument::SceneObjectNode& node : listNode )
-                {
-                    listPurpose.push_back( static_cast<uint8>( node._statePurpose ) );
-                }
-                arch.writeSection( listPurpose.data(), static_cast<uint32>( listPurpose.size() ) );
             }
 
-            /** @brief `writeNodes` 의 짝입니다. 목적 수가 엔티티 수와 다르거나 목적 값이 틀리면 오류를 남기고 false 입니다. */
+            /** @brief `writeNodes` 의 짝입니다. */
             [[nodiscard]] static bool readNodes( Archive& arch, vector<SceneDocument::SceneObjectNode>& outListNode )
             {
                 vector<uint8> bytes;
-                vector<uint8> listPurpose;
-                if ( arch.readSection( bytes ) == false || arch.readSection( listPurpose ) == false )
-                    return false;
-                if ( SceneDocument::readStreamingCellContent( bytes.data(), bytes.size(), outListNode, kSaveSource ) == false )
-                    return false;
-                if ( listPurpose.size() != outListNode.size() )
-                {
-                    SW_LOG_ERROR_ID( "SceneStreaming.SavePurposeCountMismatch", "Save game streaming cell has %# entities but %# state purposes - the save is not used",
-                                     static_cast<uint32>( outListNode.size() ), static_cast<uint32>( listPurpose.size() ) );
-                    return false;
-                }
-                for ( size_t nodeIndex = 0; nodeIndex < outListNode.size(); ++nodeIndex )
-                {
-                    if ( listPurpose[nodeIndex] > static_cast<uint8>( SerializePurpose::SaveGame ) )
-                    {
-                        SW_LOG_ERROR_ID( "SceneStreaming.SavePurposeInvalid", "Save game streaming cell entity '%#' has state purpose %# that does not exist - the save is not used",
-                                         outListNode[nodeIndex]._name, static_cast<uint32>( listPurpose[nodeIndex] ) );
-                        return false;
-                    }
-                    outListNode[nodeIndex]._statePurpose = static_cast<SerializePurpose>( listPurpose[nodeIndex] );
-                }
-                return true;
+                return arch.readSection( bytes ) && SceneDocument::readSavedNodes( bytes.data(), bytes.size(), outListNode, kSaveSource );
             }
         };
     } // namespace
