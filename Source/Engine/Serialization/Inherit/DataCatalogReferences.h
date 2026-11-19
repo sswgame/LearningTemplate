@@ -158,7 +158,7 @@ namespace sw
         [[nodiscard]] const DataCatalogKeyElement* findKeyElement( string_view type ) const;
         /** @brief 칸 줄 @p field 가 카탈로그 원소에서 쓰는 속성 이름입니다(`_attribute`, 비면 칸 이름에서 `_` 를 뗀 것). */
         [[nodiscard]] static string findElementAttribute( const DataCatalogKeyField& field );
-        /** @brief 카탈로그 루트 @p root 에서 항목 종류 @p target 의 항목 id 를 @p inoutListID 뒤에 더합니다(경로 `_entry` 를 따라간다, 빈 id 는 뺀다). 루트 이름이 다르면 아무것도 하지 않는다. */
+        /** @brief 카탈로그 루트 @p root 에서 항목 종류 @p target 의 항목 id 를 @p inoutListID 뒤에 더합니다(경로 `_entry` 를 따라간다, 빈 id 는 뺀다). 루트가 항목 원소 하나(한 단계 경로)면 그 id 하나다. 둘 다 아니면 아무것도 하지 않는다. */
         static void collectEntryIDs( const XMLNode& root, const DataCatalogKeyTarget& target, vector<string_view>& inoutListID );
 
     private:

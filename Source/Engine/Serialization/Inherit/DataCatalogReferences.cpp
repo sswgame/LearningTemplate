@@ -379,14 +379,23 @@ namespace sw
 
     void DataCatalogReferenceRules::collectEntryIDs( const XMLNode& root, const DataCatalogKeyTarget& target, vector<string_view>& inoutListID )
     {
-        if ( target._catalog != string_view( root.getName() ) )
-            return;
         vector<string> listPath;
         for ( const string_view part : StringUtil::split( target._entry, "/", { ._bTrim = true, ._bDropEmpty = true } ) )
         {
             listPath.emplace_back( part );
         }
         if ( listPath.empty() )
+            return;
+        // 항목 하나짜리 파일(루트가 항목 원소 — 에디터가 내보낸 `*.appearance.xml`, 런타임 `AppearanceDatabase::loadPresetFile` 이 읽는 꼴)도 그 항목을 정의한다.
+        // 카탈로그 루트만 보면 에디터 콤보 · 쿠커 키 검사가 런타임이 읽는 항목을 모른다.
+        if ( listPath.size() == 1 && listPath[0] == string_view( root.getName() ) )
+        {
+            const string_view id = root.getAttributeText( target._targetKey.c_str() );
+            if ( id.empty() == false )
+                inoutListID.push_back( id );
+            return;
+        }
+        if ( target._catalog != string_view( root.getName() ) )
             return;
         DataCatalogReferencesInternal::visitOwners( root, listPath, 0, [&]( const XMLNode& entry )
         {
@@ -566,8 +575,6 @@ namespace sw
         vector<string_view> listID;
         for ( const DataCatalogKeyTarget& target : _rules.getKeyTargets() )
         {
-            if ( target._catalog != rootName )
-                continue;
             listID.clear();
             DataCatalogReferenceRules::collectEntryIDs( root, target, listID );
             unordered_set<string>& setID = _mapTagID[target._tag];

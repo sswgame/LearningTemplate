@@ -3,6 +3,7 @@
 #include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/String/StringBuilder.h"
@@ -10,6 +11,7 @@
 #include "Core/String/formatString.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
@@ -30,6 +32,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -1309,14 +1312,33 @@ namespace sw::editor
             return false;
         vector<EditorAssetIndexEntry> listEntry;
         EditorAssetCatalog::collectEntriesOnUIThread( EditorPaths::getAssetPaths(), listEntry );
-        const string opening = "<" + pTarget->_catalog;
-        for ( const EditorAssetIndexEntry& entry : listEntry )
+        vector<string> listAssetID;
+        listAssetID.reserve( listEntry.size() );
+        for ( EditorAssetIndexEntry& entry : listEntry )
+        {
+            listAssetID.push_back( std::move( entry._path ) );
+        }
+        // 실행의 작업 도메인(`scratch/` — 리소스 트리 밖이라 색인에 없다)도 마운트된 리소스다: 시나리오가 사본 폴더로 내보낸 프리셋을 고를 수 있어야 한다
+        // (언리얼 임시 마운트 지점의 패키지도 에셋 레지스트리에 오른다). 폴더가 없으면 고를 것이 없다.
+        vector<string> listScratchFile;
+        const string&  scratchFolder = AssetPaths::getScratchFolderPath();
+        if ( FileUtil::isDirectory( scratchFolder ) && EditorContentScan::collectFiles( scratchFolder, ".xml", listScratchFile, true ) )
+        {
+            for ( const string& filePath : listScratchFile )
+            {
+                listAssetID.push_back( EditorPaths::getAssetPaths().toAssetID( filePath ) );
+            }
+        }
+        const string opening      = "<" + pTarget->_catalog;
+        const string entryOpening = "<" + pTarget->_entry; // 항목 하나짜리 파일(`collectEntryIDs` 가 루트 이름으로 가린다)
+        for ( const string& assetID : listAssetID )
         {
             string text;
-            if ( StringUtil::endsWith( entry._path, ".xml", true ) == false || AssetIO::readTextAsset( AssetID{ entry._path }, text ) == false || text.find( opening ) == string::npos )
+            if ( StringUtil::endsWith( assetID, ".xml", true ) == false || AssetIO::readTextAsset( AssetID{ assetID }, text ) == false ||
+                 ( text.find( opening ) == string::npos && text.find( entryOpening ) == string::npos ) )
                 continue;
             XMLDocument doc;
-            if ( doc.parseData( text, entry._path ) == false || pTarget->_catalog != doc.getRoot().getName() )
+            if ( doc.parseData( text, assetID ) == false )
                 continue;
             vector<string_view> listID; // 항목 경로(`Honor/Action`)는 쿠커와 같은 함수가 따라간다
             DataCatalogReferenceRules::collectEntryIDs( doc.getRoot(), *pTarget, listID );

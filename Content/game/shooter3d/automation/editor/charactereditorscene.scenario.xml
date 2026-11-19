@@ -79,13 +79,10 @@
 	<EditorWaitStable/>
 	<DevCommand line="component.add SkeletalMeshComponent"/>
 	<EditorWaitStable/>
+	<!-- 프리셋 칸은 카탈로그 키 콤보다(CatalogKey — 카탈로그에 있는 id 만 고른다) — 내보낸 EditorKnight 가 목록에 있어야 고를 수 있다 -->
 	<EditorClick mark="inspector.property.CharacterAppearanceComponent._presetID"/>
 	<EditorWaitStable/>
-	<EditorKey key="Ctrl+A"/>
-	<EditorWaitStable/>
-	<EditorText value="EditorKnight"/>
-	<EditorWaitStable/>
-	<EditorKey key="Enter"/>
+	<EditorClick mark="inspector.catalogkey.choice.EditorKnight"/>
 	<WaitUntil watch="Object.Property" target="Dummy" key="CharacterAppearanceComponent._presetID" is="EditorKnight" timeoutFrames="20"/>
 
 	<!-- ④ 플레이 — 조립 결과 -->

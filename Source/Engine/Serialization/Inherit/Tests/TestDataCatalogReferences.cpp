@@ -253,6 +253,23 @@ SW_TEST_CASE( DataCatalogReferencesTest, BrokenKeyValuesFail )
     SW_EXPECT_FALSE( check.validate() );
 }
 
+/** @brief [DataCatalogReferencesTest] 루트가 항목 원소 하나인 파일(에디터가 내보낸 프리셋)도 그 항목을 정의한다 — 카탈로그 루트만 보면 런타임이 읽는 항목을 모른다 */
+SW_TEST_CASE( DataCatalogReferencesTest, SingleEntryFileDefinesItsEntry )
+{
+    DataCatalogReferenceRules rules;
+    SW_REQUIRE_TRUE( rules.loadFromXMLText( kKeyTable, "table" ) );
+    DataCatalogKeyCheck check( rules );
+    addDataText( check, R"(<ItemCatalog><Item id="cape_rogue"/><Item id="my_extra"/></ItemCatalog>)", "game/test/data/items.xml" );
+    addDataText( check, R"(<Item id="helmet_knight"/>)", "game/test/data/helmet_knight.xml" );
+    addDataText( check, kLootScene, "game/test/maps/loot.scene.xml" );
+    SW_EXPECT_TRUE( check.validate() );
+    XMLDocument doc;
+    SW_REQUIRE_TRUE( doc.parse( R"(<Item id="helmet_knight"/>)", "test" ) );
+    vector<string_view> listID;
+    DataCatalogReferenceRules::collectEntryIDs( doc.getRoot(), *rules.findKeyTarget( "ItemDef" ), listID );
+    SW_EXPECT_EQUAL( size_t( 1 ), listID.size() );
+}
+
 /**
  * @brief [DataCatalogReferencesTest] 구조체 칸 하나(`<Struct>`)는 칸 이름의 원소로 적혀도 그 형식의 키 칸으로 본다 — 예전에는 원소 이름이 형식 이름이 아니라 놓쳤다
  */

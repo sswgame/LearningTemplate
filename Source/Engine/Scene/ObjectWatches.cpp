@@ -16,6 +16,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 namespace sw
 {
@@ -77,7 +78,7 @@ namespace sw
         /**
          * @brief 감시 값 `Object.Property` 입니다. 대상 오브젝트의 컴포넌트 PROPERTY 값(`key="<컴포넌트 타입>.<프로퍼티>"`)입니다.
          * @details 수(float32 · int32 · uint32)와 글(string)을 읽는다. 선택과 무관하게 이름으로 고르므로 여러 오브젝트를 한 프레임에 비교할 수 있다
-         *          (프리팹 인스턴스마다의 값, 플레이 전후의 값). 비트필드 bool 은 PROPERTY 주소가 없어 읽지 못한다.
+         *          (프리팹 인스턴스마다의 값, 플레이 전후의 값). 카탈로그 키(`CatalogKey`)는 항목 id 글로 읽는다. 비트필드 bool 은 PROPERTY 주소가 없어 읽지 못한다.
          */
         [[nodiscard]] bool readObjectProperty( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
@@ -118,6 +119,8 @@ namespace sw
                 outValue.setNumber( static_cast<float64>( integer ) );
             else if ( builtinClass == ReflectBuiltinClass::Text && pValue != nullptr )
                 outValue.setText( ReflectedValueUtil::formatBuiltin( builtinIndex, pValue ) );
+            else if ( pProperty->_typeName == hashed_string( CatalogKeyBase::kTypeName ) && pValue != nullptr )
+                outValue.setText( static_cast<const CatalogKeyBase*>( pValue )->toText() ); // 카탈로그 키는 항목 id 글이다(인스펙터 · XML 과 같은 글)
             else
             {
                 outValue.setText( "property type " + string( pProperty->_typeName.c_str() ) + " is not readable here" );
