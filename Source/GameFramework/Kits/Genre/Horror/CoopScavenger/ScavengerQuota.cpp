@@ -71,12 +71,7 @@ namespace sw
 
     void ScavengerQuota::serializeState( StateIO& io )
     {
-        io.value( _quota );
-        io.value( _fulfilled );
-        io.value( _daysLeft );
-        io.value( _cycle );
-        io.flag( _bGameOver );
-        io.check( 1 <= _quota && 0 <= _fulfilled && 0 <= _daysLeft && 0 <= _cycle );
+        io.reflected( *this ); // 칸마다의 범위는 `PROPERTY( Min · Max )` 가 지킨다
     }
 
 } // namespace sw
