@@ -432,6 +432,8 @@ def make_scenario_command(item: CtestItem, scenario: str, content_root: Path, ou
     command = set_argument(command, "scenario-backend-split-offset", None)
     command = set_argument(command, "scenario-keep-going", None)
     command = set_argument(command, "log-file", str(output / "parent.log"))
+    # 셰이더 요청 기록은 체인 전체의 것이다 — 시나리오 하나로 덮으면 다음 검증의 데우기(preflight shader warm)가 그 몫만 컴파일한다.
+    command = set_argument(command, "shader-request-log", None)
     command = set_argument(command, "scenario-report", str(output / (scenario.rpartition("/")[2][: -len(SCENARIO_SUFFIX)] + ".json")))
     command.append("-scenario-record-missing-golden")
     command += read_launch_arguments(content_root / scenario)
