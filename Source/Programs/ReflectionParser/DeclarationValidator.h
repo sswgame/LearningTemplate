@@ -12,6 +12,7 @@
 
 namespace sw
 {
+    class ContainerTypeMap;
     class TypeNameMap;
     struct ParserConfig;
 
@@ -58,10 +59,10 @@ namespace sw
         static bool isInterpAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, string_view owner );
 
         /**
-         * @brief `RuntimeState` 칸의 형식이 상태 직렬화 · 상태 해시가 실을 수 있는 것인지 봅니다 — 내장 타입은 State 역할이 있어야 하고, 컨테이너는 시퀀스만입니다.
+         * @brief `RuntimeState` 칸의 형식이 상태 직렬화 · 상태 해시가 실을 수 있는 것인지 봅니다 — 내장 타입도 컨테이너도 `ReflectBuiltins.xxx` 의 State 역할이 있어야 합니다.
          * @details 실행 중에야 FATAL 로 드러나던 것(`StateIO::reflected` · `Component::foldStateHash`)을 생성 단계에서 멈춘다. 열거 · 반사 구조체는 여기서 통과한다.
          */
-        static bool isRuntimeStateAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, string_view owner );
+        static bool isRuntimeStateAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, const ContainerTypeMap& containerTypeMap, string_view owner );
 
         /**
          * @brief 서버 버스 본문 타입(`kBusVersion`)이 모듈 내보내기 매크로를 달았는지 봅니다. 아니면 알리고 false 입니다.

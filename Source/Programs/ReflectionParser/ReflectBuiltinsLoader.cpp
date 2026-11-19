@@ -9,6 +9,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
+#include "Engine/Reflection/ReflectionEnumNames.h"
+
 #include "Programs/ReflectionParser/ContainerTypeMap.h"
 #include "Programs/ReflectionParser/EmitTemplateStore.h"
 #include "Programs/ReflectionParser/GeneratedFiles.h"
@@ -31,8 +33,8 @@ namespace sw
             static constexpr size_t kFirstAliasColumn = 7;
             /** @brief TYPE 줄의 칸 수 하한(별칭 앞 칸 모두)입니다. 별칭이 없으면 `_` 를 둔다. */
             static constexpr size_t kMinTypeArgumentCount = kFirstAliasColumn + 1;
-            /** @brief CONTAINER 줄의 칸 수 하한(매칭 이름 · 종류 · 래퍼)입니다. */
-            static constexpr size_t kMinContainerArgumentCount = 3;
+            /** @brief CONTAINER 줄의 칸 수 하한(매칭 이름 · 종류 · 래퍼 · 역할)입니다. */
+            static constexpr size_t kMinContainerArgumentCount = 4;
 
             /** @brief builtins 표의 매크로 한 줄입니다. */
             struct BuiltinRow
@@ -234,6 +236,50 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief CONTAINER 줄(매칭 이름 · 종류 · 래퍼 줄기 · 역할)을 읽습니다. 역할은 `None` 또는 `State` · `Fixed` 를 `|` 로 이은 것입니다.
+             * @details State 는 시퀀스에만(상태 직렬화 · 해시가 원소 차례대로 싣는다), 종류는 Sequence · Map 만. 어긋나면 그 줄을 알리고 false 입니다.
+             */
+            [[nodiscard]] static bool readContainerRule( const string_view absPath, const vector<string>& listArgument, ContainerTypeRule& outRule )
+            {
+                outRule._match        = listArgument[0];
+                outRule._type         = listArgument[2];
+                const bool bKnownKind = tryParseContainerKind( listArgument[1], outRule._kind ) && outRule._kind != ContainerKind::None;
+                if ( bKnownKind == false )
+                {
+                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.BadContainerKind", "%#: container '%#' has kind '%#' - use Sequence or Map", absPath, outRule._match, listArgument[1] );
+                    return false;
+                }
+                bool bRolesOk = true;
+                if ( listArgument[3] != builtinmacro::kRoleNone )
+                {
+                    const string_splitter roles( listArgument[3], builtinmacro::kRoleSeparator );
+                    for ( const string_view role : roles.getSplitList() )
+                    {
+                        const string_view name = StringUtil::trim( role );
+                        if ( name == builtinmacro::kRoleState && outRule._bState == SW_FALSE )
+                            outRule._bState = SW_TRUE;
+                        else if ( name == builtinmacro::kRoleFixed && outRule._bFixed == SW_FALSE )
+                            outRule._bFixed = SW_TRUE;
+                        else
+                            bRolesOk = false;
+                    }
+                }
+                if ( bRolesOk == false )
+                {
+                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.BadContainerRoles", "%#: container '%#' has roles '%#' - use None, or State and Fixed joined by |", absPath, outRule._match,
+                                     listArgument[3] );
+                    return false;
+                }
+                if ( outRule._bState == SW_TRUE && outRule._kind != ContainerKind::Sequence )
+                {
+                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.ContainerStateNeedsSequence", "%#: container '%#' has the State role but is a %# - State needs a Sequence", absPath,
+                                     outRule._match, listArgument[1] );
+                    return false;
+                }
+                return true;
+            }
+
             static string makeQualifiedName( const string_view nameSpace, const string_view name )
             {
                 StringBuilder<constant::buffer::kMax128> qualified;
@@ -282,7 +328,10 @@ namespace sw
             const vector<string>& listArgument = row._listArgument;
             if ( row._bContainer == SW_TRUE )
             {
-                if ( outSession._containerTypeMap.registerRule( listArgument[0], listArgument[1], listArgument[2] ) == false )
+                ContainerTypeRule rule;
+                if ( ReflectBuiltinsLoaderInternal::readContainerRule( absPath, listArgument, rule ) == false )
+                    return false;
+                if ( outSession._containerTypeMap.registerRule( rule ) == false )
                 {
                     SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.BadCONTAINERRow", "%#: bad CONTAINER row '%#'", absPath, listArgument[0] );
                     return false;
@@ -299,6 +348,16 @@ namespace sw
                 outSession._typeNameMap.registerTraits( listArgument[0], traits );
                 ++typeCount;
             }
+        }
+
+        // C 고정 배열(`T _arr[N]`)은 표의 `array` 줄을 탄다(`ContainerTreeBuilder`) — 그 줄이 고정 시퀀스가 아니면 C 배열이 다른 래퍼로 실린다.
+        const ContainerTypeRule* pFixedArray    = outSession._containerTypeMap.findByMatch( annotation::kFixedArrayTypeName );
+        const bool               bFixedArrayRow = pFixedArray != nullptr && pFixedArray->_kind == ContainerKind::Sequence && pFixedArray->_bFixed == SW_TRUE;
+        if ( bFixedArrayRow == false )
+        {
+            SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.MissingFixedArrayRow", "%#: needs a CONTAINER row '%#' with kind Sequence and the Fixed role (C arrays use it)", absPath,
+                             annotation::kFixedArrayTypeName );
+            return false;
         }
 
         outSession._typeNameMap.setLoaded( true );

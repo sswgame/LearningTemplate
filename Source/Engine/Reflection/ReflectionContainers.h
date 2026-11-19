@@ -78,6 +78,10 @@ namespace sw
         /** @brief 크기가 고정된 컨테이너(고정 배열)이면 true 입니다. 인스펙터가 추가와 비우기 버튼을 그리지 않습니다. */
         virtual bool isFixedSize() const { return false; }
 
+        /** @brief 래퍼 형식의 모양입니다. 파생 래퍼가 가리면 위 가상 함수도 그 값을 돌려준다 — 컴파일 때 표(`ReflectBuiltins.xxx` CONTAINER 역할)와 대조한다(`ContainerWrapperOf`). */
+        static constexpr bool kInPlaceElementWrite = true;
+        static constexpr bool kFixedSize           = false;
+
         /** @brief @p index 번째 원소를 지웁니다. 범위 밖이거나 지울 수 없는 컨테이너(고정 배열)이면 false 입니다. */
         virtual bool eraseAt( void* pContainer, size_t index ) const = 0;
 
@@ -138,6 +142,10 @@ namespace sw
         virtual void insertKeyValue( void* pContainer, const void* pKey, const void* pVal ) const = 0;
         /** @brief 키 집합이 타입으로 정해진 맵(`EnumArray` — 열거자마다 한 칸)이면 true 입니다. 인스펙터가 항목 추가 · 지우기를 그리지 않습니다. */
         virtual bool isFixedSize() const { return false; }
+
+        /** @brief 래퍼 형식의 모양입니다(`ContainerWrapperOf` 가 표와 대조한다). 맵은 원소 차례가 정해지지 않아 제자리 쓰기 시퀀스가 아니다. */
+        static constexpr bool kInPlaceElementWrite = false;
+        static constexpr bool kFixedSize           = false;
 
         /** @brief 키 타입의 바이트 크기입니다. */
         virtual size_t getKeySize() const = 0;
@@ -358,7 +366,8 @@ namespace sw
         }
 
         /** @brief 원소가 곧 정렬 키라 제자리에서 고칠 수 없습니다. */
-        bool allowsInPlaceElementWrite() const override { return false; }
+        static constexpr bool kInPlaceElementWrite = false;
+        bool                  allowsInPlaceElementWrite() const override { return kInPlaceElementWrite; }
 
         /** @brief @p index 번째 원소를 지웁니다(순회 순서의 번호). */
         bool eraseAt( void* pContainer, size_t index ) const override
@@ -438,7 +447,8 @@ namespace sw
         /** @brief 원소 개수를 반환합니다. */
         size_t getSize( const void* pContainer ) const override { return std::size( *static_cast<const TContainer*>( pContainer ) ); }
         /** @brief 자라지도 줄지도 않습니다. 인스펙터가 추가와 비우기 버튼을 그리지 않습니다. */
-        bool isFixedSize() const override { return true; }
+        static constexpr bool kFixedSize = true;
+        bool                  isFixedSize() const override { return kFixedSize; }
         /** @brief 인덱스 위치의 원소 포인터를 반환합니다. */
         void* getElement( void* pContainer, size_t index ) const override
         {
@@ -593,8 +603,10 @@ namespace sw
         using KeyType   = typename TContainer::key_type;
         using ValueType = typename TContainer::mapped_type;
 
+        static constexpr bool kFixedSize = true;
+
         size_t getSize( const void* ) const override { return TContainer::kSize; }
-        bool   isFixedSize() const override { return true; }
+        bool   isFixedSize() const override { return kFixedSize; }
         /** @brief 칸을 모두 기본값으로 되돌립니다(칸 수는 그대로다). */
         void clear( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->fill( ValueType{} ); }
         void constructEmpty( void* pContainer ) const override { sw_placement_new( pContainer ) TContainer{}; }
@@ -665,5 +677,23 @@ namespace sw
     struct ContainerWrapperOf
     {
         static inline const TWrapper kInstance{};
+
+        /** @brief 래퍼 형식의 종류입니다 — 기반(`ISequenceContainerWrapper` · `IMapContainerWrapper`)이 정한다. */
+        static constexpr ContainerKind kKind = std::is_base_of_v<IMapContainerWrapper, TWrapper>      ? ContainerKind::Map
+                                             : std::is_base_of_v<ISequenceContainerWrapper, TWrapper> ? ContainerKind::Sequence
+                                                                                                      : ContainerKind::None;
+        static_assert( kKind != ContainerKind::None, "a container wrapper derives from ISequenceContainerWrapper or IMapContainerWrapper" );
+
+        /** @brief 상태 직렬화 · 상태 해시가 원소 차례대로 실을 수 있는지입니다 — 제자리에서 원소를 쓰는 시퀀스(집합 · 맵은 아니다). 표의 State 역할과 같아야 한다. */
+        static constexpr bool kStateCarried = kKind == ContainerKind::Sequence && TWrapper::kInPlaceElementWrite;
+
+        /**
+         * @brief `ReflectBuiltins.xxx` CONTAINER 줄의 종류 · 역할이 이 래퍼 형식과 같은지입니다. 생성 코드가 컨테이너 칸마다 `static_assert` 로 부른다.
+         * @details 표가 래퍼와 다르면(종류를 Map 이라 적고 시퀀스 래퍼를 가리킴, State 를 집합에 담 …) 그 칸을 쓴 생성 코드가 컴파일되지 않는다.
+         */
+        static constexpr bool matchesTable( const ContainerKind kind, const bool bState, const bool bFixed )
+        {
+            return kind == kKind && bState == kStateCarried && bFixed == TWrapper::kFixedSize;
+        }
     };
 } // namespace sw

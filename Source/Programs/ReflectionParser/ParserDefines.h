@@ -75,9 +75,8 @@ namespace sw
         /** @brief 검증 함수(`Validate = fn`)의 인자 타입 — 정규 이름(`sw::` 와 참조를 벗긴 것)입니다. */
         inline constexpr const utf8* kValidationContextTypeName = "ValidationContext";
 
-        /** @brief C 고정 배열(`T _arr[N]`)의 컨테이너 이름 · 래퍼 줄기입니다 — `std::array` 와 같은 `ArrayWrapper` 를 쓴다. */
-        inline constexpr const utf8* kFixedArrayTypeName    = "array";
-        inline constexpr const utf8* kFixedArrayWrapperStem = "Array";
+        /** @brief C 고정 배열(`T _arr[N]`)이 타는 `ReflectBuiltins.xxx` CONTAINER 줄의 이름입니다 — 래퍼 줄기 · 종류 · 역할은 그 줄이 정한다(`std::array` 와 같다). */
+        inline constexpr const utf8* kFixedArrayTypeName = "array";
     } // namespace annotation
 
     namespace fixedlayout
@@ -192,6 +191,7 @@ namespace sw
         inline constexpr const utf8* kRoleNone      = "None";
         inline constexpr const utf8* kRoleInterp    = "Interp";
         inline constexpr const utf8* kRoleState     = "State";
+        inline constexpr const utf8* kRoleFixed     = "Fixed"; ///< CONTAINER 줄만 — 크기가 고정이다
         inline constexpr utf8        kRoleSeparator = '|';
     } // namespace builtinmacro
 

@@ -8,6 +8,7 @@
 #   MODE=broken-builtins-interp   내장 표의 bool 줄에 Interp 역할을 단다 — 섞는 길이 없는 모양(none)이라 시작할 때 멈춰야 한다.
 #   MODE=broken-builtins-widget   내장 표의 TagID 줄 위젯을 Packed 로 바꾼다 — 글 처리기가 packed 가 아니다.
 #   MODE=broken-builtins-layout   내장 표의 int2 줄 Layout 을 모르는 철자(i64)로 바꾼다.
+#   MODE=broken-builtins-container  내장 표의 TArray 줄에서 State 를 뺀다 — 같은 래퍼(Vector)의 vector 줄과 역할이 다르다.
 #   깨진 입력은 0 이 아닌 종료여야 한다 — 기본값으로 이어 가면 빌드가 틀린 생성 코드로 지나간다(폴백 없음).
 # 입력: MODE · TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · ANNOTATION_META · TEMPLATES · CONFIG · GEN_CPP_SUFFIX
 foreach(required MODE TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG GEN_CPP_SUFFIX)
@@ -149,6 +150,10 @@ elseif(MODE MATCHES "^broken-builtins-")
 		set(builtins_from "SW_REFLECT_BUILTIN_TYPE( int2, sw::int2, packed, sw, Packed, i32(_x,_y), State, _ )")
 		set(builtins_to "SW_REFLECT_BUILTIN_TYPE( int2, sw::int2, packed, sw, Packed, i64(_x,_y), State, _ )")
 		set(expected_text "use none, num, angle, f32(members) or i32(members)")
+	elseif(MODE STREQUAL "broken-builtins-container")
+		set(builtins_from "SW_REFLECT_BUILTIN_CONTAINER( TArray, Sequence, Vector, State )")
+		set(builtins_to "SW_REFLECT_BUILTIN_CONTAINER( TArray, Sequence, Vector, None )")
+		set(expected_text "one wrapper has one shape")
 	else()
 		message(FATAL_ERROR "RunParserToolInputs: unknown MODE '${MODE}'")
 	endif()

@@ -148,13 +148,12 @@ namespace sw
                 return LeafKind::Unsupported;
             }
 
-            /** @brief 칸이 싣는 시퀀스 래퍼입니다. 시퀀스가 아니면 nullptr, 맵 · 중첩 컨테이너는 실을 수 없어 멈춘다. */
+            /** @brief 칸이 싣는 시퀀스 래퍼입니다. 컨테이너가 아니면 nullptr, State 역할 밖(맵 · 집합 · 중첩)은 실을 수 없어 멈춘다(`PropertyInfo::findStateSequence`). */
             static const ISequenceContainerWrapper* findSequence( const TypeInfo& owner, const PropertyInfo& prop )
             {
                 if ( prop._bIsContainer == SW_FALSE )
                     return nullptr;
-                const bool                       bNested   = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
-                const ISequenceContainerWrapper* pSequence = prop._containerWrapper != nullptr && bNested == false ? prop._containerWrapper->asSequence() : nullptr;
+                const ISequenceContainerWrapper* pSequence = prop.findStateSequence();
                 if ( pSequence == nullptr )
                     stopForUnsupportedField( owner, prop );
                 return pSequence;

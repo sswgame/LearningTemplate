@@ -4,8 +4,6 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Reflection/ReflectionEnumNames.h"
-
 #include "Programs/ReflectionParser/ParserUtil.h"
 
 namespace sw
@@ -23,29 +21,40 @@ namespace sw
         _bLoaded = SW_FALSE;
     }
 
-    bool ContainerTypeMap::registerRule( const string& match, ContainerKind kind, const string& type )
+    bool ContainerTypeMap::registerRule( const ContainerTypeRule& rule )
     {
-        if ( match.empty() || type.empty() )
+        if ( rule._match.empty() || rule._type.empty() )
             return false;
-        ContainerTypeRule rule;
-        rule._match = match;
-        rule._kind  = kind;
-        rule._type  = type;
-        _listRule.push_back( std::move( rule ) );
+        const ContainerTypeRule* pSameStem = findByWrapperStem( rule._type );
+        const bool               bMismatch = pSameStem != nullptr && ( pSameStem->_kind != rule._kind || pSameStem->_bState != rule._bState || pSameStem->_bFixed != rule._bFixed );
+        if ( bMismatch )
+        {
+            SW_LOG_ERROR_ID( "ContainerTypeMap.WrapperStemDisagrees", "'%#' and '%#' share the wrapper %#Wrapper but differ in kind or roles - one wrapper has one shape",
+                             pSameStem->_match, rule._match, rule._type );
+            return false;
+        }
+        _listRule.push_back( rule );
         return true;
     }
 
-    bool ContainerTypeMap::registerRule( const string& match, const string& kindSpelling,
-                                         const string& type )
+    const ContainerTypeRule* ContainerTypeMap::findByMatch( const string_view match ) const
     {
-        // 철자를 모르면 Sequence 로 대신하지 않는다 - 맵 · 집합이 배열로 직렬화되어 저장 파일이 조용히 다른 꼴이 된다.
-        ContainerKind kind = ContainerKind::Sequence;
-        if ( tryParseContainerKind( kindSpelling, kind ) == false )
+        for ( const ContainerTypeRule& rule : _listRule )
         {
-            SW_LOG_ERROR_ID( "ContainerTypeMap.UnknownContainerKind", "Unknown container kind '%#' for '%#'", kindSpelling, match );
-            return false;
+            if ( string_view{ rule._match } == match )
+                return &rule;
         }
-        return registerRule( match, kind, type );
+        return nullptr;
+    }
+
+    const ContainerTypeRule* ContainerTypeMap::findByWrapperStem( const string_view wrapperStem ) const
+    {
+        for ( const ContainerTypeRule& rule : _listRule )
+        {
+            if ( string_view{ rule._type } == wrapperStem )
+                return &rule;
+        }
+        return nullptr;
     }
 
     const ContainerTypeRule* ContainerTypeMap::match( const string_view clangTypeSpelling ) const

@@ -8,6 +8,7 @@
 #include "Engine/Reflection/ReflectionUnits.h"
 
 #include "Programs/ReflectionParser/AnnotationLookup.h"
+#include "Programs/ReflectionParser/ContainerTypeMap.h"
 #include "Programs/ReflectionParser/CursorReader.h"
 #include "Programs/ReflectionParser/ParserConfig.h"
 #include "Programs/ReflectionParser/ParserDefines.h"
@@ -341,16 +342,25 @@ namespace sw
         return false;
     }
 
-    bool DeclarationValidator::isRuntimeStateAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, const string_view owner )
+    bool DeclarationValidator::isRuntimeStateAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, const ContainerTypeMap& containerTypeMap,
+                                                      const string_view owner )
     {
         if ( prop._bRuntimeState == SW_FALSE || prop._bIsBitField == SW_TRUE )
             return true;
-        if ( prop._bIsContainer == SW_TRUE && prop._containerKind != ContainerKind::Sequence )
+        if ( prop._bIsContainer == SW_TRUE )
         {
-            SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRuntimeStateContainer",
-                             "ERROR: PROPERTY( RuntimeState ) on '%#' (%#) - state fields carry a single value or a sequence; take the map out of RuntimeState and carry it in serializeState.",
-                             owner, prop._typeName );
-            return false;
+            // 컨테이너는 표(`ReflectBuiltins.xxx` CONTAINER 줄)의 State 역할 — 순서가 정해지고 원소를 제자리에서 쓰는 시퀀스만 원소 차례대로 실린다.
+            const ContainerTypeRule* pRule    = containerTypeMap.findByWrapperStem( prop._containerType );
+            const bool               bNested  = prop._containerTree != nullptr && prop._containerTree->_elementNested != nullptr && prop._containerTree->_elementNested->_bIsContainer == SW_TRUE;
+            const bool               bCarried = pRule != nullptr && pRule->_bState == SW_TRUE && bNested == false;
+            if ( bCarried == false )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRuntimeStateContainer",
+                                 "ERROR: PROPERTY( RuntimeState ) on '%#' (%#) - the container has no State role in ReflectBuiltins.xxx (or nests another container); state fields carry "
+                                 "a single value or an ordered sequence - take it out of RuntimeState and carry it in serializeState.",
+                                 owner, prop._typeName );
+                return false;
+            }
         }
         const string&            leafType = prop._bIsContainer == SW_TRUE ? prop._elementTypeName : prop._typeName;
         const BuiltinTypeTraits* pTraits  = typeNameMap.findTraits( leafType );

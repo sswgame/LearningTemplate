@@ -183,8 +183,7 @@ namespace sw
                 }
                 if ( prop._bIsContainer == SW_TRUE )
                 {
-                    const bool                       bNested   = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
-                    const ISequenceContainerWrapper* pSequence = prop._containerWrapper != nullptr && bNested == false ? prop._containerWrapper->asSequence() : nullptr;
+                    const ISequenceContainerWrapper* pSequence = prop.findStateSequence(); // 상태 직렬화와 같은 판정 — 집합처럼 차례가 없는 컨테이너는 해시가 실행마다 달라진다
                     if ( pSequence == nullptr )
                         stopForUnsupportedField( field._owner, prop );
                     const size_t elementCount = pSequence->getSize( field._pValue );

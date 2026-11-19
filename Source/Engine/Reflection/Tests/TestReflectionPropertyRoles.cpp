@@ -8,6 +8,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/ReflectedValue.h"
+#include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
@@ -326,4 +327,42 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, BuiltinLayoutGivesComponentCountAndSiz
     SW_EXPECT_TRUE( sw::ReflectBuiltinTraitTable::get( sw::ReflectBuiltinIndex::kint2 )._layout == sw::ReflectBuiltinLayout::Int32 );
     SW_EXPECT_EQUAL( static_cast<sw::uint8>( 16 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kfloat4x4 ) );
     SW_EXPECT_EQUAL( static_cast<sw::uint8>( 0 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kNone ) );
+}
+
+namespace
+{
+    // 래퍼 형식이 정하는 모양 — 표(`ReflectBuiltins.xxx` CONTAINER 줄)의 종류 · State · Fixed 와 생성 코드가 이 값으로 대조한다.
+    using VectorWrapperT = sw::VectorWrapper<sw::vector<sw::int32>>;
+    using SetWrapperT    = sw::SetWrapper<sw::set<sw::int32>>;
+    using ArrayWrapperT  = sw::ArrayWrapper<sw::int32[4]>;
+    using MapWrapperT    = sw::MapWrapper<sw::map<sw::int32, sw::int32>>;
+    static_assert( sw::ContainerWrapperOf<VectorWrapperT>::matchesTable( sw::ContainerKind::Sequence, true, false ) );
+    static_assert( sw::ContainerWrapperOf<SetWrapperT>::matchesTable( sw::ContainerKind::Sequence, false, false ) );
+    static_assert( sw::ContainerWrapperOf<ArrayWrapperT>::matchesTable( sw::ContainerKind::Sequence, true, true ) );
+    static_assert( sw::ContainerWrapperOf<MapWrapperT>::matchesTable( sw::ContainerKind::Map, false, false ) );
+    static_assert( sw::ContainerWrapperOf<SetWrapperT>::matchesTable( sw::ContainerKind::Sequence, true, false ) == false, "집합에 State 를 달면 컴파일이 멈춰야 한다" );
+    static_assert( sw::ContainerWrapperOf<VectorWrapperT>::matchesTable( sw::ContainerKind::Map, true, false ) == false, "시퀀스 래퍼를 Map 이라 적으면 컴파일이 멈춰야 한다" );
+} // namespace
+
+/**
+ * @brief [ReflectionPropertyRoleTest] 상태 직렬화 · 해시가 싣는 시퀀스는 차례가 정해진 평평한 시퀀스뿐이다 — 집합 · 맵은 nullptr(`PropertyInfo::findStateSequence`)
+ * @details 래퍼 가상 함수(`allowsInPlaceElementWrite` · `isFixedSize`)가 같은 형식의 정적 값과 같아 표 · 생성 코드 · 런타임 판정이 한 값을 본다.
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, StateSequenceIsTheOrderedFlatSequence )
+{
+    const auto makeContainer = []( const sw::ContainerKind kind, const sw::IContainerWrapper* pWrapper )
+    { return sw::PropertyInfo( sw::hashed_string( "_list" ), sw::hashed_string( "container" ), 0, true, kind, sw::hashed_string( "int32" ), {}, pWrapper ); };
+    const sw::PropertyInfo vectorProp = makeContainer( sw::ContainerKind::Sequence, &sw::ContainerWrapperOf<VectorWrapperT>::kInstance );
+    const sw::PropertyInfo arrayProp  = makeContainer( sw::ContainerKind::Sequence, &sw::ContainerWrapperOf<ArrayWrapperT>::kInstance );
+    const sw::PropertyInfo setProp    = makeContainer( sw::ContainerKind::Sequence, &sw::ContainerWrapperOf<SetWrapperT>::kInstance );
+    const sw::PropertyInfo mapProp    = makeContainer( sw::ContainerKind::Map, &sw::ContainerWrapperOf<MapWrapperT>::kInstance );
+    const sw::PropertyInfo scalarProp( sw::hashed_string( "_value" ), sw::hashed_string( "int32" ), 0 );
+
+    SW_EXPECT_TRUE( vectorProp.findStateSequence() != nullptr );
+    SW_EXPECT_TRUE( arrayProp.findStateSequence() != nullptr );
+    SW_EXPECT_TRUE( setProp.findStateSequence() == nullptr );
+    SW_EXPECT_TRUE( mapProp.findStateSequence() == nullptr );
+    SW_EXPECT_TRUE( scalarProp.findStateSequence() == nullptr );
+    SW_EXPECT_TRUE( sw::ContainerWrapperOf<ArrayWrapperT>::kInstance.isFixedSize() );
+    SW_EXPECT_FALSE( sw::ContainerWrapperOf<SetWrapperT>::kInstance.allowsInPlaceElementWrite() );
 }
