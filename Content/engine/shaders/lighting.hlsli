@@ -47,7 +47,18 @@ struct LightProbe
     static float4 load( uint probeIndex, uint element );
     static float3 evaluateSphericalHarmonics( uint probeIndex, float3 normal );
     static float3 evaluateSphericalHarmonicsFrom( uint firstElement, float3 normal );
+    static float2 loadVisibilityTexel( uint firstElement, uint texel );
+    static float2 sampleVisibilityMoments( uint firstElement, float3 direction );
 };
+
+// 프로브 GI 빛샘 막기 계수 — 값은 Config/Engine/EngineConfig.json `_render._probeVisibility` 가 정본이고 엔진이 모든 컴파일에 define 으로 넣는다(ShaderCompiler::appendEngineDefines).
+#if !defined( SW_PROBE_NORMAL_BIAS ) || !defined( SW_PROBE_VIEW_BIAS ) || !defined( SW_PROBE_BACKFACE_FLOOR ) || !defined( SW_PROBE_CHEBYSHEV_EXPONENT )
+    #error "SW_PROBE_* is not defined - the engine injects it from EngineConfig _render._probeVisibility"
+#endif
+static const float kProbeNormalBias        = SW_PROBE_NORMAL_BIAS;        // 표면을 노멀 쪽으로 띄우는 거리(가장 짧은 프로브 간격의 비율)
+static const float kProbeViewBias          = SW_PROBE_VIEW_BIAS;          // 표면을 카메라 쪽으로 띄우는 거리(같은 비율)
+static const float kProbeBackfaceFloor     = SW_PROBE_BACKFACE_FLOOR;     // 표면 뒤 프로브의 가중 하한
+static const float kProbeChebyshevExponent = SW_PROBE_CHEBYSHEV_EXPONENT; // 체비쇼프 가시성 지수
 
 /** @brief 반사 프로브 텍셀 읽기. 원소 하나의 반사는 LightData::sampleReflectionProbe 다. */
 struct ReflectionProbe
@@ -428,20 +439,60 @@ static float3 LightProbe::evaluateSphericalHarmonicsFrom( uint firstElement, flo
     return max( linearTerm + quadraticTerm + LightProbe::loadFromXML( firstElement + 6u ).rgb * squareInput, 0.0f );
 }
 
+/** @brief 프로브 가시성 모먼트 묶음(@p firstElement 부터, binding_slots.hlsli 8 절)의 텍셀 하나 — (평균 거리, 거리²의 평균)입니다. float4 하나에 텍셀 둘이다. */
+static float2 LightProbe::loadVisibilityTexel( uint firstElement, uint texel )
+{
+    const float4 pair = LightProbe::loadFromXML( firstElement + ( texel >> 1u ) );
+    return ( texel & 1u ) != 0u ? pair.zw : pair.xy;
+}
+
+/**
+ * @brief 프로브 하나의 거리 모먼트를 방향 @p direction 으로 쌍선형 샘플합니다(가장자리는 자른다 — 반사 프로브 sampleLevel 과 같은 규칙).
+ * @return (평균 거리, 거리²의 평균). 거리²의 평균이 0 인 텍셀(광선이 아직 닿지 않음)은 빼고 남은 텍셀로 다시 나눈다 — 모두 모르면 (0, 0)(가리지 않는다).
+ */
+static float2 LightProbe::sampleVisibilityMoments( uint firstElement, float3 direction )
+{
+    const uint   resolution = SW_PROBE_VISIBILITY_RESOLUTION;
+    const float  lastTexel  = (float)( resolution - 1u );
+    const float2 texel      = clamp( Octahedral::encodeTexture( direction ) * (float)resolution - 0.5f, 0.0f, lastTexel );
+    const uint2  low        = uint2( floor( texel ) );
+    const uint2  high       = min( low + 1u, uint2( resolution - 1u, resolution - 1u ) );
+    const float2 blend      = texel - float2( low );
+    float2       sum        = float2( 0.0f, 0.0f );
+    float        weightSum  = 0.0f;
+    SW_UNROLL for ( uint corner = 0u; corner < 4u; ++corner )
+    {
+        const uint2  pick    = uint2( corner & 1u, corner >> 1u );
+        const uint2  cell    = low + ( high - low ) * pick;
+        const float2 axis    = lerp( 1.0f - blend, blend, float2( pick ) );
+        const float2 moments = LightProbe::loadVisibilityTexel( firstElement, cell.y * resolution + cell.x );
+        const float  weight  = moments.y > 0.0f ? axis.x * axis.y : 0.0f;
+        sum += moments * weight;
+        weightSum += weight;
+    }
+    return weightSum > 0.0f ? sum / weightSum : float2( 0.0f, 0.0f );
+}
+
 /**
  * @brief 프로브 볼륨 원소 하나(binding_slots.hlsli 8 절의 SW_LIGHT_TYPE_PROBE_VOLUME 배치)에서 이 위치의 간접광을 구합니다.
- * @return rgb = 조도 / π(이웃 프로브 여덟의 삼선형 보간), a = 가중치 — 상자 안이면 1, 밖이면 0 이다. 상자 밖을 가장 가까운 프로브로 자르지 않는다
+ * @return rgb = 조도 / π(이웃 프로브 여덟의 가중 보간), a = 가중치 — 상자 안이면 1, 밖이면 0 이다. 상자 밖을 가장 가까운 프로브로 자르지 않는다
  *         (IndirectLighting.md P3 계약 — 볼륨이 없는 곳은 볼륨의 빛을 받지 않는다). 프로브 버퍼가 안 걸렸으면 0 이다.
+ * @param toView 표면에서 카메라 쪽 단위 벡터 — 자기 그림자 바이어스에 쓴다
  * @param outSkyVisibility 반사 앰비언트에 곱할 하늘 보임 — lerp( 1, 프로브 하늘 보임(원소 6 의 w), 볼륨의 하늘 가림 세기 colorIntensity.w ). 세기가 0(베이크 · 기본)이거나 상자 밖이면 1 이다.
+ * @details 빛샘 막기(DDGI 모양, RTXGI · Adria): 표면을 노멀 · 시선 쪽으로 띄운 점(가장 짧은 간격 × 계수)으로 이웃 프로브와 삼선형 비율을 고르고, 프로브마다
+ *          삼선형 비율 × 뒷면 가중(프로브가 표면 뒤면 줄인다) × 체비쇼프 가시성(실시간 볼륨의 거리 모먼트 — 벽 너머면 0 에 가깝다)으로 가중해 그 합으로 나눈다.
+ *          가중 식은 shading_math.hlsli ShadingMath::computeProbeVisibilityWeight 하나다(C++ 테스트가 같은 파일을 잰다). 상자 안팎은 띄우기 전 위치로 본다.
  */
-float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal, out float outSkyVisibility )
+float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal, float3 toView, out float outSkyVisibility )
 {
-    const float3 origin    = _colorIntensity.xyz;
-    const float3 spacing   = max( _directionType.xyz, 1e-4f );
-    const uint3  count     = uint3( _params.xyz + 0.5f );
-    const uint   probeBase = (uint)( _params.w + 0.5f );
-    const float3 lastCell  = float3( max( count, 1u ) - 1u );
-    const float3 local     = ( worldPosition - origin ) / spacing;
+    const float3 origin      = _colorIntensity.xyz;
+    const float3 spacing     = max( _directionType.xyz, 1e-4f );
+    const uint3  count       = uint3( _params.xyz + 0.5f );
+    const uint   probeBase   = (uint)( _params.w + 0.5f );
+    const uint   momentBase  = (uint)( _extra.x + 0.5f );
+    const bool   bHasMoments = _extra.y > 0.5f;
+    const float3 lastCell    = float3( max( count, 1u ) - 1u );
+    const float3 local       = ( worldPosition - origin ) / spacing;
     // 프로브가 하나뿐인 축은 그 축의 두께가 0 이다 — 간격 반 안을 안으로 본다.
     const float3 multiAxis = float3( count > 1u ); // 1 이면 그 축에 프로브가 둘 이상
     // 상자 면에 놓인 표면(볼륨 바닥을 바닥에 맞춘 무대)은 안이다 — 디퍼드는 깊이에서 위치를 되살려 면 위의 점이 칸의 1/10000 쯤 밖으로 흔들린다(포워드는 정확히 면 위).
@@ -450,28 +501,45 @@ float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal, out fl
     const float3 lowBound      = multiAxis * 0.5f - 0.5f - kFaceSlack;
     const float3 highBound     = lerp( float3( 0.5f, 0.5f, 0.5f ), lastCell, multiAxis ) + kFaceSlack;
     const bool   bInside       = all( local >= lowBound ) && all( local <= highBound ) && g_SwLightProbesIndex != kInvalidIndex;
-    const float3 clamped       = clamp( local, 0.0f, lastCell );
+    const float  minSpacing    = min( spacing.x, min( spacing.y, spacing.z ) );
+    const float3 biased        = worldPosition + ( normal * kProbeNormalBias + toView * kProbeViewBias ) * minSpacing;
+    const float3 clamped       = clamp( ( biased - origin ) / spacing, 0.0f, lastCell );
     const uint3  cell          = min( uint3( clamped ), uint3( max( lastCell - 1.0f, 0.0f ) ) );
     const float3 blend         = saturate( clamped - float3( cell ) ) * multiAxis;
     const uint3  nextOffset    = uint3( count > 1u );
     const float  skyOcclusion  = saturate( _colorIntensity.w );
     float3       result        = float3( 0.0f, 0.0f, 0.0f );
     float        skyVisibility = 0.0f;
+    float        weightSum     = 0.0f;
     if ( bInside )
     {
         SW_UNROLL for ( uint corner = 0u; corner < 8u; ++corner )
         {
-            const uint3  pick         = uint3( corner & 1u, ( corner >> 1u ) & 1u, ( corner >> 2u ) & 1u );
-            const uint3  probeCell    = cell + pick * nextOffset;
-            const float3 axisWeight   = lerp( 1.0f - blend, blend, float3( pick ) );
-            const uint   probeIndex   = probeBase + ( probeCell.z * count.y + probeCell.y ) * count.x + probeCell.x;
-            const float  cornerWeight = axisWeight.x * axisWeight.y * axisWeight.z;
+            const uint3  pick          = uint3( corner & 1u, ( corner >> 1u ) & 1u, ( corner >> 2u ) & 1u );
+            const uint3  probeCell     = cell + pick * nextOffset;
+            const float3 axisWeight    = lerp( 1.0f - blend, blend, float3( pick ) );
+            const uint   probeLocal    = ( probeCell.z * count.y + probeCell.y ) * count.x + probeCell.x;
+            const uint   probeIndex    = probeBase + probeLocal;
+            const float3 probePosition = origin + float3( probeCell ) * spacing;
+            const float3 toProbe       = probePosition - worldPosition;
+            const float3 fromProbe     = biased - probePosition;
+            const float  distance      = length( fromProbe );
+            float2       moments       = float2( 0.0f, 0.0f );
+            SW_BRANCH if ( bHasMoments && distance > 1e-4f )
+            {
+                moments = LightProbe::sampleVisibilityMoments( momentBase + probeLocal * SW_PROBE_VISIBILITY_FLOAT4_COUNT, fromProbe / distance );
+            }
+            const float normalDotToProbe = dot( normal, toProbe * rsqrt( max( dot( toProbe, toProbe ), 1e-8f ) ) );
+            const float visibility       = ShadingMath::computeProbeVisibilityWeight( normalDotToProbe, distance, moments.x, moments.y, kProbeBackfaceFloor, kProbeChebyshevExponent );
+            const float cornerWeight     = axisWeight.x * axisWeight.y * axisWeight.z * visibility;
             result += LightProbe::evaluateSphericalHarmonics( probeIndex, normal ) * cornerWeight;
             skyVisibility += LightProbe::load( probeIndex, 6u ).w * cornerWeight;
+            weightSum += cornerWeight;
         }
     }
-    outSkyVisibility = bInside ? lerp( 1.0f, saturate( skyVisibility ), skyOcclusion ) : 1.0f;
-    return float4( result, bInside ? 1.0f : 0.0f );
+    const float normalizer = weightSum > 0.0f ? 1.0f / weightSum : 0.0f;
+    outSkyVisibility       = bInside ? lerp( 1.0f, saturate( skyVisibility * normalizer ), skyOcclusion ) : 1.0f;
+    return float4( result * normalizer, bInside ? 1.0f : 0.0f );
 }
 
 /**
@@ -871,7 +939,7 @@ float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
         if ( lightType == SW_LIGHT_TYPE_PROBE_VOLUME )
         {
             float        probeSkyVisibility;
-            const float4 probe = light.sampleProbeVolume( worldPosition, _normal, probeSkyVisibility );
+            const float4 probe = light.sampleProbeVolume( worldPosition, _normal, _toView, probeSkyVisibility );
             probeSum += probe.rgb * probe.a;
             probeWeight += probe.a;
             skyVisibilitySum += probeSkyVisibility * probe.a;

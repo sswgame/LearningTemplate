@@ -64,13 +64,16 @@ namespace sw
             }
 
             /**
-             * @brief 실시간 갱신 볼륨의 라이트 원소를 만들고, 프로브 버퍼에 자리(프로브마다 0 으로 채운 SH9 원소)를 잡습니다. 값은 GPU 의 프로브 갱신(`probe_update.hlsl`)이 프레임마다 덮어쓴다.
+             * @brief 실시간 갱신 볼륨의 라이트 원소를 만들고, 프로브 버퍼에 자리(프로브마다 0 으로 채운 SH9 원소와 가시성 모먼트)를 잡습니다. 값은 GPU 의 프로브 갱신(`probe_update.hlsl`)이 프레임마다 덮어쓴다.
              * @details 소비 셰이더는 베이크 볼륨과 같은 원소를 읽는다 — 다른 길이 없다. 자리 번호(`_params.w`)가 갱신 컴퓨트의 쓰기 위치이기도 하다.
+             *          모먼트 자리(`_extra.x`, 있음 `_extra.y` = 1)는 실시간 볼륨만 있다 — 소비 셰이더가 체비쇼프 가시성으로 벽 너머 프로브를 줄인다(binding_slots.hlsli 8 절).
              */
             static GPULight makeRealtimeProbeVolumeElement( const LightProbeGridLayout& layout, LightProbeElementBuilder& inoutProbeElement )
             {
-                const uint32 probeBase = inoutProbeElement.appendRealtimeVolume( layout.getProbeCount() );
-                return makeVolumeElementFor( layout, probeBase );
+                const RealtimeProbeSlot slot    = inoutProbeElement.appendRealtimeVolume( layout.getProbeCount() );
+                GPULight                element = makeVolumeElementFor( layout, slot._probeBase );
+                element._extra                  = float4{ static_cast<float32>( slot._visibilityBase ), 1.0f, 0.0f, 0.0f };
+                return element;
             }
 
             /**
@@ -186,15 +189,24 @@ namespace sw
         return probeBase;
     }
 
-    uint32 LightProbeElementBuilder::appendRealtimeVolume( uint32 probeCount )
+    uint32 LightProbeElementBuilder::computeRealtimeElementCount( uint32 probeCount )
     {
-        const uint32 probeBase = _elementCountScratch / shaderslot::kLightProbeFloat4Count;
+        const uint32 momentCount = probeCount * shaderslot::kProbeVisibilityFloat4Count;
+        const uint32 roundedUp   = ( momentCount + shaderslot::kLightProbeFloat4Count - 1u ) / shaderslot::kLightProbeFloat4Count * shaderslot::kLightProbeFloat4Count;
+        return probeCount * shaderslot::kLightProbeFloat4Count + roundedUp;
+    }
+
+    RealtimeProbeSlot LightProbeElementBuilder::appendRealtimeVolume( uint32 probeCount )
+    {
+        RealtimeProbeSlot slot;
+        slot._probeBase      = _elementCountScratch / shaderslot::kLightProbeFloat4Count;
+        slot._visibilityBase = _elementCountScratch + probeCount * shaderslot::kLightProbeFloat4Count;
         // 0 자리의 내용은 수만 정한다. 컴포넌트 번호 0 은 쓰이지 않는 번호라 베이크 원본과 섞이지 않는다.
         _listKeyScratch.push_back( 0 );
         _listKeyScratch.push_back( probeCount );
         _listSourceScratch.push_back( Source{ nullptr, nullptr, nullptr, probeCount } );
-        _elementCountScratch += probeCount * shaderslot::kLightProbeFloat4Count;
-        return probeBase;
+        _elementCountScratch += computeRealtimeElementCount( probeCount );
+        return slot;
     }
 
     uint32 LightProbeElementBuilder::appendReflectionProbe( uint64 componentID, uint32 revision, const ReflectionProbeAsset& data )
@@ -269,7 +281,7 @@ namespace sw
             }
             else
             {
-                pElements->resize( pElements->size() + static_cast<size_t>( source._realtimeProbeCount ) * shaderslot::kLightProbeFloat4Count, float4{} );
+                pElements->resize( pElements->size() + computeRealtimeElementCount( source._realtimeProbeCount ), float4{} ); // SH9 0 자리 + 모먼트 0 자리(모름)
             }
         }
         _pElements = std::move( pElements );

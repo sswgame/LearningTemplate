@@ -1,7 +1,7 @@
 /**
  * octahedral.hlsli — 단위 벡터 ↔ 옥타헤드럴 좌표와 그 32 비트 묶음(snorm16 둘).
  *
- * G버퍼 노멀 첨부(R16G16_SNORM) · VAT 노멀 · 변형 결과(g_SwMorphVertices 의 법선 · 탄젠트 단어)가 쓴다.
+ * G버퍼 노멀 첨부(R16G16_SNORM) · VAT 노멀 · 변형 결과(g_SwMorphVertices 의 법선 · 탄젠트 단어)가 쓴다. 프로브 가시성 모먼트(probe_update.hlsl 이 쓰고 lighting.hlsli 가 읽는다)는 텍스처 좌표 판을 쓴다.
  * C++ `OctahedralNormal`(Core/Math/OctahedralNormal.h)과 같은 식 · 같은 바이트다(_u 가 아래 16 비트).
  */
 
@@ -13,6 +13,7 @@ struct Octahedral
 {
     static float2 encode( float3 direction );
     static float3 decode( float2 coordinate );
+    static float2 encodeTexture( float3 direction );
     static uint pack( float3 direction );
     static float3 unpack( uint word );
 };
@@ -40,6 +41,12 @@ static float2 Octahedral::encode( float3 direction )
     const float2 signs  = float2( plane.x >= 0.0f ? 1.0f : -1.0f, plane.y >= 0.0f ? 1.0f : -1.0f );
     const float2 folded = ( 1.0f - abs( plane.yx ) ) * signs;
     return ( direction.z < 0.0f ) ? folded : plane;
+}
+
+/** @brief 방향을 옥타헤드럴 텍스처 좌표 [0, 1]^2 로 접는다(`encode` 를 텍스처 범위로 옮긴 것) — 프로브 가시성 모먼트의 쓰는 쪽과 읽는 쪽이 이 하나를 쓴다. */
+static float2 Octahedral::encodeTexture( float3 direction )
+{
+    return Octahedral::encode( direction ) * 0.5f + 0.5f;
 }
 
 /** @brief 방향을 snorm16 둘(u 가 아래 16 비트)로 묶는다 — C++ `OctahedralNormal`(R16G16_SNORM)과 같은 바이트. 오차는 0.01 도 아래다. */

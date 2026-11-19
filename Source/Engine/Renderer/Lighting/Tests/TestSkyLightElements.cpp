@@ -48,12 +48,13 @@ SW_TEST_CASE( SkyLightElementsTest, TexelsThenAmbientFollowTheEarlierElements )
     const SkyLightData       skyLight = Util::makeSkyLight( 1.0f, 1 );
     LightProbeElementBuilder builder;
     builder.begin();
-    const uint32 volumeBase = builder.appendRealtimeVolume( 2 ); // 앞선 원소 — 프로브 둘(float4 열넷)
+    const RealtimeProbeSlot volume = builder.appendRealtimeVolume( 2 ); // 앞선 원소 — 프로브 둘(SH9 float4 열넷 + 모먼트)
     builder.appendSkyLight( skyLight );
     builder.finish();
 
-    const uint32 firstElement = 2u * shaderslot::kLightProbeFloat4Count;
-    SW_EXPECT_EQUAL( 0u, volumeBase );
+    const uint32 firstElement = LightProbeElementBuilder::computeRealtimeElementCount( 2 );
+    SW_EXPECT_EQUAL( 0u, volume._probeBase );
+    SW_EXPECT_EQUAL( 2u * shaderslot::kLightProbeFloat4Count, volume._visibilityBase ); // 모먼트는 SH9 원소 바로 뒤
     SW_EXPECT_NEAR( static_cast<float32>( Util::kResolution ), builder.getSkyLight()._x, 0.0f );
     SW_EXPECT_NEAR( static_cast<float32>( Util::kLevelCount ), builder.getSkyLight()._y, 0.0f );
     SW_EXPECT_NEAR( static_cast<float32>( firstElement ), builder.getSkyLight()._z, 0.0f );
@@ -76,6 +77,31 @@ SW_TEST_CASE( SkyLightElementsTest, TexelsThenAmbientFollowTheEarlierElements )
         SW_EXPECT_NEAR( arrAmbient[element]._x, uploaded._x, 0.0f );
         SW_EXPECT_NEAR( arrAmbient[element]._w, uploaded._w, 0.0f );
     }
+}
+
+/**
+ * @brief [SkyLightElementsTest] 실시간 볼륨은 SH9 원소 뒤에 가시성 모먼트 묶음을 잡고, 그 묶음을 프로브 원소 수의 배수로 올려 다음 볼륨의 프로브 번호가 정수로 남는다
+ * @details 묶음은 0 으로 채운다 — 거리² 0 은 "모름" 이라 갱신 컴퓨트가 쓰기 전에는 소비 셰이더가 가리지 않는다.
+ */
+SW_TEST_CASE( SkyLightElementsTest, RealtimeVolumeReservesVisibilityMomentsAfterSH9 )
+{
+    LightProbeElementBuilder builder;
+    builder.begin();
+    const RealtimeProbeSlot first  = builder.appendRealtimeVolume( 3 );
+    const RealtimeProbeSlot second = builder.appendRealtimeVolume( 1 );
+    builder.finish();
+
+    const uint32 firstCount = LightProbeElementBuilder::computeRealtimeElementCount( 3 );
+    SW_EXPECT_EQUAL( 0u, firstCount % shaderslot::kLightProbeFloat4Count );
+    SW_EXPECT_TRUE( firstCount >= 3u * ( shaderslot::kLightProbeFloat4Count + shaderslot::kProbeVisibilityFloat4Count ) );
+    SW_EXPECT_EQUAL( 3u * shaderslot::kLightProbeFloat4Count, first._visibilityBase );
+    SW_EXPECT_EQUAL( firstCount / shaderslot::kLightProbeFloat4Count, second._probeBase );
+    SW_EXPECT_EQUAL( firstCount + shaderslot::kLightProbeFloat4Count, second._visibilityBase );
+
+    const shared_ptr<const vector<float4>> pElements = builder.getElements();
+    SW_REQUIRE_NOT_NULL( pElements );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( firstCount + LightProbeElementBuilder::computeRealtimeElementCount( 1 ) ), pElements->size() );
+    SW_EXPECT_NEAR( 0.0f, ( *pElements )[second._visibilityBase]._y, 0.0f );
 }
 
 /** @brief [SkyLightElementsTest] 번호가 같으면 지난 묶음을 그대로 주고(다시 올리지 않는다), 번호가 오르면 새 묶음이며, 스카이 라이트가 없는 수집은 자리가 0 이다 */

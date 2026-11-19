@@ -335,10 +335,17 @@
 #define SW_LIGHT_TYPE_SHADOW2D 15
 // 빛이 아니라 라이트 프로브 볼륨 하나(IndirectLighting.md P3). 3D 라이트 뒤, 2D 그림자 토막 앞에 붙고 라이트 그리드가 경계 구로 클러스터에 넣는다.
 // 원소: positionRadius = (상자 중심 xyz, 상자 대각선 반) · colorIntensity = (첫 프로브 위치 xyz, 0) · directionType = (축마다 간격 xyz, 이 타입) ·
-//       params = (축마다 프로브 수 xyz, g_SwLightProbes 의 첫 프로브 번호) — 수와 번호는 정확한 정수 실수(2^24 안)다.
+//       params = (축마다 프로브 수 xyz, g_SwLightProbes 의 첫 프로브 번호) · extra = (가시성 모먼트의 첫 원소 번호, 모먼트가 있으면 1 · 없으면 0, 0, 0)
+//       — 수와 번호는 정확한 정수 실수(2^24 안)다. 모먼트는 실시간 볼륨만 있다(갱신 컴퓨트 probe_update.hlsl 이 쓴다. 베이크는 0 — 체비쇼프 가시성 없이 뒷면 가중만 본다).
 #define SW_LIGHT_TYPE_PROBE_VOLUME 14
 // 프로브 하나의 g_SwLightProbes 원소 수(SH9 RGB 를 조도 / π 로 접은 float4 일곱 개).
 #define SW_LIGHT_PROBE_FLOAT4_COUNT 7u
+// 프로브 가시성(DDGI 의 거리 모먼트 — 빛샘 막기) — 프로브마다 옥타헤드럴 한 변 SW_PROBE_VISIBILITY_RESOLUTION 텍셀, 텍셀 하나가 (평균 거리, 거리²의 평균) float2,
+// float4 하나에 텍셀 둘(xy 가 짝수 텍셀, zw 가 홀수 텍셀)이라 프로브 하나가 SW_PROBE_VISIBILITY_FLOAT4_COUNT 원소다. 텍셀 순서는 행 → 열, 방향은 반사 프로브와 같은 접기
+// (probe_visibility.hlsli ProbeVisibility::encodeDirection). 거리²의 평균이 0 인 텍셀은 아직 광선이 닿지 않은 것이라 보이는 것으로 친다.
+// 볼륨의 모먼트 묶음은 g_SwLightProbes 안 SH9 원소 뒤에 붙고 그 첫 원소가 볼륨 원소의 extra.x 다(C++ LightProbeElementBuilder::appendRealtimeVolume).
+#define SW_PROBE_VISIBILITY_RESOLUTION   8u
+#define SW_PROBE_VISIBILITY_FLOAT4_COUNT 32u
 // 빛이 아니라 반사 프로브 하나(IndirectLighting.md P4). 프로브 볼륨처럼 경계 구로 그리드에 들고, 옥타헤드럴 텍셀(선형 RGB, 텍셀 하나가 float4 하나)은
 // g_SwLightProbes(t13)에 SH9 원소와 함께 이어 붙는다 — 텍스처 슬롯을 쓰지 않아 네 백엔드가 같은 길로 읽는다. 읽는 함수는 lighting.hlsli LightData::sampleReflectionProbe 하나다.
 // 원소: positionRadius = (상자 중심 xyz, 상자 대각선 반) · colorIntensity = (상자 반 크기 xyz, 경계에서 섞는 폭 m) · directionType = (찍은 위치 xyz, 이 타입) ·

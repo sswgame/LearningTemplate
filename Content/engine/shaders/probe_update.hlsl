@@ -1,5 +1,6 @@
 #include "common.hlsli"
 #include "light_data.hlsli"
+#include "octahedral.hlsli"
 
 /**
  * probe_update.hlsl — 실시간 라이트 프로브 갱신 컴퓨트(RenderPassKind::ProbeUpdate, RealtimeGlobalIllumination.md R6). 유니티 APV 의 갱신, 언리얼 Lumen 의 프로브 갱신 자리다.
@@ -14,8 +15,11 @@
  * 방향은 프로브 · 프레임마다 회전한 피보나치 구라서 갱신마다 달라 기록과 섞이며 잡음이 평균된다.
  * 닿은 칸이 발광 칸(SceneVoxelGrid::_listEmission, RGB9E5)이면 그 빛 × 볼륨의 발광 배율을 더한다(배율 0 이면 읽지 않는다 — 이전 그림).
  * 하늘로 나간 광선의 몫(하늘 보임)을 기록의 남는 칸(원시 계수 뒤 28 번째)에 함께 섞고 프로브 원소 6 의 w 에 싣는다 — 소비 셰이더가 볼륨의 하늘 가림 세기로 반사 앰비언트를 가린다.
+ * 빛샘 막기(DDGI 의 거리 모먼트): 광선마다 닿은 거리(닿지 않거나 멀면 셀 대각선)의 (d, d²) 를 그 방향의 옥타헤드럴 텍셀(binding_slots.hlsli 8 절 SW_PROBE_VISIBILITY_*)에
+ * 기록과 같은 비율로 섞는다. 기록은 프로브마다 SH9 일곱 뒤에 모먼트 묶음이 붙고, 프레임마다 모먼트 묶음을 프로브 버퍼의 볼륨 모먼트 자리(kVolVisibility)로 옮긴다.
+ * 소비 셰이더(lighting.hlsli LightData::sampleProbeVolume)가 체비쇼프 가시성으로 벽 너머 프로브를 줄인다. 거리²가 0 인 텍셀은 아직 모르는 것이다.
  *
- * 바인딩 계약: 읽기 t0 라이트(g_SwLights 와 같은 버퍼) · t1 입력 행(g_ProbeParams) · t2 복셀 단어(볼륨들의 비트 격자를 이어 붙임), 쓰기 u0 기록(float4, 프로브마다 일곱) · u1 프로브 버퍼.
+ * 바인딩 계약: 읽기 t0 라이트(g_SwLights 와 같은 버퍼) · t1 입력 행(g_ProbeParams) · t2 복셀 단어(볼륨들의 비트 격자를 이어 붙임), 쓰기 u0 기록(float4, 프로브마다 kHistoryFloat4Count) · u1 프로브 버퍼.
  * 입력 행 배치는 아래 kRow*, C++: FrameRenderer::dispatchProbeUpdate(RealtimeProbeUpdater) — dispatchCompute( ceil(총 프로브 수 / 64), 1, 1 ).
  */
 
@@ -29,7 +33,7 @@ SW_DECLARE_RW_STRUCTURED_BUFFER( float4, g_ProbeOutRW, 1 );
 static const uint kRowHeader      = 0u; // asuint( 볼륨 수, 프레임 번호, 라이트 수, 0 )
 static const uint kRowSky         = 1u; // 하늘 SH 의 원시 계수 27 개를 float4 일곱에(1..7)
 static const uint kRowFirstVolume = 8u;
-static const uint kVolumeRowCount = 7u;
+static const uint kVolumeRowCount = 8u;
 static const uint kVolOrigin      = 0u;          // 프로브 시작점 xyz, 반사율
 static const uint kVolSpacing     = 1u;          // 프로브 간격 xyz, 새 값 섞는 비율
 static const uint kVolCounts      = 2u;          // asuint( 프로브 수 X, Y, Z, 프로브 버퍼 안의 첫 float4 번호 )
@@ -37,14 +41,18 @@ static const uint kVolVoxelOrigin = 3u;          // 복셀 시작점 xyz, 칸 �
 static const uint kVolVoxelDim    = 4u;          // asuint( 복셀 칸 수 X, Y, Z, 복셀 단어 버퍼 안의 첫 단어 )
 static const uint kVolHistory     = 5u;          // asuint( 기록의 첫 float4 번호, 첫 스레드 번호, 프로브 수, 광선 수 )
 static const uint kVolSchedule    = 6u;          // asuint( 갱신 주기, 기록이 쌓인 프레임 수, 발광 단어의 첫 단어(없으면 kNoEmission), asuint( 발광 배율 ) )
+static const uint kVolVisibility  = 7u;          // asuint( 프로브 버퍼 안의 모먼트 첫 float4 번호, 0, 0, 0 )
 static const uint kNoEmission     = 0xFFFFFFFFu; // RealtimeProbeUpdater::kNoEmission 과 같다
 
-static const uint kProbeFloat4Count = 7u; // SW_LIGHT_PROBE_FLOAT4_COUNT 와 같다
-static const uint kMaxDirectLights  = 8u; // 닿은 면을 비추는 라이트의 상한(앞에서부터)
+static const uint kProbeFloat4Count   = SW_LIGHT_PROBE_FLOAT4_COUNT;
+static const uint kMomentFloat4Count  = SW_PROBE_VISIBILITY_FLOAT4_COUNT;
+static const uint kHistoryFloat4Count = kProbeFloat4Count + kMomentFloat4Count; // 프로브 하나의 기록 — SH9 원시 계수 일곱 뒤에 모먼트(C++ RealtimeProbeHistoryAllocator::kFloat4PerProbe)
+static const uint kMaxDirectLights    = 8u;                                     // 닿은 면을 비추는 라이트의 상한(앞에서부터)
 // 원주율은 common.hlsli 의 kPi 를 쓴다.
-static const float kSurfaceOffset   = 0.05f; // 닿은 칸 안쪽으로 파고들지 않게 면에서 띄우는 칸 크기 비율
-static const float kParallelEpsilon = 1.0e-8f;
-static const float kFarDistance     = 1.0e30f;
+static const float kSurfaceOffset     = 0.05f; // 닿은 칸 안쪽으로 파고들지 않게 면에서 띄우는 칸 크기 비율
+static const float kParallelEpsilon   = 1.0e-8f;
+static const float kFarDistance       = 1.0e30f;
+static const float kMinMomentDistance = 1.0e-4f; // 프로브가 칸 안에 박혀 거리 0 에 닿아도 모먼트를 "모름"(거리² 0)으로 두지 않는다 — 박힌 프로브는 모든 방향에서 가려진다
 
 // SH9 기저 상수(SphericalHarmonics.cpp 의 Band0/1/2 — 1/(2√π), √3/(2√π), √15/(2√π), √5/(4√π), √15/(4√π)).
 static const float kBand0  = 0.2820947918f;
@@ -299,6 +307,23 @@ float3 computeDirectLight( VoxelGrid grid, uint lightCount, float3 position, flo
     return result;
 }
 
+/**
+ * @brief 광선 하나의 거리 @p distance 를 방향 @p direction 의 모먼트 텍셀(기록 @p momentAt 부터)에 비율 @p blend 로 섞습니다. 아직 모르는 텍셀(거리² 0)은 이 값으로 바로 채운다.
+ */
+void accumulateMoment( uint momentAt, float3 direction, float distance, float blend )
+{
+    const uint   resolution = SW_PROBE_VISIBILITY_RESOLUTION;
+    const uint2  cell       = min( uint2( Octahedral::encodeTexture( direction ) * (float)resolution ), uint2( resolution - 1u, resolution - 1u ) );
+    const uint   texel      = cell.y * resolution + cell.x;
+    const uint   at         = momentAt + ( texel >> 1u );
+    const float4 stored     = g_ProbeHistoryRW[at];
+    const bool   bOdd       = ( texel & 1u ) != 0u;
+    const float2 previous   = bOdd ? stored.zw : stored.xy;
+    const float2 fresh      = float2( distance, distance * distance );
+    const float2 mixed      = previous.y > 0.0f ? lerp( previous, fresh, blend ) : fresh;
+    g_ProbeHistoryRW[at]    = bOdd ? float4( stored.xy, mixed ) : float4( mixed, stored.zw );
+}
+
 /** @brief 원시 SH9 계수(28 칸, 27 개 + 0)를 소비 셰이더의 프로브 원소 일곱으로 바꿉니다(SH9Color::makeGPUElement 와 같다). */
 void packProbeElement( float coefficient[28], out float4 outElement[7] )
 {
@@ -344,12 +369,15 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
     const uint4  voxelDim     = asuint( g_ProbeParams[volumeBase + kVolVoxelDim] );
     const uint4  history      = asuint( g_ProbeParams[volumeBase + kVolHistory] );
     const uint4  schedule     = asuint( g_ProbeParams[volumeBase + kVolSchedule] );
+    const uint4  visibility   = asuint( g_ProbeParams[volumeBase + kVolVisibility] );
 
-    const uint probe     = dispatchID.x - history.y;
-    const uint historyAt = history.x + probe * kProbeFloat4Count;
-    const uint outAt     = counts.w + probe * kProbeFloat4Count;
-    const uint period    = max( schedule.x, 1u );
-    const bool bRefresh  = ( probe % period ) == ( frameIndex % period );
+    const uint probe       = dispatchID.x - history.y;
+    const uint historyAt   = history.x + probe * kHistoryFloat4Count;
+    const uint momentAt    = historyAt + kProbeFloat4Count;
+    const uint outAt       = counts.w + probe * kProbeFloat4Count;
+    const uint outMomentAt = visibility.x + probe * kMomentFloat4Count;
+    const uint period      = max( schedule.x, 1u );
+    const bool bRefresh    = ( probe % period ) == ( frameIndex % period );
 
     // 기록(원시 계수 27 개 + 0).
     float arrCoefficient[28];
@@ -380,6 +408,10 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
         const uint   emissionOffset    = schedule.z;
         const float  emissiveIntensity = asfloat( schedule.w );
         float        escapedRays       = 0.0f;
+        // 기록이 막 생겼으면(쌓인 프레임 수 0) 새 값으로 바로 바꾼다. 쌓일수록 설정한 비율로 섞는다 - 1 / (쌓인 프레임 + 1) 이 더 크면 그 비율(처음 몇 번을 빨리 채운다).
+        const float blend = max( spacingBlend.w, 1.0f / ( (float)schedule.y + 1.0f ) );
+        // 모먼트 거리의 상한 — 셀 대각선. 셀 안의 표면과 꼭짓점 프로브 사이는 이보다 멀지 않다(닿지 않은 광선도 이 값).
+        const float momentMaxDistance = length( spacingBlend.xyz );
 
         // 방향 수열: 피보나치 구를 프로브 · 갱신 횟수마다 회전한다(Cranley-Patterson). 갱신마다 방향이 달라 기록과 섞이며 평균된다.
         const uint  seed       = hashUint( dispatchID.x * 747796405u + ( frameIndex / period ) * 2891336453u );
@@ -398,10 +430,12 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
             const float  ring      = sqrt( max( 1.0f - height * height, 0.0f ) );
             const float3 direction = float3( ring * cos( azimuth ), ring * sin( azimuth ), height );
 
-            float3 radiance;
-            float  hitDistance;
-            float3 hitNormal;
-            if ( traceVoxelRay( grid, position, direction, kFarDistance, hitDistance, hitNormal ) )
+            float3     radiance;
+            float      hitDistance;
+            float3     hitNormal;
+            const bool bHit = traceVoxelRay( grid, position, direction, kFarDistance, hitDistance, hitNormal );
+            accumulateMoment( momentAt, direction, bHit ? clamp( hitDistance, kMinMomentDistance, momentMaxDistance ) : momentMaxDistance, blend );
+            if ( bHit )
             {
                 const float3 surface = position + direction * hitDistance + hitNormal * ( grid._cellSize * kSurfaceOffset );
                 radiance             = computeDirectLight( grid, lightCount, surface, hitNormal ) * albedo;
@@ -425,9 +459,7 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
             }
         }
 
-        // 기록이 막 생겼으면(쌓인 프레임 수 0) 새 값으로 바로 바꾼다. 쌓일수록 설정한 비율로 섞는다 - 1 / (쌓인 프레임 + 1) 이 더 크면 그 비율(처음 몇 번을 빨리 채운다).
-        arrFresh[27]      = escapedRays / (float)rayCount; // 하늘 보임
-        const float blend = max( spacingBlend.w, 1.0f / ( (float)schedule.y + 1.0f ) );
+        arrFresh[27] = escapedRays / (float)rayCount; // 하늘 보임
         SW_UNROLL for ( uint mixIndex = 0u; mixIndex < 28u; ++mixIndex )
         {
             arrCoefficient[mixIndex] = lerp( arrCoefficient[mixIndex], arrFresh[mixIndex], blend );
@@ -443,5 +475,10 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
     SW_UNROLL for ( uint outSlot = 0u; outSlot < kProbeFloat4Count; ++outSlot )
     {
         g_ProbeOutRW[outAt + outSlot] = arrElement[outSlot];
+    }
+    // 모먼트도 프로브 버퍼는 프레임마다 다시 올라오므로(CPU 가 0 자리를 올린다) 갱신하지 않는 프레임에도 옮긴다.
+    SW_LOOP for ( uint momentSlot = 0u; momentSlot < kMomentFloat4Count; ++momentSlot )
+    {
+        g_ProbeOutRW[outMomentAt + momentSlot] = g_ProbeHistoryRW[momentAt + momentSlot];
     }
 }
