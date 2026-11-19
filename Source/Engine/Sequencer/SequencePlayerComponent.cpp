@@ -355,7 +355,10 @@ namespace sw
         {
             signal._secondsUntil    = static_cast<float32>( signal._framesUntil ) * secondsPerFrame;
             signal._durationSeconds = static_cast<float32>( signal._item._end - signal._item._start ) * secondsPerFrame;
-            signal._target          = view.findHandle( signal._item._binding );
+            // 컷 사이 섞임은 벽시계 초다 — 2 배속이면 반 시간에 섞는다.
+            if ( signal._kind == SequenceCameraSignalKind::CutBegin )
+                signal._blendSeconds = static_cast<float32>( signal._blendFrames ) * secondsPerFrame / MathUtil::abs( _player.getPlayRate() );
+            signal._target = view.findHandle( signal._item._binding );
             _history.record( SequenceHistoryKind::CameraSignal, frame, signal._item._binding, signal._item._name, static_cast<uint8>( signal._kind ) );
         }
         for ( const SequenceCameraSignal& signal : inoutListSignal )

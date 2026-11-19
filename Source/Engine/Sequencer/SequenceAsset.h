@@ -255,9 +255,19 @@ namespace sw
         /** @brief 카메라 흔들림: 최대 흔들림(m) 입니다. 애니메이션: 섞는 세기(0..1)입니다. */
         PROPERTY( Tooltip = "Camera shake: largest shake offset (m); Animation: blend weight (0..1)" )
         float32 _amplitude{ 1.0f };
-        /** @brief 카메라 컷: 앞 컷 화면에서 이 컷으로 섞어 들어가는 시간(초)입니다. 0 이면 끊어 바꾼다(언리얼 Camera Cut 섹션의 Ease In · Can Blend). 첫 컷은 시퀀스의 Blend In 이 정한다. */
-        PROPERTY( Min = 0.0, Units = s, Tooltip = "Camera cut: blend from the previous cut's view into this cut (0: cut; the first cut uses the sequence Blend In)" )
-        float32 _cutBlendSeconds{ 0.0f };
+        /**
+         * @brief 구간 머리의 섞임 길이(프레임)입니다(언리얼 섹션 Ease In). 0 이면 바로 온전히 든다.
+         * @details 애니메이션은 이 동안 세기를 `_easeInCurve` 로 올리고, 카메라 컷은 앞 컷 화면에서 이 길이만큼 섞어 들어간다(첫 컷은 시퀀스 Blend In 이 게임 화면에서 섞는다).
+         */
+        PROPERTY( Min = 0, Tooltip = "Ease in frames at the head of the span (animation weight; camera cut: blend from the previous cut)" )
+        int32 _easeInFrames{ 0 };
+        /** @brief 구간 꼬리의 섞임 길이(프레임)입니다(언리얼 섹션 Ease Out). 애니메이션 세기를 `_easeOutCurve` 로 내린다. */
+        PROPERTY( Min = 0, Tooltip = "Ease out frames at the tail of the span (animation weight)" )
+        int32 _easeOutFrames{ 0 };
+        PROPERTY( Tooltip = "Curve of the ease in (the blend curve table)" )
+        BlendCurve _easeInCurve{ BlendCurve::SmoothStep };
+        PROPERTY( Tooltip = "Curve of the ease out (the blend curve table)" )
+        BlendCurve _easeOutCurve{ BlendCurve::SmoothStep };
         PROPERTY( Tooltip = "Editor colour (0xAABBGGRR)" )
         uint32 _color{ 0xFFAA8080 };
         PROPERTY( Tooltip = "Item kind" )
@@ -268,6 +278,11 @@ namespace sw
          * @details 규칙은 종류 표 한 곳이다 — 파일 읽기(`SequenceAsset::validateFile`)와 에디터의 필수 칸 검사가 같은 답을 본다. 바인딩 id 가 시퀀스에 있는지는 시퀀스가 본다.
          */
         [[nodiscard]] SequenceItemFieldIssue findFieldIssue( SequenceItemField* pOutField = nullptr ) const;
+        /**
+         * @brief @p frame 의 섞임 가중치(0..1)입니다 — 머리 `_easeInFrames` 동안 `_easeInCurve` 로 오르고 꼬리 `_easeOutFrames` 동안 `_easeOutCurve` 로 내린다(둘이 겹치면 곱).
+         * @details 프레임 → 값이라 재생 방향과 상관없다(역재생도 같은 프레임에 같은 값). 구간 밖은 0 이다. 언리얼 `FMovieSceneEasingSettings` 의 가중치와 같다.
+         */
+        [[nodiscard]] float32 computeEaseWeight( float32 frame ) const;
         /** @brief 칸 @p field 가 차 있는지입니다(바인딩은 0 이 아니면 찼다). */
         [[nodiscard]] bool hasField( SequenceItemField field ) const;
         /** @brief 글 칸 @p field 입니다. 바인딩 · 범위 밖이면 nullptr 입니다(에디터가 칸을 표에서 그린다). */

@@ -9,6 +9,15 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct FloatCurveInternal
+        {
+            /** @brief 자동 접선의 한도 — 양옆 구간 기울기의 이 배수를 넘으면 단조 구간의 에르미트가 키 값 밖으로 넘친다(Fritsch-Carlson 의 α · β ≤ 3). */
+            static constexpr float32 kAutoTangentSlopeLimit = 3.0f;
+        };
+    } // namespace
+
     float32 FloatCurveKey::interpolateTo( const FloatCurveKey& next, float32 time ) const
     {
         const float32 span = next._time - _time;
@@ -17,6 +26,14 @@ namespace sw
         const float32 t = MathUtil::saturate( ( time - _time ) / span );
         if ( _interpolation == CurveInterpolation::Linear )
             return _value + ( next._value - _value ) * t;
+        if ( _interpolation == CurveInterpolation::Eased )
+        {
+            // 블렌드 곡선은 정규화 시간을 받는다 — 스프링이 초를 쓰므로 길이는 구간 길이다.
+            BlendCurveDef spec{};
+            spec._curve    = _easing;
+            spec._duration = span;
+            return _value + ( next._value - _value ) * evaluateBlendWeight( spec, t );
+        }
         // 에르미트 기저: h00 · p0 + h10 · dt · m0 + h01 · p1 + h11 · dt · m1
         const float32 t2  = t * t;
         const float32 t3  = t2 * t;
@@ -70,10 +87,20 @@ namespace sw
             float32 slope{ 0.0f }; // 끝 키는 평평하다
             if ( index > 0 && index + 1 < keyCount )
             {
-                const FloatCurveKey& previous = _listKey[index - 1];
-                const FloatCurveKey& next     = _listKey[index + 1];
-                const float32        span     = next._time - previous._time;
-                slope                         = span > 0.0f ? ( next._value - previous._value ) / span : 0.0f;
+                const FloatCurveKey& previous   = _listKey[index - 1];
+                const FloatCurveKey& next       = _listKey[index + 1];
+                const float32        span       = next._time - previous._time;
+                const float32        spanBefore = key._time - previous._time;
+                const float32        spanAfter  = next._time - key._time;
+                const float32        deltaIn    = spanBefore > 0.0f ? ( key._value - previous._value ) / spanBefore : 0.0f;
+                const float32        deltaOut   = spanAfter > 0.0f ? ( next._value - key._value ) / spanAfter : 0.0f;
+                // 극값(이웃 둘이 같은 쪽)이면 평평하다 — Catmull-Rom 기울기를 그대로 두면 키 너머로 넘친다.
+                if ( span > 0.0f && deltaIn * deltaOut > 0.0f )
+                {
+                    slope               = ( next._value - previous._value ) / span;
+                    const float32 limit = FloatCurveInternal::kAutoTangentSlopeLimit * MathUtil::min( MathUtil::abs( deltaIn ), MathUtil::abs( deltaOut ) );
+                    slope               = MathUtil::clamp( slope, -limit, limit );
+                }
             }
             key._arriveTangent = slope;
             key._leaveTangent  = slope;

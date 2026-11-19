@@ -645,3 +645,64 @@ SW_TEST_CASE( SequencePlaybackTest, ComponentSkipToEndFinishesOnce )
     pPlayer->stop();
     SW_EXPECT_EQUAL( 1u, finishedCount );
 }
+
+/** @brief [SequencePlaybackTest] 구간 섞임 가중치: 머리 4 프레임 동안 오르고 꼬리 2 프레임 동안 내린다(곡선은 블렌드 표), 구간 밖은 0 */
+SW_TEST_CASE( SequencePlaybackTest, SectionEaseWeightRisesAndFalls )
+{
+    SequenceTrackItem item{};
+    item._kind          = SequenceItemKind::Animation;
+    item._start         = 0;
+    item._end           = 10;
+    item._easeInFrames  = 4;
+    item._easeOutFrames = 2;
+    item._easeInCurve   = BlendCurve::Linear;
+    item._easeOutCurve  = BlendCurve::Linear;
+    SW_EXPECT_NEAR( 0.0f, item.computeEaseWeight( 0.0f ), 1e-6f );
+    SW_EXPECT_NEAR( 0.5f, item.computeEaseWeight( 2.0f ), 1e-6f );
+    SW_EXPECT_NEAR( 1.0f, item.computeEaseWeight( 5.0f ), 1e-6f );
+    SW_EXPECT_NEAR( 0.5f, item.computeEaseWeight( 9.0f ), 1e-6f );
+    SW_EXPECT_NEAR( 0.0f, item.computeEaseWeight( 10.0f ), 1e-6f );
+    SW_EXPECT_NEAR( 0.0f, item.computeEaseWeight( 11.0f ), 1e-6f );
+    item._easeInCurve = BlendCurve::SmoothStep;
+    SW_EXPECT_NEAR( 0.5f, item.computeEaseWeight( 2.0f ), 1e-6f );
+    SW_EXPECT_NEAR( 0.15625f, item.computeEaseWeight( 1.0f ), 1e-6f );
+}
+
+/** @brief [SequencePlaybackTest] 이징 키의 값은 프레임의 값이다 — 정방향으로 닿은 4 프레임과 역방향으로 닿은 4 프레임의 위치가 같고, 그 값이 스무스스텝 표본이다 */
+SW_TEST_CASE( SequencePlaybackTest, EasedKeysGiveTheSameValueInReverse )
+{
+    using Util = SequencePlaybackTestUtil;
+    GameObjectManager        manager;
+    GameObject*              pHero   = nullptr;
+    SequencePlayerComponent* pPlayer = Util::makeScene( manager, pHero );
+    SW_REQUIRE_NOT_NULL( pPlayer );
+    SequenceAsset asset;
+    asset._frameMin         = 0;
+    asset._frameMax         = 10;
+    asset._whenFinished     = SequenceFinishPolicy::KeepState;
+    const uint32     heroID = asset.addBinding( "Hero" );
+    SequenceKeyTrack track{};
+    track._kind    = SequenceTrackKind::Transform;
+    track._binding = heroID;
+    track.fitChannelsToKind();
+    (void)track.setChannelKey( 0, 0.0f, 0.0f );
+    (void)track.setChannelKey( 0, 10.0f, 10.0f );
+    track._listChannel[0]._listKey[0]._interpolation = CurveInterpolation::Eased;
+    track._listChannel[0]._listKey[0]._easing        = BlendCurve::SmoothStep;
+    asset._listTrack.push_back( track );
+    pPlayer->setSequence( asset );
+    pPlayer->setBinding( heroID, pHero->getHandle() );
+
+    pPlayer->play();
+    while ( pPlayer->isPlaying() && pPlayer->getCurrentFrame() < 4 )
+        Util::update( manager, *pPlayer, 1.0f / 30.0f );
+    SW_REQUIRE_EQUAL( 4, pPlayer->getCurrentFrame() );
+    const float32 forwardX = Util::readX( *pHero );
+    SW_EXPECT_NEAR( 3.52f, forwardX, 1e-4f ); // 10 × (3 · 0.4² - 2 · 0.4³)
+
+    pPlayer->playReverse();
+    while ( pPlayer->isPlaying() && pPlayer->getCurrentFrame() > 4 )
+        Util::update( manager, *pPlayer, 1.0f / 30.0f );
+    SW_REQUIRE_EQUAL( 4, pPlayer->getCurrentFrame() );
+    SW_EXPECT_NEAR( forwardX, Util::readX( *pHero ), 1e-6f );
+}

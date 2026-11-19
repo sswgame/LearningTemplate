@@ -192,9 +192,14 @@ namespace sw
             if ( bActivated && bFromOtherCamera && signal._blendSeconds <= 0.0f )
                 pDirector->blendFromPose( CameraPose::makePoseFromCamera( *pPreviousCamera ), pDirector->getCatalog().getBlend( hashed_string{}, presetID ) );
         }
-        // 컷 항목의 블렌드 시간(`SequenceTrackItem::_cutBlendSeconds`) — 앞 컷 화면에서 섞어 들어온다(언리얼 Camera Cut 의 Ease In). 디렉터가 없는 컷 카메라는 섞을 수 없어 끊는다.
+        // 컷 항목의 섞임(`SequenceTrackItem::_easeInFrames` · 곡선) — 앞 컷 화면에서 섞어 들어온다(언리얼 Camera Cut 섹션의 Ease In). 디렉터가 없는 컷 카메라는 섞을 수 없어 끊는다.
         if ( pDirector != nullptr && bFromOtherCamera && signal._blendSeconds > 0.0f )
-            pDirector->blendFromPose( CameraPose::makePoseFromCamera( *pPreviousCamera ), makeCinematicBlend( signal._blendSeconds ) );
+        {
+            BlendCurveDef blend{};
+            blend._curve    = signal._blendCurve;
+            blend._duration = signal._blendSeconds;
+            pDirector->blendFromPose( CameraPose::makePoseFromCamera( *pPreviousCamera ), blend );
+        }
         _currentCutCamera = pTarget->getHandle();
 
         // 대기 뷰로 올려 둔 카메라가 이제 화면에 왔다 — 대기 뷰를 푼다.

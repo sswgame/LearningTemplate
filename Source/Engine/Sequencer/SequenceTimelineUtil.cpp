@@ -733,23 +733,26 @@ namespace sw
             const SequencePlaybackSegment& segment = step._arrSegment[segmentIndex];
             const bool                     bLast   = segmentIndex + 1 == step._segmentCount;
             const SequenceTrackItem*       pCut    = asset.findCameraCut( bLast ? step._frame : segment._to );
-            appendCutSignals( asset, pCut, pPreviousCut, outListSignal );
+            appendCutSignals( asset, pCut, pPreviousCut, segment.isForward() || segment._from == segment._to, outListSignal );
             appendCrossingSignals( asset, segment, outListSignal );
             pPreviousCut = pCut;
         }
         if ( step._segmentCount == 0 )
-            appendCutSignals( asset, asset.findCameraCut( step._frame ), pPreviousCut, outListSignal );
+            appendCutSignals( asset, asset.findCameraCut( step._frame ), pPreviousCut, true, outListSignal );
     }
 
-    void SequenceTimelineUtil::appendCutSignals( const SequenceAsset& asset, const SequenceTrackItem* pCut, const SequenceTrackItem* pPreviousCut, vector<SequenceCameraSignal>& outListSignal )
+    void SequenceTimelineUtil::appendCutSignals( const SequenceAsset& asset, const SequenceTrackItem* pCut, const SequenceTrackItem* pPreviousCut, bool bForward,
+                                                 vector<SequenceCameraSignal>& outListSignal )
     {
         // 컷이 바뀌었는가 — 덮는 컷이 이전에 덮던 컷과 다르다.
         if ( pCut != nullptr && pCut != pPreviousCut )
         {
             SequenceCameraSignal signal;
-            signal._item         = *pCut;
-            signal._blendSeconds = pPreviousCut != nullptr ? pCut->_cutBlendSeconds : 0.0f; // 앞 컷에서 섞어 들어온다(첫 컷은 시네마틱 시작이 게임 화면에서 섞는다)
-            signal._kind         = SequenceCameraSignalKind::CutBegin;
+            signal._item = *pCut;
+            // 앞 컷에서 섞어 들어온다 — 정방향이면 구간 머리(Ease In), 역방향이면 꼬리(Ease Out)로 들어온다. 첫 컷은 시네마틱 시작이 게임 화면에서 섞는다.
+            signal._blendFrames = pPreviousCut != nullptr ? ( bForward ? pCut->_easeInFrames : pCut->_easeOutFrames ) : 0;
+            signal._blendCurve  = bForward ? pCut->_easeInCurve : pCut->_easeOutCurve;
+            signal._kind        = SequenceCameraSignalKind::CutBegin;
             outListSignal.push_back( signal );
         }
         if ( pCut != nullptr && pPreviousCut == nullptr )

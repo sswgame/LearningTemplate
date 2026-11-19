@@ -366,7 +366,7 @@
     "Source/Engine/Animation/Facial/LiveLinkFace.cpp": {"integer": 1},
     "Source/Engine/Animation/Graph/AnimationGraphAsset.h": {"minus-one": 2},
     "Source/Engine/Animation/Graph/AnimationGraphParams.h": {"minus-one": 2},
-    "Source/Engine/Animation/Graph/BlendCurve.cpp": {"float": 6},
+    "Source/Engine/Curve/BlendCurve.cpp": {"float": 6},
     "Source/Engine/Animation/Notify/AnimationNotifyComponent.cpp": {"float": 1},
     "Source/Engine/Animation/Notify/AnimationNotifyHandlers.cpp": {"float": 2},
     "Source/Engine/Animation/Retarget/PoseRetargeter.cpp": {"float": 1},

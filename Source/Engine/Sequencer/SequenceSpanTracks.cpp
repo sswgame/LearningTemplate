@@ -61,7 +61,9 @@ namespace sw
                     return;
                 const float32 fps  = context._framesPerSecond > 0.0f ? context._framesPerSecond : 30.0f;
                 const float32 time = static_cast<float32>( context._frame - context._pItem->_start ) / fps;
-                pAnimator->setSequencerOverride( context._pState->_clip, time, MathUtil::saturate( context._pItem->_amplitude ) );
+                // 섞임(Ease In · Out)이 세기를 구간 머리 · 꼬리에서 올리고 내린다 — 프레임의 값이라 역재생도 같다.
+                const float32 easeWeight = context._pItem->computeEaseWeight( static_cast<float32>( context._frame ) );
+                pAnimator->setSequencerOverride( context._pState->_clip, time, MathUtil::saturate( context._pItem->_amplitude ) * easeWeight );
             }
 
             static void leaveAnimation( const SequenceSpanContext& context )

@@ -46,12 +46,14 @@ namespace sw
      */
     struct SequenceCameraSignal
     {
-        SequenceTrackItem        _item{};                  ///< 그 컷 · 흔들림 항목(끝 신호는 덮던 마지막 컷)
-        GameObjectHandle         _target{};                ///< 항목의 바인딩이 묶인 오브젝트(컷 카메라 · 흔들 카메라). 묶이지 않았으면 무효다
-        int32                    _framesUntil{ 0 };        ///< 대기 뷰: 컷 시작까지 남은 프레임
-        float32                  _secondsUntil{ 0.0f };    ///< 대기 뷰: 컷 시작까지 남은 시간(초)
-        float32                  _durationSeconds{ 0.0f }; ///< 흔들림: 구간 길이(초)
-        float32                  _blendSeconds{ 0.0f };    ///< 시네마틱 시작 · 끝: 섞는 시간(초). 0 이면 끊어 바꾼다
+        SequenceTrackItem        _item{};                               ///< 그 컷 · 흔들림 항목(끝 신호는 덮던 마지막 컷)
+        GameObjectHandle         _target{};                             ///< 항목의 바인딩이 묶인 오브젝트(컷 카메라 · 흔들 카메라). 묶이지 않았으면 무효다
+        int32                    _framesUntil{ 0 };                     ///< 대기 뷰: 컷 시작까지 남은 프레임
+        float32                  _secondsUntil{ 0.0f };                 ///< 대기 뷰: 컷 시작까지 남은 시간(초)
+        float32                  _durationSeconds{ 0.0f };              ///< 흔들림: 구간 길이(초)
+        float32                  _blendSeconds{ 0.0f };                 ///< 시네마틱 시작 · 끝 · 컷 바뀜: 섞는 시간(초). 0 이면 끊어 바꾼다(컷 바뀜은 `_blendFrames` 에서 플레이어가 채운다)
+        int32                    _blendFrames{ 0 };                     ///< 컷 바뀜: 앞 컷에서 섞는 프레임(그 컷의 Ease In, 역방향이면 Ease Out). 0 이면 끊는다
+        BlendCurve               _blendCurve{ BlendCurve::SmoothStep }; ///< 컷 바뀜: 섞는 곡선(그 컷의 이징 곡선)
         SequenceCameraSignalKind _kind{ SequenceCameraSignalKind::CutBegin };
     };
 
@@ -250,8 +252,9 @@ namespace sw
     private:
         /** @brief 구간 @p segment 에서 문턱을 넘은 이벤트를 @p pOutListCrossedEvent 에 **덧붙입니다**(비우지 않는다). */
         static void appendCrossedEvents( const SequenceAsset& asset, const SequencePlaybackSegment& segment, vector<const SequenceTrackItem*>* pOutListCrossedEvent );
-        /** @brief 덮는 컷이 @p pPreviousCut 에서 @p pCut 으로 바뀐 신호(컷 바뀜 · 시네마틱 시작 · 끝)를 덧붙입니다. */
-        static void appendCutSignals( const SequenceAsset& asset, const SequenceTrackItem* pCut, const SequenceTrackItem* pPreviousCut, vector<SequenceCameraSignal>& outListSignal );
+        /** @brief 덮는 컷이 @p pPreviousCut 에서 @p pCut 으로 바뀐 신호(컷 바뀜 · 시네마틱 시작 · 끝)를 덧붙입니다. @p bForward 는 컷 사이 섞임에 구간 머리 · 꼬리 중 어느 쪽을 쓸지입니다. */
+        static void appendCutSignals( const SequenceAsset& asset, const SequenceTrackItem* pCut, const SequenceTrackItem* pPreviousCut, bool bForward,
+                                      vector<SequenceCameraSignal>& outListSignal );
         /** @brief 구간 @p segment 에서 문턱을 넘은 대기 뷰 · 흔들림 신호를 덧붙입니다. */
         static void appendCrossingSignals( const SequenceAsset& asset, const SequencePlaybackSegment& segment, vector<SequenceCameraSignal>& outListSignal );
     };
