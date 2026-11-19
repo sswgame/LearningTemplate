@@ -2,6 +2,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
