@@ -1401,8 +1401,9 @@ SW_TEST_CASE_F( SRPGRulesTest, CampaignState )
     const auto              readFixture = [&]( uint8 bInMission, uint8 bFailed )
     {
         sw::vector<uint8> listByte = listSaved;
-        SW_REQUIRE_TRUE( sw::StateIOTestUtil::overwrite( listByte, inMissionAt, bInMission ) );
-        SW_REQUIRE_TRUE( sw::StateIOTestUtil::overwrite( listByte, inMissionAt + sizeof( uint8 ), bFailed ) );
+        // 자리가 바이트 밖이면 읽지 않고 false — 맞는 값이 읽히는 아래 검사가 그 경우를 드러낸다
+        if ( sw::StateIOTestUtil::overwrite( listByte, inMissionAt, bInMission ) == false || sw::StateIOTestUtil::overwrite( listByte, inMissionAt + sizeof( uint8 ), bFailed ) == false )
+            return false;
         sw::Archive readingFixture( listByte.data(), listByte.size() );
         return restored.readState( readingFixture );
     };
