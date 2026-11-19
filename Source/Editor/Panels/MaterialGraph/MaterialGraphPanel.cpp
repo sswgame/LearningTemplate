@@ -34,6 +34,10 @@ namespace sw::editor
         {
             /** @brief 캔버스가 차지하는 폭의 비율입니다(나머지는 미리보기 · 값). */
             static constexpr float32 kCanvasWidthRatio = 0.68f;
+            /** @brief 텍스처 노드가 받는 원본 확장자입니다 — 값 칸의 에셋 슬롯과 캔버스에 놓기가 같은 거르개를 쓴다. */
+            static constexpr const utf8* kTextureAssetExtension = ".png";
+            /** @brief 텍스처를 캔버스에 놓으면 만드는 노드 종류 이름입니다(언리얼 머티리얼 그래프의 Texture Sample). */
+            static constexpr string_view kTextureSampleKindName = "TextureSample";
             /** @brief 미리보기의 세로 / 가로 비율입니다. */
             static constexpr float32 kPreviewAspect = 0.75f;
             /** @brief 미리보기 구의 맞춤 반지름입니다(머티리얼 창과 같다). */
@@ -66,6 +70,7 @@ namespace sw::editor
         , _nodeGraph{}
         , _listKind{}
         , _listMenu{}
+        , _listAssetNodeRule{}
         , _removal{}
     {
         _model.bindDocumentEditRecorder( getDocumentEditRecorder() ); // 문서 편집 알림은 모델이 낸다(감사 E-16)
@@ -76,7 +81,12 @@ namespace sw::editor
         for ( uint32 kindIndex = 0; kindIndex < static_cast<uint32>( _listKind.size() ); ++kindIndex )
         {
             _listMenu.push_back( EditorGraphNodeKind{ _listKind[kindIndex]->getName(), _listKind[kindIndex]->getCategory(), kindIndex } );
+            // 에셋 → 노드 종류 표(EditorGraphAssetNodeRule) — 텍스처는 샘플 노드로 놓인다.
+            if ( string_view{ _listKind[kindIndex]->getName() } == MaterialGraphPanelInternal::kTextureSampleKindName )
+                _listAssetNodeRule.push_back( EditorGraphAssetNodeRule{ MaterialGraphPanelInternal::kTextureAssetExtension, kindIndex } );
         }
+        // 등록표에 샘플 노드가 없으면 텍스처 놓기가 조용히 꺼진다 — 이름이 바뀐 것이니 멈춘다.
+        SW_ASSERT( _listKind.empty() || _listAssetNodeRule.empty() == false );
     }
 
     ToolAssetLoadResult MaterialGraphPanel::loadDocument()
@@ -256,6 +266,9 @@ namespace sw::editor
         float2 canvasPosition{};
         if ( _nodeGraph.drawAddNodePopup( _listMenu, kindID, canvasPosition ) )
             (void)_model.addNode( _listKind[kindID]->getName(), canvasPosition );
+        string droppedAssetPath;
+        if ( _nodeGraph.acceptAssetDrop( _listAssetNodeRule, kindID, droppedAssetPath, canvasPosition ) )
+            (void)_model.addAssetNode( _listKind[kindID]->getName(), canvasPosition, droppedAssetPath );
 
         applyCanvasDeletions();
 
@@ -402,7 +415,7 @@ namespace sw::editor
         if ( bTextureNode || bSubgraph )
         {
             string     assetPath = node._assetPath;
-            const bool bChanged  = EditorWidgets::drawAssetSlot( SW_LOCKEY( "EditorMaterialGraph", "AssetSlot" ), assetPath, bSubgraph ? MaterialGraphDef::kExtension.data() : ".png" );
+            const bool bChanged  = EditorWidgets::drawAssetSlot( SW_LOCKEY( "EditorMaterialGraph", "AssetSlot" ), assetPath, bSubgraph ? MaterialGraphDef::kExtension.data() : MaterialGraphPanelInternal::kTextureAssetExtension );
             if ( bChanged )
                 _model.setAssetPath( nodeIndex, assetPath );
         }
