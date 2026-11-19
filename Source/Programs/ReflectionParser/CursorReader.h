@@ -40,6 +40,12 @@ namespace sw
         /** @brief 열거형 선언의 열거자 이름 · 값을 @p outListEnumerator 에 더합니다. */
         static void collectEnumerators( CXCursor enumCursor, vector<ParsedEnumeratorInfo>& outListEnumerator );
 
+        /**
+         * @brief 개수 표식 열거자 이름입니다. `ENUM( Count = … )` 에 적은 이름이 있으면 그것, 없으면 끝 열거자가 `Count` 일 때 `Count`(비트 플래그 제외), 아니면 빈 글입니다.
+         * @details 등록기(`AstVisitor`)와 고정 배치 코덱(`FixedTypeAnalyzer`)이 같은 규칙을 쓰도록 한 곳에 둔다 — 갈리면 한쪽만 개수를 안다.
+         */
+        static string resolveCountEnumerator( string_view annotatedCount, const vector<ParsedEnumeratorInfo>& listEnumerator, bool bIsBitFlag );
+
     private:
         /** @brief enumerator 이름·값을 수집합니다. */
         static CXChildVisitResult enumeratorCollectorVisitor( CXCursor cursor, CXCursor parent, CXClientData data );

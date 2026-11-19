@@ -9,6 +9,7 @@
  *          쓰는 곳은 둘이다 — 모든 오브젝트 선택 변경이 모이는 `EditorSelection::notifyChanged` 가 자기 문맥(메인 · 미리보기)으로, 콘텐츠 브라우저의 고르기(`ContentBrowserViewModel::selectAsset`)가 자기 문맥으로 알린다.
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
@@ -70,7 +71,7 @@ namespace sw::editor
         [[nodiscard]] static string findObjectAssetPath( const GameObject& object );
 
     private:
-        EditorSelectionSyncEntry _arrEntry[static_cast<size_t>( EditorSelectionContext::Count )]{};
-        uint64                   _nextSequence{ 1 };
+        EnumArray<EditorSelectionContext, EditorSelectionSyncEntry> _arrEntry{};
+        uint64                                                      _nextSequence{ 1 };
     };
 } // namespace sw::editor

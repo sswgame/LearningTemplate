@@ -3,6 +3,7 @@
  * @brief 에디터와 런타임이 함께 쓰는 대화 그래프 XML 에셋입니다.
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
@@ -92,17 +93,14 @@ namespace sw
      * @brief 노드 종류 테이블입니다. **종류마다 항목이 하나이고, 순서는 `DialogueAssetNodeKind` 값 순서입니다.**
      * @details 에셋 이름 해석, 런타임 진행(`DialogueCursor`), 에디터 그리기, 추가 메뉴, 인스펙터가 모두 이 테이블을 읽는다.
      */
-    inline constexpr DialogueNodeInfo kArrDialogueNodeInfo[] = {
+    inline constexpr auto kArrDialogueNodeInfo = makeEnumTable<DialogueAssetNodeKind, DialogueNodeInfo>( {
         {   "Start",                       "", float4( 0.2f, 0.9f, 0.3f, 1.0f ),    DialogueAssetNodeKind::Start, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,      DialogueNodeBody::None, false, false, false, 0},
         {"Dialogue", "Enter dialogue text...", float4( 0.4f, 0.7f, 1.0f, 1.0f ), DialogueAssetNodeKind::Dialogue, DialogueNodeFlow::WaitAdvance,   DialogueNodeOutput::Next,      DialogueNodeBody::Text,  true,  true,  true, 0},
         {  "Choice",         "Player options", float4( 0.8f, 0.5f, 1.0f, 1.0f ),   DialogueAssetNodeKind::Choice,  DialogueNodeFlow::WaitChoice, DialogueNodeOutput::Choice,      DialogueNodeBody::Text,  true, false,  true, 2},
         {  "Branch",           "visited == 1", float4( 1.0f, 0.8f, 0.2f, 1.0f ),   DialogueAssetNodeKind::Branch,   DialogueNodeFlow::Condition, DialogueNodeOutput::Branch, DialogueNodeBody::Condition,  true, false,  true, 0},
         {  "Action",           "event(ready)", float4( 0.2f, 0.9f, 0.9f, 1.0f ),   DialogueAssetNodeKind::Action, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,    DialogueNodeBody::Action,  true, false,  true, 0},
         {     "End",                       "", float4( 0.9f, 0.3f, 0.3f, 1.0f ),      DialogueAssetNodeKind::End,      DialogueNodeFlow::Finish,   DialogueNodeOutput::None,      DialogueNodeBody::None,  true, false,  true, 0},
-    };
-
-    static_assert( SW_COUNT_OF( kArrDialogueNodeInfo ) == static_cast<size_t>( DialogueAssetNodeKind::Count ),
-                   "DialogueAssetNodeKind 을 늘렸으면 kArrDialogueNodeInfo 에도 줄을 더할 것" );
+    } ); // DialogueAssetNodeKind 을 늘리고 줄을 잊으면 makeEnumTable 이 컴파일을 멈춘다
 
     /** @brief 노드의 화자 칸이 이 값이면 화자가 없습니다. */
     inline constexpr uint32 kDialogueNoSpeaker = 0;

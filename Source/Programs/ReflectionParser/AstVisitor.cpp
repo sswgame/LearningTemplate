@@ -295,6 +295,37 @@ namespace sw
      * 2. `ENUM(...)` 어노테이션 속성(Alias, Count, Invalid 등)
      * 3. 비트플래그 여부는 `ENUM( Flags )` 선언으로만 정합니다(값 모양으로 추측하지 않습니다. 본문 주석 참고).
      */
+    CXChildVisitResult AstVisitor::collectEnumeratorCursor( const CXCursor cursor, CXCursor, const CXClientData clientData )
+    {
+        if ( clang_getCursorKind( cursor ) == CXCursor_EnumConstantDecl )
+            static_cast<vector<CXCursor>*>( clientData )->push_back( cursor );
+        return CXChildVisit_Continue;
+    }
+
+    bool AstVisitor::applyEnumeratorAnnotation( const CXCursor enumCursor, ParsedEnumInfo& inoutEnum ) const
+    {
+        vector<CXCursor> listCursor;
+        clang_visitChildren( enumCursor, collectEnumeratorCursor, &listCursor );
+        if ( listCursor.size() != inoutEnum._listEnumerator.size() )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.EnumeratorCursorMismatch", "Enumerator cursors (%#) differ from collected enumerators (%#) on %#", listCursor.size(),
+                             inoutEnum._listEnumerator.size(), inoutEnum._fullyQualifiedName );
+            return false;
+        }
+        bool bValid = true;
+        for ( size_t index = 0; index < listCursor.size(); ++index )
+        {
+            // 열거자 뒤의 속성은 자식 AnnotateAttr 로만 본다 — 소스 창 폴백은 앞 열거자의 매크로를 제 것으로 읽는다.
+            const string spelling = AnnotationLookup::findAnnotateAttr( listCursor[index], annotation::kEnumeratorPrefix );
+            if ( spelling.empty() )
+                continue;
+            ParsedEnumeratorInfo& enumerator = inoutEnum._listEnumerator[index];
+            const string          owner      = inoutEnum._fullyQualifiedName + "::" + enumerator._name;
+            bValid                           = AnnotationLookup::applyAnnotation( spelling, enumerator, *_pSession, owner ) && bValid;
+        }
+        return bValid;
+    }
+
     void AstVisitor::onEnumDeclaration( const CXCursor cursor, ParsedHeader& outHeader )
     {
         ParsedEnumInfo enumInfo;
@@ -319,6 +350,11 @@ namespace sw
 
         // 모든 열거자 항목(이름, 정수값) 수집
         CursorReader::collectEnumerators( cursor, enumInfo._listEnumerator );
+        if ( applyEnumeratorAnnotation( cursor, enumInfo ) == false )
+        {
+            markHeaderError( outHeader );
+            return;
+        }
 
         BLOCK( "Parse ENUM annotation (Alias / …)" )
         {
@@ -332,6 +368,7 @@ namespace sw
                 markHeaderError( outHeader );
                 return;
             }
+            enumInfo._countEnumerator = CursorReader::resolveCountEnumerator( enumInfo._countEnumerator, enumInfo._listEnumerator, enumInfo._bIsBitFlag != SW_FALSE );
             if ( enumInfo._countEnumerator.empty() == false && enumInfo._invalidEnumerator.empty() )
                 enumInfo._invalidEnumerator = enumInfo._countEnumerator;
             if ( DeclarationValidator::validateEnumeratorRedirects( enumInfo ) == false )

@@ -10,7 +10,7 @@
 namespace sw
 {
     /// @brief Key 종류를 정의하는 열거형입니다.
-    ENUM( Invalid = Unknown, Count = Count )
+    ENUM( Invalid = Unknown )
     enum class Key : uint8
     {
         Unknown = 0,
@@ -137,7 +137,7 @@ namespace sw
     };
 
     /// @brief 마우스 버튼 종류를 정의하는 열거형입니다.
-    ENUM( Invalid = Count, Count = Count )
+    ENUM( Invalid = Count )
     enum class MouseButton : uint8
     {
         Left = 0,

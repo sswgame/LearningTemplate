@@ -6,6 +6,7 @@
  *          유니티 단축키 관리자의 컨텍스트, 언리얼 위젯별 `FUICommandList` 와 같은 선이다(기억).
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -112,11 +113,11 @@ namespace sw::editor
             EditorCommandTarget _target;
         };
 
-        EditorShortcutMap     _shortcuts;                                          ///< 맵 · 판정 · 재배치(Model)
-        vector<QueuedCommand> _listQueuedCommand;                                  ///< `queueCommand` 가 넣은 것(다음 `processFrame` 이 비운다)
-        bool                  _arrForwardedKey[static_cast<size_t>( Key::Count )]; ///< 에디터 창에서 넣은 눌린 키(키보드를 놓으면 놓는다)
-        InputKeyboardFocus    _focusBeforeTool;                                    ///< `Tool` 로 바꾸기 전의 키보드 주인(게임 스레드 — `applyKeyboardOwner`)
-        uint8                 _bToolOwnsKeyboard  : 1;                             ///< 이 서브시스템이 키보드 포커스를 `Tool` 로 둔 중이면 true
-        uint8                 _bCommandsSuspended : 1;                             ///< 재배치 창이 키를 받는 중이면 true
+        EditorShortcutMap     _shortcuts;              ///< 맵 · 판정 · 재배치(Model)
+        vector<QueuedCommand> _listQueuedCommand;      ///< `queueCommand` 가 넣은 것(다음 `processFrame` 이 비운다)
+        EnumArray<Key, bool>  _arrForwardedKey;        ///< 에디터 창에서 넣은 눌린 키(키보드를 놓으면 놓는다)
+        InputKeyboardFocus    _focusBeforeTool;        ///< `Tool` 로 바꾸기 전의 키보드 주인(게임 스레드 — `applyKeyboardOwner`)
+        uint8                 _bToolOwnsKeyboard  : 1; ///< 이 서브시스템이 키보드 포커스를 `Tool` 로 둔 중이면 true
+        uint8                 _bCommandsSuspended : 1; ///< 재배치 창이 키를 받는 중이면 true
     };
 } // namespace sw::editor

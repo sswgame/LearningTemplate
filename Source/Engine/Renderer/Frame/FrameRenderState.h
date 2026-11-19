@@ -5,6 +5,7 @@
  *          소유는 렌더러가 하고 패스 실행은 참조로 받는다. 언리얼 `FSceneRenderer` 가 `FViewInfo` 목록과 장면 데이터를 들고, 패스(RDG 람다)가 그것을 잡아 읽는 나눔과 같다.
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -108,7 +109,7 @@ namespace sw
          * @details 뷰를 얻으면 그 뷰의 값이 함께 따라온다. 주의: 이 값들을 뷰 밖 멤버로 흩어 두면 "이 값은 어느 뷰
          *          것인가" 를 사람이 기억해야 하고, 컬링 상수 버퍼를 뷰끼리 나눠 쓰게 되어 뒤 업로드가 앞 디스패치를 덮어쓴다.
          */
-        RenderView _arrView[static_cast<uint32>( RenderViewKind::Count )]{};
+        EnumArray<RenderViewKind, RenderView> _arrView{};
         /**
          * @brief 주 시점 방향광 캐스케이드마다의 그림자 컬링 입력(절두체 · 자기 컬링 상수 버퍼)입니다. 앞 `_cascadeCullCount` 개만 씁니다.
          * @details 컬링 슬롯은 추가 뷰 슬롯 뒤에 붙는다(`_cascadeCullSlotBase` + 캐스케이드 번호). 추가 뷰(CCTV · PiP)는 작은 장면이라 합친 칸 하나를 그대로 쓴다.
@@ -218,8 +219,8 @@ namespace sw
         uint8  _bHasFrameSky{ SW_FALSE }; ///< 이번 프레임의 씬에 하늘이 있다(`_frameSky`). 기록 전에 정하고 패스 콜백은 읽기만 한다
 
         /** @brief 뷰 하나를 얻습니다. 그 뷰의 행렬, 절두체, 상수 버퍼가 함께 옵니다. */
-        RenderView&       view( RenderViewKind kind ) { return _arrView[static_cast<uint32>( kind )]; }
-        const RenderView& view( RenderViewKind kind ) const { return _arrView[static_cast<uint32>( kind )]; }
+        RenderView&       view( RenderViewKind kind ) { return _arrView[kind]; }
+        const RenderView& view( RenderViewKind kind ) const { return _arrView[kind]; }
         /** @brief 뷰 @p target 의 컬링 입력입니다. 주 시점은 `_arrView[Main]`, 추가 뷰는 자기 것입니다. */
         RenderView& getCullInputOf( FrameViewTarget& target ) { return &target == &_mainView ? view( RenderViewKind::Main ) : target._cullInput; }
         /**

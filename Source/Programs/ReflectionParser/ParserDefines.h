@@ -56,6 +56,8 @@ namespace sw
         inline constexpr const utf8* kVoidTypeName          = "void";
         inline constexpr const utf8* kDefaultMethodCategory = "General";
         inline constexpr const utf8* kConstructorCategory   = "Constructor";
+        /** @brief 끝에 오면 개수 표식으로 보는 열거자 이름입니다(`ENUM( Count = … )` 을 적지 않아도 된다). */
+        inline constexpr const utf8* kCountEnumerator = "Count";
 
         /**
          * @brief 서버 버스 본문 타입의 표식 멤버(`static constexpr uint32 kBusVersion`)입니다(`ServerBusTopic.h` 의 `HasServerBusVersion`).
@@ -219,21 +221,22 @@ namespace sw
     // ------------------------------------------------------------------------------
     namespace templatekey
     {
-        inline constexpr const utf8* kSourcePath   = "SourcePath";
-        inline constexpr const utf8* kBanner       = "Banner";
-        inline constexpr const utf8* kID           = "ID";
-        inline constexpr const utf8* kName         = "Name";
-        inline constexpr const utf8* kFqn          = "FQN";
-        inline constexpr const utf8* kParentFqn    = "ParentFQN";
-        inline constexpr const utf8* kModuleName   = "ModuleName";
-        inline constexpr const utf8* kCppType      = "CppType";
-        inline constexpr const utf8* kFlags        = "Flags";
-        inline constexpr const utf8* kAliasRegs    = "AliasRegs";
-        inline constexpr const utf8* kIsBitFlag    = "IsBitFlag";
-        inline constexpr const utf8* kHasInvalid   = "HasInvalid";
-        inline constexpr const utf8* kInvalidValue = "InvalidValue";
-        inline constexpr const utf8* kHasCount     = "HasCount";
-        inline constexpr const utf8* kCountValue   = "CountValue";
+        inline constexpr const utf8* kSourcePath    = "SourcePath";
+        inline constexpr const utf8* kBanner        = "Banner";
+        inline constexpr const utf8* kID            = "ID";
+        inline constexpr const utf8* kName          = "Name";
+        inline constexpr const utf8* kFqn           = "FQN";
+        inline constexpr const utf8* kParentFqn     = "ParentFQN";
+        inline constexpr const utf8* kModuleName    = "ModuleName";
+        inline constexpr const utf8* kCppType       = "CppType";
+        inline constexpr const utf8* kFlags         = "Flags";
+        inline constexpr const utf8* kAliasRegs     = "AliasRegs";
+        inline constexpr const utf8* kIsBitFlag     = "IsBitFlag";
+        inline constexpr const utf8* kInvalidName   = "InvalidName";
+        inline constexpr const utf8* kCountName     = "CountName";
+        inline constexpr const utf8* kEntryTable    = "EntryTable";
+        inline constexpr const utf8* kRedirectTable = "RedirectTable";
+        inline constexpr const utf8* kTables        = "Tables";
     } // namespace templatekey
 
     // ------------------------------------------------------------------------------

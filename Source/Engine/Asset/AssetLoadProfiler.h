@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -27,12 +28,12 @@ namespace sw
     /** @brief 로드 한 번의 기록입니다. */
     struct SW_API AssetLoadRecord
     {
-        string        _path{};
-        hashed_string _kind{}; ///< "Texture" · "Mesh" · "Material" · "Prefab" · "Scene" …
-        uint64        _arrPhaseNanos[static_cast<uint32>( AssetLoadPhase::Count )]{};
-        uint64        _bytes{ 0 };
-        uint8         _bAsync{ SW_FALSE }; ///< 워커 스레드에서 읽었다(스트리밍 · 비동기 씬)
-        uint8         _bSucceeded{ SW_TRUE };
+        string                            _path{};
+        hashed_string                     _kind{}; ///< "Texture" · "Mesh" · "Material" · "Prefab" · "Scene" …
+        EnumArray<AssetLoadPhase, uint64> _arrPhaseNanos{};
+        uint64                            _bytes{ 0 };
+        uint8                             _bAsync{ SW_FALSE }; ///< 워커 스레드에서 읽었다(스트리밍 · 비동기 씬)
+        uint8                             _bSucceeded{ SW_TRUE };
 
         uint64 computeTotalNanos() const;
     };
@@ -43,13 +44,13 @@ namespace sw
     /** @brief 에셋 종류 하나의 누적입니다. */
     struct AssetLoadKindSummary
     {
-        hashed_string _kind{};
-        uint64        _arrPhaseNanos[static_cast<uint32>( AssetLoadPhase::Count )]{};
-        uint64        _maxTotalNanos{ 0 };
-        uint64        _bytes{ 0 };
-        uint32        _count{ 0 };
-        uint32        _asyncCount{ 0 };
-        uint32        _failedCount{ 0 };
+        hashed_string                     _kind{};
+        EnumArray<AssetLoadPhase, uint64> _arrPhaseNanos{};
+        uint64                            _maxTotalNanos{ 0 };
+        uint64                            _bytes{ 0 };
+        uint32                            _count{ 0 };
+        uint32                            _asyncCount{ 0 };
+        uint32                            _failedCount{ 0 };
     };
 } // namespace sw
 
@@ -100,8 +101,8 @@ namespace sw
         /** @brief 종류 하나의 누적과 프레임 프로파일러 구간 번호(단계마다)입니다. */
         struct KindEntry
         {
-            AssetLoadKindSummary _summary{};
-            uint32               _arrProfilerSlot[static_cast<uint32>( AssetLoadPhase::Count )]{};
+            AssetLoadKindSummary              _summary{};
+            EnumArray<AssetLoadPhase, uint32> _arrProfilerSlot{};
         };
 
         mutable mutex                        _mutex;

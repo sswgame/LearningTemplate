@@ -3,6 +3,7 @@
  * @brief DXC 와 D3DCompiler 로 HLSL 을 여러 백엔드용으로 컴파일하는 셰이더 컴파일러 인터페이스입니다.
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/EngineMinimal.h"
@@ -79,7 +80,7 @@ namespace sw
     /** @brief 스테이지의 테이블 항목입니다. `Count` 이상이면 버텍스 항목을 반환합니다(폴백). */
     inline const ShaderStageInfo& getShaderStageInfo( ShaderStage stage ) noexcept
     {
-        static constexpr ShaderStageInfo arrInfo[static_cast<size_t>( ShaderStage::Count )] = {
+        static constexpr auto kArrInfo = makeEnumTable<ShaderStage, ShaderStageInfo>( {
             {"vs", "VSMain", "vs_5_0", "vs_6_6",        "SW_SHADER_STAGE_VERTEX"}, // Vertex
             {"ps", "PSMain", "ps_5_0", "ps_6_6",         "SW_SHADER_STAGE_PIXEL"}, // Pixel
             {"cs", "CSMain", "cs_5_0", "cs_6_6",       "SW_SHADER_STAGE_COMPUTE"}, // Compute
@@ -88,9 +89,8 @@ namespace sw
             {"ds", "DSMain", "ds_5_0", "ds_6_6",        "SW_SHADER_STAGE_DOMAIN"}, // Domain
             {"ms", "MSMain",  nullptr, "ms_6_6",          "SW_SHADER_STAGE_MESH"}, // Mesh. SM5 에는 없다
             {"as", "ASMain",  nullptr, "as_6_6", "SW_SHADER_STAGE_AMPLIFICATION"}, // Amplification. SM5 에는 없다
-        };
-        const size_t index = ( stage < ShaderStage::Count ) ? static_cast<size_t>( stage ) : 0;
-        return arrInfo[index];
+        } );
+        return kArrInfo[( stage < ShaderStage::Count ) ? stage : ShaderStage::Vertex];
     }
 
     /** @brief @p entryPoint 가 비어 있으면 스테이지의 기본 진입점(테이블의 `_pEntryPoint`)을 반환합니다. 진입점 기본값은 이 테이블 하나가 정합니다. */

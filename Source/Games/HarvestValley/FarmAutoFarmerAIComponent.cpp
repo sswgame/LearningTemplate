@@ -2,6 +2,7 @@
 
 #include "Games/HarvestValley/FarmAutoFarmerAIComponent.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -34,8 +35,7 @@ namespace sw
                 Till,
                 Count
             };
-            static constexpr const utf8* kArrTileKey[] = { "HarvestTile", "WaterTile", "SowTile", "TillTile" };
-            static_assert( std::size( kArrTileKey ) == static_cast<size_t>( TileJob::Count ), "one blackboard key per tile job" );
+            static constexpr auto kArrTileKey = makeEnumTable<TileJob, const utf8*>( "HarvestTile", "WaterTile", "SowTile", "TillTile" );
 
             /** @brief 손에 든 도구의 참거짓 키입니다(`FarmTool` 순서). */
             static constexpr const utf8* kArrHoldingKey[] = { "HoldingHoe", "HoldingWateringCan", "HoldingSeeds", "HoldingHand" };
@@ -83,7 +83,7 @@ namespace sw
                         cultivatedCount += field.findTile( x, y )->_bTilled != SW_FALSE ? 1 : 0;
                     }
                 }
-                bool arrFound[static_cast<size_t>( TileJob::Count )]{};
+                EnumArray<TileJob, bool> arrFound;
                 for ( int32 y = 0; y < FarmGameModeComponent::kFieldHeight; ++y )
                 {
                     for ( int32 x = 0; x < FarmGameModeComponent::kFieldWidth; ++x )
@@ -100,17 +100,16 @@ namespace sw
                             job = TileJob::Sow;
                         else if ( bCanCultivate )
                             job = TileJob::Till;
-                        const size_t jobIndex = static_cast<size_t>( job );
-                        if ( job == TileJob::Count || arrFound[jobIndex] )
+                        if ( job == TileJob::Count || arrFound[job] )
                             continue;
-                        arrFound[jobIndex] = true;
-                        blackboard.setVector( hashed_string{ string_view{ kArrTileKey[jobIndex] } }, FarmGameModeComponent::computeTileCenter( x, y ) + float3{ 0.0f, 0.0f, -1.0f } );
+                        arrFound[job] = true;
+                        blackboard.setVector( hashed_string{ string_view{ kArrTileKey[job] } }, FarmGameModeComponent::computeTileCenter( x, y ) + float3{ 0.0f, 0.0f, -1.0f } );
                     }
                 }
-                for ( size_t jobIndex = 0; jobIndex < static_cast<size_t>( TileJob::Count ); ++jobIndex )
+                for ( const TileJob job : EnumRange<TileJob>{} )
                 {
-                    if ( arrFound[jobIndex] == false )
-                        blackboard.clearValue( hashed_string{ string_view{ kArrTileKey[jobIndex] } } );
+                    if ( arrFound[job] == false )
+                        blackboard.clearValue( hashed_string{ string_view{ kArrTileKey[job] } } );
                 }
             }
         };

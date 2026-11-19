@@ -66,7 +66,7 @@ namespace sw
         {
             const utf8* pName = findEnumName( enumFqn, index );
             if ( pName == nullptr )
-                SW_FATAL( "Online method table '%#' has no reflected name for value %# - add ENUM( Count = Count ) to it", enumFqn.c_str(), index );
+                SW_FATAL( "Online method table '%#' has no reflected name for value %# - add ENUM() and a trailing Count enumerator to it", enumFqn.c_str(), index );
             listName.push_back( pName );
         }
         return listName;

@@ -589,7 +589,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 (void)context.expect( bDrawn, "the game view was not drawn while its tab was in front" );
 
-                const EditorUIFrameOutput::ViewMark& view    = frame._arrView[static_cast<uint32>( EditorViewKind::Game )];
+                const EditorUIFrameOutput::ViewMark& view    = frame._arrView[EditorViewKind::Game];
                 const ImGuiWindow*                   pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( GameViewPanel::kPanelTitle ).c_str() );
                 if ( context.expect( pWindow != nullptr, "the Game window does not exist" ) == false )
                     return EditorSelfTestStep::Done;

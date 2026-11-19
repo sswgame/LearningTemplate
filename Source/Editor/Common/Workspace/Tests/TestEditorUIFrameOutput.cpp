@@ -35,8 +35,8 @@ SW_TEST_CASE( EditorUIFrameOutputTest, PublishedOnlyAtFrameEnd )
     views.publishUIFrame( 0x5u );
     const EditorUIFrameOutput first = views.getPublishedUIFrame();
     SW_EXPECT_TRUE( first.wasViewDrawn( EditorViewKind::Game ) );
-    SW_EXPECT_EQUAL( 12, first._arrView[static_cast<uint32>( EditorViewKind::Game )]._windowX );
-    SW_EXPECT_EQUAL( 31, first._arrView[static_cast<uint32>( EditorViewKind::Game )]._windowY );
+    SW_EXPECT_EQUAL( 12, first._arrView[EditorViewKind::Game]._windowX );
+    SW_EXPECT_EQUAL( 31, first._arrView[EditorViewKind::Game]._windowY );
     SW_EXPECT_TRUE( first._bGameViewFocused == SW_TRUE );
     SW_EXPECT_TRUE( first._bGameViewHovered == SW_TRUE );
     SW_EXPECT_EQUAL( 0x5u, first._redrawReasons );
@@ -68,8 +68,8 @@ SW_TEST_CASE( EditorUIFrameOutputTest, ViewRequestRule )
     EditorUIFrameOutput frame;
     SW_EXPECT_TRUE( frame.isViewRequested( EditorViewKind::Scene ) );
     SW_EXPECT_FALSE( frame.isViewRequested( EditorViewKind::Game ) );
-    frame._arrView[static_cast<uint32>( EditorViewKind::Scene )]._bDrawn = SW_TRUE;
-    frame._arrView[static_cast<uint32>( EditorViewKind::Game )]._bDrawn  = SW_TRUE;
+    frame._arrView[EditorViewKind::Scene]._bDrawn = SW_TRUE;
+    frame._arrView[EditorViewKind::Game]._bDrawn  = SW_TRUE;
     SW_EXPECT_TRUE( frame.isViewRequested( EditorViewKind::Scene ) );
     SW_EXPECT_TRUE( frame.isViewRequested( EditorViewKind::Game ) );
 }

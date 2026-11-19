@@ -21,7 +21,7 @@ namespace sw
     {
         struct AssetLoadProfilerInternal
         {
-            static constexpr const utf8* kArrPhaseName[] = { "IO", "Decode", "Upload" };
+            static constexpr auto kArrPhaseName = makeEnumTable<AssetLoadPhase, const utf8*>( "IO", "Decode", "Upload" );
 
             [[maybe_unused]] static float64 toMilliseconds( uint64 nanos ) { return static_cast<float64>( nanos ) / constant::time::kNanosecondsPerMillisecond; }
 
@@ -35,7 +35,6 @@ namespace sw
                 return total;
             }
         };
-        static_assert( std::size( AssetLoadProfilerInternal::kArrPhaseName ) == static_cast<size_t>( AssetLoadPhase::Count ) );
     } // namespace
 
     namespace
@@ -99,8 +98,8 @@ namespace sw
         if ( isEnabled() == false )
             return;
         // 프레임 프로파일러 구간은 잠금 밖에서 더한다(그쪽도 스레드 안전하다). 번호는 종류마다 한 번 받는다.
-        uint32     arrSlot[static_cast<uint32>( AssetLoadPhase::Count )]{};
-        const bool bFrameProfiler = engine::areEngineServicesBound();
+        EnumArray<AssetLoadPhase, uint32> arrSlot{};
+        const bool                        bFrameProfiler = engine::areEngineServicesBound();
         {
             ScopedLock<mutex> lock{ _mutex };
             KindEntry*        pEntry = nullptr;
@@ -116,7 +115,7 @@ namespace sw
             {
                 KindEntry entry{};
                 entry._summary._kind = record._kind;
-                for ( uint32 phase = 0; phase < static_cast<uint32>( AssetLoadPhase::Count ); ++phase )
+                for ( const AssetLoadPhase phase : EnumRange<AssetLoadPhase>{} )
                 {
                     entry._arrProfilerSlot[phase] = FrameProfiler::kInvalidSlot;
                     if ( bFrameProfiler )
@@ -130,7 +129,7 @@ namespace sw
             }
             AssetLoadKindSummary& summary = pEntry->_summary;
             const uint64          total   = record.computeTotalNanos();
-            for ( uint32 phase = 0; phase < static_cast<uint32>( AssetLoadPhase::Count ); ++phase )
+            for ( const AssetLoadPhase phase : EnumRange<AssetLoadPhase>{} )
             {
                 summary._arrPhaseNanos[phase] += record._arrPhaseNanos[phase];
                 arrSlot[phase] = pEntry->_arrProfilerSlot[phase];
@@ -155,7 +154,7 @@ namespace sw
         if ( bFrameProfiler == false )
             return;
         FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
-        for ( uint32 phase = 0; phase < static_cast<uint32>( AssetLoadPhase::Count ); ++phase )
+        for ( const AssetLoadPhase phase : EnumRange<AssetLoadPhase>{} )
         {
             if ( record._arrPhaseNanos[phase] != 0 && arrSlot[phase] != FrameProfiler::kInvalidSlot )
                 profiler.addSample( arrSlot[phase], record._arrPhaseNanos[phase] );
@@ -209,15 +208,15 @@ namespace sw
         {
             SW_LOG_INFO_ID( "AssetLoadProfiler.KindSummary", "[AssetLoad]   %# %# %# %# %# %# %# %# %# %#", summary._kind.c_str(), summary._count, summary._asyncCount, summary._failedCount,
                             summary._bytes, Internal::toMilliseconds( Internal::computeSummaryTotal( summary ) ),
-                            Internal::toMilliseconds( summary._arrPhaseNanos[0] ), Internal::toMilliseconds( summary._arrPhaseNanos[1] ),
-                            Internal::toMilliseconds( summary._arrPhaseNanos[2] ), Internal::toMilliseconds( summary._maxTotalNanos ) );
+                            Internal::toMilliseconds( summary._arrPhaseNanos[AssetLoadPhase::IO] ), Internal::toMilliseconds( summary._arrPhaseNanos[AssetLoadPhase::Decode] ),
+                            Internal::toMilliseconds( summary._arrPhaseNanos[AssetLoadPhase::Upload] ), Internal::toMilliseconds( summary._maxTotalNanos ) );
         }
         SW_LOG_INFO_ID( "AssetLoadProfiler.SlowestTotalMsIo", "[AssetLoad] slowest — total_ms io_ms decode_ms upload_ms bytes async kind path" );
         for ( const AssetLoadRecord& record : listSlowest )
         {
             SW_LOG_INFO_ID( "AssetLoadProfiler.SlowestLoad", "[AssetLoad]   %# %# %# %# %# %# %# %#", Internal::toMilliseconds( record.computeTotalNanos() ),
-                            Internal::toMilliseconds( record._arrPhaseNanos[0] ), Internal::toMilliseconds( record._arrPhaseNanos[1] ),
-                            Internal::toMilliseconds( record._arrPhaseNanos[2] ), record._bytes, record._bAsync != SW_FALSE ? "async" : "sync",
+                            Internal::toMilliseconds( record._arrPhaseNanos[AssetLoadPhase::IO] ), Internal::toMilliseconds( record._arrPhaseNanos[AssetLoadPhase::Decode] ),
+                            Internal::toMilliseconds( record._arrPhaseNanos[AssetLoadPhase::Upload] ), record._bytes, record._bAsync != SW_FALSE ? "async" : "sync",
                             record._kind.c_str(), record._path.c_str() );
         }
 #endif // 표는 Info 로그로만 나간다 — 그것이 사라지는 빌드(Shipping)에서는 모을 것만 모은다
@@ -272,7 +271,7 @@ namespace sw
             return;
         const int64 now = MonotonicClock::nowNanoseconds();
         if ( _phase != AssetLoadPhase::Count && now > _phaseStartNanos )
-            _record._arrPhaseNanos[static_cast<uint32>( _phase )] += static_cast<uint64>( now - _phaseStartNanos );
+            _record._arrPhaseNanos[_phase] += static_cast<uint64>( now - _phaseStartNanos );
         _phase           = phase;
         _phaseStartNanos = now;
     }

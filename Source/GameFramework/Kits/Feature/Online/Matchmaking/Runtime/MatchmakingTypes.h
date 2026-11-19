@@ -17,7 +17,7 @@
 namespace sw
 {
     /** @brief 매칭 요청의 결과입니다. 키트 오류 코드는 `OnlineMethodRange::kMatchmaking` 에 값을 더한 것이며 0은 성공입니다. 와이어 형식입니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class MatchmakingResult : uint8
     {
         Ok = 0,
@@ -283,7 +283,7 @@ namespace sw
 namespace sw
 {
     /** @brief 로비 상태입니다. 와이어 값입니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class LobbyState : uint8
     {
         Open = 0,
@@ -351,7 +351,7 @@ namespace sw
 namespace sw
 {
     /** @brief 줄을 선 티켓이 끝난 이유입니다. 와이어 값입니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class MatchQueueResult : uint8
     {
         Found = 0,

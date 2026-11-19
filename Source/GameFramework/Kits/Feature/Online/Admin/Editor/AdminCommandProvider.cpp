@@ -242,12 +242,11 @@ namespace sw::editor
         if ( request._untilMs < 0 || static_cast<uint8>( request._sanctionKind ) >= static_cast<uint8>( ServiceSanctionKind::Count ) )
             return AdminServiceResult::fail( OnlineError::kInvalidRequest );
 
-        const int32 kindIndex = static_cast<int32>( request._sanctionKind );
-        const int64 before    = pAccount->_sanction._arrUntilMs[kindIndex];
-        const bool  bBan      = request._sanctionKind == ServiceSanctionKind::Ban && request._untilMs != 0;
-        const int64 after     = bBan ? ServiceSanctionState::kPermanentMs : request._untilMs;
+        const int64 before = pAccount->_sanction._arrUntilMs[request._sanctionKind];
+        const bool  bBan   = request._sanctionKind == ServiceSanctionKind::Ban && request._untilMs != 0;
+        const int64 after  = bBan ? ServiceSanctionState::kPermanentMs : request._untilMs;
 
-        pAccount->_sanction._arrUntilMs[kindIndex] = after;
+        pAccount->_sanction._arrUntilMs[request._sanctionKind] = after;
         if ( request._reasonCode.empty() == false )
             pAccount->_sanction._reasonCode = request._reasonCode; // 서버와 같다 - 사유 없는 해제가 앞의 사유를 지우지 않는다
         ++pAccount->_sanction._version;

@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Settings/GlobalVariablesPanel.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -22,6 +23,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 
 #include <imgui.h>
 
@@ -98,7 +100,7 @@ namespace sw::editor
             {
                 const int32     currentVal = info.getValueAsInt();
                 const EnumInfo* pEnumInfo  = GlobalVariablesViewModel::findEnumInfo( info._enumType );
-                if ( pEnumInfo == nullptr || pEnumInfo->_mapValueToName.empty() )
+                if ( pEnumInfo == nullptr || pEnumInfo->_listEnumerator.empty() )
                     return drawInt32Widget( info );
 
                 bool        bChanged{ false };
@@ -106,10 +108,13 @@ namespace sw::editor
                 const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
                 if ( EditorWidgets::beginCombo( "##val", pPreview ) )
                 {
-                    for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
+                    for ( const EnumeratorInfo& enumerator : pEnumInfo->_listEnumerator ) // 선언 순서, `Count` 표식 제외
                     {
-                        const int32 val32     = static_cast<int32>( val );
-                        const utf8* name      = nameHashed.toString().data();
+                        const EnumeratorEditorMetadata& display = pEnumInfo->findEnumeratorEditorMetadata( enumerator._name );
+                        if ( display._bHidden != SW_FALSE )
+                            continue;
+                        const int32 val32     = static_cast<int32>( enumerator._value );
+                        const utf8* name      = display._displayName.empty() ? enumerator._name.toString().data() : display._displayName.c_str();
                         const bool  bSelected = ( val32 == currentVal );
                         if ( ImGui::Selectable( name, bSelected ) )
                         {
@@ -135,20 +140,20 @@ namespace sw::editor
              * @brief 타입별 값 위젯 테이블입니다. 행 순서는 `GlobalVariableType` 열거자 순서이며, 새 타입은 여기 행 하나를 더합니다.
              * @details Core 는 에디터를 모르므로 위젯은 에디터가 자기 테이블로 가집니다(Core 의 처리 테이블과 같은 열거자로 고른다).
              */
-            static constexpr WidgetRow kArrWidgetRow[] = {
+            static constexpr auto kArrWidgetRow = makeEnumTable<GlobalVariableType, WidgetRow>( {
                 { GlobalVariableType::Boolean, &drawBooleanWidget},
                 {   GlobalVariableType::Int32,   &drawInt32Widget},
                 {   GlobalVariableType::Float,   &drawFloatWidget},
                 {  GlobalVariableType::String,  &drawStringWidget},
                 {    GlobalVariableType::Enum,    &drawEnumWidget},
                 {GlobalVariableType::DiskPath,  &drawStringWidget}, // 글 칸이다 - 받을 때 절대화는 `setValueAsString` 이 한다
-            };
+            } );
 
             static constexpr bool isWidgetTableInTypeOrder()
             {
                 for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( GlobalVariableType::Count ); ++rowIndex )
                 {
-                    if ( kArrWidgetRow[rowIndex]._type != static_cast<GlobalVariableType>( rowIndex ) )
+                    if ( kArrWidgetRow[static_cast<GlobalVariableType>( rowIndex )]._type != static_cast<GlobalVariableType>( rowIndex ) )
                         return false;
                 }
                 return true;
@@ -163,11 +168,9 @@ namespace sw::editor
                     return false;
                 }
                 // 등록이 범위 밖 타입을 거절하므로 인덱스는 늘 행 안이다.
-                return kArrWidgetRow[static_cast<uint32>( info._type )]._draw( info );
+                return kArrWidgetRow[info._type]._draw( info );
             }
         };
-        static_assert( std::size( GlobalVariablesPanelInternal::kArrWidgetRow ) == static_cast<size_t>( GlobalVariableType::Count ),
-                       "GlobalVariablesPanel needs one value widget per GlobalVariableType" );
         static_assert( GlobalVariablesPanelInternal::isWidgetTableInTypeOrder(), "GlobalVariablesPanel widget rows must follow GlobalVariableType order" );
     } // namespace
 

@@ -103,7 +103,7 @@ SW_TEST_CASE( AdminToolSessionTest, RefreshReadsTheAccountActedOn )
 
     session.requestSanction( AdminToolSessionTestUtil::kPlayer, ServiceSanctionKind::ChatMute, 600, "gm.notice", "ticket" );
     SW_EXPECT_EQUAL( AccountID( AdminToolSessionTestUtil::kPlayer ), session.getLookupAccountID() );
-    SW_EXPECT_TRUE( session.getLookup()._sanction._arrUntilMs[static_cast<int32>( ServiceSanctionKind::ChatMute )] != 0 );
+    SW_EXPECT_TRUE( session.getLookup()._sanction._arrUntilMs[ServiceSanctionKind::ChatMute] != 0 );
 }
 
 SW_TEST_CASE( AdminToolSessionTest, FailedCommandDoesNotRefresh )
@@ -125,7 +125,7 @@ SW_TEST_CASE( AdminToolSessionTest, BadDurationsAreRefusedBeforeSending )
 {
     AdminToolSession session;
     session.requestSanction( AdminToolSessionTestUtil::kPlayer, ServiceSanctionKind::ChatMute, 600, "gm.notice", "ticket" );
-    const int64 untilMs = session.getLookup()._sanction._arrUntilMs[static_cast<int32>( ServiceSanctionKind::ChatMute )];
+    const int64 untilMs = session.getLookup()._sanction._arrUntilMs[ServiceSanctionKind::ChatMute];
     SW_REQUIRE_TRUE( untilMs != 0 );
     const int32 completedBefore = session.getCompletedCount();
 
@@ -136,7 +136,7 @@ SW_TEST_CASE( AdminToolSessionTest, BadDurationsAreRefusedBeforeSending )
     SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( completedBefore, session.getCompletedCount() ); // 제공자에 닿지 않았다
     SW_EXPECT_EQUAL( 0, session.getPendingCount() );
-    SW_EXPECT_EQUAL( untilMs, session.getLookup()._sanction._arrUntilMs[static_cast<int32>( ServiceSanctionKind::ChatMute )] );
+    SW_EXPECT_EQUAL( untilMs, session.getLookup()._sanction._arrUntilMs[ServiceSanctionKind::ChatMute] );
 
     session.requestSetMaintenance( "all", "maintenance.default", -5, "ticket" );
     SW_EXPECT_EQUAL( AdminMethod::SetMaintenance::kID, session.getLastMethod() );
@@ -153,7 +153,7 @@ SW_TEST_CASE( AdminToolSessionTest, ZeroDurationLiftsASanction )
     session.requestSanction( AdminToolSessionTestUtil::kPlayer, ServiceSanctionKind::ChatMute, 600, "gm.notice", "ticket" );
     session.requestSanction( AdminToolSessionTestUtil::kPlayer, ServiceSanctionKind::ChatMute, 0, "gm.notice", "ticket" );
     SW_EXPECT_TRUE( session.getLastResult() == AdminResult::Ok );
-    SW_EXPECT_EQUAL( int64( 0 ), session.getLookup()._sanction._arrUntilMs[static_cast<int32>( ServiceSanctionKind::ChatMute )] );
+    SW_EXPECT_EQUAL( int64( 0 ), session.getLookup()._sanction._arrUntilMs[ServiceSanctionKind::ChatMute] );
 }
 
 SW_TEST_CASE( AdminToolSessionTest, AuditRowsComeFromTheLastListing )

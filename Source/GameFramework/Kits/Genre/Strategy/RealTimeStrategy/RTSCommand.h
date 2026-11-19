@@ -22,7 +22,7 @@
 namespace sw
 {
     /** @brief 명령 종류입니다. 바이트에 들어가므로 새 종류는 `Count` 앞에만 더하고 `RTSCommand::kFormatVersion` 을 올립니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class RTSCommandKind : uint8
     {
         Smart = 0, ///< 오른쪽 클릭 — 유닛마다 `issueSmart`(목표 유닛이 있으면 그것)

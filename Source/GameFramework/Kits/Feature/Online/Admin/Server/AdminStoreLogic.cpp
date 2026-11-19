@@ -62,7 +62,7 @@ namespace sw
             static string formatSanction( const ServiceSanctionState& state )
             {
                 utf8 arrBuffer[constant::buffer::kMax256];
-                formatstring( arrBuffer, constant::buffer::kMax256, "mute=%# suspend=%# ban=%# reason=%#", state._arrUntilMs[0], state._arrUntilMs[1], state._arrUntilMs[2],
+                formatstring( arrBuffer, constant::buffer::kMax256, "mute=%# suspend=%# ban=%# reason=%#", state._arrUntilMs[ServiceSanctionKind::ChatMute], state._arrUntilMs[ServiceSanctionKind::Suspend], state._arrUntilMs[ServiceSanctionKind::Ban],
                               state._reasonCode );
                 return string( arrBuffer );
             }
@@ -156,9 +156,9 @@ namespace sw
                 ServiceSanctionState state;
                 if ( ServiceSanction::readState( connection, request._accountID, state ) != ServiceStoreResult::Ok )
                     return AdminServiceResult::fail( OnlineError::kUnavailable );
-                inoutAudit._before                                             = formatSanction( state );
-                const bool bBan                                                = request._sanctionKind == ServiceSanctionKind::Ban && request._untilMs != 0;
-                state._arrUntilMs[static_cast<int32>( request._sanctionKind )] = bBan ? ServiceSanctionState::kPermanentMs : request._untilMs;
+                inoutAudit._before                       = formatSanction( state );
+                const bool bBan                          = request._sanctionKind == ServiceSanctionKind::Ban && request._untilMs != 0;
+                state._arrUntilMs[request._sanctionKind] = bBan ? ServiceSanctionState::kPermanentMs : request._untilMs;
                 if ( request._reasonCode.empty() == false )
                     state._reasonCode = request._reasonCode;
                 ServiceSanction::stageWrite( inoutTransaction, request._accountID, state );
@@ -166,7 +166,7 @@ namespace sw
                 inoutAudit._after  = formatSanction( state );
                 outReply._sanction = state;
                 // 저장한 값으로 본다 - 영구 정지는 요청의 시각이 지났어도 영구로 남는다
-                const bool bLocksAccount  = request._sanctionKind != ServiceSanctionKind::ChatMute && state._arrUntilMs[static_cast<int32>( request._sanctionKind )] > command._nowMs;
+                const bool bLocksAccount  = request._sanctionKind != ServiceSanctionKind::ChatMute && state._arrUntilMs[request._sanctionKind] > command._nowMs;
                 outReply._bRevokeSessions = bLocksAccount ? SW_TRUE : SW_FALSE;
                 return AdminResult::Ok;
             }

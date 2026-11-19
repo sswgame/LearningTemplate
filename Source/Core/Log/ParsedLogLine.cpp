@@ -2,14 +2,15 @@
 
 #include "Core/Log/ParsedLogLine.h"
 
+#include "Core/Container/EnumArray.h"
+
 namespace sw
 {
     namespace
     {
         struct LogLineFormatInternal
         {
-            static constexpr const utf8* kArrLevelLabel[] = { "Error", "Warning", "Info", "Trace" };
-            static_assert( SW_COUNT_OF( kArrLevelLabel ) == static_cast<uint32>( LogLevel::Count ), "LogLevel 과 같아야 합니다" );
+            static constexpr auto kArrLevelLabel = makeEnumTable<LogLevel, const utf8*>( "Error", "Warning", "Info", "Trace" );
             /** @brief 머리와 본문을 가르는 글입니다(`AsyncLogSink` 의 `- `). */
             static constexpr string_view kMessageSeparator = "- ";
         };
@@ -17,21 +18,21 @@ namespace sw
 
     const utf8* ParsedLogLine::getLevelLabel( LogLevel level )
     {
-        return LogLineFormatInternal::kArrLevelLabel[static_cast<size_t>( level )];
+        return LogLineFormatInternal::kArrLevelLabel[level];
     }
 
     bool ParsedLogLine::tryParse( string_view line, ParsedLogLine& outLine )
     {
         // 머리의 수준 칸 `[수준] ` 은 줄에서 가장 앞에 나오는 것이다(본문에도 같은 글이 있을 수 있다).
         size_t levelEnd = string_view::npos;
-        for ( uint32 index = 0; index < static_cast<uint32>( LogLevel::Count ); ++index )
+        for ( const LogLevel level : EnumRange<LogLevel>{} )
         {
-            const string label = string( "[" ) + LogLineFormatInternal::kArrLevelLabel[index] + "] ";
+            const string label = string( "[" ) + LogLineFormatInternal::kArrLevelLabel[level] + "] ";
             const size_t found = line.find( label );
             if ( found != string_view::npos && ( levelEnd == string_view::npos || found + label.size() < levelEnd ) )
             {
                 levelEnd       = found + label.size();
-                outLine._level = static_cast<LogLevel>( index );
+                outLine._level = level;
             }
         }
         if ( levelEnd == string_view::npos )

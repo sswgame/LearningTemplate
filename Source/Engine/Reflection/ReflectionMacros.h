@@ -7,7 +7,8 @@
  *   - 이름 변경 창구: REFLECT(Alias=…) · ENUM(Alias=…) / ENUM(ValueAlias="Old:New, …") / ENUM(Removed="Old:Replacement") / PROPERTY(Alias="hp, HitPoints")
  *     실제 게임 데이터가 생긴 뒤 이름을 바꾸거나 지울 때만 씁니다. 그 전에는 이름을 바꾸고 데이터를 새 이름으로 다시 씁니다(엔진 · 게임 코드에 별칭이 없습니다).
  *     옛 이름은 읽기 호환용이라 고정 배치형 스키마 해시에 들어가지 않고, 선언 없이 지우거나 바꾼 이름은 읽기가 실패합니다.
- *   - ENUM(Flags): 비트 연산자를 켭니다. ENUM(Invalid=…, Count=…): TypeRegistry::enumToString 센티널
+ *   - 열거자 표시 메타: `Red ENUMERATOR( DisplayName = "빨강", Tooltip = "…", Hidden ),` (언리얼 UMETA)
+ *   - ENUM(Flags): 비트 연산자를 켭니다. ENUM(Invalid=…, Count=…): TypeRegistry::enumToString 센티널. 끝 열거자 `Count` 는 적지 않아도 Count 센티널이다
  *   - 직접 만든 컨테이너: 타입에 REFLECT_CONTAINER(...) 한 번 → 필드는 PROPERTY() 만
  *   - StaticType 필요: REFLECT_BODY()
  *   - std:: / int32 등: ReflectBuiltins.xxx (TypeInfo 는 ReflectBuiltins.gen.cpp)
@@ -47,6 +48,8 @@ namespace sw::generated
     #define PROPERTY( ... ) __attribute__( ( annotate( "PROPERTY;" #__VA_ARGS__ ) ) )
     #define FUNCTION( ... ) __attribute__( ( annotate( "FUNCTION;" #__VA_ARGS__ ) ) )
     #define ENUM( ... )     __attribute__( ( annotate( "ENUM;" #__VA_ARGS__ ) ) )
+    /** @brief 열거자 하나의 표시 메타입니다(언리얼 `UMETA`). 열거자 이름 뒤에 적습니다: `Red ENUMERATOR( DisplayName = "빨강", Hidden ),` */
+    #define ENUMERATOR( ... ) __attribute__( ( annotate( "ENUMERATOR;" #__VA_ARGS__ ) ) )
 
     /**
      * @brief 컨테이너 타입을 선언할 때 씁니다. 파서가 타입 선언에서 읽어 Sequence/Map 으로 인식합니다.
@@ -78,6 +81,7 @@ namespace sw::generated
     #define PROPERTY( ... )
     #define FUNCTION( ... )
     #define ENUM( ... )
+    #define ENUMERATOR( ... )
     #define REFLECT_CONTAINER( ... )
 
     /**

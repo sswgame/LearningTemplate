@@ -624,3 +624,65 @@ SW_TEST_CASE( ReflectionContainersTest, FixedArrayFillsTheSlotOfEachElement )
     SW_EXPECT_EQUAL( 13, arr[3] );
     SW_EXPECT_EQUAL( 4u, arrWrapper.getSize( &arr ) );
 }
+
+/**
+ * @brief [ReflectionContainersTest] `EnumArray<E, T>` 프로퍼티는 열거자 → 값 맵으로 세 형식에서 왕복하고, 텍스트 키는 열거자 이름이다
+ * @details 칸은 열거자마다 하나로 고정이라 추가 · 지우기가 없고(`isFixedSize`), 파일에 없는 칸은 기본값으로 읽힌다. 순서가 아니라 이름으로 찾으므로
+ *          파일의 항목 순서가 달라도 제 칸에 들어가고, 모르는 열거자 이름은 그 항목만 버린다.
+ */
+SW_TEST_CASE( ReflectionContainersTest, EnumArrayRoundTripsAsEnumeratorMap )
+{
+    const sw::TypeInfo* pType = sw::EnumArrayActor::StaticType();
+    SW_REQUIRE_NOT_NULL( pType );
+    const sw::PropertyInfo* pScore = pType->findPropertyInHierarchy( "_arrScore" );
+    SW_REQUIRE_NOT_NULL( pScore );
+    SW_REQUIRE_NOT_NULL( pScore->_containerWrapper );
+    const sw::IMapContainerWrapper* pMap = pScore->_containerWrapper->asMap();
+    SW_REQUIRE_NOT_NULL( pMap );
+    SW_EXPECT_TRUE( pMap->isFixedSize() );
+
+    sw::EnumArrayActor source;
+    source._arrScore[sw::TestTrailingCountEnum::Alpha] = 5;
+    source._arrScore[sw::TestTrailingCountEnum::Beta]  = -2;
+    source._arrScore[sw::TestTrailingCountEnum::Gamma] = 900;
+    source._after                                      = 42;
+    SW_EXPECT_EQUAL( size_t( 3 ), pMap->getSize( &source._arrScore ) );
+    SW_EXPECT_FALSE( pMap->eraseAt( &source._arrScore, 0 ) );
+
+    const auto isSame = []( const sw::EnumArrayActor& actor )
+    {
+        return actor._arrScore[sw::TestTrailingCountEnum::Alpha] == 5 && actor._arrScore[sw::TestTrailingCountEnum::Beta] == -2 &&
+               actor._arrScore[sw::TestTrailingCountEnum::Gamma] == 900 && actor._after == 42;
+    };
+
+    const sw::string   xml = sw::XMLSerializer::serialize( &source, *pType );
+    sw::EnumArrayActor fromXML;
+    SW_EXPECT_TRUE_MSG( sw::XMLSerializer::deserialize( &fromXML, *pType, xml ), xml.c_str() );
+    SW_EXPECT_TRUE_MSG( isSame( fromXML ), xml.c_str() );
+    SW_EXPECT_TRUE_MSG( xml.find( "\"Gamma\"" ) != sw::string::npos, xml.c_str() ); // 키는 열거자 이름이다
+    SW_EXPECT_TRUE_MSG( xml.find( "\"Count\"" ) == sw::string::npos, xml.c_str() ); // 개수 표식은 칸이 아니다
+
+    const sw::string   json = sw::JSONSerializer::serialize( &source, *pType ).value();
+    sw::EnumArrayActor fromJSON;
+    SW_EXPECT_TRUE_MSG( sw::JSONSerializer::deserialize( &fromJSON, *pType, json ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( isSame( fromJSON ), json.c_str() );
+
+    sw::vector<uint8> bytes;
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &source, *pType, bytes ) );
+    sw::EnumArrayActor fromBinary;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromBinary, *pType, bytes.data(), bytes.size() ) );
+    SW_EXPECT_TRUE( isSame( fromBinary ) );
+
+    // 첫 항목(Alpha)을 빼도 나머지는 이름으로 제 칸을 찾고, 빠진 칸은 기본값이다(읽기 전 값 77 이 남지 않는다).
+    sw::string   partial    = xml;
+    const size_t alphaBegin = partial.find( "<entry key=\"Alpha\"" );
+    SW_REQUIRE_TRUE( alphaBegin != sw::string::npos );
+    const size_t nextEntry = partial.find( "<entry", alphaBegin + 1 );
+    SW_REQUIRE_TRUE( nextEntry != sw::string::npos );
+    partial.erase( alphaBegin, nextEntry - alphaBegin );
+    sw::EnumArrayActor fromPartial;
+    fromPartial._arrScore[sw::TestTrailingCountEnum::Alpha] = 77;
+    SW_EXPECT_TRUE_MSG( sw::XMLSerializer::deserialize( &fromPartial, *pType, partial ), partial.c_str() );
+    SW_EXPECT_EQUAL( 0, fromPartial._arrScore[sw::TestTrailingCountEnum::Alpha] );
+    SW_EXPECT_EQUAL( 900, fromPartial._arrScore[sw::TestTrailingCountEnum::Gamma] );
+}

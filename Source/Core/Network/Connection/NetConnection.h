@@ -31,6 +31,7 @@
  *          싣지 못하고 줄에서 나이 상한을 넘기면 Lost 다. 잃은 것으로 본 뒤 늦게 온 확인은 판정을 바꾸지 않는다(받는 쪽은 틱 번호로 늦은 메시지를 스스로 거른다).
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
@@ -323,7 +324,7 @@ namespace sw
         SequenceBuffer<ReceivedPacket, kPacketWindow>                            _receivedPackets;
         SequenceBuffer<OutgoingReliable, static_cast<uint32>( kReliableWindow )> _outgoingReliable;
         SequenceBuffer<IncomingReliable, static_cast<uint32>( kReliableWindow )> _incomingReliable;
-        IncomingQueue                                                            _arrIncoming[static_cast<int32>( NetChannelKind::Count )];
+        EnumArray<NetChannelKind, IncomingQueue>                                 _arrIncoming;
         vector<vector<uint8>>                                                    _listOutgoingSequenced; ///< 종류(첫 바이트)마다 가장 새 메시지 하나. 쌓인 순서대로 보관한다.
         deque<QueuedUnreliable>                                                  _listOutgoingUnreliable;
         vector<ParsedMessage>                                                    _listParsedScratch;        ///< 받은 패킷을 먼저 다 읽어 두는 스크래치 버퍼(용량을 다시 쓴다).

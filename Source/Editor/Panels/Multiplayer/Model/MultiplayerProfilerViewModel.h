@@ -27,12 +27,12 @@ namespace sw::editor
     /** @brief Profiler 탭이 한 프레임 그릴 값입니다. 포인터 · 참조를 두지 않는다(MVVM 계약). */
     struct MultiplayerProfilerViewState
     {
-        MultiplayerProfilerGraph     _arrGraph[static_cast<size_t>( EditorNetProfilerChannel::Count )]{}; ///< 채널 순서
-        vector<EditorNetKindShare>   _listKindShare{};                                                    ///< 바이트가 큰 순서
-        vector<EditorNetReplicaRate> _listReplicaRate{};                                                  ///< 초당 바이트가 큰 순서
-        int32                        _connectionCount{ 0 };                                               ///< 대상의 마지막 보고의 연결 수
-        int32                        _sampleCount{ 0 };                                                   ///< 대상 시계열의 표본 수
-        uint8                        _bHasData{ SW_FALSE };                                               ///< 대상의 표본이 있다 — 아니면 안내 한 줄만 그린다
+        EnumArray<EditorNetProfilerChannel, MultiplayerProfilerGraph> _arrGraph{};           ///< 채널 순서
+        vector<EditorNetKindShare>                                    _listKindShare{};      ///< 바이트가 큰 순서
+        vector<EditorNetReplicaRate>                                  _listReplicaRate{};    ///< 초당 바이트가 큰 순서
+        int32                                                         _connectionCount{ 0 }; ///< 대상의 마지막 보고의 연결 수
+        int32                                                         _sampleCount{ 0 };     ///< 대상 시계열의 표본 수
+        uint8                                                         _bHasData{ SW_FALSE }; ///< 대상의 표본이 있다 — 아니면 안내 한 줄만 그린다
     };
 
     /**

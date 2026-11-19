@@ -68,7 +68,7 @@ namespace sw
      * @details 필드 이름(`_backgroundColor`)은 리플렉션 PROPERTY 이름이 기준이다 — `_` + 열거자 이름(첫 글자 소문자)과 같아야 한다
      *          (`UIStyleTest.FieldTableMatchesReflection`).
      */
-    ENUM( Count = Count )
+    ENUM()
     enum class UIStyleField : uint8
     {
         BackgroundColor,

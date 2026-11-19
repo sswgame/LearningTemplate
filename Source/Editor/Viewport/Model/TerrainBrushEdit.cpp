@@ -2,6 +2,7 @@
 
 #include "Editor/Viewport/Model/TerrainBrushEdit.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Ray.h"
@@ -434,15 +435,14 @@ namespace sw::editor
             {
                 if ( listArgument.empty() || listArgument.size() > 4 )
                     return false;
-                static const utf8* const s_arrModeName[] = { "raise", "lower", "flatten", "paint", "smooth", "hole", "fill" };
-                static_assert( static_cast<size_t>( ( sizeof( s_arrModeName ) / sizeof( s_arrModeName[0] ) ) ) == static_cast<size_t>( TerrainBrushMode::Count ), "Terrain brush command names follow TerrainBrushMode" );
-                TerrainBrushSettings settings   = get()._settings;
-                bool                 bKnownMode = false;
-                for ( uint32 index = 0; index < ( sizeof( s_arrModeName ) / sizeof( s_arrModeName[0] ) ); ++index )
+                static constexpr auto kArrModeName = makeEnumTable<TerrainBrushMode, const utf8*>( "raise", "lower", "flatten", "paint", "smooth", "hole", "fill" );
+                TerrainBrushSettings  settings     = get()._settings;
+                bool                  bKnownMode   = false;
+                for ( const TerrainBrushMode mode : EnumRange<TerrainBrushMode>{} )
                 {
-                    if ( listArgument[0] == s_arrModeName[index] )
+                    if ( listArgument[0] == kArrModeName[mode] )
                     {
-                        settings._mode = static_cast<TerrainBrushMode>( index );
+                        settings._mode = mode;
                         bKnownMode     = true;
                     }
                 }

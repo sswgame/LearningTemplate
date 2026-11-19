@@ -6,6 +6,7 @@
  *          "서로 겹치는 접근이 없는 것끼리만 같이 돈다" 의 입력입니다(`FrameSystemParallelPlan` 이 파도로 묶고 `runFrameStepFrameSystems` 가 병렬 시스템(`ISceneParallelFrameSystem`)을 워커로 보낸다 — 워커에서 돌지는 선언이 아니라 서명이 정한다).
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -25,14 +26,12 @@ namespace sw
     /** @brief 종류 이름(표의 식별자)입니다. 범위 밖이면 "Unknown" 입니다. */
     constexpr const utf8* getSceneDataKindName( SceneDataKind kind )
     {
-        constexpr const utf8* kArrName[] = {
+        constexpr auto kArrName = makeEnumTable<SceneDataKind, const utf8*>( {
 #define SW_SCENE_DATA_KIND( Name ) #Name,
 #include "Engine/Object/GameObject/Tick/SceneDataKindList.xxx"
 #undef SW_SCENE_DATA_KIND
-        };
-        static_assert( sizeof( kArrName ) / sizeof( kArrName[0] ) == static_cast<size_t>( SceneDataKind::Count ), "kind name table must cover every SceneDataKind" );
-        const size_t index = static_cast<size_t>( kind );
-        return index < static_cast<size_t>( SceneDataKind::Count ) ? kArrName[index] : "Unknown";
+        } );
+        return kind < SceneDataKind::Count ? kArrName[kind] : "Unknown";
     }
 
     /** @brief `SceneDataKind` 의 집합입니다(비트 하나가 종류 하나). */

@@ -1,5 +1,5 @@
 # =============================================================================
-# AnnotationMeta — REFLECT / PROPERTY / FUNCTION 토큰 → canonical 필드
+# AnnotationMeta — REFLECT / ENUM / ENUMERATOR / PROPERTY / FUNCTION 토큰 → canonical 필드
 # =============================================================================
 # [SCOPE]
 #   kind.필드이름 = 별칭, 별칭2
@@ -47,9 +47,17 @@ string.Removed = Removed
 string.Meta = Meta, meta, CustomMeta
 # 비트 플래그 연산자(|, &, ^, ~)를 만든다. 직렬화용 EnumInfo::_bIsBitFlag 도 켠다.
 flag.Flags = Flags, BitFlag, FLAG, Bitwise
-# TypeRegistry::enumToString / enumFromString 이 쓰는 Invalid 센티널과 (배타적) Count 센티널
+# TypeRegistry::enumToString / enumFromString 이 쓰는 Invalid 센티널과 (배타적) Count 센티널. 끝 열거자 `Count` 는 적지 않아도 Count 센티널이다(비트 플래그 제외)
 string.Invalid = Invalid, InvalidValue
 string.Count = Count, CountValue
+
+[ENUMERATOR]
+# 열거자 하나의 표시 메타 — 열거자 이름 뒤에 `Red ENUMERATOR( DisplayName = "빨강", Tooltip = "…" ),` 로 적는다(언리얼 UMETA, 유니티 InspectorName)
+string.DisplayName = DisplayName
+string.Tooltip = Tooltip
+# 에디터 선택지(콤보 · 체크박스)에서 숨긴다. 값은 그대로 읽고 쓴다
+flag.Hidden = Hidden
+string.Meta = Meta, meta, CustomMeta
 
 [PROPERTY]
 flag.ReadOnly = ReadOnly

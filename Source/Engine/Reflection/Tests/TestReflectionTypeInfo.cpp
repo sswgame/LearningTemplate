@@ -661,6 +661,28 @@ SW_TEST_CASE( ReflectionMetadataTest, EnumMetadataQuery )
 }
 
 /**
+ * @brief [ReflectionMetadataTest] 열거자 뒤의 `ENUMERATOR( … )` 가 열거자마다의 표시 메타(DisplayName · Tooltip · Hidden · Meta)가 된다
+ */
+SW_TEST_CASE( ReflectionMetadataTest, EnumeratorMetadataQuery )
+{
+    const sw::EnumInfo* pEnumInfo = sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "TestMetaEnum" ) );
+    SW_REQUIRE_NOT_NULL( pEnumInfo );
+
+    const sw::EnumeratorEditorMetadata& first = pEnumInfo->findEnumeratorEditorMetadata( sw::hashed_string( "First" ) );
+    SW_EXPECT_TRUE( first._displayName == "First Choice" );
+    SW_EXPECT_TRUE( first._tooltip == "The first one" );
+    SW_EXPECT_TRUE( first._bHidden == SW_FALSE );
+    const sw::string* pIcon = first.findCustomMeta( sw::hashed_string( "Icon" ) );
+    SW_REQUIRE_NOT_NULL( pIcon );
+    SW_EXPECT_TRUE( *pIcon == "One" );
+
+    SW_EXPECT_TRUE( pEnumInfo->findEnumeratorEditorMetadata( sw::hashed_string( "Legacy" ) )._bHidden != SW_FALSE );
+    const sw::EnumeratorEditorMetadata& second = pEnumInfo->findEnumeratorEditorMetadata( sw::hashed_string( "Second" ) );
+    SW_EXPECT_TRUE( second._displayName.empty() ); // 적지 않은 열거자는 기본값
+    SW_EXPECT_TRUE( &second == &sw::EnumeratorEditorMetadata::getDefault() );
+}
+
+/**
  * @brief [ReflectionMetadataTest] Transient 프로퍼티의 JSON 및 Binary 직렬화 제외 검증
  */
 SW_TEST_CASE( ReflectionMetadataTest, TransientPropertySerialization )

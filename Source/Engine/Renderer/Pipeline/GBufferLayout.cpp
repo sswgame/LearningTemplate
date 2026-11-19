@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/Math/OctahedralNormal.h"
 
 namespace sw
@@ -9,7 +10,7 @@ namespace sw
     namespace
     {
         /// 번호 → 이름입니다. 순서는 ShadingModelID 와 같습니다(디버그 표시의 값 줄 이름).
-        constexpr const utf8* s_arrShadingModelName[static_cast<uint32>( ShadingModelID::Count )] = {
+        constexpr auto s_arrShadingModelName = makeEnumTable<ShadingModelID, const utf8*>( {
             "Shading model: None",
             "Shading model: Unlit",
             "Shading model: DefaultLit",
@@ -20,7 +21,7 @@ namespace sw
             "Shading model: Eye",
             "Shading model: ThinTranslucent",
             "Shading model: Anisotropic",
-        };
+        } );
     } // namespace
 
     ShadingModelID GBufferLayout::decodeShadingModel( float32 encoded )
@@ -32,8 +33,7 @@ namespace sw
 
     const utf8* GBufferLayout::getShadingModelName( ShadingModelID id )
     {
-        const uint32 index = static_cast<uint32>( id );
-        return index < static_cast<uint32>( ShadingModelID::Count ) ? s_arrShadingModelName[index] : "Shading model: (out of table)";
+        return id < ShadingModelID::Count ? s_arrShadingModelName[id] : "Shading model: (out of table)";
     }
 
     const GBufferAttachmentSpec* GBufferLayout::findAttachment( string_view name )

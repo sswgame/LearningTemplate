@@ -48,7 +48,7 @@ namespace sw
 namespace sw
 {
     /** @brief 계정 호출의 결과입니다. 와이어 형식이며 새 값은 뒤에만 추가합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class LoginResult : uint8
     {
         Ok = 0,

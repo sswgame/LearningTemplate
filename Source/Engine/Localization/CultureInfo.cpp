@@ -3,6 +3,7 @@
 #include "Engine/Localization/CultureInfo.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/EnumArray.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
@@ -25,8 +26,7 @@ namespace sw
             /** @brief 통화 패턴에서 통화 기호 자리를 가리키는 `¤`(U+00A4) 의 UTF-8 입니다. */
             static constexpr const utf8* kCurrencySign = "\xC2\xA4";
 
-            static constexpr const utf8* kArrCategoryName[] = { "zero", "one", "two", "few", "many", "other" };
-            static_assert( SW_COUNT_OF( kArrCategoryName ) == static_cast<size_t>( PluralCategory::Count ), "kArrCategoryName must name every PluralCategory" );
+            static constexpr auto kArrCategoryName = makeEnumTable<PluralCategory, const utf8*>( "zero", "one", "two", "few", "many", "other" );
 
             /** @brief 표 루트의 자식 요소 이름입니다(숫자 체계 · 통화는 없어도 된다 — 앞서 읽은 파일의 것을 쓴다). 문화권은 `CultureInfo` 원소다. */
             static constexpr string_view kArrTablePart[] = { "numberingSystems", "currencies", "CultureInfo" };
@@ -435,17 +435,16 @@ namespace sw
 {
     const utf8* CultureInfo::getPluralKeyword( PluralCategory category )
     {
-        const size_t index = static_cast<size_t>( category );
-        return index < SW_COUNT_OF( CultureInfoInternal::kArrCategoryName ) ? CultureInfoInternal::kArrCategoryName[index] : "other";
+        return category < PluralCategory::Count ? CultureInfoInternal::kArrCategoryName[category] : "other";
     }
 
     bool CultureInfo::tryParsePluralKeyword( string_view keyword, PluralCategory& outCategory )
     {
-        for ( size_t index = 0; index < SW_COUNT_OF( CultureInfoInternal::kArrCategoryName ); ++index )
+        for ( const PluralCategory category : EnumRange<PluralCategory>{} )
         {
-            if ( keyword == CultureInfoInternal::kArrCategoryName[index] )
+            if ( keyword == CultureInfoInternal::kArrCategoryName[category] )
             {
-                outCategory = static_cast<PluralCategory>( index );
+                outCategory = category;
                 return true;
             }
         }

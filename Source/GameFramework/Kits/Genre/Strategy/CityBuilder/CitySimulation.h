@@ -3,6 +3,7 @@
  * @brief 도시 한 판을 진행합니다. 땅, 도로, 건물 배치, 노동 배분, 순회 일꾼(서비스, 상인, 수레, 세리), 집 진화, 이민, 달마다 소비와 세금과 임금, 해마다 범람을 다룹니다.
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
@@ -71,22 +72,22 @@ namespace sw
     /** @brief 지은 건물 하나입니다(집 포함). */
     struct CityBuilding
     {
-        ItemStackList          _stock{};
-        const CityBuildingDef* _pDef{ nullptr };
-        int2                   _origin{};
-        int2                   _accessTile{ constant::invalid_index::kInt32, constant::invalid_index::kInt32 }; ///< 붙어 있는 도로 타일이다(없으면 -1)
-        float32                _efficiency{ 0.0f };                                                             ///< 배정된 일꾼 수 / 필요한 일꾼 수이다(일꾼이 필요 없는 건물은 길만 있으면 1)
-        float32                _walkerTimer{ 0.0f };
-        float32                _productionProgress{ 0.0f };
-        float32                _arrServiceTime[static_cast<int32>( CityService::Count )]{};
-        float32                _evolveTimer{ 0.0f };
-        float32                _devolveTimer{ 0.0f };
-        float32                _immigrationTimer{ 0.0f };
-        int32                  _assignedWorkers{ 0 };
-        int32                  _activeWalkerCount{ 0 };
-        int32                  _level{ 0 }; ///< 집 단계
-        int32                  _population{ 0 };
-        uint8                  _bAlive{ SW_TRUE };
+        ItemStackList                   _stock{};
+        const CityBuildingDef*          _pDef{ nullptr };
+        int2                            _origin{};
+        int2                            _accessTile{ constant::invalid_index::kInt32, constant::invalid_index::kInt32 }; ///< 붙어 있는 도로 타일이다(없으면 -1)
+        float32                         _efficiency{ 0.0f };                                                             ///< 배정된 일꾼 수 / 필요한 일꾼 수이다(일꾼이 필요 없는 건물은 길만 있으면 1)
+        float32                         _walkerTimer{ 0.0f };
+        float32                         _productionProgress{ 0.0f };
+        EnumArray<CityService, float32> _arrServiceTime{};
+        float32                         _evolveTimer{ 0.0f };
+        float32                         _devolveTimer{ 0.0f };
+        float32                         _immigrationTimer{ 0.0f };
+        int32                           _assignedWorkers{ 0 };
+        int32                           _activeWalkerCount{ 0 };
+        int32                           _level{ 0 }; ///< 집 단계
+        int32                           _population{ 0 };
+        uint8                           _bAlive{ SW_TRUE };
 
         bool hasRoadAccess() const { return _accessTile._x >= 0; }
         bool isHouse() const { return _pDef != nullptr && _pDef->_kind == CityBuildingKind::House; }

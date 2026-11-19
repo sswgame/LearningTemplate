@@ -502,7 +502,7 @@ namespace sw
         {
             if ( bMainShadowSlotUnused && viewIndex == static_cast<uint32>( RenderViewKind::Shadow ) )
                 continue;
-            bAllViewsCulled = enqueueCullView( viewIndex, _state._arrView[viewIndex], nullptr ) && bAllViewsCulled;
+            bAllViewsCulled = enqueueCullView( viewIndex, _state._arrView[static_cast<RenderViewKind>( viewIndex )], nullptr ) && bAllViewsCulled;
         }
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {

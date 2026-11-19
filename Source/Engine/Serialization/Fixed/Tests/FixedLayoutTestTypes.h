@@ -5,6 +5,7 @@
  *          float64 · 수학 타입 · 열거형 · 비트 플래그 · 글 · vector · array · 펼친 중첩 타입(바깥 필드가 범위) · 다른 코덱(검증 함수가 있어 펼치지 않는다) · 기반 클래스.
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/array.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -18,7 +19,7 @@
 namespace sw
 {
     /** @brief `Count` 가 있는 열거형입니다 — 범위는 [Idle, Run] 이다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class FixedLayoutSampleMode : uint8
     {
         Idle,
@@ -174,5 +175,28 @@ namespace sw
 
         PROPERTY()
         vector<int32> _listCache; ///< 길이가 없어 전체 코덱은 적격이 아니다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `array<int32, 3>` 칸 하나입니다 — `FixedLayoutEnumArraySample` 와 바이트를 견준다(`FixedLayoutTest.EnumArrayMatchesFixedArrayBytes`). */
+    REFLECT()
+    struct FixedLayoutPlainArraySample
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        array<int32, 3> _arrValue{};
+    };
+
+    /** @brief 열거자로 색인하는 배열 칸입니다 — 와이어는 원소 수가 같은 고정 배열과 한 비트도 다르지 않아야 한다(C 배열에서 옮겨도 스키마가 그대로다). */
+    REFLECT()
+    struct FixedLayoutEnumArraySample
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        EnumArray<FixedLayoutSampleMode, int32> _arrValue{};
     };
 } // namespace sw

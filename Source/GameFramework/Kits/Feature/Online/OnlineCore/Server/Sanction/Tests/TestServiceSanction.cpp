@@ -24,8 +24,8 @@ SW_TEST_CASE( ServiceSanctionTest, SanctionsBlockLogin )
 {
     sw::MemoryServiceDatabase database;
     sw::ServiceSanctionState  state;
-    state._reasonCode                                                          = "sanction.spam";
-    state._arrUntilMs[static_cast<int32>( sw::ServiceSanctionKind::ChatMute )] = kNowMs + 1000;
+    state._reasonCode                                    = "sanction.spam";
+    state._arrUntilMs[sw::ServiceSanctionKind::ChatMute] = kNowMs + 1000;
     sw::ServiceTransaction transaction;
     sw::ServiceSanction::stageWrite( transaction, kAccount, state );
     SW_REQUIRE_TRUE( database.commit( transaction ) == sw::ServiceStoreResult::Ok );
@@ -37,9 +37,9 @@ SW_TEST_CASE( ServiceSanctionTest, SanctionsBlockLogin )
     SW_EXPECT_FALSE( sw::ServiceSanction::isActive( read, sw::ServiceSanctionKind::ChatMute, kNowMs + 1000 ) );
     SW_EXPECT_EQUAL( int64( 0 ), sw::ServiceSanction::getLoginBlockedUntilMs( read, kNowMs ) );
 
-    read._arrUntilMs[static_cast<int32>( sw::ServiceSanctionKind::Suspend )] = kNowMs + 5000;
+    read._arrUntilMs[sw::ServiceSanctionKind::Suspend] = kNowMs + 5000;
     SW_EXPECT_EQUAL( kNowMs + 5000, sw::ServiceSanction::getLoginBlockedUntilMs( read, kNowMs ) );
-    read._arrUntilMs[static_cast<int32>( sw::ServiceSanctionKind::Ban )] = sw::ServiceSanctionState::kPermanentMs;
+    read._arrUntilMs[sw::ServiceSanctionKind::Ban] = sw::ServiceSanctionState::kPermanentMs;
     SW_EXPECT_EQUAL( sw::ServiceSanctionState::kPermanentMs, sw::ServiceSanction::getLoginBlockedUntilMs( read, kNowMs ) );
 
     sw::ServiceSanctionState none;
@@ -57,7 +57,7 @@ SW_TEST_CASE( ServiceSanctionTest, ReasonAtTheStateLimitRoundTrips )
     sw::MemoryServiceDatabase database;
     sw::ServiceSanctionState  state;
     state._reasonCode.assign( static_cast<size_t>( sw::ServiceSanctionState::kMaxReasonCodeSize ), 'r' );
-    state._arrUntilMs[static_cast<int32>( sw::ServiceSanctionKind::Suspend )] = kNowMs + 1000;
+    state._arrUntilMs[sw::ServiceSanctionKind::Suspend] = kNowMs + 1000;
     sw::ServiceTransaction transaction;
     sw::ServiceSanction::stageWrite( transaction, kAccount, state );
     SW_REQUIRE_TRUE( database.commit( transaction ) == sw::ServiceStoreResult::Ok );
@@ -102,7 +102,7 @@ SW_TEST_CASE( ServiceSanctionTest, LiftingEverythingErasesTheRecord )
     // 틀리면: 빈 상태를 지우지 않고 쓰면 countRecords 단언이, 버전 0 에 지우기를 넣으면 isEmpty 단언이, 종류 범위 검사를 빼면 Count 단언이 진다.
     sw::MemoryServiceDatabase database;
     sw::ServiceSanctionState  state;
-    state._arrUntilMs[static_cast<int32>( sw::ServiceSanctionKind::Ban )] = sw::ServiceSanctionState::kPermanentMs;
+    state._arrUntilMs[sw::ServiceSanctionKind::Ban] = sw::ServiceSanctionState::kPermanentMs;
     sw::ServiceTransaction write;
     sw::ServiceSanction::stageWrite( write, kAccount, state );
     SW_REQUIRE_TRUE( database.commit( write ) == sw::ServiceStoreResult::Ok );
@@ -110,7 +110,7 @@ SW_TEST_CASE( ServiceSanctionTest, LiftingEverythingErasesTheRecord )
     sw::ServiceSanctionState read;
     SW_REQUIRE_TRUE( sw::ServiceSanction::readState( database, kAccount, read ) == sw::ServiceStoreResult::Ok );
     SW_REQUIRE_TRUE( read._version != 0 );
-    read._arrUntilMs[static_cast<int32>( sw::ServiceSanctionKind::Ban )] = 0;
+    read._arrUntilMs[sw::ServiceSanctionKind::Ban] = 0;
     sw::ServiceTransaction lift;
     sw::ServiceSanction::stageWrite( lift, kAccount, read );
     SW_REQUIRE_TRUE( database.commit( lift ) == sw::ServiceStoreResult::Ok );

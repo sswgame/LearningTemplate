@@ -2,6 +2,7 @@
 
 #include "Programs/OnlineLoadBot/LoadBotScenario.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -29,7 +30,7 @@ namespace sw
             static constexpr string_view kArrPresenceStatus[] = { "online", "away", "busy", "in_game", "offline" };
 
             /** @brief 동작 표 — 이름 찾기 · 칸 검사 · 값 검사가 이 표 하나를 쓴다. 열거형 순서와 같다. */
-            static constexpr ActionRow kArrAction[] = {
+            static constexpr auto kArrAction = makeEnumTable<LoadBotAction, ActionRow>( {
                 {             LoadBotAction::Login,                "login",                           { "_mode" },      kArrLoginMode,      SW_COUNT_OF( kArrLoginMode )},
                 {            LoadBotAction::Logout,               "logout",                                    {},            nullptr,                                 0},
                 {        LoadBotAction::Disconnect,           "disconnect",                                    {},            nullptr,                                 0},
@@ -61,21 +62,20 @@ namespace sw
                 {      LoadBotAction::GuildDeposit,        "guild_deposit",               { "_asset", "_amount" },            nullptr,                                 0},
                 {     LoadBotAction::GuildWithdraw,       "guild_withdraw",               { "_asset", "_amount" },            nullptr,                                 0},
                 { LoadBotAction::LeaderboardSubmit,   "leaderboard_submit",               { "_board", "_amount" },            nullptr,                                 0},
-            };
-            static_assert( std::size( kArrAction ) == static_cast<size_t>( LoadBotAction::Count ), "every load bot action has a row" );
+            } ); // LoadBotAction 을 늘리고 줄을 잊으면 makeEnumTable 이 컴파일을 멈춘다
 
             /** @brief 표가 열거형 순서인지 봅니다 — `getRow` 가 열거자를 인덱스로 쓴다. */
             static constexpr bool isInEnumOrder()
             {
-                for ( size_t index = 0; index < std::size( kArrAction ); ++index )
+                for ( const LoadBotAction action : EnumRange<LoadBotAction>{} )
                 {
-                    if ( static_cast<size_t>( kArrAction[index]._action ) != index )
+                    if ( kArrAction[action]._action != action )
                         return false;
                 }
                 return true;
             }
 
-            static const ActionRow& getRow( LoadBotAction action ) { return kArrAction[static_cast<size_t>( action )]; }
+            static const ActionRow& getRow( LoadBotAction action ) { return kArrAction[action]; }
 
             /** @brief 첫 칸(`_text`)으로 읽는 키 — 동작마다 많아야 하나다. */
             static constexpr string_view kArrTextKey[] = { "_channel", "_board", "_mode", "_kind", "_status", "_offer", "_product", "_asset" };

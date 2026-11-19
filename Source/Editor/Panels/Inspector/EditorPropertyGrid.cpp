@@ -82,13 +82,15 @@ namespace sw::editor
                     if ( choice._value == 0 )
                         continue;
                     bool bChecked = ( ( inoutEditedValue & choice._value ) == choice._value );
-                    if ( ImGui::Checkbox( choice._name.toString().data(), &bChecked ) )
+                    if ( ImGui::Checkbox( choice._label.c_str(), &bChecked ) )
                     {
                         if ( bChecked )
                             inoutEditedValue |= choice._value;
                         else
                             inoutEditedValue &= ~choice._value;
                     }
+                    if ( choice._tooltip.empty() == false && ImGui::IsItemHovered() )
+                        ImGui::SetTooltip( "%s", choice._tooltip.c_str() );
                 }
                 ImGui::EndCombo();
             }
@@ -110,8 +112,10 @@ namespace sw::editor
                 for ( const PropertyEnumChoice& choice : row._listChoice )
                 {
                     const bool bSelected = ( choice._value == row._enumValue );
-                    if ( ImGui::Selectable( choice._name.toString().data(), bSelected ) )
+                    if ( ImGui::Selectable( choice._label.c_str(), bSelected ) )
                         outEditedValue = choice._value;
+                    if ( choice._tooltip.empty() == false && ImGui::IsItemHovered() )
+                        ImGui::SetTooltip( "%s", choice._tooltip.c_str() );
                     if ( EditorSelfTestMarks::isEnabled() )
                     {
                         // 시나리오가 콤보 항목을 누를 수 있게 한다(`inspector.enum.<프로퍼티>.<열거자>`) — 콤보를 연 프레임에만 그려진다.

@@ -3,6 +3,7 @@
  * @brief 렌더용 뷰/투영 행렬을 만드는 SceneComponent 입니다.
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
 
@@ -263,10 +264,10 @@ namespace sw
         PROPERTY( Category = "Lens", DisplayName = "Lens Shift", Tooltip = "Projection centre shift as a fraction of the screen; +x moves the view right, +y up" )
         float2 _lensShift;
         PROPERTY( Category = "Projection", DisplayName = "Orthographic", Tooltip = "Toggle orthographic projection" )
-        bool         _bOrthographic;
-        uint64       _cutFrame;                                                       ///< 마지막 `markCut` 의 씬 프레임 번호입니다(저장하지 않는다)
-        uint32       _cutStamp;                                                       ///< `markCut` 을 부를 때마다 오르는 차례입니다(0 은 컷 없음)
-        uint32       _arrCutSeenStamp[static_cast<uint32>( CameraCutReader::Count )]; ///< 읽는 쪽마다 마지막으로 본 차례입니다
-        Subscription _cameraRegistration;                                             ///< 카메라 레지스트리 등록 구독입니다(`onRegister` 가 받고 `onUnregister` 가 놓는다)
+        bool                               _bOrthographic;
+        uint64                             _cutFrame;           ///< 마지막 `markCut` 의 씬 프레임 번호입니다(저장하지 않는다)
+        uint32                             _cutStamp;           ///< `markCut` 을 부를 때마다 오르는 차례입니다(0 은 컷 없음)
+        EnumArray<CameraCutReader, uint32> _arrCutSeenStamp;    ///< 읽는 쪽마다 마지막으로 본 차례입니다
+        Subscription                       _cameraRegistration; ///< 카메라 레지스트리 등록 구독입니다(`onRegister` 가 받고 `onUnregister` 가 놓는다)
     };
 } // namespace sw

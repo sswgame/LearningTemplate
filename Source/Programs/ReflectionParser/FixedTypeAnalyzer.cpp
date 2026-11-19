@@ -55,8 +55,8 @@ namespace sw
         ParsedEnumInfo annotated;
         vector<string> listUnknownToken; // 그 열거형의 헤더를 수집할 때 알립니다. 여기서 다시 알리지 않습니다
         sw::AnnotationApply::apply( spelling, annotated, session._annotationMeta, listUnknownToken );
-        result->_countEnumerator = string( ParserUtil::scopeLeaf( annotated._countEnumerator ) );
         result->_bIsBitFlag      = annotated._bIsBitFlag;
+        result->_countEnumerator = CursorReader::resolveCountEnumerator( ParserUtil::scopeLeaf( annotated._countEnumerator ), result->_listEnumerator, annotated._bIsBitFlag != SW_FALSE );
         return result;
     }
 
@@ -133,6 +133,13 @@ namespace sw
         {
             result->_kind    = bVector ? FixedValueKind::Vector : FixedValueKind::FixedArray;
             result->_element = classifyFixedType( clang_Type_getTemplateArgumentAsType( canonical, 0 ), session, depth + 1 );
+            return result;
+        }
+        // `EnumArray<E, T>` 는 와이어에서 `T[열거자 수]` 와 같다(개수 없이 원소 N 개 — C 배열에서 옮겨도 스키마 · 바이트가 그대로다). 원소는 두 번째 인자다.
+        if ( StringUtil::startsWith( canonicalSpelling, "sw::EnumArray<" ) )
+        {
+            result->_kind    = FixedValueKind::FixedArray;
+            result->_element = classifyFixedType( clang_Type_getTemplateArgumentAsType( canonical, 1 ), session, depth + 1 );
             return result;
         }
         const CXCursor declaration = clang_getTypeDeclaration( canonical );

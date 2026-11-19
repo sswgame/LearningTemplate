@@ -2,6 +2,7 @@
 
 #include "Core/Log/Sink/JSONLinesLogOutput.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/Encoding/HexUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/String/JSONStringUtil.h"
@@ -13,8 +14,7 @@ namespace sw
     {
         struct JSONLinesInternal
         {
-            static constexpr const utf8* kArrLevelName[] = { "error", "warning", "info", "trace" };
-            static_assert( SW_COUNT_OF( kArrLevelName ) == static_cast<uint32>( LogLevel::Count ), "LogLevel과 같아야 합니다" );
+            static constexpr auto kArrLevelName = makeEnumTable<LogLevel, const utf8*>( "error", "warning", "info", "trace" );
 
             /** @brief `"name":"escaped"` 칸을 쉼표와 함께 붙입니다. */
             static void appendTextField( string& outLine, const utf8* pName, string_view value )
@@ -71,11 +71,10 @@ namespace sw
 
     void JSONLinesLogOutput::appendLine( string& outLine, const JSONLogFields& params )
     {
-        const size_t levelIndex = static_cast<size_t>( params._level );
         outLine.append( "{\"time\":\"" );
         JSONStringUtil::appendEscaped( outLine, params._time );
         outLine.append( "\",\"ts\":" ).append( to_string( params._unixMilliseconds ) );
-        outLine.append( ",\"level\":\"" ).append( levelIndex < SW_COUNT_OF( JSONLinesInternal::kArrLevelName ) ? JSONLinesInternal::kArrLevelName[levelIndex] : "info" ).append( "\"" );
+        outLine.append( ",\"level\":\"" ).append( params._level < LogLevel::Count ? JSONLinesInternal::kArrLevelName[params._level] : "info" ).append( "\"" );
         JSONLinesInternal::appendTextField( outLine, "tag", params._tag );
         if ( params._bHasClock )
             outLine.append( params._clock == LogClock::Frame ? ",\"frame\":" : ",\"tick\":" ).append( to_string( params._clockNumber ) );

@@ -4,6 +4,7 @@
  * @details 시계열 · 세션을 모르는 값 헤더라 Profiler 탭의 ViewState 가 이 형식을 그대로 든다(`EditorNetProfilerHistory.h` 가 시계열을 들고 이 헤더를 include 한다).
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -14,7 +15,7 @@
 namespace sw::editor
 {
     /** @brief 표본 하나의 필드입니다. 그래프 하나에 해당합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class EditorNetProfilerChannel : uint8
     {
         SentBytesPerSecond = 0,   ///< 최근 1 초 보낸 바이트(연결 대역폭의 합)
@@ -36,8 +37,8 @@ namespace sw::editor
     /** @brief 시계열의 표본 하나입니다. */
     struct EditorNetProfilerSample
     {
-        float64 _timeSeconds{ 0.0 }; ///< 보고를 받은 시각(단조 시계, 초)
-        float32 _arrValue[static_cast<size_t>( EditorNetProfilerChannel::Count )]{};
+        float64                                      _timeSeconds{ 0.0 }; ///< 보고를 받은 시각(단조 시계, 초)
+        EnumArray<EditorNetProfilerChannel, float32> _arrValue{};
 
         // 시계열과 비중의 계산입니다. 탭과 테스트가 같이 씁니다.
         /** @brief 자식 프로세스에 보고를 묻는 간격(초)입니다. 응답 줄이 자식 로그에도 남으므로 느리게 묻습니다. */

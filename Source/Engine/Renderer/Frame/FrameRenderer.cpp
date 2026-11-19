@@ -784,10 +784,10 @@ namespace sw
     {
         // 뷰마다 하나씩. 절두체가 다르므로 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
         uint32 rowIndex{ 0 };
-        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewKind::Count ); ++viewIndex )
+        for ( RenderView& renderView : _state._arrView )
         {
-            outArrRow[rowIndex++] = { &_state._arrView[viewIndex]._cullCb, sizeof( FrameRendererUtil::GPUCullParams ), "cull" };
-            outArrRow[rowIndex++] = { &_state._arrView[viewIndex]._sortCb, sizeof( FrameRendererUtil::GPUSortParams ), "instance sort" };
+            outArrRow[rowIndex++] = { &renderView._cullCb, sizeof( FrameRendererUtil::GPUCullParams ), "cull" };
+            outArrRow[rowIndex++] = { &renderView._sortCb, sizeof( FrameRendererUtil::GPUSortParams ), "instance sort" };
         }
         outArrRow[rowIndex++] = { &_state._deform._instanceAnimationCb, sizeof( FrameRendererUtil::GPUAnimationParams ), "instance animation" };
         outArrRow[rowIndex++] = { &_state._deform._meshMorphCb, sizeof( FrameRendererUtil::GPUMorphParams ), "mesh morph" };

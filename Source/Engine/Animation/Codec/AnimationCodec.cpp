@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Codec/AnimationCodec.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -18,9 +19,9 @@ namespace sw
             static constexpr uint32 kVirtualVertexCount = 4;
 
             /** @brief 등록된 코덱 표입니다. 번호 순서입니다. */
-            static const IAnimationCodec* const* getCodecTable()
+            static const EnumArray<AnimationCodecID, const IAnimationCodec*>& getCodecTable()
             {
-                static const IAnimationCodec* const s_arrCodec[static_cast<uint32>( AnimationCodecID::Count )] = { &RawAnimationCodec::getInstance(), &ACLAnimationCodec::getInstance() };
+                static const auto s_arrCodec = makeEnumTable<AnimationCodecID, const IAnimationCodec*>( &RawAnimationCodec::getInstance(), &ACLAnimationCodec::getInstance() );
                 return s_arrCodec;
             }
 
@@ -60,15 +61,13 @@ namespace sw
 
     const IAnimationCodec* AnimationCodecRegistry::findCodec( AnimationCodecID id )
     {
-        const uint32 index = static_cast<uint32>( id );
-        return index < static_cast<uint32>( AnimationCodecID::Count ) ? AnimationCodecInternal::getCodecTable()[index] : nullptr;
+        return id < AnimationCodecID::Count ? AnimationCodecInternal::getCodecTable()[id] : nullptr;
     }
 
     const IAnimationCodec* AnimationCodecRegistry::findCodecByName( string_view name )
     {
-        for ( uint32 index = 0; index < static_cast<uint32>( AnimationCodecID::Count ); ++index )
+        for ( const IAnimationCodec* pCodec : AnimationCodecInternal::getCodecTable() )
         {
-            const IAnimationCodec* pCodec = AnimationCodecInternal::getCodecTable()[index];
             if ( StringUtil::equals( name, string_view( pCodec->getName() ), true ) )
                 return pCodec;
         }

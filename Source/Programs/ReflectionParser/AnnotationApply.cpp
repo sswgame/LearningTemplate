@@ -290,4 +290,5 @@ namespace sw
     template void AnnotationApply::apply<ParsedEnumInfo>( string_view, ParsedEnumInfo&, const AnnotationMeta&, vector<string>& );
     template void AnnotationApply::apply<ParsedPropertyInfo>( string_view, ParsedPropertyInfo&, const AnnotationMeta&, vector<string>& );
     template void AnnotationApply::apply<ParsedFunctionInfo>( string_view, ParsedFunctionInfo&, const AnnotationMeta&, vector<string>& );
+    template void AnnotationApply::apply<ParsedEnumeratorInfo>( string_view, ParsedEnumeratorInfo&, const AnnotationMeta&, vector<string>& );
 } // namespace sw

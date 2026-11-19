@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Input/EditorInputGUI.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Hash/HashUtil.h"
@@ -40,7 +41,7 @@ namespace sw::editor
             /** @brief 페이로드 이름 표입니다(종류마다 id → 이름). 끌기는 문자열이 아니라 id 를 싣고, 받는 쪽이 이 표로 이름을 되찾는다. */
             struct PayloadNameState
             {
-                unordered_map<uint64, string> _arrMapName[static_cast<size_t>( EditorPayloadKind::Count )];
+                EnumArray<EditorPayloadKind, unordered_map<uint64, string>> _arrMapName;
             };
 
             /** @brief @p button 을 끌기 문턱 안에서 이번 프레임에 뗐으면 true 입니다(R1 — 끌었으면 비행 · 화면 이동이지 메뉴가 아니다). */
@@ -223,14 +224,14 @@ namespace sw::editor
         // id 는 이름의 해시다 — 같은 이름은 어느 패널에서 끌어도 같은 id 이고, 표는 받는 쪽이 이름을 되찾는 데만 쓴다.
         const uint64                              id    = HashUtil::computeStringHash64( name, false );
         EditorInputGUIInternal::PayloadNameState& state = getEditorState<EditorInputGUIInternal::PayloadNameState>();
-        state._arrMapName[static_cast<size_t>( kind )].insert_or_assign( id, string( name ) );
+        state._arrMapName[kind].insert_or_assign( id, string( name ) );
         return id;
     }
 
     bool EditorInputGUI::findPayloadName( EditorPayloadKind kind, uint64 id, string& outName )
     {
         const EditorInputGUIInternal::PayloadNameState& state = getEditorState<EditorInputGUIInternal::PayloadNameState>();
-        const unordered_map<uint64, string>&            map   = state._arrMapName[static_cast<size_t>( kind )];
+        const unordered_map<uint64, string>&            map   = state._arrMapName[kind];
         const auto                                      found = map.find( id );
         if ( found == map.end() )
             return false;

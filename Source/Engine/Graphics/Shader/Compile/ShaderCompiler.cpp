@@ -6,6 +6,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/EnumArray.h"
 #include "Core/Diagnostics/ScopedProgressReport.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
@@ -588,17 +589,15 @@ namespace sw
 
             static const DxcTargetRow& getDxcTargetRow( ShaderTargetFormat format )
             {
-                static const DxcTargetRow kArrDxcTargetRow[] = {
+                static const auto kArrDxcTargetRow = makeEnumTable<ShaderTargetFormat, DxcTargetRow>( {
                     {  ShaderTargetFormat::DXBC_D3D11,   L"DX11=1",                     nullptr,             nullptr,                       "D3D11 (DXBC)", 0},
                     {  ShaderTargetFormat::DXIL_D3D12,   L"DX12=1",                     nullptr,             nullptr,             "D3D12 (DXIL Row-Major)", 1},
                     {ShaderTargetFormat::SPIRV_Vulkan, L"VULKAN=1", &appendSpirvVulkanArguments,             nullptr, "Vulkan (SPIR-V, Vulkan API target)", 1},
                     {ShaderTargetFormat::SPIRV_OpenGL, L"OPENGL=1", &appendSpirvOpenGLArguments,   &applyOpenGLPatch,          "OpenGL (SPIR-V vulkan1.1)", 0},
                     { ShaderTargetFormat::WGSL_WebGPU, L"WEBGPU=1", &appendSpirvWebGPUArguments, &convertSpirvToWgsl,      "WebGPU (SPIR-V -> WGSL, Tint)", 0},
-                };
-                static_assert( std::size( kArrDxcTargetRow ) == static_cast<size_t>( ShaderTargetFormat::Count ), "kArrDxcTargetRow needs one row per ShaderTargetFormat" );
-                const size_t index = static_cast<size_t>( format );
-                SW_ASSERT( index < std::size( kArrDxcTargetRow ) && kArrDxcTargetRow[index]._format == format );
-                return kArrDxcTargetRow[index];
+                } );
+                SW_ASSERT( format < ShaderTargetFormat::Count && kArrDxcTargetRow[format]._format == format );
+                return kArrDxcTargetRow[format];
             }
 
             /** @brief 타깃(SPIR-V 레이아웃 · 레지스터 시프트, 타깃 매크로)과 스테이지에 따른 DXC 인자를 더합니다. 넣는 글은 모두 정적 수명입니다. */

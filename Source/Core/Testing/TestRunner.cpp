@@ -6,6 +6,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/Container/EnumArray.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
@@ -74,9 +75,9 @@ namespace sw::test
 
             static const utf8* getFailureKindName( TestFailureKind kind )
             {
-                static constexpr const utf8* kArrName[] = { "Assertion", "NoAssertion", "UndeclaredLog", "ExpectedLogMissing", "SnapshotMissing", "SnapshotDiffers", "Timeout", "Crash" };
-                static_assert( std::size( kArrName ) == static_cast<size_t>( TestFailureKind::Count ), "a failure kind without a name" );
-                return kArrName[static_cast<size_t>( kind )];
+                static constexpr auto kArrName = makeEnumTable<TestFailureKind, const utf8*>( "Assertion", "NoAssertion", "UndeclaredLog", "ExpectedLogMissing", "SnapshotMissing",
+                                                                                              "SnapshotDiffers", "Timeout", "Crash" );
+                return kArrName[kind];
             }
 
             /** @brief 일부러 내는 로그 하나의 선언과 나온 횟수입니다. */
@@ -930,13 +931,13 @@ namespace sw::test
         thread                             watchThread;
         if ( Process::isDebuggerPresent() == false )
             watchThread = thread( ThreadTestAccess::getKey(), &Internal::watchCaseDeadline );
-        const uint32        repeatCount  = ( bChildRun || bIsolatedRun ) ? 1u : MathUtil::max( options._repeatCount, 1u );
-        uint32              failedCount  = 0;
-        uint32              skippedCount = 0;
-        uint32              ranCount     = 0;
-        uint32              arrKindCount[static_cast<size_t>( Internal::TestFailureKind::Count )]{}; // 종류별 진 케이스 수(보고의 `failureKinds`)
-        string              caseReport;
-        Internal::Watchdog& runWatchdog = Internal::getWatchdog();
+        const uint32                                 repeatCount  = ( bChildRun || bIsolatedRun ) ? 1u : MathUtil::max( options._repeatCount, 1u );
+        uint32                                       failedCount  = 0;
+        uint32                                       skippedCount = 0;
+        uint32                                       ranCount     = 0;
+        EnumArray<Internal::TestFailureKind, uint32> arrKindCount{}; // 종류별 진 케이스 수(보고의 `failureKinds`)
+        string                                       caseReport;
+        Internal::Watchdog&                          runWatchdog = Internal::getWatchdog();
         runWatchdog._ranCount.store( 0, std::memory_order_relaxed );
         runWatchdog._failedCount.store( 0, std::memory_order_relaxed );
         runWatchdog._skippedCount.store( 0, std::memory_order_relaxed );
@@ -1049,7 +1050,7 @@ namespace sw::test
                 else if ( bPassed == false )
                 {
                     ++failedCount;
-                    ++arrKindCount[static_cast<size_t>( failureKind )];
+                    ++arrKindCount[failureKind];
                 }
                 runWatchdog._ranCount.store( ranCount, std::memory_order_relaxed );
                 runWatchdog._failedCount.store( failedCount, std::memory_order_relaxed );
@@ -1117,8 +1118,8 @@ namespace sw::test
             for ( size_t index = 0; index < listUnmatched.size(); ++index )
                 report += ( index == 0 ? "\"" : ", \"" ) + Internal::escapeJSON( listUnmatched[index] ) + "\"";
             report += "],\n  \"failureKinds\": {";
-            for ( size_t kindIndex = 0; kindIndex < std::size( arrKindCount ); ++kindIndex )
-                report += string( kindIndex == 0 ? "\"" : ", \"" ) + Internal::getFailureKindName( static_cast<Internal::TestFailureKind>( kindIndex ) ) + "\": " + to_string( arrKindCount[kindIndex] );
+            for ( const Internal::TestFailureKind kind : EnumRange<Internal::TestFailureKind>{} )
+                report += string( kind == static_cast<Internal::TestFailureKind>( 0 ) ? "\"" : ", \"" ) + Internal::getFailureKindName( kind ) + "\": " + to_string( arrKindCount[kind] );
             report += "},\n  \"updatedSnapshots\": [";
             for ( size_t index = 0; index < listUpdatedSnapshot.size(); ++index )
             {

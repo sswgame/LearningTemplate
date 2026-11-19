@@ -99,6 +99,8 @@ namespace sw
     const AnnotationScope<ParsedPropertyInfo>& getAnnotationScope<ParsedPropertyInfo>();
     template <>
     const AnnotationScope<ParsedFunctionInfo>& getAnnotationScope<ParsedFunctionInfo>();
+    template <>
+    const AnnotationScope<ParsedEnumeratorInfo>& getAnnotationScope<ParsedEnumeratorInfo>();
 
     // ------------------------------------------------------------------------------
     // 3) 표를 도는 일 — 코드젠 · 검증
@@ -144,8 +146,10 @@ namespace sw
     extern template bool AnnotationFields::hasEditorMetadata<ParsedEnumInfo>( const ParsedEnumInfo& );
     extern template bool AnnotationFields::hasEditorMetadata<ParsedPropertyInfo>( const ParsedPropertyInfo& );
     extern template bool AnnotationFields::hasEditorMetadata<ParsedFunctionInfo>( const ParsedFunctionInfo& );
+    extern template bool AnnotationFields::hasEditorMetadata<ParsedEnumeratorInfo>( const ParsedEnumeratorInfo& );
     extern template void AnnotationFields::emitEditorMetadata<ParsedTypeInfo>( CodeEmit&, const ParsedTypeInfo&, string_view );
     extern template void AnnotationFields::emitEditorMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
     extern template void AnnotationFields::emitEditorMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
     extern template void AnnotationFields::emitEditorMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
+    extern template void AnnotationFields::emitEditorMetadata<ParsedEnumeratorInfo>( CodeEmit&, const ParsedEnumeratorInfo&, string_view );
 } // namespace sw

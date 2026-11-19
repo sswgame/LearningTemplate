@@ -17,9 +17,9 @@ namespace sw
 
             static bool isEmpty( const ServiceSanctionState& state )
             {
-                for ( int32 kindIndex = 0; kindIndex < kKindCount; ++kindIndex )
+                for ( const int64 untilMs : state._arrUntilMs )
                 {
-                    if ( state._arrUntilMs[kindIndex] != 0 )
+                    if ( untilMs != 0 )
                         return false;
                 }
                 return true;
@@ -50,9 +50,9 @@ namespace sw
         BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
         if ( reader.readVarUint() != ServiceSanctionInternal::kFormat )
             return ServiceStoreResult::Unavailable;
-        for ( int32 kindIndex = 0; kindIndex < ServiceSanctionInternal::kKindCount; ++kindIndex )
+        for ( int64& untilMs : outState._arrUntilMs ) // 레코드는 열거자 순서의 값 나열이다
         {
-            outState._arrUntilMs[kindIndex] = reader.readVarInt();
+            untilMs = reader.readVarInt();
         }
         // 쓰는 쪽(관리자 프로토콜의 MaxCount)과 같은 상한 하나다 — 따로 두면 그 사이 길이의 사유가 쓰이고 다시는 읽히지 않는다.
         if ( ServiceKeyUtil::readString( reader, ServiceSanctionState::kMaxReasonCodeSize, outState._reasonCode ) == false || reader.hasOverflowed() )
@@ -66,14 +66,14 @@ namespace sw
         const int32 kindIndex = static_cast<int32>( kind );
         if ( kindIndex < 0 || kindIndex >= ServiceSanctionInternal::kKindCount )
             return false;
-        return state._arrUntilMs[kindIndex] > nowMs;
+        return state._arrUntilMs[kind] > nowMs;
     }
 
     int64 ServiceSanction::getLoginBlockedUntilMs( const ServiceSanctionState& state, int64 nowMs )
     {
         int64 untilMs = 0;
         if ( isActive( state, ServiceSanctionKind::Suspend, nowMs ) )
-            untilMs = state._arrUntilMs[static_cast<int32>( ServiceSanctionKind::Suspend )];
+            untilMs = state._arrUntilMs[ServiceSanctionKind::Suspend];
         if ( isActive( state, ServiceSanctionKind::Ban, nowMs ) )
             untilMs = ServiceSanctionState::kPermanentMs;
         return untilMs;
@@ -90,9 +90,9 @@ namespace sw
         }
         BitWriter writer;
         writer.writeVarUint( ServiceSanctionInternal::kFormat );
-        for ( int32 kindIndex = 0; kindIndex < ServiceSanctionInternal::kKindCount; ++kindIndex )
+        for ( const int64 untilMs : state._arrUntilMs )
         {
-            writer.writeVarInt( state._arrUntilMs[kindIndex] );
+            writer.writeVarInt( untilMs );
         }
         ServiceKeyUtil::writeString( writer, state._reasonCode );
         inoutTransaction.put( getTable(), key, writer.releaseBytes(), state._version );

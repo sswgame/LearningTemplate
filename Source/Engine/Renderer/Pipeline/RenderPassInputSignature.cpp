@@ -2,6 +2,8 @@
 
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 
+#include "Core/Container/EnumArray.h"
+
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 
@@ -10,7 +12,7 @@ namespace sw
     namespace
     {
         /// 역할 → 셰이더 이름입니다. 순서는 RenderPassInputRole 과 같습니다.
-        constexpr const utf8* s_arrRoleName[static_cast<uint32>( RenderPassInputRole::Count )] = {
+        constexpr auto s_arrRoleName = makeEnumTable<RenderPassInputRole, const utf8*>( {
             "Invalid",
             "SourceColor",
             "SceneDepth",
@@ -31,7 +33,7 @@ namespace sw
             "DBufferA",
             "DBufferB",
             "DBufferC",
-        };
+        } );
 
         /// 이름이 곧 역할인 첨부입니다. 파이프라인이 이 이름을 쓰면 그 역할로 걸립니다.
         struct FixedRoleName
@@ -62,15 +64,14 @@ namespace sw
 
     const utf8* getRenderPassInputRoleName( RenderPassInputRole role )
     {
-        const uint32 index = static_cast<uint32>( role );
-        return index < static_cast<uint32>( RenderPassInputRole::Count ) ? s_arrRoleName[index] : s_arrRoleName[0];
+        return role < RenderPassInputRole::Count ? s_arrRoleName[role] : s_arrRoleName[RenderPassInputRole::Invalid];
     }
 
     bool tryParseRenderPassInputRole( string_view roleName, RenderPassInputRole& outRole )
     {
         for ( uint32 index = static_cast<uint32>( RenderPassInputRole::SourceColor ); index < static_cast<uint32>( RenderPassInputRole::Count ); ++index )
         {
-            if ( roleName == s_arrRoleName[index] )
+            if ( roleName == s_arrRoleName[static_cast<RenderPassInputRole>( index )] )
             {
                 outRole = static_cast<RenderPassInputRole>( index );
                 return true;

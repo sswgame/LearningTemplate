@@ -5,6 +5,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Programs/ReflectionParser/ParsedReflection.h"
+#include "Programs/ReflectionParser/ParserDefines.h"
 
 namespace sw
 {
@@ -86,5 +87,15 @@ namespace sw
     void CursorReader::collectEnumerators( const CXCursor enumCursor, vector<ParsedEnumeratorInfo>& outListEnumerator )
     {
         clang_visitChildren( enumCursor, enumeratorCollectorVisitor, &outListEnumerator );
+    }
+
+    string CursorReader::resolveCountEnumerator( const string_view annotatedCount, const vector<ParsedEnumeratorInfo>& listEnumerator, const bool bIsBitFlag )
+    {
+        if ( annotatedCount.empty() == false )
+            return string( annotatedCount );
+        // 끝 열거자 `Count` 는 손으로 적지 않아도 개수 표식이다(magic_enum · 언리얼 `MAX` 관례, Core `EnumArray` 도 같은 열거자를 개수로 읽는다).
+        // 비트 플래그의 `Count` 는 개수가 아니다.
+        const bool bTrailingCount = listEnumerator.empty() == false && listEnumerator.back()._name == annotation::kCountEnumerator;
+        return ( bTrailingCount && bIsBitFlag == false ) ? string( annotation::kCountEnumerator ) : string();
     }
 } // namespace sw

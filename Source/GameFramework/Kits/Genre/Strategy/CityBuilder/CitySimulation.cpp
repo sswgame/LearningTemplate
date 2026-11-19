@@ -585,7 +585,7 @@ namespace sw
                             const bool bHouseInServiceRange = house._bAlive != SW_FALSE && house.isHouse() &&
                                                               CitySimulationInternal::computeChebyshev( house._origin, building._origin, def._size ) <= def._range;
                             if ( bHouseInServiceRange )
-                                house._arrServiceTime[static_cast<int32>( def._service )] = _time;
+                                house._arrServiceTime[def._service] = _time;
                         }
                         break;
                     }
@@ -900,7 +900,7 @@ namespace sw
                     continue;
                 if ( walker._kind == CityWalkerKind::Service && walker._service != CityService::Count )
                 {
-                    house._arrServiceTime[static_cast<int32>( walker._service )] = _time;
+                    house._arrServiceTime[walker._service] = _time;
                     continue;
                 }
                 if ( walker._kind != CityWalkerKind::Trader )
@@ -930,7 +930,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool CitySimulation::isHouseServed( const CityBuilding& house, CityService service ) const
     {
-        return service != CityService::Count && _time - house._arrServiceTime[static_cast<int32>( service )] <= _settings._serviceDuration;
+        return service != CityService::Count && _time - house._arrServiceTime[service] <= _settings._serviceDuration;
     }
 
     bool CitySimulation::hasReachedHouseLevel( const CityBuilding& house, int32 level ) const

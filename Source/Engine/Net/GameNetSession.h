@@ -46,6 +46,7 @@
  * @warning 리로드로 다시 선 키트는 이미 붙은 연결의 `Connected` 사건을 받지 못한다 — 처리기를 단 뒤 `getPeers().collectConnected` 로 받는다.
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
@@ -369,11 +370,11 @@ namespace sw
         /** @brief 샤드 하나의 운영 지표 시리즈입니다(레지스트리가 소유 — 걸지 않았으면 모두 nullptr). */
         struct ShardMetrics
         {
-            MetricGauge*   _pConnectionGauge{ nullptr };                                               ///< net_connections
-            MetricCounter* _pRejectedCounter{ nullptr };                                               ///< net_rejected_packets_total
-            MetricCounter* _pAuthenticationFailureCounter{ nullptr };                                  ///< net_authentication_failures_total
-            MetricCounter* _pReplayRejectedCounter{ nullptr };                                         ///< net_replay_rejected_packets_total
-            MetricCounter* _arrDisconnectCounter[static_cast<size_t>( NetDisconnectReason::Count )]{}; ///< net_disconnects_total, 사유가 첨자(None 은 비었다)
+            MetricGauge*                                   _pConnectionGauge{ nullptr };              ///< net_connections
+            MetricCounter*                                 _pRejectedCounter{ nullptr };              ///< net_rejected_packets_total
+            MetricCounter*                                 _pAuthenticationFailureCounter{ nullptr }; ///< net_authentication_failures_total
+            MetricCounter*                                 _pReplayRejectedCounter{ nullptr };        ///< net_replay_rejected_packets_total
+            EnumArray<NetDisconnectReason, MetricCounter*> _arrDisconnectCounter{};                   ///< net_disconnects_total, 사유가 첨자(None 은 비었다)
         };
         /** @brief 올린 복제 셈과 지난 보고에 실은 바이트입니다(늘어난 양 = 지금 − 지난 보고 때). */
         struct ReplicaStat

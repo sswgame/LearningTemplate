@@ -5,6 +5,7 @@
  *          (컴포넌트는 "Add Component" 메뉴에 오르고, 이 층(1)은 컴포넌트 모델(5)을 include 하지 못한다).
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/array.h"
 #include "Core/Container/map.h"
 #include "Core/Container/set.h"
@@ -88,6 +89,29 @@ namespace sw
         Zero = 0,
         One  = 1,
         Two  = 2,
+    };
+
+    /** @brief 끝 열거자 `Count` 가 `ENUM( Count = … )` 없이 개수 표식이 되는지 본다 — 열거자 목록 · 인덱스 목록에서 빠진다(`ReflectionEnumInfoTest`). */
+    ENUM()
+    enum class TestTrailingCountEnum : uint8
+    {
+        Alpha,
+        Beta,
+        Gamma,
+        Count
+    };
+
+    /** @brief 조합 열거자가 있는 비트플래그입니다 — 글은 단일 비트 이름만 쓰고, 단일 비트 이름이 없는 비트만 조합 이름으로 적는다(`ReflectionEnumBitFlagTest`). */
+    ENUM( Flags )
+    enum class TestCompositeFlag : uint8
+    {
+        None  = 0,
+        Red   = 0x01,
+        Green = 0x02,
+        Blue  = 0x04,
+        Cyan  = 0x06,
+        All   = 0x07,
+        Pair  = 0x30,
     };
 } // namespace sw
 
@@ -481,8 +505,9 @@ namespace sw
     ENUM( Meta = "Doc=EnumForTesting, Version=2" )
     enum class TestMetaEnum : uint32
     {
-        First  = 0,
-        Second = 1,
+        First ENUMERATOR( DisplayName = "First Choice", Tooltip = "The first one", Meta = "Icon=One" ) = 0,
+        Second                                                                                         = 1,
+        Legacy ENUMERATOR( Hidden )                                                                    = 2,
     };
 } // namespace sw
 
@@ -1000,5 +1025,21 @@ namespace sw
 
         PROPERTY()
         int32 _after{ 0 }; ///< 배열 뒤의 칸 — 배열을 읽다 스트림이 어긋나면 여기가 틀린다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 열거자로 색인하는 배열 프로퍼티 샘플입니다(`ReflectionContainersTest.EnumArrayRoundTripsAsEnumeratorMap`). 텍스트 키는 열거자 이름이다. */
+    REFLECT()
+    struct EnumArrayActor
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        EnumArray<TestTrailingCountEnum, int32> _arrScore{};
+
+        PROPERTY()
+        int32 _after{ 0 }; ///< 맵 뒤의 칸 — 칸을 읽다 스트림이 어긋나면 여기가 틀린다
     };
 } // namespace sw

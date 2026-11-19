@@ -84,7 +84,7 @@ namespace sw::editor
                 context.expect( session.getLastResult() == AdminResult::InsufficientFunds, "a revoke above the balance must be rejected" );
 
                 session.requestSanction( playerID, ServiceSanctionKind::ChatMute, 600, "gm.notice", "selftest" );
-                context.expect( session.getLastResult() == AdminResult::Ok && session.getLookup()._sanction._arrUntilMs[0] != 0, "a chat mute should be set" );
+                context.expect( session.getLastResult() == AdminResult::Ok && session.getLookup()._sanction._arrUntilMs[ServiceSanctionKind::ChatMute] != 0, "a chat mute should be set" );
 
                 session.requestAudit( "" );
                 context.expect( session.getAuditRows().size() == 2, "the grant and the sanction should be in the audit log" );

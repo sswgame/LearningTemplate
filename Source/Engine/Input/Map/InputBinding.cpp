@@ -2,6 +2,7 @@
 
 #include "Engine/Input/Map/InputBinding.h"
 
+#include "Core/Container/EnumArray.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Input/GamepadButtonUtil.h"
@@ -36,8 +37,8 @@ namespace sw
 
         constexpr uint32 kNoRebind = constant::invalid_index::kUint32; // 표 칸의 없음 — 밖으로는 `BindingKinds::findRebindSlotIndex` 가 optional 로 낸다
 
-        // 종류를 추가하면 이 테이블에 한 줄을 더한다. 빠뜨리면 아래 static_assert 가 컴파일을 막는다.
-        constexpr BindingKindInfo kArrBindingKindInfo[] = {
+        // 종류를 추가하면 이 테이블에 한 줄을 더한다. 빠뜨리면 makeEnumTable 이 컴파일을 막는다(이름과 충돌 슬롯 수가 여기서 온다).
+        constexpr auto kArrBindingKindInfo = makeEnumTable<BindingKind, BindingKindInfo>( {
             {       BindingKind::SingleSlot,          "single", 1,         0, false},
             {  BindingKind::Axis1DComposite,          "axis1d", 2, kNoRebind, false},
             {BindingKind::Vector2DComposite,        "vector2d", 4, kNoRebind, false},
@@ -48,10 +49,7 @@ namespace sw
             {           BindingKind::AnyKey,          "anyKey", 0, kNoRebind, false},
             {BindingKind::VirtualJoystick2D, "virtualJoystick", 1, kNoRebind, false},
             {     BindingKind::MouseWheel1D,      "mouseWheel", 0, kNoRebind,  true},
-        };
-
-        static_assert( sizeof( kArrBindingKindInfo ) / sizeof( kArrBindingKindInfo[0] ) == static_cast<size_t>( BindingKind::Count ),
-                       "BindingKind 를 늘렸으면 kArrBindingKindInfo 에도 줄을 더할 것 — 이름과 충돌 슬롯 수가 여기서 온다." );
+        } );
 
         /** @brief 테이블에서 종류에 해당하는 줄을 찾습니다. 범위 밖이면 nullptr 입니다. */
         const BindingKindInfo* findBindingKindInfo( BindingKind kind )

@@ -3,6 +3,7 @@
 #include "Engine/Sequencer/SequenceAsset.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -32,7 +33,7 @@ namespace sw
          *          이벤트 · 시나리오는 대상이 없어도 된다(알림만 한다). 소리는 대상이 없으면 화면 소리다. 자막은 대상 바인딩의 표시 이름이 화자다(없으면 화자 없이).
          *          구간 처리기가 있는 종류는 재생 · 미리보기가 들어가기 · 머물기 · 나가기를 그 처리기로 돈다(`SequenceTimelineUtil::applySpans`) — 새 구간 종류는 처리기 하나와 이 줄 하나다.
          */
-        constexpr SequenceItemKindInfo kArrSequenceItemKindInfo[] = {
+        constexpr auto kArrSequenceItemKindInfo = makeEnumTable<SequenceItemKind, SequenceItemKindInfo>( {
             // 종류, 색, 필수 칸, 허용 칸, 구간 처리기, 대상 켬, 지날 때 알림, 컷, 흔들림, 스폰, 시나리오
             {       SequenceItemKind::Clip, 0xFF80AA80u,                kFieldBinding,                  kFieldBinding,                        nullptr,  true, false, false, false, false, false},
             {      SequenceItemKind::Event, 0xFF8080AAu,                           0u,                  kFieldBinding,                        nullptr, false,  true, false, false, false, false},
@@ -44,17 +45,15 @@ namespace sw
             {  SequenceItemKind::Animation, 0xFFA0A060u,   kFieldBinding | kFieldClip,     kFieldBinding | kFieldClip, &kSequenceAnimationSpanHandler, false, false, false, false, false, false},
             {      SequenceItemKind::Audio, 0xFF6080C0u,                  kFieldSound,    kFieldBinding | kFieldSound,     &kSequenceAudioSpanHandler, false, false, false, false, false, false},
             {   SequenceItemKind::Subtitle, 0xFFB0B0B0u,                   kFieldText,     kFieldBinding | kFieldText,  &kSequenceSubtitleSpanHandler, false, false, false, false, false, false},
-        };
-
-        static_assert( SW_COUNT_OF( kArrSequenceItemKindInfo ) == static_cast<size_t>( SequenceItemKind::Count ), "SequenceItemKind 를 늘렸으면 kArrSequenceItemKindInfo 에도 줄을 더할 것" );
+        } ); // SequenceItemKind 를 늘리고 줄을 잊으면 makeEnumTable 이 컴파일을 멈춘다
 
         /** @brief 종류 표가 값 순서이고 필수 칸이 허용 칸 안인지 확인합니다. `findItemKindInfo` 가 값으로 바로 찾습니다. */
         constexpr bool isKindTableOrdered()
         {
-            for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( kArrSequenceItemKindInfo ); ++kindIndex )
+            for ( const SequenceItemKind kind : EnumRange<SequenceItemKind>{} )
             {
-                const SequenceItemKindInfo& info = kArrSequenceItemKindInfo[kindIndex];
-                if ( info._kind != static_cast<SequenceItemKind>( kindIndex ) || ( info._requiredProperties & ~info._allowedProperties ) != 0 )
+                const SequenceItemKindInfo& info = kArrSequenceItemKindInfo[kind];
+                if ( info._kind != kind || ( info._requiredProperties & ~info._allowedProperties ) != 0 )
                     return false;
             }
             return true;
@@ -63,23 +62,21 @@ namespace sw
         static_assert( isKindTableOrdered(), "kArrSequenceItemKindInfo must be ordered by SequenceItemKind and its required fields must be allowed" );
 
         /** @brief 키 트랙 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceTrackKind` 값 순서입니다**(언리얼 Sequencer 의 트랙 에디터 등록 한 줄에 해당). */
-        constexpr SequenceTrackKindInfo kArrSequenceTrackKindInfo[] = {
+        constexpr auto kArrSequenceTrackKindInfo = makeEnumTable<SequenceTrackKind, SequenceTrackKindInfo>( {
             // 종류, 채널 수, 새 이름 머리, 대상 경로를 쓴다
             { SequenceTrackKind::Transform, kSequenceTransformChannelCount, "Transform", false},
             {  SequenceTrackKind::Property,                              1,  "Property",  true},
             {   SequenceTrackKind::RigSlot,                              1,  "Rig Slot",  true},
             {SequenceTrackKind::CameraLens,      kSequenceLensChannelCount,      "Lens", false},
-        };
-
-        static_assert( SW_COUNT_OF( kArrSequenceTrackKindInfo ) == static_cast<size_t>( SequenceTrackKind::Count ), "SequenceTrackKind 를 늘렸으면 kArrSequenceTrackKindInfo 에도 줄을 더할 것" );
+        } ); // SequenceTrackKind 를 늘리고 줄을 잊으면 makeEnumTable 이 컴파일을 멈춘다
 
         /** @brief 트랙 종류 표가 값 순서이고 채널 수가 값 버퍼 안인지 확인합니다. */
         constexpr bool isTrackKindTableOrdered()
         {
-            for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( kArrSequenceTrackKindInfo ); ++kindIndex )
+            for ( const SequenceTrackKind kind : EnumRange<SequenceTrackKind>{} )
             {
-                const SequenceTrackKindInfo& info = kArrSequenceTrackKindInfo[kindIndex];
-                if ( info._kind != static_cast<SequenceTrackKind>( kindIndex ) || info._channelCount == 0 || info._channelCount > kSequenceMaxChannelCount )
+                const SequenceTrackKindInfo& info = kArrSequenceTrackKindInfo[kind];
+                if ( info._kind != kind || info._channelCount == 0 || info._channelCount > kSequenceMaxChannelCount )
                     return false;
             }
             return true;
@@ -383,7 +380,7 @@ namespace sw
         const int32 kindIndex = static_cast<int32>( kind );
         if ( kindIndex < 0 || kindIndex >= static_cast<int32>( SequenceItemKind::Count ) )
             return nullptr;
-        return &kArrSequenceItemKindInfo[kindIndex];
+        return &kArrSequenceItemKindInfo[kind];
     }
 
     const SequenceTrackKindInfo* SequenceAsset::findTrackKindInfo( SequenceTrackKind kind )
@@ -391,7 +388,7 @@ namespace sw
         const int32 kindIndex = static_cast<int32>( kind );
         if ( kindIndex < 0 || kindIndex >= static_cast<int32>( SequenceTrackKind::Count ) )
             return nullptr;
-        return &kArrSequenceTrackKindInfo[kindIndex];
+        return &kArrSequenceTrackKindInfo[kind];
     }
 
     const SequenceBinding* SequenceAsset::findBinding( uint32 bindingID ) const

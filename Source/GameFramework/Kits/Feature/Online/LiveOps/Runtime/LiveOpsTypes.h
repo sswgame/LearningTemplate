@@ -21,7 +21,7 @@ namespace sw
      * @details 공통 범주(범위 밖 요청 · 일시 장애 · 버전)는 여기 두지 않고 `OnlineError` 로 온다(`OnlineResult::_errorCode`).
      *          옛 `RateLimited` · `UnknownProvider` 는 내는 곳이 없어 지웠다(푸시 도배 제한은 보내기 쪽에서 세고, 모르는 제공자의 기기도 저장한다 — 다른 빌드의 서버가 보낸다).
      */
-    ENUM( Count = Count )
+    ENUM()
     enum class LiveOpsResult : uint8
     {
         Ok = 0,
@@ -36,7 +36,7 @@ namespace sw
 namespace sw
 {
     /** @brief 이벤트의 반복 방식입니다. 와이어 값입니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class LiveEventRecurrence : uint8
     {
         Once = 0,

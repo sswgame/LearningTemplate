@@ -85,13 +85,35 @@ namespace sw
         static const FunctionEditorMetadata& getDefault() noexcept;
     };
 
-    /** @brief `ENUM()` 에 적은 에디터 메타데이터입니다(커스텀 메타뿐). */
-    struct SW_API EnumEditorMetadata
+    /** @brief 열거자 하나 뒤에 적은 `ENUMERATOR( … )` 의 에디터 메타데이터입니다(언리얼 `UMETA` — DisplayName · ToolTip · Hidden). 멤버 이름은 생성기 DTO(`ParsedEnumeratorInfo`)와 같다. */
+    struct SW_API EnumeratorEditorMetadata
     {
+        string                               _displayName;
+        string                               _tooltip;
         unordered_map<hashed_string, string> _mapCustomMeta;
+        uint8                                _bHidden       : 1; ///< 에디터 선택지에서 숨긴다. 값은 그대로 읽고 쓴다
+        [[maybe_unused]] uint8               _reservedFlags : 7;
+
+        EnumeratorEditorMetadata() noexcept;
 
         /** @brief 커스텀 메타데이터를 조회합니다. 없으면 nullptr 입니다. */
         const string* findCustomMeta( const hashed_string& key ) const noexcept;
+        /** @brief 아무것도 적지 않은 기본값입니다(메타데이터 없는 열거자 · 배포 구성). */
+        static const EnumeratorEditorMetadata& getDefault() noexcept;
+    };
+
+    /** @brief `ENUM()` 에 적은 에디터 메타데이터(커스텀 메타)와 열거자마다의 표시 메타입니다. */
+    struct SW_API EnumEditorMetadata
+    {
+        unordered_map<hashed_string, string>                   _mapCustomMeta;
+        unordered_map<hashed_string, EnumeratorEditorMetadata> _mapEnumerator; ///< 열거자 이름 → `ENUMERATOR( … )`. 적은 열거자만 있다
+
+        /** @brief 커스텀 메타데이터를 조회합니다. 없으면 nullptr 입니다. */
+        const string* findCustomMeta( const hashed_string& key ) const noexcept;
+        /** @brief 생성 코드가 열거자 줄을 채울 칸입니다. */
+        EnumeratorEditorMetadata& addEnumerator( const hashed_string& name ) { return _mapEnumerator[name]; }
+        /** @brief 열거자의 표시 메타입니다. 적지 않았으면 기본값입니다. */
+        const EnumeratorEditorMetadata& findEnumerator( const hashed_string& name ) const noexcept;
     };
 } // namespace sw
 

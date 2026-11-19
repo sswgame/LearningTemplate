@@ -112,6 +112,6 @@ namespace sw
 
     void OnlinePushRelayRegistry::recordMissingPushName( const hashed_string& pushEnum, int64 value )
     {
-        SW_LOG_ERROR_ID( "OnlinePushRelay.PushValueNoReflected", "Push %# value %# has no reflected enumerator name - add ENUM( Count = Count ) to it; the push is not relayed", pushEnum.c_str(), value );
+        SW_LOG_ERROR_ID( "OnlinePushRelay.PushValueNoReflected", "Push %# value %# has no reflected enumerator name - add ENUM() and a trailing Count enumerator to it; the push is not relayed", pushEnum.c_str(), value );
     }
 } // namespace sw

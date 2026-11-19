@@ -4,6 +4,7 @@
  * @details 레코드 읽기 · 쓰기(`ServiceSanction`)와 제재 버스 주제는 서버만 돌아 `Sanction/Server/ServiceSanction.h` 에 있다.
  */
 #pragma once
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
@@ -12,7 +13,7 @@
 namespace sw
 {
     /** @brief 제재 종류입니다. 저장 값이라 순서를 바꾸지 않는다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class ServiceSanctionKind : uint8
     {
         ChatMute = 0, ///< 채팅 금지
@@ -36,7 +37,7 @@ namespace sw
         PROPERTY( MaxCount = kMaxReasonCodeSize )
         string _reasonCode{}; ///< 표시용 사유 코드(로컬라이제이션 키). 가장 최근 것이다
         PROPERTY()
-        int64  _arrUntilMs[static_cast<int32>( ServiceSanctionKind::Count )]{}; ///< 0 = 없음
-        uint64 _version{ 0 };                                                   ///< 레코드 판(0 = 레코드 없음)
+        EnumArray<ServiceSanctionKind, int64> _arrUntilMs{}; ///< 0 = 없음. 텍스트 키는 열거자 이름(`EnumArrayWrapper`), 고정 배치형 와이어는 `int64[3]` 과 같다
+        uint64                                _version{ 0 }; ///< 레코드 판(0 = 레코드 없음)
     };
 } // namespace sw

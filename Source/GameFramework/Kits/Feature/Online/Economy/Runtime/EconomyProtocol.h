@@ -22,7 +22,7 @@
 namespace sw
 {
     /** @brief 경제 서비스 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)이고, 이름의 snake_case 가 지표 라벨입니다. 새 메서드는 `Count` 앞에만 더합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class EconomyMethodName : uint8
     {
         GetWallet,
@@ -34,7 +34,7 @@ namespace sw
     };
 
     /** @brief 경제 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class EconomyPushName : uint8
     {
         BalanceChanged,
@@ -45,7 +45,7 @@ namespace sw
 namespace sw
 {
     /** @brief 경제 요청의 결과입니다. 와이어 값이므로 순서를 바꾸지 않고 새 값은 끝에만 추가합니다. */
-    ENUM( Count = Count )
+    ENUM()
     enum class EconomyResult : uint8
     {
         Ok = 0,

@@ -197,17 +197,9 @@ namespace sw::editor
                     outText           = pName != nullptr ? pName : "<Unknown>";
                     return;
                 }
-                for ( const auto& [flag, nameHashed] : enumInfo._mapValueToName )
-                {
-                    if ( flag != 0 && ( value & flag ) == flag )
-                    {
-                        if ( outText.empty() == false )
-                            outText += " | ";
-                        outText += nameHashed.toString();
-                    }
-                }
-                if ( outText.empty() )
-                    outText = ( value == 0 ) ? "None" : "<Unknown>";
+                // 저장 글과 같은 규칙(단일 비트 이름만, `EnumInfo::collectFlagNames`)으로 잇는다 — 조합 열거자를 겹쳐 보이지 않는다.
+                const string_view flagsText = enumInfo.toStringFlags( value );
+                outText                     = flagsText.empty() ? string_view( "<Unknown>" ) : flagsText;
             }
 
             /** @brief 그릴 위젯이 없는 타입의 글입니다. */
@@ -579,9 +571,14 @@ namespace sw::editor
             row._kind      = pEnumInfo->_bIsBitFlag ? PropertyRowKind::BitFlagEnum : PropertyRowKind::Enum;
             row._enumValue = pEnumInfo->readValueFromMemory( pEnumMemory );
             Internal::formatEnumPreview( registry, *pEnumInfo, prop, row._enumValue, row._valueText );
-            for ( const auto& [value, nameHashed] : pEnumInfo->_mapValueToName )
+            // 선언 순서로 보이고 `Count` 표식은 선택지가 아니다(`EnumInfo::_listEnumerator`). `ENUMERATOR( Hidden )` 은 숨기고 표시 이름을 쓴다.
+            for ( const EnumeratorInfo& enumerator : pEnumInfo->_listEnumerator )
             {
-                row._listChoice.push_back( PropertyEnumChoice{ nameHashed, value } );
+                const EnumeratorEditorMetadata& display = pEnumInfo->findEnumeratorEditorMetadata( enumerator._name );
+                if ( display._bHidden != SW_FALSE )
+                    continue;
+                const string label = display._displayName.empty() ? string( enumerator._name.toString() ) : display._displayName;
+                row._listChoice.push_back( PropertyEnumChoice{ enumerator._name, label, display._tooltip, enumerator._value } );
             }
             return;
         }
@@ -610,7 +607,8 @@ namespace sw::editor
                 row._kind         = PropertyRowKind::Map;
                 row._elementCount = static_cast<uint32>( pMap->getSize( pContainer ) );
                 formatstring( header.data(), header.capacity(), "[%# -> %#] (%# entries)", prop._keyTypeName.c_str(), prop._elementTypeName.c_str(), row._elementCount );
-                row._bCanAddRemove = bReadOnly ? SW_FALSE : SW_TRUE;
+                // 열거자마다 한 칸인 맵(`EnumArray`)은 항목을 더하거나 지울 수 없다 — 값만 고친다.
+                row._bCanAddRemove = ( bReadOnly == false && pMap->isFixedSize() == false ) ? SW_TRUE : SW_FALSE;
             }
             else
             {
