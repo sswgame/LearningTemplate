@@ -817,3 +817,19 @@ SW_TEST_CASE( FileTest, TryWriteFileReportsTheResult )
     SW_REQUIRE_TRUE( FileUtil::setWritable( path, true ) );
     SW_EXPECT_TRUE( FileUtil::tryWriteFile( path, nullptr, 0 ) == FileWriteResult::WriteFailed );
 }
+
+/**
+ * @brief [FileTest] 열린 파일의 크기를 재면 오프셋이 처음으로 돌아온다 — 읽던 자리와 상관없이 전체 크기다
+ */
+SW_TEST_CASE( FileTest, OpenFileSizeRewindsToTheStart )
+{
+    const sw::string path = sw::FileUtil::joinPath( sw::test::makeScratchPath( "SwOpenFileSizeTest" ), "five.bin" );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( path ) && sw::FileUtil::writeTextFile( path, "12345" ) );
+
+    FILE* pFile = sw::PlatformFileUtil::openFile( path.c_str(), "rb" );
+    SW_REQUIRE_NOT_NULL( pFile );
+    SW_EXPECT_TRUE( sw::PlatformFileUtil::seekTo( pFile, 3, SEEK_SET ) ); // 읽던 자리를 흉내 낸다
+    SW_EXPECT_EQUAL( int64{ 5 }, sw::PlatformFileUtil::getOpenFileSizeAndRewind( pFile ) );
+    SW_EXPECT_EQUAL( int64{ 0 }, sw::PlatformFileUtil::tellPosition( pFile ) );
+    std::fclose( pFile );
+}

@@ -169,6 +169,16 @@ namespace sw
         return _arrivedCount == _arrivalSchedule.getTotalCount();
     }
 
+    int32 LoadBotRunner::getRunningBotCount() const
+    {
+        int32 runningCount = 0;
+        for ( int32 botIndex = 0; botIndex < _launchedCount; ++botIndex )
+        {
+            runningCount += _listBot[static_cast<size_t>( botIndex )]->isFinished() ? 0 : 1;
+        }
+        return runningCount;
+    }
+
     LoadBot* LoadBotRunner::findBot( int32 botIndex ) const
     {
         if ( botIndex < 0 || botIndex >= getBotCount() )

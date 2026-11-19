@@ -278,7 +278,6 @@
     "getDefaultCodec": "지웠다 — CompressionCodecRegistry 의 기본 코덱은 아무도 정하지도 읽지도 않았다. 코덱은 부르는 쪽이 CompressionCodecKind 으로 고른다(팩은 PackConfig)(2026-11-19 Core 죽은 코드 정리)",
     "getDefaultCodecType": "지웠다 — getDefaultCodec 과 같다(2026-11-19 Core 죽은 코드 정리)",
     "setDefaultCodecType": "지웠다 — getDefaultCodec 과 같다(2026-11-19 Core 죽은 코드 정리)",
-    "getOpenFileSizeAndRewind": "지웠다 — 부르는 곳이 없었다. 크기는 FileUtil::tryGetFileSize · PlatformFileUtil::getNativeFileSize(2026-11-19 Core 죽은 코드 정리)",
     "allowsOneMore": "canSpawnMore (2026-11-08 새 이름 검토)",
     "allowsAnotherRun": "canTriggerAgain (2026-11-08 새 이름 검토)",
     "isAboveIntensityCap": "isAboveMaxIntensity (2026-11-08 새 이름 검토)",
