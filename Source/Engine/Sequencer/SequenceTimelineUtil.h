@@ -7,6 +7,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/PlaybackSegment.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -17,7 +18,6 @@ namespace sw
 {
     struct PropertyInfo;
     struct SequenceKeyTrack;
-    struct SequencePlaybackSegment;
     struct SequencePlaybackStep;
 
     class AnimationClip;
@@ -184,7 +184,7 @@ namespace sw
          */
         static void applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame );
         /**
-         * @brief 플레이어의 갱신 하나를 적용합니다 — 지금 프레임의 상태(`applyFrame`)를 쓰고, 지난 구간마다(`SequencePlaybackSegment::hasCrossed`) 문턱을 넘은 이벤트를 구간 순서대로 모읍니다.
+         * @brief 플레이어의 갱신 하나를 적용합니다 — 지금 프레임의 상태(`applyFrame`)를 쓰고, 지난 구간마다(`PlaybackSegment::hasCrossed`) 문턱을 넘은 이벤트를 구간 순서대로 모읍니다.
          * @param pOutListCrossedEvent nullptr 가 아니면 이번에 지난 이벤트 항목들로 **채웁니다**(먼저 비웁니다). 가리키는 항목은 @p asset 의 원소라 에셋보다 오래 살지 않습니다.
          * @details 역방향 구간도 쏜다(언리얼 이벤트 트랙의 기본). 점프 갱신(구간 없음)은 쏘지 않는다.
          */
@@ -251,11 +251,11 @@ namespace sw
 
     private:
         /** @brief 구간 @p segment 에서 문턱을 넘은 이벤트를 @p pOutListCrossedEvent 에 **덧붙입니다**(비우지 않는다). */
-        static void appendCrossedEvents( const SequenceAsset& asset, const SequencePlaybackSegment& segment, vector<const SequenceTrackItem*>* pOutListCrossedEvent );
+        static void appendCrossedEvents( const SequenceAsset& asset, const PlaybackSegment<int32>& segment, vector<const SequenceTrackItem*>* pOutListCrossedEvent );
         /** @brief 덮는 컷이 @p pPreviousCut 에서 @p pCut 으로 바뀐 신호(컷 바뀜 · 시네마틱 시작 · 끝)를 덧붙입니다. @p bForward 는 컷 사이 섞임에 구간 머리 · 꼬리 중 어느 쪽을 쓸지입니다. */
         static void appendCutSignals( const SequenceAsset& asset, const SequenceTrackItem* pCut, const SequenceTrackItem* pPreviousCut, bool bForward,
                                       vector<SequenceCameraSignal>& outListSignal );
         /** @brief 구간 @p segment 에서 문턱을 넘은 대기 뷰 · 흔들림 신호를 덧붙입니다. */
-        static void appendCrossingSignals( const SequenceAsset& asset, const SequencePlaybackSegment& segment, vector<SequenceCameraSignal>& outListSignal );
+        static void appendCrossingSignals( const SequenceAsset& asset, const PlaybackSegment<int32>& segment, vector<SequenceCameraSignal>& outListSignal );
     };
 } // namespace sw

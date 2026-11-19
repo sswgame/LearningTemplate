@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/PlaybackSegment.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
 
@@ -14,22 +15,8 @@ namespace sw
     /** @brief 시퀀스 한 프레임의 틱 수입니다. 2 · 3 · 4 · 5 · 6 · 8 로 나뉘어 반 · 3 분의 1 배속의 갱신이 정수로 떨어진다(언리얼 `FFrameTime` 의 서브프레임 자리). */
     constexpr int64 kSequenceTicksPerFrame = 960;
 
-    /**
-     * @struct SequencePlaybackSegment
-     * @brief 갱신 하나가 지난 프레임 구간 하나입니다. `_from` 은 이미 본 프레임, `_to` 는 이번에 닿은 프레임이고 방향은 둘의 크기가 정한다.
-     * @details 발화 규칙(이벤트 · 흔들림): 정방향(`_from < _to`)은 `_from < 시작 <= _to`, 역방향은 `_to <= 시작 < _from` 인 문턱을 지난다.
-     *          그래서 왕복이 꺾이는 끝 프레임 · 반복이 되감는 경계의 문턱은 한 번만 지난다(꺾인 뒤 구간은 그 끝을 `_from` 으로 갖는다).
-     */
-    struct SequencePlaybackSegment
-    {
-        int32 _from{ 0 };
-        int32 _to{ 0 };
-
-        /** @brief 정방향 구간이면 true 입니다. 빈 구간(`_from == _to`)은 어느 쪽도 아니다. */
-        [[nodiscard]] bool isForward() const { return _from < _to; }
-        /** @brief 이 구간을 지나며 @p frame 의 문턱을 넘었으면 true 입니다(머리말의 발화 규칙). */
-        [[nodiscard]] bool hasCrossed( int32 frame ) const { return _from < _to ? ( _from < frame && frame <= _to ) : ( _to <= frame && frame < _from ); }
-    };
+    /** @brief 갱신 하나가 지난 프레임 구간입니다 — 발화 규칙은 공용 커서 구간(`PlaybackSegment`)과 같다(애니메이션 알림도 같은 형식을 쓴다). */
+    using SequencePlaybackSegment = PlaybackSegment<int32>;
 
     /** @brief 갱신의 종류입니다. 카메라 신호가 "앞에 덮던 컷" 을 어디서 볼지를 정한다. */
     enum class SequencePlaybackStepKind : uint8

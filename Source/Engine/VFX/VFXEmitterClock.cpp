@@ -11,10 +11,10 @@ namespace sw
         : _pDef{ std::move( pDef ) }
         , _listBurstFired{}
         , _spawnedCount{ 0 }
-        , _emitterSeconds{ 0.0f }
+        , _emitterSeconds{ 0.0 }
         , _spawnCarry{ 0.0f }
         , _spawnScale{ spawnScale }
-        , _pendingSeconds{ 0.0f }
+        , _pendingSeconds{ 0.0 }
         , _bEmitting{ SW_TRUE }
         , _bWarnedStepLimit{ SW_FALSE }
     {
@@ -30,9 +30,10 @@ namespace sw
         if ( deltaSeconds <= 0.0f )
             return 0;
 
-        _pendingSeconds += deltaSeconds;
-        const uint32 dueStepCount = static_cast<uint32>( _pendingSeconds / constant::time::kDefaultFixedStepSeconds );
-        _pendingSeconds -= static_cast<float32>( dueStepCount ) * constant::time::kDefaultFixedStepSeconds;
+        const float64 stepSeconds = static_cast<float64>( constant::time::kDefaultFixedStepSeconds );
+        _pendingSeconds += static_cast<float64>( deltaSeconds );
+        const uint32 dueStepCount = static_cast<uint32>( _pendingSeconds / stepSeconds );
+        _pendingSeconds -= static_cast<float64>( dueStepCount ) * stepSeconds;
         if ( dueStepCount <= kMaxStepsPerUpdate )
             return dueStepCount;
         if ( _bWarnedStepLimit == false )
@@ -52,42 +53,57 @@ namespace sw
             return spawn;
 
         const VFXEmitterDef& def             = *_pDef;
-        const float32        previousSeconds = _emitterSeconds;
-        _emitterSeconds += stepSeconds;
+        const float64        duration        = static_cast<float64>( def._duration );
+        const float64        previousSeconds = _emitterSeconds;
+        _emitterSeconds += static_cast<float64>( stepSeconds );
 
         // 버스트와 생성률은 생성 배율(이펙트 품질)을 곱해 같은 나머지에 쌓는다 — 배율이 1 이 아니어도 작은 버스트가 반올림으로 사라지지 않고 다음 몫에 이어진다.
-        for ( size_t burstIndex = 0; burstIndex < def._listBurst.size(); ++burstIndex )
-        {
-            const VFXBurstDef& burst = def._listBurst[burstIndex];
-            if ( _listBurstFired[burstIndex] == 0 && burst._time <= _emitterSeconds )
-            {
-                _listBurstFired[burstIndex] = 1;
-                _spawnCarry += static_cast<float32>( burst._count ) * _spawnScale;
-            }
-        }
-
+        accumulateDueBurst();
         // 생성률은 방출 시간(0.._duration) 안에서만 쌓는다.
-        const float32 emitSeconds = MathUtil::min( _emitterSeconds, def._duration ) - MathUtil::min( previousSeconds, def._duration );
-        _spawnCarry += def._spawnRate * _spawnScale * emitSeconds;
-        const float32 wholeCount = MathUtil::floor( _spawnCarry );
-        _spawnCarry -= wholeCount;
-        spawn._count += static_cast<uint32>( wholeCount );
-        // 만들지 못한 입자도 번호를 쓴다 — 풀 상태가 나머지 입자의 난수를 바꾸지 않게 한다.
-        _spawnedCount += spawn._count;
+        accumulateEmission( MathUtil::min( _emitterSeconds, duration ) - MathUtil::min( previousSeconds, duration ) );
 
-        if ( _emitterSeconds >= def._duration )
+        if ( _emitterSeconds >= duration )
         {
             if ( def._bLooping )
             {
-                _emitterSeconds -= def._duration;
+                // 끝을 넘은 몫은 다음 바퀴의 시간이다 — 그 몫의 버스트 · 생성률을 이 단계에 센다(바퀴 경계에서 0 번 · 한 단계 늦음이 없다).
+                // shortcut: 바퀴가 단계보다 짧으면 몫이 바퀴를 넘는다 — 한 단계에 한 바퀴만 세고 넘는 몫은 버린다. 단계보다 짧은 반복이 데이터에 나오면 바퀴 수만큼 센다.
+                _emitterSeconds = MathUtil::min( _emitterSeconds - duration, duration );
                 _listBurstFired.assign( def._listBurst.size(), 0 );
+                accumulateDueBurst();
+                accumulateEmission( _emitterSeconds );
             }
             else
             {
                 _bEmitting = SW_FALSE;
             }
         }
+
+        const float32 wholeCount = MathUtil::floor( _spawnCarry );
+        _spawnCarry -= wholeCount;
+        spawn._count += static_cast<uint32>( wholeCount );
+        // 만들지 못한 입자도 번호를 쓴다 — 풀 상태가 나머지 입자의 난수를 바꾸지 않게 한다.
+        _spawnedCount += spawn._count;
         return spawn;
+    }
+
+    void VFXEmitterClock::accumulateDueBurst()
+    {
+        const VFXEmitterDef& def = *_pDef;
+        for ( size_t burstIndex = 0; burstIndex < def._listBurst.size(); ++burstIndex )
+        {
+            const VFXBurstDef& burst = def._listBurst[burstIndex];
+            if ( _listBurstFired[burstIndex] == 0 && static_cast<float64>( burst._time ) <= _emitterSeconds )
+            {
+                _listBurstFired[burstIndex] = 1;
+                _spawnCarry += static_cast<float32>( burst._count ) * _spawnScale;
+            }
+        }
+    }
+
+    void VFXEmitterClock::accumulateEmission( float64 emitSeconds )
+    {
+        _spawnCarry += _pDef->_spawnRate * _spawnScale * static_cast<float32>( emitSeconds );
     }
 
     uint64 VFXEmitterClock::getLifetimeWindowSteps( const VFXEmitterDef& def, float32 stepSeconds )
@@ -115,9 +131,9 @@ namespace sw
     {
         _listBurstFired.assign( _pDef->_listBurst.size(), 0 );
         _spawnedCount   = 0;
-        _emitterSeconds = 0.0f;
+        _emitterSeconds = 0.0;
         _spawnCarry     = 0.0f;
-        _pendingSeconds = 0.0f;
+        _pendingSeconds = 0.0;
         _bEmitting      = SW_TRUE;
         // 이미 낸 경고(단계 상한)는 다시 켜지 않는다 — 다시 시작해도 같은 데이터 문제다.
     }

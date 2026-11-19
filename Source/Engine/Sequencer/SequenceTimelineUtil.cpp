@@ -406,7 +406,7 @@ namespace sw
         }
     }
 
-    void SequenceTimelineUtil::appendCrossedEvents( const SequenceAsset& asset, const SequencePlaybackSegment& segment, vector<const SequenceTrackItem*>* pOutListCrossedEvent )
+    void SequenceTimelineUtil::appendCrossedEvents( const SequenceAsset& asset, const PlaybackSegment<int32>& segment, vector<const SequenceTrackItem*>* pOutListCrossedEvent )
     {
         for ( const SequenceTrackItem& item : asset._listItem )
         {
@@ -773,7 +773,7 @@ namespace sw
         }
     }
 
-    void SequenceTimelineUtil::appendCrossingSignals( const SequenceAsset& asset, const SequencePlaybackSegment& segment, vector<SequenceCameraSignal>& outListSignal )
+    void SequenceTimelineUtil::appendCrossingSignals( const SequenceAsset& asset, const PlaybackSegment<int32>& segment, vector<SequenceCameraSignal>& outListSignal )
     {
         for ( const SequenceTrackItem& item : asset._listItem )
         {
