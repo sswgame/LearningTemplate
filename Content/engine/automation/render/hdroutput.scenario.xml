@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="aa1b502823344d219712653dfc127d31"?>
+<!--
+  엔진 시나리오 — HDR 디스플레이 출력의 SDR 떨어짐(DesignBacklog "HDR 디스플레이 출력" 6 절): HDR10 을 요청하고(-gv_displayOutput=HDR10 — 옵션 메뉴 display.hdr 와 같은 변수),
+  백엔드 · 모니터가 받지 않는 기계에서 정보 로그 한 줄(Display.OutputUnsupported)과 함께 SDR 로 그려 그림이 SDR 과 같은지 본다. 골든은 SDR 그림이다(통합이 HDR 없는 기계의 첫 실행에서 기록한다).
+  HDR 을 받는 모니터에서는 떨어지지 않으므로 건너뛴다 — 그 기계의 검사(되읽은 백버퍼를 decodePQ 로 풀어 장면 RT 와 견주기)는 이 시나리오의 몫이 아니다.
+  실행: App -scenario=engine/automation/render/hdroutput.scenario.xml -unattended (ctest 는 게임 체인에 엔진 render 폴더를 함께 싣는다)
+-->
+<Scenario name="engine.render.hdroutput" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_displayOutput" value="HDR10"/>
+	<SkipUnless watch="Display.SDRFallback" reason="this monitor takes HDR10 - the SDR fall-back check needs a backend or monitor without HDR output"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="sdr.ppm" stability="none"/>
+	<!-- SDR 로 떨어진 그림은 SDR 출력과 같다 — 톤 곡선 어깨 1 · 인코딩 패스 없음(SDR 골든 불변) -->
+	<ExpectImage file="sdr.ppm" golden="sdr"/>
+	<ExpectLog id="Display.OutputUnsupported" atLeast="1"/>
+	<ExpectLog id="RHI.ColorSpaceChangeFailed" count="0"/>
+	<ExpectLog id="App.QuitRequested" count="0"/>
+	<Pass/>
+</Scenario>

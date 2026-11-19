@@ -89,6 +89,7 @@ SW_TEST_CASE( ScenarioGoldensTest, EveryChainBackendHasGoldens )
     SW_EXPECT_TRUE( Util::validateFolder( "engine/automation", listTag ) );
     (void)Util::validateFolder( "engine/automation/editor", listTag );
     (void)Util::validateFolder( "engine/automation/rhiswap", listTag );
+    (void)Util::validateFolder( "engine/automation/render", listTag );
     (void)Util::validateFolder( gameFolder, listTag ); // 시나리오가 없는 게임도 있다
     (void)Util::validateFolder( gameFolder + "/desktop", listTag );
     (void)Util::validateFolder( gameFolder + "/sequence", listTag );

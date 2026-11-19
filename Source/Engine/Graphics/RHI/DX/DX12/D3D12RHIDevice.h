@@ -245,7 +245,8 @@ namespace sw
         /** @brief 링이 지금 슬롯에 들어온 직후(앞 사용의 펜스를 지난 뒤, 기록 전) 그 슬롯의 예약된 다시 쓰기를 사본에 씁니다. `waitForRingSlot` 이 부른다. */
         void flushBindlessRingSlot();
         /** @brief 스왑체인이 만든 백버퍼 포맷입니다. 백버퍼 PSO 의 렌더 타깃 포맷이 여기서 나옵니다. */
-        RHIFormat getBackBufferFormat() const override { return _swapChain.getFormat(); }
+        RHIFormat     getBackBufferFormat() const override { return _swapChain.getFormat(); }
+        RHIColorSpace getBackBufferColorSpace() const override { return _swapChain.getColorSpace(); }
 
         /** @brief 루트 시그니처의 무제한 텍스처 배열 테이블(t0 space1)로 g_SwBindlessTex2D[] 를 샘플링합니다. SM6.6 힙 인덱싱이 아닙니다. */
         bool supportsNativeBindlessSampling() const override { return _bBindlessRootSignature != SW_FALSE; }
@@ -262,11 +263,13 @@ namespace sw
         /** @brief 정적 테이블에 런타임 값(네이티브 bindless)을 반영해 반환합니다. */
         RHICapabilities getCapabilities() const override
         {
-            RHICapabilities caps  = RHIAvailability::query( RHIBackend::DirectX12 );
-            caps._bNativeBindless = _bBindlessRootSignature != SW_FALSE ? 1u : 0u;
-            caps._bGPUBreadcrumbs = _arrBreadcrumb[0]._address != 0 ? SW_TRUE : SW_FALSE;
-            caps._bAsyncCompute   = _computeQueue != nullptr ? SW_TRUE : SW_FALSE;
-            caps._bPlacedTextures = SW_TRUE; // RT · DS 전용 힙은 모든 리소스 힙 등급이 받는다
+            RHICapabilities caps          = RHIAvailability::query( RHIBackend::DirectX12 );
+            caps._bNativeBindless         = _bBindlessRootSignature != SW_FALSE ? 1u : 0u;
+            caps._bGPUBreadcrumbs         = _arrBreadcrumb[0]._address != 0 ? SW_TRUE : SW_FALSE;
+            caps._bAsyncCompute           = _computeQueue != nullptr ? SW_TRUE : SW_FALSE;
+            caps._bPlacedTextures         = SW_TRUE; // RT · DS 전용 힙은 모든 리소스 힙 등급이 받는다
+            caps._displayOutputSupport    = _swapChain.getDisplayOutputSupport()._mask;
+            caps._displayMaxLuminanceNits = _swapChain.getDisplayOutputSupport()._maxLuminanceNits;
             return caps;
         }
 
@@ -299,6 +302,8 @@ namespace sw
         /** @brief 슬롯 하나를 기록했다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
         void                         markTimestampWritten( uint32 slotIndex ) { _timestampRing.markWritten( slotIndex ); }
         void                         resizeInternal( uint32 width, uint32 height ) override;
+        [[nodiscard]] bool           setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata ) override;
+        [[nodiscard]] bool           setDisplayMetadataInternal( const RHIDisplayMetadata& metadata ) override { return _swapChain.setDisplayMetadata( metadata ); }
         [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
         void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;
         void                         destroySwapChainInternal( IRHISwapChain& swapChain ) override;
@@ -795,6 +800,10 @@ namespace sw
         D3D12RHISwapChain& useSwapChain( IRHISwapChain* pSwapChain );
         /** @brief 열린 프레임 리스트를 내고 GPU 를 기다린 뒤 백버퍼를 새 크기로 다시 만듭니다(메인 · 다른 창 공통). */
         void resizeSwapChainBuffers( D3D12RHISwapChain& swapChain, uint32 width, uint32 height );
+        /** @brief 열린 프레임 리스트를 내고 GPU 를 기다린 뒤 백버퍼를 놓습니다 — `ResizeBuffers` 앞(크기 · 색 공간 바꿈 공통). 부르는 쪽이 렌더 스레드 역할을 빌렸다. */
+        void releaseSwapChainBuffersForRebuild( D3D12RHISwapChain& swapChain );
+        /** @brief `ResizeBuffers` 뒤 백버퍼 RTV 를 다시 만들고 현재 백버퍼를 고릅니다. */
+        void recreateSwapChainBuffers( D3D12RHISwapChain& swapChain );
         /// @brief 브레드크럼 버퍼를 만들어 매핑합니다. 못 만들면 능력을 켜지 않을 뿐 초기화는 이어진다(진단 기능이다).
         void createBreadcrumbBuffer();
         /** @brief 큐의 브레드크럼 버퍼 GPU 주소입니다(@p bComputeQueue — 비동기 컴퓨트 리스트). 버퍼가 없으면 0 입니다. */

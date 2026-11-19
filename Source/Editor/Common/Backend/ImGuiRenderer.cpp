@@ -162,7 +162,7 @@ namespace sw::editor
         desc._vertexEntryPoint               = "VSMain";
         desc._pixelEntryPoint                = "PSMain";
         desc._numRenderTargets               = 1;
-        desc._arrRTVFormat[0]                = pRHIDevice->getBackBufferFormat();
+        desc._arrRTVFormat[0]                = pRHIDevice->getUITargetFormat(); // HDR 이면 UI RT, SDR 이면 백버퍼 — 둘 다 이 포맷이다
         desc._depthStencilFormat             = RHIFormat::Unknown;
         desc._renderState._bEnableDepthWrite = SW_FALSE;
         desc._renderState.setAllBlendTargets( BlendTargetState::makeStraightAlpha() );

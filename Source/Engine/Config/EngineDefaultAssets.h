@@ -189,6 +189,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderScreenRotation; ///< 화면 회전 출력(풀스크린) — 회전한 휴대 기기 화면에서 논리 크기 대기 텍스처를 스왑체인 이미지로 돌려 옮긴다(pre-rotation)
         PROPERTY( Required )
+        DataPath _shaderDisplayEncode; ///< HDR 화면 출력의 마지막 두 패스(풀스크린) — UI 합성(SDR UI RT → 장면 출력 RT)과 인코딩(장면 출력 RT → HDR10 PQ · scRGB 백버퍼)
+        PROPERTY( Required )
         DataPath _shaderHZBBuild; ///< HZB 짓기(컴퓨트) — 장면 깊이를 최소 · 최대 깊이 밉 사슬로 줄인다. GPU 컬링의 가림 판정과 화면 공간 반사의 hi-z trace 가 읽는다
         PROPERTY( Required )
         DataPath _shaderDeferredTileClassify; ///< 디퍼드 조명 타일 분류(컴퓨트) — 8² 타일마다 셰이딩 모델 종류를 골라 조명의 간접 그리기 목록을 쓴다

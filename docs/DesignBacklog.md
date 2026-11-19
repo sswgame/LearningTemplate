@@ -1235,6 +1235,8 @@ public:
 
 **측정.** 없다(정확성). HDR 퍼뮤테이션이 SDR 프레임 시간을 바꾸지 않는지만 `bench.json` p50 으로 한 번.
 
+**구현에서 바꾼 것(2026-11-20, ②~⑤).** ① 기본값은 사용자 설정 스키마 `display.hdr`(off) · `-gv_displayOutput` 이 맡고 EngineConfig `_render._displayOutput` 칸은 두지 않았다 — 원천을 둘로 만들지 않는다. ② 장면 패스는 SDR 과 같은 [0,1] 출력 신호(1 = 최대 휘도)를 내고 톤 곡선은 `x / (x + 어깨)`(어깨 = `(최대 휘도 / 종이 흰색)^(1/2.2)`, SDR 1)를 PassCB `g_DisplayOutput` 으로 받는다 — Tonemap · 후처리 체인에 퍼뮤테이션을 두지 않아 PSO 가 늘지 않고 SDR 셰이더 결과가 그대로다. 인코딩(퍼뮤테이션 `SW_DISPLAY_OUTPUT`)은 끝의 패스 하나라 RCAS 는 바꿀 것이 없다. ③ UI 합성 · 인코딩은 파이프라인 XML 패스 대신 회전 출력(`FrameScreenRotation`)과 같은 그래프 밖 출력(`FrameDisplayEncode`)으로 했다 — 화면에 쓰는 곳이 넷이 넘어(Present · Canvas · 캡처 → 화면 · 개발 겹치기 · 렌더 스레드 UI) XML 패스로는 다 모을 수 없고, 모두 `getScreenTarget` 한 자리를 본다. 패스는 `DisplayEncodeHDR10` · `DisplayEncodeScRGB` · `DisplayCompositeUI`(고정 포맷, 모니터가 HDR 을 받을 때만 PSO). 에뮬 백엔드(DX11)의 엔진 텍스처 칸을 늘리지 않으려고 UI 는 인코딩 앞 합성 패스로 장면 RT 위에 섞는다. ④ Vulkan 은 HDR 인 동안 다른 창(에디터 도구 창)을 새로 열지 않는다(주 창 렌더 패스 포맷을 따른다 — 코드의 shortcut 주석).
+
 ### 헤더 팬인 다이어트(설계 2026-11-20, 감사 8)
 
 **문제.** 공통 헤더 하나를 고치면 전체 재빌드(50 분대 — 4 절 "검증 시간")다. 숫자(`py -3 -m Scripts header-fanin`, 2026-11-20, TU 3685 · pch 가 끄는 헤더 65): 점수(헤더를 포함하는 TU 수 × 그 헤더가 pch 밖에서 끌어오는 헤더 수) 합 867 490. 위 넷은 오브젝트 · 리플렉션 핵심이다 —

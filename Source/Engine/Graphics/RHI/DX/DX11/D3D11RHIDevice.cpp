@@ -470,7 +470,7 @@ namespace sw
             return false;
         }
         _pHWnd            = static_cast<HWND>( pWindowHandle );
-        _backBufferFormat = desc._format;
+        _backBufferFormat = desc._sdrFormat;
         // D3D11 에는 자원의 할당 크기를 물을 API 가 없다. 추적기는 서술로 계산한 논리 크기다.
         getMemoryTracker().setSizeBasis( RHIMemorySizeBasis::Logical );
         // 큰 업로드는 스테이징 예산 안에서만 받는다. 0 이면 큰 업로드를 하나도 받지 못하므로 기본값으로 바꾸지 않고 초기화를 멈춘다.
@@ -489,7 +489,7 @@ namespace sw
         swapChainDesc.BufferCount                        = ( desc._bufferCount < 2 ) ? 2 : desc._bufferCount;
         swapChainDesc.BufferDesc.Width                   = desc._width;
         swapChainDesc.BufferDesc.Height                  = desc._height;
-        swapChainDesc.BufferDesc.Format                  = toDXGIFormat( desc._format );
+        swapChainDesc.BufferDesc.Format                  = toDXGIFormat( desc.getFormat() );
         swapChainDesc.BufferDesc.RefreshRate.Numerator   = kDefaultNumerator;
         swapChainDesc.BufferDesc.RefreshRate.Denominator = kDefaultDenominator;
         swapChainDesc.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -601,7 +601,7 @@ namespace sw
         }
 
         // D3D11 은 디바이스와 스왑체인이 한 호출에서 함께 나온다. 만들어진 것을 넘겨 소유시킨다.
-        if ( _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height, swapChainDesc.Flags ) == false )
+        if ( _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height, swapChainDesc.Flags, desc._sdrFormat ) == false )
             return false;
 
         // Deferred Context 기반 병렬 기록이 실익이 있는지는 드라이버가 커맨드 리스트를 네이티브로
@@ -743,7 +743,26 @@ namespace sw
         return swapChain;
     }
 
+    bool D3D11RHIDevice::setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
+    {
+        if ( _swapChain.isValid() == false )
+            return false;
+        // 크기 바꿈과 같은 길 — 백버퍼 참조를 모두 놓고 포맷만 바꿔 `ResizeBuffers` 한 뒤 RTV 를 다시 잡는다.
+        releaseSwapChainReferences( _swapChain );
+        const bool bChanged = _swapChain.setColorSpace( colorSpace, metadata );
+        _swapChain.acquireNextImage( _device.Get() );
+        return bChanged;
+    }
+
     void D3D11RHIDevice::resizeSwapChainBuffers( D3D11RHISwapChain& swapChain, uint32 width, uint32 height )
+    {
+        releaseSwapChainReferences( swapChain );
+        if ( swapChain.resize( width, height ) == false )
+            return;
+        swapChain.acquireNextImage( _device.Get() );
+    }
+
+    void D3D11RHIDevice::releaseSwapChainReferences( D3D11RHISwapChain& swapChain )
     {
 
         // 백버퍼를 가리키는 참조가 하나라도 남아 있으면 ResizeBuffers 가 거부된다
@@ -764,9 +783,6 @@ namespace sw
             context->ClearState();
             context->Flush();
         }
-        if ( swapChain.resize( width, height ) == false )
-            return;
-        swapChain.acquireNextImage( _device.Get() );
     }
 
     bool D3D11RHIDevice::bindGraphicsContext()

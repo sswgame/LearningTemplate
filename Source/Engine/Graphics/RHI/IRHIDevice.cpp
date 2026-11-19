@@ -527,7 +527,7 @@ namespace sw
         _backBufferWidth              = swapChainDesc._width;
         _backBufferHeight             = swapChainDesc._height;
         swapChainDesc._bufferCount    = kBackBufferCount;
-        swapChainDesc._format         = requestedFormat;
+        swapChainDesc._sdrFormat      = requestedFormat;
         swapChainDesc._bVSync         = _bPreferredVSync;
         // 0 은 그대로 넘긴다 — 쓰는 백엔드가 오류로 거절한다(기본값으로 바꿔 주지 않는다).
         swapChainDesc._stagingRingBytes                 = static_cast<uint64>( rhiConfig._stagingRingMegabytes ) * constant::memory::kBytesPerMegabyte;
@@ -596,7 +596,8 @@ namespace sw
         _initPhaseTimings.begin();
         if ( initializeInternal( swapChainDesc ) == false )
             return false;
-        _initResult = RHIInitResult::Succeeded;
+        _initResult          = RHIInitResult::Succeeded;
+        _sdrBackBufferFormat = getBackBufferFormat(); // 주 스왑체인은 SDR 로 선다 — UI 포맷의 첫 값
         // 기동 요약(`App.StartupPhasesHostScopeMs`)의 RHI 몫을 단계로 나눈 줄이다. 로그 중앙값을 시나리오 전체에서 모아 비교한다.
         SW_LOG_INFO_ID( "RHI.InitPhasesMs", "RHI %# init phases: %#", getBackendName(), _initPhaseTimings.describe().c_str() );
         if ( swapChainDesc._bSoftwareAdapter )
@@ -609,7 +610,7 @@ namespace sw
         }
         // 요청과 채택이 다를 수 있다(Vulkan 서피스 협상). 백버퍼 PSO 는 채택값으로 만들어진다. 어느 쪽인지 로그로 남긴다.
         SW_LOG_INFO_ID( "RHI.BackBufferFormatRequested", "Back buffer format: requested %# -> adopted %# (getBackBufferFormat)",
-                        static_cast<uint32>( swapChainDesc._format ), static_cast<uint32>( getBackBufferFormat() ) );
+                        static_cast<uint32>( swapChainDesc.getFormat() ), static_cast<uint32>( getBackBufferFormat() ) );
         return true;
     }
 
@@ -648,6 +649,45 @@ namespace sw
         waitIdle( RHIWaitIdleReason::WindowSwapChain );
         ScopedThreadRoleBorrow borrow{ _renderThread };
         destroySwapChainInternal( *pSwapChain );
+    }
+
+    bool IRHIDevice::setBackBufferColorSpace( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
+    {
+        // 같은 색 공간이면 스왑체인을 다시 만들지 않는다 — HDR10 은 마스터링 값(최대 휘도 · 종이 흰색)만 다시 알린다(GPU 를 비울 까닭이 없다).
+        if ( colorSpace == getBackBufferColorSpace() )
+        {
+            if ( colorSpace != RHIColorSpace::HDR10ST2084 )
+                return true;
+            ScopedThreadRoleBorrow metadataBorrow{ _renderThread };
+            if ( setDisplayMetadataInternal( metadata ) )
+                return true;
+            SW_LOG_ERROR_ID( "RHI.DisplayMetadataFailed", "%# could not report the HDR10 mastering values - the previous values stay", getBackendName() );
+            return false;
+        }
+        if ( ( getCapabilities()._displayOutputSupport & makeColorSpaceBit( colorSpace ) ) == 0 )
+        {
+            SW_LOG_ERROR_ID( "RHI.ColorSpaceUnsupported", "%# cannot present color space %# on this monitor - resolve the display output against the capabilities first",
+                             getBackendName(), getEnumName( colorSpace ) );
+            return false;
+        }
+        waitIdle( RHIWaitIdleReason::DisplayOutput );
+        ScopedThreadRoleBorrow borrow{ _renderThread }; // 렌더 스레드가 쉬는 동안 백버퍼 · 프레임 진행 상태를 이 스레드가 빌려 만진다(resize 와 같다)
+        // SDR 을 떠나기 전에 UI 포맷(지금 채택한 SDR 백버퍼 포맷)을 적는다 — HDR 인 동안 UI PSO · UI RT 가 이 값으로 그린다.
+        if ( getBackBufferColorSpace() == RHIColorSpace::SRGBNonLinear )
+            _sdrBackBufferFormat = getBackBufferFormat();
+        if ( setBackBufferColorSpaceInternal( colorSpace, metadata ) == false )
+        {
+            SW_LOG_ERROR_ID( "RHI.ColorSpaceChangeFailed", "%# could not switch the back buffer to %# - it stays %#", getBackendName(), getEnumName( colorSpace ),
+                             getEnumName( getBackBufferColorSpace() ) );
+            return false;
+        }
+        SW_LOG_INFO_ID( "RHI.BackBufferColorSpace", "Back buffer color space: %# (format %#)", getEnumName( getBackBufferColorSpace() ), getRHIFormatName( getBackBufferFormat() ) );
+        return true;
+    }
+
+    bool IRHIDevice::setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& /*metadata*/ )
+    {
+        return colorSpace == RHIColorSpace::SRGBNonLinear;
     }
 
     void IRHIDevice::resize( uint32 width, uint32 height )

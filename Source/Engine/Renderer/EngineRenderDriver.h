@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Graphics/Display/DisplayOutput.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 #include "Engine/Graphics/View/FrameViewports.h"
@@ -62,6 +63,11 @@ namespace sw
         void                        overrideDeviceLostPolicy( RHIDeviceLostPolicy policy ) override;
         [[nodiscard]] uint32        getDeviceRecreateCount() const override { return _deviceRecreateCount; }
 
+        /** @brief 마지막으로 적용한 화면 출력입니다(능력에 맞춘 값 — 주 패킷이 싣는다). 아직 적용하지 않았으면 기본값(SDR)입니다. */
+        const DisplayOutputDesc& getAppliedDisplayOutput() const { return _appliedDisplayOutput; }
+        /** @brief 마지막 요청이 HDR 이었는데 백엔드 · 모니터가 받지 않아 SDR 로 떨어졌으면 true 입니다(감시 값 `Display.SDRFallback`). */
+        bool isDisplayOutputFallenBackToSDR() const { return _displayRequest._kind != DisplayOutputKind::SDR && _appliedDisplayOutput._kind == DisplayOutputKind::SDR; }
+
         /**
          * @brief 장치 분실에 대한 답입니다. 잃지 않았으면 비고, 잃었으면 지금 할 일(`Quit` 또는 `Recreate`)입니다(`submitFrame` 이 프레임마다 묻는다).
          * @details 브레드크럼 보고는 손실을 처음 본 백엔드가 이미 했다(`GPUBreadcrumbs::reportDeviceLost`) — 여기서는 끝낼지 다시 만들지만 정한다.
@@ -86,6 +92,12 @@ namespace sw
          *          앱 멈춤의 오디오 출력 닫기 · 입력 리셋은 앱 몫이다(`App::onAppLifecycle` → `IAudioService::suspendOutput`).
          */
         void onMainWindowLifecycle( WindowLifecycleEvent event );
+        /**
+         * @brief 화면 출력 요청 @p requested(패킷이 뜬 `-gv_displayOutput` · 사용자 설정)를 능력에 맞춰 적용하고 그 값을 돌려줍니다(게임 스레드, 패킷을 짓는 중).
+         * @details 바뀐 요청만 스왑체인을 다시 만든다 — 렌더 스레드를 세운 뒤 `IRHIDevice::setBackBufferColorSpace`(창 크기 바뀜과 같은 길). 장치를 다시 만들면(백엔드 교체 · 분실) 새 장치는 SDR 이라 다시 적용한다.
+         * @note shortcut: 창을 다른 모니터로 옮겨 능력이 바뀌어도 요청이 그대로면 다시 맞추지 않는다 — 모니터마다 HDR 이 다른 기계가 보이면 창 이동 통보에서 다시 맞춘다.
+         */
+        DisplayOutputDesc applyDisplayOutput( const DisplayOutputDesc& requested );
 
     private:
         SubsystemScope&         _startupScope;
@@ -101,10 +113,13 @@ namespace sw
         FontService*            _pFontService;                 ///< 캔버스가 글리프 캐시를 싣는다
         Subscription            _mainWindowResizeSubscription; ///< 주 창 크기 칸의 구독입니다(RHI 가 선 클라이언트만). `onShutdownBegin` 이 창보다 먼저 놓는다
         Subscription            _mainWindowLifecycleSubscription;
-        RHIDeviceLostPolicy     _deviceLostPolicy;         ///< `onStartupFinished` 가 `EngineConfig::_deviceLostPolicy` 에서 읽는다
-        RHIDeviceLostPolicy     _deviceLostPolicyOverride; ///< `overrideDeviceLostPolicy` 가 덮은 값(`None` 이면 덮지 않았다 — 설정 값을 쓴다)
-        uint32                  _deviceRecreateCount;      ///< 잃은 장치를 다시 만들어 장면을 다시 묶은 횟수
-        uint8                   _bDeviceLostHandled : 1;   ///< 분실을 한 번 처리했다(로그 · 종료 요청을 프레임마다 되풀이하지 않는다)
+        RHIDeviceLostPolicy     _deviceLostPolicy;          ///< `onStartupFinished` 가 `EngineConfig::_deviceLostPolicy` 에서 읽는다
+        RHIDeviceLostPolicy     _deviceLostPolicyOverride;  ///< `overrideDeviceLostPolicy` 가 덮은 값(`None` 이면 덮지 않았다 — 설정 값을 쓴다)
+        uint32                  _deviceRecreateCount;       ///< 잃은 장치를 다시 만들어 장면을 다시 묶은 횟수
+        uint8                   _bDeviceLostHandled    : 1; ///< 분실을 한 번 처리했다(로그 · 종료 요청을 프레임마다 되풀이하지 않는다)
+        uint8                   _bDisplayOutputApplied : 1; ///< 지금 장치에 화면 출력 요청을 적용했다(장치를 다시 만들면 내린다)
+        DisplayOutputDesc       _displayRequest;            ///< 마지막으로 적용한 요청(능력에 맞추기 전)
+        DisplayOutputDesc       _appliedDisplayOutput;      ///< 마지막으로 적용한 값(능력에 맞춘 뒤)
     };
 
     /**
