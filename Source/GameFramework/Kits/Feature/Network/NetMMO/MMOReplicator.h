@@ -20,6 +20,12 @@
  *             멀거나 변하지 않는 엔티티도 언젠가는 차례가 오므로 굶지 않는다. 상태가 바뀐 엔티티는 우선도가 더 빨리 쌓인다.
  *
  *          엔티티 상태의 크기는 `NetMMOMessage::kMaxStateBytes` 까지 허용한다. 서버와 클라이언트가 같은 상한을 쓰며, 이를 넘는 `setEntity` 는 받지 않는다.
+ *
+ *          스트리밍 월드(설계: DesignBacklog "멀티플레이 스트리밍 소스 · 관련성")
+ *          - 서버: 관찰자마다 스트리밍 소스 하나(위치 · 반경 · 우선순위 — `setObserverStreaming`)이고 서버가 올리는 셀은 그 반경의 합집합이다(`feedStreamingSources`).
+ *          - 셀에 놓인 엔티티(`MMOEntity::_staticID` = 쿠킹된 씬의 파일 id)는 클라이언트가 스폰하지 않고 제 셀 오브젝트에 묶는다(`Bound` · `Unbound` — 언리얼 정적 액터 NetGUID).
+ *          - 클라이언트: 새로 보인 엔티티의 셀이 아직 오르지 않았으면 보류하고 오르면 놓는다(`MMOClientView::setWorld` · `update`). 클라이언트는 셀 상태를 서버에 알리지 않는다 —
+ *            서버가 검증해야 할 입력을 만들지 않는다.
  */
 #pragma once
 #include "Core/Container/SlotHandle.h"
@@ -48,12 +54,13 @@
 namespace sw
 {
     class INetPeers;
+    class Scene;
     class SceneStreamingSubsystem;
 
     /** @brief MMO 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetMMOMessage
     {
-        using Enter  = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
+        using Enter  = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>; ///< 판 2: 엔티티마다 정적 id(`MMOEntity::_staticID`)를 싣는다
         using Leave  = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
         using Update = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 4>; ///< 서버 → 클라이언트(비신뢰, 전달 통지). 통지 값은 서버 틱이다. 판 4: 갱신 확인 메시지 없이 전달 통지로 판정한다
         using Table  = NetMessageTable<NetKitMessageRange::kMMO, Enter, Leave, Update>;
@@ -76,6 +83,7 @@ namespace sw
         float3        _position{};
         uint32        _entityID{ 0 };
         uint32        _typeID{ 0 };
+        uint64        _staticID{ 0 };               ///< 셀에 놓인 엔티티면 쿠킹된 씬의 파일 id(서버 · 클라이언트가 같은 쿠킹본이라 같다). 0 이면 게임이 스폰하는 동적 엔티티다. 새로 보임에만 싣는다
         float32       _importance{ 1.0f };          ///< 보스와 다른 플레이어는 크게 잡는다
         uint8         _bAlwaysRelevant{ SW_FALSE }; ///< 반경 밖에서도 보일 후보. 서버 복제기가 `setEntity` 때 항상 보임 집합에 모으고 정책(`IInterestPolicy::isAlwaysRelevant`)이 관찰자마다 거른다. 와이어에는 싣지 않는다
     };
@@ -181,7 +189,13 @@ namespace sw
         /** @brief 엔티티를 추가하거나 갱신합니다. 상태가 `NetMMOMessage::kMaxStateBytes` 를 넘으면 받지 않고 그 엔티티는 지난 값을 유지합니다. 처음 한 번만 경고하고 그 뒤로는 횟수만 셉니다. */
         void setEntity( const MMOEntity& entity );
         void removeEntity( uint32 entityID );
+        /** @brief 연결 @p connectionID 의 관찰자를 엔티티 @p entityID 로 정합니다. 처음 정한 관찰자의 스트리밍 소스는 격자 로딩 반경 · `Normal` 입니다. */
         void setObserver( int32 connectionID, uint32 entityID );
+        /**
+         * @brief 관찰자의 스트리밍 소스 반경 · 우선순위를 정합니다(언리얼 World Partition 의 플레이어 스트리밍 소스). 서버가 올리는 셀은 관찰자 반경의 합집합입니다.
+         * @return 관찰자가 없거나, 반경이 유한하지 않거나 나가는 반경보다 작으면(보이는 엔티티가 오르지 않은 셀에 있을 수 있다) 오류를 남기고 false 이며 지난 값을 둡니다.
+         */
+        [[nodiscard]] bool setObserverStreaming( int32 connectionID, float32 loadingRadius, StreamingSourcePriority priority );
         /** @brief 관찰자를 지웁니다. 연결이 닫히면 라우터를 통해 자동으로 지워지므로, 연결은 두고 관심만 끊을 때 직접 호출합니다. */
         void removeObserver( int32 connectionID );
         /**
@@ -199,7 +213,12 @@ namespace sw
          */
         void collectObserverPositions( vector<float3>& outListPosition ) const;
         /**
-         * @brief 서버의 월드 스트리밍 원점을 관찰자 위치로 정합니다(`SceneStreamingSubsystem::setExternalSources`). 서버 게임 코드가 틱마다 `update` 와 함께 부릅니다.
+         * @brief 관찰자마다 스트리밍 소스(조종하는 엔티티 위치 · 관찰자 반경 · 우선순위)를 채웁니다. 순서 · 고르는 관찰자는 `collectObserverPositions` 와 같습니다.
+         * @param outListSource 비우고 채웁니다.
+         */
+        void collectStreamingSources( vector<StreamingSource>& outListSource ) const;
+        /**
+         * @brief 서버의 월드 스트리밍 원점을 관찰자 소스로 정합니다(`collectStreamingSources` → `SceneStreamingSubsystem::setExternalSources`). 서버 게임 코드가 틱마다 `update` 와 함께 부릅니다.
          * @details 관찰자가 없으면 빈 목록을 넣는다 — 아무 셀도 원하지 않는다(카메라 원점으로 돌아가지 않는다).
          */
         void feedStreamingSources( SceneStreamingSubsystem& streaming );
@@ -230,7 +249,9 @@ namespace sw
             NetPrioritizer                      _prioritizer{};  ///< 보이는 엔티티마다 쌓인 우선도
             TickRingBuffer<uint8>               _updateResult{}; ///< 판정이 난 갱신 틱. 값이 `SW_TRUE` 면 전달, `SW_FALSE` 면 잃음이다. 항목이 없으면 아직 판정이 없다
             uint32                              _entityID{ 0 };
-            int32                               _updateBudgetBytes{ 0 }; ///< 이번 update 의 갱신 예산(그 연결의 지금 송신 속도에서). 나눠 실행하기 전에 정하며 워커는 읽기만 한다
+            int32                               _updateBudgetBytes{ 0 };  ///< 이번 update 의 갱신 예산(그 연결의 지금 송신 속도에서). 나눠 실행하기 전에 정하며 워커는 읽기만 한다
+            float32                             _streamingRadius{ 0.0f }; ///< 이 관찰자 둘레에서 서버가 올리는 반경. 나가는 반경 이상이다(`setObserverStreaming`)
+            StreamingSourcePriority             _streamingPriority{ StreamingSourcePriority::Normal };
             uint8                               _bActive{ SW_FALSE };
         };
 
@@ -267,7 +288,7 @@ namespace sw
         unordered_set<uint32>               _setAlwaysRelevant; ///< `_bAlwaysRelevant` 인 엔티티 id. `setEntity` · `removeEntity` 가 갱신하고, 관찰자마다 이것만 정책에 묻는다(월드 전체를 훑지 않는다)
         vector<Observer>                    _listObserver;
         NetInterestGrid                     _interest;          ///< 엔티티 위치(XZ 평면의 점)와 두 반경. 칸은 `initialize` 가 받은 월드 격자의 셀 크기, 키는 `NetInterestGrid::makeKey`
-        vector<float3>                      _listScratchSource; ///< `feedStreamingSources` 가 틱마다 다시 쓴다
+        vector<StreamingSource>             _listScratchSource; ///< `feedStreamingSources` 가 틱마다 다시 쓴다
         MMOReplicatorConfig                 _settings;
         IInterestPolicy                     _defaultPolicy;
         INetPeers*                          _pHost;
@@ -275,26 +296,90 @@ namespace sw
         uint64                              _sentUpdateCount;
         uint64                              _oversizedEntityCount;
         NetParallelFor                      _parallel;
-        NetParallelScratch<ObserverScratch> _observerScratch; ///< 스레드마다 하나씩 둔다
-        float32                             _tickDeltaTime;   ///< 이번 update 의 시간. 나눠 실행하는 본문이 읽는다
-        uint32                              _tick;            ///< `update` 마다 하나씩 올린다. 새로 보임과 갱신 메시지에 실어서 받는 쪽이 오래된 메시지를 버리게 한다
-        Observer*                           _pRangeObserver;  ///< 나눠 실행하는 본문이 쓰는 `_listObserver.data()`. 워커는 컨테이너를 직접 만지지 않는다
+        NetParallelScratch<ObserverScratch> _observerScratch;   ///< 스레드마다 하나씩 둔다
+        float32                             _tickDeltaTime;     ///< 이번 update 의 시간. 나눠 실행하는 본문이 읽는다
+        float32                             _cellLoadingRadius; ///< `initialize` 가 받은 격자의 로딩 반경 — 새 관찰자의 소스 반경
+        uint32                              _tick;              ///< `update` 마다 하나씩 올린다. 새로 보임과 갱신 메시지에 실어서 받는 쪽이 오래된 메시지를 버리게 한다
+        Observer*                           _pRangeObserver;    ///< 나눠 실행하는 본문이 쓰는 `_listObserver.data()`. 워커는 컨테이너를 직접 만지지 않는다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 클라이언트에서 일어난 일을 알리는 이벤트입니다. */
+    /**
+     * @brief 클라이언트에서 일어난 일을 알리는 이벤트입니다.
+     * @details 동적 엔티티는 `Entered` · `Left`(게임이 스폰 · 지운다), 셀에 놓인 엔티티는 `Bound` · `Unbound`(이미 있는 셀 오브젝트 `_staticObjectID` 에 묶고 푼다 — 지우지 않는다).
+     *          종류가 달라 `Entered` 에만 스폰하는 게임은 셀 오브젝트를 두 번 만들 수 없다.
+     */
     struct MMOClientEvent
     {
         enum class Kind : uint8
         {
             Entered = 0,
             Left,
-            Updated
+            Updated,
+            Bound,
+            Unbound
         };
         uint32 _entityID{ 0 };
         Kind   _kind{ Kind::Entered };
+        uint64 _staticObjectID{ 0 }; ///< `Bound` · `Unbound` · 정적 엔티티의 `Updated` 일 때 묶인 셀 오브젝트의 런타임 id
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class INetClientWorld
+     * @brief 클라이언트 복제가 묻는 클라이언트 월드입니다 — 자리의 셀이 다 올랐는지, 셀에 놓인 엔티티의 오브젝트가 있는지. 씬 구현은 `MMOSceneClientWorld` 입니다.
+     */
+    class SW_KIT_API INetClientWorld
+    {
+    public:
+        INetClientWorld()          = default;
+        virtual ~INetClientWorld() = default;
+
+        INetClientWorld( const INetClientWorld& )            = delete;
+        INetClientWorld& operator=( const INetClientWorld& ) = delete;
+
+        /** @brief 자리 @p position 의 셀(바닥)이 다 올랐거나 기다릴 셀이 없으면 true 입니다. */
+        virtual bool isPositionStreamed( const float3& position ) const = 0;
+        /** @brief 파일 id @p staticID 인 셀 오브젝트가 드러나 있으면 그 런타임 id, 없으면 0 입니다. */
+        virtual uint64 findStaticObject( uint64 staticID ) const = 0;
+    };
+
+    /**
+     * @class MMOSceneClientWorld
+     * @brief 씬 하나가 클라이언트 월드입니다 — 셀은 그 씬의 스트리밍(`SceneStreamingSubsystem::isCellStreamingCompleted`), 정적 엔티티는 씬의 파일 id 짝(`Scene::collectSavedIDMap`).
+     * @details 파일 id → 오브젝트 표는 셀이 오르내릴 때만(`SceneStreamingSubsystem::getChangeSerial`) 다시 만든다. 씬을 바꾸면 새 월드를 `MMOClientView::setWorld` 로 다시 건다.
+     */
+    class SW_KIT_API MMOSceneClientWorld final : public INetClientWorld
+    {
+    public:
+        explicit MMOSceneClientWorld( const Scene& scene );
+
+        bool   isPositionStreamed( const float3& position ) const override;
+        uint64 findStaticObject( uint64 staticID ) const override;
+
+    private:
+        const Scene&                          _scene;
+        mutable unordered_map<uint64, uint64> _mapFileIDToObjectID; ///< 파일 id → 런타임 id. `_cachedSerial` 때의 표
+        mutable uint64                        _cachedSerial;        ///< 표를 만든 때의 셀 번호. 처음에는 어떤 번호와도 다른 가장 큰 값
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 클라이언트 복제 보기의 설정입니다. 범위 밖이면 `MMOClientView::setWorld` 가 거절합니다(`ConfigRangeUtil`).
+     * @details 기본값이 없다(0 은 범위 밖) — 스트리밍하는 게임이 자기 Config 데이터에서 반드시 준다.
+     */
+    REFLECT()
+    struct SW_KIT_API MMOClientViewConfig
+    {
+        REFLECT_BODY();
+        PROPERTY( Min = 0.001, Units = s )
+        float32 _cellHoldTimeoutSeconds{ 0.0f }; ///< 셀이 오르기를 기다리며 엔티티를 보류하는 최대 시간. 넘으면 경고하고 동적 엔티티는 보이고 정적 엔티티는 버린다
     };
 } // namespace sw
 
@@ -308,9 +393,20 @@ namespace sw
         NetHandleResult receive( NetMMOMessage::Enter, const NetMessageContext& context, BitReader& body );
         NetHandleResult receive( NetMMOMessage::Leave, const NetMessageContext& context, BitReader& body );
         NetHandleResult receive( NetMMOMessage::Update, const NetMessageContext& context, BitReader& body );
-        /** @brief 서버에 (다시) 연결되면 호출합니다. 보이던 엔티티를 비우며, 새 연결은 새로 보임부터 다시 받습니다. */
+        /** @brief 서버에 (다시) 연결되면 호출합니다. 보이던 엔티티와 보류한 엔티티를 비우며, 새 연결은 새로 보임부터 다시 받습니다. */
         void onConnectionOpened( int32 connectionID ) override;
         void pollEvents( vector<MMOClientEvent>& outListEvent );
+
+        /**
+         * @brief 클라이언트 월드를 겁니다. 건 뒤로 새로 보인 엔티티는 제 셀이 다 오르고(동적) 셀 오브젝트가 드러날 때까지(정적) 보류합니다(언리얼은 레벨 가시성으로 서버가 미루는 자리).
+         * @details 월드가 없으면(스트리밍하지 않는 게임) 곧바로 놓고, 정적 엔티티는 묶을 곳이 없어 오류로 버린다. @p pWorld 가 nullptr 이면 월드를 떼고 보류한 엔티티를 시한이 지난 것처럼 정리한다.
+         * @return 설정이 범위 밖이면 오류를 남기고 false 이며 지난 월드를 둔다.
+         */
+        [[nodiscard]] bool setWorld( const INetClientWorld* pWorld, const MMOClientViewConfig& settings );
+        /** @brief 보류한 엔티티 가운데 셀이 오른 것을 놓고(엔티티 id 순), 보류 시간이 넘은 것은 경고한 뒤 정리합니다. 월드를 건 게임이 프레임마다 부릅니다. */
+        void update( float32 deltaSeconds );
+        /** @brief 셀을 기다리며 보류 중인 엔티티 수입니다. */
+        int32 getHeldEntityCount() const { return static_cast<int32>( _mapHeld.size() ); }
 
         const MMOEntity* findEntity( uint32 entityID ) const;
         int32            getEntityCount() const { return static_cast<int32>( _mapEntity.size() ); }
@@ -321,10 +417,29 @@ namespace sw
         struct ClientEntity
         {
             MMOEntity _entity{};
-            uint32    _tick{ 0 }; ///< 마지막으로 적용한 서버 틱
+            uint64    _staticObjectID{ 0 }; ///< 묶인 셀 오브젝트(정적 엔티티)
+            uint32    _tick{ 0 };           ///< 마지막으로 적용한 서버 틱
         };
 
+        struct HeldEntity
+        {
+            ClientEntity _entry{};
+            float32      _heldSeconds{ 0.0f };
+        };
+
+        /** @brief 엔티티가 놓일 수 있으면 true 이고 정적 엔티티면 묶을 오브젝트를 @p outStaticObjectID 에 줍니다. 월드가 있어야 합니다. */
+        bool tryResolve( const MMOEntity& entity, uint64& outStaticObjectID ) const;
+        /** @brief 엔티티를 보이는 목록에 넣고 `Entered` · `Bound` 를 알립니다. */
+        void release( ClientEntity&& entry, uint64 staticObjectID );
+        /** @brief 보류 시간이 넘었거나 월드를 뗀 엔티티를 정리합니다 — 경고하고 동적은 놓고 정적은 버립니다. */
+        void expire( ClientEntity&& entry );
+
+    private:
         unordered_map<uint32, ClientEntity> _mapEntity{};
+        unordered_map<uint32, HeldEntity>   _mapHeld{};         ///< 셀을 기다리는 엔티티. 갱신은 틱 규칙대로 받아 두고, 사라짐이면 사건 없이 버린다
+        vector<uint32>                      _listScratchHeld{}; ///< `update` 가 보류 id 를 순서대로 훑을 때 쓴다
+        MMOClientViewConfig                 _settings{};
+        const INetClientWorld*              _pWorld{ nullptr };
         EventBuffer<MMOClientEvent>         _eventBuffer{};
         uint64                              _staleUpdateCount{ 0 };
     };
