@@ -1235,6 +1235,24 @@ public:
 
 **측정.** 없다(정확성). HDR 퍼뮤테이션이 SDR 프레임 시간을 바꾸지 않는지만 `bench.json` p50 으로 한 번.
 
+### 메모리 사용량 디버그 · 내보내기(설계 2026-11-20)
+
+**문제.** 메모리를 볼 곳이 흩어져 있다 — 태그 표는 로그(`memory.report`) · HUD · Profiler 메모리 탭, 할당 사이트 상위 N 은 `-gv_profileAllocSites` 의 파일, 캐시 계수(`CacheStats`)는 `FrameProfileSession` 파일에만 있다. 에셋별 · 형식별 크기, GPU 자원별 VRAM, 두 시점 비교, 표 내보내기는 없다. "어디서 메모리가 늘었나" 를 숫자로 답할 수 없다.
+
+**대조.** 언리얼은 LLM 태그 + Memory Insights(할당 콜스택 · 두 시점 비교), `memreport -full`(`obj list` · `ListTextures` · `rhi.DumpMemory` 의 글 보고), 유니티 Memory Profiler 는 스냅숏을 찍어 표(All Of Memory · Unity Objects — 거르기 · 정렬)로 보고 두 스냅숏을 비교한다. Godot 디버거의 Video RAM 탭은 자원(경로 · 형식 · 포맷 · 크기) 목록을 CSV 로 내보낸다. → 셋 다 "한 시점의 스냅숏 하나 + 표 여럿 + 두 스냅숏 비교 + 파일로 내보내기" 다. 같은 꼴로 간다.
+
+**결정.**
+1. **스냅숏은 일반 표 여섯.** `MemorySnapshot`(DevTools/Profiling/Memory) = 시트 여섯(Tags · AllocationSites · Assets · GPUResources · Types · Caches)이고, 시트마다 칸 서술(이름 · 종류 Text/Bytes/Count · 키 칸 · 크기 칸 · 거르기 칸)이 표 하나(`MemorySheetSchema`)에 있다. 비교 · CSV · 패널 · 원격 글이 시트별 코드를 갖지 않는다 — 시트를 더할 때 서술 한 줄과 수집 함수 하나만 는다.
+2. **캐시 질의.** `AssetCacheBase::collectMemoryEntries`(순수 가상 — 새 캐시가 빠뜨리고 지을 수 없다, `getCachedCount` 와 같은 진단 계약이라 배포에도 둔다). 줄은 경로 · CPU · GPU 바이트 · 쥔 쪽 수, 종류는 캐시 이름. 약한 표는 `WeakInternTable::forEachLive`(잠금 안에서는 포인터 복사만 — 마지막 사본을 놓는 소멸자가 같은 잠금을 잡는다). 크기는 텍스처(밉 논리 크기 + CPU 사본) · 메시(정점 · 인덱스)만 정확하고 나머지는 `sizeof` — 컨테이너 몫은 태그 표가 센다.
+3. **GPU 자원 공통 면은 `RHIMemoryTracker` 하나.** 네 백엔드가 이미 키별로 올리므로 줄에 모양(`recordTexture( 핸들, 서술, 바이트 )`)과 디버그 이름(`setLabel` — 백엔드 `setTextureDebugName` 한 줄)을 붙이고, `collectResources` 가 잠금 아래에서 복사한다. 해제는 백엔드가 펜스 뒤 콜백에서 내리므로 복사본이 곧 "GPU 가 놓은 뒤" 의 목록이다 — 렌더 스레드에 따로 펜스 복사를 두지 않는다. 렌더링 디버그(RT 목록 · HUD VRAM 줄)도 이 면만 읽는다.
+4. **형식별.** 올라온 모든 씬(`SceneManager::collectAllScenes` — PIE · 미리보기 포함)의 오브젝트 저장소를 돌아 GameObject 형식 · 컴포넌트 형식(리플렉션 이름)마다 수 × `TypeInfo::_size`.
+5. **할당 사이트.** 세부 추적(`memory.tracking`)이 켜져 있을 때 `getTopCallStacks` 상위 N(설정) — 기호 풀기는 수집 때 한다(원격 스냅숏은 주소가 아니라 글이어야 한다).
+6. **배포에서 빠짐.** 수집 · 비교 · CSV · 명령은 DevTools(배포 호스트가 링크하지 않는다) · 에디터다. 엔진에 남는 것은 위 2 · 3 의 질의뿐이다.
+7. **패널 "Memory"**(MVVM — Model 은 ImGui 없이 단위 테스트): 요약(CPU · GPU 합 · 태그 막대), 시트 탭(정렬 · 이름 거르기 · 거르기 칸), 스냅숏 찍기 · 둘 고르기 · 비교(늘어난 것 순 — 새로 생김 · 늘어남 · 줄어듦 · 사라짐), 에셋 줄 → 콘텐츠 브라우저 · 인스펙터. 원천은 이 프로세스(편집 · PIE 같은 프로세스)와 원격(개발 명령 `memory.snapshot` 의 답이 스냅숏 글 — 디버그 채널 `EditorRemoteInspector`).
+8. **내보내기.** CSV(UTF-8 BOM · 쉼표 · RFC 4180 따옴표 · 첫 줄 머리말 · 바이트 칸은 원값 + `(MB)` 칸 따로). 표 하나 또는 스냅숏 전체(시트마다 파일 + Summary). 폴더는 `<Saved>/<_exportFolder>/<yyyyMMdd-HHmmss>`(같은 초는 `-2` — 덮지 않는다), 설정 `Config/Dev/MemorySnapshot.json`(없으면 오류). 쓰기는 워커(에디터 `EditorBackgroundTask`, 명령 · 인자는 `TaskManager`). 개발 명령 `memory.export [폴더]`, 실행 인자 `-memory-export=<폴더>`(루프가 끝날 때 한 번 — 언리얼 `-csvExitOnCompletion` 자리), `SavedRetention` 규칙 한 줄.
+
+**확인.** 단위: 수집(가짜 캐시 · 추적기에 올린 가짜 자원), 비교(늘어남 · 새로 생김 · 사라짐), CSV(BOM · 이스케이프 · 한글 경로 · 숫자 칸), 스냅숏 글 왕복, ViewModel(정렬 · 거르기 · 비교). 시나리오 `editor/memorypanel`: 패널 열기 → 찍기 두 번 → 비교 → 내보내기 → `memory.exportinfo` 가 읽은 머리말 · 행 수.
+
 ### 헤더 팬인 다이어트(설계 2026-11-20, 감사 8)
 
 **문제.** 공통 헤더 하나를 고치면 전체 재빌드(50 분대 — 4 절 "검증 시간")다. 숫자(`py -3 -m Scripts header-fanin`, 2026-11-20, TU 3685 · pch 가 끄는 헤더 65): 점수(헤더를 포함하는 TU 수 × 그 헤더가 pch 밖에서 끌어오는 헤더 수) 합 867 490. 위 넷은 오브젝트 · 리플렉션 핵심이다 —
