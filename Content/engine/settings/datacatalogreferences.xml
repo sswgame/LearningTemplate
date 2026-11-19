@@ -142,4 +142,6 @@
 	<CatalogKey tag="CameraPresetDef" catalog="CameraPresetCatalog" entry="Preset"/>
 	<Field owner="CameraDirectorComponent" field="_initialPreset" tag="CameraPresetDef"/>
 	<Field owner="SkirmishGameModeComponent" field="_watchCameraPreset" tag="CameraPresetDef"/>
+	<CatalogKey tag="CropDef" catalog="CropCatalog" entry="Crop"/>
+	<Field owner="FarmCropModel" field="_cropID" tag="CropDef"/>
 </DataCatalogReferenceTable>
