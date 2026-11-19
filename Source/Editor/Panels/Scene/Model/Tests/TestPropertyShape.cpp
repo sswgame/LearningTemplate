@@ -338,3 +338,80 @@ SW_TEST_CASE( PropertyShapeTest, DeclarationOptionsAreRead )
         SW_EXPECT_EQUAL( uint8{ 1 }, decl._bWorldAxes );
     }
 }
+
+/**
+ * @brief [PropertyShapeTest] 배율 2 의 구: 손잡이는 월드 반지름(저장 값 × 2)에 서고, 끈 월드 거리를 2 로 나눠 저장 값으로 되쓴다. 결함이면 배율이 있는 오브젝트에서 모양 · 손잡이가 물리와 어긋난다
+ */
+SW_TEST_CASE( PropertyShapeTest, ScaledSphereHandlesSitOnTheWorldRadiusAndWriteTheStoredValue )
+{
+    using Internal           = PropertyShapeTestInternal;
+    PropertyShapeValue value = Internal::makeValue( PropertyShapeKind::Sphere );
+    value._number            = 1.5f;
+    value._numberScale       = 2.0f;
+    sw::vector<PropertyShapeHandle> listHandle;
+    value.collectHandles( 1, sw::hashed_string( "_radius" ), sw::hashed_string{}, listHandle );
+    const PropertyShapeHandle* pPlusX = Internal::findHandle( listHandle, PropertyShapeHandleKind::Radius, 0, 1.0f );
+    SW_REQUIRE_NOT_NULL( pPlusX );
+    SW_EXPECT_NEAR( 4.0f, pPlusX->_position._x, Internal::kTolerance ); // 원점 x 1 + 1.5 × 2
+    // 중심에서 월드 6 m — 저장 값 3.
+    const sw::Ray down = Internal::makeRay( sw::float3{ 7.0f, 10.0f, 3.0f }, sw::float3{ 7.0f, 2.0f, 3.0f } );
+    SW_EXPECT_NEAR( 3.0f, pPlusX->computeDraggedNumber( down ), Internal::kTolerance );
+
+    // 배율 0 이면 끈 거리를 저장 값으로 되돌릴 수 없다 — 손잡이가 없다.
+    value._numberScale = 0.0f;
+    listHandle.clear();
+    value.collectHandles( 1, sw::hashed_string( "_radius" ), sw::hashed_string{}, listHandle );
+    SW_EXPECT_TRUE( listHandle.empty() );
+}
+
+/**
+ * @brief [PropertyShapeTest] 배율 2 의 바닥 캡슐: 가운데 · 꼭대기 · 둘레가 월드 크기로 서고, 반지름 · 반 높이 끌기는 각자의 배율로 나눈다. 결함이면 키운 캐릭터의 캡슐이 발밑에 작게 그려진다
+ */
+SW_TEST_CASE( PropertyShapeTest, ScaledBaseCapsuleHandlesAndDrags )
+{
+    using Internal           = PropertyShapeTestInternal;
+    PropertyShapeValue value = Internal::makeValue( PropertyShapeKind::Capsule );
+    value._number            = 0.5f;
+    value._range             = 1.0f;
+    value._numberScale       = 2.0f;
+    value._rangeScale        = 2.0f;
+    value._bBaseOrigin       = 1;
+    sw::vector<PropertyShapeHandle> listHandle;
+    value.collectHandles( 6, sw::hashed_string( "_radius" ), sw::hashed_string( "_halfHeight" ), listHandle );
+    SW_REQUIRE_EQUAL( size_t{ 5 }, listHandle.size() );
+
+    const PropertyShapeHandle* pPlusX = Internal::findHandle( listHandle, PropertyShapeHandleKind::Radius, 0, 1.0f );
+    SW_REQUIRE_NOT_NULL( pPlusX );
+    SW_EXPECT_NEAR( 5.0f, pPlusX->_position._y, Internal::kTolerance ); // 바닥 y 2 + 월드 (2 + 1)
+    SW_EXPECT_NEAR( 2.0f, pPlusX->_position._x, Internal::kTolerance ); // 원점 x 1 + 월드 반지름 1
+    // 가운데에서 +X 로 월드 3 m — 저장 반지름 1.5.
+    const sw::Ray radiusRay = Internal::makeRay( sw::float3{ 4.0f, 5.0f, 10.0f }, sw::float3{ 4.0f, 5.0f, 3.0f } );
+    SW_EXPECT_NEAR( 1.5f, pPlusX->computeDraggedNumber( radiusRay ), Internal::kTolerance );
+
+    const PropertyShapeHandle* pTop = Internal::findHandle( listHandle, PropertyShapeHandleKind::CapsuleHeight, 1, 1.0f );
+    SW_REQUIRE_NOT_NULL( pTop );
+    SW_EXPECT_NEAR( 8.0f, pTop->_position._y, Internal::kTolerance ); // 바닥 y 2 + 2 × 월드 3
+    // 바닥에서 위로 월드 8 m — 월드 반 높이 (8 - 2 × 1) ÷ 2 = 3, 저장 값 1.5.
+    const sw::Ray heightRay = Internal::makeRay( sw::float3{ 1.0f, 10.0f, 10.0f }, sw::float3{ 1.0f, 10.0f, 3.0f } );
+    SW_EXPECT_NEAR( 1.5f, pTop->computeDraggedNumber( heightRay ), Internal::kTolerance );
+}
+
+/**
+ * @brief [PropertyShapeTest] 캐릭터 캡슐의 배율 규칙은 물리(`makeScaledShape`)와 같다 — 반지름은 max(X, Z), 반 높이는 Y. 결함이면 늘인 캐릭터의 그린 캡슐과 물리 캡슐이 다르다
+ */
+SW_TEST_CASE( PropertyShapeTest, CharacterCapsuleUsesThePhysicsScaleRule )
+{
+    const sw::TypeInfo* pType = sw::findStaticType<sw::CharacterControllerComponent>();
+    SW_REQUIRE_NOT_NULL( pType );
+    sw::vector<sw::editor::PropertyShapeDecl> listDecl;
+    SW_REQUIRE_TRUE( sw::editor::PropertyShapeDecl::collect( *pType, listDecl ).has_value() );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listDecl.size() );
+    SW_EXPECT_TRUE( listDecl[0]._scaleRule == sw::editor::PropertyShapeScaleRule::Physics );
+
+    const sw::CharacterControllerComponent component;
+    sw::editor::PropertyShapeFrame         frame{};
+    frame._scale                   = sw::float3{ 2.0f, 3.0f, 4.0f };
+    const PropertyShapeValue value = listDecl[0].makeValue( &component, frame );
+    SW_EXPECT_NEAR( 4.0f, value._numberScale, PropertyShapeTestInternal::kTolerance );
+    SW_EXPECT_NEAR( 3.0f, value._rangeScale, PropertyShapeTestInternal::kTolerance );
+}

@@ -58,6 +58,48 @@ namespace sw::editor
                 return nullopt;
             }
 
+            /** @brief 메타 `ShapeScale=` 의 글을 규칙으로 바꿉니다. 모르는 글은 없음입니다. */
+            static optional<PropertyShapeScaleRule> findScaleRule( const string& text )
+            {
+                if ( text == "None" )
+                    return PropertyShapeScaleRule::None;
+                if ( text == "Physics" )
+                    return PropertyShapeScaleRule::Physics;
+                if ( text == "Physics2D" )
+                    return PropertyShapeScaleRule::Physics2D;
+                return nullopt;
+            }
+
+            /**
+             * @brief 규칙 @p rule 로 틀의 배율 @p scale 을 값 @p inoutValue 의 저장 → 월드 배율에 옮깁니다.
+             * @details `PhysicsComponent::makeScaledShape`(3D · 2D)와 같은 식이다 — 캐릭터 컨트롤러가 캡슐을 그 함수로 짓는다. 그 함수의 규칙을 바꾸면 여기도 함께 바꾼다.
+             */
+            static void applyScaleRule( PropertyShapeScaleRule rule, const float3& scale, PropertyShapeValue& inoutValue )
+            {
+                if ( rule == PropertyShapeScaleRule::None )
+                    return;
+                const bool bPhysics2D = rule == PropertyShapeScaleRule::Physics2D;
+                switch ( inoutValue._kind )
+                {
+                    case PropertyShapeKind::Box:
+                        inoutValue._vectorScale = float3{ scale._x, scale._y, bPhysics2D ? 1.0f : scale._z };
+                        break;
+                    case PropertyShapeKind::Sphere:
+                        inoutValue._numberScale = bPhysics2D ? MathUtil::max( scale._x, scale._y ) : MathUtil::max( MathUtil::max( scale._x, scale._z ), scale._y );
+                        break;
+                    case PropertyShapeKind::Circle:
+                        inoutValue._numberScale = bPhysics2D ? MathUtil::max( scale._x, scale._y ) : MathUtil::max( scale._x, scale._z );
+                        break;
+                    case PropertyShapeKind::Capsule:
+                        inoutValue._numberScale = bPhysics2D ? scale._x : MathUtil::max( scale._x, scale._z );
+                        inoutValue._rangeScale  = scale._y;
+                        break;
+                    case PropertyShapeKind::Cone:
+                    case PropertyShapeKind::Arrow:
+                        break;
+                }
+            }
+
             /** @brief 모양 @p kind 가 받는 값 형식이면 true 입니다(상자 · 화살표는 float3, 나머지는 float32). */
             static bool isValueTypeAccepted( PropertyShapeKind kind, const PropertyInfo& prop )
             {
@@ -78,11 +120,15 @@ namespace sw::editor
                 if ( pScene == nullptr )
                     return nullopt;
                 const float4x4     world = pScene->getWorldMatrix();
+                const float3       axisX = float3::transformVector( float3::UnitX, world );
+                const float3       axisY = float3::transformVector( float3::UnitY, world );
+                const float3       axisZ = float3::transformVector( float3::UnitZ, world );
                 PropertyShapeFrame frame{};
                 frame._origin = pScene->getWorldPosition();
-                frame._axisX  = float3::transformVector( float3::UnitX, world ).normalizeOr( float3::UnitX, MathUtil::kEpsilon );
-                frame._axisY  = float3::transformVector( float3::UnitY, world ).normalizeOr( float3::UnitY, MathUtil::kEpsilon );
-                frame._axisZ  = float3::transformVector( float3::UnitZ, world ).normalizeOr( float3::UnitZ, MathUtil::kEpsilon );
+                frame._axisX  = axisX.normalizeOr( float3::UnitX, MathUtil::kEpsilon );
+                frame._axisY  = axisY.normalizeOr( float3::UnitY, MathUtil::kEpsilon );
+                frame._axisZ  = axisZ.normalizeOr( float3::UnitZ, MathUtil::kEpsilon );
+                frame._scale  = float3{ axisX.getLength(), axisY.getLength(), axisZ.getLength() }; // 행렬 행의 길이 — `float4x4::getScale` 과 같은 크기
                 return frame;
             }
 
@@ -152,6 +198,7 @@ namespace sw::editor
         static const hashed_string s_rangeKey( "ShapeRange" );
         static const hashed_string s_axesKey( "ShapeAxes" );
         static const hashed_string s_originKey( "ShapeOrigin" );
+        static const hashed_string s_scaleKey( "ShapeScale" );
         for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
         {
             const string* pShape = prop.findCustomMeta( s_shapeKey );
@@ -190,6 +237,14 @@ namespace sw::editor
                     return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeOrigin is Base or Center, only for Shape=Capsule", prop._name.view() } );
                 decl._bBaseOrigin = *pOrigin == "Base" ? 1 : 0;
             }
+            if ( const string* pScale = prop.findCustomMeta( s_scaleKey ); pScale != nullptr )
+            {
+                const optional<PropertyShapeScaleRule> rule      = Internal::findScaleRule( *pScale );
+                const bool                             bScalable = *kind != PropertyShapeKind::Cone && *kind != PropertyShapeKind::Arrow; // 반각 · 방향은 배율과 상관없다
+                if ( rule.has_value() == false || bScalable == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeScale is None, Physics or Physics2D, not for Shape=Cone/Arrow", prop._name.view() } );
+                decl._scaleRule = *rule;
+            }
             outListDecl.push_back( decl );
         }
         return {};
@@ -222,6 +277,7 @@ namespace sw::editor
             const float32* pRange = _pRangeProperty->getValuePtr<float32>( pInstance );
             value._range          = pRange != nullptr ? *pRange : 0.0f;
         }
+        PropertyShapeEditInternal::applyScaleRule( _scaleRule, frame._scale, value );
         return value;
     }
 
