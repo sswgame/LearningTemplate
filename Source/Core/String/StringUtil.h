@@ -112,6 +112,16 @@ namespace sw
          * @details UCS-2 글꼴만 받는 경로(X11 코어 글꼴의 `XDrawString16`)용이다. 서로게이트 쌍으로 늘리는 `utf8ToUTF16` 와 다르다.
          */
         static void utf8ToUcs2( string_view text, vector<uint16>& outListUnit );
+        /**
+         * @brief UTF-8 글을 UTF-16 코드 단위(16 비트, 평면 밖은 서로게이트 쌍)로 바꿉니다. 잘못된 바이트는 U+FFFD 입니다.
+         * @details `wchar_t` 너비와 상관없이 16 비트다 — JNI `NewString`(Java 글은 UTF-16)이 받는다. `NewStringUTF` 는 수정 UTF-8 이라 4 바이트 글자를 잘못 읽으므로 쓰지 않는다.
+         */
+        static void utf8ToUTF16Units( string_view text, vector<uint16>& outListUnit );
+        /**
+         * @brief UTF-16 코드 단위 @p count 개를 UTF-8 로 @p outText 에 담습니다. 서로게이트 쌍은 한 글자, 짝 없는 서로게이트는 U+FFFD 입니다.
+         * @details JNI `GetStringChars`(Java 글)가 낸 단위를 받는다. `GetStringUTFChars` 는 수정 UTF-8 이라 평면 밖 글자를 3 바이트 두 개(CESU-8)로 깨뜨리므로 쓰지 않는다.
+         */
+        static void utf16UnitsToUTF8( const uint16* pUnit, size_t count, string& outText );
         /** @brief 코드 포인트 하나를 UTF-8 로 @p inoutText 끝에 덧붙입니다. */
         static void appendUTF8( string& inoutText, uint32 codepoint );
         /** @brief 유니코드 표기 `U+XXXX`(대문자 16진 4 ~ 6 자리)를 읽습니다. 형식이 틀리거나 유니코드 범위 밖 · 서로게이트이면 false 이고 @p outCodepoint 는 그대로입니다. */

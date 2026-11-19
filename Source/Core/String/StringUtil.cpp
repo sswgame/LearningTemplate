@@ -34,10 +34,13 @@ namespace sw
                 pOutDest[copiedCount] = CharType{};
             }
 
-            static constexpr uint32 kMaxUnicodeCodepoint = 0x10FFFF;
-            static constexpr uint32 kSurrogateBegin      = 0xD800;
-            static constexpr uint32 kSurrogateEnd        = 0xDFFF;
-            static constexpr uint32 kUTF16LowBoundary    = 0x10000;
+            static constexpr uint32 kMaxUnicodeCodepoint  = 0x10FFFF;
+            static constexpr uint32 kSurrogateBegin       = 0xD800;
+            static constexpr uint32 kSurrogateEnd         = 0xDFFF;
+            static constexpr uint32 kUTF16LowBoundary     = 0x10000;
+            static constexpr uint32 kLowSurrogateBegin    = 0xDC00;
+            static constexpr uint32 kSurrogatePayloadBits = 10;
+            static constexpr uint32 kSurrogatePayloadMask = 0x3FF;
 
             static SW_INLINE constexpr bool isWhitespace( utf8 c ) noexcept
             {
@@ -1273,6 +1276,49 @@ namespace sw
             uint32     codepoint = 0;
             const bool bValid    = tryDecodeUTF8( text, offset, codepoint );
             outListUnit.push_back( static_cast<uint16>( bValid && codepoint <= kMaxUcs2Codepoint ? codepoint : StringUtilInternal::kReplacementCodepoint ) );
+        }
+    }
+
+    void StringUtil::utf8ToUTF16Units( string_view text, vector<uint16>& outListUnit )
+    {
+        using Internal = StringUtilInternal;
+        outListUnit.clear();
+        size_t offset = 0;
+        while ( offset < text.size() )
+        {
+            uint32 codepoint = 0;
+            (void)tryDecodeUTF8( text, offset, codepoint ); // 잘못된 시퀀스면 U+FFFD 다
+            if ( codepoint < Internal::kUTF16LowBoundary )
+            {
+                outListUnit.push_back( static_cast<uint16>( codepoint ) );
+                continue;
+            }
+            const uint32 value = codepoint - Internal::kUTF16LowBoundary;
+            outListUnit.push_back( static_cast<uint16>( Internal::kSurrogateBegin + ( value >> Internal::kSurrogatePayloadBits ) ) );
+            outListUnit.push_back( static_cast<uint16>( Internal::kLowSurrogateBegin + ( value & Internal::kSurrogatePayloadMask ) ) );
+        }
+    }
+
+    void StringUtil::utf16UnitsToUTF8( const uint16* pUnit, size_t count, string& outText )
+    {
+        using Internal = StringUtilInternal;
+        outText.clear();
+        for ( size_t index = 0; index < count; ++index )
+        {
+            const uint32 unit = pUnit[index];
+            if ( unit < Internal::kSurrogateBegin || unit > Internal::kSurrogateEnd )
+            {
+                Internal::appendUTF8( outText, unit );
+                continue;
+            }
+            const uint32 next = index + 1 < count ? static_cast<uint32>( pUnit[index + 1] ) : 0u;
+            if ( unit < Internal::kLowSurrogateBegin && next >= Internal::kLowSurrogateBegin && next <= Internal::kSurrogateEnd )
+            {
+                Internal::appendUTF8( outText, Internal::kUTF16LowBoundary + ( ( unit - Internal::kSurrogateBegin ) << Internal::kSurrogatePayloadBits ) + ( next - Internal::kLowSurrogateBegin ) );
+                ++index;
+                continue;
+            }
+            Internal::appendUTF8( outText, Internal::kReplacementCodepoint ); // 짝 없는 서로게이트
         }
     }
 

@@ -2,7 +2,7 @@
  * @file AndroidClipboard.cpp
  * @brief Android 클립보드입니다. JNI 로 액티비티의 `ClipboardManager` 를 부른다(NDK 에는 클립보드 API 가 없다).
  * @details 읽기: `getPrimaryClip().getItemAt( 0 ).coerceToText( activity ).toString()`, 쓰기: `setPrimaryClip( ClipData.newPlainText( "", text ) )`.
- *          글은 `String.getBytes( "UTF-8" )` · `new String( bytes, "UTF-8" )` 로 옮긴다 — JNI 의 `NewStringUTF` · `GetStringUTFChars` 는 수정 UTF-8 이라
+ *          글은 `AndroidJNIString`(UTF-16 단위 — `GetStringChars` · `NewString`)으로 옮긴다 — JNI 의 `NewStringUTF` · `GetStringUTFChars` 는 수정 UTF-8 이라
  *          보충 평면 글자(이모지)가 서로게이트 두 개로 깨진다. https://developer.android.com/reference/android/content/ClipboardManager
  *          Looper 제약: API 26 부터 `ClipboardManager` 는 만들 때 Handler 를 만들지 않고(액티비티의 메인 스레드 Handler 를 받는다) 호출은 바인더라
  *          게임 스레드(android_main)에서 불러도 된다 — 이 앱의 최소 API 는 29 다(CMakePresets.json). Android 10 부터 읽기는 앱이 포커스를 가질 때만 글을 준다(그 밖은 null — false).
@@ -13,6 +13,7 @@
 #include "Engine/Window/PlatformClipboard.h"
 
 #if defined( SW_PLATFORM_ANDROID )
+    #include "Engine/Window/Android/AndroidJNIString.h"
     #include "Engine/Window/Android/AndroidWindow.h"
 
     #include <android_native_app_glue.h>
@@ -115,18 +116,8 @@ namespace sw
         const jobject   text     = scope.takeException() == false ? pEnv->CallObjectMethod( textSequence, toString ) : nullptr;
         if ( scope.takeException() || text == nullptr )
             return false;
-        const jstring   encodingName = pEnv->NewStringUTF( "UTF-8" );
-        const jmethodID getBytes     = pEnv->GetMethodID( pEnv->GetObjectClass( text ), "getBytes", "(Ljava/lang/String;)[B" );
-        const auto      bytes        = static_cast<jbyteArray>( scope.takeException() == false ? pEnv->CallObjectMethod( text, getBytes, encodingName ) : nullptr );
-        if ( scope.takeException() || bytes == nullptr )
-            return false;
-        const jsize length = pEnv->GetArrayLength( bytes );
-        if ( length > 0 )
-        {
-            outText.resize( static_cast<size_t>( length ) );
-            pEnv->GetByteArrayRegion( bytes, 0, length, reinterpret_cast<jbyte*>( &outText[0] ) );
-        }
-        return true;
+        outText = AndroidJNIString::toUTF8( pEnv, static_cast<jstring>( text ) );
+        return scope.takeException() == false;
     }
 
     bool PlatformClipboard::writeText( string_view text )
@@ -139,22 +130,16 @@ namespace sw
             SW_LOG_WARNING_ID( "AndroidClipboard.NoManager", "Android: the activity's ClipboardManager is unavailable - the text was not copied" );
             return false;
         }
-        const jsize      length = static_cast<jsize>( text.size() );
-        const jbyteArray bytes  = pEnv->NewByteArray( length );
-        if ( scope.takeException() || bytes == nullptr )
+        const jstring clipText = AndroidJNIString::toJava( pEnv, text );
+        if ( scope.takeException() || clipText == nullptr )
         {
-            SW_LOG_WARNING_ID( "AndroidClipboard.WriteFailed", "Android: could not allocate %# bytes for the clipboard text", text.size() );
+            SW_LOG_WARNING_ID( "AndroidClipboard.WriteFailed", "Android: could not make a Java string of %# bytes for the clipboard text", text.size() );
             return false;
         }
-        pEnv->SetByteArrayRegion( bytes, 0, length, reinterpret_cast<const jbyte*>( text.data() ) );
-        const jclass    stringC      = pEnv->FindClass( "java/lang/String" );
-        const jmethodID construct    = stringC != nullptr ? pEnv->GetMethodID( stringC, "<init>", "([BLjava/lang/String;)V" ) : nullptr;
-        const jstring   encodingName = pEnv->NewStringUTF( "UTF-8" );
-        const jobject   clipText     = scope.takeException() == false && construct != nullptr ? pEnv->NewObject( stringC, construct, bytes, encodingName ) : nullptr;
-        const jclass    clipC        = scope.takeException() == false && clipText != nullptr ? pEnv->FindClass( "android/content/ClipData" ) : nullptr;
+        const jclass    clipC = pEnv->FindClass( "android/content/ClipData" );
         const jmethodID newPlain =
             clipC != nullptr ? pEnv->GetStaticMethodID( clipC, "newPlainText", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Landroid/content/ClipData;" ) : nullptr;
-        const jstring   label   = pEnv->NewStringUTF( "" );
+        const jstring   label   = AndroidJNIString::toJava( pEnv, string_view{} );
         const jobject   clip    = scope.takeException() == false && newPlain != nullptr ? pEnv->CallStaticObjectMethod( clipC, newPlain, label, clipText ) : nullptr;
         const jmethodID setClip = scope.takeException() == false && clip != nullptr ? pEnv->GetMethodID( pEnv->GetObjectClass( manager ), "setPrimaryClip", "(Landroid/content/ClipData;)V" ) : nullptr;
         const bool      bReady  = scope.takeException() == false && setClip != nullptr;

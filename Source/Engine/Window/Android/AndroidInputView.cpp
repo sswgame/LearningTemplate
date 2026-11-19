@@ -4,7 +4,8 @@
 
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
+
+#include "Engine/Window/Android/AndroidJNIString.h"
 
 #include <cerrno>
 #include <fcntl.h>
@@ -24,51 +25,11 @@ namespace sw
 
             static AndroidInputView* fromHandle( jlong nativeHandle ) { return reinterpret_cast<AndroidInputView*>( static_cast<uintptr_t>( nativeHandle ) ); }
 
-            /**
-             * @brief Java 글(UTF-16)을 UTF-8 로 옮깁니다. `GetStringUTFChars` 는 수정 UTF-8 이라 보조 평면 글자(이모지)를 대리 쌍 두 개(CESU-8)로 내므로 쓰지 않는다.
-             * @details 짝 없는 대리 값은 U+FFFD 로 바꾼다 — 입력기 글을 믿지 않는다.
-             */
-            static string toUTF8( JNIEnv* pEnv, jstring text )
-            {
-                string result;
-                if ( text == nullptr )
-                    return result;
-                const jsize        length = pEnv->GetStringLength( text );
-                const jchar* const pChar  = pEnv->GetStringChars( text, nullptr );
-                if ( pChar == nullptr )
-                    return result;
-                constexpr uint32 kHighSurrogateBegin = 0xD800;
-                constexpr uint32 kLowSurrogateBegin  = 0xDC00;
-                constexpr uint32 kSurrogateEnd       = 0xE000;
-                constexpr uint32 kUTF16LowBoundary   = 0x10000;
-                constexpr uint32 kSurrogateBits      = 10;
-                constexpr uint32 kReplacement        = 0xFFFD;
-                for ( jsize index = 0; index < length; ++index )
-                {
-                    const uint32 unit = pChar[index];
-                    if ( unit < kHighSurrogateBegin || unit >= kSurrogateEnd )
-                    {
-                        StringUtil::appendUTF8( result, unit );
-                        continue;
-                    }
-                    const uint32 next = index + 1 < length ? static_cast<uint32>( pChar[index + 1] ) : 0u;
-                    if ( unit < kLowSurrogateBegin && next >= kLowSurrogateBegin && next < kSurrogateEnd )
-                    {
-                        StringUtil::appendUTF8( result, kUTF16LowBoundary + ( ( unit - kHighSurrogateBegin ) << kSurrogateBits ) + ( next - kLowSurrogateBegin ) );
-                        ++index;
-                        continue;
-                    }
-                    StringUtil::appendUTF8( result, kReplacement );
-                }
-                pEnv->ReleaseStringChars( text, pChar );
-                return result;
-            }
-
             static uint32 toCount( jint value ) { return value > 0 ? static_cast<uint32>( value ) : 0u; } // 음수는 명세 밖 — 지우지 않는다
 
-            static void JNICALL setComposingText( JNIEnv* pEnv, jclass, jlong nativeHandle, jstring text ) { fromHandle( nativeHandle )->onSetComposingText( toUTF8( pEnv, text ) ); }
+            static void JNICALL setComposingText( JNIEnv* pEnv, jclass, jlong nativeHandle, jstring text ) { fromHandle( nativeHandle )->onSetComposingText( AndroidJNIString::toUTF8( pEnv, text ) ); }
             static void JNICALL finishComposingText( JNIEnv*, jclass, jlong nativeHandle ) { fromHandle( nativeHandle )->onFinishComposingText(); }
-            static void JNICALL commitText( JNIEnv* pEnv, jclass, jlong nativeHandle, jstring text ) { fromHandle( nativeHandle )->onCommitText( toUTF8( pEnv, text ) ); }
+            static void JNICALL commitText( JNIEnv* pEnv, jclass, jlong nativeHandle, jstring text ) { fromHandle( nativeHandle )->onCommitText( AndroidJNIString::toUTF8( pEnv, text ) ); }
             static void JNICALL deleteSurroundingText( JNIEnv*, jclass, jlong nativeHandle, jint beforeLength, jint afterLength )
             {
                 fromHandle( nativeHandle )->onDeleteSurroundingText( toCount( beforeLength ), toCount( afterLength ) );
@@ -93,7 +54,7 @@ namespace sw
                 const jobject   loader         = getClassLoader != nullptr ? pEnv->CallObjectMethod( activity, getClassLoader ) : nullptr;
                 const jclass    loaderC        = loader != nullptr ? pEnv->FindClass( "java/lang/ClassLoader" ) : nullptr;
                 const jmethodID loadClass      = loaderC != nullptr ? pEnv->GetMethodID( loaderC, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;" ) : nullptr;
-                const jstring   name           = pEnv->NewStringUTF( pDottedName );
+                const jstring   name           = AndroidJNIString::toJava( pEnv, pDottedName );
                 const jclass    found          = loadClass != nullptr ? static_cast<jclass>( pEnv->CallObjectMethod( loader, loadClass, name ) ) : nullptr;
                 return clearException( pEnv ) ? nullptr : found;
             }

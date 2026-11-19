@@ -8,6 +8,7 @@
 
 #include "Engine/Input/Map/InputKeyTable.h"
 #include "Engine/Window/Android/AndroidInputView.h"
+#include "Engine/Window/Android/AndroidJNIString.h"
 #include "Engine/Window/WindowPlatform.h"
 
 #include <android/configuration.h>
@@ -163,17 +164,11 @@ namespace sw
             return {};
         const jobject activity  = AndroidWindowInternal::s_pApp->activity->clazz;
         const jobject intent    = pEnv->CallObjectMethod( activity, pEnv->GetMethodID( pEnv->GetObjectClass( activity ), "getIntent", "()Landroid/content/Intent;" ) );
-        const jstring extraName = pEnv->NewStringUTF( kIntentArgumentsExtra );
+        const jstring extraName = AndroidJNIString::toJava( pEnv, kIntentArgumentsExtra );
         const jstring extra     = intent != nullptr ? static_cast<jstring>( pEnv->CallObjectMethod( intent, pEnv->GetMethodID( pEnv->GetObjectClass( intent ), "getStringExtra", "(Ljava/lang/String;)Ljava/lang/String;" ),
                                                                                                     extraName ) )
                                                     : nullptr;
-        string        arguments;
-        const utf8*   pText = extra != nullptr ? pEnv->GetStringUTFChars( extra, nullptr ) : nullptr;
-        if ( pText != nullptr )
-        {
-            arguments = pText;
-            pEnv->ReleaseStringUTFChars( extra, pText );
-        }
+        string        arguments = AndroidJNIString::toUTF8( pEnv, extra ); // 경로 · 시나리오 이름의 평면 밖 글자를 깨뜨리지 않는다
         if ( pEnv->ExceptionCheck() )
         {
             pEnv->ExceptionClear();
