@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIModuleABI.h"
+#include "Engine/Module/EngineABIStamp.h"
 
 namespace sw
 {
@@ -157,18 +158,20 @@ namespace sw
         if ( pModuleHandle == nullptr )
             return false;
 
-        PFN_GetRHIModuleABIVersion pfnVersion = reinterpret_cast<PFN_GetRHIModuleABIVersion>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIVersion" ) );
-        if ( pfnVersion == nullptr || pfnVersion() != kRHIModuleABIVersion )
+        // 백엔드 모듈이 이 엔진과 같은 헤더로 빌드됐는지 — 빌드가 모듈마다 박은 엔진 ABI 스탬프(`RHIModuleABI.h`)를 돌고 있는 엔진의 것과 대조한다.
+        const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
+        if ( pInfo == nullptr )
         {
-            SW_LOG_ERROR_ID( "RHIBackendRegistry.RHIMODULEABIVersion", "RHI MODULE ABI version mismatch or missing getRHIModuleABIVersion (%#)", modulePath );
+            SW_LOG_ERROR_ID( "RHIBackendRegistry.BackendNotInTable", "Backend %# has no descriptor in RHIBackendInfoTable (%#)", static_cast<int32>( backend ), modulePath );
             (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
             return false;
         }
-
-        PFN_GetRHIModuleABIStamp pfnStamp = reinterpret_cast<PFN_GetRHIModuleABIStamp>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIStamp" ) );
-        if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kRHIModuleABIStamp ) == false )
+        const string stampSymbolName = string{ "sw_moduleEngineABIStamp_" } + string{ pInfo->_pModuleName };
+        const utf8*  pModuleStamp    = static_cast<const utf8*>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, stampSymbolName ) );
+        if ( pModuleStamp == nullptr || StringUtil::equals( pModuleStamp, engine::getEngineABIStamp() ) == false )
         {
-            SW_LOG_ERROR_ID( "RHIBackendRegistry.RHIMODULEABIStamp", "RHI MODULE ABI stamp mismatch or missing getRHIModuleABIStamp (%#; expected %#)", modulePath, kRHIModuleABIStamp );
+            SW_LOG_ERROR_ID( "RHIBackendRegistry.RHIMODULEABIStamp", "RHI MODULE engine ABI stamp mismatch or missing %# (%#; expected %#) - rebuild the engine and the RHI modules together.",
+                             stampSymbolName, modulePath, engine::getEngineABIStamp() );
             (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
             return false;
         }

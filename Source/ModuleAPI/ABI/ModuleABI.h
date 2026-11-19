@@ -1,6 +1,6 @@
 /**
  * @file ModuleABI.h
- * @brief 모듈 C-ABI 버전 + 스탬프입니다(App 과 EditorModule/SWGame 이 일치해야 합니다).
+ * @brief 모듈 C-ABI 표의 스탬프를 표 선언 글에서 계산하는 장치입니다(App 과 EditorModule/SWGame 이 일치해야 합니다).
  *
  * @details `GameAPI` · `EditorAPI` 는 **함수 포인터를 순서대로 늘어놓은 구조체**입니다. 모듈이
  *          자기가 아는 자리에 채우고 호스트가 자기가 아는 자리에서 읽으므로, 둘이 서로 다른
@@ -12,37 +12,37 @@
  *          가운데 삽입에서도 멀쩡히 채워집니다. 핫 리로드는 모듈 DLL 만 다시 빌드하는 기능이므로 이 어긋남이
  *          생기는 바로 그 상황입니다.
  *
- *          RHI 경계도 같은 이유로 `RHIModuleABI.h` 에 버전+스탬프를 두고 로드할 때
- *          대조합니다(CLAUDE.md 의 "RHI ABI stamps"). 이 파일은 같은 장치의 모듈 경계 판입니다.
- *
- * @note **표에 항목을 더하거나 순서를 바꾸면 `kModuleABIVersion` 을 올리고 스탬프 문자열을 고치십시오.**
- *       그러면 옛 DLL 은 로드 시점에 이유가 적힌 에러와 함께 거부됩니다.
+ *          예전에는 손 판 번호(v1 ~ v12)와 스탬프 문자열을 사람이 올렸다 — 잊으면 옛 DLL 이 통과했다. 이제 표는 X 매크로 목록 하나
+ *          (`SW_GAME_API_ENTRIES` · `SW_EDITOR_API_ENTRIES`)로 선언하고, 구조체 멤버와 스탬프가 둘 다 그 목록에서 나온다. 스탬프는 목록 글
+ *          (반환형 · 이름 · 매개변수, 순서대로)의 FNV-1a 64 비트 해시라 항목을 더하거나 빼거나 순서 · 시그니처를 바꾸면 저절로 바뀐다
+ *          (언리얼 모듈의 빌드가 만드는 `BuildId`, Godot GDExtension 의 생성된 인터페이스 해시와 같은 자리).
+ *          표 밖에서 경계를 넘는 구조체(`StateBufferSink` · `ViewportTarget` …)의 배치는 이 스탬프에 들지 않는다 — 그것은 핫 리로드가
+ *          올리기 전에 대조하는 엔진 ABI 스탬프(헤더 내용 지문, `Engine/Module/EngineABIStamp.h`)가 덮는다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
+
+/** @brief 표 항목 하나를 구조체 멤버(빈 함수 포인터)로 펼칩니다. */
+#define SW_MODULE_ABI_ENTRY_MEMBER( ReturnType, Name, Params ) ReturnType( *Name ) Params{ nullptr };
+/** @brief 표 항목 하나를 스탬프 글(`반환형 이름(매개변수);`)로 펼칩니다. 목록 전체가 이어 붙은 문자열 리터럴 하나가 됩니다. */
+#define SW_MODULE_ABI_ENTRY_TEXT( ReturnType, Name, Params ) #ReturnType " " #Name #Params ";"
+/** @brief 표 항목 하나를 함수 포인터 형(`PFN_<이름>`)으로 펼칩니다. 이름으로 찾는 진입점(헤드리스 에디터 진입점)이 씁니다. */
+#define SW_MODULE_ABI_ENTRY_PFN( ReturnType, Name, Params ) using PFN_##Name = ReturnType( * ) Params;
 
 namespace sw
 {
-    /** @brief `GameAPI`/`EditorAPI` 표의 모양이 바뀔 때마다 올립니다. */
-    inline constexpr uint32 kModuleABIVersion = 12;
+    /** @struct ModuleABIUtil @brief 표 선언 글에서 스탬프를 계산합니다. */
+    struct ModuleABIUtil
+    {
+        /** @brief 표 선언 글 @p text 의 스탬프입니다(대소문자를 구분하는 FNV-1a 64 비트). 리터럴 끝의 NUL 은 넣지 않습니다. */
+        template <size_t N>
+        [[nodiscard]] static constexpr uint64 computeStamp( const utf8 ( &text )[N] ) noexcept
+        {
+            return HashUtil::computeStringHash64( text, N - 1, false );
+        }
+    };
 
-    /**
-     * @brief 표의 지문입니다. 버전과 함께 바꿉니다.
-     *        v1: 모듈 경계에 버전 · 스탬프를 처음 붙임 (GameAPI 9항목 · EditorAPI 19항목).
-     *        v2: `importEditorAssets` 가 호스트 서비스 표를 받음(헤드리스 임포트가 작업 시스템을 쓴다).
-     *        v3: 씬 뷰 / 게임 뷰 분리 — `EditorAPI` 에 `getSceneViewport` 를 더하고 `getViewportCamera` 를 `getSceneViewCamera` 로(EditorAPI 20항목).
-     *        v4: 에디터 모듈이 헤드리스 로컬라이제이션 진입점 `runEditorLocalizationTask` 를 내보냄(글 수집 · PO 교환이 엔진에서 에디터로).
-     *        v5: 호출처가 없던 `EditorAPI::registerTexture` · `unregisterTexture` 를 지움(EditorAPI 18항목, `TextureHandle` 도 지움).
-     *        v6: 다중 월드 — `EditorAPI::getPreviewSceneViews` 로 툴 창의 미리보기 씬 뷰를 넘김(EditorAPI 19항목).
-     *        v7: `GameAPI::serializeState` 가 크기 묻기 대신 호스트 할당 싱크(`StateBufferSink`)를 받음(직렬화 한 번).
-     *        v8: `EditorAPI::getGameViewport` · `getSceneViewport` 가 `ViewportTarget` 하나를 채움(창 안 자리가 더해져 게임 뷰의 런타임 UI 가 포인터를 받는다).
-     *        v9: `EditorAPI::getRedrawReasons` 를 더하고(에디터가 조용하면 앱 루프가 잔다) 재정의하는 패널이 없던 `EditorAPI::preRender` 를 지움(EditorAPI 19항목).
-     *        v10: `GameAPI::initialize` 가 RHI 디바이스를 받지 않음 — 게임은 디바이스를 쓰지 않는다(렌더 자원은 엔진이 붙은 디바이스로 만든다).
-     *        v11: `EditorAPI::prepareRender` 를 더함(EditorAPI 20항목) — UI 업로드를 백버퍼 패스 밖에서 한다. Vulkan 은 패스 안의 복사가 그 패스를 닫아 UI 가 그려지지 않았다.
-     *        v12: `EditorAPI::applyUICommands` 를 더함(EditorAPI 21항목) — UI 가 보낸 명령(뷰 크기 · 재생)을 호스트가 씬 틱 앞에서 적용한다(`EditorUICommandQueue`).
-     */
-    inline constexpr auto kModuleABIStamp = "module-abi-v12-2026-11-editor-ui-commands";
-
-    using PFN_GetModuleABIVersion = uint32 ( * )();
-    using PFN_GetModuleABIStamp   = const utf8* (*)();
+    /** @brief 모듈이 빌드된 표 스탬프를 돌려주는 진입점의 형입니다(`getGameModuleABIStamp` · `getEditorModuleABIStamp`). */
+    using PFN_GetModuleABIStamp = uint64 ( * )();
 } // namespace sw

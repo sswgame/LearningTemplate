@@ -6,6 +6,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "ModuleAPI/ABI/ModuleABI.h"
 #include "ModuleAPI/ABI/ModuleHandles.h"
 
 namespace sw
@@ -39,36 +40,62 @@ namespace sw
     // 1) EditorAPI — C ABI 함수 테이블
     //    IEditor 구현은 EditorModule 안에 두고, App 은 이 포인터만 부른다
     // ------------------------------------------------------------------------------
+    /**
+     * @brief `EditorAPI` 표의 항목 목록입니다 — `X( 반환형, 이름, ( 매개변수 ) )`. 구조체 멤버와 스탬프(`kEditorModuleABIStamp`)가 둘 다 여기서 나옵니다.
+     * @details 항목을 더하거나 순서 · 시그니처를 바꾸면 스탬프가 저절로 바뀌어 옛 모듈 DLL 은 로드 때 거부됩니다(`ModuleABI.h`).
+     *          줄 연결 매크로 안이라 설명은 블록 주석으로 씁니다(줄 주석은 다음 줄을 삼킨다).
+     */
+#define SW_EDITOR_API_ENTRIES( X ) /** 에디터 인스턴스를 생성합니다. */                                                                                                                         \
+    X( EditorHandle, create, () )                                                                                                                                                               \
+    /** 에디터 인스턴스를 파괴합니다. */                                                                                                                                                        \
+    X( void, destroy, ( EditorHandle editor ) )                                                                                                                                                 \
+    /** 윈도우 및 RHI 디바이스로 에디터를 초기화합니다. */                                                                                                                                      \
+    X( bool, initialize, ( EditorHandle editor, WindowHandle window, RHIDeviceHandle rhiDevice ) )                                                                                              \
+    /** 에디터를 종료합니다. */                                                                                                                                                                 \
+    X( void, shutdown, ( EditorHandle editor ) )                                                                                                                                                \
+    /** 메인 스레드에서 에디터 UI 및 플랫폼 윈도우를 갱신합니다. */                                                                                                                             \
+    X( void, updateUI, ( EditorHandle editor ) )                                                                                                                                                \
+    /** UI 가 보낸 명령(뷰 크기 · 재생)을 적용합니다. 게임 스레드가 씬 틱 · 틱 여부 질의 앞에서 부릅니다. */                                                                                    \
+    X( void, applyUICommands, ( EditorHandle editor ) )                                                                                                                                         \
+    /** 렌더 패스 밖에서 이번 프레임 UI 의 업로드(그리기 목록 · 텍스처 연산 · bindless 등록)를 합니다. */                                                                                       \
+    X( void, prepareRender, ( EditorHandle editor, RHIDeviceHandle rhiDevice ) )                                                                                                                \
+    /** 열린 백버퍼 패스 안에서 에디터 UI 를 그립니다(업로드는 prepareRender 가 했다). */                                                                                                       \
+    X( void, render, ( EditorHandle editor, RHIDeviceHandle rhiDevice ) )                                                                                                                       \
+    /** 렌더링 결과가 출력된 후 호출됩니다(멀티 뷰포트 처리용). */                                                                                                                              \
+    X( void, postPresent, ( EditorHandle editor, RHIDeviceHandle rhiDevice ) )                                                                                                                  \
+    /** 에디터 인스턴스를 없애기 직전에만 부릅니다(렌더 워커는 이미 비운 뒤). 렌더 대기 중인 draw 스냅샷 표시를 버리게 합니다. 모듈 리로드 중간에 부르면 UI 스레드와 렌더 스레드가 겹칩니다. */ \
+    X( void, abandonPendingDraw, ( EditorHandle editor ) )                                                                                                                                      \
+    /** 네이티브 이벤트를 에디터로 전달합니다. */                                                                                                                                               \
+    X( bool, processEvent, ( EditorHandle editor, const NativeWindowEvent* pEvent ) )                                                                                                           \
+    /** 이번 프레임 게임 뷰 RT 핸들 · 크기 · 창 안 자리를 씁니다(패널이 안 보이면 빈 값). */                                                                                                    \
+    X( void, getGameViewport, ( EditorHandle editor, ViewportTarget * pOutTarget ) )                                                                                                            \
+    /** 이번 프레임 씬 뷰 RT 핸들 · 크기 · 창 안 자리를 씁니다(패널이 안 보이면 빈 값). */                                                                                                      \
+    X( void, getSceneViewport, ( EditorHandle editor, ViewportTarget * pOutTarget ) )                                                                                                           \
+    /** 이번 프레임 씬 뷰 카메라(에디터 카메라, CameraComponent*)를 반환합니다. */                                                                                                              \
+    X( void*, getSceneViewCamera, ( EditorHandle editor ) )                                                                                                                                     \
+    /** 호스트 서비스 범위를 에디터 모듈에 주입하거나 nullptr 로 해제합니다. */                                                                                                                 \
+    X( void, bindService, ( const ISubsystemLocator* pService ) )                                                                                                                               \
+    /** 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */                                                                                                                                     \
+    X( bool, isPlaying, ( EditorHandle editor ) )                                                                                                                                               \
+    /** 에디터 시뮬레이션이 일시정지인지 반환합니다. */                                                                                                                                         \
+    X( bool, isPaused, ( EditorHandle editor ) )                                                                                                                                                \
+    /** 에디터 시뮬레이션(PIE)을 정지합니다(핫 리로드 등). */                                                                                                                                   \
+    X( void, stopSimulation, ( EditorHandle editor ) )                                                                                                                                          \
+    /** 월드 틱 이후 Step 소비 등 프레임 마감을 합니다. */                                                                                                                                      \
+    X( void, endFrame, ( EditorHandle editor ) )                                                                                                                                                \
+    /** 이번 프레임에 보인 미리보기 씬 뷰(툴 창)를 pOutView 에 최대 capacity 개 씁니다. 쓴 개수를 반환합니다(PreviewSceneView, Engine 의 값 타입). */                                           \
+    X( uint32, getPreviewSceneViews, ( EditorHandle editor, PreviewSceneView * pOutView, uint32 capacity ) )                                                                                    \
+    /** 이번 프레임의 다시 그릴 까닭(EditorRedrawReason 비트 묶음)입니다. updateUI 뒤에 부릅니다. 0 이면 에디터가 조용합니다. */                                                                \
+    X( uint32, getRedrawReasons, ( EditorHandle editor ) )                                                                                                                                      \
+    /** 앱이 끝나는 중이니 에디터의 백그라운드 잡(색인 스캔 · 임포트 …)은 일찍 끝내라는 협조 신호를 올립니다. 호스트가 종료 대기(flushRenderWorkers) 앞에서 한 번 부릅니다. */                  \
+    X( void, requestBackgroundStop, ( EditorHandle editor ) )                                                                                                                                   \
+    /** 지금 이 모듈을 내리면 안 되면 true 입니다(다른 스레드가 이 모듈 코드에 있다 — 열린 파일 대화상자). 인스턴스가 없어도 부를 수 있다. 호스트가 리로드 잡음으로 건다. */                    \
+    X( bool, isReloadHeld, () )
+
     /** @brief EditorModule 이 exportEditorAPI 로 채우고 App 이 부르는 함수 포인터 테이블입니다. */
     struct EditorAPI
     {
-        EditorHandle ( *create )(){ nullptr };                                                                  /**< @brief 에디터 인스턴스를 생성합니다. */
-        void ( *destroy )( EditorHandle editor ){ nullptr };                                                    /**< @brief 에디터 인스턴스를 파괴합니다. */
-        bool ( *initialize )( EditorHandle editor, WindowHandle window, RHIDeviceHandle rhiDevice ){ nullptr }; /**< @brief 윈도우 및 RHI 디바이스로 에디터를 초기화합니다. */
-        void ( *shutdown )( EditorHandle editor ){ nullptr };                                                   /**< @brief 에디터를 종료합니다. */
-        void ( *updateUI )( EditorHandle editor ){ nullptr };                                                   /**< @brief 메인 스레드에서 에디터 UI 및 플랫폼 윈도우를 갱신합니다. */
-        void ( *applyUICommands )( EditorHandle editor ){ nullptr };                                            /**< @brief UI 가 보낸 명령(뷰 크기 · 재생)을 적용합니다. 게임 스레드가 씬 틱 · 틱 여부 질의 앞에서 부릅니다. */
-        void ( *prepareRender )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                   /**< @brief 렌더 패스 밖에서 이번 프레임 UI 의 업로드(그리기 목록 · 텍스처 연산 · bindless 등록)를 합니다. */
-        void ( *render )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                          /**< @brief 열린 백버퍼 패스 안에서 에디터 UI 를 그립니다(업로드는 `prepareRender` 가 했다). */
-        void ( *postPresent )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                     /**< @brief 렌더링 결과가 출력된 후 호출됩니다 (멀티 뷰포트 처리용). */
-        void ( *abandonPendingDraw )( EditorHandle editor ){ nullptr };                                         /**< @brief 에디터 인스턴스를 없애기 직전에만 부릅니다(렌더 워커는 이미 비운 뒤). 렌더 대기 중인 draw 스냅샷 표시를 버리게 합니다. 모듈 리로드 중간에 부르면 UI 스레드와 렌더 스레드가 겹칩니다. */
-        bool ( *processEvent )( EditorHandle editor, const NativeWindowEvent* pEvent ){ nullptr };              /**< @brief 네이티브 이벤트를 에디터로 전달합니다. */
-        void ( *getGameViewport )( EditorHandle editor, ViewportTarget* pOutTarget ){ nullptr };                /**< @brief 이번 프레임 게임 뷰 RT 핸들 · 크기 · 창 안 자리를 씁니다(패널이 안 보이면 빈 값). */
-        void ( *getSceneViewport )( EditorHandle editor, ViewportTarget* pOutTarget ){ nullptr };               /**< @brief 이번 프레임 씬 뷰 RT 핸들 · 크기 · 창 안 자리를 씁니다(패널이 안 보이면 빈 값). */
-        void* ( *getSceneViewCamera )(EditorHandle editor){ nullptr };                                          /**< @brief 이번 프레임 씬 뷰 카메라(에디터 카메라, CameraComponent*)를 반환합니다. */
-        void ( *bindService )( const ISubsystemLocator* pService ){ nullptr };                                  /**< @brief 호스트 서비스 범위를 에디터 모듈에 주입하거나 nullptr 로 해제합니다. */
-        bool ( *isPlaying )( EditorHandle editor ){ nullptr };                                                  /**< @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */
-        bool ( *isPaused )( EditorHandle editor ){ nullptr };                                                   /**< @brief 에디터 시뮬레이션이 일시정지인지 반환합니다. */
-        void ( *stopSimulation )( EditorHandle editor ){ nullptr };                                             /**< @brief 에디터 시뮬레이션(PIE)을 정지합니다(핫 리로드 등). */
-        void ( *endFrame )( EditorHandle editor ){ nullptr };                                                   /**< @brief 월드 틱 이후 Step 소비 등 프레임 마감을 합니다. */
-        /** @brief 이번 프레임에 보인 미리보기 씬 뷰(툴 창)를 @p pOutView 에 최대 @p capacity 개 씁니다. 쓴 개수를 반환합니다(`PreviewSceneView`, Engine 의 값 타입). */
-        uint32 ( *getPreviewSceneViews )( EditorHandle editor, PreviewSceneView* pOutView, uint32 capacity ){ nullptr };
-        /** @brief 이번 프레임의 다시 그릴 까닭(`EditorRedrawReason` 비트 묶음)입니다. `updateUI` 뒤에 부릅니다. 0 이면 에디터가 조용합니다. */
-        uint32 ( *getRedrawReasons )( EditorHandle editor ){ nullptr };
-        /** @brief 앱이 끝나는 중이니 에디터의 백그라운드 잡(색인 스캔 · 임포트 …)은 일찍 끝내라는 협조 신호를 올립니다. 호스트가 종료 대기(`flushRenderWorkers`) 앞에서 한 번 부릅니다. */
-        void ( *requestBackgroundStop )( EditorHandle editor ){ nullptr };
-        /** @brief 지금 이 모듈을 내리면 안 되면 true 입니다(다른 스레드가 이 모듈 코드에 있다 — 열린 파일 대화상자). 인스턴스가 없어도 부를 수 있다. 호스트가 리로드 잡음으로 건다. */
-        bool ( *isReloadHeld )(){ nullptr };
+        SW_EDITOR_API_ENTRIES( SW_MODULE_ABI_ENTRY_MEMBER )
     };
 
     /** @brief EditorModule 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportEditorAPI). */
@@ -83,8 +110,24 @@ namespace sw
         TextureVariant = 3, ///< `textures_raw/` 의 이미지 → 모든 배포 대상의 형식 변형(`a.astc.dds`, `App --cook-texture-variants` · `--check-texture-variants`)
     };
 
-    /** @brief 헤드리스 에셋 임포트 진입점의 형입니다(심볼 이름: `kImportEditorAssetsSymbol`). */
-    using PFN_ImportEditorAssets = int32 ( * )( uint32 kind, uint32 checkOnly, const ISubsystemLocator* pService );
+    /**
+     * @brief 이름으로 찾는 헤드리스 진입점(에디터 인스턴스 없이 모듈만 올려 부른다)의 목록입니다 — `X( 반환형, 형 이름, ( 매개변수 ) )` 가 `PFN_<형 이름>` 이 됩니다.
+     * @details 시그니처가 바뀌면 표와 같이 `kEditorModuleABIStamp` 가 바뀝니다(v2 에서 `importEditorAssets` 가 서비스 표를 받게 된 변경이 이 자리).
+     *          심볼 이름은 아래 `k...Symbol` 이고, 구현은 아래 extern "C" 선언입니다.
+     */
+#define SW_EDITOR_HEADLESS_ENTRIES( X )                                                                                                          \
+    /** 헤드리스 에셋 임포트(심볼 kImportEditorAssetsSymbol). */                                                                                 \
+    X( int32, ImportEditorAssets, ( uint32 kind, uint32 checkOnly, const ISubsystemLocator* pService ) )                                         \
+    /** 헤드리스 로컬라이제이션(심볼 kRunEditorLocalizationTaskSymbol). */                                                                       \
+    X( int32, RunEditorLocalizationTask, ( uint32 task, const utf8* pPoPath, const utf8* pProjectArgument, const ISubsystemLocator* pService ) ) \
+    /** 헤드리스 에셋 참조 검사(심볼 kCheckEditorAssetReferencesSymbol). */                                                                      \
+    X( int32, CheckEditorAssetReferences, ( const ISubsystemLocator* pService ) )
+
+    SW_EDITOR_HEADLESS_ENTRIES( SW_MODULE_ABI_ENTRY_PFN )
+
+    /** @brief 에디터 모듈 경계의 스탬프입니다 — `EditorAPI` 표와 헤드리스 진입점 목록의 글. 에디터 모듈이 내보내고(`getEditorModuleABIStamp`) 호스트가 로드 전에 대조합니다. */
+    inline constexpr uint64 kEditorModuleABIStamp =
+        ModuleABIUtil::computeStamp( SW_EDITOR_API_ENTRIES( SW_MODULE_ABI_ENTRY_TEXT ) SW_EDITOR_HEADLESS_ENTRIES( SW_MODULE_ABI_ENTRY_TEXT ) );
 
     /** @brief `importEditorAssets` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --import-textures` · `--import-models`). */
     inline constexpr const utf8* kImportEditorAssetsSymbol = "importEditorAssets";
@@ -98,14 +141,8 @@ namespace sw
         ExportPo   = 3, ///< 문화권마다 `po/<culture>.po` 를 쓴다(`App --export-po`)
     };
 
-    /** @brief 헤드리스 로컬라이제이션 진입점의 형입니다(심볼 이름: `kRunEditorLocalizationTaskSymbol`). */
-    using PFN_RunEditorLocalizationTask = int32 ( * )( uint32 task, const utf8* pPoPath, const utf8* pProjectArgument, const ISubsystemLocator* pService );
-
     /** @brief `runEditorLocalizationTask` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --gather-text` · `--check-text`). */
     inline constexpr const utf8* kRunEditorLocalizationTaskSymbol = "runEditorLocalizationTask";
-
-    /** @brief 헤드리스 에셋 참조 검사 진입점의 형입니다(심볼 이름: `kCheckEditorAssetReferencesSymbol`). */
-    using PFN_CheckEditorAssetReferences = int32 ( * )( const ISubsystemLocator* pService );
 
     /** @brief `validateEditorAssetReferences` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --check-asset-refs`). */
     inline constexpr const utf8* kCheckEditorAssetReferencesSymbol = "validateEditorAssetReferences";
@@ -116,10 +153,8 @@ extern "C"
     // ------------------------------------------------------------------------------
     // 2) export — EditorModule 이 채우는 진입점
     // ------------------------------------------------------------------------------
-    /** @brief 이 모듈이 빌드된 표 버전입니다. 호스트가 로드 전에 자기 것과 대조합니다. */
-    SW_MODULE_API uint32 getEditorModuleABIVersion();
-    /** @brief 이 모듈이 빌드된 표 지문입니다. 버전과 함께 대조합니다. */
-    SW_MODULE_API const utf8* getEditorModuleABIStamp();
+    /** @brief 이 모듈이 빌드된 경계 스탬프(`sw::kEditorModuleABIStamp`)입니다. 호스트가 로드 전에 자기 것과 대조합니다. */
+    SW_MODULE_API uint64 getEditorModuleABIStamp();
 
     /** @brief EditorModule API 테이블을 내보냅니다. */
     SW_MODULE_API bool exportEditorAPI( sw::EditorAPI* pOutAPI );

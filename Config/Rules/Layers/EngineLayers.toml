@@ -31,6 +31,7 @@ Console = 1
 "Module/ModuleObjectRegistrar.h" = 1   # 모듈 이미지의 정적 등록자 바탕(Core 만) — 낮은 층의 레지스트리(일괄 틱 · 5 층)가 상속해 E1 사전 등록 사슬에 단다
 "Module/ModuleEntryRegistrar.h" = 1  # 등록 줄 하나의 정적 등록자(Core 만) — 낮은 층의 레지스트리가 쓴다
 "Module/ModuleObjectRegistrar.cpp" = 1 # 링크 때 목록 머리 하나뿐(Core 만)
+"Module/EngineABIStamp.h" = 1          # 엔진 ABI 스탬프 읽기 선언(Core 만) — RHI 백엔드 로더(4 층)가 모듈의 스탬프와 대조한다. 구현(.cpp)은 생성 헤더를 읽어 맨 위 층이다
 # 2 — 콘텐츠: 에셋 · 글 · 현지화
 Asset = 2
 Text = 2

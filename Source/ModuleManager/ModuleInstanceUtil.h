@@ -6,7 +6,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
@@ -23,7 +22,7 @@ namespace sw
      */
     struct ModuleAPISymbols
     {
-        const utf8* _pVersionSymbol;
+        uint64      _expectedStamp; ///< 호스트가 빌드된 표 스탬프(`kGameModuleABIStamp` · `kEditorModuleABIStamp`)
         const utf8* _pStampSymbol;
         const utf8* _pExportSymbol;
         const utf8* _pModuleLabel;
@@ -43,22 +42,14 @@ namespace sw
          * @details `GameAPI` · `EditorAPI` 는 함수 포인터를 순서대로 늘어놓은 구조체입니다. 모듈은 자기가 아는 자리에 채우고 호스트는
          *          자기가 아는 자리에서 읽으므로, 서로 다른 헤더로 빌드되면 **호스트가 엉뚱한 함수를 부릅니다.** `create != nullptr && destroy != nullptr`
          *          만으로는 막지 못합니다 — 그 둘은 **맨 앞**에 있어서 가운데에 끼워 넣어도 채워집니다. 핫 리로드는 모듈만 다시 빌드하는 기능이라 이런
-         *          어긋남이 생기는 바로 그 상황입니다. RHI 경계의 `RHIModuleABI.h` 와 같은 대조입니다.
+         *          어긋남이 생기는 바로 그 상황입니다. 스탬프는 표 선언 글의 해시라 표를 고치면 저절로 바뀝니다(`ModuleABI.h`).
          */
         static bool matchesModuleABI( void* pLibraryModule, const ModuleAPISymbols& symbols )
         {
-            const PFN_GetModuleABIVersion pfnVersion =
-                reinterpret_cast<PFN_GetModuleABIVersion>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pVersionSymbol ) );
-            if ( pfnVersion == nullptr || pfnVersion() != kModuleABIVersion )
-            {
-                SW_LOG_ERROR_ID( "ModuleInstanceUtil.ModuleABIVersionDiffers", "The %# module ABI version differs (expected %#) - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleABIVersion );
-                return false;
-            }
-
             const PFN_GetModuleABIStamp pfnStamp = reinterpret_cast<PFN_GetModuleABIStamp>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pStampSymbol ) );
-            if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kModuleABIStamp ) == false )
+            if ( pfnStamp == nullptr || pfnStamp() != symbols._expectedStamp )
             {
-                SW_LOG_ERROR_ID( "ModuleInstanceUtil.ModuleABIStampDiffers", "The %# module ABI stamp differs (expected '%#') - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleABIStamp );
+                SW_LOG_ERROR_ID( "ModuleInstanceUtil.ModuleABIStampDiffers", "The %# module ABI stamp differs (expected %#) - rebuild the engine and the module together.", symbols._pModuleLabel, symbols._expectedStamp );
                 return false;
             }
             return true;
