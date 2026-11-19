@@ -83,9 +83,9 @@ namespace sw
         float3        _position{};
         uint32        _entityID{ 0 };
         uint32        _typeID{ 0 };
-        uint64        _staticID{ 0 };               ///< 셀에 놓인 엔티티면 쿠킹된 씬의 파일 id(서버 · 클라이언트가 같은 쿠킹본이라 같다). 0 이면 게임이 스폰하는 동적 엔티티다. 새로 보임에만 싣는다
         float32       _importance{ 1.0f };          ///< 보스와 다른 플레이어는 크게 잡는다
         uint8         _bAlwaysRelevant{ SW_FALSE }; ///< 반경 밖에서도 보일 후보. 서버 복제기가 `setEntity` 때 항상 보임 집합에 모으고 정책(`IInterestPolicy::isAlwaysRelevant`)이 관찰자마다 거른다. 와이어에는 싣지 않는다
+        uint64        _staticID{ 0 };               ///< (집합체 초기화 순서를 지키려 끝에 둔다) 셀에 놓인 엔티티면 쿠킹된 씬의 파일 id(서버 · 클라이언트가 같은 쿠킹본이라 같다). 0 이면 게임이 스폰하는 동적 엔티티다. 새로 보임에만 싣는다
     };
 } // namespace sw
 

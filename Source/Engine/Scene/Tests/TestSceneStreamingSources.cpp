@@ -12,6 +12,8 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
 
+#include <limits>
+
 using namespace sw;
 
 namespace
