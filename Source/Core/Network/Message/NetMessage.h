@@ -27,9 +27,10 @@ namespace sw
      * @class NetMessageWriter
      * @brief 종류 바이트를 쓰고 본문은 돌려준 `BitWriter` 에 이어 쓴 뒤 보냅니다. 버퍼를 다시 쓰므로 메시지마다 할당하지 않습니다.
      * @code
-     *     BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kInput );
-     *     writer.writeVarUint( tick );
-     *     (void)_messageWriter.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered );
+     *     if ( _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( body ) ) // 본문 형식이 있는 메시지(`NetMessageBodyDef`)
+     *         (void)_messageWriter.send( *_pHost, connectionID, NetLockstepMessage::Input::kChannel );
+     *     BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kRollbackInput );               // 손으로 쓰는 본문
+     *     writer.writeVarUint( frame );
      * @endcode
      */
     class SW_API NetMessageWriter

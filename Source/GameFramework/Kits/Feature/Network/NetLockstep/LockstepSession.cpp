@@ -112,12 +112,12 @@ namespace sw
         const uint32 tick = _listNextInputTick[static_cast<size_t>( _localPlayer )];
         if ( tick > _currentTick + kMaxInputLead || storeInput( _localPlayer, tick, listInput ) == false )
             return false;
-        BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kInput );
-        writer.writeVarUint( static_cast<uint64>( _localPlayer ) );
-        writer.writeVarUint( tick );
-        writer.writeBlob( listInput.data(), static_cast<int32>( listInput.size() ) );
-        if ( _pHost != nullptr )
-            (void)_messageWriter.sendToPeers( *_pHost, NetChannelKind::ReliableOrdered );
+        LockstepInputBody body;
+        body._player = _localPlayer;
+        body._tick   = tick;
+        body._input  = listInput;
+        if ( _pHost != nullptr && _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( body ) )
+            (void)_messageWriter.sendToPeers( *_pHost, NetLockstepMessage::Input::kChannel );
         return true;
     }
 
@@ -195,12 +195,12 @@ namespace sw
     void LockstepSession::reportChecksum( uint32 tick, uint32 checksum )
     {
         storeChecksum( _localPlayer, tick, checksum );
-        BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kChecksum );
-        writer.writeVarUint( static_cast<uint64>( _localPlayer ) );
-        writer.writeVarUint( tick );
-        writer.writeUint32( checksum );
-        if ( _pHost != nullptr )
-            (void)_messageWriter.sendToPeers( *_pHost, NetChannelKind::ReliableOrdered );
+        LockstepChecksumBody body;
+        body._player   = _localPlayer;
+        body._tick     = tick;
+        body._checksum = checksum;
+        if ( _pHost != nullptr && _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Checksum>( body ) )
+            (void)_messageWriter.sendToPeers( *_pHost, NetLockstepMessage::Checksum::kChannel );
     }
 
     void LockstepSession::applyLeave( int32 player, uint32 tick )
@@ -227,19 +227,18 @@ namespace sw
         // 서버가 받은 마지막 입력의 다음 틱을 이탈 틱으로 한다. 그 이전의 입력은 이미 모두에게 신뢰 순서로 나갔고, 그 이후의 입력은 아무도 받지 못했다.
         const uint32 tick = MathUtil::max( _listNextInputTick[static_cast<size_t>( player )], _currentTick );
         applyLeave( player, tick );
-        BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kLeave );
-        writer.writeVarUint( static_cast<uint64>( player ) );
-        writer.writeVarUint( tick );
-        (void)_messageWriter.broadcast( *_pHost, NetChannelKind::ReliableOrdered );
+        LockstepLeaveBody body;
+        body._player = player;
+        body._tick   = tick;
+        if ( _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Leave>( body ) )
+            (void)_messageWriter.broadcast( *_pHost, NetLockstepMessage::Leave::kChannel );
     }
 
-    NetHandleResult LockstepSession::receive( NetLockstepMessage::Leave, const NetMessageContext& context, BitReader& body )
+    NetHandleResult LockstepSession::receive( NetLockstepMessage::Leave, const NetMessageContext& context, const LockstepLeaveBody& body )
     {
         (void)context;
-        const int32  player = body.readVarUint31();
-        const uint32 tick   = body.readVarUint32();
-        if ( body.hasOverflowed() )
-            return NetHandleResult::Malformed;
+        const int32  player = body._player;
+        const uint32 tick   = body._tick;
         // 이탈은 서버만 정한다.
         const bool bServer     = _pHost != nullptr && _pHost->isServer();
         const bool bApplyLeave = bServer == false && 0 < player && player < _playerCount && hasLeft( player ) == false;
@@ -248,35 +247,26 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    NetHandleResult LockstepSession::receive( NetLockstepMessage::Input, const NetMessageContext& context, BitReader& body )
+    NetHandleResult LockstepSession::receive( NetLockstepMessage::Input, const NetMessageContext& context, const LockstepInputBody& body )
     {
-        const int32  player = body.readVarUint31();
-        const uint32 tick   = body.readVarUint32();
+        const int32  player = body._player;
+        const uint32 tick   = body._tick;
         // 서버는 클라이언트가 자기 번호로만 보내게 한다. 다른 플레이어의 입력을 위조하지 못하게 하려는 것이다.
         const bool bServer = _pHost != nullptr && _pHost->isServer();
         if ( bServer && player != context._connectionID + 1 )
             return NetHandleResult::Handled;
-        vector<uint8> listInput;
-        if ( body.readBlob( listInput, NetLockstepMessage::kMaxInputBytes ) == false )
-            return NetHandleResult::Malformed;
-        if ( body.hasOverflowed() )
-            return NetHandleResult::Malformed;
-        if ( storeInput( player, tick, listInput ) && _pHost != nullptr )
+        if ( storeInput( player, tick, body._input ) && _pHost != nullptr )
             (void)NetMessageRouter::relayToOtherPeers( *_pHost, context ); // 받아들인 입력만 전달한다. 버린 입력이 다른 클라이언트의 순서를 어지럽히지 않게 하려는 것이다
         return NetHandleResult::Handled;
     }
 
-    NetHandleResult LockstepSession::receive( NetLockstepMessage::Checksum, const NetMessageContext& context, BitReader& body )
+    NetHandleResult LockstepSession::receive( NetLockstepMessage::Checksum, const NetMessageContext& context, const LockstepChecksumBody& body )
     {
-        const int32  player  = body.readVarUint31();
-        const uint32 tick    = body.readVarUint32();
-        const bool   bServer = _pHost != nullptr && _pHost->isServer();
+        const int32 player  = body._player;
+        const bool  bServer = _pHost != nullptr && _pHost->isServer();
         if ( bServer && player != context._connectionID + 1 )
             return NetHandleResult::Handled;
-        const uint32 checksum = body.readUint32();
-        if ( body.hasOverflowed() )
-            return NetHandleResult::Malformed;
-        storeChecksum( player, tick, checksum );
+        storeChecksum( player, body._tick, body._checksum );
         if ( _pHost != nullptr )
             (void)NetMessageRouter::relayToOtherPeers( *_pHost, context );
         return NetHandleResult::Handled;

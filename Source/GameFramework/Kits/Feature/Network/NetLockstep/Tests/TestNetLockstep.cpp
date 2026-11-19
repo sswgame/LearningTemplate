@@ -393,31 +393,30 @@ SW_TEST_CASE( NetLockstepTest, FarFutureInputIsIgnored )
 {
     LockstepSession session;
     SW_REQUIRE_TRUE( session.initialize( nullptr, 2, 0, LockstepConfig{ 2 } ) );
-    const int32      queuedBefore = session.getQueuedTickCount();
-    NetMessageWriter writer;
+    const int32       queuedBefore = session.getQueuedTickCount();
+    NetMessageWriter  writer;
+    LockstepInputBody input;
+    input._player = 1;
+    input._input  = vector<uint8>{ 0xAB };
     for ( uint32 tick = 100; tick < 100000; tick += 997 )
     {
-        BitWriter& body = writer.begin( NetLockstepMessage::kInput );
-        body.writeVarUint( 1 );
-        body.writeVarUint( tick );
-        body.writeVarUint( 1 );
-        body.writeBits( 0xAB, 8 );
+        input._tick = tick;
+        SW_REQUIRE_TRUE( ( writer.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( input ) ) );
         SW_EXPECT_TRUE( NetHandleResult::Handled == session.handleMessage( 0, writer.getBytes() ) );
     }
     SW_EXPECT_EQUAL( queuedBefore, session.getQueuedTickCount() );
-    BitWriter& checksum = writer.begin( NetLockstepMessage::kChecksum );
-    checksum.writeVarUint( 1 );
-    checksum.writeVarUint( 1000000 );
-    checksum.writeUint32( 7 );
+    LockstepChecksumBody checksum;
+    checksum._player   = 1;
+    checksum._tick     = 1000000;
+    checksum._checksum = 7;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Checksum>( checksum ) ) );
     SW_EXPECT_TRUE( NetHandleResult::Handled == session.handleMessage( 0, writer.getBytes() ) );
     SW_EXPECT_EQUAL( 0, session.getPendingChecksumCount() );
 
     // 다음 틱(2)은 받는다 — 내 입력과 함께 세 틱을 진행한다.
-    BitWriter& next = writer.begin( NetLockstepMessage::kInput );
-    next.writeVarUint( 1 );
-    next.writeVarUint( 2 );
-    next.writeVarUint( 1 );
-    next.writeBits( 0x11, 8 );
+    input._tick  = 2;
+    input._input = vector<uint8>{ 0x11 };
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( input ) ) );
     SW_EXPECT_TRUE( NetHandleResult::Handled == session.handleMessage( 0, writer.getBytes() ) );
     SW_EXPECT_TRUE( session.submitLocalInput( vector<uint8>{ 0x22 } ) );
     // 내 입력은 지금(0) + kMaxInputLead 까지만 예약된다.
@@ -450,16 +449,22 @@ SW_TEST_CASE( NetLockstepTest, OversizeInputIsRefusedOnBothEnds )
     }
     SW_EXPECT_TRUE( session.submitLocalInput( vector<uint8>( static_cast<size_t>( NetLockstepMessage::kMaxInputBytes ), 0x5A ) ) );
 
-    NetMessageWriter writer;
-    BitWriter&       body = writer.begin( NetLockstepMessage::kInput );
-    body.writeVarUint( 1 );
-    body.writeVarUint( 0 );
-    body.writeVarUint( static_cast<uint64>( NetLockstepMessage::kMaxInputBytes ) + 1 );
-    for ( int32 index = 0; index <= NetLockstepMessage::kMaxInputBytes; ++index )
-    {
-        body.writeBits( 0x5A, 8 );
-    }
+    // 본문 형식이 상한을 넘는 입력을 쓰지 못하게 막는다. 상한 본문 뒤에 바이트를 덧붙인 꾸민 메시지는 남는 비트라 깨진 메시지다. 잘린 본문도 같다.
+    LockstepInputBody input;
+    input._player = 1;
+    input._input.assign( static_cast<size_t>( NetLockstepMessage::kMaxInputBytes ) + 1, uint8{ 0x5A } );
+    NetMessageWriter refusedWriter;
+    SW_EXPECT_LOG( "Net.MessageBodyOutOfRange" );
+    SW_EXPECT_FALSE( ( refusedWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( input ) ) );
+    input._input.resize( static_cast<size_t>( NetLockstepMessage::kMaxInputBytes ) );
+    BitWriter writer;
+    writer.writeBits( NetLockstepMessage::kInput, 8 );
+    SW_REQUIRE_TRUE( NetLockstepMessage::Input::writeBody( input, writer ) );
+    const vector<uint8> listExact = writer.getBytes();
+    writer.writeBits( 0x5A, 8 );
     SW_EXPECT_TRUE( NetHandleResult::Malformed == session.handleMessage( 0, writer.getBytes() ) );
+    const vector<uint8> listTruncated( listExact.begin(), listExact.begin() + static_cast<std::ptrdiff_t>( listExact.size() / 2 ) );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == session.handleMessage( 0, listTruncated ) );
 }
 
 /**
@@ -477,13 +482,13 @@ SW_TEST_CASE( NetLockstepTest, PendingChecksumsExpireOneTickAtATime )
     NetMessageWriter      writer;
     vector<vector<uint8>> listInput;
     const vector<uint8>   listEmpty;
+    LockstepInputBody     input; // 빈 입력
+    input._player = 1;
     for ( uint32 tick = 0; tick < LockstepSession::kChecksumWindow + 10u; ++tick )
     {
         SW_REQUIRE_TRUE( session.submitLocalInput( listEmpty ) );
-        BitWriter& body = writer.begin( NetLockstepMessage::kInput );
-        body.writeVarUint( 1 );
-        body.writeVarUint( tick );
-        body.writeVarUint( 0 ); // 빈 입력
+        input._tick = tick;
+        SW_REQUIRE_TRUE( ( writer.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( input ) ) );
         SW_REQUIRE_TRUE( NetHandleResult::Handled == session.handleMessage( 0, writer.getBytes() ) );
         SW_REQUIRE_TRUE( session.tryAdvance( listInput ) );
         const uint32 currentTick = session.getCurrentTick();
