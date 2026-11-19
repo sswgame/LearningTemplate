@@ -1581,7 +1581,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
   - 게임 넷 메시지 본문을 REFLECT 고정 배치로, 본문 판은 스키마 해시(GameServer PacketGenerator, M — NetMessageDef 37 곳).
   - 열거형: 등록기를 항목 표 하나로(생성 바이트 약 0.7 MB↓), 플래그 글은 단일 비트 이름만, 끝 열거자 `Count` 자동 센티널, Core `EnumArray<E,T>` · `makeEnumTable`(개수 모자람을 컴파일 오류로), 열거자 단위 데이터 철자(magic_enum, S~M).
   - 렌더 그래프 접근 종류를 핸들 형식에 — 손 전이 81 곳 제거(Adria, L, HZB 뒤).
-  - 컴포넌트 → 카탈로그 id 를 `CatalogKey<Tag>` 형식으로, 쿠킹이 대조(ezEngine, M).
+  - 컴포넌트 → 카탈로그 id 를 `CatalogKey<Tag>` 형식으로, 쿠킹이 대조(ezEngine, M). **했다(2026-11-19)** — 판단: 항목 종류 → 카탈로그 루트 · 원소와 칸 목록은 코드가 아니라 참조 표(`<CatalogKey>` · `<Field>`)에 둔다. 쿠커는 게임 모듈 리플렉션을 못 보기 때문이고(문서 표 · `DocumentTableMatchesReflection` 과 같은 모양), 파서가 칸의 항목 종류를 메타 `_catalogKeyTag` 에 실어 표와 코드를 테스트가 대조한다. 대조는 "굽는 모든 도메인의 그 종류 카탈로그 어딘가에 있다" 이고(키는 파일을 모른다 — 언리얼 `FDataTableRowHandle` 은 표 포인터를 함께 든다), 쓰는 쪽이 고른 한 벌은 시작할 때 `GameCatalog::require` 가 본다. `ActionPlatformer` 패턴 전이는 같은 패턴 안(inEntry) 줄로, `FighterCatalog` 기술 → 프레임은 다른 파일 줄(`file` · `defaultAttribute`)로 옮겨 그 원소만 버리던 읽기가 실패한다. 남은 것: 외형 프리셋 칸(`CharacterAppearanceComponent::_presetID` · `ShooterEnemyKind::_preset` — 글 형식 호출 사슬), 종류가 둘인 칸(`WesternDeedComponent::_id` · `MeadowTownView::_id`), 구조체 칸 하나로 든 주인(원소 이름이 칸 이름이라 쿠커가 못 찾는다), 카탈로그 정의 사이의 다른 파일 참조(무기 → 탄 등 — 원소 이름이 정의 형식 이름과 달라 이 표의 칸 줄로 못 적는다; 지금처럼 시작 검사).
   - 타입별 판 + 패치 `REFLECT( Version = N )` — 그릇마다가 아니라 타입 한 곳(ezEngine GraphPatch, M).
 - 화질
   - 스카이 라이트 · 반사 프로브 거르기를 filtered importance sampling(원본 밉을 pdf 로 고름), HDRI 반사를 SH9 대신 거른 텍스처로(VQEngine, S → GPU 찍기 M).
