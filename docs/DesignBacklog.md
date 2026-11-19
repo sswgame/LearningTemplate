@@ -1739,6 +1739,11 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 
 **원칙 — 엔진 기능은 모두 허브에(사용자 결정 2026-11-20).** 키트뿐 아니라 엔진 · GameFramework 기능은 빠짐없이 허브 장소나 미니게임 어딘가에서 쓰이고 시나리오로 확인된다(예: 정거장 텔레포트 장치, 숲 풀베기 · 나무 베기, 대장간 장비 교체, 진흙길 발자국 · 지형 표면 효과 · 웅덩이, 광장 날씨 전환 · 낮밤, 격투 미니게임 히트 반응 · 피 · 신체 절단). 배치표는 엔진 기능 전수 조사(같은 날)로 채우고, 없는 기능은 "만들 것" 으로 배치한다. 폐기할 게임에서만 쓰이던 기능은 그 게임을 지우기 전에 허브로 옮긴다.
 
+**엔진 기능 전수(2026-11-20, 시나리오 467 · 기능 폴더 전체) — 허브 이전 확인 목록.**
+- 없는 기능(만들 것 → 붙일 장치): 텔레포트 장치 · 포털(Interactable · ZoneVolume · `SceneComponent::teleport` · savetravel), 풀베기(FoliageComponent 인스턴스 제거 API 새로), 나무 베기(Fracture · RigidBody · LootTable), 피 데칼 · 지속 출혈(DecalComponent · Dismemberment `_bloodChannel` · VFXEffectPool), 번개 · 비 · 눈 파티클 · 쌓이는 눈 · 웅덩이 고임 · 마름 · 밟으면 튐(WeatherSystem · 지형 `_wetness` · `_puddleScale` · SurfaceDeform), 실내 차폐(DecalRainWash 지붕 광선 · AudioRoomGraph), 날씨 · 낮밤 → 오디오 · 조명, 바람 → 천, 3D 등반 · 맨틀 · 수영 · 로프 · 사다리(MotionWarping · NavMeshLink), 상자 열기 · 줍기(LootTable 은 쓰는 곳 0), 이모트 · 미니맵 · 낚시.
+- 시험이 없는 기능: 단위 · 시나리오 둘 다 없음 — SmartObject · 소프트바디 · HDR 출력, 시나리오 없음 — 3D 파괴 · 표정 · 립싱크 · AI 인지 · AI · 스폰 디렉터 · 락온 · 턴 순서 · 인벤토리 · 제작 · 상점 · 날씨 전환 · 데칼 비 씻김 · 카메라 흔들림 · 사진 모드 · 스플라인 강, 단위 없음 — GrabberComponent · 튜토리얼 힌트 · 안개 · 무기 교체.
+- 폐기할 게임에서만 쓰는 사용처(지우기 전에 허브로): Shooter3D — 장비 교체 · 외형 골든 5 · rainyard(발자국 · 표면 · 젖음 유일 사용처) · 래그돌 · IK · 보폭 워핑 · 머리카락 · 망토 · 군중 · 활 · 킬캠 · 업적 · AI · 스폰 디렉터 · 공간 오디오 · 온라인 매치 · 리바인드 · 장치 분실 · 재생성. WildWest — 말 타기 · AI 인지 · 날씨 · 자동 저장 · 도착 컷씬 · 운반. HarvestValley — 낮밤 · NPC 일과 · 날씨 · 튜토리얼 힌트. MeadowVillage · Velmora — 퀘스트 · 평판 · 넷 하우징 · 시퀀스 운반. PixelTown — 대화 · 타일맵. FrontierTown · NileCity — 월드 시계 · 결정성 · 패드 커서 · 일시정지. ThemeParkTycoon — 소품 흩뿌리기 · 오디오 이벤트 · 그림자 골든. StarSkirmish · VoxelCraft · AbilityArena · LanternVale — 매치 상태 · AI 스커미시 · 뷰 동기 · 복셀 · 어빌리티 디버거 · 씬 저장 · 넷 페어드 애니메이션.
+
 **플레이 중 리로드 시나리오(사용자 요청).** 허브 · 미니게임을 플레이하는 도중에 게임 모듈 핫 리로드 · 에디터 모듈 리로드(PIE) · 에셋 리로드(텍스처 · 머티리얼 · 메시 · 프리팹 · 카탈로그) · 설정 리로드 · 셰이더 다시 컴파일(실패 하나 섞기)을 일으켜, 플레이 상태 보존 · 화면 안 깨짐 · 실패는 이전 판 유지 + 실패로 기록(`AssetCacheReloadFunction` void 결함 — 전수 조사 판단 1 절) · 소요 시간 감시 값을 확인한다. 키트가 많이 살아 있는 허브 지점에서 돈다.
 
 **결정(전수 조사 2026-11-20 — 게임 14 개, Empty 골든 613 · Shooter3D 510 · ThemePark 25 · WildWest 14 · Meadow 8).**
