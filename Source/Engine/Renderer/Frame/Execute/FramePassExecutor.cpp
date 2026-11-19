@@ -1000,7 +1000,7 @@ namespace sw
     void FramePassExecutor::recordFrameGraph( IRHIDevice* pDevice )
     {
         _frameBufferTable.reset();
-        _frameGraphExecutor.beginFrame();
+        _frameGraphExecutor.beginFrame( _frameBufferTable );
         RenderGraph& frameGraph = _state._frameGraph;
         // 주인이 등록한 처음 접근을 그래프에 심는다(언리얼 RegisterExternalBuffer 의 처음 상태) — 같은 이름은 제자리에서 바뀐다.
         for ( const FrameBufferTable::Entry& entry : _frameBufferTable.getEntries() )
@@ -1048,7 +1048,11 @@ namespace sw
 #endif
         // 이벤트 표시 + 브레드크럼(시작 · 끝) + GPU 시간 한 벌 — 캡처 · 장치 손실 보고 · 프레임 프로파일러에 프레임 패스 이름(XML 의 `_name`)이 남는다.
         const GPUPassScope scope{ *pCmd, passDesc._name, timestampBeginSlot };
-        _frameGraphExecutor.executePass( passDesc._type, *pCmd );
+        // 패스 몸통은 선언한 접근 핸들로만 등록 자원을 받는다(`RenderGraphPassContext::getBuffer` · `uavBarrier`) — 표와 이 패스의 리스트를 문맥에 싣는다.
+        RenderGraphPassContext passContext = graphContext;
+        passContext._pCmdList              = pCmd;
+        passContext._pResourceTable        = &_frameBufferTable;
+        _frameGraphExecutor.executePass( passDesc._type, passContext );
     }
 
     void FramePassExecutor::onGraphLevelPrologue( const RenderGraphLevelContext& levelContext )

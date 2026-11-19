@@ -34,6 +34,7 @@ namespace sw::test
         hashed_string _passName;                                                                      /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
         uint32        _transitionBatchCount{ 0 };                                                     /**< `transitionBuffers` 호출 수 */
         uint32        _transitionCount{ 0 };                                                          /**< `transitionBuffers` 로 받은 전이 수의 합 */
+        uint32        _uavBarrierCount{ 0 };                                                          /**< `uavBarrier` 호출 수 */
         /** @brief `copyBufferRegion` 한 번입니다. */
         struct BufferCopy
         {
@@ -97,7 +98,7 @@ namespace sw::test
         }
         void copyBufferToReadback( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
         void copyBufferRegion( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override { _listBufferCopy.push_back( BufferCopy{ destination, destinationOffset, source, sourceOffset, sizeBytes } ); }
-        void uavBarrier( RHIBufferHandle ) override {}
+        void uavBarrier( RHIBufferHandle ) override { ++_uavBarrierCount; }
         void drawIndexedIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
         void beginEventMarker( const utf8* ) override {}
         void endEventMarker() override {}

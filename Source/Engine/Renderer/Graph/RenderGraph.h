@@ -14,10 +14,12 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIEnums.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class FrameBufferTable;
     class IRHICommandList;
     class IRHIDevice;
     class TaskManager;
@@ -98,7 +100,7 @@ namespace sw
      * @struct RenderGraphHandle
      * @brief 접근 종류가 형식인 자원 핸들입니다 — 패스 선언(`RenderGraph::addPass`)이 받는다.
      * @details 언리얼 RDG `FRDGTextureSRVRef` · `FRDGBufferUAVRef`, Adria `RGTextureReadOnlyId` · `RGBufferReadWriteId` 자리다. 접근이 형식이라
-     *          SRV 로 받은 자원을 UAV 로 쓰는 코드는 형식이 맞지 않는다(다음 단계: 패스 몸통이 핸들로만 디스크립터를 얻는다).
+     *          SRV 로 받은 자원을 UAV 로 쓰는 코드는 형식이 맞지 않는다. 패스 몸통은 같은 핸들로 RHI 핸들을 받는다(`RenderGraphPassContext::getBuffer`).
      */
     template <RenderGraphViewableKind kViewable, RenderGraphAccess kAccess>
     struct RenderGraphHandle
@@ -147,14 +149,39 @@ namespace sw
     /**
      * @struct RenderGraphPassContext
      * @brief execute() 중에 패스 콜백에 넘기는 컨텍스트입니다.
+     * @details 패스 몸통은 그래프 밖 자원을 **선언한 접근 핸들로만** 받는다(`getBuffer` · `getTexture` · `uavBarrier`) — 언리얼 RDG 패스 파라미터의 `FRDGBufferUAVRef`,
+     *          Adria `RGPassContext::GetReadWriteBuffer` 자리다. 선언하지 않은 이름 · 접근은 오류를 남기고 무효 핸들(0)이라 손으로 묶을 길이 없다. 전이는 레벨 콜백이 냈다.
      */
-    struct RenderGraphPassContext
+    struct SW_API RenderGraphPassContext
     {
         hashed_string                            _passName; ///< 실행 중인 패스 이름
         const vector<hashed_string>*             _pListInputs{ nullptr };
         const vector<hashed_string>*             _pListOutputs{ nullptr };
-        const vector<RenderGraphResourceAccess>* _pListAccess{ nullptr }; ///< 이 패스가 선언한 접근 전부(이름으로 선언한 패스는 입력 = 셰이더 읽기, 출력 = 렌더 타깃)
-        IRHICommandList*                         _pCmdList{ nullptr };    ///< (선택) 병렬 기록 때 활성 패스의 커맨드 리스트
+        const vector<RenderGraphResourceAccess>* _pListAccess{ nullptr };    ///< 이 패스가 선언한 접근 전부(이름으로 선언한 패스는 입력 = 셰이더 읽기, 출력 = 렌더 타깃)
+        IRHICommandList*                         _pCmdList{ nullptr };       ///< (선택) 병렬 기록 때 활성 패스의 커맨드 리스트
+        const FrameBufferTable*                  _pResourceTable{ nullptr }; ///< 그래프 밖 자원의 RHI 핸들 표(프레임 그래프 — 실행기가 채운다). 없으면 핸들 요청은 모두 무효다
+
+        /** @brief 이 패스가 선언한 버퍼 접근 @p handle 의 뷰 칸 @p slot 버퍼입니다. 선언하지 않은 접근 · 등록하지 않은 칸은 오류를 남기고 0 입니다. */
+        template <RenderGraphAccess kAccess>
+        RHIBufferHandle getBuffer( RenderGraphHandle<RenderGraphViewableKind::Buffer, kAccess> handle, uint32 slot = 0 ) const
+        {
+            return findDeclaredHandle( handle, slot );
+        }
+        /** @brief 이 패스가 선언한 텍스처 접근 @p handle 의 뷰 칸 @p slot 텍스처입니다. 규칙은 `getBuffer` 와 같다. */
+        template <RenderGraphAccess kAccess>
+        RHITextureHandle getTexture( RenderGraphHandle<RenderGraphViewableKind::Texture, kAccess> handle, uint32 slot = 0 ) const
+        {
+            return findDeclaredHandle( handle, slot );
+        }
+        /**
+         * @brief 한 패스 안의 연속 디스패치(HZB 밉 사슬 · 컬링 → 정렬)가 앞 디스패치의 UAV 쓰기를 기다리게 합니다(뷰 칸 @p slot).
+         * @details UAV 핸들만 받는다 — SRV 로 선언한 버퍼로는 부를 수 없다(형식). 같은 상태의 연속이라 전이로는 알 수 없는 의존이다.
+         */
+        void uavBarrier( RenderGraphBufferUAV handle, uint32 slot = 0 ) const;
+
+    private:
+        /** @brief 선언한 접근이면 표에서 핸들을 찾습니다. 선언하지 않았거나 표에 없으면 오류를 남기고 0 입니다. */
+        uint64 findDeclaredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const;
     };
 } // namespace sw
 

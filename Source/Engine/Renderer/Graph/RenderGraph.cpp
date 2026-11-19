@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Graph/FrameBufferTable.h"
 
 #include <algorithm>
 #include <atomic>
@@ -264,6 +265,39 @@ namespace sw
         _pParallelScratch->_listNodeCmdList.clear();
         _pParallelScratch->_listPassEntry.clear();
         _pParallelScratch->_pCmdListDevice = nullptr;
+    }
+
+    uint64 RenderGraphPassContext::findDeclaredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const
+    {
+        bool bDeclared = false;
+        if ( _pListAccess != nullptr )
+        {
+            for ( const RenderGraphResourceAccess& declared : *_pListAccess )
+            {
+                bDeclared = bDeclared || ( declared._resource == access._resource && declared._access == access._access && declared._viewable == access._viewable );
+            }
+        }
+        if ( bDeclared == false )
+        {
+            // 선언하지 않은 접근을 주면 그래프가 그 전이를 내지 않은 자원을 묶는다 — 무효 핸들로 막는다(손으로 묶을 길이 없다).
+            SW_LOG_ERROR_ONCE_ID( "Renderer.GraphUndeclaredAccess", "Render graph pass '%#' asked for '%#' with an access it did not declare - it gets no handle", _passName.c_str(),
+                                  access._resource.c_str() );
+            return 0;
+        }
+        const uint64 handle = _pResourceTable == nullptr                          ? 0
+                            : access._viewable == RenderGraphViewableKind::Buffer ? _pResourceTable->findBuffer( access._resource, slot )
+                                                                                  : _pResourceTable->findTexture( access._resource, slot );
+        if ( handle == 0 )
+            SW_LOG_ERROR_ONCE_ID( "Renderer.GraphUnregisteredResource", "Render graph pass '%#' declared '%#' but nothing registered slot %# this frame - it gets no handle", _passName.c_str(),
+                                  access._resource.c_str(), slot );
+        return handle;
+    }
+
+    void RenderGraphPassContext::uavBarrier( RenderGraphBufferUAV handle, uint32 slot ) const
+    {
+        const RHIBufferHandle buffer = findDeclaredHandle( handle, slot );
+        if ( buffer != 0 && _pCmdList != nullptr )
+            _pCmdList->uavBarrier( buffer );
     }
 
     /**

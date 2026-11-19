@@ -1,11 +1,12 @@
 /**
  * @file TestFrameBufferTable.cpp
- * @brief 프레임 그래프 자원 표(`FrameBufferTable`) 테스트 — 등록 · 찾기, 같은 이름 · 칸 두 번과 칸마다 다른 처음 접근 거절입니다(GPU 없음).
+ * @brief 프레임 그래프 자원 표(`FrameBufferTable`) 테스트 — 등록 · 찾기, 같은 이름 · 칸 두 번과 칸마다 다른 처음 접근 거절, 패스 문맥이 선언한 접근 핸들로만 핸들을 주는지(GPU 없음).
  */
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Renderer/Graph/FrameBufferTable.h"
 
 using namespace sw;
@@ -55,4 +56,43 @@ SW_TEST_CASE( FrameBufferTableTest, DuplicateNamesAreRejected )
     SW_EXPECT_FALSE( table.registerTexture( hzb, 1, RHITextureHandle{ 14 }, RenderGraphAccess::ShaderRead ) );
     SW_EXPECT_EQUAL( RHIBufferHandle{ 11 }, table.findBuffer( hzb, 0 ) );
     SW_EXPECT_EQUAL( size_t{ 1 }, table.getEntries().size() );
+}
+
+/**
+ * @brief [FrameBufferTableTest] 패스 몸통은 선언한 접근 핸들로만 핸들을 받는다 — 다른 접근 · 선언 안 한 이름은 오류와 0, UAV 배리어는 선언한 UAV 의 등록 칸에만 나간다
+ * @details 결함이면 SRV 로 선언한 버퍼를 UAV 로 묶거나(그래프가 낸 상태와 어긋나 DX12 · Vulkan 검증 오류), 선언하지 않은 버퍼를 전이 없이 묶는다(지난 내용을 읽는다).
+ */
+SW_TEST_CASE( FrameBufferTableTest, PassContextHandsOutOnlyDeclaredAccesses )
+{
+    SW_EXPECT_LOG( "Renderer.GraphUndeclaredAccess" );
+    SW_EXPECT_LOG( "Renderer.GraphUnregisteredResource" );
+    const hashed_string hzb( "HZB" );
+    const hashed_string grid( "LightGrid" );
+    FrameBufferTable    table;
+    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 0, RHIBufferHandle{ 11 }, RenderGraphAccess::ShaderRead ) );
+    SW_REQUIRE_TRUE( table.registerBuffer( grid, 0, RHIBufferHandle{ 31 }, RenderGraphAccess::ShaderRead ) );
+
+    const vector<RenderGraphResourceAccess> listAccess{ RenderGraphBufferUAV{ hzb }, RenderGraphBufferSRV{ grid } };
+    test::FakeRHICommandList                cmd( 0 );
+    RenderGraphPassContext                  context;
+    context._passName       = hashed_string( "HZBBuild" );
+    context._pListAccess    = &listAccess;
+    context._pCmdList       = &cmd;
+    context._pResourceTable = &table;
+
+    SW_EXPECT_EQUAL( RHIBufferHandle{ 11 }, context.getBuffer( RenderGraphBufferUAV{ hzb } ) );
+    SW_EXPECT_EQUAL( RHIBufferHandle{ 31 }, context.getBuffer( RenderGraphBufferSRV{ grid } ) );
+    SW_EXPECT_EQUAL( RHIBufferHandle{ 0 }, context.getBuffer( RenderGraphBufferUAV{ grid } ) );                     // SRV 로 선언했다
+    SW_EXPECT_EQUAL( RHIBufferHandle{ 0 }, context.getBuffer( RenderGraphBufferSRV{ hashed_string( "Other" ) } ) ); // 선언하지 않았다
+    SW_EXPECT_EQUAL( RHITextureHandle{ 0 }, context.getTexture( RenderGraphTextureUAV{ hzb } ) );                   // 종류가 다르다
+    SW_EXPECT_EQUAL( RHIBufferHandle{ 0 }, context.getBuffer( RenderGraphBufferUAV{ hzb }, 3 ) );                   // 등록하지 않은 칸
+
+    context.uavBarrier( RenderGraphBufferUAV{ hzb } );
+    SW_EXPECT_EQUAL( uint32{ 1 }, cmd._uavBarrierCount );
+    context.uavBarrier( RenderGraphBufferUAV{ grid } ); // SRV 로 선언한 버퍼 — 배리어가 나가지 않는다
+    SW_EXPECT_EQUAL( uint32{ 1 }, cmd._uavBarrierCount );
+
+    // 표가 없는 문맥(뷰 그래프)은 선언했어도 핸들이 없다.
+    context._pResourceTable = nullptr;
+    SW_EXPECT_EQUAL( RHIBufferHandle{ 0 }, context.getBuffer( RenderGraphBufferUAV{ hzb } ) );
 }
