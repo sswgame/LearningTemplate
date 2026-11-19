@@ -5,6 +5,7 @@
  */
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
@@ -106,7 +107,7 @@ namespace sw
                 vector<string> listName;
                 forEachZone( *query._pManager, *pTarget, [&listName]( const hashed_string& source, const ZoneSample& /*sample*/ )
                 { listName.push_back( source.c_str() ); } );
-                std::sort( listName.begin(), listName.end() );
+                VectorUtil::sort( listName );
                 string joined;
                 for ( const string& name : listName )
                 {

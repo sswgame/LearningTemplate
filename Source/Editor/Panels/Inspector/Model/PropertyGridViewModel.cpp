@@ -1347,7 +1347,7 @@ namespace sw::editor
                 outListID.emplace_back( id );
             }
         }
-        std::sort( outListID.begin(), outListID.end() );
+        VectorUtil::sort( outListID );
         outListID.erase( std::unique( outListID.begin(), outListID.end() ), outListID.end() );
         return true;
     }

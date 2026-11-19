@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/string.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -63,7 +64,7 @@ namespace sw
                 {
                     outListValue.push_back( SavedAttributeValue{ name, value } );
                 }
-                std::sort( outListValue.begin(), outListValue.end(), []( const SavedAttributeValue& lhs, const SavedAttributeValue& rhs )
+                VectorUtil::sort( outListValue, []( const SavedAttributeValue& lhs, const SavedAttributeValue& rhs )
                 { return lhs._attribute.view() < rhs._attribute.view(); } );
             }
 

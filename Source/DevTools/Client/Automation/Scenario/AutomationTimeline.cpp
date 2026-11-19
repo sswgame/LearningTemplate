@@ -2,6 +2,7 @@
 
 #include "DevTools/Client/Automation/Scenario/AutomationTimeline.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include <algorithm>
@@ -87,7 +88,7 @@ namespace sw
             line += linePart.c_str();
         }
         vector<AutomationStepKindCost> listCost = _listStepKindCost;
-        std::sort( listCost.begin(), listCost.end(), []( const AutomationStepKindCost& left, const AutomationStepKindCost& right )
+        VectorUtil::sort( listCost, []( const AutomationStepKindCost& left, const AutomationStepKindCost& right )
         { return left._seconds > right._seconds; } );
         line += "; steps";
         for ( size_t index = 0; index < listCost.size() && index < kStepKindKeep; ++index )

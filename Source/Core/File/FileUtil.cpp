@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/File/PlatformFileSystem.h"
 #include "Core/File/PlatformFileUtil.h"
@@ -388,7 +389,7 @@ namespace sw
                 vector<WalkChild> listChild;
                 // 도중에 멈춘 폴더도 모은 데까지 걷는다(부분 목록과 false — 전과 같은 계약이다)
                 const bool bOpened = PlatformFileSystem::forEachChild( walk._directory, collectWalkChild, &listChild );
-                std::sort( listChild.begin(), listChild.end(), []( const WalkChild& lhs, const WalkChild& rhs )
+                VectorUtil::sort( listChild, []( const WalkChild& lhs, const WalkChild& rhs )
                 { return lhs._name < rhs._name; } );
                 for ( const WalkChild& child : listChild )
                 {

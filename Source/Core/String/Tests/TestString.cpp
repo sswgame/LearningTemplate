@@ -2,6 +2,7 @@
 // string_splitter, fixed_string(잘림 · 글자 경계 · data() 쓰기 · 자기 참조 · try_assign · 잘림 경고 재진입), StringBuilder(성장 · 이동 · 자기 참조), formatstring(서식 · 자리표 · 큰 실수 · 용량 0).
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Hash/HashUtil.h"
@@ -177,7 +178,7 @@ SW_TEST_CASE( StringTest, HashedStringFollowsFNameRules )
     // 순서는 고른다 — 사전순(대소문자 무시)은 실행과 무관하고, 같은 이름은 어느 쪽도 앞이 아니다
     sw::vector<sw::hashed_string> listName{ sw::hashed_string( "FNameRuleCharlie" ), sw::hashed_string( "fnameRuleAlpha" ),
                                             sw::hashed_string( "FNAMERULEBRAVO" ) };
-    std::sort( listName.begin(), listName.end(), sw::HashedStringLexicalLess{} );
+    VectorUtil::sort( listName, sw::HashedStringLexicalLess{} );
     SW_EXPECT_EQUAL( sw::string_view( "fnameRuleAlpha" ), sw::string_view( listName[0].c_str() ) );
     SW_EXPECT_EQUAL( sw::string_view( "FNAMERULEBRAVO" ), sw::string_view( listName[1].c_str() ) );
     SW_EXPECT_EQUAL( sw::string_view( "FNameRuleCharlie" ), sw::string_view( listName[2].c_str() ) );

@@ -416,7 +416,7 @@ namespace sw
                             listID.push_back( assetID );
                     }
                 }
-                std::sort( listID.begin(), listID.end() );
+                VectorUtil::sort( listID );
                 uint64 hash = settingsHash;
                 for ( const string& assetID : listID )
                 {
@@ -520,7 +520,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "PackCooker.GameConfigFolderUnreadable", "Pack cook: the game preset folder %# could not be listed - game cook rules cannot be merged", folder );
                     return false;
                 }
-                std::sort( listConfigPath.begin(), listConfigPath.end() );
+                VectorUtil::sort( listConfigPath );
                 for ( const string& configPath : listConfigPath )
                 {
                     GameConfig gameConfig;

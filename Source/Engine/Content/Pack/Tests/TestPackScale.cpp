@@ -1,6 +1,7 @@
 // PackScaleTest — 30 만 항목 합성 팩의 마운트 · 색인 메모리 · 조회와 1 GiB 패치 확인 비용을 잰다(감사 A-9 ~ A-12, 설계 PK-1).
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
@@ -155,7 +156,7 @@ SW_TEST_CASE( PackScaleTest, Index300k, ._tags = "bench", ._disabledReason = "be
         SW_REQUIRE_TRUE( reader.open( packPath ) );
         listMountNanos.push_back( watch.getElapsedNanoseconds() );
     }
-    std::sort( listMountNanos.begin(), listMountNanos.end() );
+    VectorUtil::sort( listMountNanos );
     const int64 mountMedianNanos = listMountNanos[listMountNanos.size() / 2];
 
     const uint64 liveBefore = Internal::readLiveBytes();

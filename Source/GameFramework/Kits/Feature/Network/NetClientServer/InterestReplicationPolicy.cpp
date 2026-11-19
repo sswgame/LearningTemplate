@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/InterestReplicationPolicy.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+
 #include <algorithm>
 
 namespace sw
@@ -79,7 +81,7 @@ namespace sw
             {
                 _listEnterScratch.push_back( NetInterestGrid::getEntityID( key ) );
             }
-            std::sort( _listEnterScratch.begin(), _listEnterScratch.end() );
+            VectorUtil::sort( _listEnterScratch );
             _listMergeScratch.clear();
             std::set_union( observer._listVisible.begin(), observer._listVisible.end(), _listEnterScratch.begin(),
                             std::unique( _listEnterScratch.begin(), _listEnterScratch.end() ), std::back_inserter( _listMergeScratch ) );

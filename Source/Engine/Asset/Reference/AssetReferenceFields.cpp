@@ -6,6 +6,7 @@
 
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
@@ -590,7 +591,7 @@ namespace sw
         vector<AssetReference> listReference;
         extract( inoutText, syntax, listReference );
         // 뒤에서부터 바꿔 앞 참조의 자리가 밀리지 않게 한다. CMake 는 인자마다 따로 뽑아 글 순서가 아니므로 자리로 정렬한다.
-        std::sort( listReference.begin(), listReference.end(), []( const AssetReference& left, const AssetReference& right )
+        VectorUtil::sort( listReference, []( const AssetReference& left, const AssetReference& right )
         { return left._offset < right._offset; } );
         uint32 rewriteCount{ 0 };
         for ( auto itReference = listReference.rbegin(); itReference != listReference.rend(); ++itReference )

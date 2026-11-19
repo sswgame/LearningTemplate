@@ -2,6 +2,7 @@
 
 #include "Engine/Asset/AssetPackIndex.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/String/StringUtil.h"
@@ -36,7 +37,7 @@ namespace sw
 
             static void sortByGUID( vector<AssetPackIndexEntry>& inoutList )
             {
-                std::sort( inoutList.begin(), inoutList.end(), []( const AssetPackIndexEntry& left, const AssetPackIndexEntry& right )
+                VectorUtil::sort( inoutList, []( const AssetPackIndexEntry& left, const AssetPackIndexEntry& right )
                 { return left._guid < right._guid; } );
             }
         };

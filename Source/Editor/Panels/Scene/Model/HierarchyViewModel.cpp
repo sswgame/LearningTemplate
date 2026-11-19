@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Scene/Model/HierarchyViewModel.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Name/TagID.h"
 #include "Core/String/StringUtil.h"
@@ -251,7 +252,7 @@ namespace sw::editor
             if ( forcedRow.has_value() )
                 pushWithAncestors( *forcedRow );
         }
-        std::sort( outListRow.begin(), outListRow.end() );
+        VectorUtil::sort( outListRow );
         outListRow.erase( std::unique( outListRow.begin(), outListRow.end() ), outListRow.end() );
     }
 

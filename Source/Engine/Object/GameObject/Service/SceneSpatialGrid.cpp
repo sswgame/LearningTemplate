@@ -2,6 +2,7 @@
 
 #include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -262,7 +263,7 @@ namespace sw
         // 질의마다 새 목록이다 — 병렬 틱이 같은 격자를 동시에 읽는다.
         vector<SlotHandle> listHandle;
         pLayer->_arrGrid[_frontIndex].queryAABB( minX, minY, maxX, maxY, listHandle );
-        std::sort( listHandle.begin(), listHandle.end(), [this]( SlotHandle left, SlotHandle right )
+        VectorUtil::sort( listHandle, [this]( SlotHandle left, SlotHandle right )
         {
             return _listEntry[left.index()]._sequence < _listEntry[right.index()]._sequence;
         } );

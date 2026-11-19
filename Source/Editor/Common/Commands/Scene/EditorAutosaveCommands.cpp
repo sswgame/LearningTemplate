@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
@@ -124,7 +125,7 @@ namespace sw::editor
                     if ( StringUtil::parseInt( string_view( name ).substr( 0, name.size() - string_view( kSceneSuffix ).size() ), generation ) && generation > 0 )
                         outListGeneration.push_back( static_cast<uint32>( generation ) );
                 }
-                std::sort( outListGeneration.begin(), outListGeneration.end() );
+                VectorUtil::sort( outListGeneration );
             }
 
             static string makeSnapshotPath( const string& slotFolder, uint32 generation ) { return makeGenerationPath( slotFolder, generation, kSceneSuffix ); }

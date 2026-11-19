@@ -15,6 +15,7 @@
  *          추적기는 잠그지 않는다. 여러 스레드에서 오는 백엔드 알림은 백엔드가 모아 두었다가 step 뒤에 한 스레드에서 넣는다.
  */
 #pragma once
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
@@ -290,7 +291,7 @@ namespace sw
             }
             std::sort( outListEvent.begin() + static_cast<std::ptrdiff_t>( firstNew ), outListEvent.end(), &isEarlierEvent );
             // 재시작한 쌍의 끝은 이번 step 의 어떤 이벤트보다 앞선다 — 정렬(쌍 · 단계 순)에 넣으면 같은 쌍의 새 시작 뒤로 간다.
-            std::sort( _listRestartEnd.begin(), _listRestartEnd.end(), &isEarlierEvent );
+            VectorUtil::sort( _listRestartEnd, &isEarlierEvent );
             outListEvent.insert( outListEvent.begin() + static_cast<std::ptrdiff_t>( firstNew ), _listRestartEnd.begin(), _listRestartEnd.end() );
         }
 

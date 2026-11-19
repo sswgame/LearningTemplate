@@ -2,6 +2,7 @@
 
 #include "Engine/Text/GlyphAtlas.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -186,7 +187,7 @@ namespace sw
             if ( _listPage[index]._lastUsedFrame < beforeFrame )
                 outListPage.push_back( static_cast<uint32>( index ) );
         }
-        std::sort( outListPage.begin(), outListPage.end(), [this]( uint32 a, uint32 b )
+        VectorUtil::sort( outListPage, [this]( uint32 a, uint32 b )
         {
             const uint64 frameA = _listPage[a]._lastUsedFrame;
             const uint64 frameB = _listPage[b]._lastUsedFrame;

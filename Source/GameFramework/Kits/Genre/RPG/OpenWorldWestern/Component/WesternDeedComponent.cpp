@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternDeedComponent.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -35,7 +37,7 @@ namespace sw
             witness._bLawman  = pWitness->_bLawman ? SW_TRUE : SW_FALSE;
             outListWitness.push_back( witness );
         }
-        std::sort( outListWitness.begin(), outListWitness.end(), []( const WesternWitness& lhs, const WesternWitness& rhs )
+        VectorUtil::sort( outListWitness, []( const WesternWitness& lhs, const WesternWitness& rhs )
         { return lhs._id < rhs._id; } );
     }
 
@@ -108,7 +110,7 @@ namespace sw
                 listDeed.push_back( pDeed );
         }
         // 방문 순서를 약속하지 않으므로 같은 거리의 자리를 id 로 정해 둔다.
-        std::sort( listDeed.begin(), listDeed.end(), []( const WesternDeedComponent* pLeft, const WesternDeedComponent* pRight )
+        VectorUtil::sort( listDeed, []( const WesternDeedComponent* pLeft, const WesternDeedComponent* pRight )
         { return pLeft->getOwner()->getObjectID() < pRight->getOwner()->getObjectID(); } );
         vector<InteractionCandidate> listCandidate;
         listCandidate.reserve( listDeed.size() );

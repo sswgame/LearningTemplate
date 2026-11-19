@@ -445,7 +445,7 @@ namespace sw::editor
                 return false;
         }
         // 옮기는 쪽 끝부터 — 앞의 키가 아직 옮기지 않은 고른 키를 덮지 않는다.
-        std::sort( _listSelectedKey.begin(), _listSelectedKey.end(), [frameDelta]( const SequenceKeyRef& left, const SequenceKeyRef& right )
+        VectorUtil::sort( _listSelectedKey, [frameDelta]( const SequenceKeyRef& left, const SequenceKeyRef& right )
         { return frameDelta > 0 ? left._frame > right._frame : left._frame < right._frame; } );
         bool bMoved = false;
         for ( SequenceKeyRef& key : _listSelectedKey )

@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Catalog/Model/CatalogCurve.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -383,7 +384,7 @@ namespace sw::editor
         {
             listRemoved.push_back( listReadKey[keyIndex]->_elementIndex );
         }
-        std::sort( listRemoved.begin(), listRemoved.end(), []( int32 left, int32 right )
+        VectorUtil::sort( listRemoved, []( int32 left, int32 right )
         { return left > right; } );
         for ( const int32 element : listRemoved )
         {

@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -122,7 +123,7 @@ namespace sw::editor
             listOrder.push_back( index );
             totalSize += bHorizontal ? ioListRect[index]._size._x : ioListRect[index]._size._y;
         }
-        std::sort( listOrder.begin(), listOrder.end(), [&ioListRect, bHorizontal]( uint32 a, uint32 b )
+        VectorUtil::sort( listOrder, [&ioListRect, bHorizontal]( uint32 a, uint32 b )
         { return bHorizontal ? ioListRect[a]._position._x < ioListRect[b]._position._x : ioListRect[a]._position._y < ioListRect[b]._position._y; } );
         const float32 span   = bHorizontal ? boundsMax._x - boundsMin._x : boundsMax._y - boundsMin._y;
         const float32 gap    = ( span - totalSize ) / static_cast<float32>( listOrder.size() - 1 );

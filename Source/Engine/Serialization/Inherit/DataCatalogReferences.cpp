@@ -162,7 +162,7 @@ namespace sw
                     if ( id.empty() == false )
                         outListID.push_back( id );
                 }
-                std::sort( outListID.begin(), outListID.end() );
+                VectorUtil::sort( outListID );
             }
 
             /** @brief @p node 아래에서 경로 @p listPath 의 @p depth 번째 원소부터 따라가 끝 원소마다 @p visit 를 부릅니다. */

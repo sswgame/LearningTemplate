@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatTextNormalizer.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringUtil.h"
@@ -43,7 +44,7 @@ namespace sw
 
     void ChatTextNormalizer::setIgnored( vector<uint32> listCodepoint )
     {
-        std::sort( listCodepoint.begin(), listCodepoint.end() );
+        VectorUtil::sort( listCodepoint );
         listCodepoint.erase( std::unique( listCodepoint.begin(), listCodepoint.end() ), listCodepoint.end() );
         _listIgnored = std::move( listCodepoint );
     }

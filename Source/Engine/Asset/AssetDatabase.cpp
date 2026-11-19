@@ -2,6 +2,7 @@
 
 #include "Engine/Asset/AssetDatabase.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -266,7 +267,7 @@ namespace sw
             else if ( kind == AssetIdentityKind::Sidecar )
                 setSidecarID.insert( Internal::toLowerID( file._assetID ) );
         }
-        std::sort( listSorted.begin(), listSorted.end(), []( const AssetIdentityFile* pLeft, const AssetIdentityFile* pRight )
+        VectorUtil::sort( listSorted, []( const AssetIdentityFile* pLeft, const AssetIdentityFile* pRight )
         { return pLeft->_assetID < pRight->_assetID; } );
 
         AssetDatabase database;

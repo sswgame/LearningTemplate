@@ -6,6 +6,7 @@
 
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineParallel.h"
@@ -71,7 +72,7 @@ namespace sw
         }
         if ( _listProcessing.empty() )
             return;
-        std::sort( _listProcessing.begin(), _listProcessing.end(), []( const KeyedCallback& left, const KeyedCallback& right )
+        VectorUtil::sort( _listProcessing, []( const KeyedCallback& left, const KeyedCallback& right )
         {
             if ( left._dispatchOrdinal != right._dispatchOrdinal )
                 return left._dispatchOrdinal < right._dispatchOrdinal;

@@ -460,7 +460,7 @@ namespace sw
                 step._listJoinBatch.push_back( batch );
                 listBatchJoined[batch] = 1;
             }
-            std::sort( step._listJoinBatch.begin(), step._listJoinBatch.end() );
+            VectorUtil::sort( step._listJoinBatch );
         }
         for ( size_t orderIndex = 0; orderIndex < _listQueueStep.size(); ++orderIndex )
         {

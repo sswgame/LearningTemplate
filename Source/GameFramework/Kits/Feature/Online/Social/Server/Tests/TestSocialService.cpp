@@ -2,6 +2,7 @@
 // 읽는 도중 바뀐 관계, 접속 상태 쓰기 · 연장 · 조회 · 떠날 때 · 친구 역색인을 따른 전달. 규칙 표는 SocialLinkRulesTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
@@ -360,7 +361,7 @@ SW_TEST_CASE( SocialServiceTest, PresenceFanoutFollowsFriendIndex )
             if ( notification._kind == SocialNotificationKind::PresenceChanged && notification._otherID == kAlice )
                 listRecipient.push_back( notification._recipientID );
         }
-        std::sort( listRecipient.begin(), listRecipient.end() );
+        VectorUtil::sort( listRecipient );
         return listRecipient;
     };
 

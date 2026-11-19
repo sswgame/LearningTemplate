@@ -2,6 +2,7 @@
 
 #include "Engine/Text/GlyphCache.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Time/MonotonicClock.h"
@@ -187,7 +188,7 @@ namespace sw
             _mapGlyph.erase( key );
         }
         // 표 순서는 결정적이지 않다 — 높이 큰 것부터, 같으면 키 순으로 다시 잡는다(스카이라인이 덜 조각나고 결과가 기계마다 같다).
-        std::sort( _listRetainKey.begin(), _listRetainKey.end(), [this]( uint64 a, uint64 b )
+        VectorUtil::sort( _listRetainKey, [this]( uint64 a, uint64 b )
         {
             const uint16 heightA = _mapGlyph.find( a )->second._rect._height;
             const uint16 heightB = _mapGlyph.find( b )->second._rect._height;

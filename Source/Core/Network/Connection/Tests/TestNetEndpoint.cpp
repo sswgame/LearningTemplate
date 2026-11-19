@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetEndpoint.h"
@@ -232,8 +233,8 @@ SW_TEST_CASE( NetEndpointTest, EveryChannelPairsItsSendAndReceiveFlows )
         }
         const string label = "kind " + sw::to_string( static_cast<uint32>( flowCase._kind ) );
         SW_EXPECT_TRUE_MSG( listSent.size() == static_cast<size_t>( flowCase._count ), label.c_str() );
-        std::sort( listSent.begin(), listSent.end() );
-        std::sort( listReceivedID.begin(), listReceivedID.end() );
+        VectorUtil::sort( listSent );
+        VectorUtil::sort( listReceivedID );
         SW_EXPECT_TRUE_MSG( listSent == listReceivedID, label.c_str() ); // 보낸 것마다 같은 id 의 받은 것이 하나
     }
 }

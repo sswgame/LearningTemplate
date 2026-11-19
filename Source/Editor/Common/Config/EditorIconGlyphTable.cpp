@@ -79,7 +79,7 @@ namespace sw::editor
         }
 
         // 이어지는 코드포인트는 한 구간으로 묶는다(ImGui 범위 표 — 짝마다 처음 · 끝, 0 으로 끝남).
-        std::sort( listCodepoint.begin(), listCodepoint.end() );
+        VectorUtil::sort( listCodepoint );
         for ( const uint16 codepoint : listCodepoint )
         {
             if ( _listGlyphRange.empty() == false && _listGlyphRange.back() + 1 == codepoint )
